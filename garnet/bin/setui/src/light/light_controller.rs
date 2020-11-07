@@ -25,6 +25,9 @@ use std::convert::TryInto;
 /// signal that a LightError::INVALID_NAME should be returned to the client.
 pub const ARG_NAME: &'static str = "name";
 
+/// Hardware path used to connect to light devices.
+pub const DEVICE_PATH: &'static str = "/dev/class/light/*";
+
 impl DeviceStorageCompatible for LightInfo {
     fn default_value() -> Self {
         LightInfo { light_groups: Default::default() }
@@ -50,27 +53,13 @@ pub struct LightController {
 #[async_trait]
 impl data_controller::Create<LightInfo> for LightController {
     async fn create(client: ClientProxy<LightInfo>) -> Result<Self, ControllerError> {
-        let light_proxy = client
-            .get_service_context()
-            .await
-            .lock()
-            .await
-            .connect_device_path::<LightMarker>("/dev/class/light/*")
-            .await
-            .or_else(|e| {
-                Err(ControllerError::InitFailure(
-                    format!("failed to connect to fuchsia.hardware.light with error: {:?}", e)
-                        .into(),
-                ))
-            })?;
-
         let light_hardware_config = DefaultSetting::<LightHardwareConfiguration, &str>::new(
             None,
             "/config/data/light_hardware_config.json",
         )
         .get_default_value();
 
-        Ok(LightController { client, light_proxy, _light_hardware_config: light_hardware_config })
+        LightController::create_with_config(client, light_hardware_config).await
     }
 }
 
@@ -95,6 +84,28 @@ impl controller::Handle for LightController {
 /// Controller for processing switchboard messages surrounding the Light
 /// protocol.
 impl LightController {
+    /// Alternate constructor that allows specifying a configuration.
+    pub(crate) async fn create_with_config(
+        client: ClientProxy<LightInfo>,
+        light_hardware_config: Option<LightHardwareConfiguration>,
+    ) -> Result<Self, ControllerError> {
+        let light_proxy = client
+            .get_service_context()
+            .await
+            .lock()
+            .await
+            .connect_device_path::<LightMarker>(DEVICE_PATH)
+            .await
+            .or_else(|e| {
+                Err(ControllerError::InitFailure(
+                    format!("failed to connect to fuchsia.hardware.light with error: {:?}", e)
+                        .into(),
+                ))
+            })?;
+
+        Ok(LightController { client, light_proxy, _light_hardware_config: light_hardware_config })
+    }
+
     async fn set(&self, name: String, state: Vec<LightState>) -> SettingHandlerResult {
         let mut current = self.client.read().await;
 

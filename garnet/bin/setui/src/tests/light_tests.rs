@@ -11,15 +11,19 @@ use fidl_fuchsia_settings::{LightError, LightMarker, LightProxy};
 use futures::lock::Mutex;
 
 use crate::agent::restore_agent;
+use crate::handler::base::{Context, GenerateHandler};
 use crate::handler::device_storage::testing::*;
-use crate::handler::device_storage::DeviceStorage;
+use crate::handler::device_storage::{DeviceStorage, DeviceStorageFactory};
+use crate::handler::setting_handler::persist::ClientProxy;
+use crate::handler::setting_handler::{BoxedController, ClientImpl};
+use crate::light::light_controller::LightController;
 use crate::switchboard::base::SettingType;
 use crate::switchboard::light_types::{
     ColorRgb, LightGroup, LightInfo, LightState, LightType, LightValue,
 };
 use crate::tests::fakes::hardware_light_service::HardwareLightService;
 use crate::tests::fakes::service_registry::ServiceRegistry;
-use crate::EnvironmentBuilder;
+use crate::{EnvironmentBuilder, LightHardwareConfiguration};
 
 type HardwareLightServiceHandle = Arc<Mutex<HardwareLightService>>;
 
@@ -102,47 +106,135 @@ async fn populate_multiple_test_lights(
     }
 }
 
-/// Creates a test environment for light.
-///
-/// If starting_light_info is provided, the device storage will be initialized with the given value.
-/// If hardware_light_service_handle is provided, it will be used as the fake service in the service
-/// registry, otherwise one will be constructed.
-async fn create_test_light_env_with_service(
+struct TestLightEnvironment {
+    light_service: LightProxy,
+    store: Arc<Mutex<DeviceStorage<LightInfo>>>,
+}
+
+struct TestLightEnvironmentBuilder {
     starting_light_info: Option<LightInfo>,
     hardware_light_service_handle: Option<HardwareLightServiceHandle>,
-) -> (LightProxy, Arc<Mutex<DeviceStorage<LightInfo>>>) {
-    let service_registry = ServiceRegistry::create();
-    let service_handle = match hardware_light_service_handle.clone() {
-        Some(service) => service,
-        None => Arc::new(Mutex::new(HardwareLightService::new())),
-    };
-    service_registry.lock().await.register_service(service_handle.clone());
+    light_hardware_config: Option<LightHardwareConfiguration>,
+}
 
-    let storage_factory = InMemoryStorageFactory::create();
-    let store = storage_factory
-        .lock()
-        .await
-        .get_device_storage::<LightInfo>(StorageAccessContext::Test, CONTEXT_ID);
-
-    if let Some(info) = starting_light_info {
-        store.lock().await.write(&info, false).await.expect("write starting values");
-        if hardware_light_service_handle.is_none() {
-            // If a fake hardware light service wasn't provided for us, populate the initial lights.
-            populate_single_test_lights(service_handle.clone(), info).await;
+impl TestLightEnvironmentBuilder {
+    fn new() -> Self {
+        Self {
+            starting_light_info: None,
+            hardware_light_service_handle: None,
+            light_hardware_config: None,
         }
     }
 
-    let env = EnvironmentBuilder::new(storage_factory)
-        .service(Box::new(ServiceRegistry::serve(service_registry)))
-        .agents(&[restore_agent::blueprint::create()])
-        .settings(&[SettingType::Light])
-        .spawn_and_get_nested_environment(ENV_NAME)
-        .await
-        .unwrap();
+    /// Sets the initial light info that the fake `HardwareLightService` and device storage will
+    /// use.
+    fn set_starting_light_info(mut self, starting_light_info: LightInfo) -> Self {
+        self.starting_light_info = Some(starting_light_info);
+        self
+    }
 
-    let light_service = env.connect_to_service::<LightMarker>().unwrap();
+    /// Provides a handle to a custom fake `HardwareLightService`. This only works in conjunction
+    /// with specifying `starting_light_info`.
+    fn set_hardware_light_service_handle(
+        mut self,
+        hardware_light_service_handle: HardwareLightServiceHandle,
+    ) -> Self {
+        self.hardware_light_service_handle = Some(hardware_light_service_handle);
+        self
+    }
 
-    (light_service, store)
+    // TODO(fxbug.dev/63554): use this in tests.
+    #[allow(dead_code)]
+    fn set_light_hardware_config(
+        mut self,
+        light_hardware_config: LightHardwareConfiguration,
+    ) -> Self {
+        self.light_hardware_config = Some(light_hardware_config);
+        self
+    }
+
+    async fn build(self) -> TestLightEnvironment {
+        let service_registry = ServiceRegistry::create();
+        let service_handle = match self.hardware_light_service_handle.clone() {
+            Some(service) => service,
+            None => Arc::new(Mutex::new(HardwareLightService::new())),
+        };
+        service_registry.lock().await.register_service(service_handle.clone());
+
+        let storage_factory = InMemoryStorageFactory::create();
+        let store = storage_factory
+            .lock()
+            .await
+            .get_device_storage::<LightInfo>(StorageAccessContext::Test, CONTEXT_ID);
+
+        if let Some(info) = self.starting_light_info {
+            store.lock().await.write(&info, false).await.expect("write starting values");
+            if self.hardware_light_service_handle.is_none() {
+                // If a fake hardware light service wasn't provided for us, populate the initial lights.
+                populate_single_test_lights(service_handle.clone(), info).await;
+            }
+        }
+
+        let mut environment_builder = EnvironmentBuilder::new(storage_factory)
+            .service(Box::new(ServiceRegistry::serve(service_registry)))
+            .agents(&[restore_agent::blueprint::create()])
+            .settings(&[SettingType::Light]);
+
+        if let Some(config) = self.light_hardware_config {
+            // If hardware configuration was specified, we need a generate_handler to include the
+            // specified configuration. This generate_handler method is a copy-paste of
+            // persist::controller::spawn from setting_handler.rs, with the innermost controller
+            // create method replaced with our custome constructor from light controller.
+            // TODO(fxbug.dev/63832): See if we can reduce this rightward drift.
+            let generate_handler: GenerateHandler<InMemoryStorageFactory> =
+                Box::new(move |context: Context<InMemoryStorageFactory>| {
+                    let config_clone = config.clone();
+                    Box::pin(async move {
+                        let storage = context
+                            .environment
+                            .storage_factory_handle
+                            .lock()
+                            .await
+                            .get_store::<LightInfo>(context.id);
+
+                        let setting_type = context.setting_type;
+                        ClientImpl::create(
+                            context,
+                            Box::new(move |proxy| {
+                                let config = config_clone.clone();
+                                let storage = storage.clone();
+                                Box::pin(async move {
+                                    let proxy =
+                                        ClientProxy::<LightInfo>::new(proxy, storage, setting_type)
+                                            .await;
+                                    let controller_result = LightController::create_with_config(
+                                        proxy,
+                                        Some(config.clone()),
+                                    )
+                                    .await;
+
+                                    match controller_result {
+                                        Err(err) => Err(err),
+                                        Ok(controller) => {
+                                            Ok(Box::new(controller) as BoxedController)
+                                        }
+                                    }
+                                })
+                            }),
+                        )
+                        .await
+                    })
+                });
+
+            environment_builder = environment_builder.handler(SettingType::Light, generate_handler);
+        }
+
+        let env = environment_builder.spawn_and_get_nested_environment(ENV_NAME).await.unwrap();
+
+        let light_service = env.connect_to_service::<LightMarker>().unwrap();
+
+        TestLightEnvironment { light_service, store: store }
+    }
 }
 
 async fn set_light_value(service: &LightProxy, light_group: LightGroup) {
@@ -205,13 +297,15 @@ async fn test_light_restore() {
     let hardware_light_service_handle = Arc::new(Mutex::new(HardwareLightService::new()));
     populate_single_test_lights(hardware_light_service_handle.clone(), get_test_light_info()).await;
 
-    let (light_service, store) =
-        create_test_light_env_with_service(None, Some(hardware_light_service_handle)).await;
+    let env = TestLightEnvironmentBuilder::new()
+        .set_hardware_light_service_handle(hardware_light_service_handle)
+        .build()
+        .await;
 
     let expected_light_group = get_test_light_info().light_groups.remove(LIGHT_NAME_1).unwrap();
 
     // Verify that the restored value is persisted.
-    let mut store_lock = store.lock().await;
+    let mut store_lock = env.store.lock().await;
     let retrieved_struct = store_lock.get().await;
     assert_switchboard_light_group_eq(
         &expected_light_group.clone(),
@@ -220,7 +314,7 @@ async fn test_light_restore() {
 
     // Verify that the restored value is returned on a watch call.
     let settings: fidl_fuchsia_settings::LightGroup =
-        light_service.watch_light_group(LIGHT_NAME_1).await.expect("watch completed");
+        env.light_service.watch_light_group(LIGHT_NAME_1).await.expect("watch completed");
     assert_light_group_eq(
         &fidl_fuchsia_settings::LightGroup::from(expected_light_group),
         &settings,
@@ -231,16 +325,17 @@ async fn test_light_restore() {
 async fn test_light_restores_on_watch() {
     let hardware_light_service_handle = Arc::new(Mutex::new(HardwareLightService::new()));
 
-    let (light_service, _) =
-        create_test_light_env_with_service(None, Some(hardware_light_service_handle.clone())).await;
+    let env = TestLightEnvironmentBuilder::new()
+        .set_hardware_light_service_handle(hardware_light_service_handle.clone())
+        .build()
+        .await;
 
     // Don't populate the fake service with lights until after the service starts.
     let expected_light_info = get_test_light_info();
-    populate_single_test_lights(hardware_light_service_handle.clone(), expected_light_info.clone())
-        .await;
+    populate_single_test_lights(hardware_light_service_handle, expected_light_info.clone()).await;
 
     // Upon a watch call, light controller will read the underlying value from the fake service.
-    let settings = light_service.watch_light_groups().await.expect("watch completed");
+    let settings = env.light_service.watch_light_groups().await.expect("watch completed");
     assert_lights_eq(settings, expected_light_info);
 }
 
@@ -252,28 +347,32 @@ async fn test_light_store_and_watch() {
     changed_light_group.lights = vec![LightState { value: Some(LightValue::Brightness(0.128)) }];
     expected_light_info.light_groups.insert(LIGHT_NAME_1.to_string(), changed_light_group.clone());
 
-    let (light_service, store) =
-        create_test_light_env_with_service(Some(get_test_light_info()), None).await;
+    let env = TestLightEnvironmentBuilder::new()
+        .set_starting_light_info(get_test_light_info())
+        .build()
+        .await;
 
     // Set a light value.
-    set_light_value(&light_service, changed_light_group).await;
+    set_light_value(&env.light_service, changed_light_group).await;
 
     // Verify the value we set is persisted in DeviceStorage.
-    assert_eq!(expected_light_info, store.lock().await.get().await);
+    assert_eq!(expected_light_info, env.store.lock().await.get().await);
 
     // Ensure value from Watch matches set value.
     let settings: Vec<fidl_fuchsia_settings::LightGroup> =
-        light_service.watch_light_groups().await.expect("watch completed");
+        env.light_service.watch_light_groups().await.expect("watch completed");
     assert_lights_eq(settings, expected_light_info);
 }
 
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_light_set_wrong_size() {
-    let (light_service, _) =
-        create_test_light_env_with_service(Some(get_test_light_info()), None).await;
+    let env = TestLightEnvironmentBuilder::new()
+        .set_starting_light_info(get_test_light_info())
+        .build()
+        .await;
 
     // Light group only has one light, attempt to set two lights.
-    light_service
+    env.light_service
         .set_light_group_values(
             LIGHT_NAME_1,
             &mut vec![
@@ -331,26 +430,27 @@ async fn test_light_set_none() {
 
     let hardware_light_service_handle = Arc::new(Mutex::new(HardwareLightService::new()));
 
-    let (light_service, store) = create_test_light_env_with_service(
-        Some(starting_light_info.clone()),
-        Some(hardware_light_service_handle.clone()),
-    )
-    .await;
+    let env = TestLightEnvironmentBuilder::new()
+        .set_starting_light_info(starting_light_info.clone())
+        .set_hardware_light_service_handle(hardware_light_service_handle.clone())
+        .build()
+        .await;
 
     // Populate the fake service with the initial lights so the set calls aren't rejected.
     populate_multiple_test_lights(hardware_light_service_handle, starting_light_info).await;
 
-    set_light_value(&light_service, changed_light_group).await;
+    set_light_value(&env.light_service, changed_light_group).await;
 
     // Verify the value we set is persisted in DeviceStorage.
-    assert_eq!(expected_light_info, store.lock().await.get().await);
+    assert_eq!(expected_light_info, env.store.lock().await.get().await);
 
     // Ensure value from Watch matches set value.
     let mut settings: Vec<fidl_fuchsia_settings::LightGroup> =
-        light_service.watch_light_groups().await.expect("watch completed");
+        env.light_service.watch_light_groups().await.expect("watch completed");
     settings.sort_by_key(|group: &fidl_fuchsia_settings::LightGroup| group.name.clone());
 
-    let settings = light_service.watch_light_group(TEST_LIGHT_NAME).await.expect("watch completed");
+    let settings =
+        env.light_service.watch_light_group(TEST_LIGHT_NAME).await.expect("watch completed");
     assert_eq!(settings, expected_light_group.into());
 }
 
@@ -365,8 +465,11 @@ async fn test_individual_light_group() {
     let mut light_group_2_updated = light_group_2.clone();
     light_group_2_updated.lights = vec![LightState { value: Some(LightValue::Simple(false)) }];
 
-    let (light_service, _) =
-        create_test_light_env_with_service(Some(get_test_light_info()), None).await;
+    let env = TestLightEnvironmentBuilder::new()
+        .set_starting_light_info(get_test_light_info())
+        .build()
+        .await;
+    let light_service = env.light_service;
 
     // Ensure values from Watch matches set values.
     let settings = light_service.watch_light_group(LIGHT_NAME_1).await.expect("watch completed");
@@ -388,20 +491,25 @@ async fn test_individual_light_group() {
 
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_watch_unknown_light_group_name() {
-    let (light_service, _) =
-        create_test_light_env_with_service(Some(get_test_light_info()), None).await;
+    let env = TestLightEnvironmentBuilder::new()
+        .set_starting_light_info(get_test_light_info())
+        .build()
+        .await;
 
     // Unknown name should be rejected.
-    light_service.watch_light_group("unknown_name").await.expect_err("watch should fail");
+    env.light_service.watch_light_group("unknown_name").await.expect_err("watch should fail");
 }
 
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_set_unknown_light_group_name() {
-    let (light_service, _) =
-        create_test_light_env_with_service(Some(get_test_light_info()), None).await;
+    let env = TestLightEnvironmentBuilder::new()
+        .set_starting_light_info(get_test_light_info())
+        .build()
+        .await;
 
     // Unknown name should be rejected.
-    let result = light_service
+    let result = env
+        .light_service
         .set_light_group_values("unknown_name", &mut vec![].into_iter())
         .await
         .expect("set returns");
@@ -410,11 +518,14 @@ async fn test_set_unknown_light_group_name() {
 
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_set_wrong_state_length() {
-    let test_light_info = get_test_light_info();
-    let (light_service, _) = create_test_light_env_with_service(Some(test_light_info), None).await;
+    let env = TestLightEnvironmentBuilder::new()
+        .set_starting_light_info(get_test_light_info())
+        .build()
+        .await;
 
     // Set with no light state should fail.
-    let result = light_service
+    let result = env
+        .light_service
         .set_light_group_values(LIGHT_NAME_1, &mut vec![].into_iter())
         .await
         .expect("set returns");
@@ -425,7 +536,8 @@ async fn test_set_wrong_state_length() {
         fidl_fuchsia_settings::LightState { value: None },
         fidl_fuchsia_settings::LightState { value: None },
     ];
-    let result = light_service
+    let result = env
+        .light_service
         .set_light_group_values(LIGHT_NAME_1, &mut extra_state.into_iter())
         .await
         .expect("set returns");
@@ -452,15 +564,15 @@ async fn test_set_wrong_value_type() {
     let starting_light_info = LightInfo { light_groups };
 
     let hardware_light_service_handle = Arc::new(Mutex::new(HardwareLightService::new()));
-
-    let (light_service, _) = create_test_light_env_with_service(
-        Some(starting_light_info.clone()),
-        Some(hardware_light_service_handle.clone()),
-    )
-    .await;
+    let env = TestLightEnvironmentBuilder::new()
+        .set_starting_light_info(starting_light_info.clone())
+        .set_hardware_light_service_handle(hardware_light_service_handle)
+        .build()
+        .await;
 
     // One of the light values is On instead of brightness, the set should fail.
-    let result = light_service
+    let result = env
+        .light_service
         .set_light_group_values(
             TEST_LIGHT_NAME,
             &mut vec![
@@ -476,7 +588,8 @@ async fn test_set_wrong_value_type() {
     assert_eq!(result, Err(LightError::InvalidValue));
 
     // One of the values is the right type, but the other is still wrong, the set should fail.
-    let result = light_service
+    let result = env
+        .light_service
         .set_light_group_values(
             TEST_LIGHT_NAME,
             &mut vec![
@@ -518,15 +631,15 @@ async fn test_set_invalid_rgb_values() {
     let starting_light_info = LightInfo { light_groups };
 
     let hardware_light_service_handle = Arc::new(Mutex::new(HardwareLightService::new()));
-
-    let (light_service, _) = create_test_light_env_with_service(
-        Some(starting_light_info.clone()),
-        Some(hardware_light_service_handle.clone()),
-    )
-    .await;
+    let env = TestLightEnvironmentBuilder::new()
+        .set_starting_light_info(starting_light_info.clone())
+        .set_hardware_light_service_handle(hardware_light_service_handle)
+        .build()
+        .await;
 
     // One of the RGB components is too big, the set should fail.
-    let result = light_service
+    let result = env
+        .light_service
         .set_light_group_values(
             TEST_LIGHT_NAME,
             &mut vec![fidl_fuchsia_settings::LightState {
@@ -545,7 +658,8 @@ async fn test_set_invalid_rgb_values() {
     assert_eq!(result, Err(LightError::InvalidValue));
 
     // One of the RGB components is negative, the set should fail.
-    let result = light_service
+    let result = env
+        .light_service
         .set_light_group_values(
             TEST_LIGHT_NAME,
             &mut vec![fidl_fuchsia_settings::LightState {

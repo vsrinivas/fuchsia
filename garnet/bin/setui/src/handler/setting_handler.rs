@@ -365,7 +365,7 @@ pub mod persist {
                     .lock()
                     .await
                     .get_store::<S>(context.id);
-                let setting_type = context.setting_type.clone();
+                let setting_type = context.setting_type;
 
                 ClientImpl::create(
                     context,
