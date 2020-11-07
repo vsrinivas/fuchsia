@@ -46,25 +46,45 @@ const VOLUME_EARCON_ID: u32 = 1;
 const INITIAL_MEDIA_STREAM_SETTINGS: AudioStreamSettings = AudioStreamSettings {
     stream: Some(fidl_fuchsia_media::AudioRenderUsage::Media),
     source: Some(fidl_fuchsia_settings::AudioStreamSettingSource::User),
-    user_volume: Some(Volume { level: Some(INITIAL_VOLUME_LEVEL), muted: Some(false) }),
+    user_volume: Some(Volume {
+        level: Some(INITIAL_VOLUME_LEVEL),
+        muted: Some(false),
+        ..Volume::empty()
+    }),
+    ..AudioStreamSettings::empty()
 };
 
 const INITIAL_COMMUNICATION_STREAM_SETTINGS: AudioStreamSettings = AudioStreamSettings {
     stream: Some(fidl_fuchsia_media::AudioRenderUsage::Communication),
     source: Some(fidl_fuchsia_settings::AudioStreamSettingSource::User),
-    user_volume: Some(Volume { level: Some(INITIAL_VOLUME_LEVEL), muted: Some(false) }),
+    user_volume: Some(Volume {
+        level: Some(INITIAL_VOLUME_LEVEL),
+        muted: Some(false),
+        ..Volume::empty()
+    }),
+    ..AudioStreamSettings::empty()
 };
 
 const INITIAL_SYSTEM_AGENT_STREAM_SETTINGS: AudioStreamSettings = AudioStreamSettings {
     stream: Some(fidl_fuchsia_media::AudioRenderUsage::SystemAgent),
     source: Some(fidl_fuchsia_settings::AudioStreamSettingSource::User),
-    user_volume: Some(Volume { level: Some(INITIAL_VOLUME_LEVEL), muted: Some(false) }),
+    user_volume: Some(Volume {
+        level: Some(INITIAL_VOLUME_LEVEL),
+        muted: Some(false),
+        ..Volume::empty()
+    }),
+    ..AudioStreamSettings::empty()
 };
 
 const INITIAL_INTERRUPTION_STREAM_SETTINGS: AudioStreamSettings = AudioStreamSettings {
     stream: Some(fidl_fuchsia_media::AudioRenderUsage::Interruption),
     source: Some(fidl_fuchsia_settings::AudioStreamSettingSource::User),
-    user_volume: Some(Volume { level: Some(INITIAL_VOLUME_LEVEL), muted: Some(false) }),
+    user_volume: Some(Volume {
+        level: Some(INITIAL_VOLUME_LEVEL),
+        muted: Some(false),
+        ..Volume::empty()
+    }),
+    ..AudioStreamSettings::empty()
 };
 
 const CHANGED_MEDIA_STREAM_SETTINGS: AudioStreamSettings = AudioStreamSettings {
@@ -73,7 +93,9 @@ const CHANGED_MEDIA_STREAM_SETTINGS: AudioStreamSettings = AudioStreamSettings {
     user_volume: Some(Volume {
         level: Some(CHANGED_VOLUME_LEVEL_2),
         muted: Some(CHANGED_VOLUME_MUTED),
+        ..Volume::empty()
     }),
+    ..AudioStreamSettings::empty()
 };
 
 const CHANGED_MEDIA_STREAM_SETTINGS_MAX: AudioStreamSettings = AudioStreamSettings {
@@ -82,7 +104,9 @@ const CHANGED_MEDIA_STREAM_SETTINGS_MAX: AudioStreamSettings = AudioStreamSettin
     user_volume: Some(Volume {
         level: Some(MAX_VOLUME_LEVEL),
         muted: Some(CHANGED_VOLUME_UNMUTED),
+        ..Volume::empty()
     }),
+    ..AudioStreamSettings::empty()
 };
 
 const CHANGED_INTERRUPTION_STREAM_SETTINGS: AudioStreamSettings = AudioStreamSettings {
@@ -91,7 +115,9 @@ const CHANGED_INTERRUPTION_STREAM_SETTINGS: AudioStreamSettings = AudioStreamSet
     user_volume: Some(Volume {
         level: Some(CHANGED_VOLUME_LEVEL_2),
         muted: Some(CHANGED_VOLUME_MUTED),
+        ..Volume::empty()
     }),
+    ..AudioStreamSettings::empty()
 };
 
 const CHANGED_INTERRUPTION_STREAM_SETTINGS_MAX: AudioStreamSettings = AudioStreamSettings {
@@ -100,7 +126,9 @@ const CHANGED_INTERRUPTION_STREAM_SETTINGS_MAX: AudioStreamSettings = AudioStrea
     user_volume: Some(Volume {
         level: Some(MAX_VOLUME_LEVEL),
         muted: Some(CHANGED_VOLUME_UNMUTED),
+        ..Volume::empty()
     }),
+    ..AudioStreamSettings::empty()
 };
 
 const CHANGED_COMMUNICATION_STREAM_SETTINGS_MAX: AudioStreamSettings = AudioStreamSettings {
@@ -109,7 +137,9 @@ const CHANGED_COMMUNICATION_STREAM_SETTINGS_MAX: AudioStreamSettings = AudioStre
     user_volume: Some(Volume {
         level: Some(MAX_VOLUME_LEVEL),
         muted: Some(CHANGED_VOLUME_UNMUTED),
+        ..Volume::empty()
     }),
+    ..AudioStreamSettings::empty()
 };
 
 const CHANGED_SYSTEM_AGENT_STREAM_SETTINGS_MAX: AudioStreamSettings = AudioStreamSettings {
@@ -118,7 +148,9 @@ const CHANGED_SYSTEM_AGENT_STREAM_SETTINGS_MAX: AudioStreamSettings = AudioStrea
     user_volume: Some(Volume {
         level: Some(MAX_VOLUME_LEVEL),
         muted: Some(CHANGED_VOLUME_UNMUTED),
+        ..Volume::empty()
     }),
+    ..AudioStreamSettings::empty()
 };
 
 impl From<AudioStreamSettings> for AudioStream {

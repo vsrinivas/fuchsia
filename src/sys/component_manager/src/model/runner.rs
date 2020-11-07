@@ -209,6 +209,7 @@ mod tests {
                     ns: None,
                     outgoing_dir: None,
                     runtime_dir: None,
+                    ..fcrunner::ComponentStartInfo::empty()
                 },
                 server,
             )

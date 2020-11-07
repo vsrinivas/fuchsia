@@ -221,12 +221,16 @@ async fn test_theme_mode_auto() {
 
     // Test that if theme is is set to auto, it is reflected.
     let mut display_settings = DisplaySettings::empty();
-    display_settings.theme = Some(FidlTheme { theme_type: Some(FidlThemeType::Auto) });
+    display_settings.theme =
+        Some(FidlTheme { theme_type: Some(FidlThemeType::Auto), ..FidlTheme::empty() });
     display_proxy.set(display_settings).await.expect("set completed").expect("set successful");
 
     let settings = display_proxy.watch().await.expect("watch completed");
 
-    assert_eq!(settings.theme, Some(FidlTheme { theme_type: Some(FidlThemeType::Auto) }));
+    assert_eq!(
+        settings.theme,
+        Some(FidlTheme { theme_type: Some(FidlThemeType::Auto), ..FidlTheme::empty() })
+    );
 }
 
 #[fuchsia_async::run_until_stalled(test)]

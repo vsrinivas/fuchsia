@@ -174,7 +174,13 @@ impl FidlServer {
 
 fn into_update_result(attempt: Option<&UpdateAttempt>) -> UpdateResult {
     match attempt {
-        None => UpdateResult { attempt_id: None, url: None, options: None, state: None },
+        None => UpdateResult {
+            attempt_id: None,
+            url: None,
+            options: None,
+            state: None,
+            ..UpdateResult::empty()
+        },
         Some(attempt) => attempt.into(),
     }
 }

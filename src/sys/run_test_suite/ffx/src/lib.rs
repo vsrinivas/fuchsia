@@ -64,7 +64,7 @@ async fn get_tests<W: Write>(
     let _result = harness_proxy
         .launch_suite(
             &suite_url,
-            ftest_manager::LaunchOptions {},
+            ftest_manager::LaunchOptions::empty(),
             suite_server_end,
             controller_server_end,
         )

@@ -62,7 +62,11 @@ async fn call_work_scheduler_svc_from_namespace(
     .expect("failed to open WorkScheduler service");
     capability_util::add_dir_to_namespace(namespace, &path.dirname, dir_proxy).await;
     let work_scheduler_proxy = fsys::WorkSchedulerProxy::new(node_proxy.into_channel().unwrap());
-    let req = fsys::WorkRequest { start: Some(fsys::Start::MonotonicTime(0)), period: None };
+    let req = fsys::WorkRequest {
+        start: Some(fsys::Start::MonotonicTime(0)),
+        period: None,
+        ..fsys::WorkRequest::empty()
+    };
     let res = work_scheduler_proxy.schedule_work("hippos", req).await;
 
     match should_succeed {

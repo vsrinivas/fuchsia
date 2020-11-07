@@ -309,7 +309,13 @@ impl ProfileServerFacade {
                 None
             };
 
-            info_list.push(Information { language, name, description, provider });
+            info_list.push(Information {
+                language,
+                name,
+                description,
+                provider,
+                ..Information::empty()
+            });
         }
         Ok(info_list)
     }
@@ -570,6 +576,7 @@ impl ProfileServerFacade {
             },
             information: Some(information),
             additional_attributes,
+            ..ServiceDefinition::empty()
         }];
 
         let (connect_client, connect_requests) =

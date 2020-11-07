@@ -206,6 +206,7 @@ mod test {
             utc: Some(sample.utc.into_nanos()),
             monotonic: Some(sample.monotonic.into_nanos()),
             standard_deviation: Some(sample.standard_deviation.into_nanos()),
+            ..TimeSample::empty()
         })
     }
 

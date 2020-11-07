@@ -63,6 +63,7 @@ fn new_device_config(
             // method.
             report_metadata: Some(false),
             min_tx_buffer_length: None,
+            ..fidl_fuchsia_net_tun::BaseConfig::empty()
         }),
         // Create the device with the link online signal.
         online: Some(true),
@@ -72,6 +73,7 @@ fn new_device_config(
         // Use the MAC requested by the caller. TAP-like devices require a MAC
         // address, while TUN-like devices don't.
         mac,
+        ..fidl_fuchsia_net_tun::DeviceConfig::empty()
     }
 }
 
@@ -110,6 +112,7 @@ async fn tap_like_over_network_tun() -> Result<(), Error> {
         .connect_protocols(fidl_fuchsia_net_tun::Protocols {
             network_device: Some(netdevice_server_end),
             mac_addressing: Some(mac_server_end),
+            ..fidl_fuchsia_net_tun::Protocols::empty()
         })
         .context("failed to connect protocols")?;
 
@@ -124,6 +127,7 @@ async fn tap_like_over_network_tun() -> Result<(), Error> {
                 name: Some("tap-like".to_string()),
                 topopath: Some("/fake-topopath".to_string()),
                 metric: Some(100),
+                ..fidl_fuchsia_net_stack::InterfaceConfig::empty()
             },
             // The device definition tells Netstack this is an Ethernet device
             // and gives it handles to access the data plane and the MAC
@@ -171,6 +175,7 @@ async fn tap_like_over_network_tun() -> Result<(), Error> {
             frame_type: Some(fidl_fuchsia_hardware_network::FrameType::Ethernet),
             data: Some(helpers::bob_pings_alice_for_tap_like(&CONFIG_FOR_TAP_LIKE)),
             meta: None,
+            ..fidl_fuchsia_net_tun::Frame::empty()
         })
         .await
         .context("write_frame FIDL error")?
@@ -188,6 +193,7 @@ async fn tap_like_over_network_tun() -> Result<(), Error> {
             data,
             // Metadata associated with the frame.
             meta: _,
+            ..
         } = tun_device
             .read_frame()
             .await
@@ -212,6 +218,7 @@ async fn tap_like_over_network_tun() -> Result<(), Error> {
                             frame_type: Some(fidl_fuchsia_hardware_network::FrameType::Ethernet),
                             data: Some(helpers::build_bob_arp_response(&CONFIG_FOR_TAP_LIKE)),
                             meta: None,
+                            ..fidl_fuchsia_net_tun::Frame::empty()
                         })
                         .await
                         .context("write_frame FIDL error")?
@@ -265,6 +272,7 @@ async fn tun_like_over_network_tun() -> Result<(), Error> {
         .connect_protocols(fidl_fuchsia_net_tun::Protocols {
             network_device: Some(netdevice_server_end),
             mac_addressing: None,
+            ..fidl_fuchsia_net_tun::Protocols::empty()
         })
         .context("failed to connect protocols")?;
 
@@ -279,6 +287,7 @@ async fn tun_like_over_network_tun() -> Result<(), Error> {
                 name: Some("tun-like".to_string()),
                 topopath: Some("/fake-topopath".to_string()),
                 metric: Some(100),
+                ..fidl_fuchsia_net_stack::InterfaceConfig::empty()
             },
             // The device definition tells Netstack this is a TUN-like device
             // operating at the IP layer and gives it handles to access the data
@@ -324,6 +333,7 @@ async fn tun_like_over_network_tun() -> Result<(), Error> {
             frame_type: Some(fidl_fuchsia_hardware_network::FrameType::Ipv4),
             data: Some(helpers::bob_pings_alice_for_tun_like(&CONFIG_FOR_TUN_LIKE)),
             meta: None,
+            ..fidl_fuchsia_net_tun::Frame::empty()
         })
         .await
         .context("write_frame FIDL error")?
@@ -340,6 +350,7 @@ async fn tun_like_over_network_tun() -> Result<(), Error> {
             data,
             // Metadata associated with the frame.
             meta: _,
+            ..
         } = tun_device
             .read_frame()
             .await
@@ -572,6 +583,7 @@ mod helpers {
                  has_default_ipv4_route: _,
                  has_default_ipv6_route: _,
                  name: _,
+                 ..
              }| {
                 if *online == Some(true) {
                     Some(())

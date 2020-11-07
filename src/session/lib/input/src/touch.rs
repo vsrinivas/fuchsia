@@ -203,7 +203,9 @@ impl TouchBinding {
                         max_contacts: _,
                         touch_type: _,
                         buttons: _,
+                        ..
                     }),
+                ..
             }) => Ok(TouchBinding {
                 event_sender: input_event_sender,
                 device_descriptor: TouchDeviceDescriptor {
@@ -315,6 +317,7 @@ impl TouchBinding {
                 pressure: pressure_axis,
                 contact_width: width_axis,
                 contact_height: height_axis,
+                ..
             } => Ok(ContactDeviceDescriptor {
                 x_range: x_axis.range,
                 y_range: y_axis.range,
@@ -398,6 +401,7 @@ mod tests {
             pressure: None,
             contact_width: None,
             contact_height: None,
+            ..fidl_fuchsia_input_report::ContactInputReport::empty()
         };
         let reports = vec![create_touch_input_report(vec![contact], event_time_i64)];
 
@@ -438,6 +442,7 @@ mod tests {
             pressure: None,
             contact_width: None,
             contact_height: None,
+            ..fidl_fuchsia_input_report::ContactInputReport::empty()
         };
         let reports = vec![
             create_touch_input_report(vec![contact], event_time_i64),
@@ -495,6 +500,7 @@ mod tests {
             pressure: None,
             contact_width: None,
             contact_height: None,
+            ..fidl_fuchsia_input_report::ContactInputReport::empty()
         };
         let second_contact = fidl_fuchsia_input_report::ContactInputReport {
             contact_id: Some(TOUCH_ID),
@@ -503,6 +509,7 @@ mod tests {
             pressure: None,
             contact_width: None,
             contact_height: None,
+            ..fidl_fuchsia_input_report::ContactInputReport::empty()
         };
 
         let reports = vec![

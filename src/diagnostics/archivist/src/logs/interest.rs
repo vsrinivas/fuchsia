@@ -76,7 +76,10 @@ impl InterestDispatcher {
                             // on strict name comparison look at using moniker
                             // heuristics via selectors API.
                             if name == &component.name {
-                                interest = Some(Interest { min_severity: s.interest.min_severity });
+                                interest = Some(Interest {
+                                    min_severity: s.interest.min_severity,
+                                    ..Interest::empty()
+                                });
                             }
                         }
                         _ => warn!("Unexpected component selector moniker segment {:?}", segment),
@@ -86,7 +89,10 @@ impl InterestDispatcher {
         });
         if let Some(i) = interest {
             self.notify_listeners_for_component(component, |l| {
-                let _ = l.send_on_register_interest(Interest { min_severity: i.min_severity });
+                let _ = l.send_on_register_interest(Interest {
+                    min_severity: i.min_severity,
+                    ..Interest::empty()
+                });
             });
         }
     }
@@ -110,6 +116,7 @@ impl InterestDispatcher {
                                 |l| {
                                     let _ = l.send_on_register_interest(Interest {
                                         min_severity: s.interest.min_severity,
+                                        ..Interest::empty()
                                     });
                                 },
                             );
@@ -181,7 +188,10 @@ mod tests {
                 }
                 // notify checks the channel/retains
                 dispatcher.notify_listeners_for_component(c.clone(), |listener| {
-                    let _ = listener.send_on_register_interest(Interest { min_severity: None });
+                    let _ = listener.send_on_register_interest(Interest {
+                        min_severity: None,
+                        ..Interest::empty()
+                    });
                 });
 
                 // check that the listener is no longer active.

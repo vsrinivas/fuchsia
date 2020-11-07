@@ -44,42 +44,51 @@ pub struct State {
 
 impl From<State> for Option<update::State> {
     fn from(state: State) -> Self {
-        let update =
-            Some(UpdateInfo { version_available: state.version_available, download_size: None });
-        let installation_progress =
-            Some(InstallationProgress { fraction_completed: state.install_progress });
+        let update = Some(UpdateInfo {
+            version_available: state.version_available,
+            download_size: None,
+            ..UpdateInfo::empty()
+        });
+        let installation_progress = Some(InstallationProgress {
+            fraction_completed: state.install_progress,
+            ..InstallationProgress::empty()
+        });
         match state.manager_state {
             state_machine::State::Idle => None,
             state_machine::State::CheckingForUpdates => {
-                Some(update::State::CheckingForUpdates(CheckingForUpdatesData {}))
+                Some(update::State::CheckingForUpdates(CheckingForUpdatesData::empty()))
             }
             state_machine::State::ErrorCheckingForUpdate => {
-                Some(update::State::ErrorCheckingForUpdate(ErrorCheckingForUpdateData {}))
+                Some(update::State::ErrorCheckingForUpdate(ErrorCheckingForUpdateData::empty()))
             }
             state_machine::State::NoUpdateAvailable => {
-                Some(update::State::NoUpdateAvailable(NoUpdateAvailableData {}))
+                Some(update::State::NoUpdateAvailable(NoUpdateAvailableData::empty()))
             }
             state_machine::State::InstallationDeferredByPolicy => {
                 Some(update::State::InstallationDeferredByPolicy(InstallationDeferredData {
                     update,
+                    ..InstallationDeferredData::empty()
                 }))
             }
             state_machine::State::InstallingUpdate => {
                 Some(update::State::InstallingUpdate(InstallingData {
                     update,
                     installation_progress,
+                    ..InstallingData::empty()
                 }))
             }
             state_machine::State::WaitingForReboot => {
                 Some(update::State::WaitingForReboot(InstallingData {
                     update,
                     installation_progress,
+                    ..InstallingData::empty()
                 }))
             }
             state_machine::State::InstallationError => {
                 Some(update::State::InstallationError(InstallationErrorData {
                     update,
                     installation_progress,
+                    ..InstallationErrorData::empty()
                 }))
             }
         }
@@ -853,6 +862,7 @@ mod tests {
         let options = update::CheckOptions {
             initiator: Some(Initiator::User),
             allow_attaching_to_existing_update_check: Some(false),
+            ..update::CheckOptions::empty()
         };
         let result = proxy.check_now(options, None).await.unwrap();
         assert_matches!(result, Ok(()));
@@ -866,6 +876,7 @@ mod tests {
         let options = update::CheckOptions {
             initiator: None,
             allow_attaching_to_existing_update_check: None,
+            ..update::CheckOptions::empty()
         };
         let result = proxy.check_now(options, Some(client_end)).await.unwrap();
         assert_matches!(result, Err(CheckNotStartedReason::InvalidOptions));
@@ -884,6 +895,7 @@ mod tests {
         let options = update::CheckOptions {
             initiator: Some(Initiator::User),
             allow_attaching_to_existing_update_check: None,
+            ..update::CheckOptions::empty()
         };
         let result = proxy.check_now(options, None).await.unwrap();
         assert_matches!(result, Err(CheckNotStartedReason::AlreadyInProgress));
@@ -901,6 +913,7 @@ mod tests {
         let options = update::CheckOptions {
             initiator: Some(Initiator::User),
             allow_attaching_to_existing_update_check: None,
+            ..update::CheckOptions::empty()
         };
         let result = proxy.check_now(options, None).await.unwrap();
         assert_matches!(result, Err(CheckNotStartedReason::Throttled));
@@ -914,12 +927,13 @@ mod tests {
         let options = update::CheckOptions {
             initiator: Some(Initiator::User),
             allow_attaching_to_existing_update_check: Some(true),
+            ..update::CheckOptions::empty()
         };
         let result = proxy.check_now(options, Some(client_end)).await.unwrap();
         assert_matches!(result, Ok(()));
         let expected_states = [
-            update::State::CheckingForUpdates(CheckingForUpdatesData {}),
-            update::State::ErrorCheckingForUpdate(ErrorCheckingForUpdateData {}),
+            update::State::CheckingForUpdates(CheckingForUpdatesData::empty()),
+            update::State::ErrorCheckingForUpdate(ErrorCheckingForUpdateData::empty()),
         ];
         let mut expected_states = expected_states.iter();
         while let Some(event) = stream.try_next().await.unwrap() {
@@ -942,6 +956,7 @@ mod tests {
         let options = update::CheckOptions {
             initiator: Some(Initiator::User),
             allow_attaching_to_existing_update_check: Some(true),
+            ..update::CheckOptions::empty()
         };
         let result = proxy.check_now(options, Some(client_end)).await.unwrap();
         assert_matches!(result, Ok(()));
@@ -960,6 +975,7 @@ mod tests {
         let options = update::CheckOptions {
             initiator: Some(Initiator::User),
             allow_attaching_to_existing_update_check: Some(true),
+            ..update::CheckOptions::empty()
         };
         let result = proxy.check_now(options, Some(client_end)).await.unwrap();
         assert_matches!(result, Ok(()));
@@ -982,6 +998,7 @@ mod tests {
                 update::State::InstallingUpdate(InstallingData {
                     update: _,
                     installation_progress,
+                    ..
                 }) => {
                     assert_eq!(installation_progress.unwrap().fraction_completed.unwrap(), progress)
                 }

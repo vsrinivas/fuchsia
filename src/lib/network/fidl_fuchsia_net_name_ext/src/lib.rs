@@ -63,25 +63,34 @@ pub trait CloneExt {
 
 impl CloneExt for fname::StaticDnsServerSource {
     fn clone(&self) -> fname::StaticDnsServerSource {
-        fname::StaticDnsServerSource {}
+        fname::StaticDnsServerSource::empty()
     }
 }
 
 impl CloneExt for fname::DhcpDnsServerSource {
     fn clone(&self) -> fname::DhcpDnsServerSource {
-        fname::DhcpDnsServerSource { source_interface: self.source_interface }
+        fname::DhcpDnsServerSource {
+            source_interface: self.source_interface,
+            ..fname::DhcpDnsServerSource::empty()
+        }
     }
 }
 
 impl CloneExt for fname::NdpDnsServerSource {
     fn clone(&self) -> fname::NdpDnsServerSource {
-        fname::NdpDnsServerSource { source_interface: self.source_interface }
+        fname::NdpDnsServerSource {
+            source_interface: self.source_interface,
+            ..fname::NdpDnsServerSource::empty()
+        }
     }
 }
 
 impl CloneExt for fname::Dhcpv6DnsServerSource {
     fn clone(&self) -> fname::Dhcpv6DnsServerSource {
-        fname::Dhcpv6DnsServerSource { source_interface: self.source_interface }
+        fname::Dhcpv6DnsServerSource {
+            source_interface: self.source_interface,
+            ..fname::Dhcpv6DnsServerSource::empty()
+        }
     }
 }
 
@@ -103,6 +112,7 @@ impl CloneExt for fname::DnsServer_ {
         fname::DnsServer_ {
             address: self.address.clone(),
             source: self.source.as_ref().map(|x| x.clone()),
+            ..fname::DnsServer_::empty()
         }
     }
 }
@@ -121,35 +131,55 @@ mod tests {
 
     #[test]
     fn test_from_into_ext() {
-        let a = fname::StaticDnsServerSource {};
+        let a = fname::StaticDnsServerSource::empty();
         assert_eq!(fname::DnsServerSource::StaticSource(a.clone()), a.into_ext());
 
-        let a = fname::DhcpDnsServerSource { source_interface: Some(1) };
+        let a = fname::DhcpDnsServerSource {
+            source_interface: Some(1),
+            ..fname::DhcpDnsServerSource::empty()
+        };
         assert_eq!(fname::DnsServerSource::Dhcp(a.clone()), a.into_ext());
 
-        let a = fname::NdpDnsServerSource { source_interface: Some(1) };
+        let a = fname::NdpDnsServerSource {
+            source_interface: Some(1),
+            ..fname::NdpDnsServerSource::empty()
+        };
         assert_eq!(fname::DnsServerSource::Ndp(a.clone()), a.into_ext());
 
-        let a = fname::Dhcpv6DnsServerSource { source_interface: Some(1) };
+        let a = fname::Dhcpv6DnsServerSource {
+            source_interface: Some(1),
+            ..fname::Dhcpv6DnsServerSource::empty()
+        };
         assert_eq!(fname::DnsServerSource::Dhcpv6(a.clone()), a.into_ext());
     }
 
     #[test]
     fn test_clone() {
-        let a = fname::StaticDnsServerSource {};
+        let a = fname::StaticDnsServerSource::empty();
         assert_eq!(a.clone(), a);
 
-        let a = fname::DhcpDnsServerSource { source_interface: Some(1) };
+        let a = fname::DhcpDnsServerSource {
+            source_interface: Some(1),
+            ..fname::DhcpDnsServerSource::empty()
+        };
         assert_eq!(a.clone(), a);
 
-        let a = fname::NdpDnsServerSource { source_interface: Some(1) };
+        let a = fname::NdpDnsServerSource {
+            source_interface: Some(1),
+            ..fname::NdpDnsServerSource::empty()
+        };
         assert_eq!(a.clone(), a);
 
-        let a = fname::Dhcpv6DnsServerSource { source_interface: Some(1) };
+        let a = fname::Dhcpv6DnsServerSource {
+            source_interface: Some(1),
+            ..fname::Dhcpv6DnsServerSource::empty()
+        };
         assert_eq!(a.clone(), a);
 
-        let a =
-            fname::DnsServerSource::Dhcp(fname::DhcpDnsServerSource { source_interface: Some(1) });
+        let a = fname::DnsServerSource::Dhcp(fname::DhcpDnsServerSource {
+            source_interface: Some(1),
+            ..fname::DhcpDnsServerSource::empty()
+        });
         assert_eq!(a.clone(), a);
 
         let a = fname::DnsServer_ {
@@ -159,7 +189,9 @@ mod tests {
             })),
             source: Some(fname::DnsServerSource::Dhcp(fname::DhcpDnsServerSource {
                 source_interface: Some(1),
+                ..fname::DhcpDnsServerSource::empty()
             })),
+            ..fname::DnsServer_::empty()
         };
         assert_eq!(a.clone(), a);
     }

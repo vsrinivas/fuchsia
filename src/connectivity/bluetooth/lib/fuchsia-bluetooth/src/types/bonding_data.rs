@@ -435,6 +435,7 @@ impl From<LeData> for sys::LeData {
             local_ltk: src.local_ltk,
             irk: src.irk,
             csrk: src.csrk,
+            ..sys::LeData::empty()
         }
     }
 }
@@ -446,6 +447,7 @@ impl From<BredrData> for sys::BredrData {
             role_preference: src.role_preference,
             services: Some(src.services.into_iter().map(|uuid| uuid.into()).collect()),
             link_key: src.link_key,
+            ..sys::BredrData::empty()
         }
     }
 }
@@ -603,6 +605,7 @@ impl From<BondingData> for sys::BondingData {
             name: bd.name,
             le,
             bredr,
+            ..sys::BondingData::empty()
         }
     }
 }
@@ -617,7 +620,7 @@ pub struct HostData {
 
 impl From<HostData> for sys::HostData {
     fn from(src: HostData) -> sys::HostData {
-        sys::HostData { irk: src.irk }
+        sys::HostData { irk: src.irk, ..sys::HostData::empty() }
     }
 }
 
@@ -649,6 +652,7 @@ impl From<Identity> for sys::Identity {
         sys::Identity {
             host: Some(src.host.into()),
             bonds: Some(src.bonds.into_iter().map(|i| i.into()).collect()),
+            ..sys::Identity::empty()
         }
     }
 }
@@ -879,11 +883,18 @@ mod tests {
                 name: None,
                 le: None,
                 bredr: None,
+                ..sys::BondingData::empty()
             }
         }
 
         fn empty_bredr_data() -> sys::BredrData {
-            sys::BredrData { address: None, role_preference: None, link_key: None, services: None }
+            sys::BredrData {
+                address: None,
+                role_preference: None,
+                link_key: None,
+                services: None,
+                ..sys::BredrData::empty()
+            }
         }
 
         fn empty_le_data() -> sys::LeData {
@@ -896,6 +907,7 @@ mod tests {
                 local_ltk: None,
                 irk: None,
                 csrk: None,
+                ..sys::LeData::empty()
             }
         }
 

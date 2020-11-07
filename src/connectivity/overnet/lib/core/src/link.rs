@@ -184,6 +184,7 @@ impl LinkRouting {
                 .flatten()
                 .map(|d| d.as_micros().try_into().unwrap_or(std::u64::MAX)),
             config: (self.config)(),
+            ..LinkDiagnosticInfo::empty()
         }
     }
 
@@ -535,6 +536,7 @@ impl From<LinkStatus> for fidl_fuchsia_overnet_protocol::LinkStatus {
                 round_trip_time: Some(
                     status.round_trip_time.as_micros().try_into().unwrap_or(std::u64::MAX),
                 ),
+                ..LinkMetrics::empty()
             },
         }
     }

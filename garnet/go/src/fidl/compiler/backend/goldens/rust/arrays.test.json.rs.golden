@@ -97,6 +97,9 @@ fidl_struct_copy! {
 #[derive(Debug, PartialEq)]
 pub struct TableSmallArray {
     pub a: Option<[u32; 2]>,
+    #[deprecated = "Use `..TableSmallArray::empty()` to construct and `..` to match."]
+    #[doc(hidden)]
+    pub __non_exhaustive: (),
 }
 
 fidl_table! {
@@ -112,6 +115,9 @@ fidl_table! {
 #[derive(Debug, PartialEq)]
 pub struct TableLargeArray {
     pub a: Option<[u32; 100]>,
+    #[deprecated = "Use `..TableLargeArray::empty()` to construct and `..` to match."]
+    #[doc(hidden)]
+    pub __non_exhaustive: (),
 }
 
 fidl_table! {

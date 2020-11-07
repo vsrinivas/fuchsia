@@ -46,6 +46,7 @@ impl RequestExt for fonts::Request {
             weight: Some(self.weight as u16),
             slant: Some(self.slant),
             width: Width::from_primitive(self.width),
+            ..Style2::empty()
         });
 
         let languages: Option<Vec<intl::LocaleId>> = self.language.map(|languages| {
@@ -70,9 +71,11 @@ impl RequestExt for fonts::Request {
                     _ => None,
                 },
                 fallback_family: self.fallback_group.to_generic_font_family(),
+                ..TypefaceQuery::empty()
             }),
             flags: Some(flags),
             cache_miss_policy: None,
+            ..TypefaceRequest::empty()
         }
     }
 }

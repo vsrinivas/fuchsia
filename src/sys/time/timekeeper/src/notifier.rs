@@ -64,9 +64,11 @@ struct NotifyInner {
 impl NotifyInner {
     /// Reply to a client with the current UtcState.
     fn reply(&self, responder: ftime::UtcWatchStateResponder, update_time: i64) {
-        if let Err(why) = responder
-            .send(ftime::UtcState { timestamp: Some(update_time), source: Some(self.source) })
-        {
+        if let Err(why) = responder.send(ftime::UtcState {
+            timestamp: Some(update_time),
+            source: Some(self.source),
+            ..ftime::UtcState::empty()
+        }) {
             warn!("failed to notify a client of an update: {:?}", why);
         }
     }

@@ -29,7 +29,11 @@ impl FIDLClone for AudioSettings {
     fn clone(&self) -> Self {
         return AudioSettings {
             streams: Some(self.streams.as_ref().unwrap().clone()),
-            input: Some(AudioInput { muted: self.input.as_ref().unwrap().muted }),
+            input: Some(AudioInput {
+                muted: self.input.as_ref().unwrap().muted,
+                ..AudioInput::empty()
+            }),
+            ..AudioSettings::empty()
         };
     }
 }
@@ -42,7 +46,9 @@ impl FIDLClone for AudioStreamSettings {
             user_volume: Some(Volume {
                 level: self.user_volume.as_ref().unwrap().level,
                 muted: self.user_volume.as_ref().unwrap().muted,
+                ..Volume::empty()
             }),
+            ..AudioStreamSettings::empty()
         };
     }
 }
@@ -50,14 +56,18 @@ impl FIDLClone for AudioStreamSettings {
 impl FIDLClone for InputDeviceSettings {
     fn clone(&self) -> Self {
         InputDeviceSettings {
-            microphone: Some(Microphone { muted: self.microphone.as_ref().unwrap().muted }),
+            microphone: Some(Microphone {
+                muted: self.microphone.as_ref().unwrap().muted,
+                ..Microphone::empty()
+            }),
+            ..InputDeviceSettings::empty()
         }
     }
 }
 
 impl FIDLClone for Microphone {
     fn clone(&self) -> Self {
-        Microphone { muted: self.muted }
+        Microphone { muted: self.muted, ..Microphone::empty() }
     }
 }
 
@@ -130,13 +140,14 @@ impl FIDLClone for LightGroup {
                 .lights
                 .as_ref()
                 .map(|l| l.iter().map(LightState::clone).collect::<Vec<_>>()),
+            ..LightGroup::empty()
         }
     }
 }
 
 impl FIDLClone for LightState {
     fn clone(&self) -> Self {
-        LightState { value: self.value.as_ref().map(LightValue::clone) }
+        LightState { value: self.value.as_ref().map(LightValue::clone), ..LightState::empty() }
     }
 }
 
@@ -157,6 +168,7 @@ impl FIDLClone for MediaButtonsEvent {
             mic_mute: self.mic_mute,
             pause: self.pause,
             camera_disable: self.camera_disable,
+            ..MediaButtonsEvent::empty()
         }
     }
 }

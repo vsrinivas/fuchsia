@@ -124,7 +124,11 @@ mod test {
             cache
                 .get_oauth_proxy("crashes")
                 .await?
-                .revoke_refresh_token(OauthRefreshToken { content: None, account_id: None })
+                .revoke_refresh_token(OauthRefreshToken {
+                    content: None,
+                    account_id: None,
+                    ..OauthRefreshToken::empty()
+                })
                 .await
                 .unwrap()
                 .unwrap();
@@ -133,7 +137,11 @@ mod test {
             assert!(cache
                 .get_oauth_proxy("crashes")
                 .await?
-                .revoke_refresh_token(OauthRefreshToken { content: None, account_id: None })
+                .revoke_refresh_token(OauthRefreshToken {
+                    content: None,
+                    account_id: None,
+                    ..OauthRefreshToken::empty()
+                })
                 .await
                 .is_err());
 
@@ -163,9 +171,11 @@ mod test {
                     Some(OauthOpenIdConnectRequest::GetIdTokenFromRefreshToken {
                         responder,
                         ..
-                    }) => {
-                        responder.send(&mut Ok(OpenIdToken { content: None, expiry_time: None }))?
-                    }
+                    }) => responder.send(&mut Ok(OpenIdToken {
+                        content: None,
+                        expiry_time: None,
+                        ..OpenIdToken::empty()
+                    }))?,
                     _ => panic!("Got unexpected request"),
                 };
 
@@ -188,6 +198,7 @@ mod test {
                 .get_id_token_from_refresh_token(OpenIdTokenFromOauthRefreshTokenRequest {
                     refresh_token: None,
                     audiences: None,
+                    ..OpenIdTokenFromOauthRefreshTokenRequest::empty()
                 })
                 .await
                 .unwrap()
@@ -199,7 +210,8 @@ mod test {
                 .await?
                 .get_id_token_from_refresh_token(OpenIdTokenFromOauthRefreshTokenRequest {
                     refresh_token: None,
-                    audiences: None
+                    audiences: None,
+                    ..OpenIdTokenFromOauthRefreshTokenRequest::empty()
                 })
                 .await
                 .is_err());

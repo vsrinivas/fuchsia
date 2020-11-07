@@ -150,6 +150,7 @@ impl ElementaryStream for VideoFrameStream {
             oob_bytes: None,
             pass_through_parameters: None,
             timebase: self.timebase,
+            ..FormatDetails::empty()
         }
     }
 

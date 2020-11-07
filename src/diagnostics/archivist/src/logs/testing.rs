@@ -46,11 +46,13 @@ pub fn create_capability_requested_event(
         descriptor: Some(fsys::ComponentDescriptor {
             moniker: Some(target_moniker),
             component_url: Some(target_url),
+            ..fsys::ComponentDescriptor::empty()
         }),
         event_result: Some(fsys::EventResult::Payload(fsys::EventPayload::CapabilityRequested(
             fsys::CapabilityRequestedPayload {
                 name: Some(LogSinkMarker::NAME.into()),
                 capability: Some(capability),
+                ..fsys::CapabilityRequestedPayload::empty()
             },
         ))),
         ..fsys::Event::empty()

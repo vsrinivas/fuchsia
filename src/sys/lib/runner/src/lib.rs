@@ -108,6 +108,7 @@ mod tests {
             ns: None,
             outgoing_dir: None,
             runtime_dir: None,
+            ..fcrunner::ComponentStartInfo::empty()
         };
         assert_eq!(
             Ok("some_url".to_string()),
@@ -126,11 +127,13 @@ mod tests {
                     value: binary_name
                         .and_then(|s| Some(Box::new(fdata::DictionaryValue::Str(s.to_string())))),
                 }]),
+                ..fdata::Dictionary::empty()
             }),
             ns: None,
             outgoing_dir: None,
             runtime_dir: None,
             resolved_url: None,
+            ..fcrunner::ComponentStartInfo::empty()
         };
         assert_eq!(
             Ok("bin/myexecutable".to_string()),
@@ -153,11 +156,13 @@ mod tests {
                     key: "args".to_string(),
                     value: Some(Box::new(fdata::DictionaryValue::StrVec(args))),
                 }]),
+                ..fdata::Dictionary::empty()
             }),
             ns: None,
             outgoing_dir: None,
             runtime_dir: None,
             resolved_url: None,
+            ..fcrunner::ComponentStartInfo::empty()
         }
     }
 
@@ -168,11 +173,15 @@ mod tests {
         assert_eq!(
             e,
             get_program_args(&fcrunner::ComponentStartInfo {
-                program: Some(fdata::Dictionary { entries: Some(vec![]) }),
+                program: Some(fdata::Dictionary {
+                    entries: Some(vec![]),
+                    ..fdata::Dictionary::empty()
+                }),
                 ns: None,
                 outgoing_dir: None,
                 runtime_dir: None,
                 resolved_url: None,
+                ..fcrunner::ComponentStartInfo::empty()
             })
             .unwrap()
         );

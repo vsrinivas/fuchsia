@@ -309,6 +309,7 @@ impl std::convert::TryInto<SensorFeatureReport> for SerializableSensorFeatureRep
             sensitivity: self.sensitivity.clone(),
             threshold_high: self.threshold_high.clone(),
             threshold_low: self.threshold_low.clone(),
+            ..SensorFeatureReport::empty()
         })
     }
 }
@@ -335,6 +336,7 @@ impl std::convert::TryInto<FeatureReport> for SerializableFeatureReport {
                 Some(s) => Some(s.try_into()?),
                 None => None,
             },
+            ..FeatureReport::empty()
         })
     }
 }

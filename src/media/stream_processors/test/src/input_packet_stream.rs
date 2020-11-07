@@ -118,6 +118,7 @@ impl<'a, I: Iterator<Item = ElementaryStreamChunk>> InputPacketStream<I> {
             header: Some(PacketHeader {
                 packet_index: Some(packet_idx),
                 buffer_lifetime_ordinal: Some(self.buffer_set.buffer_lifetime_ordinal),
+                ..PacketHeader::empty()
             }),
             buffer_index: Some(buffer_idx),
             stream_lifetime_ordinal: Some(self.stream_lifetime_ordinal),

@@ -190,7 +190,12 @@ async fn install_ip_device(
     let interface_state = env.connect_to_service::<fidl_fuchsia_net_interfaces::StateMarker>()?;
     let id = stack
         .add_interface(
-            fidl_fuchsia_net_stack::InterfaceConfig { name: None, topopath: None, metric: None },
+            fidl_fuchsia_net_stack::InterfaceConfig {
+                name: None,
+                topopath: None,
+                metric: None,
+                ..fidl_fuchsia_net_stack::InterfaceConfig::empty()
+            },
             &mut fidl_fuchsia_net_stack::DeviceDefinition::Ip(device),
         )
         .await
@@ -246,6 +251,7 @@ fn base_ip_device_config() -> fidl_fuchsia_net_tun::BaseConfig {
         ]),
         report_metadata: None,
         min_tx_buffer_length: None,
+        ..fidl_fuchsia_net_tun::BaseConfig::empty()
     }
 }
 
@@ -273,6 +279,7 @@ async fn test_ip_endpoints_socket() -> Result {
                 fallible_transmit_right: None,
                 mac_left: None,
                 mac_right: None,
+                ..fidl_fuchsia_net_tun::DevicePairConfig::empty()
             },
             req,
         )
@@ -287,11 +294,14 @@ async fn test_ip_endpoints_socket() -> Result {
             left: Some(fidl_fuchsia_net_tun::Protocols {
                 network_device: Some(client_req),
                 mac_addressing: None,
+                ..fidl_fuchsia_net_tun::Protocols::empty()
             }),
             right: Some(fidl_fuchsia_net_tun::Protocols {
                 network_device: Some(server_req),
                 mac_addressing: None,
+                ..fidl_fuchsia_net_tun::Protocols::empty()
             }),
+            ..fidl_fuchsia_net_tun::DevicePairEnds::empty()
         })
         .context("connect protocols failed")?;
 
@@ -344,6 +354,7 @@ async fn test_ip_endpoint_packets() -> Result {
                 online: Some(true),
                 blocking: Some(true),
                 mac: None,
+                ..fidl_fuchsia_net_tun::DeviceConfig::empty()
             },
             req,
         )
@@ -355,6 +366,7 @@ async fn test_ip_endpoint_packets() -> Result {
         .connect_protocols(fidl_fuchsia_net_tun::Protocols {
             network_device: Some(device_req),
             mac_addressing: None,
+            ..fidl_fuchsia_net_tun::Protocols::empty()
         })
         .context("connect protocols failed")?;
 
@@ -480,6 +492,7 @@ async fn test_ip_endpoint_packets() -> Result {
             frame_type: Some(fidl_fuchsia_hardware_network::FrameType::Ipv4),
             data: Some(packet.clone()),
             meta: None,
+            ..fidl_fuchsia_net_tun::Frame::empty()
         })
         .await
         .context("write_frame failed")?
@@ -519,6 +532,7 @@ async fn test_ip_endpoint_packets() -> Result {
                 frame_type: Some(fidl_fuchsia_hardware_network::FrameType::Ipv6),
                 data: Some(packet),
                 meta: None,
+                ..fidl_fuchsia_net_tun::Frame::empty()
             },
             &mut read_frame,
         )
@@ -549,6 +563,7 @@ async fn test_ip_endpoint_packets() -> Result {
             frame_type: Some(fidl_fuchsia_hardware_network::FrameType::Ipv6),
             data: Some(packet.clone()),
             meta: None,
+            ..fidl_fuchsia_net_tun::Frame::empty()
         })
         .await
         .context("write_frame failed")?
@@ -588,6 +603,7 @@ async fn test_ip_endpoint_packets() -> Result {
                 frame_type: Some(fidl_fuchsia_hardware_network::FrameType::Ipv4),
                 data: Some(packet),
                 meta: None,
+                ..fidl_fuchsia_net_tun::Frame::empty()
             },
             &mut read_frame,
         )

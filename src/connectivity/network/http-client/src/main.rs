@@ -99,7 +99,9 @@ async fn to_success_response(
             method: Some(info.method.to_string()),
             url: info.url.map(|u| u.to_string()),
             referrer: info.referrer.map(|r| r.to_string()),
+            ..net_http::RedirectTarget::empty()
         }),
+        ..net_http::Response::empty()
     };
 
     fasync::Task::spawn(async move {
@@ -178,6 +180,7 @@ fn to_error_response(error: net_http::Error) -> net_http::Response {
         status_line: None,
         headers: None,
         redirect: None,
+        ..net_http::Response::empty()
     }
 }
 

@@ -51,13 +51,13 @@ impl Into<fidl::State> for State {
     fn into(self) -> fidl::State {
         match self {
             State::CheckingForUpdates => {
-                fidl::State::CheckingForUpdates(fidl::CheckingForUpdatesData {})
+                fidl::State::CheckingForUpdates(fidl::CheckingForUpdatesData::empty())
             }
             State::ErrorCheckingForUpdate => {
-                fidl::State::ErrorCheckingForUpdate(fidl::ErrorCheckingForUpdateData {})
+                fidl::State::ErrorCheckingForUpdate(fidl::ErrorCheckingForUpdateData::empty())
             }
             State::NoUpdateAvailable => {
-                fidl::State::NoUpdateAvailable(fidl::NoUpdateAvailableData {})
+                fidl::State::NoUpdateAvailable(fidl::NoUpdateAvailableData::empty())
             }
             State::InstallationDeferredByPolicy(data) => {
                 fidl::State::InstallationDeferredByPolicy(data.into())
@@ -95,6 +95,7 @@ impl Into<fidl::InstallationErrorData> for InstallationErrorData {
         fidl::InstallationErrorData {
             update: self.update.map(|ext| ext.into()),
             installation_progress: self.installation_progress.map(|ext| ext.into()),
+            ..fidl::InstallationErrorData::empty()
         }
     }
 }
@@ -114,7 +115,10 @@ pub struct InstallationProgress {
 }
 impl Into<fidl::InstallationProgress> for InstallationProgress {
     fn into(self) -> fidl::InstallationProgress {
-        fidl::InstallationProgress { fraction_completed: self.fraction_completed }
+        fidl::InstallationProgress {
+            fraction_completed: self.fraction_completed,
+            ..fidl::InstallationProgress::empty()
+        }
     }
 }
 impl From<fidl::InstallationProgress> for InstallationProgress {
@@ -133,6 +137,7 @@ impl Into<fidl::InstallingData> for InstallingData {
         fidl::InstallingData {
             update: self.update.map(|ext| ext.into()),
             installation_progress: self.installation_progress.map(|ext| ext.into()),
+            ..fidl::InstallingData::empty()
         }
     }
 }
@@ -151,7 +156,10 @@ pub struct InstallationDeferredData {
 }
 impl Into<fidl::InstallationDeferredData> for InstallationDeferredData {
     fn into(self) -> fidl::InstallationDeferredData {
-        fidl::InstallationDeferredData { update: self.update.map(|ext| ext.into()) }
+        fidl::InstallationDeferredData {
+            update: self.update.map(|ext| ext.into()),
+            ..fidl::InstallationDeferredData::empty()
+        }
     }
 }
 impl From<fidl::InstallationDeferredData> for InstallationDeferredData {
@@ -171,6 +179,7 @@ impl Into<fidl::UpdateInfo> for UpdateInfo {
         fidl::UpdateInfo {
             version_available: self.version_available,
             download_size: self.download_size,
+            ..fidl::UpdateInfo::empty()
         }
     }
 }
@@ -242,6 +251,7 @@ impl From<CheckOptions> for fidl::CheckOptions {
             allow_attaching_to_existing_update_check: Some(
                 o.allow_attaching_to_existing_update_check,
             ),
+            ..Self::empty()
         }
     }
 }
@@ -351,6 +361,7 @@ mod tests {
                 CheckOptions::try_from(fidl::CheckOptions {
                     initiator: None,
                     allow_attaching_to_existing_update_check: Some(allow_attaching_to_existing_update_check),
+                    ..fidl::CheckOptions::empty()
                 }),
                 Err(CheckOptionsDecodeError::MissingInitiator)
             );

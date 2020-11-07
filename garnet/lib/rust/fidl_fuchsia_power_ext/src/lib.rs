@@ -26,6 +26,7 @@ impl CloneExt for BatteryInfo {
                 _ => Some(TimeRemaining::Indeterminate(0)),
             },
             timestamp: self.timestamp.clone(),
+            ..BatteryInfo::empty()
         }
     }
 }

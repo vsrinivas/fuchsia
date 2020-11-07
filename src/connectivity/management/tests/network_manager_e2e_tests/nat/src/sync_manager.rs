@@ -56,7 +56,7 @@ impl SyncManager {
                 self.status_by_name(client).remove(device::STATUS_ATTACHED)
             }
             nsync::BusEvent::OnBusData {
-                data: nsync::Event { code: Some(code), message: Some(message), arguments: _ },
+                data: nsync::Event { code: Some(code), message: Some(message), arguments: _, .. },
             } => self.status_by_name(message).add(code.into()),
             event @ _ => error!("unrecognized sync bus event: {:?}", event),
         }
@@ -108,6 +108,7 @@ impl SyncManager {
                 code: Some(status.into()),
                 message: Some(name),
                 arguments: None,
+                ..nsync::Event::empty()
             })
             .await
             .map_err(|e| e.into())

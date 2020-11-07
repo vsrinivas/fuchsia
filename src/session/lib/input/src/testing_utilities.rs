@@ -38,12 +38,14 @@ pub fn create_keyboard_input_report(
         keyboard: Some(fidl_input_report::KeyboardInputReport {
             pressed_keys: Some(pressed_keys2),
             pressed_keys3: Some(pressed_keys3),
+            ..fidl_input_report::KeyboardInputReport::empty()
         }),
         mouse: None,
         touch: None,
         sensor: None,
         consumer_control: None,
         trace_id: None,
+        ..fidl_input_report::InputReport::empty()
     }
 }
 
@@ -123,11 +125,13 @@ pub fn create_mouse_input_report(
             scroll_h: None,
             scroll_v: None,
             pressed_buttons: Some(buttons),
+            ..fidl_input_report::MouseInputReport::empty()
         }),
         touch: None,
         sensor: None,
         consumer_control: None,
         trace_id: None,
+        ..fidl_input_report::InputReport::empty()
     }
 }
 
@@ -173,10 +177,12 @@ pub fn create_touch_input_report(
         touch: Some(fidl_input_report::TouchInputReport {
             contacts: Some(contacts),
             pressed_buttons: None,
+            ..fidl_input_report::TouchInputReport::empty()
         }),
         sensor: None,
         consumer_control: None,
         trace_id: None,
+        ..fidl_input_report::InputReport::empty()
     }
 }
 

@@ -169,6 +169,7 @@ fn create_key_event(
         type_: Some(event_type),
         key: Some(*key),
         modifiers,
+        ..fidl_ui_input3::KeyEvent::empty()
     }
 }
 

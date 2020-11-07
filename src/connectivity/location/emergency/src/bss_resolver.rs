@@ -110,6 +110,7 @@ where
         headers: None,
         body: Some(HttpBody::Buffer(MemBuffer { vmo: request_vmo, size: request_size })),
         deadline: None,
+        ..HttpRequest::empty()
     }))
 }
 
@@ -170,8 +171,16 @@ fn json_to_position(response: JsonValue) -> Result<Position, ResolverError> {
     }
 
     let extras = match response[ACCURACY_KEY].as_f64() {
-        Some(accuracy) => PositionExtras { accuracy_meters: Some(accuracy), altitude_meters: None },
-        None => PositionExtras { accuracy_meters: None, altitude_meters: None },
+        Some(accuracy) => PositionExtras {
+            accuracy_meters: Some(accuracy),
+            altitude_meters: None,
+            ..PositionExtras::empty()
+        },
+        None => PositionExtras {
+            accuracy_meters: None,
+            altitude_meters: None,
+            ..PositionExtras::empty()
+        },
     };
 
     Ok(Position { latitude, longitude, extras })
@@ -335,6 +344,7 @@ mod tests {
                     status_line: None,
                     headers: None,
                     redirect: None,
+                    ..HttpResponse::empty()
                 })
             });
             assert_eq!(
@@ -355,6 +365,7 @@ mod tests {
                     status_line: None,
                     headers: None,
                     redirect: None,
+                    ..HttpResponse::empty()
                 })
             });
             assert_eq!(
@@ -718,6 +729,7 @@ mod test_doubles {
                 status_line: None,
                 headers: None,
                 redirect: None,
+                ..HttpResponse::empty()
             }))
         }
 
@@ -779,6 +791,7 @@ mod test_doubles {
                 status_line: None,
                 headers: None,
                 redirect: None,
+                ..HttpResponse::empty()
             }))
         }
 

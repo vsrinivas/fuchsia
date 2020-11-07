@@ -17,13 +17,18 @@ impl CloneExt for ftest::RunOptions {
             include_disabled_tests: self.include_disabled_tests,
             parallel: self.parallel,
             arguments: self.arguments.clone(),
+            ..ftest::RunOptions::empty()
         }
     }
 }
 
 impl CloneExt for ftest::Invocation {
     fn clone(&self) -> Self {
-        ftest::Invocation { name: self.name.clone(), tag: self.tag.clone() }
+        ftest::Invocation {
+            name: self.name.clone(),
+            tag: self.tag.clone(),
+            ..ftest::Invocation::empty()
+        }
     }
 }
 

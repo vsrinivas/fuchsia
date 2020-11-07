@@ -254,13 +254,23 @@ mod tests {
             FontFamilyAliasSet::without_overrides(vec!["Abc"])?,
             FontFamilyAliasSet::new(
                 vec!["Abc Condensed", "Abc Squished"],
-                FidlStyle { slant: None, weight: None, width: Some(Width::Condensed) },
+                FidlStyle {
+                    slant: None,
+                    weight: None,
+                    width: Some(Width::Condensed),
+                    ..FidlStyle::empty()
+                },
                 iter::empty::<String>(),
             )?,
             // Duplicate
             FontFamilyAliasSet::new(
                 vec!["Abc Condensed", "Condensed Abc"],
-                FidlStyle { slant: None, weight: None, width: Some(Width::Condensed) },
+                FidlStyle {
+                    slant: None,
+                    weight: None,
+                    width: Some(Width::Condensed),
+                    ..FidlStyle::empty()
+                },
                 iter::empty::<String>(),
             )?,
         ];
@@ -287,7 +297,7 @@ mod tests {
             FontFamilyAliasSet::without_overrides(vec!["Def"])?,
             FontFamilyAliasSet::new(
                 vec!["Def"],
-                FidlStyle { slant: None, weight: None, width: None },
+                FidlStyle { slant: None, weight: None, width: None, ..FidlStyle::empty() },
                 vec!["en", "es"],
             )?,
         ];

@@ -37,6 +37,7 @@ impl From<LightGroup> for fidl_fuchsia_settings::LightGroup {
             enabled: Some(src.enabled),
             type_: Some(src.light_type.into()),
             lights: Some(src.lights.into_iter().map(LightState::into).collect()),
+            ..fidl_fuchsia_settings::LightGroup::empty()
         }
     }
 }
@@ -105,6 +106,7 @@ impl From<LightState> for fidl_fuchsia_settings::LightState {
     fn from(src: LightState) -> Self {
         fidl_fuchsia_settings::LightState {
             value: src.value.map(fidl_fuchsia_settings::LightValue::from),
+            ..fidl_fuchsia_settings::LightState::empty()
         }
     }
 }

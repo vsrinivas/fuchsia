@@ -136,6 +136,9 @@ fidl_struct! {
 #[derive(Debug, PartialEq)]
 pub struct TableWithHandle {
     pub h: Option<fidl::Vmo>,
+    #[deprecated = "Use `..TableWithHandle::empty()` to construct and `..` to match."]
+    #[doc(hidden)]
+    pub __non_exhaustive: (),
 }
 
 fidl_table! {

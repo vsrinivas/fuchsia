@@ -116,10 +116,12 @@ impl DnsServers {
     /// An unspecified source will be treated as a static address.
     fn ordering(a: &DnsServer_, b: &DnsServer_) -> Ordering {
         let ordering = |source| match source {
-            Some(&DnsServerSource::Ndp(NdpDnsServerSource { source_interface: _ })) => 0,
-            Some(&DnsServerSource::Dhcp(DhcpDnsServerSource { source_interface: _ })) => 1,
-            Some(&DnsServerSource::Dhcpv6(Dhcpv6DnsServerSource { source_interface: _ })) => 2,
-            Some(&DnsServerSource::StaticSource(StaticDnsServerSource {})) | None => 3,
+            Some(&DnsServerSource::Ndp(NdpDnsServerSource { source_interface: _, .. })) => 0,
+            Some(&DnsServerSource::Dhcp(DhcpDnsServerSource { source_interface: _, .. })) => 1,
+            Some(&DnsServerSource::Dhcpv6(Dhcpv6DnsServerSource {
+                source_interface: _, ..
+            })) => 2,
+            Some(&DnsServerSource::StaticSource(StaticDnsServerSource { .. })) | None => 3,
         };
         let a = ordering(a.source.as_ref());
         let b = ordering(b.source.as_ref());
@@ -219,7 +221,9 @@ mod tests {
             address: Some(NDP_SOURCE_SOCKADDR),
             source: Some(DnsServerSource::Dhcpv6(Dhcpv6DnsServerSource {
                 source_interface: Some(DHCPV6_SERVER1_INTERFACE_ID),
+                ..Dhcpv6DnsServerSource::empty()
             })),
+            ..DnsServer_::empty()
         };
         let mut dhcpv6 = HashMap::new();
         dhcpv6.insert(DHCPV6_SERVER1_INTERFACE_ID, vec![dhcpv6_with_ndp_address(), DHCPV6_SERVER1]);
@@ -247,7 +251,9 @@ mod tests {
             address: Some(DHCPV6_SOURCE_SOCKADDR1),
             source: Some(DnsServerSource::Ndp(NdpDnsServerSource {
                 source_interface: Some(NDP_SERVER_INTERFACE_ID),
+                ..NdpDnsServerSource::empty()
             })),
+            ..DnsServer_::empty()
         };
 
         let mut dhcpv6 = HashMap::new();

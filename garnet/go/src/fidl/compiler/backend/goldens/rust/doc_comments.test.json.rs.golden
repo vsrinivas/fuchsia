@@ -206,6 +206,9 @@ pub struct Table {
     ///
     /// table field comment #3
     pub field: Option<i32>,
+    #[deprecated = "Use `..Table::empty()` to construct and `..` to match."]
+    #[doc(hidden)]
+    pub __non_exhaustive: (),
 }
 
 fidl_table! {

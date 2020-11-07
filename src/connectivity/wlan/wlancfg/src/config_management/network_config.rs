@@ -176,7 +176,11 @@ impl From<&NetworkConfig> for fidl_policy::NetworkConfig {
             type_: network_config.security_type.clone().into(),
         };
         let credential = network_config.credential.clone().into();
-        fidl_policy::NetworkConfig { id: Some(network_id), credential: Some(credential) }
+        fidl_policy::NetworkConfig {
+            id: Some(network_id),
+            credential: Some(credential),
+            ..fidl_policy::NetworkConfig::empty()
+        }
     }
 }
 
@@ -311,6 +315,7 @@ impl From<NetworkConfig> for fidl_policy::NetworkConfig {
         fidl_policy::NetworkConfig {
             id: Some(fidl_policy::NetworkIdentifier::from(network_id)),
             credential: Some(fidl_policy::Credential::from(config.credential)),
+            ..fidl_policy::NetworkConfig::empty()
         }
     }
 }

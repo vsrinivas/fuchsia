@@ -197,6 +197,7 @@ where
                                     let response = vec![ArchiveIteratorEntry {
                                         data: Some(serde_json::to_string(&truncated_logs)?),
                                         truncated_chars: Some(truncated_chars),
+                                        ..ArchiveIteratorEntry::empty()
                                     }];
                                     responder.send(&mut Ok(response))?;
                                 }
@@ -356,6 +357,7 @@ mod test {
         BridgeStreamParameters {
             data_type: Some(DataType::Logs),
             stream_mode: Some(StreamMode::SnapshotThenSubscribe),
+            ..BridgeStreamParameters::empty()
         }
     }
 
@@ -390,6 +392,7 @@ mod test {
                 BridgeStreamParameters {
                     data_type: None,
                     stream_mode: Some(StreamMode::SnapshotThenSubscribe),
+                    ..BridgeStreamParameters::empty()
                 },
                 server,
             )
@@ -407,7 +410,11 @@ mod test {
 
         let err = proxy
             .stream_diagnostics(
-                BridgeStreamParameters { data_type: Some(DataType::Logs), stream_mode: None },
+                BridgeStreamParameters {
+                    data_type: Some(DataType::Logs),
+                    stream_mode: None,
+                    ..BridgeStreamParameters::empty()
+                },
                 server,
             )
             .await
@@ -427,6 +434,7 @@ mod test {
                 BridgeStreamParameters {
                     data_type: Some(DataType::Inspect),
                     stream_mode: Some(StreamMode::SnapshotThenSubscribe),
+                    ..BridgeStreamParameters::empty()
                 },
                 server,
             )
@@ -447,6 +455,7 @@ mod test {
                 BridgeStreamParameters {
                     data_type: Some(DataType::Logs),
                     stream_mode: Some(StreamMode::Snapshot),
+                    ..BridgeStreamParameters::empty()
                 },
                 server,
             )

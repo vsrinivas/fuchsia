@@ -30,6 +30,7 @@ async fn create_le_peer(hci: &Emulator, address: Address) -> Result<PeerProxy, E
             data: vec![0x02, 0x01, 0x02], // Flags field set to "general discoverable"
         }),
         scan_response: None,
+        ..LowEnergyPeerParameters::empty()
     };
 
     let (peer, remote) = fidl::endpoints::create_proxy()?;

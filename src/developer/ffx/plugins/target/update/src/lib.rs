@@ -102,6 +102,7 @@ async fn handle_check_now_cmd(
     let options = CheckOptions {
         initiator: Some(if service_initiated { Initiator::Service } else { Initiator::User }),
         allow_attaching_to_existing_update_check: Some(true),
+        ..CheckOptions::empty()
     };
     let (monitor_client, monitor_server) = if monitor {
         let (client_end, request_stream) =

@@ -365,7 +365,12 @@ impl SuiteInstance {
 
         debug!("Launching test component `{}`", test_url);
         harness
-            .launch_suite(&test_url, LaunchOptions {}, suite_server_end, controller_server_end)
+            .launch_suite(
+                &test_url,
+                LaunchOptions::empty(),
+                suite_server_end,
+                controller_server_end,
+            )
             .await
             .context("launch_test call failed")?
             .map_err(|e: fidl_fuchsia_test_manager::LaunchError| {
@@ -403,7 +408,11 @@ impl SuiteInstance {
                 let case_name =
                     case.name.ok_or(format_err!("invocation should contain a name."))?;
                 if pattern.as_ref().map_or(true, |p| p.matches(&case_name)) {
-                    invocations.push(Invocation { name: Some(case_name), tag: None });
+                    invocations.push(Invocation {
+                        name: Some(case_name),
+                        tag: None,
+                        ..Invocation::empty()
+                    });
                 }
             }
         }

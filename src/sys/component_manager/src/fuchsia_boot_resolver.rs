@@ -93,12 +93,14 @@ impl FuchsiaBootResolver {
         let package = fsys::Package {
             package_url: Some(url.root_url().to_string()),
             package_dir: Some(ClientEnd::new(path_proxy.into_channel().unwrap().into_zx_channel())),
+            ..fsys::Package::empty()
         };
 
         Ok(fsys::Component {
             resolved_url: Some(component_url.to_string()),
             decl: Some(component_decl),
             package: Some(package),
+            ..fsys::Component::empty()
         })
     }
 }
@@ -198,11 +200,13 @@ mod tests {
                                         fsys::UseDecl::Runner(
                                             fsys::UseRunnerDecl {
                                                 source_name: Some("elf".to_string()),
+                                                ..fsys::UseRunnerDecl::empty()
                                             }
                                         ),
                                         fsys::UseDecl::Runner (
                                             fsys::UseRunnerDecl {
-                                                source_name: Some("web".to_string())
+                                                source_name: Some("web".to_string()),
+                                                ..fsys::UseRunnerDecl::empty()
                                             }
                                         )
                                     ]),
@@ -212,7 +216,8 @@ mod tests {
                                     children: None,
                                     collections: None,
                                     environments: None,
-                                    facets: None
+                                    facets: None,
+                                    ..fsys::ComponentDecl::empty()
                                 }).unwrap()
                             ),
                         }
@@ -241,22 +246,27 @@ mod tests {
         // Check that both the returned component manifest and the component manifest in
         // the returned package dir match the expected value. This also tests that
         // the resolver returned the right package dir.
-        let fsys::Component { resolved_url, decl, package } = component;
+        let fsys::Component { resolved_url, decl, package, .. } = component;
         assert_eq!(url, resolved_url.unwrap());
         let program = fdata::Dictionary {
             entries: Some(vec![fdata::DictionaryEntry {
                 key: "binary".to_string(),
                 value: Some(Box::new(fdata::DictionaryValue::Str("bin/hello_world".to_string()))),
             }]),
+            ..fdata::Dictionary::empty()
         };
         let expected_decl = ComponentDecl {
             program: Some(program),
             uses: Some(vec![
-                fsys::UseDecl::Runner(fsys::UseRunnerDecl { source_name: Some("elf".to_string()) }),
+                fsys::UseDecl::Runner(fsys::UseRunnerDecl {
+                    source_name: Some("elf".to_string()),
+                    ..fsys::UseRunnerDecl::empty()
+                }),
                 fsys::UseDecl::Protocol(fsys::UseProtocolDecl {
                     source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
                     source_name: Some("fuchsia.logger.LogSink".to_string()),
                     target_path: Some("/svc/fuchsia.logger.LogSink".to_string()),
+                    ..fsys::UseProtocolDecl::empty()
                 }),
             ]),
             exposes: None,
@@ -266,10 +276,11 @@ mod tests {
             children: None,
             collections: None,
             environments: None,
+            ..ComponentDecl::empty()
         };
         assert_eq!(decl.unwrap(), expected_decl);
 
-        let fsys::Package { package_url, package_dir } = package.unwrap();
+        let fsys::Package { package_url, package_dir, .. } = package.unwrap();
         assert_eq!(package_url.unwrap(), "fuchsia-boot:///packages/hello-world");
 
         let dir_proxy = package_dir.unwrap().into_proxy().unwrap();

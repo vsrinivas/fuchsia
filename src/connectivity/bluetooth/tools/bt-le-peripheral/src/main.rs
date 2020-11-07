@@ -242,7 +242,11 @@ async fn main() -> Result<(), Error> {
     manufacturer_data.extend(binary_manufacturer_data);
 
     let conn_opts = if connectable {
-        Some(ConnectionOptions { bondable_mode: Some(true), service_filter: None })
+        Some(ConnectionOptions {
+            bondable_mode: Some(true),
+            service_filter: None,
+            ..ConnectionOptions::empty()
+        })
     } else {
         None
     };
@@ -256,11 +260,13 @@ async fn main() -> Result<(), Error> {
             service_data: optionalize(service_data),
             manufacturer_data: optionalize(manufacturer_data),
             uris: optionalize(uris),
+            ..AdvertisingData::empty()
         }),
         scan_response: None,
         mode_hint,
         connectable: None,
         connection_options: conn_opts,
+        ..AdvertisingParameters::empty()
     };
 
     let peripheral = connect_to_service::<PeripheralMarker>()
@@ -417,6 +423,7 @@ mod tests {
                         connectable: Some(true),
                         rssi: None,
                         advertising_data: None,
+                        ..Peer::empty()
                     };
                     control_handle.send_on_peer_connected(peer, conn)?;
                     let mock = MockPeripheral {
@@ -444,7 +451,9 @@ mod tests {
             connection_options: Some(ConnectionOptions {
                 bondable_mode: Some(true),
                 service_filter: None,
+                ..ConnectionOptions::empty()
             }),
+            ..AdvertisingParameters::empty()
         };
         let listen_task = listen(&proxy, input_parameters, &[]);
         let emulate_task = async {
@@ -476,7 +485,9 @@ mod tests {
             connection_options: Some(ConnectionOptions {
                 bondable_mode: Some(true),
                 service_filter: None,
+                ..ConnectionOptions::empty()
             }),
+            ..AdvertisingParameters::empty()
         };
 
         drop(server);

@@ -173,7 +173,8 @@ mod tests {
                 TreeRequest::GetContent { responder } => {
                     let vmo = vmos.get(&name);
                     let size = vmo.get_size()?;
-                    let content = TreeContent { buffer: Some(Buffer { vmo, size }) };
+                    let content =
+                        TreeContent { buffer: Some(Buffer { vmo, size }), ..TreeContent::empty() };
                     responder.send(content)?;
                 }
                 TreeRequest::ListChildNames { tree_iterator, .. } => {

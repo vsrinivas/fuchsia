@@ -17,7 +17,11 @@ pub(super) trait CloneExt {
 
 impl CloneExt for fidl_fuchsia_lowpan_device::DeviceState {
     fn clone(&self) -> Self {
-        Self { connectivity_state: self.connectivity_state.clone(), role: self.role.clone() }
+        Self {
+            connectivity_state: self.connectivity_state.clone(),
+            role: self.role.clone(),
+            ..Self::empty()
+        }
     }
 }
 
@@ -30,6 +34,7 @@ impl CloneExt for fidl_fuchsia_lowpan::Identity {
             channel: self.channel.clone(),
             panid: self.panid.clone(),
             mesh_local_prefix: self.mesh_local_prefix.clone(),
+            ..Self::empty()
         }
     }
 }

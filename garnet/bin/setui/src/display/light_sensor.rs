@@ -174,10 +174,12 @@ pub mod testing {
                             TEST_BLUE_VAL,
                             TEST_GREEN_VAL,
                         ]),
+                        ..SensorInputReport::empty()
                     }),
                     touch: None,
                     keyboard: None,
                     consumer_control: None,
+                    ..InputReport::empty()
                 }]
             },
         )
@@ -192,12 +194,17 @@ pub mod testing {
             }),
             mouse: None,
             sensor: Some(SensorDescriptor {
-                input: Some(SensorInputDescriptor { values: Some(axes) }),
+                input: Some(SensorInputDescriptor {
+                    values: Some(axes),
+                    ..SensorInputDescriptor::empty()
+                }),
                 feature: None,
+                ..SensorDescriptor::empty()
             }),
             touch: None,
             keyboard: None,
             consumer_control: None,
+            ..DeviceDescriptor::empty()
         }
     }
 

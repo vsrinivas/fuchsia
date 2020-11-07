@@ -338,6 +338,7 @@ impl TryFrom<&Information> for fidl_bredr::Information {
             name: src.name.clone(),
             description: src.description.clone(),
             provider: src.provider.clone(),
+            ..fidl_bredr::Information::empty()
         })
     }
 }
@@ -460,6 +461,7 @@ impl TryFrom<&ServiceDefinition> for fidl_bredr::ServiceDefinition {
             profile_descriptors: Some(profile_descriptors),
             information: Some(information?),
             additional_attributes: Some(additional_attributes),
+            ..fidl_bredr::ServiceDefinition::empty()
         })
     }
 }
@@ -488,6 +490,7 @@ impl From<&SecurityRequirements> for fidl_bredr::SecurityRequirements {
         fidl_bredr::SecurityRequirements {
             authentication_required: src.authentication_required,
             secure_connections_required: src.secure_connections_required,
+            ..fidl_bredr::SecurityRequirements::empty()
         }
     }
 }
@@ -546,6 +549,7 @@ impl TryFrom<&ChannelParameters> for fidl_bredr::ChannelParameters {
                 .security_requirements
                 .as_ref()
                 .map(fidl_bredr::SecurityRequirements::from),
+            ..fidl_bredr::ChannelParameters::empty()
         })
     }
 }
@@ -697,6 +701,7 @@ mod tests {
             name: None,
             description: None,
             provider: None,
+            ..fidl_bredr::Information::empty()
         };
         let local = Information::try_from(&no_lang_fidl);
         assert!(local.is_err());
@@ -706,6 +711,7 @@ mod tests {
             name: None,
             description: None,
             provider: None,
+            ..fidl_bredr::Information::empty()
         };
         let local = Information::try_from(&empty_lang_fidl);
         assert!(local.is_err());
@@ -827,6 +833,7 @@ mod tests {
                 name: Some(name.clone()),
                 description: Some(description.clone()),
                 provider: Some(provider.clone()),
+                ..fidl_bredr::Information::empty()
             }]),
             additional_attributes: Some(vec![fidl_bredr::Attribute {
                 id: attribute_id,
@@ -834,6 +841,7 @@ mod tests {
                     fidl_bredr::DataElement::Uint32(attribute_value),
                 ))]),
             }]),
+            ..fidl_bredr::ServiceDefinition::empty()
         };
 
         // Converting from local ServiceDefinition to the FIDL ServiceDefinition should work.
@@ -872,6 +880,7 @@ mod tests {
             channel_mode,
             max_rx_sdu_size,
             security_requirements: None,
+            ..fidl_bredr::ChannelParameters::empty()
         };
 
         let local_to_fidl =
@@ -905,6 +914,7 @@ mod tests {
             channel_mode: None,
             max_rx_sdu_size: too_small_sdu,
             security_requirements: None,
+            ..fidl_bredr::ChannelParameters::empty()
         };
 
         let local_to_fidl = fidl_bredr::ChannelParameters::try_from(&local);
@@ -923,6 +933,7 @@ mod tests {
         let fidl = fidl_bredr::SecurityRequirements {
             authentication_required,
             secure_connections_required,
+            ..fidl_bredr::SecurityRequirements::empty()
         };
 
         let local_to_fidl = fidl_bredr::SecurityRequirements::from(&local);

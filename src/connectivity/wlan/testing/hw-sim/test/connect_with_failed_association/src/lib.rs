@@ -74,7 +74,8 @@ async fn save_network_and_await_connection(
         vec![fidl_policy::NetworkState {
             id: Some(expected_network_id.clone()),
             state: Some(fidl_policy::ConnectionState::Connecting),
-            status: None
+            status: None,
+            ..fidl_policy::NetworkState::empty()
         }]
     );
 
@@ -85,7 +86,8 @@ async fn save_network_and_await_connection(
         vec![fidl_policy::NetworkState {
             id: Some(expected_network_id),
             state: Some(fidl_policy::ConnectionState::Failed),
-            status: Some(fidl_policy::DisconnectStatus::ConnectionFailed)
+            status: Some(fidl_policy::DisconnectStatus::ConnectionFailed),
+            ..fidl_policy::NetworkState::empty()
         }]
     );
 }

@@ -180,7 +180,10 @@ impl Connection {
     }
 
     async fn fetch_link_channel(fidl: &validate::ValidateProxy) -> Option<fidl_inspect::TreeProxy> {
-        let params = validate::InitializationParams { vmo_size: Some(VMO_SIZE) };
+        let params = validate::InitializationParams {
+            vmo_size: Some(VMO_SIZE),
+            ..validate::InitializationParams::empty()
+        };
         let response = fidl.initialize_tree(params).await;
         if let Ok((Some(tree_client_end), validate::TestResult::Ok)) = response {
             tree_client_end.into_proxy().ok()
@@ -209,7 +212,10 @@ impl Connection {
         match &self.root_link_channel {
             Some(root_link_channel) => Self::get_vmo_handle(&root_link_channel).await,
             None => {
-                let params = validate::InitializationParams { vmo_size: Some(VMO_SIZE) };
+                let params = validate::InitializationParams {
+                    vmo_size: Some(VMO_SIZE),
+                    ..validate::InitializationParams::empty()
+                };
                 let handle: Option<zx::Handle>;
                 let out = self.fidl.initialize(params).await?;
                 if let (Some(out_handle), _) = out {

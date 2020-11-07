@@ -41,15 +41,17 @@ macro_rules! write_field {
 
 impl std::fmt::Display for Entry {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
-        let Self(fidl::Entry { interface, neighbor, mac, state, updated_at: _ }) = self;
+        let Self(fidl::Entry { interface, neighbor, mac, state, updated_at: _, .. }) = self;
 
         write_field!(f, "Interface", interface, "|");
         write_field!(f, "IP", neighbor.map(IpAddress::from), "|");
         write_field!(f, "MAC", mac.map(MacAddress::from), "|");
         match state {
             None => write!(f, "?"),
-            Some(fidl::EntryState::Incomplete(fidl::IncompleteState {})) => write!(f, "INCOMPETE"),
-            Some(fidl::EntryState::Reachable(fidl::ReachableState { expires_at })) => {
+            Some(fidl::EntryState::Incomplete(fidl::IncompleteState { .. })) => {
+                write!(f, "INCOMPETE")
+            }
+            Some(fidl::EntryState::Reachable(fidl::ReachableState { expires_at, .. })) => {
                 write!(f, "REACHABLE | ")?;
                 match expires_at {
                     None => write!(f, "Expiration unknown"),
@@ -72,10 +74,10 @@ impl std::fmt::Display for Entry {
                     }
                 }
             }
-            Some(fidl::EntryState::Stale(fidl::StaleState {})) => write!(f, "STALE"),
-            Some(fidl::EntryState::Delay(fidl::DelayState {})) => write!(f, "DELAY"),
-            Some(fidl::EntryState::Probe(fidl::ProbeState {})) => write!(f, "PROBE"),
-            Some(fidl::EntryState::Static_(fidl::StaticState {})) => write!(f, "STATIC"),
+            Some(fidl::EntryState::Stale(fidl::StaleState { .. })) => write!(f, "STALE"),
+            Some(fidl::EntryState::Delay(fidl::DelayState { .. })) => write!(f, "DELAY"),
+            Some(fidl::EntryState::Probe(fidl::ProbeState { .. })) => write!(f, "PROBE"),
+            Some(fidl::EntryState::Static_(fidl::StaticState { .. })) => write!(f, "STATIC"),
         }
     }
 }

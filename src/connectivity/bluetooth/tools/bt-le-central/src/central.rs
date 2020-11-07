@@ -135,6 +135,7 @@ pub async fn connect_peripheral(
     let conn_opts = ConnectionOptions {
         bondable_mode: Some(true),
         service_filter: optional_service_uuid.map(|u| u.into()),
+        ..ConnectionOptions::empty()
     };
     let connect_peripheral_fut = state.read().svc.connect_peripheral(&mut id, conn_opts, server);
 

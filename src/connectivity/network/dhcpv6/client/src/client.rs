@@ -128,14 +128,14 @@ fn create_state_machine(
     ClientError,
 > {
     match models {
-        OperationalModels { stateless: Some(Stateless { options_to_request }) } => {
+        OperationalModels { stateless: Some(Stateless { options_to_request, .. }), .. } => {
             Ok(dhcpv6_core::client::ClientStateMachine::start_information_request(
                 transaction_id,
                 options_to_request.map(to_dhcpv6_option_codes).unwrap_or(Vec::new()),
                 StdRng::from_entropy(),
             ))
         }
-        OperationalModels { stateless: None } => Err(ClientError::UnsupportedModels(models)),
+        OperationalModels { stateless: None, .. } => Err(ClientError::UnsupportedModels(models)),
     }
 }
 
@@ -252,8 +252,10 @@ impl<S: for<'a> AsyncSocket<'a>> Client<S> {
                     source: Some(fnetname::DnsServerSource::Dhcpv6(
                         fnetname::Dhcpv6DnsServerSource {
                             source_interface: Some(self.interface_id),
+                            ..fnetname::Dhcpv6DnsServerSource::empty()
                         },
                     )),
+                    ..fnetname::DnsServer_::empty()
                 }
             }))
             // The channel will be closed on error, so return an error to stop the client.
@@ -436,6 +438,7 @@ pub(crate) async fn serve_client(
         interface_id: Some(interface_id),
         address: Some(address),
         models: Some(models),
+        ..
     } = params
     {
         if Ipv6Addr::from(address.address.addr).is_multicast()
@@ -523,7 +526,7 @@ mod tests {
     fn test_create_client_with_unsupported_models() {
         assert_matches!(
             create_state_machine([1, 2, 3], OperationalModels::empty()),
-            Err(ClientError::UnsupportedModels(OperationalModels { stateless: None }))
+            Err(ClientError::UnsupportedModels(OperationalModels { stateless: None, .. }))
         );
     }
 
@@ -540,8 +543,10 @@ mod tests {
                     interface_id: Some(1),
                     address: Some(fidl_socket_addr_v6!([::1]:546)),
                     models: Some(OperationalModels {
-                        stateless: Some(Stateless { options_to_request: None })
+                        stateless: Some(Stateless { options_to_request: None, ..Stateless::empty() }),
+                        ..OperationalModels::empty()
                     }),
+                    ..NewClientParams::empty()
                 },
                 server_end,
             ),
@@ -563,8 +568,13 @@ mod tests {
                     interface_id: Some(1),
                     address: Some(fidl_socket_addr_v6!([::1]:546)),
                     models: Some(OperationalModels {
-                        stateless: Some(Stateless { options_to_request: None })
+                        stateless: Some(Stateless {
+                            options_to_request: None,
+                            ..Stateless::empty()
+                        }),
+                        ..OperationalModels::empty()
                     }),
+                    ..NewClientParams::empty()
                 },
                 server_end,
             )
@@ -600,8 +610,13 @@ mod tests {
                         interface_id: Some(1),
                         address: Some(fidl_socket_addr_v6!([::1]:546)),
                         models: Some(OperationalModels {
-                            stateless: Some(Stateless { options_to_request: None })
+                            stateless: Some(Stateless {
+                                options_to_request: None,
+                                ..Stateless::empty()
+                            }),
+                            ..OperationalModels::empty()
                         }),
+                        ..NewClientParams::empty()
                     },
                     server_end
                 )
@@ -619,8 +634,10 @@ mod tests {
                 interface_id: Some(1),
                 address: None,
                 models: Some(OperationalModels {
-                    stateless: Some(Stateless { options_to_request: None }),
+                    stateless: Some(Stateless { options_to_request: None, ..Stateless::empty() }),
+                    ..OperationalModels::empty()
                 }),
+                ..NewClientParams::empty()
             },
             // Interface ID and zone index mismatch on link-local address.
             NewClientParams {
@@ -631,8 +648,10 @@ mod tests {
                     zone_index: 1,
                 }),
                 models: Some(OperationalModels {
-                    stateless: Some(Stateless { options_to_request: None }),
+                    stateless: Some(Stateless { options_to_request: None, ..Stateless::empty() }),
+                    ..OperationalModels::empty()
                 }),
+                ..NewClientParams::empty()
             },
             // Multicast address is invalid.
             NewClientParams {
@@ -643,8 +662,10 @@ mod tests {
                     zone_index: 1,
                 }),
                 models: Some(OperationalModels {
-                    stateless: Some(Stateless { options_to_request: None }),
+                    stateless: Some(Stateless { options_to_request: None, ..Stateless::empty() }),
+                    ..OperationalModels::empty()
                 }),
+                ..NewClientParams::empty()
             },
         ] {
             let (client_end, server_end) =
@@ -682,7 +703,9 @@ mod tests {
             })),
             source: Some(fnetname::DnsServerSource::Dhcpv6(fnetname::Dhcpv6DnsServerSource {
                 source_interface: Some(source_interface),
+                ..fnetname::Dhcpv6DnsServerSource::empty()
             })),
+            ..fnetname::DnsServer_::empty()
         }
     }
 
@@ -714,7 +737,10 @@ mod tests {
         let mut client = exec
             .run_singlethreaded(Client::<fasync::net::UdpSocket>::start(
                 transaction_id,
-                OperationalModels { stateless: Some(Stateless { options_to_request: None }) },
+                OperationalModels {
+                    stateless: Some(Stateless { options_to_request: None, ..Stateless::empty() }),
+                    ..OperationalModels::empty()
+                },
                 1, /* interface ID */
                 client_socket,
                 server_addr,
@@ -892,7 +918,10 @@ mod tests {
         let (server_socket, server_addr) = create_test_socket();
         let mut client = Client::<fasync::net::UdpSocket>::start(
             transaction_id,
-            OperationalModels { stateless: Some(Stateless { options_to_request: None }) },
+            OperationalModels {
+                stateless: Some(Stateless { options_to_request: None, ..Stateless::empty() }),
+                ..OperationalModels::empty()
+            },
             1, /* interface ID */
             client_socket,
             server_addr,
@@ -944,7 +973,10 @@ mod tests {
         let (_server_socket, server_addr) = create_test_socket();
         let mut client = Client::<fasync::net::UdpSocket>::start(
             [1, 2, 3], /* transaction ID */
-            OperationalModels { stateless: Some(Stateless { options_to_request: None }) },
+            OperationalModels {
+                stateless: Some(Stateless { options_to_request: None, ..Stateless::empty() }),
+                ..OperationalModels::empty()
+            },
             1, /* interface ID */
             client_socket,
             server_addr,
@@ -1044,7 +1076,10 @@ mod tests {
         let (server_socket, server_addr) = create_test_socket();
         let mut client = Client::<fasync::net::UdpSocket>::start(
             [1, 2, 3], /* transaction ID */
-            OperationalModels { stateless: Some(Stateless { options_to_request: None }) },
+            OperationalModels {
+                stateless: Some(Stateless { options_to_request: None, ..Stateless::empty() }),
+                ..OperationalModels::empty()
+            },
             1, /* interface ID */
             client_socket,
             server_addr,
@@ -1127,8 +1162,12 @@ mod tests {
                 .send(&mut std::iter::once(fnetname::DnsServer_ {
                     address: Some(fidl_socket_addr!([fe01::2:3]:42)),
                     source: Some(fnetname::DnsServerSource::Dhcpv6(
-                        fnetname::Dhcpv6DnsServerSource { source_interface: Some(42) },
+                        fnetname::Dhcpv6DnsServerSource {
+                            source_interface: Some(42),
+                            ..fnetname::Dhcpv6DnsServerSource::empty()
+                        },
                     )),
+                    ..fnetname::DnsServer_::empty()
                 }))
                 .expect("failed to send response on test channel");
         };
@@ -1139,8 +1178,10 @@ mod tests {
             vec![fnetname::DnsServer_ {
                 address: Some(fidl_socket_addr!([fe01::2:3]:42)),
                 source: Some(fnetname::DnsServerSource::Dhcpv6(fnetname::Dhcpv6DnsServerSource {
-                    source_interface: Some(42)
+                    source_interface: Some(42),
+                    ..fnetname::Dhcpv6DnsServerSource::empty()
                 },)),
+                ..fnetname::DnsServer_::empty()
             }]
         );
 
@@ -1159,7 +1200,10 @@ mod tests {
         let (server_socket, server_addr) = create_test_socket();
         let mut client = Client::<fasync::net::UdpSocket>::start(
             [1, 2, 3], /* transaction ID */
-            OperationalModels { stateless: Some(Stateless { options_to_request: None }) },
+            OperationalModels {
+                stateless: Some(Stateless { options_to_request: None, ..Stateless::empty() }),
+                ..OperationalModels::empty()
+            },
             1, /* interface ID */
             client_socket,
             server_addr,
@@ -1250,7 +1294,10 @@ mod tests {
 
         let mut client = Client::<StubSocket>::start(
             [1, 2, 3], /* transaction ID */
-            OperationalModels { stateless: Some(Stateless { options_to_request: None }) },
+            OperationalModels {
+                stateless: Some(Stateless { options_to_request: None, ..Stateless::empty() }),
+                ..OperationalModels::empty()
+            },
             1, /* interface ID */
             StubSocket {},
             std_socket_addr!([::1]:0),

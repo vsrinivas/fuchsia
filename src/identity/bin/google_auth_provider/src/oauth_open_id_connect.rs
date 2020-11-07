@@ -82,7 +82,7 @@ where
         &self,
         request: OpenIdTokenFromOauthRefreshTokenRequest,
     ) -> TokenProviderResult<OpenIdToken> {
-        let OpenIdTokenFromOauthRefreshTokenRequest { refresh_token, audiences } = request;
+        let OpenIdTokenFromOauthRefreshTokenRequest { refresh_token, audiences, .. } = request;
         let refresh_token_contents = refresh_token
             .ok_or(TokenProviderError::new(ApiError::InvalidRequest))?
             .content
@@ -113,7 +113,11 @@ where
         let (id_token, expires_in) = parse_id_token_response(response_body, status)?;
 
         let expiry_time = C::current_time() + expires_in;
-        Ok(OpenIdToken { content: Some(id_token.0), expiry_time: Some(expiry_time.into_nanos()) })
+        Ok(OpenIdToken {
+            content: Some(id_token.0),
+            expiry_time: Some(expiry_time.into_nanos()),
+            ..OpenIdToken::empty()
+        })
     }
 
     async fn get_user_info_from_access_token(
@@ -133,7 +137,7 @@ where
         let (response_body, status_code) = self.http_client.request(request).await?;
         let OpenIdUserInfoResponse { sub, name, email, picture, .. } =
             parse_user_info_response(response_body, status_code)?;
-        Ok(OpenIdUserInfo { subject: Some(sub), name, email, picture })
+        Ok(OpenIdUserInfo { subject: Some(sub), name, email, picture, ..OpenIdUserInfo::empty() })
     }
 }
 
@@ -250,11 +254,19 @@ mod test {
     }
 
     fn create_refresh_token(content: &str) -> OauthRefreshToken {
-        OauthRefreshToken { content: Some(content.to_string()), account_id: None }
+        OauthRefreshToken {
+            content: Some(content.to_string()),
+            account_id: None,
+            ..OauthRefreshToken::empty()
+        }
     }
 
     fn create_access_token(content: &str) -> OauthAccessToken {
-        OauthAccessToken { content: Some(content.to_string()), expiry_time: None }
+        OauthAccessToken {
+            content: Some(content.to_string()),
+            expiry_time: None,
+            ..OauthAccessToken::empty()
+        }
     }
 
     #[fasync::run_until_stalled(test)]
@@ -268,6 +280,7 @@ mod test {
                 .get_id_token_from_refresh_token(OpenIdTokenFromOauthRefreshTokenRequest {
                     refresh_token: Some(create_refresh_token("refresh_token")),
                     audiences: None,
+                    ..OpenIdTokenFromOauthRefreshTokenRequest::empty()
                 })
                 .await?
                 .unwrap();
@@ -291,6 +304,7 @@ mod test {
                 .get_id_token_from_refresh_token(OpenIdTokenFromOauthRefreshTokenRequest {
                     refresh_token: Some(create_refresh_token("refresh_token")),
                     audiences: Some(vec![]),
+                    ..OpenIdTokenFromOauthRefreshTokenRequest::empty()
                 })
                 .await?
                 .unwrap();
@@ -315,6 +329,7 @@ mod test {
                 .get_id_token_from_refresh_token(OpenIdTokenFromOauthRefreshTokenRequest {
                     refresh_token: Some(create_refresh_token("refresh_token")),
                     audiences: Some(vec!["".to_string()]),
+                    ..OpenIdTokenFromOauthRefreshTokenRequest::empty()
                 })
                 .await?;
             assert_eq!(request_result, Err(ApiError::InvalidRequest));
@@ -331,6 +346,7 @@ mod test {
                 .get_id_token_from_refresh_token(OpenIdTokenFromOauthRefreshTokenRequest {
                     refresh_token: Some(create_refresh_token("refresh_token")),
                     audiences: None,
+                    ..OpenIdTokenFromOauthRefreshTokenRequest::empty()
                 })
                 .await?;
             assert_eq!(request_result, Err(ApiError::Server));
@@ -346,6 +362,7 @@ mod test {
                 .get_id_token_from_refresh_token(OpenIdTokenFromOauthRefreshTokenRequest {
                     refresh_token: Some(create_refresh_token("refresh_token")),
                     audiences: None,
+                    ..OpenIdTokenFromOauthRefreshTokenRequest::empty()
                 })
                 .await?;
             assert_eq!(request_result, Err(ApiError::Network));
@@ -365,6 +382,7 @@ mod test {
             let user_info = proxy
                 .get_user_info_from_access_token(OpenIdUserInfoFromOauthAccessTokenRequest {
                     access_token: Some(create_access_token("access_token")),
+                    ..OpenIdUserInfoFromOauthAccessTokenRequest::empty()
                 })
                 .await?
                 .unwrap();
@@ -374,7 +392,8 @@ mod test {
                     subject: Some("test-id".to_string()),
                     name: Some("Bill".to_string()),
                     email: Some("bill@test.com".to_string()),
-                    picture: Some("picture-url".to_string())
+                    picture: Some("picture-url".to_string()),
+                    ..OpenIdUserInfo::empty()
                 }
             );
             Ok(())
@@ -391,6 +410,7 @@ mod test {
             let request_result = proxy
                 .get_user_info_from_access_token(OpenIdUserInfoFromOauthAccessTokenRequest {
                     access_token: Some(create_access_token("")),
+                    ..OpenIdUserInfoFromOauthAccessTokenRequest::empty()
                 })
                 .await?;
             assert_eq!(request_result, Err(ApiError::InvalidRequest));
@@ -405,6 +425,7 @@ mod test {
             let request_result = proxy
                 .get_user_info_from_access_token(OpenIdUserInfoFromOauthAccessTokenRequest {
                     access_token: Some(create_access_token("access_token")),
+                    ..OpenIdUserInfoFromOauthAccessTokenRequest::empty()
                 })
                 .await?;
             assert_eq!(request_result, Err(ApiError::Server));
@@ -419,6 +440,7 @@ mod test {
             let request_result = proxy
                 .get_user_info_from_access_token(OpenIdUserInfoFromOauthAccessTokenRequest {
                     access_token: Some(create_access_token("access_token")),
+                    ..OpenIdUserInfoFromOauthAccessTokenRequest::empty()
                 })
                 .await?;
             assert_eq!(request_result, Err(ApiError::Network));

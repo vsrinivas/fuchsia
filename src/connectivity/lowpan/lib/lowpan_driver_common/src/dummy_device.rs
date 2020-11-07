@@ -59,6 +59,7 @@ impl Driver for DummyDevice {
             spectrum_center_frequency: Some(2450000000),
             spectrum_bandwidth: Some(2000000),
             masked_by_regulatory_domain: Some(false),
+            ..ChannelInfo::empty()
         };
         Ok(vec![channel_info])
     }
@@ -186,6 +187,7 @@ impl Driver for DummyDevice {
                     channel_index: Some(11),
                     max_rssi: Some(-20),
                     min_rssi: Some(-90),
+                    ..EnergyScanResult::empty()
                 }])
                 .into_stream(),
             )
@@ -196,11 +198,13 @@ impl Driver for DummyDevice {
                         channel_index: Some(12),
                         max_rssi: Some(-30),
                         min_rssi: Some(-90),
+                        ..EnergyScanResult::empty()
                     },
                     EnergyScanResult {
                         channel_index: Some(13),
                         max_rssi: Some(-25),
                         min_rssi: Some(-90),
+                        ..EnergyScanResult::empty()
                     },
                 ])
                 .into_stream(),
@@ -211,11 +215,13 @@ impl Driver for DummyDevice {
                         channel_index: Some(14),
                         max_rssi: Some(-45),
                         min_rssi: Some(-90),
+                        ..EnergyScanResult::empty()
                     },
                     EnergyScanResult {
                         channel_index: Some(15),
                         max_rssi: Some(-40),
                         min_rssi: Some(-50),
+                        ..EnergyScanResult::empty()
                     },
                 ])
                 .into_stream(),
@@ -306,8 +312,11 @@ impl Driver for DummyDevice {
     fn watch_device_state(&self) -> BoxStream<'_, ZxResult<DeviceState>> {
         use futures::future::ready;
         use futures::stream::pending;
-        let initial =
-            Ok(DeviceState { connectivity_state: Some(ConnectivityState::Ready), role: None });
+        let initial = Ok(DeviceState {
+            connectivity_state: Some(ConnectivityState::Ready),
+            role: None,
+            ..DeviceState::empty()
+        });
 
         ready(initial).into_stream().chain(pending()).boxed()
     }

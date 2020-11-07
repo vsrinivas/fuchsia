@@ -403,6 +403,7 @@ mod tests {
                 fs_type: Some(FsType::Fatfs),
                 name: Some("fatfs".to_string()),
                 device_path: None,
+                ..FilesystemInfo::empty()
             }
         );
     }
@@ -431,6 +432,7 @@ mod tests {
                 fs_type: None,
                 name: None,
                 device_path: None,
+                ..FilesystemInfo::empty()
             }
         );
     }

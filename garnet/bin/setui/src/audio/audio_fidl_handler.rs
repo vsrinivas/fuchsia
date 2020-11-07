@@ -57,7 +57,9 @@ impl From<AudioStream> for AudioStreamSettings {
             user_volume: Some(Volume {
                 level: Some(stream.user_volume_level),
                 muted: Some(stream.user_volume_muted),
+                ..Volume::empty()
             }),
+            ..AudioStreamSettings::empty()
         }
     }
 }

@@ -584,6 +584,7 @@ mod tests {
             Ok(fidl_fuchsia_net_dhcp::Parameter::Lease(fidl_fuchsia_net_dhcp::LeaseLength {
                 default: None,
                 max: None,
+                ..fidl_fuchsia_net_dhcp::LeaseLength::empty()
             }))
         }
         fn dispatch_set_option(
@@ -676,6 +677,7 @@ mod tests {
             Ok(fidl_fuchsia_net_dhcp::Parameter::Lease(fidl_fuchsia_net_dhcp::LeaseLength {
                 default: None,
                 max: None,
+                ..fidl_fuchsia_net_dhcp::LeaseLength::empty()
             }));
         assert_eq!(res, expected_result);
         Ok(())
@@ -707,7 +709,7 @@ mod tests {
         let defaults = default_params();
         let res = futures::select! {
             res = proxy.set_parameter(&mut fidl_fuchsia_net_dhcp::Parameter::Lease(
-            fidl_fuchsia_net_dhcp::LeaseLength { default: None, max: None },
+            fidl_fuchsia_net_dhcp::LeaseLength { default: None, max: None, ..fidl_fuchsia_net_dhcp::LeaseLength::empty() },
         )).fuse() => res.context("set_parameter failed"),
             server_fut = run_server(stream, &server, &defaults, drain()).fuse() => Err(anyhow::Error::msg("server finished before request")),
         }?;
@@ -912,7 +914,11 @@ mod tests {
             assert_eq!(
                 proxy
                     .set_parameter(&mut fidl_fuchsia_net_dhcp::Parameter::Lease(
-                        fidl_fuchsia_net_dhcp::LeaseLength { default: None, max: None },
+                        fidl_fuchsia_net_dhcp::LeaseLength {
+                            default: None,
+                            max: None,
+                            ..fidl_fuchsia_net_dhcp::LeaseLength::empty()
+                        },
                     ))
                     .await
                     .context("set_parameter FIDL failure")?

@@ -589,6 +589,7 @@ impl From<&CidrAddress> for fidl_fuchsia_router_config::CidrAddress {
         fidl_fuchsia_router_config::CidrAddress {
             address: Some(cidr_addr.ip.into()),
             prefix_length: Some(cidr_addr.prefix_length),
+            ..fidl_fuchsia_router_config::CidrAddress::empty()
         }
     }
 }

@@ -172,7 +172,8 @@ mod test {
                         name: None,
                         uid: None,
                         metadata: None,
-                        key_length: None
+                        key_length: None,
+                        ..KeySingletonProperties::empty()
                     })
                     .await?,
                 Err(ApiError::UnsupportedOperation)
@@ -214,6 +215,7 @@ mod test {
                 max_keys: None,
                 automatic_rotation: None,
                 manual_rotation: None,
+                ..KeySetProperties::empty()
             };
             let (_key_set_proxy, key_set_server) = create_proxy::<KeySetMarker>()?;
             assert_eq!(

@@ -143,6 +143,7 @@ impl TypefaceInfoAndCharSet {
                 slant: Some(typeface.slant),
                 weight: Some(typeface.weight),
                 width: Some(typeface.width),
+                ..Style2::empty()
             },
             // Convert BTreeSet<String> to Vec<LocaleId>
             languages: typeface
@@ -165,6 +166,7 @@ impl From<TypefaceInfoAndCharSet> for TypefaceInfo {
             style: Some(info.style),
             languages: Some(info.languages),
             generic_family: info.generic_family,
+            ..TypefaceInfo::empty()
         }
     }
 }

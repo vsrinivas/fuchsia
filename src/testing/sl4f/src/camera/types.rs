@@ -48,6 +48,10 @@ pub struct WriteCalibrationDataRequest {
     #[serde(with = "buffer_wrapper")]
     pub calibration_data: Buffer,
     pub file_path: String,
+    // This field is needed to match the FIDL-generated struct exactly. It
+    // should be removed once we are no longer using Serde remote.
+    #[serde(skip)]
+    __non_exhaustive: (),
 }
 
 #[derive(Serialize, Deserialize, Debug, Error)]
@@ -80,6 +84,11 @@ struct DeviceInfoDef {
 
     #[serde(default, with = "device_type_wrapper")]
     type_: Option<DeviceType>,
+
+    // This field is needed to match the FIDL-generated struct exactly. It
+    // should be removed once we are no longer using Serde remote.
+    #[serde(skip)]
+    __non_exhaustive: (),
 }
 
 impl PartialEq for DeviceInfoDef {
@@ -247,6 +256,7 @@ mod tests {
                     product_id: Some(TEST_UINT16),
                     product_name: Some(TEST_STR.to_string()),
                     type_: Some(DeviceType::Virtual),
+                    ..DeviceInfo::empty()
                 },
 
                 image_info: ImageInfo {
@@ -340,6 +350,7 @@ mod tests {
         let expected_req = WriteCalibrationDataRequest {
             calibration_data: setup.full_buf,
             file_path: setup.test_str,
+            __non_exhaustive: (),
         };
 
         let serialized_len = serialized_req.calibration_data.vmo.get_size().unwrap();

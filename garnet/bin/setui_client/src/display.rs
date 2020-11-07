@@ -52,9 +52,9 @@ pub async fn command(
             Ok(_) => output.push_str(&format!("Successfully set low_light_mode to {:?}", mode)),
             Err(err) => output.push_str(&format!("{:?}", err)),
         }
-    } else if let Some(Theme { theme_type: Some(theme_type) }) = theme {
+    } else if let Some(Theme { theme_type: Some(theme_type), .. }) = theme {
         let mut settings = DisplaySettings::empty();
-        settings.theme = Some(Theme { theme_type: Some(theme_type) });
+        settings.theme = Some(Theme { theme_type: Some(theme_type), ..Theme::empty() });
 
         let mutate_result = proxy.set(settings).await?;
         match mutate_result {
@@ -87,7 +87,7 @@ fn describe_display_setting(display_setting: &DisplaySettings) -> String {
         output.push_str(&format!("low_light_mode: {:?} ", low_light_mode))
     }
 
-    if let Some(Theme { theme_type: Some(theme_type) }) = display_setting.theme {
+    if let Some(Theme { theme_type: Some(theme_type), .. }) = display_setting.theme {
         output.push_str(&format!("theme: {:?} ", theme_type))
     }
 

@@ -140,7 +140,9 @@ fn create_managed_env(sandbox: &SandboxProxy) -> Result<ManagedEnvironmentProxy,
                 klogs_enabled: Some(false),
                 filter_options: None,
                 syslog_output: Some(true),
+                ..LoggerOptions::empty()
             }),
+            ..EnvironmentOptions::empty()
         },
     )?;
     Ok(env)

@@ -74,6 +74,7 @@ async fn acquire_dhcp<E: netemul::Endpoint>(name: &str) -> Result {
                 mask: Some(fidl_ip_v4!(255.255.255.128)),
                 pool_range_start: Some(fidl_ip_v4!(192.168.0.2)),
                 pool_range_stop: Some(fidl_ip_v4!(192.168.0.5)),
+                ..fidl_fuchsia_net_dhcp::AddressPool::empty()
             }),
         ]],
         3,
@@ -113,6 +114,7 @@ async fn acquire_dhcp_with_dhcpd_bound_device<E: netemul::Endpoint>(name: &str) 
                 mask: Some(fidl_ip_v4!(255.255.255.128)),
                 pool_range_start: Some(fidl_ip_v4!(192.168.0.2)),
                 pool_range_stop: Some(fidl_ip_v4!(192.168.0.5)),
+                ..fidl_fuchsia_net_dhcp::AddressPool::empty()
             }),
             fidl_fuchsia_net_dhcp::Parameter::BoundDeviceNames(vec!["eth2".to_string()]),
         ]],
@@ -176,6 +178,7 @@ async fn acquire_dhcp_with_multiple_network<E: netemul::Endpoint>(name: &str) ->
                     mask: Some(fidl_ip_v4!(255.255.255.128)),
                     pool_range_start: Some(fidl_ip_v4!(192.168.0.2)),
                     pool_range_stop: Some(fidl_ip_v4!(192.168.0.5)),
+                    ..fidl_fuchsia_net_dhcp::AddressPool::empty()
                 }),
                 fidl_fuchsia_net_dhcp::Parameter::BoundDeviceNames(vec!["eth2".to_string()]),
             ],
@@ -187,6 +190,7 @@ async fn acquire_dhcp_with_multiple_network<E: netemul::Endpoint>(name: &str) ->
                     mask: Some(fidl_ip_v4!(255.255.255.0)),
                     pool_range_start: Some(fidl_ip_v4!(192.168.1.2)),
                     pool_range_stop: Some(fidl_ip_v4!(192.168.1.5)),
+                    ..fidl_fuchsia_net_dhcp::AddressPool::empty()
                 }),
                 fidl_fuchsia_net_dhcp::Parameter::BoundDeviceNames(vec!["eth3".to_string()]),
             ],
@@ -369,7 +373,7 @@ async fn test_dhcp<E: netemul::Endpoint>(
         let (watcher, watcher_server) =
             ::fidl::endpoints::create_proxy::<fidl_fuchsia_net_interfaces::WatcherMarker>()?;
         let () = client_interface_state
-            .get_watcher(fidl_fuchsia_net_interfaces::WatcherOptions {}, watcher_server)
+            .get_watcher(fidl_fuchsia_net_interfaces::WatcherOptions::empty(), watcher_server)
             .context("failed to initialize interface watcher")?;
         for interface in interfaces.iter() {
             let mut properties =

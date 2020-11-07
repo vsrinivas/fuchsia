@@ -3231,6 +3231,7 @@ async fn use_resolver_from_parent_environment() {
                             resolved_url: Some("test://b".into()),
                             decl: Some(default_component_decl().native_into_fidl()),
                             package: None,
+                            ..fsys::Component::empty()
                         },
                     )
                     .expect("failed to send resolve response");
@@ -3313,6 +3314,7 @@ async fn use_resolver_from_grandparent_environment() {
                             resolved_url: Some("test://c".into()),
                             decl: Some(default_component_decl().native_into_fidl()),
                             package: None,
+                            ..fsys::Component::empty()
                         },
                     )
                     .expect("failed to send resolve response");
@@ -3386,6 +3388,7 @@ async fn resolver_is_not_available() {
                             resolved_url: Some("test://b".into()),
                             decl: Some(default_component_decl().native_into_fidl()),
                             package: None,
+                            ..fsys::Component::empty()
                         },
                     )
                     .expect("failed to send resolve response");

@@ -131,6 +131,7 @@ async fn test_get_parameter_lease() {
         max: Some(
             86400,
         ),
+        __non_exhaustive: (),
     },
 )
 "#,
@@ -248,6 +249,7 @@ async fn test_list_parameter() {
                     ],
                 },
             ),
+            __non_exhaustive: (),
         },
     ),
     Lease(
@@ -258,6 +260,7 @@ async fn test_list_parameter() {
             max: Some(
                 86400,
             ),
+            __non_exhaustive: (),
         },
     ),
     PermittedMacs(
@@ -328,6 +331,7 @@ async fn test_reset_parameter() {
         max: Some(
             42,
         ),
+        __non_exhaustive: (),
     },
 )
 "#,
@@ -344,6 +348,7 @@ async fn test_reset_parameter() {
         max: Some(
             86400,
         ),
+        __non_exhaustive: (),
     },
 )
 "#,
@@ -382,6 +387,7 @@ async fn test_start_succeeds() {
                 mask: Some(fidl_ip_v4!(255.255.255.128)),
                 pool_range_start: Some(fidl_ip_v4!(192.168.0.2)),
                 pool_range_stop: Some(fidl_ip_v4!(192.168.0.5)),
+                ..fidl_fuchsia_net_dhcp::AddressPool::empty()
             }),
         ],
         vec![Command { args: vec!["start"], expected_stdout: "", expected_stderr: "" }],

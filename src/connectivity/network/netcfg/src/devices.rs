@@ -295,6 +295,7 @@ impl Device for NetworkDevice {
                     name: Some(config.name.clone()),
                     topopath: Some(topological_path.clone()),
                     metric: Some(config.metric),
+                    ..fnet_stack::InterfaceConfig::empty()
                 },
                 &mut fnet_stack::DeviceDefinition::Ethernet(fnet_stack::EthernetDeviceDefinition {
                     network_device: fidl::endpoints::ClientEnd::new(

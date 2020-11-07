@@ -96,10 +96,12 @@ impl Oauth {
             OauthRefreshToken {
                 content: Some(refresh_token_content),
                 account_id: Some(account_id),
+                ..OauthRefreshToken::empty()
             },
             OauthAccessToken {
                 content: Some(access_token_content),
                 expiry_time: Some(get_token_expiry_time_nanos()),
+                ..OauthAccessToken::empty()
             },
         ))
     }
@@ -124,6 +126,7 @@ impl Oauth {
         Ok(OauthAccessToken {
             content: Some(access_token_content),
             expiry_time: Some(get_token_expiry_time_nanos()),
+            ..OauthAccessToken::empty()
         })
     }
 
@@ -188,6 +191,7 @@ mod test {
                 let request = OauthRefreshTokenRequest {
                     account_id: Some("test-account".to_string()),
                     ui_context: None,
+                    ..OauthRefreshTokenRequest::empty()
                 };
                 let (refresh_token, access_token) =
                     proxy.create_refresh_token(request).await?.unwrap();
@@ -199,7 +203,11 @@ mod test {
                 assert!(access_token.expiry_time.is_some());
 
                 // Account ID unspecified case
-                let request = OauthRefreshTokenRequest { account_id: None, ui_context: None };
+                let request = OauthRefreshTokenRequest {
+                    account_id: None,
+                    ui_context: None,
+                    ..OauthRefreshTokenRequest::empty()
+                };
                 let (refresh_token, access_token) =
                     proxy.create_refresh_token(request).await?.unwrap();
 
@@ -225,9 +233,11 @@ mod test {
                     refresh_token: Some(OauthRefreshToken {
                         content: Some(refresh_token_content.clone()),
                         account_id: Some("account-id".to_string()),
+                        ..OauthRefreshToken::empty()
                     }),
                     client_id: Some(client_id.clone()),
                     scopes: None,
+                    ..OauthAccessTokenFromOauthRefreshTokenRequest::empty()
                 };
 
                 let access_token =
@@ -246,9 +256,11 @@ mod test {
                     refresh_token: Some(OauthRefreshToken {
                         content: Some(refresh_token_content.clone()),
                         account_id: Some("account-id".to_string()),
+                        ..OauthRefreshToken::empty()
                     }),
                     client_id: None,
                     scopes: None,
+                    ..OauthAccessTokenFromOauthRefreshTokenRequest::empty()
                 };
 
                 let access_token =
@@ -272,6 +284,7 @@ mod test {
             let refresh_token = OauthRefreshToken {
                 content: Some("refresh-token".to_string()),
                 account_id: Some("account-id".to_string()),
+                ..OauthRefreshToken::empty()
             };
             assert!(proxy.revoke_refresh_token(refresh_token).await?.is_ok());
             Ok(())
@@ -282,8 +295,11 @@ mod test {
     #[fasync::run_until_stalled(test)]
     async fn test_revoke_access_token() {
         run_proxy_test(|proxy| async move {
-            let access_token =
-                OauthAccessToken { content: Some("access-token".to_string()), expiry_time: None };
+            let access_token = OauthAccessToken {
+                content: Some("access-token".to_string()),
+                expiry_time: None,
+                ..OauthAccessToken::empty()
+            };
             assert!(proxy.revoke_access_token(access_token).await?.is_ok());
             Ok(())
         })

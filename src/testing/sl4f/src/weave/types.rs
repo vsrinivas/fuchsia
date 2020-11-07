@@ -47,6 +47,7 @@ impl From<PairingState> for fidl_fuchsia_weave::PairingState {
             is_thread_provisioned: item.is_thread_provisioned,
             is_fabric_provisioned: item.is_fabric_provisioned,
             is_service_provisioned: item.is_service_provisioned,
+            ..fidl_fuchsia_weave::PairingState::empty()
         }
     }
 }

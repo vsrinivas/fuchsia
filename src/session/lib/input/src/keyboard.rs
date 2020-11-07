@@ -240,8 +240,11 @@ impl KeyboardBinding {
         match device.get_descriptor().await?.keyboard {
             Some(fidl_fuchsia_input_report::KeyboardDescriptor {
                 input:
-                    Some(fidl_fuchsia_input_report::KeyboardInputDescriptor { keys: keys2, keys3 }),
+                    Some(fidl_fuchsia_input_report::KeyboardInputDescriptor {
+                        keys: keys2, keys3, ..
+                    }),
                 output: _,
+                ..
             }) => Ok(KeyboardBinding {
                 event_sender: input_event_sender,
                 device_descriptor: KeyboardDeviceDescriptor {

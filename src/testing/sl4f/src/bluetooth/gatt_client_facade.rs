@@ -171,7 +171,7 @@ impl GattClientFacade {
                 id,
                 offset,
                 &write_value,
-                WriteOptions { reliable_mode: Some(reliable_mode) },
+                WriteOptions { reliable_mode: Some(reliable_mode), ..WriteOptions::empty() },
             ),
             None => fx_err_and_bail!(&with_line!(tag), "Central proxy not available."),
         };
@@ -570,8 +570,11 @@ impl GattClientFacade {
         self.update_peripheral_id(&identifier, proxy);
         match &self.inner.read().central {
             Some(c) => {
-                let conn_opts =
-                    ConnectionOptions { bondable_mode: Some(true), service_filter: None };
+                let conn_opts = ConnectionOptions {
+                    bondable_mode: Some(true),
+                    service_filter: None,
+                    ..ConnectionOptions::empty()
+                };
                 let status = c.connect_peripheral(&mut identifier, conn_opts, server_end).await?;
                 match status.error {
                     Some(e) => {

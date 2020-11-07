@@ -148,6 +148,7 @@ mod tests {
                 component_url: Some(MOCK_URL.clone()),
                 component_name: Some(self.component_name),
                 instance_id: Some(self.instance_id),
+                ..SourceIdentity::empty()
             }
         }
     }

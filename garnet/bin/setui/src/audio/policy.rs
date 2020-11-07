@@ -112,6 +112,7 @@ impl From<Property> for fidl_fuchsia_settings_policy::Property {
             active_policies: Some(
                 src.active_policies.into_iter().map(Policy::into).collect::<Vec<_>>(),
             ),
+            ..fidl_fuchsia_settings_policy::Property::empty()
         }
     }
 }
@@ -201,6 +202,7 @@ impl From<Policy> for fidl_fuchsia_settings_policy::Policy {
         fidl_fuchsia_settings_policy::Policy {
             policy_id: Some(src.id.0),
             parameters: Some(src.transform.into()),
+            ..fidl_fuchsia_settings_policy::Policy::empty()
         }
     }
 }
@@ -223,13 +225,13 @@ impl TryFrom<PolicyParameters> for Transform {
 
     fn try_from(src: PolicyParameters) -> Result<Self, Self::Error> {
         Ok(match src {
-            PolicyParameters::Max(Volume { volume }) => {
+            PolicyParameters::Max(Volume { volume, .. }) => {
                 Transform::Max(volume.ok_or_else(|| "missing max volume")?)
             }
-            PolicyParameters::Min(Volume { volume }) => {
+            PolicyParameters::Min(Volume { volume, .. }) => {
                 Transform::Min(volume.ok_or_else(|| "missing min volume")?)
             }
-            PolicyParameters::Mute(Mute { mute }) => {
+            PolicyParameters::Mute(Mute { mute, .. }) => {
                 Transform::Mute(mute.ok_or_else(|| "missing mute state")?)
             }
             PolicyParameters::Disable(_) => Transform::Disable,
@@ -240,10 +242,16 @@ impl TryFrom<PolicyParameters> for Transform {
 impl From<Transform> for PolicyParameters {
     fn from(src: Transform) -> Self {
         match src {
-            Transform::Max(vol) => PolicyParameters::Max(Volume { volume: Some(vol) }),
-            Transform::Min(vol) => PolicyParameters::Min(Volume { volume: Some(vol) }),
-            Transform::Mute(is_muted) => PolicyParameters::Mute(Mute { mute: Some(is_muted) }),
-            Transform::Disable => PolicyParameters::Disable(Disable {}),
+            Transform::Max(vol) => {
+                PolicyParameters::Max(Volume { volume: Some(vol), ..Volume::empty() })
+            }
+            Transform::Min(vol) => {
+                PolicyParameters::Min(Volume { volume: Some(vol), ..Volume::empty() })
+            }
+            Transform::Mute(is_muted) => {
+                PolicyParameters::Mute(Mute { mute: Some(is_muted), ..Mute::empty() })
+            }
+            Transform::Disable => PolicyParameters::Disable(Disable::empty()),
         }
     }
 }
@@ -283,9 +291,9 @@ mod tests {
     /// if the source did not have required parameters specified.
     #[test]
     fn parameter_to_transform_missing_arguments() {
-        let max_params = PolicyParameters::Max(Volume { volume: None });
-        let min_params = PolicyParameters::Min(Volume { volume: None });
-        let mute_params = PolicyParameters::Mute(Mute { mute: None });
+        let max_params = PolicyParameters::Max(Volume { volume: None, ..Volume::empty() });
+        let min_params = PolicyParameters::Min(Volume { volume: None, ..Volume::empty() });
+        let mute_params = PolicyParameters::Mute(Mute { mute: None, ..Mute::empty() });
 
         assert_matches!(Transform::try_from(max_params), Err(_));
         assert_matches!(Transform::try_from(min_params), Err(_));
@@ -299,10 +307,12 @@ mod tests {
         let max_volume = 0.5;
         let min_volume = 0.5;
         let mute = true;
-        let max_params = PolicyParameters::Max(Volume { volume: Some(max_volume) });
-        let min_params = PolicyParameters::Min(Volume { volume: Some(min_volume) });
-        let mute_params = PolicyParameters::Mute(Mute { mute: Some(mute) });
-        let disable_params = PolicyParameters::Disable(Disable {});
+        let max_params =
+            PolicyParameters::Max(Volume { volume: Some(max_volume), ..Volume::empty() });
+        let min_params =
+            PolicyParameters::Min(Volume { volume: Some(min_volume), ..Volume::empty() });
+        let mute_params = PolicyParameters::Mute(Mute { mute: Some(mute), ..Mute::empty() });
+        let disable_params = PolicyParameters::Disable(Disable::empty());
 
         assert_eq!(Transform::try_from(max_params), Ok(Transform::Max(max_volume)));
         assert_eq!(Transform::try_from(min_params), Ok(Transform::Min(min_volume)));

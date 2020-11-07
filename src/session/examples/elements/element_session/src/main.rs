@@ -252,8 +252,10 @@ mod tests {
             key: "key".to_string(),
             value: Some(Box::new(fidl_fuchsia_session::Value::Text("value".to_string()))),
         };
-        let annotations =
-            fidl_fuchsia_session::Annotations { custom_annotations: Some(vec![annotation]) };
+        let annotations = fidl_fuchsia_session::Annotations {
+            custom_annotations: Some(vec![annotation]),
+            ..fidl_fuchsia_session::Annotations::empty()
+        };
 
         // Cannot implement a Copy of an Annotation so just make another variable with idenitical
         // fields to test the resulting calls.
@@ -261,8 +263,10 @@ mod tests {
             key: "key".to_string(),
             value: Some(Box::new(fidl_fuchsia_session::Value::Text("value".to_string()))),
         };
-        let annotations_2 =
-            fidl_fuchsia_session::Annotations { custom_annotations: Some(vec![annotation_2]) };
+        let annotations_2 = fidl_fuchsia_session::Annotations {
+            custom_annotations: Some(vec![annotation_2]),
+            ..fidl_fuchsia_session::Annotations::empty()
+        };
         let _ = element_controller_proxy.set_annotations(annotations).await.unwrap();
 
         let returned_annotations = element_controller_proxy.get_annotations().await;
@@ -301,15 +305,19 @@ mod tests {
             key: "key".to_string(),
             value: Some(Box::new(fidl_fuchsia_session::Value::Text("value".to_string()))),
         };
-        let annotations =
-            fidl_fuchsia_session::Annotations { custom_annotations: Some(vec![annotation]) };
+        let annotations = fidl_fuchsia_session::Annotations {
+            custom_annotations: Some(vec![annotation]),
+            ..fidl_fuchsia_session::Annotations::empty()
+        };
 
         let annotation_2 = fidl_fuchsia_session::Annotation {
             key: "key".to_string(),
             value: Some(Box::new(fidl_fuchsia_session::Value::Text("value".to_string()))),
         };
-        let annotations_2 =
-            fidl_fuchsia_session::Annotations { custom_annotations: Some(vec![annotation_2]) };
+        let annotations_2 = fidl_fuchsia_session::Annotations {
+            custom_annotations: Some(vec![annotation_2]),
+            ..fidl_fuchsia_session::Annotations::empty()
+        };
 
         let _ = element_controller_proxy.set_annotations(annotations).await.unwrap();
 
@@ -323,15 +331,19 @@ mod tests {
             key: "key".to_string(),
             value: Some(Box::new(fidl_fuchsia_session::Value::Text("new_value".to_string()))),
         };
-        let annotations_3 =
-            fidl_fuchsia_session::Annotations { custom_annotations: Some(vec![annotation_3]) };
+        let annotations_3 = fidl_fuchsia_session::Annotations {
+            custom_annotations: Some(vec![annotation_3]),
+            ..fidl_fuchsia_session::Annotations::empty()
+        };
 
         let annotation_4 = fidl_fuchsia_session::Annotation {
             key: "key".to_string(),
             value: Some(Box::new(fidl_fuchsia_session::Value::Text("new_value".to_string()))),
         };
-        let annotations_4 =
-            fidl_fuchsia_session::Annotations { custom_annotations: Some(vec![annotation_4]) };
+        let annotations_4 = fidl_fuchsia_session::Annotations {
+            custom_annotations: Some(vec![annotation_4]),
+            ..fidl_fuchsia_session::Annotations::empty()
+        };
 
         let _ = element_controller_proxy.set_annotations(annotations_3).await.unwrap();
 
@@ -373,8 +385,10 @@ mod tests {
             key: "key".to_string(),
             value: Some(Box::new(fidl_fuchsia_session::Value::Text("value".to_string()))),
         };
-        let annotations =
-            fidl_fuchsia_session::Annotations { custom_annotations: Some(vec![annotation]) };
+        let annotations = fidl_fuchsia_session::Annotations {
+            custom_annotations: Some(vec![annotation]),
+            ..fidl_fuchsia_session::Annotations::empty()
+        };
 
         let _ = element_controller_proxy.set_annotations(annotations).await.unwrap();
 
@@ -382,8 +396,10 @@ mod tests {
             key: "key".to_string(),
             value: Some(Box::new(fidl_fuchsia_session::Value::Text("value".to_string()))),
         };
-        let annotations_2 =
-            fidl_fuchsia_session::Annotations { custom_annotations: Some(vec![annotation_2]) };
+        let annotations_2 = fidl_fuchsia_session::Annotations {
+            custom_annotations: Some(vec![annotation_2]),
+            ..fidl_fuchsia_session::Annotations::empty()
+        };
 
         // Check that there are Annotations.
         let returned_annotations = element_controller_proxy.get_annotations().await;
@@ -394,8 +410,10 @@ mod tests {
 
         // Remove the Annotations.
         let annotation_3 = fidl_fuchsia_session::Annotation { key: "key".to_string(), value: None };
-        let annotations_3 =
-            fidl_fuchsia_session::Annotations { custom_annotations: Some(vec![annotation_3]) };
+        let annotations_3 = fidl_fuchsia_session::Annotations {
+            custom_annotations: Some(vec![annotation_3]),
+            ..fidl_fuchsia_session::Annotations::empty()
+        };
         let _ = element_controller_proxy.set_annotations(annotations_3).await.unwrap();
 
         let returned_annotations = element_controller_proxy.get_annotations().await;

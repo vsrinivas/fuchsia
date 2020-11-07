@@ -101,9 +101,12 @@ pub trait SuiteServer: Sized + Sync + Send {
 
                     fasync::Task::spawn(
                         async move {
-                            let mut iter = tests.iter().map(|TestCaseInfo { name, enabled }| {
-                                ftest::Case { name: Some(name.clone()), enabled: Some(*enabled) }
-                            });
+                            let mut iter =
+                                tests.iter().map(|TestCaseInfo { name, enabled }| ftest::Case {
+                                    name: Some(name.clone()),
+                                    enabled: Some(*enabled),
+                                    ..ftest::Case::empty()
+                                });
                             while let Some(ftest::CaseIteratorRequest::GetNext { responder }) =
                                 stream.try_next().await?
                             {

@@ -272,10 +272,10 @@ fn assert_reachable_entry(
             state: Some(fidl_fuchsia_net_neighbor::EntryState::Reachable(
                 // TODO(fxbug.dev/59372): Capture and assert expiration
                 // value
-                fidl_fuchsia_net_neighbor::ReachableState { expires_at: None },
+                fidl_fuchsia_net_neighbor::ReachableState { expires_at: None, .. },
             )),
             mac: Some(mac),
-            updated_at: Some(updated_at),
+            updated_at: Some(updated_at), ..
         } if interface == match_interface && neighbor == match_neighbor && mac == match_mac && updated_at != 0
     );
 }
@@ -293,10 +293,10 @@ fn assert_stale_entry(
             interface: Some(interface),
             neighbor: Some(neighbor),
             state: Some(fidl_fuchsia_net_neighbor::EntryState::Stale(
-                fidl_fuchsia_net_neighbor::StaleState {},
+                fidl_fuchsia_net_neighbor::StaleState { .. },
             )),
             mac: Some(mac),
-            updated_at: Some(updated_at)
+            updated_at: Some(updated_at), ..
         } if interface == match_interface && neighbor == match_neighbor && mac == match_mac && updated_at != 0
     );
 }
@@ -314,10 +314,10 @@ fn assert_static_entry(
             interface: Some(interface),
             neighbor: Some(neighbor),
             state: Some(fidl_fuchsia_net_neighbor::EntryState::Static_(
-                fidl_fuchsia_net_neighbor::StaticState {},
+                fidl_fuchsia_net_neighbor::StaticState { .. },
             )),
             mac: Some(mac),
-            updated_at: Some(updated_at),
+            updated_at: Some(updated_at), ..
         } if interface == match_interface && neighbor == match_neighbor && mac == match_mac && updated_at != 0
     );
 }

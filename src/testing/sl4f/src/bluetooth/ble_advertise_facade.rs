@@ -261,6 +261,7 @@ impl BleAdvertiseFacade {
             service_data,
             manufacturer_data,
             uris: uris,
+            ..AdvertisingData::empty()
         }))
     }
 
@@ -289,7 +290,11 @@ impl BleAdvertiseFacade {
         let connectable: bool = conn_raw.as_bool().unwrap_or(false);
 
         let conn_opts = if connectable {
-            Some(ConnectionOptions { bondable_mode: Some(true), service_filter: None })
+            Some(ConnectionOptions {
+                bondable_mode: Some(true),
+                service_filter: None,
+                ..ConnectionOptions::empty()
+            })
         } else {
             None
         };
@@ -300,6 +305,7 @@ impl BleAdvertiseFacade {
             mode_hint: Some(AdvertisingModeHint::VeryFast),
             connectable: Some(connectable),
             connection_options: conn_opts,
+            ..AdvertisingParameters::empty()
         };
 
         fx_log_info!(tag: "ble_advertise_args_to_fidl", "advertising parameters: {:?}", parameters);

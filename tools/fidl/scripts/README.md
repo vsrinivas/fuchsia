@@ -10,3 +10,10 @@ documented in this file.
 This script analyzes all `.fidl` files in the fuchsia repository and reports
 occurrences of nullable fields in unions.
 
+## fix_rust_exhaustive_tables.sh
+
+This script (1) changes FIDL table initializers to use the functional update
+syntax `MyTable { /* ... */, ..MyTable::empty() }`, and (2) changes patterns to
+use `MyTable { /* ... */, .. }`. It does this by parsing build errors with awk
+and then processing them with a Rust program executed using
+[rust-script](https://rust-script.org/).

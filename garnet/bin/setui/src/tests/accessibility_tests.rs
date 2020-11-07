@@ -53,6 +53,7 @@ async fn test_accessibility_set_all() {
         color: Some(TEST_COLOR),
         relative_size: Some(1.0),
         char_edge_style: Some(EdgeStyle::Raised),
+        ..CaptionFontStyle::empty()
     };
     const CHANGED_CAPTION_SETTINGS: CaptionsSettings = CaptionsSettings {
         for_media: Some(true),
@@ -60,6 +61,7 @@ async fn test_accessibility_set_all() {
         font_style: Some(CHANGED_FONT_STYLE),
         window_color: Some(TEST_COLOR),
         background_color: Some(TEST_COLOR),
+        ..CaptionsSettings::empty()
     };
 
     let initial_settings = AccessibilitySettings::empty();
@@ -117,6 +119,7 @@ async fn test_accessibility_set_captions() {
         color: None,
         relative_size: Some(1.0),
         char_edge_style: None,
+        ..CaptionFontStyle::empty()
     };
     const EXPECTED_CAPTIONS_SETTINGS: CaptionsSettings = CaptionsSettings {
         for_media: Some(true),
@@ -124,6 +127,7 @@ async fn test_accessibility_set_captions() {
         font_style: Some(CHANGED_FONT_STYLE),
         window_color: Some(ColorRgba { red: 238.0, green: 23.0, blue: 128.0, alpha: 255.0 }),
         background_color: None,
+        ..CaptionsSettings::empty()
     };
 
     let mut expected_settings = AccessibilitySettings::empty();
@@ -154,6 +158,7 @@ async fn test_accessibility_set_captions() {
         font_style: None,
         window_color: EXPECTED_CAPTIONS_SETTINGS.window_color,
         background_color: None,
+        ..CaptionsSettings::empty()
     });
     accessibility_proxy
         .set(first_set.clone())
@@ -169,6 +174,7 @@ async fn test_accessibility_set_captions() {
         font_style: EXPECTED_CAPTIONS_SETTINGS.font_style,
         window_color: None,
         background_color: None,
+        ..CaptionsSettings::empty()
     });
     accessibility_proxy
         .set(second_set.clone())

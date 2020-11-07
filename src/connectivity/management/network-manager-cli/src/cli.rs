@@ -361,6 +361,7 @@ async fn do_set<T: Write>(
         mtu: None,
         enable: None,
         metric: None,
+        ..WanProperties::empty()
     };
     // lan_properties contains all the lan related configs that are sent to the server
     let mut lan_properties = LanProperties {
@@ -370,6 +371,7 @@ async fn do_set<T: Write>(
         address_v6: None,
         enable_dns_forwarder: None,
         enable: None,
+        ..LanProperties::empty()
     };
     // This match statement populates the specified wan_properties field based on the subcommand
     // and calls the appropriate FIDL interface with the requested configuration changes. It then
@@ -422,7 +424,12 @@ async fn do_set<T: Write>(
                             }
                             wan_properties.connection_type = Some(WanConnection::PpPoE);
                             let pppoe_config = Pppoe {
-                                credentials: Some(Credentials { user: username, password }),
+                                credentials: Some(Credentials {
+                                    user: username,
+                                    password,
+                                    ..Credentials::empty()
+                                }),
+                                ..Pppoe::empty()
                             };
                             // Applying the configurations to the wan_properties data structure
                             wan_properties.connection_parameters =
@@ -454,8 +461,13 @@ async fn do_set<T: Write>(
                             // Wrapping username and password in "Credentials" structure and
                             // constructing the Pptp structure
                             let pptp_config = Pptp {
-                                credentials: Some(Credentials { user: username, password }),
+                                credentials: Some(Credentials {
+                                    user: username,
+                                    password,
+                                    ..Credentials::empty()
+                                }),
                                 server: Some(fidl_fuchsia_net::IpAddress::Ipv4(server_ipv4)),
+                                ..Pptp::empty()
                             };
                             wan_properties.connection_parameters = Some(
                                 fidl_fuchsia_router_config::ConnectionParameters::Pptp(pptp_config),
@@ -481,8 +493,13 @@ async fn do_set<T: Write>(
                             wan_properties.connection_type = Some(WanConnection::L2Tp);
                             let server_ipv4 = Ipv4Address { addr: server.unwrap().octets() };
                             let l2tp_config = L2tp {
-                                credentials: Some(Credentials { user: username, password }),
+                                credentials: Some(Credentials {
+                                    user: username,
+                                    password,
+                                    ..Credentials::empty()
+                                }),
                                 server: Some(fidl_fuchsia_net::IpAddress::Ipv4(server_ipv4)),
+                                ..L2tp::empty()
                             };
                             wan_properties.connection_parameters = Some(
                                 fidl_fuchsia_router_config::ConnectionParameters::L2tp(l2tp_config),
@@ -559,6 +576,7 @@ async fn do_set<T: Write>(
                                 Some(fidl_fuchsia_router_config::CidrAddress {
                                     address: Some(fidl_fuchsia_net::IpAddress::Ipv4(ipv4_address)),
                                     prefix_length: Some(prefix_length),
+                                    ..fidl_fuchsia_router_config::CidrAddress::empty()
                                 });
                             // gateway_v4 is of type IpAddress::Ipv4, which is constructed using the gateway_ipv4
                             wan_properties.gateway_v4 =
@@ -632,6 +650,7 @@ async fn do_set<T: Write>(
             lan_properties.address_v4 = Some(fidl_fuchsia_router_config::CidrAddress {
                 address: Some(fidl_fuchsia_net::IpAddress::Ipv4(ipv4_address)),
                 prefix_length: Some(prefix_length),
+                ..fidl_fuchsia_router_config::CidrAddress::empty()
             });
 
             printer.println(format!("Sending: {:?} ID: {:?}", lan_properties, lan_id));
@@ -719,6 +738,7 @@ async fn do_set<T: Write>(
                 v6_firewall: None,
                 upnp: None,
                 drop_icmp_echo: None,
+                ..SecurityFeatures::empty()
             };
             printer.println(format!(
                 "Setting security feature: {:?}, enabled: {:?}",
@@ -793,6 +813,7 @@ async fn do_set<T: Write>(
                         },
                         None => Some(Protocol::Both),
                     },
+                    ..FlowSelector::empty()
                 },
             };
             let response = router_admin

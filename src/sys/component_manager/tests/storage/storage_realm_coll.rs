@@ -22,6 +22,7 @@ async fn main() -> Result<(), Error> {
         )),
         startup: Some(fsys::StartupMode::Lazy),
         environment: None,
+        ..fsys::ChildDecl::empty()
     };
 
     realm

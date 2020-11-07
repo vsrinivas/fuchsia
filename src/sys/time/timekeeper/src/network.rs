@@ -72,9 +72,11 @@ mod tests {
             online: Some(true),
             addresses: Some(vec![finterfaces::Address {
                 addr: Some(fnet::Subnet { addr: fidl_ip!(192.168.0.1), prefix_len: 16 }),
+                ..finterfaces::Address::empty()
             }]),
             has_default_ipv4_route: Some(true),
             has_default_ipv6_route: Some(true),
+            ..finterfaces::Properties::empty()
         }
     }
 

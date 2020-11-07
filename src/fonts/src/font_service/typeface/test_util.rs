@@ -59,15 +59,22 @@ pub fn make_typeface_request<'a>(
     TypefaceRequest {
         query: Some(TypefaceQuery {
             family: None,
-            style: Some(Style2 { weight: weight.into(), width: width.into(), slant: slant.into() }),
+            style: Some(Style2 {
+                weight: weight.into(),
+                width: width.into(),
+                slant: slant.into(),
+                ..Style2::empty()
+            }),
             code_points: None,
             languages: languages
                 .into()
                 .map(|l| l.iter().map(|s| LocaleId { id: s.to_string() }).collect()),
             fallback_family: fallback_family.into(),
+            ..TypefaceQuery::empty()
         }),
         flags: Some(flags),
         cache_miss_policy: None,
+        ..TypefaceRequest::empty()
     }
 }
 

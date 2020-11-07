@@ -200,6 +200,7 @@ mod tests {
         let fidl_type = fidl_fuchsia_identity_tokens::OpenIdToken {
             expiry_time: Some(TEST_EXPIRY_TIME.clone().into_nanos()),
             content: Some(TEST_ID_TOKEN.to_string()),
+            ..fidl_fuchsia_identity_tokens::OpenIdToken::empty()
         };
 
         let native_type = OAuthToken::try_from(fidl_type).unwrap();
@@ -210,14 +211,18 @@ mod tests {
         let fidl_type = fidl_fuchsia_identity_tokens::OpenIdToken {
             expiry_time: None,
             content: Some(TEST_ID_TOKEN.to_string()),
+            ..fidl_fuchsia_identity_tokens::OpenIdToken::empty()
         };
         let native_type = OAuthToken::try_from(fidl_type).unwrap();
         assert_eq!(&native_type.token, TEST_ID_TOKEN);
         assert_eq!(native_type.expiry_time(), &Time::INFINITE);
 
         // No token contents.
-        let invalid_fidl_type =
-            fidl_fuchsia_identity_tokens::OpenIdToken { expiry_time: None, content: None };
+        let invalid_fidl_type = fidl_fuchsia_identity_tokens::OpenIdToken {
+            expiry_time: None,
+            content: None,
+            ..fidl_fuchsia_identity_tokens::OpenIdToken::empty()
+        };
         assert!(OAuthToken::try_from(invalid_fidl_type).is_err());
     }
 

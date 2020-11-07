@@ -52,7 +52,12 @@ impl BusConnection {
     }
 
     pub fn publish_code(&self, code: i32) -> Result<(), Error> {
-        self.bus.publish(Event { code: Some(code), message: None, arguments: None })?;
+        self.bus.publish(Event {
+            code: Some(code),
+            message: None,
+            arguments: None,
+            ..Event::empty()
+        })?;
         Ok(())
     }
 

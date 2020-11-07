@@ -55,6 +55,7 @@ mod test {
                     .revoke_id_token(OpenIdToken {
                         content: Some("id-token".to_string()),
                         expiry_time: None,
+                        ..OpenIdToken::empty()
                     })
                     .await
                     .unwrap()

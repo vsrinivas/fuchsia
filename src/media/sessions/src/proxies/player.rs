@@ -395,6 +395,7 @@ impl Player {
                     .map(|media_image| MediaImage {
                         image_type: Some(media_image.image_type),
                         sizes: Some(media_image.sizes),
+                        ..MediaImage::empty()
                     })
                     .collect()
             }),
@@ -406,6 +407,7 @@ impl Player {
         WatchOptions {
             only_active: Some(self.state.is_active().unwrap_or(false)),
             allowed_sessions: Some(vec![self.id.get()]),
+            ..WatchOptions::empty()
         }
     }
 }
@@ -630,6 +632,7 @@ mod test {
         let delta = PlayerInfoDelta {
             player_capabilities: Some(PlayerCapabilities {
                 flags: Some(PlayerCapabilityFlags::Play | PlayerCapabilityFlags::Pause),
+                ..PlayerCapabilities::empty()
             }),
             ..Decodable::new_empty()
         };

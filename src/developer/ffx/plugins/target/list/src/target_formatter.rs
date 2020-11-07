@@ -284,6 +284,7 @@ mod test {
             rcs_state: Some(bridge::RemoteControlState::Unknown),
             target_type: Some(bridge::TargetType::Unknown),
             target_state: Some(bridge::TargetState::Unknown),
+            ..bridge::Target::empty()
         }
     }
 
@@ -312,6 +313,7 @@ mod test {
                 rcs_state: Some(bridge::RemoteControlState::Unknown),
                 target_type: Some(bridge::TargetType::Unknown),
                 target_state: Some(bridge::TargetState::Unknown),
+                ..bridge::Target::empty()
             },
         ])
         .unwrap();

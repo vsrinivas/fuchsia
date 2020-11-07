@@ -83,6 +83,7 @@ fn make_intl_profile(timezone: &str) -> Result<fintl::Profile, Error> {
         ]),
         time_zones: Some(vec![fintl::TimeZoneId { id: timezone.to_string() }]),
         temperature_unit: None,
+        ..fintl::Profile::empty()
     };
     Ok(profile)
 }

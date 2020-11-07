@@ -152,6 +152,7 @@ impl MockResolver {
             resolved_url: Some(format!("test:///{}_resolved", name)),
             decl: Some(fsys_decl),
             package: None,
+            ..fsys::Component::empty()
         })
     }
 

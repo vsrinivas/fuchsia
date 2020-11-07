@@ -111,7 +111,10 @@ impl SuiteServer for TestServer {
                     Err(error) => {
                         error!("failed to run test '{}'. {}", test, error);
                         case_listener_proxy
-                            .finished(ftest::Result_ { status: Some(ftest::Status::Failed) })
+                            .finished(ftest::Result_ {
+                                status: Some(ftest::Status::Failed),
+                                ..ftest::Result_::empty()
+                            })
                             .map_err(RunTestError::SendFinish)?;
                     }
                 }
@@ -314,7 +317,10 @@ impl TestServer {
         // so we must manually return early in order to skip a test.
         let skip_disabled_tests = !run_options.include_disabled_tests.unwrap_or(false);
         if skip_disabled_tests && self.is_test_disabled(test_component.clone(), test).await? {
-            return Ok(ftest::Result_ { status: Some(ftest::Status::Skipped) });
+            return Ok(ftest::Result_ {
+                status: Some(ftest::Status::Skipped),
+                ..ftest::Result_::empty()
+            });
         }
 
         let test_invoke = Some(format!("__RUST_TEST_INVOKE={}", test));
@@ -324,7 +330,10 @@ impl TestServer {
         if let Some(user_args) = &run_options.arguments {
             if let Err(e) = Self::validate_args(&user_args) {
                 test_logger.write_str(&format!("{}", e)).await?;
-                return Ok(ftest::Result_ { status: Some(ftest::Status::Failed) });
+                return Ok(ftest::Result_ {
+                    status: Some(ftest::Status::Failed),
+                    ..ftest::Result_::empty()
+                });
             }
             args.extend(user_args.clone());
         }
@@ -369,12 +378,18 @@ impl TestServer {
         let process_info = process.info().map_err(RunTestError::ProcessInfo)?;
 
         match process_info.return_code {
-            TR_OK => Ok(ftest::Result_ { status: Some(ftest::Status::Passed) }),
+            TR_OK => Ok(ftest::Result_ {
+                status: Some(ftest::Status::Passed),
+                ..ftest::Result_::empty()
+            }),
             TR_FAILED => {
                 // Add a preceding newline so that this does not mix with test output, as
                 // test output might not contain a newline at end.
                 test_logger.write_str("\ntest failed.\n").await?;
-                Ok(ftest::Result_ { status: Some(ftest::Status::Failed) })
+                Ok(ftest::Result_ {
+                    status: Some(ftest::Status::Failed),
+                    ..ftest::Result_::empty()
+                })
             }
             other => Err(RunTestError::UnexpectedReturnCode(other)),
         }
@@ -536,6 +551,7 @@ mod tests {
             ns.push(fcrunner::ComponentNamespaceEntry {
                 path: Some(path.to_string()),
                 directory: Some(handle),
+                ..fcrunner::ComponentNamespaceEntry::empty()
             });
         }
         ComponentNamespace::try_from(ns)
@@ -717,7 +733,7 @@ mod tests {
             ListenerEvent::start_test("my_tests::passing_test"),
             ListenerEvent::finish_test(
                 "my_tests::passing_test",
-                TestResult { status: Some(Status::Passed) },
+                TestResult { status: Some(Status::Passed), ..TestResult::empty() },
             ),
             ListenerEvent::finish_all_test(),
         ];
@@ -743,6 +759,7 @@ mod tests {
                 include_disabled_tests: Some(false),
                 parallel: Some(1),
                 arguments: Some(vec!["--my_custom_arg2".to_owned()]),
+                ..RunOptions::empty()
             },
         )
         .await
@@ -752,37 +769,37 @@ mod tests {
             ListenerEvent::start_test("my_tests::sample_test_one"),
             ListenerEvent::finish_test(
                 "my_tests::sample_test_one",
-                TestResult { status: Some(Status::Passed) },
+                TestResult { status: Some(Status::Passed), ..TestResult::empty() },
             ),
             ListenerEvent::start_test("my_tests::passing_test"),
             ListenerEvent::finish_test(
                 "my_tests::passing_test",
-                TestResult { status: Some(Status::Passed) },
+                TestResult { status: Some(Status::Passed), ..TestResult::empty() },
             ),
             ListenerEvent::start_test("my_tests::failing_test"),
             ListenerEvent::finish_test(
                 "my_tests::failing_test",
-                TestResult { status: Some(Status::Failed) },
+                TestResult { status: Some(Status::Failed), ..TestResult::empty() },
             ),
             ListenerEvent::start_test("my_tests::sample_test_two"),
             ListenerEvent::finish_test(
                 "my_tests::sample_test_two",
-                TestResult { status: Some(Status::Passed) },
+                TestResult { status: Some(Status::Passed), ..TestResult::empty() },
             ),
             ListenerEvent::start_test("my_tests::ignored_passing_test"),
             ListenerEvent::finish_test(
                 "my_tests::ignored_passing_test",
-                TestResult { status: Some(Status::Skipped) },
+                TestResult { status: Some(Status::Skipped), ..TestResult::empty() },
             ),
             ListenerEvent::start_test("my_tests::ignored_failing_test"),
             ListenerEvent::finish_test(
                 "my_tests::ignored_failing_test",
-                TestResult { status: Some(Status::Skipped) },
+                TestResult { status: Some(Status::Skipped), ..TestResult::empty() },
             ),
             ListenerEvent::start_test("my_tests::test_custom_arguments"),
             ListenerEvent::finish_test(
                 "my_tests::test_custom_arguments",
-                TestResult { status: Some(Status::Passed) },
+                TestResult { status: Some(Status::Passed), ..TestResult::empty() },
             ),
             ListenerEvent::finish_all_test(),
         ];
@@ -802,7 +819,12 @@ mod tests {
                 "my_tests::ignored_passing_test",
                 "my_tests::ignored_failing_test",
             ]),
-            RunOptions { include_disabled_tests: Some(false), parallel: Some(4), arguments: None },
+            RunOptions {
+                include_disabled_tests: Some(false),
+                parallel: Some(4),
+                arguments: None,
+                ..RunOptions::empty()
+            },
         )
         .await
         .unwrap();
@@ -811,32 +833,32 @@ mod tests {
             ListenerEvent::start_test("my_tests::sample_test_one"),
             ListenerEvent::finish_test(
                 "my_tests::sample_test_one",
-                TestResult { status: Some(Status::Passed) },
+                TestResult { status: Some(Status::Passed), ..TestResult::empty() },
             ),
             ListenerEvent::start_test("my_tests::passing_test"),
             ListenerEvent::finish_test(
                 "my_tests::passing_test",
-                TestResult { status: Some(Status::Passed) },
+                TestResult { status: Some(Status::Passed), ..TestResult::empty() },
             ),
             ListenerEvent::start_test("my_tests::failing_test"),
             ListenerEvent::finish_test(
                 "my_tests::failing_test",
-                TestResult { status: Some(Status::Failed) },
+                TestResult { status: Some(Status::Failed), ..TestResult::empty() },
             ),
             ListenerEvent::start_test("my_tests::sample_test_two"),
             ListenerEvent::finish_test(
                 "my_tests::sample_test_two",
-                TestResult { status: Some(Status::Passed) },
+                TestResult { status: Some(Status::Passed), ..TestResult::empty() },
             ),
             ListenerEvent::start_test("my_tests::ignored_passing_test"),
             ListenerEvent::finish_test(
                 "my_tests::ignored_passing_test",
-                TestResult { status: Some(Status::Skipped) },
+                TestResult { status: Some(Status::Skipped), ..TestResult::empty() },
             ),
             ListenerEvent::start_test("my_tests::ignored_failing_test"),
             ListenerEvent::finish_test(
                 "my_tests::ignored_failing_test",
-                TestResult { status: Some(Status::Skipped) },
+                TestResult { status: Some(Status::Skipped), ..TestResult::empty() },
             ),
             ListenerEvent::finish_all_test(),
         ];
@@ -857,7 +879,12 @@ mod tests {
                 "my_tests::ignored_passing_test",
                 "my_tests::ignored_failing_test",
             ]),
-            RunOptions { include_disabled_tests: Some(true), parallel: Some(1), arguments: None },
+            RunOptions {
+                include_disabled_tests: Some(true),
+                parallel: Some(1),
+                arguments: None,
+                ..RunOptions::empty()
+            },
         )
         .await
         .unwrap();
@@ -866,17 +893,17 @@ mod tests {
             ListenerEvent::start_test("my_tests::sample_test_two"),
             ListenerEvent::finish_test(
                 "my_tests::sample_test_two",
-                TestResult { status: Some(Status::Passed) },
+                TestResult { status: Some(Status::Passed), ..TestResult::empty() },
             ),
             ListenerEvent::start_test("my_tests::ignored_passing_test"),
             ListenerEvent::finish_test(
                 "my_tests::ignored_passing_test",
-                TestResult { status: Some(Status::Passed) },
+                TestResult { status: Some(Status::Passed), ..TestResult::empty() },
             ),
             ListenerEvent::start_test("my_tests::ignored_failing_test"),
             ListenerEvent::finish_test(
                 "my_tests::ignored_failing_test",
-                TestResult { status: Some(Status::Failed) },
+                TestResult { status: Some(Status::Failed), ..TestResult::empty() },
             ),
             ListenerEvent::finish_all_test(),
         ];

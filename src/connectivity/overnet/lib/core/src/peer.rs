@@ -42,7 +42,7 @@ struct Config {}
 
 impl Config {
     fn negotiate(_request: ConfigRequest) -> (Self, ConfigResponse) {
-        (Config {}, ConfigResponse {})
+        (Config {}, ConfigResponse::empty())
     }
 
     fn from_response(_response: ConfigResponse) -> Self {
@@ -279,7 +279,7 @@ impl Peer {
                     service_name: service.to_string(),
                     stream_ref,
                     rights,
-                    options: ConnectToServiceOptions {},
+                    options: ConnectToServiceOptions::empty(),
                 }))
                 .await?;
             Ok(())
@@ -337,6 +337,7 @@ impl Peer {
                 stats.rtt.as_micros().try_into().unwrap_or(std::u64::MAX),
             ),
             congestion_window_bytes: Some(stats.cwnd as u64),
+            ..PeerConnectionDiagnosticInfo::empty()
         }
     }
 }
@@ -360,7 +361,12 @@ async fn client_handshake(
         // Send config request
         let mut conn_stream_writer: FramedStreamWriter = conn_stream_writer.into();
         conn_stream_writer
-            .send(FrameType::Data, &encode_fidl(&mut ConfigRequest {})?, false, &conn_stats.config)
+            .send(
+                FrameType::Data,
+                &encode_fidl(&mut ConfigRequest::empty())?,
+                false,
+                &conn_stats.config,
+            )
             .await?;
         // Receive FIDL header
         log::trace!("[{:?} clipeer:{:?}] read fidl header", my_node_id, peer_node_id);
@@ -500,6 +506,7 @@ async fn client_conn_stream(
                         FrameType::Data,
                         &encode_fidl(&mut PeerMessage::UpdateNodeDescription(PeerDescription {
                             services,
+                            ..PeerDescription::empty()
                         }))?,
                         false,
                         &svc_conn_stats.update_node_description,
@@ -696,11 +703,14 @@ async fn server_conn_stream(
                             .connect(
                                 &service_name,
                                 app_channel,
-                                ConnectionInfo { peer: Some(node_id.into()) },
+                                ConnectionInfo {
+                                    peer: Some(node_id.into()),
+                                    ..ConnectionInfo::empty()
+                                },
                             )
                             .await?;
                     }
-                    PeerMessage::UpdateNodeDescription(PeerDescription { services }) => {
+                    PeerMessage::UpdateNodeDescription(PeerDescription { services, .. }) => {
                         router
                             .service_map()
                             .update_node(node_id, services.unwrap_or(vec![]))

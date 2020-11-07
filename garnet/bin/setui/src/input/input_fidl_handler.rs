@@ -23,7 +23,8 @@ impl From<SettingResponse> for InputDeviceSettings {
         if let SettingResponse::Input(info) = response {
             let mut input_settings = InputDeviceSettings::empty();
 
-            let microphone = Microphone { muted: Some(info.microphone.muted) };
+            let microphone =
+                Microphone { muted: Some(info.microphone.muted), ..Microphone::empty() };
 
             input_settings.microphone = Some(microphone);
             input_settings
@@ -34,7 +35,7 @@ impl From<SettingResponse> for InputDeviceSettings {
 }
 
 fn to_request(settings: InputDeviceSettings) -> Option<SettingRequest> {
-    if let Some(Microphone { muted: Some(muted) }) = settings.microphone {
+    if let Some(Microphone { muted: Some(muted), .. }) = settings.microphone {
         Some(SettingRequest::SetMicMute(muted))
     } else {
         None

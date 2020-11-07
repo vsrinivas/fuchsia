@@ -164,6 +164,7 @@ async fn test_no_duplicate_interface_names() -> Result {
                 name: Some(IFNAME.to_string()),
                 topopath: None,
                 metric: None,
+                ..fidl_fuchsia_net_stack::InterfaceConfig::empty()
             },
             &mut fidl_fuchsia_net_stack::DeviceDefinition::Ethernet(
                 fidl_fuchsia_net_stack::EthernetDeviceDefinition { network_device, mac },
@@ -526,7 +527,7 @@ async fn test_close_interface<E: netemul::Endpoint>(enabled: bool, name: &str) -
     let (watcher, watcher_server) =
         ::fidl::endpoints::create_proxy::<fidl_fuchsia_net_interfaces::WatcherMarker>()?;
     let () = interface_state
-        .get_watcher(fidl_fuchsia_net_interfaces::WatcherOptions {}, watcher_server)
+        .get_watcher(fidl_fuchsia_net_interfaces::WatcherOptions::empty(), watcher_server)
         .context("failed to initialize interface watcher")?;
     let mut if_map = HashMap::new();
     let () = fidl_fuchsia_net_interfaces_ext::wait_interface(
@@ -581,7 +582,7 @@ async fn test_down_close_race<E: netemul::Endpoint>(name: &str) -> Result {
     let (watcher, watcher_server) =
         ::fidl::endpoints::create_proxy::<fidl_fuchsia_net_interfaces::WatcherMarker>()?;
     let () = interface_state
-        .get_watcher(fidl_fuchsia_net_interfaces::WatcherOptions {}, watcher_server)
+        .get_watcher(fidl_fuchsia_net_interfaces::WatcherOptions::empty(), watcher_server)
         .context("failed to initialize interface watcher")?;
     let mut if_map = HashMap::new();
 
@@ -661,7 +662,7 @@ async fn test_close_data_race<E: netemul::Endpoint>(name: &str) -> Result {
     let (watcher, watcher_server) =
         ::fidl::endpoints::create_proxy::<fidl_fuchsia_net_interfaces::WatcherMarker>()?;
     let () = interface_state
-        .get_watcher(fidl_fuchsia_net_interfaces::WatcherOptions {}, watcher_server)
+        .get_watcher(fidl_fuchsia_net_interfaces::WatcherOptions::empty(), watcher_server)
         .context("failed to initialize interface watcher")?;
     let mut if_map = HashMap::new();
     for _ in 0..10u64 {
@@ -777,7 +778,7 @@ async fn test_interfaces_watcher_race() -> Result {
         let (watcher, server) =
             fidl::endpoints::create_proxy::<fidl_fuchsia_net_interfaces::WatcherMarker>()?;
         let () = interface_state
-            .get_watcher(fidl_fuchsia_net_interfaces::WatcherOptions {}, server)
+            .get_watcher(fidl_fuchsia_net_interfaces::WatcherOptions::empty(), server)
             .context("failed to initialize interface watcher")?;
 
         let ep = sandbox
@@ -900,7 +901,7 @@ async fn test_interfaces_watcher() -> Result {
         let (watcher, server) =
             fidl::endpoints::create_proxy::<fidl_fuchsia_net_interfaces::WatcherMarker>()?;
         let () = interface_state
-            .get_watcher(fidl_fuchsia_net_interfaces::WatcherOptions {}, server)
+            .get_watcher(fidl_fuchsia_net_interfaces::WatcherOptions::empty(), server)
             .context("failed to initialize interface watcher")?;
 
         let event = watcher.watch().await.context("failed to watch")?;
@@ -977,6 +978,7 @@ async fn test_interfaces_watcher() -> Result {
         addresses: Some(vec![]),
         has_default_ipv4_route: Some(false),
         has_default_ipv6_route: Some(false),
+        ..fidl_fuchsia_net_interfaces::Properties::empty()
     });
     async fn try_next<S>(stream: &mut S) -> Result<fidl_fuchsia_net_interfaces::Event>
     where
@@ -1017,6 +1019,7 @@ async fn test_interfaces_watcher() -> Result {
                     device_class: None,
                     has_default_ipv4_route: None,
                     has_default_ipv6_route: None,
+                    ..
                 },
             ) if event_id == id => {
                 if let Some(got_online) = online {
@@ -1121,6 +1124,7 @@ async fn test_interfaces_watcher() -> Result {
             online: None,
             has_default_ipv4_route: None,
             has_default_ipv6_route: None,
+            ..
         }) if event_id == id => Ok(addresses.iter().filter_map(|a| a.addr).collect::<HashSet<_>>()),
         _ => Err(anyhow::anyhow!("got: {:?}, want changed event with added IPv4 address", event)),
     };

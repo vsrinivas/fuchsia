@@ -317,6 +317,7 @@ async fn validate_intl_watch() -> Result<(), Error> {
                 temperature_unit: Some(TEST_TEMPERATURE_UNIT),
                 time_zone_id: Some(TimeZoneId { id: TEST_TIME_ZONE.to_string() }),
                 hour_cycle: Some(TEST_HOUR_CYCLE),
+                ..IntlSettings::empty()
             })?;
         }
     );
@@ -335,6 +336,7 @@ async fn validate_intl_watch() -> Result<(), Error> {
                 temperature_unit: Some(TEST_TEMPERATURE_UNIT),
                 time_zone_id: Some(TimeZoneId { id: TEST_TIME_ZONE.to_string() }),
                 hour_cycle: Some(TEST_HOUR_CYCLE),
+                ..IntlSettings::empty()
             }
         )
     );
@@ -347,6 +349,7 @@ async fn validate_device() -> Result<(), Error> {
         DeviceRequest::Watch { responder } => {
             responder.send(DeviceSettings {
                 build_tag: Some(TEST_BUILD_TAG.to_string()),
+                ..DeviceSettings::empty()
             })?;
         }
     );
@@ -385,7 +388,7 @@ async fn validate_display(
               (settings.low_light_mode, expected_low_light_mode) {
                 assert_eq!(low_light_mode, expected_low_light_mode_value);
                 responder.send(&mut Ok(()))?;
-            } else if let (Some(Theme{ theme_type: Some(theme_type)}), Some(expected_theme_type_value)) =
+            } else if let (Some(Theme{ theme_type: Some(theme_type), ..}), Some(expected_theme_type_value)) =
               (settings.theme, expected_theme_type) {
                 assert_eq!(theme_type, expected_theme_type_value);
                 responder.send(&mut Ok(()))?;
@@ -400,7 +403,8 @@ async fn validate_display(
                 user_brightness_offset: Some(0.5),
                 low_light_mode: Some(LowLightMode::Disable),
                 screen_enabled: Some(true),
-                theme: Some(Theme{theme_type: Some(ThemeType::Default)}),
+                theme: Some(Theme{theme_type: Some(ThemeType::Default), ..Theme::empty()}),
+                ..DisplaySettings::empty()
             })?;
         }
     );
@@ -415,7 +419,7 @@ async fn validate_display(
         expected_auto_brightness,
         false,
         expected_low_light_mode,
-        Some(Theme { theme_type: expected_theme_type }),
+        Some(Theme { theme_type: expected_theme_type, ..Theme::empty() }),
     )
     .await?;
 
@@ -438,6 +442,7 @@ async fn validate_factory_reset(expected_local_reset_allowed: bool) -> Result<()
         FactoryResetRequest::Watch { responder } => {
             responder.send(FactoryResetSettings {
                 is_local_reset_allowed: Some(true),
+                ..FactoryResetSettings::empty()
             })?;
         }
     );
@@ -471,6 +476,7 @@ async fn validate_light_sensor() -> Result<(), Error> {
                                 green: 16.0,
                                 blue: 59.0,
                             }),
+                            ..LightSensorData::empty()
                         })
                         .unwrap();
                 }
@@ -598,12 +604,16 @@ async fn validate_audio(expected: &'static ExpectedStreamSettingsStruct) -> Resu
                     source: Some(fidl_fuchsia_settings::AudioStreamSettingSource::User),
                     user_volume: Some(Volume {
                         level: Some(0.6),
-                        muted: Some(false)
+                        muted: Some(false),
+                        ..Volume::empty()
                     }),
+                    ..AudioStreamSettings::empty()
                 }]),
                 input: Some(AudioInput {
-                    muted: Some(true)
+                    muted: Some(true),
+                    ..AudioInput::empty()
                 }),
+                ..AudioSettings::empty()
             })?;
         }
     );
@@ -626,7 +636,7 @@ async fn validate_audio(expected: &'static ExpectedStreamSettingsStruct) -> Resu
 async fn validate_input(expected_mic_muted: Option<bool>) -> Result<(), Error> {
     let env = create_service!(Services::Input,
         InputRequest::Set { settings, responder } => {
-            if let Some(Microphone { muted }) = settings.microphone {
+            if let Some(Microphone { muted, .. }) = settings.microphone {
                 assert_eq!(expected_mic_muted, muted);
                 responder.send(&mut (Ok(())))?;
             }
@@ -635,7 +645,9 @@ async fn validate_input(expected_mic_muted: Option<bool>) -> Result<(), Error> {
             responder.send(InputDeviceSettings {
                 microphone: Some(Microphone {
                     muted: expected_mic_muted,
-                })
+                    ..Microphone::empty()
+                }),
+                ..InputDeviceSettings::empty()
             })?;
         }
     );
@@ -649,7 +661,13 @@ async fn validate_input(expected_mic_muted: Option<bool>) -> Result<(), Error> {
             output,
             format!(
                 "{:#?}",
-                InputDeviceSettings { microphone: Some(Microphone { muted: expected_mic_muted }) }
+                InputDeviceSettings {
+                    microphone: Some(Microphone {
+                        muted: expected_mic_muted,
+                        ..Microphone::empty()
+                    }),
+                    ..InputDeviceSettings::empty()
+                }
             )
         );
     } else {
@@ -711,6 +729,7 @@ async fn validate_dnd(
             responder.send(DoNotDisturbSettings {
                 user_initiated_do_not_disturb: Some(false),
                 night_mode_initiated_do_not_disturb: Some(false),
+                ..DoNotDisturbSettings::empty()
             })?;
         }
     );
@@ -733,8 +752,8 @@ async fn validate_light_set() -> Result<(), Error> {
     let env = create_service!(Services::Light,
         LightRequest::SetLightGroupValues { name, state, responder } => {
             assert_eq!(name, TEST_NAME);
-            assert_eq!(state, vec![LightState { value: Some(LightValue::Brightness(LIGHT_VAL_1)) },
-            LightState { value: Some(LightValue::Brightness(LIGHT_VAL_2)) }]);
+            assert_eq!(state, vec![LightState { value: Some(LightValue::Brightness(LIGHT_VAL_1)), ..LightState::empty() },
+            LightState { value: Some(LightValue::Brightness(LIGHT_VAL_2)), ..LightState::empty() }]);
             responder.send(&mut Ok(()))?;
         }
     );
@@ -771,9 +790,10 @@ async fn validate_light_watch() -> Result<(), Error> {
                     enabled: Some(ENABLED),
                     type_: Some(LIGHT_TYPE),
                     lights: Some(vec![
-                        LightState { value: Some(LightValue::Brightness(LIGHT_VAL_1)) },
-                        LightState { value: Some(LightValue::Brightness(LIGHT_VAL_2)) }
-                    ])
+                        LightState { value: Some(LightValue::Brightness(LIGHT_VAL_1)), ..LightState::empty() },
+                        LightState { value: Some(LightValue::Brightness(LIGHT_VAL_2)), ..LightState::empty() }
+                    ]),
+                    ..LightGroup::empty()
                 }
             ].into_iter())?;
         }
@@ -802,9 +822,16 @@ async fn validate_light_watch() -> Result<(), Error> {
                 enabled: Some(ENABLED),
                 type_: Some(LIGHT_TYPE),
                 lights: Some(vec![
-                    LightState { value: Some(LightValue::Brightness(LIGHT_VAL_1)) },
-                    LightState { value: Some(LightValue::Brightness(LIGHT_VAL_2)) }
-                ])
+                    LightState {
+                        value: Some(LightValue::Brightness(LIGHT_VAL_1)),
+                        ..LightState::empty()
+                    },
+                    LightState {
+                        value: Some(LightValue::Brightness(LIGHT_VAL_2)),
+                        ..LightState::empty()
+                    }
+                ]),
+                ..LightGroup::empty()
             }]
         )
     );
@@ -826,9 +853,10 @@ async fn validate_light_watch_individual() -> Result<(), Error> {
                     enabled: Some(ENABLED),
                     type_: Some(LIGHT_TYPE),
                     lights: Some(vec![
-                        LightState { value: Some(LightValue::Brightness(LIGHT_VAL_1)) },
-                        LightState { value: Some(LightValue::Brightness(LIGHT_VAL_2)) }
-                    ])
+                        LightState { value: Some(LightValue::Brightness(LIGHT_VAL_1)), ..LightState::empty() },
+                        LightState { value: Some(LightValue::Brightness(LIGHT_VAL_2)), ..LightState::empty() }
+                    ]),
+                    ..LightGroup::empty()
                 })?;
         }
     );
@@ -856,9 +884,16 @@ async fn validate_light_watch_individual() -> Result<(), Error> {
                 enabled: Some(ENABLED),
                 type_: Some(LIGHT_TYPE),
                 lights: Some(vec![
-                    LightState { value: Some(LightValue::Brightness(LIGHT_VAL_1)) },
-                    LightState { value: Some(LightValue::Brightness(LIGHT_VAL_2)) }
-                ])
+                    LightState {
+                        value: Some(LightValue::Brightness(LIGHT_VAL_1)),
+                        ..LightState::empty()
+                    },
+                    LightState {
+                        value: Some(LightValue::Brightness(LIGHT_VAL_2)),
+                        ..LightState::empty()
+                    }
+                ]),
+                ..LightGroup::empty()
             }
         )
     );
@@ -880,6 +915,7 @@ async fn validate_night_mode(expected_night_mode_enabled: Option<bool>) -> Resul
         NightModeRequest::Watch { responder } => {
             responder.send(NightModeSettings {
                 night_mode_enabled: Some(false),
+                ..NightModeSettings::empty()
             })?;
         }
     );
@@ -901,6 +937,7 @@ async fn validate_night_mode_set_output(expected_night_mode_enabled: bool) -> Re
         NightModeRequest::Watch { responder } => {
             responder.send(NightModeSettings {
                 night_mode_enabled: Some(expected_night_mode_enabled),
+                ..NightModeSettings::empty()
             })?;
         }
     );
@@ -929,6 +966,7 @@ async fn validate_night_mode_watch_output(
         NightModeRequest::Watch { responder } => {
             responder.send(NightModeSettings {
                 night_mode_enabled: expected_night_mode_enabled,
+                ..NightModeSettings::empty()
             })?;
         }
     );
@@ -942,7 +980,13 @@ async fn validate_night_mode_watch_output(
 
     assert_eq!(
         output,
-        format!("{:#?}", NightModeSettings { night_mode_enabled: expected_night_mode_enabled })
+        format!(
+            "{:#?}",
+            NightModeSettings {
+                night_mode_enabled: expected_night_mode_enabled,
+                ..NightModeSettings::empty()
+            }
+        )
     );
 
     Ok(())
@@ -962,6 +1006,7 @@ async fn validate_privacy(expected_user_data_sharing_consent: Option<bool>) -> R
         PrivacyRequest::Watch { responder } => {
             responder.send(PrivacySettings {
                 user_data_sharing_consent: Some(false),
+                ..PrivacySettings::empty()
             })?;
         }
     );
@@ -985,6 +1030,7 @@ async fn validate_privacy_set_output(
         PrivacyRequest::Watch { responder } => {
             responder.send(PrivacySettings {
                 user_data_sharing_consent: Some(expected_user_data_sharing_consent),
+                ..PrivacySettings::empty()
             })?;
         }
     );
@@ -1017,6 +1063,7 @@ async fn validate_privacy_watch_output(
         PrivacyRequest::Watch { responder } => {
             responder.send(PrivacySettings {
                 user_data_sharing_consent: expected_user_data_sharing_consent,
+                ..PrivacySettings::empty()
             })?;
         }
     );
@@ -1032,7 +1079,10 @@ async fn validate_privacy_watch_output(
         output,
         format!(
             "{:?}",
-            PrivacySettings { user_data_sharing_consent: expected_user_data_sharing_consent }
+            PrivacySettings {
+                user_data_sharing_consent: expected_user_data_sharing_consent,
+                ..PrivacySettings::empty()
+            }
         )
     );
 

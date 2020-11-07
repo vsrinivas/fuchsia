@@ -74,6 +74,7 @@ impl From<&HostInfo> for fsys::HostInfo {
             local_name: src.local_name.clone(),
             discoverable: Some(src.discoverable),
             discovering: Some(src.discovering),
+            ..fsys::HostInfo::empty()
         }
     }
 }
@@ -182,6 +183,7 @@ mod tests {
             local_name: None,
             discoverable: None,
             discovering: None,
+            ..fsys::HostInfo::empty()
         }
     }
 
@@ -222,6 +224,7 @@ mod tests {
             local_name: None,
             discoverable: None,
             discovering: None,
+            ..fsys::HostInfo::empty()
         };
         let expected = HostInfo {
             id: HostId(1),
@@ -250,6 +253,7 @@ mod tests {
             local_name: Some("name".to_string()),
             discoverable: Some(false),
             discovering: Some(true),
+            ..fsys::HostInfo::empty()
         };
         let expected = HostInfo {
             id: HostId(1),
@@ -287,6 +291,7 @@ mod tests {
             local_name: Some("name".to_string()),
             discoverable: Some(false),
             discovering: Some(false),
+            ..fsys::HostInfo::empty()
         };
 
         assert_eq!(expected, info.into());

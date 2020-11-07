@@ -172,6 +172,7 @@ async fn send_get_play_status(target_proxy: TargetHandlerProxy) {
             song_length: Some(123),
             song_position: Some(55), // Predetermined time using exec.set_fake_time().
             playback_status: Some(PlaybackStatus::Playing),
+            ..PlayStatus::empty()
         }),
         res
     );
@@ -188,6 +189,7 @@ async fn send_get_media_attributes(target_proxy: TargetHandlerProxy) {
             total_number_of_tracks: None,
             genre: None,
             playing_time: Some("123".to_string()),
+            ..MediaAttributes::empty()
         }),
         res
     );

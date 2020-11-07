@@ -64,7 +64,11 @@ impl WlanApPolicyFacade {
         match self
             .ap_controller
             .start_access_point(
-                NetworkConfig { id: Some(network_id), credential: Some(credential) },
+                NetworkConfig {
+                    id: Some(network_id),
+                    credential: Some(credential),
+                    ..NetworkConfig::empty()
+                },
                 mode,
                 band,
             )
@@ -120,7 +124,11 @@ impl WlanApPolicyFacade {
         let network_id = NetworkIdentifier { ssid: target_ssid.clone(), type_: type_ };
         match self
             .ap_controller
-            .stop_access_point(NetworkConfig { id: Some(network_id), credential: Some(credential) })
+            .stop_access_point(NetworkConfig {
+                id: Some(network_id),
+                credential: Some(credential),
+                ..NetworkConfig::empty()
+            })
             .await?
         {
             RequestStatus::Acknowledged => Ok(()),

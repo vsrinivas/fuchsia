@@ -99,7 +99,12 @@ impl From<&PairingOptions> for sys::PairingOptions {
         };
         let le_security_level = Some(opts.le_security_level.into());
         let transport = Some(opts.transport.into());
-        sys::PairingOptions { le_security_level, bondable_mode, transport }
+        sys::PairingOptions {
+            le_security_level,
+            bondable_mode,
+            transport,
+            ..sys::PairingOptions::empty()
+        }
     }
 }
 
@@ -139,7 +144,12 @@ impl From<PairingOptions> for control::PairingOptions {
         };
         let le_security_level = Some(opts.le_security_level.into());
         let transport = Some(opts.transport.into());
-        control::PairingOptions { le_security_level, non_bondable, transport }
+        control::PairingOptions {
+            le_security_level,
+            non_bondable,
+            transport,
+            ..control::PairingOptions::empty()
+        }
     }
 }
 

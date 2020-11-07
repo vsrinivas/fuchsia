@@ -31,6 +31,7 @@ fn start_fake_loader(stream: fidl_fuchsia_net_http::LoaderRequestStream) {
                             status_line: Some("ok".as_bytes().to_vec()),
                             headers: None,
                             redirect: None,
+                            ..fidl_fuchsia_net_http::Response::empty()
                         })?;
 
                         fasync::Task::spawn(async move {

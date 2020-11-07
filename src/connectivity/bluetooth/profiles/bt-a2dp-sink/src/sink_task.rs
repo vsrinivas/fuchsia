@@ -463,6 +463,7 @@ mod tests {
                 max_lead_time: Some(500),
                 error: None,
                 presentation_timeline: None,
+                ..AudioConsumerStatus::empty()
             },
         );
 

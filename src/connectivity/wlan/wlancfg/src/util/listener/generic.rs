@@ -213,7 +213,11 @@ mod tests {
             test_utils::ack_next_status_update(&mut exec, &mut l1_stream, &mut serve_listeners);
         assert_eq!(
             summary,
-            fidl_policy::ClientStateSummary { state: None, networks: Some(vec![]) }
+            fidl_policy::ClientStateSummary {
+                state: None,
+                networks: Some(vec![]),
+                ..fidl_policy::ClientStateSummary::empty()
+            }
         );
 
         // Verify exactly one update was sent.
@@ -250,6 +254,7 @@ mod tests {
         let expected_summary = fidl_policy::ClientStateSummary {
             state: Some(fidl_policy::WlanClientState::ConnectionsEnabled),
             networks: Some(vec![]),
+            ..fidl_policy::ClientStateSummary::empty()
         };
         test_utils::broadcast_update(
             &mut exec,
@@ -327,6 +332,7 @@ mod tests {
         let expected_summary = fidl_policy::ClientStateSummary {
             state: Some(fidl_policy::WlanClientState::ConnectionsEnabled),
             networks: Some(vec![]),
+            ..fidl_policy::ClientStateSummary::empty()
         };
         assert_eq!(summary, expected_summary);
 
@@ -342,6 +348,7 @@ mod tests {
         let expected_summary = fidl_policy::ClientStateSummary {
             state: Some(fidl_policy::WlanClientState::ConnectionsEnabled),
             networks: Some(vec![]),
+            ..fidl_policy::ClientStateSummary::empty()
         };
         assert_eq!(summary, expected_summary);
 
@@ -361,6 +368,7 @@ mod tests {
         let expected_summary = fidl_policy::ClientStateSummary {
             state: Some(fidl_policy::WlanClientState::ConnectionsDisabled),
             networks: Some(vec![]),
+            ..fidl_policy::ClientStateSummary::empty()
         };
         let summary =
             test_utils::ack_next_status_update(&mut exec, &mut l1_stream, &mut serve_listeners);

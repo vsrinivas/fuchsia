@@ -26,9 +26,11 @@ pub fn roboto_info(id: u32, weight: u16) -> fonts_exp::TypefaceInfo {
             slant: Some(fonts::Slant::Upright),
             weight: Some(weight),
             width: Some(fonts::Width::Normal),
+            ..fonts::Style2::empty()
         }),
         languages: Some(Vec::new()),
         generic_family: Some(fonts::GenericFontFamily::SansSerif),
+        ..fonts_exp::TypefaceInfo::empty()
     }
 }
 
@@ -42,6 +44,7 @@ pub fn empty_list_typefaces_request() -> fonts_exp::ListTypefacesRequest {
         languages: None,
         code_points: None,
         generic_family: None,
+        ..fonts_exp::ListTypefacesRequest::empty()
     }
 }
 
@@ -55,6 +58,7 @@ pub fn name_query(name: &str) -> fonts_exp::ListTypefacesRequest {
         languages: None,
         code_points: None,
         generic_family: None,
+        ..fonts_exp::ListTypefacesRequest::empty()
     }
 }
 
@@ -68,6 +72,7 @@ pub fn slant_query(lower: fonts::Slant, upper: fonts::Slant) -> fonts_exp::ListT
         languages: None,
         code_points: None,
         generic_family: None,
+        ..fonts_exp::ListTypefacesRequest::empty()
     }
 }
 
@@ -81,6 +86,7 @@ pub fn weight_query(lower: u16, upper: u16) -> fonts_exp::ListTypefacesRequest {
         languages: None,
         code_points: None,
         generic_family: None,
+        ..fonts_exp::ListTypefacesRequest::empty()
     }
 }
 
@@ -94,6 +100,7 @@ pub fn width_query(lower: fonts::Width, upper: fonts::Width) -> fonts_exp::ListT
         languages: None,
         code_points: None,
         generic_family: None,
+        ..fonts_exp::ListTypefacesRequest::empty()
     }
 }
 
@@ -111,6 +118,7 @@ pub fn lang_query(langs: Vec<LocaleId>) -> fonts_exp::ListTypefacesRequest {
         languages: Some(langs),
         code_points: None,
         generic_family: None,
+        ..fonts_exp::ListTypefacesRequest::empty()
     }
 }
 
@@ -124,6 +132,7 @@ pub fn code_point_query(points: Vec<u32>) -> fonts_exp::ListTypefacesRequest {
         languages: None,
         code_points: Some(points),
         generic_family: None,
+        ..fonts_exp::ListTypefacesRequest::empty()
     }
 }
 
@@ -139,5 +148,6 @@ pub fn generic_family_query(
         languages: None,
         code_points: None,
         generic_family: Some(generic_family),
+        ..fonts_exp::ListTypefacesRequest::empty()
     }
 }

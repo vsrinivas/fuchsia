@@ -83,6 +83,7 @@ mod test {
             rcs_state: Some(RemoteControlState::Up),
             target_type: Some(TargetType::Unknown),
             target_state: Some(TargetState::Unknown),
+            ..FidlTarget::empty()
         }
     }
 

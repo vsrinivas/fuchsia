@@ -369,7 +369,10 @@ fn static_source_from_ip(f: std::net::IpAddr) -> fnet_name::DnsServer_ {
 
     fnet_name::DnsServer_ {
         address: Some(socket_addr),
-        source: Some(fnet_name::DnsServerSource::StaticSource(fnet_name::StaticDnsServerSource {})),
+        source: Some(fnet_name::DnsServerSource::StaticSource(
+            fnet_name::StaticDnsServerSource::empty(),
+        )),
+        ..fnet_name::DnsServer_::empty()
     }
 }
 
@@ -1315,6 +1318,7 @@ impl<'a> NetCfg<'a> {
         let v = fnet_dhcp::LeaseLength {
             default: Some(WLAN_AP_DHCP_LEASE_TIME_SECONDS),
             max: Some(WLAN_AP_DHCP_LEASE_TIME_SECONDS),
+            ..fnet_dhcp::LeaseLength::empty()
         };
         debug!("setting DHCP LeaseLength parameter to {:?}", v);
         let () = dhcp_server
@@ -1344,6 +1348,7 @@ impl<'a> NetCfg<'a> {
             mask: Some(fnet::Ipv4Address { addr: (!host_mask).to_be_bytes() }),
             pool_range_start: Some(dhcp_pool_start),
             pool_range_stop: Some(dhcp_pool_end),
+            ..fnet_dhcp::AddressPool::empty()
         };
         debug!("setting DHCP AddressPool parameter to {:?}", v);
         dhcp_server
@@ -1611,8 +1616,11 @@ mod tests {
                                     options_to_request: Some(vec![
                                         fnet_dhcpv6::RequestableOptionCode::DnsServers
                                     ]),
+                                    ..fnet_dhcpv6::Stateless::empty()
                                 }),
+                                ..fnet_dhcpv6::OperationalModels::empty()
                             }),
+                            ..fnet_dhcpv6::NewClientParams::empty()
                         }
                     );
 
@@ -1659,8 +1667,9 @@ mod tests {
                     vec![fnet_name::DnsServer_ {
                         address: Some(DNS_SERVER1),
                         source: Some(fnet_name::DnsServerSource::StaticSource(
-                            fnet_name::StaticDnsServerSource {},
+                            fnet_name::StaticDnsServerSource::empty(),
                         )),
+                        ..fnet_name::DnsServer_::empty()
                     }],
                 )
                 .map(|r| r.context("error updating netstack DNS servers").map_err(Into::into)),
@@ -1705,8 +1714,10 @@ mod tests {
                         source: Some(fnet_name::DnsServerSource::Dhcpv6(
                             fnet_name::Dhcpv6DnsServerSource {
                                 source_interface: Some(INTERFACE_ID.into()),
+                                ..fnet_name::Dhcpv6DnsServerSource::empty()
                             },
                         )),
+                        ..fnet_name::DnsServer_::empty()
                     }],
                 )
                 .map(|r| r.context("error updating netstack DNS servers").map_err(Into::into)),

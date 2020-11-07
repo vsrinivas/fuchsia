@@ -113,7 +113,9 @@ async fn run_test() -> Result<(), Error> {
             klogs_enabled: Some(false),
             filter_options: None,
             syslog_output: None,
+            ..LoggerOptions::empty()
         }),
+        ..EnvironmentOptions::empty()
     };
     // launch the child env
     env.create_child_environment(child_env_server, env_options)?;
@@ -183,7 +185,9 @@ async fn launch_grandchild() -> Result<(), Error> {
             klogs_enabled: Some(false),
             filter_options: None,
             syslog_output: None,
+            ..LoggerOptions::empty()
         }),
+        ..EnvironmentOptions::empty()
     };
 
     let (child_env, child_env_server) =

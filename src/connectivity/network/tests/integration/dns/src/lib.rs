@@ -138,6 +138,7 @@ async fn test_discovered_dns<E: netemul::Endpoint, M: Manager>(name: &str) -> Re
                 mask: Some(fidl_ip_v4!(255.255.255.128)),
                 pool_range_start: Some(fidl_ip_v4!(192.168.0.2)),
                 pool_range_stop: Some(fidl_ip_v4!(192.168.0.5)),
+                ..fidl_fuchsia_net_dhcp::AddressPool::empty()
             }),
         ]
         .iter_mut(),

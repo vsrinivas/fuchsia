@@ -44,6 +44,7 @@ impl TryFrom<txt::TextFieldState> for TextFieldState {
             composition,
             composition_highlight,
             dead_key_highlight,
+            ..
         } = state;
         let document = match document {
             Some(v) => v,
@@ -97,6 +98,7 @@ impl Into<txt::TextFieldState> for TextFieldState {
             composition,
             composition_highlight,
             dead_key_highlight,
+            ..txt::TextFieldState::empty()
         }
     }
 }

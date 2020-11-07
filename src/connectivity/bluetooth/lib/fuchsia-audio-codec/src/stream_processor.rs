@@ -223,7 +223,9 @@ impl StreamProcessorInner {
             }
             StreamProcessorEvent::OnFreeInputPacket {
                 free_input_packet:
-                    PacketHeader { buffer_lifetime_ordinal: Some(_ord), packet_index: Some(idx) },
+                    PacketHeader {
+                        buffer_lifetime_ordinal: Some(_ord), packet_index: Some(idx), ..
+                    },
             } => {
                 self.client_owned.insert(InputBufferIndex(idx));
                 self.setup_input_cursor();
@@ -458,10 +460,14 @@ impl StreamProcessor {
             oob_bytes: None,
             pass_through_parameters: None,
             timebase: None,
+            ..FormatDetails::empty()
         };
 
-        let encoder_params =
-            CreateEncoderParams { input_details: Some(format_details), require_hw: Some(false) };
+        let encoder_params = CreateEncoderParams {
+            input_details: Some(format_details),
+            require_hw: Some(false),
+            ..CreateEncoderParams::empty()
+        };
 
         let codec_svc = fuchsia_component::client::connect_to_service::<CodecFactoryMarker>()
             .context("Failed to connect to Codec Factory")?;
@@ -491,6 +497,7 @@ impl StreamProcessor {
             domain: None,
             pass_through_parameters: None,
             timebase: None,
+            ..FormatDetails::empty()
         };
 
         let decoder_params = CreateDecoderParams {
@@ -580,6 +587,7 @@ impl StreamProcessor {
             header: Some(PacketHeader {
                 buffer_lifetime_ordinal: Some(1),
                 packet_index: Some(idx.0),
+                ..PacketHeader::empty()
             }),
             buffer_index: Some(idx.0),
             stream_lifetime_ordinal: Some(1),

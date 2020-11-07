@@ -430,6 +430,7 @@ mod test {
                         .send(&mut Ok(IdentifyHostResponse {
                             addresses: Some(vec![]),
                             nodename: Some(NODENAME.to_string()),
+                            ..IdentifyHostResponse::empty()
                         }))
                         .unwrap(),
                     _ => panic!("Unexpected request: {:?}", req),
@@ -487,6 +488,7 @@ mod test {
                                         rcs_state: Some(RemoteControlState::Unknown),
                                         target_type: Some(TargetType::Unknown),
                                         target_state: Some(TargetState::Unknown),
+                                        ..Target::empty()
                                     }]
                                     .drain(..),
                                 )
@@ -502,6 +504,7 @@ mod test {
                                             rcs_state: Some(RemoteControlState::Unknown),
                                             target_type: Some(TargetType::Unknown),
                                             target_state: Some(TargetState::Unknown),
+                                            ..Target::empty()
                                         },
                                         Target {
                                             nodename: Some(UNRESPONSIVE_NODENAME.to_string()),
@@ -510,6 +513,7 @@ mod test {
                                             rcs_state: Some(RemoteControlState::Unknown),
                                             target_type: Some(TargetType::Unknown),
                                             target_state: Some(TargetState::Unknown),
+                                            ..Target::empty()
                                         },
                                     ]
                                     .drain(..),

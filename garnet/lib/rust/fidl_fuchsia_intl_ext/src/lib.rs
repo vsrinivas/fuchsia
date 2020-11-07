@@ -19,6 +19,7 @@ impl CloneExt for Profile {
             calendars: self.calendars.clone(),
             time_zones: self.time_zones.clone(),
             temperature_unit: self.temperature_unit.clone(),
+            ..Profile::empty()
         }
     }
 }

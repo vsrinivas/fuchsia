@@ -229,7 +229,7 @@ impl ProfileRegistrar {
                     .unwrap_or_else(|_fidl_error| Err(ErrorCode::Failed));
                 let _ = responder.send(&mut result);
             }
-            bredr::ConnectParameters::Rfcomm(bredr::RfcommParameters { channel }) => {
+            bredr::ConnectParameters::Rfcomm(bredr::RfcommParameters { channel, .. }) => {
                 let server_channel = match channel.map(ServerChannel::try_from) {
                     Some(Ok(sc)) => sc,
                     _ => {

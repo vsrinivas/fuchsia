@@ -55,6 +55,7 @@ impl From<NetworkConfigBuilder> for fidl_policy::NetworkConfig {
         fidl_policy::NetworkConfig {
             id: Some(fidl_policy::NetworkIdentifier { ssid, type_ }),
             credential: Some(credential),
+            ..fidl_policy::NetworkConfig::empty()
         }
     }
 }
@@ -216,6 +217,7 @@ pub async fn assert_connecting(
             id: Some(network_identifier),
             state: Some(fidl_policy::ConnectionState::Connecting),
             status: None,
+            ..fidl_policy::NetworkState::empty()
         }],
     )
     .await;
@@ -232,6 +234,7 @@ pub async fn assert_connected(
             id: Some(network_identifier),
             state: Some(fidl_policy::ConnectionState::Connected),
             status: None,
+            ..fidl_policy::NetworkState::empty()
         }],
     )
     .await;
@@ -248,6 +251,7 @@ pub async fn assert_failed(
             id: Some(network_identifier),
             state: Some(fidl_policy::ConnectionState::Failed),
             status: Some(disconnect_status),
+            ..fidl_policy::NetworkState::empty()
         }],
     )
     .await;

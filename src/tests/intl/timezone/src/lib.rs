@@ -62,6 +62,7 @@ impl ScopedTimezone {
             locales: None,
             temperature_unit: None,
             hour_cycle: None,
+            ..fsettings::IntlSettings::empty()
         };
         let _result = self.client.set(settings).await.context("setting timezone").unwrap();
         Ok(())
@@ -85,6 +86,7 @@ impl Drop for ScopedTimezone {
                     locales: None,
                     temperature_unit: None,
                     hour_cycle: None,
+                    ..fsettings::IntlSettings::empty()
                 };
                 let _result = client.set(settings).await.context("restoring timezone");
                 tx.send(()).unwrap();

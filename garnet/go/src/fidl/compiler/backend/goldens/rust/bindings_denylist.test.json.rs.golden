@@ -25,7 +25,11 @@ use {
 pub const ALL_BINDINGS: u32 = 0;
 
 #[derive(Debug, PartialEq)]
-pub struct OnlyRust {}
+pub struct OnlyRust {
+    #[deprecated = "Use `..OnlyRust::empty()` to construct and `..` to match."]
+    #[doc(hidden)]
+    pub __non_exhaustive: (),
+}
 
 fidl_table! {
   name: OnlyRust,

@@ -122,7 +122,8 @@ async fn gather_product_status(product: ProductProxy) -> Result<StatusEntry> {
 
     let mut regulatory_domain =
         StatusEntry::new("Regulatory domain", "regulatory_domain", "Domain designation.");
-    if let Some(RegulatoryDomain { country_code: Some(country_code) }) = info.regulatory_domain {
+    if let Some(RegulatoryDomain { country_code: Some(country_code), .. }) = info.regulatory_domain
+    {
         regulatory_domain.value = Some(StatusValue::StringValue(country_code.to_string()));
     }
 
@@ -259,6 +260,7 @@ mod tests {
                     .send(BoardInfo {
                         name: Some("fake_name".to_string()),
                         revision: Some("fake_revision".to_string()),
+                        ..BoardInfo::empty()
                     })
                     .unwrap();
             }
@@ -332,6 +334,7 @@ mod tests {
                         serial_number: Some("fake_serial".to_string()),
                         is_retail_demo: Some(false),
                         retail_sku: Some("fake_sku".to_string()),
+                        ..DeviceInfo::empty()
                     })
                     .unwrap();
             }
@@ -363,6 +366,7 @@ mod tests {
                         language: Some("fake_language".to_string()),
                         regulatory_domain: Some(RegulatoryDomain {
                             country_code: Some("fake_regulatory_domain".to_string()),
+                            ..RegulatoryDomain::empty()
                         }),
                         locale_list: Some(vec![]),
                         name: Some("fake_name".to_string()),
@@ -377,6 +381,7 @@ mod tests {
                         microphone: Some("fake_microphone".to_string()),
                         model: Some("fake_model".to_string()),
                         nand_storage: Some("fake_nand_storage".to_string()),
+                        ..ProductInfo::empty()
                     })
                     .unwrap();
             }

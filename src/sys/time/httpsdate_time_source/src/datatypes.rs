@@ -29,6 +29,7 @@ impl Into<Update> for HttpsSample {
             monotonic: Some(self.monotonic.into_nanos()),
             utc: Some(self.utc.into_nanos()),
             standard_deviation: Some(self.standard_deviation.into_nanos()),
+            ..TimeSample::empty()
         }
         .into()
     }
@@ -83,7 +84,8 @@ mod test {
             Update::Sample(Arc::new(TimeSample {
                 monotonic: Some(monotonic_time.into_nanos()),
                 utc: Some(utc_time.into_nanos()),
-                standard_deviation: Some(standard_deviation.into_nanos())
+                standard_deviation: Some(standard_deviation.into_nanos()),
+                ..TimeSample::empty()
             }))
         );
     }

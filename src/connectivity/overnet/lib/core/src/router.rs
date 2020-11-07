@@ -762,7 +762,11 @@ impl Router {
         );
         if is_local {
             self.service_map()
-                .connect(service_name, chan, ConnectionInfo { peer: Some(node_id.into()) })
+                .connect(
+                    service_name,
+                    chan,
+                    ConnectionInfo { peer: Some(node_id.into()), ..ConnectionInfo::empty() },
+                )
                 .await
         } else {
             self.client_peer(node_id, NoLinkHint, "connect_to_service")
@@ -1512,6 +1516,7 @@ mod tests {
                 fidl_fuchsia_overnet_protocol::SocketLinkOptions {
                     connection_label: Some("test".to_string()),
                     bytes_per_second: None,
+                    ..fidl_fuchsia_overnet_protocol::SocketLinkOptions::empty()
                 },
             )
             .await
@@ -1548,6 +1553,7 @@ mod tests {
             fidl_fuchsia_overnet_protocol::SocketLinkOptions {
                 connection_label: Some("test".to_string()),
                 bytes_per_second: Some(0),
+                ..fidl_fuchsia_overnet_protocol::SocketLinkOptions::empty()
             },
         )
         .await

@@ -210,6 +210,7 @@ where
                         buffer: Some(buffer),
                         buffer_id: Some(typeface.asset_id.into()),
                         font_index: Some(typeface.font_index),
+                        ..fonts::TypefaceResponse::empty()
                     })
                 })
                 .unwrap_or_else(|_| fonts::TypefaceResponse::new_empty()),
@@ -233,6 +234,7 @@ where
             |FontFamilyMatch { family, overrides: _ }| fonts::FontFamilyInfo {
                 name: Some(fonts::FamilyName { name: family.name.clone() }),
                 styles: Some(family.faces.get_styles().collect()),
+                ..fonts::FontFamilyInfo::empty()
             },
         )
     }
@@ -248,6 +250,7 @@ where
                     buffer: Some(buffer),
                     buffer_id: Some(id.into()),
                     font_index: None,
+                    ..fonts::TypefaceResponse::empty()
                 };
                 Ok(response)
             }
@@ -270,7 +273,10 @@ where
             .map(|matched| matched.family)
             .ok_or(fonts_exp::Error::NotFound)?;
         let faces = family.extract_faces().map_into().collect();
-        let response = fonts_exp::TypefaceInfoResponse { results: Some(faces) };
+        let response = fonts_exp::TypefaceInfoResponse {
+            results: Some(faces),
+            ..fonts_exp::TypefaceInfoResponse::empty()
+        };
         Ok(response)
     }
 
@@ -399,7 +405,10 @@ where
                                 (fonts_exp::MAX_TYPEFACE_RESULTS as usize).min(results.len());
                             // Return results in order
                             let chunk = results.drain(..split_at).collect_vec();
-                            let response = fonts_exp::TypefaceInfoResponse { results: Some(chunk) };
+                            let response = fonts_exp::TypefaceInfoResponse {
+                                results: Some(chunk),
+                                ..fonts_exp::TypefaceInfoResponse::empty()
+                            };
                             responder.send(response)?;
                         }
                     }

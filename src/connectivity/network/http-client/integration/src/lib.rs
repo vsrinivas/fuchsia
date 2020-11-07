@@ -84,6 +84,7 @@ fn make_request(method: &str, url: String) -> http::Request {
         headers: None,
         body: None,
         deadline: None,
+        ..http::Request::empty()
     }
 }
 
@@ -268,6 +269,7 @@ async fn test_start_redirect() {
                 method: Some("GET".to_string()),
                 url: Some(format!("http://{}/", addr)),
                 referrer: None,
+                ..http::RedirectTarget::empty()
             })
         );
 
@@ -330,6 +332,7 @@ async fn test_start_see_other() {
                 method: Some("GET".to_string()),
                 url: Some(format!("http://{}/", addr)),
                 referrer: None,
+                ..http::RedirectTarget::empty()
             })
         );
 
@@ -367,6 +370,7 @@ async fn test_fetch_max_redirect() {
                 method: Some("GET".to_string()),
                 url: Some(format!("http://{}/loop2", addr)),
                 referrer: None,
+                ..http::RedirectTarget::empty()
             })
         );
     })
@@ -400,6 +404,7 @@ async fn test_start_redirect_loop() {
                     method: Some("GET".to_string()),
                     url: Some(format!("http://{}/loop2", addr)),
                     referrer: None,
+                    ..http::RedirectTarget::empty()
                 })
             );
 
@@ -420,6 +425,7 @@ async fn test_start_redirect_loop() {
                     method: Some("GET".to_string()),
                     url: Some(format!("http://{}/loop1", addr)),
                     referrer: None,
+                    ..http::RedirectTarget::empty()
                 })
             );
 

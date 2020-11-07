@@ -106,6 +106,7 @@ async fn run_ascendd_connection(
                 node_id: Some(fidl_fuchsia_overnet_protocol::NodeId { id: node.node_id().0 }),
                 connection_label: connection_label.clone(),
                 key: None,
+                ..StreamSocketGreeting::empty()
             };
             let mut bytes = Vec::new();
             let mut handles = Vec::new();
@@ -156,6 +157,7 @@ async fn run_ascendd_connection(
                             fidl_fuchsia_overnet_protocol::AscenddLinkConfig {
                                 path: Some(ascendd_path.clone()),
                                 connection_label: connection_label.clone(),
+                                ..fidl_fuchsia_overnet_protocol::AscenddLinkConfig::empty()
                             },
                         ))
                     }),

@@ -232,6 +232,7 @@ impl WatchSender<Arc<TimeSample>> for WatchSampleResponder {
             utc: data.utc.clone(),
             monotonic: data.monotonic.clone(),
             standard_deviation: data.standard_deviation.clone(),
+            ..TimeSample::empty()
         };
         self.0.send(time_sample).unwrap_or_else(|e| warn!("Error sending response: {:?}", e));
     }
@@ -426,11 +427,17 @@ mod test {
                 monotonic: Some(23),
                 utc: Some(24),
                 standard_deviation: None,
+                ..TimeSample::empty()
             })))
             .await;
         assert_eq!(
             sample_fut.await.unwrap(),
-            TimeSample { monotonic: Some(23), utc: Some(24), standard_deviation: None }
+            TimeSample {
+                monotonic: Some(23),
+                utc: Some(24),
+                standard_deviation: None,
+                ..TimeSample::empty()
+            }
         );
 
         // Subsequent watches complete only after a new update is produced.
@@ -440,11 +447,17 @@ mod test {
                 monotonic: Some(25),
                 utc: Some(26),
                 standard_deviation: None,
+                ..TimeSample::empty()
             })))
             .await;
         assert_eq!(
             sample_fut.await.unwrap(),
-            TimeSample { monotonic: Some(25), utc: Some(26), standard_deviation: None }
+            TimeSample {
+                monotonic: Some(25),
+                utc: Some(26),
+                standard_deviation: None,
+                ..TimeSample::empty()
+            }
         );
 
         // Watches hangs in absence of new update.
@@ -465,15 +478,26 @@ mod test {
                 monotonic: Some(23),
                 utc: Some(24),
                 standard_deviation: None,
+                ..TimeSample::empty()
             })))
             .await;
         assert_eq!(
             sample_fut.await.unwrap(),
-            TimeSample { monotonic: Some(23), utc: Some(24), standard_deviation: None }
+            TimeSample {
+                monotonic: Some(23),
+                utc: Some(24),
+                standard_deviation: None,
+                ..TimeSample::empty()
+            }
         );
         assert_eq!(
             sample_fut_2.await.unwrap(),
-            TimeSample { monotonic: Some(23), utc: Some(24), standard_deviation: None }
+            TimeSample {
+                monotonic: Some(23),
+                utc: Some(24),
+                standard_deviation: None,
+                ..TimeSample::empty()
+            }
         );
 
         // Subsequent watches complete only after a new update is produced.
@@ -484,22 +508,38 @@ mod test {
                 monotonic: Some(25),
                 utc: Some(26),
                 standard_deviation: None,
+                ..TimeSample::empty()
             })))
             .await;
         assert_eq!(
             sample_fut.await.unwrap(),
-            TimeSample { monotonic: Some(25), utc: Some(26), standard_deviation: None }
+            TimeSample {
+                monotonic: Some(25),
+                utc: Some(26),
+                standard_deviation: None,
+                ..TimeSample::empty()
+            }
         );
         assert_eq!(
             sample_fut_2.await.unwrap(),
-            TimeSample { monotonic: Some(25), utc: Some(26), standard_deviation: None }
+            TimeSample {
+                monotonic: Some(25),
+                utc: Some(26),
+                standard_deviation: None,
+                ..TimeSample::empty()
+            }
         );
 
         // A client that connects later gets the latest update.
         let proxy_3 = harness.new_proxy();
         assert_eq!(
             proxy_3.watch_sample().await.unwrap(),
-            TimeSample { monotonic: Some(25), utc: Some(26), standard_deviation: None }
+            TimeSample {
+                monotonic: Some(25),
+                utc: Some(26),
+                standard_deviation: None,
+                ..TimeSample::empty()
+            }
         );
     }
 
@@ -548,10 +588,10 @@ mod test {
         let proxy = harness.new_proxy();
         let proxy_2 = harness.new_proxy();
 
-        proxy.update_device_properties(Properties {}).unwrap();
-        proxy_2.update_device_properties(Properties {}).unwrap();
+        proxy.update_device_properties(Properties::empty()).unwrap();
+        proxy_2.update_device_properties(Properties::empty()).unwrap();
         // Sleep here to allow the executor to run the tasks servicing these requests.
         fasync::Timer::new(fasync::Time::after(zx::Duration::from_nanos(1000))).await;
-        harness.assert_device_properties(&vec![Properties {}, Properties {}]).await;
+        harness.assert_device_properties(&vec![Properties::empty(), Properties::empty()]).await;
     }
 }

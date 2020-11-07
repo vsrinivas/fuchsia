@@ -100,7 +100,8 @@ mod tests {
 
         let view_ref = scenic::ViewRefPair::new()?.view_ref;
         let view_ref_dup = fuchsia_scenic::duplicate_view_ref(&view_ref)?;
-        let focus_chain = focus::FocusChain { focus_chain: Some(vec![view_ref]) };
+        let focus_chain =
+            focus::FocusChain { focus_chain: Some(vec![view_ref]), ..focus::FocusChain::empty() };
 
         let (_, view_ref) = join(
             focus_chain_listener_client_end.on_focus_change(focus_chain),

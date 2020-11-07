@@ -461,6 +461,8 @@ mod tests {
         struct DataTable {
             num: Option<i32>,
             string: Option<String>,
+            #[deprecated = "Do not use __non_exhaustive"]
+            pub __non_exhaustive: (),
         }
 
         fidl_table! {
@@ -511,6 +513,8 @@ mod tests {
             num: Option<i32>,
             string: Option<String>,
             new_field: Option<String>,
+            #[deprecated = "Do not use __non_exhaustive"]
+            pub __non_exhaustive: (),
         }
 
         fidl_table! {

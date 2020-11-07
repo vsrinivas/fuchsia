@@ -792,6 +792,7 @@ impl<DS: SpinelDeviceClient> SpinelDriver<DS> {
         DeviceState {
             connectivity_state: Some(driver_state.connectivity_state),
             role: Some(driver_state.role),
+            ..DeviceState::empty()
         }
     }
 

@@ -266,7 +266,7 @@ impl Into<Vec<LightState>> for LightGroup {
                 .simple
                 .clone()
                 .into_iter()
-                .map(|val| LightState { value: Some(LightValue::On(val)) })
+                .map(|val| LightState { value: Some(LightValue::On(val)), ..LightState::empty() })
                 .collect::<Vec<_>>();
         }
 
@@ -275,7 +275,10 @@ impl Into<Vec<LightState>> for LightGroup {
                 .brightness
                 .clone()
                 .into_iter()
-                .map(|val| LightState { value: Some(LightValue::Brightness(val)) })
+                .map(|val| LightState {
+                    value: Some(LightValue::Brightness(val)),
+                    ..LightState::empty()
+                })
                 .collect::<Vec<_>>();
         }
 
@@ -284,7 +287,10 @@ impl Into<Vec<LightState>> for LightGroup {
                 .rgb
                 .clone()
                 .into_iter()
-                .map(|val| LightState { value: Some(LightValue::Color(val)) })
+                .map(|val| LightState {
+                    value: Some(LightValue::Color(val)),
+                    ..LightState::empty()
+                })
                 .collect::<Vec<_>>();
         }
 
@@ -430,10 +436,20 @@ fn str_to_low_light_mode(src: &str) -> Result<fidl_fuchsia_settings::LowLightMod
 
 fn str_to_theme(src: &str) -> Result<fidl_fuchsia_settings::Theme, &str> {
     match src {
-        "default" => Ok(Theme { theme_type: Some(fidl_fuchsia_settings::ThemeType::Default) }),
-        "dark" => Ok(Theme { theme_type: Some(fidl_fuchsia_settings::ThemeType::Dark) }),
-        "light" => Ok(Theme { theme_type: Some(fidl_fuchsia_settings::ThemeType::Light) }),
-        "auto" => Ok(Theme { theme_type: Some(fidl_fuchsia_settings::ThemeType::Auto) }),
+        "default" => Ok(Theme {
+            theme_type: Some(fidl_fuchsia_settings::ThemeType::Default),
+            ..Theme::empty()
+        }),
+        "dark" => {
+            Ok(Theme { theme_type: Some(fidl_fuchsia_settings::ThemeType::Dark), ..Theme::empty() })
+        }
+        "light" => Ok(Theme {
+            theme_type: Some(fidl_fuchsia_settings::ThemeType::Light),
+            ..Theme::empty()
+        }),
+        "auto" => {
+            Ok(Theme { theme_type: Some(fidl_fuchsia_settings::ThemeType::Auto), ..Theme::empty() })
+        }
         _ => Err("Couldn't parse theme."),
     }
 }

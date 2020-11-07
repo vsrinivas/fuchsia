@@ -131,7 +131,9 @@ impl TestSandbox {
                     klogs_enabled: None,
                     filter_options: None,
                     syslog_output: Some(true),
+                    ..netemul_environment::LoggerOptions::empty()
                 }),
+                ..netemul_environment::EnvironmentOptions::empty()
             },
         )?;
         Ok(TestEnvironment { environment, name, _sandbox: self })
@@ -175,7 +177,12 @@ impl TestSandbox {
         let (status, network) = netm
             .create_network(
                 &name,
-                netemul_network::NetworkConfig { latency: None, packet_loss: None, reorder: None },
+                netemul_network::NetworkConfig {
+                    latency: None,
+                    packet_loss: None,
+                    reorder: None,
+                    ..netemul_network::NetworkConfig::empty()
+                },
             )
             .await
             .context("create_network FIDL error")?;
@@ -575,7 +582,12 @@ impl<'a> TestEndpoint<'a> {
                 let (device, mac) = Self::connect_netdevice_protocols(netdevice)?;
                 stack
                     .add_interface(
-                        net_stack::InterfaceConfig { name: None, topopath: None, metric: None },
+                        net_stack::InterfaceConfig {
+                            name: None,
+                            topopath: None,
+                            metric: None,
+                            ..net_stack::InterfaceConfig::empty()
+                        },
                         &mut net_stack::DeviceDefinition::Ethernet(
                             net_stack::EthernetDeviceDefinition {
                                 network_device: device,

@@ -378,7 +378,7 @@ impl Element {
                 })),
             });
         }
-        Ok(Annotations { custom_annotations: Some(custom_annotations) })
+        Ok(Annotations { custom_annotations: Some(custom_annotations), ..Annotations::empty() })
     }
 }
 

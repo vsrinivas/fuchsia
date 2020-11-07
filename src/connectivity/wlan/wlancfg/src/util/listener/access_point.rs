@@ -16,7 +16,10 @@ pub struct ConnectedClientInformation {
 
 impl Into<fidl_policy::ConnectedClientInformation> for ConnectedClientInformation {
     fn into(self) -> fidl_policy::ConnectedClientInformation {
-        fidl_policy::ConnectedClientInformation { count: Some(self.count) }
+        fidl_policy::ConnectedClientInformation {
+            count: Some(self.count),
+            ..fidl_policy::ConnectedClientInformation::empty()
+        }
     }
 }
 
@@ -64,6 +67,7 @@ impl Into<Vec<fidl_policy::AccessPointState>> for ApStatesUpdate {
                 band: ap.band.map(|band| fidl_policy::OperatingBand::from(band)),
                 frequency: ap.frequency,
                 clients: ap.clients.map(|c| c.into()),
+                ..fidl_policy::AccessPointState::empty()
             })
             .collect()
     }
@@ -171,7 +175,11 @@ mod tests {
                 mode: Some(fidl_policy::ConnectivityMode::Unrestricted),
                 band: Some(fidl_policy::OperatingBand::Any),
                 frequency: Some(200),
-                clients: Some(fidl_policy::ConnectedClientInformation { count: Some(1) }),
+                clients: Some(fidl_policy::ConnectedClientInformation {
+                    count: Some(1),
+                    ..fidl_policy::ConnectedClientInformation::empty()
+                }),
+                ..fidl_policy::AccessPointState::empty()
             }]
         );
     }

@@ -546,6 +546,7 @@ impl EventLoop {
                                 properties: None,
                                 vlan: None,
                                 type_: None,
+                                ..fidl_fuchsia_router_config::Lif::empty()
                             },
                             not_found!(),
                         )
@@ -569,6 +570,7 @@ impl EventLoop {
                                 properties: None,
                                 vlan: None,
                                 type_: None,
+                                ..fidl_fuchsia_router_config::Lif::empty()
                             },
                             not_found!(),
                         )
@@ -605,6 +607,7 @@ impl EventLoop {
                     mtu: None,
                     enable: None,
                     metric: None,
+                    ..fidl_fuchsia_router_config::WanProperties::empty()
                 };
                 responder.send(properties, not_supported!())
             }
@@ -617,6 +620,7 @@ impl EventLoop {
                     address_v6: None,
                     enable_dns_forwarder: None,
                     enable: None,
+                    ..fidl_fuchsia_router_config::LanProperties::empty()
                 };
 
                 responder.send(properties, not_supported!())
@@ -666,6 +670,7 @@ impl EventLoop {
                     sip_passthru: None,
                     upnp: None,
                     v6_firewall: None,
+                    ..fidl_fuchsia_router_config::SecurityFeatures::empty()
                 };
                 responder.send(security_features)
             }
@@ -719,6 +724,7 @@ impl EventLoop {
                     daylight_savings_time_enabled: None,
                     leds_enabled: None,
                     hostname: None,
+                    ..fidl_fuchsia_router_config::SystemConfig::empty()
                 };
                 responder.send(config)
             }
@@ -727,6 +733,7 @@ impl EventLoop {
                     version: None,
                     topology: None,
                     config: None,
+                    ..fidl_fuchsia_router_config::Device::empty()
                 };
                 responder.send(device)
             }

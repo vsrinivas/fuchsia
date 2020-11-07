@@ -655,6 +655,7 @@ mod tests {
             component_url: Some("http://foo.com".into()),
             instance_id: None,
             realm_path: None,
+            ..SourceIdentity::empty()
         });
 
         let log_reader2 = harness.create_default_reader(SourceIdentity {
@@ -662,6 +663,7 @@ mod tests {
             component_url: Some("http://bar.com".into()),
             instance_id: None,
             realm_path: None,
+            ..SourceIdentity::empty()
         });
 
         attributed_inspect_two_streams_different_identities_by_reader(
@@ -694,6 +696,7 @@ mod tests {
             component_url: Some("http://bar.com".into()),
             instance_id: None,
             realm_path: None,
+            ..SourceIdentity::empty()
         });
         attributed_inspect_two_streams_different_identities_by_reader(
             harness,
@@ -808,6 +811,7 @@ mod tests {
             component_url: Some("http://foo.com".into()),
             instance_id: None,
             realm_path: None,
+            ..SourceIdentity::empty()
         });
         attributed_inspect_two_streams_same_identity_by_reader(
             harness,
@@ -838,6 +842,7 @@ mod tests {
             component_url: Some("http://foo.com".into()),
             instance_id: None,
             realm_path: None,
+            ..SourceIdentity::empty()
         });
         attributed_inspect_two_streams_same_identity_by_reader(harness, log_reader1, log_reader2)
             .await;

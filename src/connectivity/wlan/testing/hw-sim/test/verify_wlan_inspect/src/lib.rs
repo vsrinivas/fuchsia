@@ -123,6 +123,7 @@ async fn connect_future(
             id: Some(fidl_policy::NetworkIdentifier { ssid: SSID.to_vec(), type_: security_type }),
             state: Some(fidl_policy::ConnectionState::Connected),
             status: None,
+            ..fidl_policy::NetworkState::empty()
         }],
     )
     .await;
@@ -220,6 +221,7 @@ async fn verify_wlan_inspect() {
             }),
             state: Some(fidl_policy::ConnectionState::Disconnected),
             status: Some(fidl_policy::DisconnectStatus::ConnectionStopped),
+            ..fidl_policy::NetworkState::empty()
         }],
     )
     .await;

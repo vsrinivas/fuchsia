@@ -623,7 +623,7 @@ fn parse_flags(args: &[String]) -> Result<LogListenerOptions, String> {
 
                     options.selectors.push(LogInterestSelector {
                         selector,
-                        interest: Interest { min_severity },
+                        interest: Interest { min_severity, ..Interest::empty() },
                     });
                 }
 
@@ -1587,7 +1587,7 @@ mod tests {
             let mut expected = LogListenerOptions::default();
             expected.selectors.push(LogInterestSelector {
                 selector: selectors::parse_component_selector(&"foo.cmx".to_string()).unwrap(),
-                interest: Interest { min_severity: Some(Severity::Debug) },
+                interest: Interest { min_severity: Some(Severity::Debug), ..Interest::empty() },
             });
             parse_flag_test_helper(&args, Some(&expected));
         }
@@ -1600,11 +1600,11 @@ mod tests {
             let mut expected = LogListenerOptions::default();
             expected.selectors.push(LogInterestSelector {
                 selector: selectors::parse_component_selector(&"foo.cmx".to_string()).unwrap(),
-                interest: Interest { min_severity: Some(Severity::Debug) },
+                interest: Interest { min_severity: Some(Severity::Debug), ..Interest::empty() },
             });
             expected.selectors.push(LogInterestSelector {
                 selector: selectors::parse_component_selector(&"bar.cml".to_string()).unwrap(),
-                interest: Interest { min_severity: Some(Severity::Warn) },
+                interest: Interest { min_severity: Some(Severity::Warn), ..Interest::empty() },
             });
             parse_flag_test_helper(&args, Some(&expected));
         }
@@ -1617,7 +1617,7 @@ mod tests {
             let mut expected = LogListenerOptions::default();
             expected.selectors.push(LogInterestSelector {
                 selector: selectors::parse_component_selector(&"foo.cmx".to_string()).unwrap(),
-                interest: Interest { min_severity: None },
+                interest: Interest { min_severity: None, ..Interest::empty() },
             });
             parse_flag_test_helper(&args, Some(&expected));
         }

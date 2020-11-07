@@ -123,6 +123,7 @@ mod tests {
             temperature_unit: Some(fidl_fuchsia_intl::TemperatureUnit::Celsius),
             time_zone_id: Some(fidl_fuchsia_intl::TimeZoneId { id: TIME_ZONE_ID.to_string() }),
             hour_cycle: Some(fidl_fuchsia_settings::HourCycle::H12),
+            ..IntlSettings::empty()
         };
 
         let request = SettingRequest::from(intl_settings);

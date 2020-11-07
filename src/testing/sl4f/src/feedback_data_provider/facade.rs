@@ -23,8 +23,10 @@ impl FeedbackDataProviderFacade {
     pub async fn get_snapshot(&self) -> Result<serde_json::Value, Error> {
         let data_provider =
             connect_to_service::<DataProviderMarker>().context("connect to DataProvider")?;
-        let params =
-            GetSnapshotParameters { collection_timeout_per_data: Some(2.minutes().into_nanos()) };
+        let params = GetSnapshotParameters {
+            collection_timeout_per_data: Some(2.minutes().into_nanos()),
+            ..GetSnapshotParameters::empty()
+        };
         let snapshot = data_provider.get_snapshot(params).await.context("get snapshot")?;
         match snapshot.archive {
             Some(archive) => {

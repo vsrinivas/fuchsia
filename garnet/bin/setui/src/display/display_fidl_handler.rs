@@ -63,10 +63,18 @@ impl From<SettingResponse> for DisplaySettings {
 
             display_settings.theme = match info.theme_mode {
                 ThemeMode::Unknown => None,
-                ThemeMode::Default => Some(Theme { theme_type: Some(FidlThemeType::Default) }),
-                ThemeMode::Light => Some(Theme { theme_type: Some(FidlThemeType::Light) }),
-                ThemeMode::Dark => Some(Theme { theme_type: Some(FidlThemeType::Dark) }),
-                ThemeMode::Auto => Some(Theme { theme_type: Some(FidlThemeType::Auto) }),
+                ThemeMode::Default => {
+                    Some(Theme { theme_type: Some(FidlThemeType::Default), ..Theme::empty() })
+                }
+                ThemeMode::Light => {
+                    Some(Theme { theme_type: Some(FidlThemeType::Light), ..Theme::empty() })
+                }
+                ThemeMode::Dark => {
+                    Some(Theme { theme_type: Some(FidlThemeType::Dark), ..Theme::empty() })
+                }
+                ThemeMode::Auto => {
+                    Some(Theme { theme_type: Some(FidlThemeType::Auto), ..Theme::empty() })
+                }
             };
 
             display_settings
@@ -92,7 +100,7 @@ fn to_request(settings: DisplaySettings) -> Option<SettingRequest> {
                 Some(SettingRequest::SetLowLightMode(LowLightMode::DisableImmediately))
             }
         };
-    } else if let Some(Theme { theme_type: Some(theme_type) }) = settings.theme {
+    } else if let Some(Theme { theme_type: Some(theme_type), .. }) = settings.theme {
         request = match theme_type {
             FidlThemeType::Default => Some(SettingRequest::SetThemeMode(ThemeMode::Default)),
             FidlThemeType::Light => Some(SettingRequest::SetThemeMode(ThemeMode::Light)),

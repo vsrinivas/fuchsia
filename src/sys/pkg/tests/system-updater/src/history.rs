@@ -424,14 +424,18 @@ async fn serves_fidl_with_history_present() {
                 initiator: Some(fidl_fuchsia_update_installer::Initiator::User,),
                 allow_attach_to_existing_attempt: Some(false),
                 should_write_recovery: Some(true),
+                ..Options::empty()
             }),
             state: Some(State::Complete(CompleteData {
-                info: Some(UpdateInfo { download_size: None }),
+                info: Some(UpdateInfo { download_size: None, ..UpdateInfo::empty() }),
                 progress: Some(InstallationProgress {
                     fraction_completed: Some(1.0),
                     bytes_downloaded: None,
-                })
+                    ..InstallationProgress::empty()
+                }),
+                ..CompleteData::empty()
             })),
+            ..UpdateResult::empty()
         }
     );
     assert_eq!(
@@ -443,14 +447,18 @@ async fn serves_fidl_with_history_present() {
                 initiator: Some(fidl_fuchsia_update_installer::Initiator::User),
                 allow_attach_to_existing_attempt: Some(false),
                 should_write_recovery: Some(true),
+                ..Options::empty()
             }),
             state: Some(State::Fetch(FetchData {
-                info: Some(UpdateInfo { download_size: Some(42) }),
+                info: Some(UpdateInfo { download_size: Some(42), ..UpdateInfo::empty() }),
                 progress: Some(InstallationProgress {
                     fraction_completed: Some(0.8),
                     bytes_downloaded: Some(36),
-                })
+                    ..InstallationProgress::empty()
+                }),
+                ..FetchData::empty()
             })),
+            ..UpdateResult::empty()
         }
     );
     assert_eq!(
@@ -462,14 +470,18 @@ async fn serves_fidl_with_history_present() {
                 initiator: Some(fidl_fuchsia_update_installer::Initiator::User),
                 allow_attach_to_existing_attempt: Some(false),
                 should_write_recovery: Some(true),
+                ..Options::empty()
             }),
             state: Some(State::Complete(CompleteData {
-                info: Some(UpdateInfo { download_size: None }),
+                info: Some(UpdateInfo { download_size: None, ..UpdateInfo::empty() }),
                 progress: Some(InstallationProgress {
                     fraction_completed: Some(1.0),
                     bytes_downloaded: None,
-                })
+                    ..InstallationProgress::empty()
+                }),
+                ..CompleteData::empty()
             })),
+            ..UpdateResult::empty()
         }
     );
 }
@@ -483,10 +495,22 @@ async fn serves_fidl_without_history_present() {
 
     assert_eq!(
         installer_proxy.get_last_update_result().await.unwrap(),
-        UpdateResult { attempt_id: None, url: None, options: None, state: None }
+        UpdateResult {
+            attempt_id: None,
+            url: None,
+            options: None,
+            state: None,
+            ..UpdateResult::empty()
+        }
     );
     assert_eq!(
         installer_proxy.get_update_result("0").await.unwrap(),
-        UpdateResult { attempt_id: None, url: None, options: None, state: None }
+        UpdateResult {
+            attempt_id: None,
+            url: None,
+            options: None,
+            state: None,
+            ..UpdateResult::empty()
+        }
     );
 }

@@ -138,7 +138,7 @@ impl Service {
 
         if let Some(semantic_key_maps) = &layout.semantic_key_map {
             event.semantic_key = semantic_key_maps.iter().find_map(
-                |ui_input2::SemanticKeyMap { modifiers, optional_modifiers, entries }| {
+                |ui_input2::SemanticKeyMap { modifiers, optional_modifiers, entries, .. }| {
                     let entries = match entries {
                         None => return None,
                         Some(entries) => entries,
@@ -213,6 +213,7 @@ impl Store {
                         phase: event.phase,
                         physical_key: event.physical_key,
                         semantic_key: event.semantic_key.as_ref().map(clone_semantic_key),
+                        ..ui_input2::KeyEvent::empty()
                     };
                     let subscriber = subscriber.lock().await;
                     let handled = subscriber

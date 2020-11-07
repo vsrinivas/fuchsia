@@ -129,6 +129,7 @@ impl KeyListenerStore {
                         modifiers: event.modifiers,
                         timestamp: event.timestamp,
                         type_: event.type_,
+                        ..ui_input3::KeyEvent::empty()
                     };
                     let handled =
                         subscriber.listener.on_key_event(event).await.unwrap_or_else(|e| {
@@ -164,6 +165,7 @@ mod tests {
             key: Some(key),
             modifiers: Some(modifiers),
             type_: Some(ui_input3::KeyEventType::Pressed),
+            ..ui_input3::KeyEvent::empty()
         }
     }
 

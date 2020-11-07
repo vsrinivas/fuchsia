@@ -228,7 +228,7 @@ async fn test_not_resolved() {
         proxy
             .launch_suite(
                 "fuchsia-pkg://fuchsia.com/test_manager_test#meta/invalid_cml.cm",
-                LaunchOptions {},
+                LaunchOptions::empty(),
                 suite_server_end,
                 controller_server_end
             )

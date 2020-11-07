@@ -50,6 +50,7 @@ impl BuiltinCapability for KernelStats {
                         mmu_overhead_bytes: Some(mem_stats.mmu_overhead_bytes),
                         ipc_bytes: Some(mem_stats.ipc_bytes),
                         other_bytes: Some(mem_stats.other_bytes),
+                        ..fkernel::MemoryStats::empty()
                     };
                     responder.send(stats)?;
                 }
@@ -74,6 +75,7 @@ impl BuiltinCapability for KernelStats {
                             syscalls: Some(cpu_stat.syscalls),
                             reschedule_ipis: Some(cpu_stat.reschedule_ipis),
                             generic_ipis: Some(cpu_stat.generic_ipis),
+                            ..fkernel::PerCpuStats::empty()
                         });
                     }
                     let mut stats = fkernel::CpuStats {

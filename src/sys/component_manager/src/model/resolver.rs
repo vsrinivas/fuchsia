@@ -261,8 +261,10 @@ mod tests {
                     children: None,
                     collections: None,
                     environments: None,
+                    ..fsys::ComponentDecl::empty()
                 }),
                 package: None,
+                ..fsys::Component::empty()
             }))
         }
     }

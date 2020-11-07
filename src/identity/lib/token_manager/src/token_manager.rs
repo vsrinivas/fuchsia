@@ -184,6 +184,7 @@ impl<APS: AuthProviderSupplier> TokenManager<APS> {
             .create_refresh_token(OauthRefreshTokenRequest {
                 account_id: user_profile_id,
                 ui_context: Some(ui_context_client_end),
+                ..OauthRefreshTokenRequest::empty()
             })
             .await
             .map_err(|err| {
@@ -197,6 +198,7 @@ impl<APS: AuthProviderSupplier> TokenManager<APS> {
         let user_profile_info = oauth_open_id_proxy
             .get_user_info_from_access_token(OpenIdUserInfoFromOauthAccessTokenRequest {
                 access_token: Some(access_token),
+                ..OpenIdUserInfoFromOauthAccessTokenRequest::empty()
             })
             .await
             .map_err(|err| {
@@ -263,6 +265,7 @@ impl<APS: AuthProviderSupplier> TokenManager<APS> {
                 refresh_token: Some(refresh_token),
                 client_id: app_config.client_id.clone(),
                 scopes: Some(app_scopes),
+                ..OauthAccessTokenFromOauthRefreshTokenRequest::empty()
             })
             .await
             .map_err(|err| {
@@ -304,6 +307,7 @@ impl<APS: AuthProviderSupplier> TokenManager<APS> {
         let get_id_token_request = OpenIdTokenFromOauthRefreshTokenRequest {
             refresh_token: Some(refresh_token),
             audiences: audience.map(|audience| vec![audience]),
+            ..OpenIdTokenFromOauthRefreshTokenRequest::empty()
         };
 
         let provider_token =
@@ -351,6 +355,7 @@ impl<APS: AuthProviderSupplier> TokenManager<APS> {
             .revoke_refresh_token(OauthRefreshToken {
                 content: Some(refresh_token),
                 account_id: None,
+                ..OauthRefreshToken::empty()
             })
             .await
             .map_err(|err| {
@@ -413,6 +418,7 @@ impl<APS: AuthProviderSupplier> TokenManager<APS> {
             Ok(rt) => Ok(OauthRefreshToken {
                 content: Some(rt.to_string()),
                 account_id: Some(db_key.user_profile_id().to_string()),
+                ..OauthRefreshToken::empty()
             }),
             Err(err) => Err(TokenManagerError::from(err)),
         }
@@ -603,10 +609,12 @@ mod tests {
                     OauthRefreshToken {
                         content: Some(format!("{}_CREDENTIAL", user_id)),
                         account_id: Some(user_id.to_string()),
+                        ..OauthRefreshToken::empty()
                     },
                     OauthAccessToken {
                         content: Some("ACCESS_TOKEN".to_string()),
                         expiry_time: None,
+                        ..OauthAccessToken::empty()
                     },
                 )))?;
             }
@@ -628,6 +636,7 @@ mod tests {
                 let access_token = OauthAccessToken {
                     content: Some(format!("{}_ACCESS", token)),
                     expiry_time: None, // todo(before-submit)
+                    ..OauthAccessToken::empty()
                 };
                 responder.send(&mut Ok(access_token))?;
             }
@@ -648,6 +657,7 @@ mod tests {
                     name: Some(format!("{}_DISPLAY", user_id)),
                     email: Some(format!("{}@example.org", user_id)),
                     picture: Some(format!("http://example.org/{}/img", user_id)),
+                    ..OpenIdUserInfo::empty()
                 }))
             }
             _ => panic!("Unexpected message received"),
@@ -661,13 +671,15 @@ mod tests {
     ) -> Result<(), fidl::Error> {
         match request {
             OauthOpenIdConnectRequest::GetIdTokenFromRefreshToken { request, responder } => {
-                let OpenIdTokenFromOauthRefreshTokenRequest { refresh_token, audiences } = request;
+                let OpenIdTokenFromOauthRefreshTokenRequest { refresh_token, audiences, .. } =
+                    request;
                 assert_eq!(&refresh_token.unwrap().content.unwrap(), expected_refresh_token);
                 assert_eq!(audiences, Some(vec!["AUDIENCE".to_string()]));
                 let expiry_time = Time::get(ClockId::UTC) + Duration::from_seconds(3600);
                 let mut id_token = Ok(OpenIdToken {
                     content: Some(format!("{}_ID", expected_refresh_token)),
                     expiry_time: Some(expiry_time.into_nanos()),
+                    ..OpenIdToken::empty()
                 });
                 responder.send(&mut id_token)?;
             }

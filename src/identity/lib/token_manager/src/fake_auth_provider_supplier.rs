@@ -222,7 +222,8 @@ mod tests {
                 oauth_proxy
                     .revoke_refresh_token(OauthRefreshToken {
                         content: Some("HOOLI_CREDENTIAL".to_string()),
-                        account_id: None
+                        account_id: None,
+                        ..OauthRefreshToken::empty()
                     })
                     .await
                     .unwrap(),
@@ -242,9 +243,11 @@ mod tests {
                             refresh_token: Some(OauthRefreshToken {
                                 content: Some("PIED_PIPER_CREDENTIAL".to_string()),
                                 account_id: None,
+                                ..OauthRefreshToken::empty()
                             }),
                             client_id: None,
-                            scopes: Some(vec![])
+                            scopes: Some(vec![]),
+                            ..OauthAccessTokenFromOauthRefreshTokenRequest::empty()
                         }
                     )
                     .await
@@ -310,7 +313,8 @@ mod tests {
                 oauth_proxy
                     .create_refresh_token(OauthRefreshTokenRequest {
                         account_id: None,
-                        ui_context: None
+                        ui_context: None,
+                        ..OauthRefreshTokenRequest::empty()
                     })
                     .await
                     .unwrap(),
@@ -329,6 +333,7 @@ mod tests {
                     .get_id_token_from_refresh_token(OpenIdTokenFromOauthRefreshTokenRequest {
                         refresh_token: None,
                         audiences: None,
+                        ..OpenIdTokenFromOauthRefreshTokenRequest::empty()
                     })
                     .await
                     .unwrap(),
@@ -344,7 +349,11 @@ mod tests {
 
             assert_eq!(
                 open_id_connect_proxy
-                    .revoke_id_token(OpenIdToken { content: None, expiry_time: None })
+                    .revoke_id_token(OpenIdToken {
+                        content: None,
+                        expiry_time: None,
+                        ..OpenIdToken::empty()
+                    })
                     .await
                     .unwrap(),
                 Err(fidl_fuchsia_identity_external::Error::InvalidRequest)

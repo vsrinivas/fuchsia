@@ -74,6 +74,7 @@ impl BatteryManager {
                 health: Some(fpower::HealthStatus::Unknown),
                 time_remaining: Some(fpower::TimeRemaining::Indeterminate(0)),
                 timestamp: Some(get_current_time()),
+                ..fpower::BatteryInfo::empty()
             }),
             watchers: Arc::new(Mutex::new(Vec::new())),
             simulation_state: RwLock::new(false),
@@ -86,6 +87,7 @@ impl BatteryManager {
                 health: Some(fpower::HealthStatus::Unknown),
                 time_remaining: Some(fpower::TimeRemaining::Indeterminate(0)),
                 timestamp: Some(get_current_time()),
+                ..fpower::BatteryInfo::empty()
             }),
         }
     }

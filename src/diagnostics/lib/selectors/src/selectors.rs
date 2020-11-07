@@ -366,10 +366,12 @@ pub fn parse_selector(unparsed_selector: &str) -> Result<Selector, Error> {
                 inspect_node_selector,
                 Some(property_selector),
             )?),
+            ..Selector::empty()
         }),
         [component_selector, inspect_node_selector] => Ok(Selector {
             component_selector: Some(parse_component_selector(component_selector)?),
             tree_selector: Some(parse_tree_selector(inspect_node_selector, None)?),
+            ..Selector::empty()
         }),
         _ => Err(format_err!(
             "Selector format requires at least 2 subselectors delimited by a `:`.",

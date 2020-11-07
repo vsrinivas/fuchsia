@@ -2715,8 +2715,9 @@ pub fn decode_unknown_table_field(decoder: &mut Decoder<'_>, offset: usize) -> R
 }
 
 /// Implements the FIDL `Encodable` and `Decodable` traits for a struct
-/// representing a FIDL table. All the struct's fields must be `Option`s. Also
-/// generates the `empty()` method returning an empty table.
+/// representing a FIDL table. All the struct's fields must be `Option`s, except
+/// for the `pub __non_exhaustive: ()` field. Also generates the `empty()` method
+/// returning an empty table.
 #[macro_export]
 macro_rules! fidl_table {
     (
@@ -2739,9 +2740,13 @@ macro_rules! fidl_table {
             /// Generates an empty table, with every field set to `None`.
             #[inline]
             pub const fn empty() -> Self {
-                Self {$(
+                #[allow(deprecated)]
+                Self {
+                    $(
                         $member_name: None,
-                )*}
+                    )*
+                    __non_exhaustive: (),
+                }
             }
 
             #[inline(always)]
@@ -4490,6 +4495,8 @@ mod test {
         pub num_none: Option<i32>,
         pub string: Option<String>,
         pub handle: Option<Handle>,
+        #[deprecated = "Do not use MyTable"]
+        pub __non_exhaustive: (),
     }
 
     fidl_table! {
@@ -4515,7 +4522,10 @@ mod test {
     }
 
     #[allow(unused)]
-    struct EmptyTableCompiles {}
+    struct EmptyTableCompiles {
+        #[deprecated = "Do not use __non_exhaustive"]
+        pub __non_exhaustive: (),
+    }
     fidl_table! {
         name: EmptyTableCompiles,
         members: [],
@@ -4524,6 +4534,8 @@ mod test {
     struct TablePrefix {
         num: Option<i32>,
         num_none: Option<i32>,
+        #[deprecated = "Do not use __non_exhaustive"]
+        pub __non_exhaustive: (),
     }
 
     fidl_table! {
@@ -4630,6 +4642,8 @@ mod test {
     pub struct SimpleTable {
         x: Option<i64>,
         y: Option<i64>,
+        #[deprecated = "Do not use __non_exhaustive"]
+        pub __non_exhaustive: (),
     }
 
     fidl_table! {
@@ -4651,6 +4665,8 @@ mod test {
         foo: Option<String>,
         bar: Option<i32>,
         baz: Option<Vec<u8>>,
+        #[deprecated = "Do not use __non_exhaustive"]
+        pub __non_exhaustive: (),
     }
 
     fidl_table! {
@@ -4768,6 +4784,8 @@ mod test {
     struct TableWithGaps {
         second: Option<i32>,
         fourth: Option<i32>,
+        #[deprecated = "Do not use __non_exhaustive"]
+        pub __non_exhaustive: (),
     }
 
     fidl_table! {
@@ -4819,6 +4837,8 @@ mod test {
         struct TableWithoutGaps {
             first: Option<i32>,
             second: Option<i32>,
+            #[deprecated = "Do not use __non_exhaustive"]
+            pub __non_exhaustive: (),
         }
         fidl_table! {
             name: TableWithoutGaps,

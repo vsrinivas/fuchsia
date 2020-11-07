@@ -115,6 +115,7 @@ mod test {
                             .send(&mut Ok(IdentifyHostResponse {
                                 nodename: Some("".to_string()),
                                 addresses: Some(vec![]),
+                                ..IdentifyHostResponse::empty()
                             }))
                             .unwrap();
                     }

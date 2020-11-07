@@ -273,7 +273,11 @@ mod test {
         t.get(BOB).wait_for_interface_online(1).await;
 
         let icmp_provider = t.get(ALICE).connect_icmp_provider().unwrap();
-        let config = EchoSocketConfig { local: Src::local_fidl(), remote: Dst::remote_fidl() };
+        let config = EchoSocketConfig {
+            local: Src::local_fidl(),
+            remote: Dst::remote_fidl(),
+            ..EchoSocketConfig::empty()
+        };
 
         let (socket_client, socket_server) =
             fidl::endpoints::create_endpoints::<EchoSocketMarker>().unwrap();

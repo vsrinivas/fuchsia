@@ -45,7 +45,9 @@ mod tests {
                     klogs_enabled: Some(false),
                     filter_options: None,
                     syslog_output: Some(true),
+                    ..LoggerOptions::empty()
                 }),
+                ..EnvironmentOptions::empty()
             },
         )?;
 
@@ -64,7 +66,12 @@ mod tests {
         env.connect_to_service(NetworkContextMarker::NAME, netctx_server_end.into_channel())?;
         let (netmgr, netmgr_server_end) = fidl::endpoints::create_proxy::<NetworkManagerMarker>()?;
         netctx.get_network_manager(netmgr_server_end)?;
-        let config = NetworkConfig { latency: None, packet_loss: None, reorder: None };
+        let config = NetworkConfig {
+            latency: None,
+            packet_loss: None,
+            reorder: None,
+            ..NetworkConfig::empty()
+        };
         let (status, network) = netmgr.create_network(name, config).await?;
         match status {
             zx::sys::ZX_OK => Ok(network.unwrap().into_proxy()?),

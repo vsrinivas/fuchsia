@@ -247,6 +247,7 @@ mod tests {
             service_data: None,
             manufacturer_data: None,
             uris: None,
+            ..fble::AdvertisingData::empty()
         };
         let expected = AdvertisingData {
             name: None,
@@ -280,6 +281,7 @@ mod tests {
                 data: vec![3, 4, 5],
             }]),
             uris: Some(vec!["some/uri".to_string()]),
+            ..fble::AdvertisingData::empty()
         };
         let expected = AdvertisingData {
             name: Some("hello".to_string()),
@@ -378,7 +380,13 @@ mod tests {
 
     #[test]
     fn peer_from_fidl_no_id() {
-        let peer = fble::Peer { id: None, connectable: None, rssi: None, advertising_data: None };
+        let peer = fble::Peer {
+            id: None,
+            connectable: None,
+            rssi: None,
+            advertising_data: None,
+            ..fble::Peer::empty()
+        };
         let peer = Peer::try_from(peer);
         assert!(peer.is_err());
     }
@@ -390,6 +398,7 @@ mod tests {
             connectable: None,
             rssi: None,
             advertising_data: None,
+            ..fble::Peer::empty()
         };
         let expected =
             Peer { id: PeerId(1), connectable: false, rssi: None, advertising_data: None };
@@ -411,7 +420,9 @@ mod tests {
                 service_data: None,
                 manufacturer_data: None,
                 uris: None,
+                ..fble::AdvertisingData::empty()
             }),
+            ..fble::Peer::empty()
         };
         let expected = Peer {
             id: PeerId(1),

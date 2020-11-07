@@ -131,12 +131,21 @@ impl Keymap {
                     let modifiers = from_modifiers(&layout.modifiers);
                     let optional_modifiers = from_modifiers(&layout.optional_modifiers);
                     let entries = from_entries(&layout.entries);
-                    ui_input::SemanticKeyMap { entries, modifiers, optional_modifiers }
+                    ui_input::SemanticKeyMap {
+                        entries,
+                        modifiers,
+                        optional_modifiers,
+                        ..ui_input::SemanticKeyMap::empty()
+                    }
                 })
                 .collect(),
         );
 
-        Ok(ui_input::KeyboardLayout { key_map: None, semantic_key_map })
+        Ok(ui_input::KeyboardLayout {
+            key_map: None,
+            semantic_key_map,
+            ..ui_input::KeyboardLayout::empty()
+        })
     }
 }
 

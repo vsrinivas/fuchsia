@@ -29,6 +29,7 @@ async fn collections() {
             )),
             startup: Some(fsys::StartupMode::Lazy),
             environment: None,
+            ..fsys::ChildDecl::empty()
         };
         realm
             .create_child(&mut collection_ref, child_decl)
@@ -88,6 +89,7 @@ async fn collections() {
             ),
             startup: Some(fsys::StartupMode::Lazy),
             environment: None,
+            ..fsys::ChildDecl::empty()
         };
         realm
             .create_child(&mut collection_ref, child_decl)

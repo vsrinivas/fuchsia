@@ -1109,6 +1109,7 @@ pub mod capability_util {
         ns.push(fcrunner::ComponentNamespaceEntry {
             path: Some(dir_path.to_string()),
             directory: Some(ClientEnd::new(dir_proxy.into_channel().unwrap().into_zx_channel())),
+            ..fcrunner::ComponentNamespaceEntry::empty()
         });
     }
 

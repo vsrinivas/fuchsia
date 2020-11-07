@@ -237,6 +237,7 @@ async fn force_install_reboot() {
             initiator: Some(fidl_installer::Initiator::User),
             should_write_recovery: Some(true),
             allow_attach_to_existing_attempt: Some(true),
+            ..fidl_installer::Options::empty()
         },
         reboot_controller_present: true,
     }]);
@@ -290,6 +291,7 @@ async fn force_install_no_reboot() {
             initiator: Some(fidl_installer::Initiator::User),
             should_write_recovery: Some(true),
             allow_attach_to_existing_attempt: Some(true),
+            ..fidl_installer::Options::empty()
         },
         reboot_controller_present: true,
     }]);
@@ -319,6 +321,7 @@ async fn force_install_failure_state() {
             initiator: Some(fidl_installer::Initiator::User),
             should_write_recovery: Some(true),
             allow_attach_to_existing_attempt: Some(true),
+            ..fidl_installer::Options::empty()
         },
         reboot_controller_present: true,
     }]);
@@ -345,6 +348,7 @@ async fn force_install_unexpected_end() {
             initiator: Some(fidl_installer::Initiator::User),
             should_write_recovery: Some(true),
             allow_attach_to_existing_attempt: Some(true),
+            ..fidl_installer::Options::empty()
         },
         reboot_controller_present: true,
     }]);
@@ -369,6 +373,7 @@ async fn force_install_service_initiated_flag() {
             initiator: Some(fidl_installer::Initiator::Service),
             should_write_recovery: Some(true),
             allow_attach_to_existing_attempt: Some(true),
+            ..fidl_installer::Options::empty()
         },
         reboot_controller_present: true,
     }]);
@@ -384,6 +389,7 @@ async fn check_now_service_initiated_flag() {
         options: fidl_update::CheckOptions {
             initiator: Some(fidl_update::Initiator::Service),
             allow_attaching_to_existing_update_check: Some(true),
+            ..fidl_update::CheckOptions::empty()
         },
         monitor_present: false,
     }]);
@@ -401,6 +407,7 @@ async fn check_now_error_if_throttled() {
         options: fidl_update::CheckOptions {
             initiator: Some(fidl_update::Initiator::User),
             allow_attaching_to_existing_update_check: Some(true),
+            ..fidl_update::CheckOptions::empty()
         },
         monitor_present: false,
     }]);
@@ -436,6 +443,7 @@ async fn check_now_monitor_flag() {
         options: fidl_update::CheckOptions {
             initiator: Some(fidl_update::Initiator::User),
             allow_attaching_to_existing_update_check: Some(true),
+            ..fidl_update::CheckOptions::empty()
         },
         monitor_present: true,
     }]);
@@ -459,6 +467,7 @@ async fn check_now_monitor_error_checking() {
         options: fidl_update::CheckOptions {
             initiator: Some(fidl_update::Initiator::User),
             allow_attaching_to_existing_update_check: Some(true),
+            ..fidl_update::CheckOptions::empty()
         },
         monitor_present: true,
     }]);
@@ -503,6 +512,7 @@ async fn check_now_monitor_error_installing() {
         options: fidl_update::CheckOptions {
             initiator: Some(fidl_update::Initiator::User),
             allow_attaching_to_existing_update_check: Some(true),
+            ..fidl_update::CheckOptions::empty()
         },
         monitor_present: true,
     }]);

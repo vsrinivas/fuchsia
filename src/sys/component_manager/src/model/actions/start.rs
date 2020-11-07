@@ -177,6 +177,7 @@ async fn make_execution_runtime(
         ns: Some(ns),
         outgoing_dir: Some(ServerEnd::new(outgoing_dir_server)),
         runtime_dir: Some(ServerEnd::new(runtime_dir_server)),
+        ..fcrunner::ComponentStartInfo::empty()
     };
 
     Ok((runtime, start_info, controller_server))

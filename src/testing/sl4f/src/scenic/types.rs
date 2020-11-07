@@ -199,6 +199,10 @@ pub struct ProfileDef {
     pub time_zones: Option<Vec<TimeZoneId>>,
     #[serde(default, deserialize_with = "TemperatureUnitDef::deserialize_option")]
     pub temperature_unit: Option<TemperatureUnit>,
+    // This field is needed to match the FIDL-generated struct exactly. It
+    // should be removed once we are no longer using Serde remote.
+    #[serde(skip)]
+    __non_exhaustive: (),
 }
 
 #[derive(Deserialize, Debug)]

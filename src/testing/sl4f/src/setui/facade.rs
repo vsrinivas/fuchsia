@@ -177,10 +177,18 @@ impl SetUiFacade {
         let stream_settings = AudioStreamSettings {
             stream: Some(AudioRenderUsage::Media),
             source: Some(AudioStreamSettingSource::User),
-            user_volume: Some(Volume { level: Some(volume), muted: Some(false) }),
+            user_volume: Some(Volume {
+                level: Some(volume),
+                muted: Some(false),
+                ..Volume::empty()
+            }),
+            ..AudioStreamSettings::empty()
         };
-        let settings =
-            fsettings::AudioSettings { streams: Some(vec![stream_settings]), input: None };
+        let settings = fsettings::AudioSettings {
+            streams: Some(vec![stream_settings]),
+            input: None,
+            ..fsettings::AudioSettings::empty()
+        };
 
         match audio_proxy.set(settings).await? {
             Ok(_) => Ok(to_value(SetUiResult::Success)?),
@@ -285,7 +293,12 @@ mod tests {
                         AudioStreamSettings {
                             stream: Some(AudioRenderUsage::Media),
                             source: Some(AudioStreamSettingSource::User),
-                            user_volume: Some(Volume { level: Some(volume), muted: Some(false) }),
+                            user_volume: Some(Volume {
+                                level: Some(volume),
+                                muted: Some(false),
+                                ..Volume::empty()
+                            }),
+                            ..AudioStreamSettings::empty()
                         }
                     );
                     responder.send(&mut Ok(())).unwrap();

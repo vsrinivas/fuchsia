@@ -533,8 +533,14 @@ async fn test_set_wrong_state_length() {
 
     // Set with an extra light state should fail.
     let extra_state = vec![
-        fidl_fuchsia_settings::LightState { value: None },
-        fidl_fuchsia_settings::LightState { value: None },
+        fidl_fuchsia_settings::LightState {
+            value: None,
+            ..fidl_fuchsia_settings::LightState::empty()
+        },
+        fidl_fuchsia_settings::LightState {
+            value: None,
+            ..fidl_fuchsia_settings::LightState::empty()
+        },
     ];
     let result = env
         .light_service
@@ -576,9 +582,13 @@ async fn test_set_wrong_value_type() {
         .set_light_group_values(
             TEST_LIGHT_NAME,
             &mut vec![
-                fidl_fuchsia_settings::LightState { value: None },
+                fidl_fuchsia_settings::LightState {
+                    value: None,
+                    ..fidl_fuchsia_settings::LightState::empty()
+                },
                 fidl_fuchsia_settings::LightState {
                     value: Some(fidl_fuchsia_settings::LightValue::On(true)),
+                    ..fidl_fuchsia_settings::LightState::empty()
                 },
             ]
             .into_iter(),
@@ -595,9 +605,11 @@ async fn test_set_wrong_value_type() {
             &mut vec![
                 fidl_fuchsia_settings::LightState {
                     value: Some(fidl_fuchsia_settings::LightValue::Brightness(LIGHT_CHANGED_VAL)),
+                    ..fidl_fuchsia_settings::LightState::empty()
                 },
                 fidl_fuchsia_settings::LightState {
                     value: Some(fidl_fuchsia_settings::LightValue::On(true)),
+                    ..fidl_fuchsia_settings::LightState::empty()
                 },
             ]
             .into_iter(),
@@ -650,6 +662,7 @@ async fn test_set_invalid_rgb_values() {
                         blue: INVALID_VAL_1,
                     },
                 )),
+                ..fidl_fuchsia_settings::LightState::empty()
             }]
             .into_iter(),
         )
@@ -670,6 +683,7 @@ async fn test_set_invalid_rgb_values() {
                         blue: LIGHT_START_VAL,
                     },
                 )),
+                ..fidl_fuchsia_settings::LightState::empty()
             }]
             .into_iter(),
         )

@@ -28,8 +28,11 @@ async fn notify_cobalt_current_software_distribution_impl(
     let channel = app_set.get_current_channel().await;
     let app_id = app_set.get_current_app_id().await;
 
-    let distribution_info =
-        SoftwareDistributionInfo { current_channel: Some(channel), current_realm: Some(app_id) };
+    let distribution_info = SoftwareDistributionInfo {
+        current_channel: Some(channel),
+        current_realm: Some(app_id),
+        ..SoftwareDistributionInfo::empty()
+    };
     match proxy.set_software_distribution_info(distribution_info).await {
         Ok(fidl_fuchsia_cobalt::Status::Ok) => {}
         error => {

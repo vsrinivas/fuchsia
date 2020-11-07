@@ -74,6 +74,7 @@ async fn process_incoming(
             std::process::id()
         )),
         key: None,
+        ..StreamSocketGreeting::empty()
     };
     let mut bytes = Vec::new();
     let mut handles = Vec::new();
@@ -121,6 +122,7 @@ async fn process_incoming(
                     fidl_fuchsia_overnet_protocol::AscenddLinkConfig {
                         path: Some(sockpath.clone()),
                         connection_label: None,
+                        ..fidl_fuchsia_overnet_protocol::AscenddLinkConfig::empty()
                     },
                 ))
             }),

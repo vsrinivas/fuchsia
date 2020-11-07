@@ -125,8 +125,11 @@ pub async fn verify_v6_dns_servers(
             models: Some(fdhcpv6::OperationalModels {
                 stateless: Some(fdhcpv6::Stateless {
                     options_to_request: Some(vec![fdhcpv6::RequestableOptionCode::DnsServers]),
+                    ..fdhcpv6::Stateless::empty()
                 }),
+                ..fdhcpv6::OperationalModels::empty()
             }),
+            ..fdhcpv6::NewClientParams::empty()
         },
         server_end,
     )?;

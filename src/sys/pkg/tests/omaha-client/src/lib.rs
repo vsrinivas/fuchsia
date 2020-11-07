@@ -283,6 +283,7 @@ impl TestEnv {
         let options = CheckOptions {
             initiator: Some(Initiator::User),
             allow_attaching_to_existing_update_check: Some(false),
+            ..CheckOptions::empty()
         };
         let (client_end, stream) =
             fidl::endpoints::create_request_stream::<MonitorMarker>().unwrap();
@@ -393,11 +394,11 @@ async fn expect_states(stream: &mut MonitorRequestStream, expected_states: &[Sta
 fn update_info() -> Option<UpdateInfo> {
     // TODO(fxbug.dev/47469): version_available should be `Some("0.1.2.3".to_string())` once omaha-client
     // returns version_available.
-    Some(UpdateInfo { version_available: None, download_size: None })
+    Some(UpdateInfo { version_available: None, download_size: None, ..UpdateInfo::empty() })
 }
 
 fn progress(fraction_completed: Option<f32>) -> Option<InstallationProgress> {
-    Some(InstallationProgress { fraction_completed })
+    Some(InstallationProgress { fraction_completed, ..InstallationProgress::empty() })
 }
 
 #[fasync::run_singlethreaded(test)]
@@ -429,10 +430,11 @@ async fn test_omaha_client_update() {
     expect_states(
         &mut stream,
         &[
-            State::CheckingForUpdates(CheckingForUpdatesData {}),
+            State::CheckingForUpdates(CheckingForUpdatesData::empty()),
             State::InstallingUpdate(InstallingData {
                 update: update_info(),
                 installation_progress: progress(None),
+                ..InstallingData::empty()
             }),
         ],
     )
@@ -442,7 +444,7 @@ async fn test_omaha_client_update() {
     while let Some(request) = stream.try_next().await.unwrap() {
         let MonitorRequest::OnState { state, responder } = request;
         match state {
-            State::InstallingUpdate(InstallingData { update, installation_progress }) => {
+            State::InstallingUpdate(InstallingData { update, installation_progress, .. }) => {
                 assert_eq!(update, update_info());
                 assert!(!waiting_for_reboot);
                 if let Some(last_progress) = last_progress {
@@ -458,7 +460,7 @@ async fn test_omaha_client_update() {
                 }
                 last_progress = installation_progress;
             }
-            State::WaitingForReboot(InstallingData { update, installation_progress }) => {
+            State::WaitingForReboot(InstallingData { update, installation_progress, .. }) => {
                 assert_eq!(update, update_info());
                 assert_eq!(installation_progress, progress(Some(1.)));
                 assert!(!waiting_for_reboot);
@@ -506,10 +508,11 @@ async fn test_omaha_client_update_progress_with_mock_installer() {
     expect_states(
         &mut stream,
         &[
-            State::CheckingForUpdates(CheckingForUpdatesData {}),
+            State::CheckingForUpdates(CheckingForUpdatesData::empty()),
             State::InstallingUpdate(InstallingData {
                 update: update_info(),
                 installation_progress: progress(None),
+                ..InstallingData::empty()
             }),
         ],
     )
@@ -523,6 +526,7 @@ async fn test_omaha_client_update_progress_with_mock_installer() {
         &[State::InstallingUpdate(InstallingData {
             update: update_info(),
             installation_progress: progress(Some(0.0)),
+            ..InstallingData::empty()
         })],
     )
     .await;
@@ -543,6 +547,7 @@ async fn test_omaha_client_update_progress_with_mock_installer() {
         &[State::InstallingUpdate(InstallingData {
             update: update_info(),
             installation_progress: progress(Some(0.0)),
+            ..InstallingData::empty()
         })],
     )
     .await;
@@ -565,6 +570,7 @@ async fn test_omaha_client_update_progress_with_mock_installer() {
         &[State::InstallingUpdate(InstallingData {
             update: update_info(),
             installation_progress: progress(Some(0.5)),
+            ..InstallingData::empty()
         })],
     )
     .await;
@@ -581,10 +587,12 @@ async fn test_omaha_client_update_progress_with_mock_installer() {
             State::InstallingUpdate(InstallingData {
                 update: update_info(),
                 installation_progress: progress(Some(1.0)),
+                ..InstallingData::empty()
             }),
             State::WaitingForReboot(InstallingData {
                 update: update_info(),
                 installation_progress: progress(Some(1.0)),
+                ..InstallingData::empty()
             }),
         ],
     )
@@ -599,10 +607,11 @@ async fn test_omaha_client_update_error() {
     expect_states(
         &mut stream,
         &[
-            State::CheckingForUpdates(CheckingForUpdatesData {}),
+            State::CheckingForUpdates(CheckingForUpdatesData::empty()),
             State::InstallingUpdate(InstallingData {
                 update: update_info(),
                 installation_progress: progress(None),
+                ..InstallingData::empty()
             }),
         ],
     )
@@ -612,7 +621,7 @@ async fn test_omaha_client_update_error() {
     while let Some(request) = stream.try_next().await.unwrap() {
         let MonitorRequest::OnState { state, responder } = request;
         match state {
-            State::InstallingUpdate(InstallingData { update, installation_progress }) => {
+            State::InstallingUpdate(InstallingData { update, installation_progress, .. }) => {
                 assert_eq!(update, update_info());
                 assert!(!installation_error);
                 if let Some(last_progress) = last_progress {
@@ -632,6 +641,7 @@ async fn test_omaha_client_update_error() {
             State::InstallationError(InstallationErrorData {
                 update,
                 installation_progress: _,
+                ..
             }) => {
                 assert_eq!(update, update_info());
                 assert!(!installation_error);
@@ -671,8 +681,8 @@ async fn test_omaha_client_no_update() {
     expect_states(
         &mut stream,
         &[
-            State::CheckingForUpdates(CheckingForUpdatesData {}),
-            State::NoUpdateAvailable(NoUpdateAvailableData {}),
+            State::CheckingForUpdates(CheckingForUpdatesData::empty()),
+            State::NoUpdateAvailable(NoUpdateAvailableData::empty()),
         ],
     )
     .await;
@@ -699,8 +709,8 @@ async fn test_omaha_client_invalid_response() {
     expect_states(
         &mut stream,
         &[
-            State::CheckingForUpdates(CheckingForUpdatesData {}),
-            State::ErrorCheckingForUpdate(ErrorCheckingForUpdateData {}),
+            State::CheckingForUpdates(CheckingForUpdatesData::empty()),
+            State::ErrorCheckingForUpdate(ErrorCheckingForUpdateData::empty()),
         ],
     )
     .await;
@@ -727,14 +737,16 @@ async fn test_omaha_client_invalid_url() {
     expect_states(
         &mut stream,
         &[
-            State::CheckingForUpdates(CheckingForUpdatesData {}),
+            State::CheckingForUpdates(CheckingForUpdatesData::empty()),
             State::InstallingUpdate(InstallingData {
                 update: update_info(),
                 installation_progress: progress(None),
+                ..InstallingData::empty()
             }),
             State::InstallationError(InstallationErrorData {
                 update: update_info(),
                 installation_progress: progress(None),
+                ..InstallationErrorData::empty()
             }),
         ],
     )
@@ -766,6 +778,7 @@ async fn test_omaha_client_invalid_app_set() {
     let options = CheckOptions {
         initiator: Some(Initiator::User),
         allow_attaching_to_existing_update_check: None,
+        ..CheckOptions::empty()
     };
     assert_matches!(
         env.proxies.update_manager.check_now(options, None).await.expect("check_now"),

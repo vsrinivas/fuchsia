@@ -35,6 +35,7 @@ impl<T: Clone> Clone for FilterApplicant<T> {
             options: WatchOptions {
                 only_active: self.options.only_active,
                 allowed_sessions: self.options.allowed_sessions.clone(),
+                ..WatchOptions::empty()
             },
             applicant: self.applicant.clone(),
         }
@@ -156,6 +157,7 @@ mod test {
         let active_filter = Filter::new(WatchOptions {
             only_active: Some(true),
             allowed_sessions: Some(vec![0u64, 5u64]),
+            ..WatchOptions::empty()
         });
 
         assert_eq!(
@@ -165,7 +167,11 @@ mod test {
 
         assert_eq!(
             active_filter.filter(&FilterApplicant::new(
-                WatchOptions { only_active: Some(true), allowed_sessions: Some(vec![0u64]) },
+                WatchOptions {
+                    only_active: Some(true),
+                    allowed_sessions: Some(vec![0u64]),
+                    ..WatchOptions::empty()
+                },
                 2u32
             )),
             true
@@ -173,7 +179,11 @@ mod test {
 
         assert_eq!(
             active_filter.filter(&FilterApplicant::new(
-                WatchOptions { only_active: Some(false), allowed_sessions: Some(vec![5u64]) },
+                WatchOptions {
+                    only_active: Some(false),
+                    allowed_sessions: Some(vec![5u64]),
+                    ..WatchOptions::empty()
+                },
                 2u32
             )),
             false

@@ -33,6 +33,7 @@ impl ShortcutBuilder {
                 trigger: None,
                 key3: None,
                 keys_required: None,
+                ..ui_shortcut::Shortcut::empty()
             },
         }
     }
@@ -47,6 +48,7 @@ impl ShortcutBuilder {
             trigger: self.shortcut.trigger,
             key3: self.shortcut.key3,
             keys_required: self.shortcut.keys_required.clone(),
+            ..ui_shortcut::Shortcut::empty()
         }
     }
 
@@ -175,6 +177,7 @@ impl ManagerService {
             phase: Some(ui_input2::KeyEventPhase::Pressed),
             physical_key: None,
             semantic_key: None,
+            ..ui_input2::KeyEvent::empty()
         };
 
         self.manager.handle_key_event(event)
@@ -194,6 +197,7 @@ impl ManagerService {
             phase: Some(ui_input2::KeyEventPhase::Released),
             physical_key: None,
             semantic_key: None,
+            ..ui_input2::KeyEvent::empty()
         };
 
         self.manager.handle_key_event(event)
@@ -208,6 +212,7 @@ impl ManagerService {
             type_: Some(ui_input3::KeyEventType::Pressed),
             key: Some(key),
             modifiers: None,
+            ..ui_input3::KeyEvent::empty()
         };
 
         self.manager.handle_key3_event(event)
@@ -222,6 +227,7 @@ impl ManagerService {
             type_: Some(ui_input3::KeyEventType::Released),
             key: Some(key),
             modifiers: None,
+            ..ui_input3::KeyEvent::empty()
         };
 
         self.manager.handle_key3_event(event)
@@ -238,6 +244,7 @@ impl ManagerService {
                 type_: Some(ui_input3::KeyEventType::Pressed),
                 key: Some(key),
                 modifiers: None,
+                ..ui_input3::KeyEvent::empty()
             };
             let key_handled = self.manager.handle_key3_event(event).await?;
             if key_handled && iter.peek().is_some() {
@@ -258,6 +265,7 @@ impl ManagerService {
                 type_: Some(ui_input3::KeyEventType::Released),
                 key: Some(key),
                 modifiers: None,
+                ..ui_input3::KeyEvent::empty()
             };
             was_handled = was_handled || self.manager.handle_key3_event(event).await?;
         }
@@ -272,6 +280,7 @@ impl ManagerService {
                     .map(scenic::duplicate_view_ref)
                     .collect::<Result<Vec<_>, _>>()?,
             ),
+            ..ui_focus::FocusChain::empty()
         };
         self.manager.handle_focus_change(focus_chain).await.map_err(Into::into)
     }

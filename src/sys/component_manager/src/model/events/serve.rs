@@ -109,13 +109,17 @@ async fn maybe_create_event_result(
         Ok(EventPayload::CapabilityRouted { source, capability_provider, .. }) => {
             Ok(maybe_create_capability_routed_payload(scope, source, capability_provider.clone()))
         }
-        Ok(EventPayload::Running { started_timestamp }) => {
-            Ok(Some(fsys::EventResult::Payload(fsys::EventPayload::Running(
-                fsys::RunningPayload { started_timestamp: Some(started_timestamp.into_nanos()) },
-            ))))
-        }
+        Ok(EventPayload::Running { started_timestamp }) => Ok(Some(fsys::EventResult::Payload(
+            fsys::EventPayload::Running(fsys::RunningPayload {
+                started_timestamp: Some(started_timestamp.into_nanos()),
+                ..fsys::RunningPayload::empty()
+            }),
+        ))),
         Ok(EventPayload::Stopped { status }) => Ok(Some(fsys::EventResult::Payload(
-            fsys::EventPayload::Stopped(fsys::StoppedPayload { status: Some(status.into_raw()) }),
+            fsys::EventPayload::Stopped(fsys::StoppedPayload {
+                status: Some(status.into_raw()),
+                ..fsys::StoppedPayload::empty()
+            }),
         ))),
         Ok(payload) => Ok(maybe_create_empty_payload(payload.event_type())),
         Err(EventError {
@@ -123,7 +127,10 @@ async fn maybe_create_event_result(
             event_error_payload: EventErrorPayload::CapabilityReady { name },
         }) => Ok(Some(fsys::EventResult::Error(fsys::EventError {
             error_payload: Some(fsys::EventErrorPayload::CapabilityReady(
-                fsys::CapabilityReadyError { name: Some(name.to_string()) },
+                fsys::CapabilityReadyError {
+                    name: Some(name.to_string()),
+                    ..fsys::CapabilityReadyError::empty()
+                },
             )),
             description: Some(format!("{}", source)),
             ..fsys::EventError::empty()
@@ -133,7 +140,10 @@ async fn maybe_create_event_result(
             event_error_payload: EventErrorPayload::CapabilityRequested { name, .. },
         }) => Ok(Some(fsys::EventResult::Error(fsys::EventError {
             error_payload: Some(fsys::EventErrorPayload::CapabilityRequested(
-                fsys::CapabilityRequestedError { name: Some(name.to_string()) },
+                fsys::CapabilityRequestedError {
+                    name: Some(name.to_string()),
+                    ..fsys::CapabilityRequestedError::empty()
+                },
             )),
             description: Some(format!("{}", source)),
             ..fsys::EventError::empty()
@@ -144,6 +154,7 @@ async fn maybe_create_event_result(
         }) => Ok(Some(fsys::EventResult::Error(fsys::EventError {
             error_payload: Some(fsys::EventErrorPayload::Running(fsys::RunningError {
                 started_timestamp: Some(started_timestamp.into_nanos()),
+                ..fsys::RunningError::empty()
             })),
             description: Some(format!("{}", source)),
             ..fsys::EventError::empty()
@@ -167,7 +178,11 @@ fn create_capability_ready_payload(
         Some(node_client_end)
     };
 
-    let payload = fsys::CapabilityReadyPayload { name: Some(name), node };
+    let payload = fsys::CapabilityReadyPayload {
+        name: Some(name),
+        node,
+        ..fsys::CapabilityReadyPayload::empty()
+    };
     Ok(fsys::EventResult::Payload(fsys::EventPayload::CapabilityReady(payload)))
 }
 
@@ -178,8 +193,11 @@ async fn create_capability_requested_payload(
     let capability = capability.lock().await.take();
     match capability {
         Some(capability) => {
-            let payload =
-                fsys::CapabilityRequestedPayload { name: Some(name), capability: Some(capability) };
+            let payload = fsys::CapabilityRequestedPayload {
+                name: Some(name),
+                capability: Some(capability),
+                ..fsys::CapabilityRequestedPayload::empty()
+            };
             fsys::EventResult::Payload(fsys::EventPayload::CapabilityRequested(payload))
         }
         None => {
@@ -187,6 +205,7 @@ async fn create_capability_requested_payload(
             let payload =
                 fsys::EventErrorPayload::CapabilityRequested(fsys::CapabilityRequestedError {
                     name: Some(name),
+                    ..fsys::CapabilityRequestedError::empty()
                 });
             fsys::EventResult::Error(fsys::EventError {
                 error_payload: Some(payload),
@@ -228,26 +247,31 @@ fn maybe_create_capability_routed_payload(
         }
     });
 
-    let payload = fsys::CapabilityRoutedPayload { routing_protocol, name, source };
+    let payload = fsys::CapabilityRoutedPayload {
+        routing_protocol,
+        name,
+        source,
+        ..fsys::CapabilityRoutedPayload::empty()
+    };
     Some(fsys::EventResult::Payload(fsys::EventPayload::CapabilityRouted(payload)))
 }
 
 fn maybe_create_empty_payload(event_type: EventType) -> Option<fsys::EventResult> {
     let result = match event_type {
-        EventType::Destroyed => {
-            fsys::EventResult::Payload(fsys::EventPayload::Destroyed(fsys::DestroyedPayload {}))
-        }
-        EventType::Discovered => {
-            fsys::EventResult::Payload(fsys::EventPayload::Discovered(fsys::DiscoveredPayload {}))
-        }
+        EventType::Destroyed => fsys::EventResult::Payload(fsys::EventPayload::Destroyed(
+            fsys::DestroyedPayload::empty(),
+        )),
+        EventType::Discovered => fsys::EventResult::Payload(fsys::EventPayload::Discovered(
+            fsys::DiscoveredPayload::empty(),
+        )),
         EventType::MarkedForDestruction => fsys::EventResult::Payload(
-            fsys::EventPayload::MarkedForDestruction(fsys::MarkedForDestructionPayload {}),
+            fsys::EventPayload::MarkedForDestruction(fsys::MarkedForDestructionPayload::empty()),
         ),
         EventType::Resolved => {
-            fsys::EventResult::Payload(fsys::EventPayload::Resolved(fsys::ResolvedPayload {}))
+            fsys::EventResult::Payload(fsys::EventPayload::Resolved(fsys::ResolvedPayload::empty()))
         }
         EventType::Started => {
-            fsys::EventResult::Payload(fsys::EventPayload::Started(fsys::StartedPayload {}))
+            fsys::EventResult::Payload(fsys::EventPayload::Started(fsys::StartedPayload::empty()))
         }
         _ => fsys::EventResult::__UnknownVariant { ordinal: 999, bytes: vec![], handles: vec![] },
     };
@@ -256,14 +280,16 @@ fn maybe_create_empty_payload(event_type: EventType) -> Option<fsys::EventResult
 
 fn maybe_create_empty_error_payload(error: &EventError) -> Option<fsys::EventResult> {
     let error_payload = match error.event_type() {
-        EventType::Destroyed => fsys::EventErrorPayload::Destroyed(fsys::DestroyedError {}),
-        EventType::Discovered => fsys::EventErrorPayload::Discovered(fsys::DiscoveredError {}),
-        EventType::MarkedForDestruction => {
-            fsys::EventErrorPayload::MarkedForDestruction(fsys::MarkedForDestructionError {})
+        EventType::Destroyed => fsys::EventErrorPayload::Destroyed(fsys::DestroyedError::empty()),
+        EventType::Discovered => {
+            fsys::EventErrorPayload::Discovered(fsys::DiscoveredError::empty())
         }
-        EventType::Resolved => fsys::EventErrorPayload::Resolved(fsys::ResolvedError {}),
-        EventType::Started => fsys::EventErrorPayload::Started(fsys::StartedError {}),
-        EventType::Stopped => fsys::EventErrorPayload::Stopped(fsys::StoppedError {}),
+        EventType::MarkedForDestruction => {
+            fsys::EventErrorPayload::MarkedForDestruction(fsys::MarkedForDestructionError::empty())
+        }
+        EventType::Resolved => fsys::EventErrorPayload::Resolved(fsys::ResolvedError::empty()),
+        EventType::Started => fsys::EventErrorPayload::Started(fsys::StartedError::empty()),
+        EventType::Stopped => fsys::EventErrorPayload::Stopped(fsys::StoppedError::empty()),
         _ => fsys::EventErrorPayload::__UnknownVariant {
             ordinal: 999,
             bytes: vec![],
@@ -287,10 +313,18 @@ async fn create_event_fidl_object(event: Event) -> Result<fsys::Event, fidl::Err
     let descriptor = Some(fsys::ComponentDescriptor {
         moniker: Some(target_relative_moniker.to_string()),
         component_url: Some(event.event.component_url.clone()),
+        ..fsys::ComponentDescriptor::empty()
     });
     let event_result = maybe_create_event_result(&event.scope_moniker, &event.event.result).await?;
     let handler = maybe_serve_handler_async(event);
-    Ok(fsys::Event { event_type, descriptor, handler, event_result, timestamp })
+    Ok(fsys::Event {
+        event_type,
+        descriptor,
+        handler,
+        event_result,
+        timestamp,
+        ..fsys::Event::empty()
+    })
 }
 
 /// Serves the server end of the RoutingProtocol FIDL protocol asynchronously.

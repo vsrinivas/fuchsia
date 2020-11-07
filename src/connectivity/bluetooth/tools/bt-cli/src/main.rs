@@ -284,7 +284,12 @@ fn parse_pair(args: &[&str], state: &Mutex<State>) -> Result<(FidlPeerId, Pairin
     let transport = if args.len() == 4 { Some(parse_pairing_transport(args[3])?) } else { None };
     Ok((
         peer_id,
-        PairingOptions { le_security_level, non_bondable: Some(!bondable_mode), transport },
+        PairingOptions {
+            le_security_level,
+            non_bondable: Some(!bondable_mode),
+            transport,
+            ..PairingOptions::empty()
+        },
     ))
 }
 
@@ -891,6 +896,7 @@ mod tests {
                         le_security_level: Some(PairingSecurityLevel::Encrypted),
                         non_bondable: Some(false),
                         transport: Some(TechnologyType::LowEnergy),
+                        ..PairingOptions::empty()
                     },
                 )),
             ),
@@ -903,6 +909,7 @@ mod tests {
                         le_security_level: Some(PairingSecurityLevel::Authenticated),
                         non_bondable: Some(true),
                         transport: None,
+                        ..PairingOptions::empty()
                     },
                 )),
             ),
@@ -1014,6 +1021,7 @@ mod tests {
             le_security_level: Some(PairingSecurityLevel::Encrypted),
             non_bondable: Some(false),
             transport: None,
+            ..PairingOptions::empty()
         };
 
         let args = vec![peer_id_string.as_str(), "ENC", "T"];
@@ -1038,6 +1046,7 @@ mod tests {
             le_security_level: Some(PairingSecurityLevel::Encrypted),
             non_bondable: Some(false),
             transport: None,
+            ..PairingOptions::empty()
         };
 
         let args = vec![peer_id_string.as_str(), "ENC", "T"];

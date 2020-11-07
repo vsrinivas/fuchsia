@@ -27,6 +27,7 @@ impl From<ScanResult> for fidl_policy::ScanResult {
             id: Some(input.id),
             entries: Some(input.entries.into_iter().map(fidl_policy::Bss::from).collect()),
             compatibility: Some(input.compatibility),
+            ..fidl_policy::ScanResult::empty()
         }
     }
 }
@@ -56,6 +57,7 @@ impl From<Bss> for fidl_policy::Bss {
             rssi: Some(input.rssi),
             frequency: Some(input.frequency),
             timestamp_nanos: Some(input.timestamp_nanos),
+            ..fidl_policy::Bss::empty()
         }
     }
 }

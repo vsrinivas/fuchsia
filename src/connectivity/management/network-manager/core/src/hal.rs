@@ -653,6 +653,7 @@ impl NetCfg {
             params.push(fnetdhcp::Parameter::Lease(fnetdhcp::LeaseLength {
                 default: Some(*lease_time_sec),
                 max: None,
+                ..fnetdhcp::LeaseLength::empty()
             }));
         }
 
@@ -703,6 +704,7 @@ impl NetCfg {
                 }),
                 pool_range_start: Some(fnet::Ipv4Address { addr: start.octets() }),
                 pool_range_stop: Some(fnet::Ipv4Address { addr: end.octets() }),
+                ..fnetdhcp::AddressPool::empty()
             }));
         }
 
@@ -712,6 +714,7 @@ impl NetCfg {
                 .map(|reservation| fnetdhcp::StaticAssignment {
                     host: Some(fnet::MacAddress { octets: reservation.mac.to_array() }),
                     assigned_addr: Some(fnet::Ipv4Address { addr: reservation.address.octets() }),
+                    ..fnetdhcp::StaticAssignment::empty()
                 })
                 .collect(),
         ));
@@ -1933,7 +1936,11 @@ mod tests {
                     fnet::Ipv4Address { addr: [192, 168, 42, 242] },
                 ])),
                 MockDhcpServerRequest::SetParameter(fnetdhcp::Parameter::Lease(
-                    fnetdhcp::LeaseLength { default: Some(3600), max: None },
+                    fnetdhcp::LeaseLength {
+                        default: Some(3600),
+                        max: None,
+                        ..fnetdhcp::LeaseLength::empty()
+                    },
                 )),
                 MockDhcpServerRequest::SetParameter(fnetdhcp::Parameter::AddressPool(
                     fnetdhcp::AddressPool {
@@ -1942,12 +1949,14 @@ mod tests {
                         mask: Some(fnet::Ipv4Address { addr: [255, 255, 255, 0] }),
                         pool_range_start: Some(fnet::Ipv4Address { addr: [192, 168, 42, 100] }),
                         pool_range_stop: Some(fnet::Ipv4Address { addr: [192, 168, 42, 200] }),
+                        ..fnetdhcp::AddressPool::empty()
                     },
                 )),
                 MockDhcpServerRequest::SetParameter(fnetdhcp::Parameter::StaticallyAssignedAddrs(
                     vec![fnetdhcp::StaticAssignment {
                         host: Some(fnet::MacAddress { octets: [1, 2, 3, 4, 5, 6] }),
                         assigned_addr: Some(fnet::Ipv4Address { addr: [192, 168, 42, 201] }),
+                        ..fnetdhcp::StaticAssignment::empty()
                     }],
                 )),
             ],
@@ -1971,7 +1980,11 @@ mod tests {
             want_enable: true,
             want_requests: &[
                 MockDhcpServerRequest::SetParameter(fnetdhcp::Parameter::Lease(
-                    fnetdhcp::LeaseLength { default: Some(3600), max: None },
+                    fnetdhcp::LeaseLength {
+                        default: Some(3600),
+                        max: None,
+                        ..fnetdhcp::LeaseLength::empty()
+                    },
                 )),
                 MockDhcpServerRequest::SetParameter(fnetdhcp::Parameter::StaticallyAssignedAddrs(
                     Vec::new(),

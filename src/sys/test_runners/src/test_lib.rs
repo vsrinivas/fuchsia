@@ -103,9 +103,10 @@ impl Clone for ListenerEvent {
     fn clone(&self) -> Self {
         match self {
             ListenerEvent::StartTest(name) => ListenerEvent::start_test(name),
-            ListenerEvent::FinishTest(name, test_result) => {
-                ListenerEvent::finish_test(name, TestResult { status: test_result.status.clone() })
-            }
+            ListenerEvent::FinishTest(name, test_result) => ListenerEvent::finish_test(
+                name,
+                TestResult { status: test_result.status.clone(), ..TestResult::empty() },
+            ),
             ListenerEvent::FinishAllTests => ListenerEvent::finish_all_test(),
         }
     }
@@ -145,7 +146,10 @@ pub async fn collect_listener_event(
 
 /// Helper method to convert names to `Invocation`.
 pub fn names_to_invocation(names: Vec<&str>) -> Vec<Invocation> {
-    names.iter().map(|s| Invocation { name: Some(s.to_string()), tag: None }).collect()
+    names
+        .iter()
+        .map(|s| Invocation { name: Some(s.to_string()), tag: None, ..Invocation::empty() })
+        .collect()
 }
 
 // process events by parsing and normalizing logs
@@ -210,7 +214,10 @@ mod tests {
     fn test_ordering_by_enum() {
         let expected_events = vec![
             ListenerEvent::start_test("a"),
-            ListenerEvent::finish_test("a", TestResult { status: Some(Status::Passed) }),
+            ListenerEvent::finish_test(
+                "a",
+                TestResult { status: Some(Status::Passed), ..TestResult::empty() },
+            ),
             ListenerEvent::finish_all_test(),
         ];
 
@@ -227,20 +234,38 @@ mod tests {
         let mut events = vec![
             ListenerEvent::start_test("b"),
             ListenerEvent::start_test("a"),
-            ListenerEvent::finish_test("a", TestResult { status: Some(Status::Passed) }),
+            ListenerEvent::finish_test(
+                "a",
+                TestResult { status: Some(Status::Passed), ..TestResult::empty() },
+            ),
             ListenerEvent::start_test("c"),
-            ListenerEvent::finish_test("b", TestResult { status: Some(Status::Passed) }),
-            ListenerEvent::finish_test("c", TestResult { status: Some(Status::Passed) }),
+            ListenerEvent::finish_test(
+                "b",
+                TestResult { status: Some(Status::Passed), ..TestResult::empty() },
+            ),
+            ListenerEvent::finish_test(
+                "c",
+                TestResult { status: Some(Status::Passed), ..TestResult::empty() },
+            ),
             ListenerEvent::finish_all_test(),
         ];
 
         let expected_events = vec![
             ListenerEvent::start_test("a"),
-            ListenerEvent::finish_test("a", TestResult { status: Some(Status::Passed) }),
+            ListenerEvent::finish_test(
+                "a",
+                TestResult { status: Some(Status::Passed), ..TestResult::empty() },
+            ),
             ListenerEvent::start_test("b"),
-            ListenerEvent::finish_test("b", TestResult { status: Some(Status::Passed) }),
+            ListenerEvent::finish_test(
+                "b",
+                TestResult { status: Some(Status::Passed), ..TestResult::empty() },
+            ),
             ListenerEvent::start_test("c"),
-            ListenerEvent::finish_test("c", TestResult { status: Some(Status::Passed) }),
+            ListenerEvent::finish_test(
+                "c",
+                TestResult { status: Some(Status::Passed), ..TestResult::empty() },
+            ),
             ListenerEvent::finish_all_test(),
         ];
         events.sort();

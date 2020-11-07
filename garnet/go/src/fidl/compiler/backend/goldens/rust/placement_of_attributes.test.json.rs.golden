@@ -109,6 +109,9 @@ fidl_struct_copy! {
 #[derive(Debug, PartialEq)]
 pub struct ExampleTable {
     pub member: Option<u32>,
+    #[deprecated = "Use `..ExampleTable::empty()` to construct and `..` to match."]
+    #[doc(hidden)]
+    pub __non_exhaustive: (),
 }
 
 fidl_table! {

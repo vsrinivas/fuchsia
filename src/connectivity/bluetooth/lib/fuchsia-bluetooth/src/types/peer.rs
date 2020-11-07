@@ -252,6 +252,7 @@ impl From<&Peer> for fsys::Peer {
             services: None,
             le_services: Some(src.le_services.iter().map(|uuid| uuid.into()).collect()),
             bredr_services: Some(src.bredr_services.iter().map(|uuid| uuid.into()).collect()),
+            ..fsys::Peer::empty()
         }
     }
 }

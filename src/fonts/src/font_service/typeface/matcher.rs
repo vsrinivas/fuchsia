@@ -17,6 +17,7 @@ lazy_static! {
         slant: Some(fonts::DEFAULT_SLANT),
         weight: Some(fonts::DEFAULT_WEIGHT),
         width: Some(fonts::DEFAULT_WIDTH),
+        ..Style2::empty()
     };
 }
 

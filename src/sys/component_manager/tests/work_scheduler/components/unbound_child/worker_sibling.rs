@@ -23,7 +23,11 @@ async fn main() -> Result<(), Error> {
     work_scheduler
         .schedule_work(
             "TEST",
-            fsys::WorkRequest { start: Some(fsys::Start::MonotonicTime(0)), period: None },
+            fsys::WorkRequest {
+                start: Some(fsys::Start::MonotonicTime(0)),
+                period: None,
+                ..fsys::WorkRequest::empty()
+            },
         )
         .await
         .expect("connection error scheduling work item")

@@ -236,6 +236,7 @@ impl From<MirrorConfig> for fidl::MirrorConfig {
             mirror_url: Some(config.mirror_url.to_string()),
             subscribe: Some(config.subscribe),
             blob_mirror_url,
+            ..Self::empty()
         }
     }
 }
@@ -444,6 +445,7 @@ impl From<RepositoryConfig> for fidl::RepositoryConfig {
             update_package_url: config.update_package_url.map(|url| url.to_string()),
             use_local_mirror: Some(config.use_local_mirror),
             storage_type: Some(RepositoryStorageType::into(config.repo_storage_type)),
+            ..Self::empty()
         }
     }
 }
@@ -779,6 +781,7 @@ mod tests {
                 mirror_url: Some("http://example.com/tuf/repo".into()),
                 subscribe: Some(true),
                 blob_mirror_url: Some("http://example.com/tuf/repo/subdir/blobs".into()),
+                ..fidl::MirrorConfig::empty()
             }
         );
     }
@@ -797,6 +800,7 @@ mod tests {
                 mirror_url: Some("http://example.com/tuf/repo".into()),
                 subscribe: Some(false),
                 blob_mirror_url: None,
+                ..fidl::MirrorConfig::empty()
             }
         );
     }
@@ -807,6 +811,7 @@ mod tests {
             mirror_url: Some("http://example.com/tuf/repo".into()),
             subscribe: Some(true),
             blob_mirror_url: Some("http://example.com/tuf/repo/subdir/blobs".into()),
+            ..fidl::MirrorConfig::empty()
         };
         assert_matches!(
             MirrorConfig::try_from(as_fidl),
@@ -824,6 +829,7 @@ mod tests {
             mirror_url: Some("example.com".into()),
             subscribe: Some(false),
             blob_mirror_url: None,
+            ..fidl::MirrorConfig::empty()
         };
         assert_matches!(
             MirrorConfig::try_from(as_fidl),
@@ -834,6 +840,7 @@ mod tests {
             mirror_url: Some("https://example.com".into()),
             subscribe: Some(false),
             blob_mirror_url: Some("example.com".into()),
+            ..fidl::MirrorConfig::empty()
         };
         assert_matches!(
             MirrorConfig::try_from(as_fidl),
@@ -847,6 +854,7 @@ mod tests {
             mirror_url: Some("http://example.com/tuf/repo/".into()),
             subscribe: Some(false),
             blob_mirror_url: None,
+            ..fidl::MirrorConfig::empty()
         };
         assert_matches!(
             MirrorConfig::try_from(as_fidl),
@@ -966,8 +974,12 @@ mod tests {
 
     #[test]
     fn test_mirror_config_bad_uri() {
-        let as_fidl =
-            fidl::MirrorConfig { mirror_url: None, subscribe: Some(false), blob_mirror_url: None };
+        let as_fidl = fidl::MirrorConfig {
+            mirror_url: None,
+            subscribe: Some(false),
+            blob_mirror_url: None,
+            ..fidl::MirrorConfig::empty()
+        };
         assert_matches!(
             MirrorConfig::try_from(as_fidl),
             Err(RepositoryParseError::MirrorUrlMissing)
@@ -1035,12 +1047,14 @@ mod tests {
                     mirror_url: Some("http://example.com/tuf/repo".into()),
                     subscribe: Some(true),
                     blob_mirror_url: None,
+                    ..fidl::MirrorConfig::empty()
                 }]),
                 update_package_url: Some(
                     "fuchsia-pkg://fuchsia.com/systemupdate".try_into().unwrap()
                 ),
                 use_local_mirror: Some(true),
                 storage_type: Some(fidl::RepositoryStorageType::Ephemeral),
+                ..fidl::RepositoryConfig::empty()
             }
         );
     }
@@ -1056,10 +1070,12 @@ mod tests {
                 mirror_url: Some("http://example.com/tuf/repo/".into()),
                 subscribe: Some(true),
                 blob_mirror_url: None,
+                ..fidl::MirrorConfig::empty()
             }]),
             update_package_url: Some("fuchsia-pkg://fuchsia.com/systemupdate".try_into().unwrap()),
             use_local_mirror: None,
             storage_type: None,
+            ..fidl::RepositoryConfig::empty()
         };
         assert_matches!(
             RepositoryConfig::try_from(as_fidl),
@@ -1093,10 +1109,12 @@ mod tests {
                 mirror_url: Some("http://example.com/tuf/repo/".into()),
                 subscribe: Some(true),
                 blob_mirror_url: None,
+                ..fidl::MirrorConfig::empty()
             }]),
             update_package_url: Some("fuchsia-pkg://fuchsia.com/systemupdate".try_into().unwrap()),
             use_local_mirror: None,
             storage_type: Some(fidl::RepositoryStorageType::Persistent),
+            ..fidl::RepositoryConfig::empty()
         };
         assert_matches!(
             RepositoryConfig::try_from(as_fidl),
@@ -1130,10 +1148,12 @@ mod tests {
                 mirror_url: Some("http://example.com/tuf/repo/".into()),
                 subscribe: Some(true),
                 blob_mirror_url: None,
+                ..fidl::MirrorConfig::empty()
             }]),
             update_package_url: Some("fuchsia-pkg://fuchsia.com/systemupdate".try_into().unwrap()),
             use_local_mirror: None,
             storage_type: None,
+            ..fidl::RepositoryConfig::empty()
         };
         assert_matches!(
             RepositoryConfig::try_from(as_fidl),
@@ -1167,10 +1187,12 @@ mod tests {
                 mirror_url: Some("http://example.com/tuf/repo/".into()),
                 subscribe: Some(true),
                 blob_mirror_url: None,
+                ..fidl::MirrorConfig::empty()
             }]),
             update_package_url: Some("fuchsia-pkg://fuchsia.com/systemupdate".try_into().unwrap()),
             use_local_mirror: Some(true),
             storage_type: None,
+            ..fidl::RepositoryConfig::empty()
         };
         assert_matches!(
             RepositoryConfig::try_from(as_fidl),
@@ -1204,6 +1226,7 @@ mod tests {
             update_package_url: Some("fuchsia-pkg://fuchsia.com/systemupdate".try_into().unwrap()),
             use_local_mirror: None,
             storage_type: None,
+            ..fidl::RepositoryConfig::empty()
         };
         assert_matches!(
             RepositoryConfig::try_from(as_fidl),

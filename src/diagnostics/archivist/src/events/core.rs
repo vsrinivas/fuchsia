@@ -99,6 +99,7 @@ pub mod tests {
                 descriptor: Some(fsys::ComponentDescriptor {
                     moniker: Some("./foo:0/bar:0".to_string()),
                     component_url: Some("fuchsia-pkg://fuchsia.com/foo#meta/bar.cmx".to_string()),
+                    ..fsys::ComponentDescriptor::empty()
                 }),
                 timestamp: Some(zx::Time::get_monotonic().into_nanos()),
                 ..fsys::Event::empty()
@@ -112,9 +113,13 @@ pub mod tests {
                 descriptor: Some(fsys::ComponentDescriptor {
                     moniker: Some("./foo:0/bar:0".to_string()),
                     component_url: Some("fuchsia-pkg://fuchsia.com/foo#meta/bar.cmx".to_string()),
+                    ..fsys::ComponentDescriptor::empty()
                 }),
                 event_result: Some(fsys::EventResult::Payload(fsys::EventPayload::Running(
-                    fsys::RunningPayload { started_timestamp: Some(0) },
+                    fsys::RunningPayload {
+                        started_timestamp: Some(0),
+                        ..fsys::RunningPayload::empty()
+                    },
                 ))),
                 timestamp: Some(zx::Time::get_monotonic().into_nanos()),
                 ..fsys::Event::empty()
@@ -129,11 +134,13 @@ pub mod tests {
                 descriptor: Some(fsys::ComponentDescriptor {
                     moniker: Some("./foo:0/bar:0".to_string()),
                     component_url: Some("fuchsia-pkg://fuchsia.com/foo#meta/bar.cmx".to_string()),
+                    ..fsys::ComponentDescriptor::empty()
                 }),
                 event_result: Some(fsys::EventResult::Payload(
                     fsys::EventPayload::CapabilityReady(fsys::CapabilityReadyPayload {
                         name: Some("diagnostics".to_string()),
                         node: Some(node),
+                        ..fsys::CapabilityReadyPayload::empty()
                     }),
                 )),
                 timestamp: Some(zx::Time::get_monotonic().into_nanos()),
@@ -148,6 +155,7 @@ pub mod tests {
                 descriptor: Some(fsys::ComponentDescriptor {
                     moniker: Some("./foo:0/bar:0".to_string()),
                     component_url: Some("fuchsia-pkg://fuchsia.com/foo#meta/bar.cmx".to_string()),
+                    ..fsys::ComponentDescriptor::empty()
                 }),
                 timestamp: Some(zx::Time::get_monotonic().into_nanos()),
                 ..fsys::Event::empty()

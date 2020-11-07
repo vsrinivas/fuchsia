@@ -406,8 +406,11 @@ mod time_tests {
         let work_scheduler = t.work_scheduler();
         t.run_and_sync(&mut Box::pin(async {
             let root = AbsoluteMoniker::root();
-            let now_once =
-                fsys::WorkRequest { start: Some(fsys::Start::MonotonicTime(0)), period: None };
+            let now_once = fsys::WorkRequest {
+                start: Some(fsys::Start::MonotonicTime(0)),
+                period: None,
+                ..fsys::WorkRequest::empty()
+            };
             assert_eq!(
                 Ok(()),
                 work_scheduler.schedule_work_item(&root, "NOW_ONCE", &now_once).await
@@ -425,8 +428,11 @@ mod time_tests {
         // Set batch period and queue a unit of work.
         t.run_and_sync(&mut Box::pin(async {
             assert_eq!(Ok(()), work_scheduler.set_batch_period(1).await);
-            let now_once =
-                fsys::WorkRequest { start: Some(fsys::Start::MonotonicTime(0)), period: None };
+            let now_once = fsys::WorkRequest {
+                start: Some(fsys::Start::MonotonicTime(0)),
+                period: None,
+                ..fsys::WorkRequest::empty()
+            };
             assert_eq!(
                 Ok(()),
                 work_scheduler.schedule_work_item(&root, "NOW_ONCE", &now_once).await
@@ -454,8 +460,11 @@ mod time_tests {
         // Set batch period and queue a unit of work.
         t.run_and_sync(&mut Box::pin(async {
             assert_eq!(Ok(()), work_scheduler.set_batch_period(1).await);
-            let every_moment =
-                fsys::WorkRequest { start: Some(fsys::Start::MonotonicTime(0)), period: Some(1) };
+            let every_moment = fsys::WorkRequest {
+                start: Some(fsys::Start::MonotonicTime(0)),
+                period: Some(1),
+                ..fsys::WorkRequest::empty()
+            };
             assert_eq!(
                 Ok(()),
                 work_scheduler.schedule_work_item(&root, "EVERY_MOMENT", &every_moment).await
@@ -487,8 +496,11 @@ mod time_tests {
         // Set batch period and queue a unit of work.
         t.run_and_sync(&mut Box::pin(async {
             assert_eq!(Ok(()), work_scheduler.set_batch_period(5).await);
-            let at_nine =
-                fsys::WorkRequest { start: Some(fsys::Start::MonotonicTime(9)), period: None };
+            let at_nine = fsys::WorkRequest {
+                start: Some(fsys::Start::MonotonicTime(9)),
+                period: None,
+                ..fsys::WorkRequest::empty()
+            };
             assert_eq!(Ok(()), work_scheduler.schedule_work_item(&root, "AT_NINE", &at_nine).await);
         }));
 
@@ -498,8 +510,11 @@ mod time_tests {
 
         // Queue unit of work with deadline _earlier_ than first unit of work.
         t.run_and_sync(&mut Box::pin(async {
-            let at_four =
-                fsys::WorkRequest { start: Some(fsys::Start::MonotonicTime(4)), period: None };
+            let at_four = fsys::WorkRequest {
+                start: Some(fsys::Start::MonotonicTime(4)),
+                period: None,
+                ..fsys::WorkRequest::empty()
+            };
             assert_eq!(Ok(()), work_scheduler.schedule_work_item(&root, "AT_FOUR", &at_four).await);
         }));
 
@@ -520,8 +535,11 @@ mod time_tests {
 
         // Queue unit of work with deadline _later_ than existing unit of work.
         t.run_and_sync(&mut Box::pin(async {
-            let at_ten =
-                fsys::WorkRequest { start: Some(fsys::Start::MonotonicTime(10)), period: None };
+            let at_ten = fsys::WorkRequest {
+                start: Some(fsys::Start::MonotonicTime(10)),
+                period: None,
+                ..fsys::WorkRequest::empty()
+            };
             assert_eq!(Ok(()), work_scheduler.schedule_work_item(&root, "AT_TEN", &at_ten).await);
         }));
 
@@ -550,11 +568,17 @@ mod time_tests {
         // cycle.
         t.run_and_sync(&mut Box::pin(async {
             assert_eq!(Ok(()), work_scheduler.set_batch_period(5).await);
-            let at_four =
-                fsys::WorkRequest { start: Some(fsys::Start::MonotonicTime(4)), period: None };
+            let at_four = fsys::WorkRequest {
+                start: Some(fsys::Start::MonotonicTime(4)),
+                period: None,
+                ..fsys::WorkRequest::empty()
+            };
             assert_eq!(Ok(()), work_scheduler.schedule_work_item(&root, "AT_FOUR", &at_four).await);
-            let at_nine =
-                fsys::WorkRequest { start: Some(fsys::Start::MonotonicTime(9)), period: None };
+            let at_nine = fsys::WorkRequest {
+                start: Some(fsys::Start::MonotonicTime(9)),
+                period: None,
+                ..fsys::WorkRequest::empty()
+            };
             assert_eq!(Ok(()), work_scheduler.schedule_work_item(&root, "AT_NINE", &at_nine).await);
         }));
 
@@ -587,11 +611,17 @@ mod time_tests {
         // cycle.
         t.run_and_sync(&mut Box::pin(async {
             assert_eq!(Ok(()), work_scheduler.set_batch_period(5).await);
-            let at_four =
-                fsys::WorkRequest { start: Some(fsys::Start::MonotonicTime(4)), period: None };
+            let at_four = fsys::WorkRequest {
+                start: Some(fsys::Start::MonotonicTime(4)),
+                period: None,
+                ..fsys::WorkRequest::empty()
+            };
             assert_eq!(Ok(()), work_scheduler.schedule_work_item(&root, "AT_FOUR", &at_four).await);
-            let at_nine_periodic =
-                fsys::WorkRequest { start: Some(fsys::Start::MonotonicTime(9)), period: Some(5) };
+            let at_nine_periodic = fsys::WorkRequest {
+                start: Some(fsys::Start::MonotonicTime(9)),
+                period: Some(5),
+                ..fsys::WorkRequest::empty()
+            };
             assert_eq!(
                 Ok(()),
                 work_scheduler
@@ -651,32 +681,44 @@ mod time_tests {
         // - One work item to remain after first period.
         t.run_and_sync(&mut Box::pin(async {
             assert_eq!(Ok(()), work_scheduler.set_batch_period(3).await);
-            let root_0 =
-                fsys::WorkRequest { start: Some(fsys::Start::MonotonicTime(0)), period: None };
+            let root_0 = fsys::WorkRequest {
+                start: Some(fsys::Start::MonotonicTime(0)),
+                period: None,
+                ..fsys::WorkRequest::empty()
+            };
             assert_eq!(
                 Ok(()),
                 work_scheduler
                     .schedule_counted_work_item(root_dispatcher.clone(), "ROOT_0", &root_0)
                     .await
             );
-            let root_1 =
-                fsys::WorkRequest { start: Some(fsys::Start::MonotonicTime(1)), period: None };
+            let root_1 = fsys::WorkRequest {
+                start: Some(fsys::Start::MonotonicTime(1)),
+                period: None,
+                ..fsys::WorkRequest::empty()
+            };
             assert_eq!(
                 Ok(()),
                 work_scheduler
                     .schedule_counted_work_item(root_dispatcher.clone(), "ROOT_1", &root_1)
                     .await
             );
-            let child_2 =
-                fsys::WorkRequest { start: Some(fsys::Start::MonotonicTime(2)), period: None };
+            let child_2 = fsys::WorkRequest {
+                start: Some(fsys::Start::MonotonicTime(2)),
+                period: None,
+                ..fsys::WorkRequest::empty()
+            };
             assert_eq!(
                 Ok(()),
                 work_scheduler
                     .schedule_counted_work_item(child_dispatcher.clone(), "CHILD_2", &child_2)
                     .await
             );
-            let child_5 =
-                fsys::WorkRequest { start: Some(fsys::Start::MonotonicTime(5)), period: None };
+            let child_5 = fsys::WorkRequest {
+                start: Some(fsys::Start::MonotonicTime(5)),
+                period: None,
+                ..fsys::WorkRequest::empty()
+            };
             assert_eq!(
                 Ok(()),
                 work_scheduler

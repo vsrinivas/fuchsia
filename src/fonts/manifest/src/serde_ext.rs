@@ -128,6 +128,7 @@ impl From<StyleOptions> for FidlStyle {
             slant: style_options.slant,
             weight: style_options.weight,
             width: style_options.width,
+            ..FidlStyle::empty()
         }
     }
 }

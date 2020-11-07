@@ -28,36 +28,45 @@ fn main() {
                     value: Some(Box::new(fdata::DictionaryValue::Str("notify".to_string()))),
                 },
             ]),
+            ..fdata::Dictionary::empty()
         };
         let uses = vec![
-            UseDecl::Runner(UseRunnerDecl { source_name: Some("elf".to_string()) }),
+            UseDecl::Runner(UseRunnerDecl {
+                source_name: Some("elf".to_string()),
+                ..UseRunnerDecl::empty()
+            }),
             UseDecl::Service(UseServiceDecl {
                 source: Some(Ref::Parent(ParentRef {})),
                 source_name: Some("fuchsia.fonts.Provider".to_string()),
                 target_path: Some("/svc/fuchsia.fonts.Provider".to_string()),
+                ..UseServiceDecl::empty()
             }),
             UseDecl::Protocol(UseProtocolDecl {
                 source: Some(Ref::Parent(ParentRef {})),
                 source_name: Some("fuchsia.fonts.LegacyProvider".to_string()),
                 target_path: Some("/svc/fuchsia.fonts.OldProvider".to_string()),
+                ..UseProtocolDecl::empty()
             }),
             UseDecl::Event(UseEventDecl {
                 source: Some(Ref::Framework(FrameworkRef {})),
                 source_name: Some("started".to_string()),
                 target_name: Some("began".to_string()),
                 filter: None,
+                ..UseEventDecl::empty()
             }),
             UseDecl::Event(UseEventDecl {
                 source: Some(Ref::Parent(ParentRef {})),
                 source_name: Some("destroyed".to_string()),
                 target_name: Some("destroyed".to_string()),
                 filter: None,
+                ..UseEventDecl::empty()
             }),
             UseDecl::Event(UseEventDecl {
                 source: Some(Ref::Parent(ParentRef {})),
                 source_name: Some("stopped".to_string()),
                 target_name: Some("stopped".to_string()),
                 filter: None,
+                ..UseEventDecl::empty()
             }),
             UseDecl::Event(UseEventDecl {
                 source: Some(Ref::Parent(ParentRef {})),
@@ -70,7 +79,9 @@ fn main() {
                             "diagnostics".to_string(),
                         ))),
                     }]),
+                    ..fdata::Dictionary::empty()
                 }),
+                ..UseEventDecl::empty()
             }),
             UseDecl::EventStream(UseEventStreamDecl {
                 target_path: Some("/svc/my_stream".to_string()),
@@ -79,6 +90,7 @@ fn main() {
                     "destroyed".to_string(),
                     "diagnostics_ready".to_string(),
                 ]),
+                ..UseEventStreamDecl::empty()
             }),
         ];
         let exposes = vec![
@@ -87,12 +99,14 @@ fn main() {
                 source_name: Some("fuchsia.logger.Log".to_string()),
                 target_name: Some("fuchsia.logger.Log".to_string()),
                 target: Some(Ref::Parent(ParentRef {})),
+                ..ExposeServiceDecl::empty()
             }),
             ExposeDecl::Protocol(ExposeProtocolDecl {
                 source: Some(Ref::Child(ChildRef { name: "logger".to_string(), collection: None })),
                 source_name: Some("fuchsia.logger.LegacyLog".to_string()),
                 target_name: Some("fuchsia.logger.OldLog".to_string()),
                 target: Some(Ref::Parent(ParentRef {})),
+                ..ExposeProtocolDecl::empty()
             }),
             ExposeDecl::Directory(ExposeDirectoryDecl {
                 source: Some(Ref::Self_(SelfRef {})),
@@ -101,6 +115,7 @@ fn main() {
                 target: Some(Ref::Parent(ParentRef {})),
                 rights: None,
                 subdir: Some("blob".to_string()),
+                ..ExposeDirectoryDecl::empty()
             }),
         ];
         let offers = vec![
@@ -109,6 +124,7 @@ fn main() {
                 source_name: Some("fuchsia.logger.Log".to_string()),
                 target: Some(Ref::Collection(CollectionRef { name: "modular".to_string() })),
                 target_name: Some("fuchsia.logger.Log".to_string()),
+                ..OfferServiceDecl::empty()
             }),
             OfferDecl::Protocol(OfferProtocolDecl {
                 source: Some(Ref::Child(ChildRef { name: "logger".to_string(), collection: None })),
@@ -116,6 +132,7 @@ fn main() {
                 target: Some(Ref::Collection(CollectionRef { name: "modular".to_string() })),
                 target_name: Some("fuchsia.logger.OldLog".to_string()),
                 dependency_type: Some(DependencyType::Strong),
+                ..OfferProtocolDecl::empty()
             }),
             OfferDecl::Event(OfferEventDecl {
                 source: Some(Ref::Parent(ParentRef {})),
@@ -123,16 +140,19 @@ fn main() {
                 target: Some(Ref::Child(ChildRef { name: "logger".to_string(), collection: None })),
                 target_name: Some("stopped-logger".to_string()),
                 filter: None,
+                ..OfferEventDecl::empty()
             }),
         ];
         let capabilities = vec![
             CapabilityDecl::Service(ServiceDecl {
                 name: Some("fuchsia.logger.Log".to_string()),
                 source_path: Some("/svc/fuchsia.logger.Log".to_string()),
+                ..ServiceDecl::empty()
             }),
             CapabilityDecl::Protocol(ProtocolDecl {
                 name: Some("fuchsia.logger.Log2".to_string()),
                 source_path: Some("/svc/fuchsia.logger.Log2".to_string()),
+                ..ProtocolDecl::empty()
             }),
             CapabilityDecl::Directory(DirectoryDecl {
                 name: Some("blobfs".to_string()),
@@ -147,21 +167,25 @@ fn main() {
                         | fio2::Operations::Traverse
                         | fio2::Operations::ModifyDirectory,
                 ),
+                ..DirectoryDecl::empty()
             }),
             CapabilityDecl::Storage(StorageDecl {
                 name: Some("minfs".to_string()),
                 source: Some(Ref::Parent(ParentRef {})),
                 backing_dir: Some("data".to_string()),
                 subdir: None,
+                ..StorageDecl::empty()
             }),
             CapabilityDecl::Runner(RunnerDecl {
                 name: Some("dart_runner".to_string()),
                 source: Some(Ref::Self_(SelfRef {})),
                 source_path: Some("/svc/fuchsia.sys2.Runner".to_string()),
+                ..RunnerDecl::empty()
             }),
             CapabilityDecl::Resolver(ResolverDecl {
                 name: Some("pkg_resolver".to_string()),
                 source_path: Some("/svc/fuchsia.pkg.Resolver".to_string()),
+                ..ResolverDecl::empty()
             }),
         ];
         let children = vec![ChildDecl {
@@ -169,11 +193,13 @@ fn main() {
             url: Some("fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm".to_string()),
             startup: Some(StartupMode::Lazy),
             environment: Some("env_one".to_string()),
+            ..ChildDecl::empty()
         }];
         let collections = vec![CollectionDecl {
             name: Some("modular".to_string()),
             durability: Some(Durability::Persistent),
             environment: None,
+            ..CollectionDecl::empty()
         }];
         let facets = Object {
             entries: vec![
@@ -191,6 +217,7 @@ fn main() {
                 stop_timeout_ms: Some(1337),
                 runners: None,
                 resolvers: None,
+                ..EnvironmentDecl::empty()
             },
             EnvironmentDecl {
                 name: Some("env_two".to_string()),
@@ -198,6 +225,7 @@ fn main() {
                 stop_timeout_ms: None,
                 runners: None,
                 resolvers: None,
+                ..EnvironmentDecl::empty()
             },
         ];
         ComponentDecl {
@@ -210,6 +238,7 @@ fn main() {
             collections: Some(collections),
             facets: Some(facets),
             environments: Some(envs),
+            ..ComponentDecl::empty()
         }
     };
     assert_eq!(cm_decl, expected_decl);

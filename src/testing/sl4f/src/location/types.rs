@@ -20,6 +20,10 @@ struct PositionDef {
 struct PositionExtrasDef {
     pub accuracy_meters: Option<f64>,
     pub altitude_meters: Option<f64>,
+    // This field is needed to match the FIDL-generated struct exactly. It
+    // should be removed once we are no longer using Serde remote.
+    #[serde(skip)]
+    __non_exhaustive: (),
 }
 
 #[derive(Serialize)]

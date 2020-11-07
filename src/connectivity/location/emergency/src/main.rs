@@ -385,13 +385,21 @@ mod tests {
         const POSITION_WITH_UNKNOWN_ACCURACY: Position = Position {
             latitude: 1.0,
             longitude: -1.0,
-            extras: PositionExtras { accuracy_meters: None, altitude_meters: None },
+            extras: PositionExtras {
+                accuracy_meters: None,
+                altitude_meters: None,
+                ..PositionExtras::empty()
+            },
         };
 
         const POSITION_WITH_KNOWN_ACCURACY: Position = Position {
             latitude: 1.0,
             longitude: -1.0,
-            extras: PositionExtras { accuracy_meters: Some(1.0), altitude_meters: None },
+            extras: PositionExtras {
+                accuracy_meters: Some(1.0),
+                altitude_meters: None,
+                ..PositionExtras::empty()
+            },
         };
 
         #[fasync::run_until_stalled(test)]

@@ -75,6 +75,7 @@ fn apply_change(
         has_default_ipv4_route,
         has_default_ipv6_route,
         addresses,
+        ..
     }: fidl_interfaces::Properties,
 ) {
     if properties.id == id {
@@ -102,6 +103,7 @@ fn immutable_fields_present(properties: &fidl_interfaces::Properties) -> bool {
         addresses: _,
         has_default_ipv4_route: _,
         has_default_ipv6_route: _,
+        ..
     } = properties
     {
         true
@@ -346,7 +348,7 @@ pub fn event_stream_from_state(
     let (watcher, server) = ::fidl::endpoints::create_proxy::<fidl_interfaces::WatcherMarker>()
         .context("failed to create watcher proxy")?;
     let () = interface_state
-        .get_watcher(fidl_interfaces::WatcherOptions {}, server)
+        .get_watcher(fidl_interfaces::WatcherOptions::empty(), server)
         .context("failed to initialize interface watcher")?;
     Ok(futures::stream::try_unfold(watcher, |watcher| async {
         Ok(Some((watcher.watch().await.context("failed to watch")?, watcher)))
@@ -368,6 +370,7 @@ mod tests {
             has_default_ipv4_route: Some(false),
             has_default_ipv6_route: Some(false),
             addresses: Some(vec![]),
+            ..fidl_interfaces::Properties::empty()
         }
     }
 
@@ -477,6 +480,7 @@ mod tests {
         let mut properties = InterfaceState::Unknown(ID);
         let addr = fidl_interfaces::Address {
             addr: Some(fidl_fuchsia_net::Subnet { addr: fidl_ip!(192.168.0.1), prefix_len: 16 }),
+            ..fidl_interfaces::Address::empty()
         };
         for (event, want) in vec![
             (fidl_interfaces::Event::Existing(test_properties(ID)), test_properties(ID)),

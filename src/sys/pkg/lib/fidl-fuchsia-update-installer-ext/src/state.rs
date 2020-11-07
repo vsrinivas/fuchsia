@@ -471,54 +471,62 @@ pub enum RequiredStateField {
 impl From<State> for fidl::State {
     fn from(state: State) -> Self {
         match state {
-            State::Prepare => fidl::State::Prepare(fidl::PrepareData {}),
+            State::Prepare => fidl::State::Prepare(fidl::PrepareData::empty()),
             State::Fetch(UpdateInfoAndProgress { info, progress }) => {
                 fidl::State::Fetch(fidl::FetchData {
                     info: Some(info.into()),
                     progress: Some(progress.into()),
+                    ..fidl::FetchData::empty()
                 })
             }
             State::Stage(UpdateInfoAndProgress { info, progress }) => {
                 fidl::State::Stage(fidl::StageData {
                     info: Some(info.into()),
                     progress: Some(progress.into()),
+                    ..fidl::StageData::empty()
                 })
             }
             State::WaitToReboot(UpdateInfoAndProgress { info, progress }) => {
                 fidl::State::WaitToReboot(fidl::WaitToRebootData {
                     info: Some(info.into()),
                     progress: Some(progress.into()),
+                    ..fidl::WaitToRebootData::empty()
                 })
             }
             State::Reboot(UpdateInfoAndProgress { info, progress }) => {
                 fidl::State::Reboot(fidl::RebootData {
                     info: Some(info.into()),
                     progress: Some(progress.into()),
+                    ..fidl::RebootData::empty()
                 })
             }
             State::DeferReboot(UpdateInfoAndProgress { info, progress }) => {
                 fidl::State::DeferReboot(fidl::DeferRebootData {
                     info: Some(info.into()),
                     progress: Some(progress.into()),
+                    ..fidl::DeferRebootData::empty()
                 })
             }
             State::Complete(UpdateInfoAndProgress { info, progress }) => {
                 fidl::State::Complete(fidl::CompleteData {
                     info: Some(info.into()),
                     progress: Some(progress.into()),
+                    ..fidl::CompleteData::empty()
                 })
             }
-            State::FailPrepare => fidl::State::FailPrepare(fidl::FailPrepareData {}),
+            State::FailPrepare => fidl::State::FailPrepare(fidl::FailPrepareData::empty()),
             State::FailFetch(UpdateInfoAndProgress { info, progress }) => {
                 fidl::State::FailFetch(fidl::FailFetchData {
                     info: Some(info.into()),
                     progress: Some(progress.into()),
+                    ..fidl::FailFetchData::empty()
                 })
             }
             State::FailStage(UpdateInfoAndProgress { info, progress }) => {
                 fidl::State::FailStage(fidl::FailStageData {
                     info: Some(info.into()),
                     progress: Some(progress.into()),
+                    ..fidl::FailStageData::empty()
                 })
             }
         }
@@ -547,30 +555,30 @@ impl TryFrom<fidl::State> for State {
         }
 
         Ok(match state {
-            fidl::State::Prepare(fidl::PrepareData {}) => State::Prepare,
-            fidl::State::Fetch(fidl::FetchData { info, progress }) => {
+            fidl::State::Prepare(fidl::PrepareData { .. }) => State::Prepare,
+            fidl::State::Fetch(fidl::FetchData { info, progress, .. }) => {
                 State::Fetch(decode_info_progress(info, progress)?)
             }
-            fidl::State::Stage(fidl::StageData { info, progress }) => {
+            fidl::State::Stage(fidl::StageData { info, progress, .. }) => {
                 State::Stage(decode_info_progress(info, progress)?)
             }
-            fidl::State::WaitToReboot(fidl::WaitToRebootData { info, progress }) => {
+            fidl::State::WaitToReboot(fidl::WaitToRebootData { info, progress, .. }) => {
                 State::WaitToReboot(decode_info_progress(info, progress)?)
             }
-            fidl::State::Reboot(fidl::RebootData { info, progress }) => {
+            fidl::State::Reboot(fidl::RebootData { info, progress, .. }) => {
                 State::Reboot(decode_info_progress(info, progress)?)
             }
-            fidl::State::DeferReboot(fidl::DeferRebootData { info, progress }) => {
+            fidl::State::DeferReboot(fidl::DeferRebootData { info, progress, .. }) => {
                 State::DeferReboot(decode_info_progress(info, progress)?)
             }
-            fidl::State::Complete(fidl::CompleteData { info, progress }) => {
+            fidl::State::Complete(fidl::CompleteData { info, progress, .. }) => {
                 State::Complete(decode_info_progress(info, progress)?)
             }
-            fidl::State::FailPrepare(fidl::FailPrepareData {}) => State::FailPrepare,
-            fidl::State::FailFetch(fidl::FailFetchData { info, progress }) => {
+            fidl::State::FailPrepare(fidl::FailPrepareData { .. }) => State::FailPrepare,
+            fidl::State::FailFetch(fidl::FailFetchData { info, progress, .. }) => {
                 State::FailFetch(decode_info_progress(info, progress)?)
             }
-            fidl::State::FailStage(fidl::FailStageData { info, progress }) => {
+            fidl::State::FailStage(fidl::FailStageData { info, progress, .. }) => {
                 State::FailStage(decode_info_progress(info, progress)?)
             }
         })
@@ -595,7 +603,10 @@ pub enum DecodeUpdateInfoError {}
 
 impl From<UpdateInfo> for fidl::UpdateInfo {
     fn from(info: UpdateInfo) -> Self {
-        fidl::UpdateInfo { download_size: none_or_some_nonzero(info.download_size) }
+        fidl::UpdateInfo {
+            download_size: none_or_some_nonzero(info.download_size),
+            ..fidl::UpdateInfo::empty()
+        }
     }
 }
 
@@ -631,6 +642,7 @@ impl From<Progress> for fidl::InstallationProgress {
         fidl::InstallationProgress {
             fraction_completed: Some(progress.fraction_completed),
             bytes_downloaded: none_or_some_nonzero(progress.bytes_downloaded),
+            ..fidl::InstallationProgress::empty()
         }
     }
 }
@@ -843,16 +855,16 @@ mod tests {
             };
 
             match &mut as_fidl {
-                fidl::State::Prepare(fidl::PrepareData {}) => prop_assume!(false),
-                fidl::State::Fetch(fidl::FetchData { info, progress }) => break_info_progress(info, progress),
-                fidl::State::Stage(fidl::StageData { info, progress }) => break_info_progress(info, progress),
-                fidl::State::WaitToReboot(fidl::WaitToRebootData { info, progress }) => break_info_progress(info, progress),
-                fidl::State::Reboot(fidl::RebootData { info, progress }) => break_info_progress(info, progress),
-                fidl::State::DeferReboot(fidl::DeferRebootData { info, progress }) => break_info_progress(info, progress),
-                fidl::State::Complete(fidl::CompleteData { info, progress }) => break_info_progress(info, progress),
-                fidl::State::FailPrepare(fidl::FailPrepareData {}) => prop_assume!(false),
-                fidl::State::FailFetch(fidl::FailFetchData { info, progress }) => break_info_progress(info, progress),
-                fidl::State::FailStage(fidl::FailStageData { info, progress }) => break_info_progress(info, progress),
+                fidl::State::Prepare(fidl::PrepareData { .. }) => prop_assume!(false),
+                fidl::State::Fetch(fidl::FetchData { info, progress, .. }) => break_info_progress(info, progress),
+                fidl::State::Stage(fidl::StageData { info, progress, .. }) => break_info_progress(info, progress),
+                fidl::State::WaitToReboot(fidl::WaitToRebootData { info, progress, .. }) => break_info_progress(info, progress),
+                fidl::State::Reboot(fidl::RebootData { info, progress, .. }) => break_info_progress(info, progress),
+                fidl::State::DeferReboot(fidl::DeferRebootData { info, progress, .. }) => break_info_progress(info, progress),
+                fidl::State::Complete(fidl::CompleteData { info, progress, .. }) => break_info_progress(info, progress),
+                fidl::State::FailPrepare(fidl::FailPrepareData { .. }) => prop_assume!(false),
+                fidl::State::FailFetch(fidl::FailFetchData { info, progress, .. }) => break_info_progress(info, progress),
+                fidl::State::FailStage(fidl::FailStageData { info, progress, .. }) => break_info_progress(info, progress),
             }
             prop_assert_eq!(
                 State::try_from(as_fidl),

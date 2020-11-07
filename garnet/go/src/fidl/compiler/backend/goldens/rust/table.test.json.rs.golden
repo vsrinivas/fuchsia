@@ -23,7 +23,11 @@ use {
 };
 
 #[derive(Debug, PartialEq)]
-pub struct EmptyTable {}
+pub struct EmptyTable {
+    #[deprecated = "Use `..EmptyTable::empty()` to construct and `..` to match."]
+    #[doc(hidden)]
+    pub __non_exhaustive: (),
+}
 
 fidl_table! {
   name: EmptyTable,
@@ -35,6 +39,9 @@ fidl_table! {
 pub struct SimpleTable {
     pub x: Option<i64>,
     pub y: Option<i64>,
+    #[deprecated = "Use `..SimpleTable::empty()` to construct and `..` to match."]
+    #[doc(hidden)]
+    pub __non_exhaustive: (),
 }
 
 fidl_table! {
@@ -54,6 +61,9 @@ fidl_table! {
 #[derive(Debug, PartialEq)]
 pub struct OlderSimpleTable {
     pub x: Option<i64>,
+    #[deprecated = "Use `..OlderSimpleTable::empty()` to construct and `..` to match."]
+    #[doc(hidden)]
+    pub __non_exhaustive: (),
 }
 
 fidl_table! {
@@ -71,6 +81,9 @@ pub struct NewerSimpleTable {
     pub x: Option<i64>,
     pub y: Option<i64>,
     pub z: Option<i64>,
+    #[deprecated = "Use `..NewerSimpleTable::empty()` to construct and `..` to match."]
+    #[doc(hidden)]
+    pub __non_exhaustive: (),
 }
 
 fidl_table! {
@@ -96,6 +109,9 @@ pub struct ReverseOrdinalTable {
     pub z: Option<i64>,
     pub y: Option<i64>,
     pub x: Option<i64>,
+    #[deprecated = "Use `..ReverseOrdinalTable::empty()` to construct and `..` to match."]
+    #[doc(hidden)]
+    pub __non_exhaustive: (),
 }
 
 fidl_table! {

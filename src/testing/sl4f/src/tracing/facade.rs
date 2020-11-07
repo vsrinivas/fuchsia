@@ -167,13 +167,15 @@ impl TracingFacade {
 
         let result = match request.results_destination {
             ResultsDestination::Ignore => {
-                let options = TerminateOptions { write_results: Some(false) };
+                let options =
+                    TerminateOptions { write_results: Some(false), ..TerminateOptions::empty() };
                 controller.terminate_tracing(options).await?;
 
                 TerminateResponse { data: None }
             }
             ResultsDestination::WriteAndReturn => {
-                let options = TerminateOptions { write_results: Some(true) };
+                let options =
+                    TerminateOptions { write_results: Some(true), ..TerminateOptions::empty() };
                 let terminate_fut = controller.terminate_tracing(options).map_err(Error::from);
                 let data_socket = self.status.write().data_socket.take();
                 let drain_fut = drain_socket(data_socket);

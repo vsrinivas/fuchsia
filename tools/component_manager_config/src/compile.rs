@@ -110,6 +110,7 @@ impl Into<component_internal::AllowlistedCapability> for AllowlistedCapability {
                 component_internal::AllowlistedCapability::Directory(
                     component_internal::AllowlistedDirectory {
                         source_name: Some(source_name.clone()),
+                        ..component_internal::AllowlistedDirectory::empty()
                     },
                 )
             }
@@ -118,6 +119,7 @@ impl Into<component_internal::AllowlistedCapability> for AllowlistedCapability {
                     component_internal::AllowlistedEvent {
                         source_name: Some(source_name.clone()),
                         source: Some(source.clone().into()),
+                        ..component_internal::AllowlistedEvent::empty()
                     },
                 )
             }
@@ -125,6 +127,7 @@ impl Into<component_internal::AllowlistedCapability> for AllowlistedCapability {
                 component_internal::AllowlistedCapability::Protocol(
                     component_internal::AllowlistedProtocol {
                         source_name: Some(source_name.clone()),
+                        ..component_internal::AllowlistedProtocol::empty()
                     },
                 )
             }
@@ -132,6 +135,7 @@ impl Into<component_internal::AllowlistedCapability> for AllowlistedCapability {
                 component_internal::AllowlistedCapability::Service(
                     component_internal::AllowlistedService {
                         source_name: Some(source_name.clone()),
+                        ..component_internal::AllowlistedService::empty()
                     },
                 )
             }
@@ -139,6 +143,7 @@ impl Into<component_internal::AllowlistedCapability> for AllowlistedCapability {
                 component_internal::AllowlistedCapability::Storage(
                     component_internal::AllowlistedStorage {
                         source_name: Some(source_name.clone()),
+                        ..component_internal::AllowlistedStorage::empty()
                     },
                 )
             }
@@ -146,6 +151,7 @@ impl Into<component_internal::AllowlistedCapability> for AllowlistedCapability {
                 component_internal::AllowlistedCapability::Runner(
                     component_internal::AllowlistedRunner {
                         source_name: Some(source_name.clone()),
+                        ..component_internal::AllowlistedRunner::empty()
                     },
                 )
             }
@@ -153,6 +159,7 @@ impl Into<component_internal::AllowlistedCapability> for AllowlistedCapability {
                 component_internal::AllowlistedCapability::Resolver(
                     component_internal::AllowlistedResolver {
                         source_name: Some(source_name.clone()),
+                        ..component_internal::AllowlistedResolver::empty()
                     },
                 )
             }
@@ -220,6 +227,7 @@ impl TryFrom<Config> for component_internal::Config {
                 Some(root_component_url) => Some(root_component_url.as_str().to_string()),
                 None => None,
             },
+            ..Self::empty()
         })
     }
 }
@@ -233,6 +241,7 @@ fn translate_security_policy(
     component_internal::SecurityPolicy {
         job_policy: job_policy.map(translate_job_policy),
         capability_policy: capability_policy.map(translate_capability_policy),
+        ..component_internal::SecurityPolicy::empty()
     }
 }
 
@@ -242,6 +251,7 @@ fn translate_job_policy(
     component_internal::JobPolicyAllowlists {
         ambient_mark_vmo_exec: job_policy.ambient_mark_vmo_exec,
         main_process_critical: job_policy.main_process_critical,
+        ..component_internal::JobPolicyAllowlists::empty()
     }
 }
 
@@ -254,9 +264,13 @@ fn translate_capability_policy(
             source_moniker: e.source_moniker.clone(),
             capability: e.capability.clone().map_or_else(|| None, |t| Some(t.into())),
             target_monikers: e.target_monikers.clone(),
+            ..component_internal::CapabilityAllowlistEntry::empty()
         })
         .collect::<Vec<_>>();
-    component_internal::CapabilityPolicyAllowlists { allowlist: Some(allowlist) }
+    component_internal::CapabilityPolicyAllowlists {
+        allowlist: Some(allowlist),
+        ..component_internal::CapabilityPolicyAllowlists::empty()
+    }
 }
 
 macro_rules! extend_if_unset {
@@ -449,6 +463,7 @@ mod tests {
                     job_policy: Some(component_internal::JobPolicyAllowlists {
                         main_process_critical: Some(vec!["/".to_string(), "/bar".to_string()]),
                         ambient_mark_vmo_exec: Some(vec!["/foo".to_string()]),
+                        ..component_internal::JobPolicyAllowlists::empty()
                     }),
                     capability_policy: Some(component_internal::CapabilityPolicyAllowlists {
                         allowlist: Some(vec![
@@ -460,6 +475,7 @@ mod tests {
                                             source_name: Some(
                                                 "fuchsia.boot.RootResource".to_string()
                                             ),
+                                            ..component_internal::AllowlistedProtocol::empty()
                                         }
                                     )
                                 ),
@@ -468,6 +484,7 @@ mod tests {
                                     "/root/bootstrap".to_string(),
                                     "/root/core".to_string()
                                 ]),
+                                ..component_internal::CapabilityAllowlistEntry::empty()
                             },
                             component_internal::CapabilityAllowlistEntry {
                                 source_moniker: Some("/foo/bar".to_string()),
@@ -475,30 +492,37 @@ mod tests {
                                     component_internal::AllowlistedEvent {
                                         source_name: Some("running".to_string()),
                                         source: Some(fsys::Ref::Framework(fsys::FrameworkRef {})),
+                                        ..component_internal::AllowlistedEvent::empty()
                                     }
                                 )),
                                 target_monikers: Some(vec![
                                     "/foo/bar".to_string(),
                                     "/foo/bar/baz".to_string()
                                 ]),
+                                ..component_internal::CapabilityAllowlistEntry::empty()
                             },
                         ]),
+                        ..component_internal::CapabilityPolicyAllowlists::empty()
                     }),
+                    ..component_internal::SecurityPolicy::empty()
                 }),
                 namespace_capabilities: Some(vec![
                     fsys::CapabilityDecl::Protocol(fsys::ProtocolDecl {
                         name: Some("foo_svc".into()),
                         source_path: Some("/svc/foo_svc".into()),
+                        ..fsys::ProtocolDecl::empty()
                     }),
                     fsys::CapabilityDecl::Directory(fsys::DirectoryDecl {
                         name: Some("bar_dir".into()),
                         source_path: Some("/bar".into()),
                         rights: Some(fio2::Operations::Connect),
+                        ..fsys::DirectoryDecl::empty()
                     }),
                 ]),
                 num_threads: Some(321),
                 out_dir_contents: Some(component_internal::OutDirContents::Svc),
                 root_component_url: Some("fuchsia-pkg://fuchsia.com/foo#meta/foo.cmx".to_string()),
+                ..component_internal::Config::empty()
             }
         );
     }

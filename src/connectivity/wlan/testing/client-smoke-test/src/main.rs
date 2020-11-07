@@ -327,6 +327,7 @@ async fn download_and_measure(http_svc: &http::LoaderProxy) -> Result<Measuremen
         headers: None,
         body: None,
         deadline: None,
+        ..http::Request::empty()
     };
     let start_time = zx::Time::get_monotonic();
     let http::Response {
@@ -337,6 +338,7 @@ async fn download_and_measure(http_svc: &http::LoaderProxy) -> Result<Measuremen
         status_line: _,
         headers: _,
         redirect: _,
+        ..
     } = http_svc.fetch(request).await.context("failed to call Loader::fetch")?;
     if let Some(error) = error {
         let () = Err(format_err!("network error: {:?}", error))?;

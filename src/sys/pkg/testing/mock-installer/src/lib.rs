@@ -217,6 +217,7 @@ mod tests {
             initiator: Some(Initiator::User),
             should_write_recovery: Some(true),
             allow_attach_to_existing_attempt: Some(true),
+            ..Options::empty()
         };
         let (monitor_client_end, stream) =
             fidl::endpoints::create_request_stream::<MonitorMarker>().unwrap();

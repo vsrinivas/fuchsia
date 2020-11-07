@@ -188,6 +188,7 @@ impl TestEnvironment {
                     devices: None,
                     inherit_parent_launch_services: None,
                     logger_options: None,
+                    ..fidl_fuchsia_netemul_environment::EnvironmentOptions::empty()
                 },
             )
             .context("failed to create environment")?;
@@ -219,6 +220,7 @@ impl TestEnvironment {
                     latency: None,
                     packet_loss: None,
                     reorder: None,
+                    ..fidl_fuchsia_netemul_network::NetworkConfig::empty()
                 },
             )
             .await

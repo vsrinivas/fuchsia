@@ -381,7 +381,7 @@ impl TestServer {
             if let Err(e) = TestServer::validate_args(user_args) {
                 test_logger.write_str(&format!("{}", e)).await?;
                 case_listener_proxy
-                    .finished(TestResult { status: Some(Status::Failed) })
+                    .finished(TestResult { status: Some(Status::Failed), ..TestResult::empty() })
                     .map_err(RunTestError::SendFinish)?;
                 return Ok(());
             }
@@ -449,7 +449,7 @@ impl TestServer {
             test_logger.write_str("Test exited abnormally\n").await?;
 
             case_listener_proxy
-                .finished(TestResult { status: Some(Status::Failed) })
+                .finished(TestResult { status: Some(Status::Failed), ..TestResult::empty() })
                 .map_err(RunTestError::SendFinish)?;
             return Ok(());
         }
@@ -465,7 +465,7 @@ impl TestServer {
                     .await?;
 
                 case_listener_proxy
-                    .finished(TestResult { status: Some(Status::Failed) })
+                    .finished(TestResult { status: Some(Status::Failed), ..TestResult::empty() })
                     .map_err(RunTestError::SendFinish)?;
                 return Ok(());
             }
@@ -484,7 +484,7 @@ impl TestServer {
                 .await?;
 
             case_listener_proxy
-                .finished(TestResult { status: Some(Status::Failed) })
+                .finished(TestResult { status: Some(Status::Failed), ..TestResult::empty() })
                 .map_err(RunTestError::SendFinish)?;
             return Ok(());
         }
@@ -509,7 +509,7 @@ impl TestServer {
             }
         };
         case_listener_proxy
-            .finished(TestResult { status: Some(test_status) })
+            .finished(TestResult { status: Some(test_status), ..TestResult::empty() })
             .map_err(RunTestError::SendFinish)?;
         debug!("test finish {}", test);
         Ok(())
@@ -720,6 +720,7 @@ mod tests {
             ns.push(fcrunner::ComponentNamespaceEntry {
                 path: Some(path.to_string()),
                 directory: Some(handle),
+                ..fcrunner::ComponentNamespaceEntry::empty()
             });
         }
         ComponentNamespace::try_from(ns)
@@ -918,7 +919,12 @@ mod tests {
                 "SampleTest2.SimplePass",
                 "Tests/SampleParameterizedTestFixture.Test/2",
             ]),
-            RunOptions { include_disabled_tests: Some(false), parallel: None, arguments: None },
+            RunOptions {
+                include_disabled_tests: Some(false),
+                parallel: None,
+                arguments: None,
+                ..RunOptions::empty()
+            },
             None,
         )
         .await
@@ -928,22 +934,22 @@ mod tests {
             ListenerEvent::start_test("SampleTest1.SimpleFail"),
             ListenerEvent::finish_test(
                 "SampleTest1.SimpleFail",
-                TestResult { status: Some(Status::Failed) },
+                TestResult { status: Some(Status::Failed), ..TestResult::empty() },
             ),
             ListenerEvent::start_test("SampleTest1.Crashing"),
             ListenerEvent::finish_test(
                 "SampleTest1.Crashing",
-                TestResult { status: Some(Status::Failed) },
+                TestResult { status: Some(Status::Failed), ..TestResult::empty() },
             ),
             ListenerEvent::start_test("SampleTest2.SimplePass"),
             ListenerEvent::finish_test(
                 "SampleTest2.SimplePass",
-                TestResult { status: Some(Status::Passed) },
+                TestResult { status: Some(Status::Passed), ..TestResult::empty() },
             ),
             ListenerEvent::start_test("Tests/SampleParameterizedTestFixture.Test/2"),
             ListenerEvent::finish_test(
                 "Tests/SampleParameterizedTestFixture.Test/2",
-                TestResult { status: Some(Status::Passed) },
+                TestResult { status: Some(Status::Passed), ..TestResult::empty() },
             ),
             ListenerEvent::finish_all_test(),
         ];
@@ -971,6 +977,7 @@ mod tests {
                 include_disabled_tests: Some(false),
                 parallel: None,
                 arguments: Some(vec!["--my_custom_arg2".to_owned()]),
+                ..RunOptions::empty()
             },
             Some(component),
         )
@@ -981,7 +988,7 @@ mod tests {
             ListenerEvent::start_test("TestArg.TestArg"),
             ListenerEvent::finish_test(
                 "TestArg.TestArg",
-                TestResult { status: Some(Status::Passed) },
+                TestResult { status: Some(Status::Passed), ..TestResult::empty() },
             ),
             ListenerEvent::finish_all_test(),
         ];
@@ -1002,7 +1009,12 @@ mod tests {
                 "Tests/SampleParameterizedTestFixture.Test/1",
                 "Tests/SampleParameterizedTestFixture.Test/2",
             ]),
-            RunOptions { include_disabled_tests: Some(false), parallel: Some(4), arguments: None },
+            RunOptions {
+                include_disabled_tests: Some(false),
+                parallel: Some(4),
+                arguments: None,
+                ..RunOptions::empty()
+            },
             None,
         )
         .await
@@ -1012,32 +1024,32 @@ mod tests {
             ListenerEvent::start_test("SampleTest1.SimpleFail"),
             ListenerEvent::finish_test(
                 "SampleTest1.SimpleFail",
-                TestResult { status: Some(Status::Failed) },
+                TestResult { status: Some(Status::Failed), ..TestResult::empty() },
             ),
             ListenerEvent::start_test("SampleTest1.Crashing"),
             ListenerEvent::finish_test(
                 "SampleTest1.Crashing",
-                TestResult { status: Some(Status::Failed) },
+                TestResult { status: Some(Status::Failed), ..TestResult::empty() },
             ),
             ListenerEvent::start_test("SampleTest2.SimplePass"),
             ListenerEvent::finish_test(
                 "SampleTest2.SimplePass",
-                TestResult { status: Some(Status::Passed) },
+                TestResult { status: Some(Status::Passed), ..TestResult::empty() },
             ),
             ListenerEvent::start_test("Tests/SampleParameterizedTestFixture.Test/0"),
             ListenerEvent::finish_test(
                 "Tests/SampleParameterizedTestFixture.Test/0",
-                TestResult { status: Some(Status::Passed) },
+                TestResult { status: Some(Status::Passed), ..TestResult::empty() },
             ),
             ListenerEvent::start_test("Tests/SampleParameterizedTestFixture.Test/1"),
             ListenerEvent::finish_test(
                 "Tests/SampleParameterizedTestFixture.Test/1",
-                TestResult { status: Some(Status::Passed) },
+                TestResult { status: Some(Status::Passed), ..TestResult::empty() },
             ),
             ListenerEvent::start_test("Tests/SampleParameterizedTestFixture.Test/2"),
             ListenerEvent::finish_test(
                 "Tests/SampleParameterizedTestFixture.Test/2",
-                TestResult { status: Some(Status::Passed) },
+                TestResult { status: Some(Status::Passed), ..TestResult::empty() },
             ),
             ListenerEvent::finish_all_test(),
         ];
@@ -1057,7 +1069,12 @@ mod tests {
                 "SampleDisabled.DISABLED_TestPass",
                 "SampleDisabled.DISABLED_TestFail",
             ]),
-            RunOptions { include_disabled_tests: Some(false), parallel: None, arguments: None },
+            RunOptions {
+                include_disabled_tests: Some(false),
+                parallel: None,
+                arguments: None,
+                ..RunOptions::empty()
+            },
             None,
         )
         .await
@@ -1067,12 +1084,12 @@ mod tests {
             ListenerEvent::start_test("SampleDisabled.DISABLED_TestPass"),
             ListenerEvent::finish_test(
                 "SampleDisabled.DISABLED_TestPass",
-                TestResult { status: Some(Status::Skipped) },
+                TestResult { status: Some(Status::Skipped), ..TestResult::empty() },
             ),
             ListenerEvent::start_test("SampleDisabled.DISABLED_TestFail"),
             ListenerEvent::finish_test(
                 "SampleDisabled.DISABLED_TestFail",
-                TestResult { status: Some(Status::Skipped) },
+                TestResult { status: Some(Status::Skipped), ..TestResult::empty() },
             ),
             ListenerEvent::finish_all_test(),
         ];
@@ -1085,7 +1102,12 @@ mod tests {
     async fn run_no_test() -> Result<(), Error> {
         let events = run_tests(
             vec![],
-            RunOptions { include_disabled_tests: Some(false), parallel: None, arguments: None },
+            RunOptions {
+                include_disabled_tests: Some(false),
+                parallel: None,
+                arguments: None,
+                ..RunOptions::empty()
+            },
             None,
         )
         .await
@@ -1101,7 +1123,12 @@ mod tests {
     async fn run_one_test() -> Result<(), Error> {
         let events = run_tests(
             names_to_invocation(vec!["SampleTest2.SimplePass"]),
-            RunOptions { include_disabled_tests: Some(false), parallel: None, arguments: None },
+            RunOptions {
+                include_disabled_tests: Some(false),
+                parallel: None,
+                arguments: None,
+                ..RunOptions::empty()
+            },
             None,
         )
         .await
@@ -1111,7 +1138,7 @@ mod tests {
             ListenerEvent::start_test("SampleTest2.SimplePass"),
             ListenerEvent::finish_test(
                 "SampleTest2.SimplePass",
-                TestResult { status: Some(Status::Passed) },
+                TestResult { status: Some(Status::Passed), ..TestResult::empty() },
             ),
             ListenerEvent::finish_all_test(),
         ];

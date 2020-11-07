@@ -619,6 +619,7 @@ async fn do_neigh(cmd: opts::NeighEnum) -> Result<(), Error> {
                     max_unicast_probes,
                     max_anycast_delay_time,
                     max_reachability_confirmations,
+                    ..neighbor::UnreachabilityConfig::empty()
                 };
                 let controller = connect_to_service::<neighbor::ControllerMarker>()
                     .context("failed to connect to neighbor controller")?;
@@ -680,7 +681,7 @@ async fn print_neigh_entries(watch_for_changes: bool) -> Result<(), Error> {
     let it = it_client.into_proxy().context("error creating proxy to entry iterator")?;
 
     let () = view
-        .open_entry_iterator(it_server, neighbor::EntryIteratorOptions {})
+        .open_entry_iterator(it_server, neighbor::EntryIteratorOptions::empty())
         .context("error opening a connection to the entry iterator")?;
 
     neigh_entry_stream(it, watch_for_changes)
@@ -1196,9 +1197,11 @@ mod tests {
                 neighbor: Some(net::IpAddress::Ipv4(net::Ipv4Address { addr: [192, 168, 0, 1] })),
                 state: Some(neighbor::EntryState::Reachable(neighbor::ReachableState {
                     expires_at: Some(expires_at),
+                    ..neighbor::ReachableState::empty()
                 })),
                 mac: Some(net::MacAddress { octets: [1, 2, 3, 4, 5, 6] }),
                 updated_at: Some(updated_at),
+                ..neighbor::Entry::empty()
             }
         }
 
@@ -1255,9 +1258,11 @@ mod tests {
                 neighbor: Some(net::IpAddress::Ipv4(net::Ipv4Address { addr: ip })),
                 state: Some(neighbor::EntryState::Reachable(neighbor::ReachableState {
                     expires_at: Some(expires_at),
+                    ..neighbor::ReachableState::empty()
                 })),
                 mac: Some(net::MacAddress { octets: mac }),
                 updated_at: Some(updated_at),
+                ..neighbor::Entry::empty()
             }
         }
 

@@ -297,6 +297,7 @@ mod test {
                             utc: Some(SAMPLE_1_UTC_NANOS),
                             monotonic: Some(SAMPLE_1_MONO_NANOS),
                             standard_deviation: Some(SAMPLE_1_STD_DEV_NANOS),
+                            ..ftexternal::TimeSample::empty()
                         };
                         responder.send(sample).unwrap();
                     }

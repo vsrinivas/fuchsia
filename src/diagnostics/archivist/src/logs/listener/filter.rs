@@ -108,6 +108,7 @@ mod tests {
             realm_path: Some(vec!["bogus".to_string()]),
             component_name: Some("specious-at-best.cmx".to_string()),
             component_url: Some("fuchsia-pkg://not-a-package".to_string()),
+            ..SourceIdentity::empty()
         };
         Message::new(
             fuchsia_zircon::Time::from_nanos(1),

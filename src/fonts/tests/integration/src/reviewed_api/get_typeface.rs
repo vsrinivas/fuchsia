@@ -89,7 +89,12 @@ async fn test_aliases_with_style_overrides() -> Result<(), Error> {
     let a = get_typeface_info(
         &font_provider,
         Some("Alpha Sans".to_string()),
-        Some(Style2 { slant: None, weight: None, width: Some(Width::Condensed) }),
+        Some(Style2 {
+            slant: None,
+            weight: None,
+            width: Some(Width::Condensed),
+            ..Style2::empty()
+        }),
         None,
         None,
     )

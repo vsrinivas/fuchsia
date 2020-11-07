@@ -25,7 +25,10 @@ fidl_hanging_get_responder!(
 impl From<SettingResponse> for PrivacySettings {
     fn from(response: SettingResponse) -> Self {
         if let SettingResponse::Privacy(info) = response {
-            return PrivacySettings { user_data_sharing_consent: info.user_data_sharing_consent };
+            return PrivacySettings {
+                user_data_sharing_consent: info.user_data_sharing_consent,
+                ..PrivacySettings::empty()
+            };
         }
 
         panic!("incorrect value sent to privacy");

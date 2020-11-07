@@ -146,6 +146,7 @@ where
         Ok(OauthAccessToken {
             content: Some(access_token.0),
             expiry_time: Some(expiry_time.into_nanos()),
+            ..OauthAccessToken::empty()
         })
     }
 
@@ -247,10 +248,15 @@ where
             oauth_open_id_connect::parse_user_info_response(response_body, status_code)?;
 
         Ok((
-            OauthRefreshToken { content: Some(refresh_token.0), account_id: Some(user_info.sub) },
+            OauthRefreshToken {
+                content: Some(refresh_token.0),
+                account_id: Some(user_info.sub),
+                ..OauthRefreshToken::empty()
+            },
             OauthAccessToken {
                 content: Some(access_token.0),
                 expiry_time: Some(expiry_time.into_nanos()),
+                ..OauthAccessToken::empty()
             },
         ))
     }
@@ -503,6 +509,7 @@ mod test {
         OauthRefreshToken {
             content: Some(contents.to_string()),
             account_id: Some(account_id.to_string()),
+            ..OauthRefreshToken::empty()
         }
     }
 
@@ -530,6 +537,7 @@ mod test {
             .create_refresh_token(OauthRefreshTokenRequest {
                 account_id: None,
                 ui_context: Some(ui_context),
+                ..OauthRefreshTokenRequest::empty()
             })
             .await?
             .unwrap();
@@ -542,6 +550,7 @@ mod test {
                 expiry_time: Some(
                     (TEST_CURRENT_TIME.clone() + Duration::from_seconds(3600)).into_nanos()
                 ),
+                ..OauthAccessToken::empty()
             }
         );
         Ok(())
@@ -582,7 +591,8 @@ mod test {
             oauth
                 .create_refresh_token(OauthRefreshTokenRequest {
                     account_id: None,
-                    ui_context: Some(get_authentication_ui_context())
+                    ui_context: Some(get_authentication_ui_context()),
+                    ..OauthRefreshTokenRequest::empty()
                 })
                 .await
                 .unwrap()
@@ -622,7 +632,8 @@ mod test {
             oauth
                 .create_refresh_token(OauthRefreshTokenRequest {
                     account_id: None,
-                    ui_context: Some(get_authentication_ui_context())
+                    ui_context: Some(get_authentication_ui_context()),
+                    ..OauthRefreshTokenRequest::empty()
                 })
                 .await
                 .unwrap()
@@ -638,7 +649,8 @@ mod test {
             oauth
                 .create_refresh_token(OauthRefreshTokenRequest {
                     account_id: None,
-                    ui_context: None
+                    ui_context: None,
+                    ..OauthRefreshTokenRequest::empty()
                 })
                 .await?,
             Err(ApiError::InvalidRequest)
@@ -656,6 +668,7 @@ mod test {
                 refresh_token: Some(construct_refresh_token("credential", "test-account")),
                 client_id: None,
                 scopes: None,
+                ..OauthAccessTokenFromOauthRefreshTokenRequest::empty()
             })
             .await?
             .unwrap();
@@ -677,6 +690,7 @@ mod test {
                 refresh_token: None,
                 client_id: None,
                 scopes: None,
+                ..OauthAccessTokenFromOauthRefreshTokenRequest::empty()
             })
             .await?;
         assert_eq!(result, Err(ApiError::InvalidRequest));
@@ -690,6 +704,7 @@ mod test {
                 refresh_token: Some(construct_refresh_token("credential", "test-account")),
                 client_id: None,
                 scopes: None,
+                ..OauthAccessTokenFromOauthRefreshTokenRequest::empty()
             })
             .await?;
         assert_eq!(result, Err(ApiError::Server));
@@ -702,6 +717,7 @@ mod test {
                 refresh_token: Some(construct_refresh_token("credential", "test-account")),
                 client_id: None,
                 scopes: None,
+                ..OauthAccessTokenFromOauthRefreshTokenRequest::empty()
             })
             .await?;
         assert_eq!(result, Err(ApiError::Network));
@@ -761,6 +777,7 @@ mod test {
             .revoke_access_token(OauthAccessToken {
                 content: Some("access-token".to_string()),
                 expiry_time: Some(99999),
+                ..OauthAccessToken::empty()
             })
             .await?
             .is_ok());
@@ -776,6 +793,7 @@ mod test {
                 .revoke_access_token(OauthAccessToken {
                     content: Some("".to_string()),
                     expiry_time: Some(99999),
+                    ..OauthAccessToken::empty()
                 })
                 .await?,
             Err(ApiError::InvalidRequest)
@@ -790,6 +808,7 @@ mod test {
                 .revoke_access_token(OauthAccessToken {
                     content: Some("access-token".to_string()),
                     expiry_time: Some(99999),
+                    ..OauthAccessToken::empty()
                 })
                 .await?,
             Err(ApiError::Server)
@@ -803,6 +822,7 @@ mod test {
                 .revoke_access_token(OauthAccessToken {
                     content: Some("access-token".to_string()),
                     expiry_time: Some(99999),
+                    ..OauthAccessToken::empty()
                 })
                 .await?,
             Err(ApiError::Network)

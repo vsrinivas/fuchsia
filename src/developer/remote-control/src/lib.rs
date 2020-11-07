@@ -188,6 +188,7 @@ impl RemoteControlService {
             .send(&mut Ok(rcs::IdentifyHostResponse {
                 nodename: Some(nodename),
                 addresses: Some(result),
+                ..rcs::IdentifyHostResponse::empty()
             }))
             .context("sending IdentifyHost response")?;
 

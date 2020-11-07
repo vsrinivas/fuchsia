@@ -78,7 +78,10 @@ mod tests {
 
     #[test]
     fn to_request_maps_correctly() {
-        let result = to_request(FactoryResetSettings { is_local_reset_allowed: Some(true) });
+        let result = to_request(FactoryResetSettings {
+            is_local_reset_allowed: Some(true),
+            ..FactoryResetSettings::empty()
+        });
         matches::assert_matches!(result, Some(SettingRequest::SetLocalResetAllowed(true)));
     }
 }

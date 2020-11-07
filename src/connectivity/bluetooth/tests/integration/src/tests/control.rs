@@ -80,6 +80,7 @@ async fn test_disconnect(control: ControlHarness) -> Result<(), Error> {
             data: vec![0x02, 0x01, 0x02], // Flags field set to "general discoverable"
         }),
         scan_response: None,
+        ..LowEnergyPeerParameters::empty()
     };
     let (_peer, remote) = fidl::endpoints::create_proxy()?;
     let _ = hci

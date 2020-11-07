@@ -41,6 +41,7 @@ async fn test_lifecycle(_: ()) -> Result<(), Error> {
         extended_advertising: None,
         acl_buffer_settings: None,
         le_acl_buffer_settings: None,
+        ..EmulatorSettings::empty()
     };
 
     let mut emulator = Emulator::create("bt-hci-integration-lifecycle").await?;

@@ -32,8 +32,14 @@ async fn test_ephemeral_get_typeface() -> Result<(), Error> {
         code_points: None,
         languages: None,
         fallback_family: None,
+        ..fonts::TypefaceQuery::empty()
     });
-    let request = fonts::TypefaceRequest { query, flags: None, cache_miss_policy: None };
+    let request = fonts::TypefaceRequest {
+        query,
+        flags: None,
+        cache_miss_policy: None,
+        ..fonts::TypefaceRequest::empty()
+    };
 
     let response = font_provider.get_typeface(request).await?;
 

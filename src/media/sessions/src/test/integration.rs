@@ -341,6 +341,7 @@ async fn can_receive_deltas() -> Result<()> {
         .emit_delta(PlayerInfoDelta {
             player_capabilities: Some(PlayerCapabilities {
                 flags: Some(PlayerCapabilityFlags::Play),
+                ..PlayerCapabilities::empty()
             }),
             ..Decodable::new_empty()
         })
@@ -349,13 +350,17 @@ async fn can_receive_deltas() -> Result<()> {
     let (_id, delta) = updates.remove(0);
     assert_eq!(
         delta.player_capabilities,
-        Some(PlayerCapabilities { flags: Some(PlayerCapabilityFlags::Play) })
+        Some(PlayerCapabilities {
+            flags: Some(PlayerCapabilityFlags::Play),
+            ..PlayerCapabilities::empty()
+        })
     );
 
     player1
         .emit_delta(PlayerInfoDelta {
             player_capabilities: Some(PlayerCapabilities {
                 flags: Some(PlayerCapabilityFlags::Pause),
+                ..PlayerCapabilities::empty()
             }),
             ..Decodable::new_empty()
         })
@@ -364,7 +369,10 @@ async fn can_receive_deltas() -> Result<()> {
     let (_id, delta) = updates.remove(0);
     assert_eq!(
         delta.player_capabilities,
-        Some(PlayerCapabilities { flags: Some(PlayerCapabilityFlags::Pause) })
+        Some(PlayerCapabilities {
+            flags: Some(PlayerCapabilityFlags::Pause),
+            ..PlayerCapabilities::empty()
+        })
     );
 
     Ok(())
@@ -588,6 +596,7 @@ async fn player_capabilities() -> Result<()> {
 
     let expected_player_capabilities = || PlayerCapabilities {
         flags: Some(PlayerCapabilityFlags::Pause | PlayerCapabilityFlags::SkipForward),
+        ..PlayerCapabilities::empty()
     };
 
     player
@@ -624,6 +633,7 @@ async fn media_images() -> Result<()> {
                     width: 10,
                     height: 10,
                 }]),
+                ..MediaImage::empty()
             },
             MediaImage {
                 image_type: Some(MediaImageType::Artwork),
@@ -632,6 +642,7 @@ async fn media_images() -> Result<()> {
                     width: 10,
                     height: 10,
                 }]),
+                ..MediaImage::empty()
             },
         ]
     };
