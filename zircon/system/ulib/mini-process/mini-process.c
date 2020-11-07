@@ -268,8 +268,9 @@ zx_status_t start_mini_process(zx_handle_t job, zx_handle_t transferred_handle,
 
   *thread = ZX_HANDLE_INVALID;
   status = zx_thread_create(*process, "minith", 6u, 0, thread);
-  if (status != ZX_OK)
+  if (status != ZX_OK) {
     goto exit;
+  }
 
   status = start_mini_process_etc(*process, *thread, vmar, transferred_handle, true, &channel);
   transferred_handle = ZX_HANDLE_INVALID;  // The transferred_handle gets consumed.
@@ -285,6 +286,10 @@ exit:
 
   if (channel != ZX_HANDLE_INVALID)
     zx_handle_close(channel);
+
+  if (vmar != ZX_HANDLE_INVALID) {
+    zx_handle_close(vmar);
+  }
 
   return status;
 }
