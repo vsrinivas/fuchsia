@@ -206,26 +206,21 @@ CoefficientTable* CreateSincFilterTable(SincFilter::Inputs inputs) {
 SincFilter::CacheT* CreateSincFilterCoefficientTableCache() {
   auto cache = new SincFilter::CacheT(CreateSincFilterTable);
 
-  // To avoid lengthy construction time, cache some coefficient tables persistently.
-  // For now we just cache a 1-to-1 table (e.g. 48k -> 48k) as this will be the most common.
-  // Also see fxb/45074.
-  SincFilter::persistent_cache_ = new std::vector<SincFilter::CacheT::SharedPtr>;
-  SincFilter::persistent_cache_->push_back(cache->Get(SincFilter::Inputs{
-      .side_width = SincFilter::GetFilterWidth(48000, 48000),
-      .num_frac_bits = kPtsFractionalBits,
-      .rate_conversion_ratio = 1.0,
-  }));
-  SincFilter::persistent_cache_->push_back(cache->Get(SincFilter::Inputs{
-      .side_width = SincFilter::GetFilterWidth(96000, 48000),
-      .num_frac_bits = kPtsFractionalBits,
-      .rate_conversion_ratio = 0.5,
-  }));
-  SincFilter::persistent_cache_->push_back(cache->Get(SincFilter::Inputs{
-      .side_width = SincFilter::GetFilterWidth(48000, 96000),
-      .num_frac_bits = kPtsFractionalBits,
-      .rate_conversion_ratio = 2.0,
-  }));
+  auto make_inputs = [](uint32_t source_rate, uint32_t dest_rate) {
+    return SincFilter::Inputs{
+        .side_width = SincFilter::GetFilterWidth(source_rate, dest_rate),
+        .num_frac_bits = kPtsFractionalBits,
+        .rate_conversion_ratio = static_cast<double>(dest_rate) / static_cast<double>(source_rate),
+    };
+  };
 
+  // To avoid lengthy construction time, cache some coefficient tables persistently.
+  // See fxbug.dev/45074 and fxbug.dev/57666.
+  SincFilter::persistent_cache_ = new std::vector<SincFilter::CacheT::SharedPtr>;
+  SincFilter::persistent_cache_->push_back(cache->Get(make_inputs(48000, 48000)));
+  SincFilter::persistent_cache_->push_back(cache->Get(make_inputs(96000, 48000)));
+  SincFilter::persistent_cache_->push_back(cache->Get(make_inputs(48000, 96000)));
+  SincFilter::persistent_cache_->push_back(cache->Get(make_inputs(96000, 16000)));
   return cache;
 }
 
