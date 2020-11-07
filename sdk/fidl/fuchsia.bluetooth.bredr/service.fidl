@@ -84,19 +84,26 @@ struct ProtocolDescriptor {
 /// Specifying a specific protocol endpoint that can be connected.
 using ProtocolDescriptorList = vector<ProtocolDescriptor>:MAX_SEQUENCE_LENGTH;
 
-/// Identifiers that are valid for Bluetooth Classes / Profiles
+/// Identifiers that are valid for Bluetooth Classes / Profiles.
 /// We intentionally omit classes and profile IDs that are unsupported, deprecated,
 /// or reserved for use by Fuchsia Bluetooth.
-/// From Bluetooth Assigned Numbers for SDP
+/// These numbers are sourced from the Bluetooth Assigned Numbers for SDP.
 /// https://www.bluetooth.com/specifications/assigned-numbers/service-discovery
 enum ServiceClassProfileIdentifier : uint16 {
-    /// ServiceDiscoveryService and BrowseGroupDescriptorService claimed by Fuchsia
-    SERIAL_PORT = 0x1101; // Serial Port Profile (SPP)
-    DIALUP_NETWORKING = 0x1103; // Dial-up Networking Profile (DUN)
-    OBEX_OBJECT_PUSH = 0x1105; // Object Push Profile (OPP)
-    OPEX_FILE_TRANSFER = 0x1106; // File Transfer Profile (FTP)
+    // ServiceDiscoveryService and BrowseGroupDescriptorService claimed by Fuchsia
+    /// Serial Port Profile (SPP)
+    SERIAL_PORT = 0x1101;
+    // LANAccessUsingPPP omitted (deprecated)
+    /// Dial-up Networking Profile (DUN)
+    DIALUP_NETWORKING = 0x1103;
+    /// Object Push Profile (OPP)
+    OBEX_OBJECT_PUSH = 0x1105;
+    /// File Transfer Profile (FTP)
+    OPEX_FILE_TRANSFER = 0x1106;
     /// Headset Profile (HSP)
     HEADSET = 0x1108;
+    // CordlessTelephony (CTP) omitted (deprecated)
+    // Fax Profile (FAX) omitted (deprecated)
     HEADSET_AUDIO_GATEWAY = 0x1112;
     HEADSET_HS = 0x1131;
     /// Advanced Audio Distribution Profile (A2DP)
@@ -107,16 +114,20 @@ enum ServiceClassProfileIdentifier : uint16 {
     AV_REMOTE_CONTROL_TARGET = 0x110C;
     AV_REMOTE_CONTROL = 0x110E;
     AV_REMOTE_CONTROL_CONTROLLER = 0x110F;
+    // Intercom (ICP) omitted (deprecated)
+    // Wap and Wap Client (WAP) omitted (deprecated)
+    // Synchronization Profile (SYNC) omitted (unsupported)
     /// Personal Area Networking (PAN)
     PANU = 0x1115;
     NAP = 0x1116;
     GN = 0x1117;
-    /// Basic Printing and Basic Imaging Profiles omitted (unsupported)
+    // Basic Printing and Basic Imaging Profiles omitted (unsupported)
     /// Hands-Free Profile (HFP)
     HANDSFREE = 0x111E;
     HANDSFREE_AUDIO_GATEWAY = 0x111F;
-    /// Human Interface Device and Hardcopy Cable Replacement Profile omitted (unsupported)
-    SIM_ACCESS = 0x112D; // Sim Access Profile (SAP)
+    // Human Interface Device and Hardcopy Cable Replacement Profile omitted (unsupported)
+    /// Sim Access Profile (SAP)
+    SIM_ACCESS = 0x112D;
     /// Phonebook Access Profile (PBAP)
     PHONEBOOK_PCE = 0x112E;
     PHONEBOOK_PSE = 0x112F;
@@ -125,12 +136,21 @@ enum ServiceClassProfileIdentifier : uint16 {
     MESSAGE_ACCESS_SERVER = 0x1132;
     MESSAGE_NOTIFICATION_SERVER = 0x1133;
     MESSAGE_ACCESS_PROFILE = 0x1134;
-    /// GNSS and 3DSP omitted (unsupported)
+    // GNSS and 3DSP omitted (unsupported)
     /// Multi-Profile Specification (MPS)
     MPS_PROFILE = 0x113A;
     MPS_CLASS = 0x113B;
-    /// Calendar, Task, and Notes Profile omitted (unsupported)
-    /// Device ID used by Fuchsia
+    // Calendar, Task, and Notes Profile omitted (unsupported)
+    // Device ID claimed by Fuchsia
+    /// Generic Networking
+    GENERIC_NETWORKING = 0x1201;
+    /// Generic File Transfer
+    GENERIC_FILE_TRANSFER = 0x1202;
+    /// Generic Audio
+    GENERIC_AUDIO = 0x1203;
+    /// Generic Telephony
+    GENERIC_TELEPHONY = 0x1204;
+    // Enhanced Service Discovery Profile (ESDP) service classes omitted (deprecated).
     /// Video Distribution Profile (VDP)
     VIDEO_SOURCE = 0x1303;
     VIDEO_SINK = 0x1304;
