@@ -1,0 +1,25 @@
+# Copyright 2020 The Fuchsia Authors
+#
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT
+
+import("//build/testing/host_test.gni")
+
+if (is_host) {
+  host_test_data("cpuid") {
+    sources = [
+      "atom-d510.json",
+      "core2-6300.json",
+      "haswell-xeon-e5-2690v3.json",
+      "ivy-bridge-i3-3240.json",
+      "nehalem-xeon-e5520.json",
+      "ryzen-2700x.json",
+      "ryzen-3950x.json",
+      "sandy-bridge-i7-2600k.json",
+      "skylake-i3-6100.json",
+      "threadripper-1950x.json",
+    ]
+    outputs = [ "$root_out_dir/testdata/cpuid/{{source_file_part}}" ]
+  }
+}

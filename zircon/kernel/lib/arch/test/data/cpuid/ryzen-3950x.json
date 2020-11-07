@@ -1,0 +1,498 @@
+[
+    {
+        "leaf": 0,
+        "subleaf": 0,
+        "eax": 16,
+        "ebx": 1752462657,
+        "ecx": 1145913699,
+        "edx": 1769238117
+    },
+    {
+        "leaf": 1,
+        "subleaf": 0,
+        "eax": 8851216,
+        "ebx": 522192896,
+        "ecx": 2128097803,
+        "edx": 395049983
+    },
+    {
+        "leaf": 2,
+        "subleaf": 0,
+        "eax": 0,
+        "ebx": 0,
+        "ecx": 0,
+        "edx": 0
+    },
+    {
+        "leaf": 3,
+        "subleaf": 0,
+        "eax": 0,
+        "ebx": 0,
+        "ecx": 0,
+        "edx": 0
+    },
+    {
+        "leaf": 5,
+        "subleaf": 0,
+        "eax": 64,
+        "ebx": 64,
+        "ecx": 3,
+        "edx": 17
+    },
+    {
+        "leaf": 6,
+        "subleaf": 0,
+        "eax": 4,
+        "ebx": 0,
+        "ecx": 1,
+        "edx": 0
+    },
+    {
+        "leaf": 7,
+        "subleaf": 0,
+        "eax": 0,
+        "ebx": 563909033,
+        "ecx": 4194308,
+        "edx": 0
+    },
+    {
+        "leaf": 8,
+        "subleaf": 0,
+        "eax": 0,
+        "ebx": 0,
+        "ecx": 0,
+        "edx": 0
+    },
+    {
+        "leaf": 9,
+        "subleaf": 0,
+        "eax": 0,
+        "ebx": 0,
+        "ecx": 0,
+        "edx": 0
+    },
+    {
+        "leaf": 10,
+        "subleaf": 0,
+        "eax": 0,
+        "ebx": 0,
+        "ecx": 0,
+        "edx": 0
+    },
+    {
+        "leaf": 11,
+        "subleaf": 0,
+        "eax": 1,
+        "ebx": 2,
+        "ecx": 256,
+        "edx": 31
+    },
+    {
+        "leaf": 11,
+        "subleaf": 1,
+        "eax": 7,
+        "ebx": 32,
+        "ecx": 513,
+        "edx": 31
+    },
+    {
+        "leaf": 12,
+        "subleaf": 0,
+        "eax": 0,
+        "ebx": 0,
+        "ecx": 0,
+        "edx": 0
+    },
+    {
+        "leaf": 13,
+        "subleaf": 0,
+        "eax": 519,
+        "ebx": 832,
+        "ecx": 896,
+        "edx": 0
+    },
+    {
+        "leaf": 13,
+        "subleaf": 1,
+        "eax": 15,
+        "ebx": 832,
+        "ecx": 0,
+        "edx": 0
+    },
+    {
+        "leaf": 13,
+        "subleaf": 2,
+        "eax": 256,
+        "ebx": 576,
+        "ecx": 0,
+        "edx": 0
+    },
+    {
+        "leaf": 13,
+        "subleaf": 9,
+        "eax": 64,
+        "ebx": 832,
+        "ecx": 0,
+        "edx": 0
+    },
+    {
+        "leaf": 14,
+        "subleaf": 0,
+        "eax": 0,
+        "ebx": 0,
+        "ecx": 0,
+        "edx": 0
+    },
+    {
+        "leaf": 15,
+        "subleaf": 0,
+        "eax": 0,
+        "ebx": 255,
+        "ecx": 0,
+        "edx": 2
+    },
+    {
+        "leaf": 15,
+        "subleaf": 1,
+        "eax": 0,
+        "ebx": 64,
+        "ecx": 255,
+        "edx": 7
+    },
+    {
+        "leaf": 16,
+        "subleaf": 0,
+        "eax": 0,
+        "ebx": 2,
+        "ecx": 0,
+        "edx": 0
+    },
+    {
+        "leaf": 16,
+        "subleaf": 1,
+        "eax": 15,
+        "ebx": 0,
+        "ecx": 4,
+        "edx": 15
+    },
+    {
+        "leaf": 536870912,
+        "subleaf": 0,
+        "eax": 0,
+        "ebx": 0,
+        "ecx": 0,
+        "edx": 0
+    },
+    {
+        "leaf": 2147483648,
+        "subleaf": 0,
+        "eax": 2147483680,
+        "ebx": 1752462657,
+        "ecx": 1145913699,
+        "edx": 1769238117
+    },
+    {
+        "leaf": 2147483649,
+        "subleaf": 0,
+        "eax": 8851216,
+        "ebx": 536870912,
+        "ecx": 1975662591,
+        "edx": 802421759
+    },
+    {
+        "leaf": 2147483650,
+        "subleaf": 0,
+        "eax": 541347137,
+        "ebx": 1702525266,
+        "ecx": 540614766,
+        "edx": 808794419
+    },
+    {
+        "leaf": 2147483651,
+        "subleaf": 0,
+        "eax": 909189208,
+        "ebx": 1919894317,
+        "ecx": 1917853797,
+        "edx": 1936024431
+    },
+    {
+        "leaf": 2147483652,
+        "subleaf": 0,
+        "eax": 544370547,
+        "ebx": 538976288,
+        "ecx": 538976288,
+        "edx": 2105376
+    },
+    {
+        "leaf": 2147483653,
+        "subleaf": 0,
+        "eax": 4282449728,
+        "ebx": 4282449728,
+        "ecx": 537395520,
+        "edx": 537395520
+    },
+    {
+        "leaf": 2147483654,
+        "subleaf": 0,
+        "eax": 1207985152,
+        "ebx": 1744856064,
+        "ecx": 33579328,
+        "edx": 33591616
+    },
+    {
+        "leaf": 2147483655,
+        "subleaf": 0,
+        "eax": 0,
+        "ebx": 27,
+        "ecx": 0,
+        "edx": 26521
+    },
+    {
+        "leaf": 2147483656,
+        "subleaf": 0,
+        "eax": 12336,
+        "ebx": 17610327,
+        "ecx": 28703,
+        "edx": 65536
+    },
+    {
+        "leaf": 2147483657,
+        "subleaf": 0,
+        "eax": 0,
+        "ebx": 0,
+        "ecx": 0,
+        "edx": 0
+    },
+    {
+        "leaf": 2147483658,
+        "subleaf": 0,
+        "eax": 1,
+        "ebx": 32768,
+        "ecx": 0,
+        "edx": 1293567
+    },
+    {
+        "leaf": 2147483659,
+        "subleaf": 0,
+        "eax": 0,
+        "ebx": 0,
+        "ecx": 0,
+        "edx": 0
+    },
+    {
+        "leaf": 2147483660,
+        "subleaf": 0,
+        "eax": 0,
+        "ebx": 0,
+        "ecx": 0,
+        "edx": 0
+    },
+    {
+        "leaf": 2147483661,
+        "subleaf": 0,
+        "eax": 0,
+        "ebx": 0,
+        "ecx": 0,
+        "edx": 0
+    },
+    {
+        "leaf": 2147483662,
+        "subleaf": 0,
+        "eax": 0,
+        "ebx": 0,
+        "ecx": 0,
+        "edx": 0
+    },
+    {
+        "leaf": 2147483663,
+        "subleaf": 0,
+        "eax": 0,
+        "ebx": 0,
+        "ecx": 0,
+        "edx": 0
+    },
+    {
+        "leaf": 2147483664,
+        "subleaf": 0,
+        "eax": 0,
+        "ebx": 0,
+        "ecx": 0,
+        "edx": 0
+    },
+    {
+        "leaf": 2147483665,
+        "subleaf": 0,
+        "eax": 0,
+        "ebx": 0,
+        "ecx": 0,
+        "edx": 0
+    },
+    {
+        "leaf": 2147483666,
+        "subleaf": 0,
+        "eax": 0,
+        "ebx": 0,
+        "ecx": 0,
+        "edx": 0
+    },
+    {
+        "leaf": 2147483667,
+        "subleaf": 0,
+        "eax": 0,
+        "ebx": 0,
+        "ecx": 0,
+        "edx": 0
+    },
+    {
+        "leaf": 2147483668,
+        "subleaf": 0,
+        "eax": 0,
+        "ebx": 0,
+        "ecx": 0,
+        "edx": 0
+    },
+    {
+        "leaf": 2147483669,
+        "subleaf": 0,
+        "eax": 0,
+        "ebx": 0,
+        "ecx": 0,
+        "edx": 0
+    },
+    {
+        "leaf": 2147483670,
+        "subleaf": 0,
+        "eax": 0,
+        "ebx": 0,
+        "ecx": 0,
+        "edx": 0
+    },
+    {
+        "leaf": 2147483671,
+        "subleaf": 0,
+        "eax": 0,
+        "ebx": 0,
+        "ecx": 0,
+        "edx": 0
+    },
+    {
+        "leaf": 2147483672,
+        "subleaf": 0,
+        "eax": 0,
+        "ebx": 0,
+        "ecx": 0,
+        "edx": 0
+    },
+    {
+        "leaf": 2147483673,
+        "subleaf": 0,
+        "eax": 4030787648,
+        "ebx": 0,
+        "ecx": 0,
+        "edx": 0
+    },
+    {
+        "leaf": 2147483674,
+        "subleaf": 0,
+        "eax": 6,
+        "ebx": 0,
+        "ecx": 0,
+        "edx": 0
+    },
+    {
+        "leaf": 2147483675,
+        "subleaf": 0,
+        "eax": 1023,
+        "ebx": 0,
+        "ecx": 0,
+        "edx": 0
+    },
+    {
+        "leaf": 2147483676,
+        "subleaf": 0,
+        "eax": 0,
+        "ebx": 0,
+        "ecx": 0,
+        "edx": 0
+    },
+    {
+        "leaf": 2147483677,
+        "subleaf": 0,
+        "eax": 16673,
+        "ebx": 29360191,
+        "ecx": 63,
+        "edx": 0
+    },
+    {
+        "leaf": 2147483677,
+        "subleaf": 1,
+        "eax": 16674,
+        "ebx": 29360191,
+        "ecx": 63,
+        "edx": 0
+    },
+    {
+        "leaf": 2147483677,
+        "subleaf": 2,
+        "eax": 16707,
+        "ebx": 29360191,
+        "ecx": 1023,
+        "edx": 2
+    },
+    {
+        "leaf": 2147483677,
+        "subleaf": 3,
+        "eax": 115043,
+        "ebx": 62914623,
+        "ecx": 16383,
+        "edx": 1
+    },
+    {
+        "leaf": 2147483678,
+        "subleaf": 0,
+        "eax": 31,
+        "ebx": 271,
+        "ecx": 0,
+        "edx": 0
+    },
+    {
+        "leaf": 2147483679,
+        "subleaf": 0,
+        "eax": 65551,
+        "ebx": 367,
+        "ecx": 509,
+        "edx": 1
+    },
+    {
+        "leaf": 2147483680,
+        "subleaf": 0,
+        "eax": 0,
+        "ebx": 2,
+        "ecx": 0,
+        "edx": 0
+    },
+    {
+        "leaf": 2147483680,
+        "subleaf": 1,
+        "eax": 11,
+        "ebx": 0,
+        "ecx": 0,
+        "edx": 15
+    },
+    {
+        "leaf": 2156265472,
+        "subleaf": 0,
+        "eax": 0,
+        "ebx": 0,
+        "ecx": 0,
+        "edx": 0
+    },
+    {
+        "leaf": 3221225472,
+        "subleaf": 0,
+        "eax": 0,
+        "ebx": 0,
+        "ecx": 0,
+        "edx": 0
+    }
+]

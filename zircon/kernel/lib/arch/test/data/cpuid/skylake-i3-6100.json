@@ -1,0 +1,362 @@
+[
+    {
+        "leaf": 0,
+        "subleaf": 0,
+        "eax": 22,
+        "ebx": 1970169159,
+        "ecx": 1818588270,
+        "edx": 1231384169
+    },
+    {
+        "leaf": 1,
+        "subleaf": 0,
+        "eax": 263907,
+        "ebx": 51382272,
+        "ecx": 2147154879,
+        "edx": 3219913727
+    },
+    {
+        "leaf": 2,
+        "subleaf": 0,
+        "eax": 1979933441,
+        "ebx": 15775231,
+        "ecx": 0,
+        "edx": 12779520
+    },
+    {
+        "leaf": 3,
+        "subleaf": 0,
+        "eax": 0,
+        "ebx": 0,
+        "ecx": 0,
+        "edx": 0
+    },
+    {
+        "leaf": 4,
+        "subleaf": 0,
+        "eax": 469778721,
+        "ebx": 29360191,
+        "ecx": 63,
+        "edx": 0
+    },
+    {
+        "leaf": 4,
+        "subleaf": 1,
+        "eax": 469778722,
+        "ebx": 29360191,
+        "ecx": 63,
+        "edx": 0
+    },
+    {
+        "leaf": 4,
+        "subleaf": 2,
+        "eax": 469778755,
+        "ebx": 12582975,
+        "ecx": 1023,
+        "edx": 0
+    },
+    {
+        "leaf": 4,
+        "subleaf": 3,
+        "eax": 470008163,
+        "ebx": 46137407,
+        "ecx": 4095,
+        "edx": 6
+    },
+    {
+        "leaf": 5,
+        "subleaf": 0,
+        "eax": 64,
+        "ebx": 64,
+        "ecx": 3,
+        "edx": 286531872
+    },
+    {
+        "leaf": 6,
+        "subleaf": 0,
+        "eax": 10231,
+        "ebx": 2,
+        "ecx": 9,
+        "edx": 0
+    },
+    {
+        "leaf": 7,
+        "subleaf": 0,
+        "eax": 0,
+        "ebx": 43806655,
+        "ecx": 0,
+        "edx": 2617254912
+    },
+    {
+        "leaf": 8,
+        "subleaf": 0,
+        "eax": 0,
+        "ebx": 0,
+        "ecx": 0,
+        "edx": 0
+    },
+    {
+        "leaf": 9,
+        "subleaf": 0,
+        "eax": 0,
+        "ebx": 0,
+        "ecx": 0,
+        "edx": 0
+    },
+    {
+        "leaf": 10,
+        "subleaf": 0,
+        "eax": 120587268,
+        "ebx": 0,
+        "ecx": 0,
+        "edx": 1539
+    },
+    {
+        "leaf": 11,
+        "subleaf": 0,
+        "eax": 1,
+        "ebx": 2,
+        "ecx": 256,
+        "edx": 3
+    },
+    {
+        "leaf": 11,
+        "subleaf": 1,
+        "eax": 4,
+        "ebx": 4,
+        "ecx": 513,
+        "edx": 3
+    },
+    {
+        "leaf": 12,
+        "subleaf": 0,
+        "eax": 0,
+        "ebx": 0,
+        "ecx": 0,
+        "edx": 0
+    },
+    {
+        "leaf": 13,
+        "subleaf": 0,
+        "eax": 31,
+        "ebx": 1088,
+        "ecx": 1088,
+        "edx": 0
+    },
+    {
+        "leaf": 13,
+        "subleaf": 1,
+        "eax": 15,
+        "ebx": 960,
+        "ecx": 256,
+        "edx": 0
+    },
+    {
+        "leaf": 13,
+        "subleaf": 2,
+        "eax": 256,
+        "ebx": 576,
+        "ecx": 0,
+        "edx": 0
+    },
+    {
+        "leaf": 13,
+        "subleaf": 3,
+        "eax": 64,
+        "ebx": 960,
+        "ecx": 0,
+        "edx": 0
+    },
+    {
+        "leaf": 13,
+        "subleaf": 4,
+        "eax": 64,
+        "ebx": 1024,
+        "ecx": 0,
+        "edx": 0
+    },
+    {
+        "leaf": 13,
+        "subleaf": 8,
+        "eax": 128,
+        "ebx": 0,
+        "ecx": 1,
+        "edx": 0
+    },
+    {
+        "leaf": 14,
+        "subleaf": 0,
+        "eax": 0,
+        "ebx": 0,
+        "ecx": 0,
+        "edx": 0
+    },
+    {
+        "leaf": 15,
+        "subleaf": 0,
+        "eax": 0,
+        "ebx": 0,
+        "ecx": 0,
+        "edx": 0
+    },
+    {
+        "leaf": 16,
+        "subleaf": 0,
+        "eax": 0,
+        "ebx": 0,
+        "ecx": 0,
+        "edx": 0
+    },
+    {
+        "leaf": 17,
+        "subleaf": 0,
+        "eax": 0,
+        "ebx": 0,
+        "ecx": 0,
+        "edx": 0
+    },
+    {
+        "leaf": 18,
+        "subleaf": 0,
+        "eax": 0,
+        "ebx": 0,
+        "ecx": 0,
+        "edx": 0
+    },
+    {
+        "leaf": 19,
+        "subleaf": 0,
+        "eax": 0,
+        "ebx": 0,
+        "ecx": 0,
+        "edx": 0
+    },
+    {
+        "leaf": 20,
+        "subleaf": 0,
+        "eax": 1,
+        "ebx": 15,
+        "ecx": 7,
+        "edx": 0
+    },
+    {
+        "leaf": 20,
+        "subleaf": 1,
+        "eax": 38338562,
+        "ebx": 4145151,
+        "ecx": 0,
+        "edx": 0
+    },
+    {
+        "leaf": 21,
+        "subleaf": 0,
+        "eax": 2,
+        "ebx": 192,
+        "ecx": 0,
+        "edx": 0
+    },
+    {
+        "leaf": 22,
+        "subleaf": 0,
+        "eax": 2300,
+        "ebx": 2300,
+        "ecx": 100,
+        "edx": 0
+    },
+    {
+        "leaf": 536870912,
+        "subleaf": 0,
+        "eax": 2300,
+        "ebx": 2300,
+        "ecx": 100,
+        "edx": 0
+    },
+    {
+        "leaf": 2147483648,
+        "subleaf": 0,
+        "eax": 2147483656,
+        "ebx": 0,
+        "ecx": 0,
+        "edx": 0
+    },
+    {
+        "leaf": 2147483649,
+        "subleaf": 0,
+        "eax": 0,
+        "ebx": 0,
+        "ecx": 289,
+        "edx": 739248128
+    },
+    {
+        "leaf": 2147483650,
+        "subleaf": 0,
+        "eax": 1702129225,
+        "ebx": 693250156,
+        "ecx": 1919894304,
+        "edx": 1297360997
+    },
+    {
+        "leaf": 2147483651,
+        "subleaf": 0,
+        "eax": 862527529,
+        "ebx": 808531501,
+        "ecx": 1126192432,
+        "edx": 1075860816
+    },
+    {
+        "leaf": 2147483652,
+        "subleaf": 0,
+        "eax": 858665504,
+        "ebx": 2051557168,
+        "ecx": 0,
+        "edx": 0
+    },
+    {
+        "leaf": 2147483653,
+        "subleaf": 0,
+        "eax": 0,
+        "ebx": 0,
+        "ecx": 0,
+        "edx": 0
+    },
+    {
+        "leaf": 2147483654,
+        "subleaf": 0,
+        "eax": 0,
+        "ebx": 0,
+        "ecx": 16801856,
+        "edx": 0
+    },
+    {
+        "leaf": 2147483655,
+        "subleaf": 0,
+        "eax": 0,
+        "ebx": 0,
+        "ecx": 0,
+        "edx": 256
+    },
+    {
+        "leaf": 2147483656,
+        "subleaf": 0,
+        "eax": 12327,
+        "ebx": 0,
+        "ecx": 0,
+        "edx": 0
+    },
+    {
+        "leaf": 2156265472,
+        "subleaf": 0,
+        "eax": 2300,
+        "ebx": 2300,
+        "ecx": 100,
+        "edx": 0
+    },
+    {
+        "leaf": 3221225472,
+        "subleaf": 0,
+        "eax": 2300,
+        "ebx": 2300,
+        "ecx": 100,
+        "edx": 0
+    }
+]

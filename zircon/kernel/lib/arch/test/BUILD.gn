@@ -15,14 +15,19 @@ if (is_host) {
   test("arch-tests") {
     sources = [
       "cpuid-basic-tests.cc",
+      "cpuid-corpus-tests.cc",
       "fake-cpuid-tests.cc",
       "lbr-tests.cc",
     ]
     deps = [
+      "data/cpuid",
+      "//src/lib/files",
       "//zircon/kernel/lib/arch",
       "//zircon/kernel/lib/arch/testing",
+      "//zircon/public/lib/zxc",
       "//zircon/public/lib/zxtest",
       "//zircon/system/ulib/hwreg:hwreg-mock",
+      "//zircon/third_party/rapidjson",
     ]
   }
 }

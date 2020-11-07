@@ -1,11 +1,19 @@
-// Copyright 2020 The Fuchsia Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style license that can be
-// found in the LICENSE file.
+// Copyright 2020 The Fuchsia Authors
+//
+// Use of this source code is governed by a MIT-style
+// license that can be found in the LICENSE file or at
+// https://opensource.org/licenses/MIT
 
 #include <lib/arch/testing/x86/fake-cpuid.h>
 #include <lib/arch/x86/cpuid.h>
 
 #include <zxtest/zxtest.h>
+
+// This file is meant for tests that exercise basic CPUID lib/arch logic that
+// does not rely upon CpuidIo access (but rather the business logic around it),
+// Tests that deal in CpuidIo access should written in cpuid-corpus-tests.cc
+// and leverage the corpus of CPUID values for expectations around particular
+// processors.
 
 namespace {
 
@@ -58,37 +66,6 @@ TEST(CpuidTests, Model) {
   }
 }
 
-TEST(CpuidTests, GetVendor) {
-  // Intel.
-  {
-    arch::testing::FakeCpuidIo cpuid;
-    cpuid.Populate(0x0, 0x0, arch::CpuidIo::kEbx, 0x756e'6547)
-        .Populate(0x0, 0x0, arch::CpuidIo::kEdx, 0x4965'6e69)
-        .Populate(0x0, 0x0, arch::CpuidIo::kEcx, 0x6c65'746e);
-    auto vendor = arch::GetVendor(cpuid);
-    EXPECT_EQ(arch::Vendor::kIntel, vendor);
-  }
-  // AMD.
-  {
-    arch::testing::FakeCpuidIo cpuid;
-    cpuid.Populate(0x0, 0x0, arch::CpuidIo::kEbx, 0x6874'7541)
-        .Populate(0x0, 0x0, arch::CpuidIo::kEdx, 0x6974'6e65)
-        .Populate(0x0, 0x0, arch::CpuidIo::kEcx, 0x444d'4163);
-    auto vendor = arch::GetVendor(cpuid);
-    EXPECT_EQ(arch::Vendor::kAmd, vendor);
-  }
-
-  // Unknown.
-  {
-    arch::testing::FakeCpuidIo cpuid;
-    cpuid.Populate(0x0, 0x0, arch::CpuidIo::kEbx, 0x1234'4321)
-        .Populate(0x0, 0x0, arch::CpuidIo::kEdx, 0x5678'8765)
-        .Populate(0x0, 0x0, arch::CpuidIo::kEcx, 0xabcd'dcba);
-    auto vendor = arch::GetVendor(cpuid);
-    EXPECT_EQ(arch::Vendor::kUnknown, vendor);
-  }
-}
-
 TEST(CpuidTests, GetMicroarchitectureFromVersion) {
   // Particular SoCs judiciously picked at random.
   struct {
@@ -135,54 +112,6 @@ TEST(CpuidTests, GetMicroarchitectureFromVersion) {
               static_cast<int>(vendor_sv.size()), vendor_sv.data(), test_case.extended_family,
               test_case.base_family, test_case.extended_model, test_case.base_model,
               static_cast<int>(actual_sv.size()), actual_sv.data());
-  }
-}
-
-// Effectively an integration test of the above two.
-TEST(CpuidTests, GetMicroarchitecture) {
-  // Intel Coffee Lake S.
-  {
-    arch::testing::FakeCpuidIo cpuid;
-    cpuid.Populate(0x0, 0x0, arch::CpuidIo::kEbx, 0x756e'6547)
-        .Populate(0x0, 0x0, arch::CpuidIo::kEdx, 0x4965'6e69)
-        .Populate(0x0, 0x0, arch::CpuidIo::kEcx, 0x6c65'746e)
-        .Populate(0x1, 0x0, arch::CpuidIo::kEax, 0x000906e0);
-
-    EXPECT_EQ(arch::Microarchitecture::kIntelSkylake, arch::GetMicroarchitecture(cpuid));
-  }
-
-  // AMD Banded Kestrel.
-  {
-    arch::testing::FakeCpuidIo cpuid;
-    cpuid.Populate(0x0, 0x0, arch::CpuidIo::kEbx, 0x6874'7541)
-        .Populate(0x0, 0x0, arch::CpuidIo::kEdx, 0x6974'6e65)
-        .Populate(0x0, 0x0, arch::CpuidIo::kEcx, 0x444d'4163)
-        .Populate(0x1, 0x0, arch::CpuidIo::kEax, 0x00810f80);
-
-    EXPECT_EQ(arch::Microarchitecture::kAmdFamily0x17, arch::GetMicroarchitecture(cpuid));
-  }
-
-  // Unknown vendor.
-  {
-    arch::testing::FakeCpuidIo cpuid;
-    cpuid.Populate(0x0, 0x0, arch::CpuidIo::kEbx, 0x1234'4321)
-        .Populate(0x0, 0x0, arch::CpuidIo::kEdx, 0x5678'8765)
-        .Populate(0x0, 0x0, arch::CpuidIo::kEcx, 0xabcd'dcba)
-        .Populate(0x1, 0x0, arch::CpuidIo::kEax, 0x11111111);
-
-    EXPECT_EQ(arch::Microarchitecture::kUnknown, arch::GetMicroarchitecture(cpuid));
-  }
-
-  // Known vendor, but unknown version.
-  {
-    arch::testing::FakeCpuidIo cpuid;
-    // Intel.
-    cpuid.Populate(0x0, 0x0, arch::CpuidIo::kEbx, 0x756e'6547)
-        .Populate(0x0, 0x0, arch::CpuidIo::kEdx, 0x4965'6e69)
-        .Populate(0x0, 0x0, arch::CpuidIo::kEcx, 0x6c65'746e)
-        .Populate(0x1, 0x0, arch::CpuidIo::kEax, 0x11111111);
-
-    EXPECT_EQ(arch::Microarchitecture::kUnknown, arch::GetMicroarchitecture(cpuid));
   }
 }
 
