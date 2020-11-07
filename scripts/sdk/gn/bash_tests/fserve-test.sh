@@ -150,7 +150,7 @@ TEST_fserve_registers_package_server() {
   source "${SSH_MOCK_PATH}/ssh.mock_state.2"
 
   # The host address matches the mock in ssh
-  expected=("${SSH_MOCK_PATH}/ssh" -F "${FUCHSIA_WORK_DIR}/sshconfig" "fe80::c0ff:eec0:ffee%coffee" amber_ctl add_src -f "http://172.20.100.10:8083/config.json" )
+  expected=("${SSH_MOCK_PATH}/ssh" -F "${FUCHSIA_WORK_DIR}/sshconfig" "fe80::c0ff:eec0:ffee%coffee" amber_ctl add_src -f "http://172.20.100.10:8083/config.json" -n "devhost")
   gn-test-check-mock-args "${expected[@]}"
 }
 
@@ -191,7 +191,6 @@ TEST_fserve_device_name(){
 
   BT_EXPECT "${FSERVE_CMD}" --device-name coffee-coffee-coffee-coffee > /dev/null 2>&1
 
-
   # shellcheck disable=SC1090
   source "${SSH_MOCK_PATH}/ssh.mock_state.1"
   expected=(_ANY_ -F "${FUCHSIA_WORK_DIR}/sshconfig" "fe80::c0ff:eec0:ffee%coffee" "echo" "\$SSH_CONNECTION")
@@ -199,7 +198,7 @@ TEST_fserve_device_name(){
 
   # shellcheck disable=SC1090
   source "${SSH_MOCK_PATH}/ssh.mock_state.2"
-  expected_args=("${SSH_MOCK_PATH}/ssh" -F "${FUCHSIA_WORK_DIR}/sshconfig" "fe80::c0ff:eec0:ffee%coffee" _ANY_ _ANY_ _ANY_ _ANY_)
+  expected_args=("${SSH_MOCK_PATH}/ssh" -F "${FUCHSIA_WORK_DIR}/sshconfig" "fe80::c0ff:eec0:ffee%coffee" _ANY_ _ANY_ _ANY_ _ANY_ _ANY_ _ANY_)
   gn-test-check-mock-args "${expected_args[@]}"
 }
 
@@ -218,7 +217,7 @@ TEST_fserve_device_addr(){
 
   # shellcheck disable=SC1090
   source "${SSH_MOCK_PATH}/ssh.mock_state.2"
-  expected_args=("${SSH_MOCK_PATH}/ssh" -F "${FUCHSIA_WORK_DIR}/sshconfig" 192.1.1.1  amber_ctl _ANY_ _ANY_ _ANY_)
+  expected_args=("${SSH_MOCK_PATH}/ssh" -F "${FUCHSIA_WORK_DIR}/sshconfig" 192.1.1.1  amber_ctl _ANY_ _ANY_ _ANY_ _ANY_ _ANY_)
   gn-test-check-mock-args "${expected_args[@]}"
   }
 
@@ -238,7 +237,7 @@ TEST_fserve_with_ip_prop() {
 
   # shellcheck disable=SC1090
   source "${SSH_MOCK_PATH}/ssh.mock_state.2"
-  expected_args=("${SSH_MOCK_PATH}/ssh" -F "${FUCHSIA_WORK_DIR}/sshconfig" 192.1.1.2  amber_ctl _ANY_ _ANY_ _ANY_)
+  expected_args=("${SSH_MOCK_PATH}/ssh" -F "${FUCHSIA_WORK_DIR}/sshconfig" 192.1.1.2  amber_ctl _ANY_ _ANY_ _ANY_ _ANY_ _ANY_)
   gn-test-check-mock-args "${expected_args[@]}"
 }
 
@@ -258,7 +257,7 @@ TEST_fserve_with_name_prop() {
 
   # shellcheck disable=SC1090
   source "${SSH_MOCK_PATH}/ssh.mock_state.2"
-  expected_args=("${SSH_MOCK_PATH}/ssh" -F "${FUCHSIA_WORK_DIR}/sshconfig" "fe80::c0ff:eec0:ffee%coffee"  amber_ctl _ANY_ _ANY_ _ANY_)
+  expected_args=("${SSH_MOCK_PATH}/ssh" -F "${FUCHSIA_WORK_DIR}/sshconfig" "fe80::c0ff:eec0:ffee%coffee"  amber_ctl _ANY_ _ANY_ _ANY_ _ANY_ _ANY_)
   gn-test-check-mock-args "${expected_args[@]}"
 }
 
@@ -279,7 +278,7 @@ TEST_fserve_with_all_props() {
 
   # shellcheck disable=SC1090
   source "${SSH_MOCK_PATH}/ssh.mock_state.2"
-  expected_args=("${SSH_MOCK_PATH}/ssh" -F "${FUCHSIA_WORK_DIR}/sshconfig" 192.1.1.2  amber_ctl _ANY_ _ANY_ _ANY_)
+  expected_args=("${SSH_MOCK_PATH}/ssh" -F "${FUCHSIA_WORK_DIR}/sshconfig" 192.1.1.2  amber_ctl _ANY_ _ANY_ _ANY_ _ANY_ _ANY_)
   gn-test-check-mock-args "${expected_args[@]}"
 }
 
@@ -297,7 +296,7 @@ TEST_fserve_custom_sshconfig(){
 
   # shellcheck disable=SC1090
   source "${SSH_MOCK_PATH}/ssh.mock_state.2"
-  expected_args=("${SSH_MOCK_PATH}/ssh" -F "my_custom_config" 192.1.1.1  amber_ctl _ANY_ _ANY_ _ANY_)
+  expected_args=("${SSH_MOCK_PATH}/ssh" -F "my_custom_config" 192.1.1.1  amber_ctl _ANY_ _ANY_ _ANY_ _ANY_ _ANY_)
   gn-test-check-mock-args "${expected_args[@]}"
   }
 

@@ -24,12 +24,14 @@ if [[ "${IMAGE_NAME}" == "" ]]; then
   IMAGE_NAME="generic-x64"
 fi
 
+SOURCE_NAME="devhost"
+
 usage () {
   echo "Usage: $0"
   echo "  [--work-dir <directory to store image assets>]"
-  echo "    Defaults to ${FUCHSIA_IMAGE_WORK_DIR}"
+  echo "    Defaults to ${FUCHSIA_IMAGE_WORK_DIR}."
   echo "  [--bucket <fuchsia gsutil bucket>]"
-  echo "    Defaults to ${FUCHSIA_BUCKET}"
+  echo "    Defaults to ${FUCHSIA_BUCKET}."
   echo "  [--image <image name>]"
   echo "    Defaults to ${IMAGE_NAME}. Use --image list to list all available images."
   echo "  [--private-key <identity file>]"
@@ -45,10 +47,14 @@ usage () {
   echo "  [--sshconfig <sshconfig file>]"
   echo "    Use the specified sshconfig file instead of fssh's version."
   echo "  [--kill]"
-  echo "    Kills any existing package manager server"
+  echo "    Kills any existing package manager server."
   echo "  [--prepare]"
-  echo "    Downloads any dependencies but does not start the package server"
-  echo "  [-x] Enable debug."
+  echo "    Downloads any dependencies but does not start the package server."
+  echo "  [-x]"
+  echo "    Enable debug."
+  echo "  [--name <source name>]"
+  echo "    Name for the package server. Defaults to ${SOURCE_NAME}."
+  echo "    This name is used as the update channel identifier, as reported by fuchsia.update.channel.Provider."
 }
 
 PRIVATE_KEY_FILE=""
@@ -101,6 +107,10 @@ case $1 in
     ;;
     -x)
       set -x
+    ;;
+    --name)
+      shift
+      SOURCE_NAME="${1}"
     ;;
     *)
       # unknown option
@@ -273,7 +283,7 @@ echo "** Starting package server in the background**"
 "$(get-fuchsia-sdk-tools-dir)/pm" serve -repo "${FUCHSIA_IMAGE_WORK_DIR}/packages/amber-files" -l ":${FUCHSIA_SERVER_PORT}"&
 
 
-cmd_args=( amber_ctl add_src -f "http://${HOST_IP}:${FUCHSIA_SERVER_PORT}/config.json" )
+cmd_args=( amber_ctl add_src -f "http://${HOST_IP}:${FUCHSIA_SERVER_PORT}/config.json" -n "${SOURCE_NAME}")
 
 # Update the device to point to the server.
 # Because the URL to config.json contains an IPv6 address, the address needs
