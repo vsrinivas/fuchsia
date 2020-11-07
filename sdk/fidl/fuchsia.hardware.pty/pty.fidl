@@ -20,7 +20,6 @@ using zx;
 /// Instead the character is read from the read() input path.
 const uint32 FEATURE_RAW = 1;
 
-[ForDeprecatedCBindings]
 struct WindowSize {
     uint32 width;
     uint32 height;
@@ -38,7 +37,7 @@ const uint32 EVENT_MASK = 7;
 /// When an event is pending, this signal is asserted on the Controlling PTY.
 const uint32 SIGNAL_EVENT = 0x02000000; // DEVICE_SIGNAL_OOB
 
-[Discoverable, ForDeprecatedCBindings]
+[Discoverable]
 protocol Device {
     // Compose from fuchsia.io.File so we can support Read/Write and export
     // a "Tty" type node info
