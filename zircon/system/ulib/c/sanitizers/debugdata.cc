@@ -132,6 +132,7 @@ zx_handle_t sanitizer_debugdata_connect() {
   if (status != ZX_OK) {
     constexpr const char kErrorDirectoryOpen[] = "Failed to open service namespace";
     __sanitizer_log_write(kErrorDirectoryOpen, sizeof(kErrorDirectoryOpen) - 1);
+    _zx_handle_close(h1);
     return ZX_HANDLE_INVALID;
   }
 
