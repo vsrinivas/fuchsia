@@ -17,7 +17,6 @@ mod status;
 
 /// Main entry point for the `status` subcommand.
 #[ffx_plugin(
-    "target_status",
     ChannelControlProxy = "core/appmgr:out:fuchsia.update.channelcontrol.ChannelControl",
     BoardProxy = "core/appmgr:out:fuchsia.hwinfo.Board",
     DeviceProxy = "core/appmgr:out:fuchsia.hwinfo.Device",
@@ -50,6 +49,10 @@ async fn status_cmd_impl<W: Write>(
     target_status_args: args::TargetStatus,
     mut writer: W,
 ) -> Result<()> {
+    if target_status_args.version {
+        println!("ffx target status version 0.1");
+        return Ok(());
+    }
     // To add more status information, add a `gather_*_status(*) call to this
     // list, as well as the labels in the Ok() and vec![] just below.
     let status = match futures::try_join!(
@@ -270,7 +273,7 @@ mod tests {
             setup_fake_board_server(),
             setup_fake_device_server(),
             setup_fake_product_server(),
-            args::TargetStatus { desc: false, label: false, json: false },
+            args::TargetStatus::default(),
             &mut output,
         )
         .await
@@ -286,7 +289,7 @@ mod tests {
             setup_fake_board_server(),
             setup_fake_device_server(),
             setup_fake_product_server(),
-            args::TargetStatus { desc: false, label: false, json: true },
+            args::TargetStatus { json: true, ..Default::default() },
             &mut output,
         )
         .await

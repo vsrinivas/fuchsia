@@ -5,10 +5,22 @@
 use {argh::FromArgs, ffx_core::ffx_command};
 
 #[ffx_command()]
-#[derive(FromArgs, Debug, PartialEq)]
-#[argh(subcommand, name = "status", description = "Status of the target device.")]
+#[derive(Debug, Default, FromArgs, PartialEq)]
+#[argh(
+    subcommand,
+    name = "status",
+    description = "Display status information for the target device.",
+    note = "\
+    The default output is intended for a human reader. This output can be \
+    decorated with machine readable labels (--label) and descriptions of each \
+    field (--desc).\
+    \n\nThe 'label' fields in the machine readable output (--json) will remain \
+    stable across software updates and is not localized (compare to 'title' \
+    which may change or be localized). The 'value' field will be one of: null, \
+    bool, string, or a list of strings."
+)]
 pub struct TargetStatus {
-    /// display descriptions of entries.
+    /// display descriptions of entries (default for json).
     #[argh(switch)]
     pub desc: bool,
 
@@ -19,4 +31,8 @@ pub struct TargetStatus {
     /// generate machine readable output (JSON).
     #[argh(switch)]
     pub json: bool,
+
+    /// display version.
+    #[argh(switch)]
+    pub version: bool,
 }

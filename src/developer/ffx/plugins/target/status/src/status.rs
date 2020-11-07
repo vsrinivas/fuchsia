@@ -157,13 +157,7 @@ mod tests {
     fn test_output_list() {
         let input = vec![StatusEntry::new("Test", "the_test", "A test.")];
         let mut result = Vec::new();
-        output_list(
-            7,
-            &input,
-            &TargetStatus { desc: false, label: false, json: false },
-            &mut result,
-        )
-        .unwrap();
+        output_list(7, &input, &TargetStatus::default(), &mut result).unwrap();
         assert_eq!(result, b"       Test: \n");
     }
 
@@ -176,13 +170,7 @@ mod tests {
             vec![StatusEntry::new("Prop", "a_prop", "Some data.")],
         )];
         let mut result = Vec::new();
-        output_list(
-            0,
-            &input,
-            &TargetStatus { desc: false, label: false, json: false },
-            &mut result,
-        )
-        .unwrap();
+        output_list(0, &input, &TargetStatus::default(), &mut result).unwrap();
         assert_eq!(result, b"Test: \n    Prop: \n");
     }
 
@@ -195,12 +183,7 @@ mod tests {
             vec![StatusEntry::bool_value("Prop", "a_prop", "Some data.", &Some(false))],
         )];
         let mut result = Vec::new();
-        output_for_human(
-            &input,
-            &TargetStatus { desc: false, label: false, json: false },
-            &mut result,
-        )
-        .unwrap();
+        output_for_human(&input, &TargetStatus::default(), &mut result).unwrap();
         assert_eq!(result, b"Test: \n    Prop: false\n");
     }
 
@@ -213,12 +196,8 @@ mod tests {
             vec![StatusEntry::bool_value("Prop", "a_prop", "Some data.", &Some(false))],
         )];
         let mut result = Vec::new();
-        output_for_machine(
-            &input,
-            &TargetStatus { desc: false, label: false, json: true },
-            &mut result,
-        )
-        .unwrap();
+        output_for_machine(&input, &TargetStatus { json: true, ..Default::default() }, &mut result)
+            .unwrap();
         assert_eq!(
             result,
             b"[{\"title\":\"Test\",\"label\":\"the_test\",\"description\"\
