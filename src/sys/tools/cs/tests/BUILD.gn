@@ -15,6 +15,7 @@ rustc_test("v2_test_bin") {
     "//src/sys/component_manager/testing:test_utils_lib",
     "//src/sys/tools/cs:lib",
     "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:regex",
   ]
 
   sources = [ "v2_test.rs" ]
