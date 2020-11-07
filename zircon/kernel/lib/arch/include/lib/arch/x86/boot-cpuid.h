@@ -59,8 +59,9 @@ inline constexpr CpuidIo kBootCpuidInitializer = {
 // This template can be used as a parameter for template functions, e.g.
 // `arch::GetVendor(BootCpuidIo{})`.
 struct BootCpuidIo {
-  template <typename CpuidValue>
-  const CpuidIo* Get() const {
+  // The underlying instantiation is indexed by leaf and subleaf.
+  template <uint32_t Leaf, uint32_t Subleaf = 0>
+  const CpuidIo* GetLeaf() const {
     // The CpuidIo object for each instantiation goes into a special section
     // that the InitializeBootCpuid() function processes when called at
     // startup.  Each entry starts at compile time with the leaf and subleaf
@@ -72,9 +73,17 @@ struct BootCpuidIo {
     static_assert(alignof(CpuidIo) == alignof(uint32_t));
     static_assert(sizeof(CpuidIo) == sizeof(uint32_t[4]));
     static_assert(std::is_same_v<decltype(CpuidIo{}.values_), uint32_t[4]>);
-    [[gnu::section("BootCpuid")]] alignas(uint32_t) static CpuidIo gCpuidIo =
-        internal::kBootCpuidInitializer<CpuidValue>;
+    [[gnu::section("BootCpuid")]] alignas(uint32_t) static CpuidIo gCpuidIo = {
+        {[CpuidIo::kEax] = Leaf, [CpuidIo::kEcx] = Subleaf}};
     return &gCpuidIo;
+  }
+
+  // Most often just Get<Type> is used instead to reach a particular (sub)leaf.
+  // Multiple different CpuidValue types reach the same (sub)leaf, usually one
+  // type for each of the four registers.
+  template <typename CpuidValue>
+  const CpuidIo* Get() const {
+    return GetLeaf<CpuidValue::kLeaf, CpuidValue::kSubleaf>();
   }
 
   // Convenience accessor for the common case.
@@ -102,17 +111,17 @@ inline auto BootCpuid() {
 // to give them unmangled (extern "C") names that are usable from assembly.
 
 template <>
-inline const CpuidIo* BootCpuidIo::Get<CpuidMaximumLeaf>() const {
+inline const CpuidIo* BootCpuidIo::GetLeaf<CpuidMaximumLeaf::kLeaf>() const {
   return &internal::gBootCpuid0;
 }
 
 template <>
-inline const CpuidIo* BootCpuidIo::Get<CpuidFeatureFlagsC>() const {
+inline const CpuidIo* BootCpuidIo::GetLeaf<CpuidFeatureFlagsC::kLeaf>() const {
   return &internal::gBootCpuidFeature;
 }
 
 template <>
-inline const CpuidIo* BootCpuidIo::Get<CpuidExtendedFeatureFlagsB>() const {
+inline const CpuidIo* BootCpuidIo::GetLeaf<CpuidExtendedFeatureFlagsB::kLeaf>() const {
   return &internal::gBootCpuidExtf;
 }
 
