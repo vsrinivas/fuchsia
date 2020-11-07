@@ -97,8 +97,13 @@ impl OutputWorker {
         self.frame_size = num_channels as u64 * sample_size as u64;
 
         let frames_per_millisecond = frames_per_second as u64 / 1000;
-
         self.frames_per_notification = 50 * frames_per_millisecond;
+
+        fx_log_info!(
+            "AudioFacade::OutputWorker: configuring with {:?} fps, {:?} bpf",
+            frames_per_second,
+            self.frame_size
+        );
 
         Ok(())
     }
@@ -116,6 +121,11 @@ impl OutputWorker {
             num_ring_buffer_frames as u64 / self.frames_per_notification;
 
         va_output.set_notification_frequency(target_notifications_per_ring as u32)?;
+        fx_log_info!(
+            "AudioFacade::OutputWorker: created buffer with {:?} frames, {:?} notifications",
+            num_ring_buffer_frames,
+            target_notifications_per_ring
+        );
 
         self.work_space = num_ring_buffer_frames as u64 * self.frame_size;
 
@@ -135,6 +145,12 @@ impl OutputWorker {
     ) -> Result<(), Error> {
         if capturing && self.next_read != self.next_read_end {
             let vmo = if let Some(vmo) = &self.vmo { vmo } else { return Ok(()) };
+
+            fx_log_info!(
+                "AudioFacade::OutputWorker read byte {:?} to {:?}",
+                self.next_read,
+                self.next_read_end
+            );
 
             if (self.next_read_end as u64) < self.next_read {
                 // Wrap-around case, read through the end.
@@ -189,6 +205,7 @@ impl OutputWorker {
                             return Err(format_err!("Got None ExtractMsg Event, exiting worker"));
                         },
                         Some(ExtractMsg::Stop { mut out_sender }) => {
+                            fx_log_info!("AudioFacade::OutputWorker: Stop capture");
                             self.capturing = false;
                             let mut ret_data = vec![0u8; 0];
 
@@ -197,6 +214,7 @@ impl OutputWorker {
                             out_sender.try_send(ret_data)?;
                         }
                         Some(ExtractMsg::Start) => {
+                            fx_log_info!("AudioFacade::OutputWorker: Start capture");
                             self.extracted_data.clear();
                             self.capturing = true;
                         }
@@ -219,7 +237,7 @@ impl OutputWorker {
                         },
                         Some(OutputEvent::OnStart { start_time }) => {
                             if last_timestamp > zx::Time::from_nanos(0) {
-                                fx_log_info!("Extraction OnPositionNotify received before OnStart");
+                                fx_log_info!("AudioFacade::OutputWorker: Extraction OnPositionNotify received before OnStart");
                             }
                             last_timestamp = zx::Time::from_nanos(start_time);
                             last_event_time = zx::Time::get_monotonic();
@@ -227,7 +245,7 @@ impl OutputWorker {
                         Some(OutputEvent::OnStop { stop_time, ring_position }) => {
                             if last_timestamp == zx::Time::from_nanos(0) {
                                 fx_log_info!(
-                                    "Extraction OnPositionNotify timestamp cleared before OnStop");
+                                    "AudioFacade::OutputWorker: Extraction OnPositionNotify timestamp cleared before OnStop");
                             }
                             last_timestamp = zx::Time::from_nanos(0);
                             last_event_time = zx::Time::from_nanos(0);
@@ -235,45 +253,48 @@ impl OutputWorker {
                         Some(OutputEvent::OnPositionNotify { monotonic_time, ring_position }) => {
                             if last_timestamp == zx::Time::from_nanos(0) {
                                 fx_log_info!(
-                                    "Extraction OnStart not received before OnPositionNotify");
+                                    "AudioFacade::OutputWorker: Extraction OnStart not received before OnPositionNotify");
                             }
+
                             let monotonic_zx_time = zx::Time::from_nanos(monotonic_time);
-
-                            // Log if our timestamps had a gap of more than 100ms. This is highly
-                            // abnormal and indicates possible glitching while receiving playback
-                            // audio from the system and/or extracting it for analysis.
-                            let timestamp_interval = monotonic_zx_time - last_timestamp;
-
-                            if  timestamp_interval > zx::Duration::from_millis(100) {
-                                fx_log_info!(
-                "Extraction position timestamp jumped by more than 100ms ({:?}). Expect glitches.",
-                                    timestamp_interval.into_millis());
-                            }
-                            if  monotonic_zx_time < last_timestamp {
-                                fx_log_info!(
-                        "Extraction position timestamp moved backwards ({:?}). Expect glitches.",
-                                    timestamp_interval.into_millis());
-                            }
-                            last_timestamp = monotonic_zx_time;
-
-                            // Log if there was a gap in position notification arrivals of more
-                            // than 150ms. This is highly abnormal and indicates possible glitching
-                            // while receiving playback audio from the system and/or extracting it
-                            // for analysis.
                             let now = zx::Time::get_monotonic();
-                            let observed_interval = now - last_event_time;
 
-                            if  observed_interval > zx::Duration::from_millis(150) {
-                                fx_log_info!(
-                            "Extraction position not updated for 150ms ({:?}). Expect glitches.",
-                                    observed_interval.into_millis());
+                            // To minimize logspam, log glitches only when capturing.
+                            if (self.capturing) {
+                                // Log if our timestamps had a gap of more than 100ms. This is highly
+                                // abnormal and indicates possible glitching while receiving playback
+                                // audio from the system and/or extracting it for analysis.
+                                let timestamp_interval = monotonic_zx_time - last_timestamp;
+                                if  timestamp_interval > zx::Duration::from_millis(100) {
+                                    fx_log_info!(
+                                        "AudioFacade::OutputWorker: Extraction position timestamp jumped by more than 100ms ({:?}ms). Expect glitches.",
+                                        timestamp_interval.into_millis());
+                                }
+                                if  monotonic_zx_time < last_timestamp {
+                                    fx_log_info!(
+                                        "AudioFacade::OutputWorker: Extraction position timestamp moved backwards ({:?}ms). Expect glitches.",
+                                        timestamp_interval.into_millis());
+                                }
+
+                                // Log if there was a gap in position notification arrivals of more
+                                // than 150ms. This is highly abnormal and indicates possible glitching
+                                // while receiving playback audio from the system and/or extracting it
+                                // for analysis.
+                                let observed_interval = now - last_event_time;
+                                if  observed_interval > zx::Duration::from_millis(150) {
+                                    fx_log_info!(
+                                        "AudioFacade::OutputWorker: Extraction position not updated for 150ms ({:?}ms). Expect glitches.",
+                                        observed_interval.into_millis());
+                                }
                             }
+
+                            last_timestamp = monotonic_zx_time;
                             last_event_time = now;
 
                             self.on_position_notify(monotonic_time, ring_position, self.capturing)?;
                         },
                         Some(evt) => {
-                            fx_log_info!("Got unknown OutputEvent {:?}", evt);
+                            fx_log_info!("AudioFacade::OutputWorker: Got unknown OutputEvent {:?}", evt);
                         }
                     }
                 },
@@ -333,10 +354,10 @@ impl VirtualOutput {
             ASF_RANGE_FLAG_FPS_CONTINUOUS,
         )?;
 
-        // set buffer size to be 500ms-1000ms
+        // set buffer size to be at least 1s.
         let frames_1ms = self.frames_per_second / 1000;
-        let frames_low = 500 * frames_1ms;
-        let frames_high = 1000 * frames_1ms;
+        let frames_low = 1000 * frames_1ms;
+        let frames_high = 2000 * frames_1ms;
         let frames_modulo = 1 * frames_1ms;
         va_output.set_ring_buffer_restrictions(frames_low, frames_high, frames_modulo)?;
 
@@ -433,6 +454,7 @@ impl InputWorker {
         self.data_offset = 44;
         self.zeros_written = 0;
         self.inj_data.write(&data)?;
+        fx_log_info!("AudioFacade::InputWorker: Injecting {:?} bytes", self.inj_data.len());
         Ok(())
     }
 
@@ -449,7 +471,13 @@ impl InputWorker {
 
         let frames_per_millisecond = frames_per_second as u64 / 1000;
 
-        self.target_frames = 150 * frames_per_millisecond;
+        fx_log_info!(
+            "AudioFacade::InputWorker: configuring with {:?} fps, {:?} bpf",
+            frames_per_second,
+            self.frame_size
+        );
+
+        self.target_frames = 250 * frames_per_millisecond;
         self.low_frames = 100 * frames_per_millisecond;
         self.frames_per_notification = 50 * frames_per_millisecond;
         Ok(())
@@ -468,6 +496,11 @@ impl InputWorker {
             num_ring_buffer_frames as u64 / self.frames_per_notification;
 
         va_input.set_notification_frequency(target_notifications_per_ring as u32)?;
+        fx_log_info!(
+            "AudioFacade::InputWorker: created buffer with {:?} frames, {:?} notifications",
+            num_ring_buffer_frames,
+            target_notifications_per_ring
+        );
 
         self.work_space = num_ring_buffer_frames as u64 * self.frame_size;
 
@@ -502,6 +535,12 @@ impl InputWorker {
             (ring_position as u64 + self.target_frames * self.frame_size) % self.work_space;
 
         if active {
+            fx_log_info!(
+                "AudioFacade::InputWorker: write byte {:?} to {:?}",
+                self.next_write,
+                write_end
+            );
+
             // Calculate how many bytes we're writing, and figure out if we've wrapped around, and
             // if so, calculate the split.
             let (split_point, write_size) = if write_end < self.next_write {
@@ -603,65 +642,65 @@ impl InputWorker {
                         },
                         Some(InputEvent::OnStart { start_time }) => {
                             if last_timestamp > zx::Time::from_nanos(0) {
-                                fx_log_info!("Injection OnPositionNotify received before OnStart");
+                                fx_log_info!("AudioFacade::InputWorker: Injection OnPositionNotify received before OnStart");
                             }
                             last_timestamp = zx::Time::from_nanos(start_time);
                             last_event_time = zx::Time::get_monotonic();
                         },
                         Some(InputEvent::OnStop { stop_time, ring_position }) => {
                             if last_timestamp == zx::Time::from_nanos(0) {
-                                fx_log_info!(
-                                    "Injection OnPositionNotify timestamp cleared before OnStop");
+                                fx_log_info!("AudioFacade::InputWorker: Injection OnPositionNotify timestamp cleared before OnStop");
                             }
                             last_timestamp = zx::Time::from_nanos(0);
                             last_event_time = zx::Time::from_nanos(0);
                         },
                         Some(InputEvent::OnPositionNotify { monotonic_time, ring_position }) => {
                             if last_timestamp == zx::Time::from_nanos(0) {
-                                fx_log_info!(
-                                    "Injection OnStart not received before OnPositionNotify");
+                                fx_log_info!("AudioFacade::InputWorker: Injection OnStart not received before OnPositionNotify");
                             }
+
                             let monotonic_zx_time = zx::Time::from_nanos(monotonic_time);
-
-                            // Log if our timestamps had a gap of more than 100ms. This is highly
-                            // abnormal and indicates possible glitching while receiving audio to
-                            // be injected and/or providing it to the system.
-                            let timestamp_interval = monotonic_zx_time - last_timestamp;
-
-                            if  timestamp_interval > zx::Duration::from_millis(100) {
-                                fx_log_info!(
-                "Injection position timestamp jumped by more than 100ms ({:?}). Expect glitches.",
-                                    timestamp_interval.into_millis());
-                            }
-                            if  monotonic_zx_time < last_timestamp {
-                                fx_log_info!(
-                            "Injection position timestamp moved backwards ({:?}). Expect glitches.",
-                                    timestamp_interval.into_millis());
-                            }
-                            last_timestamp = monotonic_zx_time;
-
-                            // Log if there was a gap in position notification arrivals of more
-                            // than 150ms. This is highly abnormal and indicates possible glitching
-                            // while receiving audio to be injected and/or providing it to the
-                            // system.
                             let now = zx::Time::get_monotonic();
-                            let observed_interval = now - last_event_time;
+                            let mut active = active.lock().await;
 
-                            if  observed_interval > zx::Duration::from_millis(150) {
-                                fx_log_info!(
-                                "Injection position not updated for 150ms ({:?}). Expect glitches.",
-                                    observed_interval.into_millis());
+                            // To minimize logspam, log glitches only when writing audio.
+                            if (*active) {
+                                // Log if our timestamps had a gap of more than 100ms. This is highly
+                                // abnormal and indicates possible glitching while receiving audio to
+                                // be injected and/or providing it to the system.
+                                let timestamp_interval = monotonic_zx_time - last_timestamp;
+
+                                if  timestamp_interval > zx::Duration::from_millis(100) {
+                                    fx_log_info!("AudioFacade::InputWorker: Injection position timestamp jumped by more than 100ms ({:?}ms). Expect glitches.",
+                                        timestamp_interval.into_millis());
+                                }
+                                if  monotonic_zx_time < last_timestamp {
+                                    fx_log_info!("AudioFacade::InputWorker: Injection position timestamp moved backwards ({:?}ms). Expect glitches.",
+                                        timestamp_interval.into_millis());
+                                }
+
+                                // Log if there was a gap in position notification arrivals of more
+                                // than 150ms. This is highly abnormal and indicates possible glitching
+                                // while receiving audio to be injected and/or providing it to the
+                                // system.
+                                let observed_interval = now - last_event_time;
+
+                                if  observed_interval > zx::Duration::from_millis(150) {
+                                    fx_log_info!("AudioFacade::InputWorker: Injection position not updated for 150ms ({:?}ms). Expect glitches.",
+                                        observed_interval.into_millis());
+                                }
                             }
+
+                            last_timestamp = monotonic_zx_time;
                             last_event_time = now;
 
-                            let mut active = active.lock().await;
                             self.on_position_notify(monotonic_time, ring_position, *active)?;
                             if self.zeros_written >= self.work_space as usize {
                                 *(active) = false;
                             }
                         },
                         Some(evt) => {
-                            fx_log_info!("Got unknown InputEvent {:?}", evt);
+                            fx_log_info!("AudioFacade::InputWorker: Got unknown InputEvent {:?}", evt);
                         }
                     }
                 },
@@ -714,10 +753,10 @@ impl VirtualInput {
             ASF_RANGE_FLAG_FPS_CONTINUOUS,
         )?;
 
-        // set buffer size to be 500ms-1000ms
+        // set buffer size to be at least 1s.
         let frames_1ms = self.frames_per_second / 1000;
-        let frames_low = 500 * frames_1ms;
-        let frames_high = 1000 * frames_1ms;
+        let frames_low = 1000 * frames_1ms;
+        let frames_high = 2000 * frames_1ms;
         let frames_modulo = 1 * frames_1ms;
         va_input.set_ring_buffer_restrictions(frames_low, frames_high, frames_modulo)?;
 

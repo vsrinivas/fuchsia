@@ -6,10 +6,13 @@ import 'dart:convert';
 import 'dart:io' show File;
 import 'dart:typed_data' show Uint8List;
 
+import 'package:logging/logging.dart';
 import 'package:pedantic/pedantic.dart';
 
 import 'dump.dart';
 import 'sl4f_client.dart';
+
+final _log = Logger('Webdriver');
 
 /// Injects and captures audio using the Virtual Audio Device interface with
 /// SL4F's audio facade.
@@ -30,6 +33,7 @@ class Audio {
   /// Right now the audio file must be a 2-channel, signed 16bit, 16kHz WAVE
   /// file. See the VirtualAudio constructor in SL4F's audio facade.
   Future<void> putInputAudio(int index, File file) async {
+    _log.info('putInputAudio($index)');
     final audioBytes = await file.readAsBytes();
     await _sl4f.request('audio_facade.PutInputAudio', {
       'index': index,
@@ -38,17 +42,24 @@ class Audio {
   }
 
   /// Start injection of audio file stored at [index].
-  Future<void> startInputInjection(int index) =>
-      _sl4f.request('audio_facade.StartInputInjection', {'index': index});
+  Future<void> startInputInjection(int index) {
+    _log.info('startInputInjection($index)');
+    return _sl4f.request('audio_facade.StartInputInjection', {'index': index});
+  }
 
   /// Starts capturing the audio output.
-  Future<void> startOutputSave() =>
-      _sl4f.request('audio_facade.StartOutputSave');
+  Future<void> startOutputSave() {
+    _log.info('startOutputSave');
+    return _sl4f.request('audio_facade.StartOutputSave');
+  }
 
   /// Stops capturing the audio output.
   ///
   /// Use [getOutputAudio] to get the latest audio capture.
-  Future<void> stopOutputSave() => _sl4f.request('audio_facade.StopOutputSave');
+  Future<void> stopOutputSave() {
+    _log.info('stopOutputSave');
+    return _sl4f.request('audio_facade.StopOutputSave');
+  }
 
   /// Retrieves the latest audio capture.
   ///
@@ -75,6 +86,7 @@ class Audio {
       unawaited(_dump.writeAsBytes(dumpName, 'wav', bytes));
     }
 
+    _log.info('getOutputAudio ${bytes.length} bytes, silence = $silence');
     return AudioTrack()
       ..audioData = bytes
       ..isSilence = silence;
