@@ -13,6 +13,7 @@
 
 #include <optional>
 #include <type_traits>
+#include <utility>
 
 namespace arch {
 
@@ -160,21 +161,21 @@ struct LastBranchRecord {
 // ```
 class LbrStack {
  public:
-  template <typename CpuidLeaf0Io, typename CpuidLeaf1Io>
-  LbrStack(CpuidLeaf0Io io0, CpuidLeaf1Io io1) {
+  template <typename CpuidIoProvider>
+  explicit LbrStack(CpuidIoProvider&& io) {
     // While it would have been possible to create a chain of deferred
     // constructors to initialize the members as const in an initializer list,
     // that would have been won at the minor expense of some readability.
-    const Microarchitecture microarch = GetMicroarchitecture(io0, io1);
-    // Gives whether the IA32_PERF_CAPABILITIES MSR is accessible, from which
-    // we determine the format of the LBRs.
-    const bool supports_pdcm = CpuidFeatureFlagsC::Get().ReadFrom(&io1).pdcm();
-    Initialize(microarch, supports_pdcm);
+    bool supports_pdcm = io.template Read<CpuidFeatureFlagsC>().pdcm();
+    Initialize(GetMicroarchitecture(std::forward<CpuidIoProvider>(io)), supports_pdcm);
   }
 
   // TODO(joshuaseaton): define a default constructor in terms of the global
-  // CpuidIo objects for leaves 0 and 1 when available.
-  // LbrStack() : LbrStack(gCpuidIo<0>, gCpuidIo<1>) {}
+  // CpuidIo objects when available.
+  // LbrStack() : LbrStack(arch::BootCpuidIo{}) {}
+
+  LbrStack(const LbrStack&) = default;
+  LbrStack(LbrStack&&) = default;
 
   // Gives the size (or depth) of the LBR stack, which is the maximum number
   // of records that can be stored.
@@ -241,6 +242,9 @@ class LbrStack {
   }
 
  private:
+  // Initializes the stack abstraction. `supports_pdcm` gives whether the
+  // IA32_PERF_CAPABILITIES MSR is accessible, which is how one determines the
+  // format of the LBRs.
   void Initialize(Microarchitecture microarch, bool supports_pdcm);
 
   // A reasonable set of default settings (e.g., excluding returns and other

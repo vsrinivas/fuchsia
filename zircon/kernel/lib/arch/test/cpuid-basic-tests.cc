@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/arch/testing/x86/fake-cpuid.h>
 #include <lib/arch/x86/cpuid.h>
 
-#include <hwreg/mock.h>
 #include <zxtest/zxtest.h>
 
 namespace {
@@ -61,41 +61,31 @@ TEST(CpuidTests, Model) {
 TEST(CpuidTests, GetVendor) {
   // Intel.
   {
-    hwreg::Mock mock;
-    auto& cpuid0Io = *mock.io();
-
-    mock.ExpectRead(uint32_t{0x756e'6547}, arch::CpuidIo::kEbx)
-        .ExpectRead(uint32_t{0x4965'6e69}, arch::CpuidIo::kEdx)
-        .ExpectRead(uint32_t{0x6c65'746e}, arch::CpuidIo::kEcx);
-    auto vendor = arch::GetVendor(cpuid0Io);
+    arch::testing::FakeCpuidIo cpuid;
+    cpuid.Populate(0x0, 0x0, arch::CpuidIo::kEbx, 0x756e'6547)
+        .Populate(0x0, 0x0, arch::CpuidIo::kEdx, 0x4965'6e69)
+        .Populate(0x0, 0x0, arch::CpuidIo::kEcx, 0x6c65'746e);
+    auto vendor = arch::GetVendor(cpuid);
     EXPECT_EQ(arch::Vendor::kIntel, vendor);
-    ASSERT_NO_FATAL_FAILURES(mock.VerifyAndClear());
   }
-
   // AMD.
   {
-    hwreg::Mock mock;
-    auto& cpuid0Io = *mock.io();
-
-    mock.ExpectRead(uint32_t{0x6874'7541}, arch::CpuidIo::kEbx)
-        .ExpectRead(uint32_t{0x6974'6e65}, arch::CpuidIo::kEdx)
-        .ExpectRead(uint32_t{0x444d'4163}, arch::CpuidIo::kEcx);
-    auto vendor = arch::GetVendor(cpuid0Io);
+    arch::testing::FakeCpuidIo cpuid;
+    cpuid.Populate(0x0, 0x0, arch::CpuidIo::kEbx, 0x6874'7541)
+        .Populate(0x0, 0x0, arch::CpuidIo::kEdx, 0x6974'6e65)
+        .Populate(0x0, 0x0, arch::CpuidIo::kEcx, 0x444d'4163);
+    auto vendor = arch::GetVendor(cpuid);
     EXPECT_EQ(arch::Vendor::kAmd, vendor);
-    ASSERT_NO_FATAL_FAILURES(mock.VerifyAndClear());
   }
 
   // Unknown.
   {
-    hwreg::Mock mock;
-    auto& cpuid0Io = *mock.io();
-
-    mock.ExpectRead(uint32_t{0x1234'4321}, arch::CpuidIo::kEbx)
-        .ExpectRead(uint32_t{0x5678'8765}, arch::CpuidIo::kEdx)
-        .ExpectRead(uint32_t{0xabcd'dcba}, arch::CpuidIo::kEcx);
-    auto vendor = arch::GetVendor(cpuid0Io);
+    arch::testing::FakeCpuidIo cpuid;
+    cpuid.Populate(0x0, 0x0, arch::CpuidIo::kEbx, 0x1234'4321)
+        .Populate(0x0, 0x0, arch::CpuidIo::kEdx, 0x5678'8765)
+        .Populate(0x0, 0x0, arch::CpuidIo::kEcx, 0xabcd'dcba);
+    auto vendor = arch::GetVendor(cpuid);
     EXPECT_EQ(arch::Vendor::kUnknown, vendor);
-    ASSERT_NO_FATAL_FAILURES(mock.VerifyAndClear());
   }
 }
 
@@ -152,73 +142,47 @@ TEST(CpuidTests, GetMicroarchitectureFromVersion) {
 TEST(CpuidTests, GetMicroarchitecture) {
   // Intel Coffee Lake S.
   {
-    hwreg::Mock cpuid0Mock, cpuid1Mock;
-    auto& cpuid0Io = *cpuid0Mock.io();
-    auto& cpuid1Io = *cpuid1Mock.io();
+    arch::testing::FakeCpuidIo cpuid;
+    cpuid.Populate(0x0, 0x0, arch::CpuidIo::kEbx, 0x756e'6547)
+        .Populate(0x0, 0x0, arch::CpuidIo::kEdx, 0x4965'6e69)
+        .Populate(0x0, 0x0, arch::CpuidIo::kEcx, 0x6c65'746e)
+        .Populate(0x1, 0x0, arch::CpuidIo::kEax, 0x000906e0);
 
-    cpuid0Mock.ExpectRead(uint32_t{0x756e'6547}, arch::CpuidIo::kEbx)
-        .ExpectRead(uint32_t{0x4965'6e69}, arch::CpuidIo::kEdx)
-        .ExpectRead(uint32_t{0x6c65'746e}, arch::CpuidIo::kEcx);
-    cpuid1Mock.ExpectRead(uint32_t{0x000906e0}, arch::CpuidIo::kEax);
-
-    EXPECT_EQ(arch::Microarchitecture::kIntelSkylake,
-              arch::GetMicroarchitecture(cpuid0Io, cpuid1Io));
-
-    ASSERT_NO_FATAL_FAILURES(cpuid0Mock.VerifyAndClear());
-    ASSERT_NO_FATAL_FAILURES(cpuid1Mock.VerifyAndClear());
+    EXPECT_EQ(arch::Microarchitecture::kIntelSkylake, arch::GetMicroarchitecture(cpuid));
   }
 
-  // AMD Branded Kestrel.
+  // AMD Banded Kestrel.
   {
-    hwreg::Mock cpuid0Mock, cpuid1Mock;
-    auto& cpuid0Io = *cpuid0Mock.io();
-    auto& cpuid1Io = *cpuid1Mock.io();
+    arch::testing::FakeCpuidIo cpuid;
+    cpuid.Populate(0x0, 0x0, arch::CpuidIo::kEbx, 0x6874'7541)
+        .Populate(0x0, 0x0, arch::CpuidIo::kEdx, 0x6974'6e65)
+        .Populate(0x0, 0x0, arch::CpuidIo::kEcx, 0x444d'4163)
+        .Populate(0x1, 0x0, arch::CpuidIo::kEax, 0x00810f80);
 
-    cpuid0Mock.ExpectRead(uint32_t{0x6874'7541}, arch::CpuidIo::kEbx)
-        .ExpectRead(uint32_t{0x6974'6e65}, arch::CpuidIo::kEdx)
-        .ExpectRead(uint32_t{0x444d'4163}, arch::CpuidIo::kEcx);
-    cpuid1Mock.ExpectRead(uint32_t{0x00810f80}, arch::CpuidIo::kEax);
-
-    EXPECT_EQ(arch::Microarchitecture::kAmdFamily0x17,
-              arch::GetMicroarchitecture(cpuid0Io, cpuid1Io));
-
-    ASSERT_NO_FATAL_FAILURES(cpuid0Mock.VerifyAndClear());
-    ASSERT_NO_FATAL_FAILURES(cpuid1Mock.VerifyAndClear());
+    EXPECT_EQ(arch::Microarchitecture::kAmdFamily0x17, arch::GetMicroarchitecture(cpuid));
   }
 
   // Unknown vendor.
   {
-    hwreg::Mock cpuid0Mock, cpuid1Mock;
-    auto& cpuid0Io = *cpuid0Mock.io();
-    auto& cpuid1Io = *cpuid1Mock.io();
+    arch::testing::FakeCpuidIo cpuid;
+    cpuid.Populate(0x0, 0x0, arch::CpuidIo::kEbx, 0x1234'4321)
+        .Populate(0x0, 0x0, arch::CpuidIo::kEdx, 0x5678'8765)
+        .Populate(0x0, 0x0, arch::CpuidIo::kEcx, 0xabcd'dcba)
+        .Populate(0x1, 0x0, arch::CpuidIo::kEax, 0x11111111);
 
-    cpuid0Mock.ExpectRead(uint32_t{0x1234'4321}, arch::CpuidIo::kEbx)
-        .ExpectRead(uint32_t{0x5678'8765}, arch::CpuidIo::kEdx)
-        .ExpectRead(uint32_t{0xabcd'dcba}, arch::CpuidIo::kEcx);
-    cpuid1Mock.ExpectRead(uint32_t{0x11111111}, arch::CpuidIo::kEax);
-
-    EXPECT_EQ(arch::Microarchitecture::kUnknown, arch::GetMicroarchitecture(cpuid0Io, cpuid1Io));
-
-    ASSERT_NO_FATAL_FAILURES(cpuid0Mock.VerifyAndClear());
-    ASSERT_NO_FATAL_FAILURES(cpuid1Mock.VerifyAndClear());
+    EXPECT_EQ(arch::Microarchitecture::kUnknown, arch::GetMicroarchitecture(cpuid));
   }
 
   // Known vendor, but unknown version.
   {
-    hwreg::Mock cpuid0Mock, cpuid1Mock;
-    auto& cpuid0Io = *cpuid0Mock.io();
-    auto& cpuid1Io = *cpuid1Mock.io();
-
+    arch::testing::FakeCpuidIo cpuid;
     // Intel.
-    cpuid0Mock.ExpectRead(uint32_t{0x756e'6547}, arch::CpuidIo::kEbx)
-        .ExpectRead(uint32_t{0x4965'6e69}, arch::CpuidIo::kEdx)
-        .ExpectRead(uint32_t{0x6c65'746e}, arch::CpuidIo::kEcx);
-    cpuid1Mock.ExpectRead(uint32_t{0x11111111}, arch::CpuidIo::kEax);
+    cpuid.Populate(0x0, 0x0, arch::CpuidIo::kEbx, 0x756e'6547)
+        .Populate(0x0, 0x0, arch::CpuidIo::kEdx, 0x4965'6e69)
+        .Populate(0x0, 0x0, arch::CpuidIo::kEcx, 0x6c65'746e)
+        .Populate(0x1, 0x0, arch::CpuidIo::kEax, 0x11111111);
 
-    EXPECT_EQ(arch::Microarchitecture::kUnknown, arch::GetMicroarchitecture(cpuid0Io, cpuid1Io));
-
-    ASSERT_NO_FATAL_FAILURES(cpuid0Mock.VerifyAndClear());
-    ASSERT_NO_FATAL_FAILURES(cpuid1Mock.VerifyAndClear());
+    EXPECT_EQ(arch::Microarchitecture::kUnknown, arch::GetMicroarchitecture(cpuid));
   }
 }
 

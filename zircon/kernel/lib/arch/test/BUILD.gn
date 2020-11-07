@@ -15,10 +15,12 @@ if (is_host) {
   test("arch-tests") {
     sources = [
       "cpuid-basic-tests.cc",
+      "fake-cpuid-tests.cc",
       "lbr-tests.cc",
     ]
     deps = [
       "//zircon/kernel/lib/arch",
+      "//zircon/kernel/lib/arch/testing",
       "//zircon/public/lib/zxtest",
       "//zircon/system/ulib/hwreg:hwreg-mock",
     ]

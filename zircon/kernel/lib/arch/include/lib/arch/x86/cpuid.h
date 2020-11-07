@@ -9,6 +9,7 @@
 
 #include <string_view>
 #include <type_traits>
+#include <utility>
 
 #include <hwreg/bitfields.h>
 
@@ -127,16 +128,16 @@ struct CpuidVendorB : public CpuidValueBase<CpuidVendorB, 0x0, 0x0, CpuidIo::kEb
 struct CpuidVendorC : public CpuidValueBase<CpuidVendorC, 0x0, 0x0, CpuidIo::kEcx> {};
 struct CpuidVendorD : public CpuidValueBase<CpuidVendorD, 0x0, 0x0, CpuidIo::kEdx> {};
 
-template <typename Leaf0CpuidIoProvider>
-Vendor GetVendor(Leaf0CpuidIoProvider io) {
+template <typename CpuidIoProvider>
+Vendor GetVendor(CpuidIoProvider&& io) {
   using namespace std::string_view_literals;
 
-  uint32_t ids[] = {
-      CpuidVendorB::Get().ReadFrom(&io).reg_value(),
-      CpuidVendorD::Get().ReadFrom(&io).reg_value(),
-      CpuidVendorC::Get().ReadFrom(&io).reg_value(),
+  const uint32_t ids[] = {
+      io.template Read<CpuidVendorB>().reg_value(),
+      io.template Read<CpuidVendorD>().reg_value(),
+      io.template Read<CpuidVendorC>().reg_value(),
   };
-  std::string_view name{reinterpret_cast<char*>(ids), sizeof(ids)};
+  std::string_view name{reinterpret_cast<const char*>(ids), sizeof(ids)};
   if (name == "GenuineIntel"sv) {
     return Vendor::kIntel;
   } else if (name == "AuthenticAMD"sv) {
@@ -180,10 +181,11 @@ struct CpuidVersionInfo : public CpuidValueBase<CpuidVersionInfo, 0x1, 0x0, Cpui
   Microarchitecture microarchitecture(Vendor vendor) const;
 };
 
-template <typename Leaf0CpuidIoProvider, typename Leaf1CpuidIoProvider>
-Microarchitecture GetMicroarchitecture(Leaf0CpuidIoProvider io0, Leaf1CpuidIoProvider io1) {
-  auto vendor = GetVendor(io0);
-  return CpuidVersionInfo::Get().ReadFrom(&io1).microarchitecture(vendor);
+template <typename CpuidIoProvider>
+Microarchitecture GetMicroarchitecture(CpuidIoProvider&& io) {
+  auto vendor = GetVendor(io);
+  return std::forward<CpuidIoProvider>(io).template Read<CpuidVersionInfo>().microarchitecture(
+      vendor);
 }
 
 // [intel/vol2]: Table 3-10.  Feature Information Returned in the ECX Register.

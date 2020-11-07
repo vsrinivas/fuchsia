@@ -253,6 +253,12 @@ the identifiers are expected to be one of the following:
 
 ## Testing
 
+[`lib/arch/testing`](testing) provides a library of testing utilities subject
+to all of the above constraints. When tests that run in kernel or `phys`
+environments are not necessary, it is usually much easier to test related code
+using userland `zxtest` or `gtest` tests that don't need to meet all the
+constraints of the code under test itself.
+
 **TODO(mcgrathr)** _Describe testing methodology._
  * host/user if possible: zxtest
  * kernel/lib/unittest if possible

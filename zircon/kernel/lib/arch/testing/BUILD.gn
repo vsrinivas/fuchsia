@@ -1,0 +1,25 @@
+# Copyright 2020 The Fuchsia Authors
+#
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT
+
+source_set("testing") {
+  testonly = true
+
+  sources = [ "fake-cpuid.cc" ]
+
+  public_deps = [  # TODO: foo:headers doesn't work?
+    # <lib/arch/x86/testing/fake-cpuid.h> includes <lib/arch/x86/cpuid.h>
+    "//zircon/kernel/lib/arch",
+
+    # <lib/arch/x86/testing/fake-cpuid.h> includes <fbl/intrusive_hash_table.h>
+    "//zircon/system/ulib/fbl",
+  ]
+
+  public_configs = [ ":include" ]
+}
+
+config("include") {
+  include_dirs = [ "include" ]
+}

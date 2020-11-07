@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/arch/testing/x86/fake-cpuid.h>
 #include <lib/arch/x86/lbr.h>
 
 #include <vector>
@@ -479,23 +480,19 @@ struct GoldmontPlusCase {
 
 template <typename TestCase>
 void TestEnabling() {
-  hwreg::Mock cpuid0Mock, cpuid1Mock, msrMock;
-  auto& cpuid0Io = *cpuid0Mock.io();
-  auto& cpuid1Io = *cpuid1Mock.io();
+  hwreg::Mock msrMock;
   auto& msrIo = *msrMock.io();
 
+  arch::testing::FakeCpuidIo cpuid;
   // Intel as the vendor.
-  cpuid0Mock.ExpectRead(uint32_t{0x756e'6547}, arch::CpuidIo::kEbx)
-      .ExpectRead(uint32_t{0x4965'6e69}, arch::CpuidIo::kEdx)
-      .ExpectRead(uint32_t{0x6c65'746e}, arch::CpuidIo::kEcx);
+  cpuid.Populate(0x0, 0x0, arch::CpuidIo::kEbx, 0x756e'6547)
+      .Populate(0x0, 0x0, arch::CpuidIo::kEdx, 0x4965'6e69)
+      .Populate(0x0, 0x0, arch::CpuidIo::kEcx, 0x6c65'746e)
+      .Populate(0x1, 0x0, arch::CpuidIo::kEax, TestCase::kCpuidVersionValue)
+      // Has the PDCM feature flag.
+      .Populate(0x1, 0x0, arch::CpuidIo::kEcx, uint32_t{1} << 15);
 
-  cpuid1Mock.ExpectRead(TestCase::kCpuidVersionValue, arch::CpuidIo::kEax);
-  // Has the PDCM feature flag.
-  cpuid1Mock.ExpectRead(uint32_t{1} << 15, arch::CpuidIo::kEcx);
-
-  arch::LbrStack stack(cpuid0Io, cpuid1Io);
-  ASSERT_NO_FATAL_FAILURES(cpuid0Mock.VerifyAndClear());
-  ASSERT_NO_FATAL_FAILURES(cpuid1Mock.VerifyAndClear());
+  arch::LbrStack stack(cpuid);
 
   ASSERT_TRUE(stack.is_supported());
 
@@ -539,23 +536,19 @@ void TestEnabling() {
 // (interpreted modulo the stack size).
 template <typename TestCase>
 void TestIteration(uint32_t top_of_stack) {
-  hwreg::Mock cpuid0Mock, cpuid1Mock, msrMock;
-  auto& cpuid0Io = *cpuid0Mock.io();
-  auto& cpuid1Io = *cpuid1Mock.io();
+  hwreg::Mock msrMock;
   auto& msrIo = *msrMock.io();
 
+  arch::testing::FakeCpuidIo cpuid;
   // Intel as the vendor.
-  cpuid0Mock.ExpectRead(uint32_t{0x756e'6547}, arch::CpuidIo::kEbx)
-      .ExpectRead(uint32_t{0x4965'6e69}, arch::CpuidIo::kEdx)
-      .ExpectRead(uint32_t{0x6c65'746e}, arch::CpuidIo::kEcx);
+  cpuid.Populate(0x0, 0x0, arch::CpuidIo::kEbx, 0x756e'6547)
+      .Populate(0x0, 0x0, arch::CpuidIo::kEdx, 0x4965'6e69)
+      .Populate(0x0, 0x0, arch::CpuidIo::kEcx, 0x6c65'746e)
+      .Populate(0x1, 0x0, arch::CpuidIo::kEax, TestCase::kCpuidVersionValue)
+      // Has the PDCM feature flag.
+      .Populate(0x1, 0x0, arch::CpuidIo::kEcx, uint32_t{1} << 15);
 
-  cpuid1Mock.ExpectRead(TestCase::kCpuidVersionValue, arch::CpuidIo::kEax);
-  // Has the PDCM feature flag.
-  cpuid1Mock.ExpectRead(uint32_t{1} << 15, arch::CpuidIo::kEcx);
-
-  arch::LbrStack stack(cpuid0Io, cpuid1Io);
-  ASSERT_NO_FATAL_FAILURES(cpuid0Mock.VerifyAndClear());
-  ASSERT_NO_FATAL_FAILURES(cpuid1Mock.VerifyAndClear());
+  arch::LbrStack stack(cpuid);
 
   ASSERT_TRUE(stack.is_supported());
   EXPECT_EQ(TestCase::kExpectedStackSize, stack.size());
@@ -665,20 +658,18 @@ TEST_ITERATION(Goldmont)
 TEST_ITERATION(GoldmontPlus)
 
 TEST(LbrStackTests, UnknownSystem) {
-  hwreg::Mock cpuid0Mock, cpuid1Mock, msrMock;
-  auto& cpuid0Io = *cpuid0Mock.io();
-  auto& cpuid1Io = *cpuid1Mock.io();
+  hwreg::Mock msrMock;
   auto& msrIo = *msrMock.io();
 
-  cpuid0Mock.ExpectRead(uint32_t{0x1234'4321}, arch::CpuidIo::kEbx)
-      .ExpectRead(uint32_t{0x5678'8765}, arch::CpuidIo::kEdx)
-      .ExpectRead(uint32_t{0xabcd'dcba}, arch::CpuidIo::kEcx);
-  cpuid1Mock.ExpectRead(uint32_t{0x1111'1111}, arch::CpuidIo::kEax);
-  cpuid1Mock.ExpectRead(uint32_t{1} << 15, arch::CpuidIo::kEcx);  // PDCM
+  arch::testing::FakeCpuidIo cpuid;
+  cpuid.Populate(0x0, 0x0, arch::CpuidIo::kEbx, 0x1234'4321)
+      .Populate(0x0, 0x0, arch::CpuidIo::kEdx, 0x5678'8765)
+      .Populate(0x0, 0x0, arch::CpuidIo::kEcx, 0xabcd'dcba)
+      .Populate(0x1, 0x0, arch::CpuidIo::kEax, 0x11111111)
+      // Has the PDCM feature flag.
+      .Populate(0x1, 0x0, arch::CpuidIo::kEcx, uint32_t{1} << 15);
 
-  arch::LbrStack stack(cpuid0Io, cpuid1Io);
-  ASSERT_NO_FATAL_FAILURES(cpuid0Mock.VerifyAndClear());
-  ASSERT_NO_FATAL_FAILURES(cpuid1Mock.VerifyAndClear());
+  arch::LbrStack stack(cpuid);
 
   ASSERT_FALSE(stack.is_supported());
   EXPECT_EQ(0, stack.size());
@@ -692,23 +683,19 @@ TEST(LbrStackTests, UnknownSystem) {
 }
 
 TEST(LbrStackTests, PdcmUnsupported) {
-  hwreg::Mock cpuid0Mock, cpuid1Mock, msrMock;
-  auto& cpuid0Io = *cpuid0Mock.io();
-  auto& cpuid1Io = *cpuid1Mock.io();
+  hwreg::Mock msrMock;
   auto& msrIo = *msrMock.io();
 
   // A Haswell S, but with PDCM no longer a feature... from, say, a microcode
   // update?
-  cpuid0Mock.ExpectRead(uint32_t{0x756e'6547}, arch::CpuidIo::kEbx)
-      .ExpectRead(uint32_t{0x4965'6e69}, arch::CpuidIo::kEdx)
-      .ExpectRead(uint32_t{0x6c65'746e}, arch::CpuidIo::kEcx);
-  cpuid1Mock.ExpectRead(uint32_t{0x000306d0}, arch::CpuidIo::kEax);
+  arch::testing::FakeCpuidIo cpuid;
+  cpuid.Populate(0x0, 0x0, arch::CpuidIo::kEbx, 0x756e'6547)
+      .Populate(0x0, 0x0, arch::CpuidIo::kEdx, 0x4965'6e69)
+      .Populate(0x0, 0x0, arch::CpuidIo::kEcx, 0x6c65'746e)
+      .Populate(0x1, 0x0, arch::CpuidIo::kEax, 0x000306d0)
+      .Populate(0x1, 0x0, arch::CpuidIo::kEcx, 0);
 
-  cpuid1Mock.ExpectRead(uint32_t{0}, arch::CpuidIo::kEcx);
-
-  arch::LbrStack stack(cpuid0Io, cpuid1Io);
-  ASSERT_NO_FATAL_FAILURES(cpuid0Mock.VerifyAndClear());
-  ASSERT_NO_FATAL_FAILURES(cpuid1Mock.VerifyAndClear());
+  arch::LbrStack stack(cpuid);
 
   ASSERT_FALSE(stack.is_supported());
   EXPECT_EQ(16, stack.size());
