@@ -61,7 +61,7 @@ impl Diagnostics for CobaltDiagnostics {
             sample.final_bound_size.into_micros(),
         );
 
-        let mut bucket_counts = [0u64; HTTPSDATE_POLL_LATENCY_INT_BUCKETS_NUM_BUCKETS as usize + 1];
+        let mut bucket_counts = [0u64; HTTPSDATE_POLL_LATENCY_INT_BUCKETS_NUM_BUCKETS as usize + 2];
         for bucket_idx in sample.round_trip_times.iter().map(Self::round_trip_time_bucket) {
             bucket_counts[bucket_idx as usize] += 1;
         }
@@ -107,6 +107,9 @@ mod test {
         static ref BUCKET_5_RTT_2: zx::Duration = BUCKET_FLOOR + BUCKET_SIZE * 5 - ONE_MICROS;
         static ref OVERFLOW_RTT: zx::Duration =
             BUCKET_FLOOR + BUCKET_SIZE * (HTTPSDATE_POLL_LATENCY_INT_BUCKETS_NUM_BUCKETS + 2);
+        static ref OVERFLOW_RTT_2: zx::Duration = BUCKET_FLOOR
+            + BUCKET_SIZE * HTTPSDATE_POLL_LATENCY_INT_BUCKETS_NUM_BUCKETS
+            + zx::Duration::from_minutes(2);
         static ref OVERFLOW_ADJACENT_RTT: zx::Duration = BUCKET_FLOOR
             + BUCKET_SIZE * HTTPSDATE_POLL_LATENCY_INT_BUCKETS_NUM_BUCKETS
             - ONE_MICROS;
@@ -132,6 +135,10 @@ mod test {
         assert_eq!(CobaltDiagnostics::round_trip_time_bucket(&*BUCKET_5_RTT_1), 5);
         assert_eq!(
             CobaltDiagnostics::round_trip_time_bucket(&*OVERFLOW_RTT),
+            HTTPSDATE_POLL_LATENCY_INT_BUCKETS_NUM_BUCKETS + 1
+        );
+        assert_eq!(
+            CobaltDiagnostics::round_trip_time_bucket(&*OVERFLOW_RTT_2),
             HTTPSDATE_POLL_LATENCY_INT_BUCKETS_NUM_BUCKETS + 1
         );
         assert_eq!(
@@ -237,5 +244,40 @@ mod test {
             }
             p => panic!("Got unexpected payload: {:?}", p),
         }
+    }
+
+    #[fasync::run_until_stalled(test)]
+    async fn test_success_overflow_rtt() {
+        let (cobalt, event_recv) = diagnostics_for_test();
+        cobalt.success(&HttpsSample {
+            utc: *TEST_TIME,
+            monotonic: *TEST_TIME,
+            standard_deviation: TEST_STANDARD_DEVIATION,
+            final_bound_size: TEST_BOUND_SIZE,
+            round_trip_times: vec![*OVERFLOW_RTT],
+        });
+        assert_eq!(
+            event_recv.take(2).collect::<Vec<_>>().await,
+            vec![
+                CobaltEvent {
+                    metric_id: HTTPSDATE_BOUND_SIZE_METRIC_ID,
+                    event_codes: vec![*TEST_INITIAL_PHASE_COBALT as u32],
+                    component: None,
+                    payload: EventPayload::EventCount(CountEvent {
+                        period_duration_micros: 0,
+                        count: TEST_BOUND_SIZE.into_micros()
+                    })
+                },
+                CobaltEvent {
+                    metric_id: HTTPSDATE_POLL_LATENCY_METRIC_ID,
+                    event_codes: vec![],
+                    component: None,
+                    payload: EventPayload::IntHistogram(vec![HistogramBucket {
+                        index: HTTPSDATE_POLL_LATENCY_INT_BUCKETS_NUM_BUCKETS + 1,
+                        count: 1
+                    }])
+                }
+            ]
+        );
     }
 }
