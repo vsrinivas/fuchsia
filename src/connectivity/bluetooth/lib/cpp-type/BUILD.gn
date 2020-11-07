@@ -1,0 +1,29 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/test/test_package.gni")
+
+source_set("cpp-type") {
+  sources = [
+    "member_pointer_traits.h",
+    "to_std_array.h",
+  ]
+}
+
+executable("tests") {
+  testonly = true
+
+  output_name = "bt-lib-cpp-type-unittests"
+
+  sources = [
+    "member_pointer_traits_unittest.cc",
+    "to_std_array_unittest.cc",
+  ]
+
+  deps = [
+    ":cpp-type",
+    "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gtest",
+  ]
+}

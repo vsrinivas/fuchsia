@@ -14,6 +14,8 @@ group("lib") {
     "bt-fidl-mocks:tests",
     "bt-profile-test-server",
     "bt-test-harness",
+    "cpp-type",
+    "cpp-type:tests",
     "fidl",
     "fidl:tests",
     "fuchsia-audio-codec",
