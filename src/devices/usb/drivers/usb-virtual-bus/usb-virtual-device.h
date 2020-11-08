@@ -8,6 +8,7 @@
 #include <ddk/device.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/usb/dci.h>
+#include <fbl/macros.h>
 
 namespace usb_virtual_bus {
 

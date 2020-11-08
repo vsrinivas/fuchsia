@@ -16,9 +16,9 @@
 #include <ddktl/device-internal.h>
 #include <ddktl/init-txn.h>
 #include <ddktl/resume-txn.h>
+#include <ddktl/span.h>
 #include <ddktl/suspend-txn.h>
 #include <ddktl/unbind-txn.h>
-#include <fbl/span.h>
 
 // ddk::Device<D, ...>
 //
@@ -394,7 +394,7 @@ class DeviceAddArgs {
     args_.flags = flags;
     return *this;
   }
-  DeviceAddArgs& set_props(fbl::Span<zx_device_prop_t> props) {
+  DeviceAddArgs& set_props(ddktl::Span<zx_device_prop_t> props) {
     args_.props = props.data();
     args_.prop_count = static_cast<uint32_t>(props.size());
     return *this;
@@ -415,13 +415,13 @@ class DeviceAddArgs {
     args_.inspect_vmo = inspect_vmo.release();
     return *this;
   }
-  DeviceAddArgs& set_power_states(fbl::Span<const device_power_state_info_t> power_states) {
+  DeviceAddArgs& set_power_states(ddktl::Span<const device_power_state_info_t> power_states) {
     args_.power_states = power_states.data();
     args_.power_state_count = static_cast<uint8_t>(power_states.size());
     return *this;
   }
   DeviceAddArgs& set_performance_states(
-      fbl::Span<const device_performance_state_info_t> performance_states) {
+      ddktl::Span<const device_performance_state_info_t> performance_states) {
     args_.performance_states = performance_states.data();
     args_.performance_state_count = static_cast<uint8_t>(performance_states.size());
     return *this;
@@ -437,13 +437,14 @@ class DeviceMakeVisibleArgs {
  public:
   DeviceMakeVisibleArgs() {}
 
-  DeviceMakeVisibleArgs& set_power_states(fbl::Span<const device_power_state_info_t> power_states) {
+  DeviceMakeVisibleArgs& set_power_states(
+      ddktl::Span<const device_power_state_info_t> power_states) {
     args_.power_states = power_states.data();
     args_.power_state_count = static_cast<uint8_t>(power_states.size());
     return *this;
   }
   DeviceMakeVisibleArgs& set_performance_states(
-      fbl::Span<const device_performance_state_info_t> performance_states) {
+      ddktl::Span<const device_performance_state_info_t> performance_states) {
     args_.performance_states = performance_states.data();
     args_.performance_state_count = static_cast<uint8_t>(performance_states.size());
     return *this;

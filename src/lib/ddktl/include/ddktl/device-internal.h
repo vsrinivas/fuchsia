@@ -12,7 +12,6 @@
 #include <ddktl/resume-txn.h>
 #include <ddktl/suspend-txn.h>
 #include <ddktl/unbind-txn.h>
-#include <fbl/macros.h>
 
 namespace ddk {
 namespace internal {

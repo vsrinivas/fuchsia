@@ -18,9 +18,6 @@ zx_library("ddktl") {
   ]
   sources = []
   public_deps = [
-    # <ddktl/device-internal.h> has #include <fbl/macros.h>.
-    "//zircon/public/lib/fbl",
-
     # <ddktl/fidl.h> has #include <lib/fidl/llcpp/transaction.h>.
     "//zircon/public/lib/fidl-llcpp:headers",
 
