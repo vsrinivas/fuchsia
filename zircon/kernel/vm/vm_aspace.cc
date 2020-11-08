@@ -555,7 +555,9 @@ zx_status_t VmAspace::PageFault(vaddr_t va, uint flags) {
       zx_status_t st = page_request.Wait();
       if (st != ZX_OK) {
         if (st == ZX_ERR_TIMED_OUT) {
-          root_vmar_->Dump(0, false);
+          Guard<Mutex> guard{&lock_};
+          AssertHeld(root_vmar_->lock_ref());
+          root_vmar_->DumpLocked(0, false);
         }
         return st;
       }
@@ -585,7 +587,8 @@ void VmAspace::Dump(bool verbose) const {
   Guard<Mutex> guard{&lock_};
 
   if (verbose) {
-    root_vmar_->Dump(1, verbose);
+    AssertHeld(root_vmar_->lock_ref());
+    root_vmar_->DumpLocked(1, verbose);
   }
 }
 

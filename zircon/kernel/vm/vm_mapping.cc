@@ -54,9 +54,7 @@ size_t VmMapping::AllocatedPagesLocked() const {
   return object_->AttributedPagesInRange(object_offset_locked(), size_);
 }
 
-void VmMapping::Dump(uint depth, bool verbose) const {
-  // TODO: Add annotations to remove this.
-  AssertHeld(lock_ref());
+void VmMapping::DumpLocked(uint depth, bool verbose) const {
   canary_.Assert();
   for (uint i = 0; i < depth; ++i) {
     printf("  ");
@@ -70,9 +68,6 @@ void VmMapping::Dump(uint depth, bool verbose) const {
   }
   printf("vmo %p/k%" PRIu64 " off %#" PRIx64 " pages %zu ref %d '%s'\n", object_.get(),
          object_->user_id(), object_offset_locked(),
-         // TODO(dbort): Use AttributedPagesInRange() once Dump() is locked
-         // consistently. Currently, Dump() may be called without the aspace
-         // lock.
          object_->AttributedPagesInRange(object_offset_locked(), size_), ref_count_debug(),
          vmo_name);
   if (verbose) {

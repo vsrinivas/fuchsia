@@ -255,10 +255,10 @@ void Arena::Free(void* addr) {
 void Arena::Dump() const {
   DEBUG_ASSERT(vmar_ != nullptr);
   printf("%s mappings:\n", vmar_->name());
-  // Not completely safe, since we don't hold the VMAR's aspace
-  // lock, but we're the only ones who know about the mappings
-  // and we're not modifying anything.
-  vmar_->Dump(/* depth */ 1, /* verbose */ true);
+  {
+    Guard<Mutex> guard{vmar_->lock()};
+    vmar_->DumpLocked(/* depth */ 1, /* verbose */ true);
+  }
   printf("%s pools:\n", vmar_->name());
   control_.Dump();
   data_.Dump();

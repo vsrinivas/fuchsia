@@ -540,7 +540,7 @@ bool VmAddressRegion::has_parent() const {
   return parent_ != nullptr;
 }
 
-void VmAddressRegion::Dump(uint depth, bool verbose) const {
+void VmAddressRegion::DumpLocked(uint depth, bool verbose) const {
   canary_.Assert();
   for (uint i = 0; i < depth; ++i) {
     printf("  ");
@@ -548,7 +548,8 @@ void VmAddressRegion::Dump(uint depth, bool verbose) const {
   printf("vmar %p [%#" PRIxPTR " %#" PRIxPTR "] sz %#zx ref %d '%s'\n", this, base_,
          base_ + (size_ - 1), size_, ref_count_debug(), name_);
   for (const auto& child : subregions_) {
-    child.Dump(depth + 1, verbose);
+    AssertHeld(child.lock_ref());
+    child.DumpLocked(depth + 1, verbose);
   }
 }
 

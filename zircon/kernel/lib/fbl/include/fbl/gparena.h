@@ -8,6 +8,7 @@
 #define ZIRCON_KERNEL_LIB_FBL_INCLUDE_FBL_GPARENA_H_
 
 #include <align.h>
+
 #include <fbl/auto_call.h>
 #include <fbl/confine_array_index.h>
 #include <kernel/mutex.h>
@@ -171,7 +172,10 @@ class __OWNER(void) GPArena {
 
     DEBUG_ASSERT(vmar_ != nullptr);
     printf("GPArena<%#zx,%#zx> %s mappings:\n", PersistSize, ObjectSize, vmar_->name());
-    vmar_->Dump(/* depth */ 1, /* verbose */ true);
+    {
+      Guard<Mutex> guard{vmar_->lock()};
+      vmar_->DumpLocked(/* depth */ 1, /* verbose */ true);
+    }
 
     printf(" start 0x%#zx\n", start_);
     const size_t nslots = (top_ - start_) / ObjectSize;

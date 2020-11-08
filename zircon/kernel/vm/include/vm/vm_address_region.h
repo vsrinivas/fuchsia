@@ -115,7 +115,7 @@ class VmAddressRegionOrMapping
   vaddr_t GetKey() const { return base(); }
 
   // Dump debug info
-  virtual void Dump(uint depth, bool verbose) const = 0;
+  virtual void DumpLocked(uint depth, bool verbose) const TA_REQ(lock()) = 0;
 
   // Expose our backing lock for annotation purposes.
   Lock<Mutex>* lock() const TA_RET_CAP(aspace_->lock()) { return aspace_->lock(); }
@@ -316,7 +316,7 @@ class VmAddressRegion : public VmAddressRegionOrMapping {
   bool is_mapping() const override { return false; }
   bool has_parent() const;
 
-  void Dump(uint depth, bool verbose) const override;
+  void DumpLocked(uint depth, bool verbose) const TA_REQ(lock()) override;
   zx_status_t PageFault(vaddr_t va, uint pf_flags, PageRequest* page_request)
       TA_REQ(lock()) override;
 
@@ -419,7 +419,7 @@ class VmAddressRegionDummy final : public VmAddressRegion {
 
   zx_status_t Unmap(vaddr_t base, size_t size) override { return ZX_ERR_BAD_STATE; }
 
-  void Dump(uint depth, bool verbose) const override { return; }
+  void DumpLocked(uint depth, bool verbose) const override { return; }
 
   zx_status_t PageFault(vaddr_t va, uint pf_flags, PageRequest* page_request) override {
     // We should never be trying to page fault on this...
@@ -488,7 +488,7 @@ class VmMapping final : public VmAddressRegionOrMapping,
 
   bool is_mapping() const override { return true; }
 
-  void Dump(uint depth, bool verbose) const override;
+  void DumpLocked(uint depth, bool verbose) const TA_REQ(lock()) override;
   zx_status_t PageFault(vaddr_t va, uint pf_flags, PageRequest* page_request)
       TA_REQ(lock()) override;
 
