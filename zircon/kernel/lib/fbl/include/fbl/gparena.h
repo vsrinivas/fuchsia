@@ -177,16 +177,28 @@ class __OWNER(void) GPArena {
       vmar_->DumpLocked(/* depth */ 1, /* verbose */ true);
     }
 
-    printf(" start 0x%#zx\n", start_);
-    const size_t nslots = (top_ - start_) / ObjectSize;
-    printf(" top 0x%zx (%zu slots allocated)\n", top_.load(ktl::memory_order_relaxed), nslots);
-    const size_t np = (committed_.load(ktl::memory_order_relaxed) - start_) / PAGE_SIZE;
+    // |top_|, |committed_|, and |count_| are all atomic variables that can change out from under
+    // this method so it's not possible to guarantee a consistent snapshot.  Instead, we aim for
+    // providing output that's not "obviously wrong".
+    //
+    // Load (with sequential consistency) all three values into local variable to minimize the
+    // chance of getting inconsistent data.
+    const size_t top = top_.load();
+    const size_t committed = committed_.load();
+    const size_t count = count_.load();
+
+    const size_t nslots = (top - start_) / ObjectSize;
+    const size_t np = (committed - start_) / PAGE_SIZE;
     const size_t npmax = (end_ - start_) / PAGE_SIZE;
-    printf(" committed 0x%#zx (%zu/%zu pages)\n", committed_.load(ktl::memory_order_relaxed), np,
-           npmax);
     const size_t tslots = static_cast<size_t>(end_ - start_) / ObjectSize;
+
+    // If we didn't get a consistent read, at least make sure we don't underflow.
+    const size_t free_list = (nslots > count) ? (nslots - count) : 0;
+
+    printf(" start 0x%#zx\n", start_);
+    printf(" top 0x%zx (%zu slots allocated)\n", top, nslots);
+    printf(" committed 0x%#zx (%zu/%zu pages)\n", committed, np, npmax);
     printf(" end 0x%#zx (%zu slots total)\n", end_, tslots);
-    const size_t free_list = nslots - count_;
     printf(" free list length %zu\n", free_list);
   }
 
