@@ -17,6 +17,55 @@
 namespace ddk {
 namespace internal {
 
+// Macro for defining a trait that checks if a type T has a method with the
+// given name. See fbl/macros.h.
+//
+// Example:
+//
+// DDTL_INTERNAL_DECLARE_HAS_MEMBER_FN(has_bar, Bar);
+// template <typename T>
+// class Foo {
+//   static_assert(has_bar_v<T>, "Foo classes must implement Bar()!");
+//   lands.
+//   static_assert(is_same_v<decltype(&T::Bar), void (T::*)(int)>,
+//                 "Bar must be a non-static member function with signature "
+//                 "'void Bar(int)', and must be visible to Foo (either "
+//                 "because it is public, or due to friendship).");
+//  };
+#define DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN(trait_name, fn_name)    \
+  template <typename T>                                              \
+  struct trait_name {                                                \
+   private:                                                          \
+    template <typename C>                                            \
+    static std::true_type test(decltype(&C::fn_name));               \
+    template <typename C>                                            \
+    static std::false_type test(...);                                \
+                                                                     \
+   public:                                                           \
+    static constexpr bool value = decltype(test<T>(nullptr))::value; \
+  };                                                                 \
+  template <typename T>                                              \
+  static inline constexpr bool trait_name##_v = trait_name<T>::value
+
+// Example:
+//
+// DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_c_str, c_str, const char* (C::*)()
+// const);
+#define DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(trait_name, fn_name, sig) \
+  template <typename T>                                                               \
+  struct trait_name {                                                                 \
+   private:                                                                           \
+    template <typename C>                                                             \
+    static std::true_type test(decltype(static_cast<sig>(&C::fn_name)));              \
+    template <typename C>                                                             \
+    static std::false_type test(...);                                                 \
+                                                                                      \
+   public:                                                                            \
+    static constexpr bool value = decltype(test<T>(nullptr))::value;                  \
+  };                                                                                  \
+  template <typename T>                                                               \
+  static inline constexpr bool trait_name##_v = trait_name<T>::value
+
 // Implemented like protocol op mixins, but defined on all base_device since they must implement
 template <typename D>
 class Releasable {
@@ -148,7 +197,7 @@ using is_base_proto = std::is_same<internal::base_protocol, T>;
 // the method can't be found, leading to a slightly more confusing error message. Adding the first
 // check gives a chance to show the user a more intelligible error message.
 
-DECLARE_HAS_MEMBER_FN(has_ddk_get_protocol, DdkGetProtocol);
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN(has_ddk_get_protocol, DdkGetProtocol);
 
 template <typename D>
 constexpr void CheckGetProtocolable() {
@@ -160,7 +209,7 @@ constexpr void CheckGetProtocolable() {
       "'zx_status_t DdkGetProtocol(uint32_t, void*)'.");
 }
 
-DECLARE_HAS_MEMBER_FN(has_ddk_init, DdkInit);
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN(has_ddk_init, DdkInit);
 
 template <typename D>
 constexpr void CheckInitializable() {
@@ -170,7 +219,7 @@ constexpr void CheckInitializable() {
                 "'void DdkInit(ddk::InitTxn)'.");
 }
 
-DECLARE_HAS_MEMBER_FN(has_ddk_open, DdkOpen);
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN(has_ddk_open, DdkOpen);
 
 template <typename D>
 constexpr void CheckOpenable() {
@@ -181,7 +230,7 @@ constexpr void CheckOpenable() {
       "'zx_status_t DdkOpen(zx_device_t**, uint32_t)'.");
 }
 
-DECLARE_HAS_MEMBER_FN(has_ddk_close, DdkClose);
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN(has_ddk_close, DdkClose);
 
 template <typename D>
 constexpr void CheckClosable() {
@@ -191,7 +240,7 @@ constexpr void CheckClosable() {
                 "'zx_status_t DdkClose(uint32)'.");
 }
 
-DECLARE_HAS_MEMBER_FN(has_ddk_unbind, DdkUnbind);
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN(has_ddk_unbind, DdkUnbind);
 
 template <typename D>
 constexpr void CheckUnbindable() {
@@ -201,7 +250,7 @@ constexpr void CheckUnbindable() {
                 "'void DdkUnbind(ddk::UnbindTxn)'.");
 }
 
-DECLARE_HAS_MEMBER_FN(has_ddk_release, DdkRelease);
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN(has_ddk_release, DdkRelease);
 
 template <typename D>
 constexpr void CheckReleasable() {
@@ -211,7 +260,7 @@ constexpr void CheckReleasable() {
                 "'void DdkRelease()'.");
 }
 
-DECLARE_HAS_MEMBER_FN(has_ddk_read, DdkRead);
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN(has_ddk_read, DdkRead);
 
 template <typename D>
 constexpr void CheckReadable() {
@@ -222,7 +271,7 @@ constexpr void CheckReadable() {
                 "'zx_status_t DdkRead(void*, size_t, zx_off_t, size_t*)'.");
 }
 
-DECLARE_HAS_MEMBER_FN(has_ddk_write, DdkWrite);
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN(has_ddk_write, DdkWrite);
 
 template <typename D>
 constexpr void CheckWritable() {
@@ -233,7 +282,7 @@ constexpr void CheckWritable() {
                 "'zx_status_t DdkWrite(const void*, size_t, zx_off_t, size_t*)'.");
 }
 
-DECLARE_HAS_MEMBER_FN(has_ddk_get_size, DdkGetSize);
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN(has_ddk_get_size, DdkGetSize);
 
 template <typename D>
 constexpr void CheckGetSizable() {
@@ -244,7 +293,7 @@ constexpr void CheckGetSizable() {
                 "'zx_off_t DdkGetSize()'.");
 }
 
-DECLARE_HAS_MEMBER_FN(has_ddk_message, DdkMessage);
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN(has_ddk_message, DdkMessage);
 
 template <typename D>
 constexpr void CheckMessageable() {
@@ -255,7 +304,7 @@ constexpr void CheckMessageable() {
                 "'zx_status_t DdkMessage(fidl_incoming_msg_t*, fidl_txn_t*)'.");
 }
 
-DECLARE_HAS_MEMBER_FN(has_ddk_suspend, DdkSuspend);
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN(has_ddk_suspend, DdkSuspend);
 
 template <typename D>
 constexpr void CheckSuspendable() {
@@ -265,7 +314,7 @@ constexpr void CheckSuspendable() {
                 "'zx_status_t DdkSuspend(SuspendTxn txn)'.");
 }
 
-DECLARE_HAS_MEMBER_FN(has_ddk_auto_configure_suspend, DdkConfigureAutoSuspend);
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN(has_ddk_auto_configure_suspend, DdkConfigureAutoSuspend);
 
 template <typename D>
 constexpr void CheckConfigureAutoSuspend() {
@@ -277,7 +326,7 @@ constexpr void CheckConfigureAutoSuspend() {
       "'zx_status_t DdkConfigureAutoSuspend(bool, uint8_t)'.");
 }
 
-DECLARE_HAS_MEMBER_FN(has_ddk_resume, DdkResume);
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN(has_ddk_resume, DdkResume);
 
 template <typename D>
 constexpr void CheckResumable() {
@@ -287,7 +336,7 @@ constexpr void CheckResumable() {
                 "'void DdkResume(ResumeTxn)'.");
 }
 
-DECLARE_HAS_MEMBER_FN(has_ddk_set_performance_state, DdkSetPerformanceState);
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN(has_ddk_set_performance_state, DdkSetPerformanceState);
 
 template <typename D>
 constexpr void CheckPerformanceTunable() {
@@ -299,7 +348,7 @@ constexpr void CheckPerformanceTunable() {
                 "'zx_status_t DdkSetPerformanceState(uint32_t, uint32_t*)'.");
 }
 
-DECLARE_HAS_MEMBER_FN(has_ddk_rxrpc, DdkRxrpc);
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN(has_ddk_rxrpc, DdkRxrpc);
 
 template <typename D>
 constexpr void CheckRxrpcable() {
@@ -309,7 +358,7 @@ constexpr void CheckRxrpcable() {
                 "'zx_status_t DdkRxrpc(zx_handle_t)'.");
 }
 
-DECLARE_HAS_MEMBER_FN(has_ddk_child_pre_release, DdkChildPreRelease);
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN(has_ddk_child_pre_release, DdkChildPreRelease);
 
 template <typename D>
 constexpr void CheckChildPreReleaseable() {
@@ -320,10 +369,10 @@ constexpr void CheckChildPreReleaseable() {
                 "'void DdkChildPreRelease(void*)'.");
 }
 
-DECLARE_HAS_MEMBER_FN(has_ddk_open_protocol_session_multibindable,
-                      DdkOpenProtocolSessionMultibindable);
-DECLARE_HAS_MEMBER_FN(has_ddk_close_protocol_session_multibindable,
-                      DdkCloseProtocolSessionMultibindable);
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN(has_ddk_open_protocol_session_multibindable,
+                                     DdkOpenProtocolSessionMultibindable);
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN(has_ddk_close_protocol_session_multibindable,
+                                     DdkCloseProtocolSessionMultibindable);
 template <typename D>
 constexpr void CheckMultibindable() {
   static_assert(has_ddk_open_protocol_session_multibindable<D>::value,
