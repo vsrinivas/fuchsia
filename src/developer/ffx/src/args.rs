@@ -21,21 +21,16 @@ pub struct Ffx {
 
     #[argh(option, short = 't')]
     #[ffx_config_default("target.default")]
-    /// sets the target to which operations are applied. Overwrites the runtime
-    /// config for "target.default". If this isn't set, will fall back to
-    /// "target.default" from the user config. This is applied after
-    /// --config overrides.
+    /// apply operations across single or multiple targets
     pub target: Option<String>,
 
-    #[argh(option, short = 'p')]
+    #[argh(option, short = 'T')]
     #[ffx_config_default(key = "proxy.timeout_secs", default = "1.0")]
-    /// sets how long to wait for the proxy to timeout in fractional seconds.
-    /// Backed by the config value "proxy.timeout_secs". Defaults to 1.0
-    /// if unavailable in the config.
-    pub proxy_timeout: Option<f64>,
+    /// override default proxy timeout
+    pub timeout: Option<f64>,
 
-    #[argh(switch, short = 'v', description = "direct all log output to the launching terminal")]
-    /// verbose output always prints to stdio, both frontend and daemon
+    #[argh(switch, short = 'v')]
+    /// use verbose output
     pub verbose: bool,
 
     #[argh(subcommand)]

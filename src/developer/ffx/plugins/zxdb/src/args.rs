@@ -6,12 +6,7 @@ use {argh::FromArgs, ffx_core::ffx_command};
 
 #[ffx_command()]
 #[derive(FromArgs, Debug, PartialEq)]
-#[argh(
-    subcommand,
-    name = "debug",
-    description = "[EXPERIMENTAL] Start a debugging session. \
-    Currently only runs inside the Fuchsia tree."
-)]
+#[argh(subcommand, name = "debug", description = "Start a debugging session.")]
 pub struct DebugCommand {
     #[argh(positional, default = "String::from(\"/tmp/zxdb.socket\")")]
     pub socket_location: String,

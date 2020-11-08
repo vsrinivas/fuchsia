@@ -8,5 +8,6 @@ use {anyhow::Result, ffx_core::ffx_plugin, ffx_lib_args::Ffx, std::env, std::pro
 pub async fn help(_cmd: Ffx) -> Result<()> {
     let ffx_path = env::current_exe()?;
     Command::new(ffx_path).arg("help").status()?;
+    println!("See 'ffx help <command>' for more information on a specific command.");
     Ok(())
 }

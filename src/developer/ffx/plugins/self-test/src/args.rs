@@ -6,7 +6,7 @@ use {argh::FromArgs, ffx_core::ffx_command};
 
 #[ffx_command()]
 #[derive(FromArgs, Debug, PartialEq)]
-#[argh(subcommand, name = "self-test", description = "execute the ffx self-test (e2e) suite")]
+#[argh(subcommand, name = "self-test", description = "Execute the ffx self-test (e2e) suite")]
 pub struct SelftestCommand {
     #[argh(
         option,
