@@ -12,22 +12,22 @@
 namespace ddk {
 namespace internal {
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_echo_protocol_echo32, EchoEcho32,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_echo_protocol_echo32, EchoEcho32,
         uint32_t (C::*)(uint32_t uint32));
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_echo_protocol_echo64, EchoEcho64,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_echo_protocol_echo64, EchoEcho64,
         uint64_t (C::*)(uint64_t uint64));
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_echo_protocol_echo_enum, EchoEchoEnum,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_echo_protocol_echo_enum, EchoEchoEnum,
         echo_me_t (C::*)(echo_me_t req));
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_echo_protocol_echo_handle, EchoEchoHandle,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_echo_protocol_echo_handle, EchoEchoHandle,
         void (C::*)(zx::handle req, zx::handle* out_response));
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_echo_protocol_echo_channel, EchoEchoChannel,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_echo_protocol_echo_channel, EchoEchoChannel,
         void (C::*)(zx::channel req, zx::channel* out_response));
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_echo_protocol_echo_struct, EchoEchoStruct,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_echo_protocol_echo_struct, EchoEchoStruct,
         void (C::*)(const echo_more_t* req, echo_more_t* out_response));
 
 

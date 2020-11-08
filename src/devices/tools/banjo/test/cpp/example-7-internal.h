@@ -12,7 +12,7 @@
 namespace ddk {
 namespace internal {
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_hello_protocol_say, HelloSay,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_hello_protocol_say, HelloSay,
         void (C::*)(const char* req, char* out_response, size_t response_capacity));
 
 

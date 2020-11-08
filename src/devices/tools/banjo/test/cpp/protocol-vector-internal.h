@@ -12,40 +12,40 @@
 namespace ddk {
 namespace internal {
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_vector_protocol_bool, VectorBool,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_vector_protocol_bool, VectorBool,
         void (C::*)(const bool* b_list, size_t b_count, bool* out_b_list, size_t b_count, size_t* out_b_actual));
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_vector_protocol_int8, VectorInt8,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_vector_protocol_int8, VectorInt8,
         void (C::*)(const int8_t* i8_list, size_t i8_count, int8_t* out_i8_list, size_t i8_count, size_t* out_i8_actual));
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_vector_protocol_int16, VectorInt16,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_vector_protocol_int16, VectorInt16,
         void (C::*)(const int16_t* i16_list, size_t i16_count, int16_t* out_i16_list, size_t i16_count, size_t* out_i16_actual));
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_vector_protocol_int32, VectorInt32,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_vector_protocol_int32, VectorInt32,
         void (C::*)(const int32_t* i32_list, size_t i32_count, int32_t* out_i32_list, size_t i32_count, size_t* out_i32_actual));
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_vector_protocol_int64, VectorInt64,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_vector_protocol_int64, VectorInt64,
         void (C::*)(const int64_t* i64_list, size_t i64_count, int64_t* out_i64_list, size_t i64_count, size_t* out_i64_actual));
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_vector_protocol_uint8, VectorUint8,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_vector_protocol_uint8, VectorUint8,
         void (C::*)(const uint8_t* u8_list, size_t u8_count, uint8_t* out_u8_list, size_t u8_count, size_t* out_u8_actual));
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_vector_protocol_uint16, VectorUint16,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_vector_protocol_uint16, VectorUint16,
         void (C::*)(const uint16_t* u16_list, size_t u16_count, uint16_t* out_u16_list, size_t u16_count, size_t* out_u16_actual));
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_vector_protocol_uint32, VectorUint32,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_vector_protocol_uint32, VectorUint32,
         void (C::*)(const uint32_t* u32_list, size_t u32_count, uint32_t* out_u32_list, size_t u32_count, size_t* out_u32_actual));
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_vector_protocol_uint64, VectorUint64,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_vector_protocol_uint64, VectorUint64,
         void (C::*)(const uint64_t* u64_list, size_t u64_count, uint64_t* out_u64_list, size_t u64_count, size_t* out_u64_actual));
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_vector_protocol_float32, VectorFloat32,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_vector_protocol_float32, VectorFloat32,
         void (C::*)(const float* f32_list, size_t f32_count, float* out_f32_list, size_t f32_count, size_t* out_f32_actual));
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_vector_protocol_float64, VectorFloat64,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_vector_protocol_float64, VectorFloat64,
         void (C::*)(const double* u64_list, size_t u64_count, double* out_f64_list, size_t f64_count, size_t* out_f64_actual));
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_vector_protocol_handle, VectorHandle,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_vector_protocol_handle, VectorHandle,
         void (C::*)(const zx_handle_t* u64_list, size_t u64_count, zx_handle_t* out_f64_list, size_t f64_count, size_t* out_f64_actual));
 
 
@@ -101,40 +101,40 @@ constexpr void CheckVectorProtocolSubclass() {
 
 }
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_vector2_protocol_bool, Vector2Bool,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_vector2_protocol_bool, Vector2Bool,
         void (C::*)(const bool* b_list, size_t b_count, bool* out_b_list, size_t b_count, size_t* out_b_actual));
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_vector2_protocol_int8, Vector2Int8,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_vector2_protocol_int8, Vector2Int8,
         void (C::*)(const int8_t* i8_list, size_t i8_count, int8_t* out_i8_list, size_t i8_count, size_t* out_i8_actual));
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_vector2_protocol_int16, Vector2Int16,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_vector2_protocol_int16, Vector2Int16,
         void (C::*)(const int16_t* i16_list, size_t i16_count, int16_t* out_i16_list, size_t i16_count, size_t* out_i16_actual));
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_vector2_protocol_int32, Vector2Int32,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_vector2_protocol_int32, Vector2Int32,
         void (C::*)(const int32_t* i32_list, size_t i32_count, int32_t* out_i32_list, size_t i32_count, size_t* out_i32_actual));
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_vector2_protocol_int64, Vector2Int64,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_vector2_protocol_int64, Vector2Int64,
         void (C::*)(const int64_t* i64_list, size_t i64_count, int64_t* out_i64_list, size_t i64_count, size_t* out_i64_actual));
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_vector2_protocol_uint8, Vector2Uint8,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_vector2_protocol_uint8, Vector2Uint8,
         void (C::*)(const uint8_t* u8_list, size_t u8_count, uint8_t* out_u8_list, size_t u8_count, size_t* out_u8_actual));
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_vector2_protocol_uint16, Vector2Uint16,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_vector2_protocol_uint16, Vector2Uint16,
         void (C::*)(const uint16_t* u16_list, size_t u16_count, uint16_t* out_u16_list, size_t u16_count, size_t* out_u16_actual));
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_vector2_protocol_uint32, Vector2Uint32,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_vector2_protocol_uint32, Vector2Uint32,
         void (C::*)(const uint32_t* u32_list, size_t u32_count, uint32_t* out_u32_list, size_t u32_count, size_t* out_u32_actual));
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_vector2_protocol_uint64, Vector2Uint64,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_vector2_protocol_uint64, Vector2Uint64,
         void (C::*)(const uint64_t* u64_list, size_t u64_count, uint64_t* out_u64_list, size_t u64_count, size_t* out_u64_actual));
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_vector2_protocol_float32, Vector2Float32,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_vector2_protocol_float32, Vector2Float32,
         void (C::*)(const float* f32_list, size_t f32_count, float* out_f32_list, size_t f32_count, size_t* out_f32_actual));
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_vector2_protocol_float64, Vector2Float64,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_vector2_protocol_float64, Vector2Float64,
         void (C::*)(const double* u64_list, size_t u64_count, double* out_f64_list, size_t f64_count, size_t* out_f64_actual));
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_vector2_protocol_handle, Vector2Handle,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_vector2_protocol_handle, Vector2Handle,
         void (C::*)(const zx_handle_t* u64_list, size_t u64_count, zx_handle_t* out_f64_list, size_t f64_count, size_t* out_f64_actual));
 
 
@@ -190,40 +190,40 @@ constexpr void CheckVector2ProtocolSubclass() {
 
 }
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_vector_of_vectors_protocol_bool, VectorOfVectorsBool,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_vector_of_vectors_protocol_bool, VectorOfVectorsBool,
         void (C::*)(const bool* b_list, size_t b_count, bool* out_b_list, size_t b_count, size_t* out_b_actual));
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_vector_of_vectors_protocol_int8, VectorOfVectorsInt8,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_vector_of_vectors_protocol_int8, VectorOfVectorsInt8,
         void (C::*)(const int8_t* i8_list, size_t i8_count, int8_t* out_i8_list, size_t i8_count, size_t* out_i8_actual));
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_vector_of_vectors_protocol_int16, VectorOfVectorsInt16,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_vector_of_vectors_protocol_int16, VectorOfVectorsInt16,
         void (C::*)(const int16_t* i16_list, size_t i16_count, int16_t* out_i16_list, size_t i16_count, size_t* out_i16_actual));
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_vector_of_vectors_protocol_int32, VectorOfVectorsInt32,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_vector_of_vectors_protocol_int32, VectorOfVectorsInt32,
         void (C::*)(const int32_t* i32_list, size_t i32_count, int32_t* out_i32_list, size_t i32_count, size_t* out_i32_actual));
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_vector_of_vectors_protocol_int64, VectorOfVectorsInt64,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_vector_of_vectors_protocol_int64, VectorOfVectorsInt64,
         void (C::*)(const int64_t* i64_list, size_t i64_count, int64_t* out_i64_list, size_t i64_count, size_t* out_i64_actual));
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_vector_of_vectors_protocol_uint8, VectorOfVectorsUint8,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_vector_of_vectors_protocol_uint8, VectorOfVectorsUint8,
         void (C::*)(const uint8_t* u8_list, size_t u8_count, uint8_t* out_u8_list, size_t u8_count, size_t* out_u8_actual));
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_vector_of_vectors_protocol_uint16, VectorOfVectorsUint16,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_vector_of_vectors_protocol_uint16, VectorOfVectorsUint16,
         void (C::*)(const uint16_t* u16_list, size_t u16_count, uint16_t* out_u16_list, size_t u16_count, size_t* out_u16_actual));
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_vector_of_vectors_protocol_uint32, VectorOfVectorsUint32,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_vector_of_vectors_protocol_uint32, VectorOfVectorsUint32,
         void (C::*)(const uint32_t* u32_list, size_t u32_count, uint32_t* out_u32_list, size_t u32_count, size_t* out_u32_actual));
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_vector_of_vectors_protocol_uint64, VectorOfVectorsUint64,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_vector_of_vectors_protocol_uint64, VectorOfVectorsUint64,
         void (C::*)(const uint64_t* u64_list, size_t u64_count, uint64_t* out_u64_list, size_t u64_count, size_t* out_u64_actual));
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_vector_of_vectors_protocol_float32, VectorOfVectorsFloat32,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_vector_of_vectors_protocol_float32, VectorOfVectorsFloat32,
         void (C::*)(const float* f32_list, size_t f32_count, float* out_f32_list, size_t f32_count, size_t* out_f32_actual));
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_vector_of_vectors_protocol_float64, VectorOfVectorsFloat64,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_vector_of_vectors_protocol_float64, VectorOfVectorsFloat64,
         void (C::*)(const double* u64_list, size_t u64_count, double* out_f64_list, size_t f64_count, size_t* out_f64_actual));
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_vector_of_vectors_protocol_handle, VectorOfVectorsHandle,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_vector_of_vectors_protocol_handle, VectorOfVectorsHandle,
         void (C::*)(const zx_handle_t* u64_list, size_t u64_count, zx_handle_t* out_f64_list, size_t f64_count, size_t* out_f64_actual));
 
 

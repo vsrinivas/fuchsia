@@ -12,19 +12,19 @@
 namespace ddk {
 namespace internal {
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_drawing_protocol_register_callback, DrawingRegisterCallback,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_drawing_protocol_register_callback, DrawingRegisterCallback,
         void (C::*)());
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_drawing_protocol_deregister_callback, DrawingDeregisterCallback,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_drawing_protocol_deregister_callback, DrawingDeregisterCallback,
         void (C::*)());
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_drawing_protocol_draw_lots, DrawingDrawLots,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_drawing_protocol_draw_lots, DrawingDrawLots,
         int32_t (C::*)(zx::vmo commands, point_t* out_p));
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_drawing_protocol_draw_array, DrawingDrawArray,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_drawing_protocol_draw_array, DrawingDrawArray,
         zx_status_t (C::*)(const point_t points[4]));
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_drawing_protocol_describe, DrawingDescribe,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_drawing_protocol_describe, DrawingDescribe,
         void (C::*)(const char* one, char* out_two, size_t two_capacity));
 
 

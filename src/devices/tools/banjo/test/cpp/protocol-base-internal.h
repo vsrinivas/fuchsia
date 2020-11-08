@@ -12,31 +12,31 @@
 namespace ddk {
 namespace internal {
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_synchronous_base_protocol_status, SynchronousBaseStatus,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_synchronous_base_protocol_status, SynchronousBaseStatus,
         zx_status_t (C::*)(zx_status_t status, zx_status_t* out_status_2));
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_synchronous_base_protocol_time, SynchronousBaseTime,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_synchronous_base_protocol_time, SynchronousBaseTime,
         zx_time_t (C::*)(zx_time_t time, zx_time_t* out_time_2));
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_synchronous_base_protocol_duration, SynchronousBaseDuration,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_synchronous_base_protocol_duration, SynchronousBaseDuration,
         zx_duration_t (C::*)(zx_duration_t duration, zx_duration_t* out_duration_2));
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_synchronous_base_protocol_koid, SynchronousBaseKoid,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_synchronous_base_protocol_koid, SynchronousBaseKoid,
         zx_koid_t (C::*)(zx_koid_t koid, zx_koid_t* out_koid_2));
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_synchronous_base_protocol_vaddr, SynchronousBaseVaddr,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_synchronous_base_protocol_vaddr, SynchronousBaseVaddr,
         zx_vaddr_t (C::*)(zx_vaddr_t vaddr, zx_vaddr_t* out_vaddr_2));
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_synchronous_base_protocol_paddr, SynchronousBasePaddr,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_synchronous_base_protocol_paddr, SynchronousBasePaddr,
         zx_paddr_t (C::*)(zx_paddr_t paddr, zx_paddr_t* out_paddr_2));
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_synchronous_base_protocol_paddr32, SynchronousBasePaddr32,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_synchronous_base_protocol_paddr32, SynchronousBasePaddr32,
         zx_paddr32_t (C::*)(zx_paddr32_t paddr32, zx_paddr32_t* out_paddr32_2));
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_synchronous_base_protocol_gpaddr, SynchronousBaseGpaddr,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_synchronous_base_protocol_gpaddr, SynchronousBaseGpaddr,
         zx_gpaddr_t (C::*)(zx_gpaddr_t gpaddr, zx_gpaddr_t* out_gpaddr_2));
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_synchronous_base_protocol_off, SynchronousBaseOff,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_synchronous_base_protocol_off, SynchronousBaseOff,
         zx_off_t (C::*)(zx_off_t off, zx_off_t* out_off_2));
 
 
@@ -80,31 +80,31 @@ constexpr void CheckSynchronousBaseProtocolSubclass() {
 
 }
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_async_base_protocol_status, AsyncBaseStatus,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_async_base_protocol_status, AsyncBaseStatus,
         void (C::*)(zx_status_t status, async_base_status_callback callback, void* cookie));
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_async_base_protocol_time, AsyncBaseTime,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_async_base_protocol_time, AsyncBaseTime,
         void (C::*)(zx_time_t time, async_base_time_callback callback, void* cookie));
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_async_base_protocol_duration, AsyncBaseDuration,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_async_base_protocol_duration, AsyncBaseDuration,
         void (C::*)(zx_duration_t duration, async_base_duration_callback callback, void* cookie));
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_async_base_protocol_koid, AsyncBaseKoid,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_async_base_protocol_koid, AsyncBaseKoid,
         void (C::*)(zx_koid_t koid, async_base_koid_callback callback, void* cookie));
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_async_base_protocol_vaddr, AsyncBaseVaddr,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_async_base_protocol_vaddr, AsyncBaseVaddr,
         void (C::*)(zx_vaddr_t vaddr, async_base_vaddr_callback callback, void* cookie));
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_async_base_protocol_paddr, AsyncBasePaddr,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_async_base_protocol_paddr, AsyncBasePaddr,
         void (C::*)(zx_paddr_t paddr, async_base_paddr_callback callback, void* cookie));
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_async_base_protocol_paddr32, AsyncBasePaddr32,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_async_base_protocol_paddr32, AsyncBasePaddr32,
         void (C::*)(zx_paddr32_t paddr32, async_base_paddr32_callback callback, void* cookie));
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_async_base_protocol_gpaddr, AsyncBaseGpaddr,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_async_base_protocol_gpaddr, AsyncBaseGpaddr,
         void (C::*)(zx_gpaddr_t gpaddr, async_base_gpaddr_callback callback, void* cookie));
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_async_base_protocol_off, AsyncBaseOff,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_async_base_protocol_off, AsyncBaseOff,
         void (C::*)(zx_off_t off, async_base_off_callback callback, void* cookie));
 
 

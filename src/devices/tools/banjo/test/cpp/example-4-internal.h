@@ -12,7 +12,7 @@
 namespace ddk {
 namespace internal {
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_interface_protocol_func, Interfacefunc,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_interface_protocol_func, Interfacefunc,
         void (C::*)(bool x));
 
 

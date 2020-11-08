@@ -12,22 +12,22 @@
 namespace ddk {
 namespace internal {
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_other_types_protocol_struct, OtherTypesStruct,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_other_types_protocol_struct, OtherTypesStruct,
         void (C::*)(const this_is_astruct_t* s, this_is_astruct_t* out_s));
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_other_types_protocol_union, OtherTypesUnion,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_other_types_protocol_union, OtherTypesUnion,
         void (C::*)(const this_is_aunion_t* u, this_is_aunion_t* out_u));
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_other_types_protocol_enum, OtherTypesEnum,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_other_types_protocol_enum, OtherTypesEnum,
         this_is_an_enum_t (C::*)(this_is_an_enum_t e));
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_other_types_protocol_string, OtherTypesString,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_other_types_protocol_string, OtherTypesString,
         void (C::*)(const char* s, char* out_s, size_t s_capacity));
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_other_types_protocol_string_sized, OtherTypesStringSized,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_other_types_protocol_string_sized, OtherTypesStringSized,
         void (C::*)(const char* s, char* out_s, size_t s_capacity));
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_other_types_protocol_string_sized2, OtherTypesStringSized2,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_other_types_protocol_string_sized2, OtherTypesStringSized2,
         void (C::*)(const char* s, char* out_s, size_t s_capacity));
 
 
@@ -59,22 +59,22 @@ constexpr void CheckOtherTypesProtocolSubclass() {
 
 }
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_other_types_async_protocol_struct, OtherTypesAsyncStruct,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_other_types_async_protocol_struct, OtherTypesAsyncStruct,
         void (C::*)(const this_is_astruct_t* s, other_types_async_struct_callback callback, void* cookie));
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_other_types_async_protocol_union, OtherTypesAsyncUnion,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_other_types_async_protocol_union, OtherTypesAsyncUnion,
         void (C::*)(const this_is_aunion_t* u, other_types_async_union_callback callback, void* cookie));
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_other_types_async_protocol_enum, OtherTypesAsyncEnum,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_other_types_async_protocol_enum, OtherTypesAsyncEnum,
         void (C::*)(this_is_an_enum_t e, other_types_async_enum_callback callback, void* cookie));
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_other_types_async_protocol_string, OtherTypesAsyncString,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_other_types_async_protocol_string, OtherTypesAsyncString,
         void (C::*)(const char* s, other_types_async_string_callback callback, void* cookie));
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_other_types_async_protocol_string_sized, OtherTypesAsyncStringSized,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_other_types_async_protocol_string_sized, OtherTypesAsyncStringSized,
         void (C::*)(const char* s, other_types_async_string_sized_callback callback, void* cookie));
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_other_types_async_protocol_string_sized2, OtherTypesAsyncStringSized2,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_other_types_async_protocol_string_sized2, OtherTypesAsyncStringSized2,
         void (C::*)(const char* s, other_types_async_string_sized2_callback callback, void* cookie));
 
 
@@ -106,19 +106,19 @@ constexpr void CheckOtherTypesAsyncProtocolSubclass() {
 
 }
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_other_types_reference_protocol_struct, OtherTypesReferenceStruct,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_other_types_reference_protocol_struct, OtherTypesReferenceStruct,
         void (C::*)(this_is_astruct_t* s, this_is_astruct_t** out_s));
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_other_types_reference_protocol_union, OtherTypesReferenceUnion,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_other_types_reference_protocol_union, OtherTypesReferenceUnion,
         void (C::*)(this_is_aunion_t* u, this_is_aunion_t** out_u));
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_other_types_reference_protocol_string, OtherTypesReferenceString,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_other_types_reference_protocol_string, OtherTypesReferenceString,
         void (C::*)(const char* s, char* out_s, size_t s_capacity));
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_other_types_reference_protocol_string_sized, OtherTypesReferenceStringSized,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_other_types_reference_protocol_string_sized, OtherTypesReferenceStringSized,
         void (C::*)(const char* s, char* out_s, size_t s_capacity));
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_other_types_reference_protocol_string_sized2, OtherTypesReferenceStringSized2,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_other_types_reference_protocol_string_sized2, OtherTypesReferenceStringSized2,
         void (C::*)(const char* s, char* out_s, size_t s_capacity));
 
 
@@ -146,19 +146,19 @@ constexpr void CheckOtherTypesReferenceProtocolSubclass() {
 
 }
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_other_types_async_reference_protocol_struct, OtherTypesAsyncReferenceStruct,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_other_types_async_reference_protocol_struct, OtherTypesAsyncReferenceStruct,
         void (C::*)(this_is_astruct_t* s, other_types_async_reference_struct_callback callback, void* cookie));
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_other_types_async_reference_protocol_union, OtherTypesAsyncReferenceUnion,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_other_types_async_reference_protocol_union, OtherTypesAsyncReferenceUnion,
         void (C::*)(this_is_aunion_t* u, other_types_async_reference_union_callback callback, void* cookie));
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_other_types_async_reference_protocol_string, OtherTypesAsyncReferenceString,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_other_types_async_reference_protocol_string, OtherTypesAsyncReferenceString,
         void (C::*)(const char* s, other_types_async_reference_string_callback callback, void* cookie));
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_other_types_async_reference_protocol_string_sized, OtherTypesAsyncReferenceStringSized,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_other_types_async_reference_protocol_string_sized, OtherTypesAsyncReferenceStringSized,
         void (C::*)(const char* s, other_types_async_reference_string_sized_callback callback, void* cookie));
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_other_types_async_reference_protocol_string_sized2, OtherTypesAsyncReferenceStringSized2,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_other_types_async_reference_protocol_string_sized2, OtherTypesAsyncReferenceStringSized2,
         void (C::*)(const char* s, other_types_async_reference_string_sized2_callback callback, void* cookie));
 
 
@@ -186,16 +186,16 @@ constexpr void CheckOtherTypesAsyncReferenceProtocolSubclass() {
 
 }
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_interface_protocol_value, InterfaceValue,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_interface_protocol_value, InterfaceValue,
         void (C::*)(const other_types_protocol_t* intf, other_types_protocol_t* out_intf));
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_interface_protocol_reference, InterfaceReference,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_interface_protocol_reference, InterfaceReference,
         void (C::*)(const other_types_protocol_t* intf, other_types_protocol_t** out_intf));
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_interface_protocol_async, InterfaceAsync,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_interface_protocol_async, InterfaceAsync,
         void (C::*)(const other_types_protocol_t* intf, interface_async_callback callback, void* cookie));
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_interface_protocol_async_refernce, InterfaceAsyncRefernce,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_interface_protocol_async_refernce, InterfaceAsyncRefernce,
         void (C::*)(const other_types_protocol_t* intf, interface_async_refernce_callback callback, void* cookie));
 
 

@@ -12,10 +12,10 @@
 namespace ddk {
 namespace internal {
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_baker_protocol_register, BakerRegister,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_baker_protocol_register, BakerRegister,
         void (C::*)(const cookie_maker_protocol_t* intf));
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_baker_protocol_de_register, BakerDeRegister,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_baker_protocol_de_register, BakerDeRegister,
         void (C::*)());
 
 
@@ -31,13 +31,13 @@ constexpr void CheckBakerProtocolSubclass() {
 
 }
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_cookie_maker_protocol_prep, CookieMakerPrep,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_cookie_maker_protocol_prep, CookieMakerPrep,
         void (C::*)(cookie_kind_t cookie, cookie_maker_prep_callback callback, void* cookie));
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_cookie_maker_protocol_bake, CookieMakerBake,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_cookie_maker_protocol_bake, CookieMakerBake,
         void (C::*)(uint64_t token, zx_time_t time, cookie_maker_bake_callback callback, void* cookie));
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_cookie_maker_protocol_deliver, CookieMakerDeliver,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_cookie_maker_protocol_deliver, CookieMakerDeliver,
         zx_status_t (C::*)(uint64_t token));
 
 

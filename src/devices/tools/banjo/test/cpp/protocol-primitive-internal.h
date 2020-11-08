@@ -12,37 +12,37 @@
 namespace ddk {
 namespace internal {
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_synchronous_primitive_protocol_bool, SynchronousPrimitiveBool,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_synchronous_primitive_protocol_bool, SynchronousPrimitiveBool,
         bool (C::*)(bool b, bool* out_b_2));
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_synchronous_primitive_protocol_int8, SynchronousPrimitiveInt8,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_synchronous_primitive_protocol_int8, SynchronousPrimitiveInt8,
         int8_t (C::*)(int8_t i8, int8_t* out_i8_2));
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_synchronous_primitive_protocol_int16, SynchronousPrimitiveInt16,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_synchronous_primitive_protocol_int16, SynchronousPrimitiveInt16,
         int16_t (C::*)(int16_t i16, int16_t* out_i16_2));
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_synchronous_primitive_protocol_int32, SynchronousPrimitiveInt32,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_synchronous_primitive_protocol_int32, SynchronousPrimitiveInt32,
         int32_t (C::*)(int32_t i32, int32_t* out_i32_2));
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_synchronous_primitive_protocol_int64, SynchronousPrimitiveInt64,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_synchronous_primitive_protocol_int64, SynchronousPrimitiveInt64,
         int64_t (C::*)(int64_t i64, int64_t* out_i64_2));
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_synchronous_primitive_protocol_uint8, SynchronousPrimitiveUint8,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_synchronous_primitive_protocol_uint8, SynchronousPrimitiveUint8,
         uint8_t (C::*)(uint8_t u8, uint8_t* out_u8_2));
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_synchronous_primitive_protocol_uint16, SynchronousPrimitiveUint16,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_synchronous_primitive_protocol_uint16, SynchronousPrimitiveUint16,
         uint16_t (C::*)(uint16_t u16, uint16_t* out_u16_2));
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_synchronous_primitive_protocol_uint32, SynchronousPrimitiveUint32,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_synchronous_primitive_protocol_uint32, SynchronousPrimitiveUint32,
         uint32_t (C::*)(uint32_t u32, uint32_t* out_u32_2));
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_synchronous_primitive_protocol_uint64, SynchronousPrimitiveUint64,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_synchronous_primitive_protocol_uint64, SynchronousPrimitiveUint64,
         uint64_t (C::*)(uint64_t u64, uint64_t* out_u64_2));
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_synchronous_primitive_protocol_float32, SynchronousPrimitiveFloat32,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_synchronous_primitive_protocol_float32, SynchronousPrimitiveFloat32,
         float (C::*)(float f32, float* out_f32_2));
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_synchronous_primitive_protocol_float64, SynchronousPrimitiveFloat64,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_synchronous_primitive_protocol_float64, SynchronousPrimitiveFloat64,
         double (C::*)(double u64, double* out_f64_2));
 
 
@@ -94,37 +94,37 @@ constexpr void CheckSynchronousPrimitiveProtocolSubclass() {
 
 }
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_async_primitive_protocol_bool, AsyncPrimitiveBool,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_async_primitive_protocol_bool, AsyncPrimitiveBool,
         void (C::*)(bool b, async_primitive_bool_callback callback, void* cookie));
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_async_primitive_protocol_int8, AsyncPrimitiveInt8,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_async_primitive_protocol_int8, AsyncPrimitiveInt8,
         void (C::*)(int8_t i8, async_primitive_int8_callback callback, void* cookie));
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_async_primitive_protocol_int16, AsyncPrimitiveInt16,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_async_primitive_protocol_int16, AsyncPrimitiveInt16,
         void (C::*)(int16_t i16, async_primitive_int16_callback callback, void* cookie));
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_async_primitive_protocol_int32, AsyncPrimitiveInt32,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_async_primitive_protocol_int32, AsyncPrimitiveInt32,
         void (C::*)(int32_t i32, async_primitive_int32_callback callback, void* cookie));
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_async_primitive_protocol_int64, AsyncPrimitiveInt64,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_async_primitive_protocol_int64, AsyncPrimitiveInt64,
         void (C::*)(int64_t i64, async_primitive_int64_callback callback, void* cookie));
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_async_primitive_protocol_uint8, AsyncPrimitiveUint8,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_async_primitive_protocol_uint8, AsyncPrimitiveUint8,
         void (C::*)(uint8_t u8, async_primitive_uint8_callback callback, void* cookie));
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_async_primitive_protocol_uint16, AsyncPrimitiveUint16,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_async_primitive_protocol_uint16, AsyncPrimitiveUint16,
         void (C::*)(uint16_t u16, async_primitive_uint16_callback callback, void* cookie));
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_async_primitive_protocol_uint32, AsyncPrimitiveUint32,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_async_primitive_protocol_uint32, AsyncPrimitiveUint32,
         void (C::*)(uint32_t u32, async_primitive_uint32_callback callback, void* cookie));
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_async_primitive_protocol_uint64, AsyncPrimitiveUint64,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_async_primitive_protocol_uint64, AsyncPrimitiveUint64,
         void (C::*)(uint64_t u64, async_primitive_uint64_callback callback, void* cookie));
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_async_primitive_protocol_float32, AsyncPrimitiveFloat32,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_async_primitive_protocol_float32, AsyncPrimitiveFloat32,
         void (C::*)(float f32, async_primitive_float32_callback callback, void* cookie));
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_async_primitive_protocol_float64, AsyncPrimitiveFloat64,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_async_primitive_protocol_float64, AsyncPrimitiveFloat64,
         void (C::*)(double u64, async_primitive_float64_callback callback, void* cookie));
 
 

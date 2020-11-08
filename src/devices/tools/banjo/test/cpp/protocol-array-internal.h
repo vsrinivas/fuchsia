@@ -12,40 +12,40 @@
 namespace ddk {
 namespace internal {
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_array_protocol_bool, ArrayBool,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_array_protocol_bool, ArrayBool,
         void (C::*)(const bool b[1], bool out_b[1]));
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_array_protocol_int8, ArrayInt8,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_array_protocol_int8, ArrayInt8,
         void (C::*)(const int8_t i8[1], int8_t out_i8[1]));
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_array_protocol_int16, ArrayInt16,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_array_protocol_int16, ArrayInt16,
         void (C::*)(const int16_t i16[1], int16_t out_i16[1]));
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_array_protocol_int32, ArrayInt32,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_array_protocol_int32, ArrayInt32,
         void (C::*)(const int32_t i32[1], int32_t out_i32[1]));
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_array_protocol_int64, ArrayInt64,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_array_protocol_int64, ArrayInt64,
         void (C::*)(const int64_t i64[1], int64_t out_i64[1]));
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_array_protocol_uint8, ArrayUint8,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_array_protocol_uint8, ArrayUint8,
         void (C::*)(const uint8_t u8[1], uint8_t out_u8[1]));
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_array_protocol_uint16, ArrayUint16,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_array_protocol_uint16, ArrayUint16,
         void (C::*)(const uint16_t u16[1], uint16_t out_u16[1]));
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_array_protocol_uint32, ArrayUint32,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_array_protocol_uint32, ArrayUint32,
         void (C::*)(const uint32_t u32[1], uint32_t out_u32[1]));
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_array_protocol_uint64, ArrayUint64,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_array_protocol_uint64, ArrayUint64,
         void (C::*)(const uint64_t u64[1], uint64_t out_u64[1]));
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_array_protocol_float32, ArrayFloat32,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_array_protocol_float32, ArrayFloat32,
         void (C::*)(const float f32[1], float out_f32[1]));
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_array_protocol_float64, ArrayFloat64,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_array_protocol_float64, ArrayFloat64,
         void (C::*)(const double u64[1], double out_f64[1]));
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_array_protocol_handle, ArrayHandle,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_array_protocol_handle, ArrayHandle,
         void (C::*)(const zx::handle u64[1], zx::handle out_f64[1]));
 
 
@@ -101,40 +101,40 @@ constexpr void CheckArrayProtocolSubclass() {
 
 }
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_array2_protocol_bool, Array2Bool,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_array2_protocol_bool, Array2Bool,
         void (C::*)(const bool b[array_size], bool out_b[array_size]));
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_array2_protocol_int8, Array2Int8,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_array2_protocol_int8, Array2Int8,
         void (C::*)(const int8_t i8[array_size], int8_t out_i8[array_size]));
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_array2_protocol_int16, Array2Int16,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_array2_protocol_int16, Array2Int16,
         void (C::*)(const int16_t i16[array_size], int16_t out_i16[array_size]));
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_array2_protocol_int32, Array2Int32,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_array2_protocol_int32, Array2Int32,
         void (C::*)(const int32_t i32[array_size], int32_t out_i32[array_size]));
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_array2_protocol_int64, Array2Int64,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_array2_protocol_int64, Array2Int64,
         void (C::*)(const int64_t i64[array_size], int64_t out_i64[array_size]));
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_array2_protocol_uint8, Array2Uint8,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_array2_protocol_uint8, Array2Uint8,
         void (C::*)(const uint8_t u8[array_size], uint8_t out_u8[array_size]));
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_array2_protocol_uint16, Array2Uint16,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_array2_protocol_uint16, Array2Uint16,
         void (C::*)(const uint16_t u16[array_size], uint16_t out_u16[array_size]));
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_array2_protocol_uint32, Array2Uint32,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_array2_protocol_uint32, Array2Uint32,
         void (C::*)(const uint32_t u32[array_size], uint32_t out_u32[array_size]));
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_array2_protocol_uint64, Array2Uint64,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_array2_protocol_uint64, Array2Uint64,
         void (C::*)(const uint64_t u64[array_size], uint64_t out_u64[array_size]));
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_array2_protocol_float32, Array2Float32,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_array2_protocol_float32, Array2Float32,
         void (C::*)(const float f32[array_size], float out_f32[array_size]));
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_array2_protocol_float64, Array2Float64,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_array2_protocol_float64, Array2Float64,
         void (C::*)(const double u64[array_size], double out_f64[array_size]));
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_array2_protocol_handle, Array2Handle,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_array2_protocol_handle, Array2Handle,
         void (C::*)(const zx::handle u64[array_size], zx::handle out_f64[array_size]));
 
 
@@ -190,40 +190,40 @@ constexpr void CheckArray2ProtocolSubclass() {
 
 }
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_arrayof_arrays_protocol_bool, ArrayofArraysBool,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_arrayof_arrays_protocol_bool, ArrayofArraysBool,
         void (C::*)(const bool b[array_size][4], bool out_b[array_size][4]));
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_arrayof_arrays_protocol_int8, ArrayofArraysInt8,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_arrayof_arrays_protocol_int8, ArrayofArraysInt8,
         void (C::*)(const int8_t i8[array_size][4], int8_t out_i8[array_size][4]));
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_arrayof_arrays_protocol_int16, ArrayofArraysInt16,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_arrayof_arrays_protocol_int16, ArrayofArraysInt16,
         void (C::*)(const int16_t i16[array_size][4], int16_t out_i16[array_size][4]));
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_arrayof_arrays_protocol_int32, ArrayofArraysInt32,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_arrayof_arrays_protocol_int32, ArrayofArraysInt32,
         void (C::*)(const int32_t i32[array_size][4], int32_t out_i32[array_size][4]));
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_arrayof_arrays_protocol_int64, ArrayofArraysInt64,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_arrayof_arrays_protocol_int64, ArrayofArraysInt64,
         void (C::*)(const int64_t i64[array_size][4], int64_t out_i64[array_size][4]));
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_arrayof_arrays_protocol_uint8, ArrayofArraysUint8,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_arrayof_arrays_protocol_uint8, ArrayofArraysUint8,
         void (C::*)(const uint8_t u8[array_size][4], uint8_t out_u8[array_size][4]));
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_arrayof_arrays_protocol_uint16, ArrayofArraysUint16,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_arrayof_arrays_protocol_uint16, ArrayofArraysUint16,
         void (C::*)(const uint16_t u16[array_size][4], uint16_t out_u16[array_size][4]));
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_arrayof_arrays_protocol_uint32, ArrayofArraysUint32,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_arrayof_arrays_protocol_uint32, ArrayofArraysUint32,
         void (C::*)(const uint32_t u32[array_size][4], uint32_t out_u32[array_size][4]));
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_arrayof_arrays_protocol_uint64, ArrayofArraysUint64,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_arrayof_arrays_protocol_uint64, ArrayofArraysUint64,
         void (C::*)(const uint64_t u64[array_size][4], uint64_t out_u64[array_size][4]));
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_arrayof_arrays_protocol_float32, ArrayofArraysFloat32,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_arrayof_arrays_protocol_float32, ArrayofArraysFloat32,
         void (C::*)(const float f32[array_size][4], float out_f32[array_size][4]));
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_arrayof_arrays_protocol_float64, ArrayofArraysFloat64,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_arrayof_arrays_protocol_float64, ArrayofArraysFloat64,
         void (C::*)(const double u64[array_size][4], double out_f64[array_size][4]));
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_arrayof_arrays_protocol_handle, ArrayofArraysHandle,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_arrayof_arrays_protocol_handle, ArrayofArraysHandle,
         void (C::*)(const zx::handle u64[array_size][4], zx::handle out_f64[array_size][4]));
 
 

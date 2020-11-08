@@ -12,7 +12,7 @@
 namespace ddk {
 namespace internal {
 
-DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_view_protocol_move_to, ViewMoveTo,
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_view_protocol_move_to, ViewMoveTo,
         void (C::*)(const point_t* p));
 
 
