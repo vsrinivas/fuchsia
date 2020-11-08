@@ -5,12 +5,14 @@
 #ifndef SRC_BRINGUP_BIN_NETSVC_ZBI_H_
 #define SRC_BRINGUP_BIN_NETSVC_ZBI_H_
 
+#include <lib/zx/vmo.h>
 #include <stdint.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
-zx_status_t netboot_prepare_zbi(zx_handle_t nbkernel_vmo, zx_handle_t nbbootdata_vmo,
-                                const uint8_t* cmdline, uint32_t cmdline_size, zx_handle_t* kernel,
-                                zx_handle_t* bootdata);
+#include <string_view>
+
+zx_status_t netboot_prepare_zbi(zx::vmo nbkernel, zx::vmo nbdata, std::string_view cmdline,
+                                zx::vmo* kernel_zbi, zx::vmo* data_zbi);
 
 #endif  // SRC_BRINGUP_BIN_NETSVC_ZBI_H_

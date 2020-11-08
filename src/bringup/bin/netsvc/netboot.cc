@@ -12,6 +12,7 @@
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
+#include <lib/zx/vmo.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -48,7 +49,7 @@ struct nbfilecontainer_t {
 };
 
 static nbfilecontainer_t nbkernel;
-static nbfilecontainer_t nbbootdata;
+static nbfilecontainer_t nbdata;
 static nbfilecontainer_t nbcmdline;
 
 // Pointer to the currently active transfer.
@@ -115,7 +116,7 @@ nbfile* netboot_get_buffer(const char* name, size_t size) {
   if (!strcmp(name, NB_KERNEL_FILENAME)) {
     result = &nbkernel;
   } else if (!strcmp(name, NB_RAMDISK_FILENAME)) {
-    result = &nbbootdata;
+    result = &nbdata;
   } else if (!strcmp(name, NB_CMDLINE_FILENAME)) {
     result = &nbcmdline;
   } else {
@@ -248,11 +249,12 @@ static void nb_close(uint32_t cookie, const ip6_addr_t* saddr, uint16_t sport, u
 }
 
 static zx_status_t do_dmctl_mexec() {
-  zx_handle_t kernel, bootdata;
+  zx::vmo kernel_zbi, data_zbi;
   // TODO(scottmg): range check nbcmdline.file.size rather than just casting.
-  zx_status_t status =
-      netboot_prepare_zbi(nbkernel.data, nbbootdata.data, nbcmdline.file.data,
-                          static_cast<uint32_t>(nbcmdline.file.size), &kernel, &bootdata);
+  zx_status_t status = netboot_prepare_zbi(
+      zx::vmo(nbkernel.data), zx::vmo(nbdata.data),
+      std::string_view(reinterpret_cast<const char*>(nbcmdline.file.data), nbcmdline.file.size),
+      &kernel_zbi, &data_zbi);
   if (status != ZX_OK) {
     return status;
   }
@@ -268,7 +270,7 @@ static zx_status_t do_dmctl_mexec() {
     return ZX_ERR_INTERNAL;
   }
 
-  status = fuchsia_kernel_MexecBrokerPerformMexec(local.get(), kernel, bootdata);
+  status = fuchsia_kernel_MexecBrokerPerformMexec(local.get(), kernel_zbi.get(), data_zbi.get());
   if (status != ZX_OK) {
     return ZX_ERR_INTERNAL;
   }
