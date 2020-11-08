@@ -5,7 +5,6 @@
 #ifndef LIB_INSPECT_CPP_VMO_STATE_H_
 #define LIB_INSPECT_CPP_VMO_STATE_H_
 
-#include <lib/async/dispatcher.h>
 #include <lib/fit/function.h>
 #include <lib/fit/promise.h>
 #include <lib/fit/sequencer.h>
