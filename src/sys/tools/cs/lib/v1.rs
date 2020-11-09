@@ -149,10 +149,18 @@ impl V1Component {
         let job_id = component_dir.read_file("job-id").await.parse::<u32>().unwrap();
         let url = component_dir.read_file("url").await;
         let name = component_dir.read_file("name").await;
-        let pkg_dir = component_dir.open_dir("in").await.open_dir("pkg").await;
+        let in_dir = component_dir.open_dir("in").await;
 
-        let merkleroot =
-            if pkg_dir.exists("meta").await { Some(pkg_dir.read_file("meta").await) } else { None };
+        let merkleroot = if in_dir.exists("pkg").await {
+            let pkg_dir = in_dir.open_dir("pkg").await;
+            if pkg_dir.exists("meta").await {
+                Some(pkg_dir.read_file("meta").await)
+            } else {
+                None
+            }
+        } else {
+            None
+        };
 
         let child_components = if component_dir.exists("c").await {
             let child_components_dir = component_dir.open_dir("c").await;
@@ -161,10 +169,7 @@ impl V1Component {
             vec![]
         };
 
-        let incoming_capabilities = {
-            let in_dir = component_dir.open_dir("in").await;
-            get_capabilities(in_dir).await
-        };
+        let incoming_capabilities = get_capabilities(in_dir).await;
 
         let outgoing_capabilities = if component_dir.exists("out").await {
             if let Some(out_dir) = component_dir.open_dir_timeout("out").await {
