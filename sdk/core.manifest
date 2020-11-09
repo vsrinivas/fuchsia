@@ -68,6 +68,7 @@ sdk://fidl/fuchsia.media.target
 sdk://fidl/fuchsia.mediacodec
 sdk://fidl/fuchsia.mem
 sdk://fidl/fuchsia.memorypressure
+sdk://fidl/fuchsia.metrics
 sdk://fidl/fuchsia.migration
 sdk://fidl/fuchsia.modular
 sdk://fidl/fuchsia.net
