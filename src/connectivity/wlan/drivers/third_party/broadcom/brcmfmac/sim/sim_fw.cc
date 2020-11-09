@@ -445,6 +445,17 @@ zx_status_t SimFirmware::BusTxCtl(unsigned char* msg, unsigned int len) {
       }
       break;
     }
+    case BRCMF_C_SCAN: {
+      // For now this command is not used to start any kind of scan, the iovar "escan" is the entry
+      // of scan operation. This command is now only used to abort an escan when channel[0] in the
+      // parameter is -1.
+      auto scan_params = (reinterpret_cast<brcmf_scan_params_le*>(data));
+      ZX_ASSERT_MSG(scan_params->channel_list[0] == static_cast<uint16_t>(-1),
+                    "BRCMF_C_SCAN should only be used for aborting an escan now.");
+      // Stop the escan.
+      scan_state_.state = ScanState::STOPPED;
+      break;
+    }
     default:
       BRCMF_DBG(SIM, "Unimplemented firmware message %d", dcmd->cmd);
       return ZX_ERR_NOT_SUPPORTED;

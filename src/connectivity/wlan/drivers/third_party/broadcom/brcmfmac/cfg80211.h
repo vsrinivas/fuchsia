@@ -50,7 +50,7 @@
 
 #define BRCMF_DISCONNECT_TIMER_DUR_MS     ZX_MSEC(50) /* disconnect timer dur */
 #define BRCMF_SIGNAL_REPORT_TIMER_DUR_MS  ZX_MSEC(1000) /* Signal report dur */
-#define BRCMF_AP_START_TIMER_DUR_MS       ZX_MSEC(9000) /* AP start timer dur */
+#define BRCMF_AP_START_TIMER_DUR_MS       ZX_MSEC(1000) /* AP start timer dur */
 #define BRCMF_CONNECT_TIMER_DUR_MS        ZX_MSEC(1500) /*connect timer dur*/
 
 #define WL_ESCAN_ACTION_START      1

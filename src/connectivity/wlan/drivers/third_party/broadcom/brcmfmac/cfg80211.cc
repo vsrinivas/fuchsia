@@ -1050,6 +1050,7 @@ zx_status_t brcmf_cfg80211_scan(struct net_device* ndev, const wlanif_scan_req_t
   }
 
   struct brcmf_cfg80211_info* cfg = ndev_to_if(ndev)->drvr->config;
+  struct net_device* softap_ndev = cfg_to_softap_ndev(cfg);
 
   if (brcmf_test_bit_in_array(BRCMF_SCAN_STATUS_BUSY, &cfg->scan_status)) {
     BRCMF_ERR("Scanning already: status (%lu)\n", cfg->scan_status.load());
@@ -1066,6 +1067,11 @@ zx_status_t brcmf_cfg80211_scan(struct net_device* ndev, const wlanif_scan_req_t
   if (brcmf_test_bit_in_array(BRCMF_VIF_STATUS_CONNECTING, &vif->sme_state)) {
     BRCMF_ERR("Scan request suppressed: connect in progress (status: %lu)\n",
               vif->sme_state.load());
+    return ZX_ERR_UNAVAILABLE;
+  }
+  if (softap_ndev != nullptr && brcmf_test_bit_in_array(BRCMF_VIF_STATUS_AP_START_PENDING,
+                                                        &ndev_to_vif(softap_ndev)->sme_state)) {
+    BRCMF_ERR("AP start request in progress, rejecting scan request, a retry is expected.");
     return ZX_ERR_UNAVAILABLE;
   }
 
@@ -2889,6 +2895,7 @@ zx_status_t brcmf_vif_clear_mgmt_ies(struct brcmf_cfg80211_vif* vif) {
 // If all iovars succeed, MLME is notified when E_LINK event is received.
 static uint8_t brcmf_cfg80211_start_ap(struct net_device* ndev, const wlanif_start_req_t* req) {
   struct brcmf_if* ifp = ndev_to_if(ndev);
+  struct brcmf_cfg80211_info* cfg = ifp->drvr->config;
 
   if (brcmf_test_bit_in_array(BRCMF_VIF_STATUS_AP_CREATED, &ifp->vif->sme_state)) {
     BRCMF_ERR("AP already started");
@@ -2910,11 +2917,18 @@ static uint8_t brcmf_cfg80211_start_ap(struct net_device* ndev, const wlanif_sta
     return WLAN_START_RESULT_NOT_SUPPORTED;
   }
 
+  if (brcmf_test_bit_in_array(BRCMF_SCAN_STATUS_BUSY, &cfg->scan_status)) {
+    BRCMF_ERR(
+        "Scanning in progress when AP start request comes, scan status (%lu), aborting scan to "
+        "continue AP start request.\n",
+        cfg->scan_status.load());
+    brcmf_abort_scanning(cfg);
+  }
+
   BRCMF_DBG(TRACE, "ssid: %*s  beacon period: %d  dtim_period: %d  channel: %d  rsne_len: %zd",
             req->ssid.len, req->ssid.data, req->beacon_period, req->dtim_period, req->channel,
             req->rsne_len);
 
-  struct brcmf_cfg80211_info* cfg = ifp->drvr->config;
   wlan_channel_t channel = {};
   uint16_t chanspec = 0;
   zx_status_t status;

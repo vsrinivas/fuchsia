@@ -33,7 +33,8 @@ class DynamicIfTest : public SimTest {
   // How long an individual test will run for. We need an end time because tests run until no more
   // events remain and if ap's are beaconing the test will run indefinitely.
   static constexpr zx::duration kTestDuration = zx::sec(100);
-  DynamicIfTest() = default;
+  DynamicIfTest() : ap_(env_.get(), kDefaultBssid, kDefaultSsid, kDefaultChannel){};
+  void Init();
 
   // How many devices have been registered by the fake devhost
   uint32_t DeviceCount();
@@ -68,11 +69,17 @@ class DynamicIfTest : public SimTest {
   void TestApStop(bool use_cdown);
 
  protected:
+  simulation::FakeAp ap_;
   SimInterface client_ifc_;
   SimInterface softap_ifc_;
   void CheckAddIfaceWritesWdev(wlan_info_mac_role_t role, const char iface_name[],
                                SimInterface& ifc);
 };
+
+void DynamicIfTest::Init() {
+  ASSERT_EQ(SimTest::Init(), ZX_OK);
+  ap_.EnableBeacon(zx::msec(100));
+}
 
 void DynamicIfTest::PhyQuery(wlanphy_impl_info_t* out_info) {
   zx_status_t status;
@@ -462,11 +469,8 @@ TEST_F(DynamicIfTest, ConnectBothInterfaces) {
   // Start our SoftAP
   softap_ifc_.StartSoftAp();
 
-  // Start up our fake AP
-  simulation::FakeAp ap(env_.get(), kDefaultBssid, kDefaultSsid, kDefaultChannel);
-
   // Associate to FakeAp
-  client_ifc_.AssociateWith(ap, zx::msec(10));
+  client_ifc_.AssociateWith(ap_, zx::msec(10));
   // Associate to SoftAP
   SCHEDULE_CALL(zx::msec(100), &DynamicIfTest::TxAuthAndAssocReq, this);
 
@@ -489,10 +493,6 @@ void DynamicIfTest::TestApStop(bool use_cdown) {
   // Start our SoftAP
   softap_ifc_.StartSoftAp();
 
-  // Start up our fake AP
-  simulation::FakeAp ap(env_.get(), kDefaultBssid, kDefaultSsid, kDefaultChannel);
-  ap.EnableBeacon(zx::msec(100));
-
   // Optionally force the use of a C_DOWN command, which has the side-effect of bringing down the
   // client interface.
   if (use_cdown) {
@@ -500,7 +500,7 @@ void DynamicIfTest::TestApStop(bool use_cdown) {
   }
 
   // Associate to FakeAp
-  client_ifc_.AssociateWith(ap, zx::msec(10));
+  client_ifc_.AssociateWith(ap_, zx::msec(10));
 
   // Associate to SoftAP
   SCHEDULE_CALL(zx::msec(100), &DynamicIfTest::TxAuthAndAssocReq, this);
@@ -589,12 +589,9 @@ TEST_F(DynamicIfTest, CheckSoftAPChannel) {
   StartInterface(WLAN_INFO_MAC_ROLE_CLIENT, &client_ifc_);
   StartInterface(WLAN_INFO_MAC_ROLE_AP, &softap_ifc_);
 
-  // Start up our fake AP
-  simulation::FakeAp ap(env_.get(), kDefaultBssid, kDefaultSsid, kDefaultChannel);
-
   zx::duration delay = zx::msec(10);
   // Associate to FakeAp
-  client_ifc_.AssociateWith(ap, delay);
+  client_ifc_.AssociateWith(ap_, delay);
   // Start our SoftAP
   delay += zx::msec(10);
   SCHEDULE_CALL(delay, &SimInterface::StartSoftAp, &softap_ifc_, SimInterface::kDefaultSoftApSsid,
@@ -628,14 +625,11 @@ TEST_F(DynamicIfTest, StartApIfaceTimeoutWithReqSpamAndFwIgnore) {
   SCHEDULE_CALL(zx::msec(510), &SimInterface::StartSoftAp, &softap_ifc_,
                 SimInterface::kDefaultSoftApSsid, kDefaultChannel, 100, 100);
 
-  // TODO(fxb/63542): The timeout for AP start is temporarily changed to 9 sec, change it back when
-  // the fix for start AP timeout issue is checked in. Check the timer is fired, it should fire at
-  // 9010 msec.
-  SCHEDULE_CALL(zx::msec(9011), &DynamicIfTest::VerifyStartApTimer, this);
+  SCHEDULE_CALL(zx::msec(1011), &DynamicIfTest::VerifyStartApTimer, this);
   // Make firmware back to normal.
-  SCHEDULE_CALL(zx::msec(9011), &DynamicIfTest::DelInjectedStartAPIgnore, this);
+  SCHEDULE_CALL(zx::msec(1011), &DynamicIfTest::DelInjectedStartAPIgnore, this);
   // Issue start AP request again.
-  SCHEDULE_CALL(zx::msec(9100), &SimInterface::StartSoftAp, &softap_ifc_,
+  SCHEDULE_CALL(zx::msec(1100), &SimInterface::StartSoftAp, &softap_ifc_,
                 SimInterface::kDefaultSoftApSsid, kDefaultChannel, 100, 100);
 
   env_->Run(kTestDuration);
@@ -643,5 +637,59 @@ TEST_F(DynamicIfTest, StartApIfaceTimeoutWithReqSpamAndFwIgnore) {
   // Make sure the AP iface finally stated successfully.
   EXPECT_EQ(softap_ifc_.stats_.start_confirmations.size(), 3U);
   EXPECT_EQ(softap_ifc_.stats_.start_confirmations.back().result_code, WLAN_START_RESULT_SUCCESS);
+}
+
+// This test case verifies that when an AP start request comes during a scan, the scan will be
+// aborted and AP interface will be start successfully.
+TEST_F(DynamicIfTest, StartApWhileScanning) {
+  constexpr uint64_t kScanId = 0x18c5f;
+
+  Init();
+  StartInterface(WLAN_INFO_MAC_ROLE_CLIENT, &client_ifc_);
+  StartInterface(WLAN_INFO_MAC_ROLE_AP, &softap_ifc_);
+
+  SCHEDULE_CALL(zx::msec(30), &SimInterface::StartScan, &client_ifc_, kScanId, false);
+  SCHEDULE_CALL(zx::msec(200), &SimInterface::StartSoftAp, &softap_ifc_,
+                SimInterface::kDefaultSoftApSsid, kDefaultChannel, 100, 100);
+
+  env_->Run(kTestDuration);
+
+  // There will be no result received from firmware, because the fake external AP's channel number
+  // is 149, The scan has been stopped before reaching that channel.
+  EXPECT_EQ(client_ifc_.ScanResultBssList(kScanId)->size(), 0U);
+  ASSERT_NE(client_ifc_.ScanResultCode(kScanId), std::nullopt);
+  EXPECT_EQ(client_ifc_.ScanResultCode(kScanId).value(), WLAN_SCAN_RESULT_INTERNAL_ERROR);
+
+  // Make sure the AP iface is finally started successfully.
+  EXPECT_EQ(softap_ifc_.stats_.start_confirmations.size(), 1U);
+  EXPECT_EQ(softap_ifc_.stats_.start_confirmations.back().result_code, WLAN_START_RESULT_SUCCESS);
+}
+
+// This test case verifies that a scan request comes while a AP start req is in progress will be
+// rejected. Because the AP start request will return a success immediately in SIM, so here we
+// inject a ignore error for AP start req to simulate the pending of it.
+TEST_F(DynamicIfTest, RejectScanWhenApStartReqIsPending) {
+  constexpr uint64_t kScanId = 0x18c5f;
+  Init();
+  StartInterface(WLAN_INFO_MAC_ROLE_CLIENT, &client_ifc_);
+  StartInterface(WLAN_INFO_MAC_ROLE_AP, &softap_ifc_);
+
+  InjectStartAPIgnore();
+  SCHEDULE_CALL(zx::msec(30), &SimInterface::StartSoftAp, &softap_ifc_,
+                SimInterface::kDefaultSoftApSsid, kDefaultChannel, 100, 100);
+  // The timeout of AP start is 1000 msec, so a scan request before zx::msec(1030) will be rejected.
+  SCHEDULE_CALL(zx::msec(100), &SimInterface::StartScan, &client_ifc_, kScanId, false);
+
+  env_->Run(kTestDuration);
+  // There will be no result received from firmware, because the fake external AP's channel number
+  // is 149, The scan has been stopped before reaching that channel.
+  EXPECT_EQ(client_ifc_.ScanResultBssList(kScanId)->size(), 0U);
+  ASSERT_NE(client_ifc_.ScanResultCode(kScanId), std::nullopt);
+  EXPECT_EQ(client_ifc_.ScanResultCode(kScanId).value(), WLAN_SCAN_RESULT_INTERNAL_ERROR);
+
+  // AP start will also fail because the request is ignored in firmware.
+  EXPECT_EQ(softap_ifc_.stats_.start_confirmations.size(), 1U);
+  EXPECT_EQ(softap_ifc_.stats_.start_confirmations.back().result_code,
+            WLAN_START_RESULT_NOT_SUPPORTED);
 }
 }  // namespace wlan::brcmfmac
