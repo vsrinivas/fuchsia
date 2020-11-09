@@ -38,9 +38,6 @@ source_set("phys") {
   if (toolchain.environment == "kernel") {
     deps += [ "$zx/kernel/lib/console" ]
   }
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "$zx_build_config:Wno-conversion" ]
 }
 
 source_set("zbitl") {

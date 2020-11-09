@@ -31,8 +31,5 @@ if (is_host) {
       "//zircon/kernel/lib/heap/cmpctmalloc/include/lib",
       "//zircon/kernel/lib/heap/include",
     ]
-
-    # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-    configs += [ "//build/config:Wno-conversion" ]
   }
 }

@@ -188,9 +188,6 @@ source_set("phys-unittests") {
     "$zx/kernel/lib/unittest",
     "$zx/kernel/tests",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "$zx_build_config:Wno-conversion" ]
 }
 
 source_set("phys-memory-test") {

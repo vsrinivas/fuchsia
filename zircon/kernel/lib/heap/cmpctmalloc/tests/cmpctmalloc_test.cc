@@ -94,8 +94,8 @@ class RandomAllocator {
   // memalign is only required to accept alignment specifications that are
   // powers of two and multiples of sizeof(void*) (guaranteed itself to be a
   // power of 2).
-  const size_t kMinAlignmentExponent = log2(sizeof(void*));
-  const size_t kMaxAlignmentExponent = log2(ZX_PAGE_SIZE);
+  const size_t kMinAlignmentExponent = static_cast<size_t>(log2(sizeof(void*)));
+  const size_t kMaxAlignmentExponent = static_cast<size_t>(log2(ZX_PAGE_SIZE));
 
   std::default_random_engine generator_;
   std::uniform_int_distribution<size_t> sizes_;

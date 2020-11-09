@@ -15,7 +15,4 @@ zx_library("console") {
     # <lib/console.h> has #include <lib/special-sections/special-sections.h>.
     "$zx/kernel/lib/special-sections:headers",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "$zx_build_config:Wno-conversion" ]
 }

@@ -12,7 +12,4 @@ zx_library("dummy") {
     # <dev/iommu/dummy.h> has #include <ktl/unique_ptr.h>.
     "$zx/kernel/lib/ktl:headers",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "$zx_build_config:Wno-conversion" ]
 }

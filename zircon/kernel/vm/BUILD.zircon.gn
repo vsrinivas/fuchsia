@@ -62,15 +62,9 @@ zx_library("vm") {
     # <vm/vm_aspace.h> has #include <lib/crypto/prng.h>
     "$zx/kernel/lib/crypto:headers",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "$zx_build_config:Wno-conversion" ]
 }
 
 source_set("tests") {
   sources = [ "vm_unittest.cc" ]
   deps = [ "$zx/kernel/lib/unittest" ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "$zx_build_config:Wno-conversion" ]
 }

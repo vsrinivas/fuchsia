@@ -1541,7 +1541,7 @@ zx_status_t VmCowPages::GetPageLocked(uint64_t offset, uint pf_flags, list_node*
       p = vm_get_zero_page();
     } else {
       AssertHeld(page_owner->lock_);
-      uint32_t user_id = 0;
+      uint64_t user_id = 0;
       if (page_owner->paged_ref_) {
         AssertHeld(page_owner->paged_ref_->lock_ref());
         user_id = page_owner->paged_ref_->user_id_locked();
