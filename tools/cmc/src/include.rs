@@ -44,7 +44,7 @@ pub fn merge_includes(
     }
 
     // Write postprocessed JSON
-    if let Some(output_path) = output {
+    if let Some(output_path) = output.clone() {
         fs::OpenOptions::new()
             .create(true)
             .truncate(true)
@@ -57,14 +57,22 @@ pub fn merge_includes(
 
     // Write includes to depfile
     if let Some(depfile_path) = depfile {
-        let mut depfile_contents = includes.join("\n");
-        depfile_contents.push('\n');
-        fs::OpenOptions::new()
-            .create(true)
-            .truncate(true)
-            .write(true)
-            .open(depfile_path)?
-            .write_all(depfile_contents.as_bytes())?;
+        if output.is_none() || includes.is_empty() {
+            // A non-existent depfile is the same as an empty depfile
+            if depfile_path.exists() {
+                // Delete stale depfile
+                fs::remove_file(depfile_path)?;
+            }
+        } else if let Some(output_path) = output {
+            let depfile_contents =
+                format!("{}: {}\n", output_path.as_path().display(), includes.join(" "));
+            fs::OpenOptions::new()
+                .create(true)
+                .truncate(true)
+                .write(true)
+                .open(depfile_path)?
+                .write_all(depfile_contents.as_bytes())?;
+        }
     }
 
     Ok(())
@@ -140,7 +148,7 @@ mod tests {
         );
         let mut deps = String::new();
         File::open(&cmx_depfile_path).unwrap().read_to_string(&mut deps).unwrap();
-        assert_eq!(deps, "shard.cmx\n");
+        assert_eq!(deps, format!("{}/out.cmx: shard.cmx\n", tmp_dir.path().display()));
     }
 
     #[test]
@@ -176,7 +184,7 @@ mod tests {
         );
         let mut deps = String::new();
         File::open(&cml_depfile_path).unwrap().read_to_string(&mut deps).unwrap();
-        assert_eq!(deps, "shard.cml\n");
+        assert_eq!(deps, format!("{}/out.cml: shard.cml\n", tmp_dir.path().display()));
     }
 
     #[test]
@@ -234,7 +242,7 @@ mod tests {
         );
         let mut deps = String::new();
         File::open(&cmx_depfile_path).unwrap().read_to_string(&mut deps).unwrap();
-        assert_eq!(deps, "shard1.cmx\nshard2.cmx\n");
+        assert_eq!(deps, format!("{}/out.cmx: shard1.cmx shard2.cmx\n", tmp_dir.path().display()));
     }
 
     #[test]
@@ -269,9 +277,7 @@ mod tests {
                 }
             }),
         );
-        let mut deps = String::new();
-        File::open(&cmx_depfile_path).unwrap().read_to_string(&mut deps).unwrap();
-        assert_eq!(deps, "\n");
+        assert_eq!(cmx_depfile_path.exists(), false);
     }
 
     #[test]
@@ -305,8 +311,6 @@ mod tests {
                 }
             }),
         );
-        let mut deps = String::new();
-        File::open(&cmx_depfile_path).unwrap().read_to_string(&mut deps).unwrap();
-        assert_eq!(deps, "\n");
+        assert_eq!(cmx_depfile_path.exists(), false);
     }
 }
