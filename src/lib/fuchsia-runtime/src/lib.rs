@@ -22,6 +22,7 @@ use {
         Rights,
         Status,
         Thread,
+        Time,
         Unowned,
         Vmar,
     },
@@ -335,6 +336,17 @@ pub fn duplicate_utc_clock_handle(rights: Rights) -> Result<Clock, Status> {
     handle.duplicate(rights)
 }
 
+/// Reads time from the UTC `Clock` registered with the runtime.
+///
+/// This call fails if no clock was registered with the runtime or the clock is not yet started.
+pub fn utc_time() -> Result<Time, Status> {
+    let clock: Unowned<'static, Clock> = unsafe {
+        let handle = zx_utc_reference_get();
+        Unowned::from_raw_handle(handle)
+    };
+    clock.read()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -389,5 +401,10 @@ mod tests {
         // Unknown handle type
         assert!(HandleInfo::try_from(0x00000000).is_err());
         assert!(HandleInfo::try_from(0x00000006).is_err());
+    }
+
+    #[test]
+    fn read_utc_time() {
+        utc_time().unwrap();
     }
 }
