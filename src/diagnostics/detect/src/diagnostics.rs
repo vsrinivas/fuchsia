@@ -5,7 +5,7 @@
 // Fetches diagnostic data.
 
 use {
-    anyhow::Error,
+    anyhow::{bail, Error},
     fuchsia_inspect_contrib::reader::{ArchiveReader, DataType},
     log::error,
     triage::DiagnosticData,
@@ -14,6 +14,8 @@ use {
 
 // Selectors for Inspect data must start with this exact string.
 const INSPECT_PREFIX: &str = "INSPECT:";
+// The capability name for the Inspect reader
+const INSPECT_SERVICE_PATH: &str = "/svc/fuchsia.diagnostics.FeedbackArchiveAccessor";
 
 // Durable connection to Archivist
 #[derive(Debug)]
@@ -69,7 +71,14 @@ impl InspectFetcher {
         if selectors.len() == 0 {
             return Ok(InspectFetcher { reader: None });
         }
-        let reader = ArchiveReader::new();
+        let proxy = match fuchsia_component::client::connect_to_service_at_path::<
+            fidl_fuchsia_diagnostics::ArchiveAccessorMarker,
+        >(INSPECT_SERVICE_PATH)
+        {
+            Ok(proxy) => proxy,
+            Err(e) => bail!("Failed to connect to Inspect reader: {}", e),
+        };
+        let reader = ArchiveReader::new().with_archive(proxy);
         let get_inspect = |s: String| -> Option<std::string::String> {
             if &s[..INSPECT_PREFIX.len()] == INSPECT_PREFIX {
                 Some(s[INSPECT_PREFIX.len()..].to_string())

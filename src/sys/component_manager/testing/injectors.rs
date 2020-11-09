@@ -199,7 +199,10 @@ impl<M: ServiceMarker, T: ProtocolInjector<Marker = M> + 'static + Sync + Send> 
     for T
 {
     async fn inject(self: &Arc<Self>, event_source: &EventSource, matcher: EventMatcher) {
-        let matcher = matcher.capability_id(M::NAME);
+        let matcher = match matcher.capability_name {
+            None => matcher.capability_id(M::NAME),
+            Some(_) => matcher,
+        };
         CapabilityInjector::subscribe(self, event_source, matcher).await;
     }
 

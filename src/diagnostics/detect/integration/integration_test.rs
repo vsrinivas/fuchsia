@@ -49,6 +49,10 @@ const DETECT_PROGRAM_URL: &str =
     "fuchsia-pkg://fuchsia.com/detect-integration-test#meta/detect-component.cm";
 // Keep this the same as the command line arg in meta/detect.cml.
 const CHECK_PERIOD_SECONDS: u64 = 5;
+// The capability name Detect needs for its config/data directory
+const CONFIG_DATA_CAPABILITY_NAME: &str = "config-data";
+// The capability name Detect needs for its ArchiveAccessor connection
+const ARCHIVE_ACCESSOR_CAPABILITY_NAME: &str = "fuchsia.diagnostics.FeedbackArchiveAccessor";
 
 // Test that the "repeat" field of snapshots works correctly.
 mod test_snapshot_throttle;
@@ -149,12 +153,14 @@ async fn run_a_test(test_data: TestData) -> Result<(), Error> {
     let event_source = test.connect_to_event_source().await.unwrap();
 
     DirectoryInjector::new(prepare_injected_config_directory(&test_data))
-        .inject(&event_source, EventMatcher::ok().capability_id("config-data"))
+        .inject(&event_source, EventMatcher::ok().capability_id(CONFIG_DATA_CAPABILITY_NAME))
         .await;
 
     let capability =
         FakeArchiveAccessor::new(&test_data, events_sender.clone(), done_waiter.get_signaler());
-    capability.inject(&event_source, EventMatcher::ok()).await;
+    capability
+        .inject(&event_source, EventMatcher::ok().capability_id(ARCHIVE_ACCESSOR_CAPABILITY_NAME))
+        .await;
 
     let capability = FakeCrashReporter::new(events_sender.clone(), done_waiter.get_signaler());
     capability.inject(&event_source, EventMatcher::ok()).await;
