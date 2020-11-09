@@ -1,0 +1,24 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# This contains a list of all drivers in the graphics area.
+group("drivers") {
+  testonly = true
+  deps = [
+    "//src/graphics/display:drivers",
+    "//src/graphics/drivers/aml-gpu",
+    "//src/graphics/drivers/misc/goldfish:goldfish_driver",
+    "//src/graphics/drivers/misc/goldfish_address_space:address_space_driver",
+    "//src/graphics/drivers/misc/goldfish_control:control_driver",
+    "//src/graphics/drivers/msd-arm-mali:msd_arm",
+    "//src/graphics/drivers/msd-arm-mali:msd_arm_test",
+    "//src/graphics/drivers/msd-img-rgx/mtk:msd_img_rgx_mt8167",
+    "//src/graphics/drivers/msd-img-rgx/no_hardware:msd_img_rgx_no_hardware",
+    "//src/graphics/drivers/msd-intel-gen:msd_intel",
+    "//src/graphics/drivers/msd-intel-gen:msd_intel_test",
+    "//src/graphics/drivers/msd-vsi-vip:msd_vsi",
+    "//src/graphics/drivers/msd-vsi-vip:msd_vsi_test",
+    "//src/graphics/drivers/virtio:virtio_gpu",
+  ]
+}

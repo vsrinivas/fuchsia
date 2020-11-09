@@ -4,6 +4,23 @@
 
 import("//build/fuzzing/fuzzer.gni")
 
+group("drivers") {
+  testonly = true
+  deps = [
+    "drivers/aml-canvas",
+    "drivers/amlogic-display",
+    "drivers/display",
+    "drivers/dsi-dw",
+    "drivers/dsi-mt",
+    "drivers/fake:fake-display",
+    "drivers/goldfish-display",
+    "drivers/intel-i915",
+    "drivers/mt8167s-display",
+    "drivers/ssd1306:ssd1306_driver",
+    "drivers/vim-display",
+  ]
+}
+
 group("tests") {
   testonly = true
 
