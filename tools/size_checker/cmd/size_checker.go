@@ -375,13 +375,14 @@ func parseBlobsJSON(
 			trimmed := strings.TrimPrefix(blob.SourcePath, absBuildDir)
 			icuCopyNode := newNode(trimmed)
 			node.children[trimmed] = icuCopyNode
-		} else if _, ok := state.distributedShlibs[blob.Path]; ok {
+		} else if node, ok = state.distributedShlibs[blob.Path]; ok {
 			if state.blobMap[blob.Merkle] != nil {
-				if state.distributedShlibs[blob.Path] == nil {
+				if node == nil {
 					state.distributedShlibs[blob.Path] = newNode(blob.Path)
+					node = state.distributedShlibs[blob.Path]
 				}
-				state.distributedShlibs[blob.Path].size += state.blobMap[blob.Merkle].size
-				state.distributedShlibs[blob.Path].copies += 1
+				node.size += state.blobMap[blob.Merkle].size
+				node.copies += 1
 				delete(state.blobMap, blob.Merkle)
 			}
 		} else {
