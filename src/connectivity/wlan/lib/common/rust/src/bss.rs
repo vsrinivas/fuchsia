@@ -93,9 +93,6 @@ pub trait BssDescriptionExt {
     fn get_latest_standard(&self) -> Standard;
     /// Search for vendor-specific Info Element for WPA. If found, return the body.
     fn find_wpa_ie(&self) -> Option<&[u8]>;
-    /// Get the received channel power of the BSSDescription. This will be derived
-    /// from RCPI if it exists, but will fallback to RSSI if RCPI is not in the description.
-    fn get_rx_dbm(&self) -> i8;
     /// Search for WPA Info Element and parse it. If no WPA Info Element is found, or a WPA Info
     /// Element is found but is not valid, return an error.
     fn get_wpa_ie(&self) -> Result<ie::wpa::WpaIe, anyhow::Error>;
@@ -201,14 +198,6 @@ impl BssDescriptionExt for fidl_mlme::BssDescription {
             .next()
     }
 
-    fn get_rx_dbm(&self) -> i8 {
-        if self.rcpi_dbmh != 0 {
-            (self.rcpi_dbmh / 2) as i8
-        } else {
-            self.rssi_dbm
-        }
-    }
-
     fn get_wpa_ie(&self) -> Result<ie::wpa::WpaIe, anyhow::Error> {
         ie::parse_wpa_ie(self.find_wpa_ie().ok_or(format_err!("no wpa ie found"))?)
             .map_err(|e| e.into())
@@ -235,12 +224,12 @@ impl BssDescriptionExt for fidl_mlme::BssDescription {
     }
 
     fn candidacy(&self) -> BssCandidacy {
-        let rx_dbm = self.get_rx_dbm();
-        match rx_dbm {
+        let rssi_dbm = self.rssi_dbm;
+        match rssi_dbm {
             // The value 0 is considered a marker for an invalid RSSI and is therefore
             // transformed to the minimum RSSI value.
-            0 => BssCandidacy { protection: self.get_protection(), rx_dbm: i8::MIN },
-            _ => BssCandidacy { protection: self.get_protection(), rx_dbm },
+            0 => BssCandidacy { protection: self.get_protection(), rssi_dbm: i8::MIN },
+            _ => BssCandidacy { protection: self.get_protection(), rssi_dbm },
         }
     }
 }
@@ -250,7 +239,7 @@ impl BssDescriptionExt for fidl_mlme::BssDescription {
 #[derive(Debug, Eq, PartialEq)]
 pub struct BssCandidacy {
     protection: Protection,
-    rx_dbm: i8,
+    rssi_dbm: i8,
 }
 
 impl PartialOrd for BssCandidacy {
@@ -261,7 +250,7 @@ impl PartialOrd for BssCandidacy {
 
 impl Ord for BssCandidacy {
     fn cmp(&self, other: &Self) -> Ordering {
-        self.protection.cmp(&other.protection).then(self.rx_dbm.cmp(&other.rx_dbm))
+        self.protection.cmp(&other.protection).then(self.rssi_dbm.cmp(&other.rssi_dbm))
     }
 }
 
@@ -449,22 +438,22 @@ mod tests {
         let bss_candidacy = fake_bss!(Wpa2, rssi_dbm: -10).candidacy();
         assert_eq!(
             bss_candidacy,
-            BssCandidacy { protection: Protection::Wpa2Personal, rx_dbm: -10 }
+            BssCandidacy { protection: Protection::Wpa2Personal, rssi_dbm: -10 }
         );
 
         let bss_candidacy = fake_bss!(Open, rssi_dbm: -10).candidacy();
-        assert_eq!(bss_candidacy, BssCandidacy { protection: Protection::Open, rx_dbm: -10 });
+        assert_eq!(bss_candidacy, BssCandidacy { protection: Protection::Open, rssi_dbm: -10 });
 
         let bss_candidacy = fake_bss!(Wpa2, rssi_dbm: -20).candidacy();
         assert_eq!(
             bss_candidacy,
-            BssCandidacy { protection: Protection::Wpa2Personal, rx_dbm: -20 }
+            BssCandidacy { protection: Protection::Wpa2Personal, rssi_dbm: -20 }
         );
 
         let bss_candidacy = fake_bss!(Wpa2, rssi_dbm: 0).candidacy();
         assert_eq!(
             bss_candidacy,
-            BssCandidacy { protection: Protection::Wpa2Personal, rx_dbm: i8::MIN }
+            BssCandidacy { protection: Protection::Wpa2Personal, rssi_dbm: i8::MIN }
         );
     }
 
@@ -481,40 +470,17 @@ mod tests {
         //  Two BSSDescription values with the same protection and RSSI are equivalent.
         assert_eq!(
             Ordering::Equal,
-            fake_bss!(Wpa2, rssi_dbm: -10, rcpi_dbmh: -10)
+            fake_bss!(Wpa2, rssi_dbm: -10)
                 .candidacy()
-                .cmp(&fake_bss!(Wpa2, rssi_dbm: -10, rcpi_dbmh: -10).candidacy())
+                .cmp(&fake_bss!(Wpa2, rssi_dbm: -10).candidacy())
         );
 
         // Higher security is better.
-        assert_bss_comparison(
-            &fake_bss!(Wpa1, rssi_dbm: -10, rcpi_dbmh: -10),
-            &fake_bss!(Wpa2, rssi_dbm: -50, rcpi_dbmh: -50),
-        );
-        assert_bss_comparison(
-            &fake_bss!(Open, rssi_dbm: -10, rcpi_dbmh: -10),
-            &fake_bss!(Wpa2, rssi_dbm: -50, rcpi_dbmh: -50),
-        );
-
-        // RCPI in dBmh takes priority over RSSI in dBmh
-        assert_bss_comparison(
-            &fake_bss!(Wpa2, rssi_dbm: -20, rcpi_dbmh: -60),
-            &fake_bss!(Wpa2, rssi_dbm: -30, rcpi_dbmh: -40),
-        );
-        // Compare RSSI if RCPI is absent
-        assert_bss_comparison(
-            &fake_bss!(Wpa2, rssi_dbm: -30, rcpi_dbmh: 0),
-            &fake_bss!(Wpa2, rssi_dbm: -20, rcpi_dbmh: 0),
-        );
-        // Having an RCPI measurement is always better than not having any measurement
-        assert_bss_comparison(
-            &fake_bss!(Wpa2, rssi_dbm: 0, rcpi_dbmh: 0),
-            &fake_bss!(Wpa2, rssi_dbm: 0, rcpi_dbmh: -200),
-        );
+        assert_bss_comparison(&fake_bss!(Wpa1, rssi_dbm: -10), &fake_bss!(Wpa2, rssi_dbm: -50));
+        assert_bss_comparison(&fake_bss!(Open, rssi_dbm: -10), &fake_bss!(Wpa2, rssi_dbm: -50));
+        // Higher RSSI is better if security is equivalent.
+        assert_bss_comparison(&fake_bss!(Wpa2, rssi_dbm: -50), &fake_bss!(Wpa2, rssi_dbm: -10));
         // Having an RSSI measurement is always better than not having any measurement
-        assert_bss_comparison(
-            &fake_bss!(Wpa2, rssi_dbm: 0, rcpi_dbmh: 0),
-            &fake_bss!(Wpa2, rssi_dbm: -100, rcpi_dbmh: 0),
-        );
+        assert_bss_comparison(&fake_bss!(Wpa2, rssi_dbm: 0), &fake_bss!(Wpa2, rssi_dbm: -100));
     }
 }

@@ -24,15 +24,11 @@ enum WlanRxInfoFlags : uint32 {
 
 const int8 WLAN_RSSI_DBM_MIN = -97;
 const int8 WLAN_RSSI_DBM_MAX = -10;
-const int16 WLAN_RCPI_DBMH_MIN = -194; // -97 * 2
-const int16 WLAN_RCPI_DBMH_MAX = -20; //-10 * 2
-const int16 WLAN_RSNI_DBH_MIN = 1;
-const int16 WLAN_RSNI_DBH_MAX = 120; // 60 * 2
-
 const int8 WLAN_RSSI_DBM_INVALID = 0;
-const int16 WLAN_RCPI_DBMH_INVALID = 0;
-const int16 WLAN_RSNI_DBH_INVALID = 0;
-// LINT.ThenChange(//src/connectivity/wlan/lib/common/cpp/include/wlan/common/energy.h)
+
+const int16 WLAN_SNR_DBH_MIN = 1;
+const int16 WLAN_SNR_DBH_MAX = 120; // 60 * 2
+const int16 WLAN_SNR_DBH_INVALID = 0;
 
 struct WlanRxInfo {
     /// Receive flags. These represent boolean flags as opposed to enums or value-based info which
@@ -54,9 +50,6 @@ struct WlanRxInfo {
 
     /// Received Signal Strength Indicator.
     int8 rssi_dbm;
-    /// Received Channel Power Indicator, in 0.5 dBm. IEEE Std 802.11-2016, 17.3.10.7.
-    /// Do not use encoding in 15.4.6.6
-    int16 rcpi_dbmh;
     /// Signal-to-Noise Ratio, in 0.5 dB.
     int16 snr_dbh;
 };

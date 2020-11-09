@@ -3240,7 +3240,6 @@ mod tests {
             },
             mcs: 0,
             rssi_dbm,
-            rcpi_dbmh: 0,
             snr_dbh: 0,
         }
     }

@@ -299,7 +299,7 @@ async fn print_iface_status(iface_id: u16, wlan_svc: WlanSvc) -> Result<(), Erro
                         String::from_utf8_lossy(&bss.ssid),
                         MacAddr(bss.bssid),
                         Channel::from_fidl(bss.channel),
-                        bss.rx_dbm,
+                        bss.rssi_dbm,
                         bss.snr_db,
                     );
                 }
@@ -557,7 +557,7 @@ fn print_scan_result(bss: &fidl_sme::BssInfo) {
 
     print_scan_line(
         MacAddr(bss.bssid),
-        bss.rx_dbm,
+        bss.rssi_dbm,
         Channel::from_fidl(bss.channel),
         match bss.protection {
             fidl_sme::Protection::Unknown => "Unknown",

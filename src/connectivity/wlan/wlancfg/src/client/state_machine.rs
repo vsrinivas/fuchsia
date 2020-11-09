@@ -1561,7 +1561,7 @@ mod tests {
                     connected_to: Some(Box::new(fidl_sme::BssInfo{
                         bssid: [0, 0, 0, 0, 0, 0],
                         ssid: network_ssid.as_bytes().to_vec(),
-                        rx_dbm: 0,
+                        rssi_dbm: 0,
                         snr_db: 0,
                         channel: fidl_common::WlanChan {
                             primary: 1,
@@ -1646,7 +1646,7 @@ mod tests {
                     connected_to: Some(Box::new(fidl_sme::BssInfo{
                         bssid: [0, 0, 0, 0, 0, 0],
                         ssid: network_ssid.as_bytes().to_vec(),
-                        rx_dbm: 0,
+                        rssi_dbm: 0,
                         snr_db: 0,
                         channel: fidl_common::WlanChan {
                             primary: 1,
@@ -1708,7 +1708,7 @@ mod tests {
                     connected_to: Some(Box::new(fidl_sme::BssInfo{
                         bssid: [0, 0, 0, 0, 0, 0],
                         ssid: first_network_ssid.as_bytes().to_vec(),
-                        rx_dbm: 0,
+                        rssi_dbm: 0,
                         snr_db: 0,
                         channel: fidl_common::WlanChan {
                             primary: 1,
@@ -2247,7 +2247,7 @@ mod tests {
                     connected_to: Some(Box::new(fidl_sme::BssInfo{
                         bssid: [0, 0, 0, 0, 0, 0],
                         ssid: "no_password".as_bytes().to_vec(),
-                        rx_dbm: 0,
+                        rssi_dbm: 0,
                         snr_db: 0,
                         channel: fidl_common::WlanChan {
                             primary: 1,

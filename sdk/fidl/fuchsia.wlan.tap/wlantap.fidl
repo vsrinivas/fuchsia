@@ -33,7 +33,6 @@ struct WlanRxInfo {
     fuchsia.wlan.common.WlanChan chan;
     uint8 mcs;
     int8 rssi_dbm;
-    int16 rcpi_dbmh;
     int16 snr_dbh;
 };
 

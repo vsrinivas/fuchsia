@@ -48,9 +48,6 @@ pub fn clone_bss_desc(d: &fidl_mlme::BssDescription) -> fidl_mlme::BssDescriptio
         rsne: d.rsne.clone(),
         vendor_ies: d.vendor_ies.clone(),
 
-        rcpi_dbmh: d.rcpi_dbmh,
-        rsni_dbh: d.rsni_dbh,
-
         ht_cap: d.ht_cap.as_ref().map(|v| Box::new(clone_ht_capabilities(v))),
         ht_op: d.ht_op.as_ref().map(|v| Box::new(clone_ht_operation(v))),
 

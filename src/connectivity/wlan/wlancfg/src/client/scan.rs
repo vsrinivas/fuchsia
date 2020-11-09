@@ -196,7 +196,7 @@ fn insert_bss_to_network_bss_map(
             if !entry.iter().any(|existing_bss| existing_bss.bssid == bss.bssid) {
                 entry.push(types::Bss {
                     bssid: bss.bssid,
-                    rssi: bss.rx_dbm,
+                    rssi: bss.rssi_dbm,
                     snr_db: bss.snr_db,
                     frequency: 0,       // TODO(mnck): convert channel to freq
                     timestamp_nanos: 0, // TODO(mnck): find where this comes from
@@ -458,7 +458,7 @@ mod tests {
             fidl_sme::BssInfo {
                 bssid: [0, 0, 0, 0, 0, 0],
                 ssid: "duplicated ssid".as_bytes().to_vec(),
-                rx_dbm: 0,
+                rssi_dbm: 0,
                 snr_db: 1,
                 channel: fidl_common::WlanChan {
                     primary: 1,
@@ -471,7 +471,7 @@ mod tests {
             fidl_sme::BssInfo {
                 bssid: [1, 2, 3, 4, 5, 6],
                 ssid: "unique ssid".as_bytes().to_vec(),
-                rx_dbm: 7,
+                rssi_dbm: 7,
                 snr_db: 2,
                 channel: fidl_common::WlanChan {
                     primary: 8,
@@ -484,7 +484,7 @@ mod tests {
             fidl_sme::BssInfo {
                 bssid: [7, 8, 9, 10, 11, 12],
                 ssid: "duplicated ssid".as_bytes().to_vec(),
-                rx_dbm: 13,
+                rssi_dbm: 13,
                 snr_db: 3,
                 channel: fidl_common::WlanChan {
                     primary: 11,
@@ -588,7 +588,7 @@ mod tests {
             fidl_sme::BssInfo {
                 bssid: [9, 9, 9, 9, 9, 9],
                 ssid: "foo active ssid".as_bytes().to_vec(),
-                rx_dbm: 0,
+                rssi_dbm: 0,
                 snr_db: 8,
                 channel: fidl_common::WlanChan {
                     primary: 1,
@@ -601,7 +601,7 @@ mod tests {
             fidl_sme::BssInfo {
                 bssid: [8, 8, 8, 8, 8, 8],
                 ssid: "misc ssid".as_bytes().to_vec(),
-                rx_dbm: 7,
+                rssi_dbm: 7,
                 snr_db: 9,
                 channel: fidl_common::WlanChan {
                     primary: 8,
@@ -1093,7 +1093,7 @@ mod tests {
             fidl_sme::BssInfo {
                 bssid: [0, 0, 0, 0, 0, 0],
                 ssid: "duplicated ssid".as_bytes().to_vec(),
-                rx_dbm: 0,
+                rssi_dbm: 0,
                 snr_db: 1,
                 channel: fidl_common::WlanChan {
                     primary: 1,
@@ -1106,7 +1106,7 @@ mod tests {
             fidl_sme::BssInfo {
                 bssid: [0, 0, 0, 0, 0, 0],
                 ssid: "duplicated ssid".as_bytes().to_vec(),
-                rx_dbm: 13,
+                rssi_dbm: 13,
                 snr_db: 3,
                 channel: fidl_common::WlanChan {
                     primary: 14,
@@ -1143,7 +1143,7 @@ mod tests {
             fidl_sme::BssInfo {
                 bssid: [0, 0, 0, 0, 0, 0],
                 ssid: "duplicated ssid".as_bytes().to_vec(),
-                rx_dbm: 100,
+                rssi_dbm: 100,
                 snr_db: 100,
                 channel: fidl_common::WlanChan {
                     primary: 100,
@@ -1156,7 +1156,7 @@ mod tests {
             fidl_sme::BssInfo {
                 bssid: [1, 2, 3, 4, 5, 6],
                 ssid: "duplicated ssid".as_bytes().to_vec(),
-                rx_dbm: 101,
+                rssi_dbm: 101,
                 snr_db: 101,
                 channel: fidl_common::WlanChan {
                     primary: 101,

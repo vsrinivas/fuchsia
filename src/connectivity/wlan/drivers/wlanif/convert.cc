@@ -178,12 +178,6 @@ void ConvertBSSDescription(wlanif_bss_description_t* wlanif_desc,
 
   // rssi_dbm
   wlanif_desc->rssi_dbm = fidl_desc.rssi_dbm;
-
-  // rcpi_dbmh
-  wlanif_desc->rcpi_dbmh = fidl_desc.rcpi_dbmh;
-
-  // rsni_dbh
-  wlanif_desc->rsni_dbh = fidl_desc.rsni_dbh;
 }
 
 wlan_mlme::BSSTypes ConvertBSSType(uint8_t bss_type) {
@@ -299,12 +293,6 @@ void ConvertBSSDescription(wlan_mlme::BSSDescription* fidl_desc,
 
   // rssi_dbm
   fidl_desc->rssi_dbm = wlanif_desc.rssi_dbm;
-
-  // rcpi_dbmh
-  fidl_desc->rcpi_dbmh = wlanif_desc.rcpi_dbmh;
-
-  // rsni_dbh
-  fidl_desc->rsni_dbh = wlanif_desc.rsni_dbh;
 }
 
 void ConvertAssocInd(wlan_mlme::AssociateIndication* fidl_ind,

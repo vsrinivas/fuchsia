@@ -224,7 +224,7 @@ pub struct BssInfoNode {
     bssid_hash: StringProperty,
     ssid: StringProperty,
     ssid_hash: StringProperty,
-    rx_dbm: IntProperty,
+    rssi_dbm: IntProperty,
     snr_db: IntProperty,
     channel: ChannelNode,
     protection: StringProperty,
@@ -241,7 +241,7 @@ impl BssInfoNode {
         let bssid_hash = node.create_string("bssid_hash", hasher.hash_mac_addr(&bss_info.bssid));
         let ssid = node.create_string("ssid", String::from_utf8_lossy(&bss_info.ssid[..]));
         let ssid_hash = node.create_string("ssid_hash", hasher.hash(&bss_info.ssid[..]));
-        let rx_dbm = node.create_int("rx_dbm", bss_info.rx_dbm as i64);
+        let rssi_dbm = node.create_int("rssi_dbm", bss_info.rssi_dbm as i64);
         let snr_db = node.create_int("snr_db", bss_info.snr_db as i64);
         let channel = ChannelNode::new(node.create_child("channel"), bss_info.channel.to_fidl());
         let protection = node.create_string("protection", format!("{}", bss_info.protection));
@@ -259,7 +259,7 @@ impl BssInfoNode {
             bssid_hash,
             ssid,
             ssid_hash,
-            rx_dbm,
+            rssi_dbm,
             snr_db,
             channel,
             protection,
@@ -278,7 +278,7 @@ impl BssInfoNode {
         self.bssid_hash.set(&hasher.hash_mac_addr(&bss_info.bssid));
         self.ssid.set(&String::from_utf8_lossy(&bss_info.ssid[..]));
         self.ssid_hash.set(&hasher.hash(&bss_info.ssid[..]));
-        self.rx_dbm.set(bss_info.rx_dbm as i64);
+        self.rssi_dbm.set(bss_info.rssi_dbm as i64);
         self.snr_db.set(bss_info.snr_db as i64);
         self.channel.update(bss_info.channel.to_fidl());
         self.protection.set(&format!("{}", bss_info.protection));

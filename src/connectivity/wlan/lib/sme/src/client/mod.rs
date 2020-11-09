@@ -550,8 +550,6 @@ fn inspect_log_join_scan(
             ssid: String::from_utf8_lossy(&bss.ssid[..]).as_ref(),
             ssid_hash: ctx.inspect.hasher.hash(&bss.ssid[..]),
             channel: InspectWlanChan(&bss.chan),
-            rcpi_dbm: bss.rcpi_dbmh / 2,
-            rsni_db: bss.rsni_dbh / 2,
             rssi_dbm: bss.rssi_dbm,
         });
     });

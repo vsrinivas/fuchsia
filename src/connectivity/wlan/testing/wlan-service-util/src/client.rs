@@ -1007,7 +1007,7 @@ mod tests {
                 let bss_info: fidl_sme::BssInfo = fidl_sme::BssInfo {
                     bssid: [0, 1, 2, 3, 4, 5],
                     ssid: ssid,
-                    rx_dbm: -30,
+                    rssi_dbm: -30,
                     snr_db: 10,
                     channel: fidl_common::WlanChan {
                         primary: 1,
@@ -1181,13 +1181,13 @@ mod tests {
     fn create_bss_info(
         bssid: [u8; 6],
         ssid: Vec<u8>,
-        rx_dbm: i8,
+        rssi_dbm: i8,
         snr_db: i8,
         channel: fidl_common::WlanChan,
         protection: Protection,
         compatible: bool,
     ) -> fidl_sme::BssInfo {
-        fidl_sme::BssInfo { bssid, ssid, rx_dbm, snr_db, channel, protection, compatible }
+        fidl_sme::BssInfo { bssid, ssid, rssi_dbm, snr_db, channel, protection, compatible }
     }
 
     fn assert_eq_credentials(

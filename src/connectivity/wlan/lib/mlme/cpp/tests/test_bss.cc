@@ -86,8 +86,6 @@ wlan_mlme::BSSDescription CreateBssDescription(bool rsne, wlan_channel_t chan) {
   } else {
     bss_desc.rsne.reset();
   }
-  bss_desc.rcpi_dbmh = 0;
-  bss_desc.rsni_dbh = 0;
 
   bss_desc.ht_cap.reset();
   bss_desc.ht_op.reset();

@@ -3368,8 +3368,7 @@ static void fill_rx_info(wlan_rx_info_t* info, RxDesc rx_desc, Rxwi1 rxwi1, Rxwi
 
   // TODO(tkilbourn): check rssi1 and rssi2 and figure out what to do with them
   info->rssi_dbm = WLAN_RSSI_DBM_INVALID;
-  info->rcpi_dbmh = WLAN_RCPI_DBMH_INVALID;
-  info->snr_dbh = WLAN_RSNI_DBH_INVALID;
+  info->snr_dbh = WLAN_SNR_DBH_INVALID;
 
   if (rxwi2.rssi0() > 0) {
     // Use rssi offsets from the EEPROM to convert to RSSI
@@ -3384,7 +3383,7 @@ static void fill_rx_info(wlan_rx_info_t* info, RxDesc rx_desc, Rxwi1 rxwi1, Rxwi
   if (rxwi1.phy_mode() != PhyMode::kLegacyCck && rxwi3.snr0() > 0) {
     // Convert to SNR
     auto snr_dbh = ((rxwi3.snr0() * 3 / 16) + 10) * 2;
-    if (WLAN_RSNI_DBH_MIN <= snr_dbh && snr_dbh <= WLAN_RSNI_DBH_MAX) {
+    if (WLAN_SNR_DBH_MIN <= snr_dbh && snr_dbh <= WLAN_SNR_DBH_MAX) {
       info->valid_fields |= WLAN_RX_INFO_VALID_SNR;
       info->snr_dbh = snr_dbh;
     }

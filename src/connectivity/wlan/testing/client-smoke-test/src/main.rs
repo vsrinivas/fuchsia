@@ -451,7 +451,7 @@ mod tests {
             let bss_info: fidl_sme::BssInfo = fidl_sme::BssInfo {
                 bssid: [0, 1, 2, 3, 4, 5],
                 ssid: s.to_string().as_bytes().to_vec(),
-                rx_dbm: -30,
+                rssi_dbm: -30,
                 snr_db: 0,
                 channel: fidl_common::WlanChan {
                     primary: 1,

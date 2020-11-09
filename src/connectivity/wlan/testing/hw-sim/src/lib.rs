@@ -91,7 +91,6 @@ pub fn create_rx_info(channel: &WlanChan, rssi_dbm: i8) -> WlanRxInfo {
         },
         mcs: 0,
         rssi_dbm,
-        rcpi_dbmh: 0,
         snr_dbh: 0,
     }
 }

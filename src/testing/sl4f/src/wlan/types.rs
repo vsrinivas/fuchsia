@@ -101,7 +101,7 @@ impl From<fidl_sme::Protection> for Protection {
 pub struct BssInfo {
     pub bssid: [u8; 6],
     pub ssid: Vec<u8>,
-    pub rx_dbm: i8,
+    pub rssi_dbm: i8,
     pub snr_db: i8,
     pub channel: u8,
     pub protection: Protection,
@@ -113,7 +113,7 @@ impl From<fidl_sme::BssInfo> for BssInfo {
         BssInfo {
             bssid: bss_info.bssid,
             ssid: bss_info.ssid,
-            rx_dbm: bss_info.rx_dbm,
+            rssi_dbm: bss_info.rssi_dbm,
             snr_db: bss_info.snr_db,
             channel: bss_info.channel.primary,
             protection: Protection::from(bss_info.protection),

@@ -2310,8 +2310,6 @@ static void brcmf_return_scan_result(struct net_device* ndev, uint16_t channel,
   result.bss.chan.primary = (uint8_t)channel;
   result.bss.chan.cbw = WLAN_CHANNEL_BANDWIDTH__20;  // TODO(cphoenix): Don't hard-code this.
   result.bss.rssi_dbm = std::min<int16_t>(0, std::max<int16_t>(-255, rssi_dbm));
-  result.bss.rcpi_dbmh = 0;
-  result.bss.rsni_dbh = 0;
 
   BRCMF_DBG(SCAN, "Returning scan result %.*s, channel %d, dbm %d, id %lu", result.bss.ssid.len,
             result.bss.ssid.data, channel, result.bss.rssi_dbm, result.txn_id);

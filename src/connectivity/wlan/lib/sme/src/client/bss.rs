@@ -47,7 +47,7 @@ impl ClientConfig {
         BssInfo {
             bssid: bss.bssid.clone(),
             ssid: bss.ssid.clone(),
-            rx_dbm: bss.get_rx_dbm(),
+            rssi_dbm: bss.rssi_dbm,
             snr_db: bss.snr_db,
             channel: Channel::from_fidl(bss.chan),
             protection: bss.get_protection(),
@@ -99,7 +99,7 @@ impl ClientConfig {
 pub struct BssInfo {
     pub bssid: [u8; 6],
     pub ssid: Ssid,
-    pub rx_dbm: i8,
+    pub rssi_dbm: i8,
     pub snr_db: i8,
     pub channel: wlan_common::channel::Channel,
     pub protection: Protection,
@@ -177,7 +177,7 @@ mod tests {
             BssInfo {
                 bssid: [0u8; 6],
                 ssid: vec![],
-                rx_dbm: -30,
+                rssi_dbm: -30,
                 snr_db: 0,
                 channel: Channel { primary: 1, cbw: Cbw::Cbw20 },
                 protection: Protection::Wpa2Personal,
@@ -215,7 +215,7 @@ mod tests {
             BssInfo {
                 bssid: [0u8; 6],
                 ssid: vec![],
-                rx_dbm: -30,
+                rssi_dbm: -30,
                 snr_db: 0,
                 channel: Channel { primary: 1, cbw: Cbw::Cbw20 },
                 protection: Protection::Wpa2Personal,
@@ -251,7 +251,7 @@ mod tests {
             BssInfo {
                 bssid: [0u8; 6],
                 ssid: vec![],
-                rx_dbm: -30,
+                rssi_dbm: -30,
                 snr_db: 0,
                 channel: Channel { primary: 1, cbw: Cbw::Cbw20 },
                 protection: Protection::Wep,
@@ -288,7 +288,7 @@ mod tests {
             BssInfo {
                 bssid: [0u8; 6],
                 ssid: vec![],
-                rx_dbm: -30,
+                rssi_dbm: -30,
                 snr_db: 0,
                 channel: Channel { primary: 1, cbw: Cbw::Cbw20 },
                 protection: Protection::Wep,

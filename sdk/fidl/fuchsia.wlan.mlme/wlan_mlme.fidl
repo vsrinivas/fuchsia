@@ -130,14 +130,6 @@ struct BSSDescription {
     /// This slice should be a valid chain of IEs including IE headers for each element.
     bytes? vendor_ies;
 
-    /// As per IEEE 802.11-2016, RCPI indicates total channel power (rssi, snr and noise) of
-    /// the received frame measured on the channel at the antenna connector. This value is
-    /// specifically meant for beacon reception.
-    int16 rcpi_dbmh; // 0.5 step dBm. Do not use encoding from IEEE Std 802.11-2016 9.4.2.38.
-    /// As per IEEE 802.11-2016, RSNI indicates SNR + interference ratio of received frame.
-    /// This value is specifically meant for beacon reception.
-    int16 rsni_dbh; // 0.5 step dB.  Do not use encoding from IEEE Std 802.11-2016 9.4.2.41.
-
     HtCapabilities? ht_cap;
     HtOperation? ht_op;
 

@@ -93,14 +93,13 @@ struct WlanChannel {
 };
 
 enum WlanRxInfoValid : uint32 {
-    /// Bits 7-31 reserved
+    /// Bits 6-31 reserved
     PHY = 0x1;
     DATA_RATE = 0x2;
     CHAN_WIDTH = 0x4;
     MCS = 0x8;
     RSSI = 0x10;
-    RCPI = 0x20;
-    SNR = 0x40;
+    SNR = 0x20;
 };
 
 /// Guard Interval

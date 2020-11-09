@@ -131,7 +131,7 @@ pub fn compare_bss(left: &fidl_sme::BssInfo, right: &fidl_sme::BssInfo) -> Order
     left.compatible
         .cmp(&right.compatible)
         .then(left.protection.cmp(&right.protection))
-        .then(left.rx_dbm.cmp(&right.rx_dbm))
+        .then(left.rssi_dbm.cmp(&right.rssi_dbm))
 }
 
 /// Returns the 'best' BSS from a given BSS list. The 'best' BSS is determined by comparing
@@ -210,7 +210,7 @@ fn convert_bss_info(bss: &fidl_sme::BssInfo) -> legacy::Ap {
     legacy::Ap {
         bssid: bss.bssid.to_vec(),
         ssid: String::from_utf8_lossy(&bss.ssid).to_string(),
-        rssi_dbm: bss.rx_dbm,
+        rssi_dbm: bss.rssi_dbm,
         is_secure: bss.protection != fidl_sme::Protection::Open,
         is_compatible: bss.compatible,
         chan: bss.channel,
@@ -429,7 +429,7 @@ mod tests {
         let bss = fidl_sme::BssInfo {
             bssid: [0x62, 0x73, 0x73, 0x66, 0x6f, 0x6f],
             ssid: b"Foo".to_vec(),
-            rx_dbm: 20,
+            rssi_dbm: 20,
             snr_db: 0,
             channel: fidl_common::WlanChan {
                 primary: 1,
@@ -492,11 +492,11 @@ mod tests {
         assert_eq!(get_best_bss(&bss_list), Some(&bss_list[0])); //diff rssi
     }
 
-    fn bss(rx_dbm: i8, compatible: bool, protection: fidl_sme::Protection) -> fidl_sme::BssInfo {
+    fn bss(rssi_dbm: i8, compatible: bool, protection: fidl_sme::Protection) -> fidl_sme::BssInfo {
         fidl_sme::BssInfo {
             bssid: [0x62, 0x73, 0x73, 0x66, 0x6f, 0x6f],
             ssid: b"Foo".to_vec(),
-            rx_dbm,
+            rssi_dbm,
             snr_db: 0,
             channel: fidl_common::WlanChan {
                 primary: 1,
@@ -817,7 +817,7 @@ mod tests {
                     connected_to: Some(Box::new(fidl_sme::BssInfo{
                         bssid: [0, 0, 0, 0, 0, 0],
                         ssid: TEST_SSID.as_bytes().to_vec(),
-                        rx_dbm: i8::MAX,
+                        rssi_dbm: i8::MAX,
                         snr_db: i8::MAX,
                         channel: fidl_common::WlanChan {
                             primary: 1,
@@ -1002,7 +1002,7 @@ mod tests {
         let scan_result = fidl_sme::BssInfo {
             bssid: [0; 6],
             ssid: TEST_SSID.as_bytes().to_vec(),
-            rx_dbm: i8::MAX,
+            rssi_dbm: i8::MAX,
             snr_db: i8::MAX,
             channel: fidl_common::WlanChan {
                 primary: 1,

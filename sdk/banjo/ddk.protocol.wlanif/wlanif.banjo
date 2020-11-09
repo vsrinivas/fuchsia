@@ -77,8 +77,6 @@ struct WlanifBssDescription {
     ddk.protocol.wlan.info.WlanChannel chan;
     int8 rssi_dbm;
     int8 snr_db;
-    int16 rcpi_dbmh;
-    int16 rsni_dbh;
 };
 
 const uint32 WLAN_MAX_OP_RATES = 12;

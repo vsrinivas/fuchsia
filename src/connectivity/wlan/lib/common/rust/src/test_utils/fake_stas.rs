@@ -44,9 +44,6 @@ pub fn build_fake_bss__(protection_cfg: FakeProtectionCfg__) -> fidl_mlme::BssDe
         rates: vec![0x82, 0x84, 0x8b, 0x96, 0x0c, 0x12, 0x18, 0x24, 0x30, 0x48, 0x60, 0x6c],
         country: None,
 
-        rcpi_dbmh: 0,
-        rsni_dbh: 0,
-
         ht_cap: Some(Box::new(fidl_mlme::HtCapabilities { bytes: fake_ht_cap_bytes() })),
         ht_op: Some(Box::new(fidl_mlme::HtOperation { bytes: fake_ht_op_bytes() })),
         vht_cap: Some(Box::new(fidl_mlme::VhtCapabilities { bytes: fake_vht_cap_bytes() })),

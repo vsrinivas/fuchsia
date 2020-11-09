@@ -128,8 +128,6 @@ pub fn construct_bss_description(
 
         chan,
         rssi_dbm: rx_info.as_ref().map(|info| info.rssi_dbm).unwrap_or(0),
-        rcpi_dbmh: rx_info.as_ref().map(|info| info.rcpi_dbmh).unwrap_or(0),
-        rsni_dbh: rx_info.as_ref().map(|info| info.snr_dbh).unwrap_or(0),
         snr_db: 0,
     })
 }
@@ -164,7 +162,6 @@ mod tests {
             secondary80: 0,
         },
         rssi_dbm: -40,
-        rcpi_dbmh: 30,
         snr_dbh: 35,
 
         // Unused fields
@@ -301,8 +298,6 @@ mod tests {
                     bytes: [0x00, 0x00, 0x00, 0x00, 0x00]
                 })),
                 rssi_dbm: RX_INFO.rssi_dbm,
-                rcpi_dbmh: RX_INFO.rcpi_dbmh,
-                rsni_dbh: RX_INFO.snr_dbh,
                 chan: fidl_common::WlanChan {
                     primary: 140,
                     cbw: fidl_common::Cbw::Cbw40,

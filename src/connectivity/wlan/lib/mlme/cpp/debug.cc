@@ -333,7 +333,6 @@ std::string Describe(const wlan_rx_info_t& rxinfo) {
   BUFFER("chan:%s", common::ChanStr(rxinfo.chan).c_str());
   BUFFER("mcs:%u", rxinfo.mcs);
   BUFFER("rssi_dbm:%d", rxinfo.rssi_dbm);
-  BUFFER("rcpi_dbmh:%d", rxinfo.rcpi_dbmh);
   BUFFER("snr_dbh:%d", rxinfo.snr_dbh);
   return std::string(buf);
 }

@@ -1398,7 +1398,7 @@ mod tests {
                     fidl_sme::BssInfo {
                         bssid: [0, 0, 0, 0, 0, 0],
                         ssid: test_id_1.ssid.clone(),
-                        rx_dbm: 10,
+                        rssi_dbm: 10,
                         snr_db: 10,
                         channel: fidl_common::WlanChan {
                             primary: 1,
@@ -1411,7 +1411,7 @@ mod tests {
                     fidl_sme::BssInfo {
                         bssid: [0, 0, 0, 0, 0, 0],
                         ssid: test_id_2.ssid.clone(),
-                        rx_dbm: 0,
+                        rssi_dbm: 0,
                         snr_db: 0,
                         channel: fidl_common::WlanChan {
                             primary: 1,

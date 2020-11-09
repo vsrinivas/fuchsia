@@ -743,7 +743,6 @@ mod tests {
             chan: WlanChannel { primary: 0, cbw: WlanChannelBandwidth::_20, secondary80: 0 },
             mcs: 0,
             rssi_dbm: 0,
-            rcpi_dbmh: 0,
             snr_dbh: 0,
         };
         ap.handle_mac_frame(&probe_req[..], Some(rx_info_wrong_channel.clone()));

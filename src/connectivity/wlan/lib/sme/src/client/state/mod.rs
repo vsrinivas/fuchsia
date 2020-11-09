@@ -1035,7 +1035,7 @@ impl ClientState {
                         let mut bss = associated
                             .cfg
                             .convert_bss_description(&associated.bss, associated.wmm_param);
-                        bss.rx_dbm = associated.last_rssi;
+                        bss.rssi_dbm = associated.last_rssi;
                         bss.snr_db = associated.last_snr;
                         Some(bss)
                     },
@@ -1150,14 +1150,12 @@ fn connect_cmd_inspect_summary(cmd: &ConnectCommand) -> String {
         "ConnectCmd {{ \
          cap: {cap:?}, rates: {rates:?}, \
          protected: {protected:?}, chan: {chan:?}, \
-         rcpi: {rcpi:?}, rsni: {rsni:?}, rssi: {rssi:?}, ht_cap: {ht_cap:?}, ht_op: {ht_op:?}, \
+         rssi: {rssi:?}, ht_cap: {ht_cap:?}, ht_op: {ht_op:?}, \
          vht_cap: {vht_cap:?}, vht_op: {vht_op:?} }}",
         cap = bss.cap,
         rates = bss.rates,
         protected = bss.rsne.is_some(),
         chan = bss.chan,
-        rcpi = bss.rcpi_dbmh,
-        rsni = bss.rsni_dbh,
         rssi = bss.rssi_dbm,
         ht_cap = bss.ht_cap.is_some(),
         ht_op = bss.ht_op.is_some(),
@@ -2213,11 +2211,11 @@ mod tests {
         let state =
             link_up_state(Box::new(fake_bss!(Open, ssid: b"RSSI".to_vec(), bssid: [42; 6])));
         let state = state.on_mlme_event(signal_report_with_rssi_snr(-42, 20), &mut h.context);
-        assert_eq!(state.status().connected_to.unwrap().rx_dbm, -42);
+        assert_eq!(state.status().connected_to.unwrap().rssi_dbm, -42);
         assert_eq!(state.status().connected_to.unwrap().snr_db, 20);
 
         let state = state.on_mlme_event(signal_report_with_rssi_snr(-24, 10), &mut h.context);
-        assert_eq!(state.status().connected_to.unwrap().rx_dbm, -24);
+        assert_eq!(state.status().connected_to.unwrap().rssi_dbm, -24);
         assert_eq!(state.status().connected_to.unwrap().snr_db, 10);
     }
 

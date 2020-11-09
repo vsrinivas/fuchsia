@@ -274,8 +274,6 @@ impl<'a> BoundScanner<'a> {
                     // If there's no RX info, keep old values
                     if rx_info.is_none() {
                         new_bss_description.rssi_dbm = bss_description.rssi_dbm;
-                        new_bss_description.rcpi_dbmh = bss_description.rcpi_dbmh;
-                        new_bss_description.rsni_dbh = bss_description.rsni_dbh;
                     }
 
                     *bss_description = new_bss_description;
@@ -487,7 +485,6 @@ mod tests {
             secondary80: 0,
         },
         rssi_dbm: -40,
-        rcpi_dbmh: 30,
         snr_dbh: 35,
 
         // Unused fields
@@ -904,8 +901,6 @@ mod tests {
                     vht_cap: None,
                     vht_op: None,
                     rssi_dbm: RX_INFO.rssi_dbm,
-                    rcpi_dbmh: RX_INFO.rcpi_dbmh,
-                    rsni_dbh: RX_INFO.snr_dbh,
                     chan: fidl_common::WlanChan {
                         primary: RX_INFO.chan.primary,
                         cbw: fidl_common::Cbw::Cbw20,
@@ -1112,8 +1107,6 @@ mod tests {
             .next_mlme_msg::<fidl_mlme::ScanResult>()
             .expect("error reading MLME ScanResult");
         assert_eq!(scan_result.bss.rssi_dbm, -40);
-        assert_eq!(scan_result.bss.rcpi_dbmh, 30);
-        assert_eq!(scan_result.bss.rsni_dbh, 35);
         assert_eq!(
             scan_result.bss.chan,
             fidl_common::WlanChan {

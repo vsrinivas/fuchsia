@@ -30,7 +30,7 @@ pub fn fake_bss_info() -> BssInfo {
     BssInfo {
         bssid: [55, 11, 22, 3, 9, 70],
         ssid: Ssid::from(b"foo".clone()),
-        rx_dbm: 0,
+        rssi_dbm: 0,
         snr_db: 0,
         channel: channel::Channel { primary: 1, cbw: channel::Cbw::Cbw20 },
         protection: Protection::Wpa2Personal,
