@@ -9,6 +9,7 @@
 
 #include <vector>
 
+#include <blobfs/blob-layout.h>
 #include <blobfs/host.h>
 #include <digest/digest.h>
 #include <fbl/array.h>
@@ -56,6 +57,9 @@ class BlobfsCreator : public FsCreator {
 
   // A list of Merkle Information for blobs in |blob_list_|.
   std::vector<blobfs::MerkleInfo> merkle_list_;
+
+  // The format blobfs should use to store blobs.
+  blobfs::BlobLayoutFormat blob_layout_format_ = blobfs::BlobLayoutFormat::kPaddedMerkleTreeAtStart;
 };
 
 #endif  // ZIRCON_TOOLS_BLOBFS_BLOBFS_H_

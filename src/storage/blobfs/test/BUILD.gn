@@ -123,8 +123,9 @@ fuchsia_unittest_package("blobfs-unittest") {
 test("blobfs-host") {
   sources = [ "host/host-test.cc" ]
   deps = [
+    "//src/lib/fxl/test:gtest_main",
     "//src/storage/blobfs",
-    "//zircon/public/lib/zxtest",
+    "//third_party/googletest:gtest",
   ]
 }
 

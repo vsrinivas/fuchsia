@@ -12,6 +12,7 @@
 #include <sys/mman.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <zircon/assert.h>
 
 #include <cstddef>
 #include <cstdint>
@@ -21,12 +22,14 @@
 #include <utility>
 
 #include <blobfs/blob-layout.h>
+#include <blobfs/common.h>
 #include <blobfs/compression-settings.h>
 #include <blobfs/format.h>
 #include <blobfs/host.h>
 #include <blobfs/host/fsck.h>
 #include <digest/digest.h>
 #include <digest/merkle-tree.h>
+#include <digest/node-digest.h>
 #include <fbl/algorithm.h>
 #include <fbl/array.h>
 #include <fbl/auto_call.h>
@@ -97,15 +100,30 @@ zx_status_t WriteBlockOffset(int fd, const void* data, uint64_t block_count, off
 //
 // Given a mapped blob at |blob_data| of length |length|, compute the
 // Merkle digest and the output merkle tree as a uint8_t array.
-zx_status_t buffer_create_merkle(const FileMapping& mapping, MerkleInfo* out_info) {
+zx_status_t buffer_create_merkle(const FileMapping& mapping, bool use_compact_format,
+                                 MerkleInfo* out_info) {
   zx_status_t status;
-  std::unique_ptr<uint8_t[]> merkle_tree;
-  size_t merkle_size;
-  if ((status = MerkleTreeCreator::Create(mapping.data(), mapping.length(), &merkle_tree,
-                                          &merkle_size, &out_info->digest)) != ZX_OK) {
+  MerkleTreeCreator mtc;
+  mtc.SetUseCompactFormat(use_compact_format);
+  if ((status = mtc.SetDataLength(mapping.length())) != ZX_OK) {
     return status;
   }
+  std::unique_ptr<uint8_t[]> merkle_tree;
+  size_t merkle_length = mtc.GetTreeLength();
+  if (merkle_length > 0) {
+    merkle_tree.reset(new uint8_t[merkle_length]);
+  }
+  uint8_t root[digest::kSha256Length];
+  if ((status = mtc.SetTree(merkle_tree.get(), merkle_length, root, digest::kSha256Length)) !=
+      ZX_OK) {
+    return status;
+  }
+  if ((status = mtc.Append(mapping.data(), mapping.length())) != ZX_OK) {
+    return status;
+  }
+  out_info->digest = root;
   out_info->merkle = std::move(merkle_tree);
+  out_info->merkle_length = merkle_length;
   out_info->length = mapping.length();
   return ZX_OK;
 }
@@ -164,6 +182,13 @@ zx_status_t blobfs_add_mapped_blob_with_merkle(Blobfs* bs, JsonRecorder* json_re
     data = mapping.data();
   }
 
+  auto blob_layout = BlobLayout::CreateFromSizes(GetBlobLayoutFormat(bs->Info()), info.length,
+                                                 info.GetDataSize(), bs->GetBlockSize());
+  if (blob_layout.is_error()) {
+    FS_TRACE_ERROR("blobfs: Failed to create blob layout: %d\n", blob_layout.status_value());
+    return blob_layout.status_value();
+  }
+
   // After we've pre-calculated all necessary information, actually add the
   // blob to the filesystem itself.
   static std::mutex add_blob_mutex_;
@@ -181,12 +206,7 @@ zx_status_t blobfs_add_mapped_blob_with_merkle(Blobfs* bs, JsonRecorder* json_re
 
   Inode* inode = inode_block->GetInode();
   inode->blob_size = mapping.length();
-  uint64_t block_count = ComputeNumMerkleTreeBlocks(*inode) + info.GetDataBlocks();
-  if (block_count > std::numeric_limits<uint32_t>::max()) {
-    FS_TRACE_ERROR("error: Block count too large\n");
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-  inode->block_count = static_cast<uint32_t>(block_count);
+  inode->block_count = blob_layout->TotalBlockCount();
   inode->header.flags |=
       kBlobFlagAllocated | (info.compressed ? HostCompressor::InodeHeaderCompressionFlags() : 0);
 
@@ -213,7 +233,7 @@ zx_status_t blobfs_add_mapped_blob_with_merkle(Blobfs* bs, JsonRecorder* json_re
                           kBlobfsBlockSize * inode->block_count);
   }
 
-  if ((status = bs->WriteData(inode, info.merkle.get(), data, info.GetDataSize())) != ZX_OK) {
+  if ((status = bs->WriteData(inode, info.merkle.get(), data, *blob_layout.value())) != ZX_OK) {
     return status;
   }
 
@@ -307,11 +327,10 @@ zx_status_t GetBlockCount(int fd, uint64_t* out) {
   return ZX_OK;
 }
 
-int Mkfs(int fd, uint64_t block_count) {
+int Mkfs(int fd, uint64_t block_count, const FilesystemOptions& options) {
   Superblock info;
   // TODO(fxbug.dev/36663): Add support for setting the blob layout format.
-  InitializeSuperblock(block_count,
-                       {.blob_layout_format = BlobLayoutFormat::kPaddedMerkleTreeAtStart}, &info);
+  InitializeSuperblock(block_count, options, &info);
   zx_status_t status = CheckSuperblock(&info, block_count);
   if (status != ZX_OK) {
     FS_TRACE_ERROR("Failed to initialize superblock: %d\n", status);
@@ -479,14 +498,16 @@ zx_status_t blobfs_create_sparse(std::unique_ptr<Blobfs>* out, fbl::unique_fd fd
   return ZX_OK;
 }
 
-zx_status_t blobfs_preprocess(int data_fd, bool compress, MerkleInfo* out_info) {
+zx_status_t blobfs_preprocess(int data_fd, bool compress, BlobLayoutFormat blob_layout_format,
+                              MerkleInfo* out_info) {
   FileMapping mapping;
   zx_status_t status = mapping.Map(data_fd);
   if (status != ZX_OK) {
     return status;
   }
 
-  if ((status = buffer_create_merkle(mapping, out_info)) != ZX_OK) {
+  if ((status = buffer_create_merkle(mapping, ShouldUseCompactMerkleTreeFormat(blob_layout_format),
+                                     out_info)) != ZX_OK) {
     return status;
   }
 
@@ -506,7 +527,8 @@ zx_status_t blobfs_add_blob(Blobfs* bs, JsonRecorder* json_recorder, int data_fd
 
   // Calculate the actual Merkle tree.
   MerkleInfo info;
-  status = buffer_create_merkle(mapping, &info);
+  status = buffer_create_merkle(
+      mapping, ShouldUseCompactMerkleTreeFormat(GetBlobLayoutFormat(bs->Info())), &info);
   if (status != ZX_OK) {
     return status;
   }
@@ -689,48 +711,40 @@ zx_status_t Blobfs::WriteNode(std::unique_ptr<InodeBlock> ino_block) {
 }
 
 zx_status_t Blobfs::WriteData(Inode* inode, const void* merkle_data, const void* blob_data,
-                              uint64_t data_size) {
-  const size_t merkle_blocks = ComputeNumMerkleTreeBlocks(*inode);
-  const size_t data_blocks = inode->block_count - merkle_blocks;
-  uint64_t merkle_start_block = data_start_block_ + inode->extents[0].Start();
+                              const BlobLayout& blob_layout) {
+  if (blob_layout.TotalBlockCount() == 0) {
+    // Nothing to write.
+    return ZX_OK;
+  }
+  // Allocate a new buffer to hold both the data and Merkle tree together.  The data and Merkle tree
+  // may not be block multiples in size which makes writing them separately in terms of blocks
+  // difficult, also the data and Merkle tree may share a block.  Creating a new buffer to hold both
+  // uses more memory but makes writing the blob significantly easier.
+  uint64_t block_size = GetBlockSize();
+  uint64_t buf_size = block_size * blob_layout.TotalBlockCount();
+  auto buf = std::make_unique<uint8_t[]>(blob_layout.TotalBlockCount() * GetBlockSize());
+  // Zero the entire buffer instead of trying to calculate where the data and Merkle tree won't be.
+  memset(buf.get(), 0, buf_size);
+
+  // Copy the data to the buffer.
+  uint64_t data_offset = block_size * blob_layout.DataBlockOffset();
+  memcpy(buf.get() + data_offset, blob_data, blob_layout.DataSizeUpperBound());
+
+  // |merkle_data| will be null when the blob size is less than or equal to the Merkle tree node
+  // size.
+  if (merkle_data) {
+    // Copy the Merkle tree to the buffer.
+    uint64_t merkle_offset = block_size * blob_layout.MerkleTreeBlockOffset() +
+                             blob_layout.MerkleTreeOffsetWithinBlockOffset();
+    memcpy(buf.get() + merkle_offset, merkle_data, blob_layout.MerkleTreeSize());
+  }
 
   zx_status_t status;
-  status = WriteBlocks(merkle_start_block, merkle_blocks, merkle_data);
-  if (status != ZX_OK) {
-    fprintf(stderr, "%s:%d %d\n", __func__, __LINE__, status);
+  uint32_t blob_start_block = data_start_block_ + inode->extents[0].Start();
+  if ((status = WriteBlocks(blob_start_block, blob_layout.TotalBlockCount(), buf.get())) != ZX_OK) {
+    FS_TRACE_ERROR("blobfs: Failed to write a blob: %d\n", status);
     return status;
   }
-
-  // We need to zero fill all the bytes in the last block to round up to
-  // block size. But the input buffer need not be large enough to hold
-  // rest of the bytes. So we copy out last valid bytes that needs to be
-  // rounded up into another buffer. This ends up requiring two pwrite()s
-  // to write blob data.
-  bool zero_fill_last_block = (data_size % kBlobfsBlockSize) != 0;
-  size_t aligned_blocks = zero_fill_last_block ? data_blocks - 1 : data_blocks;
-  uint64_t data_start_block = merkle_start_block + merkle_blocks;
-  if (aligned_blocks > 0) {
-    const void* data = fs::GetBlock(kBlobfsBlockSize, blob_data, 0);
-    status = WriteBlocks(data_start_block, aligned_blocks, data);
-    if (status != ZX_OK) {
-      fprintf(stderr, "%s:%d %d\n", __func__, __LINE__, status);
-      return status;
-    }
-  }
-
-  uint64_t last_data_block_start = data_start_block + aligned_blocks;
-  if (zero_fill_last_block) {
-    const void* data = fs::GetBlock(kBlobfsBlockSize, blob_data, aligned_blocks);
-    uint8_t last_data[kBlobfsBlockSize];
-    memset(last_data, 0, kBlobfsBlockSize);
-    memcpy(last_data, data, data_size % kBlobfsBlockSize);
-    status = WriteBlock(last_data_block_start, last_data);
-    if (status != ZX_OK) {
-      fprintf(stderr, "%s:%d %d\n", __func__, __LINE__, status);
-      return status;
-    }
-  }
-
   return ZX_OK;
 }
 
@@ -789,76 +803,70 @@ InodePtr Blobfs::GetNode(uint32_t index) {
 
 zx_status_t Blobfs::LoadAndVerifyBlob(uint32_t node_index) {
   Inode inode = *GetNode(node_index);
+  size_t blob_start_block = data_start_block_ + inode.extents[0].Start();
+  uint32_t block_size = GetBlockSize();
+  zx_status_t status;
 
-  // Determine size for (uncompressed) data buffer.
-  uint64_t data_blocks = BlobDataBlocks(inode);
-  uint64_t merkle_blocks = ComputeNumMerkleTreeBlocks(inode);
-  uint64_t num_blocks = data_blocks + merkle_blocks;
-  size_t target_size;
-  if (mul_overflow(num_blocks, kBlobfsBlockSize, &target_size)) {
-    FS_TRACE_ERROR("Multiplication overflow");
-    return ZX_ERR_OUT_OF_RANGE;
+  auto blob_layout =
+      blobfs::BlobLayout::CreateFromInode(GetBlobLayoutFormat(Info()), inode, block_size);
+  if (blob_layout.is_error()) {
+    FS_TRACE_ERROR("blobfs: Failed to create blob layout: %d\n", blob_layout.status_value());
+    return blob_layout.status_value();
   }
 
-  // Create data buffer.
-  std::unique_ptr<uint8_t[]> data(new uint8_t[target_size]);
+  // Read in the Merkle tree.
+  uint32_t merkle_tree_block_count = blob_layout->MerkleTreeBlockCount();
+  uint32_t merkle_tree_block_offset = blob_layout->MerkleTreeBlockOffset();
+  std::unique_ptr<uint8_t[]> merkle_tree_blocks(
+      new uint8_t[blob_layout->MerkleTreeBlockAlignedSize()]);
+  for (uint32_t block = 0; block < merkle_tree_block_count; ++block) {
+    ReadBlock(blob_start_block + merkle_tree_block_offset + block);
+    memcpy(merkle_tree_blocks.get() + (block * block_size), cache_.blk, block_size);
+  }
+
+  // Read in the data.
+  uint32_t data_block_count = blob_layout->DataBlockCount();
+  uint32_t data_block_offset = blob_layout->DataBlockOffset();
+  std::unique_ptr<uint8_t[]> data_blocks(new uint8_t[blob_layout->DataBlockAlignedSize()]);
+  for (uint32_t block = 0; block < data_block_count; ++block) {
+    ReadBlock(blob_start_block + data_block_offset + block);
+    memcpy(data_blocks.get() + (block * block_size), cache_.blk, block_size);
+  }
+
+  // Decompress the data if necessary.
   if (inode.header.flags & HostCompressor::InodeHeaderCompressionFlags()) {
-    // Read in uncompressed merkle blocks.
-    for (unsigned i = 0; i < merkle_blocks; i++) {
-      ReadBlock(data_start_block_ + inode.extents[0].Start() + i);
-      memcpy(data.get() + (i * kBlobfsBlockSize), cache_.blk, kBlobfsBlockSize);
-    }
-
-    // Determine size for compressed data buffer.
-    size_t compressed_blocks = (inode.block_count - merkle_blocks);
-    size_t compressed_size;
-    if (mul_overflow(compressed_blocks, kBlobfsBlockSize, &compressed_size)) {
-      FS_TRACE_ERROR("Multiplication overflow");
-      return ZX_ERR_OUT_OF_RANGE;
-    }
-
-    // Create compressed data buffer.
-    std::unique_ptr<uint8_t[]> compressed_data(new uint8_t[compressed_size]);
-
-    // Read in all compressed blob data.
-    for (unsigned i = 0; i < compressed_blocks; i++) {
-      ReadBlock(data_start_block_ + inode.extents[0].Start() + i + merkle_blocks);
-      memcpy(compressed_data.get() + (i * kBlobfsBlockSize), cache_.blk, kBlobfsBlockSize);
-    }
-
-    // Decompress the compressed data into the target buffer.
-    zx_status_t status;
-    target_size = inode.blob_size;
-    uint8_t* data_ptr = data.get() + (merkle_blocks * kBlobfsBlockSize);
+    size_t file_size = inode.blob_size;
+    std::unique_ptr<uint8_t[]> uncompressed_data(new uint8_t[file_size]);
     HostDecompressor decompressor;
-    if ((status = decompressor.Decompress(data_ptr, &target_size, compressed_data.get(),
-                                          compressed_size)) != ZX_OK) {
+    if ((status = decompressor.Decompress(uncompressed_data.get(), &file_size, data_blocks.get(),
+                                          blob_layout->DataSizeUpperBound())) != ZX_OK) {
+      FS_TRACE_ERROR("blobfs: Failed to decompress a blob: %d\n", status);
       return status;
     }
-    if (target_size != inode.blob_size) {
-      FS_TRACE_ERROR("Failed to fully decompress blob (%zu of %" PRIu64 " expected)\n", target_size,
-                     inode.blob_size);
+    if (file_size != inode.blob_size) {
+      FS_TRACE_ERROR("blobfs: Failed to fully decompress blob (%zu of %" PRIu64 " expected)\n",
+                     file_size, inode.blob_size);
       return ZX_ERR_IO_DATA_INTEGRITY;
     }
-  } else {
-    // For uncompressed blobs, read entire blob straight into the data buffer.
-    for (unsigned i = 0; i < inode.block_count; i++) {
-      ReadBlock(data_start_block_ + inode.extents[0].Start() + i);
-      memcpy(data.get() + (i * kBlobfsBlockSize), cache_.blk, kBlobfsBlockSize);
-    }
+    // Replace the compressed data with the uncompressed data.
+    data_blocks = std::move(uncompressed_data);
   }
 
   // Verify the contents of the blob.
-  uint8_t* data_ptr = data.get() + (merkle_blocks * kBlobfsBlockSize);
+  uint8_t* merkle_tree_ptr =
+      merkle_tree_blocks.get() + blob_layout->MerkleTreeOffsetWithinBlockOffset();
   MerkleTreeVerifier mtv;
-  zx_status_t status;
+  mtv.SetUseCompactFormat(blobfs::ShouldUseCompactMerkleTreeFormat(blob_layout->Format()));
   if ((status = mtv.SetDataLength(inode.blob_size)) != ZX_OK ||
-      (status = mtv.SetTree(data.get(), mtv.GetTreeLength(), inode.merkle_root_hash,
+      (status = mtv.SetTree(merkle_tree_ptr, mtv.GetTreeLength(), inode.merkle_root_hash,
                             sizeof(inode.merkle_root_hash))) != ZX_OK ||
-      (status = mtv.Verify(data_ptr, inode.blob_size, 0)) != ZX_OK) {
+      (status = mtv.Verify(data_blocks.get(), inode.blob_size, 0)) != ZX_OK) {
+    FS_TRACE_ERROR("blobfs: Failed verify a blob: %d\n", status);
     return status;
   }
   return ZX_OK;
 }
+
+uint32_t Blobfs::GetBlockSize() const { return Info().block_size; }
 
 }  // namespace blobfs

@@ -3,7 +3,9 @@
 // found in the LICENSE file.
 
 #include <inttypes.h>
+#include <string.h>
 #include <sys/stat.h>
+#include <zircon/errors.h>
 
 #include <algorithm>
 #include <memory>
@@ -11,6 +13,8 @@
 #include <utility>
 #include <vector>
 
+#include <blobfs/blob-layout.h>
+#include <blobfs/format.h>
 #include <blobfs/host/fsck.h>
 #include <fbl/auto_call.h>
 
@@ -41,6 +45,10 @@ zx_status_t AddBlob(blobfs::Blobfs* blobfs, JsonRecorder* json_recorder,
 zx_status_t BlobfsCreator::Usage() {
   zx_status_t status = FsCreator::Usage();
 
+  fprintf(stderr, "\nblobfs specific options:\n");
+  fprintf(stderr,
+          "\t--blob_layout_format [padded|compact]\tFormat blobfs should store blobs in. Only "
+          "valid for the commands: mkfs, and create.\n");
   // Additional information about manifest format.
   fprintf(stderr, "\nEach manifest line must adhere to one of the following formats:\n");
   fprintf(stderr, "\t'dst/path=src/path'\n");
@@ -108,18 +116,42 @@ zx_status_t BlobfsCreator::ProcessManifestLine(FILE* manifest, const char* dir_p
 }
 
 zx_status_t BlobfsCreator::ProcessCustom(int argc, char** argv, uint8_t* processed) {
-  constexpr uint8_t required_args = 2;
-  if (strcmp(argv[0], "--blob")) {
-    fprintf(stderr, "Argument not found: %s\n", argv[0]);
-    return ZX_ERR_INVALID_ARGS;
-  } else if (argc < required_args) {
-    fprintf(stderr, "Not enough arguments for %s\n", argv[0]);
+  if (strcmp(argv[0], "--blob") == 0) {
+    constexpr uint8_t required_args = 2;
+    if (argc < required_args) {
+      fprintf(stderr, "Not enough arguments for %s\n", argv[0]);
+      return ZX_ERR_INVALID_ARGS;
+    }
+    blob_list_.push_back(argv[1]);
+    *processed = required_args;
+    return ZX_OK;
+  }
+  if (strcmp(argv[0], "--blob_layout_format") == 0) {
+    constexpr uint8_t required_args = 2;
+    if (GetCommand() != Command::kMkfs) {
+      fprintf(stderr, "%s is only valid for mkfs, and create\n", argv[0]);
+      return ZX_ERR_INVALID_ARGS;
+    }
+    if (argc < required_args) {
+      fprintf(stderr, "Not enough arguments for %s\n", argv[0]);
+      return ZX_ERR_INVALID_ARGS;
+    }
+    if (strcmp("padded", argv[1]) == 0) {
+      blob_layout_format_ = blobfs::BlobLayoutFormat::kPaddedMerkleTreeAtStart;
+      *processed = required_args;
+      return ZX_OK;
+    }
+    if (strcmp("compact", argv[1]) == 0) {
+      blob_layout_format_ = blobfs::BlobLayoutFormat::kCompactMerkleTreeAtEnd;
+      *processed = required_args;
+      return ZX_OK;
+    }
+    fprintf(stderr, "Invalid argument to %s, expected \"padded\" or \"compact\" but got \"%s\"\n",
+            argv[0], argv[1]);
     return ZX_ERR_INVALID_ARGS;
   }
-
-  blob_list_.push_back(argv[1]);
-  *processed = required_args;
-  return ZX_OK;
+  fprintf(stderr, "Argument not found: %s\n", argv[0]);
+  return ZX_ERR_INVALID_ARGS;
 }
 
 zx_status_t BlobfsCreator::CalculateRequiredSize(off_t* out) {
@@ -158,7 +190,8 @@ zx_status_t BlobfsCreator::CalculateRequiredSize(off_t* out) {
         blobfs::MerkleInfo info;
         fbl::unique_fd data_fd(open(path, O_RDONLY, 0644));
 
-        if ((res = blobfs::blobfs_preprocess(data_fd.get(), ShouldCompress(), &info)) != ZX_OK) {
+        if ((res = blobfs::blobfs_preprocess(data_fd.get(), ShouldCompress(), blob_layout_format_,
+                                             &info)) != ZX_OK) {
           mtx.lock();
           status = res;
           mtx.unlock();
@@ -194,9 +227,14 @@ zx_status_t BlobfsCreator::CalculateRequiredSize(off_t* out) {
   merkle_list_.resize(std::distance(merkle_list_.begin(), it));
 
   for (const auto& info : merkle_list_) {
-    blobfs::Inode node;
-    node.blob_size = info.length;
-    data_blocks_ += ComputeNumMerkleTreeBlocks(node) + info.GetDataBlocks();
+    auto blob_layout = blobfs::BlobLayout::CreateFromSizes(
+        blob_layout_format_, info.length, info.GetDataSize(), blobfs::kBlobfsBlockSize);
+    if (blob_layout.is_error()) {
+      fprintf(stderr, "blobfs: Failed to create blob layout for: %s\n",
+              info.digest.ToString().c_str());
+      return blob_layout.status_value();
+    }
+    data_blocks_ += blob_layout->TotalBlockCount();
   }
 
   blobfs::Superblock info;
@@ -215,7 +253,7 @@ zx_status_t BlobfsCreator::Mkfs() {
     return ZX_ERR_IO;
   }
 
-  int r = blobfs::Mkfs(fd_.get(), block_count);
+  int r = blobfs::Mkfs(fd_.get(), block_count, {.blob_layout_format = blob_layout_format_});
 
   if (r >= 0 && !blob_list_.is_empty()) {
     zx_status_t status;

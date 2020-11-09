@@ -46,6 +46,7 @@ struct MerkleInfo {
   // Merkle-Tree related information.
   digest::Digest digest;
   std::unique_ptr<uint8_t[]> merkle;
+  uint64_t merkle_length;
 
   // The path which generated this file, and a cached file length.
   fbl::String path;
@@ -144,7 +145,7 @@ class Blobfs : public fbl::RefCounted<Blobfs>, public NodeFinder {
   zx_status_t AllocateBlocks(size_t nblocks, size_t* blkno_out);
 
   zx_status_t WriteData(Inode* inode, const void* merkle_data, const void* blob_data,
-                        uint64_t data_size);
+                        const BlobLayout& blob_layout);
   zx_status_t WriteBitmap(size_t nblocks, size_t start_block);
   zx_status_t WriteNode(std::unique_ptr<InodeBlock> ino_block);
   zx_status_t WriteInfo();
@@ -164,6 +165,10 @@ class Blobfs : public fbl::RefCounted<Blobfs>, public NodeFinder {
     }
     return allocated;
   }
+
+  const Superblock& Info() const { return info_; }
+
+  uint32_t GetBlockSize() const;
 
  private:
   struct BlockCache {
@@ -230,7 +235,7 @@ zx_status_t GetBlockCount(int fd, uint64_t* out);
 // the device represteted by |fd|.
 //
 // Returns -1 on error, 0 on success.
-int Mkfs(int fd, uint64_t block_count);
+int Mkfs(int fd, uint64_t block_count, const FilesystemOptions& options);
 
 // Copies into |out_size| the number of bytes used by data in fs contained in a partition between
 // bytes |start| and |end|. If |start| and |end| are not passed, start is assumed to be zero and
@@ -256,7 +261,8 @@ zx_status_t blobfs_create(std::unique_ptr<Blobfs>* out, fbl::unique_fd blockfd);
 // Pre-process a blob by creating a merkle tree and digest from the supplied file.
 // Also return the length of the file. If |compress| is true and we decide to compress the file,
 // the compressed length and data are returned.
-zx_status_t blobfs_preprocess(int data_fd, bool compress, MerkleInfo* out_info);
+zx_status_t blobfs_preprocess(int data_fd, bool compress, BlobLayoutFormat blob_layout_format,
+                              MerkleInfo* out_info);
 
 // blobfs_add_blob may be called by multiple threads to gain concurrent
 // merkle tree generation. No other methods are thread safe.
