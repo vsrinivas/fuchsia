@@ -37,12 +37,12 @@ const struct FidlCodedXUnion fidl_test_arrays_UnionLargeArrayNullableRefTable = 
 static const struct FidlTableField Fields32fidl_test_arrays_TableSmallArray[] = {
     /*FidlTableField*/{.type=(fidl_type_t*)(&Array8_6uint32Table), .ordinal=1u}
 };
-const struct FidlCodedTable fidl_test_arrays_TableSmallArrayTable = {.tag=kFidlTypeTable, .fields=Fields32fidl_test_arrays_TableSmallArray, .field_count=1u, .name="fidl.test.arrays/TableSmallArray"};
+const struct FidlCodedTable fidl_test_arrays_TableSmallArrayTable = {.tag=kFidlTypeTable, .fields=Fields32fidl_test_arrays_TableSmallArray, .field_count=1u, .is_resource=kFidlIsResource_NotResource, .name="fidl.test.arrays/TableSmallArray"};
 
 static const struct FidlTableField Fields32fidl_test_arrays_TableLargeArray[] = {
     /*FidlTableField*/{.type=(fidl_type_t*)(&Array400_6uint32Table), .ordinal=1u}
 };
-const struct FidlCodedTable fidl_test_arrays_TableLargeArrayTable = {.tag=kFidlTypeTable, .fields=Fields32fidl_test_arrays_TableLargeArray, .field_count=1u, .name="fidl.test.arrays/TableLargeArray"};
+const struct FidlCodedTable fidl_test_arrays_TableLargeArrayTable = {.tag=kFidlTypeTable, .fields=Fields32fidl_test_arrays_TableLargeArray, .field_count=1u, .is_resource=kFidlIsResource_NotResource, .name="fidl.test.arrays/TableLargeArray"};
 
 const struct FidlCodedStruct fidl_test_arrays_StructSmallArrayTable = {.tag=kFidlTypeStruct, .elements=NULL, .element_count=0u, .size=8u, .name="fidl.test.arrays/StructSmallArray"};
 

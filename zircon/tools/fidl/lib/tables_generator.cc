@@ -242,6 +242,12 @@ void TablesGenerator::Generate(const coded::TableType& table_type) {
   Emit(&tables_file_, table_type.fields.empty() ? "NULL" : fields_array_name);
   Emit(&tables_file_, ", .field_count=");
   Emit(&tables_file_, static_cast<uint32_t>(table_type.fields.size()));
+  Emit(&tables_file_, ", .is_resource=");
+  if (table_type.is_resource) {
+    Emit(&tables_file_, "kFidlIsResource_Resource");
+  } else {
+    Emit(&tables_file_, "kFidlIsResource_NotResource");
+  }
   Emit(&tables_file_, ", .name=\"");
   Emit(&tables_file_, table_type.qname);
   Emit(&tables_file_, "\"};\n\n");

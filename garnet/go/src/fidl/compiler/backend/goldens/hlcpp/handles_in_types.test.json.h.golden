@@ -158,6 +158,16 @@ class TableWithHandle final {
     Destruct(&h_value_.value);
   }
 
+  const std::map<uint64_t, ::fidl::UnknownData>& UnknownData() const {
+    return _unknown_data;
+  }
+
+  void SetUnknownDataEntry(uint32_t ordinal, ::fidl::UnknownData&& data) {
+    auto ord = static_cast<uint64_t>(ordinal);
+    ZX_ASSERT(!IsOrdinalKnown(ord));
+    _unknown_data.insert({ord, std::move(data)});
+  }
+
   TableWithHandle();
   TableWithHandle(TableWithHandle&& other);
   ~TableWithHandle();
@@ -183,6 +193,26 @@ class TableWithHandle final {
     p->~T();
   }
 
+  size_t MaxOrdinal() const {
+    size_t max_ordinal =
+        static_cast<size_t>(field_presence_.MaxSetIndex()) + std::size_t{1};
+    for (const auto& data : _unknown_data) {
+      if (data.first > max_ordinal) {
+        max_ordinal = data.first;
+      }
+    }
+    return max_ordinal;
+  }
+
+  static bool IsOrdinalKnown(uint64_t ordinal) {
+    switch (ordinal) {
+      case 1:
+        return true;
+      default:
+        return false;
+    }
+  }
+
   ::fidl::internal::BitSet<1> field_presence_;
   union ValueUnion_h {
     ValueUnion_h() {}
@@ -191,6 +221,7 @@ class TableWithHandle final {
     ::zx::vmo value;
   };
   ValueUnion_h h_value_;
+  std::map<uint64_t, ::fidl::UnknownData> _unknown_data;
 };
 
 using TableWithHandlePtr = ::std::unique_ptr<TableWithHandle>;
@@ -366,7 +397,7 @@ struct Equality<::fidl::test::handlesintypes::TableWithHandle> {
     } else if (_rhs.has_h()) {
       return false;
     }
-    return true;
+    return ::fidl::Equals(_lhs.UnknownData(), _rhs.UnknownData());
   }
 };
 #endif  // __Fuchsia__

@@ -7,9 +7,11 @@
 
 #include <array>
 #include <cstdint>
+#include <map>
 #include <memory>
 #include <string>
 #include <type_traits>
+#include <utility>
 #include <vector>
 
 #include "lib/fidl/cpp/types.h"
@@ -89,12 +91,41 @@ struct Equality<UnknownBytes> {
   }
 };
 
+template <>
+struct Equality<std::map<uint64_t, std::vector<uint8_t>>> {
+  bool operator()(const std::map<uint64_t, std::vector<uint8_t>>& lhs,
+                  const std::map<uint64_t, std::vector<uint8_t>>& rhs) const {
+    return lhs == rhs;
+  }
+};
+
 #ifdef __Fuchsia__
 template <>
 struct Equality<UnknownData> {
   bool operator()(const UnknownData& lhs, const UnknownData& rhs) const {
     return ::fidl::Equality<std::vector<uint8_t>>{}(lhs.bytes, rhs.bytes) &&
            ::fidl::Equality<std::vector<zx::handle>>{}(lhs.handles, rhs.handles);
+  }
+};
+
+template <>
+struct Equality<std::map<uint64_t, UnknownData>> {
+  bool operator()(const std::map<uint64_t, UnknownData>& lhs,
+                  const std::map<uint64_t, UnknownData>& rhs) const {
+    if (lhs.size() != rhs.size()) {
+      return false;
+    }
+
+    auto l = lhs.cbegin();
+    auto r = rhs.cbegin();
+    while (l != lhs.cend()) {
+      if (!Equals(l->first, r->first) || !Equals(l->second, r->second)) {
+        return false;
+      }
+      std::advance(l, 1);
+      std::advance(r, 1);
+    }
+    return true;
   }
 };
 #endif

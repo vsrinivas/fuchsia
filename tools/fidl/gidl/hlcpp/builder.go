@@ -152,6 +152,7 @@ func (b *cppValueBuilder) visitRecord(value gidlir.Record, decl gidlmixer.Record
 		b.Builder.WriteString(fmt.Sprintf("%s %s;\n", typeName(decl), containerVar))
 	}
 
+	_, isTable := decl.(*gidlmixer.TableDecl)
 	for _, field := range value.Fields {
 		accessor := "."
 		if nullable {
@@ -160,16 +161,29 @@ func (b *cppValueBuilder) visitRecord(value gidlir.Record, decl gidlmixer.Record
 		b.Builder.WriteString("\n")
 
 		if field.Key.IsUnknown() {
-			unknownData := field.Value.(gidlir.UnknownData)
-			if decl.IsResourceType() {
-				b.Builder.WriteString(fmt.Sprintf(
-					"%s%sSetUnknownData(static_cast<fidl_xunion_tag_t>(%dlu), %s, %s);\n",
-					containerVar, accessor, field.Key.UnknownOrdinal, buildBytes(unknownData.Bytes),
-					buildHandles(unknownData.Handles)))
+			if isTable {
+				unknownData := field.Value.(gidlir.UnknownData)
+				if decl.IsResourceType() {
+					b.Builder.WriteString(fmt.Sprintf(
+						"::fidl::UnknownData _data = {\n.bytes=%s,\n.handles=%s\n};\n%s%sSetUnknownDataEntry(%dlu, std::move(_data));\n",
+						buildBytes(unknownData.Bytes), buildHandles(unknownData.Handles), containerVar, accessor, field.Key.UnknownOrdinal))
+				} else {
+					b.Builder.WriteString(fmt.Sprintf(
+						"%s%sSetUnknownDataEntry(%dlu, %s);\n",
+						containerVar, accessor, field.Key.UnknownOrdinal, buildBytes(unknownData.Bytes)))
+				}
 			} else {
-				b.Builder.WriteString(fmt.Sprintf(
-					"%s%sSetUnknownData(static_cast<fidl_xunion_tag_t>(%dlu), %s);\n",
-					containerVar, accessor, field.Key.UnknownOrdinal, buildBytes(unknownData.Bytes)))
+				unknownData := field.Value.(gidlir.UnknownData)
+				if decl.IsResourceType() {
+					b.Builder.WriteString(fmt.Sprintf(
+						"%s%sSetUnknownData(static_cast<fidl_xunion_tag_t>(%dlu), %s, %s);\n",
+						containerVar, accessor, field.Key.UnknownOrdinal, buildBytes(unknownData.Bytes),
+						buildHandles(unknownData.Handles)))
+				} else {
+					b.Builder.WriteString(fmt.Sprintf(
+						"%s%sSetUnknownData(static_cast<fidl_xunion_tag_t>(%dlu), %s);\n",
+						containerVar, accessor, field.Key.UnknownOrdinal, buildBytes(unknownData.Bytes)))
+				}
 			}
 			continue
 		}

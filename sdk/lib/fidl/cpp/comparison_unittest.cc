@@ -4,6 +4,8 @@
 
 #include "lib/fidl/cpp/comparison.h"
 
+#include <map>
+
 #include <gtest/gtest.h>
 
 #include "lib/fidl/cpp/clone.h"
@@ -44,8 +46,15 @@ TEST(Comparison, UnknownDataSameHandle) {
   data2.handles.push_back(zx::handle(h));
 
   ASSERT_EQ(true, Equals(data1, data2));
+
+  std::map<uint64_t, UnknownData> map1;
+  map1.insert({3, std::move(data1)});
+  std::map<uint64_t, UnknownData> map2;
+  map2.insert({3, std::move(data2)});
+  ASSERT_EQ(true, Equals(map1, map2));
+
   // prevent double close by releasing one of the handles
-  [[maybe_unused]] zx_handle_t copy = data1.handles[0].release();
+  [[maybe_unused]] zx_handle_t copy = map1.begin()->second.handles[0].release();
 }
 
 TEST(Comparison, UnknownDataCopiedHandle) {
@@ -61,6 +70,12 @@ TEST(Comparison, UnknownDataCopiedHandle) {
   ASSERT_EQ(ZX_OK, Clone(data1, &data2));
 
   ASSERT_EQ(false, Equals(data1, data2));
+
+  std::map<uint64_t, UnknownData> map1;
+  map1.insert({3, std::move(data1)});
+  std::map<uint64_t, UnknownData> map2;
+  map2.insert({3, std::move(data2)});
+  ASSERT_EQ(false, Equals(map1, map2));
 }
 #endif
 

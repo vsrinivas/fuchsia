@@ -224,7 +224,7 @@ success("ReverseOrdinalTable") {
 decode_success("ValueTableUnknownReservedDropped") {
     // TODO(fxbug.dev/61848): Move these to ValueTableUnknownReservedStored and
     // delete this test.
-    bindings_allowlist = [hlcpp,llcpp,rust],
+    bindings_allowlist = [llcpp,rust],
     bytes = {
         v1 = [
             5, 0, 0, 0, 0, 0, 0, 0, // max ordinal
@@ -255,7 +255,7 @@ decode_success("ValueTableUnknownReservedDropped") {
 decode_success("ResourceTableUnknownReservedDropped") {
     // TODO(fxbug.dev/61848): Move these to ResourceTableUnknownReservedStored
     // and delete this test.
-    bindings_allowlist = [hlcpp,llcpp,rust],
+    bindings_allowlist = [llcpp,rust],
     bytes = {
         v1 = [
             5, 0, 0, 0, 0, 0, 0, 0, // max ordinal
@@ -285,7 +285,7 @@ decode_success("ResourceTableUnknownReservedDropped") {
 
 decode_success("ValueTableUnknownReservedStored") {
     // TODO(fxbug.dev/61848): Move the rest from ValueTableUnknownReservedDropped.
-    bindings_allowlist = [dart,go],
+    bindings_allowlist = [hlcpp,dart,go],
     bytes = {
         v1 = [
             5, 0, 0, 0, 0, 0, 0, 0, // max ordinal
@@ -318,7 +318,7 @@ decode_success("ValueTableUnknownReservedStored") {
 
 decode_success("ResourceTableUnknownReservedStored") {
     // TODO(fxbug.dev/61788): Move the rest from ResourceTableUnknownReservedDropped.
-    bindings_allowlist = [dart,go],
+    bindings_allowlist = [hlcpp,dart,go],
     bytes = {
         v1 = [
             5, 0, 0, 0, 0, 0, 0, 0, // max ordinal
@@ -352,7 +352,7 @@ decode_success("ResourceTableUnknownReservedStored") {
 decode_success("ValueTableUnknownTrailingDropped") {
     // TODO(fxbug.dev/61848): Move these to ValueTableUnknownTrailingStored and
     // delete this test.
-    bindings_allowlist = [hlcpp,llcpp,rust],
+    bindings_allowlist = [llcpp,rust],
     bytes = {
         v1 = [
             6, 0, 0, 0, 0, 0, 0, 0, // max ordinal
@@ -385,7 +385,7 @@ decode_success("ValueTableUnknownTrailingDropped") {
 decode_success("ResourceTableUnknownTrailingDropped") {
     // TODO(fxbug.dev/61848): Move these to ResourceTableUnknownTrailingStored
     // and delete this test.
-    bindings_allowlist = [hlcpp,llcpp,rust],
+    bindings_allowlist = [llcpp,rust],
     bytes = {
         v1 = [
             6, 0, 0, 0, 0, 0, 0, 0, // max ordinal
@@ -417,7 +417,7 @@ decode_success("ResourceTableUnknownTrailingDropped") {
 
 decode_success("ValueTableUnknownTrailingStored") {
     // TODO(fxbug.dev/61848): Move the rest from ValueTableUnknownTrailingDropped.
-    bindings_allowlist = [dart,go],
+    bindings_allowlist = [hlcpp,dart,go],
     bytes = {
         v1 = [
             6, 0, 0, 0, 0, 0, 0, 0, // max ordinal
@@ -452,7 +452,7 @@ decode_success("ValueTableUnknownTrailingStored") {
 
 decode_success("ResourceTableUnknownTrailingStored") {
     // TODO(fxbug.dev/61848): Move the rest from ResourceTableUnknownTrailingDropped.
-    bindings_allowlist = [dart,go],
+    bindings_allowlist = [hlcpp,dart,go],
     bytes = {
         v1 = [
             6, 0, 0, 0, 0, 0, 0, 0, // max ordinal
@@ -488,7 +488,7 @@ decode_success("ResourceTableUnknownTrailingStored") {
 decode_success("ValueTableUnknownTrailingHandlesDropped") {
     // TODO(fxbug.dev/61848): Move these to ValueTableUnknownTrailingHandlesRejected
     // and delete this test.
-    bindings_allowlist = [hlcpp,rust],
+    bindings_allowlist = [rust],
     handle_defs = {
         #0 = event(),
         #1 = event(),
@@ -523,7 +523,7 @@ decode_success("ValueTableUnknownTrailingHandlesDropped") {
 decode_success("ResourceTableUnknownTrailingHandlesDropped") {
     // TODO(fxbug.dev/61848): Move these to ResourceTableUnknownTrailingHandlesStored
     // and delete this test.
-    bindings_allowlist = [hlcpp,rust],
+    bindings_allowlist = [rust],
     handle_defs = {
         #0 = event(),
         #1 = event(),
@@ -597,7 +597,7 @@ decode_success("ValueTableUnknownTrailingHandlesIncorrectlyStored") {
 decode_failure("ValueTableUnknownTrailingHandlesRejected") {
     // TODO(fxbug.dev/61848): Move the rest from ValueTableUnknownTrailingHandlesDropped
     // and ValueTableUnknownTrailingHandlesIncorrectlyStored.
-    bindings_allowlist = [],
+    bindings_allowlist = [hlcpp],
     handle_defs = {
         #0 = event(),
         #1 = event(),
@@ -628,7 +628,7 @@ decode_failure("ValueTableUnknownTrailingHandlesRejected") {
 
 decode_success("ResourceTableUnknownTrailingHandlesStored") {
     // TODO(fxbug.dev/61848): Move the rest from ResourceTableUnknownTrailingHandlesDropped.
-    bindings_allowlist = [dart,go],
+    bindings_allowlist = [hlcpp,dart,go],
     handle_defs = {
         #0 = event(),
         #1 = event(),

@@ -1017,4 +1017,42 @@ union NonResourceUnion {
   }
 }
 
+TEST(CodedTypesGeneratorTests, TableResourceness) {
+  TestLibrary library(R"FIDL(
+library example;
+
+resource table ResourceTable {
+  1: bool first;
+};
+
+table NonResourceTable {
+  1: bool first;
+};
+
+)FIDL");
+  ASSERT_TRUE(library.Compile());
+  fidl::CodedTypesGenerator gen(library.library());
+  gen.CompileCodedTypes(fidl::WireFormat::kV1NoEe);
+
+  {
+    auto name = fidl::flat::Name::Key(library.library(), "ResourceTable");
+    auto type = gen.CodedTypeFor(name);
+    ASSERT_NOT_NULL(type);
+    ASSERT_EQ(fidl::coded::Type::Kind::kTable, type->kind);
+
+    auto coded_table = static_cast<const fidl::coded::TableType*>(type);
+    EXPECT_EQ(true, coded_table->is_resource);
+  }
+
+  {
+    auto name = fidl::flat::Name::Key(library.library(), "NonResourceTable");
+    auto type = gen.CodedTypeFor(name);
+    ASSERT_NOT_NULL(type);
+    ASSERT_EQ(fidl::coded::Type::Kind::kTable, type->kind);
+
+    auto coded_table = static_cast<const fidl::coded::TableType*>(type);
+    EXPECT_EQ(false, coded_table->is_resource);
+  }
+}
+
 }  // namespace

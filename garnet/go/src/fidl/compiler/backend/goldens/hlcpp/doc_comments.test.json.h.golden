@@ -319,6 +319,16 @@ class Table final {
     Destruct(&Field_value_.value);
   }
 
+  const std::map<uint64_t, std::vector<uint8_t>>& UnknownData() const {
+    return _unknown_data;
+  }
+
+  void SetUnknownDataEntry(uint32_t ordinal, std::vector<uint8_t>&& data) {
+    auto ord = static_cast<uint64_t>(ordinal);
+    ZX_ASSERT(!IsOrdinalKnown(ord));
+    _unknown_data.insert({ord, std::move(data)});
+  }
+
   Table();
   Table(Table&& other);
   ~Table();
@@ -343,6 +353,26 @@ class Table final {
     p->~T();
   }
 
+  size_t MaxOrdinal() const {
+    size_t max_ordinal =
+        static_cast<size_t>(field_presence_.MaxSetIndex()) + std::size_t{1};
+    for (const auto& data : _unknown_data) {
+      if (data.first > max_ordinal) {
+        max_ordinal = data.first;
+      }
+    }
+    return max_ordinal;
+  }
+
+  static bool IsOrdinalKnown(uint64_t ordinal) {
+    switch (ordinal) {
+      case 1:
+        return true;
+      default:
+        return false;
+    }
+  }
+
   ::fidl::internal::BitSet<1> field_presence_;
   union ValueUnion_Field {
     ValueUnion_Field() {}
@@ -351,6 +381,7 @@ class Table final {
     int32_t value;
   };
   ValueUnion_Field Field_value_;
+  std::map<uint64_t, std::vector<uint8_t>> _unknown_data;
 };
 
 using TablePtr = ::std::unique_ptr<Table>;
@@ -802,7 +833,7 @@ struct Equality<::fidl::test::doccomments::Table> {
     } else if (_rhs.has_Field()) {
       return false;
     }
-    return true;
+    return ::fidl::Equals(_lhs.UnknownData(), _rhs.UnknownData());
   }
 };
 template <>

@@ -351,6 +351,7 @@ struct FidlCodedStructPointer FIDL_INTERNAL_INHERIT_TYPE_T {
 
 struct FidlCodedTable FIDL_INTERNAL_INHERIT_TYPE_T {
   const FidlTypeTag tag;
+  const FidlIsResource is_resource;
   const uint32_t field_count;
   const struct FidlTableField* const fields;
   const char* name;  // may be nullptr if omitted at compile time

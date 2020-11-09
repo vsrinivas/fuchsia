@@ -25,7 +25,7 @@ const struct FidlCodedStruct fidl_test_doccomments_InterfaceOnEventEventTable = 
 static const struct FidlTableField Fields27fidl_test_doccomments_Table[] = {
     /*FidlTableField*/{.type=(fidl_type_t*)(&fidl_internal_kInt32Table), .ordinal=1u}
 };
-const struct FidlCodedTable fidl_test_doccomments_TableTable = {.tag=kFidlTypeTable, .fields=Fields27fidl_test_doccomments_Table, .field_count=1u, .name="fidl.test.doccomments/Table"};
+const struct FidlCodedTable fidl_test_doccomments_TableTable = {.tag=kFidlTypeTable, .fields=Fields27fidl_test_doccomments_Table, .field_count=1u, .is_resource=kFidlIsResource_NotResource, .name="fidl.test.doccomments/Table"};
 
 const struct FidlCodedStruct fidl_test_doccomments_StructTable = {.tag=kFidlTypeStruct, .elements=NULL, .element_count=0u, .size=4u, .name="fidl.test.doccomments/Struct"};
 

@@ -78,7 +78,7 @@ class FidlHandleCloser final
     return Status::kSuccess;
   }
 
-  Status VisitUnknownEnvelope(EnvelopePointer envelope, fidl::EnvelopeSource source) {
+  Status VisitUnknownEnvelope(EnvelopePointer envelope, FidlIsResource is_resource) {
     return Status::kSuccess;
   }
 

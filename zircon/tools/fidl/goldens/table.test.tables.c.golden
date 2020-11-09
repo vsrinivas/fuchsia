@@ -15,26 +15,26 @@ static const struct FidlTableField Fields27fidl_test_table_SimpleTable[] = {
     /*FidlTableField*/{.type=(fidl_type_t*)(&fidl_internal_kInt64Table), .ordinal=1u},
     /*FidlTableField*/{.type=(fidl_type_t*)(&fidl_internal_kInt64Table), .ordinal=5u}
 };
-const struct FidlCodedTable fidl_test_table_SimpleTableTable = {.tag=kFidlTypeTable, .fields=Fields27fidl_test_table_SimpleTable, .field_count=2u, .name="fidl.test.table/SimpleTable"};
+const struct FidlCodedTable fidl_test_table_SimpleTableTable = {.tag=kFidlTypeTable, .fields=Fields27fidl_test_table_SimpleTable, .field_count=2u, .is_resource=kFidlIsResource_NotResource, .name="fidl.test.table/SimpleTable"};
 
 static const struct FidlTableField Fields35fidl_test_table_ReverseOrdinalTable[] = {
     /*FidlTableField*/{.type=(fidl_type_t*)(&fidl_internal_kInt64Table), .ordinal=1u},
     /*FidlTableField*/{.type=(fidl_type_t*)(&fidl_internal_kInt64Table), .ordinal=2u},
     /*FidlTableField*/{.type=(fidl_type_t*)(&fidl_internal_kInt64Table), .ordinal=3u}
 };
-const struct FidlCodedTable fidl_test_table_ReverseOrdinalTableTable = {.tag=kFidlTypeTable, .fields=Fields35fidl_test_table_ReverseOrdinalTable, .field_count=3u, .name="fidl.test.table/ReverseOrdinalTable"};
+const struct FidlCodedTable fidl_test_table_ReverseOrdinalTableTable = {.tag=kFidlTypeTable, .fields=Fields35fidl_test_table_ReverseOrdinalTable, .field_count=3u, .is_resource=kFidlIsResource_NotResource, .name="fidl.test.table/ReverseOrdinalTable"};
 
 static const struct FidlTableField Fields32fidl_test_table_OlderSimpleTable[] = {
     /*FidlTableField*/{.type=(fidl_type_t*)(&fidl_internal_kInt64Table), .ordinal=1u}
 };
-const struct FidlCodedTable fidl_test_table_OlderSimpleTableTable = {.tag=kFidlTypeTable, .fields=Fields32fidl_test_table_OlderSimpleTable, .field_count=1u, .name="fidl.test.table/OlderSimpleTable"};
+const struct FidlCodedTable fidl_test_table_OlderSimpleTableTable = {.tag=kFidlTypeTable, .fields=Fields32fidl_test_table_OlderSimpleTable, .field_count=1u, .is_resource=kFidlIsResource_NotResource, .name="fidl.test.table/OlderSimpleTable"};
 
 static const struct FidlTableField Fields32fidl_test_table_NewerSimpleTable[] = {
     /*FidlTableField*/{.type=(fidl_type_t*)(&fidl_internal_kInt64Table), .ordinal=1u},
     /*FidlTableField*/{.type=(fidl_type_t*)(&fidl_internal_kInt64Table), .ordinal=5u},
     /*FidlTableField*/{.type=(fidl_type_t*)(&fidl_internal_kInt64Table), .ordinal=6u}
 };
-const struct FidlCodedTable fidl_test_table_NewerSimpleTableTable = {.tag=kFidlTypeTable, .fields=Fields32fidl_test_table_NewerSimpleTable, .field_count=3u, .name="fidl.test.table/NewerSimpleTable"};
+const struct FidlCodedTable fidl_test_table_NewerSimpleTableTable = {.tag=kFidlTypeTable, .fields=Fields32fidl_test_table_NewerSimpleTable, .field_count=3u, .is_resource=kFidlIsResource_NotResource, .name="fidl.test.table/NewerSimpleTable"};
 
-const struct FidlCodedTable fidl_test_table_EmptyTableTable = {.tag=kFidlTypeTable, .fields=NULL, .field_count=0u, .name="fidl.test.table/EmptyTable"};
+const struct FidlCodedTable fidl_test_table_EmptyTableTable = {.tag=kFidlTypeTable, .fields=NULL, .field_count=0u, .is_resource=kFidlIsResource_NotResource, .name="fidl.test.table/EmptyTable"};
 

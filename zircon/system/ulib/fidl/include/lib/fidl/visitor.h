@@ -19,17 +19,6 @@
 
 namespace fidl {
 
-// Whether the envelope is in a table vs union, or in a resource vs non-resource
-// are separate axes, and so should theoretically be two separate parameters.
-// However, currently both HLCPP and LLCPP do not store unknown handles for
-// tables, and so resource tables, non-resource tables, and non-resource unions
-// are all treated the same.
-//
-// If unknown handles for tables start being stored in either HLCPP or LLCPP,
-// it might make sense to separate the enum into two different bits:
-// from union/from table, and is resource/is non-resource.
-enum class EnvelopeSource { kTable, kNotResourceUnion, kResourceUnion };
-
 struct NonMutatingVisitorTrait {
   // Types residing in the FIDL message buffer are const
   static constexpr bool kIsConst = true;
@@ -183,7 +172,8 @@ class Visitor {
   // if they type was known.
   //
   // |envelope| is a pointer to the fidl_envelope_t structure containing the envelope.
-  Status VisitUnknownEnvelope(EnvelopePointer envelope, EnvelopeSource source) {
+  // |is_resource| indicates whether the type containing this envelope is a resource type.
+  Status VisitUnknownEnvelope(EnvelopePointer envelope, FidlIsResource is_resource) {
     __builtin_unreachable();
   }
 

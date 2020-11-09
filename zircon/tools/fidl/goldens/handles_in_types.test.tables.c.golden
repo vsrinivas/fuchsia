@@ -42,7 +42,7 @@ const struct FidlCodedXUnion fidl_test_handlesintypes_UnionWithHandleNullableRef
 static const struct FidlTableField Fields40fidl_test_handlesintypes_TableWithHandle[] = {
     /*FidlTableField*/{.type=(fidl_type_t*)(&HandlevmononnullableTable), .ordinal=1u}
 };
-const struct FidlCodedTable fidl_test_handlesintypes_TableWithHandleTable = {.tag=kFidlTypeTable, .fields=Fields40fidl_test_handlesintypes_TableWithHandle, .field_count=1u, .name="fidl.test.handlesintypes/TableWithHandle"};
+const struct FidlCodedTable fidl_test_handlesintypes_TableWithHandleTable = {.tag=kFidlTypeTable, .fields=Fields40fidl_test_handlesintypes_TableWithHandle, .field_count=1u, .is_resource=kFidlIsResource_Resource, .name="fidl.test.handlesintypes/TableWithHandle"};
 
 static const struct FidlStructElement Fields39fidl_test_handlesintypes_HandlesInTypes[] = {
     /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_Resource},.offset=0u, .field_type=(fidl_type_t*)(&HandlevmononnullableTable)}},

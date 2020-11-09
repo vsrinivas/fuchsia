@@ -71,14 +71,13 @@ template <Mode mode, typename Byte>
 class FidlDecoder final : public BaseVisitor<Byte> {
  public:
   FidlDecoder(Byte* bytes, uint32_t num_bytes, const zx_handle_t* handles, uint32_t num_handles,
-              uint32_t next_out_of_line, const char** out_error_msg,
-              bool skip_unknown_union_handles)
+              uint32_t next_out_of_line, const char** out_error_msg, bool skip_unknown_handles)
       : bytes_(bytes),
         num_bytes_(num_bytes),
         num_handles_(num_handles),
         next_out_of_line_(next_out_of_line),
         out_error_msg_(out_error_msg),
-        skip_unknown_union_handles_(skip_unknown_union_handles) {
+        skip_unknown_handles_(skip_unknown_handles) {
     if (likely(handles != nullptr)) {
       handles_ = handles;
     }
@@ -86,13 +85,13 @@ class FidlDecoder final : public BaseVisitor<Byte> {
 
   FidlDecoder(Byte* bytes, uint32_t num_bytes, const zx_handle_info_t* handle_infos,
               uint32_t num_handle_infos, uint32_t next_out_of_line, const char** out_error_msg,
-              bool skip_unknown_union_handles)
+              bool skip_unknown_handles)
       : bytes_(bytes),
         num_bytes_(num_bytes),
         num_handles_(num_handle_infos),
         next_out_of_line_(next_out_of_line),
         out_error_msg_(out_error_msg),
-        skip_unknown_union_handles_(skip_unknown_union_handles) {
+        skip_unknown_handles_(skip_unknown_handles) {
     if (likely(handle_infos != nullptr)) {
       handles_ = handle_infos;
     }
@@ -276,7 +275,7 @@ class FidlDecoder final : public BaseVisitor<Byte> {
     return Status::kSuccess;
   }
 
-  Status VisitUnknownEnvelope(EnvelopePointer envelope, fidl::EnvelopeSource source) {
+  Status VisitUnknownEnvelope(EnvelopePointer envelope, FidlIsResource is_resource) {
     if (mode == Mode::Validate) {
       handle_idx_ += envelope->num_handles;
       return Status::kSuccess;
@@ -289,14 +288,17 @@ class FidlDecoder final : public BaseVisitor<Byte> {
         SetError("number of unknown handles exceeds unknown handle array size");
         return Status::kConstraintViolationError;
       }
-      // HLCPP will process unknown handles for unions that are resources at a later step, so don't
-      // close the handles
-      if (skip_unknown_union_handles_ && source == fidl::EnvelopeSource::kResourceUnion) {
+      // If skip_unknown_handles_ is true, leave the unknown handles intact
+      // for something else to process (e.g. HLCPP Decode)
+      if (skip_unknown_handles_ && is_resource == kFidlIsResource_Resource) {
         handle_idx_ += envelope->num_handles;
         return Status::kSuccess;
       }
-      if (unlikely(skip_unknown_union_handles_ &&
-                   source == fidl::EnvelopeSource::kNotResourceUnion)) {
+      // Receiving unknown handles for a resource type is only an error if
+      // skip_unknown_handles_ is true, i.e. the walker itself is not
+      // automatically closing all unknown handles (making it impossible for
+      // the domain object to store the unknown handles).
+      if (unlikely(skip_unknown_handles_ && is_resource == kFidlIsResource_NotResource)) {
         SetError("received unknown handles for a non-resource type");
         return Status::kConstraintViolationError;
       }
@@ -366,10 +368,10 @@ class FidlDecoder final : public BaseVisitor<Byte> {
   uint32_t next_out_of_line_;
   const char** const out_error_msg_;
   // HLCPP first uses FidlDecoder to do an in-place decode, then extracts data
-  // out into domain objects. Since HLCPP stores unknown handles for unions
+  // out into domain objects. Since HLCPP stores unknown handles
   // (and LLCPP does not), this field allows HLCPP to use the decoder while
   // keeping unknown handles in flexible resource unions intact.
-  bool skip_unknown_union_handles_;
+  bool skip_unknown_handles_;
 
   // Decoder state
   zx_status_t status_ = ZX_OK;
@@ -462,10 +464,9 @@ void close_handle_infos_op(const zx_handle_info_t* handle_infos, uint32_t max_id
 
 }  // namespace
 
-zx_status_t fidl_decode_skip_unknown_union_handles(const fidl_type_t* type, void* bytes,
-                                                   uint32_t num_bytes, const zx_handle_t* handles,
-                                                   uint32_t num_handles,
-                                                   const char** out_error_msg) {
+zx_status_t fidl_decode_skip_unknown_handles(const fidl_type_t* type, void* bytes,
+                                             uint32_t num_bytes, const zx_handle_t* handles,
+                                             uint32_t num_handles, const char** out_error_msg) {
   return fidl_decode_impl<zx_handle_t, Mode::Decode>(type, bytes, num_bytes, handles, num_handles,
                                                      out_error_msg, close_handles_op, true);
 }

@@ -304,6 +304,7 @@ TableSmallArray::TableSmallArray(TableSmallArray&& other) {
   if (field_presence_.IsSet<0>()) {
     Construct(&a_value_.value, std::move(other.a_value_.value));
   }
+  _unknown_data = std::move(other._unknown_data);
 }
 
 TableSmallArray::~TableSmallArray() {
@@ -324,30 +325,51 @@ TableSmallArray& TableSmallArray::operator=(TableSmallArray&& other) {
     field_presence_.Clear<0>();
     Destruct(&a_value_.value);
   }
+  _unknown_data = std::move(other._unknown_data);
   return *this;
 }
 
-bool TableSmallArray::IsEmpty() const { return field_presence_.IsEmpty(); }
+bool TableSmallArray::IsEmpty() const {
+  return field_presence_.IsEmpty() && _unknown_data.size() == 0;
+}
 
 void TableSmallArray::Encode(::fidl::Encoder* _encoder, size_t _offset) {
-  size_t max_ordinal = field_presence_.MaxSetIndex() + 1ll;
+  size_t max_ordinal = MaxOrdinal();
   ::fidl::EncodeVectorPointer(_encoder, max_ordinal, _offset);
   if (max_ordinal == 0) return;
-  size_t base = _encoder->Alloc(max_ordinal * 2 * sizeof(uint64_t));
+  size_t base = _encoder->Alloc(max_ordinal * sizeof(fidl_envelope_t));
+  auto next_unknown = _unknown_data.begin();
   if (field_presence_.IsSet<0>()) {
+    // Encode unknown fields that have an ordinal that should appear before this
+    // field.
+    while (next_unknown != _unknown_data.end() && next_unknown->first < 1) {
+      size_t envelope_base =
+          base + (next_unknown->first - 1) * sizeof(fidl_envelope_t);
+      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
+                                 envelope_base);
+      std::advance(next_unknown, 1);
+    }
+
     const size_t length_before = _encoder->CurrentLength();
     const size_t handles_before = _encoder->CurrentHandleCount();
     ::fidl::Encode(
         _encoder, &a_value_.value,
         _encoder->Alloc(::fidl::EncodingInlineSize<::std::array<uint32_t, 2>,
                                                    ::fidl::Encoder>(_encoder)));
-    size_t envelope_base = base + (1 - 1) * 2 * sizeof(uint64_t);
+    size_t envelope_base = base + (1 - 1) * sizeof(fidl_envelope_t);
     uint64_t num_bytes_then_num_handles =
         (_encoder->CurrentLength() - length_before) |
         ((_encoder->CurrentHandleCount() - handles_before) << 32);
     ::fidl::Encode(_encoder, &num_bytes_then_num_handles, envelope_base);
-    *_encoder->GetPtr<uintptr_t>(envelope_base + sizeof(uint64_t)) =
+    *_encoder->GetPtr<uintptr_t>(envelope_base +
+                                 offsetof(fidl_envelope_t, presence)) =
         FIDL_ALLOC_PRESENT;
+  }
+  // Encode any remaining unknown fields (i.e. ones that have an ordinal outside
+  // the range of known ordinals)
+  for (auto curr = next_unknown; curr != _unknown_data.end(); ++curr) {
+    size_t envelope_base = base + (curr->first - 1) * sizeof(fidl_envelope_t);
+    ::fidl::EncodeUnknownBytes(_encoder, &curr->second, envelope_base);
   }
 }
 
@@ -363,9 +385,10 @@ void TableSmallArray::Decode(::fidl::Decoder* _decoder, TableSmallArray* _value,
   base = _decoder->GetOffset(encoded->data);
   count = encoded->count;
   if (count >= 1) {
-    size_t envelope_base = base + (1 - 1) * 2 * sizeof(uint64_t);
+    size_t envelope_base = base + (1 - 1) * sizeof(fidl_envelope_t);
     uint64_t presence;
-    ::fidl::Decode(_decoder, &presence, envelope_base + sizeof(uint64_t));
+    ::fidl::Decode(_decoder, &presence,
+                   envelope_base + offsetof(fidl_envelope_t, presence));
     if (presence != 0) {
       ::fidl::Decode(_decoder, _value->mutable_a(),
                      _decoder->GetOffset(presence));
@@ -374,6 +397,24 @@ void TableSmallArray::Decode(::fidl::Decoder* _decoder, TableSmallArray* _value,
     }
   } else {
     goto done_1;
+  }
+
+  if (count > 1) {
+    for (uint64_t ordinal = 1; ordinal <= count; ordinal++) {
+      if (IsOrdinalKnown(ordinal)) continue;
+
+      size_t envelope_base = base + (ordinal - 1) * sizeof(fidl_envelope_t);
+      fidl_envelope_t* envelope =
+          _decoder->GetPtr<fidl_envelope_t>(envelope_base);
+      if (envelope->presence != 0) {
+        auto result = _value->_unknown_data.emplace(
+            std::piecewise_construct, std::forward_as_tuple(ordinal),
+            std::forward_as_tuple());
+        auto iter = result.first;
+        iter->second.resize(envelope->num_bytes);
+        memcpy(iter->second.data(), envelope->data, iter->second.size());
+      }
+    }
   }
 
   return;
@@ -392,7 +433,7 @@ zx_status_t TableSmallArray::Clone(TableSmallArray* result) const {
   } else {
     result->clear_a();
   }
-  return ZX_OK;
+  return ::fidl::Clone(_unknown_data, &result->_unknown_data);
 }
 extern "C" const fidl_type_t fidl_test_arrays_TableLargeArrayTable;
 const fidl_type_t* TableLargeArray::FidlType =
@@ -405,6 +446,7 @@ TableLargeArray::TableLargeArray(TableLargeArray&& other) {
   if (field_presence_.IsSet<0>()) {
     Construct(&a_value_.value, std::move(other.a_value_.value));
   }
+  _unknown_data = std::move(other._unknown_data);
 }
 
 TableLargeArray::~TableLargeArray() {
@@ -425,30 +467,51 @@ TableLargeArray& TableLargeArray::operator=(TableLargeArray&& other) {
     field_presence_.Clear<0>();
     Destruct(&a_value_.value);
   }
+  _unknown_data = std::move(other._unknown_data);
   return *this;
 }
 
-bool TableLargeArray::IsEmpty() const { return field_presence_.IsEmpty(); }
+bool TableLargeArray::IsEmpty() const {
+  return field_presence_.IsEmpty() && _unknown_data.size() == 0;
+}
 
 void TableLargeArray::Encode(::fidl::Encoder* _encoder, size_t _offset) {
-  size_t max_ordinal = field_presence_.MaxSetIndex() + 1ll;
+  size_t max_ordinal = MaxOrdinal();
   ::fidl::EncodeVectorPointer(_encoder, max_ordinal, _offset);
   if (max_ordinal == 0) return;
-  size_t base = _encoder->Alloc(max_ordinal * 2 * sizeof(uint64_t));
+  size_t base = _encoder->Alloc(max_ordinal * sizeof(fidl_envelope_t));
+  auto next_unknown = _unknown_data.begin();
   if (field_presence_.IsSet<0>()) {
+    // Encode unknown fields that have an ordinal that should appear before this
+    // field.
+    while (next_unknown != _unknown_data.end() && next_unknown->first < 1) {
+      size_t envelope_base =
+          base + (next_unknown->first - 1) * sizeof(fidl_envelope_t);
+      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
+                                 envelope_base);
+      std::advance(next_unknown, 1);
+    }
+
     const size_t length_before = _encoder->CurrentLength();
     const size_t handles_before = _encoder->CurrentHandleCount();
     ::fidl::Encode(
         _encoder, &a_value_.value,
         _encoder->Alloc(::fidl::EncodingInlineSize<::std::array<uint32_t, 100>,
                                                    ::fidl::Encoder>(_encoder)));
-    size_t envelope_base = base + (1 - 1) * 2 * sizeof(uint64_t);
+    size_t envelope_base = base + (1 - 1) * sizeof(fidl_envelope_t);
     uint64_t num_bytes_then_num_handles =
         (_encoder->CurrentLength() - length_before) |
         ((_encoder->CurrentHandleCount() - handles_before) << 32);
     ::fidl::Encode(_encoder, &num_bytes_then_num_handles, envelope_base);
-    *_encoder->GetPtr<uintptr_t>(envelope_base + sizeof(uint64_t)) =
+    *_encoder->GetPtr<uintptr_t>(envelope_base +
+                                 offsetof(fidl_envelope_t, presence)) =
         FIDL_ALLOC_PRESENT;
+  }
+  // Encode any remaining unknown fields (i.e. ones that have an ordinal outside
+  // the range of known ordinals)
+  for (auto curr = next_unknown; curr != _unknown_data.end(); ++curr) {
+    size_t envelope_base = base + (curr->first - 1) * sizeof(fidl_envelope_t);
+    ::fidl::EncodeUnknownBytes(_encoder, &curr->second, envelope_base);
   }
 }
 
@@ -464,9 +527,10 @@ void TableLargeArray::Decode(::fidl::Decoder* _decoder, TableLargeArray* _value,
   base = _decoder->GetOffset(encoded->data);
   count = encoded->count;
   if (count >= 1) {
-    size_t envelope_base = base + (1 - 1) * 2 * sizeof(uint64_t);
+    size_t envelope_base = base + (1 - 1) * sizeof(fidl_envelope_t);
     uint64_t presence;
-    ::fidl::Decode(_decoder, &presence, envelope_base + sizeof(uint64_t));
+    ::fidl::Decode(_decoder, &presence,
+                   envelope_base + offsetof(fidl_envelope_t, presence));
     if (presence != 0) {
       ::fidl::Decode(_decoder, _value->mutable_a(),
                      _decoder->GetOffset(presence));
@@ -475,6 +539,24 @@ void TableLargeArray::Decode(::fidl::Decoder* _decoder, TableLargeArray* _value,
     }
   } else {
     goto done_1;
+  }
+
+  if (count > 1) {
+    for (uint64_t ordinal = 1; ordinal <= count; ordinal++) {
+      if (IsOrdinalKnown(ordinal)) continue;
+
+      size_t envelope_base = base + (ordinal - 1) * sizeof(fidl_envelope_t);
+      fidl_envelope_t* envelope =
+          _decoder->GetPtr<fidl_envelope_t>(envelope_base);
+      if (envelope->presence != 0) {
+        auto result = _value->_unknown_data.emplace(
+            std::piecewise_construct, std::forward_as_tuple(ordinal),
+            std::forward_as_tuple());
+        auto iter = result.first;
+        iter->second.resize(envelope->num_bytes);
+        memcpy(iter->second.data(), envelope->data, iter->second.size());
+      }
+    }
   }
 
   return;
@@ -493,7 +575,7 @@ zx_status_t TableLargeArray::Clone(TableLargeArray* result) const {
   } else {
     result->clear_a();
   }
-  return ZX_OK;
+  return ::fidl::Clone(_unknown_data, &result->_unknown_data);
 }
 extern "C" const fidl_type_t fidl_test_arrays_StructSmallArrayTable;
 const fidl_type_t* StructSmallArray::FidlType =

@@ -41,7 +41,7 @@ const struct FidlCodedXUnion example_ExampleUnionNullableRefTable = {.tag=kFidlT
 static const struct FidlTableField Fields20example_ExampleTable[] = {
     /*FidlTableField*/{.type=(fidl_type_t*)(&fidl_internal_kUint32Table), .ordinal=1u}
 };
-const struct FidlCodedTable example_ExampleTableTable = {.tag=kFidlTypeTable, .fields=Fields20example_ExampleTable, .field_count=1u, .name="example/ExampleTable"};
+const struct FidlCodedTable example_ExampleTableTable = {.tag=kFidlTypeTable, .fields=Fields20example_ExampleTable, .field_count=1u, .is_resource=kFidlIsResource_NotResource, .name="example/ExampleTable"};
 
 const struct FidlCodedStruct example_ExampleStructTable = {.tag=kFidlTypeStruct, .elements=NULL, .element_count=0u, .size=4u, .name="example/ExampleStruct"};
 

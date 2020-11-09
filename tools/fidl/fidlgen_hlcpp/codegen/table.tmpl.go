@@ -62,6 +62,16 @@ class {{ .Name }} final {
   }
   {{- end }}
 
+  const std::map<uint64_t, {{ if .IsResourceType }}::fidl::UnknownData{{ else }}std::vector<uint8_t>{{ end }}>& UnknownData() const {
+    return _unknown_data;
+  }
+
+  void SetUnknownDataEntry(uint32_t ordinal, {{if .IsResourceType }}::fidl::UnknownData{{ else }}std::vector<uint8_t>{{ end }}&& data) {
+    auto ord = static_cast<uint64_t>(ordinal);
+    ZX_ASSERT(!IsOrdinalKnown(ord));
+    _unknown_data.insert({ord, std::move(data)});
+  }
+
   {{ .Name }}();
   {{ .Name }}({{ .Name }}&& other);
   ~{{ .Name }}();
@@ -72,7 +82,6 @@ class {{ .Name }} final {
   void Encode(::fidl::Encoder* _encoder, size_t _offset);
   static void Decode(::fidl::Decoder* _decoder, {{ .Name }}* _value, size_t _offset);
   zx_status_t Clone({{ .Name }}* _result) const;
-
  private:
   template <class T, class... Args>
   void Construct(T* p, Args&&... args) {
@@ -82,6 +91,27 @@ class {{ .Name }} final {
   template <class T>
   void Destruct(T* p) {
     p->~T();
+  }
+
+  size_t MaxOrdinal() const {
+    size_t max_ordinal = static_cast<size_t>(field_presence_.MaxSetIndex()) + std::size_t{1};
+    for (const auto& data : _unknown_data) {
+      if (data.first > max_ordinal) {
+        max_ordinal = data.first;
+      }
+    }
+    return max_ordinal;
+  }
+
+  static bool IsOrdinalKnown(uint64_t ordinal) {
+    switch (ordinal) {
+  {{- range .Members }}
+    case {{ .Ordinal }}:
+  {{- end }}
+      return true;
+    default:
+      return false;
+    }
   }
 
   ::fidl::internal::BitSet<{{ .BiggestOrdinal }}> field_presence_;
@@ -97,6 +127,11 @@ class {{ .Name }} final {
     {{ .Type.Decl }} value;
   };
   {{ .ValueUnionName }} {{ .FieldDataName }};
+  {{- end }}
+  {{- if .IsResourceType }}
+  std::map<uint64_t, ::fidl::UnknownData> _unknown_data;
+  {{- else }}
+  std::map<uint64_t, std::vector<uint8_t>> _unknown_data;
   {{- end }}
 };
 
@@ -123,6 +158,7 @@ const fidl_type_t* {{ .Name }}::FidlType = &{{ .TableType }};
     Construct(&{{ .FieldDataName }}.value, std::move(other.{{ .FieldDataName }}.value));
   }
   {{- end }}
+  _unknown_data = std::move(other._unknown_data);
 }
 
 {{ .Name }}::~{{ .Name }}() {
@@ -147,36 +183,57 @@ const fidl_type_t* {{ .Name }}::FidlType = &{{ .TableType }};
     Destruct(&{{ .FieldDataName }}.value);
   }
   {{- end }}
+  _unknown_data = std::move(other._unknown_data);
   return *this;
 }
 
 bool {{ .Name }}::IsEmpty() const {
-  return field_presence_.IsEmpty();
+  return field_presence_.IsEmpty() && _unknown_data.size() == 0;
 }
 
 void {{ .Name }}::Encode(::fidl::Encoder* _encoder, size_t _offset) {
-  size_t max_ordinal = field_presence_.MaxSetIndex() + 1ll;
+  size_t max_ordinal = MaxOrdinal();
   ::fidl::EncodeVectorPointer(_encoder, max_ordinal, _offset);
   if (max_ordinal == 0) return;
-  {{- if len .Members }}
-  size_t base = _encoder->Alloc(max_ordinal * 2 * sizeof(uint64_t));
-  {{- end }}
+  size_t base = _encoder->Alloc(max_ordinal * sizeof(fidl_envelope_t));
+  auto next_unknown = _unknown_data.begin();
   {{- range .Members }}
   if ({{ .FieldPresenceIsSet }}) {
+    // Encode unknown fields that have an ordinal that should appear before this field.
+    while (next_unknown != _unknown_data.end() && next_unknown->first < {{ .Ordinal }}) {
+      size_t envelope_base = base + (next_unknown->first - 1) * sizeof(fidl_envelope_t);
+    {{- if $.IsResourceType }}
+      ::fidl::EncodeUnknownData(_encoder, &next_unknown->second, envelope_base);
+    {{- else }}
+      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second, envelope_base);
+    {{- end }}
+      std::advance(next_unknown, 1);
+    }
+
     const size_t length_before = _encoder->CurrentLength();
     const size_t handles_before = _encoder->CurrentHandleCount();
     ::fidl::Encode(
         _encoder,
         &{{ .FieldDataName }}.value,
         _encoder->Alloc(::fidl::EncodingInlineSize<{{ .Type.Decl }}, ::fidl::Encoder>(_encoder)));
-    size_t envelope_base = base + ({{ .Ordinal }} - 1) * 2 * sizeof(uint64_t);
+    size_t envelope_base = base + ({{ .Ordinal }} - 1) * sizeof(fidl_envelope_t);
     uint64_t num_bytes_then_num_handles =
         (_encoder->CurrentLength() - length_before) |
         ((_encoder->CurrentHandleCount() - handles_before) << 32);
     ::fidl::Encode(_encoder, &num_bytes_then_num_handles, envelope_base);
-    *_encoder->GetPtr<uintptr_t>(envelope_base + sizeof(uint64_t)) = FIDL_ALLOC_PRESENT;
+    *_encoder->GetPtr<uintptr_t>(envelope_base + offsetof(fidl_envelope_t, presence)) = FIDL_ALLOC_PRESENT;
   }
   {{- end }}
+  // Encode any remaining unknown fields (i.e. ones that have an ordinal outside
+  // the range of known ordinals)
+  for (auto curr = next_unknown; curr != _unknown_data.end(); ++curr) {
+    size_t envelope_base = base + (curr->first - 1) * sizeof(fidl_envelope_t);
+  {{- if .IsResourceType }}
+    ::fidl::EncodeUnknownData(_encoder, &curr->second, envelope_base);
+  {{- else }}
+    ::fidl::EncodeUnknownBytes(_encoder, &curr->second, envelope_base);
+  {{- end }}
+  }
 }
 
 void {{ .Name }}::Decode(::fidl::Decoder* _decoder, {{ .Name }}* _value, size_t _offset) {
@@ -192,9 +249,9 @@ void {{ .Name }}::Decode(::fidl::Decoder* _decoder, {{ .Name }}* _value, size_t 
 
   {{- range .Members }}
   if (count >= {{ .Ordinal }}) {
-    size_t envelope_base = base + ({{ .Ordinal }} - 1) * 2 * sizeof(uint64_t);
+    size_t envelope_base = base + ({{ .Ordinal }} - 1) * sizeof(fidl_envelope_t);
     uint64_t presence;
-    ::fidl::Decode(_decoder, &presence, envelope_base + sizeof(uint64_t));
+    ::fidl::Decode(_decoder, &presence, envelope_base + offsetof(fidl_envelope_t, presence));
     if (presence != 0) {
       ::fidl::Decode(_decoder, _value->mutable_{{ .Name }}(), _decoder->GetOffset(presence));
     } else {
@@ -204,6 +261,29 @@ void {{ .Name }}::Decode(::fidl::Decoder* _decoder, {{ .Name }}* _value, size_t 
     goto done_{{ .Ordinal }};
   }
   {{- end }}
+
+  {{/* Handle unknown data separately to avoid affecting the common case */}}
+  if (count > {{ len .Members }}) {
+    for (uint64_t ordinal = 1; ordinal <= count; ordinal++) {
+      if (IsOrdinalKnown(ordinal))
+        continue;
+
+      size_t envelope_base = base + (ordinal - 1) * sizeof(fidl_envelope_t);
+      fidl_envelope_t* envelope = _decoder->GetPtr<fidl_envelope_t>(envelope_base);
+      if (envelope->presence != 0) {
+        auto result = _value->_unknown_data.emplace(std::piecewise_construct, std::forward_as_tuple(ordinal), std::forward_as_tuple());
+        auto iter = result.first;
+    {{- if .IsResourceType }}
+        iter->second.bytes.resize(envelope->num_bytes);
+        iter->second.handles.resize(envelope->num_handles);
+        ::fidl::Decode(_decoder, &iter->second, _decoder->GetOffset(envelope->data));
+    {{- else }}
+        iter->second.resize(envelope->num_bytes);
+        memcpy(iter->second.data(), envelope->data, iter->second.size());
+    {{- end }}
+      }
+    }
+  }
 
   return;
 
@@ -226,7 +306,7 @@ zx_status_t {{ .Name }}::Clone({{ .Name }}* result) const {
     result->{{ .MethodClearName }}();
   }
   {{- end }}
-  return ZX_OK;
+  return ::fidl::Clone(_unknown_data, &result->_unknown_data);
 }
 {{- if .IsResourceType }}
 #endif  // __Fuchsia__
@@ -261,7 +341,7 @@ struct Equality<{{ .Namespace }}::{{ .Name }}> {
       return false;
     }
     {{- end }}
-    return true;
+    return ::fidl::Equals(_lhs.UnknownData(), _rhs.UnknownData());
   }
 };
 {{- if .IsResourceType }}

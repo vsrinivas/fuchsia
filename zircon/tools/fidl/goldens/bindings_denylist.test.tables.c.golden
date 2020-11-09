@@ -20,7 +20,7 @@ const struct FidlCodedStruct fidl_test_bindingsdenylist_OnlyLibfuzzerLibfuzzerNe
 
 const struct FidlCodedBits fidl_test_bindingsdenylist_OnlySyzkallerTable = {.tag=kFidlTypeBits, .underlying_type=kFidlCodedPrimitiveSubtype_Uint32, .strictness=kFidlStrictness_Strict, .mask=1ul, .name="fidl.test.bindingsdenylist/OnlySyzkaller"};
 
-const struct FidlCodedTable fidl_test_bindingsdenylist_OnlyRustTable = {.tag=kFidlTypeTable, .fields=NULL, .field_count=0u, .name="fidl.test.bindingsdenylist/OnlyRust"};
+const struct FidlCodedTable fidl_test_bindingsdenylist_OnlyRustTable = {.tag=kFidlTypeTable, .fields=NULL, .field_count=0u, .is_resource=kFidlIsResource_NotResource, .name="fidl.test.bindingsdenylist/OnlyRust"};
 
 static const struct FidlXUnionField Fields36fidl_test_bindingsdenylist_OnlyLlcpp[] = {
     /*FidlXUnionField*/{.type=(fidl_type_t*)(&fidl_internal_kUint32Table)}

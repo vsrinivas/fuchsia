@@ -13,6 +13,7 @@
 #include "lib/fidl/cpp/string.h"
 #include "lib/fidl/cpp/traits.h"
 #include "lib/fidl/cpp/vector.h"
+#include "types.h"
 
 namespace fidl {
 
@@ -63,7 +64,7 @@ inline
     typename std::enable_if<!IsPrimitive<T>::value && !std::is_base_of<zx::object_base, T>::value &&
                                 !IsStdVector<T>::value && !IsStdArray<T>::value,
                             zx_status_t>::type
-#else  // __Fuchsia__
+#else   // __Fuchsia__
     typename std::enable_if<!IsPrimitive<T>::value && !IsStdVector<T>::value &&
                                 !IsStdArray<T>::value,
                             zx_status_t>::type
@@ -166,10 +167,29 @@ inline zx_status_t Clone(const UnknownBytes& value, UnknownBytes* result) {
   return ZX_OK;
 }
 
+inline zx_status_t Clone(const ::std::map<uint64_t, ::std::vector<uint8_t>>& value,
+                         ::std::map<uint64_t, ::std::vector<uint8_t>>* result) {
+  *result = value;
+  return ZX_OK;
+}
+
 #ifdef __Fuchsia__
 inline zx_status_t Clone(const UnknownData& value, UnknownData* result) {
   result->bytes = value.bytes;
   return Clone(value.handles, &(result->handles));
+}
+
+inline zx_status_t Clone(const ::std::map<uint64_t, UnknownData>& value,
+                         ::std::map<uint64_t, UnknownData>* result) {
+  result->clear();
+  for (const auto& pair : value) {
+    auto field = result->emplace(std::piecewise_construct, std::forward_as_tuple(pair.first),
+                                     std::forward_as_tuple());
+    zx_status_t status = Clone(pair.second, &field.first->second);
+    if (status != ZX_OK)
+      return status;
+  }
+  return ZX_OK;
 }
 #endif
 

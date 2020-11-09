@@ -185,6 +185,16 @@ class TableSmallArray final {
     Destruct(&a_value_.value);
   }
 
+  const std::map<uint64_t, std::vector<uint8_t>>& UnknownData() const {
+    return _unknown_data;
+  }
+
+  void SetUnknownDataEntry(uint32_t ordinal, std::vector<uint8_t>&& data) {
+    auto ord = static_cast<uint64_t>(ordinal);
+    ZX_ASSERT(!IsOrdinalKnown(ord));
+    _unknown_data.insert({ord, std::move(data)});
+  }
+
   TableSmallArray();
   TableSmallArray(TableSmallArray&& other);
   ~TableSmallArray();
@@ -210,6 +220,26 @@ class TableSmallArray final {
     p->~T();
   }
 
+  size_t MaxOrdinal() const {
+    size_t max_ordinal =
+        static_cast<size_t>(field_presence_.MaxSetIndex()) + std::size_t{1};
+    for (const auto& data : _unknown_data) {
+      if (data.first > max_ordinal) {
+        max_ordinal = data.first;
+      }
+    }
+    return max_ordinal;
+  }
+
+  static bool IsOrdinalKnown(uint64_t ordinal) {
+    switch (ordinal) {
+      case 1:
+        return true;
+      default:
+        return false;
+    }
+  }
+
   ::fidl::internal::BitSet<1> field_presence_;
   union ValueUnion_a {
     ValueUnion_a() {}
@@ -218,6 +248,7 @@ class TableSmallArray final {
     ::std::array<uint32_t, 2> value;
   };
   ValueUnion_a a_value_;
+  std::map<uint64_t, std::vector<uint8_t>> _unknown_data;
 };
 
 using TableSmallArrayPtr = ::std::unique_ptr<TableSmallArray>;
@@ -258,6 +289,16 @@ class TableLargeArray final {
     Destruct(&a_value_.value);
   }
 
+  const std::map<uint64_t, std::vector<uint8_t>>& UnknownData() const {
+    return _unknown_data;
+  }
+
+  void SetUnknownDataEntry(uint32_t ordinal, std::vector<uint8_t>&& data) {
+    auto ord = static_cast<uint64_t>(ordinal);
+    ZX_ASSERT(!IsOrdinalKnown(ord));
+    _unknown_data.insert({ord, std::move(data)});
+  }
+
   TableLargeArray();
   TableLargeArray(TableLargeArray&& other);
   ~TableLargeArray();
@@ -283,6 +324,26 @@ class TableLargeArray final {
     p->~T();
   }
 
+  size_t MaxOrdinal() const {
+    size_t max_ordinal =
+        static_cast<size_t>(field_presence_.MaxSetIndex()) + std::size_t{1};
+    for (const auto& data : _unknown_data) {
+      if (data.first > max_ordinal) {
+        max_ordinal = data.first;
+      }
+    }
+    return max_ordinal;
+  }
+
+  static bool IsOrdinalKnown(uint64_t ordinal) {
+    switch (ordinal) {
+      case 1:
+        return true;
+      default:
+        return false;
+    }
+  }
+
   ::fidl::internal::BitSet<1> field_presence_;
   union ValueUnion_a {
     ValueUnion_a() {}
@@ -291,6 +352,7 @@ class TableLargeArray final {
     ::std::array<uint32_t, 100> value;
   };
   ValueUnion_a a_value_;
+  std::map<uint64_t, std::vector<uint8_t>> _unknown_data;
 };
 
 using TableLargeArrayPtr = ::std::unique_ptr<TableLargeArray>;
@@ -498,7 +560,7 @@ struct Equality<::fidl::test::arrays::TableSmallArray> {
     } else if (_rhs.has_a()) {
       return false;
     }
-    return true;
+    return ::fidl::Equals(_lhs.UnknownData(), _rhs.UnknownData());
   }
 };
 template <>
@@ -524,7 +586,7 @@ struct Equality<::fidl::test::arrays::TableLargeArray> {
     } else if (_rhs.has_a()) {
       return false;
     }
-    return true;
+    return ::fidl::Equals(_lhs.UnknownData(), _rhs.UnknownData());
   }
 };
 template <>

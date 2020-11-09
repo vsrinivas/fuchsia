@@ -241,14 +241,18 @@ struct StructPointerType : public Type {
   const StructType* element_type;
 };
 
+// TODO(fcz): make resourceness consistent with strictness
 struct TableType : public Type {
-  TableType(std::string name, std::vector<TableField> fields, uint32_t size, std::string qname)
+  TableType(std::string name, std::vector<TableField> fields, uint32_t size, std::string qname,
+            bool is_resource)
       : Type(Kind::kTable, std::move(name), size, true, false),
         fields(std::move(fields)),
-        qname(std::move(qname)) {}
+        qname(std::move(qname)),
+        is_resource(is_resource) {}
 
   std::vector<TableField> fields;
   std::string qname;
+  bool is_resource;
 };
 
 struct XUnionType : public Type {

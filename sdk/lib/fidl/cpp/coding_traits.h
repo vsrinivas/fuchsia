@@ -237,6 +237,18 @@ struct CodingTraits<UnknownBytes> {
   }
 };
 
+template <class EncoderImpl>
+void EncodeUnknownBytes(EncoderImpl* encoder, std::vector<uint8_t>* value, size_t envelope_offset) {
+  // encode the envelope
+  uint64_t num_bytes_then_num_handles = value->size();
+  CodingTraits<uint64_t>::Encode(encoder, &num_bytes_then_num_handles, envelope_offset);
+  *encoder->template GetPtr<uintptr_t>(envelope_offset + offsetof(fidl_envelope_t, presence)) =
+      FIDL_ALLOC_PRESENT;
+  // encode the data
+  const size_t data_offset = encoder->Alloc(value->size());
+  std::copy(value->begin(), value->end(), encoder->template GetPtr<uint8_t>(data_offset));
+}
+
 #ifdef __Fuchsia__
 template <>
 struct CodingTraits<UnknownData> {
@@ -255,6 +267,17 @@ struct CodingTraits<UnknownData> {
     }
   }
 };
+
+template <class EncoderImpl>
+void EncodeUnknownData(EncoderImpl* encoder, UnknownData* value, size_t envelope_offset) {
+  // encode the envelope
+  uint64_t num_bytes_then_num_handles = value->bytes.size() | (value->handles.size() << 32);
+  CodingTraits<uint64_t>::Encode(encoder, &num_bytes_then_num_handles, envelope_offset);
+  *encoder->template GetPtr<uintptr_t>(envelope_offset + offsetof(fidl_envelope_t, presence)) =
+      FIDL_ALLOC_PRESENT;
+  // encode the data
+  CodingTraits<UnknownData>::Encode(encoder, value, encoder->Alloc(value->bytes.size()));
+}
 #endif
 
 template <typename T, size_t InlineSizeV1NoEE>

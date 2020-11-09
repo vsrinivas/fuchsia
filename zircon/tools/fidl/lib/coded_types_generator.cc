@@ -468,7 +468,8 @@ void CodedTypesGenerator::CompileDecl(const flat::Decl* decl, const WireFormat w
           decl->name,
           std::make_unique<coded::TableType>(
               std::move(table_name), std::vector<coded::TableField>(),
-              table_decl->typeshape(wire_format).InlineSize(), NameFlatName(table_decl->name)));
+              table_decl->typeshape(wire_format).InlineSize(), NameFlatName(table_decl->name),
+              table_decl->resourceness == types::Resourceness::kResource));
       break;
     }
     case flat::Decl::Kind::kStruct: {

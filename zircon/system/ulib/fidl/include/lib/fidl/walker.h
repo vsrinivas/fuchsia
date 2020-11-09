@@ -197,7 +197,7 @@ class Walker final {
   Result WalkStructPointer(const FidlCodedStructPointer* coded_struct, Position position,
                            OutOfLineDepth depth);
   Result WalkEnvelope(Position envelope_position, const fidl_type_t* payload_type,
-                      OutOfLineDepth depth, EnvelopeSource source);
+                      OutOfLineDepth depth, FidlIsResource is_resource);
   Result WalkTable(const FidlCodedTable* coded_table, Position position, OutOfLineDepth depth);
   Result WalkXUnion(const FidlCodedXUnion* coded_table, Position position, OutOfLineDepth depth);
   Result WalkArray(const FidlCodedArray* coded_array, Position position, OutOfLineDepth depth);
@@ -425,7 +425,7 @@ Result Walker<VisitorImpl>::WalkStructPointer(const FidlCodedStructPointer* code
 template <typename VisitorImpl>
 Result Walker<VisitorImpl>::WalkEnvelope(Position envelope_position,
                                          const fidl_type_t* payload_type, OutOfLineDepth depth,
-                                         EnvelopeSource source) {
+                                         bool is_resource) {
   auto envelope = PtrTo<fidl_envelope_t>(envelope_position);
 
   EnvelopeCheckpoint checkpoint = visitor_->EnterEnvelope();
@@ -446,7 +446,7 @@ Result Walker<VisitorImpl>::WalkEnvelope(Position envelope_position,
       auto result = WalkInternal(payload_type, obj_position, obj_depth);
       FIDL_RESULT_GUARD(result);
     } else {
-      status = visitor_->VisitUnknownEnvelope(envelope, source);
+      status = visitor_->VisitUnknownEnvelope(envelope, is_resource);
       FIDL_STATUS_GUARD(status);
     }
   }
@@ -499,7 +499,7 @@ Result Walker<VisitorImpl>::WalkTable(const FidlCodedTable* coded_table,
         envelope_vector_position + field_index * uint32_t(sizeof(fidl_envelope_t));
     const fidl_type_t* payload_type = known_field ? known_field->type : nullptr;
     auto result = WalkEnvelope(envelope_position, payload_type, envelope_vector_depth,
-                               EnvelopeSource::kTable);
+                               coded_table->is_resource);
     FIDL_RESULT_GUARD(result);
   }
   return Result::kContinue;
@@ -539,10 +539,7 @@ Result Walker<VisitorImpl>::WalkXUnion(const FidlCodedXUnion* coded_xunion,
     FIDL_STATUS_GUARD(Status::kConstraintViolationError);
   }
 
-  auto source = coded_xunion->is_resource == kFidlIsResource_Resource
-                    ? EnvelopeSource::kResourceUnion
-                    : EnvelopeSource::kNotResourceUnion;
-  return WalkEnvelope(envelope_pos, payload_type, depth, source);
+  return WalkEnvelope(envelope_pos, payload_type, depth, coded_xunion->is_resource);
 }
 
 template <typename VisitorImpl>

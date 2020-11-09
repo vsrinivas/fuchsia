@@ -4,6 +4,8 @@
 
 #include "lib/fidl/cpp/clone.h"
 
+#include <map>
+
 #include <gtest/gtest.h>
 
 #ifdef __Fuchsia__
@@ -179,7 +181,11 @@ TEST(Clone, UnknownHandles) {
       .handles = {},
   };
   data.handles.push_back(zx::handle(h));
+  zx_info_handle_basic_t info_orig = {};
+  ASSERT_EQ(ZX_OK, data.handles[0].get_info(ZX_INFO_HANDLE_BASIC, &info_orig, sizeof(info_orig),
+                                            nullptr, nullptr));
 
+  // Test Clone specialization for UnknownData
   UnknownData copy;
   ASSERT_EQ(ZX_OK, Clone(data, &copy));
 
@@ -188,13 +194,28 @@ TEST(Clone, UnknownHandles) {
   EXPECT_EQ(copy.bytes[1], 0xad);
 
   ASSERT_EQ(copy.handles.size(), 1u);
-  zx_info_handle_basic_t info_orig = {};
-  ASSERT_EQ(ZX_OK, data.handles[0].get_info(ZX_INFO_HANDLE_BASIC, &info_orig, sizeof(info_orig),
-                                            nullptr, nullptr));
   zx_info_handle_basic_t info_copy = {};
-  ASSERT_EQ(ZX_OK, data.handles[0].get_info(ZX_INFO_HANDLE_BASIC, &info_copy, sizeof(info_copy),
+  ASSERT_EQ(ZX_OK, copy.handles[0].get_info(ZX_INFO_HANDLE_BASIC, &info_copy, sizeof(info_copy),
                                             nullptr, nullptr));
   EXPECT_EQ(info_orig.koid, info_copy.koid);
+
+  // Test Clone specialization for map<uint64_t, UnknownData>
+  std::map<uint64_t, UnknownData> map_data;
+  map_data.insert({6, std::move(data)});
+  std::map<uint64_t, UnknownData> map_copy;
+  ASSERT_EQ(ZX_OK, Clone(map_data, &map_copy));
+  ASSERT_EQ(map_copy.size(), 1u);
+  {
+    const auto& copy = map_copy.cbegin();
+    EXPECT_EQ(copy->first, 6u);
+    ASSERT_EQ(copy->second.bytes.size(), 2u);
+    EXPECT_EQ(copy->second.bytes[0], 0xde);
+    EXPECT_EQ(copy->second.bytes[1], 0xad);
+    ASSERT_EQ(copy->second.handles.size(), 1u);
+    ASSERT_EQ(ZX_OK, copy->second.handles[0].get_info(ZX_INFO_HANDLE_BASIC, &info_copy,
+                                                      sizeof(info_copy), nullptr, nullptr));
+    EXPECT_EQ(info_orig.koid, info_copy.koid);
+  }
 }
 #endif
 

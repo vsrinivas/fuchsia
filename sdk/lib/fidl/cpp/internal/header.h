@@ -11,6 +11,7 @@
 
 #include <array>
 #include <functional>
+#include <map>
 #include <ostream>
 #include <type_traits>
 
