@@ -106,6 +106,7 @@ pub struct Associated {
     auth_method: Option<auth::MethodName>,
     last_rssi: i8,
     last_snr: i8,
+    last_signal_report_time: zx::Time,
     link_state: LinkState,
     radio_cfg: RadioConfig,
     chan: Channel,
@@ -454,6 +455,7 @@ impl Associating {
             auth_method,
             last_rssi: self.cmd.bss.rssi_dbm,
             last_snr: self.cmd.bss.snr_db,
+            last_signal_report_time: now(),
             bss: self.cmd.bss,
             link_state,
             radio_cfg: self.cmd.radio_cfg,
@@ -821,6 +823,7 @@ impl ClientState {
                 MlmeEvent::SignalReport { ind } => {
                     state.last_rssi = ind.rssi_dbm;
                     state.last_snr = ind.snr_db;
+                    state.last_signal_report_time = now();
                     state.into()
                 }
                 MlmeEvent::EapolInd { ind } => {
@@ -1037,6 +1040,7 @@ impl ClientState {
                             .convert_bss_description(&associated.bss, associated.wmm_param);
                         bss.rssi_dbm = associated.last_rssi;
                         bss.snr_db = associated.last_snr;
+                        bss.signal_report_time = associated.last_signal_report_time;
                         Some(bss)
                     },
                     connecting_to: None,
@@ -2207,16 +2211,25 @@ mod tests {
     #[test]
     fn status_returns_last_rssi_snr() {
         let mut h = TestHelper::new();
+        let time_a = now();
 
         let state =
             link_up_state(Box::new(fake_bss!(Open, ssid: b"RSSI".to_vec(), bssid: [42; 6])));
         let state = state.on_mlme_event(signal_report_with_rssi_snr(-42, 20), &mut h.context);
         assert_eq!(state.status().connected_to.unwrap().rssi_dbm, -42);
         assert_eq!(state.status().connected_to.unwrap().snr_db, 20);
+        assert!(state.status().connected_to.unwrap().signal_report_time > time_a);
+
+        let time_b = now();
+        assert!(state.status().connected_to.unwrap().signal_report_time < time_b);
 
         let state = state.on_mlme_event(signal_report_with_rssi_snr(-24, 10), &mut h.context);
         assert_eq!(state.status().connected_to.unwrap().rssi_dbm, -24);
         assert_eq!(state.status().connected_to.unwrap().snr_db, 10);
+        assert!(state.status().connected_to.unwrap().signal_report_time > time_b);
+
+        let time_c = now();
+        assert!(state.status().connected_to.unwrap().signal_report_time < time_c);
     }
 
     // Helper functions and data structures for tests
@@ -2561,6 +2574,7 @@ mod tests {
             responder: cmd.responder,
             last_rssi: 60,
             last_snr: 0,
+            last_signal_report_time: zx::Time::ZERO,
             link_state,
             radio_cfg: RadioConfig::default(),
             chan: fake_channel(),
@@ -2586,6 +2600,7 @@ mod tests {
             auth_method: None,
             last_rssi: 60,
             last_snr: 30,
+            last_signal_report_time: zx::Time::ZERO,
             link_state,
             radio_cfg: RadioConfig::default(),
             chan: fake_channel(),
@@ -2616,6 +2631,7 @@ mod tests {
             auth_method,
             last_rssi: 60,
             last_snr: 30,
+            last_signal_report_time: zx::Time::ZERO,
             link_state,
             radio_cfg: RadioConfig::default(),
             chan: fake_channel(),

@@ -226,6 +226,7 @@ pub struct BssInfoNode {
     ssid_hash: StringProperty,
     rssi_dbm: IntProperty,
     snr_db: IntProperty,
+    signal_report_time: TimeProperty,
     channel: ChannelNode,
     protection: StringProperty,
     _is_wmm_assoc: BoolProperty,
@@ -243,6 +244,8 @@ impl BssInfoNode {
         let ssid_hash = node.create_string("ssid_hash", hasher.hash(&bss_info.ssid[..]));
         let rssi_dbm = node.create_int("rssi_dbm", bss_info.rssi_dbm as i64);
         let snr_db = node.create_int("snr_db", bss_info.snr_db as i64);
+        let signal_report_time =
+            node.create_time_at("signal_report_time", bss_info.signal_report_time);
         let channel = ChannelNode::new(node.create_child("channel"), bss_info.channel.to_fidl());
         let protection = node.create_string("protection", format!("{}", bss_info.protection));
         let is_wmm_assoc = node.create_bool("is_wmm_assoc", bss_info.wmm_param.is_some());
@@ -261,6 +264,7 @@ impl BssInfoNode {
             ssid_hash,
             rssi_dbm,
             snr_db,
+            signal_report_time,
             channel,
             protection,
             _is_wmm_assoc: is_wmm_assoc,
@@ -280,6 +284,7 @@ impl BssInfoNode {
         self.ssid_hash.set(&hasher.hash(&bss_info.ssid[..]));
         self.rssi_dbm.set(bss_info.rssi_dbm as i64);
         self.snr_db.set(bss_info.snr_db as i64);
+        self.signal_report_time.set_at(bss_info.signal_report_time);
         self.channel.update(bss_info.channel.to_fidl());
         self.protection.set(&format!("{}", bss_info.protection));
         match &bss_info.ht_cap {

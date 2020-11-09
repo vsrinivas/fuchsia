@@ -4,7 +4,7 @@
 
 use {
     crate::{Config, Ssid},
-    fidl_fuchsia_wlan_mlme as fidl_mlme,
+    fidl_fuchsia_wlan_mlme as fidl_mlme, fuchsia_zircon as zx,
     std::collections::HashSet,
     wlan_common::{
         bss::{BssDescriptionExt as _, Protection},
@@ -49,6 +49,7 @@ impl ClientConfig {
             ssid: bss.ssid.clone(),
             rssi_dbm: bss.rssi_dbm,
             snr_db: bss.snr_db,
+            signal_report_time: zx::Time::ZERO,
             channel: Channel::from_fidl(bss.chan),
             protection: bss.get_protection(),
             compatible: self.is_bss_compatible(bss),
@@ -101,6 +102,7 @@ pub struct BssInfo {
     pub ssid: Ssid,
     pub rssi_dbm: i8,
     pub snr_db: i8,
+    pub signal_report_time: zx::Time,
     pub channel: wlan_common::channel::Channel,
     pub protection: Protection,
     pub compatible: bool,
@@ -153,32 +155,35 @@ mod tests {
     #[test]
     fn convert_bss() {
         let cfg = ClientConfig::default();
-        assert_eq!(
-            cfg.convert_bss_description(
-                &fake_bss!(Wpa2,
-                    ssid: vec![],
-                    bssid: [0u8; 6],
-                    rssi_dbm: -30,
-                    snr_db: 0,
-                    chan: fidl_common::WlanChan {
-                        primary: 1,
-                        secondary80: 0,
-                        cbw: fidl_common::Cbw::Cbw20,
-                    },
-                    ht_cap: Some(Box::new(fidl_mlme::HtCapabilities {
-                        bytes: fake_ht_cap_bytes()
-                    })),
-                    vht_cap: Some(Box::new(fidl_mlme::VhtCapabilities {
-                        bytes: fake_vht_cap_bytes()
-                    })),
-                ),
-                None
+        let bss_info = cfg.convert_bss_description(
+            &fake_bss!(Wpa2,
+                       ssid: vec![],
+                       bssid: [0u8; 6],
+                       rssi_dbm: -30,
+                       snr_db: 0,
+                       chan: fidl_common::WlanChan {
+                           primary: 1,
+                           secondary80: 0,
+                           cbw: fidl_common::Cbw::Cbw20,
+                       },
+                       ht_cap: Some(Box::new(fidl_mlme::HtCapabilities {
+                           bytes: fake_ht_cap_bytes()
+                       })),
+                       vht_cap: Some(Box::new(fidl_mlme::VhtCapabilities {
+                           bytes: fake_vht_cap_bytes()
+                       })),
             ),
+            None,
+        );
+
+        assert_eq!(
+            bss_info,
             BssInfo {
                 bssid: [0u8; 6],
                 ssid: vec![],
                 rssi_dbm: -30,
                 snr_db: 0,
+                signal_report_time: zx::Time::ZERO,
                 channel: Channel { primary: 1, cbw: Cbw::Cbw20 },
                 protection: Protection::Wpa2Personal,
                 compatible: true,
@@ -191,32 +196,35 @@ mod tests {
 
         let wmm_param = *ie::parse_wmm_param(&fake_wmm_param().bytes[..])
             .expect("expect WMM param to be parseable");
-        assert_eq!(
-            cfg.convert_bss_description(
-                &fake_bss!(Wpa2,
-                    ssid: vec![],
-                    bssid: [0u8; 6],
-                    rssi_dbm: -30,
-                    snr_db: 0,
-                    chan: fidl_common::WlanChan {
-                        primary: 1,
-                        secondary80: 0,
-                        cbw: fidl_common::Cbw::Cbw20,
-                    },
-                    ht_cap: Some(Box::new(fidl_mlme::HtCapabilities {
-                        bytes: fake_ht_cap_bytes()
-                    })),
-                    vht_cap: Some(Box::new(fidl_mlme::VhtCapabilities {
-                        bytes: fake_vht_cap_bytes()
-                    })),
-                ),
-                Some(wmm_param)
+        let bss_info = cfg.convert_bss_description(
+            &fake_bss!(Wpa2,
+                       ssid: vec![],
+                       bssid: [0u8; 6],
+                       rssi_dbm: -30,
+                       snr_db: 0,
+                       chan: fidl_common::WlanChan {
+                           primary: 1,
+                           secondary80: 0,
+                           cbw: fidl_common::Cbw::Cbw20,
+                       },
+                       ht_cap: Some(Box::new(fidl_mlme::HtCapabilities {
+                           bytes: fake_ht_cap_bytes()
+                       })),
+                       vht_cap: Some(Box::new(fidl_mlme::VhtCapabilities {
+                           bytes: fake_vht_cap_bytes()
+                       })),
             ),
+            Some(wmm_param),
+        );
+
+        assert_eq!(
+            bss_info,
             BssInfo {
                 bssid: [0u8; 6],
                 ssid: vec![],
                 rssi_dbm: -30,
                 snr_db: 0,
+                signal_report_time: zx::Time::ZERO,
                 channel: Channel { primary: 1, cbw: Cbw::Cbw20 },
                 protection: Protection::Wpa2Personal,
                 compatible: true,
@@ -227,32 +235,34 @@ mod tests {
             }
         );
 
-        assert_eq!(
-            cfg.convert_bss_description(
-                &fake_bss!(Wep,
-                    ssid: vec![],
-                    bssid: [0u8; 6],
-                    rssi_dbm: -30,
-                    snr_db: 0,
-                    chan: fidl_common::WlanChan {
-                        primary: 1,
-                        secondary80: 0,
-                        cbw: fidl_common::Cbw::Cbw20,
-                    },
-                    ht_cap: Some(Box::new(fidl_mlme::HtCapabilities {
-                        bytes: fake_ht_cap_bytes()
-                    })),
-                    vht_cap: Some(Box::new(fidl_mlme::VhtCapabilities {
-                        bytes: fake_vht_cap_bytes()
-                    })),
-                ),
-                None
+        let bss_info = cfg.convert_bss_description(
+            &fake_bss!(Wep,
+                       ssid: vec![],
+                       bssid: [0u8; 6],
+                       rssi_dbm: -30,
+                       snr_db: 0,
+                       chan: fidl_common::WlanChan {
+                           primary: 1,
+                           secondary80: 0,
+                           cbw: fidl_common::Cbw::Cbw20,
+                       },
+                       ht_cap: Some(Box::new(fidl_mlme::HtCapabilities {
+                           bytes: fake_ht_cap_bytes()
+                       })),
+                       vht_cap: Some(Box::new(fidl_mlme::VhtCapabilities {
+                           bytes: fake_vht_cap_bytes()
+                       })),
             ),
+            None,
+        );
+        assert_eq!(
+            bss_info,
             BssInfo {
                 bssid: [0u8; 6],
                 ssid: vec![],
                 rssi_dbm: -30,
                 snr_db: 0,
+                signal_report_time: zx::Time::ZERO,
                 channel: Channel { primary: 1, cbw: Cbw::Cbw20 },
                 protection: Protection::Wep,
                 compatible: false,
@@ -260,36 +270,38 @@ mod tests {
                 vht_cap: Some(fidl_mlme::VhtCapabilities { bytes: fake_vht_cap_bytes() }),
                 probe_resp_wsc: None,
                 wmm_param: None,
-            }
+            },
         );
 
         let cfg = ClientConfig::from_config(Config::default().with_wep(), false);
-        assert_eq!(
-            cfg.convert_bss_description(
-                &fake_bss!(Wep,
-                    ssid: vec![],
-                    bssid: [0u8; 6],
-                    rssi_dbm: -30,
-                    snr_db: 0,
-                    chan: fidl_common::WlanChan {
-                        primary: 1,
-                        secondary80: 0,
-                        cbw: fidl_common::Cbw::Cbw20,
-                    },
-                    ht_cap: Some(Box::new(fidl_mlme::HtCapabilities {
-                        bytes: fake_ht_cap_bytes()
-                    })),
-                    vht_cap: Some(Box::new(fidl_mlme::VhtCapabilities {
-                        bytes: fake_vht_cap_bytes()
-                    })),
-                ),
-                None
+        let bss_info = cfg.convert_bss_description(
+            &fake_bss!(Wep,
+                       ssid: vec![],
+                       bssid: [0u8; 6],
+                       rssi_dbm: -30,
+                       snr_db: 0,
+                       chan: fidl_common::WlanChan {
+                           primary: 1,
+                           secondary80: 0,
+                           cbw: fidl_common::Cbw::Cbw20,
+                       },
+                       ht_cap: Some(Box::new(fidl_mlme::HtCapabilities {
+                           bytes: fake_ht_cap_bytes()
+                       })),
+                       vht_cap: Some(Box::new(fidl_mlme::VhtCapabilities {
+                           bytes: fake_vht_cap_bytes()
+                       })),
             ),
+            None,
+        );
+        assert_eq!(
+            bss_info,
             BssInfo {
                 bssid: [0u8; 6],
                 ssid: vec![],
                 rssi_dbm: -30,
                 snr_db: 0,
+                signal_report_time: zx::Time::ZERO,
                 channel: Channel { primary: 1, cbw: Cbw::Cbw20 },
                 protection: Protection::Wep,
                 compatible: true,
@@ -297,7 +309,7 @@ mod tests {
                 vht_cap: Some(fidl_mlme::VhtCapabilities { bytes: fake_vht_cap_bytes() }),
                 probe_resp_wsc: None,
                 wmm_param: None,
-            }
+            },
         );
     }
 

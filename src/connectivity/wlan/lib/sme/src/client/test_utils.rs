@@ -8,7 +8,7 @@ use {
         client::{bss::BssInfo, rsn::Supplicant},
         Ssid,
     },
-    fidl_fuchsia_wlan_mlme as fidl_mlme,
+    fidl_fuchsia_wlan_mlme as fidl_mlme, fuchsia_zircon as zx,
     futures::channel::mpsc,
     std::sync::{
         atomic::{AtomicBool, Ordering},
@@ -32,6 +32,7 @@ pub fn fake_bss_info() -> BssInfo {
         ssid: Ssid::from(b"foo".clone()),
         rssi_dbm: 0,
         snr_db: 0,
+        signal_report_time: zx::Time::ZERO,
         channel: channel::Channel { primary: 1, cbw: channel::Cbw::Cbw20 },
         protection: Protection::Wpa2Personal,
         compatible: true,
