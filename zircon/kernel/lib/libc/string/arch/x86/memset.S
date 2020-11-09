@@ -49,13 +49,12 @@ FUNCTION(memset_quad)
     ret
 END_FUNCTION(memset_quad)
 
-FUNCTION(memset)
+// Declare a weak alias so asan can override this function.
+.weak memset
+LOCAL_FUNCTION(memset)
     jmp memset_erms
     APPLY_CODE_PATCH_FUNC_WITH_DEFAULT(x86_memset_select, __unsanitized_memset, 2)
 END_FUNCTION(memset)
-
-// Declare a weak alias so asan can override this function.
-.weak memset
 
 .globl __unsanitized_memset
 .hidden __unsanitized_memset

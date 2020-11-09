@@ -7,7 +7,8 @@
 // The strchrnul implementation is verbatim from cortex-strings.
 // But the strchrnul symbol must be weak, with a __strchrnul alias.
 
+#define global weak
 #include "third_party/lib/cortex-strings/src/aarch64/strchrnul.S"
+#undef global
 
 ALIAS(strchrnul, __strchrnul)
-.weak strchrnul
