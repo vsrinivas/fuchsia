@@ -2,6 +2,14 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+group("drivers") {
+  testonly = true
+  deps = [
+    "drivers/aml-light",
+    "drivers/gpio-light",
+    "drivers/lp50xx-light",
+  ]
+}
 group("tests") {
   testonly = true
 

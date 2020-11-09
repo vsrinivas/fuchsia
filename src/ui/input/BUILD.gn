@@ -6,6 +6,30 @@ group("input") {
   deps = [ "drivers" ]
 }
 
+group("drivers") {
+  testonly = true
+  deps = [
+    "drivers/bma253",
+    "drivers/cypress",
+    "drivers/focaltech",
+    "drivers/ft8201:ft8201-module",
+    "drivers/goodix",
+    "drivers/hid",
+    "drivers/hid-buttons",
+    "drivers/hid-input-report",
+    "drivers/hidctl",
+    "drivers/i2c-hid",
+    "drivers/usb-hid:usb-hid",
+    "drivers/usb-hid:usb-one-endpoint-hid-fake-usb",
+    "drivers/usb-hid:usb-two-endpoint-hid-fake-usb",
+    "drivers/virtio:virtio_input",
+  ]
+
+  if (current_cpu == "x64") {
+    deps += [ "drivers/pc-ps2" ]
+  }
+}
+
 group("tests") {
   testonly = true
 

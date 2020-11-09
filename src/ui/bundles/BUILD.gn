@@ -5,15 +5,8 @@
 group("drivers") {
   testonly = true
   deps = [
-    "drivers/sg-micro",
-    "drivers/ti-lp8556",
-  ]
-}
-
-group("tests") {
-  testonly = true
-  deps = [
-    "drivers:tests",
-    "tests",
+    "//src/ui/backlight:drivers",
+    "//src/ui/input:drivers",
+    "//src/ui/light:drivers",
   ]
 }
