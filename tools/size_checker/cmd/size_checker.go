@@ -46,6 +46,7 @@ type Node struct {
 	fullPath string
 	size     int64
 	copies   int64
+	parent   *Node
 	children map[string]*Node
 }
 
@@ -98,7 +99,9 @@ func newDummyNode() *Node {
 func newNode(p string) *Node {
 	return &Node{
 		fullPath: p,
+		size:     0,
 		copies:   0,
+		parent:   nil,
 		children: make(map[string]*Node),
 	}
 }
@@ -114,11 +117,13 @@ func (root *Node) add(p string, blob *Blob) {
 	// We divide the size by the total number of packages that depend on it to get a rough estimate of
 	// the size of the individual blob.
 	size := blob.size / int64(len(blob.dep))
+	curr.size += size
 	for _, name := range fullPath {
 		name = strings.TrimSuffix(name, ".meta")
 		nodePath = filepath.Join(nodePath, name)
 		if _, ok := curr.children[name]; !ok {
 			target := newNode(nodePath)
+			target.parent = curr
 			curr.children[name] = target
 		}
 		curr = curr.children[name]
@@ -127,8 +132,8 @@ func (root *Node) add(p string, blob *Blob) {
 }
 
 // Finds the node whose fullPath matches the given path. The path is guaranteed to be unique as it
-// corresponds to the filesystem of the build directory.
-func (root *Node) find(p string) *Node {
+// corresponds to the filesystem of the build directory. Detaches the node from the tree.
+func (root *Node) detachByPath(p string) *Node {
 	fullPath := strings.Split(p, "/")
 	curr := root
 
@@ -139,8 +144,23 @@ func (root *Node) find(p string) *Node {
 		}
 		curr = next
 	}
-
+	curr.detach()
 	return curr
+}
+
+// Detach this subtree from its parent, removing the size of this subtree from
+// the aggregate size in the parent.
+func (root *Node) detach() {
+	size := root.size
+	curr := root
+	for curr.parent != nil {
+		curr.parent.size -= size
+		curr = curr.parent
+	}
+	if root.parent != nil {
+		delete(root.parent.children, filepath.Base(root.fullPath))
+	}
+	root.parent = nil
 }
 
 // Returns the only child of a node. Useful for finding the root node.
@@ -437,7 +457,7 @@ func parseSizeLimits(sizeLimits *SizeLimits, buildDir, packageList, blobsJSON st
 		var nodes []*Node
 
 		for _, src := range component.Src {
-			if node := root.find(src); node != nil {
+			if node := root.detachByPath(src); node != nil {
 				nodes = append(nodes, node)
 				size += node.size
 			}
@@ -476,10 +496,14 @@ func parseSizeLimits(sizeLimits *SizeLimits, buildDir, packageList, blobsJSON st
 		log.Fatalf("Failed to parse %s as an int64: %s\n", sizeLimits.CoreLimit, err)
 	}
 	const coreName = "Core system+services"
+	coreNodes := make([]*Node, 0)
+	// `root` contains the leftover nodes that have not been detached by the path
+	// filters.
+	coreNodes = append(coreNodes, root)
 	outputSizes[coreName] = &ComponentSize{
-		Size:   root.size - total,
+		Size:   root.size,
 		Budget: CoreSizeLimit,
-		nodes:  make([]*Node, 0),
+		nodes:  coreNodes,
 	}
 
 	if sizeLimits.DistributedShlibsLimit.String() != "" {

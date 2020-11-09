@@ -203,20 +203,23 @@ func Test_processBlobsJSON_blobLookup(t *testing.T) {
 			}
 			parseBlobsJSON(&st, []BlobFromJSON{test.blob}, test.pkgPath)
 
-			expectedNode := root.find(test.expectedPathInTree)
+			expectedNode := root.detachByPath(test.expectedPathInTree)
 			if expectedNode == nil {
-				t.Fatalf("tree.find(%s) returns nil; expect to find a node", test.expectedPathInTree)
+				t.Fatalf("tree.detachByPath(%s) returns nil; expect to find a node", test.expectedPathInTree)
 			}
 
 			expectedSize := test.blobMap[test.blob.Merkle].size
 			if expectedNode.size != expectedSize {
-				t.Fatalf("tree.find(%s).size returns %d; expect %d", test.expectedPathInTree, expectedNode.size, expectedSize)
+				t.Fatalf("tree.detachByPath(%s).size returns %d; expect %d", test.expectedPathInTree, expectedNode.size, expectedSize)
 			}
 		})
 	}
 }
 func Test_nodeAdd(t *testing.T) {
 	root := newDummyNode()
+	if root.size != 0 {
+		t.Fatalf("the size of the root node is %d; expect 0", root.size)
+	}
 	testBlob := Blob{
 		dep:  []string{"not used"},
 		size: 10,
@@ -224,7 +227,10 @@ func Test_nodeAdd(t *testing.T) {
 
 	// Test adding a single node
 	root.add("foo", &testBlob)
-	child := root.find("foo")
+	if root.size != 10 {
+		t.Fatalf("the size of the root node is %d; expect 10", root.size)
+	}
+	child := root.detachByPath("foo")
 	if child == nil {
 		t.Fatal("foo is not added as the child of the root")
 	}
@@ -234,12 +240,15 @@ func Test_nodeAdd(t *testing.T) {
 
 	// Test adding a node that shares a common path
 	root.add("foo/bar", &testBlob)
-	grandchild := root.find("foo/bar")
+	if root.size != 10 {
+		t.Fatalf("the size of the root node is %d; expect 10", root.size)
+	}
+	grandchild := root.detachByPath("foo/bar")
 	if grandchild == nil {
 		t.Fatal("bar is not added as the grandchild of the root")
 	}
-	if child.size != 20 {
-		t.Fatalf("the size of the foo node (root's child) is %d; expect 20", child.size)
+	if child.size != 10 {
+		t.Fatalf("the size of the foo node (root's child) is %d; expect 10", child.size)
 	}
 	if grandchild.size != 10 {
 		t.Fatalf("the size of the bar node (root's grandchild) is %d; expect 10", grandchild.size)
@@ -247,12 +256,15 @@ func Test_nodeAdd(t *testing.T) {
 
 	// Test adding a node with .meta suffix
 	root.add("foo/update.meta", &testBlob)
-	update := root.find("foo/update")
+	if root.size != 10 {
+		t.Fatalf("the size of the root node is %d; expect 10", root.size)
+	}
+	update := root.detachByPath("foo/update")
 	if update == nil {
 		t.Fatal("update.meta is not added as the child of the root with the name 'update'")
 	}
-	if child.size != 30 {
-		t.Fatalf("the size of the foo node (root's child) is %d; expect 30", child.size)
+	if child.size != 10 {
+		t.Fatalf("the size of the foo node (root's child) is %d; expect 10", child.size)
 	}
 	if update.size != 10 {
 		t.Fatalf("the size of the update node (root's grandchild, bar's sibling) is %d; expect 10", update.size)
@@ -267,7 +279,7 @@ func Test_nodeFind(t *testing.T) {
 		{
 			"Find Existing Node",
 			"foo",
-			&Node{"foo", 10, 0, make(map[string]*Node)},
+			&Node{"foo", 10, 0, nil, make(map[string]*Node)},
 		},
 		{
 			"Find Nonexistent Node",
@@ -280,8 +292,8 @@ func Test_nodeFind(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			if node := root.find(test.path); !reflect.DeepEqual(node, test.expected) {
-				t.Fatalf("node.find(%s) = %+v; expect %+v", test.path, node, test.expected)
+			if node := root.detachByPath(test.path); !reflect.DeepEqual(node, test.expected) {
+				t.Fatalf("node.detachByPath(%s) = %+v; expect %+v", test.path, node, test.expected)
 			}
 		})
 	}
