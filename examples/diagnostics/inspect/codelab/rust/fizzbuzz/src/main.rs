@@ -67,9 +67,9 @@ impl FizzBuzzServer {
         while let Some(request) = stream.try_next().await.context("serve fizzbuzz")? {
             let FizzBuzzRequest::Execute { count, responder } = request;
             self.metrics.request_count.add(1);
-            let start_time = zx::Time::get(zx::ClockId::Monotonic);
+            let start_time = zx::Time::get_monotonic();
             responder.send(&fizzbuzz(count)).context("send execute response")?;
-            let stop_time = zx::Time::get(zx::ClockId::Monotonic);
+            let stop_time = zx::Time::get_monotonic();
             let time_micros = (stop_time - start_time).into_micros() as u64;
             self.metrics.request_time_histogram.insert(time_micros);
         }
