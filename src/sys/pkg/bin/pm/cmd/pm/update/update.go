@@ -32,5 +32,9 @@ func Run(cfg *build.Config, args []string) error {
 		return err
 	}
 
+	if len(fs.Args()) != 0 {
+		fmt.Fprintf(os.Stderr, "WARNING: unused arguments: %s\n", fs.Args())
+	}
+
 	return build.Update(cfg)
 }

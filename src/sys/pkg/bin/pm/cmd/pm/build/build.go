@@ -42,6 +42,10 @@ func Run(cfg *build.Config, args []string) error {
 		return err
 	}
 
+	if len(fs.Args()) != 0 {
+		fmt.Fprintf(os.Stderr, "WARNING: unused arguments: %s\n", fs.Args())
+	}
+
 	if err := update.Run(cfg, []string{}); err != nil {
 		return fmt.Errorf("failed to update the merkle roots: %s", err)
 	}

@@ -110,14 +110,14 @@ func (r *Repo) EncryptWith(path string) error {
 	return nil
 }
 
-// Init initializes a repository, reparing it for publishing. If a
+// Init initializes a repository, preparing it for publishing. If a
 // repository already exists, either os.ErrExist, or a TUF error are returned.
 // If a repository does not exist at the given location, a repo will be created there.
 func (r *Repo) Init() error {
 	return r.OptionallyInitAtLocation(true)
 }
 
-// OptionallyInitAtLocation initializes a new repository, reparing it
+// OptionallyInitAtLocation initializes a new repository, preparing it
 // for publishing, if a repository does not already exist at its
 // location and createIfNotExists is true.
 // If a repository already exists, either os.ErrExist, or a TUF error are returned.

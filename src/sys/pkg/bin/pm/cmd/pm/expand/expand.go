@@ -50,6 +50,10 @@ func Run(cfg *build.Config, args []string) error {
 		return err
 	}
 
+	if len(fs.Args()) > 1 {
+		fmt.Fprintf(os.Stderr, "WARNING: unused arguments: %s\n", fs.Args()[1:])
+	}
+
 	af, err := os.Open(fs.Arg(0))
 	if err != nil {
 		return err

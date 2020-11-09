@@ -35,6 +35,9 @@ func Run(cfg *build.Config, args []string) error {
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
+	if len(fs.Args()) != 0 {
+		fmt.Fprintf(os.Stderr, "WARNING: unused arguments: %s\n", fs.Args())
+	}
 	config.ApplyDefaults()
 
 	os.MkdirAll(config.RepoDir, os.ModePerm)

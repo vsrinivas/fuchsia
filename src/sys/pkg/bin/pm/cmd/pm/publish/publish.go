@@ -78,6 +78,10 @@ func Run(cfg *build.Config, args []string) error {
 		return err
 	}
 
+	if len(fs.Args()) != 0 {
+		fmt.Fprintf(os.Stderr, "WARNING: unused arguments: %s\n", fs.Args())
+	}
+
 	config.ApplyDefaults()
 
 	var numModes int
@@ -99,7 +103,7 @@ func Run(cfg *build.Config, args []string) error {
 	// depfilePath if requested.
 	var deps []string
 
-	// Make sure the the paths to publish actually exist.
+	// Make sure the paths to publish actually exist.
 	for _, k := range filePaths {
 		if _, err := os.Stat(k); err != nil {
 			return fmt.Errorf("%q: %s", k, err)

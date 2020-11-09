@@ -55,6 +55,9 @@ func ParseFlags(args []string) error {
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
+	if len(fs.Args()) != 0 {
+		fmt.Fprintf(os.Stderr, "WARNING: unused arguments: %s\n", fs.Args())
+	}
 	config.ApplyDefaults()
 
 	// The -d flag points at $reporoot/repository, so the "repo" for publishing is

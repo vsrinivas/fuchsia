@@ -104,6 +104,10 @@ func parseConfig(args []string) (*snapshotConfig, error) {
 		return nil, err
 	}
 
+	if len(fs.Args()) != 0 {
+		fmt.Fprintf(os.Stderr, "WARNING: unused arguments: %s\n", fs.Args())
+	}
+
 	if c.outputPath == "" {
 		return nil, fmt.Errorf("output path required")
 	}
