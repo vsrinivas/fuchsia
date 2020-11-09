@@ -66,6 +66,7 @@ if (internal_access) {
     sources = [
       "//prebuilt/connectivity/bluetooth/firmware/intel/ibt-11-5.sfi",
       "//prebuilt/connectivity/bluetooth/firmware/intel/ibt-12-16.sfi",
+      "//prebuilt/connectivity/bluetooth/firmware/intel/ibt-17-2.sfi",
       "//prebuilt/connectivity/bluetooth/firmware/intel/ibt-18-2.sfi",
       "//prebuilt/connectivity/bluetooth/firmware/intel/ibt-hw-37.8.10-fw-22.50.19.14.f.bseq",
       "//prebuilt/connectivity/bluetooth/firmware/intel/ibt-hw-37.8.bseq",
@@ -97,6 +98,9 @@ driver_package("intel") {
       },
       {
         name = "firmware/ibt-12-16.sfi"
+      },
+      {
+        name = "firmware/ibt-17-2.sfi"
       },
       {
         name = "firmware/ibt-18-2.sfi"
