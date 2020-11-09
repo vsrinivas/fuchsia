@@ -238,7 +238,7 @@ pub struct BssInfoNode {
 impl BssInfoNode {
     fn new(node: Node, bss_info: &BssInfo, hasher: &WlanHasher) -> Self {
         let bssid = node.create_string("bssid", bss_info.bssid.to_mac_str());
-        let bssid_hash = node.create_string("bssid_hash", hasher.hash_mac_addr(bss_info.bssid));
+        let bssid_hash = node.create_string("bssid_hash", hasher.hash_mac_addr(&bss_info.bssid));
         let ssid = node.create_string("ssid", String::from_utf8_lossy(&bss_info.ssid[..]));
         let ssid_hash = node.create_string("ssid_hash", hasher.hash(&bss_info.ssid[..]));
         let rx_dbm = node.create_int("rx_dbm", bss_info.rx_dbm as i64);
@@ -275,7 +275,7 @@ impl BssInfoNode {
 
     fn update(&mut self, bss_info: &BssInfo, hasher: &WlanHasher) {
         self.bssid.set(&bss_info.bssid.to_mac_str());
-        self.bssid_hash.set(&hasher.hash_mac_addr(bss_info.bssid));
+        self.bssid_hash.set(&hasher.hash_mac_addr(&bss_info.bssid));
         self.ssid.set(&String::from_utf8_lossy(&bss_info.ssid[..]));
         self.ssid_hash.set(&hasher.hash(&bss_info.ssid[..]));
         self.rx_dbm.set(bss_info.rx_dbm as i64);

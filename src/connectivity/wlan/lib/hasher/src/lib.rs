@@ -7,7 +7,10 @@ use {
         hash::{Digest, Sha256},
         hmac::hmac,
     },
-    wlan_common::{format::MacFmt, mac::MacAddr},
+    wlan_common::{
+        format::{MacFmt, SsidFmt},
+        mac::MacAddr,
+    },
 };
 
 #[derive(Debug, Clone)]
@@ -25,10 +28,12 @@ impl WlanHasher {
         hex::encode(hmac::<Sha256>(&self.hash_key, bytes).bytes())
     }
 
-    pub fn hash_mac_addr(&self, addr: MacAddr) -> String {
-        addr.to_mac_str_partial_hashed(|bytes| {
-            hex::encode(hmac::<Sha256>(&self.hash_key, bytes).bytes())
-        })
+    pub fn hash_mac_addr(&self, addr: &MacAddr) -> String {
+        addr.to_mac_str_partial_hashed(|bytes| self.hash(bytes))
+    }
+
+    pub fn hash_ssid(&self, ssid: &[u8]) -> String {
+        ssid.to_ssid_str_hashed(|bytes| self.hash(bytes))
     }
 }
 
@@ -42,8 +47,18 @@ mod tests {
     fn test_hash_mac_addr() {
         let hasher = WlanHasher::new(HASH_KEY);
         let mac_addr = [0x11, 0x22, 0x33, 0x44, 0x55, 0x66];
-        let hashed_str = hasher.hash_mac_addr(mac_addr);
+        let hashed_str = hasher.hash_mac_addr(&mac_addr);
         assert!(hashed_str.starts_with("11:22:33:"));
         assert_ne!(hashed_str, "11:22:33:44:55:66");
+    }
+
+    #[test]
+    fn test_hash_ssid() {
+        let hasher = WlanHasher::new(HASH_KEY);
+        let ssid_foo = String::from("foo").into_bytes();
+        let ssid_bar = String::from("bar").into_bytes();
+        assert!(!hasher.hash_ssid(&ssid_foo).contains("foo"));
+        assert_eq!(hasher.hash_ssid(&ssid_foo), hasher.hash_ssid(&ssid_foo));
+        assert_ne!(hasher.hash_ssid(&ssid_foo), hasher.hash_ssid(&ssid_bar));
     }
 }

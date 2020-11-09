@@ -28,7 +28,7 @@ async fn connect_future(
     assert_failed(
         listener_stream,
         fidl_policy::NetworkIdentifier { ssid: SSID.to_vec(), type_: security_type },
-        fidl_policy::DisconnectStatus::CredentialsFailed,
+        fidl_policy::DisconnectStatus::ConnectionFailed,
     )
     .await;
     remove_network(wlan_controller, SSID, security_type, password).await;

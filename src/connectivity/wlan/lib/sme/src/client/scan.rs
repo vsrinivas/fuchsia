@@ -14,7 +14,7 @@ use {
         sync::Arc,
     },
     wlan_common::{
-        bss::BssDescriptionExt,
+        bss::BssDescriptionExt as _,
         channel::{Cbw, Channel},
         ie,
     },

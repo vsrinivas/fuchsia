@@ -234,7 +234,7 @@ pub fn make_data_frame_amsdu_padding_too_short() -> Vec<u8> {
 }
 
 pub fn fake_wpa1_ie_body(enhanced: bool) -> Vec<u8> {
-    let cipher = if enhanced { 0x4 } else { 0x2 }; // unicast cipher is TKIP or CCMP-128
+    let cipher = if enhanced { 0x4 } else { 0x2 }; // unicast cipher is CCMP-128 or TKIP
     vec![
         0x01, 0x00, // WPA version
         0x00, 0x50, 0xf2, 0x02, // multicast cipher: TKIP

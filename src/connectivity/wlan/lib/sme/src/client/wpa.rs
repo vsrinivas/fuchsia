@@ -6,7 +6,7 @@ use anyhow::format_err;
 use fidl_fuchsia_wlan_mlme::{BssDescription, DeviceInfo};
 
 use fidl_fuchsia_wlan_sme as fidl_sme;
-use wlan_common::bss::BssDescriptionExt;
+use wlan_common::bss::BssDescriptionExt as _;
 use wlan_common::ie::rsn::{akm, cipher};
 use wlan_common::ie::wpa::WpaIe;
 use wlan_common::organization::Oui;

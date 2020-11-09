@@ -34,6 +34,7 @@ use {
         timer::{self, TimedEvent},
         InfoStream, MlmeRequest, MlmeStream, Ssid,
     },
+    anyhow::{format_err, Context as _},
     fidl_fuchsia_wlan_common as fidl_common,
     fidl_fuchsia_wlan_mlme::{
         self as fidl_mlme, BssDescription, DeviceInfo, MlmeEvent, ScanRequest,
@@ -41,12 +42,15 @@ use {
     fidl_fuchsia_wlan_sme as fidl_sme,
     fuchsia_inspect_contrib::{inspect_insert, inspect_log, log::InspectListClosure},
     futures::channel::{mpsc, oneshot},
-    log::{error, info},
-    std::sync::Arc,
+    log::{error, info, warn},
+    std::{
+        iter::{Iterator, Peekable},
+        sync::Arc,
+    },
     wep_deprecated,
     wlan_common::{
         self,
-        bss::{BssDescriptionExt, Protection as BssProtection},
+        bss::{BssDescriptionExt as _, Protection as BssProtection},
         format::MacFmt,
         mac::MacAddr,
         RadioConfig,
@@ -88,9 +92,6 @@ mod internal {
 }
 
 use self::internal::*;
-
-const SSID_HASH_LEN: usize = 16;
-const BSSID_HASH_LEN: usize = 16;
 
 pub type TimeStream = timer::TimeStream<Event>;
 
@@ -166,19 +167,10 @@ impl ConnectFailure {
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct CredentialErrorMessage(String);
-
-impl From<CredentialErrorMessage> for SelectNetworkFailure {
-    fn from(msg: CredentialErrorMessage) -> Self {
-        SelectNetworkFailure::CredentialError(msg)
-    }
-}
-
-#[derive(Clone, Debug, PartialEq)]
 pub enum SelectNetworkFailure {
     NoScanResultWithSsid,
-    NoCompatibleNetwork,
-    CredentialError(CredentialErrorMessage),
+    IncompatibleConnectRequest,
+    InternalProtectionError,
 }
 
 impl From<SelectNetworkFailure> for ConnectFailure {
@@ -356,15 +348,21 @@ impl ClientSme {
     }
 }
 
+// TODO(fxbug.dev/63495): Move this function to BssDescriptionExt.
 fn bss_to_string(bss: &BssDescription, hasher: &WlanHasher) -> String {
     format!(
         "SSID: {}, BSSID: {}, Protection: {}, Pri Chan: {}, Rx dBm: {}",
-        &hasher.hash(&bss.ssid[..])[..SSID_HASH_LEN],
-        &hasher.hash_mac_addr(bss.bssid)[..BSSID_HASH_LEN],
+        hasher.hash_ssid(&bss.ssid),
+        hasher.hash_mac_addr(&&bss.bssid),
         bss.get_protection(),
         bss.chan.primary,
         bss.rssi_dbm,
     )
+}
+
+struct ViableBss<'a> {
+    bss: &'a BssDescription,
+    protection: Protection,
 }
 
 impl super::Station for ClientSme {
@@ -384,97 +382,109 @@ impl super::Station for ClientSme {
                 self.send_scan_request(request);
                 match result {
                     scan::ScanResult::None => (),
-                    scan::ScanResult::JoinScanFinished { token, result: Ok(bss_list) } => {
+                    scan::ScanResult::JoinScanFinished { token, result: Ok(bss_list) }
+                        if bss_list.is_empty() =>
+                    {
                         info!("Scan results:");
-                        if bss_list.is_empty() {
-                            info!("  No Results");
-                        } else {
-                            for bss in &bss_list {
-                                info!("  {}", bss_to_string(bss, &self.context.inspect.hasher));
-                            }
-                        }
-
-                        let mut inspect_msg: Option<String> = None;
-                        let best_bss = self.cfg.get_best_bss(&bss_list);
-                        if let Some(ref best_bss) = best_bss {
-                            self.context.info.report_candidate_network(clone_bss_desc(best_bss));
-                        }
-                        let best_bssid = best_bss.as_ref().map(|bss| bss.bssid.clone());
-                        match best_bss {
-                            // BSS found and compatible.
-                            Some(best_bss) if self.cfg.is_bss_compatible(best_bss) => {
-                                match get_protection(
-                                    &self.context.device_info,
-                                    &self.cfg,
-                                    &token.credential,
-                                    &best_bss,
-                                ) {
-                                    Ok(protection) => {
-                                        info!("Attempting to connect to:");
-                                        info!(
-                                            "  {}",
-                                            bss_to_string(&best_bss, &self.context.inspect.hasher)
-                                        );
-                                        inspect_msg.replace("attempt to connect".to_string());
-                                        let cmd = ConnectCommand {
-                                            bss: Box::new(clone_bss_desc(&best_bss)),
-                                            responder: Some(token.responder),
-                                            protection,
-                                            radio_cfg: token.radio_cfg,
-                                        };
-                                        self.state = self
-                                            .state
-                                            .take()
-                                            .map(|state| state.connect(cmd, &mut self.context));
-                                    }
-                                    Err(credential_error_message) => {
-                                        inspect_msg.replace(format!(
-                                            "cannot join: {:?}",
-                                            credential_error_message
-                                        ));
-                                        error!(
-                                            "cannot join '{}' ({}): {:?}",
-                                            String::from_utf8_lossy(&best_bss.ssid[..]),
-                                            best_bss.bssid.to_mac_str(),
-                                            credential_error_message,
-                                        );
-                                        report_connect_finished(
-                                            Some(token.responder),
-                                            &mut self.context,
-                                            SelectNetworkFailure::from(credential_error_message)
-                                                .into(),
-                                        );
-                                    }
-                                }
-                            }
-                            // Incompatible network
-                            Some(incompatible_bss) => {
-                                inspect_msg.replace("incompatible BSS".to_string());
-                                error!("incompatible BSS: {:?}", &incompatible_bss);
-                                report_connect_finished(
-                                    Some(token.responder),
-                                    &mut self.context,
-                                    SelectNetworkFailure::NoCompatibleNetwork.into(),
-                                );
-                            }
-                            // No matching BSS found
-                            None => {
-                                inspect_msg.replace("no matching BSS".to_string());
-                                error!("no matching BSS found");
-                                report_connect_finished(
-                                    Some(token.responder),
-                                    &mut self.context,
-                                    SelectNetworkFailure::NoScanResultWithSsid.into(),
-                                );
-                            }
-                        };
-
+                        info!("  No Results");
+                        let error_msg_str = "no matching BSS found";
+                        error!("{}", error_msg_str);
+                        report_connect_finished(
+                            Some(token.responder),
+                            &mut self.context,
+                            SelectNetworkFailure::NoScanResultWithSsid.into(),
+                        );
                         inspect_log_join_scan(
                             &mut self.context,
                             &bss_list,
-                            best_bssid,
-                            inspect_msg,
+                            None,
+                            Some(error_msg_str.to_string()),
                         );
+                    }
+                    scan::ScanResult::JoinScanFinished { token, result: Ok(bss_list) } => {
+                        info!("Scan results:");
+                        for bss in &bss_list {
+                            info!("  {}", bss_to_string(bss, &self.context.inspect.hasher));
+                        }
+
+                        let mut compatible_bss_iter =
+                            filter_to_compatible_bss(&bss_list, &self.cfg, &token.credential);
+
+                        if compatible_bss_iter.peek() == None {
+                            let error_msg_str = "incompatible connect request for scan results";
+                            error!("{}", error_msg_str);
+                            report_connect_finished(
+                                Some(token.responder),
+                                &mut self.context,
+                                SelectNetworkFailure::IncompatibleConnectRequest.into(),
+                            );
+                            inspect_log_join_scan(
+                                &mut self.context,
+                                &bss_list,
+                                None,
+                                Some(error_msg_str.to_string()),
+                            );
+                        } else {
+                            match filter_to_viable_bss(
+                                compatible_bss_iter,
+                                &self.context.device_info,
+                                &self.cfg,
+                                &token.credential,
+                                &self.context.inspect.hasher,
+                            )
+                            .max_by_key(|compatible_bss| compatible_bss.bss.candidacy())
+                            {
+                                None => {
+                                    // Report a SelectNetworkFailure if there are no compatible results.
+                                    let error_msg_str = "internal protection error";
+                                    error!("{}", error_msg_str);
+                                    report_connect_finished(
+                                        Some(token.responder),
+                                        &mut self.context,
+                                        SelectNetworkFailure::InternalProtectionError.into(),
+                                    );
+                                    inspect_log_join_scan(
+                                        &mut self.context,
+                                        &bss_list,
+                                        None,
+                                        Some(error_msg_str.to_string()),
+                                    );
+                                }
+                                Some(best_compatible_bss) => {
+                                    let best_bss = best_compatible_bss.bss;
+                                    let best_bssid = best_bss.bssid;
+                                    let best_bss_protection = best_compatible_bss.protection;
+
+                                    info!("Attempting to connect to:");
+                                    info!(
+                                        "  {}",
+                                        bss_to_string(&best_bss, &self.context.inspect.hasher)
+                                    );
+
+                                    self.context
+                                        .info
+                                        .report_candidate_network(clone_bss_desc(best_bss));
+                                    let cmd = ConnectCommand {
+                                        bss: Box::new(clone_bss_desc(&best_bss)),
+                                        responder: Some(token.responder),
+                                        protection: best_bss_protection,
+                                        radio_cfg: token.radio_cfg,
+                                    };
+
+                                    self.state = self
+                                        .state
+                                        .take()
+                                        .map(|state| state.connect(cmd, &mut self.context));
+
+                                    inspect_log_join_scan(
+                                        &mut self.context,
+                                        &bss_list,
+                                        Some(best_bssid),
+                                        Some("attempt to connect".to_string()),
+                                    );
+                                }
+                            }
+                        }
                     }
                     scan::ScanResult::JoinScanFinished { token, result: Err(e) } => {
                         inspect_log!(
@@ -536,7 +546,7 @@ fn inspect_log_join_scan(
     let inspect_bss = InspectListClosure(&bss_list, |node_writer, key, bss| {
         inspect_insert!(node_writer, var key: {
             bssid: bss.bssid.to_mac_str(),
-            bssid_hash: ctx.inspect.hasher.hash_mac_addr(bss.bssid),
+            bssid_hash: ctx.inspect.hasher.hash_mac_addr(&bss.bssid),
             ssid: String::from_utf8_lossy(&bss.ssid[..]).as_ref(),
             ssid_hash: ctx.inspect.hasher.hash(&bss.ssid[..]),
             channel: InspectWlanChan(&bss.chan),
@@ -550,7 +560,7 @@ fn inspect_log_join_scan(
         bss_list: inspect_bss,
         candidate_bss: {
             bssid?: candidate_bssid.as_ref().map(|bssid| bssid.to_mac_str()),
-            bssid_hash?: candidate_bssid.map(|bssid| hasher.hash_mac_addr(bssid)),
+            bssid_hash?: candidate_bssid.map(|bssid| hasher.hash_mac_addr(&bssid)),
         },
         result?: result_msg,
     });
@@ -567,28 +577,94 @@ fn report_connect_finished(
     }
 }
 
-pub fn get_protection(
+/// Filter out any BssDescription in `bss_list` that is not compatible with
+/// 'device_info`, `client_config`, or `credential`. A BssDescription is
+/// not compatible if `client_config.is_bss_compatible()` returns `false`
+/// or if `get_protection()` returns a `Result::Err`.
+fn filter_to_compatible_bss<'a>(
+    bss_list: &'a Vec<BssDescription>,
+    client_config: &'a ClientConfig,
+    credential: &'a fidl_sme::Credential,
+) -> Peekable<impl Iterator<Item = &'a BssDescription>> {
+    bss_list
+        .iter()
+        .filter_map(move |bss| {
+            if !client_config.is_bss_compatible(bss) {
+                return None;
+            }
+            if let fidl_sme::Credential::None(_) = credential {
+                if bss.is_protected() {
+                    return None;
+                }
+            } else {
+                if !bss.is_protected() {
+                    return None;
+                }
+            }
+            Some(bss)
+        })
+        .peekable()
+}
+
+fn filter_to_viable_bss<'a>(
+    bss_iter: Peekable<impl Iterator<Item = &'a BssDescription>>,
+    device_info: &'a DeviceInfo,
+    client_config: &'a ClientConfig,
+    credential: &'a fidl_sme::Credential,
+    hasher: &'a WlanHasher,
+) -> impl Iterator<Item = ViableBss<'a>> {
+    bss_iter.filter_map(move |bss| {
+        match get_protection(device_info, client_config, credential, bss, hasher) {
+            Err(e) => {
+                warn!("{:?}", e);
+                None
+            }
+            Ok(protection) => Some(ViableBss { bss, protection }),
+        }
+    })
+}
+
+fn get_protection(
     device_info: &DeviceInfo,
     client_config: &ClientConfig,
     credential: &fidl_sme::Credential,
     bss: &BssDescription,
-) -> Result<Protection, CredentialErrorMessage> {
+    hasher: &WlanHasher,
+) -> Result<Protection, anyhow::Error> {
+    let ssid_hash = hasher.hash_ssid(&bss.ssid);
+    let bssid_hash = hasher.hash_mac_addr(&&bss.bssid);
+
     match bss.get_protection() {
         wlan_common::bss::Protection::Open => match credential {
             fidl_sme::Credential::None(_) => Ok(Protection::Open),
-            _ => Err(CredentialErrorMessage("credentials provided for open network".to_string())),
+            _ => Err(format_err!(
+                "Open network {} ({}) not compatible with credentials.",
+                ssid_hash,
+                bssid_hash
+            )),
         },
         wlan_common::bss::Protection::Wep => match credential {
-            fidl_sme::Credential::Password(pwd) => wep_deprecated::derive_key(&pwd[..])
-                .map(Protection::Wep)
-                .map_err(|e| CredentialErrorMessage(e.to_string())),
-            _ => {
-                Err(CredentialErrorMessage(format!("unsupported credential type {:?}", credential)))
+            fidl_sme::Credential::Password(pwd) => {
+                wep_deprecated::derive_key(&pwd[..]).map(Protection::Wep).with_context(|| {
+                    format!(
+                        "WEP network {} ({}) protection cannot be retrieved with credential {:?}",
+                        ssid_hash, bssid_hash, credential,
+                    )
+                })
             }
+            _ => Err(format_err!(
+                "WEP network {} ({}) not compatible with credential {:?}",
+                ssid_hash,
+                bssid_hash,
+                credential
+            )),
         },
         wlan_common::bss::Protection::Wpa1 => {
-            get_legacy_wpa_association(device_info, credential, bss).map_err(|e| {
-                CredentialErrorMessage(format!("failed to get protection for legacy WPA: {}", e))
+            get_legacy_wpa_association(device_info, credential, bss).with_context(|| {
+                format!(
+                    "WPA1 network {} ({}) protection cannot be retrieved with credential {:?}",
+                    ssid_hash, bssid_hash, credential
+                )
             })
         }
         // If WPA3 is supported, we will only treat Wpa2/Wpa3 transition APs as WPA3.
@@ -596,23 +672,27 @@ pub fn get_protection(
         | wlan_common::bss::Protection::Wpa2Wpa3Personal
             if client_config.wpa3_supported =>
         {
-            get_wpa3_rsna(device_info, credential, bss).map_err(|e| {
-                CredentialErrorMessage(format!("failed to get protection for WPA3: {}", e))
+            get_wpa3_rsna(device_info, credential, bss).with_context(|| {
+                format!(
+                    "WPA3 network {} ({}) protection cannot be retrieved with credential {:?}:",
+                    ssid_hash, bssid_hash, credential
+                )
             })
         }
         wlan_common::bss::Protection::Wpa1Wpa2Personal
         | wlan_common::bss::Protection::Wpa2Personal
         | wlan_common::bss::Protection::Wpa2Wpa3Personal => {
-            get_wpa2_rsna(device_info, credential, bss)
-                .map_err(|e| CredentialErrorMessage(e.to_string()))
+            get_wpa2_rsna(device_info, credential, bss).with_context(|| {
+                format!(
+                    "WPA2 network {} ({}) protection cannot be retrieved with credential {:?}",
+                    ssid_hash, bssid_hash, credential
+                )
+            })
         }
         wlan_common::bss::Protection::Unknown => {
-            Err(CredentialErrorMessage("unknown protection type for targeted SSID".to_string()))
+            Err(format_err!("Unknown protection type for {} ({})", ssid_hash, bssid_hash,))
         }
-        other => Err(CredentialErrorMessage(format!(
-            "unsupported protection type for targeted SSID: {:?}",
-            other
-        ))),
+        _ => Err(format_err!("Unsupported protection type for {} ({})", ssid_hash, bssid_hash)),
     }
 }
 
@@ -647,35 +727,36 @@ mod tests {
     fn test_get_protection() {
         let dev_info = test_utils::fake_device_info(CLIENT_ADDR);
         let client_config = Default::default();
+        let hasher = WlanHasher::new(DUMMY_HASH_KEY);
 
         // Open network without credentials:
         let credential = fidl_sme::Credential::None(fidl_sme::Empty);
         let bss = fake_bss!(Open);
-        let protection = get_protection(&dev_info, &client_config, &credential, &bss);
+        let protection = get_protection(&dev_info, &client_config, &credential, &bss, &hasher);
         assert_variant!(protection, Ok(Protection::Open));
 
         // Open network with credentials:
         let credential = fidl_sme::Credential::Password(b"somepass".to_vec());
         let bss = fake_bss!(Open);
-        get_protection(&dev_info, &client_config, &credential, &bss)
+        get_protection(&dev_info, &client_config, &credential, &bss, &hasher)
             .expect_err("unprotected network cannot use password");
 
         // RSN with user entered password:
         let credential = fidl_sme::Credential::Password(b"somepass".to_vec());
         let bss = fake_bss!(Wpa2);
-        let protection = get_protection(&dev_info, &client_config, &credential, &bss);
+        let protection = get_protection(&dev_info, &client_config, &credential, &bss, &hasher);
         assert_variant!(protection, Ok(Protection::Rsna(_)));
 
         // RSN with user entered PSK:
         let credential = fidl_sme::Credential::Psk(vec![0xAC; 32]);
         let bss = fake_bss!(Wpa2);
-        let protection = get_protection(&dev_info, &client_config, &credential, &bss);
+        let protection = get_protection(&dev_info, &client_config, &credential, &bss, &hasher);
         assert_variant!(protection, Ok(Protection::Rsna(_)));
 
         // RSN without credentials:
         let credential = fidl_sme::Credential::None(fidl_sme::Empty);
         let bss = fake_bss!(Wpa2);
-        get_protection(&dev_info, &client_config, &credential, &bss)
+        get_protection(&dev_info, &client_config, &credential, &bss, &hasher)
             .expect_err("protected network requires password");
     }
 
@@ -683,29 +764,30 @@ mod tests {
     fn test_get_protection_wep() {
         let dev_info = test_utils::fake_device_info(CLIENT_ADDR);
         let client_config = ClientConfig::from_config(SmeConfig::default().with_wep(), false);
+        let hasher = WlanHasher::new(DUMMY_HASH_KEY);
 
         // WEP-40 with credentials:
         let credential = fidl_sme::Credential::Password(b"wep40".to_vec());
         let bss = fake_bss!(Wep);
-        let protection = get_protection(&dev_info, &client_config, &credential, &bss);
+        let protection = get_protection(&dev_info, &client_config, &credential, &bss, &hasher);
         assert_variant!(protection, Ok(Protection::Wep(_)));
 
         // WEP-104 with credentials:
         let credential = fidl_sme::Credential::Password(b"superinsecure".to_vec());
         let bss = fake_bss!(Wep);
-        let protection = get_protection(&dev_info, &client_config, &credential, &bss);
+        let protection = get_protection(&dev_info, &client_config, &credential, &bss, &hasher);
         assert_variant!(protection, Ok(Protection::Wep(_)));
 
         // WEP without credentials:
         let credential = fidl_sme::Credential::None(fidl_sme::Empty);
         let bss = fake_bss!(Wep);
-        get_protection(&dev_info, &client_config, &credential, &bss)
+        get_protection(&dev_info, &client_config, &credential, &bss, &hasher)
             .expect_err("WEP network not supported");
 
         // WEP with invalid credentials:
         let credential = fidl_sme::Credential::Password(b"wep".to_vec());
         let bss = fake_bss!(Wep);
-        get_protection(&dev_info, &client_config, &credential, &bss)
+        get_protection(&dev_info, &client_config, &credential, &bss, &hasher)
             .expect_err("expected error for invalid WEP credentials");
     }
 
@@ -713,11 +795,12 @@ mod tests {
     fn test_get_protection_sae() {
         let dev_info = test_utils::fake_device_info(CLIENT_ADDR);
         let mut client_config = ClientConfig::from_config(SmeConfig::default(), true);
+        let hasher = WlanHasher::new(DUMMY_HASH_KEY);
 
         // WPA3, supported
         let credential = fidl_sme::Credential::Password(b"somepass".to_vec());
         let bss = fake_bss!(Wpa3);
-        let protection = get_protection(&dev_info, &client_config, &credential, &bss);
+        let protection = get_protection(&dev_info, &client_config, &credential, &bss, &hasher);
         assert_variant!(protection, Ok(Protection::Rsna(rsna)) => {
             assert_eq!(rsna.negotiated_protection.akm.suite_type, akm::SAE)
         });
@@ -725,7 +808,7 @@ mod tests {
         // WPA2/3, supported
         let credential = fidl_sme::Credential::Password(b"somepass".to_vec());
         let bss = fake_bss!(Wpa2Wpa3);
-        let protection = get_protection(&dev_info, &client_config, &credential, &bss);
+        let protection = get_protection(&dev_info, &client_config, &credential, &bss, &hasher);
         assert_variant!(protection, Ok(Protection::Rsna(rsna)) => {
             assert_eq!(rsna.negotiated_protection.akm.suite_type, akm::SAE)
         });
@@ -735,13 +818,13 @@ mod tests {
         // WPA3, unsupported
         let credential = fidl_sme::Credential::Password(b"somepass".to_vec());
         let bss = fake_bss!(Wpa3);
-        let protection = get_protection(&dev_info, &client_config, &credential, &bss);
+        let protection = get_protection(&dev_info, &client_config, &credential, &bss, &hasher);
         assert_variant!(protection, Err(_));
 
         // WPA2/3, WPA3 unsupported, downgrade to WPA2
         let credential = fidl_sme::Credential::Password(b"somepass".to_vec());
         let bss = fake_bss!(Wpa2Wpa3);
-        let protection = get_protection(&dev_info, &client_config, &credential, &bss);
+        let protection = get_protection(&dev_info, &client_config, &credential, &bss, &hasher);
         assert_variant!(protection, Ok(Protection::Rsna(rsna)) => {
             assert_eq!(rsna.negotiated_protection.akm.suite_type, akm::PSK)
         });
@@ -779,6 +862,107 @@ mod tests {
             Status { connected_to: None, connecting_to: Some(b"bar".to_vec()) },
             sme.status()
         );
+    }
+
+    #[test]
+    fn status_connecting_to_open_network_with_duplicate_ssid_in_scan_result() {
+        let (mut sme, mut mlme_stream, _info_stream, _time_stream) = create_sme();
+        assert_eq!(Status { connected_to: None, connecting_to: None }, sme.status());
+
+        let credential = fidl_sme::Credential::None(fidl_sme::Empty);
+        let _recv = sme.on_connect_command(connect_req(b"foo".to_vec(), credential));
+        assert_eq!(None, sme.state.as_ref().unwrap().status().connecting_to);
+        assert_eq!(
+            Status { connected_to: None, connecting_to: Some(b"foo".to_vec()) },
+            sme.status()
+        );
+
+        assert_variant!(mlme_stream.try_next(), Ok(Some(MlmeRequest::Scan(..))));
+
+        // Push a fake scan result into SME. We should still be connecting to "foo",
+        // but the status should now come from the state machine and not from the scanner.
+        sme.on_mlme_event(MlmeEvent::OnScanResult {
+            result: fidl_mlme::ScanResult {
+                txn_id: 1,
+                bss: fake_bss!(Open,
+                               ssid: b"foo".to_vec(),
+                               bssid: [1; 6],
+                               rssi_dbm: -100,
+                ),
+            },
+        });
+        sme.on_mlme_event(MlmeEvent::OnScanResult {
+            result: fidl_mlme::ScanResult {
+                txn_id: 1,
+                bss: fake_bss!(Wpa2,
+                               ssid: b"foo".to_vec(),
+                               bssid: [2; 6],
+                               rssi_dbm: -1,
+                ),
+            },
+        });
+        sme.on_mlme_event(MlmeEvent::OnScanEnd {
+            end: fidl_mlme::ScanEnd { txn_id: 1, code: fidl_mlme::ScanResultCodes::Success },
+        });
+        // Despite the fact that the stronger signal strength network has the wrong security
+        // type, we should try to connect to the open network anyway.
+        assert_eq!(Some(b"foo".to_vec()), sme.state.as_ref().unwrap().status().connecting_to);
+        assert_eq!(
+            Status { connected_to: None, connecting_to: Some(b"foo".to_vec()) },
+            sme.status()
+        );
+
+        assert_variant!(mlme_stream.try_next(), Ok(Some(MlmeRequest::Join(..))));
+    }
+
+    #[test]
+    fn status_connecting_to_protected_network_with_duplicate_ssid_in_scan_result() {
+        let (mut sme, mut mlme_stream, _info_stream, _time_stream) = create_sme();
+        assert_eq!(Status { connected_to: None, connecting_to: None }, sme.status());
+
+        let credential = fidl_sme::Credential::Password(b"somepass".to_vec());
+        let _recv = sme.on_connect_command(connect_req(b"foo".to_vec(), credential));
+        assert_eq!(None, sme.state.as_ref().unwrap().status().connecting_to);
+        assert_eq!(
+            Status { connected_to: None, connecting_to: Some(b"foo".to_vec()) },
+            sme.status()
+        );
+
+        assert_variant!(mlme_stream.try_next(), Ok(Some(MlmeRequest::Scan(..))));
+
+        // Push fake scan results into SME with the same SSIDs and different security types.
+        sme.on_mlme_event(MlmeEvent::OnScanResult {
+            result: fidl_mlme::ScanResult {
+                txn_id: 1,
+                bss: fake_bss!(Wpa2,
+                               ssid: b"foo".to_vec(),
+                               bssid: [1; 6],
+                               rssi_dbm: -100,
+                ),
+            },
+        });
+        sme.on_mlme_event(MlmeEvent::OnScanResult {
+            result: fidl_mlme::ScanResult {
+                txn_id: 1,
+                bss: fake_bss!(Open,
+                               ssid: b"foo".to_vec(),
+                               bssid: [2; 6],
+                               rssi_dbm: -1,
+                ),
+            },
+        });
+        sme.on_mlme_event(MlmeEvent::OnScanEnd {
+            end: fidl_mlme::ScanEnd { txn_id: 1, code: fidl_mlme::ScanResultCodes::Success },
+        });
+        // Despite the fact that the stronger signal strength network has the wrong security
+        // type, we should try to connect to the Wpa2 network anyway.
+        assert_eq!(Some(b"foo".to_vec()), sme.state.as_ref().unwrap().status().connecting_to);
+        assert_eq!(
+            Status { connected_to: None, connecting_to: Some(b"foo".to_vec()) },
+            sme.status()
+        );
+
+        assert_variant!(mlme_stream.try_next(), Ok(Some(MlmeRequest::Join(..))));
     }
 
     #[test]
@@ -953,15 +1137,9 @@ mod tests {
         // User should get a message that connection failed
         assert_variant!(
             connect_fut.try_recv(),
-            Ok(
-                Some(
-                    ConnectResult::Failed(
-                        ConnectFailure::SelectNetworkFailure(
-                            SelectNetworkFailure::CredentialError(_),
-                        ),
-                    ),
-                ),
-            )
+            Ok(Some(ConnectResult::Failed(ConnectFailure::SelectNetworkFailure(
+                SelectNetworkFailure::IncompatibleConnectRequest,
+            ),),),)
         );
     }
 
@@ -1005,15 +1183,9 @@ mod tests {
         // User should get a message that connection failed
         assert_variant!(
             connect_fut.try_recv(),
-            Ok(
-                Some(
-                    ConnectResult::Failed(
-                        ConnectFailure::SelectNetworkFailure(
-                            SelectNetworkFailure::CredentialError(_),
-                        ),
-                    ),
-                ),
-            )
+            Ok(Some(ConnectResult::Failed(ConnectFailure::SelectNetworkFailure(
+                SelectNetworkFailure::IncompatibleConnectRequest,
+            ),),),)
         );
     }
 
@@ -1055,15 +1227,9 @@ mod tests {
         // User should get a message that connection failed
         assert_variant!(
             connect_fut.try_recv(),
-            Ok(
-                Some(
-                    ConnectResult::Failed(
-                        ConnectFailure::SelectNetworkFailure(
-                            SelectNetworkFailure::CredentialError(_),
-                        ),
-                    ),
-                ),
-            )
+            Ok(Some(ConnectResult::Failed(ConnectFailure::SelectNetworkFailure(
+                SelectNetworkFailure::IncompatibleConnectRequest,
+            ),),),)
         );
     }
 
@@ -1082,20 +1248,33 @@ mod tests {
     }
 
     #[test]
-    fn connecting_no_compatible_network_found() {
+    fn connecting_right_credential_type_no_privacy() {
         let (mut sme, _mlme_stream, _info_stream, _time_stream) = create_sme();
 
         let credential = fidl_sme::Credential::Password(b"password".to_vec());
         let mut connect_fut = sme.on_connect_command(connect_req(b"foo".to_vec(), credential));
-        let bss_desc = fidl_mlme::BssDescription {
-            cap: wlan_common::mac::CapabilityInfo(0).with_privacy(false).0,
-            ..fake_bss!(Wpa2, ssid: b"foo".to_vec())
-        };
-        // Make our check flag this BSS as incompatible
+        let bss_desc = fake_bss!(Wpa2,
+                                 ssid: b"foo".to_vec(),
+                                 cap: wlan_common::mac::CapabilityInfo(0).with_privacy(false).0
+        );
         report_fake_scan_result(&mut sme, bss_desc);
 
         assert_variant!(connect_fut.try_recv(), Ok(Some(failure)) => {
-            assert_eq!(failure, SelectNetworkFailure::NoCompatibleNetwork.into());
+            assert_eq!(failure, SelectNetworkFailure::IncompatibleConnectRequest.into());
+        });
+    }
+
+    #[test]
+    fn connecting_right_credential_type_but_short_password() {
+        let (mut sme, _mlme_stream, _info_stream, _time_stream) = create_sme();
+
+        let credential = fidl_sme::Credential::Password(b"pass".to_vec());
+        let mut connect_fut = sme.on_connect_command(connect_req(b"foo".to_vec(), credential));
+        let bss_desc = fake_bss!(Wpa2, ssid: b"foo".to_vec());
+        report_fake_scan_result(&mut sme, bss_desc);
+
+        assert_variant!(connect_fut.try_recv(), Ok(Some(failure)) => {
+            assert_eq!(failure, SelectNetworkFailure::InternalProtectionError.into());
         });
     }
 

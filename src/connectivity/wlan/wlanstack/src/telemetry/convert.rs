@@ -192,8 +192,8 @@ pub(super) fn convert_select_network_failure(
     use metrics::NetworkSelectionFailureMetricDimensionErrorReason::*;
     match failure {
         SelectNetworkFailure::NoScanResultWithSsid => NoScanResultWithSsid,
-        SelectNetworkFailure::NoCompatibleNetwork => NoCompatibleNetwork,
-        SelectNetworkFailure::CredentialError(_) => CredentialError,
+        SelectNetworkFailure::IncompatibleConnectRequest => IncompatibleConnectRequest,
+        SelectNetworkFailure::InternalProtectionError => InternalProtectionError,
     }
 }
 

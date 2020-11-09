@@ -20,7 +20,7 @@ use wlan_inspect;
 use wlan_rsn::auth;
 use wlan_sme::client::{
     AssociationFailure, BssDiscoveryResult, BssInfo, ConnectFailure, ConnectResult,
-    EstablishRsnaFailure, EstablishRsnaFailureReason, InfoEvent, SelectNetworkFailure,
+    EstablishRsnaFailure, EstablishRsnaFailureReason, InfoEvent,
 };
 use wlan_sme::{self as sme, client as client_sme, InfoStream};
 
@@ -248,12 +248,6 @@ fn convert_connect_result(result: &ConnectResult) -> fidl_sme::ConnectResultCode
     match result {
         ConnectResult::Success => fidl_sme::ConnectResultCode::Success,
         ConnectResult::Canceled => fidl_sme::ConnectResultCode::Canceled,
-        // This case is for errors associated with the credential type specified.
-        // Example problems are specifying an unsupported protection type or
-        // specifying a password for an open network.
-        ConnectResult::Failed(ConnectFailure::SelectNetworkFailure(
-            SelectNetworkFailure::CredentialError(_),
-        )) => fidl_sme::ConnectResultCode::WrongCredentialType,
 
         // Assuming the correct type of credentials are given, a bad password
         // will cause a variety of errors depending on the security type. All of

@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+const SSID_HASH_LEN: usize = 16;
+
 pub trait MacFmt {
     fn to_mac_str(&self) -> String;
     /// Produce string of the OUI (not hashed), followed by the hash of the last three bytes
@@ -19,6 +21,7 @@ impl MacFmt for [u8; 6] {
         )
     }
 
+    /// Produce hashed string of the OUI (not hashed), followed by the hash of the last three bytes
     fn to_mac_str_partial_hashed<H>(&self, hash: H) -> String
     where
         H: FnOnce(&[u8]) -> String,
@@ -28,6 +31,22 @@ impl MacFmt for [u8; 6] {
 
     fn to_oui_uppercase(&self, sep: &str) -> String {
         format!("{:02X}{}{:02X}{}{:02X}", self[0], sep, self[1], sep, self[2])
+    }
+}
+
+pub trait SsidFmt {
+    /// Produce fixed length hashed string of the SSID
+    fn to_ssid_str_hashed<H>(&self, hash: H) -> String
+    where
+        H: FnOnce(&[u8]) -> String;
+}
+
+impl SsidFmt for [u8] {
+    fn to_ssid_str_hashed<H>(&self, hash: H) -> String
+    where
+        H: FnOnce(&[u8]) -> String,
+    {
+        format!("{}", &hash(&self[..])[..SSID_HASH_LEN])
     }
 }
 

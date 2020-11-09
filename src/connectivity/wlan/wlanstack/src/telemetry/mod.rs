@@ -24,7 +24,7 @@ use {
     std::default::Default,
     std::ops::Sub,
     std::sync::Arc,
-    wlan_common::{bss::BssDescriptionExt, format::MacFmt},
+    wlan_common::{bss::BssDescriptionExt as _, format::MacFmt},
     wlan_metrics_registry as metrics,
     wlan_sme::client::{
         info::{
@@ -600,7 +600,7 @@ pub fn log_disconnect(
         last_rssi: info.last_rssi,
         last_snr: info.last_snr,
         bssid: info.bssid.to_mac_str(),
-        bssid_hash: inspect_tree.hasher.hash_mac_addr(info.bssid),
+        bssid_hash: inspect_tree.hasher.hash_mac_addr(&info.bssid),
         ssid: String::from_utf8_lossy(&info.ssid[..]).to_string(),
         ssid_hash: inspect_tree.hasher.hash(&info.ssid[..]),
         channel: {
@@ -849,7 +849,7 @@ mod tests {
     #[test]
     fn test_log_connect_stats_select_network_failure() {
         let connect_stats = ConnectStats {
-            result: SelectNetworkFailure::NoCompatibleNetwork.into(),
+            result: SelectNetworkFailure::IncompatibleConnectRequest.into(),
             ..fake_connect_stats()
         };
         let expected_metrics_subset = hashset! {
