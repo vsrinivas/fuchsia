@@ -17,6 +17,7 @@ use crate::handler::device_storage::{DeviceStorage, DeviceStorageFactory};
 use crate::handler::setting_handler::persist::ClientProxy;
 use crate::handler::setting_handler::{BoxedController, ClientImpl};
 use crate::light::light_controller::LightController;
+use crate::light::light_hardware_configuration::LightGroupConfiguration;
 use crate::switchboard::base::SettingType;
 use crate::switchboard::light_types::{
     ColorRgb, LightGroup, LightInfo, LightState, LightType, LightValue,
@@ -32,6 +33,7 @@ const CONTEXT_ID: u64 = 0;
 
 const LIGHT_NAME_1: &str = "light_name_1";
 const LIGHT_NAME_2: &str = "light_name_2";
+const LIGHT_NAME_3: &str = "light_name_3";
 
 fn get_test_light_info() -> LightInfo {
     let mut light_groups = HashMap::new();
@@ -98,7 +100,7 @@ async fn populate_multiple_test_lights(
                 .insert_light(
                     group.hardware_index[i],
                     format!("{}_{}", name, i),
-                    group.light_type.clone(),
+                    group.light_type,
                     group.lights[i].value.clone().unwrap(),
                 )
                 .await;
@@ -336,6 +338,102 @@ async fn test_light_restores_on_watch() {
 
     // Upon a watch call, light controller will read the underlying value from the fake service.
     let settings = env.light_service.watch_light_groups().await.expect("watch completed");
+    assert_lights_eq(settings, expected_light_info);
+}
+
+// Tests that when a `LightHardwareConfiguration` is specified, that the service will restore
+// lights based on the configuration, while still reading light values from the underlying hardware.
+#[fuchsia_async::run_until_stalled(test)]
+async fn test_light_restore_from_configuration() {
+    // Populate the fake service with an initial set of lights.
+    let hardware_light_service_handle = Arc::new(Mutex::new(HardwareLightService::new()));
+    populate_single_test_lights(hardware_light_service_handle.clone(), get_test_light_info()).await;
+
+    // Hardware config only includes on light group, basically a renamed version of LIGHT_NAME_1.
+    let light_hardware_config = LightHardwareConfiguration {
+        light_groups: vec![LightGroupConfiguration {
+            name: LIGHT_NAME_3.to_string(),
+            hardware_index: vec![0],
+            light_type: LightType::Brightness,
+            persist: false,
+            disable_conditions: vec![],
+        }],
+    };
+
+    let env = TestLightEnvironmentBuilder::new()
+        .set_hardware_light_service_handle(hardware_light_service_handle)
+        .set_light_hardware_config(light_hardware_config)
+        .build()
+        .await;
+
+    // We're expecting LIGHT_NAME_1 except it's been renamed to LIGHT_NAME_3 by the hardware config.
+    let mut expected_light_group = get_test_light_info().light_groups.remove(LIGHT_NAME_1).unwrap();
+    expected_light_group.name = LIGHT_NAME_3.to_string();
+
+    // Verify that the restored value is persisted.
+    let mut store_lock = env.store.lock().await;
+    let retrieved_struct = store_lock.get().await;
+    assert_switchboard_light_group_eq(
+        &expected_light_group.clone(),
+        retrieved_struct.light_groups.get(LIGHT_NAME_3).unwrap(),
+    );
+
+    // Verify that the restored value is returned on a watch call.
+    let settings: fidl_fuchsia_settings::LightGroup =
+        env.light_service.watch_light_group(LIGHT_NAME_3).await.expect("watch completed");
+    assert_light_group_eq(
+        &fidl_fuchsia_settings::LightGroup::from(expected_light_group),
+        &settings,
+    );
+
+    // None of the light names provided by in the hardware itself are valid as they're not in the
+    // configuration.
+    env.light_service.watch_light_group(LIGHT_NAME_1).await.expect_err("watch should fail");
+    env.light_service.watch_light_group(LIGHT_NAME_2).await.expect_err("watch should fail");
+}
+
+// Tests that setting a light that's specified in a `LightHardwareConfiguration` also sets the value
+// in the underlying hardware.
+#[fuchsia_async::run_until_stalled(test)]
+async fn test_light_set_from_configuration() {
+    // Populate the fake service with an initial set of lights.
+    let hardware_light_service_handle = Arc::new(Mutex::new(HardwareLightService::new()));
+    populate_single_test_lights(hardware_light_service_handle.clone(), get_test_light_info()).await;
+
+    // Hardware config only includes on light group, basically a renamed version of LIGHT_NAME_1.
+    let light_hardware_config = LightHardwareConfiguration {
+        light_groups: vec![LightGroupConfiguration {
+            name: LIGHT_NAME_3.to_string(),
+            hardware_index: vec![0],
+            light_type: LightType::Brightness,
+            persist: false,
+            disable_conditions: vec![],
+        }],
+    };
+
+    let mut changed_light_group =
+        get_test_light_info().light_groups.get(LIGHT_NAME_1).unwrap().clone();
+    // The light hardware configuration basically renames LIGHT_NAME_1 to LIGHT_NAME_3.
+    changed_light_group.name = LIGHT_NAME_3.to_string();
+    changed_light_group.lights = vec![LightState { value: Some(LightValue::Brightness(0.99)) }];
+    let mut expected_light_info = LightInfo { light_groups: Default::default() };
+    expected_light_info.light_groups.insert(LIGHT_NAME_3.to_string(), changed_light_group.clone());
+
+    let env = TestLightEnvironmentBuilder::new()
+        .set_hardware_light_service_handle(hardware_light_service_handle)
+        .set_light_hardware_config(light_hardware_config)
+        .build()
+        .await;
+
+    // Set a light value.
+    set_light_value(&env.light_service, changed_light_group).await;
+
+    // Verify the value we set is persisted in DeviceStorage.
+    assert_eq!(expected_light_info, env.store.lock().await.get().await);
+
+    // Ensure value from Watch matches set value.
+    let settings: Vec<fidl_fuchsia_settings::LightGroup> =
+        env.light_service.watch_light_groups().await.expect("watch completed");
     assert_lights_eq(settings, expected_light_info);
 }
 

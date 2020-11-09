@@ -19,6 +19,7 @@ use crate::switchboard::base::{
 use crate::switchboard::light_types::{LightGroup, LightInfo, LightState, LightType, LightValue};
 use crate::{call_async, LightHardwareConfiguration};
 use std::collections::hash_map::Entry;
+use std::collections::HashMap;
 use std::convert::TryInto;
 
 /// Used as the argument field in a ControllerError::InvalidArgument to signal the FIDL handler to
@@ -46,8 +47,7 @@ pub struct LightController {
     /// Hardware configuration that determines what lights to return to the client.
     ///
     /// If present, overrides the lights from the underlying fuchsia.hardware.light API.
-    // TODO(fxbug.dev/53313): use config to override underlying light data
-    _light_hardware_config: Option<LightHardwareConfiguration>,
+    light_hardware_config: Option<LightHardwareConfiguration>,
 }
 
 #[async_trait]
@@ -103,7 +103,7 @@ impl LightController {
                 ))
             })?;
 
-        Ok(LightController { client, light_proxy, _light_hardware_config: light_hardware_config })
+        Ok(LightController { client, light_proxy, light_hardware_config })
     }
 
     async fn set(&self, name: String, state: Vec<LightState>) -> SettingHandlerResult {
@@ -211,8 +211,55 @@ impl LightController {
     }
 
     async fn restore(&self) -> SettingHandlerResult {
-        // Read light info from hardware.
-        let mut current = self.client.read().await;
+        if let Some(config) = self.light_hardware_config.clone() {
+            // Configuration is specified, restore from the configuration.
+            self.restore_from_configuration(config).await
+        } else {
+            // Read light info from hardware.
+            self.restore_from_hardware().await
+        }
+    }
+
+    /// Restores the light information from a pre-defined hardware configuration. Individual light
+    /// states are read from the underlying fuchsia.hardware.Light API, but the structure of the
+    /// light groups is determined by the given `config`.
+    async fn restore_from_configuration(
+        &self,
+        config: LightHardwareConfiguration,
+    ) -> SettingHandlerResult {
+        let mut light_groups: HashMap<String, LightGroup> = HashMap::new();
+        for group_config in config.light_groups {
+            let mut light_state: Vec<LightState> = Vec::new();
+            for light_index in group_config.hardware_index.iter() {
+                light_state.push(
+                    self.light_state_from_hardware_index(*light_index, group_config.light_type)
+                        .await
+                        .or_else(|e| Err(e))?,
+                );
+            }
+
+            light_groups.insert(
+                group_config.name.clone(),
+                LightGroup {
+                    name: group_config.name,
+                    // TODO(fxbug.dev/62591): listen to media button values to determine this
+                    // value.
+                    enabled: true,
+                    light_type: group_config.light_type,
+                    lights: light_state,
+                    hardware_index: group_config.hardware_index,
+                },
+            );
+        }
+
+        write(&self.client, LightInfo { light_groups }, false).await.into_handler_result()
+    }
+
+    /// Restores the light information when no hardware configuration is specified by reading from
+    /// the underlying fuchsia.hardware.Light API and turning each light into a [`LightGroup`].
+    ///
+    /// [`LightGroup`]: ../../switchboard/light_types/struct.LightGroup.html
+    async fn restore_from_hardware(&self) -> SettingHandlerResult {
         let num_lights =
             self.light_proxy.call_async(LightProxy::get_num_lights).await.or_else(|_| {
                 Err(ControllerError::ExternalFailure(
@@ -222,6 +269,7 @@ impl LightController {
                 ))
             })?;
 
+        let mut current = self.client.read().await;
         for i in 0..num_lights {
             let info = match call_async!(self.light_proxy => get_info(i)).await {
                 Ok(Ok(info)) => info,
@@ -240,15 +288,37 @@ impl LightController {
         write(&self.client, current, false).await.into_handler_result()
     }
 
-    /// Convert an Info object from fuchsia.hardware.Light into a LightGroup, the internal
+    /// Converts an Info object from the fuchsia.hardware.Light API into a LightGroup, the internal
     /// representation used for our service.
     async fn light_info_to_group(
         &self,
         index: u32,
         info: Info,
     ) -> Result<(String, LightGroup), ControllerError> {
-        let light_type = info.capability.into();
+        let light_type: LightType = info.capability.into();
 
+        let light_state = self.light_state_from_hardware_index(index, light_type).await?;
+
+        Ok((
+            info.name.clone(),
+            LightGroup {
+                name: info.name,
+                // When there's no config, lights are assumed to be always enabled.
+                enabled: true,
+                light_type,
+                lights: vec![light_state],
+                hardware_index: vec![index],
+            },
+        ))
+    }
+
+    /// Reads light state from the underlying fuchsia.hardware.Light API for the given hardware
+    /// index and light type.
+    async fn light_state_from_hardware_index(
+        &self,
+        index: u32,
+        light_type: LightType,
+    ) -> Result<LightState, ControllerError> {
         // Read the proper value depending on the light type.
         let value = match light_type {
             LightType::Brightness => LightValue::Brightness(
@@ -289,17 +359,6 @@ impl LightController {
             ),
         };
 
-        Ok((
-            info.name.clone(),
-            LightGroup {
-                name: info.name,
-                // TODO(fxbug.dev/53313): actually set this value once we can read configs and
-                // determine the expected behavior for it.
-                enabled: true,
-                light_type,
-                lights: vec![LightState { value: Some(value) }],
-                hardware_index: vec![index],
-            },
-        ))
+        Ok(LightState { value: Some(value) })
     }
 }

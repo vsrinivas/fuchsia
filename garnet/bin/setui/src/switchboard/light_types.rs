@@ -42,7 +42,7 @@ impl From<LightGroup> for fidl_fuchsia_settings::LightGroup {
     }
 }
 
-#[derive(PartialEq, Debug, Clone, Serialize, Deserialize)]
+#[derive(PartialEq, Debug, Copy, Clone, Serialize, Deserialize)]
 pub enum LightType {
     Brightness,
     Rgb,
