@@ -28,9 +28,6 @@ source_set("common") {
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/ramdevice-client",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 test("nand-broker") {
