@@ -18,6 +18,7 @@
             "fuchsia.hardware.pty.Device",
             "fuchsia.logger.Log",
             "fuchsia.logger.LogSink",
+            "fuchsia.media.Audio",
             "fuchsia.net.NameLookup",
             "fuchsia.pkg.PackageResolverAdmin",
             "fuchsia.pkg.RepositoryManager",
