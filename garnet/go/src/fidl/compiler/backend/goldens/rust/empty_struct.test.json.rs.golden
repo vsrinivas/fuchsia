@@ -16,10 +16,13 @@ use fuchsia_zircon as zx;
 use {
     bitflags::bitflags,
     fidl::{
+        client::{decode_transaction_body_fut, QueryResponseFut},
         fidl_empty_struct, fidl_flexible_bits, fidl_flexible_enum, fidl_strict_bits,
         fidl_strict_enum, fidl_struct, fidl_struct_copy, fidl_table, fidl_xunion,
+        wrap_handle_metadata,
     },
     fuchsia_zircon_status as zx_status,
+    futures::future::{self, MaybeDone, TryFutureExt},
 };
 
 const _FIDL_TRACE_BINDINGS_RUST: u32 = 6;
@@ -69,7 +72,8 @@ impl EmptyProtocolSynchronousProxy {
         mut e: &mut Empty,
         ___deadline: zx::Time,
     ) -> Result<(Empty), fidl::Error> {
-        self.client.send_query(&mut (e), 0x56ca6bd78bac3571, ___deadline)
+        let _value: (Empty,) = self.client.send_query(&mut (e), 0x56ca6bd78bac3571, ___deadline)?;
+        Ok(_value.0)
     }
 }
 
@@ -124,7 +128,16 @@ impl EmptyProtocolProxyInterface for EmptyProtocolProxy {
     type ReceiveResponseFut = fidl::client::QueryResponseFut<(Empty)>;
     type SendAndReceiveResponseFut = fidl::client::QueryResponseFut<(Empty)>;
     fn send_and_receive(&self, mut e: &mut Empty) -> Self::SendAndReceiveResponseFut {
-        self.client.send_query(&mut (e), 0x56ca6bd78bac3571)
+        fn transform(result: Result<(Empty,), fidl::Error>) -> Result<(Empty), fidl::Error> {
+            result.map(|_value| _value.0)
+        }
+        let send_result = self.client.call_send_raw_query(&mut (e), 0x56ca6bd78bac3571);
+        QueryResponseFut(match send_result {
+            Ok(res_fut) => future::maybe_done(
+                res_fut.and_then(|buf| decode_transaction_body_fut(buf, transform)),
+            ),
+            Err(e) => MaybeDone::Done(Err(e)),
+        })
     }
 }
 
@@ -318,17 +331,17 @@ impl futures::Stream for EmptyProtocolRequestStream {
 
             std::task::Poll::Ready(Some(match header.ordinal() {
                 0x1e4e78d0556b6f28 => {
-                    let mut req: (Empty) = fidl::encoding::Decodable::new_empty();
+                    let mut req: (Empty,) = fidl::encoding::Decodable::new_empty();
                     fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.emptystruct/EmptyProtocolSend_Request");
                     fidl::trace_blob!("fidl:blob", "decode", bytes);
                     fidl::encoding::Decoder::decode_into(&header, _body_bytes, handles, &mut req)?;
                     fidl::duration_end!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => handles.len() as u32);
                     let control_handle = EmptyProtocolControlHandle { inner: this.inner.clone() };
 
-                    Ok(EmptyProtocolRequest::Send_ { e: req, control_handle })
+                    Ok(EmptyProtocolRequest::Send_ { e: req.0, control_handle })
                 }
                 0x56ca6bd78bac3571 => {
-                    let mut req: (Empty) = fidl::encoding::Decodable::new_empty();
+                    let mut req: (Empty,) = fidl::encoding::Decodable::new_empty();
                     fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.emptystruct/EmptyProtocolSendAndReceiveRequest");
                     fidl::trace_blob!("fidl:blob", "decode", bytes);
                     fidl::encoding::Decoder::decode_into(&header, _body_bytes, handles, &mut req)?;
@@ -336,7 +349,7 @@ impl futures::Stream for EmptyProtocolRequestStream {
                     let control_handle = EmptyProtocolControlHandle { inner: this.inner.clone() };
 
                     Ok(EmptyProtocolRequest::SendAndReceive {
-                        e: req,
+                        e: req.0,
                         responder: EmptyProtocolSendAndReceiveResponder {
                             control_handle: std::mem::ManuallyDrop::new(control_handle),
                             tx_id: header.tx_id(),

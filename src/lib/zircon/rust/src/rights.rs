@@ -43,5 +43,21 @@ bitflags! {
         const POLICY         = sys::ZX_RIGHT_GET_POLICY | sys::ZX_RIGHT_SET_POLICY;
         const RESOURCE_BASIC = sys::ZX_RIGHT_TRANSFER | sys::ZX_RIGHT_DUPLICATE |
                                sys::ZX_RIGHT_WRITE | sys::ZX_RIGHT_INSPECT;
+        const CHANNEL_DEFAULT = sys::ZX_RIGHT_TRANSFER | sys::ZX_RIGHT_WAIT |
+                                sys::ZX_RIGHT_INSPECT |sys::ZX_RIGHT_READ |
+                                sys::ZX_RIGHT_WRITE | sys::ZX_RIGHT_SIGNAL |
+                                sys::ZX_RIGHT_SIGNAL_PEER;
+    }
+}
+
+impl Rights {
+    /// Same as from_bits() but a const fn.
+    #[inline]
+    pub const fn from_bits_const(bits: sys::zx_rights_t) -> Option<Rights> {
+        if (bits & !Rights::all().bits()) == 0 {
+            return Some(Rights { bits });
+        } else {
+            None
+        }
     }
 }

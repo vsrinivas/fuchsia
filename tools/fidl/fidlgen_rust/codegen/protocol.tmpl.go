@@ -5,6 +5,55 @@
 package codegen
 
 const protocolTmpl = `
+{{- define "ResponseType" -}}
+{{ if .Result }}
+{{ .Result.Name }}HandleWrapper
+{{- else -}}{{/* if not .Result */}}
+{{- range $index, $response := .Response -}}
+{{- if .HasHandleMetadata -}}
+{{ .HandleWrapperName }}<{{- $response.Type -}}>,
+{{- else -}}
+{{- $response.Type -}},
+{{- end -}}
+{{- end -}}{{/* end range */}}
+{{- end -}}
+{{- end -}}{{/* ResponseType */}}
+
+
+{{- define "RemoveHandleWrappers" -}}
+{{- if (eq (len .) 1) -}}
+
+{{- if (index . 0).HasHandleMetadata -}}
+_value.0.into_inner()
+{{- else -}}
+_value.0
+{{- end -}}
+
+{{- else -}}{{/* if (ne (len .) 1) */}}
+
+(
+{{- range $index, $response := . -}}
+{{ if .HasHandleMetadata }}
+_value.{{ $index }}.into_inner(),
+{{ else }}
+_value.{{ $index }},
+{{- end -}}
+{{- end -}}{{/* end range */}}
+)
+
+{{ end }}
+{{ end }}{{/* RemoveHandleWrappers */}}
+
+
+{{- define "ResponseValue" -}}
+{{ if .Result }}
+_value.map(|_value| {{ template "RemoveHandleWrappers" .Result.Ok }})
+{{ else }}
+{{ template "RemoveHandleWrappers" .Response }}
+{{ end }}
+{{ end }}{{/* ResponseValue */}}
+
+
 {{- define "ProtocolDeclaration" -}}
 {{- $protocol := . }}
 
@@ -94,7 +143,9 @@ impl {{ $protocol.Name }}SynchronousProxy {
 		{{- end -}}
 	), fidl::Error> {
 		{{- if $method.HasResponse -}}
-			self.client.send_query(&mut (
+			let _value: (
+				{{ template "ResponseType" $method }}
+			) = self.client.send_query(&mut (
 				{{- range $index, $request := $method.Request -}}
 				{{- if (eq $index 0) -}} {{ $request.Name }}
 				{{- else -}}, {{ $request.Name }} {{- end -}}
@@ -102,7 +153,8 @@ impl {{ $protocol.Name }}SynchronousProxy {
 				),
 				{{ $method.Ordinal | printf "%#x" }},
 				___deadline,
-			)
+			)?;
+			Ok({{ template "ResponseValue" $method }})
 		{{- else -}}
 			self.client.send(&mut (
 				{{- range $index, $request := $method.Request -}}
@@ -199,24 +251,49 @@ impl {{ $protocol.Name}}ProxyInterface for {{ $protocol.Name}}Proxy {
 	{{- end -}}
 
 	{{- if $method.HasRequest }}
+	{{- if $method.HasResponse -}}
 	fn {{ $method.Name }}(&self,
 		{{- range $request := $method.Request }}
 		mut {{ $request.Name }}: {{ $request.BorrowedType }},
 		{{- end }}
-	)
-	{{- if $method.HasResponse -}}
-	-> Self::{{ $method.CamelName}}ResponseFut {
-		self.client.send_query(&mut (
+	) -> Self::{{ $method.CamelName}}ResponseFut {
+		fn transform(result: Result<(
+			{{ template "ResponseType" $method }}
+		), fidl::Error>) -> Result<(
+			{{- range $index, $response := $method.Response -}}
+			{{- if (eq $index 0) -}} {{- $response.Type -}}
+			{{- else -}}, {{- $response.Type -}} {{- end -}}
+			{{- end -}}
+		), fidl::Error> {
+			result.map(|_value| {{ template "ResponseValue" $method }})
+		}
+		let send_result = self.client.call_send_raw_query(&mut (
+		{{- range $index, $request := $method.Request -}}
+		{{- if (eq $index 0) -}} {{ $request.Name }}
+		{{- else -}}, {{ $request.Name }} {{- end -}}
+		{{- end -}}
+		), {{ $method.Ordinal | printf "%#x" }});
+		QueryResponseFut(match send_result {
+            Ok(res_fut) => {
+                future::maybe_done(res_fut.and_then(|buf| decode_transaction_body_fut(buf, transform)))
+            }
+            Err(e) => MaybeDone::Done(Err(e)),
+        })
+	}
 	{{- else -}}
-	-> Result<(), fidl::Error> {
+	fn {{ $method.Name }}(&self,
+		{{- range $request := $method.Request }}
+		mut {{ $request.Name }}: {{ $request.BorrowedType }},
+		{{- end }}
+	) -> Result<(), fidl::Error> {
 		self.client.send(&mut (
-	{{- end -}}
 		{{- range $index, $request := $method.Request -}}
 		{{- if (eq $index 0) -}} {{ $request.Name }}
 		{{- else -}}, {{ $request.Name }} {{- end -}}
 		{{- end -}}
 	), {{ $method.Ordinal | printf "%#x" }})
 	}
+	{{- end -}}
 	{{- end -}}
 	{{- end -}}
 }
@@ -254,7 +331,11 @@ impl futures::Stream for {{ $protocol.Name }}EventStream {
 			{{ .Ordinal | printf "%#x" }} => {
 				let mut out_tuple: (
 					{{- range $index, $param := $method.Response -}}
+					{{- if .HasHandleMetadata -}}
+					{{ .HandleWrapperName }}<{{- $param.Type -}}>,
+					{{- else -}}
 					{{- $param.Type -}},
+					{{- end -}}
 					{{- end -}}
 				) = fidl::encoding::Decodable::new_empty();
 				fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "{{ $protocol.ECI }}{{ $method.CamelName }}Event");
@@ -264,7 +345,11 @@ impl futures::Stream for {{ $protocol.Name }}EventStream {
 				Ok((
 					{{ $protocol.Name }}Event::{{ $method.CamelName }} {
 						{{- range $index, $param := $method.Response -}}
+						{{ if $param.HasHandleMetadata }}
+						{{- $param.Name -}}: out_tuple.{{- $index -}}.into_inner(),
+						{{- else -}}
 						{{- $param.Name -}}: out_tuple.{{- $index -}},
+						{{- end -}}
 						{{- end -}}
 					}
 				))
@@ -463,8 +548,10 @@ impl futures::Stream for {{ $protocol.Name }}RequestStream {
 				{{ .Ordinal | printf "%#x" }} => {
 					let mut req: (
 						{{- range $index, $param := $method.Request -}}
-							{{- if ne 0 $index -}}, {{- $param.Type -}}
-							{{- else -}} {{- $param.Type -}}
+							{{-  if .HasHandleMetadata -}}
+							{{ .HandleWrapperName }}<{{- $param.Type -}}>,
+							{{- else -}}
+							{{- $param.Type -}},
 							{{- end -}}
 						{{- end -}}
 					) = fidl::encoding::Decodable::new_empty();
@@ -478,10 +565,10 @@ impl futures::Stream for {{ $protocol.Name }}RequestStream {
 
 					Ok({{ $protocol.Name }}Request::{{ $method.CamelName }} {
 						{{- range $index, $param := $method.Request -}}
-							{{- if ne 1 (len $method.Request) -}}
-							{{ $param.Name }}: req.{{ $index }},
+							{{- if .HasHandleMetadata -}}
+							{{ $param.Name }}: req.{{ $index }}.into_inner(),
 							{{- else -}}
-							{{ $param.Name }}: req,
+							{{ $param.Name }}: req.{{ $index }},
 							{{- end -}}
 						{{- end -}}
 						{{- if $method.HasResponse -}}
@@ -540,7 +627,11 @@ impl {{ $protocol.Name }}RequestMessage {
 			{{ .Ordinal | printf "%#x" }} => {
 				let mut out_tuple: (
 					{{- range $index, $param := $method.Request -}}
+						{{- if .HasHandleMetadata -}}
+						{{ .HandleWrapperName }}<{{- $param.Type -}}>,
+						{{- else -}}
 						{{- $param.Type -}},
+						{{- end -}}
 					{{- end -}}
 				) = fidl::encoding::Decodable::new_empty();
 				fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "{{ $protocol.ECI }}{{ $method.CamelName }}Request");
@@ -550,7 +641,11 @@ impl {{ $protocol.Name }}RequestMessage {
 
 				Ok({{ $protocol.Name }}RequestMessage::{{ $method.CamelName }} {
 					{{- range $index, $param := $method.Request -}}
+						{{- if .HasHandleMetadata -}}
+						{{ $param.Name }}: out_tuple.{{ $index }}.into_inner(),
+						{{- else -}}
 						{{ $param.Name }}: out_tuple.{{ $index }},
+						{{- end -}}
 					{{- end -}}
 					{{- if $method.HasResponse -}}
 						tx_id: header.tx_id().into(),

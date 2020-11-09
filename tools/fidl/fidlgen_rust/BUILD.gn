@@ -21,6 +21,7 @@ go_library("gopkg") {
     "codegen/codegen_test.go",
     "codegen/const.tmpl.go",
     "codegen/enum.tmpl.go",
+    "codegen/handle_metadata_wrappers.tmpl.go",
     "codegen/ir.go",
     "codegen/ir_test.go",
     "codegen/protocol.tmpl.go",

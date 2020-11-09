@@ -26,7 +26,7 @@ use std::{
 const INVALID_HANDLE: u32 = 0xffff_ffff;
 
 /// The type of an object.
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Copy, Clone)]
 pub struct ObjectType(u32);
 
 macro_rules! define_object_type_constant {
@@ -40,6 +40,11 @@ impl ObjectType {
     /// No object.
     pub const NONE: ObjectType = ObjectType(0);
     invoke_for_handle_types!(define_object_type_constant);
+
+    /// Converts ObjectType into the underlying zircon type.
+    pub fn into_raw(self) -> u32 {
+        self.0
+    }
 }
 
 /// A borrowed reference to an underlying handle
@@ -301,7 +306,7 @@ impl Channel {
     /// Create a channel, resulting in a pair of `Channel` objects representing both
     /// sides of the channel. Messages written into one maybe read from the opposite.
     pub fn create() -> Result<(Channel, Channel), zx_status::Status> {
-        let rights = Rights::TRANSFER | Rights::WRITE | Rights::READ;
+        let rights = Rights::CHANNEL_DEFAULT;
         let (shard, slot) = CHANNELS.new_handle_slot(rights);
         let left = pack_handle(shard, slot, HdlType::Channel, Side::Left);
         let right = pack_handle(shard, slot, HdlType::Channel, Side::Right);
@@ -763,6 +768,22 @@ bitflags! {
         const WRITE          = 1 << 3;
         /// Same rights.
         const SAME_RIGHTS = 1 << 31;
+        /// Rights of a new channel.
+        const CHANNEL_DEFAULT = Rights::TRANSFER.bits() |
+                                Rights::READ.bits() |
+                                Rights::WRITE.bits();
+    }
+}
+
+impl Rights {
+    /// Same as from_bits() but a const fn.
+    #[inline]
+    pub const fn from_bits_const(bits: u32) -> Option<Rights> {
+        if (bits & !Rights::all().bits()) == 0 {
+            return Some(Rights { bits });
+        } else {
+            None
+        }
     }
 }
 

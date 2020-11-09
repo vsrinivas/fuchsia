@@ -5,6 +5,7 @@
 //! Error (common to all fidl operations)
 
 use {
+    crate::handle::{ObjectType, Rights},
     fuchsia_zircon_status as zx_status,
     std::{io, result},
     thiserror::Error,
@@ -119,6 +120,26 @@ pub enum Error {
     /// A handle which is invalid in the context of a host build of Fuchsia.
     #[error("Invalid FIDL handle used on the host.")]
     InvalidHostHandle,
+
+    /// The handle subtype doesn't match the expected subtype.
+    #[error("Incorrect handle subtype. Expected {}, but received {}", expected.into_raw(), received.into_raw())]
+    IncorrectHandleSubtype {
+        /// The expected object type.
+        expected: ObjectType,
+        /// The received object type.
+        received: ObjectType,
+    },
+
+    /// Some expected handle rights are missing.
+    #[error("Some expected handle rights are missing: {}", missing_rights.bits())]
+    MissingExpectedHandleRights {
+        /// The rights that are missing.
+        missing_rights: Rights,
+    },
+
+    /// An error was encountered during handle replace().
+    #[error("An error was encountered during handle replace()")]
+    HandleReplace(#[source] zx_status::Status),
 
     /// A FIDL server encountered an IO error writing a response to a channel.
     #[error("A server encountered an IO error writing a FIDL response to a channel: {}", _0)]

@@ -16,10 +16,13 @@ use fuchsia_zircon as zx;
 use {
     bitflags::bitflags,
     fidl::{
+        client::{decode_transaction_body_fut, QueryResponseFut},
         fidl_empty_struct, fidl_flexible_bits, fidl_flexible_enum, fidl_strict_bits,
         fidl_strict_enum, fidl_struct, fidl_struct_copy, fidl_table, fidl_xunion,
+        wrap_handle_metadata,
     },
     fuchsia_zircon_status as zx_status,
+    futures::future::{self, MaybeDone, TryFutureExt},
 };
 
 pub const ALL_BINDINGS: u32 = 0;

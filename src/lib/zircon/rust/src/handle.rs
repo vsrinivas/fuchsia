@@ -374,7 +374,15 @@ assoc_values!(ObjectType, [
     SUSPEND_TOKEN   = sys::ZX_OBJ_TYPE_SUSPEND_TOKEN;
     PAGER           = sys::ZX_OBJ_TYPE_PAGER;
     EXCEPTION       = sys::ZX_OBJ_TYPE_EXCEPTION;
+    CLOCK           = sys::ZX_OBJ_TYPE_CLOCK;
 ]);
+
+impl ObjectType {
+    /// Converts ObjectType into the underlying zircon type.
+    pub fn into_raw(self) -> sys::zx_obj_type_t {
+        self.0
+    }
+}
 
 /// Basic information about a handle.
 ///

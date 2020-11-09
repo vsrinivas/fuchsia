@@ -490,15 +490,76 @@ impl<'a> Decoder<'a> {
         decoder.post_decoding(inline_size, next_out_of_line)
     }
 
+    fn consume_handle_info(&self, mut handle_info: HandleInfo) -> Result<Handle> {
+        let received_subtype = handle_info.object_type;
+        let expected_subtype = self.next_handle_subtype;
+        if expected_subtype != ObjectType::NONE
+            && received_subtype != ObjectType::NONE
+            && expected_subtype != received_subtype
+        {
+            return Err(Error::IncorrectHandleSubtype {
+                expected: expected_subtype,
+                received: received_subtype,
+            });
+        }
+
+        let received_rights = handle_info.rights;
+        let expected_rights = self.next_handle_rights;
+        // We shouldn't receive a handle with no rights.
+        // At a minimum TRANSFER or DUPLICATE is needed to send the handle.
+        assert!(!expected_rights.is_empty());
+        if expected_rights != Rights::SAME_RIGHTS
+            && received_rights != Rights::SAME_RIGHTS
+            && expected_rights != received_rights
+        {
+            if !received_rights.contains(expected_rights) {
+                return Err(Error::MissingExpectedHandleRights {
+                    missing_rights: expected_rights - received_rights,
+                });
+            }
+            return match handle_info.handle.replace(expected_rights) {
+                Ok(r) => Ok(r),
+                Err(status) => Err(Error::HandleReplace(status)),
+            };
+        }
+        Ok(std::mem::replace(&mut handle_info.handle, Handle::invalid()))
+    }
+
     /// Take the next handle from the `handles` list.
     #[inline]
     pub fn take_next_handle(&mut self) -> Result<Handle> {
         if self.next_handle >= self.handles.len() {
             return Err(Error::OutOfRange);
         }
-        let handle = take_handle(&mut self.handles[self.next_handle].handle);
+        let handle_info = std::mem::replace(
+            &mut self.handles[self.next_handle],
+            HandleInfo {
+                handle: Handle::invalid(),
+                object_type: ObjectType::NONE,
+                rights: Rights::NONE,
+            },
+        );
+        let handle = self.consume_handle_info(handle_info)?;
         self.next_handle += 1;
         Ok(handle)
+    }
+
+    /// Drops the next handle in the handle array.
+    #[inline]
+    pub fn drop_next_handle(&mut self) -> Result<()> {
+        if self.next_handle >= self.handles.len() {
+            return Err(Error::OutOfRange);
+        }
+        drop(std::mem::replace(
+            &mut self.handles[self.next_handle],
+            HandleInfo {
+                handle: Handle::invalid(),
+                object_type: ObjectType::NONE,
+                rights: Rights::NONE,
+            },
+        ));
+        self.next_handle += 1;
+        Ok(())
     }
 
     /// Generates an error for bad padding bytes at the end of a block.
@@ -2699,7 +2760,7 @@ pub fn decode_unknown_table_field(decoder: &mut Decoder<'_>, offset: usize) -> R
     match present {
         ALLOC_PRESENT_U64 => decoder.read_out_of_line(num_bytes as usize, |decoder, _offset| {
             for _ in 0..num_handles {
-                decoder.take_next_handle()?;
+                decoder.drop_next_handle()?;
             }
             Ok(())
         }),
@@ -2891,8 +2952,6 @@ macro_rules! fidl_table {
 
                         // Decode the remaining unknown envelopes.
                         while next_offset < end_offset {
-                            decoder.set_next_handle_subtype($crate::handle::ObjectType::NONE);
-                            decoder.set_next_handle_rights($crate::handle::Rights::SAME_RIGHTS);
                             $crate::encoding::decode_unknown_table_field(decoder, next_offset)?;
                             next_offset += 16;
                         }
@@ -3217,7 +3276,7 @@ macro_rules! fidl_xunion {
                     // Strict xunion: reject unknown ordinals.
                     _ => {
                         for _ in 0..num_handles {
-                            decoder.take_next_handle()?;
+                            decoder.drop_next_handle()?;
                         }
                         return Err($crate::Error::UnknownUnionTag);
                     },
@@ -3251,7 +3310,7 @@ macro_rules! fidl_xunion {
                                     let bytes = decoder.buffer()[offset.. offset+(num_bytes as usize)].to_vec();
                                     let mut handles = Vec::with_capacity(num_handles as usize);
                                     decoder.set_next_handle_subtype($crate::handle::ObjectType::NONE);
-                                    decoder.set_next_handle_rights($crate::handle::Rights::NONE);
+                                    decoder.set_next_handle_rights($crate::handle::Rights::SAME_RIGHTS);
                                     for _ in 0..num_handles {
                                         handles.push(decoder.take_next_handle()?);
                                     }
@@ -3636,6 +3695,64 @@ pub fn decode_persistent_body<T: Decodable>(bytes: &[u8], header: &PersistentHea
     Ok(output)
 }
 
+/// Creates a type that wraps a value and provides object type and rights information.
+#[macro_export]
+macro_rules! wrap_handle_metadata {
+    ($name:ident, $object_type:expr, $rights:expr) => {
+        pub struct $name<T>(T);
+
+        impl<T> $name<T> {
+            pub fn into_inner(self) -> T {
+                self.0
+            }
+        }
+
+        impl<T: $crate::encoding::Layout> $crate::encoding::Layout for $name<T> {
+            #[inline]
+            fn inline_align(context: &$crate::encoding::Context) -> usize {
+                T::inline_align(context)
+            }
+
+            #[inline]
+            fn inline_size(context: &$crate::encoding::Context) -> usize {
+                T::inline_size(context)
+            }
+        }
+
+        impl<T: $crate::encoding::Encodable> $crate::encoding::Encodable for $name<T> {
+            #[inline]
+            unsafe fn unsafe_encode(
+                &mut self,
+                encoder: &mut $crate::encoding::Encoder<'_>,
+                offset: usize,
+                recursion_depth: usize,
+            ) -> $crate::Result<()> {
+                encoder.set_next_handle_subtype($object_type);
+                encoder.set_next_handle_rights($rights);
+                self.0.unsafe_encode(encoder, offset, recursion_depth)
+            }
+        }
+
+        impl<T: $crate::encoding::Decodable> $crate::encoding::Decodable for $name<T> {
+            #[inline]
+            fn new_empty() -> Self {
+                Self(T::new_empty())
+            }
+
+            #[inline]
+            unsafe fn unsafe_decode(
+                &mut self,
+                decoder: &mut $crate::encoding::Decoder<'_>,
+                offset: usize,
+            ) -> $crate::Result<()> {
+                decoder.set_next_handle_subtype($object_type);
+                decoder.set_next_handle_rights($rights);
+                self.0.unsafe_decode(decoder, offset)
+            }
+        }
+    };
+}
+
 // Implementations of Encodable for (&mut Head, ...Tail) and Decodable for (Head, ...Tail)
 macro_rules! tuple_impls {
     () => {};
@@ -3730,19 +3847,18 @@ macro_rules! tuple_impls {
 
             #[inline]
             unsafe fn unsafe_decode(&mut self, decoder: &mut Decoder<'_>, offset: usize) -> Result<()> {
-                let mut cur_offset = 0;
                 self.$idx.unsafe_decode(decoder, offset)?;
-                cur_offset += decoder.inline_size_of::<$typ>();
+                let mut _cur_offset = decoder.inline_size_of::<$typ>();
                 $(
                     // Skip to the start of the next field
                     let member_offset =
-                        round_up_to_align(cur_offset, decoder.inline_align_of::<$ntyp>());
-                    decoder.check_padding(offset + cur_offset, member_offset - cur_offset)?;
+                        round_up_to_align(_cur_offset, decoder.inline_align_of::<$ntyp>());
+                    decoder.check_padding(offset + _cur_offset, member_offset - _cur_offset)?;
                     self.$nidx.unsafe_decode(decoder, offset + member_offset)?;
-                    cur_offset = member_offset + decoder.inline_size_of::<$ntyp>();
+                    _cur_offset = member_offset + decoder.inline_size_of::<$ntyp>();
                 )*
                 // Skip to the end of the struct's size
-                decoder.check_padding(offset + cur_offset, decoder.inline_size_of::<Self>() - cur_offset)?;
+                decoder.check_padding(offset + _cur_offset, decoder.inline_size_of::<Self>() - _cur_offset)?;
                 Ok(())
             }
         }
@@ -4517,6 +4633,10 @@ mod test {
             handle {
                 ty: Handle,
                 ordinal: 4,
+                handle_metadata: {
+                    handle_subtype: ObjectType::NONE,
+                    handle_rights: Rights::SAME_RIGHTS,
+                },
             },
         ],
     }
@@ -5021,6 +5141,10 @@ mod test {
             SomethinElse {
                 ty: Handle,
                 ordinal: 55,
+                handle_metadata: {
+                    handle_subtype: ObjectType::NONE,
+                    handle_rights: Rights::SAME_RIGHTS,
+                },
             },
         ],
         unknown_member: __UnknownVariant,
@@ -5251,7 +5375,8 @@ mod zx_test {
 
             assert!(handle.is_invalid());
 
-            let mut handle_out = Handle::new_empty();
+            wrap_handle_metadata!(HandleWrapper, ObjectType::NONE, Rights::SAME_RIGHTS);
+            let mut handle_out = HandleWrapper(Handle::new_empty());
             Decoder::decode_with_context(
                 ctx,
                 buf,
@@ -5260,7 +5385,7 @@ mod zx_test {
             )
             .expect("Decoding failed");
 
-            assert_eq!(raw_handle, handle_out.raw_handle());
+            assert_eq!(raw_handle, handle_out.into_inner().raw_handle());
         }
     }
 

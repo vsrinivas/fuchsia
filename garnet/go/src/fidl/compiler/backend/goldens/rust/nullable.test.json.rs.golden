@@ -16,10 +16,13 @@ use fuchsia_zircon as zx;
 use {
     bitflags::bitflags,
     fidl::{
+        client::{decode_transaction_body_fut, QueryResponseFut},
         fidl_empty_struct, fidl_flexible_bits, fidl_flexible_enum, fidl_strict_bits,
         fidl_strict_enum, fidl_struct, fidl_struct_copy, fidl_table, fidl_xunion,
+        wrap_handle_metadata,
     },
     fuchsia_zircon_status as zx_status,
+    futures::future::{self, MaybeDone, TryFutureExt},
 };
 
 const _FIDL_TRACE_BINDINGS_RUST: u32 = 6;
@@ -96,7 +99,7 @@ fidl_struct! {
       offset_v1: 0,
       handle_metadata: {
         handle_subtype: fidl::ObjectType::VMO,
-        handle_rights: fidl::Rights::from_bits_truncate(2147483648),
+        handle_rights: fidl::Rights::from_bits_const(2147483648).unwrap(),
       },
     },
   ],
@@ -117,6 +120,10 @@ fidl_struct! {
     val {
       ty: Option<fidl::endpoints::ClientEnd<SimpleProtocolMarker>>,
       offset_v1: 0,
+      handle_metadata: {
+        handle_subtype: fidl::ObjectType::CHANNEL,
+        handle_rights: fidl::Rights::CHANNEL_DEFAULT,
+      },
     },
   ],
   padding: [],
@@ -136,6 +143,10 @@ fidl_struct! {
     val {
       ty: Option<fidl::endpoints::ServerEnd<SimpleProtocolMarker>>,
       offset_v1: 0,
+      handle_metadata: {
+        handle_subtype: fidl::ObjectType::CHANNEL,
+        handle_rights: fidl::Rights::CHANNEL_DEFAULT,
+      },
     },
   ],
   padding: [],
@@ -237,7 +248,9 @@ impl SimpleProtocolSynchronousProxy {
         mut b: i32,
         ___deadline: zx::Time,
     ) -> Result<(i32), fidl::Error> {
-        self.client.send_query(&mut (a, b), 0x113010d7832f175d, ___deadline)
+        let _value: (i32,) =
+            self.client.send_query(&mut (a, b), 0x113010d7832f175d, ___deadline)?;
+        Ok(_value.0)
     }
 }
 
@@ -285,7 +298,16 @@ impl SimpleProtocolProxy {
 impl SimpleProtocolProxyInterface for SimpleProtocolProxy {
     type AddResponseFut = fidl::client::QueryResponseFut<(i32)>;
     fn add(&self, mut a: i32, mut b: i32) -> Self::AddResponseFut {
-        self.client.send_query(&mut (a, b), 0x113010d7832f175d)
+        fn transform(result: Result<(i32,), fidl::Error>) -> Result<(i32), fidl::Error> {
+            result.map(|_value| _value.0)
+        }
+        let send_result = self.client.call_send_raw_query(&mut (a, b), 0x113010d7832f175d);
+        QueryResponseFut(match send_result {
+            Ok(res_fut) => future::maybe_done(
+                res_fut.and_then(|buf| decode_transaction_body_fut(buf, transform)),
+            ),
+            Err(e) => MaybeDone::Done(Err(e)),
+        })
     }
 }
 

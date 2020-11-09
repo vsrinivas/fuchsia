@@ -16,10 +16,13 @@ use fuchsia_zircon as zx;
 use {
     bitflags::bitflags,
     fidl::{
+        client::{decode_transaction_body_fut, QueryResponseFut},
         fidl_empty_struct, fidl_flexible_bits, fidl_flexible_enum, fidl_strict_bits,
         fidl_strict_enum, fidl_struct, fidl_struct_copy, fidl_table, fidl_xunion,
+        wrap_handle_metadata,
     },
     fuchsia_zircon_status as zx_status,
+    futures::future::{self, MaybeDone, TryFutureExt},
 };
 
 const _FIDL_TRACE_BINDINGS_RUST: u32 = 6;
@@ -115,14 +118,18 @@ impl ProtocolSynchronousProxy {
         mut s: &mut StrictFoo,
         ___deadline: zx::Time,
     ) -> Result<(FlexibleFoo), fidl::Error> {
-        self.client.send_query(&mut (s), 0x3c5330c58686011a, ___deadline)
+        let _value: (FlexibleFoo,) =
+            self.client.send_query(&mut (s), 0x3c5330c58686011a, ___deadline)?;
+        Ok(_value.0)
     }
     pub fn request_flexible_response_strict(
         &mut self,
         mut s: &mut FlexibleFoo,
         ___deadline: zx::Time,
     ) -> Result<(StrictFoo), fidl::Error> {
-        self.client.send_query(&mut (s), 0x3cb49d8f6e204f76, ___deadline)
+        let _value: (StrictFoo,) =
+            self.client.send_query(&mut (s), 0x3cb49d8f6e204f76, ___deadline)?;
+        Ok(_value.0)
     }
 }
 
@@ -182,14 +189,36 @@ impl ProtocolProxyInterface for ProtocolProxy {
         &self,
         mut s: &mut StrictFoo,
     ) -> Self::RequestStrictResponseFlexibleResponseFut {
-        self.client.send_query(&mut (s), 0x3c5330c58686011a)
+        fn transform(
+            result: Result<(FlexibleFoo,), fidl::Error>,
+        ) -> Result<(FlexibleFoo), fidl::Error> {
+            result.map(|_value| _value.0)
+        }
+        let send_result = self.client.call_send_raw_query(&mut (s), 0x3c5330c58686011a);
+        QueryResponseFut(match send_result {
+            Ok(res_fut) => future::maybe_done(
+                res_fut.and_then(|buf| decode_transaction_body_fut(buf, transform)),
+            ),
+            Err(e) => MaybeDone::Done(Err(e)),
+        })
     }
     type RequestFlexibleResponseStrictResponseFut = fidl::client::QueryResponseFut<(StrictFoo)>;
     fn request_flexible_response_strict(
         &self,
         mut s: &mut FlexibleFoo,
     ) -> Self::RequestFlexibleResponseStrictResponseFut {
-        self.client.send_query(&mut (s), 0x3cb49d8f6e204f76)
+        fn transform(
+            result: Result<(StrictFoo,), fidl::Error>,
+        ) -> Result<(StrictFoo), fidl::Error> {
+            result.map(|_value| _value.0)
+        }
+        let send_result = self.client.call_send_raw_query(&mut (s), 0x3cb49d8f6e204f76);
+        QueryResponseFut(match send_result {
+            Ok(res_fut) => future::maybe_done(
+                res_fut.and_then(|buf| decode_transaction_body_fut(buf, transform)),
+            ),
+            Err(e) => MaybeDone::Done(Err(e)),
+        })
     }
 }
 
@@ -368,7 +397,7 @@ impl futures::Stream for ProtocolRequestStream {
 
             std::task::Poll::Ready(Some(match header.ordinal() {
                 0x3c5330c58686011a => {
-                    let mut req: (StrictFoo) = fidl::encoding::Decodable::new_empty();
+                    let mut req: (StrictFoo,) = fidl::encoding::Decodable::new_empty();
                     fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.requestflexibleenvelope/ProtocolRequestStrictResponseFlexibleRequest");
                     fidl::trace_blob!("fidl:blob", "decode", bytes);
                     fidl::encoding::Decoder::decode_into(&header, _body_bytes, handles, &mut req)?;
@@ -376,7 +405,7 @@ impl futures::Stream for ProtocolRequestStream {
                     let control_handle = ProtocolControlHandle { inner: this.inner.clone() };
 
                     Ok(ProtocolRequest::RequestStrictResponseFlexible {
-                        s: req,
+                        s: req.0,
                         responder: ProtocolRequestStrictResponseFlexibleResponder {
                             control_handle: std::mem::ManuallyDrop::new(control_handle),
                             tx_id: header.tx_id(),
@@ -385,7 +414,7 @@ impl futures::Stream for ProtocolRequestStream {
                     })
                 }
                 0x3cb49d8f6e204f76 => {
-                    let mut req: (FlexibleFoo) = fidl::encoding::Decodable::new_empty();
+                    let mut req: (FlexibleFoo,) = fidl::encoding::Decodable::new_empty();
                     fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.requestflexibleenvelope/ProtocolRequestFlexibleResponseStrictRequest");
                     fidl::trace_blob!("fidl:blob", "decode", bytes);
                     fidl::encoding::Decoder::decode_into(&header, _body_bytes, handles, &mut req)?;
@@ -393,7 +422,7 @@ impl futures::Stream for ProtocolRequestStream {
                     let control_handle = ProtocolControlHandle { inner: this.inner.clone() };
 
                     Ok(ProtocolRequest::RequestFlexibleResponseStrict {
-                        s: req,
+                        s: req.0,
                         responder: ProtocolRequestFlexibleResponseStrictResponder {
                             control_handle: std::mem::ManuallyDrop::new(control_handle),
                             tx_id: header.tx_id(),

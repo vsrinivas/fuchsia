@@ -76,13 +76,19 @@ type UnionMember struct {
 	HandleSubtype     string
 }
 
+type ResultOkEntry struct {
+	OGType            types.Type
+	Type              string
+	HasHandleMetadata bool
+	HandleWrapperName string
+}
+
 type Result struct {
 	types.Attributes
 	ECI       EncodedCompoundIdentifier
 	Derives   derives
 	Name      string
-	OkOGTypes []types.Type
-	Ok        []string
+	Ok        []ResultOkEntry
 	ErrOGType types.Type
 	ErrType   string
 	Size      int
@@ -164,14 +170,23 @@ type Method struct {
 	Request        []Parameter
 	HasResponse    bool
 	Response       []Parameter
+	Result         *Result
 	IsTransitional bool
 }
 
 type Parameter struct {
-	OGType       types.Type
-	Type         string
-	BorrowedType string
-	Name         string
+	OGType            types.Type
+	Type              string
+	BorrowedType      string
+	Name              string
+	HandleWrapperName string
+	HasHandleMetadata bool
+}
+
+type HandleMetadataWrapper struct {
+	Name    string
+	Subtype string
+	Rights  string
 }
 
 type Service struct {
@@ -190,16 +205,17 @@ type ServiceMember struct {
 }
 
 type Root struct {
-	ExternCrates []string
-	Bits         []Bits
-	Consts       []Const
-	Enums        []Enum
-	Structs      []Struct
-	Unions       []Union
-	Results      []Result
-	Tables       []Table
-	Protocols    []Protocol
-	Services     []Service
+	ExternCrates           []string
+	Bits                   []Bits
+	Consts                 []Const
+	Enums                  []Enum
+	Structs                []Struct
+	Unions                 []Union
+	Results                []Result
+	Tables                 []Table
+	Protocols              []Protocol
+	Services               []Service
+	HandleMetadataWrappers []HandleMetadataWrapper
 }
 
 func (r *Root) findProtocol(eci EncodedCompoundIdentifier) *Protocol {
@@ -444,6 +460,8 @@ type compiler struct {
 	externCrates           map[string]struct{}
 	requestResponsePayload map[types.EncodedCompoundIdentifier]types.Struct
 	structs                map[types.EncodedCompoundIdentifier]types.Struct
+	results                map[types.EncodedCompoundIdentifier]Result
+	handleMetadataWrappers map[string]HandleMetadataWrapper
 }
 
 func (c *compiler) inExternalLibrary(ci types.CompoundIdentifier) bool {
@@ -591,22 +609,62 @@ func compileHandleSubtype(val types.HandleSubtype) string {
 	panic(fmt.Sprintf("unknown handle type: %v", val))
 }
 
-func fieldHandleInformation(val *types.Type) (string, string, bool) {
+type FieldHandleInformation struct {
+	fullObjectType    string
+	fullRights        string
+	shortObjectType   string
+	shortRights       string
+	hasHandleMetadata bool
+}
+
+func (c *compiler) fieldHandleInformation(val *types.Type) FieldHandleInformation {
 	if val.ElementType != nil {
-		return fieldHandleInformation(val.ElementType)
+		return c.fieldHandleInformation(val.ElementType)
+	}
+	if val.Kind == types.RequestType {
+		return FieldHandleInformation{
+			fullObjectType:    "fidl::ObjectType::CHANNEL",
+			fullRights:        "fidl::Rights::CHANNEL_DEFAULT",
+			shortObjectType:   "CHANNEL",
+			shortRights:       "CHANNEL_DEFAULT",
+			hasHandleMetadata: true,
+		}
+	}
+	if val.Kind == types.IdentifierType {
+		declType, ok := c.decls[val.Identifier]
+		if !ok {
+			panic(fmt.Sprintf("unknown identifier: %v", val.Identifier))
+		}
+		if declType == types.ProtocolDeclType {
+			return FieldHandleInformation{
+				fullObjectType:    "fidl::ObjectType::CHANNEL",
+				fullRights:        "fidl::Rights::CHANNEL_DEFAULT",
+				shortObjectType:   "CHANNEL",
+				shortRights:       "CHANNEL_DEFAULT",
+				hasHandleMetadata: true,
+			}
+		}
 	}
 	if val.Kind != types.HandleType {
-		return "fidl::ObjectType::NONE", "fidl::Rights::NONE", false
+		return FieldHandleInformation{
+			fullObjectType:    "fidl::ObjectType::NONE",
+			fullRights:        "fidl::Rights::NONE",
+			shortObjectType:   "NONE",
+			shortRights:       "NONE",
+			hasHandleMetadata: false,
+		}
 	}
 	subtype, ok := handleSubtypeConsts[val.HandleSubtype]
 	if !ok {
 		panic(fmt.Sprintf("unknown handle type for const: %v", val))
 	}
-	// NOTE: from_bits_truncate is used because currently from_bits isn't a
-	// const fn. Change this to from_bits if it ever becomes a const_fn.
-	return fmt.Sprintf("fidl::ObjectType::%s", subtype),
-		fmt.Sprintf("fidl::Rights::from_bits_truncate(%d)",
-			val.HandleRights), true
+	return FieldHandleInformation{
+		fullObjectType:    fmt.Sprintf("fidl::ObjectType::%s", subtype),
+		fullRights:        fmt.Sprintf("fidl::Rights::from_bits_const(%d).unwrap()", val.HandleRights),
+		shortObjectType:   subtype,
+		shortRights:       fmt.Sprintf("%d", val.HandleRights),
+		hasHandleMetadata: true,
+	}
 }
 
 func (c *compiler) compileType(val types.Type, borrowed bool) Type {
@@ -760,6 +818,22 @@ func (c *compiler) compileEnum(val types.Enum) Enum {
 	return e
 }
 
+func (c *compiler) compileHandleMetadataWrapper(val *types.Type) (string, bool) {
+	hi := c.fieldHandleInformation(val)
+	name := fmt.Sprintf("HandleWrapperObjectType%sRights%s", hi.shortObjectType, hi.shortRights)
+	wrapper := HandleMetadataWrapper{
+		Name:    name,
+		Subtype: hi.fullObjectType,
+		Rights:  hi.fullRights,
+	}
+	if hi.hasHandleMetadata {
+		if _, ok := c.handleMetadataWrappers[name]; !ok {
+			c.handleMetadataWrappers[name] = wrapper
+		}
+	}
+	return name, hi.hasHandleMetadata
+}
+
 func (c *compiler) compileParameterArray(payload types.EncodedCompoundIdentifier) []Parameter {
 	val, ok := c.requestResponsePayload[payload]
 	if !ok {
@@ -768,11 +842,14 @@ func (c *compiler) compileParameterArray(payload types.EncodedCompoundIdentifier
 
 	var parameters []Parameter
 	for _, v := range val.Members {
+		wrapperName, hasHandleMetadata := c.compileHandleMetadataWrapper(&v.Type)
 		parameters = append(parameters, Parameter{
-			OGType:       v.Type,
-			Type:         c.compileType(v.Type, false).Decl,
-			BorrowedType: c.compileType(v.Type, true).Decl,
-			Name:         compileSnakeIdentifier(v.Name),
+			OGType:            v.Type,
+			Type:              c.compileType(v.Type, false).Decl,
+			BorrowedType:      c.compileType(v.Type, true).Decl,
+			Name:              compileSnakeIdentifier(v.Name),
+			HandleWrapperName: wrapperName,
+			HasHandleMetadata: hasHandleMetadata,
 		})
 	}
 	return parameters
@@ -790,6 +867,13 @@ func (c *compiler) compileProtocol(val types.Protocol) Protocol {
 	for _, v := range val.Methods {
 		name := compileSnakeIdentifier(v.Name)
 		camelName := compileCamelIdentifier(v.Name)
+		var foundResult *Result
+		if len(v.Response) == 1 && v.Response[0].Type.Kind == types.IdentifierType {
+			responseType := v.Response[0].Type
+			if result, ok := c.results[responseType.Identifier]; ok {
+				foundResult = &result
+			}
+		}
 		m := Method{
 			Attributes:     v.Attributes,
 			Ordinal:        v.Ordinal,
@@ -797,6 +881,7 @@ func (c *compiler) compileProtocol(val types.Protocol) Protocol {
 			CamelName:      camelName,
 			HasRequest:     v.HasRequest,
 			HasResponse:    v.HasResponse,
+			Result:         foundResult,
 			IsTransitional: v.IsTransitional(),
 		}
 		if v.RequestPayload != "" {
@@ -835,7 +920,7 @@ func (c *compiler) compileService(val types.Service) Service {
 
 func (c *compiler) compileStructMember(val types.StructMember) StructMember {
 	memberType := c.compileType(val.Type, false)
-	subtype, rights, hasHandleMetadata := fieldHandleInformation(&val.Type)
+	hi := c.fieldHandleInformation(&val.Type)
 	return StructMember{
 		Attributes:        val.Attributes,
 		Type:              memberType.Decl,
@@ -844,9 +929,9 @@ func (c *compiler) compileStructMember(val types.StructMember) StructMember {
 		Offset:            val.FieldShapeV1.Offset,
 		HasDefault:        false,
 		DefaultValue:      "", // TODO(cramertj) support defaults
-		HasHandleMetadata: hasHandleMetadata,
-		HandleSubtype:     subtype,
-		HandleRights:      rights,
+		HasHandleMetadata: hi.hasHandleMetadata,
+		HandleSubtype:     hi.fullObjectType,
+		HandleRights:      hi.fullRights,
 	}
 }
 
@@ -1036,16 +1121,16 @@ func (c *compiler) compileStruct(val types.Struct) Struct {
 }
 
 func (c *compiler) compileUnionMember(val types.UnionMember) UnionMember {
-	subtype, rights, hasHandleMetadata := fieldHandleInformation(&val.Type)
+	hi := c.fieldHandleInformation(&val.Type)
 	return UnionMember{
 		Attributes:        val.Attributes,
 		Type:              c.compileType(val.Type, false).Decl,
 		OGType:            val.Type,
 		Name:              compileCamelIdentifier(val.Name),
 		Ordinal:           val.Ordinal,
-		HasHandleMetadata: hasHandleMetadata,
-		HandleSubtype:     subtype,
-		HandleRights:      rights,
+		HasHandleMetadata: hi.hasHandleMetadata,
+		HandleSubtype:     hi.fullObjectType,
+		HandleRights:      hi.fullRights,
 	}
 }
 
@@ -1073,8 +1158,7 @@ func (c *compiler) compileResultFromUnion(val types.Union, root Root) Result {
 		Attributes: val.Attributes,
 		ECI:        val.Name,
 		Name:       c.compileCamelCompoundIdentifier(val.Name),
-		OkOGTypes:  []types.Type{},
-		Ok:         []string{},
+		Ok:         []ResultOkEntry{},
 		ErrOGType:  val.Members[1].Type,
 		ErrType:    c.compileUnionMember(val.Members[1]).Type,
 		Size:       val.TypeShapeV1.InlineSize,
@@ -1088,11 +1172,18 @@ func (c *compiler) compileResultFromUnion(val types.Union, root Root) Result {
 	for _, v := range root.Structs {
 		if v.Name == ci {
 			for _, m := range v.Members {
-				r.OkOGTypes = append(r.OkOGTypes, m.OGType)
-				r.Ok = append(r.Ok, m.Type)
+				wrapperName, hasHandleMetadata := c.compileHandleMetadataWrapper(&m.OGType)
+				r.Ok = append(r.Ok, ResultOkEntry{
+					OGType:            m.OGType,
+					Type:              m.Type,
+					HasHandleMetadata: hasHandleMetadata,
+					HandleWrapperName: wrapperName,
+				})
 			}
 		}
 	}
+
+	c.results[r.ECI] = r
 
 	return r
 }
@@ -1100,16 +1191,16 @@ func (c *compiler) compileResultFromUnion(val types.Union, root Root) Result {
 func (c *compiler) compileTable(table types.Table) Table {
 	var members []TableMember
 	for _, member := range table.SortedMembersNoReserved() {
-		subtype, rights, hasHandleMetadata := fieldHandleInformation(&member.Type)
+		hi := c.fieldHandleInformation(&member.Type)
 		members = append(members, TableMember{
 			Attributes:        member.Attributes,
 			OGType:            member.Type,
 			Type:              c.compileType(member.Type, false).Decl,
 			Name:              compileSnakeIdentifier(member.Name),
 			Ordinal:           member.Ordinal,
-			HasHandleMetadata: hasHandleMetadata,
-			HandleSubtype:     subtype,
-			HandleRights:      rights,
+			HasHandleMetadata: hi.hasHandleMetadata,
+			HandleSubtype:     hi.fullObjectType,
+			HandleRights:      hi.fullRights,
 		})
 	}
 	return Table{
@@ -1345,8 +1436,8 @@ typeSwitch:
 				break typeSwitch
 			}
 			derivesOut = derivesAllButZerocopy
-			for _, oktype := range result.OkOGTypes {
-				derivesOut = derivesOut.and(dc.fillDerivesForType(oktype))
+			for _, ok := range result.Ok {
+				derivesOut = derivesOut.and(dc.fillDerivesForType(ok.OGType))
 			}
 			derivesOut = derivesOut.and(dc.fillDerivesForType(result.ErrOGType))
 			result.Derives = derivesOut
@@ -1431,6 +1522,8 @@ func Compile(r types.Root) Root {
 		map[string]struct{}{},
 		map[types.EncodedCompoundIdentifier]types.Struct{},
 		map[types.EncodedCompoundIdentifier]types.Struct{},
+		map[types.EncodedCompoundIdentifier]Result{},
+		map[string]HandleMetadataWrapper{},
 	}
 
 	for _, s := range r.Structs {
@@ -1475,6 +1568,10 @@ func Compile(r types.Root) Root {
 
 	for _, v := range r.Protocols {
 		root.Protocols = append(root.Protocols, c.compileProtocol(v))
+	}
+
+	for _, hmw := range c.handleMetadataWrappers {
+		root.HandleMetadataWrappers = append(root.HandleMetadataWrappers, hmw)
 	}
 
 	c.fillDerives(&root)

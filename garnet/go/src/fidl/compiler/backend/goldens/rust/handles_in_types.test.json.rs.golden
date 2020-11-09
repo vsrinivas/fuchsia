@@ -16,10 +16,13 @@ use fuchsia_zircon as zx;
 use {
     bitflags::bitflags,
     fidl::{
+        client::{decode_transaction_body_fut, QueryResponseFut},
         fidl_empty_struct, fidl_flexible_bits, fidl_flexible_enum, fidl_strict_bits,
         fidl_strict_enum, fidl_struct, fidl_struct_copy, fidl_table, fidl_xunion,
+        wrap_handle_metadata,
     },
     fuchsia_zircon_status as zx_status,
+    futures::future::{self, MaybeDone, TryFutureExt},
 };
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
@@ -56,7 +59,7 @@ fidl_xunion! {
             ordinal: 1,
             handle_metadata: {
                 handle_subtype: fidl::ObjectType::VMO,
-                handle_rights: fidl::Rights::from_bits_truncate(2147483648),
+                handle_rights: fidl::Rights::from_bits_const(2147483648).unwrap(),
             },
         },
     ],
@@ -82,7 +85,7 @@ fidl_struct! {
       offset_v1: 0,
       handle_metadata: {
         handle_subtype: fidl::ObjectType::VMO,
-        handle_rights: fidl::Rights::from_bits_truncate(2147483648),
+        handle_rights: fidl::Rights::from_bits_const(2147483648).unwrap(),
       },
     },
     handle_in_vec {
@@ -90,7 +93,7 @@ fidl_struct! {
       offset_v1: 8,
       handle_metadata: {
         handle_subtype: fidl::ObjectType::VMO,
-        handle_rights: fidl::Rights::from_bits_truncate(2147483648),
+        handle_rights: fidl::Rights::from_bits_const(2147483648).unwrap(),
       },
     },
     handle_in_array {
@@ -98,7 +101,7 @@ fidl_struct! {
       offset_v1: 24,
       handle_metadata: {
         handle_subtype: fidl::ObjectType::VMO,
-        handle_rights: fidl::Rights::from_bits_truncate(2147483648),
+        handle_rights: fidl::Rights::from_bits_const(2147483648).unwrap(),
       },
     },
     handle_in_mixed_vec_array {
@@ -106,7 +109,7 @@ fidl_struct! {
       offset_v1: 48,
       handle_metadata: {
         handle_subtype: fidl::ObjectType::VMO,
-        handle_rights: fidl::Rights::from_bits_truncate(2147483648),
+        handle_rights: fidl::Rights::from_bits_const(2147483648).unwrap(),
       },
     },
     table_with_handle {
@@ -149,7 +152,7 @@ fidl_table! {
       ordinal: 1,
       handle_metadata: {
         handle_subtype: fidl::ObjectType::VMO,
-        handle_rights: fidl::Rights::from_bits_truncate(2147483648),
+        handle_rights: fidl::Rights::from_bits_const(2147483648).unwrap(),
       },
     },
   ],

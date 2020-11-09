@@ -16,10 +16,13 @@ use fuchsia_zircon as zx;
 use {
     bitflags::bitflags,
     fidl::{
+        client::{decode_transaction_body_fut, QueryResponseFut},
         fidl_empty_struct, fidl_flexible_bits, fidl_flexible_enum, fidl_strict_bits,
         fidl_strict_enum, fidl_struct, fidl_struct_copy, fidl_table, fidl_xunion,
+        wrap_handle_metadata,
     },
     fuchsia_zircon_status as zx_status,
+    futures::future::{self, MaybeDone, TryFutureExt},
 };
 
 const _FIDL_TRACE_BINDINGS_RUST: u32 = 6;
@@ -612,13 +615,17 @@ impl TestProtocolSynchronousProxy {
         &mut self,
         ___deadline: zx::Time,
     ) -> Result<(StrictBoundedXUnion), fidl::Error> {
-        self.client.send_query(&mut (), 0x747b084a44f0dc3e, ___deadline)
+        let _value: (StrictBoundedXUnion,) =
+            self.client.send_query(&mut (), 0x747b084a44f0dc3e, ___deadline)?;
+        Ok(_value.0)
     }
     pub fn flexible_x_union_hence_response_must_be_heap_allocated(
         &mut self,
         ___deadline: zx::Time,
     ) -> Result<(OlderSimpleUnion), fidl::Error> {
-        self.client.send_query(&mut (), 0x57615a25c2a785d2, ___deadline)
+        let _value: (OlderSimpleUnion,) =
+            self.client.send_query(&mut (), 0x57615a25c2a785d2, ___deadline)?;
+        Ok(_value.0)
     }
 }
 
@@ -676,14 +683,36 @@ impl TestProtocolProxyInterface for TestProtocolProxy {
     fn strict_x_union_hence_response_may_be_stack_allocated(
         &self,
     ) -> Self::StrictXUnionHenceResponseMayBeStackAllocatedResponseFut {
-        self.client.send_query(&mut (), 0x747b084a44f0dc3e)
+        fn transform(
+            result: Result<(StrictBoundedXUnion,), fidl::Error>,
+        ) -> Result<(StrictBoundedXUnion), fidl::Error> {
+            result.map(|_value| _value.0)
+        }
+        let send_result = self.client.call_send_raw_query(&mut (), 0x747b084a44f0dc3e);
+        QueryResponseFut(match send_result {
+            Ok(res_fut) => future::maybe_done(
+                res_fut.and_then(|buf| decode_transaction_body_fut(buf, transform)),
+            ),
+            Err(e) => MaybeDone::Done(Err(e)),
+        })
     }
     type FlexibleXUnionHenceResponseMustBeHeapAllocatedResponseFut =
         fidl::client::QueryResponseFut<(OlderSimpleUnion)>;
     fn flexible_x_union_hence_response_must_be_heap_allocated(
         &self,
     ) -> Self::FlexibleXUnionHenceResponseMustBeHeapAllocatedResponseFut {
-        self.client.send_query(&mut (), 0x57615a25c2a785d2)
+        fn transform(
+            result: Result<(OlderSimpleUnion,), fidl::Error>,
+        ) -> Result<(OlderSimpleUnion), fidl::Error> {
+            result.map(|_value| _value.0)
+        }
+        let send_result = self.client.call_send_raw_query(&mut (), 0x57615a25c2a785d2);
+        QueryResponseFut(match send_result {
+            Ok(res_fut) => future::maybe_done(
+                res_fut.and_then(|buf| decode_transaction_body_fut(buf, transform)),
+            ),
+            Err(e) => MaybeDone::Done(Err(e)),
+        })
     }
 }
 

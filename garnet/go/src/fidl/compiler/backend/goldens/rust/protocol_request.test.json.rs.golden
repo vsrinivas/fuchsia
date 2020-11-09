@@ -16,13 +16,21 @@ use fuchsia_zircon as zx;
 use {
     bitflags::bitflags,
     fidl::{
+        client::{decode_transaction_body_fut, QueryResponseFut},
         fidl_empty_struct, fidl_flexible_bits, fidl_flexible_enum, fidl_strict_bits,
         fidl_strict_enum, fidl_struct, fidl_struct_copy, fidl_table, fidl_xunion,
+        wrap_handle_metadata,
     },
     fuchsia_zircon_status as zx_status,
+    futures::future::{self, MaybeDone, TryFutureExt},
 };
 
 const _FIDL_TRACE_BINDINGS_RUST: u32 = 6;
+wrap_handle_metadata!(
+    HandleWrapperObjectTypeCHANNELRightsCHANNEL_DEFAULT,
+    fidl::ObjectType::CHANNEL,
+    fidl::Rights::CHANNEL_DEFAULT
+);
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct ChildMarker;
@@ -333,13 +341,23 @@ impl ParentSynchronousProxy {
         &mut self,
         ___deadline: zx::Time,
     ) -> Result<(fidl::endpoints::ClientEnd<ChildMarker>), fidl::Error> {
-        self.client.send_query(&mut (), 0x6e0c789be8dbb77e, ___deadline)
+        let _value: (
+            HandleWrapperObjectTypeCHANNELRightsCHANNEL_DEFAULT<
+                fidl::endpoints::ClientEnd<ChildMarker>,
+            >,
+        ) = self.client.send_query(&mut (), 0x6e0c789be8dbb77e, ___deadline)?;
+        Ok(_value.0.into_inner())
     }
     pub fn get_child_request(
         &mut self,
         ___deadline: zx::Time,
     ) -> Result<(fidl::endpoints::ServerEnd<ChildMarker>), fidl::Error> {
-        self.client.send_query(&mut (), 0x193e7d6949a9df98, ___deadline)
+        let _value: (
+            HandleWrapperObjectTypeCHANNELRightsCHANNEL_DEFAULT<
+                fidl::endpoints::ServerEnd<ChildMarker>,
+            >,
+        ) = self.client.send_query(&mut (), 0x193e7d6949a9df98, ___deadline)?;
+        Ok(_value.0.into_inner())
     }
     pub fn take_child(
         &mut self,
@@ -419,12 +437,48 @@ impl ParentProxyInterface for ParentProxy {
     type GetChildResponseFut =
         fidl::client::QueryResponseFut<(fidl::endpoints::ClientEnd<ChildMarker>)>;
     fn get_child(&self) -> Self::GetChildResponseFut {
-        self.client.send_query(&mut (), 0x6e0c789be8dbb77e)
+        fn transform(
+            result: Result<
+                (
+                    HandleWrapperObjectTypeCHANNELRightsCHANNEL_DEFAULT<
+                        fidl::endpoints::ClientEnd<ChildMarker>,
+                    >,
+                ),
+                fidl::Error,
+            >,
+        ) -> Result<(fidl::endpoints::ClientEnd<ChildMarker>), fidl::Error> {
+            result.map(|_value| _value.0.into_inner())
+        }
+        let send_result = self.client.call_send_raw_query(&mut (), 0x6e0c789be8dbb77e);
+        QueryResponseFut(match send_result {
+            Ok(res_fut) => future::maybe_done(
+                res_fut.and_then(|buf| decode_transaction_body_fut(buf, transform)),
+            ),
+            Err(e) => MaybeDone::Done(Err(e)),
+        })
     }
     type GetChildRequestResponseFut =
         fidl::client::QueryResponseFut<(fidl::endpoints::ServerEnd<ChildMarker>)>;
     fn get_child_request(&self) -> Self::GetChildRequestResponseFut {
-        self.client.send_query(&mut (), 0x193e7d6949a9df98)
+        fn transform(
+            result: Result<
+                (
+                    HandleWrapperObjectTypeCHANNELRightsCHANNEL_DEFAULT<
+                        fidl::endpoints::ServerEnd<ChildMarker>,
+                    >,
+                ),
+                fidl::Error,
+            >,
+        ) -> Result<(fidl::endpoints::ServerEnd<ChildMarker>), fidl::Error> {
+            result.map(|_value| _value.0.into_inner())
+        }
+        let send_result = self.client.call_send_raw_query(&mut (), 0x193e7d6949a9df98);
+        QueryResponseFut(match send_result {
+            Ok(res_fut) => future::maybe_done(
+                res_fut.and_then(|buf| decode_transaction_body_fut(buf, transform)),
+            ),
+            Err(e) => MaybeDone::Done(Err(e)),
+        })
     }
     fn take_child(
         &self,
@@ -642,26 +696,32 @@ impl futures::Stream for ParentRequestStream {
                     })
                 }
                 0x5311bd7214c0f6e => {
-                    let mut req: (fidl::endpoints::ClientEnd<ChildMarker>) =
-                        fidl::encoding::Decodable::new_empty();
+                    let mut req: (
+                        HandleWrapperObjectTypeCHANNELRightsCHANNEL_DEFAULT<
+                            fidl::endpoints::ClientEnd<ChildMarker>,
+                        >,
+                    ) = fidl::encoding::Decodable::new_empty();
                     fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.protocolrequest/ParentTakeChildRequest");
                     fidl::trace_blob!("fidl:blob", "decode", bytes);
                     fidl::encoding::Decoder::decode_into(&header, _body_bytes, handles, &mut req)?;
                     fidl::duration_end!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => handles.len() as u32);
                     let control_handle = ParentControlHandle { inner: this.inner.clone() };
 
-                    Ok(ParentRequest::TakeChild { c: req, control_handle })
+                    Ok(ParentRequest::TakeChild { c: req.0.into_inner(), control_handle })
                 }
                 0x15dae312bad5a9cc => {
-                    let mut req: (fidl::endpoints::ServerEnd<ChildMarker>) =
-                        fidl::encoding::Decodable::new_empty();
+                    let mut req: (
+                        HandleWrapperObjectTypeCHANNELRightsCHANNEL_DEFAULT<
+                            fidl::endpoints::ServerEnd<ChildMarker>,
+                        >,
+                    ) = fidl::encoding::Decodable::new_empty();
                     fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.protocolrequest/ParentTakeChildRequestRequest");
                     fidl::trace_blob!("fidl:blob", "decode", bytes);
                     fidl::encoding::Decoder::decode_into(&header, _body_bytes, handles, &mut req)?;
                     fidl::duration_end!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => handles.len() as u32);
                     let control_handle = ParentControlHandle { inner: this.inner.clone() };
 
-                    Ok(ParentRequest::TakeChildRequest { r: req, control_handle })
+                    Ok(ParentRequest::TakeChildRequest { r: req.0.into_inner(), control_handle })
                 }
                 _ => Err(fidl::Error::UnknownOrdinal {
                     ordinal: header.ordinal(),
@@ -722,8 +782,11 @@ impl ParentRequestMessage {
                 Ok(ParentRequestMessage::GetChildRequest { tx_id: header.tx_id().into() })
             }
             0x5311bd7214c0f6e => {
-                let mut out_tuple: (fidl::endpoints::ClientEnd<ChildMarker>,) =
-                    fidl::encoding::Decodable::new_empty();
+                let mut out_tuple: (
+                    HandleWrapperObjectTypeCHANNELRightsCHANNEL_DEFAULT<
+                        fidl::endpoints::ClientEnd<ChildMarker>,
+                    >,
+                ) = fidl::encoding::Decodable::new_empty();
                 fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.protocolrequest/ParentTakeChildRequest");
                 fidl::trace_blob!("fidl:blob", "decode", bytes);
                 fidl::encoding::Decoder::decode_into(
@@ -734,11 +797,14 @@ impl ParentRequestMessage {
                 )?;
                 fidl::duration_end!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => _handles.len() as u32);
 
-                Ok(ParentRequestMessage::TakeChild { c: out_tuple.0 })
+                Ok(ParentRequestMessage::TakeChild { c: out_tuple.0.into_inner() })
             }
             0x15dae312bad5a9cc => {
-                let mut out_tuple: (fidl::endpoints::ServerEnd<ChildMarker>,) =
-                    fidl::encoding::Decodable::new_empty();
+                let mut out_tuple: (
+                    HandleWrapperObjectTypeCHANNELRightsCHANNEL_DEFAULT<
+                        fidl::endpoints::ServerEnd<ChildMarker>,
+                    >,
+                ) = fidl::encoding::Decodable::new_empty();
                 fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.protocolrequest/ParentTakeChildRequestRequest");
                 fidl::trace_blob!("fidl:blob", "decode", bytes);
                 fidl::encoding::Decoder::decode_into(
@@ -749,7 +815,7 @@ impl ParentRequestMessage {
                 )?;
                 fidl::duration_end!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => _handles.len() as u32);
 
-                Ok(ParentRequestMessage::TakeChildRequest { r: out_tuple.0 })
+                Ok(ParentRequestMessage::TakeChildRequest { r: out_tuple.0.into_inner() })
             }
             _ => Err(fidl::Error::UnknownOrdinal {
                 ordinal: header.ordinal(),

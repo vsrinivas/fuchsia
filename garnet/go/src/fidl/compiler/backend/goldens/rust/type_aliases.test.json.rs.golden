@@ -16,10 +16,13 @@ use fuchsia_zircon as zx;
 use {
     bitflags::bitflags,
     fidl::{
+        client::{decode_transaction_body_fut, QueryResponseFut},
         fidl_empty_struct, fidl_flexible_bits, fidl_flexible_enum, fidl_strict_bits,
         fidl_strict_enum, fidl_struct, fidl_struct_copy, fidl_table, fidl_xunion,
+        wrap_handle_metadata,
     },
     fuchsia_zircon_status as zx_status,
+    futures::future::{self, MaybeDone, TryFutureExt},
 };
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
@@ -88,7 +91,7 @@ fidl_struct! {
       offset_v1: 104,
       handle_metadata: {
         handle_subtype: fidl::ObjectType::NONE,
-        handle_rights: fidl::Rights::from_bits_truncate(2147483648),
+        handle_rights: fidl::Rights::from_bits_const(2147483648).unwrap(),
       },
     },
     field_of_client_end {
@@ -96,7 +99,7 @@ fidl_struct! {
       offset_v1: 108,
       handle_metadata: {
         handle_subtype: fidl::ObjectType::NONE,
-        handle_rights: fidl::Rights::from_bits_truncate(2147483648),
+        handle_rights: fidl::Rights::from_bits_const(2147483648).unwrap(),
       },
     },
     field_of_nullable_client_end {
@@ -104,7 +107,7 @@ fidl_struct! {
       offset_v1: 112,
       handle_metadata: {
         handle_subtype: fidl::ObjectType::NONE,
-        handle_rights: fidl::Rights::from_bits_truncate(2147483648),
+        handle_rights: fidl::Rights::from_bits_const(2147483648).unwrap(),
       },
     },
   ],

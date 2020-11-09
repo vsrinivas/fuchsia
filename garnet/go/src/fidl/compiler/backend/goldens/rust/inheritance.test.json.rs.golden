@@ -16,10 +16,13 @@ use fuchsia_zircon as zx;
 use {
     bitflags::bitflags,
     fidl::{
+        client::{decode_transaction_body_fut, QueryResponseFut},
         fidl_empty_struct, fidl_flexible_bits, fidl_flexible_enum, fidl_strict_bits,
         fidl_strict_enum, fidl_struct, fidl_struct_copy, fidl_table, fidl_xunion,
+        wrap_handle_metadata,
     },
     fuchsia_zircon_status as zx_status,
+    futures::future::{self, MaybeDone, TryFutureExt},
 };
 
 const _FIDL_TRACE_BINDINGS_RUST: u32 = 6;
@@ -54,7 +57,8 @@ impl Super_SynchronousProxy {
         self.client.into_channel()
     }
     pub fn foo(&mut self, mut s: &str, ___deadline: zx::Time) -> Result<(i64), fidl::Error> {
-        self.client.send_query(&mut (s), 0x45602cf3b581d6ab, ___deadline)
+        let _value: (i64,) = self.client.send_query(&mut (s), 0x45602cf3b581d6ab, ___deadline)?;
+        Ok(_value.0)
     }
 }
 
@@ -102,7 +106,16 @@ impl Super_Proxy {
 impl Super_ProxyInterface for Super_Proxy {
     type FooResponseFut = fidl::client::QueryResponseFut<(i64)>;
     fn foo(&self, mut s: &str) -> Self::FooResponseFut {
-        self.client.send_query(&mut (s), 0x45602cf3b581d6ab)
+        fn transform(result: Result<(i64,), fidl::Error>) -> Result<(i64), fidl::Error> {
+            result.map(|_value| _value.0)
+        }
+        let send_result = self.client.call_send_raw_query(&mut (s), 0x45602cf3b581d6ab);
+        QueryResponseFut(match send_result {
+            Ok(res_fut) => future::maybe_done(
+                res_fut.and_then(|buf| decode_transaction_body_fut(buf, transform)),
+            ),
+            Err(e) => MaybeDone::Done(Err(e)),
+        })
     }
 }
 
@@ -258,7 +271,7 @@ impl futures::Stream for Super_RequestStream {
 
             std::task::Poll::Ready(Some(match header.ordinal() {
                 0x45602cf3b581d6ab => {
-                    let mut req: (String) = fidl::encoding::Decodable::new_empty();
+                    let mut req: (String,) = fidl::encoding::Decodable::new_empty();
                     fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.inheritance/superFooRequest");
                     fidl::trace_blob!("fidl:blob", "decode", bytes);
                     fidl::encoding::Decoder::decode_into(&header, _body_bytes, handles, &mut req)?;
@@ -266,7 +279,7 @@ impl futures::Stream for Super_RequestStream {
                     let control_handle = Super_ControlHandle { inner: this.inner.clone() };
 
                     Ok(Super_Request::Foo {
-                        s: req,
+                        s: req.0,
                         responder: Super_FooResponder {
                             control_handle: std::mem::ManuallyDrop::new(control_handle),
                             tx_id: header.tx_id(),
@@ -505,7 +518,8 @@ impl SubSynchronousProxy {
         self.client.into_channel()
     }
     pub fn foo(&mut self, mut s: &str, ___deadline: zx::Time) -> Result<(i64), fidl::Error> {
-        self.client.send_query(&mut (s), 0x45602cf3b581d6ab, ___deadline)
+        let _value: (i64,) = self.client.send_query(&mut (s), 0x45602cf3b581d6ab, ___deadline)?;
+        Ok(_value.0)
     }
 }
 
@@ -553,7 +567,16 @@ impl SubProxy {
 impl SubProxyInterface for SubProxy {
     type FooResponseFut = fidl::client::QueryResponseFut<(i64)>;
     fn foo(&self, mut s: &str) -> Self::FooResponseFut {
-        self.client.send_query(&mut (s), 0x45602cf3b581d6ab)
+        fn transform(result: Result<(i64,), fidl::Error>) -> Result<(i64), fidl::Error> {
+            result.map(|_value| _value.0)
+        }
+        let send_result = self.client.call_send_raw_query(&mut (s), 0x45602cf3b581d6ab);
+        QueryResponseFut(match send_result {
+            Ok(res_fut) => future::maybe_done(
+                res_fut.and_then(|buf| decode_transaction_body_fut(buf, transform)),
+            ),
+            Err(e) => MaybeDone::Done(Err(e)),
+        })
     }
 }
 
@@ -709,7 +732,7 @@ impl futures::Stream for SubRequestStream {
 
             std::task::Poll::Ready(Some(match header.ordinal() {
                 0x45602cf3b581d6ab => {
-                    let mut req: (String) = fidl::encoding::Decodable::new_empty();
+                    let mut req: (String,) = fidl::encoding::Decodable::new_empty();
                     fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.inheritance/subFooRequest");
                     fidl::trace_blob!("fidl:blob", "decode", bytes);
                     fidl::encoding::Decoder::decode_into(&header, _body_bytes, handles, &mut req)?;
@@ -717,7 +740,7 @@ impl futures::Stream for SubRequestStream {
                     let control_handle = SubControlHandle { inner: this.inner.clone() };
 
                     Ok(SubRequest::Foo {
-                        s: req,
+                        s: req.0,
                         responder: SubFooResponder {
                             control_handle: std::mem::ManuallyDrop::new(control_handle),
                             tx_id: header.tx_id(),

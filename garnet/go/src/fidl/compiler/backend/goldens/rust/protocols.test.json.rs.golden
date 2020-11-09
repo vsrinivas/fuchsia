@@ -16,10 +16,13 @@ use fuchsia_zircon as zx;
 use {
     bitflags::bitflags,
     fidl::{
+        client::{decode_transaction_body_fut, QueryResponseFut},
         fidl_empty_struct, fidl_flexible_bits, fidl_flexible_enum, fidl_strict_bits,
         fidl_strict_enum, fidl_struct, fidl_struct_copy, fidl_table, fidl_xunion,
+        wrap_handle_metadata,
     },
     fuchsia_zircon_status as zx_status,
+    futures::future::{self, MaybeDone, TryFutureExt},
 };
 
 const _FIDL_TRACE_BINDINGS_RUST: u32 = 6;
@@ -56,9 +59,16 @@ fidl_strict_enum! {
 
 pub type WithErrorSyntaxResponseAsStructResult = std::result::Result<(i64, i64, i64), u32>;
 
+pub type WithErrorSyntaxResponseAsStructResultHandleWrapper =
+    std::result::Result<(i64, i64, i64), u32>;
+
 pub type WithErrorSyntaxErrorAsPrimitiveResult = std::result::Result<(), u32>;
 
+pub type WithErrorSyntaxErrorAsPrimitiveResultHandleWrapper = std::result::Result<(), u32>;
+
 pub type WithErrorSyntaxErrorAsEnumResult = std::result::Result<(), ErrorEnun>;
+
+pub type WithErrorSyntaxErrorAsEnumResultHandleWrapper = std::result::Result<(), ErrorEnun>;
 
 #[derive(
     Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, zerocopy::AsBytes, zerocopy::FromBytes,
@@ -100,6 +110,11 @@ fidl_empty_struct!(WithErrorSyntaxErrorAsPrimitiveResponse);
 pub struct WithErrorSyntaxErrorAsEnumResponse;
 
 fidl_empty_struct!(WithErrorSyntaxErrorAsEnumResponse);
+wrap_handle_metadata!(
+    HandleWrapperObjectTypeSOCKETRights2147483648,
+    fidl::ObjectType::SOCKET,
+    fidl::Rights::from_bits_const(2147483648).unwrap()
+);
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct WithAndWithoutRequestResponseMarker;
@@ -149,13 +164,15 @@ impl WithAndWithoutRequestResponseSynchronousProxy {
         self.client.send(&mut (), 0x6ad894147d0c6ba4)
     }
     pub fn no_request_empty_response(&mut self, ___deadline: zx::Time) -> Result<(), fidl::Error> {
-        self.client.send_query(&mut (), 0x4068f26bf6d868ae, ___deadline)
+        let _value: () = self.client.send_query(&mut (), 0x4068f26bf6d868ae, ___deadline)?;
+        Ok(())
     }
     pub fn no_request_with_response(
         &mut self,
         ___deadline: zx::Time,
     ) -> Result<(String), fidl::Error> {
-        self.client.send_query(&mut (), 0x447e655905ccfbf4, ___deadline)
+        let _value: (String,) = self.client.send_query(&mut (), 0x447e655905ccfbf4, ___deadline)?;
+        Ok(_value.0)
     }
     pub fn with_request_no_response(&mut self, mut arg: &str) -> Result<(), fidl::Error> {
         self.client.send(&mut (arg), 0x7cb47b2f9e76d17d)
@@ -165,14 +182,17 @@ impl WithAndWithoutRequestResponseSynchronousProxy {
         mut arg: &str,
         ___deadline: zx::Time,
     ) -> Result<(), fidl::Error> {
-        self.client.send_query(&mut (arg), 0x65eb512ff0e1c07e, ___deadline)
+        let _value: () = self.client.send_query(&mut (arg), 0x65eb512ff0e1c07e, ___deadline)?;
+        Ok(())
     }
     pub fn with_request_with_response(
         &mut self,
         mut arg: &str,
         ___deadline: zx::Time,
     ) -> Result<(String), fidl::Error> {
-        self.client.send_query(&mut (arg), 0x1d323510d4447cf1, ___deadline)
+        let _value: (String,) =
+            self.client.send_query(&mut (arg), 0x1d323510d4447cf1, ___deadline)?;
+        Ok(_value.0)
     }
 }
 
@@ -244,11 +264,29 @@ impl WithAndWithoutRequestResponseProxyInterface for WithAndWithoutRequestRespon
     }
     type NoRequestEmptyResponseResponseFut = fidl::client::QueryResponseFut<()>;
     fn no_request_empty_response(&self) -> Self::NoRequestEmptyResponseResponseFut {
-        self.client.send_query(&mut (), 0x4068f26bf6d868ae)
+        fn transform(result: Result<(), fidl::Error>) -> Result<(), fidl::Error> {
+            result.map(|_value| ())
+        }
+        let send_result = self.client.call_send_raw_query(&mut (), 0x4068f26bf6d868ae);
+        QueryResponseFut(match send_result {
+            Ok(res_fut) => future::maybe_done(
+                res_fut.and_then(|buf| decode_transaction_body_fut(buf, transform)),
+            ),
+            Err(e) => MaybeDone::Done(Err(e)),
+        })
     }
     type NoRequestWithResponseResponseFut = fidl::client::QueryResponseFut<(String)>;
     fn no_request_with_response(&self) -> Self::NoRequestWithResponseResponseFut {
-        self.client.send_query(&mut (), 0x447e655905ccfbf4)
+        fn transform(result: Result<(String,), fidl::Error>) -> Result<(String), fidl::Error> {
+            result.map(|_value| _value.0)
+        }
+        let send_result = self.client.call_send_raw_query(&mut (), 0x447e655905ccfbf4);
+        QueryResponseFut(match send_result {
+            Ok(res_fut) => future::maybe_done(
+                res_fut.and_then(|buf| decode_transaction_body_fut(buf, transform)),
+            ),
+            Err(e) => MaybeDone::Done(Err(e)),
+        })
     }
     fn with_request_no_response(&self, mut arg: &str) -> Result<(), fidl::Error> {
         self.client.send(&mut (arg), 0x7cb47b2f9e76d17d)
@@ -258,14 +296,32 @@ impl WithAndWithoutRequestResponseProxyInterface for WithAndWithoutRequestRespon
         &self,
         mut arg: &str,
     ) -> Self::WithRequestEmptyResponseResponseFut {
-        self.client.send_query(&mut (arg), 0x65eb512ff0e1c07e)
+        fn transform(result: Result<(), fidl::Error>) -> Result<(), fidl::Error> {
+            result.map(|_value| ())
+        }
+        let send_result = self.client.call_send_raw_query(&mut (arg), 0x65eb512ff0e1c07e);
+        QueryResponseFut(match send_result {
+            Ok(res_fut) => future::maybe_done(
+                res_fut.and_then(|buf| decode_transaction_body_fut(buf, transform)),
+            ),
+            Err(e) => MaybeDone::Done(Err(e)),
+        })
     }
     type WithRequestWithResponseResponseFut = fidl::client::QueryResponseFut<(String)>;
     fn with_request_with_response(
         &self,
         mut arg: &str,
     ) -> Self::WithRequestWithResponseResponseFut {
-        self.client.send_query(&mut (arg), 0x1d323510d4447cf1)
+        fn transform(result: Result<(String,), fidl::Error>) -> Result<(String), fidl::Error> {
+            result.map(|_value| _value.0)
+        }
+        let send_result = self.client.call_send_raw_query(&mut (arg), 0x1d323510d4447cf1);
+        QueryResponseFut(match send_result {
+            Ok(res_fut) => future::maybe_done(
+                res_fut.and_then(|buf| decode_transaction_body_fut(buf, transform)),
+            ),
+            Err(e) => MaybeDone::Done(Err(e)),
+        })
     }
     type OnEmptyResponseResponseFut = fidl::client::QueryResponseFut<()>;
     type OnWithResponseResponseFut = fidl::client::QueryResponseFut<(String)>;
@@ -586,7 +642,7 @@ impl futures::Stream for WithAndWithoutRequestResponseRequestStream {
 							},})
 				}
 				0x7cb47b2f9e76d17d => {
-					let mut req: (String) = fidl::encoding::Decodable::new_empty();
+					let mut req: (String,) = fidl::encoding::Decodable::new_empty();
 					fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.protocols/WithAndWithoutRequestResponseWithRequestNoResponseRequest");
 					fidl::trace_blob!("fidl:blob", "decode", bytes);
 					fidl::encoding::Decoder::decode_into(&header, _body_bytes, handles, &mut req)?;
@@ -595,10 +651,10 @@ impl futures::Stream for WithAndWithoutRequestResponseRequestStream {
 						inner: this.inner.clone(),
 					};
 
-					Ok(WithAndWithoutRequestResponseRequest::WithRequestNoResponse {arg: req,control_handle,})
+					Ok(WithAndWithoutRequestResponseRequest::WithRequestNoResponse {arg: req.0,control_handle,})
 				}
 				0x65eb512ff0e1c07e => {
-					let mut req: (String) = fidl::encoding::Decodable::new_empty();
+					let mut req: (String,) = fidl::encoding::Decodable::new_empty();
 					fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.protocols/WithAndWithoutRequestResponseWithRequestEmptyResponseRequest");
 					fidl::trace_blob!("fidl:blob", "decode", bytes);
 					fidl::encoding::Decoder::decode_into(&header, _body_bytes, handles, &mut req)?;
@@ -607,14 +663,14 @@ impl futures::Stream for WithAndWithoutRequestResponseRequestStream {
 						inner: this.inner.clone(),
 					};
 
-					Ok(WithAndWithoutRequestResponseRequest::WithRequestEmptyResponse {arg: req,responder:WithAndWithoutRequestResponseWithRequestEmptyResponseResponder {
+					Ok(WithAndWithoutRequestResponseRequest::WithRequestEmptyResponse {arg: req.0,responder:WithAndWithoutRequestResponseWithRequestEmptyResponseResponder {
 								control_handle: std::mem::ManuallyDrop::new(control_handle),
 								tx_id: header.tx_id(),
 								ordinal: header.ordinal(),
 							},})
 				}
 				0x1d323510d4447cf1 => {
-					let mut req: (String) = fidl::encoding::Decodable::new_empty();
+					let mut req: (String,) = fidl::encoding::Decodable::new_empty();
 					fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.protocols/WithAndWithoutRequestResponseWithRequestWithResponseRequest");
 					fidl::trace_blob!("fidl:blob", "decode", bytes);
 					fidl::encoding::Decoder::decode_into(&header, _body_bytes, handles, &mut req)?;
@@ -623,7 +679,7 @@ impl futures::Stream for WithAndWithoutRequestResponseRequestStream {
 						inner: this.inner.clone(),
 					};
 
-					Ok(WithAndWithoutRequestResponseRequest::WithRequestWithResponse {arg: req,responder:WithAndWithoutRequestResponseWithRequestWithResponseResponder {
+					Ok(WithAndWithoutRequestResponseRequest::WithRequestWithResponse {arg: req.0,responder:WithAndWithoutRequestResponseWithRequestWithResponseResponder {
 								control_handle: std::mem::ManuallyDrop::new(control_handle),
 								tx_id: header.tx_id(),
 								ordinal: header.ordinal(),
@@ -1434,19 +1490,25 @@ impl WithErrorSyntaxSynchronousProxy {
         &mut self,
         ___deadline: zx::Time,
     ) -> Result<(WithErrorSyntaxResponseAsStructResult), fidl::Error> {
-        self.client.send_query(&mut (), 0x3784d38864674290, ___deadline)
+        let _value: (WithErrorSyntaxResponseAsStructResultHandleWrapper) =
+            self.client.send_query(&mut (), 0x3784d38864674290, ___deadline)?;
+        Ok(_value.map(|_value| (_value.0, _value.1, _value.2)))
     }
     pub fn error_as_primitive(
         &mut self,
         ___deadline: zx::Time,
     ) -> Result<(WithErrorSyntaxErrorAsPrimitiveResult), fidl::Error> {
-        self.client.send_query(&mut (), 0x2f7c390f3cdef4ce, ___deadline)
+        let _value: (WithErrorSyntaxErrorAsPrimitiveResultHandleWrapper) =
+            self.client.send_query(&mut (), 0x2f7c390f3cdef4ce, ___deadline)?;
+        Ok(_value.map(|_value| ()))
     }
     pub fn error_as_enum(
         &mut self,
         ___deadline: zx::Time,
     ) -> Result<(WithErrorSyntaxErrorAsEnumResult), fidl::Error> {
-        self.client.send_query(&mut (), 0x8b550d7c29f740c, ___deadline)
+        let _value: (WithErrorSyntaxErrorAsEnumResultHandleWrapper) =
+            self.client.send_query(&mut (), 0x8b550d7c29f740c, ___deadline)?;
+        Ok(_value.map(|_value| ()))
     }
 }
 
@@ -1507,17 +1569,50 @@ impl WithErrorSyntaxProxyInterface for WithErrorSyntaxProxy {
     type ResponseAsStructResponseFut =
         fidl::client::QueryResponseFut<(WithErrorSyntaxResponseAsStructResult)>;
     fn response_as_struct(&self) -> Self::ResponseAsStructResponseFut {
-        self.client.send_query(&mut (), 0x3784d38864674290)
+        fn transform(
+            result: Result<(WithErrorSyntaxResponseAsStructResultHandleWrapper), fidl::Error>,
+        ) -> Result<(WithErrorSyntaxResponseAsStructResult), fidl::Error> {
+            result.map(|_value| _value.map(|_value| (_value.0, _value.1, _value.2)))
+        }
+        let send_result = self.client.call_send_raw_query(&mut (), 0x3784d38864674290);
+        QueryResponseFut(match send_result {
+            Ok(res_fut) => future::maybe_done(
+                res_fut.and_then(|buf| decode_transaction_body_fut(buf, transform)),
+            ),
+            Err(e) => MaybeDone::Done(Err(e)),
+        })
     }
     type ErrorAsPrimitiveResponseFut =
         fidl::client::QueryResponseFut<(WithErrorSyntaxErrorAsPrimitiveResult)>;
     fn error_as_primitive(&self) -> Self::ErrorAsPrimitiveResponseFut {
-        self.client.send_query(&mut (), 0x2f7c390f3cdef4ce)
+        fn transform(
+            result: Result<(WithErrorSyntaxErrorAsPrimitiveResultHandleWrapper), fidl::Error>,
+        ) -> Result<(WithErrorSyntaxErrorAsPrimitiveResult), fidl::Error> {
+            result.map(|_value| _value.map(|_value| ()))
+        }
+        let send_result = self.client.call_send_raw_query(&mut (), 0x2f7c390f3cdef4ce);
+        QueryResponseFut(match send_result {
+            Ok(res_fut) => future::maybe_done(
+                res_fut.and_then(|buf| decode_transaction_body_fut(buf, transform)),
+            ),
+            Err(e) => MaybeDone::Done(Err(e)),
+        })
     }
     type ErrorAsEnumResponseFut =
         fidl::client::QueryResponseFut<(WithErrorSyntaxErrorAsEnumResult)>;
     fn error_as_enum(&self) -> Self::ErrorAsEnumResponseFut {
-        self.client.send_query(&mut (), 0x8b550d7c29f740c)
+        fn transform(
+            result: Result<(WithErrorSyntaxErrorAsEnumResultHandleWrapper), fidl::Error>,
+        ) -> Result<(WithErrorSyntaxErrorAsEnumResult), fidl::Error> {
+            result.map(|_value| _value.map(|_value| ()))
+        }
+        let send_result = self.client.call_send_raw_query(&mut (), 0x8b550d7c29f740c);
+        QueryResponseFut(match send_result {
+            Ok(res_fut) => future::maybe_done(
+                res_fut.and_then(|buf| decode_transaction_body_fut(buf, transform)),
+            ),
+            Err(e) => MaybeDone::Done(Err(e)),
+        })
     }
 }
 
@@ -2302,14 +2397,18 @@ impl ChannelProtocolSynchronousProxy {
         mut b: i64,
         ___deadline: zx::Time,
     ) -> Result<(i64), fidl::Error> {
-        self.client.send_query(&mut (a, b), 0x5da1d2ed00055cea, ___deadline)
+        let _value: (i64,) =
+            self.client.send_query(&mut (a, b), 0x5da1d2ed00055cea, ___deadline)?;
+        Ok(_value.0)
     }
     pub fn mutate_socket(
         &mut self,
         mut a: fidl::Socket,
         ___deadline: zx::Time,
     ) -> Result<(fidl::Socket), fidl::Error> {
-        self.client.send_query(&mut (a), 0x7dd036a18b33b76a, ___deadline)
+        let _value: (HandleWrapperObjectTypeSOCKETRights2147483648<fidl::Socket>,) =
+            self.client.send_query(&mut (a), 0x7dd036a18b33b76a, ___deadline)?;
+        Ok(_value.0.into_inner())
     }
 }
 
@@ -2370,11 +2469,34 @@ impl ChannelProtocolProxyInterface for ChannelProtocolProxy {
     type EventAResponseFut = fidl::client::QueryResponseFut<(i64, i64)>;
     type MethodBResponseFut = fidl::client::QueryResponseFut<(i64)>;
     fn method_b(&self, mut a: i64, mut b: i64) -> Self::MethodBResponseFut {
-        self.client.send_query(&mut (a, b), 0x5da1d2ed00055cea)
+        fn transform(result: Result<(i64,), fidl::Error>) -> Result<(i64), fidl::Error> {
+            result.map(|_value| _value.0)
+        }
+        let send_result = self.client.call_send_raw_query(&mut (a, b), 0x5da1d2ed00055cea);
+        QueryResponseFut(match send_result {
+            Ok(res_fut) => future::maybe_done(
+                res_fut.and_then(|buf| decode_transaction_body_fut(buf, transform)),
+            ),
+            Err(e) => MaybeDone::Done(Err(e)),
+        })
     }
     type MutateSocketResponseFut = fidl::client::QueryResponseFut<(fidl::Socket)>;
     fn mutate_socket(&self, mut a: fidl::Socket) -> Self::MutateSocketResponseFut {
-        self.client.send_query(&mut (a), 0x7dd036a18b33b76a)
+        fn transform(
+            result: Result<
+                (HandleWrapperObjectTypeSOCKETRights2147483648<fidl::Socket>,),
+                fidl::Error,
+            >,
+        ) -> Result<(fidl::Socket), fidl::Error> {
+            result.map(|_value| _value.0.into_inner())
+        }
+        let send_result = self.client.call_send_raw_query(&mut (a), 0x7dd036a18b33b76a);
+        QueryResponseFut(match send_result {
+            Ok(res_fut) => future::maybe_done(
+                res_fut.and_then(|buf| decode_transaction_body_fut(buf, transform)),
+            ),
+            Err(e) => MaybeDone::Done(Err(e)),
+        })
     }
 }
 
@@ -2614,7 +2736,8 @@ impl futures::Stream for ChannelProtocolRequestStream {
                     })
                 }
                 0x7dd036a18b33b76a => {
-                    let mut req: (fidl::Socket) = fidl::encoding::Decodable::new_empty();
+                    let mut req: (HandleWrapperObjectTypeSOCKETRights2147483648<fidl::Socket>,) =
+                        fidl::encoding::Decodable::new_empty();
                     fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.protocols/ChannelProtocolMutateSocketRequest");
                     fidl::trace_blob!("fidl:blob", "decode", bytes);
                     fidl::encoding::Decoder::decode_into(&header, _body_bytes, handles, &mut req)?;
@@ -2622,7 +2745,7 @@ impl futures::Stream for ChannelProtocolRequestStream {
                     let control_handle = ChannelProtocolControlHandle { inner: this.inner.clone() };
 
                     Ok(ChannelProtocolRequest::MutateSocket {
-                        a: req,
+                        a: req.0.into_inner(),
                         responder: ChannelProtocolMutateSocketResponder {
                             control_handle: std::mem::ManuallyDrop::new(control_handle),
                             tx_id: header.tx_id(),
@@ -2693,7 +2816,8 @@ impl ChannelProtocolRequestMessage {
                 })
             }
             0x7dd036a18b33b76a => {
-                let mut out_tuple: (fidl::Socket,) = fidl::encoding::Decodable::new_empty();
+                let mut out_tuple: (HandleWrapperObjectTypeSOCKETRights2147483648<fidl::Socket>,) =
+                    fidl::encoding::Decodable::new_empty();
                 fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.protocols/ChannelProtocolMutateSocketRequest");
                 fidl::trace_blob!("fidl:blob", "decode", bytes);
                 fidl::encoding::Decoder::decode_into(
@@ -2705,7 +2829,7 @@ impl ChannelProtocolRequestMessage {
                 fidl::duration_end!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => _handles.len() as u32);
 
                 Ok(ChannelProtocolRequestMessage::MutateSocket {
-                    a: out_tuple.0,
+                    a: out_tuple.0.into_inner(),
                     tx_id: header.tx_id().into(),
                 })
             }
@@ -3091,7 +3215,8 @@ impl TransitionalSynchronousProxy {
         self.client.into_channel()
     }
     pub fn request(&mut self, mut x: i64, ___deadline: zx::Time) -> Result<(i64), fidl::Error> {
-        self.client.send_query(&mut (x), 0x62d345e621780ee8, ___deadline)
+        let _value: (i64,) = self.client.send_query(&mut (x), 0x62d345e621780ee8, ___deadline)?;
+        Ok(_value.0)
     }
     pub fn one_way(&mut self, mut x: i64) -> Result<(), fidl::Error> {
         self.client.send(&mut (x), 0xf99bc4b26bc9ea5)
@@ -3145,7 +3270,16 @@ impl TransitionalProxy {
 impl TransitionalProxyInterface for TransitionalProxy {
     type RequestResponseFut = fidl::client::QueryResponseFut<(i64)>;
     fn request(&self, mut x: i64) -> Self::RequestResponseFut {
-        self.client.send_query(&mut (x), 0x62d345e621780ee8)
+        fn transform(result: Result<(i64,), fidl::Error>) -> Result<(i64), fidl::Error> {
+            result.map(|_value| _value.0)
+        }
+        let send_result = self.client.call_send_raw_query(&mut (x), 0x62d345e621780ee8);
+        QueryResponseFut(match send_result {
+            Ok(res_fut) => future::maybe_done(
+                res_fut.and_then(|buf| decode_transaction_body_fut(buf, transform)),
+            ),
+            Err(e) => MaybeDone::Done(Err(e)),
+        })
     }
     fn one_way(&self, mut x: i64) -> Result<(), fidl::Error> {
         self.client.send(&mut (x), 0xf99bc4b26bc9ea5)
@@ -3338,7 +3472,7 @@ impl futures::Stream for TransitionalRequestStream {
 
             std::task::Poll::Ready(Some(match header.ordinal() {
                 0x62d345e621780ee8 => {
-                    let mut req: (i64) = fidl::encoding::Decodable::new_empty();
+                    let mut req: (i64,) = fidl::encoding::Decodable::new_empty();
                     fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.protocols/TransitionalRequestRequest");
                     fidl::trace_blob!("fidl:blob", "decode", bytes);
                     fidl::encoding::Decoder::decode_into(&header, _body_bytes, handles, &mut req)?;
@@ -3346,7 +3480,7 @@ impl futures::Stream for TransitionalRequestStream {
                     let control_handle = TransitionalControlHandle { inner: this.inner.clone() };
 
                     Ok(TransitionalRequest::Request {
-                        x: req,
+                        x: req.0,
                         responder: TransitionalRequestResponder {
                             control_handle: std::mem::ManuallyDrop::new(control_handle),
                             tx_id: header.tx_id(),
@@ -3355,14 +3489,14 @@ impl futures::Stream for TransitionalRequestStream {
                     })
                 }
                 0xf99bc4b26bc9ea5 => {
-                    let mut req: (i64) = fidl::encoding::Decodable::new_empty();
+                    let mut req: (i64,) = fidl::encoding::Decodable::new_empty();
                     fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.protocols/TransitionalOneWayRequest");
                     fidl::trace_blob!("fidl:blob", "decode", bytes);
                     fidl::encoding::Decoder::decode_into(&header, _body_bytes, handles, &mut req)?;
                     fidl::duration_end!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => handles.len() as u32);
                     let control_handle = TransitionalControlHandle { inner: this.inner.clone() };
 
-                    Ok(TransitionalRequest::OneWay { x: req, control_handle })
+                    Ok(TransitionalRequest::OneWay { x: req.0, control_handle })
                 }
                 _ => Err(fidl::Error::UnknownOrdinal {
                     ordinal: header.ordinal(),

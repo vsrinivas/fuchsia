@@ -16,10 +16,13 @@ use fuchsia_zircon as zx;
 use {
     bitflags::bitflags,
     fidl::{
+        client::{decode_transaction_body_fut, QueryResponseFut},
         fidl_empty_struct, fidl_flexible_bits, fidl_flexible_enum, fidl_strict_bits,
         fidl_strict_enum, fidl_struct, fidl_struct_copy, fidl_table, fidl_xunion,
+        wrap_handle_metadata,
     },
     fuchsia_zircon_status as zx_status,
+    futures::future::{self, MaybeDone, TryFutureExt},
 };
 
 const _FIDL_TRACE_BINDINGS_RUST: u32 = 6;
@@ -55,7 +58,9 @@ impl TopSynchronousProxy {
         self.client.into_channel()
     }
     pub fn get_foo(&mut self, ___deadline: zx::Time) -> Result<(fidl_bottom::Foo), fidl::Error> {
-        self.client.send_query(&mut (), 0x6ae8d19bc98f3d92, ___deadline)
+        let _value: (fidl_bottom::Foo,) =
+            self.client.send_query(&mut (), 0x6ae8d19bc98f3d92, ___deadline)?;
+        Ok(_value.0)
     }
 }
 
@@ -103,7 +108,18 @@ impl TopProxy {
 impl TopProxyInterface for TopProxy {
     type GetFooResponseFut = fidl::client::QueryResponseFut<(fidl_bottom::Foo)>;
     fn get_foo(&self) -> Self::GetFooResponseFut {
-        self.client.send_query(&mut (), 0x6ae8d19bc98f3d92)
+        fn transform(
+            result: Result<(fidl_bottom::Foo,), fidl::Error>,
+        ) -> Result<(fidl_bottom::Foo), fidl::Error> {
+            result.map(|_value| _value.0)
+        }
+        let send_result = self.client.call_send_raw_query(&mut (), 0x6ae8d19bc98f3d92);
+        QueryResponseFut(match send_result {
+            Ok(res_fut) => future::maybe_done(
+                res_fut.and_then(|buf| decode_transaction_body_fut(buf, transform)),
+            ),
+            Err(e) => MaybeDone::Done(Err(e)),
+        })
     }
 }
 

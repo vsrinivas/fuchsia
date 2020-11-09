@@ -37,8 +37,13 @@ fn decode_transaction_body<D: Decodable>(mut buf: MessageBufEtc) -> Result<D, Er
     Ok(output)
 }
 
-fn decode_transaction_body_fut<D: Decodable>(buf: MessageBufEtc) -> Ready<Result<D, Error>> {
-    future::ready(decode_transaction_body(buf))
+/// Decodes the body of a transaction.
+/// Exposed for generated code.
+pub fn decode_transaction_body_fut<D: Decodable, T>(
+    buf: MessageBufEtc,
+    transform: fn(Result<D, Error>) -> Result<T, Error>,
+) -> Ready<Result<T, Error>> {
+    future::ready(transform(decode_transaction_body(buf)))
 }
 
 /// A FIDL client which can be used to send buffers and receive responses via a channel.
@@ -47,16 +52,16 @@ pub struct Client {
     inner: Arc<ClientInner>,
 }
 
-/// A future representing the decoded response to a FIDL query.
-pub type DecodedQueryResponseFut<D> =
-    AndThen<MessageResponse, Ready<Result<D, Error>>, fn(MessageBufEtc) -> Ready<Result<D, Error>>>;
+/// A future representing the decoded and transformed response to a FIDL query.
+pub type DecodedQueryResponseFut<T> =
+    AndThen<MessageResponse, Ready<Result<T, Error>>, fn(MessageBufEtc) -> Ready<Result<T, Error>>>;
 
 /// A future representing the result of a FIDL query, with early error detection available if the
 /// message couldn't be sent.
 #[derive(Debug)]
-pub struct QueryResponseFut<D>(MaybeDone<DecodedQueryResponseFut<D>>);
+pub struct QueryResponseFut<T>(pub MaybeDone<DecodedQueryResponseFut<T>>);
 
-impl<D> FusedFuture for QueryResponseFut<D> {
+impl<T> FusedFuture for QueryResponseFut<T> {
     fn is_terminated(&self) -> bool {
         match self.0 {
             MaybeDone::Gone => true,
@@ -65,8 +70,8 @@ impl<D> FusedFuture for QueryResponseFut<D> {
     }
 }
 
-impl<D> Future for QueryResponseFut<D> {
-    type Output = Result<D, Error>;
+impl<T> Future for QueryResponseFut<T> {
+    type Output = Result<T, Error>;
 
     fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         ready!(self.0.poll_unpin(cx));
@@ -75,7 +80,7 @@ impl<D> Future for QueryResponseFut<D> {
     }
 }
 
-impl<D> QueryResponseFut<D> {
+impl<T> QueryResponseFut<T> {
     /// Check to see if the query has an error. If there was en error sending, this returns it and
     /// the error is returned, otherwise it returns self, which can then be awaited on:
     /// i.e. match echo_proxy.echo("something").check() {
@@ -201,8 +206,29 @@ impl Client {
         });
 
         QueryResponseFut(match send_result {
-            Ok(res_fut) => future::maybe_done(res_fut.and_then(decode_transaction_body_fut::<D>)),
+            Ok(res_fut) => {
+                future::maybe_done(res_fut.and_then(|buf| {
+                    decode_transaction_body_fut::<D, D>(buf, std::convert::identity)
+                }))
+            }
             Err(e) => MaybeDone::Done(Err(e)),
+        })
+    }
+
+    /// Send an encodable query and receive a decodable response, transforming
+    /// the response with the specified function after decoding.
+    pub fn call_send_raw_query<E: Encodable>(
+        &self,
+        msg: &mut E,
+        ordinal: u64,
+    ) -> Result<MessageResponse, Error> {
+        self.send_raw_query(|tx_id, bytes, handles| {
+            let msg = &mut TransactionMessage {
+                header: TransactionHeader::new(tx_id.as_raw_id(), ordinal),
+                body: msg,
+            };
+            Encoder::encode(bytes, handles, msg)?;
+            Ok(())
         })
     }
 

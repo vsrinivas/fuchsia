@@ -25,6 +25,7 @@ func NewGenerator() *Generator {
 	template.Must(tmpls.Parse(constTmpl))
 	template.Must(tmpls.Parse(enumTmpl))
 	template.Must(tmpls.Parse(protocolTmpl))
+	template.Must(tmpls.Parse(handleMetadataWrapperTmpl))
 	template.Must(tmpls.Parse(serviceTmpl))
 	template.Must(tmpls.Parse(structTmpl))
 	template.Must(tmpls.Parse(unionTmpl))

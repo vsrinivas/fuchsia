@@ -25,6 +25,7 @@ use fuchsia_zircon as zx;
 use {
 	bitflags::bitflags,
 	fuchsia_zircon_status as zx_status,
+  	futures::future::{self, MaybeDone, TryFutureExt},
 	fidl::{
 		fidl_empty_struct,
 		fidl_flexible_bits,
@@ -35,6 +36,11 @@ use {
 		fidl_struct,
 		fidl_table,
 		fidl_xunion,
+		wrap_handle_metadata,
+		client::{
+			QueryResponseFut,
+			decode_transaction_body_fut,
+		},
 	},
 };
 
@@ -74,6 +80,9 @@ const _FIDL_TRACE_BINDINGS_RUST: u32 = 6;
 {{ end -}}
 {{ range $table := .Tables -}}
 {{ template "TableDeclaration" $table }}
+{{ end -}}
+{{ range $hmw := .HandleMetadataWrappers -}}
+{{ template "HandleMetadataWrapperDeclaration" $hmw }}
 {{ end -}}
 {{ range $protocol := .Protocols -}}
 {{ range $transport, $_ := .Transports -}}
