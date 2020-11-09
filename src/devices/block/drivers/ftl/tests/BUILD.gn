@@ -17,9 +17,6 @@ source_set("shared") {
     "//src/devices/block/drivers/ftl:common",
     "//src/devices/testing/fake_ddk",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 group("tests") {
@@ -97,9 +94,6 @@ fuzzer("ftl-read-write-fuzzer") {
   sources = [ "ftl-fuzzer.cc" ]
   include_dirs = [ "//src/devices/block/drivers/ftl" ]
   deps = [ ":shared" ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 fuzzers_package("ftl-fuzzers") {
