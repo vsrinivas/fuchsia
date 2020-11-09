@@ -75,8 +75,6 @@ template("_cmc_tool") {
 
 # Compiles a Components Framework v2 manifest (.cml) file to .cm
 #
-# The compiled manifest will be pretty-printed if is_debug is true.
-#
 # Example:
 #
 # ```
@@ -129,10 +127,6 @@ template("cmc_compile") {
       rebase_path(output_file, root_build_dir),
       rebase_path(manifest, root_build_dir),
     ]
-
-    if (is_debug) {
-      args += [ "--pretty" ]
-    }
   }
 }
 

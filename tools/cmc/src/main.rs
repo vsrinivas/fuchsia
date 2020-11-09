@@ -46,7 +46,7 @@ fn run_cmc() -> Result<(), Error> {
             }
             format::format(&file, pretty, cml, output)?;
         }
-        opts::Commands::Compile { file, pretty: _, output } => {
+        opts::Commands::Compile { file, output } => {
             // FIXME: Don't just unwrap it.
             compile::compile(&file, &output.unwrap())?
         }

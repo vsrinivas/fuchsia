@@ -43,9 +43,5 @@ template("cm") {
       rebase_path(compiled_output, root_build_dir),
       rebase_path(invoker.manifest, root_build_dir),
     ]
-
-    if (is_debug) {
-      args += [ "--pretty" ]
-    }
   }
 }
