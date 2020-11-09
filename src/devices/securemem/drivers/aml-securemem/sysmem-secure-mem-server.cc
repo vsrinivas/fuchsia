@@ -120,7 +120,7 @@ void SysmemSecureMemServer::SetPhysicalSecureHeaps(
   llcpp::fuchsia::sysmem::SecureMem_SetPhysicalSecureHeaps_Result result;
   zx_status_t status = SetPhysicalSecureHeapsInternal(heaps);
   if (status != ZX_OK) {
-    LOG(ERROR, "SetPhysicalSecureHeapsInternal() failed - status: %d", status);
+    // Logging handled in `SetPhysicalSecureHeapsInternal`
     result.set_err(fidl::unowned_ptr(&status));
     completer.Reply(std::move(result));
     return;
@@ -154,7 +154,7 @@ bool SysmemSecureMemServer::TrySetupSecmemSession() {
     }
 
     secmem_session_.emplace(session_result.take_value());
-    LOG(INFO, "Successfully connected to secmem session");
+    LOG(DEBUG, "Successfully connected to secmem session");
     return true;
   }
 
@@ -242,7 +242,7 @@ zx_status_t SysmemSecureMemServer::SetPhysicalSecureHeapsInternal(
   // This implementation is amlogic-specific; we expect exactly 1 heap which is
   // AMLOGIC_SECURE, only.
   if (heaps.heaps_count != 1) {
-    LOG(ERROR, "heaps.heaps_count != 1");
+    LOG(ERROR, "heaps.heaps_count %" PRIu32 " != 1", heaps.heaps_count);
     return ZX_ERR_INVALID_ARGS;
   }
   const llcpp::fuchsia::sysmem::PhysicalSecureHeap& heap = heaps.heaps[0];

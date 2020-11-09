@@ -534,7 +534,7 @@ zx_status_t Device::SysmemRegisterSecureMem(zx::channel secure_mem_connection) {
           return;
         }
         if (set_result->result.is_err()) {
-          LOG(ERROR, "Got secure memory allocation error %d", set_result->result.err());
+          LOG(WARNING, "Unable to set physical secure heaps. Status: %d", set_result->result.err());
           return;
         }
 

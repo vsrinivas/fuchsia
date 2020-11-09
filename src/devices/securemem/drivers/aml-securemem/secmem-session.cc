@@ -131,7 +131,7 @@ fit::result<SecmemSession, fuchsia::tee::DeviceSyncPtr> SecmemSession::TryOpen(
   }
 
   if (result.return_code() != TEEC_SUCCESS) {
-    LOG(ERROR, "OpenSession to secmem failed - TEEC_Result: %" PRIx64 ", origin: %" PRIu32 ".",
+    LOG(WARNING, "OpenSession to secmem failed - TEEC_Result: %" PRIx64 ", origin: %" PRIu32 ".",
         result.return_code(), static_cast<uint32_t>(result.return_origin()));
     return fit::error(std::move(tee_connection));
   }
