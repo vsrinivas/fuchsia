@@ -8,8 +8,8 @@
 #define ZIRCON_KERNEL_VM_INCLUDE_VM_VM_PAGE_LIST_H_
 
 #include <align.h>
-#include <zircon/types.h>
 #include <zircon/errors.h>
+#include <zircon/types.h>
 
 #include <fbl/canary.h>
 #include <fbl/function.h>
@@ -270,6 +270,18 @@ class VmPageList final {
   zx_status_t ForEveryPageAndGapInRange(PAGE_FUNC per_page_func, GAP_FUNC per_gap_func,
                                         uint64_t start_offset, uint64_t end_offset) const {
     return ForEveryPageAndGapInRange(this, per_page_func, per_gap_func, start_offset, end_offset);
+  }
+
+  // Returns true if any pages or markers are in the given range.
+  bool AnyPagesInRange(uint64_t start_offset, uint64_t end_offset) const {
+    bool found_page = false;
+    ForEveryPageInRange(
+        [&found_page](const VmPageOrMarker* page, uint64_t offset) {
+          found_page = true;
+          return ZX_ERR_STOP;
+        },
+        start_offset, end_offset);
+    return found_page;
   }
 
   // Attempts to return a reference to the VmPageOrMarker at the specified offset. The returned

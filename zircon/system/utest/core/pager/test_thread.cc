@@ -30,7 +30,9 @@ TestThread::TestThread(fbl::Function<bool()> fn) : fn_(std::move(fn)) {
 
 TestThread::~TestThread() {
   // TODO: UserPagers need to be destroyed before TestThreads to ensure threads aren't blocked
-  ZX_ASSERT(thrd_join(thrd_, nullptr) == thrd_success);
+  if (thrd_) {
+    ZX_ASSERT(thrd_join(thrd_, nullptr) == thrd_success);
+  }
 }
 
 bool TestThread::Start() {

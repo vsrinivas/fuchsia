@@ -5,6 +5,7 @@
 #ifndef ZIRCON_SYSTEM_UTEST_CORE_PAGER_USERPAGER_H_
 #define ZIRCON_SYSTEM_UTEST_CORE_PAGER_USERPAGER_H_
 
+#include <lib/zx/event.h>
 #include <lib/zx/pager.h>
 #include <lib/zx/port.h>
 #include <lib/zx/vmar.h>
@@ -17,6 +18,8 @@
 
 #include <fbl/function.h>
 #include <fbl/intrusive_double_list.h>
+
+#include "test_thread.h"
 
 namespace pager_tests {
 
@@ -50,6 +53,8 @@ class Vmo : public fbl::DoublyLinkedListable<std::unique_ptr<Vmo>> {
 
   std::unique_ptr<Vmo> Clone();
 
+  std::unique_ptr<Vmo> Clone(uint64_t offset, uint64_t size);
+
  private:
   Vmo(zx::vmo vmo, uint64_t size, uint64_t* base, uint64_t base_addr, uint64_t base_val)
       : size_(size),
@@ -73,6 +78,7 @@ class Vmo : public fbl::DoublyLinkedListable<std::unique_ptr<Vmo>> {
 
 class UserPager {
  public:
+  UserPager();
   ~UserPager();
 
   // Initialzies the UserPager.
@@ -114,16 +120,24 @@ class UserPager {
   bool GetPageReadRequest(Vmo* vmo, zx_time_t deadline, uint64_t* page_offset,
                           uint64_t* page_count);
 
+  // Starts a thread to handle any page faults. Faulted in pages are initialized with the default
+  // page tagged data as per SupplyPages. This function is not thread safe, and should only be
+  // called once. After starting a pager thread it is an error to create or destroy VMOs, as this
+  // could lead to data races.
+  bool StartTaggedPageFaultHandler();
+
   const zx::pager& pager() const { return pager_; }
 
  private:
   bool WaitForRequest(uint64_t key, const zx_packet_page_request_t& request, zx_time_t deadline);
   bool WaitForRequest(fbl::Function<bool(const zx_port_packet_t& packet)> cmp_fn,
                       zx_time_t deadline);
+  void PageFaultHandler();
 
   zx::pager pager_;
   zx::port port_;
-  uint64_t next_base_ = 0;
+  static constexpr uint64_t kShutdownKey = 1;
+  uint64_t next_base_ = kShutdownKey + 1;
 
   fbl::DoublyLinkedList<std::unique_ptr<Vmo>> vmos_;
 
@@ -132,6 +146,9 @@ class UserPager {
   } request_t;
 
   fbl::DoublyLinkedList<std::unique_ptr<request_t>> requests_;
+
+  zx::event shutdown_event_;
+  TestThread pager_thread_;
 };
 
 }  // namespace pager_tests

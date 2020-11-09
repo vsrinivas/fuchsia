@@ -2175,4 +2175,154 @@ TEST(Pager, DeepHierarchy) {
   vmo.reset();
 }
 
+// This tests that if there are intermediate parents that children see at least the state when
+// they were created, and might (or might not) see writes that occur after creation.
+TEST(Pager, CloneMightSeeIntermediateForks) {
+  UserPager pager;
+
+  ASSERT_TRUE(pager.Init());
+
+  Vmo* root_vmo;
+  ASSERT_TRUE(pager.CreateVmo(16, &root_vmo));
+
+  // We are not testing page fault specifics, so just spin up a thread to handle all page faults.
+  ASSERT_TRUE(pager.StartTaggedPageFaultHandler());
+
+  // Create a child that sees the full range, and put in an initial page fork
+  // Create first child slightly inset.
+  std::unique_ptr<Vmo> child = root_vmo->Clone(0, ZX_PAGE_SIZE * 16);
+  ASSERT_NOT_NULL(child);
+  uint64_t val = 1;
+  EXPECT_OK(child->vmo().write(&val, ZX_PAGE_SIZE * 8, sizeof(uint64_t)));
+
+  // Create two children of this, one in the fully empty half and one with the forked page.
+  std::unique_ptr<Vmo> empty_child = child->Clone(0, ZX_PAGE_SIZE * 8);
+  ASSERT_NOT_NULL(empty_child);
+  std::unique_ptr<Vmo> forked_child = child->Clone(ZX_PAGE_SIZE * 8, ZX_PAGE_SIZE * 8);
+  ASSERT_NOT_NULL(forked_child);
+
+  EXPECT_TRUE(empty_child->CheckVmo(0, 8));
+  EXPECT_TRUE(forked_child->CheckVmo(1, 7));
+  EXPECT_OK(forked_child->vmo().read(&val, 0, sizeof(uint64_t)));
+  EXPECT_EQ(val, 1u);
+
+  // Preemptively fork a distinct page in both children
+  val = 2;
+  EXPECT_OK(empty_child->vmo().write(&val, 0, sizeof(uint64_t)));
+  val = 3;
+  EXPECT_OK(forked_child->vmo().write(&val, ZX_PAGE_SIZE, sizeof(uint64_t)));
+
+  // Fork these and other pages in the original child
+  val = 4;
+  EXPECT_OK(child->vmo().write(&val, 0, sizeof(uint64_t)));
+  val = 5;
+  EXPECT_OK(child->vmo().write(&val, ZX_PAGE_SIZE * 9, sizeof(uint64_t)));
+  val = 6;
+  EXPECT_OK(child->vmo().write(&val, ZX_PAGE_SIZE, sizeof(uint64_t)));
+  val = 7;
+  EXPECT_OK(child->vmo().write(&val, ZX_PAGE_SIZE * 10, sizeof(uint64_t)));
+
+  // For the pages we had already forked in the child, we expect to see precisely what we wrote
+  // originally, as we should have forked.
+  EXPECT_OK(empty_child->vmo().read(&val, 0, sizeof(uint64_t)));
+  EXPECT_EQ(val, 2u);
+  EXPECT_OK(forked_child->vmo().read(&val, ZX_PAGE_SIZE, sizeof(uint64_t)));
+  EXPECT_EQ(val, 3u);
+
+  // For the other forked pages we should either see what child wrote, or the original contents.
+  // With the current implementation we know deterministically that empty_child should see the
+  // original contents, and forked_child should see the forked. The commented out checks represent
+  // the equally correct, but not current implementation, behavior.
+  EXPECT_OK(empty_child->vmo().read(&val, ZX_PAGE_SIZE, sizeof(uint64_t)));
+  // EXPECT_EQ(val, 6u);
+  EXPECT_TRUE(empty_child->CheckVmo(1, 1));
+  EXPECT_OK(forked_child->vmo().read(&val, ZX_PAGE_SIZE * 2, sizeof(uint64_t)));
+  EXPECT_EQ(val, 7u);
+  // EXPECT_TRUE(forked_child->CheckVmo(2, 1));
+}
+
+// Test that clones always see committed parent pages. This is validating that if a clone is hung
+// off a higher parent internally than it was created on, that we never hang too high (i.e. any
+// forked pages in intermediaries are always seen), and it has the correct limits and does cannot
+// see more of the parent it hangs of than any of its intermediaries would have allowed it.
+TEST(Pager, CloneSeesCorrectParentPages) {
+  UserPager pager;
+
+  ASSERT_TRUE(pager.Init());
+
+  Vmo* root_vmo;
+  ASSERT_TRUE(pager.CreateVmo(16, &root_vmo));
+
+  // We are not testing page fault specifics, so just spin up a thread to handle all page faults.
+  ASSERT_TRUE(pager.StartTaggedPageFaultHandler());
+
+  // Create first child slightly inset.
+  std::unique_ptr<Vmo> child1 = root_vmo->Clone(ZX_PAGE_SIZE, ZX_PAGE_SIZE * 14);
+  ASSERT_NOT_NULL(child1);
+
+  // Fork some pages in the child.
+  uint64_t val = 1;
+  EXPECT_OK(child1->vmo().write(&val, 0, sizeof(uint64_t)));
+  val = 2;
+  EXPECT_OK(child1->vmo().write(&val, ZX_PAGE_SIZE * 4, sizeof(uint64_t)));
+  val = 3;
+  EXPECT_OK(child1->vmo().write(&val, ZX_PAGE_SIZE * 8, sizeof(uint64_t)));
+
+  // Create a child that covers the full range.
+  std::unique_ptr<Vmo> child2 = child1->Clone();
+
+  // Create children that should always have at least 1 forked page (in child1), and validate they
+  // see it.
+  std::unique_ptr<Vmo> child3 = child2->Clone(0, ZX_PAGE_SIZE * 4);
+  ASSERT_NOT_NULL(child2);
+
+  EXPECT_OK(child3->vmo().read(&val, 0, sizeof(uint64_t)));
+  EXPECT_EQ(val, 1u);
+  // Rest of the vmo should be unchanged.
+  EXPECT_TRUE(child3->CheckVmo(1, 3));
+  // Hanging a large child in the non-forked portion of child3/2 should not see more of child2.
+  std::unique_ptr<Vmo> child4 = child3->Clone(ZX_PAGE_SIZE, ZX_PAGE_SIZE * 4);
+  ASSERT_NOT_NULL(child4);
+  // First 3 pages should be original content, full view back to the root and no forked pages.
+  EXPECT_TRUE(child4->CheckVmo(0, 3));
+  // In the fourth page we should *not* see the forked page in child1 as we should have been clipped
+  // by the limits of child3, and thus see zeros instead.
+  EXPECT_OK(child4->vmo().read(&val, ZX_PAGE_SIZE * 3, sizeof(uint64_t)));
+  EXPECT_NE(val, 2u);
+  EXPECT_EQ(val, 0u);
+  child4.reset();
+  child3.reset();
+
+  child3 = child2->Clone(ZX_PAGE_SIZE, ZX_PAGE_SIZE * 7);
+  ASSERT_NOT_NULL(child3);
+  // Here our page 3 should be the forked second page from child1, the rest should be original.
+  EXPECT_TRUE(child3->CheckVmo(0, 2));
+  EXPECT_TRUE(child3->CheckVmo(4, 3));
+  EXPECT_OK(child3->vmo().read(&val, ZX_PAGE_SIZE * 3, sizeof(uint64_t)));
+  EXPECT_EQ(val, 2u);
+  // Create a child smaller than child3.
+  child4 = child3->Clone(0, ZX_PAGE_SIZE * 6);
+  ASSERT_NOT_NULL(child4);
+  // Fork a new low page in child4
+  val = 4;
+  EXPECT_OK(child4->vmo().write(&val, 0, sizeof(uint64_t)));
+  // Now create a child larger than child4
+  std::unique_ptr<Vmo> child5 = child4->Clone(0, ZX_PAGE_SIZE * 10);
+  ASSERT_NOT_NULL(child5);
+  // Now create a child that skips the forked page in child 4, but sees the forked page in child1.
+  std::unique_ptr<Vmo> child6 = child5->Clone(ZX_PAGE_SIZE, ZX_PAGE_SIZE * 7);
+  ASSERT_NOT_NULL(child6);
+  // Although we see the forked page in child1, due to our intermediate parent (child4) having a
+  // limit of 5 pages relative to child6, that is the point at which our view back should terminate
+  // and we should start seeing zeroes.
+  EXPECT_TRUE(child6->CheckVmo(0, 2));
+  EXPECT_OK(child6->vmo().read(&val, ZX_PAGE_SIZE * 2, sizeof(uint64_t)));
+  EXPECT_EQ(val, 2u);
+  EXPECT_TRUE(child6->CheckVmo(3, 2));
+  EXPECT_OK(child6->vmo().read(&val, ZX_PAGE_SIZE * 5, sizeof(uint64_t)));
+  EXPECT_EQ(val, 0u);
+  EXPECT_OK(child6->vmo().read(&val, ZX_PAGE_SIZE * 6, sizeof(uint64_t)));
+  EXPECT_EQ(val, 0u);
+}
+
 }  // namespace pager_tests

@@ -89,27 +89,40 @@ void Vmo::GenerateBufferContents(void* dest_buffer, uint64_t len, uint64_t paged
   }
 }
 
-std::unique_ptr<Vmo> Vmo::Clone() {
+std::unique_ptr<Vmo> Vmo::Clone() { return Clone(0, size_); }
+
+std::unique_ptr<Vmo> Vmo::Clone(uint64_t offset, uint64_t size) {
   zx::vmo clone;
   zx_status_t status;
-  if ((status = vmo_.create_child(ZX_VMO_CHILD_PRIVATE_PAGER_COPY | ZX_VMO_CHILD_RESIZABLE, 0,
-                                  size_, &clone)) != ZX_OK) {
+  if ((status = vmo_.create_child(ZX_VMO_CHILD_PRIVATE_PAGER_COPY | ZX_VMO_CHILD_RESIZABLE, offset,
+                                  size, &clone)) != ZX_OK) {
     fprintf(stderr, "vmo create_child failed with %s\n", zx_status_get_string(status));
     return nullptr;
   }
 
   zx_vaddr_t addr;
-  if ((status = zx::vmar::root_self()->map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, clone, 0, size_,
+  if ((status = zx::vmar::root_self()->map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, clone, 0, size,
                                            &addr)) != ZX_OK) {
     fprintf(stderr, "vmar map failed with %s\n", zx_status_get_string(status));
     return nullptr;
   }
 
-  return std::unique_ptr<Vmo>(
-      new Vmo(std::move(clone), size_, reinterpret_cast<uint64_t*>(addr), addr, base_val_));
+  return std::unique_ptr<Vmo>(new Vmo(std::move(clone), size, reinterpret_cast<uint64_t*>(addr),
+                                      addr, base_val_ + (offset / sizeof(uint64_t))));
 }
 
+UserPager::UserPager()
+    : pager_thread_([this]() -> bool {
+        this->PageFaultHandler();
+        return true;
+      }) {}
+
 UserPager::~UserPager() {
+  // If a pager thread was started, gracefully shut it down.
+  if (shutdown_event_) {
+    shutdown_event_.signal(0, ZX_USER_SIGNAL_0);
+    pager_thread_.Wait();
+  }
   while (!vmos_.is_empty()) {
     auto vmo = vmos_.pop_front();
     zx::vmar::root_self()->unmap(vmo->base_addr_, vmo->size_);
@@ -130,6 +143,11 @@ bool UserPager::Init() {
 }
 
 bool UserPager::CreateVmo(uint64_t size, Vmo** vmo_out) {
+  if (shutdown_event_) {
+    fprintf(stderr, "creating vmo after starting pager thread\n");
+    return false;
+  }
+
   zx::vmo vmo;
   size *= ZX_PAGE_SIZE;
   zx_status_t status;
@@ -166,6 +184,11 @@ bool UserPager::UnmapVmo(Vmo* vmo) {
 }
 
 bool UserPager::ReplaceVmo(Vmo* vmo, zx::vmo* old_vmo) {
+  if (shutdown_event_) {
+    fprintf(stderr, "creating vmo after starting pager thread\n");
+    return false;
+  }
+
   zx::vmo new_vmo;
   zx_status_t status;
   if ((status = pager_.create_vmo(0, port_, next_base_, vmo->size_, &new_vmo)) != ZX_OK) {
@@ -209,6 +232,13 @@ bool UserPager::DetachVmo(Vmo* vmo) {
 }
 
 void UserPager::ReleaseVmo(Vmo* vmo) {
+  if (shutdown_event_) {
+    fprintf(stderr, "releasing vmo after starting pager thread\n");
+    // Generate an assertion error as there is no return code.
+    ZX_ASSERT(!shutdown_event_);
+    return;
+  }
+
   zx::vmar::root_self()->unmap(vmo->base_addr_, vmo->size_);
   vmos_.erase(*vmo);
 }
@@ -340,6 +370,60 @@ bool UserPager::FailPages(Vmo* paged_vmo, uint64_t page_offset, uint64_t page_co
   if ((status = pager_.op_range(ZX_PAGER_OP_FAIL, paged_vmo->vmo_, page_offset * ZX_PAGE_SIZE,
                                 page_count * ZX_PAGE_SIZE, error_status)) != ZX_OK) {
     fprintf(stderr, "pager op_range failed with %s\n", zx_status_get_string(status));
+    return false;
+  }
+  return true;
+}
+
+void UserPager::PageFaultHandler() {
+  zx::vmo aux_vmo;
+  zx_status_t status = zx::vmo::create(ZX_PAGE_SIZE, 0, &aux_vmo);
+  ZX_ASSERT(status == ZX_OK);
+  while (1) {
+    zx_port_packet_t actual_packet;
+    status = port_.wait(zx::time::infinite(), &actual_packet);
+    if (status != ZX_OK) {
+      fprintf(stderr, "Unexpected err %s waiting on port\n", zx_status_get_string(status));
+      return;
+    }
+    if (actual_packet.key == kShutdownKey) {
+      ZX_ASSERT(actual_packet.type == ZX_PKT_TYPE_SIGNAL_ONE);
+      return;
+    }
+    ZX_ASSERT(actual_packet.type == ZX_PKT_TYPE_PAGE_REQUEST);
+    if (actual_packet.page_request.command == ZX_PAGER_VMO_READ) {
+      // Just brute force find matching VMO keys, no need for efficiency.
+      for (auto& vmo : vmos_) {
+        if (vmo.GetKey() == actual_packet.key) {
+          // Supply the requested range.
+          SupplyPages(&vmo, actual_packet.page_request.offset / ZX_PAGE_SIZE,
+                      actual_packet.page_request.length / ZX_PAGE_SIZE);
+        }
+      }
+    }
+  }
+}
+
+bool UserPager::StartTaggedPageFaultHandler() {
+  if (shutdown_event_) {
+    fprintf(stderr, "Page fault handler already created\n");
+    return false;
+  }
+  zx_status_t status;
+  status = zx::event::create(0, &shutdown_event_);
+  if (status != ZX_OK) {
+    fprintf(stderr, "Failed to create event for shutdown sycnronization\n");
+    return false;
+  }
+
+  status = shutdown_event_.wait_async(port_, kShutdownKey, ZX_USER_SIGNAL_0, 0);
+  if (status != ZX_OK) {
+    fprintf(stderr, "Failed to associate shutdown event with port\n");
+    return false;
+  }
+
+  if (!pager_thread_.Start()) {
+    fprintf(stderr, "Failed to start page fault handling thread\n");
     return false;
   }
   return true;

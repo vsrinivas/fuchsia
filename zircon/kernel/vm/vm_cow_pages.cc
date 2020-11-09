@@ -515,7 +515,7 @@ zx_status_t VmCowPages::CreateCloneLocked(CloneType type, uint64_t offset, uint6
     return ZX_ERR_INVALID_ARGS;
   }
 
-  const uint64_t child_parent_limit = offset >= size_ ? 0 : ktl::min(size, size_ - offset);
+  uint64_t child_parent_limit = offset >= size_ ? 0 : ktl::min(size, size_ - offset);
 
   // Invalidate everything the clone will be able to see. They're COW pages now,
   // so any existing mappings can no longer directly write to the pages.
@@ -578,7 +578,30 @@ zx_status_t VmCowPages::CreateCloneLocked(CloneType type, uint64_t offset, uint6
       return ZX_ERR_NO_MEMORY;
     }
 
-    AddChildLocked(cow_pages.get(), offset, new_root_parent_offset, child_parent_limit);
+    // Walk up the parent chain until we find a good place to hang this new cow clone. A good place
+    // here means the first place that has committed pages that we actually need to snapshot. In
+    // doing so we need to ensure that the limits of the child we create do not end up seeing more
+    // of the final parent than it would have been able to see from here.
+    VmCowPages* cur = this;
+    AssertHeld(cur->lock_ref());
+    while (cur->parent_) {
+      // There's a parent, check if there are any pages in the current range. Unless we've moved
+      // outside the range of our parent, in which case we can just walk up.
+      if (child_parent_limit > 0 &&
+          cur->page_list_.AnyPagesInRange(offset, offset + child_parent_limit)) {
+        break;
+      }
+      // To move to the parent we need to translate our window into |cur|.
+      if (offset >= cur->parent_limit_) {
+        child_parent_limit = 0;
+      } else {
+        child_parent_limit = ktl::min(child_parent_limit, cur->parent_limit_ - offset);
+      }
+      offset += cur->parent_offset_;
+      cur = cur->parent_.get();
+    }
+    new_root_parent_offset = CheckedAdd(offset, cur->root_parent_offset_);
+    cur->AddChildLocked(cow_pages.get(), offset, new_root_parent_offset, child_parent_limit);
 
     *cow_child = ktl::move(cow_pages);
   }

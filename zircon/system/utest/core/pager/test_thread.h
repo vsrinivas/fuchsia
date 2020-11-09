@@ -56,7 +56,7 @@ class TestThread {
 
   const fbl::Function<bool()> fn_;
 
-  thrd_t thrd_;
+  thrd_t thrd_ = 0;
   zx::thread zx_thread_;
   zx::channel exception_channel_;
   bool success_ = false;
