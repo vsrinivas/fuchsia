@@ -372,9 +372,15 @@ func parseBlobsJSON(
 			}
 			// Save the full path of the ICU data file, so ICU data file
 			// proliferation can be debugged.
+			var blobNode *Node
+			blobNode = node.children[blob.Merkle]
+			if blobNode == nil {
+				blobNode = newNode(blob.Merkle)
+				node.children[blob.Merkle] = blobNode
+			}
 			trimmed := strings.TrimPrefix(blob.SourcePath, absBuildDir)
 			icuCopyNode := newNode(trimmed)
-			node.children[trimmed] = icuCopyNode
+			blobNode.children[trimmed] = icuCopyNode
 		} else if node, ok = state.distributedShlibs[blob.Path]; ok {
 			if state.blobMap[blob.Merkle] != nil {
 				if node == nil {
