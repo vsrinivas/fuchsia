@@ -41,9 +41,6 @@ test("tests") {
     "//zircon/system/ulib/devmgr-integration-test",
     "//zircon/system/ulib/inspector",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 isolated_devmgr_unittest_package("libdriver-integration-test") {
