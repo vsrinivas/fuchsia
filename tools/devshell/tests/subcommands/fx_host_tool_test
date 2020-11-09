@@ -1,0 +1,81 @@
+#!/bin/bash
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+### Test expected usage of device-finder in fx scripts
+
+
+BT_FILE_DEPS=(
+  "scripts/fx"
+  "tools/devshell/lib/fx-cmd-locator.sh"
+  "tools/devshell/lib/fx-optional-features.sh"
+  "tools/devshell/lib/vars.sh"
+  "tools/devshell/lib/platform.sh"
+  "tools/devshell/host-tool"
+)
+
+BT_MOCKED_TOOLS=(
+  "tools/devshell/list-build-artifacts"
+  "tools/devshell/build"
+)
+
+declare fx devfinder
+
+BT_SET_UP() {
+  source "${BT_TEMP_DIR}/tools/devshell/tests/lib/fuchsia-mock.sh"
+  fx="$(btf::setup_fx)"
+  source "${BT_TEMP_DIR}/tools/devshell/lib/vars.sh"
+  fx-config-read
+  devfinder="$(btf::make_installed_hosttools_mock device-finder)"
+  devfinder_rel="${devfinder##${FUCHSIA_BUILD_DIR}/}"
+  cat >"${BT_TEMP_DIR}/tools/devshell/list-build-artifacts.mock_side_effects" <<EOF
+    [[ \$2 == "device-finder" ]] && echo ${devfinder_rel} && exit 0
+    exit 1
+EOF
+
+}
+
+TEST_tool_executed() {
+  BT_EXPECT ${fx} host-tool "device-finder" "--flag1" "arg1"
+  btf::expect-mock-args "${devfinder}" "--flag1" "arg1"
+}
+
+TEST_tool_not_built() {
+  BT_EXPECT ${fx} host-tool "device-finder" "--flag1" "arg1"
+  # tool exists, so build should not be called
+  BT_ASSERT_FILE_DOES_NOT_EXIST "${BT_TEMP_DIR}/tools/devshell/build.mock_state"
+}
+
+TEST_force_build() {
+  BT_EXPECT ${fx} host-tool --force-build "device-finder" "--flag1" "arg1"
+  # tool exists, but build should be called anyway because --force-build
+  BT_ASSERT_FILE_EXISTS "${BT_TEMP_DIR}/tools/devshell/build.mock_state"
+}
+
+TEST_build_if_not_found() {
+  # tool does not exist, but is known to the build, so build should be called
+  mv "${devfinder}" "${devfinder}_backup"
+
+  # recreate the tool when 'fx build' is called
+  cat >"${BT_TEMP_DIR}/tools/devshell/build.mock_side_effects" <<EOF
+    mv "${devfinder}_backup" "${devfinder}"
+EOF
+
+  BT_EXPECT ${fx} host-tool "device-finder" "--flag1" "arg1"
+  BT_ASSERT_FILE_EXISTS "${BT_TEMP_DIR}/tools/devshell/build.mock_state"
+  btf::expect-mock-args "${devfinder}" "--flag1" "arg1"
+}
+
+TEST_no_build() {
+  # tool does not exist, is known to the build, but --no-build is specified
+  mv "${devfinder}" "${devfinder}_backup"
+
+  # should fail because tool cannot be found
+  BT_EXPECT_FAIL ${fx} host-tool "--no-build" "device-finder" "--flag1" "arg1" 2> /dev/null
+
+  # ensure that build was not called
+  BT_ASSERT_FILE_DOES_NOT_EXIST "${BT_TEMP_DIR}/tools/devshell/build.mock_state"
+}
+
+BT_RUN_TESTS "$@"
