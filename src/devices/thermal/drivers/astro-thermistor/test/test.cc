@@ -95,7 +95,7 @@ class ThermistorDeviceTest : public zxtest::Test {
   uint32_t CalcSampleValue(NtcInfo info, uint32_t idx, uint32_t pullup) {
     uint32_t ntc_resistance = info.profile[idx].resistance_ohm;
     float ratio = static_cast<float>(ntc_resistance) / static_cast<float>(ntc_resistance + pullup);
-    float sample = round(ratio * ((1 << adc_->Resolution()) - 1));
+    float sample = roundf(ratio * static_cast<float>((1 << adc_->Resolution()) - 1));
     return static_cast<uint32_t>(sample);
   }
 
