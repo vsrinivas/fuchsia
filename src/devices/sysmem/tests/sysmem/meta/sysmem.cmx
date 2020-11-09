@@ -14,6 +14,9 @@
         "dev": [
             "class/sysmem"
         ],
+        "features": [
+            "isolated-cache-storage"
+        ],
         "services": [
             "fuchsia.logger.LogSink",
             "fuchsia.sysinfo.SysInfo",

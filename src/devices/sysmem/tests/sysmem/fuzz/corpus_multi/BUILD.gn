@@ -8,6 +8,9 @@ import("//build/dist/resource.gni")
 
 # Generated using `fx fuzz update sysmem-fuzz/sysmem_fuzzer_multi`.
 resource("corpus_multi") {
-  sources = [ "sysmem_fuzz_corpus_multi_buffer_collecton_constraints.dat" ]
+  sources = [
+    "sysmem_fuzz_corpus_multi_buffer_collecton_constraints.dat",
+    "sysmem_fuzz_corpus_multi_buffer_format_modifier_constraints.dat",
+  ]
   outputs = [ "data/src/devices/sysmem/tests/sysmem/fuzz/corpus_multi/{{source_file_part}}" ]
 }

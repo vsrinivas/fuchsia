@@ -31,7 +31,8 @@
 #include <hw/arch_ops.h>
 #include <zxtest/zxtest.h>
 
-// To dump a corpus file for sysmem_fuzz.cc test, enable SYSMEM_FUZZ_CORPUS.
+// To dump a corpus file for sysmem_fuzz.cc test, enable SYSMEM_FUZZ_CORPUS. Files can be found
+// under /data/cache/r/sys/fuchsia.com:sysmem-test:0#meta:sysmem.cmx/ on the device.
 #define SYSMEM_FUZZ_CORPUS 0
 
 // We assume one sysmem since boot, for now.
@@ -301,9 +302,8 @@ SecureVmoReadTester::SecureVmoReadTester(zx::vmo secure_vmo) : secure_vmo_(std::
   ZX_ASSERT(status == ZX_OK);
 
   uintptr_t map_addr_raw;
-  status = child_vmar_.map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_SPECIFIC | ZX_VM_MAP_RANGE,
-                           0, secure_vmo_, 0, ZX_PAGE_SIZE,
-                           &map_addr_raw);
+  status = child_vmar_.map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_SPECIFIC | ZX_VM_MAP_RANGE, 0,
+                           secure_vmo_, 0, ZX_PAGE_SIZE, &map_addr_raw);
   ZX_ASSERT(status == ZX_OK);
   map_addr_ = reinterpret_cast<uint8_t*>(map_addr_raw);
   ZX_ASSERT(reinterpret_cast<uint8_t*>(child_vaddr) == map_addr_);
@@ -597,8 +597,8 @@ TEST(Sysmem, TokenOneParticipantWithImageConstraints) {
   image_constraints.display_width_divisor = 1;
   image_constraints.display_height_divisor = 1;
 
-#ifdef SYSMEM_FUZZ_CORPUS
-  FILE* ofp = fopen("/data/sysmem_fuzz_corpus_buffer_collecton_constraints.dat", "wb");
+#if SYSMEM_FUZZ_CORPUS
+  FILE* ofp = fopen("/cache/sysmem_fuzz_corpus_buffer_collecton_constraints.dat", "wb");
   if (ofp) {
     fwrite(constraints.get(), sizeof(fuchsia_sysmem_BufferCollectionConstraints), 1, ofp);
     fclose(ofp);
@@ -1037,8 +1037,8 @@ TEST(Sysmem, MultipleParticipants) {
   constraints_2->image_format_constraints[0].min_coded_width = 512;
   constraints_2->image_format_constraints[0].min_coded_height = 512;
 
-#ifdef SYSMEM_FUZZ_CORPUS
-  FILE* ofp = fopen("/data/sysmem_fuzz_corpus_multi_buffer_collecton_constraints.dat", "wb");
+#if SYSMEM_FUZZ_CORPUS
+  FILE* ofp = fopen("/cache/sysmem_fuzz_corpus_multi_buffer_collecton_constraints.dat", "wb");
   if (ofp) {
     fwrite(constraints_1.get(), sizeof(fuchsia_sysmem_BufferCollectionConstraints), 1, ofp);
     fwrite(constraints_2.get(), sizeof(fuchsia_sysmem_BufferCollectionConstraints), 1, ofp);
@@ -1246,6 +1246,125 @@ TEST(Sysmem, MultipleParticipants) {
   // doesn't crash
   zx_status_t close_status = fuchsia_sysmem_BufferCollectionClose(collection_client_3.get());
   EXPECT_EQ(close_status, ZX_OK, "");
+}
+
+// This test is mainly to have something in the fuzzer corpus using format modifiers.
+TEST(Sysmem, ComplicatedFormatModifiers) {
+  zx_status_t status;
+  zx::channel allocator2_client_1;
+  status = connect_to_sysmem_driver(&allocator2_client_1);
+  ASSERT_EQ(status, ZX_OK, "");
+
+  zx::channel token_client_1;
+  zx::channel token_server_1;
+  status = zx::channel::create(0, &token_client_1, &token_server_1);
+  ASSERT_EQ(status, ZX_OK, "");
+
+  status = fuchsia_sysmem_AllocatorAllocateSharedCollection(allocator2_client_1.get(),
+                                                            token_server_1.release());
+  ASSERT_EQ(status, ZX_OK, "");
+
+  zx::channel token_client_2;
+  zx::channel token_server_2;
+  status = zx::channel::create(0, &token_client_2, &token_server_2);
+  ASSERT_EQ(status, ZX_OK, "");
+
+  status = fuchsia_sysmem_BufferCollectionTokenDuplicate(token_client_1.get(), ZX_RIGHT_SAME_RIGHTS,
+                                                         token_server_2.release());
+  ASSERT_EQ(status, ZX_OK, "");
+
+  zx::channel collection_client_1;
+  zx::channel collection_server_1;
+  status = zx::channel::create(0, &collection_client_1, &collection_server_1);
+  ASSERT_EQ(status, ZX_OK, "");
+
+  ASSERT_NE(token_client_1.get(), ZX_HANDLE_INVALID, "");
+  status = fuchsia_sysmem_AllocatorBindSharedCollection(
+      allocator2_client_1.get(), token_client_1.release(), collection_server_1.release());
+  ASSERT_EQ(status, ZX_OK, "");
+
+  BufferCollectionConstraints constraints_1(BufferCollectionConstraints::Default);
+  constraints_1->usage.cpu = fuchsia_sysmem_cpuUsageReadOften | fuchsia_sysmem_cpuUsageWriteOften;
+  constraints_1->min_buffer_count_for_camping = 1;
+
+  constexpr uint64_t kFormatModifiers[] = {
+      fuchsia_sysmem_FORMAT_MODIFIER_LINEAR, fuchsia_sysmem_FORMAT_MODIFIER_INTEL_I915_X_TILED,
+      fuchsia_sysmem_FORMAT_MODIFIER_ARM_AFBC_16X16_SPLIT_BLOCK_SPARSE_YUV_TE_TILED_HEADER,
+      fuchsia_sysmem_FORMAT_MODIFIER_ARM_AFBC_16X16_TE};
+  constraints_1->image_format_constraints_count = std::size(kFormatModifiers);
+
+  for (uint32_t i = 0; i < std::size(kFormatModifiers); i++) {
+    fuchsia_sysmem_ImageFormatConstraints& image_constraints_1 =
+        constraints_1->image_format_constraints[i];
+
+    image_constraints_1.pixel_format.type =
+        i < 2 ? fuchsia_sysmem_PixelFormatType_R8G8B8A8 : fuchsia_sysmem_PixelFormatType_BGRA32;
+    image_constraints_1.pixel_format.has_format_modifier = true;
+    image_constraints_1.pixel_format.format_modifier.value = kFormatModifiers[i];
+    image_constraints_1.color_spaces_count = 1;
+    image_constraints_1.color_space[0] = fuchsia_sysmem_ColorSpace{
+        .type = fuchsia_sysmem_ColorSpaceType_SRGB,
+    };
+  }
+
+  // Start with constraints_2 a copy of constraints_1.  There are no handles
+  // in the constraints struct so a struct copy instead of clone is fine here.
+  BufferCollectionConstraints constraints_2(*constraints_1.get());
+
+  for (uint32_t i = 0; i < constraints_2->image_format_constraints_count; i++) {
+    // Modify constraints_2 to require nonzero image dimensions.
+    constraints_2->image_format_constraints[i].required_max_coded_height = 512;
+    constraints_2->image_format_constraints[i].required_max_coded_width = 512;
+  }
+
+#if SYSMEM_FUZZ_CORPUS
+  FILE* ofp = fopen("/cache/sysmem_fuzz_corpus_multi_buffer_format_modifier_constraints.dat", "wb");
+  if (ofp) {
+    fwrite(constraints_1.get(), sizeof(fuchsia_sysmem_BufferCollectionConstraints), 1, ofp);
+    fwrite(constraints_2.get(), sizeof(fuchsia_sysmem_BufferCollectionConstraints), 1, ofp);
+    fclose(ofp);
+  } else {
+    fprintf(stderr,
+            "Failed to write sysmem multi BufferCollectionConstraints corpus file at line %d\n",
+            __LINE__);
+    fflush(stderr);
+  }
+#endif  // SYSMEM_FUZZ_CORPUS
+
+  status = fuchsia_sysmem_BufferCollectionSetConstraints(collection_client_1.get(), true,
+                                                         constraints_1.release());
+  ASSERT_EQ(status, ZX_OK, "");
+
+  zx::channel collection_client_2;
+  zx::channel collection_server_2;
+  status = zx::channel::create(0, &collection_client_2, &collection_server_2);
+  ASSERT_EQ(status, ZX_OK, "");
+
+  status = fuchsia_sysmem_BufferCollectionSync(collection_client_1.get());
+  ASSERT_EQ(status, ZX_OK, "");
+
+  ASSERT_NE(token_client_2.get(), ZX_HANDLE_INVALID, "");
+  status = fuchsia_sysmem_AllocatorBindSharedCollection(
+      allocator2_client_1.get(), token_client_2.release(), collection_server_2.release());
+  ASSERT_EQ(status, ZX_OK, "");
+
+  status = fuchsia_sysmem_BufferCollectionSetConstraints(collection_client_2.get(), true,
+                                                         constraints_2.release());
+  ASSERT_EQ(status, ZX_OK, "");
+
+  //
+  // Only after both participants (both clients) have SetConstraints() will
+  // the allocation be successful.
+  //
+
+  zx_status_t allocation_status;
+  BufferCollectionInfo buffer_collection_info_1(BufferCollectionInfo::Default);
+  status = fuchsia_sysmem_BufferCollectionWaitForBuffersAllocated(
+      collection_client_1.get(), &allocation_status, buffer_collection_info_1.get());
+  // This is the first round-trip to/from sysmem.  A failure here can be due
+  // to any step above failing async.
+  ASSERT_EQ(status, ZX_OK, "");
+  ASSERT_EQ(allocation_status, ZX_OK, "");
 }
 
 TEST(Sysmem, ConstraintsRetainedBeyondCleanClose) {
