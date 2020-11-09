@@ -1,4 +1,4 @@
-# zx_channel_iovec_t support for zx_channel_write and zx_channel_call (RFC-NNNN)
+# zx_channel_iovec_t support for zx_channel_write and zx_channel_call (RFC-0010)
 
 This RFC introduces a new mode to zx_channel_write and zx_channel_call
 which copies input data from multiple memory regions rather than from a
@@ -10,7 +10,7 @@ Status    | Accepted
 Author(s) | bprosnitz@google.com
 Submitted | 2020-10-01
 Reviewed  | 2020-11-06
-Issue     | https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=60623
+Issue     | [fxbug.dev/60623](http://fxbug.dev/60623)
 
 [TOC]
 
@@ -180,9 +180,10 @@ effects on FIDL users.
 ## Performance
 
 A prototype was implemented and benchmarked.
-- Kernel change CL https://fuchsia-review.googlesource.com/c/fuchsia/+/432451
-- FIDL encoder CL https://fuchsia-review.googlesource.com/c/fuchsia/+/432223
-- Benchmark CL https://fuchsia-review.googlesource.com/c/fuchsia/+/432568
+
+- [Kernel change CL](https://fuchsia-review.googlesource.com/c/fuchsia/+/432451)
+- [FIDL encoder CL](https://fuchsia-review.googlesource.com/c/fuchsia/+/432223)
+- [Benchmark CL](https://fuchsia-review.googlesource.com/c/fuchsia/+/432568)
 
 This prototype implemented the zx_channel_write option on the kernel side
 and limited FIDL support (inline objects and vectors only).
@@ -195,16 +196,19 @@ These measurements are from a machine with a Intel Core i5-7300U CPU @ 2.60GHz.
 
 Byte vector event benchmarks (zx_channel_write, zx_channel_wait_async and
 zx_channel_read) showed a significant improvement:
+
 - 4096 byte vector: 9398 ns -> 4495 ns
 - 256 byte vector: 8788 ns -> 3794 ns
 
 FIDL encode also showed performance improvements.
 
 Encode time of the byte vector examples:
+
 - 4096 byte vector: 345 ns -> 88 ns
 - 256 byte vector: 251 ns -> 86 ns
 
 Inline objects also show small encode improvement:
+
 - Struct with 256 uint8 fields: 67 ns -> 49 ns
 
 ## Security considerations
@@ -283,7 +287,8 @@ Three proposals were considered:
   structure used in the Linux syscall `sendmmsg` and might be more familiar to
   users. While the performance of the array-of-array representation wasnt't
   measured, there is evidence that there could be a 5-25% overhead due to
-  indirection (see https://fuchsia-review.googlesource.com/c/fuchsia/+/433621).
+  indirection (see
+  [CL](https://fuchsia-review.googlesource.com/c/fuchsia/+/433621)).
 - Header-prefixed representation: the buffer begins with a header and is
   followed by the iovec array. The header consists of 16 message descriptors,
   each of which contains only the a `uint16_t` `message_size` field. This field
