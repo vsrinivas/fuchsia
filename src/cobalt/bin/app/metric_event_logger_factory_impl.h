@@ -5,7 +5,7 @@
 #ifndef SRC_COBALT_BIN_APP_METRIC_EVENT_LOGGER_FACTORY_IMPL_H_
 #define SRC_COBALT_BIN_APP_METRIC_EVENT_LOGGER_FACTORY_IMPL_H_
 
-#include <fuchsia/cobalt/cpp/fidl.h>
+#include <fuchsia/metrics/cpp/fidl.h>
 #include <stdlib.h>
 
 #include "lib/fidl/cpp/binding_set.h"
@@ -15,19 +15,19 @@
 
 namespace cobalt {
 
-class MetricEventLoggerFactoryImpl : public fuchsia::cobalt::MetricEventLoggerFactory {
+class MetricEventLoggerFactoryImpl : public fuchsia::metrics::MetricEventLoggerFactory {
  public:
   MetricEventLoggerFactoryImpl(CobaltServiceInterface* cobalt_service);
 
   void ShutDown();
 
  private:
-  void CreateMetricEventLogger(fuchsia::cobalt::ProjectSpec project_spec,
-                               fidl::InterfaceRequest<fuchsia::cobalt::MetricEventLogger> request,
+  void CreateMetricEventLogger(fuchsia::metrics::ProjectSpec project_spec,
+                               fidl::InterfaceRequest<fuchsia::metrics::MetricEventLogger> request,
                                CreateMetricEventLoggerCallback callback);
 
-  fidl::BindingSet<fuchsia::cobalt::MetricEventLogger,
-                   std::unique_ptr<fuchsia::cobalt::MetricEventLogger>>
+  fidl::BindingSet<fuchsia::metrics::MetricEventLogger,
+                   std::unique_ptr<fuchsia::metrics::MetricEventLogger>>
       logger_bindings_;
 
   bool shut_down_ = false;

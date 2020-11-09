@@ -10,6 +10,8 @@
 
 namespace cobalt {
 
+using fuchsia::cobalt::Status;
+
 const uint32_t kMetricId = 1;
 const uint32_t kEventTypeIndex = 0;
 const std::string kComponent = "";

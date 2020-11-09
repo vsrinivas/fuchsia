@@ -8,7 +8,7 @@
 
 namespace cobalt {
 
-using fuchsia::cobalt::MetricEvent;
+using fuchsia::metrics::MetricEvent;
 
 MetricEventBuilder::MetricEventBuilder(uint32_t metric_id) { event_.metric_id = metric_id; }
 
@@ -50,7 +50,7 @@ MetricEvent MetricEventBuilder::as_integer(const int64_t integer_value) {
 }
 
 MetricEvent MetricEventBuilder::as_integer_histogram(
-    std::vector<fuchsia::cobalt::HistogramBucket> histogram) {
+    std::vector<fuchsia::metrics::HistogramBucket> histogram) {
   event_.payload.set_histogram(std::move(histogram));
 
   return std::move(event_);

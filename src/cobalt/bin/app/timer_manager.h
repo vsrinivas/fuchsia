@@ -18,8 +18,6 @@
 #include <string>
 #include <unordered_map>
 
-using fuchsia::cobalt::Status;
-
 namespace cobalt {
 
 // Used to store all necessary values for a Timer to be able to log an Event.
@@ -81,23 +79,26 @@ class TimerManager {
   // same timer_id and different start timestamp exists it returns
   // FAILED_PRECONDITION. If timer_ID or timeout_s is invalid, returns
   // INVALID_ARGUMENTS.
-  Status GetTimerValWithStart(uint32_t metric_id, uint32_t event_code, const std::string& component,
-                              uint32_t encoding_id, const std::string& timer_id, int64_t timestamp,
-                              uint32_t timeout_s, std::unique_ptr<TimerVal>* timer_val_ptr);
+  fuchsia::cobalt::Status GetTimerValWithStart(
+      uint32_t metric_id, uint32_t event_code, const std::string& component,
+      uint32_t encoding_id, const std::string& timer_id, int64_t timestamp,
+      uint32_t timeout_s, std::unique_ptr<TimerVal>* timer_val_ptr);
 
   // Populates the TimerVal parameter with the timer's values if there is a
   // valid timer with the timer_id. If no valid timer exists it creates a new
   // timer with the end data and resets the TimerVal ptr. If a timer with the
   // same timer_id and different end timestamp exists it returns an error.
-  Status GetTimerValWithEnd(const std::string& timer_id, int64_t timestamp, uint32_t timeout_s,
-                            std::unique_ptr<TimerVal>* timer_val_ptr);
+  fuchsia::cobalt::Status GetTimerValWithEnd(
+      const std::string& timer_id, int64_t timestamp, uint32_t timeout_s,
+      std::unique_ptr<TimerVal>* timer_val_ptr);
 
   // Populates the TimerVal parameter with the timer's values if there is a
   // valid timer with the timer_id. If no valid timer exists it creates a new
   // timer with the end data and resets the TimerVal ptr. If a timer with the
   // same timer_id and different end timestamp exists it returns an error.
-  Status GetTimerValWithEnd(const std::string& timer_id, int64_t timestamp, uint32_t timeout_s,
-                            const std::string& part_name, std::unique_ptr<TimerVal>* timer_val_ptr);
+  fuchsia::cobalt::Status GetTimerValWithEnd(
+      const std::string& timer_id, int64_t timestamp, uint32_t timeout_s,
+      const std::string& part_name, std::unique_ptr<TimerVal>* timer_val_ptr);
 
  private:
   // Schedules a task which will delete the timer entries associated with

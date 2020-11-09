@@ -10,7 +10,7 @@
 namespace cobalt {
 
 using config::ProjectConfigs;
-using fuchsia::cobalt::Status;
+using fuchsia::metrics::Status;
 
 constexpr uint32_t kFuchsiaCustomerId = 1;
 
@@ -18,8 +18,8 @@ MetricEventLoggerFactoryImpl::MetricEventLoggerFactoryImpl(CobaltServiceInterfac
     : cobalt_service_(cobalt_service) {}
 
 void MetricEventLoggerFactoryImpl::CreateMetricEventLogger(
-    fuchsia::cobalt::ProjectSpec project_spec,
-    fidl::InterfaceRequest<fuchsia::cobalt::MetricEventLogger> request,
+    fuchsia::metrics::ProjectSpec project_spec,
+    fidl::InterfaceRequest<fuchsia::metrics::MetricEventLogger> request,
     CreateMetricEventLoggerCallback callback) {
   if (shut_down_) {
     FX_LOGS(ERROR) << "The LoggerFactory received a ShutDown signal and can not "

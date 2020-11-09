@@ -6,11 +6,29 @@
 #define SRC_COBALT_BIN_TESTAPP_COBALT_TESTAPP_LOGGER_H_
 
 #include <fuchsia/cobalt/cpp/fidl.h>
+#include <fuchsia/metrics/cpp/fidl.h>
 
 #include <map>
 #include <string>
 
 namespace cobalt::testapp {
+
+inline std::string StatusToString(fuchsia::metrics::Status status) {
+  switch (status) {
+    case fuchsia::metrics::Status::OK:
+      return "OK";
+    case fuchsia::metrics::Status::INVALID_ARGUMENTS:
+      return "INVALID_ARGUMENTS";
+    case fuchsia::metrics::Status::EVENT_TOO_BIG:
+      return "EVENT_TOO_BIG";
+    case fuchsia::metrics::Status::BUFFER_FULL:
+      return "BUFFER_FULL";
+    case fuchsia::metrics::Status::SHUT_DOWN:
+      return "SHUT_DOWN";
+    case fuchsia::metrics::Status::INTERNAL_ERROR:
+      return "INTERNAL_ERROR";
+  }
+};
 
 class CobaltTestAppLogger {
  public:
@@ -71,7 +89,7 @@ class CobaltTestAppLogger {
 
   fuchsia::cobalt::LoggerSyncPtr logger_;
   fuchsia::cobalt::LoggerSimpleSyncPtr logger_simple_;
-  fuchsia::cobalt::MetricEventLoggerSyncPtr metric_event_logger_;
+  fuchsia::metrics::MetricEventLoggerSyncPtr metric_event_logger_;
 };
 
 }  // namespace cobalt::testapp

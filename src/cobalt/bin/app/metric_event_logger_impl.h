@@ -5,7 +5,7 @@
 #ifndef SRC_COBALT_BIN_APP_METRIC_EVENT_LOGGER_IMPL_H_
 #define SRC_COBALT_BIN_APP_METRIC_EVENT_LOGGER_IMPL_H_
 
-#include <fuchsia/cobalt/cpp/fidl.h>
+#include <fuchsia/metrics/cpp/fidl.h>
 
 #include "third_party/cobalt/src/logger/logger.h"
 
@@ -16,35 +16,35 @@ namespace cobalt {
 // To test run:
 //    fx set --with-base //bundles:tools,//src/cobalt/bin:cobalt_tests;
 //    fx run-test-component cobalt_testapp_no_network
-class MetricEventLoggerImpl : public fuchsia::cobalt::MetricEventLogger {
+class MetricEventLoggerImpl : public fuchsia::metrics::MetricEventLogger {
  public:
   MetricEventLoggerImpl(std::unique_ptr<logger::LoggerInterface> logger);
 
  private:
   void LogOccurrence(uint32_t metric_id, uint64_t count, ::std::vector<uint32_t> event_codes,
-                     fuchsia::cobalt::MetricEventLogger::LogOccurrenceCallback callback) override;
+                     fuchsia::metrics::MetricEventLogger::LogOccurrenceCallback callback) override;
 
   void LogInteger(uint32_t metric_id, int64_t value, ::std::vector<uint32_t> event_codes,
-                  fuchsia::cobalt::MetricEventLogger::LogIntegerCallback callback) override;
+                  fuchsia::metrics::MetricEventLogger::LogIntegerCallback callback) override;
 
   void LogIntegerHistogram(
-      uint32_t metric_id, std::vector<fuchsia::cobalt::HistogramBucket> histogram,
+      uint32_t metric_id, std::vector<fuchsia::metrics::HistogramBucket> histogram,
       ::std::vector<uint32_t> event_codes,
-      fuchsia::cobalt::MetricEventLogger::LogIntegerHistogramCallback callback) override;
+      fuchsia::metrics::MetricEventLogger::LogIntegerHistogramCallback callback) override;
 
   void LogString(uint32_t metric_id, std::string string_value, ::std::vector<uint32_t> event_codes,
-                 fuchsia::cobalt::MetricEventLogger::LogStringCallback callback) override;
+                 fuchsia::metrics::MetricEventLogger::LogStringCallback callback) override;
 
   void LogMetricEvents(
-      std::vector<fuchsia::cobalt::MetricEvent> events,
-      fuchsia::cobalt::MetricEventLogger::LogMetricEventsCallback callback) override;
+      std::vector<fuchsia::metrics::MetricEvent> events,
+      fuchsia::metrics::MetricEventLogger::LogMetricEventsCallback callback) override;
 
   void LogCustomEvent(uint32_t metric_id,
-                      std::vector<fuchsia::cobalt::CustomEventValue> event_values,
-                      fuchsia::cobalt::MetricEventLogger::LogCustomEventCallback callback) override;
+                      std::vector<fuchsia::metrics::CustomEventValue> event_values,
+                      fuchsia::metrics::MetricEventLogger::LogCustomEventCallback callback) override;
 
  private:
-  fuchsia::cobalt::Status LogMetricEvent(fuchsia::cobalt::MetricEvent event);
+  fuchsia::metrics::Status LogMetricEvent(fuchsia::metrics::MetricEvent event);
 
   std::unique_ptr<logger::LoggerInterface> logger_;
 };

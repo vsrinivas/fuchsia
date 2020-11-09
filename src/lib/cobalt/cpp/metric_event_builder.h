@@ -5,7 +5,7 @@
 #ifndef SRC_LIB_COBALT_CPP_METRIC_EVENT_BUILDER_H_
 #define SRC_LIB_COBALT_CPP_METRIC_EVENT_BUILDER_H_
 
-#include <fuchsia/cobalt/cpp/fidl.h>
+#include <fuchsia/metrics/cpp/fidl.h>
 
 namespace cobalt {
 
@@ -39,16 +39,16 @@ class MetricEventBuilder {
 
   [[nodiscard]] MetricEventBuilder Clone() const;
 
-  fuchsia::cobalt::MetricEvent as_occurrence(int64_t count);
-  fuchsia::cobalt::MetricEvent as_integer(int64_t integer_value);
-  fuchsia::cobalt::MetricEvent as_integer_histogram(
-      std::vector<fuchsia::cobalt::HistogramBucket> histogram);
-  fuchsia::cobalt::MetricEvent as_string(const std::string &string_value);
+  fuchsia::metrics::MetricEvent as_occurrence(int64_t count);
+  fuchsia::metrics::MetricEvent as_integer(int64_t integer_value);
+  fuchsia::metrics::MetricEvent as_integer_histogram(
+      std::vector<fuchsia::metrics::HistogramBucket> histogram);
+  fuchsia::metrics::MetricEvent as_string(const std::string &string_value);
 
  private:
   MetricEventBuilder() = default;
 
-  fuchsia::cobalt::MetricEvent event_;
+  fuchsia::metrics::MetricEvent event_;
 };
 
 }  // namespace cobalt

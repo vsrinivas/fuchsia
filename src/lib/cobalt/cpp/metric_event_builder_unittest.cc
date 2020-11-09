@@ -8,7 +8,7 @@
 
 namespace cobalt {
 
-using fuchsia::cobalt::MetricEvent;
+using fuchsia::metrics::MetricEvent;
 
 const uint32_t kMetricId = 123;
 const uint32_t kDimension1 = 456;
@@ -39,7 +39,7 @@ TEST(MetricEventBuilder, IntegerEvent) {
 }
 
 TEST(MetricEventBuilder, IntegerHistogram) {
-  std::vector<fuchsia::cobalt::HistogramBucket> histogram;
+  std::vector<fuchsia::metrics::HistogramBucket> histogram;
   histogram.push_back({0, 10});
   histogram.push_back({1, 20});
   histogram.push_back({2, 30});

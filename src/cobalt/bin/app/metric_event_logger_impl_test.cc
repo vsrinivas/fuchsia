@@ -23,20 +23,20 @@ class MetricEventLoggerImplTest : public ::testing::Test {
  protected:
   logger::testing::FakeLogger* fake_logger_;
   MetricEventLoggerImpl logger_impl_;
-  fuchsia::cobalt::MetricEventLogger* logger_;
+  fuchsia::metrics::MetricEventLogger* logger_;
 };
 
 TEST_F(MetricEventLoggerImplTest, PauseDuringBatch) {
-  std::vector<fuchsia::cobalt::MetricEvent> events;
+  std::vector<fuchsia::metrics::MetricEvent> events;
   events.push_back(MetricEventBuilder(1).as_occurrence(1));
   events.push_back(MetricEventBuilder(1).as_occurrence(2));
   events.push_back(MetricEventBuilder(1).as_occurrence(3));
   events.push_back(MetricEventBuilder(1).as_occurrence(4));
   events.push_back(MetricEventBuilder(1).as_occurrence(5));
-  logger_->LogMetricEvents(std::move(events), [](fuchsia::cobalt::Status status) {});
+  logger_->LogMetricEvents(std::move(events), [](fuchsia::metrics::Status status) {});
   std::map<logger::PerProjectLoggerCallsMadeMetricDimensionLoggerMethod, uint32_t>
       internal_logger_calls = fake_logger_->internal_logger_calls();
-  // Only the LogCobaltEvents call should be recorded.
+  // Only the LogMetricEvents call should be recorded.
   EXPECT_EQ(internal_logger_calls.size(), 1);
   EXPECT_EQ(
       internal_logger_calls[logger::LoggerCallsMadeMetricDimensionLoggerMethod::LogMetricEvents],

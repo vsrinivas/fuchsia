@@ -12,6 +12,7 @@
 #include "src/cobalt/bin/testapp/cobalt_testapp.h"
 
 #include <fuchsia/cobalt/cpp/fidl.h>
+#include <fuchsia/metrics/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
@@ -180,17 +181,17 @@ void CobaltTestApp::Connect(uint32_t schedule_interval_seconds, uint32_t min_int
   FX_CHECK(status == fuchsia::cobalt::Status::OK)
       << "CreateLoggerSimple() => " << StatusToString(status);
 
-  fuchsia::cobalt::MetricEventLoggerFactorySyncPtr metric_event_logger_factory;
+  fuchsia::metrics::MetricEventLoggerFactorySyncPtr metric_event_logger_factory;
   services.Connect(metric_event_logger_factory.NewRequest());
 
-  status = fuchsia::cobalt::Status::INTERNAL_ERROR;
-  fuchsia::cobalt::ProjectSpec project;
+  fuchsia::metrics::Status metrics_status = fuchsia::metrics::Status::INTERNAL_ERROR;
+  fuchsia::metrics::ProjectSpec project;
   project.set_customer_id(1);
   project.set_project_id(project_id);
   metric_event_logger_factory->CreateMetricEventLogger(
-      std::move(project), logger_.metric_event_logger_.NewRequest(), &status);
-  FX_CHECK(status == fuchsia::cobalt::Status::OK)
-      << "CreateMetricEventLogger() => " << StatusToString(status);
+      std::move(project), logger_.metric_event_logger_.NewRequest(), &metrics_status);
+  FX_CHECK(metrics_status == fuchsia::metrics::Status::OK)
+      << "CreateMetricEventLogger() => " << StatusToString(metrics_status);
 
   services.Connect(system_data_updater_.NewRequest());
   status = fuchsia::cobalt::Status::INTERNAL_ERROR;

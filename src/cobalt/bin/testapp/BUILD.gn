@@ -47,6 +47,7 @@ executable("cobalt_testapp") {
     ":testapp_metrics_registry_cc",
     "//garnet/public/lib/svc/cpp",
     "//sdk/fidl/fuchsia.cobalt",
+    "//sdk/fidl/fuchsia.metrics",
     "//sdk/fidl/fuchsia.time",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",

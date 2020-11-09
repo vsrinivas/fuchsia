@@ -13,6 +13,8 @@
 
 namespace cobalt {
 
+using fuchsia::cobalt::Status;
+
 class LoggerImplTest : public ::testing::Test {
  public:
   LoggerImplTest()

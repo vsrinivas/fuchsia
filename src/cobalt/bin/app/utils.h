@@ -6,6 +6,7 @@
 #define SRC_COBALT_BIN_APP_UTILS_H_
 
 #include <fuchsia/cobalt/cpp/fidl.h>
+#include <fuchsia/metrics/cpp/fidl.h>
 #include <stdlib.h>
 
 #include <string>
@@ -22,6 +23,13 @@ fuchsia::cobalt::Status ToCobaltStatus(observation_store::ObservationStore::Stor
 fuchsia::cobalt::Status ToCobaltStatus(logger::Status s);
 
 fuchsia::cobalt::Status ToCobaltStatus(util::Status s);
+
+// Maps an ObservationStore::StoreStatus to a fuchsia::metrics::Status.
+fuchsia::metrics::Status ToMetricsStatus(observation_store::ObservationStore::StoreStatus s);
+
+fuchsia::metrics::Status ToMetricsStatus(logger::Status s);
+
+fuchsia::metrics::Status ToMetricsStatus(util::Status s);
 
 // Reads the PEM file at the specified path and returns the contents as
 // a string. CHECK fails if the file cannot be read.

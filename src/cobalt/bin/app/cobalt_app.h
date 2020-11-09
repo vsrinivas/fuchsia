@@ -6,6 +6,7 @@
 #define SRC_COBALT_BIN_APP_COBALT_APP_H_
 
 #include <fuchsia/cobalt/cpp/fidl.h>
+#include <fuchsia/metrics/cpp/fidl.h>
 #include <fuchsia/process/lifecycle/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <stdlib.h>
@@ -128,7 +129,7 @@ class CobaltApp {
   fidl::BindingSet<fuchsia::cobalt::LoggerFactory> logger_factory_bindings_;
 
   std::unique_ptr<MetricEventLoggerFactoryImpl> metric_event_logger_factory_impl_;
-  fidl::BindingSet<fuchsia::cobalt::MetricEventLoggerFactory> metric_event_logger_factory_bindings_;
+  fidl::BindingSet<fuchsia::metrics::MetricEventLoggerFactory> metric_event_logger_factory_bindings_;
 
   std::unique_ptr<fuchsia::cobalt::SystemDataUpdater> system_data_updater_impl_;
   fidl::BindingSet<fuchsia::cobalt::SystemDataUpdater> system_data_updater_bindings_;

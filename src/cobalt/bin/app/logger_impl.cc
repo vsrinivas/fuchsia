@@ -10,6 +10,8 @@
 
 namespace cobalt {
 
+using fuchsia::cobalt::Status;
+
 LoggerImpl::LoggerImpl(std::unique_ptr<logger::LoggerInterface> logger, TimerManager* timer_manager)
     : logger_(std::move(logger)), timer_manager_(timer_manager) {}
 

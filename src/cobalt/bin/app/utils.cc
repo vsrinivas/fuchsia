@@ -11,57 +11,56 @@
 
 namespace cobalt {
 
-using fuchsia::cobalt::Status;
 using observation_store::ObservationStore;
 
-Status ToCobaltStatus(ObservationStore::StoreStatus s) {
+fuchsia::cobalt::Status ToCobaltStatus(ObservationStore::StoreStatus s) {
   switch (s) {
     case ObservationStore::kOk:
-      return Status::OK;
+      return fuchsia::cobalt::Status::OK;
 
     case ObservationStore::kObservationTooBig:
-      return Status::EVENT_TOO_BIG;
+      return fuchsia::cobalt::Status::EVENT_TOO_BIG;
 
     case ObservationStore::kStoreFull:
-      return Status::BUFFER_FULL;
+      return fuchsia::cobalt::Status::BUFFER_FULL;
 
     case ObservationStore::kWriteFailed:
-      return Status::INTERNAL_ERROR;
+      return fuchsia::cobalt::Status::INTERNAL_ERROR;
   }
 }
 
-Status ToCobaltStatus(logger::Status s) {
+fuchsia::cobalt::Status ToCobaltStatus(logger::Status s) {
   switch (s) {
     case logger::Status::kOK:
-      return Status::OK;
+      return fuchsia::cobalt::Status::OK;
 
     case logger::Status::kInvalidArguments:
     case logger::Status::kInvalidConfig:
-      return Status::INVALID_ARGUMENTS;
+      return fuchsia::cobalt::Status::INVALID_ARGUMENTS;
 
     case logger::Status::kTooBig:
-      return Status::EVENT_TOO_BIG;
+      return fuchsia::cobalt::Status::EVENT_TOO_BIG;
 
     case logger::Status::kFull:
-      return Status::BUFFER_FULL;
+      return fuchsia::cobalt::Status::BUFFER_FULL;
 
     case logger::Status::kOther:
-      return Status::INTERNAL_ERROR;
+      return fuchsia::cobalt::Status::INTERNAL_ERROR;
 
     default:  // Needed so that the Cobalt core enum can be added to.
       FX_LOGS(ERROR) << "Unimplemented translation for enum value: " << s;
-      return Status::INTERNAL_ERROR;
+      return fuchsia::cobalt::Status::INTERNAL_ERROR;
   }
 }
 
-Status ToCobaltStatus(util::Status s) {
+fuchsia::cobalt::Status ToCobaltStatus(util::Status s) {
   switch (s.error_code()) {
     case util::StatusCode::OK:
-      return Status::OK;
+      return fuchsia::cobalt::Status::OK;
     case util::StatusCode::INVALID_ARGUMENT:
-      return Status::INVALID_ARGUMENTS;
+      return fuchsia::cobalt::Status::INVALID_ARGUMENTS;
     case util::StatusCode::RESOURCE_EXHAUSTED:
-      return Status::BUFFER_FULL;
+      return fuchsia::cobalt::Status::BUFFER_FULL;
     case util::StatusCode::CANCELLED:
     case util::StatusCode::UNKNOWN:
     case util::StatusCode::DEADLINE_EXCEEDED:
@@ -77,7 +76,74 @@ Status ToCobaltStatus(util::Status s) {
     case util::StatusCode::DATA_LOSS:
     case util::StatusCode::UNAUTHENTICATED:
     default:
-      return Status::INTERNAL_ERROR;
+      return fuchsia::cobalt::Status::INTERNAL_ERROR;
+  }
+}
+
+fuchsia::metrics::Status ToMetricsStatus(ObservationStore::StoreStatus s) {
+  switch (s) {
+    case ObservationStore::kOk:
+      return fuchsia::metrics::Status::OK;
+
+    case ObservationStore::kObservationTooBig:
+      return fuchsia::metrics::Status::EVENT_TOO_BIG;
+
+    case ObservationStore::kStoreFull:
+      return fuchsia::metrics::Status::BUFFER_FULL;
+
+    case ObservationStore::kWriteFailed:
+      return fuchsia::metrics::Status::INTERNAL_ERROR;
+  }
+}
+
+fuchsia::metrics::Status ToMetricsStatus(logger::Status s) {
+  switch (s) {
+    case logger::Status::kOK:
+      return fuchsia::metrics::Status::OK;
+
+    case logger::Status::kInvalidArguments:
+    case logger::Status::kInvalidConfig:
+      return fuchsia::metrics::Status::INVALID_ARGUMENTS;
+
+    case logger::Status::kTooBig:
+      return fuchsia::metrics::Status::EVENT_TOO_BIG;
+
+    case logger::Status::kFull:
+      return fuchsia::metrics::Status::BUFFER_FULL;
+
+    case logger::Status::kOther:
+      return fuchsia::metrics::Status::INTERNAL_ERROR;
+
+    default:  // Needed so that the Cobalt core enum can be added to.
+      FX_LOGS(ERROR) << "Unimplemented translation for enum value: " << s;
+      return fuchsia::metrics::Status::INTERNAL_ERROR;
+  }
+}
+
+fuchsia::metrics::Status ToMetricsStatus(util::Status s) {
+  switch (s.error_code()) {
+    case util::StatusCode::OK:
+      return fuchsia::metrics::Status::OK;
+    case util::StatusCode::INVALID_ARGUMENT:
+      return fuchsia::metrics::Status::INVALID_ARGUMENTS;
+    case util::StatusCode::RESOURCE_EXHAUSTED:
+      return fuchsia::metrics::Status::BUFFER_FULL;
+    case util::StatusCode::CANCELLED:
+    case util::StatusCode::UNKNOWN:
+    case util::StatusCode::DEADLINE_EXCEEDED:
+    case util::StatusCode::NOT_FOUND:
+    case util::StatusCode::ALREADY_EXISTS:
+    case util::StatusCode::PERMISSION_DENIED:
+    case util::StatusCode::FAILED_PRECONDITION:
+    case util::StatusCode::ABORTED:
+    case util::StatusCode::OUT_OF_RANGE:
+    case util::StatusCode::UNIMPLEMENTED:
+    case util::StatusCode::INTERNAL:
+    case util::StatusCode::UNAVAILABLE:
+    case util::StatusCode::DATA_LOSS:
+    case util::StatusCode::UNAUTHENTICATED:
+    default:
+      return fuchsia::metrics::Status::INTERNAL_ERROR;
   }
 }
 
