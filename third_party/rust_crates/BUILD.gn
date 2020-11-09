@@ -94,12 +94,6 @@ group("csv") {
   deps = [ ":csv-v1_1_3" ]
 }
 
-if (current_os == "fuchsia") {
-  group("ct-logs") {
-    deps = [ ":ct-logs-v0_6_0" ]
-  }
-}
-
 group("cxx") {
   deps = [ ":cxx-v0_3_5" ]
 }
@@ -2290,28 +2284,6 @@ rust_library("csv-core-v0_1_10") {
     "-Cmetadata=736f88686751ea8f",
     "-Cextra-filename=-736f88686751ea8f",
     "--cfg=feature=\"default\"",
-  ]
-}
-
-rust_library("ct-logs-v0_6_0") {
-  crate_name = "ct_logs"
-  crate_root = "//third_party/rust_crates/vendor/ct-logs/src/lib.rs"
-  output_name = "ct_logs-1d46bea7ecea0aa7"
-  configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
-  ]
-
-  deps = []
-  deps += [ ":sct-v0_6_0" ]
-
-  rustenv = []
-
-  rustflags = [
-    "--cap-lints=allow",
-    "--edition=2018",
-    "-Cmetadata=1d46bea7ecea0aa7",
-    "-Cextra-filename=-1d46bea7ecea0aa7",
   ]
 }
 

@@ -602,15 +602,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "ct-logs"
-version = "0.6.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4d3686f5fa27dbc1d76c751300376e167c5a43387f44bb451fd1c24776e49113"
-dependencies = [
- "sct",
-]
-
-[[package]]
 name = "cxx"
 version = "0.3.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -851,7 +842,6 @@ dependencies = [
  "crossbeam",
  "crossterm",
  "csv",
- "ct-logs",
  "cxx",
  "cxxbridge-cmd",
  "data-encoding",
