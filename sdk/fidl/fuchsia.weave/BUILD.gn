@@ -9,6 +9,7 @@ fidl("fuchsia.weave") {
 
   sources = [
     "auth.fidl",
+    "bootstrap.fidl",
     "common.fidl",
     "weavestack.fidl",
   ]

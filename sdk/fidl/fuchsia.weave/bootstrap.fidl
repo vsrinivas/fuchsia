@@ -1,0 +1,22 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.weave;
+
+using fuchsia.mem as mem;
+using zx;
+
+/// Protocol to allow components to provide initial configuration data derived from
+/// an existing Weave implementation to ensure continuity of the Weave fabric and
+/// other Weave settings or configuration data.
+[Discoverable]
+protocol Bootstrap {
+    /// Import a JSON-formatted Weave config providing data in the format
+    /// expected to satisfy the Weave DeviceLayer
+    /// [ConfigurationManager](https://github.com/openweave/openweave-core/blob/master/src/adaptations/device-layer/include/Weave/DeviceLayer/ConfigurationManager.h).
+    ///
+    /// Configuration is guaranteed to have been persisted upon successful
+    /// completion of this call.
+    ImportWeaveConfig(mem.Buffer config_json) -> () error zx.status;
+};
