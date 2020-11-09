@@ -70,10 +70,6 @@ package("component_manager_for_test_pkg") {
       path = rebase_path("meta/component_manager_for_test.cmx")
       dest = "component_manager_for_test.cmx"
     },
-    {
-      path = rebase_path("meta/test_manager_envelope.cml")
-      dest = "test_manager_envelope.cm"
-    },
   ]
 }
 

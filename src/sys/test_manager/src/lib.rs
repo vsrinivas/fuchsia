@@ -189,7 +189,7 @@ impl RunningTest {
                 }
             })?;
 
-        Self::connect_request_to_protocol_at_dir(&dir, suite_request).await.map_err(|e| {
+        Self::connect_request_to_protocol_at_dir(&dir, suite_request).map_err(|e| {
             fx_log_err!(
                 "Failed to connect to `fuchsia.test.Suite` protocol for `{}`: {}",
                 test_url,
@@ -203,26 +203,15 @@ impl RunningTest {
     }
 
     /// Connect to an instance of a FIDL protocol hosted in `directory` to `server_end`.
-    // TODO(fxbug.dev/56604): This tries to connect to the protocol under root, then falls back to /svc if
-    // that fails. Remove this fallback (and the async) once 56604 is done.
-    pub async fn connect_request_to_protocol_at_dir<S: DiscoverableService>(
+    fn connect_request_to_protocol_at_dir<S: DiscoverableService>(
         directory: &DirectoryProxy,
         server_end: ServerEnd<S>,
     ) -> Result<(), Error> {
-        // First, probe for protocol in root, to determine if we need to fall back to /svc.
-        let path = if files_async::dir_contains(directory, S::SERVICE_NAME)
-            .await
-            .context("Failed to probe for protocol")?
-        {
-            format!("{}", S::SERVICE_NAME)
-        } else {
-            format!("svc/{}", S::SERVICE_NAME)
-        };
         directory
             .open(
                 fidl_fuchsia_io::OPEN_RIGHT_READABLE | fidl_fuchsia_io::OPEN_RIGHT_WRITABLE,
                 fidl_fuchsia_io::MODE_TYPE_SERVICE,
-                &path,
+                S::SERVICE_NAME,
                 ServerEnd::new(server_end.into_channel()),
             )
             .context("Failed to open protocol in directory")

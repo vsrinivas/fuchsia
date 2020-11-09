@@ -127,10 +127,7 @@ impl Execution {
             None
         };
 
-        let exposed_capabilities = {
-            let expose_dir = exec_dir.open_dir("expose").await;
-            get_capabilities(expose_dir).await
-        };
+        let exposed_capabilities = exec_dir.open_dir("expose").await.entries().await;
 
         Execution {
             elf_runtime,

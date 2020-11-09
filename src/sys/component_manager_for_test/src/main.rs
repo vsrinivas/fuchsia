@@ -42,9 +42,7 @@ fn main() -> Result<(), Error> {
     let args = std::env::args();
     // replace first argument(binary name) with test manager envelope so that it
     // can be launched as root component.
-    let args =
-        vec!["fuchsia-pkg://fuchsia.com/component_manager_for_test#meta/test_manager_envelope.cm"
-            .to_owned()]
+    let args = vec!["fuchsia-pkg://fuchsia.com/test_manager#meta/test_manager.cm".to_owned()]
         .into_iter()
         .chain(args.skip(1));
 
