@@ -2,21 +2,23 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//topaz/runtime/flutter_runner/flutter_app.gni")
+import("//build/dart/dart_library.gni")
+import("//build/flutter/flutter_component.gni")
+import("//src/sys/build/components.gni")
 
-flutter_app("a11y-demo") {
-  main_dart = "lib/main.dart"
-
-  manifest = "pubspec.yaml"
-
-  meta = [
-    {
-      path = rebase_path("meta/a11y-demo.cmx")
-      dest = "a11y-demo.cmx"
-    },
-  ]
-
+dart_library("lib") {
+  package_name = "a11y-demo"
   sources = [ "main.dart" ]
-
   deps = [ "//third_party/dart-pkg/git/flutter/packages/flutter" ]
+}
+
+flutter_component("component") {
+  manifest = "meta/a11y-demo.cmx"
+  main_package = "a11y-demo"
+  component_name = "a11y-demo"
+  deps = [ ":lib" ]
+}
+
+fuchsia_package("a11y-demo") {
+  deps = [ ":component" ]
 }
