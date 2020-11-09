@@ -18,13 +18,16 @@ if (is_host) {
       "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:byteorder",
       "//third_party/rust_crates:clap",
+      "//third_party/rust_crates:csv",
       "//third_party/rust_crates:futures",
       "//third_party/rust_crates:lazy_static",
       "//third_party/rust_crates:matches",
       "//third_party/rust_crates:num",
       "//third_party/rust_crates:num-derive",
       "//third_party/rust_crates:num-traits",
-      "//third_party/rust_crates:termion",
+      "//third_party/rust_crates:regex",
+      "//third_party/rust_crates:serde",
+      "//third_party/rust_crates:serde_json",
       "//third_party/rust_crates:thiserror",
     ]
 

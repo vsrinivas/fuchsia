@@ -5,6 +5,8 @@
 use {
     crate::protocol::{self, ParameterValue, ReportFormat, Value, MAX_PACKET_SIZE},
     anyhow::{bail, format_err, Error},
+    serde::Serialize,
+    serde_json as json,
     std::{
         cell::RefCell,
         collections::HashMap,
@@ -35,22 +37,16 @@ pub trait StopSignal {
     fn should_stop(&mut self) -> Result<bool, Error>;
 }
 
-/// Writes a Report to a CSV-formatted line of output.
-fn report_to_string(
-    report: protocol::Report,
-    shunt_resistance: f32,
-    v_shunt_index: usize,
-    v_bus_index: usize,
-) -> String {
-    let v_shunt = report.values[v_shunt_index];
-    let v_bus = report.values[v_bus_index];
-    let (v_shunt, v_bus) = match (v_shunt, v_bus) {
-        (Value::F32(x), Value::F32(y)) => (x, y),
-        t => panic!("Got wrong value types for (v_shunt, v_bus): {:?}", t),
-    };
+/// Properties that can be queried using ZedmonClient::describe.
+pub const DESCRIBABLE_PROPERTIES: [&'static str; 2] = ["shunt_resistance", "csv_header"];
 
-    let power = v_bus * v_shunt / shunt_resistance;
-    format!("{},{},{},{}\n", report.timestamp_micros, v_shunt, v_bus, power)
+/// A single record of output from ZedmonClient.
+#[derive(Debug, Default, Serialize)]
+struct ZedmonRecord {
+    timestamp_micros: u64,
+    shunt_voltage: f32,
+    bus_voltage: f32,
+    power: f32,
 }
 
 /// Interface to a Zedmon device.
@@ -188,6 +184,21 @@ impl<InterfaceType: usb_bulk::Open<InterfaceType> + Read + Write> ZedmonClient<I
         })
     }
 
+    /// Describes properties of the Zedmon device and/or ZedmonClient.
+    pub fn describe(&self, name: &str) -> Result<json::Value, Error> {
+        match name {
+            "shunt_resistance" => Ok(json::json!(self.shunt_resistance)),
+            "csv_header" => {
+                let mut writer = csv::Writer::from_writer(Vec::new());
+                writer.serialize(ZedmonRecord::default())?;
+                let lines = String::from_utf8(writer.into_inner()?)?;
+                let header = lines.split('\n').nth(0).unwrap();
+                Ok(json::json!(header))
+            }
+            _ => panic!("'{}' is not a valid parameter name.", name),
+        }
+    }
+
     /// Retrieves a ParameterValue from the provided Zedmon interface.
     fn get_parameter(interface: &mut InterfaceType, index: u8) -> Result<ParameterValue, Error> {
         let request = protocol::encode_query_parameter(index);
@@ -254,7 +265,7 @@ impl<InterfaceType: usb_bulk::Open<InterfaceType> + Read + Write> ZedmonClient<I
     /// signal.
     pub fn read_reports(
         &self,
-        mut writer: Box<dyn Write + Send>,
+        writer: Box<dyn Write + Send>,
         mut stopper: impl StopSignal,
     ) -> Result<(), Error> {
         // This function's workload is shared between its main thread and `output_thread`.
@@ -279,14 +290,25 @@ impl<InterfaceType: usb_bulk::Open<InterfaceType> + Read + Write> ZedmonClient<I
         let v_bus_index = self.v_bus_index;
 
         let output_thread = std::thread::spawn(move || -> Result<(), Error> {
+            // The CSV header is suppressed. Clients may query it by using `describe`.
+            let mut writer = csv::WriterBuilder::new().has_headers(false).from_writer(writer);
+
             for buffer in packet_receiver.iter() {
                 let reports = parser.parse_reports(&buffer).unwrap();
                 for report in reports.into_iter() {
-                    write!(
-                        *writer,
-                        "{}",
-                        report_to_string(report, shunt_resistance, v_shunt_index, v_bus_index,)
-                    )?;
+                    let (shunt_voltage, bus_voltage) =
+                        match (report.values[v_shunt_index], report.values[v_bus_index]) {
+                            (Value::F32(x), Value::F32(y)) => (x, y),
+                            t => panic!("Got wrong value types for (v_shunt, v_bus): {:?}", t),
+                        };
+
+                    let record = ZedmonRecord {
+                        timestamp_micros: report.timestamp_micros,
+                        shunt_voltage,
+                        bus_voltage,
+                        power: bus_voltage * shunt_voltage / shunt_resistance,
+                    };
+                    writer.serialize(record)?;
                 }
             }
             writer.flush()?;
