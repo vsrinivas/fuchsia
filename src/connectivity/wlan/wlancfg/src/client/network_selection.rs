@@ -97,7 +97,9 @@ impl NetworkSelector {
 
         // Determine if a new scan is warranted
         if scan_age >= STALE_SCAN_AGE {
-            info!("Scan results are {:?} old, triggering a scan", scan_age);
+            if last_scan_result_time != SystemTime::UNIX_EPOCH {
+                info!("Scan results are {:?} old, triggering a scan", scan_age);
+            }
 
             let mut cobalt_api_clone = self.cobalt_api.lock().await.clone();
             let potentially_hidden_saved_networks =
