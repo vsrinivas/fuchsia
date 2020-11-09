@@ -36,11 +36,21 @@ class PosixCalls : public ApiAbstraction {
   int listen(int fd, int backlog) override { return ::listen(fd, backlog); }
 
   ssize_t send(int fd, const void* buf, size_t len, int flags) override {
+#if !defined(__Fuchsia__)
+    // Since we don't install signal handlers, prevent signal triggering on send which can cause
+    // SIGPIPE to be raised on unconnected stream sockets.
+    flags |= MSG_NOSIGNAL;
+#endif
     return ::send(fd, buf, len, flags);
   }
 
   ssize_t sendto(int fd, const void* buf, size_t buflen, int flags, const struct sockaddr* addr,
                  socklen_t addrlen) override {
+#if !defined(__Fuchsia__)
+    // Since we don't install signal handlers, prevent signal triggering on sendto which can cause
+    // SIGPIPE to be raised on unconnected stream sockets.
+    flags |= MSG_NOSIGNAL;
+#endif
     return ::sendto(fd, buf, buflen, flags, addr, addrlen);
   }
 
