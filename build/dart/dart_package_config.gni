@@ -11,7 +11,7 @@
 #
 # Parameters
 #
-#   deps (optional)
+#   deps, public_deps (optional)
 #     [list of labels] The targets to generate a manifest for.
 #     See `gn help` for more details.
 #
@@ -41,6 +41,7 @@ template("dart_package_config") {
     forward_variables_from(invoker,
                            [
                              "deps",
+                             "public_deps",
                              "testonly",
                            ])
 
@@ -71,6 +72,7 @@ template("dart_package_config") {
     forward_variables_from(invoker,
                            [
                              "deps",
+                             "public_deps",
                              "testonly",
                              "visibility",
                            ])

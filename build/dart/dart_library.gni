@@ -63,9 +63,10 @@ declare_args() {
 #     Defaults to "lib".
 #
 #   deps (optional)
-#     List of labels for Dart libraries this library depends on.
+#     List of labels this library depends on.
 #
-#   non_dart_deps (optional)
+#   TODO(fxb/63133): non_dart_deps is deprecated. Use deps instead.
+#   non_dart_deps (optional, deprecated)
 #     List of labels this library depends on that are not Dart libraries. This
 #     includes things like actions that generate Dart code. It typically doesn't
 #     need to be set.
@@ -147,11 +148,16 @@ if (current_toolchain == dart_toolchain) {
       assert(false, "Must specify either a package_name or infer_package_name")
     }
 
-    dart_deps = []
+    _dart_deps = []
     if (defined(invoker.deps)) {
       foreach(dep, invoker.deps) {
-        dart_deps += [ get_label_info(dep, "label_no_toolchain") ]
+        _dart_deps += [ get_label_info(dep, "label_no_toolchain") ]
       }
+    }
+
+    _non_dart_deps = []
+    if (defined(invoker.non_dart_deps)) {
+      _non_dart_deps += invoker.non_dart_deps
     }
 
     package_root = "."
@@ -181,57 +187,8 @@ if (current_toolchain == dart_toolchain) {
     # Dependencies of the umbrella group for the targets in this file.
     group_deps = []
 
-    # TODO(fxbug.dev/55756) remove usages of .packages.
-    # This is here because there are still some tools which rely on the
-    # existence of this file. When all the usages of this file have been
-    # removed from the tree we can remove the generation of this file.
-    _dot_packages_file_deprecated = "$target_gen_dir/$target_name.packages"
-    dot_packages_target_name = "${target_name}_dot_packages"
-    group_deps += [ ":$dot_packages_target_name" ]
-
-    # Creates a .packages file listing dependencies of this library.
-    action(dot_packages_target_name) {
-      script = "//build/dart/gen_dot_packages.py"
-
-      deps = []
-      package_files = []
-      foreach(dep, dart_deps) {
-        deps += [ "${dep}_dot_packages" ]
-        dep_gen_dir = get_label_info(dep, "target_gen_dir")
-        dep_name = get_label_info(dep, "name")
-        package_files += [ "$dep_gen_dir/$dep_name.packages" ]
-      }
-      if (defined(invoker.non_dart_deps)) {
-        public_deps = invoker.non_dart_deps
-      }
-
-      sources = package_files
-
-      # Require a manifest file, allowing the analysis service to
-      # identify the package.
-      if (defined(invoker.pubspec)) {
-        sources += [ invoker.pubspec ]
-      } else {
-        sources += [ "$package_root/pubspec.yaml" ]
-      }
-      outputs = [ _dot_packages_file_deprecated ]
-
-      args = [
-               "--out",
-               rebase_path(_dot_packages_file_deprecated),
-               "--source-dir",
-               rebase_path(source_dir),
-               "--package-name",
-               package_name,
-               "--deps",
-             ] + rebase_path(package_files)
-
-      forward_variables_from(invoker, [ "testonly" ])
-    }
-
     _metadata_collection_results_path =
         "$target_gen_dir/${target_name}_dart_build_info.out"
-    _deps = dart_deps
     _public_deps = []
     if (defined(invoker.public_deps)) {
       _public_deps = invoker.public_deps
@@ -258,7 +215,7 @@ if (current_toolchain == dart_toolchain) {
         {
           __is_current_target = false
           __package_name = package_name
-          __deps = _deps
+          __deps = _dart_deps + _non_dart_deps
           __public_deps = _public_deps
           __rebased_sources = rebased_sources
         },
@@ -282,12 +239,12 @@ if (current_toolchain == dart_toolchain) {
       # Do not publish the metadata to the dart_package_config json file if the
       # disable_metadata_entry flag is enabled in the dart_tool. The reason this is here
       # is to avoid entries that may have identical rootUris as fxb/58781 has highlighted.
+      deps = _dart_deps
       if (!defined(invoker.disable_metadata_entry) ||
           !invoker.disable_metadata_entry) {
-        deps = dart_deps + [ ":$_publish_metadata_target_name" ]
-      } else {
-        deps = dart_deps
+        deps += [ ":$_publish_metadata_target_name" ]
       }
+      public_deps = _non_dart_deps
       outputs = [ _packages_path ]
       forward_variables_from(invoker, [ "testonly" ])
     }
@@ -358,10 +315,7 @@ if (current_toolchain == dart_toolchain) {
       action(invocation_target_name) {
         script = "//build/dart/gen_analyzer_invocation.py"
 
-        deps = dart_sdk_deps + [
-                 ":$dot_packages_target_name",
-                 ":$_dart_package_config_target_name",
-               ]
+        deps = dart_sdk_deps + [ ":$_dart_package_config_target_name" ]
 
         inputs = [
           dart_analyzer_binary,
@@ -433,10 +387,7 @@ if (current_toolchain == dart_toolchain) {
           rebase_path(depfile),
         ]
 
-        deps = dart_sdk_deps + [
-                 ":$dot_packages_target_name",
-                 ":$_dart_package_config_target_name",
-               ]
+        deps = dart_sdk_deps + [ ":$_dart_package_config_target_name" ]
 
         forward_variables_from(invoker, [ "testonly" ])
       }
@@ -456,7 +407,7 @@ if (current_toolchain == dart_toolchain) {
           {
             __is_current_target = true
             __package_name = package_name
-            __deps = _deps
+            __deps = _dart_deps + _non_dart_deps
             __public_deps = _public_deps
             __rebased_sources = rebased_sources
           },
@@ -471,7 +422,7 @@ if (current_toolchain == dart_toolchain) {
       outputs = [ _metadata_collection_results_path ]
       output_conversion = "json"
       deps =
-          dart_deps + [ ":${invoker.target_name}_dart_build_info_self_marker" ]
+          _dart_deps + [ ":${invoker.target_name}_dart_build_info_self_marker" ]
       forward_variables_from(invoker, [ "testonly" ])
     }
 
@@ -521,10 +472,10 @@ if (current_toolchain == dart_toolchain) {
         _full_target_label
 
     group(target_name) {
-      # dart_deps are added here to ensure they are fully built.
+      # _dart_deps are added here to ensure they are fully built.
       # Up to this point, only the targets generating .packages had been
       # depended on.
-      deps = dart_deps
+      deps = _dart_deps + _non_dart_deps
 
       if (!disable_dart_strict_deps && !_package_excludes_contains_target &&
           !_is_third_party_lib) {
@@ -584,10 +535,7 @@ if (current_toolchain == dart_toolchain) {
           #"--overwrite",
         ]
 
-        deps = dart_sdk_deps + [
-                 ":$dot_packages_target_name",
-                 runner_label,
-               ]
+        deps = dart_sdk_deps + [ runner_label ]
         forward_variables_from(invoker, [ "testonly" ])
       }
 
@@ -619,22 +567,20 @@ if (current_toolchain == dart_toolchain) {
 
       # Path to Dart manifest files for third-party dependencies.
       third_party_pubspecs = []
-      if (defined(invoker.deps)) {
-        local_deps = filter_exclude(invoker.deps, [ "//third_party/*" ])
-        third_party_deps = filter_include(invoker.deps, [ "//third_party/*" ])
-        foreach(dep, local_deps) {
-          full_label = get_label_info(dep, "label_no_toolchain")
-          sdk_dep = "${full_label}_sdk"
-          sdk_deps += [ sdk_dep ]
 
-          gen_dir = get_label_info(sdk_dep, "target_gen_dir")
-          name = get_label_info(sdk_dep, "name")
-          sdk_metas += [ rebase_path("$gen_dir/$name.meta.json") ]
-        }
-        foreach(dep, third_party_deps) {
-          path = get_label_info(dep, "dir")
-          third_party_pubspecs += [ rebase_path("$path/pubspec.yaml") ]
-        }
+      local_deps = filter_exclude(_dart_deps, [ "//third_party/*" ])
+      third_party_deps = filter_include(_dart_deps, [ "//third_party/*" ])
+      foreach(dep, local_deps) {
+        sdk_dep = "${dep}_sdk"
+        sdk_deps += [ sdk_dep ]
+
+        gen_dir = get_label_info(sdk_dep, "target_gen_dir")
+        name = get_label_info(sdk_dep, "name")
+        sdk_metas += [ rebase_path("$gen_dir/$name.meta.json") ]
+      }
+      foreach(dep, third_party_deps) {
+        path = get_label_info(dep, "dir")
+        third_party_pubspecs += [ rebase_path("$path/pubspec.yaml") ]
       }
 
       file_base = "dart/${invoker.package_name}"

@@ -4,7 +4,6 @@
 
 import("//build/dart/config.gni")
 import("//build/dart/dart.gni")
-import("//build/dart/dart_library.gni")
 import("//build/dart/dart_package_config.gni")
 import("//build/dart/kernel/dart_kernel.gni")
 import("//src/sys/build/components.gni")
