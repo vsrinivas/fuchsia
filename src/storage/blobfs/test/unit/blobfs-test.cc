@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "blobfs.h"
+#include "src/storage/blobfs/blobfs.h"
 
 #include <lib/sync/completion.h>
 
@@ -12,8 +12,8 @@
 #include <gtest/gtest.h>
 #include <storage/buffer/vmo_buffer.h>
 
-#include "directory.h"
-#include "test/blob_utils.h"
+#include "src/storage/blobfs/directory.h"
+#include "src/storage/blobfs/test/blob_utils.h"
 
 namespace blobfs {
 namespace {

@@ -41,7 +41,7 @@
 #include <fvm/format.h>
 #include <gtest/gtest.h>
 
-#include "blobfs_fixtures.h"
+#include "src/storage/blobfs/test/integration/blobfs_fixtures.h"
 #include "src/storage/blobfs/test/integration/fdio_test.h"
 
 namespace blobfs {

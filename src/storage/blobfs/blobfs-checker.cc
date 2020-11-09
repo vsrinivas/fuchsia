@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "blobfs-checker.h"
+#include "src/storage/blobfs/blobfs-checker.h"
 
 #include <inttypes.h>
 
@@ -24,8 +24,8 @@
 
 #endif
 
-#include "iterator/allocated-extent-iterator.h"
-#include "iterator/extent-iterator.h"
+#include "src/storage/blobfs/iterator/allocated-extent-iterator.h"
+#include "src/storage/blobfs/iterator/extent-iterator.h"
 
 namespace blobfs {
 

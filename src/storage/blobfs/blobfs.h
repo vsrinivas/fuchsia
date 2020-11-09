@@ -43,20 +43,20 @@
 #include <fs/vnode.h>
 #include <storage/operation/unbuffered_operations_builder.h>
 
-#include "allocator/allocator.h"
-#include "allocator/extent-reserver.h"
-#include "allocator/node-reserver.h"
-#include "blob-cache.h"
-#include "blob-loader.h"
-#include "directory.h"
-#include "iterator/allocated-extent-iterator.h"
-#include "iterator/block-iterator-provider.h"
-#include "iterator/block-iterator.h"
-#include "iterator/extent-iterator.h"
-#include "metrics.h"
-#include "pager/user-pager.h"
+#include "src/storage/blobfs/allocator/allocator.h"
+#include "src/storage/blobfs/allocator/extent-reserver.h"
+#include "src/storage/blobfs/allocator/node-reserver.h"
+#include "src/storage/blobfs/blob-cache.h"
+#include "src/storage/blobfs/blob-loader.h"
+#include "src/storage/blobfs/directory.h"
+#include "src/storage/blobfs/iterator/allocated-extent-iterator.h"
+#include "src/storage/blobfs/iterator/block-iterator-provider.h"
+#include "src/storage/blobfs/iterator/block-iterator.h"
+#include "src/storage/blobfs/iterator/extent-iterator.h"
+#include "src/storage/blobfs/metrics.h"
+#include "src/storage/blobfs/pager/user-pager.h"
+#include "src/storage/blobfs/transaction-manager.h"
 #include "src/storage/blobfs/transaction.h"
-#include "transaction-manager.h"
 
 namespace blobfs {
 

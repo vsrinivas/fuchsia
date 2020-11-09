@@ -22,8 +22,8 @@
 #include <fs/ticker.h>
 #include <fs/vnode.h>
 
-#include "read-metrics.h"
-#include "verification-metrics.h"
+#include "src/storage/blobfs/read-metrics.h"
+#include "src/storage/blobfs/verification-metrics.h"
 
 namespace blobfs {
 

@@ -14,8 +14,8 @@
 #include <block-client/cpp/fake-device.h>
 #include <gtest/gtest.h>
 
-#include "blobfs.h"
-#include "utils.h"
+#include "src/storage/blobfs/blobfs.h"
+#include "src/storage/blobfs/test/unit/utils.h"
 
 namespace blobfs {
 namespace {

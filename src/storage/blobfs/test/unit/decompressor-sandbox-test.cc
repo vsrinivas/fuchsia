@@ -13,10 +13,10 @@
 #include <blobfs/compression-settings.h>
 #include <gtest/gtest.h>
 
-#include "compression/chunked.h"
-#include "compression/decompressor-sandbox/decompressor-impl.h"
-#include "compression/external-decompressor.h"
-#include "compression/zstd-plain.h"
+#include "src/storage/blobfs/compression/chunked.h"
+#include "src/storage/blobfs/compression/decompressor-sandbox/decompressor-impl.h"
+#include "src/storage/blobfs/compression/external-decompressor.h"
+#include "src/storage/blobfs/compression/zstd-plain.h"
 
 namespace blobfs {
 namespace {

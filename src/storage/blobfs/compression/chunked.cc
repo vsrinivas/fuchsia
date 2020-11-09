@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "chunked.h"
+#include "src/storage/blobfs/compression/chunked.h"
 
 #include <lib/zx/status.h>
 #include <zircon/errors.h>

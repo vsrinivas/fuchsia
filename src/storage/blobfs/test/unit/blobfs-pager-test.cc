@@ -25,11 +25,11 @@
 #include <fbl/auto_call.h>
 #include <gtest/gtest.h>
 
-#include "blob-verifier.h"
-#include "compression/blob-compressor.h"
-#include "compression/chunked.h"
-#include "pager/page-watcher.h"
-#include "pager/user-pager.h"
+#include "src/storage/blobfs/blob-verifier.h"
+#include "src/storage/blobfs/compression/blob-compressor.h"
+#include "src/storage/blobfs/compression/chunked.h"
+#include "src/storage/blobfs/pager/page-watcher.h"
+#include "src/storage/blobfs/pager/user-pager.h"
 
 namespace blobfs {
 namespace pager {

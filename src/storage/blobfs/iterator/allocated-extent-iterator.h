@@ -11,8 +11,8 @@
 
 #include <blobfs/format.h>
 
-#include "allocated-node-iterator.h"
-#include "extent-iterator.h"
+#include "src/storage/blobfs/iterator/allocated-node-iterator.h"
+#include "src/storage/blobfs/iterator/extent-iterator.h"
 
 namespace blobfs {
 

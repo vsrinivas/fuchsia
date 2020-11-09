@@ -18,8 +18,8 @@
 #include <fvm/format.h>
 #include <gtest/gtest.h>
 
-#include "blobfs_fixtures.h"
-#include "test/blob_utils.h"
+#include "src/storage/blobfs/test/blob_utils.h"
+#include "src/storage/blobfs/test/integration/blobfs_fixtures.h"
 
 namespace blobfs {
 namespace {

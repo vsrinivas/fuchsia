@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "allocator.h"
+#include "src/storage/blobfs/allocator/allocator.h"
 
 #include <inttypes.h>
 #include <lib/fzl/resizeable-vmo-mapper.h>
@@ -22,9 +22,9 @@
 #include <fs/trace.h>
 #include <storage/buffer/owned_vmoid.h>
 
-#include "extent-reserver.h"
-#include "iterator/extent-iterator.h"
-#include "node-reserver.h"
+#include "src/storage/blobfs/allocator/extent-reserver.h"
+#include "src/storage/blobfs/allocator/node-reserver.h"
+#include "src/storage/blobfs/iterator/extent-iterator.h"
 
 namespace blobfs {
 

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "allocated-extent-iterator.h"
+#include "src/storage/blobfs/iterator/allocated-extent-iterator.h"
 
 #include <lib/zx/status.h>
 #include <stdint.h>
@@ -11,14 +11,16 @@
 #include <blobfs/format.h>
 #include <fs/trace.h>
 
-#include "allocated-node-iterator.h"
-#include "extent-iterator.h"
+#include "src/storage/blobfs/iterator/allocated-node-iterator.h"
+#include "src/storage/blobfs/iterator/extent-iterator.h"
 
 namespace blobfs {
 
 AllocatedExtentIterator::AllocatedExtentIterator(NodeFinder* finder, uint32_t node_index)
-    : finder_(finder), inode_(finder_->GetNode(node_index)),
-    node_index_(node_index), node_iterator_(finder, inode_.get()) {}
+    : finder_(finder),
+      inode_(finder_->GetNode(node_index)),
+      node_index_(node_index),
+      node_iterator_(finder, inode_.get()) {}
 
 bool AllocatedExtentIterator::Done() const { return ExtentIndex() == inode_->extent_count; }
 

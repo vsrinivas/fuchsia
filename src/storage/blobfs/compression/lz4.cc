@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "lz4.h"
+#include "src/storage/blobfs/compression/lz4.h"
 
 #include <zircon/types.h>
 
@@ -14,8 +14,8 @@
 #include <fs/trace.h>
 #include <lz4/lz4frame.h>
 
-#include "compressor.h"
-#include "decompressor.h"
+#include "src/storage/blobfs/compression/compressor.h"
+#include "src/storage/blobfs/compression/decompressor.h"
 
 namespace blobfs {
 

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "allocated-node-iterator.h"
+#include "src/storage/blobfs/iterator/allocated-node-iterator.h"
 
 #include <lib/zx/status.h>
 #include <stdint.h>
@@ -26,8 +26,7 @@ zx::status<ExtentContainer*> AllocatedNodeIterator::Next() {
   ExtentContainer* next = finder_->GetNode(NextNodeIndex())->AsExtentContainer();
 
   ZX_DEBUG_ASSERT(next != nullptr);
-  bool is_container =
-      next->header.IsAllocated() && next->header.IsExtentContainer();
+  bool is_container = next->header.IsAllocated() && next->header.IsExtentContainer();
   if (!is_container) {
     return zx::error(ZX_ERR_IO_DATA_INTEGRITY);
   }

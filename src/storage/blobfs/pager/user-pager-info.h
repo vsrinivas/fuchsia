@@ -11,8 +11,8 @@
 
 #include <memory>
 
-#include "../blob-verifier.h"
-#include "../compression/seekable-decompressor.h"
+#include "src/storage/blobfs/blob-verifier.h"
+#include "src/storage/blobfs/compression/seekable-decompressor.h"
 
 namespace blobfs {
 namespace pager {

@@ -13,8 +13,8 @@
 #include <fbl/vector.h>
 #include <gtest/gtest.h>
 
-#include "allocator/allocator.h"
-#include "transaction-manager.h"
+#include "src/storage/blobfs/allocator/allocator.h"
+#include "src/storage/blobfs/transaction-manager.h"
 
 namespace blobfs {
 

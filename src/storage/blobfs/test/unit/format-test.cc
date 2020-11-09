@@ -7,7 +7,7 @@
 #include <block-client/cpp/fake-device.h>
 #include <gtest/gtest.h>
 
-#include "blobfs.h"
+#include "src/storage/blobfs/blobfs.h"
 
 namespace blobfs {
 namespace {

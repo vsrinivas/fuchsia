@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "iterator/node-populator.h"
+#include "src/storage/blobfs/iterator/node-populator.h"
 
 #include <memory>
 
 #include <gtest/gtest.h>
 
-#include "utils.h"
+#include "src/storage/blobfs/test/unit/utils.h"
 
 namespace blobfs {
 namespace {

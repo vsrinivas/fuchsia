@@ -2,16 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "decompressor.h"
+#include "src/storage/blobfs/compression/decompressor.h"
 
 #include <zircon/errors.h>
 
 #include <memory>
 
-#include "chunked.h"
-#include "lz4.h"
-#include "zstd-plain.h"
-#include "zstd-seekable.h"
+#include "src/storage/blobfs/compression/chunked.h"
+#include "src/storage/blobfs/compression/lz4.h"
+#include "src/storage/blobfs/compression/zstd-plain.h"
+#include "src/storage/blobfs/compression/zstd-seekable.h"
 
 namespace blobfs {
 

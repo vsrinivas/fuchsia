@@ -13,8 +13,8 @@
 #include <digest/merkle-tree.h>
 #include <fbl/macros.h>
 
-#include "blob-corruption-notifier.h"
-#include "metrics.h"
+#include "src/storage/blobfs/blob-corruption-notifier.h"
+#include "src/storage/blobfs/metrics.h"
 
 namespace blobfs {
 

@@ -17,10 +17,10 @@
 #include <fbl/unique_fd.h>
 #include <gtest/gtest.h>
 
-#include "blobfs.h"
-#include "runner.h"
+#include "src/storage/blobfs/blobfs.h"
+#include "src/storage/blobfs/runner.h"
+#include "src/storage/blobfs/test/blob_utils.h"
 #include "src/storage/blobfs/test/integration/fdio_test.h"
-#include "test/blob_utils.h"
 
 namespace blobfs {
 namespace {

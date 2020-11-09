@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "allocator/extent-reserver.h"
+#include "src/storage/blobfs/allocator/extent-reserver.h"
 
 #include <stdint.h>
 #include <zircon/types.h>

@@ -38,9 +38,9 @@
 #include <safemath/checked_math.h>
 #include <safemath/safe_conversions.h>
 
-#include "compression/chunked.h"
-#include "compression/compressor.h"
-#include "compression/decompressor.h"
+#include "src/storage/blobfs/compression/chunked.h"
+#include "src/storage/blobfs/compression/compressor.h"
+#include "src/storage/blobfs/compression/decompressor.h"
 
 using digest::Digest;
 using digest::MerkleTreeCreator;

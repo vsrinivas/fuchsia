@@ -19,11 +19,11 @@
 #include <fbl/macros.h>
 #include <storage/buffer/owned_vmoid.h>
 
-#include "compression/seekable-decompressor.h"
-#include "iterator/block-iterator-provider.h"
-#include "metrics.h"
-#include "pager/page-watcher.h"
-#include "transaction-manager.h"
+#include "src/storage/blobfs/compression/seekable-decompressor.h"
+#include "src/storage/blobfs/iterator/block-iterator-provider.h"
+#include "src/storage/blobfs/metrics.h"
+#include "src/storage/blobfs/pager/page-watcher.h"
+#include "src/storage/blobfs/transaction-manager.h"
 
 namespace blobfs {
 

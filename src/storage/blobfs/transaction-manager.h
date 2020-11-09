@@ -13,8 +13,8 @@
 #include <fs/transaction/legacy_transaction_handler.h>
 #include <fs/vnode.h>
 
-#include "allocator/allocator.h"
-#include "metrics.h"
+#include "src/storage/blobfs/allocator/allocator.h"
+#include "src/storage/blobfs/metrics.h"
 
 namespace blobfs {
 

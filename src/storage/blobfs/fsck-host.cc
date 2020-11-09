@@ -7,7 +7,7 @@
 #include <blobfs/host/fsck.h>
 #include <fs/trace.h>
 
-#include "blobfs-checker.h"
+#include "src/storage/blobfs/blobfs-checker.h"
 
 namespace blobfs {
 

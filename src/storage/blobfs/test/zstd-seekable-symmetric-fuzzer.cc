@@ -13,7 +13,7 @@
 #include <blobfs/compression-settings.h>
 #include <fuzzer/FuzzedDataProvider.h>
 
-#include "compression/zstd-seekable.h"
+#include "src/storage/blobfs/compression/zstd-seekable.h"
 
 // Compression/decompression symmetry fuzzer for zstd seekable. The fuzzer compresses and then
 // decompresses part of a seekable zstd archive. This fuzzer uses its input to:

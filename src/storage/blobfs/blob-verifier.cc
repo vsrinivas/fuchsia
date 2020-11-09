@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "blob-verifier.h"
+#include "src/storage/blobfs/blob-verifier.h"
 
 #include <fuchsia/blobfs/c/fidl.h>
 #include <zircon/status.h>

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "blob-loader.h"
+#include "src/storage/blobfs/blob-loader.h"
 
 #include <lib/fzl/owned-vmo-mapper.h>
 #include <lib/sync/completion.h>
@@ -24,10 +24,10 @@
 #include <fbl/auto_call.h>
 #include <gtest/gtest.h>
 
-#include "blob.h"
-#include "blobfs.h"
-#include "test/blob_utils.h"
-#include "utils.h"
+#include "src/storage/blobfs/blob.h"
+#include "src/storage/blobfs/blobfs.h"
+#include "src/storage/blobfs/test/blob_utils.h"
+#include "src/storage/blobfs/test/unit/utils.h"
 
 namespace blobfs {
 namespace {

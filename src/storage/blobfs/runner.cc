@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "runner.h"
+#include "src/storage/blobfs/runner.h"
 
 #include <fuchsia/fs/llcpp/fidl.h>
 #include <lib/inspect/service/cpp/service.h>
 
 #include <fs/pseudo_dir.h>
 
-#include "query.h"
+#include "src/storage/blobfs/query.h"
 
 namespace blobfs {
 

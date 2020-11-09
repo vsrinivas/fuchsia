@@ -16,7 +16,7 @@
 #include <fs/vfs.h>
 #include <fs/vnode.h>
 
-#include "blobfs.h"
+#include "src/storage/blobfs/blobfs.h"
 
 namespace blobfs {
 

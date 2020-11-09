@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "blob-loader.h"
+#include "src/storage/blobfs/blob-loader.h"
 
 #include <lib/fzl/owned-vmo-mapper.h>
 #include <lib/zx/status.h>
@@ -22,11 +22,11 @@
 #include <fbl/string_buffer.h>
 #include <storage/buffer/owned_vmoid.h>
 
-#include "blob-verifier.h"
-#include "compression/chunked.h"
-#include "compression/decompressor.h"
-#include "compression/seekable-decompressor.h"
-#include "iterator/block-iterator.h"
+#include "src/storage/blobfs/blob-verifier.h"
+#include "src/storage/blobfs/compression/chunked.h"
+#include "src/storage/blobfs/compression/decompressor.h"
+#include "src/storage/blobfs/compression/seekable-decompressor.h"
+#include "src/storage/blobfs/iterator/block-iterator.h"
 
 namespace blobfs {
 

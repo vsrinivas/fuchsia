@@ -16,11 +16,12 @@
 
 #include <memory>
 
-#include "../metrics.h"
-#include "../transaction-manager.h"
+#include "src/storage/blobfs/metrics.h"
+#include "src/storage/blobfs/pager/transfer-buffer.h"
+#include "src/storage/blobfs/pager/user-pager-info.h"
+#include "src/storage/blobfs/transaction-manager.h"
 #include "src/storage/lib/watchdog/include/lib/watchdog/watchdog.h"
-#include "transfer-buffer.h"
-#include "user-pager-info.h"
+
 namespace blobfs {
 namespace pager {
 

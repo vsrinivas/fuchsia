@@ -23,10 +23,6 @@ declare_args() {
   blobfs_page_in_metrics_recording = false
 }
 
-config("headers_config") {
-  include_dirs = [ "." ]
-}
-
 source_set("private_headers") {
   visibility = [ "./*" ]
   sources = [
@@ -61,7 +57,6 @@ source_set("private_headers") {
       "verification-metrics.h",
     ]
   }
-  public_configs = [ ":headers_config" ]
   deps = [
     "//src/lib/chunked-compression",
     "//src/storage/lib/watchdog",
@@ -213,7 +208,6 @@ zx_library("blobfs") {
     ]
     deps += [ "//zircon/system/ulib/fs-host" ]
   }
-  include_dirs = [ "." ]
   configs += [
     # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
     "//build/config:Wno-conversion",
@@ -236,10 +230,6 @@ fidl("fuchsia.blobfs.internal") {
 }
 
 source_set("decompressor-impl") {
-  include_dirs = [
-    ".",
-    "//src",
-  ]
   visibility = [ "./*" ]
   sources = [
     "compression/decompressor-sandbox/decompressor-impl.cc",
@@ -264,10 +254,6 @@ source_set("decompressor-impl") {
 }
 
 executable("decompressor") {
-  include_dirs = [
-    ".",
-    "//src",
-  ]
   sources = [ "compression/decompressor-sandbox/main.cc" ]
   deps = [
     ":decompressor-impl",

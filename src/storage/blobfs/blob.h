@@ -35,15 +35,15 @@
 #include <fs/vnode.h>
 #include <storage/buffer/owned_vmoid.h>
 
-#include "allocator/allocator.h"
-#include "allocator/extent-reserver.h"
-#include "allocator/node-reserver.h"
-#include "blob-cache.h"
-#include "compression/blob-compressor.h"
-#include "compression/compressor.h"
-#include "format-assertions.h"
-#include "metrics.h"
-#include "pager/page-watcher.h"
+#include "src/storage/blobfs/allocator/allocator.h"
+#include "src/storage/blobfs/allocator/extent-reserver.h"
+#include "src/storage/blobfs/allocator/node-reserver.h"
+#include "src/storage/blobfs/blob-cache.h"
+#include "src/storage/blobfs/compression/blob-compressor.h"
+#include "src/storage/blobfs/compression/compressor.h"
+#include "src/storage/blobfs/format-assertions.h"
+#include "src/storage/blobfs/metrics.h"
+#include "src/storage/blobfs/pager/page-watcher.h"
 #include "src/storage/blobfs/transaction.h"
 
 namespace blobfs {

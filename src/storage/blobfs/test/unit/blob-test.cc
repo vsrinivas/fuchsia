@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "blob.h"
+#include "src/storage/blobfs/blob.h"
 
 #include <zircon/assert.h>
 
@@ -18,10 +18,9 @@
 #include <fbl/auto_call.h>
 #include <gtest/gtest.h>
 
-#include "blobfs.h"
-#include "fuchsia/io/llcpp/fidl.h"
-#include "test/blob_utils.h"
-#include "utils.h"
+#include "src/storage/blobfs/blobfs.h"
+#include "src/storage/blobfs/test/blob_utils.h"
+#include "src/storage/blobfs/test/unit/utils.h"
 
 namespace blobfs {
 namespace {

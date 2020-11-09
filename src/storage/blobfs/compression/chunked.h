@@ -16,9 +16,9 @@
 #include <src/lib/chunked-compression/chunked-decompressor.h>
 #include <src/lib/chunked-compression/streaming-chunked-compressor.h>
 
-#include "compressor.h"
-#include "decompressor.h"
-#include "seekable-decompressor.h"
+#include "src/storage/blobfs/compression/compressor.h"
+#include "src/storage/blobfs/compression/decompressor.h"
+#include "src/storage/blobfs/compression/seekable-decompressor.h"
 
 namespace blobfs {
 

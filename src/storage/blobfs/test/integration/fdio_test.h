@@ -13,8 +13,8 @@
 #include <fbl/unique_fd.h>
 #include <gtest/gtest.h>
 
-#include "blobfs.h"
-#include "runner.h"
+#include "src/storage/blobfs/blobfs.h"
+#include "src/storage/blobfs/runner.h"
 
 namespace blobfs {
 

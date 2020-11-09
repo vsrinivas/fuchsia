@@ -20,7 +20,7 @@ static_assert(false, "Fuchsia only header");
 #include <lz4/lz4frame.h>
 #include <zstd/zstd.h>
 
-#include "compressor.h"
+#include "src/storage/blobfs/compression/compressor.h"
 
 namespace blobfs {
 

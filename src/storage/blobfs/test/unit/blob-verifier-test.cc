@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "blob-verifier.h"
+#include "src/storage/blobfs/blob-verifier.h"
 
 #include <random>
 
@@ -10,8 +10,8 @@
 #include <digest/merkle-tree.h>
 #include <gtest/gtest.h>
 
-#include "test/blob_utils.h"
-#include "utils.h"
+#include "src/storage/blobfs/test/blob_utils.h"
+#include "src/storage/blobfs/test/unit/utils.h"
 
 namespace blobfs {
 namespace {

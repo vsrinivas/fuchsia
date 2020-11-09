@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "compression/compressor.h"
+#include "src/storage/blobfs/compression/compressor.h"
 
 #include <stdlib.h>
 #include <zircon/assert.h>
@@ -19,14 +19,13 @@
 #include <digest/merkle-tree.h>
 #include <gtest/gtest.h>
 
-#include "blobfs.h"
-#include "compression/blob-compressor.h"
-#include "compression/decompressor.h"
-#include "compression/lz4.h"
-#include "compression/zstd-plain.h"
-#include "compression/zstd-seekable.h"
-#include "test/blob_utils.h"
-#include "zircon/errors.h"
+#include "src/storage/blobfs/blobfs.h"
+#include "src/storage/blobfs/compression/blob-compressor.h"
+#include "src/storage/blobfs/compression/decompressor.h"
+#include "src/storage/blobfs/compression/lz4.h"
+#include "src/storage/blobfs/compression/zstd-plain.h"
+#include "src/storage/blobfs/compression/zstd-seekable.h"
+#include "src/storage/blobfs/test/blob_utils.h"
 
 namespace blobfs {
 namespace {

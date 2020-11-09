@@ -13,8 +13,8 @@
 #include <blobfs/format.h>
 #include <zstd/zstd.h>
 
-#include "compressor.h"
-#include "decompressor.h"
+#include "src/storage/blobfs/compression/compressor.h"
+#include "src/storage/blobfs/compression/decompressor.h"
 
 namespace blobfs {
 

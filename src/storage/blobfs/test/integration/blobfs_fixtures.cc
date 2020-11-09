@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "blobfs_fixtures.h"
+#include "src/storage/blobfs/blobfs_fixtures.h"
 
 #include <fcntl.h>
 #include <fuchsia/io/llcpp/fidl.h>

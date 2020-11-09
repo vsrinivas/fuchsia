@@ -29,8 +29,8 @@
 #include <id_allocator/id_allocator.h>
 #include <storage/buffer/vmoid_registry.h>
 
-#include "extent-reserver.h"
-#include "node-reserver.h"
+#include "src/storage/blobfs/allocator/extent-reserver.h"
+#include "src/storage/blobfs/allocator/node-reserver.h"
 
 namespace blobfs {
 

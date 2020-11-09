@@ -17,8 +17,8 @@
 #include <fvm/format.h>
 #include <gtest/gtest.h>
 
-#include "blobfs_fixtures.h"
-#include "load_generator.h"
+#include "src/storage/blobfs/test/integration/blobfs_fixtures.h"
+#include "src/storage/blobfs/test/integration/load_generator.h"
 
 namespace blobfs {
 namespace {

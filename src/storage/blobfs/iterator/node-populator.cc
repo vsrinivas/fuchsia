@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "node-populator.h"
+#include "src/storage/blobfs/iterator/node-populator.h"
 
 #include <stdint.h>
 #include <zircon/types.h>
@@ -10,8 +10,8 @@
 #include <blobfs/format.h>
 #include <fbl/vector.h>
 
-#include "allocator/allocator.h"
-#include "extent-iterator.h"
+#include "src/storage/blobfs/allocator/allocator.h"
+#include "src/storage/blobfs/iterator/extent-iterator.h"
 
 namespace blobfs {
 

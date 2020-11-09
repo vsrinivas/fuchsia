@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "directory.h"
+#include "src/storage/blobfs/directory.h"
 
 #include <fuchsia/device/c/fidl.h>
 #include <lib/fidl-utils/bind.h>
@@ -21,9 +21,9 @@
 #include <fs/metrics/events.h>
 #include <fs/vfs_types.h>
 
-#include "blob.h"
-#include "blobfs.h"
-#include "metrics.h"
+#include "src/storage/blobfs/blob.h"
+#include "src/storage/blobfs/blobfs.h"
+#include "src/storage/blobfs/metrics.h"
 
 namespace blobfs {
 

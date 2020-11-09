@@ -7,8 +7,8 @@
 #include <gtest/gtest.h>
 #include <id_allocator/id_allocator.h>
 
-#include "allocator/allocator.h"
-#include "utils.h"
+#include "src/storage/blobfs/allocator/allocator.h"
+#include "src/storage/blobfs/test/unit/utils.h"
 
 namespace blobfs {
 namespace {

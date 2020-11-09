@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "user-pager.h"
+#include "src/storage/blobfs/pager/user-pager.h"
 
 #include <fuchsia/scheduler/cpp/fidl.h>
 #include <lib/fdio/directory.h>
@@ -20,7 +20,7 @@
 #include <fbl/auto_call.h>
 #include <fs/trace.h>
 
-#include "metrics.h"
+#include "src/storage/blobfs/metrics.h"
 #include "src/storage/lib/watchdog/include/lib/watchdog/operations.h"
 
 namespace blobfs {

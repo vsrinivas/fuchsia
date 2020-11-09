@@ -2,16 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "blobfs/blobfs_inspector.h"
-
 #include <zircon/status.h>
 
 #include <algorithm>
 
+#include <blobfs/blobfs_inspector.h>
 #include <fs/journal/internal/inspector_parser.h>
 #include <fs/trace.h>
 
-#include "parser.h"
+#include "src/storage/blobfs/inspector/parser.h"
 
 namespace blobfs {
 

@@ -8,7 +8,7 @@
 
 #include "src/storage/blobfs/compression/decompressor-sandbox/decompressor-impl.h"
 
-#include <fbl/auto_call.h>
+#include <fuchsia/blobfs/internal/llcpp/fidl.h>
 #include <fuchsia/scheduler/cpp/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/fzl/owned-vmo-mapper.h>
@@ -17,7 +17,6 @@
 #include <lib/trace/event.h>
 #include <lib/zx/thread.h>
 #include <lib/zx/time.h>
-#include <src/lib/chunked-compression/chunked-decompressor.h>
 #include <threads.h>
 #include <zircon/errors.h>
 #include <zircon/status.h>
@@ -25,10 +24,11 @@
 #include <zircon/types.h>
 
 #include <blobfs/compression-settings.h>
-#include <compression/decompressor.h>
-#include <compression/external-decompressor.h>
-#include <fuchsia/blobfs/internal/llcpp/fidl.h>
+#include <fbl/auto_call.h>
+#include <src/lib/chunked-compression/chunked-decompressor.h>
 
+#include "src/storage/blobfs/compression/decompressor.h"
+#include "src/storage/blobfs/compression/external-decompressor.h"
 
 namespace {
 struct FifoInfo {
@@ -49,15 +49,15 @@ namespace blobfs {
 // use, with a path to optimize it later.
 // TODO(fxbug.dev/62395): Remove the need to repeatedly map and unmap the compressed mapper.
 zx_status_t DecompressChunkedPartial(const fzl::OwnedVmoMapper& decompressed_mapper,
-                                    const fzl::VmoMapper& compressed_mapper,
-                                    const llcpp::fuchsia::blobfs::internal::Range decompressed,
-                                    const llcpp::fuchsia::blobfs::internal::Range compressed,
-                                    size_t* bytes_decompressed) {
+                                     const fzl::VmoMapper& compressed_mapper,
+                                     const llcpp::fuchsia::blobfs::internal::Range decompressed,
+                                     const llcpp::fuchsia::blobfs::internal::Range compressed,
+                                     size_t* bytes_decompressed) {
   const uint8_t* src = static_cast<const uint8_t*>(compressed_mapper.start()) + compressed.offset;
   uint8_t* dst = static_cast<uint8_t*>(decompressed_mapper.start()) + decompressed.offset;
   chunked_compression::ChunkedDecompressor decompressor;
-  return decompressor.DecompressFrame(
-      src, compressed.size, dst, decompressed.size, bytes_decompressed);
+  return decompressor.DecompressFrame(src, compressed.size, dst, decompressed.size,
+                                      bytes_decompressed);
 }
 
 zx_status_t DecompressFull(const fzl::OwnedVmoMapper& decompressed_mapper,
@@ -219,8 +219,8 @@ void DecompressorImpl::Create(zx::fifo server_end, zx::vmo compressed_vmo, zx::v
   thrd_t handler_thread;
   std::unique_ptr<FifoInfo> info = std::make_unique<FifoInfo>();
   *info = {std::move(server_end), std::move(compressed_vmo), std::move(decompressed_mapper)};
-  if (thrd_create_with_name(&handler_thread, WatchFifoWrapper,
-                            info.release(), "decompressor-fifo-thread") != thrd_success) {
+  if (thrd_create_with_name(&handler_thread, WatchFifoWrapper, info.release(),
+                            "decompressor-fifo-thread") != thrd_success) {
     return callback(ZX_ERR_INTERNAL);
   }
   SetDeadlineProfile(&handler_thread);

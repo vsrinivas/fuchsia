@@ -15,8 +15,8 @@
 #include <fbl/function.h>
 #include <fs/trace.h>
 
-#include "allocated-extent-iterator.h"
-#include "extent-iterator.h"
+#include "src/storage/blobfs/iterator/allocated-extent-iterator.h"
+#include "src/storage/blobfs/iterator/extent-iterator.h"
 
 namespace blobfs {
 

@@ -11,7 +11,7 @@
 
 #include <fuzzer/FuzzedDataProvider.h>
 
-#include "compression/zstd-seekable.h"
+#include "src/storage/blobfs/compression/zstd-seekable.h"
 
 // Maximum uncompressed buffer size.
 constexpr size_t kMaxUncompressedBufSize = 10000;

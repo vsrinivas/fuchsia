@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "blob.h"
+#include "src/storage/blobfs/blob.h"
 
 #include <assert.h>
 #include <ctype.h>
@@ -43,14 +43,15 @@
 #include <fs/vfs_types.h>
 #include <safemath/checked_math.h>
 
-#include "blob-verifier.h"
-#include "blobfs.h"
-#include "iterator/allocated-extent-iterator.h"
-#include "iterator/block-iterator.h"
-#include "iterator/extent-iterator.h"
-#include "iterator/node-populator.h"
-#include "iterator/vector-extent-iterator.h"
-#include "metrics.h"
+#include "src/storage/blobfs/blob-verifier.h"
+#include "src/storage/blobfs/blobfs.h"
+#include "src/storage/blobfs/compression/chunked.h"
+#include "src/storage/blobfs/iterator/allocated-extent-iterator.h"
+#include "src/storage/blobfs/iterator/block-iterator.h"
+#include "src/storage/blobfs/iterator/extent-iterator.h"
+#include "src/storage/blobfs/iterator/node-populator.h"
+#include "src/storage/blobfs/iterator/vector-extent-iterator.h"
+#include "src/storage/blobfs/metrics.h"
 
 namespace blobfs {
 namespace {

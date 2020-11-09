@@ -4,6 +4,7 @@
 
 #include <stdlib.h>
 #include <zircon/assert.h>
+#include <zircon/errors.h>
 
 #include <algorithm>
 #include <memory>
@@ -12,12 +13,11 @@
 #include <blobfs/format.h>
 #include <gtest/gtest.h>
 
-#include "compression/blob-compressor.h"
-#include "compression/chunked.h"
-#include "compression/compressor.h"
-#include "compression/seekable-decompressor.h"
-#include "compression/zstd-seekable.h"
-#include "zircon/errors.h"
+#include "src/storage/blobfs/compression/blob-compressor.h"
+#include "src/storage/blobfs/compression/chunked.h"
+#include "src/storage/blobfs/compression/compressor.h"
+#include "src/storage/blobfs/compression/seekable-decompressor.h"
+#include "src/storage/blobfs/compression/zstd-seekable.h"
 
 namespace blobfs {
 namespace {

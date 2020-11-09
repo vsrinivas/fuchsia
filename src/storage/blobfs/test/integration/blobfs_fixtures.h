@@ -7,8 +7,8 @@
 
 #include <blobfs/format.h>
 
+#include "src/storage/blobfs/test/blob_utils.h"
 #include "src/storage/fs_test/fs_test_fixture.h"
-#include "test/blob_utils.h"
 
 namespace blobfs {
 

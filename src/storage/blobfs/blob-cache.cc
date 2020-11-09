@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "blob-cache.h"
+#include "src/storage/blobfs/blob-cache.h"
 
 #include <zircon/status.h>
 

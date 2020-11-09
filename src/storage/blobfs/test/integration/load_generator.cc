@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "load_generator.h"
+#include "src/storage/blobfs/test/integration/load_generator.h"
 
 #include <errno.h>
 #include <fcntl.h>

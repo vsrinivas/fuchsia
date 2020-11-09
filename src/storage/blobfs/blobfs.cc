@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "blobfs.h"
+#include "src/storage/blobfs/blobfs.h"
 
 #include <fuchsia/hardware/block/c/fidl.h>
 #include <fuchsia/hardware/block/volume/c/fidl.h>
@@ -28,6 +28,7 @@
 #include <utility>
 
 #include <blobfs/compression-settings.h>
+#include <blobfs/format.h>
 #include <blobfs/fsck.h>
 #include <block-client/cpp/pass-through-read-only-device.h>
 #include <block-client/cpp/remote-block-device.h>
@@ -44,17 +45,16 @@
 #include <fs/vfs_types.h>
 #include <fvm/client.h>
 
-#include "allocator/extent-reserver.h"
-#include "allocator/node-reserver.h"
-#include "blob-loader.h"
-#include "blob.h"
-#include "blobfs-checker.h"
-#include "blobfs/format.h"
-#include "compression/compressor.h"
-#include "iterator/allocated-node-iterator.h"
-#include "iterator/block-iterator.h"
-#include "pager/transfer-buffer.h"
-#include "pager/user-pager-info.h"
+#include "src/storage/blobfs/allocator/extent-reserver.h"
+#include "src/storage/blobfs/allocator/node-reserver.h"
+#include "src/storage/blobfs/blob-loader.h"
+#include "src/storage/blobfs/blob.h"
+#include "src/storage/blobfs/blobfs-checker.h"
+#include "src/storage/blobfs/compression/compressor.h"
+#include "src/storage/blobfs/iterator/allocated-node-iterator.h"
+#include "src/storage/blobfs/iterator/block-iterator.h"
+#include "src/storage/blobfs/pager/transfer-buffer.h"
+#include "src/storage/blobfs/pager/user-pager-info.h"
 
 namespace blobfs {
 namespace {

@@ -2,8 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "zstd-seekable.h"
+#include "src/storage/blobfs/compression/zstd-seekable.h"
 
+#include <zircon/errors.h>
 #include <zircon/types.h>
 
 #include <memory>
@@ -17,8 +18,7 @@
 #include <zstd/zstd.h>
 #include <zstd/zstd_seekable.h>
 
-#include "compressor.h"
-#include "zircon/errors.h"
+#include "src/storage/blobfs/compression/compressor.h"
 
 namespace blobfs {
 

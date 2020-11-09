@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "inspector/parser.h"
+#include "src/storage/blobfs/inspector/parser.h"
 
 #include <blobfs/format.h>
 #include <gtest/gtest.h>

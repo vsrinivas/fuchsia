@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "read-metrics.h"
+#include "src/storage/blobfs/read-metrics.h"
 
 #include <blobfs/compression-settings.h>
 
@@ -15,12 +15,12 @@ ReadMetrics::ReadMetrics(inspect::Node* read_metrics_node)
       zstd_seekable_metrics_(read_metrics_node->CreateChild("zstd_seekable")),
       chunked_metrics_(read_metrics_node->CreateChild("chunked")) {}
 
-ReadMetrics::PerCompressionMetrics::PerCompressionMetrics(inspect::Node node):
-    parent_node(std::move(node)),
-    read_ticks_node(parent_node.CreateInt("read_ticks", read_ticks.get())),
-    read_bytes_node(parent_node.CreateUint("read_bytes", read_bytes)),
-    decompress_ticks_node(parent_node.CreateInt("decompress_ticks", decompress_ticks.get())),
-    decompress_bytes_node(parent_node.CreateUint("decompress_bytes", decompress_bytes)) {}
+ReadMetrics::PerCompressionMetrics::PerCompressionMetrics(inspect::Node node)
+    : parent_node(std::move(node)),
+      read_ticks_node(parent_node.CreateInt("read_ticks", read_ticks.get())),
+      read_bytes_node(parent_node.CreateUint("read_bytes", read_bytes)),
+      decompress_ticks_node(parent_node.CreateInt("decompress_ticks", decompress_ticks.get())),
+      decompress_bytes_node(parent_node.CreateUint("decompress_bytes", decompress_bytes)) {}
 
 ReadMetrics::PerCompressionMetrics* ReadMetrics::GetMetrics(CompressionAlgorithm algorithm) {
   switch (algorithm) {

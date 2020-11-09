@@ -6,7 +6,7 @@
 #define SRC_STORAGE_BLOBFS_BLOBFS_CHECKER_H_
 
 #ifdef __Fuchsia__
-#include "blobfs.h"
+#include "src/storage/blobfs/blobfs.h"
 #else
 #include <blobfs/host.h>
 #endif

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "page-watcher.h"
+#include "src/storage/blobfs/pager/page-watcher.h"
 
 #include <zircon/status.h>
 

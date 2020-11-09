@@ -2,16 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "iterator/allocated-extent-iterator.h"
+#include "src/storage/blobfs/iterator/allocated-extent-iterator.h"
 
 #include <algorithm>
 #include <memory>
 
 #include <gtest/gtest.h>
 
-#include "iterator/block-iterator.h"
-#include "iterator/node-populator.h"
-#include "utils.h"
+#include "src/storage/blobfs/iterator/block-iterator.h"
+#include "src/storage/blobfs/iterator/node-populator.h"
+#include "src/storage/blobfs/test/unit/utils.h"
 
 namespace blobfs {
 namespace {

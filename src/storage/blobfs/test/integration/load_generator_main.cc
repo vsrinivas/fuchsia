@@ -7,7 +7,7 @@
 
 #include <string>
 
-#include "load_generator.h"
+#include "src/storage/blobfs/test/integration/load_generator.h"
 
 namespace {
 

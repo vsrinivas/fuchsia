@@ -17,7 +17,7 @@
 #include <fbl/condition_variable.h>
 #include <fbl/mutex.h>
 
-#include "user-pager.h"
+#include "src/storage/blobfs/pager/user-pager.h"
 
 namespace blobfs {
 namespace pager {

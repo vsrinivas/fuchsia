@@ -7,7 +7,7 @@
 
 #include <memory>
 
-#include "block-iterator.h"
+#include "src/storage/blobfs/iterator/block-iterator.h"
 
 namespace blobfs {
 

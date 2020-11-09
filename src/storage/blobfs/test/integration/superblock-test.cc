@@ -8,7 +8,7 @@
 #include <fbl/unique_fd.h>
 #include <gtest/gtest.h>
 
-#include "blobfs_fixtures.h"
+#include "src/storage/blobfs/test/integration/blobfs_fixtures.h"
 
 namespace blobfs {
 namespace {

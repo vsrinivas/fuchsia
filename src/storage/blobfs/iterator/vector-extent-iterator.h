@@ -12,8 +12,8 @@
 #include <blobfs/format.h>
 #include <fbl/vector.h>
 
-#include "allocator/extent-reserver.h"
-#include "extent-iterator.h"
+#include "src/storage/blobfs/allocator/extent-reserver.h"
+#include "src/storage/blobfs/iterator/extent-iterator.h"
 
 namespace blobfs {
 

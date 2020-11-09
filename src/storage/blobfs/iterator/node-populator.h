@@ -13,9 +13,9 @@
 #include <fbl/function.h>
 #include <fbl/vector.h>
 
-#include "allocator/allocator.h"
-#include "allocator/extent-reserver.h"
-#include "allocator/node-reserver.h"
+#include "src/storage/blobfs/allocator/allocator.h"
+#include "src/storage/blobfs/allocator/extent-reserver.h"
+#include "src/storage/blobfs/allocator/node-reserver.h"
 
 namespace blobfs {
 

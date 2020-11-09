@@ -21,7 +21,7 @@
 #include <fs/vfs_types.h>
 #include <fs/vnode.h>
 
-#include "blob-cache.h"
+#include "src/storage/blobfs/blob-cache.h"
 
 namespace blobfs {
 

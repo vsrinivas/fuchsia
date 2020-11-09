@@ -11,7 +11,7 @@
 
 #include <blobfs/mount.h>
 
-#include "runner.h"
+#include "src/storage/blobfs/runner.h"
 
 namespace blobfs {
 

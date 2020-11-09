@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "query.h"
+#include "src/storage/blobfs/query.h"
 
 #include <lib/fidl-async/cpp/bind.h>
 
 #include <blobfs/format.h>
 
-#include "blobfs.h"
-#include "runner.h"
+#include "src/storage/blobfs/blobfs.h"
+#include "src/storage/blobfs/runner.h"
 
 namespace fuchsia_fs = ::llcpp::fuchsia::fs;
 

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "test/blob_utils.h"
+#include "src/storage/blobfs/test/blob_utils.h"
 
 #include <fcntl.h>
 #include <lib/fdio/io.h>

@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "allocator/node-reserver.h"
+#include "src/storage/blobfs/allocator/node-reserver.h"
 
 #include <bitmap/rle-bitmap.h>
 #include <gtest/gtest.h>
 
-#include "allocator/extent-reserver.h"
+#include "src/storage/blobfs/allocator/extent-reserver.h"
 
 namespace blobfs {
 namespace {

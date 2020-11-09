@@ -12,8 +12,8 @@
 #include <blobfs/format.h>
 #include <lz4/lz4frame.h>
 
-#include "compressor.h"
-#include "decompressor.h"
+#include "src/storage/blobfs/compression/compressor.h"
+#include "src/storage/blobfs/compression/decompressor.h"
 
 namespace blobfs {
 

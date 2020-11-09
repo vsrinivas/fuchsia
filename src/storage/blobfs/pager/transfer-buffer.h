@@ -18,10 +18,10 @@
 #include <fbl/macros.h>
 #include <storage/buffer/owned_vmoid.h>
 
-#include "../iterator/block-iterator-provider.h"
-#include "../metrics.h"
-#include "../transaction-manager.h"
-#include "user-pager-info.h"
+#include "src/storage/blobfs/iterator/block-iterator-provider.h"
+#include "src/storage/blobfs/metrics.h"
+#include "src/storage/blobfs/pager/user-pager-info.h"
+#include "src/storage/blobfs/transaction-manager.h"
 
 namespace blobfs {
 namespace pager {

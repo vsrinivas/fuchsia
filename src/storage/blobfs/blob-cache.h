@@ -19,8 +19,8 @@
 #include <fs/trace.h>
 #include <fs/vnode.h>
 
-#include "cache-node.h"
-#include "metrics.h"
+#include "src/storage/blobfs/cache-node.h"
+#include "src/storage/blobfs/metrics.h"
 
 namespace blobfs {
 
