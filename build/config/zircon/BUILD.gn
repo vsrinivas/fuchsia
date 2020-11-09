@@ -61,7 +61,10 @@ config("clang_defaults") {
   asmflags = cflags
   ldflags = cflags
   if (clang_embed_bitcode) {
-    cflags = [ "-Xclang", "-fembed-bitcode=all" ]
+    cflags = [
+      "-Xclang",
+      "-fembed-bitcode=all",
+    ]
   }
   if (current_cpu == "x64") {
     asmflags += [ "-Wa,--mrelax-relocations=yes" ]
@@ -411,6 +414,9 @@ config("werror") {
 
     # Do not add additional `-Wno-error=...` switches to this config!
   ]
+
+  asmflags = [ "-Wa,--fatal-warnings" ]
+  cflags += asmflags
 
   if (current_os == "win") {
     ldflags = [ "-Wl,/WX" ]

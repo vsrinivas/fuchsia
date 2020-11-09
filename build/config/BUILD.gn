@@ -1061,6 +1061,9 @@ config("werror") {
 
       # Do not add additional -Wno-error to this config.
     ]
+
+    asmflags = [ "-Wa,--fatal-warnings" ]
+    cflags += asmflags
   }
   rustflags = [ "-Dwarnings" ]
 }

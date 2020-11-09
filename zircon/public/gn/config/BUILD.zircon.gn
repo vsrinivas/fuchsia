@@ -569,6 +569,9 @@ config("werror") {
     # Do not add additional `-Wno-error=...` switches to this config!
   ]
 
+  asmflags = [ "-Wa,--fatal-warnings" ]
+  cflags += asmflags
+
   if (current_os == "win") {
     ldflags = [ "-Wl,/WX" ]
   }
