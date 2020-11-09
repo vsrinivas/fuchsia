@@ -9,7 +9,4 @@ zx_library("thermal") {
   sdk_headers = [ "lib/thermal/ntc.h" ]
   sources = []
   public_deps = []
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
