@@ -63,7 +63,7 @@ impl WpanFacade {
     pub async fn get_thread_rloc16(&self) -> Result<u16, Error> {
         let thread_rloc16 = match self.device_test.read().as_ref() {
             Some(device_test) => device_test.get_thread_rloc16().await?,
-            _ => bail!("DeviceTest proxy is not set, please call initialize_proxies first"),
+            _ => bail!("DeviceTest proxy is not set"),
         };
         Ok(thread_rloc16)
     }
@@ -73,7 +73,7 @@ impl WpanFacade {
     pub async fn get_ncp_mac_address(&self) -> Result<Vec<u8>, Error> {
         let current_mac_address = match self.device_test.read().as_ref() {
             Some(device_test) => device_test.get_current_mac_address().await?,
-            _ => bail!("DeviceTest proxy is not set, please call initialize_proxies first"),
+            _ => bail!("DeviceTest proxy is not set"),
         };
         Ok(current_mac_address)
     }
@@ -82,7 +82,7 @@ impl WpanFacade {
     pub async fn get_ncp_channel(&self) -> Result<u16, Error> {
         let current_channel = match self.device_test.read().as_ref() {
             Some(device_test) => device_test.get_current_channel().await?,
-            _ => bail!("DeviceTest proxy is not set, please call initialize_proxies first"),
+            _ => bail!("DeviceTest proxy is not set"),
         };
         Ok(current_channel)
     }
@@ -91,7 +91,7 @@ impl WpanFacade {
     pub async fn get_ncp_rssi(&self) -> Result<i32, Error> {
         let ncp_rssi = match self.device_test.read().as_ref() {
             Some(device_test) => device_test.get_current_rssi().await?,
-            _ => bail!("DeviceTest proxy is not set, please call initialize_proxies first"),
+            _ => bail!("DeviceTest proxy is not set"),
         };
         Ok(ncp_rssi)
     }
@@ -100,7 +100,7 @@ impl WpanFacade {
     pub async fn get_weave_node_id(&self) -> Result<Vec<u8>, Error> {
         let factory_mac_address = match self.device_test.read().as_ref() {
             Some(device_test) => device_test.get_factory_mac_address().await?,
-            _ => bail!("DeviceTest proxy is not set, please call initialize_proxies first"),
+            _ => bail!("DeviceTest proxy is not set"),
         };
         Ok(factory_mac_address)
     }
@@ -109,7 +109,7 @@ impl WpanFacade {
     pub async fn get_network_name(&self) -> Result<Vec<u8>, Error> {
         let raw_name = match self.device_extra.read().as_ref() {
             Some(device_extra) => device_extra.watch_identity().await?.raw_name,
-            _ => bail!("DeviceExtra proxy is not set, please call initialize_proxies first"),
+            _ => bail!("DeviceExtra proxy is not set"),
         };
         match raw_name {
             Some(raw_name) => Ok(raw_name),
@@ -121,7 +121,7 @@ impl WpanFacade {
     pub async fn get_partition_id(&self) -> Result<u32, Error> {
         let partition_id = match self.device_test.read().as_ref() {
             Some(device_test) => device_test.get_partition_id().await?,
-            _ => bail!("DeviceTest proxy is not set, please call initialize_proxies first"),
+            _ => bail!("DeviceTest proxy is not set"),
         };
         Ok(partition_id)
     }
@@ -130,7 +130,7 @@ impl WpanFacade {
     pub async fn get_thread_router_id(&self) -> Result<u8, Error> {
         let router_id = match self.device_test.read().as_ref() {
             Some(device_test) => device_test.get_thread_router_id().await?,
-            _ => bail!("DeviceTest proxy is not set, please call initialize_proxies first"),
+            _ => bail!("DeviceTest proxy is not set"),
         };
         Ok(router_id)
     }
@@ -139,7 +139,7 @@ impl WpanFacade {
     pub async fn get_ncp_state(&self) -> Result<ConnectivityState, Error> {
         let device_state = match self.device.read().as_ref() {
             Some(device) => device.watch_device_state().await?.connectivity_state,
-            _ => bail!("DeviceTest proxy is not set, please call initialize_proxies first"),
+            _ => bail!("DeviceTest proxy is not set"),
         };
         match device_state {
             Some(connectivity_state) => Ok(WpanFacade::to_connectivity_state(connectivity_state)),
@@ -158,6 +158,17 @@ impl WpanFacade {
             _ => false,
         };
         Ok(is_commissioned)
+    }
+
+    /// Returns the panid from the DeviceExtra proxy service.
+    pub async fn get_panid(&self) -> Result<u16, Error> {
+        match self.device_extra.read().as_ref() {
+            Some(device_extra) => match device_extra.watch_identity().await?.panid {
+                Some(panid) => Ok(panid),
+                None => bail!("Pan id is not specified!"),
+            },
+            _ => bail!("DeviceExtra proxy is not set"),
+        }
     }
 
     fn to_connectivity_state(connectivity_state: lowpan_ConnectivityState) -> ConnectivityState {
@@ -313,5 +324,11 @@ mod tests {
     async fn test_get_is_commissioned() {
         let facade = MOCK_TESTER.create_facade_and_serve();
         MockTester::assert_wpan_fn(facade.0.get_is_commissioned(), facade.1).await;
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_get_panid() {
+        let facade = MOCK_TESTER.create_facade_and_serve();
+        MockTester::assert_wpan_fn(facade.0.get_panid(), facade.1).await;
     }
 }

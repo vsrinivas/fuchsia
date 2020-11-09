@@ -18,6 +18,7 @@ impl Facade for WpanFacade {
             WpanMethod::GetNcpRssi => to_value(self.get_ncp_rssi().await?),
             WpanMethod::GetNcpState => to_value(self.get_ncp_state().await?),
             WpanMethod::GetNetworkName => to_value(self.get_network_name().await?),
+            WpanMethod::GetPanId => to_value(self.get_panid().await?),
             WpanMethod::GetPartitionId => to_value(self.get_partition_id().await?),
             WpanMethod::GetThreadRloc16 => to_value(self.get_thread_rloc16().await?),
             WpanMethod::GetThreadRouterId => to_value(self.get_thread_router_id().await?),

@@ -329,7 +329,7 @@ impl Driver for DummyDevice {
             xpanid: None,
             net_type: None,
             channel: None,
-            panid: None,
+            panid: Some(1234),
             ..Identity::empty()
         });
 
