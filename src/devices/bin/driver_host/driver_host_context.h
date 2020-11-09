@@ -32,9 +32,6 @@ class DriverHostContext {
 
   zx_status_t SetupRootDevcoordinatorConnection(zx::channel ch);
 
-  zx_status_t ScheduleWork(const fbl::RefPtr<zx_device_t>& dev, void (*callback)(void*),
-                           void* cookie) TA_REQ(api_lock_);
-
   void ProxyIosDestroy(const fbl::RefPtr<zx_device_t>& dev);
 
   // Attaches channel |c| to new state representing an open connection to |dev|.
@@ -120,16 +117,6 @@ class DriverHostContext {
   zx_status_t DeviceAddComposite(const fbl::RefPtr<zx_device_t>& dev, const char* name,
                                  const composite_device_desc_t* comp_desc) TA_REQ(api_lock_);
 
-  // Sets up event on async loop which gets triggered once
-  zx_status_t SetupEventWaiter();
-
-  // Queues up work item, and signals event to run it.
-  void PushWorkItem(const fbl::RefPtr<zx_device_t>& dev, Callback callback);
-
-  // Runs |how_many_to_run| work items. 0 Indicates that caller wishes to run all work items in
-  // queue.
-  void RunWorkItems(size_t how_many_to_run);
-
   zx_status_t FindDriver(std::string_view libname, zx::vmo vmo, fbl::RefPtr<zx_driver_t>* out);
 
   // Called when a zx_device_t has run out of references and needs its destruction finalized.
@@ -146,46 +133,6 @@ class DriverHostContext {
   DriverHostInspect& inspect() { return inspect_; }
 
  private:
-  struct WorkItem : public fbl::DoublyLinkedListable<std::unique_ptr<WorkItem>> {
-    WorkItem(const fbl::RefPtr<zx_device_t>& dev, Callback callback)
-        : dev(dev), callback(std::move(callback)) {}
-
-    fbl::RefPtr<zx_device_t> dev;
-    Callback callback;
-  };
-
-  class EventWaiter : public AsyncLoopOwnedEventHandler<EventWaiter> {
-   public:
-    EventWaiter(zx::event event, fit::closure callback)
-        : AsyncLoopOwnedEventHandler<EventWaiter>(std::move(event)),
-          callback_(std::move(callback)) {}
-
-    static void HandleEvent(std::unique_ptr<EventWaiter> event, async_dispatcher_t* dispatcher,
-                            async::WaitBase* wait, zx_status_t status,
-                            const zx_packet_signal_t* signal);
-
-    bool signaled() { return signaled_; }
-
-    void signal() {
-      ZX_ASSERT(event()->signal(0, ZX_USER_SIGNAL_0) == ZX_OK);
-      signaled_ = true;
-    }
-
-    void designal() {
-      ZX_ASSERT(event()->signal(ZX_USER_SIGNAL_0, 0) == ZX_OK);
-      signaled_ = false;
-    }
-
-    void InvokeCallback() { callback_(); }
-
-   private:
-    bool signaled_ = false;
-    fit::closure callback_;
-  };
-
-  // Runs |how_many_to_run| work items. 0 Indicates that caller wishes to run all work items in
-  // queue.
-  void InternalRunWorkItems(size_t how_many_to_run);
 
   void FinalizeDyingDevices() TA_REQ(api_lock_);
 
@@ -209,11 +156,6 @@ class DriverHostContext {
 
   // Used to serialize API operations
   ApiLock api_lock_;
-
-  fbl::Mutex lock_;
-  // Owned by `loop_`;
-  EventWaiter* event_waiter_ TA_GUARDED(lock_) = nullptr;
-  fbl::DoublyLinkedList<std::unique_ptr<WorkItem>> work_items_ TA_GUARDED(lock_);
 
   fbl::DoublyLinkedList<fbl::RefPtr<zx_driver>> drivers_;
 

@@ -469,12 +469,6 @@ typedef struct device_fidl_txn {
 // device's unbind hook is completed, whichever is earlier.
 void device_fidl_transaction_take_ownership(fidl_txn_t* txn, device_fidl_txn_t* new_txn);
 
-// Schedule a callback to be run at a later point. Similar to the device callbacks, it
-// is *not* okay to block in the callback.
-//
-// The callback will be executed on the devhost's main thread.
-zx_status_t device_schedule_work(zx_device_t* dev, void (*callback)(void*), void* cookie);
-
 // Device State Change Functions.  These match up with the signals defined in
 // the fuchsia.device.Controller interface.
 //

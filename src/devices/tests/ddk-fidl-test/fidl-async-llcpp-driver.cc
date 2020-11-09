@@ -4,6 +4,8 @@
 
 #include "fidl-async-llcpp-driver.h"
 
+#include <lib/async/cpp/task.h>
+
 #include <memory>
 #include <optional>
 
@@ -47,27 +49,23 @@ zx_status_t DdkFidlDevice::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn)
 }
 
 void DdkFidlDevice::GetChannel(GetChannelCompleter::Sync& completer) {
-  struct CompletionContext {
-    std::optional<GetChannelCompleter::Async> completer;
-  };
-  auto context = std::make_unique<CompletionContext>();
-  context->completer = completer.ToAsync();
-
-  ZX_ASSERT(ZX_OK == DdkScheduleWork(
-                         [](void* ctx) {
-                           auto context = std::unique_ptr<CompletionContext>(
-                               reinterpret_cast<CompletionContext*>(ctx));
-
-                           zx::channel local;
-                           zx::channel remote;
-                           zx::channel::create(0, &local, &remote);
-                           __UNUSED auto dummy = local.release();
-                           context->completer->Reply(std::move(remote));
-                         },
-                         context.release()));
+  ZX_ASSERT(ZX_OK ==
+            async::PostTask(loop_.dispatcher(), [completer = completer.ToAsync()]() mutable {
+              zx::channel local;
+              zx::channel remote;
+              zx::channel::create(0, &local, &remote);
+              __UNUSED auto dummy = local.release();
+              completer.Reply(std::move(remote));
+            }));
 }
 
-zx_status_t DdkFidlDevice::Bind() { return DdkAdd("ddk-async-fidl"); }
+zx_status_t DdkFidlDevice::Bind() {
+  auto status = loop_.StartThread();
+  if (status != ZX_OK) {
+    return status;
+  }
+  return DdkAdd("ddk-async-fidl");
+}
 
 void DdkFidlDevice::DdkRelease() { delete this; }
 

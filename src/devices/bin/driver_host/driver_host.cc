@@ -186,15 +186,6 @@ zx_status_t DriverHostContext::SetupRootDevcoordinatorConnection(zx::channel ch)
   return internal::DevhostControllerConnection::BeginWait(std::move(conn), loop_.dispatcher());
 }
 
-zx_status_t DriverHostContext::ScheduleWork(const fbl::RefPtr<zx_device_t>& dev,
-                                            void (*callback)(void*), void* cookie) {
-  if (!callback) {
-    return ZX_ERR_INVALID_ARGS;
-  }
-  PushWorkItem(dev, [callback, cookie]() { callback(cookie); });
-  return ZX_OK;
-}
-
 // Send message to driver_manager asking to add child device to
 // parent device.  Called under the api lock.
 zx_status_t DriverHostContext::DriverManagerAdd(const fbl::RefPtr<zx_device_t>& parent,
@@ -743,12 +734,6 @@ int main(int argc, char** argv) {
     LOGF(WARNING, "driver_host: error serving diagnostics directory: %s\n",
          zx_status_get_string(status));
     // This is not a fatal error
-  }
-
-  status = ctx.SetupEventWaiter();
-  if (status != ZX_OK) {
-    LOGF(ERROR, "Failed to setup event watcher: %s", zx_status_get_string(status));
-    return status;
   }
 
   return ctx.loop().Run(zx::time::infinite(), false /* once */);

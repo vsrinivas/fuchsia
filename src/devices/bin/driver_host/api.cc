@@ -380,12 +380,6 @@ __EXPORT zx_status_t device_add_composite(zx_device_t* dev, const char* name,
   return internal::ContextForApi()->DeviceAddComposite(dev_ref, name, comp_desc);
 }
 
-__EXPORT zx_status_t device_schedule_work(zx_device_t* dev, void (*callback)(void*), void* cookie) {
-  fbl::AutoLock lock(&internal::ContextForApi()->api_lock());
-  auto dev_ref = fbl::RefPtr(dev);
-  return internal::ContextForApi()->ScheduleWork(dev_ref, callback, cookie);
-}
-
 __EXPORT bool driver_log_severity_enabled_internal(const zx_driver_t* drv, fx_log_severity_t flag) {
   if (drv != nullptr) {
     fbl::AutoLock lock(&internal::ContextForApi()->api_lock());

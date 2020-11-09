@@ -6,6 +6,7 @@
 #define SRC_DEVICES_TESTS_DDK_FIDL_TEST_FIDL_ASYNC_LLCPP_DRIVER_H_
 
 #include <fuchsia/hardware/test/llcpp/fidl.h>
+#include <lib/async-loop/cpp/loop.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <lib/zx/event.h>
 #include <lib/zx/socket.h>
@@ -24,7 +25,8 @@ using DeviceType = ddk::Device<DdkFidlDevice, ddk::Messageable>;
 class DdkFidlDevice : public DeviceType,
                       public ::llcpp::fuchsia::hardware::test::Device::Interface {
  public:
-  explicit DdkFidlDevice(zx_device_t* parent) : DeviceType(parent) {}
+  explicit DdkFidlDevice(zx_device_t* parent)
+      : DeviceType(parent), loop_(&kAsyncLoopConfigNeverAttachToThread) {}
 
   static zx_status_t Create(void* ctx, zx_device_t* dev);
   zx_status_t Bind();
@@ -34,6 +36,7 @@ class DdkFidlDevice : public DeviceType,
   void DdkRelease();
 
   void GetChannel(GetChannelCompleter::Sync& completer) override;
+  async::Loop loop_;
 };
 }  // namespace fidl
 

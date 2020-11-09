@@ -528,10 +528,6 @@ class Device : public ::ddk::internal::base_device<D, Mixins...> {
     return device_publish_metadata(zxdev(), path, type, data, length);
   }
 
-  zx_status_t DdkScheduleWork(void (*callback)(void*), void* cookie) {
-    return device_schedule_work(zxdev(), callback, cookie);
-  }
-
   const char* name() const { return zxdev() ? device_get_name(zxdev()) : nullptr; }
 
   // The opaque pointer representing this device.

@@ -56,6 +56,9 @@ driver_module("fidl-async-llcpp-driver") {
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/async:async-cpp",
+    "//zircon/system/ulib/async-loop",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/fidl-utils",
   ]
 }

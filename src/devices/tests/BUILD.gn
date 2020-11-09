@@ -14,7 +14,6 @@ group("tests") {
     "ddk-metadata-test",
     "ddk-power:tests",
     "ddk-runcompatibilityhook:tests",
-    "ddk-schedule-work:tests",
     "driver-inspect-test",
     "isolateddevmgr:tests",
     "libdriver-integration-test",
