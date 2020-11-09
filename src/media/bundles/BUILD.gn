@@ -2,6 +2,18 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+group("drivers") {
+  testonly = true
+  deps = [ "//src/media/audio:drivers" ]
+
+  if (target_cpu == "arm64") {
+    deps += [
+      "//src/media/drivers/amlogic_decoder:amlogic_decoder_test",
+      "//src/media/drivers/amlogic_decoder:amlogic_video_decoder",
+    ]
+  }
+}
+
 group("services") {
   testonly = true
   deps = [
