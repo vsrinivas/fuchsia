@@ -316,6 +316,10 @@ func openAndParseBlobsJSON(
 	buildDir string,
 	packages []string,
 	state *processingState) error {
+	absBuildDir, err := filepath.Abs(buildDir)
+	if err != nil {
+		return fmt.Errorf("could not find abs path of directory: %v: %w", buildDir, err)
+	}
 	for _, metaFar := range packages {
 		// From the meta.far file, we can get the path to the blobs.json for that package.
 		dir := filepath.Dir(metaFar)
@@ -330,7 +334,7 @@ func openAndParseBlobsJSON(
 			return fmt.Errorf(unmarshalError(blobsJSON, err))
 		}
 		// Finally, we add the blob and the package to the tree.
-		parseBlobsJSON(state, blobs, dir)
+		parseBlobsJSON(state, blobs, dir, absBuildDir)
 	}
 	return nil
 }
@@ -339,23 +343,38 @@ func openAndParseBlobsJSON(
 func parseBlobsJSON(
 	state *processingState,
 	blobs []BlobFromJSON,
-	pkgPath string) {
+	pkgPath string,
+	absBuildDir string) {
 	for _, blob := range blobs {
 		// If the blob is an ICU data file, we don't add it to the tree.
 		// We check the path instead of the source path because prebuilt packages have hashes as the
 		// source path for their blobs
-		if _, ok := state.icuDataMap[filepath.Base(blob.Path)]; ok {
+		baseBlobFilepath := filepath.Base(blob.Path)
+
+		var (
+			// Node must always be a pointer stored in state.icuDataMap, or nil.
+			node *Node
+			ok   bool
+		)
+		if node, ok = state.icuDataMap[baseBlobFilepath]; ok {
 			// The size of each blob is the total space occupied by the blob in blobfs (each blob may be
 			// referenced several times by different packages). Therefore, once we have already add the
 			// size, we should remove it from the map
 			if state.blobMap[blob.Merkle] != nil {
-				if state.icuDataMap[filepath.Base(blob.Path)] == nil {
-					state.icuDataMap[filepath.Base(blob.Path)] = newNode(filepath.Base(blob.Path))
+				if node == nil {
+					state.icuDataMap[baseBlobFilepath] = newNode(baseBlobFilepath)
+					// Ensure that node remains a pointer into the map.
+					node = state.icuDataMap[baseBlobFilepath]
 				}
-				state.icuDataMap[filepath.Base(blob.Path)].size += state.blobMap[blob.Merkle].size
-				state.icuDataMap[filepath.Base(blob.Path)].copies += 1
+				node.size += state.blobMap[blob.Merkle].size
+				node.copies += 1
 				delete(state.blobMap, blob.Merkle)
 			}
+			// Save the full path of the ICU data file, so ICU data file
+			// proliferation can be debugged.
+			trimmed := strings.TrimPrefix(blob.SourcePath, absBuildDir)
+			icuCopyNode := newNode(trimmed)
+			node.children[trimmed] = icuCopyNode
 		} else if _, ok := state.distributedShlibs[blob.Path]; ok {
 			if state.blobMap[blob.Merkle] != nil {
 				if state.distributedShlibs[blob.Path] == nil {

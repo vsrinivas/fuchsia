@@ -142,7 +142,7 @@ func Test_processBlobs(t *testing.T) {
 				test.distributedShlibsMap,
 				newDummyNode(),
 			}
-			parseBlobsJSON(&st, test.blobs, "")
+			parseBlobsJSON(&st, test.blobs, "", "")
 
 			if !reflect.DeepEqual(st.blobMap, test.expectedBlobMap) {
 				t.Fatalf("blob map: %v; expect %v", test.blobMap, test.expectedBlobMap)
@@ -201,7 +201,7 @@ func Test_processBlobsJSON_blobLookup(t *testing.T) {
 				dummyMap,
 				root,
 			}
-			parseBlobsJSON(&st, []BlobFromJSON{test.blob}, test.pkgPath)
+			parseBlobsJSON(&st, []BlobFromJSON{test.blob}, test.pkgPath, "")
 
 			expectedNode := root.detachByPath(test.expectedPathInTree)
 			if expectedNode == nil {
