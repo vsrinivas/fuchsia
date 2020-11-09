@@ -125,13 +125,14 @@ std::vector<UnbufferedOperation> FuzzerUtils::FuzzOperation(ReservedVmoid vmoid)
   if (registry_.HasVmo(vmoid)) {
     const zx::vmo& vmo = registry_.GetVmo(vmoid);
     builder.Add({
-        zx::unowned_vmo(vmo.get()),
-        {
-            .type = input_.ConsumeEnum<OperationType>(),
-            .vmo_offset = input_.ConsumeIntegral<uint64_t>(),
-            .dev_offset = input_.ConsumeIntegral<uint64_t>(),
-            .length = input_.ConsumeIntegral<uint64_t>(),
-        },
+        .vmo = zx::unowned_vmo(vmo.get()),
+        .op =
+            {
+                .type = input_.ConsumeEnum<OperationType>(),
+                .vmo_offset = input_.ConsumeIntegral<uint64_t>(),
+                .dev_offset = input_.ConsumeIntegral<uint64_t>(),
+                .length = input_.ConsumeIntegral<uint64_t>(),
+            },
     });
   }
   return builder.TakeOperations();

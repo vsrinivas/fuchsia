@@ -10,11 +10,16 @@
 #include <memory>
 #include <vector>
 
+#include <gmock/gmock.h>
 #include <gtest/gtest.h>
 #include <storage/operation/unbuffered_operations_builder.h>
 
 namespace storage {
 namespace {
+
+using ::testing::AllOf;
+using ::testing::ElementsAre;
+using ::testing::Field;
 
 const uint32_t kBlockSize = 8192;
 
@@ -772,6 +777,41 @@ TEST(RingBufferTest, WrappedOutOfOrderReleaseSucceeds) {
   }
   RingBufferReservation reservation;
   EXPECT_EQ(buffer->Reserve(4, &reservation), ZX_OK);
+}
+
+TEST(RingBufferTest, CopyWithPointersSucceeds) {
+  MockVmoidRegistry vmoid_registry;
+  std::unique_ptr<RingBuffer> buffer;
+  ASSERT_EQ(RingBuffer::Create(&vmoid_registry, 5, kBlockSize, "test-buffer", &buffer), ZX_OK);
+  // Reserve and then discard 4 blocks worth so that we can test wrapping.
+  {
+    RingBufferReservation reservation;
+    buffer->Reserve(4, &reservation);
+  }
+  std::vector<uint8_t> source_buffer(2 * kBlockSize);
+  // Fill the buffer with a pattern.
+  uint8_t value = 57;
+  for (uint8_t& c : source_buffer) {
+    c = value;
+    value += 3;
+  }
+  RingBufferRequests requests;
+  std::vector<UnbufferedOperation> operations = {storage::UnbufferedOperation{
+      .data = source_buffer.data(),
+      .op = {.type = OperationType::kWrite, .dev_offset = 1, .length = 2}}};
+  ASSERT_NO_FATAL_FAILURE(ReserveAndCopyRequests(buffer, operations, &requests));
+  EXPECT_THAT(
+      requests.Operations(),
+      ElementsAre(Field(&BufferedOperation::op,
+                        AllOf(Field(&Operation::type, OperationType::kWrite),
+                              Field(&Operation::vmo_offset, 4), Field(&Operation::dev_offset, 1),
+                              Field(&Operation::length, 1))),
+                  Field(&BufferedOperation::op,
+                        AllOf(Field(&Operation::type, OperationType::kWrite),
+                              Field(&Operation::vmo_offset, 0), Field(&Operation::dev_offset, 2),
+                              Field(&Operation::length, 1)))));
+  EXPECT_EQ(memcmp(requests.Reservation()->Data(0), &source_buffer[0], kBlockSize), 0);
+  EXPECT_EQ(memcmp(requests.Reservation()->Data(1), &source_buffer[kBlockSize], kBlockSize), 0);
 }
 
 }  // namespace

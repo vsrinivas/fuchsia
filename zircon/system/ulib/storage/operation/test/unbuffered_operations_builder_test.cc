@@ -13,6 +13,8 @@ namespace storage {
 namespace {
 
 using ::testing::_;
+using ::testing::ElementsAre;
+using ::testing::Field;
 
 constexpr size_t kVmoSize = 8192;
 
@@ -582,6 +584,22 @@ TEST(UnbufferedOperationsBuilderTest, RequestCoalescedWithOnlyOneOfTwoMergableRe
   EXPECT_EQ(requests[1].op.vmo_offset, operations[0].op.vmo_offset);
   EXPECT_EQ(requests[1].op.dev_offset, operations[0].op.dev_offset);
   EXPECT_EQ(requests[1].op.length, operations[0].op.length);
+}
+
+TEST(UnbufferedOperationBuilderTest, OperationsWithPointers) {
+  UnbufferedOperationsBuilder builder;
+  const char* buf = "foo";
+  builder.Add({.data = buf, .op = {.type = OperationType::kWrite, .dev_offset = 1}});
+  builder.Add({.data = buf, .op = {.type = OperationType::kWrite, .dev_offset = 2}});
+  EXPECT_THAT(builder.TakeOperations(),
+              ElementsAre(AllOf(Field(&UnbufferedOperation::data, buf),
+                                Field(&UnbufferedOperation::op,
+                                      AllOf(Field(&Operation::type, OperationType::kWrite),
+                                            Field(&Operation::dev_offset, 1)))),
+                          AllOf(Field(&UnbufferedOperation::data, buf),
+                                Field(&UnbufferedOperation::op,
+                                      AllOf(Field(&Operation::type, OperationType::kWrite),
+                                            Field(&Operation::dev_offset, 2))))));
 }
 
 TEST(UnbufferedOperationsBuilderDeathTest, BlockCountOverflowAsserts) {

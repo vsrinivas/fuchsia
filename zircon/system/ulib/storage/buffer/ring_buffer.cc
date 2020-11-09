@@ -173,17 +173,25 @@ zx::status<size_t> RingBufferReservation::CopyRequests(
 
     // Verify that the length is valid.
     ZX_DEBUG_ASSERT_MSG(buf_len > 0, "Attempting to write zero-length request into buffer");
-    const zx::unowned_vmo& vmo = in_operations[i].vmo;
 
     // Write data from the vmo into the buffer.
     void* ptr = Data(reservation_offset);
 
-    zx_status_t status =
-        vmo->read(ptr, vmo_offset * buffer_->BlockSize(), buf_len * buffer_->BlockSize());
-    if (status != ZX_OK) {
-      FS_TRACE_ERROR("fs: Failed to read from source buffer (%zu @ %zu): %s\n", buf_len, vmo_offset,
-                     zx_status_get_string(status));
-      return zx::error(status);
+    const uint8_t* data = static_cast<const uint8_t*>(in_operations[i].data);
+    const zx::unowned_vmo& vmo = in_operations[i].vmo;
+
+    if (data != nullptr) {
+      data += vmo_offset * buffer_->BlockSize();
+      memcpy(ptr, data, buf_len * buffer_->BlockSize());
+      data += buf_len * buffer_->BlockSize();
+    } else {
+      zx_status_t status =
+          vmo->read(ptr, vmo_offset * buffer_->BlockSize(), buf_len * buffer_->BlockSize());
+      if (status != ZX_OK) {
+        FS_TRACE_ERROR("fs: Failed to read from source buffer (%zu @ %zu): %s\n", buf_len,
+                       vmo_offset, zx_status_get_string(status));
+        return zx::error(status);
+      }
     }
 
     storage::BufferedOperation out_op;
@@ -205,11 +213,17 @@ zx::status<size_t> RingBufferReservation::CopyRequests(
       ZX_DEBUG_ASSERT(buf_len > 0);
 
       ptr = Data(reservation_offset);
-      status = vmo->read(ptr, vmo_offset * buffer_->BlockSize(), buf_len * buffer_->BlockSize());
-      if (status != ZX_OK) {
-        FS_TRACE_ERROR("fs: Failed to read from source buffer (%zu @ %zu): %s\n", buf_len,
-                       vmo_offset, zx_status_get_string(status));
-        return zx::error(status);
+
+      if (data) {
+        memcpy(ptr, data, buf_len * buffer_->BlockSize());
+      } else {
+        if (zx_status_t status =
+                vmo->read(ptr, vmo_offset * buffer_->BlockSize(), buf_len * buffer_->BlockSize());
+            status != ZX_OK) {
+          FS_TRACE_ERROR("fs: Failed to read from source buffer (%zu @ %zu): %s\n", buf_len,
+                         vmo_offset, zx_status_get_string(status));
+          return zx::error(status);
+        }
       }
 
       ring_buffer_offset = (ring_buffer_offset + buf_len) % capacity;

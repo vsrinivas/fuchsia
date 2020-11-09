@@ -118,7 +118,7 @@ TEST_F(DataStreamerTest, StreamSmallOperationScheduledToWriteback) {
     auto journal = take_journal();
     DataStreamer streamer(journal.get(), kWritebackLength);
     streamer.StreamData({.vmo = zx::unowned_vmo(vmo.get()),
-                         {
+                         .op = {
                              .type = storage::OperationType::kWrite,
                              .vmo_offset = kVmoOffset,
                              .dev_offset = kDevOffset,
@@ -158,7 +158,7 @@ TEST_F(DataStreamerTest, StreamOperationAsLargeAsWritebackIsChunked) {
     auto journal = take_journal();
     DataStreamer streamer(journal.get(), kWritebackLength);
     streamer.StreamData({.vmo = zx::unowned_vmo(vmo.get()),
-                         {
+                         .op = {
                              .type = storage::OperationType::kWrite,
                              .vmo_offset = kVmoOffset,
                              .dev_offset = kDevOffset,
@@ -201,7 +201,7 @@ TEST_F(DataStreamerTest, StreamOperationLargerThanWritebackIsChunkedAndNonBlocki
     auto journal = take_journal();
     DataStreamer streamer(journal.get(), kWritebackLength);
     streamer.StreamData({.vmo = zx::unowned_vmo(vmo.get()),
-                         {
+                         .op = {
                              .type = storage::OperationType::kWrite,
                              .vmo_offset = kVmoOffset,
                              .dev_offset = kDevOffset,
@@ -235,7 +235,7 @@ TEST_F(DataStreamerTest, StreamManySmallOperationsAreMerged) {
     DataStreamer streamer(journal.get(), kWritebackLength);
     for (size_t i = 0; i < kOperationCount; i++) {
       storage::UnbufferedOperation op = {.vmo = zx::unowned_vmo(vmo.get()),
-                                         {
+                                         .op = {
                                              .type = storage::OperationType::kWrite,
                                              .vmo_offset = kVmoOffset + i * kOperationLength,
                                              .dev_offset = kDevOffset + i * kOperationLength,
@@ -264,7 +264,7 @@ TEST_F(DataStreamerTest, StreamFailedOperationFailsFlush) {
     auto journal = take_journal();
     DataStreamer streamer(journal.get(), kWritebackLength);
     storage::UnbufferedOperation op = {.vmo = zx::unowned_vmo(vmo.get()),
-                                       {
+                                       .op = {
                                            .type = storage::OperationType::kWrite,
                                            .vmo_offset = kVmoOffset,
                                            .dev_offset = kDevOffset,

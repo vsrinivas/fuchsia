@@ -14,8 +14,9 @@ namespace fs {
 void DataStreamer::StreamData(storage::UnbufferedOperation operation) {
   ZX_DEBUG_ASSERT(operation.op.type == storage::OperationType::kWrite);
   const size_t max_chunk_blocks = (3 * writeback_capacity_) / 4;
-  uint64_t delta_blocks = std::min(operation.op.length, max_chunk_blocks);
   while (operation.op.length > 0) {
+    const uint64_t delta_blocks = std::min(operation.op.length, max_chunk_blocks);
+
     // If enqueueing these blocks could push us past the writeback buffer capacity
     // when combined with all previous writes, break this transaction into a smaller
     // chunk first.
@@ -23,18 +24,13 @@ void DataStreamer::StreamData(storage::UnbufferedOperation operation) {
       IssueOperations();
     }
 
-    storage::UnbufferedOperation partial_operation = {.vmo = zx::unowned_vmo(operation.vmo->get()),
-                                                      {
-                                                          .type = storage::OperationType::kWrite,
-                                                          .vmo_offset = operation.op.vmo_offset,
-                                                          .dev_offset = operation.op.dev_offset,
-                                                          .length = delta_blocks,
-                                                      }};
+    storage::UnbufferedOperation partial_operation = operation;
+    partial_operation.op.length = delta_blocks;
     operations_.Add(std::move(partial_operation));
+
     operation.op.vmo_offset += delta_blocks;
     operation.op.dev_offset += delta_blocks;
     operation.op.length -= delta_blocks;
-    delta_blocks = std::min(operation.op.length, max_chunk_blocks);
   }
 }
 

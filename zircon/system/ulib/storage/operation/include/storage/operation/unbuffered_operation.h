@@ -21,7 +21,14 @@ namespace storage {
 //
 // Clearly, this is a Fuchsia-only structure.
 struct UnbufferedOperation {
+  // Either vmo or data must be provided.
   zx::unowned_vmo vmo;
+
+  // This is const void* to avoid having to const cast for the common case where this is used for
+  // writes.  At time of writing there is no requirement for reads.  If and when we do need it, a
+  // const cast might be required somewhere.
+  const void* data = nullptr;
+
   Operation op;
 };
 

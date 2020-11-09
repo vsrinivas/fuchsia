@@ -544,7 +544,7 @@ zx_status_t Blob::WriteBlocks(const zx::vmo& vmo, uint32_t block_count, uint32_t
       &block_iter, block_count, [&](uint64_t block_offset, uint64_t dev_offset, uint32_t length) {
         ZX_DEBUG_ASSERT(block_offset >= blob_block_offset);
         storage::UnbufferedOperation op = {.vmo = zx::unowned_vmo(vmo.get()),
-                                           {
+                                           .op = {
                                                .type = storage::OperationType::kWrite,
                                                .vmo_offset = block_offset - blob_block_offset,
                                                .dev_offset = dev_offset + blobfs_data_start,

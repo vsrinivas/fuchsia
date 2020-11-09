@@ -25,6 +25,12 @@ bool EqualVmoDeviceOffsetSkew(const Operation& a, const Operation& b) {
 UnbufferedOperationsBuilder::~UnbufferedOperationsBuilder() {}
 
 void UnbufferedOperationsBuilder::Add(const UnbufferedOperation& new_operation) {
+  // Don't merge operations that don't use a VMO.
+  if (new_operation.data != nullptr) {
+    operations_.push_back(new_operation);
+    return;
+  }
+
   ZX_DEBUG_ASSERT(new_operation.vmo->is_valid());
 
   zx::unowned_vmo vmo = zx::unowned_vmo(new_operation.vmo->get());

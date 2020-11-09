@@ -431,7 +431,7 @@ void Blobfs::WriteBitmap(uint64_t nblocks, uint64_t start_block, BlobTransaction
 
   // Write back the block allocation bitmap
   transaction.AddOperation({.vmo = zx::unowned_vmo(allocator_->GetBlockMapVmo().get()),
-                            {
+                            .op = {
                                 .type = storage::OperationType::kWrite,
                                 .vmo_offset = bbm_start_block,
                                 .dev_offset = BlockMapStartBlock(info_) + bbm_start_block,
@@ -443,7 +443,7 @@ void Blobfs::WriteNode(uint32_t map_index, BlobTransaction& transaction) {
   TRACE_DURATION("blobfs", "Blobfs::WriteNode", "map_index", map_index);
   uint64_t block = (map_index * sizeof(Inode)) / kBlobfsBlockSize;
   transaction.AddOperation({.vmo = zx::unowned_vmo(allocator_->GetNodeMapVmo().get()),
-                            {
+                            .op = {
                                 .type = storage::OperationType::kWrite,
                                 .vmo_offset = block,
                                 .dev_offset = NodeMapStartBlock(info_) + block,
@@ -455,12 +455,13 @@ void Blobfs::WriteInfo(BlobTransaction& transaction) {
   memcpy(info_mapping_.start(), &info_, sizeof(info_));
   transaction.AddOperation({
       .vmo = zx::unowned_vmo(info_mapping_.vmo().get()),
-      {
-          .type = storage::OperationType::kWrite,
-          .vmo_offset = 0,
-          .dev_offset = 0,
-          .length = 1,
-      },
+      .op =
+          {
+              .type = storage::OperationType::kWrite,
+              .vmo_offset = 0,
+              .dev_offset = 0,
+              .length = 1,
+          },
   });
 }
 
@@ -587,12 +588,13 @@ zx_status_t Blobfs::AddInodes(Allocator* allocator) {
   if (zeroed_nodes_blocks > 0) {
     transaction.AddOperation({
         .vmo = zx::unowned_vmo(allocator->GetNodeMapVmo().get()),
-        {
-            .type = storage::OperationType::kWrite,
-            .vmo_offset = inoblks_old,
-            .dev_offset = NodeMapStartBlock(info_) + inoblks_old,
-            .length = zeroed_nodes_blocks,
-        },
+        .op =
+            {
+                .type = storage::OperationType::kWrite,
+                .vmo_offset = inoblks_old,
+                .dev_offset = NodeMapStartBlock(info_) + inoblks_old,
+                .length = zeroed_nodes_blocks,
+            },
     });
   }
   transaction.Commit(*journal_);
@@ -649,12 +651,13 @@ zx_status_t Blobfs::AddBlocks(size_t nblocks, RawBitmap* block_map) {
   if (zeroed_bitmap_blocks > 0) {
     storage::UnbufferedOperation operation = {
         .vmo = zx::unowned_vmo(block_map->StorageUnsafe()->GetVmo().get()),
-        {
-            .type = storage::OperationType::kWrite,
-            .vmo_offset = abmblks_old,
-            .dev_offset = BlockMapStartBlock(info_) + abmblks_old,
-            .length = zeroed_bitmap_blocks,
-        },
+        .op =
+            {
+                .type = storage::OperationType::kWrite,
+                .vmo_offset = abmblks_old,
+                .dev_offset = BlockMapStartBlock(info_) + abmblks_old,
+                .length = zeroed_bitmap_blocks,
+            },
     };
     transaction.AddOperation(operation);
   }
