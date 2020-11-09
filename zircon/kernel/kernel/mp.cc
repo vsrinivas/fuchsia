@@ -227,6 +227,8 @@ static void mp_unplug_trampoline() {
   Thread* ct = Thread::Current::Get();
   auto unplug_done = reinterpret_cast<Event*>(ct->task_state().arg());
 
+  lockup_secondary_shutdown();
+
   Scheduler::MigrateUnpinnedThreads();
   DEBUG_ASSERT(!mp_is_cpu_active(arch_curr_cpu_num()));
 

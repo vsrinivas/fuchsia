@@ -16,15 +16,25 @@
 // dependency is eliminated, drop the __BEGIN_CDECLS/__END_CDECLS/__cplusplus guards.
 __BEGIN_CDECLS
 
-// Initialize the lockup detector.
+// Initialize the lockup detector for the primary CPU.
 //
-// This should be called once on CPU-0, before we've gone SMP, but after the platform timer has been
-// initialized since it needs to perform ticks to time conversion.
-void lockup_init(void);
+// This should be called once on the boot CPU (|BOOT_CPU_ID|), before we've gone SMP, but after the
+// platform timer has been initialized since it needs to perform ticks to time conversion.
+void lockup_primary_init(void);
+
+// Initialize the lockup detector for a secondary CPU.
+//
+// This should be called once on each secondary CPU after the platform timer has been initialized.
+void lockup_secondary_init(void);
+
+// Shutdown the lockup detector for a secondary CPU.
+//
+// This should be called once on each secondary CPU prior to taking it offline.
+void lockup_secondary_shutdown(void);
 
 // Accessors exposed for testing.
-zx_ticks_t lockup_get_threshold_ticks(void);
-void lockup_set_threshold_ticks(zx_ticks_t ticks);
+zx_ticks_t lockup_get_cs_threshold_ticks(void);
+void lockup_set_cs_threshold_ticks(zx_ticks_t ticks);
 
 #if DEBUG_ASSERT_IMPLEMENTED
 #define LOCKUP_BEGIN() \
@@ -55,19 +65,5 @@ void lockup_begin(void);
 void lockup_end(void);
 
 __END_CDECLS
-
-#ifdef __cplusplus
-
-#include <ktl/atomic.h>
-
-// Per CPU state for lockup detector.
-struct LockupDetectorState {
-  // The time (tick count) at which the CPU entered the critical section.
-  ktl::atomic<zx_ticks_t> begin_ticks = 0;
-  // Critical sections may be nested so must keep track of the depth.
-  uint32_t critical_section_depth = 0;
-};
-
-#endif  // __cplusplus
 
 #endif  // ZIRCON_KERNEL_LIB_LOCKUP_DETECTOR_INCLUDE_LIB_LOCKUP_DETECTOR_H_

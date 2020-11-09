@@ -22,7 +22,7 @@ func zbiPath(t *testing.T) string {
 	return filepath.Join(exPath, "../fuchsia.zbi")
 }
 
-func TestKernelLockupDetector(t *testing.T) {
+func TestKernelLockupDetectorCriticalSection(t *testing.T) {
 	distro, err := qemu.Unpack()
 	if err != nil {
 		t.Fatal(err)
@@ -42,7 +42,7 @@ func TestKernelLockupDetector(t *testing.T) {
 		// Upon booting run "k", which will print a usage message.  By waiting for the usage
 		// message, we can be sure the system has booted and is ready to accept "k"
 		// commands.
-		AppendCmdline: "kernel.lockup-detector.threshold-ms=500 " +
+		AppendCmdline: "kernel.lockup-detector.critical-section-threshold-ms=500 " +
 			"zircon.autorun.boot=/boot/bin/sh+-c+k",
 	})
 
@@ -68,4 +68,50 @@ func TestKernelLockupDetector(t *testing.T) {
 		d.WaitForLogMessage("CPU-1 in critical section for")
 		d.WaitForLogMessage("done")
 	}
+}
+
+func TestKernelLockupDetectorHeartbeat(t *testing.T) {
+	distro, err := qemu.Unpack()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer distro.Delete()
+	arch, err := distro.TargetCPU()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	d := distro.Create(qemu.Params{
+		Arch: arch,
+		ZBI:  zbiPath(t),
+
+		// Enable the lockup detector.
+		//
+		// Upon booting run "k", which will print a usage message.  By waiting for the usage
+		// message, we can be sure the system has booted and is ready to accept "k"
+		// commands.
+		AppendCmdline: "kernel.lockup-detector.heartbeat-period-ms=50 " +
+			"kernel.lockup-detector.heartbeat-age-threshold-ms=200 " +
+			"zircon.autorun.boot=/boot/bin/sh+-c+k",
+	})
+
+	// Boot.
+	d.Start()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer d.Kill()
+
+	// Wait for the system to finish booting.
+	d.WaitForLogMessage("usage: k <command>")
+
+	// Force a lockup and see that a heartbeat OOPS is emitted.
+	d.RunCommand("k lockup test 1 1000")
+	d.WaitForLogMessage("locking up CPU")
+	d.WaitForLogMessage("ZIRCON KERNEL OOPS")
+	d.WaitForLogMessage("no heartbeat from CPU-1")
+	// See that the CPU's run queue is printed and contains the thread named "lockup-spin", the
+	// one responsible for the lockup.
+	d.WaitForLogMessage("lockup-spin")
+	d.WaitForLogMessage("done")
 }

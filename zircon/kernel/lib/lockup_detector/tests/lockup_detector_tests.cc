@@ -20,8 +20,8 @@ bool NestedCriticalSectionTest() {
 
   // For the context of this test, use the maximum threshold to prevent the detector from "firing".
   auto cleanup = fbl::MakeAutoCall(
-      [orig = lockup_get_threshold_ticks()]() { lockup_set_threshold_ticks(orig); });
-  lockup_set_threshold_ticks(INT64_MAX);
+      [orig = lockup_get_cs_threshold_ticks()]() { lockup_set_cs_threshold_ticks(orig); });
+  lockup_set_cs_threshold_ticks(INT64_MAX);
 
   LockupDetectorState* state = &get_local_percpu()->lockup_detector_state;
   EXPECT_EQ(0u, state->critical_section_depth);

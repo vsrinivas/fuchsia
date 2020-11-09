@@ -356,12 +356,35 @@ jitterentropy, producing output data that looks closer to uniformly random. Note
 that even when set to false, the CPRNG will re-process the samples, so the
 processing inside of jitterentropy is somewhat redundant.
 
-## kernel.lockup-detector.threshold-ms=\<num>
+## kernel.lockup-detector.critical-section-threshold-ms=\<num>
 
-When this threshold is exceeded, the kernel will emit a KERNEL
-OOPS. See also `k lockup status`.
+When a CPU remains in a designated critical section for longer than
+this threshold, a KERNEL OOPS will be emitted.
 
-When 0, the lockup detector is disabled.
+See also `k lockup status` and
+[lockup detector](/zircon/kernel/lib/lockup_detector/README.md).
+
+When 0, critical section lockup detection is disabled.
+
+## kernel.lockup-detector.heartbeat-period-ms=\<num>
+
+How frequently a secondary CPU should emit a heartbeat via kernel timer.  This
+value should be large enough to not impact system performance, but should be
+smaller than the heartbeat age threshold.  1000 is a reasonable value.
+
+See also [lockup detector](/zircon/kernel/lib/lockup_detector/README.md).
+
+When 0, heartbeat detection is disabled.
+
+## kernel.lockup-detector.heartbeat-age-threshold-ms=\<num>
+
+The maximum age of a secondary CPU's last heartbeat before it is considered to
+be locked up.  This value should be larger than the heartbeat peroid, but small
+enough so as to not miss short-lived lockup events.  3000 is a reasonable value.
+
+See also [lockup detector](/zircon/kernel/lib/lockup_detector/README.md).
+
+When 0, heartbeat detection is disabled.
 
 ## kernel.memory-limit-dbg=\<bool>
 

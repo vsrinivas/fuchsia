@@ -8,7 +8,7 @@
 
 #include <lib/lazy_init/lazy_init.h>
 #include <lib/load_balancer_percpu.h>
-#include <lib/lockup_detector.h>
+#include <lib/lockup_detector/state.h>
 #include <stddef.h>
 #include <sys/types.h>
 #include <zircon/compiler.h>

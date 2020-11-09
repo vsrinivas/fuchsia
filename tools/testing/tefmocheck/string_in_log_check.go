@@ -178,7 +178,8 @@ func StringInLogsChecks() (ret []FailureModeCheck) {
 			ExceptBlocks: []*logBlock{
 				{startString: " lock_dep_dynamic_analysis_tests ", endString: " lock_dep_static_analysis_tests "},
 				{startString: "RUN   TestKillCriticalProcess", endString: ": TestKillCriticalProcess"},
-				{startString: "RUN   TestKernelLockupDetector", endString: ": TestKernelLockupDetector"},
+				{startString: "RUN   TestKernelLockupDetectorCriticalSection", endString: ": TestKernelLockupDetectorCriticalSection"},
+				{startString: "RUN   TestKernelLockupDetectorHeartbeat", endString: ": TestKernelLockupDetectorHeartbeat"},
 				{startString: "RUN   TestPmmCheckerOopsAndPanic", endString: ": TestPmmCheckerOopsAndPanic"},
 			},
 		})
