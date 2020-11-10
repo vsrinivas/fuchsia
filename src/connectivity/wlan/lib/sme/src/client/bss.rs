@@ -5,7 +5,6 @@
 use {
     crate::{Config, Ssid},
     fidl_fuchsia_wlan_mlme as fidl_mlme, fuchsia_zircon as zx,
-    std::collections::HashSet,
     wlan_common::{
         bss::{BssDescriptionExt as _, Protection},
         channel::Channel,
@@ -88,11 +87,6 @@ impl ClientConfig {
             },
             _ => false,
         }
-    }
-
-    /// Counts unique SSID in a given BSS list
-    pub fn count_ssid(&self, bss_set: &[fidl_mlme::BssDescription]) -> usize {
-        bss_set.into_iter().map(|b| b.ssid.clone()).collect::<HashSet<_>>().len()
     }
 }
 
@@ -311,16 +305,5 @@ mod tests {
                 wmm_param: None,
             },
         );
-    }
-
-    #[test]
-    fn count_ssid_in_bss_list() {
-        let cfg = ClientConfig::default();
-        let bss1 = fake_bss!(Open, ssid: b"foo".to_vec(), bssid: [1, 1, 1, 1, 1, 1]);
-        let bss2 = fake_bss!(Open, ssid: b"bar".to_vec(), bssid: [2, 2, 2, 2, 2, 2]);
-        let bss3 = fake_bss!(Open, ssid: b"foo".to_vec(), bssid: [3, 3, 3, 3, 3, 3]);
-        let num_ssid = cfg.count_ssid(&vec![bss1, bss2, bss3]);
-
-        assert_eq!(2, num_ssid);
     }
 }
