@@ -63,6 +63,7 @@ fit::result<void, zx_status_t> JournalWriter::WriteData(JournalWorkItem work) {
         FS_TRACE_ERROR("journal: Failed to write data: %s\n", zx_status_get_string(status));
         return fit::error(status);
       }
+      break;
     }
     block_count += operation.op.length;
   }

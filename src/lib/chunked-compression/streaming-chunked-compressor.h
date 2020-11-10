@@ -80,8 +80,6 @@ class StreamingChunkedCompressor {
       fbl::Function<void(size_t bytes_read, size_t bytes_total, size_t bytes_written)>;
   void SetProgressCallback(ProgressFn callback) { progress_callback_ = std::move(callback); }
 
-  const CompressionParams& params() const { return params_; }
-
  private:
   // Must be called before each new frame is written to, and can only be called when |input_offset_|
   // falls on a frame boundary.

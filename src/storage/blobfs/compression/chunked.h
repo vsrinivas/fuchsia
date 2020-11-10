@@ -49,8 +49,6 @@ class ChunkedCompressor : public Compressor {
   zx_status_t Update(const void* input_data, size_t input_length) final;
   zx_status_t End() final;
 
-  size_t GetChunkSize() const override { return compressor_.params().chunk_size; }
-
  private:
   explicit ChunkedCompressor(chunked_compression::StreamingChunkedCompressor compressor,
                              size_t input_len);
@@ -83,10 +81,8 @@ class SeekableChunkedDecompressor : public SeekableDecompressor {
   SeekableChunkedDecompressor() = default;
   DISALLOW_COPY_ASSIGN_AND_MOVE(SeekableChunkedDecompressor);
 
-  // |max_seek_table_size| and |max_compressed_size| are used for validation purposes only.
-  // |seek_table_buf| should be at least |max_seek_table_size|.
-  static zx_status_t CreateDecompressor(const void* seek_table_buf, size_t max_seek_table_size,
-                                        size_t max_compressed_size,
+  static zx_status_t CreateDecompressor(const void* seek_table_buf, size_t seek_table_buf_sz,
+                                        size_t uncompressed_size,
                                         std::unique_ptr<SeekableDecompressor>* out);
 
   // SeekableDecompressor implementation.
