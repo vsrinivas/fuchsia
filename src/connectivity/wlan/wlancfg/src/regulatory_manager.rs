@@ -45,9 +45,10 @@ impl<I: IfaceManagerApi + ?Sized, P: PhyManagerApi> RegulatoryManager<I, P> {
             }
             region_array.copy_from_slice(region_string.as_bytes());
 
-            // TODO(fxbug.dev/46413): Stop APs using `IfaceManager`.
+            // Stop all clients and APs in preparation for setting the country code.
             let mut iface_manager = self.iface_manager.lock().await;
             iface_manager.stop_client_connections().await?;
+            iface_manager.stop_all_aps().await?;
 
             let phy_ids = self.phy_manager.lock().await.get_phy_ids();
             let _ = stream::iter(phy_ids)
@@ -109,23 +110,26 @@ mod tests {
     struct TestContext<
         S: Stream<Item = Result<(), Error>> + Send + Unpin,
         T: Stream<Item = Result<(), Error>> + Send + Unpin,
+        U: Stream<Item = Result<(), Error>> + Send + Unpin,
     > {
         executor: fasync::Executor,
-        iface_manager: Arc<Mutex<StubIfaceManager<S, T>>>,
-        regulatory_manager: RegulatoryManager<StubIfaceManager<S, T>, StubPhyManager>,
+        iface_manager: Arc<Mutex<StubIfaceManager<S, T, U>>>,
+        regulatory_manager: RegulatoryManager<StubIfaceManager<S, T, U>, StubPhyManager>,
         device_service_requests: DeviceServiceRequestStream,
         regulatory_region_requests: RegulatoryRegionWatcherRequestStream,
     }
 
-    impl<S, T> TestContext<S, T>
+    impl<S, T, U> TestContext<S, T, U>
     where
         S: Stream<Item = Result<(), Error>> + Send + Unpin,
         T: Stream<Item = Result<(), Error>> + Send + Unpin,
+        U: Stream<Item = Result<(), Error>> + Send + Unpin,
     {
         fn new(
             phy_manager: StubPhyManager,
-            iface_manager: StubIfaceManager<S, T>,
+            iface_manager: StubIfaceManager<S, T, U>,
         ) -> TestContext<
+            impl Stream<Item = Result<(), Error>> + Send + Unpin,
             impl Stream<Item = Result<(), Error>> + Send + Unpin,
             impl Stream<Item = Result<(), Error>> + Send + Unpin,
         > {
@@ -479,6 +483,10 @@ mod tests {
                     Some((Ok(()), ()))
                 })
                 .boxed(),
+                stop_all_access_points_response_stream: stream::unfold((), |_| async {
+                    Some((Ok(()), ()))
+                })
+                .boxed(),
             },
         );
         let regulatory_fut = context.regulatory_manager.run();
@@ -515,6 +523,57 @@ mod tests {
     }
 
     #[test]
+    fn waits_for_stop_all_access_points_response_before_changing_country() {
+        let (mut stop_aps_responder, stop_aps_response_stream) = mpsc::channel(0);
+        let mut context = TestContext::new(
+            StubPhyManager { phy_ids: vec![0] },
+            StubIfaceManager {
+                was_start_client_connections_called: false,
+                stop_client_connections_response_stream: stream::unfold((), |_| async {
+                    Some((Ok(()), ()))
+                })
+                .boxed(),
+                start_client_connections_response_stream: stream::unfold((), |_| async {
+                    Some((Ok(()), ()))
+                })
+                .boxed(),
+                stop_all_access_points_response_stream: stop_aps_response_stream,
+            },
+        );
+        let regulatory_fut = context.regulatory_manager.run();
+        pin_mut!(regulatory_fut);
+        assert!(context.executor.run_until_stalled(&mut regulatory_fut).is_pending());
+
+        // Drive the RegulatoryManager to request an update from RegulatoryRegionWatcher,
+        // and deliver a RegulatoryRegion update.
+        let region_request_fut = &mut context.regulatory_region_requests.next();
+        let region_responder = assert_variant!(
+            context.executor.run_until_stalled(region_request_fut),
+            Poll::Ready(Some(Ok(RegulatoryRegionWatcherRequest::GetUpdate{responder}))) => responder
+        );
+        region_responder.send("US").expect("failed to send region response");
+        assert!(context.executor.run_until_stalled(&mut regulatory_fut).is_pending());
+
+        // Verify that no requests have been sent to `DeviceService`.
+        let device_service_request_fut = &mut context.device_service_requests.next();
+        assert_variant!(
+            context.executor.run_until_stalled(device_service_request_fut),
+            Poll::Pending
+        );
+
+        // Respond to the `stop_all_aps()` call, then verify that `DeviceService.SetCountry` is
+        // called.
+        stop_aps_responder
+            .try_send(Ok(()))
+            .expect("internal error: failed to send fake response to StubIfaceManager");
+        let _ = context.executor.run_until_stalled(&mut regulatory_fut);
+        assert_variant!(
+            context.executor.run_until_stalled(device_service_request_fut),
+            Poll::Ready(Some(Ok(DeviceServiceRequest::SetCountry{..})))
+        );
+    }
+
+    #[test]
     fn waits_for_set_country_response_before_starting_client_connections() {
         let mut context =
             TestContext::new(make_default_stub_phy_manager(), make_default_stub_iface_manager());
@@ -533,7 +592,7 @@ mod tests {
         region_responder.send("US").expect("failed to send region response");
 
         // Verify that RegulatoryManager has _not_ requested client connections be started yet.
-        // Perform this verification up front since processing the response will grab the
+        // Verify this up front since the regulatory manager future is about to grab the
         // iface_manager lock.
         let mut has_start_been_called_fut = context
             .iface_manager
@@ -584,6 +643,10 @@ mod tests {
                     Some((Ok(()), ()))
                 })
                 .boxed(),
+                stop_all_access_points_response_stream: stream::unfold((), |_| async {
+                    Some((Ok(()), ()))
+                })
+                .boxed(),
             },
         );
         let regulatory_fut = context.regulatory_manager.run();
@@ -622,6 +685,10 @@ mod tests {
                     Some((Err(format_err!("failed to start client connections")), ()))
                 })
                 .boxed(),
+                stop_all_access_points_response_stream: stream::unfold((), |_| async {
+                    Some((Ok(()), ()))
+                })
+                .boxed(),
             },
         );
         let regulatory_fut = context.regulatory_manager.run();
@@ -650,6 +717,48 @@ mod tests {
         // After seeing `SetCountry()` succeed, the RegulatoryManager should call
         // `IfaceManager.start_client_connections()`. That call should fail, and RegulatoryManager
         // should propagate the error.
+        assert_variant!(
+            context.executor.run_until_stalled(&mut regulatory_fut),
+            Poll::Ready(Err(_))
+        );
+    }
+
+    #[test]
+    fn propagates_error_from_stop_all_access_points() {
+        let mut context = TestContext::new(
+            StubPhyManager { phy_ids: vec![0] },
+            StubIfaceManager {
+                was_start_client_connections_called: false,
+                stop_client_connections_response_stream: stream::unfold((), |_| async {
+                    Some((Ok(()), ()))
+                })
+                .boxed(),
+                start_client_connections_response_stream: stream::unfold((), |_| async {
+                    Some((Ok(()), ()))
+                })
+                .boxed(),
+                stop_all_access_points_response_stream: stream::unfold((), |_| async {
+                    Some((Err(format_err!("failed to stop access points")), ()))
+                })
+                .boxed(),
+            },
+        );
+        let regulatory_fut = context.regulatory_manager.run();
+        pin_mut!(regulatory_fut);
+        assert!(context.executor.run_until_stalled(&mut regulatory_fut).is_pending());
+
+        // Drive the RegulatoryManager to request an update from RegulatoryRegionWatcher,
+        // and deliver a RegulatoryRegion update.
+        let region_request_fut = &mut context.regulatory_region_requests.next();
+        let region_responder = assert_variant!(
+            context.executor.run_until_stalled(region_request_fut),
+            Poll::Ready(Some(Ok(RegulatoryRegionWatcherRequest::GetUpdate{responder}))) => responder
+        );
+        region_responder.send("US").expect("failed to send region response");
+
+        // After receiving the RegulatoryRegion update, the RegulatoryManager should call
+        // `IfaceManager.stop_all_aps()`. That call should fail, and RegulatoryManager should
+        // propagate the error.
         assert_variant!(
             context.executor.run_until_stalled(&mut regulatory_fut),
             Poll::Ready(Err(_))
@@ -723,16 +832,19 @@ mod tests {
     struct StubIfaceManager<
         S: Stream<Item = Result<(), Error>> + Send + Unpin,
         T: Stream<Item = Result<(), Error>> + Send + Unpin,
+        U: Stream<Item = Result<(), Error>> + Send + Unpin,
     > {
         was_start_client_connections_called: bool,
         stop_client_connections_response_stream: S,
         start_client_connections_response_stream: T,
+        stop_all_access_points_response_stream: U,
     }
 
     /// A default StubIfaceManager
     /// * immediately returns Ok() in response to stop_client_connections(), and
     /// * immediately returns Ok() in response to start_client_connections()
     fn make_default_stub_iface_manager() -> StubIfaceManager<
+        impl Stream<Item = Result<(), Error>> + Send + Unpin,
         impl Stream<Item = Result<(), Error>> + Send + Unpin,
         impl Stream<Item = Result<(), Error>> + Send + Unpin,
     > {
@@ -746,6 +858,10 @@ mod tests {
                 Some((Ok(()), ()))
             })
             .boxed(),
+            stop_all_access_points_response_stream: stream::unfold((), |_| async {
+                Some((Ok(()), ()))
+            })
+            .boxed(),
         }
     }
 
@@ -753,7 +869,8 @@ mod tests {
     impl<
             S: Stream<Item = Result<(), Error>> + Send + Unpin,
             T: Stream<Item = Result<(), Error>> + Send + Unpin,
-        > IfaceManagerApi for StubIfaceManager<S, T>
+            U: Stream<Item = Result<(), Error>> + Send + Unpin,
+        > IfaceManagerApi for StubIfaceManager<S, T, U>
     {
         async fn disconnect(
             &mut self,
@@ -819,7 +936,10 @@ mod tests {
         }
 
         async fn stop_all_aps(&mut self) -> Result<(), Error> {
-            unimplemented!();
+            self.stop_all_access_points_response_stream
+                .next()
+                .await
+                .expect("internal error: failed to receive fake response from test case")
         }
     }
 }
