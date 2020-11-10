@@ -5,6 +5,7 @@
 #ifndef SRC_DEVELOPER_FORENSICS_CRASH_REPORTS_QUEUE_H_
 #define SRC_DEVELOPER_FORENSICS_CRASH_REPORTS_QUEUE_H_
 
+#include <lib/async/cpp/task.h>
 #include <lib/async/dispatcher.h>
 
 #include <map>
@@ -32,20 +33,14 @@ class Queue {
         std::shared_ptr<InfoContext> info_context, LogTags* tags, CrashServer* crash_server,
         SnapshotManager* snapshot_manager);
 
-  // Allows the queue's functionality to change based on the upload policy.
+  // Watcher functions that allow the queue to react to external events, such as
+  //  1) the upload policy changing or
+  //  2) the network status changing.
   void WatchSettings(Settings* settings);
-
-  // Allows the queue's functionality to change based on the network status.
   void WatchNetwork(NetworkWatcher* network_watcher);
 
   // Add a report to the queue.
   bool Add(Report report);
-
-  // Processes the pending reports based on the queue's internal state. Returns the number of
-  // reports successfully processed.
-  //
-  // If a report is left as pending, it is not counted as being successfully processed.
-  size_t ProcessAll();
 
   uint64_t Size() const { return pending_reports_.size(); }
   bool IsEmpty() const { return pending_reports_.empty(); }
@@ -73,14 +68,15 @@ class Queue {
   // Returns false if another upload attempt should be made in the future.
   bool Upload(const Report& report);
 
+  void Archive(ReportId report_id);
   void GarbageCollect(ReportId report_id);
 
   // Free resources associated with a report, e.g., snapshot or log tags.
   void FreeResources(ReportId report_id);
   void FreeResources(const Report& report);
 
-  // Schedules ProcessAll() to run every 15 minutes.
-  void ProcessAllEveryFifteenMinutes();
+  // Schedules UploadAll() to run every 15 minutes.
+  void UploadAllEveryFifteenMinutes();
 
   async_dispatcher_t* dispatcher_;
   const std::shared_ptr<sys::ServiceDirectory> services_;
@@ -93,6 +89,8 @@ class Queue {
   State state_ = State::LeaveAsPending;
 
   std::vector<ReportId> pending_reports_;
+
+  async::TaskClosure upload_all_every_fifteen_minutes_task_;
 
   // Number of upload attempts within the current instance of the component. These get reset across
   // restarts and reboots.

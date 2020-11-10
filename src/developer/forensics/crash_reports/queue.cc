@@ -17,8 +17,6 @@
 namespace forensics {
 namespace crash_reports {
 
-using async::PostDelayedTask;
-using async::PostTask;
 using UploadPolicy = Settings::UploadPolicy;
 
 Queue::Queue(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
@@ -33,7 +31,7 @@ Queue::Queue(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirecto
       info_(std::move(info_context)) {
   FX_CHECK(dispatcher_);
 
-  ProcessAllEveryFifteenMinutes();
+  upload_all_every_fifteen_minutes_task_.set_handler([this]() { UploadAllEveryFifteenMinutes(); });
 
   // TODO(fxbug.dev/56448): Initialize queue with the reports in the store. We need to be able to
   // distinguish archived reports from reports that have not been uploaded yet.
@@ -66,25 +64,13 @@ bool Queue::Add(Report report) {
     return false;
   }
 
-  pending_reports_.push_back(report_id);
-
-  // Early upload that failed.
   if (state_ == State::Archive) {
-    ArchiveAll();
+    Archive(report_id);
+  } else {
+    pending_reports_.push_back(report_id);
   }
 
   return true;
-}
-
-size_t Queue::ProcessAll() {
-  switch (state_) {
-    case State::Archive:
-      return ArchiveAll();
-    case State::Upload:
-      return UploadAll();
-    case State::LeaveAsPending:
-      return 0;
-  }
 }
 
 bool Queue::Upload(const Report& report) {
@@ -108,6 +94,12 @@ bool Queue::Upload(const Report& report) {
     case CrashServer::UploadStatus::kFailure:
       return false;
   }
+}
+
+void Queue::Archive(const ReportId report_id) {
+  FX_LOGST(INFO, tags_->Get(report_id)) << "Archiving local report under /tmp/reports";
+  info_.MarkReportAsArchived(upload_attempts_[report_id]);
+  FreeResources(report_id);
 }
 
 void Queue::GarbageCollect(const ReportId report_id) {
@@ -159,9 +151,7 @@ size_t Queue::UploadAll() {
 
 size_t Queue::ArchiveAll() {
   for (const auto& report_id : pending_reports_) {
-    FX_LOGST(INFO, tags_->Get(report_id)) << "Archiving local report under /tmp/reports";
-    info_.MarkReportAsArchived(upload_attempts_[report_id]);
-    FreeResources(report_id);
+    Archive(report_id);
   }
 
   const size_t successful = pending_reports_.size();
@@ -181,49 +171,47 @@ void Queue::WatchSettings(Settings* settings) {
     switch (upload_policy) {
       case UploadPolicy::DISABLED:
         state_ = State::Archive;
+        upload_all_every_fifteen_minutes_task_.Cancel();
+        ArchiveAll();
         break;
       case UploadPolicy::ENABLED:
         state_ = State::Upload;
+        UploadAllEveryFifteenMinutes();
         break;
       case UploadPolicy::LIMBO:
         state_ = State::LeaveAsPending;
+        upload_all_every_fifteen_minutes_task_.Cancel();
         break;
     }
-    ProcessAll();
   });
 }
 
 void Queue::WatchNetwork(NetworkWatcher* network_watcher) {
   network_watcher->Register([this](const bool network_is_reachable) {
     if (network_is_reachable) {
-      // Save the size of |pending_reports_| because ProcessAll mutates |pending_reports_|.
-      if (const auto pending = pending_reports_.size(); pending > 0) {
-        const auto processed = ProcessAll();
+      // Save the size of |pending_reports_| because UploadAll mutates |pending_reports_|.
+      if (const auto pending = pending_reports_.size(); state_ == State::Upload && pending > 0) {
+        const auto uploaded = UploadAll();
         FX_LOGS(INFO) << fxl::StringPrintf(
-            "Successfully processed %zu of %zu pending crash reports on network reachable ",
-            processed, pending);
+            "Successfully uploaded %zu of %zu pending crash reports on network reachable ",
+            uploaded, pending);
       }
     }
   });
 }
 
-void Queue::ProcessAllEveryFifteenMinutes() {
-  if (const auto status = PostDelayedTask(
-          dispatcher_,
-          [this] {
-            // Save the size of |pending_reports_| because ProcessAll mutates |pending_reports_|.
-            if (const auto pending = pending_reports_.size(); pending > 0) {
-              const auto processed = ProcessAll();
-              FX_LOGS(INFO) << fxl::StringPrintf(
-                  "Successfully processed %zu of %zu pending crash reports as part of the "
-                  "15-minute periodic processing",
-                  processed, pending);
-            }
-            ProcessAllEveryFifteenMinutes();
-          },
-          zx::min(15));
+void Queue::UploadAllEveryFifteenMinutes() {
+  if (const auto pending = pending_reports_.size(); state_ == State::Upload && pending > 0) {
+    const auto uploaded = UploadAll();
+    FX_LOGS(INFO) << fxl::StringPrintf(
+        "Successfully uploaded %zu of %zu pending crash reports as part of the "
+        "15-minute periodic uploaded",
+        uploaded, pending);
+  }
+  if (const auto status =
+          upload_all_every_fifteen_minutes_task_.PostDelayed(dispatcher_, zx::min(15));
       status != ZX_OK) {
-    FX_PLOGS(ERROR, status) << "Error posting periodic process task to async loop. Won't retry.";
+    FX_PLOGS(ERROR, status) << "Error posting periodic upload task to async loop. Won't retry.";
   }
 }
 

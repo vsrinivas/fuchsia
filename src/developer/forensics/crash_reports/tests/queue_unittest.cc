@@ -160,7 +160,6 @@ class QueueTest : public UnitTestFixture {
     SetStateToArchive,
     SetStateToUpload,
     SetStateToLeaveAsPending,
-    ProcessAll,
   };
 
   void ApplyQueueOps(const std::vector<QueueOps>& ops) {
@@ -201,9 +200,6 @@ class QueueTest : public UnitTestFixture {
           state_ = QueueOps::SetStateToLeaveAsPending;
           settings_.set_upload_policy(UploadPolicy::LIMBO);
           SetExpectedQueueContents();
-          break;
-        case QueueOps::ProcessAll:
-          EXPECT_EQ(SetExpectedQueueContents(), queue_->ProcessAll());
           break;
       }
     }
@@ -300,7 +296,6 @@ TEST_F(QueueTest, Check_NotIsEmptyQueue_OnStateSetToLeaveAsPending_MultipleRepor
       QueueOps::AddNewReport,
       QueueOps::AddNewReport,
       QueueOps::AddNewReport,
-      QueueOps::ProcessAll,
   });
   CheckQueueContents();
   EXPECT_EQ(queue_->Size(), 5u);
@@ -325,7 +320,6 @@ TEST_F(QueueTest, Check_IsEmptyQueue_OnStateSetToArchive_MultipleReports_OneGarb
       QueueOps::AddNewReport,
       QueueOps::DeleteOneReport,
       QueueOps::SetStateToArchive,
-      QueueOps::ProcessAll,
   });
   CheckQueueContents();
   EXPECT_TRUE(queue_->IsEmpty());
@@ -400,7 +394,6 @@ TEST_F(QueueTest, Check_IsEmptyQueue_OnSuccessfulUpload_MultipleReports) {
       QueueOps::AddNewReport,
       QueueOps::AddNewReport,
       QueueOps::SetStateToUpload,
-      QueueOps::ProcessAll,
   });
   CheckQueueContents();
   CheckAnnotationsOnServer();
@@ -509,7 +502,47 @@ TEST_F(QueueTest,
   EXPECT_EQ(queue_->Size(), 2u);
 }
 
-TEST_F(QueueTest, Check_ProcessAll_ScheduledTwice) {
+TEST_F(QueueTest, Check_UploadAll_CancelledAndPosted) {
+  SetUpQueue({
+      kUploadFailed,
+      kUploadSuccessful,
+      kUploadFailed,
+  });
+
+  // The upload task shouldn't run.
+  ApplyQueueOps({
+      QueueOps::SetStateToLeaveAsPending,
+      QueueOps::AddNewReport,
+  });
+  RunLoopFor(kPeriodicUploadDuration);
+  EXPECT_FALSE(queue_->IsEmpty());
+
+  // The upload task should upload the report.
+  ApplyQueueOps({
+      QueueOps::SetStateToUpload,
+  });
+  RunLoopFor(kPeriodicUploadDuration);
+  EXPECT_TRUE(queue_->IsEmpty());
+
+  // The state change should cancel the upload task.
+  ApplyQueueOps({
+      QueueOps::SetStateToLeaveAsPending,
+      QueueOps::AddNewReport,
+  });
+  RunLoopFor(kPeriodicUploadDuration);
+  EXPECT_FALSE(queue_->IsEmpty());
+
+  // The state change should cancel the upload task.
+  ApplyQueueOps({
+      QueueOps::SetStateToUpload,
+      QueueOps::SetStateToArchive,
+      QueueOps::AddNewReport,
+  });
+  RunLoopFor(kPeriodicUploadDuration);
+  EXPECT_TRUE(queue_->IsEmpty());
+}
+
+TEST_F(QueueTest, Check_UploadAll_ScheduledTwice) {
   SetUpQueue({
       kUploadFailed,
       kUploadSuccessful,
@@ -536,7 +569,7 @@ TEST_F(QueueTest, Check_ProcessAll_ScheduledTwice) {
   EXPECT_TRUE(queue_->IsEmpty());
 }
 
-TEST_F(QueueTest, Check_ProcessAllTwice_OnNetworkReachable) {
+TEST_F(QueueTest, Check_UploadAllTwice_OnNetworkReachable) {
   // Setup crash report upload outcome
   SetUpQueue({
       // First crash report: automatic upload fails (no early upload as upload not enabled at
@@ -576,7 +609,7 @@ TEST_F(QueueTest, Check_ProcessAllTwice_OnNetworkReachable) {
   EXPECT_TRUE(queue_->IsEmpty());
 }
 
-TEST_F(QueueTest, Check_ProcessAll_OnReconnect_NetworkReachable) {
+TEST_F(QueueTest, Check_UploadAll_OnReconnect_NetworkReachable) {
   // Setup crash report upload outcome: Automatic upload fails,
   // succeed when the network becomes reachable
   SetUpQueue({
@@ -606,6 +639,26 @@ TEST_F(QueueTest, Check_ProcessAll_OnReconnect_NetworkReachable) {
   network_reachability_provider_->TriggerOnNetworkReachable(true);
   RunLoopUntilIdle();
   EXPECT_TRUE(queue_->IsEmpty());
+}
+
+TEST_F(QueueTest, Check_Skip_UploadAll_StateIsLeaveAsPending) {
+  SetUpQueue();
+
+  // Automatic crash report upload fails.
+  ApplyQueueOps({
+      QueueOps::SetStateToLeaveAsPending,
+      QueueOps::AddNewReport,
+  });
+  ASSERT_FALSE(queue_->IsEmpty());
+
+  // The periodic upload task shouldn't cause reports to be uploaded.
+  RunLoopFor(kPeriodicUploadDuration);
+  EXPECT_FALSE(queue_->IsEmpty());
+
+  // The network becoming reachable shouldn't cause reports to be uploaded.
+  network_reachability_provider_->TriggerOnNetworkReachable(true);
+  RunLoopUntilIdle();
+  EXPECT_FALSE(queue_->IsEmpty());
 }
 
 TEST_F(QueueTest, Check_Cobalt) {
