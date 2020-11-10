@@ -73,7 +73,8 @@ bool ParseArgs(fbl::Span<const char* const> args, Args* result) {
 
   // Parse the args.
   std::vector<std::string> params;
-  cmdline::Status status = MakeArgsParser()->Parse(args.size(), args.data(), result, &params);
+  cmdline::Status status =
+      MakeArgsParser()->Parse(static_cast<int>(args.size()), args.data(), result, &params);
   if (!status.ok()) {
     fprintf(stderr, "Could not parse arguments: %s\n", status.error_message().c_str());
     return false;
