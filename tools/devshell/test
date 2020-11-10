@@ -10,57 +10,65 @@
 ##
 ## Options:
 ## -h, --help
-##     --host                     If true, only runs host tests. The opposite of `--device`
-## -d, --device                   If true, only runs device tests. The opposite of `--host`
-## -p, --package                  Matches tests against their Fuchsia package Name
-## -c, --component                Matches tests against their Fuchsia component Name. When
-##                                --package is also specified, results are filtered both by package
-##                                and component.
-## -a, --and                      When present, adds additional requirements to the preceding
-##                                `testName` filter
-##     --printtests               If true, prints the contents of `//out/default/tests.json`
-##     --[no-]build               If true, invokes `fx build` before running the test suite
-##                                (defaults to on)
-##     --[no-]restrict-logs       If true, passes a flag of the same name to the component test runner
-##     --[no-]updateifinbase      If true, invokes `fx update-if-in-base` before running device tests
-##                                (defaults to on)
-##     --[no-]use-package-hash    If true, uses the package Merkle root hash from the build artifacts when executing device tests
-##                                (defaults to on)
-##     --info                     If true, prints the test specification in key:value format, and exits
-## -r, --random                   If true, randomizes test execution order
-##     --fuzzy                    The Levenshtein distance threshold to use when generating suggestions
-##                                (defaults to "3")
-##     --dry                      If true, does not invoke any tests
-## -f, --fail                     If true, halts test suite execution on the first failed test
-##     --[no-]log                 If true, emits all output from all tests to a file. Turned on
-##                                when running real tests unless `--no-log` is passed.
-##     --logpath                  If passed and if --no-log is not passed, customizes the
-##                                destination of the log artifact.
+##     --host                            If true, only runs host tests. The opposite of `--device`
+## -d, --device                          If true, only runs device tests. The opposite of `--host`
+## -p, --package                         Matches tests against their Fuchsia package Name
+## -c, --component                       Matches tests against their Fuchsia component Name. When
+##                                       --package is also specified, results are filtered both by package
+##                                       and component.
+## -a, --and                             When present, adds additional requirements to the preceding
+##                                       `testName` filter
+##     --printtests                      If true, prints the contents of `//out/default/tests.json`
+##     --[no-]build                      If true, invokes `fx build` before running the test suite
+##                                       (defaults to on)
+##     --[no-]restrict-logs              If true, passes a flag of the same name to the component test runner
+##                                       (defaults to on)
+##     --[no-]updateifinbase             If true, invokes `fx update-if-in-base` before running device tests
+##                                       (defaults to on)
+##     --[no-]use-package-hash           If true, uses the package Merkle root hash from the build artifacts when executing device tests
+##                                       (defaults to on)
+##     --info                            If true, prints the test specification in key:value format, and exits
+## -r, --random                          If true, randomizes test execution order
+##     --fuzzy                           The Levenshtein distance threshold to use when generating suggestions
+##                                       (defaults to "3")
+##     --dry                             If true, does not invoke any tests
+## -f, --fail                            If true, halts test suite execution on the first failed test
+##     --[no-]log                        If true, emits all output from all tests to a file. Turned on
+##                                       when running real tests unless `--no-log` is passed.
+##     --logpath                         If passed and if --no-log is not passed, customizes the
+##                                       destination of the log artifact.
 ##
-##                                Defaults to a timestamped file at the root of //out/default.
-##     --limit                    If passed, ends test suite execution after N tests
-## -s, --slow                     When set to a non-zero value, triggers output for any test that
-##                                takes longer than N seconds to execute.
+##                                       Defaults to a timestamped file at the root of //out/default.
+##     --limit                           If passed, ends test suite execution after N tests
+## -s, --slow                            When set to a non-zero value, triggers output for any test that
+##                                       takes longer than N seconds to execute.
 ##
-##                                Note: This has no impact if the -o flag is also set.
-##                                Note: The -s flag used to be an abbreviation for --simple.
-##                                (defaults to "2")
-## -R, --realm                    If passed, runs the tests in a named realm instead of a
-##                                randomized
-##                                one.
-##     --min-severity-logs        Filters log output to only messages with this for device tests.Valid severities: TRACE, DEBUG, INFO, WARN, ERROR, FATAL.
-##     --[no-]exact               If true, does not perform any fuzzy-matching on tests
-##     --[no-]e2e                 If true, allows the execution of host tests that require a connected device or emulator, such as end-to-end tests.
-##     --[no-]only-e2e            If true, skips all non-e2e tests. The `--e2e` flag is redundant when passing this flag.
-##     --skipped                  If true, prints a debug statement about each skipped test.
+##                                       Note: This has no impact if the -o flag is also set.
+##                                       Note: The -s flag used to be an abbreviation for --simple.
+##                                       (defaults to "2")
+## -R, --realm                           If passed, runs the tests in a named realm instead of a
+##                                       randomized one.
+##     --min-severity-logs               Filters log output to only messages with this for device tests.
+##                                       Valid severities: TRACE, DEBUG, INFO, WARN, ERROR, FATAL.
+##     --[no-]exact                      If true, does not perform any fuzzy-matching on tests
+##     --[no-]e2e                        If true, allows the execution of host tests that require a connected device or emulator, such as end-to-end tests.
+##     --[no-]only-e2e                   If true, skips all non-e2e tests. The `--e2e` flag is redundant when passing this flag.
+##     --skipped                         If true, prints a debug statement about each skipped test.
 ##
-##                                Note: The old `-s` abbreviation now applies to `--simple`.
-##     --simple                   If true, removes any color or decoration from output
-## -o, --output                   If true, also displays the output from passing tests
-## -u, --silenceunsupported       If true, will reduce unsupported tests to a warning and continue
-##                                executing. This is dangerous outside of the local development
-##                                cycle, as "unsupported" tests are likely a problem with this
-##                                command and not the tests.
+##                                       Note: The old `-s` abbreviation now applies to `--simple`.
+##     --simple                          If true, removes any color or decoration from output
+## -o, --output                          If true, also displays the output from passing tests
+## -u, --silenceunsupported              If true, will reduce unsupported tests to a warning and continue
+##                                       executing. This is dangerous outside of the local development
+##                                       cycle, as "unsupported" tests are likely a problem with this
+##                                       command and not the tests.
+##     --test-filter                     Runs specific test cases in v2 suite. Run
+##                                       'fx shell run-test-suite --help' for more info about this flag.
+##     --count                           Number of times to run the test. Run
+##                                       'fx shell run-test-suite --help' for more info about this flag.
+##     --[no-]also-run-disabled-tests    Whether to also run tests that have been marked disabled/ignored by
+##                                       the test author. Run 'fx shell run-test-suite --help' for more info about this
+##                                       flag.
 ## -v, --verbose
 ##
 ## Examples:
