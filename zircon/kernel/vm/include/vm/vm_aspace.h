@@ -70,6 +70,7 @@ class VmAspace : public fbl::DoublyLinkedListable<VmAspace*>, public fbl::RefCou
   bool is_aslr_enabled() const { return aslr_enabled_; }
 
   // Get the root VMAR (briefly acquires the aspace lock)
+  // May return nullptr if the aspace has been destroyed or is not yet initialized.
   fbl::RefPtr<VmAddressRegion> RootVmar();
 
   // Returns true if the address space has been destroyed.
@@ -141,6 +142,7 @@ class VmAspace : public fbl::DoublyLinkedListable<VmAspace*>, public fbl::RefCou
 
   // Convenience method for traversing the tree of VMARs to find the deepest
   // VMAR in the tree that includes *va*.
+  // Returns nullptr if the aspace has been destroyed or is not yet initialized.
   fbl::RefPtr<VmAddressRegionOrMapping> FindRegion(vaddr_t va);
 
   // For region creation routines

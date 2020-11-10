@@ -230,7 +230,10 @@ VmAspace::~VmAspace() {
 
 fbl::RefPtr<VmAddressRegion> VmAspace::RootVmar() {
   Guard<Mutex> guard{&lock_};
-  return fbl::RefPtr<VmAddressRegion>(root_vmar_);
+  if (root_vmar_) {
+    return fbl::RefPtr<VmAddressRegion>(root_vmar_);
+  }
+  return nullptr;
 }
 
 zx_status_t VmAspace::Destroy() {
@@ -253,8 +256,7 @@ zx_status_t VmAspace::Destroy() {
   }
   aspace_destroyed_ = true;
 
-  // Break the reference cycle between this aspace and the root VMAR
-  root_vmar_.reset(dummy_root_vmar);
+  root_vmar_.reset();
 
   return ZX_OK;
 }
@@ -490,6 +492,10 @@ zx_status_t VmAspace::Alloc(const char* name, size_t size, void** ptr, uint8_t a
 zx_status_t VmAspace::FreeRegion(vaddr_t va) {
   DEBUG_ASSERT(!is_user());
 
+  fbl::RefPtr<VmAddressRegionOrMapping> root_vmar = RootVmar();
+  if (!root_vmar) {
+    return ZX_ERR_NOT_FOUND;
+  }
   fbl::RefPtr<VmAddressRegionOrMapping> r = RootVmar()->FindRegion(va);
   if (!r) {
     return ZX_ERR_NOT_FOUND;
@@ -500,6 +506,9 @@ zx_status_t VmAspace::FreeRegion(vaddr_t va) {
 
 fbl::RefPtr<VmAddressRegionOrMapping> VmAspace::FindRegion(vaddr_t va) {
   fbl::RefPtr<VmAddressRegion> vmar(RootVmar());
+  if (!vmar) {
+    return nullptr;
+  }
   while (1) {
     fbl::RefPtr<VmAddressRegionOrMapping> next(vmar->FindRegion(va));
     if (!next) {
@@ -586,7 +595,7 @@ void VmAspace::Dump(bool verbose) const {
 
   Guard<Mutex> guard{&lock_};
 
-  if (verbose) {
+  if (verbose && root_vmar_) {
     AssertHeld(root_vmar_->lock_ref());
     root_vmar_->DumpLocked(1, verbose);
   }
@@ -631,6 +640,9 @@ size_t VmAspace::AllocatedPages() const {
   canary_.Assert();
 
   Guard<Mutex> guard{&lock_};
+  if (!root_vmar_) {
+    return 0;
+  }
   AssertHeld(root_vmar_->lock_ref());
   return root_vmar_->AllocatedPagesLocked();
 }

@@ -25,6 +25,7 @@ ktl::unique_ptr<UserMemory> UserMemory::Create(fbl::RefPtr<VmObject> vmo) {
   DEBUG_ASSERT(aspace);
   DEBUG_ASSERT(aspace->is_user());
   fbl::RefPtr<VmAddressRegion> root_vmar = aspace->RootVmar();
+  DEBUG_ASSERT(root_vmar);
   constexpr uint32_t vmar_flags =
       VMAR_FLAG_CAN_MAP_READ | VMAR_FLAG_CAN_MAP_WRITE | VMAR_FLAG_CAN_MAP_EXECUTE;
   fbl::RefPtr<VmMapping> mapping;
