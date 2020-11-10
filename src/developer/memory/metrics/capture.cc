@@ -16,7 +16,10 @@
 #include <zircon/process.h>
 #include <zircon/status.h>
 
+#include <iostream>
 #include <memory>
+#include <ostream>
+#include <unordered_set>
 
 #include <task-utils/walker.h>
 
@@ -174,18 +177,21 @@ zx_status_t Capture::GetCapture(Capture* capture, const CaptureState& state, Cap
           return s == ZX_ERR_BAD_STATE ? ZX_OK : s;
         }
         auto vmos = std::make_unique<zx_info_vmo_t[]>(num_vmos);
-        {
-          s = os->GetInfo(handle, ZX_INFO_PROCESS_VMOS, vmos.get(),
-                          num_vmos * sizeof(zx_info_vmo_t), &num_vmos, nullptr);
-          if (s != ZX_OK) {
-            return s == ZX_ERR_BAD_STATE ? ZX_OK : s;
-          }
+        s = os->GetInfo(handle, ZX_INFO_PROCESS_VMOS, vmos.get(), num_vmos * sizeof(zx_info_vmo_t),
+                        &num_vmos, nullptr);
+        if (s != ZX_OK) {
+          return s == ZX_ERR_BAD_STATE ? ZX_OK : s;
         }
-        process.vmos.reserve(num_vmos);
+        std::unordered_map<zx_koid_t, const zx_info_vmo_t&> unique_vmos(num_vmos);
         for (size_t i = 0; i < num_vmos; i++) {
-          const auto& vmo = vmos[i];
-          capture->koid_to_vmo_.try_emplace(vmo.koid, vmo);
-          process.vmos.push_back(vmo.koid);
+          const auto& vmo_info = vmos[i];
+          unique_vmos.try_emplace(vmo_info.koid, vmo_info);
+        }
+
+        process.vmos.reserve(unique_vmos.size());
+        for (const auto& [koid, vmo] : unique_vmos) {
+          capture->koid_to_vmo_.try_emplace(koid, vmo);
+          process.vmos.push_back(koid);
         }
         capture->koid_to_process_.emplace(koid, process);
         return ZX_OK;

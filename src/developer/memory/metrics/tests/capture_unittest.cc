@@ -53,8 +53,20 @@ const static zx_info_vmo_t _vmo = {
     .name = "V1",
     .size_bytes = vmo_size,
 };
+const static zx_info_vmo_t _vmo_dup[] = {{
+                                             .koid = vmo_koid,
+                                             .name = "V1",
+                                             .size_bytes = vmo_size,
+                                         },
+                                         {
+                                             .koid = vmo_koid,
+                                             .name = "V1",
+                                             .size_bytes = vmo_size,
+                                         }};
 const static GetInfoResponse vmos_info = {proc_handle, ZX_INFO_PROCESS_VMOS, &_vmo, sizeof(_vmo), 1,
                                           ZX_OK};
+const static GetInfoResponse vmos_dup_info = {
+    proc_handle, ZX_INFO_PROCESS_VMOS, _vmo_dup, sizeof(_vmo), 1, ZX_OK};
 
 const zx_koid_t vmo2_koid = 2000;
 const uint64_t vmo2_size = 20000;
@@ -152,6 +164,26 @@ TEST_F(CaptureUnitTest, VMODouble) {
   const auto& vmo2 = c.vmo_for_koid(vmo2_koid);
   EXPECT_EQ(vmo2_koid, vmo2.koid);
   EXPECT_STREQ(vmo2_name, vmo2.name);
+}
+
+TEST_F(CaptureUnitTest, VMOProcessDuplicate) {
+  Capture c;
+  auto ret =
+      TestUtils::GetCapture(&c, VMO,
+                            {.get_info = {self_info, kmem_info, vmos_dup_info, vmos_dup_info},
+                             .get_processes = {{ZX_OK, {proc_cb}}},
+                             .get_property = {proc_prop}});
+  EXPECT_EQ(ZX_OK, ret);
+  EXPECT_EQ(1U, c.koid_to_process().size());
+  const auto& process = c.process_for_koid(proc_koid);
+  EXPECT_EQ(proc_koid, process.koid);
+  EXPECT_STREQ(proc_name, process.name);
+  EXPECT_EQ(1U, process.vmos.size());
+  EXPECT_EQ(1U, c.koid_to_vmo().size());
+  EXPECT_EQ(vmo_koid, process.vmos[0]);
+  const auto& vmo = c.vmo_for_koid(vmo_koid);
+  EXPECT_EQ(vmo_koid, vmo.koid);
+  EXPECT_STREQ(vmo_name, vmo.name);
 }
 
 TEST_F(CaptureUnitTest, ProcessPropBadState) {

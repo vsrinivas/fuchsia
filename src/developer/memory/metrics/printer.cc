@@ -5,9 +5,18 @@
 #include "src/developer/memory/metrics/printer.h"
 
 #include <lib/trace/event.h>
+#include <zircon/types.h>
 
 #include <algorithm>
 #include <cstdint>
+#include <unordered_map>
+#include <unordered_set>
+
+#include "lib/trace/internal/event_common.h"
+#include "zircon/third_party/rapidjson/include/rapidjson/document.h"
+#include "zircon/third_party/rapidjson/include/rapidjson/ostreamwrapper.h"
+#include "zircon/third_party/rapidjson/include/rapidjson/rapidjson.h"
+#include "zircon/third_party/rapidjson/include/rapidjson/writer.h"
 
 namespace memory {
 
@@ -36,49 +45,97 @@ const char* FormatSize(uint64_t bytes, char* buf) {
   return buf;
 }
 
-void Printer::PrintCapture(const Capture& capture, CaptureLevel level, Sorted sorted) {
-  TRACE_DURATION("memory_metrics", "Printer::PrintCapture");
-  const auto& kmem = capture.kmem();
-  os_ << "K," << capture.time() << "," << kmem.total_bytes << "," << kmem.free_bytes << ","
-      << kmem.wired_bytes << "," << kmem.total_heap_bytes << "," << kmem.free_heap_bytes << ","
-      << kmem.vmo_bytes << "," << kmem.mmu_overhead_bytes << "," << kmem.ipc_bytes << ","
-      << kmem.other_bytes << "\n";
-  if (level == KMEM) {
-    return;
-  }
+void Printer::PrintCapture(const Capture& capture) {
+  TRACE_DURATION("memory_metrics", "Printer::PrintCaptureJsonSmall");
+  rapidjson::Document j(rapidjson::kObjectType);
+  auto& a = j.GetAllocator();
 
-  const auto& koid_to_process = capture.koid_to_process();
-  std::vector<zx_koid_t> process_koids;
-  for (const auto& pair : koid_to_process) {
-    process_koids.push_back(pair.first);
-  }
-  for (const auto& koid : process_koids) {
-    const auto& p = koid_to_process.at(koid);
-    os_ << "P," << p.koid << "," << p.name;
+  rapidjson::Value kernel(rapidjson::kObjectType);
+  const auto& k = capture.kmem();
+  kernel.AddMember("total", k.total_bytes, a)
+      .AddMember("free", k.free_bytes, a)
+      .AddMember("wired", k.wired_bytes, a)
+      .AddMember("total_heap", k.total_heap_bytes, a)
+      .AddMember("free_heap", k.free_heap_bytes, a)
+      .AddMember("vmo", k.vmo_bytes, a)
+      .AddMember("mmu", k.mmu_overhead_bytes, a)
+      .AddMember("ipc", k.ipc_bytes, a)
+      .AddMember("other", k.other_bytes, a);
+
+  struct NameCount {
+    std::string name;
+    mutable size_t count;
+    explicit NameCount(const char* n) : name(n), count(1) {}
+
+    bool operator==(const NameCount& kc) const { return name == kc.name; }
+  };
+
+  class NameCountHash {
+   public:
+    size_t operator()(const NameCount& kc) const { return std::hash<std::string>()(kc.name); }
+  };
+
+  std::unordered_set<NameCount, NameCountHash> name_count;
+  rapidjson::Value processes(rapidjson::kArrayType);
+  processes.Reserve(capture.koid_to_process().size(), a);
+  rapidjson::Value process_header(rapidjson::kArrayType);
+  processes.PushBack(process_header.PushBack("koid", a).PushBack("name", a).PushBack("vmos", a), a);
+  for (const auto& [k, p] : capture.koid_to_process()) {
+    rapidjson::Value vmos(rapidjson::kArrayType);
+    vmos.Reserve(p.vmos.size(), a);
     for (const auto& v : p.vmos) {
-      os_ << "," << v;
+      vmos.PushBack(v, a);
+      auto [it, inserted] = name_count.emplace(capture.koid_to_vmo().find(v)->second.name);
+      if (!inserted) {
+        (*it).count++;
+      }
     }
-    os_ << "\n";
+    rapidjson::Value process(rapidjson::kArrayType);
+    process.PushBack(p.koid, a).PushBack(rapidjson::StringRef(p.name), a).PushBack(vmos, a);
+    processes.PushBack(process, a);
   }
 
-  const auto& koid_to_vmo = capture.koid_to_vmo();
-  std::vector<zx_koid_t> vmo_koids;
-  for (const auto& pair : koid_to_vmo) {
-    vmo_koids.push_back(pair.first);
+  std::vector<NameCount> sorted_counts(name_count.begin(), name_count.end());
+  std::sort(sorted_counts.begin(), sorted_counts.end(),
+            [](const NameCount& kc1, const NameCount& kc2) { return kc1.count > kc2.count; });
+  size_t index = 0;
+  std::unordered_map<std::string, size_t> name_to_index(sorted_counts.size());
+  for (auto& kc : sorted_counts) {
+    name_to_index[kc.name] = index++;
   }
-  if (sorted == SORTED) {
-    std::sort(vmo_koids.begin(), vmo_koids.end(), [&koid_to_vmo](zx_koid_t a, zx_koid_t b) {
-      const auto& sa = koid_to_vmo.at(a);
-      const auto& sb = koid_to_vmo.at(b);
-      return sa.committed_bytes > sb.committed_bytes;
-    });
+
+  rapidjson::Value vmo_names(rapidjson::kArrayType);
+  for (const auto& nc : sorted_counts) {
+    vmo_names.PushBack(rapidjson::StringRef(nc.name.c_str()), a);
   }
-  for (const auto& koid : vmo_koids) {
-    const auto& v = koid_to_vmo.at(koid);
-    os_ << "V," << v.koid << "," << v.name << "," << v.parent_koid << "," << v.committed_bytes
-        << "\n";
+
+  rapidjson::Value vmos(rapidjson::kArrayType);
+  rapidjson::Value vmo_header(rapidjson::kArrayType);
+  vmo_header.PushBack("koid", a)
+      .PushBack("name", a)
+      .PushBack("parent_koid", a)
+      .PushBack("committed_bytes", a)
+      .PushBack("allocated_bytes", a);
+  vmos.PushBack(vmo_header, a);
+  for (const auto& [k, v] : capture.koid_to_vmo()) {
+    rapidjson::Value vmo_value(rapidjson::kArrayType);
+    vmo_value.PushBack(v.koid, a)
+        .PushBack(name_to_index[v.name], a)
+        .PushBack(v.parent_koid, a)
+        .PushBack(v.committed_bytes, a)
+        .PushBack(v.allocated_bytes, a);
+    vmos.PushBack(vmo_value, a);
   }
-  os_ << std::flush;
+
+  j.AddMember("Time", capture.time(), a)
+      .AddMember("Kernel", kernel, a)
+      .AddMember("Processes", processes, a)
+      .AddMember("VmoNames", vmo_names, a)
+      .AddMember("Vmos", vmos, a);
+
+  rapidjson::OStreamWrapper osw(os_);
+  rapidjson::Writer<rapidjson::OStreamWrapper> writer(osw);
+  j.Accept(writer);
 }
 
 void Printer::OutputSizes(const Sizes& sizes) {
@@ -130,8 +187,8 @@ void Printer::PrintSummary(const Summary& summary, CaptureLevel level, Sorted so
     const auto& name_to_sizes = s.name_to_sizes();
     std::vector<std::string> names;
     names.reserve(name_to_sizes.size());
-    for (const auto& pair : name_to_sizes) {
-      names.push_back(pair.first);
+    for (const auto& [name, sizes] : name_to_sizes) {
+      names.push_back(name);
     }
     if (sorted == SORTED) {
       std::sort(names.begin(), names.end(),
@@ -173,8 +230,9 @@ void Printer::OutputSummary(const Summary& summary, Sorted sorted, zx_koid_t pid
       }
       const auto& name_to_sizes = s.name_to_sizes();
       std::vector<std::string> names;
-      for (const auto& pair : name_to_sizes) {
-        names.push_back(pair.first);
+      names.reserve(name_to_sizes.size());
+      for (const auto& [name, sizes] : name_to_sizes) {
+        names.push_back(name);
       }
       if (sorted == SORTED) {
         std::sort(names.begin(), names.end(), [&name_to_sizes](std::string a, std::string b) {

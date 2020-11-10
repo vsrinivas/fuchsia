@@ -44,6 +44,7 @@ executable("memory_metrics_unittests") {
     "//sdk/lib/sys/cpp/testing:unit",
     "//src/developer/memory/metrics",
     "//src/lib/fxl/test:gtest_main",
+    "//zircon/third_party/rapidjson",
   ]
 
   # TODO(fxbug.dev/58160): delete the below and fix compiler warnings

@@ -40,7 +40,7 @@ int Mem(const fxl::CommandLine& command_line) {
       std::cerr << "Error getting capture: " << zx_status_get_string(s);
       return EXIT_FAILURE;
     }
-    printer.PrintCapture(capture, VMO, SORTED);
+    printer.PrintCapture(capture);
     return EXIT_SUCCESS;
   }
 

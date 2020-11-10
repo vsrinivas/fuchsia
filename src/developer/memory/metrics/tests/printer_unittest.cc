@@ -10,6 +10,7 @@
 #include "src/developer/memory/metrics/summary.h"
 #include "src/developer/memory/metrics/tests/test_utils.h"
 #include "src/lib/fxl/strings/split_string.h"
+#include "zircon/third_party/rapidjson/include/rapidjson/document.h"
 
 namespace memory {
 namespace test {
@@ -28,36 +29,7 @@ void ConfirmLines(std::ostringstream& oss, std::vector<std::string> expected_lin
   }
 }
 
-TEST_F(PrinterUnitTest, PrintCaptureKMEM) {
-  Capture c;
-  TestUtils::CreateCapture(&c, {
-                                   .time = 1234,
-                                   .kmem = {.total_bytes = 300,
-                                            .free_bytes = 100,
-                                            .wired_bytes = 10,
-                                            .total_heap_bytes = 20,
-                                            .free_heap_bytes = 30,
-                                            .vmo_bytes = 40,
-                                            .mmu_overhead_bytes = 50,
-                                            .ipc_bytes = 60,
-                                            .other_bytes = 70},
-                                   .vmos =
-                                       {
-                                           {.koid = 1, .name = "v1", .committed_bytes = 100},
-                                       },
-                                   .processes =
-                                       {
-                                           {.koid = 100, .name = "p1", .vmos = {1}},
-                                       },
-                               });
-  std::ostringstream oss;
-  Printer p(oss);
-
-  p.PrintCapture(c, KMEM, SORTED);
-  ConfirmLines(oss, {"K,1234,300,100,10,20,30,40,50,60,70"});
-}
-
-TEST_F(PrinterUnitTest, PrintCaptureVMO) {
+TEST_F(PrinterUnitTest, PrintCapture) {
   Capture c;
   TestUtils::CreateCapture(&c, {
                                    .time = 1234,
@@ -78,9 +50,9 @@ TEST_F(PrinterUnitTest, PrintCaptureVMO) {
                                            {
                                                .koid = 1,
                                                .name = "v1",
-                                               .size_bytes = 100,
-                                               .parent_koid = 200,
-                                               .committed_bytes = 300,
+                                               .parent_koid = 100,
+                                               .committed_bytes = 200,
+                                               .size_bytes = 300,
                                            },
                                        },
                                    .processes =
@@ -91,12 +63,57 @@ TEST_F(PrinterUnitTest, PrintCaptureVMO) {
   std::ostringstream oss;
   Printer p(oss);
 
-  p.PrintCapture(c, VMO, SORTED);
-  ConfirmLines(oss, {
-                        "K,1234,300,100,10,20,30,40,50,60,70",
-                        "P,100,p1,1",
-                        "V,1,v1,200,300",
-                    });
+  p.PrintCapture(c);
+
+  rapidjson::Document doc;
+  doc.Parse(oss.str().c_str());
+
+  ASSERT_TRUE(doc.IsObject());
+
+  EXPECT_EQ(1234, doc["Time"].GetInt64());
+
+  auto kernel = doc["Kernel"].GetObject();
+  EXPECT_EQ(300U, kernel["total"].GetUint64());
+  EXPECT_EQ(100U, kernel["free"].GetUint64());
+  EXPECT_EQ(10U, kernel["wired"].GetUint64());
+  EXPECT_EQ(20U, kernel["total_heap"].GetUint64());
+  EXPECT_EQ(30U, kernel["free_heap"].GetUint64());
+  EXPECT_EQ(40U, kernel["vmo"].GetUint64());
+  EXPECT_EQ(50U, kernel["mmu"].GetUint64());
+  EXPECT_EQ(60U, kernel["ipc"].GetUint64());
+  EXPECT_EQ(70U, kernel["other"].GetUint64());
+
+  auto processes = doc["Processes"].GetArray();
+  ASSERT_EQ(2U, processes.Size());
+  auto process_header = processes[0].GetArray();
+  EXPECT_STREQ("koid", process_header[0].GetString());
+  EXPECT_STREQ("name", process_header[1].GetString());
+  EXPECT_STREQ("vmos", process_header[2].GetString());
+  auto process = processes[1].GetArray();
+  EXPECT_EQ(100U, process[0].GetUint64());
+  EXPECT_STREQ("p1", process[1].GetString());
+  auto process_vmos = process[2].GetArray();
+  ASSERT_EQ(1U, process_vmos.Size());
+  EXPECT_EQ(1, process_vmos[0]);
+
+  auto vmo_names = doc["VmoNames"].GetArray();
+  ASSERT_EQ(1U, vmo_names.Size());
+  EXPECT_STREQ("v1", vmo_names[0].GetString());
+
+  auto vmos = doc["Vmos"].GetArray();
+  ASSERT_EQ(2U, vmos.Size());
+  auto vmo_header = vmos[0].GetArray();
+  EXPECT_STREQ("koid", vmo_header[0].GetString());
+  EXPECT_STREQ("name", vmo_header[1].GetString());
+  EXPECT_STREQ("parent_koid", vmo_header[2].GetString());
+  EXPECT_STREQ("committed_bytes", vmo_header[3].GetString());
+  EXPECT_STREQ("allocated_bytes", vmo_header[4].GetString());
+  auto vmo = vmos[1].GetArray();
+  EXPECT_EQ(1U, vmo[0].GetUint64());
+  EXPECT_EQ(0U, vmo[1].GetUint64());
+  EXPECT_EQ(100U, vmo[2].GetUint64());
+  EXPECT_EQ(200U, vmo[3].GetUint64());
+  EXPECT_EQ(300U, vmo[4].GetUint64());
 }
 
 TEST_F(PrinterUnitTest, PrintSummaryKMEM) {

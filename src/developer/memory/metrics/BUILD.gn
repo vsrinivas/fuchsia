@@ -27,6 +27,7 @@ source_set("metrics") {
     "//src/lib/fxl",
     "//zircon/system/ulib/task-utils",
     "//zircon/system/ulib/trace",
+    "//zircon/third_party/rapidjson",
   ]
 
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings

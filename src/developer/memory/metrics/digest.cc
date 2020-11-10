@@ -90,16 +90,14 @@ void Digester::Digest(const Capture& capture, class Digest* digest) {
   TRACE_DURATION("memory_metrics", "Digester::Digest");
   digest->time_ = capture.time();
   digest->undigested_vmos_.reserve(capture.koid_to_vmo().size());
-  for (const auto& pair : capture.koid_to_vmo()) {
-    digest->undigested_vmos_.emplace(pair.first);
+  for (const auto& [koid, vmo] : capture.koid_to_vmo()) {
+    digest->undigested_vmos_.emplace(koid);
   }
 
   digest->buckets_.reserve(bucket_matches_.size());
   for (auto& bucket_match : bucket_matches_) {
     auto& bucket = digest->buckets_.emplace_back(bucket_match.name(), 0);
-    for (const auto& pair : capture.koid_to_process()) {
-      const auto& process = pair.second;
-
+    for (const auto& [koid, process] : capture.koid_to_process()) {
       if (!bucket_match.ProcessMatch(process.name)) {
         continue;
       }

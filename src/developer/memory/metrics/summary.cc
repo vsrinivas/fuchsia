@@ -68,9 +68,7 @@ void Summary::Init(const Capture& capture, Namer* namer,
       capture.koid_to_process().size() + 1);
 
   const auto& koid_to_vmo = capture.koid_to_vmo();
-  for (const auto& pair : capture.koid_to_process()) {
-    auto process_koid = pair.first;
-    const auto& process = pair.second;
+  for (const auto& [process_koid, process] : capture.koid_to_process()) {
     auto& s = process_summaries_.emplace_back(process_koid, process.name);
     for (auto vmo_koid : process.vmos) {
       do {
@@ -112,8 +110,8 @@ void Summary::Init(const Capture& capture, Namer* namer,
   }
 
   uint64_t vmo_bytes = 0;
-  for (const auto& pair : capture.koid_to_vmo()) {
-    vmo_bytes += pair.second.committed_bytes;
+  for (const auto& [koid, vmo] : capture.koid_to_vmo()) {
+    vmo_bytes += vmo.committed_bytes;
   }
   process_summaries_.emplace_back(kstats_, vmo_bytes);
 }  // namespace memory
