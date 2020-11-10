@@ -93,7 +93,7 @@ impl<'a> fmt::Display for Capability<'a> {
             CapabilityType::PciBridgeSubsystemVendorId => write!(f, "PCI Bridge Subsystem VID"),
             CapabilityType::Agp8x => write!(f, "AGP 8x"),
             CapabilityType::SecureDevice => write!(f, "Secure Device"),
-            CapabilityType::PciExpress => write!(f, "PCI Express"),
+            CapabilityType::PciExpress => self.pci_express(f),
             CapabilityType::MsiX => self.msi_x(f),
             CapabilityType::SataDataNdxCfg => write!(f, "SATA Data Ndx Config"),
             CapabilityType::AdvancedFeatures => write!(f, "Advanced Features"),
@@ -175,6 +175,31 @@ impl<'a> Capability<'a> {
         )
     }
 
+    fn pci_express(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let (pcie, _) = LayoutVerified::<_, PciExpressCapability>::new_from_prefix(
+            &self.config[self.offset..self.config.len()],
+        )
+        .unwrap();
+        // PCIe Base Specification v4 section 7.5.3
+        let pcie_capabilities = PcieCapabilitiesField(pcie.pcie_capabilities);
+        let dev_type = PcieDevicePortType::from(pcie_capabilities.device_type());
+        let slot = match dev_type {
+            PcieDevicePortType::PCIEEP
+            | PcieDevicePortType::LPCIEEP
+            | PcieDevicePortType::RCIEP
+            | PcieDevicePortType::RCEC => String::from(""),
+            _ => format!(" (Slot{})", is_set(pcie_capabilities.slot_implemented())),
+        };
+        write!(
+            f,
+            "Express (v{}) {}{}, MSI {:#02x}",
+            pcie_capabilities.version(),
+            dev_type,
+            slot,
+            pcie_capabilities.irq_number()
+        )
+    }
+
     fn vendor(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "Vendor Specific Information: Len={:#2x}", self.config[self.offset + 2])
     }
@@ -245,4 +270,76 @@ bitfield! {
     pub struct MsixBarField(u32);
     bir, _: 2, 0;
     offset, _: 31, 3;
+}
+
+bitfield! {
+    pub struct PcieCapabilitiesField(u16);
+    version, _: 3, 0;
+    device_type, _: 7, 4;
+    slot_implemented, _: 8;
+    irq_number, _: 13, 9;
+    _reserved, _: 15, 14;
+}
+
+// PCIe Base Specification Table 7-17: PCI Express Capabilities Register
+enum PcieDevicePortType {
+    PCIEEP,
+    LPCIEEP,
+    RCIEP,
+    RCEC,
+    RPPCIERC,
+    UPPCIES,
+    DPPCIES,
+    PCIE2PCIB,
+    PCI2PCIEB,
+    Unknown(u16),
+}
+
+impl From<u16> for PcieDevicePortType {
+    fn from(value: u16) -> Self {
+        match value {
+            0b0000 => PcieDevicePortType::PCIEEP,
+            0b0001 => PcieDevicePortType::LPCIEEP,
+            0b1001 => PcieDevicePortType::RCIEP,
+            0b1010 => PcieDevicePortType::RCEC,
+            0b0100 => PcieDevicePortType::RPPCIERC,
+            0b0101 => PcieDevicePortType::UPPCIES,
+            0b0110 => PcieDevicePortType::DPPCIES,
+            0b0111 => PcieDevicePortType::PCIE2PCIB,
+            0b1000 => PcieDevicePortType::PCI2PCIEB,
+            _ => PcieDevicePortType::Unknown(value),
+        }
+    }
+}
+
+impl fmt::Display for PcieDevicePortType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self {
+                PcieDevicePortType::PCIEEP => "PCI Express Endpoint",
+                PcieDevicePortType::LPCIEEP => "Legacy PCI Express Endpoint",
+                PcieDevicePortType::RCIEP => "Root Complex Integrated Endpoint",
+                PcieDevicePortType::RCEC => "Root Complex Event Collector",
+                PcieDevicePortType::RPPCIERC => "Root Port of PCI Express Root Complex",
+                PcieDevicePortType::UPPCIES => "Upstream Port of PCI Express Switch",
+                PcieDevicePortType::DPPCIES => "Downstream Port of PCI Express Switch",
+                PcieDevicePortType::PCIE2PCIB => "PCI Express to PCI/PCI-X Bridge",
+                PcieDevicePortType::PCI2PCIEB => "PCI/PCI-X to PCI Express Bridge",
+                PcieDevicePortType::Unknown(x) => return write!(f, "Unknown PCIe Type ({:#x})", x),
+            }
+        )
+    }
+}
+
+#[derive(AsBytes, FromBytes)]
+#[repr(C, packed)]
+struct PciExpressCapability {
+    id: u8,
+    next: u8,
+    pcie_capabilities: u16,
+    device_capabilities: u32,
+    device_control: u16,
+    device_status: u16,
 }
