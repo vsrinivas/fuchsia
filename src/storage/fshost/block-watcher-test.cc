@@ -309,6 +309,16 @@ class MinfsDevice : public MockBlockDevice {
 };
 
 BlockDeviceManager::Options TestOptions() { return BlockDeviceManager::DefaultOptions(); }
+BlockDeviceManager::Options FactoryOptions() {
+  auto options = TestOptions();
+  options.options.insert({BlockDeviceManager::Options::kFactory, {}});
+  return options;
+}
+BlockDeviceManager::Options DurableOptions() {
+  auto options = TestOptions();
+  options.options.insert({BlockDeviceManager::Options::kDurable, {}});
+  return options;
+}
 
 // Tests adding a device which has an unknown format.
 TEST(AddDeviceTestCase, AddUnknownDevice) {
@@ -365,7 +375,7 @@ TEST(AddDeviceTestCase, AddMBRDevice) {
 }
 
 TEST(AddDeviceTestCase, AddBlockVerityDevice) {
-  BlockDeviceManager manager(TestOptions());
+  BlockDeviceManager manager(FactoryOptions());
   MockBlockDevice gpt_device(MockBlockDevice::GptOptions());
   EXPECT_OK(manager.AddDevice(gpt_device));
   BlockVerityDevice device(/*allow_authoring=*/true);
@@ -374,7 +384,7 @@ TEST(AddDeviceTestCase, AddBlockVerityDevice) {
 }
 
 TEST(AddDeviceTestCase, NonFactoryBlockVerityDeviceNotAttached) {
-  BlockDeviceManager manager(TestOptions());
+  BlockDeviceManager manager(FactoryOptions());
   MockBlockDevice gpt_device(MockBlockDevice::GptOptions());
   EXPECT_OK(manager.AddDevice(gpt_device));
   MockBlockDevice::Options options = BlockVerityDevice::VerityOptions();
@@ -386,7 +396,7 @@ TEST(AddDeviceTestCase, NonFactoryBlockVerityDeviceNotAttached) {
 
 // Tests adding a device with the block-verity disk format
 TEST(AddDeviceTestCase, AddFormattedBlockVerityDevice) {
-  BlockDeviceManager manager(TestOptions());
+  BlockDeviceManager manager(FactoryOptions());
   MockBlockDevice gpt_device(MockBlockDevice::GptOptions());
   EXPECT_OK(manager.AddDevice(gpt_device));
   SealedBlockVerityDevice device;
@@ -415,7 +425,7 @@ TEST(AddDeviceTestCase, AddFormattedBlockVerityDeviceWithoutSeal) {
    private:
     bool seal_read_ = false;
   };
-  BlockDeviceManager manager(TestOptions());
+  BlockDeviceManager manager(FactoryOptions());
   MockBlockDevice gpt_device(MockBlockDevice::GptOptions());
   EXPECT_OK(manager.AddDevice(gpt_device));
   BlockVerityDeviceWithNoSeal device;
@@ -439,7 +449,7 @@ TEST(AddDeviceTestCase, AddFormattedBlockVerityDeviceInAuthoringMode) {
       return ZX_OK;
     }
   };
-  BlockDeviceManager manager(TestOptions());
+  BlockDeviceManager manager(FactoryOptions());
   MockBlockDevice gpt_device(MockBlockDevice::GptOptions());
   EXPECT_OK(manager.AddDevice(gpt_device));
   BlockVerityDeviceInAuthoringMode device;
@@ -707,7 +717,7 @@ TEST(AddDeviceTestCase, AddValidDurableDevice) {
     bool formatted_ = false;
     bool mounted_ = false;
   };
-  BlockDeviceManager manager(TestOptions());
+  BlockDeviceManager manager(DurableOptions());
   MockBlockDevice gpt_device(MockBlockDevice::GptOptions());
   EXPECT_OK(manager.AddDevice(gpt_device));
   DurableZxcryptDevice zxcrypt_device;
@@ -832,7 +842,7 @@ TEST(AddDeviceTestCase, AddInvalidFactoryfsDevice) {
       return ZX_ERR_BAD_STATE;
     }
   };
-  BlockDeviceManager manager(TestOptions());
+  BlockDeviceManager manager(FactoryOptions());
   MockBlockDevice gpt_device(MockBlockDevice::GptOptions());
   EXPECT_OK(manager.AddDevice(gpt_device));
   SealedBlockVerityDevice verity_device;
@@ -847,7 +857,7 @@ TEST(AddDeviceTestCase, AddInvalidFactoryfsDevice) {
 // Tests adding factoryfs with valid fasctoryfs magic, as a verified child of a
 // block-verity device, and valid metadata.
 TEST(AddDeviceTestCase, AddValidFactoryfsDevice) {
-  BlockDeviceManager manager(TestOptions());
+  BlockDeviceManager manager(FactoryOptions());
   MockBlockDevice gpt_device(MockBlockDevice::GptOptions());
   EXPECT_OK(manager.AddDevice(gpt_device));
   SealedBlockVerityDevice verity_device;
@@ -870,6 +880,46 @@ TEST(AddDeviceTestCase, AddUnverifiedFactoryFsDevice) {
   EXPECT_FALSE(device.checked());
   EXPECT_FALSE(device.formatted());
   EXPECT_FALSE(device.mounted());
+}
+
+TEST(AddDeviceTestCase, MultipleFvmDevicesDoNotMatch) {
+  BlockDeviceManager manager(TestOptions());
+  {
+    MockBlockDevice fvm_device(MockBlockDevice::FvmOptions());
+    EXPECT_OK(manager.AddDevice(fvm_device));
+  }
+  // If another FVM device appears, it should fail.
+  {
+    MockBlockDevice fvm_device(MockBlockDevice::FvmOptions());
+    EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, manager.AddDevice(fvm_device));
+  }
+}
+
+TEST(AddDeviceTestCase, MultipleGptDevicesDoNotMatch) {
+  BlockDeviceManager manager(TestOptions());
+  {
+    MockBlockDevice gpt_device(MockBlockDevice::GptOptions());
+    EXPECT_OK(manager.AddDevice(gpt_device));
+  }
+  // If another GPT device appears, it should fail.
+  {
+    MockBlockDevice gpt_device(MockBlockDevice::GptOptions());
+    EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, manager.AddDevice(gpt_device));
+  }
+}
+
+TEST(AddDeviceTestCase, MultipleGptDevicesWithGptAllOptionMatch) {
+  auto options = TestOptions();
+  options.options.insert({BlockDeviceManager::Options::kGptAll, {}});
+  BlockDeviceManager manager(options);
+  {
+    MockBlockDevice gpt_device(MockBlockDevice::GptOptions());
+    EXPECT_OK(manager.AddDevice(gpt_device));
+  }
+  {
+    MockBlockDevice gpt_device(MockBlockDevice::GptOptions());
+    EXPECT_OK(manager.AddDevice(gpt_device));
+  }
 }
 
 class BlockWatcherTest : public zxtest::Test {

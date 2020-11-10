@@ -28,9 +28,16 @@ std::pair<std::string_view, std::string_view> SplitPath(std::string_view path) {
 // finds.
 class ContentMatcher : public BlockDeviceManager::Matcher {
  public:
-  ContentMatcher(disk_format_t format) : format_(format) {}
+  // If |allow_multiple| is true, multiple deviecs will be matched.  Otherwise, only the first
+  // device that appears will match.
+  ContentMatcher(disk_format_t format, bool allow_multiple)
+      : format_(format), allow_multiple_(allow_multiple) {}
 
   disk_format_t Match(const BlockDeviceInterface& device) override {
+    if (!allow_multiple_ && !path_.empty()) {
+      // Only match the first occurrence.
+      return DISK_FORMAT_UNKNOWN;
+    }
     if (device.content_format() == format_) {
       return format_;
     } else {
@@ -53,6 +60,7 @@ class ContentMatcher : public BlockDeviceManager::Matcher {
 
  private:
   const disk_format_t format_;
+  const bool allow_multiple_;
   std::string path_;
 };
 
@@ -62,8 +70,11 @@ class PartitionMapMatcher : public ContentMatcher {
   // |suffix| is a device that is expected to appear when the driver is bound. For example, FVM,
   // will add a "/fvm" device before adding children whilst GPT won't add anything.  If
   // |ramdisk_required| is set, this matcher will only match against a ram-disk.
-  PartitionMapMatcher(disk_format_t format, std::string_view suffix, bool ramdisk_required)
-      : ContentMatcher(format), suffix_(suffix), ramdisk_required_(ramdisk_required) {}
+  PartitionMapMatcher(disk_format_t format, bool allow_multiple, std::string_view suffix,
+                      bool ramdisk_required)
+      : ContentMatcher(format, allow_multiple),
+        suffix_(suffix),
+        ramdisk_required_(ramdisk_required) {}
 
   bool ramdisk_required() const { return ramdisk_required_; }
 
@@ -305,15 +316,11 @@ BlockDeviceManager::Options BlockDeviceManager::ReadOptions(std::istream& stream
 }
 
 BlockDeviceManager::Options BlockDeviceManager::DefaultOptions() {
-  BlockDeviceManager::Options result;
-  result.options[Options::kBlobfs] = std::string();
-  result.options[Options::kBootpart] = std::string();
-  result.options[Options::kDurable] = std::string();
-  result.options[Options::kFactory] = std::string();
-  result.options[Options::kFvm] = std::string();
-  result.options[Options::kGpt] = std::string();
-  result.options[Options::kMinfs] = std::string();
-  return result;
+  return {.options = {{Options::kBlobfs, {}},
+                      {Options::kBootpart, {}},
+                      {Options::kFvm, {}},
+                      {Options::kGpt, {}},
+                      {Options::kMinfs, {}}}};
 }
 
 BlockDeviceManager::BlockDeviceManager(const Options& options) {
@@ -323,11 +330,12 @@ BlockDeviceManager::BlockDeviceManager(const Options& options) {
     matchers_.push_back(std::make_unique<BootpartMatcher>());
   }
 
-  auto gpt = std::make_unique<PartitionMapMatcher>(DISK_FORMAT_GPT, "", /*ramdisk_required=*/false);
-  auto fvm = std::make_unique<PartitionMapMatcher>(DISK_FORMAT_FVM, "/fvm",
-                                                   options.is_set(Options::kFvmRamdisk));
+  auto gpt = std::make_unique<PartitionMapMatcher>(
+      DISK_FORMAT_GPT, options.is_set(Options::kGptAll), "", /*ramdisk_required=*/false);
+  auto fvm = std::make_unique<PartitionMapMatcher>(DISK_FORMAT_FVM, /*allow_multiple=*/false,
+                                                   "/fvm", options.is_set(Options::kFvmRamdisk));
 
-  bool gpt_required = options.is_set(Options::kGpt);
+  bool gpt_required = options.is_set(Options::kGpt) || options.is_set(Options::kGptAll);
   bool fvm_required = options.is_set(Options::kFvm);
 
   if (!options.is_set(Options::kNetboot)) {
@@ -365,8 +373,9 @@ BlockDeviceManager::BlockDeviceManager(const Options& options) {
     std::unique_ptr<PartitionMapMatcher> non_ramdisk_fvm;
     if (options.is_set(Options::kFvmRamdisk)) {
       // Add another matcher for the non-ramdisk version of FVM.
-      non_ramdisk_fvm = std::make_unique<PartitionMapMatcher>(DISK_FORMAT_FVM, "/fvm",
-                                                              /*ramdisk_required=*/false);
+      non_ramdisk_fvm =
+          std::make_unique<PartitionMapMatcher>(DISK_FORMAT_FVM, /*allow_multiple=*/false, "/fvm",
+                                                /*ramdisk_required=*/false);
       if (options.is_set(Options::kAttachZxcryptToNonRamdisk)) {
         matchers_.push_back(
             std::make_unique<MinfsMatcher>(*non_ramdisk_fvm, GetMinfsPartitionNames(),
@@ -382,8 +391,11 @@ BlockDeviceManager::BlockDeviceManager(const Options& options) {
     matchers_.push_back(std::move(gpt));
   }
   if (options.is_set(Options::kMbr)) {
-    matchers_.push_back(
-        std::make_unique<PartitionMapMatcher>(DISK_FORMAT_MBR, "", /*ramdisk_required=*/false));
+    // Default to allowing multiple devices because mbr support is disabled by default and if it's
+    // enabled, it's likely required for removable devices and so supporting multiple devices is
+    // probably appropriate.
+    matchers_.push_back(std::make_unique<PartitionMapMatcher>(
+        DISK_FORMAT_MBR, /*allow_multiple=*/true, "", /*ramdisk_required=*/false));
   }
 }
 

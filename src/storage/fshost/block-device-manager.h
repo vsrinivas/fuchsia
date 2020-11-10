@@ -39,8 +39,9 @@ class BlockDeviceManager {
     static constexpr char kDefault[] = "default";    // Expands to default options.
     static constexpr char kDurable[] = "durable";    // Enables durable partition.
     static constexpr char kFactory[] = "factory";    // Enables factory partition.
-    static constexpr char kFvm[] = "fvm";            // Enables FVM devices.
-    static constexpr char kGpt[] = "gpt";            // Enables GPT devices.
+    static constexpr char kFvm[] = "fvm";            // Enables a single FVM device.
+    static constexpr char kGpt[] = "gpt";            // Enables a single GPT device.
+    static constexpr char kGptAll[] = "gpt-all";     // Enables all GPT devices.
     static constexpr char kMbr[] = "mbr";            // Enables MBR devices.
     static constexpr char kMinfs[] = "minfs";        // Enables minfs partition.
     static constexpr char kBlobfsMaxBytes[] =

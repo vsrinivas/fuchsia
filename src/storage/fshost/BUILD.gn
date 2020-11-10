@@ -322,10 +322,27 @@ test("block_watcher_test") {
   ]
 }
 
+generated_file("block_watcher_test_config") {
+  contents = [
+    "default",
+
+    # Some of the tests requires us to be able to match against multiple GPT devices.
+    "gpt-all",
+  ]
+  output_conversion = "list lines"
+  outputs = [ "$target_gen_dir/block_watcher_test_config" ]
+}
+
+resource("block_watcher_test_config_resource") {
+  sources = [ "$target_gen_dir/block_watcher_test_config" ]
+  outputs = [ "config/fshost" ]
+}
+
 isolated_devmgr_unittest_component("block-watcher-test") {
   executable_path = "test/block_watcher_test"
   deps = [
     ":block_watcher_test",
+    ":block_watcher_test_config_resource",
     "//src/devices/block/drivers/core",
     "//src/devices/block/drivers/gpt",
     "//src/devices/block/drivers/ramdisk",
