@@ -61,9 +61,10 @@ TEST(Conformance, {{ .Name }}_Decode) {
 	{{ .ValueBuild }}
 	auto bytes = {{ .Bytes }};
 	auto handles = {{ .Handles }};
-	EXPECT_TRUE(fidl::Equals(
-		fidl::test::util::DecodedBytes<{{ .ValueType }}>(std::move(bytes), std::move(handles)),
-		{{ .ValueVar }}));
+	auto value = fidl::test::util::DecodedBytes<{{ .ValueType }}>(std::move(bytes), std::move(handles));
+	ASSERT_TRUE(fidl::Equals(value, {{ .ValueVar }}));
+	{{- /* The handles are closed in the destructor of .ValueVar */}}
+	fidl::test::util::ForgetHandles(std::move(value));
 }
 {{- if .FuchsiaOnly }}
 #endif  // __Fuchsia__
@@ -179,6 +180,7 @@ func encodeSuccessCases(gidlEncodeSuccesses []gidlir.EncodeSuccess, schema gidlm
 		if err != nil {
 			return nil, fmt.Errorf("encode success %s: %s", encodeSuccess.Name, err)
 		}
+		handleDefs := BuildHandleDefs(encodeSuccess.HandleDefs)
 		valueBuilder := newCppValueBuilder()
 		valueVar := valueBuilder.visit(encodeSuccess.Value, decl)
 		valueBuild := valueBuilder.String()
@@ -189,12 +191,12 @@ func encodeSuccessCases(gidlEncodeSuccesses []gidlir.EncodeSuccess, schema gidlm
 			}
 			encodeSuccessCases = append(encodeSuccessCases, encodeSuccessCase{
 				Name:        testCaseName(encodeSuccess.Name, encoding.WireFormat),
-				HandleDefs:  BuildHandleDefs(encodeSuccess.HandleDefs),
+				HandleDefs:  handleDefs,
 				ValueBuild:  valueBuild,
 				ValueVar:    valueVar,
 				ValueType:   declName(decl),
-				Bytes:       buildBytes(encoding.Bytes),
-				Handles:     buildRawHandles(encoding.Handles),
+				Bytes:       BuildBytes(encoding.Bytes),
+				Handles:     BuildRawHandles(encoding.Handles),
 				FuchsiaOnly: fuchsiaOnly,
 			})
 		}
@@ -209,6 +211,7 @@ func decodeSuccessCases(gidlDecodeSuccesses []gidlir.DecodeSuccess, schema gidlm
 		if err != nil {
 			return nil, fmt.Errorf("decode success %s: %s", decodeSuccess.Name, err)
 		}
+		handleDefs := BuildHandleDefs(decodeSuccess.HandleDefs)
 		valueBuilder := newCppValueBuilder()
 		valueVar := valueBuilder.visit(decodeSuccess.Value, decl)
 		valueBuild := valueBuilder.String()
@@ -219,12 +222,12 @@ func decodeSuccessCases(gidlDecodeSuccesses []gidlir.DecodeSuccess, schema gidlm
 			}
 			decodeSuccessCases = append(decodeSuccessCases, decodeSuccessCase{
 				Name:        testCaseName(decodeSuccess.Name, encoding.WireFormat),
-				HandleDefs:  BuildHandleDefs(decodeSuccess.HandleDefs),
+				HandleDefs:  handleDefs,
 				ValueBuild:  valueBuild,
 				ValueVar:    valueVar,
 				ValueType:   declName(decl),
-				Bytes:       buildBytes(encoding.Bytes),
-				Handles:     buildRawHandles(encoding.Handles),
+				Bytes:       BuildBytes(encoding.Bytes),
+				Handles:     BuildRawHandles(encoding.Handles),
 				FuchsiaOnly: fuchsiaOnly,
 			})
 		}
@@ -239,7 +242,7 @@ func encodeFailureCases(gidlEncodeFailures []gidlir.EncodeFailure, schema gidlmi
 		if err != nil {
 			return nil, fmt.Errorf("encode failure %s: %s", encodeFailure.Name, err)
 		}
-
+		handleDefs := BuildHandleDefs(encodeFailure.HandleDefs)
 		valueBuilder := newCppValueBuilder()
 		valueVar := valueBuilder.visit(encodeFailure.Value, decl)
 		valueBuild := valueBuilder.String()
@@ -251,7 +254,7 @@ func encodeFailureCases(gidlEncodeFailures []gidlir.EncodeFailure, schema gidlmi
 			}
 			encodeFailureCases = append(encodeFailureCases, encodeFailureCase{
 				Name:        testCaseName(encodeFailure.Name, wireFormat),
-				HandleDefs:  BuildHandleDefs(encodeFailure.HandleDefs),
+				HandleDefs:  handleDefs,
 				ValueBuild:  valueBuild,
 				ValueVar:    valueVar,
 				ValueType:   declName(decl),
@@ -270,6 +273,7 @@ func decodeFailureCases(gidlDecodeFailures []gidlir.DecodeFailure, schema gidlmi
 		if err != nil {
 			return nil, fmt.Errorf("decode failure %s: %s", decodeFailure.Name, err)
 		}
+		handleDefs := BuildHandleDefs(decodeFailure.HandleDefs)
 		valueType := cppConformanceType(decodeFailure.Type)
 		errorCode := cppErrorCode(decodeFailure.Err)
 		fuchsiaOnly := decl.IsResourceType() || len(decodeFailure.HandleDefs) > 0
@@ -279,10 +283,10 @@ func decodeFailureCases(gidlDecodeFailures []gidlir.DecodeFailure, schema gidlmi
 			}
 			decodeFailureCases = append(decodeFailureCases, decodeFailureCase{
 				Name:        testCaseName(decodeFailure.Name, encoding.WireFormat),
-				HandleDefs:  BuildHandleDefs(decodeFailure.HandleDefs),
+				HandleDefs:  handleDefs,
 				ValueType:   valueType,
-				Bytes:       buildBytes(encoding.Bytes),
-				Handles:     buildRawHandles(encoding.Handles),
+				Bytes:       BuildBytes(encoding.Bytes),
+				Handles:     BuildRawHandles(encoding.Handles),
 				ErrorCode:   errorCode,
 				FuchsiaOnly: fuchsiaOnly,
 			})

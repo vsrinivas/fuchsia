@@ -115,7 +115,8 @@ success("FlexibleResourceUnionUnknownValue") {
 }
 
 success("FlexibleResourceUnionUnknownValueWithHandles") {
-    // TODO(fxbug.dev/36441): Implement handles in all backends.
+    // llcpp is tested by hand since it cannot construct unknown unions (and
+    // they do not store bytes & handles), see fxr/423117
     bindings_denylist = [llcpp],
     handle_defs = {
         #0 = event(),
@@ -159,8 +160,6 @@ decode_failure("StrictUnionUnknownValue") {
 }
 
 decode_failure("StrictUnionUnknownValueWithHandles") {
-    // TODO(fxbug.dev/36441): Implement handles in all backends.
-    bindings_denylist = [llcpp],
     handle_defs = {
         #0 = event(),
         #1 = event(),

@@ -85,6 +85,15 @@ Output DecodedBytes(std::vector<uint8_t> bytes, std::vector<zx_handle_t> handles
 }
 
 template <class Input>
+void ForgetHandles(Input input) {
+  // Encode purely for the side effect of linearizing the handles.
+  fidl::Encoder enc(fidl::Encoder::NoHeader::NO_HEADER);
+  auto offset = enc.Alloc(EncodingInlineSize<Input, fidl::Encoder>(&enc));
+  input.Encode(&enc, offset);
+  enc.GetMessage().ClearHandlesUnsafe();
+}
+
+template <class Input>
 bool ValueToBytes(const Input& input, const std::vector<uint8_t>& expected) {
   fidl::Encoder enc(fidl::Encoder::NoHeader::NO_HEADER);
   auto offset = enc.Alloc(EncodingInlineSize<Input, fidl::Encoder>(&enc));

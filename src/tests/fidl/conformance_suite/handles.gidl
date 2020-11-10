@@ -3,8 +3,6 @@
 // found in the LICENSE file.
 
 success("SingleHandle") {
-    // TODO(fxbug.dev/36441): Implement handles in all backends.
-    bindings_denylist = [llcpp],
     handle_defs = {
         #0 = event(),
     },
@@ -24,8 +22,6 @@ success("SingleHandle") {
 }
 
 success("SingleOptionalHandlePresent") {
-    // TODO(fxbug.dev/36441): Implement handles in all backends.
-    bindings_denylist = [llcpp],
     handle_defs = {
         #0 = event(),
     },
@@ -45,8 +41,6 @@ success("SingleOptionalHandlePresent") {
 }
 
 success("SingleOptionalHandleAbsent") {
-    // TODO(fxbug.dev/36441): Implement handles in all backends.
-    bindings_denylist = [llcpp],
     value = SingleOptionalHandle {},
     bytes = {
         v1 = [
@@ -56,8 +50,6 @@ success("SingleOptionalHandleAbsent") {
 }
 
 success("ArrayOfHandles") {
-    // TODO(fxbug.dev/36441): Implement handles in all backends.
-    bindings_denylist = [llcpp],
     handle_defs = {
         #0 = event(),
         #1 = event(),
@@ -79,8 +71,6 @@ success("ArrayOfHandles") {
 }
 
 success("ArrayOfOptionalHandles") {
-    // TODO(fxbug.dev/36441): Implement handles in all backends.
-    bindings_denylist = [llcpp],
     handle_defs = {
         #0 = event(),
     },
@@ -100,8 +90,6 @@ success("ArrayOfOptionalHandles") {
 }
 
 success("VectorOfHandles") {
-    // TODO(fxbug.dev/36441): Implement handles in all backends.
-    bindings_denylist = [llcpp],
     handle_defs = {
         #0 = event(),
         #1 = event(),
@@ -124,8 +112,6 @@ success("VectorOfHandles") {
 }
 
 success("VectorOfOptionalHandles") {
-    // TODO(fxbug.dev/36441): Implement handles in all backends.
-    bindings_denylist = [llcpp], // dart?
     handle_defs = {
         #0 = event(),
     },
@@ -146,8 +132,6 @@ success("VectorOfOptionalHandles") {
 }
 
 success("MultipleHandleSubtypes") {
-    // TODO(fxbug.dev/36441): Implement handles in all backends.
-    bindings_denylist = [llcpp],
     handle_defs = {
         #0 = channel(),
         #1 = event(),
@@ -171,9 +155,8 @@ success("MultipleHandleSubtypes") {
 }
 
 decode_failure("TooManyHandles") {
-    // TODO(fxbug.dev/36441): Implement handles in all backends.
-    // TODO(fxbug.dev/58385): Close handles on encode/decode failure in Dart, Rust.
-    bindings_allowlist = [],
+    // TODO(fxbug.dev/58385): Close handles on encode/decode failure.
+    bindings_denylist = [go,dart,rust],
     handle_defs = {
         #0 = event(),
         #1 = event(),
@@ -192,8 +175,8 @@ decode_failure("TooManyHandles") {
     err = EXTRA_HANDLES,
 }
 
-// TODO(fxbug.dev/59449): Check for extra handles in Dart so that this fails.
 decode_success("TooManyHandlesSuccess") {
+    // TODO(fxbug.dev/59449): Check for extra handles in Dart so that this fails.
     bindings_allowlist = [dart],
     handle_defs = {
         #0 = event(),
@@ -216,7 +199,7 @@ decode_success("TooManyHandlesSuccess") {
 
 decode_failure("TooFewHandles") {
     // TODO(fxbug.dev/58385): Close handles on encode/decode failure in Rust.
-    bindings_allowlist = [go,dart],
+    bindings_denylist = [rust],
     type = SingleHandle,
     bytes = {
         v1 = [
@@ -228,8 +211,6 @@ decode_failure("TooFewHandles") {
 
 // Currently channels max out at 64-handles.
 success("ChannelMaxHandles") {
-    // TODO(fxb.dev/36441): Implement handles in all backends.
-    bindings_denylist = [llcpp],
     handle_defs = {
         #0 = event(), #1 = event(), #2 = event(), #3 = event(),
         #4 = event(), #5 = event(), #6 = event(), #7 = event(),
@@ -297,11 +278,9 @@ success("ChannelMaxHandles") {
 
 // There should be support for at least 64 handles in unknown fields.
 decode_success("ChannelMaxUnknownHandlesDropped") {
-    // TODO(fxbug.dev/36441): Implement handles in all backends.
-    // TODO(fxbug.dev/61848) as unknown data for tables gets implemented in
-    // each binding, they should be removed from the allowlist here and added
-    // to the allowlist in the test below.
-    bindings_allowlist = [rust],
+    // TODO(fxbug.dev/61848): Move Rust to ChannelMaxUnknownHandlesStored.
+    // Then this test will remain for LLCPP which does not store unknowns.
+    bindings_allowlist = [rust,llcpp],
     handle_defs = {
         #0 = event(), #1 = event(), #2 = event(), #3 = event(),
         #4 = event(), #5 = event(), #6 = event(), #7 = event(),

@@ -12,19 +12,6 @@ import (
 	gidlmixer "go.fuchsia.dev/fuchsia/tools/fidl/gidl/mixer"
 )
 
-func BytesBuilder(bytes []byte) string {
-	var builder strings.Builder
-	builder.WriteString("std::vector<uint8_t>{\n")
-	for i, b := range bytes {
-		builder.WriteString(fmt.Sprintf("0x%02x,", b))
-		if i%8 == 7 {
-			builder.WriteString("\n")
-		}
-	}
-	builder.WriteString("}")
-	return builder.String()
-}
-
 func typeNameImpl(decl gidlmixer.Declaration, ignoreNullable bool) string {
 	switch decl := decl.(type) {
 	case gidlmixer.PrimitiveDeclaration:

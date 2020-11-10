@@ -166,23 +166,23 @@ func (b *cppValueBuilder) visitRecord(value gidlir.Record, decl gidlmixer.Record
 				if decl.IsResourceType() {
 					b.Builder.WriteString(fmt.Sprintf(
 						"::fidl::UnknownData _data = {\n.bytes=%s,\n.handles=%s\n};\n%s%sSetUnknownDataEntry(%dlu, std::move(_data));\n",
-						buildBytes(unknownData.Bytes), buildHandles(unknownData.Handles), containerVar, accessor, field.Key.UnknownOrdinal))
+						BuildBytes(unknownData.Bytes), buildHandles(unknownData.Handles), containerVar, accessor, field.Key.UnknownOrdinal))
 				} else {
 					b.Builder.WriteString(fmt.Sprintf(
 						"%s%sSetUnknownDataEntry(%dlu, %s);\n",
-						containerVar, accessor, field.Key.UnknownOrdinal, buildBytes(unknownData.Bytes)))
+						containerVar, accessor, field.Key.UnknownOrdinal, BuildBytes(unknownData.Bytes)))
 				}
 			} else {
 				unknownData := field.Value.(gidlir.UnknownData)
 				if decl.IsResourceType() {
 					b.Builder.WriteString(fmt.Sprintf(
 						"%s%sSetUnknownData(static_cast<fidl_xunion_tag_t>(%dlu), %s, %s);\n",
-						containerVar, accessor, field.Key.UnknownOrdinal, buildBytes(unknownData.Bytes),
+						containerVar, accessor, field.Key.UnknownOrdinal, BuildBytes(unknownData.Bytes),
 						buildHandles(unknownData.Handles)))
 				} else {
 					b.Builder.WriteString(fmt.Sprintf(
 						"%s%sSetUnknownData(static_cast<fidl_xunion_tag_t>(%dlu), %s);\n",
-						containerVar, accessor, field.Key.UnknownOrdinal, buildBytes(unknownData.Bytes)))
+						containerVar, accessor, field.Key.UnknownOrdinal, BuildBytes(unknownData.Bytes)))
 				}
 			}
 			continue
@@ -296,7 +296,7 @@ func primitiveTypeName(subtype fidlir.PrimitiveSubtype) string {
 	}
 }
 
-func buildBytes(bytes []byte) string {
+func BuildBytes(bytes []byte) string {
 	var builder strings.Builder
 	builder.WriteString("std::vector<uint8_t>{")
 	for i, b := range bytes {
@@ -309,7 +309,7 @@ func buildBytes(bytes []byte) string {
 	return builder.String()
 }
 
-func buildRawHandles(handles []gidlir.Handle) string {
+func BuildRawHandles(handles []gidlir.Handle) string {
 	if len(handles) == 0 {
 		return "std::vector<zx_handle_t>{}"
 	}

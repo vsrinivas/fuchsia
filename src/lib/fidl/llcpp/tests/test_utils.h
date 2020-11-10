@@ -26,29 +26,34 @@
 // Testing utilities indended for GIDL-generated conformance tests.
 namespace llcpp_conformance_utils {
 
-bool ComparePayload(const uint8_t* actual, size_t actual_size, const uint8_t* expected,
-                    size_t expected_size);
+// TODO(fxbug.dev/63900): Remove this when rights are specified in GIDL.
+std::vector<zx_handle_info_t> ToHandleInfoVec(std::vector<zx_handle_t> handles);
 
-// Verifies that |value| encodes to |bytes|.
-// Note: This is destructive to |value| - a new value must be created with each call.
-template <typename FidlType>
-bool EncodeSuccess(FidlType* value, const std::vector<uint8_t>& bytes) {
-  static_assert(fidl::IsFidlType<FidlType>::value, "FIDL type required");
-
-  ::fidl::OwnedEncodedMessage<FidlType> encoded(value);
-  if (!encoded.ok() || encoded.error() != nullptr) {
-    std::cout << "Encoding failed (" << zx_status_get_string(encoded.status())
-              << "): " << encoded.error() << std::endl;
-    return false;
+template <typename T>
+bool ComparePayload(const T* actual, size_t actual_size, const T* expected, size_t expected_size) {
+  bool pass = true;
+  for (size_t i = 0; i < actual_size && i < expected_size; i++) {
+    if (actual[i] != expected[i]) {
+      pass = false;
+      std::cout << std::dec << "element[" << i << "]: " << std::hex << "actual=0x" << +actual[i]
+                << " "
+                << "expected=0x" << +expected[i] << "\n";
+    }
   }
-  return ComparePayload(encoded.GetOutgoingMessage().bytes(),
-                        encoded.GetOutgoingMessage().byte_actual(), &bytes[0], bytes.size());
+  if (actual_size != expected_size) {
+    pass = false;
+    std::cout << std::dec << "element[...]: "
+              << "actual.size=" << +actual_size << " "
+              << "expected.size=" << +expected_size << "\n";
+  }
+  return pass;
 }
 
 // Verifies that |value| encodes to |bytes|.
 // Note: This is destructive to |value| - a new value must be created with each call.
 template <typename FidlType>
-bool LinearizeAndEncodeSuccess(FidlType* value, const std::vector<uint8_t>& bytes) {
+bool EncodeSuccess(FidlType* value, const std::vector<uint8_t>& bytes,
+                   const std::vector<zx_handle_t>& handles) {
   static_assert(fidl::IsFidlType<FidlType>::value, "FIDL type required");
 
   ::fidl::OwnedEncodedMessage<FidlType> encoded(value);
@@ -57,14 +62,19 @@ bool LinearizeAndEncodeSuccess(FidlType* value, const std::vector<uint8_t>& byte
               << "): " << encoded.error() << std::endl;
     return false;
   }
-  return ComparePayload(encoded.GetOutgoingMessage().bytes(),
-                        encoded.GetOutgoingMessage().byte_actual(), &bytes[0], bytes.size());
+  bool bytes_match =
+      ComparePayload(encoded.GetOutgoingMessage().bytes(),
+                     encoded.GetOutgoingMessage().byte_actual(), bytes.data(), bytes.size());
+  bool handles_match =
+      ComparePayload(encoded.GetOutgoingMessage().handles(),
+                     encoded.GetOutgoingMessage().handle_actual(), handles.data(), handles.size());
+  return bytes_match && handles_match;
 }
 
 // Verifies that |value| fails to encode, with the expected error code.
 // Note: This is destructive to |value| - a new value must be created with each call.
 template <typename FidlType>
-bool LinearizeAndEncodeFailure(FidlType* value, zx_status_t expected_error_code) {
+bool EncodeFailure(FidlType* value, zx_status_t expected_error_code) {
   static_assert(fidl::IsFidlType<FidlType>::value, "FIDL type required");
 
   ::fidl::OwnedEncodedMessage<FidlType> encoded(value);
@@ -83,10 +93,12 @@ bool LinearizeAndEncodeFailure(FidlType* value, zx_status_t expected_error_code)
 
 // Verifies that |bytes| decodes to an object that is the same as |value|.
 template <typename FidlType>
-bool DecodeSuccess(FidlType* value, std::vector<uint8_t> bytes) {
+bool DecodeSuccess(FidlType* value, std::vector<uint8_t> bytes, std::vector<zx_handle_t> handles) {
   static_assert(fidl::IsFidlType<FidlType>::value, "FIDL type required");
-  uint32_t size = static_cast<uint32_t>(bytes.size());
-  fidl::DecodedMessage<FidlType> decoded(bytes.data(), size, nullptr, 0);
+  auto handle_infos = ToHandleInfoVec(std::move(handles));
+  fidl::DecodedMessage<FidlType> decoded(bytes.data(), static_cast<uint32_t>(bytes.size()),
+                                         handle_infos.data(),
+                                         static_cast<uint32_t>(handle_infos.size()));
   if (!decoded.ok() || decoded.error() != nullptr) {
     std::cout << "Decoding failed (" << zx_status_get_string(decoded.status())
               << "): " << decoded.error() << std::endl;
@@ -101,10 +113,13 @@ bool DecodeSuccess(FidlType* value, std::vector<uint8_t> bytes) {
 // Verifies that |bytes| fails to decode as |FidlType|, with the expected error
 // code.
 template <typename FidlType>
-bool DecodeFailure(std::vector<uint8_t> bytes, zx_status_t expected_error_code) {
+bool DecodeFailure(std::vector<uint8_t> bytes, std::vector<zx_handle_t> handles,
+                   zx_status_t expected_error_code) {
   static_assert(fidl::IsFidlType<FidlType>::value, "FIDL type required");
-  uint32_t size = static_cast<uint32_t>(bytes.size());
-  fidl::DecodedMessage<FidlType> decoded(bytes.data(), size, nullptr, 0);
+  auto handle_infos = ToHandleInfoVec(std::move(handles));
+  fidl::DecodedMessage<FidlType> decoded(bytes.data(), static_cast<uint32_t>(bytes.size()),
+                                         handle_infos.data(),
+                                         static_cast<uint32_t>(handle_infos.size()));
   if (decoded.ok()) {
     std::cout << "Decoding unexpectedly succeeded" << std::endl;
     return false;

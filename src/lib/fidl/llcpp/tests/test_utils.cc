@@ -11,24 +11,17 @@
 
 namespace llcpp_conformance_utils {
 
-bool ComparePayload(const uint8_t* actual, size_t actual_size, const uint8_t* expected,
-                    size_t expected_size) {
-  bool pass = true;
-  for (size_t i = 0; i < actual_size && i < expected_size; i++) {
-    if (actual[i] != expected[i]) {
-      pass = false;
-      std::cout << std::dec << "element[" << i << "]: " << std::hex << "actual=0x" << +actual[i]
-                << " "
-                << "expected=0x" << +expected[i] << "\n";
-    }
+// TODO(fxbug.dev/63900): Remove this when rights are specified in GIDL.
+std::vector<zx_handle_info_t> ToHandleInfoVec(std::vector<zx_handle_t> handles) {
+  std::vector<zx_handle_info_t> infos(handles.size());
+  for (size_t i = 0; i < handles.size(); i++) {
+    infos[i] = zx_handle_info_t{
+        .handle = handles[i],
+        .type = ZX_OBJ_TYPE_NONE,
+        .rights = ZX_RIGHT_SAME_RIGHTS,
+    };
   }
-  if (actual_size != expected_size) {
-    pass = false;
-    std::cout << std::dec << "element[...]: "
-              << "actual.size=" << +actual_size << " "
-              << "expected.size=" << +expected_size << "\n";
-  }
-  return pass;
+  return infos;
 }
 
 }  // namespace llcpp_conformance_utils
