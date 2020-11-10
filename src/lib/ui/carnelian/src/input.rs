@@ -8,12 +8,13 @@ use crate::{
     geometry::{IntPoint, IntRect, IntSize, LimitToBounds, Size},
     view::ViewKey,
 };
-use anyhow::Error;
+use anyhow::{format_err, Error};
 use euclid::default::{Transform2D, Vector2D};
 use fidl::endpoints::create_proxy;
 use fidl_fuchsia_input_report as hid_input_report;
-use fuchsia_async::{self as fasync};
-use fuchsia_zircon::{self as zx};
+use fuchsia_async::{self as fasync, Time, TimeoutExt};
+use fuchsia_zircon::{self as zx, Duration};
+use futures::TryFutureExt;
 use input_synthesis::{keymaps::QWERTY_MAP, usages::key_to_hid_usage};
 use std::{
     collections::{HashMap, HashSet},
@@ -375,7 +376,13 @@ async fn listen_to_entry(
     fdio::service_connect(entry.path().to_str().expect("bad path"), server)?;
     let client = fasync::Channel::from_channel(client)?;
     let device = hid_input_report::InputDeviceProxy::new(client);
-    let descriptor = device.get_descriptor().await?;
+    let descriptor = device
+        .get_descriptor()
+        .map_err(|err| format_err!("FIDL error on get_descriptor: {:?}", err))
+        .on_timeout(Time::after(Duration::from_millis(200)), || {
+            Err(format_err!("FIDL timeout on get_descriptor"))
+        })
+        .await?;
     let device_id = entry.file_name().to_string_lossy().to_string();
     internal_sender
         .unbounded_send(MessageInternal::RegisterDevice(DeviceId(device_id.clone()), descriptor))
