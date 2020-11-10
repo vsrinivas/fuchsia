@@ -2,8 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/python/python_host_test.gni")
-
 # Builds the Bazel SDK.
 #
 # Outputs
@@ -38,9 +36,9 @@ template("bazel_workspace") {
     script = "//scripts/sdk/bazel/generate.py"
     args = [
       "--directory",
-      rebase_path("${root_build_dir}/sdk/exported/core", root_build_dir),
+      rebase_path("${root_out_dir}/sdk/exported/core"),
       "--output",
-      rebase_path("${root_out_dir}/sdk/bazel", root_build_dir),
+      rebase_path("${root_out_dir}/sdk/bazel"),
     ]
     inputs = [
       "//scripts/sdk/bazel/create_test_workspace.py",
@@ -53,7 +51,7 @@ template("bazel_workspace") {
       args += [
         "--nosdk",
         "--tests",
-        rebase_path("${root_out_dir}/sdk/bazel_tests", root_build_dir),
+        rebase_path("${root_out_dir}/sdk/bazel_tests"),
       ]
     }
   }
@@ -102,13 +100,10 @@ bazel_workspace("bazel") {
   ]
 }
 
-bazel_workspace("bazel_tests") {
+bazel_workspace("tests") {
   install_tests = true
   deps = [ ":bazel" ]
-  outputs = [
-    "${root_out_dir}/sdk/bazel",
-    "${root_out_dir}/sdk/bazel_tests",
-  ]
+  outputs = [ "${root_out_dir}/sdk/bazel_tests/WORKSPACE" ]
   sources = [
     "//scripts/sdk/bazel/templates/tests/bazelrc.mako",
     "//scripts/sdk/bazel/templates/tests/fidl_build.mako",
@@ -151,57 +146,4 @@ bazel_workspace("bazel_tests") {
     "//scripts/sdk/bazel/tests/dart/flutter/main.dart",
     "//scripts/sdk/bazel/tests/dart/flutter/meta/app.cmx",
   ]
-}
-
-# Make the bazel prebuilt available in the out dir. A regular
-# copy() doesn't work properly due to symlinks.
-template("_copy_tool") {
-  action("${target_name}") {
-    forward_variables_from(invoker, [ "outputs" ])
-    script = "//build/copy_tree.py"
-    args = [
-      rebase_path("//prebuilt/sdk/bazel", root_build_dir),
-      rebase_path("${root_out_dir}/bazel_prebuilt", root_build_dir),
-      rebase_path("${root_out_dir}/bazel_prebuilt.stamp", root_build_dir),
-      "--no_symlinks",
-    ]
-    inputs = [ "//prebuilt/sdk/bazel/release.json" ]
-    if (!defined(outputs)) {
-      outputs = []
-    }
-
-    outputs += [ "${root_out_dir}/bazel_prebuilt.stamp" ]
-  }
-}
-
-_copy_tool("bazel_prebuilt") {
-  outputs = [ "${root_out_dir}/bazel_prebuilt" ]
-}
-
-python_host_test("bazel_sdk_test") {
-  _target_dir = get_label_info(target_name, "dir")
-
-  main_source = "bazel_sdk_test_wrapper.py"
-  sources = [
-    "${root_out_dir}/bazel_prebuilt",
-    "${root_out_dir}/sdk/bazel",
-    "${root_out_dir}/sdk/bazel_tests",
-  ]
-  deps = [
-    ":bazel_prebuilt",
-    ":bazel_tests",
-  ]
-  args = [
-    "--bazel",
-    rebase_path("${root_out_dir}/test_data/${_target_dir}/bazel_prebuilt/bazel",
-                root_build_dir),
-    "--test_file",
-    rebase_path("${root_out_dir}/test_data/${_target_dir}/bazel_tests/run.py",
-                root_build_dir),
-  ]
-}
-
-group("tests") {
-  testonly = true
-  public_deps = [ ":bazel_sdk_test($host_toolchain)" ]
 }
