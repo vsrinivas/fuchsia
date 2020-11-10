@@ -2719,9 +2719,9 @@ fbl::RefPtr<PageSource> VmCowPages::GetRootPageSourceLocked() const {
 }
 
 bool VmCowPages::IsCowClonableLocked() const {
-  // Copy-on-write clones of pager vmos aren't supported as we can't
+  // Copy-on-write clones of pager vmos or their descendants aren't supported as we can't
   // efficiently make an immutable snapshot.
-  if (page_source_) {
+  if (is_pager_backed_locked()) {
     return false;
   }
 
@@ -2733,15 +2733,6 @@ bool VmCowPages::IsCowClonableLocked() const {
     return false;
   }
 
-  // vmos descended from paged/physical vmos can't be eager cloned.
-  auto parent = parent_.get();
-  while (parent) {
-    if (parent->page_source_) {
-      return false;
-    }
-    AssertHeld(parent->lock_);
-    parent = parent->parent_.get();
-  }
   return true;
 }
 
