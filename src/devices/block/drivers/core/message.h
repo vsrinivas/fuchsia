@@ -60,6 +60,4 @@ class Message final : public fbl::DoublyLinkedListable<Message*> {
   };
 };
 
-using MessageQueue = fbl::DoublyLinkedList<Message*>;
-
 #endif  // SRC_DEVICES_BLOCK_DRIVERS_CORE_MESSAGE_H_

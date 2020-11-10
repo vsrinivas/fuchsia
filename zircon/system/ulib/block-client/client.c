@@ -4,13 +4,13 @@
 
 #include <assert.h>
 #include <lib/sync/completion.h>
+#include <threads.h>
 #include <unistd.h>
 #include <zircon/compiler.h>
 #include <zircon/device/block.h>
 #include <zircon/syscalls.h>
 
 #include <block-client/client.h>
-#include <threads.h>
 
 // Writes on a FIFO, repeating the write later if the FIFO is full.
 static zx_status_t do_write(zx_handle_t fifo, block_fifo_request_t* request, size_t count) {
@@ -127,8 +127,7 @@ zx_status_t block_fifo_txn(fifo_client_t* client, block_fifo_request_t* requests
     requests[i].opcode = (requests[i].opcode & BLOCKIO_OP_MASK) | BLOCKIO_GROUP_ITEM;
   }
 
-  requests[0].opcode |= BLOCKIO_BARRIER_BEFORE;
-  requests[count - 1].opcode |= BLOCKIO_GROUP_LAST | BLOCKIO_BARRIER_AFTER;
+  requests[count - 1].opcode |= BLOCKIO_GROUP_LAST;
 
   if ((status = do_write(client->fifo, &requests[0], count)) != ZX_OK) {
     mtx_lock(&client->mutex);

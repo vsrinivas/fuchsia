@@ -28,5 +28,6 @@ zx_status_t Message::Create(fbl::RefPtr<IoBuffer> iobuf, Server* server, block_f
 void Message::Complete() {
   completer_(result(), req_);
   server_->TxnEnd();
+  server_ = nullptr;  // server_ can be destroyed after calling TxnEnd().
   iobuf_ = nullptr;
 }

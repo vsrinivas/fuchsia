@@ -34,13 +34,6 @@ namespace {
 // This signal is set on the FIFO when the server should be instructed
 // to terminate.
 constexpr zx_signals_t kSignalFifoTerminate = ZX_USER_SIGNAL_0;
-// This signal is set on the FIFO when, after the thread enqueueing operations
-// has encountered a barrier, all prior operations have completed.
-constexpr zx_signals_t kSignalFifoOpsComplete = ZX_USER_SIGNAL_1;
-// Signalled on the fifo when it has finished terminating.
-// (If we need to free up user signals, this could easily be transformed
-// into a completion object).
-constexpr zx_signals_t kSignalFifoTerminated = ZX_USER_SIGNAL_2;
 
 void BlockCompleteCb(void* cookie, zx_status_t status, block_op_t* bop) {
   ZX_DEBUG_ASSERT(bop != nullptr);
@@ -62,40 +55,14 @@ uint32_t OpcodeToCommand(uint32_t opcode) {
   return opcode & shared;
 }
 
-void InQueueAdd(zx_handle_t vmo, uint64_t length, uint64_t vmo_offset, uint64_t dev_offset,
-                Message* msg, MessageQueue* queue) {
-  block_op_t* bop = msg->Op();
-  bop->rw.length = (uint32_t)length;
-  bop->rw.vmo = vmo;
-  bop->rw.offset_dev = dev_offset;
-  bop->rw.offset_vmo = vmo_offset;
-  queue->push_back(msg);
-}
-
 }  // namespace
 
-void Server::BarrierComplete() {
-  // This is the only location that unsets the OpsComplete
-  // signal. We'll never "miss" a signal, because we process
-  // the queue AFTER unsetting it.
-  barrier_in_progress_.store(false);
-  fifo_.signal(kSignalFifoOpsComplete, 0);
-  InQueueDrainer();
-}
-
-void Server::TerminateQueue() {
-  InQueueDrainer();
-  while (true) {
-    if (pending_count_.load() == 0 && in_queue_.is_empty()) {
-      return;
-    }
-    zx_signals_t signals = kSignalFifoOpsComplete;
-    zx_signals_t seen = 0;
-    fifo_.wait_one(signals, zx::deadline_after(zx::msec(10)), &seen);
-    if (seen & kSignalFifoOpsComplete) {
-      BarrierComplete();
-    }
+void Server::Enqueue(std::unique_ptr<Message> message) {
+  {
+    fbl::AutoLock server_lock(&server_lock_);
+    ++pending_count_;
   }
+  bp_->Queue(message->Op(), BlockCompleteCb, message.release());
 }
 
 void Server::SendResponse(const block_fifo_response_t& response) {
@@ -140,13 +107,6 @@ void Server::FinishTransaction(zx_status_t status, reqid_t reqid, groupid_t grou
 }
 
 zx_status_t Server::Read(block_fifo_request_t* requests, size_t* count) {
-  auto cleanup = fbl::MakeAutoCall([this]() {
-    TerminateQueue();
-    ZX_ASSERT(pending_count_.load() == 0);
-    ZX_ASSERT(in_queue_.is_empty());
-    fifo_.signal(0, kSignalFifoTerminated);
-  });
-
   // Keep trying to read messages from the fifo until we have a reason to
   // terminate
   zx_status_t status;
@@ -156,14 +116,9 @@ zx_status_t Server::Read(block_fifo_request_t* requests, size_t* count) {
     zx_signals_t seen;
     switch (status) {
       case ZX_ERR_SHOULD_WAIT:
-        signals =
-            ZX_FIFO_READABLE | ZX_FIFO_PEER_CLOSED | kSignalFifoTerminate | kSignalFifoOpsComplete;
+        signals = ZX_FIFO_READABLE | ZX_FIFO_PEER_CLOSED | kSignalFifoTerminate;
         if ((status = fifo_.wait_one(signals, zx::time::infinite(), &seen)) != ZX_OK) {
           return status;
-        }
-        if (seen & kSignalFifoOpsComplete) {
-          BarrierComplete();
-          continue;
         }
         if ((seen & ZX_FIFO_PEER_CLOSED) || (seen & kSignalFifoTerminate)) {
           return ZX_ERR_PEER_CLOSED;
@@ -171,7 +126,6 @@ zx_status_t Server::Read(block_fifo_request_t* requests, size_t* count) {
         // Try reading again...
         break;
       case ZX_OK:
-        cleanup.cancel();
         return ZX_OK;
       default:
         return status;
@@ -216,50 +170,11 @@ zx_status_t Server::AttachVmo(zx::vmo vmo, vmoid_t* out) {
 }
 
 void Server::TxnEnd() {
-  size_t old_count = pending_count_.fetch_sub(1);
-  ZX_ASSERT(old_count > 0);
-  if ((old_count == 1) && barrier_in_progress_.load()) {
-    // Since we're avoiding locking, and there is a gap between
-    // "pending count decremented" and "FIFO signalled", it's possible
-    // that we'll receive spurious wakeup requests.
-    fifo_.signal(0, kSignalFifoOpsComplete);
-  }
-}
-
-void Server::InQueueDrainer() {
-  while (true) {
-    if (in_queue_.is_empty()) {
-      return;
-    }
-
-    auto msg = in_queue_.begin();
-    block_op_t* op = msg->Op();
-    if (deferred_barrier_before_) {
-      op->command |= BLOCK_FL_BARRIER_BEFORE;
-      deferred_barrier_before_ = false;
-    }
-
-    if (op->command & BLOCK_FL_BARRIER_BEFORE) {
-      barrier_in_progress_.store(true);
-      if (pending_count_.load() > 0) {
-        return;
-      }
-      // Since we're the only thread that could add to pending
-      // count, we reliably know it has terminated.
-      barrier_in_progress_.store(false);
-    }
-    if (op->command & BLOCK_FL_BARRIER_AFTER) {
-      deferred_barrier_before_ = true;
-    }
-    pending_count_.fetch_add(1);
-    in_queue_.pop_front();
-    // Underlying block device drivers should not see block barriers
-    // which are already handled by the block midlayer.
-    //
-    // This may be altered in the future if block devices
-    // are capable of implementing hardware barriers.
-    op->command &= ~(BLOCK_FL_BARRIER_BEFORE | BLOCK_FL_BARRIER_AFTER);
-    bp_->Queue(op, BlockCompleteCb, &*msg);
+  fbl::AutoLock lock(&server_lock_);
+  // N.B. If pending_count_ hits zero, after dropping the lock the instance of Server can be
+  // destroyed.
+  if (--pending_count_ == 0) {
+    condition_.Broadcast();
   }
 }
 
@@ -298,16 +213,17 @@ zx_status_t Server::Create(ddk::BlockProtocolClient* bp,
 }
 
 zx_status_t Server::ProcessReadWriteRequest(block_fifo_request_t* request) {
-  // TODO(fxbug.dev/31470): Reduce the usage of this lock (only used to protect
-  // IoBuffers).
-  fbl::AutoLock server_lock(&server_lock_);
-
-  auto iobuf = tree_.find(request->vmoid);
-  if (!iobuf.IsValid()) {
-    // Operation which is not accessing a valid vmo.
-    zxlogf(WARNING, "ProcessReadWriteRequest: vmoid %d is not valid, failing request",
-           request->vmoid);
-    return ZX_ERR_IO;
+  fbl::RefPtr<IoBuffer> iobuf;
+  {
+    fbl::AutoLock lock(&server_lock_);
+    auto iter = tree_.find(request->vmoid);
+    if (!iter.IsValid()) {
+      // Operation which is not accessing a valid vmo.
+      zxlogf(WARNING, "ProcessReadWriteRequest: vmoid %d is not valid, failing request",
+             request->vmoid);
+      return ZX_ERR_IO;
+    }
+    iobuf = iter.CopyPointer();
   }
 
   if (!request->length) {
@@ -322,8 +238,6 @@ zx_status_t Server::ProcessReadWriteRequest(block_fifo_request_t* request) {
   if (status != ZX_OK) {
     return status;
   }
-
-  std::unique_ptr<Message> msg;
 
   const uint32_t max_xfer = info_.max_transfer_size / bsz;
   if (max_xfer != 0 && max_xfer < request->length) {
@@ -348,10 +262,6 @@ zx_status_t Server::ProcessReadWriteRequest(block_fifo_request_t* request) {
       transaction_group = groups_[request->group].get();
     }
 
-    // Once all of these smaller messages are created, splice
-    // them into the input queue together.
-    MessageQueue sub_txns_queue;
-
     uint32_t sub_txn_idx = 0;
 
     auto completer = [transaction_group](zx_status_t status, block_fifo_request_t& req) {
@@ -359,23 +269,24 @@ zx_status_t Server::ProcessReadWriteRequest(block_fifo_request_t* request) {
     };
     while (sub_txn_idx != sub_txns) {
       // We'll be using a new BlockMsg for each sub-component.
-      if (msg == nullptr) {
-        status =
-            Message::Create(iobuf.CopyPointer(), this, request, block_op_size_, completer, &msg);
-        if (status != ZX_OK) {
-          return status;
-        }
-        msg->Op()->command = OpcodeToCommand(request->opcode);
+      std::unique_ptr<Message> msg;
+      if (zx_status_t status =
+              Message::Create(iobuf, this, request, block_op_size_, completer, &msg);
+          status != ZX_OK) {
+        return status;
       }
 
       uint32_t length = std::min(len_remaining, max_xfer);
       len_remaining -= length;
 
-      // Only set the "AFTER" barrier on the last sub-txn.
-      msg->Op()->command &= ~(sub_txn_idx == sub_txns - 1 ? 0 : BLOCK_FL_BARRIER_AFTER);
-      // Only set the "BEFORE" barrier on the first sub-txn.
-      msg->Op()->command &= ~(sub_txn_idx == 0 ? 0 : BLOCK_FL_BARRIER_BEFORE);
-      InQueueAdd(iobuf->vmo(), length, vmo_offset, dev_offset, msg.release(), &sub_txns_queue);
+      *msg->Op() = block_op{.rw = {
+                                .command = OpcodeToCommand(request->opcode),
+                                .vmo = iobuf->vmo(),
+                                .length = length,
+                                .offset_dev = dev_offset,
+                                .offset_vmo = vmo_offset,
+                            }};
+      Enqueue(std::move(msg));
       vmo_offset += length;
       dev_offset += length;
       sub_txn_idx++;
@@ -386,28 +297,31 @@ zx_status_t Server::ProcessReadWriteRequest(block_fifo_request_t* request) {
       // Release the oneshot MessageGroup: it will free itself once all messages have been handled.
       oneshot_group.release();
     }
-    in_queue_.splice(in_queue_.end(), sub_txns_queue);
   } else {
     auto completer = [this](zx_status_t status, block_fifo_request_t& req) {
       FinishTransaction(status, req.reqid, req.group);
     };
-    status = Message::Create(iobuf.CopyPointer(), this, request, block_op_size_,
-                             std::move(completer), &msg);
-    if (status != ZX_OK) {
+    std::unique_ptr<Message> msg;
+    if (zx_status_t status =
+            Message::Create(iobuf, this, request, block_op_size_, std::move(completer), &msg);
+        status != ZX_OK) {
       return status;
     }
 
-    msg->Op()->command = OpcodeToCommand(request->opcode);
-
-    InQueueAdd(iobuf->vmo(), request->length, request->vmo_offset, request->dev_offset,
-               msg.release(), &in_queue_);
+    *msg->Op() = block_op{.rw = {
+                              .command = OpcodeToCommand(request->opcode),
+                              .vmo = iobuf->vmo(),
+                              .length = request->length,
+                              .offset_dev = request->dev_offset,
+                              .offset_vmo = request->vmo_offset,
+                          }};
+    Enqueue(std::move(msg));
   }
   return ZX_OK;
 }
 
 zx_status_t Server::ProcessCloseVmoRequest(block_fifo_request_t* request) {
-  fbl::AutoLock server_lock(&server_lock_);
-
+  fbl::AutoLock lock(&server_lock_);
   auto iobuf = tree_.find(request->vmoid);
   if (!iobuf.IsValid()) {
     // Operation which is not accessing a valid vmo
@@ -433,7 +347,7 @@ zx_status_t Server::ProcessFlushRequest(block_fifo_request_t* request) {
     return status;
   }
   msg->Op()->command = OpcodeToCommand(request->opcode);
-  InQueueAdd(ZX_HANDLE_INVALID, 0, 0, 0, msg.release(), &in_queue_);
+  Enqueue(std::move(msg));
   return ZX_OK;
 }
 
@@ -454,32 +368,35 @@ zx_status_t Server::ProcessTrimRequest(block_fifo_request_t* request) {
   msg->Op()->command = OpcodeToCommand(request->opcode);
   msg->Op()->trim.length = request->length;
   msg->Op()->trim.offset_dev = request->dev_offset;
-  in_queue_.push_back(msg.release());
+  Enqueue(std::move(msg));
   return ZX_OK;
 }
 
 void Server::ProcessRequest(block_fifo_request_t* request) {
-  zx_status_t status;
+  if (request->opcode & (BLOCKIO_BARRIER_BEFORE | BLOCKIO_BARRIER_AFTER)) {
+    zxlogf(WARNING, "Barriers not supported");
+    FinishTransaction(ZX_ERR_NOT_SUPPORTED, request->reqid, request->group);
+    return;
+  }
   switch (request->opcode & BLOCKIO_OP_MASK) {
     case BLOCKIO_READ:
     case BLOCKIO_WRITE:
-      if ((status = ProcessReadWriteRequest(request)) != ZX_OK) {
+      if (zx_status_t status = ProcessReadWriteRequest(request); status != ZX_OK) {
         FinishTransaction(status, request->reqid, request->group);
       }
       break;
     case BLOCKIO_FLUSH:
-      if ((status = ProcessFlushRequest(request)) != ZX_OK) {
+      if (zx_status_t status = ProcessFlushRequest(request); status != ZX_OK) {
         FinishTransaction(status, request->reqid, request->group);
       }
       break;
     case BLOCKIO_TRIM:
-      if ((status = ProcessTrimRequest(request)) != ZX_OK) {
+      if (zx_status_t status = ProcessTrimRequest(request); status != ZX_OK) {
         FinishTransaction(status, request->reqid, request->group);
       }
       break;
     case BLOCKIO_CLOSE_VMO:
-      status = ProcessCloseVmoRequest(request);
-      FinishTransaction(status, request->reqid, request->group);
+      FinishTransaction(ProcessCloseVmoRequest(request), request->reqid, request->group);
       break;
     default:
       zxlogf(WARNING, "Unrecognized block server operation: %d", request->opcode);
@@ -492,10 +409,6 @@ zx_status_t Server::Serve() {
   block_fifo_request_t requests[BLOCK_FIFO_MAX_DEPTH];
   size_t count;
   while (true) {
-    // Attempt to drain as much of the input queue as possible
-    // before (potentially) blocking in Read.
-    InQueueDrainer();
-
     if ((status = Read(requests, &count) != ZX_OK)) {
       return status;
     }
@@ -526,7 +439,6 @@ zx_status_t Server::Serve() {
           FinishTransaction(status, reqid, group);
           continue;
         }
-
       } else {
         requests[i].group = kNoGroup;
       }
@@ -537,28 +449,18 @@ zx_status_t Server::Serve() {
 }
 
 Server::Server(ddk::BlockProtocolClient* bp)
-    : bp_(bp),
-      block_op_size_(0),
-      pending_count_(0),
-      barrier_in_progress_(false),
-      last_id_(BLOCK_VMOID_INVALID + 1) {
+    : bp_(bp), block_op_size_(0), pending_count_(0), last_id_(BLOCK_VMOID_INVALID + 1) {
   size_t block_op_size;
   bp->Query(&info_, &block_op_size);
 }
 
 Server::~Server() {
-  ZX_ASSERT(pending_count_.load() == 0);
-  ZX_ASSERT(in_queue_.is_empty());
+  fbl::AutoLock lock(&server_lock_);
+  while (pending_count_ > 0)
+    condition_.Wait(&server_lock_);
 }
 
-void Server::Shutdown() {
-  // Identify that the server should stop reading and return,
-  // implicitly closing the fifo.
-  fifo_.signal(0, kSignalFifoTerminate);
-  zx_signals_t signals = kSignalFifoTerminated;
-  zx_signals_t seen;
-  fifo_.wait_one(signals, zx::time::infinite(), &seen);
-}
+void Server::Shutdown() { fifo_.signal(0, kSignalFifoTerminate); }
 
 bool Server::WillTerminate() const {
   zx_signals_t signals;

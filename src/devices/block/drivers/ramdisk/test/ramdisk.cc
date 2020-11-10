@@ -1098,7 +1098,7 @@ TEST(RamdiskTests, RamdiskTestFifoLargeOpsCountShutdown) {
   for (size_t b = 0; b < kNumOps; b++) {
     requests[b].group = group;
     requests[b].vmoid = obj.vmoid.id;
-    requests[b].opcode = BLOCKIO_WRITE | BLOCKIO_BARRIER_BEFORE | BLOCKIO_GROUP_ITEM;
+    requests[b].opcode = BLOCKIO_WRITE | BLOCKIO_GROUP_ITEM;
     requests[b].length = 1;
     requests[b].vmo_offset = 0;
     requests[b].dev_offset = b;

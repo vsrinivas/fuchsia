@@ -21,6 +21,7 @@
 #include <ddk/protocol/block.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/block.h>
+#include <fbl/condition_variable.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/intrusive_wavl_tree.h>
 #include <fbl/mutex.h>
@@ -37,18 +38,14 @@ class Server {
                             fzl::fifo<block_fifo_request_t, block_fifo_response_t>* fifo_out,
                             std::unique_ptr<Server>* out);
 
+  // This will block until all outstanding messages have been processed.
   ~Server();
 
   // Starts the Server using the current thread
   zx_status_t Serve() TA_EXCL(server_lock_);
-  zx_status_t AttachVmo(zx::vmo vmo, vmoid_t* out) TA_EXCL(server_lock_);
+  zx_status_t AttachVmo(zx::vmo vmo, vmoid_t* out) TA_EXCL(server_lock_) TA_EXCL(server_lock_);
 
-  // Updates the total number of pending txns, possibly signals
-  // the queue-draining thread to wake up if they are waiting
-  // for all pending operations to complete.
-  //
-  // Should only be called for transactions which have been placed
-  // on (and removed from) in_queue_.
+  // Updates the total number of pending requests.
   void TxnEnd();
 
   // Wrapper around "SendResponse", as a convenience
@@ -58,6 +55,8 @@ class Server {
   // Send the given response to the client.
   void SendResponse(const block_fifo_response_t& response);
 
+  // Initiates a shutdown of the server.  When this finishes, the server might still be running, but
+  // it should terminate shortly.
   void Shutdown();
 
   // Returns true if the server is about to terminate.
@@ -69,40 +68,29 @@ class Server {
 
   // Helper for processing a single message read from the FIFO.
   void ProcessRequest(block_fifo_request_t* request);
-  zx_status_t ProcessReadWriteRequest(block_fifo_request_t* request) TA_EXCL(server_lock_);
-  zx_status_t ProcessCloseVmoRequest(block_fifo_request_t* request) TA_EXCL(server_lock_);
+  zx_status_t ProcessReadWriteRequest(block_fifo_request_t* request);
+  zx_status_t ProcessCloseVmoRequest(block_fifo_request_t* request);
   zx_status_t ProcessFlushRequest(block_fifo_request_t* request);
   zx_status_t ProcessTrimRequest(block_fifo_request_t* request);
 
-  // Helper for the server to react to a signal that a barrier
-  // operation has completed. Unsets the local "waiting for barrier"
-  // signal, and enqueues any further operations that might be
-  // pending.
-  void BarrierComplete();
-
-  // Functions that read from the fifo and invoke the queue drainer.
-  // Should not be invoked concurrently.
   zx_status_t Read(block_fifo_request_t* requests, size_t* count);
-  void TerminateQueue();
-
-  // Attempts to enqueue all operations on the |in_queue_|. Stops
-  // when either the queue is empty, or a BARRIER_BEFORE is reached and
-  // operations are in-flight.
-  void InQueueDrainer();
 
   zx_status_t FindVmoIdLocked(vmoid_t* out) TA_REQ(server_lock_);
+
+  // Sends the request embedded in the message down to the lower layers.
+  void Enqueue(std::unique_ptr<Message> message) TA_EXCL(server_lock_);
 
   fzl::fifo<block_fifo_response_t, block_fifo_request_t> fifo_;
   block_info_t info_;
   ddk::BlockProtocolClient* bp_;
   size_t block_op_size_;
 
-  // BARRIER_AFTER is implemented by sticking "BARRIER_BEFORE" on the
-  // next operation that arrives.
-  bool deferred_barrier_before_ = false;
-  MessageQueue in_queue_;
-  std::atomic<size_t> pending_count_;
-  std::atomic<bool> barrier_in_progress_;
+  // Used to wait for pending_count_ to drop to zero at shutdown time.
+  fbl::ConditionVariable condition_;
+
+  // The number of outstanding requests that have been sent down the stack.
+  size_t pending_count_ TA_GUARDED(server_lock_);
+
   std::unique_ptr<MessageGroup> groups_[MAX_TXN_GROUP_COUNT];
 
   fbl::Mutex server_lock_;

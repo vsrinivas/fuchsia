@@ -253,61 +253,6 @@ TEST(FakeBlockDeviceTest, FifoTransactionUnsupportedTrim) {
   ASSERT_GE(stats.trim.failure.total_time_spent, 0);
 }
 
-TEST(FakeBlockDeviceTest, ReadWriteWithBarrier) {
-  auto fake_device = std::make_unique<FakeBlockDevice>(kBlockCountDefault, kBlockSizeDefault);
-  BlockDevice* device = fake_device.get();
-
-  const size_t kVmoBlocks = 4;
-  zx::vmo vmo;
-  storage::OwnedVmoid vmoid;
-  ASSERT_NO_FAILURES(CreateAndRegisterVmo(device, kVmoBlocks, &vmo, &vmoid));
-
-  // Write some data to the device.
-  char src[kVmoBlocks * kBlockSizeDefault];
-  memset(src, 'a', sizeof(src));
-  ASSERT_OK(vmo.write(src, 0, sizeof(src)));
-  block_fifo_request_t request;
-  request.opcode = BLOCKIO_WRITE | BLOCKIO_BARRIER_BEFORE;
-  request.vmoid = vmoid.get();
-  request.length = kVmoBlocks;
-  request.vmo_offset = 0;
-  request.dev_offset = 0;
-  ASSERT_OK(device->FifoTransaction(&request, 1));
-
-  fuchsia_hardware_block_BlockStats stats;
-  fake_device->GetStats(false, &stats);
-  ASSERT_EQ(1, stats.write.success.total_calls);
-  ASSERT_EQ(kVmoBlocks * kBlockSizeDefault, stats.write.success.bytes_transferred);
-  ASSERT_GE(stats.write.success.total_time_spent, 0);
-  ASSERT_EQ(1, stats.barrier_before.success.total_calls);
-  ASSERT_EQ(kVmoBlocks * kBlockSizeDefault, stats.barrier_before.success.bytes_transferred);
-  ASSERT_GE(stats.barrier_before.success.total_time_spent, 0);
-
-  // Clear out the registered VMO.
-  char dst[kVmoBlocks * kBlockSizeDefault];
-  static_assert(sizeof(src) == sizeof(dst), "Mismatched input/output buffer size");
-  memset(dst, 0, sizeof(dst));
-  ASSERT_OK(vmo.write(dst, 0, sizeof(dst)));
-
-  // Read data from the fake back into the registered VMO.
-  request.opcode = BLOCKIO_READ | BLOCKIO_BARRIER_AFTER;
-  request.vmoid = vmoid.get();
-  request.length = kVmoBlocks;
-  request.vmo_offset = 0;
-  request.dev_offset = 0;
-  ASSERT_OK(device->FifoTransaction(&request, 1));
-  ASSERT_OK(vmo.read(dst, 0, sizeof(dst)));
-  EXPECT_BYTES_EQ(src, dst, sizeof(src));
-
-  fake_device->GetStats(false, &stats);
-  ASSERT_EQ(1, stats.read.success.total_calls);
-  ASSERT_EQ(kVmoBlocks * kBlockSizeDefault, stats.read.success.bytes_transferred);
-  ASSERT_GE(stats.read.success.total_time_spent, 0);
-  ASSERT_EQ(1, stats.barrier_after.success.total_calls);
-  ASSERT_EQ(kVmoBlocks * kBlockSizeDefault, stats.barrier_after.success.bytes_transferred);
-  ASSERT_GE(stats.barrier_after.success.total_time_spent, 0);
-}
-
 TEST(FakeBlockDeviceTest, ClearStats) {
   auto fake_device = std::make_unique<FakeBlockDevice>(kBlockCountDefault, kBlockSizeDefault);
   BlockDevice* device = fake_device.get();
