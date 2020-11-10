@@ -5,7 +5,9 @@
 use {
     anyhow::{format_err, Error},
     argh::FromArgs,
-    fidl_fuchsia_session::{LauncherMarker, LauncherProxy, SessionConfiguration},
+    fidl_fuchsia_session::{
+        LaunchConfiguration, LauncherMarker, LauncherProxy, RestarterMarker, RestarterProxy,
+    },
     fuchsia_async as fasync,
     fuchsia_component::client::connect_to_service,
 };
@@ -41,17 +43,18 @@ pub struct RestartCommand {}
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
     let Args { command } = argh::from_env();
-    let launcher = connect_to_service::<LauncherMarker>()?;
 
     match command {
         Command::Launch(LaunchCommand { session_url }) => {
+            let launcher = connect_to_service::<LauncherMarker>()?;
             match launch_session(&session_url, launcher).await {
                 Ok(_) => println!("Launched session: {:?}", session_url),
                 Err(err) => println!("Failed to launch session: {:?}, {:?}", session_url, err),
             };
         }
         Command::Restart(RestartCommand {}) => {
-            match restart_session(launcher).await {
+            let restarter = connect_to_service::<RestarterMarker>()?;
+            match restart_session(restarter).await {
                 Ok(_) => println!("Restarted the session."),
                 Err(err) => println!("Failed to restart session: {:?}", err),
             };
@@ -71,26 +74,26 @@ async fn main() -> Result<(), Error> {
 /// Returns an error if there is an issue launching the session.
 async fn launch_session(session_url: &str, launcher: LauncherProxy) -> Result<(), Error> {
     let result = launcher
-        .launch_session(SessionConfiguration {
+        .launch(LaunchConfiguration {
             session_url: Some(session_url.to_string()),
-            ..SessionConfiguration::empty()
+            ..LaunchConfiguration::empty()
         })
         .await?;
-    result.map_err(|err: fidl_fuchsia_session::LaunchSessionError| format_err!("{:?}", err))?;
+    result.map_err(|err: fidl_fuchsia_session::LaunchError| format_err!("{:?}", err))?;
     Ok(())
 }
 
 /// Restarts a session.
 ///
 /// # Parameters
-/// - `launcher`: The launcher proxy to use to launch the session.
+/// - `restarter`: The Restarter proxy to use to restart the session.
 ///
 /// # Errors
 /// Returns an error if there is either an issue launching the session or
 /// there isn't a previous session to be restarted.
-async fn restart_session(launcher: LauncherProxy) -> Result<(), Error> {
-    let result = launcher.restart_session().await?;
-    result.map_err(|err: fidl_fuchsia_session::LaunchSessionError| format_err!("{:?}", err))?;
+async fn restart_session(restarter: RestarterProxy) -> Result<(), Error> {
+    let result = restarter.restart().await?;
+    result.map_err(|err: fidl_fuchsia_session::RestartError| format_err!("{:?}", err))?;
     Ok(())
 }
 
@@ -99,7 +102,7 @@ mod tests {
     use {
         super::*,
         fidl::endpoints::create_proxy_and_stream,
-        fidl_fuchsia_session::{LaunchSessionError, LauncherMarker, LauncherRequest},
+        fidl_fuchsia_session::{LaunchError, LauncherMarker, RestartError, RestarterMarker},
         // fidl_fuchsia.sys2::EventType, TODO(fxbug.dev/47730): re-enable the tests.
         fuchsia_async as fasync,
         futures::TryStreamExt,
@@ -115,8 +118,7 @@ mod tests {
 
         fasync::Task::spawn(async move {
             if let Some(launch_request) = launcher_server.try_next().await.unwrap() {
-                if let LauncherRequest::LaunchSession { configuration, responder } = launch_request
-                {
+                if let Some((configuration, responder)) = launch_request.into_launch() {
                     assert_eq!(configuration.session_url, Some(session_url.to_string()));
                     let _ = responder.send(&mut Ok(()));
                 } else {
@@ -132,7 +134,7 @@ mod tests {
     }
 
     /// Tests that the session_control tool returns an error on a call to LaunchSession when there
-    ///  is no SessionConfiguration provided.
+    /// is no LaunchConfiguration provided.
     #[fasync::run_singlethreaded(test)]
     async fn test_launch_session_error() {
         let (launcher, mut launcher_server) =
@@ -141,10 +143,8 @@ mod tests {
 
         fasync::Task::spawn(async move {
             if let Some(launch_request) = launcher_server.try_next().await.unwrap() {
-                if let LauncherRequest::LaunchSession { configuration: _, responder } =
-                    launch_request
-                {
-                    let _ = responder.send(&mut Err(LaunchSessionError::Failed));
+                if let Some((_, responder)) = launch_request.into_launch() {
+                    let _ = responder.send(&mut Err(LaunchError::NotFound));
                 } else {
                     assert!(false);
                 }
@@ -156,15 +156,16 @@ mod tests {
 
         assert!(launch_session(&session_url, launcher).await.is_err());
     }
+
     /// Tests that restart_session makes the appropriate calls to fuchsia.session.Launcher.
     #[fasync::run_singlethreaded(test)]
     async fn test_restart_session() {
-        let (launcher, mut launcher_server) =
-            create_proxy_and_stream::<LauncherMarker>().expect("Failed to create Launcher FIDL.");
+        let (restarter, mut restarter_server) =
+            create_proxy_and_stream::<RestarterMarker>().expect("Failed to create Restarter FIDL.");
 
         fasync::Task::spawn(async move {
-            if let Some(launch_request) = launcher_server.try_next().await.unwrap() {
-                if let LauncherRequest::RestartSession { responder } = launch_request {
+            if let Some(restarter_request) = restarter_server.try_next().await.unwrap() {
+                if let Some(responder) = restarter_request.into_restart() {
                     let _ = responder.send(&mut Ok(()));
                 } else {
                     assert!(false);
@@ -175,19 +176,19 @@ mod tests {
         })
         .detach();
 
-        assert!(restart_session(launcher).await.is_ok());
+        assert!(restart_session(restarter).await.is_ok());
     }
 
-    /// Tests that restart_session returns an error when an error is returned from fuchsia.sys.Launcher.
+    /// Tests that restart_session returns an error when an error is returned from fuchsia.session.Restarter.
     #[fasync::run_singlethreaded(test)]
     async fn test_restart_session_error() {
-        let (launcher, mut launcher_server) =
-            create_proxy_and_stream::<LauncherMarker>().expect("Failed to create Launcher FIDL.");
+        let (restarter, mut restarter_server) =
+            create_proxy_and_stream::<RestarterMarker>().expect("Failed to create Restarter FIDL.");
 
         fasync::Task::spawn(async move {
-            if let Some(launch_request) = launcher_server.try_next().await.unwrap() {
-                if let LauncherRequest::RestartSession { responder } = launch_request {
-                    let _ = responder.send(&mut Err(LaunchSessionError::NotFound));
+            if let Some(restarter_request) = restarter_server.try_next().await.unwrap() {
+                if let Some(responder) = restarter_request.into_restart() {
+                    let _ = responder.send(&mut Err(RestartError::NotFound));
                 } else {
                     assert!(false);
                 }
@@ -197,7 +198,7 @@ mod tests {
         })
         .detach();
 
-        assert!(restart_session(launcher).await.is_err());
+        assert!(restart_session(restarter).await.is_err());
     }
 
     // TODO(fxbug.dev/47730): re-enable these tests.

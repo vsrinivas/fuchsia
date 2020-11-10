@@ -3,21 +3,21 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::Error,
-    fuchsia_async as fasync, fuchsia_zircon as zx,
-    session_manager_lib::{service_management, startup},
+    anyhow::Error, fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
+    fuchsia_component::client::connect_to_service,
+    session_manager_lib::session_manager::SessionManager,
 };
 
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
     fuchsia_syslog::init_with_tags(&["session_manager"]).expect("Failed to initialize logger.");
 
-    let (mut session_url, input_injection_svc_channel) = match startup::get_session_url() {
-        Some(session_url) => (session_url.clone(), startup::launch_session(&session_url).await?),
-        None => (String::new(), zx::Channel::from(zx::Handle::invalid())),
-    };
+    let realm = connect_to_service::<fsys::RealmMarker>()?;
 
-    // Start serving the services exposed by session manager.
-    service_management::expose_services(&mut session_url, input_injection_svc_channel).await?;
+    // Start the startup session, if any, and serve services exposed by session manager.
+    let mut session_manager = SessionManager::new(realm);
+    session_manager.launch_startup_session().await?;
+    session_manager.expose_services().await?;
+
     Ok(())
 }

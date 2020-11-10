@@ -6,7 +6,6 @@ use {
     crate::cobalt,
     argh::FromArgs,
     fidl_fuchsia_component as fcomponent, fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
-    fuchsia_component::client::connect_to_service,
     fuchsia_zircon as zx, realm_management,
     serde::{Deserialize, Serialize},
     serde_json,
@@ -32,9 +31,6 @@ pub struct SessionManagerConfigs {
 /// Errors returned by calls startup functions.
 #[derive(Debug, Error, Clone, PartialEq)]
 pub enum StartupError {
-    #[error("Could not connect to Realm.")]
-    RealmConnection,
-
     #[error("Existing session not destroyed at \"{}/{}\": {:?}", collection, name, err)]
     NotDestroyed { name: String, collection: String, err: fcomponent::Error },
 
@@ -83,15 +79,18 @@ pub fn get_session_url() -> Option<String> {
 ///
 /// Any existing session child will be destroyed prior to launching the new session.
 ///
+/// Returns a channel to the session component's `exposed_dir` directory, or an error.
+///
 /// # Parameters
 /// - `session_url`: The URL of the session to launch.
+/// - `realm`: The realm in which to launch the session.
 ///
 /// # Errors
 /// If there was a problem creating or binding to the session component instance.
-pub async fn launch_session(session_url: &str) -> Result<zx::Channel, StartupError> {
-    let realm =
-        connect_to_service::<fsys::RealmMarker>().map_err(|_| StartupError::RealmConnection)?;
-
+pub async fn launch_session(
+    session_url: &str,
+    realm: &fsys::RealmProxy,
+) -> Result<zx::Channel, StartupError> {
     let start_time = zx::Time::get_monotonic();
     let exposed_dir = set_session(&session_url, realm).await?;
     let end_time = zx::Time::get_monotonic();
@@ -115,6 +114,8 @@ pub async fn launch_session(session_url: &str) -> Result<zx::Channel, StartupErr
 /// If an existing session is running, the session's component instance will be destroyed prior to
 /// creating the new session, effectively replacing the session.
 ///
+/// Returns a channel to the session component's `exposed_dir` directory, or an error.
+///
 /// # Parameters
 /// - `session_url`: The URL of the session to instantiate.
 /// - `realm`: The realm in which to create the session.
@@ -123,9 +124,9 @@ pub async fn launch_session(session_url: &str) -> Result<zx::Channel, StartupErr
 /// Returns an error if any of the realm operations fail, or the realm is unavailable.
 async fn set_session(
     session_url: &str,
-    realm: fsys::RealmProxy,
+    realm: &fsys::RealmProxy,
 ) -> Result<zx::Channel, StartupError> {
-    realm_management::destroy_child_component(SESSION_NAME, SESSION_CHILD_COLLECTION, &realm)
+    realm_management::destroy_child_component(SESSION_NAME, SESSION_CHILD_COLLECTION, realm)
         .await
         .or_else(|err: fcomponent::Error| match err {
             // Since the intent is simply to clear out the existing session child if it exists,
@@ -145,7 +146,7 @@ async fn set_session(
         SESSION_NAME,
         &session_url,
         SESSION_CHILD_COLLECTION,
-        &realm,
+        realm,
     )
     .await
     .map_err(|err| StartupError::NotCreated {
@@ -155,7 +156,7 @@ async fn set_session(
         err,
     })?;
 
-    realm_management::bind_child_component(SESSION_NAME, SESSION_CHILD_COLLECTION, &realm)
+    realm_management::bind_child_component(SESSION_NAME, SESSION_CHILD_COLLECTION, realm)
         .await
         .map_err(|err| StartupError::NotBound {
             name: SESSION_NAME.to_string(),
@@ -236,7 +237,7 @@ mod tests {
             num_realm_requests += 1;
         });
 
-        assert!(set_session(session_url, realm).await.is_ok());
+        assert!(set_session(session_url, &realm).await.is_ok());
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -265,7 +266,7 @@ mod tests {
             };
         });
 
-        let exposed_dir_client_end = match set_session(session_url, realm).await {
+        let exposed_dir_client_end = match set_session(session_url, &realm).await {
             Ok(exposed_dir_client_end) => exposed_dir_client_end,
             Err(e) => panic!("Failed to set_session() {:?}", e),
         };

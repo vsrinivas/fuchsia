@@ -3,5 +3,5 @@
 // found in the LICENSE file.
 
 pub mod cobalt;
-pub mod service_management;
+pub mod session_manager;
 pub mod startup;

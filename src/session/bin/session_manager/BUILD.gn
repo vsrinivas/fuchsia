@@ -58,7 +58,7 @@ rustc_library("lib") {
   sources = [
     "src/cobalt.rs",
     "src/lib.rs",
-    "src/service_management.rs",
+    "src/session_manager.rs",
     "src/startup.rs",
   ]
 }
@@ -69,7 +69,9 @@ rustc_binary("bin") {
 
   deps = [
     ":lib",
+    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
     "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
     "//src/lib/syslog/rust:syslog",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:anyhow",

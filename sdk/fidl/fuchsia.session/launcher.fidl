@@ -14,30 +14,63 @@ protocol Launcher {
     /// If a session is currently running, the component associated with the running
     /// session will be destroyed.
     ///
-    /// + `configuration` describes the session to launch
-    /// * error `LaunchSessionError.NOT_FOUND` if `configuration.session_url` is
-    ///   missing or could not be resolved
-    /// * error `LaunchSessionError.FAILED` if the session failed to launch
-    LaunchSession(SessionConfiguration configuration) -> () error LaunchSessionError;
-
-    /// Restarts the current session.
-    ///
-    /// * error `LaunchSessionError.NOT_FOUND` if no session is currently running,
-    ///   or `LaunchSessionError.FAILED` if it failed to restart
-    RestartSession() -> () error LaunchSessionError;
+    /// + `configuration` describes the session to launch.
+    /// * error `LaunchError.INVALID_ARGS` if `configuration.session_url` is not set.
+    /// * error `LaunchError.NOT_FOUND` if `configuration.session_url`
+    ///   could not be resolved.
+    /// * error `LaunchError.DESTROY_COMPONENT_FAILED` if an existing session component
+    ///   could not be destroyed. The existing session remains running at this point.
+    /// * error `LaunchError.CREATE_COMPONENT_FAILED` if the session component
+    ///   could not be started. No session will be running at this point.
+    Launch(LaunchConfiguration configuration) -> () error LaunchError;
 };
 
-/// Errors returned when a session fails to launch or restart.
-enum LaunchSessionError {
-    /// There was an error resolving the session's component URL.
-    NOT_FOUND = 1;
+/// An error that occurs when launching a session.
+enum LaunchError {
+    /// The session's `LaunchConfiguration` is malformed.
+    INVALID_ARGS = 1;
 
-    /// The session failed to launch.
-    FAILED = 2;
+    /// There was an error resolving the session's component URL.
+    NOT_FOUND = 2;
+
+    /// The session component could not be destroyed.
+    DESTROY_COMPONENT_FAILED = 3;
+
+    /// The session component could not be created.
+    CREATE_COMPONENT_FAILED = 4;
+};
+
+/// A protocol used to restart the currently running session.
+[Discoverable]
+protocol Restarter {
+    /// Restarts the session.
+    ///
+    /// * error `RestartError.NOT_RUNNING` if there is no
+    ///   currently running session to restart.
+    /// * error `RestartError.DESTROY_COMPONENT_FAILED` if an existing session component
+    ///   could not be destroyed. The existing session remains running at this point.
+    /// * error `RestartError.CREATE_COMPONENT_FAILED` if the session component
+    ///   could not be started. No session will be running at this point.
+    Restart() -> () error RestartError;
+};
+
+/// An error that occurs when restarting a session.
+enum RestartError {
+    /// There is no currently running session to restart.
+    NOT_RUNNING = 1;
+
+    /// There was an error resolving the session's component URL.
+    NOT_FOUND = 2;
+
+    /// The session component could not be destroyed.
+    DESTROY_COMPONENT_FAILED = 3;
+
+    /// The session component could not be created.
+    CREATE_COMPONENT_FAILED = 4;
 };
 
 /// Describes a session to launch.
-table SessionConfiguration {
+table LaunchConfiguration {
     /// The component URL of the session.
     1: string:fuchsia.url.MAX_URL_LENGTH session_url;
 };
