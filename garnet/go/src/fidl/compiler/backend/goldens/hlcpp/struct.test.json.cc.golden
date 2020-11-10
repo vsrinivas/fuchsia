@@ -3,6 +3,10 @@
 #include <struct.test.json.h>
 
 #include "lib/fidl/cpp/internal/implementation.h"
+
+//
+// Domain objects definitions (i.e. "natural types" in unified bindings)
+//
 namespace fidl {
 namespace test {
 namespace struct_ {
@@ -67,5 +71,14 @@ zx_status_t BasicStruct::Clone(BasicStruct* _result) const {
   return ZX_OK;
 }
 }  // namespace struct_
+}  // namespace test
+}  // namespace fidl
+
+//
+// Proxies and stubs definitions
+//
+namespace fidl {
+namespace test {
+namespace struct_ {}  // namespace struct_
 }  // namespace test
 }  // namespace fidl

@@ -4,6 +4,9 @@
 
 #include "lib/fidl/cpp/internal/header.h"
 
+//
+// Domain objects declarations (i.e. "natural types" in unified bindings).
+//
 namespace fidl {
 namespace test {
 namespace arrays {
@@ -641,4 +644,13 @@ struct Equality<::fidl::test::arrays::StructLargeArray> {
     return true;
   }
 };
+}  // namespace fidl
+
+//
+// Proxies and stubs declarations
+//
+namespace fidl {
+namespace test {
+namespace arrays {}  // namespace arrays
+}  // namespace test
 }  // namespace fidl

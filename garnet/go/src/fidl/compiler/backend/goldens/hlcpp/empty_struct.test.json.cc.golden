@@ -3,6 +3,10 @@
 #include <empty_struct.test.json.h>
 
 #include "lib/fidl/cpp/internal/implementation.h"
+
+//
+// Domain objects definitions (i.e. "natural types" in unified bindings)
+//
 namespace fidl {
 namespace test {
 namespace emptystruct {
@@ -31,6 +35,17 @@ zx_status_t Empty::Clone(Empty* _result) const {
   if (_status != ZX_OK) return _status;
   return ZX_OK;
 }
+}  // namespace emptystruct
+}  // namespace test
+}  // namespace fidl
+
+//
+// Proxies and stubs definitions
+//
+namespace fidl {
+namespace test {
+namespace emptystruct {
+
 #ifdef __Fuchsia__
 namespace {
 

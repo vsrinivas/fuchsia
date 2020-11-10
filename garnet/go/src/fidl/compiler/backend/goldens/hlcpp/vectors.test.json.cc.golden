@@ -3,6 +3,10 @@
 #include <vectors.test.json.h>
 
 #include "lib/fidl/cpp/internal/implementation.h"
+
+//
+// Domain objects definitions (i.e. "natural types" in unified bindings)
+//
 namespace fidl {
 namespace test {
 namespace vectors {
@@ -42,5 +46,14 @@ zx_status_t ExampleUseOfVectors::Clone(ExampleUseOfVectors* _result) const {
   return ZX_OK;
 }
 }  // namespace vectors
+}  // namespace test
+}  // namespace fidl
+
+//
+// Proxies and stubs definitions
+//
+namespace fidl {
+namespace test {
+namespace vectors {}  // namespace vectors
 }  // namespace test
 }  // namespace fidl

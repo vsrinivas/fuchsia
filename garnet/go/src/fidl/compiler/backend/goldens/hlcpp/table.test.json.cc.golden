@@ -3,6 +3,10 @@
 #include <table.test.json.h>
 
 #include "lib/fidl/cpp/internal/implementation.h"
+
+//
+// Domain objects definitions (i.e. "natural types" in unified bindings)
+//
 namespace fidl {
 namespace test {
 namespace table {
@@ -976,5 +980,14 @@ zx_status_t EmptyTable::Clone(EmptyTable* result) const {
   return ::fidl::Clone(_unknown_data, &result->_unknown_data);
 }
 }  // namespace table
+}  // namespace test
+}  // namespace fidl
+
+//
+// Proxies and stubs definitions
+//
+namespace fidl {
+namespace test {
+namespace table {}  // namespace table
 }  // namespace test
 }  // namespace fidl

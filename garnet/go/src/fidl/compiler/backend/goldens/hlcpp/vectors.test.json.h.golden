@@ -4,6 +4,9 @@
 
 #include "lib/fidl/cpp/internal/header.h"
 
+//
+// Domain objects declarations (i.e. "natural types" in unified bindings).
+//
 namespace fidl {
 namespace test {
 namespace vectors {
@@ -77,4 +80,13 @@ struct Equality<::fidl::test::vectors::ExampleUseOfVectors> {
     return true;
   }
 };
+}  // namespace fidl
+
+//
+// Proxies and stubs declarations
+//
+namespace fidl {
+namespace test {
+namespace vectors {}  // namespace vectors
+}  // namespace test
 }  // namespace fidl

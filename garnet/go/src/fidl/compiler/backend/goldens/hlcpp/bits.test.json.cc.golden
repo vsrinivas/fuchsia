@@ -3,6 +3,10 @@
 #include <bits.test.json.h>
 
 #include "lib/fidl/cpp/internal/implementation.h"
+
+//
+// Domain objects definitions (i.e. "natural types" in unified bindings)
+//
 namespace fidl {
 namespace test {
 namespace bits {
@@ -17,5 +21,14 @@ constexpr const ::fidl::test::bits::FlexibleBits FlexibleBits::kMask =
 
 #endif  // (__cplusplus < 201703)
 }  // namespace bits
+}  // namespace test
+}  // namespace fidl
+
+//
+// Proxies and stubs definitions
+//
+namespace fidl {
+namespace test {
+namespace bits {}  // namespace bits
 }  // namespace test
 }  // namespace fidl

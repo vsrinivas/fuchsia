@@ -4,6 +4,9 @@
 
 #include "lib/fidl/cpp/internal/header.h"
 
+//
+// Domain objects declarations (i.e. "natural types" in unified bindings).
+//
 namespace fidl {
 namespace test {
 namespace doccomments {
@@ -12,28 +15,15 @@ class Table;
 class Struct;
 class StrictUnion;
 #ifdef __Fuchsia__
-
 /// interface comment #1
 ///
 /// interface comment #3
 class Interface;
-using InterfacePtr = ::fidl::InterfacePtr<Interface>;
-class Interface_Proxy;
-class Interface_Stub;
-class Interface_EventSender;
-class Interface_Sync;
-using InterfaceSyncPtr = ::fidl::SynchronousInterfacePtr<Interface>;
-class Interface_SyncProxy;
 using InterfaceHandle = ::fidl::InterfaceHandle<Interface>;
-namespace internal {
-constexpr uint64_t kInterface_Method_Ordinal = 0x5c492542705b4265lu;
-constexpr uint64_t kInterface_OnEvent_Ordinal = 0x37812b697096f6falu;
-
-}  // namespace internal
 #endif  // __Fuchsia__
 #ifdef __Fuchsia__
 class Service;
-#endif  // __Fuchsia
+#endif  // __Fuchsia__
 
 /// strict enum comment #1.
 ///
@@ -491,57 +481,9 @@ inline zx_status_t Clone(const ::fidl::test::doccomments::StrictUnion& value,
 using StrictUnionPtr = ::std::unique_ptr<StrictUnion>;
 #ifdef __Fuchsia__
 
-/// interface comment #1
-///
-/// interface comment #3
-class Interface {
- public:
-  using Proxy_ = Interface_Proxy;
-  using Stub_ = Interface_Stub;
-  using EventSender_ = Interface_EventSender;
-  using Sync_ = Interface_Sync;
-  virtual ~Interface();
-
-  /// method comment #1
-  ///
-  /// method comment #3
-  virtual void Method() = 0;
-  using OnEventCallback = fit::function<void()>;
-};
-
-class Interface_RequestDecoder {
- public:
-  Interface_RequestDecoder() = default;
-  virtual ~Interface_RequestDecoder() = default;
-  static const fidl_type_t* GetType(uint64_t ordinal, bool* out_needs_response);
-  zx_status_t Decode_(::fidl::Message request) {
-    bool needs_response;
-    const fidl_type_t* request_type =
-        GetType(request.ordinal(), &needs_response);
-    if (request_type == nullptr) {
-      return ZX_ERR_NOT_SUPPORTED;
-    }
-    const char* error_msg = nullptr;
-    zx_status_t status = request.Decode(request_type, &error_msg);
-    if (status != ZX_OK) {
-      FIDL_REPORT_DECODING_ERROR(request, request_type, error_msg);
-      return status;
-    }
-    ::fidl::Decoder request_decoder(std::move(request));
-    switch (request.ordinal()) {
-      case internal::kInterface_Method_Ordinal: {
-        Method();
-        break;
-      }
-      default: {
-        status = ZX_ERR_NOT_SUPPORTED;
-        break;
-      }
-    }
-    return status;
-  }
-  virtual void Method() = 0;
-};
+namespace _internal {
+extern "C" const fidl_type_t fidl_test_doccomments_InterfaceMethodRequestTable;
+}
 
 class Interface_RequestEncoder {
  public:
@@ -549,10 +491,8 @@ class Interface_RequestEncoder {
     fidl_trace(WillHLCPPEncode);
     _encoder->Alloc(16 - sizeof(fidl_message_header_t));
 
-    bool needs_response;  // unused
     fidl_trace(DidHLCPPEncode,
-               Interface_RequestDecoder::GetType(
-                   internal::kInterface_Method_Ordinal, &needs_response),
+               &_internal::fidl_test_doccomments_InterfaceMethodRequestTable,
                _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
                _encoder->CurrentHandleCount());
 
@@ -560,36 +500,9 @@ class Interface_RequestEncoder {
   }
 };
 
-class Interface_ResponseDecoder {
- public:
-  Interface_ResponseDecoder() = default;
-  virtual ~Interface_ResponseDecoder() = default;
-  static const fidl_type_t* GetType(uint64_t ordinal);
-  zx_status_t Decode_(::fidl::Message response) {
-    const fidl_type_t* response_type = GetType(response.ordinal());
-    if (response_type == nullptr) {
-      return ZX_ERR_NOT_SUPPORTED;
-    }
-    const char* error_msg = nullptr;
-    zx_status_t status = response.Decode(response_type, &error_msg);
-    if (status != ZX_OK) {
-      FIDL_REPORT_DECODING_ERROR(response, response_type, error_msg);
-      return status;
-    }
-    ::fidl::Decoder response_decoder(std::move(response));
-    switch (response.ordinal()) {
-      case internal::kInterface_OnEvent_Ordinal: {
-        OnEvent();
-        break;
-      }
-      default: {
-        break;
-      }
-    }
-    return ZX_OK;
-  }
-  virtual void OnEvent() = 0;
-};
+namespace _internal {
+extern "C" const fidl_type_t fidl_test_doccomments_InterfaceOnEventEventTable;
+}
 
 class Interface_ResponseEncoder {
  public:
@@ -598,114 +511,14 @@ class Interface_ResponseEncoder {
     _encoder->Alloc(16 - sizeof(fidl_message_header_t));
 
     fidl_trace(DidHLCPPEncode,
-               Interface_ResponseDecoder::GetType(
-                   internal::kInterface_OnEvent_Ordinal),
+               &_internal::fidl_test_doccomments_InterfaceOnEventEventTable,
                _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
                _encoder->CurrentHandleCount());
     return _encoder->GetMessage();
   }
 };
 
-class Interface_EventSender {
- public:
-  virtual ~Interface_EventSender();
-  virtual void OnEvent() = 0;
-};
-
-class Interface_Sync {
- public:
-  using Proxy_ = Interface_SyncProxy;
-  virtual ~Interface_Sync();
-  virtual zx_status_t Method() = 0;
-};
-
-class Interface_Proxy final : public ::fidl::internal::Proxy, public Interface {
- public:
-  explicit Interface_Proxy(::fidl::internal::ProxyController* controller);
-  ~Interface_Proxy() override;
-
-  zx_status_t Dispatch_(::fidl::Message message) override;
-  void Method() override;
-  OnEventCallback OnEvent;
-
- private:
-  Interface_Proxy(const Interface_Proxy&) = delete;
-  Interface_Proxy& operator=(const Interface_Proxy&) = delete;
-
-  ::fidl::internal::ProxyController* controller_;
-};
-
-class Interface_Stub final : public ::fidl::internal::Stub,
-                             public Interface_EventSender {
- public:
-  typedef class ::fidl::test::doccomments::Interface Interface_clazz;
-  explicit Interface_Stub(Interface_clazz* impl);
-  ~Interface_Stub() override;
-
-  zx_status_t Dispatch_(::fidl::Message message,
-                        ::fidl::internal::PendingResponse response) override;
-  void OnEvent() override;
-
- private:
-  Interface_clazz* impl_;
-};
-
-class Interface_SyncProxy : public Interface_Sync {
- public:
-  explicit Interface_SyncProxy(::zx::channel channel);
-  ~Interface_SyncProxy() override;
-  zx_status_t Method() override;
-
- private:
-  ::fidl::internal::SynchronousProxy proxy_;
-  friend class ::fidl::SynchronousInterfacePtr<Interface>;
-};
 #endif  // __Fuchsia__
-#ifdef __Fuchsia__
-
-/// service comment #1
-///
-/// service comment #3
-class Service final {
- public:
-  class Handler;
-
-  static constexpr char Name[] = "fidl.test.doccomments.Service";
-
-  explicit Service(std::unique_ptr<::fidl::ServiceConnector> service)
-      : service_(std::move(service)) {}
-
-  explicit operator bool() const { return !!service_; }
-  /// Returns a |fidl::MemberConnector| which can be used to connect to the
-  /// member protocol "interface".
-  ::fidl::MemberConnector<Interface> interface() const {
-    return ::fidl::MemberConnector<Interface>(service_.get(), "interface");
-  }
-
- private:
-  std::unique_ptr<::fidl::ServiceConnector> service_;
-};
-
-/// Facilitates member protocol registration for servers.
-class Service::Handler final {
- public:
-  /// Constructs a new |Handler|. Does not take ownership of |service|.
-  explicit Handler(::fidl::ServiceHandlerBase* service) : service_(service) {}
-  /// Adds member "interface" to the service instance. |handler| is invoked when
-  /// a connection is made to the member protocol.
-  ///
-  /// # Errors
-  ///
-  /// Returns ZX_ERR_ALREADY_EXISTS if the member was already added.
-  zx_status_t add_interface(
-      ::fidl::InterfaceRequestHandler<Interface> handler) {
-    return service_->AddMember("interface", std::move(handler));
-  }
-
- private:
-  ::fidl::ServiceHandlerBase* const service_;
-};
-#endif  // __Fuchsia
 
 /// flexible union comment #1
 ///
@@ -1126,4 +939,221 @@ struct Equality<::fidl::test::doccomments::FlexibleUnion> {
     }
   }
 };
+}  // namespace fidl
+
+//
+// Proxies and stubs declarations
+//
+namespace fidl {
+namespace test {
+namespace doccomments {
+
+#ifdef __Fuchsia__
+/// interface comment #1
+///
+/// interface comment #3
+using InterfacePtr = ::fidl::InterfacePtr<Interface>;
+class Interface_Proxy;
+class Interface_Stub;
+class Interface_EventSender;
+class Interface_Sync;
+using InterfaceSyncPtr = ::fidl::SynchronousInterfacePtr<Interface>;
+class Interface_SyncProxy;
+
+namespace internal {
+constexpr uint64_t kInterface_Method_Ordinal = 0x5c492542705b4265lu;
+constexpr uint64_t kInterface_OnEvent_Ordinal = 0x37812b697096f6falu;
+
+}  // namespace internal
+#endif  // __Fuchsia__
+#ifdef __Fuchsia__
+class Service;
+#endif  // __Fuchsia__
+#ifdef __Fuchsia__
+/// interface comment #1
+///
+/// interface comment #3
+class Interface {
+ public:
+  using Proxy_ = Interface_Proxy;
+  using Stub_ = Interface_Stub;
+  using EventSender_ = Interface_EventSender;
+  using Sync_ = Interface_Sync;
+  virtual ~Interface();
+
+  /// method comment #1
+  ///
+  /// method comment #3
+  virtual void Method() = 0;
+  using OnEventCallback = fit::function<void()>;
+};
+
+class Interface_RequestDecoder {
+ public:
+  Interface_RequestDecoder() = default;
+  virtual ~Interface_RequestDecoder() = default;
+  static const fidl_type_t* GetType(uint64_t ordinal, bool* out_needs_response);
+  zx_status_t Decode_(::fidl::Message request) {
+    bool needs_response;
+    const fidl_type_t* request_type =
+        GetType(request.ordinal(), &needs_response);
+    if (request_type == nullptr) {
+      return ZX_ERR_NOT_SUPPORTED;
+    }
+    const char* error_msg = nullptr;
+    zx_status_t status = request.Decode(request_type, &error_msg);
+    if (status != ZX_OK) {
+      FIDL_REPORT_DECODING_ERROR(request, request_type, error_msg);
+      return status;
+    }
+    ::fidl::Decoder request_decoder(std::move(request));
+    switch (request.ordinal()) {
+      case internal::kInterface_Method_Ordinal: {
+        Method();
+        break;
+      }
+      default: {
+        status = ZX_ERR_NOT_SUPPORTED;
+        break;
+      }
+    }
+    return status;
+  }
+  virtual void Method() = 0;
+};
+
+class Interface_ResponseDecoder {
+ public:
+  Interface_ResponseDecoder() = default;
+  virtual ~Interface_ResponseDecoder() = default;
+  static const fidl_type_t* GetType(uint64_t ordinal);
+  zx_status_t Decode_(::fidl::Message response) {
+    const fidl_type_t* response_type = GetType(response.ordinal());
+    if (response_type == nullptr) {
+      return ZX_ERR_NOT_SUPPORTED;
+    }
+    const char* error_msg = nullptr;
+    zx_status_t status = response.Decode(response_type, &error_msg);
+    if (status != ZX_OK) {
+      FIDL_REPORT_DECODING_ERROR(response, response_type, error_msg);
+      return status;
+    }
+    ::fidl::Decoder response_decoder(std::move(response));
+    switch (response.ordinal()) {
+      case internal::kInterface_OnEvent_Ordinal: {
+        OnEvent();
+        break;
+      }
+      default: {
+        break;
+      }
+    }
+    return ZX_OK;
+  }
+  virtual void OnEvent() = 0;
+};
+
+class Interface_EventSender {
+ public:
+  virtual ~Interface_EventSender();
+  virtual void OnEvent() = 0;
+};
+
+class Interface_Sync {
+ public:
+  using Proxy_ = Interface_SyncProxy;
+  virtual ~Interface_Sync();
+  virtual zx_status_t Method() = 0;
+};
+
+class Interface_Proxy final : public ::fidl::internal::Proxy, public Interface {
+ public:
+  explicit Interface_Proxy(::fidl::internal::ProxyController* controller);
+  ~Interface_Proxy() override;
+
+  zx_status_t Dispatch_(::fidl::Message message) override;
+  void Method() override;
+  OnEventCallback OnEvent;
+
+ private:
+  Interface_Proxy(const Interface_Proxy&) = delete;
+  Interface_Proxy& operator=(const Interface_Proxy&) = delete;
+
+  ::fidl::internal::ProxyController* controller_;
+};
+
+class Interface_Stub final : public ::fidl::internal::Stub,
+                             public Interface_EventSender {
+ public:
+  typedef class ::fidl::test::doccomments::Interface Interface_clazz;
+  explicit Interface_Stub(Interface_clazz* impl);
+  ~Interface_Stub() override;
+
+  zx_status_t Dispatch_(::fidl::Message message,
+                        ::fidl::internal::PendingResponse response) override;
+  void OnEvent() override;
+
+ private:
+  Interface_clazz* impl_;
+};
+
+class Interface_SyncProxy : public Interface_Sync {
+ public:
+  explicit Interface_SyncProxy(::zx::channel channel);
+  ~Interface_SyncProxy() override;
+  zx_status_t Method() override;
+
+ private:
+  ::fidl::internal::SynchronousProxy proxy_;
+  friend class ::fidl::SynchronousInterfacePtr<Interface>;
+};
+
+#endif  // __Fuchsia__
+#ifdef __Fuchsia__
+
+/// service comment #1
+///
+/// service comment #3
+class Service final {
+ public:
+  class Handler;
+
+  static constexpr char Name[] = "fidl.test.doccomments.Service";
+
+  explicit Service(std::unique_ptr<::fidl::ServiceConnector> service)
+      : service_(std::move(service)) {}
+
+  explicit operator bool() const { return !!service_; }
+  /// Returns a |fidl::MemberConnector| which can be used to connect to the
+  /// member protocol "interface".
+  ::fidl::MemberConnector<Interface> interface() const {
+    return ::fidl::MemberConnector<Interface>(service_.get(), "interface");
+  }
+
+ private:
+  std::unique_ptr<::fidl::ServiceConnector> service_;
+};
+
+/// Facilitates member protocol registration for servers.
+class Service::Handler final {
+ public:
+  /// Constructs a new |Handler|. Does not take ownership of |service|.
+  explicit Handler(::fidl::ServiceHandlerBase* service) : service_(service) {}
+  /// Adds member "interface" to the service instance. |handler| is invoked when
+  /// a connection is made to the member protocol.
+  ///
+  /// # Errors
+  ///
+  /// Returns ZX_ERR_ALREADY_EXISTS if the member was already added.
+  zx_status_t add_interface(
+      ::fidl::InterfaceRequestHandler<Interface> handler) {
+    return service_->AddMember("interface", std::move(handler));
+  }
+
+ private:
+  ::fidl::ServiceHandlerBase* const service_;
+};
+#endif  // __Fuchsia__
+}  // namespace doccomments
+}  // namespace test
 }  // namespace fidl

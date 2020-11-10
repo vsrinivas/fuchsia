@@ -6,6 +6,9 @@
 
 #include "lib/fidl/cpp/internal/header.h"
 
+//
+// Domain objects declarations (i.e. "natural types" in unified bindings).
+//
 namespace example {
 
 class Foo;
@@ -59,3 +62,8 @@ struct Equality<::example::Foo> {
   }
 };
 }  // namespace fidl
+
+//
+// Proxies and stubs declarations
+//
+namespace example {}  // namespace example

@@ -4,6 +4,9 @@
 
 #include "lib/fidl/cpp/internal/header.h"
 
+//
+// Domain objects declarations (i.e. "natural types" in unified bindings).
+//
 namespace fidl {
 namespace test {
 namespace protocols {
@@ -27,80 +30,17 @@ class WithErrorSyntax_ErrorAsPrimitive_Response;
 class WithErrorSyntax_ErrorAsPrimitive_Result;
 class WithErrorSyntax_ErrorAsEnum_Response;
 #ifdef __Fuchsia__
-
 class Transitional;
-using TransitionalPtr = ::fidl::InterfacePtr<Transitional>;
-class Transitional_Proxy;
-class Transitional_Stub;
-class Transitional_EventSender;
-class Transitional_Sync;
-using TransitionalSyncPtr = ::fidl::SynchronousInterfacePtr<Transitional>;
-class Transitional_SyncProxy;
 using TransitionalHandle = ::fidl::InterfaceHandle<Transitional>;
-namespace internal {
-constexpr uint64_t kTransitional_Request_Ordinal = 0x62d345e621780ee8lu;
-constexpr uint64_t kTransitional_OneWay_Ordinal = 0xf99bc4b26bc9ea5lu;
-constexpr uint64_t kTransitional_Event_Ordinal = 0x53bb9212bcbe8966lu;
-
-}  // namespace internal
 #endif  // __Fuchsia__
 #ifdef __Fuchsia__
-
 class ChannelProtocol;
-using ChannelProtocolPtr = ::fidl::InterfacePtr<ChannelProtocol>;
-class ChannelProtocol_Proxy;
-class ChannelProtocol_Stub;
-class ChannelProtocol_EventSender;
-class ChannelProtocol_Sync;
-using ChannelProtocolSyncPtr = ::fidl::SynchronousInterfacePtr<ChannelProtocol>;
-class ChannelProtocol_SyncProxy;
 using ChannelProtocolHandle = ::fidl::InterfaceHandle<ChannelProtocol>;
-namespace internal {
-constexpr uint64_t kChannelProtocol_MethodA_Ordinal = 0x7d92c10fb2d002elu;
-constexpr uint64_t kChannelProtocol_EventA_Ordinal = 0x52c2fa481a687dfalu;
-constexpr uint64_t kChannelProtocol_MethodB_Ordinal = 0x5da1d2ed00055cealu;
-constexpr uint64_t kChannelProtocol_MutateSocket_Ordinal = 0x7dd036a18b33b76alu;
-
-}  // namespace internal
 #endif  // __Fuchsia__
 #ifdef __Fuchsia__
-
 class WithAndWithoutRequestResponse;
-using WithAndWithoutRequestResponsePtr =
-    ::fidl::InterfacePtr<WithAndWithoutRequestResponse>;
-class WithAndWithoutRequestResponse_Proxy;
-class WithAndWithoutRequestResponse_Stub;
-class WithAndWithoutRequestResponse_EventSender;
-class WithAndWithoutRequestResponse_Sync;
-using WithAndWithoutRequestResponseSyncPtr =
-    ::fidl::SynchronousInterfacePtr<WithAndWithoutRequestResponse>;
-class WithAndWithoutRequestResponse_SyncProxy;
 using WithAndWithoutRequestResponseHandle =
     ::fidl::InterfaceHandle<WithAndWithoutRequestResponse>;
-namespace internal {
-constexpr uint64_t kWithAndWithoutRequestResponse_NoRequestNoResponse_Ordinal =
-    0x6ad894147d0c6ba4lu;
-constexpr uint64_t
-    kWithAndWithoutRequestResponse_NoRequestEmptyResponse_Ordinal =
-        0x4068f26bf6d868aelu;
-constexpr uint64_t
-    kWithAndWithoutRequestResponse_NoRequestWithResponse_Ordinal =
-        0x447e655905ccfbf4lu;
-constexpr uint64_t
-    kWithAndWithoutRequestResponse_WithRequestNoResponse_Ordinal =
-        0x7cb47b2f9e76d17dlu;
-constexpr uint64_t
-    kWithAndWithoutRequestResponse_WithRequestEmptyResponse_Ordinal =
-        0x65eb512ff0e1c07elu;
-constexpr uint64_t
-    kWithAndWithoutRequestResponse_WithRequestWithResponse_Ordinal =
-        0x1d323510d4447cf1lu;
-constexpr uint64_t kWithAndWithoutRequestResponse_OnEmptyResponse_Ordinal =
-    0x125c87a592bff029lu;
-constexpr uint64_t kWithAndWithoutRequestResponse_OnWithResponse_Ordinal =
-    0x177adc0a3ee346c2lu;
-
-}  // namespace internal
 #endif  // __Fuchsia__
 
 enum class ErrorEnun : uint32_t {
@@ -118,24 +58,8 @@ inline zx_status_t Clone(::fidl::test::protocols::ErrorEnun value,
 
 class WithErrorSyntax_ErrorAsEnum_Result;
 #ifdef __Fuchsia__
-
 class WithErrorSyntax;
-using WithErrorSyntaxPtr = ::fidl::InterfacePtr<WithErrorSyntax>;
-class WithErrorSyntax_Proxy;
-class WithErrorSyntax_Stub;
-class WithErrorSyntax_EventSender;
-class WithErrorSyntax_Sync;
-using WithErrorSyntaxSyncPtr = ::fidl::SynchronousInterfacePtr<WithErrorSyntax>;
-class WithErrorSyntax_SyncProxy;
 using WithErrorSyntaxHandle = ::fidl::InterfaceHandle<WithErrorSyntax>;
-namespace internal {
-constexpr uint64_t kWithErrorSyntax_ResponseAsStruct_Ordinal =
-    0x3784d38864674290lu;
-constexpr uint64_t kWithErrorSyntax_ErrorAsPrimitive_Ordinal =
-    0x2f7c390f3cdef4celu;
-constexpr uint64_t kWithErrorSyntax_ErrorAsEnum_Ordinal = 0x8b550d7c29f740clu;
-
-}  // namespace internal
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -497,59 +421,11 @@ using WithErrorSyntax_ErrorAsEnum_ResponsePtr =
 
 #ifdef __Fuchsia__
 
-class Transitional {
- public:
-  using Proxy_ = Transitional_Proxy;
-  using Stub_ = Transitional_Stub;
-  using EventSender_ = Transitional_EventSender;
-  using Sync_ = Transitional_Sync;
-  virtual ~Transitional();
-  using RequestCallback = fit::function<void(int64_t)>;
-
-  virtual void Request(int64_t x, RequestCallback callback) {}
-
-  virtual void OneWay(int64_t x) {}
-  using EventCallback = fit::function<void(int64_t)>;
-};
-
-class Transitional_RequestDecoder {
- public:
-  Transitional_RequestDecoder() = default;
-  virtual ~Transitional_RequestDecoder() = default;
-  static const fidl_type_t* GetType(uint64_t ordinal, bool* out_needs_response);
-  zx_status_t Decode_(::fidl::Message request) {
-    bool needs_response;
-    const fidl_type_t* request_type =
-        GetType(request.ordinal(), &needs_response);
-    if (request_type == nullptr) {
-      return ZX_ERR_NOT_SUPPORTED;
-    }
-    const char* error_msg = nullptr;
-    zx_status_t status = request.Decode(request_type, &error_msg);
-    if (status != ZX_OK) {
-      FIDL_REPORT_DECODING_ERROR(request, request_type, error_msg);
-      return status;
-    }
-    ::fidl::Decoder request_decoder(std::move(request));
-    switch (request.ordinal()) {
-      case internal::kTransitional_Request_Ordinal: {
-        Request(::fidl::DecodeAs<int64_t>(&request_decoder, 16));
-        break;
-      }
-      case internal::kTransitional_OneWay_Ordinal: {
-        OneWay(::fidl::DecodeAs<int64_t>(&request_decoder, 16));
-        break;
-      }
-      default: {
-        status = ZX_ERR_NOT_SUPPORTED;
-        break;
-      }
-    }
-    return status;
-  }
-  virtual void Request(int64_t x) = 0;
-  virtual void OneWay(int64_t x) = 0;
-};
+namespace _internal {
+extern "C" const fidl_type_t
+    fidl_test_protocols_TransitionalRequestRequestTable;
+extern "C" const fidl_type_t fidl_test_protocols_TransitionalOneWayRequestTable;
+}  // namespace _internal
 
 class Transitional_RequestEncoder {
  public:
@@ -558,10 +434,8 @@ class Transitional_RequestEncoder {
     _encoder->Alloc(24 - sizeof(fidl_message_header_t));
     ::fidl::Encode(_encoder, x, 16);
 
-    bool needs_response;  // unused
     fidl_trace(DidHLCPPEncode,
-               Transitional_RequestDecoder::GetType(
-                   internal::kTransitional_Request_Ordinal, &needs_response),
+               &_internal::fidl_test_protocols_TransitionalRequestRequestTable,
                _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
                _encoder->CurrentHandleCount());
 
@@ -572,10 +446,8 @@ class Transitional_RequestEncoder {
     _encoder->Alloc(24 - sizeof(fidl_message_header_t));
     ::fidl::Encode(_encoder, x, 16);
 
-    bool needs_response;  // unused
     fidl_trace(DidHLCPPEncode,
-               Transitional_RequestDecoder::GetType(
-                   internal::kTransitional_OneWay_Ordinal, &needs_response),
+               &_internal::fidl_test_protocols_TransitionalOneWayRequestTable,
                _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
                _encoder->CurrentHandleCount());
 
@@ -583,41 +455,11 @@ class Transitional_RequestEncoder {
   }
 };
 
-class Transitional_ResponseDecoder {
- public:
-  Transitional_ResponseDecoder() = default;
-  virtual ~Transitional_ResponseDecoder() = default;
-  static const fidl_type_t* GetType(uint64_t ordinal);
-  zx_status_t Decode_(::fidl::Message response) {
-    const fidl_type_t* response_type = GetType(response.ordinal());
-    if (response_type == nullptr) {
-      return ZX_ERR_NOT_SUPPORTED;
-    }
-    const char* error_msg = nullptr;
-    zx_status_t status = response.Decode(response_type, &error_msg);
-    if (status != ZX_OK) {
-      FIDL_REPORT_DECODING_ERROR(response, response_type, error_msg);
-      return status;
-    }
-    ::fidl::Decoder response_decoder(std::move(response));
-    switch (response.ordinal()) {
-      case internal::kTransitional_Request_Ordinal: {
-        Request(::fidl::DecodeAs<int64_t>(&response_decoder, 16));
-        break;
-      }
-      case internal::kTransitional_Event_Ordinal: {
-        Event(::fidl::DecodeAs<int64_t>(&response_decoder, 16));
-        break;
-      }
-      default: {
-        break;
-      }
-    }
-    return ZX_OK;
-  }
-  virtual void Request(int64_t y) = 0;
-  virtual void Event(int64_t x) = 0;
-};
+namespace _internal {
+extern "C" const fidl_type_t
+    fidl_test_protocols_TransitionalRequestResponseTable;
+extern "C" const fidl_type_t fidl_test_protocols_TransitionalEventEventTable;
+}  // namespace _internal
 
 class Transitional_ResponseEncoder {
  public:
@@ -627,8 +469,7 @@ class Transitional_ResponseEncoder {
     ::fidl::Encode(_encoder, y, 16);
 
     fidl_trace(DidHLCPPEncode,
-               Transitional_ResponseDecoder::GetType(
-                   internal::kTransitional_Request_Ordinal),
+               &_internal::fidl_test_protocols_TransitionalRequestResponseTable,
                _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
                _encoder->CurrentHandleCount());
     return _encoder->GetMessage();
@@ -639,138 +480,24 @@ class Transitional_ResponseEncoder {
     ::fidl::Encode(_encoder, x, 16);
 
     fidl_trace(DidHLCPPEncode,
-               Transitional_ResponseDecoder::GetType(
-                   internal::kTransitional_Event_Ordinal),
+               &_internal::fidl_test_protocols_TransitionalEventEventTable,
                _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
                _encoder->CurrentHandleCount());
     return _encoder->GetMessage();
   }
 };
 
-class Transitional_EventSender {
- public:
-  virtual ~Transitional_EventSender();
-  virtual void Event(int64_t x) = 0;
-};
-
-class Transitional_Sync {
- public:
-  using Proxy_ = Transitional_SyncProxy;
-  virtual ~Transitional_Sync();
-  virtual zx_status_t Request(int64_t x, int64_t* out_y) = 0;
-  virtual zx_status_t OneWay(int64_t x) = 0;
-};
-
-class Transitional_Proxy final : public ::fidl::internal::Proxy,
-                                 public Transitional {
- public:
-  explicit Transitional_Proxy(::fidl::internal::ProxyController* controller);
-  ~Transitional_Proxy() override;
-
-  zx_status_t Dispatch_(::fidl::Message message) override;
-  void Request(int64_t x, RequestCallback callback) override;
-  void OneWay(int64_t x) override;
-  EventCallback Event;
-
- private:
-  Transitional_Proxy(const Transitional_Proxy&) = delete;
-  Transitional_Proxy& operator=(const Transitional_Proxy&) = delete;
-
-  ::fidl::internal::ProxyController* controller_;
-};
-
-class Transitional_Stub final : public ::fidl::internal::Stub,
-                                public Transitional_EventSender {
- public:
-  typedef class ::fidl::test::protocols::Transitional Transitional_clazz;
-  explicit Transitional_Stub(Transitional_clazz* impl);
-  ~Transitional_Stub() override;
-
-  zx_status_t Dispatch_(::fidl::Message message,
-                        ::fidl::internal::PendingResponse response) override;
-  void Event(int64_t x) override;
-
- private:
-  Transitional_clazz* impl_;
-};
-
-class Transitional_SyncProxy : public Transitional_Sync {
- public:
-  explicit Transitional_SyncProxy(::zx::channel channel);
-  ~Transitional_SyncProxy() override;
-  zx_status_t Request(int64_t x, int64_t* out_y) override;
-  zx_status_t OneWay(int64_t x) override;
-
- private:
-  ::fidl::internal::SynchronousProxy proxy_;
-  friend class ::fidl::SynchronousInterfacePtr<Transitional>;
-};
 #endif  // __Fuchsia__
 #ifdef __Fuchsia__
 
-class ChannelProtocol {
- public:
-  using Proxy_ = ChannelProtocol_Proxy;
-  using Stub_ = ChannelProtocol_Stub;
-  using EventSender_ = ChannelProtocol_EventSender;
-  using Sync_ = ChannelProtocol_Sync;
-  virtual ~ChannelProtocol();
-
-  virtual void MethodA(int64_t a, int64_t b) = 0;
-  using EventACallback = fit::function<void(int64_t, int64_t)>;
-  using MethodBCallback = fit::function<void(int64_t)>;
-
-  virtual void MethodB(int64_t a, int64_t b, MethodBCallback callback) = 0;
-  using MutateSocketCallback = fit::function<void(::zx::socket)>;
-
-  virtual void MutateSocket(::zx::socket a, MutateSocketCallback callback) = 0;
-};
-
-class ChannelProtocol_RequestDecoder {
- public:
-  ChannelProtocol_RequestDecoder() = default;
-  virtual ~ChannelProtocol_RequestDecoder() = default;
-  static const fidl_type_t* GetType(uint64_t ordinal, bool* out_needs_response);
-  zx_status_t Decode_(::fidl::Message request) {
-    bool needs_response;
-    const fidl_type_t* request_type =
-        GetType(request.ordinal(), &needs_response);
-    if (request_type == nullptr) {
-      return ZX_ERR_NOT_SUPPORTED;
-    }
-    const char* error_msg = nullptr;
-    zx_status_t status = request.Decode(request_type, &error_msg);
-    if (status != ZX_OK) {
-      FIDL_REPORT_DECODING_ERROR(request, request_type, error_msg);
-      return status;
-    }
-    ::fidl::Decoder request_decoder(std::move(request));
-    switch (request.ordinal()) {
-      case internal::kChannelProtocol_MethodA_Ordinal: {
-        MethodA(::fidl::DecodeAs<int64_t>(&request_decoder, 16),
-                ::fidl::DecodeAs<int64_t>(&request_decoder, 24));
-        break;
-      }
-      case internal::kChannelProtocol_MethodB_Ordinal: {
-        MethodB(::fidl::DecodeAs<int64_t>(&request_decoder, 16),
-                ::fidl::DecodeAs<int64_t>(&request_decoder, 24));
-        break;
-      }
-      case internal::kChannelProtocol_MutateSocket_Ordinal: {
-        MutateSocket(::fidl::DecodeAs<::zx::socket>(&request_decoder, 16));
-        break;
-      }
-      default: {
-        status = ZX_ERR_NOT_SUPPORTED;
-        break;
-      }
-    }
-    return status;
-  }
-  virtual void MethodA(int64_t a, int64_t b) = 0;
-  virtual void MethodB(int64_t a, int64_t b) = 0;
-  virtual void MutateSocket(::zx::socket a) = 0;
-};
+namespace _internal {
+extern "C" const fidl_type_t
+    fidl_test_protocols_ChannelProtocolMethodARequestTable;
+extern "C" const fidl_type_t
+    fidl_test_protocols_ChannelProtocolMethodBRequestTable;
+extern "C" const fidl_type_t
+    fidl_test_protocols_ChannelProtocolMutateSocketRequestTable;
+}  // namespace _internal
 
 class ChannelProtocol_RequestEncoder {
  public:
@@ -781,12 +508,11 @@ class ChannelProtocol_RequestEncoder {
     ::fidl::Encode(_encoder, a, 16);
     ::fidl::Encode(_encoder, b, 24);
 
-    bool needs_response;  // unused
-    fidl_trace(DidHLCPPEncode,
-               ChannelProtocol_RequestDecoder::GetType(
-                   internal::kChannelProtocol_MethodA_Ordinal, &needs_response),
-               _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
-               _encoder->CurrentHandleCount());
+    fidl_trace(
+        DidHLCPPEncode,
+        &_internal::fidl_test_protocols_ChannelProtocolMethodARequestTable,
+        _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
+        _encoder->CurrentHandleCount());
 
     return _encoder->GetMessage();
   }
@@ -797,12 +523,11 @@ class ChannelProtocol_RequestEncoder {
     ::fidl::Encode(_encoder, a, 16);
     ::fidl::Encode(_encoder, b, 24);
 
-    bool needs_response;  // unused
-    fidl_trace(DidHLCPPEncode,
-               ChannelProtocol_RequestDecoder::GetType(
-                   internal::kChannelProtocol_MethodB_Ordinal, &needs_response),
-               _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
-               _encoder->CurrentHandleCount());
+    fidl_trace(
+        DidHLCPPEncode,
+        &_internal::fidl_test_protocols_ChannelProtocolMethodBRequestTable,
+        _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
+        _encoder->CurrentHandleCount());
 
     return _encoder->GetMessage();
   }
@@ -812,11 +537,9 @@ class ChannelProtocol_RequestEncoder {
     _encoder->Alloc(24 - sizeof(fidl_message_header_t));
     ::fidl::Encode(_encoder, a, 16);
 
-    bool needs_response;  // unused
     fidl_trace(
         DidHLCPPEncode,
-        ChannelProtocol_RequestDecoder::GetType(
-            internal::kChannelProtocol_MutateSocket_Ordinal, &needs_response),
+        &_internal::fidl_test_protocols_ChannelProtocolMutateSocketRequestTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
 
@@ -824,47 +547,14 @@ class ChannelProtocol_RequestEncoder {
   }
 };
 
-class ChannelProtocol_ResponseDecoder {
- public:
-  ChannelProtocol_ResponseDecoder() = default;
-  virtual ~ChannelProtocol_ResponseDecoder() = default;
-  static const fidl_type_t* GetType(uint64_t ordinal);
-  zx_status_t Decode_(::fidl::Message response) {
-    const fidl_type_t* response_type = GetType(response.ordinal());
-    if (response_type == nullptr) {
-      return ZX_ERR_NOT_SUPPORTED;
-    }
-    const char* error_msg = nullptr;
-    zx_status_t status = response.Decode(response_type, &error_msg);
-    if (status != ZX_OK) {
-      FIDL_REPORT_DECODING_ERROR(response, response_type, error_msg);
-      return status;
-    }
-    ::fidl::Decoder response_decoder(std::move(response));
-    switch (response.ordinal()) {
-      case internal::kChannelProtocol_EventA_Ordinal: {
-        EventA(::fidl::DecodeAs<int64_t>(&response_decoder, 16),
-               ::fidl::DecodeAs<int64_t>(&response_decoder, 24));
-        break;
-      }
-      case internal::kChannelProtocol_MethodB_Ordinal: {
-        MethodB(::fidl::DecodeAs<int64_t>(&response_decoder, 16));
-        break;
-      }
-      case internal::kChannelProtocol_MutateSocket_Ordinal: {
-        MutateSocket(::fidl::DecodeAs<::zx::socket>(&response_decoder, 16));
-        break;
-      }
-      default: {
-        break;
-      }
-    }
-    return ZX_OK;
-  }
-  virtual void EventA(int64_t a, int64_t b) = 0;
-  virtual void MethodB(int64_t result) = 0;
-  virtual void MutateSocket(::zx::socket b) = 0;
-};
+namespace _internal {
+extern "C" const fidl_type_t
+    fidl_test_protocols_ChannelProtocolEventAEventTable;
+extern "C" const fidl_type_t
+    fidl_test_protocols_ChannelProtocolMethodBResponseTable;
+extern "C" const fidl_type_t
+    fidl_test_protocols_ChannelProtocolMutateSocketResponseTable;
+}  // namespace _internal
 
 class ChannelProtocol_ResponseEncoder {
  public:
@@ -876,8 +566,7 @@ class ChannelProtocol_ResponseEncoder {
     ::fidl::Encode(_encoder, b, 24);
 
     fidl_trace(DidHLCPPEncode,
-               ChannelProtocol_ResponseDecoder::GetType(
-                   internal::kChannelProtocol_EventA_Ordinal),
+               &_internal::fidl_test_protocols_ChannelProtocolEventAEventTable,
                _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
                _encoder->CurrentHandleCount());
     return _encoder->GetMessage();
@@ -887,11 +576,11 @@ class ChannelProtocol_ResponseEncoder {
     _encoder->Alloc(24 - sizeof(fidl_message_header_t));
     ::fidl::Encode(_encoder, result, 16);
 
-    fidl_trace(DidHLCPPEncode,
-               ChannelProtocol_ResponseDecoder::GetType(
-                   internal::kChannelProtocol_MethodB_Ordinal),
-               _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
-               _encoder->CurrentHandleCount());
+    fidl_trace(
+        DidHLCPPEncode,
+        &_internal::fidl_test_protocols_ChannelProtocolMethodBResponseTable,
+        _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
+        _encoder->CurrentHandleCount());
     return _encoder->GetMessage();
   }
   static ::fidl::Message MutateSocket(::fidl::Encoder* _encoder,
@@ -901,176 +590,31 @@ class ChannelProtocol_ResponseEncoder {
     ::fidl::Encode(_encoder, b, 16);
 
     fidl_trace(DidHLCPPEncode,
-               ChannelProtocol_ResponseDecoder::GetType(
-                   internal::kChannelProtocol_MutateSocket_Ordinal),
+               &_internal::
+                   fidl_test_protocols_ChannelProtocolMutateSocketResponseTable,
                _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
                _encoder->CurrentHandleCount());
     return _encoder->GetMessage();
   }
 };
 
-class ChannelProtocol_EventSender {
- public:
-  virtual ~ChannelProtocol_EventSender();
-  virtual void EventA(int64_t a, int64_t b) = 0;
-};
-
-class ChannelProtocol_Sync {
- public:
-  using Proxy_ = ChannelProtocol_SyncProxy;
-  virtual ~ChannelProtocol_Sync();
-  virtual zx_status_t MethodA(int64_t a, int64_t b) = 0;
-  virtual zx_status_t MethodB(int64_t a, int64_t b, int64_t* out_result) = 0;
-  virtual zx_status_t MutateSocket(::zx::socket a, ::zx::socket* out_b) = 0;
-};
-
-class ChannelProtocol_Proxy final : public ::fidl::internal::Proxy,
-                                    public ChannelProtocol {
- public:
-  explicit ChannelProtocol_Proxy(::fidl::internal::ProxyController* controller);
-  ~ChannelProtocol_Proxy() override;
-
-  zx_status_t Dispatch_(::fidl::Message message) override;
-  void MethodA(int64_t a, int64_t b) override;
-  EventACallback EventA;
-  void MethodB(int64_t a, int64_t b, MethodBCallback callback) override;
-  void MutateSocket(::zx::socket a, MutateSocketCallback callback) override;
-
- private:
-  ChannelProtocol_Proxy(const ChannelProtocol_Proxy&) = delete;
-  ChannelProtocol_Proxy& operator=(const ChannelProtocol_Proxy&) = delete;
-
-  ::fidl::internal::ProxyController* controller_;
-};
-
-class ChannelProtocol_Stub final : public ::fidl::internal::Stub,
-                                   public ChannelProtocol_EventSender {
- public:
-  typedef class ::fidl::test::protocols::ChannelProtocol ChannelProtocol_clazz;
-  explicit ChannelProtocol_Stub(ChannelProtocol_clazz* impl);
-  ~ChannelProtocol_Stub() override;
-
-  zx_status_t Dispatch_(::fidl::Message message,
-                        ::fidl::internal::PendingResponse response) override;
-  void EventA(int64_t a, int64_t b) override;
-
- private:
-  ChannelProtocol_clazz* impl_;
-};
-
-class ChannelProtocol_SyncProxy : public ChannelProtocol_Sync {
- public:
-  explicit ChannelProtocol_SyncProxy(::zx::channel channel);
-  ~ChannelProtocol_SyncProxy() override;
-  zx_status_t MethodA(int64_t a, int64_t b) override;
-  zx_status_t MethodB(int64_t a, int64_t b, int64_t* out_result) override;
-  zx_status_t MutateSocket(::zx::socket a, ::zx::socket* out_b) override;
-
- private:
-  ::fidl::internal::SynchronousProxy proxy_;
-  friend class ::fidl::SynchronousInterfacePtr<ChannelProtocol>;
-};
 #endif  // __Fuchsia__
 #ifdef __Fuchsia__
 
-class WithAndWithoutRequestResponse {
- public:
-  using Proxy_ = WithAndWithoutRequestResponse_Proxy;
-  using Stub_ = WithAndWithoutRequestResponse_Stub;
-  using EventSender_ = WithAndWithoutRequestResponse_EventSender;
-  using Sync_ = WithAndWithoutRequestResponse_Sync;
-  virtual ~WithAndWithoutRequestResponse();
-
-  virtual void NoRequestNoResponse() = 0;
-  using NoRequestEmptyResponseCallback = fit::function<void()>;
-
-  virtual void NoRequestEmptyResponse(
-      NoRequestEmptyResponseCallback callback) = 0;
-  using NoRequestWithResponseCallback = fit::function<void(::std::string)>;
-
-  virtual void NoRequestWithResponse(
-      NoRequestWithResponseCallback callback) = 0;
-
-  virtual void WithRequestNoResponse(::std::string arg) = 0;
-  using WithRequestEmptyResponseCallback = fit::function<void()>;
-
-  virtual void WithRequestEmptyResponse(
-      ::std::string arg, WithRequestEmptyResponseCallback callback) = 0;
-  using WithRequestWithResponseCallback = fit::function<void(::std::string)>;
-
-  virtual void WithRequestWithResponse(
-      ::std::string arg, WithRequestWithResponseCallback callback) = 0;
-  using OnEmptyResponseCallback = fit::function<void()>;
-  using OnWithResponseCallback = fit::function<void(::std::string)>;
-};
-
-class WithAndWithoutRequestResponse_RequestDecoder {
- public:
-  WithAndWithoutRequestResponse_RequestDecoder() = default;
-  virtual ~WithAndWithoutRequestResponse_RequestDecoder() = default;
-  static const fidl_type_t* GetType(uint64_t ordinal, bool* out_needs_response);
-  zx_status_t Decode_(::fidl::Message request) {
-    bool needs_response;
-    const fidl_type_t* request_type =
-        GetType(request.ordinal(), &needs_response);
-    if (request_type == nullptr) {
-      return ZX_ERR_NOT_SUPPORTED;
-    }
-    const char* error_msg = nullptr;
-    zx_status_t status = request.Decode(request_type, &error_msg);
-    if (status != ZX_OK) {
-      FIDL_REPORT_DECODING_ERROR(request, request_type, error_msg);
-      return status;
-    }
-    ::fidl::Decoder request_decoder(std::move(request));
-    switch (request.ordinal()) {
-      case internal::
-          kWithAndWithoutRequestResponse_NoRequestNoResponse_Ordinal: {
-        NoRequestNoResponse();
-        break;
-      }
-      case internal::
-          kWithAndWithoutRequestResponse_NoRequestEmptyResponse_Ordinal: {
-        NoRequestEmptyResponse();
-        break;
-      }
-      case internal::
-          kWithAndWithoutRequestResponse_NoRequestWithResponse_Ordinal: {
-        NoRequestWithResponse();
-        break;
-      }
-      case internal::
-          kWithAndWithoutRequestResponse_WithRequestNoResponse_Ordinal: {
-        WithRequestNoResponse(
-            ::fidl::DecodeAs<::std::string>(&request_decoder, 16));
-        break;
-      }
-      case internal::
-          kWithAndWithoutRequestResponse_WithRequestEmptyResponse_Ordinal: {
-        WithRequestEmptyResponse(
-            ::fidl::DecodeAs<::std::string>(&request_decoder, 16));
-        break;
-      }
-      case internal::
-          kWithAndWithoutRequestResponse_WithRequestWithResponse_Ordinal: {
-        WithRequestWithResponse(
-            ::fidl::DecodeAs<::std::string>(&request_decoder, 16));
-        break;
-      }
-      default: {
-        status = ZX_ERR_NOT_SUPPORTED;
-        break;
-      }
-    }
-    return status;
-  }
-  virtual void NoRequestNoResponse() = 0;
-  virtual void NoRequestEmptyResponse() = 0;
-  virtual void NoRequestWithResponse() = 0;
-  virtual void WithRequestNoResponse(::std::string arg) = 0;
-  virtual void WithRequestEmptyResponse(::std::string arg) = 0;
-  virtual void WithRequestWithResponse(::std::string arg) = 0;
-};
+namespace _internal {
+extern "C" const fidl_type_t
+    fidl_test_protocols_WithAndWithoutRequestResponseNoRequestNoResponseRequestTable;
+extern "C" const fidl_type_t
+    fidl_test_protocols_WithAndWithoutRequestResponseNoRequestEmptyResponseRequestTable;
+extern "C" const fidl_type_t
+    fidl_test_protocols_WithAndWithoutRequestResponseNoRequestWithResponseRequestTable;
+extern "C" const fidl_type_t
+    fidl_test_protocols_WithAndWithoutRequestResponseWithRequestNoResponseRequestTable;
+extern "C" const fidl_type_t
+    fidl_test_protocols_WithAndWithoutRequestResponseWithRequestEmptyResponseRequestTable;
+extern "C" const fidl_type_t
+    fidl_test_protocols_WithAndWithoutRequestResponseWithRequestWithResponseRequestTable;
+}  // namespace _internal
 
 class WithAndWithoutRequestResponse_RequestEncoder {
  public:
@@ -1078,13 +622,10 @@ class WithAndWithoutRequestResponse_RequestEncoder {
     fidl_trace(WillHLCPPEncode);
     _encoder->Alloc(16 - sizeof(fidl_message_header_t));
 
-    bool needs_response;  // unused
     fidl_trace(
         DidHLCPPEncode,
-        WithAndWithoutRequestResponse_RequestDecoder::GetType(
-            internal::
-                kWithAndWithoutRequestResponse_NoRequestNoResponse_Ordinal,
-            &needs_response),
+        &_internal::
+            fidl_test_protocols_WithAndWithoutRequestResponseNoRequestNoResponseRequestTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
 
@@ -1094,13 +635,10 @@ class WithAndWithoutRequestResponse_RequestEncoder {
     fidl_trace(WillHLCPPEncode);
     _encoder->Alloc(16 - sizeof(fidl_message_header_t));
 
-    bool needs_response;  // unused
     fidl_trace(
         DidHLCPPEncode,
-        WithAndWithoutRequestResponse_RequestDecoder::GetType(
-            internal::
-                kWithAndWithoutRequestResponse_NoRequestEmptyResponse_Ordinal,
-            &needs_response),
+        &_internal::
+            fidl_test_protocols_WithAndWithoutRequestResponseNoRequestEmptyResponseRequestTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
 
@@ -1110,13 +648,10 @@ class WithAndWithoutRequestResponse_RequestEncoder {
     fidl_trace(WillHLCPPEncode);
     _encoder->Alloc(16 - sizeof(fidl_message_header_t));
 
-    bool needs_response;  // unused
     fidl_trace(
         DidHLCPPEncode,
-        WithAndWithoutRequestResponse_RequestDecoder::GetType(
-            internal::
-                kWithAndWithoutRequestResponse_NoRequestWithResponse_Ordinal,
-            &needs_response),
+        &_internal::
+            fidl_test_protocols_WithAndWithoutRequestResponseNoRequestWithResponseRequestTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
 
@@ -1128,13 +663,10 @@ class WithAndWithoutRequestResponse_RequestEncoder {
     _encoder->Alloc(32 - sizeof(fidl_message_header_t));
     ::fidl::Encode(_encoder, arg, 16);
 
-    bool needs_response;  // unused
     fidl_trace(
         DidHLCPPEncode,
-        WithAndWithoutRequestResponse_RequestDecoder::GetType(
-            internal::
-                kWithAndWithoutRequestResponse_WithRequestNoResponse_Ordinal,
-            &needs_response),
+        &_internal::
+            fidl_test_protocols_WithAndWithoutRequestResponseWithRequestNoResponseRequestTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
 
@@ -1146,13 +678,10 @@ class WithAndWithoutRequestResponse_RequestEncoder {
     _encoder->Alloc(32 - sizeof(fidl_message_header_t));
     ::fidl::Encode(_encoder, arg, 16);
 
-    bool needs_response;  // unused
     fidl_trace(
         DidHLCPPEncode,
-        WithAndWithoutRequestResponse_RequestDecoder::GetType(
-            internal::
-                kWithAndWithoutRequestResponse_WithRequestEmptyResponse_Ordinal,
-            &needs_response),
+        &_internal::
+            fidl_test_protocols_WithAndWithoutRequestResponseWithRequestEmptyResponseRequestTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
 
@@ -1164,13 +693,10 @@ class WithAndWithoutRequestResponse_RequestEncoder {
     _encoder->Alloc(32 - sizeof(fidl_message_header_t));
     ::fidl::Encode(_encoder, arg, 16);
 
-    bool needs_response;  // unused
     fidl_trace(
         DidHLCPPEncode,
-        WithAndWithoutRequestResponse_RequestDecoder::GetType(
-            internal::
-                kWithAndWithoutRequestResponse_WithRequestWithResponse_Ordinal,
-            &needs_response),
+        &_internal::
+            fidl_test_protocols_WithAndWithoutRequestResponseWithRequestWithResponseRequestTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
 
@@ -1178,67 +704,20 @@ class WithAndWithoutRequestResponse_RequestEncoder {
   }
 };
 
-class WithAndWithoutRequestResponse_ResponseDecoder {
- public:
-  WithAndWithoutRequestResponse_ResponseDecoder() = default;
-  virtual ~WithAndWithoutRequestResponse_ResponseDecoder() = default;
-  static const fidl_type_t* GetType(uint64_t ordinal);
-  zx_status_t Decode_(::fidl::Message response) {
-    const fidl_type_t* response_type = GetType(response.ordinal());
-    if (response_type == nullptr) {
-      return ZX_ERR_NOT_SUPPORTED;
-    }
-    const char* error_msg = nullptr;
-    zx_status_t status = response.Decode(response_type, &error_msg);
-    if (status != ZX_OK) {
-      FIDL_REPORT_DECODING_ERROR(response, response_type, error_msg);
-      return status;
-    }
-    ::fidl::Decoder response_decoder(std::move(response));
-    switch (response.ordinal()) {
-      case internal::
-          kWithAndWithoutRequestResponse_NoRequestEmptyResponse_Ordinal: {
-        NoRequestEmptyResponse();
-        break;
-      }
-      case internal::
-          kWithAndWithoutRequestResponse_NoRequestWithResponse_Ordinal: {
-        NoRequestWithResponse(
-            ::fidl::DecodeAs<::std::string>(&response_decoder, 16));
-        break;
-      }
-      case internal::
-          kWithAndWithoutRequestResponse_WithRequestEmptyResponse_Ordinal: {
-        WithRequestEmptyResponse();
-        break;
-      }
-      case internal::
-          kWithAndWithoutRequestResponse_WithRequestWithResponse_Ordinal: {
-        WithRequestWithResponse(
-            ::fidl::DecodeAs<::std::string>(&response_decoder, 16));
-        break;
-      }
-      case internal::kWithAndWithoutRequestResponse_OnEmptyResponse_Ordinal: {
-        OnEmptyResponse();
-        break;
-      }
-      case internal::kWithAndWithoutRequestResponse_OnWithResponse_Ordinal: {
-        OnWithResponse(::fidl::DecodeAs<::std::string>(&response_decoder, 16));
-        break;
-      }
-      default: {
-        break;
-      }
-    }
-    return ZX_OK;
-  }
-  virtual void NoRequestEmptyResponse() = 0;
-  virtual void NoRequestWithResponse(::std::string ret) = 0;
-  virtual void WithRequestEmptyResponse() = 0;
-  virtual void WithRequestWithResponse(::std::string ret) = 0;
-  virtual void OnEmptyResponse() = 0;
-  virtual void OnWithResponse(::std::string ret) = 0;
-};
+namespace _internal {
+extern "C" const fidl_type_t
+    fidl_test_protocols_WithAndWithoutRequestResponseNoRequestEmptyResponseResponseTable;
+extern "C" const fidl_type_t
+    fidl_test_protocols_WithAndWithoutRequestResponseNoRequestWithResponseResponseTable;
+extern "C" const fidl_type_t
+    fidl_test_protocols_WithAndWithoutRequestResponseWithRequestEmptyResponseResponseTable;
+extern "C" const fidl_type_t
+    fidl_test_protocols_WithAndWithoutRequestResponseWithRequestWithResponseResponseTable;
+extern "C" const fidl_type_t
+    fidl_test_protocols_WithAndWithoutRequestResponseOnEmptyResponseEventTable;
+extern "C" const fidl_type_t
+    fidl_test_protocols_WithAndWithoutRequestResponseOnWithResponseEventTable;
+}  // namespace _internal
 
 class WithAndWithoutRequestResponse_ResponseEncoder {
  public:
@@ -1248,9 +727,8 @@ class WithAndWithoutRequestResponse_ResponseEncoder {
 
     fidl_trace(
         DidHLCPPEncode,
-        WithAndWithoutRequestResponse_ResponseDecoder::GetType(
-            internal::
-                kWithAndWithoutRequestResponse_NoRequestEmptyResponse_Ordinal),
+        &_internal::
+            fidl_test_protocols_WithAndWithoutRequestResponseNoRequestEmptyResponseResponseTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
     return _encoder->GetMessage();
@@ -1263,9 +741,8 @@ class WithAndWithoutRequestResponse_ResponseEncoder {
 
     fidl_trace(
         DidHLCPPEncode,
-        WithAndWithoutRequestResponse_ResponseDecoder::GetType(
-            internal::
-                kWithAndWithoutRequestResponse_NoRequestWithResponse_Ordinal),
+        &_internal::
+            fidl_test_protocols_WithAndWithoutRequestResponseNoRequestWithResponseResponseTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
     return _encoder->GetMessage();
@@ -1276,9 +753,8 @@ class WithAndWithoutRequestResponse_ResponseEncoder {
 
     fidl_trace(
         DidHLCPPEncode,
-        WithAndWithoutRequestResponse_ResponseDecoder::GetType(
-            internal::
-                kWithAndWithoutRequestResponse_WithRequestEmptyResponse_Ordinal),
+        &_internal::
+            fidl_test_protocols_WithAndWithoutRequestResponseWithRequestEmptyResponseResponseTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
     return _encoder->GetMessage();
@@ -1291,9 +767,8 @@ class WithAndWithoutRequestResponse_ResponseEncoder {
 
     fidl_trace(
         DidHLCPPEncode,
-        WithAndWithoutRequestResponse_ResponseDecoder::GetType(
-            internal::
-                kWithAndWithoutRequestResponse_WithRequestWithResponse_Ordinal),
+        &_internal::
+            fidl_test_protocols_WithAndWithoutRequestResponseWithRequestWithResponseResponseTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
     return _encoder->GetMessage();
@@ -1304,8 +779,8 @@ class WithAndWithoutRequestResponse_ResponseEncoder {
 
     fidl_trace(
         DidHLCPPEncode,
-        WithAndWithoutRequestResponse_ResponseDecoder::GetType(
-            internal::kWithAndWithoutRequestResponse_OnEmptyResponse_Ordinal),
+        &_internal::
+            fidl_test_protocols_WithAndWithoutRequestResponseOnEmptyResponseEventTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
     return _encoder->GetMessage();
@@ -1318,99 +793,14 @@ class WithAndWithoutRequestResponse_ResponseEncoder {
 
     fidl_trace(
         DidHLCPPEncode,
-        WithAndWithoutRequestResponse_ResponseDecoder::GetType(
-            internal::kWithAndWithoutRequestResponse_OnWithResponse_Ordinal),
+        &_internal::
+            fidl_test_protocols_WithAndWithoutRequestResponseOnWithResponseEventTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
     return _encoder->GetMessage();
   }
 };
 
-class WithAndWithoutRequestResponse_EventSender {
- public:
-  virtual ~WithAndWithoutRequestResponse_EventSender();
-  virtual void OnEmptyResponse() = 0;
-  virtual void OnWithResponse(::std::string ret) = 0;
-};
-
-class WithAndWithoutRequestResponse_Sync {
- public:
-  using Proxy_ = WithAndWithoutRequestResponse_SyncProxy;
-  virtual ~WithAndWithoutRequestResponse_Sync();
-  virtual zx_status_t NoRequestNoResponse() = 0;
-  virtual zx_status_t NoRequestEmptyResponse() = 0;
-  virtual zx_status_t NoRequestWithResponse(::std::string* out_ret) = 0;
-  virtual zx_status_t WithRequestNoResponse(::std::string arg) = 0;
-  virtual zx_status_t WithRequestEmptyResponse(::std::string arg) = 0;
-  virtual zx_status_t WithRequestWithResponse(::std::string arg,
-                                              ::std::string* out_ret) = 0;
-};
-
-class WithAndWithoutRequestResponse_Proxy final
-    : public ::fidl::internal::Proxy,
-      public WithAndWithoutRequestResponse {
- public:
-  explicit WithAndWithoutRequestResponse_Proxy(
-      ::fidl::internal::ProxyController* controller);
-  ~WithAndWithoutRequestResponse_Proxy() override;
-
-  zx_status_t Dispatch_(::fidl::Message message) override;
-  void NoRequestNoResponse() override;
-  void NoRequestEmptyResponse(NoRequestEmptyResponseCallback callback) override;
-  void NoRequestWithResponse(NoRequestWithResponseCallback callback) override;
-  void WithRequestNoResponse(::std::string arg) override;
-  void WithRequestEmptyResponse(
-      ::std::string arg, WithRequestEmptyResponseCallback callback) override;
-  void WithRequestWithResponse(
-      ::std::string arg, WithRequestWithResponseCallback callback) override;
-  OnEmptyResponseCallback OnEmptyResponse;
-  OnWithResponseCallback OnWithResponse;
-
- private:
-  WithAndWithoutRequestResponse_Proxy(
-      const WithAndWithoutRequestResponse_Proxy&) = delete;
-  WithAndWithoutRequestResponse_Proxy& operator=(
-      const WithAndWithoutRequestResponse_Proxy&) = delete;
-
-  ::fidl::internal::ProxyController* controller_;
-};
-
-class WithAndWithoutRequestResponse_Stub final
-    : public ::fidl::internal::Stub,
-      public WithAndWithoutRequestResponse_EventSender {
- public:
-  typedef class ::fidl::test::protocols::WithAndWithoutRequestResponse
-      WithAndWithoutRequestResponse_clazz;
-  explicit WithAndWithoutRequestResponse_Stub(
-      WithAndWithoutRequestResponse_clazz* impl);
-  ~WithAndWithoutRequestResponse_Stub() override;
-
-  zx_status_t Dispatch_(::fidl::Message message,
-                        ::fidl::internal::PendingResponse response) override;
-  void OnEmptyResponse() override;
-  void OnWithResponse(::std::string ret) override;
-
- private:
-  WithAndWithoutRequestResponse_clazz* impl_;
-};
-
-class WithAndWithoutRequestResponse_SyncProxy
-    : public WithAndWithoutRequestResponse_Sync {
- public:
-  explicit WithAndWithoutRequestResponse_SyncProxy(::zx::channel channel);
-  ~WithAndWithoutRequestResponse_SyncProxy() override;
-  zx_status_t NoRequestNoResponse() override;
-  zx_status_t NoRequestEmptyResponse() override;
-  zx_status_t NoRequestWithResponse(::std::string* out_ret) override;
-  zx_status_t WithRequestNoResponse(::std::string arg) override;
-  zx_status_t WithRequestEmptyResponse(::std::string arg) override;
-  zx_status_t WithRequestWithResponse(::std::string arg,
-                                      ::std::string* out_ret) override;
-
- private:
-  ::fidl::internal::SynchronousProxy proxy_;
-  friend class ::fidl::SynchronousInterfacePtr<WithAndWithoutRequestResponse>;
-};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1529,70 +919,14 @@ using WithErrorSyntax_ErrorAsEnum_ResultPtr =
 
 #ifdef __Fuchsia__
 
-class WithErrorSyntax {
- public:
-  using Proxy_ = WithErrorSyntax_Proxy;
-  using Stub_ = WithErrorSyntax_Stub;
-  using EventSender_ = WithErrorSyntax_EventSender;
-  using Sync_ = WithErrorSyntax_Sync;
-  virtual ~WithErrorSyntax();
-  using ResponseAsStructCallback = fit::function<void(
-      ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Result)>;
-
-  virtual void ResponseAsStruct(ResponseAsStructCallback callback) = 0;
-  using ErrorAsPrimitiveCallback = fit::function<void(
-      ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result)>;
-
-  virtual void ErrorAsPrimitive(ErrorAsPrimitiveCallback callback) = 0;
-  using ErrorAsEnumCallback = fit::function<void(
-      ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result)>;
-
-  virtual void ErrorAsEnum(ErrorAsEnumCallback callback) = 0;
-};
-
-class WithErrorSyntax_RequestDecoder {
- public:
-  WithErrorSyntax_RequestDecoder() = default;
-  virtual ~WithErrorSyntax_RequestDecoder() = default;
-  static const fidl_type_t* GetType(uint64_t ordinal, bool* out_needs_response);
-  zx_status_t Decode_(::fidl::Message request) {
-    bool needs_response;
-    const fidl_type_t* request_type =
-        GetType(request.ordinal(), &needs_response);
-    if (request_type == nullptr) {
-      return ZX_ERR_NOT_SUPPORTED;
-    }
-    const char* error_msg = nullptr;
-    zx_status_t status = request.Decode(request_type, &error_msg);
-    if (status != ZX_OK) {
-      FIDL_REPORT_DECODING_ERROR(request, request_type, error_msg);
-      return status;
-    }
-    ::fidl::Decoder request_decoder(std::move(request));
-    switch (request.ordinal()) {
-      case internal::kWithErrorSyntax_ResponseAsStruct_Ordinal: {
-        ResponseAsStruct();
-        break;
-      }
-      case internal::kWithErrorSyntax_ErrorAsPrimitive_Ordinal: {
-        ErrorAsPrimitive();
-        break;
-      }
-      case internal::kWithErrorSyntax_ErrorAsEnum_Ordinal: {
-        ErrorAsEnum();
-        break;
-      }
-      default: {
-        status = ZX_ERR_NOT_SUPPORTED;
-        break;
-      }
-    }
-    return status;
-  }
-  virtual void ResponseAsStruct() = 0;
-  virtual void ErrorAsPrimitive() = 0;
-  virtual void ErrorAsEnum() = 0;
-};
+namespace _internal {
+extern "C" const fidl_type_t
+    fidl_test_protocols_WithErrorSyntaxResponseAsStructRequestTable;
+extern "C" const fidl_type_t
+    fidl_test_protocols_WithErrorSyntaxErrorAsPrimitiveRequestTable;
+extern "C" const fidl_type_t
+    fidl_test_protocols_WithErrorSyntaxErrorAsEnumRequestTable;
+}  // namespace _internal
 
 class WithErrorSyntax_RequestEncoder {
  public:
@@ -1600,13 +934,12 @@ class WithErrorSyntax_RequestEncoder {
     fidl_trace(WillHLCPPEncode);
     _encoder->Alloc(16 - sizeof(fidl_message_header_t));
 
-    bool needs_response;  // unused
-    fidl_trace(DidHLCPPEncode,
-               WithErrorSyntax_RequestDecoder::GetType(
-                   internal::kWithErrorSyntax_ResponseAsStruct_Ordinal,
-                   &needs_response),
-               _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
-               _encoder->CurrentHandleCount());
+    fidl_trace(
+        DidHLCPPEncode,
+        &_internal::
+            fidl_test_protocols_WithErrorSyntaxResponseAsStructRequestTable,
+        _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
+        _encoder->CurrentHandleCount());
 
     return _encoder->GetMessage();
   }
@@ -1614,13 +947,12 @@ class WithErrorSyntax_RequestEncoder {
     fidl_trace(WillHLCPPEncode);
     _encoder->Alloc(16 - sizeof(fidl_message_header_t));
 
-    bool needs_response;  // unused
-    fidl_trace(DidHLCPPEncode,
-               WithErrorSyntax_RequestDecoder::GetType(
-                   internal::kWithErrorSyntax_ErrorAsPrimitive_Ordinal,
-                   &needs_response),
-               _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
-               _encoder->CurrentHandleCount());
+    fidl_trace(
+        DidHLCPPEncode,
+        &_internal::
+            fidl_test_protocols_WithErrorSyntaxErrorAsPrimitiveRequestTable,
+        _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
+        _encoder->CurrentHandleCount());
 
     return _encoder->GetMessage();
   }
@@ -1628,11 +960,9 @@ class WithErrorSyntax_RequestEncoder {
     fidl_trace(WillHLCPPEncode);
     _encoder->Alloc(16 - sizeof(fidl_message_header_t));
 
-    bool needs_response;  // unused
     fidl_trace(
         DidHLCPPEncode,
-        WithErrorSyntax_RequestDecoder::GetType(
-            internal::kWithErrorSyntax_ErrorAsEnum_Ordinal, &needs_response),
+        &_internal::fidl_test_protocols_WithErrorSyntaxErrorAsEnumRequestTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
 
@@ -1640,60 +970,14 @@ class WithErrorSyntax_RequestEncoder {
   }
 };
 
-class WithErrorSyntax_ResponseDecoder {
- public:
-  WithErrorSyntax_ResponseDecoder() = default;
-  virtual ~WithErrorSyntax_ResponseDecoder() = default;
-  static const fidl_type_t* GetType(uint64_t ordinal);
-  zx_status_t Decode_(::fidl::Message response) {
-    const fidl_type_t* response_type = GetType(response.ordinal());
-    if (response_type == nullptr) {
-      return ZX_ERR_NOT_SUPPORTED;
-    }
-    const char* error_msg = nullptr;
-    zx_status_t status = response.Decode(response_type, &error_msg);
-    if (status != ZX_OK) {
-      FIDL_REPORT_DECODING_ERROR(response, response_type, error_msg);
-      return status;
-    }
-    ::fidl::Decoder response_decoder(std::move(response));
-    switch (response.ordinal()) {
-      case internal::kWithErrorSyntax_ResponseAsStruct_Ordinal: {
-        ResponseAsStruct(
-            ::fidl::DecodeAs<::fidl::test::protocols::
-                                 WithErrorSyntax_ResponseAsStruct_Result>(
-                &response_decoder, 16));
-        break;
-      }
-      case internal::kWithErrorSyntax_ErrorAsPrimitive_Ordinal: {
-        ErrorAsPrimitive(
-            ::fidl::DecodeAs<::fidl::test::protocols::
-                                 WithErrorSyntax_ErrorAsPrimitive_Result>(
-                &response_decoder, 16));
-        break;
-      }
-      case internal::kWithErrorSyntax_ErrorAsEnum_Ordinal: {
-        ErrorAsEnum(
-            ::fidl::DecodeAs<
-                ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result>(
-                &response_decoder, 16));
-        break;
-      }
-      default: {
-        break;
-      }
-    }
-    return ZX_OK;
-  }
-  virtual void ResponseAsStruct(
-      ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Result
-          result) = 0;
-  virtual void ErrorAsPrimitive(
-      ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result
-          result) = 0;
-  virtual void ErrorAsEnum(
-      ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result result) = 0;
-};
+namespace _internal {
+extern "C" const fidl_type_t
+    fidl_test_protocols_WithErrorSyntaxResponseAsStructResponseTable;
+extern "C" const fidl_type_t
+    fidl_test_protocols_WithErrorSyntaxErrorAsPrimitiveResponseTable;
+extern "C" const fidl_type_t
+    fidl_test_protocols_WithErrorSyntaxErrorAsEnumResponseTable;
+}  // namespace _internal
 
 class WithErrorSyntax_ResponseEncoder {
  public:
@@ -1705,11 +989,12 @@ class WithErrorSyntax_ResponseEncoder {
     _encoder->Alloc(40 - sizeof(fidl_message_header_t));
     ::fidl::Encode(_encoder, result, 16);
 
-    fidl_trace(DidHLCPPEncode,
-               WithErrorSyntax_ResponseDecoder::GetType(
-                   internal::kWithErrorSyntax_ResponseAsStruct_Ordinal),
-               _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
-               _encoder->CurrentHandleCount());
+    fidl_trace(
+        DidHLCPPEncode,
+        &_internal::
+            fidl_test_protocols_WithErrorSyntaxResponseAsStructResponseTable,
+        _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
+        _encoder->CurrentHandleCount());
     return _encoder->GetMessage();
   }
   static ::fidl::Message ErrorAsPrimitive(
@@ -1720,11 +1005,12 @@ class WithErrorSyntax_ResponseEncoder {
     _encoder->Alloc(40 - sizeof(fidl_message_header_t));
     ::fidl::Encode(_encoder, result, 16);
 
-    fidl_trace(DidHLCPPEncode,
-               WithErrorSyntax_ResponseDecoder::GetType(
-                   internal::kWithErrorSyntax_ErrorAsPrimitive_Ordinal),
-               _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
-               _encoder->CurrentHandleCount());
+    fidl_trace(
+        DidHLCPPEncode,
+        &_internal::
+            fidl_test_protocols_WithErrorSyntaxErrorAsPrimitiveResponseTable,
+        _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
+        _encoder->CurrentHandleCount());
     return _encoder->GetMessage();
   }
   static ::fidl::Message ErrorAsEnum(
@@ -1734,85 +1020,15 @@ class WithErrorSyntax_ResponseEncoder {
     _encoder->Alloc(40 - sizeof(fidl_message_header_t));
     ::fidl::Encode(_encoder, result, 16);
 
-    fidl_trace(DidHLCPPEncode,
-               WithErrorSyntax_ResponseDecoder::GetType(
-                   internal::kWithErrorSyntax_ErrorAsEnum_Ordinal),
-               _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
-               _encoder->CurrentHandleCount());
+    fidl_trace(
+        DidHLCPPEncode,
+        &_internal::fidl_test_protocols_WithErrorSyntaxErrorAsEnumResponseTable,
+        _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
+        _encoder->CurrentHandleCount());
     return _encoder->GetMessage();
   }
 };
 
-class WithErrorSyntax_EventSender {
- public:
-  virtual ~WithErrorSyntax_EventSender();
-};
-
-class WithErrorSyntax_Sync {
- public:
-  using Proxy_ = WithErrorSyntax_SyncProxy;
-  virtual ~WithErrorSyntax_Sync();
-  virtual zx_status_t ResponseAsStruct(
-      ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Result*
-          out_result) = 0;
-  virtual zx_status_t ErrorAsPrimitive(
-      ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result*
-          out_result) = 0;
-  virtual zx_status_t ErrorAsEnum(
-      ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result*
-          out_result) = 0;
-};
-
-class WithErrorSyntax_Proxy final : public ::fidl::internal::Proxy,
-                                    public WithErrorSyntax {
- public:
-  explicit WithErrorSyntax_Proxy(::fidl::internal::ProxyController* controller);
-  ~WithErrorSyntax_Proxy() override;
-
-  zx_status_t Dispatch_(::fidl::Message message) override;
-  void ResponseAsStruct(ResponseAsStructCallback callback) override;
-  void ErrorAsPrimitive(ErrorAsPrimitiveCallback callback) override;
-  void ErrorAsEnum(ErrorAsEnumCallback callback) override;
-
- private:
-  WithErrorSyntax_Proxy(const WithErrorSyntax_Proxy&) = delete;
-  WithErrorSyntax_Proxy& operator=(const WithErrorSyntax_Proxy&) = delete;
-
-  ::fidl::internal::ProxyController* controller_;
-};
-
-class WithErrorSyntax_Stub final : public ::fidl::internal::Stub,
-                                   public WithErrorSyntax_EventSender {
- public:
-  typedef class ::fidl::test::protocols::WithErrorSyntax WithErrorSyntax_clazz;
-  explicit WithErrorSyntax_Stub(WithErrorSyntax_clazz* impl);
-  ~WithErrorSyntax_Stub() override;
-
-  zx_status_t Dispatch_(::fidl::Message message,
-                        ::fidl::internal::PendingResponse response) override;
-
- private:
-  WithErrorSyntax_clazz* impl_;
-};
-
-class WithErrorSyntax_SyncProxy : public WithErrorSyntax_Sync {
- public:
-  explicit WithErrorSyntax_SyncProxy(::zx::channel channel);
-  ~WithErrorSyntax_SyncProxy() override;
-  zx_status_t ResponseAsStruct(
-      ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Result*
-          out_result) override;
-  zx_status_t ErrorAsPrimitive(
-      ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result*
-          out_result) override;
-  zx_status_t ErrorAsEnum(
-      ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result* out_result)
-      override;
-
- private:
-  ::fidl::internal::SynchronousProxy proxy_;
-  friend class ::fidl::SynchronousInterfacePtr<WithErrorSyntax>;
-};
 #endif  // __Fuchsia__
 }  // namespace protocols
 }  // namespace test
@@ -2257,4 +1473,865 @@ struct Equality<::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result> {
   }
 };
 #endif  // __Fuchsia__
+}  // namespace fidl
+
+//
+// Proxies and stubs declarations
+//
+namespace fidl {
+namespace test {
+namespace protocols {
+
+#ifdef __Fuchsia__
+using TransitionalPtr = ::fidl::InterfacePtr<Transitional>;
+class Transitional_Proxy;
+class Transitional_Stub;
+class Transitional_EventSender;
+class Transitional_Sync;
+using TransitionalSyncPtr = ::fidl::SynchronousInterfacePtr<Transitional>;
+class Transitional_SyncProxy;
+
+namespace internal {
+constexpr uint64_t kTransitional_Request_Ordinal = 0x62d345e621780ee8lu;
+constexpr uint64_t kTransitional_OneWay_Ordinal = 0xf99bc4b26bc9ea5lu;
+constexpr uint64_t kTransitional_Event_Ordinal = 0x53bb9212bcbe8966lu;
+
+}  // namespace internal
+#endif  // __Fuchsia__
+#ifdef __Fuchsia__
+using ChannelProtocolPtr = ::fidl::InterfacePtr<ChannelProtocol>;
+class ChannelProtocol_Proxy;
+class ChannelProtocol_Stub;
+class ChannelProtocol_EventSender;
+class ChannelProtocol_Sync;
+using ChannelProtocolSyncPtr = ::fidl::SynchronousInterfacePtr<ChannelProtocol>;
+class ChannelProtocol_SyncProxy;
+
+namespace internal {
+constexpr uint64_t kChannelProtocol_MethodA_Ordinal = 0x7d92c10fb2d002elu;
+constexpr uint64_t kChannelProtocol_EventA_Ordinal = 0x52c2fa481a687dfalu;
+constexpr uint64_t kChannelProtocol_MethodB_Ordinal = 0x5da1d2ed00055cealu;
+constexpr uint64_t kChannelProtocol_MutateSocket_Ordinal = 0x7dd036a18b33b76alu;
+
+}  // namespace internal
+#endif  // __Fuchsia__
+#ifdef __Fuchsia__
+using WithAndWithoutRequestResponsePtr =
+    ::fidl::InterfacePtr<WithAndWithoutRequestResponse>;
+class WithAndWithoutRequestResponse_Proxy;
+class WithAndWithoutRequestResponse_Stub;
+class WithAndWithoutRequestResponse_EventSender;
+class WithAndWithoutRequestResponse_Sync;
+using WithAndWithoutRequestResponseSyncPtr =
+    ::fidl::SynchronousInterfacePtr<WithAndWithoutRequestResponse>;
+class WithAndWithoutRequestResponse_SyncProxy;
+
+namespace internal {
+constexpr uint64_t kWithAndWithoutRequestResponse_NoRequestNoResponse_Ordinal =
+    0x6ad894147d0c6ba4lu;
+constexpr uint64_t
+    kWithAndWithoutRequestResponse_NoRequestEmptyResponse_Ordinal =
+        0x4068f26bf6d868aelu;
+constexpr uint64_t
+    kWithAndWithoutRequestResponse_NoRequestWithResponse_Ordinal =
+        0x447e655905ccfbf4lu;
+constexpr uint64_t
+    kWithAndWithoutRequestResponse_WithRequestNoResponse_Ordinal =
+        0x7cb47b2f9e76d17dlu;
+constexpr uint64_t
+    kWithAndWithoutRequestResponse_WithRequestEmptyResponse_Ordinal =
+        0x65eb512ff0e1c07elu;
+constexpr uint64_t
+    kWithAndWithoutRequestResponse_WithRequestWithResponse_Ordinal =
+        0x1d323510d4447cf1lu;
+constexpr uint64_t kWithAndWithoutRequestResponse_OnEmptyResponse_Ordinal =
+    0x125c87a592bff029lu;
+constexpr uint64_t kWithAndWithoutRequestResponse_OnWithResponse_Ordinal =
+    0x177adc0a3ee346c2lu;
+
+}  // namespace internal
+#endif  // __Fuchsia__
+#ifdef __Fuchsia__
+using WithErrorSyntaxPtr = ::fidl::InterfacePtr<WithErrorSyntax>;
+class WithErrorSyntax_Proxy;
+class WithErrorSyntax_Stub;
+class WithErrorSyntax_EventSender;
+class WithErrorSyntax_Sync;
+using WithErrorSyntaxSyncPtr = ::fidl::SynchronousInterfacePtr<WithErrorSyntax>;
+class WithErrorSyntax_SyncProxy;
+
+namespace internal {
+constexpr uint64_t kWithErrorSyntax_ResponseAsStruct_Ordinal =
+    0x3784d38864674290lu;
+constexpr uint64_t kWithErrorSyntax_ErrorAsPrimitive_Ordinal =
+    0x2f7c390f3cdef4celu;
+constexpr uint64_t kWithErrorSyntax_ErrorAsEnum_Ordinal = 0x8b550d7c29f740clu;
+
+}  // namespace internal
+#endif  // __Fuchsia__
+#ifdef __Fuchsia__
+class Transitional {
+ public:
+  using Proxy_ = Transitional_Proxy;
+  using Stub_ = Transitional_Stub;
+  using EventSender_ = Transitional_EventSender;
+  using Sync_ = Transitional_Sync;
+  virtual ~Transitional();
+  using RequestCallback = fit::function<void(int64_t)>;
+
+  virtual void Request(int64_t x, RequestCallback callback) {}
+
+  virtual void OneWay(int64_t x) {}
+  using EventCallback = fit::function<void(int64_t)>;
+};
+
+class Transitional_RequestDecoder {
+ public:
+  Transitional_RequestDecoder() = default;
+  virtual ~Transitional_RequestDecoder() = default;
+  static const fidl_type_t* GetType(uint64_t ordinal, bool* out_needs_response);
+  zx_status_t Decode_(::fidl::Message request) {
+    bool needs_response;
+    const fidl_type_t* request_type =
+        GetType(request.ordinal(), &needs_response);
+    if (request_type == nullptr) {
+      return ZX_ERR_NOT_SUPPORTED;
+    }
+    const char* error_msg = nullptr;
+    zx_status_t status = request.Decode(request_type, &error_msg);
+    if (status != ZX_OK) {
+      FIDL_REPORT_DECODING_ERROR(request, request_type, error_msg);
+      return status;
+    }
+    ::fidl::Decoder request_decoder(std::move(request));
+    switch (request.ordinal()) {
+      case internal::kTransitional_Request_Ordinal: {
+        Request(::fidl::DecodeAs<int64_t>(&request_decoder, 16));
+        break;
+      }
+      case internal::kTransitional_OneWay_Ordinal: {
+        OneWay(::fidl::DecodeAs<int64_t>(&request_decoder, 16));
+        break;
+      }
+      default: {
+        status = ZX_ERR_NOT_SUPPORTED;
+        break;
+      }
+    }
+    return status;
+  }
+  virtual void Request(int64_t x) = 0;
+  virtual void OneWay(int64_t x) = 0;
+};
+
+class Transitional_ResponseDecoder {
+ public:
+  Transitional_ResponseDecoder() = default;
+  virtual ~Transitional_ResponseDecoder() = default;
+  static const fidl_type_t* GetType(uint64_t ordinal);
+  zx_status_t Decode_(::fidl::Message response) {
+    const fidl_type_t* response_type = GetType(response.ordinal());
+    if (response_type == nullptr) {
+      return ZX_ERR_NOT_SUPPORTED;
+    }
+    const char* error_msg = nullptr;
+    zx_status_t status = response.Decode(response_type, &error_msg);
+    if (status != ZX_OK) {
+      FIDL_REPORT_DECODING_ERROR(response, response_type, error_msg);
+      return status;
+    }
+    ::fidl::Decoder response_decoder(std::move(response));
+    switch (response.ordinal()) {
+      case internal::kTransitional_Request_Ordinal: {
+        Request(::fidl::DecodeAs<int64_t>(&response_decoder, 16));
+        break;
+      }
+      case internal::kTransitional_Event_Ordinal: {
+        Event(::fidl::DecodeAs<int64_t>(&response_decoder, 16));
+        break;
+      }
+      default: {
+        break;
+      }
+    }
+    return ZX_OK;
+  }
+  virtual void Request(int64_t y) = 0;
+  virtual void Event(int64_t x) = 0;
+};
+
+class Transitional_EventSender {
+ public:
+  virtual ~Transitional_EventSender();
+  virtual void Event(int64_t x) = 0;
+};
+
+class Transitional_Sync {
+ public:
+  using Proxy_ = Transitional_SyncProxy;
+  virtual ~Transitional_Sync();
+  virtual zx_status_t Request(int64_t x, int64_t* out_y) = 0;
+  virtual zx_status_t OneWay(int64_t x) = 0;
+};
+
+class Transitional_Proxy final : public ::fidl::internal::Proxy,
+                                 public Transitional {
+ public:
+  explicit Transitional_Proxy(::fidl::internal::ProxyController* controller);
+  ~Transitional_Proxy() override;
+
+  zx_status_t Dispatch_(::fidl::Message message) override;
+  void Request(int64_t x, RequestCallback callback) override;
+  void OneWay(int64_t x) override;
+  EventCallback Event;
+
+ private:
+  Transitional_Proxy(const Transitional_Proxy&) = delete;
+  Transitional_Proxy& operator=(const Transitional_Proxy&) = delete;
+
+  ::fidl::internal::ProxyController* controller_;
+};
+
+class Transitional_Stub final : public ::fidl::internal::Stub,
+                                public Transitional_EventSender {
+ public:
+  typedef class ::fidl::test::protocols::Transitional Transitional_clazz;
+  explicit Transitional_Stub(Transitional_clazz* impl);
+  ~Transitional_Stub() override;
+
+  zx_status_t Dispatch_(::fidl::Message message,
+                        ::fidl::internal::PendingResponse response) override;
+  void Event(int64_t x) override;
+
+ private:
+  Transitional_clazz* impl_;
+};
+
+class Transitional_SyncProxy : public Transitional_Sync {
+ public:
+  explicit Transitional_SyncProxy(::zx::channel channel);
+  ~Transitional_SyncProxy() override;
+  zx_status_t Request(int64_t x, int64_t* out_y) override;
+  zx_status_t OneWay(int64_t x) override;
+
+ private:
+  ::fidl::internal::SynchronousProxy proxy_;
+  friend class ::fidl::SynchronousInterfacePtr<Transitional>;
+};
+
+#endif  // __Fuchsia__
+#ifdef __Fuchsia__
+class ChannelProtocol {
+ public:
+  using Proxy_ = ChannelProtocol_Proxy;
+  using Stub_ = ChannelProtocol_Stub;
+  using EventSender_ = ChannelProtocol_EventSender;
+  using Sync_ = ChannelProtocol_Sync;
+  virtual ~ChannelProtocol();
+
+  virtual void MethodA(int64_t a, int64_t b) = 0;
+  using EventACallback = fit::function<void(int64_t, int64_t)>;
+  using MethodBCallback = fit::function<void(int64_t)>;
+
+  virtual void MethodB(int64_t a, int64_t b, MethodBCallback callback) = 0;
+  using MutateSocketCallback = fit::function<void(::zx::socket)>;
+
+  virtual void MutateSocket(::zx::socket a, MutateSocketCallback callback) = 0;
+};
+
+class ChannelProtocol_RequestDecoder {
+ public:
+  ChannelProtocol_RequestDecoder() = default;
+  virtual ~ChannelProtocol_RequestDecoder() = default;
+  static const fidl_type_t* GetType(uint64_t ordinal, bool* out_needs_response);
+  zx_status_t Decode_(::fidl::Message request) {
+    bool needs_response;
+    const fidl_type_t* request_type =
+        GetType(request.ordinal(), &needs_response);
+    if (request_type == nullptr) {
+      return ZX_ERR_NOT_SUPPORTED;
+    }
+    const char* error_msg = nullptr;
+    zx_status_t status = request.Decode(request_type, &error_msg);
+    if (status != ZX_OK) {
+      FIDL_REPORT_DECODING_ERROR(request, request_type, error_msg);
+      return status;
+    }
+    ::fidl::Decoder request_decoder(std::move(request));
+    switch (request.ordinal()) {
+      case internal::kChannelProtocol_MethodA_Ordinal: {
+        MethodA(::fidl::DecodeAs<int64_t>(&request_decoder, 16),
+                ::fidl::DecodeAs<int64_t>(&request_decoder, 24));
+        break;
+      }
+      case internal::kChannelProtocol_MethodB_Ordinal: {
+        MethodB(::fidl::DecodeAs<int64_t>(&request_decoder, 16),
+                ::fidl::DecodeAs<int64_t>(&request_decoder, 24));
+        break;
+      }
+      case internal::kChannelProtocol_MutateSocket_Ordinal: {
+        MutateSocket(::fidl::DecodeAs<::zx::socket>(&request_decoder, 16));
+        break;
+      }
+      default: {
+        status = ZX_ERR_NOT_SUPPORTED;
+        break;
+      }
+    }
+    return status;
+  }
+  virtual void MethodA(int64_t a, int64_t b) = 0;
+  virtual void MethodB(int64_t a, int64_t b) = 0;
+  virtual void MutateSocket(::zx::socket a) = 0;
+};
+
+class ChannelProtocol_ResponseDecoder {
+ public:
+  ChannelProtocol_ResponseDecoder() = default;
+  virtual ~ChannelProtocol_ResponseDecoder() = default;
+  static const fidl_type_t* GetType(uint64_t ordinal);
+  zx_status_t Decode_(::fidl::Message response) {
+    const fidl_type_t* response_type = GetType(response.ordinal());
+    if (response_type == nullptr) {
+      return ZX_ERR_NOT_SUPPORTED;
+    }
+    const char* error_msg = nullptr;
+    zx_status_t status = response.Decode(response_type, &error_msg);
+    if (status != ZX_OK) {
+      FIDL_REPORT_DECODING_ERROR(response, response_type, error_msg);
+      return status;
+    }
+    ::fidl::Decoder response_decoder(std::move(response));
+    switch (response.ordinal()) {
+      case internal::kChannelProtocol_EventA_Ordinal: {
+        EventA(::fidl::DecodeAs<int64_t>(&response_decoder, 16),
+               ::fidl::DecodeAs<int64_t>(&response_decoder, 24));
+        break;
+      }
+      case internal::kChannelProtocol_MethodB_Ordinal: {
+        MethodB(::fidl::DecodeAs<int64_t>(&response_decoder, 16));
+        break;
+      }
+      case internal::kChannelProtocol_MutateSocket_Ordinal: {
+        MutateSocket(::fidl::DecodeAs<::zx::socket>(&response_decoder, 16));
+        break;
+      }
+      default: {
+        break;
+      }
+    }
+    return ZX_OK;
+  }
+  virtual void EventA(int64_t a, int64_t b) = 0;
+  virtual void MethodB(int64_t result) = 0;
+  virtual void MutateSocket(::zx::socket b) = 0;
+};
+
+class ChannelProtocol_EventSender {
+ public:
+  virtual ~ChannelProtocol_EventSender();
+  virtual void EventA(int64_t a, int64_t b) = 0;
+};
+
+class ChannelProtocol_Sync {
+ public:
+  using Proxy_ = ChannelProtocol_SyncProxy;
+  virtual ~ChannelProtocol_Sync();
+  virtual zx_status_t MethodA(int64_t a, int64_t b) = 0;
+  virtual zx_status_t MethodB(int64_t a, int64_t b, int64_t* out_result) = 0;
+  virtual zx_status_t MutateSocket(::zx::socket a, ::zx::socket* out_b) = 0;
+};
+
+class ChannelProtocol_Proxy final : public ::fidl::internal::Proxy,
+                                    public ChannelProtocol {
+ public:
+  explicit ChannelProtocol_Proxy(::fidl::internal::ProxyController* controller);
+  ~ChannelProtocol_Proxy() override;
+
+  zx_status_t Dispatch_(::fidl::Message message) override;
+  void MethodA(int64_t a, int64_t b) override;
+  EventACallback EventA;
+  void MethodB(int64_t a, int64_t b, MethodBCallback callback) override;
+  void MutateSocket(::zx::socket a, MutateSocketCallback callback) override;
+
+ private:
+  ChannelProtocol_Proxy(const ChannelProtocol_Proxy&) = delete;
+  ChannelProtocol_Proxy& operator=(const ChannelProtocol_Proxy&) = delete;
+
+  ::fidl::internal::ProxyController* controller_;
+};
+
+class ChannelProtocol_Stub final : public ::fidl::internal::Stub,
+                                   public ChannelProtocol_EventSender {
+ public:
+  typedef class ::fidl::test::protocols::ChannelProtocol ChannelProtocol_clazz;
+  explicit ChannelProtocol_Stub(ChannelProtocol_clazz* impl);
+  ~ChannelProtocol_Stub() override;
+
+  zx_status_t Dispatch_(::fidl::Message message,
+                        ::fidl::internal::PendingResponse response) override;
+  void EventA(int64_t a, int64_t b) override;
+
+ private:
+  ChannelProtocol_clazz* impl_;
+};
+
+class ChannelProtocol_SyncProxy : public ChannelProtocol_Sync {
+ public:
+  explicit ChannelProtocol_SyncProxy(::zx::channel channel);
+  ~ChannelProtocol_SyncProxy() override;
+  zx_status_t MethodA(int64_t a, int64_t b) override;
+  zx_status_t MethodB(int64_t a, int64_t b, int64_t* out_result) override;
+  zx_status_t MutateSocket(::zx::socket a, ::zx::socket* out_b) override;
+
+ private:
+  ::fidl::internal::SynchronousProxy proxy_;
+  friend class ::fidl::SynchronousInterfacePtr<ChannelProtocol>;
+};
+
+#endif  // __Fuchsia__
+#ifdef __Fuchsia__
+class WithAndWithoutRequestResponse {
+ public:
+  using Proxy_ = WithAndWithoutRequestResponse_Proxy;
+  using Stub_ = WithAndWithoutRequestResponse_Stub;
+  using EventSender_ = WithAndWithoutRequestResponse_EventSender;
+  using Sync_ = WithAndWithoutRequestResponse_Sync;
+  virtual ~WithAndWithoutRequestResponse();
+
+  virtual void NoRequestNoResponse() = 0;
+  using NoRequestEmptyResponseCallback = fit::function<void()>;
+
+  virtual void NoRequestEmptyResponse(
+      NoRequestEmptyResponseCallback callback) = 0;
+  using NoRequestWithResponseCallback = fit::function<void(::std::string)>;
+
+  virtual void NoRequestWithResponse(
+      NoRequestWithResponseCallback callback) = 0;
+
+  virtual void WithRequestNoResponse(::std::string arg) = 0;
+  using WithRequestEmptyResponseCallback = fit::function<void()>;
+
+  virtual void WithRequestEmptyResponse(
+      ::std::string arg, WithRequestEmptyResponseCallback callback) = 0;
+  using WithRequestWithResponseCallback = fit::function<void(::std::string)>;
+
+  virtual void WithRequestWithResponse(
+      ::std::string arg, WithRequestWithResponseCallback callback) = 0;
+  using OnEmptyResponseCallback = fit::function<void()>;
+  using OnWithResponseCallback = fit::function<void(::std::string)>;
+};
+
+class WithAndWithoutRequestResponse_RequestDecoder {
+ public:
+  WithAndWithoutRequestResponse_RequestDecoder() = default;
+  virtual ~WithAndWithoutRequestResponse_RequestDecoder() = default;
+  static const fidl_type_t* GetType(uint64_t ordinal, bool* out_needs_response);
+  zx_status_t Decode_(::fidl::Message request) {
+    bool needs_response;
+    const fidl_type_t* request_type =
+        GetType(request.ordinal(), &needs_response);
+    if (request_type == nullptr) {
+      return ZX_ERR_NOT_SUPPORTED;
+    }
+    const char* error_msg = nullptr;
+    zx_status_t status = request.Decode(request_type, &error_msg);
+    if (status != ZX_OK) {
+      FIDL_REPORT_DECODING_ERROR(request, request_type, error_msg);
+      return status;
+    }
+    ::fidl::Decoder request_decoder(std::move(request));
+    switch (request.ordinal()) {
+      case internal::
+          kWithAndWithoutRequestResponse_NoRequestNoResponse_Ordinal: {
+        NoRequestNoResponse();
+        break;
+      }
+      case internal::
+          kWithAndWithoutRequestResponse_NoRequestEmptyResponse_Ordinal: {
+        NoRequestEmptyResponse();
+        break;
+      }
+      case internal::
+          kWithAndWithoutRequestResponse_NoRequestWithResponse_Ordinal: {
+        NoRequestWithResponse();
+        break;
+      }
+      case internal::
+          kWithAndWithoutRequestResponse_WithRequestNoResponse_Ordinal: {
+        WithRequestNoResponse(
+            ::fidl::DecodeAs<::std::string>(&request_decoder, 16));
+        break;
+      }
+      case internal::
+          kWithAndWithoutRequestResponse_WithRequestEmptyResponse_Ordinal: {
+        WithRequestEmptyResponse(
+            ::fidl::DecodeAs<::std::string>(&request_decoder, 16));
+        break;
+      }
+      case internal::
+          kWithAndWithoutRequestResponse_WithRequestWithResponse_Ordinal: {
+        WithRequestWithResponse(
+            ::fidl::DecodeAs<::std::string>(&request_decoder, 16));
+        break;
+      }
+      default: {
+        status = ZX_ERR_NOT_SUPPORTED;
+        break;
+      }
+    }
+    return status;
+  }
+  virtual void NoRequestNoResponse() = 0;
+  virtual void NoRequestEmptyResponse() = 0;
+  virtual void NoRequestWithResponse() = 0;
+  virtual void WithRequestNoResponse(::std::string arg) = 0;
+  virtual void WithRequestEmptyResponse(::std::string arg) = 0;
+  virtual void WithRequestWithResponse(::std::string arg) = 0;
+};
+
+class WithAndWithoutRequestResponse_ResponseDecoder {
+ public:
+  WithAndWithoutRequestResponse_ResponseDecoder() = default;
+  virtual ~WithAndWithoutRequestResponse_ResponseDecoder() = default;
+  static const fidl_type_t* GetType(uint64_t ordinal);
+  zx_status_t Decode_(::fidl::Message response) {
+    const fidl_type_t* response_type = GetType(response.ordinal());
+    if (response_type == nullptr) {
+      return ZX_ERR_NOT_SUPPORTED;
+    }
+    const char* error_msg = nullptr;
+    zx_status_t status = response.Decode(response_type, &error_msg);
+    if (status != ZX_OK) {
+      FIDL_REPORT_DECODING_ERROR(response, response_type, error_msg);
+      return status;
+    }
+    ::fidl::Decoder response_decoder(std::move(response));
+    switch (response.ordinal()) {
+      case internal::
+          kWithAndWithoutRequestResponse_NoRequestEmptyResponse_Ordinal: {
+        NoRequestEmptyResponse();
+        break;
+      }
+      case internal::
+          kWithAndWithoutRequestResponse_NoRequestWithResponse_Ordinal: {
+        NoRequestWithResponse(
+            ::fidl::DecodeAs<::std::string>(&response_decoder, 16));
+        break;
+      }
+      case internal::
+          kWithAndWithoutRequestResponse_WithRequestEmptyResponse_Ordinal: {
+        WithRequestEmptyResponse();
+        break;
+      }
+      case internal::
+          kWithAndWithoutRequestResponse_WithRequestWithResponse_Ordinal: {
+        WithRequestWithResponse(
+            ::fidl::DecodeAs<::std::string>(&response_decoder, 16));
+        break;
+      }
+      case internal::kWithAndWithoutRequestResponse_OnEmptyResponse_Ordinal: {
+        OnEmptyResponse();
+        break;
+      }
+      case internal::kWithAndWithoutRequestResponse_OnWithResponse_Ordinal: {
+        OnWithResponse(::fidl::DecodeAs<::std::string>(&response_decoder, 16));
+        break;
+      }
+      default: {
+        break;
+      }
+    }
+    return ZX_OK;
+  }
+  virtual void NoRequestEmptyResponse() = 0;
+  virtual void NoRequestWithResponse(::std::string ret) = 0;
+  virtual void WithRequestEmptyResponse() = 0;
+  virtual void WithRequestWithResponse(::std::string ret) = 0;
+  virtual void OnEmptyResponse() = 0;
+  virtual void OnWithResponse(::std::string ret) = 0;
+};
+
+class WithAndWithoutRequestResponse_EventSender {
+ public:
+  virtual ~WithAndWithoutRequestResponse_EventSender();
+  virtual void OnEmptyResponse() = 0;
+  virtual void OnWithResponse(::std::string ret) = 0;
+};
+
+class WithAndWithoutRequestResponse_Sync {
+ public:
+  using Proxy_ = WithAndWithoutRequestResponse_SyncProxy;
+  virtual ~WithAndWithoutRequestResponse_Sync();
+  virtual zx_status_t NoRequestNoResponse() = 0;
+  virtual zx_status_t NoRequestEmptyResponse() = 0;
+  virtual zx_status_t NoRequestWithResponse(::std::string* out_ret) = 0;
+  virtual zx_status_t WithRequestNoResponse(::std::string arg) = 0;
+  virtual zx_status_t WithRequestEmptyResponse(::std::string arg) = 0;
+  virtual zx_status_t WithRequestWithResponse(::std::string arg,
+                                              ::std::string* out_ret) = 0;
+};
+
+class WithAndWithoutRequestResponse_Proxy final
+    : public ::fidl::internal::Proxy,
+      public WithAndWithoutRequestResponse {
+ public:
+  explicit WithAndWithoutRequestResponse_Proxy(
+      ::fidl::internal::ProxyController* controller);
+  ~WithAndWithoutRequestResponse_Proxy() override;
+
+  zx_status_t Dispatch_(::fidl::Message message) override;
+  void NoRequestNoResponse() override;
+  void NoRequestEmptyResponse(NoRequestEmptyResponseCallback callback) override;
+  void NoRequestWithResponse(NoRequestWithResponseCallback callback) override;
+  void WithRequestNoResponse(::std::string arg) override;
+  void WithRequestEmptyResponse(
+      ::std::string arg, WithRequestEmptyResponseCallback callback) override;
+  void WithRequestWithResponse(
+      ::std::string arg, WithRequestWithResponseCallback callback) override;
+  OnEmptyResponseCallback OnEmptyResponse;
+  OnWithResponseCallback OnWithResponse;
+
+ private:
+  WithAndWithoutRequestResponse_Proxy(
+      const WithAndWithoutRequestResponse_Proxy&) = delete;
+  WithAndWithoutRequestResponse_Proxy& operator=(
+      const WithAndWithoutRequestResponse_Proxy&) = delete;
+
+  ::fidl::internal::ProxyController* controller_;
+};
+
+class WithAndWithoutRequestResponse_Stub final
+    : public ::fidl::internal::Stub,
+      public WithAndWithoutRequestResponse_EventSender {
+ public:
+  typedef class ::fidl::test::protocols::WithAndWithoutRequestResponse
+      WithAndWithoutRequestResponse_clazz;
+  explicit WithAndWithoutRequestResponse_Stub(
+      WithAndWithoutRequestResponse_clazz* impl);
+  ~WithAndWithoutRequestResponse_Stub() override;
+
+  zx_status_t Dispatch_(::fidl::Message message,
+                        ::fidl::internal::PendingResponse response) override;
+  void OnEmptyResponse() override;
+  void OnWithResponse(::std::string ret) override;
+
+ private:
+  WithAndWithoutRequestResponse_clazz* impl_;
+};
+
+class WithAndWithoutRequestResponse_SyncProxy
+    : public WithAndWithoutRequestResponse_Sync {
+ public:
+  explicit WithAndWithoutRequestResponse_SyncProxy(::zx::channel channel);
+  ~WithAndWithoutRequestResponse_SyncProxy() override;
+  zx_status_t NoRequestNoResponse() override;
+  zx_status_t NoRequestEmptyResponse() override;
+  zx_status_t NoRequestWithResponse(::std::string* out_ret) override;
+  zx_status_t WithRequestNoResponse(::std::string arg) override;
+  zx_status_t WithRequestEmptyResponse(::std::string arg) override;
+  zx_status_t WithRequestWithResponse(::std::string arg,
+                                      ::std::string* out_ret) override;
+
+ private:
+  ::fidl::internal::SynchronousProxy proxy_;
+  friend class ::fidl::SynchronousInterfacePtr<WithAndWithoutRequestResponse>;
+};
+
+#endif  // __Fuchsia__
+#ifdef __Fuchsia__
+class WithErrorSyntax {
+ public:
+  using Proxy_ = WithErrorSyntax_Proxy;
+  using Stub_ = WithErrorSyntax_Stub;
+  using EventSender_ = WithErrorSyntax_EventSender;
+  using Sync_ = WithErrorSyntax_Sync;
+  virtual ~WithErrorSyntax();
+  using ResponseAsStructCallback = fit::function<void(
+      ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Result)>;
+
+  virtual void ResponseAsStruct(ResponseAsStructCallback callback) = 0;
+  using ErrorAsPrimitiveCallback = fit::function<void(
+      ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result)>;
+
+  virtual void ErrorAsPrimitive(ErrorAsPrimitiveCallback callback) = 0;
+  using ErrorAsEnumCallback = fit::function<void(
+      ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result)>;
+
+  virtual void ErrorAsEnum(ErrorAsEnumCallback callback) = 0;
+};
+
+class WithErrorSyntax_RequestDecoder {
+ public:
+  WithErrorSyntax_RequestDecoder() = default;
+  virtual ~WithErrorSyntax_RequestDecoder() = default;
+  static const fidl_type_t* GetType(uint64_t ordinal, bool* out_needs_response);
+  zx_status_t Decode_(::fidl::Message request) {
+    bool needs_response;
+    const fidl_type_t* request_type =
+        GetType(request.ordinal(), &needs_response);
+    if (request_type == nullptr) {
+      return ZX_ERR_NOT_SUPPORTED;
+    }
+    const char* error_msg = nullptr;
+    zx_status_t status = request.Decode(request_type, &error_msg);
+    if (status != ZX_OK) {
+      FIDL_REPORT_DECODING_ERROR(request, request_type, error_msg);
+      return status;
+    }
+    ::fidl::Decoder request_decoder(std::move(request));
+    switch (request.ordinal()) {
+      case internal::kWithErrorSyntax_ResponseAsStruct_Ordinal: {
+        ResponseAsStruct();
+        break;
+      }
+      case internal::kWithErrorSyntax_ErrorAsPrimitive_Ordinal: {
+        ErrorAsPrimitive();
+        break;
+      }
+      case internal::kWithErrorSyntax_ErrorAsEnum_Ordinal: {
+        ErrorAsEnum();
+        break;
+      }
+      default: {
+        status = ZX_ERR_NOT_SUPPORTED;
+        break;
+      }
+    }
+    return status;
+  }
+  virtual void ResponseAsStruct() = 0;
+  virtual void ErrorAsPrimitive() = 0;
+  virtual void ErrorAsEnum() = 0;
+};
+
+class WithErrorSyntax_ResponseDecoder {
+ public:
+  WithErrorSyntax_ResponseDecoder() = default;
+  virtual ~WithErrorSyntax_ResponseDecoder() = default;
+  static const fidl_type_t* GetType(uint64_t ordinal);
+  zx_status_t Decode_(::fidl::Message response) {
+    const fidl_type_t* response_type = GetType(response.ordinal());
+    if (response_type == nullptr) {
+      return ZX_ERR_NOT_SUPPORTED;
+    }
+    const char* error_msg = nullptr;
+    zx_status_t status = response.Decode(response_type, &error_msg);
+    if (status != ZX_OK) {
+      FIDL_REPORT_DECODING_ERROR(response, response_type, error_msg);
+      return status;
+    }
+    ::fidl::Decoder response_decoder(std::move(response));
+    switch (response.ordinal()) {
+      case internal::kWithErrorSyntax_ResponseAsStruct_Ordinal: {
+        ResponseAsStruct(
+            ::fidl::DecodeAs<::fidl::test::protocols::
+                                 WithErrorSyntax_ResponseAsStruct_Result>(
+                &response_decoder, 16));
+        break;
+      }
+      case internal::kWithErrorSyntax_ErrorAsPrimitive_Ordinal: {
+        ErrorAsPrimitive(
+            ::fidl::DecodeAs<::fidl::test::protocols::
+                                 WithErrorSyntax_ErrorAsPrimitive_Result>(
+                &response_decoder, 16));
+        break;
+      }
+      case internal::kWithErrorSyntax_ErrorAsEnum_Ordinal: {
+        ErrorAsEnum(
+            ::fidl::DecodeAs<
+                ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result>(
+                &response_decoder, 16));
+        break;
+      }
+      default: {
+        break;
+      }
+    }
+    return ZX_OK;
+  }
+  virtual void ResponseAsStruct(
+      ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Result
+          result) = 0;
+  virtual void ErrorAsPrimitive(
+      ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result
+          result) = 0;
+  virtual void ErrorAsEnum(
+      ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result result) = 0;
+};
+
+class WithErrorSyntax_EventSender {
+ public:
+  virtual ~WithErrorSyntax_EventSender();
+};
+
+class WithErrorSyntax_Sync {
+ public:
+  using Proxy_ = WithErrorSyntax_SyncProxy;
+  virtual ~WithErrorSyntax_Sync();
+  virtual zx_status_t ResponseAsStruct(
+      ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Result*
+          out_result) = 0;
+  virtual zx_status_t ErrorAsPrimitive(
+      ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result*
+          out_result) = 0;
+  virtual zx_status_t ErrorAsEnum(
+      ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result*
+          out_result) = 0;
+};
+
+class WithErrorSyntax_Proxy final : public ::fidl::internal::Proxy,
+                                    public WithErrorSyntax {
+ public:
+  explicit WithErrorSyntax_Proxy(::fidl::internal::ProxyController* controller);
+  ~WithErrorSyntax_Proxy() override;
+
+  zx_status_t Dispatch_(::fidl::Message message) override;
+  void ResponseAsStruct(ResponseAsStructCallback callback) override;
+  void ErrorAsPrimitive(ErrorAsPrimitiveCallback callback) override;
+  void ErrorAsEnum(ErrorAsEnumCallback callback) override;
+
+ private:
+  WithErrorSyntax_Proxy(const WithErrorSyntax_Proxy&) = delete;
+  WithErrorSyntax_Proxy& operator=(const WithErrorSyntax_Proxy&) = delete;
+
+  ::fidl::internal::ProxyController* controller_;
+};
+
+class WithErrorSyntax_Stub final : public ::fidl::internal::Stub,
+                                   public WithErrorSyntax_EventSender {
+ public:
+  typedef class ::fidl::test::protocols::WithErrorSyntax WithErrorSyntax_clazz;
+  explicit WithErrorSyntax_Stub(WithErrorSyntax_clazz* impl);
+  ~WithErrorSyntax_Stub() override;
+
+  zx_status_t Dispatch_(::fidl::Message message,
+                        ::fidl::internal::PendingResponse response) override;
+
+ private:
+  WithErrorSyntax_clazz* impl_;
+};
+
+class WithErrorSyntax_SyncProxy : public WithErrorSyntax_Sync {
+ public:
+  explicit WithErrorSyntax_SyncProxy(::zx::channel channel);
+  ~WithErrorSyntax_SyncProxy() override;
+  zx_status_t ResponseAsStruct(
+      ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Result*
+          out_result) override;
+  zx_status_t ErrorAsPrimitive(
+      ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result*
+          out_result) override;
+  zx_status_t ErrorAsEnum(
+      ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result* out_result)
+      override;
+
+ private:
+  ::fidl::internal::SynchronousProxy proxy_;
+  friend class ::fidl::SynchronousInterfacePtr<WithErrorSyntax>;
+};
+
+#endif  // __Fuchsia__
+}  // namespace protocols
+}  // namespace test
 }  // namespace fidl

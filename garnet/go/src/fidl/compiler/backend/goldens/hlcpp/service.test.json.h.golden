@@ -4,13 +4,106 @@
 
 #include "lib/fidl/cpp/internal/header.h"
 
+//
+// Domain objects declarations (i.e. "natural types" in unified bindings).
+//
 namespace fidl {
 namespace test {
 namespace service {
 
 #ifdef __Fuchsia__
-
 class SecondProtocol;
+using SecondProtocolHandle = ::fidl::InterfaceHandle<SecondProtocol>;
+#endif  // __Fuchsia__
+#ifdef __Fuchsia__
+class FirstProtocol;
+using FirstProtocolHandle = ::fidl::InterfaceHandle<FirstProtocol>;
+#endif  // __Fuchsia__
+#ifdef __Fuchsia__
+class SingleMemberService;
+#endif  // __Fuchsia__
+#ifdef __Fuchsia__
+class MultiHomogeneousMemberService;
+#endif  // __Fuchsia__
+#ifdef __Fuchsia__
+class MultiHeterogeneousMemberService;
+#endif  // __Fuchsia__
+#ifdef __Fuchsia__
+class EmptyService;
+#endif  // __Fuchsia__
+#ifdef __Fuchsia__
+
+namespace _internal {
+extern "C" const fidl_type_t
+    fidl_test_service_SecondProtocolMethodOnSecondRequestTable;
+}
+
+class SecondProtocol_RequestEncoder {
+ public:
+  static ::fidl::Message MethodOnSecond(::fidl::Encoder* _encoder) {
+    fidl_trace(WillHLCPPEncode);
+    _encoder->Alloc(16 - sizeof(fidl_message_header_t));
+
+    fidl_trace(
+        DidHLCPPEncode,
+        &_internal::fidl_test_service_SecondProtocolMethodOnSecondRequestTable,
+        _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
+        _encoder->CurrentHandleCount());
+
+    return _encoder->GetMessage();
+  }
+};
+
+namespace _internal {}
+
+class SecondProtocol_ResponseEncoder {
+ public:
+};
+
+#endif  // __Fuchsia__
+#ifdef __Fuchsia__
+
+namespace _internal {
+extern "C" const fidl_type_t
+    fidl_test_service_FirstProtocolMethodOnFirstRequestTable;
+}
+
+class FirstProtocol_RequestEncoder {
+ public:
+  static ::fidl::Message MethodOnFirst(::fidl::Encoder* _encoder) {
+    fidl_trace(WillHLCPPEncode);
+    _encoder->Alloc(16 - sizeof(fidl_message_header_t));
+
+    fidl_trace(
+        DidHLCPPEncode,
+        &_internal::fidl_test_service_FirstProtocolMethodOnFirstRequestTable,
+        _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
+        _encoder->CurrentHandleCount());
+
+    return _encoder->GetMessage();
+  }
+};
+
+namespace _internal {}
+
+class FirstProtocol_ResponseEncoder {
+ public:
+};
+
+#endif  // __Fuchsia__
+}  // namespace service
+}  // namespace test
+}  // namespace fidl
+namespace fidl {}  // namespace fidl
+
+//
+// Proxies and stubs declarations
+//
+namespace fidl {
+namespace test {
+namespace service {
+
+#ifdef __Fuchsia__
 using SecondProtocolPtr = ::fidl::InterfacePtr<SecondProtocol>;
 class SecondProtocol_Proxy;
 class SecondProtocol_Stub;
@@ -18,7 +111,7 @@ class SecondProtocol_EventSender;
 class SecondProtocol_Sync;
 using SecondProtocolSyncPtr = ::fidl::SynchronousInterfacePtr<SecondProtocol>;
 class SecondProtocol_SyncProxy;
-using SecondProtocolHandle = ::fidl::InterfaceHandle<SecondProtocol>;
+
 namespace internal {
 constexpr uint64_t kSecondProtocol_MethodOnSecond_Ordinal =
     0x54ea6448c1555a29lu;
@@ -26,8 +119,6 @@ constexpr uint64_t kSecondProtocol_MethodOnSecond_Ordinal =
 }  // namespace internal
 #endif  // __Fuchsia__
 #ifdef __Fuchsia__
-
-class FirstProtocol;
 using FirstProtocolPtr = ::fidl::InterfacePtr<FirstProtocol>;
 class FirstProtocol_Proxy;
 class FirstProtocol_Stub;
@@ -35,7 +126,7 @@ class FirstProtocol_EventSender;
 class FirstProtocol_Sync;
 using FirstProtocolSyncPtr = ::fidl::SynchronousInterfacePtr<FirstProtocol>;
 class FirstProtocol_SyncProxy;
-using FirstProtocolHandle = ::fidl::InterfaceHandle<FirstProtocol>;
+
 namespace internal {
 constexpr uint64_t kFirstProtocol_MethodOnFirst_Ordinal = 0x5b76bb4db7c2bba4lu;
 
@@ -43,18 +134,17 @@ constexpr uint64_t kFirstProtocol_MethodOnFirst_Ordinal = 0x5b76bb4db7c2bba4lu;
 #endif  // __Fuchsia__
 #ifdef __Fuchsia__
 class SingleMemberService;
-#endif  // __Fuchsia
+#endif  // __Fuchsia__
 #ifdef __Fuchsia__
 class MultiHomogeneousMemberService;
-#endif  // __Fuchsia
+#endif  // __Fuchsia__
 #ifdef __Fuchsia__
 class MultiHeterogeneousMemberService;
-#endif  // __Fuchsia
+#endif  // __Fuchsia__
 #ifdef __Fuchsia__
 class EmptyService;
-#endif  // __Fuchsia
+#endif  // __Fuchsia__
 #ifdef __Fuchsia__
-
 class SecondProtocol {
  public:
   using Proxy_ = SecondProtocol_Proxy;
@@ -100,24 +190,6 @@ class SecondProtocol_RequestDecoder {
   virtual void MethodOnSecond() = 0;
 };
 
-class SecondProtocol_RequestEncoder {
- public:
-  static ::fidl::Message MethodOnSecond(::fidl::Encoder* _encoder) {
-    fidl_trace(WillHLCPPEncode);
-    _encoder->Alloc(16 - sizeof(fidl_message_header_t));
-
-    bool needs_response;  // unused
-    fidl_trace(
-        DidHLCPPEncode,
-        SecondProtocol_RequestDecoder::GetType(
-            internal::kSecondProtocol_MethodOnSecond_Ordinal, &needs_response),
-        _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
-        _encoder->CurrentHandleCount());
-
-    return _encoder->GetMessage();
-  }
-};
-
 class SecondProtocol_ResponseDecoder {
  public:
   SecondProtocol_ResponseDecoder() = default;
@@ -142,10 +214,6 @@ class SecondProtocol_ResponseDecoder {
     }
     return ZX_OK;
   }
-};
-
-class SecondProtocol_ResponseEncoder {
- public:
 };
 
 class SecondProtocol_EventSender {
@@ -200,9 +268,9 @@ class SecondProtocol_SyncProxy : public SecondProtocol_Sync {
   ::fidl::internal::SynchronousProxy proxy_;
   friend class ::fidl::SynchronousInterfacePtr<SecondProtocol>;
 };
+
 #endif  // __Fuchsia__
 #ifdef __Fuchsia__
-
 class FirstProtocol {
  public:
   using Proxy_ = FirstProtocol_Proxy;
@@ -248,24 +316,6 @@ class FirstProtocol_RequestDecoder {
   virtual void MethodOnFirst() = 0;
 };
 
-class FirstProtocol_RequestEncoder {
- public:
-  static ::fidl::Message MethodOnFirst(::fidl::Encoder* _encoder) {
-    fidl_trace(WillHLCPPEncode);
-    _encoder->Alloc(16 - sizeof(fidl_message_header_t));
-
-    bool needs_response;  // unused
-    fidl_trace(
-        DidHLCPPEncode,
-        FirstProtocol_RequestDecoder::GetType(
-            internal::kFirstProtocol_MethodOnFirst_Ordinal, &needs_response),
-        _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
-        _encoder->CurrentHandleCount());
-
-    return _encoder->GetMessage();
-  }
-};
-
 class FirstProtocol_ResponseDecoder {
  public:
   FirstProtocol_ResponseDecoder() = default;
@@ -290,10 +340,6 @@ class FirstProtocol_ResponseDecoder {
     }
     return ZX_OK;
   }
-};
-
-class FirstProtocol_ResponseEncoder {
- public:
 };
 
 class FirstProtocol_EventSender {
@@ -348,6 +394,7 @@ class FirstProtocol_SyncProxy : public FirstProtocol_Sync {
   ::fidl::internal::SynchronousProxy proxy_;
   friend class ::fidl::SynchronousInterfacePtr<FirstProtocol>;
 };
+
 #endif  // __Fuchsia__
 #ifdef __Fuchsia__
 
@@ -392,7 +439,7 @@ class SingleMemberService::Handler final {
  private:
   ::fidl::ServiceHandlerBase* const service_;
 };
-#endif  // __Fuchsia
+#endif  // __Fuchsia__
 #ifdef __Fuchsia__
 
 class MultiHomogeneousMemberService final {
@@ -453,7 +500,7 @@ class MultiHomogeneousMemberService::Handler final {
  private:
   ::fidl::ServiceHandlerBase* const service_;
 };
-#endif  // __Fuchsia
+#endif  // __Fuchsia__
 #ifdef __Fuchsia__
 
 class MultiHeterogeneousMemberService final {
@@ -514,7 +561,7 @@ class MultiHeterogeneousMemberService::Handler final {
  private:
   ::fidl::ServiceHandlerBase* const service_;
 };
-#endif  // __Fuchsia
+#endif  // __Fuchsia__
 #ifdef __Fuchsia__
 
 class EmptyService final {
@@ -540,8 +587,7 @@ class EmptyService::Handler final {
 
  private:
 };
-#endif  // __Fuchsia
+#endif  // __Fuchsia__
 }  // namespace service
 }  // namespace test
 }  // namespace fidl
-namespace fidl {}  // namespace fidl

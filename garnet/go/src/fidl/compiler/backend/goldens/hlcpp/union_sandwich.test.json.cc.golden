@@ -3,6 +3,10 @@
 #include <union_sandwich.test.json.h>
 
 #include "lib/fidl/cpp/internal/implementation.h"
+
+//
+// Domain objects definitions (i.e. "natural types" in unified bindings)
+//
 namespace fidl {
 namespace test {
 namespace unionsandwich {
@@ -795,5 +799,14 @@ zx_status_t SandwichUnionSize24Alignment8::Clone(
   return ZX_OK;
 }
 }  // namespace unionsandwich
+}  // namespace test
+}  // namespace fidl
+
+//
+// Proxies and stubs definitions
+//
+namespace fidl {
+namespace test {
+namespace unionsandwich {}  // namespace unionsandwich
 }  // namespace test
 }  // namespace fidl

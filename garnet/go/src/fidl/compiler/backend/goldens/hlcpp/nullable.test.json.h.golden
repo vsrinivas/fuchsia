@@ -6,6 +6,9 @@
 
 #include "lib/fidl/cpp/internal/header.h"
 
+//
+// Domain objects declarations (i.e. "natural types" in unified bindings).
+//
 namespace fidl {
 namespace test {
 namespace nullable {
@@ -18,20 +21,8 @@ class StructWithNullableRequest;
 class StructWithNullableProtocol;
 class StructWithNullableHandle;
 #ifdef __Fuchsia__
-
 class SimpleProtocol;
-using SimpleProtocolPtr = ::fidl::InterfacePtr<SimpleProtocol>;
-class SimpleProtocol_Proxy;
-class SimpleProtocol_Stub;
-class SimpleProtocol_EventSender;
-class SimpleProtocol_Sync;
-using SimpleProtocolSyncPtr = ::fidl::SynchronousInterfacePtr<SimpleProtocol>;
-class SimpleProtocol_SyncProxy;
 using SimpleProtocolHandle = ::fidl::InterfaceHandle<SimpleProtocol>;
-namespace internal {
-constexpr uint64_t kSimpleProtocol_Add_Ordinal = 0x113010d7832f175dlu;
-
-}  // namespace internal
 #endif  // __Fuchsia__
 class SimpleUnion;
 class Int32Wrapper;
@@ -214,52 +205,9 @@ using StructWithNullableHandlePtr = ::std::unique_ptr<StructWithNullableHandle>;
 
 #ifdef __Fuchsia__
 
-class SimpleProtocol {
- public:
-  using Proxy_ = SimpleProtocol_Proxy;
-  using Stub_ = SimpleProtocol_Stub;
-  using EventSender_ = SimpleProtocol_EventSender;
-  using Sync_ = SimpleProtocol_Sync;
-  virtual ~SimpleProtocol();
-  using AddCallback = fit::function<void(int32_t)>;
-
-  virtual void Add(int32_t a, int32_t b, AddCallback callback) = 0;
-};
-
-class SimpleProtocol_RequestDecoder {
- public:
-  SimpleProtocol_RequestDecoder() = default;
-  virtual ~SimpleProtocol_RequestDecoder() = default;
-  static const fidl_type_t* GetType(uint64_t ordinal, bool* out_needs_response);
-  zx_status_t Decode_(::fidl::Message request) {
-    bool needs_response;
-    const fidl_type_t* request_type =
-        GetType(request.ordinal(), &needs_response);
-    if (request_type == nullptr) {
-      return ZX_ERR_NOT_SUPPORTED;
-    }
-    const char* error_msg = nullptr;
-    zx_status_t status = request.Decode(request_type, &error_msg);
-    if (status != ZX_OK) {
-      FIDL_REPORT_DECODING_ERROR(request, request_type, error_msg);
-      return status;
-    }
-    ::fidl::Decoder request_decoder(std::move(request));
-    switch (request.ordinal()) {
-      case internal::kSimpleProtocol_Add_Ordinal: {
-        Add(::fidl::DecodeAs<int32_t>(&request_decoder, 16),
-            ::fidl::DecodeAs<int32_t>(&request_decoder, 20));
-        break;
-      }
-      default: {
-        status = ZX_ERR_NOT_SUPPORTED;
-        break;
-      }
-    }
-    return status;
-  }
-  virtual void Add(int32_t a, int32_t b) = 0;
-};
+namespace _internal {
+extern "C" const fidl_type_t fidl_test_nullable_SimpleProtocolAddRequestTable;
+}
 
 class SimpleProtocol_RequestEncoder {
  public:
@@ -270,10 +218,8 @@ class SimpleProtocol_RequestEncoder {
     ::fidl::Encode(_encoder, a, 16);
     ::fidl::Encode(_encoder, b, 20);
 
-    bool needs_response;  // unused
     fidl_trace(DidHLCPPEncode,
-               SimpleProtocol_RequestDecoder::GetType(
-                   internal::kSimpleProtocol_Add_Ordinal, &needs_response),
+               &_internal::fidl_test_nullable_SimpleProtocolAddRequestTable,
                _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
                _encoder->CurrentHandleCount());
 
@@ -281,36 +227,9 @@ class SimpleProtocol_RequestEncoder {
   }
 };
 
-class SimpleProtocol_ResponseDecoder {
- public:
-  SimpleProtocol_ResponseDecoder() = default;
-  virtual ~SimpleProtocol_ResponseDecoder() = default;
-  static const fidl_type_t* GetType(uint64_t ordinal);
-  zx_status_t Decode_(::fidl::Message response) {
-    const fidl_type_t* response_type = GetType(response.ordinal());
-    if (response_type == nullptr) {
-      return ZX_ERR_NOT_SUPPORTED;
-    }
-    const char* error_msg = nullptr;
-    zx_status_t status = response.Decode(response_type, &error_msg);
-    if (status != ZX_OK) {
-      FIDL_REPORT_DECODING_ERROR(response, response_type, error_msg);
-      return status;
-    }
-    ::fidl::Decoder response_decoder(std::move(response));
-    switch (response.ordinal()) {
-      case internal::kSimpleProtocol_Add_Ordinal: {
-        Add(::fidl::DecodeAs<int32_t>(&response_decoder, 16));
-        break;
-      }
-      default: {
-        break;
-      }
-    }
-    return ZX_OK;
-  }
-  virtual void Add(int32_t sum) = 0;
-};
+namespace _internal {
+extern "C" const fidl_type_t fidl_test_nullable_SimpleProtocolAddResponseTable;
+}
 
 class SimpleProtocol_ResponseEncoder {
  public:
@@ -320,66 +239,13 @@ class SimpleProtocol_ResponseEncoder {
     ::fidl::Encode(_encoder, sum, 16);
 
     fidl_trace(DidHLCPPEncode,
-               SimpleProtocol_ResponseDecoder::GetType(
-                   internal::kSimpleProtocol_Add_Ordinal),
+               &_internal::fidl_test_nullable_SimpleProtocolAddResponseTable,
                _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
                _encoder->CurrentHandleCount());
     return _encoder->GetMessage();
   }
 };
 
-class SimpleProtocol_EventSender {
- public:
-  virtual ~SimpleProtocol_EventSender();
-};
-
-class SimpleProtocol_Sync {
- public:
-  using Proxy_ = SimpleProtocol_SyncProxy;
-  virtual ~SimpleProtocol_Sync();
-  virtual zx_status_t Add(int32_t a, int32_t b, int32_t* out_sum) = 0;
-};
-
-class SimpleProtocol_Proxy final : public ::fidl::internal::Proxy,
-                                   public SimpleProtocol {
- public:
-  explicit SimpleProtocol_Proxy(::fidl::internal::ProxyController* controller);
-  ~SimpleProtocol_Proxy() override;
-
-  zx_status_t Dispatch_(::fidl::Message message) override;
-  void Add(int32_t a, int32_t b, AddCallback callback) override;
-
- private:
-  SimpleProtocol_Proxy(const SimpleProtocol_Proxy&) = delete;
-  SimpleProtocol_Proxy& operator=(const SimpleProtocol_Proxy&) = delete;
-
-  ::fidl::internal::ProxyController* controller_;
-};
-
-class SimpleProtocol_Stub final : public ::fidl::internal::Stub,
-                                  public SimpleProtocol_EventSender {
- public:
-  typedef class ::fidl::test::nullable::SimpleProtocol SimpleProtocol_clazz;
-  explicit SimpleProtocol_Stub(SimpleProtocol_clazz* impl);
-  ~SimpleProtocol_Stub() override;
-
-  zx_status_t Dispatch_(::fidl::Message message,
-                        ::fidl::internal::PendingResponse response) override;
-
- private:
-  SimpleProtocol_clazz* impl_;
-};
-
-class SimpleProtocol_SyncProxy : public SimpleProtocol_Sync {
- public:
-  explicit SimpleProtocol_SyncProxy(::zx::channel channel);
-  ~SimpleProtocol_SyncProxy() override;
-  zx_status_t Add(int32_t a, int32_t b, int32_t* out_sum) override;
-
- private:
-  ::fidl::internal::SynchronousProxy proxy_;
-  friend class ::fidl::SynchronousInterfacePtr<SimpleProtocol>;
-};
 #endif  // __Fuchsia__
 
 class SimpleUnion final {
@@ -815,4 +681,162 @@ struct Equality<::fidl::test::nullable::Int32Wrapper> {
     return true;
   }
 };
+}  // namespace fidl
+
+//
+// Proxies and stubs declarations
+//
+namespace fidl {
+namespace test {
+namespace nullable {
+
+#ifdef __Fuchsia__
+using SimpleProtocolPtr = ::fidl::InterfacePtr<SimpleProtocol>;
+class SimpleProtocol_Proxy;
+class SimpleProtocol_Stub;
+class SimpleProtocol_EventSender;
+class SimpleProtocol_Sync;
+using SimpleProtocolSyncPtr = ::fidl::SynchronousInterfacePtr<SimpleProtocol>;
+class SimpleProtocol_SyncProxy;
+
+namespace internal {
+constexpr uint64_t kSimpleProtocol_Add_Ordinal = 0x113010d7832f175dlu;
+
+}  // namespace internal
+#endif  // __Fuchsia__
+#ifdef __Fuchsia__
+class SimpleProtocol {
+ public:
+  using Proxy_ = SimpleProtocol_Proxy;
+  using Stub_ = SimpleProtocol_Stub;
+  using EventSender_ = SimpleProtocol_EventSender;
+  using Sync_ = SimpleProtocol_Sync;
+  virtual ~SimpleProtocol();
+  using AddCallback = fit::function<void(int32_t)>;
+
+  virtual void Add(int32_t a, int32_t b, AddCallback callback) = 0;
+};
+
+class SimpleProtocol_RequestDecoder {
+ public:
+  SimpleProtocol_RequestDecoder() = default;
+  virtual ~SimpleProtocol_RequestDecoder() = default;
+  static const fidl_type_t* GetType(uint64_t ordinal, bool* out_needs_response);
+  zx_status_t Decode_(::fidl::Message request) {
+    bool needs_response;
+    const fidl_type_t* request_type =
+        GetType(request.ordinal(), &needs_response);
+    if (request_type == nullptr) {
+      return ZX_ERR_NOT_SUPPORTED;
+    }
+    const char* error_msg = nullptr;
+    zx_status_t status = request.Decode(request_type, &error_msg);
+    if (status != ZX_OK) {
+      FIDL_REPORT_DECODING_ERROR(request, request_type, error_msg);
+      return status;
+    }
+    ::fidl::Decoder request_decoder(std::move(request));
+    switch (request.ordinal()) {
+      case internal::kSimpleProtocol_Add_Ordinal: {
+        Add(::fidl::DecodeAs<int32_t>(&request_decoder, 16),
+            ::fidl::DecodeAs<int32_t>(&request_decoder, 20));
+        break;
+      }
+      default: {
+        status = ZX_ERR_NOT_SUPPORTED;
+        break;
+      }
+    }
+    return status;
+  }
+  virtual void Add(int32_t a, int32_t b) = 0;
+};
+
+class SimpleProtocol_ResponseDecoder {
+ public:
+  SimpleProtocol_ResponseDecoder() = default;
+  virtual ~SimpleProtocol_ResponseDecoder() = default;
+  static const fidl_type_t* GetType(uint64_t ordinal);
+  zx_status_t Decode_(::fidl::Message response) {
+    const fidl_type_t* response_type = GetType(response.ordinal());
+    if (response_type == nullptr) {
+      return ZX_ERR_NOT_SUPPORTED;
+    }
+    const char* error_msg = nullptr;
+    zx_status_t status = response.Decode(response_type, &error_msg);
+    if (status != ZX_OK) {
+      FIDL_REPORT_DECODING_ERROR(response, response_type, error_msg);
+      return status;
+    }
+    ::fidl::Decoder response_decoder(std::move(response));
+    switch (response.ordinal()) {
+      case internal::kSimpleProtocol_Add_Ordinal: {
+        Add(::fidl::DecodeAs<int32_t>(&response_decoder, 16));
+        break;
+      }
+      default: {
+        break;
+      }
+    }
+    return ZX_OK;
+  }
+  virtual void Add(int32_t sum) = 0;
+};
+
+class SimpleProtocol_EventSender {
+ public:
+  virtual ~SimpleProtocol_EventSender();
+};
+
+class SimpleProtocol_Sync {
+ public:
+  using Proxy_ = SimpleProtocol_SyncProxy;
+  virtual ~SimpleProtocol_Sync();
+  virtual zx_status_t Add(int32_t a, int32_t b, int32_t* out_sum) = 0;
+};
+
+class SimpleProtocol_Proxy final : public ::fidl::internal::Proxy,
+                                   public SimpleProtocol {
+ public:
+  explicit SimpleProtocol_Proxy(::fidl::internal::ProxyController* controller);
+  ~SimpleProtocol_Proxy() override;
+
+  zx_status_t Dispatch_(::fidl::Message message) override;
+  void Add(int32_t a, int32_t b, AddCallback callback) override;
+
+ private:
+  SimpleProtocol_Proxy(const SimpleProtocol_Proxy&) = delete;
+  SimpleProtocol_Proxy& operator=(const SimpleProtocol_Proxy&) = delete;
+
+  ::fidl::internal::ProxyController* controller_;
+};
+
+class SimpleProtocol_Stub final : public ::fidl::internal::Stub,
+                                  public SimpleProtocol_EventSender {
+ public:
+  typedef class ::fidl::test::nullable::SimpleProtocol SimpleProtocol_clazz;
+  explicit SimpleProtocol_Stub(SimpleProtocol_clazz* impl);
+  ~SimpleProtocol_Stub() override;
+
+  zx_status_t Dispatch_(::fidl::Message message,
+                        ::fidl::internal::PendingResponse response) override;
+
+ private:
+  SimpleProtocol_clazz* impl_;
+};
+
+class SimpleProtocol_SyncProxy : public SimpleProtocol_Sync {
+ public:
+  explicit SimpleProtocol_SyncProxy(::zx::channel channel);
+  ~SimpleProtocol_SyncProxy() override;
+  zx_status_t Add(int32_t a, int32_t b, int32_t* out_sum) override;
+
+ private:
+  ::fidl::internal::SynchronousProxy proxy_;
+  friend class ::fidl::SynchronousInterfacePtr<SimpleProtocol>;
+};
+
+#endif  // __Fuchsia__
+}  // namespace nullable
+}  // namespace test
 }  // namespace fidl

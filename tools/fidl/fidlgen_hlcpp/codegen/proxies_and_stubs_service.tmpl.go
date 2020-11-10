@@ -8,7 +8,7 @@ const serviceTemplate = `
 {{- define "ServiceForwardDeclaration" }}
 #ifdef __Fuchsia__
 class {{ .Name }};
-#endif // __Fuchsia
+#endif // __Fuchsia__
 {{- end }}
 
 {{- define "ServiceDeclaration" }}
@@ -66,6 +66,6 @@ class {{ .Name }}::Handler final {
   ::fidl::ServiceHandlerBase* const service_;
   {{- end }}
 };
-#endif // __Fuchsia
+#endif // __Fuchsia__
 {{- end }}
 `

@@ -3,6 +3,10 @@
 #include <doc_comments.test.json.h>
 
 #include "lib/fidl/cpp/internal/implementation.h"
+
+//
+// Domain objects definitions (i.e. "natural types" in unified bindings)
+//
 namespace fidl {
 namespace test {
 namespace doccomments {
@@ -309,147 +313,6 @@ void StrictUnion::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
     }
   }
 }
-#ifdef __Fuchsia__
-namespace {
-
-extern "C" const fidl_type_t fidl_test_doccomments_InterfaceMethodRequestTable;
-
-extern "C" const fidl_type_t fidl_test_doccomments_InterfaceOnEventEventTable;
-
-}  // namespace
-
-Interface::~Interface() = default;
-
-const fidl_type_t* Interface_RequestDecoder::GetType(uint64_t ordinal,
-                                                     bool* out_needs_response) {
-  switch (ordinal) {
-    case internal::kInterface_Method_Ordinal:
-      *out_needs_response = false;
-      return &fidl_test_doccomments_InterfaceMethodRequestTable;
-    default:
-      *out_needs_response = false;
-      return nullptr;
-  }
-}
-
-const fidl_type_t* Interface_ResponseDecoder::GetType(uint64_t ordinal) {
-  switch (ordinal) {
-    case internal::kInterface_OnEvent_Ordinal:
-      return &fidl_test_doccomments_InterfaceOnEventEventTable;
-    default:
-      return nullptr;
-  }
-}
-
-Interface_EventSender::~Interface_EventSender() = default;
-
-Interface_Sync::~Interface_Sync() = default;
-
-Interface_Proxy::Interface_Proxy(::fidl::internal::ProxyController* controller)
-    : controller_(controller) {
-  (void)controller_;
-}
-
-Interface_Proxy::~Interface_Proxy() = default;
-
-zx_status_t Interface_Proxy::Dispatch_(::fidl::Message message) {
-  zx_status_t status = ZX_OK;
-  switch (message.ordinal()) {
-    case internal::kInterface_OnEvent_Ordinal: {
-      if (!OnEvent) {
-        status = ZX_OK;
-        break;
-      }
-      const char* error_msg = nullptr;
-      status = message.Decode(&fidl_test_doccomments_InterfaceOnEventEventTable,
-                              &error_msg);
-      if (status != ZX_OK) {
-        FIDL_REPORT_DECODING_ERROR(
-            message, &fidl_test_doccomments_InterfaceOnEventEventTable,
-            error_msg);
-        break;
-      }
-      OnEvent();
-      break;
-    }
-    default: {
-      status = ZX_ERR_NOT_SUPPORTED;
-      break;
-    }
-  }
-  return status;
-}
-
-void Interface_Proxy::Method() {
-  ::fidl::Encoder _encoder(internal::kInterface_Method_Ordinal);
-  controller_->Send(&fidl_test_doccomments_InterfaceMethodRequestTable,
-                    Interface_RequestEncoder::Method(&_encoder), nullptr);
-}
-
-Interface_Stub::Interface_Stub(Interface_clazz* impl) : impl_(impl) {
-  (void)impl_;
-}
-
-Interface_Stub::~Interface_Stub() = default;
-
-namespace {}  // namespace
-
-zx_status_t Interface_Stub::Dispatch_(
-    ::fidl::Message message, ::fidl::internal::PendingResponse response) {
-  bool needs_response;
-  const fidl_type_t* request_type =
-      Interface_RequestDecoder::GetType(message.ordinal(), &needs_response);
-  if (request_type == nullptr) {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-  if (response.needs_response() != needs_response) {
-    if (needs_response) {
-      FIDL_REPORT_DECODING_ERROR(message, request_type,
-                                 "Message needing a response with no txid");
-    } else {
-      FIDL_REPORT_DECODING_ERROR(message, request_type,
-                                 "Message not needing a response with a txid");
-    }
-    return ZX_ERR_INVALID_ARGS;
-  }
-  const char* error_msg = nullptr;
-  zx_status_t status = message.Decode(request_type, &error_msg);
-  if (status != ZX_OK) {
-    FIDL_REPORT_DECODING_ERROR(message, request_type, error_msg);
-    return status;
-  }
-  uint64_t ordinal = message.ordinal();
-  switch (ordinal) {
-    case internal::kInterface_Method_Ordinal: {
-      impl_->Method();
-      break;
-    }
-    default: {
-      status = ZX_ERR_NOT_SUPPORTED;
-      break;
-    }
-  }
-  return status;
-}
-void Interface_Stub::OnEvent() {
-  ::fidl::Encoder _encoder(internal::kInterface_OnEvent_Ordinal);
-  sender_()->Send(&fidl_test_doccomments_InterfaceOnEventEventTable,
-                  Interface_ResponseEncoder::OnEvent(&_encoder));
-}
-
-Interface_SyncProxy::Interface_SyncProxy(::zx::channel channel)
-    : proxy_(::std::move(channel)) {}
-
-Interface_SyncProxy::~Interface_SyncProxy() = default;
-
-zx_status_t Interface_SyncProxy::Method() {
-  ::fidl::Encoder _encoder(internal::kInterface_Method_Ordinal);
-  return proxy_.Send(&fidl_test_doccomments_InterfaceMethodRequestTable,
-                     Interface_RequestEncoder::Method(&_encoder));
-}
-
-#endif  // __Fuchsia__
-
 #if (__cplusplus < 201703)
 constexpr const ::fidl::test::doccomments::MyFlexibleBits
     MyFlexibleBits::MY_FIRST_BIT =
@@ -624,6 +487,158 @@ void FlexibleUnion::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
     }
   }
 }
+}  // namespace doccomments
+}  // namespace test
+}  // namespace fidl
+
+//
+// Proxies and stubs definitions
+//
+namespace fidl {
+namespace test {
+namespace doccomments {
+
+#ifdef __Fuchsia__
+namespace {
+
+extern "C" const fidl_type_t fidl_test_doccomments_InterfaceMethodRequestTable;
+
+extern "C" const fidl_type_t fidl_test_doccomments_InterfaceOnEventEventTable;
+
+}  // namespace
+
+Interface::~Interface() = default;
+
+const fidl_type_t* Interface_RequestDecoder::GetType(uint64_t ordinal,
+                                                     bool* out_needs_response) {
+  switch (ordinal) {
+    case internal::kInterface_Method_Ordinal:
+      *out_needs_response = false;
+      return &fidl_test_doccomments_InterfaceMethodRequestTable;
+    default:
+      *out_needs_response = false;
+      return nullptr;
+  }
+}
+
+const fidl_type_t* Interface_ResponseDecoder::GetType(uint64_t ordinal) {
+  switch (ordinal) {
+    case internal::kInterface_OnEvent_Ordinal:
+      return &fidl_test_doccomments_InterfaceOnEventEventTable;
+    default:
+      return nullptr;
+  }
+}
+
+Interface_EventSender::~Interface_EventSender() = default;
+
+Interface_Sync::~Interface_Sync() = default;
+
+Interface_Proxy::Interface_Proxy(::fidl::internal::ProxyController* controller)
+    : controller_(controller) {
+  (void)controller_;
+}
+
+Interface_Proxy::~Interface_Proxy() = default;
+
+zx_status_t Interface_Proxy::Dispatch_(::fidl::Message message) {
+  zx_status_t status = ZX_OK;
+  switch (message.ordinal()) {
+    case internal::kInterface_OnEvent_Ordinal: {
+      if (!OnEvent) {
+        status = ZX_OK;
+        break;
+      }
+      const char* error_msg = nullptr;
+      status = message.Decode(&fidl_test_doccomments_InterfaceOnEventEventTable,
+                              &error_msg);
+      if (status != ZX_OK) {
+        FIDL_REPORT_DECODING_ERROR(
+            message, &fidl_test_doccomments_InterfaceOnEventEventTable,
+            error_msg);
+        break;
+      }
+      OnEvent();
+      break;
+    }
+    default: {
+      status = ZX_ERR_NOT_SUPPORTED;
+      break;
+    }
+  }
+  return status;
+}
+
+void Interface_Proxy::Method() {
+  ::fidl::Encoder _encoder(internal::kInterface_Method_Ordinal);
+  controller_->Send(&fidl_test_doccomments_InterfaceMethodRequestTable,
+                    Interface_RequestEncoder::Method(&_encoder), nullptr);
+}
+
+Interface_Stub::Interface_Stub(Interface_clazz* impl) : impl_(impl) {
+  (void)impl_;
+}
+
+Interface_Stub::~Interface_Stub() = default;
+
+namespace {}  // namespace
+
+zx_status_t Interface_Stub::Dispatch_(
+    ::fidl::Message message, ::fidl::internal::PendingResponse response) {
+  bool needs_response;
+  const fidl_type_t* request_type =
+      Interface_RequestDecoder::GetType(message.ordinal(), &needs_response);
+  if (request_type == nullptr) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+  if (response.needs_response() != needs_response) {
+    if (needs_response) {
+      FIDL_REPORT_DECODING_ERROR(message, request_type,
+                                 "Message needing a response with no txid");
+    } else {
+      FIDL_REPORT_DECODING_ERROR(message, request_type,
+                                 "Message not needing a response with a txid");
+    }
+    return ZX_ERR_INVALID_ARGS;
+  }
+  const char* error_msg = nullptr;
+  zx_status_t status = message.Decode(request_type, &error_msg);
+  if (status != ZX_OK) {
+    FIDL_REPORT_DECODING_ERROR(message, request_type, error_msg);
+    return status;
+  }
+  uint64_t ordinal = message.ordinal();
+  switch (ordinal) {
+    case internal::kInterface_Method_Ordinal: {
+      impl_->Method();
+      break;
+    }
+    default: {
+      status = ZX_ERR_NOT_SUPPORTED;
+      break;
+    }
+  }
+  return status;
+}
+void Interface_Stub::OnEvent() {
+  ::fidl::Encoder _encoder(internal::kInterface_OnEvent_Ordinal);
+  sender_()->Send(&fidl_test_doccomments_InterfaceOnEventEventTable,
+                  Interface_ResponseEncoder::OnEvent(&_encoder));
+}
+
+Interface_SyncProxy::Interface_SyncProxy(::zx::channel channel)
+    : proxy_(::std::move(channel)) {}
+
+Interface_SyncProxy::~Interface_SyncProxy() = default;
+
+zx_status_t Interface_SyncProxy::Method() {
+  ::fidl::Encoder _encoder(internal::kInterface_Method_Ordinal);
+  return proxy_.Send(&fidl_test_doccomments_InterfaceMethodRequestTable,
+                     Interface_RequestEncoder::Method(&_encoder));
+}
+
+#endif  // __Fuchsia__
+
 }  // namespace doccomments
 }  // namespace test
 }  // namespace fidl

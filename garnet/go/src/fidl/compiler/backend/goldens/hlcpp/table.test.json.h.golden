@@ -4,6 +4,9 @@
 
 #include "lib/fidl/cpp/internal/header.h"
 
+//
+// Domain objects declarations (i.e. "natural types" in unified bindings).
+//
 namespace fidl {
 namespace test {
 namespace table {
@@ -858,4 +861,13 @@ struct Equality<::fidl::test::table::EmptyTable> {
     return ::fidl::Equals(_lhs.UnknownData(), _rhs.UnknownData());
   }
 };
+}  // namespace fidl
+
+//
+// Proxies and stubs declarations
+//
+namespace fidl {
+namespace test {
+namespace table {}  // namespace table
+}  // namespace test
 }  // namespace fidl

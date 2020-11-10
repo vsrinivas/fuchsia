@@ -3,6 +3,10 @@
 #include <byte_and_bytes.test.json.h>
 
 #include "lib/fidl/cpp/internal/implementation.h"
+
+//
+// Domain objects definitions (i.e. "natural types" in unified bindings)
+//
 namespace fidl {
 namespace test {
 namespace byteandbytes {
@@ -48,5 +52,14 @@ zx_status_t ByteAndBytes::Clone(ByteAndBytes* _result) const {
   return ZX_OK;
 }
 }  // namespace byteandbytes
+}  // namespace test
+}  // namespace fidl
+
+//
+// Proxies and stubs definitions
+//
+namespace fidl {
+namespace test {
+namespace byteandbytes {}  // namespace byteandbytes
 }  // namespace test
 }  // namespace fidl

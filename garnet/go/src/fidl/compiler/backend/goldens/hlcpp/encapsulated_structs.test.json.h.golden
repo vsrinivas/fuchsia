@@ -4,6 +4,9 @@
 
 #include "lib/fidl/cpp/internal/header.h"
 
+//
+// Domain objects declarations (i.e. "natural types" in unified bindings).
+//
 namespace fidl {
 namespace test {
 namespace encapsulatedstructs {
@@ -418,4 +421,13 @@ struct Equality<::fidl::test::encapsulatedstructs::TopLevelStruct> {
   }
 };
 #endif  // __Fuchsia__
+}  // namespace fidl
+
+//
+// Proxies and stubs declarations
+//
+namespace fidl {
+namespace test {
+namespace encapsulatedstructs {}  // namespace encapsulatedstructs
+}  // namespace test
 }  // namespace fidl

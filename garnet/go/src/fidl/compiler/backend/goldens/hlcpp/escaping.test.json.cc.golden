@@ -3,6 +3,10 @@
 #include <escaping.test.json.h>
 
 #include "lib/fidl/cpp/internal/implementation.h"
+
+//
+// Domain objects definitions (i.e. "natural types" in unified bindings)
+//
 namespace fidl {
 namespace test {
 namespace escaping {
@@ -37,5 +41,14 @@ zx_status_t DocCommentWithQuotes::Clone(DocCommentWithQuotes* _result) const {
   return ZX_OK;
 }
 }  // namespace escaping
+}  // namespace test
+}  // namespace fidl
+
+//
+// Proxies and stubs definitions
+//
+namespace fidl {
+namespace test {
+namespace escaping {}  // namespace escaping
 }  // namespace test
 }  // namespace fidl

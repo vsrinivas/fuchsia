@@ -3,6 +3,10 @@
 #include <transitive_dependencies.test.json.h>
 
 #include "lib/fidl/cpp/internal/implementation.h"
+
+//
+// Domain objects definitions (i.e. "natural types" in unified bindings)
+//
 namespace top {
 
 extern "C" const fidl_type_t top_BazTable;
@@ -30,3 +34,8 @@ zx_status_t Baz::Clone(Baz* _result) const {
   return ZX_OK;
 }
 }  // namespace top
+
+//
+// Proxies and stubs definitions
+//
+namespace top {}  // namespace top

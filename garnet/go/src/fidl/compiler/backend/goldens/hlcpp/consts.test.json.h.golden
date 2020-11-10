@@ -4,6 +4,9 @@
 
 #include "lib/fidl/cpp/internal/header.h"
 
+//
+// Domain objects declarations (i.e. "natural types" in unified bindings).
+//
 namespace fidl {
 namespace test {
 namespace consts {
@@ -182,4 +185,13 @@ struct Equality<::fidl::test::consts::BitsType> {
     return ::fidl::Equals(_lhs_underlying, _rhs_underlying);
   }
 };
+}  // namespace fidl
+
+//
+// Proxies and stubs declarations
+//
+namespace fidl {
+namespace test {
+namespace consts {}  // namespace consts
+}  // namespace test
 }  // namespace fidl

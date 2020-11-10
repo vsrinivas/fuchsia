@@ -4,13 +4,123 @@
 
 #include "lib/fidl/cpp/internal/header.h"
 
+//
+// Domain objects declarations (i.e. "natural types" in unified bindings).
+//
 namespace fidl {
 namespace test {
 namespace inheritancewithrecursivedecl {
 
 #ifdef __Fuchsia__
-
 class Parent;
+using ParentHandle = ::fidl::InterfaceHandle<Parent>;
+#endif  // __Fuchsia__
+#ifdef __Fuchsia__
+class Child;
+using ChildHandle = ::fidl::InterfaceHandle<Child>;
+#endif  // __Fuchsia__
+#ifdef __Fuchsia__
+
+namespace _internal {
+extern "C" const fidl_type_t
+    fidl_test_inheritancewithrecursivedecl_ParentFirstRequestTable;
+}
+
+class Parent_RequestEncoder {
+ public:
+  static ::fidl::Message First(
+      ::fidl::Encoder* _encoder,
+      ::fidl::InterfaceRequest<
+          ::fidl::test::inheritancewithrecursivedecl::Parent>* request) {
+    fidl_trace(WillHLCPPEncode);
+    _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+    ::fidl::Encode(_encoder, request, 16);
+
+    fidl_trace(
+        DidHLCPPEncode,
+        &_internal::
+            fidl_test_inheritancewithrecursivedecl_ParentFirstRequestTable,
+        _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
+        _encoder->CurrentHandleCount());
+
+    return _encoder->GetMessage();
+  }
+};
+
+namespace _internal {}
+
+class Parent_ResponseEncoder {
+ public:
+};
+
+#endif  // __Fuchsia__
+#ifdef __Fuchsia__
+
+namespace _internal {
+extern "C" const fidl_type_t
+    fidl_test_inheritancewithrecursivedecl_ChildFirstRequestTable;
+extern "C" const fidl_type_t
+    fidl_test_inheritancewithrecursivedecl_ChildSecondRequestTable;
+}  // namespace _internal
+
+class Child_RequestEncoder {
+ public:
+  static ::fidl::Message First(
+      ::fidl::Encoder* _encoder,
+      ::fidl::InterfaceRequest<
+          ::fidl::test::inheritancewithrecursivedecl::Parent>* request) {
+    fidl_trace(WillHLCPPEncode);
+    _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+    ::fidl::Encode(_encoder, request, 16);
+
+    fidl_trace(
+        DidHLCPPEncode,
+        &_internal::
+            fidl_test_inheritancewithrecursivedecl_ChildFirstRequestTable,
+        _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
+        _encoder->CurrentHandleCount());
+
+    return _encoder->GetMessage();
+  }
+  static ::fidl::Message Second(
+      ::fidl::Encoder* _encoder,
+      ::fidl::InterfaceRequest<
+          ::fidl::test::inheritancewithrecursivedecl::Parent>* request) {
+    fidl_trace(WillHLCPPEncode);
+    _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+    ::fidl::Encode(_encoder, request, 16);
+
+    fidl_trace(
+        DidHLCPPEncode,
+        &_internal::
+            fidl_test_inheritancewithrecursivedecl_ChildSecondRequestTable,
+        _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
+        _encoder->CurrentHandleCount());
+
+    return _encoder->GetMessage();
+  }
+};
+
+namespace _internal {}
+
+class Child_ResponseEncoder {
+ public:
+};
+
+#endif  // __Fuchsia__
+}  // namespace inheritancewithrecursivedecl
+}  // namespace test
+}  // namespace fidl
+namespace fidl {}  // namespace fidl
+
+//
+// Proxies and stubs declarations
+//
+namespace fidl {
+namespace test {
+namespace inheritancewithrecursivedecl {
+
+#ifdef __Fuchsia__
 using ParentPtr = ::fidl::InterfacePtr<Parent>;
 class Parent_Proxy;
 class Parent_Stub;
@@ -18,15 +128,13 @@ class Parent_EventSender;
 class Parent_Sync;
 using ParentSyncPtr = ::fidl::SynchronousInterfacePtr<Parent>;
 class Parent_SyncProxy;
-using ParentHandle = ::fidl::InterfaceHandle<Parent>;
+
 namespace internal {
 constexpr uint64_t kParent_First_Ordinal = 0x2a592d0a81dac39blu;
 
 }  // namespace internal
 #endif  // __Fuchsia__
 #ifdef __Fuchsia__
-
-class Child;
 using ChildPtr = ::fidl::InterfacePtr<Child>;
 class Child_Proxy;
 class Child_Stub;
@@ -34,7 +142,7 @@ class Child_EventSender;
 class Child_Sync;
 using ChildSyncPtr = ::fidl::SynchronousInterfacePtr<Child>;
 class Child_SyncProxy;
-using ChildHandle = ::fidl::InterfaceHandle<Child>;
+
 namespace internal {
 constexpr uint64_t kChild_First_Ordinal = 0x2a592d0a81dac39blu;
 constexpr uint64_t kChild_Second_Ordinal = 0x6cba5c5e01fee86lu;
@@ -42,7 +150,6 @@ constexpr uint64_t kChild_Second_Ordinal = 0x6cba5c5e01fee86lu;
 }  // namespace internal
 #endif  // __Fuchsia__
 #ifdef __Fuchsia__
-
 class Parent {
  public:
   using Proxy_ = Parent_Proxy;
@@ -94,27 +201,6 @@ class Parent_RequestDecoder {
                          request) = 0;
 };
 
-class Parent_RequestEncoder {
- public:
-  static ::fidl::Message First(
-      ::fidl::Encoder* _encoder,
-      ::fidl::InterfaceRequest<
-          ::fidl::test::inheritancewithrecursivedecl::Parent>* request) {
-    fidl_trace(WillHLCPPEncode);
-    _encoder->Alloc(24 - sizeof(fidl_message_header_t));
-    ::fidl::Encode(_encoder, request, 16);
-
-    bool needs_response;  // unused
-    fidl_trace(DidHLCPPEncode,
-               Parent_RequestDecoder::GetType(internal::kParent_First_Ordinal,
-                                              &needs_response),
-               _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
-               _encoder->CurrentHandleCount());
-
-    return _encoder->GetMessage();
-  }
-};
-
 class Parent_ResponseDecoder {
  public:
   Parent_ResponseDecoder() = default;
@@ -139,10 +225,6 @@ class Parent_ResponseDecoder {
     }
     return ZX_OK;
   }
-};
-
-class Parent_ResponseEncoder {
- public:
 };
 
 class Parent_EventSender {
@@ -202,9 +284,9 @@ class Parent_SyncProxy : public Parent_Sync {
   ::fidl::internal::SynchronousProxy proxy_;
   friend class ::fidl::SynchronousInterfacePtr<Parent>;
 };
+
 #endif  // __Fuchsia__
 #ifdef __Fuchsia__
-
 class Child {
  public:
   using Proxy_ = Child_Proxy;
@@ -269,44 +351,6 @@ class Child_RequestDecoder {
                           request) = 0;
 };
 
-class Child_RequestEncoder {
- public:
-  static ::fidl::Message First(
-      ::fidl::Encoder* _encoder,
-      ::fidl::InterfaceRequest<
-          ::fidl::test::inheritancewithrecursivedecl::Parent>* request) {
-    fidl_trace(WillHLCPPEncode);
-    _encoder->Alloc(24 - sizeof(fidl_message_header_t));
-    ::fidl::Encode(_encoder, request, 16);
-
-    bool needs_response;  // unused
-    fidl_trace(DidHLCPPEncode,
-               Child_RequestDecoder::GetType(internal::kChild_First_Ordinal,
-                                             &needs_response),
-               _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
-               _encoder->CurrentHandleCount());
-
-    return _encoder->GetMessage();
-  }
-  static ::fidl::Message Second(
-      ::fidl::Encoder* _encoder,
-      ::fidl::InterfaceRequest<
-          ::fidl::test::inheritancewithrecursivedecl::Parent>* request) {
-    fidl_trace(WillHLCPPEncode);
-    _encoder->Alloc(24 - sizeof(fidl_message_header_t));
-    ::fidl::Encode(_encoder, request, 16);
-
-    bool needs_response;  // unused
-    fidl_trace(DidHLCPPEncode,
-               Child_RequestDecoder::GetType(internal::kChild_Second_Ordinal,
-                                             &needs_response),
-               _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
-               _encoder->CurrentHandleCount());
-
-    return _encoder->GetMessage();
-  }
-};
-
 class Child_ResponseDecoder {
  public:
   Child_ResponseDecoder() = default;
@@ -331,10 +375,6 @@ class Child_ResponseDecoder {
     }
     return ZX_OK;
   }
-};
-
-class Child_ResponseEncoder {
- public:
 };
 
 class Child_EventSender {
@@ -403,8 +443,8 @@ class Child_SyncProxy : public Child_Sync {
   ::fidl::internal::SynchronousProxy proxy_;
   friend class ::fidl::SynchronousInterfacePtr<Child>;
 };
+
 #endif  // __Fuchsia__
 }  // namespace inheritancewithrecursivedecl
 }  // namespace test
 }  // namespace fidl
-namespace fidl {}  // namespace fidl

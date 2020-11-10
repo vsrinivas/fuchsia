@@ -4,13 +4,12 @@
 
 package codegen
 
-const protocolTemplate = `
-{{- define "ProtocolForwardDeclaration" }}
+const protocolTemplateProxiesAndStubs = `
+{{- define "ProtocolForwardDeclaration/ProxiesAndStubs" }}
 #ifdef __Fuchsia__
-{{range .DocComments}}
+{{- range .DocComments }}
 ///{{ . }}
-{{- end}}
-class {{ .Name }};
+{{- end }}
 using {{ .Name }}Ptr = ::fidl::InterfacePtr<{{ .Name }}>;
 class {{ .ProxyName }};
 class {{ .StubName }};
@@ -18,7 +17,7 @@ class {{ .EventSenderName }};
 class {{ .SyncName }};
 using {{ .Name }}SyncPtr = ::fidl::SynchronousInterfacePtr<{{ .Name }}>;
 class {{ .SyncProxyName }};
-using {{ .Name }}Handle = ::fidl::InterfaceHandle<{{ .Name }}>;
+
 namespace internal {
 
 {{- range .Methods }}
@@ -26,18 +25,12 @@ constexpr uint64_t {{ .OrdinalName }} = {{ .Ordinal | printf "%#x" }}lu;
 {{- end }}
 
 }  // namespace
-#endif // __Fuchsia__
+#endif  // __Fuchsia__
 {{- end }}
 
 {{- define "Params" -}}
   {{- range $index, $param := . -}}
     {{- if $index }}, {{ end -}}{{ $param.Type.FullDecl }} {{ $param.Name }}
-  {{- end -}}
-{{ end }}
-
-{{- define "PointerParams" -}}
-  {{- range $index, $param := . -}}
-    , {{ $param.Type.FullDecl }}* {{ $param.Name }}
   {{- end -}}
 {{ end }}
 
@@ -73,11 +66,12 @@ constexpr uint64_t {{ .OrdinalName }} = {{ .Ordinal | printf "%#x" }}lu;
   {{- end -}}
 {{ end -}}
 
-{{- define "ProtocolDeclaration" }}
+{{- define "ProtocolDeclaration/ProxiesAndStubs" }}
 #ifdef __Fuchsia__
-{{range .DocComments}}
+
+{{- range .DocComments }}
 ///{{ . }}
-{{- end}}
+{{- end }}
 class {{ .Name }} {
  public:
   using Proxy_ = {{ .ProxyName }};
@@ -154,29 +148,6 @@ class {{ .RequestDecoderName }} {
   {{- end }}
 };
 
-class {{ .RequestEncoderName }} {
- public:
-  {{- with $protocol := . }}
-  {{- range .Methods }}
-  {{- if .HasRequest }}
-  static ::fidl::Message {{ .Name }}(::fidl::Encoder* _encoder{{ template "PointerParams" .Request }}) {
-    fidl_trace(WillHLCPPEncode);
-    _encoder->Alloc({{ .RequestSize }} - sizeof(fidl_message_header_t));
-
-    {{- range .Request }}
-    ::fidl::Encode(_encoder, {{ .Name }}, {{ .Offset }});
-    {{- end }}
-
-    bool needs_response;  // unused
-    fidl_trace(DidHLCPPEncode, {{ $protocol.RequestDecoderName }}::GetType(internal::{{ .OrdinalName }}, &needs_response), _encoder->GetPtr<const char>(0), _encoder->CurrentLength(), _encoder->CurrentHandleCount());
-
-    return _encoder->GetMessage();
-  }
-  {{- end }}
-  {{- end }}
-  {{- end }}
- };
-
 class {{ .ResponseDecoderName }} {
  public:
   {{ .ResponseDecoderName }}() = default;
@@ -219,27 +190,6 @@ class {{ .ResponseDecoderName }} {
     {{- if .HasResponse }}
   virtual void {{ .Name }}({{ template "Params" .Response }}) = 0;
     {{- end }}
-  {{- end }}
-};
-
-class {{ .ResponseEncoderName }} {
- public:
-  {{- with $protocol := . }}
-  {{- range .Methods }}
-  {{- if .HasResponse }}
-  static ::fidl::Message {{ .Name }}(::fidl::Encoder* _encoder{{ template "PointerParams" .Response }}) {
-    fidl_trace(WillHLCPPEncode);
-    _encoder->Alloc({{ .ResponseSize }} - sizeof(fidl_message_header_t));
-
-    {{- range .Response }}
-    ::fidl::Encode(_encoder, {{ .Name }}, {{ .Offset }});
-    {{- end }}
-
-    fidl_trace(DidHLCPPEncode, {{ $protocol.ResponseDecoderName }}::GetType(internal::{{ .OrdinalName }}), _encoder->GetPtr<const char>(0), _encoder->CurrentLength(), _encoder->CurrentHandleCount());
-    return _encoder->GetMessage();
-  }
-  {{- end }}
-  {{- end }}
   {{- end }}
 };
 
@@ -326,7 +276,8 @@ class {{ .SyncProxyName }} : public {{ .SyncName }} {
   ::fidl::internal::SynchronousProxy proxy_;
   friend class ::fidl::SynchronousInterfacePtr<{{ .Name }}>;
 };
-#endif // __Fuchsia__
+
+#endif  // __Fuchsia__
 {{- end }}
 
 {{- define "ProtocolDefinition" }}
@@ -616,9 +567,6 @@ zx_status_t {{ $.SyncProxyName }}::{{ template "SyncRequestMethodSignature" . }}
 
 #endif // __Fuchsia__
 {{ end }}
-
-{{- define "ProtocolTraits" }}
-{{- end }}
 
 {{- define "ProtocolTestBase" }}
 class {{ .Name }}_TestBase : public {{ .Name }} {

@@ -4,6 +4,9 @@
 
 #include "lib/fidl/cpp/internal/header.h"
 
+//
+// Domain objects declarations (i.e. "natural types" in unified bindings).
+//
 namespace fidl {
 namespace test {
 namespace enum_ {
@@ -157,4 +160,13 @@ struct Equality<::fidl::test::enum_::MyFlexibleEnum> {
   }
 };
 
+}  // namespace fidl
+
+//
+// Proxies and stubs declarations
+//
+namespace fidl {
+namespace test {
+namespace enum_ {}  // namespace enum_
+}  // namespace test
 }  // namespace fidl

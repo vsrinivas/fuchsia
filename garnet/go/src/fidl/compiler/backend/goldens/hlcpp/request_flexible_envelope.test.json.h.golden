@@ -4,6 +4,9 @@
 
 #include "lib/fidl/cpp/internal/header.h"
 
+//
+// Domain objects declarations (i.e. "natural types" in unified bindings).
+//
 namespace fidl {
 namespace test {
 namespace requestflexibleenvelope {
@@ -11,23 +14,8 @@ namespace requestflexibleenvelope {
 class StrictFoo;
 class FlexibleFoo;
 #ifdef __Fuchsia__
-
 class Protocol;
-using ProtocolPtr = ::fidl::InterfacePtr<Protocol>;
-class Protocol_Proxy;
-class Protocol_Stub;
-class Protocol_EventSender;
-class Protocol_Sync;
-using ProtocolSyncPtr = ::fidl::SynchronousInterfacePtr<Protocol>;
-class Protocol_SyncProxy;
 using ProtocolHandle = ::fidl::InterfaceHandle<Protocol>;
-namespace internal {
-constexpr uint64_t kProtocol_RequestStrictResponseFlexible_Ordinal =
-    0x3c5330c58686011alu;
-constexpr uint64_t kProtocol_RequestFlexibleResponseStrict_Ordinal =
-    0x3cb49d8f6e204f76lu;
-
-}  // namespace internal
 #endif  // __Fuchsia__
 
 class StrictFoo final {
@@ -218,72 +206,12 @@ inline zx_status_t Clone(
 using FlexibleFooPtr = ::std::unique_ptr<FlexibleFoo>;
 #ifdef __Fuchsia__
 
-class Protocol {
- public:
-  using Proxy_ = Protocol_Proxy;
-  using Stub_ = Protocol_Stub;
-  using EventSender_ = Protocol_EventSender;
-  using Sync_ = Protocol_Sync;
-  virtual ~Protocol();
-  using RequestStrictResponseFlexibleCallback =
-      fit::function<void(::fidl::test::requestflexibleenvelope::FlexibleFoo)>;
-
-  virtual void RequestStrictResponseFlexible(
-      ::fidl::test::requestflexibleenvelope::StrictFoo s,
-      RequestStrictResponseFlexibleCallback callback) = 0;
-  using RequestFlexibleResponseStrictCallback =
-      fit::function<void(::fidl::test::requestflexibleenvelope::StrictFoo)>;
-
-  virtual void RequestFlexibleResponseStrict(
-      ::fidl::test::requestflexibleenvelope::FlexibleFoo s,
-      RequestFlexibleResponseStrictCallback callback) = 0;
-};
-
-class Protocol_RequestDecoder {
- public:
-  Protocol_RequestDecoder() = default;
-  virtual ~Protocol_RequestDecoder() = default;
-  static const fidl_type_t* GetType(uint64_t ordinal, bool* out_needs_response);
-  zx_status_t Decode_(::fidl::Message request) {
-    bool needs_response;
-    const fidl_type_t* request_type =
-        GetType(request.ordinal(), &needs_response);
-    if (request_type == nullptr) {
-      return ZX_ERR_NOT_SUPPORTED;
-    }
-    const char* error_msg = nullptr;
-    zx_status_t status = request.Decode(request_type, &error_msg);
-    if (status != ZX_OK) {
-      FIDL_REPORT_DECODING_ERROR(request, request_type, error_msg);
-      return status;
-    }
-    ::fidl::Decoder request_decoder(std::move(request));
-    switch (request.ordinal()) {
-      case internal::kProtocol_RequestStrictResponseFlexible_Ordinal: {
-        RequestStrictResponseFlexible(
-            ::fidl::DecodeAs<::fidl::test::requestflexibleenvelope::StrictFoo>(
-                &request_decoder, 16));
-        break;
-      }
-      case internal::kProtocol_RequestFlexibleResponseStrict_Ordinal: {
-        RequestFlexibleResponseStrict(
-            ::fidl::DecodeAs<
-                ::fidl::test::requestflexibleenvelope::FlexibleFoo>(
-                &request_decoder, 16));
-        break;
-      }
-      default: {
-        status = ZX_ERR_NOT_SUPPORTED;
-        break;
-      }
-    }
-    return status;
-  }
-  virtual void RequestStrictResponseFlexible(
-      ::fidl::test::requestflexibleenvelope::StrictFoo s) = 0;
-  virtual void RequestFlexibleResponseStrict(
-      ::fidl::test::requestflexibleenvelope::FlexibleFoo s) = 0;
-};
+namespace _internal {
+extern "C" const fidl_type_t
+    fidl_test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleRequestTable;
+extern "C" const fidl_type_t
+    fidl_test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictRequestTable;
+}  // namespace _internal
 
 class Protocol_RequestEncoder {
  public:
@@ -294,13 +222,12 @@ class Protocol_RequestEncoder {
     _encoder->Alloc(40 - sizeof(fidl_message_header_t));
     ::fidl::Encode(_encoder, s, 16);
 
-    bool needs_response;  // unused
-    fidl_trace(DidHLCPPEncode,
-               Protocol_RequestDecoder::GetType(
-                   internal::kProtocol_RequestStrictResponseFlexible_Ordinal,
-                   &needs_response),
-               _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
-               _encoder->CurrentHandleCount());
+    fidl_trace(
+        DidHLCPPEncode,
+        &_internal::
+            fidl_test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleRequestTable,
+        _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
+        _encoder->CurrentHandleCount());
 
     return _encoder->GetMessage();
   }
@@ -311,60 +238,23 @@ class Protocol_RequestEncoder {
     _encoder->Alloc(40 - sizeof(fidl_message_header_t));
     ::fidl::Encode(_encoder, s, 16);
 
-    bool needs_response;  // unused
-    fidl_trace(DidHLCPPEncode,
-               Protocol_RequestDecoder::GetType(
-                   internal::kProtocol_RequestFlexibleResponseStrict_Ordinal,
-                   &needs_response),
-               _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
-               _encoder->CurrentHandleCount());
+    fidl_trace(
+        DidHLCPPEncode,
+        &_internal::
+            fidl_test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictRequestTable,
+        _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
+        _encoder->CurrentHandleCount());
 
     return _encoder->GetMessage();
   }
 };
 
-class Protocol_ResponseDecoder {
- public:
-  Protocol_ResponseDecoder() = default;
-  virtual ~Protocol_ResponseDecoder() = default;
-  static const fidl_type_t* GetType(uint64_t ordinal);
-  zx_status_t Decode_(::fidl::Message response) {
-    const fidl_type_t* response_type = GetType(response.ordinal());
-    if (response_type == nullptr) {
-      return ZX_ERR_NOT_SUPPORTED;
-    }
-    const char* error_msg = nullptr;
-    zx_status_t status = response.Decode(response_type, &error_msg);
-    if (status != ZX_OK) {
-      FIDL_REPORT_DECODING_ERROR(response, response_type, error_msg);
-      return status;
-    }
-    ::fidl::Decoder response_decoder(std::move(response));
-    switch (response.ordinal()) {
-      case internal::kProtocol_RequestStrictResponseFlexible_Ordinal: {
-        RequestStrictResponseFlexible(
-            ::fidl::DecodeAs<
-                ::fidl::test::requestflexibleenvelope::FlexibleFoo>(
-                &response_decoder, 16));
-        break;
-      }
-      case internal::kProtocol_RequestFlexibleResponseStrict_Ordinal: {
-        RequestFlexibleResponseStrict(
-            ::fidl::DecodeAs<::fidl::test::requestflexibleenvelope::StrictFoo>(
-                &response_decoder, 16));
-        break;
-      }
-      default: {
-        break;
-      }
-    }
-    return ZX_OK;
-  }
-  virtual void RequestStrictResponseFlexible(
-      ::fidl::test::requestflexibleenvelope::FlexibleFoo f) = 0;
-  virtual void RequestFlexibleResponseStrict(
-      ::fidl::test::requestflexibleenvelope::StrictFoo f) = 0;
-};
+namespace _internal {
+extern "C" const fidl_type_t
+    fidl_test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleResponseTable;
+extern "C" const fidl_type_t
+    fidl_test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictResponseTable;
+}  // namespace _internal
 
 class Protocol_ResponseEncoder {
  public:
@@ -375,11 +265,12 @@ class Protocol_ResponseEncoder {
     _encoder->Alloc(40 - sizeof(fidl_message_header_t));
     ::fidl::Encode(_encoder, f, 16);
 
-    fidl_trace(DidHLCPPEncode,
-               Protocol_ResponseDecoder::GetType(
-                   internal::kProtocol_RequestStrictResponseFlexible_Ordinal),
-               _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
-               _encoder->CurrentHandleCount());
+    fidl_trace(
+        DidHLCPPEncode,
+        &_internal::
+            fidl_test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleResponseTable,
+        _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
+        _encoder->CurrentHandleCount());
     return _encoder->GetMessage();
   }
   static ::fidl::Message RequestFlexibleResponseStrict(
@@ -389,81 +280,16 @@ class Protocol_ResponseEncoder {
     _encoder->Alloc(40 - sizeof(fidl_message_header_t));
     ::fidl::Encode(_encoder, f, 16);
 
-    fidl_trace(DidHLCPPEncode,
-               Protocol_ResponseDecoder::GetType(
-                   internal::kProtocol_RequestFlexibleResponseStrict_Ordinal),
-               _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
-               _encoder->CurrentHandleCount());
+    fidl_trace(
+        DidHLCPPEncode,
+        &_internal::
+            fidl_test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictResponseTable,
+        _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
+        _encoder->CurrentHandleCount());
     return _encoder->GetMessage();
   }
 };
 
-class Protocol_EventSender {
- public:
-  virtual ~Protocol_EventSender();
-};
-
-class Protocol_Sync {
- public:
-  using Proxy_ = Protocol_SyncProxy;
-  virtual ~Protocol_Sync();
-  virtual zx_status_t RequestStrictResponseFlexible(
-      ::fidl::test::requestflexibleenvelope::StrictFoo s,
-      ::fidl::test::requestflexibleenvelope::FlexibleFoo* out_f) = 0;
-  virtual zx_status_t RequestFlexibleResponseStrict(
-      ::fidl::test::requestflexibleenvelope::FlexibleFoo s,
-      ::fidl::test::requestflexibleenvelope::StrictFoo* out_f) = 0;
-};
-
-class Protocol_Proxy final : public ::fidl::internal::Proxy, public Protocol {
- public:
-  explicit Protocol_Proxy(::fidl::internal::ProxyController* controller);
-  ~Protocol_Proxy() override;
-
-  zx_status_t Dispatch_(::fidl::Message message) override;
-  void RequestStrictResponseFlexible(
-      ::fidl::test::requestflexibleenvelope::StrictFoo s,
-      RequestStrictResponseFlexibleCallback callback) override;
-  void RequestFlexibleResponseStrict(
-      ::fidl::test::requestflexibleenvelope::FlexibleFoo s,
-      RequestFlexibleResponseStrictCallback callback) override;
-
- private:
-  Protocol_Proxy(const Protocol_Proxy&) = delete;
-  Protocol_Proxy& operator=(const Protocol_Proxy&) = delete;
-
-  ::fidl::internal::ProxyController* controller_;
-};
-
-class Protocol_Stub final : public ::fidl::internal::Stub,
-                            public Protocol_EventSender {
- public:
-  typedef class ::fidl::test::requestflexibleenvelope::Protocol Protocol_clazz;
-  explicit Protocol_Stub(Protocol_clazz* impl);
-  ~Protocol_Stub() override;
-
-  zx_status_t Dispatch_(::fidl::Message message,
-                        ::fidl::internal::PendingResponse response) override;
-
- private:
-  Protocol_clazz* impl_;
-};
-
-class Protocol_SyncProxy : public Protocol_Sync {
- public:
-  explicit Protocol_SyncProxy(::zx::channel channel);
-  ~Protocol_SyncProxy() override;
-  zx_status_t RequestStrictResponseFlexible(
-      ::fidl::test::requestflexibleenvelope::StrictFoo s,
-      ::fidl::test::requestflexibleenvelope::FlexibleFoo* out_f) override;
-  zx_status_t RequestFlexibleResponseStrict(
-      ::fidl::test::requestflexibleenvelope::FlexibleFoo s,
-      ::fidl::test::requestflexibleenvelope::StrictFoo* out_f) override;
-
- private:
-  ::fidl::internal::SynchronousProxy proxy_;
-  friend class ::fidl::SynchronousInterfacePtr<Protocol>;
-};
 #endif  // __Fuchsia__
 }  // namespace requestflexibleenvelope
 }  // namespace test
@@ -611,4 +437,211 @@ struct Equality<::fidl::test::requestflexibleenvelope::FlexibleFoo> {
     }
   }
 };
+}  // namespace fidl
+
+//
+// Proxies and stubs declarations
+//
+namespace fidl {
+namespace test {
+namespace requestflexibleenvelope {
+
+#ifdef __Fuchsia__
+using ProtocolPtr = ::fidl::InterfacePtr<Protocol>;
+class Protocol_Proxy;
+class Protocol_Stub;
+class Protocol_EventSender;
+class Protocol_Sync;
+using ProtocolSyncPtr = ::fidl::SynchronousInterfacePtr<Protocol>;
+class Protocol_SyncProxy;
+
+namespace internal {
+constexpr uint64_t kProtocol_RequestStrictResponseFlexible_Ordinal =
+    0x3c5330c58686011alu;
+constexpr uint64_t kProtocol_RequestFlexibleResponseStrict_Ordinal =
+    0x3cb49d8f6e204f76lu;
+
+}  // namespace internal
+#endif  // __Fuchsia__
+#ifdef __Fuchsia__
+class Protocol {
+ public:
+  using Proxy_ = Protocol_Proxy;
+  using Stub_ = Protocol_Stub;
+  using EventSender_ = Protocol_EventSender;
+  using Sync_ = Protocol_Sync;
+  virtual ~Protocol();
+  using RequestStrictResponseFlexibleCallback =
+      fit::function<void(::fidl::test::requestflexibleenvelope::FlexibleFoo)>;
+
+  virtual void RequestStrictResponseFlexible(
+      ::fidl::test::requestflexibleenvelope::StrictFoo s,
+      RequestStrictResponseFlexibleCallback callback) = 0;
+  using RequestFlexibleResponseStrictCallback =
+      fit::function<void(::fidl::test::requestflexibleenvelope::StrictFoo)>;
+
+  virtual void RequestFlexibleResponseStrict(
+      ::fidl::test::requestflexibleenvelope::FlexibleFoo s,
+      RequestFlexibleResponseStrictCallback callback) = 0;
+};
+
+class Protocol_RequestDecoder {
+ public:
+  Protocol_RequestDecoder() = default;
+  virtual ~Protocol_RequestDecoder() = default;
+  static const fidl_type_t* GetType(uint64_t ordinal, bool* out_needs_response);
+  zx_status_t Decode_(::fidl::Message request) {
+    bool needs_response;
+    const fidl_type_t* request_type =
+        GetType(request.ordinal(), &needs_response);
+    if (request_type == nullptr) {
+      return ZX_ERR_NOT_SUPPORTED;
+    }
+    const char* error_msg = nullptr;
+    zx_status_t status = request.Decode(request_type, &error_msg);
+    if (status != ZX_OK) {
+      FIDL_REPORT_DECODING_ERROR(request, request_type, error_msg);
+      return status;
+    }
+    ::fidl::Decoder request_decoder(std::move(request));
+    switch (request.ordinal()) {
+      case internal::kProtocol_RequestStrictResponseFlexible_Ordinal: {
+        RequestStrictResponseFlexible(
+            ::fidl::DecodeAs<::fidl::test::requestflexibleenvelope::StrictFoo>(
+                &request_decoder, 16));
+        break;
+      }
+      case internal::kProtocol_RequestFlexibleResponseStrict_Ordinal: {
+        RequestFlexibleResponseStrict(
+            ::fidl::DecodeAs<
+                ::fidl::test::requestflexibleenvelope::FlexibleFoo>(
+                &request_decoder, 16));
+        break;
+      }
+      default: {
+        status = ZX_ERR_NOT_SUPPORTED;
+        break;
+      }
+    }
+    return status;
+  }
+  virtual void RequestStrictResponseFlexible(
+      ::fidl::test::requestflexibleenvelope::StrictFoo s) = 0;
+  virtual void RequestFlexibleResponseStrict(
+      ::fidl::test::requestflexibleenvelope::FlexibleFoo s) = 0;
+};
+
+class Protocol_ResponseDecoder {
+ public:
+  Protocol_ResponseDecoder() = default;
+  virtual ~Protocol_ResponseDecoder() = default;
+  static const fidl_type_t* GetType(uint64_t ordinal);
+  zx_status_t Decode_(::fidl::Message response) {
+    const fidl_type_t* response_type = GetType(response.ordinal());
+    if (response_type == nullptr) {
+      return ZX_ERR_NOT_SUPPORTED;
+    }
+    const char* error_msg = nullptr;
+    zx_status_t status = response.Decode(response_type, &error_msg);
+    if (status != ZX_OK) {
+      FIDL_REPORT_DECODING_ERROR(response, response_type, error_msg);
+      return status;
+    }
+    ::fidl::Decoder response_decoder(std::move(response));
+    switch (response.ordinal()) {
+      case internal::kProtocol_RequestStrictResponseFlexible_Ordinal: {
+        RequestStrictResponseFlexible(
+            ::fidl::DecodeAs<
+                ::fidl::test::requestflexibleenvelope::FlexibleFoo>(
+                &response_decoder, 16));
+        break;
+      }
+      case internal::kProtocol_RequestFlexibleResponseStrict_Ordinal: {
+        RequestFlexibleResponseStrict(
+            ::fidl::DecodeAs<::fidl::test::requestflexibleenvelope::StrictFoo>(
+                &response_decoder, 16));
+        break;
+      }
+      default: {
+        break;
+      }
+    }
+    return ZX_OK;
+  }
+  virtual void RequestStrictResponseFlexible(
+      ::fidl::test::requestflexibleenvelope::FlexibleFoo f) = 0;
+  virtual void RequestFlexibleResponseStrict(
+      ::fidl::test::requestflexibleenvelope::StrictFoo f) = 0;
+};
+
+class Protocol_EventSender {
+ public:
+  virtual ~Protocol_EventSender();
+};
+
+class Protocol_Sync {
+ public:
+  using Proxy_ = Protocol_SyncProxy;
+  virtual ~Protocol_Sync();
+  virtual zx_status_t RequestStrictResponseFlexible(
+      ::fidl::test::requestflexibleenvelope::StrictFoo s,
+      ::fidl::test::requestflexibleenvelope::FlexibleFoo* out_f) = 0;
+  virtual zx_status_t RequestFlexibleResponseStrict(
+      ::fidl::test::requestflexibleenvelope::FlexibleFoo s,
+      ::fidl::test::requestflexibleenvelope::StrictFoo* out_f) = 0;
+};
+
+class Protocol_Proxy final : public ::fidl::internal::Proxy, public Protocol {
+ public:
+  explicit Protocol_Proxy(::fidl::internal::ProxyController* controller);
+  ~Protocol_Proxy() override;
+
+  zx_status_t Dispatch_(::fidl::Message message) override;
+  void RequestStrictResponseFlexible(
+      ::fidl::test::requestflexibleenvelope::StrictFoo s,
+      RequestStrictResponseFlexibleCallback callback) override;
+  void RequestFlexibleResponseStrict(
+      ::fidl::test::requestflexibleenvelope::FlexibleFoo s,
+      RequestFlexibleResponseStrictCallback callback) override;
+
+ private:
+  Protocol_Proxy(const Protocol_Proxy&) = delete;
+  Protocol_Proxy& operator=(const Protocol_Proxy&) = delete;
+
+  ::fidl::internal::ProxyController* controller_;
+};
+
+class Protocol_Stub final : public ::fidl::internal::Stub,
+                            public Protocol_EventSender {
+ public:
+  typedef class ::fidl::test::requestflexibleenvelope::Protocol Protocol_clazz;
+  explicit Protocol_Stub(Protocol_clazz* impl);
+  ~Protocol_Stub() override;
+
+  zx_status_t Dispatch_(::fidl::Message message,
+                        ::fidl::internal::PendingResponse response) override;
+
+ private:
+  Protocol_clazz* impl_;
+};
+
+class Protocol_SyncProxy : public Protocol_Sync {
+ public:
+  explicit Protocol_SyncProxy(::zx::channel channel);
+  ~Protocol_SyncProxy() override;
+  zx_status_t RequestStrictResponseFlexible(
+      ::fidl::test::requestflexibleenvelope::StrictFoo s,
+      ::fidl::test::requestflexibleenvelope::FlexibleFoo* out_f) override;
+  zx_status_t RequestFlexibleResponseStrict(
+      ::fidl::test::requestflexibleenvelope::FlexibleFoo s,
+      ::fidl::test::requestflexibleenvelope::StrictFoo* out_f) override;
+
+ private:
+  ::fidl::internal::SynchronousProxy proxy_;
+  friend class ::fidl::SynchronousInterfacePtr<Protocol>;
+};
+
+#endif  // __Fuchsia__
+}  // namespace requestflexibleenvelope
+}  // namespace test
 }  // namespace fidl

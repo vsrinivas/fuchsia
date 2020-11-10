@@ -4,6 +4,9 @@
 
 #include "lib/fidl/cpp/internal/header.h"
 
+//
+// Domain objects declarations (i.e. "natural types" in unified bindings).
+//
 namespace fidl {
 namespace test {
 namespace escaping {
@@ -67,4 +70,13 @@ struct Equality<::fidl::test::escaping::DocCommentWithQuotes> {
     return true;
   }
 };
+}  // namespace fidl
+
+//
+// Proxies and stubs declarations
+//
+namespace fidl {
+namespace test {
+namespace escaping {}  // namespace escaping
+}  // namespace test
 }  // namespace fidl

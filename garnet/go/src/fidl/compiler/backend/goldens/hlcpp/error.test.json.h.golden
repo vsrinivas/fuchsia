@@ -4,6 +4,9 @@
 
 #include "lib/fidl/cpp/internal/header.h"
 
+//
+// Domain objects declarations (i.e. "natural types" in unified bindings).
+//
 namespace fidl {
 namespace test {
 namespace error {
@@ -11,20 +14,8 @@ namespace error {
 class Example_foo_Response;
 class Example_foo_Result;
 #ifdef __Fuchsia__
-
 class Example;
-using ExamplePtr = ::fidl::InterfacePtr<Example>;
-class Example_Proxy;
-class Example_Stub;
-class Example_EventSender;
-class Example_Sync;
-using ExampleSyncPtr = ::fidl::SynchronousInterfacePtr<Example>;
-class Example_SyncProxy;
 using ExampleHandle = ::fidl::InterfaceHandle<Example>;
-namespace internal {
-constexpr uint64_t kExample_foo_Ordinal = 0x57e41804562237aelu;
-
-}  // namespace internal
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -168,52 +159,9 @@ using Example_foo_ResultPtr = ::std::unique_ptr<Example_foo_Result>;
 
 #ifdef __Fuchsia__
 
-class Example {
- public:
-  using Proxy_ = Example_Proxy;
-  using Stub_ = Example_Stub;
-  using EventSender_ = Example_EventSender;
-  using Sync_ = Example_Sync;
-  virtual ~Example();
-  using fooCallback =
-      fit::function<void(::fidl::test::error::Example_foo_Result)>;
-
-  virtual void foo(::std::string s, fooCallback callback) = 0;
-};
-
-class Example_RequestDecoder {
- public:
-  Example_RequestDecoder() = default;
-  virtual ~Example_RequestDecoder() = default;
-  static const fidl_type_t* GetType(uint64_t ordinal, bool* out_needs_response);
-  zx_status_t Decode_(::fidl::Message request) {
-    bool needs_response;
-    const fidl_type_t* request_type =
-        GetType(request.ordinal(), &needs_response);
-    if (request_type == nullptr) {
-      return ZX_ERR_NOT_SUPPORTED;
-    }
-    const char* error_msg = nullptr;
-    zx_status_t status = request.Decode(request_type, &error_msg);
-    if (status != ZX_OK) {
-      FIDL_REPORT_DECODING_ERROR(request, request_type, error_msg);
-      return status;
-    }
-    ::fidl::Decoder request_decoder(std::move(request));
-    switch (request.ordinal()) {
-      case internal::kExample_foo_Ordinal: {
-        foo(::fidl::DecodeAs<::std::string>(&request_decoder, 16));
-        break;
-      }
-      default: {
-        status = ZX_ERR_NOT_SUPPORTED;
-        break;
-      }
-    }
-    return status;
-  }
-  virtual void foo(::std::string s) = 0;
-};
+namespace _internal {
+extern "C" const fidl_type_t fidl_test_error_ExamplefooRequestTable;
+}
 
 class Example_RequestEncoder {
  public:
@@ -222,10 +170,8 @@ class Example_RequestEncoder {
     _encoder->Alloc(32 - sizeof(fidl_message_header_t));
     ::fidl::Encode(_encoder, s, 16);
 
-    bool needs_response;  // unused
     fidl_trace(DidHLCPPEncode,
-               Example_RequestDecoder::GetType(internal::kExample_foo_Ordinal,
-                                               &needs_response),
+               &_internal::fidl_test_error_ExamplefooRequestTable,
                _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
                _encoder->CurrentHandleCount());
 
@@ -233,37 +179,9 @@ class Example_RequestEncoder {
   }
 };
 
-class Example_ResponseDecoder {
- public:
-  Example_ResponseDecoder() = default;
-  virtual ~Example_ResponseDecoder() = default;
-  static const fidl_type_t* GetType(uint64_t ordinal);
-  zx_status_t Decode_(::fidl::Message response) {
-    const fidl_type_t* response_type = GetType(response.ordinal());
-    if (response_type == nullptr) {
-      return ZX_ERR_NOT_SUPPORTED;
-    }
-    const char* error_msg = nullptr;
-    zx_status_t status = response.Decode(response_type, &error_msg);
-    if (status != ZX_OK) {
-      FIDL_REPORT_DECODING_ERROR(response, response_type, error_msg);
-      return status;
-    }
-    ::fidl::Decoder response_decoder(std::move(response));
-    switch (response.ordinal()) {
-      case internal::kExample_foo_Ordinal: {
-        foo(::fidl::DecodeAs<::fidl::test::error::Example_foo_Result>(
-            &response_decoder, 16));
-        break;
-      }
-      default: {
-        break;
-      }
-    }
-    return ZX_OK;
-  }
-  virtual void foo(::fidl::test::error::Example_foo_Result result) = 0;
-};
+namespace _internal {
+extern "C" const fidl_type_t fidl_test_error_ExamplefooResponseTable;
+}
 
 class Example_ResponseEncoder {
  public:
@@ -274,66 +192,13 @@ class Example_ResponseEncoder {
     ::fidl::Encode(_encoder, result, 16);
 
     fidl_trace(DidHLCPPEncode,
-               Example_ResponseDecoder::GetType(internal::kExample_foo_Ordinal),
+               &_internal::fidl_test_error_ExamplefooResponseTable,
                _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
                _encoder->CurrentHandleCount());
     return _encoder->GetMessage();
   }
 };
 
-class Example_EventSender {
- public:
-  virtual ~Example_EventSender();
-};
-
-class Example_Sync {
- public:
-  using Proxy_ = Example_SyncProxy;
-  virtual ~Example_Sync();
-  virtual zx_status_t foo(
-      ::std::string s, ::fidl::test::error::Example_foo_Result* out_result) = 0;
-};
-
-class Example_Proxy final : public ::fidl::internal::Proxy, public Example {
- public:
-  explicit Example_Proxy(::fidl::internal::ProxyController* controller);
-  ~Example_Proxy() override;
-
-  zx_status_t Dispatch_(::fidl::Message message) override;
-  void foo(::std::string s, fooCallback callback) override;
-
- private:
-  Example_Proxy(const Example_Proxy&) = delete;
-  Example_Proxy& operator=(const Example_Proxy&) = delete;
-
-  ::fidl::internal::ProxyController* controller_;
-};
-
-class Example_Stub final : public ::fidl::internal::Stub,
-                           public Example_EventSender {
- public:
-  typedef class ::fidl::test::error::Example Example_clazz;
-  explicit Example_Stub(Example_clazz* impl);
-  ~Example_Stub() override;
-
-  zx_status_t Dispatch_(::fidl::Message message,
-                        ::fidl::internal::PendingResponse response) override;
-
- private:
-  Example_clazz* impl_;
-};
-
-class Example_SyncProxy : public Example_Sync {
- public:
-  explicit Example_SyncProxy(::zx::channel channel);
-  ~Example_SyncProxy() override;
-  zx_status_t foo(::std::string s,
-                  ::fidl::test::error::Example_foo_Result* out_result) override;
-
- private:
-  ::fidl::internal::SynchronousProxy proxy_;
-  friend class ::fidl::SynchronousInterfacePtr<Example>;
-};
 #endif  // __Fuchsia__
 }  // namespace error
 }  // namespace test
@@ -438,4 +303,164 @@ struct Equality<::fidl::test::error::Example_foo_Result> {
   }
 };
 #endif  // __Fuchsia__
+}  // namespace fidl
+
+//
+// Proxies and stubs declarations
+//
+namespace fidl {
+namespace test {
+namespace error {
+
+#ifdef __Fuchsia__
+using ExamplePtr = ::fidl::InterfacePtr<Example>;
+class Example_Proxy;
+class Example_Stub;
+class Example_EventSender;
+class Example_Sync;
+using ExampleSyncPtr = ::fidl::SynchronousInterfacePtr<Example>;
+class Example_SyncProxy;
+
+namespace internal {
+constexpr uint64_t kExample_foo_Ordinal = 0x57e41804562237aelu;
+
+}  // namespace internal
+#endif  // __Fuchsia__
+#ifdef __Fuchsia__
+class Example {
+ public:
+  using Proxy_ = Example_Proxy;
+  using Stub_ = Example_Stub;
+  using EventSender_ = Example_EventSender;
+  using Sync_ = Example_Sync;
+  virtual ~Example();
+  using fooCallback =
+      fit::function<void(::fidl::test::error::Example_foo_Result)>;
+
+  virtual void foo(::std::string s, fooCallback callback) = 0;
+};
+
+class Example_RequestDecoder {
+ public:
+  Example_RequestDecoder() = default;
+  virtual ~Example_RequestDecoder() = default;
+  static const fidl_type_t* GetType(uint64_t ordinal, bool* out_needs_response);
+  zx_status_t Decode_(::fidl::Message request) {
+    bool needs_response;
+    const fidl_type_t* request_type =
+        GetType(request.ordinal(), &needs_response);
+    if (request_type == nullptr) {
+      return ZX_ERR_NOT_SUPPORTED;
+    }
+    const char* error_msg = nullptr;
+    zx_status_t status = request.Decode(request_type, &error_msg);
+    if (status != ZX_OK) {
+      FIDL_REPORT_DECODING_ERROR(request, request_type, error_msg);
+      return status;
+    }
+    ::fidl::Decoder request_decoder(std::move(request));
+    switch (request.ordinal()) {
+      case internal::kExample_foo_Ordinal: {
+        foo(::fidl::DecodeAs<::std::string>(&request_decoder, 16));
+        break;
+      }
+      default: {
+        status = ZX_ERR_NOT_SUPPORTED;
+        break;
+      }
+    }
+    return status;
+  }
+  virtual void foo(::std::string s) = 0;
+};
+
+class Example_ResponseDecoder {
+ public:
+  Example_ResponseDecoder() = default;
+  virtual ~Example_ResponseDecoder() = default;
+  static const fidl_type_t* GetType(uint64_t ordinal);
+  zx_status_t Decode_(::fidl::Message response) {
+    const fidl_type_t* response_type = GetType(response.ordinal());
+    if (response_type == nullptr) {
+      return ZX_ERR_NOT_SUPPORTED;
+    }
+    const char* error_msg = nullptr;
+    zx_status_t status = response.Decode(response_type, &error_msg);
+    if (status != ZX_OK) {
+      FIDL_REPORT_DECODING_ERROR(response, response_type, error_msg);
+      return status;
+    }
+    ::fidl::Decoder response_decoder(std::move(response));
+    switch (response.ordinal()) {
+      case internal::kExample_foo_Ordinal: {
+        foo(::fidl::DecodeAs<::fidl::test::error::Example_foo_Result>(
+            &response_decoder, 16));
+        break;
+      }
+      default: {
+        break;
+      }
+    }
+    return ZX_OK;
+  }
+  virtual void foo(::fidl::test::error::Example_foo_Result result) = 0;
+};
+
+class Example_EventSender {
+ public:
+  virtual ~Example_EventSender();
+};
+
+class Example_Sync {
+ public:
+  using Proxy_ = Example_SyncProxy;
+  virtual ~Example_Sync();
+  virtual zx_status_t foo(
+      ::std::string s, ::fidl::test::error::Example_foo_Result* out_result) = 0;
+};
+
+class Example_Proxy final : public ::fidl::internal::Proxy, public Example {
+ public:
+  explicit Example_Proxy(::fidl::internal::ProxyController* controller);
+  ~Example_Proxy() override;
+
+  zx_status_t Dispatch_(::fidl::Message message) override;
+  void foo(::std::string s, fooCallback callback) override;
+
+ private:
+  Example_Proxy(const Example_Proxy&) = delete;
+  Example_Proxy& operator=(const Example_Proxy&) = delete;
+
+  ::fidl::internal::ProxyController* controller_;
+};
+
+class Example_Stub final : public ::fidl::internal::Stub,
+                           public Example_EventSender {
+ public:
+  typedef class ::fidl::test::error::Example Example_clazz;
+  explicit Example_Stub(Example_clazz* impl);
+  ~Example_Stub() override;
+
+  zx_status_t Dispatch_(::fidl::Message message,
+                        ::fidl::internal::PendingResponse response) override;
+
+ private:
+  Example_clazz* impl_;
+};
+
+class Example_SyncProxy : public Example_Sync {
+ public:
+  explicit Example_SyncProxy(::zx::channel channel);
+  ~Example_SyncProxy() override;
+  zx_status_t foo(::std::string s,
+                  ::fidl::test::error::Example_foo_Result* out_result) override;
+
+ private:
+  ::fidl::internal::SynchronousProxy proxy_;
+  friend class ::fidl::SynchronousInterfacePtr<Example>;
+};
+
+#endif  // __Fuchsia__
+}  // namespace error
+}  // namespace test
 }  // namespace fidl

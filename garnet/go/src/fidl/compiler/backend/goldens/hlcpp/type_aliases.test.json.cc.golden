@@ -3,6 +3,10 @@
 #include <type_aliases.test.json.h>
 
 #include "lib/fidl/cpp/internal/implementation.h"
+
+//
+// Domain objects definitions (i.e. "natural types" in unified bindings)
+//
 namespace example {
 
 #ifdef __Fuchsia__
@@ -90,3 +94,8 @@ zx_status_t ExampleOfUseOfAliases::Clone(ExampleOfUseOfAliases* _result) const {
 #endif  // __Fuchsia__
 
 }  // namespace example
+
+//
+// Proxies and stubs definitions
+//
+namespace example {}  // namespace example

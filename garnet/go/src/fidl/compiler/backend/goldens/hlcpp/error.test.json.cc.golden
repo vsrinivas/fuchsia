@@ -3,6 +3,10 @@
 #include <error.test.json.h>
 
 #include "lib/fidl/cpp/internal/implementation.h"
+
+//
+// Domain objects definitions (i.e. "natural types" in unified bindings)
+//
 namespace fidl {
 namespace test {
 namespace error {
@@ -220,6 +224,17 @@ void Example_foo_Result::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
   }
 }
 #endif  // __Fuchsia__
+
+}  // namespace error
+}  // namespace test
+}  // namespace fidl
+
+//
+// Proxies and stubs definitions
+//
+namespace fidl {
+namespace test {
+namespace error {
 
 #ifdef __Fuchsia__
 namespace {

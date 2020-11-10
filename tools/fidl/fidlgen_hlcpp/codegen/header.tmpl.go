@@ -17,6 +17,16 @@ const headerTemplate = `
 #include <{{ . }}/{{ $root.IncludeStem }}.h>
 {{ end -}}
 
+{{ template "Header/NaturalTypes" . }}
+{{ template "Header/ProxiesAndStubs" . }}
+
+{{ end }}
+
+{{- define "Header/NaturalTypes" }}
+//
+// Domain objects declarations (i.e. "natural types" in unified bindings).
+//
+
 {{- range .Library }}
 namespace {{ . }} {
 {{- end }}
@@ -25,7 +35,7 @@ namespace {{ . }} {
 {{- range .Decls }}
 {{- if Eq .Kind Kinds.Bits }}{{ template "BitsForwardDeclaration" . }}{{- end }}
 {{- if Eq .Kind Kinds.Enum }}{{ template "EnumForwardDeclaration" . }}{{- end }}
-{{- if Eq .Kind Kinds.Protocol }}{{ template "DispatchProtocolForwardDeclaration" . }}{{- end }}
+{{- if Eq .Kind Kinds.Protocol }}{{ template "DispatchProtocolForwardDeclaration/NaturalTypes" . }}{{- end }}
 {{- if Eq .Kind Kinds.Service }}{{ template "DispatchServiceForwardDeclaration" . }}{{- end }}
 {{- if Eq .Kind Kinds.Struct }}{{ template "StructForwardDeclaration" . }}{{- end }}
 {{- if Eq .Kind Kinds.Table }}{{ template "TableForwardDeclaration" . }}{{- end }}
@@ -34,8 +44,7 @@ namespace {{ . }} {
 
 {{- range .Decls }}
 {{- if Eq .Kind Kinds.Const }}{{ template "ConstDeclaration" . }}{{- end }}
-{{- if Eq .Kind Kinds.Protocol }}{{ template "DispatchProtocolDeclaration" . }}{{- end }}
-{{- if Eq .Kind Kinds.Service }}{{ template "DispatchServiceDeclaration" . }}{{- end }}
+{{- if Eq .Kind Kinds.Protocol }}{{ template "DispatchProtocolDeclaration/NaturalTypes" . }}{{- end }}
 {{- if Eq .Kind Kinds.Struct }}{{ template "StructDeclaration" . }}{{- end }}
 {{- if Eq .Kind Kinds.Table }}{{ template "TableDeclaration" . }}{{- end }}
 {{- if Eq .Kind Kinds.Union }}{{ template "UnionDeclaration" . }}{{- end }}
@@ -50,30 +59,60 @@ namespace fidl {
 {{- range .Decls }}
 {{- if Eq .Kind Kinds.Bits }}{{ template "BitsTraits" . }}{{- end }}
 {{- if Eq .Kind Kinds.Enum }}{{ template "EnumTraits" . }}{{- end }}
-{{- if Eq .Kind Kinds.Protocol }}{{ template "DispatchProtocolTraits" . }}{{- end }}
 {{- if Eq .Kind Kinds.Struct }}{{ template "StructTraits" . }}{{- end }}
 {{- if Eq .Kind Kinds.Table }}{{ template "TableTraits" . }}{{- end }}
 {{- if Eq .Kind Kinds.Union }}{{ template "UnionTraits" . }}{{- end }}
 {{- end -}}
 
 }  // namespace fidl
-{{ end }}
+{{- end }}
 
-{{- define "DispatchProtocolForwardDeclaration" -}}
+{{- define "Header/ProxiesAndStubs" }}
+//
+// Proxies and stubs declarations
+//
+
+{{- range .Library }}
+namespace {{ . }} {
+{{- end }}
+{{ "" }}
+
+{{- range .Decls }}
+{{- if Eq .Kind Kinds.Protocol }}{{ template "DispatchProtocolForwardDeclaration/ProxiesAndStubs" . }}{{- end }}
+{{- if Eq .Kind Kinds.Service }}{{ template "DispatchServiceForwardDeclaration" . }}{{- end }}
+{{- end }}
+
+{{- range .Decls }}
+{{- if Eq .Kind Kinds.Protocol }}{{ template "DispatchProtocolDeclaration/ProxiesAndStubs" . }}{{- end }}
+{{- if Eq .Kind Kinds.Service }}{{ template "DispatchServiceDeclaration" . }}{{- end }}
+{{- end }}
+
+{{- range .LibraryReversed }}
+}  // namespace {{ . }}
+{{- end }}
+{{- end }}
+
+{{- define "DispatchProtocolForwardDeclaration/NaturalTypes" -}}
 {{- range $transport, $_ := .Transports }}
-{{- if eq $transport "Channel" -}}{{ template "ProtocolForwardDeclaration" $ }}{{- end }}
+{{- if eq $transport "Channel" -}}{{ template "ProtocolForwardDeclaration/NaturalTypes" $ }}{{- end }}
 {{- end }}
 {{- end -}}
 
-{{- define "DispatchProtocolDeclaration" -}}
+{{- define "DispatchProtocolDeclaration/NaturalTypes" -}}
 {{- range $transport, $_ := .Transports }}
-{{- if eq $transport "Channel" -}}{{ template "ProtocolDeclaration" $ }}{{- end }}
+{{- if eq $transport "Channel" -}}{{ template "ProtocolDeclaration/NaturalTypes" $ }}{{- end }}
 {{- end }}
 {{- end -}}
 
-{{- define "DispatchProtocolTraits" -}}
+{{- define "DispatchProtocolForwardDeclaration/ProxiesAndStubs" -}}
 {{- range $transport, $_ := .Transports }}
-{{- if eq $transport "Channel" -}}{{ template "ProtocolTraits" $ }}{{- end }}
+{{- if eq $transport "Channel" -}}{{ template "ProtocolForwardDeclaration/ProxiesAndStubs" $ }}{{- end }}
+{{- end }}
+{{- end -}}
+
+{{- define "DispatchProtocolDeclaration/ProxiesAndStubs" -}}
+{{- range $transport, $_ := .Transports }}
+{{- if eq $transport "Channel" -}}{{ template "ProtocolDeclaration/ProxiesAndStubs" $ }}{{- end }}
 {{- end }}
 {{- end -}}
 

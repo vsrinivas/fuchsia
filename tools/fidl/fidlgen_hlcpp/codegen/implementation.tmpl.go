@@ -12,6 +12,16 @@ const implementationTemplate = `
 
 #include "lib/fidl/cpp/internal/implementation.h"
 
+{{ template "Implementation/NaturalTypes" . }}
+{{ template "Implementation/ProxiesAndStubs" . }}
+
+{{ end }}
+
+{{- define "Implementation/NaturalTypes" }}
+//
+// Domain objects definitions (i.e. "natural types" in unified bindings)
+//
+
 {{- range .Library }}
 namespace {{ . }} {
 {{- end }}
@@ -20,7 +30,6 @@ namespace {{ . }} {
 {{- range .Decls }}
 {{- if Eq .Kind Kinds.Bits }}{{ template "BitsDefinition" . }}{{- end }}
 {{- if Eq .Kind Kinds.Const }}{{ template "ConstDefinition" . }}{{- end }}
-{{- if Eq .Kind Kinds.Protocol }}{{ template "DispatchProtocolDefinition" . }}{{- end }}
 {{- if Eq .Kind Kinds.Struct }}{{ template "StructDefinition" . }}{{- end }}
 {{- if Eq .Kind Kinds.Union }}{{ template "UnionDefinition" . }}{{- end }}
 {{- if Eq .Kind Kinds.Table }}{{ template "TableDefinition" . }}{{- end }}
@@ -29,8 +38,26 @@ namespace {{ . }} {
 {{- range .LibraryReversed }}
 }  // namespace {{ . }}
 {{- end }}
+{{- end }}
 
-{{ end }}
+{{- define "Implementation/ProxiesAndStubs" }}
+//
+// Proxies and stubs definitions
+//
+
+{{- range .Library }}
+namespace {{ . }} {
+{{- end }}
+{{ "" }}
+
+{{- range .Decls }}
+{{- if Eq .Kind Kinds.Protocol }}{{ template "DispatchProtocolDefinition" . }}{{- end }}
+{{- end }}
+
+{{- range .LibraryReversed }}
+}  // namespace {{ . }}
+{{- end }}
+{{- end }}
 
 {{- define "DispatchProtocolDefinition" -}}
 {{- range $transport, $_ := .Transports }}

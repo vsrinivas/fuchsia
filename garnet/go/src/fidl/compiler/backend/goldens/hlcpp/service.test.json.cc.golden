@@ -3,6 +3,19 @@
 #include <service.test.json.h>
 
 #include "lib/fidl/cpp/internal/implementation.h"
+
+//
+// Domain objects definitions (i.e. "natural types" in unified bindings)
+//
+namespace fidl {
+namespace test {
+namespace service {}  // namespace service
+}  // namespace test
+}  // namespace fidl
+
+//
+// Proxies and stubs definitions
+//
 namespace fidl {
 namespace test {
 namespace service {

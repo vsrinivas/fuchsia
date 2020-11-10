@@ -23,17 +23,24 @@ func NewFidlGenerator() *FidlGenerator {
 		"Kinds": func() interface{} { return cpp.Kinds },
 		"Eq":    func(a interface{}, b interface{}) bool { return a == b },
 	})
+
+	// Natural types templates
 	template.Must(tmpls.Parse(bitsTemplate))
 	template.Must(tmpls.Parse(constTemplate))
 	template.Must(tmpls.Parse(enumTemplate))
-	template.Must(tmpls.Parse(headerTemplate))
-	template.Must(tmpls.Parse(implementationTemplate))
-	template.Must(tmpls.Parse(protocolTemplate))
-	template.Must(tmpls.Parse(serviceTemplate))
+	template.Must(tmpls.Parse(protocolTemplateNaturalTypes))
 	template.Must(tmpls.Parse(structTemplate))
 	template.Must(tmpls.Parse(tableTemplate))
-	template.Must(tmpls.Parse(testBaseTemplate))
 	template.Must(tmpls.Parse(unionTemplate))
+
+	// Proxies and stubs templates
+	template.Must(tmpls.Parse(protocolTemplateProxiesAndStubs))
+	template.Must(tmpls.Parse(serviceTemplate))
+
+	// File templates
+	template.Must(tmpls.Parse(headerTemplate))
+	template.Must(tmpls.Parse(implementationTemplate))
+	template.Must(tmpls.Parse(testBaseTemplate))
 	return &FidlGenerator{
 		tmpls: tmpls,
 	}

@@ -3,6 +3,10 @@
 #include <struct_default_value_enum_library_reference.test.json.h>
 
 #include "lib/fidl/cpp/internal/implementation.h"
+
+//
+// Domain objects definitions (i.e. "natural types" in unified bindings)
+//
 namespace example {
 
 extern "C" const fidl_type_t example_FooTable;
@@ -30,3 +34,8 @@ zx_status_t Foo::Clone(Foo* _result) const {
   return ZX_OK;
 }
 }  // namespace example
+
+//
+// Proxies and stubs definitions
+//
+namespace example {}  // namespace example

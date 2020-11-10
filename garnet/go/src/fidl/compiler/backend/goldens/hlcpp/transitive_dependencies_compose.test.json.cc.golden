@@ -3,6 +3,15 @@
 #include <transitive_dependencies_compose.test.json.h>
 
 #include "lib/fidl/cpp/internal/implementation.h"
+
+//
+// Domain objects definitions (i.e. "natural types" in unified bindings)
+//
+namespace top {}  // namespace top
+
+//
+// Proxies and stubs definitions
+//
 namespace top {
 
 #ifdef __Fuchsia__

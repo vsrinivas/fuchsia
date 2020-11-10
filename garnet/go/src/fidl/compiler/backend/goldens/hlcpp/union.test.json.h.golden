@@ -4,6 +4,9 @@
 
 #include "lib/fidl/cpp/internal/header.h"
 
+//
+// Domain objects declarations (i.e. "natural types" in unified bindings).
+//
 namespace fidl {
 namespace test {
 namespace union_ {
@@ -23,25 +26,8 @@ class FlexiblePizzaOrPasta;
 class ExplicitPizzaOrPasta;
 class OlderSimpleUnion;
 #ifdef __Fuchsia__
-
 class TestProtocol;
-using TestProtocolPtr = ::fidl::InterfacePtr<TestProtocol>;
-class TestProtocol_Proxy;
-class TestProtocol_Stub;
-class TestProtocol_EventSender;
-class TestProtocol_Sync;
-using TestProtocolSyncPtr = ::fidl::SynchronousInterfacePtr<TestProtocol>;
-class TestProtocol_SyncProxy;
 using TestProtocolHandle = ::fidl::InterfaceHandle<TestProtocol>;
-namespace internal {
-constexpr uint64_t
-    kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Ordinal =
-        0x747b084a44f0dc3elu;
-constexpr uint64_t
-    kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Ordinal =
-        0x57615a25c2a785d2lu;
-
-}  // namespace internal
 #endif  // __Fuchsia__
 class NullableUnionStruct;
 class NewerSimpleUnion;
@@ -1121,65 +1107,12 @@ inline zx_status_t Clone(const ::fidl::test::union_::OlderSimpleUnion& value,
 using OlderSimpleUnionPtr = ::std::unique_ptr<OlderSimpleUnion>;
 #ifdef __Fuchsia__
 
-class TestProtocol {
- public:
-  using Proxy_ = TestProtocol_Proxy;
-  using Stub_ = TestProtocol_Stub;
-  using EventSender_ = TestProtocol_EventSender;
-  using Sync_ = TestProtocol_Sync;
-  virtual ~TestProtocol();
-  using StrictXUnionHenceResponseMayBeStackAllocatedCallback =
-      fit::function<void(::fidl::test::union_::StrictBoundedXUnion)>;
-
-  virtual void StrictXUnionHenceResponseMayBeStackAllocated(
-      StrictXUnionHenceResponseMayBeStackAllocatedCallback callback) = 0;
-  using FlexibleXUnionHenceResponseMustBeHeapAllocatedCallback =
-      fit::function<void(::fidl::test::union_::OlderSimpleUnion)>;
-
-  virtual void FlexibleXUnionHenceResponseMustBeHeapAllocated(
-      FlexibleXUnionHenceResponseMustBeHeapAllocatedCallback callback) = 0;
-};
-
-class TestProtocol_RequestDecoder {
- public:
-  TestProtocol_RequestDecoder() = default;
-  virtual ~TestProtocol_RequestDecoder() = default;
-  static const fidl_type_t* GetType(uint64_t ordinal, bool* out_needs_response);
-  zx_status_t Decode_(::fidl::Message request) {
-    bool needs_response;
-    const fidl_type_t* request_type =
-        GetType(request.ordinal(), &needs_response);
-    if (request_type == nullptr) {
-      return ZX_ERR_NOT_SUPPORTED;
-    }
-    const char* error_msg = nullptr;
-    zx_status_t status = request.Decode(request_type, &error_msg);
-    if (status != ZX_OK) {
-      FIDL_REPORT_DECODING_ERROR(request, request_type, error_msg);
-      return status;
-    }
-    ::fidl::Decoder request_decoder(std::move(request));
-    switch (request.ordinal()) {
-      case internal::
-          kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Ordinal: {
-        StrictXUnionHenceResponseMayBeStackAllocated();
-        break;
-      }
-      case internal::
-          kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Ordinal: {
-        FlexibleXUnionHenceResponseMustBeHeapAllocated();
-        break;
-      }
-      default: {
-        status = ZX_ERR_NOT_SUPPORTED;
-        break;
-      }
-    }
-    return status;
-  }
-  virtual void StrictXUnionHenceResponseMayBeStackAllocated() = 0;
-  virtual void FlexibleXUnionHenceResponseMustBeHeapAllocated() = 0;
-};
+namespace _internal {
+extern "C" const fidl_type_t
+    fidl_test_union_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedRequestTable;
+extern "C" const fidl_type_t
+    fidl_test_union_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedRequestTable;
+}  // namespace _internal
 
 class TestProtocol_RequestEncoder {
  public:
@@ -1188,13 +1121,10 @@ class TestProtocol_RequestEncoder {
     fidl_trace(WillHLCPPEncode);
     _encoder->Alloc(16 - sizeof(fidl_message_header_t));
 
-    bool needs_response;  // unused
     fidl_trace(
         DidHLCPPEncode,
-        TestProtocol_RequestDecoder::GetType(
-            internal::
-                kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Ordinal,
-            &needs_response),
+        &_internal::
+            fidl_test_union_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedRequestTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
 
@@ -1205,13 +1135,10 @@ class TestProtocol_RequestEncoder {
     fidl_trace(WillHLCPPEncode);
     _encoder->Alloc(16 - sizeof(fidl_message_header_t));
 
-    bool needs_response;  // unused
     fidl_trace(
         DidHLCPPEncode,
-        TestProtocol_RequestDecoder::GetType(
-            internal::
-                kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Ordinal,
-            &needs_response),
+        &_internal::
+            fidl_test_union_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedRequestTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
 
@@ -1219,49 +1146,12 @@ class TestProtocol_RequestEncoder {
   }
 };
 
-class TestProtocol_ResponseDecoder {
- public:
-  TestProtocol_ResponseDecoder() = default;
-  virtual ~TestProtocol_ResponseDecoder() = default;
-  static const fidl_type_t* GetType(uint64_t ordinal);
-  zx_status_t Decode_(::fidl::Message response) {
-    const fidl_type_t* response_type = GetType(response.ordinal());
-    if (response_type == nullptr) {
-      return ZX_ERR_NOT_SUPPORTED;
-    }
-    const char* error_msg = nullptr;
-    zx_status_t status = response.Decode(response_type, &error_msg);
-    if (status != ZX_OK) {
-      FIDL_REPORT_DECODING_ERROR(response, response_type, error_msg);
-      return status;
-    }
-    ::fidl::Decoder response_decoder(std::move(response));
-    switch (response.ordinal()) {
-      case internal::
-          kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Ordinal: {
-        StrictXUnionHenceResponseMayBeStackAllocated(
-            ::fidl::DecodeAs<::fidl::test::union_::StrictBoundedXUnion>(
-                &response_decoder, 16));
-        break;
-      }
-      case internal::
-          kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Ordinal: {
-        FlexibleXUnionHenceResponseMustBeHeapAllocated(
-            ::fidl::DecodeAs<::fidl::test::union_::OlderSimpleUnion>(
-                &response_decoder, 16));
-        break;
-      }
-      default: {
-        break;
-      }
-    }
-    return ZX_OK;
-  }
-  virtual void StrictXUnionHenceResponseMayBeStackAllocated(
-      ::fidl::test::union_::StrictBoundedXUnion xu) = 0;
-  virtual void FlexibleXUnionHenceResponseMustBeHeapAllocated(
-      ::fidl::test::union_::OlderSimpleUnion xu) = 0;
-};
+namespace _internal {
+extern "C" const fidl_type_t
+    fidl_test_union_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponseTable;
+extern "C" const fidl_type_t
+    fidl_test_union_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponseTable;
+}  // namespace _internal
 
 class TestProtocol_ResponseEncoder {
  public:
@@ -1274,9 +1164,8 @@ class TestProtocol_ResponseEncoder {
 
     fidl_trace(
         DidHLCPPEncode,
-        TestProtocol_ResponseDecoder::GetType(
-            internal::
-                kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Ordinal),
+        &_internal::
+            fidl_test_union_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponseTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
     return _encoder->GetMessage();
@@ -1289,76 +1178,14 @@ class TestProtocol_ResponseEncoder {
 
     fidl_trace(
         DidHLCPPEncode,
-        TestProtocol_ResponseDecoder::GetType(
-            internal::
-                kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Ordinal),
+        &_internal::
+            fidl_test_union_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponseTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
     return _encoder->GetMessage();
   }
 };
 
-class TestProtocol_EventSender {
- public:
-  virtual ~TestProtocol_EventSender();
-};
-
-class TestProtocol_Sync {
- public:
-  using Proxy_ = TestProtocol_SyncProxy;
-  virtual ~TestProtocol_Sync();
-  virtual zx_status_t StrictXUnionHenceResponseMayBeStackAllocated(
-      ::fidl::test::union_::StrictBoundedXUnion* out_xu) = 0;
-  virtual zx_status_t FlexibleXUnionHenceResponseMustBeHeapAllocated(
-      ::fidl::test::union_::OlderSimpleUnion* out_xu) = 0;
-};
-
-class TestProtocol_Proxy final : public ::fidl::internal::Proxy,
-                                 public TestProtocol {
- public:
-  explicit TestProtocol_Proxy(::fidl::internal::ProxyController* controller);
-  ~TestProtocol_Proxy() override;
-
-  zx_status_t Dispatch_(::fidl::Message message) override;
-  void StrictXUnionHenceResponseMayBeStackAllocated(
-      StrictXUnionHenceResponseMayBeStackAllocatedCallback callback) override;
-  void FlexibleXUnionHenceResponseMustBeHeapAllocated(
-      FlexibleXUnionHenceResponseMustBeHeapAllocatedCallback callback) override;
-
- private:
-  TestProtocol_Proxy(const TestProtocol_Proxy&) = delete;
-  TestProtocol_Proxy& operator=(const TestProtocol_Proxy&) = delete;
-
-  ::fidl::internal::ProxyController* controller_;
-};
-
-class TestProtocol_Stub final : public ::fidl::internal::Stub,
-                                public TestProtocol_EventSender {
- public:
-  typedef class ::fidl::test::union_::TestProtocol TestProtocol_clazz;
-  explicit TestProtocol_Stub(TestProtocol_clazz* impl);
-  ~TestProtocol_Stub() override;
-
-  zx_status_t Dispatch_(::fidl::Message message,
-                        ::fidl::internal::PendingResponse response) override;
-
- private:
-  TestProtocol_clazz* impl_;
-};
-
-class TestProtocol_SyncProxy : public TestProtocol_Sync {
- public:
-  explicit TestProtocol_SyncProxy(::zx::channel channel);
-  ~TestProtocol_SyncProxy() override;
-  zx_status_t StrictXUnionHenceResponseMayBeStackAllocated(
-      ::fidl::test::union_::StrictBoundedXUnion* out_xu) override;
-  zx_status_t FlexibleXUnionHenceResponseMustBeHeapAllocated(
-      ::fidl::test::union_::OlderSimpleUnion* out_xu) override;
-
- private:
-  ::fidl::internal::SynchronousProxy proxy_;
-  friend class ::fidl::SynchronousInterfacePtr<TestProtocol>;
-};
 #endif  // __Fuchsia__
 
 class NullableUnionStruct final {
@@ -3759,4 +3586,202 @@ struct Equality<::fidl::test::union_::XUnionContainingEmptyStruct> {
     }
   }
 };
+}  // namespace fidl
+
+//
+// Proxies and stubs declarations
+//
+namespace fidl {
+namespace test {
+namespace union_ {
+
+#ifdef __Fuchsia__
+using TestProtocolPtr = ::fidl::InterfacePtr<TestProtocol>;
+class TestProtocol_Proxy;
+class TestProtocol_Stub;
+class TestProtocol_EventSender;
+class TestProtocol_Sync;
+using TestProtocolSyncPtr = ::fidl::SynchronousInterfacePtr<TestProtocol>;
+class TestProtocol_SyncProxy;
+
+namespace internal {
+constexpr uint64_t
+    kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Ordinal =
+        0x747b084a44f0dc3elu;
+constexpr uint64_t
+    kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Ordinal =
+        0x57615a25c2a785d2lu;
+
+}  // namespace internal
+#endif  // __Fuchsia__
+#ifdef __Fuchsia__
+class TestProtocol {
+ public:
+  using Proxy_ = TestProtocol_Proxy;
+  using Stub_ = TestProtocol_Stub;
+  using EventSender_ = TestProtocol_EventSender;
+  using Sync_ = TestProtocol_Sync;
+  virtual ~TestProtocol();
+  using StrictXUnionHenceResponseMayBeStackAllocatedCallback =
+      fit::function<void(::fidl::test::union_::StrictBoundedXUnion)>;
+
+  virtual void StrictXUnionHenceResponseMayBeStackAllocated(
+      StrictXUnionHenceResponseMayBeStackAllocatedCallback callback) = 0;
+  using FlexibleXUnionHenceResponseMustBeHeapAllocatedCallback =
+      fit::function<void(::fidl::test::union_::OlderSimpleUnion)>;
+
+  virtual void FlexibleXUnionHenceResponseMustBeHeapAllocated(
+      FlexibleXUnionHenceResponseMustBeHeapAllocatedCallback callback) = 0;
+};
+
+class TestProtocol_RequestDecoder {
+ public:
+  TestProtocol_RequestDecoder() = default;
+  virtual ~TestProtocol_RequestDecoder() = default;
+  static const fidl_type_t* GetType(uint64_t ordinal, bool* out_needs_response);
+  zx_status_t Decode_(::fidl::Message request) {
+    bool needs_response;
+    const fidl_type_t* request_type =
+        GetType(request.ordinal(), &needs_response);
+    if (request_type == nullptr) {
+      return ZX_ERR_NOT_SUPPORTED;
+    }
+    const char* error_msg = nullptr;
+    zx_status_t status = request.Decode(request_type, &error_msg);
+    if (status != ZX_OK) {
+      FIDL_REPORT_DECODING_ERROR(request, request_type, error_msg);
+      return status;
+    }
+    ::fidl::Decoder request_decoder(std::move(request));
+    switch (request.ordinal()) {
+      case internal::
+          kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Ordinal: {
+        StrictXUnionHenceResponseMayBeStackAllocated();
+        break;
+      }
+      case internal::
+          kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Ordinal: {
+        FlexibleXUnionHenceResponseMustBeHeapAllocated();
+        break;
+      }
+      default: {
+        status = ZX_ERR_NOT_SUPPORTED;
+        break;
+      }
+    }
+    return status;
+  }
+  virtual void StrictXUnionHenceResponseMayBeStackAllocated() = 0;
+  virtual void FlexibleXUnionHenceResponseMustBeHeapAllocated() = 0;
+};
+
+class TestProtocol_ResponseDecoder {
+ public:
+  TestProtocol_ResponseDecoder() = default;
+  virtual ~TestProtocol_ResponseDecoder() = default;
+  static const fidl_type_t* GetType(uint64_t ordinal);
+  zx_status_t Decode_(::fidl::Message response) {
+    const fidl_type_t* response_type = GetType(response.ordinal());
+    if (response_type == nullptr) {
+      return ZX_ERR_NOT_SUPPORTED;
+    }
+    const char* error_msg = nullptr;
+    zx_status_t status = response.Decode(response_type, &error_msg);
+    if (status != ZX_OK) {
+      FIDL_REPORT_DECODING_ERROR(response, response_type, error_msg);
+      return status;
+    }
+    ::fidl::Decoder response_decoder(std::move(response));
+    switch (response.ordinal()) {
+      case internal::
+          kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Ordinal: {
+        StrictXUnionHenceResponseMayBeStackAllocated(
+            ::fidl::DecodeAs<::fidl::test::union_::StrictBoundedXUnion>(
+                &response_decoder, 16));
+        break;
+      }
+      case internal::
+          kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Ordinal: {
+        FlexibleXUnionHenceResponseMustBeHeapAllocated(
+            ::fidl::DecodeAs<::fidl::test::union_::OlderSimpleUnion>(
+                &response_decoder, 16));
+        break;
+      }
+      default: {
+        break;
+      }
+    }
+    return ZX_OK;
+  }
+  virtual void StrictXUnionHenceResponseMayBeStackAllocated(
+      ::fidl::test::union_::StrictBoundedXUnion xu) = 0;
+  virtual void FlexibleXUnionHenceResponseMustBeHeapAllocated(
+      ::fidl::test::union_::OlderSimpleUnion xu) = 0;
+};
+
+class TestProtocol_EventSender {
+ public:
+  virtual ~TestProtocol_EventSender();
+};
+
+class TestProtocol_Sync {
+ public:
+  using Proxy_ = TestProtocol_SyncProxy;
+  virtual ~TestProtocol_Sync();
+  virtual zx_status_t StrictXUnionHenceResponseMayBeStackAllocated(
+      ::fidl::test::union_::StrictBoundedXUnion* out_xu) = 0;
+  virtual zx_status_t FlexibleXUnionHenceResponseMustBeHeapAllocated(
+      ::fidl::test::union_::OlderSimpleUnion* out_xu) = 0;
+};
+
+class TestProtocol_Proxy final : public ::fidl::internal::Proxy,
+                                 public TestProtocol {
+ public:
+  explicit TestProtocol_Proxy(::fidl::internal::ProxyController* controller);
+  ~TestProtocol_Proxy() override;
+
+  zx_status_t Dispatch_(::fidl::Message message) override;
+  void StrictXUnionHenceResponseMayBeStackAllocated(
+      StrictXUnionHenceResponseMayBeStackAllocatedCallback callback) override;
+  void FlexibleXUnionHenceResponseMustBeHeapAllocated(
+      FlexibleXUnionHenceResponseMustBeHeapAllocatedCallback callback) override;
+
+ private:
+  TestProtocol_Proxy(const TestProtocol_Proxy&) = delete;
+  TestProtocol_Proxy& operator=(const TestProtocol_Proxy&) = delete;
+
+  ::fidl::internal::ProxyController* controller_;
+};
+
+class TestProtocol_Stub final : public ::fidl::internal::Stub,
+                                public TestProtocol_EventSender {
+ public:
+  typedef class ::fidl::test::union_::TestProtocol TestProtocol_clazz;
+  explicit TestProtocol_Stub(TestProtocol_clazz* impl);
+  ~TestProtocol_Stub() override;
+
+  zx_status_t Dispatch_(::fidl::Message message,
+                        ::fidl::internal::PendingResponse response) override;
+
+ private:
+  TestProtocol_clazz* impl_;
+};
+
+class TestProtocol_SyncProxy : public TestProtocol_Sync {
+ public:
+  explicit TestProtocol_SyncProxy(::zx::channel channel);
+  ~TestProtocol_SyncProxy() override;
+  zx_status_t StrictXUnionHenceResponseMayBeStackAllocated(
+      ::fidl::test::union_::StrictBoundedXUnion* out_xu) override;
+  zx_status_t FlexibleXUnionHenceResponseMustBeHeapAllocated(
+      ::fidl::test::union_::OlderSimpleUnion* out_xu) override;
+
+ private:
+  ::fidl::internal::SynchronousProxy proxy_;
+  friend class ::fidl::SynchronousInterfacePtr<TestProtocol>;
+};
+
+#endif  // __Fuchsia__
+}  // namespace union_
+}  // namespace test
 }  // namespace fidl

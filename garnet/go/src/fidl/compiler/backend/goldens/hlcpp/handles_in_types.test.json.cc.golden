@@ -3,6 +3,10 @@
 #include <handles_in_types.test.json.h>
 
 #include "lib/fidl/cpp/internal/implementation.h"
+
+//
+// Domain objects definitions (i.e. "natural types" in unified bindings)
+//
 namespace fidl {
 namespace test {
 namespace handlesintypes {
@@ -380,5 +384,14 @@ zx_status_t HandlesInTypes::Clone(HandlesInTypes* _result) const {
 #endif  // __Fuchsia__
 
 }  // namespace handlesintypes
+}  // namespace test
+}  // namespace fidl
+
+//
+// Proxies and stubs definitions
+//
+namespace fidl {
+namespace test {
+namespace handlesintypes {}  // namespace handlesintypes
 }  // namespace test
 }  // namespace fidl

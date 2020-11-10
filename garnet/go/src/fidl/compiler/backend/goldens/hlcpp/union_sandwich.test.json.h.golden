@@ -4,6 +4,9 @@
 
 #include "lib/fidl/cpp/internal/header.h"
 
+//
+// Domain objects declarations (i.e. "natural types" in unified bindings).
+//
 namespace fidl {
 namespace test {
 namespace unionsandwich {
@@ -921,4 +924,13 @@ struct Equality<::fidl::test::unionsandwich::SandwichUnionSize24Alignment8> {
     return true;
   }
 };
+}  // namespace fidl
+
+//
+// Proxies and stubs declarations
+//
+namespace fidl {
+namespace test {
+namespace unionsandwich {}  // namespace unionsandwich
+}  // namespace test
 }  // namespace fidl
