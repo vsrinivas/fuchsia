@@ -103,7 +103,7 @@ That IDK is complemented by multiple IDK add-ons:
 
 - `//sdk:e2e_testing`: an end-to-end testing framework for Fuchsia;
 - `//sdk:modular_testing`: an hermetic testing framework for the app framework;
-- `//topaz/public/sdk:fuchsia_dart`: a Dart SDK to build mods and agents.
+- `//sdk:fuchsia_dart`: a Dart SDK to build mods and agents.
 
 Internally these targets are all instances of the `sdk` GN template.
 

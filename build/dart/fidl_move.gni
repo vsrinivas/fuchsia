@@ -12,5 +12,3 @@ dart_package_label = {
 }
 
 fidlgen_dart_topaz_output_name = "fidlgen_dart"
-
-fuchsia_dart_sdk_in_topaz = false
