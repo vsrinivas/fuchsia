@@ -7,6 +7,7 @@
 #ifndef ZIRCON_KERNEL_LIB_ARCH_INCLUDE_LIB_ARCH_X86_CPUID_H_
 #define ZIRCON_KERNEL_LIB_ARCH_INCLUDE_LIB_ARCH_X86_CPUID_H_
 
+#include <array>
 #include <string_view>
 #include <type_traits>
 #include <utility>
@@ -304,6 +305,97 @@ struct CpuidExtendedFeatureFlagsB
   DEF_BIT(2, sgx);
   DEF_BIT(1, tsc_adjust);
   DEF_BIT(0, fsgsbase);
+};
+
+//---------------------------------------------------------------------------//
+// Leaf/Function 0x8000'0000
+//
+// [intel/vol2]: Table 3-8.  Information Returned by CPUID Instruction.
+// [amd/vol3]: E.4.1  Function 8000_0000h—Maximum Extended Function Number and Vendor String
+//---------------------------------------------------------------------------//
+
+// [amd/vol3]: CPUID Fn8000_0000_EAX Largest Extended Function Number
+struct CpuidMaximumExtendedLeaf
+    : public CpuidValueBase<CpuidMaximumExtendedLeaf, 0x8000'0000, 0x0, CpuidIo::kEax> {};
+
+//---------------------------------------------------------------------------//
+// Leaves/Functions 0x8000'0002 - 0x8000'0004
+//
+// [intel/vol2]: Table 3-8.  Information Returned by CPUID Instruction.
+// [amd/vol3]: E.4.3  Functions 8000_0002h–8000_0004h—Extended Processor Name String
+//---------------------------------------------------------------------------//
+
+// The 2,3,4 below refer to the low digit of the leaf number and not the
+// express (zero-based) index into how the combine to form the processor name
+// string.
+struct CpuidProcessorName2A
+    : public CpuidValueBase<CpuidProcessorName2A, 0x8000'0002, 0x0, CpuidIo::kEax> {};
+struct CpuidProcessorName2B
+    : public CpuidValueBase<CpuidProcessorName2B, 0x8000'0002, 0x0, CpuidIo::kEbx> {};
+struct CpuidProcessorName2C
+    : public CpuidValueBase<CpuidProcessorName2C, 0x8000'0002, 0x0, CpuidIo::kEcx> {};
+struct CpuidProcessorName2D
+    : public CpuidValueBase<CpuidProcessorName2D, 0x8000'0002, 0x0, CpuidIo::kEdx> {};
+
+struct CpuidProcessorName3A
+    : public CpuidValueBase<CpuidProcessorName3A, 0x8000'0003, 0x0, CpuidIo::kEax> {};
+struct CpuidProcessorName3B
+    : public CpuidValueBase<CpuidProcessorName3B, 0x8000'0003, 0x0, CpuidIo::kEbx> {};
+struct CpuidProcessorName3C
+    : public CpuidValueBase<CpuidProcessorName3C, 0x8000'0003, 0x0, CpuidIo::kEcx> {};
+struct CpuidProcessorName3D
+    : public CpuidValueBase<CpuidProcessorName3D, 0x8000'0003, 0x0, CpuidIo::kEdx> {};
+
+struct CpuidProcessorName4A
+    : public CpuidValueBase<CpuidProcessorName4A, 0x8000'0004, 0x0, CpuidIo::kEax> {};
+struct CpuidProcessorName4B
+    : public CpuidValueBase<CpuidProcessorName4B, 0x8000'0004, 0x0, CpuidIo::kEbx> {};
+struct CpuidProcessorName4C
+    : public CpuidValueBase<CpuidProcessorName4C, 0x8000'0004, 0x0, CpuidIo::kEcx> {};
+struct CpuidProcessorName4D
+    : public CpuidValueBase<CpuidProcessorName4D, 0x8000'0004, 0x0, CpuidIo::kEdx> {};
+
+// ProcessorName is a simple class that serves to hold the content of a
+// processor name (or "brand string" in Intel-speak), a general identifier.
+class ProcessorName {
+ public:
+  template <typename CpuidIoProvider>
+  explicit ProcessorName(CpuidIoProvider&& io) {
+    // The name string needs leaves 0x8000'0002-0x8000'0004.
+    if (io.template Read<CpuidMaximumExtendedLeaf>().reg_value() >= CpuidProcessorName4D::kLeaf) {
+      const uint32_t values[] = {
+          io.template Read<CpuidProcessorName2A>().reg_value(),
+          io.template Read<CpuidProcessorName2B>().reg_value(),
+          io.template Read<CpuidProcessorName2C>().reg_value(),
+          io.template Read<CpuidProcessorName2D>().reg_value(),
+          io.template Read<CpuidProcessorName3A>().reg_value(),
+          io.template Read<CpuidProcessorName3B>().reg_value(),
+          io.template Read<CpuidProcessorName3C>().reg_value(),
+          io.template Read<CpuidProcessorName3D>().reg_value(),
+          io.template Read<CpuidProcessorName4A>().reg_value(),
+          io.template Read<CpuidProcessorName4B>().reg_value(),
+          io.template Read<CpuidProcessorName4C>().reg_value(),
+          io.template Read<CpuidProcessorName4D>().reg_value(),
+      };
+      static_assert(kSize == sizeof(values));
+      memcpy(str_.data(), values, kSize);
+    } else {
+      str_[0] = '\0';
+    }
+  }
+
+  ProcessorName() = delete;
+
+  // Returns a string representation of name of the processor, valid for as
+  // long as the associated ProcessorName is in scope.
+  std::string_view name() const {
+    std::string_view name{str_.data(), str_.size()};
+    return name.substr(0, name.find('\0'));
+  }
+
+ private:
+  static constexpr size_t kSize = 48;
+  std::array<char, kSize> str_;
 };
 
 }  // namespace arch

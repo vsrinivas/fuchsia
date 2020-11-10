@@ -30,6 +30,8 @@
 
 namespace {
 
+using namespace std::string_view_literals;
+
 constexpr std::string_view kTestDataDir = "testdata/cpuid";
 
 //
@@ -102,6 +104,9 @@ TEST(CpuidTests, Core2_6300) {
   EXPECT_EQ(0x0f, info.model());
   EXPECT_EQ(0x02, info.stepping());
 
+  auto processor = arch::ProcessorName(cpuid);
+  EXPECT_TRUE(processor.name() == "Intel(R) Core(TM)2 CPU          6300  @ 1.86GHz"sv);
+
   {
     auto features = cpuid.Read<arch::CpuidFeatureFlagsC>();
 
@@ -138,6 +143,9 @@ TEST(CpuidTests, Nehalem_Xeon_E5520) {
   EXPECT_EQ(0x6, info.family());
   EXPECT_EQ(0x1a, info.model());
   EXPECT_EQ(0x05, info.stepping());
+
+  auto processor = arch::ProcessorName(cpuid);
+  EXPECT_TRUE(processor.name() == "Intel(R) Xeon(R) CPU           E5520  @ 2.27GHz"sv);
 
   {
     auto features = cpuid.Read<arch::CpuidFeatureFlagsC>();
@@ -176,6 +184,9 @@ TEST(CpuidTests, SandyBridge_i7_2600K) {
   EXPECT_EQ(0x2a, info.model());
   EXPECT_EQ(0x07, info.stepping());
 
+  auto processor = arch::ProcessorName(cpuid);
+  EXPECT_TRUE(processor.name() == "       Intel(R) Core(TM) i7-2600K CPU @ 3.40GHz"sv);
+
   {
     auto features = cpuid.Read<arch::CpuidFeatureFlagsC>();
 
@@ -212,6 +223,9 @@ TEST(CpuidTests, IvyBridge_i3_3240) {
   EXPECT_EQ(0x6, info.family());
   EXPECT_EQ(0x3a, info.model());
   EXPECT_EQ(0x09, info.stepping());
+
+  auto processor = arch::ProcessorName(cpuid);
+  EXPECT_TRUE(processor.name() == "        Intel(R) Core(TM) i3-3240 CPU @ 3.40GHz"sv);
 
   {
     auto features = cpuid.Read<arch::CpuidFeatureFlagsC>();
@@ -252,6 +266,9 @@ TEST(CpuidTests, Haswell_Xeon_E5_2690v3) {
   EXPECT_EQ(0x3f, info.model());
   EXPECT_EQ(0x02, info.stepping());
 
+  auto processor = arch::ProcessorName(cpuid);
+  EXPECT_TRUE(processor.name() == "Intel(R) Xeon(R) CPU E5-2690 v3 @ 2.60GHz"sv);
+
   {
     auto features = cpuid.Read<arch::CpuidFeatureFlagsC>();
 
@@ -289,6 +306,9 @@ TEST(CpuidTests, Skylake_i3_6100) {
   EXPECT_EQ(0x4e, info.model());
   EXPECT_EQ(0x03, info.stepping());
 
+  auto processor = arch::ProcessorName(cpuid);
+  EXPECT_TRUE(processor.name() == "Intel(R) Core(TM) i3-6100U CPU @ 2.30GHz"sv);
+
   {
     auto features = cpuid.Read<arch::CpuidFeatureFlagsC>();
 
@@ -323,6 +343,9 @@ TEST(CpuidTests, AtomD510) {
   EXPECT_EQ(0x6, info.family());
   EXPECT_EQ(0x1c, info.model());
   EXPECT_EQ(0x0a, info.stepping());
+
+  auto processor = arch::ProcessorName(cpuid);
+  EXPECT_TRUE(processor.name() == "         Intel(R) Atom(TM) CPU D510   @ 1.66GHz"sv);
 
   {
     auto features = cpuid.Read<arch::CpuidFeatureFlagsC>();
@@ -361,6 +384,9 @@ TEST(CpuidTests, Ryzen2700X) {
   EXPECT_EQ(0x08, info.model());
   EXPECT_EQ(0x02, info.stepping());
 
+  auto processor = arch::ProcessorName(cpuid);
+  EXPECT_TRUE(processor.name() == "AMD Ryzen 7 2700X Eight-Core Processor         "sv);
+
   {
     auto features = cpuid.Read<arch::CpuidFeatureFlagsC>();
 
@@ -398,6 +424,9 @@ TEST(CpuidTests, Ryzen3950X) {
   EXPECT_EQ(0x71, info.model());
   EXPECT_EQ(0x00, info.stepping());
 
+  auto processor = arch::ProcessorName(cpuid);
+  EXPECT_TRUE(processor.name() == "AMD Ryzen 9 3950X 16-Core Processor            "sv);
+
   {
     auto features = cpuid.Read<arch::CpuidFeatureFlagsC>();
 
@@ -434,6 +463,9 @@ TEST(CpuidTests, Threadripper1950X) {
   EXPECT_EQ(0x17, info.family());
   EXPECT_EQ(0x01, info.model());
   EXPECT_EQ(0x01, info.stepping());
+
+  auto processor = arch::ProcessorName(cpuid);
+  EXPECT_TRUE(processor.name() == "AMD Ryzen Threadripper 1950X 16-Core Processor "sv);
 
   {
     auto features = cpuid.Read<arch::CpuidFeatureFlagsC>();
