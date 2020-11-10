@@ -607,10 +607,19 @@ fn test_start_clock_from_rtc() {
             );
 
             assert_eq!(
-                cobalt_event_stream.by_ref().take(1).collect::<Vec<CobaltEvent>>().await,
-                vec![CobaltEvent::builder(REAL_TIME_CLOCK_EVENTS_METRIC_ID)
-                    .with_event_codes(RtcEventType::WriteSucceeded)
-                    .as_event(),]
+                cobalt_event_stream.by_ref().take(2).collect::<Vec<CobaltEvent>>().await,
+                vec![
+                    CobaltEvent::builder(TIMEKEEPER_TRACK_EVENTS_METRIC_ID)
+                        .with_event_codes((
+                            TrackEvent::ClockUpdateTimeStep,
+                            Track::Primary,
+                            Experiment::None
+                        ))
+                        .as_count_event(0, 1),
+                    CobaltEvent::builder(REAL_TIME_CLOCK_EVENTS_METRIC_ID)
+                        .with_event_codes(RtcEventType::WriteSucceeded)
+                        .as_event(),
+                ]
             );
         },
     );

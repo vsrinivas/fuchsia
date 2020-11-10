@@ -5,7 +5,9 @@
 use {
     crate::{
         diagnostics::{Diagnostics, Event},
-        enums::{ClockCorrectionStrategy, InitialClockState, StartClockSource, Track},
+        enums::{
+            ClockCorrectionStrategy, ClockUpdateReason, InitialClockState, StartClockSource, Track,
+        },
         MonitorTrack, PrimaryTrack, TimeSource,
     },
     fuchsia_async as fasync,
@@ -110,28 +112,35 @@ impl CobaltDiagnostics {
 
     /// Records relevant information following a clock update.
     ///
-    /// Currently this only records the difference between the monitor and primary clocks when the
-    /// monitor clock is updated.
-    fn record_clock_update(&self, track: Track) {
-        if track != Track::Monitor {
-            return;
-        }
-        let primary = match self.primary_clock.read() {
-            Ok(utc) => utc,
-            Err(_) => return,
-        };
-        let monitor = match self.monitor_clock.as_ref().map(|clk| clk.read()) {
-            Some(Ok(utc)) => utc,
-            _ => return,
-        };
-        let direction = if monitor >= primary { Direction::Positive } else { Direction::Negative };
-        self.sender.lock().log_event_count(
-            TIMEKEEPER_MONITOR_DIFFERENCE_METRIC_ID,
-            (direction, self.experiment),
+    /// All updates record the reason, an update to the monitor track additionally records the
+    /// difference between the monitor and primary clocks.
+    fn record_clock_update(&self, track: Track, reason: ClockUpdateReason) {
+        let mut locked_sender = self.sender.lock();
+        locked_sender.log_event_count(
+            TIMEKEEPER_TRACK_EVENTS_METRIC_ID,
+            (Into::<TrackEvent>::into(reason), Into::<CobaltTrack>::into(track), self.experiment),
             PERIOD_DURATION,
-            // Unfortunately Cobalt does not follow the standard of nanoseconds everywhere.
-            (monitor - primary).into_micros().abs(),
+            1,
         );
+        if track == Track::Monitor {
+            let primary = match self.primary_clock.read() {
+                Ok(utc) => utc,
+                Err(_) => return,
+            };
+            let monitor = match self.monitor_clock.as_ref().map(|clk| clk.read()) {
+                Some(Ok(utc)) => utc,
+                _ => return,
+            };
+            let direction =
+                if monitor >= primary { Direction::Positive } else { Direction::Negative };
+            locked_sender.log_event_count(
+                TIMEKEEPER_MONITOR_DIFFERENCE_METRIC_ID,
+                (direction, self.experiment),
+                PERIOD_DURATION,
+                // Unfortunately Cobalt does not follow the standard of nanoseconds everywhere.
+                (monitor - primary).into_micros().abs(),
+            );
+        }
     }
 }
 
@@ -190,8 +199,8 @@ impl Diagnostics for CobaltDiagnostics {
                     self.sender.lock().log_event(TIMEKEEPER_LIFECYCLE_EVENTS_METRIC_ID, event);
                 }
             }
-            Event::UpdateClock { track, .. } => {
-                self.record_clock_update(track);
+            Event::UpdateClock { track, reason } => {
+                self.record_clock_update(track, reason);
             }
         }
     }
@@ -415,19 +424,46 @@ mod test {
     async fn record_update_clock_events() {
         let (diagnostics, mut mpsc_receiver) = create_test_object();
 
-        // Updates to the primary track should be ignored.
+        // Updates to the primary track should only log the reason.
         diagnostics.record(Event::UpdateClock {
             track: Track::Primary,
             reason: ClockUpdateReason::TimeStep,
         });
+        assert_eq!(
+            mpsc_receiver.next().await,
+            Some(CobaltEvent {
+                metric_id: time_metrics_registry::TIMEKEEPER_TRACK_EVENTS_METRIC_ID,
+                event_codes: vec![
+                    TrackEvent::ClockUpdateTimeStep as u32,
+                    CobaltTrack::Primary as u32,
+                    TEST_EXPERIMENT as u32
+                ],
+                component: None,
+                payload: event_count_payload(1),
+            })
+        );
         assert!(mpsc_receiver.next().now_or_never().is_none());
 
-        // Updates to the monitor track should lead to a difference report.
-        // Unfortunately its cumbersome to verify since we don't know the exact clock difference.
+        // Updates to the monitor track should lead to an update event and a difference report.
+        // Unfortunately the latter is cumbersome to verify since we don't know the exact clock
+        // difference.
         diagnostics.record(Event::UpdateClock {
             track: Track::Monitor,
-            reason: ClockUpdateReason::TimeStep,
+            reason: ClockUpdateReason::BeginSlew,
         });
+        assert_eq!(
+            mpsc_receiver.next().await,
+            Some(CobaltEvent {
+                metric_id: time_metrics_registry::TIMEKEEPER_TRACK_EVENTS_METRIC_ID,
+                event_codes: vec![
+                    TrackEvent::ClockUpdateBeginSlew as u32,
+                    CobaltTrack::Monitor as u32,
+                    TEST_EXPERIMENT as u32
+                ],
+                component: None,
+                payload: event_count_payload(1),
+            })
+        );
         let event = mpsc_receiver.next().await.unwrap();
         assert_eq!(event.metric_id, TIMEKEEPER_MONITOR_DIFFERENCE_METRIC_ID);
         assert_eq!(event.event_codes, vec![Direction::Positive as u32, TEST_EXPERIMENT as u32]);
