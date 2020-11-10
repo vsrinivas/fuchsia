@@ -8,5 +8,6 @@ group("tests") {
     "codesize:tests",
     "fxtest:tests",
     "fxutils:tests",
+    "sdk/bazel:tests",
   ]
 }

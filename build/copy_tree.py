@@ -14,6 +14,7 @@ params.add_argument("source", type=Path)
 params.add_argument("target", type=Path)
 params.add_argument("stamp", type=Path)
 params.add_argument("--ignore_pattern", action="append")
+params.add_argument("--no_symlinks", action='store_true')
 args = params.parse_args()
 
 if args.target.is_file():
@@ -25,7 +26,11 @@ ignore = None
 if args.ignore_pattern:
     ignore = shutil.ignore_patterns(*args.ignore_pattern)
 
-shutil.copytree(args.source, args.target, symlinks=True, ignore=ignore)
+keep_symlinks = True
+if args.no_symlinks:
+    keep_symlinks = False
+
+shutil.copytree(args.source, args.target, symlinks=keep_symlinks, ignore=ignore)
 
 stamp = Path(str(args.stamp))
 stamp.touch()

@@ -21,6 +21,10 @@ import("//build/testing/host_test_data.gni")
 #   * deps
 #   * visibility
 #     - Optional: Usual GN meanings.
+#
+#   * args
+#     - Optional: additional arguments needed when invoking the test.
+#     - Type: list(strings)
 
 template("python_host_test") {
   assert(defined(invoker.main_source), "main_source is required")
@@ -45,6 +49,9 @@ template("python_host_test") {
   host_test(target_name) {
     binary_path = python_exe_path
     args = [ rebase_path("${_out_dir}/${invoker.main_source}", root_build_dir) ]
+    if (defined(invoker.args)) {
+      args += invoker.args
+    }
     deps = [
       ":${_host_test_data_target}",
       "//build/python:interpreter",
