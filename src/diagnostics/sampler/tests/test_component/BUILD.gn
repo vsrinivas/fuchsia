@@ -1,0 +1,39 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+import("//build/rust/rustc_binary.gni")
+import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
+import("//src/sys/build/components.gni")
+import("//src/sys/pkg/sysmgr_config.gni")
+
+rustc_binary("bin") {
+  edition = "2018"
+  name = "single_counter_bin"
+  testonly = true
+  deps = [
+    "//sdk/fidl/fuchsia.inspect.deprecated:fuchsia.inspect.deprecated-rustc",
+    "//src/diagnostics/sampler/tests/fidl-for-test:fuchsia.samplertestcontroller-rustc",
+    "//src/lib/diagnostics/inspect/rust",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/lib/syslog/rust:syslog",
+    "//src/lib/zircon/rust:fuchsia-zircon",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:argh",
+    "//third_party/rust_crates:derivative",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:thiserror",
+  ]
+
+  sources = [ "src/main.rs" ]
+}
+
+fuchsia_component("single_counter_test_component") {
+  testonly = true
+  component_name = "single_counter_test_component"
+  manifest = "meta/single-counter-test-component.cmx"
+  deps = [ ":bin" ]
+}

@@ -1,0 +1,47 @@
+{
+    program: {
+        binary: "bin/sampler",
+        args: [
+            "--minimum-sample-rate-sec",
+            "10",
+        ],
+    },
+    capabilities: [
+        {
+            directory: "diagnostics",
+            rights: [ "connect" ],
+            path: "/diagnostics",
+        },
+    ],
+    use: [
+        { runner: "elf" },
+        {
+            protocol: "fuchsia.logger.Log",
+            from: "parent",
+        },
+        {
+            protocol: "fuchsia.logger.LogSink",
+            from: "parent",
+        },
+        {
+            protocol: "fuchsia.diagnostics.ArchiveAccessor",
+            from: "parent",
+        },
+        {
+            protocol: "fuchsia.cobalt.LoggerFactory",
+            from: "parent",
+        },
+        {
+            directory: "config-data",
+            rights: [ "r*" ],
+            path: "/config/data",
+        },
+    ],
+    expose: [
+        {
+            directory: "diagnostics",
+            from: "self",
+            to: "framework",
+        },
+    ],
+}

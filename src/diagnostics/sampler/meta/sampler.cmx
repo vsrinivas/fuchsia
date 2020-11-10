@@ -1,0 +1,20 @@
+{
+    "program": {
+        "args": [
+            "--minimum-sample-rate-sec",
+            "1"
+        ],
+        "binary": "bin/sampler"
+    },
+    "sandbox": {
+        "features": [
+            "config-data"
+        ],
+        "services": [
+            "fuchsia.cobalt.LoggerFactory",
+            "fuchsia.diagnostics.ArchiveAccessor",
+            "fuchsia.logger.Log",
+            "fuchsia.logger.LogSink"
+        ]
+    }
+}

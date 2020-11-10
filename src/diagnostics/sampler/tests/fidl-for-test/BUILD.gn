@@ -1,0 +1,13 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/fidl/fidl.gni")
+
+# This is a copy of the FIDL from //sdk/fidl/fuchsia.stash that we can't
+# depend on directly. It's only used in tests.
+fidl("fuchsia.samplertestcontroller") {
+  testonly = true
+
+  sources = [ "sampler_test_controller.test.fidl" ]
+}

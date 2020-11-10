@@ -1,0 +1,15 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.samplertestcontroller;
+
+enum SamplingError : int32 {
+    MULTIPLE_SAMPLE_CALLBACKS_ERROR = 1;
+};
+
+[Discoverable]
+protocol SamplerTestController {
+    IncrementInt(uint16 property_id);
+    WaitForSample() -> () error SamplingError;
+};

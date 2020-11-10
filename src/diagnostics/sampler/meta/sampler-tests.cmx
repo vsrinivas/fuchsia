@@ -1,0 +1,17 @@
+{
+    "program": {
+        "binary": "bin/diagnostics_sampler_bin_test",
+        "env_vars": [
+            "RUST_BACKTRACE=full"
+        ]
+    },
+    "sandbox": {
+        "features": [
+            "build-info",
+            "isolated-temp"
+        ],
+        "services": [
+            "fuchsia.logger.LogSink"
+        ]
+    }
+}

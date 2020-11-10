@@ -9,6 +9,7 @@ group("diagnostics") {
     "archivist",
     "config",
     "log-stats",
+    "sampler",
     "wasm",
   ]
 }
@@ -22,6 +23,7 @@ group("tests") {
     "iquery:tests",
     "lib:tests",
     "log-stats:tests",
+    "sampler:tests",
     "tool:host_tests",
     "triage:tests",
     "validator:tests",

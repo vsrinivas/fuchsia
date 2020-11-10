@@ -1,0 +1,143 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config.gni")
+import("//build/package.gni")
+import("//build/rust/rustc_binary.gni")
+import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
+
+rustc_binary("bin") {
+  name = "sampler"
+  edition = "2018"
+  with_unit_tests = true
+
+  deps = [
+    "//sdk/fidl/fuchsia.cobalt:fuchsia.cobalt-rustc",
+    "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics-rustc",
+    "//src/lib/diagnostics/inspect/node-hierarchy/rust",
+    "//src/lib/diagnostics/reader/rust",
+    "//src/lib/fdio/rust:fdio",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/lib/syslog/rust:syslog",
+    "//src/lib/syslog/rust:syslog-listener",
+    "//src/lib/zircon/rust:fuchsia-zircon",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:argh",
+    "//third_party/rust_crates:async-trait",
+    "//third_party/rust_crates:chrono",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:itertools",
+    "//third_party/rust_crates:lazy_static",
+    "//third_party/rust_crates:log",
+    "//third_party/rust_crates:matches",
+    "//third_party/rust_crates:parking_lot",
+    "//third_party/rust_crates:serde",
+    "//third_party/rust_crates:serde_json",
+    "//third_party/rust_crates:serde_json5",
+    "//third_party/rust_crates:tempfile",
+    "//third_party/rust_crates:thiserror",
+  ]
+
+  sources = [
+    "src/config.rs",
+    "src/executor.rs",
+    "src/main.rs",
+  ]
+}
+
+package("sampler") {
+  deps = [
+    ":archivist_config",
+    ":bin",
+  ]
+
+  binaries = [
+    {
+      name = "sampler"
+    },
+  ]
+  meta = [
+    {
+      path = rebase_path("meta/sampler.cml")
+      dest = "sampler.cm"
+    },
+  ]
+}
+
+config_data("archivist_config") {
+  for_pkg = "sampler"
+  sources = [ "config/archivist.json" ]
+  outputs = [ "metrics/archivist.json" ]
+}
+
+rustc_test("test-bin") {
+  testonly = true
+  name = "sampler_integration_tests"
+  deps = [
+    "//sdk/fidl/fuchsia.cobalt:fuchsia.cobalt-rustc",
+    "//sdk/fidl/fuchsia.cobalt.test:fuchsia.cobalt.test-rustc",
+    "//src/cobalt/bin/testing/mock_cobalt:component",
+    "//src/diagnostics/sampler/tests/fidl-for-test:fuchsia.samplertestcontroller-rustc",
+    "//src/lib/diagnostics/reader/rust",
+    "//src/lib/diagnostics/testing/rust",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/lib/zircon/rust:fuchsia-zircon",
+  ]
+
+  source_root = "tests/integration.rs"
+  sources = [ "tests/integration.rs" ]
+}
+
+fuchsia_component("sampler-v1") {
+  component_name = "sampler"
+  manifest = "meta/sampler.cmx"
+  deps = [ ":bin" ]
+}
+
+fuchsia_component("sampler-integration-test") {
+  testonly = true
+  manifest = "meta/integration-tests.cmx"
+  deps = [
+    ":sampler-v1",
+    ":test-bin",
+    "//src/cobalt/bin/testing/mock_cobalt",
+    "//src/diagnostics/sampler/tests/test_component:single_counter_test_component",
+  ]
+}
+
+fuchsia_test_package("sampler-integration-tests") {
+  test_components = [ ":sampler-integration-test" ]
+  deps = [ ":test-config" ]
+}
+
+config_data("test-config") {
+  for_pkg = "sampler-integration-tests"
+  sources = [ "tests/configs/test_config.json" ]
+  outputs = [ "metrics/test_config.json" ]
+}
+
+test_package("sampler-tests") {
+  deps = [ ":bin_test" ]
+
+  v2_tests = [
+    {
+      name = "sampler_bin_test"
+      environments = basic_envs
+    },
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":sampler-integration-tests",
+    ":sampler-tests",
+    "//src/cobalt/bin/testing/mock_cobalt",
+  ]
+}
