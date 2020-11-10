@@ -25,6 +25,7 @@ int main(int argc, char* argv[]) {
   }
   status = fdio_service_connect(argv[1], remote);
   if (status != ZX_OK) {
+    zx_handle_close(local);
     fprintf(stderr, "could not open %s: %s\n", argv[1], zx_status_get_string(status));
     return -1;
   }
