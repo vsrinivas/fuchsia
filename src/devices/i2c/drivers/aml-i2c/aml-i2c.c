@@ -74,7 +74,7 @@ typedef struct {
   pdev_protocol_t pdev;
   zx_device_t* zxdev;
   aml_i2c_dev_t* i2c_devs;
-  size_t dev_count;
+  uint32_t dev_count;
 } aml_i2c_t;
 
 static zx_status_t aml_i2c_set_slave_addr(aml_i2c_dev_t* dev, uint16_t addr) {
@@ -108,6 +108,7 @@ static int aml_i2c_irq_thread(void* arg) {
   return ZX_OK;
 }
 
+#if 0
 static zx_status_t aml_i2c_dumpstate(aml_i2c_dev_t* dev) {
   printf("control reg      : %08x\n", MmioRead32(&dev->virt_regs->control));
   printf("slave addr  reg  : %08x\n", MmioRead32(&dev->virt_regs->slave_addr));
@@ -120,6 +121,7 @@ static zx_status_t aml_i2c_dumpstate(aml_i2c_dev_t* dev) {
 
   return ZX_OK;
 }
+#endif
 
 static inline void MmioClearBits32(uint32_t bits, MMIO_PTR volatile uint32_t* buffer) {
   uint32_t reg = MmioRead32(buffer);
@@ -176,7 +178,7 @@ static zx_status_t aml_i2c_write(aml_i2c_dev_t* dev, const uint8_t* buff, uint32
 
     MmioWrite32(token_reg & 0xffffffff, &dev->virt_regs->token_list_0);
     token_reg = token_reg >> 32;
-    MmioWrite32(token_reg, &dev->virt_regs->token_list_1);
+    MmioWrite32(token_reg & 0xffffffff, &dev->virt_regs->token_list_1);
 
     uint64_t wdata = 0;
     for (uint32_t i = 0; i < tx_size; i++) {
@@ -229,7 +231,7 @@ static zx_status_t aml_i2c_read(aml_i2c_dev_t* dev, uint8_t* buff, uint32_t len,
 
     MmioWrite32(token_reg & 0xffffffff, &dev->virt_regs->token_list_0);
     token_reg = token_reg >> 32;
-    MmioWrite32(token_reg, &dev->virt_regs->token_list_1);
+    MmioWrite32(token_reg & 0xffffffff, &dev->virt_regs->token_list_1);
 
     // clear registers to prevent data leaking from last xfer
     MmioWrite32(0, &dev->virt_regs->token_rdata_0);
@@ -368,9 +370,9 @@ static zx_status_t aml_i2c_transact(void* ctx, uint32_t bus_id, const i2c_impl_o
       return status;
     }
     if (rws[i].is_read) {
-      status = aml_i2c_read(dev, rws[i].data_buffer, rws[i].data_size, rws[i].stop);
+      status = aml_i2c_read(dev, rws[i].data_buffer, (uint32_t)rws[i].data_size, rws[i].stop);
     } else {
-      status = aml_i2c_write(dev, rws[i].data_buffer, rws[i].data_size, rws[i].stop);
+      status = aml_i2c_write(dev, rws[i].data_buffer, (uint32_t)rws[i].data_size, rws[i].stop);
     }
     if (status != ZX_OK) {
       return status;  // TODO(andresoportus) release the bus
@@ -447,7 +449,7 @@ static zx_status_t aml_i2c_bind(void* ctx, zx_device_t* parent) {
   if (!i2c->i2c_devs) {
     goto fail;
   }
-  i2c->dev_count = info.mmio_count;
+  i2c->dev_count = (uint32_t)info.mmio_count;
 
   if (metadata_size > 0) {
     clock_delays = calloc(info.mmio_count, sizeof(uint32_t));
