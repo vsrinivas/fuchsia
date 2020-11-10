@@ -1,4 +1,6 @@
-# Component Topology
+# Component Topology (Components v2)
+
+{% include "fuchsia-src/concepts/components/_v2_banner.html" %}
 
 The component topology is an abstract data structure that represents the
 relationships among [component instances](#component-instances).

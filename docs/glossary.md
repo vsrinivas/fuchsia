@@ -237,7 +237,7 @@ instantiating a component, for example
 
 See also: [fuchsia-pkg URL](#fuchsia-pkg-url)
 
-[component-url]: /docs/concepts/components/v2/component_urls.md
+[component-url]: /docs/concepts/components/component_urls.md
 
 ### **Components v1** {#components-v1}
 

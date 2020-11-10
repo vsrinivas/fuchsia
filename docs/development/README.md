@@ -100,7 +100,7 @@ This section covers Fuchsia-wide conventions and best practices.
  - [Packet capture](debugging/packet_capture.md)
  - [Editor configurations](/docs/development/editors/README.md)
  - [Using the Fuchsia Installer](/docs/development/hardware/installer.md)
- - [Enable verbose logging for input events](/docs/development/components/verbose_logging.md)
+ - [Enable verbose logging for input events](/docs/development/components/v1/verbose_logging.md)
 
 [acer_12]: /docs/development/hardware/acer12.md "Acer 12"
 [pixelbook]: /docs/development/hardware/pixelbook.md "Pixelbook"

@@ -1,4 +1,6 @@
-# Component manager
+# Component manager (Components v2)
+
+{% include "fuchsia-src/concepts/components/_v2_banner.html" %}
 
 The component manager is the heart of the component framework. It maintains the
 [component topology][doc-topology], manages

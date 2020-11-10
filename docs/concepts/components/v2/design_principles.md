@@ -1,4 +1,6 @@
-# Design principles
+# Design principles (Components v2)
+
+{% include "fuchsia-src/concepts/components/_v2_banner.html" %}
 
 This document offers a few significant design principles of component framework.
 

@@ -1,9 +1,6 @@
-# Component manifests {#component-manifests}
+# Component manifests (Components v2) {#component-manifests}
 
-Note: This document describes manifests for Component Framework
-([Components v2][glossary-components-v2]). If your component launches with
-[appmgr][glossary-appmgr], indicated for instance by your manifest file ending
-in a `.cmx` extension, then refer to [legacy documentation][doc-legacy-manifest]
+{% include "fuchsia-src/concepts/components/_v2_banner.html" %}
 
 A [component manifest](#component-manifest) is a file that defines a component
 by encoding a [component declaration](#component-declaration). This document

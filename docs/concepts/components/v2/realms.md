@@ -1,4 +1,6 @@
-# Realms
+# Realms (Components v2)
+
+{% include "fuchsia-src/concepts/components/_v2_banner.html" %}
 
 A *realm* is a subtree of the [component instance tree][topology-instance-tree].
 Every component instance is the root instance of a realm, known as the
@@ -189,7 +191,7 @@ documentation.
 [collections]: ./component_manifests.md#collections
 [component-manifest-examples]: ./component_manifests.md#examples
 [component-manifests]: ./component_manifests.md
-[component-urls]: ./component_urls.md
+[component-urls]: /docs/concepts/components/component_urls.md
 [environments]: ./environments.md
 [expose]: ./component_manifests.md#expose
 [framework-services]: ./component_manifests.md#framework-services

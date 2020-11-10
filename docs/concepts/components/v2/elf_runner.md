@@ -1,4 +1,6 @@
-# ELF Runner
+# ELF Runner (Components v2)
+
+{% include "fuchsia-src/concepts/components/_v2_banner.html" %}
 
 The ELF runner is the runner responsible for launching
 [components][glossary-components] based on standard executable files (ELF

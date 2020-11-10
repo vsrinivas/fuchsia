@@ -1,4 +1,9 @@
-# Components
+# Components v1
+
+This section contains documentation about components in the legacy component
+framework ([components v1][glossary-components-v2]).
+
+# Components v2
 
 This section contains documentation about components in the new component
 framework ([components v2][glossary-components-v2]).
@@ -17,7 +22,6 @@ the transition to the new architecture is complete.
   framework.
 - [Component manager](component_manager.md): The runtime.
 - [Declarations](declarations.md): Describe components themselves.
-- [Component URLs](component_urls.md): URLs that identify components.
 - [Lifecycle](lifecycle.md): Component instance progression from creation to
   destruction.
 - [Topology](topology.md): The relationships among component instances.
@@ -55,6 +59,11 @@ the transition to the new architecture is complete.
 - [Life of a protocol open](life_of_a_protocol_open.md): How components connect
   to protocols in their namespaces.
 
+# Components (either version)
+
+- [Component URLs][doc-component_urls] are URLs that identify components.
+
+[doc-component-urls]: /docs/concepts/components/component_urls.md
 [glossary-components-v1]: /docs/glossary.md#components-v1
 [glossary-components-v2]: /docs/glossary.md#components-v2
 

@@ -1,8 +1,5 @@
 # Supply build-time configuration data to components
 
-Note: This guide uses the [components v1](/docs/glossary.md#components-v1)
-architecture.
-
 ## Terminology
 
 Base: A collection of software that constitutes the core of the system and is
@@ -85,6 +82,8 @@ config_data("tennis_sysmgr_config") {
 ```
 
 ### Consuming
+
+#### Components v1
 
 The component that wants to consume configuration data must request this feature
 in its component manifest, which might look something like the below.

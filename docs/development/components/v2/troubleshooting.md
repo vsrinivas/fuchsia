@@ -1,6 +1,6 @@
-# Troubleshooting components {#troubleshooting-components}
+# Troubleshooting components (Components v2) {#troubleshooting-components}
 
-Note: This guide is exclusive to [v2 components][glossary-components-v2].
+{% include "fuchsia-src/concepts/components/_v2_banner.html" %}
 
 This document contains tips for troubleshooting the following kinds of problems
 when using the [component framework][doc-intro]:
@@ -251,7 +251,7 @@ If this happens, you'll see an error like the following from `fx test`:
 ```
 Test suite encountered error trying to run tests: Error getting test cases: The test protocol was
 closed. This may mean `/svc/fuchsia.test.Suite` was not configured properly. Refer to
-//docs/development/components/troubleshooting.md#troubleshoot-test.
+//docs/development/components/v2/troubleshooting.md#troubleshoot-test.
 ```
 
 Misconfigurations can happen in a few ways:

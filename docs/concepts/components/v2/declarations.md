@@ -1,4 +1,6 @@
-# Component declarations
+# Component declarations (Components v2)
+
+{% include "fuchsia-src/concepts/components/_v2_banner.html" %}
 
 A component declaration describes what a component can do, the capabilities
 it uses and exposes, its children, and other information needed to run the
@@ -26,7 +28,7 @@ following information:
   allow other components to access the calculator's accumulator register
   using inter-process communication.
 
-[doc-component-urls]: /docs/concepts/components/v2/component_urls.md
+[doc-component-urls]: /docs/concepts/components/component_urls.md
 [doc-component-manifests]: /docs/concepts/components/v2/component_manifests.md
 [doc-component-manifests-program]: /docs/concepts/components/v2/component_manifests.md#program
 [doc-component-manifests-use]: /docs/concepts/components/v2/component_manifests.md#use

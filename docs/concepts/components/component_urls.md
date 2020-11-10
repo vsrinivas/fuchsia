@@ -1,7 +1,8 @@
 # Component URLs {#component-urls}
 
 A component URL is a [URL][wiki-url] that locates a component, including its
-declaration, program, and assets. Component URLs are resolved to
+declaration, program, and assets. In [Components v2][glossary-components-v2],
+component URLs are resolved to
 [component declarations][doc-manifests-declaration] by a
 [resolver][doc-resolvers].
 
@@ -73,15 +74,15 @@ Example:
 https://en.wikipedia.org/wiki/Hippos
 ```
 
-[doc-manifests]: component_manifests.md
-[doc-manifests-children]: component_manifests.md#children
-[doc-manifests-declaration]: component_manifests.md#component-declaration
-[doc-monikers]: monikers.md
-[doc-resolvers]: resolvers.md
+[doc-manifests]: v2/component_manifests.md
+[doc-manifests-children]: v2/component_manifests.md#children
+[doc-manifests-declaration]: v2/component_manifests.md#component-declaration
+[doc-monikers]: v2/monikers.md
+[doc-resolvers]: v2/resolvers.md
 [doc-package]: /docs/concepts/packages/package.md
 [doc-package-url]: /docs/concepts/packages/package_url.md
 [doc-package-url-resource-path]: /docs/concepts/packages/package_url.md#resource-paths
-[doc-resolvers]: resolvers.md
-[doc-runners]: runners.md
+[glossary-components-v2]: /docs/glossary.md#components-v2
+[doc-runners]: v2/runners.md
 [wiki-url]: https://en.wikipedia.org/wiki/URL
 [rfc-uri-scheme]: https://tools.ietf.org/html/rfc3986#section-3.1

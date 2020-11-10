@@ -525,7 +525,7 @@ fn suite_error(err: fidl::Error) -> anyhow::Error {
         | fidl::Error::ClientChannelClosed { .. } => anyhow::anyhow!(
             "The test protocol was closed. This may mean `fuchsia.test.Suite` was not \
             configured correctly. Refer to \
-            //docs/development/components/troubleshooting.md#troubleshoot-test"
+            //docs/development/components/v2/troubleshooting.md#troubleshoot-test"
         ),
         err => err.into(),
     }

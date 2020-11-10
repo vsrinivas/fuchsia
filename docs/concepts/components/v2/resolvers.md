@@ -1,4 +1,6 @@
-# Component Resolvers
+# Component Resolvers (Components v2)
+
+{% include "fuchsia-src/concepts/components/_v2_banner.html" %}
 
 TODO: This document is a stub. Describe general principles about software
 delivery, using resolvers, registering resolvers for a realm, implementing a

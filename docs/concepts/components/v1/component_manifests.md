@@ -1,9 +1,6 @@
-# Component manifests
+# Component manifests (Components v1)
 
-Caution: This document describes manifests for
-[components v1](/docs/glossary.md#components-v1). The old architecture
-(components v1) implemented by `appmgr` is still in use, but will be
-removed once the transition to the new architecture is complete.
+{% include "fuchsia-src/concepts/components/_v1_banner.html" %}
 
 A component manifest (.cmx) is a JSON file with the file extension `.cmx`.
 Component manifests are often located in a package’s `meta/` directory. The

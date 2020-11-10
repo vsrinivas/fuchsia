@@ -1,4 +1,6 @@
-# Hermetic testing using OpaqueTest
+# Hermetic testing using OpaqueTest (Components v2)
+
+{% include "fuchsia-src/concepts/components/_v2_banner.html" %}
 
 ## Motivation
 

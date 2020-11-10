@@ -1,4 +1,6 @@
-# Service capabilities
+# Service capabilities (Components v2)
+
+{% include "fuchsia-src/concepts/components/_v2_banner.html" %}
 
 [Service capabilities][glossary-service] allow components to connect to
 [FIDL services][fidl-service] provided either by other components or the

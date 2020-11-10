@@ -1,4 +1,6 @@
-# Hub
+# Hub (Components v2)
+
+{% include "fuchsia-src/concepts/components/_v2_banner.html" %}
 
 ## Definition
 
@@ -54,7 +56,7 @@ file of a component that accesses its own hub.
     "use": [
         { "runner": "elf" },
         {
-            "directory": "/hub",
+            "directory": "hub",
             "from": "framework",
         },
     ]

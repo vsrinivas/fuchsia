@@ -1,4 +1,6 @@
-# Life of a protocol open
+# Life of a protocol open (Components v2)
+
+{% include "fuchsia-src/concepts/components/_v2_banner.html" %}
 
 This document describes the steps that occur when a component attempts to
 connect to a protocol in its namespace.

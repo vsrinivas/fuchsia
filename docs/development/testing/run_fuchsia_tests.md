@@ -249,7 +249,7 @@ fx test --e2e <END_TO_END_TEST>
 
 [tests-as-components]: /docs/concepts/testing/tests_as_components.md
 [scripting-layer-for-fuchsia]: /docs/concepts/testing/sl4f.md
-[component-uri]: /docs/concepts/components/v2/component_urls.md
+[component-uri]: /docs/concepts/components/component_urls.md
 [glossary-components-v2]: /docs/glossary.md#components-v2
 [rust-glob-syntax]: https://docs.rs/glob/0.3.0/glob/struct.Pattern.html
 [fuchsia-package-name]: /docs/concepts/packages/package_url.md#package-name

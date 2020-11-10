@@ -6,15 +6,19 @@
 # before making changes to this file, and add a member of the fuchsia.dev
 # team as reviewer.
 toc:
+- title: "Components v1"
+  section:
+  - title: "Enable verbose logging for input events"
+    path: /docs/development/components/v1/verbose_logging.md
+- title: "Components v2"
+  section:
+  - title: "Troubleshooting components"
+    path: /docs/development/components/v2/troubleshooting.md
 - title: "Build components"
   path: /docs/development/components/build.md
 - title: "Supply build-time configuration data to components"
   path: /docs/development/components/config_data.md
 - title: "Define an index of components which use storage"
   path: /docs/development/components/component_id_index.md
-- title: "Troubleshooting components"
-  path: /docs/development/components/troubleshooting.md
-- title: "Enable verbose logging for input events"
-  path: /docs/development/components/verbose_logging.md
 - title: "Common capabilities"
   path: /docs/development/components/common_capabilities.md

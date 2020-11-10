@@ -1,4 +1,6 @@
-# Environments
+# Environments (Components v2)
+
+{% include "fuchsia-src/concepts/components/_v2_banner.html" %}
 
 *Environments* provide a way to configure certain choices the framework makes
 for components in a [realm][doc-realms].

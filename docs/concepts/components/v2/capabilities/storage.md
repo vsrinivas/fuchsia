@@ -1,4 +1,6 @@
-# Storage capabilities
+# Storage capabilities (Components v2)
+
+{% include "fuchsia-src/concepts/components/_v2_banner.html" %}
 
 [Storage capabilities][glossary-storage] are a way for components to receive
 _isolated_ access to a private storage directory. When a storage capability is
