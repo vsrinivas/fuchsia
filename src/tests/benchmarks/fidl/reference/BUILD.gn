@@ -16,7 +16,7 @@ gidl_reference_benchmarks("benchmark_suite_reference") {
     "//src/tests/benchmarks/fidl/benchmark_suite/table_all_unset.gen.gidl",
     "//src/tests/benchmarks/fidl/benchmark_suite/table_single_set.gen.gidl",
   ]
-  fidl = "//src/tests/benchmarks/fidl/benchmark_suite:benchmark_suite_fidl"
+  fidl = benchmark_suite_fidl_target
   deps = [
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fidl",
@@ -35,12 +35,12 @@ executable("bin") {
   ]
   deps = [
     ":benchmark_suite_reference",
-    "//src/tests/benchmarks/fidl/benchmark_suite:benchmark_suite_fidl",
     "//src/zircon/lib/zircon",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/sync",
     "//zircon/system/ulib/perftest",
+    benchmark_suite_fidl_target,
   ]
 }
 

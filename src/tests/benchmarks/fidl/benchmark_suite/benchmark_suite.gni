@@ -184,3 +184,6 @@ foreach(decl, benchmark_suite_declarations) {
     },
   ]
 }
+
+benchmark_suite_fidl_target =
+    "//src/tests/benchmarks/fidl/benchmark_suite:benchmark_suite_fidl"

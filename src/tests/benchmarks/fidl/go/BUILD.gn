@@ -17,7 +17,7 @@ gidl("benchmark_suite_go") {
   type = "benchmark"
   language = "go"
   inputs = benchmark_suite_gidl_files
-  fidl = "//src/tests/benchmarks/fidl/benchmark_suite:benchmark_suite_fidl"
+  fidl = benchmark_suite_fidl_target
   output = "$gidl_go_out_dir/benchmark_suite.go"
 }
 
@@ -27,8 +27,8 @@ go_library("benchmark_suite_go_lib") {
   source_dir = gidl_go_out_dir
   non_go_deps = [ ":benchmark_suite_go" ]
   deps = [
+    "${benchmark_suite_fidl_target}(${go_toolchain})",
     "//src/lib/component",
-    "//src/tests/benchmarks/fidl/benchmark_suite:benchmark_suite_fidl(${go_toolchain})",
   ]
   sources = [ "benchmark_suite.go" ]
 }
