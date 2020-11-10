@@ -8,7 +8,7 @@ import 'dart:io' as io;
 
 import 'package:zircon/zircon.dart';
 
-// ignore_for_file: public_member_api_docs
+// ignore_for_file: prefer_constructors_over_static_methods, public_member_api_docs
 
 class MxStartupInfo {
   static Handle takeEnvironment() => Handle.invalid();
