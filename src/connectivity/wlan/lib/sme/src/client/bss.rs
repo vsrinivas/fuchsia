@@ -50,7 +50,7 @@ impl ClientConfig {
             snr_db: bss.snr_db,
             signal_report_time: zx::Time::ZERO,
             channel: Channel::from_fidl(bss.chan),
-            protection: bss.get_protection(),
+            protection: bss.protection(),
             compatible: self.is_bss_compatible(bss),
             ht_cap: bss.ht_cap.as_ref().map(|cap| **cap),
             vht_cap: bss.vht_cap.as_ref().map(|cap| **cap),
@@ -62,7 +62,7 @@ impl ClientConfig {
     /// Determines whether a given BSS is compatible with this client SME configuration.
     pub fn is_bss_compatible(&self, bss: &fidl_mlme::BssDescription) -> bool {
         let privacy = wlan_common::mac::CapabilityInfo(bss.cap).privacy();
-        let protection = bss.get_protection();
+        let protection = bss.protection();
         match &protection {
             Protection::Open => true,
             Protection::Wep => self.cfg.wep_supported,

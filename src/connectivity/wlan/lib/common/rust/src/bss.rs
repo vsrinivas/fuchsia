@@ -78,24 +78,24 @@ pub enum Standard {
 pub trait BssDescriptionExt {
     /// Return bool on whether BSS is protected.
     fn is_protected(&self) -> bool {
-        self.get_protection() != Protection::Open
+        self.protection() != Protection::Open
     }
     /// Return bool on whether BSS has security type that would require exchanging EAPOL frames.
     fn needs_eapol_exchange(&self) -> bool {
-        match self.get_protection() {
+        match self.protection() {
             Protection::Unknown | Protection::Open | Protection::Wep => false,
             _ => true,
         }
     }
     /// Categorize BSS on what protection it supports.
-    fn get_protection(&self) -> Protection;
+    fn protection(&self) -> Protection;
     /// Get the latest WLAN standard that the BSS supports.
-    fn get_latest_standard(&self) -> Standard;
+    fn latest_standard(&self) -> Standard;
     /// Search for vendor-specific Info Element for WPA. If found, return the body.
     fn find_wpa_ie(&self) -> Option<&[u8]>;
     /// Search for WPA Info Element and parse it. If no WPA Info Element is found, or a WPA Info
     /// Element is found but is not valid, return an error.
-    fn get_wpa_ie(&self) -> Result<ie::wpa::WpaIe, anyhow::Error>;
+    fn wpa_ie(&self) -> Result<ie::wpa::WpaIe, anyhow::Error>;
     /// Search for the WiFi Simple Configuration Info Element. If found, return the body.
     fn find_wsc_ie(&self) -> Option<&[u8]>;
     /// Return true if an attribute is present in the WiFi Simple Configuration element.
@@ -106,9 +106,9 @@ pub trait BssDescriptionExt {
 }
 
 impl BssDescriptionExt for fidl_mlme::BssDescription {
-    fn get_protection(&self) -> Protection {
+    fn protection(&self) -> Protection {
         let supports_wpa_1 = self
-            .get_wpa_ie()
+            .wpa_ie()
             .map(|wpa_ie| {
                 let rsne = ie::rsn::rsne::Rsne {
                     group_data_cipher_suite: Some(wpa_ie.multicast_cipher),
@@ -166,7 +166,7 @@ impl BssDescriptionExt for fidl_mlme::BssDescription {
         Protection::Unknown
     }
 
-    fn get_latest_standard(&self) -> Standard {
+    fn latest_standard(&self) -> Standard {
         if self.vht_cap.is_some() && self.vht_op.is_some() {
             Standard::Dot11Ac
         } else if self.ht_cap.is_some() && self.ht_op.is_some() {
@@ -198,7 +198,7 @@ impl BssDescriptionExt for fidl_mlme::BssDescription {
             .next()
     }
 
-    fn get_wpa_ie(&self) -> Result<ie::wpa::WpaIe, anyhow::Error> {
+    fn wpa_ie(&self) -> Result<ie::wpa::WpaIe, anyhow::Error> {
         ie::parse_wpa_ie(self.find_wpa_ie().ok_or(format_err!("no wpa ie found"))?)
             .map_err(|e| e.into())
     }
@@ -228,8 +228,8 @@ impl BssDescriptionExt for fidl_mlme::BssDescription {
         match rssi_dbm {
             // The value 0 is considered a marker for an invalid RSSI and is therefore
             // transformed to the minimum RSSI value.
-            0 => BssCandidacy { protection: self.get_protection(), rssi_dbm: i8::MIN },
-            _ => BssCandidacy { protection: self.get_protection(), rssi_dbm },
+            0 => BssCandidacy { protection: self.protection(), rssi_dbm: i8::MIN },
+            _ => BssCandidacy { protection: self.protection(), rssi_dbm },
         }
     }
 }
@@ -256,17 +256,17 @@ impl Ord for BssCandidacy {
 
 /// Given a list of BssDescription, categorize each one based on the latest PHY standard it
 /// supports and return a mapping from Standard to number of BSS.
-pub fn get_phy_standard_map(bss_list: &Vec<fidl_mlme::BssDescription>) -> HashMap<Standard, usize> {
-    get_info_map(bss_list, |bss| bss.get_latest_standard())
+pub fn phy_standard_map(bss_list: &Vec<fidl_mlme::BssDescription>) -> HashMap<Standard, usize> {
+    info_map(bss_list, |bss| bss.latest_standard())
 }
 
 /// Given a list of BssDescription, return a mapping from channel to the number of BSS using
 /// that channel.
-pub fn get_channel_map(bss_list: &Vec<fidl_mlme::BssDescription>) -> HashMap<u8, usize> {
-    get_info_map(bss_list, |bss| bss.chan.primary)
+pub fn channel_map(bss_list: &Vec<fidl_mlme::BssDescription>) -> HashMap<u8, usize> {
+    info_map(bss_list, |bss| bss.chan.primary)
 }
 
-fn get_info_map<F, T>(bss_list: &Vec<fidl_mlme::BssDescription>, f: F) -> HashMap<T, usize>
+fn info_map<F, T>(bss_list: &Vec<fidl_mlme::BssDescription>, f: F) -> HashMap<T, usize>
 where
     T: Eq + Hash,
     F: Fn(&fidl_mlme::BssDescription) -> T,
@@ -291,37 +291,37 @@ mod tests {
     };
 
     #[test]
-    fn test_get_known_protection() {
-        assert_eq!(Protection::Open, fake_bss!(Open).get_protection());
-        assert_eq!(Protection::Wep, fake_bss!(Wep).get_protection());
-        assert_eq!(Protection::Wpa1, fake_bss!(Wpa1).get_protection());
-        assert_eq!(Protection::Wpa1, fake_bss!(Wpa1Enhanced).get_protection());
-        assert_eq!(Protection::Wpa1Wpa2Personal, fake_bss!(Wpa1Wpa2).get_protection());
-        assert_eq!(Protection::Wpa1Wpa2Personal, fake_bss!(Wpa2Mixed).get_protection());
-        assert_eq!(Protection::Wpa2Personal, fake_bss!(Wpa2).get_protection());
-        assert_eq!(Protection::Wpa2Wpa3Personal, fake_bss!(Wpa2Wpa3).get_protection());
-        assert_eq!(Protection::Wpa3Personal, fake_bss!(Wpa3).get_protection());
-        assert_eq!(Protection::Wpa2Enterprise, fake_bss!(Wpa2Enterprise).get_protection());
-        assert_eq!(Protection::Wpa3Enterprise, fake_bss!(Wpa3Enterprise).get_protection());
+    fn test_known_protection() {
+        assert_eq!(Protection::Open, fake_bss!(Open).protection());
+        assert_eq!(Protection::Wep, fake_bss!(Wep).protection());
+        assert_eq!(Protection::Wpa1, fake_bss!(Wpa1).protection());
+        assert_eq!(Protection::Wpa1, fake_bss!(Wpa1Enhanced).protection());
+        assert_eq!(Protection::Wpa1Wpa2Personal, fake_bss!(Wpa1Wpa2).protection());
+        assert_eq!(Protection::Wpa1Wpa2Personal, fake_bss!(Wpa2Mixed).protection());
+        assert_eq!(Protection::Wpa2Personal, fake_bss!(Wpa2).protection());
+        assert_eq!(Protection::Wpa2Wpa3Personal, fake_bss!(Wpa2Wpa3).protection());
+        assert_eq!(Protection::Wpa3Personal, fake_bss!(Wpa3).protection());
+        assert_eq!(Protection::Wpa2Enterprise, fake_bss!(Wpa2Enterprise).protection());
+        assert_eq!(Protection::Wpa3Enterprise, fake_bss!(Wpa3Enterprise).protection());
     }
 
     #[test]
-    fn test_get_unknown_protection() {
+    fn test_unknown_protection() {
         let mut bss = fake_bss!(Wpa2);
         bss.rsne = Some(fake_unknown_rsne());
-        assert_eq!(Protection::Unknown, bss.get_protection());
+        assert_eq!(Protection::Unknown, bss.protection());
 
         bss.rsne = Some(invalid_wpa2_wpa3_rsne());
-        assert_eq!(Protection::Unknown, bss.get_protection());
+        assert_eq!(Protection::Unknown, bss.protection());
 
         bss.rsne = Some(invalid_wpa3_rsne());
-        assert_eq!(Protection::Unknown, bss.get_protection());
+        assert_eq!(Protection::Unknown, bss.protection());
 
         bss.rsne = Some(invalid_wpa3_enterprise_192_bit_rsne());
-        assert_eq!(Protection::Unknown, bss.get_protection());
+        assert_eq!(Protection::Unknown, bss.protection());
 
         bss.rsne = Some(fake_wpa2_legacy_rsne());
-        assert_eq!(Protection::Unknown, bss.get_protection());
+        assert_eq!(Protection::Unknown, bss.protection());
     }
 
     #[test]
@@ -334,39 +334,39 @@ mod tests {
     }
 
     #[test]
-    fn test_get_wpa_ie() {
+    fn test_wpa_ie() {
         let mut buf = vec![];
         fake_bss!(Wpa1)
-            .get_wpa_ie()
+            .wpa_ie()
             .expect("failed to find WPA1 IE")
             .write_into(&mut buf)
             .expect("failed to serialize WPA1 IE");
         assert_eq!(fake_wpa1_ie_body(false), buf);
-        fake_bss!(Wpa2).get_wpa_ie().expect_err("found unexpected WPA1 IE");
+        fake_bss!(Wpa2).wpa_ie().expect_err("found unexpected WPA1 IE");
     }
 
     #[test]
-    fn test_get_latest_standard_ac() {
+    fn test_latest_standard_ac() {
         let bss = fake_bss!(Open,
                             vht_cap: Some(Box::new(fidl_mlme::VhtCapabilities { bytes: Default::default() })),
                             vht_op: Some(Box::new(fidl_mlme::VhtOperation { bytes: Default::default() }))
         );
-        assert_eq!(Standard::Dot11Ac, bss.get_latest_standard());
+        assert_eq!(Standard::Dot11Ac, bss.latest_standard());
     }
 
     #[test]
-    fn test_get_latest_standard_n() {
+    fn test_latest_standard_n() {
         let bss = fake_bss!(Open,
                             vht_cap: None,
                             vht_op: None,
                             ht_cap: Some(Box::new(fidl_mlme::HtCapabilities { bytes: Default::default() })),
                             ht_op: Some(Box::new(fidl_mlme::HtOperation { bytes: Default::default() })),
         );
-        assert_eq!(Standard::Dot11N, bss.get_latest_standard());
+        assert_eq!(Standard::Dot11N, bss.latest_standard());
     }
 
     #[test]
-    fn test_get_latest_standard_g() {
+    fn test_latest_standard_g() {
         let bss = fake_bss!(Open,
                             vht_cap: None,
                             vht_op: None,
@@ -379,11 +379,11 @@ mod tests {
                             },
                             rates: vec![12],
         );
-        assert_eq!(Standard::Dot11G, bss.get_latest_standard());
+        assert_eq!(Standard::Dot11G, bss.latest_standard());
     }
 
     #[test]
-    fn test_get_latest_standard_b() {
+    fn test_latest_standard_b() {
         let bss = fake_bss!(Open,
                             vht_cap: None,
                             vht_op: None,
@@ -396,11 +396,11 @@ mod tests {
                             },
                             rates: vec![2],
         );
-        assert_eq!(Standard::Dot11B, bss.get_latest_standard());
+        assert_eq!(Standard::Dot11B, bss.latest_standard());
     }
 
     #[test]
-    fn test_get_latest_standard_b_with_basic() {
+    fn test_latest_standard_b_with_basic() {
         let bss = fake_bss!(Open,
                             vht_cap: None,
                             vht_op: None,
@@ -413,11 +413,11 @@ mod tests {
                             },
                             rates: vec![ie::SupportedRate(2).with_basic(true).0],
         );
-        assert_eq!(Standard::Dot11B, bss.get_latest_standard());
+        assert_eq!(Standard::Dot11B, bss.latest_standard());
     }
 
     #[test]
-    fn test_get_latest_standard_a() {
+    fn test_latest_standard_a() {
         let bss = fake_bss!(Open,
                             vht_cap: None,
                             vht_op: None,
@@ -430,7 +430,7 @@ mod tests {
                             },
                             rates: vec![48],
         );
-        assert_eq!(Standard::Dot11A, bss.get_latest_standard());
+        assert_eq!(Standard::Dot11A, bss.latest_standard());
     }
 
     #[test]

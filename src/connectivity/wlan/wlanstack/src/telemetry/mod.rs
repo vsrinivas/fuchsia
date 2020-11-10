@@ -294,7 +294,7 @@ fn log_connect_attempts_stats(sender: &mut CobaltSender, connect_stats: &Connect
         _ => MoreThanFive,
     };
     let is_multi_bss_dim = convert_bool_dim(is_multi_bss);
-    let protection_dim = convert_protection(&bss.get_protection());
+    let protection_dim = convert_protection(&bss.protection());
     let channel_band_dim = convert_channel_band(bss.chan.primary);
 
     sender.log_event_count(
@@ -362,7 +362,7 @@ fn log_connect_result_stats(sender: &mut CobaltSender, connect_stats: &ConnectSt
     let oui = bss.bssid.to_oui_uppercase("");
 
     let is_multi_bss_dim = convert_bool_dim(is_multi_bss);
-    let protection_dim = convert_protection(&bss.get_protection());
+    let protection_dim = convert_protection(&bss.protection());
     let channel_band_dim = convert_channel_band(bss.chan.primary);
     let rssi_dim = convert_rssi(bss.rssi_dbm);
     let snr_dim = convert_snr(bss.snr_db);

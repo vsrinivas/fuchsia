@@ -37,7 +37,7 @@ pub fn get_legacy_wpa_association(
     credential: &fidl_sme::Credential,
     bss: &BssDescription,
 ) -> Result<Protection, anyhow::Error> {
-    let a_wpa = bss.get_wpa_ie()?;
+    let a_wpa = bss.wpa_ie()?;
     if !is_legacy_wpa_compatible(&a_wpa) {
         return Err(format_err!("incompatible legacy WPA {:?}", a_wpa));
     }

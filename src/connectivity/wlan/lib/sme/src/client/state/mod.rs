@@ -396,7 +396,7 @@ impl Associating {
                             self.cmd.responder,
                             context,
                             ConnectResult::Failed(AssociationFailure{
-                                bss_protection: self.cmd.bss.get_protection(),
+                                bss_protection: self.cmd.bss.protection(),
                                 code: fidl_mlme::AssociateResultCodes::RefusedCapabilitiesMismatch,
                             }.into()),
                         );
@@ -432,7 +432,7 @@ impl Associating {
                     context,
                     ConnectResult::Failed(
                         AssociationFailure {
-                            bss_protection: self.cmd.bss.get_protection(),
+                            bss_protection: self.cmd.bss.protection(),
                             code: other,
                         }
                         .into(),
@@ -482,7 +482,7 @@ impl Associating {
             context,
             ConnectResult::Failed(
                 AssociationFailure {
-                    bss_protection: self.cmd.bss.get_protection(),
+                    bss_protection: self.cmd.bss.protection(),
                     code: fidl_mlme::AssociateResultCodes::RefusedReasonUnspecified,
                 }
                 .into(),
@@ -511,7 +511,7 @@ impl Associating {
             context,
             ConnectResult::Failed(
                 AssociationFailure {
-                    bss_protection: self.cmd.bss.get_protection(),
+                    bss_protection: self.cmd.bss.protection(),
                     code: fidl_mlme::AssociateResultCodes::RefusedReasonUnspecified,
                 }
                 .into(),
@@ -1513,7 +1513,7 @@ mod tests {
         let mut h = TestHelper::new();
 
         let (cmd, receiver) = connect_command_one();
-        let bss_protection = cmd.bss.get_protection();
+        let bss_protection = cmd.bss.protection();
 
         // Start in an "Associating" state
         let state = ClientState::from(testing::new_state(Associating {
@@ -1604,7 +1604,7 @@ mod tests {
     fn deauth_while_associating() {
         let mut h = TestHelper::new();
         let (cmd_one, receiver_one) = connect_command_one();
-        let bss_protection = cmd_one.bss.get_protection();
+        let bss_protection = cmd_one.bss.protection();
         let state = associating_state(cmd_one);
         let deauth_ind = MlmeEvent::DeauthenticateInd {
             ind: fidl_mlme::DeauthenticateIndication {
@@ -1631,7 +1631,7 @@ mod tests {
     fn disassoc_while_associating() {
         let mut h = TestHelper::new();
         let (cmd_one, receiver_one) = connect_command_one();
-        let bss_protection = cmd_one.bss.get_protection();
+        let bss_protection = cmd_one.bss.protection();
         let state = associating_state(cmd_one);
         let disassoc_ind = MlmeEvent::DisassociateInd {
             ind: fidl_mlme::DisassociateIndication {

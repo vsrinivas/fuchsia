@@ -354,7 +354,7 @@ fn bss_to_string(bss: &BssDescription, hasher: &WlanHasher) -> String {
         "SSID: {}, BSSID: {}, Protection: {}, Pri Chan: {}, Rx dBm: {}",
         hasher.hash_ssid(&bss.ssid),
         hasher.hash_mac_addr(&&bss.bssid),
-        bss.get_protection(),
+        bss.protection(),
         bss.chan.primary,
         bss.rssi_dbm,
     )
@@ -578,7 +578,7 @@ fn report_connect_finished(
 /// Filter out any BssDescription in `bss_list` that is not compatible with
 /// 'device_info`, `client_config`, or `credential`. A BssDescription is
 /// not compatible if `client_config.is_bss_compatible()` returns `false`
-/// or if `get_protection()` returns a `Result::Err`.
+/// or if `protection()` returns a `Result::Err`.
 fn filter_to_compatible_bss<'a>(
     bss_list: &'a Vec<BssDescription>,
     client_config: &'a ClientConfig,
@@ -632,7 +632,7 @@ fn get_protection(
     let ssid_hash = hasher.hash_ssid(&bss.ssid);
     let bssid_hash = hasher.hash_mac_addr(&&bss.bssid);
 
-    match bss.get_protection() {
+    match bss.protection() {
         wlan_common::bss::Protection::Open => match credential {
             fidl_sme::Credential::None(_) => Ok(Protection::Open),
             _ => Err(format_err!(
