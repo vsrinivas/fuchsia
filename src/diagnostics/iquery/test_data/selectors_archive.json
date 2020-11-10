@@ -1,0 +1,5 @@
+[
+  "basic_component.cmx:root/fuchsia.inspect.Health:start_timestamp_nanos",
+  "basic_component.cmx:root/fuchsia.inspect.Health:status",
+  "basic_component.cmx:root:iquery"
+]

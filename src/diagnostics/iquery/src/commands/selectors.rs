@@ -29,6 +29,13 @@ pub struct SelectorsCommand {
     /// When `--manifest` is provided then the selectors should be tree selectors, otherwise
     /// they can be component selectors or full selectors.
     pub selectors: Vec<String>,
+
+    #[argh(option)]
+    /// the path from where to get the ArchiveAccessor connection. If the given path is a
+    /// directory, the command will look for a `fuchsia.diagnostics.ArchiveAccessor` service file.
+    /// If the given path is a service file, the command will attempt to connect to it as an
+    /// ArchiveAccessor.
+    pub archive_path: Option<String>,
 }
 
 #[async_trait]
@@ -39,8 +46,10 @@ impl Command for SelectorsCommand {
         if self.selectors.is_empty() && self.manifest.is_none() {
             return Err(Error::invalid_arguments("Expected 1 or more selectors. Got zero."));
         }
-        let selectors = utils::get_selectors_for_manifest(&self.manifest, &self.selectors).await?;
-        let mut result = utils::fetch_data(&selectors)
+        let selectors =
+            utils::get_selectors_for_manifest(&self.manifest, &self.selectors, &self.archive_path)
+                .await?;
+        let mut result = utils::fetch_data(&selectors, &self.archive_path)
             .await?
             .into_iter()
             .filter_map(|schema| {

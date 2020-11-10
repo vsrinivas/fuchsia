@@ -26,6 +26,15 @@ pub enum Error {
 
     #[error("Failed to find inspect data in location {}: {}", _0, _1)]
     ReadLocation(String, anyhow::Error),
+
+    #[error("Failed to connect to archivst: {}", _0)]
+    ConnectToArchivist(#[source] anyhow::Error),
+
+    #[error("Unknown archive path")]
+    UnknownArchivePath,
+
+    #[error("IO error. Failed to {}: {}", _0, _1)]
+    IOError(String, #[source] anyhow::Error),
 }
 
 impl Error {
@@ -35,6 +44,10 @@ impl Error {
 
     pub fn invalid_arguments(msg: impl Into<String>) -> Error {
         Error::InvalidArguments(msg.into())
+    }
+
+    pub fn io_error(msg: impl Into<String>, e: anyhow::Error) -> Error {
+        Error::IOError(msg.into(), e)
     }
 }
 

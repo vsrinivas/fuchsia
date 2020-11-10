@@ -6,6 +6,7 @@
 
 use {
     crate::{assert_command, commands::expand_paths, tests::utils, types::Error},
+    diagnostics_testing::{EnvWithDiagnostics, Launched},
     fuchsia_async as fasync,
     matches::assert_matches,
     std::path::Path,
@@ -68,6 +69,22 @@ async fn test_list_with_urls() {
     );
     utils::wait_for_terminated(app).await;
     utils::wait_for_terminated(app2).await;
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn list_archive() {
+    let test_env = EnvWithDiagnostics::new().await;
+    let Launched { app, .. } = test_env.launch(utils::BASIC_COMPONENT_URL, None);
+    assert_command!(
+        command: "list",
+        golden_basename: list_archive,
+        args: [
+            "--archive-path",
+            "/hub/r/diagnostics_*/*/c/archivist-for-embedding.cmx/*/out/svc/fuchsia.diagnostics.ArchiveAccessor"
+        ],
+        test_opts: [ "with_retries" ]
+    );
+    utils::wait_for_terminated(app).await;
 }
 
 // List files command
@@ -151,6 +168,23 @@ async fn test_selectors_filter() {
     );
     utils::wait_for_terminated(app).await;
     utils::wait_for_terminated(app2).await;
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn selectors_archive() {
+    let test_env = EnvWithDiagnostics::new().await;
+    let Launched { app, .. } = test_env.launch(utils::BASIC_COMPONENT_URL, None);
+    assert_command!(
+        command: "selectors",
+        golden_basename: selectors_archive,
+        args: [
+            "basic_component.cmx:root",
+            "--archive-path",
+            "/hub/r/diagnostics_*/*/c/archivist-for-embedding.cmx/*/out/svc/fuchsia.diagnostics.ArchiveAccessor"
+        ],
+        test_opts: [ "with_retries" ]
+    );
+    utils::wait_for_terminated(app).await;
 }
 
 // Show file
@@ -270,4 +304,21 @@ async fn show_filter_manifest() {
     );
     utils::wait_for_terminated(app).await;
     utils::wait_for_terminated(app2).await;
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn show_archive() {
+    let test_env = EnvWithDiagnostics::new().await;
+    let Launched { app, .. } = test_env.launch(utils::BASIC_COMPONENT_URL, None);
+    assert_command!(
+        command: "show",
+        golden_basename: show_archive,
+        args: [
+            "basic_component.cmx:root",
+            "--archive-path",
+            "/hub/r/diagnostics_*/*/c/archivist-for-embedding.cmx/*/out/svc/fuchsia.diagnostics.ArchiveAccessor"
+        ],
+        test_opts: [ "with_retries" ]
+    );
+    utils::wait_for_terminated(app).await;
 }

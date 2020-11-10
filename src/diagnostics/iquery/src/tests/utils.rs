@@ -19,9 +19,9 @@ use {
     regex::Regex,
 };
 
-const BASIC_COMPONENT_URL: &'static str =
+pub const BASIC_COMPONENT_URL: &'static str =
     "fuchsia-pkg://fuchsia.com/iquery-tests#meta/basic_component.cmx";
-const TEST_COMPONENT_URL: &'static str =
+pub const TEST_COMPONENT_URL: &'static str =
     "fuchsia-pkg://fuchsia.com/iquery-tests#meta/test_component.cmx";
 
 /// Creates a new environment named `env_label` and a starts the basic component under it.

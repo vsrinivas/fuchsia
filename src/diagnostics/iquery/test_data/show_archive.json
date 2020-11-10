@@ -1,0 +1,22 @@
+[
+  {
+    "data_source": "Inspect",
+    "metadata": {
+      "errors": null,
+      "filename": "fuchsia.inspect.Tree",
+      "component_url": "fuchsia-pkg://fuchsia.com/iquery-tests#meta/basic_component.cmx",
+      "timestamp": "TIMESTAMP"
+    },
+    "moniker": "basic_component.cmx",
+    "payload": {
+      "root": {
+        "iquery": "rocks",
+        "fuchsia.inspect.Health": {
+          "start_timestamp_nanos": "TIMESTAMP",
+          "status": "OK"
+        }
+      }
+    },
+    "version": 1
+  }
+]

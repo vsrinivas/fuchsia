@@ -30,6 +30,13 @@ pub struct ShowCommand {
     /// data for the whole system will be returned. If `--manifest` is provided then the selectors
     /// should be tree selectors, otherwise component selectors or full selectors.
     pub selectors: Vec<String>,
+
+    #[argh(option)]
+    /// the path from where to get the ArchiveAccessor connection. If the given path is a
+    /// directory, the command will look for a `fuchsia.diagnostics.ArchiveAccessor` service file.
+    /// If the given path is a service file, the command will attempt to connect to it as an
+    /// ArchiveAccessor.
+    pub archive_path: Option<String>,
 }
 
 #[derive(Derivative, Serialize, PartialEq)]
@@ -70,8 +77,10 @@ impl Command for ShowCommand {
     type Result = Vec<ShowCommandResultItem>;
 
     async fn execute(&self) -> Result<Self::Result, Error> {
-        let selectors = utils::get_selectors_for_manifest(&self.manifest, &self.selectors).await?;
-        let mut results = utils::fetch_data(&selectors)
+        let selectors =
+            utils::get_selectors_for_manifest(&self.manifest, &self.selectors, &self.archive_path)
+                .await?;
+        let mut results = utils::fetch_data(&selectors, &self.archive_path)
             .await?
             .into_iter()
             .map(|schema| ShowCommandResultItem(schema))
