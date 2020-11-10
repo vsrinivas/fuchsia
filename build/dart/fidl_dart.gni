@@ -41,7 +41,7 @@ template("fidl_dart") {
   compiled_action(generation_target_name) {
     visibility = [ ":*" ]
 
-    tool = "//topaz/bin/fidlgen_dart"
+    tool = "//tools/fidl/fidlgen_dart"
 
     inputs = [ json_representation ]
 

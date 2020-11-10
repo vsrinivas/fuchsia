@@ -1,0 +1,359 @@
+{
+  "version": "0.0.1",
+  "name": "fidl.test.table",
+  "library_dependencies": [],
+  "bits_declarations": [],
+  "const_declarations": [],
+  "enum_declarations": [],
+  "experimental_resource_declarations": [],
+  "interface_declarations": [],
+  "service_declarations": [],
+  "struct_declarations": [],
+  "table_declarations": [
+    {
+      "name": "fidl.test.table/EmptyTable",
+      "location": {
+        "filename": "table.test.fidl",
+        "line": 3,
+        "column": 7,
+        "length": 10
+      },
+      "members": [],
+      "strict": false,
+      "resource": false,
+      "type_shape_v1": {
+        "inline_size": 16,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": false,
+        "has_flexible_envelope": true,
+        "is_resource": false
+      }
+    },
+    {
+      "name": "fidl.test.table/SimpleTable",
+      "location": {
+        "filename": "table.test.fidl",
+        "line": 6,
+        "column": 7,
+        "length": 11
+      },
+      "members": [
+        {
+          "ordinal": 1,
+          "reserved": false,
+          "type": {
+            "kind": "primitive",
+            "subtype": "int64"
+          },
+          "name": "x",
+          "location": {
+            "filename": "table.test.fidl",
+            "line": 7,
+            "column": 14,
+            "length": 1
+          }
+        },
+        {
+          "ordinal": 2,
+          "reserved": true,
+          "location": {
+            "filename": "table.test.fidl",
+            "line": 8,
+            "column": 5,
+            "length": 11
+          }
+        },
+        {
+          "ordinal": 3,
+          "reserved": true,
+          "location": {
+            "filename": "table.test.fidl",
+            "line": 9,
+            "column": 5,
+            "length": 11
+          }
+        },
+        {
+          "ordinal": 4,
+          "reserved": true,
+          "location": {
+            "filename": "table.test.fidl",
+            "line": 10,
+            "column": 5,
+            "length": 11
+          }
+        },
+        {
+          "ordinal": 5,
+          "reserved": false,
+          "type": {
+            "kind": "primitive",
+            "subtype": "int64"
+          },
+          "name": "y",
+          "location": {
+            "filename": "table.test.fidl",
+            "line": 11,
+            "column": 14,
+            "length": 1
+          }
+        }
+      ],
+      "strict": false,
+      "resource": false,
+      "type_shape_v1": {
+        "inline_size": 16,
+        "alignment": 8,
+        "depth": 2,
+        "max_handles": 0,
+        "max_out_of_line": 96,
+        "has_padding": false,
+        "has_flexible_envelope": true,
+        "is_resource": false
+      }
+    },
+    {
+      "name": "fidl.test.table/OlderSimpleTable",
+      "location": {
+        "filename": "table.test.fidl",
+        "line": 14,
+        "column": 7,
+        "length": 16
+      },
+      "members": [
+        {
+          "ordinal": 1,
+          "reserved": false,
+          "type": {
+            "kind": "primitive",
+            "subtype": "int64"
+          },
+          "name": "x",
+          "location": {
+            "filename": "table.test.fidl",
+            "line": 15,
+            "column": 14,
+            "length": 1
+          }
+        },
+        {
+          "ordinal": 2,
+          "reserved": true,
+          "location": {
+            "filename": "table.test.fidl",
+            "line": 16,
+            "column": 5,
+            "length": 11
+          }
+        }
+      ],
+      "strict": false,
+      "resource": false,
+      "type_shape_v1": {
+        "inline_size": 16,
+        "alignment": 8,
+        "depth": 2,
+        "max_handles": 0,
+        "max_out_of_line": 24,
+        "has_padding": false,
+        "has_flexible_envelope": true,
+        "is_resource": false
+      }
+    },
+    {
+      "name": "fidl.test.table/NewerSimpleTable",
+      "location": {
+        "filename": "table.test.fidl",
+        "line": 19,
+        "column": 7,
+        "length": 16
+      },
+      "members": [
+        {
+          "ordinal": 1,
+          "reserved": false,
+          "type": {
+            "kind": "primitive",
+            "subtype": "int64"
+          },
+          "name": "x",
+          "location": {
+            "filename": "table.test.fidl",
+            "line": 20,
+            "column": 14,
+            "length": 1
+          }
+        },
+        {
+          "ordinal": 2,
+          "reserved": true,
+          "location": {
+            "filename": "table.test.fidl",
+            "line": 21,
+            "column": 5,
+            "length": 11
+          }
+        },
+        {
+          "ordinal": 3,
+          "reserved": true,
+          "location": {
+            "filename": "table.test.fidl",
+            "line": 22,
+            "column": 5,
+            "length": 11
+          }
+        },
+        {
+          "ordinal": 4,
+          "reserved": true,
+          "location": {
+            "filename": "table.test.fidl",
+            "line": 23,
+            "column": 5,
+            "length": 11
+          }
+        },
+        {
+          "ordinal": 5,
+          "reserved": false,
+          "type": {
+            "kind": "primitive",
+            "subtype": "int64"
+          },
+          "name": "y",
+          "location": {
+            "filename": "table.test.fidl",
+            "line": 24,
+            "column": 14,
+            "length": 1
+          }
+        },
+        {
+          "ordinal": 6,
+          "reserved": false,
+          "type": {
+            "kind": "primitive",
+            "subtype": "int64"
+          },
+          "name": "z",
+          "location": {
+            "filename": "table.test.fidl",
+            "line": 25,
+            "column": 14,
+            "length": 1
+          }
+        },
+        {
+          "ordinal": 7,
+          "reserved": true,
+          "location": {
+            "filename": "table.test.fidl",
+            "line": 26,
+            "column": 5,
+            "length": 11
+          }
+        }
+      ],
+      "strict": false,
+      "resource": false,
+      "type_shape_v1": {
+        "inline_size": 16,
+        "alignment": 8,
+        "depth": 2,
+        "max_handles": 0,
+        "max_out_of_line": 120,
+        "has_padding": false,
+        "has_flexible_envelope": true,
+        "is_resource": false
+      }
+    },
+    {
+      "name": "fidl.test.table/ReverseOrdinalTable",
+      "location": {
+        "filename": "table.test.fidl",
+        "line": 29,
+        "column": 7,
+        "length": 19
+      },
+      "members": [
+        {
+          "ordinal": 3,
+          "reserved": false,
+          "type": {
+            "kind": "primitive",
+            "subtype": "int64"
+          },
+          "name": "x",
+          "location": {
+            "filename": "table.test.fidl",
+            "line": 30,
+            "column": 14,
+            "length": 1
+          }
+        },
+        {
+          "ordinal": 2,
+          "reserved": false,
+          "type": {
+            "kind": "primitive",
+            "subtype": "int64"
+          },
+          "name": "y",
+          "location": {
+            "filename": "table.test.fidl",
+            "line": 31,
+            "column": 14,
+            "length": 1
+          }
+        },
+        {
+          "ordinal": 1,
+          "reserved": false,
+          "type": {
+            "kind": "primitive",
+            "subtype": "int64"
+          },
+          "name": "z",
+          "location": {
+            "filename": "table.test.fidl",
+            "line": 32,
+            "column": 14,
+            "length": 1
+          }
+        }
+      ],
+      "strict": false,
+      "resource": false,
+      "type_shape_v1": {
+        "inline_size": 16,
+        "alignment": 8,
+        "depth": 2,
+        "max_handles": 0,
+        "max_out_of_line": 72,
+        "has_padding": false,
+        "has_flexible_envelope": true,
+        "is_resource": false
+      }
+    }
+  ],
+  "union_declarations": [],
+  "type_alias_declarations": [],
+  "declaration_order": [
+    "fidl.test.table/SimpleTable",
+    "fidl.test.table/ReverseOrdinalTable",
+    "fidl.test.table/OlderSimpleTable",
+    "fidl.test.table/NewerSimpleTable",
+    "fidl.test.table/EmptyTable"
+  ],
+  "declarations": {
+    "fidl.test.table/EmptyTable": "table",
+    "fidl.test.table/SimpleTable": "table",
+    "fidl.test.table/OlderSimpleTable": "table",
+    "fidl.test.table/NewerSimpleTable": "table",
+    "fidl.test.table/ReverseOrdinalTable": "table"
+  }
+}

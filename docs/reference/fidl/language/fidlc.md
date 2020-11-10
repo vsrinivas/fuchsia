@@ -422,6 +422,6 @@ anonymous [`Name`](#name)s.
 [internal]: /zircon/system/ulib/fidl/include/lib/fidl/internal.h
 [layout-attr]: /docs/reference/fidl/language/attributes.md#layout_layout
 [fidlgen]: /garnet/go/src/fidl/compiler/backend
-[fidlgen-dart]: /topaz/bin/fidlgen_dart
+[fidlgen-dart]: /tools/fidl/fidlgen_dart
 [schema]: /docs/reference/fidl/language/json-ir.md
 [coding-readme]: /src/lib/fidl/c/walker_tests/README.md

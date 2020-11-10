@@ -33,7 +33,7 @@ HLCPP | [/tools/fidl/fidlgen_hlcpp] | [/sdk/lib/fidl/cpp] | *(located alongside 
 LLCPP | [/tools/fidl/fidlgen_llcpp] | [/zircon/system/ulib/fidl] | [/src/lib/fidl/llcpp]
 Go | [/tools/fidl/fidlgen_go] | [/third_party/go/src/syscall/zx/fidl] | *(located alongside runtime libraries)*
 Rust | [/tools/fidl/fidlgen_rust] | [/src/lib/fidl/rust] | *(located alongside runtime libraries)*
-Dart | [/topaz/bin/fidlgen_dart] | [/topaz/public/dart/fidl] | [/topaz/bin/fidl_bindings_test]
+Dart | [/tools/fidl/fidlgen_dart] | [/topaz/public/dart/fidl] | [/topaz/bin/fidl_bindings_test]
 
 Note: The tests column refers to hand-written tests that exercise both the generated code and
 the runtime libraries. There are also other tests, like unit tests for the
@@ -483,7 +483,7 @@ Note: While `fx test fidl_bindings_test` prints test names as they run, it does 
 | fidlgen golang           | `fx test fidlgen_go_test`           | //tools/fidl/fidlgen_golang                                               |
 | fidlgen rust             | `fx test fidlgen_rust_test`         | //tools/fidl/fidlgen_rust                                                 |
 | fidlgen syzkaller        | `fx test fidlgen_syzkaller_test`    | //tools/fidl/fidlgen_syzkaller                                            |
-| fidlgen dart             | `fx test fidlgen_dart_backend_test` | //topaz/bin/fidlgen_dart
+| fidlgen dart             | `fx test fidlgen_dart_backend_test` | //tools/fidl/fidlgen_dart
 
 #### Other
 
@@ -544,7 +544,7 @@ fx test --e2e fidl_microbenchmarks_test
 |-----------------------|-----------------------------------------------------------------------------|-------------------------------------------------------------------|--------------------------------------------------------------------------------------------|
 | fidlc goldens         | fx exec $FUCHSIA_DIR/zircon/tools/fidl/testdata/regen.sh                    | zircon/tools/fidl/testdata                                        | zircon/tools/fidl/goldens                                                                  |
 | fidlgen goldens       | fx exec $FUCHSIA_DIR/garnet/go/src/fidl/compiler/backend/typestest/regen.sh | zircon/tools/fidl/goldens                                         | garnet/go/src/fidl/compiler/backend/goldens                                                |
-| dart fidlgen goldens  | fx exec $FUCHSIA_DIR/topaz/bin/fidlgen_dart/regen.sh                        | zircon/tools/fidl/goldens                                         | topaz/bin/fidlgen_dart/goldens                                                             |
+| dart fidlgen goldens  | fx exec $FUCHSIA_DIR/tools/fidl/fidlgen_dart/regen.sh                        | zircon/tools/fidl/goldens                                         | tools/fidl/fidlgen_dart/goldens                                                             |
 | dangerous identifiers | fx exec src/tests/fidl/dangerous_identifiers/generate.sh                    | src/tests/fidl/dangerous_identifiers/generate/*.py                | src/tests/fidl/dangerous_identifiers/{cpp, fidl}                                           |
 | regen third party go  | fx exec $FUCHSIA_DIR/third_party/go/regen-fidl                              |                                                                   |                                                                                            |
 | fidldoc goldens       | REGENERATE_GOLDENS_FOLDER=$FUCHSIA_DIR/tools/fidl/fidldoc/src/templates/markdown/testdata fx test host_x64/fidldoc_bin_test -- golden_test | zircon/tools/fidl/goldens | tools/fidl/fidldoc/src/templates/markdown/testdata |
@@ -680,7 +680,7 @@ fidl fmt --library my_library.fidl -i
 [/tools/fidl/fidlgen_llcpp]: /tools/fidl/fidlgen_llcpp
 [/tools/fidl/fidlgen_go]: /tools/fidl/fidlgen_go
 [/tools/fidl/fidlgen_rust]: /tools/fidl/fidlgen_rust
-[/topaz/bin/fidlgen_dart]: /topaz/bin/fidlgen_dart
+[/tools/fidl/fidlgen_dart]: /tools/fidl/fidlgen_dart
 [/sdk/lib/fidl/cpp]: /sdk/lib/fidl/cpp
 [/src/lib/fidl/rust]: /src/lib/fidl/rust
 [/zircon/system/ulib/fidl]: /zircon/system/ulib/fidl

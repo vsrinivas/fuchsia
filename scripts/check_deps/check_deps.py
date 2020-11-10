@@ -49,7 +49,6 @@ allowed_deps = [
     # Will move to //tools or //sdk:
     '//garnet/go/src/fidlmerge:fidlmerge(//build/toolchain:host_x64)',
     '//garnet/go/src/pm:pm_bin(//build/toolchain:host_x64)',
-    '//topaz/bin/fidlgen_dart:fidlgen_dart(//build/toolchain:host_x64)',
     '//zircon/public/tool',
 
     # This is currently implicitly generated as a dependency on any C++

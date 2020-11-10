@@ -8,6 +8,7 @@ group("fidl") {
   public_deps = [
     "fidlcparsequality:host",
     "fidldoc($host_toolchain)",
+    "fidlgen_dart:host",
     "fidlgen_go:host",
     "fidlgen_hlcpp:host",
     "fidlgen_libfuzzer:host",
@@ -24,6 +25,7 @@ group("tests") {
 
   deps = [
     "fidldoc:tests",
+    "fidlgen_dart:tests",
     "fidlgen_go:tests",
     "fidlgen_hlcpp:tests",
     "fidlgen_libfuzzer:tests",

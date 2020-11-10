@@ -529,7 +529,7 @@ sdk("fuchsia_dart") {
     # //topaz.
     # If a FIDL deps is part of the SDK, it should be explicitly listed here.
     "//sdk/fidl/fuchsia.hardware.audio:fuchsia.hardware.audio_sdk",
-    "//topaz/bin/fidlgen_dart:fidlgen_dart_sdk_legacy($host_toolchain)",
+    "//tools/fidl/fidlgen_dart:fidlgen_dart_sdk_legacy($host_toolchain)",
     "//topaz/public/dart/composition_delegate:composition_delegate_sdk($dart_toolchain)",
     get_label_info(dart_package_label.fidl, "dir") + ":" +
         get_label_info(dart_package_label.fidl, "name") +

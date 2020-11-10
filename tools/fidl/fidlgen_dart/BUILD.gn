@@ -1,0 +1,97 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/dart/dart_library.gni")
+import("//build/go/go_binary.gni")
+import("//build/go/go_library.gni")
+import("//build/go/go_test.gni")
+import("//build/go/toolchain.gni")
+import("//build/host.gni")
+import("//build/sdk/sdk_host_tool.gni")
+
+go_library("fidlgen_dart_lib") {
+  name = "go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_dart/..."
+
+  deps = [ "//garnet/go/src/fidl:compiler" ]
+  if (is_linux || is_mac) {
+    non_go_deps = [ "goldens" ]
+  }
+  sources = [
+    "backend/codegen_test.go",
+    "backend/generator.go",
+    "backend/ir/ir.go",
+    "backend/templates/bits.tmpl.go",
+    "backend/templates/const.tmpl.go",
+    "backend/templates/enum.tmpl.go",
+    "backend/templates/interface.tmpl.go",
+    "backend/templates/library.tmpl.go",
+    "backend/templates/struct.tmpl.go",
+    "backend/templates/table.tmpl.go",
+    "backend/templates/union.tmpl.go",
+    "fidlgen_dart.go",
+  ]
+}
+
+go_binary("fidlgen_dart") {
+  gopackage = "go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_dart/"
+  deps = [ ":fidlgen_dart_lib" ]
+}
+
+sdk_host_tool("fidlgen_dart_sdk") {
+  category = "partner"
+  output_name = "fidlgen_dart"
+  deps = [ ":fidlgen_dart" ]
+}
+
+if (is_host) {
+  go_test("fidlgen_dart_backend_test") {
+    gopackages = [ "go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_dart/backend" ]
+
+    deps = [ ":fidlgen_dart_lib" ]
+    non_go_deps = [ ":copies" ]
+  }
+}
+
+group("copies") {
+  deps = [
+    ":copy_dart",
+    ":copy_dartfmt",
+    ":copy_dartsnapshot",
+  ]
+  metadata = {
+    test_runtime_deps = [
+      "$root_out_dir/test_data/fidlgen_dart/dart",
+      "$root_out_dir/test_data/fidlgen_dart/dartfmt",
+      "$root_out_dir/test_data/fidlgen_dart/snapshots/dartfmt.dart.snapshot",
+    ]
+  }
+}
+
+copy("copy_dartsnapshot") {
+  deps = dart_sdk_deps
+  sources = [ "$dart_sdk/bin/snapshots/dartfmt.dart.snapshot" ]
+  outputs =
+      [ "$root_out_dir/test_data/fidlgen_dart/snapshots/dartfmt.dart.snapshot" ]
+}
+
+copy("copy_dart") {
+  deps = dart_sdk_deps
+  sources = [ "$dart_sdk/bin/dart" ]
+  outputs = [ "$root_out_dir/test_data/fidlgen_dart/dart" ]
+}
+
+copy("copy_dartfmt") {
+  deps = dart_sdk_deps
+  sources = [ "$dart_sdk/bin/dartfmt" ]
+  outputs = [ "$root_out_dir/test_data/fidlgen_dart/dartfmt" ]
+}
+
+install_host_tools("host") {
+  deps = [ ":fidlgen_dart" ]
+  outputs = [ "fidlgen_dart" ]
+}
+
+group("tests") {
+  # TODO(ianloic): put fidlgen_dart non-host test targets here
+}

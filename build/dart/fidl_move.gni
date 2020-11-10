@@ -11,4 +11,4 @@ dart_package_label = {
   zircon = "//topaz/public/dart/zircon"
 }
 
-fidlgen_dart_topaz_output_name = "fidlgen_dart"
+fidlgen_dart_topaz_output_name = "fidlgen_dart_topaz"
