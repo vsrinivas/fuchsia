@@ -228,12 +228,6 @@ zx_status_t DeviceContext::SecondLevelMapDiscontiguous(const fbl::RefPtr<VmObjec
     size = min_contig;
   }
 
-  auto lookup_fn = [](void* ctx, size_t offset, size_t index, paddr_t pa) {
-    paddr_t* paddr = static_cast<paddr_t*>(ctx);
-    paddr[index] = pa;
-    return ZX_OK;
-  };
-
   RegionAllocator::Region::UPtr region;
   zx_status_t status = region_alloc_.GetRegion(size, min_contig, region);
   if (status != ZX_OK) {
@@ -262,9 +256,19 @@ zx_status_t DeviceContext::SecondLevelMapDiscontiguous(const fbl::RefPtr<VmObjec
     const size_t kNumEntriesPerLookup = 32;
     size_t chunk_size = ktl::min(remaining, kNumEntriesPerLookup * PAGE_SIZE);
     paddr_t paddrs[kNumEntriesPerLookup] = {};
-    status = vmo->Lookup(offset, chunk_size, lookup_fn, &paddrs);
+    size_t pages_found = 0;
+    auto lookup_fn = [&paddrs, &pages_found, &offset](uint64_t page_offset, paddr_t pa) {
+      size_t index = (page_offset - offset) / PAGE_SIZE;
+      paddrs[index] = pa;
+      pages_found++;
+      return ZX_ERR_NEXT;
+    };
+    status = vmo->Lookup(offset, chunk_size, lookup_fn);
     if (status != ZX_OK) {
       return status;
+    }
+    if (pages_found != chunk_size / PAGE_SIZE) {
+      return ZX_ERR_NO_MEMORY;
     }
 
     size_t map_len = chunk_size / PAGE_SIZE;

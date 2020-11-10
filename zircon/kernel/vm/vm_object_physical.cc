@@ -188,8 +188,9 @@ zx_status_t VmObjectPhysical::GetPageLocked(uint64_t offset, uint pf_flags, list
   return ZX_OK;
 }
 
-zx_status_t VmObjectPhysical::Lookup(uint64_t offset, uint64_t len, vmo_lookup_fn_t lookup_fn,
-                                     void* context) {
+zx_status_t VmObjectPhysical::Lookup(
+    uint64_t offset, uint64_t len,
+    fbl::Function<zx_status_t(uint64_t offset, paddr_t pa)> lookup_fn) {
   canary_.Assert();
 
   if (unlikely(len == 0)) {
@@ -206,8 +207,11 @@ zx_status_t VmObjectPhysical::Lookup(uint64_t offset, uint64_t len, vmo_lookup_f
   uint64_t end_page_offset = ROUNDUP(end, PAGE_SIZE);
 
   for (size_t idx = 0; cur_offset < end_page_offset; cur_offset += PAGE_SIZE, ++idx) {
-    zx_status_t status = lookup_fn(context, cur_offset, idx, base_ + cur_offset);
-    if (status != ZX_OK) {
+    zx_status_t status = lookup_fn(cur_offset, base_ + cur_offset);
+    if (unlikely(status != ZX_ERR_NEXT)) {
+      if (status == ZX_ERR_STOP) {
+        return ZX_OK;
+      }
       return status;
     }
   }

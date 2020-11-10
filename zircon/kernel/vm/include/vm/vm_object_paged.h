@@ -126,8 +126,8 @@ class VmObjectPaged final : public VmObject {
 
   zx_status_t Read(void* ptr, uint64_t offset, size_t len) override;
   zx_status_t Write(const void* ptr, uint64_t offset, size_t len) override;
-  zx_status_t Lookup(uint64_t offset, uint64_t len, vmo_lookup_fn_t lookup_fn,
-                     void* context) override;
+  zx_status_t Lookup(uint64_t offset, uint64_t len,
+                     fbl::Function<zx_status_t(uint64_t offset, paddr_t pa)> lookup_fn) override;
   zx_status_t LookupContiguous(uint64_t offset, uint64_t len, paddr_t* out_paddr) override;
 
   zx_status_t ReadUser(VmAspace* current_aspace, user_out_ptr<char> ptr, uint64_t offset,

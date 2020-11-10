@@ -2533,8 +2533,9 @@ void VmCowPages::UpdateChildParentLimitsLocked(uint64_t new_size) {
   }
 }
 
-zx_status_t VmCowPages::LookupLocked(uint64_t offset, uint64_t len, vmo_lookup_fn_t lookup_fn,
-                                     void* context) {
+zx_status_t VmCowPages::LookupLocked(
+    uint64_t offset, uint64_t len,
+    fbl::Function<zx_status_t(uint64_t offset, paddr_t pa)> lookup_fn) {
   canary_.Assert();
   if (unlikely(len == 0)) {
     return ZX_ERR_INVALID_ARGS;
@@ -2545,52 +2546,27 @@ zx_status_t VmCowPages::LookupLocked(uint64_t offset, uint64_t len, vmo_lookup_f
     return ZX_ERR_OUT_OF_RANGE;
   }
 
+  if (is_slice_locked()) {
+    DEBUG_ASSERT(parent_);
+    AssertHeld(parent_->lock_ref());
+    // Slices are always hung off a non-slice parent, so we know we only need to walk up one level.
+    DEBUG_ASSERT(!parent_->is_slice_locked());
+    return parent_->LookupLocked(offset + parent_offset_, len, ktl::move(lookup_fn));
+  }
+
   const uint64_t start_page_offset = ROUNDDOWN(offset, PAGE_SIZE);
   const uint64_t end_page_offset = ROUNDUP(offset + len, PAGE_SIZE);
 
-  zx_status_t status = page_list_.ForEveryPageAndGapInRange(
-      [lookup_fn, context, start_page_offset](const auto* p, uint64_t off) {
-        if (p->IsMarker()) {
-          return ZX_ERR_NO_MEMORY;
+  return page_list_.ForEveryPageInRange(
+      [&lookup_fn](const auto* p, uint64_t off) {
+        if (!p->IsPage()) {
+          // Skip non pages.
+          return ZX_ERR_NEXT;
         }
-        const size_t index = (off - start_page_offset) / PAGE_SIZE;
         paddr_t pa = p->Page()->paddr();
-        zx_status_t status = lookup_fn(context, off, index, pa);
-        if (status != ZX_OK) {
-          if (unlikely(status == ZX_ERR_NEXT || status == ZX_ERR_STOP)) {
-            status = ZX_ERR_INTERNAL;
-          }
-          return status;
-        }
-        return ZX_ERR_NEXT;
-      },
-      [this, lookup_fn, context, start_page_offset](uint64_t gap_start, uint64_t gap_end) {
-        AssertHeld(this->lock_);
-        // If some page was missing from our list, run the more expensive
-        // GetPageLocked to see if our parent has it.
-        for (uint64_t off = gap_start; off < gap_end; off += PAGE_SIZE) {
-          paddr_t pa;
-          zx_status_t status = this->GetPageLocked(off, 0, nullptr, nullptr, nullptr, &pa);
-          if (status != ZX_OK) {
-            return ZX_ERR_NO_MEMORY;
-          }
-          const size_t index = (off - start_page_offset) / PAGE_SIZE;
-          status = lookup_fn(context, off, index, pa);
-          if (status != ZX_OK) {
-            if (unlikely(status == ZX_ERR_NEXT || status == ZX_ERR_STOP)) {
-              status = ZX_ERR_INTERNAL;
-            }
-            return status;
-          }
-        }
-        return ZX_ERR_NEXT;
+        return lookup_fn(off, pa);
       },
       start_page_offset, end_page_offset);
-  if (status != ZX_OK) {
-    return status;
-  }
-
-  return ZX_OK;
 }
 
 zx_status_t VmCowPages::TakePagesLocked(uint64_t offset, uint64_t len, VmPageSpliceList* pages) {

@@ -45,8 +45,8 @@ class VmObjectPhysical final : public VmObject {
 
   uint64_t size() const override { return size_; }
 
-  zx_status_t Lookup(uint64_t offset, uint64_t len, vmo_lookup_fn_t lookup_fn,
-                     void* context) override;
+  zx_status_t Lookup(uint64_t offset, uint64_t len,
+                     fbl::Function<zx_status_t(uint64_t offset, paddr_t pa)> lookup_fn) override;
   zx_status_t LookupContiguous(uint64_t offset, uint64_t len, paddr_t* out_paddr) override;
 
   zx_status_t CommitRangePinned(uint64_t offset, uint64_t len) override;

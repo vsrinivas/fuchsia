@@ -1034,8 +1034,9 @@ zx_status_t VmObjectPaged::Write(const void* _ptr, uint64_t offset, size_t len) 
   return ReadWriteInternalLocked(offset, len, true, write_routine, &guard);
 }
 
-zx_status_t VmObjectPaged::Lookup(uint64_t offset, uint64_t len, vmo_lookup_fn_t lookup_fn,
-                                  void* context) {
+zx_status_t VmObjectPaged::Lookup(
+    uint64_t offset, uint64_t len,
+    fbl::Function<zx_status_t(uint64_t offset, paddr_t pa)> lookup_fn) {
   canary_.Assert();
   if (unlikely(len == 0)) {
     return ZX_ERR_INVALID_ARGS;
@@ -1043,7 +1044,7 @@ zx_status_t VmObjectPaged::Lookup(uint64_t offset, uint64_t len, vmo_lookup_fn_t
 
   Guard<Mutex> guard{&lock_};
 
-  return cow_pages_locked()->LookupLocked(offset, len, lookup_fn, context);
+  return cow_pages_locked()->LookupLocked(offset, len, ktl::move(lookup_fn));
 }
 
 zx_status_t VmObjectPaged::LookupContiguous(uint64_t offset, uint64_t len, paddr_t* out_paddr) {
@@ -1069,15 +1070,22 @@ zx_status_t VmObjectPaged::LookupContiguous(uint64_t offset, uint64_t len, paddr
   }
 
   // Lookup the one page / first page of contiguous VMOs.
-  return cow_pages_locked()->LookupLocked(
-      offset, len,
-      [](void* arg, uint64_t offset, size_t index, paddr_t pa) {
-        if (arg) {
-          *static_cast<paddr_t*>(arg) = pa;
-        }
-        return ZX_OK;
-      },
-      out_paddr);
+  paddr_t paddr = 0;
+  zx_status_t status =
+      cow_pages_locked()->LookupLocked(offset, len, [&paddr](uint64_t offset, paddr_t pa) {
+        paddr = pa;
+        return ZX_ERR_STOP;
+      });
+  if (status != ZX_OK) {
+    return status;
+  }
+  if (paddr == 0) {
+    return ZX_ERR_NO_MEMORY;
+  }
+  if (out_paddr) {
+    *out_paddr = paddr;
+  }
+  return ZX_OK;
 }
 
 zx_status_t VmObjectPaged::ReadUser(VmAspace* current_aspace, user_out_ptr<char> ptr,
@@ -1222,16 +1230,14 @@ zx_status_t VmObjectPaged::SetMappingCachePolicy(const uint32_t cache_policy) {
 
   // If transitioning from a cached policy we must clean/invalidate all the pages as the kernel may
   // have written to them on behalf of the user.
-  // TODO: To avoid iterating the whole offset range VmCowPages needs an appropriate interface for
-  // iterating on committed pages. Lookup is presently unsuitable as it performs a lookup for read,
-  // which could return pages in our parent, instead of a lookup for write.
   if (cache_policy_ == ARCH_MMU_FLAG_CACHED && cache_policy != ARCH_MMU_FLAG_CACHED) {
-    for (uint64_t offset = 0; offset < size_locked(); offset += PAGE_SIZE) {
-      paddr_t pa;
-      zx_status_t status = GetPageLocked(offset, 0, nullptr, nullptr, nullptr, &pa);
-      if (likely(status == ZX_OK)) {
-        arch_clean_invalidate_cache_range((vaddr_t)paddr_to_physmap(pa), PAGE_SIZE);
-      }
+    zx_status_t status =
+        cow_pages_locked()->LookupLocked(0, size_locked(), [](uint64_t offset, paddr_t pa) {
+          arch_clean_invalidate_cache_range((vaddr_t)paddr_to_physmap(pa), PAGE_SIZE);
+          return ZX_ERR_NEXT;
+        });
+    if (status != ZX_OK) {
+      return status;
     }
   }
 

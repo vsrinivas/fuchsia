@@ -1246,23 +1246,17 @@ static bool vmo_create_maximum_size() {
 // Helper that tests if all pages in a vmo in the specified range pass the given predicate.
 template <typename F>
 static bool AllPagesMatch(VmObject* vmo, F pred, uint64_t offset, uint64_t len) {
-  struct Context {
-    bool result;
-    F pred;
-  } context = {true, ktl::move(pred)};
-  zx_status_t status = vmo->Lookup(
-      offset, len,
-      [](void* context, size_t offset, size_t index, paddr_t pa) {
-        Context* c = reinterpret_cast<Context*>(context);
+  bool pred_matches = true;
+  zx_status_t status =
+      vmo->Lookup(offset, len, [&pred, &pred_matches](uint64_t offset, paddr_t pa) {
         const vm_page_t* p = paddr_to_vm_page(pa);
-        if (!c->pred(p)) {
-          c->result = false;
+        if (!pred(p)) {
+          pred_matches = false;
           return ZX_ERR_STOP;
         }
-        return ZX_OK;
-      },
-      &context);
-  return status == ZX_OK ? context.result : false;
+        return ZX_ERR_NEXT;
+      });
+  return status == ZX_OK ? pred_matches : false;
 }
 
 static bool PagesInAnyUnswappableQueue(VmObject* vmo, uint64_t offset, uint64_t len) {
@@ -1481,15 +1475,14 @@ static bool vmo_create_contiguous_test() {
   EXPECT_TRUE(PagesInWiredQueue(vmo.get(), 0, alloc_size));
 
   paddr_t last_pa;
-  auto lookup_func = [](void* ctx, size_t offset, size_t index, paddr_t pa) {
-    paddr_t* last_pa = static_cast<paddr_t*>(ctx);
-    if (index != 0 && *last_pa + PAGE_SIZE != pa) {
+  auto lookup_func = [&last_pa](uint64_t offset, paddr_t pa) {
+    if (offset != 0 && last_pa + PAGE_SIZE != pa) {
       return ZX_ERR_BAD_STATE;
     }
-    *last_pa = pa;
-    return ZX_OK;
+    last_pa = pa;
+    return ZX_ERR_NEXT;
   };
-  status = vmo->Lookup(0, alloc_size, lookup_func, &last_pa);
+  status = vmo->Lookup(0, alloc_size, lookup_func);
   paddr_t first_pa;
   paddr_t second_pa;
   EXPECT_EQ(status, ZX_OK, "vmo lookup\n");
@@ -1523,15 +1516,14 @@ static bool vmo_contiguous_decommit_test() {
 
   // Make sure all pages are still present and contiguous
   paddr_t last_pa;
-  auto lookup_func = [](void* ctx, size_t offset, size_t index, paddr_t pa) {
-    paddr_t* last_pa = static_cast<paddr_t*>(ctx);
-    if (index != 0 && *last_pa + PAGE_SIZE != pa) {
+  auto lookup_func = [&last_pa](size_t offset, paddr_t pa) {
+    if (offset != 0 && last_pa + PAGE_SIZE != pa) {
       return ZX_ERR_BAD_STATE;
     }
-    *last_pa = pa;
-    return ZX_OK;
+    last_pa = pa;
+    return ZX_ERR_NEXT;
   };
-  status = vmo->Lookup(0, alloc_size, lookup_func, &last_pa);
+  status = vmo->Lookup(0, alloc_size, lookup_func);
   ASSERT_EQ(status, ZX_OK, "vmo lookup\n");
 
   END_TEST;
@@ -1876,13 +1868,12 @@ static bool vmo_lookup_test() {
   ASSERT_TRUE(vmo, "vmobject creation\n");
 
   size_t pages_seen = 0;
-  auto lookup_fn = [](void* context, size_t offset, size_t index, paddr_t pa) {
-    size_t* pages_seen = static_cast<size_t*>(context);
-    (*pages_seen)++;
-    return ZX_OK;
+  auto lookup_fn = [&pages_seen](size_t offset, paddr_t pa) {
+    pages_seen++;
+    return ZX_ERR_NEXT;
   };
-  status = vmo->Lookup(0, alloc_size, lookup_fn, &pages_seen);
-  EXPECT_EQ(ZX_ERR_NO_MEMORY, status, "lookup on uncommitted pages\n");
+  status = vmo->Lookup(0, alloc_size, lookup_fn);
+  EXPECT_EQ(ZX_OK, status);
   EXPECT_EQ(0u, pages_seen, "lookup on uncommitted pages\n");
   pages_seen = 0;
 
@@ -1890,21 +1881,25 @@ static bool vmo_lookup_test() {
   EXPECT_EQ(ZX_OK, status, "committing vm object\n");
   EXPECT_EQ(static_cast<size_t>(1), vmo->AttributedPages(), "committing vm object\n");
 
-  // Should fail, since first page isn't mapped
-  status = vmo->Lookup(0, alloc_size, lookup_fn, &pages_seen);
-  EXPECT_EQ(ZX_ERR_NO_MEMORY, status, "lookup on partially committed pages\n");
+  // Should not see any pages in the early range.
+  status = vmo->Lookup(0, PAGE_SIZE, lookup_fn);
+  EXPECT_EQ(ZX_OK, status);
   EXPECT_EQ(0u, pages_seen, "lookup on partially committed pages\n");
   pages_seen = 0;
 
-  // Should fail, but see the mapped page
-  status = vmo->Lookup(PAGE_SIZE, alloc_size - PAGE_SIZE, lookup_fn, &pages_seen);
-  EXPECT_EQ(ZX_ERR_NO_MEMORY, status, "lookup on partially committed pages\n");
+  // Should see a committed page if looking at any range covering the committed.
+  status = vmo->Lookup(0, alloc_size, lookup_fn);
+  EXPECT_EQ(ZX_OK, status);
   EXPECT_EQ(1u, pages_seen, "lookup on partially committed pages\n");
   pages_seen = 0;
 
-  // Should succeed
-  status = vmo->Lookup(PAGE_SIZE, PAGE_SIZE, lookup_fn, &pages_seen);
-  EXPECT_EQ(ZX_OK, status, "lookup on partially committed pages\n");
+  status = vmo->Lookup(PAGE_SIZE, alloc_size - PAGE_SIZE, lookup_fn);
+  EXPECT_EQ(ZX_OK, status);
+  EXPECT_EQ(1u, pages_seen, "lookup on partially committed pages\n");
+  pages_seen = 0;
+
+  status = vmo->Lookup(PAGE_SIZE, PAGE_SIZE, lookup_fn);
+  EXPECT_EQ(ZX_OK, status);
   EXPECT_EQ(1u, pages_seen, "lookup on partially committed pages\n");
   pages_seen = 0;
 
@@ -1917,7 +1912,7 @@ static bool vmo_lookup_test() {
   EXPECT_EQ(ZX_OK, status, "committing vm object\n");
   EXPECT_EQ(alloc_size, PAGE_SIZE * vmo->AttributedPages(), "committing vm object\n");
 
-  status = vmo->Lookup(0, alloc_size, lookup_fn, &pages_seen);
+  status = vmo->Lookup(0, alloc_size, lookup_fn);
   EXPECT_EQ(ZX_OK, status, "lookup on partially committed pages\n");
   EXPECT_EQ(alloc_size / PAGE_SIZE, pages_seen, "lookup on partially committed pages\n");
   status = vmo->LookupContiguous(0, PAGE_SIZE, nullptr);
@@ -1962,24 +1957,25 @@ static bool vmo_lookup_clone_test() {
   // Lookup the paddrs for both VMOs.
   paddr_t vmo_lookup[page_count] = {};
   paddr_t clone_lookup[page_count] = {};
-  auto lookup_func = [](void* ctx, size_t offset, size_t index, paddr_t pa) {
-    static_cast<paddr_t*>(ctx)[index] = pa;
-    return ZX_OK;
+  auto vmo_lookup_func = [&vmo_lookup](uint64_t offset, paddr_t pa) {
+    vmo_lookup[offset / PAGE_SIZE] = pa;
+    return ZX_ERR_NEXT;
   };
-  status = vmo->Lookup(0, alloc_size, lookup_func, &vmo_lookup);
+  auto clone_lookup_func = [&clone_lookup](uint64_t offset, paddr_t pa) {
+    clone_lookup[offset / PAGE_SIZE] = pa;
+    return ZX_ERR_NEXT;
+  };
+  status = vmo->Lookup(0, alloc_size, vmo_lookup_func);
   EXPECT_EQ(ZX_OK, status, "vmo lookup\n");
-  status = clone->Lookup(0, alloc_size, lookup_func, &clone_lookup);
+  status = clone->Lookup(0, alloc_size, clone_lookup_func);
   EXPECT_EQ(ZX_OK, status, "vmo lookup\n");
 
-  // Check that lookup returns a valid paddr for each index and that
-  // they match/don't match when appropriate.
+  // The original VMO is now copy-on-write so we should see none of its pages,
+  // and we should only see the two pages that explicitly committed into the clone.
   for (unsigned i = 0; i < page_count; i++) {
-    EXPECT_NE(0ul, vmo_lookup[i], "Bad paddr\n");
-    EXPECT_NE(0ul, clone_lookup[i], "Bad paddr\n");
+    EXPECT_EQ(0ul, vmo_lookup[i], "Bad paddr\n");
     if (i == 0 || i == page_count - 1) {
-      EXPECT_NE(vmo_lookup[i], clone_lookup[i], "paddr mismatch");
-    } else {
-      EXPECT_EQ(vmo_lookup[i], clone_lookup[i], "paddr mismatch");
+      EXPECT_NE(0ul, clone_lookup[i], "Bad paddr\n");
     }
   }
 

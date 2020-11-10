@@ -38,8 +38,6 @@ class VmAspace;
 class VmObject;
 class VmHierarchyState;
 
-typedef zx_status_t (*vmo_lookup_fn_t)(void* context, size_t offset, size_t index, paddr_t pa);
-
 class VmObjectChildObserver {
  public:
   virtual void OnZeroChild() = 0;
@@ -213,10 +211,14 @@ class VmObject : public VmHierarchyBase,
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  // execute lookup_fn on a given range of physical addresses within the vmo.
-  // Ranges of length zero are considered invalid and will return ZX_ERR_INVALID_ARGS.
-  virtual zx_status_t Lookup(uint64_t offset, uint64_t len, vmo_lookup_fn_t lookup_fn,
-                             void* context) {
+  // execute lookup_fn on a given range of physical addresses within the vmo. Only pages that are
+  // present and writable in this VMO will be enumerated. Any copy-on-write pages in our parent
+  // will not be enumerated. The physical addresses given to the lookup_fn should not be retained in
+  // any way unless the range has also been pinned by the caller.
+  // Ranges of length zero are considered invalid and will return ZX_ERR_INVALID_ARGS. The lookup_fn
+  // can terminate iteration early by returning ZX_ERR_STOP.
+  virtual zx_status_t Lookup(uint64_t offset, uint64_t len,
+                             fbl::Function<zx_status_t(uint64_t offset, paddr_t pa)> lookup_fn) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 

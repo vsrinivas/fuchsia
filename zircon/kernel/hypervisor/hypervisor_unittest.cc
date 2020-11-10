@@ -32,11 +32,6 @@ static bool hypervisor_supported() {
   return true;
 }
 
-static zx_status_t get_paddr(void* context, size_t offset, size_t index, paddr_t pa) {
-  *static_cast<paddr_t*>(context) = pa;
-  return ZX_OK;
-}
-
 static zx_status_t create_vmo(size_t vmo_size, fbl::RefPtr<VmObjectPaged>* vmo) {
   return VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, 0u, vmo_size, vmo);
 }
@@ -260,7 +255,10 @@ static bool guest_physical_address_space_get_page() {
 
   // Read expected physical address from the VMO.
   zx_paddr_t vmo_paddr = 0;
-  status = vmo->Lookup(0, PAGE_SIZE, get_paddr, &vmo_paddr);
+  status = vmo->Lookup(0, PAGE_SIZE, [&vmo_paddr](uint64_t offset, paddr_t pa) {
+    vmo_paddr = pa;
+    return ZX_ERR_STOP;
+  });
   EXPECT_EQ(ZX_OK, status, "Failed to lookup physical address of VMO\n");
   EXPECT_NE(0u, vmo_paddr, "Failed to lookup physical address of VMO\n");
 
@@ -339,7 +337,10 @@ static bool guest_physical_address_space_get_page_complex() {
 
   // Read expected physical address from the VMO.
   zx_paddr_t vmo_paddr = 0;
-  status = vmo2->Lookup(0, PAGE_SIZE, get_paddr, &vmo_paddr);
+  status = vmo2->Lookup(0, PAGE_SIZE, [&vmo_paddr](uint64_t offset, paddr_t pa) {
+    vmo_paddr = pa;
+    return ZX_ERR_STOP;
+  });
   EXPECT_EQ(ZX_OK, status, "Failed to lookup physical address of VMO\n");
   EXPECT_NE(0u, vmo_paddr, "Failed to lookup physical address of VMO\n");
 

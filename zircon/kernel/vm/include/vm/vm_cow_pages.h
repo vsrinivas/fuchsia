@@ -97,7 +97,8 @@ class VmCowPages final : public VmHierarchyBase,
   zx_status_t ResizeLocked(uint64_t size) TA_REQ(lock_);
 
   // See VmObject::Lookup
-  zx_status_t LookupLocked(uint64_t offset, uint64_t len, vmo_lookup_fn_t lookup_fn, void* context)
+  zx_status_t LookupLocked(uint64_t offset, uint64_t len,
+                           fbl::Function<zx_status_t(uint64_t offset, paddr_t pa)> lookup_fn)
       TA_REQ(lock_);
 
   // See VmObject::TakePages
