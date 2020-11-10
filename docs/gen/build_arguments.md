@@ -508,7 +508,7 @@ pressure arises or other policies indicate.
 
 **Current value for `target_cpu = "arm64"`:** `["//src/developer/ffx:runtime"]`
 
-From //products/core.gni:96
+From //products/core.gni:97
 
 **Overridden from the default:** `[]`
 
@@ -516,7 +516,7 @@ From //BUILD.gn:40
 
 **Current value for `target_cpu = "x64"`:** `["//src/developer/ffx:runtime"]`
 
-From //products/core.gni:96
+From //products/core.gni:97
 
 **Overridden from the default:** `[]`
 
@@ -724,7 +724,7 @@ From //build/images/custom_signing.gni:23
 
 **Current value (from the default):** `"dart_jit_app"`
 
-From [//topaz/runtime/dart/dart_component.gni:24](https://fuchsia.googlesource.com/topaz/+/cd54bf08f5f3caacb04e018a00c8f25097b58225/runtime/dart/dart_component.gni#24)
+From [//topaz/runtime/dart/dart_component.gni:24](https://fuchsia.googlesource.com/topaz/+/3c84b3d04cf41433296adede6b5672d4446a9b27/runtime/dart/dart_component.gni#24)
 
 ### dart_default_build_cfg
 Non-product JIT
@@ -749,14 +749,14 @@ we use to build products.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/cd54bf08f5f3caacb04e018a00c8f25097b58225/runtime/dart/config.gni#10)
+From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/3c84b3d04cf41433296adede6b5672d4446a9b27/runtime/dart/config.gni#10)
 
 ### dart_space_dart
 Whether experimental space dart mode is enabled for Dart applications.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/dart_component.gni:43](https://fuchsia.googlesource.com/topaz/+/cd54bf08f5f3caacb04e018a00c8f25097b58225/runtime/dart/dart_component.gni#43)
+From [//topaz/runtime/dart/dart_component.gni:43](https://fuchsia.googlesource.com/topaz/+/3c84b3d04cf41433296adede6b5672d4446a9b27/runtime/dart/dart_component.gni#43)
 
 ### data_partition_manifest
 Path to manifest file containing data to place into the initial /data
@@ -1006,7 +1006,7 @@ From //build/images/args.gni:52
 
 **Current value (from the default):** `"flutter_jit_app"`
 
-From [//topaz/runtime/dart/dart_component.gni:13](https://fuchsia.googlesource.com/topaz/+/cd54bf08f5f3caacb04e018a00c8f25097b58225/runtime/dart/dart_component.gni#13)
+From [//topaz/runtime/dart/dart_component.gni:13](https://fuchsia.googlesource.com/topaz/+/3c84b3d04cf41433296adede6b5672d4446a9b27/runtime/dart/dart_component.gni#13)
 
 ### flutter_default_build_cfg
 Non-product JIT
@@ -1046,14 +1046,14 @@ From //build/flutter/config.gni:10
 
 **Current value (from the default):** `true`
 
-From [//topaz/runtime/dart/dart_component.gni:34](https://fuchsia.googlesource.com/topaz/+/cd54bf08f5f3caacb04e018a00c8f25097b58225/runtime/dart/dart_component.gni#34)
+From [//topaz/runtime/dart/dart_component.gni:34](https://fuchsia.googlesource.com/topaz/+/3c84b3d04cf41433296adede6b5672d4446a9b27/runtime/dart/dart_component.gni#34)
 
 ### flutter_space_dart
 Whether experimental space dart mode is enabled for Flutter applications.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/dart_component.gni:40](https://fuchsia.googlesource.com/topaz/+/cd54bf08f5f3caacb04e018a00c8f25097b58225/runtime/dart/dart_component.gni#40)
+From [//topaz/runtime/dart/dart_component.gni:40](https://fuchsia.googlesource.com/topaz/+/3c84b3d04cf41433296adede6b5672d4446a9b27/runtime/dart/dart_component.gni#40)
 
 ### font_catalog_paths
 
@@ -2069,7 +2069,7 @@ A list of binary labels to include in ZBIs built for this product.
 
 **Current value for `target_cpu = "arm64"`:** `["//build/info:bootfs", "//bundles:bootstrap", "//bundles:debugging", "//bundles/bringup:manual_testing", "//bundles/drivers:bootstrap", "//bundles/drivers:usb-host-stack", "//bundles/drivers:usb-peripheral-stack", "//bundles/drivers:utils", "//src/testing/runtests", "//src/sys/component_manager:component_manager_config_bootfs_resource"]`
 
-From //products/core.gni:104
+From //products/core.gni:105
 
 **Overridden from the default:** `[]`
 
@@ -2077,7 +2077,7 @@ From //build/product.gni:7
 
 **Current value for `target_cpu = "x64"`:** `["//build/info:bootfs", "//bundles:bootstrap", "//bundles:debugging", "//bundles/bringup:manual_testing", "//bundles/drivers:bootstrap", "//bundles/drivers:usb-host-stack", "//bundles/drivers:usb-peripheral-stack", "//bundles/drivers:utils", "//src/testing/runtests", "//src/sys/component_manager:component_manager_config_bootfs_resource"]`
 
-From //products/core.gni:104
+From //products/core.gni:105
 
 **Overridden from the default:** `[]`
 
@@ -2097,7 +2097,7 @@ A list of binary labels to include in the system_image package.
 
 **Current value for `target_cpu = "arm64"`:** `["//src/connectivity/bluetooth:core-system", "//src/graphics/lib/magma/tests:test-drivers", "//src/sys/pkg:pkgfs-disable-executability-restrictions", "//bundles:tools-system"]`
 
-From //products/core.gni:98
+From //products/core.gni:99
 
 **Overridden from the default:** `[]`
 
@@ -2105,7 +2105,7 @@ From //build/product.gni:10
 
 **Current value for `target_cpu = "x64"`:** `["//src/connectivity/bluetooth:core-system", "//src/graphics/lib/magma/tests:test-drivers", "//src/sys/pkg:pkgfs-disable-executability-restrictions", "//bundles:tools-system"]`
 
-From //products/core.gni:98
+From //products/core.gni:99
 
 **Overridden from the default:** `[]`
 
@@ -2719,7 +2719,7 @@ include those labels in this variable.
 
 **Current value for `target_cpu = "arm64"`:** `["//tools/net/device-finder:host", "//bundles:tools"]`
 
-From //products/core.gni:99
+From //products/core.gni:100
 
 **Overridden from the default:** `[]`
 
@@ -2727,7 +2727,7 @@ From //BUILD.gn:54
 
 **Current value for `target_cpu = "x64"`:** `["//tools/net/device-finder:host", "//bundles:tools"]`
 
-From //products/core.gni:99
+From //products/core.gni:100
 
 **Overridden from the default:** `[]`
 
