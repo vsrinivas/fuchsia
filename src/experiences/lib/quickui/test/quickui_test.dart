@@ -54,6 +54,7 @@ class TestUi extends UiSpec {
   @override
   void dispose() {}
 
+  //ignore: prefer_constructors_over_static_methods
   static Spec _build() {
     return Spec(title: '', groups: <Group>[Group(title: 'Foo', values: [])]);
   }
