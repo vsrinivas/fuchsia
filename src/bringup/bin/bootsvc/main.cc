@@ -175,12 +175,8 @@ zx_status_t LoadBootArgs(const fbl::RefPtr<bootsvc::BootfsService>& bootfs,
 // - A namespace containing:
 //   - A /boot directory, connected to the bootfs service hosted by bootsvc
 //   - A /svc directory, containing other services hosted by bootsvc, including:
-//     - fuchsia.boot.Arguments, which provides boot cmdline arguments
-//     - fuchsia.boot.Items, which allows querying for certain ZBI items
-//     - fuchsia.boot.{ReadOnly|WriteOnly}Log, which provides debuglog handles
-//     - fuchsia.boot.RootResource, which provides root resource handles
-//     - fuchsia.kernel.MmioResource, which provides mmio resource handles
-//     - fuchsia.kernel.RootJob, which provides root job handles
+//     - fuchsia.boot.FactoryItems, to access factory-related ZBI items
+//     - fuchsia.boot.Items, to access ZBI items including bootloader files
 // - A loader that can load libraries from /boot, hosted by bootsvc
 //
 // If the next process terminates, bootsvc will quit.
