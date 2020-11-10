@@ -11,16 +11,11 @@ use {
     std::{convert::TryInto, sync::Arc},
 };
 
-fn verify_and_read_buffer(buffer: &mut fidl_fuchsia_mem::Buffer) -> Vec<u8> {
+fn verify_buffer(buffer: &mut fidl_fuchsia_mem::Buffer) {
     // The paver service requires VMOs to be resizable. Assert that the buffer provided by the
     // system updater can be resized without error.
-    resize_vmo(&mut buffer.vmo);
-    read_mem_buffer(buffer)
-}
-
-fn resize_vmo(vmo: &mut Vmo) {
-    let size = vmo.get_size().expect("vmo size query to succeed");
-    vmo.set_size(size * 2).expect("vmo must be resizable");
+    let size = buffer.vmo.get_size().expect("vmo size query to succeed");
+    buffer.vmo.set_size(size * 2).expect("vmo must be resizable");
 }
 
 fn read_mem_buffer(buffer: &fidl_fuchsia_mem::Buffer) -> Vec<u8> {
@@ -42,6 +37,62 @@ pub enum PaverEvent {
     SetConfigurationUnbootable { configuration: paver::Configuration },
     BootManagerFlush,
     DataSinkFlush,
+}
+
+impl PaverEvent {
+    pub fn from_data_sink_request(request: &paver::DataSinkRequest) -> PaverEvent {
+        match request {
+            paver::DataSinkRequest::WriteAsset { configuration, asset, payload, .. } => {
+                PaverEvent::WriteAsset {
+                    configuration: configuration.to_owned(),
+                    asset: asset.to_owned(),
+                    payload: read_mem_buffer(payload),
+                }
+            }
+            paver::DataSinkRequest::WriteFirmware {
+                configuration,
+                type_: firmware_type,
+                payload,
+                ..
+            } => PaverEvent::WriteFirmware {
+                configuration: configuration.to_owned(),
+                firmware_type: firmware_type.to_owned(),
+                payload: read_mem_buffer(payload),
+            },
+            paver::DataSinkRequest::Flush { .. } => PaverEvent::DataSinkFlush {},
+            paver::DataSinkRequest::ReadAsset { configuration, asset, .. } => {
+                PaverEvent::ReadAsset {
+                    configuration: configuration.to_owned(),
+                    asset: asset.to_owned(),
+                }
+            }
+            request => panic!("Unhandled method Paver::{}", request.method_name()),
+        }
+    }
+
+    pub fn from_boot_manager_request(request: &paver::BootManagerRequest) -> PaverEvent {
+        match request {
+            paver::BootManagerRequest::QueryActiveConfiguration { .. } => {
+                PaverEvent::QueryActiveConfiguration
+            }
+            paver::BootManagerRequest::QueryCurrentConfiguration { .. } => {
+                PaverEvent::QueryCurrentConfiguration
+            }
+            paver::BootManagerRequest::QueryConfigurationStatus { configuration, .. } => {
+                PaverEvent::QueryConfigurationStatus { configuration: configuration.to_owned() }
+            }
+            paver::BootManagerRequest::SetConfigurationHealthy { configuration, .. } => {
+                PaverEvent::SetConfigurationHealthy { configuration: configuration.to_owned() }
+            }
+            paver::BootManagerRequest::SetConfigurationActive { configuration, .. } => {
+                PaverEvent::SetConfigurationActive { configuration: configuration.to_owned() }
+            }
+            paver::BootManagerRequest::SetConfigurationUnbootable { configuration, .. } => {
+                PaverEvent::SetConfigurationUnbootable { configuration: configuration.to_owned() }
+            }
+            paver::BootManagerRequest::Flush { .. } => PaverEvent::BootManagerFlush,
+        }
+    }
 }
 
 pub struct MockPaverServiceBuilder {
@@ -210,39 +261,23 @@ impl MockPaverService {
         mut stream: paver::DataSinkRequestStream,
     ) -> Result<(), Error> {
         while let Some(request) = stream.try_next().await? {
+            let event = PaverEvent::from_data_sink_request(&request);
             match request {
-                paver::DataSinkRequest::WriteAsset {
-                    configuration,
-                    asset,
-                    mut payload,
-                    responder,
-                } => {
-                    let payload = verify_and_read_buffer(&mut payload);
-                    let event = PaverEvent::WriteAsset { configuration, asset, payload };
+                paver::DataSinkRequest::WriteAsset { mut payload, responder, .. } => {
+                    verify_buffer(&mut payload);
                     let status = (*self.call_hook)(&event);
-                    self.push_event(event);
                     responder.send(status.into_raw()).expect("paver response to send");
                 }
-                paver::DataSinkRequest::WriteFirmware {
-                    configuration,
-                    type_: firmware_type,
-                    mut payload,
-                    responder,
-                } => {
-                    let payload = verify_and_read_buffer(&mut payload);
-                    let event = PaverEvent::WriteFirmware { configuration, firmware_type, payload };
+                paver::DataSinkRequest::WriteFirmware { mut payload, responder, .. } => {
+                    verify_buffer(&mut payload);
                     let mut result = (*self.firmware_hook)(&event);
-                    self.push_event(event);
                     responder.send(&mut result).expect("paver response to send");
                 }
                 paver::DataSinkRequest::Flush { responder } => {
-                    let event = PaverEvent::DataSinkFlush {};
                     let status = (*self.call_hook)(&event);
-                    self.push_event(event);
                     responder.send(status.into_raw()).expect("paver response to send");
                 }
-                paver::DataSinkRequest::ReadAsset { configuration, asset, responder } => {
-                    let event = PaverEvent::ReadAsset { configuration, asset };
+                paver::DataSinkRequest::ReadAsset { responder, .. } => {
                     let mut result = (*self.read_hook)(&event)
                         .map(|payload| {
                             let vmo = Vmo::create(payload.len() as u64).expect("Creating VMO");
@@ -250,11 +285,11 @@ impl MockPaverService {
                             Buffer { vmo, size: payload.len() as u64 }
                         })
                         .map_err(|status| status.into_raw());
-                    self.push_event(event);
                     responder.send(&mut result).expect("paver response to send");
                 }
                 request => panic!("Unhandled method Paver::{}", request.method_name()),
             }
+            self.push_event(event);
         }
 
         Ok(())
@@ -272,11 +307,10 @@ impl MockPaverService {
         let mut stream = boot_manager.into_stream()?;
 
         while let Some(request) = stream.try_next().await? {
+            let event = PaverEvent::from_boot_manager_request(&request);
             match request {
                 paver::BootManagerRequest::QueryActiveConfiguration { responder } => {
-                    let event = PaverEvent::QueryActiveConfiguration;
                     let status = (*self.call_hook)(&event);
-                    self.push_event(event);
                     let mut result = if status == Status::OK {
                         if self.active_config == paver::Configuration::Recovery {
                             Err(Status::NOT_SUPPORTED.into_raw())
@@ -289,9 +323,7 @@ impl MockPaverService {
                     responder.send(&mut result).expect("paver response to send");
                 }
                 paver::BootManagerRequest::QueryCurrentConfiguration { responder } => {
-                    let event = PaverEvent::QueryCurrentConfiguration;
                     let status = (*self.call_hook)(&event);
-                    self.push_event(event);
                     let mut result = if status == Status::OK {
                         Ok(self.current_config)
                     } else {
@@ -299,20 +331,17 @@ impl MockPaverService {
                     };
                     responder.send(&mut result).expect("paver response to send");
                 }
-                paver::BootManagerRequest::QueryConfigurationStatus {
-                    configuration,
-                    responder,
-                } => {
-                    let event = PaverEvent::QueryConfigurationStatus { configuration };
+                paver::BootManagerRequest::QueryConfigurationStatus { responder, .. } => {
                     let config_status = (*self.config_status_hook)(&event);
-                    self.push_event(event);
                     let mut result = Ok(config_status);
                     responder.send(&mut result).expect("paver response to send");
                 }
-                paver::BootManagerRequest::SetConfigurationHealthy { configuration, responder } => {
-                    let event = PaverEvent::SetConfigurationHealthy { configuration };
+                paver::BootManagerRequest::SetConfigurationHealthy {
+                    configuration,
+                    responder,
+                    ..
+                } => {
                     let status = (*self.call_hook)(&event);
-                    self.push_event(event);
                     // Return an error if the given configuration is `Recovery`.
                     let status = if status == Status::OK
                         && configuration == paver::Configuration::Recovery
@@ -323,28 +352,20 @@ impl MockPaverService {
                     };
                     responder.send(status.into_raw()).expect("paver response to send");
                 }
-                paver::BootManagerRequest::SetConfigurationActive { configuration, responder } => {
-                    let event = PaverEvent::SetConfigurationActive { configuration };
+                paver::BootManagerRequest::SetConfigurationActive { responder, .. } => {
                     let status = (*self.call_hook)(&event);
-                    self.push_event(event);
                     responder.send(status.into_raw()).expect("paver response to send");
                 }
-                paver::BootManagerRequest::SetConfigurationUnbootable {
-                    configuration,
-                    responder,
-                } => {
-                    let event = PaverEvent::SetConfigurationUnbootable { configuration };
+                paver::BootManagerRequest::SetConfigurationUnbootable { responder, .. } => {
                     let status = (*self.call_hook)(&event);
-                    self.push_event(event);
                     responder.send(status.into_raw()).expect("paver response to send");
                 }
                 paver::BootManagerRequest::Flush { responder } => {
-                    let event = PaverEvent::BootManagerFlush;
                     let status = (*self.call_hook)(&event);
-                    self.push_event(event);
                     responder.send(status.into_raw()).expect("paver response to send");
                 }
             }
+            self.push_event(event);
         }
 
         Ok(())
