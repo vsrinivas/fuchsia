@@ -39,14 +39,14 @@ class Channel extends _HandleWrapper<Channel> {
       return ZX.ERR_INVALID_ARGS;
     }
 
-    return System.channelWrite(handle, data, handles);
+    return System.channelWrite(handle!, data, handles ?? []);
   }
 
   ReadResult queryAndRead() {
     if (handle == null) {
       return const ReadResult(ZX.ERR_INVALID_ARGS);
     }
-    return System.channelQueryAndRead(handle);
+    return System.channelQueryAndRead(handle!);
   }
 }
 

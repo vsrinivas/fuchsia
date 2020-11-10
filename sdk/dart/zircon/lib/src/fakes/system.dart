@@ -39,65 +39,86 @@ class _Result {
 }
 
 class HandleResult extends _Result {
-  final Handle? handle;
-  const HandleResult(final int status, [this.handle]) : super(status);
+  final Handle? _handle;
+  Handle get handle => _handle!;
+  const HandleResult(final int status, [this._handle]) : super(status);
   @override
-  String toString() => 'HandleResult(status=$status, handle=$handle)';
+  String toString() => 'HandleResult(status=$status, handle=$_handle)';
 }
 
 class HandlePairResult extends _Result {
-  final Handle? first;
-  final Handle? second;
-  const HandlePairResult(final int status, [this.first, this.second])
+  final Handle? _first;
+  final Handle? _second;
+
+  Handle get first => _first!;
+  Handle get second => _second!;
+
+  const HandlePairResult(final int status, [this._first, this._second])
       : super(status);
   @override
   String toString() =>
-      'HandlePairResult(status=$status, first=$first, second=$second)';
+      'HandlePairResult(status=$status, first=$_first, second=$_second)';
 }
 
 class ReadResult extends _Result {
-  final ByteData? bytes;
-  final int? numBytes;
-  final List<Handle>? handles;
-  const ReadResult(final int status, [this.bytes, this.numBytes, this.handles])
+  final ByteData? _bytes;
+  final int? _numBytes;
+  final List<Handle>? _handles;
+
+  ByteData get bytes => _bytes!;
+  int get numBytes => _numBytes!;
+  List<Handle> get handles => _handles!;
+
+  const ReadResult(final int status,
+      [this._bytes, this._numBytes, this._handles])
       : super(status);
   Uint8List bytesAsUint8List() =>
-      bytes!.buffer.asUint8List(bytes!.offsetInBytes, numBytes);
+      bytes.buffer.asUint8List(bytes.offsetInBytes, numBytes);
   String bytesAsUTF8String() => utf8.decode(bytesAsUint8List());
   @override
   String toString() =>
-      'ReadResult(status=$status, bytes=$bytes, numBytes=$numBytes, handles=$handles)';
+      'ReadResult(status=$status, bytes=$_bytes, numBytes=$_numBytes, handles=$_handles)';
 }
 
 class WriteResult extends _Result {
-  final int? numBytes;
-  const WriteResult(final int status, [this.numBytes]) : super(status);
+  final int? _numBytes;
+  int get numBytes => _numBytes!;
+
+  const WriteResult(final int status, [this._numBytes]) : super(status);
   @override
-  String toString() => 'WriteResult(status=$status, numBytes=$numBytes)';
+  String toString() => 'WriteResult(status=$status, numBytes=$_numBytes)';
 }
 
 class GetSizeResult extends _Result {
-  final int? size;
-  const GetSizeResult(final int status, [this.size]) : super(status);
+  final int? _size;
+  int get size => _size!;
+
+  const GetSizeResult(final int status, [this._size]) : super(status);
   @override
-  String toString() => 'GetSizeResult(status=$status, size=$size)';
+  String toString() => 'GetSizeResult(status=$status, size=$_size)';
 }
 
 class FromFileResult extends _Result {
-  final Handle? handle;
-  final int? numBytes;
-  const FromFileResult(final int status, [this.handle, this.numBytes])
+  final Handle? _handle;
+  final int? _numBytes;
+
+  Handle get handle => _handle!;
+  int get numBytes => _numBytes!;
+
+  const FromFileResult(final int status, [this._handle, this._numBytes])
       : super(status);
   @override
   String toString() =>
-      'FromFileResult(status=$status, handle=$handle, numBytes=$numBytes)';
+      'FromFileResult(status=$status, handle=$_handle, numBytes=$_numBytes)';
 }
 
 class MapResult extends _Result {
-  final Uint8List? data;
-  const MapResult(final int status, [this.data]) : super(status);
+  final Uint8List? _data;
+  Uint8List get data => _data!;
+
+  const MapResult(final int status, [this._data]) : super(status);
   @override
-  String toString() => 'MapResult(status=$status, data=$data)';
+  String toString() => 'MapResult(status=$status, data=$_data)';
 }
 
 class System {

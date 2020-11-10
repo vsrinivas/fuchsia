@@ -15,7 +15,7 @@ class Vmo extends _HandleWrapper<Vmo> {
       return const GetSizeResult(ZX.ERR_INVALID_ARGS);
     }
 
-    return System.vmoGetSize(handle);
+    return System.vmoGetSize(handle!);
   }
 
   int setSize(int size) {
@@ -23,7 +23,7 @@ class Vmo extends _HandleWrapper<Vmo> {
       return ZX.ERR_INVALID_ARGS;
     }
 
-    return System.vmoSetSize(handle, size);
+    return System.vmoSetSize(handle!, size);
   }
 
   int write(ByteData data, [int vmoOffset = 0]) {
@@ -31,7 +31,7 @@ class Vmo extends _HandleWrapper<Vmo> {
       return ZX.ERR_INVALID_ARGS;
     }
 
-    return System.vmoWrite(handle, vmoOffset, data);
+    return System.vmoWrite(handle!, vmoOffset, data);
   }
 
   /// Duplicate this [Vmo] with the given rights.
@@ -44,7 +44,7 @@ class Vmo extends _HandleWrapper<Vmo> {
       return const ReadResult(ZX.ERR_INVALID_ARGS);
     }
 
-    return System.vmoRead(handle, vmoOffset, numBytes);
+    return System.vmoRead(handle!, vmoOffset, numBytes);
   }
 
   /// Maps the Vmo into the process's root vmar, and returns it as a typed data
@@ -57,11 +57,11 @@ class Vmo extends _HandleWrapper<Vmo> {
       const int status = ZX.ERR_INVALID_ARGS;
       throw ZxStatusException(status, getStringForStatus(status));
     }
-    MapResult r = System.vmoMap(handle);
+    MapResult r = System.vmoMap(handle!);
     if (r.status != ZX.OK) {
       throw ZxStatusException(r.status, getStringForStatus(r.status));
     }
-    return UnmodifiableUint8ListView(r.data!);
+    return UnmodifiableUint8ListView(r.data);
   }
 }
 

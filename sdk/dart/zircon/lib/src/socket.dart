@@ -37,7 +37,7 @@ class Socket extends _HandleWrapper<Socket> {
       return const WriteResult(ZX.ERR_INVALID_ARGS);
     }
 
-    return System.socketWrite(handle, data, options);
+    return System.socketWrite(handle!, data, options);
   }
 
   ReadResult read(int numBytes) {
@@ -45,7 +45,7 @@ class Socket extends _HandleWrapper<Socket> {
       return const ReadResult(ZX.ERR_INVALID_ARGS);
     }
 
-    return System.socketRead(handle, numBytes);
+    return System.socketRead(handle!, numBytes);
   }
 }
 
