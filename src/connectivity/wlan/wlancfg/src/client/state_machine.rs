@@ -342,8 +342,7 @@ async fn connecting_state(
                             connected_state(common_options, options.connect_request).into_state()
                         );
                     },
-                    fidl_sme::ConnectResultCode::CredentialRejected |
-                        fidl_sme::ConnectResultCode::WrongCredentialType => {
+                    fidl_sme::ConnectResultCode::CredentialRejected => {
                         info!("Failed to connect. Will not retry because of credential error: {:?}", code);
                         send_listener_state_update(
                             &common_options.update_sender,

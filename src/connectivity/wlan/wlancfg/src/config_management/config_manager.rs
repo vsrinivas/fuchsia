@@ -410,9 +410,6 @@ impl SavedNetworksManager {
                         fidl_sme::ConnectResultCode::CredentialRejected => {
                             network.perf_stats.failure_list.add(FailureReason::CredentialRejected);
                         }
-                        fidl_sme::ConnectResultCode::WrongCredentialType => {
-                            network.perf_stats.failure_list.add(FailureReason::WrongCredentialType);
-                        }
                         fidl_sme::ConnectResultCode::Failed => {
                             network.perf_stats.failure_list.add(FailureReason::GeneralFailure);
                         }

@@ -70,12 +70,8 @@ enum ConnectResultCode {
     CANCELED = 1;
     // Failed to join for some reason
     FAILED = 2;
-    // Failed to join because the type of credentials provided does not
-    // match what is required. For example, this code would be returned if
-    // a credential was provided for an open network.
-    WRONG_CREDENTIAL_TYPE = 3;
     // Failed to join because the authenticator rejected the credentials.
-    CREDENTIAL_REJECTED = 4;
+    CREDENTIAL_REJECTED = 3;
 };
 
 protocol ConnectTransaction {

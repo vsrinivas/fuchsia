@@ -80,8 +80,7 @@ pub async fn connect(
             fx_log_err!("Failed to connect to network");
             false
         }
-        fidl_sme::ConnectResultCode::CredentialRejected
-        | fidl_sme::ConnectResultCode::WrongCredentialType => {
+        fidl_sme::ConnectResultCode::CredentialRejected => {
             fx_log_err!("Failed to connect to network: {:?}", connection_code);
             false
         }
@@ -748,12 +747,6 @@ mod tests {
     #[test]
     fn connect_canceled_returns_false() {
         let connect_result = test_connect("TestAp", "", "", ConnectResultCode::Canceled);
-        assert!(!connect_result);
-    }
-
-    #[test]
-    fn connect_with_wrong_credential_type_returns_false() {
-        let connect_result = test_connect("TestAp", "", "", ConnectResultCode::WrongCredentialType);
         assert!(!connect_result);
     }
 

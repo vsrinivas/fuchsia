@@ -593,8 +593,7 @@ async fn handle_connect_transaction(
                         eprintln!("Connecting was canceled or superseded by another command")
                     }
                     ConnectResultCode::Failed => eprintln!("Failed to connect to network"),
-                    ConnectResultCode::CredentialRejected
-                    | ConnectResultCode::WrongCredentialType => {
+                    ConnectResultCode::CredentialRejected => {
                         eprintln!("Failed to connect to network: {:?}", code)
                     }
                 }
