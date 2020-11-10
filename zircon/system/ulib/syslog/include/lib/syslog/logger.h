@@ -47,6 +47,7 @@ __BEGIN_CDECLS
 // Configuration for a logger object.
 // Specifies the destination to which log messages should be written.
 // Multiple destinations may be used concurrently.
+// Only one of |log_sink_channel| and |log_sink_socket| may be used.
 typedef struct fx_logger_config {
   // The minimum log severity.
   // Log messages with lower severity will be discarded.
@@ -57,15 +58,27 @@ typedef struct fx_logger_config {
   // logger takes ownership of this fd.
   int console_fd;
 
-  // One end of the socket that goes to the log service. |ZX_HANDLE_INVALID| if
-  // logs should not go to the log service.
+  // A handle to the channel for a fuchsia.logger/LogSink instance to receive
+  // logs. |ZX_HANDLE_INVALID| if logs should not go to the LogSink or
+  // |log_sink_socket| should be used.
+  // If set, |log_sink_socket| must be |ZX_HANDLE_INVALID|.
   // logger takes ownership of this handle.
+  zx_handle_t log_sink_channel;
+
+  // One end of the socket that goes to the log service. |ZX_HANDLE_INVALID| if
+  // logs should not go to the log service or |log_sink_channel| should be used.
+  // If set, |log_sink_channel| must be |ZX_HANDLE_INVALID|.
+  // logger takes ownership of this handle.
+  zx_handle_t log_sink_socket;
+
+  // Deprecated. Use the new name |log_sink_socket| instead.
+  // TODO(fxbug.dev/63529): Rename all uses and remove.
   zx_handle_t log_service_channel;
 
   // An array of tag strings to associate with all messages written
   // by this logger.  Tags will be truncated if they are (individually) longer
   // than |FX_LOG_MAX_TAG_LEN|.
-  const char** tags;
+  const char* const* tags;
 
   // Number of tag strings.  Must be no more than |FX_LOG_MAX_TAGS|.
   size_t num_tags;
@@ -100,7 +113,7 @@ zx_status_t fx_logger_create_internal(const fx_logger_config_t* config, fx_logge
 
 // Destroys a logger object.
 //
-// This closes |console_fd| or |log_service_channel| which were passed in
+// This closes |console_fd|, |log_sink_channel|, or |log_sink_socket| which were passed in
 // |fx_logger_config_t|.
 void fx_logger_destroy(fx_logger_t* logger);
 
@@ -128,7 +141,7 @@ void fx_logger_set_connection(fx_logger_t* logger, zx_handle_t handle);
 void fx_logger_activate_fallback(fx_logger_t* logger, int fallback_fd);
 
 // Reconfigures the given logger with the specified configuration.
-// If |console_fd| and |log_service_channel| are invalid in |config|,
+// If |console_fd|, |log_sink_channel|, and |log_sink_socket| are invalid in |config|,
 // this function doesn't change the currently used file descriptor or channel.
 //
 // Returns:

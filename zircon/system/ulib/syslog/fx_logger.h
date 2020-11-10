@@ -92,7 +92,7 @@ struct fx_logger {
   zx_status_t VLogWriteToFd(int fd, fx_log_severity_t severity, const char* tag, const char* file,
                             uint32_t line, const char* msg, va_list args, bool perform_format);
 
-  zx_status_t SetTags(const char** tags, size_t ntags);
+  zx_status_t SetTags(const char* const* tags, size_t ntags);
 
   zx_koid_t pid_;
   std::atomic<fx_log_severity_t> severity_;

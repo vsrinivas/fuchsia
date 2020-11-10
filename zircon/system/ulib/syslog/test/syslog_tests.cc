@@ -16,8 +16,12 @@
 
 #include "zircon/system/ulib/syslog/helpers.h"
 
+namespace {
+
 const char* kFileName = syslog::internal::StripPath(__FILE__);
 const char* kFilePath = syslog::internal::StripDots(__FILE__);
+
+constexpr std::array<const char*, FX_LOG_MAX_TAGS + 1> kTooManyTags = {"1", "2", "3", "4", "5"};
 
 bool ends_with(const char* str, const fbl::String& suffix) {
   size_t str_len = strlen(str);
@@ -38,12 +42,14 @@ static void smallest_unused_fd(int* fd) {
   ASSERT_EQ(0, status);
 }
 
+}  // namespace
+
 TEST(SyslogTests, test_log_init_with_socket) {
   zx::socket socket0, socket1;
   EXPECT_EQ(ZX_OK, zx::socket::create(0, &socket0, &socket1));
   fx_logger_config_t config = {.min_severity = FX_LOG_INFO,
                                .console_fd = -1,
-                               .log_service_channel = socket1.release(),
+                               .log_sink_socket = socket1.release(),
                                .tags = nullptr,
                                .num_tags = 0};
   EXPECT_EQ(ZX_OK, fx_log_reconfigure(&config), "");
@@ -54,7 +60,7 @@ TEST(SyslogTests, test_log_enabled_macro) {
   EXPECT_EQ(ZX_OK, zx::socket::create(0, &socket0, &socket1));
   fx_logger_config_t config = {.min_severity = FX_LOG_INFO,
                                .console_fd = -1,
-                               .log_service_channel = socket1.release(),
+                               .log_sink_socket = socket1.release(),
                                .tags = nullptr,
                                .num_tags = 0};
   EXPECT_EQ(ZX_OK, fx_log_reconfigure(&config), "");
@@ -72,7 +78,7 @@ TEST(SyslogTests, test_log_enabled_macro) {
 static inline zx_status_t init_helper(int fd, const char** tags, size_t ntags) {
   fx_logger_config_t config = {.min_severity = FX_LOG_INFO,
                                .console_fd = fd,
-                               .log_service_channel = ZX_HANDLE_INVALID,
+                               .log_sink_socket = ZX_HANDLE_INVALID,
                                .tags = tags,
                                .num_tags = ntags};
 
@@ -297,7 +303,7 @@ TEST(SyslogTests, test_log_dont_dup) {
   zx_status_t status;
   fx_logger_config_t config = {.min_severity = FX_LOG_INFO,
                                .console_fd = -1,
-                               .log_service_channel = ZX_HANDLE_INVALID,
+                               .log_sink_socket = ZX_HANDLE_INVALID,
                                .tags = nullptr,
                                .num_tags = 0};
   status = fx_logger_create(&config, &logger);
@@ -312,10 +318,37 @@ TEST(SyslogTests, test_log_dont_dup) {
   fx_logger_destroy(logger);
 }
 
-TEST(SyslogTests, test_log_service_channel_closed_on_create_fail) {
-  const char* kTags[] = {"1", "2", "3", "4", "5", "6"};
-  const int kNumTags = 6;
-  EXPECT_LT(FX_LOG_MAX_TAGS, kNumTags);
+TEST(SyslogTests, test_fx_logger_create_with_null_config) {
+  fx_logger_t* logger;
+  EXPECT_EQ(ZX_ERR_INVALID_ARGS, fx_logger_create(nullptr, &logger));
+}
+
+TEST(SyslogTests, test_fx_logger_create_with_null_output_pointer) {
+  fx_logger_config_t config = {.min_severity = FX_LOG_INFO,
+                               .console_fd = -1,
+                               .log_sink_socket = ZX_HANDLE_INVALID,
+                               .tags = nullptr,
+                               .num_tags = 0};
+  EXPECT_EQ(ZX_ERR_INVALID_ARGS, fx_logger_create(&config, nullptr));
+}
+
+TEST(SyslogTests, test_fx_logger_reconfigure_with_null_config) {
+  // Create a logger
+  fx_logger_t* logger;
+  fx_logger_config_t config = {.min_severity = FX_LOG_INFO,
+                               .console_fd = -1,
+                               .log_sink_socket = ZX_HANDLE_INVALID,
+                               .tags = nullptr,
+                               .num_tags = 0};
+  ASSERT_EQ(ZX_OK, fx_logger_create(&config, &logger));
+
+  EXPECT_EQ(ZX_ERR_INVALID_ARGS, fx_logger_reconfigure(logger, nullptr));
+
+  fx_logger_destroy(logger);
+}
+
+TEST(SyslogTests, test_log_sink_channel_closed_on_create_fail) {
+  EXPECT_LT(FX_LOG_MAX_TAGS, kTooManyTags.size());
 
   zx::socket local, remote;
   EXPECT_EQ(ZX_OK, zx::socket::create(ZX_SOCKET_DATAGRAM, &local, &remote));
@@ -323,14 +356,165 @@ TEST(SyslogTests, test_log_service_channel_closed_on_create_fail) {
 
   fx_logger_config_t config = {.min_severity = FX_LOG_INFO,
                                .console_fd = -1,
-                               .log_service_channel = passed_handle,
-                               .tags = kTags,
-                               .num_tags = kNumTags};
+                               .log_sink_channel = passed_handle,
+                               .log_sink_socket = ZX_HANDLE_INVALID,
+                               .tags = kTooManyTags.data(),
+                               .num_tags = kTooManyTags.size()};
 
-  // Creation should fail because there are too many tags, and closing the
+  // This should fail because there are too many tags, and closing the
   // handle should fail because it is already closed.
   fx_logger_t* logger;
   EXPECT_EQ(ZX_ERR_INVALID_ARGS, fx_logger_create(&config, &logger));
   EXPECT_NE(ZX_HANDLE_INVALID, passed_handle);
   EXPECT_EQ(ZX_ERR_BAD_HANDLE, zx_handle_close(passed_handle));
 }
+
+TEST(SyslogTests, test_log_sink_socket_closed_on_create_fail) {
+  EXPECT_LT(FX_LOG_MAX_TAGS, kTooManyTags.size());
+
+  zx::socket local, remote;
+  EXPECT_EQ(ZX_OK, zx::socket::create(ZX_SOCKET_DATAGRAM, &local, &remote));
+  const zx_handle_t passed_handle = remote.release();
+
+  fx_logger_config_t config = {.min_severity = FX_LOG_INFO,
+                               .console_fd = -1,
+                               .log_sink_channel = ZX_HANDLE_INVALID,
+                               .log_sink_socket = passed_handle,
+                               .tags = kTooManyTags.data(),
+                               .num_tags = kTooManyTags.size()};
+
+  // This should fail because there are too many tags, and closing the
+  // handle should fail because it is already closed.
+  fx_logger_t* logger;
+  EXPECT_EQ(ZX_ERR_INVALID_ARGS, fx_logger_create(&config, &logger));
+  EXPECT_NE(ZX_HANDLE_INVALID, passed_handle);
+  EXPECT_EQ(ZX_ERR_BAD_HANDLE, zx_handle_close(passed_handle));
+}
+
+TEST(SyslogTests, test_both_handles_specified_fails_create_and_handles_closed) {
+  zx::socket local, remote;
+  EXPECT_EQ(ZX_OK, zx::socket::create(ZX_SOCKET_DATAGRAM, &local, &remote));
+  const zx_handle_t passed_log_sink_channel = local.release();
+  const zx_handle_t passed_log_sink_socket = remote.release();
+
+  fx_logger_config_t config = {.min_severity = FX_LOG_INFO,
+                               .console_fd = -1,
+                               .log_sink_channel = passed_log_sink_channel,
+                               .log_sink_socket = passed_log_sink_socket,
+                               .tags = nullptr,
+                               .num_tags = 0};
+
+  // This should fail because both handles were specified, and closing the
+  // handle should fail because it is already closed.
+  fx_logger_t* logger;
+  EXPECT_EQ(ZX_ERR_INVALID_ARGS, fx_logger_create(&config, &logger));
+  EXPECT_NE(ZX_HANDLE_INVALID, passed_log_sink_channel);
+  EXPECT_EQ(ZX_ERR_BAD_HANDLE, zx_handle_close(passed_log_sink_channel));
+  EXPECT_NE(ZX_HANDLE_INVALID, passed_log_sink_socket);
+  EXPECT_EQ(ZX_ERR_BAD_HANDLE, zx_handle_close(passed_log_sink_socket));
+}
+
+TEST(SyslogTests, test_log_sink_channel_closed_on_reconfigure_fail) {
+  EXPECT_LT(FX_LOG_MAX_TAGS, kTooManyTags.size());
+
+  zx::socket local, remote;
+  EXPECT_EQ(ZX_OK, zx::socket::create(ZX_SOCKET_DATAGRAM, &local, &remote));
+  const zx_handle_t passed_handle = remote.release();
+
+  fx_logger_config_t config = {.min_severity = FX_LOG_INFO,
+                               .console_fd = -1,
+                               .log_sink_channel = passed_handle,
+                               .log_sink_socket = ZX_HANDLE_INVALID,
+                               .tags = kTooManyTags.data(),
+                               .num_tags = kTooManyTags.size()};
+
+  // This should fail because there are too many tags, and closing the
+  // handle should fail because it is already closed.
+  EXPECT_EQ(ZX_ERR_INVALID_ARGS, fx_log_reconfigure(&config));
+  EXPECT_NE(ZX_HANDLE_INVALID, passed_handle);
+  EXPECT_EQ(ZX_ERR_BAD_HANDLE, zx_handle_close(passed_handle));
+}
+
+TEST(SyslogTests, test_log_sink_socket_closed_on_reconfigure_fail) {
+  EXPECT_LT(FX_LOG_MAX_TAGS, kTooManyTags.size());
+
+  zx::socket local, remote;
+  EXPECT_EQ(ZX_OK, zx::socket::create(ZX_SOCKET_DATAGRAM, &local, &remote));
+  const zx_handle_t passed_handle = remote.release();
+
+  fx_logger_config_t config = {.min_severity = FX_LOG_INFO,
+                               .console_fd = -1,
+                               .log_sink_channel = ZX_HANDLE_INVALID,
+                               .log_sink_socket = passed_handle,
+                               .tags = kTooManyTags.data(),
+                               .num_tags = kTooManyTags.size()};
+
+  // This should fail because there are too many tags, and closing the
+  // handle should fail because it is already closed.
+  EXPECT_EQ(ZX_ERR_INVALID_ARGS, fx_log_reconfigure(&config));
+  EXPECT_NE(ZX_HANDLE_INVALID, passed_handle);
+  EXPECT_EQ(ZX_ERR_BAD_HANDLE, zx_handle_close(passed_handle));
+}
+
+TEST(SyslogTests, test_both_handles_specified_fails_reconfigure_and_handles_closed) {
+  zx::socket local, remote;
+  EXPECT_EQ(ZX_OK, zx::socket::create(ZX_SOCKET_DATAGRAM, &local, &remote));
+  const zx_handle_t passed_log_sink_channel = local.release();
+  const zx_handle_t passed_log_sink_socket = remote.release();
+
+  fx_logger_config_t config = {.min_severity = FX_LOG_INFO,
+                               .console_fd = -1,
+                               .log_sink_channel = passed_log_sink_channel,
+                               .log_sink_socket = passed_log_sink_socket,
+                               .tags = nullptr,
+                               .num_tags = 0};
+
+  // This should fail because both handles were specified, and closing the
+  // handle should fail because it is already closed.
+  EXPECT_EQ(ZX_ERR_INVALID_ARGS, fx_log_reconfigure(&config));
+  EXPECT_NE(ZX_HANDLE_INVALID, passed_log_sink_channel);
+  EXPECT_EQ(ZX_ERR_BAD_HANDLE, zx_handle_close(passed_log_sink_channel));
+  EXPECT_NE(ZX_HANDLE_INVALID, passed_log_sink_socket);
+  EXPECT_EQ(ZX_ERR_BAD_HANDLE, zx_handle_close(passed_log_sink_socket));
+}
+
+#ifdef SYSLOG_STATIC
+TEST(SyslogTests, test_create_with_log_sink_channel_not_supported) {
+  zx::socket local, remote;
+  EXPECT_EQ(ZX_OK, zx::socket::create(ZX_SOCKET_DATAGRAM, &local, &remote));
+  const zx_handle_t passed_handle = remote.release();
+
+  fx_logger_config_t config = {.min_severity = FX_LOG_INFO,
+                               .console_fd = -1,
+                               .log_sink_channel = passed_handle,
+                               .log_sink_socket = ZX_HANDLE_INVALID,
+                               .tags = nullptr,
+                               .num_tags = 0};
+
+  // This should fail because log_sink_channel is not supported, and closing the
+  // handle should fail because it is already closed.
+  fx_logger_t* logger;
+  EXPECT_EQ(ZX_ERR_INVALID_ARGS, fx_logger_create(&config, &logger));
+  EXPECT_NE(ZX_HANDLE_INVALID, passed_handle);
+  EXPECT_EQ(ZX_ERR_BAD_HANDLE, zx_handle_close(passed_handle));
+}
+
+TEST(SyslogTests, test_reconfigure_with_log_sink_channel_not_supported) {
+  zx::socket local, remote;
+  EXPECT_EQ(ZX_OK, zx::socket::create(ZX_SOCKET_DATAGRAM, &local, &remote));
+  const zx_handle_t passed_handle = remote.release();
+
+  fx_logger_config_t config = {.min_severity = FX_LOG_INFO,
+                               .console_fd = -1,
+                               .log_sink_channel = passed_handle,
+                               .log_sink_socket = ZX_HANDLE_INVALID,
+                               .tags = nullptr,
+                               .num_tags = 0};
+
+  // This should fail because log_sink_channel is not supported, and closing the
+  // handle should fail because it is already closed.
+  EXPECT_EQ(ZX_ERR_INVALID_ARGS, fx_log_reconfigure(&config));
+  EXPECT_NE(ZX_HANDLE_INVALID, passed_handle);
+  EXPECT_EQ(ZX_ERR_BAD_HANDLE, zx_handle_close(passed_handle));
+}
+#endif

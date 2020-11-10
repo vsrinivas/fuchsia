@@ -4,6 +4,10 @@
 
 #include "fx_logger.h"
 
+#ifndef SYSLOG_STATIC
+#include <fuchsia/logger/llcpp/fidl.h>
+#endif
+
 #include <lib/syslog/logger.h>
 #include <lib/syslog/wire_format.h>
 #include <stdio.h>
@@ -59,10 +63,57 @@ void fx_logger::ActivateFallback(int fallback_fd) {
 }
 
 zx_status_t fx_logger::Reconfigure(const fx_logger_config_t* config) {
-  if (!config)
+  if (!config) {
     return ZX_ERR_INVALID_ARGS;
-  if (config->log_service_channel != ZX_HANDLE_INVALID || config->console_fd != -1) {
-    socket_.reset(config->log_service_channel);
+  }
+
+  // TODO(fxbug.dev/63529): Rename all |log_service_channel| uses and remove.
+  ZX_ASSERT(config->log_sink_socket == ZX_HANDLE_INVALID ||
+            config->log_service_channel == ZX_HANDLE_INVALID);
+  zx_handle_t log_sink_socket = (config->log_sink_socket != ZX_HANDLE_INVALID)
+                                    ? config->log_sink_socket
+                                    : config->log_service_channel;
+
+  if ((config->num_tags > FX_LOG_MAX_TAGS) ||
+#ifndef SYSLOG_STATIC
+      (config->log_sink_channel != ZX_HANDLE_INVALID && log_sink_socket != ZX_HANDLE_INVALID)
+#else
+      // |log_sink_channel| is not supported by SYSLOG_STATIC.
+      config->log_sink_channel != ZX_HANDLE_INVALID
+#endif
+  ) {
+    if (config->log_sink_channel != ZX_HANDLE_INVALID) {
+      zx_handle_close(config->log_sink_channel);
+    }
+    if (log_sink_socket != ZX_HANDLE_INVALID) {
+      zx_handle_close(log_sink_socket);
+    }
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  zx::socket socket;
+  if (log_sink_socket != ZX_HANDLE_INVALID) {
+    socket.reset(log_sink_socket);
+#ifndef SYSLOG_STATIC
+  } else if (config->log_sink_channel != ZX_HANDLE_INVALID) {
+    zx::socket remote;
+    zx_status_t status = zx::socket::create(ZX_SOCKET_DATAGRAM, &socket, &remote);
+    if (status != ZX_OK) {
+      return status;
+    }
+
+    ::llcpp::fuchsia::logger::LogSink::SyncClient logger_client(
+        zx::channel(config->log_sink_channel));
+
+    auto result = logger_client.Connect(std::move(remote));
+    if (result.status() != ZX_OK) {
+      return result.status();
+    }
+#endif
+  }
+
+  if (socket.is_valid() || config->console_fd != -1) {
+    socket_.swap(socket);
     fd_to_close_.reset(config->console_fd);
     logger_fd_.store(config->console_fd, std::memory_order_relaxed);
     // We don't expect to have a console fd and a socket at the same time.
@@ -277,7 +328,7 @@ zx_status_t fx_logger::VLogWrite(fx_log_severity_t severity, const char* tag, co
 }
 
 // This function is not thread safe
-zx_status_t fx_logger::SetTags(const char** tags, size_t ntags) {
+zx_status_t fx_logger::SetTags(const char* const* tags, size_t ntags) {
   if (ntags > FX_LOG_MAX_TAGS) {
     return ZX_ERR_INVALID_ARGS;
   }

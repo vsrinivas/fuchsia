@@ -113,20 +113,52 @@ zx_status_t fx_logger_reconfigure(fx_logger_t* logger, const fx_logger_config_t*
 SYSLOG_EXPORT
 zx_status_t fx_logger_create_internal(const fx_logger_config_t* config, fx_logger_t** out_logger,
                                       bool connect) {
-  if (config->num_tags > FX_LOG_MAX_TAGS) {
-    if (config->log_service_channel != ZX_HANDLE_INVALID)
-      zx_handle_close(config->log_service_channel);
+  // TODO(fxbug.dev/63529): Share the input checks and handle closing logic with
+  // fx_logger::Reconfigure().
+  if (!config || !out_logger) {
     return ZX_ERR_INVALID_ARGS;
   }
+
+  // TODO(fxbug.dev/63529): Rename all |log_service_channel| uses and remove.
+  ZX_ASSERT(config->log_sink_socket == ZX_HANDLE_INVALID ||
+            config->log_service_channel == ZX_HANDLE_INVALID);
+  zx_handle_t log_sink_socket = (config->log_sink_socket != ZX_HANDLE_INVALID)
+                                    ? config->log_sink_socket
+                                    : config->log_service_channel;
+
+  if ((config->num_tags > FX_LOG_MAX_TAGS) ||
+#ifndef SYSLOG_STATIC
+      (config->log_sink_channel != ZX_HANDLE_INVALID && log_sink_socket != ZX_HANDLE_INVALID)
+#else
+      // |log_sink_channel| is not supported by SYSLOG_STATIC.
+      config->log_sink_channel != ZX_HANDLE_INVALID
+#endif
+  ) {
+    if (config->log_sink_channel != ZX_HANDLE_INVALID) {
+      zx_handle_close(config->log_sink_channel);
+    }
+    if (log_sink_socket != ZX_HANDLE_INVALID) {
+      zx_handle_close(log_sink_socket);
+    }
+    return ZX_ERR_INVALID_ARGS;
+  }
+
   fx_logger_config_t c = *config;
   // In the SYSLOG_STATIC mode, we cannot connect to the logging service. We
   // should continue to instantiate the logger (which defaults to using stderr)
   // and the client can provide the appropriate channel / fd later.
 #ifndef SYSLOG_STATIC
-  if (connect && config->console_fd == -1 && config->log_service_channel == ZX_HANDLE_INVALID) {
+  if (connect && config->console_fd == -1 && config->log_sink_channel == ZX_HANDLE_INVALID &&
+      log_sink_socket == ZX_HANDLE_INVALID) {
     zx::socket sock = connect_to_logger();
-    if (sock.is_valid())
-      c.log_service_channel = sock.release();
+    if (sock.is_valid()) {
+      c.log_sink_socket = sock.release();
+      // For simplicity, the line above sets the value to the new name regardless of where it came
+      // from. Ensure that the old name is invalid in case the value came from it.
+      // TODO(fxbug.dev/63529): Rename all |log_service_channel| uses and remove this line, which
+      // ensures only one of these is set.
+      c.log_service_channel = ZX_HANDLE_INVALID;
+    }
   }
 #endif
   *out_logger = new fx_logger(&c);
