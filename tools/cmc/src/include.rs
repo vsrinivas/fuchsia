@@ -44,7 +44,7 @@ pub fn merge_includes(
     }
 
     // Write postprocessed JSON
-    if let Some(output_path) = output.clone() {
+    if let Some(output_path) = output.as_ref() {
         fs::OpenOptions::new()
             .create(true)
             .truncate(true)
