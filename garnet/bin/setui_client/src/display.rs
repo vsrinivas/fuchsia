@@ -14,6 +14,7 @@ pub async fn command(
     light_sensor: bool,
     low_light_mode: Option<LowLightMode>,
     theme: Option<Theme>,
+    screen_enabled: Option<bool>,
 ) -> Result<String, Error> {
     let mut output = String::new();
 
@@ -61,37 +62,21 @@ pub async fn command(
             Ok(_) => output.push_str(&format!("Successfully set theme to {:?}", theme_type)),
             Err(err) => output.push_str(&format!("{:?}", err)),
         }
+    } else if let Some(screen_enabled) = screen_enabled {
+        let mut settings = DisplaySettings::empty();
+        settings.screen_enabled = Some(screen_enabled);
+
+        let mutate_result = proxy.set(settings).await?;
+        match mutate_result {
+            Ok(_) => {
+                output.push_str(&format!("Successfully set screen_enabled to {:?}", screen_enabled))
+            }
+            Err(err) => output.push_str(&format!("{:?}", err)),
+        }
     } else {
         let setting_value = proxy.watch().await?;
-        let setting_string = describe_display_setting(&setting_value);
-        output.push_str(&setting_string);
+        output.push_str(&format!("{:?}", setting_value));
     }
 
     Ok(output)
-}
-
-fn describe_display_setting(display_setting: &DisplaySettings) -> String {
-    let mut output = String::new();
-
-    output.push_str("Display { ");
-
-    if let Some(brightness) = display_setting.brightness_value {
-        output.push_str(&format!("brightness_value: {} ", brightness))
-    }
-
-    if let Some(auto_brightness) = display_setting.auto_brightness {
-        output.push_str(&format!("auto_brightness: {} ", auto_brightness))
-    }
-
-    if let Some(low_light_mode) = display_setting.low_light_mode {
-        output.push_str(&format!("low_light_mode: {:?} ", low_light_mode))
-    }
-
-    if let Some(Theme { theme_type: Some(theme_type), .. }) = display_setting.theme {
-        output.push_str(&format!("theme: {:?} ", theme_type))
-    }
-
-    output.push_str("}");
-
-    return output;
 }

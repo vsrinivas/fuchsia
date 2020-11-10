@@ -65,6 +65,9 @@ pub enum SettingClient {
 
         #[structopt(short = "t", long = "theme", parse(try_from_str = "str_to_theme"))]
         theme: Option<fidl_fuchsia_settings::Theme>,
+
+        #[structopt(short = "s", long = "screen_enabled")]
+        screen_enabled: Option<bool>,
     },
 
     #[structopt(name = "do_not_disturb")]
@@ -316,6 +319,7 @@ pub async fn run_command(command: SettingClient) -> Result<(), Error> {
             light_sensor,
             low_light_mode,
             theme,
+            screen_enabled,
         } => {
             let display_service = connect_to_service::<fidl_fuchsia_settings::DisplayMarker>()
                 .context("Failed to connect to display service")?;
@@ -326,6 +330,7 @@ pub async fn run_command(command: SettingClient) -> Result<(), Error> {
                 light_sensor,
                 low_light_mode,
                 theme,
+                screen_enabled,
             )
             .await?;
             println!("Display: {}", output);
