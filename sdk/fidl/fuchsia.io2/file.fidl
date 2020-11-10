@@ -20,6 +20,7 @@ using Transfer = bytes:MAX_TRANSFER_SIZE;
 /// length.
 protocol File {
     compose Node;
+    compose AdvisoryLocking;
 
     /// Moves the offset at which the next invocation of [`Read`] or [`Write`]
     /// will occur. The seek offset is specific to each file connection.

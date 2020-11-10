@@ -4,6 +4,7 @@
 
 library fuchsia.io;
 
+using fuchsia.io2;
 using fuchsia.mem;
 using zx;
 
@@ -330,6 +331,7 @@ const uint32 VMO_FLAG_EXACT = 0x00020000;
 /// File defines the interface of a node which contains a flat layout of data.
 protocol File {
     compose Node;
+    compose fuchsia.io2.AdvisoryLocking;
 
     /// Reads `count` bytes at the seek offset.
     /// The seek offset is moved forward by the number of bytes read.

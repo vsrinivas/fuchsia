@@ -27,7 +27,7 @@ use {
         VMO_FLAG_EXACT, VMO_FLAG_EXEC, VMO_FLAG_PRIVATE, VMO_FLAG_READ, VMO_FLAG_WRITE,
     },
     fidl_fuchsia_mem::Buffer,
-    fuchsia_zircon::{sys::ZX_OK, Status},
+    fuchsia_zircon::{sys::ZX_ERR_NOT_SUPPORTED, sys::ZX_OK, Status},
     futures::stream::StreamExt,
     static_assertions::assert_eq_size,
     std::sync::Arc,
@@ -292,6 +292,9 @@ impl<T: 'static + File> FileConnection<T> {
             FileRequest::GetBuffer { flags, responder } => {
                 let (status, mut buffer) = self.handle_get_buffer(flags).await;
                 responder.send(status.into_raw(), buffer.as_mut())?;
+            }
+            FileRequest::AdvisoryLock { request: _, responder } => {
+                responder.send(&mut Err(ZX_ERR_NOT_SUPPORTED))?;
             }
         }
         Ok(ConnectionState::Alive)

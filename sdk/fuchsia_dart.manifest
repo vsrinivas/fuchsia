@@ -20,6 +20,7 @@ sdk://fidl/fuchsia.images
 sdk://fidl/fuchsia.input
 sdk://fidl/fuchsia.intl
 sdk://fidl/fuchsia.io
+sdk://fidl/fuchsia.io2
 sdk://fidl/fuchsia.logger
 sdk://fidl/fuchsia.media
 sdk://fidl/fuchsia.media.audio

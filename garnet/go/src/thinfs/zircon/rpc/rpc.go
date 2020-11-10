@@ -19,6 +19,7 @@ import (
 	"unsafe"
 
 	"fidl/fuchsia/io"
+	"fidl/fuchsia/io2"
 	"fidl/fuchsia/mem"
 
 	"go.fuchsia.dev/fuchsia/garnet/go/src/thinfs/fs"
@@ -543,6 +544,10 @@ func (f *fileWrapper) GetFlags(ctx fidl.Context) (int32, uint32, error) {
 
 func (f *fileWrapper) NodeGetFlags(ctx fidl.Context) (int32, uint32, error) {
 	return f.getFlagsInternal(ctx)
+}
+
+func (f *fileWrapper) AdvisoryLock(ctx fidl.Context, req io2.AdvisoryLockRequest) (io2.AdvisoryLockingAdvisoryLockResult, error) {
+	return io2.AdvisoryLockingAdvisoryLockResultWithErr(int32(zx.ErrNotSupported)), nil
 }
 
 // NodeSetFlags is a transitional method, and if it's unimplemented the current behavior

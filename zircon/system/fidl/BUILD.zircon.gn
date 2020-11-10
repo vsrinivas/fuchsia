@@ -16,6 +16,35 @@ fidl_c_header("fuchsia-io") {
   sources = [ "../../../sdk/fidl/fuchsia.io/io.fidl" ]
 
   deps = [
+    ":fuchsia-io2",
+    ":fuchsia-mem",
+    ":zx",
+  ]
+}
+
+fidl_c_header("fuchsia-io2") {
+  sources = [
+    "../../../sdk/fidl/fuchsia.io2/connection-info.fidl",
+    "../../../sdk/fidl/fuchsia.io2/connection-options.fidl",
+    "../../../sdk/fidl/fuchsia.io2/connector.fidl",
+    "../../../sdk/fidl/fuchsia.io2/debuglog.fidl",
+    "../../../sdk/fidl/fuchsia.io2/deprecated.fidl",
+    "../../../sdk/fidl/fuchsia.io2/directory-entry.fidl",
+    "../../../sdk/fidl/fuchsia.io2/directory-iterator.fidl",
+    "../../../sdk/fidl/fuchsia.io2/directory-watcher.fidl",
+    "../../../sdk/fidl/fuchsia.io2/directory.fidl",
+    "../../../sdk/fidl/fuchsia.io2/file.fidl",
+    "../../../sdk/fidl/fuchsia.io2/io2.fidl",
+    "../../../sdk/fidl/fuchsia.io2/locking.fidl",
+    "../../../sdk/fidl/fuchsia.io2/memory.fidl",
+    "../../../sdk/fidl/fuchsia.io2/node-attributes.fidl",
+    "../../../sdk/fidl/fuchsia.io2/node.fidl",
+    "../../../sdk/fidl/fuchsia.io2/pipe.fidl",
+    "../../../sdk/fidl/fuchsia.io2/posix-socket.fidl",
+    "../../../sdk/fidl/fuchsia.io2/rights-abilities.fidl",
+  ]
+
+  deps = [
     ":fuchsia-mem",
     ":zx",
   ]

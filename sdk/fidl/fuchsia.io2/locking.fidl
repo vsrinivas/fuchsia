@@ -1,0 +1,106 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.io2;
+
+using zx;
+
+/// Advisory locking protocol.
+///
+/// This protocol is intended to be composed into the |File| protocol to
+/// provide support for advisory locking.
+///
+/// Advisory locks are purely advisory. They do not prevent actual read or
+/// write operations from occurring on the file, either through this
+/// connection or through other connections.
+///
+/// These primitives are designed to support the flock() and fcntl(),
+/// specifically F_SETLK, F_SETLKW, and F_GETLK, functionality that code
+/// running on Fuchsia expects from other operating systems.
+protocol AdvisoryLocking {
+    /// Acquires an advisory lock on the underlying file.
+    ///
+    /// The lock lasts until either this connection is closed or
+    /// this method is called with |AdvisoryLockType.UNLOCK| to release the lock
+    /// explicitly.
+    ///
+    /// Advisory locks are purely advisory. They do not prevent actual read or
+    /// write operations from occurring on the file, either through this
+    /// connection or through other connections.
+    ///
+    /// This method requires the following rights:
+    ///
+    /// * [`Rights.READ_BYTES`] if `request.type` is [`AdvisoryLockType.READ`].
+    /// * [`Rights.WRITE_BYTES`] if `request.type` is
+    ///   [`AdvisoryLockType.WRITE`].
+    ///
+    /// # Errors
+    ///
+    /// * `ZX_ERR_BAD_STATE` The specified type of lock cannot be acquired. For
+    ///   example, another connection might hold a conflicting lock type.
+    /// * `ZX_ERR_NOT_SUPPORTED` This file does not support advisory locking.
+    /// * `ZX_ERR_ACCESS_DENIED` This connection does not have sufficient rights
+    ///   to acquire the given type of lock.
+    [Transitional]
+    AdvisoryLock(AdvisoryLockRequest request) -> () error zx.status;
+};
+
+/// A type of advisory lock.
+///
+/// Used with [`AdvisoryLocking.AdvisoryLock`].
+enum AdvisoryLockType : uint32 {
+    /// Zero or more connections can hold read locks on a file simultaneously.
+    READ = 1;
+
+    /// At most one connection can hold a write lock on a file simultaneously.
+    /// When a write lock is held on a file, no other types of locks can be held
+    /// on that file.
+    WRITE = 2;
+
+    /// The region specifies a region to be unlocked.
+    UNLOCK = 3;
+};
+
+/// A range within a file associated with an advisory lock.
+///
+/// The range can extend beyond the end of the file but cannot extend beyond
+/// the beginning of the file.
+struct AdvisoryLockRange {
+    /// The location in the file from which [`offset`] is computed.
+    SeekOrigin origin;
+
+    /// The start of the byte range, expressed as an offset from [`origin`].
+    /// Cannot be negative if [`origin`] is [`SeekOrigin.START`].
+    int64 offset;
+
+    /// The length of the byte range in bytes.
+    ///
+    /// If the length is zero, then the byte range exends until the end of the
+    /// file, regardless of how large the file becomes.
+    ///
+    /// If the length is negative, the byte range includes the bytes `offset` +
+    /// `length` up to, and including, `offset` - 1, provided this range does
+    /// not extend beyond the beginning of the file.
+    int64 length;
+};
+
+table AdvisoryLockRequest {
+    /// The type of lock to be acquired.
+    ///
+    /// If this field is absent, the [`AdvisoryLock`] method will fail
+    /// with ZX_ERR_INVALID_ARGS.
+    1: AdvisoryLockType type;
+
+    /// The byte range within the file to be locked. See [`AdvisoryLockRange`]
+    /// for semantics.
+    ///
+    /// If this field is absent, the range defaults to the entire file.
+    2: AdvisoryLockRange range;
+
+    /// Whether the file should wait reply to the [`AdvisoryLock`]
+    /// method until the requested lock can be acquired.
+    ///
+    /// If this field is absent, the file will not wait.
+    3: bool wait;
+};

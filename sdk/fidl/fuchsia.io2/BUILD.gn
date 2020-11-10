@@ -19,6 +19,7 @@ fidl("fuchsia.io2") {
     "directory.fidl",
     "file.fidl",
     "io2.fidl",
+    "locking.fidl",
     "memory.fidl",
     "node-attributes.fidl",
     "node.fidl",
