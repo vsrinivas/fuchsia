@@ -2,6 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/dart/dart_component.gni")
+import("//build/dart/dart_library.gni")
+import("//build/dart/fidl_move.gni")
 import("//build/fidl/fidl.gni")
 import("//build/rust/rustc_binary.gni")
 import("//src/sys/build/components.gni")
@@ -106,6 +109,26 @@ fuchsia_component("rust-server") {
   deps = [ ":rust_server" ]
 }
 
+## Dart Test Server
+
+dart_library("dart_server") {
+  package_name = "dart_server"
+  package_root = "dart"
+  sources = [ "main.dart" ]
+  deps = [
+    "//sdk/fidl/fuchsia.sys",
+    "//src/tests/fidl/compatibility:fidl",
+    "//topaz/public/dart/fuchsia_services",
+    dart_package_label.fidl,
+  ]
+}
+
+dart_component("dart-server") {
+  manifest = "meta/dart-server.cmx"
+  main_package = "dart_server"
+  deps = [ ":dart_server" ]
+}
+
 ## Test Runner
 
 executable("fidl_compatibility_test_executable") {
@@ -160,7 +183,7 @@ fidl_compatibilty_test_servers = [
   "go",
   "llcpp",
   "rust",
-  "fuchsia-pkg://fuchsia.com/fidl_dart_compatibility_test_server#meta/fidl_dart_compatibility_test_server.cmx",
+  "dart",
 ]
 
 test_component_labels = []
@@ -234,12 +257,11 @@ fuchsia_package("fidl_compatibility_test_package") {
            ":llcpp-server",
            ":rust-server",
            "golang:go-server",
+           ":dart-server",
          ] + test_component_labels
 }
 
 group("compatibility") {
   testonly = true
   deps = test_labels
-
-  deps += [ "//topaz/bin/fidl_compatibility_test/dart:fidl_dart_compatibility_test_server" ]
 }

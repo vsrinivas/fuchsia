@@ -78,8 +78,8 @@ Source compatibility tests are used to test FIDL's
 
 Compatibility tests are integration tests that run FIDL clients
 and servers from different bindings with each other in order to test that they
-are compatible. Compatibility tests are found in
-[/src/tests/fidl/compatibility/] and [/topaz/bin/fidl_compatibility_test/].
+are compatible. Compatibility tests are found at
+[/src/tests/fidl/compatibility/].
 
 ##### Dangerous identifiers
 
@@ -705,7 +705,6 @@ fidl fmt --library my_library.fidl -i
 [/topaz/tests/fidl-changes]: /topaz/tests/fidl-changes
 
 [/src/tests/fidl/compatibility/]: /src/tests/fidl/compatibility/
-[/topaz/bin/fidl_compatibility_test/]: /topaz/bin/fidl_compatibility_test/
 [/src/tests/fidl/dangerous_identifiers]: /src/tests/fidl/dangerous_identifiers
 [/topaz/tests/fidl-dangerous-identifiers]: /topaz/tests/fidl-dangerous-identifiers
 

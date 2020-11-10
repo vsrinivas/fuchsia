@@ -75,14 +75,12 @@ The logic for `EchoStructNoRetVal()` is similar. Instead of waiting for a
 response directly, the test waits to receive an `EchoEvent()`. And instead of
 calling the client back directly, the server sends the `EchoEvent()`.
 
-The code for the compatibility tests are located at:
+The code for the compatibility tests are located at
+`src/tests/fidl/compatibility`. It contains FIDL definitions and the server
+implementations for Dart, HLCPP, LLCPP, Rust, and Go.
 
-- `src/tests/fidl/compatibility`: contains FIDL definitions and the server
-  implementations for HLCPP, LLCPP, Rust, and Go.
-- `topaz/bin/fidl_compatibility_test`: contains the server implementation for
-  the dart bindings.
-
-The test runner and all of the test server components except for Dart are in a single package, `fuchsia-pkg://fuchsia.com/fidl-compatibility-test`.
+The test runner and all of the test server components are in a single package,
+`fuchsia-pkg://fuchsia.com/fidl-compatibility-test`.
 
 ## Running
 
