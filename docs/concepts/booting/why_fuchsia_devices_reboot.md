@@ -34,8 +34,8 @@ considered fatal and the system will reboot.
 ### The system runs out of memory
 
 If the kernel detects that the amount of free physical memory falls below a
-threshold, the system will reboot. The kernel does not kill processes to try
-to reclaim memory before rebooting, meaning a single process could cause a
+threshold, the system will reboot. The kernel does not kill processes to try to
+reclaim memory before rebooting, meaning a single process could cause a
 system-wide shortage of memory and force the device to reboot.
 
 ### Cold boot
@@ -88,6 +88,18 @@ throttling the CPU or reducing the audio volume.
 If the session manager is unable to restart a crashed session or a session
 determines it has failed in an unrecoverable manner, the device reboots.
 
+### Sysmgr failure
+
+If the system manager for v1 components (sysmgr) crashes, the device reboots.
+
+### Critical component failure
+
+If a critical component managed by sysmgr crashed, the device reboots.
+
+### Factory data reset
+
+Following a data reset to the factory defaults, the device reboots.
+
 ### Generic graceful
 
 The platform can know whether the reboot was graceful, but cannot distinguish
@@ -112,22 +124,25 @@ Fuchsia exposes the reason a device last (re)booted through
 [FIDL](/sdk/fidl/fuchsia.feedback/last_reboot_info.fidl) and tracks it on Cobalt
 and the crash server.
 
-Reboot reason                | __FIDL__                      | __Cobalt event__          | __Crash signature__
-:--------------------------- | :---------------------------- | :------------------------ | :------------------
-Kernel panic                 | `KERNEL_PANIC`                | `KernelPanic`             | `fuchsia-kernel-panic`
-System running out of memory | `SYSTEM_OUT_OF_MEMORY`        | `SystemOutOfMemory`       | `fuchsia-oom`
-Cold boot                    | `COLD`                        | `Cold`                    | N/A\*
-Brownout                     | `BROWNOUT`                    | `Brownout`                | `fuchsia-brownout`
-Hardware watchdog timeout    | `HARDWARE_WATCHDOG_TIMEOUT`   | `HardwareWatchdogTimeout` | `fuchsia-hw-watchdog-timeout`
-Software watchdog timeout    | `SOFTWARE_WATCHDOG_TIMEOUT`   | `SoftwareWatchdogTimeout` | `fuchsia-sw-watchdog-timeout`
-Brief power loss             | `BRIEF POWER LOSS`            | `BriefPowerLoss`          | `fuchsia-brief-power-loss`
-User request                 | `USER_REQUEST`                | `UserRequest`             | N/A\*
-System update                | `SYSTEM_UPDATE`               | `SystemUpdate`            | N/A\*
-High temperature             | `HIGH_TEMPERATURE`            | `HighTemperature`         | N/A\*
-Session failure              | `SESSION_FAILURE`             | `SessionFailure`          | N/A\*
-Generic graceful             | *graceful* field set to true  | `GenericGraceful`         | N/A\*
-Generic ungraceful           | *graceful* field set to false | `GenericUngraceful`       | N/A\*\*
-Unknown                      | *graceful* field not set      | `Unknown`                 | N/A\*\*
+Reboot reason                | __FIDL__                      | __Cobalt event__           | __Crash signature__
+:--------------------------- | :---------------------------- | :------------------------- | :------------------
+Kernel panic                 | `KERNEL_PANIC`                | `KernelPanic`              | `fuchsia-kernel-panic`
+System running out of memory | `SYSTEM_OUT_OF_MEMORY`        | `SystemOutOfMemory`        | `fuchsia-oom`
+Cold boot                    | `COLD`                        | `Cold`                     | N/A\*
+Brownout                     | `BROWNOUT`                    | `Brownout`                 | `fuchsia-brownout`
+Hardware watchdog timeout    | `HARDWARE_WATCHDOG_TIMEOUT`   | `HardwareWatchdogTimeout`  | `fuchsia-hw-watchdog-timeout`
+Software watchdog timeout    | `SOFTWARE_WATCHDOG_TIMEOUT`   | `SoftwareWatchdogTimeout`  | `fuchsia-sw-watchdog-timeout`
+Brief power loss             | `BRIEF POWER LOSS`            | `BriefPowerLoss`           | `fuchsia-brief-power-loss`
+User request                 | `USER_REQUEST`                | `UserRequest`              | N/A\*
+System update                | `SYSTEM_UPDATE`               | `SystemUpdate`             | N/A\*
+High temperature             | `HIGH_TEMPERATURE`            | `HighTemperature`          | N/A\*
+Session failure              | `SESSION_FAILURE`             | `SessionFailure`           | `fuchsia-session-failure`
+Sysmgr failure               | `SYSMGR_FAILURE`              | `SysmgrFailure`            | `fuchsia-sysmgr-failure`
+Critical component failure   | `CRITICAL_COMPONENT_FAILURE`  | `CriticalComponentFailure` | `fuchsia-critical-component-failure`
+Factory data reset           | `FACTORY_DATA_RESET`          | `FactoryDataReset`         | N/A\*
+Generic graceful             | *graceful* field set to true  | `GenericGraceful`          | N/A\*
+Generic ungraceful           | *graceful* field set to false | `GenericUngraceful`        | N/A\*\*
+Unknown                      | *graceful* field not set      | `Unknown`                  | `fuchsia-reboot-log-not-parseable`
 
 \* Not a crash. \
 \*\* Currently not implemented.
