@@ -88,6 +88,11 @@ pub(super) fn convert_snr(snr: i8) -> metrics::ConnectionResultPerSnrMetricDimen
     }
 }
 
+// All Yes/No metric dimensions are aliased to
+// metrics::ConnectionSuccessWithAttemptsBreakdownMetricDimensionIsMultiBss
+// in the auto-generation of the metrics crate. This function uses the
+// source of the aliases rather than each alias itself since it does
+// not make a difference otherwise.
 pub(super) fn convert_bool_dim(
     value: bool,
 ) -> metrics::ConnectionSuccessWithAttemptsBreakdownMetricDimensionIsMultiBss {
