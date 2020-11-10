@@ -60,12 +60,12 @@ enum intel_rtc_register_b {
 };
 
 static uint8_t read_reg_raw(enum intel_rtc_registers reg) {
-  outp(RTC_IDX_REG, reg);
+  outp(RTC_IDX_REG, (uint8_t)reg);
   return inp(RTC_DATA_REG);
 }
 
 static void write_reg_raw(enum intel_rtc_registers reg, uint8_t val) {
-  outp(RTC_IDX_REG, reg);
+  outp(RTC_IDX_REG, (uint8_t)reg);
   outp(RTC_DATA_REG, val);
 }
 
@@ -179,7 +179,7 @@ static void write_time(const fuchsia_hardware_rtc_Time* rtc) {
 
   write_reg(REG_DAY_OF_MONTH, rtc->day, reg_is_binary);
   write_reg(REG_MONTH, rtc->month, reg_is_binary);
-  write_reg(REG_YEAR, rtc->year - 2000, reg_is_binary);
+  write_reg(REG_YEAR, (uint8_t)(rtc->year - 2000), reg_is_binary);
 
   write_reg_raw(REG_B, read_reg_raw(REG_B) & ~REG_B_UPDATE_CYCLE_INHIBIT_BIT);
 
