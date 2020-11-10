@@ -14,6 +14,7 @@ import (
 	"runtime/trace"
 	"strings"
 	"sync"
+	"time"
 
 	"golang.org/x/sync/errgroup"
 )
@@ -21,6 +22,8 @@ import (
 type UnlicensedFiles struct {
 	files []string
 }
+
+const exampleHeader = "# Copyright %d The Fuchsia Authors. All rights reserved.\n# Use of this source code is governed by a BSD-style license that can be\n# found in the LICENSE file."
 
 // Walk gathers all Licenses then checks for a match within each filtered file
 func Walk(ctx context.Context, config *Config) error {
@@ -96,10 +99,12 @@ func Walk(ctx context.Context, config *Config) error {
 			return fmt.Errorf("Encountered prohibited license types. File paths are:\n\n%v\n\nPlease remove the offending files, or reach out to //tools/check-licenses/OWNERS for license exceptions or errors.", files)
 		}
 	}
+	year, _, _ := time.Now().Date()
+	header := fmt.Sprintf(exampleHeader, year)
 
 	if config.ExitOnUnlicensedFiles && len(unlicensedFiles.files) > 0 {
 		files := strings.Join(unlicensedFiles.files, "\n")
-		return fmt.Errorf("Encountered files that are missing licenses. File paths are:\n\n%v\n\nPlease add license information to the headers of each file, or reach out to //tools/check-licenses/OWNERS for file exceptions or errors.", files)
+		return fmt.Errorf("Encountered files that are missing licenses. File paths are:\n\n%v\n\nPlease add license information to the headers of each file. If this is Fuchsia code (e.g. not in //prebuilt, //third_party, etc), paste this example header text into the top of each file (replacing '#' with the proper comment character for your file):\n\n%s\n\nReach out to //tools/check-licenses/OWNERS for file exceptions or errors.\n", files, header)
 	}
 
 	if config.OutputLicenseFile {
