@@ -370,18 +370,18 @@ mod tests {
     const OFFSET: zx::Duration = zx::Duration::from_seconds(1111_000);
     const OFFSET_2: zx::Duration = zx::Duration::from_seconds(2222_000);
     const STD_DEV: zx::Duration = zx::Duration::from_millis(88);
+    const BACKSTOP_TIME: zx::Time = zx::Time::from_nanos(222222 * NANOS_PER_SECOND);
 
     lazy_static! {
         static ref TEST_TRACK: Track = Track::from(TEST_ROLE);
-        static ref BACKSTOP_TIME: zx::Time = zx::Time::from_nanos(222222 * NANOS_PER_SECOND);
         static ref CLOCK_OPTS: zx::ClockOpts = zx::ClockOpts::empty();
         static ref START_CLOCK_SOURCE: StartClockSource = StartClockSource::External(TEST_ROLE);
     }
 
     /// Creates and starts a new clock with default options.
     fn create_clock() -> Arc<zx::Clock> {
-        let clock = zx::Clock::create(*CLOCK_OPTS, Some(*BACKSTOP_TIME)).unwrap();
-        clock.update(zx::ClockUpdate::new().value(*BACKSTOP_TIME)).unwrap();
+        let clock = zx::Clock::create(*CLOCK_OPTS, Some(BACKSTOP_TIME)).unwrap();
+        clock.update(zx::ClockUpdate::new().value(BACKSTOP_TIME)).unwrap();
         Arc::new(clock)
     }
 
@@ -398,7 +398,7 @@ mod tests {
         events.insert(0, TimeSourceEvent::StatusChange { status: ftexternal::Status::Ok });
         let time_source = FakeTimeSource::events(events);
         let time_source_manager = TimeSourceManager::new_with_delays_disabled(
-            *BACKSTOP_TIME,
+            BACKSTOP_TIME,
             TEST_ROLE,
             time_source,
             Arc::clone(&diagnostics),
@@ -441,7 +441,7 @@ mod tests {
         let mut executor = fasync::Executor::new().unwrap();
 
         let clock = create_clock();
-        let rtc = FakeRtc::valid(*BACKSTOP_TIME);
+        let rtc = FakeRtc::valid(BACKSTOP_TIME);
         let diagnostics = Arc::new(FakeDiagnostics::new());
 
         // Spawn test notifier and verify the initial state

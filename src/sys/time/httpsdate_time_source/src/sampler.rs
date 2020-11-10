@@ -283,7 +283,6 @@ mod test {
 
     lazy_static! {
         static ref TEST_URI: hyper::Uri = "https://localhost/".parse().unwrap();
-        static ref TEST_UTC: zx::Time = zx::Time::from_nanos(1_000_000_000_000);
     }
 
     const ONE_SECOND: zx::Duration = zx::Duration::from_seconds(1);

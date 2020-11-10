@@ -14,8 +14,6 @@ pub use self::composite::CompositeDiagnostics;
 pub use self::fake::FakeDiagnostics;
 pub use self::inspect::{InspectDiagnostics, INSPECTOR};
 
-#[cfg(test)]
-use lazy_static::lazy_static;
 use {
     crate::enums::{
         ClockCorrectionStrategy, ClockUpdateReason, InitialClockState, InitializeRtcOutcome, Role,
@@ -29,11 +27,9 @@ use {
 #[cfg(test)]
 pub const ANY_DURATION: zx::Duration = zx::Duration::from_nanos(i64::MIN);
 
+/// A special time that will match any value during an `eq_with_any` operation.
 #[cfg(test)]
-lazy_static! {
-    /// A special time that will match any value during an `eq_with_any` operation.
-    pub static ref ANY_TIME: zx::Time = zx::Time::from_nanos(i64::MIN);
-}
+pub const ANY_TIME: zx::Time = zx::Time::from_nanos(i64::MIN);
 
 /// An event that is potantialle worth recording in one or more diagnostics systems.
 #[derive(Clone, Debug, PartialEq)]

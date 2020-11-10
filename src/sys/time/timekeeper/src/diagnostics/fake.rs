@@ -63,7 +63,7 @@ impl EqWithAny for zx::Duration {
 
 impl EqWithAny for zx::Time {
     fn eq_with_any(&self, other: &Self) -> bool {
-        *self == *ANY_TIME || self == other
+        *self == ANY_TIME || self == other
     }
 }
 

@@ -268,16 +268,11 @@ mod test {
         crate::time_source::FakeTimeSource,
         anyhow::anyhow,
         fuchsia_async as fasync,
-        lazy_static::lazy_static,
     };
 
     const BACKSTOP_FACTOR: i64 = 100;
     const TEST_ROLE: Role = Role::Monitor;
     const STD_DEV: zx::Duration = zx::Duration::from_millis(22);
-
-    lazy_static! {
-        static ref ZERO_TIME: zx::Time = zx::Time::from_nanos(0);
-    }
 
     /// A provider of artificial monotonic times that increment by a fixed duration each call.
     struct FakeMonotonicProvider {
@@ -288,7 +283,7 @@ mod test {
     impl FakeMonotonicProvider {
         /// Constructs a new `FakeMonotonicProvider` that increments by `increment` on each call.
         pub fn new(increment: zx::Duration) -> Self {
-            FakeMonotonicProvider { increment, last_time: *ZERO_TIME }
+            FakeMonotonicProvider { increment, last_time: zx::Time::ZERO }
         }
     }
 
@@ -307,7 +302,7 @@ mod test {
         diagnostics: Arc<FakeDiagnostics>,
     ) -> TimeSourceManager<FakeTimeSource, FakeDiagnostics, FakeMonotonicProvider> {
         TimeSourceManager {
-            backstop: *ZERO_TIME + (MIN_UPDATE_DELAY * BACKSTOP_FACTOR),
+            backstop: zx::Time::ZERO + (MIN_UPDATE_DELAY * BACKSTOP_FACTOR),
             delays_enabled: true,
             monotonic: FakeMonotonicProvider::new(MIN_UPDATE_DELAY),
             role: TEST_ROLE,
@@ -327,7 +322,7 @@ mod test {
         diagnostics: Arc<FakeDiagnostics>,
     ) -> TimeSourceManager<FakeTimeSource, FakeDiagnostics, FakeMonotonicProvider> {
         TimeSourceManager {
-            backstop: *ZERO_TIME + (MIN_UPDATE_DELAY * BACKSTOP_FACTOR),
+            backstop: zx::Time::ZERO + (MIN_UPDATE_DELAY * BACKSTOP_FACTOR),
             delays_enabled: false,
             monotonic: FakeMonotonicProvider::new(MIN_UPDATE_DELAY),
             role: TEST_ROLE,
@@ -344,8 +339,8 @@ mod test {
     /// accept between samples.rate at hence the rate we choose our fake monotonic clock to tick at.
     fn create_sample(utc_factor: i64, monotonic_factor: i64) -> Sample {
         Sample {
-            utc: *ZERO_TIME + (MIN_UPDATE_DELAY * utc_factor),
-            monotonic: *ZERO_TIME + (MIN_UPDATE_DELAY * monotonic_factor),
+            utc: zx::Time::ZERO + (MIN_UPDATE_DELAY * utc_factor),
+            monotonic: zx::Time::ZERO + (MIN_UPDATE_DELAY * monotonic_factor),
             std_dev: STD_DEV,
         }
     }
@@ -372,7 +367,10 @@ mod test {
 
         assert_eq!(manager.next_sample().await, create_sample(BACKSTOP_FACTOR + 1, 1));
         assert_eq!(manager.next_sample().await, create_sample(BACKSTOP_FACTOR + 3, 3));
-        assert_eq!(manager.last_accepted_sample_arrival, Some(*ZERO_TIME + MIN_UPDATE_DELAY * 3));
+        assert_eq!(
+            manager.last_accepted_sample_arrival,
+            Some(zx::Time::ZERO + MIN_UPDATE_DELAY * 3)
+        );
 
         diagnostics.assert_events(&[
             Event::TimeSourceStatus { role: TEST_ROLE, status: Status::Ok },
@@ -478,8 +476,12 @@ mod test {
     async fn restart_on_launch_failure() {
         let time_source = FakeTimeSource::failing();
         let diagnostics = Arc::new(FakeDiagnostics::new());
-        let mut manager =
-            TimeSourceManager::new(*ZERO_TIME, TEST_ROLE, time_source, Arc::clone(&diagnostics));
+        let mut manager = TimeSourceManager::new(
+            zx::Time::ZERO,
+            TEST_ROLE,
+            time_source,
+            Arc::clone(&diagnostics),
+        );
 
         // Calling next sample on this manager with the restart delay enabled should lead to
         // failed launch and then a few minute cooldown period before relaunch. We test for this by
@@ -509,7 +511,7 @@ mod test {
         // we try to validate a sample.
         assert_eq!(
             manager.validate_sample(&create_sample(BACKSTOP_FACTOR, 1)),
-            Ok(*ZERO_TIME + MIN_UPDATE_DELAY)
+            Ok(zx::Time::ZERO + MIN_UPDATE_DELAY)
         );
         assert_eq!(
             manager.validate_sample(&create_sample(BACKSTOP_FACTOR - 1, 2)),
@@ -537,7 +539,7 @@ mod test {
             Some(zx::Time::from_nanos(MIN_UPDATE_DELAY.into_nanos() / 2 * 11));
         assert_eq!(
             manager.validate_sample(&create_sample(BACKSTOP_FACTOR, 6)),
-            Ok(*ZERO_TIME + MIN_UPDATE_DELAY * 6)
+            Ok(zx::Time::ZERO + MIN_UPDATE_DELAY * 6)
         );
     }
 }

@@ -200,29 +200,25 @@ mod test {
         fidl::endpoints::create_proxy_and_stream,
         fuchsia_async as fasync,
         futures::StreamExt,
-        lazy_static::lazy_static,
         test_util::{assert_gt, assert_lt},
     };
 
     const TEST_FIDL_TIME: frtc::Time =
         frtc::Time { year: 2020, month: 8, day: 14, hours: 0, minutes: 0, seconds: 0 };
     const TEST_OFFSET: zx::Duration = zx::Duration::from_millis(250);
-
-    lazy_static! {
-        static ref TEST_ZX_TIME: zx::Time = zx::Time::from_nanos(1_597_363_200_000_000_000);
-        static ref DIFFERENT_ZX_TIME: zx::Time = zx::Time::from_nanos(1_597_999_999_000_000_000);
-    }
+    const TEST_ZX_TIME: zx::Time = zx::Time::from_nanos(1_597_363_200_000_000_000);
+    const DIFFERENT_ZX_TIME: zx::Time = zx::Time::from_nanos(1_597_999_999_000_000_000);
 
     #[test]
     fn time_conversion() {
-        let to_fidl = zx_time_to_fidl_time(*TEST_ZX_TIME);
+        let to_fidl = zx_time_to_fidl_time(TEST_ZX_TIME);
         assert_eq!(to_fidl, TEST_FIDL_TIME);
         // Times should be truncated to the previous second
-        let to_fidl_2 = zx_time_to_fidl_time(*TEST_ZX_TIME + 999.millis());
+        let to_fidl_2 = zx_time_to_fidl_time(TEST_ZX_TIME + 999.millis());
         assert_eq!(to_fidl_2, TEST_FIDL_TIME);
 
         let to_zx = fidl_time_to_zx_time(TEST_FIDL_TIME);
-        assert_eq!(to_zx, *TEST_ZX_TIME);
+        assert_eq!(to_zx, TEST_ZX_TIME);
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -236,7 +232,7 @@ mod test {
                 responder.send(&mut fidl_time).expect("Failed response");
             }
         });
-        assert_eq!(rtc_impl.get().await.unwrap(), *TEST_ZX_TIME);
+        assert_eq!(rtc_impl.get().await.unwrap(), TEST_ZX_TIME);
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -254,7 +250,7 @@ mod test {
             }
         });
         let before = zx::Time::get_monotonic();
-        assert!(rtc_impl.set(*TEST_ZX_TIME).await.is_ok());
+        assert!(rtc_impl.set(TEST_ZX_TIME).await.is_ok());
         let span = zx::Time::get_monotonic() - before;
         // Setting an integer second should not require any delay and therefore should complete
         // very fast - well under a millisecond typically.
@@ -276,7 +272,7 @@ mod test {
             }
         });
         let before = zx::Time::get_monotonic();
-        assert!(rtc_impl.set(*TEST_ZX_TIME - TEST_OFFSET).await.is_ok());
+        assert!(rtc_impl.set(TEST_ZX_TIME - TEST_OFFSET).await.is_ok());
         let span = zx::Time::get_monotonic() - before;
         // Setting a fractional second should cause a delay until the top of second before calling
         // the FIDL interface. We only verify half the expected time has passed to allow for some
@@ -286,14 +282,14 @@ mod test {
 
     #[fasync::run_until_stalled(test)]
     async fn valid_fake() {
-        let fake = FakeRtc::valid(*TEST_ZX_TIME);
-        assert_eq!(fake.get().await.unwrap(), *TEST_ZX_TIME);
+        let fake = FakeRtc::valid(TEST_ZX_TIME);
+        assert_eq!(fake.get().await.unwrap(), TEST_ZX_TIME);
         assert_eq!(fake.last_set(), None);
 
         // Set a new time, this should be recorded but get should still return the original time.
-        assert!(fake.set(*DIFFERENT_ZX_TIME).await.is_ok());
-        assert_eq!(fake.last_set(), Some(*DIFFERENT_ZX_TIME));
-        assert_eq!(fake.get().await.unwrap(), *TEST_ZX_TIME);
+        assert!(fake.set(DIFFERENT_ZX_TIME).await.is_ok());
+        assert_eq!(fake.last_set(), Some(DIFFERENT_ZX_TIME));
+        assert_eq!(fake.get().await.unwrap(), TEST_ZX_TIME);
     }
 
     #[fasync::run_until_stalled(test)]
@@ -304,8 +300,8 @@ mod test {
         assert_eq!(fake.last_set(), None);
 
         // Setting a new time should still succeed and be recorded but it won't make get valid.
-        assert!(fake.set(*DIFFERENT_ZX_TIME).await.is_ok());
-        assert_eq!(fake.last_set(), Some(*DIFFERENT_ZX_TIME));
+        assert!(fake.set(DIFFERENT_ZX_TIME).await.is_ok());
+        assert_eq!(fake.last_set(), Some(DIFFERENT_ZX_TIME));
         assert_eq!(&fake.get().await.unwrap_err().to_string(), &message);
     }
 }

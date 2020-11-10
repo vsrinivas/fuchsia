@@ -155,23 +155,17 @@ impl<D: Diagnostics> Estimator<D> {
 
 #[cfg(test)]
 mod test {
-    use {
-        super::*, crate::diagnostics::FakeDiagnostics, lazy_static::lazy_static,
-        test_util::assert_near,
-    };
+    use {super::*, crate::diagnostics::FakeDiagnostics, test_util::assert_near};
 
+    const TIME_1: zx::Time = zx::Time::from_nanos(10000);
+    const TIME_2: zx::Time = zx::Time::from_nanos(20000);
+    const TIME_3: zx::Time = zx::Time::from_nanos(30000);
     const OFFSET_1: zx::Duration = zx::Duration::from_seconds(777);
     const OFFSET_2: zx::Duration = zx::Duration::from_seconds(999);
     const STD_DEV_1: zx::Duration = zx::Duration::from_millis(22);
     const ZERO_DURATION: zx::Duration = zx::Duration::from_nanos(0);
     const TEST_TRACK: Track = Track::Primary;
     const SQRT_COV_1: i64 = STD_DEV_1.into_nanos();
-
-    lazy_static! {
-        static ref TIME_1: zx::Time = zx::Time::from_nanos(10000);
-        static ref TIME_2: zx::Time = zx::Time::from_nanos(20000);
-        static ref TIME_3: zx::Time = zx::Time::from_nanos(30000);
-    }
 
     fn create_estimate_event(offset: zx::Duration, sqrt_covariance: i64) -> Event {
         Event::EstimateUpdated {
@@ -186,11 +180,11 @@ mod test {
         let diagnostics = Arc::new(FakeDiagnostics::new());
         let estimator = Estimator::new(
             TEST_TRACK,
-            Sample::new(*TIME_1 + OFFSET_1, *TIME_1, STD_DEV_1),
+            Sample::new(TIME_1 + OFFSET_1, TIME_1, STD_DEV_1),
             Arc::clone(&diagnostics),
         );
-        assert_eq!(estimator.estimate(*TIME_1), *TIME_1 + OFFSET_1);
-        assert_eq!(estimator.estimate(*TIME_2), *TIME_2 + OFFSET_1);
+        assert_eq!(estimator.estimate(TIME_1), TIME_1 + OFFSET_1);
+        assert_eq!(estimator.estimate(TIME_2), TIME_2 + OFFSET_1);
         diagnostics.assert_events(&[create_estimate_event(OFFSET_1, SQRT_COV_1)]);
     }
 
@@ -199,13 +193,13 @@ mod test {
         let diagnostics = Arc::new(FakeDiagnostics::new());
         let mut estimator = Estimator::new(
             TEST_TRACK,
-            Sample::new(*TIME_1 + OFFSET_1, *TIME_1, STD_DEV_1),
+            Sample::new(TIME_1 + OFFSET_1, TIME_1, STD_DEV_1),
             Arc::clone(&diagnostics),
         );
-        estimator.update(Sample::new(*TIME_2 + OFFSET_2, *TIME_2, STD_DEV_1));
+        estimator.update(Sample::new(TIME_2 + OFFSET_2, TIME_2, STD_DEV_1));
 
         let expected_offset = (OFFSET_1 + OFFSET_2) / 2;
-        assert_eq!(estimator.estimate(*TIME_3), *TIME_3 + expected_offset);
+        assert_eq!(estimator.estimate(TIME_3), TIME_3 + expected_offset);
 
         diagnostics.assert_events(&[
             create_estimate_event(OFFSET_1, SQRT_COV_1),
@@ -258,11 +252,11 @@ mod test {
         let diagnostics = Arc::new(FakeDiagnostics::new());
         let mut estimator = Estimator::new(
             TEST_TRACK,
-            Sample::new(*TIME_1 + OFFSET_1, *TIME_1, ZERO_DURATION),
+            Sample::new(TIME_1 + OFFSET_1, TIME_1, ZERO_DURATION),
             Arc::clone(&diagnostics),
         );
         assert_eq!(estimator.covariance_00, MIN_COVARIANCE);
-        estimator.update(Sample::new(*TIME_2 + OFFSET_2, *TIME_2, ZERO_DURATION));
+        estimator.update(Sample::new(TIME_2 + OFFSET_2, TIME_2, ZERO_DURATION));
         assert_eq!(estimator.covariance_00, MIN_COVARIANCE);
         diagnostics.assert_events(&[
             create_estimate_event(OFFSET_1, MIN_COVARIANCE.sqrt() as i64),
@@ -275,11 +269,11 @@ mod test {
         let diagnostics = Arc::new(FakeDiagnostics::new());
         let mut estimator = Estimator::new(
             TEST_TRACK,
-            Sample::new(*TIME_2 + OFFSET_1, *TIME_2, STD_DEV_1),
+            Sample::new(TIME_2 + OFFSET_1, TIME_2, STD_DEV_1),
             Arc::clone(&diagnostics),
         );
         assert_near!(estimator.estimate_0, 0.0, 1.0);
-        estimator.update(Sample::new(*TIME_1 + OFFSET_1, *TIME_1, STD_DEV_1));
+        estimator.update(Sample::new(TIME_1 + OFFSET_1, TIME_1, STD_DEV_1));
         assert_near!(estimator.estimate_0, 0.0, 1.0);
         // Ignored event should not be logged.
         diagnostics.assert_events(&[create_estimate_event(OFFSET_1, SQRT_COV_1)]);

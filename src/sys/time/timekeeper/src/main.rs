@@ -360,19 +360,19 @@ mod tests {
     const OFFSET: zx::Duration = zx::Duration::from_seconds(1111_000);
     const OFFSET_2: zx::Duration = zx::Duration::from_seconds(1111_333);
     const STD_DEV: zx::Duration = zx::Duration::from_millis(44);
+    const INVALID_RTC_TIME: zx::Time = zx::Time::from_nanos(111111 * NANOS_PER_SECOND);
+    const BACKSTOP_TIME: zx::Time = zx::Time::from_nanos(222222 * NANOS_PER_SECOND);
+    const VALID_RTC_TIME: zx::Time = zx::Time::from_nanos(333333 * NANOS_PER_SECOND);
 
     lazy_static! {
-        static ref INVALID_RTC_TIME: zx::Time = zx::Time::from_nanos(111111 * NANOS_PER_SECOND);
-        static ref BACKSTOP_TIME: zx::Time = zx::Time::from_nanos(222222 * NANOS_PER_SECOND);
-        static ref VALID_RTC_TIME: zx::Time = zx::Time::from_nanos(333333 * NANOS_PER_SECOND);
         static ref CLOCK_OPTS: zx::ClockOpts = zx::ClockOpts::empty();
     }
 
     /// Creates and starts a new clock with default options, returning a tuple of the clock and its
     /// initial update time in ticks.
     fn create_clock() -> (Arc<zx::Clock>, i64) {
-        let clock = zx::Clock::create(*CLOCK_OPTS, Some(*BACKSTOP_TIME)).unwrap();
-        clock.update(zx::ClockUpdate::new().value(*BACKSTOP_TIME)).unwrap();
+        let clock = zx::Clock::create(*CLOCK_OPTS, Some(BACKSTOP_TIME)).unwrap();
+        clock.update(zx::ClockUpdate::new().value(BACKSTOP_TIME)).unwrap();
         let initial_update_ticks = clock.get_details().unwrap().last_value_update_ticks;
         (Arc::new(clock), initial_update_ticks)
     }
@@ -381,7 +381,7 @@ mod tests {
     async fn successful_update_single_notify_client_with_monitor() {
         let (primary_clock, primary_ticks) = create_clock();
         let (monitor_clock, monitor_ticks) = create_clock();
-        let rtc = FakeRtc::valid(*INVALID_RTC_TIME);
+        let rtc = FakeRtc::valid(INVALID_RTC_TIME);
         let diagnostics = Arc::new(FakeDiagnostics::new());
 
         let (utc, utc_requests) =
@@ -435,7 +435,7 @@ mod tests {
             Event::Initialized { clock_state: InitialClockState::NotSet },
             Event::InitializeRtc {
                 outcome: InitializeRtcOutcome::InvalidBeforeBackstop,
-                time: Some(*INVALID_RTC_TIME),
+                time: Some(INVALID_RTC_TIME),
             },
             Event::NetworkAvailable,
             Event::TimeSourceStatus { role: Role::Primary, status: ftexternal::Status::Ok },
@@ -467,7 +467,7 @@ mod tests {
     fn no_update_invalid_rtc_single_notify_client() {
         let mut executor = fasync::Executor::new().unwrap();
         let (clock, initial_update_ticks) = create_clock();
-        let rtc = FakeRtc::valid(*INVALID_RTC_TIME);
+        let rtc = FakeRtc::valid(INVALID_RTC_TIME);
         let diagnostics = Arc::new(FakeDiagnostics::new());
 
         let (utc, utc_requests) =
@@ -508,7 +508,7 @@ mod tests {
             Event::Initialized { clock_state: InitialClockState::NotSet },
             Event::InitializeRtc {
                 outcome: InitializeRtcOutcome::InvalidBeforeBackstop,
-                time: Some(*INVALID_RTC_TIME),
+                time: Some(INVALID_RTC_TIME),
             },
             Event::NetworkAvailable,
             Event::TimeSourceStatus { role: Role::Primary, status: ftexternal::Status::Network },
@@ -519,7 +519,7 @@ mod tests {
     fn no_update_valid_rtc_single_notify_client() {
         let mut executor = fasync::Executor::new().unwrap();
         let (clock, initial_update_ticks) = create_clock();
-        let rtc = FakeRtc::valid(*VALID_RTC_TIME);
+        let rtc = FakeRtc::valid(VALID_RTC_TIME);
         let diagnostics = Arc::new(FakeDiagnostics::new());
 
         let (utc, utc_requests) =
@@ -556,7 +556,7 @@ mod tests {
 
         // Checking that the clock was updated to use the valid RTC time.
         assert!(clock.get_details().unwrap().last_value_update_ticks > initial_update_ticks);
-        assert!(clock.read().unwrap() >= *VALID_RTC_TIME);
+        assert!(clock.read().unwrap() >= VALID_RTC_TIME);
         assert_eq!(rtc.last_set(), None);
 
         // Checking that the correct diagnostic events were logged.
@@ -564,7 +564,7 @@ mod tests {
             Event::Initialized { clock_state: InitialClockState::NotSet },
             Event::InitializeRtc {
                 outcome: InitializeRtcOutcome::Succeeded,
-                time: Some(*VALID_RTC_TIME),
+                time: Some(VALID_RTC_TIME),
             },
             Event::StartClock { track: Track::Primary, source: StartClockSource::Rtc },
             Event::NetworkAvailable,
@@ -579,10 +579,10 @@ mod tests {
         // Create a clock and set it slightly after backstop
         let (clock, _) = create_clock();
         clock
-            .update(zx::ClockUpdate::new().value(*BACKSTOP_TIME + zx::Duration::from_millis(1)))
+            .update(zx::ClockUpdate::new().value(BACKSTOP_TIME + zx::Duration::from_millis(1)))
             .unwrap();
         let initial_update_ticks = clock.get_details().unwrap().last_value_update_ticks;
-        let rtc = FakeRtc::valid(*VALID_RTC_TIME);
+        let rtc = FakeRtc::valid(VALID_RTC_TIME);
         let diagnostics = Arc::new(FakeDiagnostics::new());
 
         let (utc, utc_requests) =
