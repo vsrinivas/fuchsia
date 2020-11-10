@@ -1,0 +1,138 @@
+# Copyright 2020 The Chromium Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# TODO(fxb/58062): Delete this file after all packages are migrated away from
+# flutter_app.
+import("//build/dart/dart_library.gni")
+import("//build/flutter/flutter_build_config.gni")
+import("//build/flutter/flutter_component.gni")
+import("//src/sys/build/components.gni")
+
+# Defines a Flutter application
+#
+# Parameters
+#
+#   main_dart (required)
+#     Name of the Dart file containing the main function.
+#
+#   meta (required)
+#     A list containing 1 scope with the path to the cmx file associated with
+#     the flutter app.
+#
+#   package_name (optional)
+#     Name of the Dart package.
+#
+#   fuchsia_package_name (optional)
+#     Name of the Fuchsia package.
+#
+#   deps (optional)
+#     List of Dart packages the application depends on.
+#
+#   manifest (optional)
+#     Always "pubspec.yaml".
+#
+#   product (optional)
+#     A boolean. Whether to build/run the app in a stripped-down Dart VM.
+#     Defaults to !is_debug.
+#
+#   flutter_driver_extendable (optional)
+#     A boolean. Determines if, in a debug build, this package will be built
+#     with a wrapper that auto-enables flutter driver extensions when running
+#     the application in a an environment that includes TestRunner. Does not
+#     affect AOT or release builds.
+#
+#   resources (optional)
+#     An optional list of resources.
+#
+#   deps (optional)
+#     List of labels for Dart libraries this library depends on.
+#
+#   TODO(fxb/63133): non_dart_deps is deprecated. Use deps instead.
+#   non_dart_deps (optional, deprecated)
+#     List of labels this library depends on that are not Dart libraries. This
+#     includes things like actions that generate Dart code. It typically doesn't
+#     need to be set.
+#     Note that these labels *must* have an explicit toolchain attached.
+template("flutter_app") {
+  assert(defined(invoker.main_dart), "Must define main_dart")
+  assert(defined(invoker.meta), "Must define meta")
+  _invoker_meta = invoker.meta
+  assert(_invoker_meta != [] && _invoker_meta == [ _invoker_meta[0] ],
+         "meta must have exactly 1 element!")
+  _meta = _invoker_meta[0]
+  assert(defined(_meta.path), "Must define meta[0].path")
+  if (defined(invoker.manifest)) {
+    assert(invoker.manifest == "pubspec.yaml",
+           "manifest can only be pubspec.yaml")
+  }
+  _package_name = target_name
+  if (defined(invoker.package_name)) {
+    _package_name = invoker.package_name
+  }
+  _fuchsia_package_name = target_name
+  if (defined(invoker.fuchsia_package_name)) {
+    _fuchsia_package_name = invoker.fuchsia_package_name
+  }
+  _sources = [ string_replace(invoker.main_dart, "lib/", "", 1) ]
+  if (defined(invoker.sources)) {
+    _sources += invoker.sources
+  }
+  _build_cfg = flutter_default_build_cfg
+  if (defined(invoker.product) && invoker.product) {
+    _build_cfg = flutter_release_build_cfg
+  }
+  _deps = []
+  if (defined(invoker.deps)) {
+    _deps += invoker.deps
+  }
+  if (defined(invoker.non_dart_deps)) {
+    _deps += invoker.non_dart_deps
+  }
+
+  dart_library_gn_label = target_name + "_dart_library"
+  dart_library(dart_library_gn_label) {
+    package_name = _package_name
+    sources = _sources
+    deps = _deps
+  }
+
+  resource_gn_labels = []
+  if (defined(invoker.resources)) {
+    i = 0
+    foreach(res, invoker.resources) {
+      current_gn_label = target_name + "_resource_" + i
+      resource(current_gn_label) {
+        sources = [ res.path ]
+        outputs = [ res.dest ]
+      }
+      resource_gn_labels += [ ":$current_gn_label" ]
+      i += 1
+    }
+  }
+
+  flutter_component_gn_label = target_name + "_flutter_component"
+  flutter_component(flutter_component_gn_label) {
+    forward_variables_from(invoker, [ "flutter_driver_extendable" ])
+    main_package = _package_name
+    component_name = string_replace(_package_name, "_", "-")
+    manifest = _meta.path
+    deps = [ ":$dart_library_gn_label" ] + resource_gn_labels
+    build_cfg = _build_cfg
+  }
+
+  fuchsia_package_gn_label = string_replace(_fuchsia_package_name, "_", "-")
+  fuchsia_package(fuchsia_package_gn_label) {
+    deps = [
+      ":$flutter_component_gn_label",
+      "//build/flutter:deprecated_flutter_app_allowlist",
+    ]
+  }
+
+  # @TODO(fxb/62741): For purposes of soft transition.
+  if (_fuchsia_package_name != fuchsia_package_gn_label) {
+    group(_fuchsia_package_name) {
+      deps = [ ":$fuchsia_package_gn_label" ]
+    }
+  }
+}
