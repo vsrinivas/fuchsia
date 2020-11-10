@@ -18,7 +18,4 @@ executable("clkctl") {
     "//sdk/fidl/fuchsia.hardware.clock:fuchsia.hardware.clock_c",
     "//sdk/lib/fdio",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }

@@ -74,7 +74,7 @@ char* guess_dev(void) {
   return NULL;
 }
 
-int measure_clk_util(zx_handle_t ch, uint32_t idx) {
+ssize_t measure_clk_util(zx_handle_t ch, uint32_t idx) {
   fuchsia_hardware_clock_FrequencyInfo info;
   ssize_t rc = fuchsia_hardware_clock_DeviceMeasure(ch, idx, &info);
 
@@ -87,7 +87,7 @@ int measure_clk_util(zx_handle_t ch, uint32_t idx) {
   return 0;
 }
 
-int measure_clk(const char* path, uint32_t idx, bool clk) {
+ssize_t measure_clk(const char* path, uint32_t idx, bool clk) {
   int fd = open(path, O_RDWR);
 
   if (fd < 0) {
@@ -130,7 +130,6 @@ int measure_clk(const char* path, uint32_t idx, bool clk) {
 }
 
 int main(int argc, char** argv) {
-  int err = 0;
   const char* cmd = basename(argv[0]);
   char* path = NULL;
   const char* index = NULL;
@@ -175,7 +174,7 @@ int main(int argc, char** argv) {
 
   // Measure the clocks.
   if (measure) {
-    err = measure_clk(path, idx, clk);
+    ssize_t err = measure_clk(path, idx, clk);
     if (err) {
       printf("Measure CLK failed.\n");
     }
