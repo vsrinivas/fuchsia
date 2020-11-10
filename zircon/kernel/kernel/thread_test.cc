@@ -446,23 +446,27 @@ bool migrate_unpinned_threads_test() {
   }
 
   const cpu_num_t kStartingCpu = 1;
-  AutounsignalEvent event;
+  struct Events {
+    AutounsignalEvent worker_started;
+    AutounsignalEvent event;
+  } events;
 
   // Setup the thread that will be migrated.
   auto worker_body = [](void* arg) -> int {
-    auto event = static_cast<AutounsignalEvent*>(arg);
-    event->Signal();
-    event->Wait();
+    auto events = static_cast<Events*>(arg);
+    events->worker_started.Signal();
+    events->event.Wait();
     return 0;
   };
-  auto fn = [&event](Thread* thread, Thread::MigrateStage stage)
-                TA_NO_THREAD_SAFETY_ANALYSIS { event.SignalThreadLocked(); };
-  Thread* worker = Thread::Create("worker", worker_body, &event, DEFAULT_PRIORITY);
+  AutounsignalEvent* const event = &events.event;
+  auto fn = [event](Thread* thread, Thread::MigrateStage stage)
+                TA_NO_THREAD_SAFETY_ANALYSIS { event->SignalThreadLocked(); };
+  Thread* worker = Thread::Create("worker", worker_body, &events, DEFAULT_PRIORITY);
   worker->SetSoftCpuAffinity(cpu_num_to_mask(kStartingCpu));
   worker->SetMigrateFn(fn);
   worker->Resume();
 
-  event.Wait();
+  events.worker_started.Wait();
 
   // Setup the thread that will perform the migration.
   auto migrate_body = []() TA_REQ(thread_lock) __NO_RETURN {
@@ -475,10 +479,6 @@ bool migrate_unpinned_threads_test() {
       Thread::CreateEtc(nullptr, "migrate", nullptr, nullptr, DEFAULT_PRIORITY, migrate_body);
   migrate->SetCpuAffinity(cpu_num_to_mask(kStartingCpu));
   migrate->Resume();
-
-  // If the thread was migrated by Scheduler::MigrateUnpinnedThreads(), the
-  // event will be signalled and the test will continue.
-  event.Wait();
 
   int retcode;
   ASSERT_EQ(migrate->Join(&retcode, ZX_TIME_INFINITE), ZX_OK, "Failed to join migrate thread.");
