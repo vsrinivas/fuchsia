@@ -148,10 +148,10 @@ class VmObjectPaged final : public VmObject {
     DumpLocked(depth, verbose);
   }
 
-  zx_status_t GetPageLocked(uint64_t offset, uint pf_flags, list_node* free_list,
+  zx_status_t GetPageLocked(uint64_t offset, uint pf_flags, list_node* alloc_list,
                             PageRequest* page_request, vm_page_t** out_page,
                             paddr_t* out_paddr) override TA_REQ(lock_) {
-    return cow_pages_locked()->GetPageLocked(offset, pf_flags, free_list, page_request, out_page,
+    return cow_pages_locked()->GetPageLocked(offset, pf_flags, alloc_list, page_request, out_page,
                                              out_paddr);
   }
 

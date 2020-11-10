@@ -118,7 +118,7 @@ class VmCowPages final : public VmHierarchyBase,
   //    mappings, and will be informed to unmap via the backlinks when needed.
   //  * Our VmObjectPaged backlink and our *slice* children are allowed to have writable mappings,
   //    and will be informed to either unmap or remove writability when needed.
-  zx_status_t GetPageLocked(uint64_t offset, uint pf_flags, list_node* free_list,
+  zx_status_t GetPageLocked(uint64_t offset, uint pf_flags, list_node* alloc_list,
                             PageRequest* page_request, vm_page_t**, paddr_t*) TA_REQ(lock_);
 
   // Adds an allocated page to this cow pages at the specified offset, can be optionally zeroed and
@@ -284,7 +284,7 @@ class VmCowPages final : public VmHierarchyBase,
   //
   // |page| must not be the zero-page, as there is no need to do the complex page
   // fork logic to reduce memory consumption in that case.
-  vm_page_t* CloneCowPageLocked(uint64_t offset, list_node_t* free_list, VmCowPages* page_owner,
+  vm_page_t* CloneCowPageLocked(uint64_t offset, list_node_t* alloc_list, VmCowPages* page_owner,
                                 vm_page_t* page, uint64_t owner_offset) TA_REQ(lock_);
 
   // This is an optimized wrapper around CloneCowPageLocked for when an initial content page needs
@@ -294,7 +294,7 @@ class VmCowPages final : public VmHierarchyBase,
   // The optimization it can make is that it can fork the page up to the parent and then, instead
   // of forking here and then having to immediately free the page, it can insert a marker here and
   // set the split bits in the parent page as if it had been forked.
-  zx_status_t CloneCowPageAsZeroLocked(uint64_t offset, list_node_t* free_list,
+  zx_status_t CloneCowPageAsZeroLocked(uint64_t offset, list_node_t* freed_list,
                                        VmCowPages* page_owner, vm_page_t* page,
                                        uint64_t owner_offset) TA_REQ(lock_);
 
@@ -304,8 +304,7 @@ class VmCowPages final : public VmHierarchyBase,
 
   // Releases this vmo's reference to any ancestor vmo's COW pages, for the range [start, end)
   // in this vmo. This is done by either setting the pages' split bits (if something else
-  // can access the pages) or by freeing the pages onto |free_list| (if nothing else can
-  // access the pages).
+  // can access the pages) or by freeing the pages using the |page_remover|
   //
   // This function recursively invokes itself for regions of the parent vmo which are
   // not accessible by the sibling vmo.
