@@ -12,6 +12,8 @@ import 'package:internationalization/strings.dart';
 import 'package:fuchsia_services/services.dart' show StartupContext;
 import 'package:quickui/quickui.dart';
 
+// ignore_for_file: prefer_constructors_over_static_methods
+
 /// Defines a [UiSpec] for controlling device volume.
 class Volume extends UiSpec {
   static const minVolumeAction = 1;

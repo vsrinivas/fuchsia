@@ -9,6 +9,8 @@ import 'package:intl/intl.dart';
 import 'package:internationalization/strings.dart';
 import 'package:quickui/quickui.dart';
 
+// ignore_for_file: prefer_constructors_over_static_methods
+
 /// Defines a [UiSpec] for displaying date and time.
 class Datetime extends UiSpec {
   // Localized strings.

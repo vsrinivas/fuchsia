@@ -13,6 +13,8 @@ import 'package:fuchsia_services/services.dart' show StartupContext;
 import 'package:internationalization/strings.dart';
 import 'package:quickui/quickui.dart';
 
+// ignore_for_file: prefer_constructors_over_static_methods
+
 /// Defines a [UiSpec] for visualizing memory.
 class Memory extends UiSpec {
   static String get _memory => Strings.memory;

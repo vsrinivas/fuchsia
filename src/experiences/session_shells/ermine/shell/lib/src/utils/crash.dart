@@ -40,6 +40,7 @@ class CrashReportingRunner {
           throw _SynchronousException(e, stackTrace);
         }
       },
+      // ignore: deprecated_member_use
       onError: _onError,
     );
   }
