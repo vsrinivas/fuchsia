@@ -27,12 +27,14 @@ use {
     glob::glob,
     injectable_time::MonotonicTime,
     log::{error, info, warn},
+    serde_derive::Deserialize,
     snapshot::SnapshotRequest,
     std::collections::HashMap,
 };
 
 const MINIMUM_CHECK_TIME_NANOS: i64 = 60 * 1_000_000_000;
-const CONFIG_GLOB: &str = "/config/data/*";
+const CONFIG_GLOB: &str = "/config/data/*.config";
+const PROGRAM_CONFIG_PATH: &str = "/config/data/config.json";
 const SIGNATURE_PREFIX: &str = "fuchsia-detect-";
 const MINIMUM_SIGNATURE_INTERVAL_NANOS: i64 = 3600 * 1_000_000_000;
 
@@ -52,6 +54,25 @@ struct CommandLine {
 pub enum Mode {
     Test,
     Production,
+}
+
+#[derive(Deserialize, Default, Debug)]
+struct ProgramConfig {
+    enable_filing: Option<bool>,
+}
+
+fn load_program_config() -> Result<ProgramConfig, Error> {
+    let config_text = match std::fs::read_to_string(PROGRAM_CONFIG_PATH) {
+        Ok(text) => text,
+        Err(_) => {
+            info!("Program config file not found; using default config.");
+            "{}".to_string()
+        }
+    };
+    match serde_json5::from_str::<ProgramConfig>(&config_text) {
+        Ok(config) => Ok(config),
+        Err(e) => bail!("Program config format error: {}", e),
+    }
 }
 
 fn load_configuration_files() -> Result<HashMap<String, String>, Error> {
@@ -131,7 +152,7 @@ macro_rules! on_error {
     ($value:expr, $error_message:expr) => {
         $value.or_else(|e| {
             let message = format!($error_message, e);
-            error!("{}", message);
+            warn!("{}", message);
             bail!("{}", message)
         })
     };
@@ -149,6 +170,8 @@ async fn main() -> Result<(), Error> {
         appropriate_check_interval(&args.check_every, &mode),
         "Invalid command line arg for check time: {}"
     )?;
+    let program_config = on_error!(load_program_config(), "Error loading program config: {}")?;
+    info!("Test mode: {:?}, program config: {:?}", mode, program_config);
     let configuration =
         on_error!(load_configuration_files(), "Error reading configuration files: {}")?;
     let triage_engine = on_error!(
@@ -199,8 +222,14 @@ async fn main() -> Result<(), Error> {
         for snapshot in snapshot_requests.into_iter() {
             if delay_tracker.ok_to_send(&snapshot) {
                 let signature = format!("{}{}", SIGNATURE_PREFIX, snapshot.signature);
-                if let Err(e) = snapshot_service.request_snapshot(SnapshotRequest::new(signature)) {
-                    error!("Snapshot request failed: {}", e);
+                if program_config.enable_filing == Some(true) {
+                    if let Err(e) =
+                        snapshot_service.request_snapshot(SnapshotRequest::new(signature))
+                    {
+                        error!("Snapshot request failed: {}", e);
+                    }
+                } else {
+                    warn!("Would have filed {}", signature);
                 }
             }
         }

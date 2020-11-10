@@ -43,6 +43,7 @@ rustc_test("integration_test_bin") {
     "//third_party/rust_crates:async-trait",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:log",
+    "//third_party/rust_crates:pin-utils",
     "//third_party/rust_crates:thiserror",
   ]
 
@@ -52,6 +53,7 @@ rustc_test("integration_test_bin") {
     "fake_archive_accessor/archivist_server.rs",
     "fake_crash_reporter.rs",
     "integration_test.rs",
+    "test_filing_enable.rs",
     "test_snapshot_throttle.rs",
     "test_trigger_truth.rs",
   ]

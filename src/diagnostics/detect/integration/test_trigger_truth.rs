@@ -66,14 +66,19 @@ const CONFIG: &str = r#"
 
 pub fn test() -> TestData {
     let config = ConfigFile { name: "file.config".to_string(), contents: CONFIG.to_string() };
+    let enable = ConfigFile {
+        name: "config.json".to_string(),
+        contents: "{enable_filing: true}".to_string(),
+    };
     TestData {
         name: "Trigger truth".to_string(),
         inspect_data: vec![INSPECT_3.to_string(), INSPECT_2.to_string(), INSPECT_3.to_string()],
-        config_files: vec![config],
-        crashes: vec![
+        config_files: vec![config, enable],
+        snapshots: vec![
             vec!["fuchsia-detect-widgets-over-2".to_string()],
             vec![],
             vec!["fuchsia-detect-widgets-over-2".to_string()],
         ],
+        bails: false,
     }
 }

@@ -27,10 +27,11 @@ use {
     fake_archive_accessor::FakeArchiveAccessor,
     fake_crash_reporter::FakeCrashReporter,
     fuchsia_async as fasync,
-    futures::{channel::mpsc, SinkExt, StreamExt},
+    futures::{channel::mpsc, FutureExt, SinkExt, StreamExt},
     log::*,
     std::sync::Arc,
     test_utils_lib::{
+        events::{Event, EventStream, Stopped},
         injectors::{CapabilityInjector, DirectoryInjector},
         matcher::EventMatcher,
         opaque_test::OpaqueTest,
@@ -58,6 +59,8 @@ const ARCHIVE_ACCESSOR_CAPABILITY_NAME: &str = "fuchsia.diagnostics.FeedbackArch
 mod test_snapshot_throttle;
 // Test that the "trigger" field of snapshots works correctly.
 mod test_trigger_truth;
+// Test that no report is filed unless "config.json" has the magic contents.
+mod test_filing_enable;
 // run_a_test() verifies the Diagnostic-reading period by checking that no test completes too early.
 // Manually verified: test fails if command line is 4 seconds and CHECK_PERIOD_SECONDS is 5.
 
@@ -65,6 +68,11 @@ async fn run_all_tests() -> Vec<Result<(), Error>> {
     futures::future::join_all(vec![
         run_a_test(test_snapshot_throttle::test()),
         run_a_test(test_trigger_truth::test()),
+        run_a_test(test_filing_enable::test_with_enable()),
+        run_a_test(test_filing_enable::test_bad_enable()),
+        run_a_test(test_filing_enable::test_false_enable()),
+        run_a_test(test_filing_enable::test_no_enable()),
+        run_a_test(test_filing_enable::test_without_file()),
     ])
     .await
 }
@@ -85,11 +93,17 @@ async fn entry_point() -> Result<(), Error> {
 
 // Each test*.rs file returns one of these from its "pub test()" method.
 pub struct TestData {
+    // Just used for logging.
     name: String,
+    // Contents of the /config/data directory. May include config.json.
     config_files: Vec<ConfigFile>,
-    #[allow(dead_code)]
+    // Inspect-json-format strings, to be returned each time Detect fetches Inspect data.
     inspect_data: Vec<String>,
-    crashes: Vec<Vec<String>>,
+    // Between each fetch, the program should file these crash reports. For the inner vec,
+    // the order doesn't matter but duplicates will be retained and checked (it's not a set).
+    snapshots: Vec<Vec<String>>,
+    // Does the Detect program quit without fetching Inspect data?
+    bails: bool,
 }
 
 // ConfigFile contains file information to help build a PseudoDirectory of configuration files.
@@ -137,8 +151,18 @@ impl DoneWaiter {
         DoneSignaler { sender: self.sender.clone() }
     }
 
-    async fn wait(&mut self) {
-        self.receiver.next().await;
+    async fn wait(&mut self, exit_stream: Option<&mut EventStream>) {
+        match exit_stream {
+            Some(exit_stream) => {
+                let receiver = self.receiver.next().fuse();
+                let exit_event = exit_stream.next().fuse();
+                pin_utils::pin_mut!(receiver, exit_event);
+                futures::select!(_ = receiver => {}, _ = exit_event => {});
+            }
+            None => {
+                self.receiver.next().await;
+            }
+        }
     }
 }
 
@@ -151,6 +175,7 @@ async fn run_a_test(test_data: TestData) -> Result<(), Error> {
     // Start a component_manager as a v1 component
     let test = OpaqueTest::default(DETECT_PROGRAM_URL).await.unwrap();
     let event_source = test.connect_to_event_source().await.unwrap();
+    let mut exit_stream = event_source.subscribe(vec![Stopped::NAME]).await.unwrap();
 
     DirectoryInjector::new(prepare_injected_config_directory(&test_data))
         .inject(&event_source, EventMatcher::ok().capability_id(CONFIG_DATA_CAPABILITY_NAME))
@@ -169,12 +194,31 @@ async fn run_a_test(test_data: TestData) -> Result<(), Error> {
     event_source.start_component_tree().await;
 
     // Await the test result.
-    done_waiter.wait().await;
+    if test_data.bails {
+        // If it should bail, exit_stream will tell us it has exited. However,
+        // still collect events in case we observe more activity than we should.
+        done_waiter.wait(Some(&mut exit_stream)).await;
+    } else {
+        // If it shouldn't bail, avoid race conditions by not checking exit_stream.
+        // If the program doesn't do what it should and done_waiter never fires,
+        // the test will eventually time out and fail.
+        done_waiter.wait(None).await;
+    }
     let events = drain(events_receiver).await?;
     let end_time = std::time::Instant::now();
     let minimum_test_time = CHECK_PERIOD_SECONDS * (test_data.inspect_data.len() as u64);
-    assert!(end_time - start_time >= std::time::Duration::new(minimum_test_time, 0));
-    assert!(evaluate_test_results(&test_data, &events).is_ok());
+    let too_fast = end_time - start_time < std::time::Duration::new(minimum_test_time, 0);
+    match evaluate_test_results(&test_data, &events) {
+        Ok(()) => {}
+        Err(e) => {
+            error!("Test {} failed: {}", test_data.name, e);
+            bail!("Test {} failed: {}", test_data.name, e);
+        }
+    }
+    if too_fast && !test_data.bails {
+        error!("Test {} finished too quickly.", test_data.name);
+        bail!("Test {} finished too quickly.", test_data.name);
+    }
     Ok(())
 }
 
@@ -194,11 +238,15 @@ async fn drain(mut stream: TestEventReceiver) -> Result<Vec<TestEvent>, Error> {
 }
 
 fn evaluate_test_results(test: &TestData, events: &Vec<TestEvent>) -> Result<(), Error> {
+    if test.bails {
+        match events.len() {
+            0 => return Ok(()),
+            _ => bail!("{}: Test should bail but events were {:?}", test.name, events),
+        }
+    }
     let mut crash_list = Vec::new();
     let mut crashes_list = Vec::new();
     let mut events = events.iter();
-    info!("TestCrashes: {:?}", test.crashes);
-    info!("events: {:?}", events);
     match events.next() {
         Some(TestEvent::DiagnosticFetch) => {}
         Some(TestEvent::CrashReport(r)) => {
@@ -221,10 +269,9 @@ fn evaluate_test_results(test: &TestData, events: &Vec<TestEvent>) -> Result<(),
     if crash_list.len() != 0 {
         bail!("{}: Crashes were filed after the final fetch: {:?}", test.name, crash_list);
     }
-    let mut desired_events = test.crashes.iter();
+    let mut desired_events = test.snapshots.iter();
     let mut actual_events = crashes_list.iter();
     let mut which_iteration = 0;
-    info!("crashes_list: {:?}", crashes_list);
     loop {
         match (desired_events.next(), actual_events.next()) {
             (None, None) => break,

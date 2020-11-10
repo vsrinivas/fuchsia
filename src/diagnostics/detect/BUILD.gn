@@ -6,6 +6,12 @@ import("//build/config.gni")
 import("//build/rust/rustc_binary.gni")
 import("//src/sys/build/components.gni")
 
+config_data("enable-report-filing") {
+  for_pkg = "triage-detect"
+  sources = [ "configs/enable-filing.json" ]
+  outputs = [ "config.json" ]
+}
+
 rustc_binary("bin") {
   name = "triage-detect"
   edition = "2018"
@@ -32,6 +38,9 @@ rustc_binary("bin") {
     "//third_party/rust_crates:log",
     "//third_party/rust_crates:maplit",
     "//third_party/rust_crates:matches",
+    "//third_party/rust_crates:serde",
+    "//third_party/rust_crates:serde_derive",
+    "//third_party/rust_crates:serde_json5",
     "//third_party/rust_crates:thiserror",
   ]
 
