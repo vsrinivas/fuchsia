@@ -60,8 +60,14 @@ import("//build/flutter/internal/flutter_dart_test_component.gni")
 #     Specifies the parameters for building the component.
 #     See //build/dart/dart_build_config.gni for predefined configs.
 #
+#   package_root (optional)
+#     Path to the directory hosting the library.
+#     This is useful for generated content, and can be ignored otherwise.
+#     Defaults to ".".
+#
 #  deps
 #  visibility
+#  non_dart_deps
 template("dart_test_component") {
   _build_cfg = dart_default_build_cfg
   if (defined(invoker.build_cfg)) {

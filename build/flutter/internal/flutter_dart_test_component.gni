@@ -47,6 +47,7 @@ import("//build/flutter/internal/flutter_dart_component.gni")
 #
 #  deps
 #  visibility
+#  non_dart_deps
 template("flutter_dart_test_component") {
   assert(defined(invoker.sources),
          "flutter_dart_test_component() requires 'sources' be defined")
@@ -60,6 +61,11 @@ template("flutter_dart_test_component") {
 
   _test_files = invoker.sources
 
+  _package_root = "."
+  if (defined(invoker.package_root)) {
+    _package_root = invoker.package_root
+  }
+
   _test_package_name = string_replace(target_name, "-", "_") + "_test_package"
 
   # Create a package containing all of the original test sources
@@ -69,6 +75,7 @@ template("flutter_dart_test_component") {
                            [
                              "language_version",
                              "deps",
+                             "non_dart_deps",
                            ])
 
     testonly = true
@@ -77,10 +84,10 @@ template("flutter_dart_test_component") {
     sources = _test_files
     package_name = _test_package_name
 
-    package_root = "test/"
-    source_dir = "."
-    pubspec = "pubspec.yaml"
-    options_file = "analysis_options.yaml"
+    package_root = _package_root
+    source_dir = "test/"
+    pubspec = "${_package_root}/pubspec.yaml"
+    options_file = "${_package_root}/analysis_options.yaml"
   }
 
   # Generate a main which will call all of the test targets
@@ -113,11 +120,15 @@ template("flutter_dart_test_component") {
       # is where the build system expects the file to exist whereas the dart
       # compiler expects the source to be within the test directory since we are
       # using test/ as the package root.
-      sources += [ "test/${_source}" ]
+      sources += [ "${_package_root}/test/${_source}" ]
     }
 
     testonly = true
     visibility = [ ":*" ]
+
+    if (defined(invoker.non_dart_deps)) {
+      deps = invoker.non_dart_deps
+    }
   }
 
   # Create a package containing the main
@@ -133,8 +144,8 @@ template("flutter_dart_test_component") {
     package_name = _generated_test_package
 
     package_root = _generated_package_root
-    pubspec = "pubspec.yaml"
-    options_file = "analysis_options.yaml"
+    pubspec = "${_package_root}/pubspec.yaml"
+    options_file = "${_package_root}/analysis_options.yaml"
 
     # speed up compilation times by skipping these checks
     disable_analysis = true
@@ -144,6 +155,9 @@ template("flutter_dart_test_component") {
       "//topaz/lib/fuchsia_test_helper",
     ]
     non_dart_deps = [ ":$_generate_test_main_target_name($target_toolchain)" ]
+    if (defined(invoker.non_dart_deps)) {
+      non_dart_deps += invoker.non_dart_deps
+    }
   }
 
   _component_deps = [
