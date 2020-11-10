@@ -24,8 +24,12 @@ class {{ .Name }};
   {{- end }}
 {{- end }}
 
+{{/* TODO(fxbug.dev/36441): Remove __Fuchsia__ ifdefs once we have non-Fuchsia
+     emulated handles for C++. */}}
 {{- define "UnionDeclaration" }}
-
+{{ if .IsResource }}
+#ifdef __Fuchsia__
+{{- end }}
 extern "C" const fidl_type_t {{ .TableType }};
 {{range .DocComments}}
 //{{ . }}
@@ -132,10 +136,17 @@ class {{ .Name }} {
   FIDL_ALIGNDECL
   ::fidl::Envelope<void> envelope_;
 };
+{{- if .IsResource }}
+#endif  // __Fuchsia__
+{{- end }}
 {{- end }}
 
+{{/* TODO(fxbug.dev/36441): Remove __Fuchsia__ ifdefs once we have non-Fuchsia
+     emulated handles for C++. */}}
 {{- define "UnionDefinition" }}
-
+{{- if .IsResource }}
+#ifdef __Fuchsia__
+{{- end }}
 {{- if .IsFlexible }}
 auto {{ .Namespace }}::{{ .Name }}::which() const -> Tag {
   ZX_ASSERT(!has_invalid_tag());
@@ -151,7 +162,6 @@ auto {{ .Namespace }}::{{ .Name }}::which() const -> Tag {
 {{- end }}
 
 void {{ .Namespace }}::{{ .Name }}::SizeAndOffsetAssertionHelper() {
-  {{ $union := . -}}
   static_assert(sizeof({{ .Name }}) == sizeof(fidl_xunion_t));
   static_assert(offsetof({{ .Name }}, ordinal_) == offsetof(fidl_xunion_t, tag));
   static_assert(offsetof({{ .Name }}, envelope_) == offsetof(fidl_xunion_t, envelope));
@@ -168,14 +178,24 @@ void {{ .Name }}::_CloseHandles() {
   }
   {{- end }}
 }
+{{- if .IsResource }}
+#endif  // __Fuchsia__
+{{- end }}
 {{- end }}
 
+{{/* TODO(fxbug.dev/36441): Remove __Fuchsia__ ifdefs once we have non-Fuchsia
+     emulated handles for C++. */}}
 {{- define "UnionTraits" }}
-
+{{ if .IsResource }}
+#ifdef __Fuchsia__
+{{- end }}
 template <>
 struct IsFidlType<{{ .Namespace }}::{{ .Name }}> : public std::true_type {};
 template <>
 struct IsUnion<{{ .Namespace }}::{{ .Name }}> : public std::true_type {};
 static_assert(std::is_standard_layout_v<{{ .Namespace }}::{{ .Name }}>);
+{{- if .IsResource }}
+#endif  // __Fuchsia__
+{{- end }}
 {{- end }}
 `

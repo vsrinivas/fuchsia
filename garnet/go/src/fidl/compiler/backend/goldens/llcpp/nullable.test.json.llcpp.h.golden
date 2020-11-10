@@ -640,6 +640,7 @@ struct StructWithNullableString {
   };
 };
 
+#ifdef __Fuchsia__
 extern "C" const fidl_type_t fidl_test_nullable_StructWithNullableRequestTable;
 
 struct StructWithNullableRequest {
@@ -768,7 +769,9 @@ struct StructWithNullableRequest {
     }
   };
 };
+#endif  // __Fuchsia__
 
+#ifdef __Fuchsia__
 extern "C" const fidl_type_t fidl_test_nullable_StructWithNullableProtocolTable;
 
 struct StructWithNullableProtocol {
@@ -897,7 +900,9 @@ struct StructWithNullableProtocol {
     }
   };
 };
+#endif  // __Fuchsia__
 
+#ifdef __Fuchsia__
 extern "C" const fidl_type_t fidl_test_nullable_StructWithNullableHandleTable;
 
 struct StructWithNullableHandle {
@@ -1025,6 +1030,7 @@ struct StructWithNullableHandle {
     }
   };
 };
+#endif  // __Fuchsia__
 
 extern "C" const fidl_type_t fidl_test_nullable_SimpleProtocolAddRequestTable;
 extern "C" const fidl_type_t fidl_test_nullable_SimpleProtocolAddResponseTable;
@@ -1701,6 +1707,7 @@ static_assert(
     sizeof(::llcpp::fidl::test::nullable::StructWithNullableString) ==
     ::llcpp::fidl::test::nullable::StructWithNullableString::PrimarySize);
 
+#ifdef __Fuchsia__
 template <>
 struct IsFidlType<::llcpp::fidl::test::nullable::StructWithNullableRequest>
     : public std::true_type {};
@@ -1714,7 +1721,9 @@ static_assert(offsetof(::llcpp::fidl::test::nullable::StructWithNullableRequest,
 static_assert(
     sizeof(::llcpp::fidl::test::nullable::StructWithNullableRequest) ==
     ::llcpp::fidl::test::nullable::StructWithNullableRequest::PrimarySize);
+#endif  // __Fuchsia__
 
+#ifdef __Fuchsia__
 template <>
 struct IsFidlType<::llcpp::fidl::test::nullable::StructWithNullableProtocol>
     : public std::true_type {};
@@ -1729,7 +1738,9 @@ static_assert(
 static_assert(
     sizeof(::llcpp::fidl::test::nullable::StructWithNullableProtocol) ==
     ::llcpp::fidl::test::nullable::StructWithNullableProtocol::PrimarySize);
+#endif  // __Fuchsia__
 
+#ifdef __Fuchsia__
 template <>
 struct IsFidlType<::llcpp::fidl::test::nullable::StructWithNullableHandle>
     : public std::true_type {};
@@ -1743,6 +1754,7 @@ static_assert(offsetof(::llcpp::fidl::test::nullable::StructWithNullableHandle,
 static_assert(
     sizeof(::llcpp::fidl::test::nullable::StructWithNullableHandle) ==
     ::llcpp::fidl::test::nullable::StructWithNullableHandle::PrimarySize);
+#endif  // __Fuchsia__
 
 template <>
 struct IsFidlType<::llcpp::fidl::test::nullable::SimpleProtocol::AddRequest>

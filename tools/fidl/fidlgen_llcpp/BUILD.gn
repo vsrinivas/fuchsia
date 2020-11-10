@@ -99,19 +99,13 @@ group("goldens") {
 
   if (host_toolchain == current_toolchain) {
     denylist += [
-      # TODO(fxbug.dev/62576): Add ifdefs to that handles compile on host.
-      "//zircon/tools/fidl/testdata:fidl.test.encapsulatedstructs",
-      "//zircon/tools/fidl/testdata:fidl.test.handlesintypes",
-      "//zircon/tools/fidl/testdata:fidl.test.nullable",
-      "//zircon/tools/fidl/testdata/type_aliases:example",
-      "//zircon/tools/fidl/testdata/type_aliases:someotherlibrary",
-
       # TODO(fxbug.dev/62573): Add ifdefs to that protocols compile on host.
       "//zircon/tools/fidl/testdata:fidl.test.bindingsdenylist",
       "//zircon/tools/fidl/testdata:fidl.test.emptystruct",
       "//zircon/tools/fidl/testdata:fidl.test.error",
       "//zircon/tools/fidl/testdata:fidl.test.inheritance",
       "//zircon/tools/fidl/testdata:fidl.test.inheritancewithrecursivedecl",
+      "//zircon/tools/fidl/testdata:fidl.test.nullable",
       "//zircon/tools/fidl/testdata:fidl.test.protocols",
       "//zircon/tools/fidl/testdata:fidl.test.requestflexibleenvelope",
       "//zircon/tools/fidl/testdata:fidl.test.service",
@@ -130,8 +124,6 @@ group("goldens") {
       # need to be uncommented.
       #"//zircon/tools/fidl/testdata:fidl.test.doccomments",
       #"//zircon/tools/fidl/testdata:fidl.test.handles",
-      #"//zircon/tools/fidl/testdata:fidl.test.handlesintypes",
-      #"//zircon/tools/fidl/testdata:fidl.test.nullable",
       #"//zircon/tools/fidl/testdata:fidl.test.protocolrequest",
       #"//zircon/tools/fidl/testdata:fidl.test.union",
     ]

@@ -8,6 +8,7 @@ namespace llcpp {
 
 namespace example {
 
+#ifdef __Fuchsia__
 void ExampleOfUseOfAliases::_CloseHandles() {
   if constexpr (::llcpp::someotherlibrary::ReferenceMe::IsResource) {
     {
@@ -24,6 +25,7 @@ void ExampleOfUseOfAliases::_CloseHandles() {
   field_of_client_end.reset();
   field_of_nullable_client_end.reset();
 }
+#endif  // __Fuchsia__
 
 }  // namespace example
 }  // namespace llcpp

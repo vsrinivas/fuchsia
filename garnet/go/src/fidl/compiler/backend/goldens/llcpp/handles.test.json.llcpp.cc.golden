@@ -10,6 +10,7 @@ namespace fidl {
 namespace test {
 namespace handles {
 
+#ifdef __Fuchsia__
 void Handles::_CloseHandles() {
   plain_handle.reset();
   bti_handle.reset();
@@ -45,6 +46,7 @@ void Handles::_CloseHandles() {
   some_protocol.reset();
   request_some_protocol.reset();
 }
+#endif  // __Fuchsia__
 
 namespace {}  // namespace
 

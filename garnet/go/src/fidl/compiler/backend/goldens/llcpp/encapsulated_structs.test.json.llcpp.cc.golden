@@ -10,7 +10,9 @@ namespace fidl {
 namespace test {
 namespace encapsulatedstructs {
 
+#ifdef __Fuchsia__
 void NonInlineStructTestStruct::_CloseHandles() { h.reset(); }
+#endif  // __Fuchsia__
 
 void Int8Int32::_CloseHandles() {}
 
@@ -20,7 +22,9 @@ void ArrayInt16Int8::_CloseHandles() {}
 
 void StructPaddingTestStruct::_CloseHandles() {}
 
+#ifdef __Fuchsia__
 void TopLevelStruct::_CloseHandles() { b._CloseHandles(); }
+#endif  // __Fuchsia__
 
 }  // namespace encapsulatedstructs
 }  // namespace test

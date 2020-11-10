@@ -27,8 +27,12 @@ struct {{ .Name }};
   {{- end -}}
 {{- end }}
 
+{{/* TODO(fxbug.dev/36441): Remove __Fuchsia__ ifdefs once we have non-Fuchsia
+     emulated handles for C++. */}}
 {{- define "StructDeclaration" }}
-
+{{ if .IsResource }}
+#ifdef __Fuchsia__
+{{- end }}
 extern "C" const fidl_type_t {{ .TableType }};
 {{range .DocComments}}
 //{{ . }}
@@ -177,19 +181,33 @@ struct {{ .Name }} {
     }
   };
 };
+{{- if .IsResource }}
+#endif  // __Fuchsia__
+{{- end }}
 {{- end }}
 
+{{/* TODO(fxbug.dev/36441): Remove __Fuchsia__ ifdefs once we have non-Fuchsia
+     emulated handles for C++. */}}
 {{- define "StructDefinition" }}
-
+{{ if .IsResource }}
+#ifdef __Fuchsia__
+{{- end }}
 void {{ .Name }}::_CloseHandles() {
   {{- range .Members }}
     {{- template "StructMemberCloseHandles" . }}
   {{- end }}
 }
+{{- if .IsResource }}
+#endif  // __Fuchsia__
+{{- end }}
 {{- end }}
 
+{{/* TODO(fxbug.dev/36441): Remove __Fuchsia__ ifdefs once we have non-Fuchsia
+     emulated handles for C++. */}}
 {{- define "StructTraits" }}
-
+{{ if .IsResource }}
+#ifdef __Fuchsia__
+{{- end }}
 template <>
 struct IsFidlType<{{ .Namespace }}::{{ .Name }}> : public std::true_type {};
 template <>
@@ -200,5 +218,8 @@ static_assert(std::is_standard_layout_v<{{ .Namespace }}::{{ .Name }}>);
 static_assert(offsetof({{ $struct.Namespace }}::{{ $struct.Name }}, {{ .Name }}) == {{ .Offset }});
 {{- end }}
 static_assert(sizeof({{ .Namespace }}::{{ .Name }}) == {{ .Namespace }}::{{ .Name }}::PrimarySize);
+{{- if .IsResource }}
+#endif  // __Fuchsia__
+{{- end }}
 {{- end }}
 `

@@ -47,6 +47,7 @@ enum class obj_type : uint32_t {
 
 struct ExampleOfUseOfAliases;
 
+#ifdef __Fuchsia__
 extern "C" const fidl_type_t example_ExampleOfUseOfAliasesTable;
 
 struct ExampleOfUseOfAliases {
@@ -197,6 +198,7 @@ struct ExampleOfUseOfAliases {
     }
   };
 };
+#endif  // __Fuchsia__
 
 }  // namespace example
 }  // namespace llcpp
@@ -206,6 +208,7 @@ namespace fidl {
 template <>
 struct IsFidlType<::llcpp::example::obj_type> : public std::true_type {};
 
+#ifdef __Fuchsia__
 template <>
 struct IsFidlType<::llcpp::example::ExampleOfUseOfAliases>
     : public std::true_type {};
@@ -236,6 +239,7 @@ static_assert(offsetof(::llcpp::example::ExampleOfUseOfAliases,
                        field_of_nullable_client_end) == 112);
 static_assert(sizeof(::llcpp::example::ExampleOfUseOfAliases) ==
               ::llcpp::example::ExampleOfUseOfAliases::PrimarySize);
+#endif  // __Fuchsia__
 
 }  // namespace fidl
 

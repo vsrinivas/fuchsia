@@ -131,6 +131,7 @@ enum class obj_type : uint32_t {
 struct Handles;
 class SomeProtocol;
 
+#ifdef __Fuchsia__
 extern "C" const fidl_type_t fidl_test_handles_HandlesTable;
 
 struct Handles {
@@ -320,6 +321,7 @@ struct Handles {
     }
   };
 };
+#endif  // __Fuchsia__
 
 class SomeProtocol final {
   SomeProtocol() = delete;
@@ -417,6 +419,7 @@ template <>
 struct IsFidlType<::llcpp::fidl::test::handles::obj_type>
     : public std::true_type {};
 
+#ifdef __Fuchsia__
 template <>
 struct IsFidlType<::llcpp::fidl::test::handles::Handles>
     : public std::true_type {};
@@ -491,6 +494,7 @@ static_assert(offsetof(::llcpp::fidl::test::handles::Handles,
                        request_some_protocol) == 128);
 static_assert(sizeof(::llcpp::fidl::test::handles::Handles) ==
               ::llcpp::fidl::test::handles::Handles::PrimarySize);
+#endif  // __Fuchsia__
 
 }  // namespace fidl
 

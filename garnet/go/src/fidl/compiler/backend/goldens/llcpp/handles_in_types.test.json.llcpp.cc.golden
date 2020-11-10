@@ -9,6 +9,7 @@ namespace llcpp {
 namespace fidl {
 namespace test {
 namespace handlesintypes {
+#ifdef __Fuchsia__
 auto ::llcpp::fidl::test::handlesintypes::UnionWithHandle::which() const
     -> Tag {
   ZX_ASSERT(!has_invalid_tag());
@@ -39,13 +40,17 @@ void UnionWithHandle::_CloseHandles() {
       break;
   }
 }
+#endif  // __Fuchsia__
 
+#ifdef __Fuchsia__
 void TableWithHandle::_CloseHandles() {
   if (has_h()) {
     h().reset();
   }
 }
+#endif  // __Fuchsia__
 
+#ifdef __Fuchsia__
 void HandlesInTypes::_CloseHandles() {
   normal_handle.reset();
   {
@@ -80,6 +85,7 @@ void HandlesInTypes::_CloseHandles() {
   table_with_handle._CloseHandles();
   union_with_handle._CloseHandles();
 }
+#endif  // __Fuchsia__
 
 }  // namespace handlesintypes
 }  // namespace test

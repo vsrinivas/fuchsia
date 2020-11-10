@@ -46,6 +46,7 @@ struct ArrayInt16Int8;
 struct StructPaddingTestStruct;
 struct TopLevelStruct;
 
+#ifdef __Fuchsia__
 extern "C" const fidl_type_t
     fidl_test_encapsulatedstructs_NonInlineStructTestStructTable;
 
@@ -178,6 +179,7 @@ struct NonInlineStructTestStruct {
     }
   };
 };
+#endif  // __Fuchsia__
 
 extern "C" const fidl_type_t fidl_test_encapsulatedstructs_Int8Int32Table;
 
@@ -660,6 +662,7 @@ struct StructPaddingTestStruct {
   };
 };
 
+#ifdef __Fuchsia__
 extern "C" const fidl_type_t fidl_test_encapsulatedstructs_TopLevelStructTable;
 
 struct TopLevelStruct {
@@ -789,6 +792,7 @@ struct TopLevelStruct {
     }
   };
 };
+#endif  // __Fuchsia__
 
 }  // namespace encapsulatedstructs
 }  // namespace test
@@ -797,6 +801,7 @@ struct TopLevelStruct {
 
 namespace fidl {
 
+#ifdef __Fuchsia__
 template <>
 struct IsFidlType<
     ::llcpp::fidl::test::encapsulatedstructs::NonInlineStructTestStruct>
@@ -821,6 +826,7 @@ static_assert(
         ::llcpp::fidl::test::encapsulatedstructs::NonInlineStructTestStruct) ==
     ::llcpp::fidl::test::encapsulatedstructs::NonInlineStructTestStruct::
         PrimarySize);
+#endif  // __Fuchsia__
 
 template <>
 struct IsFidlType<::llcpp::fidl::test::encapsulatedstructs::Int8Int32>
@@ -891,6 +897,7 @@ static_assert(
     ::llcpp::fidl::test::encapsulatedstructs::StructPaddingTestStruct::
         PrimarySize);
 
+#ifdef __Fuchsia__
 template <>
 struct IsFidlType<::llcpp::fidl::test::encapsulatedstructs::TopLevelStruct>
     : public std::true_type {};
@@ -906,6 +913,7 @@ static_assert(offsetof(::llcpp::fidl::test::encapsulatedstructs::TopLevelStruct,
 static_assert(
     sizeof(::llcpp::fidl::test::encapsulatedstructs::TopLevelStruct) ==
     ::llcpp::fidl::test::encapsulatedstructs::TopLevelStruct::PrimarySize);
+#endif  // __Fuchsia__
 
 }  // namespace fidl
 

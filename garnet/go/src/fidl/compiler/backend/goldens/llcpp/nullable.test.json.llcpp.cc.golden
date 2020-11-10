@@ -18,11 +18,17 @@ void StructWithNullableStruct::_CloseHandles() {}
 
 void StructWithNullableString::_CloseHandles() {}
 
+#ifdef __Fuchsia__
 void StructWithNullableRequest::_CloseHandles() { val.reset(); }
+#endif  // __Fuchsia__
 
+#ifdef __Fuchsia__
 void StructWithNullableProtocol::_CloseHandles() { val.reset(); }
+#endif  // __Fuchsia__
 
+#ifdef __Fuchsia__
 void StructWithNullableHandle::_CloseHandles() { val.reset(); }
+#endif  // __Fuchsia__
 
 namespace {
 

@@ -50,6 +50,7 @@ class UnionWithHandle;
 class TableWithHandle;
 struct HandlesInTypes;
 
+#ifdef __Fuchsia__
 extern "C" const fidl_type_t fidl_test_handlesintypes_UnionWithHandleTable;
 
 class UnionWithHandle {
@@ -126,7 +127,9 @@ class UnionWithHandle {
   FIDL_ALIGNDECL
   ::fidl::Envelope<void> envelope_;
 };
+#endif  // __Fuchsia__
 
+#ifdef __Fuchsia__
 extern "C" const fidl_type_t fidl_test_handlesintypes_TableWithHandleTable;
 
 class TableWithHandle final {
@@ -394,7 +397,9 @@ class TableWithHandle::UnownedBuilder final {
   uint64_t max_ordinal_ = 0;
   TableWithHandle::Frame frame_;
 };
+#endif  // __Fuchsia__
 
+#ifdef __Fuchsia__
 extern "C" const fidl_type_t fidl_test_handlesintypes_HandlesInTypesTable;
 
 struct HandlesInTypes {
@@ -535,6 +540,7 @@ struct HandlesInTypes {
     }
   };
 };
+#endif  // __Fuchsia__
 
 }  // namespace handlesintypes
 }  // namespace test
@@ -547,6 +553,7 @@ template <>
 struct IsFidlType<::llcpp::fidl::test::handlesintypes::obj_type>
     : public std::true_type {};
 
+#ifdef __Fuchsia__
 template <>
 struct IsFidlType<::llcpp::fidl::test::handlesintypes::UnionWithHandle>
     : public std::true_type {};
@@ -555,7 +562,9 @@ struct IsUnion<::llcpp::fidl::test::handlesintypes::UnionWithHandle>
     : public std::true_type {};
 static_assert(std::is_standard_layout_v<
               ::llcpp::fidl::test::handlesintypes::UnionWithHandle>);
+#endif  // __Fuchsia__
 
+#ifdef __Fuchsia__
 template <>
 struct IsFidlType<::llcpp::fidl::test::handlesintypes::TableWithHandle>
     : public std::true_type {};
@@ -568,7 +577,9 @@ struct IsTableBuilder<
     : public std::true_type {};
 static_assert(std::is_standard_layout_v<
               ::llcpp::fidl::test::handlesintypes::TableWithHandle>);
+#endif  // __Fuchsia__
 
+#ifdef __Fuchsia__
 template <>
 struct IsFidlType<::llcpp::fidl::test::handlesintypes::HandlesInTypes>
     : public std::true_type {};
@@ -591,6 +602,7 @@ static_assert(offsetof(::llcpp::fidl::test::handlesintypes::HandlesInTypes,
                        union_with_handle) == 80);
 static_assert(sizeof(::llcpp::fidl::test::handlesintypes::HandlesInTypes) ==
               ::llcpp::fidl::test::handlesintypes::HandlesInTypes::PrimarySize);
+#endif  // __Fuchsia__
 
 }  // namespace fidl
 

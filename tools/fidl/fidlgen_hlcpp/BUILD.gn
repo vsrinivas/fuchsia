@@ -88,17 +88,6 @@ group("goldens") {
     "//zircon/tools/fidl/testdata:fidl.test.handles",
   ]
 
-  if (host_toolchain == current_toolchain) {
-    denylist += [
-      # TODO(fxbug.dev/62576): Add ifdefs to that handles compile on host.
-      "//zircon/tools/fidl/testdata:fidl.test.encapsulatedstructs",
-      "//zircon/tools/fidl/testdata:fidl.test.handlesintypes",
-      "//zircon/tools/fidl/testdata:fidl.test.nullable",
-      "//zircon/tools/fidl/testdata/type_aliases:example",
-      "//zircon/tools/fidl/testdata/type_aliases:someotherlibrary",
-    ]
-  }
-
   deps = []
   foreach(target, fidl_testdata_targets - denylist) {
     deps += [ "${target}_hlcpp" ]
