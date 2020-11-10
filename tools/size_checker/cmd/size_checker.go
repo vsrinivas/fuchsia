@@ -187,7 +187,11 @@ func (node *Node) storageBreakdown(level int) string {
 		copies = fmt.Sprintf("from 1 copy")
 	}
 
-	ret := fmt.Sprintf("%s%s: %s %s\n", strings.Repeat("  ", level), node.fullPath, formatSize(node.size), copies)
+	var path = node.fullPath
+	if level > 1 {
+		path = filepath.Base(node.fullPath)
+	}
+	ret := fmt.Sprintf("%s%s: %s %s\n", strings.Repeat("  ", level), path, formatSize(node.size), copies)
 	for _, n := range node.children {
 		ret += n.storageBreakdown(level + 1)
 	}
