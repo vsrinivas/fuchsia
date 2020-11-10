@@ -46,6 +46,10 @@ class Compressor {
   // Finishes the compression process.
   // Must be called before compression is considered complete.
   virtual zx_status_t End() = 0;
+
+  // Returns a minimum chunk size that would be appropriate when decompressing to avoid a serious
+  // performance penalty.
+  virtual size_t GetChunkSize() const { return 0; }
 };
 
 }  // namespace blobfs

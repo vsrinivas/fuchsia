@@ -308,8 +308,9 @@ zx_status_t BlobLoader::InitForDecompression(
   }
 
   if ((status = SeekableChunkedDecompressor::CreateDecompressor(
-           scratch_vmo_.start(), uint64_t{blocks_to_read} * GetBlockSize(), inode.blob_size,
-           decompressor_out)) != ZX_OK) {
+           scratch_vmo_.start(), /*max_seek_table_size=*/
+           std::min(uint64_t{blocks_to_read} * GetBlockSize(), blob_layout.DataSizeUpperBound()),
+           /*max_compressed_size=*/blob_layout.DataSizeUpperBound(), decompressor_out)) != ZX_OK) {
     FS_TRACE_ERROR("blobfs: Failed to init decompressor: %s\n", zx_status_get_string(status));
     return status;
   }

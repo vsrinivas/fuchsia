@@ -63,7 +63,7 @@ class BlobTest : public testing::TestWithParam<BlobLayoutFormat> {
   std::unique_ptr<Blobfs> fs_;
 };
 
-TEST_P(BlobTest, Truncate_WouldOverflow) {
+TEST_P(BlobTest, TruncateWouldOverflow) {
   fbl::RefPtr root = OpenRoot();
   fbl::RefPtr<fs::Vnode> file;
   ASSERT_EQ(root->Create(kEmptyBlobName, 0, &file), ZX_OK);
@@ -86,41 +86,29 @@ TEST_P(BlobTest, SyncBehavior) {
   size_t out_actual = 0;
   EXPECT_EQ(file->Truncate(info->size_data), ZX_OK);
 
-  // PHASE 1: Incomplete data.
-  //
   // Try syncing before the data has been written. This currently issues an error synchronously but
   // we accept either synchronous or asynchronous callbacks.
-  file->Sync([loop = &loop_](zx_status_t status) {
+  sync_completion_t sync;
+  file->Sync([&](zx_status_t status) {
     EXPECT_EQ(ZX_ERR_BAD_STATE, status);
-    loop->Quit();
+    sync_completion_signal(&sync);
   });
-  loop_.Run();
+  sync_completion_wait(&sync, ZX_TIME_INFINITE);
 
-  // PHASE 2: Complete data, not yet synced.
-  device_->Pause();  // Don't let it sync yet.
   EXPECT_EQ(file->Write(info->data.get(), info->size_data, 0, &out_actual), ZX_OK);
   EXPECT_EQ(info->size_data, out_actual);
 
-  loop_.ResetQuit();
-  file->Sync([loop = &loop_](zx_status_t status) {
-    EXPECT_EQ(ZX_OK, status);
-    loop->Quit();
-  });
-
-  // Allow the Sync to continue and wait for the reply. The system may issue this callback
-  // asynchronously. RunUntilIdle can't be used because the backend posts work to another thread and
-  // then back here.
-  device_->Resume();
-  loop_.Run();
-
-  // PHASE 3: Data previously synced.
-  //
-  // Once the blob is in a fully synced state, calling Sync on it will complete with success.
-  loop_.ResetQuit();
-  file->Sync([loop = &loop_](zx_status_t status) {
-    EXPECT_EQ(ZX_OK, status);
-    loop->Quit();
-  });
+  // It's difficult to get a precise hook into the period between when data has been written and
+  // when it has been flushed to disk.  The journal will delay flushing metadata, so the following
+  // should test sync being called before metadata has been flushed, and then again afterwards.
+  for (int i = 0; i < 2; ++i) {
+    sync_completion_t sync;
+    file->Sync([&](zx_status_t status) {
+      EXPECT_EQ(ZX_OK, status) << i;
+      sync_completion_signal(&sync);
+    });
+    sync_completion_wait(&sync, ZX_TIME_INFINITE);
+  }
 }
 
 TEST_P(BlobTest, ReadingBlobZerosTail) {
