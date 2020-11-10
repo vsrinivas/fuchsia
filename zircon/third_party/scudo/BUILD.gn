@@ -2,130 +2,155 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/test.gni")
-import("//build/testing/bootfs_test.gni")
+if (zx != "/") {
+  import("//build/test.gni")
+  import("//build/testing/bootfs_test.gni")
+}
 import("scudo_sources.gni")
 
-# Most of the code can be shared between the production and test versions.
-source_set("scudo-except-flags") {
-  visibility = [ ":*" ]
+# A template used to build the scudo library as a source_set(),
+# The caller should provide the list of sources, and an optional
+# visibility list.
+#
+# This is used to share most settings between the test and production
+# versions of the s
+#
+# Arguments:
+#   sources
+#     [list of paths] List of source files to use for this source set.
+#
+#   visibility (optional)
+#     [list of paths] GN visibility list to be applied to the source set.
+#
+template("scudo_source_set") {
+  not_needed(invoker, [ "exclude_flags_cpp" ])
+  source_set(target_name) {
+    forward_variables_from(invoker, "*")
 
-  sources = scudo_sources - [ "src/flags.cpp" ]
+    include_dirs = [ "src/include" ]
 
-  include_dirs = [ "src/include" ]
+    if (!defined(deps)) {
+      deps = []
+    }
+    deps += [
+      "$zx/system/ulib/runtime",
+      "$zx/system/ulib/sync",
+    ]
+    if (zx == "/" || zircon_toolchain != false) {
+      # Tell the code to use "scudo_platform_tls_slot.h" and where to find it.
+      # This uses libc internals, so it needs access to the internal headers.
+      defines = [ "SCUDO_HAS_PLATFORM_TLS_SLOT=1" ]
+      include_dirs += [ "." ]
+      deps += [ "$zx/third_party/ulib/musl:musl_internal" ]
 
-  deps = [
-    "//zircon/system/ulib/runtime",
-    "//zircon/system/ulib/sync",
-  ]
-
-  if (zircon_toolchain != false) {
-    # Tell the code to use "scudo_platform_tls_slot.h" and where to find it.
-    # This uses libc internals, so it needs access to the internal headers.
-    defines = [ "SCUDO_HAS_PLATFORM_TLS_SLOT=1" ]
-    include_dirs += [ "." ]
-    deps += [ "$zx/third_party/ulib/musl:musl_internal" ]
-
-    # This library is linked into libc, which is used by libfuzzer.
-    # Don't instrument it to avoid getting noise in code coverage.
-    # TODO(fxbug.dev/25073): Once a cleaner solution is found, remove this.
-    configs += [ "$zx_build_config:no_fuzzer" ]
-  } else {
-    deps += [ "//src/zircon/lib/zircon" ]
+      # This library is linked into libc, which is used by libfuzzer.
+      # Don't instrument it to avoid getting noise in code coverage.
+      # TODO(fxbug.dev/25073): Once a cleaner solution is found, remove this.
+      configs += [ "$zx_build_config:no_fuzzer" ]
+    } else {
+      deps += [ "//src/zircon/lib/zircon" ]
+    }
   }
+}
+
+# Most of the code can be shared between the production and test versions.
+scudo_source_set("scudo-except-flags") {
+  sources = scudo_sources - [ "src/flags.cpp" ]
+  visibility = [ ":*" ]
 }
 
 # The production version refers to `__scudo_default_options`.
-source_set("scudo") {
+scudo_source_set("scudo") {
   sources = [ "src/flags.cpp" ]
-  include_dirs = [ "src/include" ]
   deps = [ ":scudo-except-flags" ]
 }
 
-# The test version avoids that symbol name since it also affects the system
-# libc and not only the code under test.  Instead it renames the function to a
-# safe name for the test.  The test code that defines its own function by this
-# name also uses this config so it renames its definition to match.
-config("testonly-options") {
-  visibility = [ ":*" ]
-  defines = [ "__scudo_default_options=testonly_scudo_default_options" ]
-}
-
-source_set("scudo-flags-testonly") {
-  visibility = [ ":*" ]
-  testonly = true
-  configs += [ ":testonly-options" ]
-  sources = [ "src/flags.cpp" ]
-  include_dirs = [ "src/include" ]
-}
-
-group("tests") {
-  testonly = true
-  deps = [ ":scudo-bootfs-test" ]
-}
-
-# This is also included in the standalone core-tests.
-source_set("unittests") {
-  testonly = true
-
-  visibility = [
-    ":*",
-    "//zircon/system/utest/core:*",
-  ]
-
-  configs += [ ":testonly-options" ]
-
-  scudo_test_sources = [
-    "atomic_test.cpp",
-    "bytemap_test.cpp",
-    "checksum_test.cpp",
-    "chunk_test.cpp",
-    "combined_test.cpp",
-    "flags_test.cpp",
-    "list_test.cpp",
-    "map_test.cpp",
-    "mutex_test.cpp",
-    "primary_test.cpp",
-    "quarantine_test.cpp",
-    "release_test.cpp",
-    "report_test.cpp",
-    "scudo_unit_test.h",
-    "scudo_unit_test_main.cpp",
-    "secondary_test.cpp",
-    "size_class_map_test.cpp",
-    "stats_test.cpp",
-    "strings_test.cpp",
-    "tsd_test.cpp",
-    "vector_test.cpp",
-    "wrappers_c_test.cpp",
-
-    # TODO(mcgrathr): scudo_sources.gni omits wrappers_cpp.cpp
-    #"wrappers_cpp_test.cpp",
-  ]
-  sources = []
-  foreach(file, scudo_test_sources) {
-    sources += [ "src/tests/$file" ]
+if (zx != "/") {
+  # The test version avoids that symbol name since it also affects the system
+  # libc and not only the code under test.  Instead it renames the function to a
+  # safe name for the test.  The test code that defines its own function by this
+  # name also uses this config so it renames its definition to match.
+  config("testonly-options") {
+    visibility = [ ":*" ]
+    defines = [ "__scudo_default_options=testonly_scudo_default_options" ]
   }
 
-  include_dirs = [
-    "src/include",
-    "src",
-  ]
+  source_set("scudo-flags-testonly") {
+    visibility = [ ":*" ]
+    testonly = true
+    configs += [ ":testonly-options" ]
+    sources = [ "src/flags.cpp" ]
+    include_dirs = [ "src/include" ]
+  }
 
-  deps = [
-    ":scudo-except-flags",
-    ":scudo-flags-testonly",
-    "//zircon/public/lib/sync",
-    "//zircon/public/lib/zxtest",
-  ]
-}
+  group("tests") {
+    testonly = true
+    deps = [ ":scudo-bootfs-test" ]
+  }
 
-test("scudo-unittests") {
-  # zxtest provides the main function for the standalone unittests executable.
-  deps = [ ":unittests" ]
-}
+  # This is also included in the standalone core-tests.
+  source_set("unittests") {
+    testonly = true
 
-bootfs_test("scudo-bootfs-test") {
-  name = "scudo-unittests"
-  deps = [ ":scudo-unittests" ]
+    visibility = [
+      ":*",
+      "//zircon/system/utest/core:*",
+    ]
+
+    configs += [ ":testonly-options" ]
+
+    scudo_test_sources = [
+      "atomic_test.cpp",
+      "bytemap_test.cpp",
+      "checksum_test.cpp",
+      "chunk_test.cpp",
+      "combined_test.cpp",
+      "flags_test.cpp",
+      "list_test.cpp",
+      "map_test.cpp",
+      "mutex_test.cpp",
+      "primary_test.cpp",
+      "quarantine_test.cpp",
+      "release_test.cpp",
+      "report_test.cpp",
+      "scudo_unit_test.h",
+      "scudo_unit_test_main.cpp",
+      "secondary_test.cpp",
+      "size_class_map_test.cpp",
+      "stats_test.cpp",
+      "strings_test.cpp",
+      "tsd_test.cpp",
+      "vector_test.cpp",
+      "wrappers_c_test.cpp",
+
+      # TODO(mcgrathr): scudo_sources.gni omits wrappers_cpp.cpp
+      #"wrappers_cpp_test.cpp",
+    ]
+    sources = []
+    foreach(file, scudo_test_sources) {
+      sources += [ "src/tests/$file" ]
+    }
+
+    include_dirs = [
+      "src/include",
+      "src",
+    ]
+
+    deps = [
+      ":scudo-except-flags",
+      ":scudo-flags-testonly",
+      "//zircon/public/lib/sync",
+      "//zircon/public/lib/zxtest",
+    ]
+  }
+
+  test("scudo-unittests") {
+    # zxtest provides the main function for the standalone unittests executable.
+    deps = [ ":unittests" ]
+  }
+
+  bootfs_test("scudo-bootfs-test") {
+    name = "scudo-unittests"
+    deps = [ ":scudo-unittests" ]
+  }
 }
