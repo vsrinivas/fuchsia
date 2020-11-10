@@ -182,16 +182,21 @@ func (node *Node) getOnlyChild() (*Node, error) {
 func (node *Node) storageBreakdown(level int) string {
 	var copies string
 	if node.copies > 1 {
-		copies = fmt.Sprintf("from %d copies", node.copies)
+		copies = fmt.Sprintf("| %3d %-6s", node.copies, "copies")
 	} else if node.copies == 1 {
-		copies = fmt.Sprintf("from 1 copy")
+		copies = fmt.Sprintf("| %3d %-6s", node.copies, "copy")
 	}
 
-	var path = node.fullPath
+	var path = strings.TrimPrefix(node.fullPath, "obj/")
+	path = strings.TrimPrefix(path, "lib/")
 	if level > 1 {
-		path = filepath.Base(node.fullPath)
+		path = filepath.Base(path)
 	}
-	ret := fmt.Sprintf("%s%s: %s %s\n", strings.Repeat("  ", level), path, formatSize(node.size), copies)
+	path = fmt.Sprintf("%s%s", strings.Repeat("  ", level), path)
+	if len(path) > 40 {
+		path = "..." + path[len(path)-37:]
+	}
+	ret := fmt.Sprintf("%-40s | %10s %10s\n", path, formatSize(node.size), copies)
 	for _, n := range node.children {
 		ret += n.storageBreakdown(level + 1)
 	}
