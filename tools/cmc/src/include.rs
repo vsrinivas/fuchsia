@@ -64,8 +64,12 @@ pub fn merge_includes(
                 fs::remove_file(depfile_path)?;
             }
         } else if let Some(output_path) = output {
-            let depfile_contents =
-                format!("{}: {}\n", output_path.as_path().display(), includes.join(" "));
+            let depfile_contents = format!("{}:", output_path.display())
+                + &includes
+                    .iter()
+                    .map(|i| format!(" {}", includepath.join(i).display()))
+                    .collect::<String>()
+                + "\n";
             fs::OpenOptions::new()
                 .create(true)
                 .truncate(true)
@@ -148,7 +152,10 @@ mod tests {
         );
         let mut deps = String::new();
         File::open(&cmx_depfile_path).unwrap().read_to_string(&mut deps).unwrap();
-        assert_eq!(deps, format!("{}/out.cmx: shard.cmx\n", tmp_dir.path().display()));
+        assert_eq!(
+            deps,
+            format!("{tmp}/out.cmx: {tmp}/shard.cmx\n", tmp = tmp_dir.path().display())
+        );
     }
 
     #[test]
@@ -184,7 +191,10 @@ mod tests {
         );
         let mut deps = String::new();
         File::open(&cml_depfile_path).unwrap().read_to_string(&mut deps).unwrap();
-        assert_eq!(deps, format!("{}/out.cml: shard.cml\n", tmp_dir.path().display()));
+        assert_eq!(
+            deps,
+            format!("{tmp}/out.cml: {tmp}/shard.cml\n", tmp = tmp_dir.path().display())
+        );
     }
 
     #[test]
@@ -242,7 +252,13 @@ mod tests {
         );
         let mut deps = String::new();
         File::open(&cmx_depfile_path).unwrap().read_to_string(&mut deps).unwrap();
-        assert_eq!(deps, format!("{}/out.cmx: shard1.cmx shard2.cmx\n", tmp_dir.path().display()));
+        assert_eq!(
+            deps,
+            format!(
+                "{tmp}/out.cmx: {tmp}/shard1.cmx {tmp}/shard2.cmx\n",
+                tmp = tmp_dir.path().display()
+            )
+        );
     }
 
     #[test]
