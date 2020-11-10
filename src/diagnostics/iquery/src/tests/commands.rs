@@ -307,6 +307,25 @@ async fn show_filter_manifest() {
 }
 
 #[fasync::run_singlethreaded(test)]
+async fn show_filter_manifest_no_selectors() {
+    let (_env, app) =
+        utils::start_basic_component("show-filter-no-selectors").await.expect("create comp 1");
+    let (_env, app2) =
+        utils::start_test_component("show-filter-no-selectors2").await.expect("create comp 2");
+    assert_command!(
+        command: "show",
+        golden_basename: show_filter_no_selectors_test,
+        args: [
+            "--manifest",
+            "basic_component.cmx"
+        ],
+        test_opts: [ "with_retries" ]
+    );
+    utils::wait_for_terminated(app).await;
+    utils::wait_for_terminated(app2).await;
+}
+
+#[fasync::run_singlethreaded(test)]
 async fn show_archive() {
     let test_env = EnvWithDiagnostics::new().await;
     let Launched { app, .. } = test_env.launch(utils::BASIC_COMPONENT_URL, None);

@@ -1,0 +1,11 @@
+show-filter-no-selectors/basic_component.cmx:
+  metadata:
+    filename = fuchsia.inspect.Tree
+    component_url = fuchsia-pkg://fuchsia.com/iquery-tests#meta/basic_component.cmx
+    timestamp = TIMESTAMP
+  payload:
+    root:
+      iquery = rocks
+      fuchsia.inspect.Health:
+        start_timestamp_nanos = TIMESTAMP
+        status = OK

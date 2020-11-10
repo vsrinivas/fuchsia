@@ -94,18 +94,26 @@ pub async fn get_selectors_for_manifest(
                 with_url: false,
                 archive_path: archive_path.clone(),
             };
-            let result = list_command
+            let monikers = list_command
                 .execute()
                 .await?
                 .into_iter()
                 .map(|item| item.into_moniker())
-                .flat_map(|moniker| {
-                    tree_selectors
-                        .iter()
-                        .map(move |tree_selector| format!("{}:{}", moniker, tree_selector))
-                })
-                .collect();
-            Ok(result)
+                .collect::<Vec<_>>();
+            if monikers.is_empty() {
+                Err(Error::ManifestNotFound(manifest.clone()))
+            } else if tree_selectors.is_empty() {
+                Ok(monikers.into_iter().map(|moniker| format!("{}:root", moniker)).collect())
+            } else {
+                Ok(monikers
+                    .into_iter()
+                    .flat_map(|moniker| {
+                        tree_selectors
+                            .iter()
+                            .map(move |tree_selector| format!("{}:{}", moniker, tree_selector))
+                    })
+                    .collect())
+            }
         }
     }
 }

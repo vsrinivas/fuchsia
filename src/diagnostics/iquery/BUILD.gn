@@ -104,6 +104,8 @@ rustc_binary("bin") {
     "test_data/show_archive.text",
     "test_data/show_filter_test.text",
     "test_data/show_filter_test.json",
+    "test_data/show_filter_no_selectors_test.text",
+    "test_data/show_filter_no_selectors_test.json",
     "test_data/show_test.json",
     "test_data/show_test.text",
   ]

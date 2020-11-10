@@ -6,35 +6,38 @@ use {anyhow, serde_json, std::str::FromStr, thiserror::Error};
 
 #[derive(Error, Debug)]
 pub enum Error {
-    #[error("Error while fetching data: {}", _0)]
+    #[error("Error while fetching data: {0}")]
     Fetch(anyhow::Error),
 
-    #[error("Invalid format: {}", _0)]
+    #[error("Invalid format: {0}")]
     InvalidFormat(String),
 
-    #[error("Invalid arguments: {}", _0)]
+    #[error("Invalid arguments: {0}")]
     InvalidArguments(String),
 
-    #[error("Failed formatting the command response: {}", _0)]
+    #[error("Failed formatting the command response: {0}")]
     InvalidCommandResponse(serde_json::Error),
 
-    #[error("Failed parsing glob {}: {}", _0, _1)]
+    #[error("Failed parsing glob {0}: {1}")]
     ParsePath(String, anyhow::Error),
 
-    #[error("Failed to list locations on {} {}", _0, _1)]
+    #[error("Failed to list locations on {0} {1}")]
     ListLocations(String, anyhow::Error),
 
-    #[error("Failed to find inspect data in location {}: {}", _0, _1)]
+    #[error("Failed to find inspect data in location {0}: {1}")]
     ReadLocation(String, anyhow::Error),
 
-    #[error("Failed to connect to archivst: {}", _0)]
+    #[error("Failed to connect to archivst: {0}")]
     ConnectToArchivist(#[source] anyhow::Error),
 
     #[error("Unknown archive path")]
     UnknownArchivePath,
 
-    #[error("IO error. Failed to {}: {}", _0, _1)]
+    #[error("IO error. Failed to {0}: {1}")]
     IOError(String, #[source] anyhow::Error),
+
+    #[error("No running component was found whose URL contains the given string: {0}")]
+    ManifestNotFound(String),
 }
 
 impl Error {
