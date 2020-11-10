@@ -29,6 +29,7 @@ sdk://fidl/fuchsia.modular
 sdk://fidl/fuchsia.modular.session
 sdk://fidl/fuchsia.modular.testing
 sdk://fidl/fuchsia.net.http
+sdk://fidl/fuchsia.settings
 sdk://fidl/fuchsia.sys
 sdk://fidl/fuchsia.sysmem
 sdk://fidl/fuchsia.ui.app
@@ -37,6 +38,7 @@ sdk://fidl/fuchsia.ui.input
 sdk://fidl/fuchsia.ui.input2
 sdk://fidl/fuchsia.ui.input3
 sdk://fidl/fuchsia.ui.policy
+sdk://fidl/fuchsia.ui.types
 sdk://fidl/fuchsia.ui.views
 sdk://fidl/fuchsia.url
 sdk://fidl/fuchsia.web

@@ -22,6 +22,7 @@ fidl("fuchsia.web") {
     "//sdk/fidl/fuchsia.media.sessions2",
     "//sdk/fidl/fuchsia.mem",
     "//sdk/fidl/fuchsia.net.http",
+    "//sdk/fidl/fuchsia.settings",
     "//sdk/fidl/fuchsia.ui.gfx",
     "//sdk/fidl/fuchsia.ui.views",
   ]
