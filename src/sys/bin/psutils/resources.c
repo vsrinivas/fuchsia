@@ -26,6 +26,7 @@ zx_status_t get_root_resource(zx_handle_t* root_resource) {
   if (status != ZX_OK) {
     fprintf(stderr, "ERROR: Cannot open fuchsia.boot.RootResource: %s (%d)\n",
             zx_status_get_string(status), status);
+    zx_handle_close(local);
     return ZX_ERR_NOT_FOUND;
   }
 
