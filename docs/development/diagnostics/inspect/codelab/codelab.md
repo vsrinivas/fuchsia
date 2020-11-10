@@ -452,7 +452,7 @@ Now that you have added Inspect to your component, you can read what it says:
 1. Rebuild and update the target system
 
    ```
-   fx build && fx update
+   fx build && fx ota
    ```
 
 2. Run the client:

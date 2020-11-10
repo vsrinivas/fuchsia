@@ -91,7 +91,7 @@ You can discover more tests with by running `fx list-packages` on the host.
 
 ##### Updating a base image to get a new version of pkg-resolver or pkgctl
 
-To update the base of your fuchsia image, you can use `fx update` if you’re
+To update the base of your fuchsia image, you can use `fx ota` if you’re
 running on hardware which supports OTA. If you’re running under QEMU, you’ll
 need to just restart QEMU to get an updated base after a rebuild. Don’t worry,
 it’s fast.

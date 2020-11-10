@@ -4,11 +4,15 @@
 # found in the LICENSE file.
 
 #### CATEGORY=Software delivery
-### alias for fx ota
+#### DEPRECATED
+### [deprecated] alias for fx ota
 
-## usage: fx update
+## Deprecated: just runs 'fx ota' after a few seconds of intentional pause
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh || exit $?
-fx-config-read
 
+fx-warn "This tool has been deprecated in favor of 'fx ota'."
+echo -n "Pausing for 1 second. Run 'fx ota' directly to skip this..." > /dev/stderr
+sleep 1
+echo "ok, running 'fx ota' now." > /dev/stderr
 fx-command-run ota "$@"

@@ -91,20 +91,20 @@ in a code block by adding `posix-terminal` after <code>```</code> for a shell co
 
 <pre>
 <code>```posix-terminal
-fx update
+fx ota
 ```</code>
 </pre>
 
 This code block is rendered with `$` in the front of the command:
 
 ```posix-terminal
-fx update
+fx ota
 ```
 
 <span class="compare-worse">Not recommended</span>: Don't hardcode a `$` character in the command.
 
 ```sh
-$ fx update
+$ fx ota
 ```
 
 ### Use none to disable the copy feature

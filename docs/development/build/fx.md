@@ -56,7 +56,7 @@ with this:
 * `fx build` [execute a build](#execute-a-build)
 * `fx flash ; fx mkzedboot` [flash a target; or prepare a zedboot USB key](#flash-a-board-and-prepare-zedboot)
 * `fx serve` [serve a build](#serve-a-build)
-* `fx update` [update a target](#update-a-target-device)
+* `fx ota` [update a target](#update-a-target-device)
 * `fx test` [execute tests](#execute-tests)
 * `fx shell` [connect to a target shell](#connect-to-a-target-shell)
 * [and many other small tasks](#performing-other-common-tasks)
@@ -299,13 +299,13 @@ Fuchsia device:
 * Software that is always ephemeral (universe).
 
 For new user development workflows, the most general command to assist with
-updating a target device is `fx update`. The `fx update` command first
-updates all "cache" software, and then performs an `fx ota` or, a core
-system update. This command reboots the target device when it is complete.
-The end result of this process should be indistinguishable in terms of
-software versions from performing a fresh pave of a device.
+updating a target device is `fx ota`. The `fx ota` command first
+updates "base" and "cache" software, and then reboots the target device
+when it is complete. The end result of this process should be
+indistinguishable in terms of software versions from performing a fresh
+pave of a device.
 
-As the `fx update` process causes a device reboot, it is sometimes not the
+As the `fx ota` process causes a device reboot, it is sometimes not the
 most efficient process for diagnosis, debugging or other non-testing based
 workflows or needs. In these cases a user has some options for how to ensure
 that software on a device is being regularly updated.

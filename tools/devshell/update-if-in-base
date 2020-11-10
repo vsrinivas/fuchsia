@@ -9,7 +9,7 @@
 ##
 ## This command is to be used primarily by other commands, such as `fx test`.
 ##
-## NOTE: once the incremental workflow lands, `fx update` should always
+## NOTE: once the incremental workflow lands, `fx ota` should always
 ## execute, and this command won't be needed anymore.
 
 set -e
@@ -52,7 +52,7 @@ function main {
     check-for-amber-server || return 1
 
     echo >&2 "Package ${target} is in 'base', performing system update..."
-    fx-command-run update
+    fx-command-run ota
     echo >&2 "System update complete, waiting for device to return"
     fx-command-run wait
   fi

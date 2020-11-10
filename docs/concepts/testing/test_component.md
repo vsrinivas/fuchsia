@@ -182,7 +182,7 @@ Valid values for `max_severity`: `TRACE`, `DEBUG`, `INFO`, `WARN`, `ERROR`, `FAT
 
 If your test was already configured using [legacy methods][legacy-restrict-logs]
 you will need to remove your test from the config file (eg.
-max_severity_fuchsia.json) and run `fx update` or `fx ota`.
+max_severity_fuchsia.json) and run `fx ota`.
 
 If the test is not removed from the legacy list, the configuration in legacy
 list would be preferred and you will see a warning when running the test.
