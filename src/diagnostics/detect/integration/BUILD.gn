@@ -54,6 +54,7 @@ rustc_test("integration_test_bin") {
     "fake_crash_reporter.rs",
     "integration_test.rs",
     "test_filing_enable.rs",
+    "test_snapshot_sanitizing.rs",
     "test_snapshot_throttle.rs",
     "test_trigger_truth.rs",
   ]

@@ -146,6 +146,27 @@ fn appropriate_check_interval(
     Ok(zx::Duration::from_nanos(check_every))
 }
 
+fn build_signature(snapshot: triage::SnapshotTrigger, mode: Mode) -> String {
+    let sanitized: String = snapshot
+        .signature
+        .chars()
+        .map(|char| match char {
+            c if char.is_ascii_lowercase() => c,
+            c if char.is_ascii_uppercase() => c.to_ascii_lowercase(),
+            _ => '-',
+        })
+        .collect();
+    if sanitized != snapshot.signature {
+        let message = format!("Signature {} was sanitized to {}", snapshot.signature, sanitized);
+        if mode == Mode::Test {
+            warn!("{}", message);
+        } else {
+            error!("{}", message);
+        }
+    }
+    format!("{}{}", SIGNATURE_PREFIX, sanitized)
+}
+
 // on_error logs any errors from `value` and then returns a Result.
 // value must return a Result; error_message must contain one {} to put the error in.
 macro_rules! on_error {
@@ -221,7 +242,7 @@ async fn main() -> Result<(), Error> {
         let snapshot_requests = triage_engine.evaluate(diagnostics);
         for snapshot in snapshot_requests.into_iter() {
             if delay_tracker.ok_to_send(&snapshot) {
-                let signature = format!("{}{}", SIGNATURE_PREFIX, snapshot.signature);
+                let signature = build_signature(snapshot, mode);
                 if program_config.enable_filing == Some(true) {
                     if let Err(e) =
                         snapshot_service.request_snapshot(SnapshotRequest::new(signature))

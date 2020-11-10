@@ -61,6 +61,8 @@ mod test_snapshot_throttle;
 mod test_trigger_truth;
 // Test that no report is filed unless "config.json" has the magic contents.
 mod test_filing_enable;
+// Test that all characters other than [a-z-] are converted to that set.
+mod test_snapshot_sanitizing;
 // run_a_test() verifies the Diagnostic-reading period by checking that no test completes too early.
 // Manually verified: test fails if command line is 4 seconds and CHECK_PERIOD_SECONDS is 5.
 
@@ -73,6 +75,7 @@ async fn run_all_tests() -> Vec<Result<(), Error>> {
         run_a_test(test_filing_enable::test_false_enable()),
         run_a_test(test_filing_enable::test_no_enable()),
         run_a_test(test_filing_enable::test_without_file()),
+        run_a_test(test_snapshot_sanitizing::test()),
     ])
     .await
 }
