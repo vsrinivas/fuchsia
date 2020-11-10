@@ -60,7 +60,6 @@ class CrashReporter : public fuchsia::feedback::CrashReporter {
   async_dispatcher_t* dispatcher_;
   async::Executor executor_;
   const std::shared_ptr<sys::ServiceDirectory> services_;
-  const Config* config_;
   std::unique_ptr<LogTags> tags_;
   const ErrorOr<std::string> build_version_;
   CrashRegister* crash_register_;

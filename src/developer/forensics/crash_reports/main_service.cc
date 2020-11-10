@@ -29,7 +29,7 @@ std::unique_ptr<MainService> MainService::TryCreate(async_dispatcher_t* dispatch
                                                     std::shared_ptr<sys::ServiceDirectory> services,
                                                     timekeeper::Clock* clock,
                                                     std::shared_ptr<InfoContext> info_context) {
-  Config config;
+  auto config = std::make_unique<Config>();
 
   // We use the default config included in the package of this component if no override config was
   // specified or if we failed to parse the override config.
@@ -37,7 +37,8 @@ std::unique_ptr<MainService> MainService::TryCreate(async_dispatcher_t* dispatch
 
   if (files::IsFile(kOverrideConfigPath)) {
     use_default_config = false;
-    if (const zx_status_t status = ParseConfig(kOverrideConfigPath, &config); status != ZX_OK) {
+    if (const zx_status_t status = ParseConfig(kOverrideConfigPath, config.get());
+        status != ZX_OK) {
       // We failed to parse the override config: fall back to the default config.
       use_default_config = true;
       FX_PLOGS(ERROR, status) << "Failed to read override config file at " << kOverrideConfigPath
@@ -47,7 +48,7 @@ std::unique_ptr<MainService> MainService::TryCreate(async_dispatcher_t* dispatch
 
   // Either there was no override config or we failed to parse it.
   if (use_default_config) {
-    if (const zx_status_t status = ParseConfig(kDefaultConfigPath, &config); status != ZX_OK) {
+    if (const zx_status_t status = ParseConfig(kDefaultConfigPath, config.get()); status != ZX_OK) {
       FX_PLOGS(ERROR, status) << "Failed to read default config file at " << kDefaultConfigPath;
 
       FX_LOGS(FATAL) << "Failed to set up main service";
@@ -76,14 +77,14 @@ std::unique_ptr<MainService> MainService::TryCreate(async_dispatcher_t* dispatch
                                                     std::shared_ptr<sys::ServiceDirectory> services,
                                                     timekeeper::Clock* clock,
                                                     std::shared_ptr<InfoContext> info_context,
-                                                    Config config) {
+                                                    std::unique_ptr<Config> config) {
   const ErrorOr<std::string> build_version = ReadStringFromFile("/config/build-info/version");
 
   std::unique_ptr<CrashRegister> crash_register = std::make_unique<CrashRegister>(
       dispatcher, services, info_context, build_version, kCrashRegisterPath);
 
-  auto crash_reporter = CrashReporter::TryCreate(dispatcher, services, clock, info_context, &config,
-                                                 build_version, crash_register.get());
+  auto crash_reporter = CrashReporter::TryCreate(dispatcher, services, clock, info_context,
+                                                 config.get(), build_version, crash_register.get());
   if (!crash_reporter) {
     FX_LOGS(FATAL) << "Failed to set up main service";
     return nullptr;
@@ -96,7 +97,7 @@ std::unique_ptr<MainService> MainService::TryCreate(async_dispatcher_t* dispatch
 
 MainService::MainService(async_dispatcher_t* dispatcher,
                          std::shared_ptr<sys::ServiceDirectory> services,
-                         std::shared_ptr<InfoContext> info_context, Config config,
+                         std::shared_ptr<InfoContext> info_context, std::unique_ptr<Config> config,
                          const ErrorOr<std::string>& build_version,
                          std::unique_ptr<CrashRegister> crash_register,
                          std::unique_ptr<CrashReporter> crash_reporter)
@@ -108,7 +109,7 @@ MainService::MainService(async_dispatcher_t* dispatcher,
   FX_CHECK(crash_register_);
   FX_CHECK(crash_reporter_);
 
-  info_.ExposeConfig(config_);
+  info_.ExposeConfig(*config_);
 }
 
 void MainService::HandleCrashRegisterRequest(

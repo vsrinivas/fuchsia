@@ -41,7 +41,7 @@ class MainService {
                                                 std::shared_ptr<sys::ServiceDirectory> services,
                                                 timekeeper::Clock* clock,
                                                 std::shared_ptr<InfoContext> info_context,
-                                                Config config);
+                                                std::unique_ptr<Config> config);
 
   // FIDL protocol handlers.
   //
@@ -54,14 +54,14 @@ class MainService {
 
  private:
   MainService(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
-              std::shared_ptr<InfoContext> info_context, Config config,
+              std::shared_ptr<InfoContext> info_context, std::unique_ptr<Config> config,
               const ErrorOr<std::string>& build_version,
               std::unique_ptr<CrashRegister> crash_register,
               std::unique_ptr<CrashReporter> crash_reporter);
 
   async_dispatcher_t* dispatcher_;
   MainServiceInfo info_;
-  const Config config_;
+  std::unique_ptr<Config> config_;
 
   std::unique_ptr<CrashRegister> crash_register_;
   ::fidl::BindingSet<fuchsia::feedback::CrashReportingProductRegister> crash_register_connections_;

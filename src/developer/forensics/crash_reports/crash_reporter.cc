@@ -99,7 +99,6 @@ CrashReporter::CrashReporter(async_dispatcher_t* dispatcher,
     : dispatcher_(dispatcher),
       executor_(dispatcher),
       services_(services),
-      config_(std::move(config)),
       tags_(std::move(tags)),
       build_version_(build_version),
       crash_register_(crash_register),
@@ -108,7 +107,7 @@ CrashReporter::CrashReporter(async_dispatcher_t* dispatcher,
       crash_server_(std::move(crash_server)),
       queue_(dispatcher_, services_, info_context, tags_.get(), crash_server_.get(),
              snapshot_manager_.get()),
-      product_quotas_(dispatcher_, config_->daily_per_product_quota),
+      product_quotas_(dispatcher_, config->daily_per_product_quota),
       info_(info_context),
       network_watcher_(dispatcher_, services_),
       privacy_settings_watcher_(dispatcher, services_, &settings_),
@@ -120,7 +119,7 @@ CrashReporter::CrashReporter(async_dispatcher_t* dispatcher,
     FX_CHECK(crash_server_);
   }
 
-  const auto& upload_policy = config_->crash_server.upload_policy;
+  const auto& upload_policy = config->crash_server.upload_policy;
   settings_.set_upload_policy(upload_policy);
   if (upload_policy == CrashServerConfig::UploadPolicy::READ_FROM_PRIVACY_SETTINGS) {
     privacy_settings_watcher_.StartWatching();

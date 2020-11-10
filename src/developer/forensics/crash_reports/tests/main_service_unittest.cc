@@ -43,12 +43,13 @@ constexpr char kCrashServerUrl[] = "localhost:1234";
 class MainServiceTest : public UnitTestFixture {
  public:
   void SetUp() override {
-    Config config = {/*crash_server=*/
-                     {
-                         /*upload_policy=*/CrashServerConfig::UploadPolicy::ENABLED,
-                         /*url=*/std::make_unique<std::string>(kCrashServerUrl),
-                     },
-                     /*daily_per_product_quota=*/100u};
+    auto config = std::make_unique<Config>();
+    config->crash_server = CrashServerConfig{
+        /*upload_policy=*/CrashServerConfig::UploadPolicy::ENABLED,
+        /*url=*/std::make_unique<std::string>(kCrashServerUrl),
+    };
+    config->daily_per_product_quota = 100u;
+
     info_context_ =
         std::make_shared<InfoContext>(&InspectRoot(), &clock_, dispatcher(), services());
 
