@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#[cfg(target_os = "fuchsia")]
+use fuchsia_zircon as zx;
 use std::cell::RefCell;
 
 /// TimeSource provides the current time in nanoseconds since the Unix epoch.
@@ -49,6 +51,35 @@ impl TimeSource for UtcTime {
     }
 }
 
+/// MonotonicTime instances provide a monotonic clock.
+/// On Fuchsia, MonotonicTime uses fuchsia_zircon::Time::get_monotonic().
+pub struct MonotonicTime {
+    #[cfg(not(target_os = "fuchsia"))]
+    starting_time: std::time::Instant,
+}
+
+impl MonotonicTime {
+    pub fn new() -> MonotonicTime {
+        #[cfg(target_os = "fuchsia")]
+        let time = MonotonicTime {};
+        #[cfg(not(target_os = "fuchsia"))]
+        let time = MonotonicTime { starting_time: std::time::Instant::now() };
+
+        time
+    }
+}
+
+impl TimeSource for MonotonicTime {
+    fn now(&self) -> i64 {
+        #[cfg(target_os = "fuchsia")]
+        let now = zx::Time::get_monotonic().into_nanos();
+        #[cfg(not(target_os = "fuchsia"))]
+        let now = (std::time::Instant::now() - self.starting_time).as_nanos() as i64;
+
+        now
+    }
+}
+
 #[cfg(test)]
 mod test {
 
@@ -74,6 +105,15 @@ mod test {
         let time_holder = TimeHolder::new(&time_source);
         let first_time = time_holder.now();
         // Make sure the system time is ticking. If not, this will hang until the test times out.
+        while time_holder.now() == first_time {}
+    }
+
+    #[test]
+    fn test_monotonic_time() {
+        let time_source = MonotonicTime::new();
+        let time_holder = TimeHolder::new(&time_source);
+        let first_time = time_holder.now();
+        // Make sure the monotonic time is ticking. If not, this will hang until the test times out.
         while time_holder.now() == first_time {}
     }
 

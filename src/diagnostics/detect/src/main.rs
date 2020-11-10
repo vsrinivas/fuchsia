@@ -25,7 +25,7 @@ use {
     delay_tracker::DelayTracker,
     fuchsia_async as fasync, fuchsia_zircon as zx,
     glob::glob,
-    injectable_time::UtcTime,
+    injectable_time::MonotonicTime,
     log::{error, info, warn},
     snapshot::SnapshotRequest,
     std::collections::HashMap,
@@ -159,7 +159,7 @@ async fn main() -> Result<(), Error> {
     let selectors = triage_engine.selectors();
     let mut diagnostic_source = diagnostics::DiagnosticFetcher::create(selectors)?;
     let snapshot_service = snapshot::CrashReportHandlerBuilder::new().build()?;
-    let system_time = UtcTime::new();
+    let system_time = MonotonicTime::new();
     let mut delay_tracker = DelayTracker::new(&system_time, &mode);
 
     // Start the first scan as soon as the program starts, via the "missed deadline" logic below.
