@@ -66,6 +66,7 @@ class TestArguments {
     return parser.parse(localArgs);
   }
 
+  // ignore: prefer_constructors_over_static_methods
   static List<String> addDefaults(
     List<String> rawArgs,
     Map<String, String> defaults,

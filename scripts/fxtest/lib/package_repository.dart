@@ -70,6 +70,7 @@ class PackageRepository {
     }
   }
 
+  // ignore: prefer_constructors_over_static_methods
   static PackageUrl decoratePackageUrlWithHash(
       PackageRepository repository, String packageUrl) {
     if (packageUrl == null) {
