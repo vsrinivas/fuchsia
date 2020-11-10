@@ -6,10 +6,40 @@ library fuchsia.element;
 
 using fuchsia.mem;
 
+/// Maximum length of `AnnotationKey.namespace`.
+const uint32 MAX_ANNOTATION_KEY_NAMESPACE_SIZE = 128;
+/// Maximum length of `AnnotationKey.value`.
+const uint32 MAX_ANNOTATION_KEY_VALUE_SIZE = 128;
+/// Maximum number of annotations for a single element or view.
+const uint32 MAX_ANNOTATIONS_PER_ELEMENT = 1024;
+
+/// The key of an [`fuchsia.element/Annotation`].
+struct AnnotationKey {
+    /// A namespace that disambiguates groups of keys across clients.
+    ///
+    /// This is intended to group related keys together under the same
+    /// identifier, and avoid naming collisions. For example, a session may
+    /// use a custom namespace to define annotations that are specific
+    /// to its implementation.
+    ///
+    /// The namespace is required and must be non-empty.
+    ///
+    /// The namespace "global" is represents the global namespace, reserved for
+    /// annotations common across many products and session components.
+    ///
+    /// To ensure compatibility, clients should use a unique namespace,
+    /// like a UUID or the client's component URL, when introducing new keys.
+    string:MAX_ANNOTATION_KEY_NAMESPACE_SIZE namespace;
+
+    /// An identifier for this annotation, uniquely identifying the annotation
+    /// within `namespace`.
+    string:MAX_ANNOTATION_KEY_VALUE_SIZE value;
+};
+
 /// The value of an [`fuchsia.element/Annotation`].
 ///
 /// The actual field used depends on the type of annotation.
-resource union Value {
+resource union AnnotationValue {
     1: string:MAX text;
     2: fuchsia.mem.Buffer buffer;
 };
@@ -21,31 +51,63 @@ resource union Value {
 /// and validate annotation entries based on their own conventions.
 resource struct Annotation {
     /// An identfier for this annotation.
-    string:MAX key;
+    AnnotationKey key;
 
     /// The content of this annotation.
-    Value? value;
+    AnnotationValue value;
 };
 
-/// Error returned from methods that operate on annotations.
-enum AnnotationError {
-    /// The session rejected the provided annotations.
-    ///
-    /// Reasons for rejection may be due to annotations that violate defined
-    /// type constraints, such as:
-    ///
-    /// * The `Value` size exceeds the maximum length
-    /// * The total number of annotations on an element exceeds `MAX`
-    REJECTED = 1;
+/// A list of annotations on an element or its graphical view.
+using Annotations = vector<Annotation>:MAX_ANNOTATIONS_PER_ELEMENT;
 
-    /// The annotations on an element could not be returned.
+/// A list of annotation keys.
+using AnnotationKeys = vector<AnnotationKey>:MAX_ANNOTATIONS_PER_ELEMENT;
+
+/// An interface to create, read, update, and delete annotations,
+/// typically on an element or its view.
+protocol AnnotationController {
+    /// Adds, updates, and removes annotations.
     ///
-    /// Reasons for this failure may be due to inability to read buffer bytes.
-    NOT_FOUND = 2;
+    /// The server is expected to adhere to the following conventions:
+    ///
+    /// * If a key in `annotations_to_set` is new, a new annotation is added
+    /// * If a key in `annotations_to_set` already exists, the annotation value is updated
+    /// * If a key in `annotations_to_delete` does not exist, it is ignored
+    ///
+    /// Annotations with the same key cannot be set and deleted in the same operation.
+    ///
+    /// If the operation results in an error, the annotations remain unchanged,
+    /// and will not be partially updated.
+    ///
+    /// * error `UpdateAnnotationsError.INVALID_ARGS` if the same key exists in
+    ///   both `annotations_to_set` and `annotations_to_delete`.
+    /// * error `UpdateAnnotationsError.INVALID_ARGS` if a key in `annotations_to_set` or
+    ///   `annotations_to_delete` has an empty namespace.
+    /// * error `UpdateAnnotationsError.INVALID_ARGS` if an `AnnotationValue.buffer` in
+    ///   `annotations_to_set` could not be read.
+    /// * error `UpdateAnnotationsError.TOO_MANY_ANNOTATIONS` if the operation results
+    ///   in more than `MAX_ANNOTATIONS_PER_ELEMENT` annotations existing.
+    UpdateAnnotations(Annotations annotations_to_set, AnnotationKeys annotations_to_delete)
+        -> () error UpdateAnnotationsError;
+
+    /// Returns the current `Annotations` for the element.
+    ///
+    /// * error `GetAnnotationsError` if the annotations could not be returned.
+    GetAnnotations() -> (Annotations annotations) error GetAnnotationsError;
 };
 
-/// The annotations applied to an element.
-resource table Annotations {
-    /// A list of dynamically-defined annotations.
-    1: vector<Annotation>:MAX custom_annotations;
+/// An error returned from `AnnotationController/UpdateAnnotations`
+enum UpdateAnnotationsError {
+    /// The arguments passed to `UpdateAnnotations` are malformed.
+    INVALID_ARGS = 1;
+
+    /// The total number of annotations will exceed [`MAX_ANNOTATIONS_PER_ELEMENT`]
+    /// as a result of updating the annotations.
+    TOO_MANY_ANNOTATIONS = 2;
+};
+
+/// An error returned from `ElementController/GetAnnotations`.
+enum GetAnnotationsError {
+    /// The `AnnotationValue.buffer` of an annotation could not be read.
+    BUFFER_READ_FAILED = 1;
 };

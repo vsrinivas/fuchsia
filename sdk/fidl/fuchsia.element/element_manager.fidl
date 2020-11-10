@@ -62,36 +62,16 @@ protocol ElementManager {
         -> () error ProposeElementError;
 };
 
-/// An interface that gives clients of `ElementManager` (element proposers) control
-/// over the proposed element's lifecycle and annotations.
-///
-/// ## Lifecycle
-///
-/// The client must keep `ElementController` connected to ensure the element
-/// remains in the session and is not destroyed. Once `ElementController` is closed,
-/// the element and its component will be terminated. The element may also terminate
-/// itself, which will cause `ElementController` to close.
-protocol ElementController {
-    /// Adds, updates, or removes annotations on the element.
-    ///
-    /// When `annotations.custom_annotations` is specified, the server is
-    /// expected to adhere to the following conventions:
-    ///
-    /// * If a key is new, a new annotation is added
-    /// * If a key already exists and the value is not null,
-    ///   the annotation value is updated
-    /// * If a key already exists and the value is null,
-    ///   the annotation is deleted
-    ///
-    /// * error `AnnotationError.REJECTED` if the `annotations` could not be set
-    ///   (the exact reason depends on the session implementation;
-    ///   see [`AnnotationError.REJECTED`] for some specific examples)
-    SetAnnotations(Annotations annotations) -> () error AnnotationError;
+/// Description of an element to be added to a session.
+resource table ElementSpec {
+    /// The component URL of the element. Required.
+    1: fuchsia.url.Url component_url;
 
-    /// Returns the current `Annotations` for the element.
-    ///
-    /// * error `AnnotationError.NOT_FOUND` if the annotations could not be read.
-    GetAnnotations() -> (Annotations annotations) error AnnotationError;
+    /// Initial annotations on the element. Required, but can be an empty vector.
+    2: Annotations annotations;
+
+    /// A list of services passed to the Element. Optional.
+    3: fuchsia.sys.ServiceList additional_services;
 };
 
 /// Errors that can be returned when attempting to add elements to a session.
@@ -105,14 +85,15 @@ enum ProposeElementError {
     REJECTED = 2;
 };
 
-/// Description of an element to be added to a session.
-resource table ElementSpec {
-    /// The component URL of the element. Required.
-    1: fuchsia.url.Url component_url;
-
-    /// Initial annotations on the element. Optional.
-    2: Annotations annotations;
-
-    /// A list of services passed to the Element. Optional.
-    3: fuchsia.sys.ServiceList additional_services;
+/// An interface that gives clients of `ElementManager` (element proposers) control
+/// over the proposed element's lifecycle and annotations.
+///
+/// ## Lifecycle
+///
+/// The client must keep `ElementController` connected to ensure the element
+/// remains in the session and is not destroyed. Once `ElementController` is closed,
+/// the element and its component will be terminated. The element may also terminate
+/// itself, which will cause `ElementController` to close.
+protocol ElementController {
+    compose AnnotationController;
 };

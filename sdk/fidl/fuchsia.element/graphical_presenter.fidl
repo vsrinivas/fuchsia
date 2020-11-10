@@ -100,21 +100,14 @@ resource table ViewSpec {
 ///   to present the view (see [`GraphicalPresenter.PresentView`])
 /// * `ViewControllerEpitaph.ZX_OK` when the view is dismissed
 protocol ViewController {
-    /// Annotates the view with `annotations`.
-    ///
-    /// The presenter must observe incoming annotation requests and update
-    /// the presentation accordingly.
-    ///
-    /// The presenter must adhere to the following rules for annotation updates:
-    ///
-    /// * Annotations are added when their `Annotation.key` was not present in a
-    ///   previous set of annotations
-    /// * Annotations are updated when their `Annotation.value` is non-null
-    /// * Annotations are deleted when their `Annotation.value` is null
-    ///
-    /// When the `Annotate` call returns, clients can assume that annotations have
-    /// been updated and incorporated into the presentation.
-    Annotate(Annotations annotations) -> ();
+    // Provides control over the view's `annotations`.
+    //
+    // The presenter must observe incoming annotation requests and update
+    // the presentation accordingly.
+    //
+    // When calls to methods that update annotations return, clients can assume
+    // that the annotations have been incorporated into the presentation.
+    compose AnnotationController;
 
     /// Instructs the presenter to dismiss the associated view.
     ///
