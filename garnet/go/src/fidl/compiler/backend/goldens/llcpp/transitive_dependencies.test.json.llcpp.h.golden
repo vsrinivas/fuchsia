@@ -52,7 +52,6 @@ struct Baz {
   ::llcpp::middle::Bar g = {};
   void _CloseHandles();
 
-  // TODO(fxbug.dev/62485): rename to UnownedEncodedMessage.
   class UnownedEncodedMessage final {
    public:
     UnownedEncodedMessage(uint8_t* bytes, uint32_t byte_size, Baz* value)
@@ -77,7 +76,6 @@ struct Baz {
     ::fidl::OutgoingMessage message_;
   };
 
-  // TODO(fxbug.dev/62485): rename to OwnedEncodedMessage.
   class OwnedEncodedMessage final {
    public:
     explicit OwnedEncodedMessage(Baz* value)
@@ -104,7 +102,6 @@ struct Baz {
     UnownedEncodedMessage message_;
   };
 
-  // TODO(fxbug.dev/62485): rename to DecodedMessage.
   class DecodedMessage final : public ::fidl::internal::IncomingMessage {
    public:
     DecodedMessage(uint8_t* bytes, uint32_t byte_actual,

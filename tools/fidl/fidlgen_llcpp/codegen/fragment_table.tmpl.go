@@ -71,7 +71,6 @@ public:
 
   void _CloseHandles();
 
-  // TODO(fxbug.dev/62485): rename to UnownedEncodedMessage.
   class UnownedEncodedMessage final {
    public:
     UnownedEncodedMessage(uint8_t* bytes, uint32_t byte_size, {{ .Name }}* value)
@@ -105,7 +104,6 @@ public:
     ::fidl::OutgoingMessage message_;
   };
 
-  // TODO(fxbug.dev/62485): rename to OwnedEncodedMessage.
   class OwnedEncodedMessage final {
    public:
     explicit OwnedEncodedMessage({{ .Name }}* value)
@@ -140,7 +138,6 @@ public:
     UnownedEncodedMessage message_;
   };
 
-  // TODO(fxbug.dev/62485): rename to DecodedMessage.
   class DecodedMessage final : public ::fidl::internal::IncomingMessage {
    public:
     DecodedMessage(uint8_t* bytes, uint32_t byte_actual, zx_handle_info_t* handles = nullptr,

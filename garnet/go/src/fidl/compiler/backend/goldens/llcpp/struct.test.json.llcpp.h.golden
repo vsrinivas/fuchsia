@@ -56,7 +56,6 @@ struct Simple {
   bool f2 = {};
   void _CloseHandles();
 
-  // TODO(fxbug.dev/62485): rename to UnownedEncodedMessage.
   class UnownedEncodedMessage final {
    public:
     UnownedEncodedMessage(uint8_t* bytes, uint32_t byte_size, Simple* value)
@@ -81,7 +80,6 @@ struct Simple {
     ::fidl::OutgoingMessage message_;
   };
 
-  // TODO(fxbug.dev/62485): rename to OwnedEncodedMessage.
   class OwnedEncodedMessage final {
    public:
     explicit OwnedEncodedMessage(Simple* value)
@@ -108,7 +106,6 @@ struct Simple {
     UnownedEncodedMessage message_;
   };
 
-  // TODO(fxbug.dev/62485): rename to DecodedMessage.
   class DecodedMessage final : public ::fidl::internal::IncomingMessage {
    public:
     DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
@@ -174,7 +171,6 @@ struct BasicStruct {
   ::fidl::StringView y = {};
   void _CloseHandles();
 
-  // TODO(fxbug.dev/62485): rename to UnownedEncodedMessage.
   class UnownedEncodedMessage final {
    public:
     UnownedEncodedMessage(uint8_t* bytes, uint32_t byte_size,
@@ -200,7 +196,6 @@ struct BasicStruct {
     ::fidl::OutgoingMessage message_;
   };
 
-  // TODO(fxbug.dev/62485): rename to OwnedEncodedMessage.
   class OwnedEncodedMessage final {
    public:
     explicit OwnedEncodedMessage(BasicStruct* value)
@@ -229,7 +224,6 @@ struct BasicStruct {
     UnownedEncodedMessage message_;
   };
 
-  // TODO(fxbug.dev/62485): rename to DecodedMessage.
   class DecodedMessage final : public ::fidl::internal::IncomingMessage {
    public:
     DecodedMessage(uint8_t* bytes, uint32_t byte_actual,

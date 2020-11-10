@@ -67,7 +67,6 @@ class super final {
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kResponse;
 
-    // TODO(fxbug.dev/62485): rename to UnownedEncodedMessage.
     class UnownedEncodedMessage final {
      public:
       UnownedEncodedMessage(uint8_t* _bytes, uint32_t _byte_size, int64_t y)
@@ -103,7 +102,6 @@ class super final {
       ::fidl::OutgoingMessage message_;
     };
 
-    // TODO(fxbug.dev/62485): rename to OwnedEncodedMessage.
     class OwnedEncodedMessage final {
      public:
       explicit OwnedEncodedMessage(int64_t y)
@@ -134,7 +132,6 @@ class super final {
       UnownedEncodedMessage message_;
     };
 
-    // TODO(fxbug.dev/62485): rename to DecodedMessage.
     class DecodedMessage final : public ::fidl::internal::IncomingMessage {
      public:
       DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
@@ -211,7 +208,6 @@ class super final {
         ::fidl::internal::TransactionalMessageKind::kRequest;
     using ResponseType = fooResponse;
 
-    // TODO(fxbug.dev/62485): rename to UnownedEncodedMessage.
     class UnownedEncodedMessage final {
      public:
       UnownedEncodedMessage(uint8_t* _bytes, uint32_t _byte_size,
@@ -248,7 +244,6 @@ class super final {
       ::fidl::OutgoingMessage message_;
     };
 
-    // TODO(fxbug.dev/62485): rename to OwnedEncodedMessage.
     class OwnedEncodedMessage final {
      public:
       explicit OwnedEncodedMessage(zx_txid_t _txid, const ::fidl::StringView& s)
@@ -283,7 +278,6 @@ class super final {
       UnownedEncodedMessage message_;
     };
 
-    // TODO(fxbug.dev/62485): rename to DecodedMessage.
     class DecodedMessage final : public ::fidl::internal::IncomingMessage {
      public:
       DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
@@ -567,7 +561,6 @@ class sub final {
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kResponse;
 
-    // TODO(fxbug.dev/62485): rename to UnownedEncodedMessage.
     class UnownedEncodedMessage final {
      public:
       UnownedEncodedMessage(uint8_t* _bytes, uint32_t _byte_size, int64_t y)
@@ -603,7 +596,6 @@ class sub final {
       ::fidl::OutgoingMessage message_;
     };
 
-    // TODO(fxbug.dev/62485): rename to OwnedEncodedMessage.
     class OwnedEncodedMessage final {
      public:
       explicit OwnedEncodedMessage(int64_t y)
@@ -634,7 +626,6 @@ class sub final {
       UnownedEncodedMessage message_;
     };
 
-    // TODO(fxbug.dev/62485): rename to DecodedMessage.
     class DecodedMessage final : public ::fidl::internal::IncomingMessage {
      public:
       DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
@@ -711,7 +702,6 @@ class sub final {
         ::fidl::internal::TransactionalMessageKind::kRequest;
     using ResponseType = fooResponse;
 
-    // TODO(fxbug.dev/62485): rename to UnownedEncodedMessage.
     class UnownedEncodedMessage final {
      public:
       UnownedEncodedMessage(uint8_t* _bytes, uint32_t _byte_size,
@@ -748,7 +738,6 @@ class sub final {
       ::fidl::OutgoingMessage message_;
     };
 
-    // TODO(fxbug.dev/62485): rename to OwnedEncodedMessage.
     class OwnedEncodedMessage final {
      public:
       explicit OwnedEncodedMessage(zx_txid_t _txid, const ::fidl::StringView& s)
@@ -783,7 +772,6 @@ class sub final {
       UnownedEncodedMessage message_;
     };
 
-    // TODO(fxbug.dev/62485): rename to DecodedMessage.
     class DecodedMessage final : public ::fidl::internal::IncomingMessage {
      public:
       DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
