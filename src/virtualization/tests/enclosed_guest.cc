@@ -209,21 +209,31 @@ zx_status_t ZirconEnclosedGuest::LaunchInfo(fuchsia::virtualization::LaunchInfo*
 
 zx_status_t ZirconEnclosedGuest::WaitForSystemReady() {
   PeriodicLogger logger{"Waiting for guest system shell", zx::sec(10)};
+  std::string ps;
   for (size_t i = 0; i != kNumRetries; ++i) {
     logger.LogIfRequired();
-    std::string ps;
     zx_status_t status = Execute({"ps"}, {}, &ps);
     if (status != ZX_OK) {
       continue;
     }
     auto appmgr = ps.find("appmgr");
-    if (appmgr == std::string::npos) {
+    auto virtcon = ps.find("virtual-console");
+    if (appmgr == std::string::npos || virtcon == std::string::npos) {
       zx::nanosleep(zx::deadline_after(kRetryStep));
       continue;
     }
     return ZX_OK;
   }
-  FX_LOGS(ERROR) << "Failed to wait for appmgr";
+  FX_LOGS(ERROR) << "Failed to wait for appmgr and virtual-console";
+
+  auto appmgr = ps.find("appmgr");
+  if (appmgr == std::string::npos) {
+    FX_LOGS(ERROR) << "'appmgr' cannot be found in 'ps' output";
+  }
+  auto virtcon = ps.find("virtual-console");
+  if (virtcon == std::string::npos) {
+    FX_LOGS(ERROR) << "'virtual-console' cannot be found in 'ps' output";
+  }
   return ZX_ERR_TIMED_OUT;
 }
 
