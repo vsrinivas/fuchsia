@@ -8,6 +8,7 @@
 #include <fuchsia/sysmem/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/async/cpp/task.h>
 
 #include <mutex>
 #include <thread>
@@ -22,13 +23,17 @@ class ImagePipeSurfaceAsync : public ImagePipeSurface {
  public:
   explicit ImagePipeSurfaceAsync(zx_handle_t image_pipe_handle)
       : loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {
-    image_pipe_.Bind(zx::channel(image_pipe_handle), loop_.dispatcher());
-    image_pipe_.set_error_handler([this](zx_status_t status) {
-      std::lock_guard<std::mutex> lock(mutex_);
-      channel_closed_ = true;
-      queue_.clear();
-    });
     loop_.StartThread();
+    async::PostTask(loop_.dispatcher(), [this, image_pipe_handle] {
+      // image_pipe_ is thread hostile so it must be bound on the thread
+      // that will use it.
+      image_pipe_.Bind(zx::channel(image_pipe_handle), loop_.dispatcher());
+      image_pipe_.set_error_handler([this](zx_status_t status) {
+        std::lock_guard<std::mutex> lock(mutex_);
+        channel_closed_ = true;
+        queue_.clear();
+      });
+    });
     std::vector<VkSurfaceFormatKHR> formats(
         {{VK_FORMAT_R8G8B8A8_UNORM, VK_COLORSPACE_SRGB_NONLINEAR_KHR},
          {VK_FORMAT_R8G8B8A8_SRGB, VK_COLORSPACE_SRGB_NONLINEAR_KHR},
@@ -37,7 +42,15 @@ class ImagePipeSurfaceAsync : public ImagePipeSurface {
     supported_image_properties_ = {formats};
   }
 
-  ~ImagePipeSurfaceAsync() override { loop_.Shutdown(); }
+  ~ImagePipeSurfaceAsync() override {
+    async::PostTask(loop_.dispatcher(), [this] {
+      // image_pipe_ is thread hostile so it must be turn down on the thread
+      // that will use it.
+      image_pipe_ = nullptr;
+      loop_.Quit();
+    });
+    loop_.JoinThreads();
+  }
 
   bool Init() override;
 
