@@ -17,7 +17,13 @@ use {
     fidl::epitaph::ChannelEpitaphExt,
     fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_policy as fidl_policy,
     fidl_fuchsia_wlan_sme as fidl_sme, fuchsia_zircon as zx,
-    futures::{channel::oneshot, lock::Mutex, prelude::*, select, stream::FuturesUnordered},
+    futures::{
+        channel::oneshot,
+        lock::{Mutex, MutexGuard},
+        prelude::*,
+        select,
+        stream::FuturesUnordered,
+    },
     log::{error, info},
     std::{convert::TryFrom, sync::Arc},
 };
@@ -46,6 +52,7 @@ pub(crate) async fn serve_provider_requests(
     update_sender: listener::ClientListenerMessageSender,
     saved_networks: SavedNetworksPtr,
     network_selector: Arc<network_selection::NetworkSelector>,
+    client_provider_lock: Arc<Mutex<()>>,
     mut requests: fidl_policy::ClientProviderRequestStream,
 ) {
     let mut controller_reqs = FuturesUnordered::new();
@@ -56,15 +63,14 @@ pub(crate) async fn serve_provider_requests(
             _ = controller_reqs.select_next_some() => (),
             // Process provider requests.
             req = requests.select_next_some() => if let Ok(req) = req {
-                // If there is an active controller - reject new requests.
-                // Rust cannot yet send Epitaphs when closing a channel, thus, simply drop the
-                // request.
-                if controller_reqs.is_empty() {
+                // If another component already has a client provider, rejest the request.
+                if let Some(client_provider_guard) = client_provider_lock.try_lock() {
                     let fut = handle_provider_request(
                         Arc::clone(&iface_manager),
                         update_sender.clone(),
                         Arc::clone(&saved_networks),
                         Arc::clone(&network_selector),
+                        client_provider_guard,
                         req
                     );
                     controller_reqs.push(fut);
@@ -98,13 +104,20 @@ async fn handle_provider_request(
     update_sender: listener::ClientListenerMessageSender,
     saved_networks: SavedNetworksPtr,
     network_selector: Arc<network_selection::NetworkSelector>,
+    client_provider_guard: MutexGuard<'_, ()>,
     req: fidl_policy::ClientProviderRequest,
 ) -> Result<(), fidl::Error> {
     match req {
         fidl_policy::ClientProviderRequest::GetController { requests, updates, .. } => {
             register_listener(update_sender, updates.into_proxy()?);
-            handle_client_requests(iface_manager, saved_networks, network_selector, requests)
-                .await?;
+            handle_client_requests(
+                iface_manager,
+                saved_networks,
+                network_selector,
+                client_provider_guard,
+                requests,
+            )
+            .await?;
             Ok(())
         }
     }
@@ -133,6 +146,7 @@ async fn handle_client_requests(
     iface_manager: Arc<Mutex<dyn IfaceManagerApi + Send>>,
     saved_networks: SavedNetworksPtr,
     network_selector: Arc<network_selection::NetworkSelector>,
+    client_provider_guard: MutexGuard<'_, ()>,
     requests: ClientRequests,
 ) -> Result<(), fidl::Error> {
     let mut request_stream = requests.into_stream()?;
@@ -217,6 +231,7 @@ async fn handle_client_requests(
             }
         }
     }
+    drop(client_provider_guard);
     Ok(())
 }
 
@@ -632,6 +647,7 @@ mod tests {
         sme_stream: fidl_sme::ClientSmeRequestStream,
         update_sender: mpsc::UnboundedSender<listener::ClientListenerMessage>,
         listener_updates: mpsc::UnboundedReceiver<listener::ClientListenerMessage>,
+        client_provider_lock: Arc<Mutex<()>>,
     }
 
     // setup channels and proxies needed for the tests to use use the Client Provider and
@@ -671,6 +687,7 @@ mod tests {
             sme_stream,
             update_sender,
             listener_updates,
+            client_provider_lock: Arc::new(Mutex::new(())),
         }
     }
 
@@ -724,6 +741,7 @@ mod tests {
             test_values.update_sender,
             Arc::clone(&test_values.saved_networks),
             Arc::clone(&test_values.network_selector),
+            test_values.client_provider_lock,
             test_values.requests,
         );
         pin_mut!(serve_fut);
@@ -767,6 +785,7 @@ mod tests {
             test_values.update_sender,
             Arc::clone(&test_values.saved_networks),
             Arc::clone(&test_values.network_selector),
+            test_values.client_provider_lock,
             test_values.requests,
         );
         pin_mut!(serve_fut);
@@ -815,6 +834,7 @@ mod tests {
             test_values.update_sender,
             Arc::clone(&test_values.saved_networks),
             Arc::clone(&test_values.network_selector),
+            test_values.client_provider_lock,
             test_values.requests,
         );
         pin_mut!(serve_fut);
@@ -864,6 +884,7 @@ mod tests {
             test_values.update_sender,
             Arc::clone(&test_values.saved_networks),
             Arc::clone(&test_values.network_selector),
+            test_values.client_provider_lock,
             test_values.requests,
         );
         pin_mut!(serve_fut);
@@ -912,6 +933,7 @@ mod tests {
             test_values.update_sender,
             Arc::clone(&test_values.saved_networks),
             Arc::clone(&test_values.network_selector),
+            test_values.client_provider_lock,
             test_values.requests,
         );
         pin_mut!(serve_fut);
@@ -948,6 +970,7 @@ mod tests {
             test_values.update_sender,
             Arc::clone(&test_values.saved_networks),
             Arc::clone(&test_values.network_selector),
+            test_values.client_provider_lock,
             test_values.requests,
         );
         pin_mut!(serve_fut);
@@ -984,6 +1007,7 @@ mod tests {
             test_values.update_sender,
             Arc::clone(&test_values.saved_networks),
             Arc::clone(&test_values.network_selector),
+            test_values.client_provider_lock,
             test_values.requests,
         );
         pin_mut!(serve_fut);
@@ -1020,6 +1044,7 @@ mod tests {
             test_values.update_sender,
             Arc::clone(&test_values.saved_networks),
             Arc::clone(&test_values.network_selector),
+            test_values.client_provider_lock,
             test_values.requests,
         );
         pin_mut!(serve_fut);
@@ -1088,6 +1113,7 @@ mod tests {
             test_values.update_sender,
             Arc::clone(&test_values.saved_networks),
             Arc::clone(&test_values.network_selector),
+            test_values.client_provider_lock,
             test_values.requests,
         );
         pin_mut!(serve_fut);
@@ -1142,6 +1168,7 @@ mod tests {
             update_sender,
             Arc::clone(&saved_networks),
             network_selector,
+            test_values.client_provider_lock,
             requests,
         );
         pin_mut!(serve_fut);
@@ -1212,6 +1239,7 @@ mod tests {
             update_sender,
             Arc::clone(&saved_networks),
             network_selector,
+            test_values.client_provider_lock,
             requests,
         );
         pin_mut!(serve_fut);
@@ -1303,6 +1331,7 @@ mod tests {
             update_sender,
             Arc::clone(&saved_networks),
             network_selector,
+            Arc::new(Mutex::new(())),
             requests,
         );
         pin_mut!(serve_fut);
@@ -1381,6 +1410,7 @@ mod tests {
             update_sender,
             Arc::clone(&saved_networks),
             network_selector,
+            test_values.client_provider_lock,
             requests,
         );
         pin_mut!(serve_fut);
@@ -1456,6 +1486,7 @@ mod tests {
             update_sender,
             Arc::clone(&saved_networks),
             network_selector,
+            Arc::new(Mutex::new(())),
             requests,
         );
         pin_mut!(serve_fut);
@@ -1603,6 +1634,7 @@ mod tests {
             update_sender,
             Arc::clone(&saved_networks),
             network_selector,
+            test_values.client_provider_lock,
             requests,
         );
         pin_mut!(serve_fut);
@@ -1667,6 +1699,7 @@ mod tests {
             test_values.update_sender,
             test_values.saved_networks,
             test_values.network_selector,
+            test_values.client_provider_lock,
             test_values.requests,
         );
         pin_mut!(serve_fut);
@@ -1719,6 +1752,7 @@ mod tests {
             test_values.update_sender,
             test_values.saved_networks,
             test_values.network_selector,
+            test_values.client_provider_lock,
             test_values.requests,
         );
         pin_mut!(serve_fut);
@@ -1796,6 +1830,7 @@ mod tests {
             test_values.update_sender,
             test_values.saved_networks.clone(),
             test_values.network_selector,
+            test_values.client_provider_lock,
             test_values.requests,
         );
         pin_mut!(serve_fut);
@@ -1913,6 +1948,7 @@ mod tests {
             update_sender,
             saved_networks,
             network_selector,
+            Arc::new(Mutex::new(())),
             requests,
         );
         pin_mut!(serve_fut);
@@ -2004,6 +2040,87 @@ mod tests {
                 Credential::Password(b"not-saved".to_vec())
             )
             .await
+        );
+    }
+
+    #[test]
+    fn multiple_api_clients() {
+        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let test_values = test_setup("multiple_client_provider_requests", &mut exec, true);
+        let serve_fut = serve_provider_requests(
+            test_values.iface_manager.clone(),
+            test_values.update_sender.clone(),
+            test_values.saved_networks.clone(),
+            test_values.network_selector.clone(),
+            test_values.client_provider_lock.clone(),
+            test_values.requests,
+        );
+        pin_mut!(serve_fut);
+
+        // No request has been sent yet. Future should be idle.
+        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
+
+        // Request a controller.
+        let (controller1, _) = request_controller(&test_values.provider);
+        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
+
+        // Create another client provider request stream and start serving it.  This is equivalent
+        // to the behavior that occurs when a second client connects to the ClientProvider service.
+        let (provider, requests) = create_proxy::<fidl_policy::ClientProviderMarker>()
+            .expect("failed to create ClientProvider proxy");
+        let requests = requests.into_stream().expect("failed to create stream");
+
+        let second_serve_fut = serve_provider_requests(
+            test_values.iface_manager.clone(),
+            test_values.update_sender.clone(),
+            test_values.saved_networks.clone(),
+            test_values.network_selector.clone(),
+            test_values.client_provider_lock.clone(),
+            requests,
+        );
+        pin_mut!(second_serve_fut);
+
+        // Request a client controller from the second instance of the service.
+        let (controller2, _) = request_controller(&provider);
+        assert_variant!(exec.run_until_stalled(&mut second_serve_fut), Poll::Pending);
+
+        let chan = controller2.into_channel().expect("error turning proxy into channel");
+        let mut buffer = zx::MessageBuf::new();
+        let epitaph_fut = chan.recv_msg(&mut buffer);
+        pin_mut!(epitaph_fut);
+        assert_variant!(exec.run_until_stalled(&mut epitaph_fut), Poll::Ready(Ok(_)));
+
+        // Verify Epitaph was received by the second caller.
+        use fidl::encoding::{decode_transaction_header, Decodable, Decoder, EpitaphBody};
+        let (header, tail) =
+            decode_transaction_header(buffer.bytes()).expect("failed decoding header");
+        let mut msg = Decodable::new_empty();
+        Decoder::decode_into::<EpitaphBody>(&header, tail, &mut [], &mut msg)
+            .expect("failed decoding body");
+        assert_eq!(msg.error, zx::Status::ALREADY_BOUND);
+        assert!(chan.is_closed());
+
+        // Drop the first controller and verify that the second provider client can get a
+        // functional client controller.
+        drop(controller1);
+        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
+
+        let (controller2, _) = request_controller(&provider);
+        assert_variant!(exec.run_until_stalled(&mut second_serve_fut), Poll::Pending);
+
+        // Ensure the new controller works by issuing a connect request.
+        let connect_fut = controller2.connect(&mut fidl_policy::NetworkIdentifier {
+            ssid: b"foobar".to_vec(),
+            type_: fidl_policy::SecurityType::None,
+        });
+        pin_mut!(connect_fut);
+
+        // Process connect request from first controller. Verify success.
+        assert_variant!(exec.run_until_stalled(&mut second_serve_fut), Poll::Pending);
+
+        assert_variant!(
+            exec.run_until_stalled(&mut connect_fut),
+            Poll::Ready(Ok(fidl_common::RequestStatus::Acknowledged))
         );
     }
 }

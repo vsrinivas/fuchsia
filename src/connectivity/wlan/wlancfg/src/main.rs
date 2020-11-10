@@ -68,6 +68,8 @@ async fn serve_fidl(
 
     let saved_networks_clone = saved_networks.clone();
 
+    let client_provider_lock = Arc::new(Mutex::new(()));
+
     // TODO(sakuma): Once the legacy API is deprecated, the interface manager should default to
     // stopped.
     {
@@ -91,6 +93,7 @@ async fn serve_fidl(
                 client_sender1.clone(),
                 Arc::clone(&saved_networks_clone),
                 Arc::clone(&network_selector),
+                client_provider_lock.clone(),
                 reqs,
             ))
             .detach()
@@ -224,7 +227,8 @@ fn main() -> Result<(), Error> {
         iface_manager.clone(),
     );
 
-    let ap = access_point::AccessPoint::new(iface_manager.clone(), ap_sender);
+    let ap =
+        access_point::AccessPoint::new(iface_manager.clone(), ap_sender, Arc::new(Mutex::new(())));
     let fidl_fut = serve_fidl(
         ap,
         configurator,

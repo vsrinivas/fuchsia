@@ -11,7 +11,7 @@ use {
     futures::{
         channel::mpsc,
         future::BoxFuture,
-        lock::Mutex as FutureMutex,
+        lock::{Mutex, MutexGuard},
         select,
         sink::SinkExt,
         stream::{FuturesUnordered, StreamExt, TryStreamExt},
@@ -32,8 +32,9 @@ pub mod types;
 // servicing routines to utilize the SME.
 #[derive(Clone)]
 pub(crate) struct AccessPoint {
-    iface_manager: Arc<FutureMutex<dyn IfaceManagerApi + Send>>,
+    iface_manager: Arc<Mutex<dyn IfaceManagerApi + Send>>,
     update_sender: listener::ApListenerMessageSender,
+    ap_provider_lock: Arc<Mutex<()>>,
 }
 
 // This number was chosen arbitrarily.
@@ -45,10 +46,11 @@ impl AccessPoint {
     /// Creates a new, empty AccessPoint. The returned AccessPoint effectively represents the state
     /// in which no AP interface is available.
     pub fn new(
-        iface_manager: Arc<FutureMutex<dyn IfaceManagerApi + Send>>,
+        iface_manager: Arc<Mutex<dyn IfaceManagerApi + Send>>,
         update_sender: listener::ApListenerMessageSender,
+        ap_provider_lock: Arc<Mutex<()>>,
     ) -> Self {
-        Self { iface_manager, update_sender }
+        Self { iface_manager, update_sender, ap_provider_lock }
     }
 
     fn send_listener_message(&self, message: listener::ApMessage) -> Result<(), Error> {
@@ -77,13 +79,15 @@ impl AccessPoint {
                 // Process provider requests.
                 req = requests.select_next_some() => match req {
                     Ok(req) => {
-                        // If there is an active controller - reject new requests.
-                        if provider_reqs.is_empty() {
+                        // Reject the new provider request if another client is already using the
+                        // AccessPointProvider service.
+                        if let Some(ap_provider_guard) = self.ap_provider_lock.try_lock() {
                             let mut ap = self.clone();
                             let sink_copy = internal_messages_sink.clone();
                             let fut = async move {
                                 ap.handle_provider_request(
                                     sink_copy,
+                                    ap_provider_guard,
                                     req
                                 ).await
                             };
@@ -121,6 +125,7 @@ impl AccessPoint {
     async fn handle_provider_request(
         &mut self,
         internal_msg_sink: mpsc::Sender<BoxFuture<'static, Result<Response, Error>>>,
+        ap_provider_guard: MutexGuard<'_, ()>,
         req: fidl_policy::AccessPointProviderRequest,
     ) -> Result<(), fidl::Error> {
         match req {
@@ -128,7 +133,7 @@ impl AccessPoint {
                 requests, updates, ..
             } => {
                 self.register_listener(updates.into_proxy()?);
-                self.handle_ap_requests(internal_msg_sink, requests).await?;
+                self.handle_ap_requests(internal_msg_sink, ap_provider_guard, requests).await?;
                 Ok(())
             }
         }
@@ -151,6 +156,7 @@ impl AccessPoint {
     async fn handle_ap_requests(
         &self,
         mut internal_msg_sink: mpsc::Sender<BoxFuture<'static, Result<Response, Error>>>,
+        ap_provider_guard: MutexGuard<'_, ()>,
         requests: ApRequests,
     ) -> Result<(), fidl::Error> {
         let mut request_stream = requests.into_stream()?;
@@ -241,6 +247,7 @@ impl AccessPoint {
                 }
             }
         }
+        drop(ap_provider_guard);
         Ok(())
     }
 
@@ -473,7 +480,7 @@ mod tests {
         provider: fidl_policy::AccessPointProviderProxy,
         requests: fidl_policy::AccessPointProviderRequestStream,
         ap: AccessPoint,
-        iface_manager: Arc<FutureMutex<FakeIfaceManager>>,
+        iface_manager: Arc<Mutex<FakeIfaceManager>>,
     }
 
     /// Setup channels and proxies needed for the tests to use use the AP Provider and
@@ -484,9 +491,9 @@ mod tests {
         let requests = requests.into_stream().expect("failed to create stream");
 
         let iface_manager = FakeIfaceManager::new();
-        let iface_manager = Arc::new(FutureMutex::new(iface_manager));
+        let iface_manager = Arc::new(Mutex::new(iface_manager));
         let (sender, _) = mpsc::unbounded();
-        let ap = AccessPoint::new(iface_manager.clone(), sender);
+        let ap = AccessPoint::new(iface_manager.clone(), sender, Arc::new(Mutex::new(())));
         set_logger_for_test();
         TestValues { provider, requests, ap, iface_manager }
     }
@@ -777,7 +784,7 @@ mod tests {
     }
 
     #[test]
-    fn test_multiple_api_clients() {
+    fn test_multiple_controllers() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
         let test_values = test_setup();
         let serve_fut = test_values.ap.serve_provider_requests(test_values.requests);
@@ -809,5 +816,78 @@ mod tests {
             .expect("failed decoding body");
         assert_eq!(msg.error, zx::Status::ALREADY_BOUND);
         assert!(chan.is_closed());
+    }
+
+    #[test]
+    fn test_multiple_api_clients() {
+        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let test_values = test_setup();
+        let serve_fut = test_values.ap.clone().serve_provider_requests(test_values.requests);
+        pin_mut!(serve_fut);
+
+        // No request has been sent yet. Future should be idle.
+        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
+
+        // Request a controller.
+        let (controller1, _) = request_controller(&test_values.provider);
+        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
+
+        // Create another request stream and begin serving it.  This is equivalent to the behavior
+        // that occurs when a second client connects to the AccessPointProvider service.
+        let (provider, requests) = create_proxy::<fidl_policy::AccessPointProviderMarker>()
+            .expect("failed to create AccessPointProvider proxy");
+        let requests = requests.into_stream().expect("failed to create stream");
+        let second_serve_fut = test_values.ap.serve_provider_requests(requests);
+        pin_mut!(second_serve_fut);
+
+        let (controller2, _) = request_controller(&provider);
+        assert_variant!(exec.run_until_stalled(&mut second_serve_fut), Poll::Pending);
+
+        let chan = controller2.into_channel().expect("error turning proxy into channel");
+        let mut buffer = zx::MessageBuf::new();
+        let epitaph_fut = chan.recv_msg(&mut buffer);
+        pin_mut!(epitaph_fut);
+        assert_variant!(exec.run_until_stalled(&mut epitaph_fut), Poll::Ready(Ok(_)));
+
+        // Verify Epitaph was received.
+        use fidl::encoding::{decode_transaction_header, Decodable, Decoder, EpitaphBody};
+        let (header, tail) =
+            decode_transaction_header(buffer.bytes()).expect("failed decoding header");
+        let mut msg = Decodable::new_empty();
+        Decoder::decode_into::<EpitaphBody>(&header, tail, &mut [], &mut msg)
+            .expect("failed decoding body");
+        assert_eq!(msg.error, zx::Status::ALREADY_BOUND);
+        assert!(chan.is_closed());
+
+        // Drop the initial client controller and make sure the second service instance can get a
+        // client controller and make a request.
+        drop(controller1);
+        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
+
+        let (controller2, _) = request_controller(&provider);
+        assert_variant!(exec.run_until_stalled(&mut second_serve_fut), Poll::Pending);
+
+        // Issue StartAP request to make sure the new controller works.
+        let network_id = fidl_policy::NetworkIdentifier {
+            ssid: b"test".to_vec(),
+            type_: fidl_policy::SecurityType::None,
+        };
+        let network_config = fidl_policy::NetworkConfig {
+            id: Some(network_id),
+            credential: None,
+            ..fidl_policy::NetworkConfig::empty()
+        };
+        let connectivity_mode = fidl_policy::ConnectivityMode::LocalOnly;
+        let operating_band = fidl_policy::OperatingBand::Any;
+        let start_fut =
+            controller2.start_access_point(network_config, connectivity_mode, operating_band);
+        pin_mut!(start_fut);
+
+        // Process start request and verify start response.
+        assert_variant!(exec.run_until_stalled(&mut second_serve_fut), Poll::Pending);
+        assert_variant!(
+            exec.run_until_stalled(&mut start_fut),
+            Poll::Ready(Ok(fidl_common::RequestStatus::Acknowledged))
+        );
     }
 }
