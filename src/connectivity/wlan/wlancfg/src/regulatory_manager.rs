@@ -45,9 +45,10 @@ impl<I: IfaceManagerApi + ?Sized, P: PhyManagerApi> RegulatoryManager<I, P> {
             }
             region_array.copy_from_slice(region_string.as_bytes());
 
-            // TODO(fxbug.dev/49637): Improve handling of concurrent operations on `IfaceManager`.
             // TODO(fxbug.dev/46413): Stop APs using `IfaceManager`.
-            self.iface_manager.lock().await.stop_client_connections().await?;
+            let mut iface_manager = self.iface_manager.lock().await;
+            iface_manager.stop_client_connections().await?;
+
             let phy_ids = self.phy_manager.lock().await.get_phy_ids();
             let _ = stream::iter(phy_ids)
                 .map(|phy_id| Ok(phy_id))
@@ -65,7 +66,7 @@ impl<I: IfaceManagerApi + ?Sized, P: PhyManagerApi> RegulatoryManager<I, P> {
 
             // TODO(fxbug.dev/49632): Respect the initial state of client connections, instead of
             // restarting them unconditionally.
-            self.iface_manager.lock().await.start_client_connections().await?;
+            iface_manager.start_client_connections().await?;
 
             // TODO(fxbug.dev/49634): Have new PHYs respect current country.
         }
@@ -531,6 +532,18 @@ mod tests {
         );
         region_responder.send("US").expect("failed to send region response");
 
+        // Verify that RegulatoryManager has _not_ requested client connections be started yet.
+        // Perform this verification up front since processing the response will grab the
+        // iface_manager lock.
+        let mut has_start_been_called_fut = context
+            .iface_manager
+            .lock()
+            .then(|if_manager| future::ready(if_manager.was_start_client_connections_called));
+        assert_eq!(
+            context.executor.run_until_stalled(&mut has_start_been_called_fut),
+            Poll::Ready(false)
+        );
+
         // Drive the RegulatoryManager to send a SetCountryRequest to DeviceService.
         assert!(context.executor.run_until_stalled(&mut regulatory_fut).is_pending());
 
@@ -541,16 +554,6 @@ mod tests {
                 context.executor.run_until_stalled(device_service_request_fut),
                 Poll::Ready(Some(Ok(DeviceServiceRequest::SetCountry{req:_, responder}))) => responder
             );
-
-        // Verify that RegulatoryManager has _not_ requested client connections be started yet.
-        let mut has_start_been_called_fut = context
-            .iface_manager
-            .lock()
-            .then(|if_manager| future::ready(if_manager.was_start_client_connections_called));
-        assert_eq!(
-            context.executor.run_until_stalled(&mut has_start_been_called_fut),
-            Poll::Ready(false)
-        );
 
         // Reply to the SetCountryRequest, and drive the RegulatoryManager forward again.
         device_service_responder.send(ZX_OK).expect("failed to send device service response");
