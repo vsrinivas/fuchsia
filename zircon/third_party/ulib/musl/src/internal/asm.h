@@ -50,6 +50,20 @@
   .cfi_same_value \reg1
   .cfi_same_value \reg2
 .endm
+
+.macro adr_global reg, symbol
+#if __has_feature(hwaddress_sanitizer)
+  adrp \reg, :pg_hi21_nc:\symbol
+  movk \reg, #:prel_g3:\symbol+0x100000000
+  add \reg, \reg, #:lo12:\symbol
+#elif defined(__AARCH64_CMODEL_TINY__)
+  adr \reg, \symbol
+#else
+  adrp \reg, \symbol
+  add \reg, \reg, #:lo12:\symbol
+#endif
+.endm  // adr_global
+
 #endif  // clang-format on
 
 #ifdef __x86_64__  // clang-format off

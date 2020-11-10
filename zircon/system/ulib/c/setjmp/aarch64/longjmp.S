@@ -69,8 +69,7 @@ ENTRY(longjmp)
     .cfi_register x0, x16
 
     // Find the manglers.
-    adrp x0, __setjmp_manglers
-    add x0, x0, #:lo12:__setjmp_manglers
+    adr_global x0, __setjmp_manglers
 
     // Load the words that need to be demangled into temporaries.
     // These just hold values that were in the jmp_buf, so we don't

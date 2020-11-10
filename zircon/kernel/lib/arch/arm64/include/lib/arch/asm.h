@@ -12,6 +12,10 @@
 
 #ifdef __ASSEMBLER__  // clang-format off
 
+#ifndef __has_feature
+#define __has_feature(x) 0
+#endif
+
 /// The kernel is compiled using -ffixed-x15 so the compiler will never use
 /// this register.
 percpu_ptr .req x15
@@ -62,7 +66,11 @@ movk \reg, #(((\literal) >> 48) & 0xffff), lsl #48
 ///     - Required: A symbolic expression requiring at most PC-relative reloc.
 ///
 .macro adr_global reg, symbol
-#ifdef __AARCH64_CMODEL_TINY__
+#if __has_feature(hwaddress_sanitizer)
+  adrp \reg, :pg_hi21_nc:\symbol
+  movk \reg, #:prel_g3:\symbol+0x100000000
+  add \reg, \reg, #:lo12:\symbol
+#elif defined(__AARCH64_CMODEL_TINY__)
   adr \reg, \symbol
 #else
   adrp \reg, \symbol

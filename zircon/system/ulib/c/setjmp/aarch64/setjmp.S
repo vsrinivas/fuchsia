@@ -15,8 +15,7 @@ ENTRY(setjmp)
     // Load the manglers into temporary registers.
     // We'll be sure that by return these registers don't
     // contain the raw manglers, so those values never leak.
-    adrp x0, __setjmp_manglers
-    add x0, x0, #:lo12:__setjmp_manglers
+    adr_global x0, __setjmp_manglers
     ldp x1, x2, [x0, #8*JB_PC]
     ldp x3, x4, [x0, #8*JB_FP]
     ldr x5, [x0, #8*JB_X(18)]
