@@ -337,7 +337,7 @@ zx_status_t PcieBuscore::CreateDmaBuffer(uint32_t cache_policy, size_t size,
   return DmaBuffer::Create(bti, cache_policy, size, out_dma_buffer);
 }
 
-void PcieBuscore::SetRamsize(size_t ramsize) { chip_->ramsize = ramsize; }
+void PcieBuscore::SetRamsize(uint32_t ramsize) { chip_->ramsize = ramsize; }
 
 brcmf_chip* PcieBuscore::chip() { return chip_; }
 
@@ -363,13 +363,13 @@ const brcmf_buscore_ops* PcieBuscore::GetBuscoreOps() {
   return &buscore_ops;
 }
 
-uint32_t PcieBuscore::ConfigRead(uint32_t offset) {
+uint32_t PcieBuscore::ConfigRead(uint16_t offset) {
   uint32_t value = 0;
   pci_proto_->ConfigRead32(offset, &value);
   return value;
 }
 
-void PcieBuscore::ConfigWrite(uint32_t offset, uint32_t value) {
+void PcieBuscore::ConfigWrite(uint16_t offset, uint32_t value) {
   pci_proto_->ConfigWrite32(offset, value);
 }
 

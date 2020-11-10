@@ -102,7 +102,8 @@ void UpdateRingState(PcieBuscore* buscore, uint32_t ring_state_offset,
   auto ring_state = std::make_unique<RingState>();
   buscore->TcmRead(ring_state_offset, ring_state.get(), sizeof(*ring_state));
   ring_state->max_item = dma_ring.capacity();
-  ring_state->len_items = dma_ring.item_size();
+  ZX_DEBUG_ASSERT(dma_ring.item_size() <= std::numeric_limits<uint16_t>::max());
+  ring_state->len_items = static_cast<uint16_t>(dma_ring.item_size());
   ring_state->mem_base_addr = dma_ring.dma_address();
   buscore->TcmWrite(ring_state_offset, ring_state.get(), sizeof(*ring_state));
 }

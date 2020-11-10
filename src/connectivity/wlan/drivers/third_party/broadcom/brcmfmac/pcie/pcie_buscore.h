@@ -98,7 +98,7 @@ class PcieBuscore : public DmaBufferProviderInterface {
                               std::unique_ptr<DmaBuffer>* out_dma_buffer) override;
 
   // Manually set the ramsize for this PCIE buscore chip.
-  void SetRamsize(size_t ramsize);
+  void SetRamsize(uint32_t ramsize);
 
   // Data accessors.
   brcmf_chip* chip();
@@ -109,8 +109,8 @@ class PcieBuscore : public DmaBufferProviderInterface {
 
  private:
   // PCIE config read/write.
-  uint32_t ConfigRead(uint32_t offset);
-  void ConfigWrite(uint32_t offset, uint32_t value);
+  uint32_t ConfigRead(uint16_t offset);
+  void ConfigWrite(uint16_t offset, uint32_t value);
 
   // Configure the BAR0 window mapping.
   zx_status_t AcquireBar0Window(uint32_t address);

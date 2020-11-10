@@ -9,6 +9,7 @@
 #include <zircon/syscalls.h>
 
 #include <cstring>
+#include <limits>
 
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/brcm_hw_ids.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/chip.h"
@@ -134,8 +135,13 @@ zx_status_t PcieFirmware::Create(Device* device, PcieBuscore* buscore,
 
   // Download the NVRAM.
   if (!nvram_binary.empty()) {
-    buscore->RamWrite(buscore->chip()->ramsize - nvram_binary.size(), nvram_binary.data(),
-                      nvram_binary.size());
+    if (nvram_binary.size() > buscore->chip()->ramsize) {
+      BRCMF_ERR("RamWrite not attempted: nvram_binary size %lu too large for ramsize %d",
+                nvram_binary.size(), buscore->chip()->ramsize);
+      return ZX_ERR_INTERNAL;
+    }
+    const auto offset = buscore->chip()->ramsize - static_cast<uint32_t>(nvram_binary.size());
+    buscore->RamWrite(offset, nvram_binary.data(), nvram_binary.size());
   }
 
   buscore->RamRead(sharedram_addr_offset, &sharedram_addr_value, sizeof(sharedram_addr_value));
@@ -185,9 +191,19 @@ zx_status_t PcieFirmware::Create(Device* device, PcieBuscore* buscore,
   // Setup the shared ram info.
   auto shared_ram_info = std::make_unique<SharedRamInfo>();
   buscore->TcmRead(sharedram_addr_value, shared_ram_info.get(), sizeof(*shared_ram_info));
-  shared_ram_info->dma_scratch_len = dma_d2h_scratch_buffer->size();
+  if (dma_d2h_scratch_buffer->size() > std::numeric_limits<uint32_t>::max()) {
+    BRCMF_ERR("TcmWrite not attempted: dma_scratch_len %lu invalid (overflow)",
+              dma_d2h_scratch_buffer->size());
+    return ZX_ERR_INTERNAL;
+  }
+  shared_ram_info->dma_scratch_len = static_cast<uint32_t>(dma_d2h_scratch_buffer->size());
   shared_ram_info->dma_scratch_addr = dma_d2h_scratch_buffer->dma_address();
-  shared_ram_info->dma_ringupd_len = dma_d2h_ringupdate_buffer->size();
+  if (dma_d2h_ringupdate_buffer->size() > std::numeric_limits<uint32_t>::max()) {
+    BRCMF_ERR("TcmWrite not attempted: dma_ringupd_len %lu invalid (overflow)",
+              dma_d2h_ringupdate_buffer->size());
+    return ZX_ERR_INTERNAL;
+  }
+  shared_ram_info->dma_ringupd_len = static_cast<uint32_t>(dma_d2h_ringupdate_buffer->size());
   shared_ram_info->dma_ringupd_addr = dma_d2h_ringupdate_buffer->dma_address();
   buscore->TcmWrite(sharedram_addr_value, shared_ram_info.get(), sizeof(*shared_ram_info));
 

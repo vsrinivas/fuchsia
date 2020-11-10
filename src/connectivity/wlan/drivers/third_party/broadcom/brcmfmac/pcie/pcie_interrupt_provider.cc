@@ -135,7 +135,7 @@ void PcieInterruptProvider::InterruptServiceFunction() {
 
     if (packet.type == ZX_PKT_TYPE_USER) {
       // This is an user command packet.
-      const int command = packet.user.u64[0];
+      const auto command = packet.user.u64[0];
       if (command == kUserPacketExit) {
         // Terminate the interrupt loop.
         break;
@@ -165,7 +165,7 @@ void PcieInterruptProvider::InterruptServiceFunction() {
           *status = ZX_OK;
         }
       } else {
-        BRCMF_ERR("Invalid user command packet: %d", command);
+        BRCMF_ERR("Invalid user command packet: %lu", command);
         continue;
       }
 
