@@ -31,6 +31,12 @@ class SnapshotterTest : public gtest::TestLoopFixture {
       : service_directory_provider_loop_(&kAsyncLoopConfigNoAttachToCurrentThread),
         service_directory_provider_(service_directory_provider_loop_.dispatcher()) {}
 
+  ~SnapshotterTest() {
+    // Shut down before running member variable destructors in case tasks on the loop
+    // hold references to member variables.
+    service_directory_provider_loop_.Shutdown();
+  }
+
   void SetUp() override {
     // We run the service directory provider in a different loop and thread so that the
     // MakeSnapshot can connect to the stub feedback data provider synchronously.
