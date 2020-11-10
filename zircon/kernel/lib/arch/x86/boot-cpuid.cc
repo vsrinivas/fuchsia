@@ -11,16 +11,16 @@ namespace internal {
 
 // Leaf 0 is handled specially in InitializeBootCpuid itself.
 // Note that it is not in the special section.
-CpuidIo gBootCpuid0 = kBootCpuidInitializer<CpuidMaximumLeaf>;
+CpuidIo gBootCpuid0 = kBootCpuidInitializer<CpuidMaximumLeaf::kLeaf>;
 
 // These leaves are used from assembly code that needs unmangled names for
 // them, but InitializeBootCpuid handles them like implicit instantiations.
 
 [[gnu::section("BootCpuid")]] alignas(uint32_t) CpuidIo gBootCpuidFeature =
-    kBootCpuidInitializer<CpuidFeatureFlagsC>;
+    kBootCpuidInitializer<CpuidFeatureFlagsC::kLeaf>;
 
 [[gnu::section("BootCpuid")]] alignas(uint32_t) CpuidIo gBootCpuidExtf =
-    kBootCpuidInitializer<CpuidExtendedFeatureFlagsB>;
+    kBootCpuidInitializer<CpuidExtendedFeatureFlagsB::kLeaf>;
 
 }  // namespace internal
 }  // namespace arch

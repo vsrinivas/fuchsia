@@ -44,10 +44,8 @@ extern "C" CpuidIo gBootCpuid0, gBootCpuidFeature, gBootCpuidExtf;
 
 // This is used to set up compile-time initial values for InitializeBootCpuid()
 // to fill in later.  See BootCpuidIo, below.
-template <typename CpuidValue>
-inline constexpr CpuidIo kBootCpuidInitializer = {
-    {CpuidValue::kLeaf, 0, CpuidValue::kSubleaf, 0},
-};
+template <uint32_t Leaf, uint32_t Subleaf = 0>
+inline constexpr CpuidIo kBootCpuidInitializer = {{Leaf, 0, Subleaf, 0}};
 
 }  // namespace internal
 
@@ -73,8 +71,8 @@ struct BootCpuidIo {
     static_assert(alignof(CpuidIo) == alignof(uint32_t));
     static_assert(sizeof(CpuidIo) == sizeof(uint32_t[4]));
     static_assert(std::is_same_v<decltype(CpuidIo{}.values_), uint32_t[4]>);
-    [[gnu::section("BootCpuid")]] alignas(uint32_t) static CpuidIo gCpuidIo = {
-        {[CpuidIo::kEax] = Leaf, [CpuidIo::kEcx] = Subleaf}};
+    [[gnu::section("BootCpuid")]] alignas(uint32_t) static CpuidIo gCpuidIo =
+        internal::kBootCpuidInitializer<Leaf, Subleaf>;
     return &gCpuidIo;
   }
 
