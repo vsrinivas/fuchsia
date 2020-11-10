@@ -104,6 +104,7 @@ rustc_library("lib") {
     "src/logs/message.rs",
     "src/logs/mod.rs",
     "src/logs/redact.rs",
+    "src/logs/redact/serialize.rs",
     "src/logs/socket.rs",
     "src/logs/stats.rs",
     "src/logs/testing.rs",

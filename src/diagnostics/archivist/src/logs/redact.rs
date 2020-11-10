@@ -4,7 +4,11 @@
 
 use anyhow::Error;
 use regex::{Regex, RegexSet};
+use serde::Serialize;
 use std::borrow::Cow;
+
+mod serialize;
+use serialize::Redacted;
 
 /// A `Redactor` is responsible for removing text patterns that seem like user data in logs.
 pub struct Redactor {
@@ -45,7 +49,8 @@ impl Redactor {
         Ok(Self { to_redact, replacements })
     }
 
-    pub fn redact<'t>(&self, text: &'t str) -> Cow<'t, str> {
+    /// Replace any instances of this redactor's patterns with the value of [`REPLACEMENT`].
+    pub fn redact_text<'t>(&self, text: &'t str) -> Cow<'t, str> {
         let mut redacted = Cow::Borrowed(text);
         for idx in self.to_redact.matches(text) {
             redacted =
@@ -53,11 +58,38 @@ impl Redactor {
         }
         redacted
     }
+
+    /// Returns a wrapper around `item` which implements [`serde::Serialize`], redacting from
+    /// any strings in `item`, recursively.
+    pub fn redact<'m, 'r, M>(&'r self, item: &'m M) -> Redacted<'m, 'r, M>
+    where
+        M: ?Sized + Serialize,
+    {
+        Redacted { inner: item, redactor: self }
+    }
 }
 
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::logs::message::{Message, Severity};
+    use diagnostics_data::{LogsField, LogsHierarchy, LogsProperty};
+    use fidl_fuchsia_sys_internal::SourceIdentity;
+
+    fn test_message(contents: &str) -> Message {
+        Message::new(
+            0u64, // time
+            Severity::Info,
+            0, // size
+            0, // dropped_logs
+            &SourceIdentity::empty(),
+            LogsHierarchy::new(
+                "root",
+                vec![LogsProperty::String(LogsField::Msg, contents.to_string())],
+                vec![],
+            ),
+        )
+    }
 
     macro_rules! test_redaction {
         ($test_name:ident: $input:expr => $output:expr) => {paste::paste!{
@@ -65,8 +97,24 @@ mod test {
             fn [<redact_ $test_name>] () {
                 let noop = Redactor::noop();
                 let real = Redactor::with_static_patterns();
-                assert_eq!(noop.redact($input), $input, "no-op redaction must match input exactly");
-                assert_eq!(real.redact($input), $output);
+                assert_eq!(noop.redact_text($input), $input, "no-op redaction must match input exactly");
+                assert_eq!(real.redact_text($input), $output);
+            }
+
+            #[test]
+            fn [<redact_json_ $test_name>] () {
+                let input = test_message($input);
+                let output = test_message($output);
+                let noop = Redactor::noop();
+                let real = Redactor::with_static_patterns();
+
+                let input_json = serde_json::to_string_pretty(&input).unwrap();
+                let expected_json = serde_json::to_string_pretty(&output).unwrap();
+                let noop_json = serde_json::to_string_pretty(&noop.redact(&input)).unwrap();
+                let real_json = serde_json::to_string_pretty(&real.redact(&input)).unwrap();
+
+                assert_eq!(noop_json, input_json, "no-op redaction must match input exactly");
+                assert_eq!(real_json, expected_json);
             }
         }};
     }
