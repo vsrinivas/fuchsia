@@ -203,8 +203,9 @@ void Keyboard::InputCallback(
   }
 
   reader_client_->ReadInputReports(
-      [this](llcpp::fuchsia::input::report::InputReportsReader_ReadInputReports_Result result) {
-        InputCallback(std::move(result));
+      [this](
+          llcpp::fuchsia::input::report::InputReportsReader::ReadInputReportsResponse* response) {
+        InputCallback(std::move(response->result));
       });
 }
 
@@ -219,19 +220,19 @@ zx_status_t Keyboard::StartReading() {
     return result.status();
   }
 
-  status = reader_client_.Bind(std::move(client), dispatcher_,
-                               [this](fidl::UnbindInfo info) {
-                                 printf("vc: Keyboard Reader unbound.\n");
-                                 InputReaderUnbound(info);
-                               });
+  status = reader_client_.Bind(std::move(client), dispatcher_, [this](fidl::UnbindInfo info) {
+    printf("vc: Keyboard Reader unbound.\n");
+    InputReaderUnbound(info);
+  });
   if (status != ZX_OK) {
     return status;
   }
 
   // Queue up the first read.
   reader_client_->ReadInputReports(
-      [this](llcpp::fuchsia::input::report::InputReportsReader_ReadInputReports_Result result) {
-        InputCallback(std::move(result));
+      [this](
+          llcpp::fuchsia::input::report::InputReportsReader::ReadInputReportsResponse* response) {
+        InputCallback(std::move(response->result));
       });
   return ZX_OK;
 };

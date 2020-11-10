@@ -291,19 +291,21 @@ void TestProtocol::StrictXUnionHenceResponseMayBeStackAllocatedResponseContext::
 
 ::fidl::Result
 TestProtocol::ClientImpl::StrictXUnionHenceResponseMayBeStackAllocated(
-    ::fit::callback<void(::llcpp::fidl::test::union_::StrictBoundedXUnion xu)>
+    ::fit::callback<
+        void(StrictXUnionHenceResponseMayBeStackAllocatedResponse* response)>
         _cb) {
   class ResponseContext final
       : public StrictXUnionHenceResponseMayBeStackAllocatedResponseContext {
    public:
-    ResponseContext(::fit::callback<
-                    void(::llcpp::fidl::test::union_::StrictBoundedXUnion xu)>
-                        cb)
+    ResponseContext(
+        ::fit::callback<void(
+            StrictXUnionHenceResponseMayBeStackAllocatedResponse* response)>
+            cb)
         : cb_(std::move(cb)) {}
 
-    void OnReply(StrictXUnionHenceResponseMayBeStackAllocatedResponse* message)
+    void OnReply(StrictXUnionHenceResponseMayBeStackAllocatedResponse* response)
         override {
-      cb_(std::move(message->xu));
+      cb_(response);
 
       delete this;
     }
@@ -311,7 +313,8 @@ TestProtocol::ClientImpl::StrictXUnionHenceResponseMayBeStackAllocated(
     void OnError() override { delete this; }
 
    private:
-    ::fit::callback<void(::llcpp::fidl::test::union_::StrictBoundedXUnion xu)>
+    ::fit::callback<void(
+        StrictXUnionHenceResponseMayBeStackAllocatedResponse* response)>
         cb_;
   };
 
@@ -372,19 +375,21 @@ void TestProtocol::
 
 ::fidl::Result
 TestProtocol::ClientImpl::FlexibleXUnionHenceResponseMustBeHeapAllocated(
-    ::fit::callback<void(::llcpp::fidl::test::union_::OlderSimpleUnion xu)>
+    ::fit::callback<
+        void(FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse* response)>
         _cb) {
   class ResponseContext final
       : public FlexibleXUnionHenceResponseMustBeHeapAllocatedResponseContext {
    public:
     ResponseContext(
-        ::fit::callback<void(::llcpp::fidl::test::union_::OlderSimpleUnion xu)>
+        ::fit::callback<void(
+            FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse* response)>
             cb)
         : cb_(std::move(cb)) {}
 
     void OnReply(FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse*
-                     message) override {
-      cb_(std::move(message->xu));
+                     response) override {
+      cb_(response);
 
       delete this;
     }
@@ -392,7 +397,9 @@ TestProtocol::ClientImpl::FlexibleXUnionHenceResponseMustBeHeapAllocated(
     void OnError() override { delete this; }
 
    private:
-    ::fit::callback<void(::llcpp::fidl::test::union_::OlderSimpleUnion xu)> cb_;
+    ::fit::callback<void(
+        FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse* response)>
+        cb_;
   };
 
   auto* _context = new ResponseContext(std::move(_cb));

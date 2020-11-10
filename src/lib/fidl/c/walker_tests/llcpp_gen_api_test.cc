@@ -50,11 +50,12 @@ TEST(GenAPITestCase, TwoWayAsyncManaged) {
   ASSERT_TRUE(server_binding.is_ok());
 
   sync_completion_t done;
-  auto result = client->TwoWay(fidl::StringView(data, sizeof(data)), [&done](fidl::StringView out) {
-    ASSERT_EQ(sizeof(data), out.size());
-    EXPECT_EQ(0, strncmp(out.data(), data, sizeof(data)));
-    sync_completion_signal(&done);
-  });
+  auto result = client->TwoWay(fidl::StringView(data, sizeof(data)),
+                               [&done](Example::TwoWayResponse* response) {
+                                 ASSERT_EQ(sizeof(data), response->out.size());
+                                 EXPECT_EQ(0, strncmp(response->out.data(), data, sizeof(data)));
+                                 sync_completion_signal(&done);
+                               });
   ASSERT_TRUE(result.ok());
   ASSERT_OK(sync_completion_wait(&done, ZX_TIME_INFINITE));
 

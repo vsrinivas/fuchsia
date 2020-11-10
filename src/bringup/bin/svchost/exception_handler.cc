@@ -84,7 +84,9 @@ void ExceptionHandler::Handle(zx::exception exception, const zx_exception_info_t
   exception_info.thread_koid = info.tid;
   exception_info.type = static_cast<llcpp::fuchsia::exception::ExceptionType>(info.type);
 
-  if (const auto result = connection_->OnException(std::move(exception), exception_info, [] {});
+  if (const auto result = connection_->OnException(
+          std::move(exception), exception_info,
+          [](llcpp::fuchsia::exception::Handler::OnExceptionResponse* response) {});
       result.status() != ZX_OK) {
     LogError("Failed to pass exception to handler", info, result.status());
   }

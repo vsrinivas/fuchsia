@@ -139,13 +139,14 @@ void Transitional::RequestResponseContext::OnReply(uint8_t* reply) {
 }
 
 ::fidl::Result Transitional::ClientImpl::Request(
-    int64_t x, ::fit::callback<void(int64_t y)> _cb) {
+    int64_t x, ::fit::callback<void(RequestResponse* response)> _cb) {
   class ResponseContext final : public RequestResponseContext {
    public:
-    ResponseContext(::fit::callback<void(int64_t y)> cb) : cb_(std::move(cb)) {}
+    ResponseContext(::fit::callback<void(RequestResponse* response)> cb)
+        : cb_(std::move(cb)) {}
 
-    void OnReply(RequestResponse* message) override {
-      cb_(std::move(message->y));
+    void OnReply(RequestResponse* response) override {
+      cb_(response);
 
       delete this;
     }
@@ -153,7 +154,7 @@ void Transitional::RequestResponseContext::OnReply(uint8_t* reply) {
     void OnError() override { delete this; }
 
    private:
-    ::fit::callback<void(int64_t y)> cb_;
+    ::fit::callback<void(RequestResponse* response)> cb_;
   };
 
   auto* _context = new ResponseContext(std::move(_cb));
@@ -554,14 +555,15 @@ void ChannelProtocol::MethodBResponseContext::OnReply(uint8_t* reply) {
 }
 
 ::fidl::Result ChannelProtocol::ClientImpl::MethodB(
-    int64_t a, int64_t b, ::fit::callback<void(int64_t result)> _cb) {
+    int64_t a, int64_t b,
+    ::fit::callback<void(MethodBResponse* response)> _cb) {
   class ResponseContext final : public MethodBResponseContext {
    public:
-    ResponseContext(::fit::callback<void(int64_t result)> cb)
+    ResponseContext(::fit::callback<void(MethodBResponse* response)> cb)
         : cb_(std::move(cb)) {}
 
-    void OnReply(MethodBResponse* message) override {
-      cb_(std::move(message->result));
+    void OnReply(MethodBResponse* response) override {
+      cb_(response);
 
       delete this;
     }
@@ -569,7 +571,7 @@ void ChannelProtocol::MethodBResponseContext::OnReply(uint8_t* reply) {
     void OnError() override { delete this; }
 
    private:
-    ::fit::callback<void(int64_t result)> cb_;
+    ::fit::callback<void(MethodBResponse* response)> cb_;
   };
 
   auto* _context = new ResponseContext(std::move(_cb));
@@ -619,16 +621,16 @@ void ChannelProtocol::MutateSocketResponseContext::OnReply(uint8_t* reply) {
 }
 
 ::fidl::Result ChannelProtocol::ClientImpl::MutateSocket(
-    ::zx::socket a, ::fit::callback<void(::zx::socket b)> _cb) {
+    ::zx::socket a, ::fit::callback<void(MutateSocketResponse* response)> _cb) {
   class ResponseContext final : public MutateSocketResponseContext {
    public:
-    ResponseContext(::fit::callback<void(::zx::socket b)> cb)
+    ResponseContext(::fit::callback<void(MutateSocketResponse* response)> cb)
         : cb_(std::move(cb)) {}
 
-    void OnReply(MutateSocketResponse* message) override {
-      cb_(std::move(message->b));
+    void OnReply(MutateSocketResponse* response) override {
+      cb_(response);
 
-      message->_CloseHandles();
+      response->_CloseHandles();
 
       delete this;
     }
@@ -636,7 +638,7 @@ void ChannelProtocol::MutateSocketResponseContext::OnReply(uint8_t* reply) {
     void OnError() override { delete this; }
 
    private:
-    ::fit::callback<void(::zx::socket b)> cb_;
+    ::fit::callback<void(MutateSocketResponse* response)> cb_;
   };
 
   auto* _context = new ResponseContext(std::move(_cb));
@@ -1149,13 +1151,15 @@ void WithAndWithoutRequestResponse::NoRequestEmptyResponseResponseContext::
 
 ::fidl::Result
 WithAndWithoutRequestResponse::ClientImpl::NoRequestEmptyResponse(
-    ::fit::callback<void()> _cb) {
+    ::fit::callback<void(NoRequestEmptyResponseResponse* response)> _cb) {
   class ResponseContext final : public NoRequestEmptyResponseResponseContext {
    public:
-    ResponseContext(::fit::callback<void()> cb) : cb_(std::move(cb)) {}
+    ResponseContext(
+        ::fit::callback<void(NoRequestEmptyResponseResponse* response)> cb)
+        : cb_(std::move(cb)) {}
 
-    void OnReply(NoRequestEmptyResponseResponse* message) override {
-      cb_();
+    void OnReply(NoRequestEmptyResponseResponse* response) override {
+      cb_(response);
 
       delete this;
     }
@@ -1163,7 +1167,7 @@ WithAndWithoutRequestResponse::ClientImpl::NoRequestEmptyResponse(
     void OnError() override { delete this; }
 
    private:
-    ::fit::callback<void()> cb_;
+    ::fit::callback<void(NoRequestEmptyResponseResponse* response)> cb_;
   };
 
   auto* _context = new ResponseContext(std::move(_cb));
@@ -1213,14 +1217,15 @@ void WithAndWithoutRequestResponse::NoRequestWithResponseResponseContext::
 }
 
 ::fidl::Result WithAndWithoutRequestResponse::ClientImpl::NoRequestWithResponse(
-    ::fit::callback<void(::fidl::StringView ret)> _cb) {
+    ::fit::callback<void(NoRequestWithResponseResponse* response)> _cb) {
   class ResponseContext final : public NoRequestWithResponseResponseContext {
    public:
-    ResponseContext(::fit::callback<void(::fidl::StringView ret)> cb)
+    ResponseContext(
+        ::fit::callback<void(NoRequestWithResponseResponse* response)> cb)
         : cb_(std::move(cb)) {}
 
-    void OnReply(NoRequestWithResponseResponse* message) override {
-      cb_(std::move(message->ret));
+    void OnReply(NoRequestWithResponseResponse* response) override {
+      cb_(response);
 
       delete this;
     }
@@ -1228,7 +1233,7 @@ void WithAndWithoutRequestResponse::NoRequestWithResponseResponseContext::
     void OnError() override { delete this; }
 
    private:
-    ::fit::callback<void(::fidl::StringView ret)> cb_;
+    ::fit::callback<void(NoRequestWithResponseResponse* response)> cb_;
   };
 
   auto* _context = new ResponseContext(std::move(_cb));
@@ -1302,13 +1307,16 @@ void WithAndWithoutRequestResponse::WithRequestEmptyResponseResponseContext::
 
 ::fidl::Result
 WithAndWithoutRequestResponse::ClientImpl::WithRequestEmptyResponse(
-    ::fidl::StringView arg, ::fit::callback<void()> _cb) {
+    ::fidl::StringView arg,
+    ::fit::callback<void(WithRequestEmptyResponseResponse* response)> _cb) {
   class ResponseContext final : public WithRequestEmptyResponseResponseContext {
    public:
-    ResponseContext(::fit::callback<void()> cb) : cb_(std::move(cb)) {}
+    ResponseContext(
+        ::fit::callback<void(WithRequestEmptyResponseResponse* response)> cb)
+        : cb_(std::move(cb)) {}
 
-    void OnReply(WithRequestEmptyResponseResponse* message) override {
-      cb_();
+    void OnReply(WithRequestEmptyResponseResponse* response) override {
+      cb_(response);
 
       delete this;
     }
@@ -1316,7 +1324,7 @@ WithAndWithoutRequestResponse::ClientImpl::WithRequestEmptyResponse(
     void OnError() override { delete this; }
 
    private:
-    ::fit::callback<void()> cb_;
+    ::fit::callback<void(WithRequestEmptyResponseResponse* response)> cb_;
   };
 
   auto* _context = new ResponseContext(std::move(_cb));
@@ -1374,14 +1382,16 @@ void WithAndWithoutRequestResponse::WithRequestWithResponseResponseContext::
 
 ::fidl::Result
 WithAndWithoutRequestResponse::ClientImpl::WithRequestWithResponse(
-    ::fidl::StringView arg, ::fit::callback<void(::fidl::StringView ret)> _cb) {
+    ::fidl::StringView arg,
+    ::fit::callback<void(WithRequestWithResponseResponse* response)> _cb) {
   class ResponseContext final : public WithRequestWithResponseResponseContext {
    public:
-    ResponseContext(::fit::callback<void(::fidl::StringView ret)> cb)
+    ResponseContext(
+        ::fit::callback<void(WithRequestWithResponseResponse* response)> cb)
         : cb_(std::move(cb)) {}
 
-    void OnReply(WithRequestWithResponseResponse* message) override {
-      cb_(std::move(message->ret));
+    void OnReply(WithRequestWithResponseResponse* response) override {
+      cb_(response);
 
       delete this;
     }
@@ -1389,7 +1399,7 @@ WithAndWithoutRequestResponse::ClientImpl::WithRequestWithResponse(
     void OnError() override { delete this; }
 
    private:
-    ::fit::callback<void(::fidl::StringView ret)> cb_;
+    ::fit::callback<void(WithRequestWithResponseResponse* response)> cb_;
   };
 
   auto* _context = new ResponseContext(std::move(_cb));
@@ -1959,19 +1969,15 @@ void WithErrorSyntax::ResponseAsStructResponseContext::OnReply(uint8_t* reply) {
 }
 
 ::fidl::Result WithErrorSyntax::ClientImpl::ResponseAsStruct(
-    ::fit::callback<void(::llcpp::fidl::test::protocols::
-                             WithErrorSyntax_ResponseAsStruct_Result result)>
-        _cb) {
+    ::fit::callback<void(ResponseAsStructResponse* response)> _cb) {
   class ResponseContext final : public ResponseAsStructResponseContext {
    public:
-    ResponseContext(::fit::callback<
-                    void(::llcpp::fidl::test::protocols::
-                             WithErrorSyntax_ResponseAsStruct_Result result)>
-                        cb)
+    ResponseContext(
+        ::fit::callback<void(ResponseAsStructResponse* response)> cb)
         : cb_(std::move(cb)) {}
 
-    void OnReply(ResponseAsStructResponse* message) override {
-      cb_(std::move(message->result));
+    void OnReply(ResponseAsStructResponse* response) override {
+      cb_(response);
 
       delete this;
     }
@@ -1979,10 +1985,7 @@ void WithErrorSyntax::ResponseAsStructResponseContext::OnReply(uint8_t* reply) {
     void OnError() override { delete this; }
 
    private:
-    ::fit::callback<void(
-        ::llcpp::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Result
-            result)>
-        cb_;
+    ::fit::callback<void(ResponseAsStructResponse* response)> cb_;
   };
 
   auto* _context = new ResponseContext(std::move(_cb));
@@ -2030,19 +2033,15 @@ void WithErrorSyntax::ErrorAsPrimitiveResponseContext::OnReply(uint8_t* reply) {
 }
 
 ::fidl::Result WithErrorSyntax::ClientImpl::ErrorAsPrimitive(
-    ::fit::callback<void(::llcpp::fidl::test::protocols::
-                             WithErrorSyntax_ErrorAsPrimitive_Result result)>
-        _cb) {
+    ::fit::callback<void(ErrorAsPrimitiveResponse* response)> _cb) {
   class ResponseContext final : public ErrorAsPrimitiveResponseContext {
    public:
-    ResponseContext(::fit::callback<
-                    void(::llcpp::fidl::test::protocols::
-                             WithErrorSyntax_ErrorAsPrimitive_Result result)>
-                        cb)
+    ResponseContext(
+        ::fit::callback<void(ErrorAsPrimitiveResponse* response)> cb)
         : cb_(std::move(cb)) {}
 
-    void OnReply(ErrorAsPrimitiveResponse* message) override {
-      cb_(std::move(message->result));
+    void OnReply(ErrorAsPrimitiveResponse* response) override {
+      cb_(response);
 
       delete this;
     }
@@ -2050,10 +2049,7 @@ void WithErrorSyntax::ErrorAsPrimitiveResponseContext::OnReply(uint8_t* reply) {
     void OnError() override { delete this; }
 
    private:
-    ::fit::callback<void(
-        ::llcpp::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result
-            result)>
-        cb_;
+    ::fit::callback<void(ErrorAsPrimitiveResponse* response)> cb_;
   };
 
   auto* _context = new ResponseContext(std::move(_cb));
@@ -2099,19 +2095,14 @@ void WithErrorSyntax::ErrorAsEnumResponseContext::OnReply(uint8_t* reply) {
 }
 
 ::fidl::Result WithErrorSyntax::ClientImpl::ErrorAsEnum(
-    ::fit::callback<void(::llcpp::fidl::test::protocols::
-                             WithErrorSyntax_ErrorAsEnum_Result result)>
-        _cb) {
+    ::fit::callback<void(ErrorAsEnumResponse* response)> _cb) {
   class ResponseContext final : public ErrorAsEnumResponseContext {
    public:
-    ResponseContext(
-        ::fit::callback<void(::llcpp::fidl::test::protocols::
-                                 WithErrorSyntax_ErrorAsEnum_Result result)>
-            cb)
+    ResponseContext(::fit::callback<void(ErrorAsEnumResponse* response)> cb)
         : cb_(std::move(cb)) {}
 
-    void OnReply(ErrorAsEnumResponse* message) override {
-      cb_(std::move(message->result));
+    void OnReply(ErrorAsEnumResponse* response) override {
+      cb_(response);
 
       delete this;
     }
@@ -2119,10 +2110,7 @@ void WithErrorSyntax::ErrorAsEnumResponseContext::OnReply(uint8_t* reply) {
     void OnError() override { delete this; }
 
    private:
-    ::fit::callback<void(
-        ::llcpp::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result
-            result)>
-        cb_;
+    ::fit::callback<void(ErrorAsEnumResponse* response)> cb_;
   };
 
   auto* _context = new ResponseContext(std::move(_cb));

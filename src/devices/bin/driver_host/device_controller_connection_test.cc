@@ -123,8 +123,9 @@ TEST(DeviceControllerConnectionTestCase, PeerClosedDuringReply) {
 
   zx::vmo vmo;
   ASSERT_OK(zx::vmo::create(0, 0, &vmo));
-  auto result = client->BindDriver(::fidl::StringView("", 1), std::move(vmo),
-                                   [](zx_status_t, zx::channel) {});
+  auto result = client->BindDriver(
+      ::fidl::StringView("", 1), std::move(vmo),
+      [](::llcpp::fuchsia::device::manager::DeviceController::BindDriverResponse* response) {});
   ASSERT_OK(result.status());
 
   ASSERT_OK(ctx.loop().RunUntilIdle());
@@ -212,9 +213,9 @@ TEST(DeviceControllerConnectionTestCase, UnbindHook) {
   ASSERT_OK(client.Bind(std::move(device_local), ctx.loop().dispatcher()));
 
   bool unbind_successful = false;
-  auto result =
-      client->Unbind([&](::llcpp::fuchsia::device::manager::DeviceController_Unbind_Result result) {
-        unbind_successful = result.is_response();
+  auto result = client->Unbind(
+      [&](::llcpp::fuchsia::device::manager::DeviceController::UnbindResponse* response) {
+        unbind_successful = response->result.is_response();
       });
   ASSERT_OK(result.status());
 

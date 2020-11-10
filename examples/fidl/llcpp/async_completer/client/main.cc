@@ -41,8 +41,8 @@ int main(int argc, const char** argv) {
   // Make |kNumEchoes| EchoString requests to the server, and print the result when
   // it is received.
   for (int i = 0; i < kNumEchoes; i++) {
-    client->EchoString("hello", [&](fidl::StringView resp) {
-      std::string reply(resp.data(), resp.size());
+    client->EchoString("hello", [&](llcpp::fuchsia::examples::Echo::EchoStringResponse* response) {
+      std::string reply(response->response.data(), response->response.size());
       std::cout << "Got response after " << time(nullptr) - start << " seconds" << std::endl;
       if (++num_responses == kNumEchoes) {
         loop.Quit();

@@ -334,15 +334,16 @@ zx::status<zx::channel> DriverRunner::CreateComponent(std::string name, std::str
   if (status != ZX_OK) {
     return zx::error(status);
   }
-  auto bind_callback = [name](auto result) {
-    if (result.is_err()) {
-      LOGF(ERROR, "Failed to bind component '%s': %u", name.data(), result.err());
+  auto bind_callback = [name](llcpp::fuchsia::sys2::Realm::BindChildResponse* response) {
+    if (response->result.is_err()) {
+      LOGF(ERROR, "Failed to bind component '%s': %u", name.data(), response->result.err());
     }
   };
   auto create_callback = [this, name, collection, server_end = std::move(server_end),
-                          bind_callback = std::move(bind_callback)](auto result) mutable {
-    if (result.is_err()) {
-      LOGF(ERROR, "Failed to create component '%s': %u", name.data(), result.err());
+                          bind_callback = std::move(bind_callback)](
+                             llcpp::fuchsia::sys2::Realm::CreateChildResponse* response) mutable {
+    if (response->result.is_err()) {
+      LOGF(ERROR, "Failed to create component '%s': %u", name.data(), response->result.err());
       return;
     }
     auto bind = realm_->BindChild(fsys::ChildRef{.name = fidl::unowned_str(name),

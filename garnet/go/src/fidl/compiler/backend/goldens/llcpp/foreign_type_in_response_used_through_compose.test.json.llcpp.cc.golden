@@ -71,14 +71,14 @@ void Top::GetFooResponseContext::OnReply(uint8_t* reply) {
 }
 
 ::fidl::Result Top::ClientImpl::GetFoo(
-    ::fit::callback<void(::llcpp::bottom::Foo foo)> _cb) {
+    ::fit::callback<void(GetFooResponse* response)> _cb) {
   class ResponseContext final : public GetFooResponseContext {
    public:
-    ResponseContext(::fit::callback<void(::llcpp::bottom::Foo foo)> cb)
+    ResponseContext(::fit::callback<void(GetFooResponse* response)> cb)
         : cb_(std::move(cb)) {}
 
-    void OnReply(GetFooResponse* message) override {
-      cb_(std::move(message->foo));
+    void OnReply(GetFooResponse* response) override {
+      cb_(response);
 
       delete this;
     }
@@ -86,7 +86,7 @@ void Top::GetFooResponseContext::OnReply(uint8_t* reply) {
     void OnError() override { delete this; }
 
    private:
-    ::fit::callback<void(::llcpp::bottom::Foo foo)> cb_;
+    ::fit::callback<void(GetFooResponse* response)> cb_;
   };
 
   auto* _context = new ResponseContext(std::move(_cb));

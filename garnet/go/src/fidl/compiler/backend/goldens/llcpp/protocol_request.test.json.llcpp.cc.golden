@@ -164,16 +164,16 @@ void Parent::GetChildResponseContext::OnReply(uint8_t* reply) {
 }
 
 ::fidl::Result Parent::ClientImpl::GetChild(
-    ::fit::callback<void(::zx::channel c)> _cb) {
+    ::fit::callback<void(GetChildResponse* response)> _cb) {
   class ResponseContext final : public GetChildResponseContext {
    public:
-    ResponseContext(::fit::callback<void(::zx::channel c)> cb)
+    ResponseContext(::fit::callback<void(GetChildResponse* response)> cb)
         : cb_(std::move(cb)) {}
 
-    void OnReply(GetChildResponse* message) override {
-      cb_(std::move(message->c));
+    void OnReply(GetChildResponse* response) override {
+      cb_(response);
 
-      message->_CloseHandles();
+      response->_CloseHandles();
 
       delete this;
     }
@@ -181,7 +181,7 @@ void Parent::GetChildResponseContext::OnReply(uint8_t* reply) {
     void OnError() override { delete this; }
 
    private:
-    ::fit::callback<void(::zx::channel c)> cb_;
+    ::fit::callback<void(GetChildResponse* response)> cb_;
   };
 
   auto* _context = new ResponseContext(std::move(_cb));
@@ -224,16 +224,16 @@ void Parent::GetChildRequestResponseContext::OnReply(uint8_t* reply) {
 }
 
 ::fidl::Result Parent::ClientImpl::GetChildRequest(
-    ::fit::callback<void(::zx::channel r)> _cb) {
+    ::fit::callback<void(GetChildRequestResponse* response)> _cb) {
   class ResponseContext final : public GetChildRequestResponseContext {
    public:
-    ResponseContext(::fit::callback<void(::zx::channel r)> cb)
+    ResponseContext(::fit::callback<void(GetChildRequestResponse* response)> cb)
         : cb_(std::move(cb)) {}
 
-    void OnReply(GetChildRequestResponse* message) override {
-      cb_(std::move(message->r));
+    void OnReply(GetChildRequestResponse* response) override {
+      cb_(response);
 
-      message->_CloseHandles();
+      response->_CloseHandles();
 
       delete this;
     }
@@ -241,7 +241,7 @@ void Parent::GetChildRequestResponseContext::OnReply(uint8_t* reply) {
     void OnError() override { delete this; }
 
    private:
-    ::fit::callback<void(::zx::channel r)> cb_;
+    ::fit::callback<void(GetChildRequestResponse* response)> cb_;
   };
 
   auto* _context = new ResponseContext(std::move(_cb));

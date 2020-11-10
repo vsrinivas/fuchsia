@@ -569,7 +569,7 @@ class Top::ClientImpl final : private ::fidl::internal::ClientBase {
  public:
   // Asynchronous variant of |Top.GetFoo()|. Allocates 16 bytes of request
   // buffer on the stack. The callback is stored on the heap.
-  ::fidl::Result GetFoo(::fit::callback<void(::llcpp::bottom::Foo foo)> _cb);
+  ::fidl::Result GetFoo(::fit::callback<void(GetFooResponse* response)> _cb);
   // Asynchronous variant of |Top.GetFoo()|. Caller provides the backing storage
   // for FIDL message via request buffer. Ownership of _context is given
   // unsafely to the binding until OnError() or OnReply() are called on it.

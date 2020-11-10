@@ -12,22 +12,8 @@ const fragmentClientAsyncMethodsTmpl = `
 {{- end }}
 {{- end }}
 
-{{- define "AsyncEventHandlerIndividualMethodSignature" -}}
-  {{- if .Response -}}
-({{ template "Params" .Response }})
-  {{- else -}}
-()
-  {{- end -}}
-{{- end }}
-
-{{- define "AsyncEventHandlerMoveParams" }}
-  {{- range $index, $param := . }}
-    {{- if $index }}, {{ end -}} std::move(message->{{ $param.Name }})
-  {{- end }}
-{{- end }}
-
 {{- define "ClientAsyncRequestManagedCallbackSignature" -}}
-::fit::callback<void {{- template "AsyncEventHandlerIndividualMethodSignature" . }}>
+::fit::callback<void ({{ .Name }}Response* response)>
 {{- end }}
 
 {{- define "ClientAsyncRequestManagedMethodArguments" -}}
@@ -46,15 +32,17 @@ void {{ .LLProps.ProtocolName }}::{{ .Name }}ResponseContext::OnReply(uint8_t* r
   OnReply(reinterpret_cast<{{ .Name }}Response*>(reply));
 }
 
-::fidl::Result {{ .LLProps.ProtocolName }}::ClientImpl::{{ .Name }}({{ template "ClientAsyncRequestManagedMethodArguments" . }}) {
+::fidl::Result {{ .LLProps.ProtocolName }}::ClientImpl::{{ .Name }}(
+    {{ template "ClientAsyncRequestManagedMethodArguments" . }}) {
   class ResponseContext final : public {{ .Name }}ResponseContext {
    public:
-    ResponseContext({{ template "ClientAsyncRequestManagedCallbackSignature" . }} cb) : cb_(std::move(cb)) {}
+    ResponseContext({{ template "ClientAsyncRequestManagedCallbackSignature" . }} cb)
+        : cb_(std::move(cb)) {}
 
-    void OnReply({{ .Name }}Response* message) override {
-      cb_({{ template "AsyncEventHandlerMoveParams" .Response }});
+    void OnReply({{ .Name }}Response* response) override {
+      cb_(response);
       {{ if and .HasResponse .ResponseIsResource }}
-      message->_CloseHandles();
+      response->_CloseHandles();
       {{ end }}
       delete this;
     }

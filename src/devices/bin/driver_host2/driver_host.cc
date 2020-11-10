@@ -146,21 +146,22 @@ void DriverHost::Start(fdf::DriverStartArgs start_args, zx::channel request,
   auto file_ptr = file.get();
   auto callback = [this, request = std::move(request), completer = completer.ToAsync(),
                    binary = std::move(binary.value()), message = std::move(message),
-                   file = std::move(file)](zx_status_t status, auto buffer) mutable {
-    if (status != ZX_OK) {
+                   file = std::move(file)](fio::File::GetBufferResponse* response) mutable {
+    if (response->s != ZX_OK) {
       LOGF(ERROR, "Failed to start driver '/pkg/%s', could not get library VMO: %s", binary.data(),
-           zx_status_get_string(status));
-      completer.Close(status);
+           zx_status_get_string(response->s));
+      completer.Close(response->s);
       return;
     }
-    status = buffer->vmo.set_property(ZX_PROP_NAME, binary.data(), binary.size());
+    zx_status_t status =
+        response->buffer->vmo.set_property(ZX_PROP_NAME, binary.data(), binary.size());
     if (status != ZX_OK) {
       LOGF(ERROR, "Failed to start driver '/pkg/%s', could not name library VMO: %s", binary.data(),
            zx_status_get_string(status));
       completer.Close(status);
       return;
     }
-    auto driver = Driver::Load(std::move(buffer->vmo));
+    auto driver = Driver::Load(std::move(response->buffer->vmo));
     if (driver.is_error()) {
       completer.Close(driver.error_value());
       return;

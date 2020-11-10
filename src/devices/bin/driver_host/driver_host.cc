@@ -952,18 +952,18 @@ void DriverHostContext::LoadFirmwareAsync(const fbl::RefPtr<zx_device_t>& dev, c
   }
   VLOGD(1, *dev, "load-firmware-async");
   auto str_path = ::fidl::unowned_str(path, strlen(path));
-  auto response = client->LoadFirmware(
+  auto result = client->LoadFirmware(
       std::move(str_path),
       [callback, context, dev = std::move(device_ref)](
-          llcpp::fuchsia::device::manager::Coordinator_LoadFirmware_Result result) {
+          llcpp::fuchsia::device::manager::Coordinator::LoadFirmwareResponse* response) {
         zx_status_t call_status = ZX_OK;
         size_t size = 0;
         zx::vmo vmo;
 
-        if (result.is_err()) {
-          call_status = result.err();
+        if (response->result.is_err()) {
+          call_status = response->result.err();
         } else {
-          auto& resp = result.mutable_response();
+          auto& resp = response->result.mutable_response();
           size = resp.size;
           vmo = std::move(resp.vmo);
         }
@@ -975,9 +975,9 @@ void DriverHostContext::LoadFirmwareAsync(const fbl::RefPtr<zx_device_t>& dev, c
         callback(context, call_status, vmo.release(), size);
       });
 
-  if (response.status() != ZX_OK) {
-    log_rpc_result(dev, "load-firmware-async", response.status(), ZX_OK);
-    callback(context, response.status(), ZX_HANDLE_INVALID, 0);
+  if (result.status() != ZX_OK) {
+    log_rpc_result(dev, "load-firmware-async", result.status(), ZX_OK);
+    callback(context, result.status(), ZX_HANDLE_INVALID, 0);
   }
 }
 

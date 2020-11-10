@@ -1445,8 +1445,7 @@ class Protocol::ClientImpl final : private ::fidl::internal::ClientBase {
   // request and callback are allocated on the heap.
   ::fidl::Result RequestStrictResponseFlexible(
       ::llcpp::fidl::test::requestflexibleenvelope::StrictFoo s,
-      ::fit::callback<
-          void(::llcpp::fidl::test::requestflexibleenvelope::FlexibleFoo f)>
+      ::fit::callback<void(RequestStrictResponseFlexibleResponse* response)>
           _cb);
   // Asynchronous variant of |Protocol.RequestStrictResponseFlexible()|. Caller
   // provides the backing storage for FIDL message via request buffer. Ownership
@@ -1474,8 +1473,7 @@ class Protocol::ClientImpl final : private ::fidl::internal::ClientBase {
   // request and callback are allocated on the heap.
   ::fidl::Result RequestFlexibleResponseStrict(
       ::llcpp::fidl::test::requestflexibleenvelope::FlexibleFoo s,
-      ::fit::callback<
-          void(::llcpp::fidl::test::requestflexibleenvelope::StrictFoo f)>
+      ::fit::callback<void(RequestFlexibleResponseStrictResponse* response)>
           _cb);
   // Asynchronous variant of |Protocol.RequestFlexibleResponseStrict()|. Caller
   // provides the backing storage for FIDL message via request buffer. Ownership

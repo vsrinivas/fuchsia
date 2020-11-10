@@ -50,8 +50,8 @@ int main(int argc, const char** argv) {
                                                       std::move(handlers));
 
   // Make an EchoString call, passing it a lambda to handle the response asynchronously.
-  client->EchoString("hello", [&](fidl::StringView resp) {
-    std::string reply(resp.data(), resp.size());
+  client->EchoString("hello", [&](llcpp::fuchsia::examples::Echo::EchoStringResponse* response) {
+    std::string reply(response->response.data(), response->response.size());
     std::cout << "Got response: " << reply << std::endl;
     loop.Quit();
   });

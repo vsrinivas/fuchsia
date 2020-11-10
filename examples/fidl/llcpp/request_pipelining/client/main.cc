@@ -36,18 +36,20 @@ int main(int argc, const char** argv) {
 
   fidl::Client<llcpp::fuchsia::examples::Echo> echo;
   // Make a non-pipelined request to get an instance of Echo
-  auto result = launcher->GetEcho("non pipelined: ", [&](zx::channel client_end) {
-    // Take the channel to Echo in the response, bind it to the dispatcher, and
-    // make an EchoString request on it.
-    echo.Bind(std::move(client_end), dispatcher);
-    echo->EchoString("hello!", [&](fidl::StringView resp) {
-      std::string reply(resp.data(), resp.size());
-      std::cout << "Got echo response " << reply << std::endl;
-      if (++num_responses == 2) {
-        loop.Quit();
-      }
-    });
-  });
+  auto result = launcher->GetEcho(
+      "non pipelined: ", [&](llcpp::fuchsia::examples::EchoLauncher::GetEchoResponse* response) {
+        // Take the channel to Echo in the response, bind it to the dispatcher, and
+        // make an EchoString request on it.
+        echo.Bind(std::move(response->response), dispatcher);
+        echo->EchoString("hello!",
+                         [&](llcpp::fuchsia::examples::Echo::EchoStringResponse* response) {
+                           std::string reply(response->response.data(), response->response.size());
+                           std::cout << "Got echo response " << reply << std::endl;
+                           if (++num_responses == 2) {
+                             loop.Quit();
+                           }
+                         });
+      });
   ZX_ASSERT(result.ok());
 
   zx::channel se, ce;
@@ -56,13 +58,14 @@ int main(int argc, const char** argv) {
   ZX_ASSERT(launcher->GetEchoPipelined("pipelined: ", std::move(se)).ok());
   // A client can be initialized using the client end without waiting for a response
   fidl::Client<llcpp::fuchsia::examples::Echo> echo_pipelined(std::move(ce), dispatcher);
-  echo_pipelined->EchoString("hello!", [&](fidl::StringView resp) {
-    std::string reply(resp.data(), resp.size());
-    std::cout << "Got echo response " << reply << std::endl;
-    if (++num_responses == 2) {
-      loop.Quit();
-    }
-  });
+  echo_pipelined->EchoString(
+      "hello!", [&](llcpp::fuchsia::examples::Echo::EchoStringResponse* response) {
+        std::string reply(response->response.data(), response->response.size());
+        std::cout << "Got echo response " << reply << std::endl;
+        if (++num_responses == 2) {
+          loop.Quit();
+        }
+      });
 
   loop.Run();
   return num_responses == 2 ? 0 : 1;

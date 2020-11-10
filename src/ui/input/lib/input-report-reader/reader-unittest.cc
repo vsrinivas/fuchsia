@@ -283,9 +283,9 @@ TEST_F(InputReportReaderTests, ReadInputReportsHangingGetTest) {
 
   // Read the report. This will hang until a report is sent.
   auto status = reader->ReadInputReports(
-      [&](::llcpp::fuchsia::input::report::InputReportsReader_ReadInputReports_Result result) {
-        ASSERT_FALSE(result.is_err());
-        auto& reports = result.response().reports;
+      [&](::llcpp::fuchsia::input::report::InputReportsReader::ReadInputReportsResponse* response) {
+        ASSERT_FALSE(response->result.is_err());
+        auto& reports = response->result.response().reports;
         ASSERT_EQ(1, reports.count());
 
         auto& report = reports[0];
@@ -327,8 +327,8 @@ TEST_F(InputReportReaderTests, CloseReaderWithOutstandingRead) {
 
   // Queue a read.
   auto status = reader->ReadInputReports(
-      [&](::llcpp::fuchsia::input::report::InputReportsReader_ReadInputReports_Result result) {
-        ASSERT_TRUE(result.is_err());
+      [&](::llcpp::fuchsia::input::report::InputReportsReader::ReadInputReportsResponse* response) {
+        ASSERT_TRUE(response->result.is_err());
       });
   ASSERT_OK(status.status());
   loop.RunUntilIdle();

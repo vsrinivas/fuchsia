@@ -77,14 +77,15 @@ void super::fooResponseContext::OnReply(uint8_t* reply) {
   OnReply(reinterpret_cast<fooResponse*>(reply));
 }
 
-::fidl::Result super::ClientImpl::foo(::fidl::StringView s,
-                                      ::fit::callback<void(int64_t y)> _cb) {
+::fidl::Result super::ClientImpl::foo(
+    ::fidl::StringView s, ::fit::callback<void(fooResponse* response)> _cb) {
   class ResponseContext final : public fooResponseContext {
    public:
-    ResponseContext(::fit::callback<void(int64_t y)> cb) : cb_(std::move(cb)) {}
+    ResponseContext(::fit::callback<void(fooResponse* response)> cb)
+        : cb_(std::move(cb)) {}
 
-    void OnReply(fooResponse* message) override {
-      cb_(std::move(message->y));
+    void OnReply(fooResponse* response) override {
+      cb_(response);
 
       delete this;
     }
@@ -92,7 +93,7 @@ void super::fooResponseContext::OnReply(uint8_t* reply) {
     void OnError() override { delete this; }
 
    private:
-    ::fit::callback<void(int64_t y)> cb_;
+    ::fit::callback<void(fooResponse* response)> cb_;
   };
 
   auto* _context = new ResponseContext(std::move(_cb));
@@ -250,14 +251,15 @@ void sub::fooResponseContext::OnReply(uint8_t* reply) {
   OnReply(reinterpret_cast<fooResponse*>(reply));
 }
 
-::fidl::Result sub::ClientImpl::foo(::fidl::StringView s,
-                                    ::fit::callback<void(int64_t y)> _cb) {
+::fidl::Result sub::ClientImpl::foo(
+    ::fidl::StringView s, ::fit::callback<void(fooResponse* response)> _cb) {
   class ResponseContext final : public fooResponseContext {
    public:
-    ResponseContext(::fit::callback<void(int64_t y)> cb) : cb_(std::move(cb)) {}
+    ResponseContext(::fit::callback<void(fooResponse* response)> cb)
+        : cb_(std::move(cb)) {}
 
-    void OnReply(fooResponse* message) override {
-      cb_(std::move(message->y));
+    void OnReply(fooResponse* response) override {
+      cb_(response);
 
       delete this;
     }
@@ -265,7 +267,7 @@ void sub::fooResponseContext::OnReply(uint8_t* reply) {
     void OnError() override { delete this; }
 
    private:
-    ::fit::callback<void(int64_t y)> cb_;
+    ::fit::callback<void(fooResponse* response)> cb_;
   };
 
   auto* _context = new ResponseContext(std::move(_cb));

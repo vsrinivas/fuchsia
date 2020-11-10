@@ -1107,7 +1107,7 @@ class super::ClientImpl final : private ::fidl::internal::ClientBase {
   // Asynchronous variant of |super.foo()|. The request and callback are
   // allocated on the heap.
   ::fidl::Result foo(::fidl::StringView s,
-                     ::fit::callback<void(int64_t y)> _cb);
+                     ::fit::callback<void(fooResponse* response)> _cb);
   // Asynchronous variant of |super.foo()|. Caller provides the backing storage
   // for FIDL message via request buffer. Ownership of _context is given
   // unsafely to the binding until OnError() or OnReply() are called on it.
@@ -1164,7 +1164,7 @@ class sub::ClientImpl final : private ::fidl::internal::ClientBase {
   // Asynchronous variant of |sub.foo()|. The request and callback are allocated
   // on the heap.
   ::fidl::Result foo(::fidl::StringView s,
-                     ::fit::callback<void(int64_t y)> _cb);
+                     ::fit::callback<void(fooResponse* response)> _cb);
   // Asynchronous variant of |sub.foo()|. Caller provides the backing storage
   // for FIDL message via request buffer. Ownership of _context is given
   // unsafely to the binding until OnError() or OnReply() are called on it.

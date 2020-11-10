@@ -145,15 +145,14 @@ void EmptyProtocol::SendAndReceiveResponseContext::OnReply(uint8_t* reply) {
 
 ::fidl::Result EmptyProtocol::ClientImpl::SendAndReceive(
     ::llcpp::fidl::test::emptystruct::Empty e,
-    ::fit::callback<void(::llcpp::fidl::test::emptystruct::Empty e)> _cb) {
+    ::fit::callback<void(SendAndReceiveResponse* response)> _cb) {
   class ResponseContext final : public SendAndReceiveResponseContext {
    public:
-    ResponseContext(
-        ::fit::callback<void(::llcpp::fidl::test::emptystruct::Empty e)> cb)
+    ResponseContext(::fit::callback<void(SendAndReceiveResponse* response)> cb)
         : cb_(std::move(cb)) {}
 
-    void OnReply(SendAndReceiveResponse* message) override {
-      cb_(std::move(message->e));
+    void OnReply(SendAndReceiveResponse* response) override {
+      cb_(response);
 
       delete this;
     }
@@ -161,7 +160,7 @@ void EmptyProtocol::SendAndReceiveResponseContext::OnReply(uint8_t* reply) {
     void OnError() override { delete this; }
 
    private:
-    ::fit::callback<void(::llcpp::fidl::test::emptystruct::Empty e)> cb_;
+    ::fit::callback<void(SendAndReceiveResponse* response)> cb_;
   };
 
   auto* _context = new ResponseContext(std::move(_cb));

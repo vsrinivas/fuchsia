@@ -183,20 +183,18 @@ void Protocol::RequestStrictResponseFlexibleResponseContext::OnReply(
 
 ::fidl::Result Protocol::ClientImpl::RequestStrictResponseFlexible(
     ::llcpp::fidl::test::requestflexibleenvelope::StrictFoo s,
-    ::fit::callback<
-        void(::llcpp::fidl::test::requestflexibleenvelope::FlexibleFoo f)>
+    ::fit::callback<void(RequestStrictResponseFlexibleResponse* response)>
         _cb) {
   class ResponseContext final
       : public RequestStrictResponseFlexibleResponseContext {
    public:
     ResponseContext(
-        ::fit::callback<
-            void(::llcpp::fidl::test::requestflexibleenvelope::FlexibleFoo f)>
+        ::fit::callback<void(RequestStrictResponseFlexibleResponse* response)>
             cb)
         : cb_(std::move(cb)) {}
 
-    void OnReply(RequestStrictResponseFlexibleResponse* message) override {
-      cb_(std::move(message->f));
+    void OnReply(RequestStrictResponseFlexibleResponse* response) override {
+      cb_(response);
 
       delete this;
     }
@@ -204,9 +202,7 @@ void Protocol::RequestStrictResponseFlexibleResponseContext::OnReply(
     void OnError() override { delete this; }
 
    private:
-    ::fit::callback<void(
-        ::llcpp::fidl::test::requestflexibleenvelope::FlexibleFoo f)>
-        cb_;
+    ::fit::callback<void(RequestStrictResponseFlexibleResponse* response)> cb_;
   };
 
   auto* _context = new ResponseContext(std::move(_cb));
@@ -264,20 +260,18 @@ void Protocol::RequestFlexibleResponseStrictResponseContext::OnReply(
 
 ::fidl::Result Protocol::ClientImpl::RequestFlexibleResponseStrict(
     ::llcpp::fidl::test::requestflexibleenvelope::FlexibleFoo s,
-    ::fit::callback<
-        void(::llcpp::fidl::test::requestflexibleenvelope::StrictFoo f)>
+    ::fit::callback<void(RequestFlexibleResponseStrictResponse* response)>
         _cb) {
   class ResponseContext final
       : public RequestFlexibleResponseStrictResponseContext {
    public:
     ResponseContext(
-        ::fit::callback<
-            void(::llcpp::fidl::test::requestflexibleenvelope::StrictFoo f)>
+        ::fit::callback<void(RequestFlexibleResponseStrictResponse* response)>
             cb)
         : cb_(std::move(cb)) {}
 
-    void OnReply(RequestFlexibleResponseStrictResponse* message) override {
-      cb_(std::move(message->f));
+    void OnReply(RequestFlexibleResponseStrictResponse* response) override {
+      cb_(response);
 
       delete this;
     }
@@ -285,9 +279,7 @@ void Protocol::RequestFlexibleResponseStrictResponseContext::OnReply(
     void OnError() override { delete this; }
 
    private:
-    ::fit::callback<void(
-        ::llcpp::fidl::test::requestflexibleenvelope::StrictFoo f)>
-        cb_;
+    ::fit::callback<void(RequestFlexibleResponseStrictResponse* response)> cb_;
   };
 
   auto* _context = new ResponseContext(std::move(_cb));

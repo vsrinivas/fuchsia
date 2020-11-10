@@ -436,7 +436,7 @@ Dereferencing a `fidl::Client` provides access to the following methods:
 * `fidl::Result StartGame(::fidl::BufferSpan _request_buffer, bool
   start_first)`: Caller-allocated variant of a fire and forget method.
 * `fidl::Result MakeMove(uint8_t row, uint8_t col,
-  fit::callback<void(bool success, fidl::tracking_ptr<GameState> new_state)>
+  fit::callback<void(TicTacToeResponse* response)>
   _cb)`: Managed variant of an asynchronous two way method. It takes a
   callback to handle responses as the last argument. The callback is executed
   on response in a dispatcher thread. The returned `fidl::StatusAndError` refers

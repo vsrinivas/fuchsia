@@ -1130,12 +1130,13 @@ TEST_F(SdmmcBlockDeviceTest, RpmbPartition) {
   ASSERT_OK(messenger.SetMessageOp(&ddk_, message_op));
 
   sync_completion_t completion;
-  rpmb_fidl_->GetDeviceInfo([&](auto result) {
-    EXPECT_TRUE(result.is_emmc_info());
-    EXPECT_EQ(result.emmc_info().rpmb_size, 0x74);
-    EXPECT_EQ(result.emmc_info().reliable_write_sector_count, 1);
-    sync_completion_signal(&completion);
-  });
+  rpmb_fidl_->GetDeviceInfo(
+      [&](::llcpp::fuchsia::hardware::rpmb::Rpmb::GetDeviceInfoResponse* response) {
+        EXPECT_TRUE(response->info.is_emmc_info());
+        EXPECT_EQ(response->info.emmc_info().rpmb_size, 0x74);
+        EXPECT_EQ(response->info.emmc_info().reliable_write_sector_count, 1);
+        sync_completion_signal(&completion);
+      });
 
   sync_completion_wait(&completion, zx::duration::infinite().get());
   sync_completion_reset(&completion);
@@ -1173,10 +1174,11 @@ TEST_F(SdmmcBlockDeviceTest, RpmbPartition) {
     EXPECT_EQ(value, 0xa8 | RPMB_PARTITION);
   });
 
-  rpmb_fidl_->Request(std::move(write_read_request), [&](auto result) {
-    EXPECT_FALSE(result.is_err());
-    sync_completion_signal(&completion);
-  });
+  rpmb_fidl_->Request(std::move(write_read_request),
+                      [&](::llcpp::fuchsia::hardware::rpmb::Rpmb::RequestResponse* response) {
+                        EXPECT_FALSE(response->result.is_err());
+                        sync_completion_signal(&completion);
+                      });
 
   sync_completion_wait(&completion, zx::duration::infinite().get());
   sync_completion_reset(&completion);
@@ -1200,10 +1202,11 @@ TEST_F(SdmmcBlockDeviceTest, RpmbPartition) {
     EXPECT_TRUE(req->arg & MMC_SET_BLOCK_COUNT_RELIABLE_WRITE);
   });
 
-  rpmb_fidl_->Request(std::move(write_request), [&](auto result) {
-    EXPECT_FALSE(result.is_err());
-    sync_completion_signal(&completion);
-  });
+  rpmb_fidl_->Request(std::move(write_request),
+                      [&](::llcpp::fuchsia::hardware::rpmb::Rpmb::RequestResponse* response) {
+                        EXPECT_FALSE(response->result.is_err());
+                        sync_completion_signal(&completion);
+                      });
 
   sync_completion_wait(&completion, zx::duration::infinite().get());
   sync_completion_reset(&completion);
@@ -1232,7 +1235,9 @@ TEST_F(SdmmcBlockDeviceTest, RpmbRequestLimit) {
     ASSERT_OK(tx_frames.duplicate(ZX_RIGHT_SAME_RIGHTS, &request.tx_frames.vmo));
     request.tx_frames.offset = 0;
     request.tx_frames.size = 512;
-    rpmb_fidl_->Request(std::move(request), [&](__UNUSED auto result) {});
+    rpmb_fidl_->Request(
+        std::move(request),
+        [&](__UNUSED ::llcpp::fuchsia::hardware::rpmb::Rpmb::RequestResponse* response) {});
   }
 
   ::llcpp::fuchsia::hardware::rpmb::Request error_request = {};
@@ -1241,10 +1246,11 @@ TEST_F(SdmmcBlockDeviceTest, RpmbRequestLimit) {
   error_request.tx_frames.size = 512;
 
   sync_completion_t error_completion;
-  rpmb_fidl_->Request(std::move(error_request), [&](auto result) {
-    EXPECT_TRUE(result.is_err());
-    sync_completion_signal(&error_completion);
-  });
+  rpmb_fidl_->Request(std::move(error_request),
+                      [&](::llcpp::fuchsia::hardware::rpmb::Rpmb::RequestResponse* response) {
+                        EXPECT_TRUE(response->result.is_err());
+                        sync_completion_signal(&error_completion);
+                      });
 
   sync_completion_wait(&error_completion, zx::duration::infinite().get());
 }
@@ -1319,12 +1325,13 @@ void SdmmcBlockDeviceTest::QueueRpmbRequests() {
       request.tx_frames.offset = 0;
       request.tx_frames.size = 512;
 
-      rpmb_fidl_->Request(std::move(request), [&](auto result) {
-        EXPECT_FALSE(result.is_err());
-        if (outstanding_op_count.fetch_sub(1) == kMaxOutstandingOps / 2) {
-          sync_completion_signal(&completion);
-        }
-      });
+      rpmb_fidl_->Request(std::move(request),
+                          [&](::llcpp::fuchsia::hardware::rpmb::Rpmb::RequestResponse* response) {
+                            EXPECT_FALSE(response->result.is_err());
+                            if (outstanding_op_count.fetch_sub(1) == kMaxOutstandingOps / 2) {
+                              sync_completion_signal(&completion);
+                            }
+                          });
     }
 
     sync_completion_wait(&completion, zx::duration::infinite().get());
@@ -1374,12 +1381,13 @@ TEST_F(SdmmcBlockDeviceTest, RpmbRequestsGetToRun) {
     request.tx_frames.offset = 0;
     request.tx_frames.size = 512;
 
-    rpmb_fidl_->Request(std::move(request), [&](auto result) {
-      EXPECT_FALSE(result.is_err());
-      if ((ops_completed.fetch_add(1) + 1) == kMaxOutstandingOps) {
-        sync_completion_signal(&completion);
-      }
-    });
+    rpmb_fidl_->Request(std::move(request),
+                        [&](::llcpp::fuchsia::hardware::rpmb::Rpmb::RequestResponse* response) {
+                          EXPECT_FALSE(response->result.is_err());
+                          if ((ops_completed.fetch_add(1) + 1) == kMaxOutstandingOps) {
+                            sync_completion_signal(&completion);
+                          }
+                        });
   }
 
   sync_completion_wait(&completion, zx::duration::infinite().get());
@@ -1476,12 +1484,13 @@ TEST_F(SdmmcBlockDeviceTest, GetRpmbClient) {
   ASSERT_OK(rpmb_client.Bind(std::move(client), loop_.dispatcher()));
 
   sync_completion_t completion;
-  rpmb_client->GetDeviceInfo([&](auto result) {
-    EXPECT_TRUE(result.is_emmc_info());
-    EXPECT_EQ(result.emmc_info().rpmb_size, 0x74);
-    EXPECT_EQ(result.emmc_info().reliable_write_sector_count, 1);
-    sync_completion_signal(&completion);
-  });
+  rpmb_client->GetDeviceInfo(
+      [&](::llcpp::fuchsia::hardware::rpmb::Rpmb::GetDeviceInfoResponse* response) {
+        EXPECT_TRUE(response->info.is_emmc_info());
+        EXPECT_EQ(response->info.emmc_info().rpmb_size, 0x74);
+        EXPECT_EQ(response->info.emmc_info().reliable_write_sector_count, 1);
+        sync_completion_signal(&completion);
+      });
 
   sync_completion_wait(&completion, zx::duration::infinite().get());
   sync_completion_reset(&completion);
