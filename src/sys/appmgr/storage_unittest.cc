@@ -19,7 +19,8 @@ namespace component {
 namespace {
 
 constexpr char kIndexFilePath[] = "component_id_index";
-const char kEmptyComponentIdIndex[] = R"({ "instances": [] })";
+const char kEmptyComponentIdIndex[] =
+    R"({ "appmgr_restrict_isolated_persistent_storage": false, "instances": [] })";
 const char kExampleInstanceId[] =
     "8c90d44863ff67586cf6961081feba4f760decab8bbbee376a3bfbc77b351280";
 class StorageTest : public ::gtest::RealLoopFixture {

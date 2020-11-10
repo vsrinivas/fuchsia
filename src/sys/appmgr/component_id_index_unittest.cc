@@ -149,12 +149,21 @@ TEST_F(ComponentIdIndexTest, LookupMonikerNotExists) {
 }
 
 TEST_F(ComponentIdIndexTest, ShouldNotRestrictIsolatedPersistentStorage) {
-  // Should default to |false| if not set.
-  auto config_dir = MakeAppmgrConfigDirWithIndex(R"({"instances" : []})");
+  auto config_dir = MakeAppmgrConfigDirWithIndex(
+      R"({"appmgr_restrict_isolated_persistent_storage": false, "instances" : []})");
   auto result = ComponentIdIndex::CreateFromAppmgrConfigDir(std::move(config_dir));
   EXPECT_FALSE(result.is_error());
   auto index = result.take_value();
   EXPECT_FALSE(index->restrict_isolated_persistent_storage());
+}
+
+TEST_F(ComponentIdIndexTest, ShouldRestrictIsolatedPersistentStorage) {
+  // Should default to |true| if not set.
+  auto config_dir = MakeAppmgrConfigDirWithIndex(R"({"instances" : []})");
+  auto result = ComponentIdIndex::CreateFromAppmgrConfigDir(std::move(config_dir));
+  EXPECT_FALSE(result.is_error());
+  auto index = result.take_value();
+  EXPECT_TRUE(index->restrict_isolated_persistent_storage());
 
   // |null| is equivalent to not set.
   config_dir = MakeAppmgrConfigDirWithIndex(
@@ -162,23 +171,13 @@ TEST_F(ComponentIdIndexTest, ShouldNotRestrictIsolatedPersistentStorage) {
   result = ComponentIdIndex::CreateFromAppmgrConfigDir(std::move(config_dir));
   EXPECT_FALSE(result.is_error());
   index = result.take_value();
-  EXPECT_FALSE(index->restrict_isolated_persistent_storage());
+  EXPECT_TRUE(index->restrict_isolated_persistent_storage());
 
-  // Configs may also explicitly set to |false|.
   config_dir = MakeAppmgrConfigDirWithIndex(
-      R"({"appmgr_restrict_isolated_persistent_storage": false, "instances" : []})");
+      R"({"appmgr_restrict_isolated_persistent_storage": true, "instances" : []})");
   result = ComponentIdIndex::CreateFromAppmgrConfigDir(std::move(config_dir));
   EXPECT_FALSE(result.is_error());
   index = result.take_value();
-  EXPECT_FALSE(index->restrict_isolated_persistent_storage());
-}
-
-TEST_F(ComponentIdIndexTest, ShouldRestrictIsolatedPersistentStorage) {
-  auto config_dir = MakeAppmgrConfigDirWithIndex(
-      R"({"appmgr_restrict_isolated_persistent_storage": true, "instances" : []})");
-  auto result = ComponentIdIndex::CreateFromAppmgrConfigDir(std::move(config_dir));
-  EXPECT_FALSE(result.is_error());
-  auto index = result.take_value();
   EXPECT_TRUE(index->restrict_isolated_persistent_storage());
 }
 

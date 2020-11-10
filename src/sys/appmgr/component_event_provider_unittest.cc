@@ -26,7 +26,8 @@ namespace {
 
 // Listener is not discovearble, and needs an explicit name.
 const char kListenerName[] = "fuchsia::sys::internal::ComponentEventListener";
-const char kEmptyComponentIdIndex[] = R"({ "instances": [] })";
+const char kEmptyComponentIdIndex[] =
+    R"({ "appmgr_restrict_isolated_persistent_storage": false, "instances": [] })";
 
 class FakeListener : public fuchsia::sys::internal::testing::ComponentEventListener_TestBase {
  public:

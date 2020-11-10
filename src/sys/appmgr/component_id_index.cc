@@ -165,8 +165,8 @@ ComponentIdIndex::CreateFromIndexContents(const std::string& index_contents) {
   constexpr char kRestrictIsolatedPersistentStorage[] =
       "appmgr_restrict_isolated_persistent_storage";
   // `appmgr_restrict_isolated_persistent_storage` is an optional bool.
-  // By default, it is `false`.
-  bool restrict_isolated_persistent_storage = false;
+  // By default, it is `true`.
+  bool restrict_isolated_persistent_storage = true;
   if (doc.HasMember(kRestrictIsolatedPersistentStorage) &&
       // We check that the field is not null, because the compile-time `component_id_index` tool
       // outputs a 'null' valued field when it serializes JSON when it is absent.
