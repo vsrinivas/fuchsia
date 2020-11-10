@@ -1,0 +1,90 @@
+# Comments are ignored
+# TODO(fxb/61617) Move these to real tests
+
+# Execute command with no arguments
+command { ATTEST }
+
+# Extension execute command with no arguments
+command { AT+TEST }
+
+# Extension execute command with one argument, no trailing comma
+command { AT+TEST=field: Integer, }
+
+# Extension execute command with one argument, with trailing comma
+command { AT+TEST=field: Integer, }
+
+# Extension execute command with multiple arguments, no trailing comma
+command { AT+TEST=field1: Integer, field2: Integer }
+
+# Extension execute command with multiple arguments, with trailing comma
+command { AT+TEST=field1: Integer, field2: Integer,}
+
+# List type argument
+command { AT+TEST=field: List<Integer>}
+
+# Map  type arguments
+command { AT+TEST=field: Map<Integer, String> }
+
+# Paren delimited argument list
+command { AT+TEST=(field1: Integer) }
+
+# Paren delimited multiple argment lists
+command { AT+TEST=(field1: Integer)(field2: String, field3: String) }
+
+# Read command
+command { ATTEST? }
+
+# Extension read command
+command { AT+TEST? }
+
+# Test command
+command { ATTEST=? }
+
+# Extension test command
+command { AT+TEST=? }
+
+# Response with no arguments
+response { TEST: }
+
+# Extension response command with no arguments
+response { +TEST: }
+
+# Extension response with one argument, no trailing comma
+response { +TEST: field: Integer }
+
+# Extension response with one argument, with trailing comma
+response { +TEST: field: Integer, }
+
+# Extension response with multiple arguments, no trailing comma
+response { +TEST: field1: Integer, field2: Integer }
+
+# Extension response with multiple arguments, with trailing comma
+response { +TEST: field1: Integer, field2: Integer,}
+
+# Response with paren delimited argument list
+response { +TEST: (field1: Integer) }
+
+# Response with paren delimited multiple argment lists
+response { +TEST: (field1: Integer)(field2: String, field3: String) }
+
+# Enum with one variant
+enum Test {
+    Variant1 = 1
+}
+
+# Enum with one variant, trailing comma
+enum Test {
+    Variant1 = 1,
+}
+
+# Enum with multiple variants
+enum Test {
+    Variant1 = 1,
+    Variant2 = 2
+}
+
+# Enum with multiple variants, trailing comma
+enum Test {
+    Variant1 = 1,
+    Variant2 = 2,
+}

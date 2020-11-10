@@ -1,0 +1,53 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/compiled_action.gni")
+import("//build/config/fuchsia/rules.gni")
+import("//build/rust/rustc_library.gni")
+
+# Generate the rust sources using the code generator
+compiled_action("generate_sources") {
+  tool = "//src/connectivity/lib/at-commands/codegen:"
+  tool_output_name = "at_command_gen"
+  sources = [
+    "definitions/example1.at",
+    "definitions/example2.at",
+  ]
+  output = "$target_gen_dir/generated.rs"
+  outputs = [ output ]
+  args = [ "-o" ] + [ rebase_path(output) ]
+  foreach(input, rebase_path(sources)) {
+    args += [ "-i" ] + [ input ]
+  }
+}
+
+# Copy existing rust source to the generated source directory
+copy("copy_sources") {
+  sources = [
+    "src/lib.rs",
+    "src/lowlevel.rs",
+  ]
+  outputs = [ "$target_gen_dir/{{source_file_part}}" ]
+}
+
+# Build the at command library from the generated sources
+rustc_library("lib") {
+  name = "at_commands"
+  edition = "2018"
+  non_rust_deps = [
+    ":copy_sources",
+    ":generate_sources",
+  ]
+  source_root = "$target_gen_dir/lib.rs"
+  sources = [
+    "$target_gen_dir/generated.rs",
+    "$target_gen_dir/lib.rs",
+    "$target_gen_dir/lowlevel.rs",
+  ]
+}
+
+# Root target
+group("at-commands") {
+  public_deps = [ ":lib" ]
+}

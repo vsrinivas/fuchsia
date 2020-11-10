@@ -1,0 +1,28 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config/fuchsia/rules.gni")
+import("//build/rust/rustc_binary.gni")
+
+# Build the code generator
+if (host_toolchain == current_toolchain) {
+  rustc_binary("codegen") {
+    output_name = "at_command_gen"
+    edition = "2018"
+    deps = [
+      "//third_party/rust_crates:anyhow",
+      "//third_party/rust_crates:argh",
+      "//third_party/rust_crates:log",
+      "//third_party/rust_crates:pest",
+      "//third_party/rust_crates:pest_derive",
+      "//third_party/rust_crates:simplelog",
+    ]
+    sources = [
+      "src/definition.rs",
+      "src/grammar.rs",
+      "src/main.rs",
+      "src/parser.rs",
+    ]
+  }
+}
