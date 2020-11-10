@@ -252,12 +252,6 @@ enum Key : uint32 {
     /// Keyboard Up Arrow
     UP = 0x00070052;
 
-    /// Keyboard Non-US \ and |
-    NON_US_BACKSLASH = 0x00070064;
-
-    /// Keyboard Menu
-    MENU = 0x00070076;
-
     /// Keypad Num Lock and Clear
     NUM_LOCK = 0x00070053;
 
@@ -309,8 +303,14 @@ enum Key : uint32 {
     /// Keypad . and Delete
     KEYPAD_DOT = 0x00070063;
 
+    /// Keyboard Non-US \ and |
+    NON_US_BACKSLASH = 0x00070064;
+
     /// Keypad =
     KEYPAD_EQUALS = 0x00070067;
+
+    /// Keyboard Menu
+    MENU = 0x00070076;
 
     /// Keyboard Left Control
     LEFT_CTRL = 0x000700e0;
