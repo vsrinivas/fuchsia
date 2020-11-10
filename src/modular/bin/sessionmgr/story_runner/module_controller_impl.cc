@@ -41,8 +41,8 @@ ModuleControllerImpl::~ModuleControllerImpl() = default;
 // If the ComponentController connection closes, it means the module cannot be
 // started. We indicate this by the ERROR state.
 void ModuleControllerImpl::OnAppConnectionError() {
-  FX_LOGS(ERROR) << "Module " << EncodeModulePath(module_data_->module_path()) << " (URL "
-                 << module_data_->module_url() << ") terminated unexpectedly.";
+  FX_LOGS(WARNING) << "Module " << EncodeModulePath(module_data_->module_path()) << " (URL "
+                   << module_data_->module_url() << ") terminated unexpectedly.";
 }
 
 void ModuleControllerImpl::Teardown(fit::function<void()> done) {
