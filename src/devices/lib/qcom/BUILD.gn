@@ -9,7 +9,4 @@ zx_library("qcom") {
   sdk_headers = [ "qcom/smc.h" ]
   sources = [ "qcom-smc.cc" ]
   deps = [ "//src/lib/ddk" ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
