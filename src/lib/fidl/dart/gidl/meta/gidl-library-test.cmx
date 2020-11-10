@@ -1,0 +1,11 @@
+{
+    "program": {
+        "data": "data/gidl-library-test"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.logger.LogSink",
+            "fuchsia.sys.Environment"
+        ]
+    }
+}

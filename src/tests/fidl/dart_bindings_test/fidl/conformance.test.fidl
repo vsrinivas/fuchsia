@@ -1,0 +1,84 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fidl.test.dartbindingstest;
+
+struct EmptyStruct {
+};
+
+struct TestEmptyStructSandwich {
+    string before;
+    EmptyStruct es;
+    string after;
+};
+
+table SimpleTable {
+    1: int64 x;
+    2: reserved;
+    3: reserved;
+    4: reserved;
+    5: int64 y;
+};
+
+struct TestSimpleTable {
+    SimpleTable table;
+};
+
+table TableWithStringAndVector {
+    1: string foo;
+    2: int32 bar;
+    3: vector<uint8> baz;
+};
+
+struct TestTableWithStringAndVector {
+    TableWithStringAndVector table;
+};
+
+union SimpleUnion {
+    1: int32 i32;
+    2: int64 i64;
+    3: Int64Struct s;
+    4: string str;
+};
+
+struct Int64Struct {
+    int64 x;
+};
+
+flexible union SampleXUnion {
+    1: uint32 u;
+    2: SimpleUnion su;
+    3: SimpleTable st;
+};
+
+struct TestInlineXUnionInStruct {
+    string before;
+    SampleXUnion xu;
+    string after;
+};
+
+struct TestOptionalXUnionInStruct {
+    string before;
+    SampleXUnion? xu;
+    string after;
+};
+
+table XUnionInTable {
+    1: string before;
+    2: SampleXUnion xu;
+    3: string after;
+};
+
+struct TestXUnionInTable {
+    XUnionInTable value;
+};
+
+struct TestString3 {
+    array<string:4>:2 a;
+    array<string:4?>:2 b;
+};
+
+struct TestStringWithBound {
+    string:8 a;
+};

@@ -33,7 +33,7 @@ HLCPP | [/tools/fidl/fidlgen_hlcpp] | [/sdk/lib/fidl/cpp] | *(located alongside 
 LLCPP | [/tools/fidl/fidlgen_llcpp] | [/zircon/system/ulib/fidl] | [/src/lib/fidl/llcpp]
 Go | [/tools/fidl/fidlgen_go] | [/third_party/go/src/syscall/zx/fidl] | *(located alongside runtime libraries)*
 Rust | [/tools/fidl/fidlgen_rust] | [/src/lib/fidl/rust] | *(located alongside runtime libraries)*
-Dart | [/tools/fidl/fidlgen_dart] | [/topaz/public/dart/fidl] | [/topaz/bin/fidl_bindings_test]
+Dart | [/tools/fidl/fidlgen_dart] | [/topaz/public/dart/fidl] | [/src/tests/fidl/dart_bindings_test]
 
 Note: The tests column refers to hand-written tests that exercise both the generated code and
 the runtime libraries. There are also other tests, like unit tests for the
@@ -60,7 +60,7 @@ Path | Description
 [/src/lib/fidl/llcpp/tests/test_utils.h] | Runtime support for LLCPP conformance tests.
 [/src/lib/fidl/rust/gidl_util] | Runtime support for Rust conformance tests.
 [/third_party/go/src/syscall/zx/fidl/fidl_test] | Runtime support for Go conformance tests.
-[/topaz/lib/gidl] | Runtime support for Dart conformance tests.
+[/src/lib/fidl/dart/gidl] | Runtime support for Dart conformance tests.
 [/src/tests/benchmarks/fidl/benchmark_suite] | Benchmark definitions (`.fidl` and `.gidl` files).
 [/src/tests/benchmarks/fidl] | Runtime support for benchmarks.
 
@@ -661,7 +661,6 @@ fidl fmt --library my_library.fidl -i
 [abi-api-compat]: /docs/development/languages/fidl/guides/abi-api-compat.md
 [fidl-readme]: /docs/development/languages/fidl
 [cpp-style]: /docs/development/languages/c-cpp/cpp-style.md
-[bindings_test-dart]: https://fuchsia.googlesource.com/topaz/+/HEAD/bin/fidl_bindings_test
 [fidlc-source]: /zircon/tools/fidl/
 [fidlc-coding-tables-tests]: /src/lib/fidl/c/coding_tables_tests/
 [fidl-simple]: /src/lib/fidl/c/simple_tests/
@@ -689,7 +688,7 @@ fidl fmt --library my_library.fidl -i
 [/topaz/public/dart/fidl]: /topaz/public/dart/fidl
 [/src/lib/fidl/c]: /src/lib/fidl/c
 [/src/lib/fidl/llcpp]: /src/lib/fidl/llcpp
-[/topaz/bin/fidl_bindings_test]: /topaz/bin/fidl_bindings_test
+[/src/tests/fidl/dart_bindings_test]: /src/tests/fidl/dart_bindings_test
 [/garnet/go/src/fidl/compiler/backend]: /garnet/go/src/fidl/compiler/backend
 
 [/tools/fidl/gidl]: /tools/fidl/gidl
@@ -697,7 +696,7 @@ fidl fmt --library my_library.fidl -i
 [/src/lib/fidl/llcpp/tests/test_utils.h]: /src/lib/fidl/llcpp/tests/test_utils.h
 [/src/lib/fidl/rust/gidl_util]: /src/lib/fidl/rust/gidl_util
 [/third_party/go/src/syscall/zx/fidl/fidl_test]: /third_party/go/src/syscall/zx/fidl/fidl_test
-[/topaz/lib/gidl]: /topaz/lib/gidl
+[/src/lib/fidl/dart/gidl]: /src/lib/fidl/dart/gidl
 [/src/tests/benchmarks/fidl/benchmark_suite]: /src/tests/benchmarks/fidl/benchmark_suite
 [/src/tests/benchmarks/fidl]: /src/tests/benchmarks/fidl
 

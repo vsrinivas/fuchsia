@@ -1,0 +1,55 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/dart/dart_test_component.gni")
+import("//build/dart/fidl_move.gni")
+import("//build/fidl/fidl.gni")
+import("//src/sys/build/components.gni")
+import("//src/tests/benchmarks/fidl/benchmark_suite/benchmark_suite.gni")
+import("//tools/fidl/gidl/gidl.gni")
+
+# GIDL Benchmark
+
+benchmark_dir = "$target_gen_dir/benchmark"
+benchmark_file = "benchmark.dart"
+benchmark_path = "$benchmark_dir/test/$benchmark_file"
+
+gidl("benchmark_suite") {
+  testonly = true
+  type = "benchmark"
+  language = "dart"
+  inputs = benchmark_suite_gidl_files
+  fidl = benchmark_suite_fidl_target
+  output = benchmark_path
+}
+
+dart_test_component("benchmark-component") {
+  component_name = "dart-fidl-benchmarks"
+  manifest = "meta/dart-fidl-benchmarks.cmx"
+  package_root = benchmark_dir
+  sources = [ benchmark_file ]
+  deps = [
+    "//sdk/testing/sl4f/client",
+    "//src/lib/fidl/dart/gidl",
+    "//third_party/dart-pkg/pub/args",
+    "//third_party/dart-pkg/pub/test",
+    benchmark_suite_fidl_target,
+    dart_package_label.zircon,
+    dart_package_label.fuchsia,
+    dart_package_label.fidl,
+  ]
+  non_dart_deps = [ ":benchmark_suite" ]
+
+  pubspec = "pubspec.yaml"
+  options_file = "analysis_options.yaml"
+}
+
+fuchsia_test_package("dart-fidl-benchmarks") {
+  test_components = [ ":benchmark-component" ]
+}
+
+group("dart") {
+  testonly = true
+  deps = [ ":dart-fidl-benchmarks" ]
+}

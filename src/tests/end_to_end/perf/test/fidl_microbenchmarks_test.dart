@@ -74,9 +74,9 @@ void main(List<String> args) {
     test('dart_fidl_microbenchmarks', () async {
       final helper = await PerfTestHelper.make();
       const resultsFile =
-          '/data/r/sys/r/fidl_benchmarks/fuchsia.com:dart_fidl_benchmarks:0#meta:dart_fidl_benchmarks.cmx/results.json';
+          '/data/r/sys/r/fidl_benchmarks/fuchsia.com:dart-fidl-benchmarks:0#meta:dart-fidl-benchmarks.cmx/results.json';
       const command = 'run-test-component --realm-label=fidl_benchmarks '
-          'fuchsia-pkg://fuchsia.com/dart_fidl_benchmarks#meta/dart_fidl_benchmarks.cmx';
+          'fuchsia-pkg://fuchsia.com/dart-fidl-benchmarks#meta/dart-fidl-benchmarks.cmx';
       final result = await helper.sl4fDriver.ssh.run(command);
       expect(result.exitCode, equals(0));
       await helper.processResults(resultsFile);

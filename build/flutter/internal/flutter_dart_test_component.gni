@@ -32,7 +32,7 @@ import("//build/flutter/internal/flutter_dart_component.gni")
 #     Defaults to "2.8".
 #
 #   component_name (optional)
-#     The name of the compnonent to test.
+#     The name of the component to test.
 #     Type: String
 #     Default: target_name
 #
@@ -66,6 +66,16 @@ template("flutter_dart_test_component") {
     _package_root = invoker.package_root
   }
 
+  _pubspec = "${_package_root}/pubspec.yaml"
+  if (defined(invoker.pubspec)) {
+    _pubspec = invoker.pubspec
+  }
+
+  _options_file = "${_package_root}/analysis_options.yaml"
+  if (defined(invoker.options_file)) {
+    _options_file = invoker.options_file
+  }
+
   _test_package_name = string_replace(target_name, "-", "_") + "_test_package"
 
   # Create a package containing all of the original test sources
@@ -84,10 +94,10 @@ template("flutter_dart_test_component") {
     sources = _test_files
     package_name = _test_package_name
 
-    package_root = _package_root
-    source_dir = "test/"
-    pubspec = "${_package_root}/pubspec.yaml"
-    options_file = "${_package_root}/analysis_options.yaml"
+    package_root = "${_package_root}/test"
+    source_dir = "."
+    pubspec = _pubspec
+    options_file = _options_file
   }
 
   # Generate a main which will call all of the test targets
@@ -144,8 +154,8 @@ template("flutter_dart_test_component") {
     package_name = _generated_test_package
 
     package_root = _generated_package_root
-    pubspec = "${_package_root}/pubspec.yaml"
-    options_file = "${_package_root}/analysis_options.yaml"
+    pubspec = _pubspec
+    options_file = _options_file
 
     # speed up compilation times by skipping these checks
     disable_analysis = true

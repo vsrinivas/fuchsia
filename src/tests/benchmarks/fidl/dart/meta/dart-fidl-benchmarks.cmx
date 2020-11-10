@@ -1,0 +1,13 @@
+{
+    "program": {
+        "data": "data/dart-fidl-benchmarks"
+    },
+    "sandbox": {
+        "features": [
+            "isolated-persistent-storage"
+        ],
+        "services": [
+            "fuchsia.sys.Environment"
+        ]
+    }
+}

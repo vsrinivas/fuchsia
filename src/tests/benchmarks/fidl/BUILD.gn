@@ -5,6 +5,7 @@
 group("benchmarks") {
   testonly = true
   deps = [
+    "dart",
     "fidlc",
     "go",
     "hlcpp",
@@ -13,6 +14,5 @@ group("benchmarks") {
     "reference",
     "rust",
     "walker",
-    "//topaz/tests/dart_fidl_benchmarks",
   ]
 }

@@ -1,0 +1,153 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fidl.test.dartbindingstest;
+
+struct NoHandleStruct {
+    string foo;
+    int32 bar;
+    vector<uint8> baz;
+};
+
+resource struct NumberHandleNumber {
+    uint32 n1;
+    handle h;
+    uint32 n2;
+};
+
+struct ExampleStruct {
+    string foo;
+    int32 bar;
+    vector<uint8>? baz;
+};
+
+table ExampleTable {
+    1: string foo;
+    2: int32 bar;
+    3: vector<uint8> baz;
+};
+
+flexible resource union ExampleXunion {
+    1: string foo;
+    2: int32 bar;
+    3: vector<uint8> baz;
+    4: NumberHandleNumber with_handle;
+};
+
+resource union ExampleStrictXunion {
+    1: string foo;
+    2: int32 bar;
+    3: vector<uint8> baz;
+    4: NumberHandleNumber with_handle;
+};
+
+bits ExampleBits {
+    MEMBER_A = 2;
+    MEMBER_B = 4;
+    MEMBER_C = 8;
+};
+
+flexible bits FlexibleBits {
+    ONE = 0b01;
+    TWO = 0b10;
+};
+
+[Discoverable]
+protocol TestServer {
+    OneWayNoArgs();
+    ReceivedOneWayNoArgs() -> (bool received);
+
+    OneWayStringArg(string value);
+    ReceivedOneWayString() -> (string value);
+
+    OneWayThreeArgs(int32 x, uint64 y, NoHandleStruct z);
+    ReceivedOneWayThreeArgs() -> (int32 x, uint64 y, NoHandleStruct z);
+
+    OneWayExampleTable(ExampleTable value);
+    ReceivedOneWayExampleTable() -> (ExampleTable received);
+
+    TwoWayNoArgs() -> ();
+    TwoWayStringArg(string value) -> (string value);
+    TwoWayThreeArgs(int32 x, uint64 y, NoHandleStruct z) -> (int32 x, uint64 y, NoHandleStruct z);
+
+    OneWayExampleXunion(ExampleXunion value);
+    ReceivedOneWayExampleXunion() -> (ExampleXunion received);
+
+    OneWayExampleBits(ExampleBits value);
+    ReceivedOneWayExampleBits() -> (ExampleBits received);
+
+    SendEmptyEvent();
+    -> EmptyEvent();
+
+    SendStringEvent(string value);
+    -> StringEvent(string value);
+
+    SendThreeArgEvent(int32 x, uint64 y, NoHandleStruct z);
+    -> ThreeArgEvent(int32 x, uint64 y, NoHandleStruct z);
+
+    SendMultipleEvents(int32 count, float64 intervalSeconds);
+    -> MultipleEvent(int32 index);
+
+    ReplySlowly(string value, float64 delaySeconds) -> (string value);
+
+    ReplyWithErrorZero(bool with_error) -> () error uint32;
+    ReplyWithErrorOne(bool with_error, string value) -> (string value) error uint32;
+    ReplyWithErrorMore(bool with_error, string value, bool other_value) -> (string value, bool other_value) error uint32;
+
+    ReplyWithErrorEnumZero(bool with_error) -> () error EnumOne;
+    ReplyWithErrorEnumOne(bool with_error, string value) -> (string value) error EnumOne;
+    ReplyWithErrorEnumMore(bool with_error, string value, bool other_value) -> (string value, bool other_value) error EnumOne;
+
+    CloseConnection(float64 delaySeconds);
+    CloseConnectionWithEpitaph(int32 status, float64 delaySeconds);
+
+    -> NeverEvent();
+};
+
+strict enum EnumOne {
+    ONE = 1;
+    TWO = 2;
+    THREE = 3;
+};
+
+strict enum EnumTwo {
+    ONE = 1;
+    TWO = 2;
+    THREE = 3;
+};
+
+flexible enum FlexibleEnumThree : uint64 {
+    ONE = 1;
+    TWO = 2;
+    THREE = 3;
+};
+
+flexible enum FlexibleEnumFour : int32 {
+    ONE = 1;
+    TWO = 2;
+    THREE = 3;
+    [Unknown] CUSTOM_UNKNOWN = -123;
+};
+
+resource struct HandleStruct {
+    string foo;
+    int32 bar;
+    handle baz;
+};
+
+union UnionOne {
+    1: string foo;
+    2: string bar;
+    3: uint32 baz;
+};
+
+union UnionTwo {
+    1: string foo;
+    2: string bar;
+    3: uint32 baz;
+};
+
+protocol SimpleServer {
+    Ping() -> ();
+};

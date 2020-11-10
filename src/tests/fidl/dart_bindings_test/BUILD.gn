@@ -1,0 +1,117 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/dart/dart_component.gni")
+import("//build/dart/dart_library.gni")
+import("//build/dart/dart_test_component.gni")
+import("//build/dart/fidl_move.gni")
+import("//build/fidl/fidl.gni")
+import("//build/testing/environments.gni")
+import("//src/sys/build/components.gni")
+import("//src/tests/fidl/conformance_suite/gidl-conformance-suite.gni")
+import("//tools/fidl/gidl/gidl.gni")
+
+## Test Server
+
+dart_library("server_lib") {
+  package_name = "server"
+  package_root = "server"
+  sources = [ "main.dart" ]
+  deps = [
+    "fidl:bindings_test",
+    "//topaz/public/dart/fuchsia_services",
+    dart_package_label.fidl,
+  ]
+}
+
+dart_component("server") {
+  manifest = "meta/server.cmx"
+  main_package = "server"
+  deps = [ ":server_lib" ]
+}
+
+## GIDL Conformance Test
+
+conformance_dir = "$target_gen_dir/conformance/"
+conformance_file = "conformance.dart"
+conformance_path = "$conformance_dir/test/$conformance_file"
+
+gidl("conformance_suite") {
+  testonly = true
+  type = "conformance"
+  language = "dart"
+  inputs = conformance_suite_gidl_files
+  fidl = conformance_suite_fidl_target
+  output = conformance_path
+}
+
+dart_test_component("conformance-component") {
+  component_name = "conformance"
+  manifest = "meta/conformance.cmx"
+  package_root = conformance_dir
+  sources = [ conformance_file ]
+  deps = [
+    "//src/lib/fidl/dart/gidl",
+    "//third_party/dart-pkg/pub/test",
+    conformance_suite_fidl_target,
+    dart_package_label.zircon,
+    dart_package_label.fidl,
+  ]
+
+  non_dart_deps = [ ":conformance_suite" ]
+
+  # reuse the pubspec.yaml and analysis_options.yaml from test/
+  pubspec = "test/pubspec.yaml"
+  options_file = "test/analysis_options.yaml"
+}
+
+## Bindings Test
+
+dart_test_component("bindings-test-component") {
+  component_name = "dart-bindings-test"
+  manifest = "meta/dart-bindings-test.cmx"
+  package_root = "test"
+  sources = [
+    "bits_test.dart",
+    "channel_close_test.dart",
+    "clone_test.dart",
+    "codec_test.dart",
+    "enum_test.dart",
+    "error_test.dart",
+    "event_test.dart",
+    "failure_test.dart",
+    "hash_test.dart",
+    "header_test.dart",
+    "oneway_test.dart",
+    "state_test.dart",
+    "table_test.dart",
+    "tostring_test.dart",
+    "twoway_test.dart",
+  ]
+
+  deps = [
+    ":server_lib",
+    "//src/tests/fidl/dart_bindings_test/fidl:bindings_test",
+    "//third_party/dart-pkg/pub/collection",
+    "//third_party/dart-pkg/pub/pedantic",
+    "//third_party/dart-pkg/pub/test",
+    "//topaz/public/dart/fuchsia_services",
+    dart_package_label.zircon,
+    dart_package_label.fidl,
+  ]
+}
+
+fuchsia_test_package("dart_bindings_test_package") {
+  package_name = "dart-bindings-test"
+  test_components = [
+    ":bindings-test-component",
+    ":conformance-component",
+  ]
+  deps = [ ":server" ]
+}
+
+group("dart_bindings_test") {
+  testonly = true
+  deps = [ ":dart_bindings_test_package" ]
+}
