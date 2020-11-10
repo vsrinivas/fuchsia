@@ -66,9 +66,9 @@ int cmd_read(int fd, int argc, const char** argv) {
     return 1;
   }
 
-  int ret = read(fd, buf, length);
+  ssize_t ret = read(fd, buf, length);
   if (ret < 0) {
-    printf("Error reading from slave. (%d)\n", ret);
+    printf("Error reading from slave. (%zd)\n", ret);
     goto cmd_read_finish;
   }
 
@@ -81,7 +81,7 @@ int cmd_read(int fd, int argc, const char** argv) {
 
 cmd_read_finish:
   free(buf);
-  return ret;
+  return (int)ret;
 }
 
 int cmd_write(int fd, int argc, const char** argv) {
@@ -96,11 +96,11 @@ int cmd_write(int fd, int argc, const char** argv) {
     return 1;
   }
 
-  int ret = 0;
+  size_t ret = 0;
 
   errno = 0;
   for (int i = 0; i < argc; i++) {
-    buf[i] = strtol(argv[i], NULL, 16);
+    buf[i] = (uint8_t)strtol(argv[i], NULL, 16);
     if (errno) {
       ret = errno;
       print_usage();
@@ -110,11 +110,11 @@ int cmd_write(int fd, int argc, const char** argv) {
 
   ret = write(fd, buf, argc);
   if (ret < 0)
-    printf("Error writing to slave. (%d)\n", ret);
+    printf("Error writing to slave. (%zd)\n", ret);
 
 cmd_write_finish:
   free(buf);
-  return ret;
+  return (int)ret;
 }
 
 int cmd_transfer(int fd, int argc, const char** argv) {
@@ -186,25 +186,40 @@ int cmd_transfer(int fd, int argc, const char** argv) {
   while (i < argc) {
     if (!strcmp(argv[i++], "r")) {
       segment->type = fuchsia_hardware_i2c_SegmentType_READ;
-      segment->len = strtol(argv[i++], NULL, 10);
+      unsigned long len = strtoul(argv[i++], NULL, 10);
       if (errno) {
         print_usage();
         return errno;
       }
+      if (len >= UINT32_MAX) {
+        print_usage();
+        return -1;
+      }
+      segment->len = (uint32_t)len;
     } else {
       segment->type = fuchsia_hardware_i2c_SegmentType_WRITE;
-      segment->len = strtol(argv[i++], NULL, 10);
+      unsigned long len = strtoul(argv[i++], NULL, 10);
       if (errno) {
         print_usage();
         return errno;
       }
+      if (len >= UINT32_MAX) {
+        print_usage();
+        return -1;
+      }
+      segment->len = (uint32_t)len;
 
       for (uint32_t seg = 0; seg < segment->len; seg++) {
-        *data_buf++ = strtol(argv[i++], NULL, 16);
+        unsigned long val = strtoul(argv[i++], NULL, 16);
         if (errno) {
           print_usage();
           return errno;
         }
+        if (val >= UINT8_MAX) {
+          print_usage();
+          return -1;
+        }
+        *data_buf++ = (uint8_t)val;
       }
     }
     segment++;
