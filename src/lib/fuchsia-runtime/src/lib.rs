@@ -338,13 +338,16 @@ pub fn duplicate_utc_clock_handle(rights: Rights) -> Result<Clock, Status> {
 
 /// Reads time from the UTC `Clock` registered with the runtime.
 ///
-/// This call fails if no clock was registered with the runtime or the clock is not yet started.
-pub fn utc_time() -> Result<Time, Status> {
+/// # Panics
+///
+/// Panics if there is no UTC clock registered with the runtime or the registered handle does not
+/// have the required rights.
+pub fn utc_time() -> Time {
     let clock: Unowned<'static, Clock> = unsafe {
         let handle = zx_utc_reference_get();
         Unowned::from_raw_handle(handle)
     };
-    clock.read()
+    clock.read().expect("Failed to read UTC clock")
 }
 
 #[cfg(test)]
@@ -405,6 +408,6 @@ mod tests {
 
     #[test]
     fn read_utc_time() {
-        utc_time().unwrap();
+        utc_time();
     }
 }
