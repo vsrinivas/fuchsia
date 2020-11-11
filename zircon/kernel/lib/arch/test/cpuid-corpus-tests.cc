@@ -70,6 +70,7 @@ void PopulateFromFile(std::string_view filename, arch::testing::FakeCpuidIo* cpu
   ASSERT_FALSE(document.HasParseError());
   ASSERT_TRUE(document.IsArray());
 
+  bool hypervisor_leaves = false;  // Whether such leaves are present.
   for (rapidjson::SizeType i = 0; i < document.Size(); ++i) {
     const auto& entry = document[i];
     ASSERT_TRUE(entry.IsObject());
@@ -85,6 +86,19 @@ void PopulateFromFile(std::string_view filename, arch::testing::FakeCpuidIo* cpu
         .Populate(leaf, subleaf, arch::CpuidIo::kEbx, entry["ebx"].GetUint())
         .Populate(leaf, subleaf, arch::CpuidIo::kEcx, entry["ecx"].GetUint())
         .Populate(leaf, subleaf, arch::CpuidIo::kEdx, entry["edx"].GetUint());
+
+    hypervisor_leaves = hypervisor_leaves || (0x4000'0000 <= leaf && leaf < 0x8000'0000);
+  }
+
+  // Generally, the zeroth hypervisor leaf is safe to compute, even if no
+  // hypervisor is actually present. If no hypervisor leaves are present,
+  // we stub in one with garbage values, which ensures that we are doing
+  // proper feature testing, e.g., in creating an arch::HypervisorName.
+  if (!hypervisor_leaves) {
+    cpuid->Populate(0x4000'0000, 0x0, arch::CpuidIo::kEax, 0xaaaa'aaaa)
+        .Populate(0x4000'0000, 0x0, arch::CpuidIo::kEbx, 0xbbbb'bbbb)
+        .Populate(0x4000'0000, 0x0, arch::CpuidIo::kEcx, 0xcccc'cccc)
+        .Populate(0x4000'0000, 0x0, arch::CpuidIo::kEdx, 0xdddd'dddd);
   }
 }
 
@@ -107,6 +121,8 @@ TEST(CpuidTests, Core2_6300) {
   auto processor = arch::ProcessorName(cpuid);
   EXPECT_TRUE(processor.name() == "Intel(R) Core(TM)2 CPU          6300  @ 1.86GHz"sv);
 
+  EXPECT_TRUE(arch::HypervisorName(cpuid).name().empty());
+
   {
     auto features = cpuid.Read<arch::CpuidFeatureFlagsC>();
 
@@ -115,6 +131,7 @@ TEST(CpuidTests, Core2_6300) {
     EXPECT_TRUE(features.cmpxchg16b());
 
     // Not present:
+    EXPECT_FALSE(features.hypervisor());
     EXPECT_FALSE(features.rdrand());
     EXPECT_FALSE(features.avx());
     EXPECT_FALSE(features.osxsave());
@@ -147,6 +164,8 @@ TEST(CpuidTests, Nehalem_Xeon_E5520) {
   auto processor = arch::ProcessorName(cpuid);
   EXPECT_TRUE(processor.name() == "Intel(R) Xeon(R) CPU           E5520  @ 2.27GHz"sv);
 
+  EXPECT_TRUE(arch::HypervisorName(cpuid).name().empty());
+
   {
     auto features = cpuid.Read<arch::CpuidFeatureFlagsC>();
 
@@ -155,6 +174,7 @@ TEST(CpuidTests, Nehalem_Xeon_E5520) {
     EXPECT_TRUE(features.cmpxchg16b());
 
     // Not present:
+    EXPECT_FALSE(features.hypervisor());
     EXPECT_FALSE(features.rdrand());
     EXPECT_FALSE(features.avx());
     EXPECT_FALSE(features.osxsave());
@@ -187,6 +207,8 @@ TEST(CpuidTests, SandyBridge_i7_2600K) {
   auto processor = arch::ProcessorName(cpuid);
   EXPECT_TRUE(processor.name() == "       Intel(R) Core(TM) i7-2600K CPU @ 3.40GHz"sv);
 
+  EXPECT_TRUE(arch::HypervisorName(cpuid).name().empty());
+
   {
     auto features = cpuid.Read<arch::CpuidFeatureFlagsC>();
 
@@ -198,6 +220,7 @@ TEST(CpuidTests, SandyBridge_i7_2600K) {
     EXPECT_TRUE(features.cmpxchg16b());
 
     // Not present:
+    EXPECT_FALSE(features.hypervisor());
     EXPECT_FALSE(features.rdrand());
     EXPECT_FALSE(features.x2apic());
   }
@@ -227,6 +250,8 @@ TEST(CpuidTests, IvyBridge_i3_3240) {
   auto processor = arch::ProcessorName(cpuid);
   EXPECT_TRUE(processor.name() == "        Intel(R) Core(TM) i3-3240 CPU @ 3.40GHz"sv);
 
+  EXPECT_TRUE(arch::HypervisorName(cpuid).name().empty());
+
   {
     auto features = cpuid.Read<arch::CpuidFeatureFlagsC>();
 
@@ -238,6 +263,7 @@ TEST(CpuidTests, IvyBridge_i3_3240) {
     EXPECT_TRUE(features.cmpxchg16b());
 
     // Not present:
+    EXPECT_FALSE(features.hypervisor());
     EXPECT_FALSE(features.rdrand());
     EXPECT_FALSE(features.x2apic());
   }
@@ -269,6 +295,8 @@ TEST(CpuidTests, Haswell_Xeon_E5_2690v3) {
   auto processor = arch::ProcessorName(cpuid);
   EXPECT_TRUE(processor.name() == "Intel(R) Xeon(R) CPU E5-2690 v3 @ 2.60GHz"sv);
 
+  EXPECT_TRUE(arch::HypervisorName(cpuid).name().empty());
+
   {
     auto features = cpuid.Read<arch::CpuidFeatureFlagsC>();
 
@@ -280,6 +308,9 @@ TEST(CpuidTests, Haswell_Xeon_E5_2690v3) {
     EXPECT_TRUE(features.x2apic());
     EXPECT_TRUE(features.pdcm());
     EXPECT_TRUE(features.cmpxchg16b());
+
+    // Not present.
+    EXPECT_FALSE(features.hypervisor());
   }
 
   {
@@ -309,6 +340,8 @@ TEST(CpuidTests, Skylake_i3_6100) {
   auto processor = arch::ProcessorName(cpuid);
   EXPECT_TRUE(processor.name() == "Intel(R) Core(TM) i3-6100U CPU @ 2.30GHz"sv);
 
+  EXPECT_TRUE(arch::HypervisorName(cpuid).name().empty());
+
   {
     auto features = cpuid.Read<arch::CpuidFeatureFlagsC>();
 
@@ -320,6 +353,9 @@ TEST(CpuidTests, Skylake_i3_6100) {
     EXPECT_TRUE(features.x2apic());
     EXPECT_TRUE(features.pdcm());
     EXPECT_TRUE(features.cmpxchg16b());
+
+    // Not present:
+    EXPECT_FALSE(features.hypervisor());
   }
 
   {
@@ -347,6 +383,8 @@ TEST(CpuidTests, AtomD510) {
   auto processor = arch::ProcessorName(cpuid);
   EXPECT_TRUE(processor.name() == "         Intel(R) Atom(TM) CPU D510   @ 1.66GHz"sv);
 
+  EXPECT_TRUE(arch::HypervisorName(cpuid).name().empty());
+
   {
     auto features = cpuid.Read<arch::CpuidFeatureFlagsC>();
 
@@ -355,6 +393,7 @@ TEST(CpuidTests, AtomD510) {
     EXPECT_TRUE(features.cmpxchg16b());
 
     // Not present:
+    EXPECT_FALSE(features.hypervisor());
     EXPECT_FALSE(features.rdrand());
     EXPECT_FALSE(features.avx());
     EXPECT_FALSE(features.osxsave());
@@ -387,6 +426,8 @@ TEST(CpuidTests, Ryzen2700X) {
   auto processor = arch::ProcessorName(cpuid);
   EXPECT_TRUE(processor.name() == "AMD Ryzen 7 2700X Eight-Core Processor         "sv);
 
+  EXPECT_TRUE(arch::HypervisorName(cpuid).name().empty());
+
   {
     auto features = cpuid.Read<arch::CpuidFeatureFlagsC>();
 
@@ -398,6 +439,7 @@ TEST(CpuidTests, Ryzen2700X) {
     EXPECT_TRUE(features.cmpxchg16b());
 
     // Not present:
+    EXPECT_FALSE(features.hypervisor());
     EXPECT_FALSE(features.x2apic());
     EXPECT_FALSE(features.pdcm());
   }
@@ -427,6 +469,8 @@ TEST(CpuidTests, Ryzen3950X) {
   auto processor = arch::ProcessorName(cpuid);
   EXPECT_TRUE(processor.name() == "AMD Ryzen 9 3950X 16-Core Processor            "sv);
 
+  EXPECT_TRUE(arch::HypervisorName(cpuid).name().empty());
+
   {
     auto features = cpuid.Read<arch::CpuidFeatureFlagsC>();
 
@@ -438,6 +482,7 @@ TEST(CpuidTests, Ryzen3950X) {
     EXPECT_TRUE(features.cmpxchg16b());
 
     // Not present:
+    EXPECT_FALSE(features.hypervisor());
     EXPECT_FALSE(features.x2apic());
     EXPECT_FALSE(features.pdcm());
   }
@@ -467,6 +512,8 @@ TEST(CpuidTests, Threadripper1950X) {
   auto processor = arch::ProcessorName(cpuid);
   EXPECT_TRUE(processor.name() == "AMD Ryzen Threadripper 1950X 16-Core Processor "sv);
 
+  EXPECT_TRUE(arch::HypervisorName(cpuid).name().empty());
+
   {
     auto features = cpuid.Read<arch::CpuidFeatureFlagsC>();
 
@@ -478,6 +525,7 @@ TEST(CpuidTests, Threadripper1950X) {
     EXPECT_TRUE(features.cmpxchg16b());
 
     // Not present:
+    EXPECT_FALSE(features.hypervisor());
     EXPECT_FALSE(features.x2apic());
     EXPECT_FALSE(features.pdcm());
   }

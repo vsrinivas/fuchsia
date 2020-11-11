@@ -192,7 +192,9 @@ Microarchitecture GetMicroarchitecture(CpuidIoProvider&& io) {
 // [intel/vol2]: Table 3-10.  Feature Information Returned in the ECX Register.
 // [amd/vol3]: E.3.2, CPUID Fn0000_0001_ECX Feature Identifiers.
 struct CpuidFeatureFlagsC : public CpuidValueBase<CpuidFeatureFlagsC, 0x1, 0x0, CpuidIo::kEcx> {
-  DEF_RSVDZ_BIT(31);
+  // AMD documented "RAZ. Reserved for use by hypervisor to indicate guest
+  // status."; Intel documents "Not Used. Always returns 0.".
+  DEF_BIT(31, hypervisor);
   DEF_BIT(30, rdrand);
   DEF_BIT(29, f16c);
   DEF_BIT(28, avx);
@@ -305,6 +307,61 @@ struct CpuidExtendedFeatureFlagsB
   DEF_BIT(2, sgx);
   DEF_BIT(1, tsc_adjust);
   DEF_BIT(0, fsgsbase);
+};
+
+//---------------------------------------------------------------------------//
+// Leaves/Functions 0x4000'0000 - 0x4fff'ffff.
+//
+// [intel/vol2]: Table 3-8.  Information Returned by CPUID Instruction.
+//
+// This range is reserved by convention for hypervisors: the original RFC can be
+// found at https://lwn.net/Articles/301888.
+//
+// Intel documents that "No existing or future CPU will return processor
+// identification or feature information if the initial EAX value is in the
+// range 40000000H to 4FFFFFFFH."
+//---------------------------------------------------------------------------//
+
+struct CpuidMaximumHypervisorLeaf
+    : public CpuidValueBase<CpuidMaximumHypervisorLeaf, 0x4000'0000, 0x0, CpuidIo::kEax> {};
+
+struct CpuidHypervisorNameB
+    : public CpuidValueBase<CpuidHypervisorNameB, 0x4000'0000, 0x0, CpuidIo::kEbx> {};
+struct CpuidHypervisorNameC
+    : public CpuidValueBase<CpuidHypervisorNameC, 0x4000'0000, 0x0, CpuidIo::kEcx> {};
+struct CpuidHypervisorNameD
+    : public CpuidValueBase<CpuidHypervisorNameD, 0x4000'0000, 0x0, CpuidIo::kEdx> {};
+
+// HypervisorName is a simple class that serves to hold the content of a
+// hypervisor's name (or "vendor string").
+class HypervisorName {
+ public:
+  template <typename CpuidIoProvider>
+  explicit HypervisorName(CpuidIoProvider&& io) {
+    // Check if we are actually within a hypervisor.
+    if (io.template Read<CpuidFeatureFlagsC>().hypervisor()) {
+      const uint32_t values[] = {
+          io.template Read<CpuidHypervisorNameB>().reg_value(),
+          io.template Read<CpuidHypervisorNameC>().reg_value(),
+          io.template Read<CpuidHypervisorNameD>().reg_value(),
+      };
+      static_assert(kSize == sizeof(values));
+      memcpy(str_.data(), values, kSize);
+    } else {
+      str_[0] = '\0';
+    }
+  }
+
+  // Returns a string representation of name of the hypervisor, valid for as
+  // long as the associated HypervisorName is in scope.
+  std::string_view name() const {
+    std::string_view name{str_.data(), str_.size()};
+    return name.substr(0, name.find_first_of('\0'));
+  }
+
+ private:
+  static constexpr size_t kSize = 12;
+  std::array<char, kSize> str_;
 };
 
 //---------------------------------------------------------------------------//
