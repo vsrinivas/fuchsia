@@ -349,7 +349,7 @@ class ArgParser(argparse.ArgumentParser):
         else:
             subcommand = args[0]
             args = args[1:]
-        self.host.trace('fx fuzz {}'.format(' '.join(args)))
+        self.host.trace('fx fuzz {} {}'.format(subcommand, ' '.join(args)))
         args = self._parsers[subcommand].parse_args(args)
         if subcommand != 'help':
             return args

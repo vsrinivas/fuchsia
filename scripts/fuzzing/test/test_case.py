@@ -159,7 +159,7 @@ class TestCaseWithFactory(TestCaseWithIO):
         after the given duration.
         """
         cmd = ['cs info']
-        output = '- URL: {}'.format(url)
+        output = 'URL: {}'.format(url)
         end = None if not duration else self.host.elapsed + duration
         self.set_outputs(cmd, [output], end=end, reset=False, ssh=True)
         if refresh:

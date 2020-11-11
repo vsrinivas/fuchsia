@@ -184,7 +184,7 @@ class Device(object):
         if self._urls == None or refresh:
             self._urls = []
             out = self.ssh(['cs', 'info']).check_output()
-            pat = re.compile(r'^- URL: (?P<url>.*)')
+            pat = re.compile(r'^URL: (?P<url>.*)')
             for line in str(out).split('\n'):
                 match = pat.match(line)
                 if not match:

@@ -32,7 +32,7 @@ class Host(object):
         self._platform = 'mac-x64' if os.uname()[0] == 'Darwin' else 'linux-x64'
         self._fd_out = sys.stdout
         self._fd_err = sys.stderr
-        self._tracing = False
+        self._tracing = os.getenv(Host.TRACE_ENVVAR) == '1'
 
     @property
     def platform(self):

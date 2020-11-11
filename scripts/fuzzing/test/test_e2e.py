@@ -77,6 +77,30 @@ class IntegrationTestFull(IntegrationTest):
         with self.host.open(artifacts[0], 'rb') as f:
             self.assertEqual(f.read(3), 'HI!')
 
+    def test_start_stop(self):
+        # This test covers interactions with on-device processes
+        fuzzer = 'example-fuzzers/noop_fuzzer'
+
+        # Reset to known state
+        cmd = self.parser.parse_args(['stop', fuzzer])
+        cmd.command(cmd, self.factory)
+
+        cmd = self.parser.parse_args(['start', '-o', self.temp_dir, fuzzer])
+        cmd.command(cmd, self.factory)
+        self.assertOutContains('Starting {}'.format(fuzzer))
+
+        cmd = self.parser.parse_args(['check', fuzzer])
+        cmd.command(cmd, self.factory)
+        self.assertOutContains('{}: RUNNING'.format(fuzzer))
+
+        cmd = self.parser.parse_args(['stop', fuzzer])
+        cmd.command(cmd, self.factory)
+        self.assertOutContains('Stopping {}'.format(fuzzer))
+
+        cmd = self.parser.parse_args(['check', fuzzer])
+        cmd.command(cmd, self.factory)
+        self.assertOutContains('{}: STOPPED'.format(fuzzer))
+
     def test_repro_asan(self):
         testfile = os.path.join(self.temp_dir, "overflow_input")
 

@@ -85,7 +85,7 @@ def check_fuzzer(args, factory):
             continue
         if not fuzzer.is_resolved():
             factory.host.echo('{}: NOT INSTALLED'.format(fuzzer))
-        elif fuzzer.is_running():
+        elif fuzzer.is_running(refresh=True):
             factory.host.echo('{}: RUNNING'.format(fuzzer))
         else:
             factory.host.echo('{}: STOPPED'.format(fuzzer))

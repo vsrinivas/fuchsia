@@ -35,6 +35,7 @@ fuzzers_package("fuzzing-examples") {
     "cpp:dictionary_fuzzer",
     "cpp:dictionary_fuzzer_without_dictionary",
     "cpp:fuzzed_data_provider_fuzzer",
+    "cpp:noop_fuzzer",
     {
       # ... or scopes with additional fields, like a non-default output name.
       label = "cpp:oom_fuzzer"
