@@ -330,9 +330,10 @@ fn log_connect_result_stats(sender: &mut CobaltSender, connect_stats: &ConnectSt
     if let ConnectResult::Failed(failure) = &connect_stats.result {
         let fail_at_dim = convert_to_fail_at_dim(failure);
         let timeout_dim = convert_bool_dim(failure.is_timeout());
+        let credential_rejected_dim = convert_bool_dim(failure.likely_due_to_credential_rejected());
         sender.with_component().log_event_count::<_, String, _>(
             metrics::CONNECTION_FAILURE_METRIC_ID,
-            [fail_at_dim as u32, timeout_dim as u32],
+            [fail_at_dim as u32, timeout_dim as u32, credential_rejected_dim as u32],
             oui.clone(),
             0,
             1,
@@ -393,9 +394,12 @@ fn log_connect_result_stats(sender: &mut CobaltSender, connect_stats: &ConnectSt
         1,
     );
 
-    match &connect_stats.result {
-        ConnectResult::Failed(failure) => match failure {
+    if let ConnectResult::Failed(failure) = &connect_stats.result {
+        let credential_rejected_bool = failure.likely_due_to_credential_rejected();
+
+        match failure {
             ConnectFailure::AuthenticationFailure(code) => {
+                let credential_rejected_dim = convert_bool_dim(credential_rejected_bool);
                 let error_code_dim = convert_auth_error_code(*code);
                 sender.with_component().log_event_count(
                     metrics::AUTHENTICATION_FAILURE_METRIC_ID,
@@ -404,14 +408,21 @@ fn log_connect_result_stats(sender: &mut CobaltSender, connect_stats: &ConnectSt
                         is_multi_bss_dim as u32,
                         channel_band_dim as u32,
                         protection_dim as u32,
+                        credential_rejected_dim as u32,
                     ],
                     oui.clone(),
                     0,
                     1,
                 );
+
                 sender.with_component().log_event_count(
                     metrics::AUTHENTICATION_FAILURE_PER_RSSI_METRIC_ID,
-                    [error_code_dim as u32, rssi_dim as u32, channel_band_dim as u32],
+                    [
+                        error_code_dim as u32,
+                        rssi_dim as u32,
+                        channel_band_dim as u32,
+                        credential_rejected_dim as u32,
+                    ],
                     oui,
                     0,
                     1,
@@ -419,25 +430,32 @@ fn log_connect_result_stats(sender: &mut CobaltSender, connect_stats: &ConnectSt
             }
             ConnectFailure::AssociationFailure(AssociationFailure { code, .. }) => {
                 let error_code_dim = convert_assoc_error_code(*code);
+                let credential_rejected_dim = convert_bool_dim(credential_rejected_bool);
                 sender.with_component().log_event_count(
                     metrics::ASSOCIATION_FAILURE_METRIC_ID,
-                    [error_code_dim as u32, protection_dim as u32],
+                    [error_code_dim as u32, protection_dim as u32, credential_rejected_dim as u32],
                     oui.clone(),
                     0,
                     1,
                 );
                 sender.with_component().log_event_count(
                     metrics::ASSOCIATION_FAILURE_PER_RSSI_METRIC_ID,
-                    [error_code_dim as u32, rssi_dim as u32, channel_band_dim as u32],
+                    [
+                        error_code_dim as u32,
+                        rssi_dim as u32,
+                        channel_band_dim as u32,
+                        credential_rejected_dim as u32,
+                    ],
                     oui,
                     0,
                     1,
                 );
             }
             ConnectFailure::EstablishRsnaFailure(..) => {
+                let credential_rejected_dim = convert_bool_dim(credential_rejected_bool);
                 sender.with_component().log_event_count(
                     metrics::ESTABLISH_RSNA_FAILURE_METRIC_ID,
-                    protection_dim as u32,
+                    [protection_dim as u32, credential_rejected_dim as u32],
                     oui,
                     0,
                     1,
@@ -446,8 +464,7 @@ fn log_connect_result_stats(sender: &mut CobaltSender, connect_stats: &ConnectSt
             // Scan failure is already logged as part of scan stats.
             // Select network failure is already logged above.
             _ => (),
-        },
-        _ => (),
+        }
     }
 }
 

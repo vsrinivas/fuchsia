@@ -164,6 +164,52 @@ impl ConnectFailure {
             _ => false,
         }
     }
+
+    /// Returns true if failure was likely caused by rejected
+    /// credentials. In some cases, we cannot be 100% certain that
+    /// credentials were rejected, but it's worth noting when we
+    /// observe a failure event that was more than likely caused by
+    /// rejected credentials.
+    pub fn likely_due_to_credential_rejected(&self) -> bool {
+        match self {
+            // Assuming the correct type of credentials are given, a
+            // bad password will cause a variety of errors depending
+            // on the security type. All of the following cases assume
+            // no frames were dropped unintentionally. For example,
+            // it's possible to conflate a WPA2 bad password error
+            // with a dropped frame at just the right moment since the
+            // error itself is *caused by* a dropped frame.
+
+            // For WPA1 and WPA2, the error will be
+            // EstablishRsnaFailure::KeyFrameExchangeTimeout.  When
+            // the authenticator receives a bad MIC (derived from the
+            // password), it will silently drop the EAPOL handshake
+            // frame it received.
+            //
+            // NOTE: The alternative possibilities for seeing an
+            // EstablishRsnaFailure::KeyFrameExchangeTimeout are an
+            // error in our crypto parameter parsing and crypto
+            // implementation, or a lost connection with the AP.
+            ConnectFailure::EstablishRsnaFailure(EstablishRsnaFailure {
+                auth_method: Some(auth::MethodName::Psk),
+                reason: EstablishRsnaFailureReason::KeyFrameExchangeTimeout,
+            }) => true,
+
+            // For WEP, the entire association is always handled by
+            // fullmac, so the best we can do is use
+            // fidl_mlme::AssociateResultCodes. The code that arises
+            // when WEP fails with rejected credentials is
+            // RefusedReasonUnspecified. This is a catch-all error for
+            // a WEP authentication failure, but it is being
+            // considered good enough for catching rejected
+            // credentials for a deprecated WEP association.
+            ConnectFailure::AssociationFailure(AssociationFailure {
+                bss_protection: BssProtection::Wep,
+                code: fidl_mlme::AssociateResultCodes::RefusedNotAuthenticated,
+            }) => true,
+            _ => false,
+        }
+    }
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -719,6 +765,36 @@ mod tests {
         sme.on_mlme_event(MlmeEvent::OnScanEnd {
             end: fidl_mlme::ScanEnd { txn_id: 1, code: fidl_mlme::ScanResultCodes::Success },
         });
+    }
+
+    #[test]
+    fn test_detection_of_rejected_wpa1_or_wpa2_credentials() {
+        let failure = ConnectFailure::EstablishRsnaFailure(EstablishRsnaFailure {
+            auth_method: Some(auth::MethodName::Psk),
+            reason: EstablishRsnaFailureReason::KeyFrameExchangeTimeout,
+        });
+        assert!(failure.likely_due_to_credential_rejected());
+    }
+
+    #[test]
+    fn test_detection_of_rejected_wep_credentials() {
+        let failure = ConnectFailure::AssociationFailure(AssociationFailure {
+            bss_protection: BssProtection::Wep,
+            code: fidl_mlme::AssociateResultCodes::RefusedNotAuthenticated,
+        });
+        assert!(failure.likely_due_to_credential_rejected());
+    }
+
+    #[test]
+    fn test_no_detection_of_rejected_wpa1_or_wpa2_credentials() {
+        let failure = ConnectFailure::ScanFailure(fidl_mlme::ScanResultCodes::InternalError);
+        assert!(!failure.likely_due_to_credential_rejected());
+
+        let failure = ConnectFailure::AssociationFailure(AssociationFailure {
+            bss_protection: BssProtection::Wpa2Personal,
+            code: fidl_mlme::AssociateResultCodes::RefusedNotAuthenticated,
+        });
+        assert!(!failure.likely_due_to_credential_rejected());
     }
 
     #[test]

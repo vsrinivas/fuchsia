@@ -14,14 +14,9 @@ use pin_utils::pin_mut;
 use std::marker::Unpin;
 use std::sync::{Arc, Mutex};
 use void::Void;
-use wlan_common::bss::Protection as BssProtection;
 use wlan_hasher::WlanHasher;
 use wlan_inspect;
-use wlan_rsn::auth;
-use wlan_sme::client::{
-    AssociationFailure, BssDiscoveryResult, BssInfo, ConnectFailure, ConnectResult,
-    EstablishRsnaFailure, EstablishRsnaFailureReason, InfoEvent,
-};
+use wlan_sme::client::{BssDiscoveryResult, BssInfo, ConnectResult, InfoEvent};
 use wlan_sme::{self as sme, client as client_sme, InfoStream};
 
 use crate::inspect;
@@ -248,36 +243,9 @@ fn convert_connect_result(result: &ConnectResult) -> fidl_sme::ConnectResultCode
     match result {
         ConnectResult::Success => fidl_sme::ConnectResultCode::Success,
         ConnectResult::Canceled => fidl_sme::ConnectResultCode::Canceled,
-
-        // Assuming the correct type of credentials are given, a bad password
-        // will cause a variety of errors depending on the security type. All of
-        // the following cases assume no frames were dropped unintentionally. For example,
-        // it's possible to conflate a WPA2 bad password error with a dropped frame at just
-        // the right moment since the error itself is *caused by* a dropped frame.
-
-        // For WPA1 and WPA2, the error will be EstablishRsnaFailure::KeyFrameExchangeTimeout.
-        // When the authenticator receives a bad MIC (derived from the password), it will silently
-        // drop the EAPOL handshake frame it received.
-        //
-        // NOTE: The alternative possibilities for seeing an
-        // EstablishRsnaFailure::KeyFrameExchangeTimeout are an error in
-        // our crypto parameter parsing and crypto implementation, or a lost
-        // connection with the AP.
-        ConnectResult::Failed(ConnectFailure::EstablishRsnaFailure(EstablishRsnaFailure {
-            auth_method: Some(auth::MethodName::Psk),
-            reason: EstablishRsnaFailureReason::KeyFrameExchangeTimeout,
-        })) => fidl_sme::ConnectResultCode::CredentialRejected,
-
-        // For WEP, the entire association is always handled by fullmac, so the best we can
-        // do is use fidl_mlme::AssociateResultCodes. The code that arises when WEP fails with
-        // rejected credentials is RefusedReasonUnspecified. This is a catch-all error
-        // for authentication failures, but it is being considered good enough for cathcing
-        // rejected credentials for a deprecated WEP association.
-        ConnectResult::Failed(ConnectFailure::AssociationFailure(AssociationFailure {
-            bss_protection: BssProtection::Wep,
-            code: fidl_mlme::AssociateResultCodes::RefusedNotAuthenticated,
-        })) => fidl_sme::ConnectResultCode::CredentialRejected,
-
+        ConnectResult::Failed(failure) if failure.likely_due_to_credential_rejected() => {
+            fidl_sme::ConnectResultCode::CredentialRejected
+        }
         ConnectResult::Failed(..) => fidl_sme::ConnectResultCode::Failed,
     }
 }
@@ -302,37 +270,4 @@ fn send_connect_result(
         handle.send_on_finished(code)?;
     }
     Ok(())
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_detection_of_rejected_wpa1_or_wpa2_credentials() {
-        let result =
-            ConnectResult::Failed(ConnectFailure::EstablishRsnaFailure(EstablishRsnaFailure {
-                auth_method: Some(auth::MethodName::Psk),
-                reason: EstablishRsnaFailureReason::KeyFrameExchangeTimeout,
-            }));
-
-        assert_eq!(
-            fidl_sme::ConnectResultCode::CredentialRejected,
-            convert_connect_result(&result)
-        );
-    }
-
-    #[test]
-    fn test_detection_of_rejected_wep_credentials() {
-        let result =
-            ConnectResult::Failed(ConnectFailure::AssociationFailure(AssociationFailure {
-                bss_protection: BssProtection::Wep,
-                code: fidl_mlme::AssociateResultCodes::RefusedNotAuthenticated,
-            }));
-
-        assert_eq!(
-            fidl_sme::ConnectResultCode::CredentialRejected,
-            convert_connect_result(&result)
-        );
-    }
 }
