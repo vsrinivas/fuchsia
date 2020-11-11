@@ -9,9 +9,10 @@
 
 #include <memory>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <fbl/auto_call.h>
+
+#include "src/devices/block/drivers/sdmmc/sdmmc-bind.h"
 
 namespace sdmmc {
 
@@ -130,9 +131,4 @@ static constexpr zx_driver_ops_t sdmmc_driver_ops = []() -> zx_driver_ops_t {
   return ops;
 }();
 
-// The formatter does not play nice with these macros.
-// clang-format off
-ZIRCON_DRIVER_BEGIN(sdmmc, sdmmc_driver_ops, "zircon", "0.1", 1)
-    BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_SDMMC),
-ZIRCON_DRIVER_END(sdmmc)
-    // clang-format on
+ZIRCON_DRIVER(sdmmc, sdmmc_driver_ops, "zircon", "0.1")

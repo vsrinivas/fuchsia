@@ -8,7 +8,6 @@
 
 #include <algorithm>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
@@ -16,6 +15,8 @@
 #include <ddktl/fidl.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
+
+#include "src/ui/backlight/drivers/ti-lp8556/ti-lp8556-bind.h"
 
 namespace ti {
 
@@ -369,11 +370,4 @@ static constexpr zx_driver_ops_t ti_lp8556_driver_ops = []() {
 
 }  // namespace ti
 
-// clang-format off
-ZIRCON_DRIVER_BEGIN(ti_lp8556, ti::ti_lp8556_driver_ops, "TI-LP8556", "0.1", 4)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_COMPOSITE),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_TI),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_TI_LP8556),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_TI_BACKLIGHT),
-ZIRCON_DRIVER_END(ti_lp8556)
-    // clang-format on
+ZIRCON_DRIVER(ti_lp8556, ti::ti_lp8556_driver_ops, "TI-LP8556", "0.1")

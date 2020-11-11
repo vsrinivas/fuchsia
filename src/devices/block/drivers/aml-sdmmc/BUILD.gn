@@ -2,9 +2,20 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 import("//build/test/test_package.gni")
+
+bind_rules("aml-sdmmc-bind") {
+  rules = "aml-sdmmc.bind"
+  output = "aml-sdmmc-bind.h"
+  tests = "aml-sdmmc-bind-test.json"
+  deps = [
+    "//src/devices/bind/fuchsia.composite",
+    "//src/devices/bind/fuchsia.platform",
+  ]
+}
 
 driver_module("aml-sdmmc") {
   configs += [
@@ -18,6 +29,7 @@ driver_module("aml-sdmmc") {
   ]
   sources = [ "aml-sdmmc.cc" ]
   deps = [
+    ":aml-sdmmc-bind",
     "//sdk/banjo/ddk.protocol.block",
     "//sdk/banjo/ddk.protocol.composite",
     "//sdk/banjo/ddk.protocol.gpio",
@@ -29,9 +41,6 @@ driver_module("aml-sdmmc") {
     "//src/devices/lib/driver",
     "//src/devices/lib/mmio",
     "//src/lib/ddk",
-
-    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
-    "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//src/lib/ddktl",
     "//zircon/public/lib/hwreg",
     "//zircon/public/lib/sync",
@@ -47,6 +56,7 @@ test("aml-sdmmc-test") {
     "aml-sdmmc.cc",
   ]
   deps = [
+    ":aml-sdmmc-bind",
     "//sdk/banjo/ddk.protocol.composite",
     "//sdk/banjo/ddk.protocol.gpio",
     "//sdk/banjo/ddk.protocol.platform.device",
@@ -58,9 +68,6 @@ test("aml-sdmmc-test") {
     "//src/devices/testing/fake-bti",
     "//src/devices/testing/fake_ddk",
     "//src/lib/ddk",
-
-    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
-    "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//src/lib/ddktl",
     "//zircon/public/lib/hwreg",
     "//zircon/public/lib/sync",
@@ -85,5 +92,8 @@ unittest_package("aml-sdmmc-test-package") {
 
 group("tests") {
   testonly = true
-  deps = [ ":aml-sdmmc-test-package" ]
+  deps = [
+    ":aml-sdmmc-bind_test",
+    ":aml-sdmmc-test-package",
+  ]
 }

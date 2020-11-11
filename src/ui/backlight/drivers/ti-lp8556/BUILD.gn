@@ -2,10 +2,21 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 import("//build/test/test_package.gni")
 import("//build/testing/bootfs_test.gni")
+
+bind_rules("ti-lp8556-bind") {
+  rules = "ti-lp8556.bind"
+  output = "ti-lp8556-bind.h"
+  tests = "ti-lp8556-bind-test.json"
+  deps = [
+    "//src/devices/bind/fuchsia.composite",
+    "//src/devices/bind/fuchsia.platform",
+  ]
+}
 
 driver_module("ti-lp8556") {
   configs += [
@@ -19,6 +30,7 @@ driver_module("ti-lp8556") {
   ]
   sources = [ "ti-lp8556.cc" ]
   deps = [
+    ":ti-lp8556-bind",
     "//sdk/banjo/ddk.protocol.composite",
     "//sdk/banjo/ddk.protocol.i2c",
     "//sdk/banjo/ddk.protocol.platform.bus",
@@ -29,9 +41,6 @@ driver_module("ti-lp8556") {
     "//src/devices/lib/driver",
     "//src/devices/lib/mmio",
     "//src/lib/ddk",
-
-    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
-    "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//src/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fidl",
@@ -49,6 +58,7 @@ test("ti-lp8556-test") {
     "ti-lp8556.cc",
   ]
   deps = [
+    ":ti-lp8556-bind",
     "//sdk/banjo/ddk.protocol.composite",
     "//sdk/fidl/fuchsia.hardware.backlight:fuchsia.hardware.backlight_llcpp",
     "//src/devices/bus/lib/device-protocol-pdev",
@@ -59,9 +69,6 @@ test("ti-lp8556-test") {
     "//src/devices/testing/fake_ddk",
     "//src/devices/testing/mock-mmio-reg",
     "//src/lib/ddk",
-
-    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
-    "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//src/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fidl",
@@ -89,5 +96,8 @@ unittest_package("ti-lp8556-test-package") {
 
 group("tests") {
   testonly = true
-  deps = [ ":ti-lp8556-test-package" ]
+  deps = [
+    ":ti-lp8556-bind_test",
+    ":ti-lp8556-test-package",
+  ]
 }

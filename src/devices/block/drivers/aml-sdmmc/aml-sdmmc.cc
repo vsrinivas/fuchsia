@@ -18,7 +18,6 @@
 #include <algorithm>
 
 #include <bits/limits.h>
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/io-buffer.h>
@@ -39,6 +38,7 @@
 #include <soc/aml-s905d2/s905d2-hw.h>
 
 #include "aml-sdmmc-regs.h"
+#include "src/devices/block/drivers/aml-sdmmc/aml-sdmmc-bind.h"
 
 // Limit maximum number of descriptors to 512 for now
 #define AML_DMA_DESC_MAX_COUNT 512
@@ -999,9 +999,4 @@ static constexpr zx_driver_ops_t aml_sdmmc_driver_ops = []() {
 
 }  // namespace sdmmc
 
-ZIRCON_DRIVER_BEGIN(aml_sdmmc, sdmmc::aml_sdmmc_driver_ops, "zircon", "0.1", 5)
-BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_COMPOSITE),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_AMLOGIC),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_AMLOGIC_SDMMC_A),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_AMLOGIC_SDMMC_B),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_AMLOGIC_SDMMC_C), ZIRCON_DRIVER_END(aml_sdmmc)
+ZIRCON_DRIVER(aml_sdmmc, sdmmc::aml_sdmmc_driver_ops, "zircon", "0.1")

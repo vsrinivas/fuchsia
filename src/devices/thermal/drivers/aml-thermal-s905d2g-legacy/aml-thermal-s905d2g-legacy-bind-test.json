@@ -1,0 +1,41 @@
+[
+    {
+        "name": "Match T931",
+        "expected": "match",
+        "device": {
+            "fuchsia.BIND_PROTOCOL": "fuchsia.composite.BIND_PROTOCOL.DEVICE",
+            "fuchsia.BIND_PLATFORM_DEV_VID": "fuchsia.platform.BIND_PLATFORM_DEV_VID.AMLOGIC",
+            "fuchsia.BIND_PLATFORM_DEV_DID": "0x0a",
+            "fuchsia.BIND_PLATFORM_DEV_PID": "0x04"
+        }
+    },
+    {
+        "name": "Match S905D3",
+        "expected": "match",
+        "device": {
+            "fuchsia.BIND_PROTOCOL": "fuchsia.composite.BIND_PROTOCOL.DEVICE",
+            "fuchsia.BIND_PLATFORM_DEV_VID": "fuchsia.platform.BIND_PLATFORM_DEV_VID.AMLOGIC",
+            "fuchsia.BIND_PLATFORM_DEV_DID": "0x0a",
+            "fuchsia.BIND_PLATFORM_DEV_PID": "0x05"
+        }
+    },
+    {
+        "name": "No PID",
+        "expected": "abort",
+        "device": {
+            "fuchsia.BIND_PROTOCOL": "fuchsia.composite.BIND_PROTOCOL.DEVICE",
+            "fuchsia.BIND_PLATFORM_DEV_VID": "fuchsia.platform.BIND_PLATFORM_DEV_VID.AMLOGIC",
+            "fuchsia.BIND_PLATFORM_DEV_PID": "0x05"
+        }
+    },
+    {
+        "name": "Bad protocol",
+        "expected": "abort",
+        "device": {
+            "fuchsia.BIND_PROTOCOL": "fuchsia.platform.BIND_PROTOCOL.DEVICE",
+            "fuchsia.BIND_PLATFORM_DEV_VID": "fuchsia.platform.BIND_PLATFORM_DEV_VID.AMLOGIC",
+            "fuchsia.BIND_PLATFORM_DEV_DID": "0x0a",
+            "fuchsia.BIND_PLATFORM_DEV_PID": "0x05"
+        }
+    }
+]
