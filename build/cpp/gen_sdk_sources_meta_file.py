@@ -17,8 +17,8 @@ def main():
         '--root', help='Root of the library in the SDK', required=True)
     parser.add_argument(
         '--deps', help='Path to metadata files of dependencies', nargs='*')
-    parser.add_argument('--sources', help='List of library sources', nargs='+')
-    parser.add_argument('--headers', help='List of public headers', nargs='*')
+    parser.add_argument('--sources', help='List of library sources', nargs='*')
+    parser.add_argument('--headers', help='List of public headers', nargs='+')
     parser.add_argument(
         '--include-dir', help='Path to the include directory', required=True)
     args = parser.parse_args()
