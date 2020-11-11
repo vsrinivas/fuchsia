@@ -464,15 +464,14 @@ bool TestLogInteger(CobaltTestAppLogger* logger, SystemClockInterface* clock,
                                       const size_t backfill_days, uint32_t project_id) {
   FX_LOGS(INFO) << "========================";
   FX_LOGS(INFO) << "TestLogInteger";
-  // Expect to generate |kNumAggregatedObservations| for each day in the
-  // backfill period, plus the current day. Expect to generate no observations
-  // when GenerateObservations is called for the second time on the same day.
+
+  // All SumAndCount data is aggregated into a single observation.
   std::map<std::pair<uint32_t, uint32_t>, uint64_t> expected_num_obs;
   std::map<std::pair<uint32_t, uint32_t>, uint64_t> expect_no_obs;
-  for (const auto& [ids, expected] : kNumAggregatedObservations) {
-    expected_num_obs[ids] = (1 + backfill_days) * expected;
-    expect_no_obs[ids] = 0;
-  }
+  expected_num_obs[{cobalt_registry::kUpdateDurationNewMetricId,
+                    cobalt_registry::kUpdateDurationNewUpdateDurationTimingStatsReportId}] = 1;
+  expect_no_obs[{cobalt_registry::kUpdateDurationNewMetricId,
+                    cobalt_registry::kUpdateDurationNewUpdateDurationTimingStatsReportId}] = 0;
 
   uint32_t day_index = CurrentDayIndex(clock);
   for (uint32_t errorNameIndex : kUpdateDurationNewErrorNameIndices) {
