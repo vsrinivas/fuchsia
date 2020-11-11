@@ -6,15 +6,10 @@ use {
     anyhow::Error,
     component_manager_lib::{
         builtin_environment::BuiltinEnvironmentBuilder,
-        model::{
-            binding::Binder, moniker::AbsoluteMoniker, realm::BindReason, testing::test_helpers,
-        },
+        model::{binding::Binder, moniker::AbsoluteMoniker, realm::BindReason},
         startup,
     },
-    fidl::endpoints::ServiceMarker,
-    fidl_fuchsia_input_injection::InputDeviceRegistryMarker,
     fidl_fuchsia_io::{OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE},
-    fidl_fuchsia_session::LauncherMarker,
     fuchsia_component::server::{ServiceFs, ServiceObj},
     futures::prelude::*,
     log::*,
@@ -114,12 +109,6 @@ async fn main() -> Result<(), Error> {
         OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
     )
     .expect("Failed to open directory");
-
-    // Make sure the session manager exposes the `fuchsia.session.Launcher` service.
-    assert_eq!(
-        vec![InputDeviceRegistryMarker::DEBUG_NAME, LauncherMarker::DEBUG_NAME],
-        test_helpers::list_directory(&expose_dir_proxy).await
-    );
 
     // Bind the session manager's expose/ to out/svc of this component, so sysmgr can find it and
     // route service connections to it.

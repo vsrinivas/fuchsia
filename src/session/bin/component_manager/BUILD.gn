@@ -13,9 +13,7 @@ rustc_binary("bin") {
   deps = [
     "//garnet/lib/rust/io_util",
     "//sdk/fidl/fuchsia.component.internal:fuchsia.component.internal-rustc",
-    "//sdk/fidl/fuchsia.input.injection:fuchsia.input.injection-rustc",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
-    "//sdk/fidl/fuchsia.session:fuchsia.session-rustc",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//sdk/fidl/fuchsia.test:fuchsia.test-rustc",
     "//src/lib/fidl/rust/fidl",
