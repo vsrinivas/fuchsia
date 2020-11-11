@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 // +build fuchsia
+// +build !build_with_native_toolchain
 
 package fs
 

@@ -10,7 +10,7 @@ require (
 	github.com/golang/groupcache v0.0.0-20200121045136-8c9f03a8e57e // indirect
 	github.com/golang/mock v1.4.4 // indirect
 	github.com/golang/protobuf v1.4.2
-	github.com/google/go-cmp v0.5.2
+	github.com/google/go-cmp v0.5.3-0.20201020212313-ab46b8bd0abd
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510
 	github.com/google/subcommands v1.2.0
 	github.com/hashicorp/golang-lru v0.5.4 // indirect

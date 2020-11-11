@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// +build !build_with_native_toolchain
+
 // Package dhcp implements a DHCP client and server as described in RFC 2131.
 package dhcp
 

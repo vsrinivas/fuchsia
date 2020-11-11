@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// +build !build_with_native_toolchain
+
 // Package pkgfs hosts a filesystem for interacting with packages that are
 // stored on a host. It presents a tree of packages that are locally available
 // and a tree that enables a user to add new packages and/or package content to

@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// +build !build_with_native_toolchain
+
 // The Fuchsia Go Grand Unified Binary is a binary that contains several other
 // binaries, so done in order to reduce the amount of disk space and shared
 // memory required to run Fuchsia subsystems written in Go. This combination

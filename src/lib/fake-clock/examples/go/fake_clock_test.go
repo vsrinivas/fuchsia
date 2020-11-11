@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// +build !build_with_native_toolchain
+
 // This is an example of a Go use of FakeClock to show that the syscalls are
 // being overwritten. This file is based on the C++ test bed located in
 // //src/lib/fake-clock/lib/fake_clock_test.cc and include a subset of those
