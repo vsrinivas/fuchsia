@@ -12,6 +12,7 @@ import 'handles.dart';
 
 // ignore: avoid_classes_with_only_static_members
 abstract class Encoders {
+  // ignore: prefer_constructors_over_static_methods
   static fidl.Encoder get v1 {
     return fidl.Encoder();
   }
@@ -19,6 +20,7 @@ abstract class Encoders {
 
 // ignore: avoid_classes_with_only_static_members
 abstract class Decoders {
+  // ignore: prefer_constructors_over_static_methods
   static fidl.Decoder get v1 {
     return fidl.Decoder.fromRawArgs(null, []);
   }
