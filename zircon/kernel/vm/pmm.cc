@@ -197,6 +197,9 @@ static int cmd_pmm(int argc, const cmd_args* argv, uint32_t flags) {
           "%s oom hard                             : leak memory aggressively and keep on "
           "leaking\n",
           cmd_name);
+      printf(
+          "%s oom signal                           : trigger oom signal without leaking memory\n",
+          cmd_name);
       printf("%s mem_avail_state info                 : dump memory availability state info\n",
              cmd_name);
       printf(
@@ -254,6 +257,10 @@ static int cmd_pmm(int argc, const cmd_args* argv, uint32_t flags) {
     uint64_t rate = 0;
     bool hard = false;
     if (argc > 2) {
+      if (!strcmp(argv[2].str, "signal")) {
+        pmm_node.DebugMemAvailStateCallback(0);
+        return ZX_OK;
+      }
       if (!strcmp(argv[2].str, "hard")) {
         hard = true;
       } else {

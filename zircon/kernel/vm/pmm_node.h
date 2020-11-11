@@ -58,6 +58,7 @@ class PmmNode {
   void Dump(bool is_panic) const TA_NO_THREAD_SAFETY_ANALYSIS;
 
   void DumpMemAvailState() const;
+  void DebugMemAvailStateCallback(uint8_t mem_state_idx) const;
   uint64_t DebugNumPagesTillMemState(uint8_t mem_state_idx) const;
   uint8_t DebugMaxMemAvailState() const;
 

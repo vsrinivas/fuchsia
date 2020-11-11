@@ -723,6 +723,16 @@ uint8_t PmmNode::DebugMaxMemAvailState() const {
   return mem_avail_state_watermark_count_;
 }
 
+void PmmNode::DebugMemAvailStateCallback(uint8_t mem_state_idx) const {
+  Guard<Mutex> guard{&lock_};
+  if (mem_state_idx >= mem_avail_state_watermark_count_) {
+    return;
+  }
+  // Invoke callback for the requested state without allocating additional memory, or messing with
+  // any of the internal memory state tracking counters.
+  mem_avail_state_callback_(mem_avail_state_context_, mem_state_idx);
+}
+
 static int pmm_node_request_loop(void* arg) {
   return static_cast<PmmNode*>(arg)->RequestThreadLoop();
 }
