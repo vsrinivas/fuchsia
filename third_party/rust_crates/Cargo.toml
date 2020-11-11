@@ -101,6 +101,7 @@ rouille = "3.0.0"
 rust-crypto = "0.2"
 rustc-demangle = "0.1.16"
 rustc-hash = "1.0.1"
+rustls = { version = "0.17.0", features = ["dangerous_configuration"] }
 scopeguard = "0.3.3"
 semver = "0.9.0"
 serde = { version = "1.0.116", features = ["derive"] }
@@ -118,6 +119,7 @@ termion = "1.5.3"
 test-case = "1.0.0"
 thiserror = "1.0.9"
 timebomb = "0.1.2"
+tokio = { version = "0.2.16", default-features = false }
 toml = "0.5"
 tracing = { version = "0.1.15", features = ["log"] }
 tracing-futures = "0.2.4"
@@ -127,6 +129,7 @@ url = "2.1"
 uuid = { version = "0.7.2", features = ["serde", "v4"] } # move ?
 valico = "2.4.2"
 wasm-bindgen = "0.2.60"
+webpki = "0.21"
 xml-rs = "0.8"
 # move once target-side tests of host-side code have been removed
 # in wayland/scanner:lib and unicode_block_generator :
@@ -171,13 +174,11 @@ rust_icu_uenum = { version = "0.4.1", default-features = false, features = ["ren
 rust_icu_uloc = { version = "0.4.1", default-features = false, features = ["renaming", "icu_version_in_env", "icu_version_67_plus"] }
 rust_icu_ustring = { version = "0.4.1", default-features = false, features = ["renaming", "icu_version_in_env"] }
 rust_icu_utext = { version = "0.4.1", default-features = false, features = ["renaming", "icu_version_in_env"] }
-rustls = { version = "0.17.0", features = ["dangerous_configuration"] }
 rusttype = "0.7.3"
 serde_repr = "0.1.3"
 smallvec = "0.6"
 textwrap = "0.11.0"
 time = "0.1"
-tokio = { version = "0.2.16", default-features = false }
 tokio-rustls = "0.13.0"
 trust-dns-proto = { version = "0.19.2", default-features = false, features = ["testing"] }
 trust-dns-resolver = { version = "0.19.2", default-features = false, features = ["testing"] }
@@ -187,7 +188,6 @@ vk-sys = "0.4.0"
 void = "1.0.2"
 vte = "0.3"
 walkdir = "2.2.7"
-webpki = "0.21"
 
 # Host-side only dependencies
 [target.'cfg(not(target_os = "fuchsia"))'.dependencies]
@@ -195,6 +195,7 @@ async-std = { version = "1.6.0", features = ["attributes"] }
 crossterm = "0.17.7"
 handlebars = "2.0.0-beta.2"
 home = "0.5.3"
+hyper-rustls = { version = "0.20.0", default-features = false, features = ["rustls-native-certs"] }
 indoc = "0.3.3"
 nix = "0.18" # not included in fuchsia so we don't depend on #[cfg(unix)] things on target
 petgraph = "0.5.1"
@@ -232,6 +233,7 @@ ntapi = { path = "tiny_mirrors/ntapi" }
 pkg-config = { path = "tiny_mirrors/pkg-config" }
 regex-automata = { path = "tiny_mirrors/regex-automata" }
 rust-crypto = { path = "../rust-mirrors/rust-crypto" }
+security-framework = { path = "tiny_mirrors/security-framework" }
 serde_json5 = { path = "../rust-mirrors/serde_json5" }
 servo-freetype-sys = { path = "tiny_mirrors/servo-freetype-sys" }
 # termcolor 1.1.0 w/ UNLICENSE file removed per OSRB
@@ -290,6 +292,9 @@ deps = [ "//third_party/rust_crates/compat/brotli" ]
 
 [gn.package.byteorder."1.3.1"]
 rustflags = ["--cfg=byteorder_i128"]
+
+[gn.package.core-foundation-sys."0.7.0"]
+rustflags = []
 
 [gn.package.crc."1.8.1"]
 env_vars = ["OUT_DIR=../../../compat/crc"]
