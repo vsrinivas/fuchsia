@@ -9,7 +9,7 @@ dart_library("zircon") {
   package_name = "zircon"
   language_version = "2.10"
 
-  # sdk_category = "partner"
+  sdk_category = "partner"
 
   sources = [
     "src/channel.dart",
@@ -28,4 +28,7 @@ dart_library("zircon") {
     "zircon.dart",
   ]
 }
+
 # TODO(fxb/62912): Move over the extract constants tests left out of this migration //topaz/public/dart/zircon.
+group("test_extract_zircon_constants") {
+}
