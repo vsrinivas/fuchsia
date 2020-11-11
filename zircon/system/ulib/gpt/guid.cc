@@ -77,8 +77,8 @@ namespace {
 
 // Returns the longest common prefix between |a| and |b|.
 std::string_view CommonPrefix(std::string_view a, std::string_view b) {
-  const int end = std::min(a.size(), b.size());
-  for (int i = 0; i < end; ++i) {
+  const size_t end = std::min(a.size(), b.size());
+  for (size_t i = 0; i < end; ++i) {
     if (a[i] != b[i]) {
       return std::string_view(a.data(), i);
     }
