@@ -12,13 +12,13 @@ import("//src/sys/build/components.gni")
 #
 # Example:
 # ```
-# cts_component("my-test-component") {
+# cts_fuchsia_component("my-test-component") {
 #   deps = [ ":my-test" ]
 #   manifest = "meta/my-test.cmx"
 #   testonly = true
 # }
 # ```
-template("cts_component") {
+template("cts_fuchsia_component") {
   if (defined(invoker.deps) && invoker.deps != []) {
     cts_element("${target_name}_verify_deps") {
       deps = invoker.deps

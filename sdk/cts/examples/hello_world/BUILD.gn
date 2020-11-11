@@ -22,7 +22,7 @@ cts_executable("my-cts-test") {
   testonly = true
 }
 
-cts_component("my-cts-component") {
+cts_fuchsia_component("my-cts-component") {
   deps = [ ":my-cts-test" ]
   manifest = "meta/my-cts-test.cmx"
   testonly = true
