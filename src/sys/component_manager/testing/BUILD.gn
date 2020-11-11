@@ -47,4 +47,8 @@ rustc_library("test_utils_lib") {
     "sequence.rs",
     "trigger_capability.rs",
   ]
+
+  # OpaqueTest requires that component_manager.cmx exists
+  # for its default configuration
+  non_rust_deps = [ "//src/sys/component_manager:component-manager" ]
 }

@@ -79,15 +79,9 @@ test_package("blobfs-stress-test") {
     ":mounter",
     "//src/lib/isolated_devmgr/v2_component:isolated-devmgr",
     "//src/storage/bin/blobfs:blobfs",
-    "//src/sys/component_manager:bin",
   ]
 
   meta = [
-    {
-      path =
-          rebase_path("//src/sys/component_manager/meta/component_manager.cmx")
-      dest = "component_manager.cmx"
-    },
     {
       path = rebase_path("//src/storage/blobfs-stress-test/meta/root.cml")
       dest = "root.cm"
@@ -99,9 +93,6 @@ test_package("blobfs-stress-test") {
   ]
 
   binaries = [
-    {
-      name = "component_manager"
-    },
     {
       name = "blobfs"
     },
