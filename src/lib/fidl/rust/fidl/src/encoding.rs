@@ -237,7 +237,7 @@ impl<'a> Encoder<'a> {
 
                     // Zero the last 8 bytes in the block to ensure padding bytes are zero.
                     let padding_ptr = buf.get_unchecked_mut(aligned_inline_size - 8);
-                    std::mem::transmute::<*mut u8, *mut u64>(padding_ptr).write_unaligned(0);
+                    mem::transmute::<*mut u8, *mut u64>(padding_ptr).write_unaligned(0);
                 }
             }
             handles.truncate(0);
@@ -287,7 +287,7 @@ impl<'a> Encoder<'a> {
 
             // Zero the last 8 bytes in the block to ensure padding bytes are zero.
             let padding_ptr = self.buf.get_unchecked_mut(new_len - 8);
-            std::mem::transmute::<*mut u8, *mut u64>(padding_ptr).write_unaligned(0);
+            mem::transmute::<*mut u8, *mut u64>(padding_ptr).write_unaligned(0);
         }
         f(self, new_offset, new_depth)
     }
@@ -320,9 +320,9 @@ impl<'a> Encoder<'a> {
             resize_vec_no_zeroing(self.buf, end);
 
             let padding_ptr = self.buf.get_unchecked_mut(end - 8);
-            std::mem::transmute::<*mut u8, *mut u64>(padding_ptr).write_unaligned(0);
+            mem::transmute::<*mut u8, *mut u64>(padding_ptr).write_unaligned(0);
 
-            std::ptr::copy_nonoverlapping(
+            ptr::copy_nonoverlapping(
                 bytes.as_ptr(),
                 self.buf.as_mut_ptr().offset(start as isize),
                 bytes.len(),
@@ -361,7 +361,7 @@ impl<'a> Encoder<'a> {
         // - The pointer is valid for this range, as tested by the assertion above.
         // - All u8 pointers are properly aligned.
         unsafe {
-            std::ptr::write_bytes(self.buf.as_mut_ptr().offset(offset as isize), 0, len);
+            ptr::write_bytes(self.buf.as_mut_ptr().offset(offset as isize), 0, len);
         }
     }
 
@@ -442,7 +442,7 @@ impl<'a> Decoder<'a> {
             // padding_end <= self.buf.len() is guaranteed by the caller.
             let last_u64 = unsafe {
                 let last_u64_ptr = self.buf.get_unchecked(padding_end - 8);
-                std::mem::transmute::<*const u8, *const u64>(last_u64_ptr).read_unaligned()
+                mem::transmute::<*const u8, *const u64>(last_u64_ptr).read_unaligned()
             };
             // padding == 0 => mask == 0x0000000000000000
             // padding == 1 => mask == 0xff00000000000000
@@ -522,7 +522,7 @@ impl<'a> Decoder<'a> {
                 Err(status) => Err(Error::HandleReplace(status)),
             };
         }
-        Ok(std::mem::replace(&mut handle_info.handle, Handle::invalid()))
+        Ok(mem::replace(&mut handle_info.handle, Handle::invalid()))
     }
 
     /// Take the next handle from the `handles` list.
@@ -531,7 +531,7 @@ impl<'a> Decoder<'a> {
         if self.next_handle >= self.handles.len() {
             return Err(Error::OutOfRange);
         }
-        let handle_info = std::mem::replace(
+        let handle_info = mem::replace(
             &mut self.handles[self.next_handle],
             HandleInfo {
                 handle: Handle::invalid(),
@@ -550,7 +550,7 @@ impl<'a> Decoder<'a> {
         if self.next_handle >= self.handles.len() {
             return Err(Error::OutOfRange);
         }
-        drop(std::mem::replace(
+        drop(mem::replace(
             &mut self.handles[self.next_handle],
             HandleInfo {
                 handle: Handle::invalid(),
@@ -593,7 +593,7 @@ impl<'a> Decoder<'a> {
         // self.next_out_of_line <= self.buf.len() based on if statement above.
         let last_u64 = unsafe {
             let last_u64_ptr = self.buf.get_unchecked(self.next_out_of_line - 8);
-            std::mem::transmute::<*const u8, *const u64>(last_u64_ptr).read_unaligned()
+            mem::transmute::<*const u8, *const u64>(last_u64_ptr).read_unaligned()
         };
         let padding = aligned_len - len;
         // padding == 0 => mask == 0x0000000000000000
@@ -931,7 +931,7 @@ macro_rules! impl_codable_int { ($($int_ty:ty,)*) => { $(
         unsafe fn unsafe_encode(&mut self, encoder: &mut Encoder<'_>, offset: usize, _recursion_depth: usize) -> Result<()> {
             debug_assert!(encoder.buf.len() >= offset + mem::size_of::<$int_ty>());
             let ptr = encoder.buf.get_unchecked_mut(offset);
-            let int_ptr = std::mem::transmute::<*mut u8, *mut $int_ty>(ptr);
+            let int_ptr = mem::transmute::<*mut u8, *mut $int_ty>(ptr);
             int_ptr.write_unaligned(*self);
             Ok(())
         }
@@ -945,7 +945,7 @@ macro_rules! impl_codable_int { ($($int_ty:ty,)*) => { $(
         unsafe fn unsafe_decode(&mut self, decoder: &mut Decoder<'_>, offset: usize) -> Result<()> {
             debug_assert!(decoder.buf.len() >= offset + mem::size_of::<$int_ty>());
             let ptr = decoder.buf.get_unchecked(offset);
-            let int_ptr = std::mem::transmute::<*const u8, *const $int_ty>(ptr);
+            let int_ptr = mem::transmute::<*const u8, *const $int_ty>(ptr);
             *self = int_ptr.read_unaligned();
             Ok(())
         }
@@ -969,7 +969,7 @@ macro_rules! impl_codable_float { ($($float_ty:ty,)*) => { $(
         unsafe fn unsafe_encode(&mut self, encoder: &mut Encoder<'_>, offset: usize, _recursion_depth: usize) -> Result<()> {
             debug_assert!(encoder.buf.len() >= offset + mem::size_of::<$float_ty>());
             let ptr = encoder.buf.get_unchecked_mut(offset);
-            let float_ptr = std::mem::transmute::<*mut u8, *mut $float_ty>(ptr);
+            let float_ptr = mem::transmute::<*mut u8, *mut $float_ty>(ptr);
             float_ptr.write_unaligned(*self);
             Ok(())
         }
@@ -983,7 +983,7 @@ macro_rules! impl_codable_float { ($($float_ty:ty,)*) => { $(
         unsafe fn unsafe_decode(&mut self, decoder: &mut Decoder<'_>, offset: usize) -> Result<()> {
             debug_assert!(decoder.buf.len() >= offset + mem::size_of::<$float_ty>());
             let ptr = decoder.buf.get_unchecked(offset);
-            let float_ptr = std::mem::transmute::<*const u8, *const $float_ty>(ptr);
+            let float_ptr = mem::transmute::<*const u8, *const $float_ty>(ptr);
             *self = float_ptr.read_unaligned();
             Ok(())
         }
@@ -1163,7 +1163,7 @@ impl Encodable for i8 {
         _recursion_depth: usize,
     ) -> Result<()> {
         debug_assert!(encoder.buf.len() >= offset + 1);
-        *std::mem::transmute::<*mut u8, *mut i8>(encoder.buf.get_unchecked_mut(offset)) = *self;
+        *mem::transmute::<*mut u8, *mut i8>(encoder.buf.get_unchecked_mut(offset)) = *self;
         Ok(())
     }
 }
@@ -1177,7 +1177,7 @@ impl Decodable for i8 {
     #[inline(always)]
     unsafe fn unsafe_decode(&mut self, decoder: &mut Decoder<'_>, offset: usize) -> Result<()> {
         debug_assert!(decoder.buf.len() >= offset + 1);
-        *self = *std::mem::transmute::<*const u8, *const i8>(decoder.buf.get_unchecked(offset));
+        *self = *mem::transmute::<*const u8, *const i8>(decoder.buf.get_unchecked(offset));
         Ok(())
     }
 }
@@ -1195,7 +1195,7 @@ unsafe fn encode_array<T: Encodable>(
     if T::supports_simple_copy() {
         let src = slice.as_ptr() as *const u8;
         let dst: *mut u8 = encoder.buf.get_unchecked_mut(offset);
-        std::ptr::copy_nonoverlapping(src, dst, len * stride);
+        ptr::copy_nonoverlapping(src, dst, len * stride);
     } else {
         for i in 0..len {
             slice.get_unchecked_mut(i).unsafe_encode(
@@ -1223,7 +1223,7 @@ unsafe fn decode_array<T: Decodable>(
         // in the buffer.
         let src: *const u8 = decoder.buf.get_unchecked(offset);
         let dst = slice.as_mut_ptr() as *mut u8;
-        std::ptr::copy_nonoverlapping(src, dst, len * stride);
+        ptr::copy_nonoverlapping(src, dst, len * stride);
     } else {
         for i in 0..len {
             slice.get_unchecked_mut(i).unsafe_decode(decoder, offset + i * stride)?;
@@ -1742,7 +1742,7 @@ macro_rules! fidl_strict_bits {
                 encoder: &mut $crate::encoding::Encoder<'_>,
                 offset: usize,
                 recursion_depth: usize,
-            ) -> ::std::result::Result<(), $crate::Error> {
+            ) -> std::result::Result<(), $crate::Error> {
                 if self.bits & Self::all().bits != self.bits {
                     return Err($crate::Error::InvalidBitsValue);
                 }
@@ -1761,7 +1761,7 @@ macro_rules! fidl_strict_bits {
                 &mut self,
                 decoder: &mut $crate::encoding::Decoder<'_>,
                 offset: usize,
-            ) -> ::std::result::Result<(), $crate::Error> {
+            ) -> std::result::Result<(), $crate::Error> {
                 let mut prim = $crate::fidl_new_empty!($prim_ty);
                 $crate::fidl_decode!(&mut prim, decoder, offset)?;
                 *self = Self::from_bits(prim).ok_or($crate::Error::InvalidBitsValue)?;
@@ -1822,7 +1822,7 @@ macro_rules! fidl_flexible_bits {
                 encoder: &mut $crate::encoding::Encoder<'_>,
                 offset: usize,
                 recursion_depth: usize,
-            ) -> ::std::result::Result<(), $crate::Error> {
+            ) -> std::result::Result<(), $crate::Error> {
                 $crate::fidl_encode!(&mut self.bits, encoder, offset, recursion_depth)
             }
         }
@@ -1838,7 +1838,7 @@ macro_rules! fidl_flexible_bits {
                 &mut self,
                 decoder: &mut $crate::encoding::Decoder<'_>,
                 offset: usize,
-            ) -> ::std::result::Result<(), $crate::Error> {
+            ) -> std::result::Result<(), $crate::Error> {
                 let mut prim = $crate::fidl_new_empty!($prim_ty);
                 $crate::fidl_decode!(&mut prim, decoder, offset)?;
                 *self = Self::from_bits_allow_unknown(prim);
@@ -1890,7 +1890,7 @@ macro_rules! fidl_strict_enum {
 
             #[deprecated = "Strict enums should not use validate()"]
             #[inline]
-            pub fn validate(self) -> ::std::result::Result<Self, $prim_ty> {
+            pub fn validate(self) -> std::result::Result<Self, $prim_ty> {
                 Ok(self)
             }
 
@@ -1916,7 +1916,7 @@ macro_rules! fidl_strict_enum {
         impl $crate::encoding::Encodable for $name {
             #[inline]
             fn encode(&mut self, encoder: &mut $crate::encoding::Encoder<'_>, offset: usize, recursion_depth: usize)
-                -> ::std::result::Result<(), $crate::Error>
+                -> std::result::Result<(), $crate::Error>
             {
                 $crate::fidl_encode!(&mut (*self as $prim_ty), encoder, offset, recursion_depth)
             }
@@ -1935,7 +1935,7 @@ macro_rules! fidl_strict_enum {
 
             #[inline]
             fn decode(&mut self, decoder: &mut $crate::encoding::Decoder<'_>, offset: usize)
-                -> ::std::result::Result<(), $crate::Error>
+                -> std::result::Result<(), $crate::Error>
             {
                 let mut prim = $crate::fidl_new_empty!($prim_ty);
                 $crate::fidl_decode!(&mut prim, decoder, offset)?;
@@ -2011,7 +2011,7 @@ macro_rules! fidl_flexible_enum {
             }
 
             #[inline]
-            pub fn validate(self) -> ::std::result::Result<Self, $prim_ty> {
+            pub fn validate(self) -> std::result::Result<Self, $prim_ty> {
                 match self {
                     $(
                         $name::$custom_unknown_member => Err(self.into_primitive()),
@@ -2042,7 +2042,7 @@ macro_rules! fidl_flexible_enum {
 
         impl $crate::encoding::Encodable for $name {
             fn encode(&mut self, encoder: &mut $crate::encoding::Encoder<'_>, offset: usize, recursion_depth: usize)
-                -> ::std::result::Result<(), $crate::Error>
+                -> std::result::Result<(), $crate::Error>
             {
                 $crate::fidl_encode!(&mut self.into_primitive(), encoder, offset, recursion_depth)
             }
@@ -2055,7 +2055,7 @@ macro_rules! fidl_flexible_enum {
             }
 
             fn decode(&mut self, decoder: &mut $crate::encoding::Decoder<'_>, offset: usize)
-                -> ::std::result::Result<(), $crate::Error>
+                -> std::result::Result<(), $crate::Error>
             {
                 let mut prim = $crate::fidl_new_empty!($prim_ty);
                 $crate::fidl_decode!(&mut prim, decoder, offset)?;
@@ -3961,7 +3961,7 @@ mod test {
         handles
             .drain(..)
             .map(|mut h| HandleInfo {
-                handle: std::mem::replace(&mut h, Handle::invalid()),
+                handle: mem::replace(&mut h, Handle::invalid()),
                 object_type: ObjectType::NONE,
                 rights: Rights::SAME_RIGHTS,
             })
@@ -5355,7 +5355,7 @@ mod zx_test {
         handles
             .iter_mut()
             .map(|h| HandleInfo {
-                handle: std::mem::replace(h, Handle::invalid()),
+                handle: mem::replace(h, Handle::invalid()),
                 object_type: ObjectType::NONE,
                 rights: Rights::SAME_RIGHTS,
             })
