@@ -298,6 +298,7 @@ Remaining arguments are passed to emu wrapper and emulator:
   -A <arch> architecture of images (x64, arm64), default is the current build.
   -H|--headless run in headless mode
   --audio run with audio hardware added to the virtual machine
+  --hidpi-scaling enable pixel scaling on HiDPI devices
   --host-gpu run with host GPU acceleration
   --software-gpu run without host GPU acceleration
   --debugger pause on launch and wait for a debugger process to attach before resuming

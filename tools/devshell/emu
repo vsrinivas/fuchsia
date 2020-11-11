@@ -6,7 +6,7 @@
 #### CATEGORY=Run, inspect and debug
 ### start fuchsia in an emulator
 
-## usage: fx emu [-a <mode>] [-c <text>] [-N [-I <ifname>]] [-u <path>] [-g <port> [-r <fps>] [-t <cmd>]] [-x <port> [-X <directory>]] [-e <directory>] [-w <size>] [-s <cpus>] [-m <mb>] [-k <authorized_keys_file>] [-K <kernel_image>] [-z <zbi_image>] [-f <fvm_image>] [-H|--headless] [--audio] [--software-gpu] [--debugger]
+## usage: fx emu [-a <mode>] [-c <text>] [-N [-I <ifname>]] [-u <path>] [-g <port> [-r <fps>] [-t <cmd>]] [-x <port> [-X <directory>]] [-e <directory>] [-w <size>] [-s <cpus>] [-m <mb>] [-k <authorized_keys_file>] [-K <kernel_image>] [-z <zbi_image>] [-f <fvm_image>] [-H|--headless] [--audio] [--hidpi-scaling] [--software-gpu] [--debugger]
 ##   -a <mode> acceleration mode (auto, off, kvm, hvf, hax), default is auto
 ##   -c <text> append item to kernel command line
 ##   -ds <size> extends the fvm image size to <size> bytes. Default is twice the original size
@@ -31,6 +31,7 @@
 ##   -A <arch> architecture of images (x64, arm64), default is the current build.
 ##   -H|--headless run in headless mode
 ##   --audio run with audio hardware added to the virtual machine
+##   --hidpi-scaling enable pixel scaling on HiDPI devices
 ##   --host-gpu run with host GPU acceleration
 ##   --software-gpu run without host GPU acceleration
 ##   --debugger pause on launch and wait for a debugger process to attach before resuming
@@ -52,6 +53,7 @@ DEBUGGER=0
 IFNAME=""
 AUDIO=0
 HEADLESS=0
+HIDPI_SCALING=0
 AEMU="emulator"
 AEMU_DIR=""
 UPSCRIPT=
@@ -184,6 +186,9 @@ while [[ $# -ge 1 ]]; do
     ;;
   --debugger)
     DEBUGGER=1
+    ;;
+  --hidpi-scaling)
+    HIDPI_SCALING=1
     ;;
   --host-gpu)
     GPU="host"
@@ -324,6 +329,10 @@ fi
 
 if (( HEADLESS )); then
     OPTIONS+=("-no-window")
+fi
+
+if (( ! HIDPI_SCALING )); then
+    OPTIONS+=("-no-hidpi-scaling")
 fi
 
 if [[ "$ARCH" == "arm64" ]]; then
