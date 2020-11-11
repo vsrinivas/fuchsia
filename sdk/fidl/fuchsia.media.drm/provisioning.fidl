@@ -7,11 +7,6 @@ library fuchsia.media.drm;
 using fuchsia.mem;
 using fuchsia.url;
 
-enum ProvisioningStatus {
-    NOT_PROVISIONED = 1;
-    PROVISIONED = 2;
-};
-
 /// Message passed to a [`ProvisioningFetcher`] by a DRM system, to pass on to
 /// the provisioning server.
 resource struct ProvisioningRequest {
@@ -56,55 +51,4 @@ protocol ProvisioningFetcher {
     /// - response `response` a [`ProvisioningResponse`] message from the
     ///   provisioning server.
     Fetch(ProvisioningRequest request) -> (ProvisioningResponse response);
-};
-
-/// A protocol for exchanging messages pertaining to the establishment of a
-/// provisioning certificate.
-///
-/// DEPRECATED: See [`KeySystem.AddDataStore`] instead.
-[Deprecated]
-protocol Provisioner {
-    /// Gets the current status of provisioning for this service instance.
-    ///
-    /// - response `status` indicates whether the service instance is
-    ///   sufficiently provisioned.
-    GetStatus() -> (ProvisioningStatus status);
-
-    /// Sets the certificate to be used for encrypting outgoing messages.
-    ///
-    /// + request `certificate` a buffer containing the certificate to be used.
-    /// * error an [`Error`] indicating the reason for failure.
-    SetServerCertificate(bytes certificate) -> () error Error;
-
-    /// Generates a provisioning request for this service instance.
-    ///
-    /// If the underlying DRM system requires provisioning for individual
-    /// providers (the owner of the service instance), then this method can be
-    /// used to generate [`ProvisioningRequest`]s. This message must be routed
-    /// to the provisioning server by the client and the server's response must
-    /// be routed back to `ProcessProvisioningResponse`.
-    ///
-    /// - response `request` a `ProvisioningRequest` message to be provided to a
-    ///   provisioning server in order to receiving a provisioning certificate.
-    GenerateProvisioningRequest() -> (ProvisioningRequest request);
-
-    /// Updates the [`Provisioner`] with a message from the provisioning server.
-    ///
-    /// Not all underlying DRM systems will require provisioning for individual
-    /// providers. If they do, this method will carry the provisioning message
-    /// to the service instance so that it may persistently store the provider
-    /// certificate.
-    ///
-    /// + request `response` a [`ProvisioningResponse`] from the provisioning
-    ///   server. It should contain the provisioning certificate.
-    /// * error an [`Error`] indicating the reason for failure.
-    ProcessProvisioningResponse(ProvisioningResponse response)
-        -> () error Error;
-
-    /// Removes all provider based provisioning for this service instance.
-    ///
-    /// Any active [`ContentDecryptionModule`]s on this service instance that
-    /// relied on this provisioning will be closed, as they will no longer be
-    /// usable without it. This does not impact any factory provisioning.
-    RemoveProvisioning();
 };

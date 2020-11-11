@@ -102,14 +102,6 @@ resource table DataStoreParams {
 [Discoverable]
 protocol ClearKey {
     compose KeySystem;
-
-    /// Creates a new [`ContentDecryptionModule`].
-    ///
-    /// DEPRECATED: See [`KeySystem.CreateContentDecryptionModule2`] instead.
-    ///
-    /// + request `cdm` the server endpoint of the `ContentDecryptionModule`.
-    [Transitional, Deprecated]
-    CreateContentDecryptionModule(request<ContentDecryptionModule> cdm);
 };
 
 /// A service hub providing access to the Widevine key system.
@@ -119,27 +111,6 @@ protocol ClearKey {
 [Discoverable]
 protocol Widevine {
     compose KeySystem;
-
-    /// Creates a new [`ContentDecryptionModule`].
-    ///
-    /// The `ContentDecryptionModule`s created will share their persistent
-    /// state, but will not share active sessions.
-    ///
-    /// DEPRECATED: See [`KeySystem.CreateContentDecryptionModule2`] instead.
-    ///
-    /// + request `cdm` the server endpoint of the `ContentDecryptionModule`.
-    [Transitional, Deprecated]
-    CreateContentDecryptionModule(request<ContentDecryptionModule> cdm);
-
-    /// Creates a new [`Provisioner`].
-    ///
-    /// There can only be one active `Provisioner` for each service instance.
-    ///
-    /// DEPRECATED: See [`KeySystem.AddDataStore`] instead.
-    ///
-    /// + request `provisioner` the server endpoint of the `Provisioner`.
-    [Transitional, Deprecated]
-    CreateProvisioner(request<Provisioner> provisioner);
 };
 
 /// A service hub providing access to the PlayReady key system.
@@ -149,15 +120,4 @@ protocol Widevine {
 [Discoverable]
 protocol PlayReady {
     compose KeySystem;
-
-    /// Creates a new [`ContentDecryptionModule`].
-    ///
-    /// The `ContentDecryptionModule`s created will share their persistent
-    /// state, but will not share active sessions.
-    ///
-    /// DEPRECATED: See [`KeySystem.CreateContentDecryptionModule2`] instead.
-    ///
-    /// + request `cdm` the server endpoint of the `ContentDecryptionModule`.
-    [Transitional, Deprecated]
-    CreateContentDecryptionModule(request<ContentDecryptionModule> cdm);
 };
