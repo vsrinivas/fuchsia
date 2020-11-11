@@ -241,7 +241,6 @@ const char kPrimaryNetworkInterfaceName[] = "wlan";
 
 struct net_device {
   bool initialized_for_ap;
-  bool scan_busy;
   bool multicast_promisc;
   bool is_up;
   uint64_t scan_txn_id;

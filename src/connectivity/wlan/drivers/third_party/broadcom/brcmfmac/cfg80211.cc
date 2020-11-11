@@ -701,7 +701,6 @@ static void brcmf_signal_scan_end(struct net_device* ndev, uint64_t txn_id,
               ndev->scan_num_results);
     wlanif_impl_ifc_on_scan_end(&ndev->if_proto, &args);
   }
-  ndev->scan_busy = false;
 }
 
 zx_status_t brcmf_notify_escan_complete(struct brcmf_cfg80211_info* cfg, struct brcmf_if* ifp,
@@ -2289,11 +2288,12 @@ static void brcmf_return_scan_result(struct net_device* ndev, uint16_t channel,
                                      const uint8_t* bssid, uint16_t capability, uint16_t interval,
                                      uint8_t* ie, size_t ie_len, int16_t rssi_dbm) {
   std::shared_lock<std::shared_mutex> guard(ndev->if_proto_lock);
+  struct brcmf_cfg80211_info* cfg = ndev_to_if(ndev)->drvr->config;
   if (ndev->if_proto.ops == nullptr) {
     BRCMF_DBG(WLANIF, "interface stopped -- skipping scan result callback");
     return;
   }
-  if (!ndev->scan_busy) {
+  if (!brcmf_test_bit_in_array(BRCMF_SCAN_STATUS_BUSY, &cfg->scan_status)) {
     return;
   }
   wlanif_scan_result_t result = {};
@@ -2653,7 +2653,7 @@ static zx_status_t brcmf_notify_sched_scan_results(struct brcmf_if* ifp,
   }
 
 out_err:
-  if (ndev->scan_busy) {
+  if (brcmf_test_bit_in_array(BRCMF_SCAN_STATUS_BUSY, &cfg->scan_status)) {
     BRCMF_ERR("scan id:%lu err %d, signaling scan end", ndev->scan_txn_id, err);
     brcmf_signal_scan_end(ndev, ndev->scan_txn_id, WLAN_SCAN_RESULT_INTERNAL_ERROR);
   }
@@ -3203,14 +3203,7 @@ void brcmf_if_start_scan(net_device* ndev, const wlanif_scan_req_t* req) {
             : req->scan_type == WLAN_SCAN_TYPE_ACTIVE ? "active"
                                                       : "invalid");
 
-  if (ndev->scan_busy) {
-    BRCMF_ERR("scan already in progress id: %lu", ndev->scan_txn_id);
-    brcmf_signal_scan_end(ndev, req->txn_id, WLAN_SCAN_RESULT_INTERNAL_ERROR);
-    return;
-  }
-
   ndev->scan_txn_id = req->txn_id;
-  ndev->scan_busy = true;
   ndev->scan_num_results = 0;
 
   BRCMF_DBG(SCAN, "About to scan! Txn ID %lu", ndev->scan_txn_id);
@@ -3218,7 +3211,6 @@ void brcmf_if_start_scan(net_device* ndev, const wlanif_scan_req_t* req) {
   if (result != ZX_OK) {
     BRCMF_ERR("Couldn't start scan: %d %s", result, zx_status_get_string(result));
     brcmf_signal_scan_end(ndev, req->txn_id, WLAN_SCAN_RESULT_INTERNAL_ERROR);
-    ndev->scan_busy = false;
   }
 }
 
