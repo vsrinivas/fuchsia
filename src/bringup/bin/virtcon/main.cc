@@ -49,8 +49,6 @@
 
 namespace fpty = ::llcpp::fuchsia::hardware::pty;
 
-static bool keep_log;
-
 static zx_status_t launch_shell(vc_t* vc, int fd, const char* cmd) {
   const char* argv[] = {ZX_SHELL_DEFAULT, nullptr, nullptr, nullptr};
 
@@ -246,7 +244,8 @@ static void start_shell(async_dispatcher_t* dispatcher, bool make_active, const 
 
 class VirtconImpl final : public llcpp::fuchsia::virtualconsole::SessionManager::Interface {
  public:
-  VirtconImpl(async_dispatcher_t* dispatcher) : dispatcher_(dispatcher) {}
+  VirtconImpl(async_dispatcher_t* dispatcher, bool keep_log)
+      : dispatcher_(dispatcher), keep_log_(keep_log) {}
 
   zx_status_t Bind(zx::channel request) {
     auto result = fidl::BindServer(dispatcher_, std::move(request), this);
@@ -257,7 +256,7 @@ class VirtconImpl final : public llcpp::fuchsia::virtualconsole::SessionManager:
   }
 
   void CreateSession(::zx::channel session, CreateSessionCompleter::Sync& completer) override {
-    bool make_active = !(keep_log && g_active_vc && g_active_vc == g_log_vc && g_active_vc);
+    bool make_active = !(keep_log_ && g_active_vc && g_active_vc == g_log_vc && g_active_vc);
     vc_t* vc = nullptr;
     if (remote_session_create(&vc, std::move(session), make_active,
                               &color_schemes[kDefaultColorScheme]) < 0) {
@@ -275,6 +274,7 @@ class VirtconImpl final : public llcpp::fuchsia::virtualconsole::SessionManager:
 
  private:
   async_dispatcher_t* dispatcher_;
+  bool keep_log_;
 };
 
 int main(int argc, char** argv) {
@@ -318,7 +318,7 @@ int main(int argc, char** argv) {
 
   async::Loop loop = async::Loop(&kAsyncLoopConfigNeverAttachToThread);
 
-  VirtconImpl virtcon_server = VirtconImpl(loop.dispatcher());
+  VirtconImpl virtcon_server = VirtconImpl(loop.dispatcher(), args.keep_log_visible);
 
   svc::Outgoing outgoing(loop.dispatcher());
   status = outgoing.ServeFromStartupInfo();
