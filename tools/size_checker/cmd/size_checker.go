@@ -203,10 +203,19 @@ func displayAsDefault(node *Node, level int) string {
 	if level > 1 {
 		path = filepath.Base(path)
 	}
-	path = fmt.Sprintf("%s%s", strings.Repeat("  ", level), path)
-	if len(path) > 40 {
-		path = "..." + path[len(path)-37:]
+	var maxLen = 40 - 2*level
+	if maxLen < 0 {
+		maxLen = 0
 	}
+	var pathLength = len(path)
+	if pathLength > maxLen {
+		var startPos = pathLength - maxLen + 3
+		if startPos > pathLength {
+			startPos = pathLength
+		}
+		path = "..." + path[startPos:]
+	}
+	path = fmt.Sprintf("%s%s", strings.Repeat("  ", level), path)
 	ret := fmt.Sprintf("%-40s | %10s %10s\n", path, formatSize(node.size), copies)
 	for _, n := range node.children {
 		ret += n.storageBreakdown(level + 1)
