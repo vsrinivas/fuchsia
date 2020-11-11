@@ -902,7 +902,6 @@ async fn merkle_pinned_meta_far_size_different_than_tuf_metadata() {
 }
 
 #[fasync::run_singlethreaded(test)]
-#[ignore] // TODO(fxbug.dev/59827): enable this test once pkg-resolver fetches metadata from LocalMirror.
 async fn resolve_local_mirror() {
     let pkg = PackageBuilder::new("test")
         .add_resource_at("test_file", "hi there".as_bytes())
