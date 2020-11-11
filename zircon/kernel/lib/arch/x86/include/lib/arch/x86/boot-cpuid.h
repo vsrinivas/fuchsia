@@ -32,6 +32,11 @@
 // populate the data.  That function requires only the basic machine stack for
 // its call and return, and doesn't need the full C++ ABI to be available yet.
 
+// TODO(fxbug.dev/64109): <cpuid.h> lacks a proper multiple inclusion guard!
+#ifndef __cpuid
+#include <cpuid.h>
+#endif
+
 #include <type_traits>
 
 namespace arch {
@@ -60,6 +65,7 @@ struct BootCpuidIo {
   // The underlying instantiation is indexed by leaf and subleaf.
   template <uint32_t Leaf, uint32_t Subleaf = 0>
   const CpuidIo* GetLeaf() const {
+#ifdef __clang__
     // The CpuidIo object for each instantiation goes into a special section
     // that the InitializeBootCpuid() function processes when called at
     // startup.  Each entry starts at compile time with the leaf and subleaf
@@ -73,6 +79,26 @@ struct BootCpuidIo {
     static_assert(std::is_same_v<decltype(CpuidIo{}.values_), uint32_t[4]>);
     [[gnu::section("BootCpuid")]] alignas(uint32_t) static CpuidIo gCpuidIo =
         internal::kBootCpuidInitializer<Leaf, Subleaf>;
+#else
+    // TODO(fxbug.dev/27083): GCC doesn't honor the section attribute in a
+    // COMDAT context.  Instead, just do on-demand initialization right here.
+    // This bloats the code at each use and is less efficient than simply
+    // preloading all the data at startup via the special section hack.
+    static CpuidIo gCpuidIo = []() {
+      using MaxLeaf = std::conditional_t<
+          (Leaf < CpuidMaximumHypervisorLeaf::kLeaf), CpuidMaximumLeaf,
+          std::conditional_t<(Leaf < CpuidMaximumExtendedLeaf::kLeaf), CpuidMaximumHypervisorLeaf,
+                             CpuidMaximumExtendedLeaf>>;
+      if (Leaf > BootCpuidIo{}.Read<MaxLeaf>().reg_value()) {
+        return CpuidIo{};
+      }
+      CpuidIo data;
+      __cpuid_count(Leaf, Subleaf,  //
+                    data.values_[CpuidIo::kEax], data.values_[CpuidIo::kEbx],
+                    data.values_[CpuidIo::kEcx], data.values_[CpuidIo::kEdx]);
+      return data;
+    }();
+#endif  // __clang__
     return &gCpuidIo;
   }
 
