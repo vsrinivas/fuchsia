@@ -5,6 +5,7 @@
 library fuchsia.weave;
 
 using fuchsia.net as net;
+using fuchsia.wlan.policy as wlan_policy;
 
 /// The maximum number of HostPorts that Weave can return in a HostPortList, as
 /// weave indexes HostPortLists by a uint8.
@@ -98,6 +99,17 @@ protocol PairingStateWatcher {
     WatchPairingState() -> (PairingState state);
 };
 
+/// Component acting as WLAN network configuration provider for WeaveStack need to
+/// implement this.
+protocol WlanNetworkConfigProvider {
+    /// Returns current network configuration when new information is available.
+    ///
+    /// First call returns the current network configuration if available,
+    /// otherwise return empty config. WeaveStack consumes network config
+    /// and sends another request.
+    WatchConnectedNetwork() -> (wlan_policy.NetworkConfig network_config);
+};
+
 /// Calls and services available from WeaveStack. These calls are designed to
 /// wrap the Weave adaptation and provide information or capabilities to Weave
 /// applications or components that are interested in information that Weave
@@ -114,4 +126,19 @@ protocol Stack {
     GetQrCode() -> (QrCode qr_code) error ErrorCode;
     /// Reset the Weave configuration.
     ResetConfig(ResetConfigFlags flags) -> () error ErrorCode;
+};
+
+/// Services Provided to WeaveStack by other components.
+[Discoverable]
+protocol StackProvider {
+    /// Registers a WLAN network configuration provider with WeaveStack.
+    /// Only one provider can be set at a time.
+    ///
+    /// Attempts to set a new provider while there is an active provider
+    /// will close the channel to active provider and will be replaced
+    /// by the new provider.
+    ///
+    /// TODO(fxbug.dev/62322): This interface may be deprecated when current
+    /// WLAN network configuration  can be shared amongst multiple components.
+    SetWlanNetworkConfigProvider(WlanNetworkConfigProvider provider);
 };
