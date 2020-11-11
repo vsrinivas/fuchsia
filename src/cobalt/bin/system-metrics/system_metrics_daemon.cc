@@ -152,8 +152,7 @@ SystemMetricsDaemon::SystemMetricsDaemon(
 void SystemMetricsDaemon::StartLogging() {
   TRACE_DURATION("system_metrics", "SystemMetricsDaemon::StartLogging");
   // We keep gathering metrics until this process is terminated.
-  RepeatedlyLogUpPing();
-  RepeatedlyLogLifetimeEvents();
+  RepeatedlyLogUpPingAndLifeTimeEvents();
   RepeatedlyLogUptime();
   RepeatedlyLogCpuUsage();
   RepeatedlyLogLogStats();
@@ -161,18 +160,10 @@ void SystemMetricsDaemon::StartLogging() {
   LogTemperatureIfSupported(1 /*remaining_attempts*/);
 }
 
-void SystemMetricsDaemon::RepeatedlyLogUpPing() {
-  std::chrono::seconds uptime = GetUpTime();
-  std::chrono::seconds seconds_to_sleep = LogFuchsiaUpPing(uptime);
+void SystemMetricsDaemon::RepeatedlyLogUpPingAndLifeTimeEvents() {
+  std::chrono::seconds seconds_to_sleep = LogUpPingAndLifeTimeEvents();
   async::PostDelayedTask(
-      dispatcher_, [this]() { RepeatedlyLogUpPing(); }, zx::sec(seconds_to_sleep.count() + 5));
-  return;
-}
-
-void SystemMetricsDaemon::RepeatedlyLogLifetimeEvents() {
-  std::chrono::seconds seconds_to_sleep = LogFuchsiaLifetimeEvents();
-  async::PostDelayedTask(
-      dispatcher_, [this]() { RepeatedlyLogLifetimeEvents(); },
+      dispatcher_, [this]() { RepeatedlyLogUpPingAndLifeTimeEvents(); },
       zx::sec(seconds_to_sleep.count() + 5));
   return;
 }
@@ -265,6 +256,11 @@ std::chrono::seconds SystemMetricsDaemon::GetUpTime() {
   // starts happening we should look into how to capture actual boot time.
   auto now = clock_->Now();
   return std::chrono::duration_cast<std::chrono::seconds>(now - start_time_);
+}
+
+std::chrono::seconds SystemMetricsDaemon::LogUpPingAndLifeTimeEvents() {
+  std::chrono::seconds uptime = GetUpTime();
+  return std::min(LogFuchsiaUpPing(uptime), LogFuchsiaLifetimeEvents());
 }
 
 std::chrono::seconds SystemMetricsDaemon::LogFuchsiaUpPing(std::chrono::seconds uptime) {

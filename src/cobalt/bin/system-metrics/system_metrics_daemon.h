@@ -108,15 +108,10 @@ class SystemMetricsDaemon {
   zx_status_t ReinitializeDiagnosticsIfPeerClosed(zx_status_t zx_status);
   zx_status_t ReinitializeGranularErrorStatsIfPeerClosed(zx_status_t zx_status);
 
-  // Calls LogFuchsiaUpPing,
+  // Calls LogUpPingAndLifeTimeEvents,
   // and then uses the |dispatcher| passed to the constructor to
   // schedule the next round.
-  void RepeatedlyLogUpPing();
-
-  // Calls LogFuchsiaLifetimeEvents,
-  // and then uses the |dispatcher| passed to the constructor to
-  // schedule the next round.
-  void RepeatedlyLogLifetimeEvents();
+  void RepeatedlyLogUpPingAndLifeTimeEvents();
 
   // Calls LogFuchsiaUptime and then uses the |dispatcher| passed to the
   // constructor to schedule the next round.
@@ -152,6 +147,11 @@ class SystemMetricsDaemon {
 
   // Returns the amount of time since SystemMetricsDaemon started.
   std::chrono::seconds GetUpTime();
+
+  // Calls LogFuchsiaUpPing and LogFuchsiaLifetimeEvents.
+  //
+  // Returns the amount of time before this method needs to be invoked again.
+  std::chrono::seconds LogUpPingAndLifeTimeEvents();
 
   // Logs one or more UpPing events depending on how long the device has been
   // up.

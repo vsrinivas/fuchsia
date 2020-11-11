@@ -107,11 +107,13 @@ class SystemMetricsDaemonTest : public gtest::TestLoopFixture {
 
   seconds LogFuchsiaLifetimeEvents() { return daemon_->LogFuchsiaLifetimeEvents(); }
 
+  seconds LogUpPingAndLifeTimeEvents() { return daemon_->LogUpPingAndLifeTimeEvents(); }
+
   seconds LogFuchsiaUptime() { return daemon_->LogFuchsiaUptime(); }
 
-  void RepeatedlyLogUpPing() { return daemon_->RepeatedlyLogUpPing(); }
-
-  void RepeatedlyLogLifetimeEvents() { return daemon_->RepeatedlyLogLifetimeEvents(); }
+  void RepeatedlyLogUpPingAndLifeTimeEvents() {
+    return daemon_->RepeatedlyLogUpPingAndLifeTimeEvents();
+  }
 
   void RepeatedlyLogTemperature() { return daemon_->RepeatedlyLogTemperature(); }
 
@@ -195,6 +197,17 @@ class SystemMetricsDaemonTest : public gtest::TestLoopFixture {
                 fuchsia_system_metrics::kFuchsiaUpPingMetricId, expected_last_event_code);
   }
 
+  void DoLogUpPingAndLifeTimeEventsTest(seconds increment_seconds, seconds expected_sleep_seconds,
+                                        size_t expected_call_count,
+                                        uint32_t expected_last_metric_id,
+                                        uint32_t expected_last_event_code) {
+    fake_logger_.reset();
+    fake_clock_->Increment(increment_seconds);
+    EXPECT_EQ(expected_sleep_seconds.count(), LogUpPingAndLifeTimeEvents().count());
+    CheckValues(cobalt::kLogEvent, expected_call_count, expected_last_metric_id,
+                expected_last_event_code);
+  }
+
   void DoFuchsiaUptimeTest(seconds now_seconds, seconds expected_sleep_seconds,
                            uint32_t expected_event_code, int64_t expected_up_hours) {
     fake_logger_.reset();
@@ -205,10 +218,11 @@ class SystemMetricsDaemonTest : public gtest::TestLoopFixture {
   }
 
   // This method is used by the test of the method
-  // RepeatedlyLogUpPing(). It advances our two fake clocks
+  // RepeatedlyLogUpPingAndLifeTimeEvents(). It advances our two fake clocks
   // (one used by the SystemMetricDaemon, one used by the MessageLoop) by the
   // specified amount, and then checks to make sure that
-  // RepeatedlyLogUpPing() was executed and did the expected thing.
+  // RepeatedlyLogUpPingAndLifeTimeEvents() was executed and did the expected
+  // thing.
   void AdvanceTimeAndCheck(seconds advance_time_seconds, size_t expected_call_count,
                            uint32_t expected_metric_id, uint32_t expected_last_event_code,
                            LogMethod expected_log_method_invoked = cobalt::kOther) {
@@ -466,6 +480,114 @@ TEST_F(SystemMetricsDaemonTest, LogFuchsiaLifetimeEvents) {
   CheckValues(cobalt::kOther, 0, -1, -1);
 }
 
+// Tests the method LogUpPingAndLifeTimeEvents(). Uses a local FakeLogger_Sync
+// and does not use FIDL. Does not use the message loop.
+TEST_F(SystemMetricsDaemonTest, LogUpPingAndLifeTimeEvents) {
+  // If we have been up for 1 second, expect 2 log events. First there is an
+  // "Up" event and then there is "Boot" event. Expect a return value of
+  // 59 seconds.
+  DoLogUpPingAndLifeTimeEventsTest(seconds(1), seconds(59), 2,
+                                   fuchsia_system_metrics::kFuchsiaLifetimeEventsMetricId,
+                                   FuchsiaLifetimeEventsMetricDimensionEvents::Boot);
+
+  // 59 Seconds later, expect 2 log events. First there is an "Up" event and
+  // then there is an "UpOneMinute" event. Expect a return value of 9 minutes.
+  DoLogUpPingAndLifeTimeEventsTest(seconds(59), minutes(9), 2,
+                                   fuchsia_system_metrics::kFuchsiaUpPingMetricId,
+                                   FuchsiaUpPingMetricDimensionUptime::UpOneMinute);
+
+  // 9 Minutes minus 1 second later, expect 2 log events. First there is an
+  // "Up" event and then there is an "UpOneMinute" event. Expect a return
+  // value of 1 second.
+  DoLogUpPingAndLifeTimeEventsTest(minutes(9) - seconds(1), seconds(1), 2,
+                                   fuchsia_system_metrics::kFuchsiaUpPingMetricId,
+                                   FuchsiaUpPingMetricDimensionUptime::UpOneMinute);
+
+  // 2 seconds later, expect 3 log events. First there is an
+  // "Up" event and then there is an "UpOneMinute" event and then there is an
+  // "UpTenMinutes" event. Expect a return value  of 50 minutes - 1 second.
+  DoLogUpPingAndLifeTimeEventsTest(seconds(2), minutes(50) - seconds(1), 3,
+                                   fuchsia_system_metrics::kFuchsiaUpPingMetricId,
+                                   FuchsiaUpPingMetricDimensionUptime::UpTenMinutes);
+
+  // 50 minutes - 1 second later, the device has been up for one hour.
+  // Expect 4 log events: "Up", "UpOneMinute", "UpTenMinutes", "UpOneHour".
+  // Expect a return value of one hour.
+  DoLogUpPingAndLifeTimeEventsTest(minutes(50) - seconds(1), hours(1), 4,
+                                   fuchsia_system_metrics::kFuchsiaUpPingMetricId,
+                                   FuchsiaUpPingMetricDimensionUptime::UpOneHour);
+
+  // One hour later, the device has been up for two hours.
+  // Expect 4 log events: "Up", "UpOneMinute", "UpTenMinutes", "UpOneHour".
+  // Expect a return value of one hour.
+  DoLogUpPingAndLifeTimeEventsTest(hours(1), hours(1), 4,
+                                   fuchsia_system_metrics::kFuchsiaUpPingMetricId,
+                                   FuchsiaUpPingMetricDimensionUptime::UpOneHour);
+
+  // One hour later, the device has been up for three hours.
+  // Expect 4 log events: "Up", "UpOneMinute", "UpTenMinutes", "UpOneHour".
+  // Expect a return value of one hour.
+  DoLogUpPingAndLifeTimeEventsTest(hours(1), hours(1), 4,
+                                   fuchsia_system_metrics::kFuchsiaUpPingMetricId,
+                                   FuchsiaUpPingMetricDimensionUptime::UpOneHour);
+
+  // One hour later, the device has been up for four hours.
+  // Expect 4 log events: "Up", "UpOneMinute", "UpTenMinutes", "UpOneHour".
+  // Expect a return value of one hour.
+  DoLogUpPingAndLifeTimeEventsTest(hours(1), hours(1), 4,
+                                   fuchsia_system_metrics::kFuchsiaUpPingMetricId,
+                                   FuchsiaUpPingMetricDimensionUptime::UpOneHour);
+
+  // One hour later, the device has been up for five hours.
+  // Expect 4 log events: "Up", "UpOneMinute", "UpTenMinutes", "UpOneHour".
+  // Expect a return value of one hour.
+  DoLogUpPingAndLifeTimeEventsTest(hours(1), hours(1), 4,
+                                   fuchsia_system_metrics::kFuchsiaUpPingMetricId,
+                                   FuchsiaUpPingMetricDimensionUptime::UpOneHour);
+
+  // One hour later, the device has been up for six hours.
+  // Expect 4 log events: "Up", "UpOneMinute", "UpTenMinutes", "UpOneHour".
+  // Expect a return value of one hour.
+  DoLogUpPingAndLifeTimeEventsTest(hours(1), hours(1), 4,
+                                   fuchsia_system_metrics::kFuchsiaUpPingMetricId,
+                                   FuchsiaUpPingMetricDimensionUptime::UpOneHour);
+
+  // Six hours later, the device has been up for twelve hours.
+  // Expect 5 log events: "Up", "UpOneMinute", "UpTenMinutes", "UpOneHour",
+  // "UpTwelveHours". Expect a return value of one hour.
+  DoLogUpPingAndLifeTimeEventsTest(hours(6), hours(1), 5,
+                                   fuchsia_system_metrics::kFuchsiaUpPingMetricId,
+                                   FuchsiaUpPingMetricDimensionUptime::UpTwelveHours);
+
+  // One hour later, the device has been up for 13 hours.
+  // Expect 5 log events: "Up", "UpOneMinute", "UpTenMinutes", "UpOneHour",
+  // "UpTwelveHours". Expect a return value of one hour.
+  DoLogUpPingAndLifeTimeEventsTest(hours(1), hours(1), 5,
+                                   fuchsia_system_metrics::kFuchsiaUpPingMetricId,
+                                   FuchsiaUpPingMetricDimensionUptime::UpTwelveHours);
+
+  // One hour later, the device has been up for 14 hours.
+  // Expect 5 log events: "Up", "UpOneMinute", "UpTenMinutes", "UpOneHour",
+  // "UpTwelveHours". Expect a return value of one hour.
+  DoLogUpPingAndLifeTimeEventsTest(hours(1), hours(1), 5,
+                                   fuchsia_system_metrics::kFuchsiaUpPingMetricId,
+                                   FuchsiaUpPingMetricDimensionUptime::UpTwelveHours);
+
+  // Ten hours later, the device has been up for 24 hours.
+  // Expect 6 log events: "Up", "UpOneMinute", "UpTenMinutes", "UpOneHour",
+  // "UpTwelveHours", "UpOneDay". Expect a return value of one hour.
+  DoLogUpPingAndLifeTimeEventsTest(hours(10), hours(1), 6,
+                                   fuchsia_system_metrics::kFuchsiaUpPingMetricId,
+                                   FuchsiaUpPingMetricDimensionUptime::UpOneDay);
+
+  // One  later, the device has been up for 25 hours.
+  // Expect 6 log events: "Up", "UpOneMinute", "UpTenMinutes", "UpOneHour",
+  // "UpTwelveHours", "UpOneDay". Expect a return value of one hour.
+  DoLogUpPingAndLifeTimeEventsTest(hours(1), hours(1), 6,
+                                   fuchsia_system_metrics::kFuchsiaUpPingMetricId,
+                                   FuchsiaUpPingMetricDimensionUptime::UpOneDay);
+}
+
 // Tests the method RepeatedlyLogUptime(). This test uses the message loop to
 // schedule future runs of work. Uses a local FakeLogger_Sync and does not use
 // FIDL.
@@ -507,27 +629,28 @@ TEST_F(SystemMetricsDaemonTest, RepeatedlyLogUptime) {
   AdvanceAndCheckUptime(seconds(kWeek), 168, UptimeRange::TwoWeeksOrMore, 361);
 }
 
-// Tests the method RepeatedlyLogUpPing(). This test differs
+// Tests the method RepeatedlyLogUpPingAndLifeTimeEvents(). This test differs
 // from the previous ones because it makes use of the message loop in order to
 // schedule future runs of work. Uses a local FakeLogger_Sync and does not use
 // FIDL.
-TEST_F(SystemMetricsDaemonTest, RepeatedlyLogUpPing) {
+TEST_F(SystemMetricsDaemonTest, RepeatedlyLogUpPingAndLifeTimeEvents) {
   // Make sure the loop has no initial pending work.
   RunLoopUntilIdle();
 
   // Invoke the method under test. This kicks of the first run and schedules
   // the second run for 1 minute plus 5 seconds in the future.
-  RepeatedlyLogUpPing();
+  RepeatedlyLogUpPingAndLifeTimeEvents();
 
-  // The initial event should have been logged.
-  CheckValues(cobalt::kLogEvent, 1, fuchsia_system_metrics::kFuchsiaUpPingMetricId,
-              FuchsiaUpPingMetricDimensionUptime::Up);
+  // The initial two events should have been logged, the second of which is
+  // |Boot|.
+  CheckValues(cobalt::kLogEvent, 2, fuchsia_system_metrics::kFuchsiaLifetimeEventsMetricId,
+              FuchsiaLifetimeEventsMetricDimensionEvents::Boot);
   fake_logger_.reset();
 
   // Advance the clock by 30 seconds. Nothing should have happened.
   AdvanceTimeAndCheck(seconds(30), 0, -1, -1, cobalt::kLogEvent);
   // Advance the clock by 30 seconds again. Nothing should have happened
-  // because the first run of RepeatedlyLogUpPing() added a 5
+  // because the first run of RepeatedlyLogUpPingAndLifeTimeEvents() added a 5
   // second buffer to the next scheduled run time.
   AdvanceTimeAndCheck(seconds(30), 0, -1, -1, cobalt::kLogEvent);
 
@@ -558,27 +681,6 @@ TEST_F(SystemMetricsDaemonTest, RepeatedlyLogUpPing) {
   // |UpOneHour|.
   AdvanceTimeAndCheck(seconds(5), 4, fuchsia_system_metrics::kFuchsiaUpPingMetricId,
                       FuchsiaUpPingMetricDimensionUptime::UpOneHour, cobalt::kLogEvent);
-}
-
-// Tests the method RepeatedlyLogLifetimeEvents(). This test differs
-// from the previous ones because it makes use of the message loop in order to
-// schedule future runs of work. Uses a local FakeLogger_Sync and does not use
-// FIDL.
-TEST_F(SystemMetricsDaemonTest, RepeatedlyLogLifetimeEvents) {
-  // Make sure the loop has no initial pending work.
-  RunLoopUntilIdle();
-
-  // Invoke the method under test. This kicks of the first run and schedules the
-  // second run.
-  RepeatedlyLogLifetimeEvents();
-
-  // The initial event should have been logged.
-  CheckValues(cobalt::kLogEvent, 1, fuchsia_system_metrics::kFuchsiaLifetimeEventsMetricId,
-              FuchsiaLifetimeEventsMetricDimensionEvents::Boot);
-  fake_logger_.reset();
-
-  // Advance the clock by 2 hours. Nothing should have happened.
-  AdvanceTimeAndCheck(hours(2), 0, -1, -1, cobalt::kLogEvent);
 }
 
 // Tests the method LogCpuUsage(). Uses a local FakeLogger_Sync and
