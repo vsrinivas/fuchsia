@@ -11,6 +11,12 @@ pub(crate) const DEFAULT_SOCKET: &str = "/tmp/ascendd";
 #[cfg(test)]
 pub(crate) const DEFAULT_SOCKET: &str = "/tmp/ascendd_for_testing_only";
 
+pub(crate) const MDNS_BROADCAST_INTERVAL_SECS: u64 = 120;
+
+// How many seconds to give before dropping an MDNS target and marking it
+// as disconnected.
+pub(crate) const MDNS_TARGET_DROP_GRACE_PERIOD_SECS: u64 = 5;
+
 pub(crate) const DEFAULT_MAX_RETRY_COUNT: u64 = 30;
 
 // Delay between retry attempts to find the RCS.

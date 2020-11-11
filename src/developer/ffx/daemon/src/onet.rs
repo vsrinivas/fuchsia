@@ -5,7 +5,7 @@
 use {
     crate::constants::{get_socket, RETRY_DELAY},
     crate::ssh::build_ssh_command,
-    crate::target::{TargetAddr, TargetAddrFetcher},
+    crate::target::{ConnectionState, TargetAddr, WeakTarget},
     anyhow::{anyhow, Context, Result},
     async_std::io::prelude::BufReadExt,
     async_std::prelude::StreamExt,
@@ -20,7 +20,6 @@ use {
     std::io,
     std::os::unix::io::{FromRawFd, IntoRawFd},
     std::process::{Child, Stdio},
-    std::sync::Weak,
     std::time::Duration,
 };
 
@@ -141,14 +140,12 @@ impl Drop for HostPipeChild {
 pub struct HostPipeConnection {}
 
 impl HostPipeConnection {
-    pub fn new(
-        target: Weak<impl TargetAddrFetcher + Sized + 'static>,
-    ) -> impl Future<Output = Result<(), String>> + Send {
+    pub fn new(target: WeakTarget) -> impl Future<Output = Result<(), String>> + Send {
         HostPipeConnection::new_with_cmd(target, HostPipeChild::new, RETRY_DELAY)
     }
 
     fn new_with_cmd<F>(
-        target: Weak<impl TargetAddrFetcher + Sized + 'static>,
+        target: WeakTarget,
         cmd_func: impl FnOnce(BTreeSet<TargetAddr>) -> F + Send + Copy + 'static,
         relaunch_command_delay: Duration,
     ) -> impl Future<Output = Result<(), String>> + Send
@@ -157,12 +154,31 @@ impl HostPipeConnection {
     {
         Task::blocking(async move {
             loop {
-                log::trace!("Spawning new host-pipe instance");
-                let addrs =
-                    target.upgrade().ok_or("parent Arc<> lost".to_string())?.target_addrs().await;
+                log::debug!("Spawning new host-pipe instance");
+                let target = target.upgrade().ok_or("parent Arc<> lost. exiting".to_owned())?;
+                let addrs = target.addrs().await;
                 let mut cmd = cmd_func(addrs).await.map_err(|e| e.to_string())?;
-                cmd.wait()
-                    .map_err(|e| format!("host-pipe error running try-wait: {}", e.to_string()))?;
+
+                // Attempts to run the command. If it exits successfully (disconnect due to peer
+                // dropping) then will set the target to disconnected state. If
+                // there was an error running the command for some reason, then
+                // continue and attempt to run the command again.
+                match cmd
+                    .wait()
+                    .map_err(|e| format!("host-pipe error running try-wait: {}", e.to_string()))
+                {
+                    Ok(_) => {
+                        target
+                            .update_connection_state(|s| match s {
+                                ConnectionState::Rcs(_) => ConnectionState::Disconnected,
+                                _ => s,
+                            })
+                            .await;
+                        log::debug!("rcs disconnected, exiting");
+                        return Ok(());
+                    }
+                    Err(e) => log::debug!("running cmd: {:#?}", e),
+                }
 
                 // TODO(fxbug.dev/52038): Want an exponential backoff that
                 // is sync'd with an explicit "try to start this again
@@ -198,7 +214,7 @@ fn overnet_pipe() -> Result<fidl::AsyncSocket> {
 
 #[cfg(test)]
 mod test {
-    use {super::*, crate::target::TargetAddrFetcher, async_trait::async_trait, std::sync::Arc};
+    use super::*;
 
     const ERR_CTX: &'static str = "running fake host-pipe command for test";
 
@@ -241,21 +257,11 @@ mod test {
         Err(anyhow!(ERR_CTX))
     }
 
-    #[derive(Default)]
-    struct FakeTarget {}
-
-    #[async_trait]
-    impl TargetAddrFetcher for FakeTarget {
-        async fn target_addrs(&self) -> BTreeSet<TargetAddr> {
-            BTreeSet::new()
-        }
-    }
-
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_host_pipe_start_and_stop_normal_operation() {
-        let target = Arc::new(FakeTarget::default());
+        let target = crate::target::Target::new("flooooooooberdoober");
         let _conn = HostPipeConnection::new_with_cmd(
-            Arc::downgrade(&target),
+            target.downgrade(),
             start_child_normal_operation,
             Duration::default(),
         );
@@ -265,9 +271,9 @@ mod test {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_host_pipe_start_and_stop_internal_failure() {
         // TODO(awdavies): Verify the error matches.
-        let target = Arc::new(FakeTarget::default());
+        let target = crate::target::Target::new("flooooooooberdoober");
         let conn = HostPipeConnection::new_with_cmd(
-            Arc::downgrade(&target),
+            target.downgrade(),
             start_child_internal_failure,
             Duration::default(),
         );

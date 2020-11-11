@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use {
+    crate::constants::{MDNS_BROADCAST_INTERVAL_SECS, MDNS_TARGET_DROP_GRACE_PERIOD_SECS},
     crate::events::{self, DaemonEvent, EventSynthesizer},
     crate::fastboot::open_interface_with_serial,
     crate::net::IsLocalAddr,
@@ -11,6 +12,7 @@ use {
     crate::task::{SingleFlight, TaskSnapshot},
     anyhow::{anyhow, Context, Error, Result},
     async_std::sync::RwLock,
+    async_std::task,
     async_trait::async_trait,
     chrono::{DateTime, Utc},
     fidl::endpoints::ServiceMarker,
@@ -28,10 +30,11 @@ use {
     std::default::Default,
     std::fmt,
     std::fmt::{Debug, Display},
-    std::hash::Hash,
+    std::hash::{Hash, Hasher},
     std::io::Write,
     std::net::{IpAddr, SocketAddr, SocketAddrV4, SocketAddrV6},
-    std::sync::Arc,
+    std::sync::{Arc, Weak},
+    std::time::Duration,
     usb_bulk::Interface,
 };
 
@@ -119,10 +122,30 @@ pub struct RcsConnection {
     pub overnet_id: NodeId,
 }
 
+impl Hash for RcsConnection {
+    fn hash<H>(&self, state: &mut H)
+    where
+        H: Hasher,
+    {
+        self.overnet_id.id.hash(state)
+    }
+}
+
+impl PartialEq for RcsConnection {
+    fn eq(&self, other: &Self) -> bool {
+        self.overnet_id == other.overnet_id
+    }
+}
+
+impl Eq for RcsConnection {}
+
 #[derive(Debug, Hash, Clone, PartialEq, Eq)]
 pub enum TargetEvent {
     RcsActivated,
     Rediscovered,
+
+    /// LHS is previous state, RHS is current state.
+    ConnectionStateChanged(ConnectionState, ConnectionState),
 }
 
 #[derive(Debug)]
@@ -176,15 +199,53 @@ impl RcsConnection {
     }
 }
 
-#[derive(Debug)]
-pub struct TargetState {
-    pub rcs: Option<RcsConnection>,
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub enum ConnectionState {
+    Disconnected,
+    /// Contains the last known ping from mDNS.
+    Mdns(DateTime<Utc>),
+    /// Contains an actual connection to RCS.
+    Rcs(RcsConnection),
+    // TODO(awdavies): Have fastboot in here.
 }
 
-impl TargetState {
-    pub fn new() -> Self {
-        Self { rcs: None }
+impl Default for ConnectionState {
+    fn default() -> Self {
+        ConnectionState::Disconnected
     }
+}
+
+impl ConnectionState {
+    fn is_connected(&self) -> bool {
+        match self {
+            Self::Disconnected => false,
+            _ => true,
+        }
+    }
+
+    fn take_rcs(&mut self) -> Option<RcsConnection> {
+        if self.is_rcs() {
+            match std::mem::replace(self, ConnectionState::Disconnected) {
+                ConnectionState::Rcs(r) => Some(r),
+                _ => None,
+            }
+        } else {
+            None
+        }
+    }
+
+    fn is_rcs(&self) -> bool {
+        match self {
+            ConnectionState::Rcs(_) => true,
+            _ => false,
+        }
+    }
+}
+
+#[derive(Debug, Default)]
+#[cfg_attr(test, derive(Clone, PartialEq, Eq))]
+pub struct TargetState {
+    pub connection_state: ConnectionState,
 }
 
 struct TargetInner {
@@ -201,7 +262,7 @@ impl Default for TargetInner {
         Self {
             nodename: Default::default(),
             last_response: RwLock::new(Utc::now()),
-            state: Mutex::new(TargetState::new()),
+            state: Mutex::new(TargetState::default()),
             addrs: RwLock::new(BTreeSet::new()),
             serial: RwLock::new(None),
         }
@@ -247,10 +308,29 @@ impl TargetAddrFetcher for TargetInner {
 #[async_trait]
 impl EventSynthesizer<TargetEvent> for TargetInner {
     async fn synthesize_events(&self) -> Vec<TargetEvent> {
-        match self.state.lock().await.rcs {
-            Some(_) => vec![TargetEvent::RcsActivated],
-            None => vec![],
+        match self.state.lock().await.connection_state {
+            ConnectionState::Rcs(_) => vec![TargetEvent::RcsActivated],
+            _ => vec![],
         }
+    }
+}
+
+#[derive(Clone)]
+pub struct WeakTarget {
+    pub events: events::Queue<TargetEvent>,
+    inner: Weak<TargetInner>,
+}
+
+impl WeakTarget {
+    /// attempts to upgrade to a target with a null task manager.
+    pub fn upgrade(&self) -> Option<Target> {
+        let inner = self.inner.upgrade()?;
+        let events = self.events.clone();
+        Some(Target {
+            inner,
+            events,
+            task_manager: Arc::new(SingleFlight::new(|_| futures::future::ready(Ok(())).boxed())),
+        })
     }
 }
 
@@ -267,11 +347,58 @@ pub struct Target {
 }
 
 impl Target {
+    async fn mdns_monitor_loop(weak_target: WeakTarget, limit: Duration) -> Result<(), String> {
+        let limit = chrono::Duration::from_std(limit).map_err(|e| format!("{:?}", e))?;
+        loop {
+            if let Some(t) = weak_target.upgrade() {
+                let nodename = t.nodename();
+                t.update_connection_state(|s| match s {
+                    ConnectionState::Mdns(ref time) => {
+                        let now = Utc::now();
+                        if now.signed_duration_since(*time) > limit {
+                            log::debug!(
+                                "dropping target '{}'. MDNS response older than {}",
+                                nodename,
+                                limit,
+                            );
+                            ConnectionState::Disconnected
+                        } else {
+                            s
+                        }
+                    }
+                    _ => s,
+                })
+                .await;
+                task::sleep(Duration::from_secs(1)).await;
+            } else {
+                log::debug!("parent target dropped. exiting");
+                break;
+            }
+        }
+        Ok(())
+    }
+
+    pub async fn is_connected(&self) -> bool {
+        self.inner.state.lock().await.connection_state.is_connected()
+    }
+
+    pub fn downgrade(&self) -> WeakTarget {
+        WeakTarget { events: self.events.clone(), inner: Arc::downgrade(&self.inner) }
+    }
+
     fn from_inner(inner: Arc<TargetInner>) -> Self {
         let events = events::Queue::new(&inner);
         let weak_inner = Arc::downgrade(&inner);
+        let weak_target = WeakTarget { inner: weak_inner, events: events.clone() };
         let task_manager = Arc::new(SingleFlight::new(move |t| match t {
-            TargetTaskType::HostPipe => HostPipeConnection::new(weak_inner.clone()).boxed(),
+            TargetTaskType::HostPipe => HostPipeConnection::new(weak_target.clone()).boxed(),
+            TargetTaskType::MdnsMonitor => Target::mdns_monitor_loop(
+                weak_target.clone(),
+                Duration::from_secs(
+                    MDNS_BROADCAST_INTERVAL_SECS + MDNS_TARGET_DROP_GRACE_PERIOD_SECS,
+                ),
+            )
+            .boxed(),
         }));
         Self { inner, events, task_manager }
     }
@@ -303,9 +430,9 @@ impl Target {
         let loop_running = self.task_manager.task_snapshot(TargetTaskType::HostPipe).await
             == TaskSnapshot::Running;
         let state = self.inner.state.lock().await;
-        match (loop_running, state.rcs.as_ref()) {
-            (true, Some(_)) => bridge::RemoteControlState::Up,
-            (true, None) => bridge::RemoteControlState::Down,
+        match (loop_running, &state.connection_state) {
+            (true, ConnectionState::Rcs(_)) => bridge::RemoteControlState::Up,
+            (true, _) => bridge::RemoteControlState::Down,
             (_, _) => bridge::RemoteControlState::Unknown,
         }
     }
@@ -314,10 +441,52 @@ impl Target {
         self.inner.nodename.clone()
     }
 
+    /// Allows a client to atomically update the connection state based on what
+    /// is returned from the predicate.
+    ///
+    /// For example, if the client wants to update the connection state to RCS
+    /// connected, but only if the target is already disconnected, it would
+    /// look like this:
+    ///
+    /// ```rust
+    ///   let rcs_connection = ...;
+    ///   target.update_connection_state(move |s| {
+    ///     match s {
+    ///       ConnectionState::Disconnected => ConnectionState::Rcs(rcs_connection),
+    ///       _ => s
+    ///     }
+    ///   }).await;
+    /// ```
+    ///
+    /// The client must always return the state, as this is swapped with the
+    /// current target state in-place.
+    ///
+    /// If the state changes, this will push a `ConnectionStateChanged` event
+    /// to the event queue.
+    pub async fn update_connection_state<F>(&self, func: F)
+    where
+        F: FnOnce(ConnectionState) -> ConnectionState + Sized + Send + Copy,
+    {
+        let mut state = self.inner.state.lock().await;
+        let former_state = state.connection_state.clone();
+        let update =
+            (func)(std::mem::replace(&mut state.connection_state, ConnectionState::Disconnected));
+        state.connection_state = update;
+        if former_state != state.connection_state {
+            let _ = self
+                .events
+                .push(TargetEvent::ConnectionStateChanged(
+                    former_state,
+                    state.connection_state.clone(),
+                ))
+                .await;
+        }
+    }
+
     pub async fn rcs(&self) -> Option<RcsConnection> {
-        match self.inner.state.lock().await.rcs.as_ref() {
-            Some(r) => Some(r.clone()),
-            None => None,
+        match &self.inner.state.lock().await.connection_state {
+            ConnectionState::Rcs(conn) => Some(conn.clone()),
+            _ => None,
         }
     }
 
@@ -355,11 +524,12 @@ impl Target {
         }
     }
 
-    async fn update_state(&self, mut other: TargetState) {
+    async fn overwrite_state(&self, mut other: TargetState) {
         let mut state = self.inner.state.lock().await;
-        if let Some(rcs) = other.rcs.take() {
-            let rcs_activated = state.rcs.is_none();
-            state.rcs = Some(rcs);
+        if let Some(rcs) = other.connection_state.take_rcs() {
+            // Nots this so that we know to push an event.
+            let rcs_activated = !state.connection_state.is_rcs();
+            state.connection_state = ConnectionState::Rcs(rcs);
             if rcs_activated {
                 self.events.push(TargetEvent::RcsActivated).await.unwrap_or_else(|err| {
                     log::warn!("unable to enqueue RCS activation event: {:#}", err)
@@ -387,16 +557,18 @@ impl Target {
         // Forces drop of target state mutex so that target can be returned.
         {
             let mut target_state = target.inner.state.lock().await;
-            target_state.rcs = Some(r);
+            target_state.connection_state = ConnectionState::Rcs(r);
         }
 
         Ok(target)
     }
 
     pub async fn run_host_pipe(&self) {
-        // This is a) intended to run forever, and b) implemented using
-        // a task (which polls itself), so just drop the future here.
-        let _ = self.task_manager.spawn(TargetTaskType::HostPipe).await;
+        self.task_manager.spawn_detached(TargetTaskType::HostPipe).await
+    }
+
+    pub async fn run_mdns_monitor(&self) {
+        self.task_manager.spawn_detached(TargetTaskType::MdnsMonitor).await;
     }
 }
 
@@ -610,9 +782,9 @@ impl TargetQuery {
 
                 false
             }
-            Self::OvernetId(id) => match &t.inner.state.lock().await.rcs {
-                Some(rcs) => rcs.overnet_id.id == *id,
-                None => false,
+            Self::OvernetId(id) => match &t.inner.state.lock().await.connection_state {
+                ConnectionState::Rcs(rcs) => rcs.overnet_id.id == *id,
+                _ => false,
             },
         }
     }
@@ -689,10 +861,16 @@ impl TargetCollection {
         // TODO(awdavies): better merging (using more indices for matching).
         match inner.get(&t.inner.nodename) {
             Some(to_update) => {
+                log::debug!("attempting to merge info into target: {}", t.inner.nodename);
                 futures::join!(
                     to_update.update_last_response(t.last_response().await),
                     to_update.addrs_extend(t.addrs().await),
-                    to_update.update_state(TargetState { rcs: t.rcs().await }),
+                    to_update.overwrite_state(TargetState {
+                        connection_state: std::mem::replace(
+                            &mut t.inner.state.lock().await.connection_state,
+                            ConnectionState::Disconnected
+                        ),
+                    }),
                 );
                 to_update.events.push(TargetEvent::Rediscovered).await.unwrap_or_else(|err| {
                     log::warn!("unable to enqueue rediscovered event: {:#}", err)
@@ -770,24 +948,6 @@ mod test {
         Target::from_inner(inner)
     }
 
-    impl PartialEq for TargetState {
-        /// This is a very loose eq function for now, might need to be updated
-        /// later, but this shouldn't be used outside of tests. Compares that
-        /// another option is not None.
-        fn eq(&self, other: &Self) -> bool {
-            match self.rcs {
-                Some(_) => match other.rcs {
-                    Some(_) => true,
-                    _ => false,
-                },
-                None => match other.rcs {
-                    None => true,
-                    _ => false,
-                },
-            }
-        }
-    }
-
     impl Clone for TargetInner {
         fn clone(&self) -> Self {
             Self {
@@ -797,12 +957,6 @@ mod test {
                 addrs: RwLock::new(block_on(self.addrs.read()).clone()),
                 serial: RwLock::new(block_on(self.serial.read()).clone()),
             }
-        }
-    }
-
-    impl Clone for TargetState {
-        fn clone(&self) -> Self {
-            Self { rcs: self.rcs.clone() }
         }
     }
 
@@ -1010,7 +1164,7 @@ mod test {
         // Assures multiple "simultaneous" invocations to start the target
         // doesn't put it into a bad state that would hang.
         let _: ((), (), ()) =
-            futures::join!(t.run_host_pipe(), t.run_host_pipe(), t.run_host_pipe(),);
+            futures::join!(t.run_host_pipe(), t.run_host_pipe(), t.run_host_pipe());
     }
 
     struct RcsStateTest {
@@ -1053,13 +1207,13 @@ mod test {
             }
             {
                 *t.inner.state.lock().await = TargetState {
-                    rcs: if test.rcs_is_some {
-                        Some(RcsConnection::new_with_proxy(
+                    connection_state: if test.rcs_is_some {
+                        ConnectionState::Rcs(RcsConnection::new_with_proxy(
                             setup_fake_remote_control_service(true, "foobiedoo".to_owned()),
                             &NodeId { id: 123 },
                         ))
                     } else {
-                        None
+                        ConnectionState::Disconnected
                     },
                 };
             }
@@ -1197,12 +1351,12 @@ mod test {
         );
 
         let fut = t.events.wait_for(None, |e| e == TargetEvent::RcsActivated);
-        let mut new_state = TargetState::new();
-        new_state.rcs = Some(conn);
+        let mut new_state = TargetState::default();
+        new_state.connection_state = ConnectionState::Rcs(conn);
         // This is a bit of a race, so it's possible that state will be
         // updated before the wait_for invocation is registered with the
         // event queue, but either way this should succeed.
-        let (res, ()) = futures::join!(fut, t.update_state(new_state));
+        let (res, ()) = futures::join!(fut, t.overwrite_state(new_state));
         res.unwrap();
     }
 
@@ -1266,5 +1420,45 @@ mod test {
         assert_eq!(tc.get_default(Some(default.to_string())).await.unwrap(), t);
         assert!(tc.get_default(None).await.is_err());
         assert!(tc.get_default(Some("not_in_here".to_owned())).await.is_err());
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_target_update_connection_state() {
+        let t = Target::new("have-you-seen-my-cat");
+        let fake_time = Utc.yo(2017, 12).and_hms(1, 2, 3);
+        let fake_time_clone = fake_time.clone();
+        t.update_connection_state(move |s| {
+            assert_eq!(s, ConnectionState::Disconnected);
+
+            ConnectionState::Mdns(fake_time_clone)
+        })
+        .await;
+        assert_eq!(ConnectionState::Mdns(fake_time), t.inner.state.lock().await.connection_state);
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_target_mdns_set_disconnected() {
+        let t = Target::new("yo-yo-ma-plays-that-cello-ya-hear");
+        let now = Utc::now();
+        t.update_connection_state(|s| {
+            assert_eq!(s, ConnectionState::Disconnected);
+            ConnectionState::Mdns(now)
+        })
+        .await;
+        let events = t.events.clone();
+        let _task = fuchsia_async::Task::local(async move {
+            Target::mdns_monitor_loop(t.downgrade(), Duration::from_secs(2))
+                .await
+                .expect("mdns monitor loop failed")
+        });
+        events
+            .wait_for(None, move |e| {
+                e == TargetEvent::ConnectionStateChanged(
+                    ConnectionState::Mdns(now),
+                    ConnectionState::Disconnected,
+                )
+            })
+            .await
+            .unwrap();
     }
 }

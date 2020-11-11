@@ -3,17 +3,19 @@
 // found in the LICENSE file.
 
 use {
-    crate::constants::get_socket,
+    crate::constants::{get_socket, MDNS_BROADCAST_INTERVAL_SECS},
     crate::discovery::{TargetFinder, TargetFinderConfig},
     crate::events::{self, DaemonEvent, EventHandler, WireTrafficType},
     crate::fastboot::{client::Fastboot, spawn_fastboot_discovery},
     crate::mdns::MdnsTargetFinder,
     crate::target::{
-        RcsConnection, SshAddrFetcher, Target, TargetCollection, TargetEvent, ToFidlTarget,
+        ConnectionState, RcsConnection, SshAddrFetcher, Target, TargetCollection, TargetEvent,
+        ToFidlTarget,
     },
     anyhow::{anyhow, Context, Result},
     async_std::task,
     async_trait::async_trait,
+    chrono::Utc,
     ffx_core::TryStreamUtilExt,
     fidl::endpoints::ServiceMarker,
     fidl_fuchsia_developer_bridge::{
@@ -45,20 +47,67 @@ pub struct DaemonEventHandler {
     target_collection: Weak<TargetCollection>,
 }
 
+impl DaemonEventHandler {
+    async fn handle_mdns(t: events::TargetInfo, tc: &TargetCollection) {
+        log::info!("Found new target via mdns: {}", t.nodename);
+        tc.merge_insert(t.into())
+            .then(|target| async move {
+                target
+                    .update_connection_state(|s| match s {
+                        ConnectionState::Disconnected | ConnectionState::Mdns(_) => {
+                            ConnectionState::Mdns(Utc::now())
+                        }
+                        _ => s,
+                    })
+                    .await;
+                let _: ((), ()) = futures::join!(target.run_mdns_monitor(), target.run_host_pipe());
+            })
+            .await;
+    }
+
+    async fn handle_overnet_peer(node_id: u64, tc: &TargetCollection) {
+        // It's possible that the target will be dropped in the middle of this operation.
+        // Do not exit an error, just log and exit this round.
+        let res = {
+            match RcsConnection::new(&mut NodeId { id: node_id })
+                .await
+                .context("unable to convert proxy to target")
+            {
+                Ok(r) => Target::from_rcs_connection(r)
+                    .await
+                    .map_err(|e| anyhow!("unable to convert proxy to target: {}", e)),
+                Err(e) => Err(e),
+            }
+        };
+
+        let target = match res {
+            Ok(t) => t,
+            Err(e) => {
+                log::error!("{:#?}", e);
+                return;
+            }
+        };
+
+        log::info!("Found new target via overnet: {}", target.nodename());
+        tc.merge_insert(target).await;
+    }
+}
+
 #[async_trait]
 impl EventHandler<DaemonEvent> for DaemonEventHandler {
     async fn on_event(&self, event: DaemonEvent) -> Result<bool> {
         let tc = match self.target_collection.upgrade() {
             Some(t) => t,
-            None => return Ok(true), // We're done, as the parent has been dropped.
+            None => {
+                log::debug!("dropped target collection");
+                return Ok(true); // We're done, as the parent has been dropped.
+            }
         };
+
         match event {
             DaemonEvent::WireTraffic(traffic) => match traffic {
                 WireTrafficType::Mdns(t) => {
-                    log::info!("Found new target via mdns: {}", t.nodename);
-                    tc.merge_insert(t.into())
-                        .then(|target| async move { target.run_host_pipe().await })
-                        .await;
+                    Self::handle_mdns(t, &tc).await;
                 }
                 WireTrafficType::Fastboot(t) => {
                     log::info!("Found new target via fastboot: {}", t.nodename);
@@ -66,14 +115,7 @@ impl EventHandler<DaemonEvent> for DaemonEventHandler {
                 }
             },
             DaemonEvent::OvernetPeer(node_id) => {
-                let remote_control_proxy = RcsConnection::new(&mut NodeId { id: node_id })
-                    .await
-                    .context("unable to convert proxy to target")?;
-                let target = Target::from_rcs_connection(remote_control_proxy)
-                    .await
-                    .map_err(|e| anyhow!("unable to convert proxy to target: {}", e))?;
-                log::info!("Found new target via overnet: {}", target.nodename());
-                tc.merge_insert(target).await;
+                Self::handle_overnet_peer(node_id, &tc).await;
             }
             _ => (),
         }
@@ -113,7 +155,7 @@ impl Daemon {
 
         let config = TargetFinderConfig {
             interface_discovery_interval: Duration::from_secs(1),
-            broadcast_interval: Duration::from_secs(120),
+            broadcast_interval: Duration::from_secs(MDNS_BROADCAST_INTERVAL_SECS),
             mdns_ttl: 255,
         };
         let mut mdns = MdnsTargetFinder::new(&config)?;
@@ -228,14 +270,28 @@ impl Daemon {
                                 .targets()
                                 .await
                                 .drain(..)
-                                .map(|t| t.to_fidl_target())
+                                .map(|t| {
+                                    async move {
+                                        if t.is_connected().await {
+                                            Some(t.to_fidl_target().await)
+                                        } else {
+                                            None
+                                        }
+                                    }
+                                    .boxed()
+                                })
                                 .collect(),
                             _ => match self.target_collection.get(value.into()).await {
-                                Some(t) => vec![t.to_fidl_target()],
+                                Some(t) => {
+                                    vec![async move { Some(t.to_fidl_target().await) }.boxed()]
+                                }
                                 None => vec![],
                             },
                         })
                         .await
+                        .drain(..)
+                        .filter_map(|m| m)
+                        .collect::<Vec<_>>()
                         .drain(..),
                     )
                     .context("error sending response")?;
@@ -632,5 +688,36 @@ mod test {
         assert_eq!(r, want);
 
         Ok(())
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_daemon_mdns_event_handler() {
+        let t = Target::new("this-town-aint-big-enough-for-the-three-of-us");
+
+        let tc = Arc::new(TargetCollection::new());
+        tc.merge_insert(t.clone()).await;
+
+        let wtc = Arc::downgrade(&tc);
+        let handler = DaemonEventHandler { target_collection: wtc };
+        assert!(!handler
+            .on_event(DaemonEvent::WireTraffic(WireTrafficType::Mdns(events::TargetInfo {
+                nodename: t.nodename(),
+                ..Default::default()
+            })))
+            .await
+            .unwrap());
+
+        // This is a bit of a hack to check the target state without digging
+        // into internals.
+        t.update_connection_state(|s| {
+            if let ConnectionState::Mdns(ref _t) = s {
+                s
+            } else {
+                panic!("state not updated by event, should be set to MDNS state.");
+            }
+        })
+        .await;
+
+        // TODO(awdavies): RCS, Fastboot, etc. events.
     }
 }
