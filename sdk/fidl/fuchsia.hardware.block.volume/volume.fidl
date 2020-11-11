@@ -82,6 +82,25 @@ protocol VolumeManager {
     /// This function may be useful for A/B updates within the FVM,
     /// since it will allow activating updated partitions.
     Activate(partition.GUID old_guid, partition.GUID new_guid) -> (zx.status status);
+
+    /// Retrieves the allocation limit for the partition. A return value of 0 indicates that there
+    /// is no limit and the partition can be extended as long as there is available space on the
+    /// device.
+    ///
+    /// Currently the partition limit is not persisted across reboots but this may change in the
+    /// future.
+    GetPartitionLimit(partition.GUID guid) -> (zx.status status, uint64 byte_count);
+
+    /// Sets the allocation limit for the partition. Partitions can not be extended beyond their
+    /// allocation limit.
+    ///
+    /// The allocation limits are on the VolumeManager API rather than on the partition because
+    /// they represent a higher capability level. These limits are designed to put guards on
+    /// users of the block device (and hence the Volume API).
+    ///
+    /// Currently the partition limit is not persisted across reboots but this may change in the
+    /// future.
+    SetPartitionLimit(partition.GUID guid, uint64 byte_count) -> (zx.status status);
 };
 
 /// An arbitrary cap on the number of slices which may be requested when querying
@@ -117,6 +136,10 @@ protocol Volume {
         -> (zx.status status, array<VsliceRange>:MAX_SLICE_REQUESTS response, uint64 response_count);
 
     /// Extends the mapping of this partition.
+    ///
+    /// The ability to extend the partition is dependent on having sufficient free space on the
+    /// underlying device, having sufficient free slots for tracking the bytes in the volume
+    /// manager header, and the partition limit (see VolumeManager.SetPartitionLimit).
     Extend(uint64 start_slice, uint64 slice_count) -> (zx.status status);
 
     /// Shrinks a virtual partition. Returns `ZX_OK` if ANY slices are

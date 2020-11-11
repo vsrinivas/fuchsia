@@ -780,6 +780,21 @@ zx_status_t VPartitionManager::FIDLActivate(const fuchsia_hardware_block_partiti
   return fuchsia_hardware_block_volume_VolumeManagerActivate_reply(txn, status);
 }
 
+zx_status_t VPartitionManager::FIDLGetPartitionLimit(
+    const fuchsia_hardware_block_partition_GUID* guid, fidl_txn_t* txn) {
+  // Not yet supported. For now, report 0 which means "no limit".
+  // TODO(bug 64055) implement this.
+  return fuchsia_hardware_block_volume_VolumeManagerGetPartitionLimit_reply(txn, ZX_OK, 0);
+}
+
+zx_status_t VPartitionManager::FIDLSetPartitionLimit(
+    const fuchsia_hardware_block_partition_GUID* guid, uint64_t byte_count, fidl_txn_t* txn) {
+  // Not yet supported.
+  // TODO(bug 64055) implement this.
+  return fuchsia_hardware_block_volume_VolumeManagerSetPartitionLimit_reply(txn,
+                                                                            ZX_ERR_NOT_SUPPORTED);
+}
+
 void VPartitionManager::DdkUnbind(ddk::UnbindTxn txn) {
   // Wait untill all work has been completed, before removing the device.
   sync_completion_wait(&worker_completed_, zx::duration::infinite().get());

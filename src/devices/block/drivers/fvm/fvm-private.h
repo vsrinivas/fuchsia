@@ -113,6 +113,8 @@ class VPartitionManager : public ManagerDeviceType {
         .Query = Binder::BindMember<&VPartitionManager::FIDLQuery>,
         .GetInfo = Binder::BindMember<&VPartitionManager::FIDLGetInfo>,
         .Activate = Binder::BindMember<&VPartitionManager::FIDLActivate>,
+        .GetPartitionLimit = Binder::BindMember<&VPartitionManager::FIDLGetPartitionLimit>,
+        .SetPartitionLimit = Binder::BindMember<&VPartitionManager::FIDLSetPartitionLimit>,
     };
     return &kOps;
   }
@@ -127,6 +129,10 @@ class VPartitionManager : public ManagerDeviceType {
   zx_status_t FIDLGetInfo(fidl_txn_t* txn);
   zx_status_t FIDLActivate(const fuchsia_hardware_block_partition_GUID* old_guid,
                            const fuchsia_hardware_block_partition_GUID* new_guid, fidl_txn_t* txn);
+  zx_status_t FIDLGetPartitionLimit(const fuchsia_hardware_block_partition_GUID* guid,
+                                    fidl_txn_t* txn);
+  zx_status_t FIDLSetPartitionLimit(const fuchsia_hardware_block_partition_GUID* guid,
+                                    uint64_t byte_count, fidl_txn_t* txn);
 
   // Marks the partition with instance GUID |old_guid| as inactive,
   // and marks partitions with instance GUID |new_guid| as active.
