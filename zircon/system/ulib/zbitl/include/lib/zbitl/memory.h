@@ -7,6 +7,7 @@
 
 #include <cstring>
 
+#include <fbl/alloc_checker.h>
 #include <fbl/array.h>
 #include <fbl/span.h>
 
@@ -21,11 +22,12 @@ class StorageTraits<fbl::Array<T>> {
  public:
   using Storage = fbl::Array<T>;
 
+  // An instance represents a failure mode of being out of memory.
   struct error_type {};
 
   using payload_type = fbl::Span<T>;
 
-  static std::string_view error_string(error_type error) { return {}; }
+  static std::string_view error_string(error_type error) { return "out of memory"; }
 
   static fbl::Span<std::byte> AsBytes(const Storage& storage) {
     return {reinterpret_cast<std::byte*>(storage.data()), storage.size() * sizeof(T)};
@@ -38,7 +40,13 @@ class StorageTraits<fbl::Array<T>> {
   static fitx::result<error_type> EnsureCapacity(Storage& storage, uint32_t capacity_bytes) {
     if (size_t current = AsBytes(storage).size(); current < capacity_bytes) {
       const size_t n = (capacity_bytes + sizeof(T) - 1) / sizeof(T);
-      Storage new_storage(new T[n], n);
+
+      fbl::AllocChecker ac;
+      Storage new_storage(new (&ac) T[n], n);
+      if (!ac.check()) {
+        return fitx::error{error_type{}};
+      }
+
       memcpy(new_storage.data(), storage.data(), current);
       storage.swap(new_storage);
     }
@@ -85,7 +93,12 @@ class StorageTraits<fbl::Array<T>> {
 
   static fitx::result<error_type, Storage> Create(Storage& old, size_t size) {
     const size_t n = (size + sizeof(T) - 1) / sizeof(T);
-    return fitx::ok(Storage{new T[n], n});
+    fbl::AllocChecker ac;
+    Storage new_storage(new (&ac) T[n], n);
+    if (!ac.check()) {
+      return fitx::error{error_type{}};
+    }
+    return fitx::ok(std::move(new_storage));
   }
 };
 
