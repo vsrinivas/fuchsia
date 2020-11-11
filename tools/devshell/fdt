@@ -37,14 +37,11 @@ if [[ $HOST_PLATFORM == "mac-x64" ]]; then
   PREBUILT_UNZIP_DIR="$PREBUILT_DIR/fuchsia_devtools/macos-extracted"
   PREBUILT="$PREBUILT_UNZIP_DIR/$BINARY"
 else
-  # The _OLD values are to support a temporary transition where we are changing
-  # the name of the binary from system_monitor to fuchsia_devtools. Once that
-  # change is complete these will be removed.
-  BINARY_OLD="system_monitor/linux/system_monitor"
+  BINARY_OLD="system_monitor/linux/fuchsia_devtools"
   PREBUILT_OLD="$PREBUILT_DIR/$BINARY_OLD"
   DOWNLOAD_OLD="$DOWNLOAD_DIR/$BINARY_OLD"
 
-  BINARY="system_monitor/linux/fuchsia_devtools"
+  BINARY="fuchsia_devtools/linux/fuchsia_devtools"
   PREBUILT="$PREBUILT_DIR/$BINARY"
   DOWNLOAD="$DOWNLOAD_DIR/$BINARY"
 fi
