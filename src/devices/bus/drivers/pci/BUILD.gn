@@ -56,9 +56,6 @@ source_set("user_pci") {
     # compiled for the test using the mock version.
     "//src/devices/lib/mmio",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 source_set("user_pci.proxy") {
@@ -93,9 +90,6 @@ if (platform_enable_user_pci) {
       "bind.cc",
     ]
     deps = [ ":user_pci" ]
-
-    # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-    configs += [ "//build/config:Wno-conversion" ]
   }
 
   driver_module("bus-pci.proxy") {
@@ -135,9 +129,6 @@ if (platform_enable_user_pci) {
       "//src/lib/ddktl",
       "//zircon/public/lib/fidl",
     ]
-
-    # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-    configs += [ "//build/config:Wno-conversion" ]
   }
 
   driver_module("bus-pci.proxy") {
@@ -163,9 +154,6 @@ if (platform_enable_user_pci) {
       "//src/lib/ddk:ddk-deprecated-binding-headers",
       "//src/lib/ddktl",
     ]
-
-    # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-    configs += [ "//build/config:Wno-conversion" ]
   }
 }
 

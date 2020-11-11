@@ -60,7 +60,7 @@ zx_status_t pci_rpc_request(kpci_device_t* dev, uint32_t op, zx_handle_t* handle
     return ZX_ERR_INTERNAL;
   }
 
-  return resp->hdr.ordinal;
+  return (zx_status_t)resp->hdr.ordinal;
 }
 
 // pci_op_* methods are called by the proxy devhost. For each PCI
@@ -101,7 +101,7 @@ static zx_status_t pci_op_config_read(void* ctx, uint16_t offset, size_t width, 
       .cfg =
           {
               .offset = offset,
-              .width = width,
+              .width = (uint16_t)width,
           },
   };
   pci_msg_t resp = {};
@@ -143,7 +143,7 @@ static zx_status_t pci_op_config_write(void* ctx, uint16_t offset, size_t width,
       .cfg =
           {
               .offset = offset,
-              .width = width,
+              .width = (uint16_t)width,
               .value = val,
           },
   };
@@ -175,13 +175,13 @@ static zx_status_t pci_op_get_next_capability(void* ctx, uint8_t type, uint8_t i
   // that causes us to iterate forever otherwise.
   while (cap_offset != 0 && limit--) {
     uint32_t type_id = 0;
-    if ((st = pci_op_config_read(ctx, cap_offset, sizeof(uint8_t), &type_id)) != ZX_OK) {
+    if ((st = pci_op_config_read(ctx, (uint16_t)cap_offset, sizeof(uint8_t), &type_id)) != ZX_OK) {
       zxlogf(ERROR, "%s: error reading type from cap offset %#x: %d", __func__, cap_offset, st);
       return st;
     }
 
     if (type_id == type) {
-      *out_offset = cap_offset;
+      *out_offset = (uint8_t)cap_offset;
       return ZX_OK;
     }
 
@@ -191,7 +191,8 @@ static zx_status_t pci_op_get_next_capability(void* ctx, uint8_t type, uint8_t i
       zxlogf(ERROR, "%s: %#x is an invalid capability offset!", __func__, cap_offset);
       return ZX_ERR_BAD_STATE;
     }
-    if ((st = pci_op_config_read(ctx, cap_offset + 1, sizeof(uint8_t), &cap_offset)) != ZX_OK) {
+    if ((st = pci_op_config_read(ctx, (uint16_t)(cap_offset + 1), sizeof(uint8_t), &cap_offset)) !=
+        ZX_OK) {
       zxlogf(ERROR, "%s: error reading next cap from cap offset %#x: %d", __func__, cap_offset + 1,
              st);
       return ZX_ERR_BAD_STATE;
@@ -226,7 +227,8 @@ static zx_status_t pci_op_get_bar(void* ctx, uint32_t bar_id, zx_pci_bar_t* out_
       // x86 PIO space access requires permission in the I/O bitmap
       // TODO: this is the last remaining use of get_root_resource in pci
       // Please do not use get_root_resource() in new code. See fxbug.dev/31358.
-      st = zx_ioports_request(get_root_resource(), out_bar->addr, out_bar->size);
+      st =
+          zx_ioports_request(get_root_resource(), (uint16_t)out_bar->addr, (uint16_t)out_bar->size);
       if (st != ZX_OK) {
         zxlogf(ERROR, "Failed to map IO window for bar into process: %d", st);
         return st;
@@ -391,17 +393,21 @@ static zx_status_t pci_proxy_create(void* ctx, zx_device_t* parent, const char* 
     return ZX_ERR_BAD_STATE;
   }
 
-  uint32_t index = strtoul(args, NULL, 10);
+  unsigned long index = strtoul(args, NULL, 10);
   zx_pcie_device_info_t info;
   kpci_device_t* device = calloc(1, sizeof(kpci_device_t));
   if (!device) {
     return ZX_ERR_NO_MEMORY;
   }
 
+  if (index > UINT32_MAX) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
   // The channel and index are all we need to make this protocol call and the
   // upper devhost is already fully initialized at this point so we can get
   // our bind information from it.
-  device->index = index;
+  device->index = (uint32_t)index;
   device->pciroot_rpcch = rpcch;
   zx_status_t st = pci_op_get_device_info(device, &info);
   if (st != ZX_OK) {

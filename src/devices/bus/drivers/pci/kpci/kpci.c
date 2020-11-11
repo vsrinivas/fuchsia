@@ -34,7 +34,7 @@ static zx_status_t pci_rpc_reply(zx_handle_t ch, zx_status_t status, zx_handle_t
     return status;
   }
 
-  size_t handle_cnt = 0;
+  uint32_t handle_cnt = 0;
   if (handle && *handle != ZX_HANDLE_INVALID) {
     handle_cnt++;
   }
@@ -224,7 +224,7 @@ const char* const rxrpc_string_tbl[] = {
 #undef LABEL
 static_assert(countof(rxrpc_string_tbl) == PCI_OP_MAX, "rpc string table is not contiguous!");
 
-static inline const char* rpc_op_lbl(uint32_t op) {
+static inline const char* rpc_op_lbl(size_t op) {
   if (op >= PCI_OP_MAX) {
     return "<<INVALID OP>>";
   }
@@ -256,10 +256,10 @@ static zx_status_t kpci_rxrpc(void* ctx, zx_handle_t ch) {
     return ZX_ERR_INTERNAL;
   }
 
-  uint32_t op = req.hdr.ordinal;
+  uint64_t op = req.hdr.ordinal;
   uint32_t id = req.hdr.txid;
   if (op >= PCI_OP_MAX || rxrpc_cbk_tbl[op] == NULL) {
-    KPCIERR("pci[%s]: unsupported rpc op %u", name, op);
+    KPCIERR("pci[%s]: unsupported rpc op %zu", name, op);
     st = ZX_ERR_NOT_SUPPORTED;
     goto err;
   }
@@ -273,14 +273,14 @@ static zx_status_t kpci_rxrpc(void* ctx, zx_handle_t ch) {
     }
   }
 
-  KPCIDBG("pci[%s]: rpc = %#x, op = %s(%u) args '%#02x %#02x %#02x %#02x...'", name, id,
+  KPCIDBG("pci[%s]: rpc = %#x, op = %s(%zu) args '%#02x %#02x %#02x %#02x...'", name, id,
           rpc_op_lbl(op), op, req.data[0], req.data[1], req.data[2], req.data[3]);
   st = rxrpc_cbk_tbl[req.hdr.ordinal](&req, device, ch);
   if (st != ZX_OK) {
     goto err;
   }
 
-  KPCIDBG("pci[%s]: rpc = %#x, op = %s(%u) ZX_OK", name, id, rpc_op_lbl(op), op);
+  KPCIDBG("pci[%s]: rpc = %#x, op = %s(%zu) ZX_OK", name, id, rpc_op_lbl(op), op);
   return st;
 
 err:;
@@ -290,7 +290,7 @@ err:;
   fidl_init_txn_header(&resp.hdr, req.hdr.txid, st);
   zx_handle_close(handle);
 
-  KPCIDBG("pci[%s]: rpc = %#x, op = %s(%u) error %d", name, id, rpc_op_lbl(op), op, st);
+  KPCIDBG("pci[%s]: rpc = %#x, op = %s(%zu) error %d", name, id, rpc_op_lbl(op), op, st);
   return zx_channel_write(ch, 0, &resp, sizeof(resp), NULL, 0);
 }
 
