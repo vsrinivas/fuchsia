@@ -18,19 +18,6 @@ import (
 	"testing"
 )
 
-// newNodeWithSize creates a node with p as name and a specified size.
-func newNodeWithSize(p string, size int64) *Node {
-	n := newNode(p)
-	n.size = size
-	return n
-}
-
-// setChildren sets the children of the given node.
-func withSetChildren(n *Node, children map[string]*Node) *Node {
-	n.children = children
-	return n
-}
-
 func Test_processBlobsJSON(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -130,8 +117,8 @@ func Test_processBlobs(t *testing.T) {
 		{
 			"Adding Asset Blob",
 			map[string]*Blob{"hash": {size: 1}},
-			map[string]*Node{"test.asset": {fullPath: "test.asset", size: 0, copies: 1, children: map[string]*Node{}}},
-			map[string]*Node{"lib/ld.so.1": {fullPath: "lib/ld.so.1", size: 0, copies: 1, children: map[string]*Node{}}},
+			map[string]*Node{"test.asset": {fullPath: "test.asset", size: 0, copies: 1}},
+			map[string]*Node{"lib/ld.so.1": {fullPath: "lib/ld.so.1", size: 0, copies: 1}},
 			[]BlobFromJSON{{Path: "test.asset", Merkle: "hash"}},
 			map[string]*Blob{},
 			1,
@@ -139,8 +126,8 @@ func Test_processBlobs(t *testing.T) {
 		{
 			"Adding Non-asset Blob",
 			map[string]*Blob{"hash": {size: 1, dep: []string{"not used"}}},
-			map[string]*Node{"test.asset": {fullPath: "test.asset", size: 0, copies: 1, children: map[string]*Node{}}},
-			map[string]*Node{"lib/ld.so.1": {fullPath: "lib/ld.so.1", size: 0, copies: 1, children: map[string]*Node{}}},
+			map[string]*Node{"test.asset": {fullPath: "test.asset", size: 0, copies: 1}},
+			map[string]*Node{"lib/ld.so.1": {fullPath: "lib/ld.so.1", size: 0, copies: 1}},
 			[]BlobFromJSON{{Path: "test.notasset", Merkle: "hash"}},
 			map[string]*Blob{"hash": {size: 1, dep: []string{"not used"}}},
 			0,
@@ -283,7 +270,6 @@ func Test_nodeAdd(t *testing.T) {
 		t.Fatalf("the size of the update node (root's grandchild, bar's sibling) is %d; expect 10", update.size)
 	}
 }
-
 func Test_nodeFind(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -293,7 +279,7 @@ func Test_nodeFind(t *testing.T) {
 		{
 			"Find Existing Node",
 			"foo",
-			newNodeWithSize("foo", 10),
+			&Node{"foo", 10, 0, nil, make(map[string]*Node)},
 		},
 		{
 			"Find Nonexistent Node",
@@ -450,53 +436,5 @@ func Test_writeOutputSizes(t *testing.T) {
 	var unmarshalled map[string]int64
 	if err := json.Unmarshal(wroteBytes, &unmarshalled); err != nil {
 		t.Errorf("json.Unmarshal() failed: %v", err)
-	}
-}
-
-func TestCustomDisplay(t *testing.T) {
-	tests := []struct {
-		node     *Node
-		level    int
-		expected string
-	}{
-		{
-			newNodeWithSize("hello", 3*1024*1024),
-			3,
-			"      hello: 3.00 MiB \n",
-		},
-		{
-			newNodeWithDisplay("hashAAAA", displayAsBlob),
-			2,
-			"    Blob ID hashAAAA (0 reuses):\n",
-		},
-		{
-			newNodeWithDisplay("something_not_a_meta", displayAsMeta),
-			2,
-			"    something_not_a_meta\n",
-		},
-		{
-			newNodeWithDisplay("/some/path/a_package.meta/something_else", displayAsMeta),
-			2,
-			"    a_package\n",
-		},
-		{
-			withSetChildren(
-				newNodeWithDisplay("hashAAAA", displayAsBlob),
-				map[string]*Node{
-					"1": newNodeWithDisplay("metaBBBB", displayAsMeta),
-				}),
-			2,
-			"    Blob ID hashAAAA (1 reuses):\n      metaBBBB\n",
-		},
-	}
-	for _, test := range tests {
-		test := test
-		t.Run(test.expected, func(t *testing.T) {
-			t.Parallel()
-			actual := test.node.storageBreakdown(test.level)
-			if test.expected != actual {
-				t.Errorf("custom display mismatch:\nexpected: '%v'\nactual:   '%v'", []byte(test.expected), []byte(actual))
-			}
-		})
 	}
 }
