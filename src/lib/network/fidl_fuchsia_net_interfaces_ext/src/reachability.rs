@@ -62,11 +62,10 @@ pub fn is_globally_routable(
     })
 }
 
-/// Returns a future which resolves when a network interface's properties implies that the internet
-/// is reachable.
+/// Returns a future which resolves when any network interface's properties satisfy
+/// [`is_globally_routable`].
 ///
-/// A watcher is created using `interface_state`, and events are read until a reported network
-/// interface's properties satisfies [`is_globally_routable`].
+/// Network interface property events are consumed from a watcher created via `interface_state`.
 pub fn wait_for_reachability(
     interface_state: &fnet_interfaces::StateProxy,
 ) -> impl futures::Future<Output = Result<(), anyhow::Error>> {
