@@ -14,6 +14,8 @@ set -e
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh || exit $?
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/fx-mkzedboot.sh || exit $?
 
+fx-config-read
+
 force=false
 if [[ "$1" == "-f" ]]; then
   shift
@@ -45,4 +47,9 @@ if [[ -z "${image}" ]]; then
   exit 1
 fi
 
-fx-mkzedboot "${USB_DEVICE}" "${type}" "${image}" $force
+if [[ ! -f "${FUCHSIA_BUILD_DIR}/${image}" ]]; then
+  fx-warn "Cannot find image to run mkzedboot: $image. Attempting to build it..."
+  fx-command-run build "${image}"
+fi
+
+fx-mkzedboot "${USB_DEVICE}" "${type}" "${FUCHSIA_BUILD_DIR}/${image}" $force

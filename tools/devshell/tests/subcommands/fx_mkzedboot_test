@@ -19,6 +19,7 @@ BT_FILE_DEPS=(
 BT_MOCKED_TOOLS=(
    # FX tools.
   "tools/devshell/list-usb-disks"
+  "tools/devshell/build"
 
   # Host tools.
   "prebuilt/tools/cgpt/linux-x64/cgpt"
@@ -67,14 +68,16 @@ EOF
 
 # Ensure that help is displayed if not argument is given.
 TEST_fx-mkzedboot-no-args() {
-  BT_EXPECT_FAIL ${fx} mkzedboot 2> stderr
-  BT_EXPECT_FILE_CONTAINS_SUBSTRING stderr 'device argument required'
+  local out="${BT_TEMP_DIR}/_fx_mkzedboot_output"
+  BT_EXPECT_FAIL ${fx} mkzedboot >"$out" 2>&1
+  BT_EXPECT_FILE_CONTAINS_SUBSTRING "$out" 'device argument required'
 }
 
 # Ensure that invalid USB disks are detected.
 TEST_fx-mkzedboot-invalid-arg() {
-  BT_EXPECT_FAIL ${fx} mkzedboot /xxx/invalid 2> stderr
-  BT_EXPECT_FILE_CONTAINS_SUBSTRING stderr 'does not look like a USB device'
+  local out="${BT_TEMP_DIR}/_fx_mkzedboot_output"
+  BT_EXPECT_FAIL ${fx} mkzedboot /xxx/invalid >"$out" 2>&1
+  BT_EXPECT_FILE_CONTAINS_SUBSTRING "$out" 'does not look like a USB device'
 }
 
 # "force" should allow us to write to something that doesn't look like a USB device.
@@ -82,8 +85,9 @@ TEST_fx-mkzedboot-force-write() {
   # Modify "list-usb-disks" to not return anything as a USB disk.
   echo > ${BT_TEMP_DIR}/tools/devshell/list-usb-disks.mock_stdout
 
+  local out="${BT_TEMP_DIR}/_fx_mkzedboot_output"
   # Force write to the USB drive.
-  BT_EXPECT ${fx} mkzedboot -f ${USB_DRIVE} 2> stderr
+  BT_EXPECT ${fx} mkzedboot -f ${USB_DRIVE} >"$out" 2>&1
 
   # Ensure we wrote to the file.
   source "${BT_TEMP_DIR}/bin/dd.mock_state"
@@ -99,8 +103,9 @@ if [[ "$@" == "--expect-one --type blk mkzedboot" ]] ; then
 fi
 EOF
 
+  local out="${BT_TEMP_DIR}/_fx_mkzedboot_output"
   # Write to /dev/sda
-  BT_ASSERT ${fx} mkzedboot ${USB_DRIVE}
+  BT_ASSERT ${fx} mkzedboot ${USB_DRIVE} >"$out" 2>&1
 
   # Ensure we created the GPT.
   source "${BT_TEMP_DIR}/prebuilt/tools/cgpt/linux-x64/cgpt.mock_state.1"
@@ -118,7 +123,7 @@ EOF
 
   # We should have copied the ESP version of Zedboot.
   source "${BT_TEMP_DIR}/bin/dd.mock_state"
-  BT_EXPECT_STRING_CONTAINS_SUBSTRING "${BT_MOCK_ARGS[*]}" "zedboot.esp.blk"
+  BT_EXPECT_STRING_CONTAINS_SUBSTRING "${BT_MOCK_ARGS[*]}" "out/default/zedboot.esp.blk"
 }
 
 # Write a Chromeboot vboot USB disk
@@ -129,8 +134,9 @@ if [[ "$@" == "--expect-one --type zbi.signed mkzedboot" ]] ; then
   echo "zedboot.vboot"
 fi
 EOF
+  local out="${BT_TEMP_DIR}/_fx_mkzedboot_output"
   # Write to /dev/sda
-  BT_ASSERT ${fx} mkzedboot ${USB_DRIVE}
+  BT_ASSERT ${fx} mkzedboot ${USB_DRIVE} >"$out" 2>&1
 
   # Ensure we created the GPT.
   source "${BT_TEMP_DIR}/prebuilt/tools/cgpt/linux-x64/cgpt.mock_state.1"
@@ -159,7 +165,7 @@ EOF
 
   # We should have copied the Signed ZBI version of Zedboot.
   source "${BT_TEMP_DIR}/bin/dd.mock_state"
-  BT_EXPECT_STRING_CONTAINS_SUBSTRING "${BT_MOCK_ARGS[*]}" "zedboot.vboot"
+  BT_EXPECT_STRING_CONTAINS_SUBSTRING "${BT_MOCK_ARGS[*]}" "out/default/zedboot.vboot"
 }
 
 BT_RUN_TESTS "$@"
