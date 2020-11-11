@@ -144,7 +144,7 @@ const std::list<const UsagePixelFormatCostEntry> kArm_Mali_Cost_Entries = [] {
       llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_ARM_AFBC_16X16,
       llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_ARM_AFBC_32X8};
   for (auto modifier : modifiers) {
-    float cost = 0.0;
+    double cost = 0.0;
     if (!(modifier & llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_ARM_YUV_BIT))
       cost += kNonYuvCost;
     if (!(modifier & llcpp::fuchsia::sysmem2::FORMAT_MODIFIER_ARM_TILED_HEADER_BIT))

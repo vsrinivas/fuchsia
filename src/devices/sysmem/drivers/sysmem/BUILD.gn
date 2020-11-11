@@ -61,9 +61,6 @@ source_set("sysmem_common_srcs") {
     "//zircon/system/ulib/sysmem-make-tracking",
     "//zircon/system/ulib/sysmem-version",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 driver_module("sysmem") {

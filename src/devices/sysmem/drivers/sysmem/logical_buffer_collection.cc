@@ -1430,7 +1430,7 @@ bool LogicalBufferCollection::AccumulateConstraintImageFormats(
   ZX_DEBUG_ASSERT(acc->count());
 
   for (uint32_t ai = 0; ai < acc->count(); ++ai) {
-    uint32_t ci;
+    size_t ci;
     for (ci = 0; ci < c->count(); ++ci) {
       if (ImageFormatIsPixelFormatEqual((*acc)[ai].pixel_format(), (*c)[ci].pixel_format())) {
         if (!AccumulateConstraintImageFormat(&(*acc)[ai], &(*c)[ci])) {
@@ -2012,7 +2012,7 @@ fit::result<zx::vmo> LogicalBufferCollection::AllocateVmo(
   zx::vmo child_vmo;
   // Physical VMOs only support slices where the size (and offset) are page_size aligned,
   // so we should also round up when allocating.
-  uint32_t rounded_size_bytes =
+  size_t rounded_size_bytes =
       fbl::round_up(settings.buffer_settings().size_bytes(), ZX_PAGE_SIZE);
   if (rounded_size_bytes < settings.buffer_settings().size_bytes()) {
     LogError("size_bytes overflows when rounding to multiple of page_size");
@@ -2033,7 +2033,7 @@ fit::result<zx::vmo> LogicalBufferCollection::AllocateVmo(
   zx_status_t status = allocator->Allocate(rounded_size_bytes, name, &raw_parent_vmo);
   if (status != ZX_OK) {
     LogError(
-        "allocator->Allocate failed - size_bytes: %u "
+        "allocator->Allocate failed - size_bytes: %zu "
         "status: %d",
         rounded_size_bytes, status);
     return fit::error();
