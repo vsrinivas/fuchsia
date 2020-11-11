@@ -9,7 +9,11 @@ import("//build/go/go_test.gni")
 go_library("main") {
   source_dir = "cmd"
   deps = [ "//tools/sdk-tools/sdkcommon" ]
-  sources = [ "main.go" ]
+  sources = [
+    "fpublish_test.go",
+    "main.go",
+  ]
+  non_go_deps = [ "//src/sys/pkg/bin/pm:host" ]
 }
 
 go_binary("fpublish") {
