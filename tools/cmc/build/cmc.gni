@@ -9,6 +9,7 @@ template("cmc") {
     forward_variables_from(invoker,
                            [
                              "args",
+                             "depfile",
                              "deps",
                              "inputs",
                              "outputs",

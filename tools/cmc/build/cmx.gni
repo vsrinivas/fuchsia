@@ -102,6 +102,61 @@ template("cmx_merge") {
   }
 }
 
+# Processes a cmx file to add includes.
+#
+# The cmx_include template will add contents from any and all files referenced
+# in the given cmx file under the "include" key. Includes of includes are added
+# recursively.
+#
+# Parameters
+#
+#   manifest (required)
+#     [file] The path to the cmx file that is to be processed
+#
+#   output_name (optional)
+#     [path] Name for the output.
+#     If not specified, the target name is used.
+#
+#   deps (optional)
+#   testonly (optional)
+#   visibility (optional)
+#     Standard GN meaning.
+template("cmx_include") {
+  cmc(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "depfile",
+                             "output_name",
+                             "testonly",
+                             "visibility",
+                           ])
+    if (!defined(output_name)) {
+      output_name = target_name
+    }
+
+    output = "${target_out_dir}/${output_name}"
+    inputs = [ invoker.manifest ]
+    outputs = [ output ]
+
+    args = [
+      "include",
+      rebase_path(invoker.manifest, root_build_dir),
+      "--output",
+      rebase_path(output, root_build_dir),
+      "--includepath",
+      rebase_path("//", root_build_dir),
+    ]
+
+    if (defined(depfile)) {
+      args += [
+        "--depfile",
+        rebase_path(depfile, root_build_dir),
+      ]
+    }
+  }
+}
+
 # Formats a cmx file
 #
 # The cmx_format template will minify the given cmx file if is_debug is set to
@@ -139,9 +194,9 @@ template("cmx_format") {
 
     args = [
       "format",
+      rebase_path(invoker.manifest, root_build_dir),
       "--output",
       rebase_path(formatted_output, root_build_dir),
-      rebase_path(invoker.manifest, root_build_dir),
     ]
 
     if (is_debug) {
@@ -161,10 +216,24 @@ template("cmx_format") {
 #     [path] Name for the output.
 #     If not specified, the target name is used.
 template("cmx") {
-  cmx_validate("${target_name}_validate") {
+  cmx_include("${target_name}_include.cmx") {
     forward_variables_from(invoker,
                            [
+                             "deps",
                              "manifest",
+                             "testonly",
+                           ])
+    depfile = "${target_out_dir}/${target_name}.d"
+    visibility = [ ":*" ]
+  }
+  invoker.deps += [ ":${target_name}_include.cmx" ]
+  included = get_target_outputs(":${target_name}_include.cmx")
+  included = included[0]
+
+  cmx_validate("${target_name}_validate") {
+    manifest = included
+    forward_variables_from(invoker,
+                           [
                              "deps",
                              "testonly",
                            ])
@@ -193,7 +262,7 @@ template("cmx") {
   cmx_merge("${target_name}_merge") {
     sources = [
       cmx_patches,
-      invoker.manifest,
+      included,
     ]
     if (needs_debugdata) {
       sources += [ "//build/config/sanitizers/debugdata.cmx" ]

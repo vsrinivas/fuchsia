@@ -1,4 +1,5 @@
 {
+    include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
     program: {
         binary: "bin/ls_root_pkg",
     },
@@ -9,6 +10,5 @@
             rights: [ "rw*" ],
             path: "/root_pkg",
         },
-        { protocol: "fuchsia.logger.LogSink" },
     ],
 }

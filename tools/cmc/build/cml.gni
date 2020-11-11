@@ -5,7 +5,7 @@
 import("//tools/cmc/build/cmc.gni")
 
 # Compiles a cml file into a cm file.
-# If is_debug is true, pretty-prints the generated cm file.
+# Any "include"s are merged into the cml and produce an intermediate file.
 #
 # Parameters
 #
@@ -20,6 +20,30 @@ import("//tools/cmc/build/cmc.gni")
 #   testonly (optional)
 #   visibility (optional)
 template("cm") {
+  cmc("${target_name}_include") {
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "testonly",
+                             "visibility",
+                           ])
+    inputs = [ invoker.manifest ]
+    output = "${target_out_dir}/${target_name}.cml"
+    outputs = [ output ]
+    depfile = output + ".d"
+
+    args = [
+      "include",
+      rebase_path(invoker.manifest, root_build_dir),
+      "--output",
+      rebase_path(output, root_build_dir),
+      "--includepath",
+      rebase_path("//", root_build_dir),
+      "--depfile",
+      rebase_path(depfile, root_build_dir),
+    ]
+  }
+
   cmc(target_name) {
     forward_variables_from(invoker,
                            [
@@ -33,15 +57,20 @@ template("cm") {
       output_name = target_name
     }
 
+    if (!defined(deps)) {
+      deps = []
+    }
+    deps += [ ":${target_name}_include" ]
+
     compiled_output = "${target_out_dir}/${output_name}"
-    inputs = [ invoker.manifest ]
+    inputs = get_target_outputs(":${target_name}_include")
     outputs = [ compiled_output ]
 
     args = [
       "compile",
+      rebase_path(inputs[0], root_build_dir),
       "--output",
       rebase_path(compiled_output, root_build_dir),
-      rebase_path(invoker.manifest, root_build_dir),
     ]
   }
 }

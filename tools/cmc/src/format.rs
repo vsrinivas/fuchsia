@@ -77,6 +77,7 @@ pub fn format_cml(buffer: String, file: &Path) -> Result<Vec<u8>, Error> {
         options_by_path: hashmap! {
             "/*" => hashset! {
                 PathOption::PropertyNameOrder(vec![
+                    "include",
                     "program",
                     "children",
                     "collections",
