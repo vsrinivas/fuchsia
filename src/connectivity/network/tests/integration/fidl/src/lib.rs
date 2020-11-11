@@ -14,7 +14,7 @@ use fuchsia_async::TimeoutExt as _;
 use anyhow::Context as _;
 use fidl::endpoints::create_endpoints;
 use futures::{FutureExt as _, StreamExt as _, TryFutureExt as _, TryStreamExt as _};
-use net_declare::{fidl_ip, fidl_subnet, std_ip};
+use net_declare::{fidl_ip, fidl_subnet, std_ip, std_socket_addr};
 use netemul::EnvironmentUdpSocket as _;
 use netstack_testing_common::environments::{Netstack, Netstack2, TestSandboxExt as _};
 use netstack_testing_common::{EthertapName as _, Result};
@@ -340,17 +340,23 @@ async fn test_log_packets() -> Result {
 
     stack_log.set_log_packets(true).await.context("failed to enable packet logging")?;
 
-    let localhost_unspecified =
-        std::net::SocketAddr::new(std::net::IpAddr::V4(std::net::Ipv4Addr::LOCALHOST), 0);
-    let sock = fuchsia_async::net::UdpSocket::bind_in_env(&env, localhost_unspecified)
+    let sock = fuchsia_async::net::UdpSocket::bind_in_env(&env, std_socket_addr!(127.0.0.1:0))
         .await
         .context("failed to create socket")?;
 
-    let _: usize = sock.send_to(&[1u8, 2, 3, 4], localhost_unspecified).await?;
+    let addr = sock.local_addr().context("failed to get bound socket address")?;
+
+    const PAYLOAD: [u8; 4] = [1u8, 2, 3, 4];
+    let sent = sock.send_to(&PAYLOAD[..], addr).await.context("send_to failed")?;
+    assert_eq!(sent, PAYLOAD.len());
     log.listen_safe(client_end, None).context("failed to call listen_safe")?;
 
-    let udp_send_pattern = format!("send udp {}", std::net::Ipv4Addr::LOCALHOST);
-    server_end
+    let patterns = ["send", "recv"]
+        .iter()
+        .map(|t| format!("{} udp {} -> {} len:{}", t, addr, addr, PAYLOAD.len()))
+        .collect::<Vec<_>>();
+
+    let stream = server_end
         .into_stream()?
         .map_err(anyhow::Error::new)
         .inspect(|request| {
@@ -369,16 +375,21 @@ async fn test_log_packets() -> Result {
                 Ok(Vec::new())
             }
             Err(err) => Err(err),
+        });
+    let () = async_utils::fold::try_fold_while(stream, patterns, |mut patterns, logs| {
+        let () = patterns.retain(|pattern| !logs.iter().any(|log| log.msg.contains(pattern)));
+        futures::future::ok(if patterns.is_empty() {
+            async_utils::fold::FoldWhile::Done(())
+        } else {
+            async_utils::fold::FoldWhile::Continue(patterns)
         })
-        .try_filter(|logs| {
-            futures::future::ready(logs.iter().any(|log| log.msg.contains(&udp_send_pattern)))
-        })
-        .try_next()
-        .await?
-        .ok_or(anyhow::anyhow!(
-            "got no logs containing \"{}\" in response to fuchsia.logger.Log.ListenSafe",
-            udp_send_pattern
-        ))?;
+    })
+    .await
+    .context("failed to observe expected patterns")?
+    .short_circuited()
+    .map_err(|patterns| {
+        anyhow::anyhow!("log stream ended while still waiting for patterns {:?}", patterns)
+    })?;
 
     Ok(())
 }
