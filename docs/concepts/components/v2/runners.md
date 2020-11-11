@@ -1,6 +1,6 @@
 # Component Runners (Components v2)
 
-{% include "fuchsia-src/concepts/components/_v2_banner.html" %}
+<<../_v2_banner.md>>
 
 A runner is a protocol that provides a runtime environment for components; in
 other words, a runner actually *runs* a component. Some example runners are:

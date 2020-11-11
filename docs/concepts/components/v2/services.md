@@ -1,6 +1,6 @@
 # Services (Components v2)
 
-{% include "fuchsia-src/concepts/components/_v2_banner.html" %}
+<<../_v2_banner.md>>
 
 A service provides a set of [FIDL][FIDL] [protocols][protocol] over a
 [channel].

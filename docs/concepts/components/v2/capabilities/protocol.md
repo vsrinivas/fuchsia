@@ -1,6 +1,6 @@
 # Protocol capabilities (Components v2)
 
-{% include "fuchsia-src/concepts/components/_v2_banner.html" %}
+<<../_v2_banner.md>>
 
 [Protocol capabilities][glossary-protocol] allow components to
 connect to [FIDL protocols][glossary-fidl-protocol] provided either by other

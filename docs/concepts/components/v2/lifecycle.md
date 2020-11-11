@@ -1,6 +1,6 @@
 # Component lifecycle (Components v2)
 
-{% include "fuchsia-src/concepts/components/_v2_banner.html" %}
+<<../_v2_banner.md>>
 
 Component instances progress through four major lifecycle events: create, start,
 stop, and destroy.

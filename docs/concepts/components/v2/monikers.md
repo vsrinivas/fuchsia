@@ -1,6 +1,6 @@
 # Monikers (Components v2)
 
-{% include "fuchsia-src/concepts/components/_v2_banner.html" %}
+<<../_v2_banner.md>>
 
 A moniker identifies a specific component instance in the component tree
 using a topological path.

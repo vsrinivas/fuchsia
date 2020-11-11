@@ -1,6 +1,6 @@
 # Component declarations (Components v2)
 
-{% include "fuchsia-src/concepts/components/_v2_banner.html" %}
+<<../_v2_banner.md>>
 
 A component declaration describes what a component can do, the capabilities
 it uses and exposes, its children, and other information needed to run the

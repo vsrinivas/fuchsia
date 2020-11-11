@@ -1,6 +1,6 @@
 # Directory capabilities (Components v2)
 
-{% include "fuchsia-src/concepts/components/_v2_banner.html" %}
+<<../_v2_banner.md>>
 
 [Directory capabilities][glossary-directory] allow components to connect to
 directories provided by other components.

@@ -1,6 +1,6 @@
 # Event capabilities (Components v2) {#event-capabilities}
 
-{% include "fuchsia-src/concepts/components/_v2_banner.html" %}
+<<../_v2_banner.md>>
 
 Event capabilities allow components receive or offer events under the scope of a
 particular realm.

@@ -1,6 +1,6 @@
 # Troubleshooting components (Components v2) {#troubleshooting-components}
 
-{% include "fuchsia-src/concepts/components/_v2_banner.html" %}
+<<../../../concepts/components/_v1_banner.md>>
 
 This document contains tips for troubleshooting the following kinds of problems
 when using the [component framework][doc-intro]:

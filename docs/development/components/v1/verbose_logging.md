@@ -1,6 +1,6 @@
 # Enable verbose logging for input events (Components v1)
 
-{% include "fuchsia-src/concepts/components/_v1_banner.html" %}
+<<../../../concepts/components/_v1_banner.md>>
 
 Adding extra logging for input event dispatch allows you to see what (and how)
 components are handling event dispatch.
