@@ -7,6 +7,9 @@
 #[allow(bad_style)]
 pub mod fdio_sys;
 
+mod spawn_builder;
+pub use spawn_builder::{Error as SpawnBuilderError, SpawnBuilder};
+
 use {
     ::bitflags::bitflags,
     fidl_fuchsia_device::ControllerSynchronousProxy,

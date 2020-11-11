@@ -1,8 +1,11 @@
 {
     "program": {
-        "binary": "test/fdio_rust_tests"
+        "binary": "bin/fdio_lib_test"
     },
     "sandbox": {
+        "features": [
+            "isolated-temp"
+        ],
         "services": [
             "fuchsia.process.Launcher"
         ]
