@@ -21,6 +21,10 @@ TEST_ITERATION(ZbitlViewFblByteSpanTests, FblByteSpanTestTraits)
 
 TEST_MUTATION(ZbitlViewFblByteSpanTests, FblByteSpanTestTraits)
 
+TEST(ZbitlImageFblByteSpanTests, Appending) {
+  ASSERT_NO_FATAL_FAILURE(TestAppending<FblByteSpanTestTraits>());
+}
+
 TEST(ZbitlViewFblByteArrayTests, DefaultConstructed) {
   ASSERT_NO_FATAL_FAILURE(TestDefaultConstructedView<FblByteArrayTestTraits>());
 }

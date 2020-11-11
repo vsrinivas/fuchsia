@@ -14,6 +14,7 @@ struct StdioTestTraits {
   using storage_type = FILE*;
   using payload_type = long int;
 
+  static constexpr bool kExpectExtensibility = true;
   static constexpr bool kExpectOneshotReads = false;
   static constexpr bool kExpectUnbufferedReads = true;
   static constexpr bool kExpectUnbufferedWrites = false;

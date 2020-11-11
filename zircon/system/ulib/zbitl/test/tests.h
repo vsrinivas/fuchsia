@@ -85,6 +85,8 @@ constexpr auto Next = [](auto it) { return ++it; };
 //     for reading a payload of a given size into a string, where
 //     `payload_type` coincides with
 //     `zbitl::StorageTraits<storage_type>::payload_type`.
+//   * a static constexpr bool `kExpectExtensibility` giving the expectation of
+//     whether storage capacity can be extended.
 //   * a static constexpr bool `kExpectOneshotReads` giving the expectation of
 //     whether whole payloads can be accessed in memory directly.
 //   * a static constexpr bool `kExpectUnbufferedReads` giving the expectation of
@@ -820,8 +822,22 @@ template <typename TestTraits>
 void TestAppending() {
   using Storage = typename TestTraits::storage_type;
 
+  const Bytes to_append[] = {
+      "",
+      "aligned ",
+      "unaligned",
+  };
+
+  // The expected resulting size from appending items corresponding to the
+  // entries in `to_append`, once per `Append` method.
+  constexpr size_t kExpectedFinalSize = 272;
+
+  // For extensible storage, we expect the capacity to increase as needed
+  // during Image operations.
+  constexpr size_t kInitialSize = TestTraits::kExpectExtensibility ? 0 : kExpectedFinalSize;
+
   typename TestTraits::Context context;
-  ASSERT_NO_FATAL_FAILURE(TestTraits::Create(0, &context));
+  ASSERT_NO_FATAL_FAILURE(TestTraits::Create(kInitialSize, &context));
   // Checking::kCrc will help ensure that we are appending items with valid
   // CRC32s in the append-with-payload API.
   zbitl::CrcCheckingImage<Storage> image(context.TakeStorage());
@@ -833,12 +849,6 @@ void TestAppending() {
     ASSERT_FALSE(clear_result.is_error()) << ViewErrorString(std::move(clear_result).error_value());
     ASSERT_EQ(image.end(), image.begin());  // Is indeed empty.
   }
-
-  const Bytes to_append[] = {
-      "",
-      "aligned ",
-      "unaligned",
-  };
 
   // Append-with-payload.
   for (const Bytes& bytes : to_append) {
@@ -917,6 +927,20 @@ void TestAppending() {
     }
   }
   EXPECT_EQ(image.end(), it);
+  EXPECT_EQ(kExpectedFinalSize, image.size_bytes());
+
+  // If we are dealing with non-extensible storage, attempting to append
+  // again should result in an error.
+  if constexpr (!TestTraits::kExpectExtensibility) {
+    {
+      auto result = image.Append(zbi_header_t{.type = kItemType}, zbitl::ByteView{});
+      EXPECT_TRUE(result.is_error());
+    }
+    {
+      auto result = image.Append(zbi_header_t{.type = kItemType, .length = 0});
+      EXPECT_TRUE(result.is_error());
+    }
+  }
 
   {
     auto result = image.take_error();

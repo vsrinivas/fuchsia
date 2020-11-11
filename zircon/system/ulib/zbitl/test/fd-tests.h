@@ -15,6 +15,7 @@ struct FdTestTraits {
   using payload_type = off_t;
 
   static constexpr bool kDefaultConstructedViewHasStorageError = true;
+  static constexpr bool kExpectExtensibility = true;
   static constexpr bool kExpectOneshotReads = false;
   static constexpr bool kExpectUnbufferedReads = true;
   static constexpr bool kExpectUnbufferedWrites = false;

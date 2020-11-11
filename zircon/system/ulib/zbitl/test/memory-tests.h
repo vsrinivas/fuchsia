@@ -15,6 +15,7 @@ struct FblSpanTestTraits {
   using payload_type = storage_type;
 
   static constexpr bool kDefaultConstructedViewHasStorageError = false;
+  static constexpr bool kExpectExtensibility = false;
   static constexpr bool kExpectOneshotReads = true;
   static constexpr bool kExpectUnbufferedReads = true;
   static constexpr bool kExpectUnbufferedWrites = !std::is_const_v<T>;
@@ -66,6 +67,7 @@ struct FblArrayTestTraits {
   using SpanTraits = FblSpanTestTraits<T>;
 
   static constexpr bool kDefaultConstructedViewHasStorageError = false;
+  static constexpr bool kExpectExtensibility = true;
   static constexpr bool kExpectOneshotReads = true;
   static constexpr bool kExpectUnbufferedReads = true;
   static constexpr bool kExpectUnbufferedWrites = !std::is_const_v<T>;

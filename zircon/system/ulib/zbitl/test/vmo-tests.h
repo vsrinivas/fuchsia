@@ -17,6 +17,7 @@ struct VmoTestTraits {
   using creation_traits = VmoTestTraits;
 
   static constexpr bool kDefaultConstructedViewHasStorageError = true;
+  static constexpr bool kExpectExtensibility = true;
   static constexpr bool kExpectOneshotReads = false;
   static constexpr bool kExpectUnbufferedReads = true;
   static constexpr bool kExpectUnbufferedWrites = false;
@@ -62,6 +63,7 @@ struct UnownedVmoTestTraits {
   using creation_traits = VmoTestTraits;
 
   static constexpr bool kDefaultConstructedViewHasStorageError = true;
+  static constexpr bool kExpectExtensibility = true;
   static constexpr bool kExpectOneshotReads = false;
   static constexpr bool kExpectUnbufferedReads = true;
   static constexpr bool kExpectUnbufferedWrites = false;
@@ -107,6 +109,7 @@ struct MapOwnedVmoTestTraits {
   using creation_traits = MapOwnedVmoTestTraits;
 
   static constexpr bool kDefaultConstructedViewHasStorageError = true;
+  static constexpr bool kExpectExtensibility = true;
   static constexpr bool kExpectOneshotReads = true;
   static constexpr bool kExpectUnbufferedReads = true;
   static constexpr bool kExpectUnbufferedWrites = true;
@@ -149,6 +152,7 @@ struct MapUnownedVmoTestTraits {
   using creation_traits = MapOwnedVmoTestTraits;
 
   static constexpr bool kDefaultConstructedViewHasStorageError = true;
+  static constexpr bool kExpectExtensibility = true;
   static constexpr bool kExpectOneshotReads = true;
   static constexpr bool kExpectUnbufferedReads = true;
   static constexpr bool kExpectUnbufferedWrites = true;
