@@ -81,6 +81,8 @@ class WlanInterface {
   zx_status_t SetMulticastPromisc(bool enable);
   void DataQueueTx(uint32_t options, ethernet_netbuf_t* netbuf,
                    ethernet_impl_queue_tx_callback completion_cb, void* cookie);
+  void SaeHandshakeResp(const wlanif_sae_handshake_resp_t* resp);
+  void SaeFrameTx(const wlanif_sae_frame_t* frame);
 
  private:
   WlanInterface();

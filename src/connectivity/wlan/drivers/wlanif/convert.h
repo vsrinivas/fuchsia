@@ -6,8 +6,10 @@
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_WLANIF_CONVERT_H_
 
 #include <fuchsia/wlan/mlme/cpp/fidl.h>
+#include <net/ethernet.h>
 
 #include <ddk/protocol/wlanif.h>
+#include <wlan/protocol/mac.h>
 
 namespace wlanif {
 
@@ -70,6 +72,11 @@ uint32_t ConvertMgmtCaptureFlags(::fuchsia::wlan::mlme::MgmtFrameCaptureFlags fi
 ::fuchsia::wlan::mlme::MgmtFrameCaptureFlags ConvertMgmtCaptureFlags(uint32_t ddk_flags);
 void ConvertRates(::std::vector<uint8_t>* rates, const wlanif_bss_description_t& wlanif_desc);
 
+void ConvertSaeAuthFrame(const ::fuchsia::wlan::mlme::SaeFrame& frame_in,
+                         wlanif_sae_frame_t* frame_out);
+
+void ConvertSaeAuthFrame(const wlanif_sae_frame_t* frame_in,
+                         ::fuchsia::wlan::mlme::SaeFrame& frame_out);
 }  // namespace wlanif
 
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_WLANIF_CONVERT_H_

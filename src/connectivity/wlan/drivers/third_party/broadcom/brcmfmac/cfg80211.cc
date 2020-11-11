@@ -4398,6 +4398,13 @@ void brcmf_if_data_queue_tx(net_device* ndev, uint32_t options, ethernet_netbuf_
   brcmf_netdev_start_xmit(ndev, std::move(b));
 }
 
+void brcmf_if_sae_handshake_resp(net_device* ndev, const wlanif_sae_handshake_resp_t* resp) {
+  // TODO(fxb/52234) Implement
+}
+void brcmf_if_sae_frame_tx(net_device* ndev, const wlanif_sae_frame_t* frame) {
+  // TODO(fxb/52234) Implement
+}
+
 zx_status_t brcmf_if_set_multicast_promisc(net_device* ndev, bool enable) {
   BRCMF_DBG(WLANIF, "%s promiscuous mode", enable ? "Enabling" : "Disabling");
   ndev->multicast_promisc = enable;

@@ -262,6 +262,21 @@ struct WlanifEapolReq {
     vector<uint8> data;
 };
 
+/// This struct is sent from SME to wlanif, indicating the result of SAE handshake process.
+struct WlanifSaeHandshakeResp {
+   array<uint8>:MAC_ARRAY_LENGTH peer_sta_address;
+   WlanAuthResult result_code;
+};
+
+/// This struct is sent in both directions, containing the information of SAE authentication
+/// frames, sae_fields maps to challenge text, see IEEE Std 802.11-2016, 9.3.3.12.
+struct WlanifSaeFrame {
+   array<uint8>:MAC_ARRAY_LENGTH peer_sta_address;
+   WlanAuthResult result_code;
+   uint16 seq_num;
+   vector<uint8> sae_fields;
+};
+
 /// Bits used to request management frame subtypes to be captured. Also used by driver to indicate
 /// which management frame subtypes are supported for capture.
 ///
@@ -429,6 +444,10 @@ struct WlanifEapolIndication {
     array<uint8>:MAC_ARRAY_LENGTH src_addr;
     array<uint8>:MAC_ARRAY_LENGTH dst_addr;
     vector<uint8> data;
+};
+
+struct WlanifSaeHandshakeInd {
+    array<uint8>:MAC_ARRAY_LENGTH peer_sta_address;
 };
 
 struct WlanifBandCapabilities {
@@ -708,6 +727,8 @@ protocol WlanifImplIfc {
     StatsQueryResp(WlanifStatsQueryResponse resp) -> ();
     RelayCapturedFrame(WlanifCapturedFrameResult result) -> ();
     OnPmkAvailable(WlanifPmkInfo info) -> ();
+    SaeHandshakeInd(WlanifSaeHandshakeInd ind) -> ();
+    SaeFrameRx(WlanifSaeFrame frame) -> ();
 
     // Data operations
     DataRecv(vector<voidptr> data, uint32 flags) -> ();
@@ -742,6 +763,8 @@ protocol WlanifImpl {
     StatsQueryReq() -> ();
     StartCaptureFrames(WlanifStartCaptureFramesReq req) -> (WlanifStartCaptureFramesResp resp);
     StopCaptureFrames() -> ();
+    SaeHandshakeResp(WlanifSaeHandshakeResp resp) -> ();
+    SaeFrameTx(WlanifSaeFrame frame) -> ();
 
     // Configuration operations
     SetMulticastPromisc(bool enable) -> (zx.status status);

@@ -98,6 +98,12 @@ static wlanif_impl_ifc_protocol_ops_t wlanif_impl_ifc_ops = {
         },
     .on_pmk_available = [](void* cookie,
                            const wlanif_pmk_info_t* ind) { DEV(cookie)->OnPmkAvailable(ind); },
+    .sae_handshake_ind =
+        [](void* cookie, const wlanif_sae_handshake_ind_t* ind) {
+          DEV(cookie)->SaeHandshakeInd(ind);
+        },
+    .sae_frame_rx = [](void* cookie,
+                       const wlanif_sae_frame_t* ind) { DEV(cookie)->SaeFrameRx(ind); },
 
     // Ethernet operations
     .data_recv = [](void* cookie, const void* data, size_t length,
@@ -563,6 +569,9 @@ void Device::QueryDeviceInfo(QueryDeviceInfoCallback cb) {
   if (query_info_.driver_features & WLAN_INFO_DRIVER_FEATURE_DFS) {
     fidl_resp.driver_features.push_back(wlan_common::DriverFeature::DFS);
   }
+  if (query_info_.driver_features & WLAN_INFO_DRIVER_FEATURE_SAE_SME_AUTH) {
+    fidl_resp.driver_features.push_back(wlan_common::DriverFeature::SAE_SME_AUTH);
+  }
   if (query_info_.driver_features & WLAN_INFO_DRIVER_FEATURE_PROBE_RESP_OFFLOAD) {
     fidl_resp.driver_features.push_back(wlan_common::DriverFeature::PROBE_RESP_OFFLOAD);
   }
@@ -647,11 +656,17 @@ void Device::StartCaptureFrames(::fuchsia::wlan::mlme::StartCaptureFramesRequest
 void Device::StopCaptureFrames() { wlanif_impl_stop_capture_frames(&wlanif_impl_); }
 
 void Device::SaeHandshakeResp(::fuchsia::wlan::mlme::SaeHandshakeResponse resp) {
-  // TODO(fxbug.dev/40006): Implement.
+  wlanif_sae_handshake_resp_t handshake_resp = {};
+
+  memcpy(handshake_resp.peer_sta_address, resp.peer_sta_address.data(), ETH_ALEN);
+  handshake_resp.result_code = ConvertAuthResultCode(resp.result_code);
+  wlanif_impl_sae_handshake_resp(&wlanif_impl_, &handshake_resp);
 }
 
 void Device::SaeFrameTx(::fuchsia::wlan::mlme::SaeFrame frame) {
-  // TODO(fxbug.dev/40006): Implement.
+  wlanif_sae_frame_t sae_frame = {};
+  ConvertSaeAuthFrame(frame, &sae_frame);
+  wlanif_impl_sae_frame_tx(&wlanif_impl_, &sae_frame);
 }
 
 void Device::OnScanResult(const wlanif_scan_result_t* result) {
@@ -938,6 +953,29 @@ void Device::OnChannelSwitched(const wlanif_channel_switch_info_t* info) {
   fidl_info.new_channel = info->new_channel;
 
   binding_.events().OnChannelSwitched(fidl_info);
+}
+
+void Device::SaeHandshakeInd(const wlanif_sae_handshake_ind_t* ind) {
+  std::lock_guard<std::mutex> lock(lock_);
+  if (!binding_.is_bound()) {
+    return;
+  }
+
+  wlan_mlme::SaeHandshakeIndication fidl_ind;
+
+  memcpy(fidl_ind.peer_sta_address.data(), ind->peer_sta_address, ETH_ALEN);
+  binding_.events().OnSaeHandshakeInd(fidl_ind);
+}
+
+void Device::SaeFrameRx(const wlanif_sae_frame_t* frame) {
+  std::lock_guard<std::mutex> lock(lock_);
+  if (!binding_.is_bound()) {
+    return;
+  }
+
+  wlan_mlme::SaeFrame fidl_frame;
+  ConvertSaeAuthFrame(frame, fidl_frame);
+  binding_.events().OnSaeFrameRx(std::move(fidl_frame));
 }
 
 void Device::SignalReport(const wlanif_signal_report_indication_t* ind) {

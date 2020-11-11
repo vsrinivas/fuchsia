@@ -4,8 +4,6 @@
 
 #include "convert.h"
 
-#include <net/ethernet.h>
-
 #include <algorithm>
 #include <bitset>
 #include <memory>
@@ -13,9 +11,7 @@
 #include <ddk/hw/wlan/wlaninfo.h>
 #include <wlan/common/band.h>
 #include <wlan/common/logging.h>
-#include <wlan/protocol/mac.h>
 
-#include "ddk/protocol/wlanif.h"
 #include "fuchsia/wlan/stats/cpp/fidl.h"
 
 namespace wlanif {
@@ -1148,6 +1144,27 @@ wlan_mlme::MgmtFrameCaptureFlags ConvertMgmtCaptureFlags(uint32_t ddk_flags) {
     ret_flags |= static_cast<uint32_t>(wlan_mlme::MgmtFrameCaptureFlags::ACTION_NO_ACK);
   }
   return static_cast<wlan_mlme::MgmtFrameCaptureFlags>(ret_flags);
+}
+
+void ConvertSaeAuthFrame(const ::fuchsia::wlan::mlme::SaeFrame& frame_in,
+                         wlanif_sae_frame_t* frame_out) {
+  memcpy(frame_out->peer_sta_address, frame_in.peer_sta_address.data(), ETH_ALEN);
+  frame_out->result_code = ConvertAuthResultCode(frame_in.result_code);
+  frame_out->seq_num = frame_in.seq_num;
+
+  frame_out->sae_fields_count = frame_in.sae_fields.size();
+  frame_out->sae_fields_list = frame_in.sae_fields.data();
+}
+
+void ConvertSaeAuthFrame(const wlanif_sae_frame_t* frame_in,
+                         ::fuchsia::wlan::mlme::SaeFrame& frame_out) {
+  memcpy(frame_out.peer_sta_address.data(), frame_in->peer_sta_address, ETH_ALEN);
+  frame_out.result_code = ConvertAuthResultCode(frame_in->result_code);
+  frame_out.seq_num = frame_in->seq_num;
+
+  frame_out.sae_fields.resize(frame_in->sae_fields_count);
+  frame_out.sae_fields.assign(frame_in->sae_fields_list,
+                              frame_in->sae_fields_list + frame_in->sae_fields_count);
 }
 
 }  // namespace wlanif

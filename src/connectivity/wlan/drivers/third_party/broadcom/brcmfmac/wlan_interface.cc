@@ -113,6 +113,14 @@ wlanif_impl_protocol_ops_t wlan_interface_proto_ops = {
         },
     .stop_capture_frames =
         [](void* ctx) { return static_cast<WlanInterface*>(ctx)->StopCaptureFrames(); },
+    .sae_handshake_resp =
+        [](void* ctx, const wlanif_sae_handshake_resp_t* resp) {
+          return static_cast<WlanInterface*>(ctx)->SaeHandshakeResp(resp);
+        },
+    .sae_frame_tx =
+        [](void* ctx, const wlanif_sae_frame_t* frame) {
+          return static_cast<WlanInterface*>(ctx)->SaeFrameTx(frame);
+        },
     .set_multicast_promisc =
         [](void* ctx, bool enable) {
           return static_cast<WlanInterface*>(ctx)->SetMulticastPromisc(enable);
@@ -507,6 +515,14 @@ void WlanInterface::DataQueueTx(uint32_t options, ethernet_netbuf_t* netbuf,
     // We must fire the completion callback even if the device is being torn down.
     completion_cb(cookie, ZX_ERR_BAD_STATE, netbuf);
   }
+}
+
+void WlanInterface::SaeHandshakeResp(const wlanif_sae_handshake_resp_t* resp) {
+  brcmf_if_sae_handshake_resp(wdev_->netdev, resp);
+}
+
+void WlanInterface::SaeFrameTx(const wlanif_sae_frame_t* frame) {
+  brcmf_if_sae_frame_tx(wdev_->netdev, frame);
 }
 
 WlanInterface::WlanInterface() : zx_device_(nullptr), wdev_(nullptr), device_(nullptr) {}
