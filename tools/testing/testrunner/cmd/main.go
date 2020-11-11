@@ -284,7 +284,9 @@ func execute(ctx context.Context, tests []testsharder.Test, outputs *testOutputs
 	finalize := func(t tester, sinks []runtests.DataSinkReference) error {
 		if t != nil {
 			if err := t.RunSnapshot(ctx, snapshotFile); err != nil {
-				return err
+				// This error usually has a different root cause that gets masked when we
+				// return this error. Log it so we can keep track of it, but don't fail.
+				logger.Errorf(ctx, err.Error())
 			}
 			if err := t.EnsureSinks(ctx, sinks); err != nil {
 				return err
