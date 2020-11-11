@@ -58,7 +58,6 @@ isolated_devmgr_component("fs-management-devmgr") {
     "--search_driver=/boot/driver",
     "--search_driver=/boot/driver/test",
     "--wait_for=misc/ramctl",
-    "--enable_block_watcher",
   ]
 
   deps = [
