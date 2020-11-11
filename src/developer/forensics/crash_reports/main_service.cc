@@ -29,32 +29,26 @@ std::unique_ptr<MainService> MainService::TryCreate(async_dispatcher_t* dispatch
                                                     std::shared_ptr<sys::ServiceDirectory> services,
                                                     timekeeper::Clock* clock,
                                                     std::shared_ptr<InfoContext> info_context) {
-  auto config = std::make_unique<Config>();
-
-  // We use the default config included in the package of this component if no override config was
-  // specified or if we failed to parse the override config.
-  bool use_default_config = true;
-
+  std::optional<Config> config_opt = std::nullopt;
   if (files::IsFile(kOverrideConfigPath)) {
-    use_default_config = false;
-    if (const zx_status_t status = ParseConfig(kOverrideConfigPath, config.get());
-        status != ZX_OK) {
-      // We failed to parse the override config: fall back to the default config.
-      use_default_config = true;
-      FX_PLOGS(ERROR, status) << "Failed to read override config file at " << kOverrideConfigPath
-                              << " - falling back to default config file";
+    if (config_opt = ParseConfig(kOverrideConfigPath); !config_opt.has_value()) {
+      FX_LOGS(ERROR) << "Failed to read override config file at " << kOverrideConfigPath
+                     << " - falling back to default config file";
     }
   }
 
-  // Either there was no override config or we failed to parse it.
-  if (use_default_config) {
-    if (const zx_status_t status = ParseConfig(kDefaultConfigPath, config.get()); status != ZX_OK) {
-      FX_PLOGS(ERROR, status) << "Failed to read default config file at " << kDefaultConfigPath;
+  if (!config_opt.has_value()) {
+    if (config_opt = ParseConfig(kDefaultConfigPath); !config_opt.has_value()) {
+      FX_LOGS(ERROR) << "Failed to read default config file at " << kDefaultConfigPath;
 
       FX_LOGS(FATAL) << "Failed to set up main service";
       return nullptr;
     }
   }
+
+  // Either there was no override config or we failed to parse it.
+  auto config = std::make_unique<Config>();
+  *config = std::move(config_opt.value());
 
   return MainService::TryCreate(dispatcher, std::move(services), clock, std::move(info_context),
                                 std::move(config));

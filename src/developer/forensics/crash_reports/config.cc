@@ -7,6 +7,7 @@
 #include <lib/syslog/cpp/macros.h>
 #include <zircon/errors.h>
 
+#include <memory>
 #include <optional>
 
 #include "src/developer/forensics/crash_reports/constants.h"
@@ -86,59 +87,61 @@ bool CheckAgainstSchema(rapidjson::Document& doc) {
   return true;
 }
 
-template <typename JsonObject>
-bool ParseCrashReporterConfig(const JsonObject& obj,
-                              std::optional<uint64_t>* daily_per_product_quota) {
-  if (obj.HasMember(kDailyPerProductQuotaKey)) {
-    *daily_per_product_quota = obj[kDailyPerProductQuotaKey].GetUint64();
-  } else {
-    *daily_per_product_quota = std::nullopt;
+// Functions for parsing the config _after_ |doc| has been checked against the schema.
+//
+// These functions will crash if |doc| is is malformed.
+std::optional<uint64_t> ParseCrashReporterConfig(const rapidjson::Document& doc) {
+  if (!doc.HasMember(kCrashReporterKey)) {
+    return std::nullopt;
   }
-  return true;
+
+  return doc[kCrashReporterKey][kDailyPerProductQuotaKey].GetUint64();
 }
 
-template <typename JsonObject>
-bool ParseCrashServerConfig(const JsonObject& obj, CrashServerConfig* config) {
-  CrashServerConfig local_config;
+std::optional<CrashServerConfig> ParseCrashServerConfig(const rapidjson::Document& doc) {
+  CrashServerConfig config;
 
-  bool should_expect_url = true;
-
-  const std::string upload_policy = obj[kCrashServerUploadPolicyKey].GetString();
+  const std::string upload_policy = doc[kCrashServerKey][kCrashServerUploadPolicyKey].GetString();
   if (upload_policy == "disabled") {
-    local_config.upload_policy = CrashServerConfig::UploadPolicy::DISABLED;
-    should_expect_url = false;
+    config.upload_policy = CrashServerConfig::UploadPolicy::DISABLED;
   } else if (upload_policy == "enabled") {
-    local_config.upload_policy = CrashServerConfig::UploadPolicy::ENABLED;
+    config.upload_policy = CrashServerConfig::UploadPolicy::ENABLED;
   } else if (upload_policy == "read_from_privacy_settings") {
-    local_config.upload_policy = CrashServerConfig::UploadPolicy::READ_FROM_PRIVACY_SETTINGS;
+    config.upload_policy = CrashServerConfig::UploadPolicy::READ_FROM_PRIVACY_SETTINGS;
   } else {
-    // This should not be possible as we have checked the config against the schema.
     FX_LOGS(ERROR) << "unknown upload policy " << upload_policy;
-    return false;
+    return std::nullopt;
   }
 
-  if (should_expect_url) {
-    if (!obj.HasMember(kCrashServerUrlKey)) {
-      FX_LOGS(ERROR) << "missing crash server URL in config with upload not disabled";
-      return false;
-    }
-    local_config.url = std::make_unique<std::string>(obj[kCrashServerUrlKey].GetString());
-  } else if (obj.HasMember(kCrashServerUrlKey)) {
+  config.url = nullptr;
+  if (doc[kCrashServerKey].HasMember(kCrashServerUrlKey)) {
+    config.url =
+        std::make_unique<std::string>(doc[kCrashServerKey][kCrashServerUrlKey].GetString());
+  }
+
+  if ((config.upload_policy == CrashServerConfig::UploadPolicy::ENABLED ||
+       config.upload_policy == CrashServerConfig::UploadPolicy::READ_FROM_PRIVACY_SETTINGS) &&
+      !config.url) {
+    FX_LOGS(ERROR) << "missing crash server URL in config with upload not disabled";
+    return std::nullopt;
+  }
+
+  if (config.upload_policy == CrashServerConfig::UploadPolicy::DISABLED && config.url) {
     FX_LOGS(WARNING) << "crash server URL set in config with upload disabled, "
                         "ignoring value";
+    config.url = nullptr;
   }
 
-  *config = std::move(local_config);
-  return true;
+  return config;
 }
 
 }  // namespace
 
-zx_status_t ParseConfig(const std::string& filepath, Config* config) {
+std::optional<Config> ParseConfig(const std::string& filepath) {
   std::string json;
   if (!files::ReadFileToString(filepath, &json)) {
     FX_LOGS(ERROR) << "error reading config file at " << filepath;
-    return ZX_ERR_IO;
+    return std::nullopt;
   }
 
   rapidjson::Document doc;
@@ -146,36 +149,26 @@ zx_status_t ParseConfig(const std::string& filepath, Config* config) {
   if (!ok) {
     FX_LOGS(ERROR) << "error parsing config as JSON at offset " << ok.Offset() << " "
                    << rapidjson::GetParseError_En(ok.Code());
-    return ZX_ERR_INTERNAL;
+    return std::nullopt;
   }
 
   if (!CheckAgainstSchema(doc)) {
-    return ZX_ERR_INTERNAL;
+    return std::nullopt;
   }
 
-  // We use a local config to only set the out argument after all the checks.
-  Config local_config;
-
-  // It is safe to directly access the fields for which the keys are marked as required as we have
-  // checked the config against the schema.
-  if (!ParseCrashServerConfig(doc[kCrashServerKey].GetObject(), &local_config.crash_server)) {
-    return ZX_ERR_INTERNAL;
-  }
-
-  if (!doc.HasMember(kCrashReporterKey)) {
-    local_config.daily_per_product_quota = std::nullopt;
-  } else if (!ParseCrashReporterConfig(doc[kCrashReporterKey].GetObject(),
-                                       &local_config.daily_per_product_quota)) {
-    return ZX_ERR_INTERNAL;
+  Config config{.daily_per_product_quota = ParseCrashReporterConfig(doc)};
+  if (auto crash_server = ParseCrashServerConfig(doc); crash_server.has_value()) {
+    config.crash_server = std::move(crash_server.value());
+  } else {
+    return std::nullopt;
   }
 
   // If crash reports won't be uploaded, there shouldn't be a quota in the config.
-  if (local_config.crash_server.upload_policy == CrashServerConfig::UploadPolicy::DISABLED) {
-    FX_CHECK(local_config.daily_per_product_quota == std::nullopt);
+  if (config.crash_server.upload_policy == CrashServerConfig::UploadPolicy::DISABLED) {
+    FX_CHECK(config.daily_per_product_quota == std::nullopt);
   }
 
-  *config = std::move(local_config);
-  return ZX_OK;
+  return config;
 }
 
 std::string ToString(const CrashServerConfig::UploadPolicy upload_policy) {

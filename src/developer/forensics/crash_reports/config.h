@@ -45,8 +45,8 @@ struct Config {
   std::optional<uint64_t> daily_per_product_quota;
 };
 
-// Parses the JSON config at |filepath| as |config|.
-zx_status_t ParseConfig(const std::string& filepath, Config* config);
+// Parses the JSON config at |filepath|. Returns std::nullopt if an error occurs.
+std::optional<Config> ParseConfig(const std::string& filepath);
 
 // Returns the string version of the enum.
 std::string ToString(CrashServerConfig::UploadPolicy upload_policy);
