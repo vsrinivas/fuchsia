@@ -156,14 +156,15 @@ async fn check_and_set_system_health() {
 }
 
 async fn check_and_set_system_health_impl() -> Result<(), Error> {
-    system_health_check::check_system_health().await?;
-
     let paver = fuchsia_component::client::connect_to_service::<PaverMarker>()?;
     let (boot_manager, boot_manager_server_end) = fidl::endpoints::create_proxy()?;
 
     paver
         .find_boot_manager(boot_manager_server_end)
         .context("transport error while calling find_boot_manager()")?;
-
-    system_health_check::set_active_configuration_healthy(&boot_manager).await
+    // NOTE(fxbug.dev/63642): The docs for check_and_set_system_health say that we should respond to
+    // an error here by rebooting, but we'll be refactoring this away Soon™, so for now we just log
+    // it.
+    system_health_check::check_and_set_system_health(&boot_manager).await?;
+    Ok(())
 }

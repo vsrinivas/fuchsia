@@ -215,8 +215,8 @@ async fn test_calls_paver_service() {
     assert_eq!(
         env.proxies.paver_events.take(2).collect::<Vec<PaverEvent>>().await,
         vec![
-            PaverEvent::QueryActiveConfiguration,
-            PaverEvent::SetConfigurationHealthy { configuration: Configuration::A }
+            PaverEvent::QueryCurrentConfiguration,
+            PaverEvent::QueryConfigurationStatus { configuration: Configuration::A }
         ]
     );
 }
@@ -228,7 +228,7 @@ async fn test_channel_provider_get_current_works_after_paver_service_fails() {
 
     assert_eq!(
         env.proxies.paver_events.take(1).collect::<Vec<PaverEvent>>().await,
-        vec![PaverEvent::QueryActiveConfiguration]
+        vec![PaverEvent::QueryCurrentConfiguration]
     );
 
     assert_eq!(
@@ -244,7 +244,7 @@ async fn test_update_manager_check_now_works_after_paver_service_fails() {
 
     assert_eq!(
         env.proxies.paver_events.take(1).collect::<Vec<PaverEvent>>().await,
-        vec![PaverEvent::QueryActiveConfiguration]
+        vec![PaverEvent::QueryCurrentConfiguration]
     );
 
     let (client_end, request_stream) =

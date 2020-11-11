@@ -23,13 +23,12 @@ rustc_library("system-health-check") {
     "//third_party/rust_crates:thiserror",
   ]
 
-  test_deps = [ "//src/sys/pkg/testing/mock-paver" ]
-
-  sources = [
-    "src/check.rs",
-    "src/lib.rs",
-    "src/mark.rs",
+  test_deps = [
+    "//src/sys/pkg/testing/mock-paver",
+    "//third_party/rust_crates:matches",
   ]
+
+  sources = [ "src/lib.rs" ]
 }
 
 fuchsia_unittest_package("system-health-check-tests") {

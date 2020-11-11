@@ -337,46 +337,51 @@ impl MockCache {
     }
 }
 
-// Test will hang if omaha-client does not call set_configuration_healthy on the paver service.
+// Test will hang if omaha-client does not contact the paver service.
 #[fasync::run_singlethreaded(test)]
-async fn test_calls_set_configuration_healthy() {
-    let (send, recv) = oneshot::channel();
-    let send = Mutex::new(Some(send));
+async fn test_calls_paver_service() {
+    let (send, recv) = mpsc::unbounded();
     let paver = MockPaverServiceBuilder::new()
-        .call_hook(move |event| {
-            match event {
-                PaverEvent::SetConfigurationHealthy { configuration } => {
-                    send.lock().take().unwrap().send(*configuration).unwrap();
-                }
-                _ => {}
-            }
-            Status::OK
-        })
+        .current_config(Configuration::A)
+        .event_hook(move |e| send.unbounded_send(e.to_owned()).expect("channel stayed open"))
         .build();
     let _env = TestEnvBuilder::new().paver(paver).build();
 
-    // wait for the call hook to notify `send`.
-    assert_matches!(recv.await, Ok(Configuration::A));
+    assert_eq!(
+        recv.take(5).collect::<Vec<PaverEvent>>().await,
+        vec![
+            PaverEvent::QueryCurrentConfiguration,
+            PaverEvent::QueryConfigurationStatus { configuration: Configuration::A },
+            PaverEvent::SetConfigurationHealthy { configuration: Configuration::A },
+            PaverEvent::SetConfigurationUnbootable { configuration: Configuration::B },
+            PaverEvent::BootManagerFlush
+        ]
+    );
 }
 
-// Test will hang if omaha-client does not call set_configuration_healthy on the paver service.
+// Test will hang if omaha-client does not contact the paver service.
 #[fasync::run_singlethreaded(test)]
-async fn test_update_manager_checknow_works_after_set_configuration_healthy_fails() {
-    let (send, recv) = oneshot::channel();
-    let send = Mutex::new(Some(send));
+async fn test_update_manager_checknow_works_after_paver_service_fails() {
+    let (send, recv) = mpsc::unbounded();
     let paver = MockPaverServiceBuilder::new()
+        .current_config(Configuration::B)
+        .event_hook(move |e| send.unbounded_send(e.to_owned()).expect("channel stayed open"))
         .call_hook(move |event| match event {
-            PaverEvent::SetConfigurationHealthy { configuration } => {
-                send.lock().take().unwrap().send(*configuration).unwrap();
-                Status::INTERNAL
-            }
+            PaverEvent::SetConfigurationHealthy { .. } => Status::INTERNAL,
             _ => Status::OK,
         })
         .build();
     let env = TestEnvBuilder::new().paver(paver).build();
 
-    // wait for the call hook to notify `send`.
-    assert_matches!(recv.await, Ok(Configuration::A));
+    assert_eq!(
+        recv.take(4).collect::<Vec<PaverEvent>>().await,
+        vec![
+            PaverEvent::QueryCurrentConfiguration,
+            PaverEvent::QueryConfigurationStatus { configuration: Configuration::B },
+            PaverEvent::SetConfigurationHealthy { configuration: Configuration::B },
+            PaverEvent::BootManagerFlush
+        ]
+    );
 
     let mut stream = env.check_now().await;
     assert_matches!(stream.next().await, Some(_));
