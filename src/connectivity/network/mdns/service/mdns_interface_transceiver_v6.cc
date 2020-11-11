@@ -59,10 +59,10 @@ int MdnsInterfaceTransceiverV6::SetOptionOutboundInterface() {
   int result =
       setsockopt(socket_fd().get(), IPPROTO_IPV6, IPV6_MULTICAST_IF, &index, sizeof(index));
   if (result < 0) {
-    if (errno == EOPNOTSUPP) {
-      FX_LOGS(WARNING) << "fxbug.dev/21013 IPV6_MULTICAST_IF not supported "
-                          "(EOPNOTSUPP), continuing anyway";
-      result = 0;
+    if (errno == EADDRNOTAVAIL) {
+      // This is expected when the interface is removed as we try to use it. We still return
+      // result < 0, because we don't want to use this interface.
+      FX_LOGS(WARNING) << "Failed to set socket option IPV6_MULTICAST_IF, " << strerror(errno);
     } else {
       FX_LOGS(ERROR) << "Failed to set socket option IPV6_MULTICAST_IF, " << strerror(errno);
     }
@@ -112,7 +112,8 @@ int MdnsInterfaceTransceiverV6::SetOptionFamilySpecific() {
   if (result < 0) {
     if (errno == ENOPROTOOPT) {
       // TODO(fxbug.dev/41358): remove the bug reference when the bug is fixed.
-      FX_LOGS(WARNING) << "fxbug.dev/41358: IPV6_HOPLIMIT not supported (ENOPROTOOPT), continuing anyway";
+      FX_LOGS(WARNING)
+          << "fxbug.dev/41358: IPV6_HOPLIMIT not supported (ENOPROTOOPT), continuing anyway";
       result = 0;
     } else {
       FX_LOGS(ERROR) << "Failed to set socket option IPV6_HOPLIMIT, " << strerror(errno);
