@@ -1,14 +1,12 @@
 {
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "args": [
             "--test.timeout",
             "2m"
         ],
         "binary": "test/netstack_test"
-    },
-    "sandbox": {
-        "services": [
-            "fuchsia.logger.LogSink"
-        ]
     }
 }

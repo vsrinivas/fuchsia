@@ -1,10 +1,8 @@
 {
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "test/imx227_test"
-    },
-    "sandbox": {
-        "services": [
-            "fuchsia.logger.LogSink"
-        ]
     }
 }

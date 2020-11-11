@@ -20,6 +20,9 @@
             ]
         }
     },
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "test/flutter_semantics_tests"
     },
@@ -28,7 +31,6 @@
             "fuchsia.accessibility.ColorTransform",
             "fuchsia.accessibility.Magnifier",
             "fuchsia.fonts.Provider",
-            "fuchsia.logger.LogSink",
             "fuchsia.posix.socket.Provider",
             "fuchsia.process.Launcher",
             "fuchsia.process.Resolver",

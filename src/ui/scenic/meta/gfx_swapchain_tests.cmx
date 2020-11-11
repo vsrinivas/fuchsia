@@ -11,6 +11,9 @@
             ]
         }
     },
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "test/gfx_swapchain_tests"
     },
@@ -23,7 +26,6 @@
         ],
         "services": [
             "fuchsia.hardware.display.Provider",
-            "fuchsia.logger.LogSink",
             "fuchsia.sys.Environment",
             "fuchsia.sys.Loader",
             "fuchsia.sysmem.Allocator",

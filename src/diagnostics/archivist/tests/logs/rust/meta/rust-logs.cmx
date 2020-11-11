@@ -11,6 +11,9 @@
             ]
         }
     },
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "bin/logs_integration_rust_tests"
     },
@@ -19,7 +22,6 @@
             "fuchsia.boot.ReadOnlyLog",
             "fuchsia.boot.WriteOnlyLog",
             "fuchsia.logger.Log",
-            "fuchsia.logger.LogSink",
             "fuchsia.sys.Environment",
             "fuchsia.sys.Launcher",
             "fuchsia.sys.Loader"

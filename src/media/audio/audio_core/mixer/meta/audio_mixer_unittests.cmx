@@ -1,10 +1,8 @@
 {
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "test/audio_mixer_unittests"
-    },
-    "sandbox": {
-        "services": [
-            "fuchsia.logger.LogSink"
-        ]
     }
 }

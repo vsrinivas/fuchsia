@@ -1,10 +1,8 @@
 {
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "test/remote_control_runner_bin_test"
-    },
-    "sandbox": {
-        "services": [
-            "fuchsia.logger.LogSink"
-        ]
     }
 }

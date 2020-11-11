@@ -1,12 +1,14 @@
 {
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "bin/bt_rfcomm"
     },
     "sandbox": {
         "services": [
             "fuchsia.bluetooth.bredr.Profile",
-            "fuchsia.cobalt.LoggerFactory",
-            "fuchsia.logger.LogSink"
+            "fuchsia.cobalt.LoggerFactory"
         ]
     }
 }

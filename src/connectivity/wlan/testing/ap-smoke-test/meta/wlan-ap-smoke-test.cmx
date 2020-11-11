@@ -1,10 +1,12 @@
 {
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "bin/wlan_ap_smoke_test"
     },
     "sandbox": {
         "services": [
-            "fuchsia.logger.LogSink",
             "fuchsia.net.stack.Stack",
             "fuchsia.wlan.device.service.DeviceService"
         ]

@@ -1,4 +1,7 @@
 {
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "bin/cobalt_system_metrics"
     },
@@ -14,7 +17,6 @@
             "fuchsia.cobalt.LoggerFactory",
             "fuchsia.diagnostics.ArchiveAccessor",
             "fuchsia.kernel.Stats",
-            "fuchsia.logger.LogSink",
             "fuchsia.sysinfo.SysInfo",
             "fuchsia.tracing.provider.Registry",
             "fuchsia.ui.activity.Provider"

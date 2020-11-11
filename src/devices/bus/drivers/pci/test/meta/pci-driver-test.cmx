@@ -1,21 +1,23 @@
 {
-  "program": {
-    "binary": "test/pci-driver-test"
-  },
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
+    "program": {
+        "binary": "test/pci-driver-test"
+    },
     "sandbox": {
-          "boot": [
+        "boot": [
             "bin",
             "driver",
             "lib"
-          ],
-          "system" : [
-            "driver"
-          ],
-          "services": [
+        ],
+        "services": [
             "fuchsia.exception.Handler",
-            "fuchsia.logger.LogSink",
             "fuchsia.process.Launcher",
             "fuchsia.sys.Launcher"
-          ]
+        ],
+        "system": [
+            "driver"
+        ]
     }
 }

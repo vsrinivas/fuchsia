@@ -1,11 +1,13 @@
 {
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "bin/logs_integration_cpp_tests"
     },
     "sandbox": {
         "services": [
             "fuchsia.logger.Log",
-            "fuchsia.logger.LogSink",
             "fuchsia.sys.Environment",
             "fuchsia.sys.Loader"
         ]

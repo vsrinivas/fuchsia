@@ -1,4 +1,7 @@
 {
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "args": [
             "--disable-klog",
@@ -9,7 +12,6 @@
     },
     "sandbox": {
         "services": [
-            "fuchsia.logger.LogSink",
             "fuchsia.sys.Launcher",
             "fuchsia.sys.internal.ComponentEventProvider",
             "fuchsia.sys.internal.LogConnector"

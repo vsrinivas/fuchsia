@@ -12,6 +12,9 @@
             }
         }
     },
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "test/hwinfo_positive_test"
     },
@@ -23,8 +26,7 @@
             "fuchsia.factory.MiscFactoryStoreProvider",
             "fuchsia.hwinfo.Board",
             "fuchsia.hwinfo.Device",
-            "fuchsia.hwinfo.Product",
-            "fuchsia.logger.LogSink"
+            "fuchsia.hwinfo.Product"
         ]
     }
 }

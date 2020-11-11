@@ -14,12 +14,14 @@
             ]
         }
     },
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "test/keyboard_e2e_lib_test"
     },
     "sandbox": {
         "services": [
-            "fuchsia.logger.LogSink",
             "fuchsia.ui.input.InputDeviceRegistry",
             "fuchsia.ui.input2.Keyboard",
             "fuchsia.ui.policy.Presenter",

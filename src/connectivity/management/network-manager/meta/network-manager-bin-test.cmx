@@ -1,4 +1,7 @@
 {
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "bin/network_manager_bin_test"
     },
@@ -7,7 +10,6 @@
             "isolated-persistent-storage"
         ],
         "services": [
-            "fuchsia.logger.LogSink",
             "fuchsia.net.filter.Filter",
             "fuchsia.net.stack.Stack",
             "fuchsia.netstack.Netstack",

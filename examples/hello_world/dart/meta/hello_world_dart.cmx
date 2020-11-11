@@ -1,9 +1,9 @@
 {
-  "program": {
-    "data": "data/hello-world-dart"
-  },
-  "sandbox": {
-    "features": [],
-    "services": []
-  }
+    "program": {
+        "data": "data/hello-world-dart"
+    },
+    "sandbox": {
+        "features": [],
+        "services": []
+    }
 }

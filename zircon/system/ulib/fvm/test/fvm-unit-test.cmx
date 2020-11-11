@@ -1,10 +1,12 @@
 {
-    "program" : {
-        "binary" : "test/fvm-unit-test"
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
+    "program": {
+        "binary": "test/fvm-unit-test"
     },
-    "sandbox" : {
-        "services" : [
-            "fuchsia.logger.LogSink",
+    "sandbox": {
+        "services": [
             "fuchsia.process.Launcher"
         ]
     }

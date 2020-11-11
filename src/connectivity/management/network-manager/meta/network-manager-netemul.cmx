@@ -1,4 +1,7 @@
 {
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "args": [
             "--devicepath",
@@ -15,7 +18,6 @@
             "isolated-persistent-storage"
         ],
         "services": [
-            "fuchsia.logger.LogSink",
             "fuchsia.net.dhcp.Server",
             "fuchsia.net.filter.Filter",
             "fuchsia.net.name.LookupAdmin",

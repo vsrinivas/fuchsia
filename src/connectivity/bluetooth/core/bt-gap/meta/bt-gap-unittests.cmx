@@ -6,6 +6,9 @@
             }
         }
     },
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "test/bt-gap-unittests"
     },
@@ -14,7 +17,6 @@
             "isolated-temp"
         ],
         "services": [
-            "fuchsia.logger.LogSink",
             "fuchsia.stash.SecureStore",
             "fuchsia.sys.Environment",
             "fuchsia.sys.Launcher",

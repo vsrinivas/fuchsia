@@ -1,4 +1,7 @@
 {
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "bin/crash_reports"
     },
@@ -13,7 +16,6 @@
             "fuchsia.cobalt.LoggerFactory",
             "fuchsia.feedback.DataProvider",
             "fuchsia.feedback.DeviceIdProvider",
-            "fuchsia.logger.LogSink",
             "fuchsia.net.NameLookup",
             "fuchsia.net.http.Loader",
             "fuchsia.netstack.Netstack",

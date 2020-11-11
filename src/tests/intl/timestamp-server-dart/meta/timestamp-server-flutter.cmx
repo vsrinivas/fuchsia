@@ -1,4 +1,7 @@
 {
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "data": "data/timestamp-server-flutter"
     },
@@ -10,7 +13,6 @@
             "fuchsia.cobalt.LoggerFactory",
             "fuchsia.fonts.Provider",
             "fuchsia.intl.PropertyProvider",
-            "fuchsia.logger.LogSink",
             "fuchsia.sys.Environment",
             "fuchsia.ui.input.ImeService",
             "fuchsia.ui.input.ImeVisibilityService",

@@ -8,6 +8,9 @@
             }
         }
     },
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "test/isolated-swd-tests"
     },
@@ -19,7 +22,6 @@
             "isolated-temp"
         ],
         "services": [
-            "fuchsia.logger.LogSink",
             "fuchsia.net.NameLookup",
             "fuchsia.posix.socket.Provider",
             "fuchsia.process.Launcher",

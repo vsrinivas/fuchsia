@@ -1,10 +1,12 @@
 {
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "bin/amberctl"
     },
     "sandbox": {
         "services": [
-            "fuchsia.logger.LogSink",
             "fuchsia.net.NameLookup",
             "fuchsia.pkg.PackageResolver",
             "fuchsia.pkg.RepositoryManager",

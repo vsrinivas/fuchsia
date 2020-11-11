@@ -1,4 +1,7 @@
 {
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "data": "data/timestamp-server-dart"
     },
@@ -9,7 +12,6 @@
         "services": [
             "fuchsia.cobalt.LoggerFactory",
             "fuchsia.intl.PropertyProvider",
-            "fuchsia.logger.LogSink",
             "fuchsia.sys.Environment"
         ]
     }

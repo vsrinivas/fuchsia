@@ -28,6 +28,9 @@
             ]
         }
     },
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "bin/feedback_data_integration_test_exe"
     },
@@ -48,7 +51,6 @@
             "fuchsia.hwinfo.Board",
             "fuchsia.hwinfo.Product",
             "fuchsia.logger.Log",
-            "fuchsia.logger.LogSink",
             "fuchsia.sys.Environment",
             "fuchsia.sys.Loader",
             "fuchsia.update.channel.Provider",

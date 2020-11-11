@@ -7,6 +7,9 @@
             ]
         }
     },
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "bin/kernel_log_ptr_integration_test_exe"
     },
@@ -15,7 +18,6 @@
             "fuchsia.boot.ReadOnlyLog",
             "fuchsia.boot.WriteOnlyLog",
             "fuchsia.cobalt.LoggerFactory",
-            "fuchsia.logger.LogSink",
             "fuchsia.process.Launcher",
             "fuchsia.sys.Environment",
             "fuchsia.sys.Loader"

@@ -1,11 +1,13 @@
 {
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "bin/device"
     },
     "sandbox": {
         "services": [
             "fuchsia.camera2.hal.Controller",
-            "fuchsia.logger.LogSink",
             "fuchsia.sysmem.Allocator",
             "fuchsia.tracing.provider.Registry",
             "fuchsia.ui.policy.DeviceListenerRegistry"

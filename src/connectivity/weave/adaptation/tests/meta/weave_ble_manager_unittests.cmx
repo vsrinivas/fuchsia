@@ -1,4 +1,7 @@
 {
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "test/weave_ble_manager_unittests"
     },
@@ -8,8 +11,7 @@
         ],
         "services": [
             "fuchsia.bluetooth.gatt.Server",
-            "fuchsia.bluetooth.le.Peripheral",
-            "fuchsia.logger.LogSink"
+            "fuchsia.bluetooth.le.Peripheral"
         ]
     }
 }

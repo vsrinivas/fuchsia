@@ -1,11 +1,13 @@
 {
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "bin/pkg-cache"
     },
     "sandbox": {
         "services": [
             "fuchsia.cobalt.LoggerFactory",
-            "fuchsia.logger.LogSink",
             "fuchsia.tracing.provider.Registry"
         ]
     }

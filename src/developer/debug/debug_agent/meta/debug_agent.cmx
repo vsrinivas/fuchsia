@@ -1,4 +1,7 @@
 {
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "bin/debug_agent"
     },
@@ -12,7 +15,6 @@
         "services": [
             "fuchsia.exception.ProcessLimbo",
             "fuchsia.kernel.RootJob",
-            "fuchsia.logger.LogSink",
             "fuchsia.net.NameLookup",
             "fuchsia.posix.socket.Provider",
             "fuchsia.process.Launcher",

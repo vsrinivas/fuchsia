@@ -13,6 +13,9 @@
             ]
         }
     },
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "test/mediabuttons_listener_test"
     },
@@ -21,7 +24,6 @@
             "shell-commands"
         ],
         "services": [
-            "fuchsia.logger.LogSink",
             "fuchsia.process.Launcher",
             "fuchsia.process.Resolver",
             "fuchsia.sys.Environment",

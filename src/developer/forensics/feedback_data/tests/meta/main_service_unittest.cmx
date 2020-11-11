@@ -1,4 +1,7 @@
 {
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "bin/main_service_unittest_exe"
     },
@@ -6,9 +9,6 @@
         "features": [
             "build-info",
             "isolated-persistent-storage"
-        ],
-        "services": [
-            "fuchsia.logger.LogSink"
         ]
     }
 }

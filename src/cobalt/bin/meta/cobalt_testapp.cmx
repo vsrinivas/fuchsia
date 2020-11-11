@@ -11,12 +11,14 @@
             ]
         }
     },
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "bin/cobalt_testapp"
     },
     "sandbox": {
         "services": [
-            "fuchsia.logger.LogSink",
             "fuchsia.net.NameLookup",
             "fuchsia.net.http",
             "fuchsia.posix.socket.Provider",

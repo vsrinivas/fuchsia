@@ -1,4 +1,7 @@
 {
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "test/appmgr-lifecycle-tests"
     },
@@ -11,7 +14,6 @@
             "packages/config-data/0/meta/data/appmgr"
         ],
         "services": [
-            "fuchsia.logger.LogSink",
             "fuchsia.process.Launcher",
             "fuchsia.process.Resolver",
             "fuchsia.sys.Environment",

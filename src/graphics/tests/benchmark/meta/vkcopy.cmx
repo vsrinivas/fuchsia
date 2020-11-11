@@ -3,11 +3,14 @@
         "fuchsia.test": {
             "system-services": [
                 "fuchsia.sysmem.Allocator",
-                "fuchsia.vulkan.loader.Loader",
-                "fuchsia.tracing.provider.Registry"
+                "fuchsia.tracing.provider.Registry",
+                "fuchsia.vulkan.loader.Loader"
             ]
         }
     },
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "test/vkcopy"
     },
@@ -16,7 +19,6 @@
             "vulkan"
         ],
         "services": [
-            "fuchsia.logger.LogSink",
             "fuchsia.sysmem.Allocator",
             "fuchsia.tracing.provider.Registry",
             "fuchsia.vulkan.loader.Loader"

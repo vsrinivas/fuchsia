@@ -1,4 +1,7 @@
 {
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "bin/weavestack"
     },
@@ -12,7 +15,6 @@
             "fuchsia.bluetooth.le.Peripheral",
             "fuchsia.factory.WeaveFactoryStoreProvider",
             "fuchsia.hwinfo.Device",
-            "fuchsia.logger.LogSink",
             "fuchsia.lowpan.device.Lookup",
             "fuchsia.net.NameLookup",
             "fuchsia.net.interfaces.State",

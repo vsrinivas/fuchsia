@@ -7,6 +7,9 @@
             ]
         }
     },
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "test/disabled/vkpriority"
     },
@@ -15,7 +18,6 @@
             "vulkan"
         ],
         "services": [
-            "fuchsia.logger.LogSink",
             "fuchsia.sysmem.Allocator",
             "fuchsia.tracing.provider.Registry",
             "fuchsia.vulkan.loader.Loader"

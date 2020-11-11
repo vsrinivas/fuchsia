@@ -9,6 +9,9 @@
             ]
         }
     },
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "test/weave_platform_manager_unittests"
     },
@@ -18,7 +21,6 @@
         ],
         "services": [
             "fuchsia.hwinfo.Device",
-            "fuchsia.logger.LogSink",
             "fuchsia.posix.socket.Provider",
             "fuchsia.weave.FactoryDataManager"
         ]

@@ -4,13 +4,12 @@
     },
     "sandbox": {
         "boot": [
-          "bin",
-          "driver",
-          "lib"
+            "bin",
+            "driver",
+            "lib"
         ],
         "services": [
-          "fuchsia.process.Launcher"
+            "fuchsia.process.Launcher"
         ]
     }
 }
-

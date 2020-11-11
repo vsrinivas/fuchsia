@@ -1,4 +1,7 @@
 {
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "args": [
             "--provider=misc"
@@ -8,9 +11,6 @@
     "sandbox": {
         "features": [
             "config-data"
-        ],
-        "services": [
-            "fuchsia.logger.LogSink"
         ]
     }
 }

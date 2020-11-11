@@ -1,10 +1,12 @@
 {
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "bin/netstack_cfg"
     },
     "sandbox": {
         "services": [
-            "fuchsia.logger.LogSink",
             "fuchsia.net.interfaces.State",
             "fuchsia.net.stack.Stack",
             "fuchsia.netemul.network.NetworkContext",

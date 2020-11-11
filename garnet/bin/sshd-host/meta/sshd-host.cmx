@@ -1,4 +1,7 @@
 {
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "bin/sshd-host"
     },
@@ -11,7 +14,6 @@
         "services": [
             "fuchsia.boot.Items",
             "fuchsia.hardware.pty.Device",
-            "fuchsia.logger.LogSink",
             "fuchsia.net.NameLookup",
             "fuchsia.posix.socket.Provider",
             "fuchsia.process.Launcher"

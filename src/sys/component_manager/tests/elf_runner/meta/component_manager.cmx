@@ -1,11 +1,13 @@
 {
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "bin/component_manager"
     },
     "sandbox": {
         "services": [
             "fidl.test.args.Report",
-            "fuchsia.logger.LogSink",
             "fuchsia.process.Launcher",
             "fuchsia.sys.Loader",
             "fuchsia.tracing.provider.Registry"

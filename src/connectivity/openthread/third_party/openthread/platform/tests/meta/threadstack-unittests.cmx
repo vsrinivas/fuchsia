@@ -6,6 +6,9 @@
             }
         }
     },
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "test/threadstack-unittests"
     },
@@ -14,7 +17,6 @@
             "isolated-persistent-storage"
         ],
         "services": [
-            "fuchsia.logger.LogSink",
             "fuchsia.posix.socket.Provider"
         ]
     }

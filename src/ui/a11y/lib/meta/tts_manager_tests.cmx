@@ -1,11 +1,13 @@
 {
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "test/tts_manager_tests"
     },
     "sandbox": {
         "services": [
             "fuchsia.accessibility.tts.EngineRegistry",
-            "fuchsia.logger.LogSink",
             "fuchsia.sys.Environment",
             "fuchsia.sys.Loader"
         ]

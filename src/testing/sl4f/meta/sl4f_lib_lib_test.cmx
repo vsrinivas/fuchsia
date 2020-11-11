@@ -29,6 +29,9 @@
             }
         }
     },
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "test/sl4f_lib_lib_test"
     },
@@ -43,7 +46,6 @@
             "fuchsia.factory.PlayReadyFactoryStoreProvider",
             "fuchsia.factory.WeaveFactoryStoreProvider",
             "fuchsia.factory.WidevineFactoryStoreProvider",
-            "fuchsia.logger.LogSink",
             "fuchsia.power.test.BatterySimulator",
             "fuchsia.sys.Launcher"
         ]

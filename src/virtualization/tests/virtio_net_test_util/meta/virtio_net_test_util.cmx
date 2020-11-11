@@ -1,13 +1,13 @@
 {
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "bin/virtio_net_test_util"
     },
     "sandbox": {
         "dev": [
             "class/ethernet"
-        ],
-        "services": [
-            "fuchsia.logger.LogSink"
         ]
     }
 }

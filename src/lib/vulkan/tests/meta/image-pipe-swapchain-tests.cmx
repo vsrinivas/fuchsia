@@ -7,6 +7,9 @@
             ]
         }
     },
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "test/image-pipe-swapchain-tests"
     },
@@ -18,7 +21,6 @@
             "vulkan"
         ],
         "services": [
-            "fuchsia.logger.LogSink",
             "fuchsia.process.Launcher",
             "fuchsia.sysmem.Allocator",
             "fuchsia.tracing.provider.Registry",

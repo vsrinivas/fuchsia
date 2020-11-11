@@ -1,11 +1,11 @@
 {
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "bin/test-lifecycle-component"
     },
     "sandbox": {
-        "features": [],
-        "services": [
-            "fuchsia.logger.LogSink"
-        ]
+        "features": []
     }
 }

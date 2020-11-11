@@ -1,4 +1,7 @@
 {
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "args": [
             "--font-manifest",
@@ -11,7 +14,6 @@
             "config-data"
         ],
         "services": [
-            "fuchsia.logger.LogSink",
             "fuchsia.pkg.FontResolver",
             "fuchsia.tracing.provider.Registry"
         ]

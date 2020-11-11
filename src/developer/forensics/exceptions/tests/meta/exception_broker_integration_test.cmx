@@ -12,6 +12,9 @@
             ]
         }
     },
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "bin/exception_broker_integration_test_exe"
     },
@@ -20,7 +23,6 @@
             "fuchsia.exception.Handler",
             "fuchsia.exception.ProcessLimbo",
             "fuchsia.feedback.testing.FakeCrashReporterQuerier",
-            "fuchsia.logger.LogSink",
             "fuchsia.process.Launcher",
             "fuchsia.sys.internal.CrashIntrospect"
         ]

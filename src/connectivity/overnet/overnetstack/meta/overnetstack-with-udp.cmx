@@ -1,4 +1,7 @@
 {
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "args": [
             "--udp",
@@ -9,7 +12,6 @@
     },
     "sandbox": {
         "services": [
-            "fuchsia.logger.LogSink",
             "fuchsia.net.mdns.Publisher",
             "fuchsia.net.mdns.Subscriber",
             "fuchsia.posix.socket.Provider"

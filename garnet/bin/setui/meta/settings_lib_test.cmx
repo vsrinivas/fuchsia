@@ -1,4 +1,7 @@
 {
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "test/settings_lib_test"
     },
@@ -14,7 +17,6 @@
         ],
         "services": [
             "fuchsia.devicesettings.DeviceSettingsManager",
-            "fuchsia.logger.LogSink",
             "fuchsia.media.AudioCore",
             "fuchsia.media.audio.VolumeControl",
             "fuchsia.media.sessions2.Discovery",

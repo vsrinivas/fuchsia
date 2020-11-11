@@ -1,4 +1,7 @@
 {
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "bin/sessionmgr"
     },
@@ -9,7 +12,6 @@
         "services": [
             "fuchsia.cobalt.LoggerFactory",
             "fuchsia.intl.PropertyProvider",
-            "fuchsia.logger.LogSink",
             "fuchsia.net.NameLookup",
             "fuchsia.posix.socket.Provider",
             "fuchsia.sys.Environment",

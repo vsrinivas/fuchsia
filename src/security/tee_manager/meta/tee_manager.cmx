@@ -1,4 +1,7 @@
 {
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "bin/tee_manager"
     },
@@ -9,9 +12,6 @@
         "features": [
             "config-data",
             "isolated-persistent-storage"
-        ],
-        "services": [
-            "fuchsia.logger.LogSink"
         ]
     }
 }

@@ -1,4 +1,7 @@
 {
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "args": [
             "--prototype-account-transfer"
@@ -10,7 +13,6 @@
             "isolated-persistent-storage"
         ],
         "services": [
-            "fuchsia.logger.LogSink",
             "fuchsia.overnet.Overnet",
             "fuchsia.sys.Environment",
             "fuchsia.sys.Launcher",

@@ -1,5 +1,5 @@
 {
-    "program" : {
+    "program": {
         "binary": "test/files_unittests"
     },
     "sandbox": {

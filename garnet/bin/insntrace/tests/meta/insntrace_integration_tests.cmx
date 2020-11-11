@@ -7,6 +7,9 @@
             ]
         }
     },
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "test/insntrace_integration_tests"
     },
@@ -20,7 +23,6 @@
             "shell-commands"
         ],
         "services": [
-            "fuchsia.logger.LogSink",
             "fuchsia.process.Launcher",
             "fuchsia.process.Resolver",
             "fuchsia.sys.Launcher",

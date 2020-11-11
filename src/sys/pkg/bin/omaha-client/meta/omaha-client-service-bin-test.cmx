@@ -7,6 +7,9 @@
             }
         }
     },
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "test/omaha-client-service-bin-test"
     },
@@ -16,7 +19,6 @@
             "isolated-temp"
         ],
         "services": [
-            "fuchsia.logger.LogSink",
             "fuchsia.stash.Store2",
             "fuchsia.update.channelcontrol.ChannelControl"
         ]

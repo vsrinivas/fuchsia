@@ -1,11 +1,13 @@
 {
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "data": "data/pingable-flutter-component-debug-build-cfg"
     },
     "sandbox": {
         "services": [
             "fuchsia.fonts.Provider",
-            "fuchsia.logger.LogSink",
             "fuchsia.sys.Environment",
             "fuchsia.ui.input.ImeService",
             "fuchsia.ui.input.ImeVisibilityService",

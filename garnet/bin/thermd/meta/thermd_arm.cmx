@@ -1,4 +1,7 @@
 {
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "bin/thermd"
     },
@@ -9,7 +12,6 @@
             "misc"
         ],
         "services": [
-            "fuchsia.logger.LogSink",
             "fuchsia.sys.Launcher",
             "fuchsia.tracing.provider.Registry"
         ]

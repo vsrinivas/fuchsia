@@ -1,4 +1,7 @@
 {
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "bin/env_build"
     },
@@ -10,7 +13,6 @@
             "isolated-persistent-storage"
         ],
         "services": [
-            "fuchsia.logger.LogSink",
             "fuchsia.net.NameLookup",
             "fuchsia.netemul.environment.ManagedEnvironment",
             "fuchsia.netemul.network.NetworkContext",

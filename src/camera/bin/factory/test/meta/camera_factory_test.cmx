@@ -1,4 +1,7 @@
 {
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "test/camera_factory_test"
     },
@@ -8,9 +11,6 @@
         ],
         "features": [
             "isolated-persistent-storage"
-        ],
-        "services": [
-            "fuchsia.logger.LogSink"
         ]
     }
 }

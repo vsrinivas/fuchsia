@@ -1,4 +1,7 @@
 {
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "args": [
             "--secondary_store",
@@ -10,9 +13,6 @@
     "sandbox": {
         "features": [
             "isolated-persistent-storage"
-        ],
-        "services": [
-            "fuchsia.logger.LogSink"
         ]
     }
 }

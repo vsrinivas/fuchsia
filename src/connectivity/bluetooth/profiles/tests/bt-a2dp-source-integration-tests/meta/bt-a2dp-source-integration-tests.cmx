@@ -7,17 +7,19 @@
             }
         }
     },
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "bin/bt_a2dp_source_integration_tests"
     },
     "sandbox": {
         "services": [
-            "fuchsia.logger.LogSink",
             "fuchsia.mediacodec.CodecFactory",
             "fuchsia.process.Launcher",
-            "fuchsia.sysmem.Allocator",
             "fuchsia.sys.Environment",
-            "fuchsia.sys.Launcher"
+            "fuchsia.sys.Launcher",
+            "fuchsia.sysmem.Allocator"
         ]
     }
 }

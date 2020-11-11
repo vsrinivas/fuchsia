@@ -1,4 +1,7 @@
 {
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "test/disabled/logs_integration_go_tests"
     },
@@ -12,7 +15,6 @@
         ],
         "services": [
             "fuchsia.logger.Log",
-            "fuchsia.logger.LogSink",
             "fuchsia.process.Launcher",
             "fuchsia.process.Resolver"
         ]

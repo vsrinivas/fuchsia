@@ -1,9 +1,9 @@
 {
-    "program" : {
-        "binary" : "test/digest-unit-tests"
+    "program": {
+        "binary": "test/digest-unit-tests"
     },
-    "sandbox" : {
-        "services" : [
+    "sandbox": {
+        "services": [
             "fuchsia.process.Launcher"
         ]
     }

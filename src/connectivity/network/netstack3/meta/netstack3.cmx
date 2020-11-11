@@ -1,13 +1,13 @@
 {
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "bin/netstack3"
     },
     "sandbox": {
         "dev": [
             "class/ethernet"
-        ],
-        "services": [
-            "fuchsia.logger.LogSink"
         ]
     }
 }

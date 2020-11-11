@@ -1,4 +1,7 @@
 {
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "bin/setui_client"
     },
@@ -6,7 +9,6 @@
         "services": [
             "fuchsia.devicesettings.DeviceSettingsManager",
             "fuchsia.hardware.power.statecontrol.Admin",
-            "fuchsia.logger.LogSink",
             "fuchsia.netstack.Netstack",
             "fuchsia.settings.Accessibility",
             "fuchsia.settings.Audio",

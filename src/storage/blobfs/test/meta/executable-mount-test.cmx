@@ -6,13 +6,15 @@
             ]
         }
     },
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "test/executable_mount"
     },
     "sandbox": {
         "services": [
             "fuchsia.exception.Handler",
-            "fuchsia.logger.LogSink",
             "fuchsia.security.resource.Vmex"
         ]
     }

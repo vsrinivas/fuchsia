@@ -6,6 +6,9 @@
             ]
         }
     },
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "test/driver_manager_test"
     },
@@ -13,7 +16,6 @@
         "services": [
             "fuchsia.boot.Items",
             "fuchsia.kernel.RootJob",
-            "fuchsia.logger.LogSink",
             "fuchsia.process.Launcher"
         ]
     }

@@ -20,13 +20,15 @@
             }
         }
     },
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "bin/verify_wlan_inspect"
     },
     "sandbox": {
         "services": [
             "fuchsia.diagnostics.ArchiveAccessor",
-            "fuchsia.logger.LogSink",
             "fuchsia.stash.SecureStore",
             "fuchsia.wlan.devmgr.IsolatedDevmgr",
             "fuchsia.wlan.policy.ClientProvider"

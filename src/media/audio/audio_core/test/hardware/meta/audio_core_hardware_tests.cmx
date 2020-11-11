@@ -10,12 +10,14 @@
             ]
         }
     },
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "test/audio_core_hardware_tests"
     },
     "sandbox": {
         "services": [
-            "fuchsia.logger.LogSink",
             "fuchsia.media.AudioCore",
             "fuchsia.media.AudioDeviceEnumerator",
             "fuchsia.scheduler.ProfileProvider",

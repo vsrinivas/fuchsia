@@ -1,4 +1,7 @@
 {
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "bin/memory_monitor"
     },
@@ -14,7 +17,6 @@
             "fuchsia.feedback.CrashReporter",
             "fuchsia.kernel.RootJobForInspect",
             "fuchsia.kernel.Stats",
-            "fuchsia.logger.LogSink",
             "fuchsia.scheduler.ProfileProvider",
             "fuchsia.tracing.provider.Registry"
         ]

@@ -1,4 +1,7 @@
 {
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "bin/setui_service"
     },
@@ -18,7 +21,6 @@
             "fuchsia.hardware.light.Light",
             "fuchsia.hardware.power.statecontrol.Admin",
             "fuchsia.input.report.InputDevice",
-            "fuchsia.logger.LogSink",
             "fuchsia.media.AudioCore",
             "fuchsia.media.UsageReporter",
             "fuchsia.media.audio.VolumeControl",

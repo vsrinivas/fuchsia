@@ -17,13 +17,15 @@
             }
         }
     },
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "bin/verify_ethernet"
     },
     "sandbox": {
         "services": [
             "fuchsia.location.namedplace.RegulatoryRegionWatcher",
-            "fuchsia.logger.LogSink",
             "fuchsia.stash.SecureStore",
             "fuchsia.wlan.device.service.DeviceService",
             "fuchsia.wlan.devmgr.IsolatedDevmgr",

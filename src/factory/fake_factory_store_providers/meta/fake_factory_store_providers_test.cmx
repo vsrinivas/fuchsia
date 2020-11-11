@@ -29,6 +29,9 @@
             }
         }
     },
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "test/fake_factory_store_providers_test"
     },
@@ -39,8 +42,7 @@
             "fuchsia.factory.MiscFactoryStoreProvider",
             "fuchsia.factory.PlayReadyFactoryStoreProvider",
             "fuchsia.factory.WeaveFactoryStoreProvider",
-            "fuchsia.factory.WidevineFactoryStoreProvider",
-            "fuchsia.logger.LogSink"
+            "fuchsia.factory.WidevineFactoryStoreProvider"
         ]
     }
 }

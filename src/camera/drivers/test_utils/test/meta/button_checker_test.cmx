@@ -1,4 +1,7 @@
 {
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "test/button_checker_test"
     },
@@ -8,7 +11,6 @@
         ],
         "services": [
             "fuchsia.hardware.input",
-            "fuchsia.logger.LogSink",
             "fuchsia.process.Launcher"
         ]
     }

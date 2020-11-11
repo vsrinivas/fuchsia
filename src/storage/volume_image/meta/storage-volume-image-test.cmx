@@ -1,13 +1,13 @@
 {
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "test/storage-volume-image-test"
     },
     "sandbox": {
         "features": [
             "isolated-temp"
-        ],
-        "services": [
-            "fuchsia.logger.LogSink"
         ]
     }
 }

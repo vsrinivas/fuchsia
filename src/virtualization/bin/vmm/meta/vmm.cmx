@@ -1,4 +1,7 @@
 {
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "bin/vmm"
     },
@@ -11,7 +14,6 @@
         ],
         "services": [
             "fuchsia.boot.RootResource",
-            "fuchsia.logger.LogSink",
             "fuchsia.sys.Environment",
             "fuchsia.sys.Launcher",
             "fuchsia.sysinfo.SysInfo",

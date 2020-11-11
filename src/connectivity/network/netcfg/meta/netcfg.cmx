@@ -1,4 +1,7 @@
 {
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "bin/netcfg"
     },
@@ -12,7 +15,6 @@
             "isolated-persistent-storage"
         ],
         "services": [
-            "fuchsia.logger.LogSink",
             "fuchsia.net.dhcp.Server",
             "fuchsia.net.dhcpv6.ClientProvider",
             "fuchsia.net.filter.Filter",

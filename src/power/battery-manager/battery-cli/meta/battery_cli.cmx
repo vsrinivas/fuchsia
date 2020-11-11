@@ -1,10 +1,12 @@
 {
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "bin/battery_cli"
     },
     "sandbox": {
         "services": [
-            "fuchsia.logger.LogSink",
             "fuchsia.power.BatteryManager",
             "fuchsia.power.test.BatterySimulator",
             "fuchsia.sys.Launcher",

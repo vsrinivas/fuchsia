@@ -1,4 +1,7 @@
 {
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "bin/exceptions"
     },
@@ -9,7 +12,6 @@
         ],
         "services": [
             "fuchsia.feedback.CrashReporter",
-            "fuchsia.logger.LogSink",
             "fuchsia.process.Launcher",
             "fuchsia.sys.internal.CrashIntrospect"
         ]

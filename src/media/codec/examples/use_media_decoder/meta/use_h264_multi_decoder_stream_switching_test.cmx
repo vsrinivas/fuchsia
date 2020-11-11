@@ -9,6 +9,9 @@
             ]
         }
     },
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "test/use_h264_multi_decoder_stream_switching_test"
     },
@@ -18,7 +21,6 @@
             "class/sysmem"
         ],
         "services": [
-            "fuchsia.logger.LogSink",
             "fuchsia.mediacodec.CodecFactory",
             "fuchsia.sys.Environment",
             "fuchsia.sys.Launcher",

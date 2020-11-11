@@ -1,4 +1,7 @@
 {
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "test/agent_runner_unittest"
     },
@@ -7,8 +10,7 @@
             "isolated-persistent-storage"
         ],
         "services": [
-            "fuchsia.sys.Launcher",
-            "fuchsia.logger.LogSink"
+            "fuchsia.sys.Launcher"
         ]
     }
 }

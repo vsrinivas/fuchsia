@@ -23,13 +23,15 @@
             }
         }
     },
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "bin/legacy_sim_client_vs_sim_ap"
     },
     "sandbox": {
         "services": [
             "fuchsia.location.namedplace.RegulatoryRegionWatcher",
-            "fuchsia.logger.LogSink",
             "fuchsia.stash.SecureStore",
             "fuchsia.wlan.device.service.DeviceService",
             "fuchsia.wlan.devmgr.IsolatedDevmgr",

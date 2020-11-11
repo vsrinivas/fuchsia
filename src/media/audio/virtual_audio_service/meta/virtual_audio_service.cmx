@@ -1,13 +1,13 @@
 {
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "bin/virtual_audio_service"
     },
     "sandbox": {
         "dev": [
             "test/virtual_audio"
-        ],
-        "services": [
-            "fuchsia.logger.LogSink"
         ]
     }
 }

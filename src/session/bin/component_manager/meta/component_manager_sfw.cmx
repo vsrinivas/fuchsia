@@ -1,4 +1,7 @@
 {
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "args": [
             "--config",
@@ -43,7 +46,6 @@
             "fuchsia.hwinfo.Product",
             "fuchsia.intl.PropertyProvider",
             "fuchsia.location.namedplace.RegulatoryRegionConfigurator",
-            "fuchsia.logger.LogSink",
             "fuchsia.media.Audio",
             "fuchsia.media.AudioCore",
             "fuchsia.media.UsageReporter",

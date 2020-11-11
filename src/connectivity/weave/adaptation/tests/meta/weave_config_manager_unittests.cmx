@@ -1,13 +1,13 @@
 {
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "test/weave_config_manager_unittests"
     },
     "sandbox": {
         "features": [
             "isolated-persistent-storage"
-        ],
-        "services": [
-            "fuchsia.logger.LogSink"
         ]
     }
 }

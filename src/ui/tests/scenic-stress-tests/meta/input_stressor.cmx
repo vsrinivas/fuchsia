@@ -7,6 +7,9 @@
             ]
         }
     },
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "test/input_stressor"
     },
@@ -20,7 +23,6 @@
         ],
         "services": [
             "fuchsia.ldsvc.Loader",
-            "fuchsia.logger.LogSink",
             "fuchsia.process.Launcher",
             "fuchsia.sys.Environment",
             "fuchsia.sys.Launcher",

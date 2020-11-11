@@ -1,4 +1,7 @@
 {
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "test/regulatory_region_integration_test"
     },
@@ -6,7 +9,6 @@
         "services": [
             "fuchsia.location.namedplace.RegulatoryRegionConfigurator",
             "fuchsia.location.namedplace.RegulatoryRegionWatcher",
-            "fuchsia.logger.LogSink",
             "fuchsia.sys.Launcher"
         ]
     }

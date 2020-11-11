@@ -1,4 +1,7 @@
 {
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "bin/sl4f"
     },
@@ -62,7 +65,6 @@
             "fuchsia.location.namedplace.RegulatoryRegionConfigurator",
             "fuchsia.location.position.EmergencyProvider",
             "fuchsia.logger.Log",
-            "fuchsia.logger.LogSink",
             "fuchsia.lowpan.device.Lookup",
             "fuchsia.memorypressure.Provider",
             "fuchsia.net.NameLookup",

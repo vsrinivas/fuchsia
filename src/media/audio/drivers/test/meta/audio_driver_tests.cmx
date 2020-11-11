@@ -6,6 +6,9 @@
             ]
         }
     },
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "test/audio_driver_tests"
     },
@@ -15,7 +18,6 @@
             "class/audio-output-2"
         ],
         "services": [
-            "fuchsia.logger.LogSink",
             "fuchsia.scheduler.ProfileProvider",
             "fuchsia.sys.Environment",
             "fuchsia.sys.Loader"

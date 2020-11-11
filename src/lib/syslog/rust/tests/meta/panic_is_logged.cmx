@@ -7,13 +7,15 @@
             }
         }
     },
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "test/panic_is_logged"
     },
     "sandbox": {
         "services": [
             "fuchsia.logger.Log",
-            "fuchsia.logger.LogSink",
             "fuchsia.sys.Launcher"
         ]
     }

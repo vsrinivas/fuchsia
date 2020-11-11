@@ -7,6 +7,9 @@
             ]
         }
     },
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "test/sysmem"
     },
@@ -18,7 +21,6 @@
             "isolated-cache-storage"
         ],
         "services": [
-            "fuchsia.logger.LogSink",
             "fuchsia.sysinfo.SysInfo",
             "fuchsia.sysmem.Allocator",
             "fuchsia.tracing.provider.Registry"

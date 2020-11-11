@@ -19,13 +19,15 @@
             }
         }
     },
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "bin/configure_legacy_privacy_on"
     },
     "sandbox": {
         "services": [
             "fuchsia.location.namedplace.RegulatoryRegionWatcher",
-            "fuchsia.logger.LogSink",
             "fuchsia.stash.SecureStore",
             "fuchsia.wlan.device.service.DeviceService",
             "fuchsia.wlan.devmgr.IsolatedDevmgr",

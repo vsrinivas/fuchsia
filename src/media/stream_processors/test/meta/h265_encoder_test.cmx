@@ -9,6 +9,9 @@
             ]
         }
     },
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "args": [
             "--test-threads=1"
@@ -20,7 +23,6 @@
             "isolated-temp"
         ],
         "services": [
-            "fuchsia.logger.LogSink",
             "fuchsia.mediacodec.CodecFactory",
             "fuchsia.sysmem.Allocator",
             "fuchsia.tracing.provider.Registry"

@@ -1,11 +1,13 @@
 {
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "bin/lowpan_dummy_driver"
     },
     "sandbox": {
         "services": [
             "fuchsia.factory.lowpan.FactoryRegister",
-            "fuchsia.logger.LogSink",
             "fuchsia.lowpan.device.Register"
         ]
     }

@@ -1,4 +1,7 @@
 {
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "bin/bt_a2dp_manager"
     },
@@ -6,7 +9,6 @@
         "services": [
             "fuchsia.bluetooth.a2dp.AudioMode",
             "fuchsia.bluetooth.bredr.Profile",
-            "fuchsia.logger.LogSink",
             "fuchsia.media.AudioDeviceEnumerator",
             "fuchsia.mediacodec.CodecFactory",
             "fuchsia.sys.Launcher"

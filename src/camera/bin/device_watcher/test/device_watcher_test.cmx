@@ -7,6 +7,9 @@
             }
         }
     },
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "test/device_watcher_test"
     },
@@ -14,7 +17,6 @@
         "services": [
             "fuchsia.camera.test.DeviceWatcherTester",
             "fuchsia.camera3.DeviceWatcher",
-            "fuchsia.logger.LogSink",
             "fuchsia.tracing.provider.Registry"
         ]
     }

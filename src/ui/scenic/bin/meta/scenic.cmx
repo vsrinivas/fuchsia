@@ -1,4 +1,7 @@
 {
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "bin/scenic"
     },
@@ -14,7 +17,6 @@
         "services": [
             "fuchsia.cobalt.LoggerFactory",
             "fuchsia.hardware.display.Provider",
-            "fuchsia.logger.LogSink",
             "fuchsia.scheduler.ProfileProvider",
             "fuchsia.sysmem.Allocator",
             "fuchsia.tracing.provider.Registry",

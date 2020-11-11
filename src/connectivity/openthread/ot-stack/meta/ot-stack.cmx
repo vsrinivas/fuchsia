@@ -1,4 +1,7 @@
 {
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "bin/ot-stack"
     },
@@ -16,7 +19,6 @@
         ],
         "services": [
             "fuchsia.exception.Handler",
-            "fuchsia.logger.LogSink",
             "fuchsia.openthread.devmgr.IsolatedDevmgr",
             "fuchsia.sys.Launcher"
         ]

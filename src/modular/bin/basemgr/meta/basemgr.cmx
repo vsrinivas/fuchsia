@@ -1,4 +1,7 @@
 {
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "bin/basemgr"
     },
@@ -11,7 +14,6 @@
             "fuchsia.cobalt.LoggerFactory",
             "fuchsia.deprecatedtimezone.Timezone",
             "fuchsia.hardware.power.statecontrol.Admin",
-            "fuchsia.logger.LogSink",
             "fuchsia.settings.Intl",
             "fuchsia.sys.Launcher",
             "fuchsia.tracing.provider.Registry",

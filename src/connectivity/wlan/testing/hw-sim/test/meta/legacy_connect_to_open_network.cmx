@@ -20,13 +20,15 @@
             }
         }
     },
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "bin/legacy_connect_to_open_network"
     },
     "sandbox": {
         "services": [
             "fuchsia.location.namedplace.RegulatoryRegionWatcher",
-            "fuchsia.logger.LogSink",
             "fuchsia.stash.SecureStore",
             "fuchsia.wlan.device.service.DeviceService",
             "fuchsia.wlan.devmgr.IsolatedDevmgr",

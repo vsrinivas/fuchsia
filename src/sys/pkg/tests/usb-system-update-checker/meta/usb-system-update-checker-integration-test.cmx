@@ -8,6 +8,9 @@
             }
         }
     },
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "test/usb-system-update-checker-integration-test"
     },
@@ -21,7 +24,6 @@
         "services": [
             "fuchsia.cobalt.LoggerFactory",
             "fuchsia.device.NameProvider",
-            "fuchsia.logger.LogSink",
             "fuchsia.net.NameLookup",
             "fuchsia.posix.socket.Provider",
             "fuchsia.process.Launcher",

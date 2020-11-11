@@ -1,10 +1,12 @@
 {
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "bin/mediaplayer"
     },
     "sandbox": {
         "services": [
-            "fuchsia.logger.LogSink",
             "fuchsia.media.Audio",
             "fuchsia.mediacodec.CodecFactory",
             "fuchsia.scheduler.ProfileProvider",

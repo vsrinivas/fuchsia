@@ -1,4 +1,7 @@
 {
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "args": [
             "--manual"
@@ -8,7 +11,6 @@
     "sandbox": {
         "services": [
             "fuchsia.camera3.DeviceWatcher",
-            "fuchsia.logger.LogSink",
             "fuchsia.sys.Environment",
             "fuchsia.sysmem.Allocator",
             "fuchsia.tracing.provider.Registry",

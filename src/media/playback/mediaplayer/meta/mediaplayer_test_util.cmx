@@ -1,4 +1,7 @@
 {
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "bin/mediaplayer_test_util"
     },
@@ -7,7 +10,6 @@
             "isolated-temp"
         ],
         "services": [
-            "fuchsia.logger.LogSink",
             "fuchsia.media.playback.Player",
             "fuchsia.ui.scenic.Scenic"
         ]

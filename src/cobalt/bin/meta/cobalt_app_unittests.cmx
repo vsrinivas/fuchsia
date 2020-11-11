@@ -6,6 +6,8 @@
         "features": [
             "isolated-temp"
         ],
-        "services": [ "fuchsia.process.lifecycle.Lifecycle"]
+        "services": [
+            "fuchsia.process.lifecycle.Lifecycle"
+        ]
     }
 }

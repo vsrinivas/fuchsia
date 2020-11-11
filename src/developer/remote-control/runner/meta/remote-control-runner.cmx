@@ -1,11 +1,13 @@
 {
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "bin/remote_control_runner"
     },
     "sandbox": {
         "services": [
             "fuchsia.developer.remotecontrol.RemoteControl",
-            "fuchsia.logger.LogSink",
             "fuchsia.overnet.MeshController",
             "fuchsia.overnet.Overnet",
             "fuchsia.overnet.ServiceConsumer",

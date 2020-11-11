@@ -1,14 +1,12 @@
 {
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "args": [
             "--mode",
             "ALWAYS_FAIL_AUTHENTICATION"
         ],
         "binary": "bin/dev_authenticator"
-    },
-    "sandbox": {
-        "services": [
-            "fuchsia.logger.LogSink"
-        ]
     }
 }

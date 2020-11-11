@@ -1,4 +1,7 @@
 {
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "bin/usb_system_update_checker"
     },
@@ -7,7 +10,6 @@
             "build-info"
         ],
         "services": [
-            "fuchsia.logger.LogSink",
             "fuchsia.pkg.PackageResolver",
             "fuchsia.update.installer.Installer"
         ]

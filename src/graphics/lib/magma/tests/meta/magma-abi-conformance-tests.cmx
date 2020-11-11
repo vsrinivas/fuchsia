@@ -6,6 +6,9 @@
             ]
         }
     },
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "test/magma_abi_conformance_tests"
     },
@@ -18,7 +21,6 @@
             "vulkan"
         ],
         "services": [
-            "fuchsia.logger.LogSink",
             "fuchsia.sysmem.Allocator",
             "fuchsia.tracing.provider.Registry"
         ]

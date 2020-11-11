@@ -1,11 +1,13 @@
 {
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "bin/log_stats"
     },
     "sandbox": {
         "services": [
-            "fuchsia.diagnostics.ArchiveAccessor",
-            "fuchsia.logger.LogSink"
+            "fuchsia.diagnostics.ArchiveAccessor"
         ]
     }
 }

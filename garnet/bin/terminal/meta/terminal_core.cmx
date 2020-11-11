@@ -1,4 +1,7 @@
 {
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "bin/terminal"
     },
@@ -22,7 +25,6 @@
         "services": [
             "fuchsia.hardware.pty.Device",
             "fuchsia.logger.Log",
-            "fuchsia.logger.LogSink",
             "fuchsia.net.NameLookup",
             "fuchsia.pkg.PackageResolverAdmin",
             "fuchsia.pkg.RepositoryManager",

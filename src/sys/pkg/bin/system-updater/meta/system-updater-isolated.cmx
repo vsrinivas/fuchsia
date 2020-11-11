@@ -1,4 +1,7 @@
 {
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "bin/system-updater"
     },
@@ -6,7 +9,6 @@
         "services": [
             "fuchsia.cobalt.LoggerFactory",
             "fuchsia.hardware.power.statecontrol.Admin",
-            "fuchsia.logger.LogSink",
             "fuchsia.paver.Paver",
             "fuchsia.pkg.PackageCache",
             "fuchsia.pkg.PackageResolver",

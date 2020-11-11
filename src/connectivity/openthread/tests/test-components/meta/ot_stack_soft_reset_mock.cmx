@@ -13,12 +13,14 @@
             }
         }
     },
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "bin/ot_stack_soft_reset_mock"
     },
     "sandbox": {
         "services": [
-            "fuchsia.logger.LogSink",
             "fuchsia.lowpan.spinel.Device",
             "fuchsia.openthread.devmgr.IsolatedDevmgr",
             "fuchsia.sys.Launcher"

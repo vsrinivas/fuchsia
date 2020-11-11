@@ -1,4 +1,7 @@
 {
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "bin/lowpan_spinel_driver"
     },
@@ -11,7 +14,6 @@
         ],
         "services": [
             "fuchsia.factory.lowpan.FactoryRegister",
-            "fuchsia.logger.LogSink",
             "fuchsia.lowpan.device.Register",
             "fuchsia.lowpan.spinel.Device",
             "fuchsia.sys.Launcher"

@@ -1,4 +1,7 @@
 {
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "test/bt-tool-cli-tests"
     },
@@ -12,7 +15,6 @@
             "fuchsia.bluetooth.avrcp.test.TestPeerManager",
             "fuchsia.bluetooth.bredr.Profile",
             "fuchsia.bluetooth.snoop.Snoop",
-            "fuchsia.logger.LogSink",
             "fuchsia.process.Launcher"
         ]
     }

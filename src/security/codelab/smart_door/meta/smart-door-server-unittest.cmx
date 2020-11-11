@@ -1,13 +1,13 @@
 {
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "bin/smart-door-server-unittest"
     },
     "sandbox": {
         "features": [
             "config-data"
-        ],
-        "services": [
-            "fuchsia.logger.LogSink"
         ]
     }
 }

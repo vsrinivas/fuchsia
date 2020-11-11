@@ -1,4 +1,7 @@
 {
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "data": "data/a11y-demo"
     },
@@ -6,7 +9,6 @@
         "services": [
             "fuchsia.cobalt.LoggerFactory",
             "fuchsia.fonts.Provider",
-            "fuchsia.logger.LogSink",
             "fuchsia.modular.ContextWriter",
             "fuchsia.modular.ModuleContext",
             "fuchsia.netstack.Netstack",

@@ -1,4 +1,7 @@
 {
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "bin/last_reboot"
     },
@@ -14,8 +17,7 @@
         "services": [
             "fuchsia.cobalt.LoggerFactory",
             "fuchsia.feedback.CrashReporter",
-            "fuchsia.hardware.power.statecontrol.RebootMethodsWatcherRegister",
-            "fuchsia.logger.LogSink"
+            "fuchsia.hardware.power.statecontrol.RebootMethodsWatcherRegister"
         ]
     }
 }

@@ -1,11 +1,13 @@
 {
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "bin/camera-gym"
     },
     "sandbox": {
         "services": [
             "fuchsia.camera3.DeviceWatcher",
-            "fuchsia.logger.LogSink",
             "fuchsia.sys.Environment",
             "fuchsia.sysmem.Allocator",
             "fuchsia.tracing.provider.Registry",

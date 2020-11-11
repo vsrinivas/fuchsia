@@ -1,4 +1,7 @@
 {
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "bin/fx"
     },
@@ -7,7 +10,6 @@
             "class/audio-input"
         ],
         "services": [
-            "fuchsia.logger.LogSink",
             "fuchsia.media.Audio",
             "fuchsia.scheduler.ProfileProvider"
         ]

@@ -1,12 +1,14 @@
 {
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "test/setui_client_interface_test"
     },
     "sandbox": {
         "services": [
             "fuchsia.sys.Environment",
-            "fuchsia.sys.Loader",
-            "fuchsia.logger.LogSink"
+            "fuchsia.sys.Loader"
         ]
     }
 }

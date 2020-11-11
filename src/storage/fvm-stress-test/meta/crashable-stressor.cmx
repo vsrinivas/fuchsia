@@ -1,4 +1,7 @@
 {
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "args": [
             "--disconnect-secs",
@@ -17,7 +20,6 @@
             "fuchsia.boot.Items",
             "fuchsia.boot.WriteOnlyLog",
             "fuchsia.ldsvc.Loader",
-            "fuchsia.logger.LogSink",
             "fuchsia.process.Launcher",
             "fuchsia.sys.Environment",
             "fuchsia.sys.Launcher"

@@ -26,6 +26,9 @@
             ]
         }
     },
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "test/web_runner_pixel_tests"
     },
@@ -38,7 +41,6 @@
             "fuchsia.device.NameProvider",
             "fuchsia.fonts.Provider",
             "fuchsia.intl.PropertyProvider",
-            "fuchsia.logger.LogSink",
             "fuchsia.mediacodec.CodecFactory",
             "fuchsia.memorypressure.Provider",
             "fuchsia.netstack.Netstack",

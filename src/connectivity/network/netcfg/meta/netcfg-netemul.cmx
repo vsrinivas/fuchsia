@@ -1,4 +1,7 @@
 {
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "args": [
             "--min-severity",
@@ -16,7 +19,6 @@
             "config-data"
         ],
         "services": [
-            "fuchsia.logger.LogSink",
             "fuchsia.net.dhcp.Server",
             "fuchsia.net.dhcpv6.ClientProvider",
             "fuchsia.net.filter.Filter",

@@ -29,6 +29,9 @@
             ]
         }
     },
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "test/web_semantics_tests"
     },
@@ -39,7 +42,6 @@
             "fuchsia.device.NameProvider",
             "fuchsia.fonts.Provider",
             "fuchsia.intl.PropertyProvider",
-            "fuchsia.logger.LogSink",
             "fuchsia.memorypressure.Provider",
             "fuchsia.netstack.Netstack",
             "fuchsia.posix.socket.Provider",

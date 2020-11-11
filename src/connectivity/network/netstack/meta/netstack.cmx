@@ -1,4 +1,7 @@
 {
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "args": [
             "netstack"
@@ -12,7 +15,6 @@
         "services": [
             "fuchsia.cobalt.LoggerFactory",
             "fuchsia.device.NameProvider",
-            "fuchsia.logger.LogSink",
             "fuchsia.posix.socket.Provider",
             "fuchsia.stash.SecureStore"
         ]

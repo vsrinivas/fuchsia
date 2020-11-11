@@ -1,4 +1,7 @@
 {
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "bin/modular_test_harness_bin"
     },
@@ -8,7 +11,6 @@
             "fuchsia.device.NameProvider",
             "fuchsia.devicesettings.DeviceSettingsManager",
             "fuchsia.hardware.power.statecontrol.Admin",
-            "fuchsia.logger.LogSink",
             "fuchsia.net.NameLookup",
             "fuchsia.posix.socket.Provider",
             "fuchsia.scheduler.ProfileProvider",

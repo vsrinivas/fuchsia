@@ -1,13 +1,13 @@
 {
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "test/power_manager_bin_test"
     },
     "sandbox": {
         "features": [
             "config-data"
-        ],
-        "services": [
-            "fuchsia.logger.LogSink"
         ]
     }
 }

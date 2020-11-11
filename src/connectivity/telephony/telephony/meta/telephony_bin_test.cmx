@@ -8,6 +8,9 @@
             }
         }
     },
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "bin/telephony_bin_test"
     },
@@ -16,7 +19,6 @@
             "packages"
         ],
         "services": [
-            "fuchsia.logger.LogSink",
             "fuchsia.sys.Launcher",
             "fuchsia.tel.devmgr.IsolatedDevmgr"
         ]

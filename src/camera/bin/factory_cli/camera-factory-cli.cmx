@@ -1,4 +1,7 @@
 {
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "bin/camera-factory-cli"
     },
@@ -11,8 +14,7 @@
         ],
         "services": [
             "fuchsia.camera3.DeviceWatcher",
-            "fuchsia.factory.camera.Controller",
-            "fuchsia.logger.LogSink"
+            "fuchsia.factory.camera.Controller"
         ]
     }
 }

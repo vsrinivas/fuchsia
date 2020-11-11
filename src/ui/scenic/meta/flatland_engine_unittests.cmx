@@ -10,13 +10,15 @@
             ]
         }
     },
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "test/flatland_engine_unittests"
     },
     "sandbox": {
         "services": [
             "fuchsia.hardware.display.Provider",
-            "fuchsia.logger.LogSink",
             "fuchsia.sysmem.Allocator"
         ]
     }

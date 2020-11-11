@@ -1,4 +1,7 @@
 {
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "bin/component_manager"
     },
@@ -7,7 +10,6 @@
             "deprecated-ambient-replace-as-executable"
         ],
         "services": [
-            "fuchsia.logger.LogSink",
             "fuchsia.process.Launcher",
             "fuchsia.sys.Loader",
             "fuchsia.tracing.provider.Registry"

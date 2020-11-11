@@ -7,6 +7,9 @@
             }
         }
     },
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "test/dynamic-repositories-disabled"
     },
@@ -16,7 +19,6 @@
             "isolated-temp"
         ],
         "services": [
-            "fuchsia.logger.LogSink",
             "fuchsia.posix.socket.Provider",
             "fuchsia.process.Launcher",
             "fuchsia.sys.Environment",

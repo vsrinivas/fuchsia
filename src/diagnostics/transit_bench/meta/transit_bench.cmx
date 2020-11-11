@@ -1,4 +1,7 @@
 {
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "test/transit_bench",
         "env_vars": [
@@ -8,9 +11,6 @@
     "sandbox": {
         "features": [
             "isolated-cache-storage"
-        ],
-        "services": [
-            "fuchsia.logger.LogSink"
         ]
     }
 }

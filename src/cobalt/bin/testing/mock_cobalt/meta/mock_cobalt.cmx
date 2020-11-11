@@ -1,11 +1,13 @@
 {
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "bin/mock_cobalt"
     },
     "sandbox": {
         "services": [
-            "fuchsia.cobalt.LoggerFactory",
-            "fuchsia.logger.LogSink"
+            "fuchsia.cobalt.LoggerFactory"
         ]
     }
 }

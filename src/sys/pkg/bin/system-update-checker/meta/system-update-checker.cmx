@@ -1,4 +1,7 @@
 {
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "bin/system-update-checker"
     },
@@ -19,7 +22,6 @@
         ],
         "services": [
             "fuchsia.cobalt.SystemDataUpdater",
-            "fuchsia.logger.LogSink",
             "fuchsia.paver.Paver",
             "fuchsia.pkg.PackageResolver",
             "fuchsia.pkg.RepositoryManager",

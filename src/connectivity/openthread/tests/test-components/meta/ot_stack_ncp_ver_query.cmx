@@ -1,4 +1,7 @@
 {
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "test/ot_stack_ncp_ver_query"
     },
@@ -10,7 +13,6 @@
             "packages"
         ],
         "services": [
-            "fuchsia.logger.LogSink",
             "fuchsia.lowpan.spinel.Device",
             "fuchsia.sys.Launcher"
         ]

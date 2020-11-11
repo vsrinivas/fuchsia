@@ -1,4 +1,7 @@
 {
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "bin/hwinfo"
     },
@@ -7,8 +10,7 @@
             "config-data"
         ],
         "services": [
-            "fuchsia.factory.MiscFactoryStoreProvider",
-            "fuchsia.logger.LogSink"
+            "fuchsia.factory.MiscFactoryStoreProvider"
         ]
     }
 }

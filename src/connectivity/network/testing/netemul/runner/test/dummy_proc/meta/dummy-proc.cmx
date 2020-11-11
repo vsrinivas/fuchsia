@@ -1,4 +1,7 @@
 {
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "bin/dummy_proc"
     },
@@ -7,7 +10,6 @@
             "isolated-persistent-storage"
         ],
         "services": [
-            "fuchsia.logger.LogSink",
             "fuchsia.netemul.environment.ManagedEnvironment",
             "fuchsia.netemul.sync.SyncManager"
         ]

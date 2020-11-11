@@ -1,4 +1,7 @@
 {
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "bin/ktrace_provider"
     },
@@ -6,7 +9,6 @@
         "services": [
             "fuchsia.boot.ReadOnlyLog",
             "fuchsia.kernel.RootJob",
-            "fuchsia.logger.LogSink",
             "fuchsia.tracing.kernel.Controller",
             "fuchsia.tracing.kernel.Reader",
             "fuchsia.tracing.provider.Registry"

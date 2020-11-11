@@ -6,6 +6,9 @@
             ]
         }
     },
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "test/debug_agent_integration_tests"
     },
@@ -13,7 +16,6 @@
         "services": [
             "fuchsia.exception.ProcessLimbo",
             "fuchsia.kernel.RootJob",
-            "fuchsia.logger.LogSink",
             "fuchsia.process.Launcher"
         ]
     }

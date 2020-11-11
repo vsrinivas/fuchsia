@@ -1,13 +1,13 @@
 {
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "bin/device_id_provider_unittest_exe"
     },
     "sandbox": {
         "features": [
             "isolated-temp"
-        ],
-        "services": [
-            "fuchsia.logger.LogSink"
         ]
     }
 }

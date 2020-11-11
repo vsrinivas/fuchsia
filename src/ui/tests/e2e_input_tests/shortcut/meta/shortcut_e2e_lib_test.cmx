@@ -15,12 +15,14 @@
             ]
         }
     },
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "test/shortcut_e2e_lib_test"
     },
     "sandbox": {
         "services": [
-            "fuchsia.logger.LogSink",
             "fuchsia.ui.input.InputDeviceRegistry",
             "fuchsia.ui.policy.Presenter",
             "fuchsia.ui.scenic.Scenic",

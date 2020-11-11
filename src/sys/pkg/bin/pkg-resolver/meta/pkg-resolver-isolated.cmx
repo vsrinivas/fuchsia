@@ -1,4 +1,7 @@
 {
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "bin/pkg-resolver"
     },
@@ -6,7 +9,6 @@
         "services": [
             "fuchsia.boot.Arguments",
             "fuchsia.cobalt.LoggerFactory",
-            "fuchsia.logger.LogSink",
             "fuchsia.net.NameLookup",
             "fuchsia.pkg.LocalMirror",
             "fuchsia.pkg.PackageCache",

@@ -7,6 +7,9 @@
             ]
         }
     },
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "bin/{binary}"
     },
@@ -15,7 +18,6 @@
             "hub"
         ],
         "services": [
-            "fuchsia.logger.LogSink",
             "fuchsia.media.AudioCore",
             "fuchsia.media.AudioTestDevmgr",
             "fuchsia.scheduler.ProfileProvider",

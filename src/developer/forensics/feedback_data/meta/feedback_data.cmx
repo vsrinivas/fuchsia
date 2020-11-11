@@ -1,4 +1,7 @@
 {
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "bin/feedback_data"
     },
@@ -19,7 +22,6 @@
             "fuchsia.hwinfo.Board",
             "fuchsia.hwinfo.Product",
             "fuchsia.logger.Log",
-            "fuchsia.logger.LogSink",
             "fuchsia.process.Launcher",
             "fuchsia.sysinfo.SysInfo",
             "fuchsia.time.Utc",

@@ -1,4 +1,7 @@
 {
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "bin/telephony"
     },
@@ -7,7 +10,6 @@
             "class/qmi-transport"
         ],
         "services": [
-            "fuchsia.logger.LogSink",
             "fuchsia.sys.Launcher"
         ]
     }

@@ -1,4 +1,7 @@
 {
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "bin/bt_a2dp_sink"
     },
@@ -9,7 +12,6 @@
             "fuchsia.bluetooth.avrcp.PeerManager",
             "fuchsia.bluetooth.bredr.Profile",
             "fuchsia.cobalt.LoggerFactory",
-            "fuchsia.logger.LogSink",
             "fuchsia.media.SessionAudioConsumerFactory",
             "fuchsia.media.sessions2.Publisher",
             "fuchsia.mediacodec.CodecFactory",
