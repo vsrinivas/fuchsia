@@ -16,8 +16,12 @@ group("tests") {
       ":dm_reboot_bootloader_test($host_toolchain)",
       ":dm_reboot_recovery_test($host_toolchain)",
       ":dm_reboot_test($host_toolchain)",
-      ":kill_critical_process_test($host_toolchain)",
     ]
+
+    # TODO(fxbug.dev/63992): Temporarily disable these tests on profile builders.
+    if (select_variant + [ "profile" ] - [ "profile" ] == select_variant) {
+      deps += [ ":kill_critical_process_test($host_toolchain)" ]
+    }
   }
 }
 
