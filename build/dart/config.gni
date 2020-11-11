@@ -12,14 +12,16 @@ declare_args() {
   # TODO uncomment this once references to //topaz/runtime/dart/config.gni are converted
   #dart_force_product = false
 
-  if (dart_force_product) {
-    # Product AOT
-    dart_default_build_cfg = dart_release_build_cfg
-  } else if (is_debug) {
-    # Non-product JIT
-    dart_default_build_cfg = dart_debug_build_cfg
-  } else {
-    # Non-product AOT
-    dart_default_build_cfg = dart_profile_build_cfg
-  }
+  # TODO(fxbug.dev/64153) renable aot builds
+  #  if (dart_force_product) {
+  # Product AOT
+  #    dart_default_build_cfg = dart_release_build_cfg
+  #  } else if (is_debug) {
+  # Non-product JIT
+  dart_default_build_cfg = dart_debug_build_cfg
+
+  #  } else {
+  # Non-product AOT
+  #    dart_default_build_cfg = dart_profile_build_cfg
+  #  }
 }
