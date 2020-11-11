@@ -13,6 +13,7 @@
 
 #include <fbl/canary.h>
 #include <fbl/intrusive_double_list.h>
+#include <ktl/atomic.h>
 #include <kernel/deadline.h>
 #include <kernel/spinlock.h>
 
@@ -90,10 +91,10 @@ class Timer : public fbl::DoublyLinkedListable<Timer*, fbl::NodeOptions::AllowRe
   void* arg_ = nullptr;
 
   // INVALID_CPU, if inactive.
-  volatile cpu_num_t active_cpu_ = INVALID_CPU;
+  ktl::atomic<cpu_num_t> active_cpu_{INVALID_CPU};
 
   // true if cancel is pending
-  volatile bool cancel_ = false;
+  ktl::atomic<bool> cancel_{false};
 };
 
 // Preemption Timers
