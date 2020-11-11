@@ -3,7 +3,6 @@
         "daily_per_product_quota": 100
     },
     "crash_server" : {
-        "upload_policy": "read_from_privacy_settings",
-        "url": "https://clients2.google.com/cr/report"
+        "upload_policy": "read_from_privacy_settings"
     }
 }

@@ -1,6 +1,5 @@
 {
     "crash_server" : {
-        "upload_policy": "enabled",
-        "url": "https://clients2.google.com/cr/report"
+        "upload_policy": "enabled"
     }
 }

@@ -307,13 +307,11 @@ TEST_F(InspectManagerTest, Fail_MarkReportAsGarbageCollected_UnknownReport) {
 }
 
 TEST_F(InspectManagerTest, ExposeConfig_UploadEnabled) {
-  inspect_manager_->ExposeConfig(Config{
-      /*crash_server=*/
-      {
-          /*upload_policy=*/kConfigEnabled,
-          /*url=*/std::make_unique<std::string>("http://localhost:1234"),
-      },
-      /*daily_per_product_quota=*/100u});
+  inspect_manager_->ExposeConfig(Config{/*crash_server=*/
+                                        {
+                                            /*upload_policy=*/kConfigEnabled,
+                                        },
+                                        /*daily_per_product_quota=*/100u});
   EXPECT_THAT(InspectTree(),
               ChildrenMatch(Contains(
                   AllOf(NodeMatches(NameMatches("config")),
@@ -321,7 +319,6 @@ TEST_F(InspectManagerTest, ExposeConfig_UploadEnabled) {
                             NameMatches(kCrashServerKey),
                             PropertyList(UnorderedElementsAreArray({
                                 StringIs(kCrashServerUploadPolicyKey, ToString(kConfigEnabled)),
-                                StringIs(kCrashServerUrlKey, "http://localhost:1234"),
                             }))))))))));
 }
 
@@ -329,7 +326,6 @@ TEST_F(InspectManagerTest, ExposeConfig_UploadDisabled) {
   inspect_manager_->ExposeConfig(Config{/*crash_server=*/
                                         {
                                             /*upload_policy=*/kConfigDisabled,
-                                            /*url=*/nullptr,
                                         },
                                         /*per_product_config=*/100});
   EXPECT_THAT(InspectTree(),
@@ -345,7 +341,6 @@ TEST_F(InspectManagerTest, ExposeConfig_UploadReadFromPrivacySettings) {
   inspect_manager_->ExposeConfig(Config{/*crash_server=*/
                                         {
                                             /*upload_policy=*/kConfigReadFromPrivacySettings,
-                                            /*url=*/nullptr,
                                         },
                                         /*per_product_config=*/100u});
   EXPECT_THAT(

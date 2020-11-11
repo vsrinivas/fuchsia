@@ -152,16 +152,16 @@ class CrashReporterTest : public UnitTestFixture {
 
  protected:
   // Sets up the underlying crash reporter using the given |config| and |crash_server|.
-  void SetUpCrashReporter(Config config, std::unique_ptr<StubCrashServer> crash_server) {
+  void SetUpCrashReporter(
+      Config config, const std::vector<CrashServer::UploadStatus>& upload_attempt_results = {}) {
     auto snapshot_manager = std::make_unique<SnapshotManager>(
         dispatcher(), services(), std::make_unique<timekeeper::TestClock>(), zx::sec(5),
         StorageSize::Gigabytes(1u), StorageSize::Gigabytes(1u));
+    auto crash_server = std::make_unique<StubCrashServer>(upload_attempt_results);
 
     config_ = std::move(config);
-    FX_CHECK((config_.crash_server.url && crash_server) ||
-             (!config_.crash_server.url && !crash_server));
-    crash_server_ = crash_server.get();
 
+    crash_server_ = crash_server.get();
     if (crash_server_) {
       crash_server_->AddSnapshotManager(snapshot_manager.get());
     }
@@ -173,12 +173,6 @@ class CrashReporterTest : public UnitTestFixture {
     FX_CHECK(crash_reporter_);
   }
 
-  // Sets up the underlying crash reporter using the given |config|.
-  void SetUpCrashReporter(Config config) {
-    FX_CHECK(!config.crash_server.url);
-    return SetUpCrashReporter(std::move(config), /*crash_server=*/nullptr);
-  }
-
   // Sets up the underlying crash reporter using a default config.
   void SetUpCrashReporterDefaultConfig(
       const std::vector<CrashServer::UploadStatus>& upload_attempt_results = {}) {
@@ -186,10 +180,9 @@ class CrashReporterTest : public UnitTestFixture {
         Config{/*crash_server=*/
                {
                    /*upload_policy=*/CrashServerConfig::UploadPolicy::ENABLED,
-                   /*url=*/std::make_unique<std::string>(kStubCrashServerUrl),
                },
                /*daily_per_product_quota=*/kDailyPerProductQuota},
-        std::make_unique<StubCrashServer>(upload_attempt_results));
+        upload_attempt_results);
   }
 
   void SetUpChannelProviderServer(std::unique_ptr<stubs::ChannelProviderBase> server) {
@@ -482,11 +475,9 @@ TEST_F(CrashReporterTest, NoQuota) {
       Config{/*crash_server=*/
              {
                  /*upload_policy=*/CrashServerConfig::UploadPolicy::ENABLED,
-                 /*url=*/std::make_unique<std::string>(kStubCrashServerUrl),
              },
              /*daily_per_product_quota=*/std::nullopt},
-      std::make_unique<StubCrashServer>(
-          std::vector<CrashServer::UploadStatus>(kDailyPerProductQuota, kUploadSuccessful)));
+      std::vector<CrashServer::UploadStatus>(kDailyPerProductQuota, kUploadSuccessful));
   SetUpChannelProviderServer(std::make_unique<stubs::ChannelProvider>(kDefaultChannel));
   SetUpDataProviderServer(
       std::make_unique<stubs::DataProvider>(kDefaultAnnotations, kDefaultAttachmentBundleKey));
@@ -743,10 +734,9 @@ TEST_F(CrashReporterTest, Upload_OnUserAlreadyOptedInDataSharing) {
       Config{/*crash_server=*/
              {
                  /*upload_policy=*/CrashServerConfig::UploadPolicy::READ_FROM_PRIVACY_SETTINGS,
-                 /*url=*/std::make_unique<std::string>(kStubCrashServerUrl),
              },
              /*daily_per_product_quota=*/kDailyPerProductQuota},
-      std::make_unique<StubCrashServer>(std::vector({kUploadSuccessful})));
+      std::vector({kUploadSuccessful}));
   SetUpChannelProviderServer(std::make_unique<stubs::ChannelProvider>(kDefaultChannel));
   SetUpDataProviderServer(
       std::make_unique<stubs::DataProvider>(kDefaultAnnotations, kDefaultAttachmentBundleKey));
@@ -761,14 +751,12 @@ TEST_F(CrashReporterTest, Upload_OnUserAlreadyOptedInDataSharing) {
 }
 
 TEST_F(CrashReporterTest, Archive_OnUserAlreadyOptedOutDataSharing) {
-  SetUpCrashReporter(
-      Config{/*crash_server=*/
-             {
-                 /*upload_policy=*/CrashServerConfig::UploadPolicy::READ_FROM_PRIVACY_SETTINGS,
-                 /*url=*/std::make_unique<std::string>(kStubCrashServerUrl),
-             },
-             /*daily_per_product_quota=*/kDailyPerProductQuota},
-      std::make_unique<StubCrashServer>(std::vector<CrashServer::UploadStatus>({})));
+  SetUpCrashReporter(Config{
+      /*crash_server=*/
+      {
+          /*upload_policy=*/CrashServerConfig::UploadPolicy::READ_FROM_PRIVACY_SETTINGS,
+      },
+      /*daily_per_product_quota=*/kDailyPerProductQuota});
   SetUpChannelProviderServer(std::make_unique<stubs::ChannelProvider>(kDefaultChannel));
   SetUpDataProviderServer(
       std::make_unique<stubs::DataProvider>(kEmptyAnnotations, kDefaultAttachmentBundleKey));
@@ -785,10 +773,9 @@ TEST_F(CrashReporterTest, Upload_OnceUserOptInDataSharing) {
       Config{/*crash_server=*/
              {
                  /*upload_policy=*/CrashServerConfig::UploadPolicy::READ_FROM_PRIVACY_SETTINGS,
-                 /*url=*/std::make_unique<std::string>(kStubCrashServerUrl),
              },
              /*daily_per_product_quota=*/kDailyPerProductQuota},
-      std::make_unique<StubCrashServer>(std::vector({kUploadSuccessful})));
+      std::vector({kUploadSuccessful}));
   SetUpChannelProviderServer(std::make_unique<stubs::ChannelProvider>(kDefaultChannel));
   SetUpDataProviderServer(
       std::make_unique<stubs::DataProvider>(kDefaultAnnotations, kDefaultAttachmentBundleKey));
@@ -811,10 +798,9 @@ TEST_F(CrashReporterTest, Succeed_OnFailedUpload) {
       Config{/*crash_server=*/
              {
                  /*upload_policy=*/CrashServerConfig::UploadPolicy::ENABLED,
-                 /*url=*/std::make_unique<std::string>(kStubCrashServerUrl),
              },
              /*daily_per_product_quota=*/kDailyPerProductQuota},
-      std::make_unique<StubCrashServer>(std::vector({kUploadFailed})));
+      std::vector({kUploadFailed}));
   SetUpChannelProviderServer(std::make_unique<stubs::ChannelProvider>(kDefaultChannel));
   SetUpDataProviderServer(
       std::make_unique<stubs::DataProvider>(kEmptyAnnotations, kEmptyAttachmentBundleKey));
@@ -829,10 +815,9 @@ TEST_F(CrashReporterTest, Succeed_OnThrottledUpload) {
       Config{/*crash_server=*/
              {
                  /*upload_policy=*/CrashServerConfig::UploadPolicy::ENABLED,
-                 /*url=*/std::make_unique<std::string>(kStubCrashServerUrl),
              },
              /*daily_per_product_quota=*/kDailyPerProductQuota},
-      std::make_unique<StubCrashServer>(std::vector({kUploadThrottled})));
+      std::vector({kUploadThrottled}));
   SetUpChannelProviderServer(std::make_unique<stubs::ChannelProvider>(kDefaultChannel));
   SetUpDataProviderServer(
       std::make_unique<stubs::DataProvider>(kEmptyAnnotations, kEmptyAttachmentBundleKey));
@@ -846,7 +831,6 @@ TEST_F(CrashReporterTest, Succeed_OnDisabledUpload) {
   SetUpCrashReporter(Config{/*crash_server=*/
                             {
                                 /*upload_policy=*/CrashServerConfig::UploadPolicy::DISABLED,
-                                /*url=*/nullptr,
                             },
                             /*daily_per_product_quota=*/kDailyPerProductQuota});
   SetUpChannelProviderServer(std::make_unique<stubs::ChannelProvider>(kDefaultChannel));
@@ -932,14 +916,11 @@ TEST_F(CrashReporterTest, Check_CobaltAfterSuccessfulUpload) {
 }
 
 TEST_F(CrashReporterTest, Check_CobaltAfterQuotaReached) {
-  SetUpCrashReporter(
-      Config{/*crash_server=*/
-             {
-                 /*upload_policy=*/CrashServerConfig::UploadPolicy::ENABLED,
-                 /*url=*/std::make_unique<std::string>(kStubCrashServerUrl),
-             },
-             /*daily_per_product_quota=*/0u},
-      std::make_unique<StubCrashServer>(std::vector<CrashServer::UploadStatus>({})));
+  SetUpCrashReporter(Config{/*crash_server=*/
+                            {
+                                /*upload_policy=*/CrashServerConfig::UploadPolicy::ENABLED,
+                            },
+                            /*daily_per_product_quota=*/0u});
   SetUpChannelProviderServer(std::make_unique<stubs::ChannelProvider>(kDefaultChannel));
   SetUpDataProviderServer(
       std::make_unique<stubs::DataProvider>(kEmptyAnnotations, kEmptyAttachmentBundleKey));

@@ -30,6 +30,7 @@ Queue::Queue(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirecto
       snapshot_manager_(snapshot_manager),
       info_(std::move(info_context)) {
   FX_CHECK(dispatcher_);
+  FX_CHECK(crash_server_);
 
   upload_all_every_fifteen_minutes_task_.set_handler([this]() { UploadAllEveryFifteenMinutes(); });
 

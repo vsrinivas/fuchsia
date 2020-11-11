@@ -30,11 +30,6 @@ struct CrashServerConfig {
     READ_FROM_PRIVACY_SETTINGS,
   };
   UploadPolicy upload_policy = UploadPolicy::DISABLED;
-
-  // URL of the remote crash server.
-  //
-  // We use a std::unique_ptr to set it only when relevant, i.e. when the policy is not DISABLED.
-  std::unique_ptr<std::string> url;
 };
 
 // Crash reporter static configuration.

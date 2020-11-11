@@ -139,9 +139,6 @@ void InspectManager::ExposeConfig(const crash_reports::Config& config) {
 
   crash_server->upload_policy =
       server.CreateString(kCrashServerUploadPolicyKey, ToString(config.crash_server.upload_policy));
-  if (config.crash_server.url) {
-    crash_server->url = server.CreateString(kCrashServerUrlKey, *config.crash_server.url.get());
-  }
 }
 
 void InspectManager::ExposeSettings(crash_reports::Settings* settings) {

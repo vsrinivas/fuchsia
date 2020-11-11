@@ -47,9 +47,6 @@ const char kSchema[] = R"({
             "enabled",
             "read_from_privacy_settings"
           ]
-        },
-        "url": {
-          "type": "string"
         }
       },
       "required": [
@@ -111,25 +108,6 @@ std::optional<CrashServerConfig> ParseCrashServerConfig(const rapidjson::Documen
   } else {
     FX_LOGS(ERROR) << "unknown upload policy " << upload_policy;
     return std::nullopt;
-  }
-
-  config.url = nullptr;
-  if (doc[kCrashServerKey].HasMember(kCrashServerUrlKey)) {
-    config.url =
-        std::make_unique<std::string>(doc[kCrashServerKey][kCrashServerUrlKey].GetString());
-  }
-
-  if ((config.upload_policy == CrashServerConfig::UploadPolicy::ENABLED ||
-       config.upload_policy == CrashServerConfig::UploadPolicy::READ_FROM_PRIVACY_SETTINGS) &&
-      !config.url) {
-    FX_LOGS(ERROR) << "missing crash server URL in config with upload not disabled";
-    return std::nullopt;
-  }
-
-  if (config.upload_policy == CrashServerConfig::UploadPolicy::DISABLED && config.url) {
-    FX_LOGS(WARNING) << "crash server URL set in config with upload disabled, "
-                        "ignoring value";
-    config.url = nullptr;
   }
 
   return config;

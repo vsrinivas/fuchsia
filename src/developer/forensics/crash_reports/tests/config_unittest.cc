@@ -49,41 +49,24 @@ TEST_F(ConfigTest, ParseConfig_ValidConfig_UploadDisabled) {
     }
 })");
   EXPECT_EQ(config.crash_server.upload_policy, kDisabled);
-  EXPECT_EQ(config.crash_server.url, nullptr);
 }
 
 TEST_F(ConfigTest, ParseConfig_ValidConfig_UploadEnabled) {
   PARSE_OR_ASSERT(config, R"({
     "crash_server" : {
-        "upload_policy": "enabled",
-        "url": "http://localhost:1234"
+        "upload_policy": "enabled"
     }
 })");
   EXPECT_EQ(config.crash_server.upload_policy, kEnabled);
-  EXPECT_EQ(*config.crash_server.url, "http://localhost:1234");
 }
 
 TEST_F(ConfigTest, ParseConfig_ValidConfig_UploadReadFromPrivacySettings) {
   PARSE_OR_ASSERT(config, R"({
     "crash_server" : {
-        "upload_policy": "read_from_privacy_settings",
-        "url": "http://localhost:1234"
+        "upload_policy": "read_from_privacy_settings"
     }
 })");
   EXPECT_EQ(config.crash_server.upload_policy, kReadFromPrivacySettings);
-  EXPECT_EQ(*config.crash_server.url, "http://localhost:1234");
-}
-
-TEST_F(ConfigTest, ParseConfig_ValidConfig_UploadDisabledServerUrlIgnored) {
-  PARSE_OR_ASSERT(config, R"({
-    "crash_server" : {
-        "upload_policy": "disabled",
-        "url": "http://localhost:1234"
-    }
-})");
-  EXPECT_EQ(config.crash_server.upload_policy, kDisabled);
-  // Even though a URL is set in the config file, we check that it is not set in the struct.
-  EXPECT_EQ(config.crash_server.url, nullptr);
 }
 
 TEST_F(ConfigTest, ParseConfig_HasDailyPerProductQuota) {
@@ -92,8 +75,7 @@ TEST_F(ConfigTest, ParseConfig_HasDailyPerProductQuota) {
         "daily_per_product_quota": 100
     },
     "crash_server" : {
-        "upload_policy": "enabled",
-        "url": "http://localhost:1234"
+        "upload_policy": "enabled"
     }
 })");
   ASSERT_TRUE(config.daily_per_product_quota.has_value());
@@ -103,8 +85,7 @@ TEST_F(ConfigTest, ParseConfig_HasDailyPerProductQuota) {
 TEST_F(ConfigTest, ParseConfig_MissingDailyPerProductQuota) {
   PARSE_OR_ASSERT(config, R"({
     "crash_server" : {
-        "upload_policy": "enabled",
-        "url": "http://localhost:1234"
+        "upload_policy": "enabled"
     }
 })");
   EXPECT_FALSE(config.daily_per_product_quota.has_value());
@@ -125,22 +106,6 @@ TEST_F(ConfigTest, ParseConfig_BadConfig_SpuriousField) {
 
 TEST_F(ConfigTest, ParseConfig_BadConfig_MissingRequiredField) {
   ASSERT_IS_BAD_CONFIG(R"({
-})");
-}
-
-TEST_F(ConfigTest, ParseConfig_BadConfig_MissingServerUrlWithUploadEnabled) {
-  ASSERT_IS_BAD_CONFIG(R"({
-    "crash_server" : {
-        "upload_policy": "enabled"
-    }
-})");
-}
-
-TEST_F(ConfigTest, ParseConfig_BadConfig_MissingServerUrlWithUploadReadFromPrivacySettings) {
-  ASSERT_IS_BAD_CONFIG(R"({
-    "crash_server" : {
-        "upload_policy": "read_from_privacy_settings"
-    }
 })");
 }
 

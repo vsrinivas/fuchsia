@@ -77,11 +77,8 @@ std::unique_ptr<CrashReporter> CrashReporter::TryCreate(
 
   auto tags = std::make_unique<LogTags>();
 
-  std::unique_ptr<CrashServer> crash_server;
-  if (config->crash_server.url) {
-    crash_server = std::make_unique<CrashServer>(services, *(config->crash_server.url),
-                                                 snapshot_manager.get(), tags.get());
-  }
+  auto crash_server =
+      std::make_unique<CrashServer>(services, kCrashServerUrl, snapshot_manager.get(), tags.get());
 
   return std::unique_ptr<CrashReporter>(
       new CrashReporter(dispatcher, std::move(services), clock, std::move(info_context),
@@ -115,9 +112,7 @@ CrashReporter::CrashReporter(async_dispatcher_t* dispatcher,
   FX_CHECK(dispatcher_);
   FX_CHECK(services_);
   FX_CHECK(crash_register_);
-  if (config->crash_server.url) {
-    FX_CHECK(crash_server_);
-  }
+  FX_CHECK(crash_server_);
 
   const auto& upload_policy = config->crash_server.upload_policy;
   settings_.set_upload_policy(upload_policy);

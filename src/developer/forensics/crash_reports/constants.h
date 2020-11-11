@@ -15,7 +15,8 @@ constexpr char kDailyPerProductQuotaKey[] = "daily_per_product_quota";
 
 constexpr char kCrashServerKey[] = "crash_server";
 constexpr char kCrashServerUploadPolicyKey[] = "upload_policy";
-constexpr char kCrashServerUrlKey[] = "url";
+
+constexpr char kCrashServerUrl[] = "https://clients2.google.com/cr/report";
 
 // Snapshots can occupy up to 10 MB of memory.
 constexpr StorageSize kSnapshotAnnotationsMaxSize = StorageSize::Megabytes(5);

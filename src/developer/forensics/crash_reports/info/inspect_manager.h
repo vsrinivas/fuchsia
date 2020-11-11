@@ -96,7 +96,6 @@ class InspectManager {
     // Inspect node containing the crash server configuration.
     struct CrashServerConfig {
       inspect::StringProperty upload_policy;
-      inspect::StringProperty url;
     };
 
     CrashServerConfig crash_server;

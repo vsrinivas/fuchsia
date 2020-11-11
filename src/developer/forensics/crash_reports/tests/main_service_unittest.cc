@@ -38,15 +38,12 @@ using testing::ElementsAre;
 using testing::UnorderedElementsAre;
 using testing::UnorderedElementsAreArray;
 
-constexpr char kCrashServerUrl[] = "localhost:1234";
-
 class MainServiceTest : public UnitTestFixture {
  public:
   void SetUp() override {
     auto config = std::make_unique<Config>();
     config->crash_server = CrashServerConfig{
         /*upload_policy=*/CrashServerConfig::UploadPolicy::ENABLED,
-        /*url=*/std::make_unique<std::string>(kCrashServerUrl),
     };
     config->daily_per_product_quota = 100u;
 
@@ -105,7 +102,6 @@ TEST_F(MainServiceTest, Check_InitialInspectTree) {
                           PropertyList(UnorderedElementsAreArray({
                               StringIs(kCrashServerUploadPolicyKey,
                                        ToString(CrashServerConfig::UploadPolicy::ENABLED)),
-                              StringIs(kCrashServerUrlKey, kCrashServerUrl),
                           }))))))),
           AllOf(NodeMatches(NameMatches("crash_reporter")),
                 ChildrenMatch(UnorderedElementsAreArray({
