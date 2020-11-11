@@ -24,7 +24,7 @@
 
 static constexpr uint32_t kInterruptIndex = 0;
 
-static constexpr uint32_t kSramMmioIndex = 4;
+static constexpr uint32_t kSramMmioIndex = 5;
 
 class MsdVsiDevice::BatchRequest : public DeviceRequest {
  public:

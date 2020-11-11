@@ -142,8 +142,8 @@ static const pbus_dev_t xhci_dev = []() {
 
 static const pbus_mmio_t usb_phy_mmios[] = {
     {
-        .base = S905D3_RESET_BASE,
-        .length = S905D3_RESET_LENGTH,
+        .base = S905D3_RESET1_BASE,
+        .length = S905D3_RESET1_LENGTH,
     },
     {
         .base = S905D3_USBCTRL_BASE,

@@ -34,8 +34,8 @@ constexpr uint32_t kClockAxiEnableShift = 24;
 constexpr uint32_t kHiu = 1;
 constexpr uint32_t kPowerDomain = 2;
 constexpr uint32_t kMemoryDomain = 3;
-// constexpr uint32_t kSram = 4;
-constexpr uint32_t kReset = 5;
+constexpr uint32_t kReset = 4;
+// constexpr uint32_t kSram = 5;
 }  // namespace
 
 namespace aml_nna {

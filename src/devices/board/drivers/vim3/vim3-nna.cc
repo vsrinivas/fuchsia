@@ -32,15 +32,15 @@ static pbus_mmio_t vim3_nna_mmios[] = {
         .base = A311D_MEMORY_PD_BASE,
         .length = A311D_MEMORY_PD_LENGTH,
     },
-    // AXI SRAM
-    {
-        .base = A311D_NNA_SRAM_BASE,
-        .length = A311D_NNA_SRAM_LENGTH,
-    },
     // Reset
     {
         .base = A311D_RESET_BASE,
         .length = A311D_RESET_LENGTH,
+    },
+    // AXI SRAM
+    {
+        .base = A311D_NNA_SRAM_BASE,
+        .length = A311D_NNA_SRAM_LENGTH,
     },
 };
 

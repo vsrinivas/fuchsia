@@ -206,6 +206,10 @@ int Nelson::Thread() {
     zxlogf(ERROR, "PowerInit failed: %d", status);
   }
 
+  if ((status = NnaInit()) != ZX_OK) {
+    zxlogf(ERROR, "NnaInit failed: %d", status);
+  }
+
   // This function includes some non-trivial delays, so lets run this last
   // to avoid slowing down the rest of the boot.
   if ((status = BluetoothInit()) != ZX_OK) {

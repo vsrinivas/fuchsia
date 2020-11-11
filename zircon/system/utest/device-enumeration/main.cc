@@ -348,6 +348,7 @@ TEST_F(DeviceEnumerationTest, NelsonTest) {
       "nelson-emmc/aml-sd-emmc/sdmmc/sdmmc-mmc/user/block/part-016/block",
       "nelson-emmc/aml-sd-emmc/sdmmc/sdmmc-mmc/user/block/part-017/block",
       "tcs3400-light/tcs-3400/hid-device-000",
+      "sys/platform/05:05:1c/aml-nna",
       "sys/platform/05:05:22/clocks",
       "aml-thermal-pll/thermal",
       "class/thermal/000",
