@@ -5,11 +5,7 @@
 group("tests") {
   testonly = true
   deps = [
-    "inspect-fidl-load:tests",
-    "selectors:tests",
-    "streams/dart:tests",
-    "triage:tests",
-    "util:tests",
-    "validating-log-listener:tests",
+    "injectable-time:tests",
+    "v2-argh-wrapper:tests",
   ]
 }

@@ -69,7 +69,7 @@ fuchsia_component("integration-test-component") {
 fuchsia_component("detect-component") {
   testonly = true
   manifest = "meta/detect.cml"
-  deps = [ "//src/diagnostics/detect:bin" ]
+  deps = [ "//src/diagnostics/launcher:bin" ]
 }
 
 fuchsia_component("component-manager") {

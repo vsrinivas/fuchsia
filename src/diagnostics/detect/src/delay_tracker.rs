@@ -19,7 +19,7 @@ pub struct DelayTracker<'a> {
 }
 
 impl<'a> DelayTracker<'a> {
-    pub fn new(time_source: &'a dyn TimeSource, program_mode: &Mode) -> DelayTracker<'a> {
+    pub(crate) fn new(time_source: &'a dyn TimeSource, program_mode: &Mode) -> DelayTracker<'a> {
         DelayTracker { last_sent: HashMap::new(), time_source, program_mode: *program_mode }
     }
 
@@ -32,7 +32,7 @@ impl<'a> DelayTracker<'a> {
     }
 
     // If it's OK to send, remember the time and return true.
-    pub fn ok_to_send(&mut self, snapshot: &SnapshotTrigger) -> bool {
+    pub(crate) fn ok_to_send(&mut self, snapshot: &SnapshotTrigger) -> bool {
         let now = self.time_source.now();
         let interval = self.appropriate_report_interval(snapshot.interval);
         let should_send = match self.last_sent.get(&snapshot.signature) {

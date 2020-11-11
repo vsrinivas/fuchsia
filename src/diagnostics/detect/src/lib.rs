@@ -4,23 +4,13 @@
 
 //! `triage-detect` is responsible for auto-triggering crash reports in Fuchsia.
 
-// TODO(fxbug.dev/61333): Several things
-// need to be answered and implemented before this is deployed.
-//
-// How and whether to gate/space crash report requests - should we queue them (with limited slots)
-//  the way PowerManager code does? (probably not)
-// Should we throttle crash report requests (N per day) and where to enforce this?
-// Do signatures need to be unique for each action? Namespaced between files?
-// Integration test
-// Restrict signature to lowercase-and-hyphens.
-
 mod delay_tracker;
 mod diagnostics;
 mod snapshot;
 mod triage_shim;
 
 use {
-    anyhow::{bail, Context, Error},
+    anyhow::{bail, Error},
     argh::FromArgs,
     delay_tracker::DelayTracker,
     fuchsia_async as fasync, fuchsia_zircon as zx,
@@ -39,8 +29,9 @@ const SIGNATURE_PREFIX: &str = "fuchsia-detect-";
 const MINIMUM_SIGNATURE_INTERVAL_NANOS: i64 = 3600 * 1_000_000_000;
 
 /// Command line args
-#[derive(FromArgs, Debug)]
-struct CommandLine {
+#[derive(FromArgs, Debug, PartialEq)]
+#[argh(subcommand, name = "detect")]
+pub struct CommandLine {
     /// how often to scan Diagnostic data
     #[argh(option)]
     check_every: Option<String>,
@@ -51,7 +42,7 @@ struct CommandLine {
 }
 
 #[derive(PartialEq, Debug, Clone, Copy)]
-pub enum Mode {
+pub(crate) enum Mode {
     Test,
     Production,
 }
@@ -93,26 +84,6 @@ fn load_configuration_files() -> Result<HashMap<String, String>, Error> {
         file_contents.insert(stem, config_text);
     }
     Ok(file_contents)
-}
-
-fn load_command_line() -> Result<CommandLine, Error> {
-    // We can't just use the one-line argh parse, because that writes to stdout
-    // and stdout doesn't currently work in v2 components. Instead, grab and
-    // log the output.
-    let arg_strings = std::env::args().collect::<Vec<_>>();
-    let arg_strs: Vec<&str> = arg_strings.iter().map(|s| s.as_str()).collect();
-    match CommandLine::from_args(&[arg_strs[0]], &arg_strs[1..]) {
-        Ok(args) => Ok(args),
-        Err(output) => {
-            for line in output.output.split("\n") {
-                warn!("CmdLine: {}", line);
-            }
-            match output.status {
-                Ok(()) => bail!("Exited as requested by command line args"),
-                Err(()) => bail!("Exited due to bad command line args"),
-            }
-        }
-    }
 }
 
 /// appropriate_check_interval determines the interval to check diagnostics, or signals error.
@@ -179,10 +150,7 @@ macro_rules! on_error {
     };
 }
 
-#[fasync::run_singlethreaded]
-async fn main() -> Result<(), Error> {
-    fuchsia_syslog::init_with_tags(&["detect"]).context("initializing logging").unwrap();
-    let args = on_error!(load_command_line(), "Command line error: {}")?;
+pub async fn main(args: CommandLine) -> Result<(), Error> {
     let mode = match args.test_only {
         true => Mode::Test,
         false => Mode::Production,

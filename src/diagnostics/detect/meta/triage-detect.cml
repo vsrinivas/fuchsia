@@ -1,6 +1,6 @@
 {
     program: {
-        binary: "bin/triage_detect",
+        binary: "bin/launcher",
         args: [
             "--check-every",
             "Minutes(2)",

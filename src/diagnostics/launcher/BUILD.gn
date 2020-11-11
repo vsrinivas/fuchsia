@@ -1,0 +1,24 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config.gni")
+import("//build/rust/rustc_binary.gni")
+import("//src/sys/build/components.gni")
+
+rustc_binary("bin") {
+  name = "launcher"
+  edition = "2018"
+
+  deps = [
+    "//src/diagnostics/detect:lib",
+    "//src/diagnostics/lib/util/v2-argh-wrapper",
+    "//src/lib/fuchsia-async",
+    "//src/lib/syslog/rust:syslog",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:argh",
+  ]
+
+  sources = [ "src/main.rs" ]
+}

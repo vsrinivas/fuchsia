@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/config.gni")
-import("//build/rust/rustc_binary.gni")
+import("//build/rust/rustc_library.gni")
 import("//src/sys/build/components.gni")
 
 config_data("enable-report-filing") {
@@ -12,8 +12,8 @@ config_data("enable-report-filing") {
   outputs = [ "config.json" ]
 }
 
-rustc_binary("bin") {
-  name = "triage-detect"
+rustc_library("lib") {
+  name = "detect-lib"
   edition = "2018"
   with_unit_tests = true
 
@@ -21,8 +21,8 @@ rustc_binary("bin") {
     "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics-rustc",
     "//sdk/fidl/fuchsia.feedback:fuchsia.feedback-rustc",
     "//sdk/fidl/fuchsia.logger:fuchsia.logger-rustc",
-    "//src/diagnostics/lib/injectable-time",
     "//src/diagnostics/lib/triage",
+    "//src/diagnostics/lib/util/injectable-time",
     "//src/lib/diagnostics/inspect/contrib/rust",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",
@@ -47,7 +47,7 @@ rustc_binary("bin") {
   sources = [
     "src/delay_tracker.rs",
     "src/diagnostics.rs",
-    "src/main.rs",
+    "src/lib.rs",
     "src/snapshot.rs",
     "src/triage_shim.rs",
   ]
@@ -57,8 +57,8 @@ rustc_binary("bin") {
 
 fuchsia_component("triage-detect-component") {
   deps = [
-    ":bin",
     "//src/diagnostics/config/triage:triage-detect",
+    "//src/diagnostics/launcher:bin",
   ]
   manifest = "meta/triage-detect.cml"
 }
@@ -69,7 +69,7 @@ fuchsia_package("triage-detect") {
 
 fuchsia_unittest_package("triage-detect-tests") {
   manifest = "meta/triage-detect-tests.cmx"
-  deps = [ ":bin_test" ]
+  deps = [ ":lib_test" ]
 }
 
 group("tests") {

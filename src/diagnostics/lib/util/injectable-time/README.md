@@ -23,7 +23,7 @@ This project should be automatically included in builds.
 ## Using
 
 `injectable-time` can be used by depending on the
-`//src/diagnostics/lib/injectable-time` gn target and then using
+`//src/diagnostics/lib/util/injectable-time` gn target and then using
 the `injectable-time` crate in a rust project.
 
 `injectable-time` is not available in the sdk and is intended to be used only by

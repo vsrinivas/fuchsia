@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "bin/triage_detect_bin_test"
+        "binary": "bin/detect_lib_lib_test"
     },
     "sandbox": {
         "features": [
