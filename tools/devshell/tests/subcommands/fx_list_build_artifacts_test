@@ -93,6 +93,14 @@ BT_SET_UP() {
         "name": "netboot",
         "path": "netboot.zbi",
         "type": "zbi"
+      },
+      {
+        "mkzedboot_mode": [
+          "efi"
+        ],
+        "name": "zedboot-efi",
+        "path": "zedboot.esp.blk",
+        "type": "blk"
       }
 ]
 EOF
@@ -191,7 +199,7 @@ TEST_fx-list-build-artifacts-unknown-name() {
 }
 
 TEST_fx-list-build-artifacts-images() {
-  BT_EXPECT_EQ "$(${fx} list-build-artifacts images)" "zedboot.zbi zedboot.vbmeta fuchsia.zbi fuchsia.vbmeta obj/build/images/fvm.blk obj/build/images/fvm.sparse.blk netboot.zbi"
+  BT_EXPECT_EQ "$(${fx} list-build-artifacts images)" "zedboot.zbi zedboot.vbmeta fuchsia.zbi fuchsia.vbmeta obj/build/images/fvm.blk obj/build/images/fvm.sparse.blk netboot.zbi zedboot.esp.blk"
 }
 
 TEST_fx-list-build-artifacts-images-by-name() {
@@ -249,6 +257,10 @@ TEST_fx-list-build-artifacts-tools-by-os() {
 
 TEST_fx-list-build-artifacts-generated-sources() {
   BT_EXPECT_EQ "$(${fx} list-build-artifacts generated-sources)" "fidling/gen/sdk/fidl/fuchsia.time/fuchsia/time/cpp/fidl.cc fidling/gen/sdk/fidl/fuchsia.net.http/fuchsia.net.http.fidl.json fidling/gen/sdk/fidl/fuchsia.net.http/fuchsia/net/http/cpp/fidl.h"
+}
+
+TEST_fx-list-build-artifacts-mkzedboot() {
+  BT_EXPECT_EQ "$(${fx} list-build-artifacts mkzedboot)" "zedboot.esp.blk"
 }
 
 BT_RUN_TESTS "$@"

@@ -1,0 +1,143 @@
+#!/bin/bash
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+#### CATEGORY=Software delivery
+### make a zedboot USB key
+
+## usage: fx mkzedboot-remote HOST [DIR] [--no-build] [--no-check-ssh-keys] --usb USB_DEVICE [--force]
+##  --no-build           do not build, just pull artifacts already present
+##  --no-check-ssh-keys  do not verify that the default SSH credentials are the
+##                       same before paving.
+##
+##  HOST                 the hostname to connect to
+##  DIR                  defaults to ~/fuchsia, the path to the FUCHSIA_DIR on HOST
+##
+##  --force              force writing to a non-usb target
+##
+## HOST and DIR are persisted in the file //.fx-remote-config and are reused as
+## defaults in future invocations of any 'fx *-remote' tools.
+
+set -o errexit
+
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh || exit $?
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/fx-mkzedboot.sh || exit $?
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/fx-remote.sh || exit $?
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/verify-default-keys.sh || exit $?
+fx-config-read
+
+# Get build artifacts from remote
+
+host=""
+dir=""
+build=true
+check_ssh_keys=true
+force=false
+usb_device=""
+
+while [[ $# -ne 0 ]]; do
+  case "$1" in
+  --help|-h)
+      fx-command-help
+      exit 0
+      ;;
+  --no-build)
+    build=false
+    ;;
+  --no-check-ssh-keys)
+    check_ssh_keys=false
+    ;;
+  --usb)
+    shift
+    usb_device=$1
+    ;;
+  --force)
+    shift
+    force=true
+    ;;
+  -*)
+    fx-error "Unknown flag: $1"
+    fx-command-help
+    exit 1
+    ;;
+  *)
+    if [[ -z "${host}" ]]; then
+      host="$1"
+    elif [[ -z "${dir}" ]]; then
+      dir="$1"
+    else
+      fx-error "unexpected argument: '$1'"
+      exit 1
+    fi
+    ;;
+  esac
+  shift
+done
+
+if cached=( $(load_remote_info "$host") ); then
+  host="${cached[0]}"
+  dir="${cached[1]}"
+fi
+
+if [[ -z "${host}" ]]; then
+  fx-error "HOST must be specified"
+  fx-command-help
+  exit 1
+fi
+
+if [[ -z "${dir}" ]]; then
+  if ssh "$host" ls \~/fuchsia/.jiri_root/bin/fx > /dev/null; then
+    dir="~/fuchsia"
+  else
+    fx-error "failed to find ~/fuchsia on $host, please specify DIR"
+    fx-command-help
+    exit 1
+  fi
+fi
+
+# Verify that keys match.
+if "${check_ssh_keys}"; then
+  verify_default_keys "${FUCHSIA_DIR}" "${host}" "${dir}" || exit $?
+fi
+
+save_remote_info "$host" "$dir"
+
+authkeys_path="$(get-ssh-authkeys)" || {
+  fx-error "Cannot continue without a valid authorized keys file."
+  exit 1
+}
+
+artifact_dir="${FUCHSIA_DIR}/out/fetched"
+
+image=""
+type=""
+
+# Try to get image for efi, if not found, try to get vboot image for cros
+image="$(ssh "${host}" "cd '$dir' && .jiri_root/bin/fx list-build-artifacts --expect-one --type blk mkzedboot")"
+type="efi"
+if [[ -z "${image}" ]]; then
+   image="$(ssh "${host}" "cd '$dir' && .jiri_root/bin/fx list-build-artifacts --expect-one --type zbi.signed mkzedboot")"
+   type="vboot"
+fi
+
+if [[ -z "${image}" ]]; then
+  fx-error "Cannot find image to run mkzedboot. Re-check build board and product."
+  exit 1
+fi
+
+remote_build_dir="$(get_remote_build_dir "${host}" "${dir}")"
+mkdir -p "${artifact_dir}"
+# --relative ensures that the ZBI is copied to out/fetched relative to the
+# '/./' (i.e., the build directory).
+rsync --compress --partial --progress --relative "${host}:${remote_build_dir}/./${image}" "${artifact_dir}" || exit $?
+
+
+if [[ -z "${usb_device}" ]]; then
+  echo >&2 "device argument required"
+  echo "USB disks:"
+  fx-command-run list-usb-disks
+  exit 1
+fi
+
+fx-mkzedboot "${usb_device}" "${type}" "${artifact_dir}/${image}" $force

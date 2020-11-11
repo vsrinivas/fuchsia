@@ -183,6 +183,7 @@ if (custom_signing_script != "") {
       ]
       update_target = [ "zedboot.signed=zedboot.zbi.signed" ]
       if (use_zedboot_as_recovery) {
+        mkzedboot_mode = [ "vboot" ]
         image_paths = [ "IMAGE_ZIRCONR_SIGNEDZBI=zedboot.zbi.signed" ]
       }
     }
@@ -210,6 +211,7 @@ if (custom_signing_script != "") {
       ]
       update_target = [ "zedboot.signed=zedboot.vboot" ]
       if (use_zedboot_as_recovery) {
+        mkzedboot_mode = [ "vboot" ]
         image_paths = [ "IMAGE_ZIRCONR_SIGNEDZBI=zedboot.vboot" ]
       }
     }
@@ -285,6 +287,7 @@ if (target_cpu != "arm64" && !use_vboot) {
     metadata = {
       images = [
         {
+          mkzedboot_mode = [ "efi" ]
           name = "zedboot-efi"
           path = "zedboot.esp.blk"
           type = "blk"

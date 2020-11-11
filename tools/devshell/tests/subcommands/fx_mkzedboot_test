@@ -10,6 +10,7 @@ BT_FILE_DEPS=(
   "tools/devshell/mkzedboot"
   "tools/devshell/lib/fx-cmd-locator.sh"
   "tools/devshell/lib/fx-optional-features.sh"
+  "tools/devshell/lib/fx-mkzedboot.sh"
   "tools/devshell/lib/image_build_vars.sh"
   "tools/devshell/lib/vars.sh"
   "tools/devshell/lib/platform.sh"
@@ -42,14 +43,17 @@ BT_SET_UP() {
   source "${BT_TEMP_DIR}/tools/devshell/tests/lib/fuchsia-mock.sh"
   fx="$(btf::setup_fx)"
 
-  # Set up a dummy "image_paths.sh" file used by x64 EFI builds.
-  cat > "${BT_TEMP_DIR}/out/default/image_paths.sh" <<EOF
-    IMAGE_ZEDBOOT_ESP=zedboot.esp.blk
-EOF
-
   # Set up a dummy "platform.sh"
   cat > "${BT_TEMP_DIR}/tools/devshell/lib/platform.sh" <<EOF
   readonly PREBUILT_CGPT_DIR="${BT_TEMP_DIR}/prebuilt/tools/cgpt/linux-x64"
+EOF
+
+  # Set up list-build-artifacts mock
+  btf::make_mock "${BT_TEMP_DIR}/tools/devshell/list-build-artifacts"
+  cat > "${BT_TEMP_DIR}/tools/devshell/list-build-artifacts.mock_side_effects" << "EOF"
+if [[ "$@" == "--expect-one --type blk mkzedboot" ]] ; then
+  echo "zedboot.esp.blk"
+fi
 EOF
 
   # Set up a fake USB device; just a plain 128MiB file.
@@ -88,9 +92,11 @@ TEST_fx-mkzedboot-force-write() {
 
 # Write an EFI USB disk
 TEST_fx-mkzedboot-efi() {
-  # Set up an "image_paths.sh" file used by x64 EFI builds.
-  cat > "${BT_TEMP_DIR}/out/default/image_paths.sh" <<EOF
-    IMAGE_ZEDBOOT_ESP=zedboot.esp.blk
+  # Set up "list-build-artifacts" mock for x64 EFI builds.
+  cat > "${BT_TEMP_DIR}/tools/devshell/list-build-artifacts.mock_side_effects" << "EOF"
+if [[ "$@" == "--expect-one --type blk mkzedboot" ]] ; then
+  echo "zedboot.esp.blk"
+fi
 EOF
 
   # Write to /dev/sda
@@ -117,11 +123,12 @@ EOF
 
 # Write a Chromeboot vboot USB disk
 TEST_fx-mkzedboot-vboot() {
-  # Set up an "image_paths.sh" file used by x64 EFI builds.
-  cat > "${BT_TEMP_DIR}/out/default/image_paths.sh" <<EOF
-IMAGE_ZIRCONR_SIGNEDZBI=zedboot.vboot
+  # Set up "list-build-artifacts" mock for chromebook builds.
+  cat > "${BT_TEMP_DIR}/tools/devshell/list-build-artifacts.mock_side_effects" << "EOF"
+if [[ "$@" == "--expect-one --type zbi.signed mkzedboot" ]] ; then
+  echo "zedboot.vboot"
+fi
 EOF
-
   # Write to /dev/sda
   BT_ASSERT ${fx} mkzedboot ${USB_DRIVE}
 

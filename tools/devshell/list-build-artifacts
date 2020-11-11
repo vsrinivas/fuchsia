@@ -32,6 +32,7 @@
 ##                zedboot;
 ##                `netboot`-- returns the list of images needed to netboot
 ##                `flash`-- returns the list of images needed to flash
+##                `mkzedboot` -- returns the list of images needed to mkzedboot
 ##                `tools` -- returns the list of host tools
 ##                `zbi-tests`-- returns the list of ZBI tests
 ##                `generated-sources`-- returns the list of generated sources
@@ -140,6 +141,9 @@ elif [[ "${mode}" == flash ]]; then
   manifest="${IMAGES_JSON}"
   paths+=("flash.sh")
   jq_filter+=" | select(.fastboot_flash != null)"
+elif [[ "${mode}" == mkzedboot ]]; then
+  manifest="${IMAGES_JSON}"
+  jq_filter+=" |  select(.mkzedboot_mode != null)"
 elif [[ "${mode}" == tools ]]; then
   manifest="${TOOL_PATHS_JSON}"
   os="${os:-${HOST_OS}}"
