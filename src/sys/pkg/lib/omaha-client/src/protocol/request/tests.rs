@@ -334,6 +334,8 @@ fn multiple_event_serialization_test() {
                         "eventtype": 54,
                         "eventresult": 1,
                         "previousversion": "3.4.5.6",
+                        "nextversion": "4.5.6.7",
+                        "download_time_ms": 42,
                     }],
                 },
             ],
@@ -374,6 +376,8 @@ fn multiple_event_serialization_test() {
                         event_type: EventType::RebootedAfterUpdate,
                         event_result: EventResult::Success,
                         previous_version: Some("3.4.5.6".to_string()),
+                        next_version: Some("4.5.6.7".to_string()),
+                        download_time_ms: Some(42),
                         ..Event::default()
                     },
                 ],

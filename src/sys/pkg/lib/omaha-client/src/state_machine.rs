@@ -31,6 +31,7 @@ use http::response::Parts;
 use log::{error, info, warn};
 use std::{
     cmp::min,
+    convert::TryInto,
     rc::Rc,
     str::Utf8Error,
     time::{Duration, Instant, SystemTime},
@@ -666,6 +667,8 @@ where
                     Event::error(EventErrorCode::ParseResponse),
                     &apps,
                     &session_id,
+                    vec![None; apps.len()],
+                    None,
                     co,
                 )
                 .await;
@@ -693,6 +696,15 @@ where
             info!(
                 "At least one app has an update, proceeding to build and process an Install Plan"
             );
+            let next_versions: Vec<_> = response
+                .apps
+                .iter()
+                .map(|app| {
+                    app.update_check.as_ref().and_then(|update_check| {
+                        update_check.manifest.as_ref().map(|manifest| manifest.version.clone())
+                    })
+                })
+                .collect();
             let install_plan = match IN::InstallPlan::try_create_from(&request_params, &response) {
                 Ok(plan) => plan,
                 Err(e) => {
@@ -704,6 +716,8 @@ where
                         Event::error(EventErrorCode::ConstructInstallPlan),
                         &apps,
                         &session_id,
+                        next_versions.clone(),
+                        None,
                         co,
                     )
                     .await;
@@ -731,6 +745,8 @@ where
                         event,
                         &apps,
                         &session_id,
+                        next_versions.clone(),
+                        None,
                         co,
                     )
                     .await;
@@ -748,6 +764,8 @@ where
                         Event::error(EventErrorCode::DeniedByPolicy),
                         &apps,
                         &session_id,
+                        next_versions.clone(),
+                        None,
                         co,
                     )
                     .await;
@@ -761,12 +779,14 @@ where
                 Event::success(EventType::UpdateDownloadStarted),
                 &apps,
                 &session_id,
+                next_versions.clone(),
+                None,
                 co,
             )
             .await;
 
             let install_plan_id = install_plan.id();
-            let update_start_time = SystemTime::from(self.time_source.now());
+            let update_start_time = self.time_source.now_in_walltime();
             let update_first_seen_time =
                 self.record_update_first_seen_time(&install_plan_id, update_start_time).await;
 
@@ -785,6 +805,22 @@ where
             };
 
             let (install_result, ()) = future::join(perform_install, yield_progress).await;
+            let update_finish_time = self.time_source.now_in_walltime();
+            let install_duration = match update_finish_time.duration_since(update_start_time) {
+                Ok(duration) => {
+                    let metrics = if install_result.is_ok() {
+                        Metrics::SuccessfulUpdateDuration(duration)
+                    } else {
+                        Metrics::FailedUpdateDuration(duration)
+                    };
+                    self.report_metrics(metrics);
+                    Some(duration)
+                }
+                Err(e) => {
+                    warn!("Update start time is in the future: {}", e);
+                    None
+                }
+            };
             if let Err(e) = install_result {
                 warn!("Installation failed: {:#}", anyhow!(e));
                 self.set_state(State::InstallationError, co).await;
@@ -793,14 +829,12 @@ where
                     Event::error(EventErrorCode::Installation),
                     &apps,
                     &session_id,
+                    next_versions.clone(),
+                    install_duration,
                     co,
                 )
                 .await;
 
-                match SystemTime::from(self.time_source.now()).duration_since(update_start_time) {
-                    Ok(duration) => self.report_metrics(Metrics::FailedUpdateDuration(duration)),
-                    Err(e) => warn!("Update start time is in the future: {}", e),
-                }
                 return Ok(Self::make_response(
                     response,
                     update_check::Action::InstallPlanExecutionError,
@@ -812,6 +846,8 @@ where
                 Event::success(EventType::UpdateDownloadFinished),
                 &apps,
                 &session_id,
+                next_versions.clone(),
+                install_duration,
                 co,
             )
             .await;
@@ -823,15 +859,12 @@ where
                 Event::success(EventType::UpdateComplete),
                 &apps,
                 &session_id,
+                next_versions.clone(),
+                install_duration,
                 co,
             )
             .await;
 
-            let update_finish_time = SystemTime::from(self.time_source.now());
-            match update_finish_time.duration_since(update_start_time) {
-                Ok(duration) => self.report_metrics(Metrics::SuccessfulUpdateDuration(duration)),
-                Err(e) => warn!("Update start time is in the future: {}", e),
-            }
             match update_finish_time.duration_since(update_first_seen_time) {
                 Ok(duration) => {
                     self.report_metrics(Metrics::SuccessfulUpdateFromFirstSeen(duration))
@@ -843,17 +876,10 @@ where
                 if let Err(e) = storage.set_time(UPDATE_FINISH_TIME, update_finish_time).await {
                     error!("Unable to persist {}: {}", UPDATE_FINISH_TIME, e);
                 }
-                let target_version = response
-                    .apps
-                    .iter()
-                    .nth(0)
-                    .and_then(|app| app.update_check.as_ref())
-                    .and_then(|update_check| update_check.manifest.as_ref())
-                    .map(|manifest| manifest.version.as_str())
-                    .unwrap_or_else(|| {
-                        error!("Target version string not found in Omaha response.");
-                        "UNKNOWN"
-                    });
+                let target_version = next_versions[0].as_deref().unwrap_or_else(|| {
+                    error!("Target version string not found in Omaha response.");
+                    "UNKNOWN"
+                });
                 if let Err(e) = storage.set_string(TARGET_VERSION, target_version).await {
                     error!("Unable to persist {}: {}", TARGET_VERSION, e);
                 }
@@ -872,11 +898,19 @@ where
         event: Event,
         apps: &'a Vec<App>,
         session_id: &GUID,
+        next_versions: Vec<Option<String>>,
+        install_duration: Option<Duration>,
         co: &mut async_generator::Yield<StateMachineEvent>,
     ) {
         let config = self.config.clone();
         let mut request_builder = RequestBuilder::new(&config, &request_params);
-        for app in apps {
+        for (app, next_version) in apps.iter().zip(next_versions) {
+            let event = Event {
+                previous_version: Some(app.version.to_string()),
+                next_version,
+                download_time_ms: install_duration.and_then(|d| d.as_millis().try_into().ok()),
+                ..event.clone()
+            };
             request_builder = request_builder.add_event(app, &event);
         }
         request_builder = request_builder.session_id(session_id.clone()).request_id(GUID::new());
@@ -1252,7 +1286,10 @@ mod tests {
 
             let request_params = RequestParams::default();
             let mut request_builder = RequestBuilder::new(&state_machine.config, &request_params);
-            let event = Event::error(EventErrorCode::ParseResponse);
+            let event = Event {
+                previous_version: Some("1.2.3.4".to_string()),
+                ..Event::error(EventErrorCode::ParseResponse)
+            };
             let apps = state_machine.app_set.to_vec().await;
             request_builder = request_builder
                 .add_event(&apps[0], &event)
@@ -1286,7 +1323,10 @@ mod tests {
 
             let request_params = RequestParams::default();
             let mut request_builder = RequestBuilder::new(&state_machine.config, &request_params);
-            let event = Event::error(EventErrorCode::ConstructInstallPlan);
+            let event = Event {
+                previous_version: Some("1.2.3.4".to_string()),
+                ..Event::error(EventErrorCode::ConstructInstallPlan)
+            };
             let apps = state_machine.app_set.to_vec().await;
             request_builder = request_builder
                 .add_event(&apps[0], &event)
@@ -1306,7 +1346,16 @@ mod tests {
                 "appid": "{00000000-0000-0000-0000-000000000001}",
                 "status": "ok",
                 "updatecheck": {
-                  "status": "ok"
+                  "status": "ok",
+                  "manifest": {
+                      "version": "5.6.7.8",
+                      "actions": {
+                          "action": [],
+                      },
+                      "packages": {
+                          "package": [],
+                      },
+                  }
                 }
               }],
             }});
@@ -1324,7 +1373,12 @@ mod tests {
 
             let request_params = RequestParams::default();
             let mut request_builder = RequestBuilder::new(&state_machine.config, &request_params);
-            let event = Event::error(EventErrorCode::Installation);
+            let event = Event {
+                previous_version: Some("1.2.3.4".to_string()),
+                next_version: Some("5.6.7.8".to_string()),
+                download_time_ms: Some(0),
+                ..Event::error(EventErrorCode::Installation)
+            };
             let apps = state_machine.app_set.to_vec().await;
             request_builder = request_builder
                 .add_event(&apps[0], &event)
@@ -1369,6 +1423,7 @@ mod tests {
             let event = Event {
                 event_type: EventType::UpdateComplete,
                 event_result: EventResult::UpdateDeferred,
+                previous_version: Some("1.2.3.4".to_string()),
                 ..Event::default()
             };
             let apps = state_machine.app_set.to_vec().await;
@@ -1412,7 +1467,10 @@ mod tests {
 
             let request_params = RequestParams::default();
             let mut request_builder = RequestBuilder::new(&state_machine.config, &request_params);
-            let event = Event::error(EventErrorCode::DeniedByPolicy);
+            let event = Event {
+                previous_version: Some("1.2.3.4".to_string()),
+                ..Event::error(EventErrorCode::DeniedByPolicy)
+            };
             let apps = state_machine.app_set.to_vec().await;
             request_builder = request_builder
                 .add_event(&apps[0], &event)

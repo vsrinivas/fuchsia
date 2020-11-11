@@ -266,6 +266,19 @@ pub struct Event {
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "previousversion")]
     pub previous_version: Option<String>,
+
+    /// The version of the app that the update flow to which this event belongs attempted to
+    /// reach, regardless of success or failure of the update operation.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "nextversion")]
+    pub next_version: Option<String>,
+
+    /// For events representing a download, the time elapsed between the start of the download and
+    /// the end of the download, in milliseconds. For events representing an entire update flow,
+    /// the sum of all such download times over the course of the update flow.
+    /// Sent in <event>s that have an eventtype of "1", "2", "3", and "14" only.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub download_time_ms: Option<u64>,
 }
 
 impl Event {
