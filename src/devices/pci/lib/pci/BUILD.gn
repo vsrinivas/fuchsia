@@ -32,9 +32,6 @@ zx_library("pci") {
   ]
 
   configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 test("pci-roothost") {
