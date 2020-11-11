@@ -5,7 +5,10 @@
     use: [
         { runner: "elf" },
         {
-            protocol: "fuchsia.session.Launcher",
+            protocol: [
+                "fuchsia.session.Launcher",
+                "fuchsia.session.Restarter",
+            ],
             from: "parent",
         },
     ],
