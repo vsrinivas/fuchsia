@@ -18,6 +18,16 @@ group("camera") {
   ]
 }
 
+group("drivers") {
+  deps = [
+    "drivers/bus/aml_mipicsi:aml_mipicsi_driver",
+    "drivers/hw_accel/gdc:driver",
+    "drivers/hw_accel/ge2d:ge2d-driver",
+    "drivers/sensors/imx227:driver",
+    "drivers/usb_video:usb_video_driver",
+  ]
+}
+
 group("service") {
   public_deps = [
     "//src/camera/bin/device",
