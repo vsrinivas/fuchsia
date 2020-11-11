@@ -123,23 +123,21 @@ impl CobaltDiagnostics {
             1,
         );
         if track == Track::Monitor {
-            let primary = match self.primary_clock.read() {
-                Ok(utc) => utc,
-                Err(_) => return,
-            };
-            let monitor = match self.monitor_clock.as_ref().map(|clk| clk.read()) {
-                Some(Ok(utc)) => utc,
-                _ => return,
-            };
-            let direction =
-                if monitor >= primary { Direction::Positive } else { Direction::Negative };
-            locked_sender.log_event_count(
-                TIMEKEEPER_MONITOR_DIFFERENCE_METRIC_ID,
-                (direction, self.experiment),
-                PERIOD_DURATION,
-                // Unfortunately Cobalt does not follow the standard of nanoseconds everywhere.
-                (monitor - primary).into_micros().abs(),
-            );
+            if let Some(monitor_clock) = self.monitor_clock.as_ref() {
+                let (primary, monitor) = match read_clocks((&self.primary_clock, monitor_clock)) {
+                    Ok(times) => times,
+                    Err(_) => return,
+                };
+                let direction =
+                    if monitor >= primary { Direction::Positive } else { Direction::Negative };
+                locked_sender.log_event_count(
+                    TIMEKEEPER_MONITOR_DIFFERENCE_METRIC_ID,
+                    (direction, self.experiment),
+                    PERIOD_DURATION,
+                    // Unfortunately Cobalt does not follow the standard of nanoseconds everywhere.
+                    (monitor - primary).into_micros().abs(),
+                );
+            }
         }
     }
 }
@@ -204,6 +202,20 @@ impl Diagnostics for CobaltDiagnostics {
             }
         }
     }
+}
+
+/// Read the time in two clocks, ensuring a short delay between the samples.
+fn read_clocks(clocks: (&zx::Clock, &zx::Clock)) -> Result<(zx::Time, zx::Time), zx::Status> {
+    const MAX_DELAY: zx::Duration = zx::Duration::from_micros(500);
+    for _ in 0..3 {
+        let monotonic_before = zx::Time::get_monotonic();
+        let times = (clocks.0.read()?, clocks.1.read()?);
+        let monotonic_after = zx::Time::get_monotonic();
+        if monotonic_after - monotonic_before < MAX_DELAY {
+            return Ok(times);
+        }
+    }
+    Err(zx::Status::TIMED_OUT)
 }
 
 #[cfg(test)]
@@ -470,8 +482,8 @@ mod test {
         match event.payload {
             EventPayload::EventCount(CountEvent { period_duration_micros, count }) => {
                 assert_eq!(period_duration_micros, 0);
-                assert_geq!(count, MONITOR_OFFSET.into_micros() - 1000);
-                assert_leq!(count, MONITOR_OFFSET.into_micros() + 1000);
+                assert_geq!(count, MONITOR_OFFSET.into_micros() - 5000);
+                assert_leq!(count, MONITOR_OFFSET.into_micros() + 5000);
             }
             _ => panic!("monitor clock update did not produce event count payload"),
         }
