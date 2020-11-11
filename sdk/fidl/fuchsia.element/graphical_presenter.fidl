@@ -17,48 +17,44 @@ using fuchsia.ui.views;
 protocol GraphicalPresenter {
     /// Presents the view described by `view_spec`.
     ///
-    /// ## ViewSpec
-    ///
-    /// `view_spec.view_holder_token` and `view_spec.view_ref` must be valid,
-    /// otherwise `PresentView` will fail with `ViewControllerEpitaph.INVALID_VIEW_SPEC`.
-    ///
     /// ## ViewController
     ///
-    /// `view_controller_request` allows clients to receive a `ViewController` for the
+    /// `view_controller` allows clients to receive a `ViewController` for the
     /// presented view. The client can use the `ViewController` to control the view's
     /// presentation and receive events.
     ///
-    /// If `view_controller_request` is closed, the client can assume that the view is
+    /// If `view_controller` is closed, the client can assume that the view is
     /// no longer being presented, and will not be presented in the future.
     ///
-    /// If the client closes the `view_controller_request`, or does not provide a request
+    /// If the client closes the `view_controller`, or does not provide a request
     /// to `PresentView`, the view may be dismissed at any time with no signal to the client.
     ///
     /// ## Errors
     ///
-    /// `PresentView` errors are signaled by closing `view_controller_request`
+    /// `PresentView` errors are signaled by closing `view_controller`
     /// with an epitaph, `ViewControllerEpitaph`. See [`ViewController`].
     ///
     /// + `view_spec` describes the view to present
-    /// + `view_controller_request` an optional request for a controller for the view
-    PresentView(ViewSpec view_spec, request<ViewController>? view_controller_request);
+    /// + `view_controller` an optional request for a controller for the view
+    /// * error `PresentViewError.INVALID_ARGS` if `spec.view_holder_token` or
+    ///   `spec.view_ref` are missing or invalid
+    /// * error `PresentViewError` if the view could not be presented
+    PresentView(ViewSpec view_spec, request<ViewController>? view_controller)
+        -> () error PresentViewError;
 };
 
-/// Epitaph returned when `ViewController` is closed to signal an error.
-enum ViewControllerEpitaph {
-    /// The provided `ViewSpec` was missing a valid `ViewHolderToken`.
-    INVALID_VIEW_SPEC = 1;
-
-    /// The presenter rejected the request to present the view.
-    REJECTED = 2;
+/// An error returned when `GraphicalPresenter` fails to present a view.
+enum PresentViewError {
+    /// The provided `ViewSpec` is malformed.
+    INVALID_ARGS = 1;
 };
 
 /// A description of a view that can be presented by a `GraphicalPresenter`.
 resource table ViewSpec {
-    /// The view holder token for the presented view.
+    /// The view holder token for the presented view. Required.
     1: fuchsia.ui.views.ViewHolderToken view_holder_token;
 
-    /// The `ViewRef` of the presented view.
+    /// The `ViewRef` of the presented view. Required.
     2: fuchsia.ui.views.ViewRef view_ref;
 
     /// The annotations associated with the presented view.
@@ -93,12 +89,7 @@ resource table ViewSpec {
 ///
 /// This protocol is closed with an epitaph:
 ///
-/// * `ViewControllerEpitaph.INVALID_VIEW_SPEC` if the view failed to be
-///   presented because of a malformed `ViewSpec`
-///   (see [`GraphicalPresenter.PresentView`])
-/// * `ViewControllerEpitaph.REJECTED` if the presenter rejected the request
-///   to present the view (see [`GraphicalPresenter.PresentView`])
-/// * `ViewControllerEpitaph.ZX_OK` when the view is dismissed
+/// * `ZX_OK` when the view is dismissed
 protocol ViewController {
     // Provides control over the view's `annotations`.
     //
