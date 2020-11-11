@@ -1,5 +1,0 @@
-{
-    "crash_server" : {
-        "upload_policy": "not_in_enum"
-    }
-}

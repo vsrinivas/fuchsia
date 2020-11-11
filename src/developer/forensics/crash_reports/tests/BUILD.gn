@@ -18,8 +18,10 @@ executable("config_unittest_exe") {
   sources = [ "config_unittest.cc" ]
 
   deps = [
+    "//sdk/lib/syslog/cpp",
     "//src/developer/forensics/crash_reports:config",
     "//src/developer/forensics/testing:gtest_with_syslog_main",
+    "//src/lib/files",
     "//third_party/googletest:gtest",
   ]
 }
@@ -331,24 +333,6 @@ executable("store_metadata_unittest_exe") {
 ###############################################################################
 # RESOURCES
 ###############################################################################
-resource("test_configs") {
-  sources = [
-    "configs/bad_schema_invalid_upload_policy.json",
-    "configs/bad_schema_missing_required_field.json",
-    "configs/bad_schema_missing_server_upload_enabled.json",
-    "configs/bad_schema_missing_server_upload_read_from_privacy_settings.json",
-    "configs/bad_schema_spurious_field.json",
-    "configs/has_quota.json",
-    "configs/missing_quota.json",
-    "configs/valid_upload_disabled.json",
-    "configs/valid_upload_disabled_spurious_server.json",
-    "configs/valid_upload_enabled.json",
-    "configs/valid_upload_read_from_privacy_settings.json",
-  ]
-
-  outputs = [ "data/configs/{{source_file_part}}" ]
-}
-
 resource("test_data") {
   sources = [ "resources/test_data.zip" ]
 
@@ -382,10 +366,7 @@ fuchsia_component("config_unittest") {
 
   manifest = "meta/config_unittest.cmx"
 
-  deps = [
-    ":config_unittest_exe",
-    ":test_configs",
-  ]
+  deps = [ ":config_unittest_exe" ]
 }
 
 fuchsia_component("crash_register_unittest") {

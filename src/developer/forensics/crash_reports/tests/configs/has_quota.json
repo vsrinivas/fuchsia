@@ -1,9 +1,0 @@
-{
-    "crash_reporter": {
-        "daily_per_product_quota": 100
-    },
-    "crash_server" : {
-        "upload_policy": "enabled",
-        "url": "http://localhost:1234"
-    }
-}

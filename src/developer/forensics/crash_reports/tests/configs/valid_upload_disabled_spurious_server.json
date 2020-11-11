@@ -1,6 +1,0 @@
-{
-    "crash_server" : {
-        "upload_policy": "disabled",
-        "url": "http://localhost:1234"
-    }
-}

@@ -4,5 +4,13 @@
     ],
     "program": {
         "binary": "bin/config_unittest_exe"
+    },
+    "sandbox": {
+        "features": [
+            "isolated-temp"
+        ],
+        "services": [
+            "fuchsia.logger.LogSink"
+        ]
     }
 }
