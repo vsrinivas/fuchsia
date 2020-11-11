@@ -82,10 +82,10 @@ impl<'a> Device<'a> {
                 write!(f, " [{:04x}:{:04x}]", self.cfg.vendor_id, self.cfg.device_id)?;
             }
         }
-        write!(f, " (rev {:02x})\n", self.cfg.revision_id)?;
+        writeln!(f, " (rev {:02x})", self.cfg.revision_id)?;
         if self.args.verbose {
-            write!(f, "\tControl: {}\n", CommandRegister(self.cfg.command))?;
-            write!(f, "\tStatus: {}\n", StatusRegister(self.cfg.status))?;
+            writeln!(f, "\tControl: {}", CommandRegister(self.cfg.command))?;
+            writeln!(f, "\tStatus: {}", StatusRegister(self.cfg.status))?;
         };
 
         Ok(())
@@ -99,23 +99,29 @@ impl<'a> Device<'a> {
                 }
             }
             for capability in &self.device.capabilities {
-                write!(f, "\t{}\n", Capability::new(capability, &self.device.config[..]))?;
+                writeln!(f, "\t{}", Capability::new(capability, &self.device.config[..]))?;
             }
         }
 
         if self.args.print_config {
             const SLICE_SIZE: usize = 16;
+            // Weep for those who do not use monospace terminal fonts.
+            write!(f, "\t    ")?;
+            for col in 0..SLICE_SIZE {
+                write!(f, " {:1x} ", col)?;
+            }
+            writeln!(f)?;
             for (addr, slice) in self.device.config.chunks(SLICE_SIZE).enumerate() {
-                print!("\t{:02x}: ", addr * SLICE_SIZE);
+                write!(f, "\t{:02x}: ", addr * SLICE_SIZE)?;
                 for byte in slice {
-                    print!("{:02x} ", byte);
+                    write!(f, "{:02x} ", byte)?;
                 }
-                print!("\n");
+                writeln!(f)?;
             }
         }
 
         if self.args.verbose || self.args.print_config {
-            write!(f, "\n")?;
+            writeln!(f)?;
         }
 
         Ok(())
