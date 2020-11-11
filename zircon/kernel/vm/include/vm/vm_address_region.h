@@ -461,24 +461,22 @@ class RegionList final {
 };
 
 // A representation of a contiguous range of virtual address space
-class VmAddressRegion : public VmAddressRegionOrMapping {
+class VmAddressRegion final : public VmAddressRegionOrMapping {
  public:
   // Create a root region.  This will span the entire aspace
   static zx_status_t CreateRoot(VmAspace& aspace, uint32_t vmar_flags,
                                 fbl::RefPtr<VmAddressRegion>* out);
   // Create a subregion of this region
-  virtual zx_status_t CreateSubVmar(size_t offset, size_t size, uint8_t align_pow2,
-                                    uint32_t vmar_flags, const char* name,
-                                    fbl::RefPtr<VmAddressRegion>* out);
+  zx_status_t CreateSubVmar(size_t offset, size_t size, uint8_t align_pow2, uint32_t vmar_flags,
+                            const char* name, fbl::RefPtr<VmAddressRegion>* out);
   // Create a VmMapping within this region
-  virtual zx_status_t CreateVmMapping(size_t mapping_offset, size_t size, uint8_t align_pow2,
-                                      uint32_t vmar_flags, fbl::RefPtr<VmObject> vmo,
-                                      uint64_t vmo_offset, uint arch_mmu_flags, const char* name,
-                                      fbl::RefPtr<VmMapping>* out);
+  zx_status_t CreateVmMapping(size_t mapping_offset, size_t size, uint8_t align_pow2,
+                              uint32_t vmar_flags, fbl::RefPtr<VmObject> vmo, uint64_t vmo_offset,
+                              uint arch_mmu_flags, const char* name, fbl::RefPtr<VmMapping>* out);
 
   // Find the child region that contains the given addr.  If addr is in a gap,
   // returns nullptr.  This is a non-recursive search.
-  virtual fbl::RefPtr<VmAddressRegionOrMapping> FindRegion(vaddr_t addr);
+  fbl::RefPtr<VmAddressRegionOrMapping> FindRegion(vaddr_t addr);
 
   // Apply |op| to VMO mappings in the specified range of pages.
   zx_status_t RangeOp(uint32_t op, size_t offset, size_t len, user_inout_ptr<void> buffer,
@@ -488,7 +486,7 @@ class VmAddressRegion : public VmAddressRegionOrMapping {
   // returning it to this region to allocate.  If a subregion is entirely in
   // the range, that subregion is destroyed.  If a subregion is partially in
   // the range, Unmap() will fail.
-  virtual zx_status_t Unmap(vaddr_t base, size_t size);
+  zx_status_t Unmap(vaddr_t base, size_t size);
 
   // Same as Unmap, but allows for subregions that are partially in the range.
   // Additionally, sub-VMARs that are completely within the range will not be
@@ -498,7 +496,7 @@ class VmAddressRegion : public VmAddressRegionOrMapping {
   // Change protections on a subset of the region of memory in the containing
   // address space.  If the requested range overlaps with a subregion,
   // Protect() will fail.
-  virtual zx_status_t Protect(vaddr_t base, size_t size, uint new_arch_mmu_flags);
+  zx_status_t Protect(vaddr_t base, size_t size, uint new_arch_mmu_flags);
 
   // Reserve a memory region within this VMAR. This region is already mapped in the page table with
   // |arch_mmu_flags|. VMAR should create a VmMapping for this region even though no physical pages
@@ -524,7 +522,7 @@ class VmAddressRegion : public VmAddressRegionOrMapping {
   size_t AllocatedPagesLocked() const TA_REQ(lock()) override;
   // Used to implement VmAspace::EnumerateChildren.
   // |aspace_->lock()| must be held.
-  virtual bool EnumerateChildrenLocked(VmEnumerator* ve, uint depth);
+  bool EnumerateChildrenLocked(VmEnumerator* ve, uint depth);
 
   friend class VmMapping;
 
