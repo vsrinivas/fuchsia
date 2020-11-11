@@ -1,3 +1,7 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
 package: fuchsia_internal/test_data/debug/large_test_data
 description: Large test binaries for optional zxdb symbol tests.
 install_mode: copy
