@@ -79,9 +79,11 @@ go_binary("size_checker") {
   non_go_deps = [ ":size_checker_json" ]
 }
 
-go_test("size_checker_tests") {
-  gopackages = [ "go.fuchsia.dev/fuchsia/tools/size_checker/cmd" ]
-  deps = [ ":size_checker_lib" ]
+if (host_toolchain == current_toolchain) {
+  go_test("size_checker_tests") {
+    gopackages = [ "go.fuchsia.dev/fuchsia/tools/size_checker/cmd" ]
+    deps = [ ":size_checker_lib" ]
+  }
 }
 
 install_host_tools("host") {
@@ -91,5 +93,10 @@ install_host_tools("host") {
 
 group("tests") {
   testonly = true
-  deps = [ ":size_checker_tests" ]
+  deps = [
+    ":size_checker_tests($host_toolchain)",
+
+    # To be able to run `fx test`.
+    "//tools/symbolizer($host_toolchain)",
+  ]
 }

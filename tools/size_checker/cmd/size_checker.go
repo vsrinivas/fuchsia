@@ -14,6 +14,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strings"
 )
@@ -42,12 +43,19 @@ type SizeLimits struct {
 	Components []Component `json:"components"`
 }
 
+// Display prints the contents of node and its children into a string.  All
+// strings are printed at the supplied indentation level.
+type DisplayFn func(node *Node, level int) string
+
 type Node struct {
 	fullPath string
 	size     int64
 	copies   int64
 	parent   *Node
 	children map[string]*Node
+	// display is a function used to print the contents of Node in a human-friendly way.
+	// If unset, a default display function is used.
+	display DisplayFn
 }
 
 type Component struct {
@@ -99,11 +107,16 @@ func newDummyNode() *Node {
 func newNode(p string) *Node {
 	return &Node{
 		fullPath: p,
-		size:     0,
-		copies:   0,
-		parent:   nil,
 		children: make(map[string]*Node),
 	}
+}
+
+// newNodeWithDisplay creates a new Node, and supplies a custom function to be
+// used to print its contents.
+func newNodeWithDisplay(p string, display DisplayFn) *Node {
+	n := newNode(p)
+	n.display = display
+	return n
 }
 
 // Breaks down the given path divided by "/" and updates the size of each node on the path with the
@@ -174,12 +187,10 @@ func (node *Node) getOnlyChild() (*Node, error) {
 	return nil, fmt.Errorf("this node does not contain a single child.")
 }
 
-// storageBreakdown constructs a string including detailed storage
-// consumption for the subtree of this node.
-//
-// `level` controls the indentation level to preserve hierarchy in the
-// output.
-func (node *Node) storageBreakdown(level int) string {
+// displayAsDefault returns a human-readable representation of the supplied
+// node and its children, using level as the indentation level for display
+// pretty-printing.
+func displayAsDefault(node *Node, level int) string {
 	var copies string
 	if node.copies > 1 {
 		copies = fmt.Sprintf("| %3d %-6s", node.copies, "copies")
@@ -201,6 +212,51 @@ func (node *Node) storageBreakdown(level int) string {
 		ret += n.storageBreakdown(level + 1)
 	}
 	return ret
+}
+
+// displayAsBlob returns a human-readable representation of the supplied Node and
+// its children, formatted suitably for a blob ID, at the given indentation
+// level.
+func displayAsBlob(node *Node, level int) string {
+	nc := len(node.children)
+	ret := fmt.Sprintf("%vBlob ID %v (%v reuses):\n", strings.Repeat("  ", level), node.fullPath, nc)
+	for _, n := range node.children {
+		ret += n.storageBreakdown(level + 1)
+	}
+	return ret
+}
+
+// MetaRegex matches strings like: "/some/path/foo.meta/something_else" and
+// grabs "foo" from them.
+var metaRegex = regexp.MustCompile(`/([^/]+)\.meta/`)
+
+// displayAsMeta returns a human-readable representation of the supplied Node and
+// its children, formatted suitably as a metadata item, at the given indentation
+// level.
+func displayAsMeta(node *Node, level int) string {
+	m := metaRegex.FindStringSubmatch(node.fullPath)
+	var n string
+	if len(m) == 0 || m[1] == "" {
+		n = node.fullPath
+	} else {
+		n = m[1]
+	}
+	ret := fmt.Sprintf("%s%s\n", strings.Repeat("  ", level), n)
+	// No children to iterate over.
+	return ret
+}
+
+// storageBreakdown constructs a string including detailed storage
+// consumption for the subtree of this node.
+//
+// `level` controls the indentation level to preserve hierarchy in the
+// output.
+func (node *Node) storageBreakdown(level int) string {
+	if node.display == nil {
+		// If the node has no custom display function.
+		return displayAsDefault(node, level)
+	}
+	return node.display(node, level)
 }
 
 // Formats a given number into human friendly string representation of bytes, rounded to 2 decimal places.
@@ -384,12 +440,11 @@ func parseBlobsJSON(
 			var blobNode *Node
 			blobNode = node.children[blob.Merkle]
 			if blobNode == nil {
-				blobNode = newNode(blob.Merkle)
+				blobNode = newNodeWithDisplay(blob.Merkle, displayAsBlob)
 				node.children[blob.Merkle] = blobNode
 			}
-			trimmed := strings.TrimPrefix(blob.SourcePath, absBuildDir)
-			icuCopyNode := newNode(trimmed)
-			blobNode.children[trimmed] = icuCopyNode
+			icuCopyNode := newNodeWithDisplay(blob.SourcePath, displayAsMeta)
+			blobNode.children[blob.SourcePath] = icuCopyNode
 		} else if node, ok = state.distributedShlibs[blob.Path]; ok {
 			if state.blobMap[blob.Merkle] != nil {
 				if node == nil {
