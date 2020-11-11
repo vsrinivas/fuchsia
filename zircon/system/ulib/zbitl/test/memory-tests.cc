@@ -6,7 +6,20 @@
 
 namespace {
 
+using FblByteSpanTestTraits = FblSpanTestTraits<std::byte>;
 using FblUint64ArrayTestTraits = FblArrayTestTraits<uint64_t>;
+
+TEST(ZbitlViewFblByteSpanTests, DefaultConstructed) {
+  ASSERT_NO_FATAL_FAILURE(TestDefaultConstructedView<FblByteSpanTestTraits>());
+}
+
+TEST(ZbitlViewFblByteSpanTests, CrcCheckFailure) {
+  ASSERT_NO_FATAL_FAILURE(TestCrcCheckFailure<FblByteSpanTestTraits>());
+}
+
+TEST_ITERATION(ZbitlViewFblByteSpanTests, FblByteSpanTestTraits)
+
+TEST_MUTATION(ZbitlViewFblByteSpanTests, FblByteSpanTestTraits)
 
 TEST(ZbitlViewFblByteArrayTests, DefaultConstructed) {
   ASSERT_NO_FATAL_FAILURE(TestDefaultConstructedView<FblByteArrayTestTraits>());
