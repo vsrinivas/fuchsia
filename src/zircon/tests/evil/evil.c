@@ -181,6 +181,8 @@ int heapblaster(int count, int locking) {
 static uint8_t data[65534];
 
 int writespam(int opt) {
+// Disable this for analyzer since this function contains intentional handle leak.
+#ifndef __clang_analyzer__
   zx_handle_t p[2];
   zx_status_t r;
   uint64_t count = 0;
@@ -210,6 +212,7 @@ int writespam(int opt) {
   } else {
     printf("evil-tests: leaving the channel open (full of messages)\n");
   }
+#endif
   return 0;
 }
 
