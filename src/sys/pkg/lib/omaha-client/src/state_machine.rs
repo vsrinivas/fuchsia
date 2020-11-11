@@ -936,6 +936,7 @@ where
                 Ok(res) => res,
                 Err(e) => {
                     error!("Ping Omaha failed: {:#}", anyhow!(e));
+                    self.context.state.consecutive_failed_update_checks += 1;
                     return;
                 }
             };
@@ -944,9 +945,12 @@ where
             Ok(res) => res,
             Err(e) => {
                 error!("Unable to parse Omaha response: {:#}", anyhow!(e));
+                self.context.state.consecutive_failed_update_checks += 1;
                 return;
             }
         };
+
+        self.context.state.consecutive_failed_update_checks = 0;
 
         // Even though this is a ping, we should still update the last_update_time for
         // policy to compute the next ping time.
@@ -2758,6 +2762,40 @@ mod tests {
         wait_for_reboot_timer.unblock();
         pool.run_until_stalled();
         assert!(*reboot_called.borrow());
+    }
+
+    #[test]
+    fn test_ping_omaha_update_consecutive_failed_update_checks() {
+        block_on(async {
+            let mut http = MockHttpRequest::empty();
+            http.add_error(http_request::mock_errors::make_transport_error());
+            http.add_response(hyper::Response::new("".into()));
+            let response = json!({"response":{
+              "server": "prod",
+              "protocol": "3.0",
+              "app": [{
+                "appid": "{00000000-0000-0000-0000-000000000001}",
+                "status": "ok",
+              }],
+            }});
+            let response = serde_json::to_vec(&response).unwrap();
+            http.add_response(hyper::Response::new(response.into()));
+
+            let mut state_machine = StateMachineBuilder::new_stub().http(http).build().await;
+
+            async_generator::generate(move |mut co| async move {
+                // Failed ping increases `consecutive_failed_update_checks`.
+                state_machine.ping_omaha(&mut co).await;
+                assert_eq!(state_machine.context.state.consecutive_failed_update_checks, 1);
+                state_machine.ping_omaha(&mut co).await;
+                assert_eq!(state_machine.context.state.consecutive_failed_update_checks, 2);
+                // Successful ping resets `consecutive_failed_update_checks`.
+                state_machine.ping_omaha(&mut co).await;
+                assert_eq!(state_machine.context.state.consecutive_failed_update_checks, 0);
+            })
+            .into_complete()
+            .await;
+        });
     }
 
     #[derive(Debug)]
