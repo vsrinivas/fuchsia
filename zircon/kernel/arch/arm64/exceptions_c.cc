@@ -302,6 +302,20 @@ static void arm64_data_abort_handler(iframe_t* iframe, uint exception_flags, uin
   LTRACEF("data fault: PC at %#" PRIx64 ", is_user %d, FAR %#" PRIx64 ", esr %#x, iss %#x\n",
           iframe->elr, is_user, far, esr, iss);
 
+  uint32_t dfsc = BITS(iss, 5, 0);
+  // Accessed faults do not need to be trapped like other kind of faults and so we attempt to
+  // resolve such faults prior to potentially invoking the data fault resume handler.
+  // 0b0010XX is access faults
+  if ((dfsc & 0b111100) == 0b001000) {
+    arch_enable_ints();
+    exceptions_access.Add(1);
+    zx_status_t err = vmm_accessed_fault_handler(far);
+    arch_disable_ints();
+    if (err >= 0) {
+      return;
+    }
+  }
+
   uint64_t dfr = Thread::Current::Get()->arch().data_fault_resume;
   if (unlikely(dfr && !BIT_SET(dfr, ARM64_DFR_RUN_FAULT_HANDLER_BIT))) {
     // Need to reconstruct the canonical resume address by ensuring it is correctly sign extended.
@@ -314,23 +328,14 @@ static void arm64_data_abort_handler(iframe_t* iframe, uint exception_flags, uin
     return;
   }
 
-  uint32_t dfsc = BITS(iss, 5, 0);
-  // Only invoke the page fault handler for translation, access and permission faults. Any other
+  // Only invoke the page fault handler for translation and permission faults. Any other
   // kind of fault cannot be resolved by the handler.
   // 0b0001XX is translation faults
-  // 0b0010XX is access faults
   // 0b0011XX is permission faults
   if (likely((dfsc & 0b001100) != 0 && (dfsc & 0b110000) == 0)) {
     arch_enable_ints();
-    zx_status_t err;
-    // Send accessed faults to the separate dedicated handler.
-    if ((dfsc & 0b001100) == 0b001000) {
-      exceptions_access.Add(1);
-      err = vmm_accessed_fault_handler(far);
-    } else {
-      kcounter_add(exceptions_page, 1);
-      err = vmm_page_fault_handler(far, pf_flags);
-    }
+    kcounter_add(exceptions_page, 1);
+    zx_status_t err = vmm_page_fault_handler(far, pf_flags);
     arch_disable_ints();
     if (err >= 0) {
       return;
