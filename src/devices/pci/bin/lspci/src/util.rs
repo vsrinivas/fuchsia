@@ -14,7 +14,7 @@ pub fn is_set(field: bool) -> char {
 pub fn format_bytes(size: u64) -> String {
     let mut s = size;
     let mut divs: u8 = 0;
-    while s / 1024 > 1 {
+    while s / 1024 >= 1 {
         s /= 1024;
         divs += 1;
     }

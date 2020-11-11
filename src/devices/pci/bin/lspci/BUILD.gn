@@ -20,6 +20,7 @@ rustc_binary("lspci") {
     "//third_party/rust_crates:bitfield",
   ]
   sources = [
+    "src/bridge.rs",
     "src/capability.rs",
     "src/config.rs",
     "src/db.rs",

@@ -1,6 +1,7 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+mod bridge;
 mod capability;
 mod config;
 mod db;
@@ -14,6 +15,7 @@ mod util;
 use {
     anyhow::{Context, Error},
     argh::FromArgs,
+    bridge::Bridge,
     device::Device,
     fdio, fuchsia_async,
     std::fs::File,
@@ -84,7 +86,12 @@ async fn main() -> Result<(), Error> {
                 continue;
             }
         }
-        print!("{}", device);
+
+        if device.cfg.header_type & 0x1 == 0x1 {
+            print!("{}", Bridge::new(&device));
+        } else {
+            print!("{}", device);
+        }
     }
     Ok(())
 }

@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 use {
     crate::capability::Capability,
-    crate::config::{CommandRegister, Config, StatusRegister},
+    crate::config::{CommandRegister, StatusRegister, Type00Config},
     crate::db::PciDb,
     crate::util::format_bytes,
     crate::Args,
@@ -16,13 +16,29 @@ pub struct Device<'a> {
     pub device: &'a FidlDevice,
     pub class: Option<String>,
     pub name: Option<String>,
-    cfg: LayoutVerified<&'a [u8], Config>,
-    args: &'a Args,
+    pub cfg: LayoutVerified<&'a [u8], Type00Config>,
+    pub args: &'a Args,
+}
+
+struct BaseAddress<'a>(&'a fidl_fuchsia_hardware_pci::BaseAddress);
+impl<'a> fmt::Display for BaseAddress<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "Region {}: {} at {:#x} ({}-bit, {}) [size={}]\n",
+            self.0.id,
+            if self.0.is_memory { "Memory" } else { "I/O ports" },
+            self.0.address,
+            if self.0.is_64bit { 64 } else { 32 },
+            if self.0.is_prefetchable { "prefetchable" } else { "non-prefetchable" },
+            format_bytes(self.0.size)
+        )
+    }
 }
 
 impl<'a> Device<'a> {
     pub fn new(device: &'a FidlDevice, id_db: &Option<PciDb<'_>>, args: &'a Args) -> Self {
-        let cfg = Config::new(&device.config);
+        let cfg = Type00Config::new(&device.config);
         let (class, name) = if let Some(db) = id_db {
             (
                 db.find_class(cfg.base_class, cfg.sub_class, Some(cfg.program_interface)),
@@ -38,10 +54,8 @@ impl<'a> Device<'a> {
         };
         Device { device, class, name, cfg, args }
     }
-}
 
-impl<'a> fmt::Display for Device<'a> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    pub fn print_common_header(&self, f: &'a mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
             "{:02x}:{:02x}.{:1x}",
@@ -68,23 +82,20 @@ impl<'a> fmt::Display for Device<'a> {
                 write!(f, " [{:04x}:{:04x}]", self.cfg.vendor_id, self.cfg.device_id)?;
             }
         }
-        write!(f, " (rev {})\n", self.cfg.revision_id)?;
-
+        write!(f, " (rev {:02x})\n", self.cfg.revision_id)?;
         if self.args.verbose {
-            write!(f, "\t{}\n", CommandRegister(self.cfg.command))?;
-            write!(f, "\t{}\n", StatusRegister(self.cfg.status))?;
+            write!(f, "\tControl: {}\n", CommandRegister(self.cfg.command))?;
+            write!(f, "\tStatus: {}\n", StatusRegister(self.cfg.status))?;
+        };
+
+        Ok(())
+    }
+
+    pub fn print_common_footer(&self, f: &'a mut fmt::Formatter<'_>) -> fmt::Result {
+        if self.args.verbose {
             for bar in &self.device.base_addresses {
                 if bar.size > 0 {
-                    write!(
-                        f,
-                        "\tRegion {}: {} at {:#x} ({}-bit, {}) [size={}]\n",
-                        bar.id,
-                        if bar.is_memory { "Memory" } else { "I/O ports" },
-                        bar.address,
-                        if bar.is_64bit { 64 } else { 32 },
-                        if bar.is_prefetchable { "prefetchable" } else { "non-prefetchable" },
-                        format_bytes(bar.size)
-                    )?;
+                    write!(f, "\t{}", BaseAddress(bar))?;
                 }
             }
             for capability in &self.device.capabilities {
@@ -106,6 +117,15 @@ impl<'a> fmt::Display for Device<'a> {
         if self.args.verbose || self.args.print_config {
             write!(f, "\n")?;
         }
+
+        Ok(())
+    }
+}
+
+impl<'a> fmt::Display for Device<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.print_common_header(f)?;
+        self.print_common_footer(f)?;
         Ok(())
     }
 }
