@@ -724,7 +724,7 @@ From //build/images/custom_signing.gni:23
 
 **Current value (from the default):** `"dart_jit_app"`
 
-From [//topaz/runtime/dart/dart_component.gni:24](https://fuchsia.googlesource.com/topaz/+/3c84b3d04cf41433296adede6b5672d4446a9b27/runtime/dart/dart_component.gni#24)
+From [//topaz/runtime/dart/dart_component.gni:24](https://fuchsia.googlesource.com/topaz/+/2a363576c73cb69c61197edac4af1e6f587a1651/runtime/dart/dart_component.gni#24)
 
 ### dart_default_build_cfg
 Non-product JIT
@@ -749,14 +749,14 @@ we use to build products.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/3c84b3d04cf41433296adede6b5672d4446a9b27/runtime/dart/config.gni#10)
+From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/2a363576c73cb69c61197edac4af1e6f587a1651/runtime/dart/config.gni#10)
 
 ### dart_space_dart
 Whether experimental space dart mode is enabled for Dart applications.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/dart_component.gni:43](https://fuchsia.googlesource.com/topaz/+/3c84b3d04cf41433296adede6b5672d4446a9b27/runtime/dart/dart_component.gni#43)
+From [//topaz/runtime/dart/dart_component.gni:43](https://fuchsia.googlesource.com/topaz/+/2a363576c73cb69c61197edac4af1e6f587a1651/runtime/dart/dart_component.gni#43)
 
 ### data_partition_manifest
 Path to manifest file containing data to place into the initial /data
@@ -1006,7 +1006,7 @@ From //build/images/args.gni:52
 
 **Current value (from the default):** `"flutter_jit_app"`
 
-From [//topaz/runtime/dart/dart_component.gni:13](https://fuchsia.googlesource.com/topaz/+/3c84b3d04cf41433296adede6b5672d4446a9b27/runtime/dart/dart_component.gni#13)
+From [//topaz/runtime/dart/dart_component.gni:13](https://fuchsia.googlesource.com/topaz/+/2a363576c73cb69c61197edac4af1e6f587a1651/runtime/dart/dart_component.gni#13)
 
 ### flutter_default_build_cfg
 Non-product JIT
@@ -1046,14 +1046,14 @@ From //build/flutter/config.gni:10
 
 **Current value (from the default):** `true`
 
-From [//topaz/runtime/dart/dart_component.gni:34](https://fuchsia.googlesource.com/topaz/+/3c84b3d04cf41433296adede6b5672d4446a9b27/runtime/dart/dart_component.gni#34)
+From [//topaz/runtime/dart/dart_component.gni:34](https://fuchsia.googlesource.com/topaz/+/2a363576c73cb69c61197edac4af1e6f587a1651/runtime/dart/dart_component.gni#34)
 
 ### flutter_space_dart
 Whether experimental space dart mode is enabled for Flutter applications.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/dart_component.gni:40](https://fuchsia.googlesource.com/topaz/+/3c84b3d04cf41433296adede6b5672d4446a9b27/runtime/dart/dart_component.gni#40)
+From [//topaz/runtime/dart/dart_component.gni:40](https://fuchsia.googlesource.com/topaz/+/2a363576c73cb69c61197edac4af1e6f587a1651/runtime/dart/dart_component.gni#40)
 
 ### font_catalog_paths
 
@@ -2139,15 +2139,6 @@ Path to file to use for recovery logo
 **Current value (from the default):** `"//src/recovery/system/res/fuchsia-logo.png"`
 
 From //src/recovery/system/system_recovery_args.gni:7
-
-### rtc_c
-This is used to temporarily enable building with the C driver
-and will be removed once cpp driver is stabilized.
-See fxb/62176.
-
-**Current value (from the default):** `false`
-
-From //src/devices/rtc/drivers/pl031-rtc/BUILD.gn:12
 
 ### run_slow_bssl_tests
 
