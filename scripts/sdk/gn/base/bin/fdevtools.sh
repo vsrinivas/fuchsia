@@ -101,8 +101,8 @@ fi
 echo "Starting Fuchsia DevTools with FDT_ARGS=[${FDT_ARGS[*]}] and environment:"
 env | grep FDT_
 
-LINUX_BINARY="system_monitor/linux/fuchsia_devtools"
-LINUX_BINARY_OLD="system_monitor/linux/system_monitor"
+LINUX_BINARY="fuchsia_devtools/linux/fuchsia_devtools"
+LINUX_BINARY_OLD="system_monitor/linux/fuchsia_devtools"
 MAC_ZIP="fuchsia_devtools/macos/macos.zip"
 MAC_UNZIP_DIR="fuchsia_devtools/macos-extracted"
 MAC_BINARY="fuchsia_devtools/macos-extracted/Fuchsia DevTools.app"
