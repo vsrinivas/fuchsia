@@ -162,10 +162,8 @@ class VmAddressRegionOrMapping
   // reflects the address space layout. |aspace()->lock()| must be held.
   bool IsAliveLocked() const;
 
-  // Version of Destroy() that does not acquire the aspace lock
   virtual zx_status_t DestroyLocked() TA_REQ(lock()) = 0;
 
-  // Version of AllocatedPages() that does not acquire the aspace lock
   virtual size_t AllocatedPagesLocked() const TA_REQ(lock()) = 0;
 
   // Transition from NOT_READY to READY, and add references to self to related
@@ -347,7 +345,6 @@ class VmAddressRegion : public VmAddressRegionOrMapping {
   VmAddressRegion(VmAddressRegion& parent, vaddr_t base, size_t size, uint32_t vmar_flags,
                   const char* name);
 
-  // Version of Destroy() that does not acquire the aspace lock
   zx_status_t DestroyLocked() TA_REQ(lock()) override;
 
   void Activate() TA_REQ(lock()) override;
@@ -495,11 +492,15 @@ class VmMapping final : public VmAddressRegionOrMapping,
   // Apis intended for use by VmObject
 
   Lock<Mutex>* object_lock() TA_RET_CAP(object_->lock()) { return object_->lock(); }
-  // unmap any pages that map the passed in vmo range. May not intersect with this range
-  zx_status_t UnmapVmoRangeLocked(uint64_t offset, uint64_t len) const TA_REQ(object_->lock());
-  // removes any writeable mappings for the passed in vmo range. May fall back to unmapping pages
-  // if necessary.
-  zx_status_t RemoveWriteVmoRangeLocked(uint64_t offset, uint64_t len) const
+
+  // Unmap any pages that map the passed in vmo range from the arch aspace.
+  // May not intersect with this range.
+  zx_status_t AspaceUnmapVmoRangeLocked(uint64_t offset, uint64_t len) const
+      TA_REQ(object_->lock());
+
+  // Removes any writeable mappings for the passed in vmo range from the arch aspace.
+  // May fall back to unmapping pages from the arch aspace if necessary.
+  zx_status_t AspaceRemoveWriteVmoRangeLocked(uint64_t offset, uint64_t len) const
       TA_REQ(object_->lock());
 
   // Harvests accessed bits for any pages in the passed in vmo range and calls the provided callback
@@ -526,22 +527,18 @@ class VmMapping final : public VmAddressRegionOrMapping,
   VmMapping(VmAddressRegion& parent, vaddr_t base, size_t size, uint32_t vmar_flags,
             fbl::RefPtr<VmObject> vmo, uint64_t vmo_offset, uint arch_mmu_flags);
 
-  // Version of Destroy() that does not acquire the aspace lock
   zx_status_t DestroyLocked() TA_REQ(lock()) override;
 
-  // Implementation for Unmap().  This does not acquire the aspace lock, and
-  // supports partial unmapping.
+  // Implementation for Unmap().  This supports partial unmapping.
   zx_status_t UnmapLocked(vaddr_t base, size_t size) TA_REQ(lock());
 
-  // Implementation for Protect().  This does not acquire the aspace lock.
+  // Implementation for Protect().
   zx_status_t ProtectLocked(vaddr_t base, size_t size, uint new_arch_mmu_flags) TA_REQ(lock());
 
-  // Version of AllocatedPages() that does not acquire the aspace lock
   size_t AllocatedPagesLocked() const TA_REQ(lock()) override;
 
   void Activate() TA_REQ(lock()) override;
 
-  // Version of Activate that does not take the object_ lock.
   void ActivateLocked() TA_REQ(lock()) TA_REQ(object_->lock());
 
   // Takes a range relative to the vmo object_ and converts it into a virtual address range relative

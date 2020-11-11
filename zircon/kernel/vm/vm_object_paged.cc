@@ -187,7 +187,7 @@ uint32_t VmObjectPaged::ScanForZeroPages(bool reclaim) {
     }
     // Remove write from the mapping to ensure it's not being concurrently modified.
     AssertHeld(*m.object_lock());
-    m.RemoveWriteVmoRangeLocked(0, size_locked());
+    m.AspaceRemoveWriteVmoRangeLocked(0, size_locked());
   }
 
   uint32_t count = cow_pages_locked()->ScanForZeroPagesLocked(reclaim);
@@ -1256,9 +1256,9 @@ void VmObjectPaged::RangeChangeUpdateLocked(uint64_t offset, uint64_t len, Range
   for (auto& m : mapping_list_) {
     AssertHeld(*m.object_lock());
     if (op == RangeChangeOp::Unmap) {
-      m.UnmapVmoRangeLocked(aligned_offset, aligned_len);
+      m.AspaceUnmapVmoRangeLocked(aligned_offset, aligned_len);
     } else if (op == RangeChangeOp::RemoveWrite) {
-      m.RemoveWriteVmoRangeLocked(aligned_offset, aligned_len);
+      m.AspaceRemoveWriteVmoRangeLocked(aligned_offset, aligned_len);
     } else {
       panic("Unknown RangeChangeOp %d\n", static_cast<int>(op));
     }

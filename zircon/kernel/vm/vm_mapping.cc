@@ -360,7 +360,7 @@ bool VmMapping::ObjectRangeToVaddrRange(uint64_t offset, uint64_t len, vaddr_t* 
   return true;
 }
 
-zx_status_t VmMapping::UnmapVmoRangeLocked(uint64_t offset, uint64_t len) const {
+zx_status_t VmMapping::AspaceUnmapVmoRangeLocked(uint64_t offset, uint64_t len) const {
   canary_.Assert();
 
   // NOTE: must be acquired with the vmo lock held, but doesn't need to take
@@ -380,7 +380,7 @@ zx_status_t VmMapping::UnmapVmoRangeLocked(uint64_t offset, uint64_t len) const 
   // If we're currently faulting and are responsible for the vmo code to be calling
   // back to us, detect the recursion and abort here.
   // The specific path we're avoiding is if the VMO calls back into us during vmo->GetPageLocked()
-  // via UnmapVmoRangeLocked(). If we set this flag we're short circuiting the unmap operation
+  // via AspaceUnmapVmoRangeLocked(). If we set this flag we're short circuiting the unmap operation
   // so that we don't do extra work.
   if (unlikely(currently_faulting_)) {
     LTRACEF("recursing to ourself, abort\n");
@@ -444,7 +444,7 @@ zx_status_t VmMapping::HarvestAccessVmoRangeLocked(
   return aspace_->arch_aspace().HarvestAccessed(base, new_len / PAGE_SIZE, callback);
 }
 
-zx_status_t VmMapping::RemoveWriteVmoRangeLocked(uint64_t offset, uint64_t len) const {
+zx_status_t VmMapping::AspaceRemoveWriteVmoRangeLocked(uint64_t offset, uint64_t len) const {
   LTRACEF("region %p obj_offset %#" PRIx64 " size %zu, offset %#" PRIx64 " len %#" PRIx64 "\n",
           this, object_offset_, size_, offset, len);
 
@@ -642,7 +642,7 @@ zx_status_t VmMapping::DecommitRange(size_t offset, size_t len) {
     return ZX_ERR_OUT_OF_RANGE;
   }
   // VmObject::DecommitRange will typically call back into our instance's
-  // VmMapping::UnmapVmoRangeLocked.
+  // VmMapping::AspaceUnmapVmoRangeLocked.
   return object_->DecommitRange(object_offset_locked() + offset, len);
 }
 
@@ -735,8 +735,8 @@ zx_status_t VmMapping::PageFault(vaddr_t va, const uint pf_flags, PageRequest* p
 
   // set the currently faulting flag for any recursive calls the vmo may make back into us
   // The specific path we're avoiding is if the VMO calls back into us during vmo->GetPageLocked()
-  // via UnmapVmoRangeLocked(). Since we're responsible for that page, signal to ourself to skip
-  // the unmap operation.
+  // via AspaceUnmapVmoRangeLocked(). Since we're responsible for that page, signal to ourself to
+  // skip the unmap operation.
   DEBUG_ASSERT(!currently_faulting_);
   currently_faulting_ = true;
   auto ac = fbl::MakeAutoCall([&]() {
