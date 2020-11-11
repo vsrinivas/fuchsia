@@ -348,7 +348,8 @@ static bool io_process_txn(nvme_device_t* nvme, nvme_txn_t* txn) {
     cmd.cmd = NVME_CMD_CID(utxn->id) | NVME_CMD_PRP | NVME_CMD_NORMAL | NVME_CMD_OPC(txn->opcode);
     cmd.nsid = 1;
     cmd.u.rw.start_lba = txn->op.rw.offset_dev;
-    cmd.u.rw.block_count = blocks - 1;
+    ZX_ASSERT(blocks - 1 <= UINT16_MAX);
+    cmd.u.rw.block_count = (uint16_t)(blocks - 1);
     // The NVME command has room for two data pointers inline.
     // The first is always the pointer to the first page where data is.
     // The second is the second page if pagecount is 2.
@@ -720,7 +721,7 @@ static zx_status_t nvme_init_internal(nvme_device_t* nvme) {
 
   // initialize the microtransaction pool
   nvme->utxn_avail = 0x7FFFFFFFFFFFFFFFULL;
-  for (unsigned n = 0; n < UTXN_COUNT; n++) {
+  for (uint16_t n = 0; n < UTXN_COUNT; n++) {
     nvme->utxn[n].id = n;
     nvme->utxn[n].phys = nvme->iob.phys_list[IDX_UTXN_POOL + n];
     nvme->utxn[n].virt = nvme->iob.virt + (IDX_UTXN_POOL + n) * PAGE_SIZE;
@@ -968,7 +969,7 @@ static zx_status_t nvme_init_internal(nvme_device_t* nvme) {
   }
 
   // NVME r/w commands operate in block units, maximum of 64K:
-  size_t max_bytes_per_cmd = ((size_t)nvme->info.block_size) * ((size_t)65536);
+  uint32_t max_bytes_per_cmd = nvme->info.block_size * 65536;
 
   if (nvme->max_xfer > max_bytes_per_cmd) {
     nvme->max_xfer = max_bytes_per_cmd;

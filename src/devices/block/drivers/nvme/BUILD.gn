@@ -26,7 +26,4 @@ driver_module("nvme") {
     "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//zircon/public/lib/sync",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
