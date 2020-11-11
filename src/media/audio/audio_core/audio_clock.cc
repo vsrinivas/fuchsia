@@ -97,12 +97,18 @@ int32_t AudioClock::SynchronizeClocks(AudioClock& source_clock, AudioClock& dest
 
     case SyncMode::ResetSourceClock:
       // Immediately return the source clock to a monotonic rate, if it isn't already.
-      source_clock.ReturnToMonotonic(monotonic_time);
+      // TODO(fxbug.dev/64169): Converge position error to 0 before resetting to monotonic rate.
+      // Position error is guaranteed to be within our threshold; converging to 0 would be ideal.
+      source_clock.AdjustClock(0);
+      source_clock.ResetRateAdjustment(monotonic_time);
       return 0;
 
     case SyncMode::ResetDestClock:
       // Immediately return the dest clock to a monotonic rate, if it isn't already.
-      dest_clock.ReturnToMonotonic(monotonic_time);
+      // TODO(fxbug.dev/64169): Converge position error to 0 before resetting to monotonic rate.
+      // Position error is guaranteed to be within our threshold; converging to 0 would be ideal.
+      dest_clock.AdjustClock(0);
+      dest_clock.ResetRateAdjustment(monotonic_time);
       return 0;
 
     case SyncMode::AdjustSourceClock:
@@ -209,41 +215,35 @@ int32_t AudioClock::TuneForError(zx::time monotonic_time, zx::duration src_pos_e
   int32_t rate_adjust_ppm = ClampPpm(round(rate_adjustment * 1'000'000.0));
 
   if (rate_adjust_ppm != previous_adjustment_ppm_) {
-    FX_LOGS(TRACE) << (is_client_clock() ? "Client" : "Device")
+    FX_LOGS(DEBUG) << static_cast<void*>(this) << (is_client_clock() ? " Client" : " Device")
                    << (is_adjustable() ? "Adjustable" : "Fixed") << " clock changed from (ppm) "
                    << std::setw(5) << previous_adjustment_ppm_ << " to " << std::setw(5)
                    << rate_adjust_ppm << "; src_pos_err " << std::setw(6) << src_pos_error.get();
 
-    // If this is an actual clock, adjust it -- otherwise just return rate_adjust_ppm for micro-SRC
-    if (is_adjustable()) {
-      AdjustZxClock(rate_adjust_ppm);
-    }
-
-    previous_adjustment_ppm_ = rate_adjust_ppm;
   } else {
-    FX_LOGS(TRACE) << (is_client_clock() ? "Client" : "Device")
+    FX_LOGS(TRACE) << static_cast<void*>(this) << (is_client_clock() ? " Client" : " Device")
                    << (is_adjustable() ? "Adjustable" : "Fixed") << " adjust_ppm remains (ppm) "
                    << std::setw(5) << previous_adjustment_ppm_ << " for the src pos error "
                    << std::setw(6) << src_pos_error.get();
   }
 
+  AdjustClock(rate_adjust_ppm);
   return rate_adjust_ppm;
 }
 
-void AudioClock::AdjustZxClock(int32_t rate_adjust_ppm) {
-  FX_CHECK(is_adjustable()) << "Cannot call ReturnToMonotonic on a fixed-rate clock";
+void AudioClock::AdjustClock(int32_t rate_adjust_ppm) {
+  if (previous_adjustment_ppm_ == rate_adjust_ppm) {
+    return;
+  }
 
-  zx::clock::update_args args;
-  args.reset().set_rate_adjust(rate_adjust_ppm);
-  FX_CHECK(clock_.update(args) == ZX_OK) << "Adjustable clock could not be rate-adjusted";
-}
+  // If this is an actual clock, adjust it; else just cache rate_adjust_ppm for micro-SRC.
+  if (is_adjustable()) {
+    zx::clock::update_args args;
+    args.reset().set_rate_adjust(rate_adjust_ppm);
+    FX_CHECK(clock_.update(args) == ZX_OK) << "Adjustable clock could not be rate-adjusted";
+  }
 
-void AudioClock::ReturnToMonotonic(zx::time reset_time) {
-  // Return the zx::clock to the monotonic rate
-  AdjustZxClock(0);
-
-  // Return the PID to a zeroed-out state
-  ResetRateAdjustment(reset_time);
+  previous_adjustment_ppm_ = rate_adjust_ppm;
 }
 
 }  // namespace media::audio

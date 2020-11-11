@@ -7,6 +7,8 @@
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/clock.h>
 
+#include <string>
+
 #include <gtest/gtest.h>
 
 #include "src/media/audio/lib/clock/clone_mono.h"
@@ -18,29 +20,90 @@ class AudioClockTest : public testing::Test {
   static constexpr uint32_t kCustomDomain = 42;
   static constexpr uint32_t kCustomDomain2 = 68;
 
+  static std::string ClockSummary(const AudioClock& clock) {
+    std::string summary;
+    summary = (clock.is_client_clock() ? "Client" : "Device");
+    summary.append(clock.is_adjustable() ? "Adjustable" : "Fixed");
+    if (clock.is_device_clock()) {
+      summary.append("(" + std::to_string(clock.domain()) + ")");
+    }
+    return summary;
+  }
+
+  void ExpectZeroMicroSrc(AudioClock& source_clock, AudioClock& dest_clock) {
+    ExpectZeroMicroSrc(source_clock, dest_clock, true);
+  }
+  void ExpectNonzeroMicroSrc(AudioClock& source_clock, AudioClock& dest_clock) {
+    ExpectZeroMicroSrc(source_clock, dest_clock, false);
+  }
+  void ExpectZeroMicroSrc(AudioClock& source_clock, AudioClock& dest_clock, bool expect_zero) {
+    // Return these clocks to a known state.
+    auto now = zx::clock::get_monotonic();
+    source_clock.ResetRateAdjustment(now - zx::msec(10));
+    dest_clock.ResetRateAdjustment(now - zx::msec(10));
+
+    auto microsrc_ppm = AudioClock::SynchronizeClocks(source_clock, dest_clock, now, zx::usec(10));
+    if (expect_zero) {
+      EXPECT_EQ(0, microsrc_ppm);
+    } else {
+      EXPECT_GT(0, microsrc_ppm);
+    }
+  }
+
   // Convenience methods so AudioClock only has to declare one class (AudioClockTest) as friend.
   void ValidateSyncNone(AudioClock& source_clock, AudioClock& dest_clock) {
+    SCOPED_TRACE("SyncMode::None, Source " + ClockSummary(source_clock) + ", Dest " +
+                 ClockSummary(dest_clock));
     EXPECT_EQ(AudioClock::SyncMode::None, AudioClock::SyncModeForClocks(source_clock, dest_clock));
+
+    ExpectZeroMicroSrc(source_clock, dest_clock);
   }
+
   void ValidateSyncResetSource(AudioClock& source_clock, AudioClock& dest_clock) {
+    SCOPED_TRACE("SyncMode::ResetSourceClock, Source " + ClockSummary(source_clock) + ", Dest " +
+                 ClockSummary(dest_clock));
     EXPECT_EQ(AudioClock::SyncMode::ResetSourceClock,
               AudioClock::SyncModeForClocks(source_clock, dest_clock));
+
+    ExpectZeroMicroSrc(source_clock, dest_clock);
   }
+
   void ValidateSyncResetDest(AudioClock& source_clock, AudioClock& dest_clock) {
+    SCOPED_TRACE("SyncMode::ResetDestClock, Source " + ClockSummary(source_clock) + ", Dest " +
+                 ClockSummary(dest_clock));
     EXPECT_EQ(AudioClock::SyncMode::ResetDestClock,
               AudioClock::SyncModeForClocks(source_clock, dest_clock));
+
+    ExpectZeroMicroSrc(source_clock, dest_clock);
   }
+
   void ValidateSyncAdjustSource(AudioClock& source_clock, AudioClock& dest_clock) {
+    SCOPED_TRACE("SyncMode::AdjustSourceClock, Source " + ClockSummary(source_clock) + ", Dest " +
+                 ClockSummary(dest_clock));
     EXPECT_EQ(AudioClock::SyncMode::AdjustSourceClock,
               AudioClock::SyncModeForClocks(source_clock, dest_clock));
+
+    ExpectZeroMicroSrc(source_clock, dest_clock);
   }
+
   void ValidateSyncAdjustDest(AudioClock& source_clock, AudioClock& dest_clock) {
+    SCOPED_TRACE("SyncMode::AdjustDestClock, Source " + ClockSummary(source_clock) + ", Dest " +
+                 ClockSummary(dest_clock));
     EXPECT_EQ(AudioClock::SyncMode::AdjustDestClock,
               AudioClock::SyncModeForClocks(source_clock, dest_clock));
+
+    ExpectZeroMicroSrc(source_clock, dest_clock);
   }
+
   void ValidateSyncMicroSrc(AudioClock& source_clock, AudioClock& dest_clock) {
+    SCOPED_TRACE("SyncMode::MicroSrc, Source " + ClockSummary(source_clock) + ", Dest " +
+                 ClockSummary(dest_clock));
     EXPECT_EQ(AudioClock::SyncMode::MicroSrc,
               AudioClock::SyncModeForClocks(source_clock, dest_clock));
+
+    if (source_clock.is_client_clock() || dest_clock.is_client_clock()) {
+      ExpectNonzeroMicroSrc(source_clock, dest_clock);
+    }
   }
 };
 
@@ -108,18 +171,6 @@ TEST_F(AudioClockTest, DuplicateClock) {
   auto time2 = dupe_audio_clock.Read().get();
 
   EXPECT_LT(time1, time2);
-}
-
-TEST_F(AudioClockTest, InvalidZxClockHaltsCreate) {
-  // Uninitialized clock cannot be passed to CreateAs...
-  ASSERT_DEATH(AudioClock::ClientFixed(zx::clock()), "");
-  ASSERT_DEATH(AudioClock::ClientAdjustable(zx::clock()), "");
-  ASSERT_DEATH(AudioClock::DeviceFixed(zx::clock(), kCustomDomain), "");
-  ASSERT_DEATH(AudioClock::DeviceAdjustable(zx::clock(), kCustomDomain), "");
-
-  // Clock without WRITE rights cannot be passed to CreateAs...Adjustable
-  ASSERT_DEATH(AudioClock::ClientAdjustable(clock::CloneOfMonotonic()), "");
-  ASSERT_DEATH(AudioClock::DeviceAdjustable(clock::CloneOfMonotonic(), kCustomDomain), "");
 }
 
 // Validate AudioClock::SyncModeForClocks() combinations leading to SyncMode::None
@@ -245,6 +296,63 @@ TEST_F(AudioClockTest, SyncModeMicroSrc) {
   ValidateSyncMicroSrc(device_adjustable, device_monotonic);
   ValidateSyncMicroSrc(device_adjustable, device_diff_domain);
   ValidateSyncMicroSrc(device_adjustable, device_adjustable_diff_domain);
+}
+
+// Validate AudioClock::SyncMode::ResetSourceClock/ResetDestClock for ClientAdjustable clocks.
+TEST_F(AudioClockTest, ResetToMonotonic) {
+  // These modes are triggered by a synchronization with a MONOTONIC device clock.
+  auto client = AudioClock::ClientAdjustable(clock::AdjustableCloneOfMonotonic());
+  auto device_diff_domain =
+      AudioClock::DeviceFixed(clock::AdjustableCloneOfMonotonic(), kCustomDomain);
+  auto device_monotonic =
+      AudioClock::DeviceFixed(clock::CloneOfMonotonic(), AudioClock::kMonotonicDomain);
+
+  // First validate the render signal flow -- client clock as source clock
+  //
+  // The error should result in significant (upward) adjustment of client clock.
+  auto now = zx::clock::get_monotonic();
+  client.ResetRateAdjustment(now);
+  AudioClock::SynchronizeClocks(client, device_diff_domain, now + zx::msec(10), zx::usec(10));
+  auto mono_to_client_ref = client.ref_clock_to_clock_mono().Inverse();
+  EXPECT_GT(mono_to_client_ref.subject_delta(), mono_to_client_ref.reference_delta())
+      << "sub_delta " << mono_to_client_ref.subject_delta() << ", ref_delta "
+      << mono_to_client_ref.reference_delta();
+
+  // Syncing now to a MONOTONIC device clock, client should reset to no rate adjustment.
+  AudioClock::SynchronizeClocks(client, device_monotonic, now + zx::msec(20), zx::usec(10));
+  mono_to_client_ref = client.ref_clock_to_clock_mono().Inverse();
+  EXPECT_EQ(mono_to_client_ref.subject_delta(), mono_to_client_ref.reference_delta());
+
+  // Now validate in the other direction -- client is the destination clock
+  //
+  // The error should result in significant (downward) adjustment of client clock.
+  now = zx::clock::get_monotonic();
+  client.ResetRateAdjustment(now);
+  AudioClock::SynchronizeClocks(device_diff_domain, client, now + zx::msec(10), zx::usec(10));
+  mono_to_client_ref = client.ref_clock_to_clock_mono().Inverse();
+  EXPECT_LT(mono_to_client_ref.subject_delta(), mono_to_client_ref.reference_delta())
+      << "sub_delta " << mono_to_client_ref.subject_delta() << ", ref_delta "
+      << mono_to_client_ref.reference_delta();
+
+  // Now syncing with a MONOTONIC device clock, client should reset to no rate adjustment.
+  AudioClock::SynchronizeClocks(device_monotonic, client, now + zx::msec(20), zx::usec(10));
+  mono_to_client_ref = client.ref_clock_to_clock_mono().Inverse();
+  EXPECT_EQ(mono_to_client_ref.subject_delta(), mono_to_client_ref.reference_delta());
+}
+
+// Death tests, grouped separately
+using AudioClockDeathTest = AudioClockTest;
+
+TEST_F(AudioClockDeathTest, InvalidZxClockHaltsCreate) {
+  // Uninitialized clock cannot be passed to CreateAs...
+  ASSERT_DEATH(AudioClock::ClientFixed(zx::clock()), "");
+  ASSERT_DEATH(AudioClock::ClientAdjustable(zx::clock()), "");
+  ASSERT_DEATH(AudioClock::DeviceFixed(zx::clock(), kCustomDomain), "");
+  ASSERT_DEATH(AudioClock::DeviceAdjustable(zx::clock(), kCustomDomain), "");
+
+  // Clock without WRITE rights cannot be passed to CreateAs...Adjustable
+  ASSERT_DEATH(AudioClock::ClientAdjustable(clock::CloneOfMonotonic()), "");
+  ASSERT_DEATH(AudioClock::DeviceAdjustable(clock::CloneOfMonotonic(), kCustomDomain), "");
 }
 
 }  // namespace media::audio

@@ -141,8 +141,7 @@ class AudioClock {
   AudioClock(zx::clock clock, Source source, bool adjustable, uint32_t domain);
 
   int32_t ClampPpm(int32_t parts_per_million);
-  void AdjustZxClock(int32_t rate_adjust_ppm);
-  void ReturnToMonotonic(zx::time reset_time);
+  void AdjustClock(int32_t rate_adjust_ppm);
 
   zx::clock clock_;
 
@@ -152,7 +151,7 @@ class AudioClock {
 
   audio::clock::PidControl feedback_control_;
 
-  // For debugging/display purposes only
+  // State used to avoid repeated redundant zx::clock syscalls.
   int32_t previous_adjustment_ppm_ = 0;
 };
 
