@@ -313,7 +313,7 @@ static void ums_handle_read10(usb_ums_t* ums, ums_cbw_t* cbw) {
   zxlogf(DEBUG, "ums_handle_read10");
 
   scsi_command10_t* command = (scsi_command10_t*)cbw->CBWCB;
-  uint32_t lba = be32toh(command->lba);
+  uint64_t lba = be32toh(command->lba);
   uint32_t blocks = ((uint32_t)command->length_hi << 8) | (uint32_t)command->length_lo;
   ums_start_transfer(ums, DATA_STATE_READ, lba, blocks);
 }
@@ -331,7 +331,7 @@ static void ums_handle_read16(usb_ums_t* ums, ums_cbw_t* cbw) {
   zxlogf(DEBUG, "ums_handle_read16");
 
   scsi_command16_t* command = (scsi_command16_t*)cbw->CBWCB;
-  uint32_t lba = be64toh(command->lba);
+  uint64_t lba = be64toh(command->lba);
   uint32_t blocks = be32toh(command->length);
   ums_start_transfer(ums, DATA_STATE_READ, lba, blocks);
 }
@@ -340,7 +340,7 @@ static void ums_handle_write10(usb_ums_t* ums, ums_cbw_t* cbw) {
   zxlogf(DEBUG, "ums_handle_write10");
 
   scsi_command10_t* command = (scsi_command10_t*)cbw->CBWCB;
-  uint32_t lba = be32toh(command->lba);
+  uint64_t lba = be32toh(command->lba);
   uint32_t blocks = ((uint32_t)command->length_hi << 8) | (uint32_t)command->length_lo;
   ums_start_transfer(ums, DATA_STATE_WRITE, lba, blocks);
 }
