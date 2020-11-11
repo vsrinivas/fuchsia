@@ -46,6 +46,7 @@ test_package("a11y_lib_tests") {
     "semantics/tests:unit",
     "semantics/util/tests",
     "tts/tests",
+    "util/tests",
     "view/tests",
     "//src/ui/a11y/lib/screen_reader/i18n:resources",
   ]
@@ -146,6 +147,10 @@ test_package("a11y_lib_tests") {
     },
     {
       name = "tts_manager_tests"
+      environments = basic_envs
+    },
+    {
+      name = "util_tests"
       environments = basic_envs
     },
     {

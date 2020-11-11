@@ -17,6 +17,7 @@
 #include "src/ui/a11y/lib/screen_reader/screen_reader_context.h"
 #include "src/ui/a11y/lib/semantics/semantics_event_listener.h"
 #include "src/ui/a11y/lib/tts/tts_manager.h"
+#include "src/ui/a11y/lib/util/boot_info_manager.h"
 
 namespace a11y {
 
@@ -37,10 +38,12 @@ class ScreenReader : public SemanticsEventListener {
   // outlive screen reader. A11y App is responsible for creating these pointers along with Screen
   // Reader object.
   ScreenReader(std::unique_ptr<ScreenReaderContext> context, SemanticsSource* semantics_source,
-               GestureListenerRegistry* gesture_listener_registry, TtsManager* tts_manager);
+               GestureListenerRegistry* gesture_listener_registry, TtsManager* tts_manager,
+               bool announce_screen_reader_enabled);
   // Same as above, but accepts a custom |action_registry|.
   ScreenReader(std::unique_ptr<ScreenReaderContext> context, SemanticsSource* semantics_source,
                GestureListenerRegistry* gesture_listener_registry, TtsManager* tts_manager,
+               bool announce_screen_reader_enabled,
                std::unique_ptr<ScreenReaderActionRegistry> action_registry);
 
   ~ScreenReader();

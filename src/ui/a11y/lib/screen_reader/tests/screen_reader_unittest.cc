@@ -93,7 +93,7 @@ class ScreenReaderTest : public gtest::TestLoopFixture {
         mock_tts_manager_(std::make_unique<MockTtsManager>(context_provider_.context())),
         screen_reader_(std::make_unique<a11y::ScreenReader>(
             std::move(context_), &view_manager_, &gesture_listener_registry_,
-            mock_tts_manager_.get(), std::move(mock_action_registry_))),
+            mock_tts_manager_.get(), true, std::move(mock_action_registry_))),
         semantic_provider_(&view_manager_) {
     screen_reader_->BindGestures(&mock_gesture_handler_);
     gesture_listener_registry_.Register(mock_gesture_listener_.NewBinding(), []() {});
@@ -179,6 +179,12 @@ TEST_F(ScreenReaderTest, ScreenReaderSpeaksWhenItTurnsOnAndOff) {
   // No output should be spoken until the tts engine is connected.
   EXPECT_TRUE(mock_speaker_ptr_->message_ids().empty());
 
+  // Open engine.
+  fuchsia::accessibility::tts::EnginePtr engine_ptr;
+  mock_tts_manager_->OpenEngine(
+      engine_ptr.NewRequest(),
+      [](fuchsia::accessibility::tts::TtsManager_OpenEngine_Result result) {});
+
   // Connect the tts engine.
   fidl::InterfaceHandle<fuchsia::accessibility::tts::Engine> engine_handle;
   mock_tts_manager_->RegisterEngine(
@@ -230,6 +236,34 @@ TEST_F(ScreenReaderTest, SemanticEventsTriggerScreenReaderAction) {
       {.event_type = a11y::SemanticsEventType::kSemanticTreeUpdated});
   EXPECT_THAT(mock_action_registry_ptr_->invoked_actions(),
               ElementsAre(StrEq("Recover A11Y Focus Action")));
+}
+
+TEST_F(ScreenReaderTest, ScreenReaderSilentWhenSpecifiedDuringInit) {
+  auto mock_tts_manager = std::make_unique<MockTtsManager>(context_provider_.context());
+  auto mock_screen_reader_context = std::make_unique<MockScreenReaderContext>();
+  auto mock_speaker_ptr = mock_screen_reader_context->mock_speaker_ptr();
+  a11y::ScreenReader screen_reader(std::move(mock_screen_reader_context), &view_manager_,
+                                   &gesture_listener_registry_, mock_tts_manager.get(),
+                                   false,  // Do not announce screen reader enabled.
+                                   std::make_unique<MockScreenReaderActionRegistryImpl>());
+
+  // No output should be spoken until the tts engine is connected.
+  EXPECT_TRUE(mock_speaker_ptr->message_ids().empty());
+
+  // Open engine.
+  fuchsia::accessibility::tts::EnginePtr engine_ptr;
+  mock_tts_manager->OpenEngine(
+      engine_ptr.NewRequest(),
+      [](fuchsia::accessibility::tts::TtsManager_OpenEngine_Result result) {});
+
+  // Connect the tts engine.
+  fidl::InterfaceHandle<fuchsia::accessibility::tts::Engine> engine_handle;
+  mock_tts_manager->RegisterEngine(
+      std::move(engine_handle),
+      [](fuchsia::accessibility::tts::EngineRegistry_RegisterEngine_Result result) {});
+
+  // No output should be spoken since reboot was not user-initiated.
+  EXPECT_TRUE(mock_speaker_ptr->message_ids().empty());
 }
 
 }  // namespace

@@ -4,14 +4,18 @@
 
 source_set("util") {
   sources = [
+    "boot_info_manager.cc",
+    "boot_info_manager.h",
     "util.cc",
     "util.h",
   ]
 
-  public_deps = []
+  public_deps = [ "//sdk/fidl/fuchsia.feedback" ]
 
   deps = [
+    "//sdk/fidl/fuchsia.feedback",
     "//sdk/fidl/fuchsia.ui.views",
+    "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
     "//src/lib/fsl",
   ]
