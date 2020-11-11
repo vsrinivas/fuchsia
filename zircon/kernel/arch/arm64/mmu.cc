@@ -435,48 +435,6 @@ void ArmArchVmAspace::FreePageTable(void* vaddr, paddr_t paddr, uint page_size_s
   pt_pages_--;
 }
 
-volatile pte_t* ArmArchVmAspace::GetPageTable(uint page_size_shift, vaddr_t pt_index,
-                                              volatile pte_t* page_table) {
-  pte_t pte;
-  paddr_t paddr;
-  void* vaddr;
-
-  DEBUG_ASSERT(page_size_shift <= MMU_MAX_PAGE_SIZE_SHIFT);
-
-  pte = page_table[pt_index];
-  switch (pte & MMU_PTE_DESCRIPTOR_MASK) {
-    case MMU_PTE_DESCRIPTOR_INVALID: {
-      zx_status_t ret = AllocPageTable(&paddr, page_size_shift);
-      if (ret) {
-        TRACEF("failed to allocate page table\n");
-        return NULL;
-      }
-      vaddr = paddr_to_physmap(paddr);
-
-      LTRACEF("allocated page table, vaddr %p, paddr 0x%lx\n", vaddr, paddr);
-      memset(vaddr, MMU_PTE_DESCRIPTOR_INVALID, 1U << page_size_shift);
-
-      // ensure that the zeroing is observable from hardware page table walkers
-      __dmb(ARM_MB_ISHST);
-
-      pte = paddr | MMU_PTE_L012_DESCRIPTOR_TABLE;
-      page_table[pt_index] = pte;
-      LTRACEF("pte %p[%#" PRIxPTR "] = %#" PRIx64 "\n", page_table, pt_index, pte);
-      return static_cast<volatile pte_t*>(vaddr);
-    }
-    case MMU_PTE_L012_DESCRIPTOR_TABLE:
-      paddr = pte & MMU_PTE_OUTPUT_ADDR_MASK;
-      LTRACEF("found page table %#" PRIxPTR "\n", paddr);
-      return static_cast<volatile pte_t*>(paddr_to_physmap(paddr));
-
-    case MMU_PTE_L012_DESCRIPTOR_BLOCK:
-      return NULL;
-
-    default:
-      PANIC_UNIMPLEMENTED;
-  }
-}
-
 zx_status_t ArmArchVmAspace::SplitLargePage(vaddr_t vaddr, uint index_shift, uint page_size_shift,
                                             vaddr_t pt_index, volatile pte_t* page_table) {
   DEBUG_ASSERT(index_shift > page_size_shift);
@@ -664,21 +622,75 @@ ssize_t ArmArchVmAspace::MapPageTable(vaddr_t vaddr_in, vaddr_t vaddr_rel_in, pa
     vaddr_rem = vaddr_rel & block_mask;
     chunk_size = ktl::min(size, block_size - vaddr_rem);
     index = vaddr_rel >> index_shift;
+    pte = page_table[index];
 
     if (((vaddr_rel | paddr) & block_mask) || (chunk_size != block_size) ||
         (index_shift > MMU_PTE_DESCRIPTOR_BLOCK_MAX_SHIFT)) {
-      next_page_table = GetPageTable(page_size_shift, index, page_table);
-      if (!next_page_table) {
-        goto err;
+      // Lookup the next level page table, allocating if required.
+      bool allocated_page_table = false;
+      paddr_t page_table_paddr;
+
+      DEBUG_ASSERT(page_size_shift <= MMU_MAX_PAGE_SIZE_SHIFT);
+
+      switch (pte & MMU_PTE_DESCRIPTOR_MASK) {
+        case MMU_PTE_DESCRIPTOR_INVALID: {
+          zx_status_t ret = AllocPageTable(&page_table_paddr, page_size_shift);
+          if (ret) {
+            TRACEF("failed to allocate page table\n");
+            goto err;
+          }
+          allocated_page_table = true;
+          void *pt_vaddr = paddr_to_physmap(page_table_paddr);
+
+          LTRACEF("allocated page table, vaddr %p, paddr 0x%lx\n", pt_vaddr, page_table_paddr);
+          memset(pt_vaddr, MMU_PTE_DESCRIPTOR_INVALID, 1U << page_size_shift);
+
+          // ensure that the zeroing is observable from hardware page table walkers
+          __dmb(ARM_MB_ISHST);
+
+          pte = page_table_paddr | MMU_PTE_L012_DESCRIPTOR_TABLE;
+          page_table[index] = pte;
+          LTRACEF("pte %p[%#" PRIxPTR "] = %#" PRIx64 "\n", page_table, index, pte);
+          next_page_table = static_cast<volatile pte_t*>(pt_vaddr);
+          break;
+        }
+        case MMU_PTE_L012_DESCRIPTOR_TABLE:
+          page_table_paddr = pte & MMU_PTE_OUTPUT_ADDR_MASK;
+          LTRACEF("found page table %#" PRIxPTR "\n", page_table_paddr);
+          next_page_table = static_cast<volatile pte_t*>(paddr_to_physmap(page_table_paddr));
+          break;
+        case MMU_PTE_L012_DESCRIPTOR_BLOCK:
+          goto err;
+
+        default:
+          PANIC_UNIMPLEMENTED;
       }
 
       ret = MapPageTable(vaddr, vaddr_rem, paddr, chunk_size, attrs,
                          index_shift - (page_size_shift - 3), page_size_shift, next_page_table);
       if (ret < 0) {
+        if (allocated_page_table) {
+          // We just allocated this page table. The unmap in err will not clean it up as the size
+          // we pass in will not cause us to look at this page table. This is reasonable as if we
+          // didn't allocate the page table then we shouldn't look into and potentially unmap
+          // anything from that page table.
+          // Since we just allocated it there should be nothing in it, otherwise the MapPageTable
+          // call would not have failed.
+          DEBUG_ASSERT(page_table_is_clear(next_page_table, page_size_shift));
+          page_table[index] = MMU_PTE_DESCRIPTOR_INVALID;
+
+          // ensure that the update is observable from hardware page table walkers before TLB
+          // operations can occur.
+          __dsb(ARM_MB_ISHST);
+
+          // flush the non terminal TLB entry
+          FlushTLBEntry(vaddr, false);
+
+          FreePageTable(const_cast<pte_t*>(next_page_table), page_table_paddr, page_size_shift);
+        }
         goto err;
       }
     } else {
-      pte = page_table[index];
       if (pte) {
         TRACEF("page table entry already in use, index %#" PRIxPTR ", %#" PRIx64 "\n", index, pte);
         goto err;
