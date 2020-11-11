@@ -4,7 +4,6 @@
 
 #include "aml-sdmmc.h"
 
-#include <lib/fake-bti/bti.h>
 #include <lib/fake_ddk/fake_ddk.h>
 #include <threads.h>
 
@@ -17,6 +16,60 @@
 
 #include "aml-sdmmc-regs.h"
 
+namespace {
+
+constexpr zx_handle_t kFakeBtiHandle = 1234;
+
+uint8_t pin_count = 0;
+bool contiguous = true;
+
+}  // namespace
+
+__EXPORT
+zx_status_t zx_bti_pin(zx_handle_t bti_handle, uint32_t options, zx_handle_t vmo, uint64_t offset,
+                       uint64_t size, zx_paddr_t* addrs, size_t addrs_count, zx_handle_t* out) {
+  if (bti_handle != kFakeBtiHandle) {
+    return ZX_ERR_BAD_HANDLE;
+  }
+
+  for (size_t i = 0; i < addrs_count; i++) {
+    addrs[i] = (pin_count << 24) | (PAGE_SIZE * (i + 1) * (contiguous ? 1 : 2));
+  }
+
+  pin_count++;
+  *out = pin_count;
+  return ZX_OK;
+}
+
+__EXPORT
+zx_status_t zx_bti_release_quarantine(zx_handle_t bti_handle) {
+  return bti_handle == kFakeBtiHandle ? ZX_OK : ZX_ERR_BAD_HANDLE;
+}
+
+__EXPORT
+zx_status_t zx_pmt_unpin(zx_handle_t pmt_handle) { return ZX_OK; }
+
+__EXPORT
+zx_status_t zx_vmo_create_contiguous(zx_handle_t bti_handle, size_t size, uint32_t alignment_log2,
+                                     zx_handle_t* out) {
+  constexpr uint32_t kPageSizeShift = 12;
+
+  if (bti_handle != kFakeBtiHandle) {
+    return ZX_ERR_BAD_HANDLE;
+  }
+  if (size == 0) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+  if (alignment_log2 == 0) {
+    alignment_log2 = kPageSizeShift;
+  }
+  if (alignment_log2 < kPageSizeShift || alignment_log2 >= (8 * sizeof(uint64_t))) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  return zx_vmo_create(size, 0, out);
+}
+
 namespace sdmmc {
 
 class TestAmlSdmmc : public AmlSdmmc {
@@ -25,7 +78,7 @@ class TestAmlSdmmc : public AmlSdmmc {
       : AmlSdmmc(fake_ddk::kFakeParent, std::move(bti), ddk::MmioBuffer(mmio),
                  ddk::MmioPinnedBuffer({&mmio, ZX_HANDLE_INVALID, 0x100}),
                  aml_sdmmc_config_t{
-                     .supports_dma = false,
+                     .supports_dma = true,
                      .min_freq = 400000,
                      .max_freq = 120000000,
                      .version_3 = true,
@@ -74,6 +127,8 @@ class TestAmlSdmmc : public AmlSdmmc {
 
   void SetRequestInterruptStatus(uint32_t status) { interrupt_status_ = status; }
 
+  const aml_sdmmc_desc_t* descs() { return AmlSdmmc::descs(); }
+
  private:
   std::vector<uint8_t> request_results_;
   size_t request_index_ = 0;
@@ -87,6 +142,9 @@ class AmlSdmmcTest : public zxtest::Test {
   AmlSdmmcTest() : mmio_({FakeMmioPtr(&mmio_), 0, 0, ZX_HANDLE_INVALID}) {}
 
   void SetUp() override {
+    pin_count = 0;
+    contiguous = true;
+
     registers_.reset(new uint8_t[S912_SD_EMMC_B_LENGTH]);
     memset(registers_.get(), 0, S912_SD_EMMC_B_LENGTH);
 
@@ -99,13 +157,11 @@ class AmlSdmmcTest : public zxtest::Test {
 
     mmio_ = ddk::MmioBuffer(mmio_buffer);
 
-    zx::bti bti;
-    ASSERT_OK(fake_bti_create(bti.reset_and_get_address()));
-
+    zx::bti bti{kFakeBtiHandle};
     dut_ = new TestAmlSdmmc(mmio_buffer, std::move(bti));
 
     dut_->set_board_config({
-        .supports_dma = false,
+        .supports_dma = true,
         .min_freq = 400000,
         .max_freq = 120000000,
         .version_3 = true,
@@ -134,6 +190,18 @@ class AmlSdmmcTest : public zxtest::Test {
   }
 
  protected:
+  static zx_koid_t GetVmoKoid(const zx::vmo& vmo) {
+    zx_info_handle_basic_t info = {};
+    size_t actual = 0;
+    size_t available = 0;
+    zx_status_t status =
+        vmo.get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), &actual, &available);
+    if (status != ZX_OK || actual < 1) {
+      return ZX_KOID_INVALID;
+    }
+    return info.koid;
+  }
+
   ddk::MmioBuffer mmio_;
   TestAmlSdmmc* dut_ = nullptr;
 
@@ -511,6 +579,1080 @@ TEST_F(AmlSdmmcTest, RequestsFailAfterSuspend) {
   dut_->DdkSuspend(std::move(txn));
 
   EXPECT_NOT_OK(dut_->SdmmcRequest(&request));
+}
+
+TEST_F(AmlSdmmcTest, UnownedVmosBlockMode) {
+  ASSERT_OK(dut_->Init());
+  pin_count = 0;
+
+  zx::vmo vmos[10] = {};
+  sdmmc_buffer_region_t buffers[10];
+  for (uint32_t i = 0; i < countof(vmos); i++) {
+    ASSERT_OK(zx::vmo::create(PAGE_SIZE, 0, &vmos[i]));
+    buffers[i] = {
+        .buffer =
+            {
+                .vmo = vmos[i].get(),
+            },
+        .type = SDMMC_BUFFER_TYPE_VMO_HANDLE,
+        .offset = i * 16,
+        .size = 32 * (i + 2),
+    };
+  }
+
+  sdmmc_req_new_t request = {
+      .cmd_idx = SDMMC_READ_MULTIPLE_BLOCK,
+      .cmd_flags = SDMMC_READ_MULTIPLE_BLOCK_FLAGS,
+      .arg = 0x1234abcd,
+      .blocksize = 32,
+      .probe_tuning_cmd = false,
+      .client_id = 0,
+      .buffers_list = buffers,
+      .buffers_count = countof(buffers),
+  };
+  uint32_t response[4] = {};
+  AmlSdmmcCmdResp::Get().FromValue(0xfedc9876).WriteTo(&mmio_);
+  EXPECT_OK(dut_->SdmmcRequestNew(&request, response));
+  EXPECT_EQ(response[0], 0xfedc9876);
+
+  const aml_sdmmc_desc_t* descs = dut_->descs();
+  auto expected_desc_cfg = AmlSdmmcCmdCfg::Get()
+                               .FromValue(0)
+                               .set_len(2)
+                               .set_block_mode(1)
+                               .set_timeout(AmlSdmmcCmdCfg::kDefaultCmdTimeout)
+                               .set_data_io(1)
+                               .set_data_wr(0)
+                               .set_resp_num(1)
+                               .set_cmd_idx(SDMMC_READ_MULTIPLE_BLOCK)
+                               .set_owner(1);
+
+  EXPECT_EQ(descs[0].cmd_info, expected_desc_cfg.reg_value());
+  EXPECT_EQ(descs[0].cmd_arg, 0x1234abcd);
+  EXPECT_EQ(descs[0].data_addr, PAGE_SIZE);
+  EXPECT_EQ(descs[0].resp_addr, 0);
+
+  for (uint32_t i = 1; i < countof(vmos); i++) {
+    expected_desc_cfg.set_len(i + 2).set_no_resp(1).set_no_cmd(1).set_resp_num(0).set_cmd_idx(0);
+    if (i == countof(vmos) - 1) {
+      expected_desc_cfg.set_end_of_chain(1);
+    }
+    EXPECT_EQ(descs[i].cmd_info, expected_desc_cfg.reg_value());
+    EXPECT_EQ(descs[i].cmd_arg, 0);
+    EXPECT_EQ(descs[i].data_addr, (i << 24) | (PAGE_SIZE + (i * 16)));
+    EXPECT_EQ(descs[i].resp_addr, 0);
+  }
+}
+
+TEST_F(AmlSdmmcTest, UnownedVmosNotBlockSizeMultiple) {
+  ASSERT_OK(dut_->Init());
+  pin_count = 0;
+
+  zx::vmo vmos[10] = {};
+  sdmmc_buffer_region_t buffers[10];
+  for (uint32_t i = 0; i < countof(vmos); i++) {
+    ASSERT_OK(zx::vmo::create(PAGE_SIZE, 0, &vmos[i]));
+    buffers[i] = {
+        .buffer =
+            {
+                .vmo = vmos[i].get(),
+            },
+        .type = SDMMC_BUFFER_TYPE_VMO_HANDLE,
+        .offset = 0,
+        .size = 32 * (i + 2),
+    };
+  }
+
+  buffers[5].size = 25;
+
+  sdmmc_req_new_t request = {
+      .cmd_idx = SDMMC_READ_MULTIPLE_BLOCK,
+      .cmd_flags = SDMMC_READ_MULTIPLE_BLOCK_FLAGS,
+      .arg = 0x1234abcd,
+      .blocksize = 32,
+      .probe_tuning_cmd = false,
+      .client_id = 0,
+      .buffers_list = buffers,
+      .buffers_count = countof(buffers),
+  };
+  uint32_t response[4] = {};
+  EXPECT_NOT_OK(dut_->SdmmcRequestNew(&request, response));
+}
+
+TEST_F(AmlSdmmcTest, UnownedVmosByteMode) {
+  ASSERT_OK(dut_->Init());
+  pin_count = 0;
+
+  zx::vmo vmos[10] = {};
+  sdmmc_buffer_region_t buffers[10];
+  for (uint32_t i = 0; i < countof(vmos); i++) {
+    ASSERT_OK(zx::vmo::create(PAGE_SIZE, 0, &vmos[i]));
+    buffers[i] = {
+        .buffer =
+            {
+                .vmo = vmos[i].get(),
+            },
+        .type = SDMMC_BUFFER_TYPE_VMO_HANDLE,
+        .offset = i * 4,
+        .size = 50,
+    };
+  }
+
+  sdmmc_req_new_t request = {
+      .cmd_idx = SDMMC_READ_MULTIPLE_BLOCK,
+      .cmd_flags = SDMMC_READ_MULTIPLE_BLOCK_FLAGS,
+      .arg = 0x1234abcd,
+      .blocksize = 50,
+      .probe_tuning_cmd = false,
+      .client_id = 0,
+      .buffers_list = buffers,
+      .buffers_count = countof(buffers),
+  };
+  uint32_t response[4] = {};
+  AmlSdmmcCmdResp::Get().FromValue(0xfedc9876).WriteTo(&mmio_);
+  EXPECT_OK(dut_->SdmmcRequestNew(&request, response));
+  EXPECT_EQ(response[0], 0xfedc9876);
+
+  const aml_sdmmc_desc_t* descs = dut_->descs();
+  auto expected_desc_cfg = AmlSdmmcCmdCfg::Get()
+                               .FromValue(0)
+                               .set_len(50)
+                               .set_timeout(AmlSdmmcCmdCfg::kDefaultCmdTimeout)
+                               .set_data_io(1)
+                               .set_data_wr(0)
+                               .set_resp_num(1)
+                               .set_cmd_idx(SDMMC_READ_MULTIPLE_BLOCK)
+                               .set_owner(1);
+
+  EXPECT_EQ(descs[0].cmd_info, expected_desc_cfg.reg_value());
+  EXPECT_EQ(descs[0].cmd_arg, 0x1234abcd);
+  EXPECT_EQ(descs[0].data_addr, PAGE_SIZE);
+  EXPECT_EQ(descs[0].resp_addr, 0);
+
+  for (uint32_t i = 1; i < countof(vmos); i++) {
+    expected_desc_cfg.set_len(50).set_no_resp(1).set_no_cmd(1).set_resp_num(0).set_cmd_idx(0);
+    if (i == countof(vmos) - 1) {
+      expected_desc_cfg.set_end_of_chain(1);
+    }
+    EXPECT_EQ(descs[i].cmd_info, expected_desc_cfg.reg_value());
+    EXPECT_EQ(descs[i].cmd_arg, 0);
+    EXPECT_EQ(descs[i].data_addr, (i << 24) | (PAGE_SIZE + (i * 4)));
+    EXPECT_EQ(descs[i].resp_addr, 0);
+  }
+}
+
+TEST_F(AmlSdmmcTest, UnownedVmoByteModeMultiBlock) {
+  ASSERT_OK(dut_->Init());
+  pin_count = 0;
+
+  zx::vmo vmo;
+  ASSERT_OK(zx::vmo::create(PAGE_SIZE, 0, &vmo));
+
+  sdmmc_buffer_region_t buffer = {
+      .buffer =
+          {
+              .vmo = vmo.get(),
+          },
+      .type = SDMMC_BUFFER_TYPE_VMO_HANDLE,
+      .offset = 0,
+      .size = 400,
+  };
+
+  sdmmc_req_new_t request = {
+      .cmd_idx = SDMMC_READ_MULTIPLE_BLOCK,
+      .cmd_flags = SDMMC_READ_MULTIPLE_BLOCK_FLAGS,
+      .arg = 0x1234abcd,
+      .blocksize = 100,
+      .probe_tuning_cmd = false,
+      .client_id = 0,
+      .buffers_list = &buffer,
+      .buffers_count = 1,
+  };
+  uint32_t response[4] = {};
+  AmlSdmmcCmdResp::Get().FromValue(0xfedc9876).WriteTo(&mmio_);
+  EXPECT_OK(dut_->SdmmcRequestNew(&request, response));
+  EXPECT_EQ(response[0], 0xfedc9876);
+
+  const aml_sdmmc_desc_t* descs = dut_->descs();
+  auto expected_desc_cfg = AmlSdmmcCmdCfg::Get()
+                               .FromValue(0)
+                               .set_len(100)
+                               .set_timeout(AmlSdmmcCmdCfg::kDefaultCmdTimeout)
+                               .set_data_io(1)
+                               .set_data_wr(0)
+                               .set_resp_num(1)
+                               .set_cmd_idx(SDMMC_READ_MULTIPLE_BLOCK)
+                               .set_owner(1);
+
+  EXPECT_EQ(descs[0].cmd_info, expected_desc_cfg.reg_value());
+  EXPECT_EQ(descs[0].cmd_arg, 0x1234abcd);
+  EXPECT_EQ(descs[0].data_addr, PAGE_SIZE);
+  EXPECT_EQ(descs[0].resp_addr, 0);
+
+  for (uint32_t i = 1; i < 4; i++) {
+    expected_desc_cfg.set_no_resp(1).set_no_cmd(1).set_resp_num(0).set_cmd_idx(0);
+    if (i == 3) {
+      expected_desc_cfg.set_end_of_chain(1);
+    }
+    EXPECT_EQ(descs[i].cmd_info, expected_desc_cfg.reg_value());
+    EXPECT_EQ(descs[i].cmd_arg, 0);
+    EXPECT_EQ(descs[i].data_addr, PAGE_SIZE + (i * 100));
+    EXPECT_EQ(descs[i].resp_addr, 0);
+  }
+}
+
+TEST_F(AmlSdmmcTest, UnownedVmoOffsetNotAligned) {
+  ASSERT_OK(dut_->Init());
+  pin_count = 0;
+
+  zx::vmo vmo;
+  ASSERT_OK(zx::vmo::create(PAGE_SIZE, 0, &vmo));
+
+  sdmmc_buffer_region_t buffer = {
+      .buffer =
+          {
+              .vmo = vmo.get(),
+          },
+      .type = SDMMC_BUFFER_TYPE_VMO_HANDLE,
+      .offset = 3,
+      .size = 64,
+  };
+
+  sdmmc_req_new_t request = {
+      .cmd_idx = SDMMC_READ_MULTIPLE_BLOCK,
+      .cmd_flags = SDMMC_READ_MULTIPLE_BLOCK_FLAGS,
+      .arg = 0x1234abcd,
+      .blocksize = 32,
+      .probe_tuning_cmd = false,
+      .client_id = 0,
+      .buffers_list = &buffer,
+      .buffers_count = 1,
+  };
+  uint32_t response[4] = {};
+  AmlSdmmcCmdResp::Get().FromValue(0xfedc9876).WriteTo(&mmio_);
+  EXPECT_NOT_OK(dut_->SdmmcRequestNew(&request, response));
+}
+
+TEST_F(AmlSdmmcTest, UnownedVmoSingleBufferMultipleDescriptors) {
+  ASSERT_OK(dut_->Init());
+  pin_count = 0;
+
+  zx::vmo vmo;
+  const size_t pages = fbl::round_up<size_t, size_t>(32 * 514, PAGE_SIZE);
+  ASSERT_OK(zx::vmo::create(pages, 0, &vmo));
+
+  sdmmc_buffer_region_t buffer = {
+      .buffer =
+          {
+              .vmo = vmo.get(),
+          },
+      .type = SDMMC_BUFFER_TYPE_VMO_HANDLE,
+      .offset = 16,
+      .size = 32 * 513,
+  };
+
+  sdmmc_req_new_t request = {
+      .cmd_idx = SDMMC_READ_MULTIPLE_BLOCK,
+      .cmd_flags = SDMMC_READ_MULTIPLE_BLOCK_FLAGS,
+      .arg = 0x1234abcd,
+      .blocksize = 32,
+      .probe_tuning_cmd = false,
+      .client_id = 0,
+      .buffers_list = &buffer,
+      .buffers_count = 1,
+  };
+  uint32_t response[4] = {};
+  AmlSdmmcCmdResp::Get().FromValue(0xfedc9876).WriteTo(&mmio_);
+  EXPECT_OK(dut_->SdmmcRequestNew(&request, response));
+  EXPECT_EQ(response[0], 0xfedc9876);
+
+  const aml_sdmmc_desc_t* descs = dut_->descs();
+  auto expected_desc_cfg = AmlSdmmcCmdCfg::Get()
+                               .FromValue(0)
+                               .set_len(511)
+                               .set_block_mode(1)
+                               .set_timeout(AmlSdmmcCmdCfg::kDefaultCmdTimeout)
+                               .set_data_io(1)
+                               .set_data_wr(0)
+                               .set_resp_num(1)
+                               .set_cmd_idx(SDMMC_READ_MULTIPLE_BLOCK)
+                               .set_owner(1);
+
+  EXPECT_EQ(descs[0].cmd_info, expected_desc_cfg.reg_value());
+  EXPECT_EQ(descs[0].cmd_arg, 0x1234abcd);
+  EXPECT_EQ(descs[0].data_addr, PAGE_SIZE + 16);
+  EXPECT_EQ(descs[0].resp_addr, 0);
+
+  expected_desc_cfg.set_len(2)
+      .set_end_of_chain(1)
+      .set_no_resp(1)
+      .set_no_cmd(1)
+      .set_resp_num(0)
+      .set_cmd_idx(0);
+
+  EXPECT_EQ(descs[1].cmd_info, expected_desc_cfg.reg_value());
+  EXPECT_EQ(descs[1].cmd_arg, 0);
+  EXPECT_EQ(descs[1].data_addr, PAGE_SIZE + (511 * 32) + 16);
+  EXPECT_EQ(descs[1].resp_addr, 0);
+}
+
+TEST_F(AmlSdmmcTest, UnownedVmoSingleBufferNotPageAligned) {
+  ASSERT_OK(dut_->Init());
+  pin_count = 0;
+  contiguous = false;
+
+  zx::vmo vmo;
+  const size_t pages = fbl::round_up<size_t, size_t>(32 * 514, PAGE_SIZE);
+  ASSERT_OK(zx::vmo::create(pages, 0, &vmo));
+
+  sdmmc_buffer_region_t buffer = {
+      .buffer =
+          {
+              .vmo = vmo.get(),
+          },
+      .type = SDMMC_BUFFER_TYPE_VMO_HANDLE,
+      .offset = 16,
+      .size = 32 * 513,
+  };
+
+  sdmmc_req_new_t request = {
+      .cmd_idx = SDMMC_READ_MULTIPLE_BLOCK,
+      .cmd_flags = SDMMC_READ_MULTIPLE_BLOCK_FLAGS,
+      .arg = 0x1234abcd,
+      .blocksize = 32,
+      .probe_tuning_cmd = false,
+      .client_id = 0,
+      .buffers_list = &buffer,
+      .buffers_count = 1,
+  };
+  uint32_t response[4] = {};
+  AmlSdmmcCmdResp::Get().FromValue(0xfedc9876).WriteTo(&mmio_);
+  EXPECT_NOT_OK(dut_->SdmmcRequestNew(&request, response));
+}
+
+TEST_F(AmlSdmmcTest, UnownedVmoSingleBufferPageAligned) {
+  ASSERT_OK(dut_->Init());
+  pin_count = 0;
+  contiguous = false;
+
+  zx::vmo vmo;
+  const size_t pages = fbl::round_up<size_t, size_t>(32 * 514, PAGE_SIZE);
+  ASSERT_OK(zx::vmo::create(pages, 0, &vmo));
+
+  sdmmc_buffer_region_t buffer = {
+      .buffer =
+          {
+              .vmo = vmo.get(),
+          },
+      .type = SDMMC_BUFFER_TYPE_VMO_HANDLE,
+      .offset = 32,
+      .size = 32 * 513,
+  };
+
+  sdmmc_req_new_t request = {
+      .cmd_idx = SDMMC_READ_MULTIPLE_BLOCK,
+      .cmd_flags = SDMMC_READ_MULTIPLE_BLOCK_FLAGS,
+      .arg = 0x1234abcd,
+      .blocksize = 32,
+      .probe_tuning_cmd = false,
+      .client_id = 0,
+      .buffers_list = &buffer,
+      .buffers_count = 1,
+  };
+  uint32_t response[4] = {};
+  AmlSdmmcCmdResp::Get().FromValue(0xfedc9876).WriteTo(&mmio_);
+  EXPECT_OK(dut_->SdmmcRequestNew(&request, response));
+  EXPECT_EQ(response[0], 0xfedc9876);
+
+  const aml_sdmmc_desc_t* descs = dut_->descs();
+  auto expected_desc_cfg = AmlSdmmcCmdCfg::Get()
+                               .FromValue(0)
+                               .set_len(127)
+                               .set_block_mode(1)
+                               .set_timeout(AmlSdmmcCmdCfg::kDefaultCmdTimeout)
+                               .set_data_io(1)
+                               .set_data_wr(0)
+                               .set_resp_num(1)
+                               .set_cmd_idx(SDMMC_READ_MULTIPLE_BLOCK)
+                               .set_owner(1);
+
+  EXPECT_EQ(descs[0].cmd_info, expected_desc_cfg.reg_value());
+  EXPECT_EQ(descs[0].cmd_arg, 0x1234abcd);
+  EXPECT_EQ(descs[0].data_addr, (PAGE_SIZE * 2) + 32);
+  EXPECT_EQ(descs[0].resp_addr, 0);
+
+  for (uint32_t i = 1; i < 5; i++) {
+    expected_desc_cfg.set_len(128).set_no_resp(1).set_no_cmd(1).set_resp_num(0).set_cmd_idx(0);
+    if (i == 4) {
+      expected_desc_cfg.set_len(2).set_end_of_chain(1);
+    }
+
+    EXPECT_EQ(descs[i].cmd_info, expected_desc_cfg.reg_value());
+    EXPECT_EQ(descs[i].cmd_arg, 0);
+    EXPECT_EQ(descs[i].data_addr, PAGE_SIZE * (i + 1) * 2);
+    EXPECT_EQ(descs[i].resp_addr, 0);
+  }
+}
+
+TEST_F(AmlSdmmcTest, OwnedVmosBlockMode) {
+  ASSERT_OK(dut_->Init());
+  pin_count = 0;
+
+  sdmmc_buffer_region_t buffers[10];
+  for (uint32_t i = 0; i < countof(buffers); i++) {
+    zx::vmo vmo;
+    ASSERT_OK(zx::vmo::create(PAGE_SIZE, 0, &vmo));
+    EXPECT_OK(dut_->SdmmcRegisterVmo(i, 0, std::move(vmo), i * 64, 512));
+    buffers[i] = {
+        .buffer =
+            {
+                .vmo_id = i,
+            },
+        .type = SDMMC_BUFFER_TYPE_VMO_ID,
+        .offset = i * 16,
+        .size = 32 * (i + 2),
+    };
+  }
+
+  zx::vmo vmo;
+  EXPECT_NOT_OK(dut_->SdmmcUnregisterVmo(3, 1, &vmo));
+
+  sdmmc_req_new_t request = {
+      .cmd_idx = SDMMC_READ_MULTIPLE_BLOCK,
+      .cmd_flags = SDMMC_READ_MULTIPLE_BLOCK_FLAGS,
+      .arg = 0x1234abcd,
+      .blocksize = 32,
+      .probe_tuning_cmd = false,
+      .client_id = 0,
+      .buffers_list = buffers,
+      .buffers_count = countof(buffers),
+  };
+  uint32_t response[4] = {};
+  AmlSdmmcCmdResp::Get().FromValue(0xfedc9876).WriteTo(&mmio_);
+  EXPECT_OK(dut_->SdmmcRequestNew(&request, response));
+  EXPECT_EQ(response[0], 0xfedc9876);
+
+  const aml_sdmmc_desc_t* descs = dut_->descs();
+  auto expected_desc_cfg = AmlSdmmcCmdCfg::Get()
+                               .FromValue(0)
+                               .set_len(2)
+                               .set_block_mode(1)
+                               .set_timeout(AmlSdmmcCmdCfg::kDefaultCmdTimeout)
+                               .set_data_io(1)
+                               .set_data_wr(0)
+                               .set_resp_num(1)
+                               .set_cmd_idx(SDMMC_READ_MULTIPLE_BLOCK)
+                               .set_owner(1);
+
+  EXPECT_EQ(descs[0].cmd_info, expected_desc_cfg.reg_value());
+  EXPECT_EQ(descs[0].cmd_arg, 0x1234abcd);
+  EXPECT_EQ(descs[0].data_addr, PAGE_SIZE);
+  EXPECT_EQ(descs[0].resp_addr, 0);
+
+  for (uint32_t i = 1; i < countof(buffers); i++) {
+    expected_desc_cfg.set_len(i + 2).set_no_resp(1).set_no_cmd(1).set_resp_num(0).set_cmd_idx(0);
+    if (i == countof(buffers) - 1) {
+      expected_desc_cfg.set_end_of_chain(1);
+    }
+    EXPECT_EQ(descs[i].cmd_info, expected_desc_cfg.reg_value());
+    EXPECT_EQ(descs[i].cmd_arg, 0);
+    EXPECT_EQ(descs[i].data_addr, (i << 24) | (PAGE_SIZE + (i * 80)));
+    EXPECT_EQ(descs[i].resp_addr, 0);
+  }
+
+  request.client_id = 7;
+  EXPECT_NOT_OK(dut_->SdmmcRequestNew(&request, response));
+
+  EXPECT_OK(dut_->SdmmcUnregisterVmo(3, 0, &vmo));
+  EXPECT_NOT_OK(dut_->SdmmcRegisterVmo(2, 0, std::move(vmo), 0, 512));
+
+  request.client_id = 0;
+  EXPECT_NOT_OK(dut_->SdmmcRequestNew(&request, response));
+}
+
+TEST_F(AmlSdmmcTest, OwnedVmosNotBlockSizeMultiple) {
+  ASSERT_OK(dut_->Init());
+  pin_count = 0;
+
+  sdmmc_buffer_region_t buffers[10];
+  for (uint32_t i = 0; i < countof(buffers); i++) {
+    zx::vmo vmo;
+    ASSERT_OK(zx::vmo::create(PAGE_SIZE, 0, &vmo));
+    EXPECT_OK(dut_->SdmmcRegisterVmo(i, 0, std::move(vmo), i * 64, 512));
+    buffers[i] = {
+        .buffer =
+            {
+                .vmo_id = i,
+            },
+        .type = SDMMC_BUFFER_TYPE_VMO_ID,
+        .offset = 0,
+        .size = 32 * (i + 2),
+    };
+  }
+
+  buffers[5].size = 25;
+
+  sdmmc_req_new_t request = {
+      .cmd_idx = SDMMC_READ_MULTIPLE_BLOCK,
+      .cmd_flags = SDMMC_READ_MULTIPLE_BLOCK_FLAGS,
+      .arg = 0x1234abcd,
+      .blocksize = 32,
+      .probe_tuning_cmd = false,
+      .client_id = 0,
+      .buffers_list = buffers,
+      .buffers_count = countof(buffers),
+  };
+  uint32_t response[4] = {};
+  EXPECT_NOT_OK(dut_->SdmmcRequestNew(&request, response));
+}
+
+TEST_F(AmlSdmmcTest, OwnedVmosByteMode) {
+  ASSERT_OK(dut_->Init());
+  pin_count = 0;
+
+  sdmmc_buffer_region_t buffers[10];
+  for (uint32_t i = 0; i < countof(buffers); i++) {
+    zx::vmo vmo;
+    ASSERT_OK(zx::vmo::create(PAGE_SIZE, 0, &vmo));
+    EXPECT_OK(dut_->SdmmcRegisterVmo(i, 0, std::move(vmo), i * 64, 512));
+    buffers[i] = {
+        .buffer =
+            {
+                .vmo_id = i,
+            },
+        .type = SDMMC_BUFFER_TYPE_VMO_ID,
+        .offset = i * 4,
+        .size = 50,
+    };
+  }
+
+  sdmmc_req_new_t request = {
+      .cmd_idx = SDMMC_READ_MULTIPLE_BLOCK,
+      .cmd_flags = SDMMC_READ_MULTIPLE_BLOCK_FLAGS,
+      .arg = 0x1234abcd,
+      .blocksize = 50,
+      .probe_tuning_cmd = false,
+      .client_id = 0,
+      .buffers_list = buffers,
+      .buffers_count = countof(buffers),
+  };
+  uint32_t response[4] = {};
+  AmlSdmmcCmdResp::Get().FromValue(0xfedc9876).WriteTo(&mmio_);
+  EXPECT_OK(dut_->SdmmcRequestNew(&request, response));
+  EXPECT_EQ(response[0], 0xfedc9876);
+
+  const aml_sdmmc_desc_t* descs = dut_->descs();
+  auto expected_desc_cfg = AmlSdmmcCmdCfg::Get()
+                               .FromValue(0)
+                               .set_len(50)
+                               .set_timeout(AmlSdmmcCmdCfg::kDefaultCmdTimeout)
+                               .set_data_io(1)
+                               .set_data_wr(0)
+                               .set_resp_num(1)
+                               .set_cmd_idx(SDMMC_READ_MULTIPLE_BLOCK)
+                               .set_owner(1);
+
+  EXPECT_EQ(descs[0].cmd_info, expected_desc_cfg.reg_value());
+  EXPECT_EQ(descs[0].cmd_arg, 0x1234abcd);
+  EXPECT_EQ(descs[0].data_addr, PAGE_SIZE);
+  EXPECT_EQ(descs[0].resp_addr, 0);
+
+  for (uint32_t i = 1; i < countof(buffers); i++) {
+    expected_desc_cfg.set_len(50).set_no_resp(1).set_no_cmd(1).set_resp_num(0).set_cmd_idx(0);
+    if (i == countof(buffers) - 1) {
+      expected_desc_cfg.set_end_of_chain(1);
+    }
+    EXPECT_EQ(descs[i].cmd_info, expected_desc_cfg.reg_value());
+    EXPECT_EQ(descs[i].cmd_arg, 0);
+    EXPECT_EQ(descs[i].data_addr, (i << 24) | (PAGE_SIZE + (i * 68)));
+    EXPECT_EQ(descs[i].resp_addr, 0);
+  }
+}
+
+TEST_F(AmlSdmmcTest, OwnedVmoByteModeMultiBlock) {
+  ASSERT_OK(dut_->Init());
+  pin_count = 0;
+
+  zx::vmo vmo;
+  ASSERT_OK(zx::vmo::create(PAGE_SIZE, 0, &vmo));
+  EXPECT_OK(dut_->SdmmcRegisterVmo(1, 0, std::move(vmo), 0, 512));
+
+  sdmmc_buffer_region_t buffer = {
+      .buffer =
+          {
+              .vmo_id = 1,
+          },
+      .type = SDMMC_BUFFER_TYPE_VMO_ID,
+      .offset = 0,
+      .size = 400,
+  };
+
+  sdmmc_req_new_t request = {
+      .cmd_idx = SDMMC_READ_MULTIPLE_BLOCK,
+      .cmd_flags = SDMMC_READ_MULTIPLE_BLOCK_FLAGS,
+      .arg = 0x1234abcd,
+      .blocksize = 100,
+      .probe_tuning_cmd = false,
+      .client_id = 0,
+      .buffers_list = &buffer,
+      .buffers_count = 1,
+  };
+  uint32_t response[4] = {};
+  AmlSdmmcCmdResp::Get().FromValue(0xfedc9876).WriteTo(&mmio_);
+  EXPECT_OK(dut_->SdmmcRequestNew(&request, response));
+  EXPECT_EQ(response[0], 0xfedc9876);
+
+  const aml_sdmmc_desc_t* descs = dut_->descs();
+  auto expected_desc_cfg = AmlSdmmcCmdCfg::Get()
+                               .FromValue(0)
+                               .set_len(100)
+                               .set_timeout(AmlSdmmcCmdCfg::kDefaultCmdTimeout)
+                               .set_data_io(1)
+                               .set_data_wr(0)
+                               .set_resp_num(1)
+                               .set_cmd_idx(SDMMC_READ_MULTIPLE_BLOCK)
+                               .set_owner(1);
+
+  EXPECT_EQ(descs[0].cmd_info, expected_desc_cfg.reg_value());
+  EXPECT_EQ(descs[0].cmd_arg, 0x1234abcd);
+  EXPECT_EQ(descs[0].data_addr, PAGE_SIZE);
+  EXPECT_EQ(descs[0].resp_addr, 0);
+
+  for (uint32_t i = 1; i < 4; i++) {
+    expected_desc_cfg.set_no_resp(1).set_no_cmd(1).set_resp_num(0).set_cmd_idx(0);
+    if (i == 3) {
+      expected_desc_cfg.set_end_of_chain(1);
+    }
+    EXPECT_EQ(descs[i].cmd_info, expected_desc_cfg.reg_value());
+    EXPECT_EQ(descs[i].cmd_arg, 0);
+    EXPECT_EQ(descs[i].data_addr, PAGE_SIZE + (i * 100));
+    EXPECT_EQ(descs[i].resp_addr, 0);
+  }
+}
+
+TEST_F(AmlSdmmcTest, OwnedVmoOffsetNotAligned) {
+  ASSERT_OK(dut_->Init());
+  pin_count = 0;
+
+  zx::vmo vmo;
+  ASSERT_OK(zx::vmo::create(PAGE_SIZE, 0, &vmo));
+  EXPECT_OK(dut_->SdmmcRegisterVmo(1, 0, std::move(vmo), 2, 512));
+
+  sdmmc_buffer_region_t buffer = {
+      .buffer =
+          {
+              .vmo_id = 1,
+          },
+      .type = SDMMC_BUFFER_TYPE_VMO_ID,
+      .offset = 32,
+      .size = 64,
+  };
+
+  sdmmc_req_new_t request = {
+      .cmd_idx = SDMMC_READ_MULTIPLE_BLOCK,
+      .cmd_flags = SDMMC_READ_MULTIPLE_BLOCK_FLAGS,
+      .arg = 0x1234abcd,
+      .blocksize = 32,
+      .probe_tuning_cmd = false,
+      .client_id = 0,
+      .buffers_list = &buffer,
+      .buffers_count = 1,
+  };
+  uint32_t response[4] = {};
+  AmlSdmmcCmdResp::Get().FromValue(0xfedc9876).WriteTo(&mmio_);
+  EXPECT_NOT_OK(dut_->SdmmcRequestNew(&request, response));
+}
+
+TEST_F(AmlSdmmcTest, OwnedVmoSingleBufferMultipleDescriptors) {
+  ASSERT_OK(dut_->Init());
+  pin_count = 0;
+
+  zx::vmo vmo;
+  const size_t pages = fbl::round_up<size_t, size_t>(32 * 514, PAGE_SIZE);
+  ASSERT_OK(zx::vmo::create(pages, 0, &vmo));
+  EXPECT_OK(dut_->SdmmcRegisterVmo(1, 0, std::move(vmo), 8, pages - 8));
+
+  sdmmc_buffer_region_t buffer = {
+      .buffer =
+          {
+              .vmo_id = 1,
+          },
+      .type = SDMMC_BUFFER_TYPE_VMO_ID,
+      .offset = 8,
+      .size = 32 * 513,
+  };
+
+  sdmmc_req_new_t request = {
+      .cmd_idx = SDMMC_READ_MULTIPLE_BLOCK,
+      .cmd_flags = SDMMC_READ_MULTIPLE_BLOCK_FLAGS,
+      .arg = 0x1234abcd,
+      .blocksize = 32,
+      .probe_tuning_cmd = false,
+      .client_id = 0,
+      .buffers_list = &buffer,
+      .buffers_count = 1,
+  };
+  uint32_t response[4] = {};
+  AmlSdmmcCmdResp::Get().FromValue(0xfedc9876).WriteTo(&mmio_);
+  EXPECT_OK(dut_->SdmmcRequestNew(&request, response));
+  EXPECT_EQ(response[0], 0xfedc9876);
+
+  const aml_sdmmc_desc_t* descs = dut_->descs();
+  auto expected_desc_cfg = AmlSdmmcCmdCfg::Get()
+                               .FromValue(0)
+                               .set_len(511)
+                               .set_block_mode(1)
+                               .set_timeout(AmlSdmmcCmdCfg::kDefaultCmdTimeout)
+                               .set_data_io(1)
+                               .set_data_wr(0)
+                               .set_resp_num(1)
+                               .set_cmd_idx(SDMMC_READ_MULTIPLE_BLOCK)
+                               .set_owner(1);
+
+  EXPECT_EQ(descs[0].cmd_info, expected_desc_cfg.reg_value());
+  EXPECT_EQ(descs[0].cmd_arg, 0x1234abcd);
+  EXPECT_EQ(descs[0].data_addr, PAGE_SIZE + 16);
+  EXPECT_EQ(descs[0].resp_addr, 0);
+
+  expected_desc_cfg.set_len(1)
+      .set_len(2)
+      .set_end_of_chain(1)
+      .set_no_resp(1)
+      .set_no_cmd(1)
+      .set_resp_num(0)
+      .set_cmd_idx(0);
+
+  EXPECT_EQ(descs[1].cmd_info, expected_desc_cfg.reg_value());
+  EXPECT_EQ(descs[1].cmd_arg, 0);
+  EXPECT_EQ(descs[1].data_addr, PAGE_SIZE + (511 * 32) + 16);
+  EXPECT_EQ(descs[1].resp_addr, 0);
+}
+
+TEST_F(AmlSdmmcTest, OwnedVmoSingleBufferNotPageAligned) {
+  ASSERT_OK(dut_->Init());
+  pin_count = 0;
+  contiguous = false;
+
+  zx::vmo vmo;
+  const size_t pages = fbl::round_up<size_t, size_t>(32 * 514, PAGE_SIZE);
+  ASSERT_OK(zx::vmo::create(pages, 0, &vmo));
+  EXPECT_OK(dut_->SdmmcRegisterVmo(1, 0, std::move(vmo), 8, pages - 8));
+
+  sdmmc_buffer_region_t buffer = {
+      .buffer =
+          {
+              .vmo = 1,
+          },
+      .type = SDMMC_BUFFER_TYPE_VMO_ID,
+      .offset = 8,
+      .size = 32 * 513,
+  };
+
+  sdmmc_req_new_t request = {
+      .cmd_idx = SDMMC_READ_MULTIPLE_BLOCK,
+      .cmd_flags = SDMMC_READ_MULTIPLE_BLOCK_FLAGS,
+      .arg = 0x1234abcd,
+      .blocksize = 32,
+      .probe_tuning_cmd = false,
+      .client_id = 0,
+      .buffers_list = &buffer,
+      .buffers_count = 1,
+  };
+  uint32_t response[4] = {};
+  AmlSdmmcCmdResp::Get().FromValue(0xfedc9876).WriteTo(&mmio_);
+  EXPECT_NOT_OK(dut_->SdmmcRequestNew(&request, response));
+}
+
+TEST_F(AmlSdmmcTest, OwnedVmoSingleBufferPageAligned) {
+  ASSERT_OK(dut_->Init());
+  pin_count = 0;
+  contiguous = false;
+
+  zx::vmo vmo;
+  const size_t pages = fbl::round_up<size_t, size_t>(32 * 514, PAGE_SIZE);
+  ASSERT_OK(zx::vmo::create(pages, 0, &vmo));
+  EXPECT_OK(dut_->SdmmcRegisterVmo(1, 0, std::move(vmo), 16, pages - 16));
+
+  sdmmc_buffer_region_t buffer = {
+      .buffer =
+          {
+              .vmo = 1,
+          },
+      .type = SDMMC_BUFFER_TYPE_VMO_ID,
+      .offset = 16,
+      .size = 32 * 513,
+  };
+
+  sdmmc_req_new_t request = {
+      .cmd_idx = SDMMC_READ_MULTIPLE_BLOCK,
+      .cmd_flags = SDMMC_READ_MULTIPLE_BLOCK_FLAGS,
+      .arg = 0x1234abcd,
+      .blocksize = 32,
+      .probe_tuning_cmd = false,
+      .client_id = 0,
+      .buffers_list = &buffer,
+      .buffers_count = 1,
+  };
+  uint32_t response[4] = {};
+  AmlSdmmcCmdResp::Get().FromValue(0xfedc9876).WriteTo(&mmio_);
+  EXPECT_OK(dut_->SdmmcRequestNew(&request, response));
+  EXPECT_EQ(response[0], 0xfedc9876);
+
+  const aml_sdmmc_desc_t* descs = dut_->descs();
+  auto expected_desc_cfg = AmlSdmmcCmdCfg::Get()
+                               .FromValue(0)
+                               .set_len(127)
+                               .set_block_mode(1)
+                               .set_timeout(AmlSdmmcCmdCfg::kDefaultCmdTimeout)
+                               .set_data_io(1)
+                               .set_data_wr(0)
+                               .set_resp_num(1)
+                               .set_cmd_idx(SDMMC_READ_MULTIPLE_BLOCK)
+                               .set_owner(1);
+
+  EXPECT_EQ(descs[0].cmd_info, expected_desc_cfg.reg_value());
+  EXPECT_EQ(descs[0].cmd_arg, 0x1234abcd);
+  EXPECT_EQ(descs[0].data_addr, (PAGE_SIZE * 2) + 32);
+  EXPECT_EQ(descs[0].resp_addr, 0);
+
+  for (uint32_t i = 1; i < 5; i++) {
+    expected_desc_cfg.set_len(128).set_no_resp(1).set_no_cmd(1).set_resp_num(0).set_cmd_idx(0);
+    if (i == 4) {
+      expected_desc_cfg.set_len(2).set_end_of_chain(1);
+    }
+
+    EXPECT_EQ(descs[i].cmd_info, expected_desc_cfg.reg_value());
+    EXPECT_EQ(descs[i].cmd_arg, 0);
+    EXPECT_EQ(descs[i].data_addr, PAGE_SIZE * (i + 1) * 2);
+    EXPECT_EQ(descs[i].resp_addr, 0);
+  }
+}
+
+TEST_F(AmlSdmmcTest, OwnedVmoWritePastEnd) {
+  ASSERT_OK(dut_->Init());
+  pin_count = 0;
+  contiguous = false;
+
+  zx::vmo vmo;
+  const size_t pages = fbl::round_up<size_t, size_t>(32 * 514, PAGE_SIZE);
+  ASSERT_OK(zx::vmo::create(pages, 0, &vmo));
+  EXPECT_OK(dut_->SdmmcRegisterVmo(1, 0, std::move(vmo), 32, 32 * 384));
+
+  sdmmc_buffer_region_t buffer = {
+      .buffer =
+          {
+              .vmo = 1,
+          },
+      .type = SDMMC_BUFFER_TYPE_VMO_ID,
+      .offset = 32,
+      .size = 32 * 383,
+  };
+
+  sdmmc_req_new_t request = {
+      .cmd_idx = SDMMC_READ_MULTIPLE_BLOCK,
+      .cmd_flags = SDMMC_READ_MULTIPLE_BLOCK_FLAGS,
+      .arg = 0x1234abcd,
+      .blocksize = 32,
+      .probe_tuning_cmd = false,
+      .client_id = 0,
+      .buffers_list = &buffer,
+      .buffers_count = 1,
+  };
+  uint32_t response[4] = {};
+  AmlSdmmcCmdResp::Get().FromValue(0xfedc9876).WriteTo(&mmio_);
+  EXPECT_OK(dut_->SdmmcRequestNew(&request, response));
+  EXPECT_EQ(response[0], 0xfedc9876);
+
+  const aml_sdmmc_desc_t* descs = dut_->descs();
+  auto expected_desc_cfg = AmlSdmmcCmdCfg::Get()
+                               .FromValue(0)
+                               .set_len(126)
+                               .set_block_mode(1)
+                               .set_timeout(AmlSdmmcCmdCfg::kDefaultCmdTimeout)
+                               .set_data_io(1)
+                               .set_data_wr(0)
+                               .set_resp_num(1)
+                               .set_cmd_idx(SDMMC_READ_MULTIPLE_BLOCK)
+                               .set_owner(1);
+
+  EXPECT_EQ(descs[0].cmd_info, expected_desc_cfg.reg_value());
+  EXPECT_EQ(descs[0].cmd_arg, 0x1234abcd);
+  EXPECT_EQ(descs[0].data_addr, (PAGE_SIZE * 2) + 64);
+  EXPECT_EQ(descs[0].resp_addr, 0);
+
+  for (uint32_t i = 1; i < 4; i++) {
+    expected_desc_cfg.set_len(128).set_no_resp(1).set_no_cmd(1).set_resp_num(0).set_cmd_idx(0);
+    if (i == 3) {
+      expected_desc_cfg.set_len(1).set_end_of_chain(1);
+    }
+
+    EXPECT_EQ(descs[i].cmd_info, expected_desc_cfg.reg_value());
+    EXPECT_EQ(descs[i].cmd_arg, 0);
+    EXPECT_EQ(descs[i].data_addr, PAGE_SIZE * (i + 1) * 2);
+    EXPECT_EQ(descs[i].resp_addr, 0);
+  }
+
+  buffer.size = 32 * 384;
+  EXPECT_NOT_OK(dut_->SdmmcRequestNew(&request, response));
+}
+
+TEST_F(AmlSdmmcTest, SeparateClientVmoSpaces) {
+  ASSERT_OK(dut_->Init());
+  pin_count = 0;
+
+  zx::vmo vmo;
+  ASSERT_OK(zx::vmo::create(PAGE_SIZE, 0, &vmo));
+  const zx_koid_t vmo1_koid = GetVmoKoid(vmo);
+  EXPECT_NE(vmo1_koid, ZX_KOID_INVALID);
+  EXPECT_OK(dut_->SdmmcRegisterVmo(1, 0, std::move(vmo), 0, PAGE_SIZE));
+
+  ASSERT_OK(zx::vmo::create(PAGE_SIZE, 0, &vmo));
+  const zx_koid_t vmo2_koid = GetVmoKoid(vmo);
+  EXPECT_NE(vmo2_koid, ZX_KOID_INVALID);
+  EXPECT_OK(dut_->SdmmcRegisterVmo(2, 0, std::move(vmo), 0, PAGE_SIZE));
+
+  ASSERT_OK(zx::vmo::create(PAGE_SIZE, 0, &vmo));
+  EXPECT_NOT_OK(dut_->SdmmcRegisterVmo(1, 0, std::move(vmo), 0, PAGE_SIZE));
+
+  ASSERT_OK(zx::vmo::create(PAGE_SIZE, 0, &vmo));
+  EXPECT_NOT_OK(dut_->SdmmcRegisterVmo(1, 8, std::move(vmo), 0, PAGE_SIZE));
+
+  ASSERT_OK(zx::vmo::create(PAGE_SIZE, 0, &vmo));
+  const zx_koid_t vmo3_koid = GetVmoKoid(vmo);
+  EXPECT_NE(vmo3_koid, ZX_KOID_INVALID);
+  EXPECT_OK(dut_->SdmmcRegisterVmo(1, 1, std::move(vmo), 0, PAGE_SIZE));
+
+  EXPECT_OK(dut_->SdmmcUnregisterVmo(1, 0, &vmo));
+  EXPECT_EQ(GetVmoKoid(vmo), vmo1_koid);
+
+  EXPECT_OK(dut_->SdmmcUnregisterVmo(2, 0, &vmo));
+  EXPECT_EQ(GetVmoKoid(vmo), vmo2_koid);
+
+  EXPECT_OK(dut_->SdmmcUnregisterVmo(1, 1, &vmo));
+  EXPECT_EQ(GetVmoKoid(vmo), vmo3_koid);
+
+  EXPECT_NOT_OK(dut_->SdmmcUnregisterVmo(1, 0, &vmo));
+  EXPECT_NOT_OK(dut_->SdmmcUnregisterVmo(2, 0, &vmo));
+  EXPECT_NOT_OK(dut_->SdmmcUnregisterVmo(1, 1, &vmo));
+}
+
+TEST_F(AmlSdmmcTest, RequestWithOwnedAndUnownedVmos) {
+  ASSERT_OK(dut_->Init());
+  pin_count = 0;
+
+  zx::vmo vmos[5] = {};
+  sdmmc_buffer_region_t buffers[10];
+  for (uint32_t i = 0; i < 5; i++) {
+    zx::vmo vmo;
+    ASSERT_OK(zx::vmo::create(PAGE_SIZE, 0, &vmo));
+    ASSERT_OK(zx::vmo::create(PAGE_SIZE, 0, &vmos[i]));
+
+    EXPECT_OK(dut_->SdmmcRegisterVmo(i, 0, std::move(vmo), i * 64, 512));
+    buffers[i * 2] = {
+        .buffer =
+            {
+                .vmo_id = i,
+            },
+        .type = SDMMC_BUFFER_TYPE_VMO_ID,
+        .offset = i * 16,
+        .size = 32 * (i + 2),
+    };
+    buffers[(i * 2) + 1] = {
+        .buffer =
+            {
+                .vmo = vmos[i].get(),
+            },
+        .type = SDMMC_BUFFER_TYPE_VMO_HANDLE,
+        .offset = i * 16,
+        .size = 32 * (i + 2),
+    };
+  }
+
+  zx::vmo vmo;
+  EXPECT_NOT_OK(dut_->SdmmcUnregisterVmo(3, 1, &vmo));
+
+  sdmmc_req_new_t request = {
+      .cmd_idx = SDMMC_READ_MULTIPLE_BLOCK,
+      .cmd_flags = SDMMC_READ_MULTIPLE_BLOCK_FLAGS,
+      .arg = 0x1234abcd,
+      .blocksize = 32,
+      .probe_tuning_cmd = false,
+      .client_id = 0,
+      .buffers_list = buffers,
+      .buffers_count = countof(buffers),
+  };
+  uint32_t response[4] = {};
+  AmlSdmmcCmdResp::Get().FromValue(0xfedc9876).WriteTo(&mmio_);
+  EXPECT_OK(dut_->SdmmcRequestNew(&request, response));
+  EXPECT_EQ(response[0], 0xfedc9876);
+
+  const aml_sdmmc_desc_t* descs = dut_->descs();
+  auto expected_desc_cfg = AmlSdmmcCmdCfg::Get()
+                               .FromValue(0)
+                               .set_len(2)
+                               .set_block_mode(1)
+                               .set_timeout(AmlSdmmcCmdCfg::kDefaultCmdTimeout)
+                               .set_data_io(1)
+                               .set_data_wr(0)
+                               .set_resp_num(1)
+                               .set_cmd_idx(SDMMC_READ_MULTIPLE_BLOCK)
+                               .set_owner(1);
+
+  EXPECT_EQ(descs[0].cmd_info, expected_desc_cfg.reg_value());
+  EXPECT_EQ(descs[0].cmd_arg, 0x1234abcd);
+  EXPECT_EQ(descs[0].data_addr, PAGE_SIZE);
+  EXPECT_EQ(descs[0].resp_addr, 0);
+
+  expected_desc_cfg.set_no_resp(1).set_no_cmd(1).set_resp_num(0).set_cmd_idx(0);
+  EXPECT_EQ(descs[1].cmd_info, expected_desc_cfg.reg_value());
+  EXPECT_EQ(descs[1].cmd_arg, 0);
+  EXPECT_EQ(descs[1].data_addr, (5 << 24) | PAGE_SIZE);
+  EXPECT_EQ(descs[1].resp_addr, 0);
+
+  expected_desc_cfg.set_len(3);
+  EXPECT_EQ(descs[2].cmd_info, expected_desc_cfg.reg_value());
+  EXPECT_EQ(descs[2].cmd_arg, 0);
+  EXPECT_EQ(descs[2].data_addr, (1 << 24) | (PAGE_SIZE + 64 + 16));
+  EXPECT_EQ(descs[2].resp_addr, 0);
+
+  EXPECT_EQ(descs[3].cmd_info, expected_desc_cfg.reg_value());
+  EXPECT_EQ(descs[3].cmd_arg, 0);
+  EXPECT_EQ(descs[3].data_addr, (6 << 24) | (PAGE_SIZE + 16));
+  EXPECT_EQ(descs[3].resp_addr, 0);
+
+  expected_desc_cfg.set_len(4);
+  EXPECT_EQ(descs[4].cmd_info, expected_desc_cfg.reg_value());
+  EXPECT_EQ(descs[4].cmd_arg, 0);
+  EXPECT_EQ(descs[4].data_addr, (2 << 24) | (PAGE_SIZE + 128 + 32));
+  EXPECT_EQ(descs[4].resp_addr, 0);
+
+  EXPECT_EQ(descs[5].cmd_info, expected_desc_cfg.reg_value());
+  EXPECT_EQ(descs[5].cmd_arg, 0);
+  EXPECT_EQ(descs[5].data_addr, (7 << 24) | (PAGE_SIZE + 32));
+  EXPECT_EQ(descs[5].resp_addr, 0);
+
+  expected_desc_cfg.set_len(5);
+  EXPECT_EQ(descs[6].cmd_info, expected_desc_cfg.reg_value());
+  EXPECT_EQ(descs[6].cmd_arg, 0);
+  EXPECT_EQ(descs[6].data_addr, (3 << 24) | (PAGE_SIZE + 192 + 48));
+  EXPECT_EQ(descs[6].resp_addr, 0);
+
+  EXPECT_EQ(descs[7].cmd_info, expected_desc_cfg.reg_value());
+  EXPECT_EQ(descs[7].cmd_arg, 0);
+  EXPECT_EQ(descs[7].data_addr, (8 << 24) | (PAGE_SIZE + 48));
+  EXPECT_EQ(descs[7].resp_addr, 0);
+
+  expected_desc_cfg.set_len(6);
+  EXPECT_EQ(descs[8].cmd_info, expected_desc_cfg.reg_value());
+  EXPECT_EQ(descs[8].cmd_arg, 0);
+  EXPECT_EQ(descs[8].data_addr, (4 << 24) | (PAGE_SIZE + 256 + 64));
+  EXPECT_EQ(descs[8].resp_addr, 0);
+
+  expected_desc_cfg.set_end_of_chain(1);
+  EXPECT_EQ(descs[9].cmd_info, expected_desc_cfg.reg_value());
+  EXPECT_EQ(descs[9].cmd_arg, 0);
+  EXPECT_EQ(descs[9].data_addr, (9 << 24) | (PAGE_SIZE + 64));
+  EXPECT_EQ(descs[9].resp_addr, 0);
 }
 
 }  // namespace sdmmc

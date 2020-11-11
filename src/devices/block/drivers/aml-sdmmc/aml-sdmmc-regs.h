@@ -89,6 +89,7 @@ class AmlSdmmcCfg : public hwreg::RegisterBase<AmlSdmmcCfg, uint32_t> {
   static constexpr uint32_t kBusWidth8Bit = 2;
 
   static constexpr uint32_t kDefaultBlkLen = 9;       // 512 bytes
+  static constexpr uint32_t kMaxBlkLen = 9;           // 512 bytes
   static constexpr uint32_t kDefaultRespTimeout = 8;  // 256 core clock cycles
   static constexpr uint32_t kDefaultRcCc = 4;         // 16 core clock cycles
 
@@ -141,6 +142,8 @@ class AmlSdmmcCmdCfg : public hwreg::RegisterBase<AmlSdmmcCmdCfg, uint32_t> {
  public:
   static constexpr uint32_t kDefaultCmdTimeout = 0xc;  // 2^12 ms.
   static constexpr uint32_t kMaxBlockSize = 512;       // 9 bits
+  static constexpr uint32_t kMaxBlockCount = (1 << 9) - 1;  // 9 bits
+  static constexpr uint32_t kDataAddrAlignment = 4;
 
   static auto Get() { return hwreg::RegisterAddr<AmlSdmmcCmdCfg>(kAmlSdmmcCmdCfgOffset); }
 

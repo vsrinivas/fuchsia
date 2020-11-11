@@ -8,7 +8,11 @@
 #include <lib/mmio/mmio.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <lib/zx/interrupt.h>
+#include <lib/zx/status.h>
 #include <threads.h>
+
+#include <optional>
+#include <vector>
 
 #include <ddk/phys-iter.h>
 #include <ddktl/device.h>
@@ -20,6 +24,8 @@
 #include <fbl/span.h>
 #include <soc/aml-common/aml-sdmmc.h>
 
+#include "src/lib/vmo_store/vmo_store.h"
+
 namespace sdmmc {
 
 class AmlSdmmc;
@@ -29,16 +35,7 @@ class AmlSdmmc : public AmlSdmmcType, public ddk::SdmmcProtocol<AmlSdmmc, ddk::b
  public:
   AmlSdmmc(zx_device_t* parent, zx::bti bti, ddk::MmioBuffer mmio,
            ddk::MmioPinnedBuffer pinned_mmio, aml_sdmmc_config_t config, zx::interrupt irq,
-           const ddk::GpioProtocolClient& gpio)
-      : AmlSdmmcType(parent),
-        mmio_(std::move(mmio)),
-        bti_(std::move(bti)),
-        pinned_mmio_(std::move(pinned_mmio)),
-        reset_gpio_(gpio),
-        irq_(std::move(irq)),
-        board_config_(config),
-        dead_(false),
-        pending_txn_(false) {}
+           const ddk::GpioProtocolClient& gpio);
 
   virtual ~AmlSdmmc() = default;
   static zx_status_t Create(void* ctx, zx_device_t* parent);
@@ -74,15 +71,27 @@ class AmlSdmmc : public AmlSdmmcType, public ddk::SdmmcProtocol<AmlSdmmc, ddk::b
   virtual zx_status_t WaitForInterruptImpl();
   virtual void WaitForBus() const;
 
+  aml_sdmmc_desc_t* descs() { return static_cast<aml_sdmmc_desc_t*>(descs_buffer_.virt()); }
+
   ddk::MmioBuffer mmio_;
 
  private:
+  constexpr static size_t kResponseCount = 4;
+
   struct TuneWindow {
     uint32_t start = 0;
     uint32_t size = 0;
 
     uint32_t middle() const { return start + (size / 2); }
   };
+
+  // VMO metadata that needs to be stored in accordance with the SDMMC protocol.
+  struct OwnedVmoInfo {
+    uint64_t offset;
+    uint64_t size;
+  };
+
+  using SdmmcVmoStore = vmo_store::VmoStore<vmo_store::HashTableStorage<uint32_t, OwnedVmoInfo>>;
 
   zx_status_t TuningDoTransfer(uint8_t* tuning_res, size_t blk_pattern_size,
                                uint32_t tuning_cmd_idx);
@@ -97,6 +106,7 @@ class AmlSdmmc : public AmlSdmmcType, public ddk::SdmmcProtocol<AmlSdmmc, ddk::b
 
   void ConfigureDefaultRegs();
   void SetupCmdDesc(sdmmc_req_t* req, aml_sdmmc_desc_t** out_desc);
+  aml_sdmmc_desc_t* SetupCmdDescNew(const sdmmc_req_new_t& req);
   // Prepares the VMO and sets up the data descriptors
   zx_status_t SetupDataDescsDma(sdmmc_req_t* req, aml_sdmmc_desc_t* cur_desc,
                                 aml_sdmmc_desc_t** last_desc);
@@ -105,9 +115,23 @@ class AmlSdmmc : public AmlSdmmcType, public ddk::SdmmcProtocol<AmlSdmmc, ddk::b
                                 aml_sdmmc_desc_t** last_desc);
   zx_status_t SetupDataDescs(sdmmc_req_t* req, aml_sdmmc_desc_t* desc,
                              aml_sdmmc_desc_t** last_desc);
+  // Returns a pointer to the LAST descriptor used.
+  zx::status<std::pair<aml_sdmmc_desc_t*, std::vector<fzl::PinnedVmo>>> SetupDataDescsNew(
+      const sdmmc_req_new_t& req, aml_sdmmc_desc_t* cur_desc);
+  // These return pointers to the NEXT descriptor to use.
+  zx::status<aml_sdmmc_desc_t*> SetupOwnedVmoDescs(const sdmmc_req_new_t& req,
+                                                   const sdmmc_buffer_region_t& buffer,
+                                                   vmo_store::StoredVmo<OwnedVmoInfo>& vmo,
+                                                   aml_sdmmc_desc_t* cur_desc);
+  zx::status<std::pair<aml_sdmmc_desc_t*, fzl::PinnedVmo>> SetupUnownedVmoDescs(
+      const sdmmc_req_new_t& req, const sdmmc_buffer_region_t& buffer, aml_sdmmc_desc_t* cur_desc);
+  zx::status<aml_sdmmc_desc_t*> PopulateDescriptors(const sdmmc_req_new_t& req,
+                                                    aml_sdmmc_desc_t* cur_desc,
+                                                    fzl::PinnedVmo::Region region);
   static zx_status_t FinishReq(sdmmc_req_t* req);
   void ClearStatus();
   zx_status_t WaitForInterrupt(sdmmc_req_t* req);
+  zx::status<std::array<uint32_t, kResponseCount>> WaitForInterruptNew(const sdmmc_req_new_t& req);
 
   void ShutDown();
 
@@ -126,6 +150,7 @@ class AmlSdmmc : public AmlSdmmcType, public ddk::SdmmcProtocol<AmlSdmmc, ddk::b
   fbl::ConditionVariable txn_finished_ TA_GUARDED(mtx_);
   std::atomic<bool> dead_ TA_GUARDED(mtx_);
   std::atomic<bool> pending_txn_ TA_GUARDED(mtx_);
+  std::optional<SdmmcVmoStore> registered_vmos_[SDMMC_MAX_CLIENT_ID + 1];
 };
 
 }  // namespace sdmmc

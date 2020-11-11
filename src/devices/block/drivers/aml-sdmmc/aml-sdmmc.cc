@@ -7,6 +7,7 @@
 #include <inttypes.h>
 #include <lib/device-protocol/pdev.h>
 #include <lib/device-protocol/platform-device.h>
+#include <lib/fzl/pinned-vmo.h>
 #include <lib/sync/completion.h>
 #include <stdint.h>
 #include <string.h>
@@ -49,7 +50,7 @@
 
 namespace {
 
-uint32_t log2_ceil(uint16_t blk_sz) {
+uint32_t log2_ceil(uint32_t blk_sz) {
   if (blk_sz == 1) {
     return 0;
   }
@@ -59,6 +60,30 @@ uint32_t log2_ceil(uint16_t blk_sz) {
 }  // namespace
 
 namespace sdmmc {
+
+AmlSdmmc::AmlSdmmc(zx_device_t* parent, zx::bti bti, ddk::MmioBuffer mmio,
+                   ddk::MmioPinnedBuffer pinned_mmio, aml_sdmmc_config_t config, zx::interrupt irq,
+                   const ddk::GpioProtocolClient& gpio)
+    : AmlSdmmcType(parent),
+      mmio_(std::move(mmio)),
+      bti_(std::move(bti)),
+      pinned_mmio_(std::move(pinned_mmio)),
+      reset_gpio_(gpio),
+      irq_(std::move(irq)),
+      board_config_(config),
+      dead_(false),
+      pending_txn_(false) {
+  for (auto& store : registered_vmos_) {
+    store.emplace(vmo_store::Options{
+        .pin =
+            vmo_store::PinOptions{
+                .bti = bti_.borrow(),
+                .bti_pin_options = ZX_BTI_PERM_READ | ZX_BTI_PERM_WRITE,
+                .index = true,
+            },
+    });
+  }
+}
 
 zx_status_t AmlSdmmc::WaitForInterruptImpl() {
   zx::time timestamp;
@@ -173,6 +198,96 @@ zx_status_t AmlSdmmc::WaitForInterrupt(sdmmc_req_t* req) {
   }
 
   return ZX_OK;
+}
+
+zx::status<std::array<uint32_t, AmlSdmmc::kResponseCount>> AmlSdmmc::WaitForInterruptNew(
+    const sdmmc_req_new_t& req) {
+  zx_status_t status = WaitForInterruptImpl();
+
+  if (status != ZX_OK) {
+    AML_SDMMC_ERROR("WaitForInterruptImpl got %d", status);
+    return zx::error(status);
+  }
+
+  auto status_irq = AmlSdmmcStatus::Get().ReadFrom(&mmio_);
+  uint32_t rxd_err = status_irq.rxd_err();
+
+  auto complete_ac = fbl::MakeAutoCall([&]() { ClearStatus(); });
+
+  auto on_bus_error = fbl::MakeAutoCall(
+      [&]() { AmlSdmmcStart::Get().ReadFrom(&mmio_).set_desc_busy(0).WriteTo(&mmio_); });
+
+  if (rxd_err) {
+    if (req.probe_tuning_cmd) {
+      AML_SDMMC_TRACE("RX Data CRC Error cmd%d, status=0x%x, RXD_ERR:%d", req.cmd_idx,
+                      status_irq.reg_value(), rxd_err);
+    } else {
+      AML_SDMMC_ERROR("RX Data CRC Error cmd%d, status=0x%x, RXD_ERR:%d", req.cmd_idx,
+                      status_irq.reg_value(), rxd_err);
+    }
+    return zx::error(ZX_ERR_IO_DATA_INTEGRITY);
+  }
+  if (status_irq.txd_err()) {
+    AML_SDMMC_ERROR("TX Data CRC Error, cmd%d, status=0x%x TXD_ERR", req.cmd_idx,
+                    status_irq.reg_value());
+    return zx::error(ZX_ERR_IO_DATA_INTEGRITY);
+  }
+  if (status_irq.desc_err()) {
+    AML_SDMMC_ERROR("Controller does not own the descriptor, cmd%d, status=0x%x", req.cmd_idx,
+                    status_irq.reg_value());
+    return zx::error(ZX_ERR_IO_INVALID);
+  }
+  if (status_irq.resp_err()) {
+    if (req.probe_tuning_cmd) {
+      AML_SDMMC_TRACE("Response CRC Error, cmd%d, status=0x%x", req.cmd_idx,
+                      status_irq.reg_value());
+    } else {
+      AML_SDMMC_ERROR("Response CRC Error, cmd%d, status=0x%x", req.cmd_idx,
+                      status_irq.reg_value());
+    }
+    return zx::error(ZX_ERR_IO_DATA_INTEGRITY);
+  }
+  if (status_irq.resp_timeout()) {
+    // A timeout is acceptable for SD_SEND_IF_COND but not for MMC_SEND_EXT_CSD.
+    const bool is_sd_cmd8 =
+        req.cmd_idx == SD_SEND_IF_COND && req.cmd_flags == SD_SEND_IF_COND_FLAGS;
+    static_assert(SD_SEND_IF_COND == MMC_SEND_EXT_CSD &&
+                  (SD_SEND_IF_COND_FLAGS) != (MMC_SEND_EXT_CSD_FLAGS));
+    // When mmc dev_ice is being probed with SDIO command this is an expected failure.
+    if (req.probe_tuning_cmd || is_sd_cmd8) {
+      AML_SDMMC_TRACE("No response received before time limit, cmd%d, status=0x%x", req.cmd_idx,
+                      status_irq.reg_value());
+    } else {
+      AML_SDMMC_ERROR("No response received before time limit, cmd%d, status=0x%x", req.cmd_idx,
+                      status_irq.reg_value());
+    }
+    return zx::error(ZX_ERR_TIMED_OUT);
+  }
+  if (status_irq.desc_timeout()) {
+    AML_SDMMC_ERROR("Descriptor execution timed out, cmd%d, status=0x%x", req.cmd_idx,
+                    status_irq.reg_value());
+    return zx::error(ZX_ERR_TIMED_OUT);
+  }
+
+  if (!(status_irq.end_of_chain())) {
+    AML_SDMMC_ERROR("END OF CHAIN bit is not set status:0x%x", status_irq.reg_value());
+    return zx::error(ZX_ERR_IO_INVALID);
+  }
+
+  // At this point we have succeeded and don't need to perform our on-error call
+  on_bus_error.cancel();
+
+  std::array<uint32_t, AmlSdmmc::kResponseCount> response = {};
+  if (req.cmd_flags & SDMMC_RESP_LEN_136) {
+    response[0] = AmlSdmmcCmdResp::Get().ReadFrom(&mmio_).reg_value();
+    response[1] = AmlSdmmcCmdResp1::Get().ReadFrom(&mmio_).reg_value();
+    response[2] = AmlSdmmcCmdResp2::Get().ReadFrom(&mmio_).reg_value();
+    response[3] = AmlSdmmcCmdResp3::Get().ReadFrom(&mmio_).reg_value();
+  } else {
+    response[0] = AmlSdmmcCmdResp::Get().ReadFrom(&mmio_).reg_value();
+  }
+
+  return zx::ok(response);
 }
 
 zx_status_t AmlSdmmc::SdmmcHostInfo(sdmmc_host_info_t* info) {
@@ -350,6 +465,39 @@ void AmlSdmmc::SetupCmdDesc(sdmmc_req_t* req, aml_sdmmc_desc_t** out_desc) {
   *out_desc = desc;
 }
 
+aml_sdmmc_desc_t* AmlSdmmc::SetupCmdDescNew(const sdmmc_req_new_t& req) {
+  aml_sdmmc_desc_t* const desc = reinterpret_cast<aml_sdmmc_desc_t*>(descs_buffer_.virt());
+  auto cmd_cfg = AmlSdmmcCmdCfg::Get().FromValue(0);
+  if (req.cmd_flags == 0) {
+    cmd_cfg.set_no_resp(1);
+  } else {
+    if (req.cmd_flags & SDMMC_RESP_LEN_136) {
+      cmd_cfg.set_resp_128(1);
+    }
+
+    if (!(req.cmd_flags & SDMMC_RESP_CRC_CHECK)) {
+      cmd_cfg.set_resp_no_crc(1);
+    }
+
+    if (req.cmd_flags & SDMMC_RESP_LEN_48B) {
+      cmd_cfg.set_r1b(1);
+    }
+
+    cmd_cfg.set_resp_num(1);
+  }
+  cmd_cfg.set_cmd_idx(req.cmd_idx)
+      .set_timeout(AmlSdmmcCmdCfg::kDefaultCmdTimeout)
+      .set_error(0)
+      .set_owner(1)
+      .set_end_of_chain(0);
+
+  desc->cmd_info = cmd_cfg.reg_value();
+  desc->cmd_arg = req.arg;
+  desc->data_addr = 0;
+  desc->resp_addr = 0;
+  return desc;
+}
+
 zx_status_t AmlSdmmc::SetupDataDescsDma(sdmmc_req_t* req, aml_sdmmc_desc_t* cur_desc,
                                         aml_sdmmc_desc_t** last_desc) {
   uint64_t req_len = req->blockcount * req->blocksize;
@@ -522,6 +670,204 @@ zx_status_t AmlSdmmc::SetupDataDescs(sdmmc_req_t* req, aml_sdmmc_desc_t* desc,
     AmlSdmmcCfg::Get().ReadFrom(&mmio_).set_blk_len(req_blk_len).WriteTo(&mmio_);
   }
   return ZX_OK;
+}
+
+zx::status<std::pair<aml_sdmmc_desc_t*, std::vector<fzl::PinnedVmo>>> AmlSdmmc::SetupDataDescsNew(
+    const sdmmc_req_new_t& req, aml_sdmmc_desc_t* const cur_desc) {
+  const uint32_t req_blk_len = log2_ceil(req.blocksize);
+  if (req_blk_len > AmlSdmmcCfg::kMaxBlkLen) {
+    AML_SDMMC_ERROR("blocksize %u is greater than the max (%u)", 1 << req_blk_len,
+                    1 << AmlSdmmcCfg::kMaxBlkLen);
+    return zx::error(ZX_ERR_INVALID_ARGS);
+  }
+  AmlSdmmcCfg::Get().ReadFrom(&mmio_).set_blk_len(req_blk_len).WriteTo(&mmio_);
+
+  std::vector<fzl::PinnedVmo> pinned_vmos;
+  pinned_vmos.reserve(req.buffers_count);
+
+  aml_sdmmc_desc_t* desc = cur_desc;
+  SdmmcVmoStore& vmos = *registered_vmos_[req.client_id];
+  for (size_t i = 0; i < req.buffers_count; i++) {
+    if (req.buffers_list[i].type == SDMMC_BUFFER_TYPE_VMO_HANDLE) {
+      auto status = SetupUnownedVmoDescs(req, req.buffers_list[i], desc);
+      if (!status.is_ok()) {
+        return zx::error(status.error_value());
+      }
+
+      pinned_vmos.push_back(std::move(std::get<1>(status.value())));
+      desc = std::get<0>(status.value());
+    } else {
+      vmo_store::StoredVmo<OwnedVmoInfo>* const stored_vmo =
+          vmos.GetVmo(req.buffers_list[i].buffer.vmo_id);
+      if (stored_vmo == nullptr) {
+        AML_SDMMC_ERROR("no VMO %u for client %u", req.buffers_list[i].buffer.vmo_id,
+                        req.client_id);
+        return zx::error(ZX_ERR_NOT_FOUND);
+      }
+      auto status = SetupOwnedVmoDescs(req, req.buffers_list[i], *stored_vmo, desc);
+      if (status.is_error()) {
+        return zx::error(status.error_value());
+      }
+      desc = status.value();
+    }
+  }
+
+  if (desc == cur_desc) {
+    AML_SDMMC_ERROR("empty descriptor list!");
+    return zx::error(ZX_ERR_NOT_SUPPORTED);
+  }
+
+  return zx::ok(std::pair{desc - 1, std::move(pinned_vmos)});
+}
+
+zx::status<aml_sdmmc_desc_t*> AmlSdmmc::SetupOwnedVmoDescs(const sdmmc_req_new_t& req,
+                                                           const sdmmc_buffer_region_t& buffer,
+                                                           vmo_store::StoredVmo<OwnedVmoInfo>& vmo,
+                                                           aml_sdmmc_desc_t* const cur_desc) {
+  if (buffer.offset + buffer.size > vmo.meta().size) {
+    AML_SDMMC_ERROR("buffer reads past vmo end: offset %zu, size %zu, vmo size %zu",
+                    buffer.offset + vmo.meta().offset, buffer.size, vmo.meta().size);
+    return zx::error(ZX_ERR_OUT_OF_RANGE);
+  }
+
+  fzl::PinnedVmo::Region regions[SDMMC_PAGES_COUNT];
+  size_t offset = buffer.offset;
+  size_t remaining = buffer.size;
+  aml_sdmmc_desc_t* desc = cur_desc;
+  while (remaining > 0) {
+    size_t region_count = 0;
+    zx_status_t status = vmo.GetPinnedRegions(offset + vmo.meta().offset, buffer.size, regions,
+                                              countof(regions), &region_count);
+    if (status != ZX_OK && status != ZX_ERR_BUFFER_TOO_SMALL) {
+      AML_SDMMC_ERROR("failed to get pinned regions: %d", status);
+      return zx::error(status);
+    }
+
+    const size_t last_offset = offset;
+    for (size_t i = 0; i < region_count; i++) {
+      zx::status<aml_sdmmc_desc_t*> next_desc = PopulateDescriptors(req, desc, regions[i]);
+      if (next_desc.is_error()) {
+        return next_desc;
+      }
+
+      desc = next_desc.value();
+      offset += regions[i].size;
+      remaining -= regions[i].size;
+    }
+
+    if (offset == last_offset) {
+      AML_SDMMC_ERROR("didn't get any pinned regions");
+      return zx::error(ZX_ERR_BAD_STATE);
+    }
+  }
+
+  return zx::ok(desc);
+}
+
+zx::status<std::pair<aml_sdmmc_desc_t*, fzl::PinnedVmo>> AmlSdmmc::SetupUnownedVmoDescs(
+    const sdmmc_req_new_t& req, const sdmmc_buffer_region_t& buffer,
+    aml_sdmmc_desc_t* const cur_desc) {
+  const bool is_read = req.cmd_flags & SDMMC_CMD_READ;
+  const uint64_t pagecount = ((buffer.offset & PAGE_MASK) + buffer.size + PAGE_MASK) / PAGE_SIZE;
+
+  const zx::unowned_vmo vmo(buffer.buffer.vmo);
+  const uint32_t options = is_read ? ZX_BTI_PERM_WRITE : ZX_BTI_PERM_READ;
+
+  fzl::PinnedVmo pinned_vmo;
+  zx_status_t status =
+      pinned_vmo.PinRange(buffer.offset & ~PAGE_MASK, pagecount * PAGE_SIZE, *vmo, bti_, options);
+  if (status != ZX_OK) {
+    AML_SDMMC_ERROR("bti-pin failed with error %d", status);
+    return zx::error(status);
+  }
+
+  aml_sdmmc_desc_t* desc = cur_desc;
+  for (uint32_t i = 0; i < pinned_vmo.region_count(); i++) {
+    fzl::PinnedVmo::Region region = pinned_vmo.region(i);
+    if (i == 0) {
+      region.phys_addr += buffer.offset & PAGE_MASK;
+      region.size -= buffer.offset & PAGE_MASK;
+    }
+    if (i == pinned_vmo.region_count() - 1) {
+      const size_t end_offset = (pagecount * PAGE_SIZE) - buffer.size - (buffer.offset & PAGE_MASK);
+      region.size -= end_offset;
+    }
+
+    zx::status<aml_sdmmc_desc_t*> next_desc = PopulateDescriptors(req, desc, region);
+    if (next_desc.is_error()) {
+      return zx::error(next_desc.error_value());
+    }
+    desc = next_desc.value();
+  }
+
+  return zx::ok(std::pair{desc, std::move(pinned_vmo)});
+}
+
+zx::status<aml_sdmmc_desc_t*> AmlSdmmc::PopulateDescriptors(const sdmmc_req_new_t& req,
+                                                            aml_sdmmc_desc_t* const cur_desc,
+                                                            fzl::PinnedVmo::Region region) {
+  if (region.phys_addr > UINT32_MAX || (region.phys_addr + region.size) > UINT32_MAX) {
+    AML_SDMMC_ERROR("DMA goes out of accessible range: 0x%0zx, %zu", region.phys_addr, region.size);
+    return zx::error(ZX_ERR_BAD_STATE);
+  }
+
+  const bool use_block_mode = (1 << log2_ceil(req.blocksize)) == req.blocksize;
+  const aml_sdmmc_desc_t* const descs_end =
+      descs() + (descs_buffer_.size() / sizeof(aml_sdmmc_desc_t));
+
+  const size_t max_desc_size =
+      use_block_mode ? req.blocksize * AmlSdmmcCmdCfg::kMaxBlockCount : req.blocksize;
+
+  aml_sdmmc_desc_t* desc = cur_desc;
+  while (region.size > 0) {
+    const size_t desc_size = std::min(region.size, max_desc_size);
+
+    if (desc >= descs_end) {
+      AML_SDMMC_ERROR("request with more than %d chunks is unsupported\n", AML_DMA_DESC_MAX_COUNT);
+      return zx::error(ZX_ERR_NOT_SUPPORTED);
+    }
+    if (region.phys_addr % AmlSdmmcCmdCfg::kDataAddrAlignment != 0) {
+      // The last two bits must be zero to indicate DDR/big-endian.
+      AML_SDMMC_ERROR("DMA start address must be 4-byte aligned");
+      return zx::error(ZX_ERR_NOT_SUPPORTED);
+    }
+    if (desc_size % req.blocksize != 0) {
+      AML_SDMMC_ERROR("DMA length %zu is not multiple of block size %u", desc_size, req.blocksize);
+      return zx::error(ZX_ERR_NOT_SUPPORTED);
+    }
+
+    auto cmd = AmlSdmmcCmdCfg::Get().FromValue(desc->cmd_info);
+    if (desc != descs()) {
+      cmd.set_no_resp(1).set_no_cmd(1);
+      desc->cmd_arg = 0;
+      desc->resp_addr = 0;
+    }
+
+    cmd.set_data_io(1);
+    if (!(req.cmd_flags & SDMMC_CMD_READ)) {
+      cmd.set_data_wr(1);
+    }
+    cmd.set_owner(1).set_timeout(AmlSdmmcCmdCfg::kDefaultCmdTimeout).set_error(0);
+
+    const size_t blockcount = desc_size / req.blocksize;
+    if (use_block_mode) {
+      cmd.set_block_mode(1).set_len(static_cast<uint32_t>(blockcount));
+    } else if (blockcount == 1) {
+      cmd.set_length(req.blocksize);
+    } else {
+      AML_SDMMC_ERROR("can't send more than one block of size %u", req.blocksize);
+      return zx::error(ZX_ERR_NOT_SUPPORTED);
+    }
+
+    desc->cmd_info = cmd.reg_value();
+    desc->data_addr = static_cast<uint32_t>(region.phys_addr);
+    desc++;
+
+    region.phys_addr += desc_size;
+    region.size -= desc_size;
+  }
+
+  return zx::ok(desc);
 }
 
 zx_status_t AmlSdmmc::FinishReq(sdmmc_req_t* req) {
@@ -820,21 +1166,109 @@ zx_status_t AmlSdmmc::SdmmcPerformTuning(uint32_t tuning_cmd_idx) {
 
 zx_status_t AmlSdmmc::SdmmcRegisterVmo(uint32_t vmo_id, uint8_t client_id, zx::vmo vmo,
                                        uint64_t offset, uint64_t size) {
-  return ZX_ERR_NOT_SUPPORTED;
+  if (client_id >= countof(registered_vmos_)) {
+    return ZX_ERR_OUT_OF_RANGE;
+  }
+
+  return registered_vmos_[client_id]->RegisterWithKey(vmo_id, std::move(vmo),
+                                                      OwnedVmoInfo{.offset = offset, .size = size});
 }
 
 zx_status_t AmlSdmmc::SdmmcUnregisterVmo(uint32_t vmo_id, uint8_t client_id, zx::vmo* out_vmo) {
-  return ZX_ERR_NOT_SUPPORTED;
+  if (client_id >= countof(registered_vmos_)) {
+    return ZX_ERR_OUT_OF_RANGE;
+  }
+
+  vmo_store::StoredVmo<OwnedVmoInfo>* const vmo_info = registered_vmos_[client_id]->GetVmo(vmo_id);
+  if (!vmo_info) {
+    return ZX_ERR_NOT_FOUND;
+  }
+
+  zx_status_t status = vmo_info->vmo()->duplicate(ZX_RIGHT_SAME_RIGHTS, out_vmo);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  return registered_vmos_[client_id]->Unregister(vmo_id);
 }
 
 zx_status_t AmlSdmmc::SdmmcRequestNew(const sdmmc_req_new_t* req, uint32_t out_response[4]) {
-  return ZX_ERR_NOT_SUPPORTED;
+  if (req->client_id >= countof(registered_vmos_)) {
+    return ZX_ERR_OUT_OF_RANGE;
+  }
+
+  {
+    fbl::AutoLock lock(&mtx_);
+    if (dead_) {
+      return ZX_ERR_CANCELED;
+    }
+
+    pending_txn_ = true;
+  }
+
+  // Wait for the bus to become idle before issuing the next request. This could be necessary if the
+  // card is driving CMD low after a voltage switch.
+  WaitForBus();
+
+  // stop executing
+  AmlSdmmcStart::Get().ReadFrom(&mmio_).set_desc_busy(0).WriteTo(&mmio_);
+
+  std::optional<std::vector<fzl::PinnedVmo>> pinned_vmos;
+
+  aml_sdmmc_desc_t* desc = SetupCmdDescNew(*req);
+  aml_sdmmc_desc_t* last_desc = desc;
+  if (req->cmd_flags & SDMMC_RESP_DATA_PRESENT) {
+    auto status = SetupDataDescsNew(*req, desc);
+    if (status.is_error()) {
+      AML_SDMMC_ERROR("Failed to setup data descriptors");
+
+      fbl::AutoLock lock(&mtx_);
+      pending_txn_ = false;
+      txn_finished_.Signal();
+
+      return status.error_value();
+    }
+    last_desc = std::get<0>(status.value());
+    pinned_vmos.emplace(std::move(std::get<1>(status.value())));
+  }
+
+  auto cmd_info = AmlSdmmcCmdCfg::Get().FromValue(last_desc->cmd_info);
+  cmd_info.set_end_of_chain(1);
+  last_desc->cmd_info = cmd_info.reg_value();
+  AML_SDMMC_TRACE("SUBMIT req:%p cmd_idx: %d cmd_cfg: 0x%x cmd_dat: 0x%x cmd_arg: 0x%x", req,
+                  req->cmd_idx, desc->cmd_info, desc->data_addr, desc->cmd_arg);
+
+  zx_paddr_t desc_phys;
+
+  auto start_reg = AmlSdmmcStart::Get().ReadFrom(&mmio_);
+  desc_phys = descs_buffer_.phys();
+  descs_buffer_.CacheFlush(0, descs_buffer_.size());
+  // Read desc from external DDR
+  start_reg.set_desc_int(0);
+
+  ClearStatus();
+
+  start_reg.set_desc_busy(1).set_desc_addr((static_cast<uint32_t>(desc_phys)) >> 2).WriteTo(&mmio_);
+
+  zx::status<std::array<uint32_t, AmlSdmmc::kResponseCount>> response = WaitForInterruptNew(*req);
+  if (response.is_error()) {
+    return response.error_value();
+  }
+
+  memcpy(out_response, response.value().data(), sizeof(uint32_t) * AmlSdmmc::kResponseCount);
+
+  fbl::AutoLock lock(&mtx_);
+  pending_txn_ = false;
+  txn_finished_.Signal();
+
+  return ZX_OK;
 }
 
 zx_status_t AmlSdmmc::Init() {
   // The core clock must be enabled before attempting to access the start register.
   ConfigureDefaultRegs();
 
+  // Stop processing DMA descriptors before releasing quarantine.
   AmlSdmmcStart::Get().ReadFrom(&mmio_).set_desc_busy(0).WriteTo(&mmio_);
   zx_status_t status = bti_.release_quarantine();
   if (status != ZX_OK) {
