@@ -1453,7 +1453,7 @@ mod tests {
                     {
                         "protocol": [
                             "fuchsia.setui.SetUiService",
-                            "fuchsia.wlan.service.Wlan"
+                            "fuchsia.test.service.Name"
                         ],
                         "from": "parent",
                         "to": [ "#modular" ]
@@ -1656,11 +1656,11 @@ mod tests {
                     fsys::OfferDecl::Protocol (
                         fsys::OfferProtocolDecl {
                             source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
-                            source_name: Some("fuchsia.wlan.service.Wlan".to_string()),
+                            source_name: Some("fuchsia.test.service.Name".to_string()),
                             target: Some(fsys::Ref::Collection(fsys::CollectionRef {
                                 name: "modular".to_string(),
                             })),
-                            target_name: Some("fuchsia.wlan.service.Wlan".to_string()),
+                            target_name: Some("fuchsia.test.service.Name".to_string()),
                             dependency_type: Some(fsys::DependencyType::Strong),
                             ..fsys::OfferProtocolDecl::empty()
                         }
