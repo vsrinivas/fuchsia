@@ -38,7 +38,4 @@ zx_library("usb") {
     "//src/lib/ddktl",
     "//zircon/public/lib/zircon-internal",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }

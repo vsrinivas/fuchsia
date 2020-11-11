@@ -52,7 +52,8 @@ __EXPORT zx_status_t usb_claim_additional_interfaces(
     void* intf_end = next ? next : (void*)iter.desc_end;
     size_t length = intf_end - (void*)intf;
 
-    status = usb_composite_claim_interface(comp, intf, length);
+    ZX_ASSERT(length < UINT32_MAX);
+    status = usb_composite_claim_interface(comp, intf, (uint32_t)length);
     if (status != ZX_OK) {
       break;
     }
