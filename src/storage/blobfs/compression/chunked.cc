@@ -126,11 +126,11 @@ zx_status_t ChunkedDecompressor::Decompress(void* uncompressed_buf, size_t* unco
 // SeekableChunkedDecompressor
 
 zx_status_t SeekableChunkedDecompressor::CreateDecompressor(
-    const void* seek_table_buf, size_t seek_table_buf_sz, size_t uncompressed_size,
+    const void* seek_table_buf, size_t max_seek_table_size, size_t max_compressed_size,
     std::unique_ptr<SeekableDecompressor>* out) {
   auto decompressor = std::make_unique<SeekableChunkedDecompressor>();
   chunked_compression::HeaderReader reader;
-  Status status = reader.Parse(seek_table_buf, seek_table_buf_sz, uncompressed_size,
+  Status status = reader.Parse(seek_table_buf, max_seek_table_size, max_compressed_size,
                                &decompressor->seek_table_);
   if (status != chunked_compression::kStatusOk) {
     return ToZxStatus(status);

@@ -80,11 +80,20 @@ class BlobLayout {
   ByteCountType MerkleTreeBlockAlignedSize() const;
   // The number of blocks that the Merkle tree spans.
   BlockCountType MerkleTreeBlockCount() const;
+
+  // Returns the offset within the file for the merkle tree.
+  virtual ByteCountType MerkleTreeOffset() const = 0;
+
   // The first block of the blob containing part of the Merkle tree.  The rest of the Merkle tree
   // will be in the following |MerkleTreeBlockCount| - 1 blocks.
-  virtual BlockCountType MerkleTreeBlockOffset() const = 0;
+  BlockCountType MerkleTreeBlockOffset() const {
+    return static_cast<BlockCountType>(MerkleTreeOffset() / blobfs_block_size_);
+  }
+
   // The offset within |MerkleTreeBlockOffset| that the Merkle tree starts at.
-  virtual ByteCountType MerkleTreeOffsetWithinBlockOffset() const = 0;
+  ByteCountType MerkleTreeOffsetWithinBlockOffset() const {
+    return MerkleTreeOffset() % blobfs_block_size_;
+  }
 
   // The total number of blocks that the blob spans.
   virtual BlockCountType TotalBlockCount() const = 0;
@@ -114,7 +123,7 @@ class BlobLayout {
   BlobLayout(ByteCountType file_size, ByteCountType data_size, ByteCountType merkle_tree_size,
              BlockSizeType blobfs_block_size);
 
-  BlockSizeType BlobfsBlockSize() const;
+  BlockSizeType blobfs_block_size() const { return blobfs_block_size_; }
 
  private:
   // The uncompressed size of the file.

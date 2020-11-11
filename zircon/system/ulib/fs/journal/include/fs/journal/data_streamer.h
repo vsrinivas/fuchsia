@@ -58,11 +58,11 @@ class DataStreamer {
   // representing when all those writes have completed.
   fs::Journal::Promise Flush();
 
- private:
   // Issues locally buffered operations to the executor, and track the resulting promise in
   // |promises_|. The completion of all issued operations can be achieved by invoking |Flush()|.
   void IssueOperations();
 
+ private:
   fs::Journal* journal_;
   const size_t writeback_capacity_;
 

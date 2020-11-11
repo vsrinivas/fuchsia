@@ -32,17 +32,8 @@ class BlobCompressor {
   // Initializes a compression object given the requested |settings| and input |blob_size|.
   static std::optional<BlobCompressor> Create(CompressionSettings settings, size_t blob_size);
 
-  DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(BlobCompressor);
-  ~BlobCompressor();
-
-  BlobCompressor(BlobCompressor&& o)
-      : compressor_(std::move(o.compressor_)), compressed_blob_(std::move(o.compressed_blob_)) {}
-
-  BlobCompressor& operator=(BlobCompressor&& o) {
-    compressor_ = std::move(o.compressor_);
-    compressed_blob_ = std::move(o.compressed_blob_);
-    return *this;
-  }
+  BlobCompressor(BlobCompressor&& o) = default;
+  BlobCompressor& operator=(BlobCompressor&& o) = default;
 
   size_t Size() const { return compressor_->Size(); }
 
@@ -57,11 +48,16 @@ class BlobCompressor {
   // Returns a reference to the compression buffer.
   const void* Data() const { return compressed_blob_.start(); }
 
+  const Compressor& compressor() { return *compressor_; }
+  CompressionAlgorithm algorithm() const { return algorithm_; }
+
  private:
-  BlobCompressor(std::unique_ptr<Compressor> compressor, fzl::OwnedVmoMapper compressed_blob);
+  BlobCompressor(std::unique_ptr<Compressor> compressor, fzl::OwnedVmoMapper compressed_blob,
+                 CompressionAlgorithm algorithm);
 
   std::unique_ptr<Compressor> compressor_;
   fzl::OwnedVmoMapper compressed_blob_;
+  CompressionAlgorithm algorithm_;
 };
 
 }  // namespace blobfs

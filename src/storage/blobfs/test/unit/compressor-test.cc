@@ -497,10 +497,9 @@ TEST_F(CompressorBlobfsTests, CompressSmallCompressibleBlobs) {
   }
 }
 
-// Test that we do not inflate small blobs, even if they are incompressible.
-TEST_F(CompressorBlobfsTests, DoNotInflateSmallIncompressibleBlobs) {
+TEST_F(CompressorBlobfsTests, DoNotInflateIncompressibleBlobs) {
   size_t data_sizes[] = {
-      8 * 1024 - 1, 8 * 1024, 8 * 1024 + 1, 16 * 1024 - 1, 16 * 1024, 16 * 1024 + 1,
+      8 * 1024 - 1, 8 * 1024, 8 * 1024 + 1, 16 * 1024 - 1, 16 * 1024, 16 * 1024 + 1, 128 * 8192 + 1,
   };
 
   for (size_t data_size : data_sizes) {

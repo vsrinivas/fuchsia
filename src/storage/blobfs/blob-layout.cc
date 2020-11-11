@@ -57,38 +57,23 @@ class CompactMerkleTreeAtEndBlobLayout : public BlobLayout {
 
   BlockCountType DataBlockOffset() const override { return 0; }
 
-  BlockCountType MerkleTreeBlockOffset() const override {
-    // The Merkle tree is aligned to end at the end of the blob.  The Merkle tree's starting block
-    // is the total number of blocks in the blob minus the number of blocks that the Merkle tree
-    // spans.
-    return TotalBlockCount() - MerkleTreeBlockCount();
-  }
-
-  ByteCountType MerkleTreeOffsetWithinBlockOffset() const override {
-    // | block 6 | block 7 | block 8 | block 9 |
-    //        |<-      Merkle tree size       >|
-    // |<-  ->^ Merkle tree offset within block offset
-    BlockSizeType blobfs_block_size = BlobfsBlockSize();
-    ByteCountType merkle_tree_remainder = MerkleTreeSize() % blobfs_block_size;
-    // If the Merkle tree size is a block multiple then it starts at the beginning of the block.
-    if (merkle_tree_remainder == 0) {
-      return 0;
-    }
-    return blobfs_block_size - merkle_tree_remainder;
+  ByteCountType MerkleTreeOffset() const override {
+    // The Merkle tree is aligned to end at the end of the blob.
+    return TotalBlockCount() * blobfs_block_size() - MerkleTreeSize();
   }
 
   BlockCountType TotalBlockCount() const override {
-    return BlocksRequiredForBytes(DataSizeUpperBound() + MerkleTreeSize(), BlobfsBlockSize());
+    return BlocksRequiredForBytes(DataSizeUpperBound() + MerkleTreeSize(), blobfs_block_size());
   }
 
   bool HasMerkleTreeAndDataSharedBlock() const override {
-    ByteCountType merkle_tree_block_remainder = MerkleTreeSize() % BlobfsBlockSize();
-    ByteCountType data_block_remainder = DataSizeUpperBound() % BlobfsBlockSize();
+    ByteCountType merkle_tree_block_remainder = MerkleTreeSize() % blobfs_block_size();
+    ByteCountType data_block_remainder = DataSizeUpperBound() % blobfs_block_size();
     // If either the Merkle tree or data are a block multiple then they can't share a block.
     if (merkle_tree_block_remainder == 0 || data_block_remainder == 0) {
       return false;
     }
-    return merkle_tree_block_remainder + data_block_remainder <= BlobfsBlockSize();
+    return merkle_tree_block_remainder + data_block_remainder <= blobfs_block_size();
   }
 
   BlobLayoutFormat Format() const override { return BlobLayoutFormat::kCompactMerkleTreeAtEnd; }
@@ -171,9 +156,7 @@ class PaddedMerkleTreeAtStartBlobLayout : public BlobLayout {
     return MerkleTreeBlockCount();
   }
 
-  BlockCountType MerkleTreeBlockOffset() const override { return 0; }
-
-  ByteCountType MerkleTreeOffsetWithinBlockOffset() const override { return 0; }
+  ByteCountType MerkleTreeOffset() const override { return 0; }
 
   BlockCountType TotalBlockCount() const override {
     return DataBlockCount() + MerkleTreeBlockCount();
@@ -298,8 +281,6 @@ BlobLayout::ByteCountType BlobLayout::MerkleTreeBlockAlignedSize() const {
 BlobLayout::BlockCountType BlobLayout::MerkleTreeBlockCount() const {
   return BlocksRequiredForBytes(MerkleTreeSize(), blobfs_block_size_);
 }
-
-BlobLayout::BlockSizeType BlobLayout::BlobfsBlockSize() const { return blobfs_block_size_; }
 
 zx::status<std::unique_ptr<BlobLayout>> BlobLayout::CreateFromInode(
     BlobLayoutFormat format, const Inode& inode, BlockSizeType blobfs_block_size) {

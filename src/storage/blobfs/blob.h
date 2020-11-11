@@ -49,6 +49,7 @@
 namespace blobfs {
 
 class Blobfs;
+class Producer;
 
 using digest::Digest;
 
@@ -202,13 +203,6 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
   // depending on the state.
   zx_status_t WriteInternal(const void* data, size_t len, size_t* actual);
 
-  // For a blob being written, consider stopping the compressor,
-  // the blob to eventually be written uncompressed to disk.
-  //
-  // For blobs which don't compress very well, this provides an escape
-  // hatch to avoid wasting work.
-  void ConsiderCompressionAbort();
-
   // Reads from a blob.
   // Requires: kBlobStateReadable
   zx_status_t ReadInternal(void* data, size_t len, size_t off, size_t* actual);
@@ -218,15 +212,11 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
   // client accesses the pages.
   // If paging is disabled, the entire data VMO is loaded in and verified.
   //
-  // Idempotent (and has no effect if PrepareVmosForWriting() has already been called.)
+  // Idempotent.
   zx_status_t LoadVmosFromDisk();
 
-  // Initializes the data/merkle VMOs for writing into by:
-  //  - Creating and mapping the VMOs, and
-  //  - Attaching the VMOs to the block device FIFO.
-  //
-  // Idempotent (and has no effect if LoadVmosFromDisk() has already been called.)
-  zx_status_t PrepareVmosForWriting(uint32_t node_index, size_t data_size);
+  // Initializes the data VMO for writing.  Idempotent.
+  zx_status_t PrepareDataVmoForWriting();
 
   // Commits all the data pages of the blob into memory, i.e. reads them from disk.
   zx_status_t CommitDataBuffer();
@@ -258,13 +248,11 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
   // Commits the blob to persistent storage.
   zx_status_t Commit();
 
-  // Writes |block_count| blocks from |vmo| to persistent storage.  The blocks are written at the
-  // offset |blob_block_offset| within the blob.
-  zx_status_t WriteBlocks(const zx::vmo& vmo, uint32_t block_count, uint32_t blob_block_offset,
-                          fs::DataStreamer& streamer);
-
   // Returns the block size used by blobfs.
   uint32_t GetBlockSize() const;
+
+  // Write |block_count| blocks using the data from |producer| into |streamer|.
+  zx_status_t WriteData(uint32_t block_count, Producer& producer, fs::DataStreamer& streamer);
 
   Blobfs* const blobfs_;
   BlobState state_ = BlobState::kEmpty;
@@ -327,7 +315,23 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
   Inode inode_ = {};
 
   // Data used exclusively during writeback.
-  struct WritebackInfo {
+  struct WriteInfo {
+    // See comment for merkle_tree() below.
+    static constexpr size_t kPreMerkleTreePadding = kBlobfsBlockSize;
+
+    WriteInfo() = default;
+
+    // Not copyable or movable because merkle_tree_creator has a pointer to digest.
+    WriteInfo(const WriteInfo&) = delete;
+    WriteInfo& operator=(const WriteInfo&) = delete;
+
+    // We leave room in the merkle tree buffer to add padding before the merkle tree which might be
+    // required with the compact blob layout.
+    uint8_t* merkle_tree() const {
+      ZX_ASSERT(merkle_tree_buffer);
+      return merkle_tree_buffer.get() + kPreMerkleTreePadding;
+    }
+
     uint64_t bytes_written = {};
 
     fbl::Vector<ReservedExtent> extents;
@@ -338,9 +342,19 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
     // The fused write error.  Once writing has failed, we return the same error on subsequent
     // writes in case a higher layer dropped the error and returned a short write instead.
     zx_status_t write_error = ZX_OK;
+
+    // As data is written, we build the merkle tree using this.
+    digest::MerkleTreeCreator merkle_tree_creator;
+
+    // The merkle tree creator stores the root digest here.
+    uint8_t digest[digest::kSha256Length];
+
+    // The merkle tree creator stores the rest of the tree here.  The buffer includes space for
+    // padding.  See the comment for merkle_tree() above.
+    std::unique_ptr<uint8_t[]> merkle_tree_buffer;
   };
 
-  std::unique_ptr<WritebackInfo> write_info_ = {};
+  std::unique_ptr<WriteInfo> write_info_ = {};
 
   // Reads in the blob's pages on demand.
   std::unique_ptr<pager::PageWatcher> page_watcher_ = nullptr;
