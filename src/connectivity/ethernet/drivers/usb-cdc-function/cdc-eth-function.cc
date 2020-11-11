@@ -606,7 +606,7 @@ static zx_status_t cdc_control(void* ctx, const usb_setup_t* setup, const void* 
 }
 
 static zx_status_t cdc_set_configured(void* ctx, bool configured, usb_speed_t speed) {
-  zxlogf(SERIAL, "%s: %d %d", __func__, configured, speed);
+  zxlogf(INFO, "%s: %d %d", __func__, configured, speed);
   auto* cdc = static_cast<usb_cdc_t*>(ctx);
   zx_status_t status;
 
@@ -636,7 +636,7 @@ static zx_status_t cdc_set_configured(void* ctx, bool configured, usb_speed_t sp
 }
 
 static zx_status_t cdc_set_interface(void* ctx, uint8_t interface, uint8_t alt_setting) {
-  zxlogf(SERIAL, "%s: %d %d", __func__, interface, alt_setting);
+  zxlogf(INFO, "%s: %d %d", __func__, interface, alt_setting);
   auto* cdc = static_cast<usb_cdc_t*>(ctx);
   zx_status_t status;
 
