@@ -19472,7 +19472,7 @@ KERNEL_SYSCALL(pci_add_subtract_io_range, zx_status_t, /* no attributes */, 5,
 
 KERNEL_SYSCALL(pmt_unpin, zx_status_t, /* no attributes */, 1,
     (handle), (
-    _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t handle))
+    _ZX_SYSCALL_ANNO(release_handle("Fuchsia")) zx_handle_t handle))
 
 KERNEL_SYSCALL(port_create, zx_status_t, /* no attributes */, 2,
     (options, out), (
@@ -21995,7 +21995,7 @@ KERNEL_SYSCALL(pci_add_subtract_io_range, zx_status_t, /* no attributes */, 5,
 
 KERNEL_SYSCALL(pmt_unpin, zx_status_t, /* no attributes */, 1,
     (handle), (
-    _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t handle))
+    _ZX_SYSCALL_ANNO(release_handle("Fuchsia")) zx_handle_t handle))
 
 KERNEL_SYSCALL(port_create, zx_status_t, /* no attributes */, 2,
     (options, out), (
@@ -23163,7 +23163,7 @@ _ZX_SYSCALL_DECL(pci_add_subtract_io_range, zx_status_t, /* no attributes */, 5,
 
 _ZX_SYSCALL_DECL(pmt_unpin, zx_status_t, /* no attributes */, 1,
     (handle), (
-    _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t handle))
+    _ZX_SYSCALL_ANNO(release_handle("Fuchsia")) zx_handle_t handle))
 
 _ZX_SYSCALL_DECL(port_create, zx_status_t, /* no attributes */, 2,
     (options, out), (

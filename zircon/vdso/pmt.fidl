@@ -8,5 +8,5 @@ library zx;
 protocol pmt {
     // TODO(fxbug.dev/32803): handle ZX_OBJ_TYPE_PMT; No rights required?
     /// Unpin pages and revoke device access to them.
-    pmt_unpin(handle:PMT handle) -> (status status);
+    pmt_unpin([Release] handle:PMT handle) -> (status status);
 };
