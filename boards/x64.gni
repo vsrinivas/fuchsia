@@ -45,7 +45,9 @@ _common_bootfs_deps = [
 ]
 _common_bootfs_deps += [ "//src/security/policy/zxcrypt:null" ]
 
-board_bootfs_labels += _common_bootfs_deps
+# Some NUC users are known to leave a USB key (containing zedboot) plugged into their NUC at all
+# times. To avoid unintentionally breaking remote workflows, we permit multiple GPT devices.
+board_bootfs_labels += _common_bootfs_deps + [ "//src/storage/fshost:gpt_all" ]
 
 board_recovery_bootfs_labels += _common_bootfs_deps
 

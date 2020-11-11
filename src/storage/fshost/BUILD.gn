@@ -377,66 +377,48 @@ group("bootfs") {
   ]
 }
 
-# Generate device-specific configuration files for fshost. This file will end up on the device in
-# "/boot" (so "/boot/config/fshost") and will be read by fshost to configure some device-specific
-# behavior. We generate different versions of this file that go into different device images.
-fshost_config_in_boot = "config/fshost"
-
-fshost_config_values = []
-if (blobfs_maximum_runtime_bytes != "") {
-  fshost_config_values += [ "blobfs-max-bytes=$blobfs_maximum_runtime_bytes" ]
-}
-if (minfs_maximum_runtime_bytes != "") {
-  fshost_config_values += [ "minfs-max-bytes=$minfs_maximum_runtime_bytes" ]
-}
-
-# Default fshost config.
-default_config_file = "$target_gen_dir/default_config"
-generated_file("generate_default_config") {
-  # The config file format is a sequence of tags, one per line. Listing a tag name adds that option,
-  # preceding the tag with a "-" disables that option. The "default" option expands to the default
-  # set of all options (so if used, it should be first).
-  contents = [ "default" ] + fshost_config_values
-  output_conversion = "list lines"
-  outputs = [ default_config_file ]
-}
-resource("default_config") {
-  sources = [ default_config_file ]
-  outputs = [ fshost_config_in_boot ]
-}
-
-# Config file used to disable zxcrypt.
-no_minfs_zxcrypt_config_file = "$target_gen_dir/no_minfs_zxcrypt_config"
-generated_file("generate_no_minfs_zxcrypt_config") {
-  # The config file format is a sequence of tags, one per line. Listing a tag name adds that option,
-  # preceding the tag with a "-" disables that option. The "default" option expands to the default
-  # set of all options (so if used, it should be first).
-  contents = [
-               "default",
-               "no-zxcrypt",
-             ] + fshost_config_values
-  output_conversion = "list lines"
-  outputs = [ no_minfs_zxcrypt_config_file ]
-}
-resource("no_minfs_zxcrypt") {
-  sources = [ no_minfs_zxcrypt_config_file ]
-  outputs = [ fshost_config_in_boot ]
-  deps = [ "//build/validate:non_production_tag" ]
+# Generates an fshost config file that will appear in config/fshost. If no configuration file is
+# present (i.e. there's no dependency on a target below), a default config is used (see
+# block-device-manager.cc).
+template("fshost_config") {
+  generated_resource(target_name) {
+    contents = [ "default" ]
+    deps = []
+    if (defined(invoker.no_minfs_zxcrypt) && invoker.no_minfs_zxcrypt) {
+      contents += [ "no-zxcrypt" ]
+      deps += [ "//build/validate:non_production_tag" ]
+    }
+    if (defined(invoker.minfs_ramdisk) && invoker.minfs_ramdisk) {
+      contents += [
+        "fvm-ramdisk",
+        "zxcrypt-non-ramdisk",
+      ]
+    }
+    if (defined(invoker.gpt_all) && invoker.gpt_all) {
+      contents += [ "gpt-all" ]
+      deps += [ "//build/validate:non_production_tag" ]
+    }
+    if (blobfs_maximum_runtime_bytes != "") {
+      contents += [ "blobfs-max-bytes=$blobfs_maximum_runtime_bytes" ]
+    }
+    if (minfs_maximum_runtime_bytes != "") {
+      contents += [ "minfs-max-bytes=$minfs_maximum_runtime_bytes" ]
+    }
+    output_conversion = "list lines"
+    outputs = [ "config/fshost" ]
+  }
 }
 
-# To be used when minfs is embedded within FVM within a ramdisk (e.g. recovery) and therefore
-# doesn't require zxcrypt.
-minfs_ramdisk_config_file = "$target_gen_dir/minfs_ramdisk_config"
-generated_file("generate_minfs_ramdisk_config") {
-  contents = [
-               "default",
-               "fvm-ramdisk",
-               "zxcrypt-non-ramdisk",
-             ] + fshost_config_values
-  output_conversion = "list lines"
-  outputs = [ minfs_ramdisk_config_file ]
+fshost_config("minfs_ramdisk") {
+  minfs_ramdisk = true
 }
-resource("minfs_ramdisk") {
-  sources = [ minfs_ramdisk_config_file ]
-  outputs = [ fshost_config_in_boot ]
+
+fshost_config("no_minfs_zxcrypt") {
+  no_minfs_zxcrypt = true
+}
+
+# A configuration that allows access to multiple devices with GUID partition schemes; the default
+# will only attach a driver to the first device that appears to have a GUID partition scheme.
+fshost_config("gpt_all") {
+  gpt_all = true
 }
