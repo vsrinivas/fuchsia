@@ -29,7 +29,4 @@ driver_module("usb-hub") {
     "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//zircon/public/lib/sync",
   ]
-
-  # TODO(fxb/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
