@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/dart/dart_build_config.gni")
 import("//build/flutter/internal/flutter_dart_test_component.gni")
 
 # Defines a component which runs tests in the flutter test harness
@@ -73,7 +74,8 @@ import("//build/flutter/internal/flutter_dart_test_component.gni")
 #  visibility
 #  non_dart_deps
 template("flutter_test_component") {
-  _build_cfg = dart_default_build_cfg
+  # TODO(fxbug.dev/64126) use the default build config
+  _build_cfg = dart_debug_build_cfg
   if (defined(invoker.build_cfg)) {
     _build_cfg = invoker.build_cfg
   }
