@@ -39,17 +39,7 @@ protocol KronkProvider {
 };
 
 [Discoverable]
-protocol ThreadProvider {
-    compose Provider;
-};
-
-[Discoverable]
 protocol UltrasoundProvider {
-    compose Provider;
-};
-
-[Discoverable]
-protocol WeaveProvider {
     compose Provider;
 };
 
