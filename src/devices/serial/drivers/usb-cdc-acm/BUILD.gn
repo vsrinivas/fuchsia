@@ -79,9 +79,6 @@ test("usb-cdc-acm-integration") {
     "//zircon/system/ulib/hid",
     "//zircon/system/ulib/usb-virtual-bus-launcher",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 isolated_devmgr_unittest_package("usb-cdc-acm-integration-test") {
