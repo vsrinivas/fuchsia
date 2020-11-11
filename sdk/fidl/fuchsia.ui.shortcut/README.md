@@ -21,18 +21,18 @@ notified of the shortcut activation.
 For the cases of shortcut conflicts (e.g. parent and child components both
 register CTRL + C shortcut listeners), the child component take precedence,
 unless parent uses special flag when registering for the shortcut
-(suppress_overrides = true).
+(use_priority = true).
 
 Full disambiguation procedure:
 - Only [focused](https://fuchsia.dev/fuchsia-src/concepts/graphics/scenic/focus_chain) components
   participate
-- `suppress_overrides = true` resolution step:
-  - Only shortcuts with `suppress_overrides = true` participate
+- `use_priority = true` resolution step:
+  - Only shortcuts with `use_priority = true` participate
   - Components are sorted in top-down order of Scenic View hierarchy, i.e. parent nodes first
   - All components in that order receive the notification until one of them
   returns `handled = true`
   - If handled, stop
-- `suppress_overrides = false` resolution step:
-  - Only shortcuts with `suppress_overrides = false` participate
+- `use_priority = false` resolution step:
+  - Only shortcuts with `use_priority = false` participate
   - Components are sorted in lowest-first order of Scenic View hierarchy, i.e. child nodes first
   - All components in that order receive the notification until one of them returns `handled = true`

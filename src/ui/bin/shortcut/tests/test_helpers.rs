@@ -119,11 +119,8 @@ impl RegistryService {
 
     /// Registers a new shortcut with the shortcut registry service.
     /// Returns a future that resolves to the FIDL response.
-    pub async fn register_shortcut(&self, shortcut: ui_shortcut::Shortcut) -> QueryResponseFut<()> {
-        match self.registry.register_shortcut(shortcut).check() {
-            Err(e) => panic!("Error registering shortcut: {:?}", e),
-            Ok(fut) => fut,
-        }
+    pub async fn register_shortcut(&self, shortcut: ui_shortcut::Shortcut) -> Result<(), Error> {
+        self.registry.register_shortcut(shortcut).check()?.await.map_err(Into::into)
     }
 
     /// Expects next FIDL request from Registry service to be a shortcut activation.
@@ -205,7 +202,7 @@ impl ManagerService {
 
     /// Emulates a key press event using input3 interface.
     /// Returns a future that resolves to a FIDL response from manager service.
-    pub fn press_key3(&self, key: input::Key) -> QueryResponseFut<bool> {
+    pub async fn press_key3(&self, key: input::Key) -> Result<bool, Error> {
         // Process key event that triggers a shortcut.
         let event = ui_input3::KeyEvent {
             timestamp: None,
@@ -215,12 +212,12 @@ impl ManagerService {
             ..ui_input3::KeyEvent::empty()
         };
 
-        self.manager.handle_key3_event(event)
+        self.manager.handle_key3_event(event).check()?.await.map_err(Into::into)
     }
 
     /// Emulates a key release event using input3 interface.
     /// Returns a future that resolves to a FIDL response from manager service.
-    pub fn release_key3(&self, key: input::Key) -> QueryResponseFut<bool> {
+    pub async fn release_key3(&self, key: input::Key) -> Result<bool, Error> {
         // Process key event that triggers a shortcut.
         let event = ui_input3::KeyEvent {
             timestamp: None,
@@ -230,7 +227,7 @@ impl ManagerService {
             ..ui_input3::KeyEvent::empty()
         };
 
-        self.manager.handle_key3_event(event)
+        self.manager.handle_key3_event(event).check()?.await.map_err(Into::into)
     }
 
     /// Emulates multiple key press events sequentially using input3 interface.
@@ -246,7 +243,8 @@ impl ManagerService {
                 modifiers: None,
                 ..ui_input3::KeyEvent::empty()
             };
-            let key_handled = self.manager.handle_key3_event(event).await?;
+            let key_handled = self.manager.handle_key3_event(event).check()?.await?;
+
             if key_handled && iter.peek().is_some() {
                 panic!("Shortcuts activated, but unused keys remained in the sequence!");
             }
@@ -267,7 +265,8 @@ impl ManagerService {
                 modifiers: None,
                 ..ui_input3::KeyEvent::empty()
             };
-            was_handled = was_handled || self.manager.handle_key3_event(event).await?;
+            let key_handled = self.manager.handle_key3_event(event).check()?.await?;
+            was_handled = was_handled || key_handled;
         }
         Ok(was_handled)
     }
@@ -282,6 +281,6 @@ impl ManagerService {
             ),
             ..ui_focus::FocusChain::empty()
         };
-        self.manager.handle_focus_change(focus_chain).await.map_err(Into::into)
+        self.manager.handle_focus_change(focus_chain).check()?.await.map_err(Into::into)
     }
 }

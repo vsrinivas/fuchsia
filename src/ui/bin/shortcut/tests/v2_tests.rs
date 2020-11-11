@@ -27,14 +27,14 @@ async fn test_as_client() -> Result<(), Error> {
         .set_modifiers(ui_input::Modifiers::Shift)
         .set_key(ui_input::Key::A)
         .build();
-    registry_service.register_shortcut(shortcut).await;
+    registry_service.register_shortcut(shortcut).await?;
 
     // Set shortcut for RIGHT_CONTROL + B.
     let shortcut = ShortcutBuilder::new()
         .set_modifiers(ui_input::Modifiers::RightControl)
         .set_key(ui_input::Key::B)
         .build();
-    registry_service.register_shortcut(shortcut).await;
+    registry_service.register_shortcut(shortcut).await?;
 
     // Process key event that *does not* trigger a shortcut.
     let was_handled = manager_service
@@ -100,7 +100,7 @@ async fn test_modifiers_not_activated_on_release() -> Result<(), Error> {
         .set_modifiers(ui_input::Modifiers::LeftShift)
         .set_trigger(ui_shortcut::Trigger::KeyPressedAndReleased)
         .build();
-    registry_service.register_shortcut(shortcut).await;
+    registry_service.register_shortcut(shortcut).await?;
 
     // Set shortcut for LEFT_SHIFT + A.
     let shortcut = ShortcutBuilder::new()
@@ -108,7 +108,7 @@ async fn test_modifiers_not_activated_on_release() -> Result<(), Error> {
         .set_modifiers(ui_input::Modifiers::LeftShift)
         .set_key(ui_input::Key::C)
         .build();
-    registry_service.register_shortcut(shortcut).await;
+    registry_service.register_shortcut(shortcut).await?;
 
     let was_handled = manager_service
         .press_key2(
@@ -157,7 +157,7 @@ async fn test_modifiers_activated_on_release() -> Result<(), Error> {
         .set_modifiers(ui_input::Modifiers::LeftMeta)
         .set_trigger(ui_shortcut::Trigger::KeyPressedAndReleased)
         .build();
-    registry_service.register_shortcut(shortcut).await;
+    registry_service.register_shortcut(shortcut).await?;
 
     // Set shortcut for LEFT_META + Q.
     let shortcut = ShortcutBuilder::new()
@@ -165,7 +165,7 @@ async fn test_modifiers_activated_on_release() -> Result<(), Error> {
         .set_modifiers(ui_input::Modifiers::LeftMeta)
         .set_key(ui_input::Key::Q)
         .build();
-    registry_service.register_shortcut(shortcut).await;
+    registry_service.register_shortcut(shortcut).await?;
 
     let was_handled =
         manager_service.press_key2(ui_input::Key::LeftMeta, None).await.expect("Press LeftMeta");
