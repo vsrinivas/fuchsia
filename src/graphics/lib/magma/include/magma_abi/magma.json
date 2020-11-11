@@ -1,6 +1,6 @@
 {
   "magma-interface": {
-    "next-free-ordinal": 67,
+    "next-free-ordinal": 68,
     "exports": [
       {
         "ordinal": 4,
@@ -1235,6 +1235,29 @@
             "name": "info_out",
             "type": "magma_buffer_info_t*",
             "description": "Pointer to struct that receives the buffer info."
+          }
+        ]
+      },
+      {
+        "ordinal": 67,
+        "name": "magma_get_buffer_handle",
+        "type": "magma_status_t",
+        "description": "Gets a platform handle for the given buffer. This can be used to perform a CPU mapping of the buffer using the standard syscall.  The handle may be released without invalidating such CPU mappings.",
+        "arguments": [
+          {
+            "name": "connection",
+            "type": "magma_connection_t",
+            "description": "An open connection."
+          },
+          {
+            "name": "buffer",
+            "type": "magma_buffer_t",
+            "description": "A valid buffer."
+          },
+          {
+            "name": "handle_out",
+            "type": "magma_handle_t*",
+            "description": "Pointer to the returned handle."
           }
         ]
       }

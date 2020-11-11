@@ -66,3 +66,20 @@ source_set("inflight_list") {
     "$magma_build_root/src/magma_util:status",
   ]
 }
+
+source_set("magma_map_cpu") {
+  testonly = true
+
+  public_configs = [ "//src/graphics/lib/magma:magma_tests_include_config" ]
+
+  sources = [
+    "magma_map_cpu.cc",
+    "magma_map_cpu.h",
+  ]
+
+  public_deps = [ "$magma_build_root/include:magma_abi" ]
+
+  if (is_fuchsia) {
+    deps = [ "//zircon/system/ulib/zx" ]
+  }
+}

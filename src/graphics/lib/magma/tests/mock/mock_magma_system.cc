@@ -468,3 +468,8 @@ magma_status_t magma_buffer_get_info(magma_connection_t connection, magma_buffer
                                      magma_buffer_info_t* info_out) {
   return MAGMA_STATUS_UNIMPLEMENTED;
 }
+
+magma_status_t magma_get_buffer_handle(magma_connection_t connection, magma_buffer_t buffer,
+                                       magma_handle_t* handle_out) {
+  return MAGMA_STATUS_UNIMPLEMENTED;
+}

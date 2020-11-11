@@ -25,6 +25,7 @@
 
 #include <gtest/gtest.h>
 
+#include "helper/magma_map_cpu.h"
 #include "magma.h"
 #include "magma_common_defs.h"
 
@@ -1141,6 +1142,62 @@ TEST(MagmaAbi, CommitBuffer) {
                                   page_size(), page_size()));
   EXPECT_EQ(MAGMA_STATUS_OK, magma_buffer_get_info(connection.connection(), buffer, &info));
   EXPECT_EQ(0u, info.committed_byte_count);
+
+  magma_release_buffer(connection.connection(), buffer);
+}
+
+TEST(MagmaAbi, MapWithBufferHandle) {
+  TestConnection connection;
+
+  magma_buffer_t buffer;
+  uint64_t actual_size;
+  constexpr uint64_t kBufferSizeInPages = 10;
+  EXPECT_EQ(MAGMA_STATUS_OK,
+            magma_create_buffer(connection.connection(), kBufferSizeInPages * page_size(),
+                                &actual_size, &buffer));
+
+  magma_handle_t handle;
+  ASSERT_EQ(MAGMA_STATUS_OK, magma_get_buffer_handle(connection.connection(), buffer, &handle));
+
+  void* full_range_ptr;
+  ASSERT_TRUE(magma::MapCpuHelper(connection.connection(), buffer, 0 /*offset*/, actual_size,
+                                  &full_range_ptr));
+
+  // Some arbitrary constants
+  constexpr uint32_t kPattern[] = {
+      0x12345678,
+      0x89abcdef,
+      0xfedcba98,
+      0x87654321,
+  };
+
+  reinterpret_cast<uint32_t*>(full_range_ptr)[0] = kPattern[0];
+  reinterpret_cast<uint32_t*>(full_range_ptr)[1] = kPattern[1];
+  reinterpret_cast<uint32_t*>(full_range_ptr)[actual_size / sizeof(uint32_t) - 2] = kPattern[2];
+  reinterpret_cast<uint32_t*>(full_range_ptr)[actual_size / sizeof(uint32_t) - 1] = kPattern[3];
+
+  EXPECT_TRUE(magma::UnmapCpuHelper(full_range_ptr, actual_size));
+
+  void* first_page_ptr;
+  EXPECT_TRUE(magma::MapCpuHelper(connection.connection(), buffer, 0 /*offset*/, page_size(),
+                                  &first_page_ptr));
+
+  void* last_page_ptr;
+  EXPECT_TRUE(magma::MapCpuHelper(connection.connection(), buffer,
+                                  (kBufferSizeInPages - 1) * page_size() /*offset*/, page_size(),
+                                  &last_page_ptr));
+
+  // Check that written values match.
+  EXPECT_EQ(reinterpret_cast<uint32_t*>(first_page_ptr)[0], kPattern[0]);
+  EXPECT_EQ(reinterpret_cast<uint32_t*>(first_page_ptr)[1], kPattern[1]);
+
+  EXPECT_EQ(reinterpret_cast<uint32_t*>(last_page_ptr)[page_size() / sizeof(uint32_t) - 2],
+            kPattern[2]);
+  EXPECT_EQ(reinterpret_cast<uint32_t*>(last_page_ptr)[page_size() / sizeof(uint32_t) - 1],
+            kPattern[3]);
+
+  EXPECT_TRUE(magma::UnmapCpuHelper(last_page_ptr, page_size()));
+  EXPECT_TRUE(magma::UnmapCpuHelper(first_page_ptr, page_size()));
 
   magma_release_buffer(connection.connection(), buffer);
 }

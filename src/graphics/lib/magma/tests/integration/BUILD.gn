@@ -22,6 +22,7 @@ executable("magma_abi_conformance_tests") {
   deps = [
     "$magma_build_root/include:magma_abi",
     "$magma_build_root/src/libmagma",
+    "$magma_build_root/tests/helper:magma_map_cpu",
     "//src/lib/fxl",
     "//third_party/googletest:gtest",
   ]
@@ -53,6 +54,7 @@ executable("virtmagma_abi_conformance_tests") {
   deps = [
     "$magma_build_root/include:magma_abi",
     "$magma_build_root/src/libmagma_linux",
+    "$magma_build_root/tests/helper:magma_map_cpu",
     "//src/lib/fxl",
     "//third_party/googletest:gtest",
   ]
