@@ -49,9 +49,6 @@ source_set("common") {
     "//zircon/public/lib/fbl",
     "//zircon/system/ulib/fzl",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 test("nand-util-test") {
