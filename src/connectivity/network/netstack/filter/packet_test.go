@@ -33,13 +33,13 @@ func icmpV4Packet(payload []byte, p *icmpV4Params) (buffer.View, buffer.Vectoris
 	// Create the IPv4 header.
 	ip := header.IPv4(hdr.Prepend(header.IPv4MinimumSize))
 	ip.Encode(&header.IPv4Fields{
-		IHL:         header.IPv4MinimumSize,
 		TotalLength: uint16(header.IPv4MinimumSize + header.ICMPv4MinimumSize + len(payload)),
 		TTL:         65,
 		Protocol:    uint8(header.ICMPv4ProtocolNumber),
 		SrcAddr:     p.srcAddr,
 		DstAddr:     p.dstAddr,
 	})
+	ip.SetHeaderLength(header.IPv4MinimumSize)
 	ip.SetChecksum(^ip.CalculateChecksum())
 
 	return hdr.View(), buffer.View(payload).ToVectorisedView()
@@ -76,13 +76,13 @@ func udpV4Packet(payload []byte, p *udpParams) (buffer.View, buffer.VectorisedVi
 	// Create the IPv4 header.
 	ip := header.IPv4(hdr.Prepend(header.IPv4MinimumSize))
 	ip.Encode(&header.IPv4Fields{
-		IHL:         header.IPv4MinimumSize,
 		TotalLength: uint16(header.IPv4MinimumSize + header.UDPMinimumSize + len(payload)),
 		TTL:         65,
 		Protocol:    uint8(udp.ProtocolNumber),
 		SrcAddr:     p.srcAddr,
 		DstAddr:     p.dstAddr,
 	})
+	ip.SetHeaderLength(header.IPv4MinimumSize)
 	ip.SetChecksum(^ip.CalculateChecksum())
 
 	return hdr.View(), buffer.View(payload).ToVectorisedView()
@@ -158,13 +158,13 @@ func tcpV4Packet(payload []byte, p *tcpParams) (buffer.View, buffer.VectorisedVi
 	// Create the IPv4 header.
 	ip := header.IPv4(hdr.Prepend(header.IPv4MinimumSize))
 	ip.Encode(&header.IPv4Fields{
-		IHL:         header.IPv4MinimumSize,
 		TotalLength: uint16(header.IPv4MinimumSize + header.TCPMinimumSize + len(payload)),
 		TTL:         65,
 		Protocol:    uint8(tcp.ProtocolNumber),
 		SrcAddr:     p.srcAddr,
 		DstAddr:     p.dstAddr,
 	})
+	ip.SetHeaderLength(header.IPv4MinimumSize)
 	ip.SetChecksum(^ip.CalculateChecksum())
 
 	return hdr.View(), buffer.View(payload).ToVectorisedView()
