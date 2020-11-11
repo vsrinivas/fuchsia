@@ -142,11 +142,17 @@ void EraseCompletionCallback(void* cookie, zx_status_t status, nand_operation_t*
                                           &write_size, &vmo_offset);
   }
 
+  const size_t offset_nand =
+      ctx->physical_block * ctx->nand_info->pages_per_block + in_block_offset;
+
+  ZX_ASSERT(write_size <= UINT32_MAX);
+  ZX_ASSERT(offset_nand <= UINT32_MAX);
+
   op->rw.command = NAND_OP_WRITE;
   op->rw.data_vmo = ctx->op.vmo.get();
   op->rw.oob_vmo = ZX_HANDLE_INVALID;
-  op->rw.length = write_size;
-  op->rw.offset_nand = ctx->physical_block * ctx->nand_info->pages_per_block + in_block_offset;
+  op->rw.length = static_cast<uint32_t>(write_size);
+  op->rw.offset_nand = static_cast<uint32_t>(offset_nand);
   op->rw.offset_data_vmo = vmo_offset;
 
   ctx->nand->Queue(op, WriteCompletionCallback, cookie);
@@ -633,11 +639,17 @@ void WriteBytesWithoutEraseCompletionCallback(void* cookie, zx_status_t status,
   ComputeInBlockWriteRangeFromPageRange(ctx, *(ctx->write_page_range), &in_block_offset,
                                         &write_size, &vmo_offset);
 
+  const size_t offset_nand =
+      ctx->physical_block * ctx->nand_info->pages_per_block + in_block_offset;
+
+  ZX_ASSERT(write_size <= UINT32_MAX);
+  ZX_ASSERT(offset_nand <= UINT32_MAX);
+
   op->rw.command = NAND_OP_WRITE;
   op->rw.data_vmo = ctx->op.vmo.get();
   op->rw.oob_vmo = ZX_HANDLE_INVALID;
-  op->rw.length = write_size,
-  op->rw.offset_nand = ctx->physical_block * ctx->nand_info->pages_per_block + in_block_offset;
+  op->rw.length = static_cast<uint32_t>(write_size),
+  op->rw.offset_nand = static_cast<uint32_t>(offset_nand);
   op->rw.offset_data_vmo = vmo_offset;
   ctx->current_block += 1;
   ctx->nand->Queue(op, WriteBytesWithoutEraseCompletionCallback, cookie);
