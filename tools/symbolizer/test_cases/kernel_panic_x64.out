@@ -1,0 +1,17 @@
+[[[ELF module #0x0 "kernel" BuildID=6a74871329227362 0xffffffff00100000]]]
+dso: id=6a74871329227362 base=0xffffffff00100000 name=zircon.elf
+   #0    0xffffffff001d32b5 in platform_specific_halt(platform_halt_action, zircon_crash_reason_t, bool) ../../zircon/kernel/platform/pc/power.cc:147 <kernel>+0xffffffff801d32b5
+   #1    0xffffffff002bbd36 in platform_halt(platform_halt_action, zircon_crash_reason_t) ../../zircon/kernel/platform/power.cc:59 <kernel>+0xffffffff802bbd36
+   #2    0xffffffff00225105 in exception_die(iframe_t*, const char*) ../../zircon/kernel/arch/x86/faults.cc:100 <kernel>+0xffffffff80225105
+   #3    0xffffffff002260a5 in x86_fatal_pfe_handler(iframe_t*, ulong) ../../zircon/kernel/arch/x86/faults.cc:246 <kernel>+0xffffffff802260a5
+   #4    0xffffffff002257b3 in handle_exception_types(iframe_t*) ../../zircon/kernel/arch/x86/faults.cc:385 <kernel>+0xffffffff802257b3
+   #5    0xffffffff00224eb3 in x86_exception_handler(iframe_t*) ../../zircon/kernel/arch/x86/faults.cc:479 <kernel>+0xffffffff80224eb3
+   #6    0xffffffff00224dad in ../../zircon/kernel/arch/x86/exceptions.S:134 <kernel>+0xffffffff80224dad
+   #7    0xffffffff00104046 in command_loop(int (*)(const char**, void*), void*, bool, bool) ../../zircon/kernel/lib/console/console.cc:572 <kernel>+0xffffffff80104046
+   #8.1  0xffffffff0010347b in console_run_script_etc(const char*, bool) ../../zircon/kernel/lib/console/console.cc:665 <kernel>+0xffffffff8010347b
+   #8    0xffffffff0010347b in console_run_script(const char*) ../../zircon/kernel/lib/console/console.cc:672 <kernel>+0xffffffff8010347b
+   #9    0xffffffff00201681 in sys_debug_send_command(zx_handle_t, user_in_ptr<const char>, size_t) ../../zircon/kernel/lib/syscalls/debug.cc:125 <kernel>+0xffffffff80201681
+   #10.2 0xffffffff00217a52 in λ(const (anon class)*, ProcessDispatcher*) gen/vdso/include/lib/syscalls/kernel-wrappers.inc:176 <kernel>+0xffffffff80217a52
+   #10.1 0xffffffff00217a52 in do_syscall<(lambda at gen/vdso/include/lib/syscalls/kernel-wrappers.inc:175:97)>(uint64_t, uint64_t, (anon class)) ../../zircon/kernel/lib/syscalls/syscalls.cc:104 <kernel>+0xffffffff80217a52
+   #10   0xffffffff00217a52 in wrapper_debug_send_command(zx_handle_t, const char*, size_t, uint64_t) gen/vdso/include/lib/syscalls/kernel-wrappers.inc:175 <kernel>+0xffffffff80217a52
+   #11   0xffffffff0023921c in gen/vdso/include/lib/syscalls/kernel.inc:198 <kernel>+0xffffffff8023921c

@@ -9,7 +9,6 @@
 #include <string_view>
 #include <unordered_map>
 
-#include "src/developer/debug/ipc/records.h"
 #include "src/developer/debug/shared/message_loop_poll.h"
 #include "src/developer/debug/zxdb/client/download_observer.h"
 #include "src/developer/debug/zxdb/client/session.h"
@@ -67,20 +66,30 @@ class SymbolizerImpl : public Symbolizer,
   // Whether there are symbol downloads in progress.
   bool is_downloading_ = false;
 
+  struct ModuleInfo {
+    std::string name;
+    std::string build_id;
+    uint64_t base = 0;  // Load address of the module.
+    uint64_t size = 0;  // Range of the module.
+
+    // Zircon on x64 has a negative base address, i.e. the module offset is larger than the load
+    // address. Since zxdb doesn't support that, we load the module at 0 and modify the pc for all
+    // frames.
+    //
+    // At least one of the base and the negative_base must be zero.
+    uint64_t negative_base = 0;
+    bool printed = false;  // Whether we've printed the module info.
+  };
+
   // Mapping from module_id (available in the log) to module info.
   //
   // module_id is usually a sequence from 0 used to associate "mmap" commands with "module"
   // commands. It's different from build_id.
-  std::unordered_map<int, debug_ipc::Module> modules_;
+  std::unordered_map<int, ModuleInfo> modules_;
 
-  // Since zxdb doesn't track the size of modules, we keep our own memory mapping here.
-  struct AuxModuleInfo {
-    uint64_t size;
-    int id;
-  };
-
-  // Mapping from base address of each module to auxiliary module info.
-  std::map<uint64_t, AuxModuleInfo> aux_modules_info_;
+  // Mapping from base address of each module to the module_id.
+  // Useful when doing binary search for the module from an address.
+  std::map<uint64_t, int> address_to_module_id_;
 };
 
 }  // namespace symbolizer

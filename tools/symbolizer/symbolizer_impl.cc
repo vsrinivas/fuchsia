@@ -62,6 +62,27 @@ void SetupCommandLineOptions(const CommandLineOptions& options, zxdb::MapSetting
   }
 }
 
+std::string FormatFrameIndexAndAddress(int frame_index, int inline_index, uint64_t address) {
+  // Frame number.
+  std::string out = "   #" + std::to_string(frame_index);
+
+  // Append a sequence for inline frames, i.e. not the last frame.
+  if (inline_index) {
+    out += "." + std::to_string(inline_index);
+  }
+
+  // Pad to 9.
+  constexpr int index_width = 9;
+  if (out.length() < index_width) {
+    out += std::string(index_width - out.length(), ' ');
+  }
+
+  // Print the absolute address first.
+  out += fxl::StringPrintf("0x%016" PRIx64, address);
+
+  return out;
+}
+
 }  // namespace
 
 SymbolizerImpl::SymbolizerImpl(Printer* printer, const CommandLineOptions& options)
@@ -86,10 +107,11 @@ SymbolizerImpl::~SymbolizerImpl() { loop_.Cleanup(); }
 
 void SymbolizerImpl::Reset() {
   modules_.clear();
-  aux_modules_info_.clear();
+  address_to_module_id_.clear();
   if (target_->GetState() == zxdb::Target::State::kRunning) {
     // OnProcessExiting() will destroy the Process, ProcessSymbols but we still keep references
     // to ModuleSymbols in TargetSymbols.
+    //
     // We should be able to use target_->GetSymbols(). However, it returns a const pointer.
     target_->GetProcess()->GetSymbols()->target_symbols()->RemoveAllModules();
     target_->OnProcessExiting(0);
@@ -108,27 +130,41 @@ void SymbolizerImpl::MMap(uint64_t address, uint64_t size, uint64_t module_id,
     return;
   }
 
+  ModuleInfo& module = modules_[module_id];
   uint64_t base = address - module_offset;
 
-  // Print the module info and set aux info if we have never calculated the base address.
-  // It's safe to assume that a valid base address cannot be 0.
-  if (modules_[module_id].base == 0) {
-    modules_[module_id].base = base;
-    printer_->OutputWithContext(fxl::StringPrintf(
-        "[[[ELF module #0x%" PRIx64 " \"%s\" BuildID=%s 0x%" PRIx64 "]]]", module_id,
-        modules_[module_id].name.c_str(), modules_[module_id].build_id.c_str(), base));
-    aux_modules_info_[base].id = module_id;
-    aux_modules_info_[base].size = size + module_offset;
-    return;
+  if (address < module_offset) {
+    // Negative load address. This happens for zircon on x64.
+    if (module.printed) {
+      if (module.base != 0 || module.negative_base != module_offset - address) {
+        printer_->OutputWithContext("symbolizer: Inconsistent base address.");
+      }
+    } else {
+      base = address;  // for printing only
+      module.base = 0;
+      module.negative_base = module_offset - address;
+    }
+    if (module.size < address + size) {
+      module.size = address + size;
+    }
+  } else {
+    if (module.printed) {
+      if (module.base != base) {
+        printer_->OutputWithContext("symbolizer: Inconsistent base address.");
+      }
+    } else {
+      module.base = base;
+    }
+    if (module.size < size + module_offset) {
+      module.size = size + module_offset;
+    }
   }
 
-  if (modules_[module_id].base != base) {
-    printer_->OutputWithContext("symbolizer: Inconsistent base address.");
-    return;
-  }
-
-  if (aux_modules_info_[base].size < size + module_offset) {
-    aux_modules_info_[base].size = size + module_offset;
+  if (!module.printed) {
+    printer_->OutputWithContext(
+        fxl::StringPrintf("[[[ELF module #0x%" PRIx64 " \"%s\" BuildID=%s 0x%" PRIx64 "]]]",
+                          module_id, module.name.c_str(), module.build_id.c_str(), base));
+    module.printed = true;
   }
 }
 
@@ -137,17 +173,31 @@ void SymbolizerImpl::Backtrace(int frame_index, uint64_t address, AddressType ty
   InitProcess();
 
   // Find the module to see if the stack might be corrupt.
-  const debug_ipc::Module* module = nullptr;
-  if (auto next = aux_modules_info_.upper_bound(address); next != aux_modules_info_.begin()) {
+  const ModuleInfo* module = nullptr;
+  if (auto next = address_to_module_id_.upper_bound(address);
+      next != address_to_module_id_.begin()) {
     next--;
-    const auto& aux_info = next->second;
-    const auto& prev = modules_[aux_info.id];
-    if (address - prev.base <= aux_info.size) {
+    const auto& module_id = next->second;
+    const auto& prev = modules_[module_id];
+    if (address - prev.base <= prev.size) {
       module = &prev;
     }
   }
 
+  if (!module) {
+    std::string out =
+        FormatFrameIndexAndAddress(frame_index, 0, address) + " is not covered by any module";
+    if (!message.empty()) {
+      out += " " + std::string(message);
+    }
+    return printer_->OutputWithContext(out);
+  }
+
   uint64_t call_address = address;
+
+  if (module->negative_base) {
+    call_address += module->negative_base;
+  }
   // Substracts 1 from the address if it's a return address or unknown. It shouldn't be an issue
   // for unknown addresses as most instructions are more than 1 byte.
   if (type != AddressType::kProgramCounter) {
@@ -159,48 +209,29 @@ void SymbolizerImpl::Backtrace(int frame_index, uint64_t address, AddressType ty
   stack.SetFrames(debug_ipc::ThreadRecord::StackAmount::kFull, {frame});
 
   for (size_t i = 0; i < stack.size(); i++) {
-    // Frame number.
-    std::string out = "   #" + std::to_string(frame_index);
+    std::string out = FormatFrameIndexAndAddress(frame_index, stack.size() - i - 1, address);
 
-    // Append a sequence for inline frames, i.e. not the last frame.
-    if (i != stack.size() - 1) {
-      out += "." + std::to_string(stack.size() - 1 - i);
-    }
+    out += " in";
 
-    // Pad to 9.
-    constexpr int index_width = 9;
-    if (out.length() < index_width) {
-      out += std::string(index_width - out.length(), ' ');
-    }
-
-    // Print the absolute address first.
-    out += fxl::StringPrintf("0x%016" PRIx64, address);
-
-    if (module) {
-      out += " in";
-
-      // Function name.
-      const zxdb::Location location = stack[i]->GetLocation();
-      if (location.symbol().is_valid()) {
-        auto symbol = location.symbol().Get();
-        if (auto function = symbol->AsFunction()) {
-          out += " " + zxdb::FormatFunctionName(function, {}).AsString();
-        } else {
-          out += " " + symbol->GetFullName();
-        }
+    // Function name.
+    const zxdb::Location location = stack[i]->GetLocation();
+    if (location.symbol().is_valid()) {
+      auto symbol = location.symbol().Get();
+      if (auto function = symbol->AsFunction()) {
+        out += " " + zxdb::FormatFunctionName(function, {}).AsString();
+      } else {
+        out += " " + symbol->GetFullName();
       }
-
-      // FileLine info.
-      if (location.file_line().is_valid()) {
-        out +=
-            " " + location.file_line().file() + ":" + std::to_string(location.file_line().line());
-      }
-
-      // Module offset.
-      out += fxl::StringPrintf(" <%s>+0x%" PRIx64, module->name.c_str(), address - module->base);
-    } else {
-      out += " is not covered by any module";
     }
+
+    // FileLine info.
+    if (location.file_line().is_valid()) {
+      out += " " + location.file_line().file() + ":" + std::to_string(location.file_line().line());
+    }
+
+    // Module offset.
+    out += fxl::StringPrintf(" <%s>+0x%" PRIx64, module->name.c_str(),
+                             address - module->base + module->negative_base);
 
     // Extra message.
     if (!message.empty()) {
@@ -254,7 +285,8 @@ void SymbolizerImpl::InitProcess() {
   std::vector<debug_ipc::Module> modules;
   modules.reserve(modules_.size());
   for (const auto& pair : modules_) {
-    modules.push_back(pair.second);
+    modules.push_back({pair.second.name, pair.second.base, 0, pair.second.build_id});
+    address_to_module_id_[pair.second.base] = pair.first;
   }
   target_->GetProcess()->GetSymbols()->SetModules(modules);
 

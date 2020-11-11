@@ -1,0 +1,19 @@
+{{{reset}}}
+{{{module:0:kernel:elf:6a74871329227362}}}
+{{{mmap:0xffffffff00100000:0x1bc19b:load:0:rx:0xffffffff80100000}}}
+{{{mmap:0xffffffff002bd000:0x76000:load:0:r:0xffffffff802bd000}}}
+{{{mmap:0xffffffff00333000:0x6b48:load:0:rw:0xffffffff80333000}}}
+{{{mmap:0xffffffff0033a000:0x9e000:load:0:rw:0xffffffff8033a000}}}
+dso: id=6a74871329227362 base=0xffffffff00100000 name=zircon.elf
+{{{bt:0:0xffffffff001d32b5}}}
+{{{bt:1:0xffffffff002bbd36}}}
+{{{bt:2:0xffffffff00225105}}}
+{{{bt:3:0xffffffff002260a5}}}
+{{{bt:4:0xffffffff002257b3}}}
+{{{bt:5:0xffffffff00224eb3}}}
+{{{bt:6:0xffffffff00224dad}}}
+{{{bt:7:0xffffffff00104046}}}
+{{{bt:8:0xffffffff0010347b}}}
+{{{bt:9:0xffffffff00201681}}}
+{{{bt:10:0xffffffff00217a52}}}
+{{{bt:11:0xffffffff0023921c}}}
