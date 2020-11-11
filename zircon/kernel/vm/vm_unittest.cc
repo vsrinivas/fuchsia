@@ -3374,14 +3374,28 @@ static bool vmpl_merge_onto_test() {
   END_TEST;
 }
 
-void insert_region(RegionList* regions, vaddr_t base, size_t size) {
+class TestRegion : public fbl::RefCounted<TestRegion>,
+                   public fbl::WAVLTreeContainable<fbl::RefPtr<TestRegion>> {
+ public:
+  TestRegion(vaddr_t base, size_t size) : base_(base), size_(size) {}
+  ~TestRegion() = default;
+  vaddr_t base() const { return base_; }
+  size_t size() const { return size_; }
+  vaddr_t GetKey() const { return base(); }
+
+ private:
+  vaddr_t base_;
+  size_t size_;
+};
+
+void insert_region(RegionList<TestRegion>* regions, vaddr_t base, size_t size) {
   fbl::AllocChecker ac;
-  auto test_region = fbl::AdoptRef(new (&ac) VmAddressRegionDummy(base, size));
+  auto test_region = fbl::AdoptRef(new (&ac) TestRegion(base, size));
   ASSERT(ac.check());
   regions->InsertRegion(ktl::move(test_region));
 }
 
-bool remove_region(RegionList* regions, vaddr_t base) {
+bool remove_region(RegionList<TestRegion>* regions, vaddr_t base) {
   auto region = regions->FindRegion(base);
   if (region == nullptr) {
     return false;
@@ -3393,7 +3407,7 @@ bool remove_region(RegionList* regions, vaddr_t base) {
 static bool region_list_get_alloc_spot_test() {
   BEGIN_TEST;
 
-  RegionList regions;
+  RegionList<TestRegion> regions;
   vaddr_t base = 0xFFFF000000000000;
   vaddr_t size = 0x0001000000000000;
   vaddr_t alloc_spot = 0;
@@ -3451,7 +3465,7 @@ static bool region_list_get_alloc_spot_test() {
 static bool region_list_get_alloc_spot_no_memory_test() {
   BEGIN_TEST;
 
-  RegionList regions;
+  RegionList<TestRegion> regions;
   vaddr_t base = 0xFFFF000000000000;
   vaddr_t size = 0x0001000000000000;
   // Set the align to be 0x1000.
@@ -3474,7 +3488,7 @@ static bool region_list_get_alloc_spot_no_memory_test() {
 static bool region_list_find_region_test() {
   BEGIN_TEST;
 
-  RegionList regions;
+  RegionList<TestRegion> regions;
   vaddr_t base = 0xFFFF000000000000;
 
   auto region = regions.FindRegion(base);
@@ -3496,7 +3510,7 @@ static bool region_list_find_region_test() {
 static bool region_list_include_or_higher_test() {
   BEGIN_TEST;
 
-  RegionList regions;
+  RegionList<TestRegion> regions;
   vaddr_t base = 0xFFFF000000000000;
 
   insert_region(&regions, base + 0x1000, 0x1000);
@@ -3520,7 +3534,7 @@ static bool region_list_include_or_higher_test() {
 static bool region_list_upper_bound_test() {
   BEGIN_TEST;
 
-  RegionList regions;
+  RegionList<TestRegion> regions;
   vaddr_t base = 0xFFFF000000000000;
 
   insert_region(&regions, base + 0x1000, 0x1000);
@@ -3539,7 +3553,7 @@ static bool region_list_upper_bound_test() {
 static bool region_list_is_range_available_test() {
   BEGIN_TEST;
 
-  RegionList regions;
+  RegionList<TestRegion> regions;
   vaddr_t base = 0xFFFF000000000000;
 
   insert_region(&regions, base + 0x1000, 0x1000);

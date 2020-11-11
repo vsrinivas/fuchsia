@@ -189,58 +189,202 @@ class VmAddressRegionOrMapping
   VmAddressRegion* parent_;
 };
 
-// A list of regions ordered by virtual address.
+// A list of regions ordered by virtual address. Templated to allow for test code to avoid needing
+// to instantiate 'real' VmAddressRegionOrMapping instances.
+template <typename T = VmAddressRegionOrMapping>
 class RegionList final {
  public:
-  using ChildList = fbl::WAVLTree<vaddr_t, fbl::RefPtr<VmAddressRegionOrMapping>>;
+  using ChildList = fbl::WAVLTree<vaddr_t, fbl::RefPtr<T>>;
 
   // Remove *region* from the list, returns the removed region.
-  fbl::RefPtr<VmAddressRegionOrMapping> RemoveRegion(VmAddressRegionOrMapping* region);
+  fbl::RefPtr<T> RemoveRegion(T* region) { return regions_.erase(*region); }
 
   // Insert *region* to the region list.
-  void InsertRegion(fbl::RefPtr<VmAddressRegionOrMapping> region);
+  void InsertRegion(fbl::RefPtr<T> region) { regions_.insert(region); }
 
   // Find the region that covers addr, returns nullptr if not found.
-  fbl::RefPtr<VmAddressRegionOrMapping> FindRegion(vaddr_t addr) const;
+  fbl::RefPtr<T> FindRegion(vaddr_t addr) const {
+    // Find the first region with a base greater than *addr*.  If a region
+    // exists for *addr*, it will be immediately before it.
+    auto itr = --regions_.upper_bound(addr);
+    if (!itr.IsValid()) {
+      return nullptr;
+    }
+    // Subregion size should never be zero unless during unmapping which should never overlap with
+    // this operation.
+    DEBUG_ASSERT(itr->size() > 0);
+    vaddr_t region_end;
+    bool overflowed = add_overflow(itr->base(), itr->size() - 1, &region_end);
+    ASSERT(!overflowed);
+    if (itr->base() > addr || addr > region_end) {
+      return nullptr;
+    }
+
+    return itr.CopyPointer();
+  }
 
   // Find the region that contains |base|, or if that doesn't exist, the first region that contains
   // an address greater than |base|.
-  ChildList::iterator IncludeOrHigher(vaddr_t base);
+  typename ChildList::iterator IncludeOrHigher(vaddr_t base) {
+    // Find the first region with a base greater than *base*.  If a region
+    // exists for *base*, it will be immediately before it.
+    auto itr = regions_.upper_bound(base);
+    itr--;
+    if (!itr.IsValid()) {
+      itr = regions_.begin();
+    } else if (base >= itr->base() && base - itr->base() >= itr->size()) {
+      // If *base* isn't in this region, ignore it.
+      ++itr;
+    }
+    return itr;
+  }
 
-  ChildList::iterator UpperBound(vaddr_t base);
+  typename ChildList::iterator UpperBound(vaddr_t base) { return regions_.upper_bound(base); }
 
   // Check whether it would be valid to create a child in the range [base, base+size).
-  bool IsRangeAvailable(vaddr_t base, size_t size) const;
+  bool IsRangeAvailable(vaddr_t base, size_t size) const {
+    DEBUG_ASSERT(size > 0);
+
+    // Find the first region with base > *base*.  Since subregions_ has no
+    // overlapping elements, we just need to check this one and the prior
+    // child.
+
+    auto prev = regions_.upper_bound(base);
+    auto next = prev--;
+
+    if (prev.IsValid()) {
+      vaddr_t prev_last_byte;
+      if (add_overflow(prev->base(), prev->size() - 1, &prev_last_byte)) {
+        return false;
+      }
+      if (prev_last_byte >= base) {
+        return false;
+      }
+    }
+
+    if (next.IsValid() && next != regions_.end()) {
+      vaddr_t last_byte;
+      if (add_overflow(base, size - 1, &last_byte)) {
+        return false;
+      }
+      if (next->base() <= last_byte) {
+        return false;
+      }
+    }
+    return true;
+  }
 
   // Get the allocation spot that is free and large enough for the aligned size.
   zx_status_t GetAllocSpot(vaddr_t* alloc_spot, uint8_t align_pow2, uint8_t entropy, size_t size,
                            vaddr_t parent_base, size_t parent_size, crypto::PRNG* prng,
-                           vaddr_t upper_limit = ktl::numeric_limits<vaddr_t>::max()) const;
+                           vaddr_t upper_limit = ktl::numeric_limits<vaddr_t>::max()) const {
+    DEBUG_ASSERT(entropy < sizeof(size_t) * 8);
+    const vaddr_t align = 1UL << align_pow2;
+    // This is the maximum number of spaces we need to consider based on our desired entropy.
+    const size_t max_candidate_spaces = 1ul << entropy;
+    vaddr_t selected_index = 0;
+    if (prng != nullptr) {
+      // We first pick a index in [0, max_candidate_spaces] and hope to find the index.
+      // If the number of available spots is less than selected_index, alloc_spot_info.founds would
+      // be false. This means that selected_index is too large, we have to pick again in a smaller
+      // range and try again.
+      //
+      // Note that this is mathematically equal to randomly pick a spot within
+      // [0, candidate_spot_count] if selected_index <= candidate_spot_count.
+      //
+      // Prove as following:
+      // Define M = candidate_spot_count
+      // Define N = max_candidate_spaces (M < N, otherwise we can randomly allocate any spot from
+      // [0, max_candidate_spaces], thus allocate a specific slot has (1 / N) probability).
+      // Define slot X0 where X0 belongs to [1, M].
+      // Define event A: randomly pick a slot X in [1, N], N = X0.
+      // Define event B: randomly pick a slot X in [1, N], N belongs to [1, M].
+      // Define event C: randomly pick a slot X in [1, N], N = X0 when N belongs to [1, M].
+      // P(C) = P(A | B)
+      // Since when A happens, B definitely happens, so P(AB) = P(A)
+      // P(C) = P(A) / P(B) = (1 / N) / (M / N) = (1 / M)
+      // which is equal to the probability of picking a specific spot in [0, M].
+      selected_index = prng->RandInt(max_candidate_spaces);
+    }
+
+    AllocSpotInfo alloc_spot_info;
+    FindAllocSpotInGaps(size, align_pow2, selected_index, parent_base, parent_size,
+                        &alloc_spot_info, upper_limit);
+    size_t candidate_spot_count = alloc_spot_info.candidate_spot_count;
+    if (candidate_spot_count == 0) {
+      DEBUG_ASSERT(!alloc_spot_info.found);
+      return ZX_ERR_NO_MEMORY;
+    }
+    if (!alloc_spot_info.found) {
+      if (candidate_spot_count > max_candidate_spaces) {
+        candidate_spot_count = max_candidate_spaces;
+      }
+      // If the number of candidate spaces is less than the index we want, let's pick again from the
+      // range for available spaces.
+      DEBUG_ASSERT(prng);
+      selected_index = prng->RandInt(candidate_spot_count);
+      FindAllocSpotInGaps(size, align_pow2, selected_index, parent_base, parent_size,
+                          &alloc_spot_info, upper_limit);
+    }
+    DEBUG_ASSERT(alloc_spot_info.found);
+    *alloc_spot = alloc_spot_info.alloc_spot;
+    ASSERT(IS_ALIGNED(*alloc_spot, align));
+
+    return ZX_OK;
+  }
 
   // Utility for allocators for iterating over gaps between allocations.
   // F should have a signature of bool func(vaddr_t gap_base, size_t gap_size).
   // If func returns false, the iteration stops.  gap_base will be aligned in accordance with
   // align_pow2.
   template <typename F>
-  void ForEachGap(F func, uint8_t align_pow2, vaddr_t parent_base, size_t parent_size) const;
+  void ForEachGap(F func, uint8_t align_pow2, vaddr_t parent_base, size_t parent_size) const {
+    const vaddr_t align = 1UL << align_pow2;
+
+    // Scan the regions list to find the gap to the left of each region.  We
+    // round up the end of the previous region to the requested alignment, so
+    // all gaps reported will be for aligned ranges.
+    vaddr_t prev_region_end = ROUNDUP(parent_base, align);
+    for (const auto& region : regions_) {
+      if (region.base() > prev_region_end) {
+        const size_t gap = region.base() - prev_region_end;
+        if (!func(prev_region_end, gap)) {
+          return;
+        }
+      }
+      if (add_overflow(region.base(), region.size(), &prev_region_end)) {
+        // This region is already the last region.
+        return;
+      }
+      prev_region_end = ROUNDUP(prev_region_end, align);
+    }
+
+    // Grab the gap to the right of the last region (note that if there are no
+    // regions, this handles reporting the VMAR's whole span as a gap).
+    if (parent_size > prev_region_end - parent_base) {
+      // This is equal to parent_base + parent_size - prev_region_end, but guarantee no overflow.
+      const size_t gap = parent_size - (prev_region_end - parent_base);
+      func(prev_region_end, gap);
+    }
+  }
 
   // Returns whether the region list is empty.
   bool IsEmpty() const { return regions_.is_empty(); }
 
   // Returns the iterator points to the first element of the list.
-  VmAddressRegionOrMapping& front() { return regions_.front(); }
+  T& front() { return regions_.front(); }
 
-  ChildList::iterator begin() { return regions_.begin(); }
+  typename ChildList::iterator begin() { return regions_.begin(); }
 
-  ChildList::const_iterator begin() const { return regions_.begin(); }
+  typename ChildList::const_iterator begin() const { return regions_.begin(); }
 
-  ChildList::const_iterator cbegin() const { return regions_.cbegin(); }
+  typename ChildList::const_iterator cbegin() const { return regions_.cbegin(); }
 
-  ChildList::iterator end() { return regions_.end(); }
+  typename ChildList::iterator end() { return regions_.end(); }
 
-  ChildList::const_iterator end() const { return regions_.end(); }
+  typename ChildList::const_iterator end() const { return regions_.end(); }
 
-  ChildList::const_iterator cend() const { return regions_.cend(); }
+  typename ChildList::const_iterator cend() const { return regions_.cend(); }
 
  private:
   // list of memory regions, indexed by base address.
@@ -262,7 +406,58 @@ class RegionList final {
   // pick a smaller index and try again.
   void FindAllocSpotInGaps(size_t size, uint8_t align_pow2, vaddr_t selected_index,
                            vaddr_t parent_base, vaddr_t parent_size, AllocSpotInfo* alloc_spot_info,
-                           vaddr_t upper_limit = ktl::numeric_limits<vaddr_t>::max()) const;
+                           vaddr_t upper_limit = ktl::numeric_limits<vaddr_t>::max()) const {
+    const vaddr_t align = 1UL << align_pow2;
+    // candidate_spot_count is the number of available slot that we could allocate if we have not
+    // found the spot with index |selected_index| to allocate.
+    size_t candidate_spot_count = 0;
+    // Found indicates whether we have found the spot with index |selected_indexes|.
+    bool found = false;
+    // alloc_spot is the virtual start address of the spot to allocate if we find one.
+    vaddr_t alloc_spot = 0;
+    ForEachGap(
+        [align, align_pow2, size, upper_limit, &candidate_spot_count, &selected_index, &alloc_spot,
+         &found](vaddr_t gap_base, size_t gap_len) -> bool {
+          DEBUG_ASSERT(IS_ALIGNED(gap_base, align));
+          if (gap_len < size || gap_base + size > upper_limit) {
+            // Ignore gap that is too small or out of range.
+            return true;
+          }
+          const size_t clamped_len = ClampRange(gap_base, gap_len, upper_limit);
+          const size_t spots = AllocationSpotsInRange(clamped_len, size, align_pow2);
+          candidate_spot_count += spots;
+
+          if (selected_index < spots) {
+            // If we are able to find the spot with index |selected_indexes| in this gap, then we
+            // have found our pick.
+            found = true;
+            alloc_spot = gap_base + (selected_index << align_pow2);
+            return false;
+          }
+          selected_index -= spots;
+          return true;
+        },
+        align_pow2, parent_base, parent_size);
+    alloc_spot_info->found = found;
+    alloc_spot_info->alloc_spot = alloc_spot;
+    alloc_spot_info->candidate_spot_count = candidate_spot_count;
+    return;
+  }
+
+  // Compute the number of allocation spots that satisfy the alignment within the
+  // given range size, for a range that has a base that satisfies the alignment.
+  static constexpr size_t AllocationSpotsInRange(size_t range_size, size_t alloc_size,
+                                                 uint8_t align_pow2) {
+    return ((range_size - alloc_size) >> align_pow2) + 1;
+  }
+
+  // Returns the size of the given range clamped to the given upper limit. The base
+  // of the range must be within the upper limit.
+  static constexpr size_t ClampRange(vaddr_t range_base, size_t range_size, vaddr_t upper_limit) {
+    DEBUG_ASSERT(range_base <= upper_limit);
+    const size_t range_limit = range_base + range_size;
+    return range_limit <= upper_limit ? range_size : range_size - (range_limit - upper_limit);
+  }
 };
 
 // A representation of a contiguous range of virtual address space
@@ -380,63 +575,9 @@ class VmAddressRegion : public VmAddressRegionOrMapping {
   zx_status_t AllocSpotLocked(size_t size, uint8_t align_pow2, uint arch_mmu_flags, vaddr_t* spot,
                               vaddr_t upper_limit = ktl::numeric_limits<vaddr_t>::max());
 
-  RegionList subregions_;
+  RegionList<VmAddressRegionOrMapping> subregions_;
 
   const char name_[32] = {};
-};
-
-// A VmAddressRegion that always returns errors.  This is used to break a
-// reference cycle between root VMARs and VmAspaces.
-class VmAddressRegionDummy final : public VmAddressRegion {
- public:
-  VmAddressRegionDummy() : VmAddressRegion() {}
-
-  // Used for testing.
-  VmAddressRegionDummy(vaddr_t base, size_t size) : VmAddressRegion() {
-    base_ = base;
-    size_ = size;
-  }
-
-  zx_status_t CreateSubVmar(size_t offset, size_t size, uint8_t align_pow2, uint32_t vmar_flags,
-                            const char* name, fbl::RefPtr<VmAddressRegion>* out) override {
-    return ZX_ERR_BAD_STATE;
-  }
-  zx_status_t CreateVmMapping(size_t mapping_offset, size_t size, uint8_t align_pow2,
-                              uint32_t vmar_flags, fbl::RefPtr<VmObject> vmo, uint64_t vmo_offset,
-                              uint arch_mmu_flags, const char* name,
-                              fbl::RefPtr<VmMapping>* out) override {
-    return ZX_ERR_BAD_STATE;
-  }
-
-  fbl::RefPtr<VmAddressRegionOrMapping> FindRegion(vaddr_t addr) override { return nullptr; }
-
-  zx_status_t Protect(vaddr_t base, size_t size, uint new_arch_mmu_flags) override {
-    return ZX_ERR_BAD_STATE;
-  }
-
-  zx_status_t Unmap(vaddr_t base, size_t size) override { return ZX_ERR_BAD_STATE; }
-
-  void DumpLocked(uint depth, bool verbose) const override { return; }
-
-  zx_status_t PageFault(vaddr_t va, uint pf_flags, PageRequest* page_request) override {
-    // We should never be trying to page fault on this...
-    ASSERT(false);
-    return ZX_ERR_BAD_STATE;
-  }
-
-  size_t AllocatedPages() const override { return 0; }
-
-  zx_status_t Destroy() override { return ZX_ERR_BAD_STATE; }
-
-  ~VmAddressRegionDummy() override {}
-
-  size_t AllocatedPagesLocked() const override { return 0; }
-
-  zx_status_t DestroyLocked() override { return ZX_ERR_BAD_STATE; }
-
-  void Activate() override { return; }
-
-  bool EnumerateChildrenLocked(VmEnumerator* ve, uint depth) override { return false; }
 };
 
 // A representation of the mapping of a VMO into the address space

@@ -43,9 +43,6 @@
 // pointer to a singleton kernel address space
 VmAspace* VmAspace::kernel_aspace_ = nullptr;
 
-// pointer to the dummy root VMAR singleton
-static VmAddressRegion* dummy_root_vmar = nullptr;
-
 // list of all address spaces
 struct VmAspaceListGlobal {};
 static DECLARE_MUTEX(VmAspaceListGlobal) aspace_list_lock;
@@ -63,15 +60,9 @@ void VmAspace::KernelAspaceInitPreHeap() TA_NO_THREAD_SAFETY_ANALYSIS {
   static VmAspace _kernel_aspace(KERNEL_ASPACE_BASE, KERNEL_ASPACE_SIZE, VmAspace::TYPE_KERNEL,
                                  "kernel");
 
-  // the singleton dummy root vmar (used to break a reference cycle in
-  // Destroy())
-  static VmAddressRegionDummy dummy_vmar;
 #if LK_DEBUGLEVEL > 1
   _kernel_aspace.Adopt();
-  dummy_vmar.Adopt();
 #endif
-
-  dummy_root_vmar = &dummy_vmar;
 
   static VmAddressRegion _kernel_root_vmar(_kernel_aspace);
 
