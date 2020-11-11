@@ -166,10 +166,10 @@ extern "C" bool driver_log_severity_enabled_internal(const zx_driver_t* drv,
 }
 
 extern "C" void driver_logvf_internal(const zx_driver_t* drv, fx_log_severity_t flag,
-                                      const char* msg, va_list args) {}
+                                      const char* file, int line, const char* msg, va_list args) {}
 
 extern "C" void driver_logf_internal(const zx_driver_t* drv, fx_log_severity_t flag,
-                                     const char* msg, ...) {}
+                                     const char* file, int line, const char* msg, ...) {}
 
 const char* device_get_name(zx_device_t* device) { return "fake-acpi-battery"; }
 

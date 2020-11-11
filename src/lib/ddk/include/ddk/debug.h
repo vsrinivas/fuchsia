@@ -75,27 +75,27 @@ bool driver_log_severity_enabled_internal(const zx_driver_t* drv, fx_log_severit
 #define zxlog_level_enabled(flag) zxlog_level_enabled_etc(DDK_LOG_##flag)
 
 // Do not use this function directly, use zxlogf() instead.
-void driver_logf_internal(const zx_driver_t* drv, fx_log_severity_t flag, const char* msg, ...)
-    __PRINTFLIKE(3, 4);
+void driver_logf_internal(const zx_driver_t* drv, fx_log_severity_t flag, const char* file,
+                          int line, const char* msg, ...) __PRINTFLIKE(5, 6);
 
 // Do not use this function directly, use zxlogvf() instead.
-void driver_logvf_internal(const zx_driver_t* drv, fx_log_severity_t flag, const char* msg,
-                           va_list args);
+void driver_logvf_internal(const zx_driver_t* drv, fx_log_severity_t flag, const char* file,
+                           int line, const char* msg, va_list args);
 
 // Do not use this macro directly, use zxlogf() instead.
-#define zxlogf_etc(flag, msg...)                                                    \
-  do {                                                                              \
-    if (driver_log_severity_enabled_internal(__zircon_driver_rec__.driver, flag)) { \
-      driver_logf_internal(__zircon_driver_rec__.driver, flag, msg);                \
-    }                                                                               \
+#define zxlogf_etc(flag, msg...)                                                         \
+  do {                                                                                   \
+    if (driver_log_severity_enabled_internal(__zircon_driver_rec__.driver, flag)) {      \
+      driver_logf_internal(__zircon_driver_rec__.driver, flag, __FILE__, __LINE__, msg); \
+    }                                                                                    \
   } while (0)
 
 // Do not use this macro directly, use zxlogvf() instead.
-#define zxlogvf_etc(flag, format, args)                                             \
-  do {                                                                              \
-    if (driver_log_severity_enabled_internal(__zircon_driver_rec__.driver, flag)) { \
-      driver_logvf_internal(__zircon_driver_rec__.driver, flag, format, args);      \
-    }                                                                               \
+#define zxlogvf_etc(flag, format, args)                                                            \
+  do {                                                                                             \
+    if (driver_log_severity_enabled_internal(__zircon_driver_rec__.driver, flag)) {                \
+      driver_logvf_internal(__zircon_driver_rec__.driver, flag, __FILE__, __LINE__, format, args); \
+    }                                                                                              \
   } while (0)
 
 // zxlogf() provides a path to the kernel debuglog gated by log level flags
