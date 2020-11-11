@@ -14,7 +14,7 @@ use pin_utils::pin_mut;
 use std::marker::Unpin;
 use std::sync::{Arc, Mutex};
 use void::Void;
-use wlan_hasher::WlanHasher;
+use wlan_common::hasher::WlanHasher;
 use wlan_inspect;
 use wlan_sme::client::{BssDiscoveryResult, BssInfo, ConnectResult, InfoEvent};
 use wlan_sme::{self as sme, client as client_sme, InfoStream};

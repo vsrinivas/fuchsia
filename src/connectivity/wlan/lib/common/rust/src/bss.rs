@@ -4,6 +4,8 @@
 
 use {
     crate::{
+        format::MacFmt as _,
+        hasher::WlanHasher,
         ie::{self, rsn::suite_filter},
         mac::CapabilityInfo,
     },
@@ -103,6 +105,12 @@ pub trait BssDescriptionExt {
     fn has_wsc_attr(&self, id: ie::wsc::Id) -> bool;
     /// Returns a simplified BssCandidacy which implements PartialOrd.
     fn candidacy(&self) -> BssCandidacy;
+    /// Returns an obfuscated string representation of the BssDescriptionExt suitable
+    /// for protecting the privacy of an SSID and BSSID.
+    fn to_string(&self, hasher: &WlanHasher) -> String;
+    /// Returns a string representation of the BssDescriptionExt. This representation
+    /// is not suitable for protecting the privacy of an SSID and BSSID.
+    fn to_non_obfuscated_string(&self) -> String;
 }
 
 impl BssDescriptionExt for fidl_mlme::BssDescription {
@@ -231,6 +239,28 @@ impl BssDescriptionExt for fidl_mlme::BssDescription {
             0 => BssCandidacy { protection: self.protection(), rssi_dbm: i8::MIN },
             _ => BssCandidacy { protection: self.protection(), rssi_dbm },
         }
+    }
+
+    fn to_string(&self, hasher: &WlanHasher) -> String {
+        format!(
+            "SSID: {}, BSSID: {}, Protection: {}, Pri Chan: {}, Rx dBm: {}",
+            hasher.hash_ssid(&self.ssid),
+            hasher.hash_mac_addr(&self.bssid),
+            self.protection(),
+            self.chan.primary,
+            self.rssi_dbm,
+        )
+    }
+
+    fn to_non_obfuscated_string(&self) -> String {
+        format!(
+            "SSID: {}, BSSID: {}, Protection: {}, Pri Chan: {}, Rx dBm: {}",
+            String::from_utf8(self.ssid.clone()).unwrap_or_else(|_| hex::encode(self.ssid.clone())),
+            self.bssid.to_mac_str(),
+            self.protection(),
+            self.chan.primary,
+            self.rssi_dbm,
+        )
     }
 }
 

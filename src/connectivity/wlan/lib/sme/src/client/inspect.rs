@@ -13,9 +13,9 @@ use {
     parking_lot::Mutex,
     wlan_common::{
         format::MacFmt,
+        hasher::WlanHasher,
         ie::{self, wsc},
     },
-    wlan_hasher::WlanHasher,
     wlan_inspect::IfaceTree,
 };
 

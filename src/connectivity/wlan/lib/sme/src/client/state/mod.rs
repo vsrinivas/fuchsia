@@ -1223,8 +1223,9 @@ mod tests {
     use futures::channel::{mpsc, oneshot};
     use link_state::{EstablishingRsna, LinkUp};
     use std::sync::Arc;
-    use wlan_common::{assert_variant, fake_bss, ie::rsn::rsne::Rsne, RadioConfig};
-    use wlan_hasher::WlanHasher;
+    use wlan_common::{
+        assert_variant, fake_bss, hasher::WlanHasher, ie::rsn::rsne::Rsne, RadioConfig,
+    };
     use wlan_rsn::{key::exchange::Key, rsna::SecAssocStatus};
     use wlan_rsn::{
         rsna::{SecAssocUpdate, UpdateSink},

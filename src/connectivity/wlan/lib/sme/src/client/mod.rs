@@ -52,10 +52,10 @@ use {
         self,
         bss::{BssDescriptionExt as _, Protection as BssProtection},
         format::MacFmt,
+        hasher::WlanHasher,
         mac::MacAddr,
         RadioConfig,
     },
-    wlan_hasher::WlanHasher,
     wlan_inspect::wrappers::InspectWlanChan,
     wlan_rsn::auth,
 };
@@ -394,18 +394,6 @@ impl ClientSme {
     }
 }
 
-// TODO(fxbug.dev/63495): Move this function to BssDescriptionExt.
-fn bss_to_string(bss: &BssDescription, hasher: &WlanHasher) -> String {
-    format!(
-        "SSID: {}, BSSID: {}, Protection: {}, Pri Chan: {}, Rx dBm: {}",
-        hasher.hash_ssid(&bss.ssid),
-        hasher.hash_mac_addr(&&bss.bssid),
-        bss.protection(),
-        bss.chan.primary,
-        bss.rssi_dbm,
-    )
-}
-
 struct ViableBss<'a> {
     bss: &'a BssDescription,
     protection: Protection,
@@ -450,7 +438,7 @@ impl super::Station for ClientSme {
                     scan::ScanResult::JoinScanFinished { token, result: Ok(bss_list) } => {
                         info!("Scan results:");
                         for bss in &bss_list {
-                            info!("  {}", bss_to_string(bss, &self.context.inspect.hasher));
+                            info!("  {}", bss.to_string(&self.context.inspect.hasher));
                         }
 
                         let mut compatible_bss_iter =
@@ -502,10 +490,7 @@ impl super::Station for ClientSme {
                                     let best_bss_protection = best_compatible_bss.protection;
 
                                     info!("Attempting to connect to:");
-                                    info!(
-                                        "  {}",
-                                        bss_to_string(&best_bss, &self.context.inspect.hasher)
-                                    );
+                                    info!("  {}", best_bss.to_string(&self.context.inspect.hasher));
 
                                     self.context
                                         .info
@@ -676,7 +661,7 @@ fn get_protection(
     hasher: &WlanHasher,
 ) -> Result<Protection, anyhow::Error> {
     let ssid_hash = hasher.hash_ssid(&bss.ssid);
-    let bssid_hash = hasher.hash_mac_addr(&&bss.bssid);
+    let bssid_hash = hasher.hash_mac_addr(&bss.bssid);
 
     match bss.protection() {
         wlan_common::bss::Protection::Open => match credential {

@@ -3,13 +3,10 @@
 // found in the LICENSE file.
 
 use {
+    crate::format::{MacFmt, SsidFmt},
     mundane::{
         hash::{Digest, Sha256},
         hmac::hmac,
-    },
-    wlan_common::{
-        format::{MacFmt, SsidFmt},
-        mac::MacAddr,
     },
 };
 
@@ -28,11 +25,11 @@ impl WlanHasher {
         hex::encode(hmac::<Sha256>(&self.hash_key, bytes).bytes())
     }
 
-    pub fn hash_mac_addr(&self, addr: &MacAddr) -> String {
-        addr.to_mac_str_partial_hashed(|bytes| self.hash(bytes))
+    pub fn hash_mac_addr(&self, mac_addr: &impl MacFmt) -> String {
+        mac_addr.to_mac_str_partial_hashed(|bytes| self.hash(bytes))
     }
 
-    pub fn hash_ssid(&self, ssid: &[u8]) -> String {
+    pub fn hash_ssid(&self, ssid: &impl SsidFmt) -> String {
         ssid.to_ssid_str_hashed(|bytes| self.hash(bytes))
     }
 }
@@ -41,11 +38,29 @@ impl WlanHasher {
 mod tests {
     use super::*;
 
-    const HASH_KEY: [u8; 8] = [1, 2, 3, 4, 5, 6, 7, 8];
+    const HASH_KEY_X: [u8; 8] = [1, 2, 3, 4, 5, 6, 7, 8];
+    const HASH_KEY_Y: [u8; 8] = [0, 2, 3, 4, 5, 6, 7, 8];
+
+    #[test]
+    fn test_hasher() {
+        let hasher_x = WlanHasher::new(HASH_KEY_X);
+        let hasher_y = WlanHasher::new(HASH_KEY_Y);
+
+        // The same hasher should always get the same result for the same bytes.
+        assert_eq!(hasher_x.hash(&[0xa]), hasher_x.hash(&[0xa]));
+
+        // The same hasher should not get the same result for two different sets
+        // of bytes with very high probability.
+        assert_ne!(hasher_x.hash(&[0xa]), hasher_x.hash(&[0xb]));
+
+        // A different hash key should not get the same result for same bytes
+        // with very high probability.
+        assert_ne!(hasher_x.hash(&[0xa]), hasher_y.hash(&[0xa]));
+    }
 
     #[test]
     fn test_hash_mac_addr() {
-        let hasher = WlanHasher::new(HASH_KEY);
+        let hasher = WlanHasher::new(HASH_KEY_X);
         let mac_addr = [0x11, 0x22, 0x33, 0x44, 0x55, 0x66];
         let hashed_str = hasher.hash_mac_addr(&mac_addr);
         assert!(hashed_str.starts_with("11:22:33:"));
@@ -54,7 +69,7 @@ mod tests {
 
     #[test]
     fn test_hash_ssid() {
-        let hasher = WlanHasher::new(HASH_KEY);
+        let hasher = WlanHasher::new(HASH_KEY_X);
         let ssid_foo = String::from("foo").into_bytes();
         let ssid_bar = String::from("bar").into_bytes();
         assert!(!hasher.hash_ssid(&ssid_foo).contains("foo"));

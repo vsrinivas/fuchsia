@@ -41,7 +41,6 @@ rustc_binary("bin") {
     "//sdk/fidl/fuchsia.wlan.tap:fuchsia.wlan.tap-rustc",
     "//src/connectivity/wlan/lib/common/rust/:wlan-common",
     "//src/connectivity/wlan/lib/eapol",
-    "//src/connectivity/wlan/lib/hasher:wlan-hasher",
     "//src/connectivity/wlan/lib/inspect:wlan-inspect",
     "//src/connectivity/wlan/lib/isolated-devmgr",
     "//src/connectivity/wlan/lib/rsn:wlan-rsn",

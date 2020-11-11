@@ -19,7 +19,7 @@ use {
     pin_utils::pin_mut,
     std::{marker::Unpin, sync::Arc},
     void::Void,
-    wlan_hasher::WlanHasher,
+    wlan_common::hasher::WlanHasher,
     wlan_inspect,
     wlan_sme::{self, clone_utils},
 };

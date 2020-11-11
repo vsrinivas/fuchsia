@@ -41,7 +41,7 @@ pub trait SsidFmt {
         H: FnOnce(&[u8]) -> String;
 }
 
-impl SsidFmt for [u8] {
+impl SsidFmt for Vec<u8> {
     fn to_ssid_str_hashed<H>(&self, hash: H) -> String
     where
         H: FnOnce(&[u8]) -> String,

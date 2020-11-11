@@ -6,4 +6,4 @@ pub mod iface_mgr;
 pub mod wrappers;
 
 pub use iface_mgr::{IfaceTree, IfaceTreeHolder, IfacesTrees};
-pub use wlan_hasher::WlanHasher;
+pub use wlan_common::hasher::WlanHasher;

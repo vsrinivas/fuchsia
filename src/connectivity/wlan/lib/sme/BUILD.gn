@@ -19,7 +19,6 @@ rustc_library("wlan-sme") {
     "//sdk/fidl/fuchsia.wlan.sme:fuchsia.wlan.sme-rustc",
     "//src/connectivity/wlan/lib/common/rust:wlan-common",
     "//src/connectivity/wlan/lib/eapol",
-    "//src/connectivity/wlan/lib/hasher:wlan-hasher",
     "//src/connectivity/wlan/lib/inspect:wlan-inspect",
     "//src/connectivity/wlan/lib/rsn:wlan-rsn",
     "//src/connectivity/wlan/lib/sae:wlan-sae",

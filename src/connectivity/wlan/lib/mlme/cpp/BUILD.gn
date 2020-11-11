@@ -81,6 +81,11 @@ source_set("mlme") {
     "//src/connectivity/wlan/lib/common/cpp:common",
     "//src/connectivity/wlan/lib/mlme/rust/c-binding:wlan-mlme-c",
     "//src/devices/lib/dev-operation",
+
+    # TODO(fxbug.dev/38599): The mundane dependency here is purely due to
+    # a problem with transitive Rust static library dependencies when linking
+    # C++ programs
+    "//src/lib/mundane",
     "//src/lib/timekeeper",
     "//src/lib/timekeeper:system",
     "//zircon/public/lib/bitmap",

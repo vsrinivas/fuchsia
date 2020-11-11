@@ -14,7 +14,7 @@ use {
     parking_lot::Mutex,
     paste, rand,
     std::{collections::HashMap, sync::Arc},
-    wlan_hasher::WlanHasher,
+    wlan_common::hasher::WlanHasher,
     wlan_inspect::{IfaceTreeHolder, IfacesTrees},
 };
 
