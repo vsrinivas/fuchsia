@@ -342,6 +342,25 @@ impl TryPackAs<SpinelDataWlen> for [u8] {
     }
 }
 
+impl TryPackAs<SpinelDataWlen> for &[u8] {
+    fn pack_as_len(&self) -> std::io::Result<usize> {
+        Ok(self.len() + 2)
+    }
+
+    fn try_pack_as<T: std::io::Write + ?Sized>(&self, buffer: &mut T) -> std::io::Result<usize> {
+        let bytes = *self;
+        let len = bytes.len() + 2;
+
+        if len > std::u16::MAX as usize {
+            Err(io::ErrorKind::InvalidInput.into())
+        } else {
+            buffer.write_u16::<LittleEndian>((len - 2) as u16)?;
+            buffer.write_all(bytes)?;
+            Ok(len)
+        }
+    }
+}
+
 impl TryPackAs<SpinelDataWlen> for Vec<u8> {
     fn pack_as_len(&self) -> std::io::Result<usize> {
         Ok(self.len() + 2)
@@ -692,6 +711,16 @@ where
 mod tests {
     use super::*;
     use matches::assert_matches;
+
+    /// A verification that Spinel structs with
+    /// both `d` and `D` fields compile correctly.
+    #[allow(unused)]
+    #[spinel_packed("dD")]
+    #[derive(Debug, Hash, Clone, Eq, PartialEq)]
+    pub struct NetworkPacket<'a> {
+        pub packet: &'a [u8],
+        pub metadata: &'a [u8],
+    }
 
     #[test]
     fn test_uint_pack() {
