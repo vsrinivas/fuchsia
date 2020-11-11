@@ -90,6 +90,7 @@ fn generate_fake_test_proxy_method(
     }
 }
 
+// TODO(boetger): break this up to make testing easier.
 pub fn ffx_plugin(input: ItemFn, proxies: ProxyMap) -> Result<TokenStream, Error> {
     let mut uses_daemon = false;
     let mut uses_remote = false;
@@ -177,8 +178,43 @@ pub fn ffx_plugin(input: ItemFn, proxies: ProxyMap) -> Result<TokenStream, Error
                                                     fidl::endpoints::create_proxy::<<#path as fidl::endpoints::Proxy>::Service>()?;
                                                 let #selector =
                                                     selectors::parse_selector(#mapping_lit)?;
-                                                let #output_fut = remote_proxy
-                                                    .connect(#selector, #server_end.into_channel());
+                                                let #output_fut;
+                                                {
+                                                    // This needs to be a block in order for this `use` to avoid conflicting with a plugins own `use` for this trait.
+                                                    use futures::TryFutureExt;
+                                                    #output_fut = remote_proxy
+                                                    .connect(#selector, #server_end.into_channel())
+                                                    .map_ok_or_else(|e| Result::<(), anyhow::Error>::Err(anyhow::anyhow!(e)), |fidl_result| {
+                                                        fidl_result
+                                                        .map(|_| ())
+                                                        .map_err(|e| {
+                                                            match e {
+                                                                fidl_fuchsia_developer_remotecontrol::ConnectError::NoMatchingServices => {
+                                                                    ffx_core::ffx_error!(format!(
+"The plugin service selector '{}' did not match any services on the target.
+If you are not developing this plugin, then this is a bug. Please report it at http://fxbug.dev/new?template=ffx+User+Bug.
+
+Plugin developers: you can use `ffx component select '<selector>'` to explore the component topology of your target device and fix this selector.",
+                                                                    #mapping)).into()
+                                                                }
+                                                                fidl_fuchsia_developer_remotecontrol::ConnectError::MultipleMatchingServices => {
+                                                                    ffx_core::ffx_error!(
+                                                                        format!(
+"Plugin service selectors must match exactly one service, but '{}' matched multiple services on the target.
+If you are not developing this plugin, then this is a bug. Please report it at http://fxbug.dev/new?template=ffx+User+Bug.
+
+Plugin developers: you can use `ffx component select '{}'` to see which services matched the provided selector.",
+                                                                            #mapping, #mapping)).into()
+                                                                }
+                                                                _ => {
+                                                                    anyhow::anyhow!(
+                                                                        format!("This service dependency exists but connecting to it failed with error {:?}. Selector: {}.", e, #mapping)
+                                                                    )
+                                                                }
+                                                            }
+                                                        })
+                                                    });
+                                                }
                                             });
                                             args.push(output);
                                             futures.push(output_fut);
@@ -267,13 +303,13 @@ pub fn ffx_plugin(input: ItemFn, proxies: ProxyMap) -> Result<TokenStream, Error
     let implementation = if proxies_to_generate.len() > 0 {
         quote! {
             #preamble
-            match futures::try_join!(#futures) {
+                match futures::try_join!(#futures) {
                 Ok(_) => {
                     #method(#args)#asyncness
                 },
                 Err(e) => {
                     log::error!("There was an error getting proxies from the Remote Control Service: {}", e);
-                    anyhow::bail!("There was an error getting proxies from the Remote Control Service: {}", e)
+                    anyhow::bail!(e)
                 }
             }
         }
@@ -448,7 +484,7 @@ impl Parse for ProxyMap {
                         if !is_v1_moniker(selection.span(), moniker)?
                             && !is_expose_dir(selection.span(), subdir)?
                         {
-                            return Err(Error::new(selection.span(), format!("Selectors for V2 in plugin definitions must use `expose`, not `out`. See fxbug.dev/60910.")));
+                            return Err(Error::new(selection.span(), format!("Selectors for V2 components in plugin definitions must use `expose`, not `out`. See fxbug.dev/60910.")));
                         }
                         map.insert(qualified_name(&path), selection.value());
                     }
@@ -1054,15 +1090,52 @@ mod test {
                 let (test, test_server_end) =
                     fidl::endpoints::create_proxy::<<TestProxy as fidl::endpoints::Proxy>::Service>()?;
                 let test_selector = selectors::parse_selector("test")?;
-                let test_fut = remote_proxy
-                    .connect(test_selector, test_server_end.into_channel());
+                let test_fut;
+                {
+                    // This needs to be a block in order for this `use` to avoid conflicting with a plugins own `use` for this trait.
+                    use futures::TryFutureExt;
+                    test_fut = remote_proxy
+                    .connect(test_selector, test_server_end.into_channel())
+                    .map_ok_or_else(|e| Result::<(), anyhow::Error>::Err(anyhow::anyhow!(e)), |fidl_result| {
+                        fidl_result
+                        .map(|_| ())
+                        .map_err(|e| {
+                            match e {
+                                fidl_fuchsia_developer_remotecontrol::ConnectError::NoMatchingServices => {
+                                    ffx_core::ffx_error!(
+                                        format!(
+"The plugin service selector '{}' did not match any services on the target.
+If you are not developing this plugin, then this is a bug. Please report it at http://fxbug.dev/new?template=ffx+User+Bug.
+
+Plugin developers: you can use `ffx component select '<selector>'` to explore the component topology of your target device and fix this selector.",
+                                            "test")).into()
+                                }
+                                fidl_fuchsia_developer_remotecontrol::ConnectError::MultipleMatchingServices => {
+                                    ffx_core::ffx_error!(
+                                        format!(
+"Plugin service selectors must match exactly one service, but '{}' matched multiple services on the target.
+If you are not developing this plugin, then this is a bug. Please report it at http://fxbug.dev/new?template=ffx+User+Bug.
+
+Plugin developers: you can use `ffx component select '{}'` to see which services matched the provided selector.",
+                                            "test", "test")).into()
+                                }
+                                _ => {
+                                    anyhow::anyhow!(
+                                        format!("This service dependency exists but connecting to it failed with error {:?}. Selector: {}.", e, "test")
+                                    )
+                                }
+                            }
+                        })
+                    });
+                }
+
                 match futures::try_join!(test_fut) {
                     Ok(_) => {
                         echo(test, cmd).await
                     },
                     Err(e) => {
                         log::error!("There was an error getting proxies from the Remote Control Service: {}", e);
-                        anyhow::bail!("There was an error getting proxies from the Remote Control Service: {}", e)
+                        anyhow::bail!(e)
                     }
                 }
             }
@@ -1135,20 +1208,92 @@ mod test {
                 let (foo, foo_server_end) =
                     fidl::endpoints::create_proxy::<<FooProxy as fidl::endpoints::Proxy>::Service>()?;
                 let foo_selector = selectors::parse_selector("foo")?;
-                let foo_fut = remote_proxy
-                    .connect(foo_selector, foo_server_end.into_channel());
+                let foo_fut;
+                {
+                    // This needs to be a block in order for this `use` to avoid conflicting with a plugins own `use` for this trait.
+                    use futures::TryFutureExt;
+                    foo_fut = remote_proxy
+                    .connect(foo_selector, foo_server_end.into_channel())
+                    .map_ok_or_else(|e| Result::<(), anyhow::Error>::Err(anyhow::anyhow!(e)), |fidl_result| {
+                        fidl_result
+                        .map(|_| ())
+                        .map_err(|e| {
+                            match e {
+                                fidl_fuchsia_developer_remotecontrol::ConnectError::NoMatchingServices => {
+                                    ffx_core::ffx_error!(
+                                        format!(
+"The plugin service selector '{}' did not match any services on the target.
+If you are not developing this plugin, then this is a bug. Please report it at http://fxbug.dev/new?template=ffx+User+Bug.
+
+Plugin developers: you can use `ffx component select '<selector>'` to explore the component topology of your target device and fix this selector.",
+                                            "foo")).into()
+                                }
+                                fidl_fuchsia_developer_remotecontrol::ConnectError::MultipleMatchingServices => {
+                                    ffx_core::ffx_error!(
+                                        format!(
+"Plugin service selectors must match exactly one service, but '{}' matched multiple services on the target.
+If you are not developing this plugin, then this is a bug. Please report it at http://fxbug.dev/new?template=ffx+User+Bug.
+
+Plugin developers: you can use `ffx component select '{}'` to see which services matched the provided selector.",
+                                            "foo", "foo")).into()
+                                }
+                                _ => {
+                                    anyhow::anyhow!(
+                                        format!("This service dependency exists but connecting to it failed with error {:?}. Selector: {}.", e, "foo")
+                                    )
+                                }
+                            }
+                        })
+                    });
+                }
                 let (test, test_server_end) =
                     fidl::endpoints::create_proxy::<<TestProxy as fidl::endpoints::Proxy>::Service>()?;
                 let test_selector = selectors::parse_selector("test")?;
-                let test_fut = remote_proxy
-                    .connect(test_selector, test_server_end.into_channel());
+                let test_fut;
+                {
+                    // This needs to be a block in order for this `use` to avoid conflicting with a plugins own `use` for this trait.
+                    use futures::TryFutureExt;
+                    test_fut = remote_proxy
+                    .connect(test_selector, test_server_end.into_channel())
+                    .map_ok_or_else(|e| Result::<(), anyhow::Error>::Err(anyhow::anyhow!(e)), |fidl_result| {
+                        fidl_result
+                        .map(|_| ())
+                        .map_err(|e| {
+                            match e {
+                                fidl_fuchsia_developer_remotecontrol::ConnectError::NoMatchingServices => {
+                                    ffx_core::ffx_error!(
+                                        format!(
+"The plugin service selector '{}' did not match any services on the target.
+If you are not developing this plugin, then this is a bug. Please report it at http://fxbug.dev/new?template=ffx+User+Bug.
+
+Plugin developers: you can use `ffx component select '<selector>'` to explore the component topology of your target device and fix this selector.",
+                                            "test")).into()
+                                }
+                                fidl_fuchsia_developer_remotecontrol::ConnectError::MultipleMatchingServices => {
+                                    ffx_core::ffx_error!(
+                                        format!(
+"Plugin service selectors must match exactly one service, but '{}' matched multiple services on the target.
+If you are not developing this plugin, then this is a bug. Please report it at http://fxbug.dev/new?template=ffx+User+Bug.
+
+Plugin developers: you can use `ffx component select '{}'` to see which services matched the provided selector.",
+                                            "test", "test")).into()
+                                }
+                                _ => {
+                                    anyhow::anyhow!(
+                                        format!("This service dependency exists but connecting to it failed with error {:?}. Selector: {}.", e, "test")
+                                    )
+                                }
+                            }
+                        })
+                    });
+                }
                 match futures::try_join!(foo_fut, test_fut) {
                     Ok(_) => {
                         echo(foo, cmd, test).await
                     },
                     Err(e) => {
                         log::error!("There was an error getting proxies from the Remote Control Service: {}", e);
-                        anyhow::bail!("There was an error getting proxies from the Remote Control Service: {}", e)
+                        anyhow::bail!(e)
                     }
                 }
             }
@@ -1242,20 +1387,92 @@ mod test {
                     let (foo, foo_server_end) =
                         fidl::endpoints::create_proxy::<<FooProxy as fidl::endpoints::Proxy>::Service>()?;
                     let foo_selector = selectors::parse_selector("foo")?;
-                    let foo_fut = remote_proxy
-                        .connect(foo_selector, foo_server_end.into_channel());
+                let foo_fut;
+                {
+                    // This needs to be a block in order for this `use` to avoid conflicting with a plugins own `use` for this trait.
+                    use futures::TryFutureExt;
+                    foo_fut = remote_proxy
+                    .connect(foo_selector, foo_server_end.into_channel())
+                    .map_ok_or_else(|e| Result::<(), anyhow::Error>::Err(anyhow::anyhow!(e)), |fidl_result| {
+                        fidl_result
+                        .map(|_| ())
+                        .map_err(|e| {
+                            match e {
+                                fidl_fuchsia_developer_remotecontrol::ConnectError::NoMatchingServices => {
+                                    ffx_core::ffx_error!(
+                                        format!(
+"The plugin service selector '{}' did not match any services on the target.
+If you are not developing this plugin, then this is a bug. Please report it at http://fxbug.dev/new?template=ffx+User+Bug.
+
+Plugin developers: you can use `ffx component select '<selector>'` to explore the component topology of your target device and fix this selector.",
+                                            "foo")).into()
+                                }
+                                fidl_fuchsia_developer_remotecontrol::ConnectError::MultipleMatchingServices => {
+                                    ffx_core::ffx_error!(
+                                        format!(
+"Plugin service selectors must match exactly one service, but '{}' matched multiple services on the target.
+If you are not developing this plugin, then this is a bug. Please report it at http://fxbug.dev/new?template=ffx+User+Bug.
+
+Plugin developers: you can use `ffx component select '{}'` to see which services matched the provided selector.",
+                                            "foo", "foo")).into()
+                                }
+                                _ => {
+                                    anyhow::anyhow!(
+                                        format!("This service dependency exists but connecting to it failed with error {:?}. Selector: {}.", e, "foo")
+                                    )
+                                }
+                            }
+                        })
+                    });
+                }
                     let (test, test_server_end) =
                         fidl::endpoints::create_proxy::<<TestProxy as fidl::endpoints::Proxy>::Service>()?;
                     let test_selector = selectors::parse_selector("test")?;
-                    let test_fut = remote_proxy
-                        .connect(test_selector, test_server_end.into_channel());
+                let test_fut;
+                {
+                    // This needs to be a block in order for this `use` to avoid conflicting with a plugins own `use` for this trait.
+                    use futures::TryFutureExt;
+                    test_fut = remote_proxy
+                    .connect(test_selector, test_server_end.into_channel())
+                    .map_ok_or_else(|e| Result::<(), anyhow::Error>::Err(anyhow::anyhow!(e)), |fidl_result| {
+                        fidl_result
+                        .map(|_| ())
+                        .map_err(|e| {
+                            match e {
+                                fidl_fuchsia_developer_remotecontrol::ConnectError::NoMatchingServices => {
+                                    ffx_core::ffx_error!(
+                                        format!(
+"The plugin service selector '{}' did not match any services on the target.
+If you are not developing this plugin, then this is a bug. Please report it at http://fxbug.dev/new?template=ffx+User+Bug.
+
+Plugin developers: you can use `ffx component select '<selector>'` to explore the component topology of your target device and fix this selector.",
+                                            "test")).into()
+                                }
+                                fidl_fuchsia_developer_remotecontrol::ConnectError::MultipleMatchingServices => {
+                                    ffx_core::ffx_error!(
+                                        format!(
+"Plugin service selectors must match exactly one service, but '{}' matched multiple services on the target.
+If you are not developing this plugin, then this is a bug. Please report it at http://fxbug.dev/new?template=ffx+User+Bug.
+
+Plugin developers: you can use `ffx component select '{}'` to see which services matched the provided selector.",
+                                            "test", "test")).into()
+                                }
+                                _ => {
+                                    anyhow::anyhow!(
+                                        format!("This service dependency exists but connecting to it failed with error {:?}. Selector: {}.", e, "test")
+                                    )
+                                }
+                            }
+                        })
+                    });
+                }
                     match futures::try_join!(foo_fut, test_fut) {
                         Ok(_) => {
                             echo(foo, cmd, test).await
                         },
                         Err(e) => {
                             log::error!("There was an error getting proxies from the Remote Control Service: {}", e);
-                            anyhow::bail!("There was an error getting proxies from the Remote Control Service: {}", e)
+                            anyhow::bail!(e)
                         }
                     }
                 } else {
