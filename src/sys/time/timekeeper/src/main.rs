@@ -10,7 +10,6 @@ mod clock_manager;
 mod diagnostics;
 mod enums;
 mod estimator;
-mod network;
 mod notifier;
 mod rtc;
 mod time_source;
@@ -23,7 +22,6 @@ use {
             CobaltDiagnostics, CompositeDiagnostics, Diagnostics, Event, InspectDiagnostics,
         },
         enums::{InitialClockState, InitializeRtcOutcome, Role, StartClockSource, Track},
-        network::{event_stream, wait_for_network_available},
         notifier::Notifier,
         rtc::{Rtc, RtcImpl},
         time_source::{PushTimeSource, TimeSource},
@@ -37,7 +35,7 @@ use {
     fuchsia_zircon as zx,
     futures::{
         future::{self, OptionFuture},
-        StreamExt as _,
+        FutureExt as _, StreamExt as _,
     },
     log::{info, warn},
     std::sync::Arc,
@@ -150,17 +148,13 @@ async fn main() -> Result<(), Error> {
     let interface_state_service =
         fuchsia_component::client::connect_to_service::<finterfaces::StateMarker>()
             .context("failed to connect to fuchsia.net.interfaces/State")?;
-    let interface_event_stream = event_stream(&interface_state_service)?;
+    let internet_reachable =
+        fidl_fuchsia_net_interfaces_ext::wait_for_reachability(&interface_state_service)
+            .map(|r| r.context("failed to wait for network reachability"));
 
     fasync::Task::spawn(async move {
-        maintain_utc(
-            primary_track,
-            monitor_track,
-            optional_rtc,
-            interface_event_stream,
-            diagnostics,
-        )
-        .await;
+        maintain_utc(primary_track, monitor_track, optional_rtc, internet_reachable, diagnostics)
+            .await;
     })
     .detach();
 
@@ -250,16 +244,16 @@ async fn set_clock_from_rtc<R: Rtc, D: Diagnostics>(
 /// Checks for network connectivity before attempting any time updates.
 ///
 /// Maintains the utc clock using updates received over the `fuchsia.time.external` protocols.
-async fn maintain_utc<R: 'static, T: 'static, S: 'static, D: 'static>(
+async fn maintain_utc<R: 'static, T: 'static, F: 'static, D: 'static>(
     mut primary: PrimaryTrack<T>,
     optional_monitor: Option<MonitorTrack<T>>,
     optional_rtc: Option<R>,
-    interface_event_stream: S,
+    internet_reachable: F,
     diagnostics: Arc<D>,
 ) where
     R: Rtc,
     T: TimeSource,
-    S: futures::Stream<Item = Result<finterfaces::Event, Error>>,
+    F: futures::Future<Output = Result<(), Error>>,
     D: Diagnostics,
 {
     info!("record the state at initialization.");
@@ -311,9 +305,9 @@ async fn maintain_utc<R: 'static, T: 'static, S: 'static, D: 'static>(
     });
 
     info!("waiting for network connectivity before attempting network time sync...");
-    match wait_for_network_available(interface_event_stream).await {
+    match internet_reachable.await {
         Ok(()) => diagnostics.record(Event::NetworkAvailable),
-        Err(why) => warn!("failed to wait for network, attempted to sync time anyway: {:?}", why),
+        Err(why) => warn!("failed to wait for network, attempting to sync time anyway: {:?}", why),
     }
 
     info!("network connectivity check complete, launching clock managers...");
@@ -387,7 +381,7 @@ mod tests {
         let (utc, utc_requests) =
             fidl::endpoints::create_proxy_and_stream::<ftime::UtcMarker>().unwrap();
         let monotonic_ref = zx::Time::get_monotonic();
-        let interface_event_stream = network::create_stream_with_valid_interface();
+        let internet_reachable = future::ok(());
 
         // Spawning test notifier and verifying initial state
         let notifier = Notifier::new(ftime::UtcSource::Backstop);
@@ -420,7 +414,7 @@ mod tests {
                 ]),
             }),
             Some(rtc.clone()),
-            interface_event_stream,
+            internet_reachable,
             Arc::clone(&diagnostics),
         ));
 
@@ -476,7 +470,7 @@ mod tests {
             status: ftexternal::Status::Network,
         }]);
 
-        let interface_event_stream = network::create_stream_with_valid_interface();
+        let internet_reachable = future::ok(());
 
         // Spawning test notifier and verifying the initial state
         let notifier = Notifier::new(ftime::UtcSource::Backstop);
@@ -489,7 +483,7 @@ mod tests {
             PrimaryTrack { clock: Arc::clone(&clock), time_source, notifier: notifier.clone() },
             None,
             Some(rtc.clone()),
-            interface_event_stream,
+            internet_reachable,
             Arc::clone(&diagnostics),
         )
         .boxed();
@@ -528,7 +522,7 @@ mod tests {
             status: ftexternal::Status::Network,
         }]);
 
-        let interface_event_stream = network::create_stream_with_valid_interface();
+        let internet_reachable = future::ok(());
 
         // Spawning test notifier and verifying the initial state
         let notifier = Notifier::new(ftime::UtcSource::Backstop);
@@ -541,7 +535,7 @@ mod tests {
             PrimaryTrack { clock: Arc::clone(&clock), time_source, notifier: notifier.clone() },
             None,
             Some(rtc.clone()),
-            interface_event_stream,
+            internet_reachable,
             Arc::clone(&diagnostics),
         )
         .boxed();
@@ -591,7 +585,7 @@ mod tests {
             status: ftexternal::Status::Network,
         }]);
 
-        let interface_event_stream = network::create_stream_with_valid_interface();
+        let internet_reachable = future::ok(());
 
         // Spawning test notifier and verifying the initial state
         let notifier = Notifier::new(ftime::UtcSource::Backstop);
@@ -604,7 +598,7 @@ mod tests {
             PrimaryTrack { clock: Arc::clone(&clock), time_source, notifier: notifier.clone() },
             None,
             Some(rtc.clone()),
-            interface_event_stream,
+            internet_reachable,
             Arc::clone(&diagnostics),
         )
         .boxed();

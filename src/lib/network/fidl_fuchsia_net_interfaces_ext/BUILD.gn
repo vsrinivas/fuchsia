@@ -9,8 +9,10 @@ rustc_library("fidl_fuchsia_net_interfaces_ext") {
   with_unit_tests = true
   edition = "2018"
   deps = [
+    "//sdk/fidl/fuchsia.hardware.network:fuchsia.hardware.network-rustc",
     "//sdk/fidl/fuchsia.net:fuchsia.net-rustc",
     "//sdk/fidl/fuchsia.net.interfaces:fuchsia.net.interfaces-rustc",
+    "//src/connectivity/lib/net-types",
     "//src/lib/async-utils",
     "//src/lib/fidl/rust/fidl",
     "//third_party/rust_crates:anyhow",
@@ -18,11 +20,15 @@ rustc_library("fidl_fuchsia_net_interfaces_ext") {
     "//third_party/rust_crates:thiserror",
   ]
   test_deps = [
+    "//sdk/fidl/fuchsia.hardware.network:fuchsia.hardware.network-rustc",
     "//src/connectivity/lib/net-declare",
     "//src/lib/fuchsia-async",
   ]
 
-  sources = [ "src/lib.rs" ]
+  sources = [
+    "src/lib.rs",
+    "src/reachability.rs",
+  ]
 }
 
 fuchsia_unittest_package("fidl-fuchsia-net-interfaces-ext-tests") {
