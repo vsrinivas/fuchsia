@@ -866,7 +866,6 @@ config("Wno-conversion") {
     "//src/storage/bin/dd/*",
     "//src/storage/blobfs/*",
     "//src/storage/blobfs/test/*",
-    "//src/storage/lib/watchdog/*",
     "//src/storage/minfs/*",
     "//src/storage/volume_image/ftl/*",
     "//src/storage/volume_image/utils/*",
