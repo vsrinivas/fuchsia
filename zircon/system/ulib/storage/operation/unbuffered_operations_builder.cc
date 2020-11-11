@@ -28,6 +28,7 @@ void UnbufferedOperationsBuilder::Add(const UnbufferedOperation& new_operation) 
   // Don't merge operations that don't use a VMO.
   if (new_operation.data != nullptr) {
     operations_.push_back(new_operation);
+    block_count_ += new_operation.op.length;
     return;
   }
 

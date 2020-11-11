@@ -94,15 +94,6 @@ constexpr uint64_t kBlobfsDefaultInodeCount = 10240;
 
 constexpr size_t kMinimumDataBlocks = 2;
 
-#ifdef __Fuchsia__
-// Returns the size of the writeback buffer in filesystem blocks.
-inline size_t WriteBufferSize() {
-  // Hardcoded to 10 MB; may be replaced by a more device-specific option
-  // in the future.
-  return 10 * (1 << 20) / kBlobfsBlockSize;
-}
-#endif
-
 struct __PACKED Superblock {
   uint64_t magic0;
   uint64_t magic1;

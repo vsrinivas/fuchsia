@@ -589,8 +589,9 @@ TEST(UnbufferedOperationsBuilderTest, RequestCoalescedWithOnlyOneOfTwoMergableRe
 TEST(UnbufferedOperationBuilderTest, OperationsWithPointers) {
   UnbufferedOperationsBuilder builder;
   const char* buf = "foo";
-  builder.Add({.data = buf, .op = {.type = OperationType::kWrite, .dev_offset = 1}});
-  builder.Add({.data = buf, .op = {.type = OperationType::kWrite, .dev_offset = 2}});
+  builder.Add({.data = buf, .op = {.type = OperationType::kWrite, .dev_offset = 1, .length = 7}});
+  builder.Add({.data = buf, .op = {.type = OperationType::kWrite, .dev_offset = 2, .length = 13}});
+  EXPECT_EQ(builder.BlockCount(), 20ul);
   EXPECT_THAT(builder.TakeOperations(),
               ElementsAre(AllOf(Field(&UnbufferedOperation::data, buf),
                                 Field(&UnbufferedOperation::op,

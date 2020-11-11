@@ -144,7 +144,12 @@ zx_status_t Blob::WriteNullBlob() {
   return ZX_OK;
 }
 
-zx_status_t Blob::PrepareWrite(uint64_t size_data) {
+zx_status_t Blob::PrepareWrite(uint64_t size_data, bool compress) {
+  if (size_data > 0 && fbl::round_up(size_data, kBlobfsBlockSize) == 0) {
+    // Fail early if |len| would overflow when rounded up to block size.
+    return ZX_ERR_OUT_OF_RANGE;
+  }
+
   if (state() != BlobState::kEmpty) {
     return ZX_ERR_BAD_STATE;
   }
@@ -167,7 +172,7 @@ zx_status_t Blob::PrepareWrite(uint64_t size_data) {
       return status;
     }
   }
-  if (blobfs_->ShouldCompress() && inode_.blob_size >= kCompressionSizeThresholdBytes) {
+  if (compress) {
     write_info->compressor =
         BlobCompressor::Create(blobfs_->write_compression_settings(), inode_.blob_size);
     if (!write_info->compressor) {
@@ -180,7 +185,8 @@ zx_status_t Blob::PrepareWrite(uint64_t size_data) {
   write_info_ = std::move(write_info);
   set_state(BlobState::kDataWrite);
 
-  return ZX_OK;
+  // Special case for the null blob: We skip the write phase.
+  return inode_.blob_size == 0 ? WriteNullBlob() : ZX_OK;
 }
 
 zx_status_t Blob::SpaceAllocate(uint32_t block_count) {
@@ -414,7 +420,7 @@ zx_status_t Blob::Commit() {
   }
 
   fs::Duration generation_time;
-  fs::DataStreamer streamer(blobfs_->journal(), blobfs_->WritebackCapacity());
+  fs::DataStreamer streamer(blobfs_->journal(), blobfs_->WriteBufferBlockCount());
 
   const zx::vmo& data_vmo =
       write_info_->compressor ? write_info_->compressor->Vmo() : data_mapping_.vmo();
@@ -899,20 +905,7 @@ zx_status_t Blob::GetAttributes(fs::VnodeAttributes* a) {
 zx_status_t Blob::Truncate(size_t len) {
   TRACE_DURATION("blobfs", "Blob::Truncate", "len", len);
   auto event = blobfs_->Metrics()->NewLatencyEvent(fs_metrics::Event::kTruncate);
-  if (len > 0 && fbl::round_up(len, kBlobfsBlockSize) == 0) {
-    // Fail early if |len| would overflow when rounded up to block size.
-    return ZX_ERR_OUT_OF_RANGE;
-  }
-  zx_status_t status = PrepareWrite(len);
-  if (status != ZX_OK) {
-    return status;
-  }
-
-  // Special case for the null blob: We skip the write phase.
-  if (len == 0) {
-    return WriteNullBlob();
-  }
-  return status;
+  return PrepareWrite(len, blobfs_->ShouldCompress() && len > kCompressionSizeThresholdBytes);
 }
 
 #ifdef __Fuchsia__

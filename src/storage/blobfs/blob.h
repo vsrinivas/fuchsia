@@ -85,6 +85,19 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
   using fs::Vnode::Open;
   zx_status_t Open(ValidatedOptions options, fbl::RefPtr<Vnode>* out_redirect) final;
   zx_status_t Close() final;
+  zx_status_t GetNodeInfoForProtocol(fs::VnodeProtocol protocol, fs::Rights rights,
+                                     fs::VnodeRepresentation* info) final;
+  fs::VnodeProtocolSet GetProtocols() const final;
+  bool ValidateRights(fs::Rights rights) final;
+  zx_status_t Read(void* data, size_t len, size_t off, size_t* out_actual) final;
+  zx_status_t Write(const void* data, size_t len, size_t offset, size_t* out_actual) final;
+  zx_status_t Append(const void* data, size_t len, size_t* out_end, size_t* out_actual) final;
+  zx_status_t GetAttributes(fs::VnodeAttributes* a) final;
+  zx_status_t Truncate(size_t len) final;
+  zx_status_t QueryFilesystem(llcpp::fuchsia::io::FilesystemInfo* out) final;
+  zx_status_t GetDevicePath(size_t buffer_len, char* out_name, size_t* out_len) final;
+  zx_status_t GetVmo(int flags, zx::vmo* out_vmo, size_t* out_size) final;
+  void Sync(SyncCallback on_complete) final;
 
   ////////////////
   // fbl::Recyclable interface.
@@ -129,25 +142,14 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
   // Marks the blob as deletable, and attempt to purge it.
   zx_status_t QueueUnlink();
 
+  // PrepareWrite should be called after allocating a vnode and before writing any data to the blob.
+  // The function sets blob size, allocates vmo needed for data and merkle tree, initiates
+  // structures needed for compression and reserves an inode for the blob.  It is not meant to be
+  // called multiple times on a given vnode.  This is public only for testing.
+  zx_status_t PrepareWrite(uint64_t size_data, bool compress);
+
  private:
   DISALLOW_COPY_ASSIGN_AND_MOVE(Blob);
-
-  ////////////////
-  // fs::Vnode interface.
-
-  zx_status_t GetNodeInfoForProtocol(fs::VnodeProtocol protocol, fs::Rights rights,
-                                     fs::VnodeRepresentation* info) final;
-  fs::VnodeProtocolSet GetProtocols() const final;
-  bool ValidateRights(fs::Rights rights) final;
-  zx_status_t Read(void* data, size_t len, size_t off, size_t* out_actual) final;
-  zx_status_t Write(const void* data, size_t len, size_t offset, size_t* out_actual) final;
-  zx_status_t Append(const void* data, size_t len, size_t* out_end, size_t* out_actual) final;
-  zx_status_t GetAttributes(fs::VnodeAttributes* a) final;
-  zx_status_t Truncate(size_t len) final;
-  zx_status_t QueryFilesystem(llcpp::fuchsia::io::FilesystemInfo* out) final;
-  zx_status_t GetDevicePath(size_t buffer_len, char* out_name, size_t* out_len) final;
-  zx_status_t GetVmo(int flags, zx::vmo* out_vmo, size_t* out_size) final;
-  void Sync(SyncCallback on_complete) final;
 
   ////////////////
   // blobfs::CacheNode interface.
@@ -185,12 +187,6 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
   // Removes all traces of the vnode from blobfs.
   // The blob is not expected to be accessed again after this is called.
   zx_status_t Purge();
-
-  // PrepareWrite should be called after allocating a vnode and before writing any data to the blob.
-  // The function sets blob size, allocates vmo needed for data and merkle tree, initiates
-  // structures needed for compression and reserves an inode for the blob.
-  // It is not meant to be called multiple times on a given vnode.
-  zx_status_t PrepareWrite(uint64_t size_data);
 
   // Schedules journal transaction prepared by PrepareWrite for the null blob.
   // Null blob doesn't have any data to write. They don't go through regular

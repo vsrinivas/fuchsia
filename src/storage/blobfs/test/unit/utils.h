@@ -75,8 +75,6 @@ class MockTransactionManager : public TransactionManager {
 
   BlobfsMetrics* Metrics() final { return &metrics_; }
 
-  size_t WritebackCapacity() const final { return kWritebackCapacity; }
-
   fs::Journal* journal() final {
     ZX_ASSERT(false);
     return nullptr;

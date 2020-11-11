@@ -12,6 +12,7 @@
 #include <gtest/gtest.h>
 #include <storage/buffer/vmo_buffer.h>
 
+#include "src/storage/blobfs/blob.h"
 #include "src/storage/blobfs/directory.h"
 #include "src/storage/blobfs/test/blob_utils.h"
 
@@ -55,18 +56,19 @@ zx_status_t MockBlockDevice::BlockGetInfo(fuchsia_hardware_block_BlockInfo* info
 constexpr uint32_t kBlockSize = 512;
 constexpr uint32_t kNumBlocks = 400 * kBlobfsBlockSize / kBlockSize;
 
-std::unique_ptr<MockBlockDevice> CreateAndFormatDevice(const FilesystemOptions& options) {
-  auto device = std::make_unique<MockBlockDevice>(kNumBlocks, kBlockSize);
+std::unique_ptr<MockBlockDevice> CreateAndFormatDevice(const FilesystemOptions& options,
+                                                       uint64_t num_blocks) {
+  auto device = std::make_unique<MockBlockDevice>(num_blocks, kBlockSize);
   EXPECT_EQ(FormatFilesystem(device.get(), options), ZX_OK);
   return device;
 }
 
-template <uint64_t oldest_revision>
+template <uint64_t oldest_revision, uint64_t num_blocks = kNumBlocks>
 class BlobfsTestAtRevision : public testing::Test {
  public:
   void SetUp() final {
     FilesystemOptions options{.oldest_revision = oldest_revision};
-    std::unique_ptr<MockBlockDevice> device = CreateAndFormatDevice(options);
+    std::unique_ptr<MockBlockDevice> device = CreateAndFormatDevice(options, num_blocks);
     ASSERT_TRUE(device);
     device_ = device.get();
     loop_.StartThread();
@@ -220,6 +222,43 @@ TEST_F(BlobfsTest, TrimsData) {
   EXPECT_EQ(sync_completion_wait(&completion, zx::duration::infinite().get()), ZX_OK);
 
   ASSERT_TRUE(device_->saw_trim());
+}
+
+using BlobfsTestWithLargeDevice =
+    BlobfsTestAtRevision<blobfs::kBlobfsCurrentRevision,
+                         /*num_blocks=*/2560 * kBlobfsBlockSize / kBlockSize>;
+
+TEST_F(BlobfsTestWithLargeDevice, WritingBlobLargerThanWritebackCapacitySucceeds) {
+  fbl::RefPtr<fs::Vnode> root;
+  ASSERT_EQ(fs_->OpenRootNode(&root), ZX_OK);
+  fs::Vnode* root_node = root.get();
+
+  std::unique_ptr<BlobInfo> info;
+  GenerateRealisticBlob("", (fs_->WriteBufferBlockCount() + 1) * kBlobfsBlockSize,
+                        GetBlobLayoutFormat(fs_->Info()), &info);
+  fbl::RefPtr<fs::Vnode> file;
+  ASSERT_EQ(root_node->Create(info->path + 1, 0, &file), ZX_OK);
+  auto blob = fbl::RefPtr<Blob>::Downcast(std::move(file));
+  // Force no compression so that we have finer control over the size.
+  EXPECT_EQ(blob->PrepareWrite(info->size_data, /*compress=*/false), ZX_OK);
+  size_t actual;
+  // If this starts to fail with an ERR_NO_SPACE error it could be because WriteBufferBlockCount()
+  // has changed and is now returning something too big for the device we're using in this test.
+  EXPECT_EQ(blob->Write(info->data.get(), info->size_data, 0, &actual), ZX_OK);
+
+  sync_completion_t sync;
+  blob->Sync([&](zx_status_t status) {
+    EXPECT_EQ(status, ZX_OK);
+    sync_completion_signal(&sync);
+  });
+  sync_completion_wait(&sync, ZX_TIME_INFINITE);
+  EXPECT_EQ(blob->Close(), ZX_OK);
+  blob.reset();
+
+  ASSERT_EQ(root_node->Lookup(info->path + 1, &file), ZX_OK);
+  auto buffer = std::make_unique<uint8_t[]>(info->size_data);
+  EXPECT_EQ(file->Read(buffer.get(), info->size_data, 0, &actual), ZX_OK);
+  EXPECT_EQ(memcmp(buffer.get(), info->data.get(), info->size_data), 0);
 }
 
 }  // namespace

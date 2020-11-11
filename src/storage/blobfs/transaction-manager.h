@@ -32,10 +32,6 @@ class TransactionManager : public fs::LegacyTransactionHandler, public SpaceMana
  public:
   virtual ~TransactionManager() = default;
   virtual BlobfsMetrics* Metrics() = 0;
-
-  // Returns the capacity of the writeback buffer in blocks.
-  virtual size_t WritebackCapacity() const = 0;
-
   virtual fs::Journal* journal() = 0;
 };
 

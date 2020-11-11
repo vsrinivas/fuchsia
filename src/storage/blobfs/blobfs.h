@@ -121,7 +121,6 @@ class Blobfs : public TransactionManager, public BlockIteratorProvider {
   // underlying storage (optionally through the journal).
 
   BlobfsMetrics* Metrics() final { return metrics_.get(); }
-  size_t WritebackCapacity() const final;
   fs::Journal* journal() final;
   Writability writability() const { return writability_; }
 
@@ -134,6 +133,12 @@ class Blobfs : public TransactionManager, public BlockIteratorProvider {
 
   ////////////////
   // Other methods.
+
+  static constexpr size_t WriteBufferBlockCount() {
+    // Hardcoded to 10 MB; may be replaced by a more device-specific option
+    // in the future.
+    return 10 * (1 << 20) / kBlobfsBlockSize;
+  }
 
   // Returns the dispatcher for the current thread that blobfs uses.
   async_dispatcher_t* dispatcher() { return dispatcher_; }
@@ -221,6 +226,11 @@ class Blobfs : public TransactionManager, public BlockIteratorProvider {
          const Superblock* info, Writability writable,
          CompressionSettings write_compression_settings, zx::resource vmex_resource,
          std::optional<CachePolicy> pager_backed_cache_policy);
+
+  static zx::status<std::unique_ptr<fs::Journal>> InitializeJournal(
+      fs::TransactionHandler* transaction_handler, VmoidRegistry* registry, uint64_t journal_start,
+      uint64_t journal_length, fs::JournalSuperblock journal_superblock,
+      std::shared_ptr<fs::MetricsTrait> journal_metrics);
 
   // Terminates all internal connections, updates the "clean bit" (if writable),
   // flushes writeback buffers, empties caches, and returns the underlying

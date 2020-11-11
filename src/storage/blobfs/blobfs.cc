@@ -71,36 +71,6 @@ struct DirectoryCookie {
   uint64_t reserved;  // Unused
 };
 
-// Writeback enabled, journaling enabled.
-zx::status<std::unique_ptr<Journal>> InitializeJournal(
-    fs::TransactionHandler* transaction_handler, VmoidRegistry* registry, uint64_t journal_start,
-    uint64_t journal_length, JournalSuperblock journal_superblock,
-    std::shared_ptr<fs::MetricsTrait> journal_metrics) {
-  const uint64_t journal_entry_blocks = journal_length - fs::kJournalMetadataBlocks;
-
-  std::unique_ptr<BlockingRingBuffer> journal_buffer;
-  zx_status_t status = BlockingRingBuffer::Create(registry, journal_entry_blocks, kBlobfsBlockSize,
-                                                  "journal-writeback-buffer", &journal_buffer);
-  if (status != ZX_OK) {
-    FS_TRACE_ERROR("blobfs: Cannot create journal buffer: %s\n", zx_status_get_string(status));
-    return zx::error(status);
-  }
-
-  std::unique_ptr<BlockingRingBuffer> writeback_buffer;
-  status = BlockingRingBuffer::Create(registry, WriteBufferSize(), kBlobfsBlockSize,
-                                      "data-writeback-buffer", &writeback_buffer);
-  if (status != ZX_OK) {
-    FS_TRACE_ERROR("blobfs: Cannot create writeback buffer: %s\n", zx_status_get_string(status));
-    return zx::error(status);
-  }
-
-  auto options = Journal::Options();
-  options.metrics = journal_metrics;
-  return zx::ok(std::make_unique<Journal>(transaction_handler, std::move(journal_superblock),
-                                          std::move(journal_buffer), std::move(writeback_buffer),
-                                          journal_start, options));
-}
-
 const char* CachePolicyToString(CachePolicy policy) {
   switch (policy) {
     case CachePolicy::NeverEvict:
@@ -112,7 +82,6 @@ const char* CachePolicyToString(CachePolicy policy) {
 
 }  // namespace
 
-// static.
 zx_status_t Blobfs::Create(async_dispatcher_t* dispatcher, std::unique_ptr<BlockDevice> device,
                            const MountOptions& options, zx::resource vmex_resource,
                            std::unique_ptr<Blobfs>* out) {
@@ -341,7 +310,36 @@ zx_status_t Blobfs::Create(async_dispatcher_t* dispatcher, std::unique_ptr<Block
   return ZX_OK;
 }
 
-// static.
+// Writeback enabled, journaling enabled.
+zx::status<std::unique_ptr<Journal>> Blobfs::InitializeJournal(
+    fs::TransactionHandler* transaction_handler, VmoidRegistry* registry, uint64_t journal_start,
+    uint64_t journal_length, JournalSuperblock journal_superblock,
+    std::shared_ptr<fs::MetricsTrait> journal_metrics) {
+  const uint64_t journal_entry_blocks = journal_length - fs::kJournalMetadataBlocks;
+
+  std::unique_ptr<BlockingRingBuffer> journal_buffer;
+  zx_status_t status = BlockingRingBuffer::Create(registry, journal_entry_blocks, kBlobfsBlockSize,
+                                                  "journal-writeback-buffer", &journal_buffer);
+  if (status != ZX_OK) {
+    FS_TRACE_ERROR("blobfs: Cannot create journal buffer: %s\n", zx_status_get_string(status));
+    return zx::error(status);
+  }
+
+  std::unique_ptr<BlockingRingBuffer> writeback_buffer;
+  status = BlockingRingBuffer::Create(registry, WriteBufferBlockCount(), kBlobfsBlockSize,
+                                      "data-writeback-buffer", &writeback_buffer);
+  if (status != ZX_OK) {
+    FS_TRACE_ERROR("blobfs: Cannot create writeback buffer: %s\n", zx_status_get_string(status));
+    return zx::error(status);
+  }
+
+  auto options = Journal::Options();
+  options.metrics = journal_metrics;
+  return zx::ok(std::make_unique<Journal>(transaction_handler, std::move(journal_superblock),
+                                          std::move(journal_buffer), std::move(writeback_buffer),
+                                          journal_start, options));
+}
+
 std::unique_ptr<BlockDevice> Blobfs::Destroy(std::unique_ptr<Blobfs> blobfs) {
   return blobfs->Reset();
 }
@@ -420,8 +418,6 @@ void Blobfs::PersistNode(uint32_t node_index, BlobTransaction& transaction) {
   WriteNode(node_index, transaction);
   WriteInfo(transaction);
 }
-
-size_t Blobfs::WritebackCapacity() const { return WriteBufferSize(); }
 
 void Blobfs::WriteBitmap(uint64_t nblocks, uint64_t start_block, BlobTransaction& transaction) {
   TRACE_DURATION("blobfs", "Blobfs::WriteBitmap", "nblocks", nblocks, "start_block", start_block);
