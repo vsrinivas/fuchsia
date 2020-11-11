@@ -21,6 +21,7 @@ executable("unittests") {
     "dispatch_policy_test.cc",
     "focus_avoidance_test.cc",
     "focus_transfer_test.cc",
+    "gesture_arena_test.cc",
     "hard_keyboard_delivery_test.cc",
     "input_injection_test.cc",
     "mouse_delivery_test.cc",

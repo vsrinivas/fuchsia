@@ -4,6 +4,8 @@
 
 source_set("input") {
   sources = [
+    "gesture_arena.cc",
+    "gesture_arena.h",
     "helper.cc",
     "helper.h",
     "injector.cc",
