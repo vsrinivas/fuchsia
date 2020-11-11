@@ -69,7 +69,7 @@ struct CrashReporterError {
 
 std::unique_ptr<CrashReporter> CrashReporter::TryCreate(
     async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
-    timekeeper::Clock* clock, std::shared_ptr<InfoContext> info_context, const Config* config,
+    timekeeper::Clock* clock, std::shared_ptr<InfoContext> info_context, Config config,
     const ErrorOr<std::string>& build_version, CrashRegister* crash_register) {
   std::unique_ptr<SnapshotManager> snapshot_manager = std::make_unique<SnapshotManager>(
       dispatcher, services, std::make_unique<timekeeper::SystemClock>(),
@@ -89,7 +89,7 @@ std::unique_ptr<CrashReporter> CrashReporter::TryCreate(
 CrashReporter::CrashReporter(async_dispatcher_t* dispatcher,
                              std::shared_ptr<sys::ServiceDirectory> services,
                              timekeeper::Clock* clock, std::shared_ptr<InfoContext> info_context,
-                             const Config* config, const ErrorOr<std::string>& build_version,
+                             Config config, const ErrorOr<std::string>& build_version,
                              CrashRegister* crash_register, std::unique_ptr<LogTags> tags,
                              std::unique_ptr<SnapshotManager> snapshot_manager,
                              std::unique_ptr<CrashServer> crash_server)
@@ -104,7 +104,7 @@ CrashReporter::CrashReporter(async_dispatcher_t* dispatcher,
       crash_server_(std::move(crash_server)),
       queue_(dispatcher_, services_, info_context, tags_.get(), crash_server_.get(),
              snapshot_manager_.get()),
-      product_quotas_(dispatcher_, config->daily_per_product_quota),
+      product_quotas_(dispatcher_, config.daily_per_product_quota),
       info_(info_context),
       network_watcher_(dispatcher_, services_),
       privacy_settings_watcher_(dispatcher, services_, &settings_),
@@ -114,7 +114,7 @@ CrashReporter::CrashReporter(async_dispatcher_t* dispatcher,
   FX_CHECK(crash_register_);
   FX_CHECK(crash_server_);
 
-  const auto& upload_policy = config->crash_server.upload_policy;
+  const auto& upload_policy = config.crash_server.upload_policy;
   settings_.set_upload_policy(upload_policy);
   if (upload_policy == CrashServerConfig::UploadPolicy::READ_FROM_PRIVACY_SETTINGS) {
     privacy_settings_watcher_.StartWatching();

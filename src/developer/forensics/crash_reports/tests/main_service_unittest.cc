@@ -41,12 +41,6 @@ using testing::UnorderedElementsAreArray;
 class MainServiceTest : public UnitTestFixture {
  public:
   void SetUp() override {
-    auto config = std::make_unique<Config>();
-    config->crash_server = CrashServerConfig{
-        /*upload_policy=*/CrashServerConfig::UploadPolicy::ENABLED,
-    };
-    config->daily_per_product_quota = 100u;
-
     info_context_ =
         std::make_shared<InfoContext>(&InspectRoot(), &clock_, dispatcher(), services());
 
@@ -56,7 +50,13 @@ class MainServiceTest : public UnitTestFixture {
     SetUpUtcProviderServer();
 
     main_service_ =
-        MainService::TryCreate(dispatcher(), services(), &clock_, info_context_, std::move(config));
+        MainService::TryCreate(dispatcher(), services(), &clock_, info_context_,
+                               Config{
+                                   .crash_server = CrashServerConfig{
+                                       /*upload_policy=*/CrashServerConfig::UploadPolicy::ENABLED,
+                                   },
+                                   .daily_per_product_quota = 100u,
+                               });
     FX_CHECK(main_service_);
     RunLoopUntilIdle();
   }

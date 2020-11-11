@@ -159,15 +159,13 @@ class CrashReporterTest : public UnitTestFixture {
         StorageSize::Gigabytes(1u), StorageSize::Gigabytes(1u));
     auto crash_server = std::make_unique<StubCrashServer>(upload_attempt_results);
 
-    config_ = std::move(config);
-
     crash_server_ = crash_server.get();
     if (crash_server_) {
       crash_server_->AddSnapshotManager(snapshot_manager.get());
     }
 
     crash_reporter_ = std::make_unique<CrashReporter>(
-        dispatcher(), services(), &clock_, info_context_, &config_,
+        dispatcher(), services(), &clock_, info_context_, config,
         ErrorOr<std::string>(kBuildVersion), crash_register_.get(), std::make_unique<LogTags>(),
         std::move(snapshot_manager), std::move(crash_server));
     FX_CHECK(crash_reporter_);
@@ -413,7 +411,6 @@ class CrashReporterTest : public UnitTestFixture {
  private:
   timekeeper::TestClock clock_;
   std::shared_ptr<InfoContext> info_context_;
-  Config config_;
 
  protected:
   std::unique_ptr<CrashRegister> crash_register_;

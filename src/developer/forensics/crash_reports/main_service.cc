@@ -46,12 +46,8 @@ std::unique_ptr<MainService> MainService::TryCreate(async_dispatcher_t* dispatch
     }
   }
 
-  // Either there was no override config or we failed to parse it.
-  auto config = std::make_unique<Config>();
-  *config = std::move(config_opt.value());
-
   return MainService::TryCreate(dispatcher, std::move(services), clock, std::move(info_context),
-                                std::move(config));
+                                std::move(config_opt.value()));
 }
 
 namespace {
@@ -71,14 +67,14 @@ std::unique_ptr<MainService> MainService::TryCreate(async_dispatcher_t* dispatch
                                                     std::shared_ptr<sys::ServiceDirectory> services,
                                                     timekeeper::Clock* clock,
                                                     std::shared_ptr<InfoContext> info_context,
-                                                    std::unique_ptr<Config> config) {
+                                                    Config config) {
   const ErrorOr<std::string> build_version = ReadStringFromFile("/config/build-info/version");
 
   std::unique_ptr<CrashRegister> crash_register = std::make_unique<CrashRegister>(
       dispatcher, services, info_context, build_version, kCrashRegisterPath);
 
-  auto crash_reporter = CrashReporter::TryCreate(dispatcher, services, clock, info_context,
-                                                 config.get(), build_version, crash_register.get());
+  auto crash_reporter = CrashReporter::TryCreate(dispatcher, services, clock, info_context, config,
+                                                 build_version, crash_register.get());
   if (!crash_reporter) {
     FX_LOGS(FATAL) << "Failed to set up main service";
     return nullptr;
@@ -91,19 +87,18 @@ std::unique_ptr<MainService> MainService::TryCreate(async_dispatcher_t* dispatch
 
 MainService::MainService(async_dispatcher_t* dispatcher,
                          std::shared_ptr<sys::ServiceDirectory> services,
-                         std::shared_ptr<InfoContext> info_context, std::unique_ptr<Config> config,
+                         std::shared_ptr<InfoContext> info_context, Config config,
                          const ErrorOr<std::string>& build_version,
                          std::unique_ptr<CrashRegister> crash_register,
                          std::unique_ptr<CrashReporter> crash_reporter)
     : dispatcher_(dispatcher),
       info_(info_context),
-      config_(std::move(config)),
       crash_register_(std::move(crash_register)),
       crash_reporter_(std::move(crash_reporter)) {
   FX_CHECK(crash_register_);
   FX_CHECK(crash_reporter_);
 
-  info_.ExposeConfig(*config_);
+  info_.ExposeConfig(config);
 }
 
 void MainService::HandleCrashRegisterRequest(
