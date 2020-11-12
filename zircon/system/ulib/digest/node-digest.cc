@@ -48,7 +48,11 @@ size_t NodeDigest::Append(const void* buf, size_t buf_len) {
   digest_.Update(buf, len);
   to_append_ -= len;
   if (to_append_ == 0) {
-    PadWithZeros();
+    if (pad_len_ > 0) {
+      PadWithZeros();
+    } else {
+      digest_.Final();
+    }
   }
   return len;
 }
@@ -56,6 +60,9 @@ size_t NodeDigest::Append(const void* buf, size_t buf_len) {
 void NodeDigest::PadWithZeros() {
   static const uint8_t kZeroes[64] = {0};
   size_t padding = to_append_ + pad_len_;
+  if (padding == 0) {
+    return;
+  }
   while (padding > sizeof(kZeroes)) {
     digest_.Update(kZeroes, sizeof(kZeroes));
     padding -= sizeof(kZeroes);

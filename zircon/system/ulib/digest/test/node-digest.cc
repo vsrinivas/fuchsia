@@ -139,6 +139,36 @@ TEST(NodeDigest, ResetAndAppendWithPadding) {
   EXPECT_EQ(node_digest.get(), expected);
 }
 
+TEST(NodeDigest, PadWithZerosCanBeCalledOnAFinishedNode) {
+  NodeDigest node_digest;
+  node_digest.SetNodeSize(kMinNodeSize);
+  node_digest.Reset(0, kMinNodeSize);
+
+  // The node is automatically finished after appending all of the data.
+  uint8_t data[kMinNodeSize] = {0xAB};
+  node_digest.Append(data, kMinNodeSize);
+  // If |PadWithZeros| didn't handle being called on a finished node then it would try and finish
+  // the node again which would cause a panic.
+  node_digest.PadWithZeros();
+}
+
+TEST(NodeDigest, PadWithZerosIsAllowedToBeCalledMultipleTimes) {
+  NodeDigest node_digest;
+  node_digest.SetNodeSize(kMinNodeSize);
+  node_digest.Reset(0, kMinNodeSize / 2);
+
+  // Fill the entire node with 0s which will finish the node.
+  node_digest.PadWithZeros();
+  // Make a copy of the digest to compare against.
+  uint8_t expected[kSha256Length];
+  node_digest.get().CopyTo(expected);
+
+  // Repeated calls to |PadWithZeros| on a finished node do nothing.
+  node_digest.PadWithZeros();
+  node_digest.PadWithZeros();
+  EXPECT_EQ(node_digest.get(), expected);
+}
+
 TEST(NodeDigest, MinNodeSizeIsValid) { EXPECT_TRUE(NodeDigest::IsValidNodeSize(kMinNodeSize)); }
 
 TEST(NodeDigest, MaxNodeSizeIsValid) { EXPECT_TRUE(NodeDigest::IsValidNodeSize(kMaxNodeSize)); }
