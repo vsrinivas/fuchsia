@@ -98,8 +98,12 @@ class Metrics {
   zx::vmo DuplicateInspectVmo() const { return inspector_.DuplicateVmo(); }
 
  private:
-  // Inspector root.
+  auto& GetRoot() { return root_; }
+
   inspect::Inspector inspector_;
+
+  // Inspect root.
+  inspect::Node root_;
 
   // Current maximum wear over all nand blocks.
   inspect::UintProperty max_wear_;

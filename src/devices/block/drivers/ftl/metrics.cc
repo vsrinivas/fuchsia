@@ -79,29 +79,21 @@ std::string GetRatePropertyName(BlockOperationType operation_type,
   return name + ".issued_" + nested_name + ".average_rate";
 }
 
-BlockOperationProperties MakePropertyForBlockOperation(inspect::Inspector& inspector,
+BlockOperationProperties MakePropertyForBlockOperation(inspect::Node& root,
                                                        BlockOperationType block_operation) {
-  auto count = inspector.GetRoot().CreateUint(GetCounterPropertyName(block_operation), 0);
+  auto count = root.CreateUint(GetCounterPropertyName(block_operation), 0);
   auto all_nand = NestedNandOperationProperties(
-      inspector.GetRoot().CreateUint(
-          GetCounterPropertyName(block_operation, NandOperationType::kAll), 0),
-      inspector.GetRoot().CreateDouble(
-          GetRatePropertyName(block_operation, NandOperationType::kAll), 0));
+      root.CreateUint(GetCounterPropertyName(block_operation, NandOperationType::kAll), 0),
+      root.CreateDouble(GetRatePropertyName(block_operation, NandOperationType::kAll), 0));
   auto nand_page_read = NestedNandOperationProperties(
-      inspector.GetRoot().CreateUint(
-          GetCounterPropertyName(block_operation, NandOperationType::kPageRead), 0),
-      inspector.GetRoot().CreateDouble(
-          GetRatePropertyName(block_operation, NandOperationType::kPageRead), 0));
+      root.CreateUint(GetCounterPropertyName(block_operation, NandOperationType::kPageRead), 0),
+      root.CreateDouble(GetRatePropertyName(block_operation, NandOperationType::kPageRead), 0));
   auto nand_page_write = NestedNandOperationProperties(
-      inspector.GetRoot().CreateUint(
-          GetCounterPropertyName(block_operation, NandOperationType::kPageWrite), 0),
-      inspector.GetRoot().CreateDouble(
-          GetRatePropertyName(block_operation, NandOperationType::kPageWrite), 0));
+      root.CreateUint(GetCounterPropertyName(block_operation, NandOperationType::kPageWrite), 0),
+      root.CreateDouble(GetRatePropertyName(block_operation, NandOperationType::kPageWrite), 0));
   auto nand_block_erase = NestedNandOperationProperties(
-      inspector.GetRoot().CreateUint(
-          GetCounterPropertyName(block_operation, NandOperationType::kBlockErase), 0),
-      inspector.GetRoot().CreateDouble(
-          GetRatePropertyName(block_operation, NandOperationType::kBlockErase), 0));
+      root.CreateUint(GetCounterPropertyName(block_operation, NandOperationType::kBlockErase), 0),
+      root.CreateDouble(GetRatePropertyName(block_operation, NandOperationType::kBlockErase), 0));
 
   return BlockOperationProperties{.count = std::move(count),
                                   .all = std::move(all_nand),
@@ -138,11 +130,12 @@ std::vector<std::string> Metrics::GetPropertyNames<inspect::DoubleProperty>() {
 
 Metrics::Metrics()
     : inspector_(),
-      read_(MakePropertyForBlockOperation(inspector_, BlockOperationType::kRead)),
-      write_(MakePropertyForBlockOperation(inspector_, BlockOperationType::kWrite)),
-      flush_(MakePropertyForBlockOperation(inspector_, BlockOperationType::kFlush)),
-      trim_(MakePropertyForBlockOperation(inspector_, BlockOperationType::kTrim)) {
-  max_wear_ = inspector_.GetRoot().CreateUint("nand.erase_block.max_wear", 0);
+      root_(inspector_.GetRoot().CreateChild("ftl")),
+      read_(MakePropertyForBlockOperation(root_, BlockOperationType::kRead)),
+      write_(MakePropertyForBlockOperation(root_, BlockOperationType::kWrite)),
+      flush_(MakePropertyForBlockOperation(root_, BlockOperationType::kFlush)),
+      trim_(MakePropertyForBlockOperation(root_, BlockOperationType::kTrim)) {
+  max_wear_ = root_.CreateUint("nand.erase_block.max_wear", 0);
 }
 
 }  // namespace ftl

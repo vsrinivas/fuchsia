@@ -578,14 +578,16 @@ TEST_F(BlockDeviceTest, GetInspectVmoContainsCountersAndWearCount) {
   ASSERT_TRUE(device);
 
   zx::vmo vmo = device->DuplicateInspectVmo();
-  auto hierarchy = inspect::ReadFromVmo(vmo).take_value();
+  auto base_hierarchy = inspect::ReadFromVmo(vmo).take_value();
+  auto* hierarchy = base_hierarchy.GetByPath({"ftl"});
+  ASSERT_NOT_NULL(hierarchy);
   for (const auto& property_name : ftl::Metrics::GetPropertyNames<inspect::UintProperty>()) {
-    auto* property = hierarchy.node().get_property<inspect::UintPropertyValue>(property_name);
+    auto* property = hierarchy->node().get_property<inspect::UintPropertyValue>(property_name);
     EXPECT_NOT_NULL(property, "Missing Inspect Property: %s", property_name.c_str());
   }
 
   for (const auto& property_name : ftl::Metrics::GetPropertyNames<inspect::DoubleProperty>()) {
-    auto* property = hierarchy.node().get_property<inspect::DoublePropertyValue>(property_name);
+    auto* property = hierarchy->node().get_property<inspect::DoublePropertyValue>(property_name);
     EXPECT_NOT_NULL(property, "Missing Inspect Property: %s", property_name.c_str());
   }
 }
@@ -593,16 +595,17 @@ TEST_F(BlockDeviceTest, GetInspectVmoContainsCountersAndWearCount) {
 void ReadProperties(ftl::BlockDevice* device, std::map<std::string, uint64_t>& counters,
                     std::map<std::string, double>& rates) {
   zx::vmo vmo = device->DuplicateInspectVmo();
-  auto hierarchy = inspect::ReadFromVmo(vmo).take_value();
+  auto base_hierarchy = inspect::ReadFromVmo(vmo).take_value();
+  auto* hierarchy = base_hierarchy.GetByPath({"ftl"});
   // counters are still 0.
   for (const auto& property_name : ftl::Metrics::GetPropertyNames<inspect::UintProperty>()) {
-    auto* property = hierarchy.node().get_property<inspect::UintPropertyValue>(property_name);
+    auto* property = hierarchy->node().get_property<inspect::UintPropertyValue>(property_name);
     ASSERT_NOT_NULL(property, "Missing Inspect Property: %s", property_name.c_str());
     counters[property_name] = property->value();
   }
 
   for (const auto& property_name : ftl::Metrics::GetPropertyNames<inspect::DoubleProperty>()) {
-    auto* property = hierarchy.node().get_property<inspect::DoublePropertyValue>(property_name);
+    auto* property = hierarchy->node().get_property<inspect::DoublePropertyValue>(property_name);
     ASSERT_NOT_NULL(property, "Missing Inspect Property: %s", property_name.c_str());
     rates[property_name] = property->value();
   }

@@ -12,23 +12,25 @@ namespace ftl {
 namespace {
 TEST(MetricsTest, GetInspectVmoReflectsExistingMetrics) {
   Metrics metrics;
-  auto hierarchy = inspect::ReadFromVmo(metrics.DuplicateInspectVmo()).take_value();
+  auto base_hierarchy = inspect::ReadFromVmo(metrics.DuplicateInspectVmo()).take_value();
+  auto* hierarchy = base_hierarchy.GetByPath({"ftl"});
   for (const auto& property_name : ftl::Metrics::GetPropertyNames<inspect::UintProperty>()) {
-    auto* property = hierarchy.node().get_property<inspect::UintPropertyValue>(property_name);
+    auto* property = hierarchy->node().get_property<inspect::UintPropertyValue>(property_name);
     EXPECT_NOT_NULL(property, "Missing Inspect Property: %s", property_name.c_str());
   }
 
   for (const auto& property_name : ftl::Metrics::GetPropertyNames<inspect::DoubleProperty>()) {
-    auto* property = hierarchy.node().get_property<inspect::DoublePropertyValue>(property_name);
+    auto* property = hierarchy->node().get_property<inspect::DoublePropertyValue>(property_name);
     EXPECT_NOT_NULL(property, "Missing Inspect Property: %s", property_name.c_str());
   }
 }
 
 TEST(MetricsTest, MetricsInitializedToZero) {
   Metrics metrics;
-  auto hierarchy = inspect::ReadFromVmo(metrics.DuplicateInspectVmo()).take_value();
+  auto base_hierarchy = inspect::ReadFromVmo(metrics.DuplicateInspectVmo()).take_value();
+  auto* hierarchy = base_hierarchy.GetByPath({"ftl"});
   for (const auto& property_name : ftl::Metrics::GetPropertyNames<inspect::UintProperty>()) {
-    auto* property = hierarchy.node().get_property<inspect::UintPropertyValue>(property_name);
+    auto* property = hierarchy->node().get_property<inspect::UintPropertyValue>(property_name);
     EXPECT_NOT_NULL(property, "Missing Inspect Property: %s", property_name.c_str());
     if (property == nullptr) {
       continue;
@@ -37,7 +39,7 @@ TEST(MetricsTest, MetricsInitializedToZero) {
   }
 
   for (const auto& property_name : ftl::Metrics::GetPropertyNames<inspect::DoubleProperty>()) {
-    auto* property = hierarchy.node().get_property<inspect::DoublePropertyValue>(property_name);
+    auto* property = hierarchy->node().get_property<inspect::DoublePropertyValue>(property_name);
     EXPECT_NOT_NULL(property, "Missing Inspect Property: %s", property_name.c_str());
     if (property == nullptr) {
       continue;
@@ -163,15 +165,16 @@ TEST(MetricsTest, MetricsMappedCorrectly) {
   metrics.flush().block_erase.rate.Add(35);
   expected_double_values["block.flush.issued_block_erase.average_rate"] = 35;
 
-  auto hierarchy = inspect::ReadFromVmo(metrics.DuplicateInspectVmo()).take_value();
+  auto base_hierarchy = inspect::ReadFromVmo(metrics.DuplicateInspectVmo()).take_value();
+  auto* hierarchy = base_hierarchy.GetByPath({"ftl"});
   for (const auto& property_name : ftl::Metrics::GetPropertyNames<inspect::UintProperty>()) {
-    auto* property = hierarchy.node().get_property<inspect::UintPropertyValue>(property_name);
+    auto* property = hierarchy->node().get_property<inspect::UintPropertyValue>(property_name);
     EXPECT_NOT_NULL(property, "Missing Inspect Property: %s", property_name.c_str());
     EXPECT_EQ(property->value(), expected_uint_values[property_name], "Property value mismatch %s",
               property_name.c_str());
   }
   for (const auto& property_name : ftl::Metrics::GetPropertyNames<inspect::DoubleProperty>()) {
-    auto* property = hierarchy.node().get_property<inspect::DoublePropertyValue>(property_name);
+    auto* property = hierarchy->node().get_property<inspect::DoublePropertyValue>(property_name);
     EXPECT_NOT_NULL(property, "Missing Inspect Property: %s", property_name.c_str());
     EXPECT_EQ(property->value(), expected_double_values[property_name],
               "Property value mismatch %s", property_name.c_str());
