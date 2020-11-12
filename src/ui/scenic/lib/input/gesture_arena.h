@@ -7,27 +7,14 @@
 
 #include <lib/fit/function.h>
 
-#include <cstdint>
 #include <deque>
 #include <map>
 #include <unordered_map>
 #include <vector>
 
-namespace scenic_impl::input {
+#include "src/ui/scenic/lib/input/gesture_contender.h"
 
-// Plain enum since it's used to index into a matrix.
-enum GestureResponse {
-  kYes = 0,
-  kYesPrioritize = 1,
-  kMaybe = 2,
-  kMaybePrioritize = 3,
-  kMaybeSuppress = 4,
-  kMaybePrioritizeSuppress = 5,
-  kHold = 6,
-  kHoldSuppress = 7,
-  kNo = 8,
-  kUndefined = 9
-};
+namespace scenic_impl::input {
 
 using ContenderId = uint64_t;
 static constexpr ContenderId kInvalidContenderId = 0;

@@ -5,6 +5,10 @@
 #ifndef SRC_UI_SCENIC_LIB_INPUT_INTERNAL_POINTER_EVENT_H_
 #define SRC_UI_SCENIC_LIB_INPUT_INTERNAL_POINTER_EVENT_H_
 
+#include <zircon/types.h>
+
+#include <array>
+
 #include "src/ui/lib/glm_workaround/glm_workaround.h"
 
 namespace scenic_impl {

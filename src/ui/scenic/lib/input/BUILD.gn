@@ -6,6 +6,9 @@ source_set("input") {
   sources = [
     "gesture_arena.cc",
     "gesture_arena.h",
+    "gesture_contender.h",
+    "gfx_legacy_contender.cc",
+    "gfx_legacy_contender.h",
     "helper.cc",
     "helper.h",
     "injector.cc",
