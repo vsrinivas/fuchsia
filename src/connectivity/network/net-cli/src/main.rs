@@ -1205,7 +1205,7 @@ mod tests {
             }
         }
 
-        let now = zx::Time::get(zx::ClockId::UTC);
+        let now = fuchsia_runtime::utc_time();
         let expires_at = {
             let later = now + zx::Duration::from_minutes(3) + zx::Duration::from_seconds(1);
             later.into_nanos()
@@ -1266,7 +1266,7 @@ mod tests {
             }
         }
 
-        let now = zx::Time::get(zx::ClockId::UTC);
+        let now = fuchsia_runtime::utc_time();
         let expires_at = {
             let later = now + zx::Duration::from_minutes(3) + zx::Duration::from_seconds(1);
             later.into_nanos()
