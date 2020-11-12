@@ -8,13 +8,16 @@
 #include <zircon/errors.h>
 
 #include <algorithm>
+#include <filesystem>
 #include <memory>
+#include <string>
 #include <thread>
 #include <utility>
 #include <vector>
 
 #include <blobfs/blob-layout.h>
 #include <blobfs/format.h>
+#include <blobfs/host.h>
 #include <blobfs/host/fsck.h>
 #include <fbl/auto_call.h>
 
@@ -54,6 +57,16 @@ zx_status_t BlobfsCreator::Usage() {
   fprintf(stderr, "\t'dst/path=src/path'\n");
   fprintf(stderr, "\t'dst/path'\n");
   fprintf(stderr, "with one dst/src pair or single dst per line.\n");
+
+  fprintf(stderr, "\nblobfs specific commands:\n");
+  fprintf(stderr, "\texport [IMAGE] [PATH]\n");
+  fprintf(stderr,
+          "\nExports each blob in IMAGE to the directory in PATH. If PATH does not exist, will "
+          "attempt to "
+          "create it.\n");
+  fprintf(stderr,
+          "\nEach blob exported to PATH is named after their merkle root, and the contents match "
+          "what IMAGE has.\n");
   return status;
 }
 
@@ -328,8 +341,48 @@ zx_status_t BlobfsCreator::Add() {
   return status;
 }
 
+int ExportBlobs(std::string& source_path, std::string& output_path) {
+  fbl::unique_fd blobfs_image(open(source_path.c_str(), O_RDONLY));
+  if (!blobfs_image.is_valid()) {
+    fprintf(stderr, "Failed to open blobfs image at %s. More specifically: %s.\n",
+            source_path.c_str(), strerror(errno));
+    return -1;
+  }
+
+  std::unique_ptr<blobfs::Blobfs> fs = nullptr;
+  if (blobfs::blobfs_create(&fs, std::move(blobfs_image)) != ZX_OK) {
+    return -1;
+  }
+
+  // Try to create path if it doesn't exist.
+  std::filesystem::create_directories(output_path);
+  fbl::unique_fd output_fd(open(output_path.c_str(), O_PATH | O_DIRECTORY));
+  if (!output_fd.is_valid()) {
+    fprintf(stderr, "Failed to obtain a handle to output path at %s. More specifically: %s.\n",
+            output_path.c_str(), strerror(errno));
+    return -1;
+  }
+
+  auto export_result = blobfs::ExportBlobs(output_fd.get(), *fs);
+  if (export_result.is_error()) {
+    fprintf(stderr, "Encountered error while exporting blobs. More specifically: %s.\n",
+            export_result.error().c_str());
+    return -1;
+  }
+  fprintf(stderr, "Successfully exported all blobs.\n");
+  return 0;
+}
+
 int main(int argc, char** argv) {
   BlobfsCreator blobfs;
+
+  if (argc > 3) {
+    if (strcmp(argv[1], "export") == 0) {
+      std::string image_path = argv[2];
+      std::string output_path = argv[3];
+      return ExportBlobs(image_path, output_path);
+    }
+  }
 
   if (blobfs.ProcessAndRun(argc, argv) != ZX_OK) {
     return -1;
