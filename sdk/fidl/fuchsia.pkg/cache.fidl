@@ -66,27 +66,104 @@ protocol PackageCache {
     Sync() -> () error zx.status;
 };
 
-/// This is used to fetch blobs that are not present on the local system for a
-/// given package. This is provided by a [`PackageCache`] to the [`PackageResolver`].
-protocol NeededBlobs {
-    /// Returns a vector of blobs that are not present on the system that must be downloaded and
-    /// written to blobfs with the `Open` method before a package can be resolved. This method
-    /// should continue to be called until it returns an empty vector. This signifies all the
-    /// missing blobs have been successfully downloaded.
-    ///
-    /// - response `blobs` the vector of missing blobs.
-    GetMissingBlobs() -> (vector<BlobInfo> blobs);
+/// Error type for [`NeededBlobs.OpenMetaBlob`] and [`NeededBlobs.OpenBlob`].
+enum OpenBlobError {
+    /// There is insufficient storage space available to persist this blob.
+    OUT_OF_SPACE = 1;
 
-    /// Opens a blob for writing.
+    /// This blob is already open for write by another cache operation.
+    CONCURRENT_WRITE = 2;
+
+    /// An unspecified error occured during underlying I/O.
+    UNSPECIFIED_IO = 3;
+
+    /// An unspecified error occured.
+    INTERNAL = 4;
+};
+
+/// Represents the transaction for caching a particular package.
+///
+/// Clients should start by requesting to `OpenMetaBlob()`, and fetch and write
+/// the metadata blob if needed. Once written, `GetMissingBlobs()` should be
+/// used to determine which content blobs need fetched and written using
+/// `OpenBlob()`. Violating the expected protocol state will result in the
+/// channel being closed by the package cache with a `ZX_ERR_BAD_STATE` epitaph
+/// and aborting the package cache operation.
+///
+/// Once all needed blobs are written by the client, the package cache will
+/// complete the pending [`PackageCache.Get`] request and close this channel
+/// with a `ZX_OK` epitaph.
+protocol NeededBlobs {
+    /// Opens the package's metadata blob for writing. `GetMissingBlobs()`
+    /// should not be called until writing the meta blob or this request
+    /// responds with `false`.
+    ///
+    /// + request `file` resolves to an opened writable file which must be
+    ///   truncated to the correct size by the caller and then written from
+    ///   start to finish (seeks are not supported). A corrupt blob is indicated
+    ///   by a `Write()` (usually the final write) failing with
+    ///   `ZX_ERR_IO_DATA_INTEGRITY`. On error or a response of `false`, `file`
+    ///   will be closed by the server.
+    /// - response `needed` `true` if the blob is still needed and should be
+    ///   written by the client. On `false`, the blob now exists, does not
+    ///   need to be written by the client, and `file` will be closed.
+    /// * error an OpenBlobError indicating failure. Clients may retry this
+    ///   request, though the server end may abort this cache operation on
+    ///   errors it considers to be fatal.
+    OpenMetaBlob(request<fuchsia.io.File> file) -> (bool needed) error OpenBlobError;
+
+    /// Returns an iterator of blobs that are not present on the system that
+    /// must be written using the `OpenBlob` request before the package will be
+    /// fully cached.
+    ///
+    /// A client should make this request no more than once per `NeededBlobs`
+    /// connection. Once all blobs yielded by this iterator are written, the
+    /// package open request will complete.
+    ///
+    /// + request `iterator` a request for an iterator of [`BlobInfo`] of blobs
+    ///   that the client should try to write.
+    GetMissingBlobs(request<BlobInfoIterator> iterator);
+
+    /// Opens a content blob for writing.
     ///
     /// + request `blob_id` the blob id describing this blob.
-    /// + request `file` resolves to an opened writable file must be truncated to the correct size
-    ///   by the caller.
-    /// * error a zx_status value indicating failure. One of the following:
-    ///     * `ZX_ERR_ACCESS_DENIED` if the package does not contain this blob.
-    ///     * `ZX_ERR_IO` if there is some other unspecified error during I/O.
-    ///     * `ZX_ERR_NO_SPACE` if there is no space available to store the package.
-    Open(BlobId blob_id, request<fuchsia.io.File> file) -> () error zx.status;
+    /// + request `file` resolves to an opened writable file which must be
+    ///   truncated to the correct size by the caller and then written from
+    ///   start to finish (seeks are not supported). A corrupt blob is indicated
+    ///   by a `Write()` (usually the final write) failing with
+    ///   `ZX_ERR_IO_DATA_INTEGRITY`. On error or a response of `false`, `file`
+    ///   will be closed by the server.
+    /// - response `needed` `true` if the blob is still needed and should be
+    ///   written by the client. On `false`, the blob now exists, does not
+    ///   need to be written by the client, and `file` will be closed.
+    /// * error an OpenBlobError indicating failure. Clients may retry this
+    ///   request, though the server end may abort this cache operation on
+    ///   errors it considers to be fatal.
+    OpenBlob(
+        BlobId blob_id,
+        request<fuchsia.io.File> file
+        ) -> (bool needed) error OpenBlobError;
+
+    /// Aborts this caching operation for the package.
+    ///
+    /// Any open blobs and any missing blobs iterator will be closed. Any `dir`
+    /// provided to the associated [`PackageCache.Get`] request will also be
+    /// closed. Once this request is acknowledged, this channel will be closed.
+    ///
+    /// Note, dropping this NeededBlobs channel without writing all needed blobs
+    /// will also abort the package cache operation. However, this API provides
+    /// the ability to wait for the operation to be torn down.
+    Abort() -> ();
+};
+
+/// A chunked iterator of [`BlobInfo`], allowing transfer of more [`BlobInfo`]s
+/// that can fit in a single FIDL message.
+protocol BlobInfoIterator {
+    /// Responds with the next chunk of [`BlobInfo`]s. When the iterator is
+    /// exhausted, responds with an empty vector and closes the connection.
+    ///
+    /// - response `blobs` the next chunk of [`BlobInfo`]s.
+    Next() -> (vector<BlobInfo>:MAX blobs);
 };
 
 /// A chunk iterator for the package index. This is required because it is possible for the
@@ -97,4 +174,34 @@ protocol PackageIndexIterator {
     ///
     /// - response `entries` the next chunk of entries in the package index.
     Next() -> (vector<PackageIndexEntry>:MAX entries);
+};
+
+/// Manages the set of retained packages.
+///
+/// Retained packages will not be removed from the package cache, even if they
+/// aren't fully present. There is only a single set active at once, and the
+/// provided APIs for configuring the set atomically replace that set. On boot,
+/// the retained package set is always initialized to the empty set.
+[Discoverable]
+protocol RetainedPackages {
+    /// Atomically clear the retained package set, releasing any previously
+    /// retained packages.
+    Clear() -> ();
+
+    /// Atomically replace the retained package set with the package blob IDs
+    /// provided by the given iterator.
+    ///
+    /// + request `iterator` an iterator of package blob IDs that should be
+    ///   retained.
+    Replace(BlobIdIterator iterator) -> ();
+};
+
+/// A chunked iterator of blob IDs, allowing transfer of more blob IDs that can
+/// fit in a single FIDL message.
+protocol BlobIdIterator {
+    /// Responds with the next chunk of blob IDs. When the iterator is
+    /// exhausted, responds with an empty vector and closes the connection.
+    ///
+    /// - response `blobs` the next chunk of blob IDs.
+    Next() -> (vector<BlobId>:MAX blobs);
 };
