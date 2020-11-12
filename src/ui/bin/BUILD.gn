@@ -5,7 +5,7 @@
 group("bin") {
   deps = [
     "activity",
-    "activity/ctl:activity_ctl",
+    "activity/ctl:activity-ctl",
     "brightness_manager",
     "default_hardware_ime",
     "headless_root_presenter",

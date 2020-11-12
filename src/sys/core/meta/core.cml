@@ -11,6 +11,10 @@
         // children above it are expected to be present on all configs that include core.cml)
         // TODO(fxbug.dev/48215): Decide how to make it easier to understand which children aren't present.
         {
+            name: "activity",
+            url: "fuchsia-pkg://fuchsia.com/activity#meta/activity.cm",
+        },
+        {
             name: "log-stats",
             url: "fuchsia-pkg://fuchsia.com/log-stats#meta/log-stats.cm",
         },
@@ -60,6 +64,15 @@
             ],
             from: "parent",
             to: [ "#debug_serial" ],
+        },
+        {
+            protocol: [
+                "fuchsia.ui.activity.control.Control",
+                "fuchsia.ui.activity.Provider",
+                "fuchsia.ui.activity.Tracker",
+            ],
+            from: "#activity",
+            to: [ "#appmgr" ],
         },
         {
             protocol: "fuchsia.hardware.serial.NewDeviceProxy",
@@ -141,6 +154,7 @@
             protocol: [ "fuchsia.logger.LogSink" ],
             from: "parent",
             to: [
+                "#activity",
                 "#debug_serial",
                 "#font_provider",
                 "#log-stats",

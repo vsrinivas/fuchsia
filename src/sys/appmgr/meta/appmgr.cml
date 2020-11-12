@@ -277,6 +277,18 @@
             protocol: "fuchsia.thermal.test.TemperatureLogger",
             path: "/svc_for_sys/fuchsia.thermal.test.TemperatureLogger",
         },
+        {
+            protocol: "fuchsia.ui.activity.Provider",
+            path: "/svc_for_sys/fuchsia.ui.activity.Provider",
+        },
+        {
+            protocol: "fuchsia.ui.activity.Tracker",
+            path: "/svc_for_sys/fuchsia.ui.activity.Tracker",
+        },
+        {
+            protocol: "fuchsia.ui.activity.control.Control",
+            path: "/svc_for_sys/fuchsia.ui.activity.control.Control",
+        },
 
         // From archivist
         {

@@ -590,8 +590,6 @@ group("deprecated_package_underscore") {
     "//src/ui/a11y/bin/a11y_tts_log_engine:a11y_tts_log_engine",
     "//src/ui/a11y/bin/a11y_tts_log_engine/tests:a11y_tts_log_engine_tests",
     "//src/ui/a11y/lib:a11y_lib_tests",
-    "//src/ui/bin/activity:activity_test",
-    "//src/ui/bin/activity/ctl:activity_ctl",
     "//src/ui/bin/brightness_manager:brightness_manager",
     "//src/ui/bin/brightness_manager:brightness_manager_tests",
     "//src/ui/bin/default_hardware_ime:default_hardware_ime",

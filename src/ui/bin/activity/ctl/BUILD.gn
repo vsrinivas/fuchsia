@@ -3,9 +3,8 @@
 # found in the LICENSE file.
 
 import("//build/config.gni")
-import("//build/package.gni")
-import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
+import("//src/sys/build/components.gni")
 
 executable("bin") {
   output_name = "activity_ctl"
@@ -29,20 +28,12 @@ executable("bin") {
   configs += [ "//build/config:Wno-conversion" ]
 }
 
-package("activity_ctl") {
+fuchsia_component("activity-ctl-component") {
+  component_name = "activity-ctl"
+  manifest = "meta/activity-ctl.cmx"
   deps = [ ":bin" ]
+}
 
-  binaries = [
-    {
-      name = "activity_ctl"
-      shell = true
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("meta/activity_ctl.cmx")
-      dest = "activity_ctl.cmx"
-    },
-  ]
+fuchsia_package("activity-ctl") {
+  deps = [ ":activity-ctl-component" ]
 }

@@ -1,0 +1,30 @@
+{
+    program: {
+        binary: "bin/activity",
+    },
+    capabilities: [
+        {
+            protocol: [
+                "fuchsia.ui.activity.control.Control",
+                "fuchsia.ui.activity.Provider",
+                "fuchsia.ui.activity.Tracker",
+            ],
+        },
+    ],
+    use: [
+        { runner: "elf" },
+        {
+            protocol: [ "fuchsia.logger.LogSink" ],
+        },
+    ],
+    expose: [
+        {
+            protocol: [
+                "fuchsia.ui.activity.control.Control",
+                "fuchsia.ui.activity.Provider",
+                "fuchsia.ui.activity.Tracker",
+            ],
+            from: "self",
+        },
+    ],
+}
