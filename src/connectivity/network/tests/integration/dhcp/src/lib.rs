@@ -288,13 +288,13 @@ async fn test_dhcp<E: netemul::Endpoint>(
                     };
 
                     let config = match static_addr {
-                        Some(addr) => {
-                            // NOTE: InterfaceAddress does not currently
-                            // implement Clone, it probably will at some point
-                            // as FIDL bindings evolve.
+                        // NOTE: InterfaceAddress does not currently
+                        // implement Clone, it probably will at some point
+                        // as FIDL bindings evolve.
+                        Some(fidl_fuchsia_net::Subnet { addr, prefix_len }) => {
                             netemul::InterfaceConfig::StaticIp(fidl_fuchsia_net::Subnet {
-                                addr: addr.addr,
-                                prefix_len: addr.prefix_len,
+                                addr: *addr,
+                                prefix_len: *prefix_len,
                             })
                         }
                         None => netemul::InterfaceConfig::None,
@@ -352,9 +352,9 @@ async fn test_dhcp<E: netemul::Endpoint>(
             })
             .map(Result::Ok),
     )
-    .try_for_each(|(_, addr, interfaces)| async move {
-        let want_addr =
-            addr.ok_or(anyhow::format_err!("expected address must be set for client endpoints"))?;
+    .try_for_each(|(_, want_addr, interfaces)| async move {
+        let want_addr = want_addr
+            .ok_or(anyhow::format_err!("expected address must be set for client endpoints"))?;
 
         let bind = || {
             use netemul::EnvironmentUdpSocket as _;
@@ -389,13 +389,28 @@ async fn test_dhcp<E: netemul::Endpoint>(
                 let addr = fidl_fuchsia_net_interfaces_ext::wait_interface_with_id(
                     fidl_fuchsia_net_interfaces_ext::event_stream(watcher.clone()),
                     &mut properties,
-                    |properties| {
-                        properties.addresses.as_ref()?.iter().filter_map(|a| a.addr).find(|a| {
-                            match a.addr {
-                                fidl_fuchsia_net::IpAddress::Ipv4(_) => true,
-                                fidl_fuchsia_net::IpAddress::Ipv6(_) => false,
-                            }
-                        })
+                    |fidl_fuchsia_net_interfaces::Properties {
+                         id: _,
+                         addresses,
+                         online: _,
+                         device_class: _,
+                         has_default_ipv4_route: _,
+                         has_default_ipv6_route: _,
+                         name: _,
+                         .. // TODO(fxbug.dev/63727): Remove this when we have a validated type.
+                     }| {
+                        addresses.as_ref()?.iter().find_map(
+                            |fidl_fuchsia_net_interfaces::Address { addr, .. /* TODO(fxbug.dev/63727): Remove this when we have a validated type. */ }| {
+
+                                addr.and_then(|subnet| {
+                                    let fidl_fuchsia_net::Subnet { addr, prefix_len: _ } = subnet;
+                                    match addr {
+                                        fidl_fuchsia_net::IpAddress::Ipv4(_) => Some(subnet),
+                                        fidl_fuchsia_net::IpAddress::Ipv6(_) => None,
+                                    }
+                                })
+                            },
+                        )
                     },
                 )
                 .on_timeout(
@@ -419,9 +434,22 @@ async fn test_dhcp<E: netemul::Endpoint>(
                 let () = fidl_fuchsia_net_interfaces_ext::wait_interface_with_id(
                     fidl_fuchsia_net_interfaces_ext::event_stream(watcher.clone()),
                     &mut properties,
-                    |properties| {
-                        properties.addresses.as_ref().map_or(Some(()), |addresses| {
-                            if addresses.iter().any(|a| a.addr == Some(addr)) {
+                    |fidl_fuchsia_net_interfaces::Properties {
+                         id: _,
+                         addresses,
+                         online: _,
+                         device_class: _,
+                         has_default_ipv4_route: _,
+                         has_default_ipv6_route: _,
+                         name: _,
+                         .. // TODO(fxbug.dev/63727): Remove this when we have a validated type.
+                     }| {
+                        addresses.as_ref().map_or(Some(()), |addresses| {
+                            if addresses.iter().any(
+                                |fidl_fuchsia_net_interfaces::Address { addr, .. /* TODO(fxbug.dev/63727): Remove this when we have a validated type. */ }| {
+                                    addr == &Some(want_addr)
+                                },
+                            ) {
                                 None
                             } else {
                                 Some(())
