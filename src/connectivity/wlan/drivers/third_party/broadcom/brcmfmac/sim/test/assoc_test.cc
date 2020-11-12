@@ -32,7 +32,10 @@ constexpr wlan_ssid_t kDefaultSsid = {.len = 15, .ssid = "Fuchsia Fake AP"};
 const common::MacAddr kDefaultBssid({0x12, 0x34, 0x56, 0x78, 0x9a, 0xbc});
 const common::MacAddr kMadeupClient({0xde, 0xad, 0xbe, 0xef, 0x00, 0x01});
 const uint16_t kDefaultApDisassocReason = 1;
-const uint16_t kDefaultApDeauthReason = 0;
+// INVALID_AUTHENTICATION, IEEE 802.11-2016 9.4.17
+const uint16_t kDefaultApDeauthReason = 2;
+// LEAVING_NETWORK_DISASSOC, IEEE 802.11-2016 9.4.17
+const uint16_t kDefaultClientDeauthReason = 8;
 // Sim firmware returns these values for SNR and RSSI.
 const uint8_t kDefaultSimFwSnr = 40;
 const int8_t kDefaultSimFwRssi = -20;
@@ -272,6 +275,13 @@ void AssocTest::Init() {
   context_.signal_ind_rssi = 0;
   context_.signal_ind_snr = 0;
   context_.iface_stats = {};
+
+  // Reset all of these settings, which should be set in tests that need them.
+  start_disassoc_ = false;
+  disassoc_from_ap_ = false;
+  disassoc_self_ = true;
+  start_deauth_ = false;
+  deauth_from_ap_ = false;
 }
 
 void AssocTest::DisassocFromAp() {
@@ -512,10 +522,11 @@ void AssocTest::StartDisassoc() {
 }
 
 void AssocTest::StartDeauth() {
-  // Send disassoc request
+  // Send deauth request
   if (!deauth_from_ap_) {
     DeauthClient();
   } else {
+    // Send deauth frame
     DeauthFromAp();
   }
 }
@@ -528,7 +539,7 @@ void AssocTest::DisassocClient(const common::MacAddr& mac_addr) {
 }
 
 void AssocTest::DeauthClient() {
-  wlanif_deauth_req_t deauth_req = {};
+  wlanif_deauth_req_t deauth_req = {.reason_code = kDefaultClientDeauthReason};
 
   std::memcpy(deauth_req.peer_sta_address, context_.bssid.byte, ETH_ALEN);
   client_ifc_.if_impl_ops_->deauth_req(client_ifc_.if_impl_ctx_, &deauth_req);
@@ -1051,7 +1062,10 @@ TEST_F(AssocTest, deauth_from_ap) {
   env_->Run(kTestDuration);
 
   EXPECT_EQ(context_.assoc_resp_count, 1U);
+  EXPECT_EQ(context_.deauth_conf_count, 0U);
   EXPECT_EQ(context_.deauth_ind_count, 1U);
+  EXPECT_EQ(context_.disassoc_conf_count, 0U);
+  EXPECT_EQ(context_.disassoc_ind_count, 0U);
 }
 
 // After assoc, send a deauth from client - client should disassociate
@@ -1074,6 +1088,36 @@ TEST_F(AssocTest, deauth_from_self) {
 
   EXPECT_EQ(context_.assoc_resp_count, 1U);
   EXPECT_EQ(context_.deauth_conf_count, 1U);
+  EXPECT_EQ(context_.deauth_ind_count, 0U);
+  EXPECT_EQ(context_.disassoc_conf_count, 0U);
+  EXPECT_EQ(context_.disassoc_ind_count, 0U);
+}
+
+// Associate, send a deauth from client, associate again, then send deauth from AP.
+TEST_F(AssocTest, deauth_from_self_then_from_ap) {
+  // Create our device instance
+  Init();
+
+  // Start up our fake AP
+  simulation::FakeAp ap(env_.get(), kDefaultBssid, kDefaultSsid, kDefaultChannel);
+  ap.EnableBeacon(zx::msec(100));
+  aps_.push_back(&ap);
+
+  context_.expected_results.push_front(WLAN_ASSOC_RESULT_SUCCESS);
+  context_.expected_results.push_front(WLAN_ASSOC_RESULT_SUCCESS);
+
+  SCHEDULE_CALL(zx::msec(10), &AssocTest::StartAssoc, this);
+  SCHEDULE_CALL(zx::sec(1), &AssocTest::DeauthClient, this);
+  SCHEDULE_CALL(zx::sec(2), &AssocTest::StartAssoc, this);
+  SCHEDULE_CALL(zx::sec(3), &AssocTest::DeauthFromAp, this);
+
+  env_->Run(kTestDuration);
+
+  EXPECT_EQ(context_.assoc_resp_count, 2U);
+  EXPECT_EQ(context_.deauth_conf_count, 1U);
+  EXPECT_EQ(context_.deauth_ind_count, 1U);
+  EXPECT_EQ(context_.disassoc_conf_count, 0U);
+  EXPECT_EQ(context_.disassoc_ind_count, 0U);
 }
 
 // Verify that association is retried as per the setting
