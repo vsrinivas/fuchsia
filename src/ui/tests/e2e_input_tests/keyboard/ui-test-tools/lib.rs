@@ -9,7 +9,7 @@ use fidl_fuchsia_ui_policy as ui_policy;
 use fidl_fuchsia_ui_scenic as ui_scenic;
 use fuchsia_component::client::connect_to_service;
 use fuchsia_scenic::{EntityNode, Session, SessionPtr, View, ViewTokenPair};
-use fuchsia_zircon::{ClockId, Time};
+use fuchsia_zircon::Time;
 use futures::TryStreamExt;
 
 /// Type of the e2e testing environment to setup.
@@ -49,7 +49,7 @@ impl Service {
     }
 
     async fn present(&self) -> Result<(), Error> {
-        let presentation_time = Time::get(ClockId::Monotonic).into_nanos() as u64;
+        let presentation_time = Time::get_monotonic().into_nanos() as u64;
         self.session.lock().present(presentation_time).await.context("session present")?;
         Ok(())
     }
