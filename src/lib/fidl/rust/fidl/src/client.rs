@@ -59,6 +59,7 @@ pub type DecodedQueryResponseFut<T> =
 /// A future representing the result of a FIDL query, with early error detection available if the
 /// message couldn't be sent.
 #[derive(Debug)]
+#[must_use = "futures do nothing unless you `.await` or poll them"]
 pub struct QueryResponseFut<T>(pub MaybeDone<DecodedQueryResponseFut<T>>);
 
 impl<T> FusedFuture for QueryResponseFut<T> {
