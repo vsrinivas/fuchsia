@@ -58,7 +58,7 @@ pub struct BatteryManager {
 
 #[inline]
 fn get_current_time() -> i64 {
-    let t = zx::Time::get(zx::ClockId::UTC);
+    let t = fuchsia_runtime::utc_time();
     (t.into_nanos() / 1000) as i64
 }
 
