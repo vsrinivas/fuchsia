@@ -38,8 +38,10 @@ fuchsia-community-managers@google.com.
 
 ## What are examples of terminology to be avoided?
 
-This list is NOT meant to be comprehensive.  It contains a few examples that
+These lists are NOT meant to be comprehensive. They contain a few examples that
 people have run into frequently.
+
+**Specific terms**
 
 | Term      | Suggested alternatives                                        |
 | --------- | ------------------------------------------------------------- |
@@ -51,6 +53,17 @@ people have run into frequently.
 | sane      | expected, appropriate, sensible, valid                        |
 | crazy     | unexpected, catastrophic, incoherent                          |
 | redline   | priority line, limit, soft limit                              |
+
+**Idioms**
+
+Prefer descriptive and factual statements instead of idioms. Idioms can suffer
+from the same problems described above, and also they can be difficult to
+understand for people with a different cultural context than you.
+
+* For example, instead of "this is not black or white", prefer "this is more
+  nuanced".
+* Instead of "this is the blind leading the blind", explain what you mean, like
+  "the reference you point to is inaccurate because ...".
 
 ## What if I am interfacing with something that violates this policy?
 
