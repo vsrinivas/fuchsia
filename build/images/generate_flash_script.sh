@@ -181,7 +181,7 @@ done
 
 # Reboot into bootloader so that the new firmware image takes effect.
 if [[ ! -z "${FIRMWARE[@]}" ]]; then
-  echo "${FASTBOOT_PATH} reboot bootloader" >> "${OUTPUT}"
+  echo "${FASTBOOT_PATH}" "\${FASTBOOT_ARGS}" reboot bootloader >> "${OUTPUT}"
   # Wait for 5 seconds to allow enough time for the device to de-enumerate.
   echo "echo 'Sleeping for 5 seconds for the device to de-enumerate.'" >> "${OUTPUT}"
   echo "sleep 5" >> "${OUTPUT}"

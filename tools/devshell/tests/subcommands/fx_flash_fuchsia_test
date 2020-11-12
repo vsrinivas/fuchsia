@@ -59,4 +59,12 @@ INPUT
   btf::expect-mock-args "${flash_script}" --recovery
 }
 
+TEST_fx_flash_with_serial() {
+  BT_EXPECT ${fx} flash -s 12345
+  source "${flash_script}.mock_state"
+  btf::expect-mock-args "${flash_script}" \
+    "--ssh-key=${BT_TEMP_DIR}/.ssh/fuchsia_authorized_keys" \
+    -s 12345
+}
+
 BT_RUN_TESTS "$@"

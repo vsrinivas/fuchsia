@@ -43,17 +43,18 @@ function fx-flash {
   else
     # Process traditional fastboot over USB.
     fastboot="$(fx-command-run list-build-artifacts --build --expect-one --name fastboot tools)"
-    num_devices=$("${fastboot}" devices | wc -l)
-    if [[ "${num_devices}" -lt 1 ]]; then
-      fx-error "Please place device into fastboot mode!"
-      return 1
-    elif [[ "${num_devices}" -gt 1 ]] && [[ -z "${serial}" ]]; then
-      fx-error "More than one device detected, please provide -s <serial>!"
-      return 1
-    fi
-
     fastboot_args=()
-    if [[ ! -z "${serial}" ]]; then
+    if [[ -z "${serial}" ]]; then
+      # If the user didn't specify a device with -s, see if there's exactly 1.
+      num_devices=$("${fastboot}" devices | wc -l)
+      if [[ "${num_devices}" -lt 1 ]]; then
+        fx-error "No device detected, boot into fastboot mode or provide -s <serial>!"
+        return 1
+      elif [[ "${num_devices}" -gt 1 ]]; then
+        fx-error "More than one device detected, please provide -s <serial>!"
+        return 1
+      fi
+    else
       fastboot_args=("-s" "${serial}")
     fi
 
