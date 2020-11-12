@@ -4,6 +4,23 @@
 
 import("//build/config/fuchsia/rules.gni")
 import("//build/rust/rustc_binary.gni")
+import("//build/rust/rustc_library.gni")
+
+# Common code for codegen binary and tests
+rustc_library("codegen_lib") {
+  edition = "2018"
+  deps = [
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:pest",
+    "//third_party/rust_crates:pest_derive",
+  ]
+  sources = [
+    "src/definition.rs",
+    "src/grammar.rs",
+    "src/lib.rs",
+    "src/parser.rs",
+  ]
+}
 
 # Build the code generator
 if (host_toolchain == current_toolchain) {
@@ -11,18 +28,23 @@ if (host_toolchain == current_toolchain) {
     output_name = "at_command_gen"
     edition = "2018"
     deps = [
+      ":codegen_lib",
       "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:argh",
       "//third_party/rust_crates:log",
-      "//third_party/rust_crates:pest",
-      "//third_party/rust_crates:pest_derive",
       "//third_party/rust_crates:simplelog",
     ]
-    sources = [
-      "src/definition.rs",
-      "src/grammar.rs",
-      "src/main.rs",
-      "src/parser.rs",
-    ]
+    sources = [ "src/main.rs" ]
   }
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":parser_tests($host_toolchain)" ]
+}
+
+rustc_test("parser_tests") {
+  source_root = "src/parser_tests.rs"
+  deps = [ ":codegen_lib" ]
+  sources = [ "src/parser_tests.rs" ]
 }

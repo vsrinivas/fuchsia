@@ -2,46 +2,46 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Definition {
     Command(Command),
-    Response { command_name: String, is_extension: bool, arguments: Arguments },
+    Response { name: String, is_extension: bool, arguments: Arguments },
     Enum { name: String, variants: Vec<Variant> },
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Command {
-    Execute { command_name: String, is_extension: bool, arguments: Option<ExecuteArguments> },
-    Read { command_name: String, is_extension: bool },
-    Test { command_name: String, is_extension: bool },
+    Execute { name: String, is_extension: bool, arguments: Option<ExecuteArguments> },
+    Read { name: String, is_extension: bool },
+    Test { name: String, is_extension: bool },
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct ExecuteArguments {
     pub nonstandard_delimiter: Option<String>,
     pub arguments: Arguments,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Arguments {
     ParenthesisDelimitedArgumentLists(Vec<Vec<Argument>>),
     ArgumentList(Vec<Argument>),
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Argument {
-    pub identifier: String,
+    pub name: String,
     pub typ: Type,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Type {
     List(PrimitiveType),
     Map { key: PrimitiveType, value: PrimitiveType },
     PrimitiveType(PrimitiveType),
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum PrimitiveType {
     String,
     Integer,
@@ -50,7 +50,7 @@ pub enum PrimitiveType {
     NamedType(String),
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Variant {
     pub name: String,
     pub value: i64,

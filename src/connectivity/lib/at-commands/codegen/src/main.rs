@@ -4,6 +4,7 @@
 
 use {
     anyhow::{Context, Result},
+    codegen_lib::{definition, parser},
     log::info,
     simplelog::{Config as LogConfig, LevelFilter, SimpleLogger},
     std::{
@@ -12,10 +13,6 @@ use {
         path::PathBuf,
     },
 };
-
-mod definition;
-mod grammar;
-mod parser;
 
 // This code just confirms we've correctly linked in the lowlevel module.
 static SOME_CODE: &'static str = r#"use crate::lowlevel::Unimplemented;

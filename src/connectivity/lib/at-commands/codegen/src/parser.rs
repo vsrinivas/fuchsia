@@ -140,8 +140,8 @@ fn parse_execute(execute: Pair<'_>) -> Result<Command> {
     let optional_extension = next_match(&mut execute_elements, Rule::optional_extension)?;
     let parsed_optional_extension = parse_optional_extension(optional_extension)?;
 
-    let command_name = next_match(&mut execute_elements, Rule::command_name)?;
-    let parsed_command_name = parse_command_name(command_name)?;
+    let name = next_match(&mut execute_elements, Rule::command_name)?;
+    let parsed_name = parse_name(name)?;
 
     let execute_arguments_option =
         next_match_option(&mut execute_elements, Rule::execute_arguments)?;
@@ -151,7 +151,7 @@ fn parse_execute(execute: Pair<'_>) -> Result<Command> {
     };
 
     Ok(Command::Execute {
-        command_name: parsed_command_name,
+        name: parsed_name,
         is_extension: parsed_optional_extension,
         arguments: parsed_execute_arguments_option,
     })
@@ -191,10 +191,10 @@ fn parse_read(read: Pair<'_>) -> Result<Command> {
     let optional_extension = next_match(&mut read_elements, Rule::optional_extension)?;
     let parsed_optional_extension = parse_optional_extension(optional_extension)?;
 
-    let command_name = next_match(&mut read_elements, Rule::command_name)?;
-    let parsed_command_name = parse_command_name(command_name)?;
+    let name = next_match(&mut read_elements, Rule::command_name)?;
+    let parsed_name = parse_name(name)?;
 
-    Ok(Command::Read { command_name: parsed_command_name, is_extension: parsed_optional_extension })
+    Ok(Command::Read { name: parsed_name, is_extension: parsed_optional_extension })
 }
 
 fn parse_test(test: Pair<'_>) -> Result<Command> {
@@ -203,10 +203,10 @@ fn parse_test(test: Pair<'_>) -> Result<Command> {
     let optional_extension = next_match(&mut test_elements, Rule::optional_extension)?;
     let parsed_optional_extension = parse_optional_extension(optional_extension)?;
 
-    let command_name = next_match(&mut test_elements, Rule::command_name)?;
-    let parsed_command_name = parse_command_name(command_name)?;
+    let name = next_match(&mut test_elements, Rule::command_name)?;
+    let parsed_name = parse_name(name)?;
 
-    Ok(Command::Test { command_name: parsed_command_name, is_extension: parsed_optional_extension })
+    Ok(Command::Test { name: parsed_name, is_extension: parsed_optional_extension })
 }
 
 fn parse_response(response: Pair<'_>) -> Result<Definition> {
@@ -215,14 +215,14 @@ fn parse_response(response: Pair<'_>) -> Result<Definition> {
     let optional_extension = next_match(&mut response_elements, Rule::optional_extension)?;
     let parsed_optional_extension = parse_optional_extension(optional_extension)?;
 
-    let command_name = next_match(&mut response_elements, Rule::command_name)?;
-    let parsed_command_name = parse_command_name(command_name)?;
+    let name = next_match(&mut response_elements, Rule::command_name)?;
+    let parsed_name = parse_name(name)?;
 
     let arguments = next_match(&mut response_elements, Rule::arguments)?;
     let parsed_arguments = parse_arguments(arguments)?;
 
     Ok(Definition::Response {
-        command_name: parsed_command_name,
+        name: parsed_name,
         is_extension: parsed_optional_extension,
         arguments: parsed_arguments,
     })
@@ -293,7 +293,7 @@ fn parse_argument(argument: Pair<'_>) -> Result<Argument> {
     let typ = next_match(&mut argument_elements, Rule::typ)?;
     let parsed_type = parse_type(typ)?;
 
-    Ok(Argument { identifier: parsed_identifier, typ: parsed_type })
+    Ok(Argument { name: parsed_identifier, typ: parsed_type })
 }
 
 fn parse_type(typ: Pair<'_>) -> Result<Type> {
@@ -383,8 +383,8 @@ fn parse_variant(variant: Pair<'_>) -> Result<Variant> {
     Ok(Variant { name: parsed_name, value: parsed_value })
 }
 
-fn parse_command_name(command_name: Pair<'_>) -> Result<String> {
-    Ok(command_name.as_span().as_str().to_string())
+fn parse_name(name: Pair<'_>) -> Result<String> {
+    Ok(name.as_span().as_str().to_string())
 }
 
 fn parse_identifier(identifier: Pair<'_>) -> Result<String> {
