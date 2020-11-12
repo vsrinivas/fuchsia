@@ -4,13 +4,13 @@
 
 #include <stdlib.h>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/platform-defs.h>
-#include <ddk/protocol/gpio.h>
 #include <ddk/protocol/platform/device.h>
+
+#include "src/devices/bus/drivers/platform/test/test-parent-bind.h"
 
 #define DRIVER_NAME "test-parent"
 
@@ -72,8 +72,4 @@ static zx_driver_ops_t test_driver_ops = {
     .bind = test_bind,
 };
 
-ZIRCON_DRIVER_BEGIN(test_bus, test_driver_ops, "zircon", "0.1", 4)
-BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PDEV),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_TEST),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_PBUS_TEST),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_TEST_PARENT), ZIRCON_DRIVER_END(test_bus)
+ZIRCON_DRIVER(test_bus, test_driver_ops, "zircon", "0.1")

@@ -4,13 +4,13 @@
 
 #include <memory>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/driver.h>
-#include <ddk/platform-defs.h>
 #include <ddk/protocol/platform/device.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/vreg.h>
+
+#include "src/devices/bus/drivers/platform/test/test-vreg-bind.h"
 
 namespace vreg {
 
@@ -78,10 +78,4 @@ constexpr zx_driver_ops_t driver_ops = []() {
 
 }  // namespace vreg
 
-// clang-format off
-ZIRCON_DRIVER_BEGIN(test_vreg, vreg::driver_ops, "zircon", "0.1", 4)
-BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PDEV),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_TEST),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_PBUS_TEST),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_TEST_VREG),
-ZIRCON_DRIVER_END(test_vreg)
+ZIRCON_DRIVER(test_vreg, vreg::driver_ops, "zircon", "0.1")

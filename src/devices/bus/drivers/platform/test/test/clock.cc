@@ -4,7 +4,6 @@
 
 #include <memory>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/driver.h>
 #include <ddk/platform-defs.h>
@@ -12,6 +11,8 @@
 #include <ddk/protocol/platform/device.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/clockimpl.h>
+
+#include "src/devices/bus/drivers/platform/test/test-clock-bind.h"
 
 #define DRIVER_NAME "test-clock"
 
@@ -174,8 +175,4 @@ constexpr zx_driver_ops_t driver_ops = []() {
 
 }  // namespace
 
-ZIRCON_DRIVER_BEGIN(test_clock, driver_ops, "zircon", "0.1", 4)
-BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PDEV),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_TEST),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_PBUS_TEST),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_TEST_CLOCK), ZIRCON_DRIVER_END(test_clock)
+ZIRCON_DRIVER(test_clock, driver_ops, "zircon", "0.1")

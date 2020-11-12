@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/fidl/fidl.gni")
 import("//build/test.gni")
@@ -9,7 +10,6 @@ import("//zircon/system/ulib/devmgr-integration-test/isolated_devmgr.gni")
 
 test("platform-bus") {
   output_name = "platform-bus-test"
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "main.cc" ]
   deps = [
     "//sdk/fidl/fuchsia.sysinfo:fuchsia.sysinfo_llcpp",
@@ -26,22 +26,17 @@ test("platform-bus") {
   ]
 }
 
-simple_drivers = [
-  "child-1",
-  "child-2",
-  "child-2.proxy",
-  "child-3",
-  "parent",
-  "composite",
-]
+bind_rules("test-board-bind") {
+  rules = "test-board.bind"
+  output = "test-board-bind.h"
+  deps = [ "//src/devices/bind/fuchsia.platform" ]
+}
 
 driver_module("test-board") {
   configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
   configs += [
     "//build/config:all_source",
-    "//build/config/fuchsia:enable_zircon_asserts",
     "//build/config/fuchsia:static_cpp_standard_library",
-    "//build/unification/config:zircon-migrated",
   ]
   sources = [
     "test-board.cc",
@@ -57,6 +52,7 @@ driver_module("test-board") {
     "test.cc",
   ]
   deps = [
+    ":test-board-bind",
     "//sdk/banjo/ddk.protocol.platform.bus",
     "//sdk/banjo/ddk.protocol.platform.device",
     "//src/devices/lib/amlogic",
@@ -70,244 +66,265 @@ driver_module("test-board") {
   ]
 }
 
+bind_rules("test-gpio-bind") {
+  rules = "test/test-gpio.bind"
+  output = "test-gpio-bind.h"
+  deps = [ "//src/devices/bind/fuchsia.platform" ]
+}
+
 driver_module("test-gpio") {
   configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
   configs += [
     "//build/config:all_source",
-    "//build/config/fuchsia:enable_zircon_asserts",
     "//build/config/fuchsia:static_cpp_standard_library",
-    "//build/unification/config:zircon-migrated",
   ]
   sources = [ "test/gpio.cc" ]
   deps = [
+    ":test-gpio-bind",
     "//sdk/banjo/ddk.protocol.gpio",
     "//sdk/banjo/ddk.protocol.gpioimpl",
     "//sdk/banjo/ddk.protocol.platform.bus",
     "//sdk/banjo/ddk.protocol.platform.device",
     "//src/devices/lib/driver",
     "//src/lib/ddk",
-
-    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
-    "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//src/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
   ]
+}
+
+bind_rules("test-power-bind") {
+  rules = "test/test-power.bind"
+  output = "test-power-bind.h"
+  deps = [ "//src/devices/bind/fuchsia.platform" ]
 }
 
 driver_module("test-power") {
   configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
   configs += [
     "//build/config:all_source",
-    "//build/config/fuchsia:enable_zircon_asserts",
     "//build/config/fuchsia:static_cpp_standard_library",
-    "//build/unification/config:zircon-migrated",
   ]
   sources = [ "test/power.cc" ]
   deps = [
+    ":test-power-bind",
     "//sdk/banjo/ddk.protocol.platform.bus",
     "//sdk/banjo/ddk.protocol.platform.device",
     "//sdk/banjo/ddk.protocol.power",
     "//sdk/banjo/ddk.protocol.powerimpl",
     "//src/devices/lib/driver",
     "//src/lib/ddk",
-
-    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
-    "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//src/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
   ]
+}
+
+bind_rules("test-goldfish-address-space-bind") {
+  rules = "test/test-goldfish-address-space.bind"
+  output = "test-goldfish-address-space-bind.h"
+  deps = [ "//src/devices/bind/fuchsia.platform" ]
 }
 
 driver_module("test-goldfish-address-space") {
   configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
   configs += [
     "//build/config:all_source",
-    "//build/config/fuchsia:enable_zircon_asserts",
     "//build/config/fuchsia:static_cpp_standard_library",
-    "//build/unification/config:zircon-migrated",
   ]
   sources = [ "test/goldfish_address_space.cc" ]
   deps = [
+    ":test-goldfish-address-space-bind",
     "//sdk/banjo/ddk.protocol.goldfish.addressspace",
     "//sdk/banjo/ddk.protocol.platform.bus",
     "//sdk/banjo/ddk.protocol.platform.device",
     "//src/devices/lib/driver",
     "//src/lib/ddk",
-
-    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
-    "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//src/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
   ]
+}
+
+bind_rules("test-goldfish-pipe-bind") {
+  rules = "test/test-goldfish-pipe.bind"
+  output = "test-goldfish-pipe-bind.h"
+  deps = [ "//src/devices/bind/fuchsia.platform" ]
 }
 
 driver_module("test-goldfish-pipe") {
   configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
   configs += [
     "//build/config:all_source",
-    "//build/config/fuchsia:enable_zircon_asserts",
     "//build/config/fuchsia:static_cpp_standard_library",
-    "//build/unification/config:zircon-migrated",
   ]
   sources = [ "test/goldfish_pipe.cc" ]
   deps = [
+    ":test-goldfish-pipe-bind",
     "//sdk/banjo/ddk.protocol.goldfish.pipe",
     "//sdk/banjo/ddk.protocol.platform.bus",
     "//sdk/banjo/ddk.protocol.platform.device",
     "//src/devices/lib/driver",
     "//src/lib/ddk",
-
-    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
-    "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//src/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
   ]
+}
+
+bind_rules("test-clock-bind") {
+  rules = "test/test-clock.bind"
+  output = "test-clock-bind.h"
+  deps = [ "//src/devices/bind/fuchsia.platform" ]
 }
 
 driver_module("test-clock") {
   configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
   configs += [
     "//build/config:all_source",
-    "//build/config/fuchsia:enable_zircon_asserts",
     "//build/config/fuchsia:static_cpp_standard_library",
-    "//build/unification/config:zircon-migrated",
   ]
   sources = [ "test/clock.cc" ]
   deps = [
+    ":test-clock-bind",
     "//sdk/banjo/ddk.protocol.clock",
     "//sdk/banjo/ddk.protocol.clockimpl",
     "//sdk/banjo/ddk.protocol.platform.bus",
     "//sdk/banjo/ddk.protocol.platform.device",
     "//src/devices/lib/driver",
     "//src/lib/ddk",
-
-    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
-    "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//src/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
   ]
+}
+
+bind_rules("test-i2c-bind") {
+  rules = "test/test-i2c.bind"
+  output = "test-i2c-bind.h"
+  deps = [ "//src/devices/bind/fuchsia.platform" ]
 }
 
 driver_module("test-i2c") {
   configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
   configs += [
     "//build/config:all_source",
-    "//build/config/fuchsia:enable_zircon_asserts",
     "//build/config/fuchsia:static_cpp_standard_library",
-    "//build/unification/config:zircon-migrated",
   ]
   sources = [ "test/i2c.cc" ]
   deps = [
+    ":test-i2c-bind",
     "//sdk/banjo/ddk.protocol.i2c",
     "//sdk/banjo/ddk.protocol.i2cimpl",
     "//sdk/banjo/ddk.protocol.platform.bus",
     "//sdk/banjo/ddk.protocol.platform.device",
     "//src/devices/lib/driver",
     "//src/lib/ddk",
-
-    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
-    "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//src/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
   ]
+}
+
+bind_rules("test-spi-bind") {
+  rules = "test/test-spi.bind"
+  output = "test-spi-bind.h"
+  deps = [ "//src/devices/bind/fuchsia.platform" ]
 }
 
 driver_module("test-spi") {
   configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
   configs += [
     "//build/config:all_source",
-    "//build/config/fuchsia:enable_zircon_asserts",
     "//build/config/fuchsia:static_cpp_standard_library",
-    "//build/unification/config:zircon-migrated",
   ]
   sources = [ "test/spi.cc" ]
   deps = [
+    ":test-spi-bind",
     "//sdk/banjo/ddk.protocol.platform.bus",
     "//sdk/banjo/ddk.protocol.platform.device",
     "//sdk/banjo/ddk.protocol.spi",
     "//sdk/banjo/ddk.protocol.spiimpl",
     "//src/devices/lib/driver",
     "//src/lib/ddk",
-
-    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
-    "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//src/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
   ]
+}
+
+bind_rules("test-pwm-bind") {
+  rules = "test/test-pwm.bind"
+  output = "test-pwm-bind.h"
+  deps = [ "//src/devices/bind/fuchsia.platform" ]
 }
 
 driver_module("test-pwm") {
   configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
   configs += [
     "//build/config:all_source",
-    "//build/config/fuchsia:enable_zircon_asserts",
     "//build/config/fuchsia:static_cpp_standard_library",
-    "//build/unification/config:zircon-migrated",
   ]
   sources = [ "test/pwm.cc" ]
   deps = [
+    ":test-pwm-bind",
     "//sdk/banjo/ddk.protocol.platform.bus",
     "//sdk/banjo/ddk.protocol.platform.device",
     "//sdk/banjo/ddk.protocol.pwm",
     "//src/devices/lib/driver",
     "//src/lib/ddk",
-
-    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
-    "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//src/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
   ]
+}
+
+bind_rules("test-rpmb-bind") {
+  rules = "test/test-rpmb.bind"
+  output = "test-rpmb-bind.h"
+  deps = [ "//src/devices/bind/fuchsia.platform" ]
 }
 
 driver_module("test-rpmb") {
   configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
   configs += [
     "//build/config:all_source",
-    "//build/config/fuchsia:enable_zircon_asserts",
     "//build/config/fuchsia:static_cpp_standard_library",
-    "//build/unification/config:zircon-migrated",
   ]
   sources = [ "test/rpmb.cc" ]
   deps = [
+    ":test-rpmb-bind",
     "//sdk/banjo/ddk.protocol.platform.bus",
     "//sdk/banjo/ddk.protocol.platform.device",
     "//sdk/banjo/ddk.protocol.rpmb",
     "//src/devices/lib/driver",
     "//src/lib/ddk",
-
-    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
-    "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//src/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
   ]
+}
+
+bind_rules("test-vreg-bind") {
+  rules = "test/test-vreg.bind"
+  output = "test-vreg-bind.h"
+  deps = [ "//src/devices/bind/fuchsia.platform" ]
 }
 
 driver_module("test-vreg") {
   configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
   configs += [
     "//build/config:all_source",
-    "//build/config/fuchsia:enable_zircon_asserts",
     "//build/config/fuchsia:static_cpp_standard_library",
-    "//build/unification/config:zircon-migrated",
   ]
   sources = [ "test/vreg.cc" ]
   deps = [
+    ":test-vreg-bind",
     "//sdk/banjo/ddk.protocol.platform.bus",
     "//sdk/banjo/ddk.protocol.platform.device",
     "//sdk/banjo/ddk.protocol.vreg",
     "//src/devices/lib/driver",
     "//src/lib/ddk",
-
-    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
     "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//src/lib/ddktl",
     "//zircon/public/lib/fbl",
@@ -315,36 +332,91 @@ driver_module("test-vreg") {
   ]
 }
 
+bind_rules("test-composite-bind") {
+  rules = "test/test-composite.bind"
+  output = "test-composite-bind.h"
+  deps = [
+    "//src/devices/bind/fuchsia.composite",
+    "//src/devices/bind/fuchsia.platform",
+  ]
+}
+
+driver_module("test-composite") {
+  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
+  configs += [
+    "//build/config:all_source",
+    "//build/config/fuchsia:static_cpp_standard_library",
+  ]
+  sources = [ "test/composite.c" ]
+  deps = [
+    ":test-composite-bind",
+    "//sdk/banjo/ddk.protocol.clock",
+    "//sdk/banjo/ddk.protocol.composite",
+    "//sdk/banjo/ddk.protocol.goldfish.addressspace",
+    "//sdk/banjo/ddk.protocol.goldfish.pipe",
+    "//sdk/banjo/ddk.protocol.gpio",
+    "//sdk/banjo/ddk.protocol.i2c",
+    "//sdk/banjo/ddk.protocol.platform.device",
+    "//sdk/banjo/ddk.protocol.power",
+    "//sdk/banjo/ddk.protocol.pwm",
+    "//sdk/banjo/ddk.protocol.rpmb",
+    "//sdk/banjo/ddk.protocol.spi",
+    "//sdk/banjo/ddk.protocol.vreg",
+    "//src/devices/i2c/lib/device-protocol-i2c",
+    "//src/devices/lib/driver",
+    "//src/lib/ddk",
+
+    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
+    "//src/lib/ddk:ddk-deprecated-binding-headers",
+    "//zircon/public/lib/sync",
+  ]
+}
+
+driver_module("test-child-2.proxy") {
+  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
+  configs += [
+    "//build/config:all_source",
+    "//build/config/fuchsia:static_cpp_standard_library",
+  ]
+  sources = [ "test/child-2.proxy.c" ]
+  deps = [
+    "//src/devices/lib/driver",
+    "//src/lib/ddk",
+
+    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
+    "//src/lib/ddk:ddk-deprecated-binding-headers",
+  ]
+}
+
+simple_drivers = [
+  "child-1",
+  "child-2",
+  "child-3",
+  "parent",
+]
+
 foreach(driver, simple_drivers) {
+  bind_rules("test-${driver}-bind") {
+    rules = "test/test-${driver}.bind"
+    output = "test-${driver}-bind.h"
+    deps = [ "//src/devices/bind/fuchsia.platform" ]
+  }
+
   driver_module("test-$driver") {
     configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
     configs += [
       "//build/config:all_source",
-      "//build/config/fuchsia:enable_zircon_asserts",
       "//build/config/fuchsia:static_cpp_standard_library",
-      "//build/unification/config:zircon-migrated",
     ]
     sources = [ "test/$driver.c" ]
     deps = [
-      "//sdk/banjo/ddk.protocol.clock",
-      "//sdk/banjo/ddk.protocol.composite",
-      "//sdk/banjo/ddk.protocol.goldfish.addressspace",
-      "//sdk/banjo/ddk.protocol.goldfish.pipe",
-      "//sdk/banjo/ddk.protocol.gpio",
-      "//sdk/banjo/ddk.protocol.i2c",
+      ":test-${driver}-bind",
       "//sdk/banjo/ddk.protocol.platform.device",
-      "//sdk/banjo/ddk.protocol.power",
-      "//sdk/banjo/ddk.protocol.pwm",
-      "//sdk/banjo/ddk.protocol.rpmb",
-      "//sdk/banjo/ddk.protocol.spi",
-      "//sdk/banjo/ddk.protocol.vreg",
-      "//src/devices/i2c/lib/device-protocol-i2c",
       "//src/devices/lib/driver",
       "//src/lib/ddk",
 
       # TODO(fxb/38132): Migrate to the new bind rules and delete the below
       "//src/lib/ddk:ddk-deprecated-binding-headers",
-      "//zircon/public/lib/sync",
     ]
   }
 }
@@ -354,7 +426,9 @@ isolated_devmgr_unittest_package("platform-bus-test") {
   deps = [
     ":platform-bus",
     ":test-board",
+    ":test-child-2.proxy",
     ":test-clock",
+    ":test-composite",
     ":test-goldfish-address-space",
     ":test-goldfish-pipe",
     ":test-gpio",
@@ -382,14 +456,21 @@ fidl("fuchsia.hardware.btitest") {
   sources = [ "bti.test.fidl" ]
 }
 
+bind_rules("test-bti-board-bind") {
+  rules = "test-bti-board.bind"
+  output = "test-bti-board-bind.h"
+  deps = [ "//src/devices/bind/fuchsia.platform" ]
+}
+
 driver_module("test-bti-board") {
-  defines = [ "_ALL_SOURCE" ]
-  configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
   configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
-  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
-  configs += [ "//build/unification/config:zircon-migrated" ]
+  configs += [
+    "//build/config:all_source",
+    "//build/config/fuchsia:static_cpp_standard_library",
+  ]
   sources = [ "test-bti-board.cc" ]
   deps = [
+    ":test-bti-board-bind",
     "//sdk/banjo/ddk.protocol.platform.bus",
     "//src/devices/lib/driver",
     "//src/lib/ddk",
@@ -401,22 +482,25 @@ driver_module("test-bti-board") {
   ]
 }
 
+bind_rules("test-bti-bind") {
+  rules = "test-bti.bind"
+  output = "test-bti-bind.h"
+  deps = [ "//src/devices/bind/fuchsia.platform" ]
+}
 driver_module("test-bti") {
-  defines = [ "_ALL_SOURCE" ]
-  configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
   configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
-  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
-  configs += [ "//build/unification/config:zircon-migrated" ]
+  configs += [
+    "//build/config:all_source",
+    "//build/config/fuchsia:static_cpp_standard_library",
+  ]
   sources = [ "test-bti.cc" ]
   deps = [
     ":fuchsia.hardware.btitest_llcpp",
+    ":test-bti-bind",
     "//sdk/banjo/ddk.protocol.platform.device",
     "//src/devices/bus/lib/device-protocol-pdev",
     "//src/devices/lib/driver",
     "//src/lib/ddk",
-
-    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
-    "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//src/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",

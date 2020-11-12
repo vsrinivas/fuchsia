@@ -11,7 +11,6 @@
 #include <zircon/syscalls/object.h>
 #include <zircon/types.h>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
@@ -30,7 +29,8 @@
 #include <ddk/protocol/spi.h>
 #include <ddk/protocol/vreg.h>
 
-#include "../test-metadata.h"
+#include "src/devices/bus/drivers/platform/test/test-composite-bind.h"
+#include "src/devices/bus/drivers/platform/test/test-metadata.h"
 
 #define DRIVER_NAME "test-composite"
 #define GOLDFISH_TEST_HEAP (0x100000000000fffful)
@@ -805,12 +805,4 @@ static zx_driver_ops_t test_driver_ops = {
     .bind = test_bind,
 };
 
-// clang-format off
-ZIRCON_DRIVER_BEGIN(test_bus, test_driver_ops, "zircon", "0.1", 6)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_COMPOSITE),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_TEST),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_PBUS_TEST),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_TEST_COMPOSITE_1),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_TEST_COMPOSITE_2),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_TEST_GOLDFISH_CONTROL_COMPOSITE),
-ZIRCON_DRIVER_END(test_bus)
+ZIRCON_DRIVER(test_composite, test_driver_ops, "zircon", "0.1")

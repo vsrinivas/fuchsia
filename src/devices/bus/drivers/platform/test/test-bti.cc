@@ -7,12 +7,13 @@
 
 #include <memory>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/driver.h>
 #include <ddk/platform-defs.h>
 #include <ddktl/device.h>
 #include <ddktl/fidl.h>
+
+#include "src/devices/bus/drivers/platform/test/test-bti-bind.h"
 
 namespace {
 
@@ -79,9 +80,4 @@ static zx_driver_ops_t test_driver_ops = {
 
 }  // namespace
 
-// clang-format off
-ZIRCON_DRIVER_BEGIN(test_bti, test_driver_ops, "zircon", "0.1", 3)
-  BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_TEST),
-  BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_PBUS_TEST),
-  BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_TEST_BTI),
-ZIRCON_DRIVER_END(test_bti)
+ZIRCON_DRIVER(test_bti, test_driver_ops, "zircon", "0.1")

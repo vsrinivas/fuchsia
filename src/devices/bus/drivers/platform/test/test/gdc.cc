@@ -7,11 +7,11 @@
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/driver.h>
-#include <ddk/platform-defs.h>
 #include <ddk/protocol/platform/device.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/gdc.h>
 
+#include "src/devices/bus/drivers/platform/test/test-gdc-bind.h"
 #include "zircon/errors.h"
 
 #define DRIVER_NAME "test-gdc"
@@ -123,10 +123,4 @@ constexpr zx_driver_ops_t driver_ops = []() {
 
 }  // namespace gdc
 
-// clang-format off
-ZIRCON_DRIVER_BEGIN(test_gdc, gdc::driver_ops, "zircon", "0.1", 4)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PDEV),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_TEST),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_PBUS_TEST),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_TEST_GDC),
-ZIRCON_DRIVER_END(test_gdc)
+ZIRCON_DRIVER_BEGIN(test_gdc, gdc::driver_ops, "zircon", "0.1")
