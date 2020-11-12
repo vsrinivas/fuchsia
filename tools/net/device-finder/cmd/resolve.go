@@ -44,7 +44,7 @@ func (cmd *resolveCmd) resolveDevices(ctx context.Context, domains ...string) ([
 	}
 	f := make(chan *fuchsiaDevice, 1024)
 	for _, finder := range deviceFinders {
-		if err := finder.resolve(ctx, f, domains...); err != nil {
+		if err := finder.list(ctx, f); err != nil {
 			return nil, err
 		}
 	}
@@ -59,7 +59,7 @@ func (cmd *resolveCmd) resolveDevices(ctx context.Context, domains ...string) ([
 }
 
 func (cmd *resolveCmd) execute(ctx context.Context, domains ...string) error {
-	cmd.mdnsHandler = resolveMDNSHandler
+	cmd.mdnsHandler = listMDNSHandler
 	outDevices, err := cmd.resolveDevices(ctx, domains...)
 	if err != nil {
 		return err

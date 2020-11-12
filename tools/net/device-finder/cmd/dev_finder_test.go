@@ -331,7 +331,7 @@ func runSubTests(t *testing.T, node string, f func(*testing.T, subtest)) {
 func TestFilterDevices(t *testing.T) {
 	nbDiscover := nilNBDiscoverFunc
 	cmd := newDevFinderCmd(
-		resolveMDNSHandler,
+		listMDNSHandler,
 		[]string{},
 		false,
 		false,
@@ -591,10 +591,6 @@ func TestResolveDevices(t *testing.T) {
 	node := fuchsiaMDNSNodename1
 	nbDiscover := func(target chan<- *netboot.Target, nodename string) (func() error, error) {
 		t.Helper()
-		nodenameWant := node
-		if nodename != nodenameWant {
-			t.Fatalf("nodename set incorrectly: want %q got %q", nodenameWant, nodename)
-		}
 		go func() {
 			target <- &netboot.Target{
 				TargetAddress: net.ParseIP("192.168.1.2").To4(),
@@ -606,10 +602,10 @@ func TestResolveDevices(t *testing.T) {
 	runSubTests(t, node, func(t *testing.T, s subtest) {
 		cmd := resolveCmd{
 			devFinderCmd: newDevFinderCmd(
-				resolveMDNSHandler,
+				listMDNSHandler,
 				[]string{
-					fmt.Sprintf("%s.local", fuchsiaMDNSNodename1),
-					fmt.Sprintf("%s.local", fuchsiaMDNSNodename2),
+					fuchsiaMDNSNodename1,
+					fuchsiaMDNSNodename2,
 				},
 				false,
 				false,
@@ -618,17 +614,16 @@ func TestResolveDevices(t *testing.T) {
 		}
 		got, err := cmd.resolveDevices(context.Background(), s.node)
 		if err != nil {
-			t.Fatalf("listDevices: %s", err)
+			t.Fatalf("resolveDevices: %s", err)
 		}
 		want := []*fuchsiaDevice{
 			{
 				addr:   s.defaultMDNSIP(),
-				zone:   s.defaultMDNSZone(),
 				domain: s.node,
 			},
 		}
 		if d := cmp.Diff(want, got, cmp.Comparer(compareFuchsiaDevices)); d != "" {
-			t.Errorf("listDevices mismatch: (-want +got):\n%s", d)
+			t.Errorf("resolveDevices mismatch: (-want +got):\n%s", d)
 		}
 	})
 }
@@ -637,9 +632,9 @@ func TestResolveDevices_allProtocolsDisabled(t *testing.T) {
 	nbDiscover := nilNBDiscoverFunc
 	cmd := resolveCmd{
 		devFinderCmd: newDevFinderCmd(
-			resolveMDNSHandler,
+			listMDNSHandler,
 			[]string{
-				fmt.Sprintf("%s.local", fuchsiaMDNSNodename1),
+				fuchsiaMDNSNodename1,
 			},
 			false,
 			false,

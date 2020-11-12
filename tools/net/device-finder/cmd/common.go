@@ -200,7 +200,9 @@ func sortDeviceMap(deviceMap map[string]*fuchsiaDevice) []*fuchsiaDevice {
 	sort.Strings(keys)
 	res := make([]*fuchsiaDevice, 0)
 	for _, k := range keys {
-		res = append(res, deviceMap[k])
+		if v := deviceMap[k]; v != nil {
+			res = append(res, v)
+		}
 	}
 	return res
 }
@@ -338,24 +340,17 @@ func (cmd *devFinderCmd) filterInboundDevices(ctx context.Context, f <-chan *fuc
 	defer cancel()
 	defer cmd.close()
 	devices := make(map[string]*fuchsiaDevice)
-	resolveDomains := make(map[string]struct{})
+	resolveDomains := make(map[string]*fuchsiaDevice)
 	for _, d := range domains {
-		resolveDomains[d] = struct{}{}
+		resolveDomains[d] = nil
 	}
 	for {
 		select {
 		case <-ctx.Done():
-			devices := sortDeviceMap(devices)
 			if len(resolveDomains) == 0 {
-				return devices, nil
+				return sortDeviceMap(devices), nil
 			}
-			res := make([]*fuchsiaDevice, 0)
-			for _, d := range devices {
-				if _, ok := resolveDomains[d.domain]; ok {
-					res = append(res, d)
-				}
-			}
-			return res, nil
+			return sortDeviceMap(resolveDomains), nil
 		case device := <-f:
 			if err := device.err; err != nil {
 				return nil, err
@@ -363,14 +358,35 @@ func (cmd *devFinderCmd) filterInboundDevices(ctx context.Context, f <-chan *fuc
 			if cmd.shouldIgnoreIP(device.addr) {
 				continue
 			}
-			if _, ok := resolveDomains[device.domain]; ok || len(resolveDomains) == 0 {
+			if len(resolveDomains) == 0 {
 				devices[device.domain] = device
+				if cmd.deviceLimit != 0 && len(devices) == cmd.deviceLimit {
+					return sortDeviceMap(devices), nil
+				}
 			}
-			if cmd.deviceLimit != 0 && len(devices) == cmd.deviceLimit {
-				return sortDeviceMap(devices), nil
+			if d, ok := resolveDomains[device.domain]; ok {
+				// Bias results to link-local ipv6
+				if d == nil || isLinkLocal6(device.addr) {
+					resolveDomains[device.domain] = device
+				}
+
+				needMoreDevices := false
+				for _, d := range resolveDomains {
+					// Wait until all devices are found and ideally ipv6 link local.
+					if d == nil || !isLinkLocal6(d.addr) {
+						needMoreDevices = true
+					}
+				}
+				if !needMoreDevices {
+					return sortDeviceMap(resolveDomains), nil
+				}
 			}
 		}
 	}
+}
+
+func isLinkLocal6(ip net.IP) bool {
+	return ip.To16() != nil && ip.IsLinkLocalUnicast()
 }
 
 func (cmd *devFinderCmd) outputNormal(filteredDevices []*fuchsiaDevice, includeDomain bool) error {
