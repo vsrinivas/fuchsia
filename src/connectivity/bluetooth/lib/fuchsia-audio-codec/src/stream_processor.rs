@@ -4,7 +4,6 @@
 
 use {
     anyhow::{format_err, Context as _, Error},
-    fidl::encoding::Decodable,
     fidl_fuchsia_media::*,
     fidl_fuchsia_mediacodec::*,
     fidl_fuchsia_sysmem::*,
@@ -60,10 +59,13 @@ impl Listener {
     }
 
     /// If a listener has polled, wake the listener and replace it with New.
-    /// Panics if no one is listening.
+    /// Noop if no one has registered.
     fn wake(&mut self) {
+        if let Listener::None = self {
+            return;
+        }
         match mem::replace(self, Listener::New) {
-            Listener::None => panic!("Cannot wake with no listener!"),
+            Listener::None => panic!("Should have been polled"),
             Listener::Some(waker) => waker.wake(),
             Listener::New => {}
         }
@@ -107,6 +109,15 @@ impl OutputQueue {
     /// Wakes the listener if necessary.
     fn mark_ended(&mut self) {
         self.ended = true;
+        self.listener.wake();
+    }
+
+    fn waker(&self) -> Option<&Waker> {
+        self.listener.waker()
+    }
+
+    /// Wakes the listener so that it will repoll, if it is waiting.
+    fn wake(&mut self) {
         self.listener.wake();
     }
 }
@@ -162,7 +173,10 @@ struct StreamProcessorInner {
     output_packet_size: u64,
     /// An queue of the indexes of output buffers that have been filled by the processor and a
     /// waiter if someone is waiting on it.
+    /// Also holds the output waker, if it is registered.
     output_queue: Mutex<OutputQueue>,
+    /// Waker that is waiting on input to be ready.
+    input_waker: Option<Waker>,
     /// Allocation for the input buffers.
     input_allocation: MaybeDone<SysmemAllocation>,
     /// Allocation for the output buffers.
@@ -262,7 +276,7 @@ impl StreamProcessorInner {
             buffer_lifetime_ordinal: Some(1),
             buffer_constraints_version_ordinal: Some(1),
             sysmem_token: None,
-            ..StreamBufferPartialSettings::new_empty()
+            ..StreamBufferPartialSettings::empty()
         }
     }
 
@@ -341,39 +355,51 @@ impl StreamProcessorInner {
         Poll::Pending
     }
 
-    /// Process all the events that are currently available from the StreamProcessor and Allocators,
-    /// and set the waker of `cx` to be woken when another event arrives.
-    /// Only returns Poll::Ready when there is an error.
-    fn poll_events(&mut self, cx: &mut Context<'_>) -> Poll<Result<(), Error>> {
-        loop {
-            match self.process_event(cx) {
-                Poll::Pending => break,
-                Poll::Ready(Err(e)) => {
-                    warn!("Stream processing error: {:?}", e);
-                    return Poll::Ready(Err(e.into()));
-                }
-                Poll::Ready(Ok(())) => (),
-            }
+    /// Provides the current registered waiting context with priority given to the output waker.
+    fn waiting_waker(&self) -> Option<Waker> {
+        match (self.output_queue.lock().waker(), &self.input_waker) {
+            // No one is waiting.
+            (None, None) => None,
+            (Some(waker), _) => Some(waker.clone()),
+            (_, Some(waker)) => Some(waker.clone()),
         }
-
-        if let Poll::Ready(Err(e)) = self.poll_buffer_allocation(cx) {
-            warn!("Stream buffer allocation error: {:?}", e);
-            return Poll::Ready(Err(e.into()));
-        }
-        Poll::Pending
     }
 
-    /// If there is an output waker, process all the events in the queue with the output
-    /// waker to be woken up next.
-    fn poll_events_output(&mut self) -> Result<(), Error> {
-        let waker = match self.output_queue.lock().listener.waker() {
-            None => return Ok(()),
-            Some(waker) => waker.clone(),
+    /// Process all the events that are currently available from the StreamProcessor and Allocators,
+    /// waking any known waker to be woken when another event arrives.
+    /// Returns Ok(()) if this was accomplished or Err() if an error occurred while processing.
+    fn poll_events(&mut self) -> Result<(), Error> {
+        let waker = loop {
+            let waker = match self.waiting_waker() {
+                // No one still needs to be woken.  This means all the wakers have been awoke,
+                // and will repoll.
+                None => return Ok(()),
+                Some(waker) => waker,
+            };
+            match self.process_event(&mut Context::from_waker(&waker)) {
+                Poll::Pending => break waker,
+                Poll::Ready(Err(e)) => {
+                    warn!("Stream processing error: {:?}", e);
+                    return Err(e.into());
+                }
+                // Didn't set the waker to be awoken, so let's try again.
+                Poll::Ready(Ok(())) => {}
+            }
         };
-        match self.poll_events(&mut Context::from_waker(&waker)) {
-            Poll::Ready(e) => e,
-            Poll::Pending => Ok(()),
+
+        if let Poll::Ready(Err(e)) = self.poll_buffer_allocation(&mut Context::from_waker(&waker)) {
+            warn!("Stream buffer allocation error: {:?}", e);
+            return Err(e.into());
         }
+        Ok(())
+    }
+
+    fn wake_output(&mut self) {
+        self.output_queue.lock().wake();
+    }
+
+    fn wake_input(&mut self) {
+        self.input_waker.take().map(Waker::wake);
     }
 
     /// Attempts to set up a new input cursor, out of the current set of client owned input buffers.
@@ -389,6 +415,7 @@ impl StreamProcessorInner {
         };
         self.client_owned.take(&next_idx).unwrap();
         self.input_cursor = Some((next_idx, 0));
+        self.wake_input();
     }
 
     /// Reads an output packet from the output buffers, and marks the packets as recycled so the
@@ -436,6 +463,7 @@ impl StreamProcessor {
                 input_cursor: None,
                 output_packet_size: 0,
                 output_queue: Default::default(),
+                input_waker: None,
                 input_allocation: maybe_done(SysmemAllocation::pending()),
                 output_allocation: maybe_done(SysmemAllocation::pending()),
             })),
@@ -503,7 +531,7 @@ impl StreamProcessor {
         let decoder_params = CreateDecoderParams {
             input_details: Some(format_details),
             permit_lack_of_split_header_handling: Some(true),
-            ..CreateDecoderParams::new_empty()
+            ..CreateDecoderParams::empty()
         };
 
         let codec_svc = fuchsia_component::client::connect_to_service::<CodecFactoryMarker>()
@@ -595,7 +623,7 @@ impl StreamProcessor {
             valid_length_bytes: Some(size as u32),
             start_access_unit: Some(true),
             known_end_access_unit: Some(true),
-            ..Packet::new_empty()
+            ..Packet::empty()
         };
         write.processor.queue_input_packet(packet).map_err(fidl_error_to_io_error)?;
         // pick another buffer for the input cursor
@@ -604,22 +632,25 @@ impl StreamProcessor {
     }
 
     /// Test whether it is possible to write to the StreamProcessor. If there are no input buffers
-    /// available, returns Poll::Pending and arranges for the current task to receive a
+    /// available, returns Poll::Pending and arranges for the input task to receive a
     /// notification when an input buffer may be available or the encoder is closed.
     fn poll_writable(&mut self, cx: &mut Context<'_>) -> Poll<Result<(), io::Error>> {
         let mut write = self.inner.write();
+        // Drop the current input waker, since we have a new one.
+        // If the output waker is set, it should already be queued to be woken for the codec.
+        write.input_waker = None;
         if write.input_cursor.is_some() {
             return Poll::Ready(Ok(()));
         }
-        if let Poll::Ready(Err(e)) = write.poll_events(cx) {
+        write.input_waker = Some(cx.waker().clone());
+        // This can:
+        //  - wake the input waker (somehow received a input packet)
+        //  - poll with the output waker, setting it up to be woken
+        //  - poll with the input waker to be woken
+        if let Err(e) = write.poll_events() {
             return Poll::Ready(Err(io::Error::new(io::ErrorKind::Other, e)));
         }
-        if write.input_cursor.is_some() {
-            // The input cursor is set now, we are writable.
-            Poll::Ready(Ok(()))
-        } else {
-            Poll::Pending
-        }
+        Poll::Pending
     }
 
     pub fn close(&mut self) -> Result<(), io::Error> {
@@ -631,6 +662,8 @@ impl StreamProcessor {
         // TODO: indicate this another way so that we can send an error if someone tries to write
         // it after it's closed.
         write.input_cursor = None;
+        write.wake_input();
+        write.wake_output();
         Ok(())
     }
 }
@@ -642,10 +675,6 @@ impl AsyncWrite for StreamProcessor {
         buf: &[u8],
     ) -> Poll<io::Result<usize>> {
         ready!(self.poll_writable(cx))?;
-        // Since we are returning Poll::Ready, process events with the output waker, so that
-        // if an event happens, someone who is waiting will be woken up.
-        // If no output waker exists, no one is listening and they must poll anyway.
-        let _ = self.inner.write().poll_events_output();
         match self.write_bytes(buf) {
             Ok(written) => Poll::Ready(Ok(written)),
             Err(e) => Poll::Ready(Err(e.into())),
@@ -670,24 +699,25 @@ impl Stream for StreamProcessorOutputStream {
         let packet = {
             let mut queue = write.output_queue.lock();
             match queue.poll_next_unpin(cx) {
-                Poll::Ready(Some(packet)) => Some(packet),
-                Poll::Ready(None) => return Poll::Ready(None),
+                Poll::Ready(Some(packet)) => Some(Some(packet)),
+                Poll::Ready(None) => Some(None),
                 Poll::Pending => {
-                    // The waker has been set for when the queue is filled.
-                    // We also need to set the waker for if an event happens.
+                    // The waker has been set for when the queue gets data.
+                    // We also need to set the same waker if an event happens.
                     None
                 }
             }
         };
-        if let Some(packet) = packet {
-            return Poll::Ready(Some(write.read_output_packet(packet)));
-        }
-        // Process the events with the output waker having priority, since will be returning
-        // Poll::Pending, and any event should wake up for processing.
-        if let Err(e) = write.poll_events_output() {
+        // We always need to set a waker for the events loop (this may be the same waker as above,
+        // or the input waker if the stream returned a packet)
+        if let Err(e) = write.poll_events() {
             return Poll::Ready(Some(Err(e.into())));
         }
-        Poll::Pending
+        match packet {
+            Some(Some(packet)) => Poll::Ready(Some(write.read_output_packet(packet))),
+            Some(None) => Poll::Ready(None),
+            None => Poll::Pending,
+        }
     }
 }
 
@@ -703,7 +733,7 @@ mod tests {
 
     use byteorder::{ByteOrder, NativeEndian};
     use fuchsia_async as fasync;
-    use futures::{io::AsyncWriteExt, Future};
+    use futures::{io::AsyncWriteExt, Future, FutureExt};
     use futures_test::task::new_count_waker;
     use hex;
     use mundane::hash::{Digest, Hasher, Sha256};
@@ -826,6 +856,17 @@ mod tests {
         let mut encoder = StreamProcessor::create_encoder(input_domain, sbc_encoder_settings)
             .expect("to create Encoder");
 
+        let frames_per_packet: usize = 8; // Randomly chosen by fair d10 roll.
+        let packet_size = pcm_audio.frame_size() * frames_per_packet;
+        let mut packets = pcm_audio.buffer.as_slice().chunks(packet_size);
+        let first_packet = packets.next().unwrap();
+
+        // Write an initial frame to the encoder.
+        // This is required to get past allocating the input/output buffers.
+        let written =
+            exec.run_singlethreaded(&mut encoder.write(first_packet)).expect("successful write");
+        assert_eq!(written, first_packet.len());
+
         let mut encoded_stream = encoder.take_output_stream().expect("Stream should be taken");
 
         // Shouldn't be able to take the stream twice
@@ -841,19 +882,16 @@ mod tests {
         fasync::pin_mut!(encoded_fut);
         assert!(encoded_fut.poll(&mut counting_ctx).is_pending());
 
-        let mut frames_sent = 0;
+        let mut frames_sent = first_packet.len() / pcm_audio.frame_size();
 
-        let frames_per_packet: usize = 8; // Randomly chosen by fair d10 roll.
-        let packet_size = pcm_audio.frame_size() * frames_per_packet;
-
-        for frames in pcm_audio.buffer.as_slice().chunks(packet_size) {
-            let mut written_fut = encoder.write(&frames);
+        for packet in packets {
+            let mut written_fut = encoder.write(&packet);
 
             let written_bytes =
                 exec.run_singlethreaded(&mut written_fut).expect("to write to encoder");
 
-            assert_eq!(frames.len(), written_bytes);
-            frames_sent += frames.len() / pcm_audio.frame_size();
+            assert_eq!(packet.len(), written_bytes);
+            frames_sent += packet.len() / pcm_audio.frame_size();
         }
 
         encoder.close().expect("stream should always be closable");
@@ -862,13 +900,11 @@ mod tests {
 
         // When an unprocessed event has happened on the stream, even if intervening events have been
         // procesed by the input processes, it should wake the output future to process the events.
-        loop {
-            if encoder_fut_wake_count.get() == 1 {
-                break;
-            }
+        let woke_count = encoder_fut_wake_count.get();
+        while encoder_fut_wake_count.get() == woke_count {
             let _ = exec.run_until_stalled(&mut futures::future::pending::<()>());
         }
-        assert_eq!(encoder_fut_wake_count.get(), 1);
+        assert_eq!(encoder_fut_wake_count.get(), woke_count + 1);
 
         // Get data from the output now.
         let mut encoded = Vec::new();
@@ -1001,6 +1037,15 @@ mod tests {
         let mut decoder =
             StreamProcessor::create_decoder("audio/sbc", oob_data).expect("to create decoder");
 
+        let mut chunks = sbc_data.as_slice().chunks(SBC_FRAME_SIZE);
+        let next_frame = chunks.next().unwrap();
+
+        // Write an initial frame to the encoder.
+        // This is required to get past allocating the input/output buffers.
+        let written =
+            exec.run_singlethreaded(&mut decoder.write(next_frame)).expect("successful write");
+        assert_eq!(written, next_frame.len());
+
         let mut decoded_stream = decoder.take_output_stream().expect("Stream should be taken");
 
         // Polling the decoded stream before the decoder has started up should wake it when
@@ -1015,7 +1060,7 @@ mod tests {
 
         // Send only one frame. This is not eneough to automatically cause output to be generated
         // by pushing data.
-        let frame = sbc_data.as_slice().chunks(SBC_FRAME_SIZE).next().unwrap();
+        let frame = chunks.next().unwrap();
         let mut written_fut = decoder.write(&frame);
         let written_bytes = exec.run_singlethreaded(&mut written_fut).expect("to write to decoder");
         assert_eq!(frame.len(), written_bytes);
@@ -1026,10 +1071,8 @@ mod tests {
 
         // When an unprocessed event has happened on the stream, even if intervening events have been
         // procesed by the input processes, it should wake the output future to process the events.
-        loop {
-            if decoder_fut_wake_count.get() == 1 {
-                break;
-            }
+        assert_eq!(decoder_fut_wake_count.get(), 0);
+        while decoder_fut_wake_count.get() == 0 {
             let _ = exec.run_until_stalled(&mut futures::future::pending::<()>());
         }
         assert_eq!(decoder_fut_wake_count.get(), 1);
@@ -1047,5 +1090,93 @@ mod tests {
         }
 
         assert_eq!(512, decoded.len(), "Decoded size should be equal to one frame");
+    }
+
+    #[test]
+    fn decode_sbc_wakes_input_to_process_events() {
+        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+
+        const SBC_TEST_FILE: &str = "/pkg/data/s16le44100mono.sbc";
+        const SBC_FRAME_SIZE: usize = 72;
+
+        let mut sbc_data = Vec::new();
+        File::open(SBC_TEST_FILE)
+            .expect("open test file")
+            .read_to_end(&mut sbc_data)
+            .expect("read test file");
+
+        // SBC codec info corresponding to Mono reference stream.
+        let oob_data = Some([0x82, 0x00, 0x00, 0x00].to_vec());
+        let mut decoder =
+            StreamProcessor::create_decoder("audio/sbc", oob_data).expect("to create decoder");
+
+        let mut decoded_stream = decoder.take_output_stream().expect("Stream should be taken");
+
+        // Polling the decoded stream before the decoder has started up should wake it when
+        // output starts happening, set up the poll here.
+        let decoded_fut = decoded_stream.next();
+        fasync::pin_mut!(decoded_fut);
+
+        match exec.run_until_stalled(&mut decoded_fut) {
+            Poll::Pending => {}
+            x => panic!("Expected decoded stream to be pending (no input) got {:?}", x),
+        };
+
+        let mut chunks = sbc_data.as_slice().chunks(SBC_FRAME_SIZE);
+        let next_frame = chunks.next().unwrap();
+
+        // Write an initial frame to the encoder.
+        // This is to get past allocating the input/output buffers stage.
+        let written =
+            exec.run_singlethreaded(&mut decoder.write(next_frame)).expect("successful write");
+        assert_eq!(written, next_frame.len());
+
+        // Write to the encoder until we cannot write anymore, because there are no input buffers
+        // available.  This should happen when all the input buffers are full and and the input
+        // buffers are waiting to be written.
+        let (waker, write_fut_wake_count) = new_count_waker();
+        let mut counting_ctx = Context::from_waker(&waker);
+
+        for frame in chunks {
+            let mut written_fut = decoder.write(&frame);
+            if written_fut.poll_unpin(&mut counting_ctx).is_pending() {
+                // We should have never been woken until now, because we always were ready before,
+                // and the output waker is processing codec events.
+                assert_eq!(0, write_fut_wake_count.get());
+                break;
+            }
+            // Flush the packet, to make input buffers get spent faster.
+            let flush_fut = decoder.flush();
+            fasync::pin_mut!(flush_fut);
+            exec.run_singlethreaded(&mut flush_fut).expect("to flush the decoder");
+        }
+
+        // We should be able to get a decoded output, once the codec does it's thing.
+        let decoded_frame = exec.run_singlethreaded(&mut decoded_fut);
+        assert_eq!(512, decoded_frame.unwrap().unwrap().len(), "Decoded frame size wrong");
+
+        // Fill the input buffer again so the input waker is registered.
+        let chunks = sbc_data.as_slice().chunks(SBC_FRAME_SIZE);
+        for frame in chunks {
+            let mut written_fut = decoder.write(&frame);
+            if written_fut.poll_unpin(&mut counting_ctx).is_pending() {
+                break;
+            }
+            // Flush the packet, to make input buffers get spent faster.
+            let flush_fut = decoder.flush();
+            fasync::pin_mut!(flush_fut);
+            exec.run_singlethreaded(&mut flush_fut).expect("to flush the decoder");
+        }
+
+        // The input waker should be the one waiting on events from the codec (and woken up)
+        // At some point, we will get an event from the encoder, with no output waker set, and this
+        // should wake the input waker, which is waiting to be woken up.
+        let woken_count = write_fut_wake_count.get();
+        while write_fut_wake_count.get() == woken_count {
+            let _ = exec.run_until_stalled(&mut futures::future::pending::<()>());
+        }
+
+        // Note: at this point, we may not be able to write another frame, but the waiter should
+        // repoll, and set the waker again.
     }
 }
