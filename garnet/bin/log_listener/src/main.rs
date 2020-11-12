@@ -240,9 +240,8 @@ impl LocalOptions {
         // Note that when printing old messages from memory buffer then
         // this may offset them from UTC time as set when logged in
         // case of UTC time adjustments since.
-        let monotonic_zero_as_utc = zx::Time::get(zx::ClockId::UTC).into_nanos()
-            - zx::Time::get(zx::ClockId::Monotonic).into_nanos();
-        let shifted_timestamp = monotonic_zero_as_utc + timestamp;
+        let monotonic_zero_as_utc = fuchsia_runtime::utc_time() - zx::Time::get_monotonic();
+        let shifted_timestamp = monotonic_zero_as_utc.into_nanos() + timestamp;
         let seconds = (shifted_timestamp / 1000000000) as i64;
         let nanos = (shifted_timestamp % 1000000000) as u32;
         chrono::NaiveDateTime::from_timestamp(seconds, nanos)
@@ -468,8 +467,7 @@ fn parse_flags(args: &[String]) -> Result<LogListenerOptions, String> {
             "--since_now" => {
                 let ans = &args[i + 1];
                 if ans.to_lowercase() == "yes" {
-                    options.local.since_time =
-                        Some(zx::Time::get(zx::ClockId::Monotonic).into_nanos());
+                    options.local.since_time = Some(zx::Time::get_monotonic().into_nanos());
                 } else {
                     return Err(format!("The argument to --since_now must be 'yes'"));
                 }
