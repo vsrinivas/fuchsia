@@ -216,6 +216,17 @@
                     "sys"
                 ]
             }
+        },
+        {
+            instance_id: "eac51c2ea624ca423dbdd1110a2aa870e4f977e59be215e7f814bbcfcfd20334",
+            appmgr_moniker: {
+                url: "fuchsia-pkg://fuchsia.com/ot-stack#meta/ot-stack.cmx",
+                // ot-stack.cmx is launched by lowpan-spinel-driver.cmx, which is launched by sysmgr.
+                realm_path: [
+                    "app",
+                    "sys"
+                ]
+            }
         }
     ]
 }
