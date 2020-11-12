@@ -1,0 +1,49 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_test.gni")
+import("//src/sys/build/components.gni")
+
+rustc_test("bin") {
+  name = "test_logs_redaction"
+  edition = "2018"
+
+  deps = [
+    "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics-rustc",
+    "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
+    "//src/diagnostics/archivist:lib",
+    "//src/lib/diagnostics/data/rust",
+    "//src/lib/diagnostics/reader/rust",
+    "//src/lib/fuchsia",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:tracing",
+  ]
+
+  sources = [ "src/lib.rs" ]
+
+  inputs = [ "configs/archivist_config.json" ]
+}
+
+fuchsia_component("test-logs-redaction") {
+  testonly = true
+  manifest = "meta/test.cmx"
+  deps = [
+    ":bin",
+    ":own-logs-consuming-archivist",
+  ]
+}
+
+fuchsia_component("own-logs-consuming-archivist") {
+  testonly = true
+  manifest = "meta/archivist.cmx"
+  deps = [ "//src/diagnostics/archivist:bin" ]
+}
+
+fuchsia_test_package("logs-redaction") {
+  package_name = "test-logs-redaction"
+  test_components = [ ":test-logs-redaction" ]
+}

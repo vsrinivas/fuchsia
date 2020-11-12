@@ -14,6 +14,7 @@ group("tests") {
     "data_stats:test-spec",
     "feedback_reader:test-spec",
     "logs-from-crash",
+    "logs-redaction",
     "logs/cpp:test-spec",
     "logs/rust:test-spec",
     "unified_reader:test-spec",

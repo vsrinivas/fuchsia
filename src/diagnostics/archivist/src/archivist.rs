@@ -8,6 +8,7 @@ use {
         archive, configs, constants, data_stats, diagnostics,
         events::{stream::EventStream, types::EventSource},
         logs,
+        logs::redact::Redactor,
         repository::DiagnosticsDataRepository,
     },
     anyhow::Error,
@@ -250,22 +251,32 @@ impl Archivist {
         // selectors, meaning all diagnostics data is visible.
         // This should not be used for production services.
         // TODO(fxbug.dev/55735): Lock down this protocol using allowlists.
-        let all_inspect_repository =
-            Arc::new(RwLock::new(DiagnosticsDataRepository::new(log_manager.clone(), None)));
+        let all_inspect_repository = Arc::new(RwLock::new(DiagnosticsDataRepository::new(
+            log_manager.clone(),
+            Redactor::noop(),
+            None,
+        )));
 
         // The Inspect Repository offered to the Feedback pipeline. This repository applies
         // static selectors configured under config/data/feedback to inspect exfiltration.
-        let feedback_inspect_repository = Arc::new(RwLock::new(DiagnosticsDataRepository::new(
-            log_manager.clone(),
-            match feedback_config.disable_filtering {
-                false => feedback_config.take_inspect_selectors().map(|selectors| {
+        let (feedback_static_selectors, feedback_redactor) = if !feedback_config.disable_filtering {
+            (
+                feedback_config.take_inspect_selectors().map(|selectors| {
                     selectors
                         .into_iter()
                         .map(|selector| Arc::new(selector))
                         .collect::<Vec<Arc<Selector>>>()
                 }),
-                true => None,
-            },
+                Redactor::with_static_patterns(),
+            )
+        } else {
+            (None, Redactor::noop())
+        };
+
+        let feedback_inspect_repository = Arc::new(RwLock::new(DiagnosticsDataRepository::new(
+            log_manager.clone(),
+            feedback_redactor,
+            feedback_static_selectors,
         )));
 
         // The Inspect Repository offered to the LegacyMetrics
@@ -274,6 +285,7 @@ impl Archivist {
         let legacy_metrics_inspect_repository =
             Arc::new(RwLock::new(DiagnosticsDataRepository::new(
                 log_manager.clone(),
+                Redactor::noop(),
                 match legacy_config.disable_filtering {
                     false => legacy_config.take_inspect_selectors().map(|selectors| {
                         selectors

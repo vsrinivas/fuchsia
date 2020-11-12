@@ -1,0 +1,17 @@
+{
+    "program": {
+        "args": [
+            "--disable-klog",
+            "--disable-log-connector",
+            "--consume-own-logs",
+            "--config-path",
+            "/config/data/archivist_config.json"
+        ],
+        "binary": "bin/archivist"
+    },
+    "sandbox": {
+        "features": [
+            "isolated-temp"
+        ]
+    }
+}

@@ -68,6 +68,7 @@ fn main() -> Result<(), Error> {
         log_server = Some(server);
         fuchsia_syslog::init_with_socket_and_name(log_client, log_name)?;
         info!("Logging started.");
+        logs::redact::emit_canary();
     } else {
         fuchsia_syslog::init_with_tags(&["embedded"])?;
     }

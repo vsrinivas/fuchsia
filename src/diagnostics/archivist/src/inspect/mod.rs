@@ -626,7 +626,11 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn inspect_repo_disallows_duplicated_dirs() {
-        let mut inspect_repo = DiagnosticsDataRepository::new(LogManager::new(), None);
+        let mut inspect_repo = DiagnosticsDataRepository::new(
+            LogManager::new(),
+            crate::logs::redact::Redactor::noop(),
+            None,
+        );
         let realm_path = RealmPath(vec!["a".to_string(), "b".to_string()]);
         let instance_id = "1234".to_string();
 
@@ -759,6 +763,7 @@ mod tests {
 
                 let inspect_repo = Arc::new(RwLock::new(DiagnosticsDataRepository::new(
                     log_manager.clone(),
+                    crate::logs::redact::Redactor::noop(),
                     None,
                 )));
 
@@ -830,6 +835,7 @@ mod tests {
             selectors::parse_selector(r#"test_component.cmx:root/child_2:*"#).unwrap();
         let inspect_repo = Arc::new(RwLock::new(DiagnosticsDataRepository::new(
             LogManager::new(),
+            crate::logs::redact::Redactor::noop(),
             Some(vec![Arc::new(child_1_1_selector), Arc::new(child_2_selector)]),
         )));
 

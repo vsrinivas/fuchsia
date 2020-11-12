@@ -3,12 +3,26 @@
 // found in the LICENSE file
 
 use anyhow::Error;
+use futures::prelude::*;
 use regex::{Regex, RegexSet};
 use serde::Serialize;
-use std::borrow::Cow;
+use std::{borrow::Cow, sync::Arc};
 
 mod serialize;
-use serialize::Redacted;
+use serialize::{Redacted, RedactedItem};
+
+pub const UNREDACTED_CANARY_MESSAGE: &str = "Log redaction canary: \
+    Email: alice@website.tld, \
+    IPv4: 8.8.8.8, \
+    IPv6: 2001:503:eEa3:0:0:0:0:30, \
+    UUID: ddd0fA34-1016-11eb-adc1-0242ac120002";
+
+pub const REDACTED_CANARY_MESSAGE: &str = "Log redaction canary: \
+    Email: <REDACTED>, IPv4: <REDACTED>, IPv6: <REDACTED>, UUID: <REDACTED>";
+
+pub fn emit_canary() {
+    log::info!("{}", UNREDACTED_CANARY_MESSAGE);
+}
 
 /// A `Redactor` is responsible for removing text patterns that seem like user data in logs.
 pub struct Redactor {
@@ -67,6 +81,14 @@ impl Redactor {
     {
         Redacted { inner: item, redactor: self }
     }
+
+    pub fn redact_stream<M: Serialize + 'static>(
+        self: &Arc<Self>,
+        stream: impl Stream<Item = Arc<M>>,
+    ) -> impl Stream<Item = RedactedItem<M>> {
+        let redactor = self.clone();
+        stream.map(move |inner| RedactedItem { inner, redactor: redactor.clone() })
+    }
 }
 
 #[cfg(test)]
@@ -75,6 +97,8 @@ mod test {
     use crate::logs::message::{Message, Severity};
     use diagnostics_data::{LogsField, LogsHierarchy, LogsProperty};
     use fidl_fuchsia_sys_internal::SourceIdentity;
+    use futures::stream::iter as iter2stream;
+    use std::sync::Arc;
 
     fn test_message(contents: &str) -> Message {
         Message::new(
@@ -92,7 +116,8 @@ mod test {
     }
 
     macro_rules! test_redaction {
-        ($test_name:ident: $input:expr => $output:expr) => {paste::paste!{
+        ($($test_name:ident: $input:expr => $output:expr,)+) => {
+        paste::paste!{$(
             #[test]
             fn [<redact_ $test_name>] () {
                 let noop = Redactor::noop();
@@ -116,16 +141,44 @@ mod test {
                 assert_eq!(noop_json, input_json, "no-op redaction must match input exactly");
                 assert_eq!(real_json, expected_json);
             }
-        }};
+        )+}
+
+            #[fuchsia_async::run_singlethreaded(test)]
+            async fn redact_all_in_stream() {
+                let inputs = vec![$( Arc::new(test_message($input)), )+];
+                let outputs = vec![$( Arc::new(test_message($output)), )+];
+
+                let noop = Arc::new(Redactor::noop());
+                let real = Arc::new(Redactor::with_static_patterns());
+
+                let input_stream = iter2stream(inputs.clone());
+                let noop_stream = noop.redact_stream(iter2stream(inputs.clone()));
+                let real_stream = real.redact_stream(iter2stream(inputs.clone()));
+                let output_stream = iter2stream(outputs);
+                let mut all_streams =
+                    input_stream.zip(noop_stream).zip(real_stream).zip(output_stream);
+
+                while let Some((((input, noop), real), output)) = all_streams.next().await {
+                    let input_json = serde_json::to_string_pretty(&*input).unwrap();
+                    let expected_json = serde_json::to_string_pretty(&*output).unwrap();
+                    let noop_json = serde_json::to_string_pretty(&noop).unwrap();
+                    let real_json = serde_json::to_string_pretty(&real).unwrap();
+
+                    assert_eq!(noop_json, input_json, "no-op redaction must match input exactly");
+                    assert_eq!(real_json, expected_json);
+                }
+            }
+        };
     }
 
-    test_redaction!(email: "Email: alice@website.tld" => "Email: <REDACTED>");
-    test_redaction!(ipv4: "IPv4: 8.8.8.8" => "IPv4: <REDACTED>");
-    test_redaction!(ipv6: "IPv6: 2001:503:eEa3:0:0:0:0:30" => "IPv6: <REDACTED>");
-    test_redaction!(uuid: "UUID: ddd0fA34-1016-11eb-adc1-0242ac120002" => "UUID: <REDACTED>");
-    test_redaction!(mac_address: "MAC address: 00:0a:95:9F:68:16" => "MAC address: <REDACTED>");
-    test_redaction!(
+    test_redaction! {
+        email: "Email: alice@website.tld" => "Email: <REDACTED>",
+        ipv4: "IPv4: 8.8.8.8" => "IPv4: <REDACTED>",
+        ipv6: "IPv6: 2001:503:eEa3:0:0:0:0:30" => "IPv6: <REDACTED>",
+        uuid: "UUID: ddd0fA34-1016-11eb-adc1-0242ac120002" => "UUID: <REDACTED>",
+        mac_address: "MAC address: 00:0a:95:9F:68:16" => "MAC address: <REDACTED>",
         combined: "Combined: Email alice@website.tld, IPv4 8.8.8.8" =>
-                  "Combined: Email <REDACTED>, IPv4 <REDACTED>"
-    );
+                "Combined: Email <REDACTED>, IPv4 <REDACTED>",
+        canary: UNREDACTED_CANARY_MESSAGE => REDACTED_CANARY_MESSAGE,
+    }
 }

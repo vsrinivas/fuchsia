@@ -132,10 +132,9 @@ impl<I> JsonPacketSerializer<I> {
     }
 }
 
-impl<I, P, S> Stream for JsonPacketSerializer<I>
+impl<I, S> Stream for JsonPacketSerializer<I>
 where
-    I: Stream<Item = P> + Unpin,
-    P: Deref<Target = S>,
+    I: Stream<Item = S> + Unpin,
     S: Serialize,
 {
     type Item = Result<JsonString, serde_json::Error>;
@@ -161,7 +160,7 @@ where
                 }
             };
 
-            let item = serde_json::to_string(&*item)?;
+            let item = serde_json::to_string(&item)?;
             if item.len() >= self.max_packet_size {
                 warn!(
                     "serializing oversize item into packet (limit={} actual={})",

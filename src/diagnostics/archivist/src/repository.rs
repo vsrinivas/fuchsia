@@ -8,7 +8,7 @@ use {
             LifecycleDataContainer, UnpopulatedInspectDataContainer,
         },
         events::types::ComponentIdentifier,
-        logs::LogManager,
+        logs::{redact::Redactor, LogManager},
     },
     anyhow::{format_err, Error},
     fidl_fuchsia_diagnostics::{self, Selector},
@@ -27,6 +27,10 @@ pub struct DiagnosticsDataRepository {
     pub data_directories: DiagnosticsDataTrie,
     log_manager: LogManager,
 
+    /// Removes potentially sensitive strings from logs. By default pipelines are constructed
+    /// with a no-op redactor.
+    log_redactor: Arc<Redactor>,
+
     /// Optional static selectors. For the all_access reader, there
     /// are no provided selectors. For all other pipelines, a non-empty
     /// vector is required.
@@ -34,9 +38,14 @@ pub struct DiagnosticsDataRepository {
 }
 
 impl DiagnosticsDataRepository {
-    pub fn new(log_manager: LogManager, static_selectors: Option<Vec<Arc<Selector>>>) -> Self {
+    pub fn new(
+        log_manager: LogManager,
+        log_redactor: Redactor,
+        static_selectors: Option<Vec<Arc<Selector>>>,
+    ) -> Self {
         DiagnosticsDataRepository {
             log_manager,
+            log_redactor: Arc::new(log_redactor),
             data_directories: DiagnosticsDataTrie::new(),
             static_selectors: static_selectors,
         }
@@ -44,6 +53,10 @@ impl DiagnosticsDataRepository {
 
     pub fn log_manager(&self) -> LogManager {
         self.log_manager.clone()
+    }
+
+    pub fn log_redactor(&self) -> Arc<Redactor> {
+        self.log_redactor.clone()
     }
 
     pub fn remove(&mut self, component_id: &ComponentIdentifier) {
@@ -354,7 +367,8 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn inspect_repo_disallows_duplicated_dirs() {
-        let mut inspect_repo = DiagnosticsDataRepository::new(LogManager::new(), None);
+        let mut inspect_repo =
+            DiagnosticsDataRepository::new(LogManager::new(), Redactor::noop(), None);
         let realm_path = RealmPath(vec!["a".to_string(), "b".to_string()]);
         let instance_id = "1234".to_string();
 
@@ -383,7 +397,8 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn data_repo_updates_existing_entry_to_hold_inspect_data() {
-        let mut data_repo = DiagnosticsDataRepository::new(LogManager::new(), None);
+        let mut data_repo =
+            DiagnosticsDataRepository::new(LogManager::new(), Redactor::noop(), None);
         let realm_path = RealmPath(vec!["a".to_string(), "b".to_string()]);
         let instance_id = "1234".to_string();
 
@@ -413,7 +428,8 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn data_repo_tolerates_duplicate_new_component_insertions() {
-        let mut data_repo = DiagnosticsDataRepository::new(LogManager::new(), None);
+        let mut data_repo =
+            DiagnosticsDataRepository::new(LogManager::new(), Redactor::noop(), None);
         let realm_path = RealmPath(vec!["a".to_string(), "b".to_string()]);
         let instance_id = "1234".to_string();
 
@@ -449,7 +465,8 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn running_components_provide_start_time() {
-        let mut data_repo = DiagnosticsDataRepository::new(LogManager::new(), None);
+        let mut data_repo =
+            DiagnosticsDataRepository::new(LogManager::new(), Redactor::noop(), None);
         let realm_path = RealmPath(vec!["a".to_string(), "b".to_string()]);
         let instance_id = "1234".to_string();
 
@@ -482,7 +499,8 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn data_repo_tolerant_of_new_component_calls_if_diagnostics_ready_already_processed() {
-        let mut data_repo = DiagnosticsDataRepository::new(LogManager::new(), None);
+        let mut data_repo =
+            DiagnosticsDataRepository::new(LogManager::new(), Redactor::noop(), None);
         let realm_path = RealmPath(vec!["a".to_string(), "b".to_string()]);
         let instance_id = "1234".to_string();
 
@@ -519,7 +537,8 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn diagnostics_repo_cant_have_more_than_one_diagnostics_data_container_per_component() {
-        let mut data_repo = DiagnosticsDataRepository::new(LogManager::new(), None);
+        let mut data_repo =
+            DiagnosticsDataRepository::new(LogManager::new(), Redactor::noop(), None);
         let realm_path = RealmPath(vec!["a".to_string(), "b".to_string()]);
         let instance_id = "1234".to_string();
 
@@ -555,7 +574,8 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn data_repo_filters_inspect_by_selectors() {
-        let mut data_repo = DiagnosticsDataRepository::new(LogManager::new(), None);
+        let mut data_repo =
+            DiagnosticsDataRepository::new(LogManager::new(), Redactor::noop(), None);
         let realm_path = RealmPath(vec!["a".to_string(), "b".to_string()]);
         let instance_id = "1234".to_string();
 

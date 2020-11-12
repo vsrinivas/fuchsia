@@ -141,6 +141,7 @@ mod tests {
     async fn verify_reader(path: PathBuf) {
         let diagnostics_repo = Arc::new(RwLock::new(DiagnosticsDataRepository::new(
             crate::logs::LogManager::new(),
+            crate::logs::redact::Redactor::noop(),
             None,
         )));
 

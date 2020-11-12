@@ -18,7 +18,7 @@ use {
     futures::prelude::*,
     log::warn,
     serde::Serialize,
-    std::{ops::Deref, sync::Arc},
+    std::sync::Arc,
     thiserror::Error,
 };
 
@@ -55,16 +55,15 @@ impl AccessorServer {
         Self::new_inner(new_batcher(data, stats.clone(), mode), requests, stats)
     }
 
-    pub fn new_serving_arrays<D, P, S>(
+    pub fn new_serving_arrays<D, S>(
         data: S,
         requests: BatchIteratorRequestStream,
         mode: StreamMode,
         stats: Arc<DiagnosticsServerStats>,
     ) -> Result<Self, ServerError>
     where
-        P: Deref<Target = D>,
         D: Serialize,
-        S: Stream<Item = P> + Send + Unpin + 'static,
+        S: Stream<Item = D> + Send + Unpin + 'static,
     {
         let data =
             JsonPacketSerializer::new(stats.clone(), FORMATTED_CONTENT_CHUNK_SIZE_TARGET, data);
