@@ -7,11 +7,8 @@ use fidl_componentmanager_test as ftest;
 use fidl_fuchsia_time as ftime;
 use fuchsia_async as fasync;
 use fuchsia_component::client;
-use fuchsia_zircon::{ClockUpdate, Duration};
+use fuchsia_zircon::ClockUpdate;
 use log::*;
-
-/// Time to set in the UTC clock, as an offset above backstop time.
-const TEST_OFFSET: Duration = Duration::from_minutes(2);
 
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
@@ -30,13 +27,13 @@ async fn main() -> Result<(), Error> {
             .await
             .context("failed to get UTC clock")?;
         debug!("received clock");
+        clock
+            .update(ClockUpdate::new().error_bounds(100))
+            .map_err(|s| anyhow!("failed to write to clock: {}", s))?;
+        debug!("updated clock");
         let details =
             clock.get_details().map_err(|s| anyhow!("failed to get clock details: {}", s))?;
         debug!("got clock details");
-        clock
-            .update(ClockUpdate::new().value(details.backstop + TEST_OFFSET).error_bounds(100))
-            .map_err(|s| anyhow!("failed to update the clock: {}", s))?;
-        debug!("updated clock");
         Ok(details.backstop.into_nanos())
     }
     .await;

@@ -8,7 +8,7 @@ use {
     async_trait::async_trait,
     cm_rust::CapabilityName,
     fidl_fuchsia_time as ftime,
-    fuchsia_zircon::{Clock, ClockOpts, HandleBased, Rights, Time},
+    fuchsia_zircon::{Clock, ClockOpts, ClockUpdate, HandleBased, Rights, Time},
     futures::prelude::*,
     io_util::{file, OPEN_RIGHT_READABLE},
     lazy_static::lazy_static,
@@ -70,10 +70,14 @@ async fn read_utc_backstop(path: &str) -> Result<Time, Error> {
     ))
 }
 
-/// Creates a UTC kernel clock with a backstop time configured by /boot.
-pub async fn create_utc_clock() -> Result<Clock, Error> {
+/// Creates a UTC kernel clock with a backstop time configured by /boot,
+/// and immediately starts it, setting its time to the backstop.
+pub async fn create_and_start_utc_clock() -> Result<Clock, Error> {
     let backstop = read_utc_backstop("/boot/config/build_info/minimum_utc_stamp").await?;
     let clock = Clock::create(ClockOpts::empty(), Some(backstop))
         .map_err(|s| anyhow!("failed to create UTC clock: {}", s))?;
+    clock
+        .update(ClockUpdate::new().value(backstop))
+        .map_err(|s| anyhow!("failed to start UTC clock: {}", s))?;
     Ok(clock)
 }

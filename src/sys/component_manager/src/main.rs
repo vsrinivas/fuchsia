@@ -88,7 +88,7 @@ async fn run_root(args: startup::Arguments) -> Result<BuiltinEnvironment, Error>
         .set_args(args)
         .populate_config_from_args()
         .await?
-        .create_utc_clock()
+        .create_and_start_utc_clock()
         .await?
         .add_elf_runner()?
         .include_namespace_resolvers();
