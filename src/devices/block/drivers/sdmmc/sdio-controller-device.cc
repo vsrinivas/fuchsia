@@ -636,6 +636,40 @@ zx_status_t SdioControllerDevice::SdioDoVendorControlRwByte(bool write, uint8_t 
   return SdioDoRwByte(write, 0, addr, write_byte, out_read_byte);
 }
 
+void SdioControllerDevice::SdioRunDiagnostics() {
+  fbl::AutoLock lock(&lock_);
+  if (tuned_) {
+    zx_status_t status = sdmmc_.host().PerformTuning(SD_SEND_TUNING_BLOCK);
+    if (status == ZX_OK) {
+      zxlogf(INFO, "sdio_run_diagnostics: tuning passed");
+    } else {
+      zxlogf(INFO, "sdio_run_diagnostics: tuning failed: %d", status);
+    }
+  }
+
+  char cccr_string[(0x17 * 3) + 1];  // 0x17 octets plus spaces plus null byte
+  char* next_byte = cccr_string;
+  for (uint32_t addr = 0; addr < 0x17; addr++) {
+    zx::status<uint8_t> byte = ReadCccrByte(addr);
+    if (byte.is_ok()) {
+      next_byte += snprintf(next_byte, 4, " %02x", byte.value());
+    } else {
+      next_byte += snprintf(next_byte, 4, " --");
+    }
+  }
+
+  zxlogf(INFO, "sdio_run_diagnostics: CCCR:%s", cccr_string);
+}
+
+zx::status<uint8_t> SdioControllerDevice::ReadCccrByte(uint32_t addr) {
+  uint8_t byte = 0;
+  zx_status_t status = SdioDoRwByteLocked(false, 0, addr, 0, &byte);
+  if (status != ZX_OK) {
+    return zx::error(status);
+  }
+  return zx::ok(byte);
+}
+
 zx_status_t SdioControllerDevice::SdioReset() {
   zx_status_t st = ZX_OK;
   uint8_t abort_byte;
@@ -1008,6 +1042,7 @@ zx_status_t SdioControllerDevice::TrySwitchUhs() {
       zxlogf(ERROR, "sdio: tuning failed %d", st);
       return st;
     }
+    tuned_ = true;
   }
   return ZX_OK;
 }

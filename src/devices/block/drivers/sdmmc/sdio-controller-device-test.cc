@@ -811,4 +811,20 @@ TEST_F(SdioControllerDeviceTest, DifferentManufacturerProductIds) {
   }
 }
 
+TEST_F(SdioControllerDeviceTest, RunDiagnostics) {
+  sdmmc_.set_command_callback(
+      SDIO_SEND_OP_COND, [](sdmmc_req_t* req) -> void { req->response[0] = OpCondFunctions(4); });
+
+  sdmmc_.set_host_info({
+      .caps = SDMMC_HOST_CAP_SDR104,  // Make the SDIO driver call PerformTuning.
+      .max_transfer_size = 16,
+      .max_transfer_size_non_dma = 16,
+      .prefs = 0,
+  });
+  EXPECT_OK(dut_.Init());
+  EXPECT_OK(dut_.ProbeSdio());
+
+  dut_.SdioRunDiagnostics();
+}
+
 }  // namespace sdmmc

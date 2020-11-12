@@ -133,6 +133,7 @@ class MockSdio : ddk::SdioProtocol<MockSdio> {
   }
   zx_status_t SdioUnregisterVmo(uint32_t vmo_id, zx::vmo* out_vmo) { return ZX_ERR_NOT_SUPPORTED; }
   zx_status_t SdioDoRwTxnNew(const sdio_rw_txn_new_t* txn) { return ZX_ERR_NOT_SUPPORTED; }
+  void SdioRunDiagnostics() {}
 
  private:
   struct SdioRwExpectation {

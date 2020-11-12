@@ -255,4 +255,6 @@ zx_status_t SdioFunctionDevice::SdioDoRwTxnNew(const sdio_rw_txn_new_t* txn) {
   return ZX_ERR_NOT_SUPPORTED;
 }
 
+void SdioFunctionDevice::SdioRunDiagnostics() { return sdio_parent_->SdioRunDiagnostics(); }
+
 }  // namespace sdmmc

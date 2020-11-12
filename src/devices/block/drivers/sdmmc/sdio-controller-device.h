@@ -19,6 +19,8 @@
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
 
+#include <lib/zx/status.h>
+
 #include "sdio-function-device.h"
 #include "sdmmc-device.h"
 
@@ -60,6 +62,7 @@ class SdioControllerDevice : public SdioControllerDeviceType,
   zx_status_t SdioIntrPending(uint8_t fn_idx, bool* out_pending);
   zx_status_t SdioDoVendorControlRwByte(bool write, uint8_t addr, uint8_t write_byte,
                                         uint8_t* out_read_byte);
+  void SdioRunDiagnostics();
 
   void InBandInterruptCallback();
 
@@ -120,6 +123,8 @@ class SdioControllerDevice : public SdioControllerDeviceType,
   zx_status_t SdioDoRwByteLocked(bool write, uint8_t fn_idx, uint32_t addr, uint8_t write_byte,
                                  uint8_t* out_read_byte) TA_REQ(lock_);
 
+  zx::status<uint8_t> ReadCccrByte(uint32_t addr) TA_REQ(lock_);
+
   int SdioIrqThread();
 
   thrd_t irq_thread_ = 0;
@@ -131,6 +136,7 @@ class SdioControllerDevice : public SdioControllerDeviceType,
   std::array<zx::interrupt, SDIO_MAX_FUNCS> sdio_irqs_;
   std::array<SdioFunction, SDIO_MAX_FUNCS> funcs_ TA_GUARDED(lock_);
   sdio_device_hw_info_t hw_info_ TA_GUARDED(lock_);
+  bool tuned_ = false;
 };
 
 }  // namespace sdmmc

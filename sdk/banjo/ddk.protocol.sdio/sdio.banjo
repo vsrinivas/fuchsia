@@ -101,4 +101,12 @@ protocol Sdio {
     UnregisterVmo(uint32 vmo_id) -> (zx.status status, handle<vmo> vmo);
 
     DoRwTxnNew(SdioRwTxnNew txn) -> (zx.status status);
+
+    /// Runs tests and logs the results in order to diagnose issues with the bus. Clients should
+    /// call this before shutting down due to unrecoverable errors. This method may block for some
+    /// time to send commands to the card, so it should be the last call made by the client.
+    /// Note: SDIO devices may have different drivers bound to different functions. Clients must not
+    /// call RunDiagnostics in these cases, since doing so could interfere with other clients.
+    /// TODO(fxbug.dev/64166): Remove this when the SDIO issues have been investigated.
+    RunDiagnostics();
 };

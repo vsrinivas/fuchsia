@@ -54,6 +54,7 @@ class SdioFunctionDevice : public SdioFunctionDeviceType,
   zx_status_t SdioRegisterVmo(uint32_t vmo_id, zx::vmo vmo, uint64_t offset, uint64_t size);
   zx_status_t SdioUnregisterVmo(uint32_t vmo_id, zx::vmo* out_vmo);
   zx_status_t SdioDoRwTxnNew(const sdio_rw_txn_new_t* txn);
+  void SdioRunDiagnostics();
 
   zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
     DdkTransaction transaction(txn);
