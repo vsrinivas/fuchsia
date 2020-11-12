@@ -25,7 +25,7 @@ blueprint_definition!(Descriptor::Component("buttons_agent"), MediaButtonsAgent:
 /// Setting types that the media buttons agent will send media button events to, if they're
 /// available on the device.
 fn get_event_setting_types() -> HashSet<SettingType> {
-    vec![SettingType::Audio, SettingType::Input].into_iter().collect()
+    vec![SettingType::Audio, SettingType::Light, SettingType::Input].into_iter().collect()
 }
 
 pub struct MediaButtonsAgent {

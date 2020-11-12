@@ -206,6 +206,7 @@ mod tests {
             light_type: LightType::Simple,
             lights: vec![LightState { value: Some(LightValue::Simple(true)) }],
             hardware_index: vec![],
+            disable_conditions: vec![],
         };
         let light_group_2 = LightGroup {
             name: "test2".to_string(),
@@ -213,6 +214,7 @@ mod tests {
             light_type: LightType::Rgb,
             lights: vec![LightState { value: Some(LightValue::Brightness(0.42)) }],
             hardware_index: vec![],
+            disable_conditions: vec![],
         };
 
         let mut light_groups: HashMap<String, crate::switchboard::light_types::LightGroup> =

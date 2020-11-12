@@ -10,19 +10,22 @@ use std::sync::Arc;
 use fidl_fuchsia_settings::{LightError, LightMarker, LightProxy};
 use futures::lock::Mutex;
 
-use crate::agent::restore_agent;
+use crate::agent::base::BlueprintHandle;
+use crate::config::base::AgentType;
 use crate::handler::base::{Context, GenerateHandler};
 use crate::handler::device_storage::testing::*;
 use crate::handler::device_storage::{DeviceStorage, DeviceStorageFactory};
 use crate::handler::setting_handler::persist::ClientProxy;
 use crate::handler::setting_handler::{BoxedController, ClientImpl};
+use crate::input::common::MediaButtonsEventBuilder;
 use crate::light::light_controller::LightController;
-use crate::light::light_hardware_configuration::LightGroupConfiguration;
+use crate::light::light_hardware_configuration::{DisableConditions, LightGroupConfiguration};
 use crate::switchboard::base::SettingType;
 use crate::switchboard::light_types::{
     ColorRgb, LightGroup, LightInfo, LightState, LightType, LightValue,
 };
 use crate::tests::fakes::hardware_light_service::HardwareLightService;
+use crate::tests::fakes::input_device_registry_service::InputDeviceRegistryService;
 use crate::tests::fakes::service_registry::ServiceRegistry;
 use crate::{EnvironmentBuilder, LightHardwareConfiguration};
 
@@ -45,6 +48,7 @@ fn get_test_light_info() -> LightInfo {
             light_type: LightType::Brightness,
             lights: vec![LightState { value: Some(LightValue::Brightness(0.42)) }],
             hardware_index: vec![0],
+            disable_conditions: vec![],
         },
     );
     light_groups.insert(
@@ -55,6 +59,7 @@ fn get_test_light_info() -> LightInfo {
             light_type: LightType::Simple,
             lights: vec![LightState { value: Some(LightValue::Simple(true)) }],
             hardware_index: vec![1],
+            disable_conditions: vec![],
         },
     );
 
@@ -110,6 +115,7 @@ async fn populate_multiple_test_lights(
 
 struct TestLightEnvironment {
     light_service: LightProxy,
+    input_service: Arc<Mutex<InputDeviceRegistryService>>,
     store: Arc<Mutex<DeviceStorage<LightInfo>>>,
 }
 
@@ -117,6 +123,7 @@ struct TestLightEnvironmentBuilder {
     starting_light_info: Option<LightInfo>,
     hardware_light_service_handle: Option<HardwareLightServiceHandle>,
     light_hardware_config: Option<LightHardwareConfiguration>,
+    agents: Vec<AgentType>,
 }
 
 impl TestLightEnvironmentBuilder {
@@ -125,6 +132,7 @@ impl TestLightEnvironmentBuilder {
             starting_light_info: None,
             hardware_light_service_handle: None,
             light_hardware_config: None,
+            agents: vec![AgentType::Restore],
         }
     }
 
@@ -145,13 +153,16 @@ impl TestLightEnvironmentBuilder {
         self
     }
 
-    // TODO(fxbug.dev/63554): use this in tests.
-    #[allow(dead_code)]
     fn set_light_hardware_config(
         mut self,
         light_hardware_config: LightHardwareConfiguration,
     ) -> Self {
         self.light_hardware_config = Some(light_hardware_config);
+        self
+    }
+
+    fn add_agent(mut self, agent: AgentType) -> Self {
+        self.agents.push(agent);
         self
     }
 
@@ -162,6 +173,10 @@ impl TestLightEnvironmentBuilder {
             None => Arc::new(Mutex::new(HardwareLightService::new())),
         };
         service_registry.lock().await.register_service(service_handle.clone());
+
+        // Register fake input device registry service.
+        let input_service_handle = Arc::new(Mutex::new(InputDeviceRegistryService::new()));
+        service_registry.lock().await.register_service(input_service_handle.clone());
 
         let storage_factory = InMemoryStorageFactory::create();
         let store = storage_factory
@@ -179,7 +194,7 @@ impl TestLightEnvironmentBuilder {
 
         let mut environment_builder = EnvironmentBuilder::new(storage_factory)
             .service(Box::new(ServiceRegistry::serve(service_registry)))
-            .agents(&[restore_agent::blueprint::create()])
+            .agents(&self.agents.into_iter().map(BlueprintHandle::from).collect::<Vec<_>>())
             .settings(&[SettingType::Light]);
 
         if let Some(config) = self.light_hardware_config {
@@ -235,7 +250,7 @@ impl TestLightEnvironmentBuilder {
 
         let light_service = env.connect_to_service::<LightMarker>().unwrap();
 
-        TestLightEnvironment { light_service, store: store }
+        TestLightEnvironment { light_service, store, input_service: input_service_handle }
     }
 }
 
@@ -437,6 +452,51 @@ async fn test_light_set_from_configuration() {
     assert_lights_eq(settings, expected_light_info);
 }
 
+// Tests that when a `LightHardwareConfiguration` is specified, that light groups configured with
+// `DisableConditions::MicSwitch` have their enabled bits set to off when the mic is unmuted.
+#[fuchsia_async::run_until_stalled(test)]
+async fn test_light_disabled_by_mic_mute_off() {
+    // Populate the fake service with an initial set of lights.
+    let hardware_light_service_handle = Arc::new(Mutex::new(HardwareLightService::new()));
+    populate_single_test_lights(hardware_light_service_handle.clone(), get_test_light_info()).await;
+
+    // Hardware config only includes on light group, basically a renamed version of LIGHT_NAME_1.
+    let light_hardware_config = LightHardwareConfiguration {
+        light_groups: vec![LightGroupConfiguration {
+            name: LIGHT_NAME_3.to_string(),
+            hardware_index: vec![0],
+            light_type: LightType::Brightness,
+            persist: false,
+            disable_conditions: vec![DisableConditions::MicSwitch],
+        }],
+    };
+
+    // We're expecting LIGHT_NAME_1 except it's been renamed to LIGHT_NAME_3 by the hardware config,
+    // and the enabled bit will be set to off.
+    let mut expected_light_group = get_test_light_info().light_groups.remove(LIGHT_NAME_1).unwrap();
+    expected_light_group.name = LIGHT_NAME_3.to_string();
+    expected_light_group.enabled = false;
+
+    let env = TestLightEnvironmentBuilder::new()
+        .set_hardware_light_service_handle(hardware_light_service_handle)
+        .add_agent(AgentType::MediaButtons)
+        .set_light_hardware_config(light_hardware_config)
+        .build()
+        .await;
+
+    // Send mic unmuted, which should disable the light.
+    let buttons_event = MediaButtonsEventBuilder::new().set_mic_mute(false).build();
+    env.input_service.lock().await.send_media_button_event(buttons_event);
+
+    // Verify that the expected value is returned on a watch call.
+    let settings: fidl_fuchsia_settings::LightGroup =
+        env.light_service.watch_light_group(LIGHT_NAME_3).await.expect("watch completed");
+    assert_light_group_eq(
+        &fidl_fuchsia_settings::LightGroup::from(expected_light_group),
+        &settings,
+    );
+}
+
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_light_store_and_watch() {
     let mut expected_light_info = get_test_light_info();
@@ -485,8 +545,9 @@ async fn test_light_set_wrong_size() {
         .expect_err("set failed");
 }
 
+// Tests that when there are multiple lights, one light can be set at a time.
 #[fuchsia_async::run_until_stalled(test)]
-async fn test_light_set_none() {
+async fn test_light_set_single_light() {
     const TEST_LIGHT_NAME: &str = "multiple_lights";
     const LIGHT_1_VAL: f64 = 0.42;
     const LIGHT_2_START_VAL: f64 = 0.24;
@@ -501,6 +562,7 @@ async fn test_light_set_none() {
             LightState { value: Some(LightValue::Brightness(LIGHT_2_START_VAL)) },
         ],
         hardware_index: vec![0, 1],
+        disable_conditions: vec![],
     };
 
     // When changing the light group, specify None for the first light.
@@ -510,7 +572,7 @@ async fn test_light_set_none() {
         LightState { value: Some(LightValue::Brightness(LIGHT_2_CHANGED_VAL)) },
     ];
 
-    // Only the second light shoudl change.
+    // Only the second light should change.
     let mut expected_light_group = original_light_group.clone();
     expected_light_group.lights = vec![
         LightState { value: Some(LightValue::Brightness(LIGHT_1_VAL)) },
@@ -662,6 +724,7 @@ async fn test_set_wrong_value_type() {
             LightState { value: Some(LightValue::Brightness(LIGHT_START_VAL)) },
         ],
         hardware_index: vec![0, 1],
+        disable_conditions: vec![],
     };
     let mut light_groups = HashMap::new();
     light_groups.insert(TEST_LIGHT_NAME.to_string(), original_light_group);
@@ -735,6 +798,7 @@ async fn test_set_invalid_rgb_values() {
             })),
         }],
         hardware_index: vec![0],
+        disable_conditions: vec![],
     };
     let mut light_groups = HashMap::new();
     light_groups.insert(TEST_LIGHT_NAME.to_string(), original_light_group);

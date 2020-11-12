@@ -12,6 +12,8 @@ use crate::handler::setting_handler::persist::{
     controller as data_controller, write, ClientProxy, WriteResult,
 };
 use crate::handler::setting_handler::{controller, ControllerError};
+use crate::input::ButtonType;
+use crate::light::light_hardware_configuration::DisableConditions;
 use crate::service_context::ExternalServiceProxy;
 use crate::switchboard::base::{
     ControllerStateResult, SettingRequest, SettingResponse, SettingType,
@@ -68,6 +70,9 @@ impl controller::Handle for LightController {
     async fn handle(&self, request: SettingRequest) -> Option<SettingHandlerResult> {
         match request {
             SettingRequest::Restore => Some(self.restore().await),
+            SettingRequest::OnButton(ButtonType::MicrophoneMute(state)) => {
+                Some(self.on_mic_mute(state).await)
+            }
             SettingRequest::SetLightGroupValue(name, state) => Some(self.set(name, state).await),
             SettingRequest::Get => {
                 // Read all light values from underlying fuchsia.hardware.light before returning a
@@ -210,6 +215,22 @@ impl LightController {
         Ok(())
     }
 
+    async fn on_mic_mute(&self, mic_mute: bool) -> SettingHandlerResult {
+        let mut current = self.client.read().await;
+
+        for light in current
+            .light_groups
+            .values_mut()
+            .filter(|l| l.disable_conditions.contains(&DisableConditions::MicSwitch))
+        {
+            // This condition means that the LED is hard-wired to the mute switch and will only be
+            // on when the mic is disabled.
+            light.enabled = mic_mute;
+        }
+
+        write(&self.client, current, false).await.into_handler_result()
+    }
+
     async fn restore(&self) -> SettingHandlerResult {
         if let Some(config) = self.light_hardware_config.clone() {
             // Configuration is specified, restore from the configuration.
@@ -227,9 +248,13 @@ impl LightController {
         &self,
         config: LightHardwareConfiguration,
     ) -> SettingHandlerResult {
+        let current = self.client.read().await;
         let mut light_groups: HashMap<String, LightGroup> = HashMap::new();
         for group_config in config.light_groups {
             let mut light_state: Vec<LightState> = Vec::new();
+
+            // TODO(fxbug.dev/62591): once all clients go through setui, restore state from hardware
+            // only if not found in persistent storage.
             for light_index in group_config.hardware_index.iter() {
                 light_state.push(
                     self.light_state_from_hardware_index(*light_index, group_config.light_type)
@@ -238,16 +263,22 @@ impl LightController {
                 );
             }
 
+            // Restore previous state.
+            let enabled = current
+                .light_groups
+                .get(&group_config.name)
+                .map(|found_group| found_group.enabled)
+                .unwrap_or(true);
+
             light_groups.insert(
                 group_config.name.clone(),
                 LightGroup {
                     name: group_config.name,
-                    // TODO(fxbug.dev/62591): listen to media button values to determine this
-                    // value.
-                    enabled: true,
+                    enabled,
                     light_type: group_config.light_type,
                     lights: light_state,
                     hardware_index: group_config.hardware_index,
+                    disable_conditions: group_config.disable_conditions,
                 },
             );
         }
@@ -308,6 +339,7 @@ impl LightController {
                 light_type,
                 lights: vec![light_state],
                 hardware_index: vec![index],
+                disable_conditions: vec![],
             },
         ))
     }

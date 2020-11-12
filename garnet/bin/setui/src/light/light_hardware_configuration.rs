@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use crate::switchboard::light_types::LightType;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 #[derive(PartialEq, Debug, Clone, Deserialize)]
 pub struct LightHardwareConfiguration {
@@ -40,7 +40,7 @@ pub struct LightGroupConfiguration {
     pub disable_conditions: Vec<DisableConditions>,
 }
 
-#[derive(PartialEq, Debug, Clone, Deserialize)]
+#[derive(PartialEq, Debug, Clone, Serialize, Deserialize)]
 pub enum DisableConditions {
     /// Signals that the light group should be marked as disabled when the device's mic switch is
     /// set to "on".

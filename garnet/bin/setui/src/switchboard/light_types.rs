@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::light::light_hardware_configuration::DisableConditions;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::convert::TryFrom;
@@ -28,6 +29,15 @@ pub struct LightGroup {
     /// Each light in the underlying fuchsia.hardware.light API has a unique, fixed index. We need
     /// to remember the index of the lights in this light group in order to write values back.
     pub hardware_index: Vec<u32>,
+
+    /// A list of conditions under which the "enabled" field of the light group should be false,
+    /// which signals to clients the light's state is being overridden by external conditions, such
+    /// as an LED dedicated to showing that a device's mic is muted that is off when the mic is not
+    /// muted.
+    ///
+    /// Lights that are disabled can still have their value set, but the changes may not be
+    /// noticeable to the user until the condition disabling/overriding ends.
+    pub disable_conditions: Vec<DisableConditions>,
 }
 
 impl From<LightGroup> for fidl_fuchsia_settings::LightGroup {
