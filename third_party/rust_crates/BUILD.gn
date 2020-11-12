@@ -7452,7 +7452,8 @@ rust_library("sct-v0_6_0") {
 
 rust_library("security-framework-v0_4_4") {
   crate_name = "security_framework"
-  crate_root = "//third_party/rust-mirrors/security-framework/src/lib.rs"
+  crate_root =
+      "//third_party/rust_crates/tiny_mirrors/security-framework/src/lib.rs"
   output_name = "security_framework-bc94113e1496fc39"
   configs -= [
     "//build/config:rust_edition_2018",
