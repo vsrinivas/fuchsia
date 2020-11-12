@@ -4,10 +4,10 @@
 
 extern crate fuchsia_zircon as zircon;
 
-use zircon::{ClockId, DurationNum, Time};
+use zircon::{DurationNum, Time};
 
 pub fn main() {
-    println!("before sleep, time = {:?}", Time::get(ClockId::Monotonic));
+    println!("before sleep, time = {:?}", Time::get_monotonic());
     1_000_000_000.nanos().sleep();
-    println!("after sleep, time = {:?}", Time::get(ClockId::Monotonic));
+    println!("after sleep, time = {:?}", Time::get_monotonic());
 }
