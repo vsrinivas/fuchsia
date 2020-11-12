@@ -52,7 +52,7 @@ func NewInstallerConfig(fs *flag.FlagSet) (*InstallerConfig, error) {
 	testDataPath := filepath.Join(filepath.Dir(os.Args[0]), "test_data", "system-tests")
 
 	fs.StringVar(&c.installerMode, "installer", SystemUpdateChecker, "the installation mode (default: system-update-checker)")
-	fs.StringVar(&c.avbToolPath, "avbtool-path", filepath.Join(testDataPath, "avbtool"),
+	fs.StringVar(&c.avbToolPath, "avbtool-path", filepath.Join(testDataPath, "avbtool.py"),
 		"path to the avbtool binary")
 	fs.StringVar(&c.zbiToolPath, "zbitool-path", filepath.Join(testDataPath, "zbi"),
 		"path to the zbi binary")

@@ -12,7 +12,7 @@ if (is_host) {
   host_test_data("test_tools") {
     sources = [
       get_label_info(zbi_tool_target, "root_out_dir") + "/zbi",
-      "//zircon/third_party/tools/android/avb/avbtool",
+      "//third_party/android/platform/external/avb/avbtool.py",
     ]
     outputs = [ "$root_out_dir/test_data/system-tests/{{source_file_part}}" ]
     deps = [ zbi_tool_target ]
