@@ -71,9 +71,6 @@ impl CollectorInstance {
                     {
                         let mut state = collector_state.lock().unwrap();
                         *state = CollectorState::Idle;
-                        if let Err(e) = model.flush() {
-                            error!("Store failed to flush results after collection {}", e);
-                        }
                     }
                 }
                 CollectorMessage::Terminate => {

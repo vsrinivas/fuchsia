@@ -31,11 +31,14 @@ plugin!(
 mod tests {
     use {
         super::*,
+        crate::core::collection::{
+            Component, Components, Manifest, ManifestData, Manifests, Package, Packages, Route,
+            Routes,
+        },
         crate::search::controller::{
             components::ComponentSearchRequest, manifests::ManifestSearchRequest,
             packages::PackageSearchRequest, routes::RouteSearchRequest,
         },
-        scrutiny::model::model::*,
         serde_json::json,
         std::collections::HashMap,
         tempfile::tempdir,
@@ -51,12 +54,16 @@ mod tests {
     fn test_component_search() {
         let model = data_model();
         let search = ComponentSearchController::default();
-        model.components().write().unwrap().push(Component {
-            id: 0,
-            url: "foo".to_string(),
-            version: 0,
-            inferred: false,
-        });
+        model
+            .set(Components {
+                entries: vec![Component {
+                    id: 0,
+                    url: "foo".to_string(),
+                    version: 0,
+                    inferred: false,
+                }],
+            })
+            .unwrap();
         let request_one = ComponentSearchRequest { url: "foo".to_string() };
         let request_two = ComponentSearchRequest { url: "bar".to_string() };
         let response_one: Vec<Component> =
@@ -73,11 +80,15 @@ mod tests {
     fn test_manifest_search() {
         let model = data_model();
         let search = ManifestSearchController::default();
-        model.manifests().write().unwrap().push(Manifest {
-            component_id: 0,
-            manifest: ManifestData::Version1("foo".to_string()),
-            uses: vec![],
-        });
+        model
+            .set(Manifests {
+                entries: vec![Manifest {
+                    component_id: 0,
+                    manifest: ManifestData::Version1("foo".to_string()),
+                    uses: vec![],
+                }],
+            })
+            .unwrap();
         let request_one = ManifestSearchRequest { manifest: "foo".to_string() };
         let request_two = ManifestSearchRequest { manifest: "bar".to_string() };
         let response_one: Vec<Manifest> =
@@ -96,11 +107,15 @@ mod tests {
         let search = PackageSearchController::default();
         let mut contents = HashMap::new();
         contents.insert("foo".to_string(), "bar".to_string());
-        model.packages().write().unwrap().push(Package {
-            url: "test_url".to_string(),
-            merkle: "test_merkle".to_string(),
-            contents,
-        });
+        model
+            .set(Packages {
+                entries: vec![Package {
+                    url: "test_url".to_string(),
+                    merkle: "test_merkle".to_string(),
+                    contents,
+                }],
+            })
+            .unwrap();
         let request_one = PackageSearchRequest { files: "foo".to_string() };
         let request_two = PackageSearchRequest { files: "bar".to_string() };
         let response_one: Vec<Package> =
@@ -117,13 +132,17 @@ mod tests {
     fn test_route_search() {
         let model = data_model();
         let search = RouteSearchController::default();
-        model.routes().write().unwrap().push(Route {
-            id: 0,
-            src_id: 1,
-            dst_id: 2,
-            service_name: "foo".to_string(),
-            protocol_id: 0,
-        });
+        model
+            .set(Routes {
+                entries: vec![Route {
+                    id: 0,
+                    src_id: 1,
+                    dst_id: 2,
+                    service_name: "foo".to_string(),
+                    protocol_id: 0,
+                }],
+            })
+            .unwrap();
         let request_one = RouteSearchRequest { service_name: "foo".to_string() };
         let request_two = RouteSearchRequest { service_name: "bar".to_string() };
         let response_one: Vec<Route> =

@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use {
+    crate::core::collection::{Package, Packages},
     anyhow::Result,
     regex::Regex,
     scrutiny::{
@@ -28,7 +29,7 @@ impl DataController for PackageSearchController {
         let request: PackageSearchRequest = serde_json::from_value(query)?;
         let mut response = Vec::<Package>::new();
         let file_re = Regex::new(&request.files)?;
-        let packages = model.packages().read().unwrap();
+        let packages = &model.get::<Packages>()?.entries;
         for package in packages.iter() {
             for (file_name, _blob) in package.contents.iter() {
                 if file_re.is_match(&file_name) {

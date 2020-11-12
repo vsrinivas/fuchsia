@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use {
+    crate::core::collection::{Component, Components},
     anyhow::Result,
     regex::Regex,
     scrutiny::{
@@ -28,7 +29,7 @@ impl DataController for ComponentSearchController {
         let request: ComponentSearchRequest = serde_json::from_value(query)?;
         let mut response = Vec::<Component>::new();
         let url_re = Regex::new(&request.url)?;
-        let components = model.components().read().unwrap();
+        let components = &model.get::<Components>()?.entries;
         for component in components.iter() {
             if url_re.is_match(&component.url) {
                 response.push(component.clone());

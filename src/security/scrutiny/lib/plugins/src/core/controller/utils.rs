@@ -3,8 +3,9 @@
 // found in the LICENSE file.
 
 use {
+    crate::core::collection::{Component, Components},
     anyhow::{Error, Result},
-    scrutiny::model::model::{Component, DataModel},
+    scrutiny::model::model::DataModel,
     serde::{Deserialize, Serialize},
     serde_json::{self, value::Value},
     std::io::{self, ErrorKind},
@@ -13,10 +14,11 @@ use {
 
 /// Converts a component_url to an internal component_id.
 pub fn component_from_url(model: Arc<DataModel>, url: &str) -> Option<Component> {
-    let components = model.components().read().unwrap();
-    for component in components.iter() {
-        if component.url == url {
-            return Some(component.clone());
+    if let Ok(components) = model.get::<Components>() {
+        for component in components.entries.iter() {
+            if component.url == url {
+                return Some(component.clone());
+            }
         }
     }
     None
@@ -48,7 +50,7 @@ impl DefaultComponentRequest {
         } else if let Some(id) = &self.component_id {
             if id.is_i64() {
                 let current_id = id.as_i64().unwrap();
-                let components = model.components().read().unwrap();
+                let components = &model.get::<Components>()?.entries;
                 for component in components.iter() {
                     if component.id as i64 == current_id {
                         return Ok(id.as_i64().unwrap());
@@ -60,7 +62,7 @@ impl DefaultComponentRequest {
                 )))
             } else if id.is_string() {
                 if let Ok(id) = id.as_str().unwrap().parse::<i64>() {
-                    let components = model.components().read().unwrap();
+                    let components = &model.get::<Components>()?.entries;
                     for component in components.iter() {
                         if component.id as i64 == id {
                             return Ok(id);
@@ -104,11 +106,12 @@ mod tests {
         let store_dir = tempdir().unwrap();
         let uri = store_dir.into_path().into_os_string().into_string().unwrap();
         let model = Arc::new(DataModel::connect(uri).unwrap());
+
         let comp = make_component(123, "fake_url", 0, false);
-        {
-            let mut components = model.components().write().unwrap();
-            components.push(comp.clone());
-        }
+        let mut components = Components::default();
+        components.entries.push(comp.clone());
+        model.set(components).unwrap();
+
         let request = DefaultComponentRequest { component_id: Some(json!(123)), url: None };
         let component_id = request.component_id(model).unwrap();
         assert_eq!(component_id, 123);
@@ -119,11 +122,12 @@ mod tests {
         let store_dir = tempdir().unwrap();
         let uri = store_dir.into_path().into_os_string().into_string().unwrap();
         let model = Arc::new(DataModel::connect(uri).unwrap());
+
         let comp = make_component(123, "fake_url", 0, false);
-        {
-            let mut components = model.components().write().unwrap();
-            components.push(comp.clone());
-        }
+        let mut components = Components::default();
+        components.entries.push(comp.clone());
+        model.set(components).unwrap();
+
         let request = DefaultComponentRequest { component_id: Some(json!("123")), url: None };
         let component_id = request.component_id(model).unwrap();
         assert_eq!(component_id, 123);
@@ -135,10 +139,9 @@ mod tests {
         let uri = store_dir.into_path().into_os_string().into_string().unwrap();
         let model = Arc::new(DataModel::connect(uri).unwrap());
         let comp = make_component(123, "fake_url", 0, false);
-        {
-            let mut components = model.components().write().unwrap();
-            components.push(comp.clone());
-        }
+        let mut components = Components::default();
+        components.entries.push(comp.clone());
+        model.set(components).unwrap();
         let request =
             DefaultComponentRequest { component_id: None, url: Some("fake_url".to_string()) };
         let component_id = request.component_id(model).unwrap();
@@ -151,10 +154,9 @@ mod tests {
         let uri = store_dir.into_path().into_os_string().into_string().unwrap();
         let model = Arc::new(DataModel::connect(uri).unwrap());
         let comp = make_component(123, "fake_url", 0, false);
-        {
-            let mut components = model.components().write().unwrap();
-            components.push(comp.clone());
-        }
+        let mut components = Components::default();
+        components.entries.push(comp.clone());
+        model.set(components).unwrap();
         let request = DefaultComponentRequest { component_id: None, url: None };
         assert!(request.component_id(model).is_err());
     }
@@ -165,10 +167,9 @@ mod tests {
         let uri = store_dir.into_path().into_os_string().into_string().unwrap();
         let model = Arc::new(DataModel::connect(uri).unwrap());
         let comp = make_component(123, "fake_url", 0, false);
-        {
-            let mut components = model.components().write().unwrap();
-            components.push(comp.clone());
-        }
+        let mut components = Components::default();
+        components.entries.push(comp.clone());
+        model.set(components).unwrap();
         let request = DefaultComponentRequest { component_id: Some(json!(125)), url: None };
         assert!(request.component_id(model).is_err());
     }

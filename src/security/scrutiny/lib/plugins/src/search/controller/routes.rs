@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use {
+    crate::core::collection::{Route, Routes},
     anyhow::Result,
     regex::Regex,
     scrutiny::{
@@ -28,7 +29,7 @@ impl DataController for RouteSearchController {
         let request: RouteSearchRequest = serde_json::from_value(query)?;
         let mut response = Vec::<Route>::new();
         let service_re = Regex::new(&request.service_name)?;
-        let routes = model.routes().read().unwrap();
+        let routes = &model.get::<Routes>()?.entries;
         for route in routes.iter() {
             if service_re.is_match(&route.service_name) {
                 response.push(route.clone());

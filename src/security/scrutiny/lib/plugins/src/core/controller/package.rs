@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use {
+    crate::core::collection::Packages,
     anyhow::Result,
     scrutiny::{model::controller::DataController, model::model::DataModel},
     scrutiny_utils::usage::UsageBuilder,
@@ -15,13 +16,15 @@ pub struct PackagesGraphController {}
 
 impl DataController for PackagesGraphController {
     fn query(&self, model: Arc<DataModel>, _: Value) -> Result<Value> {
-        let mut packages = model.packages().read().unwrap().clone();
+        let mut packages = model.get::<Packages>()?.entries.clone();
         packages.sort_by(|a, b| a.url.partial_cmp(&b.url).unwrap());
         Ok(serde_json::to_value(packages)?)
     }
+
     fn description(&self) -> String {
         "Returns all Fuchsia packages and their file index.".to_string()
     }
+
     fn usage(&self) -> String {
         UsageBuilder::new()
             .name("packages - Dumps all of the package data in the model")
@@ -38,7 +41,7 @@ impl DataController for PackagesGraphController {
 #[cfg(test)]
 mod tests {
     use {
-        super::*, scrutiny::model::model::*, serde_json::json, std::collections::HashMap,
+        super::*, crate::core::collection::Package, serde_json::json, std::collections::HashMap,
         tempfile::tempdir,
     };
 
@@ -47,13 +50,15 @@ mod tests {
         let store_dir = tempdir().unwrap();
         let uri = store_dir.into_path().into_os_string().into_string().unwrap();
         let model = Arc::new(DataModel::connect(uri).unwrap());
-        let packages = PackagesGraphController::default();
-        model.packages().write().unwrap().push(Package {
+        let packages_controller = PackagesGraphController::default();
+        let mut packages = Packages::default();
+        packages.entries.push(Package {
             url: "foo".to_string(),
             merkle: "bar".to_string(),
             contents: HashMap::new(),
         });
-        let value = packages.query(model, json!("")).unwrap();
+        model.set(packages).unwrap();
+        let value = packages_controller.query(model, json!("")).unwrap();
         let response: Vec<Package> = serde_json::from_value(value).unwrap();
         assert_eq!(response.len(), 1);
     }

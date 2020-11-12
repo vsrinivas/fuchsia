@@ -32,6 +32,7 @@ if (is_host) {
       "src/engine/plugin.rs",
       "src/engine/scheduler.rs",
       "src/lib.rs",
+      "src/model/collection.rs",
       "src/model/collector.rs",
       "src/model/controller.rs",
       "src/model/error.rs",

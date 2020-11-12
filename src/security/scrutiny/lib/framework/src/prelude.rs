@@ -13,6 +13,8 @@ pub use crate::engine::plugin::Plugin;
 #[doc(no_inline)]
 pub use crate::engine::plugin::PluginDescriptor;
 #[doc(no_inline)]
+pub use crate::model::collection::DataCollection;
+#[doc(no_inline)]
 pub use crate::model::collector::DataCollector;
 #[doc(no_inline)]
 pub use crate::model::controller::DataController;

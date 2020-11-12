@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use {
+    crate::core::collection::{Manifest, ManifestData, Manifests},
     anyhow::Result,
     regex::Regex,
     scrutiny::{
@@ -28,7 +29,7 @@ impl DataController for ManifestSearchController {
         let request: ManifestSearchRequest = serde_json::from_value(query)?;
         let mut response = Vec::<Manifest>::new();
         let manifest_re = Regex::new(&request.manifest)?;
-        let manifests = model.manifests().read().unwrap();
+        let manifests = &model.get::<Manifests>()?.entries;
         for manifest in manifests.iter() {
             if let ManifestData::Version1(data) = &manifest.manifest {
                 if manifest_re.is_match(&data) {

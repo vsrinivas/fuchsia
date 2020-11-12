@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use {
+    crate::core::collection::Zbi,
     anyhow::Result,
     scrutiny::{model::controller::DataController, model::model::DataModel},
     scrutiny_utils::usage::UsageBuilder,
@@ -15,7 +16,7 @@ pub struct BootfsPathsController {}
 
 impl DataController for BootfsPathsController {
     fn query(&self, model: Arc<DataModel>, _: Value) -> Result<Value> {
-        if let Some(zbi) = &*model.zbi().read().unwrap() {
+        if let Ok(zbi) = model.get::<Zbi>() {
             let mut paths = zbi.bootfs.keys().cloned().collect::<Vec<String>>();
             paths.sort();
             Ok(serde_json::to_value(paths)?)
@@ -45,7 +46,7 @@ pub struct ZbiCmdlineController {}
 
 impl DataController for ZbiCmdlineController {
     fn query(&self, model: Arc<DataModel>, _: Value) -> Result<Value> {
-        if let Some(zbi) = &*model.zbi().read().unwrap() {
+        if let Ok(zbi) = model.get::<Zbi>() {
             Ok(serde_json::to_value(zbi.cmdline.clone())?)
         } else {
             Ok(serde_json::to_value("")?)
@@ -72,7 +73,7 @@ pub struct ZbiSectionsController {}
 
 impl DataController for ZbiSectionsController {
     fn query(&self, model: Arc<DataModel>, _: Value) -> Result<Value> {
-        if let Some(zbi) = &*model.zbi().read().unwrap() {
+        if let Ok(zbi) = model.get::<Zbi>() {
             let mut sections = vec![];
             for section in zbi.sections.iter() {
                 sections.push(section.section_type.clone());
@@ -101,10 +102,7 @@ impl DataController for ZbiSectionsController {
 
 #[cfg(test)]
 mod tests {
-    use {
-        super::*, scrutiny::model::model::*, serde_json::json, std::collections::HashMap,
-        tempfile::tempdir,
-    };
+    use {super::*, serde_json::json, std::collections::HashMap, tempfile::tempdir};
 
     #[test]
     fn bootfs_returns_files() {
@@ -113,7 +111,7 @@ mod tests {
         let model = Arc::new(DataModel::connect(uri).unwrap());
         let mut zbi = Zbi { sections: vec![], bootfs: HashMap::new(), cmdline: "".to_string() };
         zbi.bootfs.insert("foo".to_string(), vec![]);
-        *model.zbi().write().unwrap() = Some(zbi);
+        model.set(zbi).unwrap();
         let controller = BootfsPathsController::default();
         let bootfs: Vec<String> =
             serde_json::from_value(controller.query(model, json!("")).unwrap()).unwrap();
@@ -127,7 +125,7 @@ mod tests {
         let uri = store_dir.into_path().into_os_string().into_string().unwrap();
         let model = Arc::new(DataModel::connect(uri).unwrap());
         let zbi = Zbi { sections: vec![], bootfs: HashMap::new(), cmdline: "foo".to_string() };
-        *model.zbi().write().unwrap() = Some(zbi);
+        model.set(zbi).unwrap();
         let controller = ZbiCmdlineController::default();
         let cmdline: String =
             serde_json::from_value(controller.query(model, json!("")).unwrap()).unwrap();

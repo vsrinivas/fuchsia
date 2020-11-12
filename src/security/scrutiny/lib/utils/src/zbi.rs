@@ -7,7 +7,6 @@ use {
     anyhow::{Error, Result},
     byteorder::{LittleEndian, ReadBytesExt},
     log::info,
-    scrutiny::model::model::{ZbiSection, ZbiType},
     serde::{Deserialize, Serialize},
     std::convert::{TryFrom, TryInto},
     std::io::{Cursor, Read, Seek, SeekFrom},
@@ -26,6 +25,53 @@ const ZBI_ITEM_MAGIC: u32 = 0xb5781729;
 /// is ZSTD. If this flag is set ZbiHeader.extra will be the uncompressed
 /// size of the image.
 const ZBI_FLAG_STORAGE_COMPRESSED: u32 = 0x00000001;
+
+/// Defines all of the known ZBI section types. These are used to partition
+/// the Zircon boot image into sections.
+#[repr(u32)]
+#[derive(Deserialize, Serialize, Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum ZbiType {
+    AcpiRsdp = 0x50445352,
+    BootVersion = 0x53525642,
+    BootloaderFile = 0x4C465442,
+    Cmdline = 0x4c444d43,
+    CpuConfig = 0x43555043,
+    CpuTopology = 0x544F504F,
+    Crashlog = 0x4d4f4f42,
+    Discard = 0x50494b53,
+    DriverBoardInfo = 0x4953426D,
+    DriverBoardPrivate = 0x524F426D,
+    DriverMacAddress = 0x43414D6D,
+    DriverPartitionMap = 0x5452506D,
+    E820MemoryTable = 0x30323845,
+    EfiMemoryMap = 0x4d494645,
+    EfiSystemTable = 0x53494645,
+    FrameBuffer = 0x42465753,
+    ImageArgs = 0x47524149,
+    KernelDriver = 0x5652444B,
+    MemoryConfig = 0x434D454D,
+    Nvram = 0x4c4c564e,
+    NvramDeprecated = 0x4c4c5643,
+    PlatformId = 0x44494C50,
+    RebootReason = 0x42525748,
+    SerialNumber = 0x4e4c5253,
+    Smbios = 0x49424d53,
+    StorageBootfs = 0x42534642,
+    StorageBootfsFactory = 0x46534642,
+    StorageRamdisk = 0x4b534452,
+    KernelArm64 = 0x384e524b,
+    KernelX64 = 0x4C4E524B,
+    Unknown,
+}
+
+/// ZbiSection holder that contains the type and an uncompressed buffer
+/// containing the data.
+#[allow(dead_code)]
+#[derive(Deserialize, Serialize, Debug, Clone, PartialEq, Eq)]
+pub struct ZbiSection {
+    pub section_type: ZbiType,
+    pub buffer: Vec<u8>,
+}
 
 /// Rust clone of zircon/boot/image.h
 #[allow(dead_code)]

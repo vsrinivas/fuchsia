@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use {
+    crate::core::collection::{Components, Manifests, Packages, Routes, Zbi},
     anyhow::Result,
     scrutiny::{model::controller::DataController, model::model::DataModel},
     scrutiny_utils::usage::UsageBuilder,
@@ -31,25 +32,43 @@ impl DataController for ModelStatsController {
     fn query(&self, model: Arc<DataModel>, _query: Value) -> Result<Value> {
         let mut zbi_sections = 0;
         let mut bootfs_files = 0;
+        let mut components_len = 0;
+        let mut packages_len = 0;
+        let mut manifests_len = 0;
+        let mut routes_len = 0;
 
-        if let Some(zbi) = &*model.zbi().read().unwrap() {
+        if let Ok(zbi) = model.get::<Zbi>() {
             zbi_sections = zbi.sections.len();
             bootfs_files = zbi.bootfs.len();
         }
+        if let Ok(components) = model.get::<Components>() {
+            components_len = components.entries.len();
+        }
+        if let Ok(packages) = model.get::<Packages>() {
+            packages_len = packages.entries.len();
+        }
+        if let Ok(manifests) = model.get::<Manifests>() {
+            manifests_len = manifests.entries.len();
+        }
+        if let Ok(routes) = model.get::<Routes>() {
+            routes_len = routes.entries.len();
+        }
 
         let stats = ModelStats {
-            components: model.components().read().unwrap().len(),
-            packages: model.packages().read().unwrap().len(),
-            manifests: model.manifests().read().unwrap().len(),
-            routes: model.routes().read().unwrap().len(),
+            components: components_len,
+            packages: packages_len,
+            manifests: manifests_len,
+            routes: routes_len,
             zbi_sections,
             bootfs_files,
         };
         Ok(json!(stats))
     }
+
     fn description(&self) -> String {
         "Returns aggregated model statistics.".to_string()
     }
+
     fn usage(&self) -> String {
         UsageBuilder::new()
             .name("engine.model.stats - Lists important model statistics")

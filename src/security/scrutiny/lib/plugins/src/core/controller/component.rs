@@ -3,11 +3,12 @@
 // found in the LICENSE file.
 
 use {
+    crate::core::collection::{Components, ManifestData, Manifests},
     crate::core::controller::utils::DefaultComponentRequest,
     anyhow::{Error, Result},
     scrutiny::{
         model::controller::{DataController, HintDataType},
-        model::model::{DataModel, ManifestData},
+        model::model::DataModel,
     },
     scrutiny_utils::usage::UsageBuilder,
     serde_json::{self, value::Value},
@@ -20,7 +21,7 @@ pub struct ComponentsGraphController {}
 
 impl DataController for ComponentsGraphController {
     fn query(&self, model: Arc<DataModel>, _: Value) -> Result<Value> {
-        let mut components = model.components().read().unwrap().clone();
+        let mut components = model.get::<Components>()?.entries.clone();
         components.sort_by(|a, b| a.url.partial_cmp(&b.url).unwrap());
         Ok(serde_json::to_value(components)?)
     }
@@ -48,8 +49,8 @@ impl DataController for ComponentGraphController {
     fn query(&self, model: Arc<DataModel>, value: Value) -> Result<Value> {
         let req: DefaultComponentRequest = serde_json::from_value(value)?;
         let component_id = req.component_id(model.clone())?;
-        let components = model.components().read().unwrap();
-        for component in components.iter() {
+        let components = model.get::<Components>()?;
+        for component in components.entries.iter() {
             if component.id as i64 == component_id {
                 return Ok(serde_json::to_value(component)?);
             }
@@ -93,8 +94,8 @@ impl DataController for ComponentManifestGraphController {
         let req: DefaultComponentRequest = serde_json::from_value(value)?;
         let component_id = req.component_id(model.clone())?;
 
-        let manifests = model.manifests().read().unwrap();
-        for manifest in manifests.iter() {
+        let manifests = model.get::<Manifests>()?;
+        for manifest in manifests.entries.iter() {
             if manifest.component_id as i64 == component_id {
                 if let ManifestData::Version1(data) = &manifest.manifest {
                     return Ok(serde_json::from_str(data)?);
@@ -132,7 +133,12 @@ impl DataController for ComponentManifestGraphController {
 #[cfg(test)]
 mod tests {
 
-    use {super::*, scrutiny::model::model::*, serde_json::json, tempfile::tempdir};
+    use {
+        super::*,
+        crate::core::collection::{Component, Manifest},
+        serde_json::json,
+        tempfile::tempdir,
+    };
 
     fn empty_value() -> Value {
         serde_json::from_str("{}").unwrap()
@@ -158,11 +164,10 @@ mod tests {
 
         let comp1 = make_component(1, "fake_url", 0, false);
         let comp2 = make_component(2, "fake_url_2", 0, true);
-        {
-            let mut components = model.components().write().unwrap();
-            components.push(comp1.clone());
-            components.push(comp2.clone());
-        }
+        let mut components = Components::default();
+        components.entries.push(comp1.clone());
+        components.entries.push(comp2.clone());
+        model.set(components).unwrap();
 
         let controller = ComponentsGraphController::default();
         let val = controller.query(model, empty_value()).unwrap();
@@ -181,11 +186,10 @@ mod tests {
 
         let comp_1 = make_component(1, "fake_url", 0, false);
         let comp_2 = make_component(2, "fake_url_2", 0, true);
-        {
-            let mut components = model.components().write().unwrap();
-            components.push(comp_1.clone());
-            components.push(comp_2.clone());
-        }
+        let mut components = Components::default();
+        components.entries.push(comp_1.clone());
+        components.entries.push(comp_2.clone());
+        model.set(components).unwrap();
 
         let controller = ComponentGraphController::default();
         let json_body = json!({
@@ -212,11 +216,10 @@ mod tests {
 
         let comp1 = make_component(1, "fake_url", 0, false);
         let comp2 = make_component(2, "fake_url_2", 0, true);
-        {
-            let mut components = model.components().write().unwrap();
-            components.push(comp1.clone());
-            components.push(comp2.clone());
-        }
+        let mut components = Components::default();
+        components.entries.push(comp1.clone());
+        components.entries.push(comp2.clone());
+        model.set(components).unwrap();
 
         let controller = ComponentGraphController::default();
         let json_body = json!({
@@ -233,17 +236,15 @@ mod tests {
 
         let comp1 = make_component(1, "fake_url", 0, false);
         let comp2 = make_component(2, "fake_url_2", 0, true);
-        {
-            let mut components = model.components().write().unwrap();
-            components.push(comp1.clone());
-            components.push(comp2.clone());
-        }
+        let mut components = Components::default();
+        components.entries.push(comp1.clone());
+        components.entries.push(comp2.clone());
+        model.set(components).unwrap();
 
         let manifest1 = make_manifest(1, "{\"sandbox\": \"fake_manifest\"}");
-        {
-            let mut manifests = model.manifests().write().unwrap();
-            manifests.push(manifest1.clone());
-        }
+        let mut manifests = Manifests::default();
+        manifests.entries.push(manifest1.clone());
+        model.set(manifests).unwrap();
 
         let controller = ComponentManifestGraphController::default();
         let request =
@@ -261,17 +262,15 @@ mod tests {
 
         let comp1 = make_component(1, "fake_url", 0, false);
         let comp2 = make_component(2, "fake_url_2", 0, true);
-        {
-            let mut components = model.components().write().unwrap();
-            components.push(comp1.clone());
-            components.push(comp2.clone());
-        }
+        let mut components = Components::default();
+        components.entries.push(comp1.clone());
+        components.entries.push(comp2.clone());
+        model.set(components).unwrap();
 
         let manifest1 = make_manifest(1, "{\"fake_manifest\": \"fake_manifest\"");
-        {
-            let mut manifests = model.manifests().write().unwrap();
-            manifests.push(manifest1.clone());
-        }
+        let mut manifests = Manifests::default();
+        manifests.entries.push(manifest1.clone());
+        model.set(manifests).unwrap();
 
         let controller = ComponentManifestGraphController::default();
         let json_body = json!({
@@ -288,17 +287,15 @@ mod tests {
 
         let comp1 = make_component(1, "fake_url", 0, false);
         let comp2 = make_component(2, "fake_url_2", 0, true);
-        {
-            let mut components = model.components().write().unwrap();
-            components.push(comp1.clone());
-            components.push(comp2.clone());
-        }
+        let mut components = Components::default();
+        components.entries.push(comp1.clone());
+        components.entries.push(comp2.clone());
+        model.set(components).unwrap();
 
         let manifest1 = make_manifest(1, "{\"sandbox\": \"fake_manifest\"}");
-        {
-            let mut manifests = model.manifests().write().unwrap();
-            manifests.push(manifest1.clone());
-        }
+        let mut manifests = Manifests::default();
+        manifests.entries.push(manifest1.clone());
+        model.set(manifests).unwrap();
 
         let controller = ComponentManifestGraphController::default();
         let json_body = serde_json::to_value(DefaultComponentRequest {

@@ -4,6 +4,10 @@
 
 use {
     crate::core::{
+        collection::{
+            Component, Components, Manifest, ManifestData, Manifests, Package, Packages, Route,
+            Routes, Zbi,
+        },
         package::{artifact::ArtifactGetter, getter::PackageGetter, reader::*},
         util,
         util::types::*,
@@ -14,12 +18,7 @@ use {
     lazy_static::lazy_static,
     log::{debug, error, info, warn},
     regex::Regex,
-    scrutiny::{
-        model::collector::DataCollector,
-        model::model::{
-            Component, DataModel, Manifest, ManifestData, Package, Route, Zbi, ZbiType,
-        },
-    },
+    scrutiny::{model::collector::DataCollector, model::model::DataModel},
     scrutiny_utils::{bootfs::*, env, zbi::*},
     std::collections::HashMap,
     std::str,
@@ -447,29 +446,22 @@ impl DataCollector for PackageDataCollector {
             builtin_packages.len()
         );
 
-        let mut response =
+        let response =
             PackageDataCollector::build_model(served_packages, builtin_packages, services)?;
 
-        let mut model_comps = model.components().write().unwrap();
-        model_comps.clear();
+        let mut model_comps = vec![];
         for (_, val) in response.components.into_iter() {
             model_comps.push(val);
         }
-
-        let mut model_packages = model.packages().write().unwrap();
-        model_packages.clear();
-        model_packages.append(&mut response.packages);
-
-        let mut model_manifests = model.manifests().write().unwrap();
-        model_manifests.clear();
-        model_manifests.append(&mut response.manifests);
-
-        let mut model_routes = model.routes().write().unwrap();
-        model_routes.clear();
-        model_routes.append(&mut response.routes);
-
-        let mut model_zbi = model.zbi().write().unwrap();
-        *model_zbi = response.zbi;
+        model.set(Components { entries: model_comps })?;
+        model.set(Packages { entries: response.packages })?;
+        model.set(Manifests { entries: response.manifests })?;
+        model.set(Routes { entries: response.routes })?;
+        if let Some(zbi) = response.zbi {
+            model.set(zbi)?;
+        } else {
+            model.remove::<Zbi>()?;
+        }
 
         Ok(())
     }
@@ -984,7 +976,7 @@ mod tests {
         let (_, model) = create_model();
         // Put some "previous" content into the model.
         {
-            let mut comps = model.components().write().unwrap();
+            let mut comps = vec![];
             comps.push(Component {
                 id: 1,
                 url: String::from("test.component"),
@@ -997,27 +989,30 @@ mod tests {
                 version: 0,
                 inferred: false,
             });
+            model.set(Components { entries: comps }).unwrap();
 
-            let mut manis = model.manifests().write().unwrap();
-            manis.push(scrutiny::model::model::Manifest {
+            let mut manis = vec![];
+            manis.push(crate::core::collection::Manifest {
                 component_id: 1,
                 manifest: ManifestData::Version1(String::from("test.component.manifest")),
                 uses: vec![String::from("test.service")],
             });
-            manis.push(scrutiny::model::model::Manifest {
+            manis.push(crate::core::collection::Manifest {
                 component_id: 2,
                 manifest: ManifestData::Version1(String::from("foo.bar.manifest")),
                 uses: Vec::new(),
             });
+            model.set(Manifests { entries: manis }).unwrap();
 
-            let mut routes = model.routes().write().unwrap();
+            let mut routes = vec![];
             routes.push(Route {
                 id: 1,
                 src_id: 1,
                 dst_id: 2,
                 service_name: String::from("test.service"),
                 protocol_id: 0,
-            })
+            });
+            model.set(Routes { entries: routes }).unwrap();
         }
 
         mock_reader.append_builtin(BuiltinsJson { packages: Vec::new(), services: HashMap::new() });
@@ -1036,9 +1031,9 @@ mod tests {
         collector.collect(Arc::clone(&model)).unwrap();
 
         // Ensure the model reflects only the latest collection.
-        let comps = model.components().read().unwrap();
-        let manis = model.manifests().read().unwrap();
-        let routes = model.routes().read().unwrap();
+        let comps = &model.get::<Components>().unwrap().entries;
+        let manis = &model.get::<Manifests>().unwrap().entries;
+        let routes = &model.get::<Routes>().unwrap().entries;
         // There are 2 components (1 inferred, 1 defined),
         // 1 manifest (for the defined package), and 1 route
         assert_eq!(comps.len(), 2);
@@ -1096,7 +1091,7 @@ mod tests {
         collector.collect(Arc::clone(&model)).unwrap();
 
         // Test that the packages are in sorted order.
-        let packages = model.packages().read().unwrap();
+        let packages = &model.get::<Packages>().unwrap().entries;
         assert_eq!(packages.len(), 2);
         assert_eq!(packages[0].url, "fuchsia-pkg://fuchsia.com/bar");
         assert_eq!(packages[1].url, "fuchsia-pkg://fuchsia.com/foo");

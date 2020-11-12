@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use {
+    crate::core::collection::Packages,
     anyhow::anyhow,
     anyhow::Result,
     fuchsia_archive::Reader as FarReader,
@@ -39,7 +40,7 @@ impl DataController for PackageExtractController {
         let blob_dir = fuchsia_build_dir.join(BLOBS_PATH);
 
         let request: PackageExtractRequest = serde_json::from_value(query)?;
-        let packages = model.packages().read().unwrap();
+        let packages = &model.get::<Packages>()?.entries;
         for package in packages.iter() {
             if package.url == request.url {
                 let output_path = PathBuf::from(request.output);

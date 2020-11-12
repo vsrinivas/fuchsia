@@ -70,12 +70,12 @@ impl Plugin for EnginePlugin {
 mod tests {
     use {
         super::*,
+        crate::core::collection::{Component, Components},
         crate::engine::controller::{
             collector::CollectorListEntry, model::ModelStats, plugin::PluginListEntry,
         },
         anyhow::Result,
         scrutiny::model::collector::DataCollector,
-        scrutiny::model::model::Component,
         scrutiny::model::model::DataModel,
         scrutiny::plugin,
         serde_json::json,
@@ -129,12 +129,11 @@ mod tests {
         let model = data_model();
         let model_stats = ModelStatsController::default();
         assert_eq!(model_stats.query(model.clone(), json!("")).is_ok(), true);
-        model.components().write().unwrap().push(Component {
-            id: 1,
-            url: "".to_string(),
-            version: 1,
-            inferred: true,
-        });
+        model
+            .set(Components {
+                entries: vec![Component { id: 1, url: "".to_string(), version: 1, inferred: true }],
+            })
+            .unwrap();
         let response = model_stats.query(model.clone(), json!("")).unwrap();
         let stats: ModelStats = serde_json::from_value(response).unwrap();
         assert_eq!(stats.components, 1);

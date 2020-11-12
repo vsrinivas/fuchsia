@@ -37,6 +37,7 @@ if (is_host) {
     test_deps = [ "//third_party/rust_crates:tempfile" ]
 
     sources = [
+      "src/core/collection.rs",
       "src/core/controller/blob.rs",
       "src/core/controller/component.rs",
       "src/core/controller/mod.rs",
