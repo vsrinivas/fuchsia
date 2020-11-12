@@ -93,8 +93,8 @@ static const wifi_config_t wifi_config = {
     .iovar_table =
         {
             {IOVAR_STR_TYPE, {"ampdu_ba_wsize"}, 32},
-            {IOVAR_CMD_TYPE, {{BRCMF_C_SET_PM}}, 0},
-            {IOVAR_CMD_TYPE, {{BRCMF_C_SET_FAKEFRAG}}, 1},
+            {IOVAR_CMD_TYPE, {.iovar_cmd = BRCMF_C_SET_PM}, 0},
+            {IOVAR_CMD_TYPE, {.iovar_cmd = BRCMF_C_SET_FAKEFRAG}, 1},
             {IOVAR_LIST_END_TYPE, {{0}}, 0},
         },
     .cc_table =
