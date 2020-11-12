@@ -38,7 +38,13 @@ pub fn merge_includes(
     // TODO(shayba): also merge includes recursively
     for include in &includes {
         let path = includepath.join(include);
-        let includev: Value = json_or_json5_from_file(&path)?;
+        let includev: Value = json_or_json5_from_file(&path).map_err(|e| {
+            Error::parse(
+                format!("Couldn't read include {}: {}", &path.display(), e),
+                None,
+                Some(&file),
+            )
+        })?;
         merge_json(&mut v, &includev)
             .map_err(|e| Error::internal(format!("Failed to merge with {}: {}", include, e)))?;
     }
@@ -85,6 +91,7 @@ pub fn merge_includes(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use matches::assert_matches;
     use serde_json::json;
     use std::fmt::Display;
     use std::fs::File;
@@ -328,5 +335,32 @@ mod tests {
             }),
         );
         assert_eq!(cmx_depfile_path.exists(), false);
+    }
+
+    #[test]
+    fn test_invalid_include() {
+        let tmp_dir = TempDir::new().unwrap();
+        let cmx_path = tmp_file(
+            &tmp_dir,
+            "some.cmx",
+            json!({
+                "include": ["doesnt_exist.cmx"],
+                "program": {
+                    "binary": "bin/hello_world"
+                }
+            }),
+        );
+
+        let out_cmx_path = tmp_dir.path().join("out.cmx");
+        let cmx_depfile_path = tmp_dir.path().join("cmx.d");
+        let result = merge_includes(
+            cmx_path,
+            Some(out_cmx_path.clone()),
+            Some(cmx_depfile_path.clone()),
+            tmp_dir.path().to_path_buf(),
+        );
+
+        assert_matches!(result, Err(Error::Parse { err, .. })
+                        if err.starts_with("Couldn't read include ") && err.contains("doesnt_exist.cmx"));
     }
 }
