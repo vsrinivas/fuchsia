@@ -37,31 +37,6 @@ void SessionDestroy(vc_t* vc) {
   vc_destroy(vc);
 }
 
-zx_status_t LaunchShell(vc_t* vc, int fd, const char* cmd) {
-  const char* argv[] = {ZX_SHELL_DEFAULT, nullptr, nullptr, nullptr};
-
-  if (cmd) {
-    argv[1] = "-c";
-    argv[2] = cmd;
-  }
-
-  fdio_spawn_action_t actions[2] = {};
-  actions[0].action = FDIO_SPAWN_ACTION_SET_NAME;
-  actions[0].name.data = "vc:sh";
-  actions[1].action = FDIO_SPAWN_ACTION_TRANSFER_FD;
-  actions[1].fd = {.local_fd = fd, .target_fd = FDIO_FLAG_USE_FOR_STDIO};
-
-  uint32_t flags = FDIO_SPAWN_CLONE_ALL & ~FDIO_SPAWN_CLONE_STDIO;
-
-  char err_msg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH];
-  zx_status_t status = fdio_spawn_etc(ZX_HANDLE_INVALID, flags, argv[0], argv, nullptr,
-                                      std::size(actions), actions, &vc->proc, err_msg);
-  if (status != ZX_OK) {
-    printf("vc: cannot spawn shell: %s: %d (%s)\n", err_msg, status, zx_status_get_string(status));
-  }
-  return status;
-}
-
 }  // namespace
 
 void SessionManager::SessionIoCallback(vc_t* vc, async_dispatcher_t* dispatcher, async::Wait* wait,
@@ -185,37 +160,6 @@ zx::status<vc_t*> SessionManager::CreateSession(zx::channel session) {
 
 void SessionManager::HasPrimaryConnected(HasPrimaryConnectedCompleter::Sync& completer) {
   completer.Reply(is_primary_bound());
-}
-
-zx_status_t SessionManager::StartShell(const char* cmd) {
-  zx::channel device_channel, client_channel;
-  zx_status_t status = zx::channel::create(0, &device_channel, &client_channel);
-  if (status != ZX_OK) {
-    return status;
-  }
-
-  vc_t* vc = nullptr;
-  {
-    auto result = CreateSession(std::move(device_channel));
-    if (!result.is_ok()) {
-      return result.status_value();
-    }
-    vc = std::move(result.value());
-  }
-
-  vc->is_shell = true;
-
-  int raw_client_fd;
-  status = fdio_fd_create(client_channel.release(), &raw_client_fd);
-  if (status != ZX_OK) {
-    return status;
-  }
-  status = LaunchShell(vc, raw_client_fd, cmd);
-  if (status != ZX_OK) {
-    SessionDestroy(vc);
-    return status;
-  }
-  return ZX_OK;
 }
 
 }  // namespace virtcon

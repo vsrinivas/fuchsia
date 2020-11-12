@@ -16,7 +16,10 @@ group("bootfs") {
 
 group("tests") {
   testonly = true
-  deps = [ ":console-launcher-unittests" ]
+  deps = [
+    ":console-launcher-unittests",
+    ":virtcon-setup-test",
+  ]
 }
 
 source_set("lib") {
@@ -25,6 +28,8 @@ source_set("lib") {
     "autorun.h",
     "console_launcher.cc",
     "console_launcher.h",
+    "virtcon-setup.cc",
+    "virtcon-setup.h",
   ]
 
   deps = [
@@ -41,6 +46,7 @@ source_set("lib") {
 
   public_deps = [
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_llcpp",
+    "//sdk/fidl/fuchsia.virtualconsole:fuchsia.virtualconsole_llcpp",
     "//zircon/public/lib/fbl",
     "//zircon/system/ulib/zxc",
   ]
@@ -83,6 +89,12 @@ executable("unittests") {
   ]
 }
 
+# Run with `fx test console-launcher-unittests`.
+fuchsia_unittest_package("console-launcher-unittests") {
+  executable_path = "bin/console-launcher_test"
+  deps = [ ":unittests" ]
+}
+
 test("shell-permissions-test") {
   sources = [ "shell-permissions-test.cc" ]
 
@@ -97,8 +109,19 @@ bootfs_test("shell-permissions-bootfs-test") {
   deps = [ ":shell-permissions-test" ]
 }
 
-# Run with `fx test console-launcher-unittests`.
-fuchsia_unittest_package("console-launcher-unittests") {
-  executable_path = "bin/console-launcher_test"
-  deps = [ ":unittests" ]
+test("virtcon-setup-unittests") {
+  sources = [ "virtcon-setup-unittests.cc" ]
+  deps = [
+    ":lib",
+    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/async-default",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/mock-boot-arguments",
+  ]
+}
+
+fuchsia_unittest_package("virtcon-setup-test") {
+  executable_path = "test/virtcon-setup-unittests"
+  deps = [ ":virtcon-setup-unittests" ]
 }

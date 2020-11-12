@@ -30,10 +30,6 @@ class SessionManager final : public llcpp::fuchsia::virtualconsole::SessionManag
   void CreateSession(::zx::channel session, CreateSessionCompleter::Sync& completer) override;
   void HasPrimaryConnected(HasPrimaryConnectedCompleter::Sync& completer) override;
 
-  // Create a new session that's connected to a shell. Launches the shell with `cmd`.
-  // If `cmd` is null, the shell will be interactive.
-  zx_status_t StartShell(const char* cmd);
-
   // Create a Vc Session that reads and writes from `session`.
   // The `session` channel must represent a connection to a `fuchsia.hardware.pty.Device`.
   // The returned `vc_t*` will be freed when the other end of `session` is closed.

@@ -141,17 +141,6 @@ int main(int argc, char** argv) {
     return -1;
   }
 
-  setenv("TERM", "xterm", 1);
-
-  for (size_t i = 0; i < args.shells; ++i) {
-    if (i == 0) {
-      const char* command = args.command.empty() ? nullptr : args.command.c_str();
-      virtcon_server.StartShell(command);
-    } else {
-      virtcon_server.StartShell(nullptr);
-    }
-  }
-
   printf("vc: started\n");
   status = loop.Run();
   printf("vc: loop stopped: %d\n", status);

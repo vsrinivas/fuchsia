@@ -22,11 +22,9 @@ struct Arguments {
   bool keep_log_visible = false;
   bool repeat_keys = true;
   bool hide_on_boot = false;
-  size_t shells = 0;
   const color_scheme_t* color_scheme = &color_schemes[kDefaultColorScheme];
   const gfx_font* font = &gfx_font_9x16;
   const keychar_t* keymap = qwerty_map;
-  std::string command;
 };
 
 zx_status_t ParseArgs(llcpp::fuchsia::boot::Arguments::SyncClient& client, Arguments* out);

@@ -60,9 +60,6 @@ zx_status_t ParseArgs(llcpp::fuchsia::boot::Arguments::SyncClient& client, Argum
       {fidl::StringView{"virtcon.disable"}, false},
       {fidl::StringView{"virtcon.keyrepeat"}, true},
       {fidl::StringView{"virtcon.hide-on-boot"}, false},
-      {fidl::StringView{"netsvc.disable"}, true},
-      {fidl::StringView{"netsvc.netboot"}, false},
-      {fidl::StringView{"devmgr.require-system"}, false},
   };
 
   auto bool_resp = client.GetBools(fidl::unowned_vec(bool_keys));
@@ -71,21 +68,6 @@ zx_status_t ParseArgs(llcpp::fuchsia::boot::Arguments::SyncClient& client, Argum
     out->disable = bool_resp->values[1];
     out->repeat_keys = bool_resp->values[2];
     out->hide_on_boot = bool_resp->values[3];
-
-    const bool netsvc_disable = bool_resp->values[4];
-    const bool netsvc_netboot = bool_resp->values[5];
-    const bool require_system = bool_resp->values[6];
-    const bool netboot = !netsvc_disable && netsvc_netboot;
-
-    out->shells = require_system && !netboot ? 0 : 3;
-    if (netboot) {
-      out->shells = std::max<size_t>(out->shells, 1);
-      out->command = "dlog -f -t";
-    }
-  }
-
-  if (!out->command.empty()) {
-    out->color_scheme = &color_schemes[kSpecialColorScheme];
   }
 
   return ZX_OK;
