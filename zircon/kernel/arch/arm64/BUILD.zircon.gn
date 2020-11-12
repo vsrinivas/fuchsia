@@ -98,6 +98,7 @@ if (current_toolchain == default_toolchain) {
   source_set("arm64") {
     sources = [
       "arch.cc",
+      "asid_allocator.cc",
       "asm.S",
       "cache-ops.S",
       "coresight.cc",

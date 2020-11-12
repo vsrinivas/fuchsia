@@ -22,8 +22,6 @@
 
 #include <arch/arm64/hypervisor/el2_state.h>
 #include <arch/aspace.h>
-#include <bitmap/raw-bitmap.h>
-#include <bitmap/storage.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <kernel/mutex.h>
@@ -32,6 +30,8 @@
 #include <vm/physmap.h>
 #include <vm/pmm.h>
 #include <vm/vm.h>
+
+#include "asid_allocator.h"
 
 #define LOCAL_TRACE 0
 #define TRACE_CONTEXT_SWITCH 0
@@ -57,84 +57,20 @@ uint64_t kernel_relocated_base = KERNEL_BASE;
 uint64_t kernel_relocated_base = 0xffffffff10000000;
 #endif
 
-// The main translation table.
+// The main translation table for the kernel. Globally declared because it's reached
+// from assembly.
 pte_t arm64_kernel_translation_table[MMU_KERNEL_PAGE_TABLE_ENTRIES_TOP] __ALIGNED(
     MMU_KERNEL_PAGE_TABLE_ENTRIES_TOP * 8);
 
+// Global accessor for the kernel page table
 pte_t* arm64_get_kernel_ptable() { return arm64_kernel_translation_table; }
 
 namespace {
 
-class AsidAllocator {
- public:
-  AsidAllocator() { bitmap_.Reset(MMU_ARM64_MAX_USER_ASID + 1); }
-  ~AsidAllocator() = default;
-
-  zx_status_t Alloc(uint16_t* asid);
-  zx_status_t Free(uint16_t asid);
-
- private:
-  DISALLOW_COPY_ASSIGN_AND_MOVE(AsidAllocator);
-
-  DECLARE_MUTEX(AsidAllocator) lock_;
-  uint16_t last_ TA_GUARDED(lock_) = MMU_ARM64_FIRST_USER_ASID - 1;
-
-  bitmap::RawBitmapGeneric<bitmap::FixedStorage<MMU_ARM64_MAX_USER_ASID + 1>> bitmap_
-      TA_GUARDED(lock_);
-
-  static_assert(MMU_ARM64_ASID_BITS <= 16, "");
-};
-
-zx_status_t AsidAllocator::Alloc(uint16_t* asid) {
-  uint16_t new_asid;
-
-  // use the bitmap allocator to allocate ids in the range of
-  // [MMU_ARM64_FIRST_USER_ASID, MMU_ARM64_MAX_USER_ASID]
-  // start the search from the last found id + 1 and wrap when hitting the end of the range
-  {
-    Guard<Mutex> al{&lock_};
-
-    size_t val;
-    bool notfound = bitmap_.Get(last_ + 1, MMU_ARM64_MAX_USER_ASID + 1, &val);
-    if (unlikely(notfound)) {
-      // search again from the start
-      notfound = bitmap_.Get(MMU_ARM64_FIRST_USER_ASID, MMU_ARM64_MAX_USER_ASID + 1, &val);
-      if (unlikely(notfound)) {
-        TRACEF("ARM64: out of ASIDs\n");
-        return ZX_ERR_NO_MEMORY;
-      }
-    }
-    bitmap_.SetOne(val);
-
-    DEBUG_ASSERT(val <= UINT16_MAX);
-
-    new_asid = (uint16_t)val;
-    last_ = new_asid;
-  }
-
-  LTRACEF("new asid %#x\n", new_asid);
-
-  *asid = new_asid;
-
-  return ZX_OK;
-}
-
-zx_status_t AsidAllocator::Free(uint16_t asid) {
-  LTRACEF("free asid %#x\n", asid);
-
-  Guard<Mutex> al{&lock_};
-
-  bitmap_.ClearOne(asid);
-
-  return ZX_OK;
-}
-
 AsidAllocator asid;
 
-}  // namespace
-
 // Convert user level mmu flags to flags that go in L1 descriptors.
-static pte_t mmu_flags_to_s1_pte_attr(uint flags) {
+pte_t mmu_flags_to_s1_pte_attr(uint flags) {
   pte_t attr = MMU_PTE_ATTR_AF;
 
   switch (flags & ARCH_MMU_FLAG_CACHE_MASK) {
@@ -179,7 +115,7 @@ static pte_t mmu_flags_to_s1_pte_attr(uint flags) {
   return attr;
 }
 
-static void s1_pte_attr_to_mmu_flags(pte_t pte, uint* mmu_flags) {
+void s1_pte_attr_to_mmu_flags(pte_t pte, uint* mmu_flags) {
   switch (pte & MMU_PTE_ATTR_ATTR_INDEX_MASK) {
     case MMU_PTE_ATTR_STRONGLY_ORDERED:
       *mmu_flags |= ARCH_MMU_FLAG_UNCACHED;
@@ -220,7 +156,7 @@ static void s1_pte_attr_to_mmu_flags(pte_t pte, uint* mmu_flags) {
   }
 }
 
-static pte_t mmu_flags_to_s2_pte_attr(uint flags) {
+pte_t mmu_flags_to_s2_pte_attr(uint flags) {
   pte_t attr = MMU_PTE_ATTR_AF;
 
   switch (flags & ARCH_MMU_FLAG_CACHE_MASK) {
@@ -252,7 +188,7 @@ static pte_t mmu_flags_to_s2_pte_attr(uint flags) {
   return attr;
 }
 
-static void s2_pte_attr_to_mmu_flags(pte_t pte, uint* mmu_flags) {
+void s2_pte_attr_to_mmu_flags(pte_t pte, uint* mmu_flags) {
   switch (pte & MMU_S2_PTE_ATTR_ATTR_INDEX_MASK) {
     case MMU_S2_PTE_ATTR_STRONGLY_ORDERED:
       *mmu_flags |= ARCH_MMU_FLAG_UNCACHED;
@@ -285,6 +221,8 @@ static void s2_pte_attr_to_mmu_flags(pte_t pte, uint* mmu_flags) {
     *mmu_flags |= ARCH_MMU_FLAG_PERM_EXECUTE;
   }
 }
+
+} // namespace
 
 uint ArmArchVmAspace::MmuFlagsFromPte(pte_t pte) {
   uint mmu_flags = 0;
@@ -1342,16 +1280,30 @@ zx_status_t ArmArchVmAspace::Destroy() {
 
   Guard<Mutex> a{&lock_};
 
+  // Not okay to destroy the kernel address space
   DEBUG_ASSERT((flags_ & ARCH_ASPACE_FLAG_KERNEL) == 0);
 
-  // XXX make sure it's not mapped
+  // Check to see if the top level page table is empty. If not the user didn't
+  // properly unmap everything before destroying the aspace
+  vaddr_t vaddr_base;
+  uint top_size_shift, top_index_shift, page_size_shift;
+  MmuParamsFromFlags(0, nullptr, &vaddr_base, &top_size_shift, &top_index_shift, &page_size_shift);
+  if (page_table_is_clear(tt_virt_, page_size_shift) == false) {
+    panic("top level page table still in use! aspace %p tt_virt %p\n", this, tt_virt_);
+  }
+
+  if (pt_pages_ != 1) {
+    panic("allocated page table count is wrong, aspace %p count %zu (should be 1)\n", this,
+          pt_pages_);
+  }
 
   vm_page_t* page = paddr_to_vm_page(tt_phys_);
   DEBUG_ASSERT(page);
   pmm_free_page(page);
+  pt_pages_--;
 
   if (flags_ & ARCH_ASPACE_FLAG_GUEST) {
-    paddr_t vttbr = arm64_vttbr(asid_, tt_phys_);
+    paddr_t vttbr = arm64_vttbr(asid_, 0);
     __UNUSED zx_status_t status = arm64_el2_tlbi_vmid(vttbr);
     DEBUG_ASSERT(status == ZX_OK);
   } else {
@@ -1442,8 +1394,11 @@ zx_status_t arm64_mmu_translate(vaddr_t va, paddr_t* pa, bool user, bool write) 
 
 ArmArchVmAspace::ArmArchVmAspace() = default;
 
-// TODO: check that we've destroyed the aspace
-ArmArchVmAspace::~ArmArchVmAspace() = default;
+ArmArchVmAspace::~ArmArchVmAspace() {
+  // Destroy() will have freed the final page table if it ran correctly, and further validated that
+  // everything else was freed.
+  DEBUG_ASSERT(pt_pages_ == 0);
+}
 
 vaddr_t ArmArchVmAspace::PickSpot(vaddr_t base, uint prev_region_mmu_flags, vaddr_t end,
                                   uint next_region_mmu_flags, vaddr_t align, size_t size,
