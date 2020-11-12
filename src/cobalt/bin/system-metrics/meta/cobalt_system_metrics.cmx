@@ -11,7 +11,8 @@
             "misc"
         ],
         "features": [
-            "config-data"
+            "config-data",
+            "isolated-persistent-storage"
         ],
         "services": [
             "fuchsia.cobalt.LoggerFactory",

@@ -12,6 +12,7 @@
 #include <lib/inspect/testing/cpp/inspect.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
 
+#include <fstream>
 #include <future>
 #include <thread>
 
@@ -71,7 +72,8 @@ class SystemMetricsDaemonTest : public gtest::TestLoopFixture {
             std::unique_ptr<cobalt::CpuStatsFetcher>(new FakeCpuStatsFetcher()),
             std::unique_ptr<cobalt::TemperatureFetcher>(new FakeTemperatureFetcher()),
             std::unique_ptr<cobalt::LogStatsFetcher>(fake_log_stats_fetcher_), nullptr,
-            std::unique_ptr<cobalt::ArchivistStatsFetcher>(fake_archivist_stats_fetcher_))) {
+            std::unique_ptr<cobalt::ArchivistStatsFetcher>(fake_archivist_stats_fetcher_),
+            "tmp/")) {
     daemon_->cpu_bucket_config_ = daemon_->InitializeLinearBucketConfig(
         fuchsia_system_metrics::kCpuPercentageIntBucketsFloor,
         fuchsia_system_metrics::kCpuPercentageIntBucketsNumBuckets,
@@ -101,17 +103,30 @@ class SystemMetricsDaemonTest : public gtest::TestLoopFixture {
     return hierarchy;
   }
 
+  void TearDown() {
+    std::ifstream file("tmp/activation");
+    if (file) {
+      EXPECT_EQ(0, std::remove("tmp/activation"));
+    }
+  }
+
   void UpdateState(fuchsia::ui::activity::State state) { daemon_->UpdateState(state); }
 
   seconds LogFuchsiaUpPing(seconds uptime) { return daemon_->LogFuchsiaUpPing(uptime); }
 
-  bool LogFuchsiaLifetimeEvents() { return daemon_->LogFuchsiaLifetimeEvents(); }
+  bool LogFuchsiaLifetimeEventBoot() { return daemon_->LogFuchsiaLifetimeEventBoot(); }
+
+  bool LogFuchsiaLifetimeEventActivation() { return daemon_->LogFuchsiaLifetimeEventActivation(); }
 
   seconds LogFuchsiaUptime() { return daemon_->LogFuchsiaUptime(); }
 
   void RepeatedlyLogUpPing() { return daemon_->RepeatedlyLogUpPing(); }
 
   void LogLifetimeEvents() { return daemon_->LogLifetimeEvents(); }
+
+  void LogLifetimeEventBoot() { return daemon_->LogLifetimeEventBoot(); }
+
+  void LogLifetimeEventActivation() { return daemon_->LogLifetimeEventActivation(); }
 
   void RepeatedlyLogTemperature() { return daemon_->RepeatedlyLogTemperature(); }
 
@@ -449,15 +464,33 @@ TEST_F(SystemMetricsDaemonTest, LogFuchsiaUpPing) {
   DoFuchsiaUpPingTest(hours(250), hours(1), 8, FuchsiaUpPingMetricDimensionUptime::UpSixDays);
 }
 
-// Tests the method LogFuchsiaLifetimeEvents(). Uses a local FakeLogger_Sync
+// Tests the method LogFuchsiaLifetimeEventBoot(). Uses a local FakeLogger_Sync
 // and does not use FIDL. Does not use the message loop.
-TEST_F(SystemMetricsDaemonTest, LogFuchsiaLifetimeEvents) {
+TEST_F(SystemMetricsDaemonTest, LogFuchsiaLifetimeEventBoot) {
   fake_logger_.reset();
-  // The first time LogFuchsiaLifetimeEvents() is invoked it should log 1
+
+  // The first time LogFuchsiaLifetimeEventBoot() is invoked it should log 1
   // event of type "Boot" and return true indicating a successful status.
-  EXPECT_EQ(true, LogFuchsiaLifetimeEvents());
+  EXPECT_EQ(true, LogFuchsiaLifetimeEventBoot());
   CheckValues(cobalt::kLogEvent, 1, fuchsia_system_metrics::kFuchsiaLifetimeEventsMetricId,
               FuchsiaLifetimeEventsMetricDimensionEvents::Boot);
+}
+
+// Tests the method LogFuchsiaLifetimeEventActivation(). Uses a local FakeLogger_Sync
+// and does not use FIDL. Does not use the message loop.
+TEST_F(SystemMetricsDaemonTest, LogFuchsiaLifetimeEventActivation) {
+  fake_logger_.reset();
+  // The first time LogFuchsiaLifetimeEventActivation() is invoked it should log 1
+  // event of type "Activation" and return true indicating a successful status.
+  EXPECT_EQ(true, LogFuchsiaLifetimeEventActivation());
+  CheckValues(cobalt::kLogEvent, 1, fuchsia_system_metrics::kFuchsiaLifetimeEventsMetricId,
+              FuchsiaLifetimeEventsMetricDimensionEvents::Activation);
+  fake_logger_.reset();
+
+  // The second time LogFuchsiaLifetimeEventActivation() it should log zero events
+  // and return true to indicate successful completion.
+  EXPECT_EQ(true, LogFuchsiaLifetimeEventActivation());
+  CheckValues(cobalt::kOther, 0, -1, -1);
 }
 
 // Tests the method RepeatedlyLogUptime(). This test uses the message loop to
@@ -565,6 +598,45 @@ TEST_F(SystemMetricsDaemonTest, LogLifetimeEvents) {
   // Invoke the method under test. This kicks of the first run and schedules the
   // second run.
   LogLifetimeEvents();
+
+  // Two initial events should be logged, one for Activation and one for Boot.
+  // Activation is the last event logged.
+  CheckValues(cobalt::kLogEvent, 2, fuchsia_system_metrics::kFuchsiaLifetimeEventsMetricId,
+              FuchsiaLifetimeEventsMetricDimensionEvents::Activation);
+}
+
+// Tests the method LogLifetimeEventActivation(). This test differs
+// from the previous ones because it makes use of the message loop in order to
+// schedule future runs of work. Uses a local FakeLogger_Sync and does not use
+// FIDL.
+TEST_F(SystemMetricsDaemonTest, LogLifetimeEventActivation) {
+  // Make sure the loop has no initial pending work.
+  RunLoopUntilIdle();
+
+  // Invoke the method under test. This kicks of the first run and schedules the
+  // second run.
+  LogLifetimeEventActivation();
+
+  // The initial event should have been logged.
+  CheckValues(cobalt::kLogEvent, 1, fuchsia_system_metrics::kFuchsiaLifetimeEventsMetricId,
+              FuchsiaLifetimeEventsMetricDimensionEvents::Activation);
+  fake_logger_.reset();
+
+  // Advance the clock by 2 hours. Nothing should have happened.
+  AdvanceTimeAndCheck(hours(2), 0, -1, -1, cobalt::kLogEvent);
+}
+
+// Tests the method LogLifetimeEventBoot(). This test differs
+// from the previous ones because it makes use of the message loop in order to
+// schedule future runs of work. Uses a local FakeLogger_Sync and does not use
+// FIDL.
+TEST_F(SystemMetricsDaemonTest, LogLifetimeEventBoot) {
+  // Make sure the loop has no initial pending work.
+  RunLoopUntilIdle();
+
+  // Invoke the method under test. This kicks of the first run and schedules the
+  // second run.
+  LogLifetimeEventBoot();
 
   // The initial event should have been logged.
   CheckValues(cobalt::kLogEvent, 1, fuchsia_system_metrics::kFuchsiaLifetimeEventsMetricId,
@@ -831,12 +903,13 @@ class SystemMetricsDaemonInitializationTest : public gtest::TestLoopFixture {
  public:
   ~SystemMetricsDaemonInitializationTest() override = default;
 
-  bool LogFuchsiaLifetimeEvents() {
+  bool LogFuchsiaLifetimeEvent() {
     // The SystemMetricsDaemon will make asynchronous calls to the MockLogger*s that are also
     // running in this class/tests thread. So the call to the SystemMetricsDaemon needs to be made
     // on a different thread, such that the MockLogger*s running on the main thread can respond to
     // those calls.
-    std::future<bool> result = std::async([this]() { return daemon_->LogFuchsiaLifetimeEvents(); });
+    std::future<bool> result =
+        std::async([this]() { return daemon_->LogFuchsiaLifetimeEventBoot(); });
     while (result.wait_for(milliseconds(1)) != std::future_status::ready) {
       // Run the main thread's loop, allowing the MockLogger* objects to respond to requests.
       RunLoopUntilIdle();
@@ -857,7 +930,7 @@ class SystemMetricsDaemonInitializationTest : public gtest::TestLoopFixture {
         nullptr, nullptr, std::unique_ptr<cobalt::SteadyClock>(fake_clock_),
         std::unique_ptr<cobalt::CpuStatsFetcher>(new FakeCpuStatsFetcher()),
         std::unique_ptr<cobalt::TemperatureFetcher>(new FakeTemperatureFetcher()), nullptr, nullptr,
-        nullptr));
+        nullptr, "/tmp"));
   }
 
   // Note that we first save an unprotected pointer in fake_clock_ and then
@@ -877,10 +950,10 @@ TEST_F(SystemMetricsDaemonInitializationTest, LogSomethingAnything) {
   EXPECT_EQ(0u, logger_factory_->received_project_id());
   EXPECT_EQ(nullptr, logger_factory_->logger());
 
-  // When LogFuchsiaLifetimeEvents() is invoked the first time, it connects to the LoggerFactory,
+  // When LogFuchsiaLifetimeEvent() is invoked the first time, it connects to the LoggerFactory,
   // gets a logger, and returns false to indicate the logging failed and should
   // be retried.
-  EXPECT_EQ(false, LogFuchsiaLifetimeEvents());
+  EXPECT_EQ(false, LogFuchsiaLifetimeEvent());
 
   // Make sure the Logger has now been initialized, and for the correct project, but has not yet
   // logged anything.
@@ -888,7 +961,8 @@ TEST_F(SystemMetricsDaemonInitializationTest, LogSomethingAnything) {
   ASSERT_NE(nullptr, logger_factory_->logger());
   EXPECT_EQ(0, logger_factory_->logger()->num_calls());
 
-  // Second call to LogFuchsiaLifetimeEvents() succeeds at logging the metric, and returns success.
-  EXPECT_EQ(true, LogFuchsiaLifetimeEvents());
+  // Second call to LogFuchsiaLifetimeEvent() succeeds at logging the metric, and returns
+  // success.
+  EXPECT_EQ(true, LogFuchsiaLifetimeEvent());
   EXPECT_EQ(1, logger_factory_->logger()->num_calls());
 }

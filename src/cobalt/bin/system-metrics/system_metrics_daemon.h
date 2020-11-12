@@ -95,7 +95,8 @@ class SystemMetricsDaemon {
                       std::unique_ptr<cobalt::TemperatureFetcher> temperature_fetcher,
                       std::unique_ptr<cobalt::LogStatsFetcher> log_stats_fetcher,
                       std::unique_ptr<cobalt::ActivityListener> activity_listener,
-                      std::unique_ptr<cobalt::ArchivistStatsFetcher> archivist_stats_fetcher);
+                      std::unique_ptr<cobalt::ArchivistStatsFetcher> archivist_stats_fetcher,
+                      std::string activation_file_prefix);
 
   void InitializeLogger();
   void InitializeDiagnosticsLogger();
@@ -113,10 +114,18 @@ class SystemMetricsDaemon {
   // schedule the next round.
   void RepeatedlyLogUpPing();
 
-  // Calls LogFuchsiaLifetimeEvents,
+  // Calls LogLifetimeEventActivation and LogLifetimeEventBoot.
+  void LogLifetimeEvents();
+
+  // Calls LogFuchsiaLifetimeEventActivation,
   // and then uses the |dispatcher| passed to the constructor to
   // schedule the next round.
-  void LogLifetimeEvents();
+  void LogLifetimeEventActivation();
+
+  // Calls LogFuchsiaLifetimeEventBoot,
+  // and then uses the |dispatcher| passed to the constructor to
+  // schedule the next round.
+  void LogLifetimeEventBoot();
 
   // Calls LogFuchsiaUptime and then uses the |dispatcher| passed to the
   // constructor to schedule the next round.
@@ -172,7 +181,12 @@ class SystemMetricsDaemon {
   // Logs one FuchsiaLifetimeEvent event of type "Boot".
   //
   // Returns the logging status.
-  bool LogFuchsiaLifetimeEvents();
+  bool LogFuchsiaLifetimeEventBoot();
+
+  // Logs one FuchsiaLifetimeEvent event of type "Activation".
+  //
+  // Returns the logging status.
+  bool LogFuchsiaLifetimeEventActivation();
 
   // Once per hour, rounds the current uptime down to the nearest number of
   // hours and logs an event for the fuchsia_uptime metric.
@@ -233,6 +247,7 @@ class SystemMetricsDaemon {
   std::unique_ptr<cobalt::ArchivistStatsFetcher> archivist_stats_fetcher_;
   fuchsia::ui::activity::State current_state_ = fuchsia::ui::activity::State::UNKNOWN;
   fidl::InterfacePtr<fuchsia::ui::activity::Provider> activity_provider_;
+  std::string activation_file_prefix_;
 
   sys::ComponentInspector inspector_;
   inspect::Node platform_metric_node_;

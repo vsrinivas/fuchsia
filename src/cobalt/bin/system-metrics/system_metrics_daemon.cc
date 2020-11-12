@@ -21,10 +21,12 @@
 #include <zircon/status.h>
 
 #include <chrono>
+#include <cstdio>
 #include <fstream>
 #include <memory>
 #include <numeric>
 #include <thread>
+#include <utility>
 #include <vector>
 
 #include "src/cobalt/bin/system-metrics/archivist_stats_fetcher_impl.h"
@@ -50,6 +52,8 @@ using fuchsia_system_metrics::FuchsiaLifetimeEventsMetricDimensionEvents;
 using fuchsia_system_metrics::FuchsiaUpPingMetricDimensionUptime;
 using fuchsia_system_metrics::FuchsiaUptimeMetricDimensionUptimeRange;
 using std::chrono::steady_clock;
+
+constexpr char kActivationFileSuffix[] = "activation";
 
 namespace {
 
@@ -99,7 +103,8 @@ SystemMetricsDaemon::SystemMetricsDaemon(async_dispatcher_t* dispatcher,
           std::make_unique<cobalt::ActivityListener>(
               fit::bind_member(this, &SystemMetricsDaemon::UpdateState)),
           std::unique_ptr<cobalt::ArchivistStatsFetcher>(
-              new cobalt::ArchivistStatsFetcherImpl(dispatcher, context))) {
+              new cobalt::ArchivistStatsFetcherImpl(dispatcher, context)),
+          "data/") {
   InitializeLogger();
   InitializeDiagnosticsLogger();
   InitializeGranularErrorStatsLogger();
@@ -118,7 +123,8 @@ SystemMetricsDaemon::SystemMetricsDaemon(
     std::unique_ptr<cobalt::TemperatureFetcher> temperature_fetcher,
     std::unique_ptr<cobalt::LogStatsFetcher> log_stats_fetcher,
     std::unique_ptr<cobalt::ActivityListener> activity_listener,
-    std::unique_ptr<cobalt::ArchivistStatsFetcher> archivist_stats_fetcher)
+    std::unique_ptr<cobalt::ArchivistStatsFetcher> archivist_stats_fetcher,
+    std::string activation_file_prefix)
     : dispatcher_(dispatcher),
       context_(context),
       granular_error_stats_specs_(granular_error_stats_specs),
@@ -132,6 +138,7 @@ SystemMetricsDaemon::SystemMetricsDaemon(
       log_stats_fetcher_(std::move(log_stats_fetcher)),
       activity_listener_(std::move(activity_listener)),
       archivist_stats_fetcher_(std::move(archivist_stats_fetcher)),
+      activation_file_prefix_(std::move(activation_file_prefix)),
       inspector_(context),
       platform_metric_node_(inspector_.root().CreateChild(kInspecPlatformtNodeName)),
       // Diagram of hierarchy can be seen below:
@@ -170,10 +177,23 @@ void SystemMetricsDaemon::RepeatedlyLogUpPing() {
 }
 
 void SystemMetricsDaemon::LogLifetimeEvents() {
-  if (!LogFuchsiaLifetimeEvents()) {
+  LogLifetimeEventBoot();
+  LogLifetimeEventActivation();
+}
+
+void SystemMetricsDaemon::LogLifetimeEventBoot() {
+  if (!LogFuchsiaLifetimeEventBoot()) {
     // Pause for 5 minutes and try again.
     async::PostDelayedTask(
-        dispatcher_, [this]() { LogLifetimeEvents(); }, zx::sec(300));
+        dispatcher_, [this]() { LogLifetimeEventBoot(); }, zx::sec(300));
+  }
+}
+
+void SystemMetricsDaemon::LogLifetimeEventActivation() {
+  if (!LogFuchsiaLifetimeEventActivation()) {
+    // Pause for 5 minutes and try again.
+    async::PostDelayedTask(
+        dispatcher_, [this]() { LogLifetimeEventActivation(); }, zx::sec(300));
   }
 }
 
@@ -426,8 +446,8 @@ std::chrono::seconds SystemMetricsDaemon::LogFuchsiaUptime() {
   return SecondsBeforeNextHour(uptime);
 }
 
-bool SystemMetricsDaemon::LogFuchsiaLifetimeEvents() {
-  TRACE_DURATION("system_metrics", "SystemMetricsDaemon::LogFuchsiaLifetimeEvents");
+bool SystemMetricsDaemon::LogFuchsiaLifetimeEventBoot() {
+  TRACE_DURATION("system_metrics", "SystemMetricsDaemon::LogFuchsiaLifetimeEventBoot");
   if (!logger_) {
     FX_LOGS(ERROR) << "No logger present. Reconnecting...";
     InitializeLogger();
@@ -446,6 +466,36 @@ bool SystemMetricsDaemon::LogFuchsiaLifetimeEvents() {
       return false;
     }
   }
+  return true;
+}
+
+bool SystemMetricsDaemon::LogFuchsiaLifetimeEventActivation() {
+  TRACE_DURATION("system_metrics", "SystemMetricsDaemon::LogFuchsiaLifetimeEventActivation");
+  if (!logger_) {
+    FX_LOGS(ERROR) << "No logger present. Reconnecting...";
+    InitializeLogger();
+    // Something went wrong. Pause and try again.
+    return false;
+  }
+
+  std::ifstream file(activation_file_prefix_ + kActivationFileSuffix);
+  if (file) {
+    // This device has already logged activation. No work required.
+    return true;
+  }
+
+  fuchsia::cobalt::Status status = fuchsia::cobalt::Status::INTERNAL_ERROR;
+  ReinitializeIfPeerClosed(logger_->LogEvent(fuchsia_system_metrics::kFuchsiaLifetimeEventsMetricId,
+                                             FuchsiaLifetimeEventsMetricDimensionEvents::Activation,
+                                             &status));
+  if (status != fuchsia::cobalt::Status::OK) {
+    FX_LOGS(ERROR) << "LogEvent() returned status=" << StatusToString(status);
+    return false;
+  }
+
+  // Create a new empty file to prevent relogging activation.
+  std::ofstream c(activation_file_prefix_ + kActivationFileSuffix);
+  c.close();
   return true;
 }
 

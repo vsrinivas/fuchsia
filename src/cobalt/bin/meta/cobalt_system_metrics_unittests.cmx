@@ -1,5 +1,10 @@
 {
     "program": {
         "binary": "test/cobalt_system_metrics_unittests"
+    },
+    "sandbox": {
+        "features": [
+            "isolated-temp"
+        ]
     }
 }
