@@ -7,8 +7,7 @@ import("//boards/arm64.gni")
 board_name = "vim2"
 
 _common_bootfs_deps = [
-  "//src/connectivity/bluetooth/hci/transport/uart:bt-transport-uart",
-  "//src/connectivity/bluetooth/hci/vendor/broadcom:bt-hci-broadcom",
+  "//src/connectivity/bluetooth/bundles:vim2-bluetooth-hci",
   "//src/connectivity/ethernet/drivers/aml-ethernet-s912",
   "//src/connectivity/ethernet/drivers/dwmac",
   "//src/connectivity/ethernet/drivers/realtek-8211f",

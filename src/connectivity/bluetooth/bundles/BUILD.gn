@@ -1,0 +1,17 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/cipd.gni")
+
+group("vim2-bluetooth-hci") {
+  deps = [
+    "//src/connectivity/bluetooth/hci/transport/uart:bt-transport-uart",
+    "//src/connectivity/bluetooth/hci/vendor/broadcom:bt-hci-broadcom-transitional",
+  ]
+  data_deps = []
+  if (internal_access) {
+    data_deps +=
+        [ "//src/connectivity/bluetooth/hci/vendor/broadcom:broadcom-firmware" ]
+  }
+}
