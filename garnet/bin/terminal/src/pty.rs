@@ -302,6 +302,7 @@ mod tests {
         Ok(())
     }
 
+    #[ignore] // TODO(63868): until we figure out why this test is flaking.
     #[fasync::run_singlethreaded(test)]
     async fn shell_process_is_not_running_after_writing_exit() -> Result<(), Error> {
         let pty = spawn_pty().await?;
