@@ -65,6 +65,9 @@ class CobaltTestAppLogger {
   // Synchronously invokes LogCobaltEvent() using the given parameters.
   bool LogCobaltEvent(fuchsia::cobalt::CobaltEvent event);
 
+  // Synchronously invokes LogOccurrence() using the given parameters.
+  bool LogOccurrence(uint32_t metric_id, std::vector<uint32_t> indices, uint64_t count);
+
   // Synchronously invokes LogInteger() using the given parameters.
   bool LogInteger(uint32_t metric_id, std::vector<uint32_t> indices, int64_t value);
 

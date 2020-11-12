@@ -87,8 +87,12 @@ bool TestLogElapsedTimeWithAggregationWorkerRunning(
 // again, for the same day index, and checks that no observations were
 // generated.
 bool TestLogInteger(CobaltTestAppLogger* logger, util::SystemClockInterface* clock,
-                                 fuchsia::cobalt::ControllerSyncPtr* cobalt_controller,
-                                 size_t backfill_days, uint32_t project_id);
+                    fuchsia::cobalt::ControllerSyncPtr* cobalt_controller,
+                    size_t backfill_days, uint32_t project_id);
+
+bool TestLogOccurrence(CobaltTestAppLogger* logger, util::SystemClockInterface* clock,
+                       fuchsia::cobalt::ControllerSyncPtr* cobalt_controller,
+                       size_t backfill_days, uint32_t project_id);
 
 }  // namespace testapp
 }  // namespace cobalt

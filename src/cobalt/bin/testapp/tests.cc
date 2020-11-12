@@ -460,8 +460,8 @@ bool TestLogElapsedTimeWithAggregation(CobaltTestAppLogger* logger, SystemClockI
 //
 // For each of the two event_codes, log one observation with an integer value.
 bool TestLogInteger(CobaltTestAppLogger* logger, SystemClockInterface* clock,
-                                      fuchsia::cobalt::ControllerSyncPtr* cobalt_controller,
-                                      const size_t backfill_days, uint32_t project_id) {
+                    fuchsia::cobalt::ControllerSyncPtr* cobalt_controller,
+                    const size_t backfill_days, uint32_t project_id) {
   FX_LOGS(INFO) << "========================";
   FX_LOGS(INFO) << "TestLogInteger";
 
@@ -503,6 +503,53 @@ bool TestLogInteger(CobaltTestAppLogger* logger, SystemClockInterface* clock,
     return false;
   }
   return SendAndCheckSuccess("TestLogInteger", logger);
+}
+
+// features_active_new using OCCURRENCE metric.
+//
+// For each of the four event_codes, log one event with the occurrence counts.
+bool TestLogOccurrence(CobaltTestAppLogger* logger, SystemClockInterface* clock,
+                       fuchsia::cobalt::ControllerSyncPtr* cobalt_controller,
+                       const size_t backfill_days, uint32_t project_id) {
+  FX_LOGS(INFO) << "========================";
+  FX_LOGS(INFO) << "TestLogOccurrence";
+
+  // All occurrence count data is aggregated into a single observation.
+  std::map<std::pair<uint32_t, uint32_t>, uint64_t> expected_num_obs;
+  std::map<std::pair<uint32_t, uint32_t>, uint64_t> expect_no_obs;
+  expected_num_obs[{cobalt_registry::kFeaturesActiveNewMetricId,
+                    cobalt_registry::kFeaturesActiveNewFeaturesActiveUniqueDevicesReportId}] = 1;
+  expect_no_obs[{cobalt_registry::kFeaturesActiveNewMetricId,
+                    cobalt_registry::kFeaturesActiveNewFeaturesActiveUniqueDevicesReportId}] = 0;
+
+  uint32_t day_index = CurrentDayIndex(clock);
+  for (uint32_t skillIndex : kFeaturesActiveNewSkillIndices) {
+    for (uint64_t count : kFeaturesActiveNewCounts) {
+      if (!logger->LogOccurrence(cobalt_registry::kFeaturesActiveNewMetricId, {skillIndex}, count)) {
+        FX_LOGS(INFO) << "LogOccurrence(" << cobalt_registry::kFeaturesActiveNewMetricId << ", {"
+                      << skillIndex << "}, " << count << ")";
+        FX_LOGS(INFO) << "TestLogOccurrence : FAIL";
+        return false;
+      }
+    }
+  }
+
+  if (CurrentDayIndex(clock) != day_index) {
+    // TODO(fxb/52750) The date has changed mid-test. We are currently unable to
+    // deal with this so we fail this test and our caller may try again.
+    FX_LOGS(INFO) << "Quitting test because the date has changed mid-test.";
+    return false;
+  }
+
+  if (!GenerateObsAndCheckCount(day_index, cobalt_controller, project_id, expected_num_obs)) {
+    FX_LOGS(INFO) << "TestLogOccurrence : FAIL";
+    return false;
+  }
+  if (!GenerateObsAndCheckCount(day_index, cobalt_controller, project_id, expect_no_obs)) {
+    FX_LOGS(INFO) << "TestLogOccurrence : FAIL";
+    return false;
+  }
+  return SendAndCheckSuccess("TestLogOccurrence", logger);
 }
 
 }  // namespace testapp
