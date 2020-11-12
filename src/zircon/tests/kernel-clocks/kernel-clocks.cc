@@ -661,6 +661,12 @@ TEST(KernelClocksTestCase, StartedSignal) {
                       ZX_ERR_TIMED_OUT);
         ASSERT_EQ(pending, 0);
 
+        // Try to set the STARTED signal explicitly using zx_object_signal.
+        // This should fail as well.  The only way to start a clock which is not
+        // currently started is with a zx_clock_update call which sets the
+        // clock's value.
+        ASSERT_EQ(ZX_ERR_ACCESS_DENIED, clock.signal(0, ZX_CLOCK_STARTED));
+
         // Now go ahead and start the clock running.
         zx::clock::update_args args;
         if (rate) {

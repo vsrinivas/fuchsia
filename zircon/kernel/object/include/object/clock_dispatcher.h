@@ -17,7 +17,7 @@
 #include <object/handle.h>
 
 class ClockDispatcher final
-    : public SoloDispatcher<ClockDispatcher, ZX_DEFAULT_CLOCK_RIGHTS, ZX_CLOCK_STARTED> {
+    : public SoloDispatcher<ClockDispatcher, ZX_DEFAULT_CLOCK_RIGHTS> {
  public:
   static zx_status_t Create(uint64_t options, const zx_clock_create_args_v1_t& create_args,
                             KernelHandle<ClockDispatcher>* handle, zx_rights_t* rights);
