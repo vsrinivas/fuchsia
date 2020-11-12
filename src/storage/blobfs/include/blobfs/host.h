@@ -298,6 +298,11 @@ zx_status_t blobfs_fsck(fbl::unique_fd fd, off_t start, off_t end,
 // the superblock, block bitmap, inode table, and data blocks.
 zx_status_t blobfs_create_sparse(std::unique_ptr<Blobfs>* out, fbl::unique_fd fd, off_t start,
                                  off_t end, const fbl::Vector<size_t>& extent_vector);
+
+// Write each blob contained in this image into |output_dir| as a standalone file, with the merkle
+// root hash as the filename.
+fit::result<void, std::string> ExportBlobs(int output_dir, Blobfs& fs);
+
 }  // namespace blobfs
 
 #endif  // SRC_STORAGE_BLOBFS_INCLUDE_BLOBFS_HOST_H_

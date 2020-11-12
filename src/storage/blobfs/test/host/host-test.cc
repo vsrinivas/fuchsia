@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <dirent.h>
+#include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/types.h>
@@ -367,6 +369,83 @@ TEST(BlobfsHostTest, VisitBlobsForwardsVisitorErrors) {
 
   ASSERT_TRUE(res.is_error());
   ASSERT_TRUE(res.error().find("1234") != std::string::npos);
+}
+
+std::vector<uint8_t> ReadFileContents(int fd) {
+  std::vector<uint8_t> data(1);
+  std::vector<uint8_t> buffer(kBlobfsBlockSize);
+  int read_bytes = 0;
+  int read_result = 0;
+  while ((read_result = read(fd, buffer.data(), buffer.size())) > 0) {
+    data.resize(read_bytes + read_result);
+    memcpy(&data[read_bytes], buffer.data(), read_result);
+    read_bytes += read_result;
+    if (read_result == 0) {
+      return data;
+    }
+  }
+  return data;
+}
+
+TEST(BlobfsHostTest, ExportBlobsCreatesBlobsWithTheCorrectContentAndName) {
+  auto blobfs = CreateBlobfs(/*block_count=*/500,
+                             {.blob_layout_format = BlobLayoutFormat::kCompactMerkleTreeAtEnd});
+  ASSERT_TRUE(blobfs != nullptr);
+
+  unsigned int seed = testing::UnitTest::GetInstance()->random_seed();
+  int blob_count = 20;
+  std::vector<std::unique_ptr<File>> blobs;
+  std::vector<MerkleInfo> blob_info;
+
+  auto find_blob_index_by_name = [&](const char* name) -> std::optional<int> {
+    std::string target(name);
+    for (int i = 0; i < blob_count; ++i) {
+      auto& info = blob_info[i];
+      auto blob_name = std::string(info.digest.ToString().c_str(), info.digest.ToString().length());
+      if (target == blob_name) {
+        return i;
+      }
+    }
+    return std::nullopt;
+  };
+
+  for (int i = 0; i < blob_count; ++i) {
+    // 1-3 blocks and random tail(empty tail is acceptable too).
+    size_t data_size = (i % 3 + 1) * kBlobfsBlockSize + (rand_r(&seed) % kBlobfsBlockSize);
+    blobs.push_back(std::make_unique<File>(tmpfile()));
+    blob_info.push_back({});
+
+    InitBlob(data_size, *blobfs, *blobs.back(), blob_info.back(), &seed);
+  }
+
+  // Create a temporal output dir.
+  std::string tmp_dir = "blob_output_test.XXXXXX";
+  char* dir_name = mkdtemp(tmp_dir.data());
+  ASSERT_NE(dir_name, nullptr);
+
+  fbl::unique_fd output_dir(open(dir_name, O_DIRECTORY));
+  ASSERT_TRUE(output_dir.is_valid());
+
+  auto export_result = ExportBlobs(output_dir.get(), *blobfs);
+  ASSERT_TRUE(export_result.is_ok()) << export_result.error();
+
+  // Iterate and validate each entry.
+  DIR* output = opendir(dir_name);
+  ASSERT_NE(output, nullptr);
+
+  dirent* entry = nullptr;
+  while ((entry = readdir(output)) != nullptr) {
+    if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) {
+      continue;
+    }
+    fbl::unique_fd blob_fd(openat(output_dir.get(), entry->d_name, O_RDONLY));
+    ASSERT_TRUE(blob_fd.is_valid());
+    auto index_or = find_blob_index_by_name(entry->d_name);
+    ASSERT_TRUE(index_or.has_value());
+    auto contents = ReadFileContents(blob_fd.get());
+    CheckBlobContents(*blobs[index_or.value()], contents);
+  }
+  closedir(output);
 }
 
 }  // namespace

@@ -19,6 +19,7 @@
 #include <memory>
 #include <new>
 #include <optional>
+#include <string>
 #include <utility>
 
 #include <blobfs/blob-layout.h>
@@ -915,6 +916,35 @@ fit::result<void, std::string> Blobfs::VisitBlobs(BlobVisitor visitor) {
     }
   }
   return fit::ok();
+}
+
+fit::result<void, std::string> ExportBlobs(int output_dir, Blobfs& fs) {
+  return fs.VisitBlobs([output_dir](Blobfs::BlobView view) -> fit::result<void, std::string> {
+    uint8_t hash[digest::kSha256Length];
+    memcpy(hash, view.merkle_hash.data(), digest::kSha256Length);
+    auto blob_name = digest::Digest(hash).ToString();
+    fbl::unique_fd file(openat(output_dir, blob_name.c_str(), O_CREAT | O_RDWR, 0644));
+    if (!file.is_valid()) {
+      return fit::error(
+          "Failed to create blob file" + std::string(blob_name.c_str()) +
+          "(merkle root digest) in output dir. More specifically: " + strerror(errno));
+    }
+
+    size_t written_bytes = 0;
+    int write_result = 0;
+    while (written_bytes < view.blob_contents.size()) {
+      write_result = write(file.get(), &view.blob_contents[written_bytes],
+                           view.blob_contents.size() - written_bytes);
+      if (write_result < 0) {
+        return fit::error(
+            "Failed to write blob " + std::string(blob_name.c_str()) +
+            "(merkle root digest) contents in output file. More specifically: " + strerror(errno));
+      }
+      written_bytes += write_result;
+    }
+
+    return fit::ok();
+  });
 }
 
 }  // namespace blobfs
