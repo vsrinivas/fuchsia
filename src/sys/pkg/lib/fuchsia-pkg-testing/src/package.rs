@@ -5,10 +5,11 @@
 //! Test tools for building Fuchsia packages.
 
 use {
+    crate::process::wait_for_process_termination,
     anyhow::{format_err, Context as _, Error},
+    fdio::SpawnBuilder,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::{DirectoryProxy, FileMarker, FileObject, NodeInfo},
-    fuchsia_component::client::{launcher, AppBuilder},
     fuchsia_merkle::{Hash, MerkleTree},
     fuchsia_pkg::{MetaContents, MetaPackage},
     fuchsia_zircon::{self as zx, prelude::*, Status},
@@ -481,33 +482,25 @@ impl PackageBuilder {
             }
         }
 
-        let fut = AppBuilder::new("fuchsia-pkg://fuchsia.com/pm#meta/pm.cmx")
-            .arg(format!("-n={}", self.name))
-            .arg("-version=0")
-            .arg("-m=/in/package.manifest")
-            .arg(format!("-o={}", package_mount_path))
-            .arg("build")
-            .arg("-depfile=false")
-            .arg(format!("-output-package-manifest={}/manifest.json", &package_mount_path))
+        let pm = SpawnBuilder::new()
+            .options(fdio::SpawnOptions::CLONE_ALL - fdio::SpawnOptions::CLONE_NAMESPACE)
+            .arg("pm")?
+            .arg(format!("-n={}", self.name))?
+            .arg("-version=0")?
+            .arg("-m=/in/package.manifest")?
+            .arg(format!("-o={}", package_mount_path))?
+            .arg("build")?
+            .arg("-depfile=false")?
+            .arg(format!("-output-package-manifest={}/manifest.json", &package_mount_path))?
             .add_dir_to_namespace("/in".to_owned(), File::open(indir.path()).context("open /in")?)?
             .add_dir_to_namespace(
                 package_mount_path.clone(),
                 File::open(packagedir.path()).context("open /packages")?,
             )?
-            .output(&launcher()?)?;
-        let pm_output = fut.await?;
-        match pm_output.ok() {
-            Ok(_) => (),
-            Err(e) => {
-                eprintln!(
-                    "pm exited with status {}, stdout:\n{}\nstderr:\n{}",
-                    pm_output.exit_status,
-                    String::from_utf8(pm_output.stdout)?,
-                    String::from_utf8(pm_output.stderr)?,
-                );
-                return Err(e)?;
-            }
-        }
+            .spawn_from_path("/pkg/bin/pm", &fuchsia_runtime::job_default())
+            .context("spawning pm to build package")?;
+
+        wait_for_process_termination(pm).await.context("waiting for pm to build package")?;
 
         let meta_far_merkle =
             fs::read_to_string(packagedir.path().join("meta.far.merkle"))?.parse()?;

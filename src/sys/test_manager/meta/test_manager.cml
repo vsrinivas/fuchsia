@@ -92,6 +92,12 @@
                 "#rust_test_runner",
             ],
         },
+        {
+            directory: "config-ssl",
+            from: "parent",
+            to: [ "#tests" ],
+            rights: [ "r*" ],
+        },
 
         // Some components run under test need access to /config/data.
         {

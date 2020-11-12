@@ -14,7 +14,8 @@
             "class/input-report"
         ],
         "features": [
-            "isolated-temp"
+            "isolated-temp",
+            "root-ssl-certificates"
         ],
         "pkgfs": [
             "packages/config-data/0/meta/data"

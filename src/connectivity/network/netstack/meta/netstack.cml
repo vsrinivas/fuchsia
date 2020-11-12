@@ -1,0 +1,58 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    program: {
+        binary: "bin/grand_unified_binary",
+        args: [ "netstack" ],
+    },
+    capabilities: [
+        {
+            protocol: [
+                "fuchsia.net.filter.Filter",
+                "fuchsia.net.interfaces.State",
+                "fuchsia.net.neighbor.Controller",
+                "fuchsia.net.neighbor.View",
+                "fuchsia.net.routes.State",
+                "fuchsia.net.stack.Log",
+                "fuchsia.net.stack.Stack",
+                "fuchsia.netstack.Netstack",
+                "fuchsia.posix.socket.Provider",
+            ],
+        },
+    ],
+    use: [
+        { runner: "elf" },
+        {
+            // TODO(fxbug.dev/63680) rename this to the correct replacement for
+            // isolated-cache-storage once it is implemented.
+            storage: "cache",
+            path: "/cache",
+        },
+        {
+            protocol: [
+                "fuchsia.cobalt.LoggerFactory",
+                "fuchsia.device.NameProvider",
+                "fuchsia.logger.LogSink",
+                "fuchsia.posix.socket.Provider",
+                "fuchsia.stash.SecureStore",
+            ],
+        },
+    ],
+    expose: [
+        {
+            protocol: [
+                "fuchsia.net.filter.Filter",
+                "fuchsia.net.interfaces.State",
+                "fuchsia.net.neighbor.Controller",
+                "fuchsia.net.neighbor.View",
+                "fuchsia.net.routes.State",
+                "fuchsia.net.stack.Log",
+                "fuchsia.net.stack.Stack",
+                "fuchsia.netstack.Netstack",
+                "fuchsia.posix.socket.Provider",
+            ],
+            from: "self",
+        },
+    ],
+}

@@ -15,6 +15,11 @@
             path: "/pkgfs/packages/config-data/0/meta/data",
         },
         {
+            directory: "config-ssl",
+            rights: [ "r*" ],
+            path: "/config/ssl",
+        },
+        {
             protocol: [
                 "fuchsia.boot.WriteOnlyLog",
                 "fuchsia.logger.LogSink",

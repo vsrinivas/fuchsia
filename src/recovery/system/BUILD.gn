@@ -259,6 +259,7 @@ test_package("system_recovery_tests") {
     "//garnet/go/src/grand_unified_binary",
     "//src/storage/bin/blobfs",
     "//src/storage/bin/minfs",
+    "//src/sys/pkg/bin/pm:pm_bin",
   ]
 
   binaries = [
@@ -271,6 +272,9 @@ test_package("system_recovery_tests") {
     {
       name = "pkgsvr"
       source = "grand_unified_binary"
+    },
+    {
+      name = "pm"
     },
   ]
 

@@ -584,6 +584,7 @@ test_package("pkg-resolver-integration-tests") {
     "//src/sys/pkg/bin/grand-swd-binary",
     "//src/sys/pkg/bin/pkg-cache:bin",
     "//src/sys/pkg/bin/pkg-local-mirror:bin",
+    "//src/sys/pkg/bin/pm:pm_bin",
   ]
 
   extra = [ empty_repo_manifest_file ]
@@ -607,6 +608,9 @@ test_package("pkg-resolver-integration-tests") {
     {
       name = "pkgsvr"
       source = "grand_unified_binary"
+    },
+    {
+      name = "pm"
     },
   ]
 
@@ -708,5 +712,40 @@ group("tests") {
     ":pkg-resolver-integration-tests",
     "//src/lib/storage/ramdevice_client:ramdisk-isolated-devmgr",
     "//src/sys/pkg/bin/pm:pm",
+  ]
+}
+
+resource("empty-repo-resource-keys") {
+  testonly = true
+  visibility = [ ":empty-repo-resource" ]
+  sources = [
+    "template/keys/root.json",
+    "template/keys/snapshot.json",
+    "template/keys/targets.json",
+    "template/keys/timestamp.json",
+  ]
+  outputs = [ "empty-repo/keys/{{source_file_part}}" ]
+}
+
+resource("empty-repo-resource-repository") {
+  testonly = true
+  visibility = [ ":empty-repo-resource" ]
+  sources = [
+    "template/repository/1.root.json",
+    "template/repository/1.snapshot.json",
+    "template/repository/1.targets.json",
+    "template/repository/root.json",
+    "template/repository/snapshot.json",
+    "template/repository/targets.json",
+    "template/repository/timestamp.json",
+  ]
+  outputs = [ "empty-repo/repository/{{source_file_part}}" ]
+}
+
+group("empty-repo-resource") {
+  testonly = true
+  public_deps = [
+    ":empty-repo-resource-keys",
+    ":empty-repo-resource-repository",
   ]
 }

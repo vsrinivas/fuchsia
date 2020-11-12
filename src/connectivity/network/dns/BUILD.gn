@@ -90,6 +90,12 @@ fuchsia_component("component") {
   deps = [ ":bin" ]
 }
 
+fuchsia_component("component-v2") {
+  component_name = "dns_resolver"
+  manifest = "meta/dns_resolver.cml"
+  deps = [ ":bin" ]
+}
+
 fuchsia_package("dns-resolver") {
   deps = [ ":component" ]
 }

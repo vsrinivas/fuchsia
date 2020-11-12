@@ -1,0 +1,37 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
+    program: {
+        binary: "bin/pkg_resolver_lib_test",
+    },
+    capabilities: [
+        { protocol: "fuchsia.test.Suite" },
+    ],
+    use: [
+        { runner: "rust_test_runner" },
+        {
+            storage: "temp",
+            path: "/tmp",
+        },
+        {
+            protocol: [
+                "fuchsia.net.NameLookup",
+                "fuchsia.posix.socket.Provider",
+                "fuchsia.process.Launcher",
+            ],
+        },
+        {
+            directory: "config-ssl",
+            rights: [ "r*" ],
+            path: "/config/ssl",
+        },
+    ],
+    expose: [
+        {
+            protocol: "fuchsia.test.Suite",
+            from: "self",
+        },
+    ],
+}

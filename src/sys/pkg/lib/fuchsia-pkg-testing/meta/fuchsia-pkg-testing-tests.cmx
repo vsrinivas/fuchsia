@@ -19,7 +19,6 @@
             "fuchsia.net.NameLookup",
             "fuchsia.posix.socket.Provider",
             "fuchsia.process.Launcher",
-            "fuchsia.sys.Launcher",
             "fuchsia.test.IsolatedDevmgr",
             "fuchsia.tracing.provider.Registry"
         ]

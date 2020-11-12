@@ -12,6 +12,12 @@ import("//src/sys/build/components.gni")
 import("//third_party/cobalt/metrics_registry.gni")
 import("gentool/generated.gni")
 
+fuchsia_component("component-v2") {
+  component_name = "netstack"
+  manifest = "meta/netstack.cml"
+  deps = [ "//garnet/go/src/grand_unified_binary" ]
+}
+
 fuchsia_component("component") {
   component_name = "netstack"
   manifest = "meta/netstack.cmx"

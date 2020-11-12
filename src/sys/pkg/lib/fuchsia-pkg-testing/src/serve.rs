@@ -6,7 +6,7 @@
 
 use {
     crate::repo::Repository,
-    anyhow::{format_err, Error},
+    anyhow::{format_err, Context as _, Error},
     chrono::Utc,
     fidl_fuchsia_pkg_ext::{MirrorConfig, MirrorConfigBuilder, RepositoryConfig},
     fuchsia_async::{self as fasync, net::TcpListener},
@@ -78,8 +78,8 @@ impl ServedRepositoryBuilder {
     pub fn start(self) -> Result<ServedRepository, Error> {
         let (listener, addr) = {
             let addr = SocketAddr::new(Ipv6Addr::UNSPECIFIED.into(), 0);
-            let listener = TcpListener::bind(&addr)?;
-            let local_addr = listener.local_addr()?;
+            let listener = TcpListener::bind(&addr).context("bind")?;
+            let local_addr = listener.local_addr().context("local_addr")?;
             (listener, local_addr)
         };
 

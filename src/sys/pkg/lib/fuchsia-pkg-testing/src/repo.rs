@@ -5,14 +5,16 @@
 //! Test tools for building and serving TUF repositories containing Fuchsia packages.
 
 use {
-    crate::{package::Package, serve::ServedRepositoryBuilder},
+    crate::{
+        package::Package, process::wait_for_process_termination, serve::ServedRepositoryBuilder,
+    },
     anyhow::{format_err, Context as _, Error},
+    fdio::SpawnBuilder,
     fidl_fuchsia_io::{DirectoryProxy, OPEN_FLAG_CREATE, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE},
     fidl_fuchsia_pkg_ext::{
         MirrorConfig, RepositoryConfig, RepositoryConfigBuilder, RepositoryKey,
     },
     files_async::readdir,
-    fuchsia_component::client::{launcher, AppBuilder},
     fuchsia_merkle::Hash,
     fuchsia_url::pkg_url::RepoUrl,
     io_util::{
@@ -85,26 +87,31 @@ impl<'a> RepositoryBuilder<'a> {
             }
         }
 
-        let mut pm = AppBuilder::new("fuchsia-pkg://fuchsia.com/pm#meta/pm.cmx")
-            .arg("publish")
-            .arg("-lp")
-            .arg("-f=/in/manifests.list")
-            .arg("-repo=/repo")
-            .add_dir_to_namespace("/in".to_owned(), File::open(indir.path()).context("open /in")?)?
-            .add_dir_to_namespace(
-                "/repo".to_owned(),
-                File::open(repodir.path()).context("open /repo")?,
-            )?;
+        let mut pm = SpawnBuilder::new()
+            .options(fdio::SpawnOptions::CLONE_ALL - fdio::SpawnOptions::CLONE_NAMESPACE)
+            .arg("pm")?
+            .arg("publish")?
+            .arg("-lp")?
+            .arg("-f=/in/manifests.list")?
+            .arg("-repo=/repo")?
+            .add_dir_to_namespace("/in", File::open(indir.path()).context("open /in")?)?
+            .add_dir_to_namespace("/repo", File::open(repodir.path()).context("open /repo")?)?;
 
         for package in &self.packages {
             let package = package.as_ref();
-            pm = pm.add_dir_to_namespace(
-                format!("/packages/{}", package.name()),
-                File::open(package.artifacts()).context("open package dir")?,
-            )?;
+            pm = pm
+                .add_dir_to_namespace(
+                    format!("/packages/{}", package.name()),
+                    File::open(package.artifacts()).context("open package dir")?,
+                )
+                .context("add package")?;
         }
 
-        pm.output(&launcher()?)?.await?.ok()?;
+        let pm = pm
+            .spawn_from_path("/pkg/bin/pm", &fuchsia_runtime::job_default())
+            .context("spawning pm to build repo")?;
+
+        wait_for_process_termination(pm).await.context("waiting for pm to build repo")?;
 
         Ok(Repository { dir: repodir })
     }
@@ -415,16 +422,18 @@ mod tests {
         let repodir = tempfile::tempdir().context("create tempdir")?;
 
         // Populate repodir with a freshly created repository.
-        AppBuilder::new("fuchsia-pkg://fuchsia.com/pm#meta/pm.cmx")
-            .arg("newrepo")
-            .arg("-repo=/repo")
+        let pm = SpawnBuilder::new()
+            .options(fdio::SpawnOptions::CLONE_ALL - fdio::SpawnOptions::CLONE_NAMESPACE)
+            .arg("pm")?
+            .arg("newrepo")?
+            .arg("-repo=/repo")?
             .add_dir_to_namespace(
                 "/repo".to_owned(),
                 File::open(repodir.path()).context("open /repo")?,
             )?
-            .output(&launcher()?)?
-            .await?
-            .ok()?;
+            .spawn_from_path("/pkg/bin/pm", &fuchsia_runtime::job_default())
+            .context("spawning pm to build repo")?;
+        wait_for_process_termination(pm).await.context("waiting for pm to build repo")?;
 
         // Build a repo from the template.
         let repo = RepositoryBuilder::from_template_dir(repodir.path())

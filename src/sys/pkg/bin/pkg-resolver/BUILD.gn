@@ -6,6 +6,7 @@ import("//build/package.gni")
 import("//build/rust/rustc_library.gni")
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
+import("//src/sys/build/components.gni")
 import("//src/sys/pkg/bin/pkg-resolver/pkg_resolver_config.gni")
 import("//src/sys/pkg/sysmgr_config.gni")
 
@@ -135,53 +136,29 @@ package("pkg-resolver-bin") {
   ]
 }
 
-generate_manifest("empty-repo.manifest") {
-  visibility = [ ":*" ]
+fuchsia_component("unit-tests-root") {
+  component_name = "test_root"
   testonly = true
-  sources = []
-  args = []
-
-  foreach(path,
-          [
-            "keys/root.json",
-            "keys/snapshot.json",
-            "keys/targets.json",
-            "keys/timestamp.json",
-            "repository/1.root.json",
-            "repository/1.snapshot.json",
-            "repository/1.targets.json",
-            "repository/root.json",
-            "repository/snapshot.json",
-            "repository/targets.json",
-            "repository/timestamp.json",
-          ]) {
-    source = "//src/sys/pkg/tests/pkg-resolver/template/${path}"
-    sources += [ source ]
-    args += [ "--entry=empty-repo/${path}=" + rebase_path(source) ]
-  }
+  manifest = "meta/test_root.cml"
 }
-empty_repo_manifest_outputs = get_target_outputs(":empty-repo.manifest")
-empty_repo_manifest_file = empty_repo_manifest_outputs[0]
 
-test_package("pkg-resolver-unit-tests") {
+fuchsia_component("unit-tests-driver") {
+  component_name = "test_driver"
+  testonly = true
+  manifest = "meta/test_driver.cml"
+  deps = [ ":lib_test" ]
+}
+
+fuchsia_test_package("unit-tests-package") {
+  package_name = "pkg-resolver-unit-tests"
   deps = [
-    ":empty-repo.manifest",
-    ":lib_test",
+    ":unit-tests-driver",
+    "//src/connectivity/network/dns:component-v2",
+    "//src/connectivity/network/netstack:component-v2",
+    "//src/sys/pkg/bin/pm:pm_bin",
+    "//src/sys/pkg/tests/pkg-resolver:empty-repo-resource",
   ]
-  extra = [ empty_repo_manifest_file ]
-
-  tests = [
-    {
-      name = "pkg_resolver_lib_test"
-      dest = "pkg-resolver-test"
-      environments = basic_envs
-
-      # TODO(fxbug.dev/60612): Remove this override.
-      log_settings = {
-        max_severity = "ERROR"
-      }
-    },
-  ]
+  test_components = [ ":unit-tests-root" ]
 }
 
 pkg_resolver_config("enable_dynamic_configuration") {
@@ -195,5 +172,5 @@ sysmgr_config("config") {
 
 group("tests") {
   testonly = true
-  public_deps = [ ":pkg-resolver-unit-tests" ]
+  public_deps = [ ":unit-tests-package" ]
 }
