@@ -2184,7 +2184,11 @@ foreach(_target_type,
       #   be in the PATH, making the build more hermetic.
       if (get_path_info(invoker.script, "extension") == "py") {
         _invoker_script = python_exe_src
-        _invoker_args = [ rebase_path(invoker.script, root_build_dir) ]
+        _invoker_args = [
+          # Speed up startup by not looking for site packages.
+          "-S",
+          rebase_path(invoker.script, root_build_dir),
+        ]
         if (defined(invoker.args)) {
           _invoker_args += invoker.args
         }
