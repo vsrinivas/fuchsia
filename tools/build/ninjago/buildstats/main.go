@@ -98,6 +98,8 @@ type buildStats struct {
 	TotalBuildTime time.Duration
 	// Wall time spent to complete this build.
 	BuildDuration time.Duration
+	// All build actions from this build.
+	All []action
 }
 
 // constructGraph constructs a ninjagraph based on files from input paths, and
@@ -151,6 +153,8 @@ func extractBuildStats(g graph) (buildStats, error) {
 	}
 
 	for _, step := range steps {
+		ret.All = append(ret.All, toAction(step))
+
 		ret.TotalBuildTime += step.Duration()
 		// The first action always starts at time zero, so build duration equals to
 		// the end time of the last action.
