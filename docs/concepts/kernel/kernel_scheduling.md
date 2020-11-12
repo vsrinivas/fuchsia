@@ -33,8 +33,8 @@ the scheduler simply looks at the highest numbered queue that contains a thread,
 pops the head off of that queue and runs that thread.See
 [*Priority Management*](#priority-management) below for more details
 about how it decides which thread should be in which queue. If there are no
-threads in the queues to run it will instead run the idle thread, see [*Realtime
-and Idle Threads*](#realtime-and-idle-threads) below for more details.
+threads in the queues to run it will instead run the idle thread, see [Realtime
+and idle threads](#realtime-and-idle-threads) below for more details.
 
 Each thread is assigned the same timeslice size (THREAD_INITIAL_TIME_SLICE)
 when it is picked to start running. If it uses its whole timeslice it will be
@@ -57,7 +57,7 @@ queue of an eligible CPU ([*CPU
 Assignment*](#cpu-assignment-and-migration)) and if it had remaining timeslice
 to run it will be added to the front of the queue for expedited handling.
 
-#### Priority Management
+#### Priority management {#priority-management}
 
 There are three different factors used to determine the effective
 priority of a thread, the effective priority being what is used to
@@ -102,7 +102,7 @@ user event. So they get the priority boost from unblocking while
 background threads that do most of the processing receive the priority
 penalty for using their entire timeslice.
 
-#### CPU Assignment and Migration
+#### CPU assignment and migration {#cpu-assignment-and-migration}
 
 Threads are able to request which CPUs on which they wish to run using a
 CPU affinity mask, a 32 bit mask where 0b001 is CPU 1, 0b100 is CPU 3,
@@ -110,8 +110,8 @@ and 0b101 is either CPU 1 or CPU 3. This mask is usually respected but
 if the CPUs it requests are all inactive it will be assigned to another
 CPU. Also notable, if it is “pinned” to a CPU, that is its mask contains
 only one CPU, and that CPU becomes inactive the thread will sit
-unserviced until that CPU becomes active again. See [*CPU
-Activation*](#cpu-activation) below for details.
+unserviced until that CPU becomes active again. See [CPU
+activation](#cpu-activation) below for details.
 
 When selecting a CPU for a thread the scheduler will choose, in order:
 
@@ -138,7 +138,7 @@ sleeping and needs to be assigned a priority queue, the scheduler will
 re-evaluate its CPU choice for the thread, using the above logic, and
 may move it.
 
-#### CPU Activation
+#### CPU activation {#cpu-activation}
 
 When a CPU is being deactivated, that is shutdown and removed from the
 system, the scheduler will transition all running threads onto other
@@ -152,10 +152,10 @@ threads that are running on non-Affinity CPUs should be migrated back
 pretty quickly by their CPUs scheduler due to the above rules. There is
 no active rebalancing of threads to the newly awakened CPU, but as it
 should be idle more often, it should see some migration due to the logic
-laid out above in [*CPU Assignment and
-Migration*](#cpu-assignment-and-migration).
+laid out above in [CPU assignment and
+migration](#cpu-assignment-and-migration).
 
-#### Realtime and Idle Threads
+#### Realtime and idle threads {#realtime-and-idle-threads}
 
 These are special threads that are treated a little differently.
 
