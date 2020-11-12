@@ -17,7 +17,7 @@ use carnelian::{
 };
 use euclid::{Angle, Transform2D, Vector2D};
 use fidl::endpoints::{RequestStream, ServiceMarker};
-use fidl_fidl_examples_echo::{EchoMarker, EchoRequest, EchoRequestStream};
+use fidl_test_placeholders::{EchoMarker, EchoRequest, EchoRequestStream};
 use fuchsia_async as fasync;
 use fuchsia_zircon::{AsHandleRef, Event, Signals, Time};
 use futures::prelude::*;

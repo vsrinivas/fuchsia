@@ -4,10 +4,10 @@
 
 library fuchsia.overnet.triangletests;
 
-using fidl.examples.echo;
+using test.placeholders;
 
 [Discoverable]
 protocol Conscript {
-    Serve(request<fidl.examples.echo.Echo> iface);
-    Issue(fidl.examples.echo.Echo iface, string? request) -> (string? response);
+    Serve(request<test.placeholders.Echo> iface);
+    Issue(test.placeholders.Echo iface, string? request) -> (string? response);
 };

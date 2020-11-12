@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {fidl::endpoints::create_proxy, fidl_fidl_examples_echo as fidl_echo};
+use {fidl::endpoints::create_proxy, fidl_test_placeholders as fidl_echo};
 
 #[allow(deprecated)]
 #[fuchsia_async::run_until_stalled(test)]

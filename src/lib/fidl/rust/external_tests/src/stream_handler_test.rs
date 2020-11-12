@@ -4,7 +4,7 @@
 
 use {
     fidl::endpoints,
-    fidl_fidl_examples_echo::{EchoProxy, EchoRequest},
+    fidl_test_placeholders::{EchoProxy, EchoRequest},
 };
 
 #[fuchsia_async::run_singlethreaded(test)]

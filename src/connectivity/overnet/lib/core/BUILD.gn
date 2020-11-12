@@ -90,7 +90,7 @@ rustc_test("core_test") {
 
   deps = CORE_DEPS + [
            ":triangle-rustc",
-           "//garnet/examples/fidl/services:echo-rustc",
+           "//src/testing/fidl:placeholders-rustc",
            "//src/lib/fidl/rust/handle_tests:fidl_handle_tests",
            "//third_party/rust_crates:arbitrary",
            "//third_party/rust_crates:async-trait",
@@ -167,5 +167,5 @@ fidl("triangle") {
 
   sources = [ "src/integration_tests/triangle.test.fidl" ]
 
-  public_deps = [ "//garnet/examples/fidl/services:echo" ]
+  public_deps = [ "//src/testing/fidl:placeholders" ]
 }

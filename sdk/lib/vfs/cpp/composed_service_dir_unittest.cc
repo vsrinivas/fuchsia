@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <test/placeholders/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/dispatcher.h>
@@ -11,14 +12,13 @@
 #include <lib/vfs/cpp/service.h>
 #include <lib/vfs/cpp/testing/dir_test_util.h>
 
-#include <fidl/examples/echo/cpp/fidl.h>
 #include <gtest/gtest.h>
 
 namespace {
 
 using vfs_tests::Dirent;
 
-class EchoImpl : public fidl::examples::echo::Echo {
+class EchoImpl : public test::placeholders::Echo {
  public:
   EchoImpl(std::string ans) : ans_(ans) {}
 
@@ -62,7 +62,7 @@ class ComposedServiceDirectorySimpleTest : public vfs_tests::DirConnection {
   vfs::PseudoDir backing_dir_;
   vfs::ComposedServiceDir dir_;
   std::vector<std::unique_ptr<EchoImpl>> echo_impls_;
-  fidl::BindingSet<fidl::examples::echo::Echo> bindings_;
+  fidl::BindingSet<test::placeholders::Echo> bindings_;
   async::Loop loop_;
 
   std::unique_ptr<vfs::Service> GetFakeService(const std::string& ans,
@@ -81,7 +81,7 @@ TEST_F(ComposedServiceDirectorySimpleTest, ConnectToServices) {
 
   // connect to services and test
   for (auto& s : services) {
-    fidl::examples::echo::EchoSyncPtr ptr;
+    test::placeholders::EchoSyncPtr ptr;
     service_directory.Connect(s, ptr.NewRequest().TakeChannel());
     fidl::StringPtr ans;
     ptr->EchoString("hello", &ans);
@@ -92,7 +92,7 @@ TEST_F(ComposedServiceDirectorySimpleTest, ConnectToServices) {
   std::string fallback_services[] = {"echo4", "echo5"};
 
   for (auto& s : fallback_services) {
-    fidl::examples::echo::EchoSyncPtr ptr;
+    test::placeholders::EchoSyncPtr ptr;
     service_directory.Connect(s, ptr.NewRequest().TakeChannel());
     fidl::StringPtr ans;
     ptr->EchoString("hello", &ans);

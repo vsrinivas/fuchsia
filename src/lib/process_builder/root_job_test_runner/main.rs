@@ -21,8 +21,9 @@
 use {
     anyhow::{format_err, Context as _, Error},
     fidl::endpoints::ServiceMarker,
-    fidl_fidl_examples_echo::EchoMarker,
-    fidl_fuchsia_boot as fboot, fidl_fuchsia_kernel as fkernel, fuchsia_async as fasync,
+    fidl_fuchsia_boot as fboot, fidl_fuchsia_kernel as fkernel,
+    fidl_test_placeholders::EchoMarker,
+    fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
     fuchsia_zircon::{self as zx, HandleBased},
     futures::prelude::*,

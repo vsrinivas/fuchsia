@@ -7,7 +7,7 @@
 import 'dart:async';
 
 import 'package:fidl/fidl.dart';
-import 'package:fidl_fidl_examples_echo/fidl_async.dart' as fidl_echo;
+import 'package:fidl_test_placeholders/fidl_async.dart' as fidl_echo;
 import 'package:fuchsia/fuchsia.dart' as fuchsia;
 import 'package:fuchsia_logger/logger.dart';
 import 'package:fuchsia_services/services.dart';

@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use anyhow::{format_err, Context as _, Error};
-use fidl_fidl_examples_echo::EchoMarker;
+use fidl_test_placeholders::EchoMarker;
 use fuchsia_async as fasync;
 use fuchsia_component::client::{launch, launcher};
 

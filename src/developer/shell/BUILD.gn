@@ -14,7 +14,6 @@ action("generate_fidl_json") {
   outputs = [ "$generated_output" ]
   testonly = true
   deps = [
-    "//garnet/examples/fidl/services:echo",
     "//sdk:core",
     "//sdk:core_fidl_json",
     "//sdk/fidl/fuchsia.boot",
@@ -28,9 +27,6 @@ action("generate_fidl_json") {
     "--fidl-json-file=" +
         rebase_path("$root_gen_dir/sdk/core.fidl_json.txt", root_build_dir),
     "--out-file=" + rebase_path("$generated_output", root_build_dir),
-    rebase_path(
-        "$root_build_dir/fidling/gen/garnet/examples/fidl/services/echo.fidl.json",
-        root_build_dir),
     rebase_path(
         "$root_build_dir/fidling/gen/sdk/fidl/fuchsia.device.manager/fuchsia.device.manager.fidl.json",
         root_build_dir),

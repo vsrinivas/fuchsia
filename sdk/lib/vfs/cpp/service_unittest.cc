@@ -4,16 +4,15 @@
 
 #include "lib/vfs/cpp/service.h"
 
+#include <test/placeholders/cpp/fidl.h>
 #include <lib/fdio/vfs.h>
 #include <lib/fidl/cpp/binding_set.h>
-
-#include <fidl/examples/echo/cpp/fidl.h>
 
 #include "fuchsia/io/cpp/fidl.h"
 #include "lib/gtest/real_loop_fixture.h"
 #include "lib/vfs/cpp/pseudo_dir.h"
 
-class ServiceTest : public gtest::RealLoopFixture, public fidl::examples::echo::Echo {
+class ServiceTest : public gtest::RealLoopFixture, public test::placeholders::Echo {
   void EchoString(fidl::StringPtr value, EchoStringCallback callback) override {
     callback(answer_);
   }
@@ -109,7 +108,7 @@ TEST_F(ServiceTest, CanOpenAsAService) {
   for (uint32_t mode : modes) {
     for (uint32_t flag : flags) {
       SCOPED_TRACE("flag: " + std::to_string(flag) + ", mode: " + std::to_string(mode));
-      fidl::examples::echo::EchoSyncPtr ptr;
+      test::placeholders::EchoSyncPtr ptr;
       dir_ptr()->Open(flag, mode, service_name(),
                       fidl::InterfaceRequest<fuchsia::io::Node>(ptr.NewRequest().TakeChannel()));
 

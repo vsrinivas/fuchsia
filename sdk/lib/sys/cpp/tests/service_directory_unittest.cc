@@ -3,11 +3,11 @@
 // found in the LICENSE file.
 
 #include <fuchsia/io/c/fidl.h>
+#include <test/placeholders/cpp/fidl.h>
 #include <lib/fidl/cpp/message_buffer.h>
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/zx/channel.h>
 
-#include <fidl/examples/echo/cpp/fidl.h>
 #include <gtest/gtest.h>
 
 TEST(ServiceDirectoryTest, Control) {
@@ -16,7 +16,7 @@ TEST(ServiceDirectoryTest, Control) {
 
   sys::ServiceDirectory directory(std::move(svc_client));
 
-  fidl::InterfaceHandle<fidl::examples::echo::Echo> echo;
+  fidl::InterfaceHandle<test::placeholders::Echo> echo;
   EXPECT_EQ(ZX_OK, directory.Connect(echo.NewRequest()));
 
   fidl::MessageBuffer buffer;
@@ -31,7 +31,7 @@ TEST(ServiceDirectoryTest, CreateWithRequest) {
 
   auto directory = sys::ServiceDirectory::CreateWithRequest(&svc_server);
 
-  fidl::InterfaceHandle<fidl::examples::echo::Echo> echo;
+  fidl::InterfaceHandle<test::placeholders::Echo> echo;
   EXPECT_EQ(ZX_OK, directory->Connect(echo.NewRequest()));
 
   fidl::MessageBuffer buffer;
@@ -46,7 +46,7 @@ TEST(ServiceDirectoryTest, Clone) {
 
   auto directory = sys::ServiceDirectory::CreateWithRequest(&svc_server);
 
-  fidl::InterfaceHandle<fidl::examples::echo::Echo> echo;
+  fidl::InterfaceHandle<test::placeholders::Echo> echo;
   EXPECT_TRUE(directory->CloneChannel().is_valid());
 
   fidl::MessageBuffer buffer;
@@ -59,7 +59,7 @@ TEST(ServiceDirectoryTest, Clone) {
 TEST(ServiceDirectoryTest, Invalid) {
   sys::ServiceDirectory directory((zx::channel()));
 
-  fidl::InterfaceHandle<fidl::examples::echo::Echo> echo;
+  fidl::InterfaceHandle<test::placeholders::Echo> echo;
   EXPECT_EQ(ZX_ERR_UNAVAILABLE, directory.Connect(echo.NewRequest()));
 }
 
@@ -71,6 +71,6 @@ TEST(ServiceDirectoryTest, AccessDenied) {
 
   sys::ServiceDirectory directory(std::move(svc_client));
 
-  fidl::InterfaceHandle<fidl::examples::echo::Echo> echo;
+  fidl::InterfaceHandle<test::placeholders::Echo> echo;
   EXPECT_EQ(ZX_ERR_ACCESS_DENIED, directory.Connect(echo.NewRequest()));
 }

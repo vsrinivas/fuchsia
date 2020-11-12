@@ -12,11 +12,11 @@ use {
     crate::test_util::NodeIdGenerator,
     anyhow::{Context as _, Error},
     fidl::endpoints::{ClientEnd, RequestStream, ServiceMarker},
-    fidl_fidl_examples_echo as echo,
     fidl_fuchsia_overnet::{
         ServiceConsumerProxyInterface, ServiceProviderRequest, ServiceProviderRequestStream,
         ServicePublisherProxyInterface,
     },
+    fidl_test_placeholders as echo,
     fuchsia_async::Task,
     futures::prelude::*,
     std::sync::Arc,

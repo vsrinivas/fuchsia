@@ -10,8 +10,8 @@ use crate::file::test_utils::run_server_client;
 
 use {
     fidl::endpoints::{Proxy, RequestStream},
-    fidl_fidl_examples_echo::{EchoProxy, EchoRequest, EchoRequestStream},
     fidl_fuchsia_io::{OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE},
+    fidl_test_placeholders::{EchoProxy, EchoRequest, EchoRequestStream},
     futures::{
         channel::{mpsc, oneshot},
         stream::StreamExt,

@@ -6,10 +6,10 @@
 
 use anyhow::{Context as _, Error};
 use crossbeam::channel;
-use fidl_fidl_examples_echo as fecho;
 use fidl_fuchsia_intl as fintl;
 use fidl_fuchsia_settings as fsettings;
 use fidl_fuchsia_sys::{ComponentControllerEvent, LauncherProxy};
+use fidl_test_placeholders as fecho;
 use fidl_fuchsia_ui_app::ViewProviderMarker;
 use fuchsia_async as fasync;
 use fuchsia_async::DurationExt;
@@ -186,7 +186,7 @@ async fn loop_until_matching_time(
     timezone_name: &str,
     fmt: &udat::UDateFormat,
     detailed_format: &udat::UDateFormat,
-    echo: &fidl_fidl_examples_echo::EchoProxy,
+    echo: &fecho::EchoProxy,
 ) -> Result<(), Error> {
     const MAX_ATTEMPTS: usize = 10;
     let sleep = zx::Duration::from_millis(1000);

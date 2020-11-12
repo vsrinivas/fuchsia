@@ -18,7 +18,7 @@ dart_app("timestamp-server-dart") {
 
   sources = [ "main.dart" ]
   deps = [
-    "//garnet/examples/fidl/services:echo",
+    "//src/testing/fidl:placeholders",
     "//third_party/dart-pkg/pub/intl",
     "//topaz/public/dart/fuchsia_logger",
     "//topaz/public/dart/fuchsia_services",
@@ -49,7 +49,7 @@ flutter_app("timestamp-server-flutter") {
 
   sources = [ "main.dart" ]
   deps = [
-    "//garnet/examples/fidl/services:echo",
+    "//src/testing/fidl:placeholders",
     "//third_party/dart-pkg/pub/intl",
     "//topaz/public/dart/fuchsia_logger",
     "//topaz/public/dart/fuchsia_services",

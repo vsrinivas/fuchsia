@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use anyhow::Context as _;
-use fidl_fidl_examples_echo::{EchoRequest, EchoRequestStream};
+use fidl_test_placeholders::{EchoRequest, EchoRequestStream};
 use fuchsia_async as fasync;
 use fuchsia_component::server::ServiceFs;
 use futures::channel::mpsc;

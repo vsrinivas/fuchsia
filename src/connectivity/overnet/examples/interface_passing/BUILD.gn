@@ -20,12 +20,12 @@ rustc_binary("bin") {
   edition = "2018"
 
   deps = [
-    "//garnet/examples/fidl/services:echo-rustc",
     "//sdk/fidl/fuchsia.overnet:fuchsia.overnet-rustc",
     "//src/connectivity/overnet/examples/interface_passing/service:interface_passing-rustc",
     "//src/connectivity/overnet/lib/hoist",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
+    "//src/testing/fidl:placeholders-rustc",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:clap",
     "//third_party/rust_crates:futures",

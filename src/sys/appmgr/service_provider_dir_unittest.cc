@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fidl/examples/echo/cpp/fidl.h>
+#include <test/placeholders/cpp/fidl.h>
+
 #include <fs/service.h>
 #include <fs/synchronous_vfs.h>
 #include <gtest/gtest.h>
@@ -15,9 +16,9 @@
 namespace component {
 namespace {
 
-class FakeEcho : public fidl::examples::echo::Echo {
+class FakeEcho : public test::placeholders::Echo {
  public:
-  FakeEcho(fidl::InterfaceRequest<fidl::examples::echo::Echo> request) : binding_(this) {
+  FakeEcho(fidl::InterfaceRequest<test::placeholders::Echo> request) : binding_(this) {
     binding_.Bind(std::move(request));
   };
   ~FakeEcho() override {}
@@ -29,7 +30,7 @@ class FakeEcho : public fidl::examples::echo::Echo {
 
  private:
   fidl::StringPtr answer_;
-  ::fidl::Binding<fidl::examples::echo::Echo> binding_;
+  ::fidl::Binding<test::placeholders::Echo> binding_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(FakeEcho);
 };
@@ -48,7 +49,7 @@ class ServiceProviderTest : public ::gtest::RealLoopFixture {
   fbl::RefPtr<fs::Service> CreateEchoService(fidl::StringPtr answer) {
     return fbl::AdoptRef(new fs::Service([this, answer](zx::channel channel) {
       auto echo = std::make_unique<FakeEcho>(
-          fidl::InterfaceRequest<fidl::examples::echo::Echo>(std::move(channel)));
+          fidl::InterfaceRequest<test::placeholders::Echo>(std::move(channel)));
       echo->SetAnswer(answer);
       echo_services_.push_back(std::move(echo));
       return ZX_OK;

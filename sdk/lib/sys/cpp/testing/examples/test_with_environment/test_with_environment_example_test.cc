@@ -3,9 +3,8 @@
 // found in the LICENSE file.
 
 #include <fuchsia/sys/cpp/fidl.h>
+#include <test/placeholders/cpp/fidl.h>
 #include <lib/sys/cpp/testing/test_with_environment.h>
-
-#include <fidl/examples/echo/cpp/fidl.h>
 
 #include "fake_echo.h"
 
@@ -15,8 +14,8 @@ namespace echo {
 namespace testing {
 namespace {
 
-using fidl::examples::echo::EchoPtr;
 using fuchsia::sys::LaunchInfo;
+using test::placeholders::EchoPtr;
 using sys::testing::EnclosingEnvironment;
 using sys::testing::EnvironmentServices;
 using sys::testing::TestWithEnvironment;

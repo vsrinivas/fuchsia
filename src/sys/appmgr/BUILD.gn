@@ -194,13 +194,13 @@ executable("unittest_bin") {
   deps = [
     ":appmgr_for_test",
     ":lib",
-    "//garnet/examples/fidl/services:echo",
     "//garnet/public/lib/gtest",
     "//sdk/fidl/fuchsia.sys.internal",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:unit",
     "//sdk/lib/vfs/cpp",
     "//src/lib/fxl/test:gtest_main",
+    "//src/testing/fidl:placeholders",
     "//third_party/googletest:gmock",
     "//zircon/system/ulib/memfs",
   ]

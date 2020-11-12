@@ -16,12 +16,12 @@ test("component_cpp_unittests") {
   ]
 
   deps = [
-    "//garnet/examples/fidl/services:echo",
     "//garnet/public/lib/gtest",
     "//sdk/fidl/fuchsia.io",
     "//sdk/lib/fdio",
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl/test:gtest_main",
+    "//src/testing/fidl:placeholders",
     "//zircon/public/lib/fidl",
   ]
 
@@ -37,11 +37,11 @@ test("component_cpp_testing_unittests") {
   ]
 
   deps = [
-    "//garnet/examples/fidl/services:echo",
     "//garnet/public/lib/gtest",
     "//sdk/fidl/fuchsia.io",
     "//sdk/lib/sys/cpp/testing:unit",
     "//src/lib/fxl/test:gtest_main",
+    "//src/testing/fidl:placeholders",
     "//zircon/public/lib/fidl",
   ]
 }
@@ -53,12 +53,12 @@ test("component_cpp_testing_tests") {
   ]
 
   deps = [
-    "//garnet/examples/fidl/services:echo",
     "//garnet/public/lib/gtest",
     "//sdk/fidl/fuchsia.debugdata",
     "//sdk/fidl/fuchsia.io",
     "//sdk/lib/sys/cpp/testing:integration",
     "//src/lib/fxl/test:gtest_main",
+    "//src/testing/fidl:placeholders",
     "//zircon/public/lib/fidl",
   ]
 
@@ -72,10 +72,10 @@ executable("helper_proc") {
   sources = [ "helper.cc" ]
 
   deps = [
-    "//garnet/examples/fidl/services:echo",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
+    "//src/testing/fidl:placeholders",
     "//zircon/public/lib/async-cpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
@@ -88,11 +88,11 @@ executable("constructor_helper_proc") {
   sources = [ "constructor_helper.cc" ]
 
   deps = [
-    "//garnet/examples/fidl/services:echo",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
     "//src/lib/files",
     "//src/lib/fxl",
+    "//src/testing/fidl:placeholders",
     "//zircon/public/lib/async-cpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",

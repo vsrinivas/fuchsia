@@ -8,7 +8,7 @@
             "isolated-temp"
         ],
         "services": [
-            "fidl.examples.echo.Echo"
+            "test.placeholders.Echo"
         ]
     }
 }

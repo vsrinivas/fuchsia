@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fuchsia/debugdata/cpp/fidl.h>
+#include <test/placeholders/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/wait.h>
@@ -15,12 +16,10 @@
 
 #include <memory>
 
-#include <fidl/examples/echo/cpp/fidl.h>
-
 #include "src/lib/fxl/strings/string_printf.h"
 
 using namespace fuchsia::sys;
-namespace echo = ::fidl::examples::echo;
+namespace echo = test::placeholders;
 
 namespace sys::testing::test {
 

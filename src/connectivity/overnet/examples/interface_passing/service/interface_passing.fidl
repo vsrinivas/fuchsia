@@ -4,9 +4,9 @@
 
 library fuchsia.overnet.examples.interfacepassing;
 
-using fidl.examples.echo;
+using test.placeholders;
 
 [Discoverable]
 protocol Example {
-    Request(request<fidl.examples.echo.Echo> iface);
+    Request(request<test.placeholders.Echo> iface);
 };

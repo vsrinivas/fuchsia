@@ -6,10 +6,10 @@ use {
     anyhow::{Context as _, Error},
     argh::FromArgs,
     fidl::endpoints::{ClientEnd, RequestStream, ServiceMarker},
-    fidl_fidl_examples_echo as echo,
     fidl_fuchsia_overnet::{
         ServiceConsumerProxyInterface, ServiceProviderRequest, ServiceProviderRequestStream,
     },
+    fidl_test_placeholders as echo,
     futures::prelude::*,
 };
 

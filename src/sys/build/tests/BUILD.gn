@@ -87,10 +87,10 @@ fuchsia_component("echo-server") {
 rustc_test("echo_client_test") {
   source_root = "echo_client.rs"
   deps = [
-    "//garnet/examples/fidl/services:echo-rustc",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
+    "//src/testing/fidl:placeholders-rustc",
     "//third_party/rust_crates:anyhow",
   ]
 

@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <test/placeholders/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/sys/cpp/service_directory.h>
 
-#include <fidl/examples/echo/cpp/fidl.h>
 #include <gtest/gtest.h>
 
 #include "lib/fidl/cpp/binding.h"
@@ -15,7 +15,7 @@ TEST(EchoTest, TestEcho) {
   printf("hello echo\n");
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   auto service = sys::ServiceDirectory::CreateFromNamespace();
-  fidl::examples::echo::EchoSyncPtr echo;
+  test::placeholders::EchoSyncPtr echo;
   service->Connect(echo.NewRequest());
 
   fidl::StringPtr response = "";

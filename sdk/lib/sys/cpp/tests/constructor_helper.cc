@@ -7,7 +7,7 @@
 
 #include <iostream>
 
-#include "fidl/examples/echo/cpp/fidl.h"
+#include "test/placeholders/cpp/fidl.h"
 #include "lib/async-loop/cpp/loop.h"
 #include "lib/async-loop/default.h"
 #include "lib/fidl/cpp/binding_set.h"
@@ -33,7 +33,7 @@ Arguments:
   --serve_out_delayed_50ms: Serves the out/ dir in a delayed task posted to the run loop.
 )";
 
-class EchoServer : public fidl::examples::echo::Echo {
+class EchoServer : public test::placeholders::Echo {
  public:
   void EchoString(::fidl::StringPtr value, EchoStringCallback callback) override {
     std::string intercept = value.value_or("");
@@ -43,14 +43,14 @@ class EchoServer : public fidl::examples::echo::Echo {
     }
   }
 
-  fidl::InterfaceRequestHandler<fidl::examples::echo::Echo> GetHandler() {
+  fidl::InterfaceRequestHandler<test::placeholders::Echo> GetHandler() {
     return bindings_.GetHandler(this);
   }
 
   void SetListener(fit::function<void(std::string)> list) { listener_ = std::move(list); }
 
  private:
-  fidl::BindingSet<fidl::examples::echo::Echo> bindings_;
+  fidl::BindingSet<test::placeholders::Echo> bindings_;
   fit::function<void(std::string)> listener_;
 };
 

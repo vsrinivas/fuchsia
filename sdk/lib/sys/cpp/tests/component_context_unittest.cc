@@ -21,7 +21,7 @@ class ComponentContextTest : public gtest::RealLoopFixture {
 
  protected:
   void QueryEcho() {
-    fdio_service_connect_at(outgoing_client_.get(), "svc/fidl.examples.echo.Echo",
+    fdio_service_connect_at(outgoing_client_.get(), "svc/test.placeholders.Echo",
                             echo_client_.NewRequest(dispatcher()).TakeChannel().release());
 
     echo_client_->EchoString("hello", [this](fidl::StringPtr value) { echo_result_ = *value; });
@@ -36,7 +36,7 @@ class ComponentContextTest : public gtest::RealLoopFixture {
   std::unique_ptr<sys::ComponentContext> context_;
 
   EchoImpl echo_impl_;
-  fidl::examples::echo::EchoPtr echo_client_;
+  test::placeholders::EchoPtr echo_client_;
   std::string echo_result_ = "no callback";
 };
 
@@ -148,11 +148,11 @@ TEST_F(ComponentContextStaticConstructorTest, Create_ServeOutImmediately) {
   zx::channel out_dir, out_dir_req;
   ASSERT_EQ(ZX_OK, zx::channel::create(0, &out_dir, &out_dir_req));
 
-  // The process publishes a service at svc/fidl.exmaples.echo.Echo. Once a request
+  // The process publishes a service at svc/test.placeholders.Echo. Once a request
   // to open that path succeeds, the process's out dir has been published correctly.
-  fidl::examples::echo::EchoPtr echo_client;
+  test::placeholders::EchoPtr echo_client;
   auto status =
-      fdio_service_connect_at(out_dir.get(), "svc/fidl.examples.echo.Echo",
+      fdio_service_connect_at(out_dir.get(), "svc/test.placeholders.Echo",
                               echo_client.NewRequest(dispatcher()).TakeChannel().release());
   EXPECT_EQ(ZX_OK, status);
 
@@ -169,9 +169,9 @@ TEST_F(ComponentContextStaticConstructorTest, Create_ServeOutDelayed) {
   zx::channel out_dir, out_dir_req;
   ASSERT_EQ(ZX_OK, zx::channel::create(0, &out_dir, &out_dir_req));
 
-  fidl::examples::echo::EchoPtr echo_client;
+  test::placeholders::EchoPtr echo_client;
   auto status =
-      fdio_service_connect_at(out_dir.get(), "svc/fidl.examples.echo.Echo",
+      fdio_service_connect_at(out_dir.get(), "svc/test.placeholders.Echo",
                               echo_client.NewRequest(dispatcher()).TakeChannel().release());
   EXPECT_EQ(ZX_OK, status);
 

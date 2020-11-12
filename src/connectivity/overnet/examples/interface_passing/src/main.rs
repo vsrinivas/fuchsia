@@ -6,11 +6,11 @@ use {
     anyhow::{Context as _, Error},
     clap::{App, Arg, SubCommand},
     fidl::endpoints::{ClientEnd, RequestStream, ServerEnd, ServiceMarker},
-    fidl_fidl_examples_echo as echo,
     fidl_fuchsia_overnet::{
         ServiceConsumerProxyInterface, ServiceProviderRequest, ServiceProviderRequestStream,
     },
     fidl_fuchsia_overnet_examples_interfacepassing as interfacepassing,
+    fidl_test_placeholders as echo,
     futures::prelude::*,
 };
 

@@ -29,7 +29,7 @@ class OutgoingDirectoryTest : public gtest::RealLoopFixture {
   }
 
   void TestCanAccessEchoService(const char* service_path, bool succeeds = true) {
-    fidl::examples::echo::EchoPtr echo;
+    test::placeholders::EchoPtr echo;
     fdio_service_connect_at(svc_client_.get(), service_path,
                             echo.NewRequest(dispatcher()).TakeChannel().release());
 
@@ -42,7 +42,7 @@ class OutgoingDirectoryTest : public gtest::RealLoopFixture {
 
   void AddEchoService(vfs::PseudoDir* dir) {
     ASSERT_EQ(ZX_OK,
-              dir->AddEntry(fidl::examples::echo::Echo::Name_,
+              dir->AddEntry(test::placeholders::Echo::Name_,
                             std::make_unique<vfs::Service>(echo_impl_.GetHandler(dispatcher()))));
   }
 
@@ -54,34 +54,34 @@ class OutgoingDirectoryTest : public gtest::RealLoopFixture {
 TEST_F(OutgoingDirectoryTest, Control) {
   ASSERT_EQ(ZX_OK, outgoing_.AddPublicService(echo_impl_.GetHandler(dispatcher())));
 
-  TestCanAccessEchoService("svc/fidl.examples.echo.Echo");
+  TestCanAccessEchoService("svc/test.placeholders.Echo");
 
   // Ensure GetOrCreateDirectory refers to the same "svc" directory.
-  outgoing_.GetOrCreateDirectory("svc")->RemoveEntry("fidl.examples.echo.Echo");
-  TestCanAccessEchoService("svc/fidl.examples.echo.Echo", false);
+  outgoing_.GetOrCreateDirectory("svc")->RemoveEntry("test.placeholders.Echo");
+  TestCanAccessEchoService("svc/test.placeholders.Echo", false);
 }
 
 TEST_F(OutgoingDirectoryTest, AddAndRemove) {
-  ASSERT_EQ(ZX_ERR_NOT_FOUND, outgoing_.RemovePublicService<fidl::examples::echo::Echo>());
+  ASSERT_EQ(ZX_ERR_NOT_FOUND, outgoing_.RemovePublicService<test::placeholders::Echo>());
 
   ASSERT_EQ(ZX_OK, outgoing_.AddPublicService(echo_impl_.GetHandler(dispatcher())));
 
   ASSERT_EQ(ZX_ERR_ALREADY_EXISTS, outgoing_.AddPublicService(echo_impl_.GetHandler(dispatcher())));
 
-  TestCanAccessEchoService("svc/fidl.examples.echo.Echo");
+  TestCanAccessEchoService("svc/test.placeholders.Echo");
 
-  ASSERT_EQ(ZX_OK, outgoing_.RemovePublicService<fidl::examples::echo::Echo>());
-  ASSERT_EQ(ZX_ERR_NOT_FOUND, outgoing_.RemovePublicService<fidl::examples::echo::Echo>());
+  ASSERT_EQ(ZX_OK, outgoing_.RemovePublicService<test::placeholders::Echo>());
+  ASSERT_EQ(ZX_ERR_NOT_FOUND, outgoing_.RemovePublicService<test::placeholders::Echo>());
 
-  TestCanAccessEchoService("svc/fidl.examples.echo.Echo", false);
+  TestCanAccessEchoService("svc/test.placeholders.Echo", false);
 }
 
 TEST_F(OutgoingDirectoryTest, DebugDir) {
   AddEchoService(outgoing_.debug_dir());
 
-  TestCanAccessEchoService("debug/fidl.examples.echo.Echo");
-  outgoing_.GetOrCreateDirectory("debug")->RemoveEntry("fidl.examples.echo.Echo");
-  TestCanAccessEchoService("debug/fidl.examples.echo.Echo", false);
+  TestCanAccessEchoService("debug/test.placeholders.Echo");
+  outgoing_.GetOrCreateDirectory("debug")->RemoveEntry("test.placeholders.Echo");
+  TestCanAccessEchoService("debug/test.placeholders.Echo", false);
 }
 
 TEST_F(OutgoingDirectoryTest, GetOrCreateDirectory) {

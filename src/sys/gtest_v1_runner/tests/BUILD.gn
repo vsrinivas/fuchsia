@@ -12,10 +12,10 @@ executable("echo_bin") {
   sources = [ "echo_test.cc" ]
 
   deps = [
-    "//garnet/examples/fidl/services:echo",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl/test:gtest_main",
+    "//src/testing/fidl:placeholders",
     "//zircon/system/ulib/async-default",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
@@ -28,11 +28,11 @@ rustc_test("test_bin") {
   source_root = "gtest_v1_runner_test.rs"
 
   deps = [
-    "//garnet/examples/fidl/services:echo-rustc",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//sdk/fidl/fuchsia.test:fuchsia.test-rustc",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
+    "//src/testing/fidl:placeholders-rustc",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:thiserror",

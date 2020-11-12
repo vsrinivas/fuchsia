@@ -4,7 +4,7 @@
 
 #include <iostream>
 
-#include "fidl/examples/echo/cpp/fidl.h"
+#include "test/placeholders/cpp/fidl.h"
 #include "lib/async-loop/cpp/loop.h"
 #include "lib/async-loop/default.h"
 #include "lib/fidl/cpp/binding_set.h"
@@ -31,7 +31,7 @@ Arguments:
 // This helper process can be used in lib component's unittest. You can control
 // what it'll do by passing different command-line arguments
 
-class EchoServer : public fidl::examples::echo::Echo {
+class EchoServer : public test::placeholders::Echo {
  public:
   void EchoString(::fidl::StringPtr value, EchoStringCallback callback) override {
     std::string intercept = value.value_or("");
@@ -41,14 +41,14 @@ class EchoServer : public fidl::examples::echo::Echo {
     }
   }
 
-  fidl::InterfaceRequestHandler<fidl::examples::echo::Echo> GetHandler() {
+  fidl::InterfaceRequestHandler<test::placeholders::Echo> GetHandler() {
     return bindings_.GetHandler(this);
   }
 
   void SetListener(fit::function<void(std::string)> list) { listener_ = std::move(list); }
 
  private:
-  fidl::BindingSet<fidl::examples::echo::Echo> bindings_;
+  fidl::BindingSet<test::placeholders::Echo> bindings_;
   fit::function<void(std::string)> listener_;
 };
 

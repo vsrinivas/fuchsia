@@ -5,14 +5,13 @@
 #ifndef LIB_SYS_CPP_TESTING_EXAMPLES_TEST_WITH_ENVIRONMENT_FAKE_ECHO_H_
 #define LIB_SYS_CPP_TESTING_EXAMPLES_TEST_WITH_ENVIRONMENT_FAKE_ECHO_H_
 
+#include <test/placeholders/cpp/fidl.h>
 #include <lib/fidl/cpp/binding_set.h>
-
-#include <fidl/examples/echo/cpp/fidl.h>
 
 namespace echo {
 namespace testing {
 
-using fidl::examples::echo::Echo;
+using test::placeholders::Echo;
 
 // Fake server, which the client under test will be used against
 class FakeEcho : public Echo {

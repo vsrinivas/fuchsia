@@ -4,7 +4,7 @@
 
 use {
     anyhow::{Context, Error},
-    fidl_fidl_examples_echo as fecho, fuchsia_async as fasync,
+    fidl_test_placeholders as fecho, fuchsia_async as fasync,
     fuchsia_component::client::new_service_connector,
 };
 

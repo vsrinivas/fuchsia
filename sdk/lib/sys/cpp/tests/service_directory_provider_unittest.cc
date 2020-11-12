@@ -21,7 +21,7 @@ namespace {
 class ServiceDirectoryProviderTests : public gtest::RealLoopFixture {
  protected:
   void ConnectToService(const std::shared_ptr<sys::ServiceDirectory>& svc,
-                        fidl::examples::echo::EchoPtr& echo) {
+                        test::placeholders::EchoPtr& echo) {
     svc->Connect(echo.NewRequest());
   }
 
@@ -33,7 +33,7 @@ TEST_F(ServiceDirectoryProviderTests, TestInjectedServiceUsingMethod1) {
 
   ASSERT_EQ(ZX_OK, svc_provider_.AddService(echo_impl_.GetHandler(dispatcher())));
 
-  fidl::examples::echo::EchoPtr echo;
+  test::placeholders::EchoPtr echo;
 
   ConnectToService(svc_provider_.service_directory(), echo);
 
@@ -54,7 +54,7 @@ TEST_F(ServiceDirectoryProviderTests, TestInjectedServiceUsingMethod2) {
                                          }),
                                      echo_impl_.Name_));
 
-  fidl::examples::echo::EchoPtr echo;
+  test::placeholders::EchoPtr echo;
 
   ConnectToService(svc_provider_.service_directory(), echo);
 

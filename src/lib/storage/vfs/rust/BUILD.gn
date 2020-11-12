@@ -109,5 +109,5 @@ rustc_library("vfs") {
     "src/tree_builder.rs",
   ]
 
-  test_deps = [ "//garnet/examples/fidl/services:echo-rustc" ]
+  test_deps = [ "//src/testing/fidl:placeholders-rustc" ]
 }

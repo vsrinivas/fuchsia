@@ -30,7 +30,7 @@ class ComponentContextProviderTests : public gtest::RealLoopFixture {
 TEST_F(ComponentContextProviderTests, TestOutgoingPublicServices) {
   PublishOutgoingService();
 
-  auto echo = provider_.ConnectToPublicService<fidl::examples::echo::Echo>();
+  auto echo = provider_.ConnectToPublicService<test::placeholders::Echo>();
 
   std::string result;
   echo->EchoString("hello", [&result](fidl::StringPtr value) { result = *value; });
@@ -39,7 +39,7 @@ TEST_F(ComponentContextProviderTests, TestOutgoingPublicServices) {
   EXPECT_EQ("hello", result);
 
   // Also try and connect using service directory
-  echo = provider_.public_service_directory()->Connect<fidl::examples::echo::Echo>();
+  echo = provider_.public_service_directory()->Connect<test::placeholders::Echo>();
 
   result = "";
   echo->EchoString("hello", [&result](fidl::StringPtr value) { result = *value; });
@@ -51,7 +51,7 @@ TEST_F(ComponentContextProviderTests, TestOutgoingPublicServices) {
 TEST_F(ComponentContextProviderTests, TestIncomingServices) {
   PublishIncomingService();
 
-  fidl::examples::echo::EchoPtr echo;
+  test::placeholders::EchoPtr echo;
 
   auto services = provider_.service_directory_provider()->service_directory();
 

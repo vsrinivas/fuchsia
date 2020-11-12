@@ -17,5 +17,5 @@ fidl("interface_passing") {
 
   sources = [ "interface_passing.fidl" ]
 
-  public_deps = [ "//garnet/examples/fidl/services:echo" ]
+  public_deps = [ "//src/testing/fidl:placeholders" ]
 }
