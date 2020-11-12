@@ -190,7 +190,7 @@ static fb_var_t varlist[NUM_VARIABLES] = {
     },
     {
         .name = "product",
-        .value = "unimplemented",
+        .value = "gigaboot",
     },
     {
         .name = "serialno",
