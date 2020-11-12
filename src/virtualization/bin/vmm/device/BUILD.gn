@@ -456,7 +456,7 @@ action("virtio_magma_generic") {
                 root_build_dir),
     rebase_path(out_file, root_build_dir),
   ]
-  sources = [ "virtio_magma_generic.h.gen.py" ]
+  sources = [ "$script" ]
   inputs = [ "//src/graphics/lib/magma/include/magma_abi/magma.json" ]
   outputs = [ "$out_file" ]
 }

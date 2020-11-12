@@ -11,6 +11,7 @@ action("headers") {
     rebase_path("../magma_abi/magma.json", root_build_dir),
     rebase_path(out_file, root_build_dir),
   ]
+  sources = [ "$script" ]
   inputs = [ "../magma_abi/magma.json" ]
   outputs = [ "$out_file" ]
 }

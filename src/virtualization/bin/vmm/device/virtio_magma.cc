@@ -136,6 +136,69 @@ zx_status_t VirtioMagma::Handle_create_buffer(const virtio_magma_create_buffer_c
   return ZX_OK;
 }
 
+zx_status_t VirtioMagma::Handle_internal_map(const virtio_magma_internal_map_ctrl_t* request,
+                                             virtio_magma_internal_map_resp_t* response) {
+  FX_DCHECK(request->hdr.type == VIRTIO_MAGMA_CMD_INTERNAL_MAP);
+
+  response->address_out = 0;
+  response->hdr.type = VIRTIO_MAGMA_RESP_INTERNAL_MAP;
+
+  magma_handle_t handle;
+  response->result_return =
+      magma_get_buffer_handle(reinterpret_cast<magma_connection_t>(request->connection),
+                              reinterpret_cast<magma_buffer_t>(request->buffer), &handle);
+  if (response->result_return != MAGMA_STATUS_OK)
+    return ZX_OK;
+
+  zx::vmo vmo(handle);
+
+  zx_vaddr_t zx_vaddr;
+  zx_status_t zx_status = vmar_.map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0 /*vmar_offset*/, vmo,
+                                    0 /* vmo_offset */, request->length, &zx_vaddr);
+  if (zx_status != ZX_OK) {
+    FX_LOGS(ERROR) << "vmar map (length " << request->length << ") failed: " << zx_status;
+    response->result_return = MAGMA_STATUS_INVALID_ARGS;
+    return zx_status;
+  }
+
+  const uint64_t buffer_id = magma_get_buffer_id(reinterpret_cast<magma_buffer_t>(request->buffer));
+  buffer_maps_.emplace(buffer_id, std::pair<zx_vaddr_t, size_t>(zx_vaddr, request->length));
+
+  response->address_out = zx_vaddr;
+
+  return ZX_OK;
+}
+
+zx_status_t VirtioMagma::Handle_internal_unmap(const virtio_magma_internal_unmap_ctrl_t* request,
+                                               virtio_magma_internal_unmap_resp_t* response) {
+  FX_DCHECK(request->hdr.type == VIRTIO_MAGMA_CMD_INTERNAL_UNMAP);
+
+  response->hdr.type = VIRTIO_MAGMA_RESP_INTERNAL_UNMAP;
+
+  uint64_t buffer_id = magma_get_buffer_id(reinterpret_cast<magma_buffer_t>(request->buffer));
+
+  for (auto iter = buffer_maps_.find(buffer_id); iter != buffer_maps_.end(); iter++) {
+    const auto& mapping = iter->second;
+    const zx_vaddr_t mapped_addr = mapping.first;
+    const size_t length = mapping.second;
+
+    if (request->address == mapped_addr) {
+      buffer_maps_.erase(iter);
+
+      zx_status_t zx_status = vmar_.unmap(mapped_addr, length);
+      if (zx_status != ZX_OK) {
+        response->result_return = MAGMA_STATUS_INTERNAL_ERROR;
+        return zx_status;
+      }
+      response->result_return = MAGMA_STATUS_OK;
+      return ZX_OK;
+    }
+  }
+
+  response->result_return = MAGMA_STATUS_INVALID_ARGS;
+  return ZX_OK;
+}
+
 zx_status_t VirtioMagma::Handle_map_aligned(const virtio_magma_map_aligned_ctrl_t* request,
                                             virtio_magma_map_aligned_resp_t* response) {
   FX_LOGS(ERROR) << "Specialized map calls should be converted by the driver into generic ones";

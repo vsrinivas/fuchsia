@@ -1,6 +1,6 @@
 {
   "magma-interface": {
-    "next-free-ordinal": 68,
+    "next-free-ordinal": 70,
     "exports": [
       {
         "ordinal": 4,
@@ -1258,6 +1258,59 @@
             "name": "handle_out",
             "type": "magma_handle_t*",
             "description": "Pointer to the returned handle."
+          }
+        ]
+      }
+    ],
+    "virtmagma-internal": [
+      {
+        "ordinal": 68,
+        "name": "magma_internal_map",
+        "type": "magma_status_t",
+        "description": "Maps the given buffer's memory into the virtmagma VMAR.",
+        "arguments": [
+          {
+            "name": "connection",
+            "type": "magma_connection_t",
+            "description": "An open connection."
+          },
+          {
+            "name": "buffer",
+            "type": "magma_buffer_t",
+            "description": "A valid buffer."
+          },
+          {
+            "name": "length",
+            "type": "uint64_t",
+            "description": "Page-aligned number of bytes to be mapped."
+          },
+          {
+            "name": "address_out",
+            "type": "void**",
+            "description": "The returned CPU virtual address for the start of the buffer."
+          }
+        ]
+      },
+      {
+        "ordinal": 69,
+        "name": "magma_internal_unmap",
+        "type": "magma_status_t",
+        "description": "Releases the VMAR mapping for the given buffer. Should be paired with each call to magma_internal_map.",
+        "arguments": [
+          {
+            "name": "connection",
+            "type": "magma_connection_t",
+            "description": "An open connection."
+          },
+          {
+            "name": "buffer",
+            "type": "magma_buffer_t",
+            "description": "A valid buffer."
+          },
+          {
+            "name": "address",
+            "type": "void*",
+            "description": "The mapped address."
           }
         ]
       }

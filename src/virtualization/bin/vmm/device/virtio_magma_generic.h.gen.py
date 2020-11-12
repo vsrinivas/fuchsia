@@ -71,14 +71,13 @@ def has_unsupported_argument(export):
 
 # Generate a method that does simple validation of a virtio command struct,
 # passes it on to magma, and populates the corresponding response struct.
-def generate_generic_method(export):
-    name = get_name(export)
+def generate_generic_method(method, is_internal):
+    name = get_name(method)
     ret = ''
     ret += '  virtual zx_status_t Handle_' + name + '(\n'
     ret += '    const virtio_magma_' + name + '_ctrl_t* request,\n'
     ret += '    virtio_magma_' + name + '_resp_t* response)'
-
-    if has_unsupported_argument(export):
+    if has_unsupported_argument(method) or is_internal:
         ret += ' { return ZX_ERR_NOT_SUPPORTED; }\n'
         return ret
     ret += ' {\n'
@@ -87,7 +86,7 @@ def generate_generic_method(export):
     ) + ');\n'
     invocation_args = ''
     copy_temporaries = ''
-    for argument in export['arguments']:
+    for argument in method['arguments']:
         invocation_args += '      '
         if argument['name'].find('_out') != -1:
             assert (
@@ -104,9 +103,9 @@ def generate_generic_method(export):
                 'name'] + ',\n'
 
     ret += '    '
-    if export['type'] != 'void':
+    if method['type'] != 'void':
         ret += 'response->result_return = '
-    ret += export['name'] + '(\n'
+    ret += method['name'] + '(\n'
     ret += invocation_args[:-2] + ');\n'
     ret += copy_temporaries
     ret += '    response->hdr.type = VIRTIO_MAGMA_RESP_' + name.upper() + ';\n'
@@ -147,7 +146,7 @@ def generate_handle_command(magma):
     }
     switch (command_type) {
 '''
-    for export in magma['exports']:
+    for export in magma['exports'] + magma['virtmagma-internal']:
         name = get_name(export)
         ret += '      case VIRTIO_MAGMA_CMD_' + name.upper() + ': {\n'
         ret += '        auto request = reinterpret_cast<const virtio_magma_' + name + '_ctrl_t*>(request_desc.addr);\n'
@@ -182,7 +181,7 @@ def generate_handle_command(magma):
                     'name'] + ' = " << static_cast<uint64_t>(response->' + argument[
                         'name'] + ') << ""\\\n'
         if export['type'] != 'void':
-            ret += '          "\\n  result_return = " << static_cast<uint64_t>(response->result_return) << ""\\\n'
+            ret += '          "\\n  result_return = " << static_cast<int64_t>(response->result_return) << ""\\\n'
         ret += '          "";\n'
         ret += '#endif // VIRTMAGMA_DEBUG\n'
         ret += '        *chain.Used() = sizeof(*response);\n'
@@ -213,8 +212,13 @@ def main():
             header += includes() + '\n'
             header += 'class VirtioMagmaGeneric {\n'
             header += ' public:\n'
-            for export in magma['exports']:
-                header += generate_generic_method(export) + '\n'
+            for method in magma['exports']:
+                header += generate_generic_method(method, False) + '\n'
+            for method in magma['virtmagma-internal']:
+                name = method['name']
+                if not name.startswith('magma_internal_'):
+                    sys.exit("'%s' must start with 'magma_internal_'" % name)
+                header += generate_generic_method(method, True) + '\n'
             header += generate_handle_command(magma) + '\n'
             header += ' protected:\n'
             header += '  std::string device_path_;\n'

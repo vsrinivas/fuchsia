@@ -41,28 +41,33 @@ class VirtioMagma : public VirtioMagmaGeneric,
              StartCallback callback) override;
 
  private:
-  virtual zx_status_t Handle_device_import(const virtio_magma_device_import_ctrl_t* request,
-                                           virtio_magma_device_import_resp_t* response) override;
-  virtual zx_status_t Handle_create_buffer(const virtio_magma_create_buffer_ctrl_t* request,
-                                           virtio_magma_create_buffer_resp_t* response) override;
-  virtual zx_status_t Handle_map_aligned(const virtio_magma_map_aligned_ctrl_t* request,
-                                         virtio_magma_map_aligned_resp_t* response) override;
-  virtual zx_status_t Handle_map_specific(const virtio_magma_map_specific_ctrl_t* request,
-                                          virtio_magma_map_specific_resp_t* response) override;
-  virtual zx_status_t Handle_poll(const virtio_magma_poll_ctrl_t* request,
-                                  virtio_magma_poll_resp_t* response) override;
-  virtual zx_status_t Handle_read_notification_channel(
+  zx_status_t Handle_device_import(const virtio_magma_device_import_ctrl_t* request,
+                                   virtio_magma_device_import_resp_t* response) override;
+  zx_status_t Handle_create_buffer(const virtio_magma_create_buffer_ctrl_t* request,
+                                   virtio_magma_create_buffer_resp_t* response) override;
+  zx_status_t Handle_internal_map(const virtio_magma_internal_map_ctrl_t* request,
+                                  virtio_magma_internal_map_resp_t* response) override;
+  zx_status_t Handle_internal_unmap(const virtio_magma_internal_unmap_ctrl_t* request,
+                                    virtio_magma_internal_unmap_resp_t* response) override;
+  zx_status_t Handle_map_aligned(const virtio_magma_map_aligned_ctrl_t* request,
+                                 virtio_magma_map_aligned_resp_t* response) override;
+  zx_status_t Handle_map_specific(const virtio_magma_map_specific_ctrl_t* request,
+                                  virtio_magma_map_specific_resp_t* response) override;
+  zx_status_t Handle_poll(const virtio_magma_poll_ctrl_t* request,
+                          virtio_magma_poll_resp_t* response) override;
+  zx_status_t Handle_read_notification_channel(
       const virtio_magma_read_notification_channel_ctrl_t* request,
       virtio_magma_read_notification_channel_resp_t* response) override;
-  virtual zx_status_t Handle_export(const virtio_magma_export_ctrl_t* request,
-                                    virtio_magma_export_resp_t* response) override;
-  virtual zx_status_t Handle_execute_command_buffer_with_resources(
+  zx_status_t Handle_export(const virtio_magma_export_ctrl_t* request,
+                            virtio_magma_export_resp_t* response) override;
+  zx_status_t Handle_execute_command_buffer_with_resources(
       const virtio_magma_execute_command_buffer_with_resources_ctrl_t* request,
       virtio_magma_execute_command_buffer_with_resources_resp_t* response) override;
 
   zx::vmar vmar_;
   VirtioQueue out_queue_;
   fuchsia::virtualization::hardware::VirtioWaylandImporterSyncPtr wayland_importer_;
+  std::unordered_multimap<zx_koid_t, std::pair<zx_vaddr_t, size_t>> buffer_maps_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(VirtioMagma);
 };

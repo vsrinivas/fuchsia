@@ -126,9 +126,9 @@ def gen_enums(magma):
   error_id_base = 0x3000
   max_id_count = 0x4000
   used = [False] * max_id_count
-  for export in magma['exports']:
-    name = get_name(export).upper()
-    ordinal = export['ordinal']
+  for method in magma['exports'] + magma['virtmagma-internal']:
+    name = get_name(method).upper()
+    ordinal = method['ordinal']
     assert ordinal < magma['next-free-ordinal']
     command_id = command_id_base + ordinal
     response_id = response_id_base + ordinal
@@ -259,9 +259,9 @@ def main():
       header += config_type() + '\n'
       header += gen_enums(magma) + '\n'
       header += ctrl_hdr() + '\n'
-      for export in magma['exports']:
-        header += format_struct(export, True) + '\n'
-        header += format_struct(export, False) + '\n'
+      for method in magma['exports'] + magma['virtmagma-internal']:
+        header += format_struct(method, True) + '\n'
+        header += format_struct(method, False) + '\n'
       if fuchsia:
         header += '__END_CDECLS\n\n'
       header += guards(False)

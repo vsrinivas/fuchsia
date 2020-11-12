@@ -149,7 +149,7 @@ group("all") {
     "//src/ui/tools/tiles:tiles_tests",
     "//src/virtualization/bin/guest_manager:guest_manager_tests",
     "//src/virtualization/bin/vmm:vmm_tests",
-    "//src/virtualization/bin/vmm/device:virtio_magma_mock_system",
+    "//src/virtualization/bin/vmm/device:virtio_magma",
     "//src/virtualization/lib/grpc:grpc_vsock_tests",
     "//src/virtualization/lib/guest_interaction:tests",
     "//src/virtualization/lib/vsh:vsh_tests",
