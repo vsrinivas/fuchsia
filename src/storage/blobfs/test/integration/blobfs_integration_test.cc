@@ -1492,14 +1492,11 @@ void RunFailedWriteTest(fs_test::TestFilesystem& fs) {
   // - One Data block
   constexpr int kBlockCountToWrite = 5;
 
-  // Sleep after |kBlockCountToWrite - 1| blocks. This is 1 less than will be
-  // needed to write out the entire blob. This ensures that writing the blob
-  // will ultimately fail, but the write operation will return a successful
-  // response.
+  // Sleep after |kBlockCountToWrite - 1| blocks. This is 1 less than will be needed to write out
+  // the entire blob. This ensures that writing the blob will fail.
   ASSERT_EQ(fs.GetRamDisk()->SleepAfter(pages_per_block * (kBlockCountToWrite - 1)).status_value(),
             ZX_OK);
-  ASSERT_EQ(write(fd.get(), info->data.get(), info->size_data),
-            static_cast<ssize_t>(info->size_data));
+  ASSERT_EQ(write(fd.get(), info->data.get(), info->size_data), -1);
 
   // Since the write operation ultimately failed when going out to disk,
   // syncfs will return a failed response.

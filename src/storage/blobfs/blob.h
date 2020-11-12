@@ -165,6 +165,9 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
   void set_state(BlobState new_state) { state_ = new_state; };
   BlobState state() const { return state_; }
 
+  // After writing the blob, marks the blob as readable.
+  [[nodiscard]] zx_status_t MarkReadable();
+
   // Returns a handle to an event which will be signalled when
   // the blob is readable.
   //

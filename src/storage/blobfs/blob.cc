@@ -347,7 +347,8 @@ zx_status_t Blob::WriteNullBlob() {
   }
   transaction.Commit(*blobfs_->journal(), {},
                      [blob = fbl::RefPtr(this)]() { blob->CompleteSync(); });
-  return ZX_OK;
+
+  return MarkReadable();
 }
 
 zx_status_t Blob::PrepareWrite(uint64_t size_data, bool compress) {
@@ -487,22 +488,6 @@ zx_status_t Blob::WriteMetadata(BlobTransaction& transaction) {
   // Update the on-disk hash.
   MerkleRoot().CopyTo(inode_.merkle_root_hash);
 
-  // All data has been written to the containing VMO.
-  set_state(BlobState::kReadable);
-  if (readable_event_.is_valid()) {
-    zx_status_t status = readable_event_.signal(0u, ZX_USER_SIGNAL_0);
-    if (status != ZX_OK) {
-      set_state(BlobState::kError);
-      return status;
-    }
-  }
-
-  // Currently only the syncing_state needs protection with the lock.
-  {
-    std::scoped_lock guard(mutex_);
-    syncing_state_ = SyncingState::kSyncing;
-  }
-
   if (inode_.block_count) {
     // We utilize the NodePopulator class to take our reserved blocks and nodes and fill the
     // persistent map with an allocated inode / container.
@@ -560,7 +545,6 @@ zx_status_t Blob::WriteMetadata(BlobTransaction& transaction) {
     blobfs_->GetAllocator()->MarkInodeAllocated(node);
     blobfs_->PersistNode(node.index(), transaction);
   }
-  write_info_.reset();
   return ZX_OK;
 }
 
@@ -710,8 +694,10 @@ zx_status_t Blob::Commit() {
   fs::Ticker ticker(blobfs_->Metrics()->Collecting());  // Tracking enqueue time.
 
   // Enqueue the blob's final data work. Metadata must be enqueued separately.
+  zx_status_t data_status;
   sync_completion_t data_written;
   auto write_all_data = streamer.Flush().then([&](const fit::result<void, zx_status_t>& result) {
+    data_status = result.is_ok() ? ZX_OK : result.error();
     sync_completion_signal(&data_written);
     return result;
   });
@@ -735,10 +721,13 @@ zx_status_t Blob::Commit() {
   // buffers, so wait until that has happened.  We don't need to wait for the metadata because we
   // cache that.
   sync_completion_wait(&data_written, ZX_TIME_INFINITE);
+  if (data_status != ZX_OK) {
+    return data_status;
+  }
 
   blobfs_->Metrics()->UpdateClientWrite(inode_.block_count * kBlobfsBlockSize, merkle_size,
                                         ticker.End(), generation_time);
-  return ZX_OK;
+  return MarkReadable();
 }
 
 zx_status_t Blob::WriteData(uint32_t block_count, Producer& producer, fs::DataStreamer& streamer) {
@@ -775,6 +764,23 @@ zx_status_t Blob::WriteData(uint32_t block_count, Producer& producer, fs::DataSt
         }  // while (block_count)
         return ZX_OK;
       });
+}
+
+zx_status_t Blob::MarkReadable() {
+  if (readable_event_.is_valid()) {
+    zx_status_t status = readable_event_.signal(0u, ZX_USER_SIGNAL_0);
+    if (status != ZX_OK) {
+      set_state(BlobState::kError);
+      return status;
+    }
+  }
+  set_state(BlobState::kReadable);
+  {
+    std::scoped_lock guard(mutex_);
+    syncing_state_ = SyncingState::kSyncing;
+  }
+  write_info_.reset();
+  return ZX_OK;
 }
 
 zx_status_t Blob::GetReadableEvent(zx::event* out) {
@@ -1165,9 +1171,6 @@ void Blob::CompleteSync() {
     std::scoped_lock guard(mutex_);
     syncing_state_ = SyncingState::kDone;
   }
-
-  // Drop the write info, since we no longer need it.
-  write_info_.reset();
 }
 
 fbl::RefPtr<Blob> Blob::CloneWatcherTeardown() {
