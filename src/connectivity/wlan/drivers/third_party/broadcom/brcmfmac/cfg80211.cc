@@ -3907,7 +3907,9 @@ void brcmf_if_query(net_device* ndev, wlanif_query_info_t* info) {
   info->role = wdev->iftype;
 
   // features
-  info->driver_features |= WLAN_INFO_DRIVER_FEATURE_DFS;
+  if (brcmf_feat_is_enabled(ifp, BRCMF_FEAT_DFS)) {
+    info->driver_features |= WLAN_INFO_DRIVER_FEATURE_DFS;
+  }
 
   // bands
   uint32_t bandlist[3];
