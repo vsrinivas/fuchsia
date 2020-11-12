@@ -1,4 +1,5 @@
 {
+    include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
     program: {
         binary: "bin/resolved_error_reporter",
     },
@@ -15,7 +16,6 @@
         {
             protocol: [
                 "fidl.examples.routing.echo.Echo",
-                "fuchsia.logger.LogSink",
                 "fuchsia.sys2.Realm",
             ],
             from: "framework",

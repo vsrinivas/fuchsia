@@ -39,5 +39,7 @@ async fn main() {
     // error.
     let _started_event = EventMatcher::err().expect_match::<Started>(&mut event_stream).await;
 
-    let _ = echo.echo_string(Some("ERROR")).await.unwrap();
+    // Swallow the error as the test might terminate and stop serving the capability before this
+    // component exits. An error here is not an issue, the assertion was made in the test case.
+    let _ = echo.echo_string(Some("ERROR")).await;
 }
