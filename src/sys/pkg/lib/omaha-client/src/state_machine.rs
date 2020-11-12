@@ -492,14 +492,32 @@ where
         // If for whatever reason the clock was wrong on the previous boot, or monotonic
         // time is going backwards, better not to report this metric than to report an
         // incorrect default value.
-        let state_machine_start_to_now =
-            now.mono.duration_since(state_machine_start_monotonic_time);
+        let state_machine_start_to_now = now
+            .mono
+            .checked_duration_since(state_machine_start_monotonic_time)
+            .ok_or_else(|| {
+                error!("Monotonic time appears to have gone backwards");
+                anyhow!(
+                    "State machine start later than now, can't report waited for reboot duration. \
+                    State machine start: {:?}, now: {:?}",
+                    state_machine_start_monotonic_time,
+                    now.mono,
+                )
+            })?;
 
-        let waited_for_reboot_duration = update_finish_time_to_now - state_machine_start_to_now;
+        let waited_for_reboot_duration =
+            update_finish_time_to_now.checked_sub(state_machine_start_to_now).ok_or_else(|| {
+                anyhow!(
+                    "Can't report waiting for reboot duration, update finish time to now smaller \
+                    than state machine start to now. Update finish time to now: {:?}, state \
+                    machine start to now: {:?}",
+                    update_finish_time_to_now,
+                    state_machine_start_to_now,
+                )
+            })?;
 
         info!("Waited {} seconds for reboot.", waited_for_reboot_duration.as_secs());
         self.report_metrics(Metrics::WaitedForRebootDuration(waited_for_reboot_duration));
-
         Ok(())
     }
 
@@ -3104,12 +3122,10 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = r#"overflow when subtracting durations"#)]
-    // A scenario in which (now_in_monotonic - state_machine_start_time_in_monotonic) > (update_finish_time - now_in_wall_time)
-    // currently results in an overflow.
-    // A subsequent CL will fix that, but this test demonstrates the current behavior during the
-    // refactor of report_waited_for_reboot_duration.
-    fn test_report_waited_for_reboot_duration_panics_on_unreliable_current_wall_time() {
+    // A scenario in which
+    // (now_in_monotonic - state_machine_start_in_monotonic) > (update_finish_time - now_in_wall)
+    // should not panic.
+    fn test_report_waited_for_reboot_duration_doesnt_panic_on_wrong_current_time() {
         block_on(async {
             let metrics_reporter = MockMetricsReporter::new();
 
@@ -3134,8 +3150,9 @@ mod tests {
                     state_machine_start_monotonic,
                     ComplexTime { wall: now_wall, mono: now_monotonic },
                 )
-                .unwrap();
+                .expect_err("should overflow and error out");
 
+            // We should have reported no metrics
             assert!(state_machine.metrics_reporter.metrics.is_empty());
         });
     }
