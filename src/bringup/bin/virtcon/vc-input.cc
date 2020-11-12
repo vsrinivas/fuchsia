@@ -19,9 +19,9 @@
 
 static struct list_node g_vc_list = LIST_INITIAL_VALUE(g_vc_list);
 static unsigned g_vc_count = 0;
-static unsigned g_active_vc_index;
+static unsigned g_active_vc_index = 0;
 
-vc_t* g_active_vc;
+vc_t* g_active_vc = nullptr;
 int g_status_width = 0;
 
 // Process key sequences that affect the console (scrolling, switching
@@ -288,17 +288,6 @@ zx_status_t vc_create(vc_t** vc_out, const color_scheme_t* color_scheme) {
 void vc_destroy(vc_t* vc) {
   list_delete(&vc->node);
   g_vc_count -= 1;
-
-  if (vc->active) {
-    g_active_vc = NULL;
-    if (g_active_vc_index >= g_vc_count) {
-      g_active_vc_index = g_vc_count - 1;
-    }
-    vc_set_active(g_active_vc_index, NULL);
-  } else if (g_active_vc) {
-    vc_full_repaint(g_active_vc);
-    vc_render(g_active_vc);
-  }
 
   vc_free(vc);
 }

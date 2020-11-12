@@ -524,6 +524,15 @@ zx_status_t vc_alloc(vc_t** out, const color_scheme_t* color_scheme) {
 }
 
 void vc_free(vc_t* vc) {
+  if (vc->active) {
+    g_active_vc = nullptr;
+    vc_set_active(0, nullptr);
+  }
+  if (g_active_vc) {
+    vc_full_repaint(g_active_vc);
+    vc_render(g_active_vc);
+  }
+
   if (vc->fd >= 0) {
     close(vc->fd);
   }

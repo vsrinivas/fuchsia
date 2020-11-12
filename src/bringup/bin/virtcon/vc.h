@@ -11,6 +11,7 @@
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/vfs.h>
 #include <lib/zircon-internal/thread_annotations.h>
+#include <lib/zx/debuglog.h>
 #include <stdbool.h>
 #include <threads.h>
 
@@ -160,7 +161,8 @@ void vc_show_active();
 void vc_change_graphics(vc_gfx_t* graphics);
 
 void set_log_listener_active(bool active);
-int log_start(async_dispatcher_t* dispatcher);
+int log_start(async_dispatcher_t* dispatcher, zx::debuglog read_only_debuglog,
+              const color_scheme_t* color_scheme);
 zx_status_t log_create_vc(vc_gfx_t* graphics, vc_t** vc_out);
 void log_delete_vc(vc_t* vc);
 
