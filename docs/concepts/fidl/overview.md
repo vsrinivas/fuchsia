@@ -167,7 +167,7 @@ means that there are several models:
 The first is synchronous, the rest are asynchronous. We'll discuss these in
 order.
 
-### Client sends to server, waits for a reply
+#### Client sends to server, waits for a reply
 
 This model is the traditional "blocking call" or "function call" available in
 most programming languages, except that the invocation is done over a channel,
