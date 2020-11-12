@@ -12,13 +12,19 @@ Here's a simple example of a cmx for an ELF binary component:
 
 ```
 {
+    "include": [
+        "src/lib/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "bin/example_app",
         "args": [ "--example", "args" ]
     },
     "sandbox": {
         "system": [ "data/sysmgr" ],
-        "services": [ "fuchsia.sys.Launcher", "fuchsia.netstack.Netstack" ]
+        "services": [
+            "fuchsia.sys.Launcher",
+            "fuchsia.netstack.Netstack"
+        ]
     }
 }
 ```
@@ -33,6 +39,28 @@ And one for a flutter/dart component:
     "runner": "flutter_jit_runner"
 }
 ```
+
+## include
+
+The optional `include` property describes zero or more other component manifest
+files (or shards) to be merged into this component manifest.
+
+In the example given above, the component manifest is including contents from a
+file provided by the `syslog` library, thus ensuring that the component
+functions correctly at runtime if it attempts to write to syslog. By convention
+such files end with `.shard.cmx`.
+
+If working in fuchsia.git, include paths are relative to the source root of the
+Fuchsia tree.
+
+You can review the outcome of merging any and all includes into a component
+manifest file by invoking the following command:
+
+```sh
+fx cmc include {{ "<var>" }}cmx_file{{ "</var>" }} --includepath $FUCHSIA_DIR
+```
+
+Includes can be recursive, meaning that shards can have their own includes.
 
 ## program
 

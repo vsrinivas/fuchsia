@@ -251,6 +251,32 @@ A reference may refer to:
 -   A [static child instance][doc-static-children] whose name is `<reference-name>`.
 -   A [collection][doc-collections] whose name is `<reference-name>`.
 
+### include {#include}
+
+The optional `include` property describes zero or more other component manifest
+files (or shards) to be merged into this component manifest. For example:
+
+```json5
+include: [ "src/lib/syslog/client.shard.cml" ]
+```
+
+In the example given above, the component manifest is including contents from a
+manifest shard provided by the `syslog` library, thus ensuring that the component
+functions correctly at runtime if it attempts to write to syslog. By convention
+such files end with `.shard.cml`.
+
+If working in fuchsia.git, include paths are relative to the source root of the
+Fuchsia tree.
+
+You can review the outcome of merging any and all includes into a component
+manifest file by invoking the following command:
+
+```sh
+fx cmc include {{ "<var>" }}cml_file{{ "</var>" }} --includepath $FUCHSIA_DIR
+```
+
+Includes can be recursive, meaning that shards can have their own includes.
+
 ### program {#program}
 
 If the component contains executable code, the content of the `program` section
