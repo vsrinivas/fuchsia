@@ -7,6 +7,7 @@
 
 #include <array>
 #include <thread>
+#include <unordered_set>
 
 #if defined(__Fuchsia__)
 #include <lib/async-loop/cpp/loop.h>
@@ -1198,6 +1199,77 @@ TEST(MagmaAbi, MapWithBufferHandle) {
 
   EXPECT_TRUE(magma::UnmapCpuHelper(last_page_ptr, page_size()));
   EXPECT_TRUE(magma::UnmapCpuHelper(first_page_ptr, page_size()));
+
+  magma_release_buffer(connection.connection(), buffer);
+}
+
+TEST(MagmaAbi, MaxBufferHandle) {
+  TestConnection connection;
+
+  magma_buffer_t buffer;
+  uint64_t actual_size;
+  constexpr uint64_t kBufferSizeInPages = 1;
+  ASSERT_EQ(MAGMA_STATUS_OK,
+            magma_create_buffer(connection.connection(), kBufferSizeInPages * page_size(),
+                                &actual_size, &buffer));
+
+  std::unordered_set<magma_handle_t> handles;
+
+  // This may fail on Linux if the open file limit is too small.
+  constexpr size_t kMaxBufferHandles = 10000;
+
+  for (size_t i = 0; i < kMaxBufferHandles; i++) {
+    magma_handle_t handle;
+    magma_status_t status = magma_get_buffer_handle(connection.connection(), buffer, &handle);
+    if (status != MAGMA_STATUS_OK) {
+      EXPECT_EQ(status, MAGMA_STATUS_OK) << "magma_get_buffer_handle failed count: " << i;
+      break;
+    }
+    handles.insert(handle);
+  }
+
+  EXPECT_EQ(handles.size(), kMaxBufferHandles);
+
+  for (auto& handle : handles) {
+#if defined(__Fuchsia__)
+    zx_handle_close(handle);
+#elif defined(__linux__)
+    close(handle);
+#endif
+  }
+
+  magma_release_buffer(connection.connection(), buffer);
+}
+
+TEST(MagmaAbi, MaxBufferMappings) {
+  TestConnection connection;
+
+  magma_buffer_t buffer;
+  uint64_t actual_size;
+  constexpr uint64_t kBufferSizeInPages = 1;
+  ASSERT_EQ(MAGMA_STATUS_OK,
+            magma_create_buffer(connection.connection(), kBufferSizeInPages * page_size(),
+                                &actual_size, &buffer));
+
+  std::unordered_set<void*> maps;
+
+  // The helper closes the buffer handle, so the Linux open file limit shouldn't matter.
+  constexpr size_t kMaxBufferMaps = 10000;
+
+  for (size_t i = 0; i < kMaxBufferMaps; i++) {
+    void* ptr;
+    if (!magma::MapCpuHelper(connection.connection(), buffer, 0 /*offset*/, actual_size, &ptr)) {
+      EXPECT_TRUE(false) << "MapCpuHelper failed count: " << i;
+      break;
+    }
+    maps.insert(ptr);
+  }
+
+  EXPECT_EQ(maps.size(), kMaxBufferMaps);
+
+  for (void* ptr : maps) {
+    EXPECT_TRUE(magma::UnmapCpuHelper(ptr, actual_size));
+  }
 
   magma_release_buffer(connection.connection(), buffer);
 }
