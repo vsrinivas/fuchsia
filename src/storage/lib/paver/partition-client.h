@@ -61,9 +61,9 @@ class BlockPartitionClient final : public PartitionClient {
   zx::status<size_t> GetBlockSize() final;
   zx::status<size_t> GetPartitionSize() final;
   zx::status<> Read(const zx::vmo& vmo, size_t size) final;
-  zx::status<> Read(const zx::vmo& vmo, size_t size, size_t dev_offset);
+  zx::status<> Read(const zx::vmo& vmo, size_t size, size_t dev_offset, size_t vmo_offset);
   zx::status<> Write(const zx::vmo& vmo, size_t vmo_size) final;
-  zx::status<> Write(const zx::vmo& vmo, size_t vmo_size, size_t dev_offset);
+  zx::status<> Write(const zx::vmo& vmo, size_t vmo_size, size_t dev_offset, size_t vmo_offset);
   zx::status<> Trim() final;
   zx::status<> Flush() final;
   zx::channel GetChannel() final;
@@ -86,13 +86,18 @@ class BlockPartitionClient final : public PartitionClient {
   std::optional<::llcpp::fuchsia::hardware::block::BlockInfo> block_info_;
 };
 
-// A variant of BlockPartitionClient that writes starting from a fixed offset.
+// A variant of BlockPartitionClient that reads/writes starting from a fixed offset in
+// the partition and from a fixed offset in the given buffer.
 // This is for those cases where image doesn't necessarily start from the beginning of
 // the partition, (i.e. for preserving metatdata/header).
+// It's also used for cases where input image is a combined image for multiple partitions.
 class FixedOffsetBlockPartitionClient final : public PartitionClient {
  public:
-  explicit FixedOffsetBlockPartitionClient(zx::channel partition, size_t offset_in_blocks)
-      : client_(std::move(partition)), offset_in_blocks_(offset_in_blocks) {}
+  explicit FixedOffsetBlockPartitionClient(zx::channel partition, size_t offset_partition_in_blocks,
+                                           size_t offset_buffer_in_blocks)
+      : client_(std::move(partition)),
+        offset_partition_in_blocks_(offset_partition_in_blocks),
+        offset_buffer_in_blocks_(offset_buffer_in_blocks) {}
 
   zx::status<size_t> GetBlockSize() final;
   zx::status<size_t> GetPartitionSize() final;
@@ -109,10 +114,14 @@ class FixedOffsetBlockPartitionClient final : public PartitionClient {
   FixedOffsetBlockPartitionClient(FixedOffsetBlockPartitionClient&&) = delete;
   FixedOffsetBlockPartitionClient& operator=(FixedOffsetBlockPartitionClient&&) = delete;
 
+  zx::status<size_t> GetBufferOffsetInBytes();
+
  private:
   BlockPartitionClient client_;
-  // offset in blocks
-  size_t offset_in_blocks_ = 0;
+  // offset in blocks for partition
+  size_t offset_partition_in_blocks_ = 0;
+  // offset in blocks for the input buffer
+  size_t offset_buffer_in_blocks_ = 0;
 };
 
 // Specialized partition client which duplicates to multiple partitions, and attempts to read from

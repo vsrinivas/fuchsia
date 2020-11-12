@@ -75,14 +75,16 @@ zx::status<std::unique_ptr<PartitionClient>> LuisPartitioner::GetBootloaderParti
   if (boot0_part.is_error()) {
     return boot0_part.take_error();
   }
-  auto boot0 = std::make_unique<FixedOffsetBlockPartitionClient>(std::move(boot0_part.value()), 1);
+  auto boot0 =
+      std::make_unique<FixedOffsetBlockPartitionClient>(std::move(boot0_part.value()), 1, 0);
 
   auto boot1_part =
       OpenBlockPartition(gpt_->devfs_root(), std::nullopt, Uuid(GUID_EMMC_BOOT2_VALUE), ZX_SEC(5));
   if (boot1_part.is_error()) {
     return boot1_part.take_error();
   }
-  auto boot1 = std::make_unique<FixedOffsetBlockPartitionClient>(std::move(boot1_part.value()), 1);
+  auto boot1 =
+      std::make_unique<FixedOffsetBlockPartitionClient>(std::move(boot1_part.value()), 1, 0);
 
   std::vector<std::unique_ptr<PartitionClient>> partitions;
   partitions.push_back(std::move(boot0));

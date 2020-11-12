@@ -4,6 +4,8 @@
 
 #include "src/storage/lib/paver/nelson.h"
 
+#include <lib/fzl/owned-vmo-mapper.h>
+
 #include <fbl/span.h>
 #include <gpt/gpt.h>
 #include <soc/aml-common/aml-guid.h>
@@ -39,17 +41,20 @@ zx::status<std::unique_ptr<DevicePartitioner>> NelsonPartitioner::Initialize(
 }
 
 bool NelsonPartitioner::SupportsPartition(const PartitionSpec& spec) const {
-  const PartitionSpec supported_specs[] = {PartitionSpec(paver::Partition::kBootloaderA, "bl2"),
-                                           PartitionSpec(paver::Partition::kBootloaderA, "tpl"),
-                                           PartitionSpec(paver::Partition::kBootloaderB, "tpl"),
-                                           PartitionSpec(paver::Partition::kZirconA),
-                                           PartitionSpec(paver::Partition::kZirconB),
-                                           PartitionSpec(paver::Partition::kZirconR),
-                                           PartitionSpec(paver::Partition::kVbMetaA),
-                                           PartitionSpec(paver::Partition::kVbMetaB),
-                                           PartitionSpec(paver::Partition::kVbMetaR),
-                                           PartitionSpec(paver::Partition::kAbrMeta),
-                                           PartitionSpec(paver::Partition::kFuchsiaVolumeManager)};
+  const PartitionSpec supported_specs[] = {
+      PartitionSpec(paver::Partition::kBootloaderA, "bl2"),
+      PartitionSpec(paver::Partition::kBootloaderA, "bootloader"),
+      PartitionSpec(paver::Partition::kBootloaderB, "bootloader"),
+      PartitionSpec(paver::Partition::kBootloaderA, "tpl"),
+      PartitionSpec(paver::Partition::kBootloaderB, "tpl"),
+      PartitionSpec(paver::Partition::kZirconA),
+      PartitionSpec(paver::Partition::kZirconB),
+      PartitionSpec(paver::Partition::kZirconR),
+      PartitionSpec(paver::Partition::kVbMetaA),
+      PartitionSpec(paver::Partition::kVbMetaB),
+      PartitionSpec(paver::Partition::kVbMetaR),
+      PartitionSpec(paver::Partition::kAbrMeta),
+      PartitionSpec(paver::Partition::kFuchsiaVolumeManager)};
 
   for (const auto& supported : supported_specs) {
     if (SpecMatches(spec, supported)) {
@@ -66,26 +71,60 @@ zx::status<std::unique_ptr<PartitionClient>> NelsonPartitioner::AddPartition(
   return zx::error(ZX_ERR_NOT_SUPPORTED);
 }
 
-zx::status<std::unique_ptr<PartitionClient>> NelsonPartitioner::GetBL2PartitionClient() const {
+zx::status<std::unique_ptr<PartitionClient>> NelsonPartitioner::GetEmmcBootPartitionClient() const {
   auto boot0_part =
       OpenBlockPartition(gpt_->devfs_root(), std::nullopt, Uuid(GUID_EMMC_BOOT1_VALUE), ZX_SEC(5));
   if (boot0_part.is_error()) {
     return boot0_part.take_error();
   }
-  auto boot0 = std::make_unique<FixedOffsetBlockPartitionClient>(std::move(boot0_part.value()), 1);
+  auto boot0 =
+      std::make_unique<FixedOffsetBlockPartitionClient>(std::move(boot0_part.value()), 1, 0);
 
   auto boot1_part =
       OpenBlockPartition(gpt_->devfs_root(), std::nullopt, Uuid(GUID_EMMC_BOOT2_VALUE), ZX_SEC(5));
   if (boot1_part.is_error()) {
     return boot1_part.take_error();
   }
-  auto boot1 = std::make_unique<FixedOffsetBlockPartitionClient>(std::move(boot1_part.value()), 1);
+  auto boot1 =
+      std::make_unique<FixedOffsetBlockPartitionClient>(std::move(boot1_part.value()), 1, 0);
 
   std::vector<std::unique_ptr<PartitionClient>> partitions;
   partitions.push_back(std::move(boot0));
   partitions.push_back(std::move(boot1));
 
   return zx::ok(std::make_unique<PartitionCopyClient>(std::move(partitions)));
+}
+
+zx::status<std::unique_ptr<PartitionClient>> NelsonPartitioner::GetBootloaderPartitionClient(
+    const PartitionSpec& spec) const {
+  std::vector<std::unique_ptr<PartitionClient>> partitions;
+
+  auto boot_status = GetEmmcBootPartitionClient();
+  if (boot_status.is_error()) {
+    ERROR("Failed to find emmc boot partition\n");
+    return boot_status.take_error();
+  }
+
+  ZX_ASSERT(spec.partition == Partition::kBootloaderA || spec.partition == Partition::kBootloaderB);
+  PartitionSpec tpl_partition_spec(spec.partition, "tpl");
+
+  auto tpl_status = FindPartition(tpl_partition_spec);
+  if (tpl_status.is_error()) {
+    ERROR("Failed to find tpl partition\n");
+    return tpl_status.take_error();
+  }
+
+  auto tpl_block_size_status = tpl_status.value()->GetBlockSize();
+  if (tpl_block_size_status.is_error()) {
+    ERROR("Failed to get block size for tpl\n");
+    return tpl_block_size_status.take_error();
+  }
+  size_t block_size = tpl_block_size_status.value();
+  auto tpl = std::make_unique<FixedOffsetBlockPartitionClient>(tpl_status.value()->GetChannel(), 0,
+                                                               kNelsonBL2Size / block_size);
+
+  return zx::ok(std::make_unique<NelsonBootloaderPartitionClient>(std::move(boot_status.value()),
+                                                                  std::move(tpl)));
 }
 
 zx::status<std::unique_ptr<PartitionClient>> NelsonPartitioner::FindPartition(
@@ -95,17 +134,21 @@ zx::status<std::unique_ptr<PartitionClient>> NelsonPartitioner::FindPartition(
     return zx::error(ZX_ERR_NOT_SUPPORTED);
   }
 
-  std::variant<std::string_view, Uuid> part_info;
+  if (spec.content_type == "bootloader") {
+    return GetBootloaderPartitionClient(spec);
+  }
 
+  std::variant<std::string_view, Uuid> part_info;
   switch (spec.partition) {
     case Partition::kBootloaderA: {
       if (spec.content_type == "bl2") {
-        return GetBL2PartitionClient();
+        return GetEmmcBootPartitionClient();
       } else if (spec.content_type == "tpl") {
         part_info = "tpl_a";
       } else {
         return zx::error(ZX_ERR_INVALID_ARGS);
       }
+      break;
     }
     case Partition::kBootloaderB: {
       if (spec.content_type == "tpl") {
@@ -113,6 +156,7 @@ zx::status<std::unique_ptr<PartitionClient>> NelsonPartitioner::FindPartition(
       } else {
         return zx::error(ZX_ERR_INVALID_ARGS);
       }
+      break;
     }
     case Partition::kZirconA:
       part_info = Uuid(GUID_ZIRCON_A_VALUE);
@@ -183,6 +227,13 @@ zx::status<> NelsonPartitioner::ValidatePayload(const PartitionSpec& spec,
     return zx::error(ZX_ERR_NOT_SUPPORTED);
   }
 
+  if (spec.content_type == "bootloader") {
+    if (data.size() <= kNelsonBL2Size) {
+      ERROR("Payload does not seem to contain tpl image\n");
+      return zx::error(ZX_ERR_INVALID_ARGS);
+    }
+  }
+
   return zx::ok();
 }
 
@@ -211,6 +262,115 @@ zx::status<std::unique_ptr<abr::Client>> NelsonAbrClientFactory::New(
   }
 
   return abr::AbrPartitionClient::Create(std::move(partition.value()));
+}
+
+zx::status<size_t> NelsonBootloaderPartitionClient::GetBlockSize() {
+  return emmc_boot_client_->GetBlockSize();
+}
+
+zx::status<size_t> NelsonBootloaderPartitionClient::GetPartitionSize() {
+  auto boot_partition_size_status = emmc_boot_client_->GetPartitionSize();
+  if (boot_partition_size_status.is_error()) {
+    return boot_partition_size_status.take_error();
+  }
+
+  auto tpl_user_partition_size_status = tpl_client_->GetPartitionSize();
+  if (tpl_user_partition_size_status.is_error()) {
+    return tpl_user_partition_size_status.take_error();
+  }
+  size_t partition_size = std::min(boot_partition_size_status.value(),
+                                   tpl_user_partition_size_status.value() + paver::kNelsonBL2Size);
+  return zx::ok(partition_size);
+}
+
+zx::status<> NelsonBootloaderPartitionClient::Trim() {
+  if (auto status = emmc_boot_client_->Trim(); status.is_error()) {
+    return status.take_error();
+  }
+  return tpl_client_->Trim();
+}
+
+zx::status<> NelsonBootloaderPartitionClient::Flush() {
+  if (auto status = emmc_boot_client_->Flush(); status.is_error()) {
+    return status.take_error();
+  }
+  return tpl_client_->Flush();
+}
+
+zx::channel NelsonBootloaderPartitionClient::GetChannel() {
+  ERROR("GetChannel() is not supported for NelsonBootloaderPartitionClient\n");
+  ZX_ASSERT(false);
+  return zx::channel();
+}
+
+fbl::unique_fd NelsonBootloaderPartitionClient::block_fd() {
+  ERROR("block_fd() is not supported for NelsonBootloaderPartitionClient\n");
+  ZX_ASSERT(false);
+  return fbl::unique_fd();
+}
+
+zx::status<> NelsonBootloaderPartitionClient::Read(const zx::vmo& vmo, size_t size) {
+  // Read from boot0/1 first
+  if (auto status = emmc_boot_client_->Read(vmo, size); status.is_error()) {
+    return status.take_error();
+  }
+  size_t tpl_read_size = size - std::min(kNelsonBL2Size, size);
+  if (!CheckIfTplSame(vmo, tpl_read_size)) {
+    LOG("User tpl differs from boot0/1 tpl. Conservatively refusing to read bootloader\n");
+    return zx::error(ZX_ERR_BAD_STATE);
+  }
+  return zx::ok();
+}
+
+zx::status<> NelsonBootloaderPartitionClient::Write(const zx::vmo& vmo, size_t vmo_size) {
+  // write to boot0/1 for the entire combined image.
+  if (auto status = emmc_boot_client_->Write(vmo, vmo_size); status.is_error()) {
+    return status.take_error();
+  }
+  // write to tpl for only the tpl part.
+  // tpl_client adds an interal offset equal to the bl2 size when accessing vmo.
+  // thus the size to write should be adjusted accordingly.
+  auto buffer_offset_size_status = tpl_client_->GetBufferOffsetInBytes();
+  if (buffer_offset_size_status.is_error()) {
+    return buffer_offset_size_status.take_error();
+  }
+  size_t write_size = vmo_size - std::min(vmo_size, buffer_offset_size_status.value());
+  return tpl_client_->Write(vmo, write_size);
+}
+
+bool NelsonBootloaderPartitionClient::CheckIfTplSame(const zx::vmo& vmo, size_t tpl_read_size) {
+  if (!tpl_read_size) {
+    return true;
+  }
+
+  // Use the size of |vmo| for creating read buffer because it has been adjusted to
+  // consider block alignment.
+  uint64_t vmo_size;
+  if (auto status = vmo.get_size(&vmo_size); status != ZX_OK) {
+    ERROR("Fail to get vmo_size for read buffer\n");
+    return false;
+  }
+
+  fzl::OwnedVmoMapper read_tpl;
+  if (auto status = read_tpl.CreateAndMap(vmo_size, "read-tpl"); status != ZX_OK) {
+    ERROR("Fail to create vmo for tpl read\n");
+    return false;
+  }
+
+  if (auto status = tpl_client_->Read(read_tpl.vmo(), tpl_read_size); status.is_error()) {
+    ERROR("Fail to read tpl\n");
+    return false;
+  }
+
+  // Compare the tpl part
+  fzl::VmoMapper mapper;
+  if (auto status = mapper.Map(vmo, kNelsonBL2Size, 0, ZX_VM_PERM_READ); status != ZX_OK) {
+    ERROR("Fail to create vmo mapper\n")
+    return false;
+  }
+
+  const uint8_t* tpl_start = static_cast<const uint8_t*>(read_tpl.start());
+  return !memcmp(mapper.start(), tpl_start + kNelsonBL2Size, tpl_read_size);
 }
 
 }  // namespace paver

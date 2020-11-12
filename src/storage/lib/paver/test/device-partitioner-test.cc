@@ -441,6 +441,41 @@ class GptDevicePartitionerTests : public zxtest::Test {
     ASSERT_FALSE(result->result.is_err());
   }
 
+  void ReadBlocks(const BlockDevice* blk_dev, size_t offset_in_blocks, size_t size_in_blocks,
+                  uint8_t* out) {
+    zx::channel gpt_chan;
+    ASSERT_OK(fdio_fd_clone(blk_dev->fd(), gpt_chan.reset_and_get_address()));
+    auto block_client = std::make_unique<paver::BlockPartitionClient>(std::move(gpt_chan));
+
+    zx::vmo vmo;
+    const size_t vmo_size = size_in_blocks * block_size_;
+    ASSERT_OK(zx::vmo::create(vmo_size, 0, &vmo));
+    ASSERT_OK(block_client->Read(vmo, vmo_size, offset_in_blocks, 0));
+    ASSERT_OK(vmo.read(out, 0, vmo_size));
+  }
+
+  void WriteBlocks(const BlockDevice* blk_dev, size_t offset_in_blocks, size_t size_in_blocks,
+                   uint8_t* buffer) {
+    zx::channel gpt_chan;
+    ASSERT_OK(fdio_fd_clone(blk_dev->fd(), gpt_chan.reset_and_get_address()));
+    auto block_client = std::make_unique<paver::BlockPartitionClient>(std::move(gpt_chan));
+
+    zx::vmo vmo;
+    const size_t vmo_size = size_in_blocks * block_size_;
+    ASSERT_OK(zx::vmo::create(vmo_size, 0, &vmo));
+    ASSERT_OK(vmo.write(buffer, 0, vmo_size));
+    ASSERT_OK(block_client->Write(vmo, vmo_size, offset_in_blocks, 0));
+  }
+
+  void ValidateBlockContent(const BlockDevice* blk_dev, size_t offset_in_blocks,
+                            size_t size_in_blocks, uint8_t value) {
+    std::vector<uint8_t> buffer(size_in_blocks * block_size_);
+    ASSERT_NO_FATAL_FAILURES(ReadBlocks(blk_dev, offset_in_blocks, size_in_blocks, buffer.data()));
+    for (size_t i = 0; i < buffer.size(); i++) {
+      ASSERT_EQ(value, buffer[i], "at index: %zu", i);
+    }
+  }
+
   IsolatedDevmgr devmgr_;
   const uint32_t block_size_;
 };
@@ -1512,7 +1547,16 @@ TEST_F(LuisPartitionerTests, SupportsPartition) {
 
 class NelsonPartitionerTests : public GptDevicePartitionerTests {
  protected:
-  NelsonPartitionerTests() : GptDevicePartitionerTests("nelson", 512) {}
+  static constexpr size_t kNelsonBlockSize = 512;
+  static constexpr size_t kTplSize = 1024;
+  static constexpr size_t kBootloaderSize = paver::kNelsonBL2Size + kTplSize;
+  static constexpr uint8_t kBL2ImageValue = 0x01;
+  static constexpr uint8_t kTplImageValue = 0x02;
+  static constexpr size_t kTplSlotAOffset = 0x3000;
+  static constexpr size_t kTplSlotBOffset = 0x4000;
+  static constexpr size_t kUserTplBlockCount = 0x1000;
+
+  NelsonPartitionerTests() : GptDevicePartitionerTests("nelson", kNelsonBlockSize) {}
 
   // Create a DevicePartition for a device.
   zx::status<std::unique_ptr<paver::DevicePartitioner>> CreatePartitioner(
@@ -1520,6 +1564,129 @@ class NelsonPartitionerTests : public GptDevicePartitionerTests {
     zx::channel svc_root = GetSvcRoot();
     return paver::NelsonPartitioner::Initialize(devmgr_.devfs_root().duplicate(),
                                                 std::move(svc_root), device);
+  }
+
+  void CreateBootloaderPayload(zx::vmo* out) {
+    fzl::VmoMapper mapper;
+    ASSERT_OK(
+        mapper.CreateAndMap(kBootloaderSize, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, nullptr, out));
+    uint8_t* start = static_cast<uint8_t*>(mapper.start());
+    memset(start, kBL2ImageValue, paver::kNelsonBL2Size);
+    memset(start + paver::kNelsonBL2Size, kTplImageValue, kTplSize);
+  }
+
+  void TestBootloaderWrite(const PartitionSpec& spec, uint8_t tpl_a_expected,
+                           uint8_t tpl_b_expected) {
+    auto pauser = paver::BlockWatcherPauser::Create(GetSvcRoot());
+    ASSERT_OK(pauser);
+
+    std::unique_ptr<BlockDevice> gpt_dev, boot0, boot1;
+    ASSERT_NO_FATAL_FAILURES(InitializeBlockDeviceForBootloaderTest(&gpt_dev, &boot0, &boot1));
+
+    fbl::unique_fd gpt_fd(dup(gpt_dev->fd()));
+
+    auto status = CreatePartitioner(std::move(gpt_fd));
+    ASSERT_OK(status);
+    std::unique_ptr<paver::DevicePartitioner>& partitioner = status.value();
+    {
+      auto partition_client = partitioner->FindPartition(spec);
+      ASSERT_OK(partition_client);
+
+      zx::vmo bootloader_payload;
+      ASSERT_NO_FATAL_FAILURES(CreateBootloaderPayload(&bootloader_payload));
+      ASSERT_OK(partition_client->Write(bootloader_payload, kBootloaderSize));
+    }
+    const size_t bl2_blocks = paver::kNelsonBL2Size / block_size_;
+    const size_t tpl_blocks = kTplSize / block_size_;
+
+    // info block stays unchanged. assume that storage data initialized as 0.
+    ASSERT_NO_FATAL_FAILURES(ValidateBlockContent(boot0.get(), 0, 1, 0));
+    ASSERT_NO_FATAL_FAILURES(ValidateBlockContent(boot0.get(), 1, bl2_blocks, kBL2ImageValue));
+    ASSERT_NO_FATAL_FAILURES(
+        ValidateBlockContent(boot0.get(), 1 + bl2_blocks, tpl_blocks, kTplImageValue));
+
+    // info block stays unchanged
+    ASSERT_NO_FATAL_FAILURES(ValidateBlockContent(boot1.get(), 0, 1, 0));
+    ASSERT_NO_FATAL_FAILURES(ValidateBlockContent(boot1.get(), 1, bl2_blocks, kBL2ImageValue));
+    ASSERT_NO_FATAL_FAILURES(
+        ValidateBlockContent(boot1.get(), 1 + bl2_blocks, tpl_blocks, kTplImageValue));
+
+    ASSERT_NO_FATAL_FAILURES(
+        ValidateBlockContent(gpt_dev.get(), kTplSlotAOffset, tpl_blocks, tpl_a_expected));
+    ASSERT_NO_FATAL_FAILURES(
+        ValidateBlockContent(gpt_dev.get(), kTplSlotBOffset, tpl_blocks, tpl_b_expected));
+  }
+
+  void TestBootloaderRead(const PartitionSpec& spec, uint8_t tpl_a_data, uint8_t tpl_b_data,
+                          zx::status<>* out_status, uint8_t* out) {
+    auto pauser = paver::BlockWatcherPauser::Create(GetSvcRoot());
+    ASSERT_OK(pauser);
+
+    std::unique_ptr<BlockDevice> gpt_dev, boot0, boot1;
+    ASSERT_NO_FATAL_FAILURES(InitializeBlockDeviceForBootloaderTest(&gpt_dev, &boot0, &boot1));
+
+    const size_t bl2_blocks = paver::kNelsonBL2Size / block_size_;
+    const size_t tpl_blocks = kTplSize / block_size_;
+
+    // Setup initial storage data
+    struct initial_storage_data {
+      const BlockDevice* blk_dev;
+      uint64_t start_block;
+      uint64_t size_in_blocks;
+      uint8_t data;
+    } initial_storage[] = {
+        {boot0.get(), 1, bl2_blocks, kBL2ImageValue},               // bl2 in boot0
+        {boot1.get(), 1, bl2_blocks, kBL2ImageValue},               // bl2 in boot1
+        {boot0.get(), 1 + bl2_blocks, tpl_blocks, kTplImageValue},  // tpl in boot0
+        {boot1.get(), 1 + bl2_blocks, tpl_blocks, kTplImageValue},  // tpl in boot1
+        {gpt_dev.get(), kTplSlotAOffset, tpl_blocks, tpl_a_data},   // tpl_a
+        {gpt_dev.get(), kTplSlotBOffset, tpl_blocks, tpl_b_data},   // tpl_b
+    };
+    for (auto& info : initial_storage) {
+      std::vector<uint8_t> data(info.size_in_blocks * block_size_, info.data);
+      ASSERT_NO_FATAL_FAILURES(
+          WriteBlocks(info.blk_dev, info.start_block, info.size_in_blocks, data.data()));
+    }
+
+    fbl::unique_fd gpt_fd(dup(gpt_dev->fd()));
+    auto status = CreatePartitioner(std::move(gpt_fd));
+    ASSERT_OK(status);
+    std::unique_ptr<paver::DevicePartitioner>& partitioner = status.value();
+
+    fzl::OwnedVmoMapper read_buf;
+    ASSERT_OK(read_buf.CreateAndMap(kBootloaderSize, "test-read-bootloader"));
+    auto partition_client = partitioner->FindPartition(spec);
+    ASSERT_OK(partition_client);
+    *out_status = partition_client->Read(read_buf.vmo(), kBootloaderSize);
+    memcpy(out, read_buf.start(), kBootloaderSize);
+  }
+
+  void ValidateBootloaderRead(const uint8_t* buf, uint8_t expected_bl2, uint8_t expected_tpl) {
+    for (size_t i = 0; i < paver::kNelsonBL2Size; i++) {
+      ASSERT_EQ(buf[i], expected_bl2, "bl2 mismatch at idx: %zu", i);
+    }
+
+    for (size_t i = 0; i < kTplSize; i++) {
+      ASSERT_EQ(buf[i + paver::kNelsonBL2Size], expected_tpl, "tpl mismatch at idx: %zu", i);
+    }
+  }
+
+  void InitializeBlockDeviceForBootloaderTest(std::unique_ptr<BlockDevice>* gpt_dev,
+                                              std::unique_ptr<BlockDevice>* boot0,
+                                              std::unique_ptr<BlockDevice>* boot1) {
+    auto pauser = paver::BlockWatcherPauser::Create(GetSvcRoot());
+    ASSERT_OK(pauser);
+
+    ASSERT_NO_FATAL_FAILURES(CreateDisk(64 * kMebibyte, gpt_dev));
+    static const std::vector<PartitionDescription> kNelsonBootloaderTestPartitions = {
+        {"tpl_a", kDummyType, kTplSlotAOffset, kUserTplBlockCount},
+        {"tpl_b", kDummyType, kTplSlotBOffset, kUserTplBlockCount},
+    };
+    ASSERT_NO_FATAL_FAILURES(
+        InitializeStartingGPTPartitions(gpt_dev->get(), kNelsonBootloaderTestPartitions));
+
+    ASSERT_NO_FATAL_FAILURES(CreateDisk(kUserTplBlockCount * kNelsonBlockSize, kBoot0Type, boot0));
+    ASSERT_NO_FATAL_FAILURES(CreateDisk(kUserTplBlockCount * kNelsonBlockSize, kBoot1Type, boot1));
   }
 };
 
@@ -1605,6 +1772,10 @@ TEST_F(NelsonPartitionerTests, FindPartition) {
 
   // Make sure we can find the important partitions.
   EXPECT_OK(partitioner->FindPartition(PartitionSpec(paver::Partition::kBootloaderA, "bl2")));
+  EXPECT_OK(
+      partitioner->FindPartition(PartitionSpec(paver::Partition::kBootloaderA, "bootloader")));
+  EXPECT_OK(
+      partitioner->FindPartition(PartitionSpec(paver::Partition::kBootloaderB, "bootloader")));
   EXPECT_OK(partitioner->FindPartition(PartitionSpec(paver::Partition::kBootloaderA, "tpl")));
   EXPECT_OK(partitioner->FindPartition(PartitionSpec(paver::Partition::kBootloaderB, "tpl")));
   EXPECT_OK(partitioner->FindPartition(PartitionSpec(paver::Partition::kZirconA)));
@@ -1642,6 +1813,10 @@ TEST_F(NelsonPartitionerTests, SupportsPartition) {
   std::unique_ptr<paver::DevicePartitioner>& partitioner = status.value();
 
   EXPECT_TRUE(partitioner->SupportsPartition(PartitionSpec(paver::Partition::kBootloaderA, "bl2")));
+  EXPECT_TRUE(
+      partitioner->SupportsPartition(PartitionSpec(paver::Partition::kBootloaderA, "bootloader")));
+  EXPECT_TRUE(
+      partitioner->SupportsPartition(PartitionSpec(paver::Partition::kBootloaderB, "bootloader")));
   EXPECT_TRUE(partitioner->SupportsPartition(PartitionSpec(paver::Partition::kBootloaderA, "tpl")));
   EXPECT_TRUE(partitioner->SupportsPartition(PartitionSpec(paver::Partition::kBootloaderB, "tpl")));
   EXPECT_TRUE(partitioner->SupportsPartition(PartitionSpec(paver::Partition::kZirconA)));
@@ -1659,6 +1834,81 @@ TEST_F(NelsonPartitionerTests, SupportsPartition) {
   // Unsupported content type.
   EXPECT_FALSE(
       partitioner->SupportsPartition(PartitionSpec(paver::Partition::kAbrMeta, "foo_type")));
+}
+
+TEST_F(NelsonPartitionerTests, ValidatePayload) {
+  std::unique_ptr<BlockDevice> gpt_dev;
+  ASSERT_NO_FATAL_FAILURES(CreateDisk(64 * kMebibyte, &gpt_dev));
+  fbl::unique_fd gpt_fd(dup(gpt_dev->fd()));
+
+  auto status = CreatePartitioner(std::move(gpt_fd));
+  ASSERT_OK(status);
+  std::unique_ptr<paver::DevicePartitioner>& partitioner = status.value();
+
+  // Test invalid bootloader payload size.
+  std::vector<uint8_t> payload_bl2_size(paver::kNelsonBL2Size);
+  ASSERT_NOT_OK(
+      partitioner->ValidatePayload(PartitionSpec(paver::Partition::kBootloaderA, "bootloader"),
+                                   fbl::Span<uint8_t>(payload_bl2_size)));
+  ASSERT_NOT_OK(
+      partitioner->ValidatePayload(PartitionSpec(paver::Partition::kBootloaderB, "bootloader"),
+                                   fbl::Span<uint8_t>(payload_bl2_size)));
+
+  std::vector<uint8_t> payload_bl2_tpl_size(2 * 1024 * 1024);
+  ASSERT_OK(
+      partitioner->ValidatePayload(PartitionSpec(paver::Partition::kBootloaderA, "bootloader"),
+                                   fbl::Span<uint8_t>(payload_bl2_tpl_size)));
+  ASSERT_OK(
+      partitioner->ValidatePayload(PartitionSpec(paver::Partition::kBootloaderB, "bootloader"),
+                                   fbl::Span<uint8_t>(payload_bl2_tpl_size)));
+}
+
+TEST_F(NelsonPartitionerTests, WriteBootloaderA) {
+  TestBootloaderWrite(PartitionSpec(paver::Partition::kBootloaderA, "bootloader"), kTplImageValue,
+                      0x00);
+}
+
+TEST_F(NelsonPartitionerTests, WriteBootloaderB) {
+  TestBootloaderWrite(PartitionSpec(paver::Partition::kBootloaderB, "bootloader"), 0x00,
+                      kTplImageValue);
+}
+
+TEST_F(NelsonPartitionerTests, ReadBootloaderAFail) {
+  auto spec = PartitionSpec(paver::Partition::kBootloaderA, "bootloader");
+  std::vector<uint8_t> read_buf(kBootloaderSize);
+  zx::status<> status = zx::ok();
+  ASSERT_NO_FATAL_FAILURES(
+      TestBootloaderRead(spec, 0x03, kTplImageValue, &status, read_buf.data()));
+  ASSERT_NOT_OK(status);
+}
+
+TEST_F(NelsonPartitionerTests, ReadBootloaderBFail) {
+  auto spec = PartitionSpec(paver::Partition::kBootloaderB, "bootloader");
+  std::vector<uint8_t> read_buf(kBootloaderSize);
+  zx::status<> status = zx::ok();
+  ASSERT_NO_FATAL_FAILURES(
+      TestBootloaderRead(spec, kTplImageValue, 0x03, &status, read_buf.data()));
+  ASSERT_NOT_OK(status);
+}
+
+TEST_F(NelsonPartitionerTests, ReadBootloaderASucceed) {
+  auto spec = PartitionSpec(paver::Partition::kBootloaderA, "bootloader");
+  std::vector<uint8_t> read_buf(kBootloaderSize);
+  zx::status<> status = zx::ok();
+  ASSERT_NO_FATAL_FAILURES(
+      TestBootloaderRead(spec, kTplImageValue, 0x03, &status, read_buf.data()));
+  ASSERT_OK(status);
+  ASSERT_NO_FATAL_FAILURES(ValidateBootloaderRead(read_buf.data(), kBL2ImageValue, kTplImageValue));
+}
+
+TEST_F(NelsonPartitionerTests, ReadBootloaderBSucceed) {
+  std::vector<uint8_t> read_buf(kBootloaderSize);
+  auto spec = PartitionSpec(paver::Partition::kBootloaderB, "bootloader");
+  zx::status<> status = zx::ok();
+  ASSERT_NO_FATAL_FAILURES(
+      TestBootloaderRead(spec, 0x03, kTplImageValue, &status, read_buf.data()));
+  ASSERT_OK(status);
+  ASSERT_NO_FATAL_FAILURES(ValidateBootloaderRead(read_buf.data(), kBL2ImageValue, kTplImageValue));
 }
 
 TEST(AstroPartitionerTests, IsFvmWithinFtl) {

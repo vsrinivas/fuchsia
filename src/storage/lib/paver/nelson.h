@@ -11,6 +11,8 @@
 
 namespace paver {
 
+constexpr size_t kNelsonBL2Size = 64 * 1024;
+
 class NelsonPartitioner : public DevicePartitioner {
  public:
   static zx::status<std::unique_ptr<DevicePartitioner>> Initialize(
@@ -42,7 +44,10 @@ class NelsonPartitioner : public DevicePartitioner {
  private:
   explicit NelsonPartitioner(std::unique_ptr<GptDevicePartitioner> gpt) : gpt_(std::move(gpt)) {}
 
-  zx::status<std::unique_ptr<PartitionClient>> GetBL2PartitionClient() const;
+  zx::status<std::unique_ptr<PartitionClient>> GetEmmcBootPartitionClient() const;
+
+  zx::status<std::unique_ptr<PartitionClient>> GetBootloaderPartitionClient(
+      const PartitionSpec& spec) const;
 
   std::unique_ptr<GptDevicePartitioner> gpt_;
 };
@@ -62,6 +67,34 @@ class NelsonAbrClientFactory : public abr::ClientFactory {
                                                std::shared_ptr<paver::Context> context) final;
 };
 
+class NelsonBootloaderPartitionClient final : public PartitionClient {
+ public:
+  explicit NelsonBootloaderPartitionClient(
+      std::unique_ptr<PartitionClient> emmc_boot_client,
+      std::unique_ptr<FixedOffsetBlockPartitionClient> tpl_client)
+      : emmc_boot_client_(std::move(emmc_boot_client)), tpl_client_(std::move(tpl_client)) {}
+
+  zx::status<size_t> GetBlockSize() final;
+  zx::status<size_t> GetPartitionSize() final;
+  zx::status<> Read(const zx::vmo& vmo, size_t size) final;
+  zx::status<> Write(const zx::vmo& vmo, size_t vmo_size) final;
+  zx::status<> Trim() final;
+  zx::status<> Flush() final;
+  zx::channel GetChannel() final;
+  fbl::unique_fd block_fd() final;
+
+  // No copy, no move.
+  NelsonBootloaderPartitionClient(const NelsonBootloaderPartitionClient&) = delete;
+  NelsonBootloaderPartitionClient& operator=(const NelsonBootloaderPartitionClient&) = delete;
+  NelsonBootloaderPartitionClient(NelsonBootloaderPartitionClient&&) = delete;
+  NelsonBootloaderPartitionClient& operator=(NelsonBootloaderPartitionClient&&) = delete;
+
+ private:
+  bool CheckIfTplSame(const zx::vmo& vmo, size_t size);
+
+  std::unique_ptr<PartitionClient> emmc_boot_client_;
+  std::unique_ptr<FixedOffsetBlockPartitionClient> tpl_client_;
+};
 }  // namespace paver
 
 #endif  // SRC_STORAGE_LIB_PAVER_NELSON_H_
