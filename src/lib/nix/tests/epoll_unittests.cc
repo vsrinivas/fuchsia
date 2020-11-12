@@ -242,3 +242,86 @@ TEST(EpollTest, EpollEventModWrite) {
   close(fds[1]);
   close(epoll_fd);
 }
+
+TEST(EpollTest, EpollEdgeTriggered) {
+  int epoll_fd = epoll_create(1);
+  ASSERT_NE(-1, epoll_fd);
+
+  int fds[2];
+  ASSERT_NE(-1, pipe(fds));
+
+  const uint64_t expected = 0x123456789abcdef0;
+
+  epoll_event ev;
+  ev.events = EPOLLIN | EPOLLET;
+  ev.data.u64 = expected;
+  ASSERT_NE(-1, epoll_ctl(epoll_fd, EPOLL_CTL_ADD, fds[0], &ev));
+
+  ASSERT_EQ(1, write(fds[1], "aa", 1));
+
+  epoll_event events[2];
+  ASSERT_EQ(1, epoll_wait(epoll_fd, events, 2, 1));
+  uint64_t observed = events[0].data.u64;
+  ASSERT_EQ(expected, observed);
+
+  char c;
+  ASSERT_EQ(1, read(fds[0], &c, sizeof(c)));
+
+  // no new writes yet
+  ASSERT_EQ(0, epoll_wait(epoll_fd, events, 2, 1));
+
+  ASSERT_EQ(1, write(fds[1], "a", 1));
+
+  ASSERT_EQ(1, epoll_wait(epoll_fd, events, 2, 1));
+
+  // event has been consumed
+  ASSERT_EQ(0, epoll_wait(epoll_fd, events, 2, 1));
+
+  close(fds[0]);
+  close(fds[1]);
+  close(epoll_fd);
+}
+
+// This identical to |EpollEdgeTriggered| but we make
+// The fd ready prior to calling epoll_ctl.
+TEST(EpollTest, EpollEdgeFdReady) {
+  int epoll_fd = epoll_create(1);
+  ASSERT_NE(-1, epoll_fd);
+
+  int fds[2];
+  ASSERT_NE(-1, pipe(fds));
+
+  const uint64_t expected = 0x123456789abcdef0;
+
+  epoll_event ev;
+  ev.events = EPOLLIN | EPOLLET;
+  ev.data.u64 = expected;
+
+  // This makes fds[0] ready before calling epoll_ctl.
+  ASSERT_EQ(1, write(fds[1], "aa", 1));
+
+  // This should queue a packet immediately.
+  ASSERT_NE(-1, epoll_ctl(epoll_fd, EPOLL_CTL_ADD, fds[0], &ev));
+
+  epoll_event events[2];
+  ASSERT_EQ(1, epoll_wait(epoll_fd, events, 2, 1));
+  uint64_t observed = events[0].data.u64;
+  ASSERT_EQ(expected, observed);
+
+  char c;
+  ASSERT_EQ(1, read(fds[0], &c, sizeof(c)));
+
+  // no new writes yet
+  ASSERT_EQ(0, epoll_wait(epoll_fd, events, 2, 1));
+
+  ASSERT_EQ(1, write(fds[1], "a", 1));
+
+  ASSERT_EQ(1, epoll_wait(epoll_fd, events, 2, 1));
+
+  // event has been consumed
+  ASSERT_EQ(0, epoll_wait(epoll_fd, events, 2, 1));
+
+  close(fds[0]);
+  close(fds[1]);
+  close(epoll_fd);
+}

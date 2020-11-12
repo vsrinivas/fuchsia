@@ -37,14 +37,17 @@ static_assert(EPOLLHUP == POLLHUP, "");
 static_assert(EPOLLRDHUP == POLLRDHUP, "");
 
 struct nix_epoll_fd {
-  nix_epoll_fd(epoll_event* ev) {
+  nix_epoll_fd(uint32_t events, epoll_data data, bool edge_triggered) {
     handle = ZX_HANDLE_INVALID;
     signals = ZXIO_SIGNAL_NONE;
-    event = *ev;
+    event.events = events;
+    event.data = data;
+    wait_options = (edge_triggered ? ZX_WAIT_ASYNC_EDGE : 0);
   }
   epoll_event event;
-  zx_handle_t handle; // a borrowed handle from fdio_unsafe_wait_begin
+  zx_handle_t handle;  // a borrowed handle from fdio_unsafe_wait_begin
   zx_signals_t signals;
+  uint32_t wait_options;
 };
 
 struct nix_epoll {
@@ -144,7 +147,8 @@ int epoll_ctl(int epfd, int op, int fd, struct epoll_event* event) {
   // These are the only flags supported in fdio_zxio_wait_begin,
   // fdio_zxio_remote_wait_begin and poll_events_to_zxio_signals
   const uint32_t allowed_events = EPOLLIN | EPOLLPRI | EPOLLOUT | EPOLLERR | EPOLLHUP | EPOLLRDHUP;
-  if (event->events & ~allowed_events) {
+  bool edge_triggered = (event->events & EPOLLET) != 0;
+  if (event->events & ~(allowed_events | EPOLLET)) {
     return ERRNO(ENOTSUP);
   }
 
@@ -177,7 +181,8 @@ int epoll_ctl(int epfd, int op, int fd, struct epoll_event* event) {
 
   if (op == EPOLL_CTL_MOD || op == EPOLL_CTL_ADD) {
     uint64_t key = static_cast<uint64_t>(fd);
-    auto res = epoll->fd_to_event->emplace(key, nix_epoll_fd(event));
+    auto res = epoll->fd_to_event->emplace(
+        key, nix_epoll_fd(event->events & allowed_events, event->data, edge_triggered));
     if (!res.second) {
       mtx_unlock(&epoll->lock);
       return ERRNO(EEXIST);
@@ -232,7 +237,8 @@ int epoll_wait(int epfd, struct epoll_event* events, int maxevents, int timeout)
         fdio_unsafe_wait_begin(pollio, evinfo->second.event.events, &evinfo->second.handle,
                                &evinfo->second.signals);
         zx_status_t status =
-            zx_object_wait_async(evinfo->second.handle, epoll->port, fd, evinfo->second.signals, 0);
+            zx_object_wait_async(evinfo->second.handle, epoll->port, fd, evinfo->second.signals,
+                                 evinfo->second.wait_options);
         fdio_unsafe_release(pollio);
         if (status != ZX_OK) {
           wait_err = true;
@@ -264,6 +270,7 @@ int epoll_wait(int epfd, struct epoll_event* events, int maxevents, int timeout)
   mtx_lock(&epoll->lock);
 
   int ready_count = 0;
+  wait_err = false;
   if (status == ZX_OK || status == ZX_ERR_TIMED_OUT) {
     for (auto pkt : packets) {
       // The packet type produced by zx_object_wait_async.
@@ -282,7 +289,21 @@ int epoll_wait(int epfd, struct epoll_event* events, int maxevents, int timeout)
           if (evinfo != epoll->fd_to_event->end()) {
             events[ready_count].events = evs;
             events[ready_count].data = evinfo->second.event.data;
-            epoll->inactive_fds->push_back(pkt.key);
+            // If this is not edge-triggered, wait until the next
+            // epoll_wait to call zx_object_wait_async. If it is
+            // edge-triggered, start waiting immediately so that when
+            // the I/O returns EWOULDBLOCK, the fd is already being
+            // waited on.
+            if ((evinfo->second.wait_options & ZX_WAIT_ASYNC_EDGE) == 0) {
+              epoll->inactive_fds->push_back(pkt.key);
+            } else {
+              zx_status_t wait_status =
+                  zx_object_wait_async(evinfo->second.handle, epoll->port, fd,
+                                       evinfo->second.signals, evinfo->second.wait_options);
+              if (wait_status != ZX_OK) {
+                wait_err = true;
+              }
+            }
             ready_count++;
           }
         }
@@ -292,7 +313,7 @@ int epoll_wait(int epfd, struct epoll_event* events, int maxevents, int timeout)
 
   mtx_unlock(&epoll->lock);
 
-  if (status != ZX_OK && status != ZX_ERR_TIMED_OUT) {
+  if (wait_err || (status != ZX_OK && status != ZX_ERR_TIMED_OUT)) {
     return ERRNO(EINVAL);
   }
 
