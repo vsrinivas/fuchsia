@@ -108,10 +108,15 @@ class SystemMetricsDaemon {
   zx_status_t ReinitializeDiagnosticsIfPeerClosed(zx_status_t zx_status);
   zx_status_t ReinitializeGranularErrorStatsIfPeerClosed(zx_status_t zx_status);
 
-  // Calls LogUpPingAndLifeTimeEvents,
+  // Calls LogFuchsiaUpPing,
   // and then uses the |dispatcher| passed to the constructor to
   // schedule the next round.
-  void RepeatedlyLogUpPingAndLifeTimeEvents();
+  void RepeatedlyLogUpPing();
+
+  // Calls LogFuchsiaLifetimeEvents,
+  // and then uses the |dispatcher| passed to the constructor to
+  // schedule the next round.
+  void LogLifetimeEvents();
 
   // Calls LogFuchsiaUptime and then uses the |dispatcher| passed to the
   // constructor to schedule the next round.
@@ -148,11 +153,6 @@ class SystemMetricsDaemon {
   // Returns the amount of time since SystemMetricsDaemon started.
   std::chrono::seconds GetUpTime();
 
-  // Calls LogFuchsiaUpPing and LogFuchsiaLifetimeEvents.
-  //
-  // Returns the amount of time before this method needs to be invoked again.
-  std::chrono::seconds LogUpPingAndLifeTimeEvents();
-
   // Logs one or more UpPing events depending on how long the device has been
   // up.
   //
@@ -169,12 +169,10 @@ class SystemMetricsDaemon {
   // Returns the amount of time before this method needs to be invoked again.
   std::chrono::seconds LogFuchsiaUpPing(std::chrono::seconds uptime);
 
-  // Logs one FuchsiaLifetimeEvent event of type "Boot" the first time it
-  // is invoked and does nothing on subsequent invocations.
+  // Logs one FuchsiaLifetimeEvent event of type "Boot".
   //
-  // Returns the amount of time before this method needs to be invoked again.
-  // Currently returns std::chrono::seconds::max().
-  std::chrono::seconds LogFuchsiaLifetimeEvents();
+  // Returns the logging status.
+  bool LogFuchsiaLifetimeEvents();
 
   // Once per hour, rounds the current uptime down to the nearest number of
   // hours and logs an event for the fuchsia_uptime metric.
@@ -215,7 +213,6 @@ class SystemMetricsDaemon {
   // Callback function to be called by ActivityListener to update current_state_
   void UpdateState(fuchsia::ui::activity::State state) { current_state_ = state; }
 
-  bool boot_reported_ = false;
   async_dispatcher_t* const dispatcher_;
   sys::ComponentContext* context_;
   MetricSpecs granular_error_stats_specs_;

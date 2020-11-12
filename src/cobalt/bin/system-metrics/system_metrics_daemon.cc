@@ -152,20 +152,29 @@ SystemMetricsDaemon::SystemMetricsDaemon(
 void SystemMetricsDaemon::StartLogging() {
   TRACE_DURATION("system_metrics", "SystemMetricsDaemon::StartLogging");
   // We keep gathering metrics until this process is terminated.
-  RepeatedlyLogUpPingAndLifeTimeEvents();
+  RepeatedlyLogUpPing();
   RepeatedlyLogUptime();
   RepeatedlyLogCpuUsage();
   RepeatedlyLogLogStats();
   RepeatedlyLogArchivistStats();
   LogTemperatureIfSupported(1 /*remaining_attempts*/);
+  LogLifetimeEvents();
 }
 
-void SystemMetricsDaemon::RepeatedlyLogUpPingAndLifeTimeEvents() {
-  std::chrono::seconds seconds_to_sleep = LogUpPingAndLifeTimeEvents();
+void SystemMetricsDaemon::RepeatedlyLogUpPing() {
+  std::chrono::seconds uptime = GetUpTime();
+  std::chrono::seconds seconds_to_sleep = LogFuchsiaUpPing(uptime);
   async::PostDelayedTask(
-      dispatcher_, [this]() { RepeatedlyLogUpPingAndLifeTimeEvents(); },
-      zx::sec(seconds_to_sleep.count() + 5));
+      dispatcher_, [this]() { RepeatedlyLogUpPing(); }, zx::sec(seconds_to_sleep.count() + 5));
   return;
+}
+
+void SystemMetricsDaemon::LogLifetimeEvents() {
+  if (!LogFuchsiaLifetimeEvents()) {
+    // Pause for 5 minutes and try again.
+    async::PostDelayedTask(
+        dispatcher_, [this]() { LogLifetimeEvents(); }, zx::sec(300));
+  }
 }
 
 void SystemMetricsDaemon::RepeatedlyLogUptime() {
@@ -256,11 +265,6 @@ std::chrono::seconds SystemMetricsDaemon::GetUpTime() {
   // starts happening we should look into how to capture actual boot time.
   auto now = clock_->Now();
   return std::chrono::duration_cast<std::chrono::seconds>(now - start_time_);
-}
-
-std::chrono::seconds SystemMetricsDaemon::LogUpPingAndLifeTimeEvents() {
-  std::chrono::seconds uptime = GetUpTime();
-  return std::min(LogFuchsiaUpPing(uptime), LogFuchsiaLifetimeEvents());
 }
 
 std::chrono::seconds SystemMetricsDaemon::LogFuchsiaUpPing(std::chrono::seconds uptime) {
@@ -422,27 +426,27 @@ std::chrono::seconds SystemMetricsDaemon::LogFuchsiaUptime() {
   return SecondsBeforeNextHour(uptime);
 }
 
-std::chrono::seconds SystemMetricsDaemon::LogFuchsiaLifetimeEvents() {
+bool SystemMetricsDaemon::LogFuchsiaLifetimeEvents() {
   TRACE_DURATION("system_metrics", "SystemMetricsDaemon::LogFuchsiaLifetimeEvents");
   if (!logger_) {
     FX_LOGS(ERROR) << "No logger present. Reconnecting...";
     InitializeLogger();
-    // Something went wrong. Pause for 5 minutes.
-    return std::chrono::minutes(5);
+    // Something went wrong. Pause and try again.
+    return false;
   }
 
   fuchsia::cobalt::Status status = fuchsia::cobalt::Status::INTERNAL_ERROR;
-  if (!boot_reported_) {
-    ReinitializeIfPeerClosed(
-        logger_->LogEvent(fuchsia_system_metrics::kFuchsiaLifetimeEventsMetricId,
-                          FuchsiaLifetimeEventsMetricDimensionEvents::Boot, &status));
-    if (status != fuchsia::cobalt::Status::OK) {
-      FX_LOGS(ERROR) << "LogEvent() returned status=" << StatusToString(status);
-    } else {
-      boot_reported_ = true;
+  ReinitializeIfPeerClosed(logger_->LogEvent(fuchsia_system_metrics::kFuchsiaLifetimeEventsMetricId,
+                                             FuchsiaLifetimeEventsMetricDimensionEvents::Boot,
+                                             &status));
+  if (status != fuchsia::cobalt::Status::OK) {
+    FX_LOGS(ERROR) << "LogEvent() returned status=" << StatusToString(status);
+    if (status == fuchsia::cobalt::Status::BUFFER_FULL) {
+      // Temporary error. Pause and try again.
+      return false;
     }
   }
-  return std::chrono::seconds::max();
+  return true;
 }
 
 std::chrono::seconds SystemMetricsDaemon::LogCpuUsage() {
