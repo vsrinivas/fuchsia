@@ -24,7 +24,7 @@ def main():
         Log("error: could not parse input")
         return 1
     Log("writing to stdout...")
-    json.dumps(jsonish, indent=4, sys.stdout)
+    json.dump(jsonish, sys.stdout, indent=4)
 
 
 # Prints to stderr, reserving stdout for the final JSON output.

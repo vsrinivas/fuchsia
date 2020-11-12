@@ -121,7 +121,8 @@ TEST(CpuidTests, Core2_6300) {
   auto processor = arch::ProcessorName(cpuid);
   EXPECT_TRUE(processor.name() == "Intel(R) Core(TM)2 CPU          6300  @ 1.86GHz"sv);
 
-  EXPECT_TRUE(arch::HypervisorName(cpuid).name().empty());
+  auto hypervisor = arch::HypervisorName(cpuid);
+  EXPECT_TRUE(hypervisor.name().empty());
 
   {
     auto features = cpuid.Read<arch::CpuidFeatureFlagsC>();
@@ -164,7 +165,8 @@ TEST(CpuidTests, Nehalem_Xeon_E5520) {
   auto processor = arch::ProcessorName(cpuid);
   EXPECT_TRUE(processor.name() == "Intel(R) Xeon(R) CPU           E5520  @ 2.27GHz"sv);
 
-  EXPECT_TRUE(arch::HypervisorName(cpuid).name().empty());
+  auto hypervisor = arch::HypervisorName(cpuid);
+  EXPECT_TRUE(hypervisor.name().empty());
 
   {
     auto features = cpuid.Read<arch::CpuidFeatureFlagsC>();
@@ -207,7 +209,8 @@ TEST(CpuidTests, SandyBridge_i7_2600K) {
   auto processor = arch::ProcessorName(cpuid);
   EXPECT_TRUE(processor.name() == "       Intel(R) Core(TM) i7-2600K CPU @ 3.40GHz"sv);
 
-  EXPECT_TRUE(arch::HypervisorName(cpuid).name().empty());
+  auto hypervisor = arch::HypervisorName(cpuid);
+  EXPECT_TRUE(hypervisor.name().empty());
 
   {
     auto features = cpuid.Read<arch::CpuidFeatureFlagsC>();
@@ -250,7 +253,8 @@ TEST(CpuidTests, IvyBridge_i3_3240) {
   auto processor = arch::ProcessorName(cpuid);
   EXPECT_TRUE(processor.name() == "        Intel(R) Core(TM) i3-3240 CPU @ 3.40GHz"sv);
 
-  EXPECT_TRUE(arch::HypervisorName(cpuid).name().empty());
+  auto hypervisor = arch::HypervisorName(cpuid);
+  EXPECT_TRUE(hypervisor.name().empty());
 
   {
     auto features = cpuid.Read<arch::CpuidFeatureFlagsC>();
@@ -295,7 +299,8 @@ TEST(CpuidTests, Haswell_Xeon_E5_2690v3) {
   auto processor = arch::ProcessorName(cpuid);
   EXPECT_TRUE(processor.name() == "Intel(R) Xeon(R) CPU E5-2690 v3 @ 2.60GHz"sv);
 
-  EXPECT_TRUE(arch::HypervisorName(cpuid).name().empty());
+  auto hypervisor = arch::HypervisorName(cpuid);
+  EXPECT_TRUE(hypervisor.name().empty());
 
   {
     auto features = cpuid.Read<arch::CpuidFeatureFlagsC>();
@@ -340,7 +345,8 @@ TEST(CpuidTests, Skylake_i3_6100) {
   auto processor = arch::ProcessorName(cpuid);
   EXPECT_TRUE(processor.name() == "Intel(R) Core(TM) i3-6100U CPU @ 2.30GHz"sv);
 
-  EXPECT_TRUE(arch::HypervisorName(cpuid).name().empty());
+  auto hypervisor = arch::HypervisorName(cpuid);
+  EXPECT_TRUE(hypervisor.name().empty());
 
   {
     auto features = cpuid.Read<arch::CpuidFeatureFlagsC>();
@@ -383,7 +389,8 @@ TEST(CpuidTests, AtomD510) {
   auto processor = arch::ProcessorName(cpuid);
   EXPECT_TRUE(processor.name() == "         Intel(R) Atom(TM) CPU D510   @ 1.66GHz"sv);
 
-  EXPECT_TRUE(arch::HypervisorName(cpuid).name().empty());
+  auto hypervisor = arch::HypervisorName(cpuid);
+  EXPECT_TRUE(hypervisor.name().empty());
 
   {
     auto features = cpuid.Read<arch::CpuidFeatureFlagsC>();
@@ -426,7 +433,8 @@ TEST(CpuidTests, Ryzen2700X) {
   auto processor = arch::ProcessorName(cpuid);
   EXPECT_TRUE(processor.name() == "AMD Ryzen 7 2700X Eight-Core Processor         "sv);
 
-  EXPECT_TRUE(arch::HypervisorName(cpuid).name().empty());
+  auto hypervisor = arch::HypervisorName(cpuid);
+  EXPECT_TRUE(hypervisor.name().empty());
 
   {
     auto features = cpuid.Read<arch::CpuidFeatureFlagsC>();
@@ -469,7 +477,8 @@ TEST(CpuidTests, Ryzen3950X) {
   auto processor = arch::ProcessorName(cpuid);
   EXPECT_TRUE(processor.name() == "AMD Ryzen 9 3950X 16-Core Processor            "sv);
 
-  EXPECT_TRUE(arch::HypervisorName(cpuid).name().empty());
+  auto hypervisor = arch::HypervisorName(cpuid);
+  EXPECT_TRUE(hypervisor.name().empty());
 
   {
     auto features = cpuid.Read<arch::CpuidFeatureFlagsC>();
@@ -497,6 +506,194 @@ TEST(CpuidTests, Ryzen3950X) {
   }
 }
 
+TEST(CpuidTests, Ryzen3950X_VirtualBox_Hyperv) {
+  arch::testing::FakeCpuidIo cpuid;
+  ASSERT_NO_FATAL_FAILURES(PopulateFromFile("ryzen-3950x-virtualbox-hyperv.json", &cpuid));
+
+  EXPECT_EQ(arch::Vendor::kAmd, arch::GetVendor(cpuid));
+  EXPECT_EQ(arch::Microarchitecture::kAmdFamily0x17, arch::GetMicroarchitecture(cpuid));
+
+  auto info = cpuid.Read<arch::CpuidVersionInfo>();
+  EXPECT_EQ(0x17, info.family());
+  EXPECT_EQ(0x71, info.model());
+  EXPECT_EQ(0x00, info.stepping());
+
+  auto processor = arch::ProcessorName(cpuid);
+  EXPECT_TRUE(processor.name() == "AMD Ryzen 9 3950X 16-Core Processor            "sv);
+
+  auto hypervisor = arch::HypervisorName(cpuid);
+  EXPECT_TRUE(hypervisor.name() == "VBoxVBoxVBox"sv);
+
+  EXPECT_EQ(0x4000'0006, cpuid.Read<arch::CpuidMaximumHypervisorLeaf>().reg_value());
+
+  {
+    auto features = cpuid.Read<arch::CpuidFeatureFlagsC>();
+
+    // Present:
+    EXPECT_TRUE(features.hypervisor());
+
+    // Not present:
+    EXPECT_FALSE(features.rdrand());
+    EXPECT_FALSE(features.avx());
+    EXPECT_FALSE(features.osxsave());
+    EXPECT_FALSE(features.xsave());
+    EXPECT_FALSE(features.cmpxchg16b());
+    EXPECT_FALSE(features.x2apic());
+    EXPECT_FALSE(features.pdcm());
+  }
+
+  {
+    auto features = cpuid.Read<arch::CpuidExtendedFeatureFlagsB>();
+
+    // Present:
+    EXPECT_TRUE(features.fsgsbase());
+
+    // Not present:
+    EXPECT_FALSE(features.smap());
+    EXPECT_FALSE(features.rdseed());
+  }
+}
+
+TEST(CpuidTests, Ryzen3950X_VirtualBox_Kvm) {
+  arch::testing::FakeCpuidIo cpuid;
+  ASSERT_NO_FATAL_FAILURES(PopulateFromFile("ryzen-3950x-virtualbox-kvm.json", &cpuid));
+
+  EXPECT_EQ(arch::Vendor::kAmd, arch::GetVendor(cpuid));
+  EXPECT_EQ(arch::Microarchitecture::kAmdFamily0x17, arch::GetMicroarchitecture(cpuid));
+
+  auto info = cpuid.Read<arch::CpuidVersionInfo>();
+  EXPECT_EQ(0x17, info.family());
+  EXPECT_EQ(0x71, info.model());
+  EXPECT_EQ(0x00, info.stepping());
+
+  auto processor = arch::ProcessorName(cpuid);
+  EXPECT_TRUE(processor.name() == "AMD Ryzen 9 3950X 16-Core Processor            "sv);
+
+  auto hypervisor = arch::HypervisorName(cpuid);
+  EXPECT_TRUE(hypervisor.name() == "KVMKVMKVM"sv);
+
+  EXPECT_EQ(0x4000'0001, cpuid.Read<arch::CpuidMaximumHypervisorLeaf>().reg_value());
+
+  {
+    auto features = cpuid.Read<arch::CpuidFeatureFlagsC>();
+
+    // Present:
+    EXPECT_TRUE(features.hypervisor());
+
+    // Not present:
+    EXPECT_FALSE(features.rdrand());
+    EXPECT_FALSE(features.avx());
+    EXPECT_FALSE(features.osxsave());
+    EXPECT_FALSE(features.xsave());
+    EXPECT_FALSE(features.cmpxchg16b());
+    EXPECT_FALSE(features.x2apic());
+    EXPECT_FALSE(features.pdcm());
+  }
+
+  {
+    auto features = cpuid.Read<arch::CpuidExtendedFeatureFlagsB>();
+
+    // Present:
+    EXPECT_TRUE(features.fsgsbase());
+
+    // Not present:
+    EXPECT_FALSE(features.smap());
+    EXPECT_FALSE(features.rdseed());
+  }
+}
+
+TEST(CpuidTests, Ryzen3950X_VMware) {
+  arch::testing::FakeCpuidIo cpuid;
+  ASSERT_NO_FATAL_FAILURES(PopulateFromFile("ryzen-3950x-vmware.json", &cpuid));
+
+  EXPECT_EQ(arch::Vendor::kAmd, arch::GetVendor(cpuid));
+  EXPECT_EQ(arch::Microarchitecture::kAmdFamily0x17, arch::GetMicroarchitecture(cpuid));
+
+  auto info = cpuid.Read<arch::CpuidVersionInfo>();
+  EXPECT_EQ(0x17, info.family());
+  EXPECT_EQ(0x71, info.model());
+  EXPECT_EQ(0x00, info.stepping());
+
+  auto processor = arch::ProcessorName(cpuid);
+  EXPECT_TRUE(processor.name() == "AMD Ryzen 9 3950X 16-Core Processor            "sv);
+
+  auto hypervisor = arch::HypervisorName(cpuid);
+  EXPECT_TRUE(hypervisor.name() == "VMwareVMware"sv);
+
+  EXPECT_EQ(0x4000'0010, cpuid.Read<arch::CpuidMaximumHypervisorLeaf>().reg_value());
+
+  {
+    auto features = cpuid.Read<arch::CpuidFeatureFlagsC>();
+
+    // Present:
+    EXPECT_TRUE(features.hypervisor());
+    EXPECT_TRUE(features.rdrand());
+    EXPECT_TRUE(features.avx());
+    EXPECT_TRUE(features.osxsave());
+    EXPECT_TRUE(features.xsave());
+    EXPECT_TRUE(features.cmpxchg16b());
+    EXPECT_TRUE(features.x2apic());
+
+    // Not present:
+    EXPECT_FALSE(features.pdcm());
+  }
+
+  {
+    auto features = cpuid.Read<arch::CpuidExtendedFeatureFlagsB>();
+
+    // Present:
+    EXPECT_TRUE(features.rdseed());
+    EXPECT_TRUE(features.smap());
+    EXPECT_TRUE(features.fsgsbase());
+  }
+}
+
+TEST(CpuidTests, Ryzen3950X_WSL2) {
+  arch::testing::FakeCpuidIo cpuid;
+  ASSERT_NO_FATAL_FAILURES(PopulateFromFile("ryzen-3950x-wsl2.json", &cpuid));
+
+  EXPECT_EQ(arch::Vendor::kAmd, arch::GetVendor(cpuid));
+  EXPECT_EQ(arch::Microarchitecture::kAmdFamily0x17, arch::GetMicroarchitecture(cpuid));
+
+  auto info = cpuid.Read<arch::CpuidVersionInfo>();
+  EXPECT_EQ(0x17, info.family());
+  EXPECT_EQ(0x71, info.model());
+  EXPECT_EQ(0x00, info.stepping());
+
+  auto processor = arch::ProcessorName(cpuid);
+  EXPECT_TRUE(processor.name() == "AMD Ryzen 9 3950X 16-Core Processor            "sv);
+
+  auto hypervisor = arch::HypervisorName(cpuid);
+  EXPECT_TRUE(hypervisor.name() == "Microsoft Hv"sv);
+
+  EXPECT_EQ(0x4000'000b, cpuid.Read<arch::CpuidMaximumHypervisorLeaf>().reg_value());
+
+  {
+    auto features = cpuid.Read<arch::CpuidFeatureFlagsC>();
+
+    // Present:
+    EXPECT_TRUE(features.hypervisor());
+    EXPECT_TRUE(features.rdrand());
+    EXPECT_TRUE(features.avx());
+    EXPECT_TRUE(features.osxsave());
+    EXPECT_TRUE(features.xsave());
+    EXPECT_TRUE(features.cmpxchg16b());
+
+    // Not present:
+    EXPECT_FALSE(features.x2apic());
+    EXPECT_FALSE(features.pdcm());
+  }
+
+  {
+    auto features = cpuid.Read<arch::CpuidExtendedFeatureFlagsB>();
+
+    // Present:
+    EXPECT_TRUE(features.rdseed());
+    EXPECT_TRUE(features.smap());
+    EXPECT_TRUE(features.fsgsbase());
+  }
+}
+
 TEST(CpuidTests, Threadripper1950X) {
   arch::testing::FakeCpuidIo cpuid;
   ASSERT_NO_FATAL_FAILURES(PopulateFromFile("threadripper-1950x.json", &cpuid));
@@ -512,7 +709,8 @@ TEST(CpuidTests, Threadripper1950X) {
   auto processor = arch::ProcessorName(cpuid);
   EXPECT_TRUE(processor.name() == "AMD Ryzen Threadripper 1950X 16-Core Processor "sv);
 
-  EXPECT_TRUE(arch::HypervisorName(cpuid).name().empty());
+  auto hypervisor = arch::HypervisorName(cpuid);
+  EXPECT_TRUE(hypervisor.name().empty());
 
   {
     auto features = cpuid.Read<arch::CpuidFeatureFlagsC>();
