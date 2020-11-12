@@ -207,5 +207,15 @@
                 ]
             }
         },
+        {
+            instance_id: "426871d8856f43fc8433ad9049bf188454d038dc6295e0c59fd3401d72f25a48",
+            appmgr_moniker: {
+                url: "fuchsia-pkg://fuchsia.com/root_presenter#meta/root_presenter.cmx",
+                realm_path: [
+                    "app",
+                    "sys"
+                ]
+            }
+        }
     ]
 }
