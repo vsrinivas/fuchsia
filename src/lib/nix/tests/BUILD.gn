@@ -24,6 +24,7 @@ test("nix") {
   sources = [
     "epoll_unittests.cc",
     "inotify_unittests.cc",
+    "random_unittests.cc",
   ]
 
   deps = [
@@ -38,6 +39,8 @@ test("nix") {
 test("nix_hosttests") {
   if (is_linux) {
     sources = [
+      # TODO(fxbug.dev/64200): Add 'random_unittests.cc' to host tests once the
+      # prebuilt sysroot has been upgraded to a version that includes getrandom(2).
       "epoll_unittests.cc",
       "inotify_unittests.cc",
     ]
