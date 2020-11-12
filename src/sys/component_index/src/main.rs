@@ -258,7 +258,7 @@ mod tests {
             let (search_proxy, query_stream) = create_proxy_and_stream::<ComponentIndexMarker>()?;
             let server_exit_fut =
                 run_fuzzy_search_server(query_stream, Arc::new(vec!["A".to_owned()]));
-            search_proxy.fuzzy_search("A"); // Note: request is sent synchronously
+            let _ = search_proxy.fuzzy_search("A"); // Note: request is sent synchronously
             std::mem::drop(search_proxy);
             assert_matches!(server_exit_fut.await, Err(_));
             Ok(())
