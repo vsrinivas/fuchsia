@@ -85,7 +85,16 @@ template("clang_toolchain") {
     ar = "${prefix}/llvm-ar"
     ld = cxx
     rustc = "${rustc_prefix}/rustc"
-    verify_depfile = rebase_path("//build/gn/verify_depfile.py", root_build_dir)
+    verify_depfile = string_join(" ",
+                                 [
+                                   rebase_path(python_exe_src, root_build_dir),
+
+                                   # Speed up startup time by not searching for
+                                   # site packages.
+                                   "-S",
+                                   rebase_path("//build/gn/verify_depfile.py",
+                                               root_build_dir),
+                                 ])
 
     forward_variables_from(invoker, [ "use_strip" ])
     if (use_strip) {
