@@ -223,7 +223,7 @@ impl AvrcpClientController {
     }
 
     fn cache_controller_notification_state(&mut self, event: &PeerControllerEvent) {
-        self.notification_state_timestamp = zx::Time::get(zx::ClockId::UTC).into_nanos();
+        self.notification_state_timestamp = fuchsia_runtime::utc_time().into_nanos();
         Self::update_notification_from_controller_event(&mut self.notification_state, &event);
     }
 
@@ -285,7 +285,7 @@ impl AvrcpClientController {
                 event = controller_events.select_next_some() => {
                     self.cache_controller_notification_state(&event);
                     if self.filter_controller_event(&event) {
-                        let timestamp = zx::Time::get(zx::ClockId::UTC).into_nanos();
+                        let timestamp = fuchsia_runtime::utc_time().into_nanos();
                         if self.notification_window_counter > Self::EVENT_WINDOW_LIMIT {
                             self.notification_queue.push_back((timestamp, event));
                         } else {
