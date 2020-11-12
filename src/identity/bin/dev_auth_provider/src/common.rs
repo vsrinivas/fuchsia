@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use fuchsia_zircon::{ClockId, Duration, Time};
+use fuchsia_zircon::Duration;
 use rand::distributions::Alphanumeric;
 use rand::{thread_rng, Rng};
 
@@ -22,6 +22,6 @@ pub fn generate_random_string() -> String {
 /// Calculate expiry time for a token that expires in `TOKEN_LIFETIME_SECONDS`.
 pub fn get_token_expiry_time_nanos() -> i64 {
     let expiry_time =
-        Time::get(ClockId::UTC) + Duration::from_seconds(TOKEN_LIFETIME_SECONDS as i64);
+        fuchsia_runtime::utc_time() + Duration::from_seconds(TOKEN_LIFETIME_SECONDS as i64);
     expiry_time.into_nanos()
 }

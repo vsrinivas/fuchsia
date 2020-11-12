@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use fuchsia_zircon::{ClockId, Time};
+use fuchsia_zircon::Time;
 
 /// A trait for reporting the current time.
 pub trait Clock {
@@ -10,12 +10,12 @@ pub trait Clock {
     fn current_time() -> Time;
 }
 
-/// An implementation of `Clock` that retrieves UTC time as reported by Zircon.
+/// An implementation of `Clock` that retrieves UTC time as reported by the runtime.
 pub struct UtcClock;
 
 impl Clock for UtcClock {
     fn current_time() -> Time {
-        Time::get(ClockId::UTC)
+        fuchsia_runtime::utc_time()
     }
 }
 

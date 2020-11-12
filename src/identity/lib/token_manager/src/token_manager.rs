@@ -532,7 +532,7 @@ mod tests {
     use fidl_fuchsia_identity_external::{OauthOpenIdConnectRequest, OauthRequest};
     use fidl_fuchsia_identity_tokens::{OauthAccessToken, OpenIdToken, OpenIdUserInfo};
     use fuchsia_async as fasync;
-    use fuchsia_zircon::{ClockId, Duration, Time};
+    use fuchsia_zircon::Duration;
     use futures::channel::oneshot;
     use futures::future::join3;
     use tempfile::TempDir;
@@ -675,7 +675,7 @@ mod tests {
                     request;
                 assert_eq!(&refresh_token.unwrap().content.unwrap(), expected_refresh_token);
                 assert_eq!(audiences, Some(vec!["AUDIENCE".to_string()]));
-                let expiry_time = Time::get(ClockId::UTC) + Duration::from_seconds(3600);
+                let expiry_time = fuchsia_runtime::utc_time() + Duration::from_seconds(3600);
                 let mut id_token = Ok(OpenIdToken {
                     content: Some(format!("{}_ID", expected_refresh_token)),
                     expiry_time: Some(expiry_time.into_nanos()),

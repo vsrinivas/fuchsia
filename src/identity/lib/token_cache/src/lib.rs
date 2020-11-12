@@ -5,7 +5,7 @@
 //! AuthCache manages an in-memory cache of recently used short-lived authentication tokens.
 #![deny(missing_docs)]
 
-use fuchsia_zircon::{ClockId, Duration, Time};
+use fuchsia_zircon::{Duration, Time};
 use log::{info, warn};
 use std::any::Any;
 use std::cmp::Ordering;
@@ -315,7 +315,7 @@ impl TokenCache {
     }
 
     fn get_current_time() -> Time {
-        Time::get(ClockId::UTC)
+        fuchsia_runtime::utc_time()
     }
 }
 
@@ -436,7 +436,7 @@ mod tests {
 
     fn build_test_token(time_until_expiry: Duration, suffix: &str) -> Arc<TestToken> {
         Arc::new(TestToken {
-            expiry_time: Time::get(ClockId::UTC) + time_until_expiry,
+            expiry_time: fuchsia_runtime::utc_time() + time_until_expiry,
             token: TEST_TOKEN_CONTENTS.to_string() + suffix,
         })
     }
@@ -446,7 +446,7 @@ mod tests {
         suffix: &str,
     ) -> Arc<AlternateTestToken> {
         Arc::new(AlternateTestToken {
-            expiry_time: Time::get(ClockId::UTC) + time_until_expiry,
+            expiry_time: fuchsia_runtime::utc_time() + time_until_expiry,
             token: TEST_TOKEN_CONTENTS.to_string() + suffix,
             metadata: vec![suffix.to_string()],
         })

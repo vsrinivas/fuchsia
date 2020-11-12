@@ -6,7 +6,6 @@ use fidl_fuchsia_identity_authentication::{
     AttemptedEvent, Enrollment, Error as ApiError, StorageUnlockMechanismRequest,
     StorageUnlockMechanismRequestStream,
 };
-use fuchsia_zircon::{ClockId, Time};
 use futures::prelude::*;
 use lazy_static::lazy_static;
 
@@ -86,7 +85,7 @@ impl StorageUnlockMechanism {
             Mode::AlwaysFailAuthentication => NOT_MAGIC_PREKEY.clone(),
         };
         Ok(AttemptedEvent {
-            timestamp: Time::get(ClockId::UTC).into_nanos(),
+            timestamp: fuchsia_runtime::utc_time().into_nanos(),
             enrollment_id: id,
             updated_enrollment_data: None,
             prekey_material,
