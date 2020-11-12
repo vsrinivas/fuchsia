@@ -181,6 +181,11 @@ resource table CreateContextParams {
     /// of persisted CDM data exceeds this threshold, then the [`Context`] will attempt to purge
     /// some data to meet the specified quota.
     12: uint64 cdm_data_quota_bytes;
+
+    /// Specifies a target maximum size for `data_directory` contents, in bytes.
+    /// The [`Context`] will attempt to limit browsing state (e.g. cookies, LocalStorage) to
+    /// not exceed the specified size.
+    13: uint64 data_quota_bytes;
 };
 
 /// Manages browsing state (e.g. LocalStorage, cookies, etc) associated with a set of [`Frame`].
