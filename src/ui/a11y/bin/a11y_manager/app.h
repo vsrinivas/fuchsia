@@ -29,7 +29,6 @@
 #include "src/ui/a11y/lib/magnifier/magnifier.h"
 #include "src/ui/a11y/lib/screen_reader/screen_reader.h"
 #include "src/ui/a11y/lib/tts/tts_manager.h"
-#include "src/ui/a11y/lib/util/boot_info_manager.h"
 #include "src/ui/a11y/lib/view/view_manager.h"
 
 namespace a11y_manager {
@@ -43,7 +42,6 @@ class A11yManagerState {
       : screen_reader_enabled_(false),
         magnifier_enabled_(false),
         color_inversion_enabled_(false),
-        announce_screen_reader_enabled_(false),
         color_correction_mode_(fuchsia::accessibility::ColorCorrectionMode::DISABLED) {}
 
   // Copy constructor
@@ -55,11 +53,6 @@ class A11yManagerState {
   bool magnifier_enabled() const { return magnifier_enabled_; }
 
   bool color_inversion_enabled() const { return color_inversion_enabled_; }
-
-  bool announce_screen_reader_enabled() const { return announce_screen_reader_enabled_; }
-  void set_announce_screen_reader_enabled(bool announce_screen_reader_enabled) {
-    announce_screen_reader_enabled_ = announce_screen_reader_enabled;
-  }
 
   fuchsia::accessibility::ColorCorrectionMode color_correction_mode() const {
     return color_correction_mode_;
@@ -85,8 +78,6 @@ class A11yManagerState {
   bool screen_reader_enabled_;
   bool magnifier_enabled_;
   bool color_inversion_enabled_;
-  // Indicates whether the screen reader should vocalize when initialized.
-  bool announce_screen_reader_enabled_;
   fuchsia::accessibility::ColorCorrectionMode color_correction_mode_;
 };
 
@@ -98,8 +89,6 @@ class App {
   explicit App(sys::ComponentContext* context, a11y::ViewManager* view_manager,
                a11y::TtsManager* tts_manager, a11y::ColorTransformManager* color_transform_manager,
                a11y::GestureListenerRegistry* gesture_listener_registry,
-               a11y::BootInfoManager* boot_info_manager,
-               a11y::ScreenReaderContextFactory* screen_reader_context_factory,
                inspect::Node inspect_node = inspect::Node());
   ~App();
 
@@ -109,8 +98,7 @@ class App {
 
   a11y::ScreenReader* screen_reader() { return screen_reader_.get(); }
 
-  static constexpr char kIntlPropertyProviderDisconnectedInspectName[] =
-      "intl_property_provider_disconnected";
+  static constexpr char kIntlPropertyProviderDisconnectedInspectName[] = "intl_property_provider_disconnected";
 
  private:
   // If gesture manager/handler/arena ever get idempotent operations, we can remove this.
@@ -164,7 +152,7 @@ class App {
   a11y::TtsManager* tts_manager_;
   a11y::ColorTransformManager* color_transform_manager_;
   a11y::GestureListenerRegistry* gesture_listener_registry_;
-  a11y::ScreenReaderContextFactory* screen_reader_context_factory_;
+
   std::unique_ptr<a11y::FocusChainManager> focus_chain_manager_;
   // The gesture manager is instantiated whenever a11y manager starts listening
   // for pointer events, and destroyed when the listener disconnects.

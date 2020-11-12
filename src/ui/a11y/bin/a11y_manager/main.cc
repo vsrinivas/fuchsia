@@ -14,9 +14,7 @@
 #include "src/intl/intl_services/run.h"
 #include "src/ui/a11y/bin/a11y_manager/app.h"
 #include "src/ui/a11y/lib/annotation/annotation_view.h"
-#include "src/ui/a11y/lib/screen_reader/screen_reader_context.h"
 #include "src/ui/a11y/lib/semantics/a11y_semantics_event_manager.h"
-#include "src/ui/a11y/lib/util/boot_info_manager.h"
 #include "src/ui/a11y/lib/view/a11y_view_semantics.h"
 
 namespace {
@@ -39,12 +37,9 @@ int run_a11y_manager(int argc, const char** argv) {
   a11y::TtsManager tts_manager(context.get());
   a11y::ColorTransformManager color_transform_manager(context.get());
   a11y::GestureListenerRegistry gesture_listener_registry;
-  a11y::BootInfoManager boot_info_manager(context.get());
-  a11y::ScreenReaderContextFactory screen_reader_context_factory;
 
   a11y_manager::App app(context.get(), &view_manager, &tts_manager, &color_transform_manager,
-                        &gesture_listener_registry, &boot_info_manager,
-                        &screen_reader_context_factory,
+                        &gesture_listener_registry,
                         inspector->root().CreateChild("a11y_manager_app"));
 
   loop.Run();

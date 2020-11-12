@@ -17,10 +17,6 @@ void MockTtsManager::OpenEngine(
   }
   callback(std::move(result));
   engine_in_use_ = true;
-
-  if (tts_engine_ready_callback_ && engine_registered_) {
-    tts_engine_ready_callback_();
-  }
 }
 
 void MockTtsManager::SetEngineInUse(bool engine_in_use) { engine_in_use_ = engine_in_use; }
@@ -35,11 +31,8 @@ void MockTtsManager::RegisterEngine(
     result.set_response(fuchsia::accessibility::tts::EngineRegistry_RegisterEngine_Response{});
   }
   callback(std::move(result));
+  tts_engine_ready_callback_();
   engine_registered_ = true;
-
-  if (tts_engine_ready_callback_ && engine_in_use_) {
-    tts_engine_ready_callback_();
-  }
 }
 
 void MockTtsManager::SetEngineRegisered(bool engine_registered) {
