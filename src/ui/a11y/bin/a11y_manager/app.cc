@@ -22,8 +22,7 @@ App::App(sys::ComponentContext* context, a11y::ViewManager* view_manager,
       color_transform_manager_(color_transform_manager),
       gesture_listener_registry_(gesture_listener_registry),
       inspect_node_(std::move(inspect_node)),
-      inspect_property_intl_property_provider_disconnected_(
-          inspect_node_.CreateBool(kIntlPropertyProviderDisconnectedInspectName, false)) {
+      inspect_property_intl_property_provider_disconnected_(inspect_node_.CreateBool(kIntlPropertyProviderDisconnectedInspectName, false)) {
   FX_DCHECK(context);
   FX_DCHECK(view_manager);
   FX_DCHECK(tts_manager);
@@ -245,7 +244,7 @@ std::unique_ptr<a11y::ScreenReader> App::InitializeScreenReader() {
   auto screen_reader_context = std::make_unique<a11y::ScreenReaderContext>(
       std::move(a11y_focus_manager), tts_manager_, locale_id);
   auto screen_reader = std::make_unique<a11y::ScreenReader>(
-      std::move(screen_reader_context), view_manager_, gesture_listener_registry_, tts_manager_);
+      std::move(screen_reader_context), view_manager_, gesture_listener_registry_);
   view_manager_->GetSemanticsEventManager()->Register(
       screen_reader->GetSemanticsEventListenerWeakPtr());
   return screen_reader;

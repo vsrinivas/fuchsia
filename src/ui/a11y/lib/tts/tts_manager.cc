@@ -29,7 +29,6 @@ void TtsManager::OpenEngine(
     result.set_response(fuchsia::accessibility::tts::TtsManager_OpenEngine_Response{});
   }
   callback(std::move(result));
-  CheckIfTtsEngineIsReadyAndRunCallback();
 }
 
 void TtsManager::RegisterEngine(fidl::InterfaceHandle<fuchsia::accessibility::tts::Engine> engine,
@@ -43,7 +42,6 @@ void TtsManager::RegisterEngine(fidl::InterfaceHandle<fuchsia::accessibility::tt
     result.set_err(fuchsia::accessibility::tts::Error::BUSY);
   }
   callback(std::move(result));
-  CheckIfTtsEngineIsReadyAndRunCallback();
 }
 
 void TtsManager::Enqueue(fuchsia::accessibility::tts::Utterance utterance,
@@ -55,20 +53,6 @@ void TtsManager::Enqueue(fuchsia::accessibility::tts::Utterance utterance,
   } else {
     engine_->Enqueue(std::move(utterance), std::move(callback));
   }
-}
-
-void TtsManager::CheckIfTtsEngineIsReadyAndRunCallback() {
-  if (!engine_binding_.is_bound() || !engine_) {
-    return;
-  }
-
-  for (const auto& callback : tts_engine_ready_callbacks_) {
-    if (callback) {
-      callback();
-    }
-  }
-
-  tts_engine_ready_callbacks_.clear();
 }
 
 void TtsManager::Speak(SpeakCallback callback) {
@@ -89,7 +73,4 @@ void TtsManager::Cancel(CancelCallback callback) {
   }
 }
 
-void TtsManager::RegisterTTSEngineReadyCallback(TTSEngineReadyCallback callback) {
-  tts_engine_ready_callbacks_.emplace_back(std::move(callback));
-}
 }  // namespace a11y

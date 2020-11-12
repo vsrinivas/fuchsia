@@ -37,10 +37,10 @@ class ScreenReader : public SemanticsEventListener {
   // outlive screen reader. A11y App is responsible for creating these pointers along with Screen
   // Reader object.
   ScreenReader(std::unique_ptr<ScreenReaderContext> context, SemanticsSource* semantics_source,
-               GestureListenerRegistry* gesture_listener_registry, TtsManager* tts_manager);
+               GestureListenerRegistry* gesture_listener_registry);
   // Same as above, but accepts a custom |action_registry|.
   ScreenReader(std::unique_ptr<ScreenReaderContext> context, SemanticsSource* semantics_source,
-               GestureListenerRegistry* gesture_listener_registry, TtsManager* tts_manager,
+               GestureListenerRegistry* gesture_listener_registry,
                std::unique_ptr<ScreenReaderActionRegistry> action_registry);
 
   ~ScreenReader();

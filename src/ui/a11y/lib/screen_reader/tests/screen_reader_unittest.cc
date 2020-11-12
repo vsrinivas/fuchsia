@@ -29,7 +29,6 @@
 #include "src/ui/a11y/lib/semantics/tests/mocks/mock_semantic_tree_service_factory.h"
 #include "src/ui/a11y/lib/semantics/tests/mocks/mock_semantics_event_manager.h"
 #include "src/ui/a11y/lib/testing/input.h"
-#include "src/ui/a11y/lib/tts/tests/mocks/mock_tts_manager.h"
 #include "src/ui/a11y/lib/tts/tts_manager.h"
 #include "src/ui/a11y/lib/util/util.h"
 #include "src/ui/a11y/lib/view/tests/mocks/mock_view_semantics.h"
@@ -90,10 +89,9 @@ class ScreenReaderTest : public gtest::TestLoopFixture {
         mock_speaker_ptr_(context_ptr_->mock_speaker_ptr()),
         mock_action_registry_(std::make_unique<MockScreenReaderActionRegistryImpl>()),
         mock_action_registry_ptr_(mock_action_registry_.get()),
-        mock_tts_manager_(std::make_unique<MockTtsManager>(context_provider_.context())),
-        screen_reader_(std::make_unique<a11y::ScreenReader>(
-            std::move(context_), &view_manager_, &gesture_listener_registry_,
-            mock_tts_manager_.get(), std::move(mock_action_registry_))),
+        screen_reader_(std::make_unique<a11y::ScreenReader>(std::move(context_), &view_manager_,
+                                                            &gesture_listener_registry_,
+                                                            std::move(mock_action_registry_))),
         semantic_provider_(&view_manager_) {
     screen_reader_->BindGestures(&mock_gesture_handler_);
     gesture_listener_registry_.Register(mock_gesture_listener_.NewBinding(), []() {});
@@ -118,7 +116,6 @@ class ScreenReaderTest : public gtest::TestLoopFixture {
   MockScreenReaderContext::MockSpeaker* mock_speaker_ptr_;
   std::unique_ptr<MockScreenReaderActionRegistryImpl> mock_action_registry_;
   MockScreenReaderActionRegistryImpl* mock_action_registry_ptr_;
-  std::unique_ptr<MockTtsManager> mock_tts_manager_;
   std::unique_ptr<a11y::ScreenReader> screen_reader_;
   MockSemanticProvider semantic_provider_;
 };  // namespace
@@ -176,15 +173,6 @@ TEST_F(ScreenReaderTest, TrivialActionsAreInvokedWhenGestureTriggers) {
 }
 
 TEST_F(ScreenReaderTest, ScreenReaderSpeaksWhenItTurnsOnAndOff) {
-  // No output should be spoken until the tts engine is connected.
-  EXPECT_TRUE(mock_speaker_ptr_->message_ids().empty());
-
-  // Connect the tts engine.
-  fidl::InterfaceHandle<fuchsia::accessibility::tts::Engine> engine_handle;
-  mock_tts_manager_->RegisterEngine(
-      std::move(engine_handle),
-      [](fuchsia::accessibility::tts::EngineRegistry_RegisterEngine_Result result) {});
-
   // The screen reader object has already been initialized, check if it announced it:
   EXPECT_EQ(mock_speaker_ptr_->message_ids().size(), 1u);
   EXPECT_EQ(mock_speaker_ptr_->message_ids()[0],

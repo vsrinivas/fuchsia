@@ -90,15 +90,13 @@ class ScreenReader::ScreenReaderActionRegistryImpl : public ScreenReaderActionRe
 
 ScreenReader::ScreenReader(std::unique_ptr<ScreenReaderContext> context,
                            SemanticsSource* semantics_source,
-                           GestureListenerRegistry* gesture_listener_registry,
-                           TtsManager* tts_manager)
-    : ScreenReader(std::move(context), semantics_source, gesture_listener_registry, tts_manager,
+                           GestureListenerRegistry* gesture_listener_registry)
+    : ScreenReader(std::move(context), semantics_source, gesture_listener_registry,
                    std::make_unique<ScreenReaderActionRegistryImpl>()) {}
 
 ScreenReader::ScreenReader(std::unique_ptr<ScreenReaderContext> context,
                            SemanticsSource* semantics_source,
                            GestureListenerRegistry* gesture_listener_registry,
-                           TtsManager* tts_manager,
                            std::unique_ptr<ScreenReaderActionRegistry> action_registry)
     : context_(std::move(context)),
       gesture_listener_registry_(gesture_listener_registry),
@@ -107,10 +105,7 @@ ScreenReader::ScreenReader(std::unique_ptr<ScreenReaderContext> context,
   action_context_ = std::make_unique<ScreenReaderAction::ActionContext>();
   action_context_->semantics_source = semantics_source;
   InitializeActions();
-  FX_DCHECK(tts_manager);
-  // TODO(fxb/59693): Only vocalize message on reboot if user-initiated.
-  tts_manager->RegisterTTSEngineReadyCallback(
-      [this]() { SpeakMessage(fuchsia::intl::l10n::MessageIds::SCREEN_READER_ON_HINT); });
+  SpeakMessage(fuchsia::intl::l10n::MessageIds::SCREEN_READER_ON_HINT);
   context_->speaker()->set_epitaph(fuchsia::intl::l10n::MessageIds::SCREEN_READER_OFF_HINT);
 }
 
