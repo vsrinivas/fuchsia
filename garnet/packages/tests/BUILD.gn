@@ -30,8 +30,6 @@ group("all") {
     "//garnet/bin/odu:odu_tests",
     "//garnet/bin/odu:odu_tests($host_toolchain)",
     "//garnet/bin/perfcompare:tests",
-    "//garnet/bin/power_manager:power_manager_tests",
-    "//garnet/bin/power_manager/rkf45:rkf45_tests",
     "//garnet/bin/run/test:run_test_exiter",
     "//garnet/bin/run/test:run_tests",
     "//garnet/bin/run_test_component:tests",

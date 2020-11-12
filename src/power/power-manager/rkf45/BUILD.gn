@@ -1,0 +1,30 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_library.gni")
+import("//build/test/test_package.gni")
+
+rustc_library("lib") {
+  name = "rkf45"
+  edition = "2018"
+  with_unit_tests = true
+
+  deps = [
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:thiserror",
+  ]
+
+  test_deps = [ "//src/lib/test_util" ]
+
+  sources = [ "src/lib.rs" ]
+}
+
+test_package("rkf45-tests") {
+  deps = [ ":lib_test" ]
+  tests = [
+    {
+      name = "rkf45_lib_test"
+    },
+  ]
+}

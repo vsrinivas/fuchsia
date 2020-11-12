@@ -7,7 +7,7 @@ import("//build/json/validate_json.gni")
 
 template("node_config") {
   config_data("${target_name}_config_data") {
-    for_pkg = "power_manager"
+    for_pkg = "power-manager"
     sources = [ "${invoker.source}" ]
     outputs = [ "node_config.json" ]
   }
@@ -45,12 +45,12 @@ node_config("sherlock") {
   source = "sherlock_node_config.json"
 }
 
-# Make the node config files available for the power_manager_tests test package
+# Make the node config files available for the power-manager-tests test package
 # to allow for some more advanced validation beyond what we can accomplish with
 # JSON schema validation alone.
 # TODO(fxbug.dev/52818): Explore build-time JSON validation
 config_data("test_config_data") {
-  for_pkg = "power_manager_tests"
+  for_pkg = "power-manager-tests"
   sources = [
     "astro_node_config.json",
     "base_node_config.json",

@@ -58,7 +58,7 @@
         },
         {
             name: "power_manager",
-            url: "fuchsia-pkg://fuchsia.com/power_manager#meta/power_manager.cm",
+            url: "fuchsia-pkg://fuchsia.com/power-manager#meta/power-manager.cm",
         },
     ],
     offer: [
@@ -356,7 +356,7 @@
             directory: "config-data",
             from: "#fshost",
             to: [ "#power_manager" ],
-            subdir: "power_manager",
+            subdir: "power-manager",
             dependency: "weak_for_migration",
         },
 

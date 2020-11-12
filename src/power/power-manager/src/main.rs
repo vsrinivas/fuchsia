@@ -47,5 +47,7 @@ async fn main() -> Result<(), Error> {
     let mut pm = PowerManager::new();
 
     // This future should never complete
-    pm.run().await
+    let result = pm.run().await;
+    log::error!("Unexpected exit with result: {:?}", result);
+    result
 }

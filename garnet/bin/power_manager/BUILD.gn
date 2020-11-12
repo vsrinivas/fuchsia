@@ -1,145 +1,29 @@
-# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/config.gni")
-import("//build/package.gni")
-import("//build/rust/rustc_binary.gni")
-import("//build/test/test_package.gni")
-import("//third_party/cobalt/metrics_registry.gni")
+# TODO(pshickel): Temporary targets to enable a soft migration
 
-metrics_registry("power_manager_metrics") {
-  # ID of the 'power' project from the //third_party/cobalt_config/projects.yaml file
-  project_id = 3
-
-  # The namespace to use in the generated code
-  namespace = "power_manager_metrics"
-
-  # Generates a rust target called 'power_manager_metrics_rustlib'
-  generate_rust = true
-}
-
-rustc_binary("bin") {
-  name = "power_manager"
-  edition = "2018"
-  with_unit_tests = true
-
-  deps = [
-    ":power_manager_metrics_rustlib",
-    "//sdk/fidl/fuchsia.cobalt:fuchsia.cobalt-rustc",
-    "//sdk/fidl/fuchsia.device:fuchsia.device-rustc",
-    "//sdk/fidl/fuchsia.device.manager:fuchsia.device.manager-rustc",
-    "//sdk/fidl/fuchsia.feedback:fuchsia.feedback-rustc",
-    "//sdk/fidl/fuchsia.hardware.cpu.ctrl:fuchsia.hardware.cpu.ctrl-rustc",
-    "//sdk/fidl/fuchsia.hardware.power.statecontrol:fuchsia.hardware.power.statecontrol-rustc",
-    "//sdk/fidl/fuchsia.hardware.thermal:fuchsia.hardware.thermal-rustc",
-    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
-    "//sdk/fidl/fuchsia.kernel:fuchsia.kernel-rustc",
-    "//sdk/fidl/fuchsia.power.manager:fuchsia.power.manager-rustc",
-    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
-    "//sdk/fidl/fuchsia.thermal:fuchsia.thermal-rustc",
-    "//src/lib/cobalt/rust:fuchsia-cobalt",
-    "//src/lib/diagnostics/inspect/contrib/rust",
-    "//src/lib/diagnostics/inspect/rust",
-    "//src/lib/fdio/rust:fdio",
-    "//src/lib/fidl/rust/fidl",
-    "//src/lib/fuchsia-async",
-    "//src/lib/fuchsia-component",
-    "//src/lib/syslog/rust",
-    "//src/lib/trace/rust:trace",
-    "//src/lib/trace/rust:trace-provider",
-    "//src/lib/zircon/rust:fuchsia-zircon",
-    "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:async-trait",
-    "//third_party/rust_crates:futures",
-    "//third_party/rust_crates:lazy_static",
-    "//third_party/rust_crates:log",
-    "//third_party/rust_crates:num-traits",
-    "//third_party/rust_crates:parking_lot",
-    "//third_party/rust_crates:serde",
-    "//third_party/rust_crates:serde_derive",
-    "//third_party/rust_crates:serde_json",
-    "//third_party/rust_crates:thiserror",
-  ]
-
-  test_deps = [
-    "//garnet/bin/power_manager/rkf45:lib",
-    "//src/lib/test_util",
-    "//third_party/rust_crates:matches",
-  ]
-
-  sources = [
-    "src/cobalt_metrics.rs",
-    "src/cpu_control_handler.rs",
-    "src/cpu_stats_handler.rs",
-    "src/crash_report_handler.rs",
-    "src/dev_control_handler.rs",
-    "src/driver_manager_handler.rs",
-    "src/error.rs",
-    "src/main.rs",
-    "src/message.rs",
-    "src/node.rs",
-    "src/power_manager.rs",
-    "src/shutdown_request.rs",
-    "src/shutdown_watcher.rs",
-    "src/system_shutdown_handler.rs",
-    "src/temperature_handler.rs",
-    "src/test/mock_node.rs",
-    "src/test/mod.rs",
-    "src/test/thermal_integration_tests.rs",
-    "src/thermal_limiter.rs",
-    "src/thermal_policy.rs",
-    "src/thermal_shutdown.rs",
-    "src/types.rs",
-    "src/utils.rs",
-  ]
-}
-
-package("power_manager") {
-  deps = [ ":bin" ]
-
-  binaries = [
-    {
-      name = "power_manager"
-    },
-  ]
-  meta = [
-    {
-      path = rebase_path("meta/power_manager.cml")
-      dest = "power_manager.cm"
-    },
-  ]
-}
-
-test_package("power_manager_tests") {
-  deps = [
-    ":bin_test",
-    "node_config:test_config_data",
-  ]
-
-  tests = [
-    {
-      name = "power_manager_bin_test"
-    },
-  ]
+group("power_manager") {
+  deps = [ "//src/power/power-manager" ]
 }
 
 group("astro_config") {
-  deps = [ "node_config:astro" ]
+  deps = [ "//src/power/power-manager:astro_config" ]
 }
 
 group("base_config") {
-  deps = [ "node_config:base" ]
+  deps = [ "//src/power/power-manager/node_config:base" ]
 }
 
 group("luis_config") {
-  deps = [ "node_config:luis" ]
+  deps = [ "//src/power/power-manager:luis_config" ]
 }
 
 group("nelson_config") {
-  deps = [ "node_config:nelson" ]
+  deps = [ "//src/power/power-manager:nelson_config" ]
 }
 
 group("sherlock_config") {
-  deps = [ "node_config:sherlock" ]
+  deps = [ "//src/power/power-manager:sherlock_config" ]
 }
