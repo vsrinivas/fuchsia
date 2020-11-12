@@ -28,7 +28,7 @@ std::pair<std::string_view, std::string_view> SplitPath(std::string_view path) {
 // finds.
 class ContentMatcher : public BlockDeviceManager::Matcher {
  public:
-  // If |allow_multiple| is true, multiple deviecs will be matched.  Otherwise, only the first
+  // If |allow_multiple| is true, multiple devices will be matched.  Otherwise, only the first
   // device that appears will match.
   ContentMatcher(disk_format_t format, bool allow_multiple)
       : format_(format), allow_multiple_(allow_multiple) {}
