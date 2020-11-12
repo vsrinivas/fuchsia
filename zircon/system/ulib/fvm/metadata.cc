@@ -78,6 +78,12 @@ void Metadata::UpdateHash() {
   ::fvm::UpdateHash(static_cast<uint8_t*>(data_->data()), GetHeader().GetMetadataUsedBytes());
 }
 
+size_t Metadata::GetInactiveHeaderOffset() const {
+  return GetHeader().GetSuperblockOffset(inactive_header());
+}
+
+void Metadata::SwitchActiveHeaders() { active_header_ = OppositeHeader(active_header_); }
+
 Header& Metadata::GetHeader() const {
   return *reinterpret_cast<Header*>(static_cast<uint8_t*>(data_->data()));
 }
@@ -157,6 +163,13 @@ zx::status<Metadata> Metadata::CopyWithNewDimensions(const Header& dimensions) c
 
 zx::status<Metadata> Metadata::Create(std::unique_ptr<MetadataBuffer> data_a,
                                       std::unique_ptr<MetadataBuffer> data_b) {
+  return Create(std::numeric_limits<uint64_t>::max(), kBlockSize, std::move(data_a),
+                std::move(data_b));
+}
+
+zx::status<Metadata> Metadata::Create(size_t disk_size, size_t disk_block_size,
+                                      std::unique_ptr<MetadataBuffer> data_a,
+                                      std::unique_ptr<MetadataBuffer> data_b) {
   if (data_a->size() < sizeof(Header)) {
     return zx::error(ZX_ERR_BUFFER_TOO_SMALL);
   }
@@ -174,7 +187,7 @@ zx::status<Metadata> Metadata::Create(std::unique_ptr<MetadataBuffer> data_a,
     return zx::error(ZX_ERR_IO_DATA_INTEGRITY);
   }
   std::optional<SuperblockType> active_header =
-      PickValidHeader(data_a->data(), data_b->data(), meta_size);
+      PickValidHeader(disk_size, disk_block_size, data_a->data(), data_b->data(), meta_size);
   if (!active_header) {
     return zx::error(ZX_ERR_IO_DATA_INTEGRITY);
   }

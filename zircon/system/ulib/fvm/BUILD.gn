@@ -48,7 +48,11 @@ zx_library("fvm") {
     "//zircon/third_party/ulib/lz4",
   ]
   if (is_fuchsia) {
-    sources += [ "client.cc" ]
+    sdk_headers += [ "fvm/vmo-metadata-buffer.h" ]
+    sources += [
+      "client.cc",
+      "vmo-metadata-buffer.cc",
+    ]
 
     deps += [
       "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_c",

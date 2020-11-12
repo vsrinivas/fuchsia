@@ -14,6 +14,7 @@
 #include <zircon/device/block.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
+#include <zircon/types.h>
 
 #include <algorithm>
 #include <atomic>
@@ -32,6 +33,8 @@
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <fvm/fvm.h>
+#include <fvm/metadata.h>
+#include <fvm/vmo-metadata-buffer.h>
 
 #include "fvm-private.h"
 #include "fvm/format.h"
@@ -247,60 +250,41 @@ zx_status_t VPartitionManager::Load() {
   // Allocate a buffer big enough for the allocated metadata.
   size_t metadata_vmo_size = sb.GetMetadataAllocatedBytes();
 
-  // Now that the slice size is known, read the rest of the metadata
-  auto make_metadata_vmo = [&](size_t offset, fzl::OwnedVmoMapper* out_mapping) {
+  auto load_metadata = [&](size_t offset) -> zx::status<std::unique_ptr<VmoMetadataBuffer>> {
     fzl::OwnedVmoMapper mapper;
-    zx_status_t status = mapper.CreateAndMap(metadata_vmo_size, "fvm-metadata");
-    if (status != ZX_OK) {
-      return status;
+    zx_status_t status;
+    if (status = mapper.CreateAndMap(metadata_vmo_size, "fvm-metadata"); status != ZX_OK) {
+      return zx::error(status);
     }
-
-    // Read both copies of metadata, ensure at least one is valid
-    if ((status = DoIoLocked(mapper.vmo().get(), offset, metadata_vmo_size, BLOCK_OP_READ)) !=
-        ZX_OK) {
-      return status;
+    if (status = DoIoLocked(mapper.vmo().get(), offset, metadata_vmo_size, BLOCK_OP_READ);
+        status != ZX_OK) {
+      zxlogf(ERROR, "Failed to read %lu bytes from offset %lu: %s", metadata_vmo_size, offset,
+             zx_status_get_string(status));
+      return zx::error(status);
     }
-
-    dump_header.cancel();
-
-    *out_mapping = std::move(mapper);
-    return ZX_OK;
+    return zx::ok(std::make_unique<VmoMetadataBuffer>(std::move(mapper)));
   };
 
-  fzl::OwnedVmoMapper mapper;
-  if ((status = make_metadata_vmo(sb.GetSuperblockOffset(SuperblockType::kPrimary), &mapper)) !=
-      ZX_OK) {
-    zxlogf(ERROR, "Failed to load metadata vmo: %d", status);
-    return status;
+  auto buffer_a_or = load_metadata(sb.GetSuperblockOffset(SuperblockType::kPrimary));
+  if (buffer_a_or.is_error()) {
+    return buffer_a_or.status_value();
   }
-  fzl::OwnedVmoMapper mapper_backup;
-  if ((status = make_metadata_vmo(sb.GetSuperblockOffset(SuperblockType::kSecondary),
-                                  &mapper_backup)) != ZX_OK) {
-    zxlogf(ERROR, "Failed to load backup metadata vmo: %d", status);
-    return status;
+  auto buffer_b_or = load_metadata(sb.GetSuperblockOffset(SuperblockType::kSecondary));
+  if (buffer_b_or.is_error()) {
+    return buffer_b_or.status_value();
   }
 
-  // Validate metadata headers before growing and pick the correct one.
-  std::optional<SuperblockType> use_type =
-      PickValidHeader(DiskSize(), info_.block_size, mapper.start(), mapper_backup.start(),
-                      sb.GetMetadataAllocatedBytes());
-  if (!use_type) {
-    zxlogf(ERROR, "Header validation failure.");
-    return ZX_ERR_BAD_STATE;
+  zx::status<Metadata> metadata_or = Metadata::Create(
+      DiskSize(), info_.block_size, std::move(buffer_a_or.value()), std::move(buffer_b_or.value()));
+  if (metadata_or.is_error()) {
+    zxlogf(ERROR, "Failed to parse fvm metadata.");
+    return metadata_or.status_value();
   }
+  metadata_ = std::move(metadata_or.value());
+  slice_size_ = metadata_.GetHeader().slice_size;
 
-  if (*use_type == SuperblockType::kPrimary) {
-    first_metadata_is_primary_ = true;
-    metadata_ = std::move(mapper);
-  } else {
-    first_metadata_is_primary_ = false;
-    metadata_ = std::move(mapper_backup);
-  }
-
-  slice_size_ = GetFvmLocked()->slice_size;
-
-  // See if we need to grow the data.
-  fvm::Header* header = GetFvmLocked();
+  // See if we need to grow the metadata to cover more of the underlying disk.
+  Header* header = GetFvmLocked();
   size_t slices_for_disk = header->GetMaxAllocationTableEntriesForDiskSize(DiskSize());
   if (slices_for_disk > header->GetAllocationTableUsedEntryCount()) {
     header->SetSliceCount(slices_for_disk);
@@ -411,6 +395,8 @@ zx_status_t VPartitionManager::Load() {
   });
   zxlogf(INFO, "Loaded %lu partitions, slice size=%zu", device_count, slice_size_);
 
+  dump_header.cancel();
+
   return ZX_OK;
 }
 
@@ -422,20 +408,22 @@ zx_status_t VPartitionManager::WriteFvmLocked() {
   if (header->oldest_revision > fvm::kCurrentRevision)
     header->oldest_revision = fvm::kCurrentRevision;
 
-  size_t metadata_used_bytes = header->GetMetadataUsedBytes();
-  UpdateHash(header, metadata_used_bytes);
+  metadata_.UpdateHash();
 
-  // If we were reading from the primary, write to the backup.
-  if (zx_status_t status = DoIoLocked(metadata_.vmo().get(), BackupOffsetLocked(),
-                                      metadata_used_bytes, BLOCK_OP_WRITE);
+  // This is safe as long as metadata_ was constructed with a VmoMetadataBuffer, which is the case
+  // in VPartitionManager::Load.
+  const VmoMetadataBuffer* buffer = reinterpret_cast<const VmoMetadataBuffer*>(metadata_.Get());
+
+  // Persist the changes to the inactive metadata. The active metadata is not modified.
+  if (zx_status_t status = DoIoLocked(buffer->vmo().get(), metadata_.GetInactiveHeaderOffset(),
+                                      header->GetMetadataUsedBytes(), BLOCK_OP_WRITE);
       status != ZX_OK) {
-    zxlogf(ERROR, "Failed to write metadata");
+    zxlogf(ERROR, "Failed to write metadata: %s", zx_status_get_string(status));
     return status;
   }
 
-  // We only allow the switch of "write to the other copy of metadata"
-  // once a valid version has been written entirely.
-  first_metadata_is_primary_ = !first_metadata_is_primary_;
+  metadata_.SwitchActiveHeaders();
+
   return ZX_OK;
 }
 
@@ -666,13 +654,7 @@ SliceEntry* VPartitionManager::GetSliceEntryLocked(size_t index) const {
   ZX_DEBUG_ASSERT(index >= 1);
   ZX_DEBUG_ASSERT(index <= header->GetAllocationTableUsedEntryCount());
 
-  uintptr_t metadata_start = reinterpret_cast<uintptr_t>(header);
-  uintptr_t offset = static_cast<uintptr_t>(header->GetSliceEntryOffset(index));
-
-  ZX_DEBUG_ASSERT(header->GetAllocationTableOffset() <= offset);
-  ZX_DEBUG_ASSERT(header->GetAllocationTableOffset() + header->GetAllocationTableUsedByteSize() >
-                  offset);
-  return reinterpret_cast<SliceEntry*>(metadata_start + offset);
+  return &metadata_.GetSliceEntry(index);
 }
 
 VPartitionEntry* VPartitionManager::GetVPartEntryLocked(size_t index) const {
@@ -680,13 +662,7 @@ VPartitionEntry* VPartitionManager::GetVPartEntryLocked(size_t index) const {
   ZX_DEBUG_ASSERT(index >= 1);
   ZX_DEBUG_ASSERT(index <= header->GetPartitionTableEntryCount());
 
-  uintptr_t metadata_start = reinterpret_cast<uintptr_t>(header);
-  uintptr_t offset = static_cast<uintptr_t>(header->GetPartitionEntryOffset(index));
-
-  ZX_DEBUG_ASSERT(header->GetPartitionTableOffset() <= offset);
-  ZX_DEBUG_ASSERT(header->GetPartitionEntryOffset(index) + header->GetPartitionTableByteSize() >
-                  offset);
-  return reinterpret_cast<VPartitionEntry*>(metadata_start + offset);
+  return &metadata_.GetPartitionEntry(index);
 }
 
 // Device protocol (FVM)

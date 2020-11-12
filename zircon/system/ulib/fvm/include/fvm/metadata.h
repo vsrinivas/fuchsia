@@ -22,7 +22,7 @@ class MetadataBuffer {
   // described by |header|.
   static size_t BytesNeeded(const Header& header);
 
-  // Creates an uninitialized |MetadataBuffer| which has capacity for |size| bytes.
+  // Creates an uninitialized |MetadataBuffer| which has capacity for at least |size| bytes.
   // This is intentionally non-static so inheriting classes can override it to return the
   // appropriate type. In general the instance's fields/methods will not be accessed.
   virtual std::unique_ptr<MetadataBuffer> Create(size_t size) const = 0;
@@ -73,6 +73,13 @@ class Metadata {
   static zx::status<Metadata> Create(std::unique_ptr<MetadataBuffer> data_a,
                                      std::unique_ptr<MetadataBuffer> data_b);
 
+  // Override of |Create| that allows specifying disk dimensions; the sizes of each metadata copy
+  // will be checked against these sizes (see |::fvm::PickValidHeader|) and only deemed valid if
+  // they fit within the disk.
+  static zx::status<Metadata> Create(size_t disk_size, size_t disk_block_size,
+                                     std::unique_ptr<MetadataBuffer> data_a,
+                                     std::unique_ptr<MetadataBuffer> data_b);
+
   // Creates an instance of |Metadata|, initialized by copying the contents of |header|,
   // |partitions| and |slices|.
   // All of the passed metadata is copied into both the A and B slots. Any additional partitions
@@ -94,8 +101,16 @@ class Metadata {
   // Updates the hash stored in the metadata, based on its contents.
   void UpdateHash();
 
-  // Returns whether the metadata represents an active A copy or B copy.
+  // Returns the disk offset where the metadata should be persisted. This points to the
+  // offset of the *inactive* copy (see |inactive_header()|).
+  size_t GetInactiveHeaderOffset() const;
+
+  // Returns whether the Metadata represents an active A copy or B copy.
   SuperblockType active_header() const { return active_header_; }
+  SuperblockType inactive_header() const { return OppositeHeader(active_header_); }
+
+  // Switches whether the Metadata represents an active A or B copy.
+  void SwitchActiveHeaders();
 
   // Accesses the header managed by the Metadata instance.
   Header& GetHeader() const;

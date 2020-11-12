@@ -31,6 +31,7 @@
 #include <fbl/mutex.h>
 #include <fbl/vector.h>
 #include <fvm/fvm.h>
+#include <fvm/metadata.h>
 
 #include "diagnostics.h"
 #include "slice-extent.h"
@@ -159,9 +160,7 @@ class VPartitionManager : public ManagerDeviceType {
   zx_status_t FindFreeVPartEntryLocked(size_t* out) const TA_REQ(lock_);
   zx_status_t FindFreeSliceLocked(size_t* out, size_t hint) const TA_REQ(lock_);
 
-  Header* GetFvmLocked() const TA_REQ(lock_) {
-    return reinterpret_cast<Header*>(metadata_.start());
-  }
+  Header* GetFvmLocked() const TA_REQ(lock_) { return &metadata_.GetHeader(); }
 
   // Mark a slice as free in the metadata structure.
   // Update free slice accounting.
@@ -179,16 +178,6 @@ class VPartitionManager : public ManagerDeviceType {
   // virtual partition entry.
   VPartitionEntry* GetVPartEntryLocked(size_t index) const TA_REQ(lock_);
 
-  size_t PrimaryOffsetLocked() const TA_REQ(lock_) {
-    return GetFvmLocked()->GetSuperblockOffset(
-        (first_metadata_is_primary_) ? SuperblockType::kPrimary : SuperblockType::kSecondary);
-  }
-
-  size_t BackupOffsetLocked() const TA_REQ(lock_) {
-    return GetFvmLocked()->GetSuperblockOffset(
-        first_metadata_is_primary_ ? SuperblockType::kSecondary : SuperblockType::kPrimary);
-  }
-
   zx_status_t DoIoLocked(zx_handle_t vmo, size_t off, size_t len, uint32_t command) const;
 
   thrd_t initialization_thread_;
@@ -196,8 +185,7 @@ class VPartitionManager : public ManagerDeviceType {
   block_info_t info_;  // Cached info from parent device
 
   fbl::Mutex lock_;
-  fzl::OwnedVmoMapper metadata_ TA_GUARDED(lock_);
-  bool first_metadata_is_primary_ TA_GUARDED(lock_);
+  Metadata metadata_ TA_GUARDED(lock_);
   // Number of currently allocated slices.
   size_t pslice_allocated_count_ TA_GUARDED(lock_);
 
