@@ -2177,6 +2177,10 @@ foreach(_target_type,
                                "visibility",
                              ])
 
+      if (!defined(inputs)) {
+        inputs = []
+      }
+
       # This wraps the built-in action template to enforce best practices.
       # In particular:
       # * If the script is Python, use the in-tree interpreter.
@@ -2192,6 +2196,7 @@ foreach(_target_type,
         if (defined(invoker.args)) {
           _invoker_args += invoker.args
         }
+        inputs += [ invoker.script ]
       } else {
         _invoker_script = invoker.script
         _invoker_args = []
@@ -2207,6 +2212,11 @@ foreach(_target_type,
         args = _invoker_args
       } else {
         script = python_exe_src
+
+        inputs += [
+          "//build/tracer/action_tracer.py",
+          _invoker_script,
+        ]
 
         args = [
           # This wraps actions with a filesystem activity tracer.
