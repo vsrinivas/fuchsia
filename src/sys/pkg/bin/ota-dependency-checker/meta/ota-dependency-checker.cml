@@ -1,0 +1,10 @@
+{
+    include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
+    program: {
+        binary: "bin/ota-dependency-checker",
+    },
+    use: [
+        { runner: "elf" },
+        { protocol: "fuchsia.paver.Paver" },
+    ],
+}

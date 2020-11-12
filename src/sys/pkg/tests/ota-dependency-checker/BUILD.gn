@@ -1,0 +1,65 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_test.gni")
+import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
+
+rustc_test("test_driver") {
+  name = "ota_dependency_checker_integration_test"
+  edition = "2018"
+
+  deps = [
+    "//sdk/fidl/fuchsia.logger:fuchsia.logger-rustc",
+    "//sdk/fidl/fuchsia.paver:fuchsia.paver-rustc",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/sys/pkg/testing/mock-paver",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
+  ]
+
+  sources = [ "src/lib.rs" ]
+}
+
+# TODO(fxbug.dev/64137) migrate to the `fuchsia_test_package` template. It's currently possible to
+# do this by using the `resource` and `fuchsia_component` templates. However, doing so would put
+# two copies of the binary (the original grand_swd_binary and the copied ota-dependency-checker)
+# in the test package. It would be surprising to see both binaries in the meta/contents, so we are
+# sticking with the legacy template for now.
+test_package("ota-dependency-checker-integration-tests") {
+  deps = [
+    ":test_driver",
+    "//src/sys/pkg/bin/grand-swd-binary",
+  ]
+
+  binaries = [
+    {
+      name = "ota_dependency_checker"
+      source = "grand_swd_binary"
+      dest = "ota-dependency-checker"
+    },
+  ]
+
+  meta = [
+    {
+      # TODO(fxbug.dev/64125) migrate to v2.
+      path = rebase_path("meta/ota-dependency-checker.cmx")
+      dest = "ota-dependency-checker.cmx"
+    },
+  ]
+
+  tests = [
+    {
+      name = "ota_dependency_checker_integration_test"
+      dest = "ota-dependency-checker-integration-test"
+      environments = basic_envs
+    },
+  ]
+}
+
+group("tests") {
+  testonly = true
+  public_deps = [ ":ota-dependency-checker-integration-tests" ]
+}

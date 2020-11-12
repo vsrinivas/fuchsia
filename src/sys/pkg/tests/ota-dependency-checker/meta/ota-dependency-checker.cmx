@@ -1,0 +1,13 @@
+{
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
+    "program": {
+        "binary": "bin/ota-dependency-checker"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.paver.Paver"
+        ]
+    }
+}

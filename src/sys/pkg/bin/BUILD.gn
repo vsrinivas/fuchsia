@@ -20,6 +20,7 @@ group("tests") {
     "grand-swd-binary:tests",
     "multi-universal-tool:tests",
     "omaha-client:tests",
+    "ota-dependency-checker:tests",
     "pkg-cache:tests",
     "pkg-resolver:tests",
     "pkgctl:tests",

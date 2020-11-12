@@ -10,6 +10,7 @@ fn main() -> Result<(), anyhow::Error> {
 
     match program {
         Program::PkgResolver => pkg_resolver::main(),
+        Program::OtaDependencyChecker => ota_dependency_checker::main(),
     }
 }
 
@@ -25,6 +26,7 @@ fn find_program(mut args: impl Iterator<Item = OsString>) -> Result<Program, Fin
 
     match name.as_str() {
         "pkg-resolver" => Ok(Program::PkgResolver),
+        "ota-dependency-checker" => Ok(Program::OtaDependencyChecker),
         _ => Err(FindProgramError::UnknownProgram(name)),
     }
 }
@@ -32,6 +34,7 @@ fn find_program(mut args: impl Iterator<Item = OsString>) -> Result<Program, Fin
 #[derive(Debug, PartialEq, Eq)]
 enum Program {
     PkgResolver,
+    OtaDependencyChecker,
 }
 
 #[derive(Debug, PartialEq, Eq, thiserror::Error)]
@@ -61,6 +64,10 @@ mod tests {
     #[test]
     fn matches_known_programs() {
         assert_eq!(find_program(args!("/pkg/bin/pkg-resolver")), Ok(Program::PkgResolver));
+        assert_eq!(
+            find_program(args!("/pkg/bin/ota-dependency-checker")),
+            Ok(Program::OtaDependencyChecker)
+        );
     }
 
     #[test]

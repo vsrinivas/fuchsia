@@ -9,6 +9,7 @@ group("tests") {
     "far:tests",
     "isolated-ota:tests",
     "omaha-client:tests",
+    "ota-dependency-checker:tests",
     "pkg-cache:tests",
     "pkg-local-mirror:tests",
     "pkg-resolver:tests",
