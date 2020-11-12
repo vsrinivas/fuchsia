@@ -75,6 +75,22 @@ fbl::RefPtr<VmMapping> VmAddressRegionOrMapping::as_vm_mapping() {
   return fbl::RefPtr<VmMapping>(static_cast<VmMapping*>(this));
 }
 
+VmAddressRegion* VmAddressRegionOrMapping::as_vm_address_region_ptr() {
+  canary_.Assert();
+  if (unlikely(is_mapping())) {
+    return nullptr;
+  }
+  return static_cast<VmAddressRegion*>(this);
+}
+
+VmMapping* VmAddressRegionOrMapping::as_vm_mapping_ptr() {
+  canary_.Assert();
+  if (unlikely(!is_mapping())) {
+    return nullptr;
+  }
+  return static_cast<VmMapping*>(this);
+}
+
 bool VmAddressRegionOrMapping::is_valid_mapping_flags(uint arch_mmu_flags) {
   if (!(flags_ & VMAR_FLAG_CAN_MAP_READ) && (arch_mmu_flags & ARCH_MMU_FLAG_PERM_READ)) {
     return false;

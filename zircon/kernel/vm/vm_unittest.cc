@@ -3400,7 +3400,7 @@ bool remove_region(RegionList<TestRegion>* regions, vaddr_t base) {
   if (region == nullptr) {
     return false;
   }
-  regions->RemoveRegion(region.get());
+  regions->RemoveRegion(region);
   return true;
 }
 
@@ -3492,15 +3492,15 @@ static bool region_list_find_region_test() {
   vaddr_t base = 0xFFFF000000000000;
 
   auto region = regions.FindRegion(base);
-  EXPECT_EQ(region.get(), nullptr);
+  EXPECT_EQ(region, nullptr);
 
   insert_region(&regions, base + 0x1000, 0x1000);
 
   region = regions.FindRegion(base + 1);
-  EXPECT_EQ(region.get(), nullptr);
+  EXPECT_EQ(region, nullptr);
 
   region = regions.FindRegion(base + 0x1001);
-  EXPECT_NE(region.get(), nullptr);
+  EXPECT_NE(region, nullptr);
   EXPECT_EQ(base + 0x1000, region->base());
   EXPECT_EQ((size_t)0x1000, region->size());
 

@@ -103,6 +103,8 @@ class VmAddressRegionOrMapping
   bool is_mapping() const { return is_mapping_; }
   fbl::RefPtr<VmAddressRegion> as_vm_address_region();
   fbl::RefPtr<VmMapping> as_vm_mapping();
+  VmAddressRegion* as_vm_address_region_ptr();
+  VmMapping* as_vm_mapping_ptr();
 
   // Page fault in an address within the region.  Recursively traverses
   // the regions to find the target mapping, if it exists.
@@ -204,7 +206,7 @@ class RegionList final {
   void InsertRegion(fbl::RefPtr<T> region) { regions_.insert(region); }
 
   // Find the region that covers addr, returns nullptr if not found.
-  fbl::RefPtr<T> FindRegion(vaddr_t addr) const {
+  T* FindRegion(vaddr_t addr) const {
     // Find the first region with a base greater than *addr*.  If a region
     // exists for *addr*, it will be immediately before it.
     auto itr = --regions_.upper_bound(addr);
@@ -221,7 +223,7 @@ class RegionList final {
       return nullptr;
     }
 
-    return itr.CopyPointer();
+    return &*itr.CopyPointer();
   }
 
   // Find the region that contains |base|, or if that doesn't exist, the first region that contains

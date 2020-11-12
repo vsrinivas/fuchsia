@@ -353,7 +353,7 @@ fbl::RefPtr<VmAddressRegionOrMapping> VmAddressRegion::FindRegion(vaddr_t addr) 
   if (state_ != LifeCycleState::ALIVE) {
     return nullptr;
   }
-  return subregions_.FindRegion(addr);
+  return fbl::RefPtr(subregions_.FindRegion(addr));
 }
 
 size_t VmAddressRegion::AllocatedPagesLocked() const {
@@ -376,13 +376,13 @@ zx_status_t VmAddressRegion::PageFault(vaddr_t va, uint pf_flags, PageRequest* p
   canary_.Assert();
   DEBUG_ASSERT(aspace_->lock()->lock().IsHeld());
 
-  auto vmar = fbl::RefPtr(this);
-  while (auto next = vmar->subregions_.FindRegion(va)) {
-    AssertHeld(next->lock_ref());
-    if (next->is_mapping()) {
-      return next->PageFault(va, pf_flags, page_request);
+  VmAddressRegion* vmar = this;
+  while (VmAddressRegionOrMapping* next = vmar->subregions_.FindRegion(va)) {
+    if (auto mapping = next->as_vm_mapping_ptr()) {
+      AssertHeld(mapping->lock_ref());
+      return mapping->PageFault(va, pf_flags, page_request);
     }
-    vmar = next->as_vm_address_region();
+    vmar = next->as_vm_address_region_ptr();
   }
 
   return ZX_ERR_NOT_FOUND;
