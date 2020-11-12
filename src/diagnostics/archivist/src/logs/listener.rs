@@ -168,4 +168,7 @@ pub enum ListenerError {
         #[from]
         source: super::error::StreamError,
     },
+
+    #[error("error while forwarding unsafe log requests: {source}")]
+    AsbestosIo { source: fidl::Error },
 }

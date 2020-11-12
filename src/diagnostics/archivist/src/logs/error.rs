@@ -4,7 +4,67 @@
 use diagnostics_stream::parse::ParseError;
 use thiserror::Error;
 
-use super::message::{fx_log_severity_t, MAX_TAGS, MAX_TAG_LEN, MIN_PACKET_SIZE};
+use super::{
+    listener::ListenerError,
+    message::{fx_log_severity_t, MAX_TAGS, MAX_TAG_LEN, MIN_PACKET_SIZE},
+};
+
+#[derive(Debug, Error)]
+pub enum LogsError {
+    #[error("couldn't connect to {protocol}: {source}")]
+    ConnectingToService { protocol: &'static str, source: anyhow::Error },
+
+    #[error("couldn't retrieve the ReadOnlyLog debuglog handle: {source}")]
+    RetrievingDebugLog { source: fidl::Error },
+
+    #[error("malformed event: `{source}`")]
+    MalformedEvent {
+        #[from]
+        source: EventError,
+    },
+
+    #[error("couldn't forward messages: {source}")]
+    Forwarding {
+        #[from]
+        source: ForwardError,
+    },
+
+    #[error("error while handling {protocol} requests: {source}")]
+    HandlingRequests { protocol: &'static str, source: fidl::Error },
+
+    #[error("error from a listener: {source}")]
+    Listener {
+        #[from]
+        source: ListenerError,
+    },
+}
+
+#[derive(Debug, Error)]
+pub enum EventError {
+    #[error("missing `{0}`")]
+    MissingField(&'static str),
+
+    #[error("incorrect capability name {received} (expected {expected})")]
+    IncorrectName { received: String, expected: &'static str },
+
+    #[error("server end from event was invalid: {source}")]
+    InvalidServerEnd { source: fidl::Error },
+
+    #[error("received a fuchsia.sys2/EventErro: {description}")]
+    ReceivedError { description: String },
+
+    #[error("received an invalid event type")]
+    InvalidEventType,
+}
+
+#[derive(Debug, Error)]
+pub enum ForwardError {
+    #[error("couldn't create socket for forwarding: {source}")]
+    Create { source: fuchsia_zircon::Status },
+
+    #[error("couldn't send socket to logsink: {source}")]
+    Connect { source: fidl::Error },
+}
 
 #[derive(Debug, Error)]
 pub enum StreamError {

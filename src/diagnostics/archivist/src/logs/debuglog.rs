@@ -4,10 +4,13 @@
 
 // Read debug logs, convert them to LogMessages and serve them.
 
-use super::message::{LogsField, LogsHierarchy, LogsProperty, Message, Severity, METADATA_SIZE};
-use anyhow::Error;
+use crate::logs::{
+    error::LogsError,
+    message::{LogsField, LogsHierarchy, LogsProperty, Message, Severity, METADATA_SIZE},
+};
 use async_trait::async_trait;
 use byteorder::{ByteOrder, LittleEndian};
+use fidl::endpoints::ServiceMarker;
 use fidl_fuchsia_boot::ReadOnlyLogMarker;
 use fidl_fuchsia_sys_internal::SourceIdentity;
 use fuchsia_async as fasync;
@@ -54,9 +57,12 @@ impl DebugLog for KernelDebugLog {
 
 impl KernelDebugLog {
     /// Connects to `fuchsia.boot.ReadOnlyLog` to retrieve a handle.
-    pub async fn new() -> Result<Self, Error> {
-        let boot_log = connect_to_service::<ReadOnlyLogMarker>()?;
-        let debuglogger = boot_log.get().await?;
+    pub async fn new() -> Result<Self, LogsError> {
+        let boot_log = connect_to_service::<ReadOnlyLogMarker>().map_err(|source| {
+            LogsError::ConnectingToService { protocol: ReadOnlyLogMarker::NAME, source }
+        })?;
+        let debuglogger =
+            boot_log.get().await.map_err(|source| LogsError::RetrievingDebugLog { source })?;
         Ok(KernelDebugLog { debuglogger })
     }
 }

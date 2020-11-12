@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use anyhow::{format_err, Context as _, Error};
 use buffer::LazyItem;
 use fidl::endpoints::{ServerEnd, ServiceMarker};
 use fidl_fuchsia_diagnostics::{Interest, StreamMode};
 use fidl_fuchsia_logger::LogSinkMarker;
 use fidl_fuchsia_logger::{
-    LogRequest, LogRequestStream, LogSinkControlHandle, LogSinkRequest, LogSinkRequestStream,
+    LogMarker, LogRequest, LogRequestStream, LogSinkControlHandle, LogSinkRequest,
+    LogSinkRequestStream,
 };
 use fidl_fuchsia_sys2 as fsys;
 use fidl_fuchsia_sys_internal::{
@@ -35,6 +35,8 @@ pub mod stats;
 pub mod testing;
 
 pub use debuglog::{convert_debuglog_to_log_message, KernelDebugLog};
+use error::{EventError, ForwardError, LogsError};
+use listener::ListenerError;
 pub use message::Message;
 
 use interest::InterestDispatcher;
@@ -187,9 +189,7 @@ impl LogManager {
             match next {
                 Ok(LogSinkRequest::Connect { socket, control_handle }) => {
                     let forwarder = { self.inner.lock().await.legacy_forwarder.clone() };
-                    match LogMessageSocket::new(socket, source.clone(), forwarder)
-                        .context("creating log stream from socket")
-                    {
+                    match LogMessageSocket::new(socket, source.clone(), forwarder) {
                         Ok(log_stream) => {
                             self.try_add_interest_listener(&source, control_handle).await;
                             let fut =
@@ -207,9 +207,7 @@ impl LogManager {
                 }
                 Ok(LogSinkRequest::ConnectStructured { socket, control_handle }) => {
                     let forwarder = { self.inner.lock().await.structured_forwarder.clone() };
-                    match LogMessageSocket::new_structured(socket, source.clone(), forwarder)
-                        .context("creating log stream from socket")
-                    {
+                    match LogMessageSocket::new_structured(socket, source.clone(), forwarder) {
                         Ok(log_stream) => {
                             self.try_add_interest_listener(&source, control_handle).await;
                             let fut =
@@ -307,7 +305,7 @@ impl LogManager {
         &self,
         event: fsys::Event,
         sender: mpsc::UnboundedSender<FutureObj<'static, ()>>,
-    ) -> Result<(), Error> {
+    ) -> Result<(), LogsError> {
         let identity = Self::source_identity_from_event(&event)?;
         let stream = Self::log_sink_request_stream_from_event(event)?;
         fasync::Task::spawn(self.clone().handle_log_sink(stream, identity, sender)).detach();
@@ -316,18 +314,18 @@ impl LogManager {
 
     /// Extract the SourceIdentity from a components v2 event.
     // TODO(fxbug.dev/54330): LogManager should have its own error type.
-    fn source_identity_from_event(event: &fsys::Event) -> Result<Arc<SourceIdentity>, Error> {
+    fn source_identity_from_event(event: &fsys::Event) -> Result<Arc<SourceIdentity>, LogsError> {
         let target_moniker = event
             .descriptor
             .as_ref()
             .and_then(|descriptor| descriptor.moniker.clone())
-            .ok_or(format_err!("No moniker present"))?;
+            .ok_or(EventError::MissingField("moniker"))?;
 
         let component_url = event
             .descriptor
             .as_ref()
             .and_then(|descriptor| descriptor.component_url.clone())
-            .ok_or(format_err!("No URL present"))?;
+            .ok_or(EventError::MissingField("component_url"))?;
 
         let mut source = SourceIdentity::empty();
         source.component_url = Some(component_url.clone());
@@ -339,28 +337,33 @@ impl LogManager {
     // TODO(fxbug.dev/54330): LogManager should have its own error type.
     fn log_sink_request_stream_from_event(
         event: fsys::Event,
-    ) -> Result<LogSinkRequestStream, Error> {
-        let payload =
-            event.event_result.ok_or(format_err!("Missing event result.")).and_then(|result| {
-                match result {
-                    fsys::EventResult::Payload(fsys::EventPayload::CapabilityRequested(
-                        payload,
-                    )) => Ok(payload),
-                    fsys::EventResult::Error(fsys::EventError {
-                        description: Some(description),
-                        ..
-                    }) => Err(format_err!("{}", description)),
-                    _ => Err(format_err!("Incorrect event type.")),
+    ) -> Result<LogSinkRequestStream, LogsError> {
+        let payload = event.event_result.ok_or(EventError::MissingField("event_result")).and_then(
+            |result| match result {
+                fsys::EventResult::Payload(fsys::EventPayload::CapabilityRequested(payload)) => {
+                    Ok(payload)
                 }
-            })?;
+                fsys::EventResult::Error(fsys::EventError {
+                    description: Some(description),
+                    ..
+                }) => Err(EventError::ReceivedError { description }),
+                _ => Err(EventError::InvalidEventType),
+            },
+        )?;
 
-        let capability_name = payload.name.ok_or(format_err!("Missing capability path"))?;
+        let capability_name = payload.name.ok_or(EventError::MissingField("name"))?;
         if &capability_name != LogSinkMarker::NAME {
-            return Err(format_err!("Incorrect LogSink capability_name {}", capability_name));
+            Err(EventError::IncorrectName {
+                received: capability_name,
+                expected: LogSinkMarker::NAME,
+            })?;
         }
-        let capability = payload.capability.ok_or(format_err!("Missing capability"))?;
-        let server_end = ServerEnd::<LogSinkMarker>::new(capability);
-        server_end.into_stream().map_err(|_| format_err!("Unable to create LogSinkRequestStream"))
+
+        let capability = payload.capability.ok_or(EventError::MissingField("capability"))?;
+        let server_end = ServerEnd::<LogSinkMarker>::new(capability)
+            .into_stream()
+            .map_err(|source| EventError::InvalidServerEnd { source })?;
+        Ok(server_end)
     }
 
     /// Spawn a task to handle requests from components reading the shared log.
@@ -380,8 +383,13 @@ impl LogManager {
         self,
         mut stream: LogRequestStream,
         mut sender: mpsc::UnboundedSender<Task<()>>,
-    ) -> Result<(), Error> {
-        while let Some(request) = stream.try_next().await? {
+    ) -> Result<(), LogsError> {
+        while let Some(request) = stream.next().await {
+            let request = request.map_err(|source| LogsError::HandlingRequests {
+                protocol: LogMarker::NAME,
+                source,
+            })?;
+
             let (listener, options, dump_logs, selectors) = match request {
                 LogRequest::ListenSafe { log_listener, options, .. } => {
                     (log_listener, options, false, None)
@@ -397,12 +405,14 @@ impl LogManager {
                 // TODO(fxbug.dev/48758) delete these methods!
                 LogRequest::Listen { log_listener, options, .. } => {
                     warn!("Use of fuchsia.logger.Log.Listen. Use ListenSafe.");
-                    let listener = pretend_scary_listener_is_safe(log_listener)?;
+                    let listener = pretend_scary_listener_is_safe(log_listener)
+                        .map_err(|source| ListenerError::AsbestosIo { source })?;
                     (listener, options, false, None)
                 }
                 LogRequest::DumpLogs { log_listener, options, .. } => {
                     warn!("Use of fuchsia.logger.Log.DumpLogs. Use DumpLogsSafe.");
-                    let listener = pretend_scary_listener_is_safe(log_listener)?;
+                    let listener = pretend_scary_listener_is_safe(log_listener)
+                        .map_err(|source| ListenerError::AsbestosIo { source })?;
                     (listener, options, true, None)
                 }
             };
@@ -448,23 +458,28 @@ impl LogManager {
     pub fn forward_logs(self) {
         fasync::Task::spawn(async move {
             if let Err(e) = self.init_forwarders().await {
-                error!("couldn't forward logs: {:?}", e);
+                error!("couldn't forward logs: {}", e);
             }
         })
         .detach();
         debug!("Log forwarding initialized.");
     }
 
-    async fn init_forwarders(self) -> Result<(), Error> {
-        let sink = fuchsia_component::client::connect_to_service::<LogSinkMarker>()?;
+    async fn init_forwarders(self) -> Result<(), LogsError> {
+        let sink =
+            fuchsia_component::client::connect_to_service::<LogSinkMarker>().map_err(|source| {
+                LogsError::ConnectingToService { protocol: LogSinkMarker::NAME, source }
+            })?;
         let mut inner = self.inner.lock().await;
 
-        let (send, recv) = zx::Socket::create(zx::SocketOpts::DATAGRAM)?;
-        sink.connect(recv)?;
+        let (send, recv) = zx::Socket::create(zx::SocketOpts::DATAGRAM)
+            .map_err(|source| ForwardError::Create { source })?;
+        sink.connect(recv).map_err(|source| ForwardError::Connect { source })?;
         inner.legacy_forwarder.init(send);
 
-        let (send, recv) = zx::Socket::create(zx::SocketOpts::DATAGRAM)?;
-        sink.connect_structured(recv)?;
+        let (send, recv) = zx::Socket::create(zx::SocketOpts::DATAGRAM)
+            .map_err(|source| ForwardError::Create { source })?;
+        sink.connect_structured(recv).map_err(|source| ForwardError::Connect { source })?;
         inner.structured_forwarder.init(send);
 
         Ok(())

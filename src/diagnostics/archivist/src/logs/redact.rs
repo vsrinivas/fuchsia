@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file
 
-use anyhow::Error;
 use futures::prelude::*;
 use regex::{Regex, RegexSet};
 use serde::Serialize;
@@ -57,7 +56,7 @@ impl Redactor {
         Self::new(KNOWN_BAD_PATTERNS).unwrap()
     }
 
-    fn new(patterns: &[&str]) -> Result<Self, Error> {
+    fn new(patterns: &[&str]) -> Result<Self, regex::Error> {
         let replacements = patterns.iter().map(|p| Regex::new(p)).collect::<Result<Vec<_>, _>>()?;
         let to_redact = RegexSet::new(patterns)?;
         Ok(Self { to_redact, replacements })
