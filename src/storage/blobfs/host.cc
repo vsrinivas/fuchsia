@@ -801,52 +801,56 @@ InodePtr Blobfs::GetNode(uint32_t index) {
   return InodePtr(&iblock[index % kBlobfsInodesPerBlock], InodePtrDeleter(this));
 }
 
-zx_status_t Blobfs::LoadAndVerifyBlob(uint32_t node_index) {
-  Inode inode = *GetNode(node_index);
+fit::result<std::vector<uint8_t>, std::string> Blobfs::LoadAndVerifyBlob(Inode& inode) {
   size_t blob_start_block = data_start_block_ + inode.extents[0].Start();
   uint32_t block_size = GetBlockSize();
   zx_status_t status;
+  auto make_error = [&](std::string error) {
+    digest::Digest digest(inode.merkle_root_hash);
+    auto digest_str = digest.ToString();
+    return fit::error("Blob with merkle root hash of " +
+                      std::string(digest_str.data(), digest_str.length()) +
+                      " had errors. More specifically: " + error);
+  };
 
   auto blob_layout =
       blobfs::BlobLayout::CreateFromInode(GetBlobLayoutFormat(Info()), inode, block_size);
   if (blob_layout.is_error()) {
-    FS_TRACE_ERROR("blobfs: Failed to create blob layout: %d\n", blob_layout.status_value());
-    return blob_layout.status_value();
+    return make_error("Failed to create blob layout with status " +
+                      std::to_string(blob_layout.status_value()));
   }
 
   // Read in the Merkle tree.
   uint32_t merkle_tree_block_count = blob_layout->MerkleTreeBlockCount();
   uint32_t merkle_tree_block_offset = blob_layout->MerkleTreeBlockOffset();
-  std::unique_ptr<uint8_t[]> merkle_tree_blocks(
-      new uint8_t[blob_layout->MerkleTreeBlockAlignedSize()]);
+  std::vector<uint8_t> merkle_tree_blocks(blob_layout->MerkleTreeBlockAlignedSize(), 0);
   for (uint32_t block = 0; block < merkle_tree_block_count; ++block) {
     ReadBlock(blob_start_block + merkle_tree_block_offset + block);
-    memcpy(merkle_tree_blocks.get() + (block * block_size), cache_.blk, block_size);
+    memcpy(&merkle_tree_blocks[block * block_size], cache_.blk, block_size);
   }
 
   // Read in the data.
   uint32_t data_block_count = blob_layout->DataBlockCount();
   uint32_t data_block_offset = blob_layout->DataBlockOffset();
-  std::unique_ptr<uint8_t[]> data_blocks(new uint8_t[blob_layout->DataBlockAlignedSize()]);
+  std::vector<uint8_t> data_blocks(blob_layout->DataBlockAlignedSize(), 0);
   for (uint32_t block = 0; block < data_block_count; ++block) {
     ReadBlock(blob_start_block + data_block_offset + block);
-    memcpy(data_blocks.get() + (block * block_size), cache_.blk, block_size);
+    memcpy(&data_blocks[block * block_size], cache_.blk, block_size);
   }
 
   // Decompress the data if necessary.
   if (inode.header.flags & HostCompressor::InodeHeaderCompressionFlags()) {
     size_t file_size = inode.blob_size;
-    std::unique_ptr<uint8_t[]> uncompressed_data(new uint8_t[file_size]);
+    std::vector<uint8_t> uncompressed_data(file_size, 0);
     HostDecompressor decompressor;
-    if ((status = decompressor.Decompress(uncompressed_data.get(), &file_size, data_blocks.get(),
+    if ((status = decompressor.Decompress(uncompressed_data.data(), &file_size, data_blocks.data(),
                                           blob_layout->DataSizeUpperBound())) != ZX_OK) {
-      FS_TRACE_ERROR("blobfs: Failed to decompress a blob: %d\n", status);
-      return status;
+      return make_error("Failed to decompress with status " + std::to_string(status));
     }
     if (file_size != inode.blob_size) {
-      FS_TRACE_ERROR("blobfs: Failed to fully decompress blob (%zu of %" PRIu64 " expected)\n",
-                     file_size, inode.blob_size);
-      return ZX_ERR_IO_DATA_INTEGRITY;
+      return make_error("Decompressed blob size of " + std::to_string(file_size) +
+                        " mismatch with blob inode expected size of " +
+                        std::to_string(inode.blob_size));
     }
     // Replace the compressed data with the uncompressed data.
     data_blocks = std::move(uncompressed_data);
@@ -854,19 +858,63 @@ zx_status_t Blobfs::LoadAndVerifyBlob(uint32_t node_index) {
 
   // Verify the contents of the blob.
   uint8_t* merkle_tree_ptr =
-      merkle_tree_blocks.get() + blob_layout->MerkleTreeOffsetWithinBlockOffset();
+      merkle_tree_blocks.empty()
+          ? nullptr
+          : &merkle_tree_blocks[blob_layout->MerkleTreeOffsetWithinBlockOffset()];
   MerkleTreeVerifier mtv;
   mtv.SetUseCompactFormat(blobfs::ShouldUseCompactMerkleTreeFormat(blob_layout->Format()));
   if ((status = mtv.SetDataLength(inode.blob_size)) != ZX_OK ||
       (status = mtv.SetTree(merkle_tree_ptr, mtv.GetTreeLength(), inode.merkle_root_hash,
                             sizeof(inode.merkle_root_hash))) != ZX_OK ||
-      (status = mtv.Verify(data_blocks.get(), inode.blob_size, 0)) != ZX_OK) {
-    FS_TRACE_ERROR("blobfs: Failed verify a blob: %d\n", status);
-    return status;
+      (status = mtv.Verify(data_blocks.data(), inode.blob_size, 0)) != ZX_OK) {
+    return make_error("Verification failed with status " + std::to_string(status));
   }
-  return ZX_OK;
+
+  // Remove trailing block alignment.
+  data_blocks.resize(inode.blob_size, 0);
+
+  return fit::ok(std::move(data_blocks));
+}
+
+zx_status_t Blobfs::LoadAndVerifyBlob(uint32_t node_index) {
+  Inode inode = *GetNode(node_index);
+  auto load_result = LoadAndVerifyBlob(inode);
+  return load_result.is_ok() ? ZX_OK : ZX_ERR_INTERNAL;
 }
 
 uint32_t Blobfs::GetBlockSize() const { return Info().block_size; }
+
+fit::result<void, std::string> Blobfs::VisitBlobs(BlobVisitor visitor) {
+  for (uint64_t inode_index = 0, allocated_nodes = 0;
+       inode_index < info_.inode_count && allocated_nodes < info_.alloc_inode_count;
+       ++inode_index) {
+    InodePtr inode_ptr = GetNode(inode_index);
+    if (!inode_ptr) {
+      return fit::error("Failed to retrieve inode.");
+    }
+    if (!inode_ptr->header.IsAllocated()) {
+      continue;
+    }
+
+    // Required copy to preven additional calls to ReadBlock or GetNode to replace the contents
+    // of |cache_.blk| where inode_ptr comes from.
+    Inode inode = *inode_ptr;
+    allocated_nodes++;
+    auto load_result = LoadAndVerifyBlob(inode);
+    if (load_result.is_error()) {
+      return load_result.take_error_result();
+    }
+    BlobView view = {
+        .merkle_hash = fbl::Span<const uint8_t>(inode.merkle_root_hash),
+        .blob_contents = load_result.value(),
+    };
+
+    auto visitor_result = visitor(view);
+    if (visitor_result.is_error()) {
+      return visitor_result.take_error_result();
+    }
+  }
+  return fit::ok();
+}
 
 }  // namespace blobfs

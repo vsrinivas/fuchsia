@@ -7,11 +7,14 @@
 #ifndef SRC_STORAGE_BLOBFS_INCLUDE_BLOBFS_HOST_H_
 #define SRC_STORAGE_BLOBFS_INCLUDE_BLOBFS_HOST_H_
 
+#include <cstdint>
 #ifdef __Fuchsia__
 #error Host-only Header
 #endif
 
 #include <assert.h>
+#include <lib/fit/function.h>
+#include <lib/fit/result.h>
 #include <limits.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -33,6 +36,7 @@
 #include <fbl/macros.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
+#include <fbl/span.h>
 #include <fbl/string.h>
 #include <fbl/unique_fd.h>
 #include <fbl/vector.h>
@@ -131,6 +135,13 @@ class Blobfs : public fbl::RefCounted<Blobfs>, public NodeFinder {
  public:
   DISALLOW_COPY_ASSIGN_AND_MOVE(Blobfs);
 
+  struct BlobView {
+    fbl::Span<const uint8_t> merkle_hash;
+    fbl::Span<const uint8_t> blob_contents;
+  };
+
+  using BlobVisitor = fit::function<fit::result<void, std::string>(BlobView)>;
+
   // Creates an instance of Blobfs from the file at |blockfd|.
   // The blobfs partition is expected to start at |offset| bytes into the file.
   static zx_status_t Create(fbl::unique_fd blockfd, off_t offset, const info_block_t& info_block,
@@ -170,6 +181,10 @@ class Blobfs : public fbl::RefCounted<Blobfs>, public NodeFinder {
 
   uint32_t GetBlockSize() const;
 
+  // Calls |visitor| on each of the existing blobs.
+  // Errors on |visitor| will be forwarded to the caller, and will stop the iteration.
+  fit::result<void, std::string> VisitBlobs(BlobVisitor visitor);
+
  private:
   struct BlockCache {
     size_t bno;
@@ -196,6 +211,7 @@ class Blobfs : public fbl::RefCounted<Blobfs>, public NodeFinder {
   zx_status_t ResetCache();
 
   zx_status_t LoadAndVerifyBlob(uint32_t node_index);
+  fit::result<std::vector<uint8_t>, std::string> LoadAndVerifyBlob(Inode& inode);
 
   RawBitmap block_map_{};
 

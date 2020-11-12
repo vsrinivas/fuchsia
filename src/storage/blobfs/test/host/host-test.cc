@@ -8,7 +8,10 @@
 #include <unistd.h>
 #include <zircon/assert.h>
 
+#include <cstring>
+#include <limits>
 #include <memory>
+#include <optional>
 
 #include <blobfs/blob-layout.h>
 #include <blobfs/common.h>
@@ -61,28 +64,54 @@ std::unique_ptr<Blobfs> CreateBlobfs(uint64_t block_count, FilesystemOptions opt
   return blobfs;
 }
 
-// Returns the Inode for the last node to be added to |blobfs|.
-Inode GetLastCreatedInode(Blobfs& blobfs) {
-  // This takes advantage of the fact that the host Blobfs doesn't support creating blobs with
-  // extent containers so all allocated nodes in the node map will be inodes.  The host Blobfs
-  // also allocates the inodes consecutively.
-  int32_t node_index = blobfs.Info().alloc_inode_count - 1;
-  InodePtr inode_ptr = blobfs.GetNode(node_index);
-  // Double check the above assumptions.
-  ZX_ASSERT(inode_ptr->header.IsAllocated());
-  ZX_ASSERT(inode_ptr->header.IsInode());
-  // The inode_ptr is pointing to memory that gets reused inside of Blobfs so the inode is copied
-  // here to avoid lifetime issues.
-  return *inode_ptr;
+std::optional<Inode> FindInodeByMerkleDigest(Blobfs& blobfs, digest::Digest& digest) {
+  for (uint32_t i = 0; i < blobfs.Info().alloc_inode_count; ++i) {
+    InodePtr inode = blobfs.GetNode(i);
+    if (inode == nullptr) {
+      return std::nullopt;
+    }
+    if (!inode->header.IsAllocated() || !inode->header.IsInode()) {
+      continue;
+    }
+    if (digest == inode->merkle_root_hash) {
+      return *inode;
+    }
+  }
+  return std::nullopt;
+}
+
+void FillFileWithRandomContent(File& file, size_t size, unsigned int* seed) {
+  std::vector<uint8_t> file_contents(size, 0);
+
+  for (auto& b : file_contents) {
+    b = rand_r(seed) % std::numeric_limits<uint8_t>::max();
+  }
+
+  int written = 0;
+  int write_result = 0;
+  while ((write_result = write(file.fd(), file_contents.data() + written,
+                               file_contents.size() - written)) > 0) {
+    written += write_result;
+  }
+  ASSERT_EQ(write_result, 0);
+  ASSERT_EQ(written, static_cast<int>(size));
+}
+
+void InitBlob(uint64_t data_size, Blobfs& blobfs, File& blob, MerkleInfo& info,
+              unsigned int* seed) {
+  EXPECT_EQ(ftruncate(blob.fd(), data_size), 0);
+  FillFileWithRandomContent(blob, data_size, seed);
+  EXPECT_EQ(blobfs_add_blob(&blobfs, /*json_recorder=*/nullptr, blob.fd()), ZX_OK);
+  EXPECT_EQ(blobfs_preprocess(blob.fd(), false, GetBlobLayoutFormat(blobfs.Info()), &info), ZX_OK);
 }
 
 // Adds an uncompressed blob of size |data_size| to |blobfs| and returns the created blob's Inode.
 Inode AddUncompressedBlob(uint64_t data_size, Blobfs& blobfs) {
   File blob_file(tmpfile());
-  EXPECT_EQ(ftruncate(blob_file.fd(), data_size), 0);
-  EXPECT_EQ(blobfs_add_blob(&blobfs, /*json_recorder=*/nullptr, blob_file.fd()), ZX_OK);
-
-  return GetLastCreatedInode(blobfs);
+  MerkleInfo info;
+  unsigned int seed = testing::UnitTest::GetInstance()->random_seed();
+  InitBlob(data_size, blobfs, blob_file, info, &seed);
+  return FindInodeByMerkleDigest(blobfs, info.digest).value();
 }
 
 // Adds a compressed blob with an uncompressed size of |data_size| to |blobfs| and returns the
@@ -97,7 +126,7 @@ Inode AddCompressedBlob(uint64_t data_size, Blobfs& blobfs) {
   EXPECT_TRUE(info.compressed);
   EXPECT_EQ(blobfs_add_blob_with_merkle(&blobfs, /*json_recorder=*/nullptr, blob_file.fd(), info),
             ZX_OK);
-  return GetLastCreatedInode(blobfs);
+  return FindInodeByMerkleDigest(blobfs, info.digest).value();
 }
 
 TEST(BlobfsHostFormatTest, FormatDevice) {
@@ -255,6 +284,89 @@ TEST(BlobfsHostTest, WriteEmptyBlobWithCompactFormatIsCorrect) {
   BlobfsChecker checker(std::move(blobfs), {.repair = false});
   EXPECT_EQ(checker.Initialize(), ZX_OK);
   EXPECT_EQ(checker.Check(), ZX_OK);
+}
+
+void CheckBlobContents(File& blob, fbl::Span<const uint8_t> contents) {
+  std::vector<uint8_t> buffer(kBlobfsBlockSize);
+
+  int read_result = 0;
+  int read_bytes = 0;
+  lseek(blob.fd(), 0, SEEK_SET);
+  while ((read_result = read(blob.fd(), buffer.data(), buffer.size())) >= 0) {
+    ASSERT_LE(static_cast<unsigned int>(read_bytes + read_result), contents.size());
+    ASSERT_TRUE(memcmp(contents.data() + read_bytes, buffer.data(), read_result) == 0);
+    read_bytes += read_result;
+    if (read_result == 0) {
+      break;
+    }
+  }
+  ASSERT_EQ(read_result, 0);
+  ASSERT_EQ(static_cast<unsigned int>(read_bytes), contents.size());
+}
+
+TEST(BlobfsHostTest, VisitBlobsVisitsAllBlobsAndProvidesTheCorrectContents) {
+  auto blobfs = CreateBlobfs(/*block_count=*/500,
+                             {.blob_layout_format = BlobLayoutFormat::kCompactMerkleTreeAtEnd});
+  ASSERT_TRUE(blobfs != nullptr);
+
+  unsigned int seed = testing::UnitTest::GetInstance()->random_seed();
+  int blob_count = 32;
+  std::vector<std::unique_ptr<File>> blobs;
+  std::vector<MerkleInfo> blob_info;
+
+  for (int i = 0; i < blob_count; ++i) {
+    // 1-3 blocks and random tail(empty tail is acceptable too).
+    size_t data_size = (i % 3 + 1) * kBlobfsBlockSize + (rand_r(&seed) % kBlobfsBlockSize);
+    blobs.push_back(std::make_unique<File>(tmpfile()));
+    blob_info.push_back({});
+
+    InitBlob(data_size, *blobfs, *blobs.back(), blob_info.back(), &seed);
+  }
+
+  auto get_blob_index_by_digest =
+      [&](fbl::Span<const uint8_t> merkle_root_hash) -> std::optional<int> {
+    int i = 0;
+    for (auto& info : blob_info) {
+      if (info.digest.Equals(merkle_root_hash.data(), merkle_root_hash.size())) {
+        return i;
+      }
+      ++i;
+    }
+    return std::nullopt;
+  };
+
+  int visited_blob_count = 0;
+  auto visit_result =
+      blobfs->VisitBlobs([&](Blobfs::BlobView blob_view) -> fit::result<void, std::string> {
+        auto blob_index = get_blob_index_by_digest(blob_view.merkle_hash);
+        if (!blob_index.has_value()) {
+          return fit::error("Blob not found!");
+        }
+        CheckBlobContents(*blobs[blob_index.value()], blob_view.blob_contents);
+        visited_blob_count++;
+        return fit::ok();
+      });
+  ASSERT_TRUE(visit_result.is_ok()) << visit_result.error();
+  ASSERT_EQ(visited_blob_count, blob_count);
+
+  // Check that the blob can be read back and verified.
+  BlobfsChecker checker(std::move(blobfs), {.repair = false});
+  EXPECT_EQ(checker.Initialize(), ZX_OK);
+  EXPECT_EQ(checker.Check(), ZX_OK);
+}
+
+TEST(BlobfsHostTest, VisitBlobsForwardsVisitorErrors) {
+  auto blobfs = CreateBlobfs(/*block_count=*/500,
+                             {.blob_layout_format = BlobLayoutFormat::kCompactMerkleTreeAtEnd});
+  ASSERT_TRUE(blobfs != nullptr);
+
+  // One blob to visit at least.
+  AddUncompressedBlob(/*data_size=*/0, *blobfs);
+
+  auto res = blobfs->VisitBlobs([](auto view) { return fit::error("1234"); });
+
+  ASSERT_TRUE(res.is_error());
+  ASSERT_TRUE(res.error().find("1234") != std::string::npos);
 }
 
 }  // namespace

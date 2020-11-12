@@ -101,6 +101,7 @@ zx_library("blobfs") {
   public_deps = [
     "//src/storage/lib/watchdog",
     "//zircon/public/lib/bitmap",
+    "//zircon/public/lib/fit",
     "//zircon/public/lib/zxc",
     "//zircon/system/ulib/fs",
     "//zircon/system/ulib/fs/journal",
