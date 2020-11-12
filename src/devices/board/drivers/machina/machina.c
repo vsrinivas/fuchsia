@@ -28,7 +28,7 @@ static zx_status_t machina_pci_init(void) {
 
   zx_pci_init_arg_t* arg;
   // Room for one addr window.
-  size_t arg_size = sizeof(*arg) + sizeof(arg->addr_windows[0]);
+  uint32_t arg_size = sizeof(*arg) + sizeof(arg->addr_windows[0]);
   arg = calloc(1, arg_size);
   if (!arg) {
     return ZX_ERR_NO_MEMORY;
