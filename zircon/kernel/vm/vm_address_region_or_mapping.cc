@@ -20,8 +20,10 @@
 #define LOCAL_TRACE VM_GLOBAL_TRACE(0)
 
 VmAddressRegionOrMapping::VmAddressRegionOrMapping(vaddr_t base, size_t size, uint32_t flags,
-                                                   VmAspace* aspace, VmAddressRegion* parent)
-    : state_(LifeCycleState::NOT_READY),
+                                                   VmAspace* aspace, VmAddressRegion* parent,
+                                                   bool is_mapping)
+    : is_mapping_(is_mapping),
+      state_(LifeCycleState::NOT_READY),
       base_(base),
       size_(size),
       flags_(flags),

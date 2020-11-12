@@ -27,7 +27,8 @@
 #define LOCAL_TRACE VM_GLOBAL_TRACE(0)
 
 VmAddressRegion::VmAddressRegion(VmAspace& aspace, vaddr_t base, size_t size, uint32_t vmar_flags)
-    : VmAddressRegionOrMapping(base, size, vmar_flags | VMAR_CAN_RWX_FLAGS, &aspace, nullptr) {
+    : VmAddressRegionOrMapping(base, size, vmar_flags | VMAR_CAN_RWX_FLAGS, &aspace, nullptr,
+                               false) {
   // We add in CAN_RWX_FLAGS above, since an address space can't usefully
   // contain a process without all of these.
 
@@ -37,7 +38,7 @@ VmAddressRegion::VmAddressRegion(VmAspace& aspace, vaddr_t base, size_t size, ui
 
 VmAddressRegion::VmAddressRegion(VmAddressRegion& parent, vaddr_t base, size_t size,
                                  uint32_t vmar_flags, const char* name)
-    : VmAddressRegionOrMapping(base, size, vmar_flags, parent.aspace_.get(), &parent) {
+    : VmAddressRegionOrMapping(base, size, vmar_flags, parent.aspace_.get(), &parent, false) {
   strlcpy(const_cast<char*>(name_), name, sizeof(name_));
   LTRACEF("%p '%s'\n", this, name_);
 }
@@ -49,7 +50,7 @@ VmAddressRegion::VmAddressRegion(VmAspace& kernel_aspace)
   state_ = LifeCycleState::ALIVE;
 }
 
-VmAddressRegion::VmAddressRegion() : VmAddressRegionOrMapping(0, 0, 0, nullptr, nullptr) {
+VmAddressRegion::VmAddressRegion() : VmAddressRegionOrMapping(0, 0, 0, nullptr, nullptr, false) {
   strlcpy(const_cast<char*>(name_), "dummy", sizeof(name_));
   LTRACEF("%p '%s'\n", this, name_);
 }

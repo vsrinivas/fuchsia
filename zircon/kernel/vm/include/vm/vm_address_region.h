@@ -100,7 +100,7 @@ class VmAddressRegionOrMapping
   virtual size_t AllocatedPages() const;
 
   // Subtype information and safe down-casting
-  virtual bool is_mapping() const = 0;
+  bool is_mapping() const { return is_mapping_; }
   fbl::RefPtr<VmAddressRegion> as_vm_address_region();
   fbl::RefPtr<VmMapping> as_vm_mapping();
 
@@ -123,6 +123,7 @@ class VmAddressRegionOrMapping
 
  private:
   fbl::Canary<fbl::magic("VMRM")> canary_;
+  const bool is_mapping_;
 
  protected:
   // friend VmAddressRegion so it can access DestroyLocked
@@ -147,7 +148,7 @@ class VmAddressRegionOrMapping
   };
 
   VmAddressRegionOrMapping(vaddr_t base, size_t size, uint32_t flags, VmAspace* aspace,
-                           VmAddressRegion* parent);
+                           VmAddressRegion* parent, bool is_mapping);
 
   // Check if the given *arch_mmu_flags* are allowed under this
   // regions *flags_*
@@ -504,7 +505,6 @@ class VmAddressRegion final : public VmAddressRegionOrMapping {
   zx_status_t ReserveSpace(const char* name, size_t base, size_t size, uint arch_mmu_flags);
 
   const char* name() const { return name_; }
-  bool is_mapping() const override { return false; }
   bool has_parent() const;
 
   void DumpLocked(uint depth, bool verbose) const TA_REQ(lock()) override;
@@ -621,8 +621,6 @@ class VmMapping final : public VmAddressRegionOrMapping,
   // mapping was created with.  If a subrange of the mapping is specified, the
   // mapping may be split.
   zx_status_t Protect(vaddr_t base, size_t size, uint new_arch_mmu_flags);
-
-  bool is_mapping() const override { return true; }
 
   void DumpLocked(uint depth, bool verbose) const TA_REQ(lock()) override;
   zx_status_t PageFault(vaddr_t va, uint pf_flags, PageRequest* page_request)

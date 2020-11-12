@@ -27,7 +27,7 @@
 
 VmMapping::VmMapping(VmAddressRegion& parent, vaddr_t base, size_t size, uint32_t vmar_flags,
                      fbl::RefPtr<VmObject> vmo, uint64_t vmo_offset, uint arch_mmu_flags)
-    : VmAddressRegionOrMapping(base, size, vmar_flags, parent.aspace_.get(), &parent),
+    : VmAddressRegionOrMapping(base, size, vmar_flags, parent.aspace_.get(), &parent, true),
       object_(ktl::move(vmo)),
       object_offset_(vmo_offset),
       arch_mmu_flags_(arch_mmu_flags) {
