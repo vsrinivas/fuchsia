@@ -13,8 +13,9 @@ group("tests") {
   testonly = true
   deps = [
     ":wisdom",
-    "cpp:tests",
-    "rust:tests",
-    "tests",
+    # TODO(fxbug.dev/64202): reenable these tests after fixing the output
+    #"cpp:tests",
+    #"rust:tests",
+    #"tests",
   ]
 }
