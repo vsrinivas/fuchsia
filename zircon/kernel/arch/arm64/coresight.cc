@@ -159,7 +159,7 @@ int cmd_coresight(int argc, const cmd_args* argv, uint32_t flags) {
     printf("k %s walk <ROM table physical address>\n", argv[0].str);
   };
 
-  if (argc < 1) {
+  if (argc < 2) {
     usage();
     return 1;
   } else if (!strcmp(argv[1].str, "help")) {
