@@ -508,7 +508,6 @@ zx_status_t VPartitionManager::AllocateSlicesLocked(VPartition* vp, size_t vslic
 
   if ((status = WriteFvmLocked()) == ZX_OK) {
     VPartitionEntry* entry = GetVPartEntryLocked(vp->GetEntryIndex());
-    zxlogf(INFO, "added part %s", entry->name().c_str());
     diagnostics().OnAllocateSlices({
         .vpart_name = entry->name(),
         .count = count,
