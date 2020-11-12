@@ -25,15 +25,37 @@ using AmlNnaDeviceType = ddk::Device<AmlNnaDevice, ddk::GetProtocolable, ddk::Un
 
 class AmlNnaDevice : public AmlNnaDeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_NNA> {
  public:
+  // Each offset is the byte offset of the register in their respective mmio region.
+  struct NnaBlock {
+    // Power Domain MMIO.
+    uint32_t domain_power_sleep_offset;
+    uint32_t domain_power_iso_offset;
+    // Set power state (1 = power off)
+    uint32_t domain_power_sleep_bits;
+    // Set control output signal isolation (1 = set isolation)
+    uint32_t domain_power_iso_bits;
+
+    // Memory PD MMIO.
+    uint32_t hhi_mem_pd_reg0_offset;
+    uint32_t hhi_mem_pd_reg1_offset;
+
+    // Reset MMIO.
+    uint32_t reset_level2_offset;
+
+    // Hiu MMIO.
+    uint32_t clock_control_offset;
+  };
+
   explicit AmlNnaDevice(zx_device_t* parent, ddk::MmioBuffer hiu_mmio, ddk::MmioBuffer power_mmio,
                         ddk::MmioBuffer memory_pd_mmio, ddk::MmioBuffer reset_mmio,
-                        pdev_protocol_t proto)
+                        pdev_protocol_t proto, NnaBlock nna_block)
       : AmlNnaDeviceType(parent),
         pdev_(parent),
         hiu_mmio_(std::move(hiu_mmio)),
         power_mmio_(std::move(power_mmio)),
         memory_pd_mmio_(std::move(memory_pd_mmio)),
-        reset_mmio_(std::move(reset_mmio)) {
+        reset_mmio_(std::move(reset_mmio)),
+        nna_block_(nna_block) {
     memcpy(&parent_pdev_, &proto, sizeof(proto));
   }
   static zx_status_t Create(void* ctx, zx_device_t* parent);
@@ -52,6 +74,8 @@ class AmlNnaDevice : public AmlNnaDeviceType, public ddk::EmptyProtocol<ZX_PROTO
   ddk::MmioBuffer reset_mmio_;
 
   pdev_protocol_t parent_pdev_;
+
+  NnaBlock nna_block_;
 };
 
 }  // namespace aml_nna

@@ -9,16 +9,25 @@
 
 #include <hwreg/bitfields.h>
 
-// Power domain.
-#define AO_RTI_GEN_PWR_SLEEP0 (0x3a << 2)
-#define AO_RTI_GEN_PWR_ISO0 (0x3b << 2)
+#include "aml-nna.h"
 
-// Memory PD.
-#define HHI_NANOQ_MEM_PD_REG0 (0x43 << 2)
-#define HHI_NANOQ_MEM_PD_REG1 (0x44 << 2)
-#define HHI_VIPNANOQ_CLK_CNTL (0x72 << 2)
+static aml_nna::AmlNnaDevice::NnaBlock T931NnaBlock{
+    // AO_RTI_GEN_PWR_SLEEP0
+    .domain_power_sleep_offset = 0x3a << 2,
+    // AO_RTI_GEN_PWR_ISO0
+    .domain_power_iso_offset = 0x3b << 2,
+    .domain_power_sleep_bits = (1 << 16) | (1 << 17),
+    .domain_power_iso_bits = (1 << 16) | (1 << 17),
 
-// Reset.
-#define RESET_LEVEL2 0x88
+    // HHI_NANOQ_MEM_PD
+    .hhi_mem_pd_reg0_offset = 0x43 << 2,
+    .hhi_mem_pd_reg1_offset = 0x44 << 2,
+
+    // RESET2_LEVEL
+    .reset_level2_offset = 0x88,
+
+    // HHI_VIPNANOQ_CLK_CNTL
+    .clock_control_offset = 0x72 << 2,
+};
 
 #endif  // SRC_DEVICES_ML_DRIVERS_AML_NNA_T931_NNA_REGS_H_

@@ -9,6 +9,9 @@
 
 #include <mock-mmio-reg/mock-mmio-reg.h>
 
+#include "s905d3-nna-regs.h"
+#include "t931-nna-regs.h"
+
 namespace {
 constexpr size_t kHiuRegSize = 0x2000 / sizeof(uint32_t);
 constexpr size_t kPowerRegSize = 0x1000 / sizeof(uint32_t);
@@ -18,43 +21,82 @@ constexpr size_t kResetRegSize = 0x100 / sizeof(uint32_t);
 
 namespace aml_nna {
 
-TEST(AmlNnaTest, Init) {
-  auto hiu_regs = std::make_unique<ddk_mock::MockMmioReg[]>(kHiuRegSize);
-  ddk_mock::MockMmioRegRegion hiu_mock(hiu_regs.get(), sizeof(uint32_t), kHiuRegSize);
+class MockRegisters {
+ public:
+  MockRegisters()
+      : hiu_regs_(std::make_unique<ddk_mock::MockMmioReg[]>(kHiuRegSize)),
+        power_regs_(std::make_unique<ddk_mock::MockMmioReg[]>(kPowerRegSize)),
+        memory_pd_regs_(std::make_unique<ddk_mock::MockMmioReg[]>(kMemoryPDRegSize)),
+        reset_regs_(std::make_unique<ddk_mock::MockMmioReg[]>(kResetRegSize)),
 
-  auto power_regs = std::make_unique<ddk_mock::MockMmioReg[]>(kPowerRegSize);
-  ddk_mock::MockMmioRegRegion power_mock(power_regs.get(), sizeof(uint32_t), kPowerRegSize);
+        hiu_mock_(ddk_mock::MockMmioRegRegion(hiu_regs_.get(), sizeof(uint32_t), kHiuRegSize)),
+        power_mock_(
+            ddk_mock::MockMmioRegRegion(power_regs_.get(), sizeof(uint32_t), kPowerRegSize)),
+        memory_pd_mock_(
+            ddk_mock::MockMmioRegRegion(memory_pd_regs_.get(), sizeof(uint32_t), kMemoryPDRegSize)),
+        reset_mock_(
+            ddk_mock::MockMmioRegRegion(reset_regs_.get(), sizeof(uint32_t), kResetRegSize)) {}
 
-  auto memory_pd_regs = std::make_unique<ddk_mock::MockMmioReg[]>(kMemoryPDRegSize);
-  ddk_mock::MockMmioRegRegion memory_pd_mock(memory_pd_regs.get(), sizeof(uint32_t),
-                                             kMemoryPDRegSize);
+  // The caller should set the mock expectations before calling this.
+  void CreateDeviceAndVerify(AmlNnaDevice::NnaBlock nna_block) {
+    pdev_protocol_t proto;
+    auto device = std::make_unique<AmlNnaDevice>(
+        fake_ddk::kFakeParent, hiu_mock_.GetMmioBuffer(), power_mock_.GetMmioBuffer(),
+        memory_pd_mock_.GetMmioBuffer(), reset_mock_.GetMmioBuffer(), proto, nna_block);
+    ASSERT_NOT_NULL(device);
+    device->Init();
 
-  auto reset_regs = std::make_unique<ddk_mock::MockMmioReg[]>(kResetRegSize);
-  ddk_mock::MockMmioRegRegion reset_mock(reset_regs.get(), sizeof(uint32_t), kResetRegSize);
+    hiu_mock_.VerifyAll();
+    power_mock_.VerifyAll();
+    memory_pd_mock_.VerifyAll();
+    reset_mock_.VerifyAll();
+  }
 
-  power_regs[0x3a].ExpectRead(0xFFFFFFFF).ExpectWrite(0xFFFCFFFF);
-  power_regs[0x3b].ExpectRead(0xFFFFFFFF).ExpectWrite(0xFFFCFFFF);
+  std::unique_ptr<ddk_mock::MockMmioReg[]> hiu_regs_;
+  std::unique_ptr<ddk_mock::MockMmioReg[]> power_regs_;
+  std::unique_ptr<ddk_mock::MockMmioReg[]> memory_pd_regs_;
+  std::unique_ptr<ddk_mock::MockMmioReg[]> reset_regs_;
 
-  memory_pd_regs[0x43].ExpectWrite(0);
-  memory_pd_regs[0x44].ExpectWrite(0);
+  ddk_mock::MockMmioRegRegion hiu_mock_;
+  ddk_mock::MockMmioRegRegion power_mock_;
+  ddk_mock::MockMmioRegRegion memory_pd_mock_;
+  ddk_mock::MockMmioRegRegion reset_mock_;
+};
 
-  reset_regs[0x22].ExpectRead(0xFFFFFFFF).ExpectWrite(0xFFFFEFFF);
-  reset_regs[0x22].ExpectRead(0x00000000).ExpectWrite(0x00001000);
+TEST(AmlNnaTest, InitT931) {
+  MockRegisters mock_regs;
 
-  hiu_regs[0x72].ExpectRead(0x00000000).ExpectWrite(0x700);
-  hiu_regs[0x72].ExpectRead(0x00000000).ExpectWrite(0x7000000);
+  mock_regs.power_regs_[0x3a].ExpectRead(0xFFFFFFFF).ExpectWrite(0xFFFCFFFF);
+  mock_regs.power_regs_[0x3b].ExpectRead(0xFFFFFFFF).ExpectWrite(0xFFFCFFFF);
 
-  pdev_protocol_t proto;
-  auto device = std::make_unique<AmlNnaDevice>(
-      fake_ddk::kFakeParent, hiu_mock.GetMmioBuffer(), power_mock.GetMmioBuffer(),
-      memory_pd_mock.GetMmioBuffer(), reset_mock.GetMmioBuffer(), proto);
-  ASSERT_NOT_NULL(device);
-  device->Init();
+  mock_regs.memory_pd_regs_[0x43].ExpectWrite(0);
+  mock_regs.memory_pd_regs_[0x44].ExpectWrite(0);
 
-  hiu_mock.VerifyAll();
-  power_mock.VerifyAll();
-  memory_pd_mock.VerifyAll();
-  reset_mock.VerifyAll();
+  mock_regs.reset_regs_[0x22].ExpectRead(0xFFFFFFFF).ExpectWrite(0xFFFFEFFF);
+  mock_regs.reset_regs_[0x22].ExpectRead(0x00000000).ExpectWrite(0x00001000);
+
+  mock_regs.hiu_regs_[0x72].ExpectRead(0x00000000).ExpectWrite(0x700);
+  mock_regs.hiu_regs_[0x72].ExpectRead(0x00000000).ExpectWrite(0x7000000);
+
+  ASSERT_NO_FATAL_FAILURES(mock_regs.CreateDeviceAndVerify(T931NnaBlock));
+}
+
+TEST(AmlNnaTest, InitS905d3) {
+  MockRegisters mock_regs;
+
+  mock_regs.power_regs_[0x3a].ExpectRead(0xFFFFFFFF).ExpectWrite(0xFFFEFFFF);
+  mock_regs.power_regs_[0x3b].ExpectRead(0xFFFFFFFF).ExpectWrite(0xFFFEFFFF);
+
+  mock_regs.memory_pd_regs_[0x46].ExpectWrite(0);
+  mock_regs.memory_pd_regs_[0x47].ExpectWrite(0);
+
+  mock_regs.reset_regs_[0x22].ExpectRead(0xFFFFFFFF).ExpectWrite(0xFFFFEFFF);
+  mock_regs.reset_regs_[0x22].ExpectRead(0x00000000).ExpectWrite(0x00001000);
+
+  mock_regs.hiu_regs_[0x72].ExpectRead(0x00000000).ExpectWrite(0x700);
+  mock_regs.hiu_regs_[0x72].ExpectRead(0x00000000).ExpectWrite(0x7000000);
+
+  ASSERT_NO_FATAL_FAILURES(mock_regs.CreateDeviceAndVerify(S905d3NnaBlock));
 }
 
 }  // namespace aml_nna

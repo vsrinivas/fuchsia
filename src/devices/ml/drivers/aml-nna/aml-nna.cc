@@ -18,13 +18,10 @@
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 
+#include "s905d3-nna-regs.h"
 #include "t931-nna-regs.h"
 
 namespace {
-
-// PWR Shifts
-constexpr uint32_t kPowerSleepSetPowerOff = 16;
-constexpr uint32_t kPowerIsoSetIsolated = 16;
 
 // CLK Shifts
 constexpr uint32_t kClockCoreEnableShift = 8;
@@ -54,31 +51,26 @@ zx_status_t AmlNnaDevice::DdkGetProtocol(uint32_t proto_id, void* out_protocol) 
 }
 
 void AmlNnaDevice::Init() {
-  // Additional unnamed bits are set to match the reference amlogic source.
-  // set bit[16-17]=0
-  power_mmio_.ClearBits32(1 << kPowerSleepSetPowerOff | 1 << 17, AO_RTI_GEN_PWR_SLEEP0);
+  power_mmio_.ClearBits32(nna_block_.domain_power_sleep_bits, nna_block_.domain_power_sleep_offset);
 
-  // MEM_PD_REG0 set 0
-  memory_pd_mmio_.Write32(0, HHI_NANOQ_MEM_PD_REG0);
+  memory_pd_mmio_.Write32(0, nna_block_.hhi_mem_pd_reg0_offset);
 
-  // MEM_PD_REG1 set 0
-  memory_pd_mmio_.Write32(0, HHI_NANOQ_MEM_PD_REG1);
+  memory_pd_mmio_.Write32(0, nna_block_.hhi_mem_pd_reg1_offset);
 
   // set bit[12]=0
-  reset_mmio_.ClearBits32(1 << 12, RESET_LEVEL2);
+  reset_mmio_.ClearBits32(1 << 12, nna_block_.reset_level2_offset);
 
-  // set bit[16-17]=0
-  power_mmio_.ClearBits32(1 << kPowerIsoSetIsolated | 1 << 17, AO_RTI_GEN_PWR_ISO0);
+  power_mmio_.ClearBits32(nna_block_.domain_power_iso_bits, nna_block_.domain_power_iso_offset);
 
   // set bit[12]=1
-  reset_mmio_.SetBits32(1 << 12, RESET_LEVEL2);
+  reset_mmio_.SetBits32(1 << 12, nna_block_.reset_level2_offset);
 
   // Setup Clocks.
   // Set clocks to 800 MHz (FCLK_DIV2P5 = 3, Divisor = 1)
   // VIPNANOQ Core clock
-  hiu_mmio_.SetBits32(((1 << kClockCoreEnableShift) | 3 << 9), HHI_VIPNANOQ_CLK_CNTL);
+  hiu_mmio_.SetBits32(((1 << kClockCoreEnableShift) | 3 << 9), nna_block_.clock_control_offset);
   // VIPNANOQ Axi clock
-  hiu_mmio_.SetBits32(((1 << kClockAxiEnableShift) | 3 << 25), HHI_VIPNANOQ_CLK_CNTL);
+  hiu_mmio_.SetBits32(((1 << kClockAxiEnableShift) | 3 << 25), nna_block_.clock_control_offset);
 }
 
 // static
@@ -123,11 +115,32 @@ zx_status_t AmlNnaDevice::Create(void* ctx, zx_device_t* parent) {
     return status;
   }
 
+  pdev_device_info_t info;
+  status = pdev.GetDeviceInfo(&info);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s: pdev_.GetDeviceInfo failed %d\n", __func__, status);
+    return status;
+  }
+
+  NnaBlock nna_block;
+  switch (info.pid) {
+    case PDEV_PID_AMLOGIC_A311D:
+    case PDEV_PID_AMLOGIC_T931:
+      nna_block = T931NnaBlock;
+      break;
+    case PDEV_PID_AMLOGIC_S905D3:
+      nna_block = S905d3NnaBlock;
+      break;
+    default:
+      zxlogf(ERROR, "unhandled PID 0x%x", info.pid);
+      return ZX_ERR_INVALID_ARGS;
+  }
+
   fbl::AllocChecker ac;
 
   auto device = std::unique_ptr<AmlNnaDevice>(
       new (&ac) AmlNnaDevice(parent, std::move(*hiu_mmio), std::move(*power_mmio),
-                             std::move(*memory_pd_mmio), std::move(*reset_mmio), proto));
+                             std::move(*memory_pd_mmio), std::move(*reset_mmio), proto, nna_block));
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
@@ -167,9 +180,10 @@ static constexpr zx_driver_ops_t driver_ops = []() {
 }  // namespace aml_nna
 
 // clang-format off
-ZIRCON_DRIVER_BEGIN(aml_nna, aml_nna::driver_ops, "zircon", "0.1", 4)
+ZIRCON_DRIVER_BEGIN(aml_nna, aml_nna::driver_ops, "zircon", "0.1", 5)
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_AMLOGIC),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_DID, PDEV_DID_AMLOGIC_NNA),
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_AMLOGIC_T931),
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_AMLOGIC_A311D),
+    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_AMLOGIC_S905D3),
 ZIRCON_DRIVER_END(aml_nna)
