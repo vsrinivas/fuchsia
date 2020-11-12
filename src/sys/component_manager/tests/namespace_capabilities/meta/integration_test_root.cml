@@ -1,6 +1,7 @@
 // Realm for integration test that offers a child a protocol and directory from component
 // manager's namespace.
 {
+    include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
     program: {
         binary: "bin/namespace_capabilities_integration_test_root",
     },
@@ -23,9 +24,6 @@
         {
             protocol: "fuchsia.sys2.Realm",
             from: "framework",
-        },
-        {
-            protocol: [ "fuchsia.logger.LogSink" ],
         },
     ],
     offer: [

@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 {
+    include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
     program: {
         binary: "bin/export_ffs_lib_test",
     },
@@ -17,9 +18,6 @@
     ],
     use: [
         { runner: "rust_test_runner" },
-        {
-            protocol: [ "fuchsia.logger.LogSink" ],
-        },
         {
             protocol: "fuchsia.sys2.Realm",
             from: "framework",

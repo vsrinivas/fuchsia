@@ -2,16 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 {
+    include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
     program: {
         binary: "bin/system_controller_client",
     },
     use: [
         { runner: "elf" },
         {
-            protocol: [
-                "fuchsia.logger.LogSink",
-                "fuchsia.sys2.SystemController",
-            ],
+            protocol: [ "fuchsia.sys2.SystemController" ],
         },
     ],
 }

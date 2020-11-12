@@ -1,5 +1,6 @@
 // This realm contains the test cases for fuchsia_component_v2_test.
 {
+    include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
     program: {
         binary: "bin/realm",
     },
@@ -11,7 +12,6 @@
     ],
     use: [
         { runner: "elf" },
-        { protocol: "fuchsia.logger.LogSink" },
 
         // Needed to instantiate dynamic components.
         {

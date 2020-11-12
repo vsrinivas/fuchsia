@@ -1,6 +1,7 @@
 // Component manifest for the `echo_gtest_client`.
 // It connects to echo server and passes back test results.
 {
+    include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
     program: {
         binary: "bin/echo_gtest_client",
     },
@@ -10,7 +11,6 @@
     use: [
         { runner: "gtest_runner" },
         { protocol: "fidl.examples.routing.echo.Echo" },
-        { protocol: "fuchsia.logger.LogSink" },
     ],
     expose: [
         {

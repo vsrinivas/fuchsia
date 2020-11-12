@@ -1,4 +1,5 @@
 {
+    include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
     program: {
         binary: "bin/font_provider",
     },
@@ -18,10 +19,7 @@
     use: [
         { runner: "elf" },
         {
-            protocol: [
-                "fuchsia.logger.LogSink",
-                "fuchsia.pkg.FontResolver",
-            ],
+            protocol: [ "fuchsia.pkg.FontResolver" ],
         },
         {
             directory: "config-data",

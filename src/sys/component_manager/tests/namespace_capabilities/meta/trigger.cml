@@ -1,6 +1,7 @@
 // Integration test component that runs a Trigger service. When triggered, the
 // component echoes a string using the Echo service and prints it.
 {
+    include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
     program: {
         binary: "bin/namespace_capabilities_trigger",
         args: [ "Triggered" ],
@@ -11,10 +12,7 @@
     use: [
         { runner: "elf" },
         {
-            protocol: [
-                "fidl.examples.routing.echo.Echo",
-                "fuchsia.logger.LogSink",
-            ],
+            protocol: [ "fidl.examples.routing.echo.Echo" ],
         },
         {
             directory: "test-pkg",

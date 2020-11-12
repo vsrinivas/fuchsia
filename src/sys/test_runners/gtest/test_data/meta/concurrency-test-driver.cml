@@ -1,6 +1,7 @@
 // Component manifest for the `concurrency_test_driver`.
 // The test cases should run in parallel to succeed.
 {
+    include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
     program: {
         binary: "bin/concurrency_test_driver_gtest",
     },
@@ -10,10 +11,7 @@
     use: [
         { runner: "gtest_runner" },
         {
-            protocol: [
-                "fidl.examples.routing.echo.Echo",
-                "fuchsia.logger.LogSink",
-            ],
+            protocol: [ "fidl.examples.routing.echo.Echo" ],
         },
     ],
     expose: [

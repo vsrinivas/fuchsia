@@ -1,4 +1,5 @@
 {
+    include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
     program: {
         binary: "bin/mock_font_resolver",
     },
@@ -7,7 +8,6 @@
     ],
     use: [
         { runner: "elf" },
-        { protocol: "fuchsia.logger.LogSink" },
     ],
     expose: [
         {

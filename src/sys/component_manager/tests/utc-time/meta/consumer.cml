@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 {
+    include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
     program: {
         binary: "bin/utc_time_consumer_bin",
     },
@@ -9,6 +10,5 @@
         { runner: "elf" },
         { protocol: "fuchsia.time.Maintenance" },
         { protocol: "componentmanager.test.TestOutcomeReport" },
-        { protocol: "fuchsia.logger.LogSink" },
     ],
 }

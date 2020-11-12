@@ -1,4 +1,5 @@
 {
+    include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
     program: {
         binary: "bin/fatfs_mounter_bin_test",
     },
@@ -14,9 +15,6 @@
     ],
     use: [
         { runner: "rust_test_runner" },
-        {
-            protocol: [ "fuchsia.logger.LogSink" ],
-        },
         {
             protocol: "fuchsia.sys2.Realm",
             from: "framework",

@@ -1,14 +1,12 @@
 {
+    include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
     program: {
         binary: "bin/rendezvous_exit",
     },
     use: [
         { runner: "elf" },
         {
-            protocol: [
-                "fidl.test.components.Trigger",
-                "fuchsia.logger.LogSink",
-            ],
+            protocol: [ "fidl.test.components.Trigger" ],
         },
     ],
 }

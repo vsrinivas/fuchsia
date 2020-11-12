@@ -1,10 +1,10 @@
 {
+    include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
     program: {
         binary: "bin/lifecycle_full",
         lifecycle: { stop_event: "notify" },
     },
     use: [
         { runner: "elf" },
-        { protocol: "fuchsia.logger.LogSink" },
     ],
 }

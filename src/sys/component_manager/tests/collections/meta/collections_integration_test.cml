@@ -1,5 +1,6 @@
 // Realm for integration test that creates and binds to component instances in a collection.
 {
+    include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
     program: {
         binary: "test/collections_integration_test",
     },
@@ -25,9 +26,6 @@
         {
             protocol: "fuchsia.sys2.Realm",
             from: "framework",
-        },
-        {
-            protocol: [ "fuchsia.logger.LogSink" ],
         },
     ],
 

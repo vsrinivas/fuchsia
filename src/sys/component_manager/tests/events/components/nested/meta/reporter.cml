@@ -1,4 +1,5 @@
 {
+    include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
     program: {
         binary: "bin/nested_reporter",
     },
@@ -22,10 +23,7 @@
     use: [
         { runner: "elf" },
         {
-            protocol: [
-                "fuchsia.logger.LogSink",
-                "fuchsia.sys2.BlockingEventSource",
-            ],
+            protocol: [ "fuchsia.sys2.BlockingEventSource" ],
         },
         {
             protocol: [ "fidl.examples.routing.echo.Echo" ],

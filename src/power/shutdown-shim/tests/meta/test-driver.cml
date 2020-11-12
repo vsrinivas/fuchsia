@@ -1,4 +1,5 @@
 {
+    include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
     program: {
         binary: "test/shutdown_shim_integration_test",
     },
@@ -8,10 +9,7 @@
     use: [
         { runner: "rust_test_runner" },
         {
-            protocol: [
-                "fuchsia.logger.LogSink",
-                "fuchsia.test.shutdownshim.Tests",
-            ],
+            protocol: [ "fuchsia.test.shutdownshim.Tests" ],
         },
     ],
     expose: [

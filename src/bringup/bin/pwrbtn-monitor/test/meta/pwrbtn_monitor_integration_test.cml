@@ -1,4 +1,5 @@
 {
+    include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
     program: {
         binary: "bin/pwrbtn_monitor_mock_services",
     },
@@ -28,7 +29,6 @@
     ],
     use: [
         { runner: "elf" },
-        { protocol: "fuchsia.logger.LogSink" },
     ],
     offer: [
         {

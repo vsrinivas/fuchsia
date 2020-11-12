@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 {
+    include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
     program: {
         binary: "bin/blobfs_ramdisk_lib_test",
     },
@@ -14,7 +15,6 @@
         { runner: "rust_test_runner" },
         {
             protocol: [
-                "fuchsia.logger.LogSink",
                 "fuchsia.process.Launcher",
                 "fuchsia.tracing.provider.Registry",
             ],

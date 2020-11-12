@@ -1,4 +1,5 @@
 {
+    include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
     program: {
         binary: "bin/debug_serial",
     },
@@ -10,10 +11,7 @@
     use: [
         { runner: "elf" },
         {
-            protocol: [
-                "fuchsia.boot.RootResource",
-                "fuchsia.logger.LogSink",
-            ],
+            protocol: [ "fuchsia.boot.RootResource" ],
         },
     ],
     expose: [

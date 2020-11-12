@@ -1,10 +1,10 @@
 {
+    include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
     program: {
         binary: "bin/args_reporter",
     },
     use: [
         { runner: "elf" },
         { protocol: "fidl.examples.routing.echo.Echo" },
-        { protocol: "fuchsia.logger.LogSink" },
     ],
 }

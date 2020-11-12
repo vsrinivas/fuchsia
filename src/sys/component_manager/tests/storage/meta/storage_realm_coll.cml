@@ -1,4 +1,5 @@
 {
+    include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
     program: {
         binary: "bin/storage_realm_coll",
     },
@@ -31,10 +32,6 @@
         {
             protocol: "fidl.test.components.Trigger",
             from: "framework",
-        },
-        {
-            protocol: "fuchsia.logger.LogSink",
-            from: "parent",
         },
     ],
     offer: [

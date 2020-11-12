@@ -1,4 +1,5 @@
 {
+    include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
     program: {
         binary: "bin/io_conformance_harness_ulibfs",
     },
@@ -7,9 +8,6 @@
     ],
     use: [
         { runner: "elf" },
-        {
-            protocol: [ "fuchsia.logger.LogSink" ],
-        },
     ],
     expose: [
         {

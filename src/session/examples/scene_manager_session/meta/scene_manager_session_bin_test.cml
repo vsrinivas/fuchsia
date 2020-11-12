@@ -1,4 +1,5 @@
 {
+    include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
     program: {
         binary: "test/scene_manager_session_bin_test",
     },
@@ -13,7 +14,6 @@
             rights: [ "r*" ],
             path: "/dev/class/input-report",
         },
-        { protocol: "fuchsia.logger.LogSink" },
     ],
     expose: [
         {

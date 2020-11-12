@@ -1,4 +1,5 @@
 {
+    include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
     program: {
         binary: "bin/static_event_stream_trigger_server",
     },
@@ -16,9 +17,6 @@
         { runner: "elf" },
         {
             protocol: [ "fuchsia.sys2.BlockingEventSource" ],
-        },
-        {
-            protocol: [ "fuchsia.logger.LogSink" ],
         },
         {
             protocol: "fidl.examples.routing.echo.Echo",

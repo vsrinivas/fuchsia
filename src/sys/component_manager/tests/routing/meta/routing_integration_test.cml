@@ -1,6 +1,7 @@
 // Realm for integration test that provisions an Echo client and service and eagerly runs the
 // client.
 {
+    include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
     program: {
         binary: "test/routing_integration_test",
     },
@@ -27,9 +28,6 @@
         {
             protocol: "fuchsia.sys2.Realm",
             from: "framework",
-        },
-        {
-            protocol: [ "fuchsia.logger.LogSink" ],
         },
     ],
 

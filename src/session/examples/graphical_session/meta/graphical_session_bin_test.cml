@@ -1,4 +1,5 @@
 {
+    include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
     program: {
         binary: "test/graphical_session_bin_test",
     },
@@ -10,7 +11,6 @@
 
         // The Scenic service allows the session to display images.
         { protocol: "fuchsia.ui.scenic.Scenic" },
-        { protocol: "fuchsia.logger.LogSink" },
     ],
     expose: [
         {

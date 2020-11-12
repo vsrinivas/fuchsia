@@ -1,4 +1,5 @@
 {
+    include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
     program: {
         binary: "bin/scenic",
     },
@@ -53,7 +54,6 @@
             protocol: [
                 "fuchsia.cobalt.LoggerFactory",
                 "fuchsia.hardware.display.Provider",
-                "fuchsia.logger.LogSink",
                 "fuchsia.scheduler.ProfileProvider",
                 "fuchsia.sysmem.Allocator",
                 "fuchsia.tracing.provider.Registry",

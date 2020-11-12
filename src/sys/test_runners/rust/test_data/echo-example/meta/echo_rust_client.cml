@@ -1,6 +1,7 @@
 // Component manifest for the `echo_rust_client`.
 // It connects to echo server and checks result.
 {
+    include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
     program: {
         binary: "bin/echo_rust_client",
     },
@@ -10,10 +11,7 @@
     use: [
         { runner: "rust_test_runner" },
         {
-            protocol: [
-                "fidl.examples.routing.echo.Echo",
-                "fuchsia.logger.LogSink",
-            ],
+            protocol: [ "fidl.examples.routing.echo.Echo" ],
         },
     ],
     expose: [

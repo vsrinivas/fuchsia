@@ -1,4 +1,5 @@
 {
+    include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
     program: {
         binary: "bin/a11y_manager",
     },
@@ -20,7 +21,6 @@
         { runner: "elf" },
         {
             protocol: [
-                "fuchsia.logger.LogSink",
                 "fuchsia.settings.Accessibility",
                 "fuchsia.tracing.provider.Registry",
                 "fuchsia.ui.input.accessibility.PointerEventRegistry",

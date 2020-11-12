@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 {
+    include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
     program: {
         binary: "bin/log_stats",
     },
@@ -18,10 +19,7 @@
     use: [
         { runner: "elf" },
         {
-            protocol: [
-                "fuchsia.diagnostics.ArchiveAccessor",
-                "fuchsia.logger.LogSink",
-            ],
+            protocol: [ "fuchsia.diagnostics.ArchiveAccessor" ],
         },
     ],
     expose: [

@@ -1,4 +1,5 @@
 {
+    include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
     program: {
         binary: "bin/gtest_runner_integration_test",
     },
@@ -16,9 +17,6 @@
         {
             protocol: "fuchsia.sys2.Realm",
             from: "framework",
-        },
-        {
-            protocol: [ "fuchsia.logger.LogSink" ],
         },
     ],
     offer: [

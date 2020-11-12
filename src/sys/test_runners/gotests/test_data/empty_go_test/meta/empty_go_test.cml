@@ -1,4 +1,5 @@
 {
+    include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
     program: {
         binary: "test/empty_go_test",
     },
@@ -7,9 +8,6 @@
     ],
     use: [
         { runner: "go_test_runner" },
-        {
-            protocol: [ "fuchsia.logger.LogSink" ],
-        },
     ],
     expose: [
         {

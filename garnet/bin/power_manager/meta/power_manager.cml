@@ -1,4 +1,5 @@
 {
+    include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
     program: {
         binary: "bin/power_manager",
         main_process_critical: "true",
@@ -28,7 +29,6 @@
         { protocol: "fuchsia.cobalt.LoggerFactory" },
         { protocol: "fuchsia.device.manager.Administrator" },
         { protocol: "fuchsia.feedback.CrashReporter" },
-        { protocol: "fuchsia.logger.LogSink" },
         { protocol: "fuchsia.kernel.Stats" },
         { protocol: "fuchsia.tracing.provider.Registry" },
         { protocol: "fuchsia.sys2.SystemController" },

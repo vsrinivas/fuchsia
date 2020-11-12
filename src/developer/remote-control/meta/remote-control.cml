@@ -1,4 +1,5 @@
 {
+    include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
     program: {
         binary: "bin/remote_control_bin",
         args: [ "remote-control" ],
@@ -18,7 +19,6 @@
             protocol: [
                 "fuchsia.developer.remotecontrol.RemoteDiagnosticsBridge",
                 "fuchsia.device.NameProvider",
-                "fuchsia.logger.LogSink",
                 "fuchsia.net.stack.Stack",
                 "fuchsia.overnet.Overnet",
                 "fuchsia.overnet.ServicePublisher",

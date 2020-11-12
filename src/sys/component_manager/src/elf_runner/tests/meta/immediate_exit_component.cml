@@ -1,9 +1,9 @@
 {
+    include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
     program: {
         binary: "bin/immediate_exit",
     },
     use: [
         { runner: "elf" },
-        { protocol: "fuchsia.logger.LogSink" },
     ],
 }

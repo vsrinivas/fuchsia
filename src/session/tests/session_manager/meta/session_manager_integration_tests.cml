@@ -1,4 +1,5 @@
 {
+    include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
     program: {
         binary: "test/session_manager_integration_tests",
     },
@@ -17,7 +18,6 @@
             protocol: "fuchsia.sys2.Realm",
             from: "framework",
         },
-        { protocol: "fuchsia.logger.LogSink" },
     ],
     expose: [
         {

@@ -1,4 +1,5 @@
 {
+    include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
     program: {
         binary: "bin/fshost",
         args: [ "--log-to-debuglog" ],
@@ -121,7 +122,6 @@
                 "fuchsia.boot.Items",
                 "fuchsia.boot.WriteOnlyLog",
                 "fuchsia.cobalt.LoggerFactory",
-                "fuchsia.logger.LogSink",
                 "fuchsia.process.Launcher",
                 "fuchsia.tracing.provider.Registry",
             ],

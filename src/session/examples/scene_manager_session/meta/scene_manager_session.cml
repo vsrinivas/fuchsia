@@ -1,4 +1,5 @@
 {
+    include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
     program: {
         binary: "bin/scene_manager_session",
     },
@@ -11,6 +12,5 @@
             path: "/dev/class/input-report",
         },
         { protocol: "fuchsia.ui.scenic.Scenic" },
-        { protocol: "fuchsia.logger.LogSink" },
     ],
 }

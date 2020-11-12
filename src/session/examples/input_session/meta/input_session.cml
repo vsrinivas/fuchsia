@@ -1,4 +1,5 @@
 {
+    include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
     program: {
         binary: "bin/input_session",
     },
@@ -9,10 +10,6 @@
             from: "parent",
             rights: [ "r*" ],
             path: "/dev/class/input-report",
-        },
-        {
-            protocol: "fuchsia.logger.LogSink",
-            from: "parent",
         },
     ],
 }
