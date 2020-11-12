@@ -3,8 +3,8 @@
 # found in the LICENSE file.
 
 import("//build/rust/rustc_test.gni")
-import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
+import("//src/sys/build/components.gni")
 
 rustc_test("test_driver") {
   name = "ota_dependency_checker_integration_test"
@@ -23,43 +23,28 @@ rustc_test("test_driver") {
   sources = [ "src/lib.rs" ]
 }
 
-# TODO(fxbug.dev/64137) migrate to the `fuchsia_test_package` template. It's currently possible to
-# do this by using the `resource` and `fuchsia_component` templates. However, doing so would put
-# two copies of the binary (the original grand_swd_binary and the copied ota-dependency-checker)
-# in the test package. It would be surprising to see both binaries in the meta/contents, so we are
-# sticking with the legacy template for now.
-test_package("ota-dependency-checker-integration-tests") {
-  deps = [
-    ":test_driver",
-    "//src/sys/pkg/bin/grand-swd-binary",
-  ]
+fuchsia_component("component-under-test") {
+  component_name = "ota-dependency-checker"
+  manifest = "meta/ota-dependency-checker.cmx"
+  deps = [ "//src/sys/pkg/bin/ota-dependency-checker:renamed-grand-swd-binary" ]
+  testonly = true
+  visibility = [ ":*" ]
+}
 
-  binaries = [
-    {
-      name = "ota_dependency_checker"
-      source = "grand_swd_binary"
-      dest = "ota-dependency-checker"
-    },
-  ]
+fuchsia_component("component") {
+  manifest = "meta/ota-dependency-checker-integration-test.cmx"
+  deps = [ ":test_driver" ]
+  testonly = true
+  visibility = [ ":*" ]
+}
 
-  meta = [
-    {
-      # TODO(fxbug.dev/64125) migrate to v2.
-      path = rebase_path("meta/ota-dependency-checker.cmx")
-      dest = "ota-dependency-checker.cmx"
-    },
-  ]
-
-  tests = [
-    {
-      name = "ota_dependency_checker_integration_test"
-      dest = "ota-dependency-checker-integration-test"
-      environments = basic_envs
-    },
-  ]
+fuchsia_test_package("package") {
+  package_name = "ota-dependency-checker-integration-tests"
+  test_components = [ ":component" ]
+  deps = [ ":component-under-test" ]
 }
 
 group("tests") {
   testonly = true
-  public_deps = [ ":ota-dependency-checker-integration-tests" ]
+  public_deps = [ ":package" ]
 }

@@ -3,7 +3,7 @@
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "test/ota-dependency-checker-integration-test"
+        "binary": "bin/ota_dependency_checker_integration_test"
     },
     "sandbox": {
         "services": [

@@ -2,7 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
 import("//build/rust/rustc_library.gni")
 import("//src/sys/build/components.gni")
 
@@ -32,38 +31,25 @@ rustc_library("lib") {
   ]
 }
 
-fuchsia_component("ota-dependency-checker") {
-  manifest = "meta/ota-dependency-checker.cml"
-  deps = [ ":lib" ]
+resource("renamed-grand-swd-binary") {
+  deps = [ "//src/sys/pkg/bin/grand-swd-binary" ]
+  data_deps = [ "//src/sys/pkg/bin/grand-swd-binary" ]
+  sources = [ "$root_out_dir/grand_swd_binary" ]
+  outputs = [ "bin/ota-dependency-checker" ]
+  visibility = [
+    ":*",
+    "//src/sys/pkg/tests/ota-dependency-checker/*",
+  ]
 }
 
-# TODO(fxbug.dev/64137) migrate to the `fuchsia_package` template. It's currently possible to
-# do this by using the `resource` and `fuchsia_component` templates. However, doing so would put
-# two copies of the binary (the original grand_swd_binary and the copied ota-dependency-checker)
-# in the package. It would be surprising to see both binaries in the meta/contents, so we are
-# sticking with the legacy template for now.
-package("package") {
+fuchsia_component("component") {
+  manifest = "meta/ota-dependency-checker.cml"
+  deps = [ ":renamed-grand-swd-binary" ]
+}
+
+fuchsia_package("package") {
   package_name = "ota-dependency-checker"
-
-  deps = [
-    ":ota-dependency-checker",
-    "//src/sys/pkg/bin/grand-swd-binary",
-  ]
-
-  binaries = [
-    {
-      name = "ota_dependency_checker"
-      source = "grand_swd_binary"
-      dest = "ota-dependency-checker"
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("meta/ota-dependency-checker.cml")
-      dest = "ota-dependency-checker.cm"
-    },
-  ]
+  deps = [ ":component" ]
 }
 
 fuchsia_component("test-component") {
