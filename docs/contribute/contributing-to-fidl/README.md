@@ -160,23 +160,46 @@ really well for doing remote work from your laptop.
   },
   ```
 
+### Commit message style guide
+
+#### References to other CLs
+
+To reference another CL in a commit message, always use the `Change-ID`.
+
+Using the `Change-ID` is preferred since:
+
+* The git sha is only known after a change lands, and while guidance could be
+  given to use the `Change-Id` in one case, and the git sha in the other, we
+  prefer a uniform guidance.
+* The CL number is assigned by Gerrit, and is not part of the persistent history
+  of the repository. Should we change review mechanism, the `Change-Id` will
+  continue to be part of the recorded history, whereas CL numbers will not.
+  There are also rare occurrences where CL numbers may be lost, e.g. due to
+  re-indexing issues.
+
+For instance, to refer to the CL which added [FTP-042] we should use
+`I32b966810d21a249647887fa45b61720ad01714c`, and not the git sha
+`5d40ee8c42d1b0e4d8b690786da12a0a947c1aaa`, nor the CL number `fxr/284569`.
+
+#### Multi-step change
+
+When executing a change which requires multiple steps across various
+repositories, for instance to soft transition APIs defined in one repository and
+used in others, it is preferred to reference the last step taken, and the next
+step to be taken so that reviewers and those looking at the log can understand
+and navigate the totality of the change. When possible, it is encouraged to
+provide all steps to complete the migration in each commit log (but that may be
+impractical in some cases).
+
+For instance:
+
+* [Align Go union unknown data APIs](https://fuchsia-review.googlesource.com/q/Ia6d4ddeaf980e6599c8becbf9339df5b1910be89)
+* [Support for flexible enums](https://fuchsia-review.googlesource.com/q/Id71eb879e4d7dfabe228cc7b4e2fedb7f52db7b7)
+
 ### C++ style guide
 
 We follow the [Fuchsia C++ Style Guide][cpp-style], with additional rules to
 further remove ambiguity around the application or interpretation of guidelines.
-
-#### Constructors
-
-Always place the initializer list on a line below the constructor.
-
-```cpp
-// Don't do this.
-SomeClass::SomeClass() : field_(1), another_field_(2) {}
-
-// Correct.
-SomeClass::SomeClass()
-    : field_(1), another_field_(2) {}
-```
 
 #### Comments
 
@@ -672,6 +695,7 @@ fidl fmt --library my_library.fidl -i
 [go-test-flags]: https://golang.org/cmd/go/#hdr-Testing_flags
 [fidl-misc]: https://fuchsia.googlesource.com/fidl-misc
 [fidldev]: https://fuchsia.googlesource.com/fidl-misc/+/HEAD/fidldev
+[FTP-042]: /docs/contribute/governance/fidl/ftp/ftp-042.md
 
 [/zircon/tools/fidl/lib/c_generator.cc]: /zircon/tools/fidl/lib/c_generator.cc
 [/zircon/tools/fidl/lib/tables_generator.cc]: /zircon/tools/fidl/lib/tables_generator.cc
