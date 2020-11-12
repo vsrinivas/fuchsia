@@ -124,7 +124,6 @@ class ImagePipe2 : public ImagePipeBase {
   std::unordered_map<ResourceId, ImagePtr> images_;
 
   const std::shared_ptr<ImagePipeUpdater> image_pipe_updater_;
-  fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator_;
   const std::shared_ptr<ErrorReporter> error_reporter_;
   uint32_t num_protected_images_ = 0;
 

@@ -15,6 +15,7 @@
 
 #include <fbl/auto_call.h>
 
+#include "src/lib/fsl/handles/object_info.h"
 #include "src/ui/lib/escher/hmd/pose_buffer.h"
 #include "src/ui/lib/escher/renderer/batch_gpu_uploader.h"
 #include "src/ui/lib/escher/shape/mesh.h"
@@ -65,7 +66,13 @@ Session::Session(SessionId id, SessionContext session_context,
 
   zx_status_t status = fdio_service_connect("/svc/fuchsia.sysmem.Allocator",
                                             sysmem_allocator_.NewRequest().TakeChannel().release());
-  FX_DCHECK(status == ZX_OK);
+  if (status != ZX_OK) {
+    sysmem_allocator_.Unbind();
+    error_reporter_->ERROR() << "Session::Session(): Could not connect to sysmem";
+  } else {
+    sysmem_allocator_->SetDebugClientInfo(fsl::GetCurrentProcessName(),
+                                          fsl::GetCurrentProcessKoid());
+  }
 }
 
 Session::~Session() {

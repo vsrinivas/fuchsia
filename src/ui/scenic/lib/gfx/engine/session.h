@@ -112,6 +112,8 @@ class Session : public CommandDispatcher {
     return buffer_collections_;
   }
 
+  const fuchsia::sysmem::AllocatorSyncPtr& SysmemAllocatorSyncPtr() { return sysmem_allocator_; }
+
  private:
   friend class Resource;
   void IncrementResourceCount() { ++resource_count_; }

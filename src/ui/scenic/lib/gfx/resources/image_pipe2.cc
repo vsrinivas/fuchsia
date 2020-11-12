@@ -5,7 +5,6 @@
 #include "src/ui/scenic/lib/gfx/resources/image_pipe2.h"
 
 #include <fuchsia/sysmem/cpp/fidl.h>
-#include <lib/fdio/directory.h>
 #include <lib/trace/event.h>
 
 #include "src/lib/fsl/handles/object_info.h"
@@ -36,17 +35,6 @@ ImagePipe2::ImagePipe2(Session* session, ResourceId id,
       weak_ptr_factory_(this) {
   FX_CHECK(image_pipe_updater_);
   FX_CHECK(error_reporter_);
-
-  // TODO(fxbug.dev/35547): Use a common SysmemAllocator instance for all ImagePipes.
-  // Connect to Sysmem in preparation for the future AddBufferCollection() calls.
-  zx_status_t status = fdio_service_connect("/svc/fuchsia.sysmem.Allocator",
-                                            sysmem_allocator_.NewRequest().TakeChannel().release());
-  if (status != ZX_OK) {
-    sysmem_allocator_.Unbind();
-    error_reporter_->ERROR() << __func__ << ": Could not connect to sysmem";
-  }
-  sysmem_allocator_->SetDebugClientInfo(fsl::GetCurrentProcessName() + "-pipe",
-                                        fsl::GetCurrentProcessKoid());
 }
 
 ImagePipe2::~ImagePipe2() { CloseConnectionAndCleanUp(); }
@@ -101,8 +89,8 @@ void ImagePipe2::AddBufferCollection(
   // Use local token to create a BufferCollection. This will be saved for later checks in
   // AddImage().
   fuchsia::sysmem::BufferCollectionSyncPtr buffer_collection;
-  status = sysmem_allocator_->BindSharedCollection(std::move(local_token),
-                                                   buffer_collection.NewRequest());
+  status = session_->SysmemAllocatorSyncPtr()->BindSharedCollection(std::move(local_token),
+                                                                    buffer_collection.NewRequest());
   if (status != ZX_OK) {
     error_reporter_->ERROR() << __func__ << ": BindSharedCollection failed: " << status;
     CloseConnectionAndCleanUp();
