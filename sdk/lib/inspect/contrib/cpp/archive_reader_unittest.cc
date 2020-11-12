@@ -13,47 +13,82 @@ using inspect::contrib::DiagnosticsData;
 
 TEST(DiagnosticsDataTest, ComponentNameExtraction) {
   {
+    std::vector<inspect::contrib::DiagnosticsData> data;
     rapidjson::Document doc;
     doc.Parse(R"({"moniker": "root/hub/my_component.cmx"})");
-    DiagnosticsData data(std::move(doc));
-    EXPECT_EQ("my_component.cmx", data.component_name());
+    inspect::contrib::EmplaceDiagnostics(std::move(doc), &data);
+    DiagnosticsData &datum = data[0];
+    EXPECT_EQ("my_component.cmx", datum.component_name());
   }
   {
+    std::vector<inspect::contrib::DiagnosticsData> data;
     rapidjson::Document doc;
     doc.Parse(R"({"moniker": "abcd"})");
-    DiagnosticsData data(std::move(doc));
-    EXPECT_EQ("abcd", data.component_name());
+    inspect::contrib::EmplaceDiagnostics(std::move(doc), &data);
+    DiagnosticsData &datum = data[0];
+    EXPECT_EQ("abcd", datum.component_name());
   }
   {
     // Can't find path, empty return.
+    std::vector<inspect::contrib::DiagnosticsData> data;
     rapidjson::Document doc;
     doc.Parse(R"({"not_moniker": "abcd"})");
-    DiagnosticsData data(std::move(doc));
-    EXPECT_EQ("", data.component_name());
+    inspect::contrib::EmplaceDiagnostics(std::move(doc), &data);
+    DiagnosticsData &datum = data[0];
+    EXPECT_EQ("", datum.component_name());
   }
 }
 
 TEST(DiagnosticsDataTest, ContentExtraction) {
   {
+    std::vector<inspect::contrib::DiagnosticsData> data;
     rapidjson::Document doc;
     doc.Parse(R"({"payload": {"value": "hello", "count": 10}})");
-    DiagnosticsData data(std::move(doc));
-    EXPECT_EQ(rapidjson::Value("hello"), data.GetByPath({"value"}));
-    EXPECT_EQ(rapidjson::Value(10), data.GetByPath({"count"}));
-    EXPECT_EQ(rapidjson::Value(), data.GetByPath({"value", "1234"}));
+    inspect::contrib::EmplaceDiagnostics(std::move(doc), &data);
+    DiagnosticsData &datum = data[0];
+    EXPECT_EQ(rapidjson::Value("hello"), datum.GetByPath({"value"}));
+    EXPECT_EQ(rapidjson::Value(10), datum.GetByPath({"count"}));
+    EXPECT_EQ(rapidjson::Value(), datum.GetByPath({"value", "1234"}));
   }
   {
+    std::vector<inspect::contrib::DiagnosticsData> data;
     rapidjson::Document doc;
     doc.Parse(R"({"payload": {"name/with/slashes": "hello"}})");
-    DiagnosticsData data(std::move(doc));
-    EXPECT_EQ(rapidjson::Value("hello"), data.GetByPath({"name/with/slashes"}));
+    inspect::contrib::EmplaceDiagnostics(std::move(doc), &data);
+    DiagnosticsData &datum = data[0];
+    EXPECT_EQ(rapidjson::Value("hello"), datum.GetByPath({"name/with/slashes"}));
   }
   {
     // Content is missing, return nullptr.
+    std::vector<inspect::contrib::DiagnosticsData> data;
     rapidjson::Document doc;
     doc.Parse(R"({"moniker": "root/hub/my_component.cmx"})");
-    DiagnosticsData data(std::move(doc));
-    EXPECT_EQ(rapidjson::Value(), data.GetByPath({"value"}));
+    inspect::contrib::EmplaceDiagnostics(std::move(doc), &data);
+    DiagnosticsData &datum = data[0];
+    EXPECT_EQ(rapidjson::Value(), datum.GetByPath({"value"}));
+  }
+}
+
+TEST(DiagnosticsDataTest, ArrayValueCtor) {
+  {
+    std::vector<inspect::contrib::DiagnosticsData> data;
+    rapidjson::Document doc;
+    doc.Parse(R"([
+      {"payload": {"value": "hello", "count": 10}},
+      {"payload": {"value": "world", "count": 40}}
+    ])");
+
+    inspect::contrib::EmplaceDiagnostics(std::move(doc), &data);
+    DiagnosticsData &first = data[0];
+    DiagnosticsData &second = data[1];
+
+    EXPECT_EQ(rapidjson::Value("hello"), first.GetByPath({"value"}));
+    EXPECT_EQ(rapidjson::Value(10), first.GetByPath({"count"}));
+    EXPECT_EQ(rapidjson::Value(), first.GetByPath({"value", "1234"}));
+
+    EXPECT_EQ(rapidjson::Value("world"), second.GetByPath({"value"}));
+    EXPECT_EQ(rapidjson::Value(40), second.GetByPath({"count"}));
+    EXPECT_EQ(rapidjson::Value(), second.GetByPath({"value", "1234"}));
   }
 }
 

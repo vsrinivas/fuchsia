@@ -89,6 +89,8 @@ class ArchiveReader {
   fit::scope scope_;
 };
 
+void EmplaceDiagnostics(rapidjson::Document document, std::vector<DiagnosticsData>* out);
+
 }  // namespace contrib
 }  // namespace inspect
 

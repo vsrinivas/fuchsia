@@ -27,6 +27,24 @@ constexpr char kContentsName[] = "payload";
 // the events.
 constexpr size_t kDelayMs = 250;
 
+void EmplaceDiagnostics(rapidjson::Document document, std::vector<DiagnosticsData>* out) {
+  if (document.IsArray()) {
+    for (auto& value : document.GetArray()) {
+      // We need to ensure that the value is safely moved between documents, which may involve
+      // copying.
+      //
+      // It is an error to maintain a reference to a Value in a Document after that Document is
+      // destroyed, and the input |document| is destroyed immediately after this branch.
+      rapidjson::Document value_document;
+      rapidjson::Value temp(value.Move(), value_document.GetAllocator());
+      value_document.Swap(temp);
+      out->emplace_back(DiagnosticsData(std::move(value_document)));
+    }
+  } else {
+    out->emplace_back(DiagnosticsData(std::move(document)));
+  }
+}
+
 namespace {
 
 void InnerReadBatches(fuchsia::diagnostics::BatchIteratorPtr ptr,
@@ -58,7 +76,7 @@ void InnerReadBatches(fuchsia::diagnostics::BatchIteratorPtr ptr,
           rapidjson::Document document;
           document.Parse(json);
 
-          ret.emplace_back(DiagnosticsData(std::move(document)));
+          EmplaceDiagnostics(std::move(document), &ret);
         }
 
         InnerReadBatches(std::move(ptr), std::move(done), std::move(ret));
