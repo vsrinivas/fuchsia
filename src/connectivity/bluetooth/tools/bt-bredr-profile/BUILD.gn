@@ -27,9 +27,12 @@ rustc_binary("bin") {
     "//third_party/rust_crates/transitional/rustyline",
   ]
 
+  test_deps = [ "//third_party/rust_crates:matches" ]
+
   sources = [
     "src/commands.rs",
     "src/main.rs",
+    "src/rfcomm.rs",
     "src/types.rs",
   ]
 }

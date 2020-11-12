@@ -1,5 +1,6 @@
 # bt-bredr-profile
-`bt-bredr-profile` is a command-line front-end for the BR/EDR profile API ([fuchsia.bluetooth.bredr/Profile](../../../../../sdk/fidl/fuchsia.bluetooth.bredr/profile.fidl)).
+`bt-bredr-profile` is a command-line front-end for the BR/EDR profile API ([fuchsia.bluetooth.bredr/Profile](../../../../../sdk/fidl/fuchsia.bluetooth.bredr/profile.fidl)). The tool supports establishing both L2CAP and RFCOMM channels, and provides an interface for sending data
+over these channels.
 
 ## Build
 Include `bt-bredr-profile` in your `fx set`:
@@ -17,7 +18,13 @@ Include the `tests` target in your `fx set`:
 Then run `fx run-test bt-bredr-profile-tests`.
 
 ## Commands
-### connect
+### setup-rfcomm
+Registers an example RFCOMM-requesting SPP service. Adds a service advertisement and search.
+
+#### Usage
+`setup-rfcomm`
+
+### connect-l2cap
 Targets `Profile.Connect`.
 
 Issuing this command does not automatically connect non-connected peers, and
@@ -25,7 +32,7 @@ will fail for such peers. `bt-cli` may be used in conjunction with this tool to
 control peer connections.
 
 #### Usage
-`connect <peer-id> <psm> <channel-mode> <max-rx-sdu-size> <security-requirements>`
+`connect-l2cap <peer-id> <psm> <channel-mode> <max-rx-sdu-size> <security-requirements>`
 
 ##### Arguments
 - `peer-id` maps to the `peer_id` field of `Connect`
@@ -37,11 +44,30 @@ control peer connections.
   `parameters.security_requirements` field of `Connect`.
 #### Example
 ```
-profile> connect 75870b2c86d9e801 1 basic 672 none
+profile> connect-l2cap 75870b2c86d9e801 1 basic 672 none
 Channel:
   Id: 0
   Mode: Basic
   Max Tx Sdu Size: 672
+```
+
+### connect-rfcomm
+Attempts to make an outgoing RFCOMM connection to the service advertised by `server-channel`
+on the peer indicated by `peer-id`.
+
+Issuing this command does not guarantee a successful RFCOMM connection. Users should
+only attempt to make a connection to a peer whose services have been discovered - the
+`server-channel` for any such service will be printed in the REPL.
+
+#### Usage
+`connect-rfcomm <peer-id> <server-channel>`
+
+##### Arguments
+- `peer-id` maps to the `PeerId` of the peer.
+- `server-channel` maps to the Server Channel number of the peer's advertised RFCOMM service.
+#### Example
+```
+profile> connect-rfcomm 75870b2c86d9e801 1
 ```
 
 ### disconnect
@@ -56,7 +82,7 @@ channel.
 It must correspond to a connected channel listed by the `channels` command.
 
 ### channels
-Prints the assigned Ids of connected channels. These Ids are local to the REPL
+Prints the assigned Ids of connected L2CAP channels. These Ids are local to the REPL
 and are only used for indicating which channel to perform operations on in other commands.
 
 #### Usage
@@ -71,15 +97,28 @@ Channel:
   Max Tx Sdu Size: 672
 ```
 
-### write
-Write data on a socket/channel.
+### write-l2cap
+Write data on an L2CAP socket/channel.
 
 #### Usage
-`write <channel-id> <data>`
+`write-l2cap <channel-id> <data>`
 
 ##### Arguments
 - `channel-id` is an integer assigned to a channel by the REPL. It must
   correspond to a connected channel listed by the `channels` command.
+- `data` is a string of characters that will be written on the channel.
+
+### write-rfcomm
+Write data on the RFCOMM channel identified by `server-channel`.
+
+#### Usage
+`write-rfcomm <server-channel> <data>`
+
+##### Arguments
+- `server-channel` is the integer Server Channel identifying the RFCOMM channel. For
+  channels that were established by the peer, use the identifier printed in the REPL.
+  For channels that were initiated by the tool, use the same identifier as used in the
+  `connect-rfcomm` command.
 - `data` is a string of characters that will be written on the channel.
 
 ### advertise
