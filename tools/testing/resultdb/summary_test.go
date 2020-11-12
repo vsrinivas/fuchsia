@@ -46,17 +46,22 @@ func TestSetTestDetailsToResultSink(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Cannot parse test detail. got %s", err)
 	}
-	foundTag := false
+
+	tags := make(map[string]string)
 	for _, tag := range result.Tags {
-		if tag.Key == "test_case_count" {
-			foundTag = true
-			if tag.Value != "5" {
-				t.Errorf("Found incorrect number of test cases in tag, got %s, want 5", tag.Value)
-			}
-		}
+		tags[tag.Key] = tag.Value
 	}
-	if !foundTag {
-		t.Error("Did not find test_case_count in tag")
+
+	if testCaseCount, ok := tags["test_case_count"]; !ok {
+		t.Error("Did not find test_case_count in tags")
+	} else if testCaseCount != "5" {
+		t.Errorf("Found incorrect test_case_count tag, got %s, want 5", testCaseCount)
+	}
+
+	if gnLabel, ok := tags["gn_label"]; !ok {
+		t.Error("Did not find gn_label in tags")
+	} else if gnLabel != detail.GNLabel {
+		t.Errorf("Found incorrect gn_label tab, got %s, want %s", gnLabel, detail.GNLabel)
 	}
 }
 
