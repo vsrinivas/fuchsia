@@ -1274,6 +1274,7 @@ void SimFirmware::DisassocLocalClient(uint32_t reason) {
   } else {
     SendEventToDriver(0, nullptr, BRCMF_E_LINK, BRCMF_E_STATUS_FAIL, kClientIfidx);
   }
+  AuthClearContext();
   AssocClearContext();
 }
 
@@ -1294,7 +1295,7 @@ void SimFirmware::HandleDisconnectForClientIF(
 
   if (frame->MgmtFrameType() == simulation::SimManagementFrame::FRAME_TYPE_DEAUTH) {
     // The client could receive a deauth even after disassociation. Notify the driver always
-    SendEventToDriver(0, nullptr, BRCMF_E_DEAUTH, BRCMF_E_STATUS_SUCCESS, kClientIfidx, 0, 0,
+    SendEventToDriver(0, nullptr, BRCMF_E_DEAUTH_IND, BRCMF_E_STATUS_SUCCESS, kClientIfidx, 0, 0,
                       reason);
     if (assoc_state_.state == AuthState::AUTHENTICATED) {
       AuthClearContext();

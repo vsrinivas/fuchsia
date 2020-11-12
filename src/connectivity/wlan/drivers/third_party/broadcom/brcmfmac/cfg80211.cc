@@ -1207,15 +1207,16 @@ static void cfg80211_disconnected(struct brcmf_cfg80211_vif* vif, uint16_t event
   struct brcmf_cfg80211_info* cfg = vif->ifp->drvr->config;
   BRCMF_DBG(CONN, "Link Down: address: " MAC_FMT_STR ", SME reason: %d",
             MAC_FMT_ARGS(vif->profile.bssid), event_reason);
-  if (cfg->disconnect_mode == BRCMF_DISCONNECT_DEAUTH) {
+
+  const bool locally_initiated = (event_code == BRCMF_E_DEAUTH) || (event_code == BRCMF_E_DISASSOC);
+  if (cfg->disconnect_mode == BRCMF_DISCONNECT_DEAUTH && locally_initiated) {
+    // Deauthenticate came from SME.
     brcmf_notify_deauth(ndev, vif->profile.bssid);
     cfg->disconnect_mode = BRCMF_DISCONNECT_NONE;
-  } else if (cfg->disconnect_mode == BRCMF_DISCONNECT_DISASSOC) {
+  } else if (cfg->disconnect_mode == BRCMF_DISCONNECT_DISASSOC && locally_initiated) {
     brcmf_notify_disassoc(ndev, ZX_OK);
     cfg->disconnect_mode = BRCMF_DISCONNECT_NONE;
-  } else {
-    // Not initiated by SME
-    bool locally_initiated = (event_code == BRCMF_E_DEAUTH) || (event_code == BRCMF_E_DISASSOC);
+  } else {  // Not initiated by SME
     // If not initiated by SME we are not likely to get E_DEAUTH but just in case...
     if (event_code == BRCMF_E_DEAUTH || event_code == BRCMF_E_DEAUTH_IND) {
       brcmf_notify_deauth_ind(ndev, vif->profile.bssid, event_reason, locally_initiated);
@@ -4968,11 +4969,12 @@ static zx_status_t brcmf_process_deauth_event(struct brcmf_if* ifp, const struct
 
   brcmf_proto_delete_peer(ifp->drvr, ifp->ifidx, (uint8_t*)e->addr);
   if (brcmf_is_apmode(ifp->vif)) {
-    if (e->event_code == BRCMF_E_DEAUTH_IND)
+    if (e->event_code == BRCMF_E_DEAUTH_IND) {
       brcmf_notify_deauth_ind(ifp->ndev, e->addr, e->reason, false);
-    else
+    } else {
       // E_DEAUTH
       brcmf_notify_deauth(ifp->ndev, e->addr);
+    }
     return ZX_OK;
   }
 
