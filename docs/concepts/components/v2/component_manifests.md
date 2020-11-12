@@ -500,10 +500,6 @@ Example:
 ```json5
 use: [
     {
-        protocol: "fuchsia.logger.LegacyLogSink",
-        path: "/svc/fuchsia.logger.LogSink",
-    },
-    {
         protocol: [
             "fuchsia.ui.scenic.Scenic",
             "fuchsia.accessibility.Manager",

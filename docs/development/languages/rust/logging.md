@@ -21,20 +21,59 @@ deps = [
 
 See [Rust: Overview][rust-dev] for more information about building Rust within Fuchsia.
 
-### Sandbox dependency
+### Component manifest dependency {#manifest}
 
-In order to connect to a diagnostics service, `fuchsia.logger.LogSink` must be in the sandbox
-of the connecting component's [`.cmx` file]:
+Ensure that your component has the required capabilities to log by including the
+following in your component manifest:
 
-```
-{
-  "sandbox": {
-    "services": [
-      "fuchsia.logger.LogSink"
-    ]
-  }
-}
-```
+   * {.cmx}
+
+   ```json
+   {
+     "include": [
+       "sdk/lib/diagnostics/syslog/client.shard.cmx"
+     ],
+     ...
+   }
+   ```
+
+   * {.cml}
+
+   ```json5
+   {
+     include: [
+       "sdk/lib/diagnostics/syslog/client.shard.cml"
+     ],
+     ...
+   }
+   ```
+
+Note: The above is only available for in-tree development.
+This is tracked in [fxbug.dev/64207](http://fxbug.dev/64207).
+Out of tree developers should copy the snippets shown below instead.
+
+   * {.cmx}
+
+   ```json
+   {
+     "sandbox": {
+       "services": [
+         "fuchsia.logger.LogSink"
+       ]
+     },
+     ...
+   }
+   ```
+
+   * {.cml}
+
+   ```json5
+   {
+     use: [
+       { protocol: "fuchsia.logger.LogSink" },
+     ],
+   }
+   ```
 
 The syslog library will fallback to `stderr` if the `LogSink` connection fails.
 

@@ -2,20 +2,59 @@
 
 This document explains how to get started with syslogger APIs.
 
-## Component manifest
+### Component manifest dependency
 
-The fuchsia.logger.LogSink capability must be exposed to the component that uses
-the syslog API.
+Ensure that your component has the required capabilities to log by including the
+following in your component manifest:
 
-```
-{
-    "sandbox": {
-        "services": [
-            "fuchsia.logger.LogSink"
-        ]
-    }
-}
-```
+   * {.cmx}
+
+   ```json
+   {
+     "include": [
+       "sdk/lib/diagnostics/syslog/client.shard.cmx"
+     ],
+     ...
+   }
+   ```
+
+   * {.cml}
+
+   ```json5
+   {
+     include: [
+       "sdk/lib/diagnostics/syslog/client.shard.cmx"
+     ],
+     ...
+   }
+   ```
+
+Note: The above is only available for in-tree development.
+This is tracked in [fxbug.dev/64207](http://fxbug.dev/64207).
+Out of tree developers should copy the snippets shown below instead.
+
+   * {.cmx}
+
+   ```json
+   {
+     "sandbox": {
+       "services": [
+         "fuchsia.logger.LogSink"
+       ]
+     },
+     ...
+   }
+   ```
+
+   * {.cml}
+
+   ```json5
+   {
+     use: [
+       { protocol: "fuchsia.logger.LogSink" },
+     ],
+   }
+   ```
 
 ## Default configuration
 

@@ -80,14 +80,30 @@ the program running under this manifest has a very limited set of capabilities.
 For instance, there is no mutable storage available for this program and it
 cannot access any services in Fuchsia.
 
-#### Sandbox
+#### Additional capabilities
 
-The `sandbox` portion of the manifest can be used to expand on this. As an
+The manifest can include additional content to request more capabilities. As an
 alternative to the prior example, the following example provides the component
-access to storage at `/cache` and allows the component to talk to the service
-located at `/svc/fuchsia.logger.LogSink`:
+access to storage at `/cache` and allows the component to write to the system
+log.
 
-```none
+```json
+{
+    "include": [ "sdk/lib/diagnostics/syslog/client.shard.cmx" ],
+    "program": {
+        "binary": "test/hello_world_rust_bin_test"
+    },
+    "sandbox": {
+        "features": [ "isolated-cache-storage" ]
+    }
+}
+```
+
+Note: The above syntax is only available for in-tree development.
+This is tracked in [fxbug.dev/64207](http://fxbug.dev/64207).
+Out of tree developers should copy the snippet shown below instead.
+
+```json
 {
     "program": {
         "binary": "test/hello_world_rust_bin_test"

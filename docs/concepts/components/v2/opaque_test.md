@@ -34,17 +34,17 @@ For the OpaqueTest framework to function correctly, the test cmx manifest
 must specify (at minimum) the following features and services:
 
 ```rust
+"include": [ "sdk/lib/diagnostics/syslog/client.shard.cmx" ],
 "sandbox": {
     "features": [
         "hub"
     ],
     "services": [
-        "fuchsia.logger.LogSink",
         "fuchsia.process.Launcher",
         "fuchsia.sys.Environment",
         "fuchsia.sys.Launcher"
     ]
-}
+},
 ```
 
 These services and features ensure that OpaqueTest can set up a hermetic

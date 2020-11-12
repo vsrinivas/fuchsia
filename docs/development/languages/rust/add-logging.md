@@ -124,36 +124,7 @@ package. In this guide, the source file is `main.rs`.
 
 ### Edit the component manifest {#edit-the-component-manifest}
 
-The component manifest is a JSON file with the `.cmx` file extension.
-
-The component manifest declares what services and resources your package uses.
-
-For more information, see [Component manifest](/docs/concepts/components/v1/component_manifests.md).
-
-1.  Open the component manifest, `hello_world_rust.cmx`, in your chosen
-    text editor.
-
-    ```
-    vi ~/fuchsia/examples/hello_world/rust/meta/hello_world_rust.cmx
-    ```
-
-1.  Add a `sandbox` property with a `services` array.
-
-1.  Include the `fuchsia.logger.LogSink` service within the `services`
-    array.
-
-    At this point, `hello_world_rust.cmx` should look like this:
-
-    ```
-        {
-            "program": {
-                "binary": "bin/hello_world_rust"
-            },
-            "sandbox": {
-                "services": [ "fuchsia.logger.LogSink" ]
-            }
-        }
-    ```
+1.  See the [following language-agnostic instructions](logging.md#manifest).
 
 1.  Execute a build of the Fuchsia image that contains your modified component
     package.
