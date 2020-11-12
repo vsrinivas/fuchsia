@@ -24,7 +24,7 @@ enum months {
 };
 
 // Leading 0 allows using the 1-indexed month values from rtc.
-static const uint64_t days_in_month[] = {
+static const uint32_t days_in_month[] = {
     0,
     31,  // January
     28,  // February (not leap year)
@@ -115,10 +115,10 @@ void seconds_to_rtc(uint64_t seconds, fuchsia_hardware_rtc_Time* rtc) {
   }
 
   // remaining epoch is a whole number of days so just make it one-indexed
-  rtc->day = epoch + 1;
+  rtc->day = (uint8_t)(epoch + 1);
 }
 
-uint8_t to_bcd(uint8_t binary) { return ((binary / 10) << 4) | (binary % 10); }
+uint8_t to_bcd(uint8_t binary) { return (uint8_t)(((binary / 10) << 4) | (binary % 10)); }
 
 uint8_t from_bcd(uint8_t bcd) { return ((bcd >> 4) * 10) + (bcd & 0xf); }
 
