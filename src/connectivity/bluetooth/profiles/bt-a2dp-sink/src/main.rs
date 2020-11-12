@@ -433,7 +433,7 @@ async fn main() -> Result<(), Error> {
     let (connect_client, connect_requests) =
         create_request_stream().context("ConnectionReceiver creation")?;
 
-    profile_svc
+    let _ = profile_svc
         .advertise(
             &mut service_defs.into_iter(),
             bredr::ChannelParameters {
