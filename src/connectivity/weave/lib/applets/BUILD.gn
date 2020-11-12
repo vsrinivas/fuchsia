@@ -1,0 +1,12 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("applets") {
+  sources = [ "weave_applets.h" ]
+  public_configs = [ "//sdk/config" ]
+  public_deps = [
+    "//sdk/lib/sys/cpp",
+    "//src/connectivity/weave/adaptation",
+  ]
+}
