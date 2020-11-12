@@ -99,6 +99,15 @@ zx_status_t App::Init() {
     return status;
   }
 
+  stack_provider_impl_ =
+      std::make_unique<StackProviderImpl>(PlatformMgrImpl().GetComponentContextForProcess());
+  status = stack_provider_impl_->Init();
+  if (status != ZX_OK) {
+    FX_LOGS(ERROR) << "StackProviderImpl Init() failed with status = "
+                   << zx_status_get_string(status);
+    return status;
+  }
+
   initialized_ = true;
   return ZX_OK;
 }

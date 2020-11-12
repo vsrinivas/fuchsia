@@ -22,6 +22,8 @@ openweave_adaptation_layer("adaptation") {
     "generic_platform_manager_impl_fuchsia.ipp",
     "group_key_store_impl.cpp",
     "group_key_store_impl.h",
+    "network_provisioning_server_delegate_impl.cpp",
+    "network_provisioning_server_delegate_impl.h",
     "network_provisioning_server_impl.cpp",
     "network_provisioning_server_impl.h",
     "platform_case_auth_delegate.cpp",

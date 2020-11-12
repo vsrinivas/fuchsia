@@ -15,6 +15,7 @@
 #include "generic_platform_manager_impl_fuchsia.ipp"
 #include "configuration_manager_delegate_impl.h"
 #include "connectivity_manager_delegate_impl.h"
+#include "network_provisioning_server_delegate_impl.h"
 #include "thread_stack_manager_delegate_impl.h"
 // clang-format on
 
@@ -39,6 +40,9 @@ using nl::Weave::DeviceLayer::ConnectivityMgrImpl;
 using nl::Weave::DeviceLayer::PlatformMgrImpl;
 using nl::Weave::DeviceLayer::ThreadStackManagerDelegateImpl;
 using nl::Weave::DeviceLayer::ThreadStackMgrImpl;
+using nl::Weave::DeviceLayer::Internal::NetworkProvisioningServerDelegateImpl;
+using nl::Weave::DeviceLayer::Internal::NetworkProvisioningServerImpl;
+using nl::Weave::DeviceLayer::Internal::NetworkProvisioningSvrImpl;
 using nl::Weave::Profiles::DeviceControl::DeviceControlDelegate;
 }  // namespace
 
@@ -71,8 +75,7 @@ class FakeWeaveFactoryDataManager : public fuchsia::weave::testing::FactoryDataM
 
 class TestableStackImpl : public StackImpl {
  public:
-  TestableStackImpl(sys::ComponentContext* context)
-      : StackImpl(context) {}
+  TestableStackImpl(sys::ComponentContext* context) : StackImpl(context) {}
 
   // Set the result for a future LookupHostPorts call
   void SetLookupResult(uint64_t endpoint_id, std::vector<HostPort> result) {
@@ -86,15 +89,12 @@ class TestableStackImpl : public StackImpl {
     reset_config_was_called_ = false;
   }
 
-  bool ResetConfigWasCalled() {
-    return reset_config_was_called_;
-  }
+  bool ResetConfigWasCalled() { return reset_config_was_called_; }
 
  private:
   class FakeDeviceControl : public DeviceControlDelegate {
    public:
-    explicit FakeDeviceControl(TestableStackImpl* parent):
-      parent_(parent) {}
+    explicit FakeDeviceControl(TestableStackImpl* parent) : parent_(parent) {}
 
    private:
     WEAVE_ERROR OnResetConfig(uint16_t resetFlags) override {
@@ -106,47 +106,28 @@ class TestableStackImpl : public StackImpl {
     }
 
     // Following aren't used, only present to satisfy interface
-    bool ShouldCloseConBeforeResetConfig(uint16_t resetFlags) override {
-      return true;
-    }
-    WEAVE_ERROR OnFailSafeArmed(void) override {
-      return WEAVE_NO_ERROR;
-    }
-    WEAVE_ERROR OnFailSafeDisarmed(void) override {
-      return WEAVE_NO_ERROR;
-    }
-    void OnConnectionMonitorTimeout(
-        uint64_t peerNodeId, nl::Inet::IPAddress peerAddr) override {}
+    bool ShouldCloseConBeforeResetConfig(uint16_t resetFlags) override { return true; }
+    WEAVE_ERROR OnFailSafeArmed(void) override { return WEAVE_NO_ERROR; }
+    WEAVE_ERROR OnFailSafeDisarmed(void) override { return WEAVE_NO_ERROR; }
+    void OnConnectionMonitorTimeout(uint64_t peerNodeId, nl::Inet::IPAddress peerAddr) override {}
     void OnRemotePassiveRendezvousStarted(void) override {}
     void OnRemotePassiveRendezvousDone(void) override {}
-    WEAVE_ERROR WillStartRemotePassiveRendezvous(void) override {
-      return WEAVE_NO_ERROR;
-    }
+    WEAVE_ERROR WillStartRemotePassiveRendezvous(void) override { return WEAVE_NO_ERROR; }
     void WillCloseRemotePassiveRendezvous(void) override {}
-    bool IsResetAllowed(uint16_t resetFlags) override {
-      return true;
-    }
-    WEAVE_ERROR OnSystemTestStarted(uint32_t profileId,
-                                            uint32_t testId) override {
+    bool IsResetAllowed(uint16_t resetFlags) override { return true; }
+    WEAVE_ERROR OnSystemTestStarted(uint32_t profileId, uint32_t testId) override {
       return WEAVE_NO_ERROR;
     }
-    WEAVE_ERROR OnSystemTestStopped(void) override {
-      return WEAVE_NO_ERROR;
-    }
-    void EnforceAccessControl(
-        nl::Weave::ExchangeContext *ec, uint32_t msgProfileId,
-        uint8_t msgType, const nl::Weave::WeaveMessageInfo *msgInfo,
-        AccessControlResult& result) override {}
-    bool IsPairedToAccount() const override {
-      return false;
-    }
+    WEAVE_ERROR OnSystemTestStopped(void) override { return WEAVE_NO_ERROR; }
+    void EnforceAccessControl(nl::Weave::ExchangeContext* ec, uint32_t msgProfileId,
+                              uint8_t msgType, const nl::Weave::WeaveMessageInfo* msgInfo,
+                              AccessControlResult& result) override {}
+    bool IsPairedToAccount() const override { return false; }
 
     TestableStackImpl* parent_;
   };
 
-  zx_status_t LookupHostPorts(
-      uint64_t endpoint_id,
-      std::vector<HostPort>* host_ports) override {
+  zx_status_t LookupHostPorts(uint64_t endpoint_id, std::vector<HostPort>* host_ports) override {
     // Lookup in map
     auto lookup = map_.find(endpoint_id);
     if (lookup == map_.end()) {
@@ -166,8 +147,7 @@ class TestableStackImpl : public StackImpl {
     return ZX_OK;
   }
 
-  nl::Weave::Profiles::DeviceControl::DeviceControlDelegate&
-      GetDeviceControl() override {
+  nl::Weave::Profiles::DeviceControl::DeviceControlDelegate& GetDeviceControl() override {
     return fake_device_control_;
   }
 
@@ -183,7 +163,7 @@ class TestableStackImpl : public StackImpl {
   bool reset_config_was_called_;
 };
 
-class StackImplTest: public gtest::TestLoopFixture {
+class StackImplTest : public gtest::TestLoopFixture {
  public:
   void SetUp() override {
     TestLoopFixture::SetUp();
@@ -195,12 +175,13 @@ class StackImplTest: public gtest::TestLoopFixture {
     // Initialize the weave stack
     ConfigurationMgrImpl().SetDelegate(std::make_unique<ConfigurationManagerDelegateImpl>());
     ConnectivityMgrImpl().SetDelegate(std::make_unique<ConnectivityManagerDelegateImpl>());
+    NetworkProvisioningSvrImpl().SetDelegate(
+        std::make_unique<NetworkProvisioningServerDelegateImpl>());
     ThreadStackMgrImpl().SetDelegate(std::make_unique<ThreadStackManagerDelegateImpl>());
     ASSERT_EQ(PlatformMgrImpl().InitWeaveStack(), WEAVE_NO_ERROR);
 
     // Set up StackImpl
-    stack_impl_ = std::make_unique<TestableStackImpl>(
-        provider_.context());
+    stack_impl_ = std::make_unique<TestableStackImpl>(provider_.context());
     stack_impl_->Init();
 
     // Connect to the UUT
@@ -235,7 +216,7 @@ TEST_F(StackImplTest, GetPairingStateWatcher) {
   EXPECT_TRUE(watcher.is_bound());
 
   // Get first value
-  watcher->WatchPairingState([&] (PairingState result) {
+  watcher->WatchPairingState([&](PairingState result) {
     EXPECT_FALSE(result.IsEmpty());
     callback_triggered = true;
   });
@@ -244,12 +225,12 @@ TEST_F(StackImplTest, GetPairingStateWatcher) {
 
   // Try hanging get
   callback_triggered = false;
-  watcher->WatchPairingState([&] (PairingState result) {
+  watcher->WatchPairingState([&](PairingState result) {
     EXPECT_FALSE(result.IsEmpty());
     callback_triggered = true;
   });
   RunLoopUntilIdle();
-  EXPECT_FALSE(callback_triggered) << "Callback triggered on hanging get.";;
+  EXPECT_FALSE(callback_triggered) << "Callback triggered on hanging get.";
 
   // Notify and expect callback
   stack_impl_->NotifyPairingState();
@@ -264,7 +245,7 @@ TEST_F(StackImplTest, GetPairingStateWatcherDoubleCall) {
   zx_status_t error_status = ZX_OK;
 
   // Set error handler on watcher
-  watcher.set_error_handler([&] (zx_status_t status) {
+  watcher.set_error_handler([&](zx_status_t status) {
     error_handler_triggered = true;
     error_status = status;
   });
@@ -275,7 +256,7 @@ TEST_F(StackImplTest, GetPairingStateWatcherDoubleCall) {
   EXPECT_TRUE(watcher.is_bound());
 
   // Get first value
-  watcher->WatchPairingState([&] (PairingState result) {
+  watcher->WatchPairingState([&](PairingState result) {
     EXPECT_FALSE(result.IsEmpty());
     callback_triggered = true;
   });
@@ -284,20 +265,18 @@ TEST_F(StackImplTest, GetPairingStateWatcherDoubleCall) {
 
   // Try hanging get
   callback_triggered = false;
-  watcher->WatchPairingState([&] (PairingState result) {
+  watcher->WatchPairingState([&](PairingState result) {
     EXPECT_FALSE(result.IsEmpty());
     callback_triggered = true;
   });
   RunLoopUntilIdle();
-  EXPECT_FALSE(callback_triggered) << "Callback triggered on hanging get.";;
+  EXPECT_FALSE(callback_triggered) << "Callback triggered on hanging get.";
 
   // Try second get while still waiting on first
   callback_triggered = false;
-  watcher->WatchPairingState([&] (PairingState result) {
-    callback_triggered = true;
-  });
+  watcher->WatchPairingState([&](PairingState result) { callback_triggered = true; });
   RunLoopUntilIdle();
-  EXPECT_FALSE(callback_triggered) << "Callback triggered on hanging get.";;
+  EXPECT_FALSE(callback_triggered) << "Callback triggered on hanging get.";
   EXPECT_TRUE(error_handler_triggered);
   EXPECT_EQ(error_status, ZX_ERR_BAD_STATE);
 }
@@ -309,7 +288,7 @@ TEST_F(StackImplTest, GetSvcDirectoryWatcher) {
 
   // Set test data
   std::vector<HostPort> test_data;
-  test_data.emplace_back(HostPort {.host = Host::WithHostname("test"), .port = 42});
+  test_data.emplace_back(HostPort{.host = Host::WithHostname("test"), .port = 42});
   stack_impl_->SetLookupResult(kFakeEndpointId, std::move(test_data));
 
   // Get watcher
@@ -318,19 +297,15 @@ TEST_F(StackImplTest, GetSvcDirectoryWatcher) {
   EXPECT_TRUE(watcher.is_bound());
 
   // Get first value
-  watcher->WatchServiceDirectory([&] (std::vector<HostPort> result) {
-    callback_triggered = true;
-  });
+  watcher->WatchServiceDirectory([&](std::vector<HostPort> result) { callback_triggered = true; });
   RunLoopUntilIdle();
   EXPECT_TRUE(callback_triggered) << "Callback not triggered for first value.";
 
   // Try hanging get
   callback_triggered = false;
-  watcher->WatchServiceDirectory([&] (std::vector<HostPort> result) {
-    callback_triggered = true;
-  });
+  watcher->WatchServiceDirectory([&](std::vector<HostPort> result) { callback_triggered = true; });
   RunLoopUntilIdle();
-  EXPECT_FALSE(callback_triggered) << "Callback triggered on hanging get.";;
+  EXPECT_FALSE(callback_triggered) << "Callback triggered on hanging get.";
 
   // Notify and expect callback
   stack_impl_->NotifySvcDirectory();
@@ -347,11 +322,11 @@ TEST_F(StackImplTest, GetSvcDirectoryWatcherDoubleCall) {
 
   // Set test data
   std::vector<HostPort> test_data;
-  test_data.emplace_back(HostPort {.host = Host::WithHostname("test"), .port = 42});
+  test_data.emplace_back(HostPort{.host = Host::WithHostname("test"), .port = 42});
   stack_impl_->SetLookupResult(kFakeEndpointId, std::move(test_data));
 
   // Set error handler on watcher
-  watcher.set_error_handler([&] (zx_status_t status) {
+  watcher.set_error_handler([&](zx_status_t status) {
     error_handler_triggered = true;
     error_status = status;
   });
@@ -362,27 +337,21 @@ TEST_F(StackImplTest, GetSvcDirectoryWatcherDoubleCall) {
   EXPECT_TRUE(watcher.is_bound());
 
   // Get first value
-  watcher->WatchServiceDirectory([&] (std::vector<HostPort> result) {
-    callback_triggered = true;
-  });
+  watcher->WatchServiceDirectory([&](std::vector<HostPort> result) { callback_triggered = true; });
   RunLoopUntilIdle();
   EXPECT_TRUE(callback_triggered) << "Callback not triggered for first value.";
 
   // Try hanging get
   callback_triggered = false;
-  watcher->WatchServiceDirectory([&] (std::vector<HostPort> result) {
-    callback_triggered = true;
-  });
+  watcher->WatchServiceDirectory([&](std::vector<HostPort> result) { callback_triggered = true; });
   RunLoopUntilIdle();
-  EXPECT_FALSE(callback_triggered) << "Callback triggered on hanging get.";;
+  EXPECT_FALSE(callback_triggered) << "Callback triggered on hanging get.";
 
   // Try second get while still waiting on first
   callback_triggered = false;
-  watcher->WatchServiceDirectory([&] (std::vector<HostPort> result) {
-    callback_triggered = true;
-  });
+  watcher->WatchServiceDirectory([&](std::vector<HostPort> result) { callback_triggered = true; });
   RunLoopUntilIdle();
-  EXPECT_FALSE(callback_triggered) << "Callback triggered on hanging get.";;
+  EXPECT_FALSE(callback_triggered) << "Callback triggered on hanging get.";
   EXPECT_TRUE(error_handler_triggered);
   EXPECT_EQ(error_status, ZX_ERR_BAD_STATE);
 }
@@ -395,7 +364,7 @@ TEST_F(StackImplTest, GetSvcDirectoryWatcherInvalidEndpoint) {
   zx_status_t error_status = ZX_OK;
 
   // Set error handler on watcher
-  watcher.set_error_handler([&] (zx_status_t status) {
+  watcher.set_error_handler([&](zx_status_t status) {
     error_handler_triggered = true;
     error_status = status;
   });
@@ -408,9 +377,7 @@ TEST_F(StackImplTest, GetSvcDirectoryWatcherInvalidEndpoint) {
   EXPECT_EQ(error_status, ZX_OK);
 
   // Get first value
-  watcher->WatchServiceDirectory([&] (std::vector<HostPort> result) {
-    callback_triggered = true;
-  });
+  watcher->WatchServiceDirectory([&](std::vector<HostPort> result) { callback_triggered = true; });
   RunLoopUntilIdle();
   EXPECT_FALSE(callback_triggered) << "Callback triggered on invalid value.";
   EXPECT_TRUE(error_handler_triggered);
@@ -421,31 +388,23 @@ TEST_F(StackImplTest, GetQrCode) {
   Stack_GetQrCode_Result result;
 
   nl::Weave::FabricState.PairingCode = "ABCDEF";
-  weave_stack_->GetQrCode([&] (Stack_GetQrCode_Result r) {
-    result = std::move(r);
-  });
+  weave_stack_->GetQrCode([&](Stack_GetQrCode_Result r) { result = std::move(r); });
   RunLoopUntilIdle();
 
-  EXPECT_FALSE(result.is_err()) << "Failed with err: "
-                                << static_cast<uint32_t>(result.err());
+  EXPECT_FALSE(result.is_err()) << "Failed with err: " << static_cast<uint32_t>(result.err());
   EXPECT_TRUE(result.is_response());
   EXPECT_FALSE(result.response().qr_code.data.empty());
 }
 
 TEST_F(StackImplTest, ResetConfig) {
   constexpr ResetConfigFlags kResetConfigFlags =
-      ResetConfigFlags::NETWORK_CONFIG |
-      ResetConfigFlags::FABRIC_CONFIG;
+      ResetConfigFlags::NETWORK_CONFIG | ResetConfigFlags::FABRIC_CONFIG;
   Stack_ResetConfig_Result result;
 
-  stack_impl_->SetExpectedResetConfigCall(
-      static_cast<uint16_t>(kResetConfigFlags),
-      WEAVE_NO_ERROR);
+  stack_impl_->SetExpectedResetConfigCall(static_cast<uint16_t>(kResetConfigFlags), WEAVE_NO_ERROR);
 
   weave_stack_->ResetConfig(kResetConfigFlags,
-                             [&] (Stack_ResetConfig_Result r) {
-    result = std::move(r);
-  });
+                            [&](Stack_ResetConfig_Result r) { result = std::move(r); });
   RunLoopUntilIdle();
 
   EXPECT_TRUE(stack_impl_->ResetConfigWasCalled());

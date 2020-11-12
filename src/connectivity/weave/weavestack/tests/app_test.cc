@@ -14,6 +14,7 @@
 #include "generic_platform_manager_impl_fuchsia.ipp"
 #include "configuration_manager_delegate_impl.h"
 #include "connectivity_manager_delegate_impl.h"
+#include "network_provisioning_server_delegate_impl.h"
 #include "thread_stack_manager_delegate_impl.h"
 // clang-format on
 
@@ -29,16 +30,21 @@ using nl::Weave::DeviceLayer::PlatformMgr;
 using nl::Weave::DeviceLayer::PlatformMgrImpl;
 using nl::Weave::DeviceLayer::ThreadStackManagerDelegateImpl;
 using nl::Weave::DeviceLayer::ThreadStackMgrImpl;
-
+using nl::Weave::DeviceLayer::Internal::NetworkProvisioningServerDelegateImpl;
+using nl::Weave::DeviceLayer::Internal::NetworkProvisioningServerImpl;
+using nl::Weave::DeviceLayer::Internal::NetworkProvisioningSvrImpl;
 void SetDefaultDelegates() {
   ConfigurationMgrImpl().SetDelegate(std::make_unique<ConfigurationManagerDelegateImpl>());
   ConnectivityMgrImpl().SetDelegate(std::make_unique<ConnectivityManagerDelegateImpl>());
+  NetworkProvisioningSvrImpl().SetDelegate(
+      std::make_unique<NetworkProvisioningServerDelegateImpl>());
   ThreadStackMgrImpl().SetDelegate(std::make_unique<ThreadStackManagerDelegateImpl>());
 }
 
 void ClearDelegates() {
   ConfigurationMgrImpl().SetDelegate(nullptr);
   ConnectivityMgrImpl().SetDelegate(nullptr);
+  NetworkProvisioningSvrImpl().SetDelegate(nullptr);
   ThreadStackMgrImpl().SetDelegate(nullptr);
 }
 }  // namespace

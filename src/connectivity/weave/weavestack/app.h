@@ -18,6 +18,7 @@
 #include <src/lib/fsl/tasks/fd_waiter.h>
 
 #include "fidl/stack_impl.h"
+#include "fidl/stack_provider_impl.h"
 
 namespace weavestack {
 
@@ -60,6 +61,7 @@ class App {
   bool initialized_ = false;
   std::unique_ptr<async::TaskClosure> sleep_task_;
   std::unique_ptr<StackImpl> stack_impl_;
+  std::unique_ptr<StackProviderImpl> stack_provider_impl_;
 };
 
 }  // namespace weavestack

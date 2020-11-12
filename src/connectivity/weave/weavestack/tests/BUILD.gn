@@ -18,6 +18,7 @@ executable("unittests") {
   sources = [
     "app_test.cc",
     "stack_impl_test.cc",
+    "stack_provider_impl_test.cc",
     "stack_utils_test.cc",
   ]
 

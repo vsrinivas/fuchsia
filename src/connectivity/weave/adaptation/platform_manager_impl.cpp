@@ -9,6 +9,7 @@
 #include "generic_platform_manager_impl_fuchsia.ipp"
 #include "configuration_manager_delegate_impl.h"
 #include "connectivity_manager_delegate_impl.h"
+#include "network_provisioning_server_delegate_impl.h"
 #include "thread_stack_manager_delegate_impl.h"
 // clang-format on
 
@@ -20,6 +21,10 @@ namespace nl {
 namespace Weave {
 namespace DeviceLayer {
 
+namespace {
+using nl::Weave::DeviceLayer::Internal::NetworkProvisioningSvrImpl;
+}
+
 PlatformManagerImpl PlatformManagerImpl::sInstance;
 
 WEAVE_ERROR PlatformManagerImpl::_InitWeaveStack(void) {
@@ -27,6 +32,8 @@ WEAVE_ERROR PlatformManagerImpl::_InitWeaveStack(void) {
       << "ConfigurationManager delegate must be set before InitWeaveStack is called.";
   FX_CHECK(ConnectivityMgrImpl().GetDelegate() != nullptr)
       << "ConnectivityManager delegate must be set before InitWeaveStack is called.";
+  FX_CHECK(NetworkProvisioningSvrImpl().GetDelegate() != nullptr)
+      << "NetworkProvisioningServer delegate must be set before InitWeaveStack is called.";
   FX_CHECK(ThreadStackMgrImpl().GetDelegate() != nullptr)
       << "ThreadStackManager delegate must be set before InitWeaveStack is called.";
   return Internal::GenericPlatformManagerImpl_Fuchsia<PlatformManagerImpl>::_InitWeaveStack();
@@ -58,6 +65,7 @@ void PlatformManagerImpl::_PostEvent(const WeaveDeviceEvent *event) {
 void PlatformManagerImpl::ShutdownWeaveStack(void) {
   Internal::GenericPlatformManagerImpl_Fuchsia<PlatformManagerImpl>::_ShutdownWeaveStack();
   ThreadStackMgrImpl().SetDelegate(nullptr);
+  NetworkProvisioningSvrImpl().SetDelegate(nullptr);
   ConnectivityMgrImpl().SetDelegate(nullptr);
   ConfigurationMgrImpl().SetDelegate(nullptr);
   context_.reset();

@@ -284,9 +284,8 @@ WEAVE_ERROR ThreadStackManagerDelegateImpl::SetThreadProvision(const DeviceNetwo
   std::vector<uint8_t> network_name{
       netInfo.ThreadNetworkName,
       netInfo.ThreadNetworkName + std::strlen(netInfo.ThreadNetworkName)};
-  ;
-  identity.set_raw_name(std::move(network_name));
 
+  identity.set_raw_name(std::move(network_name));
   identity.set_net_type(fuchsia::lowpan::NET_TYPE_THREAD_1_X);
 
   if (netInfo.FieldPresent.ThreadExtendedPANId) {
@@ -354,9 +353,7 @@ ThreadDeviceType ThreadStackManagerDelegateImpl::GetThreadDeviceType() {
   };
 }
 
-bool ThreadStackManagerDelegateImpl::HaveMeshConnectivity() {
-  return IsThreadAttached();
-}
+bool ThreadStackManagerDelegateImpl::HaveMeshConnectivity() { return IsThreadAttached(); }
 
 WEAVE_ERROR ThreadStackManagerDelegateImpl::GetAndLogThreadStatsCounters() {
   return WEAVE_ERROR_NOT_IMPLEMENTED;  // TODO(fxbug.dev/55888)

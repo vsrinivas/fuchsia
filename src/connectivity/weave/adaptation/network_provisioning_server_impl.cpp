@@ -13,6 +13,8 @@
 #include <Weave/DeviceLayer/internal/GenericNetworkProvisioningServerImpl.ipp>
 // clang-format on
 
+#include <lib/syslog/cpp/macros.h>
+
 using namespace ::nl;
 using namespace ::nl::Weave;
 using namespace ::nl::Weave::TLV;
@@ -28,8 +30,32 @@ namespace Internal {
 
 NetworkProvisioningServerImpl NetworkProvisioningServerImpl::sInstance;
 
+void NetworkProvisioningServerImpl::SetDelegate(std::unique_ptr<Delegate> delegate) {
+  FX_CHECK(!(delegate && delegate_)) << "Attempted to set an already set delegate. Must explicitly "
+                                        "clear the existing delegate first.";
+  delegate_ = std::move(delegate);
+  if (delegate_) {
+    delegate_->SetNetworkProvisioningServerImpl(this);
+  }
+}
+
+NetworkProvisioningServerImpl::Delegate* NetworkProvisioningServerImpl::GetDelegate() {
+  return delegate_.get();
+}
+
 WEAVE_ERROR NetworkProvisioningServerImpl::_Init(void) {
+  WEAVE_ERROR err;
+
+  err = delegate_->Init();
+  if (err != WEAVE_NO_ERROR) {
+    return err;
+  }
   return GenericNetworkProvisioningServerImpl<NetworkProvisioningServerImpl>::DoInit();
+}
+
+void NetworkProvisioningServerImpl::SetWlanNetworkConfigProvider(
+    ::fidl::InterfaceHandle<class ::fuchsia::weave::WlanNetworkConfigProvider> provider) {
+  delegate_->SetWlanNetworkConfigProvider(std::move(provider));
 }
 
 void NetworkProvisioningServerImpl::_OnPlatformEvent(const WeaveDeviceEvent* event) {
@@ -38,12 +64,12 @@ void NetworkProvisioningServerImpl::_OnPlatformEvent(const WeaveDeviceEvent* eve
   GenericImplClass::_OnPlatformEvent(event);
 }
 
-WEAVE_ERROR NetworkProvisioningServerImpl::GetWiFiStationProvision(NetworkInfo& netInfo,
-                                                                   bool includeCredentials) {
-  return WEAVE_NO_ERROR;
+WEAVE_ERROR NetworkProvisioningServerImpl::GetWiFiStationProvision(NetworkInfo& net_info,
+                                                                   bool include_credentials) {
+  return delegate_->GetWiFiStationProvision(net_info, include_credentials);
 }
 
-WEAVE_ERROR NetworkProvisioningServerImpl::SetWiFiStationProvision(const NetworkInfo& netInfo) {
+WEAVE_ERROR NetworkProvisioningServerImpl::SetWiFiStationProvision(const NetworkInfo& net_info) {
   return WEAVE_NO_ERROR;
 }
 
@@ -57,13 +83,13 @@ void NetworkProvisioningServerImpl::HandleScanDone() {}
 
 #if WEAVE_DEVICE_CONFIG_WIFI_SCAN_COMPLETION_TIMEOUT
 
-void NetworkProvisioningServerImpl::HandleScanTimeOut(::nl::Weave::System::Layer* aLayer,
-                                                      void* aAppState,
-                                                      ::nl::Weave::System::Error aError) {}
+void NetworkProvisioningServerImpl::HandleScanTimeOut(::nl::Weave::System::Layer* a_layer,
+                                                      void* a_app_state,
+                                                      ::nl::Weave::System::Error a_error) {}
 
 #endif  // WEAVE_DEVICE_CONFIG_WIFI_SCAN_COMPLETION_TIMEOUT
 
-bool NetworkProvisioningServerImpl::IsSupportedWiFiSecurityType(WiFiSecurityType_t wifiSecType) {
+bool NetworkProvisioningServerImpl::IsSupportedWiFiSecurityType(WiFiSecurityType_t wifi_sec_type) {
   return false;
 }
 
