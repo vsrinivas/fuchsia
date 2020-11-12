@@ -18,7 +18,7 @@ use std::string::ToString;
 /// This wrapper stores client configuration as serialized JSON strings. The decision to use JSON
 /// derives from its use in other Stash clients, cf. commit e9c57a0, and the relative immaturity of
 /// more compact serde serialization formats, e.g. https://github.com/pyfisch/cbor/issues.
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Stash {
     prefix: String,
     proxy: fidl_fuchsia_stash::StoreAccessorProxy,
@@ -26,17 +26,23 @@ pub struct Stash {
 
 const OPTIONS_KEY: &'static str = "options";
 const PARAMETERS_KEY: &'static str = "parameters";
+const CLIENT_KEY_PREFIX: &'static str = "client";
+#[cfg(test)]
+pub(crate) const CLIENT_KEY_PREFIX_FOR_TEST: &'static str = CLIENT_KEY_PREFIX;
 
 impl Stash {
     /// Instantiates a new `Stash` value.
     ///
     /// The newly instantiated value will use `id` to identify itself with the `fuchsia.stash`
-    /// service and `prefix` as the prefix for key strings in persistent storage.
-    ///
-    /// `prefix` must not contain either '-' or ':' as these characters are used as field
-    /// delimiters in key strings for persistent storage. If `prefix` contains either character,
-    /// then the function will return `Result::Err`.
-    pub fn new(id: &str, prefix: &str) -> Result<Self, Error> {
+    /// service.
+    pub fn new(id: &str) -> Result<Self, Error> {
+        Self::new_with_prefix(id, CLIENT_KEY_PREFIX)
+    }
+
+    fn new_with_prefix(id: &str, prefix: &str) -> Result<Self, Error> {
+        if prefix.is_empty() {
+            return Err(anyhow::anyhow!("empty prefix"));
+        }
         if prefix.contains(&['-', ':'][..]) {
             return Err(anyhow::anyhow!("prefix contained invalid characters: {}", prefix));
         }
@@ -238,22 +244,28 @@ mod tests {
     use std::collections::HashMap;
     use std::convert::TryFrom;
 
+    /// Creates a new stash instance with a randomized identifier to prevent test flakes.
+    ///
+    /// `prefix` must not contain either '-' or ':' as they are used as field delimiters in stash
+    /// keys.
     fn new_stash(test_prefix: &str) -> Result<(Stash, String), Error> {
         use rand::Rng;
-        let rand_string: String =
+        let rand_id: String =
             rand::thread_rng().sample_iter(&rand::distributions::Alphanumeric).take(8).collect();
-        let stash = Stash::new(&rand_string, test_prefix)?;
-        // Clear the Stash of data leftover from the previous test.
+        let stash =
+            Stash::new_with_prefix(&rand_id, test_prefix).context("failed to create stash")?;
+        // Clear the Stash of any data leftover from the previous test.
         let () = stash.proxy.delete_prefix(&stash.prefix).context("failed to delete prefix")?;
         let () = stash.proxy.commit().context("failed to commit transaction")?;
-        Ok((stash, rand_string))
+        Ok((stash, rand_id))
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn stash_new() {
-        matches::assert_matches!(Stash::new("stash_new", "valid"), Ok(Stash { .. }));
-        matches::assert_matches!(Stash::new("stash_new", "invalid-"), Err(..));
-        matches::assert_matches!(Stash::new("stash_new", "invalid:"), Err(..));
+    async fn stash_new_with_prefix() {
+        matches::assert_matches!(Stash::new_with_prefix("stash_new", "valid"), Ok(Stash { .. }));
+        matches::assert_matches!(Stash::new_with_prefix("stash_new", "invalid-"), Err(..));
+        matches::assert_matches!(Stash::new_with_prefix("stash_new", "invalid:"), Err(..));
+        matches::assert_matches!(Stash::new_with_prefix("stash_new", ""), Err(..));
     }
 
     #[fuchsia_async::run_singlethreaded(test)]

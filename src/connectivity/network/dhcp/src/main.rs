@@ -11,7 +11,7 @@ use {
         protocol::{Message, SERVER_PORT},
         server::{
             get_server_id_from, Server, ServerAction, ServerDispatcher, ServerError,
-            DEFAULT_STASH_ID, DEFAULT_STASH_PREFIX,
+            DEFAULT_STASH_ID,
         },
     },
     fuchsia_async::{self as fasync, net::UdpSocket, Interval},
@@ -46,8 +46,7 @@ async fn main() -> Result<(), Error> {
     let () = fuchsia_syslog::init().context("cannot init logger")?;
     log::info!("starting");
 
-    let stash = dhcp::stash::Stash::new(DEFAULT_STASH_ID, DEFAULT_STASH_PREFIX)
-        .context("failed to instantiate stash")?;
+    let stash = dhcp::stash::Stash::new(DEFAULT_STASH_ID).context("failed to instantiate stash")?;
     let default_params = configuration::ServerParameters {
         server_ips: vec![],
         lease_length: dhcp::configuration::LeaseLength {
@@ -68,21 +67,36 @@ async fn main() -> Result<(), Error> {
         arp_probe: false,
         bound_device_names: vec![],
     };
-    let params = stash.load_parameters().await.unwrap_or_else(|e| {
-        log::warn!("failed to load parameters from stash: {:?}", e);
-        default_params.clone()
-    });
+    // The server parameters and the cache of client entries must be consistent with one another in
+    // order to ensure correct server operation. The cache cannot be consistent with default
+    // parameters, so if parameters fail to load from the stash, then the cache should default to
+    // empty.
+    let (params, options, cache) = match stash.load_parameters().await {
+        Ok(params) => {
+            let options = stash.load_options().await.unwrap_or_else(|e| {
+                log::warn!("failed to load options from stash: {:?}", e);
+                HashMap::new()
+            });
+            let cache = stash.load_client_configs().await.unwrap_or_else(|e| {
+                log::warn!("failed to load cached client config from stash: {:?}", e);
+                HashMap::new()
+            });
+            (params, options, cache)
+        }
+        Err(e) => {
+            log::warn!("failed to load parameters from stash: {:?}", e);
+            (default_params.clone(), HashMap::new(), HashMap::new())
+        }
+    };
+    let server = match Server::new_from_state(stash.clone(), params, options, cache) {
+        Ok(v) => v,
+        Err(e) => {
+            log::warn!("failed to create server from persistent state: {}", e);
+            Server::new(stash, default_params.clone())
+        }
+    };
 
-    let options = stash.load_options().await.unwrap_or_else(|e| {
-        log::warn!("failed to load options from stash: {:?}", e);
-        HashMap::new()
-    });
-    let cache = stash.load_client_configs().await.unwrap_or_else(|e| {
-        log::warn!("failed to load cached client config from stash: {:?}", e);
-        HashMap::new()
-    });
-    let server =
-        RefCell::new(ServerDispatcherRuntime::new(Server::new(stash, params, options, cache)));
+    let server = RefCell::new(ServerDispatcherRuntime::new(server));
 
     let mut fs = ServiceFs::new_local();
     fs.dir("svc").add_fidl_service(IncomingService::Server);

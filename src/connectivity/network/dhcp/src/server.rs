@@ -31,8 +31,6 @@ pub struct Server {
 
 /// The default string used by the Server to identify itself to the Stash service.
 pub const DEFAULT_STASH_ID: &str = "dhcpd";
-/// The default prefix used by the Server in the keys for values stored in the Stash service.
-pub const DEFAULT_STASH_PREFIX: &str = "";
 
 /// This enumerates the actions a DHCP server can take in response to a
 /// received client message. A `SendResponse(Message, Ipv4Addr)` indicates
@@ -109,6 +107,9 @@ pub enum ServerError {
     // The underlying error is not provided to this variant as it (std::time::SystemTimeError) does
     // not implement PartialEq.
     ServerTimeError,
+
+    #[error("inconsistent initial server state: {}", _0)]
+    InconsistentInitialServerState(AddressPoolError),
 }
 
 impl From<AddressPoolError> for ServerError {
@@ -165,7 +166,7 @@ impl Server {
             arp_probe: false,
             bound_device_names: vec![],
         };
-        let stash = Stash::new(&rand_string, DEFAULT_STASH_PREFIX)?;
+        let stash = Stash::new(&rand_string)?;
         Ok(Self {
             cache: HashMap::new(),
             pool: AddressPool::new(params.managed_addrs.pool_range()),
@@ -175,19 +176,37 @@ impl Server {
         })
     }
 
-    /// Instantiates a new `Server` value from the provided parts.
-    pub fn new(
+    /// Attempts to instantiate a new `Server` value from the persisted state contained in the
+    /// provided parts. If the client leases and address pool contained in the provided parts are
+    /// inconsistent with one another, then instantiation will fail.
+    pub fn new_from_state(
         stash: Stash,
         params: ServerParameters,
         options_repo: HashMap<OptionCode, DhcpOption>,
         cache: CachedClients,
-    ) -> Self {
+    ) -> Result<Self, Error> {
+        let mut pool = AddressPool::new(params.managed_addrs.pool_range());
+        let now = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map_err(|std::time::SystemTimeError { .. }| ServerError::ServerTimeError)?;
+        for (_id, CachedConfig { client_addr, .. }) in
+            cache.iter().filter(|(_id, config)| !config.expired(now))
+        {
+            let () = pool
+                .allocate_addr(*client_addr)
+                .map_err(ServerError::InconsistentInitialServerState)?;
+        }
+        Ok(Self { cache, pool, params, stash, options_repo })
+    }
+
+    /// Instantiates a new `Server`, without persisted state, from the supplied parameters.
+    pub fn new(stash: Stash, params: ServerParameters) -> Self {
         Self {
-            cache,
+            cache: HashMap::new(),
             pool: AddressPool::new(params.managed_addrs.pool_range()),
             params,
             stash,
-            options_repo,
+            options_repo: HashMap::new(),
         }
     }
 
@@ -2568,7 +2587,7 @@ pub mod tests {
             fidl::endpoints::create_proxy::<fidl_fuchsia_stash::GetIteratorMarker>()
                 .context("failed to create iterator")?;
         let () = accessor
-            .get_prefix(&format!("{}", DEFAULT_STASH_PREFIX), server_end)
+            .get_prefix(&format!("{}", crate::stash::CLIENT_KEY_PREFIX_FOR_TEST), server_end)
             .context("failed to get prefix")?;
         let keys = iter.get_next().await.context("failed to get next")?;
         Ok(keys)
