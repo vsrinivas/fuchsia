@@ -16,7 +16,7 @@ use crate::{
     },
     request_builder::{self, RequestBuilder, RequestParams},
     storage::{Storage, StorageExt},
-    time::{TimeSource, Timer},
+    time::{ComplexTime, TimeSource, Timer},
 };
 
 use anyhow::anyhow;
@@ -301,27 +301,23 @@ where
             info!("Initial context: {:?}", self.context);
 
             if should_report_waited_for_reboot_duration {
-                let now = self.time_source.now();
-                // If `update_finish_time` is in the future we don't have correct time, try again
-                // on the next loop.
-                if let Ok(update_finish_time_to_now) =
-                    now.wall_duration_since(update_finish_time.unwrap())
-                {
-                    // It might take a while for us to get here, but we only want to report the
-                    // time from update finish to state machine start after reboot, so we subtract
-                    // the duration since then using monotonic time.
-                    let waited_for_reboot_duration = update_finish_time_to_now
-                        - now.mono.duration_since(state_machine_start_monotonic_time);
-                    info!("Waited {} seconds for reboot.", waited_for_reboot_duration.as_secs());
-                    self.report_metrics(Metrics::WaitedForRebootDuration(
-                        waited_for_reboot_duration,
-                    ));
-                    should_report_waited_for_reboot_duration = false;
+                match self.report_waited_for_reboot_duration(
+                    update_finish_time.unwrap(),
+                    state_machine_start_monotonic_time,
+                    self.time_source.now(),
+                ) {
+                    Ok(()) => {
+                        // If the report was successful, don't try again on the next loop.
+                        should_report_waited_for_reboot_duration = false;
 
-                    let mut storage = self.storage_ref.lock().await;
-                    storage.remove_or_log(UPDATE_FINISH_TIME).await;
-                    storage.remove_or_log(TARGET_VERSION).await;
-                    storage.commit_or_log().await;
+                        let mut storage = self.storage_ref.lock().await;
+                        storage.remove_or_log(UPDATE_FINISH_TIME).await;
+                        storage.remove_or_log(TARGET_VERSION).await;
+                        storage.commit_or_log().await;
+                    }
+                    Err(e) => {
+                        warn!("Couldn't report wait for reboot duration: {:#}, will try again", e);
+                    }
                 }
             }
 
@@ -463,6 +459,48 @@ where
         if let Err(e) = self.installer.perform_reboot().await {
             error!("Unable to reboot the system: {}", e);
         }
+    }
+
+    /// Report the duration the previous boot waited to reboot based on the update finish time in
+    /// storage, and the current time. Does not report a metric if there's an inconsistency in the
+    /// times stored or computed, i.e. if the reboot time is later than the current time.
+    /// Returns an error if time seems incorrect, e.g. update_finish_time is in the future.
+    fn report_waited_for_reboot_duration(
+        &mut self,
+        update_finish_time: SystemTime,
+        state_machine_start_monotonic_time: Instant,
+        now: ComplexTime,
+    ) -> Result<(), anyhow::Error> {
+        // If `update_finish_time` is in the future we don't have correct time, try again
+        // on the next loop.
+        let update_finish_time_to_now =
+            now.wall_duration_since(update_finish_time).map_err(|e| {
+                anyhow!(
+                    "Update finish time later than now, can't report waited for reboot duration,
+                    update finish time: {:?}, now: {:?}, error: {:?}",
+                    update_finish_time,
+                    now,
+                    e,
+                )
+            })?;
+
+        // It might take a while for us to get here, but we only want to report the
+        // time from update finish to state machine start after reboot, so we subtract
+        // the duration since then using monotonic time.
+
+        // We only want to report this metric if we can actually compute it.
+        // If for whatever reason the clock was wrong on the previous boot, or monotonic
+        // time is going backwards, better not to report this metric than to report an
+        // incorrect default value.
+        let state_machine_start_to_now =
+            now.mono.duration_since(state_machine_start_monotonic_time);
+
+        let waited_for_reboot_duration = update_finish_time_to_now - state_machine_start_to_now;
+
+        info!("Waited {} seconds for reboot.", waited_for_reboot_duration.as_secs());
+        self.report_metrics(Metrics::WaitedForRebootDuration(waited_for_reboot_duration));
+
+        Ok(())
     }
 
     /// Report update check interval based on the last check time stored in storage.
@@ -3062,6 +3100,43 @@ mod tests {
                 .collect::<Vec<f32>>()
                 .await;
             assert_eq!(progresses, [0.0, 0.3, 0.9, 1.0]);
+        });
+    }
+
+    #[test]
+    #[should_panic(expected = r#"overflow when subtracting durations"#)]
+    // A scenario in which (now_in_monotonic - state_machine_start_time_in_monotonic) > (update_finish_time - now_in_wall_time)
+    // currently results in an overflow.
+    // A subsequent CL will fix that, but this test demonstrates the current behavior during the
+    // refactor of report_waited_for_reboot_duration.
+    fn test_report_waited_for_reboot_duration_panics_on_unreliable_current_wall_time() {
+        block_on(async {
+            let metrics_reporter = MockMetricsReporter::new();
+
+            let state_machine_start_monotonic = Instant::now();
+            let update_finish_time = SystemTime::now();
+
+            // Set the monotonic increase in time larger than the wall time increase since the end
+            // of the last update.
+            // This can happen if we don't have a reliable current wall time.
+            let now_wall = update_finish_time + Duration::from_secs(1);
+            let now_monotonic = state_machine_start_monotonic + Duration::from_secs(10);
+
+            let mut state_machine =
+                StateMachineBuilder::new_stub().metrics_reporter(metrics_reporter).build().await;
+
+            // Time has advanced monotonically since we noted the start of the state machine for
+            // longer than the wall time difference between update finish time and now.
+            // This computation should currently overflow.
+            state_machine
+                .report_waited_for_reboot_duration(
+                    update_finish_time,
+                    state_machine_start_monotonic,
+                    ComplexTime { wall: now_wall, mono: now_monotonic },
+                )
+                .unwrap();
+
+            assert!(state_machine.metrics_reporter.metrics.is_empty());
         });
     }
 
