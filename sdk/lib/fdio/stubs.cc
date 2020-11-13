@@ -9,8 +9,8 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include "fdio_unistd.h"
 #include "private-socket.h"
-#include "unistd.h"
 
 // checkfile, checkfileat, and checkfd let us error out if the object
 // doesn't exist, which allows the stubs to be a little more 'real'

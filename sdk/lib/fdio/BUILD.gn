@@ -68,6 +68,7 @@ if (toolchain_variant.configs + fuzzer_configs - fuzzer_configs !=
       "event.cc",
       "fd.cc",
       "fdio.cc",
+      "fdio_unistd.cc",
       "get-vmo.cc",
       "iovec.cc",
       "mem.cc",

@@ -8,7 +8,7 @@
 #include <lib/zxio/ops.h>
 #include <sys/mman.h>
 
-#include "unistd.h"
+#include "fdio_unistd.h"
 
 // An implementation of a POSIX memfd.
 typedef struct fdio_mem {

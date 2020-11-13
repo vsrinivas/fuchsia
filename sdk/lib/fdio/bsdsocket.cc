@@ -22,9 +22,9 @@
 
 #include <fbl/auto_call.h>
 
+#include "fdio_unistd.h"
 #include "internal.h"
 #include "src/network/getifaddrs.h"
-#include "unistd.h"
 
 namespace fio = ::llcpp::fuchsia::io;
 namespace fnet = ::llcpp::fuchsia::net;

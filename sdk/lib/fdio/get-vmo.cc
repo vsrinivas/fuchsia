@@ -8,7 +8,7 @@
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
 
-#include "unistd.h"
+#include "fdio_unistd.h"
 
 __EXPORT
 zx_status_t fdio_get_vmo_copy(int fd, zx_handle_t* out_vmo) {

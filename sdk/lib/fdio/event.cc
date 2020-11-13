@@ -16,8 +16,8 @@
 #include <algorithm>
 #include <utility>
 
+#include "fdio_unistd.h"
 #include "internal.h"
-#include "unistd.h"
 
 namespace fio2 = llcpp::fuchsia::io2;
 

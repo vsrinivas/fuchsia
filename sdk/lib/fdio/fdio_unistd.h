@@ -2,16 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_FDIO_UNISTD_H_
-#define LIB_FDIO_UNISTD_H_
+#ifndef LIB_FDIO_FDIO_UNISTD_H_
+#define LIB_FDIO_FDIO_UNISTD_H_
 
-#include <lib/fdio/io.h>
 #include <lib/fdio/unsafe.h>
-#include <sys/types.h>
-#include <threads.h>
 
 #include <cerrno>
 
+// needed for e.g. fdio_release; see fd_to_io below.
 #include "internal.h"
 
 // fd_to_io calls fdio_acquire on the fd, must call fdio_release() when done.
@@ -42,4 +40,4 @@ static inline int ERRNO(int e) {
   return -1;
 }
 
-#endif  // LIB_FDIO_UNISTD_H_
+#endif  // LIB_FDIO_FDIO_UNISTD_H_

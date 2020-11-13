@@ -18,8 +18,8 @@
 
 #include <fbl/auto_call.h>
 
+#include "fdio_unistd.h"
 #include "internal.h"
-#include "unistd.h"
 
 // An implementation of a POSIX timerfd.
 typedef struct fdio_timer {
