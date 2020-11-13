@@ -44,13 +44,20 @@
 #include "keyboard.h"
 #include "session-manager.h"
 #include "src/lib/listnode/listnode.h"
+#include "src/sys/lib/stdout-to-debuglog/cpp/stdout-to-debuglog.h"
 #include "vc.h"
 
 int main(int argc, char** argv) {
+  zx_status_t status = StdoutToDebuglog::Init();
+  if (status != ZX_OK) {
+    FX_LOGS(ERROR)
+        << "Failed to redirect stdout to debuglog, assuming test environment and continuing";
+  }
+
   llcpp::fuchsia::boot::Arguments::SyncClient boot_args;
   {
     zx::channel local, remote;
-    zx_status_t status = zx::channel::create(0, &local, &remote);
+    status = zx::channel::create(0, &local, &remote);
     if (status != ZX_OK) {
       return 1;
     }
@@ -63,7 +70,7 @@ int main(int argc, char** argv) {
   }
 
   Arguments args;
-  zx_status_t status = ParseArgs(boot_args, &args);
+  status = ParseArgs(boot_args, &args);
   if (status != ZX_OK) {
     printf("vc: failed to get boot arguments\n");
     return -1;

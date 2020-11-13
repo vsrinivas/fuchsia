@@ -40,7 +40,7 @@ assemble_system("guest") {
     "//src/bringup/bin/sysinfo",
     "//src/bringup/bin/sysinfo:bootfs",
     "//src/bringup/bin/trace-benchmark",
-    "//src/bringup/bin/virtcon:virtual-console",
+    "//src/bringup/bin/virtcon:bootfs",
     "//src/bringup/bin/waitfor",
     "//src/bringup/bin/watch",
     "//src/bringup/bundles:bootstrap",
