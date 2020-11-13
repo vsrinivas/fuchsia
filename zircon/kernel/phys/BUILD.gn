@@ -48,14 +48,11 @@ if (current_toolchain == default_toolchain) {
       exclude_variant_tags += phys_exclude_variant_tags
 
       toolchain_args = {
-        if (zircon_optimize == "none") {
-          # phys code doesn't stay sufficiently purely position-independent
-          # without optimization.
-          zircon_optimize = "debug"
-        } else if (zircon_optimize == "size") {
-          # ... and likewise size optimizations.
-          zircon_optimize = "speed"
-        }
+        # phys code doesn't stay sufficiently purely position-independent
+        # without optimization.
+        # TODO(fxbug.dev/64317): rationalize environment interplay with
+        # optimization.
+        zircon_optimize = "speed"
       }
     }
   }

@@ -65,14 +65,11 @@ if (current_toolchain == default_toolchain) {
       exclude_variant_tags += phys_exclude_variant_tags
 
       toolchain_args = {
-        if (optimize == "none" || optimize == "profile") {
-          # phys code doesn't stay sufficiently purely position-independent
-          # without optimization.
-          optimize = "debug"
-        } else if (optimize == "size") {
-          # ... and likewise size optimizations.
-          optimize = "speed"
-        }
+        # phys code doesn't stay sufficiently purely position-independent
+        # without optimization.
+        # TODO(fxbug.dev/64317): rationalize environment interplay with
+        # optimization.
+        optimize = "speed"
       }
     }
   }
