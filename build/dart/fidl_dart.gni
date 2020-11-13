@@ -102,7 +102,7 @@ template("fidl_dart") {
 
     package_name = "fidl_" + string_replace(library_name, ".", "_")
 
-    language_version = "2.10"
+    null_safe = true
 
     sources = [
       rebase_path(async_bindings_file, bindings_dir),

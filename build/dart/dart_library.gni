@@ -103,6 +103,9 @@ declare_args() {
 #   disable_metadata_entry (optional)
 #     Prevents metedata entry from being written to the dart_packag_config json file.
 #
+#   null_safe (optional)
+#     A flag that enables null safety check in dart libraries.
+#
 # Example of usage:
 #
 #   dart_library("baz") {
