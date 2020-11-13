@@ -136,6 +136,7 @@ impl V1Realm {
 #[derive(Debug, Eq, PartialEq)]
 pub struct V1Component {
     job_id: u32,
+    process_id: u32,
     name: String,
     url: String,
     merkleroot: Option<String>,
@@ -147,6 +148,7 @@ pub struct V1Component {
 impl V1Component {
     async fn create(component_dir: Directory) -> V1Component {
         let job_id = component_dir.read_file("job-id").await.parse::<u32>().unwrap();
+        let process_id = component_dir.read_file("process-id").await.parse::<u32>().unwrap();
         let url = component_dir.read_file("url").await;
         let name = component_dir.read_file("name").await;
         let in_dir = component_dir.open_dir("in").await;
@@ -187,6 +189,7 @@ impl V1Component {
 
         V1Component {
             job_id,
+            process_id,
             name,
             url,
             merkleroot,
@@ -213,6 +216,7 @@ impl V1Component {
             println!("Moniker: {}", moniker);
             println!("URL: {}", self.url);
             println!("Job ID: {}", self.job_id);
+            println!("Process ID: {}", self.process_id);
             println!("Merkle Root: {}", merkle);
             println!("Type: v1 component");
 
@@ -236,5 +240,42 @@ impl V1Component {
         for child in &self.child_components {
             child.print_details_recursive(&moniker_prefix, filter);
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use {
+        std::fs::{self, File},
+        std::io::Write,
+        tempfile::TempDir,
+    };
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn v1_component_loads_job_id_and_process_id() {
+        let test_dir = TempDir::new_in("/tmp").unwrap();
+        let root = test_dir.path();
+
+        // Create the following structure
+        // <root>
+        // |- in
+        // |- job-id
+        // |- name
+        // |- process-id
+        // |- url
+        fs::create_dir(root.join("in")).unwrap();
+        let mut job_id = File::create(root.join("job-id")).unwrap();
+        job_id.write_all("12345".as_bytes()).unwrap();
+        File::create(root.join("name")).unwrap();
+        let mut process_id = File::create(root.join("process-id")).unwrap();
+        process_id.write_all("67890".as_bytes()).unwrap();
+        File::create(root.join("url")).unwrap();
+
+        let root_dir = Directory::from_namespace(root.to_path_buf());
+        let v1_component = V1Component::create(root_dir).await;
+
+        assert_eq!(v1_component.job_id, 12345);
+        assert_eq!(v1_component.process_id, 67890);
     }
 }
