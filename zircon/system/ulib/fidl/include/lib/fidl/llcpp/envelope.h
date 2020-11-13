@@ -18,11 +18,11 @@ struct Envelope {
   // envelope may contain. For example, a vector<string>'s num_bytes for ["hello", "world"] would
   // include the string contents in the size, not just the outer vector. Always a multiple of 8;
   // must be zero in transit if envelope is null.
-  uint32_t num_bytes;
+  uint32_t num_bytes = 0;
 
   // The number of handles in the envelope, including any additional out-of-line objects that the
   // envelope contains. Must be zero in transit if envelope is null.
-  uint32_t num_handles;
+  uint32_t num_handles = 0;
 
   // A pointer to the out-of-line envelope data.
   tracking_ptr<T> data;
