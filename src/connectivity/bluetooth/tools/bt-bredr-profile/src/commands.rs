@@ -86,7 +86,7 @@ gen_commands! {
         RemoveService = ("remove-service", ["service-id"],
                          "\n\t\tUnregister service corresponding to 'service-id'\n\
                           \t\tExample: remove-service 0"),
-        Channels = ("channels", [], "List connected channels and their Ids assigned by the REPL"),
+        Channels = ("channels", [], "List connected L2CAP channels and their Ids assigned by the REPL"),
         ConnectL2cap = ("connect-l2cap", ["peer-id", "psm", "channel-mode", "max-rx-sdu-size", "security-requirements"],
                         "\n\t\tCreate an l2cap channel to the remote device 'peer-id'. \n\
                          \t\t'channel-mode' must be {basic|ertm}. 'psm' and 'max-rx-sdu-size' must be\n\
@@ -97,12 +97,15 @@ gen_commands! {
                         "\n\t\tCreate an RFCOMM channel to the remote device 'peer-id'. \n\
                          \t\t'server-channel' must be in the range [1,30]. \n\
                          \t\tExample: connect-rfcomm 028565803f1368b2 1"),
-        Disconnect = ("disconnect", ["channel-id"],
+        DisconnectL2cap = ("disconnect-l2cap", ["channel-id"],
                            "\n\t\tDrop socket corresponding to 'channel-id', which will disconnect\n\
                             \t\tthe l2cap channel.\n\
                             \t\t'channel-id' must correspond to a connected channel listed by the \n\
                             \t\t'channels' command\n\n\
                             \t\tExample: disconnect-l2cap 0"),
+        DisconnectRfcomm = ("disconnect-rfcomm", ["server-channel"],
+                           "\n\t\tDisconnect the RFCOMM channel corresponding to `server-channel`.\n\
+                            \t\tExample: disconnect-rfcomm 5"),
         WriteL2cap = ("write-l2cap", ["channel-id", "data"],
                 "\n\t\tWrite 'data' on the L2CAP socket/channel represented by 'channel-id'\n\n\
                  \t\tExample: write 0 0123456789abcd"),

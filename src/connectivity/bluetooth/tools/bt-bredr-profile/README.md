@@ -70,16 +70,26 @@ only attempt to make a connection to a peer whose services have been discovered 
 profile> connect-rfcomm 75870b2c86d9e801 1
 ```
 
-### disconnect
+### disconnect-l2cap
 Drops the socket corresponding to `channel-id`, which will disconnect the l2cap
 channel.
 
 #### Usage
-`disconnect <channel-id>`
+`disconnect-l2cap <channel-id>`
 
 ##### Arguments
 - `channel-id` is an integer assigned to this channel by the REPL.
 It must correspond to a connected channel listed by the `channels` command.
+
+### disconnect-rfcomm
+Drops the socket corresponding to `server-channel`, which will disconnect the rfcomm
+channel.
+
+#### Usage
+`disconnect-rfcomm <server-channel>`
+
+##### Arguments
+- `server-channel` is the Server Channel number assigned to the RFCOMM channel.
 
 ### channels
 Prints the assigned Ids of connected L2CAP channels. These Ids are local to the REPL

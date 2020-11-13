@@ -323,7 +323,7 @@ async fn connect_rfcomm(
     Ok(())
 }
 
-fn disconnect(state: Arc<RwLock<ProfileState>>, args: &Vec<String>) -> Result<(), Error> {
+fn disconnect_l2cap(state: Arc<RwLock<ProfileState>>, args: &Vec<String>) -> Result<(), Error> {
     if args.len() != 1 {
         return Err(anyhow!("Invalid number of arguments"));
     }
@@ -333,6 +333,23 @@ fn disconnect(state: Arc<RwLock<ProfileState>>, args: &Vec<String>) -> Result<()
     match state.write().l2cap_channels.remove(&chan_id) {
         Some(_) => println!("Channel {} disconnected", chan_id),
         None => println!("No channel with id {} exists", chan_id),
+    }
+    Ok(())
+}
+
+fn disconnect_rfcomm(state: Arc<RwLock<ProfileState>>, args: &Vec<String>) -> Result<(), Error> {
+    if args.len() != 1 {
+        return Err(anyhow!("Invalid number of arguments"));
+    }
+
+    let server_channel =
+        args[0].parse::<u8>().map_err(|_| anyhow!("Server channel must be a u8"))?;
+    let server_channel = ServerChannelNumber::try_from(server_channel)?;
+
+    if state.write().rfcomm.remove_channel(server_channel) {
+        println!("RFCOMM Channel {:?} disconnected", server_channel);
+    } else {
+        println!("No RFCOMM channel with id {:?} exists", server_channel);
     }
     Ok(())
 }
@@ -356,7 +373,7 @@ fn write_l2cap(state: Arc<RwLock<ProfileState>>, args: &Vec<String>) -> Result<(
 
 /// Sends a user data payload to the ServerChannelNumber specified in `args`.
 fn write_rfcomm(state: Arc<RwLock<ProfileState>>, args: &Vec<String>) -> Result<(), Error> {
-    if args.len() != 1 {
+    if args.len() != 2 {
         return Err(anyhow!("Invalid number of arguments"));
     }
 
@@ -404,7 +421,8 @@ async fn handle_cmd(
         Cmd::Channels => channels(state.clone()),
         Cmd::ConnectL2cap => connect_l2cap(profile_svc, state.clone(), &args).await?,
         Cmd::ConnectRfcomm => connect_rfcomm(profile_svc, state.clone(), &args).await?,
-        Cmd::Disconnect => disconnect(state.clone(), &args)?,
+        Cmd::DisconnectL2cap => disconnect_l2cap(state.clone(), &args)?,
+        Cmd::DisconnectRfcomm => disconnect_rfcomm(state.clone(), &args)?,
         Cmd::SetupRfcomm => setup_rfcomm(profile_svc, state.clone())?,
         Cmd::WriteL2cap => write_l2cap(state.clone(), &args)?,
         Cmd::WriteRfcomm => write_rfcomm(state.clone(), &args)?,
@@ -512,7 +530,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_disconnect() {
+    fn disconnect_l2cap_channel_succeeds() {
         let state = Arc::new(RwLock::new(ProfileState::new()));
         let (s, _) = fidl::Socket::create(fidl::SocketOpts::STREAM).unwrap();
         assert_eq!(
@@ -525,11 +543,24 @@ mod tests {
         );
         assert_eq!(1, state.read().l2cap_channels.map().len());
         let args = vec!["0".to_string()];
-        assert!(disconnect(state.clone(), &args).is_ok());
+        assert!(disconnect_l2cap(state.clone(), &args).is_ok());
         assert!(state.read().l2cap_channels.map().is_empty());
 
         // Disconnecting an already disconnected channel should not fail.
         // (It should only print a message)
-        assert!(disconnect(state.clone(), &args).is_ok());
+        assert!(disconnect_l2cap(state.clone(), &args).is_ok());
+    }
+
+    #[test]
+    fn disconnect_rfcomm_channel_succeeds() {
+        let state = Arc::new(RwLock::new(ProfileState::new()));
+        let server_channel = ServerChannelNumber(10);
+        let _receiver = state.write().rfcomm.create_channel(server_channel);
+        let args = vec!["10".to_string()];
+        assert!(disconnect_rfcomm(state.clone(), &args).is_ok());
+
+        // Disconnecting an already disconnected channel should not fail.
+        // (It should only print a message)
+        assert!(disconnect_rfcomm(state.clone(), &args).is_ok());
     }
 }

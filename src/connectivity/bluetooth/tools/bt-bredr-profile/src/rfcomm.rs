@@ -72,7 +72,7 @@ pub async fn rfcomm_channel_task(
                         continue;
                     }
                     None => {
-                        // RFCOMM Channel closed. Cleanup the state.
+                        // RFCOMM channel closed by the peer.
                         println!("Peer closed RFCOMM channel {:?}", server_channel);
                         state.write().rfcomm.remove_channel(server_channel);
                         return;
@@ -80,9 +80,14 @@ pub async fn rfcomm_channel_task(
                 };
                 println!("{:?}: Received user data from peer: {:?}", server_channel, user_data);
             }
-            bytes_to_peer = write_requests.select_next_some() => {
-                let res = channel.as_ref().write(&bytes_to_peer);
-                println!("{:?}: Sent user data to peer: {:?}", server_channel, res);
+            bytes_to_peer = write_requests.next() => {
+                match bytes_to_peer {
+                    Some(bytes) => {
+                        let res = channel.as_ref().write(&bytes);
+                        println!("{:?}: Sent user data to peer: {:?}", server_channel, res);
+                    }
+                    None => return, // RFCOMM channel closed by tool.
+                }
             }
             complete => return,
         }
@@ -138,7 +143,7 @@ mod tests {
     use futures::task::Poll;
 
     #[test]
-    fn test_server_channel_from_invalid_protocol() {
+    fn server_channel_from_invalid_protocol() {
         // Empty.
         let protocol0 = vec![];
         assert_eq!(server_channel_from_protocol(&protocol0), None);
@@ -178,7 +183,7 @@ mod tests {
     }
 
     #[test]
-    fn test_server_channel_from_protocol() {
+    fn server_channel_from_valid_protocol() {
         let expected = ServerChannelNumber(10);
         let protocol = vec![
             bredr::ProtocolDescriptor {
@@ -194,7 +199,7 @@ mod tests {
     }
 
     #[test]
-    fn test_rfcomm_channel_task() {
+    fn rfcomm_task_finishes_when_peer_disconnects() {
         let mut exec = fasync::Executor::new().unwrap();
 
         let server_channel = ServerChannelNumber(5);
@@ -227,6 +232,24 @@ mod tests {
         assert!(exec.run_until_stalled(&mut rfcomm_fut).is_pending());
         // Peer "disconnects" - task is done.
         drop(remote);
+        assert!(exec.run_until_stalled(&mut rfcomm_fut).is_ready());
+    }
+
+    #[test]
+    fn rfcomm_task_finishes_when_tool_closes_channel() {
+        let mut exec = fasync::Executor::new().unwrap();
+
+        let server_channel = ServerChannelNumber(5);
+        let state = Arc::new(RwLock::new(ProfileState::new()));
+        let (local, _remote) = Channel::create();
+        let receiver = state.write().rfcomm.create_channel(server_channel);
+
+        let mut rfcomm_fut =
+            Box::pin(rfcomm_channel_task(server_channel, state.clone(), local, receiver));
+        assert!(exec.run_until_stalled(&mut rfcomm_fut).is_pending());
+
+        // Tool closes the channel - task is done.
+        assert!(state.write().rfcomm.remove_channel(server_channel));
         assert!(exec.run_until_stalled(&mut rfcomm_fut).is_ready());
     }
 }

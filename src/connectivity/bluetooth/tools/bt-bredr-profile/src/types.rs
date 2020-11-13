@@ -147,9 +147,10 @@ impl RfcommState {
         receiver
     }
 
-    /// Removes the RFCOMM channel for the provided `server_channel`.
-    pub fn remove_channel(&mut self, server_channel: ServerChannelNumber) {
-        self.active_channels.remove(&server_channel);
+    /// Removes the RFCOMM channel for the provided `server_channel`. Returns true if
+    /// the channel was removed.
+    pub fn remove_channel(&mut self, server_channel: ServerChannelNumber) -> bool {
+        self.active_channels.remove(&server_channel).is_some()
     }
 
     /// Sends the `user_data` buf to the peer that provides the service identified
@@ -174,7 +175,7 @@ mod tests {
     use matches::assert_matches;
 
     #[test]
-    fn test_incremented_id_map() {
+    fn incremented_id_map() {
         let mut numbers = IncrementedIdMap::<i32>::new();
         assert_eq!(0, numbers.insert(0));
         assert_eq!(1, numbers.insert(1));
@@ -185,7 +186,7 @@ mod tests {
     }
 
     #[test]
-    fn test_send_rfcomm_user_data() {
+    fn send_rfcomm_data_is_received_by_peer() {
         let mut exec = fasync::Executor::new().unwrap();
 
         let mut state = ProfileState::new();
@@ -213,7 +214,7 @@ mod tests {
         }
 
         // Removing channel is OK.
-        state.rfcomm.remove_channel(server_channel);
+        assert!(state.rfcomm.remove_channel(server_channel));
         // Trying to send more data on the closed channel should fail immediately.
         assert_matches!(state.rfcomm.send_user_data(server_channel, vec![0x09]), Err(_));
     }
