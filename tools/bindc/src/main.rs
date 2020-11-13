@@ -31,9 +31,10 @@ struct SharedOptions {
     include_file: Option<PathBuf>,
 
     /// The bind program input file. This should be in the format described in
-    /// //tools/bindc/README.md.
+    /// //tools/bindc/README.md. This is required unless disable_autobind is true, in which case
+    /// the driver while bind unconditionally (but only on the user's request.)
     #[structopt(parse(from_os_str))]
-    input: PathBuf,
+    input: Option<PathBuf>,
 }
 
 #[derive(StructOpt, Debug)]
@@ -95,16 +96,23 @@ fn main() {
     }
 }
 
-fn write_depfile(output: &PathBuf, input: &PathBuf, includes: &[PathBuf]) -> Result<String, Error> {
+fn write_depfile(
+    output: &PathBuf,
+    input: &Option<PathBuf>,
+    includes: &[PathBuf],
+) -> Result<String, Error> {
     fn path_to_str(path: &PathBuf) -> Result<&str, Error> {
         path.as_os_str().to_str().context("failed to convert path to string")
     };
 
-    let output_str = path_to_str(output)?;
-    let input_str = path_to_str(input)?;
     let mut deps = includes.iter().map(|s| path_to_str(s)).collect::<Result<Vec<&str>, Error>>()?;
-    deps.push(input_str);
 
+    if let Some(input) = input {
+        let input_str = path_to_str(input)?;
+        deps.push(input_str);
+    }
+
+    let output_str = path_to_str(output)?;
     let mut out = String::new();
     writeln!(&mut out, "{}: {}", output_str, deps.join(" "))?;
     Ok(out)
@@ -148,7 +156,8 @@ fn handle_command(command: Command) -> Result<(), Error> {
         Command::Debug { options, device_file } => {
             let includes = handle_includes(options.include, options.include_file)?;
             let includes = includes.iter().map(read_file).collect::<Result<Vec<String>, _>>()?;
-            let program = read_file(&options.input)?;
+            let input = options.input.ok_or(anyhow!("The debug command requires an input."))?;
+            let program = read_file(&input)?;
             let (instructions, symbol_table) = compiler::compile_to_symbolic(&program, &includes)?;
 
             let device = read_file(&device_file)?;
@@ -161,7 +170,8 @@ fn handle_command(command: Command) -> Result<(), Error> {
             Ok(())
         }
         Command::Test { options, test_spec } => {
-            let program = read_file(&options.input)?;
+            let input = options.input.ok_or(anyhow!("The test command requires an input."))?;
+            let program = read_file(&input)?;
             let includes = handle_includes(options.include, options.include_file)?;
             let includes = includes.iter().map(read_file).collect::<Result<Vec<String>, _>>()?;
             let test_spec = read_file(&test_spec)?;
@@ -202,7 +212,7 @@ fn handle_includes(
 }
 
 fn handle_compile(
-    input: PathBuf,
+    input: Option<PathBuf>,
     includes: Vec<PathBuf>,
     disable_autobind: bool,
     output_bytecode: bool,
@@ -222,15 +232,25 @@ fn handle_compile(
         Box::new(io::stdout())
     };
 
-    let program = read_file(&input)?;
-    let includes = includes.iter().map(read_file).collect::<Result<Vec<String>, _>>()?;
-    let mut instructions = compiler::compile(&program, &includes)?;
-    if disable_autobind {
+    let instructions = if !disable_autobind {
+        let input = input.ok_or(anyhow!("An input is required when disable_autobind is false."))?;
+        let program = read_file(&input)?;
+        let includes = includes.iter().map(read_file).collect::<Result<Vec<String>, _>>()?;
+        compiler::compile(&program, &includes)?
+    } else if let Some(input) = input {
+        // Autobind is disabled but there are some bind rules for manual binding.
+        let program = read_file(&input)?;
+        let includes = includes.iter().map(read_file).collect::<Result<Vec<String>, _>>()?;
+        let mut instructions = compiler::compile(&program, &includes)?;
         instructions.insert(
             0,
             InstructionDebug::new(Instruction::Abort(Condition::NotEqual(AUTOBIND_PROPERTY, 0))),
         );
-    }
+        instructions
+    } else {
+        // Autobind is disabled and there are no bind rules. Emit only the autobind check.
+        vec![InstructionDebug::new(Instruction::Abort(Condition::NotEqual(AUTOBIND_PROPERTY, 0)))]
+    };
 
     if output_bytecode {
         let bytecode = write_bind_bytecode(instructions);
@@ -291,17 +311,27 @@ mod tests {
         let output = PathBuf::from("/a/output");
         let input = PathBuf::from("/a/input");
         assert_eq!(
-            write_depfile(&output, &input, &[]).unwrap(),
+            write_depfile(&output, &Some(input), &[]).unwrap(),
             "/a/output: /a/input\n".to_string()
         );
     }
 
     #[test]
-    fn depfile_with_includes() {
+    fn depfile_no_input() {
+        let output = PathBuf::from("/a/output");
+        let includes = vec![PathBuf::from("/a/include"), PathBuf::from("/b/include")];
+        let result = write_depfile(&output, &None, &includes).unwrap();
+        assert!(result.starts_with("/a/output:"));
+        assert!(result.contains("/a/include"));
+        assert!(result.contains("/b/include"));
+    }
+
+    #[test]
+    fn depfile_input_and_includes() {
         let output = PathBuf::from("/a/output");
         let input = PathBuf::from("/a/input");
         let includes = vec![PathBuf::from("/a/include"), PathBuf::from("/b/include")];
-        let result = write_depfile(&output, &input, &includes).unwrap();
+        let result = write_depfile(&output, &Some(input), &includes).unwrap();
         assert!(result.starts_with("/a/output:"));
         assert!(result.contains("/a/input"));
         assert!(result.contains("/a/include"));

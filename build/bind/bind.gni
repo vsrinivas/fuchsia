@@ -176,6 +176,7 @@ template("bind_test") {
 #
 #   rules (required)
 #     [path]: Path to the bind rules source file.
+#     Note: This becomes optional when disable_autobind is true. See below.
 #
 #   deps (optional)
 #     [lib of labels]: List of bind_library targets included by the bind rules.
@@ -191,9 +192,11 @@ template("bind_test") {
 #
 #   disable_autobind (optional)
 #     [bool]: Configure the bind compiler to disable autobind, so that the driver must be bound on
-#     a user's request. Defaults to false.
-#     TODO(fxbug.dev/43400): Eventually this option should be removed when we can define this configuration
-#     in the driver's component manifest.
+#     a user's request. If this is set to true, then the rules parameter becomes optional and when
+#     it's omitted the driver will bind unconditionally (but must be bound manually.) Defaults to
+#     false.
+#     TODO(fxbug.dev/43400): Eventually this option should be removed when we can define this
+#     configuration in the driver's component manifest.
 #
 #   output_bytecode (optional)
 #     [bool]: Output a bytecode file, instead of a C header file.
@@ -202,7 +205,9 @@ template("bind_test") {
 #     Forwarded from invoker.
 #
 template("bind_rules") {
-  assert(defined(invoker.rules), "Need a bind rules source")
+  assert(defined(invoker.rules) || (defined(invoker.disable_autobind) &&
+                                        invoker.disable_autobind == true),
+         "Need a bind rules source")
 
   output_file = "$target_name.h"
   if (defined(invoker.output)) {
@@ -235,13 +240,14 @@ template("bind_rules") {
     tool = "//tools/bindc:bin"
     tool_output_name = "bindc"
 
-    sources = [ invoker.rules ]
+    if (defined(invoker.rules)) {
+      sources = [ invoker.rules ]
+    }
 
     depfile = "$target_gen_dir/$target_name.d"
 
     args = [
       "compile",
-      rebase_path(invoker.rules, root_build_dir),
       "--output",
       rebase_path("$target_gen_dir/$output_file", root_build_dir),
       "--include-file",
@@ -254,6 +260,9 @@ template("bind_rules") {
     }
     if (defined(invoker.output_bytecode) && invoker.output_bytecode) {
       args += [ "--output-bytecode" ]
+    }
+    if (defined(invoker.rules)) {
+      args += [ rebase_path(invoker.rules, root_build_dir) ]
     }
 
     inputs = [ response_file ]
