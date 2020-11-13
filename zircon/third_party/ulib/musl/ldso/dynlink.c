@@ -133,7 +133,7 @@ static struct dso ldso, vdso;
 static struct dso *head, *tail, *fini_head;
 static struct dso* detached_head;
 static unsigned long long gencnt;
-static int runtime __asm__("_dynlink_runtime") __USED;
+static int runtime __asm__("_dynlink_runtime") __ALWAYS_EMIT;
 static int ldso_fail;
 static jmp_buf* rtld_fail;
 static pthread_rwlock_t lock;

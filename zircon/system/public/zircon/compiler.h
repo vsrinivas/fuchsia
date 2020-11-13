@@ -22,7 +22,7 @@
 #define likely(x) __builtin_expect(!!(x), 1)
 #define unlikely(x) __builtin_expect(!!(x), 0)
 #define __UNUSED __attribute__((__unused__))
-#define __USED __attribute__((__used__))
+#define __ALWAYS_EMIT __attribute__((__used__))
 #define __PACKED __attribute__((packed))
 #define __ALIGNED(x) __attribute__((aligned(x)))
 #define __PRINTFLIKE(__fmt, __varargs) __attribute__((__format__(__printf__, __fmt, __varargs)))
