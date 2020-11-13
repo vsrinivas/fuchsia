@@ -136,6 +136,4 @@ void fdio_default_wait_begin(fdio_t* io, uint32_t events, zx_handle_t* handle,
 
 void fdio_default_wait_end(fdio_t* io, zx_signals_t signals, uint32_t* _events) {}
 
-zx_status_t fdio_default_posix_ioctl(fdio_t* io, int req, va_list va) {
-  return ZX_ERR_NOT_SUPPORTED;
-}
+Errno fdio_default_posix_ioctl(fdio_t* io, int req, va_list va) { return Errno(ENOTTY); }

@@ -45,6 +45,13 @@ typedef struct fdio_namespace fdio_ns_t;
 typedef zx_status_t (*two_path_op)(fdio_t* io, const char* src, size_t srclen,
                                    zx_handle_t dst_token, const char* dst, size_t dstlen);
 
+struct Errno {
+  constexpr explicit Errno(int e) : e(e) {}
+  static constexpr int Ok = 0;
+  bool is_error() const { return e != 0; }
+  int e;
+};
+
 typedef struct fdio_ops {
   zx_status_t (*close)(fdio_t* io);
   zx_status_t (*open)(fdio_t* io, const char* path, uint32_t flags, uint32_t mode, fdio_t** out);
@@ -63,7 +70,10 @@ typedef struct fdio_ops {
   zx_status_t (*borrow_channel)(fdio_t* io, zx_handle_t* out_handle);
   void (*wait_begin)(fdio_t* io, uint32_t events, zx_handle_t* handle, zx_signals_t* signals);
   void (*wait_end)(fdio_t* io, zx_signals_t signals, uint32_t* events);
-  zx_status_t (*posix_ioctl)(fdio_t* io, int req, va_list va);
+
+  // |posix_ioctl| returns an |Errno|, which wraps an errno to be set on
+  // failure, or |Errno::Ok| (0) on success.
+  Errno (*posix_ioctl)(fdio_t* io, int req, va_list va);
   zx_status_t (*get_token)(fdio_t* io, zx_handle_t* out);
   zx_status_t (*get_attr)(fdio_t* io, zxio_node_attributes_t* out);
   zx_status_t (*set_attr)(fdio_t* io, const zxio_node_attributes_t* attr);
@@ -132,7 +142,7 @@ zx_status_t fdio_zxio_recvmsg(fdio_t* io, struct msghdr* msg, int flags, size_t*
 zx_status_t fdio_zxio_sendmsg(fdio_t* io, const struct msghdr* msg, int flags, size_t* out_actual,
                               int16_t* out_code);
 
-zx_status_t fdio_zx_socket_posix_ioctl(const zx::socket& socket, int request, va_list va);
+Errno fdio_zx_socket_posix_ioctl(const zx::socket& socket, int request, va_list va);
 zx_status_t fdio_zx_socket_shutdown(const zx::socket& socket, int how);
 
 // Initialize an |fdio_t| object with the provided ops table.
@@ -372,7 +382,7 @@ zx_status_t fdio_default_getsockopt(fdio_t* io, int level, int optname, void* op
 zx_status_t fdio_default_setsockopt(fdio_t* io, int level, int optname, const void* optval,
                                     socklen_t optlen, int16_t* out_code);
 zx_status_t fdio_default_shutdown(fdio_t* io, int how, int16_t* out_code);
-zx_status_t fdio_default_posix_ioctl(fdio_t* io, int req, va_list va);
+Errno fdio_default_posix_ioctl(fdio_t* io, int req, va_list va);
 
 typedef struct {
   mtx_t lock;

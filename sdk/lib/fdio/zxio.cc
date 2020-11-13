@@ -20,6 +20,7 @@
 
 #include <fbl/auto_lock.h>
 
+#include "fdio_unistd.h"
 #include "internal.h"
 
 namespace fio = ::llcpp::fuchsia::io;
@@ -398,17 +399,17 @@ fdio_t* fdio_file_create(zx_handle_t control, zx_handle_t event, zx_handle_t str
   return io;
 }
 
-zx_status_t fdio_pty_posix_ioctl(fdio_t* io, int request, va_list va) {
+Errno fdio_pty_posix_ioctl(fdio_t* io, int request, va_list va) {
   switch (request) {
     case TIOCGWINSZ: {
       zx::unowned_channel device(fdio_unsafe_borrow_channel(io));
       if (!device->is_valid()) {
-        return ZX_ERR_NOT_SUPPORTED;
+        return Errno(ENOTTY);
       }
 
       auto result = fpty::Device::Call::GetWindowSize(std::move(device));
       if (result.status() != ZX_OK || result->status != ZX_OK) {
-        return ZX_ERR_NOT_SUPPORTED;
+        return Errno(ENOTTY);
       }
 
       struct winsize size = {};
@@ -416,12 +417,12 @@ zx_status_t fdio_pty_posix_ioctl(fdio_t* io, int request, va_list va) {
       size.ws_col = static_cast<unsigned short>(result->size.width);
       struct winsize* out_size = va_arg(va, struct winsize*);
       *out_size = size;
-      return ZX_OK;
+      return Errno(Errno::Ok);
     }
     case TIOCSWINSZ: {
       zx::unowned_channel device(fdio_unsafe_borrow_channel(io));
       if (!device->is_valid()) {
-        return ZX_ERR_NOT_SUPPORTED;
+        return Errno(ENOTTY);
       }
 
       const struct winsize* in_size = va_arg(va, const struct winsize*);
@@ -431,12 +432,12 @@ zx_status_t fdio_pty_posix_ioctl(fdio_t* io, int request, va_list va) {
 
       auto result = fpty::Device::Call::SetWindowSize(std::move(device), size);
       if (result.status() != ZX_OK || result->status != ZX_OK) {
-        return ZX_ERR_NOT_SUPPORTED;
+        return Errno(ENOTTY);
       }
-      return ZX_OK;
+      return Errno(Errno::Ok);
     }
     default:
-      return ZX_ERR_NOT_SUPPORTED;
+      return Errno(ENOTTY);
   }
 }
 
@@ -567,14 +568,14 @@ static inline zxio_pipe_t* fdio_get_zxio_pipe(fdio_t* io) {
   return (zxio_pipe_t*)fdio_get_zxio(io);
 }
 
-zx_status_t fdio_zx_socket_posix_ioctl(const zx::socket& socket, int request, va_list va) {
+Errno fdio_zx_socket_posix_ioctl(const zx::socket& socket, int request, va_list va) {
   switch (request) {
     case FIONREAD: {
       zx_info_socket_t info;
       memset(&info, 0, sizeof(info));
       zx_status_t status = socket.get_info(ZX_INFO_SOCKET, &info, sizeof(info), nullptr, nullptr);
       if (status != ZX_OK) {
-        return status;
+        return Errno(fdio_status_to_errno(status));
       }
       size_t available = info.rx_buf_available;
       if (available > INT_MAX) {
@@ -582,14 +583,14 @@ zx_status_t fdio_zx_socket_posix_ioctl(const zx::socket& socket, int request, va
       }
       int* actual = va_arg(va, int*);
       *actual = static_cast<int>(available);
-      return ZX_OK;
+      return Errno(Errno::Ok);
     }
     default:
-      return ZX_ERR_NOT_SUPPORTED;
+      return Errno(ENOTTY);
   }
 }
 
-static zx_status_t fdio_zxio_pipe_posix_ioctl(fdio_t* io, int request, va_list va) {
+static Errno fdio_zxio_pipe_posix_ioctl(fdio_t* io, int request, va_list va) {
   return fdio_zx_socket_posix_ioctl(fdio_get_zxio_pipe(io)->socket, request, va);
 }
 

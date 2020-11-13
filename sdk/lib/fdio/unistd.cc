@@ -2057,17 +2057,13 @@ int ioctl(int fd, int req, ...) {
 
   va_list ap;
   va_start(ap, req);
-  zx_status_t r = fdio_get_ops(io)->posix_ioctl(io, req, ap);
+  Errno e = fdio_get_ops(io)->posix_ioctl(io, req, ap);
   va_end(ap);
   fdio_release(io);
-  switch (r) {
-    case ZX_ERR_NOT_FOUND:
-      return ERRNO(ENODEV);
-    case ZX_ERR_NOT_SUPPORTED:
-      return ERRNO(ENOTTY);
-    default:
-      return STATUS(r);
+  if (e.is_error()) {
+    return ERRNO(e.e);
   }
+  return 0;
 }
 
 __EXPORT

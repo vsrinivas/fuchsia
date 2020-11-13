@@ -14,6 +14,7 @@
 
 #include <safemath/safe_conversions.h>
 
+#include "fdio_unistd.h"
 #include "private-socket.h"
 
 namespace fio = ::llcpp::fuchsia::io;
@@ -320,36 +321,39 @@ zx_status_t base_setsockopt(zx::unowned_channel channel, int level, int optname,
   return ZX_OK;
 }
 
-zx_status_t zxsio_posix_ioctl(fdio_t* io, int req, va_list va,
-                              zx_status_t (*fallback)(fdio_t* io, int req, va_list va)) {
+Errno zxsio_posix_ioctl(fdio_t* io, int req, va_list va,
+                        Errno (*fallback)(fdio_t* io, int req, va_list va)) {
   switch (req) {
     case SIOCGIFNAME: {
       fsocket::Provider::SyncClient* provider;
       zx_status_t status = fdio_get_socket_provider(&provider);
       if (status != ZX_OK) {
-        return status;
+        return Errno(fdio_status_to_errno(status));
       }
       struct ifreq* ifr = va_arg(va, struct ifreq*);
       auto response = provider->InterfaceIndexToName(static_cast<uint64_t>(ifr->ifr_ifindex));
       status = response.status();
       if (status != ZX_OK) {
-        return status;
+        return Errno(fdio_status_to_errno(status));
       }
       auto const& result = response.Unwrap()->result;
       if (result.is_err()) {
-        return result.err();
+        if (result.err() == ZX_ERR_NOT_FOUND) {
+          return Errno(ENODEV);
+        }
+        return Errno(fdio_status_to_errno(status));
       }
       auto const& name = result.response().name;
       const size_t n = std::min(name.size(), sizeof(ifr->ifr_name));
       memcpy(ifr->ifr_name, name.data(), n);
       ifr->ifr_name[n] = 0;
-      return ZX_OK;
+      return Errno(Errno::Ok);
     }
     case SIOCGIFINDEX: {
       fsocket::Provider::SyncClient* provider;
       zx_status_t status = fdio_get_socket_provider(&provider);
       if (status != ZX_OK) {
-        return status;
+        return Errno(fdio_status_to_errno(status));
       }
       struct ifreq* ifr = va_arg(va, struct ifreq*);
       fidl::StringView name(ifr->ifr_name, strnlen(ifr->ifr_name, sizeof(ifr->ifr_name) - 1));
@@ -357,16 +361,21 @@ zx_status_t zxsio_posix_ioctl(fdio_t* io, int req, va_list va,
       status = response.status();
       if (status != ZX_OK) {
         if (status == ZX_ERR_INVALID_ARGS) {
-          status = ZX_ERR_NOT_FOUND;
+          // FIDL calls will return ZX_ERR_INVALID_ARGS if the passed string
+          // (`name` in this case) fails UTF-8 validation.
+          return Errno(ENODEV);
         }
-        return status;
+        return Errno(fdio_status_to_errno(status));
       }
       auto const& result = response.Unwrap()->result;
       if (result.is_err()) {
-        return result.err();
+        if (result.err() == ZX_ERR_NOT_FOUND) {
+          return Errno(ENODEV);
+        }
+        return Errno(fdio_status_to_errno(status));
       }
       ifr->ifr_ifindex = static_cast<int>(result.response().index);
-      return ZX_OK;
+      return Errno(Errno::Ok);
     }
     default:
       return fallback(io, req, va);
