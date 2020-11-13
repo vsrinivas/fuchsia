@@ -25,12 +25,14 @@ use crate::{
     future_help::{log_errors, Observable, Observer, PollMutex},
     handle_info::{handle_info, HandleKey, HandleType},
     labels::{ConnectionId, Endpoint, NodeId, NodeLinkId, TransferKey},
-    link::{new_link, LinkReceiver, LinkRouting, LinkSender},
+    link::{new_link, LinkReceiver, LinkRouting, LinkSender, LinkStatus},
     link_status_updater::{run_link_status_updater, LinkStatePublisher},
     peer::Peer,
     proxy::{ProxyTransferInitiationReceiver, RemoveFromProxyTable, StreamRefSender},
     proxyable_handle::IntoProxied,
-    routes::{ForwardingTable, Routes},
+    route_planner::{
+        routing_update_channel, run_route_planner, RemoteRoutingUpdate, RemoteRoutingUpdateSender,
+    },
     security_context::{quiche_config_from_security_context, SecurityContext},
     service_map::{ListablePeer, ServiceMap},
     socket_link::run_socket_link,
@@ -39,18 +41,19 @@ use anyhow::{bail, format_err, Context as _, Error};
 use fidl::{endpoints::ClientEnd, AsHandleRef, Channel, Handle, HandleBased, Socket, SocketOpts};
 use fidl_fuchsia_overnet::{ConnectionInfo, ServiceProviderMarker};
 use fidl_fuchsia_overnet_protocol::{
-    ChannelHandle, LinkDiagnosticInfo, PeerConnectionDiagnosticInfo, RouteMetrics, SocketHandle,
-    SocketType, StreamId, StreamRef, ZirconHandle,
+    ChannelHandle, LinkDiagnosticInfo, PeerConnectionDiagnosticInfo, SocketHandle, SocketType,
+    StreamId, StreamRef, ZirconHandle,
 };
-use fuchsia_async::Task;
+use fuchsia_async::{Task, TimeoutExt};
 use futures::{future::poll_fn, lock::Mutex, prelude::*, ready};
 use rand::Rng;
 use std::{
-    collections::{btree_map, BTreeMap, HashMap},
+    collections::{btree_map, BTreeMap, HashMap, HashSet},
     convert::TryInto,
     sync::atomic::{AtomicU64, Ordering},
     sync::{Arc, Weak},
     task::{Context, Poll, Waker},
+    time::Duration,
 };
 
 /// Configuration object for creating a router.
@@ -100,21 +103,42 @@ pub(crate) enum OpenedTransfer {
     Remote(AsyncQuicStreamWriter, AsyncQuicStreamReader, Handle),
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
+pub(crate) enum LinkSource {
+    Unknown,
+    PeerHint,
+    PeerReachable,
+    LinkHint,
+    RoutingUpdate,
+}
+
+struct Questioning(NodeId, Task<()>);
+
+pub(crate) struct CurrentLink {
+    link: Weak<LinkRouting>,
+    source: LinkSource,
+    questioning: Option<Questioning>,
+}
+
 struct PeerMaps {
     clients: BTreeMap<NodeId, Arc<Peer>>,
     servers: BTreeMap<NodeId, Vec<Arc<Peer>>>,
     connections: HashMap<ConnectionId, Arc<Peer>>,
+    current_link: BTreeMap<NodeId, CurrentLink>,
 }
 
 impl PeerMaps {
     async fn get_client(
         &mut self,
         peer_node_id: NodeId,
+        link_hint: impl LinkHint,
         router: &Arc<Router>,
+        but_why: &str,
     ) -> Result<Arc<Peer>, Error> {
         if peer_node_id == router.node_id {
             bail!("Trying to create loopback client peer");
         }
+        let link = self.apply_link_hint(peer_node_id, router.node_id(), link_hint).await;
         if let Some(p) = self.clients.get(&peer_node_id) {
             if p.node_id() != peer_node_id {
                 bail!(
@@ -124,8 +148,12 @@ impl PeerMaps {
                 );
             }
             Ok(p.clone())
+        } else if let Some(link) = link {
+            let p = self.new_client(peer_node_id, router, but_why).await?;
+            link.add_route_for_peers(std::iter::once(&p)).await;
+            Ok(p)
         } else {
-            self.new_client(peer_node_id, router).await
+            bail!("no route to node {:?}", peer_node_id)
         }
     }
 
@@ -134,24 +162,34 @@ impl PeerMaps {
         conn_id: &[u8],
         ty: quiche::Type,
         peer_node_id: NodeId,
+        link_hint: impl LinkHint,
         router: &Arc<Router>,
     ) -> Result<Arc<Peer>, Error> {
         if peer_node_id == router.node_id {
-            bail!("Trying to create loopback peer");
+            bail!("Trying to create loopback client peer");
         }
-        match (ty, conn_id.try_into().map(|conn_id| self.connections.get(&conn_id))) {
-            (_, Ok(Some(p))) => {
-                if p.node_id() != peer_node_id {
-                    bail!(
-                        "Existing looked-up peer gets a packet from a new peer node id {:?} (vs {:?})",
-                        peer_node_id,
-                        p.node_id()
-                    );
-                }
-                Ok(p.clone())
+        let link = self.apply_link_hint(peer_node_id, router.node_id(), link_hint).await;
+        if let Ok(Some(p)) = conn_id.try_into().map(|conn_id| self.connections.get(&conn_id)) {
+            if p.node_id() != peer_node_id {
+                bail!(
+                    "Existing looked-up peer gets a packet from a new peer node id {:?} (vs {:?})",
+                    peer_node_id,
+                    p.node_id()
+                );
             }
-            (quiche::Type::Initial, _) => self.new_server(peer_node_id, router).await,
-            (_, _) => bail!("Packet received for unknown connection"),
+            Ok(p.clone())
+        } else if ty != quiche::Type::Initial {
+            bail!("Packet received for unknown connection")
+        } else if let Some(link) = link {
+            if self.clients.get(&peer_node_id).is_none() {
+                let p = self.new_client(peer_node_id, router, "incoming server connection").await?;
+                link.add_route_for_peers(std::iter::once(&p)).await;
+            }
+            let p = self.new_server(peer_node_id, router).await?;
+            link.add_route_for_peers(std::iter::once(&p)).await;
+            Ok(p)
+        } else {
+            bail!("no route back to node {:?}", peer_node_id)
         }
     }
 
@@ -159,6 +197,7 @@ impl PeerMaps {
         &mut self,
         peer_node_id: NodeId,
         router: &Arc<Router>,
+        but_why: &str,
     ) -> Result<Arc<Peer>, Error> {
         let mut config =
             router.quiche_config().await.context("creating client configuration for quiche")?;
@@ -168,8 +207,10 @@ impl PeerMaps {
             peer_node_id,
             conn_id,
             conn,
+            router.link_state_observable.new_observer(),
             router.service_map.new_local_service_observer(),
             router,
+            but_why,
         );
         self.clients.insert(peer_node_id, peer.clone());
         self.connections.insert(conn_id, peer.clone());
@@ -189,6 +230,349 @@ impl PeerMaps {
         self.servers.entry(peer_node_id).or_insert(Vec::new()).push(peer.clone());
         self.connections.insert(conn_id, peer.clone());
         Ok(peer)
+    }
+
+    async fn new_route(
+        &mut self,
+        peer_node_id: NodeId,
+        link_hint: impl LinkHint,
+        router: &Arc<Router>,
+        but_why: &str,
+    ) -> Result<(), Error> {
+        self.get_client(peer_node_id, link_hint, router, but_why).map_ok(drop).await
+    }
+
+    async fn apply_link_hint(
+        &mut self,
+        peer_node_id: NodeId,
+        own_node_id: NodeId,
+        link_hint: impl LinkHint,
+    ) -> Option<Arc<LinkRouting>> {
+        let (link, source) = link_hint.to_link(&self.current_link);
+        self.alter_link(peer_node_id, own_node_id, link, source).await
+    }
+
+    async fn question_peer(&mut self, peer: NodeId, router: &Arc<Router>, but_why: &str) {
+        let my_node_id = router.node_id();
+        match self.current_link.get_mut(&peer) {
+            Some(CurrentLink { questioning: Some(_), .. }) => {
+                // Already questioning this link, no need to do more.
+                log::trace!(
+                    "{:?} question peer {:?}: already questioning... continue",
+                    my_node_id,
+                    peer
+                );
+            }
+            Some(current_link) => {
+                log::trace!("{:?} question peer {:?}: begin questioning", my_node_id, peer);
+                let router = Arc::downgrade(router);
+                let ask = {
+                    let router = router.clone();
+                    let get_router =
+                        move || Weak::upgrade(&router).ok_or_else(|| format_err!("no router"));
+                    let but_why = but_why.to_string();
+                    async move {
+                        let mut peer_client =
+                            get_router()?.client_peer(peer, NoLinkHint, &but_why).await?;
+                        loop {
+                            let ping_result = async {
+                                let rtt = peer_client.round_trip_time().await;
+                                let timeout = std::cmp::max(
+                                    Duration::from_secs(5),
+                                    std::cmp::min(Duration::from_secs(30), 100 * rtt),
+                                );
+                                log::trace!(
+                                    "{:?} question peer {:?}: ping with timeout {:?}",
+                                    my_node_id,
+                                    peer,
+                                    timeout
+                                );
+                                peer_client
+                                    .ping()
+                                    .on_timeout(timeout, || Err(format_err!("ping timeout")))
+                                    .await
+                            }
+                            .await;
+                            if let Err(e) = ping_result {
+                                let current_peer_client =
+                                    get_router()?.client_peer(peer, NoLinkHint, &but_why).await?;
+                                if peer_client.conn_id() != current_peer_client.conn_id() {
+                                    log::warn!("{:?} pinged old client {:?} to determine liveness; retrying with new {:?}", my_node_id, peer_client.conn_id(), current_peer_client.conn_id());
+                                    peer_client = current_peer_client;
+                                    continue;
+                                } else {
+                                    return Err(e);
+                                }
+                            } else {
+                                log::trace!(
+                                    "{:?} question peer {:?}: pinged successfully",
+                                    my_node_id,
+                                    peer
+                                );
+                                return Ok(());
+                            }
+                        }
+                    }
+                };
+                current_link.questioning = Some(Questioning(
+                    peer,
+                    Task::spawn(async move {
+                        let r = ask.await;
+                        if let Some(router) = Weak::upgrade(&router) {
+                            match r {
+                                Ok(_) => {
+                                    router
+                                        .peers
+                                        .lock()
+                                        .await
+                                        .current_link
+                                        .get_mut(&peer)
+                                        .map(|l| l.questioning = None);
+                                }
+                                Err(e) => {
+                                    router
+                                        .remove_peer_id(peer, &format!("query ping error: {:?}", e))
+                                        .await;
+                                }
+                            }
+                        }
+                    }),
+                ));
+            }
+            None => {
+                // No current link, and we don't have a historical link hint either.
+                // This peer can go.
+                self.remove_peer_id(peer, router.node_id, "no known link").await;
+            }
+        }
+    }
+
+    fn peers<'a>(
+        node_id: NodeId,
+        clients: &'a BTreeMap<NodeId, Arc<Peer>>,
+        servers: &'a BTreeMap<NodeId, Vec<Arc<Peer>>>,
+    ) -> impl Iterator<Item = &'a Arc<Peer>> {
+        clients
+            .get(&node_id)
+            .into_iter()
+            .chain(servers.get(&node_id).into_iter().map(|v| v.iter()).flatten())
+    }
+
+    async fn alter_link(
+        &mut self,
+        peer_node_id: NodeId,
+        own_node_id: NodeId,
+        link: Option<Arc<LinkRouting>>,
+        source: LinkSource,
+    ) -> Option<Arc<LinkRouting>> {
+        let clients = &self.clients;
+        let servers = &self.servers;
+        let peers = move || Self::peers(peer_node_id, clients, servers);
+        // See if there's an existing link
+        match self.current_link.entry(peer_node_id) {
+            btree_map::Entry::Occupied(mut o) => {
+                let current_link = o.get_mut();
+                // Is it still current?
+                if let Some(old_link) = Weak::upgrade(&current_link.link) {
+                    // Yep there's still a real link.
+                    // Let's see if the source of routing information is better or worse via this update.
+                    if source < current_link.source {
+                        log::trace!(
+                            "{:?} alter_link to {:?} from {:?} - current source {:?} dominates",
+                            own_node_id,
+                            peer_node_id,
+                            source,
+                            current_link.source
+                        );
+                        return Some(old_link);
+                    }
+                    // This is strong enough information to update the routing table.
+                    if let Some(link) = link.as_ref() {
+                        if !Arc::ptr_eq(&old_link, link) {
+                            log::trace!(
+                                concat!(
+                                    "{:?} alter_link to {:?} from {:?} - ",
+                                    "remove old link {:?}, add new link {:?}"
+                                ),
+                                own_node_id,
+                                peer_node_id,
+                                source,
+                                old_link.debug_id(),
+                                link.debug_id(),
+                            );
+                            old_link.remove_route_for_peers(peers()).await;
+                            link.add_route_for_peers(peers()).await;
+                            *current_link = CurrentLink {
+                                link: Arc::downgrade(link),
+                                source,
+                                questioning: None,
+                            };
+                        } else if current_link.questioning.is_some() || source > current_link.source
+                        {
+                            log::trace!(
+                                "{:?} alter_link to {:?} from {:?} - refresh link {:?}",
+                                own_node_id,
+                                peer_node_id,
+                                source,
+                                link.debug_id(),
+                            );
+                            *current_link = CurrentLink {
+                                link: Arc::downgrade(link),
+                                source,
+                                questioning: None,
+                            };
+                        }
+                    }
+                } else if let Some(link) = link.as_ref() {
+                    // There was a link but it's gone.
+                    // Just add this new one.
+                    log::trace!(
+                        "{:?} alter_link to {:?} from {:?} - replace expired with {:?}",
+                        own_node_id,
+                        peer_node_id,
+                        source,
+                        link.debug_id()
+                    );
+                    link.add_route_for_peers(peers()).await;
+                    *current_link =
+                        CurrentLink { link: Arc::downgrade(link), source, questioning: None };
+                } else {
+                    let was_questioning = current_link.questioning.is_some();
+                    o.remove();
+                    // There was a link but it's gone. Also, this is not a new link.
+                    if was_questioning {
+                        // If we were questioning, then now we have proof that there's no relevant link.
+                        self.remove_peer_id(
+                            peer_node_id,
+                            own_node_id,
+                            "proved no route during alter_link",
+                        )
+                        .await;
+                    }
+                }
+            }
+            btree_map::Entry::Vacant(v) => {
+                // No original link, add a new one if we were given one.
+                if let Some(link) = link.as_ref() {
+                    log::trace!(
+                        "{:?} alter_link to {:?} from {:?} - new link {:?}",
+                        own_node_id,
+                        peer_node_id,
+                        source,
+                        link.debug_id(),
+                    );
+                    v.insert(CurrentLink { link: Arc::downgrade(link), source, questioning: None });
+                    link.add_route_for_peers(peers()).await;
+                }
+            }
+        }
+        link
+    }
+
+    async fn update_routes(
+        &mut self,
+        routes: Vec<(NodeId, Arc<LinkRouting>)>,
+        direct_links: HashSet<NodeId>,
+        router: &Arc<Router>,
+        but_why: &str,
+    ) -> Result<(), Error> {
+        log::trace!(
+            "[{:?}] update routes: {:?}",
+            router.node_id(),
+            routes.iter().map(|(n, l)| (n, l.debug_id())).collect::<Vec<_>>()
+        );
+        let mut seen_peers = direct_links;
+        for (node_id, link) in routes.into_iter() {
+            self.alter_link(node_id, router.node_id(), Some(link), LinkSource::RoutingUpdate).await;
+            seen_peers.insert(node_id);
+        }
+        log::trace!("[{:?}] seen peers: {:?}", router.node_id(), seen_peers);
+        let mut unseen_peer_ids = HashSet::new();
+        for peer in self.connections.values().map(|p| p.node_id()) {
+            if seen_peers.contains(&peer) {
+                continue;
+            }
+            unseen_peer_ids.insert(peer);
+        }
+        log::trace!("[{:?}] unseen peer ids: {:?}", router.node_id(), unseen_peer_ids);
+        for peer in unseen_peer_ids {
+            self.question_peer(peer, router, but_why).await;
+        }
+        Ok(())
+    }
+
+    async fn remove_peer_id(&mut self, peer_id: NodeId, own_node_id: NodeId, but_why: &str) {
+        log::info!("[{:?}] remove peer id {:?} because {}", own_node_id, peer_id, but_why);
+        let mut to_shutdown = Vec::new();
+        let mut add_to_shutdown = |peer| to_shutdown.push(peer);
+        self.clients.remove(&peer_id).map(&mut add_to_shutdown);
+        self.servers
+            .remove(&peer_id)
+            .unwrap_or_else(Vec::new)
+            .into_iter()
+            .for_each(&mut add_to_shutdown);
+        self.connections.retain(|_, peer| peer.node_id() != peer_id);
+        futures::stream::iter(to_shutdown.into_iter())
+            .for_each_concurrent(None, |peer| async move { peer.shutdown().await })
+            .await;
+        self.current_link.remove(&peer_id);
+        log::trace!("[{:?}] removed peer id {:?}", own_node_id, peer_id);
+    }
+}
+
+pub(crate) trait LinkHint {
+    fn to_link(
+        self,
+        current_link: &BTreeMap<NodeId, CurrentLink>,
+    ) -> (Option<Arc<LinkRouting>>, LinkSource)
+    where
+        Self: Sized;
+}
+
+impl LinkHint for Weak<LinkRouting> {
+    fn to_link(
+        self,
+        _current_link: &BTreeMap<NodeId, CurrentLink>,
+    ) -> (Option<Arc<LinkRouting>>, LinkSource)
+    where
+        Self: Sized,
+    {
+        (Weak::upgrade(&self), LinkSource::LinkHint)
+    }
+}
+
+impl LinkHint for Arc<LinkRouting> {
+    fn to_link(
+        self,
+        _current_link: &BTreeMap<NodeId, CurrentLink>,
+    ) -> (Option<Arc<LinkRouting>>, LinkSource)
+    where
+        Self: Sized,
+    {
+        (Some(self), LinkSource::LinkHint)
+    }
+}
+
+impl LinkHint for (NodeId, LinkSource) {
+    fn to_link(
+        self,
+        current_link: &BTreeMap<NodeId, CurrentLink>,
+    ) -> (Option<Arc<LinkRouting>>, LinkSource)
+    where
+        Self: Sized,
+    {
+        (current_link.get(&self.0).map(|w| Weak::upgrade(&w.link)).flatten(), self.1)
+    }
+}
+
+pub(crate) struct NoLinkHint;
+
+impl LinkHint for NoLinkHint {
+    fn to_link(
+        self,
+        _current_link: &BTreeMap<NodeId, CurrentLink>,
+    ) -> (Option<Arc<LinkRouting>>, LinkSource) {
+        (None, LinkSource::Unknown)
     }
 }
 
@@ -231,11 +615,11 @@ pub struct Router {
     peers: Mutex<PeerMaps>,
     links: Mutex<HashMap<NodeLinkId, Weak<LinkRouting>>>,
     link_state_publisher: LinkStatePublisher,
+    link_state_observable: Arc<Observable<Vec<LinkStatus>>>,
     service_map: ServiceMap,
+    routing_update_sender: RemoteRoutingUpdateSender,
     proxied_streams: Mutex<HashMap<HandleKey, ProxiedHandle>>,
     pending_transfers: Mutex<PendingTransferMap>,
-    routes: Arc<Routes>,
-    current_forwarding_table: Mutex<ForwardingTable>,
     task: Mutex<Option<Task<()>>>,
 }
 
@@ -277,38 +661,43 @@ impl Router {
         verify_file(security_context.root_cert())?;
 
         let node_id = options.node_id.unwrap_or_else(generate_node_id);
+        let (routing_update_sender, routing_update_receiver) = routing_update_channel();
         let service_map = ServiceMap::new(node_id);
         let (link_state_publisher, link_state_receiver) = futures::channel::mpsc::channel(1);
-        let routes = Arc::new(Routes::new());
         let router = Arc::new(Router {
             node_id,
             next_node_link_id: 1.into(),
             security_context,
+            routing_update_sender,
             link_state_publisher,
+            link_state_observable: Arc::new(Observable::new(Vec::new())),
             service_map,
             links: Mutex::new(HashMap::new()),
             peers: Mutex::new(PeerMaps {
                 clients: BTreeMap::new(),
                 servers: BTreeMap::new(),
                 connections: HashMap::new(),
+                current_link: BTreeMap::new(),
             }),
             proxied_streams: Mutex::new(HashMap::new()),
             pending_transfers: Mutex::new(PendingTransferMap::new()),
-            routes: routes.clone(),
             task: Mutex::new(None),
-            current_forwarding_table: Mutex::new(ForwardingTable::empty()),
         });
 
         let diagnostics = options.diagnostics;
-        let link_state_observable = Observable::new(BTreeMap::new());
+        let link_state_observable = router.link_state_observable.clone();
+        let link_state_observer = link_state_observable.new_observer();
         let weak_router = Arc::downgrade(&router);
-        *router.task.lock().now_or_never().unwrap() = Some(Task::spawn(log_errors(
+        *futures::executor::block_on(router.task.lock()) = Some(Task::spawn(log_errors(
             async move {
                 let router = &weak_router;
-                futures::future::try_join4(
-                    summon_clients(router.clone(), routes.new_forwarding_table_observer()),
-                    routes.run_planner(node_id, link_state_observable.new_observer()),
-                    run_link_status_updater(node_id, link_state_observable, link_state_receiver),
+                futures::future::try_join3(
+                    run_route_planner(router, routing_update_receiver, link_state_observer),
+                    run_link_status_updater(
+                        node_id,
+                        link_state_observable.clone(),
+                        link_state_receiver,
+                    ),
                     async move {
                         if let Some(implementation) = diagnostics {
                             run_diagostic_service_request_handler(router, implementation).await?;
@@ -336,14 +725,16 @@ impl Router {
             new_link(peer_node_id, node_link_id, &self, config);
         log::trace!("[{:?} link {:?}] new link to {:?}", self.node_id, node_link_id, peer_node_id);
         self.links.lock().await.insert(routing.id(), Arc::downgrade(&routing));
+        log::trace!("[{:?} link {:?}] declare peer {:?}", self.node_id, node_link_id, peer_node_id);
+        self.peers
+            .lock()
+            .await
+            .new_route(peer_node_id, Arc::downgrade(&routing), self, "new_link")
+            .await?;
         log::trace!("[{:?} link {:?}] publish link", self.node_id, node_link_id);
         self.link_state_publisher.clone().send((node_link_id, peer_node_id, observer)).await?;
         log::trace!("[{:?} link {:?}] return link", self.node_id, node_link_id);
         Ok((sender, receiver))
-    }
-
-    pub(crate) async fn get_link(&self, node_link_id: NodeLinkId) -> Option<Arc<LinkRouting>> {
-        self.links.lock().await.get(&node_link_id).and_then(Weak::upgrade)
     }
 
     /// Accessor for the node id of this router.
@@ -353,18 +744,6 @@ impl Router {
 
     pub(crate) fn service_map(&self) -> &ServiceMap {
         &self.service_map
-    }
-
-    pub(crate) fn new_forwarding_table_observer(&self) -> Observer<ForwardingTable> {
-        self.routes.new_forwarding_table_observer()
-    }
-
-    pub(crate) async fn update_routes(
-        &self,
-        via: NodeId,
-        routes: impl Iterator<Item = (NodeId, RouteMetrics)>,
-    ) {
-        self.routes.update(via, routes).await
     }
 
     /// Create a new stream to advertised service `service` on remote node id `node`.
@@ -390,7 +769,7 @@ impl Router {
                 )
                 .await
         } else {
-            self.client_peer(node_id)
+            self.client_peer(node_id, NoLinkHint, "connect_to_service")
                 .await
                 .with_context(|| {
                     format_err!(
@@ -433,11 +812,10 @@ impl Router {
         futures::stream::iter(self.links.lock().await.iter())
             .filter_map(|(_, link)| async move {
                 if let Some(link) = Weak::upgrade(link) {
-                    if !link.is_closed().await {
-                        return Some(link.diagnostic_info().await);
-                    }
+                    Some(link.diagnostic_info().await)
+                } else {
+                    None
                 }
-                None
             })
             .collect()
             .await
@@ -468,83 +846,66 @@ impl Router {
         Ok(config)
     }
 
-    pub(crate) async fn remove_peer(
-        self: &Arc<Self>,
-        conn_id: ConnectionId,
-        due_to_routing_error: bool,
-    ) {
-        log::trace!("[{:?}] Request remove peer {:?}", self.node_id, conn_id);
-        let mut removed_client_peer_node_id = None;
-        {
-            let mut peers = self.peers.lock().await;
-            if let Some(peer) = peers.connections.remove(&conn_id) {
-                match peer.endpoint() {
-                    Endpoint::Client => {
-                        if let btree_map::Entry::Occupied(o) = peers.clients.entry(peer.node_id()) {
-                            if Arc::ptr_eq(o.get(), &peer) {
-                                removed_client_peer_node_id = Some(peer.node_id());
-                                o.remove_entry();
-                            }
-                        }
-                    }
-                    Endpoint::Server => {
-                        peers
-                            .servers
-                            .get_mut(&peer.node_id())
-                            .map(|v| v.retain(|other| !Arc::ptr_eq(&peer, other)));
-                    }
-                }
-                peer.shutdown().await;
-            }
-        }
-        if let Some(removed_client_peer_node_id) = removed_client_peer_node_id {
-            log::trace!(
-                "[{:?}] Removed client peer {:?} to {:?}",
-                self.node_id,
-                conn_id,
-                removed_client_peer_node_id
-            );
-            let revive = !due_to_routing_error
-                && self
-                    .current_forwarding_table
-                    .lock()
-                    .await
-                    .route_for(removed_client_peer_node_id)
-                    .is_some();
-            if revive {
-                log::trace!(
-                    "[{:?}] Revive client peer to {:?}",
-                    self.node_id,
-                    removed_client_peer_node_id
-                );
-                if let Err(e) =
-                    self.peers.lock().await.get_client(removed_client_peer_node_id, self).await
-                {
-                    log::trace!(
-                        "[{:?}] Failed revibing client peer to {:?}: {:?}",
-                        self.node_id,
-                        removed_client_peer_node_id,
-                        e
-                    );
-                } else {
-                    log::trace!(
-                        "[{:?}] Revived client peer to {:?}",
-                        self.node_id,
-                        removed_client_peer_node_id
-                    );
-                }
-            } else {
-                log::trace!(
-                    "[{:?}] Do not revive client peer to {:?}",
-                    self.node_id,
-                    removed_client_peer_node_id
-                );
-            }
+    pub(crate) async fn send_routing_update(&self, routing_update: RemoteRoutingUpdate) {
+        if let Err(e) = self.routing_update_sender.clone().send(routing_update).await {
+            log::warn!("Routing update send failed: {:?}", e);
         }
     }
 
-    async fn client_peer(self: &Arc<Self>, peer_node_id: NodeId) -> Result<Arc<Peer>, Error> {
-        self.peers.lock().await.get_client(peer_node_id, self).await
+    /// Retrieve the current link for some peer node id - if there is one present.
+    pub(crate) async fn peer_link(&self, peer_id: NodeId) -> Option<Arc<LinkRouting>> {
+        self.peers.lock().await.current_link.get(&peer_id).map(|l| Weak::upgrade(&l.link)).flatten()
+    }
+
+    /// Ensure that a client peer id exists for a given `node_id`
+    /// If the client peer needs to be created, `link_id_hint` will be used as an interim hint
+    /// as to the best route *to* this node, until a full routing update can be performed.
+    pub(crate) async fn ensure_client_peer(
+        self: &Arc<Self>,
+        node_id: NodeId,
+        link_hint: impl LinkHint,
+        but_why: &str,
+    ) -> Result<(), Error> {
+        if node_id == self.node_id {
+            return Ok(());
+        }
+        self.client_peer(node_id, link_hint, but_why).await.map(drop)
+    }
+
+    pub(crate) async fn remove_peer(self: &Arc<Self>, conn_id: ConnectionId) {
+        log::info!("[{:?}] Request remove peer {:?}", self.node_id, conn_id);
+        let mut peers = self.peers.lock().await;
+        if let Some(peer) = peers.connections.remove(&conn_id) {
+            match peer.endpoint() {
+                Endpoint::Client => {
+                    if let btree_map::Entry::Occupied(o) = peers.clients.entry(peer.node_id()) {
+                        if Arc::ptr_eq(o.get(), &peer) {
+                            o.remove_entry();
+                        }
+                    }
+                }
+                Endpoint::Server => {
+                    peers
+                        .servers
+                        .get_mut(&peer.node_id())
+                        .map(|v| v.retain(|other| !Arc::ptr_eq(&peer, other)));
+                }
+            }
+            peer.shutdown().await;
+        }
+    }
+
+    async fn remove_peer_id(self: &Arc<Self>, peer_id: NodeId, but_why: &str) {
+        self.peers.lock().await.remove_peer_id(peer_id, self.node_id, but_why).await
+    }
+
+    pub(crate) async fn client_peer(
+        self: &Arc<Self>,
+        peer_node_id: NodeId,
+        link_hint: impl LinkHint,
+        but_why: &str,
+    ) -> Result<Arc<Peer>, Error> {
+        self.peers.lock().await.get_client(peer_node_id, link_hint, self, but_why).await
     }
 
     pub(crate) async fn lookup_peer(
@@ -552,8 +913,30 @@ impl Router {
         conn_id: &[u8],
         ty: quiche::Type,
         peer_node_id: NodeId,
+        link_hint: impl LinkHint,
     ) -> Result<Arc<Peer>, Error> {
-        self.peers.lock().await.lookup(conn_id, ty, peer_node_id, self).await
+        self.peers.lock().await.lookup(conn_id, ty, peer_node_id, link_hint, self).await
+    }
+
+    pub(crate) async fn update_routes(
+        self: &Arc<Self>,
+        routes: impl Iterator<Item = (NodeId, NodeLinkId)>,
+        but_why: &str,
+    ) -> Result<(), Error> {
+        let (routes, direct_links) = {
+            let links = self.links.lock().await;
+            (
+                routes
+                    .filter_map(|(id, link_id)| {
+                        links.get(&link_id).map(Weak::upgrade).flatten().map(|link| (id, link))
+                    })
+                    .collect(),
+                links.values().filter_map(Weak::upgrade).map(|link| link.peer_node_id()).collect(),
+            )
+        };
+        self.peers.lock().await.update_routes(routes, direct_links, self, but_why).await?;
+        log::trace!("[{:?}] update routes done", self.node_id);
+        Ok(())
     }
 
     fn add_proxied(
@@ -824,6 +1207,7 @@ impl Router {
         target: NodeId,
         transfer_key: TransferKey,
         handle: Handle,
+        peer_with_route: NodeId,
     ) -> Result<OpenedTransfer, Error> {
         if target == self.node_id {
             // The target is local: we just file away the handle.
@@ -852,8 +1236,11 @@ impl Router {
             Ok(OpenedTransfer::Fused)
         } else {
             let (writer, reader) = loop {
-                if let Some(x) =
-                    self.client_peer(target).await?.send_open_transfer(transfer_key).await
+                if let Some(x) = self
+                    .client_peer(target, (peer_with_route, LinkSource::PeerHint), "open_transfer")
+                    .await?
+                    .send_open_transfer(transfer_key)
+                    .await
                 {
                     break x;
                 }
@@ -870,22 +1257,6 @@ impl Router {
     pub(crate) fn security_context(&self) -> &dyn SecurityContext {
         &*self.security_context
     }
-}
-
-async fn summon_clients(
-    router: Weak<Router>,
-    mut forwarding_table: Observer<ForwardingTable>,
-) -> Result<(), Error> {
-    let get_router = move || Weak::upgrade(&router).ok_or_else(|| format_err!("router gone"));
-    while let Some(forwarding_table) = forwarding_table.next().await {
-        let router = get_router()?;
-        *router.current_forwarding_table.lock().await = forwarding_table.clone();
-        let mut peers = router.peers.lock().await;
-        for (destination, _) in forwarding_table.iter() {
-            let _ = peers.get_client(destination, &router).await?;
-        }
-    }
-    Ok(())
 }
 
 #[cfg(test)]
@@ -909,12 +1280,11 @@ mod tests {
         );
     }
 
-    async fn forward(sender: LinkSender, mut receiver: LinkReceiver) -> Result<(), Error> {
-        while let Some(packet) = sender.next_send().await {
-            let mut bytes = packet.bytes().to_vec();
-            drop(packet);
-            log::trace!("got frame {} bytes", bytes.len());
-            if let Err(e) = receiver.received_packet(&mut bytes).await {
+    async fn forward(sender: LinkSender, receiver: LinkReceiver) -> Result<(), Error> {
+        let mut frame = [0u8; 2048];
+        while let Some(n) = sender.next_send(&mut frame).await? {
+            log::trace!("got frame {} bytes", n);
+            if let Err(e) = receiver.received_packet(&mut frame[..n]).await {
                 log::warn!("error receiving packet: {:?}", e);
             }
         }

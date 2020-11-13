@@ -99,7 +99,7 @@ impl ServiceMap {
             log::trace!("Publish new service '{}'", service_name);
             let services: Vec<String> = local_services.keys().cloned().collect();
             drop(local_services);
-            self.local_service_list.maybe_push(services.clone()).await;
+            self.local_service_list.push(services.clone()).await;
         }
     }
 
@@ -120,12 +120,12 @@ impl ServiceMap {
                     return;
                 }
                 *existing_peer = update_peer;
-                self.list_peers.maybe_push(lsp.publish()).await;
+                self.list_peers.push(lsp.publish()).await;
                 return;
             }
         }
         peers.push(update_peer);
-        self.list_peers.maybe_push(lsp.publish()).await;
+        self.list_peers.push(lsp.publish()).await;
     }
 
     pub async fn add_client_connection(&self, peer_id: NodeId) {
@@ -134,7 +134,7 @@ impl ServiceMap {
             btree_map::Entry::Occupied(o) => *o.into_mut() += 1,
             btree_map::Entry::Vacant(v) => {
                 v.insert(1);
-                self.list_peers.maybe_push(lsp.publish()).await;
+                self.list_peers.push(lsp.publish()).await;
             }
         }
     }
@@ -146,7 +146,7 @@ impl ServiceMap {
                 0 => unreachable!(),
                 1 => {
                     o.remove();
-                    self.list_peers.maybe_push(lsp.publish()).await;
+                    self.list_peers.push(lsp.publish()).await;
                 }
                 n => *o.get_mut() = n - 1,
             },

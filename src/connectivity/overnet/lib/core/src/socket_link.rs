@@ -56,7 +56,9 @@ pub(crate) async fn run_socket_link(
         async move {
             loop {
                 let msg = framer_read.read().await?;
+                log::trace!("{:?} write bytes {:?}", dbgid, msg.len());
                 tx_bytes.write(&msg).await?;
+                log::trace!("{:?} wrote bytes", dbgid);
             }
         },
         async move {
@@ -64,9 +66,12 @@ pub(crate) async fn run_socket_link(
             loop {
                 let n = rx_bytes.read(&mut buf).await?;
                 if n == 0 {
+                    log::trace!("{:?} finished reading bytes", dbgid);
                     return Ok(());
                 }
+                log::trace!("{:?} read bytes {:?}", dbgid, n);
                 deframer_write.write(&buf[..n]).await?;
+                log::trace!("{:?} queued deframe bytes", dbgid);
             }
         },
         async move {
@@ -113,7 +118,7 @@ pub(crate) async fn run_socket_link(
                 StreamSocketGreeting { node_id: Some(n), .. } => n.id,
             };
             log::trace!("{:?} Handshake complete, creating link", dbgid);
-            let (link_sender, mut link_receiver) = node
+            let (link_sender, link_receiver) = node
                 .new_link(
                     node_id.into(),
                     Box::new(move || {
@@ -132,6 +137,7 @@ pub(crate) async fn run_socket_link(
                 async move {
                     loop {
                         let (frame_type, mut frame) = deframer.read().await?;
+                        log::trace!("{:?} got frame {:?} {:?}", dbgid, frame_type, frame.len());
                         if frame_type != Some(FrameType::Overnet) {
                             log::warn!("Skip frame of type {:?}", frame_type);
                             continue;
@@ -139,11 +145,15 @@ pub(crate) async fn run_socket_link(
                         if let Err(err) = link_receiver.received_packet(frame.as_mut()).await {
                             log::warn!("Error reading packet: {:?}", err);
                         }
+                        log::trace!("{:?} handled frame", dbgid);
                     }
                 },
                 async move {
-                    while let Some(packet) = link_sender.next_send().await {
-                        framer.write(FrameType::Overnet, packet.bytes()).await?;
+                    let mut buf = [0u8; 4096];
+                    while let Some(n) = link_sender.next_send(&mut buf).await? {
+                        log::trace!("{:?} send frame {:?}", dbgid, n);
+                        framer.write(FrameType::Overnet, &buf[..n]).await?;
+                        log::trace!("{:?} sent frame", dbgid);
                     }
                     Ok::<_, Error>(())
                 },

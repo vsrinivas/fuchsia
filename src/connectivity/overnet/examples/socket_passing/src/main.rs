@@ -128,7 +128,6 @@ async fn run_command(socket: fidl::Socket, args: Command) -> Result<(), Error> {
                 while ofs != buf.len() {
                     ofs += tx.write(&buf[ofs..]).await?;
                 }
-                println!("SENT");
             }
             Ok(()) as Result<(), Error>
         },
@@ -139,9 +138,6 @@ async fn run_command(socket: fidl::Socket, args: Command) -> Result<(), Error> {
                 let mut ofs = 0;
                 while ofs < expect.len() {
                     let n = rx.read(&mut buf[ofs..]).await?;
-                    if n == 0 {
-                        break;
-                    }
                     println!("got bytes: {:?}", &buf[ofs..ofs + n]);
                     ofs += n;
                 }

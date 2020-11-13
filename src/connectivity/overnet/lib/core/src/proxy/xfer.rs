@@ -27,6 +27,7 @@ pub(crate) async fn follow<Hdl: 'static + Proxyable>(
     transfer_key: TransferKey,
     stream_reader: StreamReader<Hdl::Message>,
 ) -> Result<(), Error> {
+    let peer_node_id = stream_writer.peer_node_id();
     let debug_id = stream_writer.debug_id();
     futures::future::try_join(stream_reader.expect_shutdown(Ok(())), async move {
         stream_writer.send_ack_transfer().await?;
@@ -43,7 +44,9 @@ pub(crate) async fn follow<Hdl: 'static + Proxyable>(
             new_destination_node,
             hdl
         );
-        let r = router.open_transfer(new_destination_node.into(), transfer_key, hdl).await?;
+        let r = router
+            .open_transfer(new_destination_node.into(), transfer_key, hdl, peer_node_id)
+            .await?;
         log::trace!("[PROXY {:?}] open_transfer got {:?}", debug_id, r);
         match r {
             OpenedTransfer::Fused => {

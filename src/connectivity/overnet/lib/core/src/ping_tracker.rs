@@ -298,13 +298,12 @@ impl<'a> PingSender<'a> {
     pub fn new(tracker: &'a PingTracker) -> Self {
         Self(PollMutex::new(&*tracker.0))
     }
-}
 
-impl<'a> Future for PingSender<'a> {
-    // Output is guaranteed to be not (None, None)
-    type Output = (Option<u64>, Option<Pong>);
-    fn poll(mut self: Pin<&mut Self>, ctx: &mut Context<'_>) -> Poll<Self::Output> {
-        let mut state = ready!(self.0.poll(ctx));
+    pub fn poll(&mut self, ctx: &mut Context<'_>) -> (Option<u64>, Option<Pong>) {
+        let mut state = match self.0.poll(ctx) {
+            Poll::Pending => return (None, None),
+            Poll::Ready(x) => x,
+        };
         let ping = if state.send_ping {
             state.send_ping = false;
             let id = state.next_ping_id;
@@ -325,10 +324,8 @@ impl<'a> Future for PingSender<'a> {
         };
         if ping.is_none() && pong.is_none() {
             state.on_send_ping_pong = Some(ctx.waker().clone());
-            Poll::Pending
-        } else {
-            Poll::Ready((ping, pong))
         }
+        (ping, pong)
     }
 }
 
@@ -337,7 +334,6 @@ mod test {
     use super::*;
     use fuchsia_async::{Task, Timer};
     use futures::task::noop_waker;
-    use std::future::Future;
 
     #[fuchsia_async::run(1, test)]
     async fn published_mean_updates(run: usize) {
@@ -349,18 +345,17 @@ mod test {
         });
         loop {
             log::info!("published_mean_updates[{}]: send ping", run);
-            match Pin::new(&mut PingSender::new(&pt)).poll(&mut Context::from_waker(&noop_waker()))
-            {
-                Poll::Pending => {
-                    Timer::new(Duration::from_millis(10)).await;
-                    continue;
-                }
-                Poll::Ready((ping, pong)) => {
-                    assert_eq!(pong, None);
-                    assert_eq!(ping, Some(1));
-                    break;
-                }
+            let mut ping_sender = PingSender::new(&pt);
+            let (ping, pong) = ping_sender.poll(&mut Context::from_waker(&noop_waker()));
+            assert_eq!(pong, None);
+            if ping.is_none() {
+                log::info!("published_mean_updates[{}]: got none for ping, retry", run);
+                drop(ping_sender);
+                Timer::new(Duration::from_millis(10)).await;
+                continue;
             }
+            assert_eq!(ping, Some(1));
+            break;
         }
         log::info!("published_mean_updates[{}]: wait for second observation", run);
         assert_eq!(rtt_obs.next().await, Some(None));

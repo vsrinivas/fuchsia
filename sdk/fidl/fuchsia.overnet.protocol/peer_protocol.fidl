@@ -16,10 +16,14 @@ union PeerMessage {
     1: ConnectToService connect_to_service;
     /// Update this peers description on the server.
     2: PeerDescription update_node_description;
-    3: reserved;
+    /// Update information about a link that this peer knows about on the
+    /// remote peer.
+    3: UpdateLinkStatus update_link_status;
     /// Open a transfered stream.
     4: OpenTransfer open_transfer;
-    5: reserved;
+    /// Ping the peer and solicit a response. Used for verifying liveness.
+    /// Value is echoed back in the PeerReply.pong message.
+    5: uint64 ping;
 };
 
 /// Overall connection configuration request
@@ -36,10 +40,21 @@ table ConfigResponse {
 union PeerReply {
     /// Acknowledge an UpdateLinkStatus message
     1: Empty update_link_status_ack;
-    2: reserved;
+    /// Acknowledge a ping message.
+    2: uint64 pong;
 };
 
 struct Empty {
+};
+
+/// Update status of all links starting from a given node
+/// By bundling all link updates together, we guarantee:
+///  - a simple protocol that can deal with updates, additions, and deletions
+///    to the link set
+///  - no routing decisions based on partial information from any one node
+struct UpdateLinkStatus {
+    /// Status of all active links originating at the sending node
+    vector<LinkStatus>:MAX link_status;
 };
 
 /// Create a new stream, labelled `stream_id`, to communicate with the

@@ -7,20 +7,8 @@ use std::collections::BTreeMap;
 
 const MAX_REASSEMBLING_FRAMES: usize = 3;
 
-#[derive(PartialEq, Debug)]
-enum Frame {
-    Assembling(BTreeMap<u8, Vec<u8>>),
-    Delivered,
-}
-
-impl Default for Frame {
-    fn default() -> Self {
-        Frame::Assembling(BTreeMap::new())
-    }
-}
-
 pub struct Reassembler {
-    frames: BTreeMap<u64, Frame>,
+    frames: BTreeMap<u64, BTreeMap<u8, Vec<u8>>>,
     largest_seen_msg_id: u64,
 }
 
@@ -32,22 +20,20 @@ impl Reassembler {
     pub fn recv(&mut self, msg_id: u8, fragment_id: u8, fragment: Vec<u8>) -> Option<Vec<u8>> {
         let msg_id = self.expand_msg_id(msg_id);
         let frame = self.frames.entry(msg_id).or_default();
+        frame.insert(fragment_id, fragment);
+        let last_fragment_id = frame.keys().next_back().unwrap();
         let mut out = None;
-        if let Frame::Assembling(frame) = frame {
-            frame.insert(fragment_id, fragment);
-            let last_fragment_id = frame.keys().next_back().unwrap();
-            if last_fragment_id & END_OF_MSG == END_OF_MSG
-                && frame.len() == 1 + ((last_fragment_id & !END_OF_MSG) as usize)
-            {
-                out = Some(
-                    frame
-                        .into_iter()
-                        .map(|(_, v)| std::mem::replace(v, Vec::new()))
-                        .flatten()
-                        .collect(),
-                );
-                self.frames.insert(msg_id, Frame::Delivered);
-            }
+        if last_fragment_id & END_OF_MSG == END_OF_MSG
+            && frame.len() == 1 + ((last_fragment_id & !END_OF_MSG) as usize)
+        {
+            out = Some(
+                frame
+                    .into_iter()
+                    .map(|(_, v)| std::mem::replace(v, Vec::new()))
+                    .flatten()
+                    .collect(),
+            );
+            self.frames.remove(&msg_id);
         }
         while self.frames.len() > MAX_REASSEMBLING_FRAMES {
             let first = *self.frames.keys().next().unwrap();
@@ -102,9 +88,7 @@ mod test {
     fn single_frame() {
         let mut r = Reassembler::new();
         assert_eq!(r.recv(1, 0 | END_OF_MSG, vec![1, 2, 3]), Some(vec![1, 2, 3]));
-        for frame in r.frames.values() {
-            assert_eq!(Frame::Delivered, *frame);
-        }
+        assert!(r.frames.is_empty());
     }
 
     #[test]

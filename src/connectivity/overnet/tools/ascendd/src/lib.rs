@@ -114,7 +114,7 @@ async fn process_incoming(
 
     // Register our new link!
     let sockpath = sockpath.to_string();
-    let (link_sender, mut link_receiver) = node
+    let (link_sender, link_receiver) = node
         .new_link(
             node_id.into(),
             Box::new(move || {
@@ -130,8 +130,9 @@ async fn process_incoming(
         .await?;
     let _: ((), ()) = futures::future::try_join(
         async move {
-            while let Some(frame) = link_sender.next_send().await {
-                tx_frames.write(FrameType::Overnet, frame.bytes()).await?;
+            let mut buf = [0u8; 4096];
+            while let Some(n) = link_sender.next_send(&mut buf).await? {
+                tx_frames.write(FrameType::Overnet, &buf[..n]).await?;
             }
             Ok(())
         },
@@ -140,7 +141,7 @@ async fn process_incoming(
                 let (frame_type, mut frame) = rx_frames.read().await?;
                 ensure!(frame_type == Some(FrameType::Overnet), "Expect only overnet frames");
                 if let Err(err) = link_receiver.received_packet(frame.as_mut()).await {
-                    log::info!("Failed handling packet: {:?}", err);
+                    log::trace!("Failed handling packet: {:?}", err);
                 }
             }
         },

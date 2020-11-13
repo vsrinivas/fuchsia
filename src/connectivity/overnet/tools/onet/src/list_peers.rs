@@ -5,16 +5,11 @@
 use {
     crate::generator::Generator,
     crate::probe_node::{probe_node, Selector},
-    anyhow::{format_err, Error},
+    anyhow::Error,
     fidl_fuchsia_overnet::ServiceConsumerProxyInterface,
     fidl_fuchsia_overnet_protocol::NodeId,
-    fuchsia_async::{TimeoutExt, Timer},
-    futures::future::Either,
-    futures::lock::Mutex,
     futures::prelude::*,
     std::collections::HashSet,
-    std::sync::Arc,
-    std::time::Duration,
 };
 
 // List peers, but wait for things to settle out first
@@ -22,82 +17,35 @@ pub fn list_peers() -> impl Stream<Item = Result<NodeId, Error>> {
     Generator::new(move |mut tx| async move {
         let r: Result<(), Error> = async {
             let svc = hoist::connect_as_service_consumer()?;
-            let seen_peers = Arc::new(Mutex::new(HashSet::new()));
-            let more_to_do = {
-                let seen_peers = seen_peers.clone();
-                move || async move {
-                    let seen_peers = Arc::new(seen_peers.lock().await.clone());
-                    eprintln!("check if more to do after seeing: {:?}", seen_peers);
-                    if seen_peers.is_empty() {
-                        return true;
+            let mut seen_peers = HashSet::new();
+            // Track peers that we expect to see via svc.list_peers() but have not yet.
+            // Once seen_peers is populated and unseen_peers is empty we can be reasonably sure
+            // that we've captured a consistent snapshot of the mesh.
+            let mut unseen_peers = HashSet::new();
+            while !unseen_peers.is_empty() || seen_peers.is_empty() {
+                for peer in svc.list_peers().await?.into_iter() {
+                    unseen_peers.remove(&peer.id.id);
+                    if !seen_peers.insert(peer.id.id) {
+                        continue;
                     }
-                    futures::future::select_ok(seen_peers.iter().map(|&id| {
-                        let seen_peers = seen_peers.clone();
-                        async move {
-                            // This async block returns Ok(()) if there is more work to do, and Err(()) if no new work is detected.
-                            // The outer select_ok will return Ok(()) if *any* child returns Ok(()), and Err(()) if *all* children return Err(()).
-                            eprintln!("check for new peers with {}", id);
-                            match probe_node(NodeId { id }, Selector::Links).on_timeout(Duration::from_secs(5), || Err(format_err!("timeout waiting for diagnostic probe"))). await {
-                                Ok(links) => {
-                                    for link in links.links.unwrap_or_else(Vec::new) {
-                                        if let Some(destination) = link.destination {
-                                            if !seen_peers.contains(&destination.id) {
-                                                eprintln!(
-                                                    "note new destination: {:?} via link {:?} from {}",
-                                                    destination.id, link, id
-                                                );
-                                                return Ok(());
-                                            }
-                                        }
-                                    }
-                                    eprintln!("checked for new peers with {}", id);
-                                    Err(())
-                                }
-                                Err(e) => {
-                                    eprintln!("Seen node {:?} failed probe: {:?}", id, e);
-                                    Err(())
-                                }
-                            }
-                        }
-                        .boxed()
-                    }))
-                    .await
-                    .is_ok()
-                }
-            };
-            eprintln!("list_peers begins");
-            loop {
-                let more_to_do = more_to_do.clone();
-                let wait_until_no_more_to_do = async move {
-                    while (more_to_do.clone())().await {
-                        Timer::new(Duration::from_secs(1)).await;
-                    }
-                };
-                match futures::future::select(
-                    wait_until_no_more_to_do.boxed(),
-                    svc.list_peers().boxed(),
-                )
-                .await
-                {
-                    Either::Left(((), _)) => break,
-                    Either::Right((Ok(peers), wait_until_no_more_to_do)) => {
-                        drop(wait_until_no_more_to_do);
-                        let mut seen_peers = seen_peers.lock().await;
-                        for peer in peers.into_iter() {
-                            if seen_peers.insert(peer.id.id) {
-                                tx.send(Ok(peer.id.into())).await?;
+                    // check links on this node to see if there's any other nodes that we should know about.
+                    for link in
+                        probe_node(peer.id, Selector::Links).await?.links.unwrap_or_else(Vec::new)
+                    {
+                        if let Some(destination) = link.destination {
+                            if !seen_peers.contains(&destination.id) {
+                                unseen_peers.insert(destination.id);
                             }
                         }
                     }
-                    Either::Right((Err(e), _)) => return Err(e.into()),
+                    tx.send(Ok(peer.id)).await?;
                 }
             }
-            eprintln!("list_peers done");
             Ok(())
         }
         .await;
         if let Err(e) = r {
-            let _ = tx.send(Err(e)).await;
+            let _ = tx.send(Err(e));
         }
     })
 }

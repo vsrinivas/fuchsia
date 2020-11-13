@@ -24,8 +24,7 @@ use std::sync::{Arc, Weak};
 use std::task::{Context, Poll, Waker};
 use std::time::{Duration, Instant};
 
-/// Current state of a connection - mutex guarded by AsyncConnection.
-pub struct ConnState {
+struct IO {
     conn: Pin<Box<Connection>>,
     seen_established: bool,
     closed: bool,
@@ -36,33 +35,13 @@ pub struct ConnState {
     timeout: Option<Instant>,
 }
 
-impl std::fmt::Debug for ConnState {
+impl std::fmt::Debug for IO {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}|est={}", self.conn.trace_id(), self.seen_established)
     }
 }
 
-impl ConnState {
-    pub(crate) fn poll_send(
-        &mut self,
-        ctx: &mut Context<'_>,
-        frame: &mut [u8],
-    ) -> Poll<Result<Option<usize>, Error>> {
-        match self.conn.send(frame) {
-            Ok(n) => {
-                self.update_timeout();
-                self.wake_stream_io();
-                Poll::Ready(Ok(Some(n)))
-            }
-            Err(quiche::Error::Done) if self.conn.is_closed() => Poll::Ready(Ok(None)),
-            Err(quiche::Error::Done) => {
-                self.update_timeout();
-                self.wait_for_conn_send(ctx)
-            }
-            Err(e) => Poll::Ready(Err(e.into())),
-        }
-    }
-
+impl IO {
     fn wake_conn_send(&mut self) {
         self.waiting_for_conn_send.take().map(|w| w.wake());
     }
@@ -145,19 +124,44 @@ impl ConnState {
     }
 }
 
+pub struct NextSend<'a>(PollMutex<'a, IO>, NodeId, Endpoint);
+
+impl<'a> NextSend<'a> {
+    pub fn poll(
+        &mut self,
+        ctx: &mut Context<'_>,
+        frame: &mut [u8],
+    ) -> Poll<Result<Option<usize>, Error>> {
+        let mut guard = ready!(self.0.poll(ctx));
+        match guard.conn.send(frame) {
+            Ok(n) => {
+                guard.update_timeout();
+                guard.wake_stream_io();
+                Poll::Ready(Ok(Some(n)))
+            }
+            Err(quiche::Error::Done) if guard.conn.is_closed() => Poll::Ready(Ok(None)),
+            Err(quiche::Error::Done) => {
+                guard.update_timeout();
+                guard.wait_for_conn_send(ctx)
+            }
+            Err(e) => Poll::Ready(Err(e.into())),
+        }
+    }
+}
+
 #[derive(Debug)]
 struct AsyncConnectionInner {
     next_bidi: AtomicU64,
     next_uni: AtomicU64,
     endpoint: Endpoint,
-    io: Mutex<ConnState>,
+    io: Mutex<IO>,
     own_node_id: NodeId,
     peer_node_id: NodeId,
 }
 
 impl LockInner for AsyncConnectionInner {
-    type Inner = ConnState;
-    fn lock_inner<'a>(&'a self) -> MutexLockFuture<'a, ConnState> {
+    type Inner = IO;
+    fn lock_inner<'a>(&'a self) -> MutexLockFuture<'a, IO> {
         self.io.lock()
     }
 }
@@ -173,7 +177,7 @@ impl AsyncConnection {
         peer_node_id: NodeId,
     ) -> Self {
         let inner = Arc::new(AsyncConnectionInner {
-            io: Mutex::new(ConnState {
+            io: Mutex::new(IO {
                 conn,
                 seen_established: false,
                 closed: false,
@@ -210,8 +214,8 @@ impl AsyncConnection {
         io.wake_conn_send();
     }
 
-    pub fn poll_lock_state<'a>(&'a self) -> PollMutex<'a, ConnState> {
-        PollMutex::new(&self.0.io)
+    pub fn next_send<'a>(&'a self) -> NextSend<'a> {
+        NextSend(PollMutex::new(&self.0.io), self.0.peer_node_id, self.0.endpoint)
     }
 
     #[allow(dead_code)]
@@ -423,7 +427,7 @@ pub struct QuicSend<'b> {
     n: usize,
     fin: bool,
     sent_fin: &'b mut bool,
-    io_lock: PollMutex<'b, ConnState>,
+    io_lock: PollMutex<'b, IO>,
 }
 
 impl<'b> QuicSend<'b> {
@@ -645,7 +649,7 @@ pub struct QuicRead<'b> {
     conn: &'b AsyncConnectionInner,
     bytes: ReadBuf<'b>,
     bytes_offset: usize,
-    io_lock: PollMutex<'b, ConnState>,
+    io_lock: PollMutex<'b, IO>,
 }
 
 impl<'b> QuicRead<'b> {
@@ -777,8 +781,8 @@ pub(crate) mod test_util {
     async fn direct_packets(from: AsyncConnection, to: AsyncConnection) -> Result<(), Error> {
         let mut frame = [0u8; 2048];
         while let Some(length) = {
-            let mut lock_state = from.poll_lock_state();
-            poll_fn(|ctx| ready!(lock_state.poll(ctx)).poll_send(ctx, &mut frame)).await?
+            let mut ns = from.next_send();
+            poll_fn(|ctx| ns.poll(ctx, &mut frame)).await?
         } {
             to.recv(&mut frame[..length]).await?;
         }

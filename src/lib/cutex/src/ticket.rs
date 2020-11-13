@@ -2,10 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::{
-    cutex::{AcquisitionPredicateDebug, ALWAYS_TRUE},
-    AcquisitionPredicate, Cutex, CutexGuard, CutexLockFuture,
-};
+use crate::{cutex::ALWAYS_TRUE, AcquisitionPredicate, Cutex, CutexGuard, CutexLockFuture};
 use futures::prelude::*;
 use std::pin::Pin;
 use std::task::{Context, Poll};
@@ -35,15 +32,6 @@ pub struct CutexTicket<'a, 'b, T> {
     cutex: &'a Cutex<T>,
     check: Pin<&'b dyn AcquisitionPredicate<T>>,
     lock: Option<CutexLockFuture<'a, 'b, T>>,
-}
-
-impl<'a, 'b, T> std::fmt::Debug for CutexTicket<'a, 'b, T> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("CutexTicket")
-            .field("check", &AcquisitionPredicateDebug(&*self.check))
-            .field("lock", &self.lock)
-            .finish()
-    }
 }
 
 impl<'a, 'b, T> CutexTicket<'a, 'b, T> {

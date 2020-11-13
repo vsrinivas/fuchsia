@@ -95,6 +95,7 @@ where
                     new_destination_node.into(),
                     transfer_key,
                     overnet_chan.into_handle(),
+                    conn.peer_node_id(),
                 )
                 .await?;
             match opened_transfer {

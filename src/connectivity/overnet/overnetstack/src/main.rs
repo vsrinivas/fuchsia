@@ -96,8 +96,8 @@ async fn read_udp(udp_socket: Arc<UdpSocketHolder>, udp_links: UdpLinks) -> Resu
         let (length, sender) = sock.recv_from(&mut buf).await?;
         println!("UDP_RECV from:{} len:{}", sender, length);
         let sender = normalize_addr(sender);
-        let mut udp_links = udp_links.lock().await;
-        if let Some(link) = udp_links.get_mut(&sender) {
+        let udp_links = udp_links.lock().await;
+        if let Some(link) = udp_links.get(&sender) {
             if let Err(e) = link.received_packet(&mut buf[..length]).await {
                 log::warn!("Failed receiving packet: {:?}", e);
             }
@@ -135,8 +135,10 @@ async fn register_udp(
         udp_links.insert(addr, link_receiver);
         fasync::Task::local(log_errors(
             async move {
-                while let Some(frame) = link_sender.next_send().await {
-                    udp_socket.sock.clone().send_to(frame.bytes(), addr.into()).await?;
+                let mut buf = [0u8; 1400];
+                while let Some(n) = link_sender.next_send(&mut buf).await? {
+                    println!("UDP_SEND to:{} len:{}", addr, n);
+                    udp_socket.sock.clone().send_to(&buf[..n], addr.into()).await?;
                 }
                 Ok(())
             },

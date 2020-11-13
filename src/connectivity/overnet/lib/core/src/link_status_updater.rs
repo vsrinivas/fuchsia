@@ -5,26 +5,26 @@
 use crate::{
     future_help::{Observable, Observer, PollMutex},
     labels::{NodeId, NodeLinkId},
-    routes::LinkMetrics,
+    link::LinkStatus,
 };
 use anyhow::Error;
 use fuchsia_async::{Task, Timer};
 use futures::{future::poll_fn, lock::Mutex, prelude::*, ready};
 use std::{
-    collections::{BTreeMap, HashMap},
+    collections::HashMap,
     sync::Arc,
     task::{Poll, Waker},
     time::Duration,
 };
 
-pub(crate) type LinkStatePublisher =
+pub type LinkStatePublisher =
     futures::channel::mpsc::Sender<(NodeLinkId, NodeId, Observer<Option<Duration>>)>;
-pub(crate) type LinkStateReceiver =
+pub type LinkStateReceiver =
     futures::channel::mpsc::Receiver<(NodeLinkId, NodeId, Observer<Option<Duration>>)>;
 
-pub(crate) async fn run_link_status_updater(
+pub async fn run_link_status_updater(
     my_node_id: NodeId,
-    observable: Observable<BTreeMap<NodeId, LinkMetrics>>,
+    observable: Arc<Observable<Vec<LinkStatus>>>,
     mut receiver: LinkStateReceiver,
 ) -> Result<(), Error> {
     struct RecvState {
@@ -71,18 +71,14 @@ pub(crate) async fn run_link_status_updater(
                 }
             })
             .await;
-            let mut new_status: BTreeMap<NodeId, LinkMetrics> = Default::default();
-            for (&node_link_id, &(node_id, round_trip_time)) in link_status.iter() {
-                let metrics = LinkMetrics { node_link_id, round_trip_time };
-                new_status
-                    .entry(node_id)
-                    .and_modify(|link_metrics| {
-                        if metrics.score() > link_metrics.score() {
-                            *link_metrics = metrics.clone();
-                        }
-                    })
-                    .or_insert(metrics);
-            }
+            let new_status: Vec<_> = link_status
+                .iter()
+                .map(|(node_link_id, (node_id, round_trip_time))| LinkStatus {
+                    to: *node_id,
+                    local_id: *node_link_id,
+                    round_trip_time: *round_trip_time,
+                })
+                .collect();
             log::trace!("[{:?}] new status is {:?}", my_node_id, new_status);
             observable.push(new_status).await;
             Timer::new(Duration::from_millis(300)).await;
