@@ -70,7 +70,28 @@ class ChangeSemanticLevelAction : public gtest::TestLoopFixture {
   MockSemanticProvider semantic_provider_;
 };
 
-TEST_F(ChangeSemanticLevelAction, CyclesForwardThroughLevelsForNonSliderNode) {
+TEST_F(ChangeSemanticLevelAction, NoChangeForNonSliderNode) {
+  // The focus is not important when it is not a slider node.
+  a11y_focus_manager_ptr_->set_should_get_a11y_focus_fail(true);
+  a11y::ChangeSemanticLevelAction action(a11y::ChangeSemanticLevelAction::Direction::kForward,
+                                         &action_context_, screen_reader_context_.get());
+  a11y::ScreenReaderAction::ActionData action_data;
+  action_data.current_view_koid = semantic_provider_.koid();
+  action.Run(action_data);
+  RunLoopUntilIdle();
+  EXPECT_EQ(screen_reader_context_->semantic_level(),
+            ScreenReaderContext::SemanticLevel::kNormalNavigation);
+  action.Run(action_data);
+  RunLoopUntilIdle();
+  EXPECT_EQ(screen_reader_context_->semantic_level(),
+            ScreenReaderContext::SemanticLevel::kNormalNavigation);
+  EXPECT_THAT(mock_speaker_ptr_->message_ids(),
+              ElementsAre(MessageIds::NORMAL_NAVIGATION_GRANULARITY,
+                          MessageIds::NORMAL_NAVIGATION_GRANULARITY));
+}
+
+// TODO(fxb/63293): Enable when word and character navigation exist.
+TEST_F(ChangeSemanticLevelAction, DISABLED_CyclesForwardThroughLevelsForNonSliderNode) {
   // The focus is not important when it is not a slider node.
   a11y_focus_manager_ptr_->set_should_get_a11y_focus_fail(true);
   a11y::ChangeSemanticLevelAction action(a11y::ChangeSemanticLevelAction::Direction::kForward,
@@ -93,7 +114,8 @@ TEST_F(ChangeSemanticLevelAction, CyclesForwardThroughLevelsForNonSliderNode) {
                           MessageIds::NORMAL_NAVIGATION_GRANULARITY));
 }
 
-TEST_F(ChangeSemanticLevelAction, CyclesBackwardThroughLevelsForNonSliderNode) {
+// TODO(fxb/63293): Enable when word and character navigation exist.
+TEST_F(ChangeSemanticLevelAction, DISABLED_CyclesBackwardThroughLevelsForNonSliderNode) {
   // The focus is not important when it is not a slider node.
   a11y_focus_manager_ptr_->set_should_get_a11y_focus_fail(true);
   a11y::ChangeSemanticLevelAction action(a11y::ChangeSemanticLevelAction::Direction::kBackward,
@@ -125,6 +147,7 @@ TEST_F(ChangeSemanticLevelAction, CyclesForwardThroughLevelsForSliderNode) {
   RunLoopUntilIdle();
   EXPECT_EQ(screen_reader_context_->semantic_level(),
             ScreenReaderContext::SemanticLevel::kAdjustValue);
+  /* TODO(fxb/63293): Uncomment when word and character navigation exist.
   action.Run(action_data);
   RunLoopUntilIdle();
   EXPECT_EQ(screen_reader_context_->semantic_level(),
@@ -132,13 +155,14 @@ TEST_F(ChangeSemanticLevelAction, CyclesForwardThroughLevelsForSliderNode) {
   action.Run(action_data);
   RunLoopUntilIdle();
   EXPECT_EQ(screen_reader_context_->semantic_level(), ScreenReaderContext::SemanticLevel::kWord);
+  */
   action.Run(action_data);
   RunLoopUntilIdle();
   EXPECT_EQ(screen_reader_context_->semantic_level(),
             ScreenReaderContext::SemanticLevel::kNormalNavigation);
-  EXPECT_THAT(mock_speaker_ptr_->message_ids(),
-              ElementsAre(MessageIds::ADJUST_VALUE_GRANULARITY, MessageIds::CHARACTER_GRANULARITY,
-                          MessageIds::WORD_GRANULARITY, MessageIds::NORMAL_NAVIGATION_GRANULARITY));
+  EXPECT_THAT(
+      mock_speaker_ptr_->message_ids(),
+      ElementsAre(MessageIds::ADJUST_VALUE_GRANULARITY, MessageIds::NORMAL_NAVIGATION_GRANULARITY));
 }
 
 TEST_F(ChangeSemanticLevelAction, CyclesBackwardThroughLevelsForSliderNode) {
@@ -146,13 +170,15 @@ TEST_F(ChangeSemanticLevelAction, CyclesBackwardThroughLevelsForSliderNode) {
                                          &action_context_, screen_reader_context_.get());
   a11y::ScreenReaderAction::ActionData action_data;
   action_data.current_view_koid = semantic_provider_.koid();
-  action.Run(action_data);
-  RunLoopUntilIdle();
-  EXPECT_EQ(screen_reader_context_->semantic_level(), ScreenReaderContext::SemanticLevel::kWord);
-  action.Run(action_data);
-  RunLoopUntilIdle();
-  EXPECT_EQ(screen_reader_context_->semantic_level(),
-            ScreenReaderContext::SemanticLevel::kCharacter);
+  /* TODO(fxb/63293): Uncomment when word and character navigation exist.
+action.Run(action_data);
+RunLoopUntilIdle();
+EXPECT_EQ(screen_reader_context_->semantic_level(), ScreenReaderContext::SemanticLevel::kWord);
+action.Run(action_data);
+RunLoopUntilIdle();
+EXPECT_EQ(screen_reader_context_->semantic_level(),
+        ScreenReaderContext::SemanticLevel::kCharacter);
+  */
   action.Run(action_data);
   RunLoopUntilIdle();
   EXPECT_EQ(screen_reader_context_->semantic_level(),
@@ -163,8 +189,7 @@ TEST_F(ChangeSemanticLevelAction, CyclesBackwardThroughLevelsForSliderNode) {
             ScreenReaderContext::SemanticLevel::kNormalNavigation);
   EXPECT_THAT(
       mock_speaker_ptr_->message_ids(),
-      ElementsAre(MessageIds::WORD_GRANULARITY, MessageIds::CHARACTER_GRANULARITY,
-                  MessageIds::ADJUST_VALUE_GRANULARITY, MessageIds::NORMAL_NAVIGATION_GRANULARITY));
+      ElementsAre(MessageIds::ADJUST_VALUE_GRANULARITY, MessageIds::NORMAL_NAVIGATION_GRANULARITY));
 }
 
 }  // namespace
