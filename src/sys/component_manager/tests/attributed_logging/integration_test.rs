@@ -36,7 +36,7 @@ async fn check_logsink_requested() {
             vec![
                 EventMatcher::ok()
                     .r#type(events::CapabilityRouted::TYPE)
-                    .capability_id("fuchsia.logger.LogSink")
+                    .capability_name("fuchsia.logger.LogSink")
                     .moniker("/empty_child:0"),
                 EventMatcher::ok().r#type(events::Stopped::TYPE).moniker("/empty_child:0"),
             ],

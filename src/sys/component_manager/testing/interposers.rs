@@ -34,7 +34,7 @@ pub trait ProtocolInterposer: 'static + Send + Sync {
         event_source: &EventSource,
         matcher: EventMatcher,
     ) -> AbortHandle {
-        let matcher = matcher.capability_id(Self::Marker::NAME);
+        let matcher = matcher.capability_name(Self::Marker::NAME);
         let server_end = event_source
             .subscribe_endpoint(vec![CapabilityRouted::NAME])
             .await

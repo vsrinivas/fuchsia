@@ -24,7 +24,7 @@ pub async fn inject_from_test_namespace(
     event_source: &EventSource,
 ) {
     TestNamespaceInjector::new(path)
-        .inject(event_source, EventMatcher::ok().capability_id(name))
+        .inject(event_source, EventMatcher::ok().capability_name(name))
         .await;
 }
 

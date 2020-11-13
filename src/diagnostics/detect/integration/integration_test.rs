@@ -181,13 +181,13 @@ async fn run_a_test(test_data: TestData) -> Result<(), Error> {
     let mut exit_stream = event_source.subscribe(vec![Stopped::NAME]).await.unwrap();
 
     DirectoryInjector::new(prepare_injected_config_directory(&test_data))
-        .inject(&event_source, EventMatcher::ok().capability_id(CONFIG_DATA_CAPABILITY_NAME))
+        .inject(&event_source, EventMatcher::ok().capability_name(CONFIG_DATA_CAPABILITY_NAME))
         .await;
 
     let capability =
         FakeArchiveAccessor::new(&test_data, events_sender.clone(), done_waiter.get_signaler());
     capability
-        .inject(&event_source, EventMatcher::ok().capability_id(ARCHIVE_ACCESSOR_CAPABILITY_NAME))
+        .inject(&event_source, EventMatcher::ok().capability_name(ARCHIVE_ACCESSOR_CAPABILITY_NAME))
         .await;
 
     let capability = FakeCrashReporter::new(events_sender.clone(), done_waiter.get_signaler());

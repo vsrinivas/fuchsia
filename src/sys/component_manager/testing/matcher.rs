@@ -204,8 +204,8 @@ impl EventMatcher {
     }
 
     /// The expected capability id.
-    pub fn capability_id(mut self, capability_id: impl Into<String>) -> Self {
-        self.capability_name = Some(CapabilityNameMatcher::new(capability_id));
+    pub fn capability_name(mut self, capability_name: impl Into<String>) -> Self {
+        self.capability_name = Some(CapabilityNameMatcher::new(capability_name));
         self
     }
 
