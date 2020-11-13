@@ -10,6 +10,7 @@
 
 #include <stdint.h>
 #include <sys/types.h>
+#include <ktl/atomic.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
@@ -99,7 +100,7 @@ class Event {
   uint32_t magic_;
 
   static constexpr zx_status_t kNotSignalled = INT_MAX;
-  zx_status_t result_;
+  ktl::atomic<zx_status_t> result_;
 
   Flags flags_;
 

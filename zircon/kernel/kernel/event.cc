@@ -46,7 +46,7 @@ Event::~Event() {
   DEBUG_ASSERT(magic_ == kMagic);
 
   magic_ = 0;
-  result_ = INT_MAX;
+  result_.store(kNotSignalled, ktl::memory_order_relaxed);
   flags_ = Flags(0);
 }
 
@@ -59,13 +59,13 @@ zx_status_t Event::WaitWorker(const Deadline& deadline, Interruptible interrupti
 
   Guard<SpinLock, IrqSave> guard{ThreadLock::Get()};
 
-  if (result_ != kNotSignalled) {
-    ret = result_;
+  if (result_.load(ktl::memory_order_relaxed) != kNotSignalled) {
+    ret = result_.load(ktl::memory_order_relaxed);
 
     /* signaled, we're going to fall through */
     if (flags_ & Event::AUTOUNSIGNAL) {
       /* autounsignal flag lets one thread fall through before unsignaling */
-      result_ = kNotSignalled;
+      result_.store(kNotSignalled, ktl::memory_order_relaxed);
     }
   } else {
     /* unsignaled, block here */
@@ -79,7 +79,7 @@ void Event::SignalInternal(bool reschedule, zx_status_t wait_result) TA_REQ(thre
   DEBUG_ASSERT(magic_ == kMagic);
   DEBUG_ASSERT(wait_result != kNotSignalled);
 
-  if (result_ == kNotSignalled) {
+  if (result_.load(ktl::memory_order_relaxed) == kNotSignalled) {
     if (flags_ & Event::AUTOUNSIGNAL) {
       /* try to release one thread and leave unsignaled if successful */
       if (!wait_.WakeOne(reschedule, wait_result)) {
@@ -88,11 +88,11 @@ void Event::SignalInternal(bool reschedule, zx_status_t wait_result) TA_REQ(thre
          * signaled state and let the next call to Wait
          * unsignal the event.
          */
-        result_ = wait_result;
+        result_.store(wait_result, ktl::memory_order_relaxed);
       }
     } else {
       /* release all threads and remain signaled */
-      result_ = wait_result;
+      result_.store(wait_result, ktl::memory_order_relaxed);
       wait_.WakeAll(reschedule, wait_result);
     }
   }
@@ -143,7 +143,7 @@ void Event::SignalThreadLocked() {
 zx_status_t Event::Unsignal() {
   DEBUG_ASSERT(magic_ == kMagic);
 
-  result_ = kNotSignalled;
+  result_.store(kNotSignalled, ktl::memory_order_relaxed);
 
   return ZX_OK;
 }
