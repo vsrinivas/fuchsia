@@ -74,7 +74,15 @@ template("flutter_app") {
   if (defined(invoker.fuchsia_package_name)) {
     _fuchsia_package_name = invoker.fuchsia_package_name
   }
-  _sources = [ string_replace(invoker.main_dart, "lib/", "", 1) ]
+  _split_main_dart = string_split(invoker.main_dart, "lib/")
+  if (_split_main_dart[0] == "") {
+    _main_dart = string_replace(invoker.main_dart, "lib/", "", 1)
+    _source_dir = "lib"
+  } else {
+    _main_dart = invoker.main_dart
+    _source_dir = "."
+  }
+  _sources = [ _main_dart ]
   if (defined(invoker.sources)) {
     _sources += invoker.sources
   }
@@ -90,13 +98,6 @@ template("flutter_app") {
     _deps += invoker.non_dart_deps
   }
 
-  dart_library_gn_label = target_name + "_dart_library"
-  dart_library(dart_library_gn_label) {
-    package_name = _package_name
-    sources = _sources
-    deps = _deps
-  }
-
   resource_gn_labels = []
   if (defined(invoker.resources)) {
     i = 0
@@ -104,11 +105,19 @@ template("flutter_app") {
       current_gn_label = target_name + "_resource_" + i
       resource(current_gn_label) {
         sources = [ res.path ]
-        outputs = [ res.dest ]
+        outputs = [ "data/" + res.dest ]
       }
       resource_gn_labels += [ ":$current_gn_label" ]
       i += 1
     }
+  }
+
+  dart_library_gn_label = target_name + "_dart_library"
+  dart_library(dart_library_gn_label) {
+    package_name = _package_name
+    sources = _sources
+    source_dir = _source_dir
+    deps = _deps + resource_gn_labels
   }
 
   flutter_component_gn_label = target_name + "_flutter_component"
@@ -116,8 +125,9 @@ template("flutter_app") {
     forward_variables_from(invoker, [ "flutter_driver_extendable" ])
     main_package = _package_name
     component_name = string_replace(_package_name, "_", "-")
+    main_dart = _main_dart
     manifest = _meta.path
-    deps = [ ":$dart_library_gn_label" ] + resource_gn_labels
+    deps = [ ":$dart_library_gn_label" ]
     build_cfg = _build_cfg
   }
 
