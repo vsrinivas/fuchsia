@@ -80,6 +80,11 @@ int Astro::Thread() {
     return -1;
   }
 
+  if ((status = RegistersInit()) != ZX_OK) {
+    zxlogf(ERROR, "%s: RegistersInit() failed: %d", __func__, status);
+    return status;
+  }
+
   if ((status = ClkInit()) != ZX_OK) {
     zxlogf(ERROR, "ClkInit failed: %d", status);
   }

@@ -32,6 +32,7 @@ driver_module("astro") {
     "astro-pwm.cc",
     "astro-ram.cc",
     "astro-rawnand.cc",
+    "astro-registers.cc",
     "astro-sdio.cc",
     "astro-securemem.cc",
     "astro-sysmem.cc",

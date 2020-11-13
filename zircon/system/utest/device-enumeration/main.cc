@@ -290,6 +290,9 @@ TEST_F(DeviceEnumerationTest, AstroTest) {
       "class/temperature/001",
       "class/temperature/002",
       "class/temperature/003",
+
+      // Registers Device.
+      "sys/platform/00:00:29",
   };
 
   ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, std::size(kDevicePaths)));

@@ -115,6 +115,7 @@ class Astro : public AstroType {
   zx_status_t PwmInit();
   zx_status_t RamCtlInit();
   zx_status_t RawNandInit();
+  zx_status_t RegistersInit();
   zx_status_t SdioInit();
   zx_status_t SecureMemInit();
   zx_status_t Start();
