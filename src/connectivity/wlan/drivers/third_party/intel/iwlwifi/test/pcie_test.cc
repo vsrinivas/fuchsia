@@ -38,6 +38,7 @@ extern "C" {
 }
 
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/pcie/pcie_device.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/wlan-pkt-builder.h"
 
 namespace {
 
@@ -611,37 +612,14 @@ class TxTest : public PcieTest {
     ASSERT_EQ(available_space, TFD_QUEUE_SIZE_MAX - 1);
   }
 
-  // Copy an arbitray packet / device command into the member variables:
+  // Initialize the memory variables for testing.
   //
-  //  * mac_pkt_
-  //  * pkt_
+  //  * wlan_pkt_: to hold the WLAN packet content.
   //  * dev_cmd_
   //
   void SetupTxPacket() {
-    uint8_t mac_pkt[] = {
-        0x08, 0x01,                          // frame_ctrl
-        0x00, 0x00,                          // duration
-        0x11, 0x22, 0x33, 0x44, 0x55, 0x66,  // MAC1
-        0x01, 0x02, 0x03, 0x04, 0x05, 0x06,  // MAC2
-        0x01, 0x02, 0x03, 0x04, 0x05, 0x06,  // MAC3
-        0x00, 0x00,                          // seq_ctrl
-    };
-    ASSERT_GE(sizeof(mac_pkt_), sizeof(mac_pkt));
-    memcpy(mac_pkt_, mac_pkt, sizeof(mac_pkt));
-
-    wlan_tx_packet_t pkt = {
-        .packet_head =
-            {
-                .data_buffer = mac_pkt_,
-                .data_size = sizeof(mac_pkt_),
-            },
-        .info =
-            {
-                .tx_flags = 0,
-                .cbw = WLAN_CHANNEL_BANDWIDTH__20,
-            },
-    };
-    pkt_ = pkt;
+    wlan::testing::WlanPktBuilder builder;
+    wlan_pkt_ = builder.build();
 
     iwl_device_cmd dev_cmd = {
         .hdr =
@@ -655,8 +633,7 @@ class TxTest : public PcieTest {
  protected:
   int txq_id_;
   struct iwl_txq* txq_;
-  uint8_t mac_pkt_[2048];
-  wlan_tx_packet_t pkt_;
+  std::shared_ptr<wlan::testing::WlanPktBuilder::WlanPkt> wlan_pkt_;
   iwl_device_cmd dev_cmd_;
 };
 
@@ -1066,7 +1043,7 @@ TEST_F(TxTest, TxDataCornerPacketTail) {
   SetupTxQueue();
   SetupTxPacket();
 
-  wlan_tx_packet_t pkt = pkt_;
+  wlan_tx_packet_t pkt = *wlan_pkt_->pkt();
   pkt.packet_tail_count = 1;  // whatever non-zero value.
   ASSERT_EQ(ZX_ERR_INVALID_ARGS, iwl_trans_pcie_tx(trans_, &pkt, &dev_cmd_, txq_id_));
 }
@@ -1079,7 +1056,7 @@ TEST_F(TxTest, TxNormal) {
   ASSERT_EQ(0, txq_->read_ptr);
   ASSERT_EQ(0, txq_->write_ptr);
   // Tx a packet and see the write pointer advanced.
-  ASSERT_EQ(ZX_OK, iwl_trans_pcie_tx(trans_, &pkt_, &dev_cmd_, txq_id_));
+  ASSERT_EQ(ZX_OK, iwl_trans_pcie_tx(trans_, wlan_pkt_->pkt(), &dev_cmd_, txq_id_));
   ASSERT_EQ(0, txq_->read_ptr);
   ASSERT_EQ(1, txq_->write_ptr);
   ASSERT_EQ(TFD_QUEUE_SIZE_MAX - 1 - /* this packet */ 1, iwl_queue_space(trans_, txq_));
@@ -1090,10 +1067,10 @@ TEST_F(TxTest, TxNormalThenReclaim) {
   SetupTxQueue();
   SetupTxPacket();
 
-  ASSERT_EQ(ZX_OK, iwl_trans_pcie_tx(trans_, &pkt_, &dev_cmd_, txq_id_));
+  ASSERT_EQ(ZX_OK, iwl_trans_pcie_tx(trans_, wlan_pkt_->pkt(), &dev_cmd_, txq_id_));
 
   unref_.ExpectCall();
-  // reclaim a packet and see the reader pointer advanced.
+  // reclaim a packet and see the writer pointer advanced.
   iwl_trans_pcie_reclaim(trans_, txq_id_, /*ssn*/ 1);
   ASSERT_EQ(1, txq_->write_ptr);
   unref_.VerifyAndClear();
@@ -1109,7 +1086,7 @@ TEST_F(TxTest, TxSoManyPackets) {
   // Fill up all space.
   op_mode_queue_full_.ExpectCall(txq_id_);
   for (int i = 0; i < TFD_QUEUE_SIZE_MAX * 2; i++) {
-    ASSERT_EQ(ZX_OK, iwl_trans_pcie_tx(trans_, &pkt_, &dev_cmd_, txq_id_));
+    ASSERT_EQ(ZX_OK, iwl_trans_pcie_tx(trans_, wlan_pkt_->pkt(), &dev_cmd_, txq_id_));
     ASSERT_EQ(MIN(TFD_QUEUE_SIZE_MAX - TX_RESERVED_SPACE, i + 1), txq_->write_ptr);
   }
   op_mode_queue_full_.VerifyAndClear();
@@ -1123,7 +1100,7 @@ TEST_F(TxTest, TxSoManyPacketsThenReclaim) {
 
   // Fill up all space.
   for (int i = 0; i < TFD_QUEUE_SIZE_MAX * 2; i++) {
-    ASSERT_EQ(ZX_OK, iwl_trans_pcie_tx(trans_, &pkt_, &dev_cmd_, txq_id_));
+    ASSERT_EQ(ZX_OK, iwl_trans_pcie_tx(trans_, wlan_pkt_->pkt(), &dev_cmd_, txq_id_));
   }
 
   op_mode_queue_not_full_.ExpectCall(txq_id_);
