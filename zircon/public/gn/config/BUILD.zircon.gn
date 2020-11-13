@@ -603,6 +603,12 @@ config("default_warnings") {
       "-Wno-nonnull-compare",
       "-Wno-format-truncation",
     ]
+
+    cflags_cc += [
+      # TODO(https://gcc.gnu.org/bugzilla/show_bug.cgi?id=90036): Re-enable
+      # once the bug is fixed.
+      "-Wno-format-overflow",
+    ]
   } else {
     cflags += [
       "-Wnewline-eof",
