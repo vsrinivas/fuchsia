@@ -13,6 +13,7 @@ use {
     },
     async_trait::async_trait,
     fuchsia_cobalt::CobaltSender,
+    fuchsia_zircon as zx,
     futures::lock::Mutex,
     log::{error, info, trace},
     std::{
@@ -34,7 +35,7 @@ use {
 };
 
 const RECENT_FAILURE_WINDOW: Duration = Duration::from_secs(60 * 5); // 5 minutes
-const STALE_SCAN_AGE: Duration = Duration::from_secs(10); // TODO(61992) Optimize this value
+const STALE_SCAN_AGE: zx::Duration = zx::Duration::from_seconds(10); // TODO(61992) Tweak duration
 
 pub struct NetworkSelector {
     saved_network_manager: Arc<SavedNetworksManager>,
@@ -43,7 +44,7 @@ pub struct NetworkSelector {
 }
 
 struct ScanResultCache {
-    updated_at: SystemTime,
+    updated_at: zx::Time,
     results: Vec<types::ScanResult>,
 }
 
@@ -60,7 +61,7 @@ impl NetworkSelector {
         Self {
             saved_network_manager,
             scan_result_cache: Arc::new(Mutex::new(ScanResultCache {
-                updated_at: SystemTime::UNIX_EPOCH,
+                updated_at: zx::Time::ZERO,
                 results: Vec::new(),
             })),
             cobalt_api: Arc::new(Mutex::new(cobalt_api)),
@@ -76,29 +77,28 @@ impl NetworkSelector {
     }
 
     async fn perform_scan(&self, iface_manager: Arc<Mutex<dyn IfaceManagerApi + Send>>) {
-        // Get the scan age. On error (which indicates the system clock moved backwards) fallback
-        // to a number that will trigger a new scan, since we have no idea how old the scan is.
+        // Get the scan age.
         let scan_result_guard = self.scan_result_cache.lock().await;
         let last_scan_result_time = scan_result_guard.updated_at;
         drop(scan_result_guard);
-        let scan_age = last_scan_result_time.elapsed().unwrap_or(STALE_SCAN_AGE);
+        let scan_age = zx::Time::get_monotonic() - last_scan_result_time;
 
         // Log a metric for scan age, to help us optimize the STALE_SCAN_AGE
-        if last_scan_result_time != SystemTime::UNIX_EPOCH {
+        if last_scan_result_time != zx::Time::ZERO {
             let mut cobalt_api_guard = self.cobalt_api.lock().await;
             let cobalt_api = &mut *cobalt_api_guard;
             cobalt_api.log_elapsed_time(
                 LAST_SCAN_AGE_WHEN_SCAN_REQUESTED_METRIC_ID,
                 Vec::<u32>::new(),
-                scan_age.as_micros().try_into().unwrap_or(i64::MAX),
+                scan_age.into_micros(),
             );
             drop(cobalt_api_guard);
         }
 
         // Determine if a new scan is warranted
         if scan_age >= STALE_SCAN_AGE {
-            if last_scan_result_time != SystemTime::UNIX_EPOCH {
-                info!("Scan results are {:?} old, triggering a scan", scan_age);
+            if last_scan_result_time != zx::Time::ZERO {
+                info!("Scan results are {}s old, triggering a scan", scan_age.into_seconds());
             }
 
             let mut cobalt_api_clone = self.cobalt_api.lock().await.clone();
@@ -139,7 +139,7 @@ impl NetworkSelector {
             )
             .await;
         } else {
-            info!("Using cached scan results from {:?} ago", scan_age);
+            info!("Using cached scan results from {}s ago", scan_age.into_seconds());
         }
     }
 
@@ -243,7 +243,7 @@ impl ScanResultUpdate for NetworkSelectorScanUpdater {
         let scan_results_clone = scan_results.clone();
         let mut scan_result_guard = self.scan_result_cache.lock().await;
         scan_result_guard.results = scan_results_clone;
-        scan_result_guard.updated_at = SystemTime::now();
+        scan_result_guard.updated_at = zx::Time::get_monotonic();
         drop(scan_result_guard);
 
         // Record metrics for this scan
@@ -1251,9 +1251,9 @@ mod tests {
 
         // Set the scan result cache to be fresher than STALE_SCAN_AGE
         let mut scan_result_guard = network_selector.scan_result_cache.lock().await;
-        let last_scan_age = Duration::from_secs(1);
+        let last_scan_age = zx::Duration::from_seconds(1);
         assert!(last_scan_age < STALE_SCAN_AGE);
-        scan_result_guard.updated_at = SystemTime::now() - last_scan_age;
+        scan_result_guard.updated_at = zx::Time::get_monotonic() - last_scan_age;
         drop(scan_result_guard);
 
         network_selector.perform_scan(test_values.iface_manager).await;
@@ -1266,10 +1266,12 @@ mod tests {
         assert_eq!(metric.metric_id, expected_metric.metric_id);
         assert_eq!(metric.event_codes, expected_metric.event_codes);
         assert_eq!(metric.component, expected_metric.component);
-        assert_variant!(metric.payload, fidl_fuchsia_cobalt::EventPayload::ElapsedMicros(elapsed_micros) => {
-            let elapsed_time = Duration::from_micros(elapsed_micros.try_into().unwrap());
-            assert!(elapsed_time < STALE_SCAN_AGE);
-        });
+        assert_variant!(
+            metric.payload, fidl_fuchsia_cobalt::EventPayload::ElapsedMicros(elapsed_micros) => {
+                let elapsed_time = zx::Duration::from_micros(elapsed_micros.try_into().unwrap());
+                assert!(elapsed_time < STALE_SCAN_AGE);
+            }
+        );
 
         // No scan performed
         assert!(test_values.sme_stream.next().await.is_none());
@@ -1280,13 +1282,13 @@ mod tests {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
         let mut test_values = exec.run_singlethreaded(test_setup());
         let network_selector = test_values.network_selector;
-        let test_start_time = SystemTime::now();
+        let test_start_time = zx::Time::get_monotonic();
 
         // Set the scan result cache to be older than STALE_SCAN_AGE
         let mut scan_result_guard =
             exec.run_singlethreaded(network_selector.scan_result_cache.lock());
         scan_result_guard.updated_at =
-            SystemTime::now() - (STALE_SCAN_AGE + Duration::from_secs(1));
+            zx::Time::get_monotonic() - (STALE_SCAN_AGE + zx::Duration::from_seconds(1));
         drop(scan_result_guard);
 
         // Kick off scan
@@ -1301,10 +1303,12 @@ mod tests {
         assert_eq!(metric.metric_id, expected_metric.metric_id);
         assert_eq!(metric.event_codes, expected_metric.event_codes);
         assert_eq!(metric.component, expected_metric.component);
-        assert_variant!(metric.payload, fidl_fuchsia_cobalt::EventPayload::ElapsedMicros(elapsed_micros) => {
-            let elapsed_time = Duration::from_micros(elapsed_micros.try_into().unwrap());
-            assert!(elapsed_time > STALE_SCAN_AGE);
-        });
+        assert_variant!(
+            metric.payload, fidl_fuchsia_cobalt::EventPayload::ElapsedMicros(elapsed_micros) => {
+                let elapsed_time = zx::Duration::from_micros(elapsed_micros.try_into().unwrap());
+                assert!(elapsed_time > STALE_SCAN_AGE);
+            }
+        );
 
         // Check that a scan request was sent to the sme and send back results
         let expected_scan_request = fidl_sme::ScanRequest::Passive(fidl_sme::PassiveScanRequest {});
@@ -1333,7 +1337,7 @@ mod tests {
         // Check scan results were updated
         let scan_result_guard = exec.run_singlethreaded(network_selector.scan_result_cache.lock());
         assert!(scan_result_guard.updated_at > test_start_time);
-        assert!(scan_result_guard.updated_at < SystemTime::now());
+        assert!(scan_result_guard.updated_at < zx::Time::get_monotonic());
         drop(scan_result_guard);
     }
 
