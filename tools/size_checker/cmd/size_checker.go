@@ -644,10 +644,8 @@ func writeOutputSizes(sizes map[string]*ComponentSize, outPath string) error {
 	encoder := json.NewEncoder(f)
 	encoder.SetIndent("", "  ")
 	simpleSizes := make(map[string]int64)
-	budgetSuffix := ".budget"
 	for name, cs := range sizes {
 		simpleSizes[name] = cs.Size
-		simpleSizes[name+budgetSuffix] = cs.Budget
 	}
 	if err := encoder.Encode(&simpleSizes); err != nil {
 		log.Fatal("failed to encode simpleSizes: ", err)
