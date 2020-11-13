@@ -21,6 +21,11 @@
             }
           ]
         },
+        "dart_library_null_safe": {
+          "description": "A flag that enables null safety checks in a dart library",
+          "type": "boolean",
+          "default": false
+        },
         "name": {
           "description": "Name of the library",
           "$ref": "#/definitions/package_name"
@@ -65,7 +70,6 @@
         "root",
         "sources",
         "third_party_deps",
-
         "name",
         "type"
       ],
@@ -97,3 +101,4 @@
     }
   }
 }
+

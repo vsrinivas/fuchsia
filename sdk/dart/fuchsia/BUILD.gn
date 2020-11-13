@@ -6,6 +6,7 @@ import("//build/dart/dart_library.gni")
 
 dart_library("fuchsia") {
   package_name = "fuchsia"
+  null_safe = true
 
   sdk_category = "partner"
 

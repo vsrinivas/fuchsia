@@ -44,6 +44,10 @@ def main():
         help='Path to pubspec files of 3p dependencies',
         nargs='*')
     parser.add_argument('--sources', help='List of library sources', nargs='+')
+    parser.add_argument(
+        '--dart-library-null-safe',
+        help='Null safety flag for dart libraries',
+        action='store_true')
     args = parser.parse_args()
 
     metadata = {
@@ -52,6 +56,9 @@ def main():
         'root': args.root,
         'sources': args.sources,
     }
+
+    if args.dart_library_null_safe:
+        metadata['dart_library_null_safe'] = True
 
     third_party_deps = []
     for spec in args.third_party_specs:

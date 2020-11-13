@@ -200,6 +200,8 @@ if (current_toolchain == dart_toolchain) {
           name = package_name
           if (defined(invoker.language_version)) {
             language_version = invoker.language_version
+          } else if (defined(invoker.null_safe) && invoker.null_safe) {
+            language_version = "2.12"
           } else if (defined(invoker.pubspec)) {
             pubspec_path = rebase_path(invoker.pubspec, root_build_dir)
           }
@@ -619,6 +621,10 @@ if (current_toolchain == dart_toolchain) {
         args += [ "--specs" ] + sdk_metas
         args += [ "--sources" ] + sdk_sources
         args += [ "--third-party-specs" ] + third_party_pubspecs
+
+        if (defined(invoker.null_safe) && invoker.null_safe) {
+          args += [ "--dart-library-null-safe" ]
+        }
 
         deps = sdk_deps
 
