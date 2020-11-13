@@ -27,7 +27,7 @@ use {
 
 const _FIDL_TRACE_BINDINGS_RUST: u32 = 6;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum FlexibleFoo {
     S(String),
     I(i32),
@@ -35,7 +35,6 @@ pub enum FlexibleFoo {
     __UnknownVariant {
         ordinal: u64,
         bytes: Vec<u8>,
-        handles: Vec<fidl::Handle>,
     },
 }
 
@@ -51,7 +50,7 @@ fidl_xunion! {
             ordinal: 2,
         },
     ],
-    unknown_member: __UnknownVariant,
+    value_unknown_member: __UnknownVariant,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]

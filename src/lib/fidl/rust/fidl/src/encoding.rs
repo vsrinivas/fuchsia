@@ -3181,8 +3181,12 @@ macro_rules! fidl_xunion {
                 )?
             },
         )*],
-        // Flexible xunions only: name of the unknown variant.
-        $( unknown_member: $unknown_name:ident, )?
+        // Flexible xunions only: the resource_unknown_member and
+        // value_unknown_member represent the name of the unknown variant for
+        // resource types and value types, respectively, and are mutually
+        // exclusive (they cannot both be present).
+        $( resource_unknown_member: $resource_unknown_name:ident, )?
+        $( value_unknown_member: $value_unknown_name:ident, )?
     ) => {
         impl $name {
             #[inline]
@@ -3192,7 +3196,10 @@ macro_rules! fidl_xunion {
                         $name::$member_name(_) => $member_ordinal,
                     )*
                     $(
-                        $name::$unknown_name { ordinal, .. } => ordinal,
+                        $name::$value_unknown_name { ordinal, .. } => ordinal,
+                    )?
+                    $(
+                        $name::$resource_unknown_name { ordinal, .. } => ordinal,
                     )?
                 }
             }
@@ -3222,7 +3229,7 @@ macro_rules! fidl_xunion {
                         },
                     )*
                     $(
-                        $name::$unknown_name { ordinal: _, bytes, handles } => {
+                        $name::$resource_unknown_name { ordinal: _, bytes, handles } => {
                             // Throw the raw data from the unrecognized variant
                             // back onto the wire. This will allow correct proxies even in
                             // the event that they don't yet recognize this union variant.
@@ -3239,6 +3246,20 @@ macro_rules! fidl_xunion {
                             Ok(())
                         },
                     )?
+                    $(
+                        $name::$value_unknown_name { ordinal: _, bytes } => {
+                            // Throw the raw data from the unrecognized variant
+                            // back onto the wire. This will allow correct proxies even in
+                            // the event that they don't yet recognize this union variant.
+                            $crate::fidl_unsafe_encode!(&mut (bytes.len() as u64), encoder, offset + 8, recursion_depth)?;
+                            $crate::fidl_unsafe_encode!(
+                                &mut $crate::encoding::ALLOC_PRESENT_U64.clone(), encoder, offset + 16, recursion_depth
+                            )?;
+                            $crate::encoding::Encoder::check_recursion_depth(recursion_depth + 1)?;
+                            encoder.append_out_of_line_bytes(bytes);
+                            Ok(())
+                        },
+                    )?
                 }
             }
         }
@@ -3251,7 +3272,10 @@ macro_rules! fidl_xunion {
                     return $name::$member_name($crate::fidl_new_empty!($member_ty));
                 )*
                 $(
-                    $name::$unknown_name { ordinal: 0, bytes: vec![], handles: vec![] }
+                    $name::$resource_unknown_name { ordinal: 0, bytes: vec![], handles: vec![] }
+                )?
+                $(
+                    $name::$value_unknown_name { ordinal: 0, bytes: vec![] }
                 )?
             }
 
@@ -3265,9 +3289,26 @@ macro_rules! fidl_xunion {
                     )*
                     $(
                         _ => {
-                            // We need the expansion to refer to $unknown_name,
+                            // We need the expansion to refer to $resource_unknown_name,
                             // so just create and discard it as a string.
-                            stringify!($unknown_name);
+                            stringify!($resource_unknown_name);
+                            // Flexible xunion: unknown payloads are considered
+                            // a wholly-inline string of bytes.
+                            num_bytes as usize
+                        }
+                    )?
+                    $(
+                        _ => {
+                            // Disallow unknown handles in non-resource types.
+                            if (num_handles > 0) {
+                                for _ in 0..num_handles {
+                                    decoder.drop_next_handle()?;
+                                }
+                                return Err($crate::Error::CannotStoreUnknownHandles);
+                            }
+                            // We need the expansion to refer to $value_unknown_name,
+                            // so just create and discard it as a string.
+                            stringify!($value_unknown_name);
                             // Flexible xunion: unknown payloads are considered
                             // a wholly-inline string of bytes.
                             num_bytes as usize
@@ -3314,7 +3355,13 @@ macro_rules! fidl_xunion {
                                     for _ in 0..num_handles {
                                         handles.push(decoder.take_next_handle()?);
                                     }
-                                    *self = $name::$unknown_name { ordinal, bytes, handles };
+                                    *self = $name::$resource_unknown_name { ordinal, bytes, handles };
+                                }
+                            )?
+                            $(
+                                ordinal => {
+                                    let bytes = decoder.buffer()[offset.. offset+(num_bytes as usize)].to_vec();
+                                    *self = $name::$value_unknown_name { ordinal, bytes };
                                 }
                             )?
                             // This should be unreachable, since we already
@@ -5090,6 +5137,8 @@ mod test {
         ],
     }
 
+    // This is a resource union, as a resource member is added in
+    // TestSampleXUnionExpanded
     #[derive(Debug, PartialEq)]
     pub enum TestSampleXUnion {
         U(u32),
@@ -5108,7 +5157,7 @@ mod test {
                 ordinal: 0x6f317664,
             },
         ],
-        unknown_member: __UnknownVariant,
+        resource_unknown_member: __UnknownVariant,
     }
 
     #[derive(Debug, PartialEq)]
@@ -5147,7 +5196,7 @@ mod test {
                 },
             },
         ],
-        unknown_member: __UnknownVariant,
+        resource_unknown_member: __UnknownVariant,
     }
 
     #[test]
@@ -5268,7 +5317,7 @@ mod test {
         #[derive(Debug, PartialEq)]
         enum XUnion {
             Variant(Vec<u8>),
-            __UnknownVariant { ordinal: u64, bytes: Vec<u8>, handles: Vec<Handle> },
+            __UnknownVariant { ordinal: u64, bytes: Vec<u8> },
         }
         fidl_xunion! {
             name: XUnion,
@@ -5278,7 +5327,7 @@ mod test {
                     ordinal: 1,
                 },
             ],
-            unknown_member: __UnknownVariant,
+            value_unknown_member: __UnknownVariant,
         }
 
         identities![

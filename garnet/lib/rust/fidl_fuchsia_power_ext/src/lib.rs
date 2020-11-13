@@ -30,16 +30,3 @@ impl CloneExt for BatteryInfo {
         }
     }
 }
-
-// This manual impl is necessary because `TimeRemaining` is an xunion
-// without [MaxHandles], so it could potentially have non-cloneable
-// handles added to it in the future.
-impl CloneExt for TimeRemaining {
-    fn clone(&self) -> Self {
-        match self {
-            Self::FullCharge(c) => Self::FullCharge(*c),
-            Self::BatteryLife(l) => Self::BatteryLife(*l),
-            _ => Self::Indeterminate(0),
-        }
-    }
-}

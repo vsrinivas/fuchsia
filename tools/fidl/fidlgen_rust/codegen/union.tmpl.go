@@ -22,7 +22,9 @@ pub enum {{ .Name }} {
 	__UnknownVariant {
 		ordinal: u64,
 		bytes: Vec<u8>,
+		{{- if .IsResourceType }}
 		handles: Vec<fidl::Handle>,
+		{{- end }}
 	},
 	{{- end }}
 }
@@ -44,7 +46,7 @@ fidl_xunion! {
 	{{- end }}
 	],
 	{{- if not .Strictness }}
-	unknown_member: __UnknownVariant,
+	{{ if .IsResourceType }}resource{{ else }}value{{ end }}_unknown_member: __UnknownVariant,
 	{{- end }}
 }
 {{- end }}

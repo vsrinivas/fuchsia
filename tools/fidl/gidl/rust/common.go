@@ -281,12 +281,20 @@ func onUnion(value gidlir.Record, decl *gidlmixer.UnionDecl) string {
 	var valueStr string
 	if field.Key.IsUnknown() {
 		unknownData := field.Value.(gidlir.UnknownData)
-		valueStr = fmt.Sprintf(
-			"%s::__UnknownVariant { ordinal: %d, bytes: vec!%s, handles: %s }",
-			declName(decl),
-			field.Key.UnknownOrdinal,
-			buildBytes(unknownData.Bytes),
-			buildHandleValues(unknownData.Handles))
+		if decl.IsResourceType() {
+			valueStr = fmt.Sprintf(
+				"%s::__UnknownVariant { ordinal: %d, bytes: vec!%s, handles: %s }",
+				declName(decl),
+				field.Key.UnknownOrdinal,
+				buildBytes(unknownData.Bytes),
+				buildHandleValues(unknownData.Handles))
+		} else {
+			valueStr = fmt.Sprintf(
+				"%s::__UnknownVariant { ordinal: %d, bytes: vec!%s }",
+				declName(decl),
+				field.Key.UnknownOrdinal,
+				buildBytes(unknownData.Bytes))
+		}
 	} else {
 		fieldName := fidlcommon.ToUpperCamelCase(field.Key.Name)
 		fieldDecl, ok := decl.Field(field.Key.Name)

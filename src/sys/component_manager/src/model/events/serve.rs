@@ -290,11 +290,7 @@ fn maybe_create_empty_error_payload(error: &EventError) -> Option<fsys::EventRes
         EventType::Resolved => fsys::EventErrorPayload::Resolved(fsys::ResolvedError::empty()),
         EventType::Started => fsys::EventErrorPayload::Started(fsys::StartedError::empty()),
         EventType::Stopped => fsys::EventErrorPayload::Stopped(fsys::StoppedError::empty()),
-        _ => fsys::EventErrorPayload::__UnknownVariant {
-            ordinal: 999,
-            bytes: vec![],
-            handles: vec![],
-        },
+        _ => fsys::EventErrorPayload::__UnknownVariant { ordinal: 999, bytes: vec![] },
     };
     Some(fsys::EventResult::Error(fsys::EventError {
         error_payload: Some(error_payload),

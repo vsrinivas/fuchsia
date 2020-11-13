@@ -67,7 +67,7 @@ fidl_xunion! {
     ],
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum FlexiblePizzaOrPasta {
     Pizza(Pizza),
     Pasta(Pasta),
@@ -75,7 +75,6 @@ pub enum FlexiblePizzaOrPasta {
     __UnknownVariant {
         ordinal: u64,
         bytes: Vec<u8>,
-        handles: Vec<fidl::Handle>,
     },
 }
 
@@ -91,7 +90,7 @@ fidl_xunion! {
             ordinal: 2,
         },
     ],
-    unknown_member: __UnknownVariant,
+    value_unknown_member: __UnknownVariant,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
@@ -139,7 +138,7 @@ fidl_xunion! {
     ],
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum FlexibleUnion {
     Primitive(i32),
     StringNeedsConstructor(String),
@@ -148,7 +147,6 @@ pub enum FlexibleUnion {
     __UnknownVariant {
         ordinal: u64,
         bytes: Vec<u8>,
-        handles: Vec<fidl::Handle>,
     },
 }
 
@@ -168,7 +166,7 @@ fidl_xunion! {
             ordinal: 3,
         },
     ],
-    unknown_member: __UnknownVariant,
+    value_unknown_member: __UnknownVariant,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
@@ -251,7 +249,7 @@ fidl_xunion! {
     ],
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum FlexibleFoo {
     S(String),
     I(i32),
@@ -259,7 +257,6 @@ pub enum FlexibleFoo {
     __UnknownVariant {
         ordinal: u64,
         bytes: Vec<u8>,
-        handles: Vec<fidl::Handle>,
     },
 }
 
@@ -275,7 +272,7 @@ fidl_xunion! {
             ordinal: 2,
         },
     ],
-    unknown_member: __UnknownVariant,
+    value_unknown_member: __UnknownVariant,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
@@ -298,7 +295,7 @@ fidl_xunion! {
     ],
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum ExplicitFoo {
     S(String),
     I(i32),
@@ -306,7 +303,6 @@ pub enum ExplicitFoo {
     __UnknownVariant {
         ordinal: u64,
         bytes: Vec<u8>,
-        handles: Vec<fidl::Handle>,
     },
 }
 
@@ -322,7 +318,7 @@ fidl_xunion! {
             ordinal: 1,
         },
     ],
-    unknown_member: __UnknownVariant,
+    value_unknown_member: __UnknownVariant,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
@@ -345,7 +341,7 @@ fidl_xunion! {
     ],
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum OlderSimpleUnion {
     I(i64),
     F(f32),
@@ -353,7 +349,6 @@ pub enum OlderSimpleUnion {
     __UnknownVariant {
         ordinal: u64,
         bytes: Vec<u8>,
-        handles: Vec<fidl::Handle>,
     },
 }
 
@@ -369,10 +364,10 @@ fidl_xunion! {
             ordinal: 2,
         },
     ],
-    unknown_member: __UnknownVariant,
+    value_unknown_member: __UnknownVariant,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum NewerSimpleUnion {
     I(i64),
     S(String),
@@ -381,7 +376,6 @@ pub enum NewerSimpleUnion {
     __UnknownVariant {
         ordinal: u64,
         bytes: Vec<u8>,
-        handles: Vec<fidl::Handle>,
     },
 }
 
@@ -401,7 +395,7 @@ fidl_xunion! {
             ordinal: 3,
         },
     ],
-    unknown_member: __UnknownVariant,
+    value_unknown_member: __UnknownVariant,
 }
 
 #[derive(Debug, Clone, PartialEq, PartialOrd)]
@@ -429,14 +423,13 @@ fidl_xunion! {
     ],
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum XUnionContainingEmptyStruct {
     Empty(Empty),
     #[doc(hidden)]
     __UnknownVariant {
         ordinal: u64,
         bytes: Vec<u8>,
-        handles: Vec<fidl::Handle>,
     },
 }
 
@@ -448,7 +441,7 @@ fidl_xunion! {
             ordinal: 1,
         },
     ],
-    unknown_member: __UnknownVariant,
+    value_unknown_member: __UnknownVariant,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
@@ -466,7 +459,7 @@ fidl_xunion! {
     ],
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum ExplicitXUnion {
     I(i64),
     F(f32),
@@ -474,7 +467,6 @@ pub enum ExplicitXUnion {
     __UnknownVariant {
         ordinal: u64,
         bytes: Vec<u8>,
-        handles: Vec<fidl::Handle>,
     },
 }
 
@@ -490,7 +482,7 @@ fidl_xunion! {
             ordinal: 4,
         },
     ],
-    unknown_member: __UnknownVariant,
+    value_unknown_member: __UnknownVariant,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
@@ -555,7 +547,7 @@ pub struct Empty;
 
 fidl_empty_struct!(Empty);
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 
 pub struct StructWithNullableXUnion {
     pub x1: Option<Box<OlderSimpleUnion>>,

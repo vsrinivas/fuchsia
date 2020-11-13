@@ -152,14 +152,14 @@ fidl_xunion! {
 /// flexible union comment #1
 ///
 /// flexible union comment #3
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum FlexibleUnion {
     /// union member comment #1
     ///
     /// union member comment #3
     Field(i32),
     #[doc(hidden)]
-    __UnknownVariant { ordinal: u64, bytes: Vec<u8>, handles: Vec<fidl::Handle> },
+    __UnknownVariant { ordinal: u64, bytes: Vec<u8> },
 }
 
 fidl_xunion! {
@@ -170,7 +170,7 @@ fidl_xunion! {
             ordinal: 1,
         },
     ],
-    unknown_member: __UnknownVariant,
+    value_unknown_member: __UnknownVariant,
 }
 
 /// struct comment #1

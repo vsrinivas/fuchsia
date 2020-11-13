@@ -63,7 +63,7 @@ fidl_xunion! {
             },
         },
     ],
-    unknown_member: __UnknownVariant,
+    resource_unknown_member: __UnknownVariant,
 }
 
 #[derive(Debug, PartialEq)]

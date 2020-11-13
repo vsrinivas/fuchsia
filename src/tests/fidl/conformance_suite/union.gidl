@@ -185,7 +185,7 @@ decode_failure("StrictUnionUnknownValueWithHandles") {
 decode_failure("FlexibleUnionUnknownValueWithHandles") {
     // TODO(fxbug.dev/62772): Add bindings here as they properly implement the
     // value/resource distinction for flexible types.
-    bindings_allowlist = [hlcpp],
+    bindings_allowlist = [hlcpp, rust],
     handle_defs = {
         #0 = event(),
         #1 = event(),

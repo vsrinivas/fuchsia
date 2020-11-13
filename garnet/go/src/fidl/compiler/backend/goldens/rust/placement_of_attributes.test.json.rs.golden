@@ -66,14 +66,13 @@ fidl_xunion! {
     ],
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum ExampleXUnion {
     Variant(u32),
     #[doc(hidden)]
     __UnknownVariant {
         ordinal: u64,
         bytes: Vec<u8>,
-        handles: Vec<fidl::Handle>,
     },
 }
 
@@ -85,7 +84,7 @@ fidl_xunion! {
             ordinal: 1,
         },
     ],
-    unknown_member: __UnknownVariant,
+    value_unknown_member: __UnknownVariant,
 }
 
 #[derive(

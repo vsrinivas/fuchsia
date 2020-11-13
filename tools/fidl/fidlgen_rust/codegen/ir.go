@@ -57,12 +57,11 @@ type EnumMember struct {
 }
 
 type Union struct {
-	types.Attributes
+	types.Union
 	Derives derives
 	ECI     EncodedCompoundIdentifier
 	Name    string
 	Members []UnionMember
-	types.Strictness
 }
 
 type UnionMember struct {
@@ -1136,11 +1135,10 @@ func (c *compiler) compileUnionMember(val types.UnionMember) UnionMember {
 
 func (c *compiler) compileUnion(val types.Union) Union {
 	r := Union{
-		Attributes: val.Attributes,
-		ECI:        val.Name,
-		Name:       c.compileCamelCompoundIdentifier(val.Name),
-		Members:    []UnionMember{},
-		Strictness: val.Strictness,
+		Union:   val,
+		ECI:     val.Name,
+		Name:    c.compileCamelCompoundIdentifier(val.Name),
+		Members: []UnionMember{},
 	}
 
 	for _, v := range val.Members {
@@ -1226,8 +1224,9 @@ const (
 	derivesFromBytes
 	derivesAll derives = (1 << iota) - 1
 
-	derivesMinimal        derives = derivesDebug | derivesPartialEq
-	derivesAllButZerocopy derives = derivesAll & ^derivesAsBytes & ^derivesFromBytes
+	derivesMinimal            derives = derivesDebug | derivesPartialEq
+	derivesMinimalNonResource derives = derivesMinimal | derivesClone
+	derivesAllButZerocopy     derives = derivesAll & ^derivesAsBytes & ^derivesFromBytes
 )
 
 // note: keep this list in the same order as the derives definitions
@@ -1260,6 +1259,10 @@ func (v derives) remove(others ...derives) derives {
 
 func (v derives) andUnknown() derives {
 	return v.and(derivesMinimal)
+}
+
+func (v derives) andUnknownNonResource() derives {
+	return v.and(derivesMinimalNonResource)
 }
 
 func (v derives) contains(other derives) bool {
@@ -1425,7 +1428,11 @@ typeSwitch:
 				derivesOut = derivesOut.and(dc.fillDerivesForType(member.OGType))
 			}
 			if union.Strictness.IsFlexible() {
-				derivesOut = derivesOut.andUnknown()
+				if union.IsResourceType() {
+					derivesOut = derivesOut.andUnknown()
+				} else {
+					derivesOut = derivesOut.andUnknownNonResource()
+				}
 			}
 			union.Derives = derivesOut
 		} else {

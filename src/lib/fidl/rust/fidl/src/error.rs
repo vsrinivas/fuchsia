@@ -137,6 +137,10 @@ pub enum Error {
         missing_rights: Rights,
     },
 
+    /// A non-resource type encountered a handle when decoding unknown data
+    #[error("Attempted to decode unknown data with handles for a non-resource type")]
+    CannotStoreUnknownHandles,
+
     /// An error was encountered during handle replace().
     #[error("An error was encountered during handle replace()")]
     HandleReplace(#[source] zx_status::Status),
