@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <sys/epoll.h>
+#include <sys/eventfd.h>
 #include <unistd.h>
 
 #include <zxtest/zxtest.h>
@@ -324,4 +325,45 @@ TEST(EpollTest, EpollEdgeFdReady) {
   close(fds[0]);
   close(fds[1]);
   close(epoll_fd);
+}
+
+TEST(EpollTest, EventFdEdgeTriggeredEveryWriteGeneratesEvent) {
+  // Verify that we receive EPOLLIN for every new write
+  // on an eventfd even if it is not read.
+  int pollfd = epoll_create(1);
+  ASSERT_NE(pollfd, -1);
+  int evfd = eventfd(0, EFD_NONBLOCK);
+  ASSERT_NE(evfd, -1);
+
+  epoll_event ev;
+  ev.events = EPOLLIN | EPOLLET;
+  ev.data.ptr = nullptr;
+  int ret = epoll_ctl(pollfd, EPOLL_CTL_ADD, evfd, &ev);
+  ASSERT_NE(ret, -1);
+
+  // On Linux, every iteration through the test loop produces a new EPOLLIN event.
+#if defined(__linux__)
+  constexpr int iteration_count = 10;
+#else
+  // https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=64286
+  // Fuchsia currently does not implement this behavior correctly and only
+  // produces an EPOLLIN event on the first write.
+  constexpr int iteration_count = 1;
+#endif
+
+  for (int i = 0; i < iteration_count; ++i) {
+    int n;
+    do {
+      n = eventfd_write(evfd, 1);
+    } while (n < 0 && errno == EINTR);
+    ASSERT_EQ(n, 0);
+
+    struct epoll_event events[1];
+    do {
+      n = epoll_wait(pollfd, events, 1, 100);
+    } while (n < 0 && errno == EINTR);
+    ASSERT_EQ(n, 1);
+
+    ASSERT_TRUE(events[0].events & EPOLLIN);
+  }
 }
