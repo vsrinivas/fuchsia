@@ -155,6 +155,7 @@
                 "fuchsia.amber.Control",
                 "fuchsia.cobalt.LoggerFactory",
                 "fuchsia.diagnostics.internal.LogStatsController",
+                "fuchsia.diagnostics.internal.SamplerController",
                 "fuchsia.exception.Handler",
                 "fuchsia.feedback.CrashReporter",
                 "fuchsia.net.NameLookup",

@@ -630,10 +630,11 @@
             to: [ "#archivist" ],
         },
 
-        // Weak services from appmgr and log-stats
+        // Weak services from appmgr and diagnostics products.
         {
             protocol: [
                 "fuchsia.diagnostics.internal.LogStatsController",
+                "fuchsia.diagnostics.internal.SamplerController",
                 "fuchsia.sys.internal.ComponentEventProvider",
                 "fuchsia.sys.internal.LogConnector",
             ],

@@ -24,6 +24,10 @@
             url: "fuchsia-pkg://fuchsia.com/log-stats#meta/log-stats.cm",
         },
         {
+            name: "sampler",
+            url: "fuchsia-pkg://fuchsia.com/sampler#meta/sampler.cm",
+        },
+        {
             name: "test_manager",
             url: "fuchsia-pkg://fuchsia.com/test_manager#meta/test_manager.cm",
         },
@@ -153,6 +157,7 @@
             to: [
                 "#appmgr",
                 "#log-stats",
+                "#sampler",
             ],
         },
         {
@@ -165,6 +170,7 @@
                 "#log-stats",
                 "#ota-dependency-checker",
                 "#remote-control",
+                "#sampler",
                 "#temperature-logger",
                 "#test_manager",
             ],
@@ -215,6 +221,12 @@
             from: "parent",
             to: [ "#font_provider" ],
             subdir: "fonts",
+        },
+        {
+            directory: "config-data",
+            from: "parent",
+            to: [ "#sampler" ],
+            subdir: "sampler",
         },
         {
             directory: "config-data",
@@ -372,6 +384,10 @@
         {
             protocol: [ "fuchsia.diagnostics.internal.LogStatsController" ],
             from: "#log-stats",
+        },
+        {
+            protocol: [ "fuchsia.diagnostics.internal.SamplerController" ],
+            from: "#sampler",
         },
 
         // device_manager needs the hub for the serial console

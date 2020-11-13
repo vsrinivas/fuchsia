@@ -10,6 +10,9 @@
     },
     capabilities: [
         {
+            protocol: [ "fuchsia.diagnostics.internal.SamplerController" ],
+        },
+        {
             directory: "diagnostics",
             rights: [ "connect" ],
             path: "/diagnostics",
@@ -36,6 +39,10 @@
         },
     ],
     expose: [
+        {
+            protocol: [ "fuchsia.diagnostics.internal.SamplerController" ],
+            from: "self",
+        },
         {
             directory: "diagnostics",
             from: "self",
