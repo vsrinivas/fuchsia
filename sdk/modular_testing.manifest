@@ -1,4 +1,5 @@
 sdk://docs/metadata_schemas
+sdk://fidl/fuchsia.element
 sdk://fidl/fuchsia.input
 sdk://fidl/fuchsia.io
 sdk://fidl/fuchsia.io2
@@ -13,6 +14,7 @@ sdk://fidl/fuchsia.ui.input3
 sdk://fidl/fuchsia.ui.lifecycle
 sdk://fidl/fuchsia.ui.policy
 sdk://fidl/fuchsia.ui.views
+sdk://fidl/fuchsia.url
 sdk://fidl/zx
 sdk://pkg/async
 sdk://pkg/async-cpp

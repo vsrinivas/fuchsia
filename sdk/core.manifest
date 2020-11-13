@@ -33,6 +33,7 @@ sdk://fidl/fuchsia.data
 sdk://fidl/fuchsia.deprecatedtimezone
 sdk://fidl/fuchsia.developer.tiles
 sdk://fidl/fuchsia.diagnostics
+sdk://fidl/fuchsia.element
 sdk://fidl/fuchsia.factory
 sdk://fidl/fuchsia.factory.wlan
 sdk://fidl/fuchsia.feedback

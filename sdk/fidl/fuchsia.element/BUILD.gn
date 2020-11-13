@@ -5,6 +5,8 @@
 import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.element") {
+  sdk_category = "partner"
+
   sources = [
     "annotations.fidl",
     "element_manager.fidl",
