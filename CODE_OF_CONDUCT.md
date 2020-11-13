@@ -29,7 +29,7 @@ they are doing. Politely bringing their behavior to their attention is
 encouraged.
 
 If you are uncomfortable speaking up, or feel that your concerns are not being
-duly considered, you can email fuchsia-community-managers@google.com to request
+duly considered, you can email <community-managers@fuchsia.dev>  to request
 involvement from a community manager. All concerns shared with community
 managers will be kept confidential, but you may also submit an anonymous report
 [here](https://goo.gl/forms/xgisUdowrEWrYgui2). Please note that without a way
@@ -75,8 +75,8 @@ following, at the sole discretion of the Fuchsia community managers:
 
 Participants warned to stop any harassing behavior are expected to comply
 immediately. Failure to do so will result in an escalation of consequences.
-The decisions of the Fuchsia community managers may be appealed via
-fuchsia-community-appeals@google.com.
+The decisions of the Fuchsia community managers may be appealed at
+<community-managers@fuchsia.dev>.
 
 ## Acknowledgements
 
