@@ -29,6 +29,7 @@ rustc_binary("echo_server_rust_bin") {
 # Rename the executable to be consistent with the common manifest.
 resource("echo_server_rust") {
   deps = [ ":echo_server_rust_bin" ]
+  data_deps = [ ":echo_server_rust_bin" ]
   sources = [ "$root_out_dir/echo_server_rust" ]
   outputs = [ "bin/echo_server" ]
 }
