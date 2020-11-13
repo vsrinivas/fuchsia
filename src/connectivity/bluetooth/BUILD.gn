@@ -16,6 +16,23 @@ group("bluetooth") {
   ]
 }
 
+# This is a list of all drivers.
+group("drivers") {
+  testonly = true
+  deps = [
+    "core/bt-host:driver",
+    "hci/emulator:driver",
+    "hci/passthrough:driver",
+    "hci/transport/uart:bt-transport-uart",
+    "hci/transport/usb:bt-transport-usb",
+    "hci/vendor/atheros:driver",
+    "hci/vendor/broadcom:bt-hci-broadcom",
+    "hci/vendor/intel:driver",
+    "hci/vendor/mediatek:bt-hci-mediatek",
+    "profiles/bt-hog:driver",
+  ]
+}
+
 # Core is the group that is included in the core product.
 group("core") {
   public_deps = [

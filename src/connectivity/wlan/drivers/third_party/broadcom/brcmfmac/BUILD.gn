@@ -233,6 +233,7 @@ driver_module("driver_module") {
   ]
   configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
   configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
+  visibility += [ "//src/connectivity/wlan:drivers" ]
 }
 
 # Driver module for the test version of the brcmfmac driver, which includes run_unit_tests() DDK
@@ -254,6 +255,7 @@ driver_module("test_driver_module") {
   defines = [ "CONFIG_BRCMFMAC_DRIVER_TEST=1" ]
   configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
   configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
+  visibility += [ "//src/connectivity/wlan:drivers" ]
 }
 
 # Firmware file copying below.  There are three targets:

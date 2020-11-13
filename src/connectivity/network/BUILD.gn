@@ -33,6 +33,10 @@ group("config") {
   ]
 }
 
+group("drivers") {
+  deps = [ "drivers/network-device" ]
+}
+
 group("tests") {
   testonly = true
   deps = [

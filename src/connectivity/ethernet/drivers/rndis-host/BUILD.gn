@@ -6,7 +6,10 @@ import("//build/config/fuchsia/rules.gni")
 import("//build/driver_package.gni")
 
 driver_module("driver") {
-  visibility = [ ":*" ]
+  visibility = [
+    ":*",
+    "//src/connectivity/ethernet:drivers",
+  ]
   output_name = "rndis-host"
 
   configs += [

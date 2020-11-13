@@ -2,6 +2,28 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+group("drivers") {
+  deps = [
+    "drivers/aml-ethernet-s912",
+    "drivers/asix-88179",
+    "drivers/asix-88179:fake-asix-88179",
+    "drivers/asix-88772b",
+    "drivers/dwmac",
+    "drivers/ethernet",
+    "drivers/ethertap",
+    "drivers/realtek-8211f",
+    "drivers/rndis-function",
+    "drivers/rndis-host:driver",
+    "drivers/usb-cdc-ecm",
+    "drivers/usb-cdc-function",
+    "drivers/virtio:virtio_ethernet",
+  ]
+
+  if (current_cpu == "x64") {
+    deps += [ "drivers/realtek-8111" ]
+  }
+}
+
 group("tests") {
   testonly = true
 

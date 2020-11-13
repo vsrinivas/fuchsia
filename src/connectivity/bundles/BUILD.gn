@@ -2,6 +2,19 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+group("drivers") {
+  testonly = true
+  deps = [
+    "//src/connectivity/bluetooth:drivers",
+    "//src/connectivity/ethernet:drivers",
+    "//src/connectivity/network:drivers",
+    "//src/connectivity/openthread:drivers",
+    "//src/connectivity/ppp:drivers",
+    "//src/connectivity/telephony:drivers",
+    "//src/connectivity/wlan:drivers",
+  ]
+}
+
 group("debugging") {
   deps = [ "//src/connectivity/network/bin/ping" ]
 }

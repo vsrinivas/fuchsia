@@ -10,6 +10,22 @@ group("wlan") {
   ]
 }
 
+group("drivers") {
+  deps = [
+    "drivers/mediatek/ralink:ralink_driver",
+    "drivers/realtek/rtl88xx:rtl88xx_driver",
+    "drivers/testing:wlanphy-testdev",
+    "drivers/third_party/atheros/ath10k:ath10k_driver",
+    "drivers/third_party/broadcom/brcmfmac:driver_module",
+    "drivers/third_party/broadcom/brcmfmac:test_driver_module",
+    "drivers/third_party/intel/iwlwifi:iwlwifi_driver",
+    "drivers/wlan:wlan_driver",
+    "drivers/wlanif:wlanif_driver",
+    "drivers/wlanphy:wlanphy_driver",
+    "testing/wlantap-driver:wlantap_driver",
+  ]
+}
+
 # This target just includes the wlan-related packages, but not any sysmgr
 # config that will cause them to actually be used. Product configs (and only
 # product configs, rather than other group targets, to avoid conflicts) should

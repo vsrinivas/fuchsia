@@ -14,6 +14,16 @@ group("telephony") {
   ]
 }
 
+group("drivers") {
+  testonly = true
+  deps = [
+    "drivers/qmi-fake-transport:fake_qmi_driver",
+    "drivers/qmi-usb-transport:qmi_driver",
+    "tests/fake-drivers/at-fake-transport:fake_at_driver",
+    "tests/fake-drivers/usb-qmi-function:qmi_function",
+  ]
+}
+
 group("tests") {
   testonly = true
   public_deps = [
@@ -24,9 +34,4 @@ group("tests") {
     "//src/connectivity/telephony/telephony-snooper",
     "//src/connectivity/telephony/tests:telephony-tests",
   ]
-}
-
-group("drivers") {
-  testonly = true
-  public_deps = [ "//src/connectivity/telephony/drivers" ]
 }
