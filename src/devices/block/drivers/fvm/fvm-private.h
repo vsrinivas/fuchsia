@@ -79,6 +79,9 @@ class VPartitionManager : public ManagerDeviceType {
   // Returns global information about the FVM.
   void Query(volume_info_t* info) TA_EXCL(lock_);
 
+  zx_status_t GetPartitionLimit(const uint8_t* guid, uint64_t* byte_count) const;
+  zx_status_t SetPartitionLimit(const uint8_t* guid, uint64_t byte_count);
+
   size_t DiskSize() const { return info_.block_count * info_.block_size; }
   size_t slice_size() const { return slice_size_; }
   uint64_t VSliceMax() const { return fvm::kMaxVSlices; }
@@ -178,21 +181,35 @@ class VPartitionManager : public ManagerDeviceType {
   // virtual partition entry.
   VPartitionEntry* GetVPartEntryLocked(size_t index) const TA_REQ(lock_);
 
+  // Returns the number of the partition with the given GUID. If there are multiple ones (there
+  // should not be), returns the first one. If there are no matches, returns 0 (partitions are
+  // 1-indexed).
+  size_t GetPartitionNumberLocked(const uint8_t* guid) const TA_REQ(lock_);
+
   zx_status_t DoIoLocked(zx_handle_t vmo, size_t off, size_t len, uint32_t command) const;
 
   thrd_t initialization_thread_;
   std::atomic_bool initialization_thread_started_ = false;
   block_info_t info_;  // Cached info from parent device
 
-  fbl::Mutex lock_;
+  mutable fbl::Mutex lock_;
   Metadata metadata_ TA_GUARDED(lock_);
   // Number of currently allocated slices.
-  size_t pslice_allocated_count_ TA_GUARDED(lock_);
+  size_t pslice_allocated_count_ TA_GUARDED(lock_) = 0;
 
   Diagnostics diagnostics_;
 
   // Set when the driver is loaded and never changed.
   size_t slice_size_ = 0;
+
+  // Stores the maximum size in bytes for each partition, 1-indexed (0 elt is not used) the same as
+  // GetVPartEntryLocked(). A 0 max size means there is no maximum for this partition.
+  //
+  // These are 0-initialized and set by the FIDL call SetPartitionLimit. It would be better in the
+  // future if this information could be persisted in the partition table. But currently we want
+  // to keep the max size without changing the on-disk format. fshost will set these on startup
+  // when configured to do so.
+  uint64_t max_partition_sizes_[fvm::kMaxVPartitions] TA_GUARDED(lock_) = {0};
 
   // Block Protocol
   const size_t block_op_size_;

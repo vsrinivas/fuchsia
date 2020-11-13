@@ -14,6 +14,7 @@
 #include <fbl/algorithm.h>
 #include <fbl/auto_lock.h>
 #include <fbl/vector.h>
+#include <safemath/checked_math.h>
 
 #include "fvm-private.h"
 
@@ -60,6 +61,21 @@ void SetOperationLength(uint32_t length, block_op_t* txn) {
     default:
       ZX_ASSERT_MSG(false, "Unexpected operation type");
   }
+}
+
+zx_status_t BoundsCheckSliceExtent(const slice_extent_t& request, uint64_t vslice_max) {
+  if (request.offset == 0) {
+    return ZX_ERR_OUT_OF_RANGE;  // 0 is an invalid slice number.
+  }
+
+  size_t final_slice;
+  if (!safemath::CheckAdd(request.offset, request.length).AssignIfValid(&final_slice)) {
+    return ZX_ERR_OUT_OF_RANGE;  // Integer overflow.
+  }
+  if (final_slice > vslice_max) {
+    return ZX_ERR_OUT_OF_RANGE;  // End of request
+  }
+  return ZX_OK;
 }
 
 }  // namespace.
@@ -184,21 +200,6 @@ void VPartition::ExtentDestroyLocked(uint64_t vslice) TA_REQ(lock_) {
   size_t length = extent->size();
   slice_map_.erase(*extent);
   AddBlocksLocked(-((length * mgr_->slice_size()) / info_.block_size));
-}
-
-template <typename T>
-static zx_status_t RequestBoundCheck(const T& request, uint64_t vslice_max) {
-  if (request.offset == 0 || request.offset > vslice_max) {
-    return ZX_ERR_OUT_OF_RANGE;
-  }
-  if (request.length > vslice_max) {
-    return ZX_ERR_OUT_OF_RANGE;
-  }
-  if (request.offset + request.length < request.offset ||
-      request.offset + request.length > vslice_max) {
-    return ZX_ERR_OUT_OF_RANGE;
-  }
-  return ZX_OK;
 }
 
 // Device protocol (VPartition)
@@ -444,8 +445,7 @@ zx_status_t VPartition::BlockPartitionGetName(char* out_name, size_t capacity) {
 }
 
 zx_status_t VPartition::BlockVolumeExtend(const slice_extent_t* extent) {
-  zx_status_t status = RequestBoundCheck(*extent, mgr_->VSliceMax());
-  if (status != ZX_OK) {
+  if (zx_status_t status = BoundsCheckSliceExtent(*extent, mgr_->VSliceMax()); status != ZX_OK) {
     return status;
   }
   if (extent->length == 0) {
@@ -455,8 +455,7 @@ zx_status_t VPartition::BlockVolumeExtend(const slice_extent_t* extent) {
 }
 
 zx_status_t VPartition::BlockVolumeShrink(const slice_extent_t* extent) {
-  zx_status_t status = RequestBoundCheck(*extent, mgr_->VSliceMax());
-  if (status != ZX_OK) {
+  if (zx_status_t status = BoundsCheckSliceExtent(*extent, mgr_->VSliceMax()); status != ZX_OK) {
     return status;
   }
   if (extent->length == 0) {

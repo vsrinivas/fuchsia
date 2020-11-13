@@ -35,6 +35,7 @@
 #include <fvm/fvm.h>
 #include <fvm/metadata.h>
 #include <fvm/vmo-metadata-buffer.h>
+#include <safemath/clamped_math.h>
 
 #include "fvm-private.h"
 #include "fvm/format.h"
@@ -49,14 +50,17 @@ zx_status_t FvmLoadThread(void* arg) {
   return reinterpret_cast<fvm::VPartitionManager*>(arg)->Load();
 }
 
+// Our GUIDs come from several places which all must agree on the size.
+static_assert(kGuidSize == BLOCK_GUID_LEN);
+
+// Comparison for Guids. Each pointer should be a buffer of kGuidSize length.
+bool GuidsEqual(const uint8_t* a, const uint8_t* b) { return memcmp(a, b, kGuidSize) == 0; }
+
 }  // namespace
 
 VPartitionManager::VPartitionManager(zx_device_t* parent, const block_info_t& info,
                                      size_t block_op_size, const block_impl_protocol_t* bp)
-    : ManagerDeviceType(parent),
-      info_(info),
-      pslice_allocated_count_(0),
-      block_op_size_(block_op_size) {
+    : ManagerDeviceType(parent), info_(info), block_op_size_(block_op_size) {
   memcpy(&bp_, bp, sizeof(*bp));
 }
 
@@ -110,8 +114,8 @@ void VPartitionManager::DdkInit(ddk::InitTxn txn) {
 }
 
 zx_status_t VPartitionManager::AddPartition(std::unique_ptr<VPartition> vp) const {
-  const std::string name = GetAllocatedVPartEntry(vp->GetEntryIndex())->name() + "-p-" +
-                           std::to_string(vp->GetEntryIndex());
+  const std::string name =
+      GetAllocatedVPartEntry(vp->entry_index())->name() + "-p-" + std::to_string(vp->entry_index());
 
   zx_status_t status;
   if ((status = vp->DdkAdd(name.c_str())) != ZX_OK) {
@@ -321,7 +325,7 @@ zx_status_t VPartitionManager::Load() {
     }
 
     // Update instance placeholder GUIDs to a newly generated guid.
-    if (memcmp(entry->guid, kPlaceHolderInstanceGuid.data(), kGuidSize) == 0) {
+    if (GuidsEqual(entry->guid, kPlaceHolderInstanceGuid.data())) {
       uuid::Uuid uuid = uuid::Uuid::Generate();
       memcpy(entry->guid, uuid.bytes(), uuid::kUuidSize);
       has_updated_partitions = true;
@@ -430,7 +434,7 @@ zx_status_t VPartitionManager::WriteFvmLocked() {
 zx_status_t VPartitionManager::FindFreeVPartEntryLocked(size_t* out) const {
   for (size_t i = 1; i < fvm::kMaxVPartitions; i++) {
     const VPartitionEntry* entry = GetVPartEntryLocked(i);
-    if (entry->slices == 0) {
+    if (entry->IsFree()) {
       *out = i;
       return ZX_OK;
     }
@@ -463,7 +467,10 @@ zx_status_t VPartitionManager::AllocateSlices(VPartition* vp, size_t vslice_star
 
 zx_status_t VPartitionManager::AllocateSlicesLocked(VPartition* vp, size_t vslice_start,
                                                     size_t count) {
-  if (vslice_start + count > VSliceMax()) {
+  if (count == 0) {
+    return ZX_OK;  // Nothing to do.
+  }
+  if (safemath::ClampAdd(vslice_start, count) > VSliceMax()) {
     return ZX_ERR_INVALID_ARGS;
   }
 
@@ -475,21 +482,31 @@ zx_status_t VPartitionManager::AllocateSlicesLocked(VPartition* vp, size_t vslic
     if (vp->IsKilledLocked()) {
       return ZX_ERR_BAD_STATE;
     }
+
+    ZX_DEBUG_ASSERT_MSG(vp->entry_index() >= 1 && vp->entry_index() < fvm::kMaxVPartitions,
+                        "VPartition entry index out of range.");
+    if (uint64_t max_size = max_partition_sizes_[vp->entry_index()]) {
+      // Enforce the max partition size.
+      auto existing_slices = GetVPartEntryLocked(vp->entry_index())->slices;
+      uint64_t requested_size =
+          safemath::ClampMul(safemath::ClampAdd(existing_slices, count), slice_size_);
+      if (requested_size > max_size) {
+        return ZX_ERR_NO_SPACE;
+      }
+    }
+
     for (size_t i = 0; i < count; i++) {
       size_t pslice;
       auto vslice = vslice_start + i;
       if (vp->SliceGetLocked(vslice, &pslice)) {
-        zxlogf(ERROR,
-               "VPartitionManager::AllocateSlicesLocked: "
-               "SliceGetLocked found no physical slice for vslice %zu",
-               vslice);
+        zxlogf(ERROR, "FVM: Attempting to allocate vslice %zu that is already allocated.", vslice);
         status = ZX_ERR_INVALID_ARGS;
       }
 
       // If the vslice is invalid, or there are no more free physical slices, undo all
       // previous allocations.
       if ((status != ZX_OK) || ((status = FindFreeSliceLocked(&pslice, hint)) != ZX_OK)) {
-        for (int j = static_cast<int>(i - 1); j >= 0; j--) {
+        for (int j = safemath::checked_cast<int>(i) - 1; j >= 0; j--) {
           vslice = vslice_start + j;
           vp->SliceGetLocked(vslice, &pslice);
           FreePhysicalSlice(vp, pslice);
@@ -507,16 +524,15 @@ zx_status_t VPartitionManager::AllocateSlicesLocked(VPartition* vp, size_t vslic
   }
 
   if ((status = WriteFvmLocked()) == ZX_OK) {
-    VPartitionEntry* entry = GetVPartEntryLocked(vp->GetEntryIndex());
+    VPartitionEntry* entry = GetVPartEntryLocked(vp->entry_index());
     diagnostics().OnAllocateSlices({
         .vpart_name = entry->name(),
         .count = count,
     });
   } else {
-    // Undo allocation in the event of failure; avoid holding VPartition
-    // lock while writing to fvm.
+    // Undo allocation in the event of failure; avoid holding VPartition lock while writing to fvm.
     fbl::AutoLock lock(&vp->lock_);
-    for (int j = static_cast<int>(count - 1); j >= 0; j--) {
+    for (int j = safemath::checked_cast<int>(count) - 1; j >= 0; j--) {
       auto vslice = vslice_start + j;
       uint64_t pslice;
       // Will always return true, because partition slice allocation is synchronized.
@@ -535,16 +551,16 @@ zx_status_t VPartitionManager::Upgrade(const uint8_t* old_guid, const uint8_t* n
   size_t old_index = 0;
   size_t new_index = 0;
 
-  if (!memcmp(old_guid, new_guid, BLOCK_GUID_LEN)) {
+  if (GuidsEqual(old_guid, new_guid)) {
     old_guid = nullptr;
   }
 
   for (size_t i = 1; i < fvm::kMaxVPartitions; i++) {
     auto entry = GetVPartEntryLocked(i);
     if (entry->slices != 0) {
-      if (old_guid && entry->IsActive() && !memcmp(entry->guid, old_guid, BLOCK_GUID_LEN)) {
+      if (old_guid && entry->IsActive() && GuidsEqual(entry->guid, old_guid)) {
         old_index = i;
-      } else if (entry->IsInactive() && !memcmp(entry->guid, new_guid, BLOCK_GUID_LEN)) {
+      } else if (entry->IsInactive() && GuidsEqual(entry->guid, new_guid)) {
         new_index = i;
       }
     }
@@ -564,12 +580,15 @@ zx_status_t VPartitionManager::Upgrade(const uint8_t* old_guid, const uint8_t* n
 
 zx_status_t VPartitionManager::FreeSlices(VPartition* vp, size_t vslice_start, size_t count) {
   fbl::AutoLock lock(&lock_);
-  return FreeSlicesLocked(vp, static_cast<uint64_t>(vslice_start), count);
+  return FreeSlicesLocked(vp, safemath::strict_cast<uint64_t>(vslice_start), count);
 }
 
 zx_status_t VPartitionManager::FreeSlicesLocked(VPartition* vp, uint64_t vslice_start,
                                                 size_t count) {
-  if (vslice_start + count > VSliceMax() || count > VSliceMax()) {
+  if (count == 0) {
+    return ZX_OK;  // Nothing to do.
+  }
+  if (safemath::ClampAdd(vslice_start, count) > VSliceMax()) {
     return ZX_ERR_INVALID_ARGS;
   }
 
@@ -594,12 +613,12 @@ zx_status_t VPartitionManager::FreeSlicesLocked(VPartition* vp, uint64_t vslice_
       if (vp->zxdev()) {
         vp->DdkAsyncRemove();
       }
-      auto entry = GetVPartEntryLocked(vp->GetEntryIndex());
+      auto entry = GetVPartEntryLocked(vp->entry_index());
       entry->Release();
       vp->KillLocked();
       valid_range = true;
     } else {
-      for (int i = static_cast<int>(count - 1); i >= 0; i--) {
+      for (int i = safemath::checked_cast<int>(count - 1); i >= 0; i--) {
         auto vslice = vslice_start + i;
         if (vp->SliceCanFree(vslice)) {
           uint64_t pslice;
@@ -629,16 +648,38 @@ void VPartitionManager::Query(volume_info_t* info) {
   }
 }
 
+zx_status_t VPartitionManager::GetPartitionLimit(const uint8_t* guid, uint64_t* byte_count) const {
+  fbl::AutoLock lock(&lock_);
+
+  if (size_t partition = GetPartitionNumberLocked(guid)) {
+    *byte_count = max_partition_sizes_[partition];
+    return ZX_OK;
+  }
+
+  *byte_count = 0;
+  return ZX_ERR_NOT_FOUND;
+}
+
+zx_status_t VPartitionManager::SetPartitionLimit(const uint8_t* guid, uint64_t byte_count) {
+  fbl::AutoLock lock(&lock_);
+
+  if (size_t partition = GetPartitionNumberLocked(guid)) {
+    max_partition_sizes_[partition] = byte_count;
+    return ZX_OK;
+  }
+  return ZX_ERR_NOT_FOUND;
+}
+
 void VPartitionManager::FreePhysicalSlice(VPartition* vp, uint64_t pslice) {
   auto entry = GetSliceEntryLocked(pslice);
   ZX_DEBUG_ASSERT_MSG(entry->IsAllocated(), "Freeing already-free slice");
   entry->Release();
-  GetVPartEntryLocked(vp->GetEntryIndex())->slices--;
+  GetVPartEntryLocked(vp->entry_index())->slices--;
   pslice_allocated_count_--;
 }
 
 void VPartitionManager::AllocatePhysicalSlice(VPartition* vp, uint64_t pslice, uint64_t vslice) {
-  uint64_t vpart = vp->GetEntryIndex();
+  uint64_t vpart = vp->entry_index();
   ZX_DEBUG_ASSERT(vpart <= fvm::kMaxVPartitions);
   ZX_DEBUG_ASSERT(vslice <= fvm::kMaxVSlices);
   auto entry = GetSliceEntryLocked(pslice);
@@ -662,6 +703,15 @@ VPartitionEntry* VPartitionManager::GetVPartEntryLocked(size_t index) const {
   ZX_DEBUG_ASSERT(index <= header->GetPartitionTableEntryCount());
 
   return &metadata_.GetPartitionEntry(index);
+}
+
+size_t VPartitionManager::GetPartitionNumberLocked(const uint8_t* guid) const {
+  for (size_t i = 1; i < fvm::kMaxVPartitions; i++) {
+    auto* entry = GetVPartEntryLocked(i);
+    if (entry->IsAllocated() && GuidsEqual(entry->guid, guid))
+      return i;
+  }
+  return 0;
 }
 
 // Device protocol (FVM)
@@ -757,17 +807,15 @@ zx_status_t VPartitionManager::FIDLActivate(const fuchsia_hardware_block_partiti
 
 zx_status_t VPartitionManager::FIDLGetPartitionLimit(
     const fuchsia_hardware_block_partition_GUID* guid, fidl_txn_t* txn) {
-  // Not yet supported. For now, report 0 which means "no limit".
-  // TODO(bug 64055) implement this.
-  return fuchsia_hardware_block_volume_VolumeManagerGetPartitionLimit_reply(txn, ZX_OK, 0);
+  uint64_t byte_size = 0;
+  zx_status_t status = GetPartitionLimit(guid->value, &byte_size);
+  return fuchsia_hardware_block_volume_VolumeManagerGetPartitionLimit_reply(txn, status, byte_size);
 }
 
 zx_status_t VPartitionManager::FIDLSetPartitionLimit(
     const fuchsia_hardware_block_partition_GUID* guid, uint64_t byte_count, fidl_txn_t* txn) {
-  // Not yet supported.
-  // TODO(bug 64055) implement this.
-  return fuchsia_hardware_block_volume_VolumeManagerSetPartitionLimit_reply(txn,
-                                                                            ZX_ERR_NOT_SUPPORTED);
+  return fuchsia_hardware_block_volume_VolumeManagerSetPartitionLimit_reply(
+      txn, SetPartitionLimit(guid->value, byte_count));
 }
 
 void VPartitionManager::DdkUnbind(ddk::UnbindTxn txn) {

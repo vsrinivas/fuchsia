@@ -46,6 +46,7 @@ source_set("shared") {
     "//src/lib/uuid:uuid",
     "//third_party/boringssl",
     "//zircon/public/lib/fbl",
+    "//zircon/public/lib/safemath",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",

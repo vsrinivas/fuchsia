@@ -94,7 +94,7 @@ class VPartition : public PartitionDeviceType,
   size_t BlockSize() const TA_NO_THREAD_SAFETY_ANALYSIS { return info_.block_size; }
   void AddBlocksLocked(ssize_t nblocks) TA_REQ(lock_) { info_.block_count += nblocks; }
 
-  size_t GetEntryIndex() const { return entry_index_; }
+  size_t entry_index() const { return entry_index_; }
 
   void KillLocked() TA_REQ(lock_) { entry_index_ = 0; }
   bool IsKilledLocked() const TA_REQ(lock_) { return entry_index_ == 0; }
