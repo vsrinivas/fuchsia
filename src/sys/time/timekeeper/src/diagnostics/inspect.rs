@@ -13,8 +13,7 @@ use {
     },
     fidl_fuchsia_time_external::Status,
     fuchsia_inspect::{
-        health::Reporter, Inspector, IntProperty, Node, NumericProperty, Property, StringProperty,
-        UintProperty,
+        Inspector, IntProperty, Node, NumericProperty, Property, StringProperty, UintProperty,
     },
     fuchsia_zircon as zx,
     futures::FutureExt,
@@ -277,17 +276,23 @@ struct TrackNode {
     estimates: CircularBuffer<Estimate>,
     /// A circular buffer of recently planned clock corrections.
     corrections: CircularBuffer<ClockCorrection>,
+    /// The details of the most recent update to the clock object.
+    last_update: Option<<ClockDetails as InspectWritable>::NodeType>,
+    /// The clock used to determine the result of a clock update operation.
+    clock: Arc<zx::Clock>,
     /// The inspect `Node` these fields are exported to.
-    _node: Node,
+    node: Node,
 }
 
 impl TrackNode {
     /// Constructs a new `TrackNode`.
-    pub fn new(node: Node) -> Self {
+    pub fn new(node: Node, clock: Arc<zx::Clock>) -> Self {
         TrackNode {
             estimates: CircularBuffer::new(ESTIMATE_UPDATE_COUNT, "estimate_", &node),
             corrections: CircularBuffer::new(CLOCK_CORRECTION_COUNT, "clock_correction_", &node),
-            _node: node,
+            last_update: None,
+            clock,
+            node,
         }
     }
 
@@ -314,6 +319,27 @@ impl TrackNode {
         };
         self.corrections.update(&clock_correction);
     }
+
+    /// Records an update to the clock object.
+    pub fn update_clock(&mut self, reason: Option<ClockUpdateReason>) {
+        match self.clock.get_details() {
+            Ok(details) => {
+                let mut details_struct: ClockDetails = details.into();
+                if let Some(reason) = reason {
+                    details_struct = details_struct.with_reason(reason);
+                }
+                if let Some(last_update_node) = &self.last_update {
+                    last_update_node.update(&details_struct);
+                } else {
+                    self.last_update
+                        .replace(details_struct.create(self.node.create_child("last_update")));
+                }
+            }
+            Err(err) => {
+                warn!("Failed to export clock update to inspect: {}", err);
+            }
+        };
+    }
 }
 
 /// The complete set of Timekeeper information exported through Inspect.
@@ -326,16 +352,8 @@ pub struct InspectDiagnostics {
     tracks: Mutex<HashMap<Track, TrackNode>>,
     /// Details of interactions with the real time clock.
     rtc: Mutex<Option<RealTimeClockNode>>,
-    /// The details of the most recent update to the UTC zx::Clock.
-    // TODO(jsankey): Consider moving this into the TrackNode.
-    last_update: Mutex<Option<<ClockDetails as InspectWritable>::NodeType>>,
-    /// The UTC clock that provides the `clock_utc` component of `TimeSet` data.
-    // TODO(jsankey): Consider moving this into the TrackNode.
-    clock: Arc<zx::Clock>,
     /// The inspect node used to export the contents of this `InspectDiagnostics`.
     node: Node,
-    /// The inspect health node to expose component status.
-    health: Mutex<fuchsia_inspect::health::Node>,
 }
 
 impl InspectDiagnostics {
@@ -347,9 +365,8 @@ impl InspectDiagnostics {
         optional_monitor: &Option<MonitorTrack<T>>,
     ) -> Self {
         // Record fixed data directly into the node without retaining any references.
-        let clock = Arc::clone(&primary.clock);
-        node.record_child("initialization", |child| TimeSet::now(&clock).record(child));
-        let backstop = clock.get_details().expect("failed to get clock details").backstop;
+        node.record_child("initialization", |child| TimeSet::now(&primary.clock).record(child));
+        let backstop = primary.clock.get_details().expect("failed to get clock details").backstop;
         node.record_int("backstop", backstop.into_nanos());
 
         let mut time_sources_hashmap = HashMap::new();
@@ -358,15 +375,20 @@ impl InspectDiagnostics {
             Role::Primary,
             TimeSourceNode::new(node.create_child("primary_time_source"), &primary.time_source),
         );
-        tracks_hashmap.insert(Track::Primary, TrackNode::new(node.create_child("primary_track")));
+        tracks_hashmap.insert(
+            Track::Primary,
+            TrackNode::new(node.create_child("primary_track"), Arc::clone(&primary.clock)),
+        );
 
         if let Some(monitor) = optional_monitor {
             time_sources_hashmap.insert(
                 Role::Monitor,
                 TimeSourceNode::new(node.create_child("monitor_time_source"), &monitor.time_source),
             );
-            tracks_hashmap
-                .insert(Track::Monitor, TrackNode::new(node.create_child("monitor_track")));
+            tracks_hashmap.insert(
+                Track::Monitor,
+                TrackNode::new(node.create_child("monitor_track"), Arc::clone(&monitor.clock)),
+            );
         }
 
         let diagnostics = InspectDiagnostics {
@@ -374,12 +396,9 @@ impl InspectDiagnostics {
             time_sources: Mutex::new(time_sources_hashmap),
             tracks: Mutex::new(tracks_hashmap),
             rtc: Mutex::new(None),
-            last_update: Mutex::new(None),
-            clock: Arc::clone(&clock),
             node: node.clone_weak(),
-            health: Mutex::new(fuchsia_inspect::health::Node::new(node)),
         };
-        diagnostics.health.lock().set_starting_up();
+        let clock = Arc::clone(&primary.clock);
         node.record_lazy_child("current", move || {
             let clock_clone = Arc::clone(&clock);
             async move {
@@ -390,31 +409,6 @@ impl InspectDiagnostics {
             .boxed()
         });
         diagnostics
-    }
-
-    /// Records an update to the UTC zx::Clock
-    fn update_clock(&self, track: Track, reason: Option<ClockUpdateReason>) {
-        if track == Track::Primary {
-            self.health.lock().set_ok();
-            match self.clock.get_details() {
-                Ok(details) => {
-                    let mut details_struct: ClockDetails = details.into();
-                    if let Some(reason) = reason {
-                        details_struct = details_struct.with_reason(reason);
-                    }
-                    let mut lock = self.last_update.lock();
-                    if let Some(last_update) = &*lock {
-                        last_update.update(&details_struct);
-                    } else {
-                        lock.replace(details_struct.create(self.node.create_child("last_update")));
-                    }
-                }
-                Err(err) => {
-                    warn!("Failed to export clock update to inspect: {}", err);
-                    return;
-                }
-            };
-        }
     }
 }
 
@@ -461,8 +455,12 @@ impl Diagnostics for InspectDiagnostics {
                     rtc_node.write(outcome);
                 }
             }
-            Event::StartClock { track, .. } => self.update_clock(track, None),
-            Event::UpdateClock { track, reason } => self.update_clock(track, Some(reason)),
+            Event::StartClock { track, .. } => {
+                self.tracks.lock().get_mut(&track).map(|track| track.update_clock(None));
+            }
+            Event::UpdateClock { track, reason } => {
+                self.tracks.lock().get_mut(&track).map(|track| track.update_clock(Some(reason)));
+            }
         }
     }
 }
@@ -472,7 +470,7 @@ mod tests {
     use {
         super::*,
         crate::{
-            enums::{SampleValidationError as SVE, TimeSourceError as TSE},
+            enums::{SampleValidationError as SVE, StartClockSource, TimeSourceError as TSE},
             time_source::FakeTimeSource,
             Notifier,
         },
@@ -599,9 +597,6 @@ mod tests {
                     // For brevity we omit the other empty estimates we expect in the circular
                     // buffer.
                 },
-                "fuchsia.inspect.Health": contains {
-                    status: "STARTING_UP",
-                }
             }
         );
     }
@@ -623,7 +618,8 @@ mod tests {
                     .error_bounds(0),
             )
             .expect("Failed to update test clock");
-        inspect_diagnostics.update_clock(Track::Primary, None);
+        inspect_diagnostics
+            .record(Event::StartClock { track: Track::Primary, source: StartClockSource::Rtc });
         clock
             .update(
                 zx::ClockUpdate::new()
@@ -632,7 +628,10 @@ mod tests {
                     .error_bounds(ERROR_BOUNDS),
             )
             .expect("Failed to update test clock");
-        inspect_diagnostics.update_clock(Track::Primary, Some(ClockUpdateReason::TimeStep));
+        inspect_diagnostics.record(Event::UpdateClock {
+            track: Track::Primary,
+            reason: ClockUpdateReason::TimeStep,
+        });
         assert_inspect_tree!(
             inspector,
             root: contains {
@@ -648,18 +647,17 @@ mod tests {
                     kernel_utc: AnyProperty,
                     clock_utc: AnyProperty,
                 },
-                last_update: contains {
-                    retrieval_monotonic: AnyProperty,
-                    generation_counter: 4u64,
-                    monotonic_offset: AnyProperty,
-                    utc_offset: AnyProperty,
-                    rate_ppm: RATE_ADJUST as i64,
-                    error_bounds: ERROR_BOUNDS,
-                    reason: "Some(TimeStep)",
-                },
-                "fuchsia.inspect.Health": contains {
-                    status: "OK",
-                },
+                primary_track: contains {
+                    last_update: contains {
+                        retrieval_monotonic: AnyProperty,
+                        generation_counter: 4u64,
+                        monotonic_offset: AnyProperty,
+                        utc_offset: AnyProperty,
+                        rate_ppm: RATE_ADJUST as i64,
+                        error_bounds: ERROR_BOUNDS,
+                        reason: "Some(TimeStep)",
+                    },
+                }
             }
         );
     }
@@ -829,6 +827,10 @@ mod tests {
                 correction: CORRECTION * i,
                 strategy: ClockCorrectionStrategy::MaxDurationSlew,
             });
+            test.record(Event::UpdateClock {
+                track: Track::Primary,
+                reason: ClockUpdateReason::BeginSlew,
+            });
         }
 
         assert_inspect_tree!(
@@ -883,6 +885,15 @@ mod tests {
                         correction: 6 * CORRECTION.into_nanos(),
                         strategy: "MaxDurationSlew",
                     },
+                    last_update: contains {
+                        retrieval_monotonic: AnyProperty,
+                        generation_counter: 0u64,
+                        monotonic_offset: AnyProperty,
+                        utc_offset: AnyProperty,
+                        rate_ppm: AnyProperty,
+                        error_bounds: AnyProperty,
+                        reason: "Some(BeginSlew)",
+                    },
                 },
                 monitor_track: contains {
                     estimate_0: contains {},
@@ -890,20 +901,9 @@ mod tests {
                     estimate_2: contains {},
                     estimate_3: contains {},
                     estimate_4: contains {},
-                },
-            }
-        );
-    }
-
-    #[test]
-    fn health() {
-        let inspector = &Inspector::new();
-        let _inspect_diagnostics = create_test_object(&inspector, false);
-        assert_inspect_tree!(
-            inspector,
-            root: contains {
-                "fuchsia.inspect.Health": contains {
-                    status: "STARTING_UP",
+                    clock_correction_0: contains {},
+                    clock_correction_1: contains {},
+                    clock_correction_2: contains {},
                 },
             }
         );
