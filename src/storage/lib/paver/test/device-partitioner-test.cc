@@ -61,6 +61,13 @@ using driver_integration_test::IsolatedDevmgr;
 using paver::BlockWatcherPauser;
 using paver::PartitionSpec;
 
+// New Type GUID's
+constexpr uint8_t kDurableBootType[GPT_GUID_LEN] = GPT_DURABLE_BOOT_TYPE_GUID;
+constexpr uint8_t kVbMetaType[GPT_GUID_LEN] = GPT_VBMETA_ABR_TYPE_GUID;
+constexpr uint8_t kZirconType[GPT_GUID_LEN] = GPT_ZIRCON_ABR_TYPE_GUID;
+constexpr uint8_t kNewFvmType[GPT_GUID_LEN] = GPT_FVM_TYPE_GUID;
+
+// Legacy Type GUID's
 constexpr uint8_t kBootloaderType[GPT_GUID_LEN] = GUID_BOOTLOADER_VALUE;
 constexpr uint8_t kEfiType[GPT_GUID_LEN] = GUID_EFI_VALUE;
 constexpr uint8_t kCrosKernelType[GPT_GUID_LEN] = GUID_CROS_KERNEL_VALUE;
@@ -1341,6 +1348,41 @@ TEST_F(SherlockPartitionerTests, InitializePartitionTable) {
   EXPECT_OK(partitioner->FindPartition(PartitionSpec(paver::Partition::kVbMetaR)));
   EXPECT_OK(partitioner->FindPartition(PartitionSpec(paver::Partition::kFuchsiaVolumeManager)));
 }
+
+TEST_F(SherlockPartitionerTests, FindPartitionNewGuids) {
+  std::unique_ptr<BlockDevice> gpt_dev;
+  constexpr uint64_t kBlockCount = 0x748034;
+  ASSERT_NO_FATAL_FAILURES(CreateDisk(kBlockCount * block_size_, &gpt_dev));
+
+  // partition size / location is arbitrary
+  const std::vector<PartitionDescription> kSherlockNewPartitions = {
+      {GPT_DURABLE_BOOT_NAME, kDurableBootType, 0x10400, 0x10000},
+      {GPT_VBMETA_A_NAME, kVbMetaType, 0x20400, 0x10000},
+      {GPT_VBMETA_B_NAME, kVbMetaType, 0x30400, 0x10000},
+      {GPT_VBMETA_R_NAME, kVbMetaType, 0x40400, 0x10000},
+      {GPT_ZIRCON_A_NAME, kZirconType, 0x50400, 0x10000},
+      {GPT_ZIRCON_B_NAME, kZirconType, 0x60400, 0x10000},
+      {GPT_ZIRCON_R_NAME, kZirconType, 0x70400, 0x10000},
+      {GPT_FVM_NAME, kNewFvmType, 0x80400, 0x10000},
+  };
+  ASSERT_NO_FATAL_FAILURES(InitializeStartingGPTPartitions(gpt_dev.get(), kSherlockNewPartitions));
+
+  fbl::unique_fd gpt_fd(dup(gpt_dev->fd()));
+  auto status = CreatePartitioner(std::move(gpt_fd));
+  ASSERT_OK(status);
+  std::unique_ptr<paver::DevicePartitioner>& partitioner = status.value();
+
+  // Make sure we can find the important partitions.
+  EXPECT_OK(partitioner->FindPartition(PartitionSpec(paver::Partition::kZirconA)));
+  EXPECT_OK(partitioner->FindPartition(PartitionSpec(paver::Partition::kZirconB)));
+  EXPECT_OK(partitioner->FindPartition(PartitionSpec(paver::Partition::kZirconR)));
+  EXPECT_OK(partitioner->FindPartition(PartitionSpec(paver::Partition::kAbrMeta)));
+  EXPECT_OK(partitioner->FindPartition(PartitionSpec(paver::Partition::kVbMetaA)));
+  EXPECT_OK(partitioner->FindPartition(PartitionSpec(paver::Partition::kVbMetaB)));
+  EXPECT_OK(partitioner->FindPartition(PartitionSpec(paver::Partition::kVbMetaR)));
+  EXPECT_OK(partitioner->FindPartition(PartitionSpec(paver::Partition::kFuchsiaVolumeManager)));
+}
+
 
 TEST_F(SherlockPartitionerTests, FindBootloader) {
   std::unique_ptr<BlockDevice> gpt_dev;

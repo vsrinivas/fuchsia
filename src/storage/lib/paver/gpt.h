@@ -137,7 +137,8 @@ bool FilterByTypeAndName(const gpt_partition_t& part, const uuid::Uuid& type,
                          fbl::StringPiece name);
 
 inline bool IsFvmPartition(const gpt_partition_t& part) {
-  return FilterByType(part, GUID_FVM_VALUE);
+  return FilterByType(part, GUID_FVM_VALUE) ||
+         FilterByTypeAndName(part, GPT_FVM_TYPE_GUID, GPT_FVM_NAME);
 }
 
 // Returns true if the spec partition is Zircon A/B/R.

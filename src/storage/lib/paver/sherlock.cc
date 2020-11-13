@@ -99,7 +99,10 @@ zx::status<std::unique_ptr<PartitionClient>> SherlockPartitioner::FindPartition(
     return zx::error(ZX_ERR_NOT_SUPPORTED);
   }
 
+  // TODO(b/173125535): Remove legacy GPT support
+  Uuid legacy_type;
   Uuid type;
+  std::string_view part_name;
 
   switch (spec.partition) {
     case Partition::kBootloaderA: {
@@ -126,35 +129,53 @@ zx::status<std::unique_ptr<PartitionClient>> SherlockPartitioner::FindPartition(
       return zx::ok(std::make_unique<PartitionCopyClient>(std::move(partitions)));
     }
     case Partition::kZirconA:
-      type = GUID_ZIRCON_A_VALUE;
+      legacy_type = GUID_ZIRCON_A_VALUE;
+      type = GPT_ZIRCON_ABR_TYPE_GUID;
+      part_name = GPT_ZIRCON_A_NAME;
       break;
     case Partition::kZirconB:
-      type = GUID_ZIRCON_B_VALUE;
+      legacy_type = GUID_ZIRCON_B_VALUE;
+      type = GPT_ZIRCON_ABR_TYPE_GUID;
+      part_name = GPT_ZIRCON_B_NAME;
       break;
     case Partition::kZirconR:
-      type = GUID_ZIRCON_R_VALUE;
+      legacy_type = GUID_ZIRCON_R_VALUE;
+      type = GPT_ZIRCON_ABR_TYPE_GUID;
+      part_name = GPT_ZIRCON_R_NAME;
       break;
     case Partition::kVbMetaA:
-      type = GUID_VBMETA_A_VALUE;
+      legacy_type = GUID_VBMETA_A_VALUE;
+      type = GPT_VBMETA_ABR_TYPE_GUID;
+      part_name = GPT_VBMETA_A_NAME;
       break;
     case Partition::kVbMetaB:
-      type = GUID_VBMETA_B_VALUE;
+      legacy_type = GUID_VBMETA_B_VALUE;
+      type = GPT_VBMETA_ABR_TYPE_GUID;
+      part_name = GPT_VBMETA_B_NAME;
       break;
     case Partition::kVbMetaR:
-      type = GUID_VBMETA_R_VALUE;
+      legacy_type = GUID_VBMETA_R_VALUE;
+      type = GPT_VBMETA_ABR_TYPE_GUID;
+      part_name = GPT_VBMETA_R_NAME;
       break;
     case Partition::kAbrMeta:
-      type = GUID_ABR_META_VALUE;
+      legacy_type = GUID_ABR_META_VALUE;
+      type = GPT_DURABLE_BOOT_TYPE_GUID;
+      part_name = GPT_DURABLE_BOOT_NAME;
       break;
     case Partition::kFuchsiaVolumeManager:
-      type = GUID_FVM_VALUE;
+      legacy_type = GUID_FVM_VALUE;
+      type = GPT_FVM_TYPE_GUID;
+      part_name = GPT_FVM_NAME;
       break;
     default:
       ERROR("Partition type is invalid\n");
       return zx::error(ZX_ERR_INVALID_ARGS);
   }
 
-  const auto filter = [&type](const gpt_partition_t& part) { return type == Uuid(part.type); };
+  const auto filter = [&legacy_type, &type, &part_name](const gpt_partition_t& part) {
+    return FilterByType(part, legacy_type) || FilterByTypeAndName(part, type, part_name);
+  };
   auto status = gpt_->FindPartition(std::move(filter));
   if (status.is_error()) {
     return status.take_error();
