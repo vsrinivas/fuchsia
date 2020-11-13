@@ -2,28 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-# TODO(pshickel): Temporary targets to enable a soft migration
-
-group("power_manager") {
-  deps = [ "//src/power/power-manager" ]
-}
-
-group("astro_config") {
-  deps = [ "//src/power/power-manager:astro_config" ]
-}
-
+# TODO(pshickel): empty target for now to facilitate a soft migration
 group("base_config") {
-  deps = [ "//src/power/power-manager/node_config:base" ]
-}
-
-group("luis_config") {
-  deps = [ "//src/power/power-manager:luis_config" ]
-}
-
-group("nelson_config") {
-  deps = [ "//src/power/power-manager:nelson_config" ]
-}
-
-group("sherlock_config") {
-  deps = [ "//src/power/power-manager:sherlock_config" ]
+  deps = []
 }
