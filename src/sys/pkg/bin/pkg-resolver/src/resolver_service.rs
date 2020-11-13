@@ -206,7 +206,7 @@ async fn hash_from_base_or_repo_or_cache(
         .await
         .map_err(|e| {
             let status = e.to_resolve_status();
-            fx_log_err!("error getting hash {} as {}: {:#}", pkg_url, rewritten_url, anyhow!(e));
+            fx_log_warn!("error getting hash {} as {}: {:#}", pkg_url, rewritten_url, anyhow!(e));
             status
         })
         .map(|hash| match hash {
@@ -295,7 +295,7 @@ async fn package_from_base_or_repo_or_cache(
     .await
     .map_err(|e| {
         let status = e.to_resolve_status();
-        fx_log_err!("error resolving {} as {}: {:#}", pkg_url, rewritten_url, anyhow!(e));
+        fx_log_warn!("error resolving {} as {}: {:#}", pkg_url, rewritten_url, anyhow!(e));
         status
     })
     .map(|hash| match hash {
