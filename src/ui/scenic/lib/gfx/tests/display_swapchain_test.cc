@@ -238,7 +238,7 @@ VK_TEST_F(DisplaySwapchainTest, RenderProtectedStress) {
 
 VK_TEST_F(DisplaySwapchainTest, InitializesFramebuffers) {
   auto swapchain = CreateSwapchain(display());
-  EXPECT_EQ(2u, Framebuffers(swapchain.get()).size());
+  EXPECT_EQ(3u, Framebuffers(swapchain.get()).size());
 }
 
 }  // namespace test

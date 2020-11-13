@@ -24,8 +24,36 @@
 namespace scenic_impl {
 namespace gfx {
 
-// TODO (fxbug.dev/64056): Make this configurable.
-static const uint32_t kSwapchainImageCount = 2;
+// TODO(fxbug.dev/23637): Don't triple buffer.  This is done to avoid "tearing", but it
+// wastes memory, and can result in the "permanent" addition of an extra Vsync
+// period of latency.  An alternative would be to use an acquire fence; this
+// saves memory, but can still result in the permanent extra latency.  Here's
+// how:
+//
+// First, let's see how tearing occurs in the 2-framebuffer case.
+//
+// Let's say we have framebuffers A and B in a world that conveniently starts at
+// some negative time, such that the first frame rendered into A has a target
+// presentation time of 0ms, and the next frame is rendered into B with a target
+// presentation time of 16ms.
+//
+// However, assume that frame being rendered into A takes a bit too long, so
+// that instead of being presented at 0ms, it is instead presented at 16ms.  The
+// frame to render into B has already been scheduled, and starts rendering at
+// 8ms to hit the target presentation time of 16ms.  Even if it's fast, it
+// cannot present at 16ms, because that frame has already been "claimed" by A,
+// and so it is instead presented at 32ms.
+//
+// The tearing occurs when it is time to render A again.  We don't know that B
+// has been deferred to present at 32ms.  So, we wake up at 24ms to render into
+// A to hit the 32ms target.  Oops!
+//
+// The problem is that A is still being displayed from 16-32ms, until it is
+// replaced by B at 32ms.  Thus, tearing.
+//
+// If you followed that, it should be clear both why triple-buffering fixes the
+// tearing, and why it adds the frame of latency.
+static const uint32_t kSwapchainImageCount = 3;
 
 DisplaySwapchain::DisplaySwapchain(
     Sysmem* sysmem,
