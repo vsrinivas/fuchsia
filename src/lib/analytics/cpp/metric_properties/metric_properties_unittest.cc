@@ -15,7 +15,7 @@ namespace analytics::metric_properties {
 
 // To avoid polluting user's home directory, this test fixture will set $HOME to a temp directory
 // during SetUp() and restore it during TearDown()
-class FuchsiaPropertiesTest : public ::testing::Test {
+class MetricPropertiesTest : public ::testing::Test {
  protected:
   void SetUp() override {
     home_dir_ = std::getenv("HOME");
@@ -29,7 +29,7 @@ class FuchsiaPropertiesTest : public ::testing::Test {
   std::filesystem::path home_dir_;
 };
 
-TEST_F(FuchsiaPropertiesTest, NonExistentProperty) {
+TEST_F(MetricPropertiesTest, NonExistentProperty) {
   EXPECT_FALSE(Exists("not-created"));
   EXPECT_FALSE(Get("not-created").has_value());
   EXPECT_FALSE(GetBool("not-created").has_value());
@@ -37,7 +37,7 @@ TEST_F(FuchsiaPropertiesTest, NonExistentProperty) {
   Delete("not-created");  // should be no-op
 }
 
-TEST_F(FuchsiaPropertiesTest, SetGetDelete) {
+TEST_F(MetricPropertiesTest, SetGetDelete) {
   Set("property", "value");
   EXPECT_TRUE(Exists("property"));
   EXPECT_EQ(*Get("property"), "value");
@@ -50,7 +50,7 @@ TEST_F(FuchsiaPropertiesTest, SetGetDelete) {
   EXPECT_FALSE(Get("property").has_value());
 }
 
-TEST_F(FuchsiaPropertiesTest, BooleanProperty) {
+TEST_F(MetricPropertiesTest, BooleanProperty) {
   SetBool("true", true);
   EXPECT_TRUE(*GetBool("true"));
 

@@ -10,6 +10,8 @@
 #include <string>
 
 #include "src/lib/analytics/cpp/google_analytics/event.h"
+#include "src/lib/analytics/cpp/google_analytics/general_parameters.h"
+#include "src/lib/fxl/memory/weak_ptr.h"
 
 namespace analytics::google_analytics {
 
@@ -36,9 +38,9 @@ class NetError {
 // Example usage:
 //
 //     auto ga_client = SomeClientImplementation();
-//     ga_client.set_tracking_id("UA-123456-1");
-//     ga_client.set_client_id("5555");
-//     ga_client.set_user_agent("Example Agent")
+//     ga_client.SetTrackingId("UA-123456-1");
+//     ga_client.SetClientId("5555");
+//     ga_client.SetUserAgent("Example Agent")
 //     int64_t value = 12345;
 //     auto event = Event("category", "action", "label", value);
 //     fit::promise<void, NetError> p = ga_client.AddEvent(event)
@@ -52,26 +54,30 @@ class Client {
  public:
   static constexpr char kEndpoint[] = "https://www.google-analytics.com/collect";
 
-  Client() = default;
+  Client();
   Client(const Client&) = delete;
 
   virtual ~Client() = default;
 
-  void set_user_agent(std::string_view user_agent) { user_agent_ = user_agent; }
-  void set_tracking_id(std::string_view tracking_id) { tracking_id_ = tracking_id; }
-  void set_client_id(std::string_view client_id) { client_id_ = client_id; }
+  void SetUserAgent(std::string_view user_agent) { user_agent_ = user_agent; }
+  void SetTrackingId(std::string_view tracking_id);
+  void SetClientId(std::string_view client_id);
+  // Add parameters shared by all metrics, for example, an (application name).
+  void AddSharedParameters(const GeneralParameters& shared_parameters);
 
   fit::promise<void, NetError> AddEvent(const Event& event) const;
 
+  fxl::WeakPtr<Client> GetWeakPtr() { return weak_factory_.GetWeakPtr(); };
+
  private:
   bool IsReady() const;
-  std::map<std::string, std::string> PrepareParameters() const;
   virtual fit::promise<void, NetError> SendData(
       std::string_view user_agent, const std::map<std::string, std::string>& parameters) const = 0;
 
   std::string user_agent_;
-  std::string tracking_id_;
-  std::string client_id_;
+  // Stores shared parameters
+  std::map<std::string, std::string> shared_parameters_;
+  fxl::WeakPtrFactory<Client> weak_factory_;
 };
 
 }  // namespace analytics::google_analytics

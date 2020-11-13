@@ -6,6 +6,8 @@
 
 #include <lib/cmdline/args_parser.h>
 
+#include <iostream>
+
 namespace zxdb {
 
 namespace {
@@ -107,6 +109,16 @@ const char kSymbolServerHelp[] = R"(  --symbol-server=<url>
       Adds the given URL to symbol servers. Symbol servers host the debug
       symbols for prebuilt binaries and dynamic libraries.)";
 
+const char* const kAnalyticsHelp = R"(  --analytics=enable|disable
+      Enable or disable collection of analytics:
+      --analytics=enable           Enable collection of analytics and save the
+                                   status in a configuration file.
+      --analytics=disable          Disable collection of analytics and save the
+                                   status in a configuration file.)";
+
+const char* const kShowAnalyticsHelp = R"(  --show-analytics
+      Show the opt-in/out status for collection of analytics and what we collect when opt-in.)";
+
 }  // namespace
 
 cmdline::Status ParseCommandLine(int argc, const char* argv[], CommandLineOptions* options,
@@ -130,6 +142,32 @@ cmdline::Status ParseCommandLine(int argc, const char* argv[], CommandLineOption
   parser.AddSwitch("symbol-cache", 0, kSymbolCacheHelp, &CommandLineOptions::symbol_cache);
   parser.AddSwitch("symbol-server", 0, kSymbolServerHelp, &CommandLineOptions::symbol_servers);
 
+  // The analytics option can take two additional internal options, which can only be used when
+  // another core developer tool (such as ffx) is sub-launching zxdb. The two internal options are
+  //      --analytics=sublaunch-first  Indicate that zxdb is sub-launched by the
+  //                                   first run of the first tool. Collection of
+  //                                   analytics will be disabled in this run.
+  //      --analytics=sublaunch-normal Indicate that zxdb is sub-launched by another
+  //                                   tool, but not by the first run of the first
+  //                                   tool. Collection of analytics will be enabled
+  //                                   or disabled according to the saved status.
+  CommandLineOptions::AnalyticsMode analytics = CommandLineOptions::AnalyticsMode::kUnspecified;
+  parser.AddGeneralSwitch("analytics", 0, kAnalyticsHelp, [&analytics](const std::string& value) {
+    if (value == "enable") {
+      analytics = CommandLineOptions::AnalyticsMode::kEnable;
+    } else if (value == "disable") {
+      analytics = CommandLineOptions::AnalyticsMode::kDisable;
+    } else if (value == "sublaunch-first") {
+      analytics = CommandLineOptions::AnalyticsMode::kSubLaunchFirst;
+    } else if (value == "sublaunch-normal") {
+      analytics = CommandLineOptions::AnalyticsMode::kSubLaunchNormal;
+    } else {
+      return cmdline::Status::Error("Unable to parse analytics setting \"" + value + "\"");
+    }
+    return cmdline::Status::Ok();
+  });
+  parser.AddSwitch("show-analytics", 0, kShowAnalyticsHelp, &CommandLineOptions::show_analytics);
+
   // Special --help switch which doesn't exist in the options structure.
   bool requested_help = false;
   parser.AddGeneralSwitch("help", 'h', kHelpHelp, [&requested_help]() { requested_help = true; });
@@ -141,6 +179,8 @@ cmdline::Status ParseCommandLine(int argc, const char* argv[], CommandLineOption
   // Handle --help switch since we're the one that knows about the switches.
   if (requested_help)
     return cmdline::Status::Error(kHelpIntro + parser.GetHelp());
+
+  options->analytics = analytics;
 
   return cmdline::Status::Ok();
 }

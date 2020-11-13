@@ -17,26 +17,36 @@ constexpr char kClientIdKey[] = "cid";
 
 }  // namespace
 
+Client::Client()
+    : shared_parameters_{{kProtocolVersionKey, kProtocolVersion}}, weak_factory_(this) {}
+
+void Client::SetTrackingId(std::string_view tracking_id) {
+  shared_parameters_[kTrackingIdKey] = tracking_id;
+}
+
+void Client::SetClientId(std::string_view client_id) {
+  shared_parameters_[kClientIdKey] = client_id;
+}
+
+void Client::AddSharedParameters(const GeneralParameters& shared_parameters) {
+  const auto& parameters = shared_parameters.parameters();
+  shared_parameters_.insert(parameters.begin(), parameters.end());
+}
+
 fit::promise<void, NetError> Client::AddEvent(const Event& event) const {
   FX_DCHECK(IsReady());
 
-  auto parameters = PrepareParameters();
-  auto event_parameters = event.parameters();
+  std::map<std::string, std::string> parameters(shared_parameters_);
+  const auto& event_parameters = event.parameters();
   parameters.insert(event_parameters.begin(), event_parameters.end());
 
   return SendData(user_agent_, parameters);
 }
 
-std::map<std::string, std::string> Client::PrepareParameters() const {
-  FX_DCHECK(IsReady());
-
-  return {{kProtocolVersionKey, kProtocolVersion},
-          {kTrackingIdKey, tracking_id_},
-          {kClientIdKey, client_id_}};
-}
-
 bool Client::IsReady() const {
-  return !(user_agent_.empty() || tracking_id_.empty() || client_id_.empty());
+  return !(user_agent_.empty() ||
+           shared_parameters_.find(kTrackingIdKey) == shared_parameters_.end() ||
+           shared_parameters_.find(kClientIdKey) == shared_parameters_.end());
 }
 
 }  // namespace analytics::google_analytics

@@ -8,6 +8,7 @@
 
 #include <cstdlib>
 #include <filesystem>
+#include <iostream>
 
 #include "src/developer/debug/shared/buffered_fd.h"
 #include "src/developer/debug/shared/logging/logging.h"
@@ -17,8 +18,11 @@
 #include "src/developer/debug/zxdb/client/setting_schema_definition.h"
 #include "src/developer/debug/zxdb/common/string_util.h"
 #include "src/developer/debug/zxdb/console/actions.h"
+#include "src/developer/debug/zxdb/console/analytics.h"
+#include "src/developer/debug/zxdb/console/analytics_scope.h"
 #include "src/developer/debug/zxdb/console/command_line_options.h"
 #include "src/developer/debug/zxdb/console/console_impl.h"
+#include "src/developer/debug/zxdb/console/google_analytics_client.h"
 #include "src/developer/debug/zxdb/console/output_buffer.h"
 #include "src/developer/debug/zxdb/console/verbs.h"
 #include "src/developer/debug/zxdb/symbols/system_symbols.h"
@@ -155,9 +159,44 @@ void SetupCommandLineOptions(const CommandLineOptions& options, Session* session
   }
 }
 
+void InitAnalytics(CommandLineOptions::AnalyticsMode analytics_option, Session& session) {
+  analytics::core_dev_tools::SubLaunchStatus sub_launch_status;
+  if (analytics_option == CommandLineOptions::AnalyticsMode::kSubLaunchFirst) {
+    sub_launch_status = analytics::core_dev_tools::SubLaunchStatus::kSubLaunchedFirst;
+  } else if (analytics_option == CommandLineOptions::AnalyticsMode::kSubLaunchNormal) {
+    sub_launch_status = analytics::core_dev_tools::SubLaunchStatus::kSubLaunchedNormal;
+  } else {
+    sub_launch_status = analytics::core_dev_tools::SubLaunchStatus::kDirectlyLaunched;
+  }
+
+  Analytics::Init(session, sub_launch_status);
+}
+// Early processing of analytics options. Returns true if invoked with --analytics=enable|disable or
+// --show-analytics, indicating that we are expected to exit after analytics related actions.
+bool EarlyProcessAnalyticsOptions(const CommandLineOptions& options) {
+  bool should_exit_early = false;
+  if (options.analytics == CommandLineOptions::AnalyticsMode::kEnable) {
+    Analytics::PersistentEnable([] { debug_ipc::MessageLoop::Current()->QuitNow(); });
+    should_exit_early = true;
+    debug_ipc::MessageLoop::Current()->Run();
+  } else if (options.analytics == CommandLineOptions::AnalyticsMode::kDisable) {
+    Analytics::PersistentDisable([] { debug_ipc::MessageLoop::Current()->QuitNow(); });
+    should_exit_early = true;
+    debug_ipc::MessageLoop::Current()->Run();
+  }
+
+  if (options.show_analytics) {
+    Analytics::ShowAnalytics();
+    should_exit_early = true;
+  }
+
+  return should_exit_early;
+}
+
 }  // namespace
 
 int ConsoleMain(int argc, const char* argv[]) {
+  AnalyticsScope _scope;
   CommandLineOptions options;
   std::vector<std::string> params;
   cmdline::Status status = ParseCommandLine(argc, argv, &options, &params);
@@ -180,6 +219,11 @@ int ConsoleMain(int argc, const char* argv[]) {
     return 1;
   }
 
+  if (EarlyProcessAnalyticsOptions(options)) {
+    loop.Cleanup();
+    return 0;
+  }
+
   // This scope forces all the objects to be destroyed before the Cleanup() call which will mark the
   // message loop as not-current.
   {
@@ -188,6 +232,9 @@ int ConsoleMain(int argc, const char* argv[]) {
     // Route data from buffer -> session.
     Session session;
     buffer.set_data_available_callback([&session]() { session.OnStreamReadable(); });
+
+    InitAnalytics(options.analytics, session);
+    Analytics::IfEnabledSendInvokeEvent(&session);
 
     debug_ipc::SetLogCategories({debug_ipc::LogCategory::kAll});
     if (options.debug_mode) {

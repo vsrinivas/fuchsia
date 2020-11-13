@@ -1,0 +1,79 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/test.gni")
+
+static_library("core_dev_tools") {
+  friend = [ ":analytics_cpp_core_dev_tools_unittests" ]
+
+  public = [
+    "analytics.h",
+    "general_parameters.h",
+    "system_info.h",
+    "toolchain.h",
+  ]
+
+  sources = [
+    "analytics.h",
+    "analytics_internal.cc",
+    "analytics_internal.h",
+    "analytics_messages.cc",
+    "analytics_messages.h",
+    "analytics_status.h",
+    "general_parameters.cc",
+    "general_parameters.h",
+    "persistent_status.cc",
+    "persistent_status.h",
+    "system_info.cc",
+    "system_info.h",
+    "toolchain.cc",
+    "toolchain.h",
+  ]
+
+  deps = [
+    "//sdk/lib/syslog/cpp",
+    "//src/lib/analytics/cpp/google_analytics",
+    "//src/lib/analytics/cpp/metric_properties",
+    "//src/lib/fxl",
+    "//src/lib/uuid",
+
+    # TODO(fxbug.dev/57392): Move it back to //third_party once unification completes.
+    "//zircon/third_party/rapidjson",
+  ]
+}
+
+test("analytics_cpp_core_dev_tools_unittests") {
+  sources = [ "persistent_status_unittest.cc" ]
+
+  deps = [
+    ":core_dev_tools",
+    "//src/lib/analytics/cpp/metric_properties",
+    "//src/lib/files",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/uuid",
+    "//third_party/googletest:gtest",
+  ]
+}
+
+test("analytics_cpp_core_dev_tools_toolchain_manualtest") {
+  sources = [ "toolchain_manualtest.cc" ]
+
+  deps = [ ":core_dev_tools" ]
+}
+
+test("analytics_cpp_core_dev_tools_system_info_manualtest") {
+  sources = [ "system_info_manualtest.cc" ]
+
+  deps = [ ":core_dev_tools" ]
+}
+
+group("tests") {
+  testonly = true
+
+  deps = [
+    ":analytics_cpp_core_dev_tools_system_info_manualtest",
+    ":analytics_cpp_core_dev_tools_toolchain_manualtest",
+    ":analytics_cpp_core_dev_tools_unittests",
+  ]
+}

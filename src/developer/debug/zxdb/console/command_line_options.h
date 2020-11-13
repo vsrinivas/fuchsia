@@ -14,6 +14,8 @@
 namespace zxdb {
 
 struct CommandLineOptions {
+  enum class AnalyticsMode { kEnable, kDisable, kSubLaunchFirst, kSubLaunchNormal, kUnspecified };
+
   std::optional<std::string> connect;
   std::optional<std::string> unix_connect;
   bool debug_mode = false;
@@ -29,6 +31,8 @@ struct CommandLineOptions {
   std::vector<std::string> ids_txts;
   std::vector<std::string> symbol_servers;
   std::vector<std::string> build_dirs;
+  AnalyticsMode analytics = AnalyticsMode::kUnspecified;
+  bool show_analytics = false;
 };
 
 // Parses the given command line into options and params.

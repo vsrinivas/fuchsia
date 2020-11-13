@@ -8,6 +8,10 @@ static_library("console") {
   sources = [
     "actions.cc",
     "actions.h",
+    "analytics.cc",
+    "analytics.h",
+    "analytics_scope.cc",
+    "analytics_scope.h",
     "analyze_memory.cc",
     "analyze_memory.h",
     "async_output_buffer.cc",
@@ -195,6 +199,7 @@ static_library("console") {
   public_deps = [
     "//src/developer/debug/zxdb/client",
     "//src/developer/debug/zxdb/expr",
+    "//src/lib/analytics/cpp/core_dev_tools",
     "//src/lib/analytics/cpp/google_analytics",
     "//src/lib/fxl",
     "//src/lib/line_input",

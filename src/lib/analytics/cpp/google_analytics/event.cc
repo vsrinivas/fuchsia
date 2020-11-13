@@ -28,4 +28,9 @@ Event::Event(std::string_view category, std::string_view action,
     parameters_[kValueKey] = std::to_string(value.value());
 }
 
+void Event::AddGeneralParameters(const GeneralParameters& general_parameters) {
+  const auto& parameters = general_parameters.parameters();
+  parameters_.insert(parameters.begin(), parameters.end());
+}
+
 }  // namespace analytics::google_analytics
