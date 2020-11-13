@@ -36,10 +36,9 @@
 
 namespace {
 
-KCOUNTER(vmo_attribution_queries_all, "vm.object.attribution.queries_all")
-KCOUNTER(vmo_attribution_queries_entire_object, "vm.object.attribution.queries_entire_object")
-KCOUNTER(vmo_attribution_cache_hits, "vm.object.attribution.cache_hits")
-KCOUNTER(vmo_attribution_cache_misses, "vm.object.attribution.cache_misses")
+KCOUNTER(vmo_attribution_queries, "vm.attributed_pages.object.queries")
+KCOUNTER(vmo_attribution_cache_hits, "vm.attributed_pages.object.cache_hits")
+KCOUNTER(vmo_attribution_cache_misses, "vm.attributed_pages.object.cache_misses")
 
 }  // namespace
 
@@ -595,14 +594,13 @@ size_t VmObjectPaged::AttributedPagesInRangeLocked(uint64_t offset, uint64_t len
     return 0;
   }
 
-  vmo_attribution_queries_all.Add(1);
+  vmo_attribution_queries.Add(1);
 
   uint64_t gen_count;
   bool update_cached_attribution = false;
   // Use cached value if generation count has not changed since the last time we attributed pages.
   // Only applicable for attribution over the entire VMO, not a partial range.
   if (offset == 0 && new_len == size_locked()) {
-    vmo_attribution_queries_entire_object.Add(1);
     gen_count = GetHierarchyGenerationCountLocked();
 
     if (cached_page_attribution_.generation_count == gen_count) {

@@ -7,6 +7,7 @@
 #include <align.h>
 #include <assert.h>
 #include <inttypes.h>
+#include <lib/counters.h>
 #include <trace.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
@@ -25,6 +26,14 @@
 #include "vm_priv.h"
 
 #define LOCAL_TRACE VM_GLOBAL_TRACE(0)
+
+namespace {
+
+KCOUNTER(vm_mapping_attribution_queries, "vm.attributed_pages.mapping.queries")
+KCOUNTER(vm_mapping_attribution_cache_hits, "vm.attributed_pages.mapping.cache_hits")
+KCOUNTER(vm_mapping_attribution_cache_misses, "vm.attributed_pages.mapping.cache_misses")
+
+}  // namespace
 
 VmMapping::VmMapping(VmAddressRegion& parent, vaddr_t base, size_t size, uint32_t vmar_flags,
                      fbl::RefPtr<VmObject> vmo, uint64_t vmo_offset, uint arch_mmu_flags)
@@ -53,6 +62,8 @@ size_t VmMapping::AllocatedPagesLocked() const {
     return 0;
   }
 
+  vm_mapping_attribution_queries.Add(1);
+
   if (!object_->is_paged()) {
     return object_->AttributedPagesInRange(object_offset_locked(), size_);
   }
@@ -66,9 +77,11 @@ size_t VmMapping::AllocatedPagesLocked() const {
   // have not changed.
   if (cached_page_attribution_.mapping_generation_count == mapping_gen_count &&
       cached_page_attribution_.vmo_generation_count == vmo_gen_count) {
-    // TODO(rashaeqbal): Add counters for tracking hits and misses
+    vm_mapping_attribution_cache_hits.Add(1);
     return cached_page_attribution_.page_count;
   }
+
+  vm_mapping_attribution_cache_misses.Add(1);
 
   size_t page_count = object_paged->AttributedPagesInRange(object_offset_locked(), size_);
 
