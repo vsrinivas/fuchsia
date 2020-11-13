@@ -63,7 +63,7 @@ dart_library("lib") {
 
 resource("keyboard-shortcuts") {
   sources = [ "config/keyboard_shortcuts.json" ]
-  outputs = [ "keyboard_shortcuts.json" ]
+  outputs = [ "data/keyboard_shortcuts.json" ]
 }
 
 flutter_component("component") {
