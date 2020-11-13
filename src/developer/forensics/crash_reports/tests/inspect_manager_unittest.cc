@@ -17,7 +17,7 @@
 #include "src/developer/forensics/crash_reports/constants.h"
 #include "src/developer/forensics/crash_reports/errors.h"
 #include "src/developer/forensics/crash_reports/product.h"
-#include "src/developer/forensics/crash_reports/settings.h"
+#include "src/developer/forensics/crash_reports/reporting_policy_watcher.h"
 #include "src/developer/forensics/testing/unit_test_fixture.h"
 #include "src/developer/forensics/utils/errors.h"
 #include "src/lib/fxl/strings/string_printf.h"
@@ -55,10 +55,6 @@ constexpr CrashServerConfig::UploadPolicy kConfigDisabled =
 constexpr CrashServerConfig::UploadPolicy kConfigEnabled = CrashServerConfig::UploadPolicy::ENABLED;
 constexpr CrashServerConfig::UploadPolicy kConfigReadFromPrivacySettings =
     CrashServerConfig::UploadPolicy::READ_FROM_PRIVACY_SETTINGS;
-
-constexpr Settings::UploadPolicy kSettingsDisabled = Settings::UploadPolicy::DISABLED;
-constexpr Settings::UploadPolicy kSettingsEnabled = Settings::UploadPolicy::ENABLED;
-constexpr Settings::UploadPolicy kSettingsLimbo = Settings::UploadPolicy::LIMBO;
 
 class InspectManagerTest : public UnitTestFixture {
  public:
@@ -353,44 +349,50 @@ TEST_F(InspectManagerTest, ExposeConfig_UploadReadFromPrivacySettings) {
                                                 ToString(kConfigReadFromPrivacySettings))))))))))));
 }
 
+class TestReportingPolicyWatcher : public ReportingPolicyWatcher {
+ public:
+  TestReportingPolicyWatcher() : ReportingPolicyWatcher(ReportingPolicy::kUndecided) {}
+
+  void Set(const ReportingPolicy policy) { SetPolicy(policy); }
+};
+
 TEST_F(InspectManagerTest, ExposeSettings_TrackUploadPolicyChanges) {
-  Settings settings;
-  settings.set_upload_policy(kSettingsEnabled);
-  inspect_manager_->ExposeSettings(&settings);
-  EXPECT_THAT(
-      InspectTree(),
-      ChildrenMatch(Contains(AllOf(
-          NodeMatches(NameMatches("crash_reporter")),
-          ChildrenMatch(Contains(NodeMatches(AllOf(
-              NameMatches("settings"), PropertyList(ElementsAre(StringIs(
-                                           "upload_policy", ToString(kSettingsEnabled))))))))))));
+  TestReportingPolicyWatcher watcher;
+  inspect_manager_->ExposeReportingPolicy(&watcher);
+  EXPECT_THAT(InspectTree(),
+              ChildrenMatch(Contains(
+                  AllOf(NodeMatches(NameMatches("crash_reporter")),
+                        ChildrenMatch(Contains(NodeMatches(AllOf(
+                            NameMatches("settings"),
+                            PropertyList(ElementsAre(StringIs(
+                                "upload_policy", ToString(ReportingPolicy::kUndecided))))))))))));
 
-  settings.set_upload_policy(kSettingsDisabled);
-  EXPECT_THAT(
-      InspectTree(),
-      ChildrenMatch(Contains(AllOf(
-          NodeMatches(NameMatches("crash_reporter")),
-          ChildrenMatch(Contains(NodeMatches(AllOf(
-              NameMatches("settings"), PropertyList(ElementsAre(StringIs(
-                                           "upload_policy", ToString(kSettingsDisabled))))))))))));
+  watcher.Set(ReportingPolicy::kArchive);
+  EXPECT_THAT(InspectTree(),
+              ChildrenMatch(Contains(
+                  AllOf(NodeMatches(NameMatches("crash_reporter")),
+                        ChildrenMatch(Contains(NodeMatches(AllOf(
+                            NameMatches("settings"),
+                            PropertyList(ElementsAre(StringIs(
+                                "upload_policy", ToString(ReportingPolicy::kArchive))))))))))));
 
-  settings.set_upload_policy(kSettingsLimbo);
-  EXPECT_THAT(
-      InspectTree(),
-      ChildrenMatch(Contains(AllOf(
-          NodeMatches(NameMatches("crash_reporter")),
-          ChildrenMatch(Contains(NodeMatches(AllOf(
-              NameMatches("settings"), PropertyList(ElementsAre(StringIs(
-                                           "upload_policy", ToString(kSettingsLimbo))))))))))));
+  watcher.Set(ReportingPolicy::kDoNotFileAndDelete);
+  EXPECT_THAT(InspectTree(),
+              ChildrenMatch(Contains(
+                  AllOf(NodeMatches(NameMatches("crash_reporter")),
+                        ChildrenMatch(Contains(NodeMatches(AllOf(
+                            NameMatches("settings"),
+                            PropertyList(ElementsAre(StringIs(
+                                "upload_policy", ToString(ReportingPolicy::kDoNotFileAndDelete))))))))))));
 
-  settings.set_upload_policy(kSettingsEnabled);
-  EXPECT_THAT(
-      InspectTree(),
-      ChildrenMatch(Contains(AllOf(
-          NodeMatches(NameMatches("crash_reporter")),
-          ChildrenMatch(Contains(NodeMatches(AllOf(
-              NameMatches("settings"), PropertyList(ElementsAre(StringIs(
-                                           "upload_policy", ToString(kSettingsEnabled))))))))))));
+  watcher.Set(ReportingPolicy::kUpload);
+  EXPECT_THAT(InspectTree(),
+              ChildrenMatch(Contains(
+                  AllOf(NodeMatches(NameMatches("crash_reporter")),
+                        ChildrenMatch(Contains(NodeMatches(AllOf(
+                            NameMatches("settings"),
+                            PropertyList(ElementsAre(StringIs(
+                                "upload_policy", ToString(ReportingPolicy::kUpload))))))))))));
 }
 
 TEST_F(InspectManagerTest, IncreaseReportsGarbageCollectedBy) {

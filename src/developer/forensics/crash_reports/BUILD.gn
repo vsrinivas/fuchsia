@@ -98,11 +98,10 @@ source_set("crash_reporter") {
     ":crash_server",
     ":log_tags",
     ":network_watcher",
-    ":privacy_settings_ptr",
     ":product",
     ":queue",
     ":report_id",
-    ":settings",
+    ":reporting_policy_watcher",
     ":snapshot_manager",
     "//sdk/fidl/fuchsia.feedback",
     "//sdk/lib/sys/cpp",
@@ -206,31 +205,6 @@ source_set("network_watcher") {
   deps = [ "//sdk/lib/syslog/cpp" ]
 }
 
-source_set("privacy_settings_ptr") {
-  sources = [
-    "privacy_settings_ptr.cc",
-    "privacy_settings_ptr.h",
-  ]
-
-  public_deps = [
-    ":settings",
-    "//sdk/fidl/fuchsia.feedback",
-    "//sdk/fidl/fuchsia.settings",
-    "//sdk/lib/sys/cpp",
-    "//src/lib/backoff",
-    "//src/lib/fxl",
-    "//zircon/public/lib/async",
-    "//zircon/public/lib/zx",
-  ]
-
-  deps = [
-    "//garnet/public/lib/fostr/fidl/fuchsia.settings",
-    "//sdk/lib/syslog/cpp",
-    "//zircon/public/lib/async-cpp",
-    "//zircon/public/lib/fit",
-  ]
-}
-
 source_set("product") {
   sources = [
     "product.cc",
@@ -251,7 +225,7 @@ source_set("queue") {
     ":log_tags",
     ":network_watcher",
     ":report_id",
-    ":settings",
+    ":reporting_policy_watcher",
     ":store",
     "//src/developer/forensics/crash_reports/info",
     "//src/lib/backoff",
@@ -282,6 +256,24 @@ source_set("report") {
   ]
 }
 
+source_set("reporting_policy_watcher") {
+  sources = [
+    "reporting_policy_watcher.cc",
+    "reporting_policy_watcher.h",
+  ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.settings",
+    "//sdk/lib/sys/cpp",
+    "//src/lib/backoff",
+    "//zircon/public/lib/async",
+    "//zircon/public/lib/fit",
+    "//zircon/public/lib/zx",
+  ]
+
+  deps = [ "//sdk/lib/syslog/cpp" ]
+}
+
 source_set("report_id") {
   sources = [ "report_id.h" ]
 }
@@ -307,23 +299,6 @@ source_set("report_util") {
     "//src/lib/files",
     "//src/lib/fxl",
   ]
-}
-
-source_set("settings") {
-  public = [ "settings.h" ]
-
-  sources = [
-    "settings.cc",
-    "settings.h",
-  ]
-
-  public_deps = [
-    ":config",
-    "//src/lib/fxl",
-    "//zircon/public/lib/fit",
-  ]
-
-  deps = [ "//sdk/lib/syslog/cpp" ]
 }
 
 source_set("sized_data_reader") {

@@ -15,7 +15,7 @@
 
 #include "src/developer/forensics/crash_reports/config.h"
 #include "src/developer/forensics/crash_reports/product.h"
-#include "src/developer/forensics/crash_reports/settings.h"
+#include "src/developer/forensics/crash_reports/reporting_policy_watcher.h"
 #include "src/developer/forensics/utils/inspect_node_manager.h"
 #include "src/developer/forensics/utils/inspect_protocol_stats.h"
 #include "src/developer/forensics/utils/storage_size.h"
@@ -32,8 +32,8 @@ class InspectManager {
   // Exposes the static configuration of the crash reporter.
   void ExposeConfig(const crash_reports::Config& config);
 
-  // Exposes the mutable settings of the crash reporter.
-  void ExposeSettings(crash_reports::Settings* settings);
+  // Exposes the reporting policy of the crash reporter.
+  void ExposeReportingPolicy(ReportingPolicyWatcher* watcher);
 
   // Exposes the static properties of the report store.
   void ExposeStore(StorageSize max_size);
@@ -87,9 +87,6 @@ class InspectManager {
 
  private:
   bool Contains(const std::string& local_report_id);
-
-  // Callback to update |settings_| on upload policy changes.
-  void OnUploadPolicyChange(const crash_reports::Settings::UploadPolicy& upload_policy);
 
   // Inspect node containing the static configuration.
   struct Config {

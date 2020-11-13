@@ -19,7 +19,7 @@
 #include "src/developer/forensics/crash_reports/network_watcher.h"
 #include "src/developer/forensics/crash_reports/report.h"
 #include "src/developer/forensics/crash_reports/report_id.h"
-#include "src/developer/forensics/crash_reports/settings.h"
+#include "src/developer/forensics/crash_reports/reporting_policy_watcher.h"
 #include "src/developer/forensics/crash_reports/store.h"
 #include "src/lib/fxl/macros.h"
 
@@ -34,9 +34,9 @@ class Queue {
         SnapshotManager* snapshot_manager);
 
   // Watcher functions that allow the queue to react to external events, such as
-  //  1) the upload policy changing or
+  //  1) the reporting policy changing or
   //  2) the network status changing.
-  void WatchSettings(Settings* settings);
+  void WatchReportingPolicy(ReportingPolicyWatcher* watcher);
   void WatchNetwork(NetworkWatcher* network_watcher);
 
   // Add a report to the queue.

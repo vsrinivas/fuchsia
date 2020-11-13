@@ -8,7 +8,7 @@
 #include <memory>
 
 #include "src/developer/forensics/crash_reports/info/info_context.h"
-#include "src/developer/forensics/crash_reports/settings.h"
+#include "src/developer/forensics/crash_reports/reporting_policy_watcher.h"
 #include "src/developer/forensics/utils/cobalt/metrics.h"
 
 namespace forensics {
@@ -19,8 +19,8 @@ struct CrashReporterInfo {
  public:
   CrashReporterInfo(std::shared_ptr<InfoContext> context);
 
-  // Exposes the mutable settings of the crash reporter.
-  void ExposeSettings(Settings* settings);
+  // Exposes the reporting policy of the crash reporter.
+  void ExposeReportingPolicy(ReportingPolicyWatcher* watcher);
 
   void LogCrashState(cobalt::CrashState state);
 

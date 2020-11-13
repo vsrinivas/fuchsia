@@ -198,25 +198,6 @@ executable("network_watcher_unittest_exe") {
   ]
 }
 
-executable("privacy_settings_ptr_unittest_exe") {
-  testonly = true
-
-  sources = [ "privacy_settings_ptr_unittest.cc" ]
-
-  deps = [
-    "//garnet/public/lib/fostr/fidl/fuchsia.settings",
-    "//sdk/fidl/fuchsia.settings",
-    "//src/developer/forensics/crash_reports:privacy_settings_ptr",
-    "//src/developer/forensics/testing:gtest_with_syslog_main",
-    "//src/developer/forensics/testing:unit_test_fixture",
-    "//src/developer/forensics/testing/fakes:privacy_settings",
-    "//src/lib/files",
-    "//src/lib/fxl",
-    "//third_party/googletest:gtest",
-    "//zircon/public/lib/zx",
-  ]
-}
-
 executable("queue_unittest_exe") {
   testonly = true
 
@@ -237,6 +218,20 @@ executable("queue_unittest_exe") {
     "//src/lib/fsl:fsl",
     "//src/lib/timekeeper:testing",
     "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+  ]
+}
+
+executable("reporting_policy_watcher_unittest_exe") {
+  testonly = true
+
+  sources = [ "reporting_policy_watcher_unittest.cc" ]
+
+  deps = [
+    "//src/developer/forensics/crash_reports:reporting_policy_watcher",
+    "//src/developer/forensics/testing:gtest_with_syslog_main",
+    "//src/developer/forensics/testing:unit_test_fixture",
+    "//src/developer/forensics/testing/fakes:privacy_settings",
     "//third_party/googletest:gtest",
   ]
 }
@@ -423,6 +418,14 @@ fuchsia_component("crash_server_unittest") {
   deps = [ ":crash_server_unittest_exe" ]
 }
 
+fuchsia_component("reporting_policy_watcher_unittest") {
+  testonly = true
+
+  manifest = "meta/reporting_policy_watcher_unittest.cmx"
+
+  deps = [ ":reporting_policy_watcher_unittest_exe" ]
+}
+
 fuchsia_component("inspect_manager_unittest") {
   testonly = true
 
@@ -445,14 +448,6 @@ fuchsia_component("main_service_unittest") {
   manifest = "meta/main_service_unittest.cmx"
 
   deps = [ ":main_service_unittest_exe" ]
-}
-
-fuchsia_component("privacy_settings_ptr_unittest") {
-  testonly = true
-
-  manifest = "meta/privacy_settings_ptr_unittest.cmx"
-
-  deps = [ ":privacy_settings_ptr_unittest_exe" ]
 }
 
 fuchsia_component("queue_unittest") {
@@ -515,14 +510,14 @@ fuchsia_test_package("crash-reports-tests") {
     ":crash_reports_integration_test_invalid_override_config",
     ":crash_reports_integration_test_valid_override_config",
     ":crash_server_unittest",
-    ":snapshot_manager_unittest",
+    ":reporting_policy_watcher_unittest",
     ":inspect_manager_unittest",
-    ":network_watcher_unittest",
     ":main_service_unittest",
-    ":privacy_settings_ptr_unittest",
+    ":network_watcher_unittest",
     ":queue_unittest",
     ":report_util_unittest",
     ":sized_data_reader_unittest",
+    ":snapshot_manager_unittest",
     ":store_unittest",
     ":store_metadata_unittest",
   ]

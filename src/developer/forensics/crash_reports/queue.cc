@@ -17,8 +17,6 @@
 namespace forensics {
 namespace crash_reports {
 
-using UploadPolicy = Settings::UploadPolicy;
-
 Queue::Queue(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
              std::shared_ptr<InfoContext> info_context, LogTags* tags, CrashServer* crash_server,
              SnapshotManager* snapshot_manager)
@@ -166,25 +164,30 @@ size_t Queue::ArchiveAll() {
 // be uploaded may later be considered to be forbidden. This is due to the fact that when uploads
 // are disabled all reports are immediately archived after having been added to the queue, thus we
 // never have to worry that a report that shouldn't be uploaded ends up being uploaded when the
-// upload policy changes.
-void Queue::WatchSettings(Settings* settings) {
-  settings->RegisterUploadPolicyWatcher([this](const UploadPolicy& upload_policy) {
-    switch (upload_policy) {
-      case UploadPolicy::DISABLED:
+// reporting policy changes.
+void Queue::WatchReportingPolicy(ReportingPolicyWatcher* watcher) {
+  auto ChangeState = [this](const ReportingPolicy policy) {
+    switch (policy) {
+      // TODO(fxbug.dev/62362): Behave differently for Archive and Delete.
+      case ReportingPolicy::kArchive:
+      case ReportingPolicy::kDoNotFileAndDelete:
         state_ = State::Archive;
         upload_all_every_fifteen_minutes_task_.Cancel();
         ArchiveAll();
         break;
-      case UploadPolicy::ENABLED:
+      case ReportingPolicy::kUpload:
         state_ = State::Upload;
         UploadAllEveryFifteenMinutes();
         break;
-      case UploadPolicy::LIMBO:
+      case ReportingPolicy::kUndecided:
         state_ = State::LeaveAsPending;
         upload_all_every_fifteen_minutes_task_.Cancel();
         break;
     }
-  });
+  };
+
+  ChangeState(watcher->CurrentPolicy());
+  watcher->OnPolicyChange([=](const ReportingPolicy policy) { ChangeState(policy); });
 }
 
 void Queue::WatchNetwork(NetworkWatcher* network_watcher) {

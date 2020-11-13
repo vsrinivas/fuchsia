@@ -65,6 +65,22 @@ struct CrashReporterError {
   std::string_view log_message;
 };
 
+// Make the appropriate ReportingPolicyWatcher for the upload policy in |config|.
+std::unique_ptr<ReportingPolicyWatcher> MakeReportingPolicyWatcher(
+    async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
+    const Config& config) {
+  switch (config.crash_server.upload_policy) {
+    case CrashServerConfig::UploadPolicy::ENABLED:
+      // Uploads being enabled in |config| is explcit consent to upload all reports.
+      return std::make_unique<StaticReportingPolicyWatcher<ReportingPolicy::kUpload>>();
+    case CrashServerConfig::UploadPolicy::DISABLED:
+      // Uploads being disabled in |config| means that reports should be archived.
+      return std::make_unique<StaticReportingPolicyWatcher<ReportingPolicy::kArchive>>();
+    case CrashServerConfig::UploadPolicy::READ_FROM_PRIVACY_SETTINGS:
+      return std::make_unique<UserReportingPolicyWatcher>(dispatcher, std::move(services));
+  }
+}
+
 }  // namespace
 
 std::unique_ptr<CrashReporter> CrashReporter::TryCreate(
@@ -107,25 +123,19 @@ CrashReporter::CrashReporter(async_dispatcher_t* dispatcher,
       product_quotas_(dispatcher_, config.daily_per_product_quota),
       info_(info_context),
       network_watcher_(dispatcher_, services_),
-      privacy_settings_watcher_(dispatcher, services_, &settings_),
+      reporting_policy_watcher_(MakeReportingPolicyWatcher(dispatcher_, services, config)),
       device_id_provider_ptr_(dispatcher_, services_) {
   FX_CHECK(dispatcher_);
   FX_CHECK(services_);
   FX_CHECK(crash_register_);
   FX_CHECK(crash_server_);
 
-  const auto& upload_policy = config.crash_server.upload_policy;
-  settings_.set_upload_policy(upload_policy);
-  if (upload_policy == CrashServerConfig::UploadPolicy::READ_FROM_PRIVACY_SETTINGS) {
-    privacy_settings_watcher_.StartWatching();
-  }
-
   next_report_id_ = SeedReportId();
 
-  queue_.WatchSettings(&settings_);
+  queue_.WatchReportingPolicy(reporting_policy_watcher_.get());
   queue_.WatchNetwork(&network_watcher_);
 
-  info_.ExposeSettings(&settings_);
+  info_.ExposeReportingPolicy(reporting_policy_watcher_.get());
 }
 
 void CrashReporter::File(fuchsia::feedback::CrashReport report, FileCallback callback) {

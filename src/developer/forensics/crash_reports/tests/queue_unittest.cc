@@ -15,7 +15,7 @@
 #include "src/developer/forensics/crash_reports/constants.h"
 #include "src/developer/forensics/crash_reports/info/info_context.h"
 #include "src/developer/forensics/crash_reports/network_watcher.h"
-#include "src/developer/forensics/crash_reports/settings.h"
+#include "src/developer/forensics/crash_reports/reporting_policy_watcher.h"
 #include "src/developer/forensics/crash_reports/tests/stub_crash_server.h"
 #include "src/developer/forensics/testing/stubs/cobalt_logger_factory.h"
 #include "src/developer/forensics/testing/stubs/network_reachability_provider.h"
@@ -46,8 +46,6 @@ using testing::Not;
 using testing::Pair;
 using testing::UnorderedElementsAre;
 using testing::UnorderedElementsAreArray;
-
-using UploadPolicy = Settings::UploadPolicy;
 
 constexpr CrashServer::UploadStatus kUploadSuccessful = CrashServer::UploadStatus::kSuccess;
 constexpr CrashServer::UploadStatus kUploadFailed = CrashServer::UploadStatus::kFailure;
@@ -112,12 +110,18 @@ Report MakeReport(const std::size_t report_id) {
   return std::move(report.value());
 }
 
+class TestReportingPolicyWatcher : public ReportingPolicyWatcher {
+ public:
+  TestReportingPolicyWatcher() : ReportingPolicyWatcher(ReportingPolicy::kUndecided) {}
+
+  void Set(const ReportingPolicy policy) { SetPolicy(policy); }
+};
+
 class QueueTest : public UnitTestFixture {
  public:
   QueueTest() : network_watcher_(dispatcher(), services()) {}
 
   void SetUp() override {
-    settings_.set_upload_policy(UploadPolicy::LIMBO);
     info_context_ =
         std::make_shared<InfoContext>(&InspectRoot(), &clock_, dispatcher(), services());
 
@@ -150,7 +154,7 @@ class QueueTest : public UnitTestFixture {
     queue_ = std::make_unique<Queue>(dispatcher(), services(), info_context_, &tags_,
                                      crash_server_.get(), snapshot_manager_.get());
     ASSERT_TRUE(queue_);
-    queue_->WatchSettings(&settings_);
+    queue_->WatchReportingPolicy(&reporting_policy_watcher_);
     queue_->WatchNetwork(&network_watcher_);
   }
 
@@ -188,17 +192,17 @@ class QueueTest : public UnitTestFixture {
           break;
         case QueueOps::SetStateToArchive:
           state_ = QueueOps::SetStateToArchive;
-          settings_.set_upload_policy(UploadPolicy::DISABLED);
+          reporting_policy_watcher_.Set(ReportingPolicy::kArchive);
           SetExpectedQueueContents();
           break;
         case QueueOps::SetStateToUpload:
           state_ = QueueOps::SetStateToUpload;
-          settings_.set_upload_policy(UploadPolicy::ENABLED);
+          reporting_policy_watcher_.Set(ReportingPolicy::kUpload);
           SetExpectedQueueContents();
           break;
         case QueueOps::SetStateToLeaveAsPending:
           state_ = QueueOps::SetStateToLeaveAsPending;
-          settings_.set_upload_policy(UploadPolicy::LIMBO);
+          reporting_policy_watcher_.Set(ReportingPolicy::kUndecided);
           SetExpectedQueueContents();
           break;
       }
@@ -273,7 +277,7 @@ class QueueTest : public UnitTestFixture {
   std::vector<CrashServer::UploadStatus> upload_attempt_results_;
   std::vector<CrashServer::UploadStatus>::const_iterator next_upload_attempt_result_;
 
-  Settings settings_;
+  TestReportingPolicyWatcher reporting_policy_watcher_;
   NetworkWatcher network_watcher_;
   timekeeper::TestClock clock_;
   std::unique_ptr<SnapshotManager> snapshot_manager_;

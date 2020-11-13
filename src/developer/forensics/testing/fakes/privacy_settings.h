@@ -42,9 +42,9 @@ class PrivacySettings : public fuchsia::settings::testing::Privacy_TestBase {
     FX_NOTIMPLEMENTED() << name << " is not implemented";
   }
 
- protected:
   void CloseConnection();
 
+ protected:
   void NotifyWatcher();
 
  private:

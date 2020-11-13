@@ -20,11 +20,10 @@
 #include "src/developer/forensics/crash_reports/info/info_context.h"
 #include "src/developer/forensics/crash_reports/log_tags.h"
 #include "src/developer/forensics/crash_reports/network_watcher.h"
-#include "src/developer/forensics/crash_reports/privacy_settings_ptr.h"
 #include "src/developer/forensics/crash_reports/product_quotas.h"
 #include "src/developer/forensics/crash_reports/queue.h"
 #include "src/developer/forensics/crash_reports/report_id.h"
-#include "src/developer/forensics/crash_reports/settings.h"
+#include "src/developer/forensics/crash_reports/reporting_policy_watcher.h"
 #include "src/developer/forensics/crash_reports/snapshot_manager.h"
 #include "src/developer/forensics/utils/errors.h"
 #include "src/developer/forensics/utils/fidl/device_id_provider_ptr.h"
@@ -69,9 +68,8 @@ class CrashReporter : public fuchsia::feedback::CrashReporter {
 
   ProductQuotas product_quotas_;
   CrashReporterInfo info_;
-  Settings settings_;
   NetworkWatcher network_watcher_;
-  PrivacySettingsWatcher privacy_settings_watcher_;
+  std::unique_ptr<ReportingPolicyWatcher> reporting_policy_watcher_;
   fidl::DeviceIdProviderPtr device_id_provider_ptr_;
 
   ReportId next_report_id_;

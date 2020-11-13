@@ -14,8 +14,8 @@ CrashReporterInfo::CrashReporterInfo(std::shared_ptr<InfoContext> context)
   FX_CHECK(context_);
 }
 
-void CrashReporterInfo::ExposeSettings(Settings* settings) {
-  context_->InspectManager().ExposeSettings(settings);
+void CrashReporterInfo::ExposeReportingPolicy(ReportingPolicyWatcher* watcher) {
+  context_->InspectManager().ExposeReportingPolicy(watcher);
 }
 
 void CrashReporterInfo::LogCrashState(cobalt::CrashState state) {

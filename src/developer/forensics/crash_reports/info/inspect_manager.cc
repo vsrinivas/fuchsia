@@ -141,11 +141,12 @@ void InspectManager::ExposeConfig(const crash_reports::Config& config) {
       server.CreateString(kCrashServerUploadPolicyKey, ToString(config.crash_server.upload_policy));
 }
 
-void InspectManager::ExposeSettings(crash_reports::Settings* settings) {
-  settings->RegisterUploadPolicyWatcher(
-      [this](const crash_reports::Settings::UploadPolicy& upload_policy) {
-        OnUploadPolicyChange(upload_policy);
-      });
+void InspectManager::ExposeReportingPolicy(ReportingPolicyWatcher* watcher) {
+  settings_.upload_policy = node_manager_.Get("/crash_reporter/settings")
+                                .CreateString("upload_policy", ToString(watcher->CurrentPolicy()));
+
+  watcher->OnPolicyChange(
+      [=](const ReportingPolicy policy) { settings_.upload_policy.Set(ToString(policy)); });
 }
 
 void InspectManager::SetQueueSize(const uint64_t size) {
@@ -167,18 +168,6 @@ void InspectManager::UpdateCrashReporterProtocolStats(InspectProtocolStatsUpdate
 
 bool InspectManager::Contains(const std::string& local_report_id) {
   return reports_.find(local_report_id) != reports_.end();
-}
-
-void InspectManager::OnUploadPolicyChange(
-    const crash_reports::Settings::UploadPolicy& upload_policy) {
-  // |settings_.upload_policy| will change so we only create a StringProperty the first time it is
-  // needed.
-  if (!settings_.upload_policy) {
-    settings_.upload_policy = node_manager_.Get("/crash_reporter/settings")
-                                  .CreateString("upload_policy", ToString(upload_policy));
-  } else {
-    settings_.upload_policy.Set(ToString(upload_policy));
-  }
 }
 
 void InspectManager::ExposeStore(const StorageSize max_size) {

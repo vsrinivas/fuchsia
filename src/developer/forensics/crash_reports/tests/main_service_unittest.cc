@@ -108,10 +108,9 @@ TEST_F(MainServiceTest, Check_InitialInspectTree) {
                     NodeMatches(AllOf(NameMatches("store"),
                                       PropertyList(ElementsAre(
                                           UintIs("max_size_in_kb", kStoreMaxSize.ToKilobytes()))))),
-                    NodeMatches(
-                        AllOf(NameMatches("settings"),
-                              PropertyList(ElementsAre(StringIs(
-                                  "upload_policy", ToString(Settings::UploadPolicy::ENABLED)))))),
+                    NodeMatches(AllOf(NameMatches("settings"),
+                                      PropertyList(ElementsAre(StringIs(
+                                          "upload_policy", ToString(ReportingPolicy::kUpload)))))),
                     NodeMatches(NameMatches("reports")),
                     NodeMatches(NameMatches("queue")),
                 }))),
