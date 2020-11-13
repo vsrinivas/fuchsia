@@ -16,4 +16,3 @@ pub mod inspect;
 pub mod lifecycle;
 pub mod logs;
 pub mod repository;
-pub mod server;

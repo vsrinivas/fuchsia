@@ -321,10 +321,10 @@ mod tests {
         super::collector::InspectDataCollector,
         super::*,
         crate::{
+            accessor::BatchIterator,
             diagnostics,
             events::types::{ComponentIdentifier, InspectData, LegacyIdentifier, RealmPath},
             logs::LogManager,
-            server::AccessorServer,
         },
         anyhow::format_err,
         fdio,
@@ -1089,7 +1089,7 @@ mod tests {
         (
             consumer,
             Task::spawn(async {
-                AccessorServer::new(
+                BatchIterator::new(
                     reader_server,
                     batch_iterator_requests,
                     StreamMode::Snapshot,

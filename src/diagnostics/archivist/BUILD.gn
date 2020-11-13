@@ -109,7 +109,6 @@ rustc_library("lib") {
     "src/logs/stats.rs",
     "src/logs/testing.rs",
     "src/repository.rs",
-    "src/server.rs",
   ]
 }
 

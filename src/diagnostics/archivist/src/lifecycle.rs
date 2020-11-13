@@ -62,10 +62,10 @@ mod tests {
     use {
         super::*,
         crate::{
+            accessor::BatchIterator,
             diagnostics::{self, DiagnosticsServerStats},
             events::types::{ComponentIdentifier, LegacyIdentifier},
             inspect::collector::InspectDataCollector,
-            server::AccessorServer,
         },
         fdio,
         fidl::endpoints::create_proxy_and_stream,
@@ -209,7 +209,7 @@ mod tests {
         let (consumer, batch_iterator_requests) =
             create_proxy_and_stream::<BatchIteratorMarker>().unwrap();
         let _server = Task::spawn(async move {
-            AccessorServer::new(reader_server, batch_iterator_requests, StreamMode::Snapshot, stats)
+            BatchIterator::new(reader_server, batch_iterator_requests, StreamMode::Snapshot, stats)
                 .unwrap()
                 .run()
                 .await
