@@ -9,16 +9,20 @@ use {
     fuchsia_syslog::fx_log_info,
 };
 
+mod check_and_set;
+
 pub fn main() -> Result<(), Error> {
     fuchsia_syslog::init_with_tags(&["ota-dependency-checker"])
         .context("while initializing logger")?;
     fx_log_info!("starting ota-dependency-checker");
 
     let mut executor = fasync::Executor::new().context("error creating executor")?;
-    executor.run_singlethreaded(main_inner_async())
+    let () = executor.run_singlethreaded(main_inner_async())?;
+
+    fx_log_info!("shutting down ota-dependency-checker");
+    Ok(())
 }
 
-// Currently, this logic is identical to the health checking that is done in the update checkers.
 // Soon, we will grow this to be smarter. Everyone starts somewhere. 🌱
 async fn main_inner_async() -> Result<(), Error> {
     let paver = fuchsia_component::client::connect_to_service::<PaverMarker>()
@@ -30,10 +34,10 @@ async fn main_inner_async() -> Result<(), Error> {
         .find_boot_manager(boot_manager_server_end)
         .context("transport error while calling find_boot_manager()")?;
 
-    // NOTE(fxbug.dev/63642): The docs for check_and_set_system_health say that we should respond to
-    // an error here by rebooting, but we'll be refactoring this away Soon™, so for now we just log
-    // it.
-    system_health_check::check_and_set_system_health(&boot_manager)
+    // NOTE: The docs for check_and_set_system_health say that we should respond to
+    // an error here by rebooting, but we'll be refactoring this away Soon™, so for now
+    // we just log it.
+    crate::check_and_set::check_and_set_system_health(&boot_manager)
         .await
         .context("while checking and setting system health")
 }

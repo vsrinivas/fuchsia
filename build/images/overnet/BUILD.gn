@@ -19,6 +19,7 @@ assemble_system("overnet") {
     "//src/connectivity/overnet/overnetstack",
     "//src/connectivity/overnet/overnetstack:overnetstack_config",
     "//src/connectivity/overnet/tools/debug-serial",
+    "//src/sys/pkg/bin/ota-dependency-checker:package",
   ]
   bootfs_labels = [
     "//build/info:bootfs",

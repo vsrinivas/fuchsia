@@ -4,7 +4,6 @@
 
 #![cfg(test)]
 use {
-    fidl_fuchsia_paver::{Configuration, PaverRequestStream},
     fidl_fuchsia_update::{
         CheckOptions, CheckingForUpdatesData, Initiator, InstallationProgress, InstallingData,
         ManagerMarker, ManagerProxy, MonitorMarker, MonitorRequest, MonitorRequestStream, State,
@@ -17,10 +16,8 @@ use {
         server::{NestedEnvironment, ServiceFs},
     },
     fuchsia_pkg_testing::make_packages_json,
-    fuchsia_zircon::Status,
     futures::{channel::mpsc, prelude::*},
     mock_installer::MockUpdateInstallerService,
-    mock_paver::{hooks as mphooks, MockPaverService, MockPaverServiceBuilder, PaverEvent},
     mock_resolver::MockResolverService,
     std::{fs::File, sync::Arc},
     tempfile::TempDir,
@@ -34,8 +31,6 @@ struct Mounts {
 }
 
 struct Proxies {
-    _paver: Arc<MockPaverService>,
-    paver_events: mpsc::UnboundedReceiver<PaverEvent>,
     resolver: Arc<MockResolverService>,
     channel_provider: ProviderProxy,
     update_manager: ManagerProxy,
@@ -51,29 +46,12 @@ impl Mounts {
 }
 
 struct TestEnvBuilder {
-    paver_builder: MockPaverServiceBuilder,
-    paver_events: mpsc::UnboundedReceiver<PaverEvent>,
     installer: MockUpdateInstallerService,
 }
 
 impl TestEnvBuilder {
     fn new() -> Self {
-        let (events_tx, events_rx) = mpsc::unbounded();
-        let paver_builder = MockPaverServiceBuilder::new().event_hook(move |event| {
-            events_tx.unbounded_send(event.to_owned()).expect("to write to events channel")
-        });
-        Self {
-            paver_builder,
-            paver_events: events_rx,
-            installer: MockUpdateInstallerService::builder().build(),
-        }
-    }
-
-    fn paver_init<F>(self, paver_init: F) -> Self
-    where
-        F: FnOnce(MockPaverServiceBuilder) -> MockPaverServiceBuilder,
-    {
-        Self { paver_builder: paver_init(self.paver_builder), ..self }
+        Self { installer: MockUpdateInstallerService::builder().build() }
     }
 
     fn installer(self, installer: MockUpdateInstallerService) -> Self {
@@ -90,18 +68,6 @@ impl TestEnvBuilder {
 
         let mut fs = ServiceFs::new();
         fs.add_proxy_service::<fidl_fuchsia_logger::LogSinkMarker, _>();
-
-        let paver = self.paver_builder.build();
-        let paver = Arc::new(paver);
-        let paver_clone = Arc::clone(&paver);
-        fs.add_fidl_service(move |stream: PaverRequestStream| {
-            fasync::Task::spawn(
-                Arc::clone(&paver_clone)
-                    .run_paver_service(stream)
-                    .unwrap_or_else(|e| panic!("Failed to run paver: {:?}", e)),
-            )
-            .detach();
-        });
 
         let resolver = Arc::new(MockResolverService::new(None));
         let resolver_clone = Arc::clone(&resolver);
@@ -143,8 +109,6 @@ impl TestEnvBuilder {
             _env: env,
             _mounts: mounts,
             proxies: Proxies {
-                _paver: paver,
-                paver_events: self.paver_events,
                 resolver,
                 channel_provider: system_update_checker
                     .connect_to_service::<ProviderMarker>()
@@ -208,30 +172,8 @@ fn progress(fraction_completed: Option<f32>) -> Option<InstallationProgress> {
 }
 
 #[fasync::run_singlethreaded(test)]
-// Test will hang if system-update-checker does not call paver service
-async fn test_calls_paver_service() {
+async fn test_channel_provider_get_current() {
     let env = TestEnvBuilder::new().build();
-
-    assert_eq!(
-        env.proxies.paver_events.take(2).collect::<Vec<PaverEvent>>().await,
-        vec![
-            PaverEvent::QueryCurrentConfiguration,
-            PaverEvent::QueryConfigurationStatus { configuration: Configuration::A }
-        ]
-    );
-}
-
-#[fasync::run_singlethreaded(test)]
-// Test will hang if system-update-checker does not call paver service
-async fn test_channel_provider_get_current_works_after_paver_service_fails() {
-    let env = TestEnvBuilder::new()
-        .paver_init(|p| p.insert_hook(mphooks::return_error(|_| Status::INTERNAL)))
-        .build();
-
-    assert_eq!(
-        env.proxies.paver_events.take(1).collect::<Vec<PaverEvent>>().await,
-        vec![PaverEvent::QueryCurrentConfiguration]
-    );
 
     assert_eq!(
         env.proxies.channel_provider.get_current().await.expect("get_current"),
@@ -240,16 +182,8 @@ async fn test_channel_provider_get_current_works_after_paver_service_fails() {
 }
 
 #[fasync::run_singlethreaded(test)]
-// Test will hang if system-update-checker does not call paver service
-async fn test_update_manager_check_now_works_after_paver_service_fails() {
-    let env = TestEnvBuilder::new()
-        .paver_init(|p| p.insert_hook(mphooks::return_error(|_| Status::INTERNAL)))
-        .build();
-
-    assert_eq!(
-        env.proxies.paver_events.take(1).collect::<Vec<PaverEvent>>().await,
-        vec![PaverEvent::QueryCurrentConfiguration]
-    );
+async fn test_update_manager_check_now_error_checking_for_update() {
+    let env = TestEnvBuilder::new().build();
 
     let (client_end, request_stream) =
         fidl::endpoints::create_request_stream().expect("create_request_stream");

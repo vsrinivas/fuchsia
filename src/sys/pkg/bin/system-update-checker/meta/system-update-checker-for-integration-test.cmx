@@ -7,7 +7,6 @@
     },
     "sandbox": {
         "services": [
-            "fuchsia.paver.Paver",
             "fuchsia.pkg.PackageResolver",
             "fuchsia.update.channel.Provider",
             "fuchsia.update.installer.Installer"

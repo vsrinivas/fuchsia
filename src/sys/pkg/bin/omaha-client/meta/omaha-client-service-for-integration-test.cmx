@@ -10,7 +10,6 @@
             "root-ssl-certificates"
         ],
         "services": [
-            "fuchsia.paver.Paver",
             "fuchsia.posix.socket.Provider",
             "fuchsia.update.installer.Installer"
         ]

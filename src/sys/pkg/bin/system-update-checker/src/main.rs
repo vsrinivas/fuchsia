@@ -24,7 +24,6 @@ use {
         update_service::{RealUpdateManager, UpdateService},
     },
     anyhow::{anyhow, Context as _, Error},
-    fidl_fuchsia_paver::PaverMarker,
     fidl_fuchsia_update_channel::ProviderRequestStream,
     fidl_fuchsia_update_channelcontrol::ChannelControlRequestStream,
     fidl_fuchsia_update_ext::{CheckOptions, Initiator},
@@ -122,8 +121,6 @@ async fn main() -> Result<(), Error> {
         .boxed(),
     );
 
-    futures.push(check_and_set_system_health().boxed());
-
     futures.collect::<()>().await;
 
     Ok(())
@@ -147,24 +144,4 @@ async fn handle_incoming_service(incoming_service: IncomingServices) -> Result<(
             handler.handle_control_request_stream(request_stream).await
         }
     }
-}
-
-async fn check_and_set_system_health() {
-    if let Err(err) = check_and_set_system_health_impl().await {
-        fx_log_err!("error during system health check: {:#}", err);
-    }
-}
-
-async fn check_and_set_system_health_impl() -> Result<(), Error> {
-    let paver = fuchsia_component::client::connect_to_service::<PaverMarker>()?;
-    let (boot_manager, boot_manager_server_end) = fidl::endpoints::create_proxy()?;
-
-    paver
-        .find_boot_manager(boot_manager_server_end)
-        .context("transport error while calling find_boot_manager()")?;
-    // NOTE(fxbug.dev/63642): The docs for check_and_set_system_health say that we should respond to
-    // an error here by rebooting, but we'll be refactoring this away Soon™, so for now we just log
-    // it.
-    system_health_check::check_and_set_system_health(&boot_manager).await?;
-    Ok(())
 }

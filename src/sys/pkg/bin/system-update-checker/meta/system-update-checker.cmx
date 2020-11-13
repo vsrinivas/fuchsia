@@ -22,7 +22,6 @@
         ],
         "services": [
             "fuchsia.cobalt.SystemDataUpdater",
-            "fuchsia.paver.Paver",
             "fuchsia.pkg.PackageResolver",
             "fuchsia.pkg.RepositoryManager",
             "fuchsia.pkg.rewrite.Engine",

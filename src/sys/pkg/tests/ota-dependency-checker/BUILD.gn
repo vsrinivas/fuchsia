@@ -32,6 +32,7 @@ fuchsia_component("component-under-test") {
 }
 
 fuchsia_component("component") {
+  component_name = "ota-dependency-checker-integration-test"
   manifest = "meta/ota-dependency-checker-integration-test.cmx"
   deps = [ ":test_driver" ]
   testonly = true

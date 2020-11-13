@@ -18,13 +18,21 @@ rustc_library("lib") {
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/syslog/rust:syslog",
-
-    # TODO(fxbug.dev/63642) remove the health check library, move all logic and testing here.
-    "//src/sys/pkg/lib/system-health-check",
+    "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:thiserror",
   ]
+  test_deps = [
+    "//src/sys/pkg/testing/mock-paver",
+    "//third_party/rust_crates:matches",
+  ]
+
   source_root = "src/main.rs"
-  sources = [ "src/main.rs" ]
+  sources = [
+    "src/check_and_set.rs",
+    "src/main.rs",
+  ]
+
   visibility = [
     ":*",
     "//src/sys/pkg/bin/grand-swd-binary:*",
@@ -43,6 +51,7 @@ resource("renamed-grand-swd-binary") {
 }
 
 fuchsia_component("component") {
+  component_name = "ota-dependency-checker"
   manifest = "meta/ota-dependency-checker.cml"
   deps = [ ":renamed-grand-swd-binary" ]
 }

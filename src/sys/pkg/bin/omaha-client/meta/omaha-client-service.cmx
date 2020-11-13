@@ -17,7 +17,6 @@
             "fuchsia.cobalt.SystemDataUpdater",
             "fuchsia.hardware.power.statecontrol.Admin",
             "fuchsia.net.NameLookup",
-            "fuchsia.paver.Paver",
             "fuchsia.posix.socket.Provider",
             "fuchsia.stash.Store2",
             "fuchsia.ui.activity.Provider",

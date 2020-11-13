@@ -19,6 +19,7 @@ assemble_system("guest") {
     "//src/sys/core",
     "//src/virtualization/packages/zircon_guest:services_config",
     "//src/virtualization/tests:virtualization_test_utils_pkg",
+    "//src/sys/pkg/bin/ota-dependency-checker:package",
   ]
 
   bootfs_labels = [

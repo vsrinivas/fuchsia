@@ -6,6 +6,11 @@
             name: "appmgr",
             url: "fuchsia-pkg://fuchsia.com/appmgr#meta/appmgr.cm",
         },
+        {
+            name: "ota-dependency-checker",
+            url: "fuchsia-pkg://fuchsia.com/ota-dependency-checker#meta/ota-dependency-checker.cm",
+            startup: "eager",
+        },
 
         // Children below this line may be present on some but not all product configurations (whereas
         // children above it are expected to be present on all configs that include core.cml)
@@ -158,10 +163,16 @@
                 "#debug_serial",
                 "#font_provider",
                 "#log-stats",
+                "#ota-dependency-checker",
                 "#remote-control",
                 "#temperature-logger",
                 "#test_manager",
             ],
+        },
+        {
+            protocol: "fuchsia.paver.Paver",
+            from: "parent",
+            to: [ "#ota-dependency-checker" ],
         },
         {
             protocol: [

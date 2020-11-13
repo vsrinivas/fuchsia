@@ -5,7 +5,7 @@
 #![cfg(test)]
 use {
     anyhow::anyhow,
-    fidl_fuchsia_paver::{Configuration, PaverRequestStream},
+    fidl_fuchsia_paver::PaverRequestStream,
     fidl_fuchsia_pkg::{PackageCacheRequestStream, PackageResolverRequestStream},
     fidl_fuchsia_update::{
         CheckNotStartedReason, CheckOptions, CheckingForUpdatesData, ErrorCheckingForUpdateData,
@@ -24,7 +24,7 @@ use {
         assert_inspect_tree, reader::NodeHierarchy, testing::TreeAssertion, tree_assertion,
     },
     fuchsia_pkg_testing::{get_inspect_hierarchy, make_packages_json},
-    fuchsia_zircon::{self as zx, Status},
+    fuchsia_zircon as zx,
     futures::{
         channel::{mpsc, oneshot},
         prelude::*,
@@ -32,7 +32,7 @@ use {
     matches::assert_matches,
     mock_installer::MockUpdateInstallerService,
     mock_omaha_server::{OmahaResponse, OmahaServer},
-    mock_paver::{hooks as mphooks, MockPaverService, MockPaverServiceBuilder, PaverEvent},
+    mock_paver::MockPaverServiceBuilder,
     mock_reboot::MockRebootService,
     mock_resolver::MockResolverService,
     parking_lot::Mutex,
@@ -94,7 +94,6 @@ struct Proxies {
 }
 
 struct TestEnvBuilder {
-    paver: MockPaverService,
     response: OmahaResponse,
     version: String,
     installer: Option<MockUpdateInstallerService>,
@@ -102,16 +101,7 @@ struct TestEnvBuilder {
 
 impl TestEnvBuilder {
     fn new() -> Self {
-        Self {
-            paver: MockPaverServiceBuilder::new().build(),
-            response: OmahaResponse::NoUpdate,
-            version: "0.1.2.3".to_string(),
-            installer: None,
-        }
-    }
-
-    fn paver(self, paver: MockPaverService) -> Self {
-        Self { paver, ..self }
+        Self { response: OmahaResponse::NoUpdate, version: "0.1.2.3".to_string(), installer: None }
     }
 
     fn response(self, response: OmahaResponse) -> Self {
@@ -145,7 +135,7 @@ impl TestEnvBuilder {
             .to_string(),
         );
 
-        let paver = Arc::new(self.paver);
+        let paver = Arc::new(MockPaverServiceBuilder::new().build());
         fs.add_fidl_service(move |stream: PaverRequestStream| {
             fasync::Task::spawn(
                 Arc::clone(&paver)
@@ -335,56 +325,6 @@ impl MockCache {
             }
         }
     }
-}
-
-// Test will hang if omaha-client does not contact the paver service.
-#[fasync::run_singlethreaded(test)]
-async fn test_calls_paver_service() {
-    let (send, recv) = mpsc::unbounded();
-    let paver = MockPaverServiceBuilder::new()
-        .current_config(Configuration::A)
-        .event_hook(move |e| send.unbounded_send(e.to_owned()).expect("channel stayed open"))
-        .build();
-    let _env = TestEnvBuilder::new().paver(paver).build();
-
-    assert_eq!(
-        recv.take(5).collect::<Vec<PaverEvent>>().await,
-        vec![
-            PaverEvent::QueryCurrentConfiguration,
-            PaverEvent::QueryConfigurationStatus { configuration: Configuration::A },
-            PaverEvent::SetConfigurationHealthy { configuration: Configuration::A },
-            PaverEvent::SetConfigurationUnbootable { configuration: Configuration::B },
-            PaverEvent::BootManagerFlush
-        ]
-    );
-}
-
-// Test will hang if omaha-client does not contact the paver service.
-#[fasync::run_singlethreaded(test)]
-async fn test_update_manager_checknow_works_after_paver_service_fails() {
-    let (send, recv) = mpsc::unbounded();
-    let paver = MockPaverServiceBuilder::new()
-        .current_config(Configuration::B)
-        .event_hook(move |e| send.unbounded_send(e.to_owned()).expect("channel stayed open"))
-        .insert_hook(mphooks::return_error(|event| match event {
-            PaverEvent::SetConfigurationHealthy { .. } => Status::INTERNAL,
-            _ => Status::OK,
-        }))
-        .build();
-    let env = TestEnvBuilder::new().paver(paver).build();
-
-    assert_eq!(
-        recv.take(4).collect::<Vec<PaverEvent>>().await,
-        vec![
-            PaverEvent::QueryCurrentConfiguration,
-            PaverEvent::QueryConfigurationStatus { configuration: Configuration::B },
-            PaverEvent::SetConfigurationHealthy { configuration: Configuration::B },
-            PaverEvent::BootManagerFlush
-        ]
-    );
-
-    let mut stream = env.check_now().await;
-    assert_matches!(stream.next().await, Some(_));
 }
 
 async fn expect_states(stream: &mut MonitorRequestStream, expected_states: &[State]) {
