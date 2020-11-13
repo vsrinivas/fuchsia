@@ -48,7 +48,7 @@
 // operators. Must be called in the same scope that |type| is defined in.
 #define FBL_ENABLE_ENUM_BITS(type)                                          \
   static_assert(std::is_enum_v<type>, "Type must be an enum: type=" #type); \
-  __USED static constexpr bool FBL__EnumBitsTag(const type&) { return true; }
+  [[maybe_unused]] static constexpr bool FBL__EnumBitsTag(const type&) { return true; }
 
 namespace fbl::internal {
 
