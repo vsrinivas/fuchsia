@@ -584,7 +584,7 @@ TEST_F(AnnotationViewTest, TestViewPropertiesChangedElevation) {
   RunLoopUntilIdle();
 
   // Same as the value defined in annotation_view.cc.
-  const float kEpsilon = 0.999f;
+  const float kEpsilon = 0.950f;
   const float kExpectedElevation = kViewProperties.bounding_box.min.z * kEpsilon;
 
   const auto& rectangles = mock_session_->rectangles();

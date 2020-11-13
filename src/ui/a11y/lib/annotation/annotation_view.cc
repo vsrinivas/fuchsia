@@ -101,7 +101,13 @@ void AnnotationView::DrawHighlight(const fuchsia::ui::gfx::BoundingBox& bounding
 
   // Add some offset to ensure these rectangles fall into the View bounding box
   // so that it's drawable.
-  constexpr float kEpsilon = 0.001;
+  // TODO(fxbug.dev/64277): Ideally we would draw this higher in the scene graph so that we can't
+  // accidentally draw behind the camera.  In the mean time, we draw 5% between min z and max z
+  // in our view to give some extra space for z translations higher up in the scene graph.  It
+  // is very common to find a flutter::LayerTree EntityNode that applies a -10 z translation,
+  // and the bounding box min z and max z are typically -1000 and 1000, so make sure we have
+  // plenty of space for that.
+  constexpr float kEpsilon = 0.05;
   const auto annotation_elevation = parent_view_properties_.bounding_box.min.z * (1 - kEpsilon);
 
   // Used to translate edge rectangles.
