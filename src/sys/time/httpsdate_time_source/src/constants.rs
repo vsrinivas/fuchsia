@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 /// Number of polls taken to produce the intial sample.
-pub const INITIAL_SAMPLE_POLLS: usize = 2;
+pub const INITIAL_SAMPLE_POLLS: usize = 3;
 /// Number of polls to produce all subsequent samples.
 pub const SAMPLE_POLLS: usize = 5;
 /// Number of samples produced during the convergence phase, during which samples are
