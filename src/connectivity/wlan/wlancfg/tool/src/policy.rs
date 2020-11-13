@@ -6,10 +6,12 @@ use {
     crate::opts::*,
     anyhow::{format_err, Error},
     eui48::MacAddress,
-    fidl::endpoints::{create_endpoints, create_proxy},
+    fidl::endpoints::{create_endpoints, create_proxy, Proxy},
     fidl_fuchsia_wlan_common as fidl_wlan_common, fidl_fuchsia_wlan_policy as wlan_policy,
     fidl_fuchsia_wlan_product_deprecatedconfiguration as wlan_deprecated,
+    fuchsia_async::{self as fasync, DurationExt},
     fuchsia_component::client::connect_to_service,
+    fuchsia_zircon as zx,
     futures::TryStreamExt,
 };
 
@@ -17,7 +19,7 @@ use {
 
 /// Communicates with the client policy provider to get the components required to get a client
 /// controller.
-pub fn get_client_controller(
+pub async fn get_client_controller(
 ) -> Result<(wlan_policy::ClientControllerProxy, wlan_policy::ClientStateUpdatesRequestStream), Error>
 {
     let policy_provider = connect_to_service::<wlan_policy::ClientProviderMarker>()?;
@@ -27,6 +29,19 @@ pub fn get_client_controller(
         create_endpoints::<wlan_policy::ClientStateUpdatesMarker>().unwrap();
     let () = policy_provider.get_controller(server_end, update_client_end)?;
     let update_stream = update_server_end.into_stream()?;
+
+    // Sleep very briefly to introduce a yield point (with the await) so that in case the other
+    // end of the channel is closed, its status is correctly propagated by the kernel and we can
+    // accurately check it using `is_closed()`.
+    let sleep_duration = zx::Duration::from_millis(10);
+    fasync::Timer::new(sleep_duration.after_now()).await;
+    if client_controller.is_closed() {
+        return Err(format_err!(
+            "Failed to obtain a WLAN client controller. Your command was not executed.\n\n\
+            Help: Only one component may hold a client controller at once. You can try killing\n\
+            other holders with 'killall basemgr.cmx'.\n"
+        ));
+    }
 
     Ok((client_controller, update_stream))
 }
@@ -323,7 +338,7 @@ pub async fn handle_get_saved_networks(
                 }
                 saved_networks.append(&mut new_configs);
             }
-            Err(_) => return Err(format_err!("failed while retrieving saved networks")),
+            Err(e) => return Err(format_err!("failed while retrieving saved networks: {:?}", e)),
         }
     }
     Ok(saved_networks)

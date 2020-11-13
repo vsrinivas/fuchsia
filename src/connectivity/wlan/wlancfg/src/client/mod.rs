@@ -76,7 +76,7 @@ pub(crate) async fn serve_provider_requests(
                     controller_reqs.push(fut);
                 } else {
                     if let Err(e) = reject_provider_request(req) {
-                        error!("error sending rejection epitaph");
+                        error!("error sending rejection epitaph: {:?}", e);
                     }
                 }
             },

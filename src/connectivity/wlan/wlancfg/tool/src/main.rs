@@ -31,11 +31,11 @@ fn main() -> Result<(), Error> {
 async fn do_policy_client_cmd(cmd: opts::PolicyClientCmd) -> Result<(), Error> {
     match cmd {
         opts::PolicyClientCmd::Connect(network_id) => {
-            let (client_controller, updates_server_end) = get_client_controller()?;
+            let (client_controller, updates_server_end) = get_client_controller().await?;
             handle_connect(client_controller, updates_server_end, network_id).await?;
         }
         opts::PolicyClientCmd::GetSavedNetworks => {
-            let (client_controller, _) = get_client_controller()?;
+            let (client_controller, _) = get_client_controller().await?;
             let saved_networks = handle_get_saved_networks(client_controller).await?;
             print_saved_networks(saved_networks)?;
         }
@@ -44,24 +44,24 @@ async fn do_policy_client_cmd(cmd: opts::PolicyClientCmd) -> Result<(), Error> {
             handle_listen(update_stream).await?;
         }
         opts::PolicyClientCmd::RemoveNetwork(network_config) => {
-            let (client_controller, _) = get_client_controller()?;
+            let (client_controller, _) = get_client_controller().await?;
             handle_remove_network(client_controller, network_config).await?;
         }
         opts::PolicyClientCmd::SaveNetwork(network_config) => {
-            let (client_controller, _) = get_client_controller()?;
+            let (client_controller, _) = get_client_controller().await?;
             handle_save_network(client_controller, network_config).await?;
         }
         opts::PolicyClientCmd::ScanForNetworks => {
-            let (client_controller, _) = get_client_controller()?;
+            let (client_controller, _) = get_client_controller().await?;
             let scan_results = handle_scan(client_controller).await?;
             print_scan_results(scan_results)?;
         }
         opts::PolicyClientCmd::StartClientConnections => {
-            let (client_controller, _) = get_client_controller()?;
+            let (client_controller, _) = get_client_controller().await?;
             handle_start_client_connections(client_controller).await?;
         }
         opts::PolicyClientCmd::StopClientConnections => {
-            let (client_controller, _) = get_client_controller()?;
+            let (client_controller, _) = get_client_controller().await?;
             handle_stop_client_connections(client_controller).await?;
         }
     }
