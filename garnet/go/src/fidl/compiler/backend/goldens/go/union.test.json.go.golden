@@ -179,7 +179,7 @@ const (
 
 type FlexiblePizzaOrPasta struct {
 	I_flexiblePizzaOrPastaTag `fidl:"x" fidl_size_v1:"24" fidl_alignment_v1:"8"`
-	I_unknownData             []byte
+	I_unknownData             interface{}
 	I_unknownHandles          []_zx.HandleInfo
 	Pizza                     Pizza `fidl_ordinal:"1"`
 	Pasta                     Pasta `fidl_ordinal:"2"`
@@ -220,6 +220,9 @@ func FlexiblePizzaOrPastaWithPasta(pasta Pasta) FlexiblePizzaOrPasta {
 	var _u FlexiblePizzaOrPasta
 	_u.SetPasta(pasta)
 	return _u
+}
+func (_m *FlexiblePizzaOrPasta) GetUnknownData() _bindings.UnknownData {
+	return _m.I_unknownData.(_bindings.UnknownData)
 }
 
 type I_strictPizzaOrPastaTag uint64
@@ -332,7 +335,7 @@ const (
 
 type FlexibleUnion struct {
 	I_flexibleUnionTag               `fidl:"x" fidl_size_v1:"24" fidl_alignment_v1:"8"`
-	I_unknownData                    []byte
+	I_unknownData                    interface{}
 	I_unknownHandles                 []_zx.HandleInfo
 	Primitive                        int32    `fidl_ordinal:"1"`
 	StringNeedsConstructor           string   `fidl_bounds:"" fidl_ordinal:"2"`
@@ -387,6 +390,9 @@ func FlexibleUnionWithVectorStringAlsoNeedsConstructor(vectorStringAlsoNeedsCons
 	var _u FlexibleUnion
 	_u.SetVectorStringAlsoNeedsConstructor(vectorStringAlsoNeedsConstructor)
 	return _u
+}
+func (_m *FlexibleUnion) GetUnknownData() _bindings.UnknownData {
+	return _m.I_unknownData.(_bindings.UnknownData)
 }
 
 type I_strictUnionTag uint64
@@ -571,7 +577,7 @@ const (
 
 type FlexibleFoo struct {
 	I_flexibleFooTag `fidl:"x" fidl_size_v1:"24" fidl_alignment_v1:"8"`
-	I_unknownData    []byte
+	I_unknownData    interface{}
 	I_unknownHandles []_zx.HandleInfo
 	S                string `fidl_bounds:"" fidl_ordinal:"1"`
 	I                int32  `fidl_ordinal:"2"`
@@ -612,6 +618,9 @@ func FlexibleFooWithI(i int32) FlexibleFoo {
 	var _u FlexibleFoo
 	_u.SetI(i)
 	return _u
+}
+func (_m *FlexibleFoo) GetUnknownData() _bindings.UnknownData {
+	return _m.I_unknownData.(_bindings.UnknownData)
 }
 
 type I_strictFooTag uint64
@@ -667,7 +676,7 @@ const (
 
 type ExplicitFoo struct {
 	I_explicitFooTag `fidl:"x" fidl_size_v1:"24" fidl_alignment_v1:"8"`
-	I_unknownData    []byte
+	I_unknownData    interface{}
 	I_unknownHandles []_zx.HandleInfo
 	S                string `fidl_bounds:"" fidl_ordinal:"2"`
 	I                int32  `fidl_ordinal:"1"`
@@ -708,6 +717,9 @@ func ExplicitFooWithI(i int32) ExplicitFoo {
 	var _u ExplicitFoo
 	_u.SetI(i)
 	return _u
+}
+func (_m *ExplicitFoo) GetUnknownData() _bindings.UnknownData {
+	return _m.I_unknownData.(_bindings.UnknownData)
 }
 
 type I_explicitStrictFooTag uint64
@@ -763,7 +775,7 @@ const (
 
 type OlderSimpleUnion struct {
 	I_olderSimpleUnionTag `fidl:"x" fidl_size_v1:"24" fidl_alignment_v1:"8"`
-	I_unknownData         []byte
+	I_unknownData         interface{}
 	I_unknownHandles      []_zx.HandleInfo
 	I                     int64   `fidl_ordinal:"1"`
 	F                     float32 `fidl_ordinal:"2"`
@@ -805,6 +817,9 @@ func OlderSimpleUnionWithF(f float32) OlderSimpleUnion {
 	_u.SetF(f)
 	return _u
 }
+func (_m *OlderSimpleUnion) GetUnknownData() _bindings.UnknownData {
+	return _m.I_unknownData.(_bindings.UnknownData)
+}
 
 type I_newerSimpleUnionTag uint64
 
@@ -817,7 +832,7 @@ const (
 
 type NewerSimpleUnion struct {
 	I_newerSimpleUnionTag `fidl:"x" fidl_size_v1:"24" fidl_alignment_v1:"8"`
-	I_unknownData         []byte
+	I_unknownData         interface{}
 	I_unknownHandles      []_zx.HandleInfo
 	I                     int64    `fidl_ordinal:"1"`
 	S                     string   `fidl_bounds:"" fidl_ordinal:"2"`
@@ -872,6 +887,9 @@ func NewerSimpleUnionWithV(v []string) NewerSimpleUnion {
 	var _u NewerSimpleUnion
 	_u.SetV(v)
 	return _u
+}
+func (_m *NewerSimpleUnion) GetUnknownData() _bindings.UnknownData {
+	return _m.I_unknownData.(_bindings.UnknownData)
 }
 
 type I_strictSimpleXUnionTag uint64
@@ -939,7 +957,7 @@ const (
 
 type XUnionContainingEmptyStruct struct {
 	I_xUnionContainingEmptyStructTag `fidl:"x" fidl_size_v1:"24" fidl_alignment_v1:"8"`
-	I_unknownData                    []byte
+	I_unknownData                    interface{}
 	I_unknownHandles                 []_zx.HandleInfo
 	Empty                            Empty `fidl_ordinal:"1"`
 }
@@ -966,6 +984,9 @@ func XUnionContainingEmptyStructWithEmpty(empty Empty) XUnionContainingEmptyStru
 	var _u XUnionContainingEmptyStruct
 	_u.SetEmpty(empty)
 	return _u
+}
+func (_m *XUnionContainingEmptyStruct) GetUnknownData() _bindings.UnknownData {
+	return _m.I_unknownData.(_bindings.UnknownData)
 }
 
 type I_strictBoundedXUnionTag uint64
@@ -1008,7 +1029,7 @@ const (
 
 type ExplicitXUnion struct {
 	I_explicitXUnionTag `fidl:"x" fidl_size_v1:"24" fidl_alignment_v1:"8"`
-	I_unknownData       []byte
+	I_unknownData       interface{}
 	I_unknownHandles    []_zx.HandleInfo
 	I                   int64   `fidl_ordinal:"1"`
 	F                   float32 `fidl_ordinal:"4"`
@@ -1049,6 +1070,9 @@ func ExplicitXUnionWithF(f float32) ExplicitXUnion {
 	var _u ExplicitXUnion
 	_u.SetF(f)
 	return _u
+}
+func (_m *ExplicitXUnion) GetUnknownData() _bindings.UnknownData {
+	return _m.I_unknownData.(_bindings.UnknownData)
 }
 
 const (

@@ -264,7 +264,7 @@ const (
 // flexible union comment #3
 type FlexibleUnion struct {
 	I_flexibleUnionTag `fidl:"x" fidl_size_v1:"24" fidl_alignment_v1:"8"`
-	I_unknownData      []byte
+	I_unknownData      interface{}
 	I_unknownHandles   []_zx.HandleInfo
 	// union member comment #1
 	//
@@ -294,6 +294,9 @@ func FlexibleUnionWithField(field int32) FlexibleUnion {
 	var _u FlexibleUnion
 	_u.SetField(field)
 	return _u
+}
+func (_m *FlexibleUnion) GetUnknownData() _bindings.UnknownData {
+	return _m.I_unknownData.(_bindings.UnknownData)
 }
 
 // table comment #1

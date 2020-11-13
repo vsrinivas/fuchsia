@@ -236,6 +236,7 @@ type Union struct {
 	Members []UnionMember
 	Tags    Tags
 	types.Strictness
+	UnknownDataType string
 }
 
 type UnionMember struct {
@@ -875,12 +876,13 @@ func (c *compiler) compileUnion(val types.Union) Union {
 		FidlAlignmentV1Tag: val.TypeShapeV1.Alignment,
 	}
 	return Union{
-		Attributes: val.Attributes,
-		Name:       c.compileCompoundIdentifier(val.Name, true, ""),
-		TagName:    "I_" + c.compileCompoundIdentifier(val.Name, false, TagSuffix),
-		Members:    members,
-		Strictness: val.Strictness,
-		Tags:       tags,
+		Attributes:      val.Attributes,
+		Name:            c.compileCompoundIdentifier(val.Name, true, ""),
+		TagName:         "I_" + c.compileCompoundIdentifier(val.Name, false, TagSuffix),
+		Members:         members,
+		Strictness:      val.Strictness,
+		Tags:            tags,
+		UnknownDataType: fmt.Sprintf("%s.UnknownData", BindingsAlias),
 	}
 }
 
@@ -1061,7 +1063,7 @@ func Compile(fidlData types.Root) Root {
 	for _, v := range fidlData.Tables {
 		r.Tables = append(r.Tables, c.compileTable(v))
 	}
-	if len(fidlData.Structs) != 0 || len(fidlData.Bits) != 0 || len(fidlData.Enums) != 0 || len(fidlData.Protocols) != 0 || len(fidlData.Tables) != 0 {
+	if len(fidlData.Structs) != 0 || len(fidlData.Bits) != 0 || len(fidlData.Enums) != 0 || len(fidlData.Protocols) != 0 || len(fidlData.Tables) != 0 || len(fidlData.Unions) != 0 {
 		c.usedLibraryDeps[BindingsPackage] = BindingsAlias
 	}
 	for _, v := range fidlData.Protocols {

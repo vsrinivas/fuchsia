@@ -61,7 +61,7 @@ const (
 
 type FlexibleFoo struct {
 	I_flexibleFooTag `fidl:"x" fidl_size_v1:"24" fidl_alignment_v1:"8"`
-	I_unknownData    []byte
+	I_unknownData    interface{}
 	I_unknownHandles []_zx.HandleInfo
 	S                string `fidl_bounds:"" fidl_ordinal:"1"`
 	I                int32  `fidl_ordinal:"2"`
@@ -102,6 +102,9 @@ func FlexibleFooWithI(i int32) FlexibleFoo {
 	var _u FlexibleFoo
 	_u.SetI(i)
 	return _u
+}
+func (_m *FlexibleFoo) GetUnknownData() _bindings.UnknownData {
+	return _m.I_unknownData.(_bindings.UnknownData)
 }
 
 type I_strictFooTag uint64

@@ -22,7 +22,7 @@ const (
 type {{ .Name }} struct {
 	{{ .TagName }} ` + "`{{.Tags}}`" + `
 	{{- if .IsFlexible }}
-	I_unknownData []byte
+	I_unknownData interface{}
 	I_unknownHandles []_zx.HandleInfo
 	{{- end }}
 	{{- range .Members }}
@@ -63,6 +63,12 @@ func {{ $.Name }}With{{ .Name }}({{ .PrivateName }} {{ .Type }}) {{ $.Name }} {
 	var _u {{ $.Name }}
 	_u.Set{{ .Name }}({{ .PrivateName }})
 	return _u
+}
+{{- end }}
+
+{{- if .IsFlexible }}
+func (_m *{{ .Name }}) GetUnknownData() {{ .UnknownDataType }} {
+	return _m.I_unknownData.({{ .UnknownDataType }})
 }
 {{- end }}
 

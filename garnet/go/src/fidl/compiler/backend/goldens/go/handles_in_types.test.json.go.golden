@@ -73,7 +73,7 @@ const (
 
 type UnionWithHandle struct {
 	I_unionWithHandleTag `fidl:"x" fidl_size_v1:"24" fidl_alignment_v1:"8"`
-	I_unknownData        []byte
+	I_unknownData        interface{}
 	I_unknownHandles     []_zx.HandleInfo
 	H                    _zx.VMO `fidl_handle_subtype:"3" fidl_handle_rights:"2147483648" fidl_bounds:"0" fidl_ordinal:"1"`
 }
@@ -100,6 +100,9 @@ func UnionWithHandleWithH(h _zx.VMO) UnionWithHandle {
 	var _u UnionWithHandle
 	_u.SetH(h)
 	return _u
+}
+func (_m *UnionWithHandle) GetUnknownData() _bindings.UnknownData {
+	return _m.I_unknownData.(_bindings.UnknownData)
 }
 
 type TableWithHandle struct {
