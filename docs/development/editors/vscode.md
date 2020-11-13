@@ -6,7 +6,7 @@
 VS Code watches external file changes. It automatically reloads the lastest stored file if it does not have a working copy that conflicts. Watching and detecting changes, however, can take long time. The larger the code base, the longer it takes to detect the file change. Excluding some directories from the search space improves the speed.
 
 Follow the menu Code -> Preferences -> Text Editor -> File -> Add Pattern
-Add a directory pattern you want to exclude the search from. Alternatively one can directory modify `settings.json` and add exclude pattern similar to below
+Add a directory pattern you want to exclude the search from. Alternatively one can directly modify `settings.json` and add exclude pattern similar to below
 
 ```
     "files.watcherExclude": {
