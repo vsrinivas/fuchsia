@@ -56,9 +56,10 @@ class ClockSyncPipelineTest : public HermeticAudioTest {
   virtual size_t ConvergenceFrames() const = 0;
   virtual double NumFramesOutput(int32_t clock_slew_ppm, size_t num_frames_input) = 0;
 
-  AudioBuffer<ASF::FLOAT> Impulse(float value = 0.5) {
-    AudioBuffer<ASF::FLOAT> out(format_, 1);
-    out.samples()[0] = value;
+  AudioBuffer<ASF::FLOAT> Impulse(float value = 0.5, size_t pre_silence_frames = 0,
+                                  size_t post_silence_frames = 0) {
+    AudioBuffer<ASF::FLOAT> out(format_, pre_silence_frames + 1 + post_silence_frames);
+    out.samples()[pre_silence_frames] = value;
     return out;
   }
 
@@ -70,28 +71,34 @@ class ClockSyncPipelineTest : public HermeticAudioTest {
     return out;
   }
 
-  // Maximum ring-in frames. We use no effects; this comes from SincSampler only. This represents
-  // how long BEFORE a signal's first frame that it can be reflected in the SincSampler's output.
-  size_t RingIn() {
+  // For a signal change occurring at frame T, how far BEFORE that frame will the effects of that
+  // change be reflected in the output. We use no effects; this comes from SincSampler only.
+  size_t PreRampFrames() {
     auto mixer = mixer::SincSampler::Select(format_.stream_type(), format_.stream_type());
     return mixer->pos_filter_width().Ceiling();
   }
 
-  // Maximum ring-out frames. We use no effects; this comes from SincSampler only. This represents
-  // how long AFTER a signal's last frame that it is still reflected in the SincSampler's output.
-  // These are SOURCE frames, but rates are so near unity that we safely use them interchangeably.
-  size_t RingOut() {
+  // For a signal change occurring at frame T, how far AFTER that frame will the output reflect some
+  // effect of the previous signal. We use no effects; this comes from SincSampler only.
+  size_t PostRampFrames() {
     auto mixer = mixer::SincSampler::Select(format_.stream_type(), format_.stream_type());
     return mixer->neg_filter_width().Ceiling();
   }
 
-  // Offset of the first audio sample. This should be greater than RingIn() so that there is silence
-  // and then transitional frames at the start of the output, following by the signal.
+  // Maximum number of frames needed for a transition between two adjacent signals. At the beginning
+  // of this interval, the output begins to reflect the new signal; only at the end of this interval
+  // is the full effect shown. During this interval, the output is a cross-fading mixture of the
+  // preceding signal and the new signal. We use no effects; this comes from SincSampler only.
+  // These are SOURCE frames, but rates are so near unity that we safely use them interchangeably.
+  size_t TotalRampFrames() { return PreRampFrames() + PostRampFrames(); }
+
+  // Offset of the first audio sample. This should be greater than TotalRampFrames() so that there
+  // is silence and then transitional frames at the start of the output, following by the signal.
   // These are SOURCE frames, but rates are so near unity that we safely use them interchangeably.
   size_t OffsetFrames() {
-    constexpr size_t kFramesOfSilence = 20;
-    EXPECT_TRUE(kFramesOfSilence > RingIn())
-        << "For effective testing, OffsetFrames must exceed RingIn()";
+    constexpr size_t kFramesOfSilence = 40;
+    EXPECT_TRUE(kFramesOfSilence > TotalRampFrames())
+        << "For effective testing, OffsetFrames must exceed TotalRampFrames()";
 
     return kFramesOfSilence;
   }
@@ -121,7 +128,7 @@ class ClockSyncPipelineTest : public HermeticAudioTest {
         peak_val = s;
       }
     }
-    return {peak_idx, peak_val};
+    return {.index = peak_idx, .value = peak_val};
   }
 
   // Verify that the clock for this renderer is running at the expected rate
@@ -146,12 +153,18 @@ class ClockSyncPipelineTest : public HermeticAudioTest {
   //
   // This test validates that time is correctly translated between the two clocks.
   // This test validates the following, with two 1-frame impulses during clock synchronization:
-  // A, The 2 impulses are peak-detected in the output;
+  // A, The impulses are peak-detected in the output, with expected magnitudes;
   // B. The impulse-to-impulse interval is the expected number of frames;
-  // C. The renderer clock is running at the expected rate (within a certain tolerance).
+  // C. The renderer clock is running at the expected rate.
+  // All measurements use tolerance ranges except where explicitly stated as exact.
   void RunImpulseTest(int32_t clock_slew_ppm, size_t frames_between_impulses) {
     constexpr double kInputImpulseMagnitude = 1.0;
+    constexpr double kOutputImpulseMagnitude = kInputImpulseMagnitude * 0.65;
     constexpr bool kDebugOutputImpulseValues = false;
+
+    // These should be zero, once lookahead/decay times are properly accounted-for.
+    const size_t kPreSilenceFrames = PreRampFrames();
+    const size_t kPostSilenceFrames = PostRampFrames() * 2;
 
     Init(clock_slew_ppm, frames_between_impulses);
 
@@ -161,37 +174,47 @@ class ClockSyncPipelineTest : public HermeticAudioTest {
     auto offset_before_input_start = std::max(OffsetFrames(), ConvergenceFrames());
 
     // We use single-frame impulses in the input signal
-    auto impulse = Impulse(kInputImpulseMagnitude);
+    auto impulse = Impulse(kInputImpulseMagnitude, kPreSilenceFrames, kPostSilenceFrames);
 
     // Play two impulses frames_between_impulses apart.
     auto first_input = renderer_->AppendPackets({&impulse}, offset_before_input_start);
     auto second_input =
         renderer_->AppendPackets({&impulse}, offset_before_input_start + frames_between_impulses);
+
+    if constexpr (kDebugOutputImpulseValues) {
+      auto snapshot = renderer_->payload().Snapshot<ASF::FLOAT>();
+      snapshot.Display(0, 2 * impulse.NumFrames());
+    }
+
     renderer_->PlaySynchronized(this, output_, 0);
     renderer_->WaitForPackets(this, first_input);
     renderer_->WaitForPackets(this, second_input);
 
     auto offset_before_output_start =
-        static_cast<size_t>(NumFramesOutput(clock_slew_ppm, offset_before_input_start - RingIn()));
+        static_cast<size_t>(NumFramesOutput(clock_slew_ppm, offset_before_input_start));
     // Shift the output so that neither "peak detection" range crosses the ring buffer boundary.
     auto ring_buffer = SnapshotRingBuffer(offset_before_output_start);
 
-    // A. two impulses are detected in the bissected output ring buffer
+    // A. two impulses are detected in the bisected output ring buffer
     auto num_frames_output = NumFramesOutput(clock_slew_ppm, frames_between_impulses);
     auto midpoint = num_frames_output / 2;
     auto first_peak = FindPeak(AudioBufferSlice(&ring_buffer, 0, midpoint));
     auto second_peak = FindPeak(AudioBufferSlice(&ring_buffer, midpoint, ring_buffer.NumFrames()));
-    auto peak_to_peak_frames = (midpoint + second_peak.index) - first_peak.index;
 
     if constexpr (kDebugOutputImpulseValues) {
-      FX_LOGS(INFO) << "Found impulse peaks of " << first_peak.value << " and "
-                    << second_peak.value;
-      ring_buffer.Display((first_peak.index - 8 > first_peak.index) ? 0 : first_peak.index - 8,
-                          first_peak.index + 8);
-      ring_buffer.Display(midpoint + second_peak.index - 8, midpoint + second_peak.index + 8);
+      FX_LOGS(INFO) << "Found impulse peaks of [" << first_peak.index << "] " << first_peak.value
+                    << " and [" << midpoint + second_peak.index << "] " << second_peak.value;
+      auto first_start = first_peak.index - std::min(first_peak.index, PreRampFrames());
+      auto second_start = midpoint + second_peak.index - PreRampFrames();
+      ring_buffer.Display(first_start, first_start + TotalRampFrames());
+      ring_buffer.Display(second_start, second_start + TotalRampFrames());
     }
 
+    EXPECT_GE(first_peak.value, kOutputImpulseMagnitude);
+    EXPECT_GE(second_peak.value, kOutputImpulseMagnitude);
+
     // B. The distance between the two impulses should be num_frames_output.
+    auto peak_to_peak_frames = (midpoint + second_peak.index) - first_peak.index;
     EXPECT_NEAR(static_cast<double>(peak_to_peak_frames), num_frames_output, 1.0);
 
     // C. clock rate check
@@ -206,13 +229,15 @@ class ClockSyncPipelineTest : public HermeticAudioTest {
   // calls, specifically when the destination clock is running faster than the source clock.
   //
   // This test validates the following, rendering a step function during clock synchronization:
-  // A. The output step signal starts at the expected frame (with ringin tolerance);
-  // B. The output step signal is non-zero for its entirety (no dropouts);
-  // C. The output step signal ends at the expected frame (with ringout tolerance);
-  // D. Subsequent output signal is precisely zero (after ringout tolerance);
-  // E. The renderer clock is running at the expected rate (within a certain tolerance).
+  // A. The output step signal starts at the expected frame;
+  // B. The output step signal has the expected magnitude for its entirety (no dropouts);
+  // C. The output step signal ends at the expected frame;
+  // D. Subsequent output signal (after PostRampFrames) is precisely zero;
+  // E. The renderer clock is running at the expected rate.
+  // All measurements use tolerance ranges except where explicitly stated as exact.
   void RunStepTest(int32_t clock_slew_ppm, size_t num_frames_input) {
-    constexpr double kInputStepMagnitude = 0.75;
+    constexpr double kInputStepMagnitude = 0.95;
+    constexpr double kOutputRelativeError = 0.025;
 
     Init(clock_slew_ppm, num_frames_input);
 
@@ -226,20 +251,20 @@ class ClockSyncPipelineTest : public HermeticAudioTest {
     renderer_->PlaySynchronized(this, output_, 0);
     renderer_->WaitForPackets(this, packets);
 
-    // NumFramesOutput returns a double. It's OK to truncate this: we insert transition ranges
-    // for filter ring in/out, between the "must be silence" and "must be non-silence" ranges.
-    auto offset_before_output_start =
-        static_cast<size_t>(NumFramesOutput(clock_slew_ppm, offset_before_input_start - RingIn()));
+    // NumFramesOutput returns a double. It's OK to truncate this: we insert transition ranges for
+    // filter TotalRampFrames, between the "must be silence" and "must be non-silence" ranges.
+    auto offset_before_output_start = static_cast<size_t>(
+        NumFramesOutput(clock_slew_ppm, offset_before_input_start - PreRampFrames()));
     // We shift the output so that neither signal range nor silence range cross the ring's edge.
     auto ring_buffer = SnapshotRingBuffer(offset_before_output_start);
 
-    // The output should contain silence, followed by optional ring in, followed by data, followed
-    // by optional ring out, followed again by silence. Ultimately we're testing that we emit the
-    // correct number of output frames. Our test is necessarily imprecise, despite our using an
-    // input signal that is crisp and maximally detectable, because we ignore the sampler's ring
-    // in/out intervals when doing our "signal or silence" checks. To illustrate:
+    // The output should contain silence, followed by TotalRampFrames of transition, followed by
+    // data, followed by TotalRampFrames of transition, followed again by silence. Ultimately we're
+    // testing that we emit the correct number of output frames. Our test is necessarily imprecise,
+    // despite our using an input signal that is crisp and maximally detectable, because we ignore
+    // the sampler's ramp intervals when doing our "signal or silence" checks. To illustrate:
     //
-    //     max-ringin                           max-ringout
+    //  max PreRampFrames                    max PostRampFrames
     //      |      |                             |      |
     //      |      V      num_frames_input       V      |
     //       \ +-----+-------------------------+-----+  |
@@ -251,38 +276,39 @@ class ClockSyncPipelineTest : public HermeticAudioTest {
     //
     //
     // In this case, we expect more output frames than input frames. However, since the delta
-    // is smaller than the maximum ring out, we cannot be sure if the extra frames are output
-    // or ring out. This means we cannot check if the system operated correctly.
+    // is smaller than the maximum PostRampFrames, we cannot be sure if the extra frames are output
+    // or PostRampFrames. This means we cannot check if the system operated correctly.
     //
     // To address this problem, the diff between input and output frames must be greater than the
-    // total number of ring in + ring out frames. This is checked in Init().
+    // TotalRampFrames. This is checked in Init().
     //
-    // We do not enforce a precise output duration or step magnitude. We draw conservative
+    // We do not enforce a precise output duration or an exact step magnitude. We draw conservative
     // boundaries around the output and verify that no dropped frames occur within the boundaries.
     //
-    // We do not ExpectNonSilentAudio during the RingIn+RingOut transition, because sinc filter
-    // coefficients have zero-crossings, thus zero data values might be correct during transition
-    // (if the SRC ratio is 1:1, for example).
+    // We do not check data values during the TotalRampFrames transition, because sinc
+    // filter coefficients have zero-crossings, thus zero data values might be correct during
+    // transition (if the SRC ratio is 1:1, for example). In our shifted ring-buffer, this ramp
+    // begins at frame 0 (we include PreRampFrames() of frames of output before the signal begins).
     auto num_frames_output = static_cast<size_t>(NumFramesOutput(clock_slew_ppm, num_frames_input));
-
-    auto data_start = RingIn() + RingOut();               // signal reaches full strength
-    auto data_end = num_frames_output;                    // fadein starts for subsequent silence
-    auto silence_start = data_start + num_frames_output;  // signal fadeout completes
-
-    ExpectAudioBufferOptions opts;
-    opts.num_frames_per_packet = kPacketFrames;
+    auto data_start = TotalRampFrames();                  // signal reaches full strength
+    auto data_end = num_frames_output;                    // subsequent silence starts to ramp in
+    auto silence_start = data_start + num_frames_output;  // our signal ramp out is complete
 
     // A. output step starts at expected frame.
-    // B. expected step range is entirely non-silent: no dropouts
+    // B. magnitude is within tolerance across the entire step range: no dropouts
     auto data = AudioBufferSlice(&ring_buffer, data_start, data_end);
-    opts.test_label = fxl::StringPrintf("check data (starting at %lu)", data_start);
-    ExpectNonSilentAudioBuffer(data, opts);
+    CompareAudioBufferOptions compare_opts;
+    compare_opts.test_label = fxl::StringPrintf("check data (starting at %lu)", data_start);
+    compare_opts.max_relative_error = kOutputRelativeError;
+    auto expect = AudioBufferSlice(&input, 0, data_end - data_start);
+    CompareAudioBuffers(data, expect, compare_opts);
 
     // C. output step ends at expected frame.
     // D. subsequent range is entirely silent
     auto silence = AudioBufferSlice(&ring_buffer, silence_start, ring_buffer.NumFrames());
-    opts.test_label = fxl::StringPrintf("check silence (starting at %lu)", silence_start);
-    ExpectSilentAudioBuffer(silence, opts);
+    ExpectAudioBufferOptions expect_opts;
+    expect_opts.test_label = fxl::StringPrintf("check silence (starting at %lu)", silence_start);
+    ExpectSilentAudioBuffer(silence, expect_opts);
 
     // E. clock rate check
     CheckClockRate(renderer_->reference_clock(), clock_slew_ppm);
@@ -292,10 +318,10 @@ class ClockSyncPipelineTest : public HermeticAudioTest {
   // frequency. Each sinusoidal period contains (num_frames_to_analyze / input_freq) frames.
   //
   // This test validates the following, rendering a sinusoid during clock synchronization:
-  // A. The output signal's magnitude is essentially unattenuated;
+  // A. The output signal's magnitude is essentially unattenuated (within tolerance);
   // B. The output signal's center frequency is shifted by exactly the expected amount;
   // C. No other frequencies exceed the noise floor threshold (with a few exceptions);
-  // D. Those above-noise-floor frequencies are clustered around the primary output frequency;
+  // D. The above-noise-floor frequencies are clustered around the primary output frequency;
   // E. The width of that cluster (from leftmost to rightmost) is below a certain "peak width";
   // F. The renderer clock is running at the expected rate (within a certain tolerance).
   void RunSineTest(int32_t clock_slew_ppm, size_t num_frames_to_analyze, size_t input_freq) {
@@ -328,8 +354,9 @@ class ClockSyncPipelineTest : public HermeticAudioTest {
     auto input_prefix =
         AudioBufferSlice(&input, 0, actual_num_frames_input - num_frames_to_analyze);
 
-    // Verify that this is enough output for our analysis (even after subtracting ring in/out) ...
-    ASSERT_TRUE(NumFramesOutput(clock_slew_ppm, actual_num_frames_input - RingIn() - RingOut()) >
+    // Verify that this is enough output for our analysis (even after subtracting
+    // TotalRampFrames)...
+    ASSERT_TRUE(NumFramesOutput(clock_slew_ppm, actual_num_frames_input - TotalRampFrames()) >
                 num_frames_to_analyze);
     // ... and that this additional output doesn't cause us to overrun the ring buffer.
     ASSERT_TRUE(NumFramesOutput(clock_slew_ppm, actual_num_frames_input) < kPayloadFrames);
@@ -338,10 +365,10 @@ class ClockSyncPipelineTest : public HermeticAudioTest {
     renderer_->PlaySynchronized(this, output_, 0);
     renderer_->WaitForPackets(this, packets);
 
-    // offset_before_input_start is input frame where signal starts. Add RingOut to get input frame
-    // where any effect from preceding silence has completely "rung out". Translate to output frame.
-    auto offset_before_output_start =
-        static_cast<size_t>(NumFramesOutput(clock_slew_ppm, offset_before_input_start + RingOut()));
+    // offset_before_input_start is input frame where signal starts. Add PostRampFrames to get the
+    // frame where any effect of preceding silence is completely gone. Translate to output frame.
+    auto offset_before_output_start = static_cast<size_t>(
+        NumFramesOutput(clock_slew_ppm, offset_before_input_start + PostRampFrames()));
 
     // Shift the entire buffer (with wraparound) to produce a full-length signal starting at [0].
     auto ring_buffer = SnapshotRingBuffer(offset_before_output_start);
@@ -461,11 +488,13 @@ class MicroSrcPipelineTest : public ClockSyncPipelineTest {
     ASSERT_TRUE(num_frames_input + offset_before_input_start < kPayloadFrames)
         << "input signal is too big for the ring buffer";
 
-    // In Step testing, the change in step length should exceed total ramp time, to be detectable.
-    size_t num_frames_output = NumFramesOutput(clock_slew_ppm, num_frames_input);
-    ASSERT_TRUE(std::abs(static_cast<ssize_t>(num_frames_input - num_frames_output)) >
-                static_cast<ssize_t>(RingOut() + RingIn()))
-        << "Change in signal length is too small to be detectable";
+    if (clock_slew_ppm) {
+      // In Impulse/Step testing, the length change must exceed transition time, to be detectable.
+      size_t num_frames_output = NumFramesOutput(clock_slew_ppm, num_frames_input);
+      ASSERT_TRUE(std::abs(static_cast<ssize_t>(num_frames_input - num_frames_output)) >
+                  static_cast<ssize_t>(TotalRampFrames()))
+          << "Change in signal length is too small to be detectable";
+    }
   }
 
   double NumFramesOutput(int32_t clock_slew_ppm, size_t num_frames_input) override {
@@ -503,19 +532,32 @@ class AdjustableClockPipelineTest : public ClockSyncPipelineTest {
   }
 };
 
-// The maximum clock skew is +/-1000PPM. These tests use a skew less than the maximum, so the two
+// Use these to debug the tests in the absence of rate-adjustment
+//
+// TEST_F(MicroSrcPipelineTest, ImpulseBaseline) { RunImpulseTest(0, kFrameRate); }
+// TEST_F(MicroSrcPipelineTest, StepBaseline) { RunStepTest(0, kFrameRate); }
+// TEST_F(MicroSrcPipelineTest, SineBaseline) { RunSineTest(0, 131072, 20000); }
+// TEST_F(AdjustableClockPipelineTest, ImpulseBaseline) { RunImpulseTest(0, kFrameRate); }
+// TEST_F(AdjustableClockPipelineTest, StepBaseline) { RunStepTest(0, kFrameRate); }
+// TEST_F(AdjustableClockPipelineTest, SineBaseline) { RunSineTest(0, 131072, 20000); }
+
+// The maximum clock skew is +/-1000 PPM. These tests use a skew less than the maximum, so the two
 // sides have a chance to converge (at the maximum, the slow side can never fully catch up).
-TEST_F(MicroSrcPipelineTest, ImpulseFastReferenceClock) { RunImpulseTest(500, kFrameRate); }
-TEST_F(MicroSrcPipelineTest, ImpulseSlowReferenceClock) { RunImpulseTest(-500, kFrameRate); }
+// To be discernable from the TotalRampFrames interval, the skew must also be > 291 PPM.
+// At 96k rate, to make the offset an exact integer, clock skew should be a multiple of 125.
+TEST_F(MicroSrcPipelineTest, ImpulseUp500) { RunImpulseTest(500, kFrameRate); }
+TEST_F(MicroSrcPipelineTest, ImpulseUp875) { RunImpulseTest(875, kFrameRate); }
+TEST_F(MicroSrcPipelineTest, ImpulseDown500) { RunImpulseTest(-500, kFrameRate); }
 
-TEST_F(AdjustableClockPipelineTest, ImpulseFastReferenceClock) { RunImpulseTest(500, kFrameRate); }
-TEST_F(AdjustableClockPipelineTest, ImpulseSlowReferenceClock) { RunImpulseTest(-500, kFrameRate); }
+TEST_F(AdjustableClockPipelineTest, ImpulseUp500) { RunImpulseTest(500, kFrameRate); }
+TEST_F(AdjustableClockPipelineTest, ImpulseDown500) { RunImpulseTest(-500, kFrameRate); }
 
-TEST_F(MicroSrcPipelineTest, StepFastReferenceClock) { RunStepTest(500, kFrameRate); }
-TEST_F(MicroSrcPipelineTest, StepSlowReferenceClock) { RunStepTest(-500, kFrameRate); }
+TEST_F(MicroSrcPipelineTest, StepUp500) { RunStepTest(500, kFrameRate); }
+TEST_F(MicroSrcPipelineTest, StepDown500) { RunStepTest(-500, kFrameRate); }
+TEST_F(MicroSrcPipelineTest, StepDown625) { RunStepTest(-625, kFrameRate); }
 
-TEST_F(AdjustableClockPipelineTest, StepFastReferenceClock) { RunStepTest(500, kFrameRate); }
-TEST_F(AdjustableClockPipelineTest, StepSlowReferenceClock) { RunStepTest(-500, kFrameRate); }
+TEST_F(AdjustableClockPipelineTest, StepUp500) { RunStepTest(500, kFrameRate); }
+TEST_F(AdjustableClockPipelineTest, StepDown500) { RunStepTest(-500, kFrameRate); }
 
 // For best precision in measuring resultant signal frequency, input signal frequency should be
 // high, but with room for upward slew without approaching the Nyquist limit(num_input_frames/2).
@@ -523,10 +565,11 @@ TEST_F(AdjustableClockPipelineTest, StepSlowReferenceClock) { RunStepTest(-500, 
 //
 // Sine test input buffer length: the largest power-of-2 (in frames) that fits into 2 secs @ 96kHz.
 // The numbers below work out to a frequency of 20k / (131072/96kHz) = 14.648 kHz.
-TEST_F(MicroSrcPipelineTest, SineFastReferenceClock) { RunSineTest(500, 131072, 20000); }
-TEST_F(MicroSrcPipelineTest, SineSlowReferenceClock) { RunSineTest(-500, 131072, 20000); }
+TEST_F(MicroSrcPipelineTest, SineUp500) { RunSineTest(500, 131072, 20000); }
+TEST_F(MicroSrcPipelineTest, SineDown500) { RunSineTest(-500, 131072, 20000); }
+TEST_F(MicroSrcPipelineTest, SineDown750) { RunSineTest(-750, 131072, 20000); }
 
-TEST_F(AdjustableClockPipelineTest, SineFastReferenceClock) { RunSineTest(500, 131072, 20000); }
-TEST_F(AdjustableClockPipelineTest, SineSlowReferenceClock) { RunSineTest(-500, 131072, 20000); }
+TEST_F(AdjustableClockPipelineTest, SineUp500) { RunSineTest(500, 131072, 20000); }
+TEST_F(AdjustableClockPipelineTest, SineDown500) { RunSineTest(-500, 131072, 20000); }
 
 }  // namespace media::audio::test

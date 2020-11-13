@@ -110,10 +110,10 @@ zx::time RendererShimImpl::PlaySynchronized(
 template <fuchsia::media::AudioSampleFormat SampleFormat>
 RendererShimImpl::PacketVector RendererShimImpl::AppendPackets(
     const std::vector<AudioBufferSlice<SampleFormat>>& slices, int64_t initial_pts) {
-  // Where in the payload to write the next packet.
-  size_t payload_offset = payload_buffer_.GetCurrentOffset();
+  // Where in the payload buffer (in bytes) to write the next packet.
+  size_t payload_offset = payload_buffer_.GetCurrentOffset() * format().bytes_per_frame();
 
-  // Where in the media timeline to write the next packet.
+  // Where in the media timeline (in PTS units; frames by default) to write the next packet.
   int64_t pts = initial_pts;
 
   PacketVector out;
