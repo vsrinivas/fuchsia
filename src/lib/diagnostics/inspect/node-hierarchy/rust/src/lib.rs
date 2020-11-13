@@ -149,16 +149,18 @@ where
 
     /// Either returns an existing child of `self` with name `name` or creates
     /// a new child with name `name`.
-    pub fn get_or_add_child_mut(&mut self, name: impl Into<String>) -> &mut NodeHierarchy<Key> {
+    pub fn get_or_add_child_mut<T>(&mut self, name: T) -> &mut NodeHierarchy<Key>
+    where
+        T: AsRef<str>,
+    {
         // We have to use indices to iterate here because the borrow checker cannot
         // deduce that there are no borrowed values in the else-branch.
         // TODO(fxbug.dev/4601): We could make this cleaner by changing the NodeHierarchy
         // children to hashmaps.
-        let name_string: String = name.into();
-        match (0..self.children.len()).find(|&i| self.children[i].name == name_string) {
+        match (0..self.children.len()).find(|&i| self.children[i].name == name.as_ref()) {
             Some(matching_index) => &mut self.children[matching_index],
             None => {
-                self.children.push(NodeHierarchy::new(name_string, vec![], vec![]));
+                self.children.push(NodeHierarchy::new(name.as_ref(), vec![], vec![]));
                 self.children
                     .last_mut()
                     .expect("We just added an entry so we cannot get None here.")
@@ -183,16 +185,16 @@ where
     ///
     /// NOTE: Inspect VMOs may allow multiple nodes of the same name. In this case,
     ///        the first node found is returned.
-    pub fn get_or_add_node(
-        &mut self,
-        node_path: Vec<impl Into<String>>,
-    ) -> &mut NodeHierarchy<Key> {
+    pub fn get_or_add_node<T>(&mut self, node_path: &[T]) -> &mut NodeHierarchy<Key>
+    where
+        T: AsRef<str>,
+    {
         assert!(!node_path.is_empty());
-        let mut iter = node_path.into_iter();
-        let first_path_string: String = iter.next().unwrap().into();
+        let mut iter = node_path.iter();
+        let first_path_string = iter.next().unwrap().as_ref();
         // It is an invariant that the node path start with the key fragment equal to the
         // name of the node that get_or_add_node is called on.
-        assert_eq!(first_path_string, self.name);
+        assert_eq!(first_path_string, &self.name);
         let mut curr_node = self;
         for node_path_entry in iter {
             curr_node = curr_node.get_or_add_child_mut(node_path_entry);
@@ -209,11 +211,10 @@ where
     ///
     /// NOTE: Inspect VMOs may allow multiple nodes of the same name. In this case,
     ///       the property is added to the first node found.
-    pub fn add_property(
-        &mut self,
-        node_path: Vec<impl Into<String> + Copy>,
-        property: Property<Key>,
-    ) {
+    pub fn add_property<T>(&mut self, node_path: &[T], property: Property<Key>)
+    where
+        T: AsRef<str>,
+    {
         self.get_or_add_node(node_path).properties.push(property);
     }
 
@@ -833,7 +834,7 @@ where
                     RegexSet::new(property_regex_strings).map_err(Error::Regex)?;
 
                 if property_regex_set.len() > 0 {
-                    working_node = new_root.get_or_add_node(node_path);
+                    working_node = new_root.get_or_add_node(&node_path);
                     nodes_added = nodes_added + 1;
                 }
 
@@ -1129,9 +1130,9 @@ mod tests {
         let prop_2 = Property::Uint("c".to_string(), 3);
         let path_2 = vec!["root", "two"];
         let prop_2_prime = Property::Int("z".to_string(), -4);
-        hierarchy.add_property(path_1, prop_1.clone());
-        hierarchy.add_property(path_2.clone(), prop_2.clone());
-        hierarchy.add_property(path_2, prop_2_prime.clone());
+        hierarchy.add_property(&path_1, prop_1.clone());
+        hierarchy.add_property(&path_2.clone(), prop_2.clone());
+        hierarchy.add_property(&path_2, prop_2_prime.clone());
 
         assert_eq!(
             hierarchy,
@@ -1163,7 +1164,7 @@ mod tests {
     fn no_empty_paths_allowed() {
         let mut hierarchy = NodeHierarchy::<String>::new_root();
         let path_1: Vec<&String> = vec![];
-        hierarchy.get_or_add_node(path_1);
+        hierarchy.get_or_add_node(&path_1);
     }
 
     #[test]
@@ -1173,7 +1174,7 @@ mod tests {
     fn path_must_start_at_self() {
         let mut hierarchy = NodeHierarchy::<String>::new_root();
         let path_1 = vec!["not_root", "a"];
-        hierarchy.get_or_add_node(path_1);
+        hierarchy.get_or_add_node(&path_1);
     }
 
     #[test]
