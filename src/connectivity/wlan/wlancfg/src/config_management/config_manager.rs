@@ -316,10 +316,7 @@ impl SavedNetworksManager {
 
         if let Entry::Occupied(network_configs) = &network_entry {
             if network_configs.get().iter().any(|cfg| cfg.credential == credential) {
-                info!(
-                    "Saving a previously saved network with same password: {}",
-                    String::from_utf8_lossy(&network_id.ssid)
-                );
+                info!("Saving a previously saved network with same password.");
                 return Ok(None);
             }
         }
@@ -420,11 +417,7 @@ impl SavedNetworksManager {
             }
         }
         // Will not reach here if we find the saved network with matching SSID and credential.
-        info!(
-            "Failed finding network ({},{:?}) to record result of connect attempt.",
-            String::from_utf8_lossy(&id.ssid),
-            id.security_type
-        );
+        info!("Failed to find network to record result of connect attempt.");
     }
 
     pub async fn record_periodic_metrics(&self) {
