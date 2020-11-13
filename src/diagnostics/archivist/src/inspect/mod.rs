@@ -5,7 +5,7 @@
 use {
     crate::{
         constants,
-        container::{PopulatedInspectDataContainer, ReadSnapshot, SnapshotData},
+        container::{ReadSnapshot, SnapshotData},
         diagnostics::DiagnosticsServerStats,
         repository::DiagnosticsDataRepository,
     },
@@ -27,6 +27,9 @@ use {
 };
 
 pub mod collector;
+pub mod container;
+
+use container::PopulatedInspectDataContainer;
 
 /// Packet containing a node hierarchy and all the metadata needed to
 /// populate a diagnostics schema for that node hierarchy.

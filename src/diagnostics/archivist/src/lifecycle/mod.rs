@@ -1,8 +1,9 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+
 use {
-    crate::{container::LifecycleDataContainer, repository::DiagnosticsDataRepository},
+    crate::repository::DiagnosticsDataRepository,
     diagnostics_data::{Data, LifecycleData},
     futures::prelude::*,
     parking_lot::RwLock,
@@ -13,6 +14,10 @@ use {
         task::{Context, Poll},
     },
 };
+
+pub mod container;
+
+use container::LifecycleDataContainer;
 
 /// LifecycleServer holds the state and data needed to serve Lifecycle data
 /// reading requests for a single client.

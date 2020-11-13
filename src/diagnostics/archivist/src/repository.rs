@@ -3,11 +3,10 @@
 // found in the LICENSE file.
 use {
     crate::{
-        container::{
-            DiagnosticsArtifactsContainer, InspectArtifactsContainer, LifecycleArtifactsContainer,
-            LifecycleDataContainer, UnpopulatedInspectDataContainer,
-        },
+        container::DiagnosticsArtifactsContainer,
         events::types::ComponentIdentifier,
+        inspect::container::{InspectArtifactsContainer, UnpopulatedInspectDataContainer},
+        lifecycle::container::{LifecycleArtifactsContainer, LifecycleDataContainer},
         logs::{redact::Redactor, LogManager},
     },
     anyhow::{format_err, Error},
