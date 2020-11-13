@@ -18,7 +18,7 @@ function help_global_options {
 Global fx options: fx [OPTION] ${cmd} ...
   --dir=BUILD_DIR       Path to the build directory to use when running COMMAND.
   --disable=FEATURE     Disable a feature (non-persistent).
-                        Valid values for FEATURE: [${_FX_OPTIONAL_FEATURES[@]}]
+                        Valid values for FEATURE: [$(list_optional_features)]
   -d=DEVICE[:SSH_PORT]  Target a specific device.
                         DEVICE may be a Fuchsia device name to be resolved using
                         device-finder or an IP address.
@@ -174,7 +174,7 @@ while [[ $# -ne 0 ]]; do
       shift # Removes --disable.
       feature="$1"
       if ! is_valid_feature "${feature}"; then
-        fx-error "Unknown feature \"${feature}\". Valid values are: ${_FX_OPTIONAL_FEATURES[@]}"
+        fx-error "Unknown feature \"${feature}\". Valid values are: $(list_optional_features)"
         exit 1
       fi
       env_name="$(get_disable_feature_env_name "${feature}")"

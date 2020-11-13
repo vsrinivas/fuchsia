@@ -3,12 +3,14 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-readonly _FX_OPTIONAL_FEATURES=("incremental")
+function list_optional_features {
+  echo "incremental"
+}
 
 function is_valid_feature {
   local el feature
   feature="$1"
-  for el in "${_FX_OPTIONAL_FEATURES[@]}"; do
+  for el in $(list_optional_features); do
     if [[ "${el}" == "${feature}" ]]; then
       return 0
     fi

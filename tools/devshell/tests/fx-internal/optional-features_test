@@ -22,7 +22,8 @@ BT_SET_UP() {
   # get the first valid feature defined in an array in fx-optional-features.sh
   # if there are no optional features, this variable will
   # be empty and the tests that depend on it should return SUCCESS.
-  valid_feature="${_FX_OPTIONAL_FEATURES[0]}"
+  local features=( $(list_optional_features) )
+  valid_feature="${features[0]}"
 }
 
 TEST_disable_feature() {
@@ -48,6 +49,18 @@ EOF
   # Now it should return false, since the feature is explicitly disabled
   # in the fx invocation.
   BT_EXPECT_FAIL ${fx} --disable=${valid_feature} ${cmd}
+}
+
+TEST_features_are_valid() {
+  for f in $(list_optional_features); do
+    # no spaces
+    if [[ $f =~ " " ]]; then
+      BT_FAIL "Optional feature '${f}' should not contain spaces"
+    fi
+
+    # reverse checking
+    BT_EXPECT is_valid_feature "$f"
+  done
 }
 
 BT_RUN_TESTS "$@"

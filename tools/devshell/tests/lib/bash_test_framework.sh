@@ -580,6 +580,19 @@ BT_ASSERT() {
 }
 
 #######################################
+# Produce a test failure with a given message
+# Arguments:
+#   remaining arg(s) - custom error message (optional)
+# Returns:
+#   0
+#######################################
+BT_FAIL() {
+  # return 1 (*not* the given 0 status)
+  btf::_fail 1 "$@"
+}
+
+
+#######################################
 # Evaluates the arguments (interprets the arguments as a command string, using the
 # 'eval' built-in), generates a non-fatal failure if the return status is zero (0).
 # Arguments:
