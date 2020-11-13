@@ -235,9 +235,9 @@ pub struct SessionChannel {
     dlci: DLCI,
     /// The local role assigned to us.
     role: Role,
-    /// The flow control used for this SessionChannel. By default, the channel
-    /// will be controlled using credit-based flow control.
-    flow_control: FlowControlMode,
+    /// The flow control used for this SessionChannel. If unset during establishment, the channel
+    /// will default to credit-based flow control.
+    flow_control: Option<FlowControlMode>,
     /// The processing task associated with the channel. This is set through
     /// `self.establish()`, and indicates whether this SessionChannel is
     /// currently active.
@@ -248,19 +248,18 @@ pub struct SessionChannel {
 
 impl SessionChannel {
     pub fn new(dlci: DLCI, role: Role) -> Self {
-        Self {
-            dlci,
-            role,
-            flow_control: FlowControlMode::CreditBased(Credits::default()),
-            processing_task: None,
-            user_data_queue: None,
-        }
+        Self { dlci, role, flow_control: None, processing_task: None, user_data_queue: None }
     }
 
     /// Returns true if this SessionChannel has been established. Namely, `self.establish()`
     /// has been called, and a processing task started up.
     pub fn is_established(&self) -> bool {
         self.processing_task.is_some()
+    }
+
+    /// Returns true if the parameters for this SessionChannel have been negotiated.
+    pub fn parameters_negotiated(&self) -> bool {
+        self.flow_control.is_some()
     }
 
     /// Sets the flow control mode for this channel. Returns an Error if the channel
@@ -274,7 +273,7 @@ impl SessionChannel {
         if self.is_established() {
             return Err(RfcommError::ChannelAlreadyEstablished(self.dlci));
         }
-        self.flow_control = flow_control;
+        self.flow_control = Some(flow_control);
         Ok(())
     }
 
@@ -338,18 +337,21 @@ impl SessionChannel {
 
     /// Starts the processing task over the provided `channel`. The processing task will:
     /// 1) Read bytes received from the `channel` and relay user data to the `frame_sender`.
-    /// 2) Read packets from the `pending_writes` queue, and send the data to the other
+    /// 2) Read packets from the `pending_writes` queue, and send the data to the client
     ///    end of the `channel`.
     ///
     /// While unusual, it is OK to call establish() multiple times. The currently active
     /// processing task will be dropped, and a new one will be spawned using the provided
-    /// new channel.
+    /// new channel. If the flow control has not been negotiated, the channel will default
+    /// to using credit-based flow control.
     pub fn establish(&mut self, channel: Channel, frame_sender: mpsc::Sender<Frame>) {
         let (user_data_queue, pending_writes) = mpsc::channel(0);
+        self.flow_control =
+            self.flow_control.or(Some(FlowControlMode::CreditBased(Credits::default())));
         let processing_task = fasync::Task::local(Self::user_data_relay(
             self.dlci,
             self.role,
-            self.flow_control,
+            self.flow_control.unwrap(),
             channel,
             pending_writes,
             frame_sender,

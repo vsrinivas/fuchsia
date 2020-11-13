@@ -59,8 +59,6 @@ impl Default for SessionParameters {
 pub enum ParameterNegotiationState {
     /// Parameters have not been negotiated.
     NotNegotiated,
-    /// Parameters are currently being negotiated.
-    Negotiating,
     /// Parameters have been negotiated.
     Negotiated(SessionParameters),
 }
@@ -72,11 +70,11 @@ impl ParameterNegotiationState {
     fn parameters(&self) -> SessionParameters {
         match self {
             Self::Negotiated(params) => *params,
-            Self::Negotiating | Self::NotNegotiated => SessionParameters::default(),
+            Self::NotNegotiated => SessionParameters::default(),
         }
     }
 
-    /// Negotiates the `new` parameters with the (potentially) current parameters. Returns
+    /// Negotiates the `new` parameters with the (potential) current parameters. Returns
     /// the parameters that were set.
     fn negotiate(&mut self, new: SessionParameters) -> SessionParameters {
         let updated = self.parameters().negotiated(&new);
@@ -123,10 +121,6 @@ impl SessionMultiplexer {
         self.role
     }
 
-    pub fn parameter_negotiation_state(&self) -> ParameterNegotiationState {
-        self.parameters
-    }
-
     pub fn set_role(&mut self, role: Role) {
         self.role = role;
     }
@@ -136,27 +130,19 @@ impl SessionMultiplexer {
         self.parameters().credit_based_flow()
     }
 
+    #[cfg(test)]
+    pub fn parameter_negotiation_state(&self) -> ParameterNegotiationState {
+        self.parameters
+    }
+
     /// Returns true if the session parameters have been negotiated.
     pub fn parameters_negotiated(&self) -> bool {
         std::matches!(&self.parameters, ParameterNegotiationState::Negotiated(_))
     }
 
-    /// Returns true if the session parameters are currently negotiating.
-    pub fn negotiating_parameters(&self) -> bool {
-        self.parameters == ParameterNegotiationState::Negotiating
-    }
-
     /// Returns the parameters associated with this session.
     pub fn parameters(&self) -> SessionParameters {
         self.parameters.parameters()
-    }
-
-    pub fn set_parameters_negotiating(&mut self) {
-        self.parameters = ParameterNegotiationState::Negotiating;
-    }
-
-    pub fn reset_parameters(&mut self) {
-        self.parameters = ParameterNegotiationState::NotNegotiated;
     }
 
     /// Negotiates the parameters associated with this session - returns the session parameters
@@ -221,6 +207,11 @@ impl SessionMultiplexer {
     pub fn find_or_create_session_channel(&mut self, dlci: DLCI) -> &mut SessionChannel {
         let channel = self.channels.entry(dlci).or_insert(SessionChannel::new(dlci, self.role));
         channel
+    }
+
+    /// Returns true if the parameters have been negotiated for the provided `dlci`.
+    pub fn dlc_parameters_negotiated(&self, dlci: &DLCI) -> bool {
+        self.channels.get(dlci).map_or(false, |c| c.parameters_negotiated())
     }
 
     /// Sets the flow control mode of the RFCOMM channel associated with the `dlci` to use
