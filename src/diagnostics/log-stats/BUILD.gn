@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/rust/rustc_binary.gni")
+import("//build/rust/rustc_library.gni")
 import("//src/sys/build/components.gni")
 
 group("log-stats") {
@@ -21,7 +21,7 @@ group("tests") {
 fuchsia_component("component") {
   component_name = "log-stats"
   manifest = "meta/log-stats.cml"
-  deps = [ ":bin" ]
+  deps = [ "//src/diagnostics/launcher:bin" ]
 }
 
 fuchsia_package("package") {
@@ -32,10 +32,10 @@ fuchsia_package("package") {
 fuchsia_component("component-v1") {
   component_name = "log-stats"
   manifest = "meta/log-stats.cmx"
-  deps = [ ":bin" ]
+  deps = [ "//src/diagnostics/launcher:bin" ]
 }
 
-rustc_binary("bin") {
+rustc_library("lib") {
   name = "log-stats"
   with_unit_tests = true
 
@@ -50,16 +50,17 @@ rustc_binary("bin") {
     "//src/lib/fuchsia-component",
     "//src/lib/syslog",
     "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:argh",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:tracing",
   ]
 
-  sources = [ "src/main.rs" ]
+  sources = [ "src/lib.rs" ]
 }
 
 fuchsia_unittest_component("log-stats-unit-tests") {
-  executable_path = "bin/log_stats_bin_test"
-  deps = [ ":bin_test" ]
+  executable_path = "bin/log_stats_lib_test"
+  deps = [ ":lib_test" ]
 }
 
 fuchsia_component("log-stats-integration-tests") {

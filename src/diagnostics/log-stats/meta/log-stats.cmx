@@ -3,7 +3,10 @@
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "bin/log_stats"
+        "args": [
+            "log-stats"
+        ],
+        "binary": "bin/launcher"
     },
     "sandbox": {
         "services": [

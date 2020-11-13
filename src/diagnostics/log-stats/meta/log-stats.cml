@@ -4,7 +4,8 @@
 {
     include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
     program: {
-        binary: "bin/log_stats",
+        binary: "bin/launcher",
+        args: [ "log-stats" ],
     },
     capabilities: [
         {

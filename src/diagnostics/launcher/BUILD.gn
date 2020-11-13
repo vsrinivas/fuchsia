@@ -13,6 +13,7 @@ rustc_binary("bin") {
   deps = [
     "//src/diagnostics/detect:lib",
     "//src/diagnostics/lib/util/v2-argh-wrapper",
+    "//src/diagnostics/log-stats:lib",
     "//src/diagnostics/sampler:lib",
     "//src/lib/fuchsia-async",
     "//src/lib/syslog/rust:syslog",

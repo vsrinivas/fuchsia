@@ -6,6 +6,7 @@ use archivist_lib::logs::{
     debuglog::KERNEL_URL,
     stats::{LogManagerStats, LogSource},
 };
+use argh::FromArgs;
 use diagnostics_reader::{ArchiveReader, Logs};
 use fidl_fuchsia_diagnostics::{ArchiveAccessorMarker, ArchiveAccessorProxy};
 use fuchsia_async as fasync;
@@ -18,9 +19,12 @@ use fuchsia_inspect_derive::WithInspect;
 use futures::{future::join, prelude::*};
 use tracing::*;
 
-#[fasync::run_singlethreaded]
-async fn main() -> Result<(), anyhow::Error> {
-    fuchsia_syslog::init()?;
+/// Empty command line args, just to give Launcher the subcommand name "log-stats"
+#[derive(FromArgs, Debug, PartialEq)]
+#[argh(subcommand, name = "log-stats")]
+pub struct CommandLine {}
+
+pub async fn main() -> Result<(), anyhow::Error> {
     let mut service_fs = ServiceFs::new_local();
     service_fs.take_and_serve_directory_handle()?;
 
