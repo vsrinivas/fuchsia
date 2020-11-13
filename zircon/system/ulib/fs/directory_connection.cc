@@ -304,7 +304,7 @@ void DirectoryConnection::Mount(zx::channel remote, MountCompleter::Sync& comple
   FS_PRETTY_TRACE_DEBUG("[DirectoryAdminMount] our options: ", options());
 
   if (!options().rights.admin) {
-    Vfs::UnmountHandle(std::move(remote), zx::time::infinite_past());
+    Vfs::UnmountHandle(std::move(remote), zx::time::infinite());
     completer.Reply(ZX_ERR_ACCESS_DENIED);
     return;
   }
@@ -318,7 +318,7 @@ void DirectoryConnection::MountAndCreate(zx::channel remote, fidl::StringView na
   FS_PRETTY_TRACE_DEBUG("[DirectoryAdminMountAndCreate] our options: ", options());
 
   if (!options().rights.admin) {
-    Vfs::UnmountHandle(std::move(remote), zx::time::infinite_past());
+    Vfs::UnmountHandle(std::move(remote), zx::time::infinite());
     completer.Reply(ZX_ERR_ACCESS_DENIED);
     return;
   }

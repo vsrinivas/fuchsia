@@ -299,6 +299,32 @@ TEST(UnmountTestEvilCase, UnmountTestEvil) {
   ASSERT_EQ(unlink(mount_path), 0);
 }
 
+TEST(MountFailsWithoutAdminCase, MountFailsWithoutAdmin) {
+  const char* mount_path = "/memfs/fail_root";
+
+  // Create a ramdisk
+  ramdisk_client_t* ramdisk = nullptr;
+  ASSERT_EQ(ramdisk_create(512, 1 << 16, &ramdisk), ZX_OK);
+  const char* ramdisk_path = ramdisk_get_path(ramdisk);
+  ASSERT_EQ(mkfs(ramdisk_path, DISK_FORMAT_MINFS, launch_stdio_sync, &default_mkfs_options), ZX_OK);
+  ASSERT_EQ(mkdir(mount_path, 0666), 0);
+  ASSERT_NO_FATAL_FAILURES(CheckMountedFs(mount_path, "memfs", strlen("memfs")));
+
+  // open the directory without O_ADMIN and try to mount
+  int ramdisk_fd = open(ramdisk_path, O_RDWR);
+  ASSERT_GE(ramdisk_fd, 0);
+  int mount_fd = open(mount_path, O_RDONLY);
+  ASSERT_GE(mount_fd, 0);
+  ASSERT_NE(
+      fmount(ramdisk_fd, mount_fd, DISK_FORMAT_MINFS, &test_mount_options(), launch_stdio_async),
+      ZX_OK);
+  ASSERT_NO_FATAL_FAILURES(CheckMountedFs(mount_path, "memfs", strlen("memfs")));
+  ASSERT_EQ(close(mount_fd), 0);
+
+  ASSERT_EQ(ramdisk_destroy(ramdisk), 0);
+  ASSERT_EQ(rmdir(mount_path), 0);
+}
+
 TEST(DoubleMountRootCase, DoubleMountRoot) {
   const char* mount_path = "/memfs/double_mount_root";
 
@@ -535,8 +561,7 @@ TEST(MountBlockReadonlyCase, MountBlockReadonly) {
   ASSERT_EQ(ramdisk_set_flags(ramdisk, flags), ZX_OK);
 
   bool read_only = false;
-  ASSERT_NO_FATAL_FAILURES(
-      MountMinfs(ramdisk_get_block_fd(ramdisk), read_only, mount_path));
+  ASSERT_NO_FATAL_FAILURES(MountMinfs(ramdisk_get_block_fd(ramdisk), read_only, mount_path));
 
   // We can't modify the file.
   int root_fd = open(mount_path, O_RDONLY | O_DIRECTORY);
