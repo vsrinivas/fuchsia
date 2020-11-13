@@ -6,6 +6,7 @@ import("//build/sdk/sdk_atom.gni")
 import("//build/testing/host_test_data.gni")
 import("//src/lib/vulkan/build/config.gni")
 import("//src/lib/vulkan/build/symlink.gni")
+import("//src/lib/vulkan/compact_image.gni")
 import("//src/lib/vulkan/image_pipe_swapchain.gni")
 import("//src/lib/vulkan/layers.gni")
 
@@ -86,13 +87,13 @@ sdk_atom("vulkan_layers") {
 
   files = []
 
-  resources =
-      vulkan_validation_layers.resources + image_pipe_swapchain.resources
+  resources = vulkan_validation_layers.resources +
+              image_pipe_swapchain.resources + compact_image.resources
 
   loadable_modules = vulkan_validation_layers.loadable_modules +
                      image_pipe_swapchain.loadable_modules
-  non_sdk_deps =
-      vulkan_validation_layers.public_deps + image_pipe_swapchain.public_deps
+  non_sdk_deps = vulkan_validation_layers.public_deps +
+                 image_pipe_swapchain.public_deps + compact_image.public_deps
 
   sdk_resources = []
   foreach(resource, resources) {

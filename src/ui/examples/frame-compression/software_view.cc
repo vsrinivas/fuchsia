@@ -115,7 +115,7 @@ SoftwareView::SoftwareView(scenic::ViewContext context, uint64_t modifier, uint3
   // Initialize images from allocated buffer collection.
   //
 
-  for (size_t i = 0; i < kNumImages; ++i) {
+  for (uint32_t i = 0; i < kNumImages; ++i) {
     auto& image = images_[i];
 
     image.image_id = session()->AllocResourceId();

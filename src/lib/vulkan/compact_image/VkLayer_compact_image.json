@@ -1,0 +1,17 @@
+{
+    "file_format_version" : "1.0.0",
+    "layer" : {
+        "name": "VK_LAYER_FUCHSIA_compact_image",
+        "type": "GLOBAL",
+        "library_path": "VkLayer_compact_image.so",
+        "api_version": "1.1.0",
+        "implementation_version": "1",
+        "description": "Compact Image",
+        "disable_environment": {
+            "DISABLE_COMPACT_IMAGE_LAYER": "1"
+        },
+        "device_extensions": [
+            { "name": "VK_FUCHSIA_compact_image", "spec_version": "1" }
+        ]
+    }
+}

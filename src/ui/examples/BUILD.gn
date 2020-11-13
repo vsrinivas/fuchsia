@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/package.gni")
+import("//src/lib/vulkan/compact_image.gni")
 import("//src/lib/vulkan/layers.gni")
 
 group("examples") {
@@ -83,9 +84,10 @@ package("frame-compression") {
     },
   ]
 
-  public_deps = vulkan_validation_layers.public_deps
-  loadable_modules = vulkan_validation_layers.loadable_modules
-  resources = vulkan_validation_layers.resources
+  public_deps = vulkan_validation_layers.public_deps + compact_image.public_deps
+  loadable_modules =
+      vulkan_validation_layers.loadable_modules + compact_image.loadable_modules
+  resources = vulkan_validation_layers.resources + compact_image.resources
 }
 
 package("direct_input") {

@@ -1,7 +1,8 @@
 # Copyright 2020 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
-# this has to match the binary name in examples/ui/Build.gn
+
+# This has to match the binary name in src/ui/examples/BUILD.gn
 
 executable("frame-compression") {
   output_name = "frame-compression"
@@ -39,7 +40,4 @@ executable("frame-compression") {
     "//zircon/system/ulib/trace",
     "//zircon/system/ulib/trace-provider:trace-provider-with-fdio",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }

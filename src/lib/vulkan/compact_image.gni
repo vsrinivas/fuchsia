@@ -1,0 +1,41 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# To use the compact image layer in a package, add a dependency on
+# //src/lib/vulkan/compact_image
+# in the package, import this .gni file, and append the loadable_module and
+# resources entries from this scope to the package's scope.
+#
+# Example BUILD.gn file:
+#
+# import("//src/lib/vulkan/compact_image.gni")
+#
+# package("funky_image_example") {
+#   loadable_modules = [
+#     ...
+#     ] + compact_image.loadable_modules
+#
+#   resources = [
+#     ...
+#     ] + compact_image.resources
+#
+#   public_deps = [
+#     ...
+#     ] + compact_image.public_deps
+# }
+compact_image = {
+  loadable_modules = [
+    {
+      name = "VkLayer_compact_image.so"
+    },
+  ]
+  resources = [
+    {
+      path = rebase_path("compact_image/VkLayer_compact_image.json")
+      dest = "vulkan/explicit_layer.d/VkLayer_compact_image.json"
+    },
+  ]
+
+  public_deps = [ "//src/lib/vulkan/compact_image" ]
+}

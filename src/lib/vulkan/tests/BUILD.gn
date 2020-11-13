@@ -4,12 +4,45 @@
 
 import("//build/test/test_package.gni")
 import("//src/graphics/lib/magma/gnbuild/magma.gni")
+import("//src/lib/vulkan/compact_image.gni")
 import("//src/lib/vulkan/image_pipe_swapchain.gni")
 import("//src/lib/vulkan/layers.gni")
 
 group("tests") {
   testonly = true
-  deps = [ ":image-pipe-swapchain-tests" ]
+  deps = [
+    ":compact-image-tests",
+    ":image-pipe-swapchain-tests",
+  ]
+}
+
+test_package("compact-image-tests") {
+  deps = [ ":test_compact_image" ]
+
+  tests = [
+    {
+      name = "test_compact_image"
+      dest = "compact-image-tests"
+      environments = [ aemu_env ] + magma_libvulkan_hardware_envs
+    },
+  ]
+  public_deps = vulkan_validation_layers.public_deps + compact_image.public_deps
+
+  loadable_modules =
+      vulkan_validation_layers.loadable_modules + compact_image.loadable_modules
+
+  resources = vulkan_validation_layers.resources + compact_image.resources
+}
+
+executable("test_compact_image") {
+  testonly = true
+  sources = [ "test_compact_image.cc" ]
+  deps = [
+    "//garnet/public/lib/gtest",
+    "//sdk/lib/sys/cpp/testing:unit",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/vulkan",
+  ]
 }
 
 test_package("image-pipe-swapchain-tests") {

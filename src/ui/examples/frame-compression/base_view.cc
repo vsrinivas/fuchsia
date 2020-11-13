@@ -13,9 +13,9 @@ namespace frame_compression {
 
 namespace {
 
-constexpr float kDisplayHeight = 50;
-constexpr float kInitialWindowXPos = 320;
-constexpr float kInitialWindowYPos = 240;
+constexpr float kDisplayHeight = 50.0f;
+constexpr float kInitialWindowXPos = 320.0f;
+constexpr float kInitialWindowYPos = 240.0f;
 
 // Inspect values.
 constexpr char kBaseView[] = "base_view";
@@ -36,7 +36,7 @@ BaseView::BaseView(scenic::ViewContext context, const std::string& debug_name, u
       inspect_node_(
           top_inspect_node_.CreateLazyValues(kBaseView, [this] { return PopulateStats(); })) {
   // Create a rectangle shape to display on.
-  scenic::Rectangle shape(session(), width_, height_);
+  scenic::Rectangle shape(session(), static_cast<float>(width_), static_cast<float>(height_));
 
   node_.SetShape(shape);
   node_.SetMaterial(material_);
@@ -111,14 +111,14 @@ uint32_t BaseView::GetNextFrameNumber() {
 
 void BaseView::Animate(fuchsia::images::PresentationInfo presentation_info) {
   // Compute the amount of time that has elapsed since the view was created.
-  double seconds = static_cast<double>(presentation_info.presentation_time) / 1'000'000'000;
+  float seconds = static_cast<float>(presentation_info.presentation_time) / 1'000'000'000;
 
   const float kHalfWidth = logical_size().x * 0.5f;
   const float kHalfHeight = logical_size().y * 0.5f;
 
   // Compute the translation for the window to swirl around the screen.
-  node_.SetTranslation(kHalfWidth * (1. + .1 * sin(seconds * 0.8)),
-                       kHalfHeight * (1. + .1 * sin(seconds * 0.6)), -kDisplayHeight);
+  node_.SetTranslation(kHalfWidth * (1.f + .1f * sin(seconds * 0.8f)),
+                       kHalfHeight * (1.f + .1f * sin(seconds * 0.6f)), -kDisplayHeight);
 }
 
 fit::promise<inspect::Inspector> BaseView::PopulateStats() const {

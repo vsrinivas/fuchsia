@@ -1,0 +1,298 @@
+#version 450
+
+#extension GL_EXT_buffer_reference : require
+#extension GL_EXT_buffer_reference_uvec2 : require
+
+layout(local_size_x = 64) in;
+
+layout(push_constant) uniform _push {
+    uvec2 image_address;
+    uvec2 scratch_address;
+    uvec2 aux_address;
+    uint body_offset;
+    uint block_count;
+};
+
+layout(buffer_reference, std430, buffer_reference_align = 16) buffer image_buffer {
+    uvec4 data[];
+};
+
+layout(buffer_reference, std430, buffer_reference_align = 4) buffer aux_buffer {
+    uint size_bytes;
+};
+
+// AFBC constants.
+const uint kAfbcTilePixelWidth = 16;
+const uint kAfbcTilePixelHeight = 16;
+const uint kAfbcTilePixels = kAfbcTilePixelWidth * kAfbcTilePixelHeight;
+const uint kAfbcPixelsPerUvec4 = 4;
+const uint kAfbcTileUvec4s = kAfbcTilePixels / kAfbcPixelsPerUvec4;
+const uint kAfbcSuperblockTileWidth = 8;
+const uint kAfbcSuperblockTileHeight = 8;
+const uint kAfbcSuperblockTileCount = kAfbcSuperblockTileWidth * kAfbcSuperblockTileHeight;
+
+// Type definitions.
+const uint kInvalidDuplicate = kAfbcSuperblockTileCount;
+
+// Shared memory used to deduplicate tiles.
+//
+// Total shared memory used:
+//   (8 * 8) * sizeof(uint) * 4 = 1024 bytes
+//
+shared uint hashes[kAfbcSuperblockTileCount];
+shared uint body_sizes[kAfbcSuperblockTileCount];
+shared uint duplicates[kAfbcSuperblockTileCount];
+shared uint tile_starts[kAfbcSuperblockTileCount];
+
+// Shared memory where base offset for tile data is stored.
+shared uint next_tile_start;
+
+uint subtileSize(uint subtile)
+{
+    return subtile == 1 ? 64 : subtile;
+}
+
+void calculateHashAndBodySize(uint tile_base_idx, uint i)
+{
+    restrict image_buffer image = image_buffer(image_address);
+
+    uint tile_idx = tile_base_idx + i;
+
+    // Get tile start from header and divide by 16 to get th offset in
+    // uvec4s. Tile start is expected to be a multiple of the tile
+    // size (1024 bytes) so it's safe to divide by 16.
+    uint tile_start = image.data[tile_idx].x / 16;
+
+    uint hash = 0;
+    uint body_size = 0;
+
+    // Calculate hash and determine size of body for non-solid tiles.
+    if (tile_start != 0)
+    {
+        uint h1 = image.data[tile_idx].y;
+        uint h2 = image.data[tile_idx].z;
+        uint h3 = image.data[tile_idx].w;
+
+        // Extract the size of each subtile from the header.
+        body_size += subtileSize(h1 & 0x3f);
+        body_size += subtileSize((h1 >> 6) & 0x3f);
+        body_size += subtileSize((h1 >> 12) & 0x3f);
+        body_size += subtileSize((h1 >> 18) & 0x3f);
+        body_size += subtileSize((h1 >> 24) & 0x3f);
+        body_size += subtileSize((h1 >> 30) | (h2 & 0xf) << 2);
+        body_size += subtileSize((h2 >> 4) & 0x3f);
+        body_size += subtileSize((h2 >> 10) & 0x3f);
+        body_size += subtileSize((h2 >> 16) & 0x3f);
+        body_size += subtileSize((h2 >> 22) & 0x3f);
+        body_size += subtileSize((h2 >> 28) | (h3 & 0x3) << 4);
+        body_size += subtileSize((h3 >> 2) & 0x3f);
+        body_size += subtileSize((h3 >> 8) & 0x3f);
+        body_size += subtileSize((h3 >> 14) & 0x3f);
+        body_size += subtileSize((h3 >> 20) & 0x3f);
+        body_size += subtileSize((h3 >> 26) & 0x3f);
+
+        // Roundup to number of uvec4s.
+        body_size = (body_size + 15) / 16;
+
+        uint tile_offset = tile_start;
+        uint tile_end = tile_start + body_size;
+
+        while (tile_offset < tile_end)
+        {
+            uvec4 data = image.data[tile_offset];
+
+            hash = (hash * 31) ^ data.x;
+            hash = (hash * 31) ^ data.y;
+            hash = (hash * 31) ^ data.z;
+            hash = (hash * 31) ^ data.w;
+
+            tile_offset++;
+        }
+    }
+
+    // Store results in shared memory.
+    hashes[i] = hash;
+    body_sizes[i] = body_size;
+}
+
+void dedupReserveSpaceAndCopyToScratch(uint tile_base_idx, uint i)
+{
+    restrict image_buffer image = image_buffer(image_address);
+
+    uint tile_idx = tile_base_idx + i;
+
+    // Get unpacked tile start from header.
+    uint tile_start = image.data[tile_idx].x / 16;
+
+    // Load hash and body size from shared memory.
+    uint hash = hashes[i];
+    uint body_size = body_sizes[i];
+
+    uint duplicate = kInvalidDuplicate;
+    uint packed_tile_start = 0;
+
+    // Try to deduplicate non-solid tiles.
+    if (body_size != 0)
+    {
+        // Linear scan through tiles with lower index to find a match. There
+        // are a number of ways this can be optimized as failing to find a
+        // duplicate when one exists is not an error (fxb/64177).
+        uint j = i;
+        while (j > 0)
+        {
+            j--;
+
+            // Consider tile if hash and body size matches.
+            if (hashes[j] == hash && body_sizes[j] == body_size)
+            {
+                uint other_tile_idx = tile_base_idx + j;
+
+                // Get other unpacked tile start from header.
+                uint other_tile_start = image.data[other_tile_idx].x / 16;
+
+                // Compare tile bodies to determine if this is an exact match.
+                uint k = 0;
+                while (k < body_size)
+                {
+                    if (image.data[other_tile_start + k] != image.data[tile_start + k])
+                    {
+                        break;
+                    }
+                    k++;
+                }
+
+                // Set duplicate if bodies matched.
+                if (k == body_size)
+                {
+                    duplicate = j;
+                    break;
+                }
+            }
+        }
+
+        // Copy tile and acquire a start offset unless tile is a duplicate.
+        if (duplicate == kInvalidDuplicate)
+        {
+            restrict image_buffer scratch = image_buffer(scratch_address);
+            uint scratch_tile_start = i * kAfbcTileUvec4s;
+
+            // Copy tile body.
+            for (uint k = 0; k < body_size; k++)
+            {
+                scratch.data[scratch_tile_start + k] = image.data[tile_start + k];
+            }
+            packed_tile_start = atomicAdd(next_tile_start, body_size);
+        }
+    }
+
+    // Store results in shared memory.
+    duplicates[i] = duplicate;
+    tile_starts[i] = packed_tile_start;
+}
+
+void resolveAndWriteOut(uint tile_base_idx, uint i)
+{
+    restrict image_buffer image = image_buffer(image_address);
+
+    uint tile_idx = tile_base_idx + i;
+
+    // Get tile header.
+    uvec4 header = image.data[tile_idx];
+
+    // Load packed tile start and duplicate from shared memory.
+    uint tile_start = tile_starts[i];
+    uint duplicate = duplicates[i];
+
+    // Copy tile body unless tile is a duplicate.
+    if (duplicate == kInvalidDuplicate)
+    {
+        restrict image_buffer scratch = image_buffer(scratch_address);
+        uint scratch_tile_start = i * kAfbcTileUvec4s;
+
+        // Load body size from shared memory.
+        uint body_size = body_sizes[i];
+
+        // Copy tile body.
+        for (uint j = 0; j < body_size; j++)
+        {
+            image.data[tile_start + j] = scratch.data[scratch_tile_start + j];
+        }
+    }
+    else
+    {
+        // Find tile start by resolving duplicates.
+        do
+        {
+            tile_start = tile_starts[duplicate];
+            duplicate = duplicates[duplicate];
+        }
+        while (duplicate != kInvalidDuplicate);
+    }
+
+    // Write tile start and rest of header.
+    image.data[tile_idx] = uvec4(tile_start * 16, header.yzw);
+}
+
+void processBlock(uint block)
+{
+    uint start_tile = block * kAfbcSuperblockTileCount;
+
+    //
+    // Stage 1: Calculate hashes and body sizes.
+    //
+    for (uint i = gl_LocalInvocationID.x; i < kAfbcSuperblockTileCount; i += gl_WorkGroupSize.x)
+    {
+        calculateHashAndBodySize(start_tile, i);
+    }
+
+    // Ensure all threads in work group have executed statements
+    // above before we proceed to next stage.
+    barrier();
+
+    //
+    // Stage 2: Deduplicate, reserve space, and copy tiles to staging memory.
+    //
+    for (uint i = gl_LocalInvocationID.x; i < kAfbcSuperblockTileCount; i += gl_WorkGroupSize.x)
+    {
+        dedupReserveSpaceAndCopyToScratch(start_tile, i);
+    }
+
+    // Ensure all threads in work group have executed statements
+    // above before we proceed to next stage.
+    barrier();
+
+    //
+    // Stage 3: Resolve duplicates and write out tiles to image from staging memory.
+    //
+    for (uint i = gl_LocalInvocationID.x; i < kAfbcSuperblockTileCount; i += gl_WorkGroupSize.x)
+    {
+        resolveAndWriteOut(start_tile, i);
+    }
+}
+
+void main()
+{
+    // Initialize tile start offset to body offset.
+    if (gl_LocalInvocationID.x == 0)
+    {
+        next_tile_start = body_offset / 16;
+    }
+
+    // Process all blocks in forward sequence. The order is important
+    // as we can't write to earlier block memory until they've been
+    // processed.
+    for (uint i = 0; i < block_count; ++i)
+    {
+        processBlock(i);
+
+        // Note: no barrier is needed here as last processing stage can run
+        // in parallel with first stage.
+    }
+
+    // Write the final size in bytes to auxiliary buffer.
+    if (gl_LocalInvocationID.x == 0)
+    {
+        restrict aux_buffer aux = aux_buffer(aux_address);
+        aux.size_bytes = next_tile_start * 16;
+    }
+}

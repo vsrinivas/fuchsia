@@ -95,29 +95,13 @@ int main(int argc, const char** argv) {
     std::string count;
     FX_CHECK(command_line.GetOptionValue(kPaintCount, &count))
         << "Missing --" << kPaintCount << " argument";
-    paint_count = strtoul(count.c_str(), nullptr, 10);
-  }
-
-  uint32_t work_group_size = kDefaultWorkGroupSize;
-  if (command_line.HasOption(kWorkGroupSize)) {
-    std::string size;
-    FX_CHECK(command_line.GetOptionValue(kWorkGroupSize, &size))
-        << "Missing --" << kWorkGroupSize << " argument";
-    work_group_size = strtoul(size.c_str(), nullptr, 10);
-  }
-
-  uint32_t work_group_tile_count = kDefaultWorkGroupTileCount;
-  if (command_line.HasOption(kWorkGroupTileCount)) {
-    std::string count;
-    FX_CHECK(command_line.GetOptionValue(kWorkGroupTileCount, &count))
-        << "Missing --" << kWorkGroupTileCount << " argument";
-    work_group_tile_count = strtoul(count.c_str(), nullptr, 10);
+    paint_count = static_cast<uint32_t>(std::stoul(count));
   }
 
   escher::GlslangInitializeProcess();
 
   escher::VulkanInstance::Params instance_params(
-      {{},
+      {{"VK_LAYER_FUCHSIA_compact_image"},
        {VK_EXT_DEBUG_REPORT_EXTENSION_NAME, VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME,
         VK_KHR_EXTERNAL_MEMORY_CAPABILITIES_EXTENSION_NAME,
         VK_KHR_EXTERNAL_SEMAPHORE_CAPABILITIES_EXTENSION_NAME},
@@ -137,6 +121,7 @@ int main(int argc, const char** argv) {
                             VK_FUCHSIA_EXTERNAL_SEMAPHORE_EXTENSION_NAME,
                             VK_KHR_GET_MEMORY_REQUIREMENTS_2_EXTENSION_NAME,
                             VK_FUCHSIA_BUFFER_COLLECTION_EXTENSION_NAME,
+                            "VK_FUCHSIA_compact_image",
                         },
                         {},
                         vk::SurfaceKHR()});
@@ -144,13 +129,11 @@ int main(int argc, const char** argv) {
 
   scenic::ViewFactory factory;
   if (command_line.HasOption(kCompute)) {
-    factory = [modifier, width, height, paint_count, work_group_size, work_group_tile_count, png_fp,
-               inspector = &inspector,
+    factory = [modifier, width, height, paint_count, png_fp, inspector = &inspector,
                weak_escher = escher.GetWeakPtr()](scenic::ViewContext view_context) {
       return std::make_unique<frame_compression::ComputeView>(
           std::move(view_context), std::move(weak_escher), modifier, width, height, paint_count,
-          work_group_size, work_group_tile_count, png_fp,
-          inspector->root().CreateChild(kComputeView));
+          png_fp, inspector->root().CreateChild(kComputeView));
     };
   } else {
     factory = [modifier, width, height, paint_count, png_fp,

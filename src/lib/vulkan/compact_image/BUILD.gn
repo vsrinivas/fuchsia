@@ -1,0 +1,68 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/compiled_action.gni")
+
+# Compile a set of glsl shaders, each into a C header SPIR-V module.
+#
+# NOTE: To get the list of generated files, use target_outputs(":<name>")
+#       after calling compile_glsl_shader_foreach("<name>").
+#
+# Variables:
+#    sources: list of source .comp shader files.
+#    output_dir: output directory.
+#
+template("compile_glsl_shader_foreach") {
+  _output_dir = invoker.output_dir
+  _gen_spv_target_name = "gen_spv_${target_name}"
+  compiled_action_foreach(_gen_spv_target_name) {
+    forward_variables_from(invoker, [ "sources" ])
+    tool = "//third_party/glslang:glslang_validator"
+    outputs = [ "${_output_dir}/{{source_name_part}}.spv.h" ]
+    args = [
+      "-o",
+      rebase_path(outputs[0], root_build_dir),
+      "--vn",
+      "{{source_name_part}}_comp_spv",
+      "{{source}}",
+    ]
+    if (defined(invoker.args)) {
+      args += invoker.args
+    }
+  }
+}
+
+# Compile the shaders to .spv.h
+compile_glsl_shader_foreach("shaders") {
+  sources = [
+    "pack.comp",
+    "unpack.comp",
+  ]
+  output_dir = "${target_gen_dir}/${target_name}"
+  args = [
+    "--target-env",
+    "vulkan1.1",
+  ]
+}
+
+config("shaders_config") {
+  include_dirs = [ "$target_gen_dir/shaders" ]
+  cflags = [ "-Wno-newline-eof" ]
+}
+
+loadable_module("compact_image") {
+  output_name = "VkLayer_compact_image"
+  sources = [ "compact_image_layer.cc" ]
+  deps = [
+    ":gen_spv_shaders",
+    "//sdk/fidl/fuchsia.sysmem",
+    "//sdk/lib/fdio",
+    "//sdk/lib/syslog/cpp:cpp",
+    "//src/lib/vulkan:headers",
+    "//src/lib/vulkan:micro_layer_common",
+    "//zircon/public/lib/fbl",
+  ]
+  ldflags = [ "-static-libstdc++" ]
+  configs += [ ":shaders_config" ]
+}

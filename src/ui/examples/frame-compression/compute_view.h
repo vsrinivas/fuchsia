@@ -22,8 +22,8 @@ namespace frame_compression {
 class ComputeView : public BaseView {
  public:
   ComputeView(scenic::ViewContext context, escher::EscherWeakPtr weak_escher, uint64_t modifier,
-              uint32_t width, uint32_t height, uint32_t paint_count, uint32_t work_group_size,
-              uint32_t work_group_tile_count, FILE* png_fp, inspect::Node inspect_node);
+              uint32_t width, uint32_t height, uint32_t paint_count, FILE* png_fp,
+              inspect::Node inspect_node);
   ~ComputeView() override;
 
  private:
@@ -61,19 +61,15 @@ class ComputeView : public BaseView {
   const escher::EscherWeakPtr escher_;
   const uint64_t modifier_;
   const uint32_t paint_count_;
-  const uint32_t work_group_tile_count_;
   FILE* const png_fp_;
   escher::impl::DescriptorSetPool descriptor_set_pool_;
-  escher::impl::DescriptorSetPool pack_descriptor_set_pool_;
   fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator_;
   Image images_[kNumImages];
   std::vector<png_bytep> row_pointers_;
-  Image scratch_images_[kNumScratchImages];
-  uint32_t next_scratch_image_index_ = 0;
+  escher::ImagePtr scratch_image_;
+  vk::Buffer scratch_buffer_;
   vk::PipelineLayout pipeline_layout_;
-  vk::PipelineLayout pack_pipeline_layout_;
   vk::Pipeline pipeline_;
-  vk::Pipeline pack_pipeline_;
   inspect::LazyNode inspect_node_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ComputeView);
