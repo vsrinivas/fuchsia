@@ -1,10 +1,11 @@
 {
     "program": {
         "args": [
+            "lapis",
             "--minimum-sample-rate-sec",
             "1"
         ],
-        "binary": "bin/sampler"
+        "binary": "bin/launcher"
     },
     "sandbox": {
         "features": [

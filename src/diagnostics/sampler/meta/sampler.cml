@@ -1,8 +1,9 @@
 {
     include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
     program: {
-        binary: "bin/sampler",
+        binary: "bin/launcher",
         args: [
+            "lapis",
             "--minimum-sample-rate-sec",
             "10",
         ],

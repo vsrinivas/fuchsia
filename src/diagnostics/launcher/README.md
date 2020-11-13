@@ -31,6 +31,7 @@ empty struct with `#[derive(FromArgs, Debug, PartialEq)]`.)
 1. Also from lib.rs, export the former `main` funtion with this signature:
 `pub async fn main(args: CommandLine) -> Result<(), Error>`
     1. Remove the `#[fasync::run_singlethreaded]` or similar lines.
+    1. Remove syslog initialization; Launcher does that (the tag is "launcher").
 1. In BUILD.gn, `import("//build/rust/rustc_library.gni")`, change
 `rustc_bin` to `rustc_lib`, and replace `main.rs` with `lib.rs` in `sources`.
 1. In the .cmx for unit tests, change `_bin_test` to `_lib_test`.

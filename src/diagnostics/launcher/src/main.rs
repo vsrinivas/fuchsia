@@ -20,14 +20,16 @@ struct LauncherArgs {
 #[derive(FromArgs, PartialEq, Debug)]
 #[argh(subcommand)]
 enum ChildArgs {
-    Detect(detect_lib::CommandLine),
+    Detect(detect::CommandLine),
+    Lapis(sampler::Args),
 }
 
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
-    fuchsia_syslog::init_with_tags(&["launcher"]).context("initializing logging").unwrap();
+    fuchsia_syslog::init().context("initializing logging").unwrap();
     let args = v2_argh_wrapper::load_command_line::<LauncherArgs>()?;
     match args.program {
-        ChildArgs::Detect(args) => detect_lib::main(args).await,
+        ChildArgs::Detect(args) => detect::main(args).await,
+        ChildArgs::Lapis(args) => sampler::main(args).await,
     }
 }

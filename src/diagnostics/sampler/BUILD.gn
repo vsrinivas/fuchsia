@@ -4,11 +4,11 @@
 
 import("//build/config.gni")
 import("//build/package.gni")
-import("//build/rust/rustc_binary.gni")
+import("//build/rust/rustc_library.gni")
 import("//build/test/test_package.gni")
 import("//src/sys/build/components.gni")
 
-rustc_binary("bin") {
+rustc_library("lib") {
   name = "sampler"
   edition = "2018"
   with_unit_tests = true
@@ -46,21 +46,16 @@ rustc_binary("bin") {
   sources = [
     "src/config.rs",
     "src/executor.rs",
-    "src/main.rs",
+    "src/lib.rs",
   ]
 }
 
 package("sampler") {
   deps = [
     ":archivist_config",
-    ":bin",
+    "//src/diagnostics/launcher:bin",
   ]
 
-  binaries = [
-    {
-      name = "sampler"
-    },
-  ]
   meta = [
     {
       path = rebase_path("meta/sampler.cml")
@@ -97,7 +92,10 @@ rustc_test("test-bin") {
 fuchsia_component("sampler-v1") {
   component_name = "sampler"
   manifest = "meta/sampler.cmx"
-  deps = [ ":bin" ]
+  deps = [
+    ":lib",
+    "//src/diagnostics/launcher:bin",
+  ]
 }
 
 fuchsia_component("sampler-integration-test") {
@@ -123,11 +121,11 @@ config_data("test-config") {
 }
 
 test_package("sampler-tests") {
-  deps = [ ":bin_test" ]
+  deps = [ ":lib_test" ]
 
   v2_tests = [
     {
-      name = "sampler_bin_test"
+      name = "sampler_lib_test"
       environments = basic_envs
     },
   ]

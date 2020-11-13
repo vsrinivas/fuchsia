@@ -1,7 +1,7 @@
 {
     include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
     program: {
-        binary: "test/sampler_bin_test",
+        binary: "test/sampler_lib_test",
     },
     capabilities: [
         { protocol: "fuchsia.test.Suite" },
