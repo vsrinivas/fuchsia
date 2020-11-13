@@ -152,6 +152,26 @@ bool CobaltTestAppLogger::LogInteger(uint32_t metric_id, std::vector<uint32_t> i
   return true;
 }
 
+bool CobaltTestAppLogger::LogIntegerHistogram(uint32_t metric_id, std::vector<uint32_t> indices,
+                                              const std::map<uint32_t, uint64_t>& histogram_map) {
+  fuchsia::metrics::Status status = fuchsia::metrics::Status::INTERNAL_ERROR;
+  std::vector<fuchsia::metrics::HistogramBucket> histogram;
+  for (auto it = histogram_map.begin(); histogram_map.end() != it; it++) {
+    fuchsia::metrics::HistogramBucket entry;
+    entry.index = it->first;
+    entry.count = it->second;
+    histogram.push_back(std::move(entry));
+  }
+
+  metric_event_logger_->LogIntegerHistogram(metric_id, std::move(histogram), indices, &status);
+  FX_VLOGS(1) << "LogIntegerHistogram() => " << StatusToString(status);
+  if (status != fuchsia::metrics::Status::OK) {
+    FX_LOGS(ERROR) << "LogIntegerHistogram() => " << StatusToString(status);
+    return false;
+  }
+  return true;
+}
+
 bool CobaltTestAppLogger::LogCustomMetricsTestProto(uint32_t metric_id,
                                                     const std::string& query_val,
                                                     const int64_t wait_time_val,

@@ -94,6 +94,10 @@ bool TestLogOccurrence(CobaltTestAppLogger* logger, util::SystemClockInterface* 
                        fuchsia::cobalt::ControllerSyncPtr* cobalt_controller,
                        size_t backfill_days, uint32_t project_id);
 
+bool TestLogIntegerHistogram(CobaltTestAppLogger* logger, util::SystemClockInterface* clock,
+                             fuchsia::cobalt::ControllerSyncPtr* cobalt_controller,
+                             size_t backfill_days, uint32_t project_id);
+
 }  // namespace testapp
 }  // namespace cobalt
 

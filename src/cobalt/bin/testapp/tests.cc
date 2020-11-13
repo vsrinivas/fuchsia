@@ -471,7 +471,7 @@ bool TestLogInteger(CobaltTestAppLogger* logger, SystemClockInterface* clock,
   expected_num_obs[{cobalt_registry::kUpdateDurationNewMetricId,
                     cobalt_registry::kUpdateDurationNewUpdateDurationTimingStatsReportId}] = 1;
   expect_no_obs[{cobalt_registry::kUpdateDurationNewMetricId,
-                    cobalt_registry::kUpdateDurationNewUpdateDurationTimingStatsReportId}] = 0;
+                 cobalt_registry::kUpdateDurationNewUpdateDurationTimingStatsReportId}] = 0;
 
   uint32_t day_index = CurrentDayIndex(clock);
   for (uint32_t errorNameIndex : kUpdateDurationNewErrorNameIndices) {
@@ -520,7 +520,7 @@ bool TestLogOccurrence(CobaltTestAppLogger* logger, SystemClockInterface* clock,
   expected_num_obs[{cobalt_registry::kFeaturesActiveNewMetricId,
                     cobalt_registry::kFeaturesActiveNewFeaturesActiveUniqueDevicesReportId}] = 1;
   expect_no_obs[{cobalt_registry::kFeaturesActiveNewMetricId,
-                    cobalt_registry::kFeaturesActiveNewFeaturesActiveUniqueDevicesReportId}] = 0;
+                 cobalt_registry::kFeaturesActiveNewFeaturesActiveUniqueDevicesReportId}] = 0;
 
   uint32_t day_index = CurrentDayIndex(clock);
   for (uint32_t skillIndex : kFeaturesActiveNewSkillIndices) {
@@ -550,6 +550,80 @@ bool TestLogOccurrence(CobaltTestAppLogger* logger, SystemClockInterface* clock,
     return false;
   }
   return SendAndCheckSuccess("TestLogOccurrence", logger);
+}
+
+// power_usage_new and bandwidth_usage_new using INTEGER_HISTOGRAM metric.
+//
+// For each |event_code|, log one observation in each histogram bucket, using
+// decreasing values per bucket.
+bool TestLogIntegerHistogram(CobaltTestAppLogger* logger, SystemClockInterface* clock,
+                       fuchsia::cobalt::ControllerSyncPtr* cobalt_controller,
+                       const size_t backfill_days, uint32_t project_id) {
+  FX_LOGS(INFO) << "========================";
+  FX_LOGS(INFO) << "TestLogIntegerHistogram";
+  std::map<uint32_t, uint64_t> histogram;
+
+  // All integer histogram data is aggregated into a single observation.
+  std::map<std::pair<uint32_t, uint32_t>, uint64_t> expected_num_obs = {
+      {{cobalt_registry::kPowerUsageNewMetricId,
+        cobalt_registry::kPowerUsageNewPowerUsageHistogramsReportId}, 1},
+      {{cobalt_registry::kBandwidthUsageNewMetricId,
+        cobalt_registry::kBandwidthUsageNewBandwidthUsageHistogramsReportId}, 1},
+  };
+  std::map<std::pair<uint32_t, uint32_t>, uint64_t> expect_no_obs = {
+      {{cobalt_registry::kPowerUsageNewMetricId,
+        cobalt_registry::kPowerUsageNewPowerUsageHistogramsReportId}, 0},
+      {{cobalt_registry::kBandwidthUsageNewMetricId,
+        cobalt_registry::kBandwidthUsageNewBandwidthUsageHistogramsReportId}, 0},
+  };
+
+  uint32_t day_index = CurrentDayIndex(clock);
+
+  // Set up and send power_usage_new histograms.
+  for (uint32_t bucket = 0; bucket < kPowerUsageNewBuckets; bucket++) {
+    histogram[bucket] = kPowerUsageNewBuckets - bucket + 1;
+  }
+  for (uint32_t index : kPowerUsageNewIndices) {
+    if (!logger->LogIntegerHistogram(cobalt_registry::kPowerUsageNewMetricId, {index}, histogram)) {
+      FX_LOGS(INFO) << "LogIntegerHistogram(" << cobalt_registry::kPowerUsageNewMetricId << ", {"
+                    << index << "}, buckets[" << kPowerUsageNewBuckets << "])";
+      FX_LOGS(INFO) << "TestLogIntegerHistogram : FAIL";
+      return false;
+    }
+  }
+
+  histogram.clear();
+
+  // Set up and send bandwidth_usage_new histograms.
+  for (uint32_t bucket = 0; bucket < kBandwidthUsageNewBuckets; bucket++) {
+    histogram[bucket] = kBandwidthUsageNewBuckets - bucket + 1;
+  }
+  for (uint32_t index : kBandwidthUsageNewIndices) {
+    if (!logger->LogIntegerHistogram(cobalt_registry::kBandwidthUsageNewMetricId, {index},
+                                     histogram)) {
+      FX_LOGS(INFO) << "LogIntegerHistogram(" << cobalt_registry::kBandwidthUsageNewMetricId << ", {"
+                    << index << "}, buckets[" << kBandwidthUsageNewBuckets << "])";
+      FX_LOGS(INFO) << "TestLogIntegerHistogram : FAIL";
+      return false;
+    }
+  }
+
+  if (CurrentDayIndex(clock) != day_index) {
+    // TODO(fxb/52750) The date has changed mid-test. We are currently unable to
+    // deal with this so we fail this test and our caller may try again.
+    FX_LOGS(INFO) << "Quitting test because the date has changed mid-test.";
+    return false;
+  }
+
+  if (!GenerateObsAndCheckCount(day_index, cobalt_controller, project_id, expected_num_obs)) {
+    FX_LOGS(INFO) << "TestLogIntegerHistogram : FAIL";
+    return false;
+  }
+  if (!GenerateObsAndCheckCount(day_index, cobalt_controller, project_id, expect_no_obs)) {
+    FX_LOGS(INFO) << "TestLogIntegerHistogram : FAIL";
+    return false;
+  }
+  return SendAndCheckSuccess("TestLogIntegerHistogram", logger);
 }
 
 }  // namespace testapp

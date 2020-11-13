@@ -72,6 +72,14 @@ const int64_t kUpdateDurationNewValues[] = {-1, 0, 1, 10, 702};
 const int32_t kFeaturesActiveNewSkillIndices[] = {0, 1, 2, 3};
 const int64_t kFeaturesActiveNewCounts[] = {1, 2, 10, 42};
 
+// power_usage_new metric constants.
+const int32_t kPowerUsageNewIndices[] = {0, 1};
+const int32_t kPowerUsageNewBuckets = 52;
+
+// bandwidth_usage_new metric constants.
+const int32_t kBandwidthUsageNewIndices[] = {0, 1};
+const int64_t kBandwidthUsageNewBuckets = 22;
+
 // The number of locally aggregated observations that should be generated for
 // each locally aggregated report in the test_app2 project for a day, assuming
 // that no events were logged for locally aggregated reports on that day.
