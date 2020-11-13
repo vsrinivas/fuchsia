@@ -77,7 +77,7 @@ config("clang_defaults") {
   asmflags = cflags
   ldflags = cflags
   if (clang_embed_bitcode) {
-    cflags = [
+    cflags += [
       "-Xclang",
       "-fembed-bitcode=all",
     ]
