@@ -724,7 +724,7 @@ From //build/images/custom_signing.gni:23
 
 **Current value (from the default):** `"dart_jit_app"`
 
-From [//topaz/runtime/dart/dart_component.gni:24](https://fuchsia.googlesource.com/topaz/+/b7996429b595ec5cf77b4c9777f9dd70e174a5d8/runtime/dart/dart_component.gni#24)
+From [//topaz/runtime/dart/dart_component.gni:24](https://fuchsia.googlesource.com/topaz/+/1a92a169c135b8f8d03d33e1331f2d54d73509dd/runtime/dart/dart_component.gni#24)
 
 ### dart_default_build_cfg
 TODO(fxbug.dev/64153) renable aot builds
@@ -754,14 +754,14 @@ we use to build products.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/b7996429b595ec5cf77b4c9777f9dd70e174a5d8/runtime/dart/config.gni#10)
+From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/1a92a169c135b8f8d03d33e1331f2d54d73509dd/runtime/dart/config.gni#10)
 
 ### dart_space_dart
 Whether experimental space dart mode is enabled for Dart applications.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/dart_component.gni:43](https://fuchsia.googlesource.com/topaz/+/b7996429b595ec5cf77b4c9777f9dd70e174a5d8/runtime/dart/dart_component.gni#43)
+From [//topaz/runtime/dart/dart_component.gni:43](https://fuchsia.googlesource.com/topaz/+/1a92a169c135b8f8d03d33e1331f2d54d73509dd/runtime/dart/dart_component.gni#43)
 
 ### data_partition_manifest
 Path to manifest file containing data to place into the initial /data
@@ -1011,7 +1011,7 @@ From //build/images/args.gni:52
 
 **Current value (from the default):** `"flutter_jit_app"`
 
-From [//topaz/runtime/dart/dart_component.gni:13](https://fuchsia.googlesource.com/topaz/+/b7996429b595ec5cf77b4c9777f9dd70e174a5d8/runtime/dart/dart_component.gni#13)
+From [//topaz/runtime/dart/dart_component.gni:13](https://fuchsia.googlesource.com/topaz/+/1a92a169c135b8f8d03d33e1331f2d54d73509dd/runtime/dart/dart_component.gni#13)
 
 ### flutter_default_build_cfg
 Non-product JIT
@@ -1051,14 +1051,14 @@ From //build/flutter/config.gni:10
 
 **Current value (from the default):** `true`
 
-From [//topaz/runtime/dart/dart_component.gni:34](https://fuchsia.googlesource.com/topaz/+/b7996429b595ec5cf77b4c9777f9dd70e174a5d8/runtime/dart/dart_component.gni#34)
+From [//topaz/runtime/dart/dart_component.gni:34](https://fuchsia.googlesource.com/topaz/+/1a92a169c135b8f8d03d33e1331f2d54d73509dd/runtime/dart/dart_component.gni#34)
 
 ### flutter_space_dart
 Whether experimental space dart mode is enabled for Flutter applications.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/dart_component.gni:40](https://fuchsia.googlesource.com/topaz/+/b7996429b595ec5cf77b4c9777f9dd70e174a5d8/runtime/dart/dart_component.gni#40)
+From [//topaz/runtime/dart/dart_component.gni:40](https://fuchsia.googlesource.com/topaz/+/1a92a169c135b8f8d03d33e1331f2d54d73509dd/runtime/dart/dart_component.gni#40)
 
 ### font_catalog_paths
 
@@ -1350,16 +1350,16 @@ only useful on Chrome OS.
 
 **Current value (from the default):** `false`
 
-From [//third_party/icu/config.gni:12](https://fuchsia.googlesource.com/third_party/icu/+/c1863f755f0dfbaa3a3f8bc548cd24b27117b47b/config.gni#12)
+From [//third_party/icu/config.gni:12](https://fuchsia.googlesource.com/third_party/icu/+/ef02cc27c0faceffc9345e11a35769ae92b836fb/config.gni#12)
 
 ### icu_major_version_number
 Contains the major version number of the ICU library, for dependencies that
 need different configuration based on the library version. Currently this
 is only useful in Fuchsia.
 
-**Current value (from the default):** `"67"`
+**Current value (from the default):** `"68"`
 
-From [//third_party/icu/version.gni:9](https://fuchsia.googlesource.com/third_party/icu/+/c1863f755f0dfbaa3a3f8bc548cd24b27117b47b/version.gni#9)
+From [//third_party/icu/version.gni:9](https://fuchsia.googlesource.com/third_party/icu/+/ef02cc27c0faceffc9345e11a35769ae92b836fb/version.gni#9)
 
 ### icu_use_data_file
 Tells icu to load an external data file rather than rely on the icudata
@@ -1367,7 +1367,7 @@ being linked directly into the binary.
 
 **Current value (from the default):** `true`
 
-From [//third_party/icu/config.gni:8](https://fuchsia.googlesource.com/third_party/icu/+/c1863f755f0dfbaa3a3f8bc548cd24b27117b47b/config.gni#8)
+From [//third_party/icu/config.gni:8](https://fuchsia.googlesource.com/third_party/icu/+/ef02cc27c0faceffc9345e11a35769ae92b836fb/config.gni#8)
 
 ### include_devmgr_config_in_vbmeta
 If true, /config/devmgr config will be included into a vbmeta image
