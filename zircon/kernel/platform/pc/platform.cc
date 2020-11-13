@@ -29,6 +29,8 @@
 #include <lib/instrumentation/asan.h>
 #include <lib/system-topology.h>
 #include <lib/zbi/zbi-cpp.h>
+#include <lib/zbitl/error_stdio.h>
+#include <lib/zbitl/view.h>
 #include <mexec.h>
 #include <platform.h>
 #include <string.h>
@@ -98,133 +100,138 @@ const zbi_header_t* platform_get_zbi(void) {
   return reinterpret_cast<zbi_header_t*>(X86_PHYS_TO_VIRT(_zbi_base));
 }
 
-zbi_result_t process_zbi_item(zbi_header_t* hdr, void* payload, void* cookie) {
-  switch (hdr->type) {
-    case ZBI_TYPE_PLATFORM_ID:
-      if (hdr->length >= sizeof(zbi_platform_id_t)) {
-        memcpy(&bootloader.platform_id, payload, sizeof(zbi_platform_id_t));
-        bootloader.platform_id_size = sizeof(zbi_platform_id_t);
+static void platform_save_bootloader_data(void) {
+  // Drop constness, as we will need to edit CMDLINE items (see below).
+  zbi_header_t* data_zbi = const_cast<zbi_header_t*>(platform_get_zbi());
+  if (data_zbi == nullptr) {
+    return;
+  }
+  size_t size = sizeof(*data_zbi) + data_zbi->length;
+  printf("Data ZBI: @ %p (%zu bytes)\n", data_zbi, size);
+
+  zbitl::View view(zbitl::AsWritableBytes(data_zbi, size));
+  for (auto it = view.begin(); it != view.end(); ++it) {
+    auto [header, payload] = *it;
+    switch (header->type) {
+      case ZBI_TYPE_PLATFORM_ID: {
+        if (payload.size() >= sizeof(zbi_platform_id_t)) {
+          memcpy(&bootloader.platform_id, payload.data(), sizeof(zbi_platform_id_t));
+          bootloader.platform_id_size = sizeof(zbi_platform_id_t);
+        }
+        break;
       }
-      break;
-    case ZBI_TYPE_ACPI_RSDP:
-      if (hdr->length >= sizeof(uint64_t)) {
-        bootloader.acpi_rsdp = *((uint64_t*)payload);
+      case ZBI_TYPE_ACPI_RSDP: {
+        if (payload.size() >= sizeof(uint64_t)) {
+          bootloader.acpi_rsdp = *reinterpret_cast<uint64_t*>(payload.data());
+        }
+        break;
       }
-      break;
-    case ZBI_TYPE_SMBIOS:
-      if (hdr->length >= sizeof(uint64_t)) {
-        bootloader.smbios = *((uint64_t*)payload);
+      case ZBI_TYPE_SMBIOS: {
+        if (payload.size() >= sizeof(uint64_t)) {
+          bootloader.smbios = *reinterpret_cast<uint64_t*>(payload.data());
+        }
+        break;
       }
-      break;
-    case ZBI_TYPE_EFI_SYSTEM_TABLE:
-      if (hdr->length >= sizeof(uint64_t)) {
-        bootloader.efi_system_table = (void*)*((uint64_t*)payload);
+      case ZBI_TYPE_EFI_SYSTEM_TABLE: {
+        if (payload.size() >= sizeof(uint64_t)) {
+          bootloader.efi_system_table =
+              reinterpret_cast<void*>(*reinterpret_cast<uint64_t*>(payload.data()));
+        }
+        break;
       }
-      break;
-    case ZBI_TYPE_FRAMEBUFFER: {
-      if (hdr->length >= sizeof(zbi_swfb_t)) {
-        memcpy(&bootloader.fb, payload, sizeof(zbi_swfb_t));
+      case ZBI_TYPE_FRAMEBUFFER: {
+        if (payload.size() >= sizeof(zbi_swfb_t)) {
+          memcpy(&bootloader.fb, payload.data(), sizeof(zbi_swfb_t));
+        }
+        bootloader.fb.format = pixel_format_fixup(bootloader.fb.format);
+        break;
       }
-      bootloader.fb.format = pixel_format_fixup(bootloader.fb.format);
-      break;
-    }
-    case ZBI_TYPE_CMDLINE:
-      if (hdr->length > 0) {
-        ((char*)payload)[hdr->length - 1] = 0;
-        gCmdline.Append((char*)payload);
+      case ZBI_TYPE_CMDLINE: {
+        if (payload.empty()) {
+          break;
+        }
+        payload.back() = std::byte{'\0'};
+        gCmdline.Append(reinterpret_cast<const char*>(payload.data()));
 
         // The CMDLINE might include entropy for the zircon cprng.
         // We don't want that information to be accesible after it has
         // been added to the kernel cmdline.
-        mandatory_memset(payload, 0, hdr->length);
-        hdr->type = ZBI_TYPE_DISCARD;
-        hdr->crc32 = ZBI_ITEM_NO_CRC32;
-        hdr->flags &= ~ZBI_FLAG_CRC32;
+        // Editing the header of a ktl::span will not result in an error.
+        // TODO(fxbug.dev/64272): Inline the following once the GCC bug is fixed.
+        zbi_header_t header{};
+        header.type = ZBI_TYPE_DISCARD;
+        static_cast<void>(view.EditHeader(it, header));
+        mandatory_memset(payload.data(), 0, payload.size());
+        break;
       }
-      break;
-    case ZBI_TYPE_EFI_MEMORY_MAP:
-      bootloader.efi_mmap = payload;
-      bootloader.efi_mmap_size = hdr->length;
-      break;
-    case ZBI_TYPE_E820_TABLE:
-      bootloader.e820_table = payload;
-      bootloader.e820_count = hdr->length / sizeof(e820entry_t);
-      break;
-    case ZBI_TYPE_NVRAM_DEPRECATED:
-    // fallthrough: this is a legacy/typo variant
-    case ZBI_TYPE_NVRAM:
-      if (hdr->length >= sizeof(zbi_nvram_t)) {
-        zbi_nvram_t info;
-        memcpy(&info, payload, sizeof(info));
-        platform_set_ram_crashlog_location(info.base, info.length);
+      case ZBI_TYPE_EFI_MEMORY_MAP: {
+        bootloader.efi_mmap = payload.data();
+        bootloader.efi_mmap_size = payload.size();
+        break;
       }
-      break;
-    case ZBI_TYPE_KERNEL_DRIVER:
-      switch (hdr->extra) {
-        case KDRV_I8250_PIO_UART:
-          if (hdr->length >= sizeof(dcfg_simple_pio_t)) {
-            dcfg_simple_pio_t pio;
-            memcpy(&pio, payload, sizeof(pio));
-            bootloader.uart = pio;
+      case ZBI_TYPE_E820_TABLE: {
+        bootloader.e820_table = payload.data();
+        bootloader.e820_count = payload.size() / sizeof(e820entry_t);
+        break;
+      }
+      case ZBI_TYPE_NVRAM_DEPRECATED:
+      case ZBI_TYPE_NVRAM: {
+        if (payload.size() >= sizeof(zbi_nvram_t)) {
+          zbi_nvram_t info;
+          memcpy(&info, payload.data(), sizeof(info));
+          platform_set_ram_crashlog_location(info.base, info.length);
+        }
+        break;
+      }
+      case ZBI_TYPE_KERNEL_DRIVER: {
+        switch (header->extra) {
+          case KDRV_I8250_PIO_UART: {
+            if (payload.size() >= sizeof(dcfg_simple_pio_t)) {
+              dcfg_simple_pio_t pio;
+              memcpy(&pio, payload.data(), sizeof(pio));
+              bootloader.uart = pio;
+            }
+            break;
           }
-          break;
-        case KDRV_I8250_MMIO_UART:
-          if (hdr->length >= sizeof(dcfg_simple_t)) {
-            dcfg_simple_t mmio;
-            memcpy(&mmio, payload, sizeof(mmio));
-            bootloader.uart = mmio;
+          case KDRV_I8250_MMIO_UART: {
+            if (payload.size() >= sizeof(dcfg_simple_t)) {
+              dcfg_simple_t mmio;
+              memcpy(&mmio, payload.data(), sizeof(mmio));
+              bootloader.uart = mmio;
+            }
+            break;
           }
-          break;
+        };
+        break;
       }
-      break;
-    case ZBI_TYPE_CRASHLOG:
-      last_crashlog = payload;
-      last_crashlog_len = hdr->length;
-      break;
-    case ZBI_TYPE_DISCARD:
-      break;
-    case ZBI_TYPE_HW_REBOOT_REASON: {
-      zbi_hw_reboot_reason_t reason;
-      memcpy(&reason, payload, sizeof(reason));
-      platform_set_hw_reboot_reason(reason);
-      break;
-    }
+      case ZBI_TYPE_CRASHLOG: {
+        last_crashlog = payload.data();
+        last_crashlog_len = payload.size();
+        break;
+      }
+      case ZBI_TYPE_DISCARD:
+        break;
+      case ZBI_TYPE_HW_REBOOT_REASON: {
+        if (payload.size() >= sizeof(zbi_hw_reboot_reason_t)) {
+          zbi_hw_reboot_reason_t reason;
+          memcpy(&reason, payload.data(), sizeof(reason));
+          platform_set_hw_reboot_reason(reason);
+        }
+        break;
+      }
+    };
   }
-  return ZBI_RESULT_OK;
-}
 
-static void process_zbi(zbi_header_t* hdr, uintptr_t phys) {
-  uint8_t* zbi_base = reinterpret_cast<uint8_t*>(hdr);
-
-  zbi::Zbi image(zbi_base);
-
-  // Make sure the image is in good shape.
-  zbi_header_t* bad_hdr;
-  zbi_result_t result = image.Check(&bad_hdr);
-  if (result != ZBI_RESULT_OK) {
-    printf("zbi: invalid %08x %08x %08x %08x, retcode = %d\n", bad_hdr->type, bad_hdr->length,
-           bad_hdr->extra, bad_hdr->flags, result);
+  if (auto result = view.take_error(); result.is_error()) {
+    printf("process_zbi: error occurred during iteration: ");
+    zbitl::PrintViewError(result.error_value());
     return;
   }
 
-  printf("zbi: @ %p (%u bytes)\n", image.Base(), image.Length());
-
-  result = image.ForEach(process_zbi_item, nullptr);
-  if (result != ZBI_RESULT_OK) {
-    printf("zbi: failed to process bootdata, reason = %d\n", result);
-    return;
-  }
-
-  boot_alloc_reserve(phys, image.Length());
+  auto phys = reinterpret_cast<uintptr_t>(_zbi_base);
+  boot_alloc_reserve(phys, view.size_bytes());
   bootloader.ramdisk_base = phys;
-  bootloader.ramdisk_size = image.Length();
-}
-
-static void platform_save_bootloader_data(void) {
-  if (_zbi_base != NULL) {
-    zbi_header_t* bd = (zbi_header_t*)X86_PHYS_TO_VIRT(_zbi_base);
-    process_zbi(bd, (uintptr_t)_zbi_base);
-  }
+  bootloader.ramdisk_size = view.size_bytes();
 }
 
 static void* ramdisk_base;
