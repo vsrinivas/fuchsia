@@ -53,6 +53,9 @@
 #endif
 
 #include <lib/zbi/zbi-cpp.h>
+#include <lib/zbitl/error_stdio.h>
+#include <lib/zbitl/image.h>
+#include <lib/zbitl/memory.h>
 #include <zircon/boot/image.h>
 #include <zircon/errors.h>
 #include <zircon/rights.h>
@@ -77,14 +80,14 @@ static constexpr size_t kNumArenas = 16;
 static pmm_arena_info_t mem_arena[kNumArenas];
 static size_t arena_count = 0;
 
-// boot items to save for mexec
-// TODO(voydanoff): more generic way of doing this that can be shared with PC platform
-static uint8_t mexec_zbi[4096];
-static size_t mexec_zbi_length = 0;
-
-static constexpr bool kProcessZbiEarly = true;
+// Backs mexec's data ZBI.
+static std::byte mexec_data_zbi[ZX_PAGE_SIZE];
 
 const zbi_header_t* platform_get_zbi(void) { return zbi_root; }
+
+zbitl::Image<ktl::span<std::byte>> GetMexecDataImage() {
+  return zbitl::Image(ktl::span<std::byte>{mexec_data_zbi, sizeof(mexec_data_zbi)});
+}
 
 static void halt_other_cpus(void) {
   static ktl::atomic<int> halted;
@@ -226,14 +229,6 @@ static inline bool is_zbi_container(void* addr) {
   return item->type == ZBI_TYPE_CONTAINER;
 }
 
-static void save_mexec_zbi(zbi_header_t* item) {
-  size_t length = ZBI_ALIGN(static_cast<uint32_t>(sizeof(zbi_header_t) + item->length));
-  ASSERT(sizeof(mexec_zbi) - mexec_zbi_length >= length);
-
-  memcpy(&mexec_zbi[mexec_zbi_length], item, length);
-  mexec_zbi_length += length;
-}
-
 static void process_mem_range(const zbi_mem_range_t* mem_range) {
   switch (mem_range->type) {
     case ZBI_MEM_RANGE_RAM:
@@ -264,70 +259,6 @@ static void process_mem_range(const zbi_mem_range_t* mem_range) {
   }
 }
 
-// Called during platform_init_early, the heap is not yet present.
-static zbi_result_t process_zbi_item_early(zbi_header_t* item, void* payload, void*) {
-  if (ZBI_TYPE_DRV_METADATA(item->type)) {
-    save_mexec_zbi(item);
-    return ZBI_RESULT_OK;
-  }
-
-  switch (item->type) {
-    case ZBI_TYPE_KERNEL_DRIVER:
-    case ZBI_TYPE_PLATFORM_ID:
-      // we don't process these here, but we need to save them for mexec
-      save_mexec_zbi(item);
-      break;
-    case ZBI_TYPE_CMDLINE: {
-      if (item->length < 1) {
-        break;
-      }
-      char* contents = reinterpret_cast<char*>(payload);
-      contents[item->length - 1] = '\0';
-      gCmdline.Append(contents);
-
-      // The CMDLINE might include entropy for the zircon cprng.
-      // We don't want that information to be accesible after it has
-      // been added to the kernel cmdline.
-      mandatory_memset(payload, 0, item->length);
-      item->type = ZBI_TYPE_DISCARD;
-      item->crc32 = ZBI_ITEM_NO_CRC32;
-      item->flags &= ~ZBI_FLAG_CRC32;
-      break;
-    }
-    case ZBI_TYPE_MEM_CONFIG: {
-      zbi_mem_range_t* mem_range = reinterpret_cast<zbi_mem_range_t*>(payload);
-      uint32_t count = item->length / (uint32_t)sizeof(zbi_mem_range_t);
-      for (uint32_t i = 0; i < count; i++) {
-        process_mem_range(mem_range++);
-      }
-      save_mexec_zbi(item);
-      break;
-    }
-
-    case ZBI_TYPE_NVRAM: {
-      zbi_nvram_t info;
-      memcpy(&info, payload, sizeof(info));
-
-      dprintf(INFO, "boot reserve nvram range: phys base %#" PRIx64 " length %#" PRIx64 "\n",
-              info.base, info.length);
-
-      platform_set_ram_crashlog_location(info.base, info.length);
-      boot_reserve_add_range(info.base, info.length);
-      save_mexec_zbi(item);
-      break;
-    }
-
-    case ZBI_TYPE_HW_REBOOT_REASON: {
-      zbi_hw_reboot_reason_t reason;
-      memcpy(&reason, payload, sizeof(reason));
-      platform_set_hw_reboot_reason(reason);
-      break;
-    }
-  }
-
-  return ZBI_RESULT_OK;
-}
-
 static constexpr zbi_topology_node_t fallback_topology = {
     .entity_type = ZBI_TOPOLOGY_ENTITY_PROCESSOR,
     .parent_index = ZBI_TOPOLOGY_NO_PARENT,
@@ -343,7 +274,7 @@ static constexpr zbi_topology_node_t fallback_topology = {
                                                        .gic_id = 0,
                                                    }}}}};
 
-static void init_topology(zbi_topology_node_t* nodes, size_t node_count) {
+static void init_topology(const zbi_topology_node_t* nodes, size_t node_count) {
   auto result = system_topology::Graph::InitializeSystemTopology(nodes, node_count);
   if (result != ZX_OK) {
     printf("Failed to initialize system topology! error: %d\n", result);
@@ -365,92 +296,173 @@ static void init_topology(zbi_topology_node_t* nodes, size_t node_count) {
   }
 }
 
-// Called after heap is up, but before multithreading.
-static zbi_result_t process_zbi_item_late(zbi_header_t* item, void* payload, void*) {
-  switch (item->type) {
-    case ZBI_TYPE_CPU_CONFIG: {
-      zbi_cpu_config_t* cpu_config = reinterpret_cast<zbi_cpu_config_t*>(payload);
+// Called during platform_init_early, the heap is not yet present.
+void ProcessZbiEarly(zbi_header_t* zbi) {
+  DEBUG_ASSERT(zbi);
 
-      // Convert old zbi_cpu_config into zbi_topology structure.
+  auto mexec_data_image = GetMexecDataImage();
+  // Writable bytes, as we will need to edit CMDLINE items (see below).
+  zbitl::View view(zbitl::AsWritableBytes(zbi, SIZE_MAX));
 
-      // Allocate some memory to work in.
-      size_t node_count = 0;
-      for (size_t cluster = 0; cluster < cpu_config->cluster_count; cluster++) {
-        // Each cluster will get a node.
-        node_count++;
-        node_count += cpu_config->clusters[cluster].cpu_count;
-      }
-
-      fbl::AllocChecker checker;
-      auto flat_topology =
-          ktl::unique_ptr<zbi_topology_node_t[]>{new (&checker) zbi_topology_node_t[node_count]};
-      if (!checker.check()) {
-        return ZBI_RESULT_ERROR;
-      }
-
-      // Initialize to 0.
-      memset(flat_topology.get(), 0, sizeof(zbi_topology_node_t) * node_count);
-
-      // Create topology structure.
-      size_t flat_index = 0;
-      uint16_t logical_id = 0;
-      for (size_t cluster = 0; cluster < cpu_config->cluster_count; cluster++) {
-        const auto cluster_index = flat_index;
-        auto& node = flat_topology.get()[flat_index++];
-        node.entity_type = ZBI_TOPOLOGY_ENTITY_CLUSTER;
-        node.parent_index = ZBI_TOPOLOGY_NO_PARENT;
-
-        // We don't have this data so it is a guess that little cores are
-        // first.
-        node.entity.cluster.performance_class = static_cast<uint8_t>(cluster);
-
-        for (size_t i = 0; i < cpu_config->clusters[cluster].cpu_count; i++) {
-          auto& node = flat_topology.get()[flat_index++];
-          node.entity_type = ZBI_TOPOLOGY_ENTITY_PROCESSOR;
-          node.parent_index = static_cast<uint16_t>(cluster_index);
-          node.entity.processor.logical_id_count = 1;
-          node.entity.processor.logical_ids[0] = logical_id;
-          node.entity.processor.architecture = ZBI_TOPOLOGY_ARCH_ARM;
-          node.entity.processor.architecture_info.arm.cluster_1_id = static_cast<uint8_t>(cluster);
-          node.entity.processor.architecture_info.arm.cpu_id = static_cast<uint8_t>(i);
-          node.entity.processor.architecture_info.arm.gic_id = static_cast<uint8_t>(logical_id++);
+  for (auto it = view.begin(); it != view.end(); ++it) {
+    auto [header, payload] = *it;
+    bool is_mexec_data = ZBI_TYPE_DRV_METADATA(header->type);
+    switch (header->type) {
+      case ZBI_TYPE_KERNEL_DRIVER:
+      case ZBI_TYPE_PLATFORM_ID:
+        is_mexec_data = true;
+        break;
+      case ZBI_TYPE_CMDLINE: {
+        if (payload.empty()) {
+          break;
         }
+        payload.back() = std::byte{'\0'};
+        gCmdline.Append(reinterpret_cast<const char*>(payload.data()));
+
+        // The CMDLINE might include entropy for the zircon cprng.
+        // We don't want that information to be accesible after it has
+        // been added to the kernel cmdline.
+        // Editing the header of a ktl::span will not result in an error.
+        // TODO(fxbug.dev/64272): Inline the following once the GCC bug is fixed.
+        zbi_header_t header{};
+        header.type = ZBI_TYPE_DISCARD;
+        static_cast<void>(view.EditHeader(it, header));
+        mandatory_memset(payload.data(), 0, payload.size());
+        break;
       }
-      DEBUG_ASSERT(flat_index == node_count);
+      case ZBI_TYPE_MEM_CONFIG: {
+        zbi_mem_range_t* mem_range = reinterpret_cast<zbi_mem_range_t*>(payload.data());
+        size_t count = payload.size() / sizeof(zbi_mem_range_t);
+        for (size_t i = 0; i < count; i++) {
+          process_mem_range(mem_range++);
+        }
+        is_mexec_data = true;
+        break;
+      }
+      case ZBI_TYPE_NVRAM: {
+        zbi_nvram_t info;
+        memcpy(&info, payload.data(), sizeof(info));
 
-      // Initialize topology subsystem.
-      init_topology(flat_topology.get(), node_count);
-      save_mexec_zbi(item);
-      break;
-    }
-    case ZBI_TYPE_CPU_TOPOLOGY: {
-      const int node_count = item->length / item->extra;
+        dprintf(INFO, "boot reserve NVRAM range: phys base %#" PRIx64 " length %#" PRIx64 "\n",
+                info.base, info.length);
 
-      zbi_topology_node_t* nodes = reinterpret_cast<zbi_topology_node_t*>(payload);
+        platform_set_ram_crashlog_location(info.base, info.length);
+        boot_reserve_add_range(info.base, info.length);
+        is_mexec_data = true;
+        break;
+      }
+      case ZBI_TYPE_HW_REBOOT_REASON: {
+        zbi_hw_reboot_reason_t reason;
+        memcpy(&reason, payload.data(), sizeof(reason));
+        platform_set_hw_reboot_reason(reason);
+        break;
+      }
+    };
 
-      init_topology(nodes, node_count);
-      save_mexec_zbi(item);
-      break;
+    if (is_mexec_data) {
+      auto result = mexec_data_image.Append(*header, zbitl::AsBytes(payload));
+      if (result.is_error()) {
+        printf("ProcessZbiEarly: failed to append item to mexec data ZBI: ");
+        zbitl::PrintViewError(result.error_value());
+      }
     }
   }
-  return ZBI_RESULT_OK;
+
+  if (auto result = view.take_error(); result.is_error()) {
+    printf("ProcessZbiEarly: encountered error iterating through data ZBI: ");
+    zbitl::PrintViewError(result.error_value());
+  }
 }
 
-static void process_zbi(zbi_header_t* root, bool early) {
-  DEBUG_ASSERT(root);
-  zbi_result_t result;
+// Called after the heap is up, but before multithreading.
+void ProcessZbiLate(const zbi_header_t* zbi) {
+  DEBUG_ASSERT(zbi);
 
-  uint8_t* zbi_base = reinterpret_cast<uint8_t*>(root);
-  zbi::Zbi image(zbi_base);
+  auto mexec_data_image = GetMexecDataImage();
+  zbitl::View view(zbitl::AsBytes(zbi, SIZE_MAX));
 
-  // Make sure the image looks valid.
-  result = image.Check(nullptr);
-  if (result != ZBI_RESULT_OK) {
-    // TODO(gkalsi): Print something informative here?
-    return;
+  for (auto it = view.begin(); it != view.end(); ++it) {
+    auto [header, payload] = *it;
+    bool is_mexec_data = false;
+    switch (header->type) {
+      case ZBI_TYPE_CPU_CONFIG: {
+        const auto* cpu_config = reinterpret_cast<const zbi_cpu_config_t*>(payload.data());
+
+        // Convert old zbi_cpu_config into zbi_topology structure.
+
+        // Allocate some memory to work in.
+        size_t node_count = 0;
+        for (size_t cluster = 0; cluster < cpu_config->cluster_count; cluster++) {
+          // Each cluster will get a node.
+          node_count++;
+          node_count += cpu_config->clusters[cluster].cpu_count;
+        }
+
+        fbl::AllocChecker ac;
+        auto flat_topology =
+            ktl::unique_ptr<zbi_topology_node_t[]>{new (&ac) zbi_topology_node_t[node_count]};
+        if (!ac.check()) {
+          panic("out of memory");
+        }
+
+        // Initialize to 0.
+        memset(flat_topology.get(), 0, sizeof(zbi_topology_node_t) * node_count);
+
+        // Create topology structure.
+        size_t flat_index = 0;
+        uint16_t logical_id = 0;
+        for (size_t cluster = 0; cluster < cpu_config->cluster_count; cluster++) {
+          const auto cluster_index = flat_index;
+          auto& node = flat_topology.get()[flat_index++];
+          node.entity_type = ZBI_TOPOLOGY_ENTITY_CLUSTER;
+          node.parent_index = ZBI_TOPOLOGY_NO_PARENT;
+
+          // We don't have this data so it is a guess that little cores are
+          // first.
+          node.entity.cluster.performance_class = static_cast<uint8_t>(cluster);
+
+          for (size_t i = 0; i < cpu_config->clusters[cluster].cpu_count; i++) {
+            auto& node = flat_topology.get()[flat_index++];
+            node.entity_type = ZBI_TOPOLOGY_ENTITY_PROCESSOR;
+            node.parent_index = static_cast<uint16_t>(cluster_index);
+            node.entity.processor.logical_id_count = 1;
+            node.entity.processor.logical_ids[0] = logical_id;
+            node.entity.processor.architecture = ZBI_TOPOLOGY_ARCH_ARM;
+            node.entity.processor.architecture_info.arm.cluster_1_id =
+                static_cast<uint8_t>(cluster);
+            node.entity.processor.architecture_info.arm.cpu_id = static_cast<uint8_t>(i);
+            node.entity.processor.architecture_info.arm.gic_id = static_cast<uint8_t>(logical_id++);
+          }
+        }
+        DEBUG_ASSERT(flat_index == node_count);
+
+        // Initialize topology subsystem.
+        init_topology(flat_topology.get(), node_count);
+        is_mexec_data = true;
+        break;
+      }
+      case ZBI_TYPE_CPU_TOPOLOGY: {
+        const size_t node_count = payload.size() / static_cast<size_t>(header->extra);
+        const auto* nodes = reinterpret_cast<const zbi_topology_node_t*>(payload.data());
+        init_topology(nodes, node_count);
+        is_mexec_data = true;
+        break;
+      }
+    };
+
+    if (is_mexec_data) {
+      auto result = mexec_data_image.Append(*header, payload);
+      if (result.is_error()) {
+        printf("ProcessZbiEarly: failed to append item to mexec data ZBI: ");
+        zbitl::PrintViewError(result.error_value());
+      }
+    }
   }
 
-  image.ForEach(early ? process_zbi_item_early : process_zbi_item_late, nullptr);
+  if (auto result = view.take_error(); result.is_error()) {
+    printf("ProcessZbiLate: encountered error iterating through data ZBI: ");
+    zbitl::PrintViewError(result.error_value());
+  }
 }
 
 void platform_early_init(void) {
@@ -478,9 +490,17 @@ void platform_early_init(void) {
     panic("no ramdisk!\n");
   }
 
+  // Create an empty ZBI container now, into which ProcessZbi(Early|Late) will
+  // append the items for the mexec data ZBI.
+  auto mexec_data_image = GetMexecDataImage();
+  if (auto result = mexec_data_image.clear(); result.is_error()) {
+    zbitl::PrintViewError(result.error_value());
+    panic("failed to create mexec Data ZBI\n");
+  }
+
   zbi_root = reinterpret_cast<zbi_header_t*>(ramdisk_base);
   // walk the zbi structure and process all the items
-  process_zbi(zbi_root, kProcessZbiEarly);
+  ProcessZbiEarly(zbi_root);
 
   // is the cmdline option to bypass dlog set ?
   dlog_bypass_init();
@@ -539,7 +559,7 @@ void platform_early_init(void) {
 void platform_prevm_init() {}
 
 // Called after the heap is up but before the system is multithreaded.
-void platform_init_pre_thread(uint) { process_zbi(zbi_root, !kProcessZbiEarly); }
+void platform_init_pre_thread(uint init_level) { ProcessZbiLate(zbi_root); }
 
 LK_INIT_HOOK(platform_init_pre_thread, platform_init_pre_thread, LK_INIT_LEVEL_VM)
 
@@ -648,24 +668,23 @@ void platform_specific_halt(platform_halt_action suggested_action, zircon_crash_
 }
 
 zx_status_t platform_mexec_patch_zbi(uint8_t* zbi, const size_t len) {
-  size_t offset = 0;
-
   // copy certain boot items provided by the bootloader or boot shim
   // to the mexec zbi
   zbi::Zbi image(zbi, len);
-  while (offset < mexec_zbi_length) {
-    zbi_header_t* item = reinterpret_cast<zbi_header_t*>(mexec_zbi + offset);
 
-    zbi_result_t status;
-    status = image.CreateEntryWithPayload(item->type, item->extra, item->flags,
-                                          reinterpret_cast<uint8_t*>(item + 1), item->length);
-
-    if (status != ZBI_RESULT_OK)
+  auto mexec_data_image = GetMexecDataImage();
+  for (auto [header, payload] : mexec_data_image) {
+    zbi_result_t status = image.CreateEntryWithPayload(header->type, header->extra, header->flags,
+                                                       payload.data(), payload.size());
+    if (status != ZBI_RESULT_OK) {
       return ZX_ERR_INTERNAL;
-
-    offset += ZBI_ALIGN(static_cast<uint32_t>(sizeof(zbi_header_t)) + item->length);
+    }
   }
 
+  if (auto result = mexec_data_image.take_error(); result.is_error()) {
+    zbitl::PrintViewError(result.error_value());
+    return ZX_ERR_INTERNAL;
+  }
   return ZX_OK;
 }
 
