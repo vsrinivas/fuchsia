@@ -57,9 +57,9 @@ class As370Thermal : public DeviceType,
   void GetFanLevel(GetFanLevelCompleter::Sync& completer) override;
   void SetFanLevel(uint32_t fan_level, SetFanLevelCompleter::Sync& completer) override;
 
- private:
   zx_status_t Init();
 
+ private:
   zx_status_t SetOperatingPoint(uint16_t op_idx);
 
   const ddk::MmioBuffer mmio_;

@@ -192,8 +192,18 @@ void As370Thermal::SetFanLevel(uint32_t fan_level, SetFanLevelCompleter::Sync& c
 
 zx_status_t As370Thermal::Init() {
   PvtCtrl::Get().FromValue(0).set_power_down(1).WriteTo(&mmio_);
-  const uint16_t max_operating_point = static_cast<uint16_t>(
-      device_info_.opps[static_cast<uint32_t>(PowerDomain::BIG_CLUSTER_POWER_DOMAIN)].count - 1);
+
+  const OperatingPoint& operating_points =
+      device_info_.opps[static_cast<uint32_t>(PowerDomain::BIG_CLUSTER_POWER_DOMAIN)];
+  const auto max_operating_point = static_cast<uint16_t>(operating_points.count - 1);
+
+  zx_status_t status = cpu_power_.RegisterPowerDomain(
+      operating_points.opp[0].volt_uv, operating_points.opp[max_operating_point].volt_uv);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s: Failed to register power domain: %d", __func__, status);
+    return status;
+  }
+
   return SetOperatingPoint(max_operating_point);
 }
 

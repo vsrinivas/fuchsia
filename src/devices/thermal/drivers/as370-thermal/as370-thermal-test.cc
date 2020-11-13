@@ -35,7 +35,7 @@ class As370ThermalTest : public zxtest::Test {
              ddk::ClockProtocolClient(clock_.GetProto()),
              ddk::PowerProtocolClient(power_.GetProto())) {}
 
-  void SetUp() {
+  void SetUp() override {
     ASSERT_OK(messenger_.SetMessageOp(
         &dut_, [](void* ctx, fidl_incoming_msg_t* msg, fidl_txn_t* txn) -> zx_status_t {
           return static_cast<As370Thermal*>(ctx)->DdkMessage(msg, txn);
@@ -52,6 +52,7 @@ class As370ThermalTest : public zxtest::Test {
   ddk_mock::MockMmioRegRegion reg_region_;
   ddk::MockClock clock_;
   ddk::MockPower power_;
+  As370Thermal dut_;
 
  private:
   static constexpr ThermalDeviceInfo kThermalDeviceInfo = {
@@ -88,7 +89,6 @@ class As370ThermalTest : public zxtest::Test {
   };
 
   ddk_mock::MockMmioReg reg_array_[8];
-  As370Thermal dut_;
 };
 
 TEST_F(As370ThermalTest, GetTemperature) {
@@ -214,6 +214,14 @@ TEST_F(As370ThermalTest, DvfsOperatingPoint) {
     EXPECT_OK(get_result->status);
     EXPECT_EQ(get_result->op_idx, 1);
   }
+}
+
+TEST_F(As370ThermalTest, Init) {
+  power_.ExpectRegisterPowerDomain(ZX_OK, 825'000, 900'000);
+  power_.ExpectRequestVoltage(ZX_OK, 900'000, 900'000);
+  clock_.ExpectSetRate(ZX_OK, 1'800'000'000);
+  EXPECT_OK(dut_.Init());
+  ASSERT_NO_FATAL_FAILURES(VerifyAll());
 }
 
 }  // namespace thermal
