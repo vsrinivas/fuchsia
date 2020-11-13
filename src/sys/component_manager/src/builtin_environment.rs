@@ -19,7 +19,7 @@ use {
             runner::{BuiltinRunner, BuiltinRunnerFactory},
             smc_resource::SmcResource,
             system_controller::SystemController,
-            time::{create_and_start_utc_clock, UtcTimeMaintainer},
+            time::{create_utc_clock, UtcTimeMaintainer},
             vmex::VmexService,
         },
         capability_ready_notifier::CapabilityReadyNotifier,
@@ -122,15 +122,13 @@ impl BuiltinEnvironmentBuilder {
     /// Not every instance of component_manager running on the system maintains a
     /// UTC clock. Only the root component_manager should have the `maintain-utc-clock`
     /// config flag set.
-    pub async fn create_and_start_utc_clock(mut self) -> Result<Self, Error> {
+    pub async fn create_utc_clock(mut self) -> Result<Self, Error> {
         let runtime_config = self
             .runtime_config
             .as_ref()
-            .ok_or(format_err!("Runtime config should be set to start utc clock."))?;
+            .ok_or(format_err!("Runtime config should be set to create utc clock."))?;
         self.utc_clock = if runtime_config.maintain_utc_clock {
-            Some(Arc::new(
-                create_and_start_utc_clock().await.context("failed to create UTC clock")?,
-            ))
+            Some(Arc::new(create_utc_clock().await.context("failed to create UTC clock")?))
         } else {
             None
         };
