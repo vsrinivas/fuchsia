@@ -35,7 +35,43 @@ impl TryFrom<(Format, Vec<bridge::Target>)> for Box<dyn TargetFormatter> {
         Ok(match format {
             Format::Tabular => Box::new(TabularTargetFormatter::try_from(targets)?),
             Format::Simple => Box::new(SimpleTargetFormatter::try_from(targets)?),
+            Format::Addresses => Box::new(AddressesTargetFormatter::try_from(targets)?),
         })
+    }
+}
+
+pub struct AddressesTarget(TargetAddr);
+
+impl TryFrom<bridge::Target> for AddressesTarget {
+    type Error = Error;
+
+    fn try_from(t: bridge::Target) -> Result<Self> {
+        let addrs = t.addresses.ok_or(anyhow!("must contain an address"))?;
+        let addrs = addrs.iter().map(|a| TargetAddr::from(a)).collect::<Vec<_>>();
+
+        Ok(Self((&addrs).to_ssh_addr().ok_or(anyhow!("could not convert to ssh addr"))?))
+    }
+}
+
+pub struct AddressesTargetFormatter {
+    targets: Vec<AddressesTarget>,
+}
+
+impl TryFrom<Vec<bridge::Target>> for AddressesTargetFormatter {
+    type Error = Error;
+
+    fn try_from(mut targets: Vec<bridge::Target>) -> Result<Self> {
+        let mut t = Vec::with_capacity(targets.len());
+        for target in targets.drain(..) {
+            t.push(AddressesTarget::try_from(target)?)
+        }
+        Ok(Self { targets: t })
+    }
+}
+
+impl TargetFormatter for AddressesTargetFormatter {
+    fn lines(&self, _default_nodename: Option<&str>) -> Vec<String> {
+        self.targets.iter().map(|t| format!("{}", t.0)).collect()
     }
 }
 
@@ -392,5 +428,17 @@ mod test {
         let lines = formatter.lines(None);
         assert_eq!(lines[0], "101:101:101:101:101:101:101:101 fooberdoober");
         assert_eq!(lines[1], "101:101:101:101:101:101:101:101 fooberdoober");
+    }
+
+    #[test]
+    fn test_addresses_format() {
+        let formatter = Box::<dyn TargetFormatter>::try_from((
+            Format::Addresses,
+            vec![make_valid_target(), make_valid_target()],
+        ))
+        .unwrap();
+        let lines = formatter.lines(None);
+        assert_eq!(lines[0], "101:101:101:101:101:101:101:101");
+        assert_eq!(lines[1], "101:101:101:101:101:101:101:101");
     }
 }

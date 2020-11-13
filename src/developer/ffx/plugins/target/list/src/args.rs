@@ -17,13 +17,16 @@ pub struct ListCommand {
 
     #[argh(option, default = "Format::Tabular")]
     /// determines the output format for the targets. Default is the "tabular"
-    /// format. Expects either "tabular" or "simple". Tabular format includes
-    /// the most verbose information. Simple format includes the SSH address of
-    /// a target and its nodename in two unlabeled columns.
+    /// format. Expects either "tabular," "addresses," or "simple". Tabular
+    /// format includes the most verbose information. Simple format includes
+    /// the SSH address of a target and its nodename in two unlabeled columns.
+    /// Addresses format provides an unordered list of ssh addresses for all
+    /// targets.
     ///
     /// Accepted variations:
     /// -- "simple" or "s" for simple format.
     /// -- "tabular" or "table" or "tab" or "t" for tabular format.
+    /// -- "addresses" or "addrs" or "addr" or "a" for addresses format.
     pub format: Format,
 }
 
@@ -31,6 +34,7 @@ pub struct ListCommand {
 pub enum Format {
     Tabular,
     Simple,
+    Addresses,
 }
 
 impl std::str::FromStr for Format {
@@ -40,7 +44,8 @@ impl std::str::FromStr for Format {
         match s {
             "tabular" | "table" | "tab" | "t" => Ok(Format::Tabular),
             "simple" | "s" => Ok(Format::Simple),
-            _ => Err(anyhow!("expected 'tabular' or 'simple'")),
+            "addresses" | "a" | "addr" | "addrs" => Ok(Format::Addresses),
+            _ => Err(anyhow!("expected 'tabular', 'simple', or 'addresses'")),
         }
     }
 }
