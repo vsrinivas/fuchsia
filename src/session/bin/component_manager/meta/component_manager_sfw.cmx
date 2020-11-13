@@ -82,8 +82,7 @@
             "fuchsia.ui.shortcut.Manager",
             "fuchsia.ui.views.ViewRefInstalled",
             "fuchsia.update.channel.Provider",
-            "fuchsia.update.channelcontrol.ChannelControl",
-            "fuchsia.wlan.service.Wlan"
+            "fuchsia.update.channelcontrol.ChannelControl"
         ]
     }
 }
