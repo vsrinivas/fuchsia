@@ -5,11 +5,12 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/platform-defs.h>
+
+#include "src/devices/bus/drivers/platform/test/test-child-2.proxy-bind.h"
 
 #define DRIVER_NAME "test-child-4"
 
@@ -76,6 +77,4 @@ static zx_driver_ops_t test_driver_ops = {
     .create = test_create,
 };
 
-ZIRCON_DRIVER_BEGIN(test_bus, test_driver_ops, "zircon", "0.1", 1)
-BI_ABORT_IF_AUTOBIND
-ZIRCON_DRIVER_END(test_bus)
+ZIRCON_DRIVER(test_bus, test_driver_ops, "zircon", "0.1")

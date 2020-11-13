@@ -372,6 +372,11 @@ driver_module("test-composite") {
   ]
 }
 
+bind_rules("test-child-2.proxy-bind") {
+  output = "test-child-2.proxy-bind.h"
+  disable_autobind = true
+}
+
 driver_module("test-child-2.proxy") {
   configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
   configs += [
@@ -380,11 +385,9 @@ driver_module("test-child-2.proxy") {
   ]
   sources = [ "test/child-2.proxy.c" ]
   deps = [
+    ":test-child-2.proxy-bind",
     "//src/devices/lib/driver",
     "//src/lib/ddk",
-
-    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
-    "//src/lib/ddk:ddk-deprecated-binding-headers",
   ]
 }
 
