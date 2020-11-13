@@ -157,6 +157,14 @@ class FidlDecoder final : public BaseVisitor<Byte> {
   Status VisitHandleInfo(Position handle_position, HandlePointer handle,
                          zx_rights_t required_handle_rights,
                          zx_obj_type_t required_handle_subtype) {
+// Disable this function for clang static analyzer because:
+//   This function would never be called in Validate mode, however, the function is compiled with
+//   Validate mode in compile time even though mode would never be Validate in run time.
+//   The clang static analyzer could not associate the runtime mode with compile time 'mode', so it
+//   would construct a code path with compile time mode as Validate and runtime mode as Decode,
+//   causing 'AssignInDecode' function to be called with Validate mode and causing
+//   'received_handle' to be leaked.
+#ifndef __clang_analyzer__
     assert(mode == Mode::Decode);
     assert(has_handle_infos());
     zx_handle_info_t received_handle_info = handle_infos()[handle_idx_];
@@ -210,6 +218,7 @@ class FidlDecoder final : public BaseVisitor<Byte> {
     AssignInDecode<mode>(handle, received_handle);
     handle_idx_++;
     return Status::kSuccess;
+#endif //  #ifndef __clang_analyzer__
   }
 
   Status VisitHandle(Position handle_position, HandlePointer handle,
