@@ -27,7 +27,10 @@ enum class UploadAttemptState {
   kUnknown = cobalt_registry::CrashUploadAttemptsMetricDimensionState::Unknown,
   kUploadAttempt = cobalt_registry::CrashUploadAttemptsMetricDimensionState::UploadAttempt,
   kUploaded = cobalt_registry::CrashUploadAttemptsMetricDimensionState::Uploaded,
-  kArchived = cobalt_registry::CrashUploadAttemptsMetricDimensionState::Archived,
+  // TODO(fxbug.dev/62362): Change this to
+  // `kDeleted = cobalt_registry::CrashUploadAttemptsMetricDimensionState::Deleted`
+  // once Archive has been renamed to Deleted.
+  kArchived = 3u,
   kGarbageCollected = cobalt_registry::CrashUploadAttemptsMetricDimensionState::GarbageCollected,
   kUploadThrottled = cobalt_registry::CrashUploadAttemptsMetricDimensionState::UploadThrottled,
 };
