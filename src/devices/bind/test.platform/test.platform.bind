@@ -1,0 +1,45 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library test.platform;
+
+extend uint fuchsia.BIND_PLATFORM_DEV_VID {
+  TEST = 17,
+};
+
+extend uint fuchsia.BIND_PLATFORM_DEV_PID {
+  PBUS_TEST = 0x01,
+};
+
+extend uint fuchsia.BIND_PLATFORM_DEV_DID {
+  PARENT = 0x01,
+  CHILD_1 = 0x02,
+  CHILD_2 = 0x03,
+  CHILD_3 = 0x04,
+  GPIO = 0x05,
+  COMPOSITE = 0x06,
+  CLOCK = 0x07,
+  I2C = 0x08,
+  POWER = 0x09,
+  CHILD_4 = 0x0A,
+  VCAMERA = 0x0B,
+  AUDIO_CODEC = 0x0C,
+  DDKFIDL = 0x0D,
+  VCAM_FACTORY = 0x0E,
+  COMPOSITE_1 = 0x0F,
+  COMPOSITE_2 = 0x10,
+  SPI = 0x12,
+  CAMERA_SENSOR = 0x13,
+  QMI_MODEM = 0x14,
+  DDKASYNCFIDL = 0x15,
+  AT_MODEM = 0x16,
+  PWM = 0x17,
+  OT_RADIO = 0x18,
+  RPMB = 0x19,
+  BTI = 0x1A,
+  VREG = 0x1B,
+  GOLDFISH_PIPE = 0x1C,
+  GOLDFISH_ADDRESS_SPACE = 0x1D,
+  GOLDFISH_CONTROL_COMPOSITE = 0x1E,
+};

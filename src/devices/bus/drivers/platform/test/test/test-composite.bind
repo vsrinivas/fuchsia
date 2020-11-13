@@ -3,13 +3,13 @@
 // found in the LICENSE file.
 
 using fuchsia.composite;
-using fuchsia.platform;
+using test.platform;
 
 fuchsia.BIND_PROTOCOL == fuchsia.composite.BIND_PROTOCOL.DEVICE;
-fuchsia.BIND_PLATFORM_DEV_VID == fuchsia.platform.BIND_PLATFORM_DEV_VID.TEST;
-fuchsia.BIND_PLATFORM_DEV_PID == fuchsia.platform.BIND_PLATFORM_DEV_PID.PBUS_TEST;
+fuchsia.BIND_PLATFORM_DEV_VID == test.platform.BIND_PLATFORM_DEV_VID.TEST;
+fuchsia.BIND_PLATFORM_DEV_PID == test.platform.BIND_PLATFORM_DEV_PID.PBUS_TEST;
 accept fuchsia.BIND_PLATFORM_DEV_DID {
-  fuchsia.platform.BIND_PLATFORM_DEV_DID.TEST_COMPOSITE_1,
-  fuchsia.platform.BIND_PLATFORM_DEV_DID.TEST_COMPOSITE_2,
-  fuchsia.platform.BIND_PLATFORM_DEV_DID.TEST_GOLDFISH_CONTROL_COMPOSITE,
+  test.platform.BIND_PLATFORM_DEV_DID.COMPOSITE_1,
+  test.platform.BIND_PLATFORM_DEV_DID.COMPOSITE_2,
+  test.platform.BIND_PLATFORM_DEV_DID.GOLDFISH_CONTROL_COMPOSITE,
 }
