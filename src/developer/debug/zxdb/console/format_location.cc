@@ -100,31 +100,38 @@ OutputBuffer FormatLocation(const Location& loc, const FormatLocationOptions& op
     // Showing the file path means not passing the target symbols because the target symbols is
     // used to shorten the paths.
     result.Append(
-        DescribeFileLine(opts.show_file_path ? nullptr : opts.target_symbols, loc.file_line()));
+        FormatFileLine(loc.file_line(), opts.show_file_path ? nullptr : opts.target_symbols));
   }
   return result;
 }
 
-std::string DescribeFileLine(const TargetSymbols* optional_target_symbols,
-                             const FileLine& file_line) {
-  std::string result;
-
-  // Name.
-  if (file_line.file().empty()) {
-    result = "?";
-  } else if (!optional_target_symbols) {
-    result = file_line.file();
-  } else {
-    result = optional_target_symbols->GetShortestUniqueFileName(file_line.file());
+OutputBuffer FormatFile(const std::string& file_name,
+                        const TargetSymbols* optional_target_symbols) {
+  if (file_name.empty()) {
+    return OutputBuffer(Syntax::kFileName, "?");
+  }
+  if (!optional_target_symbols) {
+    // Use full file name.
+    return OutputBuffer(Syntax::kFileName, file_name);
   }
 
-  result.push_back(':');
+  // Try to generate the shortest unique file name.
+  return OutputBuffer(Syntax::kFileName,
+                      optional_target_symbols->GetShortestUniqueFileName(file_name));
+}
+
+OutputBuffer FormatFileLine(const FileLine& file_line,
+                            const TargetSymbols* optional_target_symbols) {
+  // File name.
+  OutputBuffer result = FormatFile(file_line.file(), optional_target_symbols);
+  result.Append(Syntax::kComment, ":");
 
   // Line.
-  if (file_line.line() == 0)
-    result.push_back('?');
-  else
-    result.append(std::to_string(file_line.line()));
+  if (file_line.line() == 0) {
+    result.Append("?");
+  } else {
+    result.Append(std::to_string(file_line.line()));
+  }
 
   return result;
 }

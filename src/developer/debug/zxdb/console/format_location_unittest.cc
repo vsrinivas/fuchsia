@@ -108,20 +108,24 @@ TEST(FormatLocation, FormatLocation_ELF) {
                 .AsString());
 }
 
-TEST(FormatLocation, DescribeFileLine) {
+// This implicitly tests FormatFileName() also.
+TEST(FormatLocation, FormatFileLine) {
   FileLine fl("/path/to/foo.cc", 21);
-  EXPECT_EQ("/path/to/foo.cc:21", DescribeFileLine(nullptr, fl));
+  EXPECT_EQ("/path/to/foo.cc:21", FormatFileLine(fl).AsString());
 
   // Missing line number.
-  EXPECT_EQ("/path/foo.cc:?", DescribeFileLine(nullptr, FileLine("/path/foo.cc", 0)));
+  EXPECT_EQ("/path/foo.cc:?", FormatFileLine(FileLine("/path/foo.cc", 0)).AsString());
 
   // Missing both.
-  EXPECT_EQ("?:?", DescribeFileLine(nullptr, FileLine()));
+  EXPECT_EQ("?:?", FormatFileLine(FileLine()).AsString());
 
   // Pass an TargetSymbols to trigger path shortening. Since the TargetSymbols has no files to
   // match, the name will be unique and we'll get just the name part.
+  //
+  // This also tests the syntax highlighting.
   ProcessSymbolsTestSetup setup;
-  EXPECT_EQ("foo.cc:21", DescribeFileLine(&setup.target(), fl));
+  EXPECT_EQ("kFileName \"foo.cc\", kComment \":\", kNormal \"21\"",
+            FormatFileLine(fl, &setup.target()).GetDebugString());
 }
 
 }  // namespace zxdb

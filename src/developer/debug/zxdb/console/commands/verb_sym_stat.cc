@@ -96,7 +96,8 @@ void SummarizeProcessSymbolStatus(ConsoleContext* context, Process* process, Out
     out->Append("\n");
 
     if (module.symbols_loaded) {
-      out->Append("    Symbols loaded: Yes\n    Symbol file: " + module.symbol_file);
+      out->Append("    Symbols loaded: Yes\n    Symbol file: ");
+      out->Append(Syntax::kFileName, module.symbol_file);
       out->Append(module.files_indexed ? Syntax::kNormal : Syntax::kError,
                   fxl::StringPrintf("\n    Source files indexed: %zu", module.files_indexed));
       out->Append(module.functions_indexed ? Syntax::kNormal : Syntax::kError,

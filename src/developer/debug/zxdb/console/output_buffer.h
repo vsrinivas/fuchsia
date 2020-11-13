@@ -23,7 +23,8 @@ enum class Syntax {
   kWarning,
   kSpecial,
   kReversed,
-  kVariable  // Use for variable names.
+  kVariable,  // Use for variable names.
+  kFileName
 };
 
 const char* SyntaxToString(Syntax);

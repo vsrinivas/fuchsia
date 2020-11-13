@@ -33,6 +33,7 @@ static const SyntaxColorMap& GetSyntaxColorMap() {
       {Syntax::kSpecial, "\x1b[34m"},   // "[34m" = Blue.
       {Syntax::kReversed, "\x1b[7m"},   // "[7m" = Reverse video.
       {Syntax::kVariable, "\x1b[36m"},  // "[36m" = Cyan.
+      {Syntax::kFileName, "\x1b[95m"},  // "[35m" = Bright Magenta.
   };
 
   return syntax_color_map;
@@ -116,6 +117,8 @@ const char* SyntaxToString(Syntax syntax) {
       return "kReversed";
     case Syntax::kVariable:
       return "kVariable";
+    case Syntax::kFileName:
+      return "kFileName";
   }
   return nullptr;
 }

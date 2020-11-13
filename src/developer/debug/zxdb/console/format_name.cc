@@ -37,8 +37,7 @@ bool FormatClangLambda(const Function* function, OutputBuffer* out) {
   //
   // If this is used in contexts where the file/line isn't shown, we should add a flag and an
   // optional_target_symbols parameter to this function so we can print it as:
-  //   out->Append("λ @ " + DescribeFileLine(optional_target_symbols,
-  //                                         function->decl_line()));
+  //   out->Append("λ @ " + FormatFileLine(function->decl_line(), optional_target_symbols));
   // so users can tell where the lambda function is.
   auto parent_ref = function->parent().Get();  // Hold a ref to keep alive.
   const Collection* coll = parent_ref->AsCollection();

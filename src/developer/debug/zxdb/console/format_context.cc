@@ -104,8 +104,7 @@ OutputBuffer FormatAsmSourceForRange(Process* process,
   }
 
   // Some error getting the source code, show the location file/line number instead.
-  return OutputBuffer(Syntax::kComment,
-                      DescribeFileLine(process->GetSymbols()->target_symbols(), start_line));
+  return FormatFileLine(start_line, process->GetSymbols()->target_symbols());
 }
 
 // Describes the destination for the given call destination, formatted as for a disassembly. The
@@ -263,7 +262,7 @@ Err FormatSourceContext(const std::string& file_name_for_display, const std::str
   // Optional file name.
   if (opts.show_file_name) {
     out->Append("📄 ");
-    out->Append(Syntax::kComment, file_name_for_display);
+    out->Append(Syntax::kFileName, file_name_for_display);
     out->Append("\n");
   }
 

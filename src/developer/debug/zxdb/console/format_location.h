@@ -51,11 +51,14 @@ struct FormatLocationOptions {
 // Formats the location.
 OutputBuffer FormatLocation(const Location& loc, const FormatLocationOptions& opts);
 
-// The TargetSymbols pointer is used to find the shortest unique way to reference the file name.
+// Formats the file or file/line.
 //
-// If target_symbols is null, the full file path will always be included.
-std::string DescribeFileLine(const TargetSymbols* optional_target_symbols,
-                             const FileLine& file_line);
+// The TargetSymbols pointer is used to find the shortest unique way to reference the file name. If
+// target_symbols is null, the full file path will always be included.
+OutputBuffer FormatFileName(const std::string& file_name,
+                            const TargetSymbols* optional_target_symbols = nullptr);
+OutputBuffer FormatFileLine(const FileLine& file_line,
+                            const TargetSymbols* optional_target_symbols = nullptr);
 
 }  // namespace zxdb
 

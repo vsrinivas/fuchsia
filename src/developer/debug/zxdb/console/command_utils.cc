@@ -453,10 +453,10 @@ OutputBuffer FormatInputLocation(const InputLocation& location) {
       return OutputBuffer(Syntax::kComment, "<no location>");
     }
     case InputLocation::Type::kLine: {
-      // Don't pass a TargetSymbols to DescribeFileLine because we always want
-      // the full file name as passed-in by the user (as this is an "input"
-      // location object). It is surprising if the debugger deletes some input.
-      return OutputBuffer(DescribeFileLine(nullptr, location.line));
+      // Don't pass a TargetSymbols to FormatFileLine because we always want the full file name as
+      // passed-in by the user (as this is an "input" location object). It is surprising if the
+      // debugger deletes some input.
+      return OutputBuffer(FormatFileLine(location.line));
     }
     case InputLocation::Type::kName: {
       FormatIdentifierOptions opts;

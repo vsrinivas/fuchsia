@@ -310,7 +310,7 @@ Err ResolveUniqueInputLocation(const ProcessSymbols* process_symbols,
     // problem could have been two files with the same name but different paths.
     err_str += fxl::StringPrintf(" %s ", GetBullet().c_str());
     if (locations[i].file_line().is_valid()) {
-      err_str += DescribeFileLine(nullptr, locations[i].file_line());
+      err_str += FormatFileLine(locations[i].file_line()).AsString();
       err_str += fxl::StringPrintf(" = 0x%" PRIx64, locations[i].address());
     } else {
       FormatLocationOptions opts;
