@@ -46,8 +46,7 @@ const int _kSuper_foo_Ordinal = 0x45602cf3b581d6ab;
 const $fidl.MethodType _kSuper_foo_Type = $fidl.MethodType(
   request: <$fidl.MemberType>[
     $fidl.MemberType<String>(
-        type: $fidl.StringType(maybeElementCount: null, nullable: false),
-        offset: 0),
+        type: $fidl.StringType(maybeElementCount: null), offset: 0),
   ],
   response: <$fidl.MemberType>[
     $fidl.MemberType<int>(type: $fidl.Int64Type(), offset: 0),
@@ -211,8 +210,7 @@ const int _kSub_foo_Ordinal = 0x45602cf3b581d6ab;
 const $fidl.MethodType _kSub_foo_Type = $fidl.MethodType(
   request: <$fidl.MemberType>[
     $fidl.MemberType<String>(
-        type: $fidl.StringType(maybeElementCount: null, nullable: false),
-        offset: 0),
+        type: $fidl.StringType(maybeElementCount: null), offset: 0),
   ],
   response: <$fidl.MemberType>[
     $fidl.MemberType<int>(type: $fidl.Int64Type(), offset: 0),

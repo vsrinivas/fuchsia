@@ -41,16 +41,13 @@ class {{ .Name }} extends $fidl.XUnion {
   final int _ordinal;
   final _data;
 {{ if .IsFlexible }}
-  {{ .TagName }} get $tag {
-    final {{ .TagName }} $rawtag = _{{ .TagName }}_map[_ordinal];
-    return $rawtag == null ? {{ .TagName }}.$unknown : $rawtag;
-  }
+  {{ .TagName }} get $tag => _{{ .TagName }}_map[_ordinal] ?? {{ .TagName }}.$unknown;
 {{- else }}
-  {{ .TagName }} get $tag => _{{ .TagName }}_map[_ordinal];
+  {{ .TagName }} get $tag => _{{ .TagName }}_map[_ordinal]!;
 {{- end }}
 
 {{range .Members }}
-  {{ .Type.Decl }} get {{ .Name }} {
+  {{ .Type.OptionalDecl }} get {{ .Name }} {
     if (_ordinal != {{ .Ordinal }}) {
       return null;
     }
@@ -67,11 +64,7 @@ class {{ .Name }} extends $fidl.XUnion {
         return r'{{ $.Name }}.{{ .Name }}(' + {{ .Name }}.toString() +')';
 {{- end }}
       default:
-{{- if .IsFlexible }}
         return r'{{ $.Name }}.<UNKNOWN>';
-{{- else }}
-        return null;
-{{- end }}
     }
   }
 
@@ -88,9 +81,9 @@ class {{ .Name }} extends $fidl.XUnion {
 
 // See fxbug.dev/7644:
 // ignore: recursive_compile_time_constant
-const $fidl.XUnionType<{{ .Name }}> {{ .TypeSymbol }} = {{ .TypeExpr }};
+const $fidl.UnionType<{{ .Name }}> {{ .TypeSymbol }} = {{ .TypeExpr }};
 // See fxbug.dev/7644:
 // ignore: recursive_compile_time_constant
-const $fidl.XUnionType<{{ .Name }}> {{ .OptTypeSymbol }} = {{ .OptTypeExpr }};
+const $fidl.NullableUnionType<{{ .Name }}> {{ .OptTypeSymbol }} = {{ .OptTypeExpr }};
 {{ end }}
 `

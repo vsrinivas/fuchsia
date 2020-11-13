@@ -90,25 +90,22 @@ class UnionSize8Alignment4 extends $fidl.XUnion {
 
 // See fxbug.dev/7644:
 // ignore: recursive_compile_time_constant
-const $fidl.XUnionType<UnionSize8Alignment4> kUnionSize8Alignment4_Type =
-    $fidl.XUnionType<UnionSize8Alignment4>(
+const $fidl.UnionType<UnionSize8Alignment4> kUnionSize8Alignment4_Type =
+    $fidl.UnionType<UnionSize8Alignment4>(
   members: <int, $fidl.FidlType>{
     1: $fidl.Uint32Type(),
   },
   ctor: UnionSize8Alignment4._ctor,
-  nullable: false,
-  flexible: false,
 );
 // See fxbug.dev/7644:
 // ignore: recursive_compile_time_constant
-const $fidl.XUnionType<UnionSize8Alignment4> kUnionSize8Alignment4_OptType =
-    $fidl.XUnionType<UnionSize8Alignment4>(
+const $fidl.NullableUnionType<UnionSize8Alignment4>
+    kUnionSize8Alignment4_OptType =
+    $fidl.NullableUnionType<UnionSize8Alignment4>(
   members: <int, $fidl.FidlType>{
     1: $fidl.Uint32Type(),
   },
   ctor: UnionSize8Alignment4._ctor,
-  nullable: true,
-  flexible: false,
 );
 
 enum UnionSize12Alignment4Tag {
@@ -163,25 +160,24 @@ class UnionSize12Alignment4 extends $fidl.XUnion {
 
 // See fxbug.dev/7644:
 // ignore: recursive_compile_time_constant
-const $fidl.XUnionType<UnionSize12Alignment4> kUnionSize12Alignment4_Type =
-    $fidl.XUnionType<UnionSize12Alignment4>(
+const $fidl.UnionType<UnionSize12Alignment4> kUnionSize12Alignment4_Type =
+    $fidl.UnionType<UnionSize12Alignment4>(
   members: <int, $fidl.FidlType>{
-    1: $fidl.ArrayType<Uint8List>(element: $fidl.Uint8Type(), elementCount: 6),
+    1: $fidl.ArrayType<int, Uint8List>(
+        element: $fidl.Uint8Type(), elementCount: 6),
   },
   ctor: UnionSize12Alignment4._ctor,
-  nullable: false,
-  flexible: false,
 );
 // See fxbug.dev/7644:
 // ignore: recursive_compile_time_constant
-const $fidl.XUnionType<UnionSize12Alignment4> kUnionSize12Alignment4_OptType =
-    $fidl.XUnionType<UnionSize12Alignment4>(
+const $fidl.NullableUnionType<UnionSize12Alignment4>
+    kUnionSize12Alignment4_OptType =
+    $fidl.NullableUnionType<UnionSize12Alignment4>(
   members: <int, $fidl.FidlType>{
-    1: $fidl.ArrayType<Uint8List>(element: $fidl.Uint8Type(), elementCount: 6),
+    1: $fidl.ArrayType<int, Uint8List>(
+        element: $fidl.Uint8Type(), elementCount: 6),
   },
   ctor: UnionSize12Alignment4._ctor,
-  nullable: true,
-  flexible: false,
 );
 
 enum UnionSize24Alignment8Tag {
@@ -236,25 +232,22 @@ class UnionSize24Alignment8 extends $fidl.XUnion {
 
 // See fxbug.dev/7644:
 // ignore: recursive_compile_time_constant
-const $fidl.XUnionType<UnionSize24Alignment8> kUnionSize24Alignment8_Type =
-    $fidl.XUnionType<UnionSize24Alignment8>(
+const $fidl.UnionType<UnionSize24Alignment8> kUnionSize24Alignment8_Type =
+    $fidl.UnionType<UnionSize24Alignment8>(
   members: <int, $fidl.FidlType>{
     1: kStructSize16Alignment8_Type,
   },
   ctor: UnionSize24Alignment8._ctor,
-  nullable: false,
-  flexible: false,
 );
 // See fxbug.dev/7644:
 // ignore: recursive_compile_time_constant
-const $fidl.XUnionType<UnionSize24Alignment8> kUnionSize24Alignment8_OptType =
-    $fidl.XUnionType<UnionSize24Alignment8>(
+const $fidl.NullableUnionType<UnionSize24Alignment8>
+    kUnionSize24Alignment8_OptType =
+    $fidl.NullableUnionType<UnionSize24Alignment8>(
   members: <int, $fidl.FidlType>{
     1: kStructSize16Alignment8_Type,
   },
   ctor: UnionSize24Alignment8._ctor,
-  nullable: true,
-  flexible: false,
 );
 
 enum UnionSize36Alignment4Tag {
@@ -309,25 +302,24 @@ class UnionSize36Alignment4 extends $fidl.XUnion {
 
 // See fxbug.dev/7644:
 // ignore: recursive_compile_time_constant
-const $fidl.XUnionType<UnionSize36Alignment4> kUnionSize36Alignment4_Type =
-    $fidl.XUnionType<UnionSize36Alignment4>(
+const $fidl.UnionType<UnionSize36Alignment4> kUnionSize36Alignment4_Type =
+    $fidl.UnionType<UnionSize36Alignment4>(
   members: <int, $fidl.FidlType>{
-    1: $fidl.ArrayType<Uint8List>(element: $fidl.Uint8Type(), elementCount: 32),
+    1: $fidl.ArrayType<int, Uint8List>(
+        element: $fidl.Uint8Type(), elementCount: 32),
   },
   ctor: UnionSize36Alignment4._ctor,
-  nullable: false,
-  flexible: false,
 );
 // See fxbug.dev/7644:
 // ignore: recursive_compile_time_constant
-const $fidl.XUnionType<UnionSize36Alignment4> kUnionSize36Alignment4_OptType =
-    $fidl.XUnionType<UnionSize36Alignment4>(
+const $fidl.NullableUnionType<UnionSize36Alignment4>
+    kUnionSize36Alignment4_OptType =
+    $fidl.NullableUnionType<UnionSize36Alignment4>(
   members: <int, $fidl.FidlType>{
-    1: $fidl.ArrayType<Uint8List>(element: $fidl.Uint8Type(), elementCount: 32),
+    1: $fidl.ArrayType<int, Uint8List>(
+        element: $fidl.Uint8Type(), elementCount: 32),
   },
   ctor: UnionSize36Alignment4._ctor,
-  nullable: true,
-  flexible: false,
 );
 
 class SandwichUnionSize8Alignment4 extends $fidl.Struct {

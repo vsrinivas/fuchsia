@@ -14,12 +14,13 @@ enum FidlErrorCode {
   fidlUnknownMagic,
   fidlInvalidBit,
   fidlInvalidEnumValue,
-  fidlIntOutOfRange
+  fidlIntOutOfRange,
+  fidlNonEmptyStringWithNullBody
 }
 
 class FidlError implements Exception {
   // TODO(fxbug.dev/7865) Make code a required parameter.
-  FidlError(this.message, [this.code = FidlErrorCode.unknown]);
+  const FidlError(this.message, [this.code = FidlErrorCode.unknown]);
 
   final String message;
   final FidlErrorCode code;

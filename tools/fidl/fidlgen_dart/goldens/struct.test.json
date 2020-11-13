@@ -1,6 +1,6 @@
 {
   "version": "0.0.1",
-  "name": "fidl.test.structs",
+  "name": "fidl.test.struct",
   "library_dependencies": [],
   "bits_declarations": [],
   "const_declarations": [],
@@ -10,7 +10,7 @@
   "service_declarations": [],
   "struct_declarations": [
     {
-      "name": "fidl.test.structs/Simple",
+      "name": "fidl.test.struct/Simple",
       "location": {
         "filename": "struct.test.fidl",
         "line": 3,
@@ -67,7 +67,7 @@
       }
     },
     {
-      "name": "fidl.test.structs/BasicStruct",
+      "name": "fidl.test.struct/BasicStruct",
       "location": {
         "filename": "struct.test.fidl",
         "line": 8,
@@ -128,11 +128,11 @@
   "union_declarations": [],
   "type_alias_declarations": [],
   "declaration_order": [
-    "fidl.test.structs/Simple",
-    "fidl.test.structs/BasicStruct"
+    "fidl.test.struct/Simple",
+    "fidl.test.struct/BasicStruct"
   ],
   "declarations": {
-    "fidl.test.structs/Simple": "struct",
-    "fidl.test.structs/BasicStruct": "struct"
+    "fidl.test.struct/Simple": "struct",
+    "fidl.test.struct/BasicStruct": "struct"
   }
 }

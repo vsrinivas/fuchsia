@@ -106,27 +106,23 @@ class SimpleUnion extends $fidl.XUnion {
 
 // See fxbug.dev/7644:
 // ignore: recursive_compile_time_constant
-const $fidl.XUnionType<SimpleUnion> kSimpleUnion_Type =
-    $fidl.XUnionType<SimpleUnion>(
+const $fidl.UnionType<SimpleUnion> kSimpleUnion_Type =
+    $fidl.UnionType<SimpleUnion>(
   members: <int, $fidl.FidlType>{
     1: $fidl.Int32Type(),
     2: $fidl.Float32Type(),
   },
   ctor: SimpleUnion._ctor,
-  nullable: false,
-  flexible: false,
 );
 // See fxbug.dev/7644:
 // ignore: recursive_compile_time_constant
-const $fidl.XUnionType<SimpleUnion> kSimpleUnion_OptType =
-    $fidl.XUnionType<SimpleUnion>(
+const $fidl.NullableUnionType<SimpleUnion> kSimpleUnion_OptType =
+    $fidl.NullableUnionType<SimpleUnion>(
   members: <int, $fidl.FidlType>{
     1: $fidl.Int32Type(),
     2: $fidl.Float32Type(),
   },
   ctor: SimpleUnion._ctor,
-  nullable: true,
-  flexible: false,
 );
 
 class StructWithNullableString extends $fidl.Struct {
@@ -156,8 +152,7 @@ class StructWithNullableString extends $fidl.Struct {
     ];
   }
 
-  static const $fieldType0 =
-      $fidl.StringType(maybeElementCount: null, nullable: true);
+  static const $fieldType0 = $fidl.NullableStringType(maybeElementCount: null);
 
   @override
   void $encode($fidl.Encoder $encoder, int $offset) {
@@ -211,8 +206,8 @@ class StructWithNullableVector extends $fidl.Struct {
     ];
   }
 
-  static const $fieldType0 = $fidl.VectorType<Int32List>(
-      element: $fidl.Int32Type(), maybeElementCount: null, nullable: true);
+  static const $fieldType0 = $fidl.NullableVectorType<int, Int32List>(
+      element: $fidl.Int32Type(), maybeElementCount: null);
 
   @override
   void $encode($fidl.Encoder $encoder, int $offset) {

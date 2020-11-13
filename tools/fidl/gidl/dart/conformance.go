@@ -18,7 +18,7 @@ import (
 )
 
 var tmpl = template.Must(template.New("tmpls").Parse(`
-// @dart = 2.8
+// @dart = 2.10
 
 // Ignore unused imports so that GIDL tests can be commented out without error.
 // ignore_for_file: unused_import
@@ -359,7 +359,7 @@ func toDartIntList(handles []gidlir.Handle) string {
 var dartErrorCodeNames = map[gidlir.ErrorCode]string{
 	gidlir.StringTooLong:              "fidlStringTooLong",
 	gidlir.StringNotUtf8:              "unknown",
-	gidlir.NonEmptyStringWithNullBody: "fidlNonNullableTypeWithNullValue",
+	gidlir.NonEmptyStringWithNullBody: "fidlNonEmptyStringWithNullBody",
 	gidlir.StrictUnionFieldNotSet:     "fidlStrictXUnionFieldNotSet",
 	gidlir.StrictUnionUnknownField:    "fidlStrictXUnionUnknownField",
 	gidlir.StrictBitsUnknownBit:       "fidlInvalidBit",

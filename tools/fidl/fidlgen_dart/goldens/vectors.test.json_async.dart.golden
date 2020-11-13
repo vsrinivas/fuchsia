@@ -64,13 +64,12 @@ class ExampleUseOfVectors extends $fidl.Struct {
     ];
   }
 
-  static const $fieldType0 = $fidl.VectorType<Uint8List>(
-      element: $fidl.Uint8Type(), maybeElementCount: null, nullable: false);
-  static const $fieldType1 = $fidl.VectorType<List<List<bool>>>(
-      element: $fidl.VectorType<List<bool>>(
-          element: $fidl.BoolType(), maybeElementCount: null, nullable: false),
-      maybeElementCount: null,
-      nullable: false);
+  static const $fieldType0 = $fidl.VectorType<int, Uint8List>(
+      element: $fidl.Uint8Type(), maybeElementCount: null);
+  static const $fieldType1 = $fidl.VectorType<List<bool>, List<List<bool>>>(
+      element: $fidl.VectorType<bool, List<bool>>(
+          element: $fidl.BoolType(), maybeElementCount: null),
+      maybeElementCount: null);
 
   @override
   void $encode($fidl.Encoder $encoder, int $offset) {

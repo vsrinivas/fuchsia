@@ -12,6 +12,8 @@ dart_library("fidl") {
 
   source_dir = "lib"
 
+  language_version = "2.10"
+
   sources = [
     "fidl.dart",
     "src/bits.dart",

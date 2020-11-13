@@ -38,7 +38,7 @@ class Encoder {
     return Message(trimmed, _handles);
   }
 
-  ByteData data;
+  ByteData data = ByteData(_kInitialBufferSize);
   final List<Handle> _handles = <Handle>[];
   int _extent = 0;
 
@@ -50,11 +50,6 @@ class Encoder {
 
   void _claimMemory(int claimSize) {
     _extent += claimSize;
-    if (data == null) {
-      int newSize = max(_extent, _kInitialBufferSize);
-      data = ByteData(newSize);
-      return;
-    }
     if (_extent > data.lengthInBytes) {
       int newSize =
           max(_extent, _kMinBufferSizeIncreaseFactor * data.lengthInBytes);

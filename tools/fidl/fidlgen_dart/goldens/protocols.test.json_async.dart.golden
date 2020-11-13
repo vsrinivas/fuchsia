@@ -226,29 +226,25 @@ class WithErrorSyntaxResponseAsStructResult extends $fidl.XUnion {
 
 // See fxbug.dev/7644:
 // ignore: recursive_compile_time_constant
-const $fidl.XUnionType<WithErrorSyntaxResponseAsStructResult>
+const $fidl.UnionType<WithErrorSyntaxResponseAsStructResult>
     kWithErrorSyntax_ResponseAsStruct_Result_Type =
-    $fidl.XUnionType<WithErrorSyntaxResponseAsStructResult>(
+    $fidl.UnionType<WithErrorSyntaxResponseAsStructResult>(
   members: <int, $fidl.FidlType>{
     1: kWithErrorSyntax_ResponseAsStruct_Response_Type,
     2: $fidl.Uint32Type(),
   },
   ctor: WithErrorSyntaxResponseAsStructResult._ctor,
-  nullable: false,
-  flexible: false,
 );
 // See fxbug.dev/7644:
 // ignore: recursive_compile_time_constant
-const $fidl.XUnionType<WithErrorSyntaxResponseAsStructResult>
+const $fidl.NullableUnionType<WithErrorSyntaxResponseAsStructResult>
     kWithErrorSyntax_ResponseAsStruct_Result_OptType =
-    $fidl.XUnionType<WithErrorSyntaxResponseAsStructResult>(
+    $fidl.NullableUnionType<WithErrorSyntaxResponseAsStructResult>(
   members: <int, $fidl.FidlType>{
     1: kWithErrorSyntax_ResponseAsStruct_Response_Type,
     2: $fidl.Uint32Type(),
   },
   ctor: WithErrorSyntaxResponseAsStructResult._ctor,
-  nullable: true,
-  flexible: false,
 );
 
 enum WithErrorSyntaxErrorAsPrimitiveResultTag {
@@ -325,29 +321,25 @@ class WithErrorSyntaxErrorAsPrimitiveResult extends $fidl.XUnion {
 
 // See fxbug.dev/7644:
 // ignore: recursive_compile_time_constant
-const $fidl.XUnionType<WithErrorSyntaxErrorAsPrimitiveResult>
+const $fidl.UnionType<WithErrorSyntaxErrorAsPrimitiveResult>
     kWithErrorSyntax_ErrorAsPrimitive_Result_Type =
-    $fidl.XUnionType<WithErrorSyntaxErrorAsPrimitiveResult>(
+    $fidl.UnionType<WithErrorSyntaxErrorAsPrimitiveResult>(
   members: <int, $fidl.FidlType>{
     1: kWithErrorSyntax_ErrorAsPrimitive_Response_Type,
     2: $fidl.Uint32Type(),
   },
   ctor: WithErrorSyntaxErrorAsPrimitiveResult._ctor,
-  nullable: false,
-  flexible: false,
 );
 // See fxbug.dev/7644:
 // ignore: recursive_compile_time_constant
-const $fidl.XUnionType<WithErrorSyntaxErrorAsPrimitiveResult>
+const $fidl.NullableUnionType<WithErrorSyntaxErrorAsPrimitiveResult>
     kWithErrorSyntax_ErrorAsPrimitive_Result_OptType =
-    $fidl.XUnionType<WithErrorSyntaxErrorAsPrimitiveResult>(
+    $fidl.NullableUnionType<WithErrorSyntaxErrorAsPrimitiveResult>(
   members: <int, $fidl.FidlType>{
     1: kWithErrorSyntax_ErrorAsPrimitive_Response_Type,
     2: $fidl.Uint32Type(),
   },
   ctor: WithErrorSyntaxErrorAsPrimitiveResult._ctor,
-  nullable: true,
-  flexible: false,
 );
 
 enum WithErrorSyntaxErrorAsEnumResultTag {
@@ -422,29 +414,25 @@ class WithErrorSyntaxErrorAsEnumResult extends $fidl.XUnion {
 
 // See fxbug.dev/7644:
 // ignore: recursive_compile_time_constant
-const $fidl.XUnionType<WithErrorSyntaxErrorAsEnumResult>
+const $fidl.UnionType<WithErrorSyntaxErrorAsEnumResult>
     kWithErrorSyntax_ErrorAsEnum_Result_Type =
-    $fidl.XUnionType<WithErrorSyntaxErrorAsEnumResult>(
+    $fidl.UnionType<WithErrorSyntaxErrorAsEnumResult>(
   members: <int, $fidl.FidlType>{
     1: kWithErrorSyntax_ErrorAsEnum_Response_Type,
     2: kErrorEnun_Type,
   },
   ctor: WithErrorSyntaxErrorAsEnumResult._ctor,
-  nullable: false,
-  flexible: false,
 );
 // See fxbug.dev/7644:
 // ignore: recursive_compile_time_constant
-const $fidl.XUnionType<WithErrorSyntaxErrorAsEnumResult>
+const $fidl.NullableUnionType<WithErrorSyntaxErrorAsEnumResult>
     kWithErrorSyntax_ErrorAsEnum_Result_OptType =
-    $fidl.XUnionType<WithErrorSyntaxErrorAsEnumResult>(
+    $fidl.NullableUnionType<WithErrorSyntaxErrorAsEnumResult>(
   members: <int, $fidl.FidlType>{
     1: kWithErrorSyntax_ErrorAsEnum_Response_Type,
     2: kErrorEnun_Type,
   },
   ctor: WithErrorSyntaxErrorAsEnumResult._ctor,
-  nullable: true,
-  flexible: false,
 );
 
 class WithErrorSyntaxResponseAsStructResponse extends $fidl.Struct {
@@ -652,8 +640,7 @@ const $fidl.MethodType
   request: null,
   response: <$fidl.MemberType>[
     $fidl.MemberType<String>(
-        type: $fidl.StringType(maybeElementCount: null, nullable: false),
-        offset: 0),
+        type: $fidl.StringType(maybeElementCount: null), offset: 0),
   ],
   name: r"WithAndWithoutRequestResponse.NoRequestWithResponse",
   requestInlineSize: 0,
@@ -667,8 +654,7 @@ const $fidl.MethodType
     $fidl.MethodType(
   request: <$fidl.MemberType>[
     $fidl.MemberType<String>(
-        type: $fidl.StringType(maybeElementCount: null, nullable: false),
-        offset: 0),
+        type: $fidl.StringType(maybeElementCount: null), offset: 0),
   ],
   response: null,
   name: r"WithAndWithoutRequestResponse.WithRequestNoResponse",
@@ -683,8 +669,7 @@ const $fidl.MethodType
     $fidl.MethodType(
   request: <$fidl.MemberType>[
     $fidl.MemberType<String>(
-        type: $fidl.StringType(maybeElementCount: null, nullable: false),
-        offset: 0),
+        type: $fidl.StringType(maybeElementCount: null), offset: 0),
   ],
   response: null,
   name: r"WithAndWithoutRequestResponse.WithRequestEmptyResponse",
@@ -699,13 +684,11 @@ const $fidl.MethodType
     $fidl.MethodType(
   request: <$fidl.MemberType>[
     $fidl.MemberType<String>(
-        type: $fidl.StringType(maybeElementCount: null, nullable: false),
-        offset: 0),
+        type: $fidl.StringType(maybeElementCount: null), offset: 0),
   ],
   response: <$fidl.MemberType>[
     $fidl.MemberType<String>(
-        type: $fidl.StringType(maybeElementCount: null, nullable: false),
-        offset: 0),
+        type: $fidl.StringType(maybeElementCount: null), offset: 0),
   ],
   name: r"WithAndWithoutRequestResponse.WithRequestWithResponse",
   requestInlineSize: 16,
@@ -730,8 +713,7 @@ const $fidl.MethodType _kWithAndWithoutRequestResponse_OnWithResponse_Type =
   request: null,
   response: <$fidl.MemberType>[
     $fidl.MemberType<String>(
-        type: $fidl.StringType(maybeElementCount: null, nullable: false),
-        offset: 0),
+        type: $fidl.StringType(maybeElementCount: null), offset: 0),
   ],
   name: r"WithAndWithoutRequestResponse.OnWithResponse",
   requestInlineSize: 0,

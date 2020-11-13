@@ -33,7 +33,7 @@ class {{ .Name }} extends $fidl.Enum {
     if (!_internedValues.containsKey(_v)) {
       _internedValues[_v] = {{ .Name }}._(_v, true);
     }
-    return _internedValues[_v];
+    return _internedValues[_v]!;
 {{ end }}
   }
 
@@ -72,7 +72,7 @@ class {{ .Name }} extends $fidl.Enum {
     {{- end }}
   ];
 
-  static {{ .Name }} $valueOf(String name) => $valuesMap[name];
+  static {{ .Name }}? $valueOf(String name) => $valuesMap[name];
 
   @override
   bool isUnknown() {

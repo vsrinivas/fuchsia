@@ -154,25 +154,21 @@ class UnionWithHandle extends $fidl.XUnion {
 
 // See fxbug.dev/7644:
 // ignore: recursive_compile_time_constant
-const $fidl.XUnionType<UnionWithHandle> kUnionWithHandle_Type =
-    $fidl.XUnionType<UnionWithHandle>(
+const $fidl.UnionType<UnionWithHandle> kUnionWithHandle_Type =
+    $fidl.UnionType<UnionWithHandle>.flexible(
   members: <int, $fidl.FidlType>{
     1: $fidl.VmoType(nullable: false),
   },
   ctor: UnionWithHandle._ctor,
-  nullable: false,
-  flexible: true,
 );
 // See fxbug.dev/7644:
 // ignore: recursive_compile_time_constant
-const $fidl.XUnionType<UnionWithHandle> kUnionWithHandle_OptType =
-    $fidl.XUnionType<UnionWithHandle>(
+const $fidl.NullableUnionType<UnionWithHandle> kUnionWithHandle_OptType =
+    $fidl.NullableUnionType<UnionWithHandle>.flexible(
   members: <int, $fidl.FidlType>{
     1: $fidl.VmoType(nullable: false),
   },
   ctor: UnionWithHandle._ctor,
-  nullable: true,
-  flexible: true,
 );
 
 class HandlesInTypes extends $fidl.Struct {
@@ -222,17 +218,15 @@ class HandlesInTypes extends $fidl.Struct {
   }
 
   static const $fieldType0 = $fidl.VmoType(nullable: false);
-  static const $fieldType1 = $fidl.VectorType<List<$zircon.Vmo>>(
-      element: $fidl.VmoType(nullable: false),
-      maybeElementCount: null,
-      nullable: false);
-  static const $fieldType2 = $fidl.ArrayType<List<$zircon.Vmo>>(
+  static const $fieldType1 = $fidl.VectorType<$zircon.Vmo, List<$zircon.Vmo>>(
+      element: $fidl.VmoType(nullable: false), maybeElementCount: null);
+  static const $fieldType2 = $fidl.ArrayType<$zircon.Vmo, List<$zircon.Vmo>>(
       element: $fidl.VmoType(nullable: false), elementCount: 5);
-  static const $fieldType3 = $fidl.VectorType<List<List<$zircon.Vmo>>>(
-      element: $fidl.ArrayType<List<$zircon.Vmo>>(
-          element: $fidl.VmoType(nullable: false), elementCount: 5),
-      maybeElementCount: null,
-      nullable: false);
+  static const $fieldType3 =
+      $fidl.VectorType<List<$zircon.Vmo>, List<List<$zircon.Vmo>>>(
+          element: $fidl.ArrayType<$zircon.Vmo, List<$zircon.Vmo>>(
+              element: $fidl.VmoType(nullable: false), elementCount: 5),
+          maybeElementCount: null);
   static const $fieldType4 = kTableWithHandle_Type;
   static const $fieldType5 = kUnionWithHandle_Type;
 

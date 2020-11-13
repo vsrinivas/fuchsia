@@ -59,9 +59,6 @@ class {{ .Name }} extends $fidl.Bits {
 
   @override
   String toString() {
-    if ($value == null) {
-      return null;
-    }
     List<String> parts = [];
 {{- range .Members }}
     if ($value & {{ .Value }} != 0) {

@@ -164,7 +164,7 @@ class ArrayInt16Int8 extends $fidl.Struct {
     ];
   }
 
-  static const $fieldType0 = $fidl.ArrayType<List<Int16Int8>>(
+  static const $fieldType0 = $fidl.ArrayType<Int16Int8, List<Int16Int8>>(
       element: kInt16Int8_Type, elementCount: 3);
 
   @override

@@ -13,13 +13,13 @@ const Struct = `
 class {{ .Name }} extends $fidl.Struct {
   const {{ .Name }}({
 {{- range .Members }}
-    {{ if not .Type.Nullable }}{{ if not .DefaultValue }}@required {{ end }}{{ end -}}
+    {{ if not .Type.Nullable }}{{ if not .DefaultValue }}required {{ end }}{{ end -}}
     this.{{ .Name }}{{ if .DefaultValue }}: {{ .DefaultValue }}{{ end }},
 {{- end }}
   });
   {{ .Name }}.clone({{ .Name }} $orig, {
 {{- range .Members }}
-  {{ .Type.Decl }} {{ .Name }},
+  {{ .Type.OptionalDecl }} {{ .Name }},
 {{- end }}
   }) : this(
     {{- range .Members }}
@@ -31,7 +31,7 @@ class {{ .Name }} extends $fidl.Struct {
   {{ if .HasNullableField }}
     {{ .Name }}.cloneWithout({{ .Name }} $orig, {
       {{- range .Members }}
-        {{ if .Type.Nullable }}bool {{ .Name }},{{ end }}
+        {{ if .Type.Nullable }}bool {{ .Name }}=false,{{ end }}
       {{- end }}
     }) : this(
       {{- range .Members }}
@@ -52,8 +52,8 @@ class {{ .Name }} extends $fidl.Struct {
 {{- end }}
 
   @override
-  List<Object> get $fields {
-    return <Object>[
+  List<Object?> get $fields {
+    return <Object?>[
   {{- range .Members }}
       {{ .Name }},
   {{- end }}

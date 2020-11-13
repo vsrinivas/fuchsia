@@ -27,12 +27,12 @@ class {{ .Name }} extends $fidl.Table {
 {{- end }}{{- end }};
 
   @override
-  final Map<int, $fidl.UnknownRawData> $unknownData;
+  final Map<int, $fidl.UnknownRawData>? $unknownData;
 {{- range .Members }}
   {{- range .Doc }}
   ///{{ . -}}
   {{- end }}
-  final {{ .Type.Decl }} {{ .Name }};
+  final {{ .Type.OptionalDecl }} {{ .Name }};
 {{- end }}
 
   @override
@@ -56,7 +56,7 @@ class {{ .Name }} extends $fidl.Table {
   }
 
   static {{ .Name }} _ctor(Map<int, dynamic> argv,
-      [Map<int, $fidl.UnknownRawData> unknownData]) =>
+      [Map<int, $fidl.UnknownRawData>? unknownData]) =>
     {{ .Name }}._(argv, unknownData);
 }
 

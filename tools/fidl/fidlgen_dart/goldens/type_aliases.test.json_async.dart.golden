@@ -185,29 +185,20 @@ class ExampleOfUseOfAliases extends $fidl.Struct {
   }
 
   static const $fieldType0 = $fidl.Uint32Type();
-  static const $fieldType1 = $fidl.VectorType<List<String>>(
-      element: $fidl.StringType(maybeElementCount: null, nullable: false),
-      maybeElementCount: 5,
-      nullable: false);
-  static const $fieldType2 = $fidl.VectorType<Uint32List>(
-      element: $fidl.Uint32Type(), maybeElementCount: 5, nullable: false);
-  static const $fieldType3 = $fidl.VectorType<List<String>>(
-      element: $fidl.StringType(maybeElementCount: null, nullable: false),
-      maybeElementCount: null,
-      nullable: false);
-  static const $fieldType4 = $fidl.VectorType<List<String>>(
-      element: $fidl.StringType(maybeElementCount: null, nullable: false),
-      maybeElementCount: 9,
-      nullable: false);
-  static const $fieldType5 = $fidl.VectorType<List<String>>(
-      element: $fidl.StringType(maybeElementCount: null, nullable: false),
-      maybeElementCount: 5,
-      nullable: false);
-  static const $fieldType6 =
-      $fidl.VectorType<List<lib$someotherlibrary.ReferenceMe>>(
-          element: lib$someotherlibrary.kReferenceMe_Type,
-          maybeElementCount: 5,
-          nullable: false);
+  static const $fieldType1 = $fidl.VectorType<String, List<String>>(
+      element: $fidl.StringType(maybeElementCount: null), maybeElementCount: 5);
+  static const $fieldType2 = $fidl.VectorType<int, Uint32List>(
+      element: $fidl.Uint32Type(), maybeElementCount: 5);
+  static const $fieldType3 = $fidl.VectorType<String, List<String>>(
+      element: $fidl.StringType(maybeElementCount: null),
+      maybeElementCount: null);
+  static const $fieldType4 = $fidl.VectorType<String, List<String>>(
+      element: $fidl.StringType(maybeElementCount: null), maybeElementCount: 9);
+  static const $fieldType5 = $fidl.VectorType<String, List<String>>(
+      element: $fidl.StringType(maybeElementCount: null), maybeElementCount: 5);
+  static const $fieldType6 = $fidl.VectorType<lib$someotherlibrary.ReferenceMe,
+          List<lib$someotherlibrary.ReferenceMe>>(
+      element: lib$someotherlibrary.kReferenceMe_Type, maybeElementCount: 5);
   static const $fieldType7 = $fidl.HandleType(nullable: false);
   static const $fieldType8 = $fidl.HandleType(nullable: false);
   static const $fieldType9 = $fidl.HandleType(nullable: true);

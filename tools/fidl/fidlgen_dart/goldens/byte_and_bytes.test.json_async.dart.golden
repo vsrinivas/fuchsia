@@ -84,12 +84,12 @@ class ByteAndBytes extends $fidl.Struct {
   }
 
   static const $fieldType0 = $fidl.Uint8Type();
-  static const $fieldType1 = $fidl.VectorType<Uint8List>(
-      element: $fidl.Uint8Type(), maybeElementCount: null, nullable: false);
-  static const $fieldType2 = $fidl.VectorType<Uint8List>(
-      element: $fidl.Uint8Type(), maybeElementCount: 1024, nullable: false);
-  static const $fieldType3 = $fidl.VectorType<Uint8List>(
-      element: $fidl.Uint8Type(), maybeElementCount: 1024, nullable: true);
+  static const $fieldType1 = $fidl.VectorType<int, Uint8List>(
+      element: $fidl.Uint8Type(), maybeElementCount: null);
+  static const $fieldType2 = $fidl.VectorType<int, Uint8List>(
+      element: $fidl.Uint8Type(), maybeElementCount: 1024);
+  static const $fieldType3 = $fidl.NullableVectorType<int, Uint8List>(
+      element: $fidl.Uint8Type(), maybeElementCount: 1024);
 
   @override
   void $encode($fidl.Encoder $encoder, int $offset) {

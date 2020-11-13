@@ -111,27 +111,23 @@ class FlexibleFoo extends $fidl.XUnion {
 
 // See fxbug.dev/7644:
 // ignore: recursive_compile_time_constant
-const $fidl.XUnionType<FlexibleFoo> kFlexibleFoo_Type =
-    $fidl.XUnionType<FlexibleFoo>(
+const $fidl.UnionType<FlexibleFoo> kFlexibleFoo_Type =
+    $fidl.UnionType<FlexibleFoo>.flexible(
   members: <int, $fidl.FidlType>{
-    1: $fidl.StringType(maybeElementCount: null, nullable: false),
+    1: $fidl.StringType(maybeElementCount: null),
     2: $fidl.Int32Type(),
   },
   ctor: FlexibleFoo._ctor,
-  nullable: false,
-  flexible: true,
 );
 // See fxbug.dev/7644:
 // ignore: recursive_compile_time_constant
-const $fidl.XUnionType<FlexibleFoo> kFlexibleFoo_OptType =
-    $fidl.XUnionType<FlexibleFoo>(
+const $fidl.NullableUnionType<FlexibleFoo> kFlexibleFoo_OptType =
+    $fidl.NullableUnionType<FlexibleFoo>.flexible(
   members: <int, $fidl.FidlType>{
-    1: $fidl.StringType(maybeElementCount: null, nullable: false),
+    1: $fidl.StringType(maybeElementCount: null),
     2: $fidl.Int32Type(),
   },
   ctor: FlexibleFoo._ctor,
-  nullable: true,
-  flexible: true,
 );
 
 enum StrictFooTag {
@@ -201,26 +197,22 @@ class StrictFoo extends $fidl.XUnion {
 
 // See fxbug.dev/7644:
 // ignore: recursive_compile_time_constant
-const $fidl.XUnionType<StrictFoo> kStrictFoo_Type = $fidl.XUnionType<StrictFoo>(
+const $fidl.UnionType<StrictFoo> kStrictFoo_Type = $fidl.UnionType<StrictFoo>(
   members: <int, $fidl.FidlType>{
-    1: $fidl.StringType(maybeElementCount: null, nullable: false),
+    1: $fidl.StringType(maybeElementCount: null),
     2: $fidl.Int32Type(),
   },
   ctor: StrictFoo._ctor,
-  nullable: false,
-  flexible: false,
 );
 // See fxbug.dev/7644:
 // ignore: recursive_compile_time_constant
-const $fidl.XUnionType<StrictFoo> kStrictFoo_OptType =
-    $fidl.XUnionType<StrictFoo>(
+const $fidl.NullableUnionType<StrictFoo> kStrictFoo_OptType =
+    $fidl.NullableUnionType<StrictFoo>(
   members: <int, $fidl.FidlType>{
-    1: $fidl.StringType(maybeElementCount: null, nullable: false),
+    1: $fidl.StringType(maybeElementCount: null),
     2: $fidl.Int32Type(),
   },
   ctor: StrictFoo._ctor,
-  nullable: true,
-  flexible: false,
 );
 
 // ignore: unused_element, avoid_private_typedef_functions

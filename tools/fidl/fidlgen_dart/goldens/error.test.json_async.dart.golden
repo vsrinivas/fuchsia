@@ -105,27 +105,23 @@ class ExampleFooResult extends $fidl.XUnion {
 
 // See fxbug.dev/7644:
 // ignore: recursive_compile_time_constant
-const $fidl.XUnionType<ExampleFooResult> kExample_foo_Result_Type =
-    $fidl.XUnionType<ExampleFooResult>(
+const $fidl.UnionType<ExampleFooResult> kExample_foo_Result_Type =
+    $fidl.UnionType<ExampleFooResult>(
   members: <int, $fidl.FidlType>{
     1: kExample_foo_Response_Type,
     2: $fidl.Uint32Type(),
   },
   ctor: ExampleFooResult._ctor,
-  nullable: false,
-  flexible: false,
 );
 // See fxbug.dev/7644:
 // ignore: recursive_compile_time_constant
-const $fidl.XUnionType<ExampleFooResult> kExample_foo_Result_OptType =
-    $fidl.XUnionType<ExampleFooResult>(
+const $fidl.NullableUnionType<ExampleFooResult> kExample_foo_Result_OptType =
+    $fidl.NullableUnionType<ExampleFooResult>(
   members: <int, $fidl.FidlType>{
     1: kExample_foo_Response_Type,
     2: $fidl.Uint32Type(),
   },
   ctor: ExampleFooResult._ctor,
-  nullable: true,
-  flexible: false,
 );
 
 class ExampleFooResponse extends $fidl.Struct {
@@ -181,8 +177,7 @@ const int _kExample_foo_Ordinal = 0x57e41804562237ae;
 const $fidl.MethodType _kExample_foo_Type = $fidl.MethodType(
   request: <$fidl.MemberType>[
     $fidl.MemberType<String>(
-        type: $fidl.StringType(maybeElementCount: null, nullable: false),
-        offset: 0),
+        type: $fidl.StringType(maybeElementCount: null), offset: 0),
   ],
   response: <$fidl.MemberType>[
     $fidl.MemberType<ExampleFooResult>(

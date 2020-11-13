@@ -109,10 +109,16 @@ class {{ .AsyncResponseClass }} {
 {{- range .Doc }}
 ///{{ . -}}
 {{- end }}
-abstract class {{ .Name }} extends $fidl.Service {
-  static const String $serviceName = {{ .ServiceName }};
-  @override
-  $fidl.ServiceData get $serviceData => {{ .ServiceData }}();
+abstract class {{ .Name }} 
+{{- if .ServiceName }}
+      extends $fidl.Service
+{{- end }}
+      {
+  {{- if .ServiceName }}
+    static const String $serviceName = {{ .ServiceName }};
+    @override
+  {{- end }}
+  $fidl.ServiceData? get $serviceData => {{ .ServiceData }}();
 
 {{- range .Methods }}
   {{- if .HasRequest }}
@@ -129,7 +135,7 @@ abstract class {{ .Name }} extends $fidl.Service {
     {{- range .Doc }}
     ///{{ . -}}
     {{- end }}
-    $async.Stream<{{ .AsyncResponseType}}> get {{ .Name }}
+    $async.Stream<{{ .AsyncResponseType}}>? get {{ .Name }}
     {{- if .Transitional }}
       { return $async.Stream.empty(); }
     {{- else }}
@@ -139,13 +145,18 @@ abstract class {{ .Name }} extends $fidl.Service {
 {{- end }}
 }
 
+// TODO: Remove ServiceData for non-service
 class {{ .ServiceData }} implements $fidl.ServiceData<{{ .Name }}> {
 
   const {{ .ServiceData }}();
 
   @override
   String getName() {
+    {{- if .ServiceName }}
     return {{ .Name }}.$serviceName;
+    {{- else }}
+    return "";
+    {{- end }}
   }
 
   @override
@@ -159,7 +170,12 @@ class {{ .ServiceData }} implements $fidl.ServiceData<{{ .Name }}> {
 {{- end }}
 class {{ .ProxyName }} extends $fidl.AsyncProxy<{{ .Name }}>
     implements {{ .Name }} {
-  {{ .ProxyName }}() : super($fidl.AsyncProxyController<{{ .Name }}>($serviceName: {{ .ServiceName }}, $interfaceName: r'{{ .Name }}')) {
+  {{ .ProxyName }}() : super($fidl.AsyncProxyController<{{ .Name }}>(
+      {{- if .ServiceName }}
+        $serviceName: {{ .ServiceName }},
+      {{- end }}
+      $interfaceName: r'{{ .Name }}')
+    ) {
     ctrl.onResponse = _handleResponse;
 
     {{- if .HasEvents }}
@@ -173,11 +189,15 @@ class {{ .ProxyName }} extends $fidl.AsyncProxy<{{ .Name }}>
         {{- end }}
       }, onError: (_) { });
     {{- end }}
-
   }
 
-  @override
-  $fidl.ServiceData get $serviceData => {{ .ServiceData }}();
+  {{- if .ServiceName }}
+    @override
+    $fidl.ServiceData get $serviceData => {{ .ServiceData }}();
+  {{- else }}
+    @override
+    Null get $serviceData => null;
+  {{- end }}
 
   void _handleEvent($fidl.Message $message) {
     final $fidl.Decoder $decoder = $fidl.Decoder($message)
@@ -190,7 +210,7 @@ class {{ .ProxyName }} extends $fidl.AsyncProxy<{{ .Name }}>
         final String _name = {{ .TypeSymbol }}.name;
         try {
           Timeline.startSync(_name);
-          final List<$fidl.MemberType> $types = {{ .TypeSymbol }}.response;
+          final List<$fidl.MemberType> $types = {{ .TypeSymbol }}.response!;
           $decoder.claimMemory({{ .TypeSymbol }}.decodeResponseInlineSize($decoder));
           _{{ .Name }}EventStreamController.add(
             {{- template "DecodeResponse" . -}}
@@ -219,7 +239,7 @@ class {{ .ProxyName }} extends $fidl.AsyncProxy<{{ .Name }}>
       _handleEvent($message);
       return;
     }
-    final $async.Completer $completer = ctrl.getCompleter($txid);
+    final $async.Completer? $completer = ctrl.getCompleter($txid);
     if ($completer == null) {
       $message.closeHandles();
       return;
@@ -234,7 +254,7 @@ class {{ .ProxyName }} extends $fidl.AsyncProxy<{{ .Name }}>
         final String _name = {{ .TypeSymbol }}.name;
         try {
           Timeline.startSync(_name);
-          final List<$fidl.MemberType> $types = {{ .TypeSymbol }}.response;
+          final List<$fidl.MemberType> $types = {{ .TypeSymbol }}.response!;
           $decoder.claimMemory({{ .TypeSymbol }}.decodeResponseInlineSize($decoder));
           // ignore: prefer_const_declarations
           final $response = {{- template "DecodeResponse" . -}};
@@ -293,7 +313,7 @@ class {{ .ProxyName }} extends $fidl.AsyncProxy<{{ .Name }}>
       $encoder.encodeMessageHeader({{ .OrdinalName }}, 0);
       {{- if .Request }}
         $encoder.alloc({{ .TypeSymbol }}.encodingRequestInlineSize($encoder));
-        final List<$fidl.MemberType> $types = {{ .TypeSymbol }}.request;
+        final List<$fidl.MemberType> $types = {{ .TypeSymbol }}.request!;
       {{- end }}
       {{- range $index, $request := .Request }}
         $types[{{ $index }}].encode($encoder, {{ .Name }}, $fidl.kMessageHeaderSize);
@@ -331,20 +351,24 @@ class {{ .BindingName }} extends $fidl.AsyncBinding<{{ .Name }}> {
       $subscriptions.clear();
     }
     whenBound.then((_) {
-      {{- range .Methods }}
-        {{- if not .HasRequest }}
-          if (impl.{{ .Name }} != null) {
-            $subscriptions.add(impl.{{ .Name }}.listen(($response) {
-              final $fidl.Encoder $encoder = $fidl.Encoder();
-              $encoder.encodeMessageHeader({{ .OrdinalName }}, 0);
-              $encoder.alloc({{ .TypeSymbol }}.encodingResponseInlineSize($encoder));
-              final List<$fidl.MemberType> $types = {{ .TypeSymbol }}.response;
-              {{ template "EncodeResponse" . }}
-              sendMessage($encoder.message);
-            }));
-          }
+      final impl = this.impl;
+      if (impl != null) {
+        {{- range .Methods }}
+          {{- if not .HasRequest }}
+            final _{{ .Name }}_stream = impl.{{ .Name }};
+            if (_{{ .Name }}_stream != null) {
+              $subscriptions.add(_{{ .Name }}_stream.listen(($response) {
+                final $fidl.Encoder $encoder = $fidl.Encoder();
+                $encoder.encodeMessageHeader({{ .OrdinalName }}, 0);
+                $encoder.alloc({{ .TypeSymbol }}.encodingResponseInlineSize($encoder));
+                final List<$fidl.MemberType> $types = {{ .TypeSymbol }}.response!;
+                {{ template "EncodeResponse" . }}
+                sendMessage($encoder.message);
+              }));
+            }
+          {{- end }}
         {{- end }}
-      {{- end }}
+      }
     });
     whenClosed.then((_) => $unsubscribe());
   }
@@ -363,9 +387,9 @@ class {{ .BindingName }} extends $fidl.AsyncBinding<{{ .Name }}> {
             final String _name = {{ .TypeSymbol }}.name;
             try {
               Timeline.startSync(_name);
-              final List<$fidl.MemberType> $types = {{ .TypeSymbol }}.request;
+              final List<$fidl.MemberType> $types = {{ .TypeSymbol }}.request!;
               $decoder.claimMemory({{ .TypeSymbol }}.decodeRequestInlineSize($decoder));
-              final {{ template "AsyncReturn" . }} $future = impl.{{ .Name }}(
+              final {{ template "AsyncReturn" . }} $future = impl!.{{ .Name }}(
               {{- range $index, $request := .Request }}
                 $types[{{ $index }}].decode($decoder, $fidl.kMessageHeaderSize),
               {{- end }});
@@ -402,7 +426,7 @@ class {{ .BindingName }} extends $fidl.AsyncBinding<{{ .Name }}> {
                   $encoder.encodeMessageHeader({{ .OrdinalName }}, $message.txid);
                   {{- if .Response.WireParameters }}
                     $encoder.alloc({{ .TypeSymbol }}.encodingResponseInlineSize($encoder));
-                    final List<$fidl.MemberType> $types = {{ .TypeSymbol }}.response;
+                    final List<$fidl.MemberType> $types = {{ .TypeSymbol }}.response!;
                     {{ template "EncodeResponse" . -}}
                   {{- end }}
                   $respond($encoder.message);

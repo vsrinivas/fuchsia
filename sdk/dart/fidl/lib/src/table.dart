@@ -10,9 +10,9 @@ import 'unknown_data.dart';
 abstract class Table {
   const Table();
 
-  dynamic $field(int index);
+  dynamic? $field(int index);
   Map<int, dynamic> get $fields;
-  Map<int, UnknownRawData> get $unknownData;
+  Map<int, UnknownRawData>? get $unknownData;
 
   @override
   int get hashCode => deepHash($fields.values);

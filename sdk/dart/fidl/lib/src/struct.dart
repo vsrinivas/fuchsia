@@ -10,7 +10,7 @@ import 'hash_codes.dart';
 abstract class Struct {
   const Struct();
 
-  List<Object> get $fields;
+  List<Object?> get $fields;
 
   @override
   int get hashCode => deepHash($fields);

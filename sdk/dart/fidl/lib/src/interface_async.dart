@@ -127,7 +127,7 @@ abstract class AsyncBinding<T> extends _Stateful {
           "AsyncBinding<${$interfaceName}> couldn't create channel: ${getStringForStatus(pair.status)}");
     }
     _impl = impl;
-    _reader.bind(pair.first);
+    _reader.bind(pair.first!);
 
     state = InterfaceState.bound;
 
@@ -158,12 +158,8 @@ abstract class AsyncBinding<T> extends _Stateful {
       throw FidlError(
           "AsyncBinding<${$interfaceName}> can't bind to a null impl");
     }
-    if (interfaceRequest == null) {
-      throw FidlError(
-          "AsyncBinding<${$interfaceName}> can't bind to a null InterfaceRequest");
-    }
 
-    Channel channel = interfaceRequest.passChannel();
+    Channel? channel = interfaceRequest.passChannel();
     if (channel == null) {
       throw FidlError(
           "AsyncBinding<${$interfaceName}> can't bind to a null InterfaceRequest channel");
@@ -203,13 +199,13 @@ abstract class AsyncBinding<T> extends _Stateful {
       ..setUint8(7, 0) // magic byte
       ..setUint64(8, epitaphOrdinal) // ordinal
       ..setInt32(16, statusCode); // body (epitaph struct)
-    _reader.channel.write(bytes, []);
+    _reader.channel?.write(bytes, []);
   }
 
   /// Close the bound channel.
   ///
   /// This function does nothing if the object is not bound.
-  void close([int statusCode]) {
+  void close([int? statusCode]) {
     if (isBound) {
       if (statusCode != null) {
         _writeEpitaph(statusCode);
@@ -224,8 +220,8 @@ abstract class AsyncBinding<T> extends _Stateful {
   /// The implementation of [T] bound using this object.
   ///
   /// If this object is not bound, this property is null.
-  T get impl => _impl;
-  T _impl;
+  T? get impl => _impl;
+  T? _impl;
 
   /// Decodes the given message and dispatches the decoded message to [impl].
   ///
@@ -235,10 +231,11 @@ abstract class AsyncBinding<T> extends _Stateful {
   void handleMessage(Message message, MessageSink respond);
 
   void _handleReadable() {
-    final ReadResult result = _reader.channel.queryAndRead();
-    if ((result.bytes == null) || (result.bytes.lengthInBytes == 0))
+    final ReadResult result = _reader.channel!.queryAndRead();
+    if (result.bytes.lengthInBytes == 0) {
       throw FidlError(
           'AsyncBinding<${$interfaceName}> Unexpected empty message or error: $result');
+    }
 
     final Message message = Message.fromReadResult(result);
     if (!message.isCompatible()) {
@@ -264,7 +261,7 @@ abstract class AsyncBinding<T> extends _Stateful {
       response.closeHandles();
       return;
     }
-    _reader.channel.write(response.data, response.handles);
+    _reader.channel?.write(response.data, response.handles);
   }
 
   final ChannelReader _reader = ChannelReader();
@@ -273,7 +270,7 @@ abstract class AsyncBinding<T> extends _Stateful {
 /// Representation of a service that all [T] implementations should extend from.
 abstract class Service {
   /// Getter for the [ServiceData]
-  ServiceData get $serviceData;
+  ServiceData? get $serviceData;
 }
 
 /// Exposes the ability to get a hold of the service runtime name and bindings.
@@ -342,13 +339,13 @@ class AsyncProxyController<T> extends _Stateful {
   ///
   /// This string is typically used with the `ServiceProvider` interface to
   /// request an implementation of [T].
-  final String $serviceName;
+  final String? $serviceName;
 
   /// The name of the interface of [T].
   ///
   /// Unlike [$serviceName] should always be set and won't be fully qualified.
   /// This should only be used for debugging and logging purposes.
-  final String $interfaceName;
+  final String? $interfaceName;
 
   /// Creates an interface request whose peer is bound to this interface proxy.
   ///
@@ -368,7 +365,7 @@ class AsyncProxyController<T> extends _Stateful {
       throw FidlError(
           "AsyncProxyController<${$interfaceName}> couldn't create channel: ${getStringForStatus(pair.status)}");
     }
-    _reader.bind(pair.first);
+    _reader.bind(pair.first!);
     state = InterfaceState.bound;
 
     return InterfaceRequest<T>(pair.second);
@@ -388,16 +385,14 @@ class AsyncProxyController<T> extends _Stateful {
       throw FidlStateException(
           "AsyncProxyController<${$interfaceName}> isn't unbound");
     }
-    if (interfaceHandle == null) {
-      throw FidlError(
-          "AsyncProxyController<${$interfaceName}> can't bind to null InterfaceHandle");
-    }
-    if (interfaceHandle.channel == null) {
+
+    final channel = interfaceHandle.passChannel();
+    if (channel == null) {
       throw FidlError(
           "AsyncProxyController<${$interfaceName}> can't bind to null InterfaceHandle channel");
     }
 
-    _reader.bind(interfaceHandle.passChannel());
+    _reader.bind(channel);
     state = InterfaceState.bound;
   }
 
@@ -429,7 +424,7 @@ class AsyncProxyController<T> extends _Stateful {
     _close(null);
   }
 
-  void _close(FidlError error) {
+  void _close(FidlError? error) {
     if (isBound) {
       _reader.close();
       state = InterfaceState.closed;
@@ -446,35 +441,35 @@ class AsyncProxyController<T> extends _Stateful {
   }
 
   /// Called when an epitaph is received (from channel closure).
-  EpitaphHandler onEpitaphReceived;
+  EpitaphHandler? onEpitaphReceived;
 
   /// Called whenever this object receives a response on a bound channel.
   ///
   /// Used by subclasses of [Proxy<T>] to receive responses to messages.
-  MessageSink onResponse;
+  MessageSink? onResponse;
 
   void _handleReadable() {
-    final ReadResult result = _reader.channel.queryAndRead();
-    if ((result.bytes == null) || (result.bytes.lengthInBytes == 0)) {
+    final ReadResult result = _reader.channel!.queryAndRead();
+    if (result.bytes.lengthInBytes == 0) {
       proxyError(FidlError(
           'AsyncProxyController<${$interfaceName}>: Read from channel failed'));
       return;
     }
     try {
       Message message = Message.fromReadResult(result);
+      final epitaphCallback = onEpitaphReceived;
+      final responseCallback = onResponse;
       if (message.ordinal == epitaphOrdinal) {
         int statusCode = message.data.getInt32(16);
-        if (onEpitaphReceived != null) {
-          onEpitaphReceived(statusCode);
+        if (epitaphCallback != null) {
+          epitaphCallback(statusCode);
         }
-      } else if (onResponse != null) {
-        onResponse(message);
+      } else if (responseCallback != null) {
+        responseCallback(message);
       }
     } on FidlError catch (e) {
-      if (result.handles != null) {
-        for (Handle handle in result.handles) {
-          handle.close();
-        }
+      for (Handle handle in result.handles) {
+        handle.close();
       }
       proxyError(e);
     }
@@ -494,7 +489,7 @@ class AsyncProxyController<T> extends _Stateful {
           'AsyncProxyController<${$interfaceName}> is closed.'));
       return;
     }
-    final int status = _reader.channel.write(message.data, message.handles);
+    final int status = _reader.channel!.write(message.data, message.handles);
     if (status != ZX.OK) {
       proxyError(FidlError(
           'AsyncProxyController<${$interfaceName}> failed to write to channel: ${_reader.channel} (status: $status)'));
@@ -519,7 +514,7 @@ class AsyncProxyController<T> extends _Stateful {
       txid = _nextTxid++ & _userspaceTxidMask;
     message.txid = txid;
     _completerMap[message.txid] = completer;
-    final int status = _reader.channel.write(message.data, message.handles);
+    final int status = _reader.channel!.write(message.data, message.handles);
 
     if (status != ZX.OK) {
       proxyError(FidlError(
@@ -532,8 +527,8 @@ class AsyncProxyController<T> extends _Stateful {
   ///
   /// Used by subclasses of [AsyncProxy<T>] to retrieve registered completers when
   /// handling response messages.
-  Completer getCompleter(int txid) {
-    final Completer result = _completerMap.remove(txid);
+  Completer? getCompleter(int txid) {
+    final Completer? result = _completerMap.remove(txid);
     if (result == null) {
       proxyError(FidlError('Message had unknown request id: $txid'));
     }

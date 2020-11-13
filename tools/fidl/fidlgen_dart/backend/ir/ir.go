@@ -25,6 +25,7 @@ type Type struct {
 	Decl          string // type in traditional bindings
 	SyncDecl      string // type in async bindings when referring to traditional bindings
 	AsyncDecl     string // type in async bindings when referring to async bindings
+	OptionalDecl  string // type when the value is optional
 	Nullable      bool
 	declType      types.DeclType
 	typedDataDecl string
@@ -395,7 +396,7 @@ func formatInt(val *int) string {
 
 func formatParameterList(params []StructMember) string {
 	if len(params) == 0 {
-		return "null"
+		return "[]"
 	}
 
 	lines := []string{}
@@ -630,6 +631,10 @@ func (c *compiler) maybeCompileConstant(val *types.Constant, t *Type) string {
 }
 
 func (c *compiler) compileType(val types.Type) Type {
+	nullablePrefix := ""
+	if val.Nullable {
+		nullablePrefix = "Nullable"
+	}
 	r := Type{}
 	r.Nullable = val.Nullable
 	switch val.Kind {
@@ -647,7 +652,7 @@ func (c *compiler) compileType(val types.Type) Type {
 		}
 		elementStr := fmt.Sprintf("element: %s", t.typeExpr)
 		elementCountStr := fmt.Sprintf("elementCount: %s", formatInt(val.ElementCount))
-		r.typeExpr = fmt.Sprintf("$fidl.ArrayType<%s>(%s, %s)", r.Decl, elementStr, elementCountStr)
+		r.typeExpr = fmt.Sprintf("$fidl.ArrayType<%s, %s>(%s, %s)", t.Decl, r.Decl, elementStr, elementCountStr)
 	case types.VectorType:
 		t := c.compileType(*val.ElementType)
 		if len(t.typedDataDecl) > 0 {
@@ -661,15 +666,14 @@ func (c *compiler) compileType(val types.Type) Type {
 		}
 		elementStr := fmt.Sprintf("element: %s", t.typeExpr)
 		maybeElementCountStr := fmt.Sprintf("maybeElementCount: %s", formatInt(val.ElementCount))
-		nullableStr := fmt.Sprintf("nullable: %s", formatBool(val.Nullable))
-		r.typeExpr = fmt.Sprintf("$fidl.VectorType<%s>(%s, %s, %s)",
-			r.Decl, elementStr, maybeElementCountStr, nullableStr)
+		r.typeExpr = fmt.Sprintf("$fidl.%sVectorType<%s, %s>(%s, %s)",
+			nullablePrefix, t.Decl, r.Decl, elementStr, maybeElementCountStr)
 	case types.StringType:
 		r.Decl = "String"
 		r.SyncDecl = r.Decl
 		r.AsyncDecl = r.Decl
-		r.typeExpr = fmt.Sprintf("$fidl.StringType(maybeElementCount: %s, nullable: %s)",
-			formatInt(val.ElementCount), formatBool(val.Nullable))
+		r.typeExpr = fmt.Sprintf("$fidl.%sStringType(maybeElementCount: %s)",
+			nullablePrefix, formatInt(val.ElementCount))
 	case types.HandleType:
 		var subtype string
 		switch val.HandleSubtype {
@@ -687,8 +691,7 @@ func (c *compiler) compileType(val types.Type) Type {
 		r.Decl = "$zircon." + subtype
 		r.SyncDecl = r.Decl
 		r.AsyncDecl = r.Decl
-		r.typeExpr = fmt.Sprintf("$fidl.%sType(nullable: %s)",
-			subtype, formatBool(val.Nullable))
+		r.typeExpr = fmt.Sprintf("$fidl.%s%sType()", nullablePrefix, subtype)
 	case types.RequestType:
 		compound := types.ParseCompoundIdentifier(val.RequestSubtype)
 		t := c.compileUpperCamelCompoundIdentifier(compound, "", declarationContext)
@@ -699,8 +702,8 @@ func (c *compiler) compileType(val types.Type) Type {
 			r.SyncDecl = fmt.Sprintf("$fidl.InterfaceRequest<$sync.%s>", t)
 		}
 		r.AsyncDecl = r.Decl
-		r.typeExpr = fmt.Sprintf("$fidl.InterfaceRequestType<%s>(nullable: %s)",
-			t, formatBool(val.Nullable))
+		r.typeExpr = fmt.Sprintf("$fidl.%sInterfaceRequestType<%s>()",
+			nullablePrefix, t)
 	case types.PrimitiveType:
 		r.Decl = c.compilePrimitiveSubtype(val.PrimitiveSubtype)
 		r.SyncDecl = r.Decl
@@ -747,16 +750,15 @@ func (c *compiler) compileType(val types.Type) Type {
 				r.typeExpr = c.typeSymbolForCompoundIdentifier(types.ParseCompoundIdentifier(val.Identifier))
 			}
 		case types.InterfaceDeclType:
+
 			r.Decl = fmt.Sprintf("$fidl.InterfaceHandle<%s>", t)
 			if c.inExternalLibrary(compound) {
 				r.SyncDecl = fmt.Sprintf("$fidl.InterfaceHandle<sync$%s>", t)
-
 			} else {
 				r.SyncDecl = fmt.Sprintf("$fidl.InterfaceHandle<$sync.%s>", t)
 			}
 			r.AsyncDecl = r.Decl
-			r.typeExpr = fmt.Sprintf("$fidl.InterfaceHandleType<%s>(nullable: %s)",
-				t, formatBool(val.Nullable))
+			r.typeExpr = fmt.Sprintf("$fidl.%sInterfaceHandleType<%s>()", nullablePrefix, t)
 		default:
 			log.Fatal("Unknown declaration type: ", r.declType)
 		}
@@ -768,6 +770,12 @@ func (c *compiler) compileType(val types.Type) Type {
 	}
 	if r.SyncDecl == "" {
 		log.Fatalf("No SyncDecl for %s", r.Decl)
+	}
+	if r.Nullable {
+		r.Decl = r.Decl + "?"
+		r.OptionalDecl = r.Decl
+	} else {
+		r.OptionalDecl = r.Decl + "?"
 	}
 	return r
 }
@@ -991,10 +999,6 @@ func (c *compiler) compileInterface(val types.Interface) Interface {
 		docString(val),
 	}
 
-	if r.ServiceName == "" {
-		r.ServiceName = "null"
-	}
-
 	for _, v := range val.Methods {
 		m := c.compileMethod(v, r, val)
 		r.Methods = append(r.Methods, m)
@@ -1128,18 +1132,18 @@ func (c *compiler) compileUnion(val types.Union) Union {
 		Documented:    docString(val),
 		Strictness:    val.Strictness,
 	}
-	r.TypeExpr = fmt.Sprintf(`$fidl.XUnionType<%s>(
+	ctor := ""
+	if r.IsFlexible() {
+		ctor = ".flexible"
+	}
+	r.TypeExpr = fmt.Sprintf(`$fidl.UnionType<%s>%s(
   members: %s,
   ctor: %s._ctor,
-  nullable: false,
-  flexible: %t,
-)`, r.Name, formatUnionMemberList(r.Members), r.Name, r.IsFlexible())
-	r.OptTypeExpr = fmt.Sprintf(`$fidl.XUnionType<%s>(
+)`, r.Name, ctor, formatUnionMemberList(r.Members), r.Name)
+	r.OptTypeExpr = fmt.Sprintf(`$fidl.NullableUnionType<%s>%s(
 members: %s,
 ctor: %s._ctor,
-nullable: true,
-flexible: %t,
-)`, r.Name, formatUnionMemberList(r.Members), r.Name, r.IsFlexible())
+)`, r.Name, ctor, formatUnionMemberList(r.Members), r.Name)
 
 	return r
 }

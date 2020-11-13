@@ -64,14 +64,14 @@ class InterfaceHandle<T> {
   /// handle is bound to a [Proxy].
   ///
   /// To take the channel from this object, use [passChannel].
-  Channel get channel => _channel;
-  Channel _channel;
+  Channel? get channel => _channel;
+  Channel? _channel;
 
   /// Returns [channel] and sets [channel] to `null`.
   ///
   /// Useful for taking ownership of the underlying channel.
-  Channel passChannel() {
-    final Channel result = _channel;
+  Channel? passChannel() {
+    final Channel? result = _channel;
     _channel = null;
     return result;
   }
@@ -129,14 +129,14 @@ class InterfaceRequest<T> {
   /// handle is bound to [Binding].
   ///
   /// To take the channel from this object, use [passChannel].
-  Channel get channel => _channel;
-  Channel _channel;
+  Channel? get channel => _channel;
+  Channel? _channel;
 
   /// Returns [channel] and sets [channel] to `null`.
   ///
   /// Useful for taking ownership of the underlying channel.
-  Channel passChannel() {
-    final Channel result = _channel;
+  Channel? passChannel() {
+    final Channel? result = _channel;
     _channel = null;
     return result;
   }
@@ -155,17 +155,17 @@ class InterfacePair<T> {
     handle = InterfaceHandle<T>(pair.second);
   }
 
-  InterfaceRequest<T> request;
-  InterfaceHandle<T> handle;
+  InterfaceRequest<T>? request;
+  InterfaceHandle<T>? handle;
 
-  InterfaceRequest<T> passRequest() {
-    final InterfaceRequest<T> result = request;
+  InterfaceRequest<T>? passRequest() {
+    final InterfaceRequest<T>? result = request;
     request = null;
     return result;
   }
 
-  InterfaceHandle<T> passHandle() {
-    final InterfaceHandle<T> result = handle;
+  InterfaceHandle<T>? passHandle() {
+    final InterfaceHandle<T>? result = handle;
     handle = null;
     return result;
   }
@@ -185,13 +185,13 @@ abstract class Binding<T> {
   }
 
   /// Event for binding.
-  _VoidCallback onBind;
+  _VoidCallback? onBind;
 
   /// Event for unbinding.
-  _VoidCallback onUnbind;
+  _VoidCallback? onUnbind;
 
   /// Event for when the binding is closed.
-  _VoidCallback onClose;
+  _VoidCallback? onClose;
 
   /// Returns an interface handle whose peer is bound to the given object.
   ///
@@ -200,17 +200,18 @@ abstract class Binding<T> {
   /// decoded and dispatched to `impl`.
   ///
   /// The `impl` parameter must not be null.
-  InterfaceHandle<T> wrap(T impl) {
+  InterfaceHandle<T>? wrap(T impl) {
     assert(!isBound);
     ChannelPair pair = ChannelPair();
     if (pair.status != ZX.OK) {
       return null;
     }
     _impl = impl;
-    _reader.bind(pair.first);
+    _reader.bind(pair.first!);
 
-    if (onBind != null) {
-      onBind();
+    final callback = onBind;
+    if (callback != null) {
+      callback();
     }
 
     return InterfaceHandle<T>(pair.second);
@@ -227,15 +228,13 @@ abstract class Binding<T> {
   /// `channel` property of the given `interfaceRequest` must not be `null`.
   void bind(T impl, InterfaceRequest<T> interfaceRequest) {
     assert(!isBound);
-    assert(impl != null);
-    assert(interfaceRequest != null);
-    Channel channel = interfaceRequest.passChannel();
-    assert(channel != null);
+    Channel channel = interfaceRequest.passChannel()!;
     _impl = impl;
     _reader.bind(channel);
 
-    if (onBind != null) {
-      onBind();
+    final callback = onBind;
+    if (callback != null) {
+      callback();
     }
   }
 
@@ -251,8 +250,9 @@ abstract class Binding<T> {
     final InterfaceRequest<T> result = InterfaceRequest<T>(_reader.unbind());
     _impl = null;
 
-    if (onUnbind != null) {
-      onUnbind();
+    final callback = onUnbind;
+    if (callback != null) {
+      callback();
     }
 
     return result;
@@ -266,20 +266,21 @@ abstract class Binding<T> {
       _reader.close();
       _impl = null;
 
-      if (onClose != null) {
-        onClose();
+      final callback = onClose;
+      if (callback != null) {
+        callback();
       }
     }
   }
 
   /// Called when the channel underneath closes.
-  _VoidCallback onConnectionError;
+  _VoidCallback? onConnectionError;
 
   /// The implementation of [T] bound using this object.
   ///
   /// If this object is not bound, this property is null.
-  T get impl => _impl;
-  T _impl;
+  T? get impl => _impl;
+  T? _impl;
 
   /// Whether this object is bound to a channel.
   ///
@@ -294,10 +295,11 @@ abstract class Binding<T> {
   void handleMessage(Message message, MessageSink respond);
 
   void _handleReadable() {
-    final ReadResult result = _reader.channel.queryAndRead();
-    if ((result.bytes == null) || (result.bytes.lengthInBytes == 0))
+    final ReadResult result = _reader.channel!.queryAndRead();
+    if (result.bytes.lengthInBytes == 0) {
       throw FidlError('Unexpected empty message or error: $result '
           'from channel ${_reader.channel}');
+    }
 
     final Message message = Message.fromReadResult(result);
     if (!message.isCompatible()) {
@@ -311,8 +313,9 @@ abstract class Binding<T> {
   /// Always called when the channel underneath closes. If [onConnectionError]
   /// is set, it is called.
   void _handleError(ChannelReaderError error) {
-    if (onConnectionError != null) {
-      onConnectionError();
+    final callback = onConnectionError;
+    if (callback != null) {
+      callback();
     }
   }
 
@@ -325,7 +328,7 @@ abstract class Binding<T> {
       response.closeHandles();
       return;
     }
-    _reader.channel.write(response.data, response.handles);
+    _reader.channel!.write(response.data, response.handles);
   }
 
   final ChannelReader _reader = ChannelReader();
@@ -374,13 +377,13 @@ class ProxyController<T> {
   }
 
   /// Event for binding.
-  _VoidCallback onBind;
+  _VoidCallback? onBind;
 
   /// Event for unbinding.
-  _VoidCallback onUnbind;
+  _VoidCallback? onUnbind;
 
   /// Event for when the binding is closed.
-  _VoidCallback onClose;
+  _VoidCallback? onClose;
 
   /// The service name associated with [T], if any.
   ///
@@ -389,13 +392,13 @@ class ProxyController<T> {
   ///
   /// This string is typically used with the `ServiceProvider` interface to
   /// request an implementation of [T].
-  final String $serviceName;
+  final String? $serviceName;
 
   /// The name of the interface of [T].
   ///
   /// Unlike [$serviceName] should always be set and won't be fully qualified.
   /// This should only be used for debugging and logging purposes.
-  final String $interfaceName;
+  final String? $interfaceName;
 
   /// Creates an interface request whose peer is bound to this interface proxy.
   ///
@@ -408,11 +411,12 @@ class ProxyController<T> {
     assert(!isBound);
     ChannelPair pair = ChannelPair();
     assert(pair.status == ZX.OK);
-    _reader.bind(pair.first);
+    _reader.bind(pair.first!);
 
     _boundCompleter.complete();
-    if (onBind != null) {
-      onBind();
+    final callback = onBind;
+    if (callback != null) {
+      callback();
     }
 
     return InterfaceRequest<T>(pair.second);
@@ -429,13 +433,12 @@ class ProxyController<T> {
   /// of the given `interfaceHandle` must not be null.
   void bind(InterfaceHandle<T> interfaceHandle) {
     assert(!isBound);
-    assert(interfaceHandle != null);
-    assert(interfaceHandle.channel != null);
-    _reader.bind(interfaceHandle.passChannel());
+    _reader.bind(interfaceHandle.passChannel()!);
 
     _boundCompleter.complete();
-    if (onBind != null) {
-      onBind();
+    final callback = onBind;
+    if (callback != null) {
+      callback();
     }
   }
 
@@ -445,14 +448,15 @@ class ProxyController<T> {
   /// channel.
   ///
   /// The proxy must have previously been bound (e.g., using [bind]).
-  InterfaceHandle<T> unbind() {
+  InterfaceHandle<T>? unbind() {
     assert(isBound);
     if (!_reader.isBound) {
       return null;
     }
 
-    if (onUnbind != null) {
-      onUnbind();
+    final callback = onUnbind;
+    if (callback != null) {
+      callback();
     }
 
     // TODO(rosswang): Do we need to _reset() here?
@@ -475,19 +479,20 @@ class ProxyController<T> {
       _reset();
       _reader.close();
 
-      if (onClose != null) {
-        onClose();
+      final callback = onClose;
+      if (callback != null) {
+        callback();
       }
     }
   }
 
   /// Called when the channel underneath closes.
-  _VoidCallback onConnectionError;
+  _VoidCallback? onConnectionError;
 
   /// Called whenever this object receives a response on a bound channel.
   ///
   /// Used by subclasses of [Proxy<T>] to receive responses to messages.
-  MessageSink onResponse;
+  MessageSink? onResponse;
 
   final ChannelReader _reader = ChannelReader();
   final HashMap<int, Function> _callbackMap = HashMap<int, Function>();
@@ -515,21 +520,20 @@ class ProxyController<T> {
   }
 
   void _handleReadable() {
-    final ReadResult result = _reader.channel.queryAndRead();
-    if ((result.bytes == null) || (result.bytes.lengthInBytes == 0)) {
+    final ReadResult result = _reader.channel!.queryAndRead();
+    if (result.bytes.lengthInBytes == 0) {
       proxyError('Read from channel ${_reader.channel} failed');
       return;
     }
     try {
       _pendingResponsesCount--;
-      if (onResponse != null) {
-        onResponse(Message.fromReadResult(result));
+      final callback = onResponse;
+      if (callback != null) {
+        callback(Message.fromReadResult(result));
       }
     } on FidlError catch (e) {
-      if (result.handles != null) {
-        for (Handle handle in result.handles) {
-          handle.close();
-        }
+      for (Handle handle in result.handles) {
+        handle.close();
       }
       proxyError(e.toString());
       close();
@@ -541,8 +545,9 @@ class ProxyController<T> {
   void _handleError(ChannelReaderError error) {
     proxyError(error.toString());
     _reset();
-    if (onConnectionError != null) {
-      onConnectionError();
+    final callback = onConnectionError;
+    if (callback != null) {
+      callback();
     }
   }
 
@@ -554,7 +559,7 @@ class ProxyController<T> {
       proxyError('The proxy is closed.');
       return;
     }
-    final int status = _reader.channel.write(message.data, message.handles);
+    final int status = _reader.channel!.write(message.data, message.handles);
     if (status != ZX.OK)
       proxyError(
           'Failed to write to channel: ${_reader.channel} (status: $status)');
@@ -576,7 +581,7 @@ class ProxyController<T> {
     while (txid == 0 || _callbackMap.containsKey(txid))
       txid = _nextTxid++ & _kUserspaceTxidMask;
     message.txid = txid;
-    final int status = _reader.channel.write(message.data, message.handles);
+    final int status = _reader.channel!.write(message.data, message.handles);
 
     if (status != ZX.OK) {
       proxyError(
@@ -592,8 +597,8 @@ class ProxyController<T> {
   ///
   /// Used by subclasses of [Proxy<T>] to retrieve registered callbacks when
   /// handling response messages.
-  Function getCallback(int txid) {
-    final Function result = _callbackMap.remove(txid);
+  Function? getCallback(int txid) {
+    final Function? result = _callbackMap.remove(txid);
     if (result == null) {
       proxyError('Message had unknown request id: $txid');
       return null;

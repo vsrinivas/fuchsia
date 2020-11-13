@@ -31,7 +31,8 @@ abstract class Decoders {
 List<T> _reorderList<T>(List<T> data, List<int> order) =>
     order.map((index) => data[index]).toList();
 
-fidl.Message _encode<T>(fidl.Encoder encoder, fidl.FidlType<T> type, T value) {
+fidl.Message _encode<T, I extends Iterable<T>>(
+    fidl.Encoder encoder, fidl.FidlType<T, I> type, T value) {
   encoder.alloc(type.encodingInlineSize(encoder));
   type.encode(encoder, value, 0);
   return encoder.message;
@@ -41,8 +42,8 @@ Uint8List _getMessageBytes(fidl.Message message) {
   return Uint8List.view(message.data.buffer, 0, message.data.lengthInBytes);
 }
 
-T _decode<T>(fidl.Decoder decoder, fidl.FidlType<T> type, Uint8List bytes,
-    List<Handle> handles) {
+T _decode<T, I extends Iterable<T>>(fidl.Decoder decoder,
+    fidl.FidlType<T, I> type, Uint8List bytes, List<Handle> handles) {
   decoder
     ..data = ByteData.view(bytes.buffer, 0, bytes.length)
     ..handles = handles
@@ -52,28 +53,28 @@ T _decode<T>(fidl.Decoder decoder, fidl.FidlType<T> type, Uint8List bytes,
 
 typedef FactoryFromHandles<T> = T Function(List<Handle> handleDefs);
 
-class EncodeSuccessCase<T> {
+class EncodeSuccessCase<T, I extends Iterable<T>> {
   EncodeSuccessCase(this.encoder, this.input, this.type, this.bytes,
       {this.handles = const []});
 
   final fidl.Encoder encoder;
   final T input;
-  final fidl.FidlType<T> type;
+  final fidl.FidlType<T, I> type;
   final Uint8List bytes;
   final List<Handle> handles;
 
-  static void run<T>(fidl.Encoder encoder, String name, T input,
-      fidl.FidlType<T> type, Uint8List bytes) {
+  static void run<T, I extends Iterable<T>>(fidl.Encoder encoder, String name,
+      T input, fidl.FidlType<T, I> type, Uint8List bytes) {
     group(name, () {
       EncodeSuccessCase(encoder, input, type, bytes)._checkEncode();
     });
   }
 
-  static void runWithHandles<T>(
+  static void runWithHandles<T, I extends Iterable<T>>(
       fidl.Encoder encoder,
       String name,
       FactoryFromHandles<T> inputFactory,
-      fidl.FidlType<T> type,
+      fidl.FidlType<T, I> type,
       Uint8List bytes,
       List<HandleSubtype> subtypes,
       List<int> handleOrder) {
@@ -99,28 +100,28 @@ class EncodeSuccessCase<T> {
   }
 }
 
-class DecodeSuccessCase<T> {
+class DecodeSuccessCase<T, I extends Iterable<T>> {
   DecodeSuccessCase(this.decoder, this.input, this.type, this.bytes,
       {this.handles = const []});
 
   final fidl.Decoder decoder;
   final T input;
-  final fidl.FidlType<T> type;
+  final fidl.FidlType<T, I> type;
   final Uint8List bytes;
   final List<Handle> handles;
 
-  static void run<T>(fidl.Decoder decoder, String name, T input,
-      fidl.FidlType<T> type, Uint8List bytes) {
+  static void run<T, I extends Iterable<T>>(fidl.Decoder decoder, String name,
+      T input, fidl.FidlType<T, I> type, Uint8List bytes) {
     group(name, () {
       DecodeSuccessCase(decoder, input, type, bytes)._checkDecode();
     });
   }
 
-  static void runWithHandles<T>(
+  static void runWithHandles<T, I extends Iterable<T>>(
       fidl.Decoder decoder,
       String name,
       FactoryFromHandles<T> inputFactory,
-      fidl.FidlType<T> type,
+      fidl.FidlType<T, I> type,
       Uint8List bytes,
       List<HandleSubtype> subtypes,
       List<int> handleOrder,
@@ -156,26 +157,30 @@ class DecodeSuccessCase<T> {
 
 typedef Factory<T> = T Function();
 
-class EncodeFailureCase<T> {
+class EncodeFailureCase<T, I extends Iterable<T>> {
   EncodeFailureCase(this.encoder, this.inputFactory, this.type, this.code);
 
   final fidl.Encoder encoder;
   final Factory<T> inputFactory;
-  final fidl.FidlType<T> type;
+  final fidl.FidlType<T, I> type;
   final fidl.FidlErrorCode code;
 
-  static void run<T>(fidl.Encoder encoder, String name, Factory<T> inputFactory,
-      fidl.FidlType<T> type, fidl.FidlErrorCode code) {
+  static void run<T, I extends Iterable<T>>(
+      fidl.Encoder encoder,
+      String name,
+      Factory<T> inputFactory,
+      fidl.FidlType<T, I> type,
+      fidl.FidlErrorCode code) {
     group(name, () {
       EncodeFailureCase(encoder, inputFactory, type, code)._checkEncodeFails();
     });
   }
 
-  static void runWithHandles<T>(
+  static void runWithHandles<T, I extends Iterable<T>>(
       fidl.Encoder encoder,
       String name,
       FactoryFromHandles<T> inputFactory,
-      fidl.FidlType<T> type,
+      fidl.FidlType<T, I> type,
       fidl.FidlErrorCode code,
       List<HandleSubtype> subtypes) {
     final handleDefs = createHandles(subtypes);
@@ -201,12 +206,12 @@ class EncodeFailureCase<T> {
   }
 }
 
-class DecodeFailureCase<T> {
+class DecodeFailureCase<T, I extends Iterable<T>> {
   DecodeFailureCase(
       this.decoder, this.type, this.bytes, this.code, this.handles);
 
   final fidl.Decoder decoder;
-  final fidl.FidlType<T> type;
+  final fidl.FidlType<T, I> type;
   final Uint8List bytes;
   final fidl.FidlErrorCode code;
   final List<Handle> handles;
@@ -216,8 +221,8 @@ class DecodeFailureCase<T> {
   // The two optional parameters can be merged into a single List<HandleSubtype> in the
   // desired order, but it is simpler to reorder here than having special handling
   // for decode failures in the GIDL backend.
-  static void run<T>(fidl.Decoder decoder, String name, fidl.FidlType<T> type,
-      Uint8List bytes, fidl.FidlErrorCode code,
+  static void run<T, I extends Iterable<T>>(fidl.Decoder decoder, String name,
+      fidl.FidlType<T, I> type, Uint8List bytes, fidl.FidlErrorCode code,
       [List<HandleSubtype> subtypes = const [],
       List<int> handleOrder = const []]) {
     final handles = _reorderList(createHandles(subtypes), handleOrder);

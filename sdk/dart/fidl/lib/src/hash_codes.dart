@@ -25,11 +25,11 @@ class _Jenkins {
 /// Combine the [Object.hashCode] values of an arbitrary number of objects from
 /// an [Iterable] into one value. This function will return the same value if
 /// given null as if given an empty list.
-int deepHash(Iterable<Object> arguments) {
+int deepHash(Iterable<dynamic>? arguments) {
   int result = 0;
   if (arguments != null) {
     for (Object argument in arguments) {
-      if (argument is Iterable) {
+      if (argument is Iterable<Object>) {
         argument = deepHash(argument);
       }
       result = _Jenkins.combine(result, argument);
@@ -40,10 +40,16 @@ int deepHash(Iterable<Object> arguments) {
 
 /// Deep equality helper function.
 bool deepEquals(dynamic a, dynamic b) {
+  if (a == null) {
+    return b == null;
+  }
+  if (b == null) {
+    return false;
+  }
   // iterable
-  if (a is Iterable) {
+  if (a is Iterable<Object>) {
     // ignore: avoid_bool_literals_in_conditional_expressions
-    return (b is Iterable) ? _deepEqualsOfIterable(a, b) : false;
+    return (b is Iterable<Object>) ? _deepEqualsOfIterable(a, b) : false;
   }
 
   // map

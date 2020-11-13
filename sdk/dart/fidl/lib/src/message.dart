@@ -67,10 +67,8 @@ class Message {
   }
 
   void closeHandles() {
-    if (handles != null) {
-      for (int i = 0; i < handles.length; ++i) {
-        handles[i].close();
-      }
+    for (int i = 0; i < handles.length; ++i) {
+      handles[i].close();
     }
   }
 

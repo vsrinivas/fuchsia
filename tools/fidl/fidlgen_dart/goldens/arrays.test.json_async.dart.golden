@@ -90,27 +90,23 @@ class UnionSmallArray extends $fidl.XUnion {
 
 // See fxbug.dev/7644:
 // ignore: recursive_compile_time_constant
-const $fidl.XUnionType<UnionSmallArray> kUnionSmallArray_Type =
-    $fidl.XUnionType<UnionSmallArray>(
+const $fidl.UnionType<UnionSmallArray> kUnionSmallArray_Type =
+    $fidl.UnionType<UnionSmallArray>(
   members: <int, $fidl.FidlType>{
-    1: $fidl.ArrayType<Uint32List>(
+    1: $fidl.ArrayType<int, Uint32List>(
         element: $fidl.Uint32Type(), elementCount: 2),
   },
   ctor: UnionSmallArray._ctor,
-  nullable: false,
-  flexible: false,
 );
 // See fxbug.dev/7644:
 // ignore: recursive_compile_time_constant
-const $fidl.XUnionType<UnionSmallArray> kUnionSmallArray_OptType =
-    $fidl.XUnionType<UnionSmallArray>(
+const $fidl.NullableUnionType<UnionSmallArray> kUnionSmallArray_OptType =
+    $fidl.NullableUnionType<UnionSmallArray>(
   members: <int, $fidl.FidlType>{
-    1: $fidl.ArrayType<Uint32List>(
+    1: $fidl.ArrayType<int, Uint32List>(
         element: $fidl.Uint32Type(), elementCount: 2),
   },
   ctor: UnionSmallArray._ctor,
-  nullable: true,
-  flexible: false,
 );
 
 enum UnionLargeArrayTag {
@@ -165,27 +161,23 @@ class UnionLargeArray extends $fidl.XUnion {
 
 // See fxbug.dev/7644:
 // ignore: recursive_compile_time_constant
-const $fidl.XUnionType<UnionLargeArray> kUnionLargeArray_Type =
-    $fidl.XUnionType<UnionLargeArray>(
+const $fidl.UnionType<UnionLargeArray> kUnionLargeArray_Type =
+    $fidl.UnionType<UnionLargeArray>(
   members: <int, $fidl.FidlType>{
-    1: $fidl.ArrayType<Uint32List>(
+    1: $fidl.ArrayType<int, Uint32List>(
         element: $fidl.Uint32Type(), elementCount: 100),
   },
   ctor: UnionLargeArray._ctor,
-  nullable: false,
-  flexible: false,
 );
 // See fxbug.dev/7644:
 // ignore: recursive_compile_time_constant
-const $fidl.XUnionType<UnionLargeArray> kUnionLargeArray_OptType =
-    $fidl.XUnionType<UnionLargeArray>(
+const $fidl.NullableUnionType<UnionLargeArray> kUnionLargeArray_OptType =
+    $fidl.NullableUnionType<UnionLargeArray>(
   members: <int, $fidl.FidlType>{
-    1: $fidl.ArrayType<Uint32List>(
+    1: $fidl.ArrayType<int, Uint32List>(
         element: $fidl.Uint32Type(), elementCount: 100),
   },
   ctor: UnionLargeArray._ctor,
-  nullable: true,
-  flexible: false,
 );
 
 class StructSmallArray extends $fidl.Struct {
@@ -208,8 +200,8 @@ class StructSmallArray extends $fidl.Struct {
     ];
   }
 
-  static const $fieldType0 =
-      $fidl.ArrayType<Uint32List>(element: $fidl.Uint32Type(), elementCount: 2);
+  static const $fieldType0 = $fidl.ArrayType<int, Uint32List>(
+      element: $fidl.Uint32Type(), elementCount: 2);
 
   @override
   void $encode($fidl.Encoder $encoder, int $offset) {
@@ -254,7 +246,7 @@ class StructLargeArray extends $fidl.Struct {
     ];
   }
 
-  static const $fieldType0 = $fidl.ArrayType<Uint32List>(
+  static const $fieldType0 = $fidl.ArrayType<int, Uint32List>(
       element: $fidl.Uint32Type(), elementCount: 100);
 
   @override
@@ -319,7 +311,8 @@ const $fidl.TableType<TableSmallArray> kTableSmallArray_Type =
     $fidl.TableType<TableSmallArray>(
   inlineSize: 16,
   members: [
-    $fidl.ArrayType<Uint32List>(element: $fidl.Uint32Type(), elementCount: 2),
+    $fidl.ArrayType<int, Uint32List>(
+        element: $fidl.Uint32Type(), elementCount: 2),
   ],
   ctor: TableSmallArray._ctor,
 );
@@ -363,7 +356,8 @@ const $fidl.TableType<TableLargeArray> kTableLargeArray_Type =
     $fidl.TableType<TableLargeArray>(
   inlineSize: 16,
   members: [
-    $fidl.ArrayType<Uint32List>(element: $fidl.Uint32Type(), elementCount: 100),
+    $fidl.ArrayType<int, Uint32List>(
+        element: $fidl.Uint32Type(), elementCount: 100),
   ],
   ctor: TableLargeArray._ctor,
 );

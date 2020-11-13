@@ -204,25 +204,21 @@ class ExampleUnion extends $fidl.XUnion {
 
 // See fxbug.dev/7644:
 // ignore: recursive_compile_time_constant
-const $fidl.XUnionType<ExampleUnion> kExampleUnion_Type =
-    $fidl.XUnionType<ExampleUnion>(
+const $fidl.UnionType<ExampleUnion> kExampleUnion_Type =
+    $fidl.UnionType<ExampleUnion>(
   members: <int, $fidl.FidlType>{
     1: $fidl.Uint32Type(),
   },
   ctor: ExampleUnion._ctor,
-  nullable: false,
-  flexible: false,
 );
 // See fxbug.dev/7644:
 // ignore: recursive_compile_time_constant
-const $fidl.XUnionType<ExampleUnion> kExampleUnion_OptType =
-    $fidl.XUnionType<ExampleUnion>(
+const $fidl.NullableUnionType<ExampleUnion> kExampleUnion_OptType =
+    $fidl.NullableUnionType<ExampleUnion>(
   members: <int, $fidl.FidlType>{
     1: $fidl.Uint32Type(),
   },
   ctor: ExampleUnion._ctor,
-  nullable: true,
-  flexible: false,
 );
 
 enum ExampleXUnionTag {
@@ -283,25 +279,21 @@ class ExampleXUnion extends $fidl.XUnion {
 
 // See fxbug.dev/7644:
 // ignore: recursive_compile_time_constant
-const $fidl.XUnionType<ExampleXUnion> kExampleXUnion_Type =
-    $fidl.XUnionType<ExampleXUnion>(
+const $fidl.UnionType<ExampleXUnion> kExampleXUnion_Type =
+    $fidl.UnionType<ExampleXUnion>.flexible(
   members: <int, $fidl.FidlType>{
     1: $fidl.Uint32Type(),
   },
   ctor: ExampleXUnion._ctor,
-  nullable: false,
-  flexible: true,
 );
 // See fxbug.dev/7644:
 // ignore: recursive_compile_time_constant
-const $fidl.XUnionType<ExampleXUnion> kExampleXUnion_OptType =
-    $fidl.XUnionType<ExampleXUnion>(
+const $fidl.NullableUnionType<ExampleXUnion> kExampleXUnion_OptType =
+    $fidl.NullableUnionType<ExampleXUnion>.flexible(
   members: <int, $fidl.FidlType>{
     1: $fidl.Uint32Type(),
   },
   ctor: ExampleXUnion._ctor,
-  nullable: true,
-  flexible: true,
 );
 
 class ExampleStruct extends $fidl.Struct {
