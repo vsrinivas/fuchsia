@@ -40,7 +40,7 @@ pub trait TestHarness: Sized {
 }
 
 /// We can run any test which is an async function from some harness `H` to a result
-async fn run_with_harness<H, F, Fut>(test_func: F) -> Result<(), Error>
+pub async fn run_with_harness<H, F, Fut>(test_func: F) -> Result<(), Error>
 where
     H: TestHarness,
     F: FnOnce(H) -> Fut + Send + 'static,
@@ -201,4 +201,18 @@ generate_tuples! {
   (A, B, C, D),
   (A, B, C, D, E),
   (A, B, C, D, E, F),
+}
+
+// import the macro from the macro crate
+pub use test_harness_macro::run_singlethreaded_test;
+
+// Re-export from fuchsia_async to provide an unambiguous direct include from test_harness_macro
+/// Runs a test in an executor, potentially repeatedly and concurrently
+pub fn run_singlethreaded_test<F, Fut, R>(test: F) -> R
+where
+    F: 'static + Send + Sync + Fn(usize) -> Fut,
+    Fut: 'static + Future<Output = R>,
+    R: fasync::test_support::TestResult,
+{
+    fasync::test_support::run_singlethreaded_test(test)
 }

@@ -1,0 +1,5 @@
+{
+    "program": {
+        "binary": "bin/test_harness_crate_tests"
+    }
+}
