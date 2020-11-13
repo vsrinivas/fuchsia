@@ -6,6 +6,7 @@ use {
     crate::{
         constants::FORMATTED_CONTENT_CHUNK_SIZE_TARGET,
         diagnostics::{self, ArchiveAccessorStats, DiagnosticsServerStats},
+        error::AccessorError,
         formatter::{new_batcher, FormattedStream, JsonPacketSerializer, JsonString},
         inspect,
         lifecycle::LifecycleServer,
@@ -14,21 +15,19 @@ use {
     anyhow::format_err,
     diagnostics_data::{Data, DiagnosticsData},
     fidl_fuchsia_diagnostics::{
-        self, ArchiveAccessorRequest, ArchiveAccessorRequestStream, BatchIteratorControlHandle,
-        BatchIteratorRequest, BatchIteratorRequestStream, ClientSelectorConfiguration, DataType,
-        Format, Selector, SelectorArgument, StreamMode,
+        self, ArchiveAccessorRequest, ArchiveAccessorRequestStream, BatchIteratorRequest,
+        BatchIteratorRequestStream, ClientSelectorConfiguration, DataType, Format, Selector,
+        SelectorArgument, StreamMode,
     },
     fuchsia_async::{self as fasync, Task},
     fuchsia_inspect::NumericProperty,
     fuchsia_zircon as zx,
-    fuchsia_zircon_status::Status as ZxStatus,
     futures::prelude::*,
     log::warn,
     parking_lot::RwLock,
     selectors,
     serde::Serialize,
     std::sync::Arc,
-    thiserror::Error,
 };
 
 /// ArchiveAccessor represents an incoming connection from a client to an Archivist
@@ -43,10 +42,10 @@ pub struct ArchiveAccessor {
 
 fn validate_and_parse_inspect_selectors(
     selector_args: Vec<SelectorArgument>,
-) -> Result<Vec<Selector>, ServerError> {
+) -> Result<Vec<Selector>, AccessorError> {
     let mut selectors = vec![];
     if selector_args.is_empty() {
-        Err(ServerError::EmptySelectors)?;
+        Err(AccessorError::EmptySelectors)?;
     }
 
     for selector_arg in selector_args {
@@ -55,7 +54,7 @@ fn validate_and_parse_inspect_selectors(
             SelectorArgument::RawSelector(r) => selectors::parse_selector(&r),
             _ => Err(format_err!("unrecognized selector configuration")),
         }
-        .map_err(ServerError::ParseSelectors)?;
+        .map_err(AccessorError::ParseSelectors)?;
 
         selectors.push(selector);
     }
@@ -79,28 +78,28 @@ impl ArchiveAccessor {
         requests: BatchIteratorRequestStream,
         params: fidl_fuchsia_diagnostics::StreamParameters,
         accessor_stats: Arc<ArchiveAccessorStats>,
-    ) -> Result<(), ServerError> {
-        let format = params.format.ok_or(ServerError::MissingFormat)?;
+    ) -> Result<(), AccessorError> {
+        let format = params.format.ok_or(AccessorError::MissingFormat)?;
         if !matches!(format, Format::Json) {
-            return Err(ServerError::UnsupportedFormat);
+            return Err(AccessorError::UnsupportedFormat);
         }
-        let mode = params.stream_mode.ok_or(ServerError::MissingMode)?;
+        let mode = params.stream_mode.ok_or(AccessorError::MissingMode)?;
 
-        match params.data_type.ok_or(ServerError::MissingDataType)? {
+        match params.data_type.ok_or(AccessorError::MissingDataType)? {
             DataType::Inspect => {
                 if !matches!(mode, StreamMode::Snapshot) {
-                    return Err(ServerError::UnsupportedMode);
+                    return Err(AccessorError::UnsupportedMode);
                 }
                 let stats = Arc::new(DiagnosticsServerStats::for_inspect(accessor_stats));
 
                 let selectors =
-                    params.client_selector_configuration.ok_or(ServerError::MissingSelectors)?;
+                    params.client_selector_configuration.ok_or(AccessorError::MissingSelectors)?;
                 let selectors = match selectors {
                     ClientSelectorConfiguration::Selectors(selectors) => {
                         Some(validate_and_parse_inspect_selectors(selectors)?)
                     }
                     ClientSelectorConfiguration::SelectAll(_) => None,
-                    _ => Err(ServerError::InvalidSelectors("unrecognized selectors"))?,
+                    _ => Err(AccessorError::InvalidSelectors("unrecognized selectors"))?,
                 };
 
                 BatchIterator::new(
@@ -120,14 +119,14 @@ impl ArchiveAccessor {
             DataType::Lifecycle => {
                 // TODO(fxbug.dev/61350) support other modes
                 if !matches!(mode, StreamMode::Snapshot) {
-                    return Err(ServerError::UnsupportedMode);
+                    return Err(AccessorError::UnsupportedMode);
                 }
                 let stats = Arc::new(DiagnosticsServerStats::for_lifecycle(accessor_stats));
 
                 let selectors =
-                    params.client_selector_configuration.ok_or(ServerError::MissingSelectors)?;
+                    params.client_selector_configuration.ok_or(AccessorError::MissingSelectors)?;
                 if !matches!(selectors, ClientSelectorConfiguration::SelectAll(_)) {
-                    Err(ServerError::InvalidSelectors(
+                    Err(AccessorError::InvalidSelectors(
                         "lifecycle only supports SelectAll at the moment",
                     ))?;
                 }
@@ -199,7 +198,7 @@ impl BatchIterator {
         requests: BatchIteratorRequestStream,
         mode: StreamMode,
         stats: Arc<DiagnosticsServerStats>,
-    ) -> Result<Self, ServerError>
+    ) -> Result<Self, AccessorError>
     where
         Items: Stream<Item = Data<D>> + Send + 'static,
         D: DiagnosticsData,
@@ -225,7 +224,7 @@ impl BatchIterator {
         requests: BatchIteratorRequestStream,
         mode: StreamMode,
         stats: Arc<DiagnosticsServerStats>,
-    ) -> Result<Self, ServerError>
+    ) -> Result<Self, AccessorError>
     where
         D: Serialize,
         S: Stream<Item = D> + Send + Unpin + 'static,
@@ -239,12 +238,12 @@ impl BatchIterator {
         data: FormattedStream,
         requests: BatchIteratorRequestStream,
         stats: Arc<DiagnosticsServerStats>,
-    ) -> Result<Self, ServerError> {
+    ) -> Result<Self, AccessorError> {
         stats.open_connection();
         Ok(Self { data, requests, stats })
     }
 
-    pub async fn run(mut self) -> Result<(), ServerError> {
+    pub async fn run(mut self) -> Result<(), AccessorError> {
         while let Some(res) = self.requests.next().await {
             let BatchIteratorRequest::GetNext { responder } = res?;
             self.stats.add_request();
@@ -271,72 +270,5 @@ impl BatchIterator {
 impl Drop for BatchIterator {
     fn drop(&mut self) {
         self.stats.close_connection();
-    }
-}
-
-#[derive(Debug, Error)]
-pub enum ServerError {
-    #[error("data_type must be set")]
-    MissingDataType,
-
-    #[error("client_selector_configuration must be set")]
-    MissingSelectors,
-
-    #[error("no selectors were provided")]
-    EmptySelectors,
-
-    #[error("requested selectors are unsupported: {}", .0)]
-    InvalidSelectors(&'static str),
-
-    #[error("couldn't parse/validate the provided selectors")]
-    ParseSelectors(#[source] anyhow::Error),
-
-    #[error("format must be set")]
-    MissingFormat,
-
-    #[error("only JSON supported right now")]
-    UnsupportedFormat,
-
-    #[error("stream_mode must be set")]
-    MissingMode,
-
-    #[error("only snapshot supported right now")]
-    UnsupportedMode,
-
-    #[error("IPC failure")]
-    Ipc {
-        #[from]
-        source: fidl::Error,
-    },
-
-    #[error("Unable to create a VMO -- extremely unusual!")]
-    VmoCreate(#[source] ZxStatus),
-
-    #[error("Unable to write to VMO -- we may be OOMing")]
-    VmoWrite(#[source] ZxStatus),
-
-    #[error("JSON serialization failure: {}", source)]
-    Serialization {
-        #[from]
-        source: serde_json::Error,
-    },
-}
-
-impl ServerError {
-    pub fn close(self, control: BatchIteratorControlHandle) {
-        warn!("Closing BatchIterator: {}", &self);
-        let epitaph = match self {
-            ServerError::MissingDataType => ZxStatus::INVALID_ARGS,
-            ServerError::EmptySelectors
-            | ServerError::MissingSelectors
-            | ServerError::InvalidSelectors(_)
-            | ServerError::ParseSelectors(_) => ZxStatus::INVALID_ARGS,
-            ServerError::VmoCreate(status) | ServerError::VmoWrite(status) => status,
-            ServerError::MissingFormat | ServerError::MissingMode => ZxStatus::INVALID_ARGS,
-            ServerError::UnsupportedFormat | ServerError::UnsupportedMode => ZxStatus::WRONG_TYPE,
-            ServerError::Serialization { .. } => ZxStatus::BAD_STATE,
-            ServerError::Ipc { .. } => ZxStatus::IO,
-        };
-        control.shutdown_with_epitaph(epitaph);
     }
 }

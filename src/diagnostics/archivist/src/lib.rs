@@ -10,6 +10,7 @@ pub mod constants;
 pub mod container;
 pub mod data_stats;
 pub mod diagnostics;
+pub mod error;
 pub mod events;
 pub mod formatter;
 pub mod inspect;

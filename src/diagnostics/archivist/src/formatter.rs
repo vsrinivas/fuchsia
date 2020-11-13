@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 use {
-    crate::{accessor::ServerError, diagnostics::DiagnosticsServerStats},
+    crate::{diagnostics::DiagnosticsServerStats, error::AccessorError},
     fidl_fuchsia_diagnostics::{FormattedContent, StreamMode, MAXIMUM_ENTRIES_PER_BATCH},
     fuchsia_zircon as zx,
     futures::prelude::*,
@@ -18,7 +18,7 @@ use {
 };
 
 pub type FormattedStream =
-    Pin<Box<dyn Stream<Item = Vec<Result<FormattedContent, ServerError>>> + Send>>;
+    Pin<Box<dyn Stream<Item = Vec<Result<FormattedContent, AccessorError>>> + Send>>;
 
 #[pin_project::pin_project]
 pub struct FormattedContentBatcher<C> {
@@ -41,8 +41,8 @@ pub fn new_batcher<I, T, E>(
 ) -> FormattedStream
 where
     I: Stream<Item = Result<T, E>> + Send + 'static,
-    T: TryInto<FormattedContent, Error = ServerError> + Send,
-    E: Into<ServerError> + Send,
+    T: TryInto<FormattedContent, Error = AccessorError> + Send,
+    E: Into<AccessorError> + Send,
 {
     match mode {
         StreamMode::Subscribe | StreamMode::SnapshotThenSubscribe => {
@@ -61,10 +61,10 @@ where
 impl<I, T, E> Stream for FormattedContentBatcher<I>
 where
     I: Stream<Item = Vec<Result<T, E>>>,
-    T: TryInto<FormattedContent, Error = ServerError>,
-    E: Into<ServerError>,
+    T: TryInto<FormattedContent, Error = AccessorError>,
+    E: Into<AccessorError>,
 {
-    type Item = Vec<Result<FormattedContent, ServerError>>;
+    type Item = Vec<Result<FormattedContent, AccessorError>>;
 
     fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         let this = self.project();
@@ -100,12 +100,12 @@ impl JsonString {
 }
 
 impl TryInto<FormattedContent> for JsonString {
-    type Error = ServerError;
+    type Error = AccessorError;
 
     fn try_into(self) -> Result<FormattedContent, Self::Error> {
         let size = self.len() as u64;
-        let vmo = zx::Vmo::create(size).map_err(ServerError::VmoCreate)?;
-        vmo.write(self.as_bytes(), 0).map_err(ServerError::VmoWrite)?;
+        let vmo = zx::Vmo::create(size).map_err(AccessorError::VmoCreate)?;
+        vmo.write(self.as_bytes(), 0).map_err(AccessorError::VmoWrite)?;
         Ok(FormattedContent::Json(fidl_fuchsia_mem::Buffer { vmo, size }))
     }
 }
