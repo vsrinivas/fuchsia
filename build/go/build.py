@@ -201,21 +201,23 @@ def main():
 
     cflags = []
     if args.sysroot:
-        cflags.append('--sysroot=' + args.sysroot)
+        cflags.extend(['--sysroot', args.sysroot])
     if args.target:
-        cflags.append('--target=' + args.target)
+        cflags.extend(['-target', args.target])
 
     ldflags = cflags[:]
     if args.current_os == 'linux':
         ldflags.extend(
             [
-                '-rtlib=compiler-rt',
                 '-stdlib=libc++',
-                '-unwindlib=',
+                # TODO(fxbug.dev/64336): the following flags are not recognized by CGo.
+                # '-rtlib=compiler-rt',
+                # '-unwindlib=',
             ])
 
-    cflags += ['-isystem' + dir for dir in args.include_dir]
-    ldflags += ['-L' + dir for dir in args.lib_dir]
+    for dir in args.include_dir:
+        cflags.extend(['-isystem', dir])
+    ldflags.extend(['-L' + dir for dir in args.lib_dir])
 
     cflags_joined = ' '.join(cflags)
     ldflags_joined = ' '.join(ldflags)
