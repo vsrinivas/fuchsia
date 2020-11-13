@@ -333,6 +333,15 @@ class TestThread {
 
   State state() const { return state_.load(); }
 
+  thread_state tstate() const {
+    if (thread_ == nullptr) {
+      return thread_state::THREAD_DEATH;
+    }
+
+    Guard<SpinLock, IrqSave> guard{ThreadLock::Get()};
+    return thread_->state();
+  }
+
   template <Condition condition>
   bool WaitFor();
 
@@ -504,11 +513,7 @@ bool TestThread::WaitFor() {
 
   while (true) {
     if constexpr (condition == Condition::BLOCKED) {
-      thread_state cur_state;
-      {
-        Guard<SpinLock, IrqSave> guard{ThreadLock::Get()};
-        cur_state = thread_->state();
-      }
+      thread_state cur_state = tstate();
 
       if (cur_state == THREAD_BLOCKED) {
         break;
@@ -546,6 +551,7 @@ bool pi_test_basic() {
   enum class ReleaseMethod { WAKE = 0, TIMEOUT, KILL };
 
   AutoPrioBooster pboost;
+  constexpr zx_duration_t TIMEOUT_RELEASE_DURATION = ZX_MSEC(200);
   constexpr int END_PRIO = TEST_DEFAULT_PRIORITY;
   constexpr int PRIO_DELTAS[] = {-1, 0, 1};
   constexpr ReleaseMethod REL_METHODS[] = {ReleaseMethod::WAKE, ReleaseMethod::TIMEOUT,
@@ -556,65 +562,89 @@ bool pi_test_basic() {
       PRINT_LOOP_ITER(prio_delta);
       PRINT_LOOP_ITER(rel_method);
 
-      LockedOwnedWaitQueue owq;
-      TestThread pressure_thread;
-      TestThread blocking_thread;
+      bool retry_test;
+      do {
+        retry_test = false;
 
-      auto cleanup = fbl::MakeAutoCall([&]() {
-        TestThread::ClearShutdownBarrier();
-        owq.ReleaseAllThreads();
-        pressure_thread.Reset();
-        blocking_thread.Reset();
-      });
+        LockedOwnedWaitQueue owq;
+        TestThread pressure_thread;
+        TestThread blocking_thread;
 
-      int pressure_prio = END_PRIO + prio_delta;
-      int expected_prio = (prio_delta > 0) ? pressure_prio : END_PRIO;
-
-      // Make sure that our default barriers have been reset to their proper
-      // initial states.
-      TestThread::ResetShutdownBarrier();
-
-      // Create 2 threads, one which will sit at the end of the priority
-      // chain, and one which will exert priority pressure on the end of the
-      // chain.
-      ASSERT_TRUE(blocking_thread.Create(END_PRIO));
-      ASSERT_TRUE(pressure_thread.Create(pressure_prio));
-
-      // Start the first thread, wait for it to block, and verify that it's
-      // priority is correct (it should not be changed).
-      ASSERT_TRUE(blocking_thread.DoStall());
-      ASSERT_EQ(TEST_DEFAULT_PRIORITY, blocking_thread.effective_priority());
-
-      // Start the second thread, and have it block on the owned wait queue,
-      // and declare the blocking thread to be the owner of the queue at the
-      // same time.  Then check to be sure that the effective priority of the
-      // blocking thread matches what we expect to see.
-      Deadline timeout = (rel_method == ReleaseMethod::TIMEOUT) ? Deadline::after(ZX_MSEC(20))
-                                                                : Deadline::infinite();
-      ASSERT_TRUE(pressure_thread.BlockOnOwnedQueue(&owq, &blocking_thread, timeout));
-      ASSERT_EQ(expected_prio, blocking_thread.effective_priority());
-
-      // Finally, release the thread from the owned wait queue based on
-      // the release method we are testing.  We will either explicitly
-      // wake it up, let it time out, or kill the thread outright.
-      //
-      // Then, verify that the priority drops back down to what we
-      // expected.
-      switch (rel_method) {
-        case ReleaseMethod::WAKE:
+        auto cleanup = fbl::MakeAutoCall([&]() {
+          TestThread::ClearShutdownBarrier();
           owq.ReleaseAllThreads();
-          break;
+          pressure_thread.Reset();
+          blocking_thread.Reset();
+        });
 
-        case ReleaseMethod::TIMEOUT:
-          // Wait until the pressure thread times out and has exited.
-          ASSERT_TRUE(pressure_thread.WaitFor<TestThread::Condition::WAITING_FOR_SHUTDOWN>());
-          break;
+        int pressure_prio = END_PRIO + prio_delta;
+        int expected_prio = (prio_delta > 0) ? pressure_prio : END_PRIO;
 
-        case ReleaseMethod::KILL:
-          pressure_thread.Reset(true);
-          break;
-      }
-      ASSERT_EQ(TEST_DEFAULT_PRIORITY, blocking_thread.effective_priority());
+        // Make sure that our default barriers have been reset to their proper
+        // initial states.
+        TestThread::ResetShutdownBarrier();
+
+        // Create 2 threads, one which will sit at the end of the priority
+        // chain, and one which will exert priority pressure on the end of the
+        // chain.
+        ASSERT_TRUE(blocking_thread.Create(END_PRIO));
+        ASSERT_TRUE(pressure_thread.Create(pressure_prio));
+
+        // Start the first thread, wait for it to block, and verify that it's
+        // priority is correct (it should not be changed).
+        ASSERT_TRUE(blocking_thread.DoStall());
+        ASSERT_EQ(TEST_DEFAULT_PRIORITY, blocking_thread.effective_priority());
+
+        // Start the second thread, and have it block on the owned wait queue,
+        // and declare the blocking thread to be the owner of the queue at the
+        // same time.  Then check to be sure that the effective priority of the
+        // blocking thread matches what we expect to see.
+        Deadline timeout = (rel_method == ReleaseMethod::TIMEOUT)
+                               ? Deadline::after(TIMEOUT_RELEASE_DURATION)
+                               : Deadline::infinite();
+        ASSERT_TRUE(pressure_thread.BlockOnOwnedQueue(&owq, &blocking_thread, timeout));
+
+        // Observe the effective priority of the blocking thread, then observe
+        // the state of the thread applying pressure.  If this is the TIMEOUT
+        // test, the thread *must* still be blocked on |owq| (not timed out yet)
+        // in order for the test to be considered valid.  If the thread managed
+        // to unblock before we could observe its effective priority, just try
+        // again.
+        int observed_priority = blocking_thread.effective_priority();
+        if (rel_method == ReleaseMethod::TIMEOUT) {
+          retry_test = (pressure_thread.tstate() != thread_state::THREAD_BLOCKED) ||
+                       (pressure_thread.state() == TestThread::State::WAITING_FOR_SHUTDOWN);
+        }
+
+        // Only assert this if we managed to observe the blocked thread's
+        // effective priority while the pressure thread was still applying
+        // pressure.
+        if (!retry_test) {
+          ASSERT_EQ(expected_prio, observed_priority);
+        }
+
+        // Finally, release the thread from the owned wait queue based on
+        // the release method we are testing.  We will either explicitly
+        // wake it up, let it time out, or kill the thread outright.
+        //
+        // Then, verify that the priority drops back down to what we
+        // expected.
+        switch (rel_method) {
+          case ReleaseMethod::WAKE:
+            owq.ReleaseAllThreads();
+            break;
+
+          case ReleaseMethod::TIMEOUT:
+            // Wait until the pressure thread times out and has exited.
+            ASSERT_TRUE(pressure_thread.WaitFor<TestThread::Condition::WAITING_FOR_SHUTDOWN>());
+            break;
+
+          case ReleaseMethod::KILL:
+            pressure_thread.Reset(true);
+            break;
+        }
+        ASSERT_EQ(TEST_DEFAULT_PRIORITY, blocking_thread.effective_priority());
+      } while (retry_test);
 
       print_prio_delta.cancel();
       print_rel_method.cancel();
