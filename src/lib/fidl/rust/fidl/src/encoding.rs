@@ -3281,7 +3281,7 @@ macro_rules! fidl_xunion {
 
             #[inline]
             unsafe fn unsafe_decode(&mut self, decoder: &mut $crate::encoding::Decoder<'_>, offset: usize) -> $crate::Result<()> {
-                #![allow(irrefutable_let_patterns, unused)]
+                #[allow(unused_variables)]
                 let (ordinal, num_bytes, num_handles) = $crate::encoding::unsafe_decode_xunion_inline_portion(decoder, offset)?;
                 let member_inline_size = match ordinal {
                     $(
@@ -3315,6 +3315,7 @@ macro_rules! fidl_xunion {
                         }
                     )?
                     // Strict xunion: reject unknown ordinals.
+                    #[allow(unreachable_patterns)]
                     _ => {
                         for _ in 0..num_handles {
                             decoder.drop_next_handle()?;
@@ -3331,6 +3332,7 @@ macro_rules! fidl_xunion {
                                         decoder.set_next_handle_subtype($member_handle_subtype);
                                         decoder.set_next_handle_rights($member_handle_rights);
                                     )?
+                                    #[allow(irrefutable_let_patterns)]
                                     if let $name::$member_name(_) = self {
                                         // Do nothing, read the value into the object
                                     } else {
@@ -3339,6 +3341,7 @@ macro_rules! fidl_xunion {
                                             $crate::fidl_new_empty!($member_ty)
                                         );
                                     }
+                                    #[allow(irrefutable_let_patterns)]
                                     if let $name::$member_name(val) = self {
                                         $crate::fidl_decode!(val, decoder, offset)?;
                                     } else {
@@ -3367,6 +3370,7 @@ macro_rules! fidl_xunion {
                             // This should be unreachable, since we already
                             // checked for unknown ordinals above and returned
                             // an error in the strict case.
+                            #[allow(unreachable_patterns)]
                             ordinal => panic!("unexpected ordinal {:?}", ordinal)
                         }
                         Ok(())
@@ -4688,7 +4692,6 @@ mod test {
         ],
     }
 
-    #[allow(unused)]
     struct EmptyTableCompiles {
         #[deprecated = "Do not use __non_exhaustive"]
         pub __non_exhaustive: (),
