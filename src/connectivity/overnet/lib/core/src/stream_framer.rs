@@ -17,8 +17,6 @@ use std::sync::Arc;
 use std::task::{Context, Poll, Waker};
 use std::time::Duration;
 
-use crate::router::generate_node_id;
-
 /// Describes a framing format.
 pub trait Format: Send + Sync + 'static {
     /// Write a frame of `frame_type` with payload `bytes` into `outgoing`.
@@ -86,7 +84,6 @@ struct Framer<Fmt: Format> {
     fmt: Fmt,
     max_queued: usize,
     outgoing: Mutex<Outgoing>,
-    id: u64,
 }
 
 struct BVec(Vec<u8>);
@@ -148,7 +145,6 @@ pub fn new_framer<Fmt: Format>(
             waiting_read: None,
             waiting_write: None,
         }),
-        id: generate_node_id().0,
     });
     (FramerWriter { framer: framer.clone() }, FramerReader { framer })
 }
@@ -162,7 +158,6 @@ impl<Fmt: Format> FramerWriter<Fmt> {
         lock: &mut PollMutex<'_, Outgoing>,
     ) -> Poll<Result<(), Error>> {
         let mut outgoing = ready!(lock.poll(ctx));
-        log::trace!("{} poll_write: {:?}", self.framer.id, outgoing);
         match std::mem::replace(&mut *outgoing, Outgoing::Closed) {
             Outgoing::Closed => Poll::Ready(Err(format_err!("Closed Framer"))),
             Outgoing::Open { buffer: BVec(mut buffer), mut waiting_read, waiting_write: _ } => {
@@ -209,7 +204,6 @@ impl<Fmt: Format> FramerReader<Fmt> {
         lock: &mut PollMutex<'_, Outgoing>,
     ) -> Poll<Result<Vec<u8>, Error>> {
         let mut outgoing = ready!(lock.poll(ctx));
-        log::trace!("{} poll_read: {:?}", self.framer.id, outgoing);
         match std::mem::replace(&mut *outgoing, Outgoing::Closed) {
             Outgoing::Closed => Poll::Ready(Err(format_err!("Closed Framer"))),
             Outgoing::Open { buffer: BVec(buffer), mut waiting_write, waiting_read: _ } => {
@@ -254,7 +248,6 @@ impl<Fmt: Format> Drop for FramerReader<Fmt> {
 struct Deframer<Fmt: Format> {
     fmt: Fmt,
     incoming: Mutex<Incoming>,
-    id: u64,
 }
 
 #[derive(Debug)]
@@ -312,7 +305,6 @@ pub fn new_deframer<Fmt: Format>(fmt: Fmt) -> (DeframerWriter<Fmt>, DeframerRead
             timeout: fmt.deframe_timeout(false).map(Timer::new),
         }),
         fmt,
-        id: generate_node_id().0,
     });
     (DeframerWriter { deframer: deframer.clone() }, DeframerReader { deframer })
 }
@@ -323,13 +315,6 @@ fn deframe_step<Fmt: Format>(
     fmt: &Fmt,
 ) -> Result<Incoming, Error> {
     let Deframed { frame, unframed_bytes, new_start_pos } = fmt.deframe(&unparsed)?;
-    log::trace!(
-        "unparsed:{:?} frame:{:?} unframed_bytes:{:?} new_start_pos:{:?}",
-        unparsed,
-        frame,
-        unframed_bytes,
-        new_start_pos
-    );
     assert!(unframed_bytes <= new_start_pos);
     let mut unframed = None;
     if unframed_bytes != 0 {
@@ -369,7 +354,6 @@ impl<Fmt: Format> DeframerWriter<Fmt> {
         lock: &mut PollMutex<'_, Incoming>,
     ) -> Poll<Result<(), Error>> {
         let mut incoming = ready!(lock.poll(ctx));
-        log::trace!("{} poll_write: {:?} bytes={:?}", self.deframer.id, incoming, bytes);
         match std::mem::replace(&mut *incoming, Incoming::Closed) {
             Incoming::Closed => Poll::Ready(Err(format_err!("Deframer closed during write"))),
             Incoming::Parsing { unparsed: BVec(mut unparsed), waiting_read, timeout: _ } => {
@@ -418,7 +402,6 @@ impl<Fmt: Format> DeframerReader<Fmt> {
     ) -> Poll<Result<(Option<FrameType>, Vec<u8>), Error>> {
         let mut incoming = ready!(lock.poll(ctx));
         loop {
-            log::trace!("{} poll_read: {:?}", self.deframer.id, incoming);
             break match std::mem::replace(&mut *incoming, Incoming::Closed) {
                 Incoming::Closed => Poll::Ready(Err(format_err!("Deframer closed during read"))),
                 Incoming::Queuing {
@@ -475,7 +458,6 @@ impl<Fmt: Format> DeframerReader<Fmt> {
                     Poll::Ready(()) => {
                         let mut unframed = unparsed.split_off(1);
                         std::mem::swap(&mut unframed, &mut unparsed);
-                        log::trace!("timeout - drop byte {:?} rest {:?}", unframed, unparsed);
                         waiting_read.map(|w| w.wake());
                         *incoming = Incoming::Queuing {
                             unframed: Some(BVec(unframed)),
@@ -626,7 +608,6 @@ impl Format for LosslessBinary {
     }
 
     fn deframe(&self, bytes: &[u8]) -> Result<Deframed, Error> {
-        log::trace!("DEFRAME: buffer_len={}", bytes.len());
         if bytes.len() <= 4 {
             return Ok(Deframed { frame: None, unframed_bytes: 0, new_start_pos: 0 });
         }
@@ -635,9 +616,7 @@ impl Format for LosslessBinary {
             255u8 => FrameType::OvernetHello,
             _ => return Err(format_err!("Bad frame type {:?}", bytes[0])),
         };
-        log::trace!("DEFRAME: frame_type={:?}", frame_type);
         let len = 1 + (u16::from_le_bytes([bytes[1], bytes[2]]) as usize);
-        log::trace!("DEFRAME: frame_len={}", len);
         if bytes.len() < 3 + len {
             // Not enough bytes to deframe: done for now.
             return Ok(Deframed { frame: None, unframed_bytes: 0, new_start_pos: 0 });

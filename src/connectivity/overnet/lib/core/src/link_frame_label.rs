@@ -25,12 +25,33 @@ pub struct LinkFrameLabel {
     pub ping: Option<u64>,
     /// Pong id (if a pong is being sent)
     pub pong: Option<Pong>,
+    /// What kind of frame is this?
+    pub frame_type: FrameType,
     /// Debug string
     pub debug_token: Option<u64>,
 }
 
+/// Designator for a control packet or not.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum FrameType {
+    /// Control message between links.
+    Control,
+    /// Peer layer message.
+    Message,
+}
+
+impl FrameType {
+    pub fn is_routable(&self) -> bool {
+        match self {
+            FrameType::Control => false,
+            FrameType::Message => true,
+        }
+    }
+}
+
 const LINK_FRAME_LABEL_HAS_SRC: u8 = 0x01;
 const LINK_FRAME_LABEL_HAS_DST: u8 = 0x02;
+const LINK_FRAME_LABEL_IS_CONTROL: u8 = 0x04;
 const LINK_FRAME_LABEL_HAS_PING: u8 = 0x10;
 const LINK_FRAME_LABEL_HAS_PONG: u8 = 0x20;
 const LINK_FRAME_LABEL_HAS_DEBUG_TOKEN: u8 = 0x80;
@@ -62,11 +83,13 @@ impl LinkFrameLabel {
         if link_src != self.target.src {
             control |= LINK_FRAME_LABEL_HAS_SRC;
             length += 8;
+            assert!(self.frame_type.is_routable());
             buf.write_u64::<byteorder::LittleEndian>(self.target.src.0)?;
         }
         if link_dst != self.target.dst {
             control |= LINK_FRAME_LABEL_HAS_DST;
             length += 8;
+            assert!(self.frame_type.is_routable());
             buf.write_u64::<byteorder::LittleEndian>(self.target.dst.0)?;
         }
         if let Some(id) = self.ping {
@@ -84,6 +107,10 @@ impl LinkFrameLabel {
             control |= LINK_FRAME_LABEL_HAS_DEBUG_TOKEN;
             length += 8;
             buf.write_u64::<byteorder::LittleEndian>(id)?;
+        }
+        match self.frame_type {
+            FrameType::Control => control |= LINK_FRAME_LABEL_IS_CONTROL,
+            FrameType::Message => (),
         }
         log::trace!("control={:x} link_src={:?} link_dst={:?}", control, link_src, link_dst);
         length += 1;
@@ -103,6 +130,11 @@ impl LinkFrameLabel {
         let mut r = ReverseReader(buf);
         let control = r.rd_u8()?;
         log::trace!("control={:x} link_src={:?} link_dst={:?}", control, link_src, link_dst);
+        if control & LINK_FRAME_LABEL_IS_CONTROL != 0 {
+            if control & (LINK_FRAME_LABEL_HAS_SRC | LINK_FRAME_LABEL_HAS_DST) != 0 {
+                anyhow::bail!("Control messages cannot specify src/dst");
+            }
+        }
         let h = LinkFrameLabel {
             debug_token: if (control & LINK_FRAME_LABEL_HAS_DEBUG_TOKEN) != 0 {
                 Some(r.rd_u64()?.into())
@@ -118,6 +150,11 @@ impl LinkFrameLabel {
                 Some(r.rd_u64()?.into())
             } else {
                 None
+            },
+            frame_type: if control & LINK_FRAME_LABEL_IS_CONTROL != 0 {
+                FrameType::Control
+            } else {
+                FrameType::Message
             },
             target: RoutingTarget {
                 dst: if (control & LINK_FRAME_LABEL_HAS_DST) != 0 {
@@ -195,6 +232,7 @@ mod test {
                 ping: Some(3),
                 pong: None,
                 debug_token: None,
+                frame_type: FrameType::Message,
             },
             1.into(),
             2.into(),
@@ -205,6 +243,7 @@ mod test {
                 ping: None,
                 pong: None,
                 debug_token: None,
+                frame_type: FrameType::Control,
             },
             1.into(),
             2.into(),
@@ -215,6 +254,7 @@ mod test {
                 ping: None,
                 pong: None,
                 debug_token: None,
+                frame_type: FrameType::Message,
             },
             1.into(),
             2.into(),
@@ -225,6 +265,7 @@ mod test {
                 ping: None,
                 pong: None,
                 debug_token: LinkFrameLabel::new_debug_token(),
+                frame_type: FrameType::Message,
             },
             1.into(),
             2.into(),
@@ -235,6 +276,7 @@ mod test {
                 ping: Some(1),
                 pong: None,
                 debug_token: LinkFrameLabel::new_debug_token(),
+                frame_type: FrameType::Message,
             },
             1.into(),
             2.into(),
@@ -245,6 +287,7 @@ mod test {
                 ping: None,
                 pong: Some(Pong { id: 1, queue_time: 999 }),
                 debug_token: LinkFrameLabel::new_debug_token(),
+                frame_type: FrameType::Message,
             },
             1.into(),
             2.into(),
@@ -255,6 +298,7 @@ mod test {
                 ping: Some(123),
                 pong: Some(Pong { id: 456, queue_time: 789 }),
                 debug_token: LinkFrameLabel::new_debug_token(),
+                frame_type: FrameType::Message,
             },
             3.into(),
             4.into(),
@@ -265,6 +309,7 @@ mod test {
                 ping: None,
                 pong: None,
                 debug_token: LinkFrameLabel::new_debug_token(),
+                frame_type: FrameType::Message,
             },
             3.into(),
             4.into(),

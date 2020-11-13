@@ -41,7 +41,7 @@ impl<T> AcquisitionPredicate<T> for AlwaysTrue {
     }
 }
 
-struct AcquisitionPredicateDebug<'a, T>(&'a dyn AcquisitionPredicate<T>);
+pub(crate) struct AcquisitionPredicateDebug<'a, T>(pub(crate) &'a dyn AcquisitionPredicate<T>);
 impl<'a, T> std::fmt::Debug for AcquisitionPredicateDebug<'a, T> {
     fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         self.0.debug(fmt)
@@ -81,10 +81,21 @@ struct CutexState {
 impl std::fmt::Debug for CutexState {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let state = self.state.load(Ordering::Relaxed);
+        #[derive(Debug)]
+        enum GrantState {
+            Nobody,
+            WaitKey(usize),
+        }
         f.debug_struct("CutexState")
             .field("is_locked", &(state & IS_LOCKED != 0))
             .field("has_waiters", &(state & HAS_WAITERS != 0))
-            .field("granted_to", &(state & SENTINEL))
+            .field(
+                "granted_to",
+                &match state & SENTINEL {
+                    SENTINEL => GrantState::Nobody,
+                    x => GrantState::WaitKey(x),
+                },
+            )
             .finish()
     }
 }
@@ -259,6 +270,21 @@ pub struct CutexLockFuture<'a, 'b, T> {
     cutex: &'a Cutex<T>,
     predicate: Pin<&'b (dyn AcquisitionPredicate<T> + 'b)>,
     wait_key: usize,
+}
+
+impl<'a, 'b, T> std::fmt::Debug for CutexLockFuture<'a, 'b, T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("CutexLockFuture")
+            .field("predicate", &AcquisitionPredicateDebug(&*self.predicate))
+            .field(
+                "wait_key",
+                &match self.wait_key {
+                    SENTINEL => None,
+                    x => Some(x),
+                },
+            )
+            .finish()
+    }
 }
 
 #[pinned_drop]

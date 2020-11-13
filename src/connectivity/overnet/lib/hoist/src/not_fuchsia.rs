@@ -149,7 +149,7 @@ async fn run_ascendd_connection(
                 StreamSocketGreeting { node_id: Some(n), .. } => n.id,
             };
 
-            let (link_sender, link_receiver) = node
+            let (link_sender, mut link_receiver) = node
                 .new_link(
                     ascendd_node_id.into(),
                     Box::new(move || {
@@ -182,9 +182,8 @@ async fn run_ascendd_connection(
                     }
                 },
                 async move {
-                    let mut buffer = [0u8; 2048];
-                    while let Some(n) = link_sender.next_send(&mut buffer).await? {
-                        framer.write(FrameType::Overnet, &buffer[..n]).await?;
+                    while let Some(frame) = link_sender.next_send().await {
+                        framer.write(FrameType::Overnet, frame.bytes()).await?;
                     }
                     Ok::<_, Error>(())
                 },

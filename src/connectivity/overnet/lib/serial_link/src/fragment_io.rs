@@ -244,55 +244,49 @@ mod test {
 
     async fn run_test(
         name: &'static str,
-        repeat: u64,
+        run: usize,
         failures_per_64kib: u16,
         frame_type: FrameType,
         messages: &'static [&[u8]],
     ) -> Result<(), Error> {
         init();
-        futures::stream::iter(0..repeat)
-            .map(Ok)
-            .try_for_each_concurrent(10, move |i| async move {
-                const INCOMING_BYTE_TIMEOUT: std::time::Duration =
-                    std::time::Duration::from_millis(100);
-                let (c2s_rx, c2s_tx) = DodgyPipe::new(failures_per_64kib).split();
-                let (s2c_rx, s2c_tx) = DodgyPipe::new(failures_per_64kib).split();
-                let (c_frm_tx, c_frm_rx) = new_framer(LossyText::new(INCOMING_BYTE_TIMEOUT), 256);
-                let (s_frm_tx, s_frm_rx) = new_framer(LossyText::new(INCOMING_BYTE_TIMEOUT), 256);
-                let (c_dfrm_tx, c_dfrm_rx) = new_deframer(LossyText::new(INCOMING_BYTE_TIMEOUT));
-                let (s_dfrm_tx, s_dfrm_rx) = new_deframer(LossyText::new(INCOMING_BYTE_TIMEOUT));
-                let (mut c_tx, c_rx, c_run) = new_fragment_io(c_frm_tx, c_dfrm_rx);
-                let (_s_tx, mut s_rx, s_run) = new_fragment_io(s_frm_tx, s_dfrm_rx);
-                let (support_fut, support_handle) = try_join4(
-                    try_join(c_run, s_run),
-                    try_join(framer_write(c_frm_rx, c2s_tx), framer_write(s_frm_rx, s2c_tx)),
-                    try_join(deframer_read(c2s_rx, s_dfrm_tx), deframer_read(s2c_rx, c_dfrm_tx)),
-                    must_not_become_readable(c_rx),
-                )
-                .map_ok(drop)
-                .remote_handle();
-                try_join(
-                    async move {
-                        support_fut.await;
-                        Ok(())
-                    },
-                    async move {
-                        one_test(name, i, frame_type, &messages, &mut c_tx, &mut s_rx)
-                            .on_timeout(Duration::from_secs(120), || Err(format_err!("timeout")))
-                            .await?;
-                        drop(support_handle);
-                        Ok(())
-                    },
-                )
-                .map_ok(drop)
-                .await
-            })
-            .await
+        const INCOMING_BYTE_TIMEOUT: std::time::Duration = std::time::Duration::from_millis(100);
+        let (c2s_rx, c2s_tx) = DodgyPipe::new(failures_per_64kib).split();
+        let (s2c_rx, s2c_tx) = DodgyPipe::new(failures_per_64kib).split();
+        let (c_frm_tx, c_frm_rx) = new_framer(LossyText::new(INCOMING_BYTE_TIMEOUT), 256);
+        let (s_frm_tx, s_frm_rx) = new_framer(LossyText::new(INCOMING_BYTE_TIMEOUT), 256);
+        let (c_dfrm_tx, c_dfrm_rx) = new_deframer(LossyText::new(INCOMING_BYTE_TIMEOUT));
+        let (s_dfrm_tx, s_dfrm_rx) = new_deframer(LossyText::new(INCOMING_BYTE_TIMEOUT));
+        let (mut c_tx, c_rx, c_run) = new_fragment_io(c_frm_tx, c_dfrm_rx);
+        let (_s_tx, mut s_rx, s_run) = new_fragment_io(s_frm_tx, s_dfrm_rx);
+        let (support_fut, support_handle) = try_join4(
+            try_join(c_run, s_run),
+            try_join(framer_write(c_frm_rx, c2s_tx), framer_write(s_frm_rx, s2c_tx)),
+            try_join(deframer_read(c2s_rx, s_dfrm_tx), deframer_read(s2c_rx, c_dfrm_tx)),
+            must_not_become_readable(c_rx),
+        )
+        .map_ok(drop)
+        .remote_handle();
+        try_join(
+            async move {
+                support_fut.await;
+                Ok(())
+            },
+            async move {
+                one_test(name, run, frame_type, &messages, &mut c_tx, &mut s_rx)
+                    .on_timeout(Duration::from_secs(120), || Err(format_err!("timeout")))
+                    .await?;
+                drop(support_handle);
+                Ok(())
+            },
+        )
+        .map_ok(drop)
+        .await
     }
 
     async fn one_test(
         name: &str,
-        iteration: u64,
+        iteration: usize,
         frame_type: FrameType,
         messages: &[&[u8]],
         tx: &mut FragmentWriter,
@@ -343,22 +337,22 @@ mod test {
     const LONG_PACKET: &'static [u8; 8192] = std::include_bytes!("long_packet.bin");
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn hello() -> Result<(), Error> {
-        run_test("hello", 1, 0, FrameType::OvernetHello, &[b"hello world"]).await
+    async fn hello(run: usize) -> Result<(), Error> {
+        run_test("hello", run, 0, FrameType::OvernetHello, &[b"hello world"]).await
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn simple() -> Result<(), Error> {
-        run_test("hello", 1, 0, FrameType::Overnet, &[b"hello world"]).await
+    async fn simple(run: usize) -> Result<(), Error> {
+        run_test("simple", run, 0, FrameType::Overnet, &[b"hello world"]).await
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn long() -> Result<(), Error> {
-        run_test("hello", 1, 0, FrameType::Overnet, &[LONG_PACKET]).await
+    async fn long(run: usize) -> Result<(), Error> {
+        run_test("long", run, 0, FrameType::Overnet, &[LONG_PACKET]).await
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn long_flaky() -> Result<(), Error> {
-        run_test("hello", 100, 10, FrameType::Overnet, &[LONG_PACKET]).await
+    async fn long_flaky(run: usize) -> Result<(), Error> {
+        run_test("long_flaky", run, 10, FrameType::Overnet, &[LONG_PACKET]).await
     }
 }

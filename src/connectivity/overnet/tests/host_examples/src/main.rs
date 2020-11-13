@@ -49,11 +49,17 @@ impl Drop for SemaphoreGuard {
 
 fn cmd(name: &str) -> Command {
     let mut path = current_exe().unwrap();
-    path.pop();
-    path.push("overnet_host_examples_test_commands");
+    loop {
+        assert!(path.pop());
+        path.push("overnet_host_examples_test_commands");
+        if path.exists() {
+            break;
+        }
+        path.pop();
+    }
     path.push(name);
     let mut cmd = Command::new(path);
-    cmd.env("RUST_BACKTRACE", "1");
+    cmd.env("RUST_BACKTRACE", "full");
     cmd
 }
 
