@@ -238,24 +238,22 @@ zx_status_t Ramdisk::FidlGrow(uint64_t required_size, fidl_txn_t* txn) {
 }
 
 void Ramdisk::ProcessRequests() {
-  zx_status_t status = ZX_OK;
-  std::optional<Transaction> txn;
-  bool dead, asleep, defer;
-  uint64_t blocks = 0;
   block::BorrowedOperationQueue<> deferred_list;
 
   for (;;) {
-    do {
-      txn = std::nullopt;
+    std::optional<Transaction> txn;
+    bool defer;
+    uint64_t block_write_limit;
 
+    do {
       {
         fbl::AutoLock lock(&lock_);
-        dead = dead_;
-        asleep = asleep_;
         defer = (flags_ & fuchsia_hardware_ramdisk_RAMDISK_FLAG_RESUME_ON_WAKE) != 0;
-        blocks = pre_sleep_write_block_count_;
+        block_write_limit = pre_sleep_write_block_count_ == 0 && !asleep_
+                                ? std::numeric_limits<uint64_t>::max()
+                                : pre_sleep_write_block_count_;
 
-        if (dead) {
+        if (dead_) {
           while ((txn = deferred_list.pop())) {
             txn->Complete(ZX_ERR_BAD_STATE);
           }
@@ -265,7 +263,7 @@ void Ramdisk::ProcessRequests() {
           return;
         }
 
-        if (!asleep) {
+        if (!asleep_) {
           // If we are awake, try grabbing pending transactions from the deferred list.
           txn = deferred_list.pop();
         }
@@ -281,87 +279,70 @@ void Ramdisk::ProcessRequests() {
         sync_completion_wait(&signal_, ZX_TIME_INFINITE);
         sync_completion_reset(&signal_);
       }
-
     } while (!txn);
 
-    uint64_t txn_blocks = txn->operation()->rw.length;
-    if (txn->operation()->command == BLOCK_OP_READ || blocks == 0 || blocks > txn_blocks) {
-      // If the ramdisk is not configured to sleep after x blocks, or the number of blocks in
-      // this transaction does not exceed the pre_sleep_write_block_count, or we are
-      // performing a read operation, use the current transaction length.
-      blocks = txn_blocks;
+    uint32_t blocks = txn->operation()->rw.length;
+    if (txn->operation()->command == BLOCK_OP_WRITE && blocks > block_write_limit) {
+      // Limit the number of blocks we write.
+      blocks = static_cast<uint32_t>(block_write_limit);
     }
-
-    size_t length = blocks * block_size_;
-    size_t dev_offset = txn->operation()->rw.offset_dev * block_size_;
-    size_t vmo_offset = txn->operation()->rw.offset_vmo * block_size_;
+    const uint64_t length = blocks * block_size_;
+    const uint64_t dev_offset = txn->operation()->rw.offset_dev * block_size_;
+    const uint64_t vmo_offset = txn->operation()->rw.offset_vmo * block_size_;
     void* addr =
         reinterpret_cast<void*>(reinterpret_cast<uintptr_t>(mapping_.start()) + dev_offset);
     auto command = txn->operation()->command;
 
+    zx_status_t status = ZX_OK;
     if (length > kMaxTransferSize) {
       status = ZX_ERR_OUT_OF_RANGE;
     } else if (command == BLOCK_OP_READ) {
       // A read operation should always succeed, even if the ramdisk is "asleep".
       status = zx_vmo_write(txn->operation()->rw.vmo, addr, vmo_offset, length);
-    } else if (asleep) {
-      if (defer) {
-        // If we are asleep but resuming on wake, add txn to the deferred_list.
-        // deferred_list is only accessed by the worker_thread, so a lock is not needed.
-        deferred_list.push(std::move(*txn));
-        continue;
-      } else {
-        status = ZX_ERR_UNAVAILABLE;
-      }
     } else {  // BLOCK_OP_WRITE
-      status = zx_vmo_read(txn->operation()->rw.vmo, addr, vmo_offset, length);
-
-      if (status == ZX_OK && blocks < txn->operation()->rw.length && defer) {
-        // If the first part of the transaction succeeded but the entire transaction is not
-        // complete, we need to address the remainder.
-
-        // If we are deferring after this block count, update the transaction to
-        // reflect the blocks that have already been written, and add it to the
-        // deferred queue.
-        ZX_DEBUG_ASSERT_MSG(blocks <= std::numeric_limits<uint32_t>::max(), "Block count overflow");
-        txn->operation()->rw.length -= static_cast<uint32_t>(blocks);
-        txn->operation()->rw.offset_vmo += blocks;
-        txn->operation()->rw.offset_dev += blocks;
-
-        // Add the remaining blocks to the deferred list.
-        deferred_list.push(std::move(*txn));
+      if (length > 0) {
+        status = zx_vmo_read(txn->operation()->rw.vmo, addr, vmo_offset, length);
       }
-    }
 
-    if (command == BLOCK_OP_WRITE) {
-      {
-        // Update the ramdisk block counts. Since we aren't failing read transactions,
-        // only include write transaction counts.
-        fbl::AutoLock lock(&lock_);
-        // Increment the count based on the result of the last transaction.
-        if (status == ZX_OK) {
-          block_counts_.successful += blocks;
+      // Update the ramdisk block counts. Since we aren't failing read transactions, only include
+      // write transaction counts.
+      fbl::AutoLock lock(&lock_);
+      // Increment the count based on the result of the last transaction.
+      if (status == ZX_OK) {
+        block_counts_.successful += blocks;
 
-          if (blocks != txn_blocks && !defer) {
-            // If we are not deferring, then any excess blocks have failed.
-            block_counts_.failed += txn_blocks - blocks;
-            status = ZX_ERR_UNAVAILABLE;
-          }
-        } else {
-          block_counts_.failed += txn_blocks;
-        }
-
-        // Put the ramdisk to sleep if we have reached the required # of blocks.
-        if (pre_sleep_write_block_count_ > 0) {
+        // Put the ramdisk to sleep if we have reached the required # of blocks. It's possible that
+        // an update to the sleep count arrived whilst we didn't hold the lock, so we check for that
+        // here. If it has happened, then just don't count this transaction i.e. we pretend that it
+        // completed before the update to the sleep count.
+        if (pre_sleep_write_block_count_ == block_write_limit) {
           pre_sleep_write_block_count_ -= blocks;
           asleep_ = (pre_sleep_write_block_count_ == 0);
         }
-      }
 
-      if (defer && blocks != txn_blocks && status == ZX_OK) {
-        // If we deferred partway through a transaction, hold off on returning the
-        // result until the remainder of the transaction is completed.
-        continue;
+        if (blocks < txn->operation()->rw.length) {
+          if (defer) {
+            // If the first part of the transaction succeeded but the entire transaction is not
+            // complete, we need to address the remainder.
+
+            // If we are deferring after this block count, update the transaction to reflect the
+            // blocks that have already been written, and add it to the deferred queue.
+            txn->operation()->rw.length -= blocks;
+            txn->operation()->rw.offset_vmo += blocks;
+            txn->operation()->rw.offset_dev += blocks;
+
+            // Add the remaining blocks to the deferred list.
+            deferred_list.push(std::move(*txn));
+
+            // Hold off on returning the result until the remainder of the transaction is completed.
+            continue;
+          } else {
+            block_counts_.failed += txn->operation()->rw.length - blocks;
+            status = ZX_ERR_UNAVAILABLE;
+          }
+        }
+      } else {
+        block_counts_.failed += txn->operation()->rw.length;
       }
     }
 

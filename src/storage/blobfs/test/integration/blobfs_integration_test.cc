@@ -1469,8 +1469,7 @@ TEST_F(BlobfsTestWithFvm, CorruptAtMount) {
 }
 
 void RunFailedWriteTest(fs_test::TestFilesystem& fs) {
-  uint32_t page_size = 8192;  // disk->page_size();
-  const uint32_t pages_per_block = kBlobfsBlockSize / page_size;
+  const uint32_t pages_per_block = kBlobfsBlockSize / fs.options().device_block_size;
 
   std::unique_ptr<BlobInfo> info;
   ASSERT_NO_FATAL_FAILURE(GenerateRandomBlob(fs.mount_path(), kBlobfsBlockSize, &info));
@@ -1493,10 +1492,14 @@ void RunFailedWriteTest(fs_test::TestFilesystem& fs) {
   constexpr int kBlockCountToWrite = 5;
 
   // Sleep after |kBlockCountToWrite - 1| blocks. This is 1 less than will be needed to write out
-  // the entire blob. This ensures that writing the blob will fail.
+  // the entire blob. This ensures that writing the blob will ultimately fail, but the write
+  // operation will return a succcessful response.
   ASSERT_EQ(fs.GetRamDisk()->SleepAfter(pages_per_block * (kBlockCountToWrite - 1)).status_value(),
             ZX_OK);
-  ASSERT_EQ(write(fd.get(), info->data.get(), info->size_data), -1);
+  fbl::AutoCall wake([&] { ASSERT_EQ(fs.GetRamDisk()->Wake().status_value(), ZX_OK); });
+
+  ASSERT_EQ(write(fd.get(), info->data.get(), info->size_data),
+            static_cast<ssize_t>(info->size_data));
 
   // Since the write operation ultimately failed when going out to disk,
   // syncfs will return a failed response.
@@ -1514,8 +1517,6 @@ void RunFailedWriteTest(fs_test::TestFilesystem& fs) {
   // TODO(smklein): Implement support for "failed write propagates to the client before
   // sync".
   // ASSERT_LT(write(fd.get(), info->data.get(), kBlobfsBlockSize), 0);
-
-  ASSERT_EQ(fs.GetRamDisk()->Wake().status_value(), ZX_OK);
 }
 
 TEST_F(BlobfsTest, FailedWrite) { ASSERT_NO_FATAL_FAILURE(RunFailedWriteTest(fs())); }
