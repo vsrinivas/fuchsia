@@ -253,6 +253,12 @@ SECTIONS
         PROVIDE_HIDDEN(__stop___sancov_guards = .);
     }
 
+    BootCpuid : {
+        PROVIDE_HIDDEN(__start_BootCpuid = .);
+        *(BootCpuid)
+        PROVIDE_HIDDEN(__stop_BootCpuid = .);
+    }
+
     .data : ALIGN(128) {
         /* Pull out any aligned data into a separate section to make sure
          * individual variables do not alias with any unaligned vars.

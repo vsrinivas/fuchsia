@@ -251,6 +251,10 @@ high_entry:
     call idt_setup
     call load_startup_idt
 
+    // Initialize CPUID value cache - and do so before functions (like
+    // x86_init_percpu) begin to access CPUID data.
+    call InitializeBootCpuid
+
     /* assign this core CPU# 0 and initialize its per cpu state */
     xor %edi, %edi
     call x86_init_percpu

@@ -7,6 +7,7 @@
 
 #include <assert.h>
 #include <bits.h>
+#include <lib/arch/x86/boot-cpuid.h>
 #include <lib/cmdline.h>
 #include <lib/code_patching.h>
 #include <stdint.h>
@@ -241,8 +242,8 @@ void x86_cpu_feature_init() {
   g_cpu_vulnerable_to_rsb_underflow = (x86_get_disable_spec_mitigations() == false) &&
                                       (x86_vendor == X86_VENDOR_INTEL) &&
                                       x86_intel_cpu_has_rsb_fallback(&cpuid, &msr);
-  // TODO(fxbug.dev/33667, fxbug.dev/12150): Consider whether a process can opt-out of an IBPB on switch,
-  // either on switch-in (ex: its compiled with a retpoline) or switch-out (ex: it promises
+  // TODO(fxbug.dev/33667, fxbug.dev/12150): Consider whether a process can opt-out of an IBPB on
+  // switch, either on switch-in (ex: its compiled with a retpoline) or switch-out (ex: it promises
   // not to attack the next process).
   // TODO(fxbug.dev/33667, fxbug.dev/12150): Should we have an individual knob for IBPB?
   g_should_ibpb_on_ctxt_switch = (x86_get_disable_spec_mitigations() == false) && g_has_ibpb;
@@ -361,198 +362,76 @@ bool x86_topology_enumerate(uint8_t level, struct x86_topology_level* info) {
 const struct x86_model_info* x86_get_model(void) { return &model_info; }
 
 void x86_feature_debug(void) {
-  const struct {
-    struct x86_cpuid_bit bit;
-    const char* name;
-  } features[] = {
-      {X86_FEATURE_FPU, "fpu"},
-      {X86_FEATURE_SSE, "sse"},
-      {X86_FEATURE_SSE2, "sse2"},
-      {X86_FEATURE_SSE3, "sse3"},
-      {X86_FEATURE_SSSE3, "ssse3"},
-      {X86_FEATURE_SSE4_1, "sse4.1"},
-      {X86_FEATURE_SSE4_2, "sse4.2"},
-      {X86_FEATURE_MMX, "mmx"},
-      {X86_FEATURE_AVX, "avx"},
-      {X86_FEATURE_AVX2, "avx2"},
-      {X86_FEATURE_FXSR, "fxsr"},
-      {X86_FEATURE_PCID, "pcid"},
-      {X86_FEATURE_XSAVE, "xsave"},
-      {X86_FEATURE_MON, "mon"},
-      {X86_FEATURE_AESNI, "aesni"},
-      {X86_FEATURE_CLFLUSH, "clflush"},
-      {X86_FEATURE_CLFLUSHOPT, "clflushopt"},
-      {X86_FEATURE_CLWB, "clwb"},
-      {X86_FEATURE_FSGSBASE, "fsgsbase"},
-      {X86_FEATURE_TSC_ADJUST, "tsc_adj"},
-      {X86_FEATURE_SMEP, "smep"},
-      {X86_FEATURE_SMAP, "smap"},
-      {X86_FEATURE_ERMS, "erms"},
-      {X86_FEATURE_RDRAND, "rdrand"},
-      {X86_FEATURE_RDSEED, "rdseed"},
-      {X86_FEATURE_UMIP, "umip"},
-      {X86_FEATURE_PKU, "pku"},
-      {X86_FEATURE_SYSCALL, "syscall"},
-      {X86_FEATURE_NX, "nx"},
-      {X86_FEATURE_HUGE_PAGE, "huge"},
-      {X86_FEATURE_RDTSCP, "rdtscp"},
-      {X86_FEATURE_INVAR_TSC, "invar_tsc"},
-      {X86_FEATURE_TSC_DEADLINE, "tsc_deadline"},
-      {X86_FEATURE_X2APIC, "x2apic"},
-      {X86_FEATURE_VMX, "vmx"},
-      {X86_FEATURE_HYPERVISOR, "hypervisor"},
-      {X86_FEATURE_PT, "pt"},
-      {X86_FEATURE_HWP, "hwp"},
-      {X86_FEATURE_KVM_PV_CLOCK, "pv_clock"},
-      {X86_FEATURE_KVM_PV_CLOCK_STABLE, "pv_clock_stable"},
-      {X86_FEATURE_KVM_PV_EOI, "pv_eoi"},
-      {X86_FEATURE_KVM_PV_IPI, "pv_ipi"},
-  };
-
-  const char* vendor_string = nullptr;
-  switch (x86_vendor) {
-    case X86_VENDOR_UNKNOWN:
-      vendor_string = "unknown";
-      break;
-    case X86_VENDOR_INTEL:
-      vendor_string = "Intel";
-      break;
-    case X86_VENDOR_AMD:
-      vendor_string = "AMD";
-      break;
-  }
-  printf("Vendor: %s\n", vendor_string);
-
-  const char* microarch_string = nullptr;
-  switch (x86_microarch_config->x86_microarch) {
-    case X86_MICROARCH_UNKNOWN:
-      microarch_string = "unknown";
-      break;
-    case X86_MICROARCH_INTEL_NEHALEM:
-      microarch_string = "Nehalem";
-      break;
-    case X86_MICROARCH_INTEL_WESTMERE:
-      microarch_string = "Westmere";
-      break;
-    case X86_MICROARCH_INTEL_SANDY_BRIDGE:
-      microarch_string = "Sandy Bridge";
-      break;
-    case X86_MICROARCH_INTEL_IVY_BRIDGE:
-      microarch_string = "Ivy Bridge";
-      break;
-    case X86_MICROARCH_INTEL_BROADWELL:
-      microarch_string = "Broadwell";
-      break;
-    case X86_MICROARCH_INTEL_HASWELL:
-      microarch_string = "Haswell";
-      break;
-    case X86_MICROARCH_INTEL_SKYLAKE:
-      microarch_string = "Skylake";
-      break;
-    case X86_MICROARCH_INTEL_CANNONLAKE:
-      microarch_string = "Cannon Lake";
-      break;
-    case X86_MICROARCH_INTEL_SILVERMONT:
-      microarch_string = "Silvermont";
-      break;
-    case X86_MICROARCH_INTEL_GOLDMONT:
-      microarch_string = "Goldmont";
-      break;
-    case X86_MICROARCH_INTEL_GOLDMONT_PLUS:
-      microarch_string = "Goldmont Plus";
-      break;
-    case X86_MICROARCH_AMD_BULLDOZER:
-      microarch_string = "Bulldozer";
-      break;
-    case X86_MICROARCH_AMD_JAGUAR:
-      microarch_string = "Jaguar";
-      break;
-    case X86_MICROARCH_AMD_ZEN:
-      microarch_string = "Zen";
-      break;
-  }
-  printf("Microarch: %s\n", microarch_string);
-  printf("F/M/S: %x/%x/%x\n", model_info.display_family, model_info.display_model,
-         model_info.stepping);
-  printf("patch_level: %x\n", model_info.patch_level);
-
-  char brand_string[50];
-  memset(brand_string, 0, sizeof(brand_string));
-  const struct cpuid_leaf* leaf;
-  uint32_t leaf_num = X86_CPUID_BRAND;
-  for (int i = 0; i < 3; i++) {
-    leaf = x86_get_cpuid_leaf((enum x86_cpuid_leaf_num)(leaf_num + i));
-    if (!leaf) {
-      break;
-    }
-    memcpy(brand_string + (i * 16), &leaf->a, sizeof(uint32_t));
-    memcpy(brand_string + (i * 16) + 4, &leaf->b, sizeof(uint32_t));
-    memcpy(brand_string + (i * 16) + 8, &leaf->c, sizeof(uint32_t));
-    memcpy(brand_string + (i * 16) + 12, &leaf->d, sizeof(uint32_t));
-  }
-  printf("Brand: %s\n", brand_string);
-
-  printf("Features: ");
-  uint col = 0;
-  for (uint i = 0; i < ktl::size(features); ++i) {
-    if (x86_feature_test(features[i].bit))
-      col += printf("%s ", features[i].name);
-    if (col >= 80) {
-      printf("\n");
-      col = 0;
-    }
-  }
-  if (col > 0)
-    printf("\n");
-  // Print synthetic 'features'/properties
-  printf("Properties: ");
-  if (g_has_meltdown)
-    printf("meltdown ");
-  if (g_has_l1tf)
-    printf("l1tf ");
-  if (g_has_mds_taa)
-    printf("mds/taa ");
-  if (g_has_md_clear)
-    printf("md_clear ");
-  if (g_md_clear_on_user_return)
-    printf("md_clear_user_return ");
-  if (g_has_swapgs_bug)
-    printf("swapgs_bug ");
-  if (g_swapgs_bug_mitigated)
-    printf("swapgs_bug_mitigated ");
-  if (g_x86_feature_pcid_good)
-    printf("pcid_good ");
-  if (x86_kpti_is_enabled()) {
-    printf("pti_enabled ");
-  }
-  if (g_has_ssb)
-    printf("ssb ");
-  if (g_has_ssbd)
-    printf("ssbd ");
-  if (g_ssb_mitigated)
-    printf("ssb_mitigated ");
-  if (g_has_ibpb)
-    printf("ibpb ");
-  if (g_l1d_flush_on_vmentry)
-    printf("l1d_flush_on_vmentry ");
   printf("\n");
-  if (g_should_ibpb_on_ctxt_switch)
-    printf("ibpb_ctxt_switch ");
-  if (g_ras_fill_on_ctxt_switch)
-    printf("ras_fill ");
-  if (g_has_enhanced_ibrs)
-    printf("enhanced_ibrs ");
-  if (g_enhanced_ibrs_enabled)
-    printf("enhanced_ibrs_enabled ");
+
+  arch::BootCpuidIo io;
+  auto vendor = arch::ToString(arch::GetVendor(io));
+  printf("Vendor: %.*s\n", static_cast<int>(vendor.size()), vendor.data());
+
+  auto microarch = arch::ToString(arch::GetMicroarchitecture(io));
+  printf("Microarchitecture: %.*s\n", static_cast<int>(microarch.size()), microarch.data());
+
+  {
+    arch::ProcessorName processor(io);
+    std::string_view name = processor.name();
+    printf("Processor: %.*s\n", static_cast<int>(name.size()), name.data());
+  }
+  {
+    arch::HypervisorName hypervisor(io);
+    std::string_view name = hypervisor.name();
+    name = name.empty() ? "None" : name;
+    printf("Hypervisor: %.*s\n", static_cast<int>(name.size()), name.data());
+  }
+
+  auto version = io.Read<arch::CpuidVersionInfo>();
+  printf("Family/Model/Stepping: %#x/%#x/%#x\n", version.family(), version.model(),
+         version.stepping());
+  printf("Patch level: %x\n", model_info.patch_level);
+
+  auto print_feature = [](const char* name, auto value, auto, auto) {
+    if (name && value) {
+      printf("%s, ", name);
+    }
+  };
+  printf("\nFeatures: \t");
+  io.Read<arch::CpuidFeatureFlagsC>().ForEachField(print_feature);
+  io.Read<arch::CpuidFeatureFlagsD>().ForEachField(print_feature);
+  io.Read<arch::CpuidExtendedFeatureFlagsB>().ForEachField(print_feature);
+  printf("\n");
+
+  // Print synthetic 'features'/properties.
+  auto print_property = [](bool print, const char* property) {
+    if (print) {
+      printf("%s, ", property);
+    }
+  };
+  printf("\nProperties: \t");
+  print_property(g_has_meltdown, "meltdown");
+  print_property(g_has_l1tf, "l1tf");
+  print_property(g_has_mds_taa, "mds/taa");
+  print_property(g_has_md_clear, "md_clear");
+  print_property(g_md_clear_on_user_return, "md_clear_user_return");
+  print_property(g_has_swapgs_bug, "swapgs_bug");
+  print_property(g_swapgs_bug_mitigated, "swapgs_bug_mitigated");
+  print_property(g_x86_feature_pcid_good, "pcid_good");
+  print_property(x86_kpti_is_enabled(), "pti_enabled");
+  print_property(g_has_ssb, "ssb");
+  print_property(g_has_ssbd, "ssbd");
+  print_property(g_ssb_mitigated, "ssb_mitigated");
+  print_property(g_has_ibpb, "ibpb");
+  print_property(g_l1d_flush_on_vmentry, "l1d_flush_on_vmentry");
+  print_property(g_should_ibpb_on_ctxt_switch, "ibpb_ctxt_switch");
+  print_property(g_ras_fill_on_ctxt_switch, "ras_fill");
+  print_property(g_has_enhanced_ibrs, "enhanced_ibrs");
+  print_property(g_enhanced_ibrs_enabled, "enhanced_ibrs_enabled");
 #ifdef KERNEL_RETPOLINE
-  printf("retpoline ");
-  if (g_amd_retpoline)
-    printf("amd_retpoline ");
+  print_property(true, "retpoline");
+  print_property(g_amd_retpoline, "amd_retpoline");
 #endif
 #ifdef X64_KERNEL_JCC_WORKAROUND
-  printf("jcc_fix ");
+  print_property(true, "jcc_fix");
 #endif
-  printf("\n");
+  printf("\n\n");
 }
 
 static uint64_t default_apic_freq() {
@@ -915,16 +794,17 @@ static const x86_microarch_config_t goldmont_plus_config{
     .idle_prefer_hlt = false,
     .idle_states =
         {
-            .states = {
-              // TODO(fxbug.dev/35457): Read C6 and deeper latency from IRTL registers
-              {.name = "C10", .mwait_hint = 0x60, .exit_latency = 10000, .flushes_tlb = true},
-              {.name = "C9", .mwait_hint = 0x50, .exit_latency = 2000, .flushes_tlb = true},
-              {.name = "C8", .mwait_hint = 0x40, .exit_latency = 1000, .flushes_tlb = true},
-              {.name = "C7s", .mwait_hint = 0x31, .exit_latency = 155, .flushes_tlb = true},
-              {.name = "C6", .mwait_hint = 0x20, .exit_latency = 133, .flushes_tlb = true},
-              {.name = "C1E", .mwait_hint = 0x01, .exit_latency = 10, .flushes_tlb = false},
-              X86_CSTATE_C1(0),
-            },
+            .states =
+                {
+                    // TODO(fxbug.dev/35457): Read C6 and deeper latency from IRTL registers
+                    {.name = "C10", .mwait_hint = 0x60, .exit_latency = 10000, .flushes_tlb = true},
+                    {.name = "C9", .mwait_hint = 0x50, .exit_latency = 2000, .flushes_tlb = true},
+                    {.name = "C8", .mwait_hint = 0x40, .exit_latency = 1000, .flushes_tlb = true},
+                    {.name = "C7s", .mwait_hint = 0x31, .exit_latency = 155, .flushes_tlb = true},
+                    {.name = "C6", .mwait_hint = 0x20, .exit_latency = 133, .flushes_tlb = true},
+                    {.name = "C1E", .mwait_hint = 0x01, .exit_latency = 10, .flushes_tlb = false},
+                    X86_CSTATE_C1(0),
+                },
             .default_state_mask = kX86IdleStateMaskC1Only,
         },
 };
