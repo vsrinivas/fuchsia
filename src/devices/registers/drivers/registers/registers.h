@@ -37,7 +37,6 @@ using RegistersDeviceType = ddk::Device<RegistersDevice<T>, ddk::Unbindable>;
 
 struct MmioInfo {
   ddk::MmioBuffer mmio;
-  uint64_t base_address;
   std::vector<fbl::Mutex> locks;
 };
 
@@ -50,7 +49,7 @@ class Register : public ::llcpp::fuchsia::hardware::registers::Device::Interface
                  public ddk::RegistersProtocol<Register<T>, ddk::base_protocol>,
                  public fbl::RefCounted<Register<T>> {
  public:
-  explicit Register(zx_device_t* device, MmioInfo* mmio)
+  explicit Register(zx_device_t* device, std::shared_ptr<MmioInfo> mmio)
       : RegisterType<T>(device), mmio_(mmio), loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {}
 
   zx_status_t Init(const RegistersMetadataEntry& config);
@@ -68,45 +67,45 @@ class Register : public ::llcpp::fuchsia::hardware::registers::Device::Interface
 
   void RegistersConnect(zx::channel chan);
 
-  void ReadRegister8(uint64_t address, uint8_t mask, ReadRegister8Completer::Sync& completer) {
-    ReadRegister(address, mask, completer);
+  void ReadRegister8(uint64_t offset, uint8_t mask, ReadRegister8Completer::Sync& completer) {
+    ReadRegister(offset, mask, completer);
   }
-  void ReadRegister16(uint64_t address, uint16_t mask, ReadRegister16Completer::Sync& completer) {
-    ReadRegister(address, mask, completer);
+  void ReadRegister16(uint64_t offset, uint16_t mask, ReadRegister16Completer::Sync& completer) {
+    ReadRegister(offset, mask, completer);
   }
-  void ReadRegister32(uint64_t address, uint32_t mask, ReadRegister32Completer::Sync& completer) {
-    ReadRegister(address, mask, completer);
+  void ReadRegister32(uint64_t offset, uint32_t mask, ReadRegister32Completer::Sync& completer) {
+    ReadRegister(offset, mask, completer);
   }
-  void ReadRegister64(uint64_t address, uint64_t mask, ReadRegister64Completer::Sync& completer) {
-    ReadRegister(address, mask, completer);
+  void ReadRegister64(uint64_t offset, uint64_t mask, ReadRegister64Completer::Sync& completer) {
+    ReadRegister(offset, mask, completer);
   }
-  void WriteRegister8(uint64_t address, uint8_t mask, uint8_t value,
+  void WriteRegister8(uint64_t offset, uint8_t mask, uint8_t value,
                       WriteRegister8Completer::Sync& completer) {
-    WriteRegister(address, mask, value, completer);
+    WriteRegister(offset, mask, value, completer);
   }
-  void WriteRegister16(uint64_t address, uint16_t mask, uint16_t value,
+  void WriteRegister16(uint64_t offset, uint16_t mask, uint16_t value,
                        WriteRegister16Completer::Sync& completer) {
-    WriteRegister(address, mask, value, completer);
+    WriteRegister(offset, mask, value, completer);
   }
-  void WriteRegister32(uint64_t address, uint32_t mask, uint32_t value,
+  void WriteRegister32(uint64_t offset, uint32_t mask, uint32_t value,
                        WriteRegister32Completer::Sync& completer) {
-    WriteRegister(address, mask, value, completer);
+    WriteRegister(offset, mask, value, completer);
   }
-  void WriteRegister64(uint64_t address, uint64_t mask, uint64_t value,
+  void WriteRegister64(uint64_t offset, uint64_t mask, uint64_t value,
                        WriteRegister64Completer::Sync& completer) {
-    WriteRegister(address, mask, value, completer);
+    WriteRegister(offset, mask, value, completer);
   }
 
  private:
   template <typename Ty, typename Completer>
-  void ReadRegister(uint64_t address, Ty mask, Completer& completer) {
+  void ReadRegister(uint64_t offset, Ty mask, Completer& completer) {
     if constexpr (!std::is_same_v<T, Ty>) {
       completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
       return;
     }
     T val;
     // Need cast to compile
-    auto status = ReadRegister(address, static_cast<T>(mask), &val);
+    auto status = ReadRegister(offset, static_cast<T>(mask), &val);
     if (status == ZX_OK) {
       // Need cast to compile
       completer.ReplySuccess(static_cast<Ty>(val));
@@ -116,13 +115,13 @@ class Register : public ::llcpp::fuchsia::hardware::registers::Device::Interface
   }
 
   template <typename Ty, typename Completer>
-  void WriteRegister(uint64_t address, Ty mask, Ty value, Completer& completer) {
+  void WriteRegister(uint64_t offset, Ty mask, Ty value, Completer& completer) {
     if constexpr (!std::is_same_v<T, Ty>) {
       completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
       return;
     }
     // Need cast to compile
-    auto status = WriteRegister(address, static_cast<T>(mask), static_cast<T>(value));
+    auto status = WriteRegister(offset, static_cast<T>(mask), static_cast<T>(value));
     if (status == ZX_OK) {
       completer.ReplySuccess();
     } else {
@@ -130,15 +129,14 @@ class Register : public ::llcpp::fuchsia::hardware::registers::Device::Interface
     }
   }
 
-  zx_status_t ReadRegister(uint64_t address, T mask, T* out_value);
-  zx_status_t WriteRegister(uint64_t address, T mask, T value);
+  zx_status_t ReadRegister(uint64_t offset, T mask, T* out_value);
+  zx_status_t WriteRegister(uint64_t offset, T mask, T value);
 
   bool VerifyMask(T mask, uint64_t register_offset);
 
-  MmioInfo* mmio_;
+  std::shared_ptr<MmioInfo> mmio_;
   uint64_t id_;
-  uint64_t base_address_;
-  std::map<uint64_t, T> masks_;  // map of reg count upper bounds (inclusive) to mask
+  std::map<uint64_t, std::pair<T, uint32_t>> masks_;  // base_address to (mask, reg_count)
 
   async::Loop loop_;
   bool loop_started_ = false;
@@ -160,28 +158,12 @@ class RegistersDevice : public RegistersDeviceType<T> {
 
   zx_status_t Init(zx_device_t* parent, Metadata metadata);
   // For unit tests
-  zx_status_t Init(std::vector<MmioInfo> mmios) {
+  zx_status_t Init(std::map<uint32_t, std::shared_ptr<MmioInfo>> mmios) {
     mmios_ = std::move(mmios);
     return ZX_OK;
   }
-  // For unit tests
-  std::shared_ptr<::llcpp::fuchsia::hardware::registers::Device::SyncClient> AddRegister(
-      uint32_t mmio_index, RegistersMetadataEntry& config) {
-    registers_.push_back(std::make_unique<Register<T>>(nullptr, &mmios_[mmio_index]));
-    registers_.back()->Init(config);
 
-    zx::channel client_end, server_end;
-    if (zx::channel::create(0, &client_end, &server_end) != ZX_OK) {
-      return nullptr;
-    }
-    registers_.back()->RegistersConnect(std::move(server_end));
-    return std::make_shared<::llcpp::fuchsia::hardware::registers::Device::SyncClient>(
-        std::move(client_end));
-  }
-  std::optional<uint32_t> FindMmio(const RegistersMetadataEntry& reg_config);
-
-  std::vector<MmioInfo> mmios_;
-  std::vector<std::unique_ptr<Register<T>>> registers_;
+  std::map<uint32_t, std::shared_ptr<MmioInfo>> mmios_;  // MMIO ID to MmioInfo
 };
 
 }  // namespace registers

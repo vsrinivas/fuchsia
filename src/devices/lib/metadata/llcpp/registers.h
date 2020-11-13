@@ -27,33 +27,41 @@ Mask BuildMask(fidl::Allocator& allocator, T mask) {
   return Mask();
 }
 
+template <typename T>
+struct MaskEntryBuilder {
+  T mask;
+  uint64_t mmio_offset;
+  uint32_t reg_count;
+  bool overlap_check_on = true;
+};
 using ::llcpp::fuchsia::hardware::registers::MaskEntry;
 using ::llcpp::fuchsia::hardware::registers::RegistersMetadataEntry;
 template <typename T>
-RegistersMetadataEntry BuildMetadata(fidl::Allocator& allocator, uint64_t id, uint64_t base_address,
-                                     std::vector<std::pair<T, uint32_t>> masks) {
+RegistersMetadataEntry BuildMetadata(fidl::Allocator& allocator, uint32_t bind_id, uint32_t mmio_id,
+                                     std::vector<MaskEntryBuilder<T>> masks) {
   fidl::VectorView<MaskEntry> built_masks;
   built_masks.set_data(allocator.make<MaskEntry[]>(masks.size()));
   built_masks.set_count(masks.size());
   for (uint32_t i = 0; i < masks.size(); i++) {
-    built_masks[i] =
-        MaskEntry::Builder(allocator.make<MaskEntry::Frame>())
-            .set_count(allocator.make<uint32_t>(masks[i].second))
-            .set_mask(allocator.make<Mask>(BuildMask<T>(allocator, masks[i].first)))
-            .build();
+    built_masks[i] = MaskEntry::Builder(allocator.make<MaskEntry::Frame>())
+                         .set_mask(allocator.make<Mask>(BuildMask<T>(allocator, masks[i].mask)))
+                         .set_mmio_offset(allocator.make<uint64_t>(masks[i].mmio_offset))
+                         .set_count(allocator.make<uint32_t>(masks[i].reg_count))
+                         .set_overlap_check_on(allocator.make<bool>(masks[i].overlap_check_on))
+                         .build();
   }
 
   return RegistersMetadataEntry::Builder(allocator.make<RegistersMetadataEntry::Frame>())
-      .set_id(allocator.make<uint64_t>(id))
-      .set_base_address(allocator.make<uint64_t>(base_address))
+      .set_bind_id(allocator.make<uint32_t>(bind_id))
+      .set_mmio_id(allocator.make<uint32_t>(mmio_id))
       .set_masks(allocator.make<fidl::VectorView<MaskEntry>>(std::move(built_masks)))
       .build();
 }
 
 using ::llcpp::fuchsia::hardware::registers::MmioMetadataEntry;
-MmioMetadataEntry BuildMetadata(fidl::Allocator& allocator, uint64_t base_address) {
+MmioMetadataEntry BuildMetadata(fidl::Allocator& allocator, uint32_t id) {
   return MmioMetadataEntry::Builder(allocator.make<MmioMetadataEntry::Frame>())
-      .set_base_address(allocator.make<uint64_t>(base_address))
+      .set_id(allocator.make<uint32_t>(id))
       .build();
 }
 

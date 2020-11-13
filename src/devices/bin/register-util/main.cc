@@ -14,12 +14,13 @@
 
 int main(int argc, const char** argv) {
   if (argc < 3) {
-    fprintf(
-        stderr,
-        "Usage: %s /path/to/device registeraddr [registervalue]\nregisteraddr and registervalue "
-        "must both be formatted in hex.\nregistervalue is optional. if it exists, write, "
-        "otherwise, read.\n",
-        argv[0]);
+    fprintf(stderr,
+            "Usage: %s /path/to/device registeroffset [registervalue]\nregisteroffset and "
+            "registervalue "
+            "must both be formatted in hex.\nregisteroffset is the address offset from base of "
+            "MMIO.\nregistervalue is optional. if it exists, write, "
+            "otherwise, read.\n",
+            argv[0]);
     return 0;
   }
   int fd = open(argv[1], O_RDWR);

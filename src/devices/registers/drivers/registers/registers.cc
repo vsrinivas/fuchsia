@@ -49,17 +49,14 @@ std::optional<Ty> GetMask(const ::llcpp::fuchsia::hardware::registers::Mask& mas
 
 template <typename T>
 zx_status_t Register<T>::Init(const RegistersMetadataEntry& config) {
-  id_ = config.id();
-  base_address_ = config.base_address();
+  id_ = config.bind_id();
 
-  uint32_t reg_count = 0;
   for (const auto& m : config.masks()) {
-    reg_count += m.count();
     auto mask = GetMask<T>(m.mask());
     if (!mask.has_value()) {
       return ZX_ERR_INTERNAL;
     }
-    masks_.emplace(reg_count, mask.value());
+    masks_.emplace(m.mmio_offset(), std::make_pair(mask.value(), m.count()));
   }
 
   return ZX_OK;
@@ -89,72 +86,41 @@ void Register<T>::RegistersConnect(zx::channel chan) {
 // Returns: true if mask requested is covered by allowed mask.
 //          false if mask requested is not covered by allowed mask or mask is not found.
 template <typename T>
-bool Register<T>::VerifyMask(T mask, const uint64_t register_offset) {
-  auto it = masks_.upper_bound(register_offset);
-  if (it == masks_.end()) {
+bool Register<T>::VerifyMask(T mask, const uint64_t offset) {
+  auto it = masks_.upper_bound(offset);
+  if ((offset % sizeof(T)) || (it == masks_.begin())) {
     return false;
   }
-  // Check that mask requested is covered by allowed mask.
-  auto reg_mask = it->second;
-  return ((mask | reg_mask) == reg_mask);
+  it--;
+
+  auto base_address = it->first;
+  auto reg_mask = it->second.first;
+  auto reg_count = it->second.second;
+  return (((offset - base_address) / sizeof(T) < reg_count) &&
+          // Check that mask requested is covered by allowed mask.
+          ((mask | reg_mask) == reg_mask));
 }
 
 template <typename T>
-zx_status_t Register<T>::ReadRegister(uint64_t address, T mask, T* out_value) {
-  if ((address % sizeof(T)) ||  // Aligned to register
-      masks_.empty() ||         // Non-empty masks
-                                // Address within register range
-      (address < base_address_) ||
-      ((address - base_address_) / sizeof(T) >= masks_.rbegin()->first) ||
-      // Mask within valid range
-      !VerifyMask(mask, (address - base_address_) / sizeof(T))) {
+zx_status_t Register<T>::ReadRegister(uint64_t offset, T mask, T* out_value) {
+  if (!VerifyMask(mask, offset)) {
     return ZX_ERR_INVALID_ARGS;
   }
 
-  // Valid because when binding, register is aligned and wholly within mmio
-  auto mmio_offset = address - mmio_->base_address;
-  fbl::AutoLock lock(&mmio_->locks[mmio_offset / sizeof(T)]);
-  *out_value = mmio_->mmio.ReadMasked(mask, mmio_offset);
+  fbl::AutoLock lock(&mmio_->locks[offset / sizeof(T)]);
+  *out_value = mmio_->mmio.ReadMasked(mask, offset);
   return ZX_OK;
 }
 
 template <typename T>
-zx_status_t Register<T>::WriteRegister(uint64_t address, T mask, T value) {
-  if ((address % sizeof(T)) ||  // Aligned to register
-      masks_.empty() ||         // Non-empty masks
-                                // Address within register range
-      (address < base_address_) ||
-      ((address - base_address_) / sizeof(T) >= masks_.rbegin()->first) ||
-      // Mask within valid range
-      !VerifyMask(mask, (address - base_address_) / sizeof(T))) {
+zx_status_t Register<T>::WriteRegister(uint64_t offset, T mask, T value) {
+  if (!VerifyMask(mask, offset)) {
     return ZX_ERR_INVALID_ARGS;
   }
 
-  // Valid because when binding, register is aligned and wholly within mmio
-  auto mmio_offset = address - mmio_->base_address;
-  fbl::AutoLock lock(&mmio_->locks[mmio_offset / sizeof(T)]);
-  mmio_->mmio.ModifyBits(value, mask, mmio_offset);
+  fbl::AutoLock lock(&mmio_->locks[offset / sizeof(T)]);
+  mmio_->mmio.ModifyBits(value, mask, offset);
   return ZX_OK;
-}
-
-// FindMmio: return mmio index if register fits in some MMIO. return invalid mmio index (= mmio
-// size) if register doesn't fit in MMIO.
-template <typename T>
-std::optional<uint32_t> RegistersDevice<T>::FindMmio(const RegistersMetadataEntry& reg_config) {
-  uint32_t reg_count = 0;
-  for (const auto& it : reg_config.masks()) {
-    reg_count += it.count();
-  }
-
-  for (uint32_t i = 0; i < mmios_.size(); i++) {
-    auto offset = reg_config.base_address() - mmios_[i].base_address;
-    if ((reg_config.base_address() >= mmios_[i].base_address) &&
-        (offset / sizeof(T) + reg_count <= mmios_[i].locks.size())) {
-      return i;
-    }
-  }
-
-  return std::nullopt;
 }
 
 template <typename T>
@@ -173,6 +139,7 @@ zx_status_t RegistersDevice<T>::Init(zx_device_t* parent, Metadata metadata) {
   }
 
   // Get MMIOs
+  std::map<uint32_t, std::vector<T>> overlap;
   for (uint32_t i = 0; i < device_info.mmio_count; i++) {
     std::optional<ddk::MmioBuffer> tmp_mmio;
     if ((status = pdev.MapMmio(i, &tmp_mmio)) != ZX_OK) {
@@ -187,34 +154,61 @@ zx_status_t RegistersDevice<T>::Init(zx_device_t* parent, Metadata metadata) {
     }
 
     std::vector<fbl::Mutex> tmp_locks(register_count);
-    mmios_.push_back(MmioInfo{
-        .mmio = *std::move(tmp_mmio),
-        .base_address = metadata.mmio()[i].base_address(),
-        .locks = std::move(tmp_locks),
-    });
+    mmios_.emplace(metadata.mmio()[i].id(), std::make_shared<MmioInfo>(MmioInfo{
+                                                .mmio = *std::move(tmp_mmio),
+                                                .locks = std::move(tmp_locks),
+                                            }));
+
+    overlap.emplace(metadata.mmio()[i].id(), std::vector<T>(register_count, 0));
+  }
+
+  // Check for overlapping bits.
+  for (const auto& reg : metadata.registers()) {
+    if (mmios_.find(reg.mmio_id()) == mmios_.end()) {
+      zxlogf(ERROR, "%s: Invalid MMIO ID %u for Register %u.\n", __func__, reg.mmio_id(),
+             reg.bind_id());
+      return ZX_ERR_INTERNAL;
+    }
+
+    for (const auto& m : reg.masks()) {
+      if (m.mmio_offset() / sizeof(T) >= mmios_[reg.mmio_id()]->locks.size()) {
+        zxlogf(ERROR, "%s: Invalid offset.\n", __func__);
+        return ZX_ERR_INTERNAL;
+      }
+
+      if (!m.overlap_check_on()) {
+        continue;
+      }
+      auto bits = overlap[reg.mmio_id()][m.mmio_offset() / sizeof(T)];
+      auto mask = GetMask<T>(m.mask());
+      if (!mask.has_value()) {
+        zxlogf(ERROR, "%s: Invalid mask\n", __func__);
+        return ZX_ERR_INTERNAL;
+      }
+      auto mask_value = mask.value();
+      if (bits & mask_value) {
+        zxlogf(ERROR, "%s: Overlapping bits in MMIO ID %u, Register No. %lu, Bit mask 0x%lx\n",
+               __func__, reg.mmio_id(), m.mmio_offset() / sizeof(T),
+               static_cast<uint64_t>(bits & mask_value));
+        return ZX_ERR_INTERNAL;
+      }
+      overlap[reg.mmio_id()][m.mmio_offset() / sizeof(T)] |= mask_value;
+    }
   }
 
   // Create Registers
   for (auto& reg : metadata.registers()) {
-    auto mmio_index = FindMmio(reg);
-    if (!mmio_index.has_value()) {
-      zxlogf(ERROR, "%s: No MMIO for Register %lu--base address 0x%08lx.", __func__, reg.id(),
-             reg.base_address());
-      return ZX_ERR_INTERNAL;
-    }
-
     fbl::AllocChecker ac;
     std::unique_ptr<Register<T>> tmp_register(
-        new (&ac) Register<T>(this->zxdev(), &mmios_[mmio_index.value()]));
+        new (&ac) Register<T>(this->zxdev(), mmios_[reg.mmio_id()]));
     if (!ac.check()) {
       return ZX_ERR_NO_MEMORY;
     }
     zx_device_prop_t props[] = {
-        // TODO: cannot be 64 bits
-        {BIND_REGISTER_ID, 0, static_cast<uint32_t>(reg.id())},
+        {BIND_REGISTER_ID, 0, reg.bind_id()},
     };
     char name[20];
-    snprintf(name, sizeof(name), "register-%lu", reg.id());
+    snprintf(name, sizeof(name), "register-%u", reg.bind_id());
     auto status = tmp_register->DdkAdd(
         ddk::DeviceAddArgs(name).set_flags(DEVICE_ADD_ALLOW_MULTI_COMPOSITE).set_props(props));
     if (status != ZX_OK) {
@@ -222,8 +216,8 @@ zx_status_t RegistersDevice<T>::Init(zx_device_t* parent, Metadata metadata) {
       return status;
     }
 
-    registers_.push_back(std::move(tmp_register));
-    registers_.back()->Init(reg);
+    auto dev = tmp_register.release();
+    dev->Init(reg);
   }
 
   return ZX_OK;
@@ -285,6 +279,16 @@ zx_status_t Bind(void* ctx, zx_device_t* parent) {
   const auto& metadata = decoded.PrimaryObject();
 
   // Validate
+  if (!metadata->has_mmio() || !metadata->has_registers()) {
+    zxlogf(ERROR, "%s: Metadata incomplete", __FILE__);
+    return ZX_ERR_INTERNAL;
+  }
+  for (const auto& mmio : metadata->mmio()) {
+    if (!mmio.has_id()) {
+      zxlogf(ERROR, "%s: Metadata incomplete", __FILE__);
+      return ZX_ERR_INTERNAL;
+    }
+  }
   bool begin = true;
   ::llcpp::fuchsia::hardware::registers::Mask::Tag tag;
   for (const auto& reg : metadata->registers()) {
@@ -293,16 +297,24 @@ zx_status_t Bind(void* ctx, zx_device_t* parent) {
       begin = false;
     }
 
-    if (reg.base_address() % kTagToBytes.at(tag)) {
-      zxlogf(ERROR,
-             "%s: Register with base address 0x%08lx does not start at the beginning of a register",
-             __func__, reg.base_address());
+    if (!reg.has_bind_id() || !reg.has_mmio_id() || !reg.has_masks()) {
+      zxlogf(ERROR, "%s: Metadata incomplete", __FILE__);
       return ZX_ERR_INTERNAL;
     }
 
     for (const auto& mask : reg.masks()) {
-      if (!mask.has_mask() || (mask.mask().which() != tag)) {
+      if (!mask.has_mask() || !mask.has_mmio_offset() || !mask.has_count()) {
+        zxlogf(ERROR, "%s: Metadata incomplete", __FILE__);
+        return ZX_ERR_INTERNAL;
+      }
+
+      if (mask.mask().which() != tag) {
         zxlogf(ERROR, "%s: Width of registers don't match up.", __FILE__);
+        return ZX_ERR_INTERNAL;
+      }
+
+      if (mask.mmio_offset() % kTagToBytes.at(tag)) {
+        zxlogf(ERROR, "%s: Mask with offset 0x%08lx is not aligned", __func__, mask.mmio_offset());
         return ZX_ERR_INTERNAL;
       }
     }

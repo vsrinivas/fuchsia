@@ -47,11 +47,18 @@ zx_status_t Sherlock::RegistersInit() {
   register_entries.set_count(registers::REGISTER_ID_COUNT);
 
 #ifdef FACTORY_BUILD
-  mmio_entries[USB_FACTORY_MMIO] = registers::BuildMetadata(allocator, T931_USB_BASE);
+  mmio_entries[USB_FACTORY_MMIO] = registers::BuildMetadata(allocator, USB_FACTORY_MMIO);
 
-  register_entries[registers::REGISTER_USB_PHY_FACTORY] = registers::BuildMetadata(
-      allocator, registers::REGISTER_USB_PHY_FACTORY, T931_USB_BASE,
-      std::vector<std::pair<uint32_t, uint32_t>>{{0xFFFFFFFF, T931_USB_LENGTH / sizeof(uint32_t)}});
+  register_entries[registers::REGISTER_USB_PHY_FACTORY] =
+      registers::BuildMetadata(allocator, registers::REGISTER_USB_PHY_FACTORY, USB_FACTORY_MMIO,
+                               std::vector<registers::MaskEntryBuilder<uint32_t>>{
+                                   {
+                                       .mask = 0xFFFFFFFF,
+                                       .mmio_offset = 0,
+                                       .reg_count = T931_USB_LENGTH / sizeof(uint32_t),
+                                       .overlap_check_on = false,
+                                   },
+                               });
 #endif  // FACTORY_BUILD
 
   auto metadata =

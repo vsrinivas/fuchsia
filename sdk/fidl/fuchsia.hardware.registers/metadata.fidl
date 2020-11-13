@@ -15,17 +15,27 @@ union Mask {
 
 table MaskEntry {
     1: Mask mask;
+
+    /// MMIO offset of mask range.
+    /// Should be aligned to 4 for 32-bit registers, 8 for 64-bit registers, etc.
+    2: zx.paddr mmio_offset;
+
     /// Number of masks with this mask value.
-    2: uint32 count;
+    3: uint32 count;
+
+    /// Overlap check.
+    /// If true, checks this mask for overlapping bits defined for all registers.
+    /// If false, doesn't check.
+    /// If in doubt, default to true. If not set, defaults to true.
+    4: bool overlap_check_on;
 };
 
 table RegistersMetadataEntry {
-    /// RegisterID for binding purposes.
-    1: uint64 id;
+    /// ID for binding purposes (BIND_REGISTER_ID device property).
+    1: uint32 bind_id;
 
-    /// Base physical address of register range.
-    /// Should be aligned to 4 for 32-bit registers, 8 for 64-bit registers, etc.
-    2: zx.paddr base_address;
+    /// MMIO ID for MMIO corresponding to register.
+    2: uint32 mmio_id;
 
     /// A run length encoded list of masks.
     /// Should be in order starting from base address. Masks should all be of the same type.
@@ -33,8 +43,8 @@ table RegistersMetadataEntry {
 };
 
 table MmioMetadataEntry {
-    /// Base physical address of MMIO range.
-    1: zx.paddr base_address;
+    /// MMIO ID.
+    1: uint32 id;
 };
 
 table Metadata {
