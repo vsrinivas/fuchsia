@@ -205,7 +205,7 @@ class VmObjectPaged final : public VmObject {
     return cached_page_attribution_;
   }
 
-  // Exposed for testing.
+  // Called from VmMapping to cache page attribution counts.
   uint64_t GetHierarchyGenerationCount() const {
     Guard<Mutex> guard{&lock_};
     return GetHierarchyGenerationCountLocked();

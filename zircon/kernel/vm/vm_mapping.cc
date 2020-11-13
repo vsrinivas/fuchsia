@@ -19,6 +19,7 @@
 #include <vm/vm.h>
 #include <vm/vm_aspace.h>
 #include <vm/vm_object.h>
+#include <vm/vm_object_paged.h>
 
 #include "vm/vm_address_region.h"
 #include "vm_priv.h"
@@ -51,7 +52,33 @@ size_t VmMapping::AllocatedPagesLocked() const {
   if (state_ != LifeCycleState::ALIVE) {
     return 0;
   }
-  return object_->AttributedPagesInRange(object_offset_locked(), size_);
+
+  if (!object_->is_paged()) {
+    return object_->AttributedPagesInRange(object_offset_locked(), size_);
+  }
+
+  // If |object_| is a VmObjectPaged, check if the previously cached value still holds.
+  auto object_paged = static_cast<VmObjectPaged*>(object_.get());
+  uint64_t vmo_gen_count = object_paged->GetHierarchyGenerationCount();
+  uint64_t mapping_gen_count = GetMappingGenerationCountLocked();
+
+  // Return the cached page count if the mapping's generation count and the vmo's generation count
+  // have not changed.
+  if (cached_page_attribution_.mapping_generation_count == mapping_gen_count &&
+      cached_page_attribution_.vmo_generation_count == vmo_gen_count) {
+    // TODO(rashaeqbal): Add counters for tracking hits and misses
+    return cached_page_attribution_.page_count;
+  }
+
+  size_t page_count = object_paged->AttributedPagesInRange(object_offset_locked(), size_);
+
+  DEBUG_ASSERT(cached_page_attribution_.mapping_generation_count != mapping_gen_count ||
+               cached_page_attribution_.vmo_generation_count != vmo_gen_count);
+  cached_page_attribution_.mapping_generation_count = mapping_gen_count;
+  cached_page_attribution_.vmo_generation_count = vmo_gen_count;
+  cached_page_attribution_.page_count = page_count;
+
+  return page_count;
 }
 
 void VmMapping::DumpLocked(uint depth, bool verbose) const {
@@ -160,7 +187,7 @@ zx_status_t VmMapping::ProtectLocked(vaddr_t base, size_t size, uint new_arch_mm
     LTRACEF("arch_mmu_protect returns %d\n", status);
     arch_mmu_flags_ = new_arch_mmu_flags;
 
-    size_ = size;
+    set_size_locked(size);
     AssertHeld(mapping->lock_ref());
     AssertHeld(*mapping->object_lock());
     mapping->ActivateLocked();
@@ -181,7 +208,7 @@ zx_status_t VmMapping::ProtectLocked(vaddr_t base, size_t size, uint new_arch_mm
     zx_status_t status = ProtectOrUnmap(aspace_, base, size, new_arch_mmu_flags);
     LTRACEF("arch_mmu_protect returns %d\n", status);
 
-    size_ -= size;
+    set_size_locked(size_ - size);
     AssertHeld(mapping->lock_ref());
     AssertHeld(*mapping->object_lock());
     mapping->ActivateLocked();
@@ -210,7 +237,7 @@ zx_status_t VmMapping::ProtectLocked(vaddr_t base, size_t size, uint new_arch_mm
   LTRACEF("arch_mmu_protect returns %d\n", status);
 
   // Turn us into the left half
-  size_ = left_size;
+  set_size_locked(left_size);
 
   AssertHeld(center_mapping->lock_ref());
   AssertHeld(*center_mapping->object_lock());
@@ -288,7 +315,7 @@ zx_status_t VmMapping::UnmapLocked(vaddr_t base, size_t size) {
       object_offset_ += size;
       parent_->subregions_.InsertRegion(ktl::move(ref));
     }
-    size_ -= size;
+    set_size_locked(size_ - size);
 
     return ZX_OK;
   }
@@ -315,10 +342,11 @@ zx_status_t VmMapping::UnmapLocked(vaddr_t base, size_t size) {
   }
 
   // Turn us into the left half
-  size_ = base - base_;
+  set_size_locked(base - base_);
   AssertHeld(mapping->lock_ref());
   AssertHeld(*mapping->object_lock());
   mapping->ActivateLocked();
+
   return ZX_OK;
 }
 
@@ -678,6 +706,10 @@ zx_status_t VmMapping::DestroyLocked() {
     Guard<Mutex> guard{object_->lock()};
     object_->RemoveMappingLocked(this);
   }
+
+  // Clear the cached attribution count.
+  // The generation count should already have been incremented by UnmapLocked above.
+  cached_page_attribution_ = {};
 
   // detach from any object we have mapped. Note that we are holding the aspace_->lock() so we
   // will not race with other threads calling vmo()

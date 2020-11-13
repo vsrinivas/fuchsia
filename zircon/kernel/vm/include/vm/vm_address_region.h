@@ -649,6 +649,27 @@ class VmMapping final : public VmAddressRegionOrMapping,
       const fbl::Function<bool(vm_page*, uint64_t vmo_offset)>& accessed_callback) const
       TA_REQ(object_->lock());
 
+  // Used to cache the page attribution count for this vmo range. Also tracks the vmo hierarchy
+  // generation count and the mapping generation count at the time of caching the attributed page
+  // count.
+  struct CachedPageAttribution {
+    uint64_t mapping_generation_count = 0;
+    uint64_t vmo_generation_count = 0;
+    size_t page_count = 0;
+  };
+
+  // Exposed for testing.
+  CachedPageAttribution GetCachedPageAttribution() {
+    Guard<Mutex> guard{aspace_->lock()};
+    return cached_page_attribution_;
+  }
+
+  // Exposed for testing.
+  uint64_t GetMappingGenerationCount() {
+    Guard<Mutex> guard{aspace_->lock()};
+    return GetMappingGenerationCountLocked();
+  }
+
  protected:
   ~VmMapping() override;
   friend fbl::RefPtr<VmMapping>;
@@ -686,6 +707,27 @@ class VmMapping final : public VmAddressRegionOrMapping,
   bool ObjectRangeToVaddrRange(uint64_t offset, uint64_t len, vaddr_t* base,
                                uint64_t* virtual_len) const TA_REQ(object_->lock());
 
+  // This should be called whenever a change is made to the vmo range we are mapping, that could
+  // result in the page attribution count of that range changing.
+  void IncrementMappingGenerationCountLocked() TA_REQ(lock()) {
+    DEBUG_ASSERT(mapping_generation_count_ != 0);
+    mapping_generation_count_++;
+  }
+
+  // Get the current generation count.
+  uint64_t GetMappingGenerationCountLocked() const TA_REQ(lock()) {
+    DEBUG_ASSERT(mapping_generation_count_ != 0);
+    return mapping_generation_count_;
+  }
+
+  // Helper function that updates the |size_| to |new_size| and also increments the mapping
+  // generation count. Requires both the aspace lock and the object lock to be held, since |size_|
+  // can be read under either of those locks.
+  void set_size_locked(size_t new_size) TA_REQ(lock()) TA_REQ(object_->lock()) {
+    size_ = new_size;
+    IncrementMappingGenerationCountLocked();
+  }
+
   // pointer and region of the object we are mapping
   fbl::RefPtr<VmObject> object_;
   // This can be read with either lock hold, but requires both locks to write it.
@@ -697,6 +739,22 @@ class VmMapping final : public VmAddressRegionOrMapping,
 
   // used to detect recursions through the vmo fault path
   bool currently_faulting_ TA_GUARDED(object_->lock()) = false;
+
+  // Tracks the last cached page attribution count for the vmo range we are mapping.
+  // Only used when |object_| is a VmObjectPaged.
+  mutable CachedPageAttribution cached_page_attribution_ TA_GUARDED(aspace_->lock()) = {};
+
+  // The mapping's generation count is incremented on any change to the vmo range that is mapped.
+  //
+  // This is used to implement caching for page attribution counts, which get queried frequently to
+  // periodically track memory usage on the system. Attributing pages to a VMO is an expensive
+  // operation and involves walking the VMO tree, quite often multiple times. If the generation
+  // counts for the vmo *and* the mapping do not change between two successive queries, we can avoid
+  // re-counting attributed pages, and simply return the previously cached value.
+  //
+  // The generation count starts at 1 to ensure that there can be no cached values initially; the
+  // cached generation count starts at 0.
+  uint64_t mapping_generation_count_ TA_GUARDED(aspace_->lock()) = 1;
 };
 
 // Interface for walking a VmAspace-rooted VmAddressRegion/VmMapping tree.

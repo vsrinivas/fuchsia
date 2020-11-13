@@ -36,6 +36,7 @@
 #include "pmm_node.h"
 
 static const uint kArchRwFlags = ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE;
+static const uint kArchRwUserFlags = kArchRwFlags | ARCH_MMU_FLAG_PERM_USER;
 
 namespace {
 
@@ -2226,6 +2227,27 @@ static bool verify_object_page_attribution(VmObject* vmo, uint64_t vmo_gen, size
   END_TEST;
 }
 
+// Helper function used by the vm_mapping_attribution_* tests.
+// Verifies that the mapping generation count is |mapping_gen| and the current page attribution
+// count is |pages|. Also verifies that the cached page attribution has |mapping_gen| as the
+// mapping generation count, |vmo_gen| as the VMO generation count and |pages| as the page count
+// after the call to AllocatedPages().
+static bool verify_mapping_page_attribution(VmMapping* mapping, uint64_t mapping_gen,
+                                            uint64_t vmo_gen, size_t pages) {
+  BEGIN_TEST;
+
+  EXPECT_EQ(mapping_gen, mapping->GetMappingGenerationCount());
+
+  EXPECT_EQ(pages, mapping->AllocatedPages());
+
+  VmMapping::CachedPageAttribution attr = mapping->GetCachedPageAttribution();
+  EXPECT_EQ(mapping_gen, attr.mapping_generation_count);
+  EXPECT_EQ(vmo_gen, attr.vmo_generation_count);
+  EXPECT_EQ(pages, attr.page_count);
+
+  END_TEST;
+}
+
 // Tests that page attribution caching behaves as expected under various cloning behaviors -
 // creation of snapshot clones and slices, removal of clones, committing pages in the original vmo
 // and in the clones.
@@ -2533,6 +2555,282 @@ static bool vmo_attribution_dedup_test() {
   ASSERT_EQ(2u, vmo->ScanForZeroPages(true));
   ++expected_gen_count;
   EXPECT_EQ(true, verify_object_page_attribution(vmo.get(), expected_gen_count, 0u));
+
+  END_TEST;
+}
+
+// Tests that page attribution caching at the VmMapping layer behaves as expected under
+// commits and decommits on the vmo range.
+static bool vm_mapping_attribution_commit_decommit_test() {
+  BEGIN_TEST;
+  AutoVmScannerDisable scanner_disable;
+
+  // Create a test VmAspace to temporarily switch to for creating test mappings.
+  fbl::RefPtr<VmAspace> aspace = VmAspace::Create(0, "test-aspace");
+  ASSERT_NONNULL(aspace);
+
+  // Create a VMO to map.
+  fbl::RefPtr<VmObjectPaged> vmo;
+  zx_status_t status =
+      VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, VmObjectPaged::kResizable, 16 * PAGE_SIZE, &vmo);
+  ASSERT_EQ(ZX_OK, status);
+
+  uint64_t expected_vmo_gen_count = 1;
+  uint64_t expected_mapping_gen_count = 1;
+  EXPECT_EQ(true, verify_object_page_attribution(vmo.get(), expected_vmo_gen_count, 0u));
+
+  // Map the left half of the VMO.
+  fbl::RefPtr<VmMapping> mapping;
+  EXPECT_EQ(aspace->is_user(), true);
+  status = aspace->RootVmar()->CreateVmMapping(0, 8 * PAGE_SIZE, 0, 0, vmo, 0, kArchRwUserFlags,
+                                               "test-mapping", &mapping);
+  EXPECT_EQ(ZX_OK, status);
+
+  EXPECT_EQ(true, verify_object_page_attribution(vmo.get(), expected_vmo_gen_count, 0u));
+  EXPECT_EQ(true, verify_mapping_page_attribution(mapping.get(), expected_mapping_gen_count,
+                                                  expected_vmo_gen_count, 0u));
+
+  // Commit pages a little into the mapping, and past it.
+  // Should increment the vmo generation count, but not the mapping generation count.
+  status = vmo->CommitRange(4 * PAGE_SIZE, 8 * PAGE_SIZE);
+  ASSERT_EQ(ZX_OK, status);
+  expected_vmo_gen_count += 8;
+  EXPECT_EQ(true, verify_object_page_attribution(vmo.get(), expected_vmo_gen_count, 8u));
+  EXPECT_EQ(true, verify_mapping_page_attribution(mapping.get(), expected_mapping_gen_count,
+                                                  expected_vmo_gen_count, 4u));
+
+  // Decommit the pages committed above, returning the VMO to zero committed pages.
+  // Should increment the vmo generation count, but not the mapping generation count.
+  status = vmo->DecommitRange(4 * PAGE_SIZE, 8 * PAGE_SIZE);
+  ASSERT_EQ(ZX_OK, status);
+  ++expected_vmo_gen_count;
+  EXPECT_EQ(true, verify_object_page_attribution(vmo.get(), expected_vmo_gen_count, 0u));
+  EXPECT_EQ(true, verify_mapping_page_attribution(mapping.get(), expected_mapping_gen_count,
+                                                  expected_vmo_gen_count, 0u));
+
+  // Commit some pages in the VMO again.
+  // Should increment the vmo generation count, but not the mapping generation count.
+  status = vmo->CommitRange(0, 10 * PAGE_SIZE);
+  ASSERT_EQ(ZX_OK, status);
+  expected_vmo_gen_count += 10;
+  EXPECT_EQ(true, verify_object_page_attribution(vmo.get(), expected_vmo_gen_count, 10u));
+  EXPECT_EQ(true, verify_mapping_page_attribution(mapping.get(), expected_mapping_gen_count,
+                                                  expected_vmo_gen_count, 8u));
+
+  // Decommit pages in the vmo via the mapping.
+  // Should increment the vmo generation count, not the mapping generation count.
+  status = mapping->DecommitRange(0, mapping->size());
+  ASSERT_EQ(ZX_OK, status);
+  ++expected_vmo_gen_count;
+  EXPECT_EQ(true, verify_object_page_attribution(vmo.get(), expected_vmo_gen_count, 2u));
+  EXPECT_EQ(true, verify_mapping_page_attribution(mapping.get(), expected_mapping_gen_count,
+                                                  expected_vmo_gen_count, 0u));
+
+  // Destroy the mapping.
+  // Should increment the mapping generation count, and invalidate the cached attribution.
+  status = mapping->Destroy();
+  ASSERT_EQ(ZX_OK, status);
+  EXPECT_EQ(0ul, mapping->size());
+  ++expected_mapping_gen_count;
+  EXPECT_EQ(true, verify_object_page_attribution(vmo.get(), expected_vmo_gen_count, 2u));
+  EXPECT_EQ(expected_mapping_gen_count, mapping->GetMappingGenerationCount());
+  EXPECT_EQ(0ul, mapping->AllocatedPages());
+  VmMapping::CachedPageAttribution attr = mapping->GetCachedPageAttribution();
+  EXPECT_EQ(0ul, attr.mapping_generation_count);
+  EXPECT_EQ(0ul, attr.vmo_generation_count);
+  EXPECT_EQ(0ul, attr.page_count);
+
+  // Free the test address space.
+  status = aspace->Destroy();
+  EXPECT_EQ(ZX_OK, status);
+
+  END_TEST;
+}
+
+// Tests that page attribution caching at the VmMapping layer behaves as expected under
+// changes to the mapping's mmu permissions (some of which could also result in an unmap).
+static bool vm_mapping_attribution_protect_test() {
+  BEGIN_TEST;
+  AutoVmScannerDisable scanner_disable;
+
+  // Create a test VmAspace to temporarily switch to for creating test mappings.
+  fbl::RefPtr<VmAspace> aspace = VmAspace::Create(0, "test-aspace");
+  ASSERT_NONNULL(aspace);
+
+  // Create a VMO to map.
+  fbl::RefPtr<VmObjectPaged> vmo;
+  zx_status_t status =
+      VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, VmObjectPaged::kResizable, 16 * PAGE_SIZE, &vmo);
+  ASSERT_EQ(ZX_OK, status);
+
+  uint64_t expected_vmo_gen_count = 1;
+  uint64_t expected_mapping_gen_count = 1;
+  EXPECT_EQ(true, verify_object_page_attribution(vmo.get(), expected_vmo_gen_count, 0u));
+
+  // Map the left half of the VMO.
+  fbl::RefPtr<VmMapping> mapping;
+  EXPECT_EQ(aspace->is_user(), true);
+  status = aspace->RootVmar()->CreateVmMapping(0, 8 * PAGE_SIZE, 0, 0, vmo, 0, kArchRwUserFlags,
+                                               "test-mapping", &mapping);
+  EXPECT_EQ(ZX_OK, status);
+
+  EXPECT_EQ(true, verify_object_page_attribution(vmo.get(), expected_vmo_gen_count, 0u));
+  EXPECT_EQ(true, verify_mapping_page_attribution(mapping.get(), expected_mapping_gen_count,
+                                                  expected_vmo_gen_count, 0u));
+
+  // Commit some pages in the VMO, such that it covers the mapping.
+  // Should increment the vmo generation count, but not the mapping generation count.
+  status = vmo->CommitRange(0, 10 * PAGE_SIZE);
+  ASSERT_EQ(ZX_OK, status);
+  expected_vmo_gen_count += 10;
+  EXPECT_EQ(true, verify_object_page_attribution(vmo.get(), expected_vmo_gen_count, 10u));
+  EXPECT_EQ(true, verify_mapping_page_attribution(mapping.get(), expected_mapping_gen_count,
+                                                  expected_vmo_gen_count, 8u));
+
+  // Remove write permissions for the entire range.
+  // Should not change the mapping generation count.
+  static constexpr uint kReadOnlyFlags = kArchRwUserFlags & ~ARCH_MMU_FLAG_PERM_WRITE;
+  status = mapping->Protect(mapping->base(), mapping->size(), kReadOnlyFlags);
+  ASSERT_EQ(ZX_OK, status);
+  EXPECT_EQ(true, verify_object_page_attribution(vmo.get(), expected_vmo_gen_count, 10u));
+  EXPECT_EQ(true, verify_mapping_page_attribution(mapping.get(), expected_mapping_gen_count,
+                                                  expected_vmo_gen_count, 8u));
+
+  // Clear permission flags for the entire mapping.
+  // Should not change the mapping generation count.
+  status = mapping->Protect(mapping->base(), mapping->size(), 0);
+  ASSERT_EQ(ZX_OK, status);
+  EXPECT_EQ(true, verify_object_page_attribution(vmo.get(), expected_vmo_gen_count, 10u));
+  EXPECT_EQ(true, verify_mapping_page_attribution(mapping.get(), expected_mapping_gen_count,
+                                                  expected_vmo_gen_count, 8u));
+
+  // Restore permission flags for the entire mapping.
+  // Should not change the mapping generation count.
+  status = mapping->Protect(mapping->base(), mapping->size(), kArchRwUserFlags);
+  ASSERT_EQ(ZX_OK, status);
+  EXPECT_EQ(true, verify_object_page_attribution(vmo.get(), expected_vmo_gen_count, 10u));
+  EXPECT_EQ(true, verify_mapping_page_attribution(mapping.get(), expected_mapping_gen_count,
+                                                  expected_vmo_gen_count, 8u));
+
+  // Remove write permission flags from the right end of the mapping.
+  // Should increment the mapping generation count.
+  auto old_base = mapping->base();
+  status =
+      mapping->Protect(mapping->base() + mapping->size() - PAGE_SIZE, PAGE_SIZE, kReadOnlyFlags);
+  ASSERT_EQ(ZX_OK, status);
+  EXPECT_EQ(old_base, mapping->base());
+  EXPECT_EQ(7ul * PAGE_SIZE, mapping->size());
+  ++expected_mapping_gen_count;
+  EXPECT_EQ(true, verify_object_page_attribution(vmo.get(), expected_vmo_gen_count, 10u));
+  EXPECT_EQ(true, verify_mapping_page_attribution(mapping.get(), expected_mapping_gen_count,
+                                                  expected_vmo_gen_count, 7u));
+
+  // Remove write permission flags from the center of the mapping.
+  // Should increment the mapping generation count.
+  status = mapping->Protect(mapping->base() + 4 * PAGE_SIZE, PAGE_SIZE, kReadOnlyFlags);
+  ASSERT_EQ(ZX_OK, status);
+  EXPECT_EQ(old_base, mapping->base());
+  EXPECT_EQ(4ul * PAGE_SIZE, mapping->size());
+  ++expected_mapping_gen_count;
+  EXPECT_EQ(true, verify_object_page_attribution(vmo.get(), expected_vmo_gen_count, 10u));
+  EXPECT_EQ(true, verify_mapping_page_attribution(mapping.get(), expected_mapping_gen_count,
+                                                  expected_vmo_gen_count, 4u));
+
+  // Remove write permission flags from the left end of the mapping.
+  // Should increment the mapping generation count.
+  status = mapping->Protect(mapping->base(), PAGE_SIZE, kReadOnlyFlags);
+  ASSERT_EQ(ZX_OK, status);
+  EXPECT_EQ(old_base, mapping->base());
+  EXPECT_EQ(1ul * PAGE_SIZE, mapping->size());
+  ++expected_mapping_gen_count;
+  EXPECT_EQ(true, verify_object_page_attribution(vmo.get(), expected_vmo_gen_count, 10u));
+  EXPECT_EQ(true, verify_mapping_page_attribution(mapping.get(), expected_mapping_gen_count,
+                                                  expected_vmo_gen_count, 1u));
+
+  // Free the test address space.
+  status = aspace->Destroy();
+  EXPECT_EQ(ZX_OK, status);
+
+  END_TEST;
+}
+
+// Tests that page attribution caching at the VmMapping layer behaves as expected under
+// map and unmap operations on the mapping.
+static bool vm_mapping_attribution_map_unmap_test() {
+  BEGIN_TEST;
+  AutoVmScannerDisable scanner_disable;
+
+  // Create a test VmAspace to temporarily switch to for creating test mappings.
+  fbl::RefPtr<VmAspace> aspace = VmAspace::Create(0, "test-aspace");
+  ASSERT_NONNULL(aspace);
+
+  // Create a VMO to map.
+  fbl::RefPtr<VmObjectPaged> vmo;
+  zx_status_t status =
+      VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, VmObjectPaged::kResizable, 16 * PAGE_SIZE, &vmo);
+  ASSERT_EQ(ZX_OK, status);
+
+  uint64_t expected_vmo_gen_count = 1;
+  uint64_t expected_mapping_gen_count = 1;
+  EXPECT_EQ(true, verify_object_page_attribution(vmo.get(), expected_vmo_gen_count, 0u));
+
+  // Map the left half of the VMO.
+  fbl::RefPtr<VmMapping> mapping;
+  EXPECT_EQ(aspace->is_user(), true);
+  status = aspace->RootVmar()->CreateVmMapping(0, 8 * PAGE_SIZE, 0, 0, vmo, 0, kArchRwUserFlags,
+                                               "test-mapping", &mapping);
+  EXPECT_EQ(ZX_OK, status);
+
+  EXPECT_EQ(true, verify_object_page_attribution(vmo.get(), expected_vmo_gen_count, 0u));
+  EXPECT_EQ(true, verify_mapping_page_attribution(mapping.get(), expected_mapping_gen_count,
+                                                  expected_vmo_gen_count, 0u));
+
+  // Commit pages in the vmo via the mapping.
+  // Should increment the vmo generation count, not the mapping generation count.
+  status = mapping->MapRange(0, mapping->size(), true);
+  ASSERT_EQ(ZX_OK, status);
+  expected_vmo_gen_count += 8;
+  EXPECT_EQ(true, verify_object_page_attribution(vmo.get(), expected_vmo_gen_count, 8u));
+  EXPECT_EQ(true, verify_mapping_page_attribution(mapping.get(), expected_mapping_gen_count,
+                                                  expected_vmo_gen_count, 8u));
+
+  // Unmap from the right end of the mapping.
+  // Should increment the mapping generation count.
+  auto old_base = mapping->base();
+  status = mapping->Unmap(mapping->base() + mapping->size() - PAGE_SIZE, PAGE_SIZE);
+  ASSERT_EQ(ZX_OK, status);
+  EXPECT_EQ(old_base, mapping->base());
+  EXPECT_EQ(7ul * PAGE_SIZE, mapping->size());
+  ++expected_mapping_gen_count;
+  EXPECT_EQ(true, verify_object_page_attribution(vmo.get(), expected_vmo_gen_count, 8u));
+  EXPECT_EQ(true, verify_mapping_page_attribution(mapping.get(), expected_mapping_gen_count,
+                                                  expected_vmo_gen_count, 7u));
+
+  // Unmap from the center of the mapping.
+  // Should increment the mapping generation count.
+  status = mapping->Unmap(mapping->base() + 4 * PAGE_SIZE, PAGE_SIZE);
+  ASSERT_EQ(ZX_OK, status);
+  EXPECT_EQ(old_base, mapping->base());
+  EXPECT_EQ(4ul * PAGE_SIZE, mapping->size());
+  ++expected_mapping_gen_count;
+  EXPECT_EQ(true, verify_object_page_attribution(vmo.get(), expected_vmo_gen_count, 8u));
+  EXPECT_EQ(true, verify_mapping_page_attribution(mapping.get(), expected_mapping_gen_count,
+                                                  expected_vmo_gen_count, 4u));
+
+  // Unmap from the left end of the mapping.
+  // Should increment the mapping generation count.
+  status = mapping->Unmap(mapping->base(), PAGE_SIZE);
+  ASSERT_EQ(ZX_OK, status);
+  EXPECT_NE(old_base, mapping->base());
+  EXPECT_EQ(3ul * PAGE_SIZE, mapping->size());
+  ++expected_mapping_gen_count;
+  EXPECT_EQ(true, verify_object_page_attribution(vmo.get(), expected_vmo_gen_count, 8u));
+  EXPECT_EQ(true, verify_mapping_page_attribution(mapping.get(), expected_mapping_gen_count,
+                                                  expected_vmo_gen_count, 3u));
+
+  // Free the test address space.
+  status = aspace->Destroy();
+  EXPECT_EQ(ZX_OK, status);
 
   END_TEST;
 }
@@ -3907,6 +4205,9 @@ VM_UNITTEST(vmo_attribution_ops_test)
 VM_UNITTEST(vmo_attribution_pager_test)
 VM_UNITTEST(vmo_attribution_evict_test)
 VM_UNITTEST(vmo_attribution_dedup_test)
+VM_UNITTEST(vm_mapping_attribution_commit_decommit_test)
+VM_UNITTEST(vm_mapping_attribution_protect_test)
+VM_UNITTEST(vm_mapping_attribution_map_unmap_test)
 VM_UNITTEST(vmo_parent_merge_test)
 VM_UNITTEST(arch_noncontiguous_map)
 VM_UNITTEST(vm_kernel_region_test)

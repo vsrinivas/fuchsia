@@ -143,12 +143,8 @@ class VmHierarchyState : public fbl::RefCounted<VmHierarchyState> {
   // If the generation count does not change between two successive queries, we can avoid
   // re-counting attributed pages, and simply return the previously cached value.
   //
-  // The generation count starts at 1 to ensure that there can be no cached values initially, and is
-  // used to implement caching for page attribution counts, which get queried frequently to
-  // periodically track memory usage on the system. Attributing pages to a VMO is an expensive
-  // operation and involves walking the VMO tree, quite often multiple times. If the generation
-  // count does not change between two successive queries, we can avoid re-counting attributed
-  // pages, and simply return the previously cached value.
+  // The generation count starts at 1 to ensure that there can be no cached values initially; the
+  // cached generation count starts at 0.
   uint64_t hierarchy_generation_count_ TA_GUARDED(lock_) = 1;
 };
 
