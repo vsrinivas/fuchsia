@@ -46,7 +46,7 @@
 
 namespace devmgr {
 
-FsManager::FsManager(FsHostMetrics metrics)
+FsManager::FsManager(std::unique_ptr<FsHostMetrics> metrics)
     : global_loop_(new async::Loop(&kAsyncLoopConfigNoAttachToCurrentThread)),
       outgoing_vfs_(fs::ManagedVfs(global_loop_->dispatcher())),
       registry_(global_loop_.get()),
@@ -73,14 +73,15 @@ FsManager::~FsManager() {
 
 zx_status_t FsManager::Create(std::shared_ptr<loader::LoaderServiceBase> loader,
                               zx::channel dir_request, zx::channel lifecycle_request,
-                              FsHostMetrics metrics, std::unique_ptr<FsManager>* out) {
+                              std::unique_ptr<FsHostMetrics> metrics,
+                              std::unique_ptr<FsManager>* out) {
   auto fs_manager = std::unique_ptr<FsManager>(new FsManager(std::move(metrics)));
   zx_status_t status = fs_manager->Initialize();
   if (status != ZX_OK) {
     return status;
   }
   if (dir_request.is_valid()) {
-    status = fs_manager->SetupOutgoingDirectory(std::move(dir_request), loader);
+    status = fs_manager->SetupOutgoingDirectory(std::move(dir_request), std::move(loader));
     if (status != ZX_OK) {
       return status;
     }
@@ -106,7 +107,7 @@ zx_status_t FsManager::SetupOutgoingDirectory(zx::channel dir_request,
                                               std::shared_ptr<loader::LoaderServiceBase> loader) {
   auto outgoing_dir = fbl::MakeRefCounted<fs::PseudoDir>();
 
-  // TODO: fshost exposes two separate service directories, one here and one in
+  // TODO(unknown): fshost exposes two separate service directories, one here and one in
   // the registry vfs that's mounted under fs-manager-svc further down in this
   // function. These should be combined by either pulling the registry services
   // into this VFS or by pushing the services in this directory into the
@@ -232,7 +233,7 @@ zx_status_t FsManager::Initialize() {
   return ZX_OK;
 }
 
-void FsManager::FlushMetrics() { mutable_metrics()->FlushUntilSuccess(global_loop_->dispatcher()); }
+void FsManager::FlushMetrics() { mutable_metrics()->Flush(); }
 
 zx_status_t FsManager::InstallFs(const char* path, zx::channel h) {
   for (unsigned n = 0; n < std::size(kMountPoints); n++) {
@@ -275,8 +276,9 @@ void FsManager::Shutdown(fit::function<void(zx_status_t)> callback) {
 
   shutdown_waiter_ = std::make_unique<async::Wait>(event_.get(), FSHOST_SIGNAL_EXIT_DONE);
   shutdown_waiter_->set_handler(
-      [callback = std::move(callback)](async_dispatcher_t*, async::Wait*, zx_status_t status,
-                                       /*signal*/ const zx_packet_signal_t*) { callback(status); });
+      [callback = std::move(callback)](
+          async_dispatcher_t* unused_dispatched, async::Wait* unused_wait, zx_status_t status,
+          /*signal*/ const zx_packet_signal_t* unused_packet_signal) { callback(status); });
   shutdown_waiter_->Begin(global_loop_->dispatcher());
 }
 

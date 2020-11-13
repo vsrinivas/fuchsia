@@ -105,6 +105,7 @@ source_set("metrics") {
     "//zircon/system/ulib/fs/metrics:metrics-cobalt",
   ]
   deps = [
+    "//sdk/lib/syslog/cpp",
     "//zircon/system/ulib/cobalt-client",
     "//zircon/system/ulib/fs/metrics:metrics-cobalt",
     "//zircon/system/ulib/fs/metrics:metrics-inspect",

@@ -5,7 +5,13 @@
 #include "metrics.h"
 
 #include <lib/async/cpp/task.h>
+#include <lib/sync/completion.h>
+#include <lib/syslog/cpp/macros.h>
+#include <zircon/assert.h>
 
+#include <chrono>
+#include <condition_variable>
+#include <mutex>
 #include <type_traits>
 
 #include <cobalt-client/cpp/metric_options.h>
@@ -28,22 +34,59 @@ FsHostMetrics::FsHostMetrics(std::unique_ptr<cobalt_client::Collector> collector
   options.event_codes[1] = static_cast<uint32_t>(fs_metrics::CorruptionType::kMetadata);
   counters_.emplace(fs_metrics::Event::kDataCorruption,
                     std::make_unique<cobalt_client::Counter>(options, collector_.get()));
+  thread_ = std::thread([this] { Run(); });
 }
 
 FsHostMetrics::~FsHostMetrics() {
-  if (collector_ != nullptr) {
-    collector_->Flush();
+  if (!thread_.joinable()) {
+    return;
   }
+  {
+    std::lock_guard<std::mutex> lock(mutex_);
+    shut_down_ = true;
+  }
+  condition_.notify_all();
+  thread_.join();
 }
 
 void FsHostMetrics::LogMinfsCorruption() {
   counters_[fs_metrics::Event::kDataCorruption]->Increment();
 }
 
-void FsHostMetrics::FlushUntilSuccess(async_dispatcher_t* dispatcher) {
+void FsHostMetrics::Flush() {
+  {
+    std::lock_guard<std::mutex> lock(mutex_);
+    flush_ = true;
+  }
+  condition_.notify_all();
+}
+
+void FsHostMetrics::Run() {
+  if (collector_ == nullptr) {
+    return;
+  }
+  auto timeout_time = kSleepDuration;
+  for (;;) {
+    {
+      std::scoped_lock<std::mutex> lock(mutex_);
+      if (shut_down_) {
+        break;
+      }
+      while (!flush_ && !shut_down_ &&
+             condition_.wait_for(mutex_, timeout_time) != std::cv_status::timeout) {
+      }
+      flush_ = false;
+    }
+    if (!collector_->Flush()) {
+      timeout_time = kSleepDuration;
+    } else {
+      // Sleep for very long time.
+      timeout_time = std::chrono::hours(24 * 30);
+    }
+  }
+
   if (!collector_->Flush()) {
-    async::PostDelayedTask(
-        dispatcher, [this, dispatcher]() { FlushUntilSuccess(dispatcher); }, zx::sec(10));
+    FX_LOGS(ERROR) << "Failed to flush metrics to cobalt";
   }
 }
 

@@ -48,8 +48,9 @@ namespace {
 // local_storage project ID as defined in cobalt-analytics projects.yaml.
 constexpr uint32_t kCobaltProjectId = 3676913920;
 
-FsHostMetrics MakeMetrics() {
-  return FsHostMetrics(std::make_unique<cobalt_client::Collector>(kCobaltProjectId));
+std::unique_ptr<FsHostMetrics> MakeMetrics() {
+  return std::make_unique<FsHostMetrics>(
+      std::make_unique<cobalt_client::Collector>(kCobaltProjectId));
 }
 
 constexpr char kItemsPath[] = "/svc/" fuchsia_boot_Items_Name;

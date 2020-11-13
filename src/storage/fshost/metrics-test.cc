@@ -66,34 +66,75 @@ TEST_F(MetricsTest, LogMinfsDataCorruption) {
   EXPECT_EQ(logger_->counters().at(MakeMetricOptionsFromId(kCorruptionMetricId)), 1);
 }
 
-TEST_F(MetricsTest, FlushUntilSuccessWorks) {
-  async::TestLoop loop;
+TEST_F(MetricsTest, MultipleFlushWorks) {
   FsHostMetrics metrics(std::move(collector_));
   metrics.LogMinfsCorruption();
 
   // Logger is not working
   logger_->fail_logging(true);
-  metrics.FlushUntilSuccess(loop.dispatcher());
-  loop.RunFor(zx::sec(10));
+  metrics.Flush();
 
-  // After 10 seconds, nothing should be logged.
   ASSERT_EQ(logger_->counters().find(MakeMetricOptionsFromId(kCorruptionMetricId)),
             logger_->counters().end());
-  loop.RunFor(zx::sec(10));
 
-  // After 20 seconds, nothing should be logged.
+  // After 1 second, nothing should be logged. Sleep allows some time for the flushing
+  // thread to run.
+  sleep(1);
   ASSERT_EQ(logger_->counters().find(MakeMetricOptionsFromId(kCorruptionMetricId)),
             logger_->counters().end());
 
   // Logger begins working.
   logger_->fail_logging(false);
+  metrics.Flush();
 
-  // Work should complete now.
-  loop.RunFor(zx::sec(10));
-
-  ASSERT_NE(logger_->counters().find(MakeMetricOptionsFromId(kCorruptionMetricId)),
-            logger_->counters().end());
+  // After FsHostMetrics flush. Metrics should be available now.
+  // Block till counters change. Timed sleep without while loop is not sufficient because
+  // it make make test flake in virtual environment.
+  // The test may timeout and fail if the counter is never seen.
+  while (logger_->counters().find(MakeMetricOptionsFromId(kCorruptionMetricId)) ==
+         logger_->counters().end()) {
+    // Rather than busy waiting, sleep for a second to let other threads to run.
+    sleep(1);
+  }
   EXPECT_EQ(logger_->counters().at(MakeMetricOptionsFromId(kCorruptionMetricId)), 1);
+}
+
+TEST_F(MetricsTest, FlushDoesNotHangIfLoggerNotWorking) {
+  FsHostMetrics metrics(std::move(collector_));
+  metrics.LogMinfsCorruption();
+
+  // Logger is not working
+  logger_->fail_logging(true);
+  metrics.Flush();
+
+  ASSERT_EQ(logger_->counters().find(MakeMetricOptionsFromId(kCorruptionMetricId)),
+            logger_->counters().end());
+
+  // After 1 second, nothing should be logged. Sleep allows some time for the flushing
+  // thread to run.
+  sleep(1);
+  ASSERT_EQ(logger_->counters().find(MakeMetricOptionsFromId(kCorruptionMetricId)),
+            logger_->counters().end());
+
+  // Try to flush again.
+  metrics.Flush();
+
+  // Metrics should still be unavailable now.
+  ASSERT_EQ(logger_->counters().find(MakeMetricOptionsFromId(kCorruptionMetricId)),
+            logger_->counters().end());
+}
+
+TEST_F(MetricsTest, DestroyImmediatelySucceeds) {
+  FsHostMetrics metrics(std::move(collector_));
+  metrics.LogMinfsCorruption();
+}
+
+TEST_F(MetricsTest, SuccessWithNullCollector) {
+  FsHostMetrics metrics(nullptr);
+  metrics.LogMinfsCorruption();
+  // Sleep allows some time for thread to run.
+  sleep(1);
+  metrics.Flush();
 }
 
 }  // namespace

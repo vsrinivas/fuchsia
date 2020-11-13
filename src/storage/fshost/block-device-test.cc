@@ -33,11 +33,12 @@ using devmgr_integration_test::IsolatedDevmgr;
 constexpr uint64_t kBlockSize = 512;
 constexpr uint64_t kBlockCount = 1 << 20;
 
-FsHostMetrics MakeMetrics(cobalt_client::InMemoryLogger** logger) {
+std::unique_ptr<FsHostMetrics> MakeMetrics(cobalt_client::InMemoryLogger** logger) {
   std::unique_ptr<cobalt_client::InMemoryLogger> logger_ptr =
       std::make_unique<cobalt_client::InMemoryLogger>();
   *logger = logger_ptr.get();
-  return FsHostMetrics(std::make_unique<cobalt_client::Collector>(std::move(logger_ptr)));
+  return std::make_unique<FsHostMetrics>(
+      std::make_unique<cobalt_client::Collector>(std::move(logger_ptr)));
 }
 
 class BlockDeviceHarness : public zxtest::Test {
@@ -146,7 +147,7 @@ TEST_F(BlockDeviceHarness, TestEmptyDevice) {
   FilesystemMounter mounter(std::move(manager), options);
 
   // Initialize Ramdisk.
-  ASSERT_NO_FAILURES(CreateRamdisk(/*use_ramdisk=*/true));
+  ASSERT_NO_FAILURES(CreateRamdisk(/*use_guid=*/true));
 
   BlockDevice device(&mounter, GetRamdiskFd());
   EXPECT_EQ(device.GetFormat(), DISK_FORMAT_UNKNOWN);
@@ -290,7 +291,12 @@ TEST_F(BlockDeviceHarness, TestCorruptionEventLogged) {
                                 static_cast<uint32_t>(fs_metrics::CorruptionType::kMetadata)};
   metric_options.metric_dimensions = 2;
   metric_options.component = {};
-  ASSERT_NE(logger_->counters().find(metric_options), logger_->counters().end());
+  // Block till counters change. Timed sleep without while loop is not sufficient because
+  // it make make test flake in virtual environment.
+  // The test may timeout and fail if the counter is never seen.
+  while (logger_->counters().find(metric_options) == logger_->counters().end()) {
+    sleep(1);
+  }
   ASSERT_EQ(logger_->counters().at(metric_options), 1);
 }
 
@@ -321,7 +327,7 @@ TEST(BlockDeviceManager, ReadOptions) {
   EXPECT_EQ(expected_options.options, options.options);
 }
 
-// TODO: Add tests for Zxcrypt binding.
+// TODO(unknown): Add tests for Zxcrypt binding.
 
 }  // namespace
 }  // namespace devmgr

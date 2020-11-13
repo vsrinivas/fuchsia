@@ -38,7 +38,8 @@ class FsManager {
  public:
   static zx_status_t Create(std::shared_ptr<loader::LoaderServiceBase> loader,
                             zx::channel dir_request, zx::channel lifecycle_request,
-                            FsHostMetrics metrics, std::unique_ptr<FsManager>* out);
+                            std::unique_ptr<FsHostMetrics> metrics,
+                            std::unique_ptr<FsManager>* out);
 
   ~FsManager();
 
@@ -68,7 +69,7 @@ class FsManager {
   void Shutdown(fit::function<void(zx_status_t)> callback);
 
   // Returns a pointer to the |FsHostMetrics| instance.
-  FsHostMetrics* mutable_metrics() { return &metrics_; }
+  FsHostMetrics* mutable_metrics() { return metrics_.get(); }
 
   // Flushes FsHostMetrics to cobalt.
   void FlushMetrics();
@@ -85,7 +86,7 @@ class FsManager {
                                         zx::channel fs_diagnostics_dir_client);
 
  private:
-  FsManager(FsHostMetrics metrics);
+  explicit FsManager(std::unique_ptr<FsHostMetrics> metrics);
   zx_status_t SetupOutgoingDirectory(zx::channel dir_request,
                                      std::shared_ptr<loader::LoaderServiceBase> loader);
   zx_status_t SetupLifecycleServer(zx::channel lifecycle_request);
@@ -95,8 +96,8 @@ class FsManager {
   // Communicates state changes internal to FsManager.
   zx::event event_;
 
-  static constexpr const char* kMountPoints[] = {"/bin","/data", "/volume", "/system", "/install",
-                                                 "/blob", "/pkgfs", "/factory", "/durable"};
+  static constexpr const char* kMountPoints[] = {
+      "/bin", "/data", "/volume", "/system", "/install", "/blob", "/pkgfs", "/factory", "/durable"};
   fbl::RefPtr<fs::Vnode> mount_nodes[std::size(kMountPoints)];
 
   // The Root VFS manages the following filesystems:
@@ -116,7 +117,7 @@ class FsManager {
   fshost::Registry registry_;
 
   // Keeps a collection of metrics being track at the FsHost level.
-  FsHostMetrics metrics_;
+  std::unique_ptr<FsHostMetrics> metrics_;
 
   // Serves inspect data.
   InspectManager inspect_;

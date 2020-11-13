@@ -105,7 +105,7 @@ TEST(FsManagerTestCase, WatchExit) {
   zx::channel dir_request, lifecycle_request;
   zx_status_t status =
       devmgr::FsManager::Create(nullptr, std::move(dir_request), std::move(lifecycle_request),
-                                devmgr::FsHostMetrics(MakeCollector()), &manager);
+                                std::make_unique<devmgr::FsHostMetrics>(MakeCollector()), &manager);
   ASSERT_OK(status);
   manager->WatchExit();
 
@@ -131,8 +131,9 @@ TEST(FsManagerTestCase, LifecycleStop) {
   zx_status_t status = zx::channel::create(0, &lifecycle_request, &lifecycle);
   ASSERT_OK(status);
 
-  status = devmgr::FsManager::Create(nullptr, std::move(dir_request), std::move(lifecycle_request),
-                                     devmgr::FsHostMetrics(MakeCollector()), &manager);
+  status =
+      devmgr::FsManager::Create(nullptr, std::move(dir_request), std::move(lifecycle_request),
+                                std::make_unique<devmgr::FsHostMetrics>(MakeCollector()), &manager);
   ASSERT_OK(status);
   manager->WatchExit();
 
@@ -164,8 +165,8 @@ struct Context {
   char path[PATH_MAX + 1];
 };
 
-static zx_status_t DirectoryOpen(void* ctx, uint32_t flags, uint32_t mode, const char* path_data,
-                                 size_t path_size, zx_handle_t object) {
+zx_status_t DirectoryOpen(void* ctx, uint32_t flags, uint32_t mode, const char* path_data,
+                          size_t path_size, zx_handle_t object) {
   Context* context = reinterpret_cast<Context*>(ctx);
   context->open_flags = flags;
   context->open_count += 1;
@@ -177,7 +178,7 @@ static zx_status_t DirectoryOpen(void* ctx, uint32_t flags, uint32_t mode, const
   return ZX_OK;
 }
 
-static const fuchsia_io_DirectoryAdmin_ops_t kDirectoryAdminOps = []() {
+const fuchsia_io_DirectoryAdmin_ops_t kDirectoryAdminOps = []() {
   fuchsia_io_DirectoryAdmin_ops_t ops;
   ops.Open = DirectoryOpen;
   return ops;

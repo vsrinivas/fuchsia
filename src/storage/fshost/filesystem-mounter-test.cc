@@ -18,8 +18,8 @@
 namespace devmgr {
 namespace {
 
-FsHostMetrics MakeMetrics() {
-  return FsHostMetrics(std::make_unique<cobalt_client::Collector>(
+std::unique_ptr<FsHostMetrics> MakeMetrics() {
+  return std::make_unique<FsHostMetrics>(std::make_unique<cobalt_client::Collector>(
       std::make_unique<cobalt_client::InMemoryLogger>()));
 }
 
@@ -66,7 +66,7 @@ enum class FilesystemType {
 class TestMounter : public FilesystemMounter {
  public:
   template <typename... Args>
-  TestMounter(Args&&... args) : FilesystemMounter(std::forward<Args>(args)...) {}
+  explicit TestMounter(Args&&... args) : FilesystemMounter(std::forward<Args>(args)...) {}
 
   void ExpectFilesystem(FilesystemType fs) { expected_filesystem_ = fs; }
 
