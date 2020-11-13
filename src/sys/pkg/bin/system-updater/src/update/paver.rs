@@ -511,7 +511,7 @@ mod tests {
         super::*,
         fidl_fuchsia_paver::DataSinkMarker,
         matches::assert_matches,
-        mock_paver::{MockPaverServiceBuilder, PaverEvent},
+        mock_paver::{hooks as mphooks, MockPaverServiceBuilder, PaverEvent},
         std::sync::Arc,
     };
 
@@ -639,7 +639,7 @@ mod tests {
         let paver = Arc::new(
             MockPaverServiceBuilder::new()
                 .current_config(current_config)
-                .config_status_hook(move |_| status)
+                .insert_hook(mphooks::config_status(move |_| Ok(status)))
                 .build(),
         );
         let boot_manager = paver.spawn_boot_manager_service();
@@ -788,10 +788,9 @@ mod tests {
     async fn write_image_buffer_ignores_unsupported_firmware() {
         let paver = Arc::new(
             MockPaverServiceBuilder::new()
-                .firmware_hook(|event| match event {
-                    PaverEvent::WriteFirmware { .. } => WriteFirmwareResult::Unsupported(true),
-                    _ => panic!("Unexpected event: {:?}", event),
-                })
+                .insert_hook(mphooks::write_firmware(|_, _, _| {
+                    WriteFirmwareResult::Unsupported(true)
+                }))
                 .build(),
         );
         let data_sink = paver.spawn_data_sink_service();
@@ -819,12 +818,9 @@ mod tests {
     async fn write_image_buffer_forwards_other_firmware_errors() {
         let paver = Arc::new(
             MockPaverServiceBuilder::new()
-                .firmware_hook(|event| match event {
-                    PaverEvent::WriteFirmware { .. } => {
-                        WriteFirmwareResult::Status(Status::INTERNAL.into_raw())
-                    }
-                    _ => panic!("Unexpected event: {:?}", event),
-                })
+                .insert_hook(mphooks::write_firmware(|_, _, _| {
+                    WriteFirmwareResult::Status(Status::INTERNAL.into_raw())
+                }))
                 .build(),
         );
         let data_sink = paver.spawn_data_sink_service();
@@ -910,10 +906,10 @@ mod tests {
     async fn write_image_buffer_write_asset_forwards_errors() {
         let paver = Arc::new(
             MockPaverServiceBuilder::new()
-                .call_hook(|event| match event {
+                .insert_hook(mphooks::return_error(|event| match event {
                     PaverEvent::WriteAsset { .. } => Status::INTERNAL,
                     _ => panic!("Unexpected event: {:?}", event),
-                })
+                }))
                 .build(),
         );
         let data_sink = paver.spawn_data_sink_service();
@@ -1066,7 +1062,7 @@ mod abr_not_supported_tests {
     use {
         super::*,
         matches::assert_matches,
-        mock_paver::{MockPaverServiceBuilder, PaverEvent},
+        mock_paver::{hooks as mphooks, MockPaverServiceBuilder, PaverEvent},
         std::sync::Arc,
     };
 
@@ -1204,14 +1200,14 @@ mod abr_not_supported_tests {
     async fn write_image_buffer_forwards_config_a_error() {
         let paver = Arc::new(
             MockPaverServiceBuilder::new()
-                .call_hook(|event| match event {
+                .insert_hook(mphooks::return_error(|event| match event {
                     PaverEvent::WriteAsset {
                         configuration: Configuration::A,
                         asset: Asset::Kernel,
                         payload: _,
                     } => Status::INTERNAL,
                     _ => Status::OK,
-                })
+                }))
                 .build(),
         );
         let data_sink = paver.spawn_data_sink_service();
@@ -1241,14 +1237,14 @@ mod abr_not_supported_tests {
     async fn write_image_buffer_ignores_config_b_not_supported_error() {
         let paver = Arc::new(
             MockPaverServiceBuilder::new()
-                .call_hook(|event| match event {
+                .insert_hook(mphooks::return_error(|event| match event {
                     PaverEvent::WriteAsset {
                         configuration: Configuration::B,
                         asset: Asset::Kernel,
                         payload: _,
                     } => Status::NOT_SUPPORTED,
                     _ => Status::OK,
-                })
+                }))
                 .build(),
         );
         let data_sink = paver.spawn_data_sink_service();
@@ -1283,14 +1279,10 @@ mod abr_not_supported_tests {
     async fn write_image_buffer_write_firmware_ignores_unsupported_config_b() {
         let paver = Arc::new(
             MockPaverServiceBuilder::new()
-                .firmware_hook(|event| match event {
-                    PaverEvent::WriteFirmware {
-                        configuration: Configuration::B,
-                        firmware_type: _,
-                        payload: _,
-                    } => WriteFirmwareResult::Unsupported(true),
+                .insert_hook(mphooks::write_firmware(|configuration, _, _| match configuration {
+                    Configuration::B => WriteFirmwareResult::Unsupported(true),
                     _ => WriteFirmwareResult::Status(Status::OK.into_raw()),
-                })
+                }))
                 .build(),
         );
         let data_sink = paver.spawn_data_sink_service();
@@ -1325,14 +1317,14 @@ mod abr_not_supported_tests {
     async fn write_image_buffer_forwards_other_config_b_errors() {
         let paver = Arc::new(
             MockPaverServiceBuilder::new()
-                .call_hook(|event| match event {
+                .insert_hook(mphooks::return_error(|event| match event {
                     PaverEvent::WriteAsset {
                         configuration: Configuration::B,
                         asset: Asset::Kernel,
                         ..
                     } => Status::INTERNAL,
                     _ => Status::OK,
-                })
+                }))
                 .build(),
         );
         let data_sink = paver.spawn_data_sink_service();

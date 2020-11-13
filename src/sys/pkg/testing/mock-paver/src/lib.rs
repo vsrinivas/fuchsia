@@ -331,44 +331,6 @@ impl MockPaverServiceBuilder {
         self
     }
 
-    /// TODO: Remove and replace with direct calls to insert_hook.
-    pub fn call_hook<F>(self, call_hook: F) -> Self
-    where
-        F: Fn(&PaverEvent) -> Status + Send + Sync + 'static,
-    {
-        self.insert_hook(hooks::return_error(call_hook))
-    }
-
-    /// TODO: Remove and replace with direct calls to insert_hook.
-    pub fn config_status_hook<F>(self, config_status_hook: F) -> Self
-    where
-        F: Fn(&PaverEvent) -> paver::ConfigurationStatus + Send + Sync + 'static,
-    {
-        self.insert_hook(hooks::config_status(move |configuration| {
-            Ok(config_status_hook(&PaverEvent::QueryConfigurationStatus { configuration }))
-        }))
-    }
-
-    /// TODO: Remove and replace with direct calls to insert_hook.
-    pub fn firmware_hook<F>(self, firmware_hook: F) -> Self
-    where
-        F: Fn(&PaverEvent) -> paver::WriteFirmwareResult + Send + Sync + 'static,
-    {
-        self.insert_hook(hooks::write_firmware(move |configuration, firmware_type, payload| {
-            firmware_hook(&PaverEvent::WriteFirmware { configuration, firmware_type, payload })
-        }))
-    }
-
-    /// TODO: Remove and replace with direct calls to insert_hook.
-    pub fn read_hook<F>(self, read_hook: F) -> Self
-    where
-        F: Fn(&PaverEvent) -> Result<Vec<u8>, Status> + Send + Sync + 'static,
-    {
-        self.insert_hook(hooks::read_asset(move |configuration, asset| {
-            read_hook(&PaverEvent::ReadAsset { configuration, asset })
-        }))
-    }
-
     // Provide a callback which will be called for every paver event.
     // Useful for logging or interaction assertions.
     pub fn event_hook<F>(mut self, event_hook: F) -> Self

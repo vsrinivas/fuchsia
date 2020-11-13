@@ -44,8 +44,9 @@ async fn succeeds_even_if_target_channel_does_not_exist() {
 
 #[fasync::run_singlethreaded(test)]
 async fn does_not_promote_target_channel_on_failure() {
-    let env =
-        TestEnv::builder().paver_service(|builder| builder.call_hook(|_| Status::INTERNAL)).build();
+    let env = TestEnv::builder()
+        .paver_service(|builder| builder.insert_hook(mphooks::return_error(|_| Status::INTERNAL)))
+        .build();
 
     env.set_target_channel("target-channel");
 

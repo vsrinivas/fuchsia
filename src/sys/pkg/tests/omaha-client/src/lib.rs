@@ -32,7 +32,7 @@ use {
     matches::assert_matches,
     mock_installer::MockUpdateInstallerService,
     mock_omaha_server::{OmahaResponse, OmahaServer},
-    mock_paver::{MockPaverService, MockPaverServiceBuilder, PaverEvent},
+    mock_paver::{hooks as mphooks, MockPaverService, MockPaverServiceBuilder, PaverEvent},
     mock_reboot::MockRebootService,
     mock_resolver::MockResolverService,
     parking_lot::Mutex,
@@ -366,10 +366,10 @@ async fn test_update_manager_checknow_works_after_paver_service_fails() {
     let paver = MockPaverServiceBuilder::new()
         .current_config(Configuration::B)
         .event_hook(move |e| send.unbounded_send(e.to_owned()).expect("channel stayed open"))
-        .call_hook(move |event| match event {
+        .insert_hook(mphooks::return_error(|event| match event {
             PaverEvent::SetConfigurationHealthy { .. } => Status::INTERNAL,
             _ => Status::OK,
-        })
+        }))
         .build();
     let env = TestEnvBuilder::new().paver(paver).build();
 

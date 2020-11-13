@@ -22,7 +22,7 @@ use {
     isolated_ota::{download_and_apply_update, OmahaConfig, UpdateError},
     matches::assert_matches,
     mock_omaha_server::{OmahaResponse, OmahaServer},
-    mock_paver::{MockPaverService, MockPaverServiceBuilder, PaverEvent},
+    mock_paver::{hooks as mphooks, MockPaverService, MockPaverServiceBuilder, PaverEvent},
     serde_json::json,
     std::{
         collections::{BTreeSet, HashMap},
@@ -376,7 +376,7 @@ pub async fn test_pave_fails() -> Result<(), Error> {
     };
 
     let env = TestEnvBuilder::new()
-        .paver(|p| p.call_hook(paver_hook))
+        .paver(|p| p.insert_hook(mphooks::return_error(paver_hook)))
         .add_package(test_package)
         .add_image("zbi.signed", "FAIL".as_bytes())
         .add_image("fuchsia.vbmeta", "FAIL".as_bytes())
@@ -610,7 +610,7 @@ pub async fn test_blobfs_broken() -> Result<(), Error> {
         .add_package(package)
         .add_image("zbi.signed", "ZBI".as_bytes())
         .blobfs(ClientEnd::from(client))
-        .paver(|p| p.call_hook(paver_hook))
+        .paver(|p| p.insert_hook(mphooks::return_error(paver_hook)))
         .build()
         .await
         .context("Building TestEnv")?;

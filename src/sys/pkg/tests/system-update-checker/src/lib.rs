@@ -20,7 +20,7 @@ use {
     fuchsia_zircon::Status,
     futures::{channel::mpsc, prelude::*},
     mock_installer::MockUpdateInstallerService,
-    mock_paver::{MockPaverService, MockPaverServiceBuilder, PaverEvent},
+    mock_paver::{hooks as mphooks, MockPaverService, MockPaverServiceBuilder, PaverEvent},
     mock_resolver::MockResolverService,
     std::{fs::File, sync::Arc},
     tempfile::TempDir,
@@ -224,7 +224,9 @@ async fn test_calls_paver_service() {
 #[fasync::run_singlethreaded(test)]
 // Test will hang if system-update-checker does not call paver service
 async fn test_channel_provider_get_current_works_after_paver_service_fails() {
-    let env = TestEnvBuilder::new().paver_init(|p| p.call_hook(|_| Status::INTERNAL)).build();
+    let env = TestEnvBuilder::new()
+        .paver_init(|p| p.insert_hook(mphooks::return_error(|_| Status::INTERNAL)))
+        .build();
 
     assert_eq!(
         env.proxies.paver_events.take(1).collect::<Vec<PaverEvent>>().await,
@@ -240,7 +242,9 @@ async fn test_channel_provider_get_current_works_after_paver_service_fails() {
 #[fasync::run_singlethreaded(test)]
 // Test will hang if system-update-checker does not call paver service
 async fn test_update_manager_check_now_works_after_paver_service_fails() {
-    let env = TestEnvBuilder::new().paver_init(|p| p.call_hook(|_| Status::INTERNAL)).build();
+    let env = TestEnvBuilder::new()
+        .paver_init(|p| p.insert_hook(mphooks::return_error(|_| Status::INTERNAL)))
+        .build();
 
     assert_eq!(
         env.proxies.paver_events.take(1).collect::<Vec<PaverEvent>>().await,

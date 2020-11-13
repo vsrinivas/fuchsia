@@ -21,7 +21,7 @@ use {
     fuchsia_zircon::Status,
     futures::prelude::*,
     matches::assert_matches,
-    mock_paver::{MockPaverService, MockPaverServiceBuilder, PaverEvent},
+    mock_paver::{hooks as mphooks, MockPaverService, MockPaverServiceBuilder, PaverEvent},
     mock_reboot::MockRebootService,
     mock_resolver::MockResolverService,
     parking_lot::Mutex,
@@ -144,8 +144,6 @@ impl TestEnvBuilder {
         let system_updater_builder =
             system_updater_app_builder(&data_path, &build_info_path, &misc_path, mount_data);
 
-        // Set up the paver service to push events to our interactions buffer by overriding
-        // call_hook and firmware_hook.
         let interactions_paver_clone = Arc::clone(&interactions);
         let paver_service = Arc::new(
             paver_service_builder

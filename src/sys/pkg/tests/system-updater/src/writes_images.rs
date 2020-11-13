@@ -34,10 +34,10 @@ async fn fails_on_paver_connect_error() {
 async fn fails_on_image_write_error() {
     let env = TestEnv::builder()
         .paver_service(|builder| {
-            builder.call_hook(|event| match event {
+            builder.insert_hook(mphooks::return_error(|event| match event {
                 PaverEvent::WriteAsset { .. } => Status::INTERNAL,
                 _ => Status::OK,
-            })
+            }))
         })
         .build();
 
@@ -199,7 +199,7 @@ async fn does_not_update_with_unhealthy_current_partition() {
     let env = TestEnv::builder()
         .paver_service(|builder| {
             builder
-                .config_status_hook(|_| paver::ConfigurationStatus::Pending)
+                .insert_hook(mphooks::config_status(|_| Ok(paver::ConfigurationStatus::Pending)))
                 .current_config(current_config)
         })
         .build();
@@ -249,10 +249,10 @@ async fn does_not_update_if_alternate_cant_be_marked_unbootable() {
     let env = TestEnv::builder()
         .paver_service(|builder| {
             builder
-                .call_hook(|event| match event {
+                .insert_hook(mphooks::return_error(|event| match event {
                     PaverEvent::SetConfigurationUnbootable { .. } => Status::INTERNAL,
                     _ => Status::OK,
-                })
+                }))
                 .current_config(current_config)
         })
         .build();

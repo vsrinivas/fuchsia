@@ -156,7 +156,7 @@ mod tests {
         fuchsia_component::server::{ServiceFs, ServiceObj},
         fuchsia_pkg_testing::PackageBuilder,
         fuchsia_zircon as zx,
-        mock_paver::PaverEvent,
+        mock_paver::{hooks as mphooks, PaverEvent},
         omaha_client::http_request::mock::MockHttpRequest,
         serde_json::json,
     };
@@ -266,7 +266,7 @@ mod tests {
             .context("Building test_package")?;
         let updater = UpdaterBuilder::new()
             .await
-            .paver(|p| p.call_hook(hook))
+            .paver(|p| p.insert_hook(mphooks::return_error(hook)))
             .repo_url(TEST_REPO_URL)
             .add_package(test_package)
             .add_image("zbi.signed", &data)

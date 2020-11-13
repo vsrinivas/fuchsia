@@ -180,7 +180,7 @@ mod tests {
         fuchsia_async as fasync,
         fuchsia_zircon::Status,
         matches::assert_matches,
-        mock_paver::{MockPaverServiceBuilder, PaverEvent},
+        mock_paver::{hooks as mphooks, MockPaverServiceBuilder, PaverEvent},
         std::sync::Arc,
     };
 
@@ -191,7 +191,7 @@ mod tests {
         let paver = Arc::new(
             MockPaverServiceBuilder::new()
                 .current_config(current_config)
-                .config_status_hook(|_| paver::ConfigurationStatus::Healthy)
+                .insert_hook(mphooks::config_status(|_| Ok(paver::ConfigurationStatus::Healthy)))
                 .build(),
         );
         check_and_set_system_health(&paver.spawn_boot_manager_service()).await.unwrap();
@@ -224,7 +224,7 @@ mod tests {
         let paver = Arc::new(
             MockPaverServiceBuilder::new()
                 .current_config(current_config)
-                .config_status_hook(|_| paver::ConfigurationStatus::Pending)
+                .insert_hook(mphooks::config_status(|_| Ok(paver::ConfigurationStatus::Pending)))
                 .build(),
         );
         check_and_set_system_health(&paver.spawn_boot_manager_service()).await.unwrap();
@@ -255,7 +255,7 @@ mod tests {
         let paver = Arc::new(
             MockPaverServiceBuilder::new()
                 .current_config(current_config)
-                .config_status_hook(|_| paver::ConfigurationStatus::Unbootable)
+                .insert_hook(mphooks::config_status(|_| Ok(paver::ConfigurationStatus::Unbootable)))
                 .build(),
         );
         assert_matches!(
@@ -299,7 +299,7 @@ mod tests {
         let paver = Arc::new(
             MockPaverServiceBuilder::new()
                 .current_config(Configuration::Recovery)
-                .config_status_hook(|_| paver::ConfigurationStatus::Healthy)
+                .insert_hook(mphooks::config_status(|_| Ok(paver::ConfigurationStatus::Healthy)))
                 .build(),
         );
         check_and_set_system_health(&paver.spawn_boot_manager_service()).await.unwrap();
@@ -310,10 +310,10 @@ mod tests {
     async fn test_fails_when_set_healthy_fails() {
         let paver = Arc::new(
             MockPaverServiceBuilder::new()
-                .call_hook(|e| match e {
+                .insert_hook(mphooks::return_error(|e| match e {
                     PaverEvent::SetConfigurationHealthy { .. } => Status::OUT_OF_RANGE,
                     _ => Status::OK,
-                })
+                }))
                 .build(),
         );
 

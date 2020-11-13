@@ -246,7 +246,7 @@ mod tests {
         fidl_fuchsia_paver::Configuration,
         fuchsia_pkg_testing::TestUpdatePackage,
         fuchsia_zircon::Vmo,
-        mock_paver::{MockPaverServiceBuilder, PaverEvent},
+        mock_paver::{hooks as mphooks, MockPaverServiceBuilder},
         pretty_assertions::assert_eq,
         std::sync::Arc,
     };
@@ -293,18 +293,13 @@ mod tests {
         let paver = Arc::new(
             MockPaverServiceBuilder::new()
                 .active_config(Configuration::A)
-                .read_hook(|event| match event {
-                    PaverEvent::ReadAsset { configuration, asset } => {
-                        assert_eq!(configuration, &Configuration::A);
-                        match asset {
-                            Asset::Kernel => Ok(vec![0x7a, 0x62, 0x69]),
-                            Asset::VerifiedBootMetadata => {
-                                Ok(vec![0x76, 0x62, 0x6d, 0x65, 0x74, 0x61])
-                            }
-                        }
+                .insert_hook(mphooks::read_asset(|configuration, asset| {
+                    assert_eq!(configuration, Configuration::A);
+                    match asset {
+                        Asset::Kernel => Ok(vec![0x7a, 0x62, 0x69]),
+                        Asset::VerifiedBootMetadata => Ok(vec![0x76, 0x62, 0x6d, 0x65, 0x74, 0x61]),
                     }
-                    _ => panic!("Unexpected event: {:?}", event),
-                })
+                }))
                 .build(),
         );
         let data_sink = paver.spawn_data_sink_service();

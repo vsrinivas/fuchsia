@@ -184,7 +184,9 @@ async fn writes_multiple_firmware_types() {
 async fn skips_unsupported_firmware_type() {
     let env = TestEnv::builder()
         .paver_service(|builder| {
-            builder.firmware_hook(|_| paver::WriteFirmwareResult::Unsupported(true))
+            builder.insert_hook(mphooks::write_firmware(|_, _, _| {
+                paver::WriteFirmwareResult::Unsupported(true)
+            }))
         })
         .build();
 
@@ -241,8 +243,9 @@ async fn skips_unsupported_firmware_type() {
 async fn fails_on_firmware_write_error() {
     let env = TestEnv::builder()
         .paver_service(|builder| {
-            builder
-                .firmware_hook(|_| paver::WriteFirmwareResult::Status(Status::INTERNAL.into_raw()))
+            builder.insert_hook(mphooks::write_firmware(|_, _, _| {
+                paver::WriteFirmwareResult::Status(Status::INTERNAL.into_raw())
+            }))
         })
         .build();
 
