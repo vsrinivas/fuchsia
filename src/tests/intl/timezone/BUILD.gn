@@ -98,6 +98,18 @@ group("tests-for-flutter") {
     ":timezone-flutter-test",
     "../timestamp-server-dart:timestamp-server-flutter",
   ]
+
+  # Because we are using test_package instead of fuchsia_test_package, the
+  # flutter_*_runner will not be available if we're using fuchsia_component.
+  # This causes the test to crash because package-resolver cannot resolve the
+  # runner. This is a workaround to allow the flutter runners to be available
+  # during runtime.
+  data_deps = [
+    "//topaz/runtime/flutter_runner:flutter_aot_product_runner",
+    "//topaz/runtime/flutter_runner:flutter_aot_runner",
+    "//topaz/runtime/flutter_runner:flutter_jit_product_runner",
+    "//topaz/runtime/flutter_runner:flutter_jit_runner",
+  ]
 }
 
 rustc_test("timezone_flutter_bin_test") {

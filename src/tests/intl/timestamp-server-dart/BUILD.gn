@@ -3,8 +3,8 @@
 # found in the LICENSE file.
 
 import("//build/dart/fidl_move.gni")
+import("//build/flutter/flutter_app.gni")
 import("//topaz/runtime/dart_runner/dart_app.gni")
-import("//topaz/runtime/flutter_runner/flutter_app.gni")
 
 dart_app("timestamp-server-dart") {
   main_dart = "lib/main.dart"

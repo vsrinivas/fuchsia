@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/dart/fidl_move.gni")
-import("//topaz/runtime/flutter_runner/flutter_app.gni")
+import("//build/flutter/flutter_app.gni")
 
 flutter_app("one-flutter") {
   main_dart = "one-flutter.dart"
