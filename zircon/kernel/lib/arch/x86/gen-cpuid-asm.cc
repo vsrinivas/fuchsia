@@ -16,6 +16,8 @@ int main(int argc, char** argv) {
       .Macro("CPUID_EBX", arch::CpuidIo::kEbx * sizeof(uint32_t))
       .Macro("CPUID_ECX", arch::CpuidIo::kEcx * sizeof(uint32_t))
       .Macro("CPUID_EDX", arch::CpuidIo::kEdx * sizeof(uint32_t))
+      .Macro("CPUID_HYP_LEAF0", arch::CpuidMaximumHypervisorLeaf::kLeaf)
+      .Macro("CPUID_EXT_LEAF0", arch::CpuidMaximumExtendedLeaf::kLeaf)
       .Register<arch::CpuidFeatureFlagsC>("CPUID_FEATURE_")
       .Register<arch::CpuidExtendedFeatureFlagsB>("CPUID_EXTF_")
       .Main(argc, argv);

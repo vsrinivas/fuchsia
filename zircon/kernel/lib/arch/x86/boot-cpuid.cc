@@ -9,9 +9,12 @@
 namespace arch {
 namespace internal {
 
-// Leaf 0 is handled specially in InitializeBootCpuid itself.
-// Note that it is not in the special section.
+// The zeroth basic, hypervisor, and extended leaves (0, 0x4000'0000, and
+// 0x8000'0000) are handled specially in InitializeBootCpuid itself.
+// Note that they are not in the special section.
 CpuidIo gBootCpuid0 = kBootCpuidInitializer<CpuidMaximumLeaf::kLeaf>;
+CpuidIo gBootCpuidHyp0 = kBootCpuidInitializer<CpuidMaximumHypervisorLeaf::kLeaf>;
+CpuidIo gBootCpuidExt0 = kBootCpuidInitializer<CpuidMaximumExtendedLeaf::kLeaf>;
 
 // These leaves are used from assembly code that needs unmangled names for
 // them, but InitializeBootCpuid handles them like implicit instantiations.

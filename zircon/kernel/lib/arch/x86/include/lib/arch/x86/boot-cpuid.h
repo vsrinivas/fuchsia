@@ -45,7 +45,7 @@ namespace internal {
 
 // These are referenced from assembly code and so they need unmangled names
 // that are tolerable to use from assembly.
-extern "C" CpuidIo gBootCpuid0, gBootCpuidFeature, gBootCpuidExtf;
+extern "C" CpuidIo gBootCpuid0, gBootCpuidHyp0, gBootCpuidExt0, gBootCpuidFeature, gBootCpuidExtf;
 
 // This is used to set up compile-time initial values for InitializeBootCpuid()
 // to fill in later.  See BootCpuidIo, below.
@@ -137,6 +137,16 @@ inline auto BootCpuid() {
 template <>
 inline const CpuidIo* BootCpuidIo::GetLeaf<CpuidMaximumLeaf::kLeaf>() const {
   return &internal::gBootCpuid0;
+}
+
+template <>
+inline const CpuidIo* BootCpuidIo::GetLeaf<CpuidMaximumHypervisorLeaf::kLeaf>() const {
+  return &internal::gBootCpuidHyp0;
+}
+
+template <>
+inline const CpuidIo* BootCpuidIo::GetLeaf<CpuidMaximumExtendedLeaf::kLeaf>() const {
+  return &internal::gBootCpuidExt0;
 }
 
 template <>
