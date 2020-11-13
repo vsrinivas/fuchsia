@@ -489,9 +489,7 @@ func acquire(ctx context.Context, c *Client, info *Info) (Config, error) {
 	}
 
 	if writeOpts.To.Addr == header.IPv4Broadcast {
-		if err := sendEP.SetSockOptBool(tcpip.BroadcastOption, true); err != nil {
-			return Config{}, fmt.Errorf("SetSockOptBool(BroadcastOption, true): %s", err)
-		}
+		sendEP.SocketOptions().SetBroadcast(true)
 	}
 
 	we, ch := waiter.NewChannelEntry(nil)

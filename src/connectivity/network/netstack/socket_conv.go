@@ -213,11 +213,7 @@ func getSockOptSocket(ep tcpip.Endpoint, ns *Netstack, netProto tcpip.NetworkPro
 		return nil, tcpip.ErrUnknownDevice
 
 	case C.SO_BROADCAST:
-		v, err := ep.GetSockOptBool(tcpip.BroadcastOption)
-		if err != nil {
-			return nil, err
-		}
-
+		v := ep.SocketOptions().GetBroadcast()
 		return boolToInt32(v), nil
 
 	case C.SO_KEEPALIVE:
@@ -622,7 +618,8 @@ func setSockOptSocket(ep tcpip.Endpoint, ns *Netstack, name int16, optVal []byte
 		}
 
 		v := binary.LittleEndian.Uint32(optVal)
-		return ep.SetSockOptBool(tcpip.BroadcastOption, v != 0)
+		ep.SocketOptions().SetBroadcast(v != 0)
+		return nil
 
 	case C.SO_PASSCRED:
 		if len(optVal) < sizeOfInt32 {

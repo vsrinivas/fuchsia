@@ -119,14 +119,13 @@ func newEPConnServer(ctx context.Context, stack *stack.Stack, addrs []tcpip.Addr
 	wq := new(waiter.Queue)
 	ep, err := stack.NewEndpoint(udp.ProtocolNumber, ipv4.ProtocolNumber, wq)
 	if err != nil {
-		return nil, fmt.Errorf("dhcp: server endpoint: %v", err)
+		return nil, fmt.Errorf("NewEndpoint: %s", err)
 	}
-	if err := ep.Bind(tcpip.FullAddress{Port: ServerPort}); err != nil {
-		return nil, fmt.Errorf("dhcp: server bind: %v", err)
+	addr := tcpip.FullAddress{Port: ServerPort}
+	if err := ep.Bind(addr); err != nil {
+		return nil, fmt.Errorf("Bind(%+v): %s", addr, err)
 	}
-	if err := ep.SetSockOptBool(tcpip.BroadcastOption, true); err != nil {
-		return nil, fmt.Errorf("dhcp: server setsockopt: %v", err)
-	}
+	ep.SocketOptions().SetBroadcast(true)
 	c := newEPConn(ctx, wq, ep)
 	return NewServer(ctx, c, addrs, cfg)
 }

@@ -1421,9 +1421,7 @@ func TestTwoServers(t *testing.T) {
 	if err = ep.Bind(tcpip.FullAddress{Port: ServerPort}); err != nil {
 		t.Fatalf("dhcp: server bind: %s", err)
 	}
-	if err = ep.SetSockOptBool(tcpip.BroadcastOption, true); err != nil {
-		t.Fatalf("dhcp: setsockopt: %s", err)
-	}
+	ep.SocketOptions().SetBroadcast(true)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
