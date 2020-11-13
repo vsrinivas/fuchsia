@@ -33,6 +33,32 @@ unsafe impl ObjectQuery for ProcessInfo {
     type InfoTy = ProcessInfo;
 }
 
+sys::zx_info_task_stats_t!(TaskStatsInfo);
+
+impl From<sys::zx_info_task_stats_t> for TaskStatsInfo {
+    fn from(
+        sys::zx_info_task_stats_t {
+            mem_mapped_bytes,
+            mem_private_bytes,
+            mem_shared_bytes,
+            mem_scaled_shared_bytes,
+        }: sys::zx_info_task_stats_t,
+    ) -> TaskStatsInfo {
+        TaskStatsInfo {
+            mem_mapped_bytes,
+            mem_private_bytes,
+            mem_shared_bytes,
+            mem_scaled_shared_bytes,
+        }
+    }
+}
+
+// TaskStatsInfo is able to be safely replaced with a byte representation and is a PoD type.
+unsafe impl ObjectQuery for TaskStatsInfo {
+    const TOPIC: Topic = Topic::TASK_STATS;
+    type InfoTy = TaskStatsInfo;
+}
+
 impl Process {
     /// Similar to `Thread::start`, but is used to start the first thread in a process.
     ///
@@ -80,6 +106,15 @@ impl Process {
             .map(|_| info)
     }
 
+    /// Wraps the
+    /// [zx_object_get_info](https://fuchsia.dev/fuchsia-src/reference/syscalls/object_get_info.md)
+    /// syscall for the ZX_INFO_TASK_STATS topic.
+    pub fn task_stats(&self) -> Result<TaskStatsInfo, Status> {
+        let mut info = TaskStatsInfo::default();
+        object_get_info::<TaskStatsInfo>(self.as_handle_ref(), std::slice::from_mut(&mut info))
+            .map(|_| info)
+    }
+
     /// Exit the current process with the given return code.
     ///
     /// Wraps the
@@ -102,7 +137,7 @@ mod tests {
     use crate::cprng_draw;
     // The unit tests are built with a different crate name, but fdio and fuchsia_runtime return a
     // "real" fuchsia_zircon::Process that we need to use.
-    use fuchsia_zircon::{sys, AsHandleRef, ProcessInfo, Signals, Task, Time};
+    use fuchsia_zircon::{sys, AsHandleRef, ProcessInfo, Signals, Task, TaskStatsInfo, Time};
     use std::ffi::CString;
 
     #[test]
@@ -113,6 +148,26 @@ mod tests {
             info,
             ProcessInfo { return_code: 0, started: true, exited: false, debugger_attached: false }
         );
+    }
+
+    #[test]
+    fn stats_self() {
+        let process = fuchsia_runtime::process_self();
+        let task_stats = process.task_stats().unwrap();
+
+        // Values greater than zero should be reported back for all memory usage
+        // types.
+        assert!(matches!(task_stats,
+            TaskStatsInfo {
+                mem_mapped_bytes,
+                mem_private_bytes,
+                mem_shared_bytes,
+                mem_scaled_shared_bytes
+            }
+            if mem_mapped_bytes > 0
+                && mem_private_bytes > 0
+                && mem_shared_bytes > 0
+                && mem_scaled_shared_bytes > 0));
     }
 
     #[test]

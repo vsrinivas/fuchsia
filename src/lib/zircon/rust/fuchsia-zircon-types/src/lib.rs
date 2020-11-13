@@ -941,6 +941,19 @@ struct_decl_macro! {
 
 zx_info_vmar_t!(zx_info_vmar_t);
 
+struct_decl_macro! {
+    #[repr(C)]
+    #[derive(Default, Debug, Copy, Clone, Eq, PartialEq)]
+    pub struct <zx_info_task_stats_t> {
+        pub mem_mapped_bytes: usize,
+        pub mem_private_bytes: usize,
+        pub mem_shared_bytes: usize,
+        pub mem_scaled_shared_bytes: usize,
+    }
+}
+
+zx_info_task_stats_t!(zx_info_task_stats_t);
+
 multiconst!(zx_guest_trap_t, [
     ZX_GUEST_TRAP_BELL = 0;
     ZX_GUEST_TRAP_MEM  = 1;
