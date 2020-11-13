@@ -25,10 +25,15 @@
 // Issue 'kcounter --help' to learn what it can do.
 //
 // Kernel counters public API:
-// 1- define a new counter.
+//
+// 1- Define a new counter in a .cc file. Do not define a counter in a header
+// file as that may lead to the creation of multiple, unrelated counters. Do not
+// define multiple counters with the same name.
+//
 //      KCOUNTER(counter_name, "<counter name>");
 //
-// 2- counters start at zero, increment the counter:
+// 2- Counters start at zero. Increment the counter:
+//
 //      kcounter_add(counter_name, 1);
 //
 // By default with KCOUNTER, the `kcounter` presentation will calculate a
