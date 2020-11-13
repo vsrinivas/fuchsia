@@ -10,8 +10,16 @@
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
+#include <memory>
+#include <utility>
+
 #include <fbl/auto_lock.h>
+#include <fbl/intrusive_single_list.h>
+#include <fbl/intrusive_wavl_tree.h>
 #include <fbl/mutex.h>
+#include <fbl/ref_counted.h>
+#include <fbl/ref_ptr.h>
+#include <fbl/slab_allocator.h>
 
 // RegionAllocator
 //
@@ -56,28 +64,17 @@
 // allocator is using any bookkeeping from the pool.
 //
 // == APIs and Object lifecycle management ==
-// Both C and C++ APIs are provided for using the RegionAllocator.  The C++ API
-// makes use of fbl managed pointer types in order to simplify lifecycle
-// management.  RegionPools are managed with fbl::RefPtr while Regions are
-// handed out via std::unique_ptr.  RegionAllocators themselves impose no
-// lifecycle restrictions and may be heap allocated, stack allocated, or
-// embedded directly in objects as the user sees fit.  It is an error to allow a
-// RegionAllocator to destruct while there are allocations in flight.
-//
-// The C API is a wrapper over the C++ API.  Because of this, automatic
-// lifecycle management is lost.  Users must take care to manually return their
-// allocated Regions to their RegionAllocator, to manually destroy their
-// RegionAllocators, and to manually release their reference on their RegionPool
-// when they are finished using them.  In addition, because the C compiler
-// cannot know the size of a RegionAllocator object, it is not possible to
-// either stack allocate or embed a RegionAllocator via the C API.  Dynamic
-// allocation is the only option.
+// The API makes use of fbl managed pointer types in order to simplify lifecycle
+// management. RegionPools are managed with fbl::RefPtr while Regions are handed
+// out via std::unique_ptr. RegionAllocators themselves impose no lifecycle
+// restrictions and may be heap allocated, stack allocated, or embedded directly
+// in objects as the user sees fit.  It is an error to allow a RegionAllocator
+// to destruct while there are allocations in flight.
 //
 // == Dependencies ==
-// The RegionAllocator depends only on malloc/free and fbl.  The fbl
-// dependency is not visible to users of the C API.  new/delete implementations
-// are provided internally, no global new/delete behavior needs to be defined by
-// the user.
+// The RegionAllocator depends only on malloc/free and fbl.  new/delete
+// implementations are provided internally, no global new/delete behavior needs
+// to be defined by the user.
 //
 // == Thread Safety ==
 // RegionAllocator and RegionPools use fbl::Mutex objects to provide thread
@@ -134,121 +131,12 @@
 //   * to the pool.
 //   */
 //
-__BEGIN_CDECLS
 
-// C API
-
-// C Version of RegionAllocator::RegionPool
-// This type is opaque to users; 'struct ralloc_pool' is not actually
-// defined anywhere, but this provides a distinct type for pointers.
-typedef struct ralloc_pool ralloc_pool_t;
-
-// C Version of RegionAllocator
-
-// This type is opaque to users; 'struct ralloc_allocator' is not actually
-// defined anywhere, but this provides a distinct type for pointers.
-typedef struct ralloc_allocator ralloc_allocator_t;
-
-// C Version of RegionAllocator::Region
-typedef struct ralloc_region {
+struct ralloc_region_t {
   uint64_t base;
   uint64_t size;
-} ralloc_region_t;
+};
 
-// RegionAllocator::RegionPool interface.  Valid operations are...
-//
-// ++ Create  (specific memory limits at the time of creation)
-// ++ Release (release the C reference to the object.
-//
-#define REGION_POOL_SLAB_SIZE (4u << 10)
-zx_status_t ralloc_create_pool(size_t max_memory, ralloc_pool_t** out_pool);
-void ralloc_release_pool(ralloc_pool_t* pool);
-
-// C Version of the AllowOverlap and AllowIncomplete enums.
-typedef enum {
-  RegionAllocatorDontAllowOverlap = 0,
-  RegionAllocatorAllowOverlap = 1
-} region_allocator_allow_overlap_t;
-
-typedef enum {
-  RegionAllocatorDontAllowIncomplete = 0,
-  RegionAllocatorAllowIncomplete = 1
-} region_allocator_allow_incomplete_t;
-
-// RegionAllocator interface.  Valid operations are...
-//
-// ++ Create
-// ++ SetRegionPool
-// ++ Reset (destroys all regions which are available for allocation and returns them to the pool)
-// ++ Destroy
-// ++ AddRegion (adds a region to the set of regions available for allocation)
-// ++ SubtractRegion (subtracts a region from the set of regions available for allocation)
-// ++ GetBySize (allocates a region based on size/alignment requirements)
-// ++ GetSpecific (allocates a region based on specific base/size requirements)
-//
-zx_status_t ralloc_create_allocator(ralloc_allocator_t** out_allocator);
-zx_status_t ralloc_set_region_pool(ralloc_allocator_t* allocator, ralloc_pool_t* pool);
-void ralloc_reset_allocator(ralloc_allocator_t* allocator);
-void ralloc_destroy_allocator(ralloc_allocator_t* allocator);
-zx_status_t ralloc_add_region(ralloc_allocator_t* allocator, const ralloc_region_t* region,
-                              region_allocator_allow_overlap_t allow_overlap);
-zx_status_t ralloc_sub_region(ralloc_allocator_t* allocator, const ralloc_region_t* region,
-                              region_allocator_allow_incomplete_t allow_incomplete);
-
-zx_status_t ralloc_get_sized_region_ex(ralloc_allocator_t* allocator, uint64_t size,
-                                       uint64_t alignment, const ralloc_region_t** out_region);
-
-zx_status_t ralloc_get_specific_region_ex(ralloc_allocator_t* allocator,
-                                          const ralloc_region_t* requested_region,
-                                          const ralloc_region_t** out_region);
-
-// Wrapper versions of the _ex functions for those who don't care about the
-// specific reason for failure.
-static inline const ralloc_region_t* ralloc_get_sized_region(ralloc_allocator_t* allocator,
-                                                             uint64_t size, uint64_t alignment) {
-  const ralloc_region_t* ret;
-  ralloc_get_sized_region_ex(allocator, size, alignment, &ret);
-  return ret;
-}
-
-static inline const ralloc_region_t* ralloc_get_specific_region(
-    ralloc_allocator_t* allocator, const ralloc_region_t* requested_region) {
-  const ralloc_region_t* ret;
-  ralloc_get_specific_region_ex(allocator, requested_region, &ret);
-  return ret;
-}
-
-// Report the number of regions which are available for allocation, or which are
-// currently allocated.
-size_t ralloc_get_allocated_region_count(const ralloc_allocator_t* allocator);
-size_t ralloc_get_available_region_count(const ralloc_allocator_t* allocator);
-
-// Walk the allocated region list and call region_walk_cb for each region found
-typedef bool (*region_walk_cb)(const ralloc_region_t*, void*);
-zx_status_t ralloc_walk_allocated_regions(const ralloc_allocator_t*, region_walk_cb, void*);
-
-// RegionAllocator::Region interface.  In addition to the base/size members
-// which may be used to determine the location of the allocation,  valid
-// operations are...
-//
-// Put (return an allocated region to its allocator).
-//
-void ralloc_put_region(const ralloc_region_t* region);
-
-__END_CDECLS
-
-#ifdef __cplusplus
-
-#include <memory>
-#include <utility>
-
-#include <fbl/intrusive_single_list.h>
-#include <fbl/intrusive_wavl_tree.h>
-#include <fbl/ref_counted.h>
-#include <fbl/ref_ptr.h>
-#include <fbl/slab_allocator.h>
-
-// C++ API
 class RegionAllocator {
  private:
   // Tag types used by the Region class to exist in multiple trees
@@ -257,6 +145,8 @@ class RegionAllocator {
   struct SortBySizeTag {};
 
  public:
+  static constexpr uint64_t kRegionPoolSlabSize = (4u << 10);
+
   // An enum which selects which set of regions to test against when testing for
   // intersection or containment.  See TestRegionIntersect and
   // TestRegionContains for examples.
@@ -268,18 +158,18 @@ class RegionAllocator {
   // Enums which act as strongly typed bools and are used to control the
   // behavior of AddRegion and SubtractRegion.
   enum class AllowOverlap {
-    No = RegionAllocatorDontAllowOverlap,
-    Yes = RegionAllocatorAllowOverlap,
+    No,
+    Yes,
   };
 
   enum class AllowIncomplete {
-    No = RegionAllocatorDontAllowIncomplete,
-    Yes = RegionAllocatorAllowIncomplete,
+    No,
+    Yes,
   };
 
   class Region;
   using RegionSlabTraits =
-      fbl::ManualDeleteSlabAllocatorTraits<Region*, REGION_POOL_SLAB_SIZE, fbl::Mutex,
+      fbl::ManualDeleteSlabAllocatorTraits<Region*, kRegionPoolSlabSize, fbl::Mutex,
                                            fbl::SlabAllocatorOptions::AllowManualDeleteOperator>;
 
   class Region
@@ -628,11 +518,5 @@ class RegionAllocator {
   Region::WAVLTreeSortBySize avail_regions_by_size_ __TA_GUARDED(alloc_lock_);
   RegionPool::RefPtr region_pool_ __TA_GUARDED(alloc_lock_);
 };
-
-// If this is C++, clear out this pre-processor constant.  People can get to the
-// constant using more C++-ish methods (like RegionAllocator::RegionPool::SLAB_SIZE)
-#undef REGION_POOL_SLAB_SIZE
-
-#endif  // ifdef __cplusplus
 
 #endif  // REGION_ALLOC_REGION_ALLOC_H_

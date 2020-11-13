@@ -23,10 +23,7 @@ group("test") {
 test("region-alloc") {
   output_name = "region-alloc-test"
   configs += [ "//build/unification/config:zircon-migrated" ]
-  sources = [
-    "region-alloc-c-api.c",
-    "region-alloc.cc",
-  ]
+  sources = [ "region-alloc.cc" ]
   deps = [
     "//sdk/lib/fdio",
     "//zircon/public/lib/fbl",

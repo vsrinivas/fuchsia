@@ -10,10 +10,7 @@ zx_library("region-alloc") {
   sdk_migrated = true
   kernel = true
   static = true
-  sources = [
-    "region-alloc-c-api.cc",
-    "region-alloc.cc",
-  ]
+  sources = [ "region-alloc.cc" ]
   if (!is_kernel) {
     deps = [ "$zx/system/ulib/fbl" ]
   }
