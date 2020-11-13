@@ -4,22 +4,42 @@ This document defines general terms that have a specific meaning in a FIDL
 context. To learn more about specific FIDL topics, refer to the [FIDL
 traihead][trailhead]
 
-## Variant, tag, and ordinal {#union-terms}
+## Member, field, variant {#member-terms}
 
-**Variant** refers to the selected member of a union. For example, the variants
-of
+A **member** of a declaration is an individual element belonging to a
+declaration, i.e. a declaration is comprised of zero, one, or many members.
+
+For instance, consider the `Mode` bits declaration:
+
+```fidl
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/misc.test.fidl" region_tag="mode" %}
+```
+
+Both `READ` and `WRITE` are members.
+
+When referring to members of structs or tables, we can more specifically refer
+to these members as **fields**.
+
+When referring to members of a union, we can more specifically refer to these
+members as **variants**.
+
+For example, consider the `Command` union declaration:
 
 ```fidl
 {%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/misc.test.fidl" region_tag="command" %}
 ```
 
-are `create_resource` and `release_resource`. A value of `Command` will have a
-**selected** variant of either `create_resource` or `release_resource`.
+The two variants are `create_resource` and `release_resource`.
+
+Furthermore, the **selected variant** of an instance of a union is the current
+value held by the union at that moment.
+
+## Tag, and ordinal {#union-terms}
 
 The **tag** is the target language variant discriminator, i.e. the specific
-construct in a FIDL target language that is used to indicate the variant of a
-union. For example, in the following target language (in this example,
-typescript) representation of the `Command` union:
+construct in a target language that is used to indicate the selected variant of
+a union. For example, consider the following TypeScript representation of the
+`Command` union:
 
 ```typescript
 enum CommandTag {

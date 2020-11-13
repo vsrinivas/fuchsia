@@ -65,8 +65,8 @@ union Command {
 
 // [START mode]
 bits Mode {
-    Read = 1;
-    Write = 2;
+    READ = 1;
+    WRITE = 2;
 };
 // [END mode]
 
