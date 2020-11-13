@@ -1978,6 +1978,9 @@ rust_library("core-foundation-sys-v0_7_0") {
     "-Cmetadata=c586e370c66e3e5e",
     "-Cextra-filename=-c586e370c66e3e5e",
   ]
+  if (current_os == "mac") {
+    rustflags += [ "-lframework=CoreFoundation" ]
+  }
 }
 
 rust_library("crc-v1_8_1") {

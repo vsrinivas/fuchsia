@@ -293,8 +293,8 @@ deps = [ "//third_party/rust_crates/compat/brotli" ]
 [gn.package.byteorder."1.3.1"]
 rustflags = ["--cfg=byteorder_i128"]
 
-[gn.package.core-foundation-sys."0.7.0"]
-rustflags = []
+[gn.package.core-foundation-sys."0.7.0".platform."cfg(target_os = \"macos\")"]
+rustflags = ["-lframework=CoreFoundation"]
 
 [gn.package.crc."1.8.1"]
 env_vars = ["OUT_DIR=../../../compat/crc"]
