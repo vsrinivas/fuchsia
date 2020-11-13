@@ -12,7 +12,7 @@ dart_library("fidl") {
 
   source_dir = "lib"
 
-  language_version = "2.10"
+  null_safe = true
 
   sources = [
     "fidl.dart",
