@@ -7,6 +7,7 @@
 #include <lib/syslog/cpp/macros.h>
 
 #include <ddk/debug.h>
+#include <safemath/safe_conversions.h>
 
 #include "src/camera/drivers/usb_video/usb_video_stream.h"
 
@@ -28,7 +29,7 @@ void ControlImpl::GetFormats(uint32_t index, GetFormatsCallback callback) {
   if (formats_.size() == 0) {
     zx_status_t status = usb_video_stream_->GetFormats(formats_);
     if (status != ZX_OK) {
-      callback(std::move(formats_), formats_.size(), status);
+      callback(std::move(formats_), safemath::checked_cast<uint32_t>(formats_.size()), status);
       return;
     }
   }
@@ -39,7 +40,7 @@ void ControlImpl::GetFormats(uint32_t index, GetFormatsCallback callback) {
 
   callback(
       std::vector<fuchsia::camera::VideoFormat>(&(formats_)[min_index], &(formats_)[max_index + 1]),
-      formats_.size(), ZX_OK);
+      safemath::checked_cast<uint32_t>(formats_.size()), ZX_OK);
 }
 
 void ControlImpl::GetDeviceInfo(GetDeviceInfoCallback callback) {

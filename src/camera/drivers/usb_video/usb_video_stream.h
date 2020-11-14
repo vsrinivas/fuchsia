@@ -96,7 +96,7 @@ class UsbVideoStream : public UsbVideoStreamBase, public ddk::EmptyProtocol<ZX_P
 
   zx_status_t StopStreaming();
 
-  zx_status_t FrameRelease(uint64_t frame_offset);
+  zx_status_t FrameRelease(uint32_t frame_offset);
 
   void DeactivateVideoBuffer();
 

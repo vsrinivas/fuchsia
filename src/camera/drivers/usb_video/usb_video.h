@@ -22,7 +22,7 @@ namespace usb {
 // For changing characteristics of a video streaming interface and its
 // underlying isochronous endpoint.
 struct UsbVideoStreamingSetting {
-  int alt_setting;
+  uint8_t alt_setting;
 
   uint8_t transactions_per_microframe;
   uint16_t max_packet_size;

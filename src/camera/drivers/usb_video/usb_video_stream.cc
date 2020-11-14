@@ -390,7 +390,7 @@ zx_status_t UsbVideoStream::StopStreaming() {
   return usb_set_interface(&usb_, iface_num_, 0);
 }
 
-zx_status_t UsbVideoStream::FrameRelease(uint64_t buffer_id) {
+zx_status_t UsbVideoStream::FrameRelease(uint32_t buffer_id) {
   fbl::AutoLock lock(&lock_);
   return buffers_.ReleaseBuffer(buffer_id);
 }
@@ -436,7 +436,8 @@ static inline double device_clock_to_ms(uint32_t clock_reading, uint32_t clock_f
 void UsbVideoStream::ParseHeaderTimestamps(usb_request_t* req) {
   // TODO(jocelyndang): handle other formats, the timestamp offset is variable.
   usb_video_vs_uncompressed_payload_header header = {};
-  __UNUSED auto result = usb_request_copy_from(req, &header, sizeof(usb_video_vs_uncompressed_payload_header), 0);
+  __UNUSED auto result =
+      usb_request_copy_from(req, &header, sizeof(usb_video_vs_uncompressed_payload_header), 0);
 
   // PTS should stay the same for payloads of the same frame,
   // but it's probably not a critical error if they're different.
