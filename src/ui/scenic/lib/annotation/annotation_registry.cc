@@ -25,8 +25,10 @@ AnnotationRegistry::AnnotationRegistry(sys::ComponentContext* component_context,
                                                                    annotation_manager_);
         AddHandler(handler_id, std::move(handler));
         handlers_[handler_id]->SetErrorHandler([this, handler_id](zx_status_t status) {
-          FX_LOGS(ERROR) << "AnnotationRegistryHandler disconnected. EPITAPH = "
-                         << zx_status_get_string(status);
+          if (status != ZX_ERR_PEER_CLOSED) {
+            FX_LOGS(ERROR) << "AnnotationRegistryHandler disconnected. EPITAPH = "
+                           << zx_status_get_string(status);
+          }
           RemoveHandler(handler_id);
         });
       };
