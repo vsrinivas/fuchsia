@@ -21,10 +21,10 @@ use {
 /// If not path is provided, then connects to the global archivist. If one is provided, then
 /// connects to first `ArchiveAccessor` that the given glob matches or returns an error if none
 /// is found.
-pub async fn connect_to_archive(
-    archive_path: &Option<String>,
+pub async fn connect_to_archive_accessor(
+    accessor_path: &Option<String>,
 ) -> Result<ArchiveAccessorProxy, Error> {
-    match archive_path {
+    match accessor_path {
         None => client::connect_to_service::<ArchiveAccessorMarker>()
             .map_err(|e| Error::ConnectToArchivist(e)),
         Some(path) => connect_to_archive_at(path).await,
@@ -63,10 +63,10 @@ async fn connect_to_archive_at(glob_path: &str) -> Result<ArchiveAccessorProxy, 
                                 if entry.kind == DirentKind::Service
                                     && entry.name.ends_with(ArchiveAccessorMarker::SERVICE_NAME)
                                 {
-                                    let archive_path = format!("{}/{}", path_str, entry.name);
+                                    let accessor_path = format!("{}/{}", path_str, entry.name);
                                     return client::connect_to_service_at_path::<
                                         ArchiveAccessorMarker,
-                                    >(&archive_path)
+                                    >(&accessor_path)
                                     .map_err(|e| Error::ConnectToArchivist(e));
                                 }
                             }
@@ -84,7 +84,7 @@ async fn connect_to_archive_at(glob_path: &str) -> Result<ArchiveAccessorProxy, 
 pub async fn get_selectors_for_manifest(
     manifest: &Option<String>,
     tree_selectors: &Vec<String>,
-    archive_path: &Option<String>,
+    accessor_path: &Option<String>,
 ) -> Result<Vec<String>, Error> {
     match &manifest {
         None => Ok(tree_selectors.clone()),
@@ -92,7 +92,7 @@ pub async fn get_selectors_for_manifest(
             let list_command = ListCommand {
                 manifest: Some(manifest.clone()),
                 with_url: false,
-                archive_path: archive_path.clone(),
+                accessor_path: accessor_path.clone(),
             };
             let monikers = list_command
                 .execute()
@@ -122,9 +122,9 @@ pub async fn get_selectors_for_manifest(
 /// reading from the archive using the given selectors.
 pub async fn fetch_data(
     selectors: &[String],
-    archive_path: &Option<String>,
+    accessor_path: &Option<String>,
 ) -> Result<Vec<InspectData>, Error> {
-    let archive = connect_to_archive(archive_path).await?;
+    let archive = connect_to_archive_accessor(accessor_path).await?;
     let mut reader = ArchiveReader::new().with_archive(archive).retry_if_empty(false);
     // We support receiving the moniker or a tree selector
     for selector in selectors {

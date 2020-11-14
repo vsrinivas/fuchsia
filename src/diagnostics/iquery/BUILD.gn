@@ -50,6 +50,7 @@ iquery_deps = [
 iquery_sources = [
   "src/command_line.rs",
   "src/commands/list.rs",
+  "src/commands/list_accessors.rs",
   "src/commands/list_files.rs",
   "src/commands/mod.rs",
   "src/commands/selectors.rs",
@@ -92,14 +93,17 @@ rustc_test("bin_test") {
 
   deps = iquery_deps
 
-  sources = iquery_sources + [
-              "src/tests/commands.rs",
-              "src/tests/macros.rs",
-              "src/tests/mod.rs",
-              "src/tests/utils.rs",
-            ]
+  sources = iquery_sources
+  sources += [
+    "src/tests/commands.rs",
+    "src/tests/macros.rs",
+    "src/tests/mod.rs",
+    "src/tests/utils.rs",
+  ]
 
   inputs = [
+    "test_data/list_accessors.json",
+    "test_data/list_accessors.text",
     "test_data/list_archive.json",
     "test_data/list_archive.text",
     "test_data/list_filter_manifest.json",

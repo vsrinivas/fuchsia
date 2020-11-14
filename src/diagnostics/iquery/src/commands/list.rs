@@ -92,7 +92,7 @@ pub struct ListCommand {
     /// directory, the command will look for a `fuchsia.diagnostics.ArchiveAccessor` service file.
     /// If the given path is a service file, the command will attempt to connect to it as an
     /// ArchiveAccessor.
-    pub archive_path: Option<String>,
+    pub accessor_path: Option<String>,
 }
 
 #[async_trait]
@@ -100,7 +100,7 @@ impl Command for ListCommand {
     type Result = Vec<ListResponseItem>;
 
     async fn execute(&self) -> Result<Self::Result, Error> {
-        let results = get_ready_components(&self.archive_path)
+        let results = get_ready_components(&self.accessor_path)
             .await?
             .into_iter()
             .filter(|result| match &self.manifest {
@@ -120,8 +120,10 @@ impl Command for ListCommand {
     }
 }
 
-async fn get_ready_components(archive_path: &Option<String>) -> Result<Vec<MonikerWithUrl>, Error> {
-    let archive = utils::connect_to_archive(archive_path).await?;
+async fn get_ready_components(
+    accessor_path: &Option<String>,
+) -> Result<Vec<MonikerWithUrl>, Error> {
+    let archive = utils::connect_to_archive_accessor(accessor_path).await?;
     let reader = ArchiveReader::new().with_archive(archive);
     let values = reader.snapshot::<Lifecycle>().await.map_err(|e| Error::Fetch(e))?;
     let mut result = vec![];

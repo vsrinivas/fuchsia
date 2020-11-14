@@ -35,7 +35,7 @@ pub struct SelectorsCommand {
     /// directory, the command will look for a `fuchsia.diagnostics.ArchiveAccessor` service file.
     /// If the given path is a service file, the command will attempt to connect to it as an
     /// ArchiveAccessor.
-    pub archive_path: Option<String>,
+    pub accessor_path: Option<String>,
 }
 
 #[async_trait]
@@ -47,9 +47,9 @@ impl Command for SelectorsCommand {
             return Err(Error::invalid_arguments("Expected 1 or more selectors. Got zero."));
         }
         let selectors =
-            utils::get_selectors_for_manifest(&self.manifest, &self.selectors, &self.archive_path)
+            utils::get_selectors_for_manifest(&self.manifest, &self.selectors, &self.accessor_path)
                 .await?;
-        let mut result = utils::fetch_data(&selectors, &self.archive_path)
+        let mut result = utils::fetch_data(&selectors, &self.accessor_path)
             .await?
             .into_iter()
             .filter_map(|schema| {

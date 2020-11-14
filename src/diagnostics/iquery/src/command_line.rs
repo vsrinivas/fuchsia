@@ -13,6 +13,7 @@ use {
 #[argh(subcommand)]
 pub enum SubCommand {
     List(ListCommand),
+    ListAccessors(ListAccessorsCommand),
     ListFiles(ListFilesCommand),
     Selectors(SelectorsCommand),
     Show(ShowCommand),
@@ -58,6 +59,6 @@ impl Command for CommandLine {
     type Result = String;
 
     async fn execute(&self) -> Result<Self::Result, Error> {
-        execute_and_format!(self, [List, ListFiles, Selectors, Show, ShowFile])
+        execute_and_format!(self, [List, ListAccessors, ListFiles, Selectors, Show, ShowFile])
     }
 }

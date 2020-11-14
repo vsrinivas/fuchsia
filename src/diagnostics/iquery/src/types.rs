@@ -21,6 +21,9 @@ pub enum Error {
     #[error("Failed parsing glob {0}: {1}")]
     ParsePath(String, anyhow::Error),
 
+    #[error("Failed to list archive accessors on {0} {1}")]
+    ListAccessors(String, anyhow::Error),
+
     #[error("Failed to list locations on {0} {1}")]
     ListLocations(String, anyhow::Error),
 

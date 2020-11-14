@@ -36,7 +36,7 @@ pub struct ShowCommand {
     /// directory, the command will look for a `fuchsia.diagnostics.ArchiveAccessor` service file.
     /// If the given path is a service file, the command will attempt to connect to it as an
     /// ArchiveAccessor.
-    pub archive_path: Option<String>,
+    pub accessor_path: Option<String>,
 }
 
 #[derive(Derivative, Serialize, PartialEq)]
@@ -78,9 +78,9 @@ impl Command for ShowCommand {
 
     async fn execute(&self) -> Result<Self::Result, Error> {
         let selectors =
-            utils::get_selectors_for_manifest(&self.manifest, &self.selectors, &self.archive_path)
+            utils::get_selectors_for_manifest(&self.manifest, &self.selectors, &self.accessor_path)
                 .await?;
-        let mut results = utils::fetch_data(&selectors, &self.archive_path)
+        let mut results = utils::fetch_data(&selectors, &self.accessor_path)
             .await?
             .into_iter()
             .map(|schema| ShowCommandResultItem(schema))

@@ -79,7 +79,7 @@ async fn list_archive() {
         command: "list",
         golden_basename: list_archive,
         args: [
-            "--archive-path",
+            "--accessor-path",
             "/hub/r/diagnostics_*/*/c/archivist-for-embedding.cmx/*/out/svc/fuchsia.diagnostics.ArchiveAccessor"
         ],
         test_opts: [ "with_retries" ]
@@ -179,7 +179,7 @@ async fn selectors_archive() {
         golden_basename: selectors_archive,
         args: [
             "basic_component.cmx:root",
-            "--archive-path",
+            "--accessor-path",
             "/hub/r/diagnostics_*/*/c/archivist-for-embedding.cmx/*/out/svc/fuchsia.diagnostics.ArchiveAccessor"
         ],
         test_opts: [ "with_retries" ]
@@ -334,10 +334,20 @@ async fn show_archive() {
         golden_basename: show_archive,
         args: [
             "basic_component.cmx:root",
-            "--archive-path",
+            "--accessor-path",
             "/hub/r/diagnostics_*/*/c/archivist-for-embedding.cmx/*/out/svc/fuchsia.diagnostics.ArchiveAccessor"
         ],
         test_opts: [ "with_retries" ]
     );
     utils::wait_for_terminated(app).await;
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn list_accessors() {
+    std::env::set_current_dir(Path::new("/hub/c")).expect("change dir");
+    assert_command!(
+        command: "list-accessors",
+        golden_basename: list_accessors,
+        args: []
+    );
 }
