@@ -1507,6 +1507,30 @@ TEST(Structs, decode_nested_nullable_structs) {
   EXPECT_NULL(message.inline_struct.l0_present->l1_present->l2_inline.l3_absent);
   EXPECT_NULL(message.inline_struct.l0_present->l1_present->l2_present->l3_absent);
 }
+
+TEST(UnknownEnvelope, NumUnknownHandlesOverflows) {
+  uint8_t bytes[] = {
+      3,   0,   0,   0,   0,   0,   0,   0,    // max ordinal
+      255, 255, 255, 255, 255, 255, 255, 255,  // alloc present
+
+      0,   0,   0,   0,   0,   0,   0,   0,  // envelope 1: num bytes / num handles
+      0,   0,   0,   0,   0,   0,   0,   0,  // alloc absent
+
+      0,   0,   0,   0,   1,   0,   0,   0,    // envelope 2: num bytes / num handles
+      255, 255, 255, 255, 255, 255, 255, 255,  // alloc present
+
+      0,   0,   0,   0,   255, 255, 255, 255,  // envelope 3: num bytes / num handles
+      255, 255, 255, 255, 255, 255, 255, 255,  // alloc present
+  };
+  zx_handle_t handles[1] = {};
+
+  const char* error = nullptr;
+  auto status = fidl_decode(&llcpp::fidl::test::coding::fidl_test_coding_SimpleTableTable, bytes,
+                            ArrayCount(bytes), handles, ArrayCount(handles), &error);
+
+  EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
+  EXPECT_STR_EQ(error, "number of unknown handles overflows");
+}
 #endif
 
 TEST(UnknownEnvelope, NumUnknownHandlesExceedsUnknownArraySize) {
