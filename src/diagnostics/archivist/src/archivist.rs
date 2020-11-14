@@ -22,7 +22,7 @@ use {
     fuchsia_zircon as zx,
     futures::{
         channel::mpsc,
-        future::{self, abortable, FutureObj},
+        future::{self, abortable},
         prelude::*,
     },
     io_util,
@@ -94,14 +94,14 @@ pub struct Archivist {
     fs: ServiceFs<ServiceObj<'static, ()>>,
 
     /// Receiver for stream which will process LogSink connections.
-    log_receiver: mpsc::UnboundedReceiver<FutureObj<'static, ()>>,
+    log_receiver: mpsc::UnboundedReceiver<Task<()>>,
 
     /// Sender which is used to close the stream of LogSink connections.
     ///
     /// Clones of the sender keep the receiver end of the channel open. As soon
     /// as all clones are dropped or disconnected, the receiver will close. The
     /// receiver must close for `Archivist::run` to return gracefully.
-    log_sender: mpsc::UnboundedSender<FutureObj<'static, ()>>,
+    log_sender: mpsc::UnboundedSender<Task<()>>,
 
     /// Receiver for stream which will process Log connections.
     listen_receiver: mpsc::UnboundedReceiver<Task<()>>,
@@ -370,7 +370,7 @@ impl Archivist {
         &self.log_manager
     }
 
-    pub fn log_sender(&self) -> &mpsc::UnboundedSender<FutureObj<'static, ()>> {
+    pub fn log_sender(&self) -> &mpsc::UnboundedSender<Task<()>> {
         &self.log_sender
     }
 

@@ -255,8 +255,7 @@ impl LogWriter for StructuredMessageWriter {
 
 /// A `LogReader` host a LogSink connection.
 pub trait LogReader {
-    fn handle_request(&self, sender: mpsc::UnboundedSender<FutureObj<'static, ()>>)
-        -> LogSinkProxy;
+    fn handle_request(&self, sender: mpsc::UnboundedSender<Task<()>>) -> LogSinkProxy;
 }
 
 // A LogReader that exercises the handle_log_sink code path.
@@ -272,18 +271,15 @@ impl DefaultLogReader {
 }
 
 impl LogReader for DefaultLogReader {
-    fn handle_request(
-        &self,
-        log_sender: mpsc::UnboundedSender<FutureObj<'static, ()>>,
-    ) -> LogSinkProxy {
+    fn handle_request(&self, log_sender: mpsc::UnboundedSender<Task<()>>) -> LogSinkProxy {
         let (log_sink_proxy, log_sink_stream) =
             fidl::endpoints::create_proxy_and_stream::<LogSinkMarker>().unwrap();
-        fasync::Task::spawn(self.log_manager.clone().handle_log_sink(
+        let task = Task::spawn(self.log_manager.clone().handle_log_sink(
             log_sink_stream,
             self.identity.clone(),
-            log_sender,
-        ))
-        .detach();
+            log_sender.clone(),
+        ));
+        log_sender.unbounded_send(task).unwrap();
         log_sink_proxy
     }
 }
@@ -311,10 +307,7 @@ impl EventStreamLogReader {
 }
 
 impl LogReader for EventStreamLogReader {
-    fn handle_request(
-        &self,
-        log_sender: mpsc::UnboundedSender<FutureObj<'static, ()>>,
-    ) -> LogSinkProxy {
+    fn handle_request(&self, log_sender: mpsc::UnboundedSender<Task<()>>) -> LogSinkProxy {
         let (event_stream_proxy, event_stream) =
             fidl::endpoints::create_proxy_and_stream::<fsys::EventStreamMarker>().unwrap();
         let (log_sink_proxy, log_sink_server_end) =
@@ -327,7 +320,8 @@ impl LogReader for EventStreamLogReader {
             ))
             .unwrap();
         let log_manager = self.log_manager.clone();
-        fasync::Task::spawn(log_manager.handle_event_stream(event_stream, log_sender)).detach();
+        let task = Task::spawn(log_manager.handle_event_stream(event_stream, log_sender.clone()));
+        log_sender.unbounded_send(task).unwrap();
 
         log_sink_proxy
     }

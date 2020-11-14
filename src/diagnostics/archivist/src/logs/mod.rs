@@ -18,7 +18,7 @@ use fuchsia_async::{self as fasync, Task};
 use fuchsia_inspect as inspect;
 use fuchsia_inspect_derive::Inspect;
 use fuchsia_zircon as zx;
-use futures::{channel::mpsc, future::FutureObj, lock::Mutex, prelude::*};
+use futures::{channel::mpsc, lock::Mutex, prelude::*};
 use log::{debug, error, trace, warn};
 use std::sync::Arc;
 
@@ -140,7 +140,7 @@ impl LogManager {
     pub async fn handle_log_connector(
         self,
         connector: LogConnectorProxy,
-        sender: mpsc::UnboundedSender<FutureObj<'static, ()>>,
+        sender: mpsc::UnboundedSender<Task<()>>,
     ) {
         debug!("Handling LogSink connections from appmgr.");
         match connector.take_log_connection_listener().await {
@@ -157,12 +157,13 @@ impl LogManager {
                                 .into_stream()
                                 .expect("getting LogSinkRequestStream from serverend");
                             let source = Arc::new(source_identity);
-                            fasync::Task::spawn(self.clone().handle_log_sink(
-                                stream,
-                                source,
-                                sender.clone(),
-                            ))
-                            .detach()
+                            sender
+                                .unbounded_send(Task::spawn(self.clone().handle_log_sink(
+                                    stream,
+                                    source,
+                                    sender.clone(),
+                                )))
+                                .expect("channel is held by archivist, lasts for whole program");
                         }
                     };
                 }
@@ -179,7 +180,7 @@ impl LogManager {
         self,
         mut stream: LogSinkRequestStream,
         source: Arc<SourceIdentity>,
-        sender: mpsc::UnboundedSender<FutureObj<'static, ()>>,
+        sender: mpsc::UnboundedSender<Task<()>>,
     ) {
         if source.component_name.is_none() {
             self.inner.lock().await.stats.record_unattributed();
@@ -192,12 +193,8 @@ impl LogManager {
                     match LogMessageSocket::new(socket, source.clone(), forwarder) {
                         Ok(log_stream) => {
                             self.try_add_interest_listener(&source, control_handle).await;
-                            let fut =
-                                FutureObj::new(Box::new(self.clone().drain_messages(log_stream)));
-                            let res = sender.unbounded_send(fut);
-                            if let Err(e) = res {
-                                warn!("error queuing log message drain: {}", e);
-                            }
+                            let task = Task::spawn(self.clone().drain_messages(log_stream));
+                            sender.unbounded_send(task).expect("channel alive for whole program");
                         }
                         Err(e) => {
                             control_handle.shutdown();
@@ -210,12 +207,8 @@ impl LogManager {
                     match LogMessageSocket::new_structured(socket, source.clone(), forwarder) {
                         Ok(log_stream) => {
                             self.try_add_interest_listener(&source, control_handle).await;
-                            let fut =
-                                FutureObj::new(Box::new(self.clone().drain_messages(log_stream)));
-                            let res = sender.unbounded_send(fut);
-                            if let Err(e) = res {
-                                warn!("error queuing log message drain: {}", e);
-                            }
+                            let task = Task::spawn(self.clone().drain_messages(log_stream));
+                            sender.unbounded_send(task).expect("channel alive for whole program");
                         }
                         Err(e) => {
                             control_handle.shutdown();
@@ -286,7 +279,7 @@ impl LogManager {
     pub async fn handle_event_stream(
         self,
         mut stream: fsys::EventStreamRequestStream,
-        sender: mpsc::UnboundedSender<FutureObj<'static, ()>>,
+        sender: mpsc::UnboundedSender<Task<()>>,
     ) {
         while let Ok(Some(request)) = stream.try_next().await {
             match request {
@@ -304,11 +297,12 @@ impl LogManager {
     fn handle_event(
         &self,
         event: fsys::Event,
-        sender: mpsc::UnboundedSender<FutureObj<'static, ()>>,
+        sender: mpsc::UnboundedSender<Task<()>>,
     ) -> Result<(), LogsError> {
         let identity = Self::source_identity_from_event(&event)?;
         let stream = Self::log_sink_request_stream_from_event(event)?;
-        fasync::Task::spawn(self.clone().handle_log_sink(stream, identity, sender)).detach();
+        let task = Task::spawn(self.clone().handle_log_sink(stream, identity, sender.clone()));
+        sender.unbounded_send(task).expect("channel is alive for whole program");
         Ok(())
     }
 
