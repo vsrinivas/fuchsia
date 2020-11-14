@@ -23,7 +23,6 @@ void main() {
 
   withLongTimeout(() {
     for (final selector in [
-      'cobalt_system_metrics.cmx:root/platform_metrics/temperature:readings',
       'cobalt_system_metrics.cmx:root/platform_metrics/cpu:max',
       'cobalt_system_metrics.cmx:root/platform_metrics/cpu:mean',
     ]) {

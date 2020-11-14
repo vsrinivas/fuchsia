@@ -33,7 +33,6 @@
 #include "src/cobalt/bin/system-metrics/cpu_stats_fetcher_impl.h"
 #include "src/cobalt/bin/system-metrics/log_stats_fetcher_impl.h"
 #include "src/cobalt/bin/system-metrics/metrics_registry.cb.h"
-#include "src/cobalt/bin/system-metrics/temperature_fetcher_impl.h"
 #include "src/cobalt/bin/utils/clock.h"
 #include "src/cobalt/bin/utils/status_utils.h"
 #include "src/lib/cobalt/cpp/cobalt_event_builder.h"
@@ -42,7 +41,6 @@ using cobalt::CobaltEventBuilder;
 using cobalt::IntegerBuckets;
 using cobalt::LinearIntegerBuckets;
 using cobalt::StatusToString;
-using cobalt::TemperatureFetchStatus;
 using cobalt::config::IntegerBucketConfig;
 using fuchsia::cobalt::CobaltEvent;
 using fuchsia::cobalt::HistogramBucket;
@@ -97,7 +95,6 @@ SystemMetricsDaemon::SystemMetricsDaemon(async_dispatcher_t* dispatcher,
           nullptr, nullptr, nullptr,
           std::unique_ptr<cobalt::SteadyClock>(new cobalt::RealSteadyClock()),
           std::unique_ptr<cobalt::CpuStatsFetcher>(new cobalt::CpuStatsFetcherImpl()),
-          std::unique_ptr<cobalt::TemperatureFetcher>(new cobalt::TemperatureFetcherImpl()),
           std::unique_ptr<cobalt::LogStatsFetcher>(
               new cobalt::LogStatsFetcherImpl(dispatcher, context)),
           std::make_unique<cobalt::ActivityListener>(
@@ -120,7 +117,6 @@ SystemMetricsDaemon::SystemMetricsDaemon(
     fuchsia::cobalt::Logger_Sync* granular_error_stats_logger,
     std::unique_ptr<cobalt::SteadyClock> clock,
     std::unique_ptr<cobalt::CpuStatsFetcher> cpu_stats_fetcher,
-    std::unique_ptr<cobalt::TemperatureFetcher> temperature_fetcher,
     std::unique_ptr<cobalt::LogStatsFetcher> log_stats_fetcher,
     std::unique_ptr<cobalt::ActivityListener> activity_listener,
     std::unique_ptr<cobalt::ArchivistStatsFetcher> archivist_stats_fetcher,
@@ -134,7 +130,6 @@ SystemMetricsDaemon::SystemMetricsDaemon(
       start_time_(clock->Now()),
       clock_(std::move(clock)),
       cpu_stats_fetcher_(std::move(cpu_stats_fetcher)),
-      temperature_fetcher_(std::move(temperature_fetcher)),
       log_stats_fetcher_(std::move(log_stats_fetcher)),
       activity_listener_(std::move(activity_listener)),
       archivist_stats_fetcher_(std::move(archivist_stats_fetcher)),
@@ -144,17 +139,12 @@ SystemMetricsDaemon::SystemMetricsDaemon(
       // Diagram of hierarchy can be seen below:
       // root
       // - platform_metrics
-      //   - temperature
-      //     - readings
       //   - cpu
       //     - max
       //     - mean
       metric_cpu_node_(platform_metric_node_.CreateChild(kCPUNodeName)),
       inspect_cpu_max_(metric_cpu_node_.CreateDoubleArray(kReadingCPUMax, kCPUArraySize)),
-      inspect_cpu_mean_(metric_cpu_node_.CreateDoubleArray(kReadingCPUMean, kCPUArraySize)),
-      metric_temperature_node_(platform_metric_node_.CreateChild(kTemperatureNodeName)),
-      inspect_temperature_readings_(
-          metric_temperature_node_.CreateIntArray(kReadingTemperature, kTempArraySize)) {}
+      inspect_cpu_mean_(metric_cpu_node_.CreateDoubleArray(kReadingCPUMean, kCPUArraySize)) {}
 
 void SystemMetricsDaemon::StartLogging() {
   TRACE_DURATION("system_metrics", "SystemMetricsDaemon::StartLogging");
@@ -164,7 +154,6 @@ void SystemMetricsDaemon::StartLogging() {
   RepeatedlyLogCpuUsage();
   RepeatedlyLogLogStats();
   RepeatedlyLogArchivistStats();
-  LogTemperatureIfSupported(1 /*remaining_attempts*/);
   LogLifetimeEvents();
 }
 
@@ -232,35 +221,6 @@ void SystemMetricsDaemon::RepeatedlyLogArchivistStats() {
       dispatcher_, [this]() { RepeatedlyLogArchivistStats(); }, zx::sec(seconds_to_sleep.count()));
 }
 
-void SystemMetricsDaemon::LogTemperatureIfSupported(int remaining_attempts) {
-  int32_t temperature;
-  TemperatureFetchStatus status = temperature_fetcher_->FetchTemperature(&temperature);
-  switch (status) {
-    case TemperatureFetchStatus::NOT_SUPPORTED:
-      FX_LOGS(INFO) << "Stop further attempt to read or log temperature as it is not supported.";
-      return;
-    case TemperatureFetchStatus::SUCCEED:
-      temperature_bucket_config_ = InitializeLinearBucketConfig(
-          fuchsia_system_metrics::kFuchsiaTemperatureExperimentalIntBucketsFloor,
-          fuchsia_system_metrics::kFuchsiaTemperatureExperimentalIntBucketsNumBuckets,
-          fuchsia_system_metrics::kFuchsiaTemperatureExperimentalIntBucketsStepSize);
-      RepeatedlyLogTemperature();
-      return;
-    case TemperatureFetchStatus::FAIL:
-      if (remaining_attempts > 0) {
-        FX_LOGS(INFO) << "Failed to fetch device temperature. Try again in 1 minute.";
-        async::PostDelayedTask(
-            dispatcher_,
-            [this, remaining_attempts]() { LogTemperatureIfSupported(remaining_attempts - 1); },
-            zx::sec(60));
-      } else {
-        FX_LOGS(INFO) << "Exceeded the number of attempts to check for temperature support."
-                      << "Stop further attempt to read or log temperature.";
-      }
-      return;
-  }
-}
-
 std::unique_ptr<IntegerBucketConfig> SystemMetricsDaemon::InitializeLinearBucketConfig(
     int64_t bucket_floor, int32_t num_buckets, int32_t step_size) {
   IntegerBuckets bucket_proto;
@@ -269,13 +229,6 @@ std::unique_ptr<IntegerBucketConfig> SystemMetricsDaemon::InitializeLinearBucket
   linear->set_num_buckets(num_buckets);
   linear->set_step_size(step_size);
   return IntegerBucketConfig::CreateFromProto(bucket_proto);
-}
-
-void SystemMetricsDaemon::RepeatedlyLogTemperature() {
-  std::chrono::seconds seconds_to_sleep = LogTemperature();
-  async::PostDelayedTask(
-      dispatcher_, [this]() { RepeatedlyLogTemperature(); }, zx::sec(seconds_to_sleep.count()));
-  return;
 }
 
 std::chrono::seconds SystemMetricsDaemon::GetUpTime() {
@@ -654,50 +607,6 @@ bool SystemMetricsDaemon::LogCpuToCobalt() {
   return true;
 }
 
-std::chrono::seconds SystemMetricsDaemon::LogTemperature() {
-  TRACE_DURATION("system_metrics", "SystemMetricsDaemon::LogTemperature");
-  if (!logger_) {
-    FX_LOGS(ERROR) << "No logger present. Reconnecting...";
-    InitializeLogger();
-    return std::chrono::minutes(1);
-  }
-  int32_t temperature;
-  TemperatureFetchStatus status = temperature_fetcher_->FetchTemperature(&temperature);
-  if (TemperatureFetchStatus::SUCCEED != status) {
-    FX_LOGS(ERROR) << "Temperature fetch failed.";
-    return std::chrono::minutes(1);
-  }
-  uint32_t bucket_index = temperature_bucket_config_->BucketIndex(temperature);
-  temperature_map_[bucket_index]++;
-  inspect_temperature_readings_.Set(num_temps_++, temperature);
-  if (num_temps_ == kTempArraySize) {  // Flush every minute.
-    LogTemperatureToCobalt();
-    temperature_map_.clear();  // Drop the data even if logging does not succeed.
-    num_temps_ = 0;
-  }
-  return std::chrono::seconds(10);
-}
-
-void SystemMetricsDaemon::LogTemperatureToCobalt() {
-  TRACE_DURATION("system_metrics", "SystemMetricsDaemon::LogTemperatureToCobalt");
-  std::vector<HistogramBucket> temperature_buckets_;
-  for (const auto& pair : temperature_map_) {
-    HistogramBucket bucket;
-    bucket.index = pair.first;
-    bucket.count = pair.second;
-    temperature_buckets_.push_back(std::move(bucket));
-  }
-  // call cobalt FIDL
-  fuchsia::cobalt::Status status = fuchsia::cobalt::Status::INTERNAL_ERROR;
-  ReinitializeIfPeerClosed(
-      logger_->LogIntHistogram(fuchsia_system_metrics::kFuchsiaTemperatureExperimentalMetricId, 0,
-                               "", std::move(temperature_buckets_), &status));
-  if (status != fuchsia::cobalt::Status::OK) {
-    FX_LOGS(ERROR) << "LogTemperatureToCobalt returned status=" << StatusToString(status);
-  }
-  return;
-}
-
 zx_status_t SystemMetricsDaemon::ReinitializeIfPeerClosed(zx_status_t zx_status) {
   if (zx_status == ZX_ERR_PEER_CLOSED) {
     FX_LOGS(ERROR) << "Logger connection closed. Reconnecting...";
@@ -790,9 +699,4 @@ void SystemMetricsDaemon::InitializeGranularErrorStatsLogger() {
   if (!granular_error_stats_logger_) {
     FX_LOGS(ERROR) << "Unable to get granular error stats Logger from factory.";
   }
-}
-
-void SystemMetricsDaemon::SetTemperatureFetcher(
-    std::unique_ptr<cobalt::TemperatureFetcher> fetcher) {
-  temperature_fetcher_ = std::move(fetcher);
 }

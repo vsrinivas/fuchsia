@@ -40,9 +40,6 @@ source_set("system_metrics_daemon_lib") {
     "log_stats_fetcher_impl.h",
     "system_metrics_daemon.cc",
     "system_metrics_daemon.h",
-    "temperature_fetcher.h",
-    "temperature_fetcher_impl.cc",
-    "temperature_fetcher_impl.h",
   ]
 
   public_deps = [

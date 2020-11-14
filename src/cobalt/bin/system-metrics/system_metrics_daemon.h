@@ -25,7 +25,6 @@
 #include "src/cobalt/bin/system-metrics/cpu_stats_fetcher.h"
 #include "src/cobalt/bin/system-metrics/log_stats_fetcher.h"
 #include "src/cobalt/bin/system-metrics/metrics_registry.cb.h"
-#include "src/cobalt/bin/system-metrics/temperature_fetcher.h"
 #include "src/cobalt/bin/utils/clock.h"
 #include "third_party/cobalt/src/registry/buckets_config.h"
 
@@ -55,10 +54,6 @@ class SystemMetricsDaemon {
   // Design doc in go/fuchsia-metrics-to-inspect-design.
   // Details about config file are in b/152076901#comment6.
   static constexpr const char* kInspecPlatformtNodeName = "platform_metrics";
-
-  static constexpr const char* kTemperatureNodeName = "temperature";
-  static constexpr const char* kReadingTemperature = "readings";
-  static constexpr size_t kTempArraySize = 6;
 
   // Details about config file are in b/152073842#comment6.
   static constexpr const char* kCPUNodeName = "cpu";
@@ -92,7 +87,6 @@ class SystemMetricsDaemon {
                       fuchsia::cobalt::Logger_Sync* granular_error_stats_logger,
                       std::unique_ptr<cobalt::SteadyClock> clock,
                       std::unique_ptr<cobalt::CpuStatsFetcher> cpu_stats_fetcher,
-                      std::unique_ptr<cobalt::TemperatureFetcher> temperature_fetcher,
                       std::unique_ptr<cobalt::LogStatsFetcher> log_stats_fetcher,
                       std::unique_ptr<cobalt::ActivityListener> activity_listener,
                       std::unique_ptr<cobalt::ArchivistStatsFetcher> archivist_stats_fetcher,
@@ -144,20 +138,9 @@ class SystemMetricsDaemon {
   // constructor to schedule the next round.
   void RepeatedlyLogArchivistStats();
 
-  // Check if fetching device temperature is supported, and if successful
-  // start logging temperature.
-  // If it fails, attempt again after 1 minute. Repeat the process
-  // |remaining_attempts| times.
-  void LogTemperatureIfSupported(int remaining_attempts);
-
   // Create linear bucket config with the bucket_floor, number of buckets and step size.
   std::unique_ptr<cobalt::config::IntegerBucketConfig> InitializeLinearBucketConfig(
       int64_t bucket_floor, int32_t num_buckets, int32_t step_size);
-
-  // Calls LogTemperature,
-  // then uses the |dispatcher| passed to the constructor to schedule
-  // the next round.
-  void RepeatedlyLogTemperature();
 
   // Returns the amount of time since SystemMetricsDaemon started.
   std::chrono::seconds GetUpTime();
@@ -215,15 +198,6 @@ class SystemMetricsDaemon {
   // cpu percentages.
   bool LogCpuToCobalt();  // INT_HISTOGRAM metric type
 
-  // Fetches and logs device temperature.
-  //
-  // Returns the amount of time before this method needs to be invoked again.
-  std::chrono::seconds LogTemperature();
-
-  // Helper function to call Cobalt logger's LogIntHistogram to log
-  // a vector of temperature readings taken in one minute into Cobalt.
-  void LogTemperatureToCobalt();
-
   // Callback function to be called by ActivityListener to update current_state_
   void UpdateState(fuchsia::ui::activity::State state) { current_state_ = state; }
 
@@ -241,7 +215,6 @@ class SystemMetricsDaemon {
   std::chrono::steady_clock::time_point start_time_;
   std::unique_ptr<cobalt::SteadyClock> clock_;
   std::unique_ptr<cobalt::CpuStatsFetcher> cpu_stats_fetcher_;
-  std::unique_ptr<cobalt::TemperatureFetcher> temperature_fetcher_;
   std::unique_ptr<cobalt::LogStatsFetcher> log_stats_fetcher_;
   std::unique_ptr<cobalt::ActivityListener> activity_listener_;
   std::unique_ptr<cobalt::ArchivistStatsFetcher> archivist_stats_fetcher_;
@@ -258,9 +231,6 @@ class SystemMetricsDaemon {
   double cpu_usage_accumulator_ = 0;
   double cpu_usage_max_ = 0;
   size_t cpu_array_index_ = 0;
-
-  inspect::Node metric_temperature_node_;
-  inspect::IntArray inspect_temperature_readings_;
 
   template <typename T>
   T GetCobaltEventCodeForDeviceState(fuchsia::ui::activity::State state) {
@@ -279,19 +249,10 @@ class SystemMetricsDaemon {
   };
   std::unordered_map<fuchsia::ui::activity::State, std::unordered_map<uint32_t, uint32_t>>
       activity_state_to_cpu_map_;
-  std::unordered_map<uint32_t, uint32_t> temperature_map_;
-  uint32_t num_temps_ = 0;
   uint32_t cpu_data_stored_ = 0;
   // This bucket config is used to calculate the histogram bucket index for a given cpu percentage.
   // Usage: cpu_bucket_config_->BucketIndex(cpu_percentage * 100)
   std::unique_ptr<cobalt::config::IntegerBucketConfig> cpu_bucket_config_;
-  // This bucket config is used to calculate the histogram bucket index for a given temperature.
-  // Usage: temperature_bucket_config_->BucketIndex(temperature)
-  std::unique_ptr<cobalt::config::IntegerBucketConfig> temperature_bucket_config_;
-
- protected:
-  // This function should only be used in test to change temperature fetcher.
-  void SetTemperatureFetcher(std::unique_ptr<cobalt::TemperatureFetcher> fetcher);
 };
 
 #endif  // SRC_COBALT_BIN_SYSTEM_METRICS_SYSTEM_METRICS_DAEMON_H_
