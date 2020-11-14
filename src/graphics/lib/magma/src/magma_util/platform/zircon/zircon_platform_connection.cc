@@ -6,6 +6,8 @@
 
 #include <lib/fidl-async/cpp/bind.h>
 
+#include "magma_common_defs.h"
+
 namespace magma {
 
 class ZirconPlatformPerfCountPool : public PlatformPerfCountPool {
@@ -300,6 +302,31 @@ void ZirconPlatformConnection::CommitBuffer(uint64_t buffer_id, uint64_t page_of
 
   if (!delegate_->CommitBuffer(buffer_id, page_offset, page_count))
     SetError(MAGMA_STATUS_INVALID_ARGS);
+}
+
+void ZirconPlatformConnection::BufferRangeOp(uint64_t buffer_id,
+                                             llcpp::fuchsia::gpu::magma::BufferOp op,
+                                             uint64_t start, uint64_t length,
+                                             BufferRangeOpCompleter::Sync& completer) {
+  DLOG("ZirconPlatformConnection:::BufferOp %d", static_cast<uint32_t>(op));
+  FlowControl();
+  uint32_t buffer_op;
+  switch (op) {
+    case llcpp::fuchsia::gpu::magma::BufferOp::POPULATE_TABLES:
+      buffer_op = MAGMA_BUFFER_RANGE_OP_POPULATE_TABLES;
+      break;
+    case llcpp::fuchsia::gpu::magma::BufferOp::DEPOPULATE_TABLES:
+      buffer_op = MAGMA_BUFFER_RANGE_OP_DEPOPULATE_TABLES;
+      break;
+    default:
+      SetError(MAGMA_STATUS_INVALID_ARGS);
+      return;
+  }
+  magma::Status status = delegate_->BufferRangeOp(buffer_id, buffer_op, start, length);
+
+  if (!status) {
+    SetError(status.get());
+  }
 }
 
 void ZirconPlatformConnection::AccessPerformanceCounters(

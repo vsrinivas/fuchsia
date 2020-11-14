@@ -27,6 +27,16 @@ enum Status {
     UNIMPLEMENTED = 8;
 };
 
+enum BufferOp {
+    /// Eagerly populate GPU page tables with the pages mapping in this range, committing pages as
+    /// needed. This is not needed for MAGMA_GPU_MAP_FLAG_GROWABLE allocations, since the page
+    /// tables will be populated on demand.
+    POPULATE_TABLES = 1;
+    /// Depopulate GPU page table mappings for this range. This prevents the GPU from accessing
+    /// pages in that range, but the pages retain their contents.
+    DEPOPULATE_TABLES = 2;
+};
+
 protocol Device {
     /// Deprecated(fxbug.dev/54105)
     Query(uint64 query_id) -> (uint64 result);
@@ -129,9 +139,14 @@ protocol Primary {
     /// Buffers will also be implicitly unmapped when released.
     UnmapBufferGpu(zx.koid buffer_id, uint64 gpu_va);
 
-    /// Ensures that `page_count` pages starting at `page_offset` from the beginning of the
-    /// buffer are backed by physical memory.
+    /// DEPRECATED and replaced by BufferOp.POPULATE_TABLES. Ensures that `page_count` pages
+    /// starting at `page_offset` from the beginning of the buffer are backed by physical memory.
+    [Deprecated]
     CommitBuffer(zx.koid buffer_id, uint64 page_offset, uint64 page_count);
+
+    /// Perform an operation on a range of the buffer, starting at `start_bytes` and `length` bytes
+    /// long.
+    BufferRangeOp(zx.koid buffer_id, BufferOp op, uint64 start_bytes, uint64 length);
 
     /// Tries to enable performance counter FIDL messages. To be successful, |access_token| must
     /// have been returned by PerformanceCounterAccess.GetPerformanceCountToken() from the matching

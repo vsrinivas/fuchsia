@@ -197,13 +197,28 @@ bool MagmaSystemConnection::CommitBuffer(uint64_t id, uint64_t page_offset, uint
     return DRETF(false, "Offset overflows");
   }
   if (page_count + page_offset > iter->second.buffer->size() / magma::page_size()) {
-    return DRETF(false, "Page offset too large for buffer");
+    return DRETF(false, "Page offset + length too large for buffer");
   }
   if (msd_connection_commit_buffer(msd_connection(), iter->second.buffer->msd_buf(), page_offset,
                                    page_count) != MAGMA_STATUS_OK)
     return DRETF(false, "msd_connection_commit_buffer failed");
 
   return true;
+}
+
+magma::Status MagmaSystemConnection::BufferRangeOp(uint64_t id, uint32_t op, uint64_t start,
+                                                   uint64_t length) {
+  auto iter = buffer_map_.find(id);
+  if (iter == buffer_map_.end())
+    return DRETF(false, "Attempting to commit invalid buffer id");
+  if (start + length < start) {
+    return DRETF(false, "Offset overflows");
+  }
+  if (start + length > iter->second.buffer->size()) {
+    return DRETF(false, "Page offset too large for buffer");
+  }
+  return msd_connection_buffer_range_op(msd_connection(), iter->second.buffer->msd_buf(), op, start,
+                                        length);
 }
 
 // static

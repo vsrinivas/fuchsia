@@ -319,9 +319,10 @@ magma_status_t magma_buffer_range_op(magma_connection_t connection, magma_buffer
     return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "Invalid buffer length %ld", length);
   }
   switch (options) {
-    case MAGMA_BUFFER_RANGE_OP_POPULATE_TABLES: {
+    case MAGMA_BUFFER_RANGE_OP_POPULATE_TABLES:
+    case MAGMA_BUFFER_RANGE_OP_DEPOPULATE_TABLES: {
       magma::PlatformConnectionClient::cast(connection)
-          ->CommitBuffer(buffer_id, start_offset / magma::page_size(), length / magma::page_size());
+          ->BufferRangeOp(buffer_id, options, start_offset, length);
       return MAGMA_STATUS_OK;
     }
     case MAGMA_BUFFER_RANGE_OP_COMMIT: {

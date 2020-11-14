@@ -58,6 +58,9 @@ class PlatformConnection {
                               uint64_t page_count, uint64_t flags) = 0;
     virtual bool UnmapBufferGpu(uint64_t buffer_id, uint64_t gpu_va) = 0;
     virtual bool CommitBuffer(uint64_t buffer_id, uint64_t page_offset, uint64_t page_count) = 0;
+    virtual magma::Status BufferRangeOp(uint64_t buffer_id, uint32_t op, uint64_t start,
+                                        uint64_t length) = 0;
+    ;
     virtual void SetNotificationCallback(msd_connection_notification_callback_t callback,
                                          void* token) = 0;
     virtual magma::Status ExecuteImmediateCommands(uint32_t context_id, uint64_t commands_size,

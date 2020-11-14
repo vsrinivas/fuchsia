@@ -49,3 +49,9 @@ msd_connection_remove_performance_counter_buffer_from_pool(struct msd_connection
                                                            struct msd_buffer_t* buffer) {
   return MAGMA_STATUS_UNIMPLEMENTED;
 }
+
+magma_status_t __attribute__((weak))
+msd_connection_buffer_range_op(struct msd_connection_t* connection, struct msd_buffer_t* buffer,
+                               uint32_t options, uint64_t start_offset, uint64_t length) {
+  return MAGMA_STATUS_UNIMPLEMENTED;
+}

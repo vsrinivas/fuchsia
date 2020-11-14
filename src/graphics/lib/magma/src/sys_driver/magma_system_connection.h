@@ -63,6 +63,9 @@ class MagmaSystemConnection : private MagmaSystemContext::Owner,
                     uint64_t flags) override;
   bool UnmapBufferGpu(uint64_t buffer_id, uint64_t gpu_va) override;
   bool CommitBuffer(uint64_t buffer_id, uint64_t page_offset, uint64_t page_count) override;
+  magma::Status BufferRangeOp(uint64_t buffer_id, uint32_t op, uint64_t start,
+                              uint64_t length) override;
+
   void SetNotificationCallback(msd_connection_notification_callback_t callback,
                                void* token) override;
 

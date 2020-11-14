@@ -52,6 +52,10 @@ magma_status_t msd_connection_commit_buffer(struct msd_connection_t* connection,
                                             struct msd_buffer_t* buffer, uint64_t page_offset,
                                             uint64_t page_count);
 
+magma_status_t msd_connection_buffer_range_op(struct msd_connection_t* connection,
+                                              struct msd_buffer_t* buffer, uint32_t options,
+                                              uint64_t start_offset, uint64_t length);
+
 // Sets the callback to be used by a connection for various notifications.
 // This is called when a connection is created, and also called to unset
 // the callback before a connection is destroyed.  A multithreaded
