@@ -22,6 +22,7 @@
 #include <atomic>
 #include <cassert>
 #include <climits>
+#include <vector>
 
 #include <mini-process/mini-process.h>
 #include <zxtest/zxtest.h>
@@ -374,7 +375,6 @@ TEST(ProcessTest, InfoReflectsProcessState) {
 // Helper class to encapsulate starting a process with up to kNumThreads no-op child threads.
 class TestProcess {
  public:
-  static constexpr int kMaxThreads = 3;
 
   // Creates the process handle, must be called first before any other function.
   void CreateProcess() {
@@ -385,17 +385,12 @@ class TestProcess {
 
   // Creates a child thread but does not start it.
   void CreateThread() {
-    ASSERT_LT(num_threads_, kMaxThreads);
-
     char name[32];
-    size_t name_length = snprintf(name, sizeof(name), "test_thread_%d", num_threads_);
+    size_t name_length = snprintf(name, sizeof(name), "test_thread_%lu", threads_.size());
 
-    // Can not use a local variable here for the created thread based on clang static analyzer
-    // limitations. It currently cannot handle case where the local variable is assigned to another
-    // memregion.
-    // TODO(fxbug.dev/63653): rewrite this to use local variable once clang static analyzer is
-    // improved.
-    ASSERT_OK(zx_thread_create(process_, name, name_length, 0, &threads_[num_threads_++]));
+    zx_handle_t thread;
+    ASSERT_OK(zx_thread_create(process_, name, name_length, 0, &thread));
+    threads_.push_back(thread);
   }
 
   // Starts the process and all child threads.
@@ -404,7 +399,7 @@ class TestProcess {
   // Starts a process with a control channel that can be used to send commands.
   // Also starts all child threads.
   void StartProcessWithControl(zx_handle_t* out_control_channel) {
-    ASSERT_GT(num_threads_, 0);
+    ASSERT_GT(threads_.size(), 0);
 
     // The first thread must start the process.
     // We don't use this event but starting a new process requires passing it a handle.
@@ -413,7 +408,7 @@ class TestProcess {
     ASSERT_OK(
         start_mini_process_etc(process_, threads_[0], vmar_, event, true, out_control_channel));
 
-    for (int i = 1; i < num_threads_; ++i) {
+    for (size_t i = 1; i < threads_.size(); ++i) {
       ASSERT_OK(start_mini_process_thread(threads_[i], vmar_));
     }
   }
@@ -436,7 +431,9 @@ class TestProcess {
     EXPECT_OK(zx_task_kill(process_));
     EXPECT_OK(zx_handle_close(process_));
     EXPECT_OK(zx_handle_close(vmar_));
-    EXPECT_OK(zx_handle_close_many(threads_, num_threads_));
+    if (!threads_.empty()) {
+      EXPECT_OK(zx_handle_close_many(threads_.data(), threads_.size()));
+    }
   }
 
   zx_handle_t process() const { return process_; }
@@ -448,8 +445,7 @@ class TestProcess {
   zx_handle_t vmar_ = ZX_HANDLE_INVALID;
   zx::channel control_channel_;
 
-  int num_threads_ = 0;
-  zx_handle_t threads_[kMaxThreads];
+  std::vector<zx_handle_t> threads_;
 };
 
 TEST(ProcessTest, Suspend) {
