@@ -34,6 +34,7 @@ zx_library("hid") {
     "hid/samsung.h",
     "hid/usages.h",
     "hid/mouse.h",
+    "hid/virtio-mouse.h",
   ]
   sources = [
     "acer12.c",
@@ -53,6 +54,7 @@ zx_library("hid") {
     "mouse.c",
     "paradise.c",
     "samsung.c",
+    "virtio-mouse.c",
     "visalia-touch.c",
   ]
   deps = [

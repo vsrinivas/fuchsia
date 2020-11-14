@@ -10,8 +10,10 @@
 #include <zxtest/zxtest.h>
 
 #include "input_kbd.h"
+#include "input_mouse.h"
 #include "input_touch.h"
 #include "src/ui/input/lib/hid-input-report/keyboard.h"
+#include "src/ui/input/lib/hid-input-report/mouse.h"
 
 namespace virtio {
 
@@ -121,6 +123,166 @@ TEST_F(VirtioInputTest, MultiTouchFingerEvents) {
   ASSERT_EQ(0, paradise_touch->fingers[2].flags);
   ASSERT_EQ(0, paradise_touch->fingers[3].flags);
   ASSERT_EQ(0, paradise_touch->fingers[4].flags);
+}
+
+TEST_F(VirtioInputTest, MouseTest) {
+  // Get the HID descriptor.
+  HidMouse hid_mouse;
+  uint8_t report_descriptor[2048] = {};
+  size_t report_descriptor_size = 0;
+  ASSERT_OK(hid_mouse.GetDescriptor(HID_DESCRIPTION_TYPE_REPORT, report_descriptor,
+                                    sizeof(report_descriptor), &report_descriptor_size));
+
+  // Parse the HID descriptor.
+  hid::DeviceDescriptor* dev_desc = nullptr;
+  auto parse_res = hid::ParseReportDescriptor(report_descriptor, report_descriptor_size, &dev_desc);
+  ASSERT_EQ(parse_res, hid::ParseResult::kParseOk);
+  ASSERT_EQ(1, dev_desc->rep_count);
+  fbl::AutoCall free_descriptor([dev_desc]() { hid::FreeDeviceDescriptor(dev_desc); });
+
+  hid_input_report::Mouse mouse;
+  ASSERT_EQ(hid_input_report::ParseResult::kOk, mouse.ParseReportDescriptor(dev_desc->report[0]));
+
+  // Send the Virtio mouse keys.
+  virtio_input_event_t event = {};
+  event.type = VIRTIO_INPUT_EV_KEY;
+  event.value = VIRTIO_INPUT_EV_KEY_PRESSED;
+
+  event.code = 0x110;  // BTN_LEFT.
+  hid_mouse.ReceiveEvent(&event);
+
+  // Parse the HID report.
+  size_t report_size;
+  const uint8_t* report = hid_mouse.GetReport(&report_size);
+
+  fidl::BufferThenHeapAllocator<2048> report_allocator;
+  auto report_builder = hid_input_report::fuchsia_input_report::InputReport::Builder(
+      report_allocator.make<hid_input_report::fuchsia_input_report::InputReport::Frame>());
+
+  EXPECT_EQ(hid_input_report::ParseResult::kOk,
+            mouse.ParseInputReport(report, report_size, &report_allocator, &report_builder));
+  hid_input_report::fuchsia_input_report::InputReport input_report = report_builder.build();
+
+  ASSERT_EQ(input_report.mouse().pressed_buttons().count(), 1U);
+  EXPECT_EQ(input_report.mouse().pressed_buttons()[0], 1U);
+
+  // ------------------------------------------------------------------
+
+  // Send another Virtio mouse key event.
+  event.type = VIRTIO_INPUT_EV_KEY;
+  event.value = VIRTIO_INPUT_EV_KEY_PRESSED;
+
+  event.code = 0x111;  // BTN_RIGHT.
+  hid_mouse.ReceiveEvent(&event);
+
+  // Parse the HID report.
+  report = hid_mouse.GetReport(&report_size);
+  report_builder = hid_input_report::fuchsia_input_report::InputReport::Builder(
+      report_allocator.make<hid_input_report::fuchsia_input_report::InputReport::Frame>());
+  EXPECT_EQ(hid_input_report::ParseResult::kOk,
+            mouse.ParseInputReport(report, report_size, &report_allocator, &report_builder));
+  input_report = report_builder.build();
+
+  ASSERT_EQ(input_report.mouse().pressed_buttons().count(), 2U);
+  EXPECT_EQ(input_report.mouse().pressed_buttons()[0], 1U);
+  EXPECT_EQ(input_report.mouse().pressed_buttons()[1], 2U);
+
+  // ------------------------------------------------------------------
+
+  // Release one Virtio mouse key.
+  event.type = VIRTIO_INPUT_EV_KEY;
+  event.value = VIRTIO_INPUT_EV_KEY_RELEASED;
+
+  event.code = 0x110;  // BTN_LEFT.
+  hid_mouse.ReceiveEvent(&event);
+
+  // Parse the HID report.
+  report = hid_mouse.GetReport(&report_size);
+  report_builder = hid_input_report::fuchsia_input_report::InputReport::Builder(
+      report_allocator.make<hid_input_report::fuchsia_input_report::InputReport::Frame>());
+  EXPECT_EQ(hid_input_report::ParseResult::kOk,
+            mouse.ParseInputReport(report, report_size, &report_allocator, &report_builder));
+  input_report = report_builder.build();
+
+  ASSERT_EQ(input_report.mouse().pressed_buttons().count(), 1U);
+  EXPECT_EQ(input_report.mouse().pressed_buttons()[0], 2U);
+
+  // ------------------------------------------------------------------
+
+  // Send another Virtio mouse key event.
+  event.type = VIRTIO_INPUT_EV_KEY;
+  event.value = VIRTIO_INPUT_EV_KEY_PRESSED;
+  event.code = 0x112;  // BTN_MID.
+  hid_mouse.ReceiveEvent(&event);
+
+  // Parse the HID report.
+  report = hid_mouse.GetReport(&report_size);
+  report_builder = hid_input_report::fuchsia_input_report::InputReport::Builder(
+      report_allocator.make<hid_input_report::fuchsia_input_report::InputReport::Frame>());
+  EXPECT_EQ(hid_input_report::ParseResult::kOk,
+            mouse.ParseInputReport(report, report_size, &report_allocator, &report_builder));
+  input_report = report_builder.build();
+
+  ASSERT_EQ(input_report.mouse().pressed_buttons().count(), 2U);
+  EXPECT_EQ(input_report.mouse().pressed_buttons()[0], 2U);
+  EXPECT_EQ(input_report.mouse().pressed_buttons()[1], 3U);
+
+  // ------------------------------------------------------------------
+
+  // Send a Virtio mouse rel event on X axis.
+  event.type = VIRTIO_INPUT_EV_REL;
+  event.code = VIRTIO_INPUT_EV_REL_X;
+  event.value = 0x0abc;
+  hid_mouse.ReceiveEvent(&event);
+
+  // Parse the HID report.
+  report = hid_mouse.GetReport(&report_size);
+  report_builder = hid_input_report::fuchsia_input_report::InputReport::Builder(
+      report_allocator.make<hid_input_report::fuchsia_input_report::InputReport::Frame>());
+  EXPECT_EQ(hid_input_report::ParseResult::kOk,
+            mouse.ParseInputReport(report, report_size, &report_allocator, &report_builder));
+  input_report = report_builder.build();
+
+  ASSERT_TRUE(input_report.mouse().has_movement_x());
+  EXPECT_EQ(input_report.mouse().movement_x(), 0x0abc);
+
+  // ------------------------------------------------------------------
+
+  // Send a Virtio mouse rel event on Y axis.
+  event.type = VIRTIO_INPUT_EV_REL;
+  event.code = VIRTIO_INPUT_EV_REL_Y;
+  event.value = 0x0123;
+  hid_mouse.ReceiveEvent(&event);
+
+  // Parse the HID report.
+  report = hid_mouse.GetReport(&report_size);
+  report_builder = hid_input_report::fuchsia_input_report::InputReport::Builder(
+      report_allocator.make<hid_input_report::fuchsia_input_report::InputReport::Frame>());
+  EXPECT_EQ(hid_input_report::ParseResult::kOk,
+            mouse.ParseInputReport(report, report_size, &report_allocator, &report_builder));
+  input_report = report_builder.build();
+
+  ASSERT_TRUE(input_report.mouse().has_movement_y());
+  EXPECT_EQ(input_report.mouse().movement_y(), 0x0123);
+
+  // ------------------------------------------------------------------
+
+  // Send a Virtio mouse rel event on wheel.
+  event.type = VIRTIO_INPUT_EV_REL;
+  event.code = VIRTIO_INPUT_EV_REL_WHEEL;
+  event.value = 0x0345;
+  hid_mouse.ReceiveEvent(&event);
+
+  // Parse the HID report.
+  report = hid_mouse.GetReport(&report_size);
+  report_builder = hid_input_report::fuchsia_input_report::InputReport::Builder(
+      report_allocator.make<hid_input_report::fuchsia_input_report::InputReport::Frame>());
+  EXPECT_EQ(hid_input_report::ParseResult::kOk,
+            mouse.ParseInputReport(report, report_size, &report_allocator, &report_builder));
+  input_report = report_builder.build();
+
+  ASSERT_TRUE(input_report.mouse().has_scroll_v());
+  EXPECT_EQ(input_report.mouse().scroll_v(), 0x0345);
 }
 
 TEST_F(VirtioInputTest, KeyboardTest) {

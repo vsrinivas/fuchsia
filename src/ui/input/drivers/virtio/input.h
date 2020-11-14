@@ -17,8 +17,9 @@
 #include <hid/boot.h>
 #include <virtio/input.h>
 
-#include "input_kbd.h"
-#include "input_touch.h"
+#include "src/ui/input/drivers/virtio/input_kbd.h"
+#include "src/ui/input/drivers/virtio/input_mouse.h"
+#include "src/ui/input/drivers/virtio/input_touch.h"
 
 namespace virtio {
 

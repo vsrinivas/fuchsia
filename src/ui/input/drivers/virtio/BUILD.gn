@@ -20,6 +20,7 @@ driver_module("virtio_input") {
     "input.cc",
     "input_driver.cc",
     "input_kbd.cc",
+    "input_mouse.cc",
     "input_touch.cc",
   ]
   deps = [
@@ -43,6 +44,7 @@ test("virtio-input-test") {
   }
   sources = [
     "input_kbd.cc",
+    "input_mouse.cc",
     "input_test.cc",
     "input_touch.cc",
   ]
