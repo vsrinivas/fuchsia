@@ -16,6 +16,7 @@ use {
     fuchsia_bluetooth::{
         constants::HOST_DEVICE_DIR,
         device_watcher::{DeviceWatcher, WatchFilter},
+        expect_eq,
         expectation::{
             self,
             asynchronous::{ExpectableExt, ExpectableStateExt},
@@ -30,7 +31,7 @@ use {
     test_harness::run_suite,
 };
 
-use crate::{expect::expect_eq, tests::timeout_duration};
+use crate::tests::timeout_duration;
 
 // Tests that creating and destroying a fake HCI device binds and unbinds the bt-host driver.
 async fn test_lifecycle(_: ()) -> Result<(), Error> {

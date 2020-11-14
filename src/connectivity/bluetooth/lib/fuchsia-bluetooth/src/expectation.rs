@@ -16,6 +16,9 @@ pub mod asynchronous;
 pub mod host_driver;
 /// Expectations for remote peers
 pub mod peer;
+/// Useful convenience methods and macros for working with expectations
+#[macro_use]
+pub mod prelude;
 /// Tests for the expectation module
 #[cfg(test)]
 pub mod test;
@@ -157,7 +160,8 @@ where
             fmt_falsifications(
                 t.into_iter().enumerate().filter_map(|(i, el)| falsify_elem(&self, i, &el, doc)),
                 doc,
-            ).or(Some(doc.text("<empty>")))
+            )
+            .or(Some(doc.text("<empty>")))
         }
     }
 }
@@ -222,7 +226,8 @@ where
             fmt_falsifications(
                 iter.clone().enumerate().filter_map(|(i, el)| falsify_elem(&self.0, i, &el, doc)),
                 doc,
-            ).or(Some(doc.text("<empty>")))
+            )
+            .or(Some(doc.text("<empty>")))
         }
     }
 }

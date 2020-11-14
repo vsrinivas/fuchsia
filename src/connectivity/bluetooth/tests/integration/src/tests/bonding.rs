@@ -7,13 +7,12 @@ use {
     bt_test_harness::host_driver::{self, HostDriverHarness},
     fidl_fuchsia_bluetooth_sys as sys,
     fuchsia_bluetooth::{
+        expect_eq,
         expectation::{self, asynchronous::ExpectableExt},
         types::{Address, BondingData, LeData, OneOrBoth, PeerId},
     },
     test_harness::run_suite,
 };
-
-use crate::expect::expect_eq;
 
 // TODO(armansito|xow): Add tests for BR/EDR and dual mode bond data.
 

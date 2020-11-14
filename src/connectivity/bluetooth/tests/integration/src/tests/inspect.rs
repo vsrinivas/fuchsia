@@ -5,12 +5,10 @@
 use {
     anyhow::Error,
     bt_test_harness::{access::AccessHarness, inspect::InspectHarness},
-    fuchsia_bluetooth::expectation::asynchronous::ExpectableExt,
+    fuchsia_bluetooth::{expect_eq, expectation::asynchronous::ExpectableExt},
     fuchsia_inspect_contrib::reader::NodeHierarchy,
     test_harness::run_suite,
 };
-
-use crate::expect::expect_eq;
 
 const GAP_CHILD_NODE: &str = "system";
 

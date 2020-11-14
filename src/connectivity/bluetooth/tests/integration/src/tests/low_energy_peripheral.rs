@@ -17,6 +17,7 @@ use {
     },
     fuchsia_async::{self as fasync, DurationExt, TimeoutExt},
     fuchsia_bluetooth::{
+        expect_eq,
         expectation::asynchronous::{ExpectableExt, ExpectableState, ExpectableStateExt},
         types::Address,
     },
@@ -25,10 +26,7 @@ use {
     test_harness::run_suite,
 };
 
-use crate::{
-    expect::{expect_eq, expect_ok},
-    tests::timeout_duration,
-};
+use crate::{expect::expect_ok, tests::timeout_duration};
 
 mod expectation {
     use {

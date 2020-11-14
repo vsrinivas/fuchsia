@@ -61,6 +61,7 @@ rustc_library("fuchsia-bluetooth") {
     "src/expectation/asynchronous.rs",
     "src/expectation/host_driver.rs",
     "src/expectation/peer.rs",
+    "src/expectation/prelude.rs",
     "src/expectation/test.rs",
     "src/hci_emulator.rs",
     "src/host.rs",
