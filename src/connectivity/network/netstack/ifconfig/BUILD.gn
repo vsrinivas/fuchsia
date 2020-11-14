@@ -14,7 +14,6 @@ go_library("ifconfig_lib") {
     "../:netstack_lib",
     "//sdk/fidl/fuchsia.netstack($go_toolchain)",
     "//sdk/fidl/fuchsia.sys($go_toolchain)",
-    "//sdk/fidl/fuchsia.wlan.service($go_toolchain)",
     "//src/lib/component",
   ]
 

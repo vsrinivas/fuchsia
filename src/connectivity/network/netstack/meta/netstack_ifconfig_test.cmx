@@ -16,8 +16,7 @@
         "services": [
             "fuchsia.netstack.Netstack",
             "fuchsia.process.Launcher",
-            "fuchsia.process.Resolver",
-            "fuchsia.wlan.service.Wlan"
+            "fuchsia.process.Resolver"
         ]
     }
 }
