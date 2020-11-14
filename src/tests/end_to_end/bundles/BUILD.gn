@@ -38,9 +38,6 @@ group("end_to_end_deps") {
     # Needed for flutter driver using find to get vmservice-port.
     "//third_party/sbase:find",
 
-    # Needed to query inspect.
-    "//garnet/packages/prod:iquery",
-
     # Needed for VP9 decode conformance testing.
     "//src/media/codec/examples:vp9_decoder_conformance_http",
   ]

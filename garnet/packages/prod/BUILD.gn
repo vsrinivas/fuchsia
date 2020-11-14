@@ -37,7 +37,6 @@ group("all") {
     "//garnet/packages/prod:guest_runner",
     "//garnet/packages/prod:hwstress",
     "//garnet/packages/prod:insntrace",
-    "//garnet/packages/prod:iquery",
     "//garnet/packages/prod:magma-arm-mali-config",
     "//garnet/packages/prod:magma-arm-mali-system",
     "//garnet/packages/prod:magma-img-rgx-mt8167",
@@ -296,11 +295,6 @@ group("insntrace") {
     "//garnet/bin/insntrace",
     "//garnet/bin/insntrace:host_insntrace_print",
   ]
-}
-
-group("iquery") {
-  testonly = true
-  public_deps = [ "//src/diagnostics/iquery" ]
 }
 
 # TODO(fxb/61170): remove when all product/board files use the two targets
