@@ -208,6 +208,7 @@ sdk_molecule("host_tools") {
   not_cross_compiled = [
     "//src/developer/debug/zxdb:zxdb_sdk",
     "//tools/fidlcat:fidlcat_sdk",
+    "//tools/symbolizer:sdk",
   ]
 
   cross_compiled = [

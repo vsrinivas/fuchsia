@@ -201,6 +201,7 @@ sdk://tools/x64/minfs
 sdk://tools/x64/pm
 sdk://tools/x64/symbol-index
 sdk://tools/x64/symbolize
+sdk://tools/x64/symbolizer
 sdk://tools/x64/zbi
 sdk://tools/x64/zxdb
 sdk://tools/zbi
