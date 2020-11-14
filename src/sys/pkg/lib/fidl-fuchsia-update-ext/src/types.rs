@@ -150,21 +150,46 @@ impl From<fidl::InstallingData> for InstallingData {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Arbitrary)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct InstallationDeferredData {
     pub update: Option<UpdateInfo>,
+    pub deferral_reason: Option<fidl::InstallationDeferralReason>,
 }
+
 impl Into<fidl::InstallationDeferredData> for InstallationDeferredData {
     fn into(self) -> fidl::InstallationDeferredData {
         fidl::InstallationDeferredData {
             update: self.update.map(|ext| ext.into()),
+            deferral_reason: self.deferral_reason,
             ..fidl::InstallationDeferredData::empty()
         }
     }
 }
 impl From<fidl::InstallationDeferredData> for InstallationDeferredData {
     fn from(data: fidl::InstallationDeferredData) -> Self {
-        Self { update: data.update.map(|o| o.into()) }
+        Self { update: data.update.map(|o| o.into()), deferral_reason: data.deferral_reason }
+    }
+}
+
+// Manually impl Arbitrary because fidl::InstallationDeferralReason does not impl Arbitrary.
+// We could have created another wrapper, but we opted not to in order to guarantee the ext
+// crate stays in sync with the FIDL for InstallationDeferralReason.
+impl Arbitrary for InstallationDeferredData {
+    type Parameters = ();
+    type Strategy = BoxedStrategy<Self>;
+
+    fn arbitrary_with((): Self::Parameters) -> Self::Strategy {
+        any::<UpdateInfo>()
+            .prop_flat_map(|info| {
+                (
+                    proptest::option::of(Just(info)),
+                    proptest::option::of(Just(
+                        fidl::InstallationDeferralReason::CurrentSystemNotCommitted,
+                    )),
+                )
+            })
+            .prop_map(|(update, deferral_reason)| Self { update, deferral_reason })
+            .boxed()
     }
 }
 

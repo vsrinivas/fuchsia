@@ -211,6 +211,7 @@ table NoUpdateAvailableData {
 /// `installation_deferred_by_policy` state.
 table InstallationDeferredData {
     1: UpdateInfo update;
+    2: InstallationDeferralReason deferral_reason;
 };
 
 /// This is the set of data associated with the states involved with installing
@@ -278,4 +279,15 @@ enum CheckNotStartedReason {
     ///
     /// If a client attempts to abuse this, it will be throttled.
     THROTTLED = 4;
+};
+
+/// This is the set of values that are provided when an update installation
+/// is deferred.
+flexible enum InstallationDeferralReason {
+
+    /// The update was not installed because the currently booted system is not
+    /// committed. Consumers are encouraged to use the [`CommitStatusProvider`]
+    /// to determine when to retry the update check such that the update will
+    /// be installed.
+    CURRENT_SYSTEM_NOT_COMMITTED = 1;
 };

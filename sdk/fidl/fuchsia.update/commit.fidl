@@ -1,0 +1,36 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.update;
+
+using zx;
+
+/// A reporter for whether the currently booted system is committed. When an
+/// update is committed, this means:
+/// * The currently booted slot is marked as healthy (e.g. successfully booted).
+/// * The alternate slot (if present) is marked as unbootable.
+/// * The system will not roll back to the previous version of the OS on reboot.
+/// * The previous version of the OS may be garbage collected.
+///
+/// Until the update is committed, the system retains the prior version of the OS.
+/// That way, if we discover the newly written version is bad (e.g. it cannot itself
+/// update), then the system can fall back to the previous committed version.
+[Discoverable]
+protocol CommitStatusProvider {
+    /// Determines whether the currently booted system is committed, and immediately
+    /// returns an EventPair.
+    ///
+    /// * If the currently booted system is committed, the `ZX_USER_SIGNAL_0` signal
+    ///     is asserted on the EventPair, e.g. the signal is asserted before the
+    ///     EventPair is returned.
+    /// * If the commit is pending, no signals are asserted on the EventPair. When the
+    ///     system is committed, `ZX_USER_SIGNAL_0` is asserted on the EventPair.
+    /// * If the system fails to commit the currently booted version, the system
+    ///     will reboot and terminate the component serving [`CommitStatusProvider`],
+    ///     which will assert `ZX_EVENTPAIR_PEER_CLOSED`. At this point, any remaining
+    ///     EventPairs will observe the `ZX_EVENTPAIR_PEER_CLOSED` signal.
+    ///
+    /// - response `event` an EventPair with rights `ZX_RIGHT_WAIT` and `ZX_RIGHT_DUPLICATE`.
+    IsCurrentSystemCommitted() -> (zx.handle:EVENTPAIR event);
+};

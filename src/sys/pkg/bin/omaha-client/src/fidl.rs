@@ -67,6 +67,7 @@ impl From<State> for Option<update::State> {
             state_machine::State::InstallationDeferredByPolicy => {
                 Some(update::State::InstallationDeferredByPolicy(InstallationDeferredData {
                     update,
+                    deferral_reason: None,
                     ..InstallationDeferredData::empty()
                 }))
             }

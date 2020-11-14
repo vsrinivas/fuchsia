@@ -7,5 +7,9 @@ import("//build/fidl/fidl.gni")
 fidl("fuchsia.update") {
   sdk_category = "partner"
 
-  sources = [ "update.fidl" ]
+  sources = [
+    "commit.fidl",
+    "update.fidl",
+  ]
+  public_deps = [ "//zircon/vdso/zx" ]
 }
