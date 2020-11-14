@@ -104,7 +104,6 @@
                 "fuchsia.tracing.provider.Registry",
                 "fuchsia.update.Manager",
                 "fuchsia.virtualconsole.SessionManager",
-                "fuchsia.wlan.service.Wlan",
             ],
         },
     ],

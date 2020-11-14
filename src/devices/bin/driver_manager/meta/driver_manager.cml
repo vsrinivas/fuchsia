@@ -181,9 +181,6 @@
 
                 // Services from appmgr
                 "fuchsia.tracing.provider.Registry",
-
-                // Thought to be used by serial console only (fxbug.dev/50992)
-                "fuchsia.wlan.service.Wlan",
             ],
         },
     ],

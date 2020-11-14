@@ -373,7 +373,6 @@
                 "fuchsia.sys.Loader",
                 "fuchsia.tracing.controller.Controller",
                 "fuchsia.tracing.provider.Registry",
-                "fuchsia.wlan.service.Wlan",
             ],
             from: "#appmgr",
         },
