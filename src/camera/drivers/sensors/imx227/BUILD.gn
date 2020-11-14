@@ -39,6 +39,7 @@ source_set("source") {
     "//sdk/banjo/ddk.protocol.platform.device",
     "//sdk/lib/syslog/cpp",
     "//src/devices/lib/driver",
+    "//zircon/public/lib/safemath",
     "//zircon/system/ulib/fzl",
   ]
 
@@ -50,9 +51,6 @@ source_set("source") {
     "//zircon/system/ulib/driver-unit-test",
     "//zircon/system/ulib/trace:trace-driver",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 driver_module("driver") {

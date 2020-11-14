@@ -5,9 +5,8 @@
 #include <endian.h>
 #include <lib/fzl/vmo-mapper.h>
 
-#include <climits>
-
 #include <ddk/debug.h>
+#include <safemath/safe_conversions.h>
 
 #include "src/camera/drivers/sensors/imx227/imx227.h"
 #include "src/camera/drivers/sensors/imx227/imx227_otp_config.h"
@@ -31,7 +30,7 @@ fit::result<zx::vmo, zx_status_t> Imx227Device::OtpRead() {
   // Endian-flipped OTP start address to read through I2C channel
   const uint16_t kPageStartRegister = htobe16(OTP_PAGE_START);
 
-  for (uint32_t page_index = 0; page_index < OTP_PAGE_NUM; ++page_index) {
+  for (uint8_t page_index = 0; page_index < OTP_PAGE_NUM; ++page_index) {
     // TODO(nzo): does this check need to be in the loop?
     if (!ValidateSensorID()) {
       status = ZX_ERR_INTERNAL;
@@ -81,7 +80,8 @@ bool Imx227Device::OtpValidate(const zx::vmo& vmo) {
 
   uint32_t checksum = 0;
   uint16_t checksum_target =
-      (data[OTP_CHECKSUM_HIGH_START] << CHAR_BIT) | (data[OTP_CHECKSUM_LOW_START]);
+      safemath::checked_cast<uint16_t>((data[OTP_CHECKSUM_HIGH_START] << CHAR_BIT)) |
+      (data[OTP_CHECKSUM_LOW_START]);
 
   for (auto i = 0; i < OTP_CHECKSUM_HIGH_START; ++i) {
     checksum += data[i];

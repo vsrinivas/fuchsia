@@ -161,7 +161,7 @@ class Imx227Device : public DeviceType,
   zx_status_t Write8(uint16_t addr, uint8_t val) __TA_REQUIRES(lock_);
 
   // Other
-  zx_status_t InitMipiCsi(uint8_t mode) __TA_REQUIRES(lock_);
+  zx_status_t InitMipiCsi(uint32_t mode) __TA_REQUIRES(lock_);
   zx_status_t InitSensor(uint8_t idx) __TA_REQUIRES(lock_);
   void HwInit() __TA_REQUIRES(lock_);
   void HwDeInit() __TA_REQUIRES(lock_);
@@ -173,8 +173,8 @@ class Imx227Device : public DeviceType,
   fit::result<int32_t, zx_status_t> GetTemperature();
 
   bool is_streaming_;
-  uint8_t num_modes_;
-  uint8_t current_mode_;
+  uint32_t num_modes_;
+  uint32_t current_mode_;
 
   fit::result<uint8_t, zx_status_t> GetRegisterValueFromSequence(uint8_t index, uint16_t address);
 

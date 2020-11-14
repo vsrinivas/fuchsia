@@ -19,6 +19,7 @@
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <hw/reg.h>
+#include <safemath/safe_conversions.h>
 
 #include "src/camera/drivers/sensors/imx227/bind.h"
 #include "src/camera/drivers/sensors/imx227/constants.h"
@@ -39,9 +40,9 @@ fit::result<uint8_t, zx_status_t> Imx227Device::GetRegisterValueFromSequence(uin
   }
   const InitSeqFmt* sequence = kSEQUENCE_TABLE[index];
   while (true) {
-    uint16_t register_address = sequence->address;
-    uint16_t register_value = sequence->value;
-    uint16_t register_len = sequence->len;
+    auto register_address = sequence->address;
+    auto register_value = sequence->value;
+    auto register_len = sequence->len;
     if (register_address == kEndOfSequence && register_value == 0 && register_len == 0) {
       break;
     }
@@ -110,7 +111,7 @@ fit::result<uint16_t, zx_status_t> Imx227Device::Read16(uint16_t addr) {
     return result.take_error_result();
   }
   auto lower_byte = result.value();
-  uint16_t reg_value = upper_byte << kByteShift | lower_byte;
+  uint16_t reg_value = safemath::checked_cast<uint16_t>(upper_byte << kByteShift) | lower_byte;
   return fit::ok(reg_value);
 }
 
@@ -241,7 +242,7 @@ void Imx227Device::HwDeInit() {
   zx_nanosleep(zx_deadline_after(ZX_MSEC(50)));
 }
 
-zx_status_t Imx227Device::InitMipiCsi(uint8_t mode) {
+zx_status_t Imx227Device::InitMipiCsi(uint32_t mode) {
   mipi_info_t mipi_info;
   mipi_adap_info_t adap_info;
 
@@ -283,7 +284,8 @@ fit::result<uint32_t, zx_status_t> Imx227Device::GetLinesPerSecond() {
   if (result_hi.is_error() || result_lo.is_error()) {
     return fit::error(ZX_ERR_INTERNAL);
   }
-  uint16_t line_length_pclk = (result_hi.value() << 8) | result_lo.value();
+  uint16_t line_length_pclk =
+      safemath::checked_cast<uint16_t>(result_hi.value() << 8) | result_lo.value();
   uint32_t lines_per_second = kMasterClock / line_length_pclk;
   return fit::ok(lines_per_second);
 }
@@ -295,8 +297,6 @@ float Imx227Device::AnalogRegValueToTotalGain(uint16_t reg_value) {
 
 uint16_t Imx227Device::AnalogTotalGainToRegValue(float gain) {
   float value;
-  uint16_t register_value;
-
   // Compute the register value.
   if (analog_gain_.m0 == 0) {
     value = ((analog_gain_.c0 / gain) - analog_gain_.c1) / analog_gain_.m1;
@@ -308,7 +308,7 @@ uint16_t Imx227Device::AnalogTotalGainToRegValue(float gain) {
   value += 0.5f * analog_gain_.gain_code_step_size;
 
   // Convert and clamp.
-  register_value = value;
+  auto register_value = safemath::checked_cast<uint16_t>(value);
 
   if (register_value < analog_gain_.gain_code_min) {
     register_value = analog_gain_.gain_code_min;
@@ -330,7 +330,6 @@ float Imx227Device::DigitalRegValueToTotalGain(uint16_t reg_value) {
 
 uint16_t Imx227Device::DigitalTotalGainToRegValue(float gain) {
   float value;
-  uint16_t register_value;
 
   // Compute the register value.
   value = gain * (1 << kDigitalGainShift);
@@ -339,7 +338,7 @@ uint16_t Imx227Device::DigitalTotalGainToRegValue(float gain) {
   value += 0.5f * digital_gain_.gain_step_size;
 
   // Convert and clamp.
-  register_value = value;
+  auto register_value = safemath::checked_cast<uint16_t>(value);
 
   if (register_value < digital_gain_.gain_min) {
     register_value = digital_gain_.gain_min;

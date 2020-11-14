@@ -5,6 +5,7 @@
 #include <lib/trace/event.h>
 
 #include <ddk/debug.h>
+#include <safemath/safe_conversions.h>
 
 #include "imx227.h"
 #include "src/camera/drivers/sensors/imx227/constants.h"
@@ -183,7 +184,8 @@ zx_status_t Imx227Device::CameraSensor2GetIntegrationTime(float* out_int_time) {
   if (result_cit.is_error() || result_lps.is_error()) {
     return ZX_ERR_INTERNAL;
   }
-  *out_int_time = static_cast<float>(result_cit.value()) / result_lps.value();
+  *out_int_time = safemath::checked_cast<float>(result_cit.value()) /
+                  safemath::checked_cast<float>(result_lps.value());
 
   return ZX_OK;
 }
@@ -195,7 +197,8 @@ zx_status_t Imx227Device::CameraSensor2SetIntegrationTime(float int_time, float*
   if (result.is_error()) {
     return result.error();
   }
-  uint16_t new_coarse_integration_time = int_time * result.value();
+  uint16_t new_coarse_integration_time =
+      safemath::checked_cast<uint16_t>(int_time * safemath::checked_cast<float>(result.value()));
 
   if (new_coarse_integration_time != integration_time_.coarse_integration_time) {
     integration_time_.coarse_integration_time = new_coarse_integration_time;
