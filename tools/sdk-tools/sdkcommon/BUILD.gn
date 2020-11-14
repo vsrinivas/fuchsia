@@ -6,10 +6,16 @@ import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 
 go_library("sdkcommon") {
-  sources = [ "sdkcommon.go" ]
+  sources = [
+    "sdkcommon.go",
+    "sdkcommon_test.go",
+    "utils.go",
+  ]
+  deps = [ "//tools/lib/logger" ]
+  non_go_deps = [ "//tools/net/device-finder:host" ]
 }
 
-go_test("lib_tests") {
+go_test("sdkcommon-test") {
   gopackages = [ "go.fuchsia.dev/fuchsia/tools/sdk-tools/sdkcommon" ]
   deps = [ ":sdkcommon" ]
 }

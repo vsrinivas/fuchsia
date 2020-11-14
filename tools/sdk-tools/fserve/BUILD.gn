@@ -1,0 +1,45 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/go/go_binary.gni")
+import("//build/go/go_library.gni")
+import("//build/go/go_test.gni")
+import("//build/testing/host_test_data.gni")
+
+go_library("main") {
+  source_dir = "cmd"
+  deps = [
+    "//tools/lib/logger",
+    "//tools/sdk-tools/sdkcommon",
+  ]
+  sources = [
+    "fserve.go",
+    "fserve_test.go",
+  ]
+  non_go_deps = [ "//src/sys/pkg/bin/pm:host" ]
+}
+
+go_binary("fserve") {
+  gopackage = "go.fuchsia.dev/fuchsia/tools/sdk-tools/fserve/cmd"
+  deps = [ ":main" ]
+}
+
+host_test_data("fserve-test-data") {
+  sources = [ "testdata/testdata.tgz" ]
+  outputs = [ "${target_out_dir}/testdata/testdata.tgz" ]
+}
+
+if (is_host) {
+  go_test("fserve-test") {
+    gopackages = [ "go.fuchsia.dev/fuchsia/tools/sdk-tools/fserve/cmd" ]
+    deps = [ ":main" ]
+    args = [ "--testroot=" + rebase_path(target_out_dir, root_out_dir) ]
+    non_go_deps = [ ":fserve-test-data" ]
+  }
+}
+
+install_host_tools("fserve-host") {
+  deps = [ ":fserve" ]
+  outputs = [ "fserve" ]
+}

@@ -1,14 +1,22 @@
 # Copyright 2020 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
+
 group("tools") {
   testonly = true
 
-  public_deps = [ "//tools/sdk-tools/fpublish:fpublish-host" ]
+  public_deps = [
+    "//tools/sdk-tools/fpublish:fpublish-host",
+    "//tools/sdk-tools/fserve:fserve-host",
+  ]
 }
 
 group("tests") {
   testonly = true
 
-  deps = [ "//tools/sdk-tools/fpublish:fpublish-test($host_toolchain)" ]
+  deps = [
+    "//tools/sdk-tools/fpublish:fpublish-test($host_toolchain)",
+    "//tools/sdk-tools/fserve:fserve-test($host_toolchain)",
+    "//tools/sdk-tools/sdkcommon:sdkcommon-test($host_toolchain)",
+  ]
 }
