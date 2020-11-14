@@ -210,7 +210,7 @@ zx_status_t FdioVolumeManager::UnsealWithDeviceKey(uint8_t slot) {
 
   return TryWithKeysFrom(ordered_key_sources, Activity::Unseal,
                          [&](std::unique_ptr<uint8_t[]> key_buffer, size_t key_size) {
-                           return Unseal(key_buffer.release(), key_size, slot);
+                           return Unseal(key_buffer.get(), key_size, slot);
                          });
 }
 
