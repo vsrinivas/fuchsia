@@ -275,11 +275,17 @@ def main():
             debug_print(yaml.safe_dump(dependencies, default_flow_style=False))
 
         with open(os.path.join(importer_dir, 'pubspec.yaml'), 'w') as pubspec:
-            yaml.safe_dump({
-                'name': 'importer',
-                'dependencies': dependencies,
-                'dependency_overrides': overrides,
-            }, pubspec, default_flow_style=not args.debug)
+            yaml.safe_dump(
+                {
+                    'name': 'importer',
+                    'dependencies': dependencies,
+                    'dependency_overrides': overrides,
+                    'environment': {
+                        'sdk': '>=2.0.0 <3.0.0'
+                    }
+                },
+                pubspec,
+                default_flow_style=not args.debug)
 
         old_packages = read_package_versions(args.output)
 
