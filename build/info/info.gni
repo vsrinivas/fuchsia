@@ -17,12 +17,12 @@ declare_args() {
 }
 
 build_info_files = {
-  product = "$root_gen_dir/product.txt"
-  board = "$root_gen_dir/board.txt"
-  version = "$root_gen_dir/version.txt"
+  product = "$root_build_dir/product.txt"
+  board = "$root_build_dir/board.txt"
+  version = "$root_build_dir/version.txt"
   jiri_snapshot = "//.jiri_root/update_history/latest"
-  latest_commit_date = "$root_gen_dir/latest-commit-date.txt"
-  minimum_utc_stamp = "$root_gen_dir/minimum-utc-stamp.txt"
+  latest_commit_date = "$root_build_dir/latest-commit-date.txt"
+  minimum_utc_stamp = "$root_build_dir/minimum-utc-stamp.txt"
 }
 
 if (build_info_version == "") {

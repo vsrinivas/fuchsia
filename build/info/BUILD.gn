@@ -7,72 +7,74 @@ import("//build/dist/resource.gni")
 import("//build/info/info.gni")
 import("//build/package.gni")
 
-write_file(build_info_files.product, build_info_product)
-write_file(build_info_files.board, board_name)
+if (current_toolchain == default_toolchain) {
+  write_file(build_info_files.product, build_info_product)
+  write_file(build_info_files.board, board_name)
 
-if (build_info_files.version != build_info_files.latest_commit_date) {
-  write_file(build_info_files.version, build_info_version)
+  if (build_info_files.version != build_info_files.latest_commit_date) {
+    write_file(build_info_files.version, build_info_version)
+  }
+
+  action("latest-commit-date") {
+    # The script at tools/gen-latest-commit-date.sh script runs the following
+    # command to compute the latest commit date:
+    #
+    #   GIT_CONFIG_NOSYSTEM=1 TZ=UTC git --git-dir="$INTEGRATION"/.git log --date=iso-strict-local --format=%cd -n 1 > "$OUTPUT"
+    #
+    # That command uses the following files, which means we need to depend on them
+    # in order to ensure that this GN target will be considered dirty if the
+    # output of that command would change.
+    sources = [
+      "//integration/.git/HEAD",
+      "//integration/.git/index",
+    ]
+    outputs = [
+      build_info_files.latest_commit_date,
+      build_info_files.minimum_utc_stamp,
+    ]
+    script = "gen-latest-commit-date.sh"
+    args = rebase_path([ "//integration/" ] + outputs, root_build_dir)
+  }
+} else {
+  group("latest-commit-date") {
+    public_deps = [ ":latest-commit-date($default_toolchain)" ]
+  }
 }
 
-package("build-info") {
-  deps = [ ":latest-commit-date" ]
-  resources = [
-    {
-      dest = "product"
-      path = build_info_files.product
-    },
-    {
-      dest = "board"
-      path = build_info_files.board
-    },
-    {
-      dest = "version"
-      path = build_info_files.version
-    },
-    {
-      dest = "snapshot"
-      path = build_info_files.jiri_snapshot
-    },
-    {
-      dest = "latest-commit-date"
-      path = build_info_files.latest_commit_date
-    },
-    {
-      dest = "minimum-utc-stamp"
-      path = build_info_files.minimum_utc_stamp
-    },
-  ]
-}
+if (is_fuchsia) {
+  package("build-info") {
+    deps = [ ":latest-commit-date" ]
+    resources = [
+      {
+        dest = "product"
+        path = build_info_files.product
+      },
+      {
+        dest = "board"
+        path = build_info_files.board
+      },
+      {
+        dest = "version"
+        path = build_info_files.version
+      },
+      {
+        dest = "snapshot"
+        path = build_info_files.jiri_snapshot
+      },
+      {
+        dest = "latest-commit-date"
+        path = build_info_files.latest_commit_date
+      },
+      {
+        dest = "minimum-utc-stamp"
+        path = build_info_files.minimum_utc_stamp
+      },
+    ]
+  }
 
-resource("bootfs") {
-  sources = [ build_info_files.minimum_utc_stamp ]
-  outputs = [ "config/build_info/minimum_utc_stamp" ]
-  deps = [ ":latest-commit-date" ]
-}
-
-action("latest-commit-date") {
-  visibility = [
-    ":*",
-    "//build/images:devmgr_config.txt",
-    "//build/images:devmgr_config_prime.txt",
-  ]
-
-  # The script at tools/gen-latest-commit-date.sh script runs the following
-  # command to compute the latest commit date:
-  #
-  #   GIT_CONFIG_NOSYSTEM=1 TZ=UTC git --git-dir="$INTEGRATION"/.git log --date=iso-strict-local --format=%cd -n 1 > "$OUTPUT"
-  #
-  # That command uses the following files, which means we need to depend on them
-  # in order to ensure that this GN target will be considered dirty if the
-  # output of that command would change.
-  sources = [
-    "//integration/.git/HEAD",
-    "//integration/.git/index",
-  ]
-  outputs = [
-    build_info_files.latest_commit_date,
-    build_info_files.minimum_utc_stamp,
-  ]
-  script = "gen-latest-commit-date.sh"
-  args = rebase_path([ "//integration/" ] + outputs, root_build_dir)
+  resource("bootfs") {
+    sources = [ build_info_files.minimum_utc_stamp ]
+    outputs = [ "config/build_info/minimum_utc_stamp" ]
+    deps = [ ":latest-commit-date" ]
+  }
 }
