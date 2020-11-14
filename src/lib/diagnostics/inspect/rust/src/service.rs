@@ -17,16 +17,29 @@ use {
     tracing::error,
 };
 
+#[derive(Default, Clone)]
+pub struct TreeServerSettings {
+    /// If true, snapshots of trees returned by the handler must be private
+    /// copies. Setting this option disables VMO sharing between a reader
+    /// and the writer.
+    force_private_snapshot: bool,
+}
+
 /// Runs a server for the `fuchsia.inspect.Tree` protocol. This protocol returns the VMO
 /// associated with the given tree on `get_content` and allows to open linked trees (lazy nodes).
 pub async fn handle_request_stream(
     inspector: Inspector,
+    settings: TreeServerSettings,
     mut stream: TreeRequestStream,
 ) -> Result<(), Error> {
     while let Some(request) = stream.try_next().await.context("Error running tree server")? {
         match request {
             TreeRequest::GetContent { responder } => {
-                let vmo = inspector.duplicate_vmo();
+                let vmo = if settings.force_private_snapshot {
+                    inspector.copy_vmo()
+                } else {
+                    inspector.duplicate_vmo()
+                };
                 let buffer_data = vmo.and_then(|vmo| vmo.get_size().ok().map(|size| (vmo, size)));
                 let content = TreeContent {
                     buffer: buffer_data.map(|data| Buffer { vmo: data.0, size: data.1 }),
@@ -41,7 +54,7 @@ pub async fn handle_request_stream(
             }
             TreeRequest::OpenChild { child_name, tree, .. } => {
                 if let Ok(inspector) = inspector.read_tree(&child_name).await {
-                    spawn_tree_server(inspector, tree.into_stream()?)
+                    spawn_tree_server(inspector, settings.clone(), tree.into_stream()?)
                 }
             }
         }
@@ -51,9 +64,13 @@ pub async fn handle_request_stream(
 
 /// Spawns a server for the `fuchsia.inspect.Tree` protocol. This protocol returns the VMO
 /// associated with the given tree on `get_content` and allows to open linked trees (lazy nodes).
-pub fn spawn_tree_server(inspector: Inspector, stream: TreeRequestStream) {
+pub fn spawn_tree_server(
+    inspector: Inspector,
+    settings: TreeServerSettings,
+    stream: TreeRequestStream,
+) {
     fasync::Task::spawn(async move {
-        handle_request_stream(inspector, stream)
+        handle_request_stream(inspector, settings, stream)
             .await
             .unwrap_or_else(|e: Error| error!("error running tree server: {:?}", e));
     })
@@ -106,7 +123,7 @@ mod tests {
     use {
         super::*,
         crate::{
-            assert_inspect_tree, constants,
+            assert_inspect_tree,
             reader::{NodeHierarchy, PartialNodeHierarchy},
             Inspector,
         },
@@ -119,7 +136,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn get_contents() -> Result<(), Error> {
-        let tree = spawn_server()?;
+        let tree = spawn_server(test_inspector(), TreeServerSettings::default())?;
         let tree_content = tree.get_content().await?;
         let hierarchy = parse_content(tree_content)?;
         assert_inspect_tree!(hierarchy, root: {
@@ -130,7 +147,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn list_child_names() -> Result<(), Error> {
-        let tree = spawn_server()?;
+        let tree = spawn_server(test_inspector(), TreeServerSettings::default())?;
         let (name_iterator, server_end) =
             fidl::endpoints::create_proxy::<TreeNameIteratorMarker>()?;
         tree.list_child_names(server_end)?;
@@ -140,7 +157,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn open_children() -> Result<(), Error> {
-        let tree = spawn_server()?;
+        let tree = spawn_server(test_inspector(), TreeServerSettings::default())?;
         let (child_tree, server_end) = fidl::endpoints::create_proxy::<TreeMarker>()?;
         tree.open_child("lazy-0", server_end)?;
         let tree_content = child_tree.get_content().await?;
@@ -168,6 +185,32 @@ mod tests {
         Ok(())
     }
 
+    #[fasync::run_singlethreaded(test)]
+    async fn force_private_snapshot() -> Result<(), Error> {
+        let inspector = test_inspector();
+        let tree_dup = spawn_server(inspector.clone(), TreeServerSettings::default())?;
+        let tree_copy =
+            spawn_server(inspector.clone(), TreeServerSettings { force_private_snapshot: true })?;
+        let tree_content_copy = tree_copy.get_content().await?;
+        let tree_content_dup = tree_dup.get_content().await?;
+
+        inspector.root().record_int("new", 6);
+
+        // A tree that copies the vmo doesn't see the new int
+        let hierarchy = parse_content(tree_content_copy)?;
+        assert_inspect_tree!(hierarchy, root: {
+            a: 1i64,
+        });
+
+        // A tree that duplicates the vmo sees the new int
+        let hierarchy = parse_content(tree_content_dup)?;
+        assert_inspect_tree!(hierarchy, root: {
+            a: 1i64,
+            new: 6i64,
+        });
+        Ok(())
+    }
+
     async fn verify_iterator(
         name_iterator: TreeNameIteratorProxy,
         values: Vec<String>,
@@ -182,14 +225,15 @@ mod tests {
 
     fn parse_content(tree_content: TreeContent) -> Result<NodeHierarchy, Error> {
         let buffer = tree_content.buffer.unwrap();
-        assert_eq!(buffer.size, constants::DEFAULT_VMO_SIZE_BYTES as u64);
         Ok(PartialNodeHierarchy::try_from(&buffer.vmo)?.into())
     }
 
-    fn spawn_server() -> Result<TreeProxy, Error> {
-        let inspector = test_inspector();
+    fn spawn_server(
+        inspector: Inspector,
+        settings: TreeServerSettings,
+    ) -> Result<TreeProxy, Error> {
         let (tree, request_stream) = fidl::endpoints::create_proxy_and_stream::<TreeMarker>()?;
-        spawn_tree_server(inspector, request_stream);
+        spawn_tree_server(inspector, settings, request_stream);
         Ok(tree)
     }
 

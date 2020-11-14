@@ -173,7 +173,11 @@ async fn main() -> Result<(), Error> {
             // service in the ServiceFs, an exception occurs. This is purely a workaround for
             // ServiceFS and for the test purpose. A regular component wouldn't do this. It would
             // just do `inspector.serve(&mut fs);`.
-            inspect::service::spawn_tree_server(inspector_clone.clone(), stream);
+            inspect::service::spawn_tree_server(
+                inspector_clone.clone(),
+                inspect::service::TreeServerSettings::default(),
+                stream,
+            );
         });
 
     // TODO(fxbug.dev/41952): remove when all clients writing VMO files today have been migrated to write

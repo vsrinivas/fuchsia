@@ -215,7 +215,7 @@ impl Inspector {
             TreeMarker::SERVICE_NAME => pseudo_fs_service::host(move |stream| {
                 let inspector_clone_clone = inspector_clone.clone();
                 async move {
-                    service::handle_request_stream(inspector_clone_clone, stream).await
+                    service::handle_request_stream(inspector_clone_clone, service::TreeServerSettings::default(), stream).await
                         .unwrap_or_else(|e| error!("failed to run server: {:?}", e));
                 }
                 .boxed()

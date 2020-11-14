@@ -90,9 +90,13 @@ impl Publisher {
                 host(move |stream| {
                     let inspector_clone = inspector.clone();
                     async move {
-                        service::handle_request_stream(inspector_clone, stream)
-                            .await
-                            .expect("failed to run server");
+                        service::handle_request_stream(
+                            inspector_clone,
+                            service::TreeServerSettings::default(),
+                            stream,
+                        )
+                        .await
+                        .expect("failed to run server");
                     }
                     .boxed()
                 }),
@@ -524,7 +528,11 @@ async fn run_driver_service(
             ValidateRequest::InitializeTree { params, responder } => {
                 let actor = Actor::new(new_inspector(&params));
                 let (tree, request_stream) = create_request_stream::<TreeMarker>()?;
-                service::spawn_tree_server(actor.inspector.clone(), request_stream);
+                service::spawn_tree_server(
+                    actor.inspector.clone(),
+                    service::TreeServerSettings::default(),
+                    request_stream,
+                );
                 responder.send(Some(tree), TestResult::Ok)?;
                 actor_maybe = Some(actor);
             }
