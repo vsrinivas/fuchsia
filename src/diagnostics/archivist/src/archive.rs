@@ -1027,12 +1027,8 @@ mod tests {
     fn event_ordering() {
         let event1 = Event::new("START", "a/b/c.cmx:123");
         let event2 = Event::new("END", "a/b/c.cmx:123");
-        assert!(
-            event1.get_timestamp(Utc) < event2.get_timestamp(Utc),
-            "Expected {:?} before {:?}",
-            event1.get_timestamp(Utc),
-            event2.get_timestamp(Utc)
-        );
+        let (time1, time2) = (event1.get_timestamp(Utc), event2.get_timestamp(Utc));
+        assert!(time1 <= time2, "Expected {:?} before {:?}", time1, time2);
     }
 
     #[test]
@@ -1108,12 +1104,6 @@ mod tests {
         let (_, stats) = archive.rotate_log().unwrap();
         assert_eq!(2, stats.file_count);
         assert_ne!(0, stats.size);
-
-        let mut group_count = 0;
-        archive.get_archive().get_dates().unwrap().into_iter().for_each(|date| {
-            group_count += archive.get_archive().get_event_file_groups(&date).unwrap().len();
-        });
-        assert_eq!(2, group_count);
 
         let mut stats = archive
             .get_log()
