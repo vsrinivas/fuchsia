@@ -3,22 +3,16 @@
 # found in the LICENSE file.
 
 executable("test") {
-  testonly = true
-
   output_name = "virtual_camera_test"
-
+  testonly = true
   sources = [ "test.cc" ]
-
   deps = [
-    "..",
     "//sdk/fidl/fuchsia.sysmem",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
+    "//src/camera/lib/virtual_camera",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture",
     "//zircon/system/ulib/fzl",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
