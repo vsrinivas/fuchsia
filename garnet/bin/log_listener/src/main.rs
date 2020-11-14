@@ -250,8 +250,8 @@ impl LocalOptions {
 
 #[derive(Debug, PartialEq, Clone)]
 enum Clock {
-    Monotonic, // Corresponds to ZX_CLOCK_MONOTONIC
-    UTC,       // Corresponds to ZX_UTC_MONOTONIC
+    Monotonic, // Corresponds to monotonic time reported by the kernel
+    UTC,       // Corresponds to UTC as reported by the runtime
     Local,     // Localized wall time
 }
 
@@ -390,8 +390,8 @@ fn help(name: &str) -> String {
 
         --clock <Monotonic|UTC|Local>:
             Select clock to use for timestamps.
-            Monotonic (default): same as ZX_CLOCK_MONOTONIC.
-            UTC: same as ZX_CLOCK_UTC.
+            Monotonic (default): monotonic time reported by the kernel.
+            UTC: UTC time as reported by the runtime.
             Local: localized wall time.
 
         --time_format <format>:
