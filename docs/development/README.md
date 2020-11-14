@@ -8,7 +8,7 @@ to developing Fuchsia and software running on Fuchsia.
 This sections describes the workflows and tools for building, running, testing
 and debugging Fuchsia and programs running on Fuchsia.
 
- - [Getting started](/docs/get-started/index.md) - This document
+ - [Getting started](/docs/get-started/README.md) - This document
    covers getting the source, building and running Fuchsia.
  - [Source code](/docs/get-started/get_fuchsia_source.md)
  - [fx workflows](build/fx.md)

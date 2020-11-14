@@ -7,7 +7,7 @@
 # team as reviewer.
 toc:
 - title: "Overview"
-  path: /docs/get-started/index.md
+  path: /docs/get-started/README.md
 - heading: "Get Started with Fuchsia OS"
 - title: "Get source code"
   path: /docs/get-started/get_fuchsia_source.md

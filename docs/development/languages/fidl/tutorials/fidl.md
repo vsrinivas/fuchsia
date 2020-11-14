@@ -89,6 +89,6 @@ Fuchsia copyright notice at the top of each file.
 [sdk]: /sdk/fidl
 [fidl-template]: /build/fidl/fidl.gni
 [overview]: /docs/development/languages/fidl/tutorials/overview.md
-[getting-started]: /docs/get-started/index.md
+[getting-started]: /docs/get-started/README.md
 [component]: /docs/development/run/run-examples.md
 [fidl-fuzzing]: /docs/development/testing/fuzzing/fidl-fuzzing.md

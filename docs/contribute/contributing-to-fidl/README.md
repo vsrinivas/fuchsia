@@ -690,7 +690,7 @@ fidl fmt --library my_library.fidl -i
 [fidlc-compiler-tests]: /zircon/system/utest/fidl-compiler/
 [walker-tests]: /src/lib/fidl/c/walker_tests/
 [jsonir]: /docs/reference/fidl/language/json-ir.md
-[getting_started]: /docs/get-started/index.md
+[getting_started]: /docs/get-started/README.md
 [compat_readme]: /src/tests/fidl/compatibility/README.md
 [go-test-flags]: https://golang.org/cmd/go/#hdr-Testing_flags
 [fidl-misc]: https://fuchsia.googlesource.com/fidl-misc
