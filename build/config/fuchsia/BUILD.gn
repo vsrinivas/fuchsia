@@ -209,6 +209,10 @@ config("static_cpp_standard_library") {
   ldflags = [ "-static-libstdc++" ]
 }
 
+config("driver_static_cpp_standard_library.TEMPORARY-FOR-TRANSITION") {
+  configs = [ ":static_cpp_standard_library" ]
+}
+
 config("dynamic_rust_standard_library") {
   # -Cprefer-dynamic is incompatible with (Thin)LTO.
   if (toolchain_variant.tags + [ "lto" ] - [ "lto" ] ==
