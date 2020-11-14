@@ -4,6 +4,7 @@
 
 #include <iostream>
 
+#include "src/developer/debug/zxdb/common/version.h"
 #include "src/lib/fxl/strings/trim.h"
 #include "tools/symbol-index/command_line_options.h"
 #include "tools/symbol-index/symbol_index.h"
@@ -17,6 +18,11 @@ int Main(int argc, const char* argv[]) {
     // Sometimes the error just has too many "\n" at the end.
     std::cerr << fxl::TrimString(error, "\n") << std::endl;
     return EXIT_FAILURE;
+  }
+
+  if (options.requested_version) {
+    std::cout << "Version: " << zxdb::kBuildVersion << std::endl;
+    return EXIT_SUCCESS;
   }
 
   SymbolIndex symbol_index(options.symbol_index_file);

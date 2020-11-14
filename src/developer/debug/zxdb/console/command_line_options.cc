@@ -119,6 +119,10 @@ const char* const kAnalyticsHelp = R"(  --analytics=enable|disable
 const char* const kShowAnalyticsHelp = R"(  --show-analytics
       Show the opt-in/out status for collection of analytics and what we collect when opt-in.)";
 
+const char kVersionHelp[] = R"(  --version
+  -v
+      Prints the version.)";
+
 }  // namespace
 
 cmdline::Status ParseCommandLine(int argc, const char* argv[], CommandLineOptions* options,
@@ -141,6 +145,7 @@ cmdline::Status ParseCommandLine(int argc, const char* argv[], CommandLineOption
   parser.AddSwitch("ids-txt", 0, kIdsTxtHelp, &CommandLineOptions::ids_txts);
   parser.AddSwitch("symbol-cache", 0, kSymbolCacheHelp, &CommandLineOptions::symbol_cache);
   parser.AddSwitch("symbol-server", 0, kSymbolServerHelp, &CommandLineOptions::symbol_servers);
+  parser.AddSwitch("version", 'v', kVersionHelp, &CommandLineOptions::requested_version);
 
   // The analytics option can take two additional internal options, which can only be used when
   // another core developer tool (such as ffx) is sub-launching zxdb. The two internal options are

@@ -23,6 +23,7 @@ if (is_host) {
     sources = [ "main.cc" ]
     deps = [
       ":src",
+      "//src/developer/debug/zxdb/common:version",
       "//src/lib/fxl",
     ]
   }

@@ -64,6 +64,10 @@ const char kHelpHelp[] = R"(  --help
   -h
       Prints this help.)";
 
+const char kVersionHelp[] = R"(  --version
+  -v
+      Prints the version.)";
+
 const char kAuthHelp[] = R"(  --auth
       Starts the authentication process for symbol servers.)";
 
@@ -80,6 +84,7 @@ Error ParseCommandLine(int argc, const char* argv[], CommandLineOptions* options
   parser.AddSwitch("symbol-cache", 0, kSymbolCacheHelp, &CommandLineOptions::symbol_cache);
   parser.AddSwitch("symbol-server", 0, kSymbolServerHelp, &CommandLineOptions::symbol_servers);
   parser.AddSwitch("auth", 0, kAuthHelp, &CommandLineOptions::auth_mode);
+  parser.AddSwitch("version", 'v', kVersionHelp, &CommandLineOptions::requested_version);
 
   // Special --help switch which doesn't exist in the options structure.
   bool requested_help = false;

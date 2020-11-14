@@ -23,6 +23,7 @@ struct CommandLineOptions {
   std::string symbol_index_file;
   Verb verb;
   std::vector<std::string> params;
+  bool requested_version = false;
 
   // Sets verb from a string. Returns an error message if the string is invalid.
   Error SetVerb(const std::string& str);

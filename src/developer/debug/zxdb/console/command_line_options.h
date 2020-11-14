@@ -33,6 +33,7 @@ struct CommandLineOptions {
   std::vector<std::string> build_dirs;
   AnalyticsMode analytics = AnalyticsMode::kUnspecified;
   bool show_analytics = false;
+  bool requested_version = false;
 };
 
 // Parses the given command line into options and params.

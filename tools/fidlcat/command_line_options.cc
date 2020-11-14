@@ -229,6 +229,9 @@ const char* const kHelpHelp = R"(  --help
   -h
       Prints all command-line switches.)";
 
+const char* const kVersionHelp = R"(  --version
+      Prints the version.)";
+
 // Sets the process log settings.  The |level| is the value of the setting (as
 // passed to --quiet or --verbose), |multiplier| is a value by which a numerical
 // setting will be multiplied (basically, -1 for verbose and 1 for quiet), and
@@ -326,12 +329,19 @@ std::string ParseCommandLine(int argc, const char* argv[], CommandLineOptions* o
   parser.AddSwitch("remote-pid", 'p', kRemotePidHelp, &CommandLineOptions::remote_pid);
   parser.AddSwitch("remote-name", 'f', kRemoteNameHelp, &CommandLineOptions::remote_name);
   parser.AddSwitch("extra-name", 0, kExtraNameHelp, &CommandLineOptions::extra_name);
+
+  parser.AddSwitch("version", 0, kVersionHelp, &CommandLineOptions::requested_version);
+
   bool requested_help = false;
   parser.AddGeneralSwitch("help", 'h', kHelpHelp, [&requested_help]() { requested_help = true; });
 
   cmdline::Status status = parser.Parse(argc, argv, options, params);
   if (status.has_error()) {
     return status.error_message();
+  }
+
+  if (options->requested_version) {
+    return "";
   }
 
   status = ProcessLogOptions(options);
@@ -345,8 +355,7 @@ std::string ParseCommandLine(int argc, const char* argv[], CommandLineOptions* o
 
   if (requested_help || (device && !watch) ||
       (!options->extra_name.empty() && options->remote_name.empty())) {
-    status = cmdline::Status::Error(kHelpIntro + parser.GetHelp());
-    return status.error_message();
+    return kHelpIntro + parser.GetHelp();
   }
 
   decode_options->stack_level = options->stack_level;

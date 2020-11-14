@@ -54,6 +54,11 @@ const char kConfigHelp[] = R"(  --config=<path>
 const char kHelpHelp[] = R"(  --help
   -h
       Prints this help.)";
+
+const char kVersionHelp[] = R"(  --version
+  -v
+      Prints the version.)";
+
 }  // namespace
 
 Error CommandLineOptions::SetVerb(const std::string& str) {
@@ -108,6 +113,7 @@ Error ParseCommandLine(int argc, const char* argv[], CommandLineOptions* options
   cmdline::ArgsParser<CommandLineOptions> parser;
 
   parser.AddSwitch("config", 'c', kConfigHelp, &CommandLineOptions::symbol_index_file);
+  parser.AddSwitch("version", 'v', kVersionHelp, &CommandLineOptions::requested_version);
 
   // Special --help switch which doesn't exist in the options structure.
   bool requested_help = false;
@@ -116,6 +122,10 @@ Error ParseCommandLine(int argc, const char* argv[], CommandLineOptions* options
   auto s = parser.Parse(argc, argv, options, &params);
   if (s.has_error()) {
     return s.error_message();
+  }
+
+  if (options->requested_version) {
+    return "";
   }
 
   if (requested_help || params.empty()) {

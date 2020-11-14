@@ -5,6 +5,23 @@
 # This library contains some low-level helpers that need to be shared between
 # the "client" and "symbols", but which doesn't below in the symbol library
 # itself.
+
+import("//build/info/info.gni")
+
+action("version_inc") {
+  script = "generate_version_inc.sh"
+  inputs = [ build_info_files.version ]
+  outputs = [ "$target_gen_dir/version.inc" ]
+  args = rebase_path(inputs + outputs)
+  deps = [ "//build/info:latest-commit-date" ]
+}
+
+source_set("version") {
+  public = [ "version.h" ]
+  sources = [ "version.cc" ]
+  deps = [ ":version_inc" ]
+}
+
 static_library("common") {
   public = [
     "adapters.h",
@@ -33,11 +50,13 @@ static_library("common") {
   ]
 
   public_deps = [
+    ":version",
     "//src/developer/debug/shared",
     "//src/lib/containers/cpp",
     "//src/lib/fxl",
     "//zircon/public/lib/fit",
   ]
+
   configs += [
     # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
     "//build/config:Wno-conversion",

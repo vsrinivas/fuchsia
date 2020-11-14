@@ -55,6 +55,9 @@ struct CommandLineOptions {
   std::vector<std::string> remote_pid;
   std::vector<std::string> remote_name;
   std::vector<std::string> extra_name;
+
+  // --version in command line
+  bool requested_version = false;
 };
 
 // Parses the given |argc| and |argv| into the well-defined |options|.  If there

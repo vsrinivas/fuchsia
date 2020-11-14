@@ -17,6 +17,7 @@
 #include "src/developer/debug/zxdb/client/session.h"
 #include "src/developer/debug/zxdb/client/setting_schema_definition.h"
 #include "src/developer/debug/zxdb/common/string_util.h"
+#include "src/developer/debug/zxdb/common/version.h"
 #include "src/developer/debug/zxdb/console/actions.h"
 #include "src/developer/debug/zxdb/console/analytics.h"
 #include "src/developer/debug/zxdb/console/analytics_scope.h"
@@ -203,6 +204,11 @@ int ConsoleMain(int argc, const char* argv[]) {
   if (status.has_error()) {
     fprintf(stderr, "%s", status.error_message().c_str());
     return 1;
+  }
+
+  if (options.requested_version) {
+    printf("Version: %s\n", kBuildVersion);
+    return 0;
   }
 
   std::vector<zxdb::Action> actions;

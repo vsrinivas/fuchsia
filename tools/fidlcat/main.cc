@@ -15,6 +15,7 @@
 
 #include "src/developer/debug/zxdb/client/symbol_server.h"
 #include "src/developer/debug/zxdb/common/inet_util.h"
+#include "src/developer/debug/zxdb/common/version.h"
 #include "src/lib/fidl_codec/library_loader.h"
 #include "src/lib/fidl_codec/message_decoder.h"
 #include "tools/fidlcat/command_line_options.h"
@@ -123,6 +124,10 @@ int ConsoleMain(int argc, const char* argv[]) {
   if (!error.empty()) {
     fprintf(stderr, "%s\n", error.c_str());
     return 1;
+  }
+  if (options.requested_version) {
+    printf("Version: %s\n", zxdb::kBuildVersion);
+    return 0;
   }
 
   std::vector<std::string> paths;

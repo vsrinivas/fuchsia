@@ -23,6 +23,7 @@ struct CommandLineOptions {
   std::vector<std::string> build_dirs;
 
   bool auth_mode = false;
+  bool requested_version = false;
 };
 
 // Parses the command line into options.
