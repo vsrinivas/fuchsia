@@ -112,6 +112,11 @@ config("compiler") {
     }
   }
 
+  # Clang on RISCV64 does not support relaxation yet
+  if (current_cpu == "riscv64") {
+    cflags += [ "-mno-relax" ]
+  }
+
   asmflags = cflags
 }
 
