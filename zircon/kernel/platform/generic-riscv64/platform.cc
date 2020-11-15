@@ -61,6 +61,7 @@
 
 // Defined in start.S.
 extern paddr_t zbi_paddr;
+extern paddr_t kernel_secondary_entry_paddr;
 
 static void* ramdisk_base;
 static size_t ramdisk_size;
@@ -115,6 +116,73 @@ void* platform_get_ramdisk(size_t* size) {
 }
 
 void platform_halt_cpu(void) {
+}
+
+static zx_status_t platform_start_cpu(cpu_num_t cpu_num, uint64_t hart_id) {
+  vaddr_t sp = 0;
+
+  zx_status_t status = riscv64_create_secondary_stack(cpu_num, &sp);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  // Issue memory barrier before starting to ensure previous stores will be visible to new CPU
+  arch::ThreadMemoryBarrier();
+
+  unsigned long ret = sbi_hart_start(hart_id, kernel_secondary_entry_paddr, sp).error;
+  dprintf(INFO, "Trying to start cpu %u, hart_id %lu returned: %d\n", cpu_num, hart_id, (int)ret);
+  if (ret != 0) {
+    // start failed, free the stack
+    status = riscv64_free_secondary_stack(cpu_num);
+    DEBUG_ASSERT(status == ZX_OK);
+    return ZX_ERR_INTERNAL;
+  }
+  return ZX_OK;
+}
+
+static void topology_cpu_init(void) {
+  for (auto* node : system_topology::GetSystemTopology().processors()) {
+    if (node->entity_type != ZBI_TOPOLOGY_ENTITY_PROCESSOR ||
+        node->entity.processor.architecture != ZBI_TOPOLOGY_ARCH_RISCV) {
+      panic("Invalid processor node.");
+    }
+
+    const auto& processor = node->entity.processor;
+    for (uint8_t i = 0; i < processor.logical_id_count; i++) {
+      // Skip the current (boot) hart, we are only starting secondary harts.
+      if (processor.flags == ZBI_TOPOLOGY_PROCESSOR_PRIMARY) {
+        continue;
+      }
+      // start the hart (ignore the return value)
+      const uint64_t hart_id = processor.architecture_info.riscv.hart_id;
+      platform_start_cpu(processor.logical_ids[i], hart_id);
+    }
+  }
+
+  // Create a thread that checks that the secondary processors actually
+  // started. Since the secondary cpus are defined in the bootloader by humans
+  // it is possible they don't match the hardware.
+  constexpr auto check_cpus_booted = [](void*) -> int {
+    // We wait for secondary cpus to start up.
+    Thread::Current::SleepRelative(ZX_SEC(5));
+
+    // Check that all cpus in the topology are now online.
+    const auto online_mask = mp_get_online_mask();
+    for (auto* node : system_topology::GetSystemTopology().processors()) {
+      const auto& processor = node->entity.processor;
+      for (int i = 0; i < processor.logical_id_count; i++) {
+        const auto logical_id = node->entity.processor.logical_ids[i];
+        if ((cpu_num_to_mask(logical_id) & online_mask) == 0) {
+          printf("ERROR: CPU %d did not start!\n", logical_id);
+        }
+      }
+    }
+    return 0;
+  };
+
+  auto* warning_thread = Thread::Create("platform-cpu-boot-check-thread", check_cpus_booted,
+                                        nullptr, DEFAULT_PRIORITY);
+  warning_thread->DetachAndResume();
 }
 
 static inline bool is_zbi_container(void* addr) {
@@ -361,7 +429,7 @@ void platform_init_pre_thread(uint) { ProcessZbiLate(zbi_root); }
 
 LK_INIT_HOOK(platform_init_pre_thread, platform_init_pre_thread, LK_INIT_LEVEL_VM)
 
-void platform_init(void) { }
+void platform_init(void) { topology_cpu_init(); }
 
 // after the fact create a region to reserve the peripheral map(s)
 static void platform_init_postvm(uint level) { }

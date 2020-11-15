@@ -60,6 +60,8 @@ static inline uint arch_max_num_cpus(void) {
   return riscv64_num_cpus;
 }
 
+void arch_register_hart(uint cpu_num, uint64_t hart_id);
+
 #define READ_PERCPU_FIELD32(field) riscv64_get_percpu()->field
 #define WRITE_PERCPU_FIELD32(field, value) riscv64_get_percpu()->field = value
 

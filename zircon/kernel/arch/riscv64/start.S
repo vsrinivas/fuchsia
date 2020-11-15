@@ -22,6 +22,11 @@ FUNCTION(_start)
     lla     t0, zbi_paddr
     sd      a0, (t0)
 
+    // save the physical address of the secondary harts entry point for later
+    lla     t0, kernel_secondary_entry_paddr
+    lla     t1, _secondary_start
+    sd      t1, (t0)
+
     // The fixup code appears right after the kernel image (at __data_end in
     // our view).  Note this code overlaps with the kernel's bss!  It
     // expects a0 to contain the current physical address of __code_start and
@@ -119,6 +124,40 @@ FUNCTION(_start)
     j       .
 END_FUNCTION(_start)
 
+FUNCTION(_secondary_start)
+    // Enable the MMU with the ASID 0, prefilled by _start
+    lla     t0, riscv64_kernel_translation_table
+    srli    t1, t0, 12
+    li      t2, (9 << 60)   // mode 9, SV48
+    or      t1, t1, t2
+    csrw    satp, t1
+    sfence.vma  zero, zero
+
+    // Compute the relocation offset
+    lla     t0, kernel_relocated_base
+    ld      t1, (t0)
+    lla     t0, __code_start
+    sub     t0, t1, t0
+
+    // Jump to high memory
+    lla     t1, .Lmmu_on_vaddr_secondary
+    add     t1, t1, t0
+    jr      t1
+
+.Lmmu_on_vaddr_secondary:
+    // SBI is kind enough to give us a private parameter in a1, we fill it with
+    // the stack pointer for this hart
+    mv      sp, a1
+    ld      a1, -8(sp)
+
+    // The identity mapping is still there, we can jump to C.
+    // The hart id is already in a0.
+    jal     riscv64_secondary_entry
+
+    // should never return here
+    j       .
+END_FUNCTION(_secondary_start)
+
 // These are logically .bss (uninitialized data).  But they're set before
 // clearing the .bss, so put them in .data so they don't get zeroed.
 .data
@@ -126,6 +165,9 @@ END_FUNCTION(_start)
 DATA(zbi_paddr)
     .quad -1
 END_DATA(zbi_paddr)
+DATA(kernel_secondary_entry_paddr)
+    .quad -1
+END_DATA(kernel_secondary_entry_paddr)
 
 .bss
 LOCAL_DATA(boot_cpu_kstack)

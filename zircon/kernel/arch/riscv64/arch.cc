@@ -24,11 +24,21 @@
 #include <arch/regs.h>
 #include <kernel/atomic.h>
 #include <kernel/thread.h>
+#include <kernel/percpu.h>
+#include <kernel/scheduler.h>
 #include <lk/init.h>
 #include <lk/main.h>
 
+#define LOCAL_TRACE 0
+
 // per cpu structure, pointed to by s11 (x27)
 struct riscv64_percpu percpu[SMP_MAX_CPUS];
+
+// Used to hold up the boot sequence on secondary CPUs until signaled by the primary.
+static ktl::atomic<bool> secondaries_released;
+
+// one for each secondary CPU, indexed by (cpu_num - 1).
+static Thread _init_thread[SMP_MAX_CPUS - 1];
 
 // first C level code to initialize each cpu
 void riscv64_early_init_percpu(void) {
@@ -61,6 +71,18 @@ void arch_init() TA_NO_THREAD_SAFETY_ANALYSIS {
   dprintf(INFO, "RISCV: SBI extension IPI %ld\n", sbi_call(SBI_PROBE_EXTENSION, SBI_EXT_IPI).value);
   dprintf(INFO, "RISCV: SBI extension RFENCE %ld\n", sbi_call(SBI_PROBE_EXTENSION, SBI_EXT_RFENCE).value);
   dprintf(INFO, "RISCV: SBI extension HSM %ld\n", sbi_call(SBI_PROBE_EXTENSION, SBI_EXT_HSM).value);
+
+  uint32_t max_cpus = arch_max_num_cpus();
+  uint32_t cmdline_max_cpus = gCmdline.GetUInt32("kernel.smp.maxcpus", max_cpus);
+  if (cmdline_max_cpus > max_cpus || cmdline_max_cpus <= 0) {
+    printf("invalid kernel.smp.maxcpus value, defaulting to %u\n", max_cpus);
+    cmdline_max_cpus = max_cpus;
+  }
+
+  int secondaries_to_init = cmdline_max_cpus - 1;
+  lk_init_secondary_cpus(secondaries_to_init);
+  LTRACEF("releasing %d secondary cpus\n", secondaries_to_init);
+  secondaries_released.store(true);
 }
 
 void arch_late_init_percpu(void) {
@@ -114,4 +136,53 @@ void arch_clean_cache_range(vaddr_t start, size_t len) { }
 void arch_clean_invalidate_cache_range(vaddr_t start, size_t len) { }
 void arch_invalidate_cache_range(vaddr_t start, size_t len) { }
 void arch_sync_cache_range(vaddr_t start, size_t len) { }
+
+zx_status_t riscv64_create_secondary_stack(cpu_num_t cpu_num, vaddr_t *sp) {
+  DEBUG_ASSERT_MSG(cpu_num > 0 && cpu_num < SMP_MAX_CPUS, "cpu_num: %u", cpu_num);
+  KernelStack* stack = &_init_thread[cpu_num - 1].stack();
+  DEBUG_ASSERT(stack->base() == 0);
+  zx_status_t status = stack->Init();
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  // Store cpu_num on the stack
+  *(((uint64_t *)stack->top()) - 1) = cpu_num;
+
+  // Store the stack pointer for our caller
+  *sp = stack->top();
+
+  return ZX_OK;
+}
+
+zx_status_t riscv64_free_secondary_stack(cpu_num_t cpu_num) {
+  DEBUG_ASSERT(cpu_num > 0 && cpu_num < SMP_MAX_CPUS);
+  return _init_thread[cpu_num - 1].stack().Teardown();
+}
+
+extern "C" void riscv64_secondary_entry(uint hart_id, uint cpu_num) {
+  // basic bootstrapping of this cpu
+  riscv64_set_percpu(&percpu[cpu_num]);
+  riscv64_get_percpu()->cpu_num = cpu_num;
+  riscv64_get_percpu()->hart_id = hart_id;
+  arch_register_hart(cpu_num, hart_id);
+  wmb();
+
+  riscv64_early_init_percpu();
+
+  // Wait until the primary has finished setting things up.
+  while (!secondaries_released.load()) {
+    arch::Yield();
+  }
+
+  _init_thread[cpu_num - 1].SecondaryCpuInitEarly();
+  // Run early secondary cpu init routines up to the threading level.
+  lk_init_level(LK_INIT_FLAG_SECONDARY_CPUS, LK_INIT_LEVEL_EARLIEST, LK_INIT_LEVEL_THREADING - 1);
+
+  arch_mp_init_percpu();
+
+  dprintf(INFO, "RISCV: secondary cpu %u coming up\n", cpu_num);
+
+  lk_secondary_cpu_entry();
+}
 

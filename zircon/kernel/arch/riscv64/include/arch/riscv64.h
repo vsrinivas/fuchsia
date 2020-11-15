@@ -73,6 +73,7 @@
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
+#include <kernel/cpu.h>
 #include <arch/defines.h>
 
 __BEGIN_CDECLS
@@ -167,6 +168,16 @@ extern "C" void riscv64_context_switch(vaddr_t *old_sp, vaddr_t new_sp);
 
 extern void riscv64_timer_exception();
 extern void riscv64_software_exception();
+
+/*
+ * Creates a stack and sets the stack pointer for the specified secondary CPU.
+ */
+zx_status_t riscv64_create_secondary_stack(cpu_num_t cpu_num, vaddr_t *sp);
+
+/*
+ * Frees a stack created by |riscv64_create_secondary_stack|.
+ */
+zx_status_t riscv64_free_secondary_stack(cpu_num_t cpu_num);
 
 #endif  // __ASSEMBLER__
 
