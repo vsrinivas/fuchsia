@@ -921,6 +921,14 @@ pub struct zx_thread_state_general_regs_t {
     pub tpidr: u64,
 }
 
+#[cfg(target_arch = "riscv64")]
+#[repr(C)]
+#[derive(Debug, Default, Copy, Clone, Eq, PartialEq)]
+pub struct zx_thread_state_general_regs_t {
+    pub r: [u64; 2],
+    pub placeholder: u64,
+}
+
 #[cfg(target_arch = "aarch64")]
 #[repr(C)]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -931,6 +939,13 @@ pub struct zx_packet_guest_mem_t {
     pub xt: u8,
     pub read: bool,
     pub data: u64,
+}
+
+#[cfg(target_arch = "riscv64")]
+#[repr(C)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+pub struct zx_packet_guest_mem_t {
+    pub addr: zx_gpaddr_t,
 }
 
 pub const X86_MAX_INST_LEN: usize = 15;
