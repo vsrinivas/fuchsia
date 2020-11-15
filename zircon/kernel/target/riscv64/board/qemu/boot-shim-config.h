@@ -12,6 +12,7 @@
 #define REMOVE_KERNEL_FROM_ZBI 0
 
 #define MAX_CPU_COUNT 16
+static uint64_t boot_hart_id = 0;
 static size_t cpu_count = 0;
 
 static const dcfg_simple_t uart_driver = {
@@ -42,14 +43,33 @@ static void add_cpu_topology(zbi_header_t* zbi) {
     cpu_count = MAX_CPU_COUNT;
   }
 
-  for (size_t index = 0; index < cpu_count; index++) {
+  /* The boot CPU should always be the logical CPU 0 in our topology */
+  nodes[0] = (zbi_topology_node_t){
+      .entity_type = ZBI_TOPOLOGY_ENTITY_PROCESSOR,
+      .parent_index = ZBI_TOPOLOGY_NO_PARENT,
+      .entity = {.processor = {.logical_ids = {0},
+                               .logical_id_count = 1,
+                               .flags = ZBI_TOPOLOGY_PROCESSOR_PRIMARY,
+                               .architecture = ZBI_TOPOLOGY_ARCH_RISCV,
+                               .architecture_info = {
+                                   .riscv = {
+                                       .hart_id = boot_hart_id,
+                                   }}}}};
+
+  /* On QEMU, hart id are distributed from 0 to N, with one of them being the
+   * boot hart id. We can therefore map all hart_id except boot_hart_id */
+  for (size_t index = 1; index < cpu_count; index++) {
     nodes[index] = (zbi_topology_node_t){
         .entity_type = ZBI_TOPOLOGY_ENTITY_PROCESSOR,
         .parent_index = ZBI_TOPOLOGY_NO_PARENT,
         .entity = {.processor = {.logical_ids = {index},
                                  .logical_id_count = 1,
-                                 .flags = (index == 0) ? ZBI_TOPOLOGY_PROCESSOR_PRIMARY : 0,
-                                 .architecture = ZBI_TOPOLOGY_ARCH_RISCV}}};
+                                 .flags = 0,
+                                 .architecture = ZBI_TOPOLOGY_ARCH_RISCV,
+                                 .architecture_info = {
+                                     .riscv = {
+                                         .hart_id = index <= boot_hart_id ? index - 1 : index,
+                                     }}}}};
   }
 
   append_boot_item(zbi, ZBI_TYPE_CPU_TOPOLOGY,

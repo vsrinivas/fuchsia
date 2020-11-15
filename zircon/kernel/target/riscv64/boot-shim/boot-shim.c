@@ -251,6 +251,8 @@ boot_shim_return_t boot_shim(uint64_t hart_id, void* device_tree) {
 
   zircon_kernel_t* kernel = NULL;
 
+  boot_hart_id = hart_id;
+
   // Check the ZBI from device tree.
   device_tree_context_t ctx;
   zbi_header_t* zbi = read_device_tree(device_tree, &ctx);
