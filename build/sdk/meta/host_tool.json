@@ -29,6 +29,10 @@
                             "$ref": "#/definitions/fileGroup",
                             "description": "Files for the arm64 architecture"
                         },
+                        "riscv64": {
+                            "$ref": "#/definitions/fileGroup",
+                            "description": "Files for the riscv64 architecture"
+                        },
                         "x64": {
                             "$ref": "#/definitions/fileGroup",
                             "description": "Files for the x64 architecture"

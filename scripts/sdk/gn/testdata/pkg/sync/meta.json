@@ -5,6 +5,9 @@
     },
     "x64": {
       "link": "arch/x64/lib/libsync.a"
+    },
+    "riscv64": {
+      "link": "arch/riscv64/lib/libsync.a"
     }
   },
   "deps": [],

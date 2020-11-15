@@ -36,6 +36,10 @@
                             "$ref": "#/definitions/version",
                             "description": "arm64 version"
                         },
+                        "riscv64": {
+                            "$ref": "#/definitions/version",
+                            "description": "riscv64 version"
+                        },
                         "x64": {
                             "$ref": "#/definitions/version",
                             "description": "x64 version"

@@ -17,6 +17,10 @@
                             "$ref": "#/definitions/binaryGroup",
                             "description": "Binaries for the arm64 architecture"
                         },
+                        "riscv64": {
+                            "$ref": "#/definitions/binaryGroup",
+                            "description": "Binaries for the riscv64 architecture"
+                        },
                         "x64": {
                             "$ref": "#/definitions/binaryGroup",
                             "description": "Binaries for the x64 architecture"
