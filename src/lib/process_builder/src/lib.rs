@@ -798,7 +798,7 @@ fn compute_initial_stack_pointer(base: usize, size: usize) -> usize {
     }
 
     // The ARMv7 and ARMv8 ABIs both just require that SP be aligned, so just catch unknown archs.
-    #[cfg(not(any(target_arch = "x86_64", target_arch = "arm", target_arch = "aarch64")))]
+    #[cfg(not(any(target_arch = "x86_64", target_arch = "arm", target_arch = "aarch64", target_arch = "riscv64")))]
     {
         compile_error!("Unknown target_arch");
     }
