@@ -16,6 +16,7 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"syscall/zx"
 	"syscall/zx/fidl"
 	"syscall/zx/zxsocket"
@@ -73,6 +74,8 @@ type endpoint struct {
 
 	transProto tcpip.TransportProtocolNumber
 	netProto   tcpip.NetworkProtocolNumber
+
+	key uint64
 
 	ns *Netstack
 }
@@ -303,8 +306,10 @@ type endpointWithSocket struct {
 	// Used to unblock waiting to write when SO_LINGER is enabled.
 	linger chan struct{}
 
-	// entry is used to register callback for error and closing events.
-	entry waiter.Entry
+	onHUpOnce sync.Once
+
+	// onHUp is used to register callback for closing events.
+	onHUp waiter.Entry
 }
 
 func newEndpointWithSocket(ep tcpip.Endpoint, wq *waiter.Queue, transProto tcpip.TransportProtocolNumber, netProto tcpip.NetworkProtocolNumber, ns *Netstack) (*endpointWithSocket, error) {
@@ -338,15 +343,21 @@ func newEndpointWithSocket(ep tcpip.Endpoint, wq *waiter.Queue, transProto tcpip
 
 	// Register a callback for error and closing events from gVisor to
 	// trigger a close of the endpoint.
-	eps.entry.Callback = callback(func(*waiter.Entry) {
-		// Run this in a separate goroutine to avoid deadlock.
-		//
-		// The waiter.Queue lock is held by the caller of this callback.
-		// close() blocks on completions of `loop*`, which
-		// depend on acquiring waiter.Queue lock to unregister events.
-		go eps.close()
+	eps.onHUp.Callback = callback(func(*waiter.Entry) {
+		eps.onHUpOnce.Do(func() {
+			eps.endpoint.ns.onRemoveEndpoint(eps.endpoint.key)
+			// Run this in a separate goroutine to avoid deadlock.
+			//
+			// The waiter.Queue lock is held by the caller of this callback.
+			// close() blocks on completions of `loop*`, which
+			// depend on acquiring waiter.Queue lock to unregister events.
+			go func() {
+				eps.wq.EventUnregister(&eps.onHUp)
+				eps.close()
+			}()
+		})
 	})
-	eps.wq.EventRegister(&eps.entry, waiter.EventHUp)
+	eps.wq.EventRegister(&eps.onHUp, waiter.EventHUp)
 
 	go func() {
 		defer close(eps.loopPollDone)
@@ -396,7 +407,7 @@ func newEndpointWithSocket(ep tcpip.Endpoint, wq *waiter.Queue, transProto tcpip
 
 	go eps.loopWrite()
 
-	ns.onAddEndpoint(zx.Handle(localS), ep)
+	ns.onAddEndpoint(&eps.endpoint)
 
 	return eps, nil
 }
@@ -487,17 +498,9 @@ func (eps *endpointWithSocket) close() {
 			<-ch
 		}
 
-		// Copy the handle before closing below; (*zx.Handle).Close sets the
-		// receiver to zx.HandleInvalid.
-		key := zx.Handle(eps.local)
-
 		if err := eps.local.Close(); err != nil {
 			panic(err)
 		}
-
-		eps.wq.EventUnregister(&eps.entry)
-
-		eps.endpoint.ns.onRemoveEndpoint(key)
 
 		eps.ep.Close()
 
@@ -908,10 +911,6 @@ func (s *datagramSocketImpl) close() {
 	if s.endpoint.decRef() {
 		s.wq.EventUnregister(&s.entry)
 
-		// Copy the handle before closing below; (*zx.Handle).Close sets the
-		// receiver to zx.HandleInvalid.
-		key := s.local
-
 		if err := s.local.Close(); err != nil {
 			panic(fmt.Sprintf("local.Close() = %s", err))
 		}
@@ -920,7 +919,7 @@ func (s *datagramSocketImpl) close() {
 			panic(fmt.Sprintf("peer.Close() = %s", err))
 		}
 
-		s.ns.onRemoveEndpoint(key)
+		s.ns.onRemoveEndpoint(s.endpoint.key)
 
 		s.ep.Close()
 
@@ -1204,8 +1203,18 @@ func (s *streamSocketImpl) Accept(_ fidl.Context, wantAddr bool) (socket.StreamS
 	return socket.StreamSocketAcceptResultWithResponse(response), nil
 }
 
-func (ns *Netstack) onAddEndpoint(handle zx.Handle, ep tcpip.Endpoint) {
-	if ep, loaded := ns.endpoints.LoadOrStore(handle, ep); loaded {
+func (ns *Netstack) onAddEndpoint(e *endpoint) {
+	ns.stats.SocketsCreated.Increment()
+	var key uint64
+	// Reserve key value 0 to indicate that the endpoint was never
+	// added to the endpoints map.
+	for key == 0 {
+		key = atomic.AddUint64(&ns.endpoints.nextKey, 1)
+	}
+	// Check if the key exists in the map already. The key is a uint64 value
+	// and we skip adding the endpoint to the map in the unlikely wrap around
+	// case for now.
+	if ep, loaded := ns.endpoints.LoadOrStore(key, e.ep); loaded {
 		var info stack.TransportEndpointInfo
 		switch t := ep.Info().(type) {
 		case *tcp.EndpointInfo:
@@ -1213,15 +1222,23 @@ func (ns *Netstack) onAddEndpoint(handle zx.Handle, ep tcpip.Endpoint) {
 		case *stack.TransportEndpointInfo:
 			info = *t
 		}
-		syslog.Errorf("endpoint map store error, key %d exists with endpoint %+v", handle, info)
+		syslog.Errorf("endpoint map store error, key %d exists for endpoint %+v", key, info)
+	} else {
+		e.key = key
 	}
-
-	ns.stats.SocketsCreated.Increment()
 }
 
-func (ns *Netstack) onRemoveEndpoint(handle zx.Handle) {
-	ns.endpoints.Delete(handle)
+func (ns *Netstack) onRemoveEndpoint(key uint64) {
 	ns.stats.SocketsDestroyed.Increment()
+	// Key value 0 would indicate that the endpoint was never
+	// added to the endpoints map.
+	if key == 0 {
+		syslog.Errorf("endpoint map delete error, endpoint with key 0 is not be removed")
+		return
+	}
+	if _, loaded := ns.endpoints.LoadAndDelete(key); !loaded {
+		syslog.Errorf("endpoint map delete error, endpoint with key %d does not exist", key)
+	}
 }
 
 type providerImpl struct {
@@ -1327,7 +1344,7 @@ func (sp *providerImpl) DatagramSocket(ctx fidl.Context, domain socket.Domain, p
 	syslog.VLogTf(syslog.DebugVerbosity, "NewDatagram", "%p", s.endpointWithEvent)
 	datagramSocketInterface := socket.DatagramSocketWithCtxInterface{Channel: peerC}
 
-	sp.ns.onAddEndpoint(localE, ep)
+	sp.ns.onAddEndpoint(&s.endpoint)
 
 	if err := s.endpointWithEvent.local.SignalPeer(0, zxsocket.SignalOutgoing); err != nil {
 		panic(fmt.Sprintf("local.SignalPeer(0, zxsocket.SignalOutgoing) = %s", err))

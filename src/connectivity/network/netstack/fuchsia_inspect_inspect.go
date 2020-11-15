@@ -537,8 +537,8 @@ func (*socketInfoMapInspectImpl) ReadData() inspect.Object {
 
 func (impl *socketInfoMapInspectImpl) ListChildren() []string {
 	var children []string
-	impl.value.Range(func(handle zx.Handle, value tcpip.Endpoint) bool {
-		children = append(children, strconv.FormatUint(uint64(handle), 10))
+	impl.value.Range(func(key uint64, _ tcpip.Endpoint) bool {
+		children = append(children, strconv.FormatUint(uint64(key), 10))
 		return true
 	})
 	return children
@@ -550,7 +550,7 @@ func (impl *socketInfoMapInspectImpl) GetChild(childName string) inspectInner {
 		syslog.VLogTf(syslog.DebugVerbosity, inspect.InspectName, "GetChild: %s", err)
 		return nil
 	}
-	if ep, ok := impl.value.Load(zx.Handle(id)); ok {
+	if ep, ok := impl.value.Load(uint64(id)); ok {
 		return &socketInfoInspectImpl{
 			name:  childName,
 			info:  ep.Info(),
