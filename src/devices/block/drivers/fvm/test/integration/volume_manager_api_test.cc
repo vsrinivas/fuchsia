@@ -179,6 +179,24 @@ TEST_F(FvmVolumeManagerApiTest, PartitionLimit) {
   Volume::ResultOf::Extend bad_extend = Volume::Call::Extend(volume.channel()->borrow(), 200, 1);
   ASSERT_OK(bad_extend.status(), "Transport error");
   ASSERT_EQ(bad_extend->status, ZX_ERR_NO_SPACE, "Expected Expand() call to fail.");
+
+  // Delete and re-create the partition. It should have no limit.
+  Volume::ResultOf::Destroy destroy_result = Volume::Call::Destroy(volume.channel()->borrow());
+  ASSERT_OK(destroy_result.status(), "Transport layer error");
+  ASSERT_OK(destroy_result->status, "Can't destroy partition.");
+  volume_fd.reset();
+
+  VolumeManager::ResultOf::AllocatePartition alloc2_result = VolumeManager::Call::AllocatePartition(
+      fvm->device()->channel(), 1, type_guid, guid, /*kPartitionName*/ "thepart", 0);
+  ASSERT_OK(alloc2_result.status(), "Transport layer error");
+  ASSERT_OK(alloc2_result->status, "Service returned error.");
+
+  // That partition's initial limit should be 0 (no limit).
+  VolumeManager::ResultOf::GetPartitionLimit last_get_result =
+      VolumeManager::Call::GetPartitionLimit(fvm->device()->channel(), guid);
+  ASSERT_OK(last_get_result.status(), "Transport layer error");
+  ASSERT_OK(last_get_result->status, "Service returned error.");
+  EXPECT_EQ(last_get_result->byte_count, 0, "Expected 0 limit on new partition.");
 }
 
 }  // namespace

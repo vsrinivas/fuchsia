@@ -757,6 +757,9 @@ zx::status<std::unique_ptr<VPartition>> VPartitionManager::AllocatePartition(
     auto* entry = GetVPartEntryLocked(vpart_entry);
     *entry = VPartitionEntry(type->value, instance->value, 0, std::move(name), flags);
 
+    // Each partition starts off with a 0 max length ("no limit").
+    max_partition_sizes_[vpart_entry] = 0;
+
     if (zx_status_t status = AllocateSlicesLocked(vpart.get(), 0, slice_count); status != ZX_OK) {
       entry->slices = 0;  // Undo VPartition allocation
       return zx::error(status);
