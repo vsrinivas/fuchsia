@@ -76,11 +76,28 @@ static size_t arena_count = 0;
 
 const zbi_header_t* platform_get_zbi(void) { return zbi_root; }
 
+static void halt_other_cpus(void) {
+  static ktl::atomic<int> halted;
+
+  if (halted.exchange(1) == 0) {
+    // stop the other cpus
+    printf("stopping other cpus\n");
+    arch_mp_send_ipi(MP_IPI_TARGET_ALL_BUT_LOCAL, 0, MP_IPI_HALT);
+
+    // spin for a while
+    // TODO: find a better way to spin at this low level
+    for (volatile int i = 0; i < 100000000; i++) {
+      __asm volatile("nop");
+    }
+  }
+}
+
 void platform_panic_start(void) {
   static ktl::atomic<int> panic_started;
 
   arch_disable_ints();
 
+  halt_other_cpus();
 
   if (panic_started.exchange(1) == 0) {
     dlog_bluescreen_init();
