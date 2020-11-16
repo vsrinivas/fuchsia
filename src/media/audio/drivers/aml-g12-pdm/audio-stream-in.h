@@ -34,6 +34,7 @@ class AudioStreamIn : public SimpleAudioStream {
                         zx::vmo* out_buffer) __TA_REQUIRES(domain_token()) override;
   zx_status_t Start(uint64_t* out_start_time) __TA_REQUIRES(domain_token()) override;
   zx_status_t Stop() __TA_REQUIRES(domain_token()) override;
+  zx_status_t SetGain(const audio_proto::SetGainReq& req) override;
   void RingBufferShutdown() TA_REQ(domain_token()) override;
   void ShutdownHook() __TA_REQUIRES(domain_token()) override;
 

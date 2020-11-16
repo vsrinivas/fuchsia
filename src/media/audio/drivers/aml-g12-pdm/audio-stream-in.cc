@@ -35,6 +35,10 @@ zx_status_t AudioStreamIn::Create(void* ctx, zx_device_t* parent) {
   return ZX_OK;
 }
 
+zx_status_t AudioStreamIn::SetGain(const audio_proto::SetGainReq& req) {
+  return req.gain == 0.f ? ZX_OK : ZX_ERR_INVALID_ARGS;
+}
+
 zx_status_t AudioStreamIn::Init() {
   auto status = InitPDev();
   if (status != ZX_OK) {
