@@ -367,3 +367,50 @@ TEST(EpollTest, EventFdEdgeTriggeredEveryWriteGeneratesEvent) {
     ASSERT_TRUE(events[0].events & EPOLLIN);
   }
 }
+
+TEST(EpollTest, CloseFileDescriptorInsideEpollSet) {
+  // This tests a surprising behavior / design bug in epoll(). In Linux, entries
+  // in the epoll interest set are registered on the file descriptor and not the
+  // file description. This means close() which operates on a file descriptor,
+  // does not actually remove the entry from the epoll set.
+
+  // Illumos decided not to implement this quirk and instead registers file
+  // descriptors into the epoll set instead of file descriptions:
+  // https://illumos.org/man/5/epoll
+
+  int fds[2];
+  ASSERT_NE(-1, pipe(fds));
+
+  int epoll_fd = epoll_create(1);
+  ASSERT_NE(-1, epoll_fd);
+
+  // Register the file description referred to by the file descriptor fds[0].
+  epoll_event ev = {};
+  ev.events = EPOLLIN;
+
+  ASSERT_EQ(0, epoll_ctl(epoll_fd, EPOLL_CTL_ADD, fds[0], &ev));
+
+  // Duplicate fds[0] to produce a second file descriptor referring to the same file description.
+  int duplicate = dup(fds[0]);
+  ASSERT_NE(-1, duplicate);
+
+  // Close the original file descriptor.
+  ASSERT_EQ(0, close(fds[0]));
+
+  // At this point the epoll entry is still active and cannot be removed from epoll_fd.
+  EXPECT_EQ(0, epoll_wait(epoll_fd, &ev, 1, 0));
+
+  char c = 'a';
+  EXPECT_EQ(1, write(fds[1], &c, 1));
+
+#if defined(__linux__)
+  // TODO(https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=64296):
+  // The current Fuchsia implementation does not receive this event.
+  EXPECT_EQ(1, epoll_wait(epoll_fd, &ev, 1, 0));
+  EXPECT_EQ(EPOLLIN, ev.events);
+#endif  // defined(__linux__)
+
+  close(epoll_fd);
+  close(fds[1]);
+  close(duplicate);
+}
