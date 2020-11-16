@@ -10,31 +10,34 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"path/filepath"
 
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 	"golang.org/x/crypto/ssh"
 )
 
+const ImageManifest = "images.json"
+
 type BuildPaver struct {
-	paveZedbootScript string
-	paveScript        string
-	sshPublicKey      ssh.PublicKey
-	overrideVBMetaA   *string
-	overrideZirconA   *string
-	stdout            io.Writer
+	BootserverPath  string
+	ImageDir        string
+	sshPublicKey    ssh.PublicKey
+	overrideVBMetaA *string
+	overrideZirconA *string
+	stdout          io.Writer
 }
 
 type Paver interface {
 	Pave(ctx context.Context, deviceName string) error
 }
 
-// NewBuildPaver constructs a new paver that uses `paveZedbootScript` and
-// `paveScript` as the paths to the scripts used to pave Zedboot and Fuchsia
-// respectively. Also accepts a number of optional parameters.
-func NewBuildPaver(paveZedbootScript, paveScript string, options ...BuildPaverOption) (*BuildPaver, error) {
+// NewBuildPaver constructs a new paver that uses `bootserverPath` as the path
+// to the tool used to pave Zedboot and Fuchsia with the image manifest located
+// in `imageDir`. Also accepts a number of optional parameters.
+func NewBuildPaver(bootserverPath, imageDir string, options ...BuildPaverOption) (*BuildPaver, error) {
 	p := &BuildPaver{
-		paveZedbootScript: paveZedbootScript,
-		paveScript:        paveScript,
+		BootserverPath: bootserverPath,
+		ImageDir:       imageDir,
 	}
 
 	for _, opt := range options {
@@ -120,18 +123,21 @@ func (p *BuildPaver) Pave(ctx context.Context, deviceName string) error {
 		paverArgs = append(paverArgs, "--vbmetaa", *p.overrideVBMetaA)
 	}
 
-	// Run pave-zedboot.sh to bootstrap the new bootloader and zedboot.
-	if err := p.runPave(ctx, deviceName, p.paveZedbootScript, "--allow-zedboot-version-mismatch"); err != nil {
+	// Run bootserver with pave-zedboot mode to bootstrap the new bootloader and zedboot.
+	if err := p.runPave(ctx, deviceName, "--mode", "pave-zedboot", "--allow-zedboot-version-mismatch"); err != nil {
 		return err
 	}
 
-	// Run pave.sh to install Fuchsia.
-	return p.runPave(ctx, deviceName, p.paveScript, paverArgs...)
+	// Run bootserver with pave mode to install Fuchsia.
+	paverArgs = append([]string{"--mode", "pave"}, paverArgs...)
+	return p.runPave(ctx, deviceName, paverArgs...)
 }
 
-func (p *BuildPaver) runPave(ctx context.Context, deviceName string, script string, args ...string) error {
-	logger.Infof(ctx, "paving device %q with %s %v", deviceName, script, args)
-	path, err := exec.LookPath(script)
+func (p *BuildPaver) runPave(ctx context.Context, deviceName string, args ...string) error {
+	args = append([]string{"--images", filepath.Join(p.ImageDir, ImageManifest)}, args...)
+
+	logger.Infof(ctx, "paving device %q with %s %v", deviceName, p.BootserverPath, args)
+	path, err := exec.LookPath(p.BootserverPath)
 	if err != nil {
 		return err
 	}

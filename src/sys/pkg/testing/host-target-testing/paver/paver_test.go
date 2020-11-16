@@ -13,6 +13,7 @@ import (
 	"golang.org/x/crypto/ssh"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -52,21 +53,15 @@ echo "$0 $@"
 }
 
 func CreateAndRunPaver(options ...BuildPaverOption) (zedbootPaverArgs []string, paverArgs []string, err error) {
-	zedbootPaverScript, err := CreateScript("zedbootpave.*.sh")
+	bootserverPath, err := CreateScript("bootserver_tool")
 	if err != nil {
 		return nil, nil, err
 	}
-	defer os.Remove(zedbootPaverScript)
-
-	paverScript, err := CreateScript("pave.*.sh")
-	if err != nil {
-		return nil, nil, err
-	}
-	defer os.Remove(paverScript)
+	defer os.Remove(bootserverPath)
 
 	var output bytes.Buffer
 	options = append(options, Stdout(&output))
-	paver, err := NewBuildPaver(zedbootPaverScript, paverScript, options...)
+	paver, err := NewBuildPaver(bootserverPath, filepath.Dir(bootserverPath), options...)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -79,15 +74,15 @@ func CreateAndRunPaver(options ...BuildPaverOption) (zedbootPaverArgs []string, 
 	zedbootPaverArgs = strings.Split(outputs[0], " ")
 	paverArgs = strings.Split(outputs[1], " ")
 
-	if zedbootPaverArgs[0] != zedbootPaverScript {
-		err := fmt.Errorf("Paver called the wrong zedboot paver script. Expected %s, actual %s",
-			zedbootPaverScript, zedbootPaverArgs[0])
+	if zedbootPaverArgs[0] != bootserverPath || zedbootPaverArgs[4] != "pave-zedboot" {
+		err := fmt.Errorf("Paver called the wrong bootserver or mode. Expected %s with mode pave-zedboot, actual %s with mode %s",
+			bootserverPath, zedbootPaverArgs[0], zedbootPaverArgs[4])
 		return nil, nil, err
 	}
 
-	if paverArgs[0] != paverScript {
-		err := fmt.Errorf("Paver called the wrong paver script. Expected %s, actual %s",
-			paverScript, paverArgs[0])
+	if paverArgs[0] != bootserverPath || paverArgs[4] != "pave" {
+		err := fmt.Errorf("Paver called the wrong bootserver or mode. Expected %s with mode pave, actual %s with mode %s",
+			bootserverPath, paverArgs[0], paverArgs[4])
 		return nil, nil, err
 	}
 

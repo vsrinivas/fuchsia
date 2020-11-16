@@ -30,7 +30,7 @@ func (b *Builder) GetLatestBuildID(ctx context.Context) (string, error) {
 }
 
 // GetLatestBuild looks up the latest build for a given builder.
-func (b *Builder) GetLatestBuild(ctx context.Context, dir string, publicKey ssh.PublicKey) (*ArchiveBuild, error) {
+func (b *Builder) GetLatestBuild(ctx context.Context, dir string, publicKey ssh.PublicKey) (*ArtifactsBuild, error) {
 	id, err := b.GetLatestBuildID(ctx)
 	if err != nil {
 		return nil, err
