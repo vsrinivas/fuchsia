@@ -5,6 +5,7 @@
 import("//build/host.gni")
 import("//build/sdk/sdk_host_tool.gni")
 import("//build/test.gni")
+import("//build/testing/environments.gni")
 
 if (is_host) {
   source_set("src") {
@@ -60,6 +61,12 @@ if (is_host) {
     deps = [
       ":src",
       "//third_party/googletest:gtest",
+    ]
+    environments = [
+      {
+        dimensions = host_env.dimensions
+        tags = [ "symbolizer-e2e" ]
+      },
     ]
   }
 }
