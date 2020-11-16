@@ -103,9 +103,9 @@ Each language has a specific fuzzer GN template:
       #[cfg(not(fuzz))]
       use only::used::in::main;
 
-       #[cfg(not(fuzz))]
-       fn main() { ... }
-       ```
+      #[cfg(not(fuzz))]
+      fn main() { ... }
+      ```
 
     * You must explicitly provide the fuzz target function to the `rustc_fuzzer` with the
       `source_root` parameter. For example, in your `BUILD.gn`:
