@@ -111,6 +111,7 @@ func dedupe(l []string) []string {
 
 // MultiplyShards appends new shards to shards where each new shard contains one test
 // repeated multiple times according to the specifications in multipliers.
+// It also removes all multiplied tests from the input shards.
 func MultiplyShards(
 	shards []*Shard,
 	multipliers []TestModifier,
@@ -125,8 +126,9 @@ func MultiplyShards(
 			continue
 		}
 		type multiplierMatch struct {
-			shard *Shard
-			test  Test
+			shardIdx int
+			test     Test
+			testIdx  int
 		}
 		var exactMatches []*multiplierMatch
 		var regexMatches []*multiplierMatch
@@ -137,14 +139,14 @@ func MultiplyShards(
 		}
 
 		safeTargetDuration := float64(targetDuration) * multiplyShardTargetDurationFactor
-		for _, shard := range shards {
-			for _, test := range shard.Tests {
+		for si, shard := range shards {
+			for ti, test := range shard.Tests {
 				// An empty OS matches all OSes.
 				if multiplier.OS != "" && multiplier.OS != test.OS {
 					continue
 				}
 
-				match := &multiplierMatch{shard: shard, test: test}
+				match := &multiplierMatch{shardIdx: si, test: test, testIdx: ti}
 				if multiplier.Name == test.Name {
 					exactMatches = append(exactMatches, match)
 				} else if nameRegex.FindString(test.Name) != "" {
@@ -188,16 +190,38 @@ func MultiplyShards(
 			)
 		}
 
+		shardIdxToTestIdx := make([][]int, len(shards))
 		for _, m := range matches {
 			// If a test is multiplied, it doesn't matter if it was originally
 			// in an affected shard or not and it's confusing for it to have
 			// two prefixes. So don't include the "affected" prefix.
-			shardName := strings.TrimPrefix(m.shard.Name, affectedShardPrefix)
+			shardName := strings.TrimPrefix(shards[m.shardIdx].Name, affectedShardPrefix)
 			shards = append(shards, &Shard{
 				Name:  multipliedShardPrefix + shardName + "-" + normalizeTestName(m.test.Name),
 				Tests: []Test{m.test},
-				Env:   m.shard.Env,
+				Env:   shards[m.shardIdx].Env,
 			})
+			shardIdxToTestIdx[m.shardIdx] = append(shardIdxToTestIdx[m.shardIdx], m.testIdx)
+		}
+		// Remove the multiplied tests from the other shard. It's wasteful to run it in
+		// different shards.
+		shrunkShards := 0
+		for si, tis := range shardIdxToTestIdx {
+			shard := shards[si-shrunkShards]
+			// If entire shard is empty, remove it.
+			if len(tis) == len(shard.Tests) {
+				copy(shards[si-shrunkShards:], shards[si-shrunkShards+1:])
+				shards = shards[:len(shards)-1]
+				shrunkShards++
+				continue
+			}
+			// Remove individual tests from the shard.
+			shrunk := 0
+			for _, ti := range tis {
+				copy(shard.Tests[ti-shrunk:], shard.Tests[ti-shrunk+1:])
+				shard.Tests = shard.Tests[:len(shard.Tests)-1]
+				shrunk++
+			}
 		}
 	}
 

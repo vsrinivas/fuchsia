@@ -137,6 +137,7 @@ func TestMultiplyShards(t *testing.T) {
 				makeTestModifier(3, "linux", 3),
 			},
 			expected: []*Shard{
+				shard(env2, "fuchsia", 2, 4),
 				// We multiplied the test with id 1 five times from the first two shards.
 				multShard(env1, "fuchsia", 1, 5),
 				multShard(env2, "fuchsia", 1, 5),
@@ -258,13 +259,23 @@ func TestMultiplyShards(t *testing.T) {
 				multShard(env1, "fuchsia", 1, 5),
 			},
 		},
+		{
+			name: "removes multiplied test from shard",
+			shards: []*Shard{
+				shard(env1, "fuchsia", 1, 2),
+			},
+			multipliers: []TestModifier{
+				makeTestModifier(1, "fuchsia", 2),
+			},
+			expected: []*Shard{
+				shard(env1, "fuchsia", 2),
+				multShard(env1, "fuchsia", 1, 2),
+			},
+		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			// `expected` includes only the multiplied shards, but we want to make
-			// sure multiplication of shards leaves the original shards as-is.
-			expected := append(tc.shards, tc.expected...)
 			actual, err := MultiplyShards(
 				tc.shards,
 				tc.multipliers,
@@ -278,7 +289,7 @@ func TestMultiplyShards(t *testing.T) {
 			if err != nil {
 				return
 			}
-			assertEqual(t, expected, actual)
+			assertEqual(t, tc.expected, actual)
 		})
 	}
 }
