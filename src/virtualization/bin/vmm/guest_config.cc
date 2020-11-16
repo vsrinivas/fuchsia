@@ -422,7 +422,7 @@ void PrintCommandLineUsage(const char* program_name) {
 
 void SetDefaults(GuestConfig* cfg) {
   if (!cfg->has_memory()) {
-    cfg->mutable_memory()->push_back({.size = 512ul << 20});
+    cfg->mutable_memory()->push_back({.size = 1ul << 30});
   }
 
   for (const auto& [name, handler] : GetAllOptionHandlers()) {
