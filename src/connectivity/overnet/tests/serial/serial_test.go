@@ -5,6 +5,8 @@
 package main
 
 import (
+	"fmt"
+	"math/rand"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -33,6 +35,13 @@ func ascenddPath(t *testing.T) string {
 	return filepath.Join(exPath, "ascendd")
 }
 
+func startAscendd(t *testing.T) *exec.Cmd {
+	n := rand.Uint64()
+	path := fmt.Sprintf("/tmp/ascendd-for-serial-test.%v.sock", n)
+	os.Setenv("ASCENDD", path)
+	return exec.Command(ascenddPath(t), "--serial", "-", "--sockpath", path)
+}
+
 // Test that ascendd can connect to overnetstack via serial.
 func TestOvernetSerial(t *testing.T) {
 	distro, err := qemu.Unpack()
@@ -51,7 +60,7 @@ func TestOvernetSerial(t *testing.T) {
 		AppendCmdline: "devmgr.log-to-debuglog console.shell=false kernel.enable-debugging-syscalls=true kernel.enable-serial-syscalls=true",
 	})
 
-	ascendd := exec.Command(ascenddPath(t), "--serial", "-")
+	ascendd := startAscendd(t)
 	err = i.StartPiped(ascendd)
 	if err != nil {
 		t.Fatal(err)
@@ -79,7 +88,7 @@ func TestNoSpinningIfNoSerial(t *testing.T) {
 		AppendCmdline: "console.shell=false kernel.enable-debugging-syscalls=false kernel.enable-serial-syscalls=false",
 	})
 
-	ascendd := exec.Command(ascenddPath(t), "--serial", "-")
+	ascendd := startAscendd(t)
 	err = i.StartPiped(ascendd)
 	if err != nil {
 		t.Fatal(err)
