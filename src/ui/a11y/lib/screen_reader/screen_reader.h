@@ -37,10 +37,10 @@ class ScreenReader : public SemanticsEventListener {
   // outlive screen reader. A11y App is responsible for creating these pointers along with Screen
   // Reader object.
   ScreenReader(std::unique_ptr<ScreenReaderContext> context, SemanticsSource* semantics_source,
-               GestureListenerRegistry* gesture_listener_registry);
+               GestureListenerRegistry* gesture_listener_registry, TtsManager* tts_manager);
   // Same as above, but accepts a custom |action_registry|.
   ScreenReader(std::unique_ptr<ScreenReaderContext> context, SemanticsSource* semantics_source,
-               GestureListenerRegistry* gesture_listener_registry,
+               GestureListenerRegistry* gesture_listener_registry, TtsManager* tts_manager,
                std::unique_ptr<ScreenReaderActionRegistry> action_registry);
 
   ~ScreenReader();
@@ -77,6 +77,10 @@ class ScreenReader : public SemanticsEventListener {
 
   // Pointer to Gesture Listener Registry.
   GestureListenerRegistry* gesture_listener_registry_;
+
+  // Pointer to TTS manager.
+  TtsManager* tts_manager_;
+
   // Maps action names to screen reader actions.
   // Different triggering methods may invoke the same action. For example, both one finger tap and
   // dragging the finger on the screen invoke the explore action.

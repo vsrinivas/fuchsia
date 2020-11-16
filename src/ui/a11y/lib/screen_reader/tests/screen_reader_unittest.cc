@@ -24,11 +24,13 @@
 #include "src/ui/a11y/lib/gesture_manager/tests/mocks/mock_gesture_listener.h"
 #include "src/ui/a11y/lib/screen_reader/focus/tests/mocks/mock_a11y_focus_manager.h"
 #include "src/ui/a11y/lib/screen_reader/tests/mocks/mock_screen_reader_context.h"
+#include "src/ui/a11y/lib/screen_reader/tests/mocks/mock_tts_engine.h"
 #include "src/ui/a11y/lib/semantics/tests/mocks/mock_semantic_provider.h"
 #include "src/ui/a11y/lib/semantics/tests/mocks/mock_semantic_tree.h"
 #include "src/ui/a11y/lib/semantics/tests/mocks/mock_semantic_tree_service_factory.h"
 #include "src/ui/a11y/lib/semantics/tests/mocks/mock_semantics_event_manager.h"
 #include "src/ui/a11y/lib/testing/input.h"
+#include "src/ui/a11y/lib/tts/tests/mocks/mock_tts_manager.h"
 #include "src/ui/a11y/lib/tts/tts_manager.h"
 #include "src/ui/a11y/lib/util/util.h"
 #include "src/ui/a11y/lib/view/tests/mocks/mock_view_semantics.h"
@@ -75,40 +77,72 @@ class MockScreenReaderActionRegistryImpl : public a11y::ScreenReaderActionRegist
 
 class ScreenReaderTest : public gtest::TestLoopFixture {
  public:
-  ScreenReaderTest()
-      : factory_(std::make_unique<MockSemanticTreeServiceFactory>()),
-        factory_ptr_(factory_.get()),
-        context_provider_(),
-        view_manager_(std::move(factory_), std::make_unique<MockViewSemanticsFactory>(),
-                      std::make_unique<MockAnnotationViewFactory>(),
-                      std::make_unique<MockSemanticsEventManager>(), context_provider_.context(),
-                      context_provider_.context()->outgoing()->debug_dir()),
-        context_(std::make_unique<MockScreenReaderContext>()),
-        context_ptr_(context_.get()),
-        a11y_focus_manager_ptr_(context_ptr_->mock_a11y_focus_manager_ptr()),
-        mock_speaker_ptr_(context_ptr_->mock_speaker_ptr()),
-        mock_action_registry_(std::make_unique<MockScreenReaderActionRegistryImpl>()),
-        mock_action_registry_ptr_(mock_action_registry_.get()),
-        screen_reader_(std::make_unique<a11y::ScreenReader>(std::move(context_), &view_manager_,
-                                                            &gesture_listener_registry_,
-                                                            std::move(mock_action_registry_))),
-        semantic_provider_(&view_manager_) {
-    screen_reader_->BindGestures(&mock_gesture_handler_);
-    gesture_listener_registry_.Register(mock_gesture_listener_.NewBinding(), []() {});
+  ScreenReaderTest() = default;
+  ~ScreenReaderTest() override = default;
 
-    semantic_provider_.SetSemanticsEnabled(true);
-    view_manager_.SetSemanticsEnabled(true);
+  void InitializeScreenReader() {
+    screen_reader_ = std::make_unique<a11y::ScreenReader>(
+        std::move(context_), view_manager_.get(), gesture_listener_registry_.get(),
+        mock_tts_manager_.get(), std::move(mock_action_registry_));
+    screen_reader_->BindGestures(mock_gesture_handler_.get());
+    gesture_listener_registry_->Register(mock_gesture_listener_->NewBinding(), []() {});
+
+    semantic_provider_->SetSemanticsEnabled(true);
+    view_manager_->SetSemanticsEnabled(true);
     factory_ptr_->service()->EnableSemanticsUpdates(true);
+  }
+
+  void SetUp() override {
+    gtest::TestLoopFixture::SetUp();
+
+    factory_ = std::make_unique<MockSemanticTreeServiceFactory>();
+    factory_ptr_ = factory_.get(),
+    context_provider_ = std::make_unique<sys::testing::ComponentContextProvider>();
+    mock_gesture_handler_ = std::make_unique<MockGestureHandler>();
+    view_manager_ = std::make_unique<a11y::ViewManager>(
+        std::move(factory_), std::make_unique<MockViewSemanticsFactory>(),
+        std::make_unique<MockAnnotationViewFactory>(),
+        std::make_unique<MockSemanticsEventManager>(), context_provider_->context(),
+        context_provider_->context()->outgoing()->debug_dir());
+    context_ = std::make_unique<MockScreenReaderContext>();
+    context_ptr_ = context_.get();
+    a11y_focus_manager_ptr_ = context_ptr_->mock_a11y_focus_manager_ptr();
+    mock_speaker_ptr_ = context_ptr_->mock_speaker_ptr();
+    mock_action_registry_ = std::make_unique<MockScreenReaderActionRegistryImpl>();
+    mock_action_registry_ptr_ = mock_action_registry_.get();
+    mock_tts_manager_ = std::make_unique<MockTtsManager>(context_provider_->context());
+    semantic_provider_ = std::make_unique<MockSemanticProvider>(view_manager_.get());
+    gesture_manager_ = std::make_unique<a11y::GestureManager>();
+    gesture_listener_registry_ = std::make_unique<a11y::GestureListenerRegistry>();
+    mock_gesture_handler_ = std::make_unique<MockGestureHandler>();
+    mock_gesture_listener_ = std::make_unique<MockGestureListener>();
+  }
+
+  void ConnectSpeakerAndEngine() {
+    // The speaker and engine need to be connected to the tts manager before the
+    // screen reader announces it's on. In order to verify that the screen reader
+    // correctly vocalizes, we need to expicitly connect the speaker and engine.
+    fuchsia::accessibility::tts::EnginePtr engine_ptr;
+    mock_tts_manager_->OpenEngine(
+        engine_ptr.NewRequest(),
+        [](fuchsia::accessibility::tts::TtsManager_OpenEngine_Result result) {});
+    RunLoopUntilIdle();
+
+    MockTtsEngine mock_tts_engine;
+    mock_tts_manager_->RegisterEngine(
+        mock_tts_engine.GetHandle(),
+        [](fuchsia::accessibility::tts::EngineRegistry_RegisterEngine_Result result) {});
+    RunLoopUntilIdle();
   }
 
   std::unique_ptr<MockSemanticTreeServiceFactory> factory_;
   MockSemanticTreeServiceFactory* factory_ptr_;
-  sys::testing::ComponentContextProvider context_provider_;
-  a11y::ViewManager view_manager_;
-  a11y::GestureManager gesture_manager_;
-  a11y::GestureListenerRegistry gesture_listener_registry_;
-  MockGestureListener mock_gesture_listener_;
-  MockGestureHandler mock_gesture_handler_;
+  std::unique_ptr<sys::testing::ComponentContextProvider> context_provider_;
+  std::unique_ptr<a11y::ViewManager> view_manager_;
+  std::unique_ptr<a11y::GestureManager> gesture_manager_;
+  std::unique_ptr<a11y::GestureListenerRegistry> gesture_listener_registry_;
+  std::unique_ptr<MockGestureListener> mock_gesture_listener_;
+  std::unique_ptr<MockGestureHandler> mock_gesture_handler_;
 
   std::unique_ptr<MockScreenReaderContext> context_;
   MockScreenReaderContext* context_ptr_;
@@ -116,15 +150,17 @@ class ScreenReaderTest : public gtest::TestLoopFixture {
   MockScreenReaderContext::MockSpeaker* mock_speaker_ptr_;
   std::unique_ptr<MockScreenReaderActionRegistryImpl> mock_action_registry_;
   MockScreenReaderActionRegistryImpl* mock_action_registry_ptr_;
+  std::unique_ptr<MockTtsManager> mock_tts_manager_;
   std::unique_ptr<a11y::ScreenReader> screen_reader_;
-  MockSemanticProvider semantic_provider_;
+  std::unique_ptr<MockSemanticProvider> semantic_provider_;
 };  // namespace
 
 TEST_F(ScreenReaderTest, GestureHandlersAreRegisteredIntheRightOrder) {
+  InitializeScreenReader();
   // The order in which the Screen Reader registers the gesture handlers at startup is relevant.
   // Each registered handler is saved in the mock, so we can check if they are in the right order
   // here.
-  EXPECT_THAT(mock_gesture_handler_.bound_gestures(),
+  EXPECT_THAT(mock_gesture_handler_->bound_gestures(),
               ElementsAre(GestureType::kThreeFingerUpSwipe, GestureType::kThreeFingerDownSwipe,
                           GestureType::kThreeFingerLeftSwipe, GestureType::kThreeFingerRightSwipe,
                           GestureType::kOneFingerDownSwipe, GestureType::kOneFingerUpSwipe,
@@ -134,27 +170,28 @@ TEST_F(ScreenReaderTest, GestureHandlersAreRegisteredIntheRightOrder) {
 }
 
 TEST_F(ScreenReaderTest, RegisteredActionsAreInvokedWhenGestureTriggers) {
-  mock_gesture_handler_.TriggerGesture(
+  InitializeScreenReader();
+  mock_gesture_handler_->TriggerGesture(
       GestureType::kThreeFingerUpSwipe);  // corresponds to physical right.
-  mock_gesture_handler_.TriggerGesture(
+  mock_gesture_handler_->TriggerGesture(
       GestureType::kThreeFingerDownSwipe);  // Corresponds to physical left.
-  mock_gesture_handler_.TriggerGesture(
+  mock_gesture_handler_->TriggerGesture(
       GestureType::kThreeFingerLeftSwipe);  // Corresponds to physical up
-  mock_gesture_handler_.TriggerGesture(
+  mock_gesture_handler_->TriggerGesture(
       GestureType::kThreeFingerRightSwipe);  // Corresponds to physical down.
-  mock_gesture_handler_.TriggerGesture(
+  mock_gesture_handler_->TriggerGesture(
       GestureType::kOneFingerUpSwipe);  // Corresponds to physical right.
-  mock_gesture_handler_.TriggerGesture(
+  mock_gesture_handler_->TriggerGesture(
       GestureType::kOneFingerDownSwipe);  // Corresponds to physical left.
-  mock_gesture_handler_.TriggerGesture(
+  mock_gesture_handler_->TriggerGesture(
       GestureType::kOneFingerLeftSwipe);  // Corresponds to a physical up.
-  mock_gesture_handler_.TriggerGesture(
+  mock_gesture_handler_->TriggerGesture(
       GestureType::kOneFingerRightSwipe);  // Corresponds to a physical down.
-  mock_gesture_handler_.TriggerGesture(GestureType::kOneFingerDoubleTap);
+  mock_gesture_handler_->TriggerGesture(GestureType::kOneFingerDoubleTap);
   // Note that since one finger single tap and drag both trigger the explore action, we expect to
   // see it twice in the list of called actions.
-  mock_gesture_handler_.TriggerGesture(GestureType::kOneFingerSingleTap);
-  mock_gesture_handler_.TriggerGesture(GestureType::kOneFingerDrag);
+  mock_gesture_handler_->TriggerGesture(GestureType::kOneFingerSingleTap);
+  mock_gesture_handler_->TriggerGesture(GestureType::kOneFingerDrag);
   RunLoopUntilIdle();
   EXPECT_THAT(
       mock_action_registry_ptr_->invoked_actions(),
@@ -166,13 +203,22 @@ TEST_F(ScreenReaderTest, RegisteredActionsAreInvokedWhenGestureTriggers) {
 }
 
 TEST_F(ScreenReaderTest, TrivialActionsAreInvokedWhenGestureTriggers) {
+  InitializeScreenReader();
   // Trivial actions are not registered in the action registry, but are jusst the callback parked at
   // the gesture handler. Verify that the results of the callback are seen when it runs.
-  mock_gesture_handler_.TriggerGesture(GestureType::kTwoFingerSingleTap);
+  mock_gesture_handler_->TriggerGesture(GestureType::kTwoFingerSingleTap);
   EXPECT_TRUE(mock_speaker_ptr_->ReceivedCancel());
 }
 
 TEST_F(ScreenReaderTest, ScreenReaderSpeaksWhenItTurnsOnAndOff) {
+  InitializeScreenReader();
+  // No output should be spoken until the tts engine is connected.
+  EXPECT_TRUE(mock_speaker_ptr_->message_ids().empty());
+
+  // The screen reader will not announce it's on until the speaker and engine
+  // are connected.
+  ConnectSpeakerAndEngine();
+
   // The screen reader object has already been initialized, check if it announced it:
   EXPECT_EQ(mock_speaker_ptr_->message_ids().size(), 1u);
   EXPECT_EQ(mock_speaker_ptr_->message_ids()[0],
@@ -191,19 +237,38 @@ TEST_F(ScreenReaderTest, ScreenReaderSpeaksWhenItTurnsOnAndOff) {
   EXPECT_TRUE(callback_ran);
 }
 
+TEST_F(ScreenReaderTest, ScreenReaderSpeaksWhenInitializedAfterEngineAndSpeakerConnected) {
+  // The screen reader will not announce it's on until the speaker and engine
+  // are connected.
+  ConnectSpeakerAndEngine();
+
+  // When the screen reader's destructor was called above
+  // (via sceen_reader_.reset()), screen_reader_'s callback should have been
+  // unregistered from the tts manager. If not, the tts manager would have
+  // invoekd the stale callback. This check ensures that the unregistration was
+  // handled correctly.
+  EXPECT_TRUE(mock_speaker_ptr_->message_ids().empty());
+
+  InitializeScreenReader();
+
+  EXPECT_EQ(mock_speaker_ptr_->message_ids().size(), 1u);
+}
+
 TEST_F(ScreenReaderTest, NextOrPreviousActionInvokesActionsBasedOnTheSemanticLevel) {
+  InitializeScreenReader();
+
   // This test makes sure that when the next / previous action is invoked, bound to right / left one
   // finger swipes, it corresponds to the appropriate action to the current semantic level.
   EXPECT_EQ(context_ptr_->semantic_level(),
             a11y::ScreenReaderContext::SemanticLevel::kNormalNavigation);
-  mock_gesture_handler_.TriggerGesture(
+  mock_gesture_handler_->TriggerGesture(
       GestureType::kOneFingerUpSwipe);  // Corresponds to physical right.
-  mock_gesture_handler_.TriggerGesture(
+  mock_gesture_handler_->TriggerGesture(
       GestureType::kOneFingerDownSwipe);  // Corresponds to physical left.
   context_ptr_->set_semantic_level(a11y::ScreenReaderContext::SemanticLevel::kAdjustValue);
-  mock_gesture_handler_.TriggerGesture(
+  mock_gesture_handler_->TriggerGesture(
       GestureType::kOneFingerUpSwipe);  // Corresponds to physical right.
-  mock_gesture_handler_.TriggerGesture(
+  mock_gesture_handler_->TriggerGesture(
       GestureType::kOneFingerDownSwipe);  // Corresponds to physical left.
   EXPECT_THAT(
       mock_action_registry_ptr_->invoked_actions(),
@@ -212,9 +277,11 @@ TEST_F(ScreenReaderTest, NextOrPreviousActionInvokesActionsBasedOnTheSemanticLev
 }
 
 TEST_F(ScreenReaderTest, SemanticEventsTriggerScreenReaderAction) {
-  view_manager_.GetSemanticsEventManager()->Register(
+  InitializeScreenReader();
+
+  view_manager_->GetSemanticsEventManager()->Register(
       screen_reader_->GetSemanticsEventListenerWeakPtr());
-  view_manager_.GetSemanticsEventManager()->OnEvent(
+  view_manager_->GetSemanticsEventManager()->OnEvent(
       {.event_type = a11y::SemanticsEventType::kSemanticTreeUpdated});
   EXPECT_THAT(mock_action_registry_ptr_->invoked_actions(),
               ElementsAre(StrEq("Recover A11Y Focus Action")));

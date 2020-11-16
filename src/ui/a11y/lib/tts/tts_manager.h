@@ -23,6 +23,8 @@ class TtsManager : public fuchsia::accessibility::tts::TtsManager,
                    public fuchsia::accessibility::tts::EngineRegistry,
                    public fuchsia::accessibility::tts::Engine {
  public:
+  using TTSEngineReadyCallback = fit::function<void()>;
+
   // On initialization, this class exposes the services defined in
   // |fuchsia.accessibility.tts.(TtsManager|EngineRegistry|Engine)|
   explicit TtsManager(sys::ComponentContext* startup_context);
@@ -36,6 +38,13 @@ class TtsManager : public fuchsia::accessibility::tts::TtsManager,
   void RegisterEngine(fidl::InterfaceHandle<fuchsia::accessibility::tts::Engine> engine,
                       RegisterEngineCallback callback) override;
 
+  // Registers a callback that will be invoked once the TTS engine is ready to receive speak
+  // requests.
+  virtual void RegisterTTSEngineReadyCallback(TTSEngineReadyCallback callback);
+
+  // Unregisters the currently registered callback (if any).
+  virtual void UnregisterTTSEngineReadyCallback();
+
  private:
   // |fuchsia.accessibility.tts.Engine|
   void Enqueue(fuchsia::accessibility::tts::Utterance utterance, EnqueueCallback callback) override;
@@ -46,6 +55,10 @@ class TtsManager : public fuchsia::accessibility::tts::TtsManager,
   // |fuchsia.accessibility.tts.Engine|
   void Cancel(CancelCallback callback) override;
 
+  // Executes TTS engine ready callback(s) if both engine and speaker are
+  // connected.
+  void CheckIfTtsEngineIsReadyAndRunCallback();
+
   // Bindings to services implemented by this class.
   fidl::BindingSet<fuchsia::accessibility::tts::TtsManager> manager_bindings_;
   fidl::BindingSet<fuchsia::accessibility::tts::EngineRegistry> registry_bindings_;
@@ -54,6 +67,9 @@ class TtsManager : public fuchsia::accessibility::tts::TtsManager,
   // Registered engine with this Tts manager. For now, only one engine is
   // allowed to be registered at a time.
   fuchsia::accessibility::tts::EnginePtr engine_;
+
+  // Callback that will be invoked once the TTS engine is ready to receive speak requests.
+  TTSEngineReadyCallback tts_engine_ready_callback_;
 };
 
 }  // namespace a11y

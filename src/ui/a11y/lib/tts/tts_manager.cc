@@ -29,6 +29,7 @@ void TtsManager::OpenEngine(
     result.set_response(fuchsia::accessibility::tts::TtsManager_OpenEngine_Response{});
   }
   callback(std::move(result));
+  CheckIfTtsEngineIsReadyAndRunCallback();
 }
 
 void TtsManager::RegisterEngine(fidl::InterfaceHandle<fuchsia::accessibility::tts::Engine> engine,
@@ -42,6 +43,7 @@ void TtsManager::RegisterEngine(fidl::InterfaceHandle<fuchsia::accessibility::tt
     result.set_err(fuchsia::accessibility::tts::Error::BUSY);
   }
   callback(std::move(result));
+  CheckIfTtsEngineIsReadyAndRunCallback();
 }
 
 void TtsManager::Enqueue(fuchsia::accessibility::tts::Utterance utterance,
@@ -53,6 +55,18 @@ void TtsManager::Enqueue(fuchsia::accessibility::tts::Utterance utterance,
   } else {
     engine_->Enqueue(std::move(utterance), std::move(callback));
   }
+}
+
+void TtsManager::CheckIfTtsEngineIsReadyAndRunCallback() {
+  if (!engine_binding_.is_bound() || !engine_) {
+    return;
+  }
+
+  if (tts_engine_ready_callback_) {
+    tts_engine_ready_callback_();
+  }
+
+  UnregisterTTSEngineReadyCallback();
 }
 
 void TtsManager::Speak(SpeakCallback callback) {
@@ -73,4 +87,15 @@ void TtsManager::Cancel(CancelCallback callback) {
   }
 }
 
+void TtsManager::RegisterTTSEngineReadyCallback(TTSEngineReadyCallback callback) {
+  tts_engine_ready_callback_ = std::move(callback);
+
+  // The TTS engine and speaker may already be connected when the callback is
+  // registered, in which case, we should execute and unregister immediately.
+  CheckIfTtsEngineIsReadyAndRunCallback();
+}
+
+void TtsManager::UnregisterTTSEngineReadyCallback() {
+  tts_engine_ready_callback_ = TTSEngineReadyCallback();
+}
 }  // namespace a11y

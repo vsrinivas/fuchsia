@@ -90,26 +90,33 @@ class ScreenReader::ScreenReaderActionRegistryImpl : public ScreenReaderActionRe
 
 ScreenReader::ScreenReader(std::unique_ptr<ScreenReaderContext> context,
                            SemanticsSource* semantics_source,
-                           GestureListenerRegistry* gesture_listener_registry)
-    : ScreenReader(std::move(context), semantics_source, gesture_listener_registry,
+                           GestureListenerRegistry* gesture_listener_registry,
+                           TtsManager* tts_manager)
+    : ScreenReader(std::move(context), semantics_source, gesture_listener_registry, tts_manager,
                    std::make_unique<ScreenReaderActionRegistryImpl>()) {}
 
 ScreenReader::ScreenReader(std::unique_ptr<ScreenReaderContext> context,
                            SemanticsSource* semantics_source,
                            GestureListenerRegistry* gesture_listener_registry,
+                           TtsManager* tts_manager,
                            std::unique_ptr<ScreenReaderActionRegistry> action_registry)
     : context_(std::move(context)),
       gesture_listener_registry_(gesture_listener_registry),
+      tts_manager_(tts_manager),
       action_registry_(std::move(action_registry)),
       weak_ptr_factory_(this) {
   action_context_ = std::make_unique<ScreenReaderAction::ActionContext>();
   action_context_->semantics_source = semantics_source;
   InitializeActions();
-  SpeakMessage(fuchsia::intl::l10n::MessageIds::SCREEN_READER_ON_HINT);
+  FX_DCHECK(tts_manager_);
+
+  // TODO(fxb/59693): Only vocalize message on reboot if user-initiated.
+  tts_manager->RegisterTTSEngineReadyCallback(
+      [this]() { SpeakMessage(fuchsia::intl::l10n::MessageIds::SCREEN_READER_ON_HINT); });
   context_->speaker()->set_epitaph(fuchsia::intl::l10n::MessageIds::SCREEN_READER_OFF_HINT);
 }
 
-ScreenReader::~ScreenReader() = default;
+ScreenReader::~ScreenReader() { tts_manager_->UnregisterTTSEngineReadyCallback(); }
 
 void ScreenReader::BindGestures(a11y::GestureHandler* gesture_handler) {
   // Add gestures with higher priority earlier than gestures with lower priority.
