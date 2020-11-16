@@ -107,6 +107,9 @@ declare_args() {
   # Whether to compress the blobfs image.
   compress_blobs = true
 
+  # The format blobfs should store blobs in.
+  blob_layout_format = "padded"
+
   # Build boot images that prefer Zedboot over local boot (only for EFI).
   always_zedboot = false
 

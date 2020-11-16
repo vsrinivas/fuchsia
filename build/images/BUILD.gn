@@ -359,6 +359,8 @@ compiled_action("blob.blk") {
     "create",
     "--manifest",
     rebase_path(blob_manifest, root_build_dir),
+    "--blob_layout_format",
+    blob_layout_format,
   ]
 
   metadata = {

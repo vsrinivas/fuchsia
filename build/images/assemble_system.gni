@@ -63,6 +63,10 @@ import("//src/sys/pkg/bin/pm/pm.gni")
 #   compress_blobs (default: true)
 #     [boolean] Whether the blobs added to the blobfs image should be compressed.
 #
+#   blob_layout_format (default: "padded")
+#     [string] The format blobfs should store blobs in. The valid values are "padded" and
+#     "compact".
+#
 #   output_dir (optional; default: target_out_dir)
 #     [string] The output directory into which the final system ZBI is written.
 #
@@ -104,6 +108,11 @@ template("assemble_system") {
   compress_blobs = true
   if (defined(invoker.compress_blobs)) {
     compress_blobs = invoker.compress_blobs
+  }
+
+  blob_layout_format = "padded"
+  if (defined(invoker.blob_layout_format)) {
+    blob_layout_format = invoker.blob_layout_format
   }
 
   devmgr_config = []
@@ -250,6 +259,8 @@ template("assemble_system") {
       "create",
       "--manifest",
       rebase_path(blob_manifest, root_build_dir),
+      "--blob_layout_format",
+      blob_layout_format,
     ]
   }
 
