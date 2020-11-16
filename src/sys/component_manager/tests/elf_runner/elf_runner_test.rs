@@ -38,4 +38,5 @@ async fn run_single_test(url: &str, expected_output: &str) {
 
     let event = echo_rx.next().await.unwrap();
     assert_eq!(expected_output, event.message);
+    event.resume();
 }
