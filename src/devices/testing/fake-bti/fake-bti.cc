@@ -17,6 +17,7 @@
 #include <fbl/mutex.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
+#include <fbl/span.h>
 #include <fbl/vector.h>
 
 #include "zircon/errors.h"
@@ -29,8 +30,9 @@ class Bti final : public fake_object::Object {
  public:
   virtual ~Bti() = default;
 
-  static zx_status_t Create(fbl::RefPtr<fake_object::Object>* out) {
-    *out = fbl::AdoptRef(new Bti());
+  static zx_status_t Create(fbl::Span<const zx_paddr_t> paddrs,
+                            fbl::RefPtr<fake_object::Object>* out) {
+    *out = fbl::AdoptRef(new Bti(paddrs));
     return ZX_OK;
   }
 
@@ -41,9 +43,26 @@ class Bti final : public fake_object::Object {
 
   uint64_t& pmo_count() { return pmo_count_; }
 
+  bool PopulatePaddrs(zx_paddr_t* paddrs, size_t paddrs_count) {
+    for (size_t i = 0; i < paddrs_count; i++) {
+      if (paddrs_.empty()) {
+        paddrs[i] = FAKE_BTI_PHYS_ADDR;
+      } else {
+        if (paddrs_index_ >= paddrs_.size()) {
+          return false;
+        }
+        paddrs[i] = paddrs_[paddrs_index_++];
+      }
+    }
+    return true;
+  }
+
  private:
   Bti() = default;
+  explicit Bti(fbl::Span<const zx_paddr_t> paddrs) : paddrs_(paddrs) {}
 
+  fbl::Span<const zx_paddr_t> paddrs_ = {};
+  size_t paddrs_index_ = 0;
   uint64_t pmo_count_ = 0;
 };
 
@@ -120,8 +139,14 @@ zx_status_t Bti::get_info(zx_handle_t handle, uint32_t topic, void* buffer, size
 
 __EXPORT
 zx_status_t fake_bti_create(zx_handle_t* out) {
+  return fake_bti_create_with_paddrs(nullptr, 0, out);
+}
+
+__EXPORT
+zx_status_t fake_bti_create_with_paddrs(const zx_paddr_t* paddrs, size_t paddr_count,
+                                        zx_handle_t* out) {
   fbl::RefPtr<fake_object::Object> new_bti;
-  zx_status_t status = Bti::Create(&new_bti);
+  zx_status_t status = Bti::Create(fbl::Span(paddrs, paddr_count), &new_bti);
   if (status != ZX_OK) {
     return status;
   }
@@ -215,8 +240,8 @@ zx_status_t zx_bti_pin(zx_handle_t bti_handle, uint32_t options, zx_handle_t vmo
     }
   }
   // Fill |addrs| with the fake physical address.
-  for (size_t i = 0; i != addrs_count; ++i) {
-    addrs[i] = FAKE_BTI_PHYS_ADDR;
+  if (!bti_obj->PopulatePaddrs(addrs, addrs_count)) {
+    return ZX_ERR_OUT_OF_RANGE;
   }
 
   fbl::RefPtr<fake_object::Object> new_pmt;

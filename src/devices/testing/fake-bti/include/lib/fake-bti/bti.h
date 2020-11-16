@@ -18,6 +18,13 @@ __BEGIN_CDECLS
 
 zx_status_t fake_bti_create(zx_handle_t* out);
 
+// Like fake_bti_create, except zx_bti_pin will return the fake physical addresses in |paddrs|, or
+// ZX_ERR_OUT_OF_RANGE if not enough address were specified. If |paddrs| is NULL or paddr_count is
+// zero, each address is set to FAKE_BTI_PHYS_ADDR, and no range check is performed. |paddrs| must
+// remain valid until the last call to zx_bti_pin is made.
+zx_status_t fake_bti_create_with_paddrs(const zx_paddr_t* paddrs, size_t paddr_count,
+                                        zx_handle_t* out);
+
 __END_CDECLS
 
 #endif  // SRC_DEVICES_TESTING_FAKE_BTI_INCLUDE_LIB_FAKE_BTI_BTI_H_

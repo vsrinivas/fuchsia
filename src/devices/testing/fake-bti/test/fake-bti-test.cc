@@ -52,6 +52,38 @@ TEST(FakeBti, PinVmo) {
   ASSERT_NO_DEATH(([bti]() { zx_handle_close(bti); }));
 }
 
+TEST(FakeBti, PinVmoWithPaddrGenerator) {
+  zx_paddr_t expected_addrs[kPageCount + 1];
+  for (size_t i = 0; i < countof(expected_addrs); i++) {
+    expected_addrs[i] = FAKE_BTI_PHYS_ADDR * (i + 1);
+  }
+
+  zx_handle_t bti = ZX_HANDLE_INVALID;
+  EXPECT_OK(fake_bti_create_with_paddrs(expected_addrs, countof(expected_addrs), &bti));
+  EXPECT_NE(bti, ZX_HANDLE_INVALID);
+
+  zx_handle_t vmo_handle, pmt_handle;
+  EXPECT_OK(zx_vmo_create(kVmoTestSize, 0, &vmo_handle));
+
+  // Create an address array with one extra entry and mark it with a sentinel value.
+  zx_paddr_t addrs[kPageCount + 1];
+  addrs[kPageCount] = 42;
+
+  // Now actually pin the region
+  EXPECT_OK(zx_bti_pin(bti, 0, vmo_handle, 0, kVmoTestSize, addrs, kPageCount, &pmt_handle));
+  EXPECT_NE(pmt_handle, ZX_HANDLE_INVALID);
+
+  // Check that the addresses returned are correct, including that the sentinel value wasn't
+  // touched.
+  for (size_t i = 0; i != kPageCount; ++i) {
+    EXPECT_EQ(addrs[i], FAKE_BTI_PHYS_ADDR * (i + 1));
+  }
+  EXPECT_EQ(addrs[kPageCount], 42);
+
+  ASSERT_NO_DEATH(([pmt_handle]() { EXPECT_OK(zx_pmt_unpin(pmt_handle)); }));
+  ASSERT_NO_DEATH(([bti]() { zx_handle_close(bti); }));
+}
+
 TEST(FakeBti, CreateContiguousVmo) {
   zx_handle_t bti = ZX_HANDLE_INVALID;
   EXPECT_OK(fake_bti_create(&bti));
