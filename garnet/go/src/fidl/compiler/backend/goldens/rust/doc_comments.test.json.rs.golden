@@ -203,7 +203,7 @@ fidl_struct_copy! {
 /// table comment #1
 ///
 /// table comment #3
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Table {
     /// table field comment #1
     ///

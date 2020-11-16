@@ -5,9 +5,7 @@
 use {
     crate::battery_manager::BatterySimulationStateObserver,
     anyhow::{format_err, Error},
-    fidl_fuchsia_power as fpower,
-    fidl_fuchsia_power_ext::CloneExt,
-    fidl_fuchsia_power_test as spower,
+    fidl_fuchsia_power as fpower, fidl_fuchsia_power_test as spower,
     futures::lock::Mutex,
     std::sync::{Arc, Weak},
 };

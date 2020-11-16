@@ -13,7 +13,6 @@ use {
         RunListenerRequest::{OnFinished, OnTestCaseStarted},
         SuiteProxy,
     },
-    fidl_fuchsia_test_ext::CloneExt as _,
     fidl_fuchsia_test_manager::{HarnessProxy, LaunchOptions, SuiteControllerProxy},
     fuchsia_zircon_status as zx_status,
     futures::{

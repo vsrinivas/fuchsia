@@ -11,7 +11,6 @@
 
 use {
     fidl_fuchsia_test::Invocation,
-    fidl_fuchsia_test_ext::CloneExt as _,
     fidl_fuchsia_test_manager::HarnessProxy,
     fuchsia_async as fasync,
     futures::{channel::mpsc, prelude::*},

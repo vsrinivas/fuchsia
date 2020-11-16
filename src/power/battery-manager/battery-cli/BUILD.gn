@@ -12,7 +12,6 @@ rustc_binary("battery_cli_bin") {
   with_unit_tests = true
   edition = "2018"
   deps = [
-    "//garnet/lib/rust/fidl_fuchsia_power_ext",
     "//sdk/fidl/fuchsia.power:fuchsia.power-rustc",
     "//sdk/fidl/fuchsia.power:fuchsia.power.test-rustc",
     "//src/lib/fuchsia-async",

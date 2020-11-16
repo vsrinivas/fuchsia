@@ -134,7 +134,7 @@ type PaddingMarker struct {
 }
 
 type Table struct {
-	types.Attributes
+	types.Table
 	Derives derives
 	ECI     EncodedCompoundIdentifier
 	Name    string
@@ -1202,10 +1202,10 @@ func (c *compiler) compileTable(table types.Table) Table {
 		})
 	}
 	return Table{
-		Attributes: table.Attributes,
-		ECI:        table.Name,
-		Name:       c.compileCamelCompoundIdentifier(table.Name),
-		Members:    members,
+		Table:   table,
+		ECI:     table.Name,
+		Name:    c.compileCamelCompoundIdentifier(table.Name),
+		Members: members,
 	}
 }
 
@@ -1225,6 +1225,7 @@ const (
 	derivesAll derives = (1 << iota) - 1
 
 	derivesMinimal            derives = derivesDebug | derivesPartialEq
+	derivesHashMap            derives = derivesDebug | derivesClone | derivesEq | derivesPartialEq
 	derivesMinimalNonResource derives = derivesMinimal | derivesClone
 	derivesAllButZerocopy     derives = derivesAll & ^derivesAsBytes & ^derivesFromBytes
 )
@@ -1405,7 +1406,12 @@ typeSwitch:
 		for _, member := range table.Members {
 			derivesOut = derivesOut.and(dc.fillDerivesForType(member.OGType))
 		}
-		derivesOut = derivesOut.andUnknown()
+		if table.IsResourceType() {
+			derivesOut = derivesOut.andUnknown()
+		} else {
+			derivesOut = derivesOut.andUnknownNonResource()
+		}
+		derivesOut = derivesOut.and(derivesHashMap)
 		table.Derives = derivesOut
 	case types.UnionDeclType:
 		union := dc.root.findUnion(eci)

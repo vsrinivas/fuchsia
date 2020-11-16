@@ -125,7 +125,7 @@ pub(crate) async fn run_socket_link(
                         Some(fidl_fuchsia_overnet_protocol::LinkConfig::Socket(
                             fidl_fuchsia_overnet_protocol::SocketLinkOptions {
                                 connection_label: options.connection_label.clone(),
-                                ..options
+                                ..options.clone()
                             },
                         ))
                     }),

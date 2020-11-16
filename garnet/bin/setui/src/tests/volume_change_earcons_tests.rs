@@ -4,7 +4,6 @@
 
 use {
     crate::audio::default_audio_info,
-    crate::fidl_clone::FIDLClone,
     crate::handler::device_storage::testing::{InMemoryStorageFactory, StorageAccessContext},
     crate::handler::device_storage::DeviceStorage,
     crate::input::common::MediaButtonsEventBuilder,

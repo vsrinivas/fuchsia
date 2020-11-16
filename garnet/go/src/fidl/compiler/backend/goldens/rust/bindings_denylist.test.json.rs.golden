@@ -27,7 +27,7 @@ use {
 
 pub const ALL_BINDINGS: u32 = 0;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct OnlyRust {
     #[deprecated = "Use `..OnlyRust::empty()` to construct and `..` to match."]
     #[doc(hidden)]

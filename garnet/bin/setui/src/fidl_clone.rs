@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {fidl_fuchsia_settings::*, fidl_fuchsia_ui_input::MediaButtonsEvent};
+use fidl_fuchsia_settings::*;
 
-/// A placeholder for real cloning support in FIDL generated Rust code.
-/// TODO(fxbug.dev/37456): Remove
+// TODO(fxbug.dev/61760): Clone isn't derived for these types
+// because they have transitive dependencies in an external library
 pub trait FIDLClone {
     fn clone(&self) -> Self;
 }
@@ -53,24 +53,6 @@ impl FIDLClone for AudioStreamSettings {
     }
 }
 
-impl FIDLClone for InputDeviceSettings {
-    fn clone(&self) -> Self {
-        InputDeviceSettings {
-            microphone: Some(Microphone {
-                muted: self.microphone.as_ref().unwrap().muted,
-                ..Microphone::empty()
-            }),
-            ..InputDeviceSettings::empty()
-        }
-    }
-}
-
-impl FIDLClone for Microphone {
-    fn clone(&self) -> Self {
-        Microphone { muted: self.muted, ..Microphone::empty() }
-    }
-}
-
 impl FIDLClone for AccessibilitySettings {
     fn clone(&self) -> Self {
         let mut settings = AccessibilitySettings::empty();
@@ -113,9 +95,9 @@ impl FIDLClone for CaptionFontStyle {
     }
 }
 
-impl FIDLClone for fidl_fuchsia_settings::IntlSettings {
+impl FIDLClone for IntlSettings {
     fn clone(&self) -> Self {
-        let mut settings = fidl_fuchsia_settings::IntlSettings::empty();
+        let mut settings = IntlSettings::empty();
         settings.locales = match &self.locales {
             Some(locales) => Some(locales.clone()),
             None => None,
@@ -157,18 +139,6 @@ impl FIDLClone for LightValue {
             LightValue::On(value) => LightValue::On(value.clone()),
             LightValue::Brightness(value) => LightValue::Brightness(value.clone()),
             LightValue::Color(value) => LightValue::Color(value.clone()),
-        }
-    }
-}
-
-impl FIDLClone for MediaButtonsEvent {
-    fn clone(&self) -> Self {
-        MediaButtonsEvent {
-            volume: self.volume,
-            mic_mute: self.mic_mute,
-            pause: self.pause,
-            camera_disable: self.camera_disable,
-            ..MediaButtonsEvent::empty()
         }
     }
 }

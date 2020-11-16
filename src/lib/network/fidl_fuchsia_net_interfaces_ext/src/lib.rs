@@ -14,14 +14,14 @@ use fidl_fuchsia_net_interfaces as fidl_interfaces;
 
 type Result<T = ()> = std::result::Result<T, anyhow::Error>;
 
+// TODO(fxbug.dev/61760): Clone isn't derived for these types
+// because they have transitive dependencies in an external library
 /// Manual implementation of `Clone`.
 pub trait CloneExt {
     /// Returns a copy of the value.
     fn clone(&self) -> Self;
 }
 
-// This will no longer be necessary when Clone can be derived for FIDL unions
-// that don't store handles.
 impl CloneExt for fidl_interfaces::Event {
     fn clone(&self) -> Self {
         match self {
@@ -34,8 +34,6 @@ impl CloneExt for fidl_interfaces::Event {
     }
 }
 
-// This will no longer be necessary when Clone can be derived for FIDL tables
-// that don't store handles.
 impl CloneExt for fidl_interfaces::Properties {
     fn clone(&self) -> Self {
         fidl_interfaces::Properties {
@@ -50,16 +48,12 @@ impl CloneExt for fidl_interfaces::Properties {
     }
 }
 
-// This will no longer be necessary when Clone can be derived for FIDL tables
-// that don't store handles.
 impl CloneExt for fidl_interfaces::Address {
     fn clone(&self) -> Self {
         fidl_interfaces::Address { ..*self }
     }
 }
 
-// This will no longer be necessary when Clone can be derived for FIDL unions
-// that don't store handles.
 impl CloneExt for fidl_interfaces::DeviceClass {
     fn clone(&self) -> Self {
         match self {

@@ -25,7 +25,7 @@ use {
     futures::future::{self, MaybeDone, TryFutureExt},
 };
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct EmptyTable {
     #[deprecated = "Use `..EmptyTable::empty()` to construct and `..` to match."]
     #[doc(hidden)]
@@ -38,7 +38,7 @@ fidl_table! {
   ],
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct SimpleTable {
     pub x: Option<i64>,
     pub y: Option<i64>,
@@ -61,7 +61,7 @@ fidl_table! {
   ],
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct OlderSimpleTable {
     pub x: Option<i64>,
     #[deprecated = "Use `..OlderSimpleTable::empty()` to construct and `..` to match."]
@@ -79,7 +79,7 @@ fidl_table! {
   ],
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct NewerSimpleTable {
     pub x: Option<i64>,
     pub y: Option<i64>,
@@ -107,7 +107,7 @@ fidl_table! {
   ],
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct ReverseOrdinalTable {
     pub z: Option<i64>,
     pub y: Option<i64>,

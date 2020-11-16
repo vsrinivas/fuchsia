@@ -55,56 +55,12 @@ impl FromExt<fname::Dhcpv6DnsServerSource> for fname::DnsServerSource {
     }
 }
 
+// TODO(fxbug.dev/61760): Clone isn't derived for these types
+// because they have transitive dependencies in an external library
 /// Extension trait that provides a manual implementation of `Clone`.
 pub trait CloneExt {
     /// Returns a copy of the value.
     fn clone(&self) -> Self;
-}
-
-impl CloneExt for fname::StaticDnsServerSource {
-    fn clone(&self) -> fname::StaticDnsServerSource {
-        fname::StaticDnsServerSource::empty()
-    }
-}
-
-impl CloneExt for fname::DhcpDnsServerSource {
-    fn clone(&self) -> fname::DhcpDnsServerSource {
-        fname::DhcpDnsServerSource {
-            source_interface: self.source_interface,
-            ..fname::DhcpDnsServerSource::empty()
-        }
-    }
-}
-
-impl CloneExt for fname::NdpDnsServerSource {
-    fn clone(&self) -> fname::NdpDnsServerSource {
-        fname::NdpDnsServerSource {
-            source_interface: self.source_interface,
-            ..fname::NdpDnsServerSource::empty()
-        }
-    }
-}
-
-impl CloneExt for fname::Dhcpv6DnsServerSource {
-    fn clone(&self) -> fname::Dhcpv6DnsServerSource {
-        fname::Dhcpv6DnsServerSource {
-            source_interface: self.source_interface,
-            ..fname::Dhcpv6DnsServerSource::empty()
-        }
-    }
-}
-
-impl CloneExt for fname::DnsServerSource {
-    fn clone(&self) -> fname::DnsServerSource {
-        match self {
-            fname::DnsServerSource::StaticSource(s) => {
-                fname::DnsServerSource::StaticSource(s.clone())
-            }
-            fname::DnsServerSource::Dhcp(s) => fname::DnsServerSource::Dhcp(s.clone()),
-            fname::DnsServerSource::Ndp(s) => fname::DnsServerSource::Ndp(s.clone()),
-            fname::DnsServerSource::Dhcpv6(s) => fname::DnsServerSource::Dhcpv6(s.clone()),
-        }
-    }
 }
 
 impl CloneExt for fname::DnsServer_ {
@@ -155,33 +111,6 @@ mod tests {
 
     #[test]
     fn test_clone() {
-        let a = fname::StaticDnsServerSource::empty();
-        assert_eq!(a.clone(), a);
-
-        let a = fname::DhcpDnsServerSource {
-            source_interface: Some(1),
-            ..fname::DhcpDnsServerSource::empty()
-        };
-        assert_eq!(a.clone(), a);
-
-        let a = fname::NdpDnsServerSource {
-            source_interface: Some(1),
-            ..fname::NdpDnsServerSource::empty()
-        };
-        assert_eq!(a.clone(), a);
-
-        let a = fname::Dhcpv6DnsServerSource {
-            source_interface: Some(1),
-            ..fname::Dhcpv6DnsServerSource::empty()
-        };
-        assert_eq!(a.clone(), a);
-
-        let a = fname::DnsServerSource::Dhcp(fname::DhcpDnsServerSource {
-            source_interface: Some(1),
-            ..fname::DhcpDnsServerSource::empty()
-        });
-        assert_eq!(a.clone(), a);
-
         let a = fname::DnsServer_ {
             address: Some(fnet::SocketAddress::Ipv4(fnet::Ipv4SocketAddress {
                 address: fnet::Ipv4Address { addr: [8, 8, 4, 4] },

@@ -10,7 +10,6 @@ use {
         LocaleId, Profile, PropertyProviderControlHandle, PropertyProviderRequest,
         PropertyProviderRequestStream, TimeZoneId,
     },
-    fidl_fuchsia_intl_ext::CloneExt,
     fuchsia_async as fasync,
     fuchsia_component::server::{ServiceFs, ServiceObjLocal},
     fuchsia_syslog::{self, fx_log_err, fx_log_info},
@@ -100,7 +99,7 @@ impl Server {
     /// Get a clone of the current `Profile`, or `None` if the profile hasn't been initialized.
     fn get_profile(&self) -> Option<Profile> {
         let p = self.0.profile.read().unwrap();
-        p.as_ref().map(CloneExt::clone)
+        p.as_ref().map(Clone::clone)
     }
 
     /// Register a new listener for profile change events. Note that `PropertyProviderControlHandle`
@@ -306,7 +305,6 @@ mod test {
             CalendarId, LocaleId, Profile, PropertyProviderEventStream, PropertyProviderMarker,
             PropertyProviderProxy, TemperatureUnit, TimeZoneId,
         },
-        fidl_fuchsia_intl_ext::CloneExt,
         fidl_fuchsia_sys::LauncherProxy,
         fuchsia_async as fasync,
         fuchsia_component::client,
