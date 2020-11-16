@@ -81,25 +81,28 @@ async fn cobalt_metrics() -> Result<(), anyhow::Error> {
 
     matches::assert_matches!(
         events_with_id(&events_post_bind, networking_metrics::SOCKET_COUNT_MAX_METRIC_ID)
+            .collect::<Vec<_>>()
             .as_slice(),
         &[fidl_fuchsia_cobalt::CountEvent { count: 1, period_duration_micros: _ }]
     );
 
     matches::assert_matches!(
-        events_with_id(&events_post_bind, networking_metrics::SOCKETS_CREATED_METRIC_ID).as_slice(),
+        events_with_id(&events_post_bind, networking_metrics::SOCKETS_CREATED_METRIC_ID)
+            .collect::<Vec<_>>()
+            .as_slice(),
         &[fidl_fuchsia_cobalt::CountEvent { count: 1, period_duration_micros: _ }]
     );
 
     matches::assert_matches!(
         events_with_id(&events_post_bind, networking_metrics::SOCKETS_DESTROYED_METRIC_ID)
+            .collect::<Vec<_>>()
             .as_slice(),
         &[fidl_fuchsia_cobalt::CountEvent { count: 0, period_duration_micros: _ }]
     );
 
     assert_eq!(
         events_with_id(&events_post_accept, networking_metrics::SOCKET_COUNT_MAX_METRIC_ID)
-            .iter()
-            .map(|ev| ev.count)
+            .map(|fidl_fuchsia_cobalt::CountEvent { period_duration_micros: _, count }| *count)
             .max(),
         Some(3),
         "events: {:?}",
@@ -113,6 +116,7 @@ async fn cobalt_metrics() -> Result<(), anyhow::Error> {
             &events_post_accept,
             networking_metrics::TCP_CONNECTIONS_ESTABLISHED_TOTAL_METRIC_ID,
         )
+        .collect::<Vec<_>>()
         .as_slice(),
         &[fidl_fuchsia_cobalt::CountEvent { count: 2, period_duration_micros: _ }]
     );
@@ -124,8 +128,7 @@ async fn cobalt_metrics() -> Result<(), anyhow::Error> {
 
     assert_eq!(
         events_with_id(&events_post_first_drop, networking_metrics::PACKETS_SENT_METRIC_ID)
-            .iter()
-            .map(|ev| ev.count)
+            .map(|fidl_fuchsia_cobalt::CountEvent { period_duration_micros: _, count }| *count)
             .max(),
         Some(EXPECTED_PACKET_COUNT),
         "packets sent. events: {:?}",
@@ -133,8 +136,7 @@ async fn cobalt_metrics() -> Result<(), anyhow::Error> {
     );
     assert_eq!(
         events_with_id(&events_post_first_drop, networking_metrics::PACKETS_RECEIVED_METRIC_ID)
-            .iter()
-            .map(|ev| ev.count)
+            .map(|fidl_fuchsia_cobalt::CountEvent { period_duration_micros: _, count }| *count)
             .max(),
         Some(EXPECTED_PACKET_COUNT),
         "packets received. events: {:?}",
@@ -142,8 +144,7 @@ async fn cobalt_metrics() -> Result<(), anyhow::Error> {
     );
     assert_eq!(
         events_with_id(&events_post_first_drop, networking_metrics::BYTES_SENT_METRIC_ID)
-            .iter()
-            .map(|ev| ev.count)
+            .map(|fidl_fuchsia_cobalt::CountEvent { period_duration_micros: _, count }| *count)
             .max(),
         Some(EXPECTED_PACKET_COUNT * EXPECTED_PACKET_SIZE),
         "bytes sent. events: {:?}",
@@ -151,8 +152,7 @@ async fn cobalt_metrics() -> Result<(), anyhow::Error> {
     );
     assert_eq!(
         events_with_id(&events_post_first_drop, networking_metrics::BYTES_RECEIVED_METRIC_ID)
-            .iter()
-            .map(|ev| ev.count)
+            .map(|fidl_fuchsia_cobalt::CountEvent { period_duration_micros: _, count }| *count)
             .max(),
         Some(EXPECTED_PACKET_COUNT * EXPECTED_PACKET_SIZE),
         "bytes received. events: {:?}",
@@ -163,8 +163,7 @@ async fn cobalt_metrics() -> Result<(), anyhow::Error> {
     // TIME_WAIT, after receiving FIN from the peer.
     assert_eq!(
         events_with_id(&events_post_first_drop, networking_metrics::SOCKETS_DESTROYED_METRIC_ID)
-            .iter()
-            .map(|ev| ev.count)
+            .map(|fidl_fuchsia_cobalt::CountEvent { period_duration_micros: _, count }| *count)
             .sum::<i64>(),
         1,
         "sockets destroyed. events: {:?}",
@@ -173,8 +172,7 @@ async fn cobalt_metrics() -> Result<(), anyhow::Error> {
 
     assert_eq!(
         events_with_id(&events_post_final_drop, networking_metrics::SOCKET_COUNT_MAX_METRIC_ID)
-            .iter()
-            .map(|ev| ev.count)
+            .map(|fidl_fuchsia_cobalt::CountEvent { period_duration_micros: _, count }| *count)
             .sum::<i64>(),
         0,
         "socket count max. events: {:?}",
@@ -183,8 +181,7 @@ async fn cobalt_metrics() -> Result<(), anyhow::Error> {
 
     assert_eq!(
         events_with_id(&events_post_final_drop, networking_metrics::SOCKETS_DESTROYED_METRIC_ID)
-            .iter()
-            .map(|ev| ev.count)
+            .map(|fidl_fuchsia_cobalt::CountEvent { period_duration_micros: _, count }| *count)
             .sum::<i64>(),
         2,
         "sockets destroyed. events: {:?}",
@@ -198,6 +195,7 @@ async fn cobalt_metrics() -> Result<(), anyhow::Error> {
             &events_post_final_drop,
             networking_metrics::TCP_CONNECTIONS_ESTABLISHED_TOTAL_METRIC_ID,
         )
+        .collect::<Vec<_>>()
         .as_slice(),
         &[fidl_fuchsia_cobalt::CountEvent { count: 0, period_duration_micros: _ }]
     );
@@ -231,6 +229,7 @@ async fn cobalt_metrics() -> Result<(), anyhow::Error> {
             &events_post_final_drop,
             networking_metrics::TCP_CONNECTIONS_CLOSED_METRIC_ID,
         )
+        .collect::<Vec<_>>()
         .as_slice(),
         &[fidl_fuchsia_cobalt::CountEvent { count: 0..=2, period_duration_micros: _ }]
     );
@@ -242,6 +241,7 @@ async fn cobalt_metrics() -> Result<(), anyhow::Error> {
             &events_post_final_drop,
             networking_metrics::TCP_CONNECTIONS_RESET_METRIC_ID,
         )
+        .collect::<Vec<_>>()
         .as_slice(),
         &[fidl_fuchsia_cobalt::CountEvent { count: 0..=1, period_duration_micros: _ }]
     );
@@ -251,6 +251,7 @@ async fn cobalt_metrics() -> Result<(), anyhow::Error> {
             &events_post_final_drop,
             networking_metrics::TCP_CONNECTIONS_TIMED_OUT_METRIC_ID,
         )
+        .collect::<Vec<_>>()
         .as_slice(),
         &[fidl_fuchsia_cobalt::CountEvent { count: 0, period_duration_micros: _ }]
     );
@@ -273,13 +274,12 @@ impl<'a, T: std::fmt::Debug> std::fmt::Debug for MultilineSlice<'a, T> {
 }
 
 // Returns the internal CountEvents of `events` that have the given `id`.
-fn events_with_id<'a, I>(events: I, id: u32) -> Vec<&'a fidl_fuchsia_cobalt::CountEvent>
-where
-    I: IntoIterator<Item = &'a fidl_fuchsia_cobalt::CobaltEvent> + 'a,
-{
-    events
-        .into_iter()
-        .filter_map(move |fidl_fuchsia_cobalt::CobaltEvent { metric_id, payload, .. }| {
+fn events_with_id<'a>(
+    events: impl IntoIterator<Item = &'a fidl_fuchsia_cobalt::CobaltEvent>,
+    id: u32,
+) -> impl Iterator<Item = &'a fidl_fuchsia_cobalt::CountEvent> {
+    events.into_iter().filter_map(
+        move |fidl_fuchsia_cobalt::CobaltEvent { metric_id, payload, .. }| {
             if *metric_id == id {
                 match payload {
                     fidl_fuchsia_cobalt::EventPayload::EventCount(count_event) => Some(count_event),
@@ -288,6 +288,6 @@ where
             } else {
                 None
             }
-        })
-        .collect()
+        },
+    )
 }
