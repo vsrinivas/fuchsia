@@ -19,9 +19,7 @@ namespace Weave {
 namespace DeviceLayer {
 namespace Internal {
 
-namespace {
-constexpr char kEnvironmentStorePath[] = "/data/environment.json";
-}  // namespace
+const char WeaveConfigManager::kEnvironmentStorePath[] = "/data/environment.json";
 
 WeaveConfigManager& WeaveConfigManager::GetInstance() {
   static WeaveConfigManager manager;

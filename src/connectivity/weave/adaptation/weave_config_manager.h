@@ -58,6 +58,9 @@ class WeaveConfigWriter {
 //
 class WeaveConfigManager : public WeaveConfigReader, WeaveConfigWriter {
  public:
+  // The path that WeaveConfigManager uses by default.
+  static const char kEnvironmentStorePath[];
+
   explicit WeaveConfigManager(const std::string& path);
 
   ~WeaveConfigManager() = default;

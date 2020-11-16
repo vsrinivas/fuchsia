@@ -17,6 +17,7 @@
 #include <Weave/Core/WeaveError.h>
 #include <src/lib/fsl/tasks/fd_waiter.h>
 
+#include "fidl/bootstrap_impl.h"
 #include "fidl/stack_impl.h"
 #include "fidl/stack_provider_impl.h"
 
@@ -60,6 +61,7 @@ class App {
   async::Loop loop_{&kAsyncLoopConfigAttachToCurrentThread};
   bool initialized_ = false;
   std::unique_ptr<async::TaskClosure> sleep_task_;
+  std::unique_ptr<BootstrapImpl> bootstrap_impl_;
   std::unique_ptr<StackImpl> stack_impl_;
   std::unique_ptr<StackProviderImpl> stack_provider_impl_;
 };

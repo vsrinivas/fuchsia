@@ -10,6 +10,7 @@
 #include <zircon/types.h>
 
 #include <Weave/DeviceLayer/PlatformManager.h>
+
 namespace weavestack {
 namespace {
 using nl::Weave::DeviceLayer::PlatformMgr;
@@ -70,6 +71,7 @@ void App::DoClose(int fd) {
 }
 
 zx_status_t App::Init() {
+  zx_status_t status;
   syslog::SetTags({"weavestack"});
 
   if (initialized_) {
@@ -89,11 +91,19 @@ zx_status_t App::Init() {
 
   sleep_task_ = std::make_unique<async::TaskClosure>([this] { FdHandler(ZX_OK, 0); });
 
+  bootstrap_impl_ =
+      std::make_unique<BootstrapImpl>(PlatformMgrImpl().GetComponentContextForProcess());
+  status = bootstrap_impl_->Init();
+  if (status != ZX_OK) {
+    FX_LOGS(ERROR) << "BootstrapImpl Init() failed with status = " << zx_status_get_string(status);
+    return status;
+  }
+
   // The stack implementation should remain the last member to be fully
   // initialized, as it will begin accepting FIDL requests after initialization
   // is complete, potentially interacting with the rest of WeaveStack.
   stack_impl_ = std::make_unique<StackImpl>(PlatformMgrImpl().GetComponentContextForProcess());
-  zx_status_t status = stack_impl_->Init();
+  status = stack_impl_->Init();
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "StackImpl Init() failed with status = " << zx_status_get_string(status);
     return status;
