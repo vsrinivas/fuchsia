@@ -85,15 +85,26 @@ if (host_toolchain == current_toolchain) {
     outputs = [ "$root_out_dir/test_data/fidldoc/{{source_name_part}}.golden" ]
   }
 
+  action("check_markdown_goldens") {
+    script = "markdown_goldens.py"
+    inputs = [ "//zircon/tools/fidl/goldens/jsonir_goldens.txt" ]
+    outputs = [ "${target_gen_dir}/${target_name}.stamp" ]
+    depfile = "${target_gen_dir}/${target_name}.d"
+    args = [
+      "--input",
+      rebase_path(inputs[0], root_build_dir),
+      "--goldens",
+      rebase_path("src/templates/markdown/testdata/", root_build_dir),
+      "--stamp",
+      rebase_path(outputs[0], root_build_dir),
+      "--depfile",
+      rebase_path(depfile, root_build_dir),
+    ]
+  }
+
   # Markdown goldens have the same filename as JSON IR goldens with a ".md" extension
   host_test_data("copy_markdown_goldens") {
-    exec_script("markdown_goldens.py",
-                [
-                  "--input",
-                  rebase_path("//zircon/tools/fidl/goldens/jsonir_goldens.txt"),
-                  "--goldens",
-                  rebase_path("src/templates/markdown/testdata/"),
-                ])
+    deps = [ ":check_markdown_goldens" ]
     sources = []
     foreach(jsonir,
             read_file("//zircon/tools/fidl/goldens/jsonir_goldens.txt",

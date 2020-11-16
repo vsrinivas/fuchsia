@@ -48,7 +48,6 @@ exec_script_whitelist = [
   "//build/toolchain/zircon/zircon_toolchain.gni",
   "//build/unification/lib/zircon_runtime_library.gni",
   "//src/graphics/lib/compute/spinel-rs-sys/BUILD.gn",
-  "//tools/fidl/fidldoc/BUILD.gn",
   "//topaz/runtime/sky_engine/BUILD.gn",
   "//topaz/tools/protobuf/protobuf_dart.gni",
 ]
