@@ -70,7 +70,9 @@ func (e *Endpoint) DeliverNetworkPacket(dstLinkAddr, srcLinkAddr tcpip.LinkAddre
 	// TODO(fxbug.dev/50424): Support using a buffer.VectorisedView when parsing packets
 	// so we don't need to create a single view here.
 	if len(pkt.Data.Views()) == 0 {
-		panic("expected to receive a packet buffer with at least 1 remaining view in Data")
+		// Expected to receive a packet buffer with at least 1 remaining view in
+		// Data.
+		return
 	}
 
 	if len(pkt.Data.Views()) != 1 {
