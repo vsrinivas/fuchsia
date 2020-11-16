@@ -6,6 +6,7 @@ group("testing") {
   testonly = true
 
   deps = [
+    "fuchsia-hyper-test-support",
     "loop_fixture",
     "predicates",
   ]
@@ -15,6 +16,7 @@ group("tests") {
   testonly = true
 
   deps = [
+    "fuchsia-hyper-test-support:tests",
     "loop_fixture:tests",
     "predicates:tests",
   ]
