@@ -33,7 +33,7 @@ class GestureContender {
  public:
   // Called whenever there's a new event for a stream.
   virtual void UpdateStream(StreamId stream_id, const InternalPointerEvent& event,
-                            bool end_of_stream) = 0;
+                            bool is_end_of_stream) = 0;
   // Called at the end of a contest. If |awarded_win| is false the GestureContender will
   // receive no further events for stream |stream_id|.
   virtual void EndContest(StreamId stream_id, bool awarded_win) = 0;

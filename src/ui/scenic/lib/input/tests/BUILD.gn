@@ -14,6 +14,7 @@ executable("unittests") {
   testonly = true
   output_name = "input_unittests"
   sources = [
+    "a11y_legacy_contender_test.cc",
     "accessibility_pointer_events_test.cc",
     "coordinate_transform_test.cc",
     "coordinate_transform_test2.cc",

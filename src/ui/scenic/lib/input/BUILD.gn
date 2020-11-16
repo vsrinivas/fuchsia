@@ -4,6 +4,8 @@
 
 source_set("input") {
   sources = [
+    "a11y_legacy_contender.cc",
+    "a11y_legacy_contender.h",
     "gesture_arena.cc",
     "gesture_arena.h",
     "gesture_contender.h",

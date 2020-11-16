@@ -28,11 +28,11 @@ TEST(GfxLegacyContenderTest, ShouldGetYESResponseForEachMessage) {
       /*self_destruct*/ [] {});
 
   EXPECT_EQ(num_responses, 0u);
-  contender.UpdateStream(kStreamId, /*event*/ {}, /*end_of_stream*/ false);
+  contender.UpdateStream(kStreamId, /*event*/ {}, /*is_end_of_stream*/ false);
   EXPECT_EQ(num_responses, 1u);
-  contender.UpdateStream(kStreamId, /*event*/ {}, /*end_of_stream*/ false);
+  contender.UpdateStream(kStreamId, /*event*/ {}, /*is_end_of_stream*/ false);
   EXPECT_EQ(num_responses, 2u);
-  contender.UpdateStream(kStreamId, /*event*/ {}, /*end_of_stream*/ true);
+  contender.UpdateStream(kStreamId, /*event*/ {}, /*is_end_of_stream*/ true);
   EXPECT_EQ(num_responses, 3u);
 }
 
@@ -47,9 +47,9 @@ TEST(GfxLegacyContenderTest, ShouldGetAllEventsOnWin) {
       /*self_destruct*/ [] {});
 
   // No events delivered before being awarded a win.
-  contender.UpdateStream(kStreamId, /*event*/ {.timestamp = 0}, /*end_of_stream*/ false);
+  contender.UpdateStream(kStreamId, /*event*/ {.timestamp = 0}, /*is_end_of_stream*/ false);
   EXPECT_TRUE(last_delivered_events.empty());
-  contender.UpdateStream(kStreamId, /*event*/ {.timestamp = 1}, /*end_of_stream*/ false);
+  contender.UpdateStream(kStreamId, /*event*/ {.timestamp = 1}, /*is_end_of_stream*/ false);
   EXPECT_TRUE(last_delivered_events.empty());
 
   // All previous events should be delivered on win.
@@ -59,7 +59,7 @@ TEST(GfxLegacyContenderTest, ShouldGetAllEventsOnWin) {
   EXPECT_EQ(last_delivered_events[1].timestamp, 1);
 
   // Subsequent events are delivered immediately.
-  contender.UpdateStream(kStreamId, /*event*/ {.timestamp = 2}, /*end_of_stream*/ false);
+  contender.UpdateStream(kStreamId, /*event*/ {.timestamp = 2}, /*is_end_of_stream*/ false);
   ASSERT_EQ(last_delivered_events.size(), 1u);
   EXPECT_EQ(last_delivered_events[0].timestamp, 2);
 }
@@ -72,7 +72,7 @@ TEST(GfxLegacyContenderTest, ShouldSelfDestructOnLoss) {
       /*deliver_events_to_client*/ [&deliver_called](auto) { deliver_called = true; },
       /*self_destruct*/ [&self_destruct_called] { self_destruct_called = true; });
 
-  contender.UpdateStream(kStreamId, /*event*/ {.timestamp = 0}, /*end_of_stream*/ false);
+  contender.UpdateStream(kStreamId, /*event*/ {.timestamp = 0}, /*is_end_of_stream*/ false);
   EXPECT_FALSE(deliver_called);
   EXPECT_FALSE(self_destruct_called);
 
@@ -92,7 +92,7 @@ TEST(GfxLegacyContenderTest, ShouldSelfDescructOnStreamEndAfterWin) {
       [&num_delivered_events](auto events) { num_delivered_events += events.size(); },
       /*self_destruct*/ [&self_destruct_called] { self_destruct_called = true; });
 
-  contender.UpdateStream(kStreamId, /*event*/ {.timestamp = 0}, /*end_of_stream*/ false);
+  contender.UpdateStream(kStreamId, /*event*/ {.timestamp = 0}, /*is_end_of_stream*/ false);
   EXPECT_EQ(num_delivered_events, 0u);
   EXPECT_FALSE(self_destruct_called);
 
@@ -102,12 +102,12 @@ TEST(GfxLegacyContenderTest, ShouldSelfDescructOnStreamEndAfterWin) {
   EXPECT_FALSE(self_destruct_called);
 
   // No destruction while stream is ongoing.
-  contender.UpdateStream(kStreamId, /*event*/ {.timestamp = 0}, /*end_of_stream*/ false);
+  contender.UpdateStream(kStreamId, /*event*/ {.timestamp = 0}, /*is_end_of_stream*/ false);
   EXPECT_EQ(num_delivered_events, 2u);
   EXPECT_FALSE(self_destruct_called);
 
   // Deliver the last event and then self destruct on stream end.
-  contender.UpdateStream(kStreamId, /*event*/ {.timestamp = 0}, /*end_of_stream*/ true);
+  contender.UpdateStream(kStreamId, /*event*/ {.timestamp = 0}, /*is_end_of_stream*/ true);
   EXPECT_EQ(num_delivered_events, 3u);
   EXPECT_TRUE(self_destruct_called);
 }
@@ -122,7 +122,7 @@ TEST(GfxLegacyContenderTest, ShouldSelfDescructOnWinAfterStreamEnd) {
       [&num_delivered_events](auto events) { num_delivered_events += events.size(); },
       /*self_destruct*/ [&self_destruct_called] { self_destruct_called = true; });
 
-  contender.UpdateStream(kStreamId, /*event*/ {.timestamp = 0}, /*end_of_stream*/ true);
+  contender.UpdateStream(kStreamId, /*event*/ {.timestamp = 0}, /*is_end_of_stream*/ true);
   EXPECT_EQ(num_delivered_events, 0u);
   EXPECT_FALSE(self_destruct_called);
 

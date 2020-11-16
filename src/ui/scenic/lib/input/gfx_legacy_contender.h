@@ -25,13 +25,13 @@ class GfxLegacyContender : public GestureContender {
   ~GfxLegacyContender() = default;
 
   void UpdateStream(StreamId stream_id, const InternalPointerEvent& event,
-                    bool end_of_stream) override;
+                    bool is_end_of_stream) override;
 
   void EndContest(StreamId stream_id, bool awarded_win) override;
 
  private:
   bool awarded_win_ = false;
-  bool end_of_stream_ = false;
+  bool is_end_of_stream_ = false;
   std::vector<InternalPointerEvent> undelivered_events_;
 
   const fit::function<void(GestureResponse)> respond_;

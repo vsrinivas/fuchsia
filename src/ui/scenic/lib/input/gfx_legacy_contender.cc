@@ -19,12 +19,12 @@ GfxLegacyContender::GfxLegacyContender(
       self_destruct_(std::move(self_destruct)) {}
 
 void GfxLegacyContender::UpdateStream(StreamId stream_id, const InternalPointerEvent& event,
-                                      bool end_of_stream) {
-  end_of_stream_ = end_of_stream;
+                                      bool is_end_of_stream) {
+  is_end_of_stream_ = is_end_of_stream;
   if (awarded_win_) {
     FX_DCHECK(undelivered_events_.empty());
     deliver_events_to_client_({event});
-    if (end_of_stream_) {
+    if (is_end_of_stream_) {
       self_destruct_();
       return;
     }
@@ -42,7 +42,7 @@ void GfxLegacyContender::EndContest(StreamId stream_id, bool awarded_win) {
     undelivered_events_.clear();
   }
 
-  if (!awarded_win_ || end_of_stream_) {
+  if (!awarded_win_ || is_end_of_stream_) {
     self_destruct_();
     return;
   }
