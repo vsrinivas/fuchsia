@@ -403,16 +403,7 @@ const LogState& LogState::Get() {
   return *state;
 }
 
-void LogState::Set(const syslog::LogSettings& settings) {
-  char process_name[ZX_MAX_NAME_LEN] = "";
-
-  zx_status_t status =
-      zx::process::self()->get_property(ZX_PROP_NAME, process_name, sizeof(process_name));
-  if (status != ZX_OK)
-    process_name[0] = '\0';
-
-  Set(settings, {process_name});
-}
+void LogState::Set(const syslog::LogSettings& settings) { Set(settings, {}); }
 
 void LogState::Set(const syslog::LogSettings& settings,
                    const std::initializer_list<std::string>& tags) {

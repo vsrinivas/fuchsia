@@ -36,7 +36,6 @@ async fn main() -> Result<(), Error> {
 }
 
 struct Puppet {
-    url: String,
     start_time: zx::Time,
     socket: Socket,
     info: PuppetInfo,
@@ -87,7 +86,6 @@ impl Puppet {
 
             Ok(Self {
                 socket: Socket::from_socket(socket)?,
-                url: puppet_url.to_string(),
                 proxy,
                 info,
                 start_time,
@@ -105,10 +103,6 @@ impl Puppet {
         TestRecord::parse(&buf[0..bytes_read])
     }
 
-    fn moniker(&self) -> &str {
-        self.url.rsplit('/').next().unwrap()
-    }
-
     async fn test(&self) -> Result<(), Error> {
         info!("Ensuring we received the init message.");
 
@@ -119,7 +113,6 @@ impl Puppet {
                 self.start_time..zx::Time::get_monotonic(),
                 Severity::Info
             )
-            .add_tag(self.moniker())
             .add_string("message", "Puppet started.")
             .build()
         );
@@ -133,7 +126,6 @@ impl Puppet {
         assert_eq!(
             self.read_record().await?,
             RecordAssertion::new(&self.info, before..after, Severity::Warn)
-                .add_tag(self.moniker())
                 .add_tag("test_log")
                 .add_string("foo", "bar")
                 .build()
