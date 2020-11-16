@@ -9,9 +9,9 @@ use {argh::FromArgs, ffx_core::ffx_command};
 #[argh(
     subcommand,
     name = "select",
-    description = "lists components matching a selector. 
-Selector format: <component moniker>:(in|out|exposed)[:<service name>]. Wildcards may be used anywhere in the selector.
-Example: 'remote-control:out:*' would return all services in 'out' for the component remote-control."
+    description = "Lists components matching a selector",
+    note = "Selector format: <component moniker>:(in|out|exposed)[:<service name>]. Wildcards may be used anywhere in the selector.
+Example: 'remote-control:expose:*' would return all services exposed by the component remote-control."
 )]
 pub struct SelectCommand {
     #[argh(positional)]

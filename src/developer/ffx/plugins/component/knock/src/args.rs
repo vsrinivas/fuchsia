@@ -9,11 +9,11 @@ use {argh::FromArgs, ffx_core::ffx_command};
 #[argh(
     subcommand,
     name = "knock",
-    description = "attempts to connect to a service on the target.
-Useful for starting a service or verifying that a service exists.
+    description = "Attempts to connect to a service on the target.",
+    note = "Useful for starting a service or verifying that a service exists.
 
 Selector format: <component moniker>:(in|out|exposed)[:<service name>]. Wildcards may be used anywhere in the selector.
-Example: 'remote-control:out:*' would return all services in 'out' for the component remote-control."
+Example: 'remote-control:expose:*' would return all services exposed by the component remote-control."
 )]
 pub struct KnockCommand {
     #[argh(positional)]
