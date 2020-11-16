@@ -29,7 +29,7 @@ template("fidl_go") {
 
   fidl_target_gen_dir =
       get_label_info(":$target_name($fidl_toolchain)", "target_gen_dir")
-  library_dir = "$fidl_target_gen_dir/$library_name.fidl"
+  library_dir = "$fidl_target_gen_dir/$target_name/$library_name.fidl"
   impl_filename = "$library_dir/impl.go"
   pkg_name_filename = "$library_dir/pkg_name"
   json_representation = "$fidl_target_gen_dir/$target_name.fidl.json"

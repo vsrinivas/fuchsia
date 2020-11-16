@@ -20,14 +20,15 @@ template("fidl_rust_library") {
     library_name = invoker.name
   }
 
-  underscore_name = "fidl_" + string_replace(library_name, ".", "_")
+  crate_name = "fidl_" + string_replace(library_name, ".", "_")
 
   fidl_target_gen_dir =
       get_label_info(":bogus($fidl_toolchain)", "target_gen_dir")
-  file_stem = "$fidl_target_gen_dir/${underscore_name}"
+  file_stem = "$fidl_target_gen_dir/$target_name/$crate_name"
 
   rustc_library(rustc_target_name) {
-    name = underscore_name
+    name = crate_name
+    output_dir = target_out_dir + "/" + target_name
     version = "0.1.0"
     edition = "2018"
     forward_variables_from(invoker,

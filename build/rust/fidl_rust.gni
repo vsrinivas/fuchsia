@@ -30,7 +30,7 @@ template("fidl_rust") {
 
   fidl_target_gen_dir =
       get_label_info(":bogus($fidl_toolchain)", "target_gen_dir")
-  filename = "$fidl_target_gen_dir/$underscore_name.rs"
+  filename = "$fidl_target_gen_dir/$main_target_name/$underscore_name.rs"
   json_representation = "$fidl_target_gen_dir/$target_name.fidl.json"
 
   compiled_action(generation_target_name) {

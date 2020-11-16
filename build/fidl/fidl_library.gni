@@ -57,7 +57,8 @@ template("fidl_library") {
   response_file = "$target_gen_dir/$target_name.args"
   fidl_stem = "$target_gen_dir/$target_name.fidl"
   json_representation = "$fidl_stem.json"
-  c_stem = string_replace(library_name, ".", "/") + "/c/fidl"
+  c_stem =
+      target_name + "/" + string_replace(library_name, ".", "/") + "/c/fidl"
   c_client = "$target_gen_dir/$c_stem.client.c"
   c_header = "$target_gen_dir/$c_stem.h"
   c_server = "$target_gen_dir/$c_stem.server.c"

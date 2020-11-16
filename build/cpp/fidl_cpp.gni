@@ -8,18 +8,16 @@ import("//build/sdk/sdk_atom_alias.gni")
 
 template("_fidl_cpp_codegen_impl") {
   generation_target_name = "${target_name}_generate"
-
-  library_name = invoker.library_name
-  fidl_target_gen_dir =
-      get_label_info(":$target_name($fidl_toolchain)", "target_gen_dir")
-
-  include_stem =
-      string_replace(library_name, ".", "/") + "/" + invoker.output_stem
-  file_stem = "$fidl_target_gen_dir/$include_stem"
-
   fidl_target_name = invoker.fidl_target_name
+
   fidl_target_gen_dir =
       get_label_info(":${fidl_target_name}($fidl_toolchain)", "target_gen_dir")
+
+  library_name = invoker.library_name
+  include_stem =
+      string_replace(library_name, ".", "/") + "/" + invoker.output_stem
+  file_stem = "$fidl_target_gen_dir/$fidl_target_name/$include_stem"
+
   json_representation = "$fidl_target_gen_dir/$fidl_target_name.fidl.json"
 
   generation_visibility = [ ":$target_name" ]
@@ -59,7 +57,7 @@ template("_fidl_cpp_codegen_impl") {
       "--output-base",
       rebase_path(file_stem, root_build_dir),
       "--include-base",
-      rebase_path(fidl_target_gen_dir, root_build_dir),
+      rebase_path("$fidl_target_gen_dir/$fidl_target_name", root_build_dir),
       "--include-stem",
       invoker.output_stem,
       "--clang-format-path",
@@ -102,17 +100,14 @@ template("_fidl_llcpp_codegen_impl") {
   generation_visibility = [ ":$target_name" ]
 
   library_name = invoker.library_name
+  fidl_target_name = invoker.fidl_target_name
   fidl_target_gen_dir =
       get_label_info(":$target_name($fidl_toolchain)", "target_gen_dir")
+  json_representation = "$fidl_target_gen_dir/$fidl_target_name.fidl.json"
 
   include_stem =
       string_replace(library_name, ".", "/") + "/" + invoker.output_stem
-  file_stem = "$fidl_target_gen_dir/$include_stem"
-
-  fidl_target_name = invoker.fidl_target_name
-  fidl_target_gen_dir =
-      get_label_info(":${fidl_target_name}($fidl_toolchain)", "target_gen_dir")
-  json_representation = "$fidl_target_gen_dir/$fidl_target_name.fidl.json"
+  file_stem = "$fidl_target_gen_dir/$fidl_target_name/$include_stem"
 
   compiled_action(generation_target_name) {
     forward_variables_from(invoker, [ "testonly" ])
@@ -136,7 +131,7 @@ template("_fidl_llcpp_codegen_impl") {
       "--source",
       rebase_path("$file_stem.cc", root_build_dir),
       "--include-base",
-      rebase_path(fidl_target_gen_dir, root_build_dir),
+      rebase_path("$fidl_target_gen_dir/$fidl_target_name", root_build_dir),
       "--include-stem",
       invoker.output_stem,
       "--clang-format-path",
@@ -172,15 +167,16 @@ template("_fidl_cpp_library_impl") {
       "${invoker.fidl_target_name}${invoker.target_suffix}_generate"
 
   library_name = invoker.library_name
+  fidl_target_name = invoker.fidl_target_name
   fidl_target_gen_dir =
       get_label_info(":$target_name($fidl_toolchain)", "target_gen_dir")
 
   include_stem =
       string_replace(library_name, ".", "/") + "/" + invoker.output_stem
-  file_stem = "$fidl_target_gen_dir/$include_stem"
+  file_stem = "$fidl_target_gen_dir/$fidl_target_name/$include_stem"
 
   config(config_target_name) {
-    include_dirs = [ fidl_target_gen_dir ]
+    include_dirs = [ "$fidl_target_gen_dir/$fidl_target_name" ]
   }
 
   source_set(target_name) {
