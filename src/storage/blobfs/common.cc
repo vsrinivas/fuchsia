@@ -91,18 +91,6 @@ bool IsValidBlobLayoutFormat(BlobLayoutFormat format) {
 
 }  // namespace
 
-// Number of blocks reserved for the Merkle Tree.
-uint32_t ComputeNumMerkleTreeBlocks(const Inode& blobNode) {
-  size_t merkle_size = digest::CalculateMerkleTreeSize(blobNode.blob_size, digest::kDefaultNodeSize,
-                                                       /*use_compact_format=*/false);
-  if (merkle_size > std::numeric_limits<uint32_t>::max()) {
-    FS_TRACE_ERROR("blobfs: Merkle tree blocks (%s) max exceeded: %zu\n",
-                   Digest(blobNode.merkle_root_hash).ToString().c_str(), merkle_size);
-    return 0;
-  }
-  return fbl::round_up(static_cast<uint32_t>(merkle_size), kBlobfsBlockSize) / kBlobfsBlockSize;
-}
-
 // Validate the metadata for the superblock, given a maximum number of
 // available blocks.
 zx_status_t CheckSuperblock(const Superblock* info, uint64_t max) {

@@ -333,11 +333,6 @@ static_assert(sizeof(Inode) == kBlobfsInodeSize, "Blobfs Inode size is wrong");
 static_assert(kBlobfsBlockSize % kBlobfsInodeSize == 0,
               "Blobfs Inodes should fit cleanly within a blobfs block");
 
-// Number of blocks reserved for the blob itself
-constexpr uint64_t BlobDataBlocks(const Inode& blobNode) {
-  return fbl::round_up(blobNode.blob_size, kBlobfsBlockSize) / kBlobfsBlockSize;
-}
-
 }  // namespace blobfs
 
 #endif  // SRC_STORAGE_BLOBFS_INCLUDE_BLOBFS_FORMAT_H_

@@ -40,6 +40,8 @@ TEST_P(FragmentationTest, Fragmentation) {
   fbl::Vector<fbl::String> small_blobs;
 
   bool do_small_blob = true;
+  bool capture_large_blob_storage_space_usage = true;
+  size_t large_blob_storage_space_usage = 0;
   size_t count = 0;
   while (true) {
     std::unique_ptr<BlobInfo> info;
@@ -47,10 +49,24 @@ TEST_P(FragmentationTest, Fragmentation) {
         GenerateRandomBlob(fs().mount_path(), do_small_blob ? kSmallSize : kLargeSize, &info));
     fbl::unique_fd fd(open(info->path, O_CREAT | O_RDWR));
     ASSERT_TRUE(fd) << "Failed to create blob";
+    if (capture_large_blob_storage_space_usage && !do_small_blob) {
+      // Record how much space was used by blobfs before writing a large blob.
+      auto fs_info = fs().GetFsInfo();
+      ASSERT_TRUE(fs_info.is_ok());
+      large_blob_storage_space_usage = fs_info->used_bytes;
+    }
     ASSERT_EQ(0, ftruncate(fd.get(), info->size_data));
     if (StreamAll(write, fd.get(), info->data.get(), info->size_data) < 0) {
       ASSERT_EQ(ENOSPC, errno) << "Blobfs expected to run out of space";
       break;
+    }
+    if (capture_large_blob_storage_space_usage && !do_small_blob) {
+      // Determine how much space was required to store the large by blob by comparing blobfs'
+      // space usage before and after writing the blob.
+      auto fs_info = fs().GetFsInfo();
+      ASSERT_TRUE(fs_info.is_ok());
+      large_blob_storage_space_usage = fs_info->used_bytes - large_blob_storage_space_usage;
+      capture_large_blob_storage_space_usage = false;
     }
     if (do_small_blob) {
       small_blobs.push_back(fbl::String(info->path));
@@ -67,16 +83,6 @@ TEST_P(FragmentationTest, Fragmentation) {
   // Observe that we cannot add another large blob.
   std::unique_ptr<BlobInfo> info;
   ASSERT_NO_FATAL_FAILURE(GenerateRandomBlob(fs().mount_path(), kLargeSize, &info));
-
-  // Calculate actual number of blocks required to store the blob (including the merkle tree).
-  Inode large_inode;
-  large_inode.blob_size = kLargeSize;
-  size_t kLargeBlocks = ComputeNumMerkleTreeBlocks(large_inode) + BlobDataBlocks(large_inode);
-
-  // We shouldn't have space (before we try allocating) ...
-  auto fs_info_or = fs().GetFsInfo();
-  ASSERT_TRUE(fs_info_or.is_ok());
-  ASSERT_LT(fs_info_or->total_bytes - fs_info_or->used_bytes, kLargeBlocks * kBlobfsBlockSize);
 
   // ... and we don't have space (as we try allocating).
   fbl::unique_fd fd(open(info->path, O_CREAT | O_RDWR));
@@ -97,9 +103,9 @@ TEST_P(FragmentationTest, Fragmentation) {
   ASSERT_GT(kSmallSize * (small_blobs.size() - 1), kLargeSize);
 
   // Validate that we have enough space (before we try allocating)...
-  fs_info_or = fs().GetFsInfo();
+  auto fs_info_or = fs().GetFsInfo();
   ASSERT_TRUE(fs_info_or.is_ok());
-  ASSERT_GE(fs_info_or->total_bytes - fs_info_or->used_bytes, kLargeBlocks * kBlobfsBlockSize);
+  ASSERT_GE(fs_info_or->total_bytes - fs_info_or->used_bytes, large_blob_storage_space_usage);
 
   fd.reset(open(info->path, O_CREAT | O_RDWR));
   // Now that blobfs supports extents, verify that we can still allocate a large
