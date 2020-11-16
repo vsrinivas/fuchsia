@@ -48,15 +48,9 @@ rustc_binary("trigger_client_bin") {
   source_root = "static_event_stream/trigger_client.rs"
   deps = [
     "//examples/components/routing/fidl:echo-rustc",
-    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
-    "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
-    "//src/lib/syslog/rust:syslog",
     "//src/sys/component_manager/tests/fidl:components-rustc",
-    "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:futures",
-    "//third_party/rust_crates:log",
   ]
 
   sources = [ "static_event_stream/trigger_client.rs" ]

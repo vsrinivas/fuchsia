@@ -7,55 +7,65 @@ import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_test.gni")
 import("//src/sys/build/components.gni")
 
-rustc_test("test_bin") {
-  source_root = "integration_test.rs"
+rustc_test("test-bin") {
+  source_root = "integration-test.rs"
   name = "attributed-logging-test"
   deps = [
     "//src/lib/fuchsia-async",
     "//src/sys/component_manager/testing:test_utils_lib",
     "//third_party/rust_crates:futures",
   ]
-  sources = [ "integration_test.rs" ]
+  sources = [ "integration-test.rs" ]
 }
 
-fuchsia_component("integration_test") {
+fuchsia_component("integration-test") {
   testonly = true
   manifest = "meta/integration-test.cmx"
-  deps = [ ":test_bin" ]
+  deps = [ ":test-bin" ]
 }
 
-rustc_binary("empty") {
-  source_root = "empty.rs"
-  name = "empty"
-  sources = [ "empty.rs" ]
+rustc_test("e2e-bin") {
+  source_root = "e2e-test.rs"
+  name = "attributed-logging-e2e-test"
+  deps = [
+    "//src/lib/fuchsia-async",
+    "//src/sys/component_manager/testing:test_utils_lib",
+    "//third_party/rust_crates:futures",
+  ]
+  sources = [ "e2e-test.rs" ]
 }
 
-fuchsia_component("root_component") {
+fuchsia_component("e2e-test") {
   testonly = true
-  manifest = "meta/root.cml"
-  component_name = "root"
+  manifest = "meta/e2e-test.cmx"
+  deps = [ ":e2e-bin" ]
 }
 
-fuchsia_component("empty_component") {
+fuchsia_component("integration-root-component") {
   testonly = true
-  manifest = "meta/empty.cml"
-  component_name = "empty"
-  deps = [ ":empty" ]
+  manifest = "meta/integration-root.cml"
+  component_name = "integration-root"
 }
 
-component_config("component_manager_debug_config") {
+fuchsia_component("e2e-root-component") {
+  testonly = true
+  manifest = "meta/e2e-root.cml"
+  component_name = "e2e-root"
+}
+
+component_config("component-manager-debug-config") {
   sources = [ "//src/sys/component_manager/debug_config.json" ]
 }
 
-resource("cm_config") {
-  sources = [ "$target_gen_dir/component_manager_debug_config" ]
+resource("cm-config") {
+  sources = [ "$target_gen_dir/component-manager-debug-config" ]
   outputs = [ "data/cm_config" ]
-  deps = [ ":component_manager_debug_config" ]
+  deps = [ ":component-manager-debug-config" ]
 }
 
 fuchsia_component("component-manager") {
   deps = [
-    ":cm_config",
+    ":cm-config",
     "//src/sys/component_manager:bin",
   ]
   manifest =
@@ -63,10 +73,15 @@ fuchsia_component("component-manager") {
 }
 
 fuchsia_test_package("attributed-logging-test") {
-  test_components = [ ":integration_test" ]
+  test_components = [
+    ":integration-test",
+    ":e2e-test",
+  ]
   deps = [
     ":component-manager",
-    ":empty_component",
-    ":root_component",
+    ":e2e-root-component",
+    ":integration-root-component",
+    "components:all-components",
+    "//src/diagnostics/archivist:archivist-for-embedding-v2",
   ]
 }

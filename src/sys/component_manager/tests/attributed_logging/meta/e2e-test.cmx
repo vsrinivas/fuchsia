@@ -1,0 +1,16 @@
+{
+    "program": {
+        "binary": "bin/attributed_logging_e2e_test"
+    },
+    "sandbox": {
+        "features": [
+            "hub"
+        ],
+        "services": [
+            "fuchsia.logger.LogSink",
+            "fuchsia.process.Launcher",
+            "fuchsia.sys.Environment",
+            "fuchsia.sys.Launcher"
+        ]
+    }
+}

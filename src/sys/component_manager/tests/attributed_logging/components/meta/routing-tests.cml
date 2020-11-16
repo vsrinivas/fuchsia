@@ -1,0 +1,32 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    children: [
+        // This child tries to use the fidl.test.component.Trigger capability,
+        // which the parent (this component) does not offer.
+        {
+            name: "child",
+            url: "fuchsia-pkg://fuchsia.com/attributed-logging-test#meta/use-unoffered.cm",
+            startup: "eager",
+        },
+
+        // Subtree with errors where a parent doesn't correctly route
+        // a capability from other components to the child.
+        {
+            name: "offers-to-children-unavailable",
+            url: "fuchsia-pkg://fuchsia.com/attributed-logging-test#meta/offers-to-children-unavailable.cm",
+            startup: "eager",
+        },
+    ],
+    offer: [
+        {
+            protocol: "fuchsia.logger.LogSink",
+            from: "parent",
+            to: [
+                "#child",
+                "#offers-to-children-unavailable",
+            ],
+        },
+    ],
+}

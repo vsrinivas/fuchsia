@@ -12,6 +12,7 @@
     capabilities: [
         {
             protocol: [
+                "fuchsia.diagnostics.ArchiveAccessor",
                 "fuchsia.logger.Log",
                 "fuchsia.logger.LogSink",
             ],
@@ -21,12 +22,36 @@
         { runner: "elf" },
         {
             protocol: "fuchsia.sys2.EventSource",
+            from: "parent",
+        },
+        {
+            event: "capability_requested",
             from: "framework",
+            filter: { name: "fuchsia.logger.LogSink" },
+        },
+        {
+            event: "capability_ready",
+            from: "parent",
+            as: "diagnostics_ready",
+            filter: { name: "diagnostics" },
+        },
+        {
+            event: [
+                "running",
+                "started",
+                "stopped",
+            ],
+            from: "parent",
+        },
+        {
+            event_stream: [ "capability_requested" ],
+            path: "/svc/fuchsia.sys2.EventStream",
         },
     ],
     expose: [
         {
             protocol: [
+                "fuchsia.diagnostics.ArchiveAccessor",
                 "fuchsia.logger.Log",
                 "fuchsia.logger.LogSink",
             ],

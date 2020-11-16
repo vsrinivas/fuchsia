@@ -1,0 +1,86 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/component/config.gni")
+import("//build/rust/rustc_binary.gni")
+import("//build/rust/rustc_test.gni")
+import("//src/sys/build/components.gni")
+
+rustc_binary("empty") {
+  source_root = "empty.rs"
+  name = "empty"
+  sources = [ "empty.rs" ]
+}
+
+rustc_binary("use-unoffered") {
+  source_root = "use-unoffered.rs"
+  name = "use-unoffered"
+  deps = [
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/lib/zircon/rust:fuchsia-zircon",
+    "//src/sys/component_manager/tests/fidl:components-rustc",
+  ]
+  sources = [ "use-unoffered.rs" ]
+}
+
+rustc_binary("archive-reader") {
+  source_root = "archive-reader.rs"
+  name = "archive-reader"
+  deps = [
+    "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics-rustc",
+    "//src/lib/diagnostics/data",
+    "//src/lib/diagnostics/reader",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/lib/syslog/rust:syslog",
+    "//src/lib/zircon/rust:fuchsia-zircon",
+    "//third_party/rust_crates:futures",
+  ]
+  sources = [ "archive-reader.rs" ]
+}
+
+fuchsia_component("reader") {
+  testonly = true
+  manifest = "meta/reader.cml"
+  component_name = "reader"
+  deps = [ ":archive-reader" ]
+}
+
+fuchsia_component("empty-component") {
+  testonly = true
+  manifest = "meta/empty.cml"
+  component_name = "empty"
+  deps = [ ":empty" ]
+}
+
+fuchsia_component("use-unoffered-component") {
+  testonly = true
+  manifest = "meta/use-unoffered.cml"
+  component_name = "use-unoffered"
+  deps = [ ":use-unoffered" ]
+}
+
+fuchsia_component("offers-to-children-unavailable") {
+  testonly = true
+  manifest = "meta/offers-to-children-unavailable.cml"
+  component_name = "offers-to-children-unavailable"
+}
+
+fuchsia_component("routing-tests") {
+  testonly = true
+  manifest = "meta/routing-tests.cml"
+  component_name = "routing-tests"
+}
+
+group("all-components") {
+  testonly = true
+  deps = [
+    ":empty-component",
+    ":offers-to-children-unavailable",
+    ":reader",
+    ":routing-tests",
+    ":use-unoffered-component",
+  ]
+}

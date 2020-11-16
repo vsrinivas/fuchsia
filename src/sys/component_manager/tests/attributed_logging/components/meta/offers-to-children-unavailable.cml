@@ -1,0 +1,52 @@
+// Copyright 2020 the Fuchsia Authors. All rights reserved.
+// Use of this source code is goverened by a BSD-style license that can be
+// found in the LICENSE file.
+
+// This component offers the Trigger capability to its children not from itself
+// but from other places where it is actually unavailable. We then expect the
+// children to get errors when they try to use the unavailable capability.
+{
+    children: [
+        // A child which wants Trigger and the parent offers it from its parent
+        // which doesn't actually offer Trigger to the parent.
+        {
+            name: "child-for-offer-from-parent",
+            url: "fuchsia-pkg://fuchsia.com/attributed-logging-test#meta/use-unoffered.cm",
+            startup: "eager",
+        },
+
+        // A child which wants Trigger and the parent offers it from a sibling
+        // which doesn't actually provide it.
+        {
+            name: "child-for-offer-from-sibling",
+            url: "fuchsia-pkg://fuchsia.com/attributed-logging-test#meta/use-unoffered.cm",
+            startup: "eager",
+        },
+
+        // A child which the parent thinks will provide Trigger, but does not.
+        {
+            name: "child-that-doesnt-expose",
+            url: "fuchsia-pkg://fuchsia.com/attributed-logging-test#meta/empty.cm",
+        },
+    ],
+    offer: [
+        {
+            protocol: [ "fuchsia.logger.LogSink" ],
+            from: "parent",
+            to: [
+                "#child-for-offer-from-parent",
+                "#child-for-offer-from-sibling",
+            ],
+        },
+        {
+            protocol: [ "fidl.test.components.Trigger" ],
+            from: "parent",
+            to: [ "#child-for-offer-from-parent" ],
+        },
+        {
+            protocol: [ "fidl.test.components.Trigger" ],
+            from: "#child-that-doesnt-expose",
+            to: [ "#child-for-offer-from-sibling" ],
+        },
+    ],
+}
