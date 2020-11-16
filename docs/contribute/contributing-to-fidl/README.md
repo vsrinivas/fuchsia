@@ -252,8 +252,7 @@ fx set terminal.x64 --with //bundles:kitchen_sink \
 To symbolize backtraces, you'll need a symbolizer in scope:
 
 ```sh
-HOST_PLATFORM=linux-x64  # or mac-x64
-export ASAN_SYMBOLIZER_PATH="$FUCHSIA_DIR/prebuilt/third_party/clang/$HOST_PLATFORM/bin/llvm-symbolizer"
+export ASAN_SYMBOLIZER_PATH="$(find `pwd` -name llvm-symbolizer | grep clang | head -1)"
 ```
 
 ## Compiling and running tests
@@ -320,6 +319,15 @@ The binary can be located by running `fidldev test --dry-run --no-regen fidlc`.
 
 ```sh
 $FUCHSIA_DIR/out/default/host_x64/fidl-compiler --gtest_filter 'EnumsTests.*'
+```
+
+To easily run tests in a debug build:
+
+```
+fx set core.x64 --variant=host_asan --with //bundles/fidl:tests
+export ASAN_SYMBOLIZER_PATH="$(find `pwd` -name llvm-symbolizer | grep clang | head -1)"
+fx ninja -C out/default host_x64-asan/exe.unstripped/fidl-compiler && \
+    ./out/default/host_x64-asan/exe.unstripped/fidl-compiler --gtest_filter 'EnumsTests.*'
 ```
 
 To regenerate the `fidlc` JSON goldens:
