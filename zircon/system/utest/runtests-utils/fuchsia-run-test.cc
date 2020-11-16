@@ -76,7 +76,7 @@ TEST(RunTests, RunTestDontPublishData) {
   fbl::String test_name = PublishDataHelperBin();
 
   const char* argv[] = {test_name.c_str(), nullptr};
-  std::unique_ptr<Result> result = RunTest(argv, nullptr, nullptr, test_name.c_str(), 0);
+  std::unique_ptr<Result> result = RunTest(argv, nullptr, nullptr, test_name.c_str(), 0, nullptr);
   EXPECT_STR_EQ(argv[0], result->name.c_str());
   EXPECT_EQ(SUCCESS, result->launch_status);
   EXPECT_EQ(0, result->return_code);
@@ -91,7 +91,7 @@ TEST(RunTests, RunTestsPublishData) {
   const fbl::String output_dir = JoinPath(test_dir.path(), "output");
   const char output_file_base_name[] = "output.txt";
   ASSERT_EQ(0, MkDirAll(output_dir));
-  EXPECT_TRUE(RunTests({test_name}, {}, 1, 0, output_dir.c_str(), output_file_base_name,
+  EXPECT_TRUE(RunTests({test_name}, {}, 1, 0, output_dir.c_str(), output_file_base_name, nullptr,
                        &num_failed, &results));
   EXPECT_EQ(0, num_failed);
   EXPECT_EQ(1, results.size());
@@ -107,7 +107,7 @@ TEST(RunTests, RunDuplicateTestsPublishData) {
   const char output_file_base_name[] = "output.txt";
   ASSERT_EQ(0, MkDirAll(output_dir));
   EXPECT_TRUE(RunTests({test_name, test_name, test_name}, {}, 1, 0, output_dir.c_str(),
-                       output_file_base_name, &num_failed, &results));
+                       output_file_base_name, nullptr, &num_failed, &results));
   EXPECT_EQ(0, num_failed);
   EXPECT_EQ(3, results.size());
   EXPECT_STR_EQ(test_name.c_str(), results[0]->name.c_str());
@@ -180,7 +180,7 @@ TEST(RunTests, RunProfileMergeData) {
 
   // Run the test for the first time.
   EXPECT_TRUE(RunTests({test_name, test_name}, {}, 1, 0, output_dir.c_str(), output_file_base_name,
-                       &num_failed, &results));
+                       nullptr, &num_failed, &results));
   EXPECT_EQ(0, num_failed);
   EXPECT_EQ(2, results.size());
   EXPECT_LE(1, results[0]->data_sinks.size());
@@ -188,7 +188,7 @@ TEST(RunTests, RunProfileMergeData) {
   EXPECT_EQ(1, results[0]->data_sinks["llvm-profile"].size());
 
   // Run the test for the second time.
-  EXPECT_TRUE(RunTests({test_name}, {}, 1, 0, output_dir.c_str(), output_file_base_name,
+  EXPECT_TRUE(RunTests({test_name}, {}, 1, 0, output_dir.c_str(), output_file_base_name, nullptr,
                        &num_failed, &results));
   EXPECT_EQ(0, num_failed);
   EXPECT_EQ(3, results.size());
@@ -218,7 +218,7 @@ TEST(RunTests, RunTestRootDir) {
   {
     fbl::String output_filename = JoinPath(test_dir.path(), "test.out");
     std::unique_ptr<Result> result =
-        RunTest(argv, nullptr, output_filename.c_str(), test_name.c_str(), 0);
+        RunTest(argv, nullptr, output_filename.c_str(), test_name.c_str(), 0, nullptr);
 
     FILE* output_file = fopen(output_filename.c_str(), "r");
     ASSERT_TRUE(output_file);

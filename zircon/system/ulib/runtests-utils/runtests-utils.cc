@@ -309,8 +309,8 @@ int DiscoverTestsInDirGlobs(const fbl::Vector<fbl::String>& dir_globs, const cha
 
 bool RunTests(const fbl::Vector<fbl::String>& test_paths, const fbl::Vector<fbl::String>& test_args,
               int repeat, uint64_t timeout_msec, const char* output_dir,
-              const fbl::StringPiece output_file_basename, int* failed_count,
-              fbl::Vector<std::unique_ptr<Result>>* results) {
+              const fbl::StringPiece output_file_basename, const char* realm_label,
+              int* failed_count, fbl::Vector<std::unique_ptr<Result>>* results) {
   std::map<fbl::String, int> test_name_to_count;
   for (int i = 1; i <= repeat; ++i) {
     for (const fbl::String& test_path : test_paths) {
@@ -368,8 +368,8 @@ bool RunTests(const fbl::Vector<fbl::String>& test_paths, const fbl::Vector<fbl:
           "RUNNING TEST: %s\n\n",
           output_test_name.c_str());
       fflush(stdout);
-      std::unique_ptr<Result> result =
-          RunTest(argv.data(), output_dir, output_filename, output_test_name.c_str(), timeout_msec);
+      std::unique_ptr<Result> result = RunTest(argv.data(), output_dir, output_filename,
+                                               output_test_name.c_str(), timeout_msec, realm_label);
       char duration_str[64];  // Size should be large enough for all reasonable durations.
       snprintf(duration_str, sizeof(duration_str), "%" PRIu64 ".%03u sec",
                result->duration_milliseconds / 1000,

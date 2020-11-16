@@ -73,9 +73,12 @@ struct Result {
 // |test_name| is used to populate Result and in log messages.
 // |timeout_msec| is a number of milliseconds to wait for the test. If 0,
 //   will wait indefinitely.
+// |realm_label| is the realm label to be applied to calls to underlying run-test-component.
+//   The test will run in that realm and its run artifacts will not be cleaned up automatically
+//   after the completion of the test.
 std::unique_ptr<Result> RunTest(const char* argv[], const char* output_dir,
                                 const char* output_filename, const char* test_name,
-                                uint64_t timeout_msec);
+                                uint64_t timeout_msec, const char* realm_label);
 
 // A means of measuring how long it takes to run tests.
 class Stopwatch {
@@ -143,18 +146,18 @@ int ResolveGlobs(const fbl::Vector<fbl::String>& globs, fbl::Vector<fbl::String>
 //   |output_dir| is also nullptr.
 //   Each test's standard output and standard error will be written to
 //   |output_dir|/<test binary path>/|output_file_basename|.
-// |verbosity| if > 0 is converted to a string and passed as an additional argument to the
-//   tests, so argv = {test_path, "v=<verbosity>"}. Also if > 0, this function prints more output
-//   to stdout than otherwise.
-// |num_failed| is an output parameter which will be set to the number of test
+// |realm_label| is the realm label to be applied to calls to underlying run-test-component.
+//   The test will run in that realm and its run artifacts will not be cleaned up automatically
+//   after the completion of the test.
+// |failed_count| is an output parameter which will be set to the number of test
 //   binaries that failed.
 // |results| is an output parameter to which run results will be appended.
 //
 // Returns false if any test binary failed, true otherwise.
 bool RunTests(const fbl::Vector<fbl::String>& test_paths, const fbl::Vector<fbl::String>& test_args,
               int repeat, uint64_t timeout_msec, const char* output_dir,
-              const fbl::StringPiece output_file_basename, int* failed_count,
-              fbl::Vector<std::unique_ptr<Result>>* results);
+              fbl::StringPiece output_file_basename, const char* realm_label,
+              int* failed_count, fbl::Vector<std::unique_ptr<Result>>* results);
 
 // Expands |dir_globs| and searches those directories for files.
 //

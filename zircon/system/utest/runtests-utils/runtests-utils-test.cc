@@ -229,7 +229,7 @@ TEST(RunTest, RunTestSuccess) {
   PackagedScriptFile script_file("succeed.sh");
   fbl::String test_name = script_file.path();
   const char* argv[] = {test_name.c_str(), nullptr};
-  std::unique_ptr<Result> result = RunTest(argv, nullptr, nullptr, test_name.c_str(), 0);
+  std::unique_ptr<Result> result = RunTest(argv, nullptr, nullptr, test_name.c_str(), 0, nullptr);
   EXPECT_STR_EQ(argv[0], result->name.c_str());
   EXPECT_EQ(SUCCESS, result->launch_status);
   EXPECT_EQ(0, result->return_code);
@@ -241,7 +241,7 @@ TEST(RunTest, RunTestTimeout) {
   fbl::String inf_loop_name = inf_loop_file.path();
   const char* inf_loop_argv[] = {inf_loop_name.c_str(), nullptr};
   std::unique_ptr<Result> result =
-      RunTest(inf_loop_argv, nullptr, nullptr, inf_loop_name.c_str(), 1);
+      RunTest(inf_loop_argv, nullptr, nullptr, inf_loop_name.c_str(), 1, nullptr);
   EXPECT_STR_EQ(inf_loop_argv[0], result->name.c_str());
   EXPECT_EQ(TIMED_OUT, result->launch_status);
   EXPECT_EQ(0, result->return_code);
@@ -250,7 +250,7 @@ TEST(RunTest, RunTestTimeout) {
   PackagedScriptFile success_file("succeed.sh");
   fbl::String succeed_name = success_file.path();
   const char* succeed_argv[] = {succeed_name.c_str(), nullptr};
-  result = RunTest(succeed_argv, nullptr, nullptr, succeed_name.c_str(), 100000);
+  result = RunTest(succeed_argv, nullptr, nullptr, succeed_name.c_str(), 100000, nullptr);
   EXPECT_STR_EQ(succeed_argv[0], result->name.c_str());
   EXPECT_EQ(SUCCESS, result->launch_status);
   EXPECT_EQ(0, result->return_code);
@@ -258,7 +258,8 @@ TEST(RunTest, RunTestTimeout) {
   // Still works if output file set.
   ScopedTestDir test_dir;
   fbl::String output_filename = JoinPath(test_dir.path(), "test-inf-loop.out");
-  result = RunTest(inf_loop_argv, nullptr, output_filename.c_str(), inf_loop_name.c_str(), 1);
+  result =
+      RunTest(inf_loop_argv, nullptr, output_filename.c_str(), inf_loop_name.c_str(), 1, nullptr);
   EXPECT_STR_EQ(inf_loop_argv[0], result->name.c_str());
   EXPECT_EQ(TIMED_OUT, result->launch_status);
   EXPECT_EQ(0, result->return_code);
@@ -273,7 +274,7 @@ TEST(RunTest, RunTestSuccessWithStdout) {
 
   fbl::String output_filename = JoinPath(test_dir.path(), "test.out");
   std::unique_ptr<Result> result =
-      RunTest(argv, nullptr, output_filename.c_str(), test_name.c_str(), 0);
+      RunTest(argv, nullptr, output_filename.c_str(), test_name.c_str(), 0, nullptr);
 
   FILE* output_file = fopen(output_filename.c_str(), "r");
   ASSERT_TRUE(output_file);
@@ -296,7 +297,7 @@ TEST(RunTest, RunTestFailureWithStderr) {
 
   fbl::String output_filename = JoinPath(test_dir.path(), "test.out");
   std::unique_ptr<Result> result =
-      RunTest(argv, nullptr, output_filename.c_str(), test_name.c_str(), 0);
+      RunTest(argv, nullptr, output_filename.c_str(), test_name.c_str(), 0, nullptr);
 
   FILE* output_file = fopen(output_filename.c_str(), "r");
   ASSERT_TRUE(output_file);
@@ -313,7 +314,7 @@ TEST(RunTest, RunTestFailureWithStderr) {
 TEST(RunTest, RunTestFailureToLoadFile) {
   const char* argv[] = {"i/do/not/exist/", nullptr};
 
-  std::unique_ptr<Result> result = RunTest(argv, nullptr, nullptr, argv[0], 0);
+  std::unique_ptr<Result> result = RunTest(argv, nullptr, nullptr, argv[0], 0, nullptr);
   EXPECT_STR_EQ(argv[0], result->name.c_str());
   EXPECT_EQ(FAILED_TO_LAUNCH, result->launch_status);
 }
@@ -385,7 +386,7 @@ TEST(RunTests, RunTestsWithArguments) {
   const char output_file_base_name[] = "output.txt";
   ASSERT_EQ(0, MkDirAll(output_dir));
   EXPECT_TRUE(RunTests({succeed_file_name}, args, 1, 0, output_dir.c_str(), output_file_base_name,
-                       &num_failed, &results));
+                       nullptr, &num_failed, &results));
   EXPECT_EQ(0, num_failed);
   EXPECT_EQ(1, results.size());
 
@@ -410,7 +411,7 @@ TEST(RunTests, RunTestsCreatesOutputFile) {
   const char output_file_base_name[] = "output.txt";
   ASSERT_EQ(0, MkDirAll(output_dir));
   EXPECT_TRUE(RunTests({does_not_exist_file_name}, {}, 1, 0, output_dir.c_str(),
-                       output_file_base_name, &num_failed, &results));
+                       output_file_base_name, nullptr, &num_failed, &results));
   EXPECT_EQ(1, num_failed);
   EXPECT_EQ(1, results.size());
 
