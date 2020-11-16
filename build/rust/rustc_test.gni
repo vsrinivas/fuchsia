@@ -70,6 +70,10 @@ import("//build/testing/host_test.gni")
 #     built in-tree which are also published to crates.io. This would be passed to rustc as
 #     '--cfg feature=XXX'
 #
+#   output_dir (optional)
+#     Directory that the resulting test should be placed in.
+#     See: `gn help output_dir`
+#
 # Example of usage:
 #
 #   rustc_test("foo_test") {
@@ -227,8 +231,9 @@ template("rustc_test") {
 
     forward_variables_from(invoker,
                            [
-                             "visibility",
                              "inputs",
+                             "output_dir",
+                             "visibility",
                            ])
   }
 }

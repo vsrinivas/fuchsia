@@ -59,6 +59,10 @@ import("//build/rust/rustc_test.gni")
 #     built in-tree which are also published to crates.io. This would be passed to rustc as
 #     '--cfg feature=XXX'
 #
+#   output_dir (optional)
+#     Directory that the resulting library should be placed in.
+#     See: `gn help output_dir`
+#
 # Example of usage:
 #   if (current_toolchain == unknown_wasm32_toolchain) {
 #     rustc_wasm_library("foo-bar") {
@@ -164,10 +168,11 @@ template("rustc_wasm_library") {
 
     forward_variables_from(invoker,
                            [
-                             "testonly",
-                             "visibility",
                              "enforce_source_listing",
                              "inputs",
+                             "output_dir",
+                             "testonly",
+                             "visibility",
                            ])
   }
 }

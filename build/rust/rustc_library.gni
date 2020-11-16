@@ -73,6 +73,10 @@ import("//build/rust/rustc_test.gni")
 #     built in-tree which are also published to crates.io. This would be passed to rustc as
 #     '--cfg feature=XXX'
 #
+#   output_dir (optional)
+#     Directory that the resulting library should be placed in.
+#     See: `gn help output_dir`
+#
 # Example of usage:
 #
 #   rustc_library("foo-bar") {
@@ -198,9 +202,10 @@ template("rustc_library") {
 
     forward_variables_from(invoker,
                            [
+                             "inputs",
+                             "output_dir",
                              "testonly",
                              "visibility",
-                             "inputs",
                            ])
   }
 }

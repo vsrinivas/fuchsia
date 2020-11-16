@@ -64,6 +64,10 @@ import("//build/rust/rustc_test.gni")
 #     and should only be changed when absolutely necessary
 #     (such as in the case of generated code).
 #
+#   output_dir (optional)
+#     Directory that the resulting library should be placed in.
+#     See: `gn help output_dir`
+#
 # Example of usage:
 #
 #   rustc_staticlib("foo") {
@@ -173,9 +177,10 @@ template("rustc_staticlib") {
 
     forward_variables_from(invoker,
                            [
+                             "inputs",
+                             "output_dir",
                              "testonly",
                              "visibility",
-                             "inputs",
                            ])
   }
 
