@@ -113,7 +113,7 @@ class AudioOutput : public AudioDevice {
   //
   // If |span.is_mute| is true, then |buffer| is ignored and instead silence will be inserted
   // into the ring buffer for the frame range in |span|.
-  virtual void FinishMixJob(const AudioOutput::FrameSpan& span, float* buffer)
+  virtual void FinishMixJob(const AudioOutput::FrameSpan& span, const float* buffer)
       FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token()) = 0;
 
   // The maximum amount of time it can take to run all pending mix jobs when a device

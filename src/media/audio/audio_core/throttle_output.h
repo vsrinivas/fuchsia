@@ -98,7 +98,7 @@ class ThrottleOutput : public AudioOutput {
     return std::nullopt;
   }
 
-  void FinishMixJob(const AudioOutput::FrameSpan& span, float* buffer) override {
+  void FinishMixJob(const AudioOutput::FrameSpan& span, const float* buffer) override {
     // Since we never start any jobs, this should never be called.
     FX_DCHECK(false);
   }

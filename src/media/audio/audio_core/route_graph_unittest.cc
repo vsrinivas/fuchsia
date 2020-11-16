@@ -81,7 +81,7 @@ class FakeAudioOutput : public AudioOutput {
   std::optional<AudioOutput::FrameSpan> StartMixJob(zx::time ref_time) override {
     return std::nullopt;
   }
-  void FinishMixJob(const AudioOutput::FrameSpan& span, float* buffer) override {}
+  void FinishMixJob(const AudioOutput::FrameSpan& span, const float* buffer) override {}
   zx::duration MixDeadline() const override { return zx::msec(10); }
 
   fit::result<std::shared_ptr<ReadableStream>, zx_status_t> InitializeDestLink(

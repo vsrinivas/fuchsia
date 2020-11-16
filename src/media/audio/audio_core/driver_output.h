@@ -43,7 +43,7 @@ class DriverOutput : public AudioOutput {
   void OnWakeup() FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token()) override;
   std::optional<AudioOutput::FrameSpan> StartMixJob(zx::time ref_time)
       FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token()) override;
-  void FinishMixJob(const AudioOutput::FrameSpan& span, float* buffer)
+  void FinishMixJob(const AudioOutput::FrameSpan& span, const float* buffer)
       FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token()) override;
 
   zx::duration MixDeadline() const override { return kDefaultHighWaterNsec - kDefaultLowWaterNsec; }
@@ -88,10 +88,7 @@ class DriverOutput : public AudioOutput {
   //
   // Note: here |offset| is relative to |span.start|. The absolute frame for the write is simply
   // |span.start + offset|.
-  void WriteToRing(const AudioOutput::FrameSpan& span,
-                   fit::function<void(uint64_t offset, uint32_t length, void* dest_buf)> writer)
-      FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token());
-  void FillRingSpanWithSilence(const AudioOutput::FrameSpan& span)
+  void WriteToRing(const AudioOutput::FrameSpan& span, const float* buffer)
       FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token());
 
   State state_ = State::Uninitialized;

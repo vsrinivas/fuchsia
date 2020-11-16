@@ -126,7 +126,7 @@ class TestAudioOutput : public AudioOutput {
   }
 
   // Allow a test to provide a delegate to handle |AudioOutput::FinishMixJob| invocations.
-  using FinishMixDelegate = fit::function<void(const AudioOutput::FrameSpan&, float* buffer)>;
+  using FinishMixDelegate = fit::function<void(const AudioOutput::FrameSpan&, const float* buffer)>;
   void set_finish_mix_delegate(FinishMixDelegate delegate) {
     finish_mix_delegate_ = std::move(delegate);
   }
@@ -142,7 +142,7 @@ class TestAudioOutput : public AudioOutput {
       return std::nullopt;
     }
   }
-  void FinishMixJob(const AudioOutput::FrameSpan& span, float* buffer) override {
+  void FinishMixJob(const AudioOutput::FrameSpan& span, const float* buffer) override {
     if (finish_mix_delegate_) {
       finish_mix_delegate_(span, buffer);
     }
