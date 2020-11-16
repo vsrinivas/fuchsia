@@ -112,7 +112,7 @@ template("vbmeta") {
   }
 
   action("${target_name}__vb_desc") {
-    script = "//zircon/third_party/tools/android/avb/avbtool"
+    script = "//zircon/third_party/tools/android/avb/avbtool.py"
 
     forward_variables_from(invoker,
                            [
@@ -146,7 +146,7 @@ template("vbmeta") {
   }
 
   action(target_name) {
-    script = "//zircon/third_party/tools/android/avb/avbtool"
+    script = "//zircon/third_party/tools/android/avb/avbtool.py"
 
     forward_variables_from(invoker,
                            [
