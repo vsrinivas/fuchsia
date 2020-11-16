@@ -10,6 +10,6 @@ group("tests") {
     "device-name-provider:tests",
     "netsvc:tests",
     "pwrbtn-monitor:tests",
-    "virtcon:test",
+    "virtcon:tests",
   ]
 }

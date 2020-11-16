@@ -4,9 +4,9 @@
 
 import("//build/config/fuchsia/rules.gni")
 import("//build/dist/component_manifest_resources.gni")
-import("//build/package.gni")
 import("//build/test.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/fuchsia_test_package.gni")
+import("//src/sys/build/fuchsia_unittest_component.gni")
 
 group("bootfs") {
   deps = [
@@ -84,7 +84,7 @@ executable("virtual-console") {
   ]
 }
 
-test("virtual-console-test-display") {
+test("vc-display-test") {
   defines = [ "BUILD_FOR_DISPLAY_TEST" ]
   sources = [
     "vc-display-test.cc",
@@ -99,9 +99,12 @@ test("virtual-console-test-display") {
   ]
 }
 
-test("virtual-console-test-text") {
-  testonly = true
+fuchsia_unittest_component("virtual-console-display-test") {
+  deps = [ ":vc-display-test" ]
+  manifest = "meta/virtual-console-display-test.cmx"
+}
 
+test("vc-text-test") {
   defines = [ "BUILD_FOR_TEST" ]
 
   sources = common_sources + [
@@ -115,7 +118,12 @@ test("virtual-console-test-text") {
   ]
 }
 
-test("virtual-console-session-manager-test") {
+fuchsia_unittest_component("virtual-console-text-test") {
+  deps = [ ":vc-text-test" ]
+  executable_path = "test/vc-text-test"
+}
+
+test("vc-session-manager-test") {
   sources = [
     "keyboard-vt100.cc",
     "session-manager-test.cc",
@@ -133,7 +141,12 @@ test("virtual-console-session-manager-test") {
   ]
 }
 
-test("virtual-console-test-integration") {
+fuchsia_unittest_component("virtual-console-session-manager-test") {
+  deps = [ ":vc-session-manager-test" ]
+  manifest = "meta/virtual-console-session-manager-test.cmx"
+}
+
+test("vc-integration-test") {
   sources = [ "vc-integration-test.cc" ]
 
   deps = [
@@ -144,7 +157,12 @@ test("virtual-console-test-integration") {
   ]
 }
 
-test("virtual-console-args-test") {
+fuchsia_unittest_component("virtual-console-integration-test") {
+  deps = [ ":vc-integration-test" ]
+  executable_path = "test/vc-integration-test"
+}
+
+test("vc-args-test") {
   sources = [
     "args-test.cc",
     "args.cc",
@@ -163,35 +181,22 @@ test("virtual-console-args-test") {
   ]
 }
 
-test_package("test") {
-  package_name = "virtual-console-test"
-  deps = [
+fuchsia_unittest_component("virtual-console-args-test") {
+  deps = [ ":vc-args-test" ]
+  executable_path = "test/vc-args-test"
+}
+
+fuchsia_test_package("virtcon-tests") {
+  test_components = [
     ":virtual-console-args-test",
     ":virtual-console-session-manager-test",
-    ":virtual-console-test-display",
-    ":virtual-console-test-integration",
-    ":virtual-console-test-text",
+    ":virtual-console-display-test",
+    ":virtual-console-integration-test",
+    ":virtual-console-text-test",
   ]
-  tests = [
-    {
-      name = "virtual-console-test-text"
-      environments = basic_envs
-    },
-    {
-      name = "virtual-console-test-integration"
-      environments = basic_envs
-    },
-    {
-      name = "virtual-console-test-display"
-      environments = basic_envs
-    },
-    {
-      name = "virtual-console-args-test"
-      environments = basic_envs
-    },
-    {
-      name = "virtual-console-session-manager-test"
-      environments = basic_envs
-    },
-  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":virtcon-tests" ]
 }

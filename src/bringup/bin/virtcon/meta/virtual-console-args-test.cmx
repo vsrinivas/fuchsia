@@ -1,5 +1,0 @@
-{
-    "program": {
-        "binary": "test/virtual-console-args-test"
-    }
-}
