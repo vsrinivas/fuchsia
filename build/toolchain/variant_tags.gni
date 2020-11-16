@@ -29,6 +29,10 @@ all_variant_tags = [
   # as well.
   "asan",
 
+  # The `ubsan` tag is used for variants that implement undefined-behaviour
+  # sanitizers. These should always list 'instrumented' as well.
+  "ubsan",
+
   # The `sancov` tag is used for variants that implement code coverage
   # collection.
   "sancov",

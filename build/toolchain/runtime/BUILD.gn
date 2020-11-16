@@ -9,10 +9,9 @@ _toolchain_runtime_deps_cflags = []
 if (toolchain_variant.tags + [ "asan" ] - [ "asan" ] !=
     toolchain_variant.tags) {
   _toolchain_runtime_deps_cflags += [ "-fsanitize=address" ]
-}
-if (toolchain_variant.tags + [ "ubsan" ] - [ "ubsan" ] !=
-    toolchain_variant.tags) {
-  _toolchain_runtime_deps_cflags += [ "-fsanitize=address" ]
+} else if (toolchain_variant.tags + [ "ubsan" ] - [ "ubsan" ] !=
+           toolchain_variant.tags) {
+  _toolchain_runtime_deps_cflags += [ "-fsanitize=undefined" ]
 }
 
 toolchain_runtime_deps("static-libc++-deps") {

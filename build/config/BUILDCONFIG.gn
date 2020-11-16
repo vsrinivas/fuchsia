@@ -954,6 +954,7 @@ declare_args() {
       tags = [
         "instrumented",
         "instrumentation-runtime",
+        "ubsan",
       ]
     },
     {
@@ -966,6 +967,7 @@ declare_args() {
         "instrumented",
         "instrumentation-runtime",
         "sancov",
+        "ubsan",
       ]
     },
 
@@ -974,6 +976,7 @@ declare_args() {
       forward_variables_from(_asan_variant, "*")
       configs += [ "//build/config/sanitizers:ubsan" ]
       remove_common_configs = [ "//build/config:no_rtti" ]  # See above.
+      tags += [ "ubsan" ]
     },
     {
       forward_variables_from(_asan_variant, "*")
@@ -1009,6 +1012,7 @@ declare_args() {
         "fuzzer",
         "instrumented",
         "instrumentation-runtime",
+        "ubsan",
       ]
     },
 
