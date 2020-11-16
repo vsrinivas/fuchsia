@@ -667,11 +667,33 @@ class MockTransactionHandler final : public fs::TransactionHandler {
     return callbacks_[transactions_seen_++](requests);
   }
 
+  zx_status_t Flush() override {
+    EXPECT_LT(transactions_seen_, transactions_expected_);
+    if (transactions_seen_ == transactions_expected_) {
+      return ZX_ERR_BAD_STATE;
+    }
+    return callbacks_[transactions_seen_++](GetFlushRequests());
+  }
+
+  static bool IsFlush(const std::vector<storage::BufferedOperation>& requests) {
+    return &requests == &GetFlushRequests();
+  }
+
  private:
+  static const std::vector<storage::BufferedOperation>& GetFlushRequests() {
+    static auto requests = new std::vector<storage::BufferedOperation>();
+    return *requests;
+  }
+
   TransactionCallback* callbacks_ = nullptr;
   size_t transactions_expected_ = 0;
   size_t transactions_seen_ = 0;
 };
+
+zx_status_t FlushCallback(const std::vector<storage::BufferedOperation>& requests) {
+  EXPECT_TRUE(MockTransactionHandler::IsFlush(requests));
+  return ZX_OK;
+}
 
 class ReplayJournalTest : public ParseJournalTestFixture {
  public:
@@ -823,6 +845,7 @@ TEST_F(ReplayJournalTest, OneEntry) {
         EXPECT_EQ(operations[0].op.length, requests[0].op.length);
         return ZX_OK;
       },
+      FlushCallback,
       [&](const std::vector<storage::BufferedOperation>& requests) {
         // Observe that the replay code updates the journal superblock.
         EXPECT_EQ(requests.size(), 1ul);

@@ -279,6 +279,12 @@ zx::status<JournalSuperblock> ReplayJournal(fs::TransactionHandler* transaction_
       return zx::error(status);
     }
 
+    status = transaction_handler->Flush();
+    if (status != ZX_OK) {
+      FS_TRACE_ERROR("replay: Flush failed: %d\n", status);
+      return zx::error(status);
+    }
+
     operations.clear();
     FS_TRACE_INFO("replay: New start: %zu, sequence_number: %zu\n", next_entry_start,
                   sequence_number);
