@@ -717,7 +717,6 @@ group("deprecated_package_underscore") {
     "//topaz/public/dart/fuchsia_modular_testing:fuchsia_modular_testing_package_integration_tests_pkg",
     "//topaz/public/dart/fuchsia_services:fuchsia_services_foo_test_server_pkg",
     "//topaz/public/dart/fuchsia_services:fuchsia_services_package_integration_tests_pkg",
-    "//topaz/public/dart/fuchsia_services/examples/mind_reader/bin:mind_reader_dart_pkg",
     "//topaz/public/dart/fuchsia_vfs:fuchsia_vfs_package_unittests_pkg",
     "//topaz/public/dart/fuchsia_webview_flutter/examples/webview_mod:webview_mod_pkg",
     "//topaz/runtime/dart_runner/examples/goodbye_dart:goodbye_dart_aot_pkg",
