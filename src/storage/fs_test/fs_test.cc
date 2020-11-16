@@ -24,6 +24,7 @@
 #include <iostream>
 #include <utility>
 
+#include <blobfs/blob-layout.h>
 #include <fbl/unique_fd.h>
 #include <fs-management/admin.h>
 #include <fs-management/format.h>
@@ -39,9 +40,7 @@
 namespace fs_test {
 namespace {
 
-namespace fio = ::llcpp::fuchsia::io;
-
-std::string StripTrailingSlash(const std::string in) {
+std::string StripTrailingSlash(const std::string& in) {
   if (!in.empty() && in.back() == '/') {
     return in.substr(0, in.length() - 1);
   } else {
@@ -401,9 +400,8 @@ std::vector<TestFilesystemOptions> MapAndFilterAllTestFilesystems(
   return results;
 }
 
-zx::status<> Filesystem::Format(const std::string& device_path, disk_format_t format) {
-  mkfs_options_t options = default_mkfs_options;
-  options.sectors_per_cluster = 2;  // 1 KiB cluster size
+zx::status<> Filesystem::Format(const std::string& device_path, disk_format_t format,
+                                const mkfs_options_t& options) {
   auto status = zx::make_status(mkfs(device_path.c_str(), format, launch_stdio_sync, &options));
   if (status.is_error()) {
     std::cout << "Could not format " << disk_format_string(format)
@@ -467,7 +465,7 @@ zx::status<std::unique_ptr<FilesystemInstance>> MinfsFilesystem::Make(
     return result.take_error();
   }
   auto [device, device_path] = std::move(result).value();
-  zx::status<> status = Filesystem::Format(device_path, DISK_FORMAT_MINFS);
+  zx::status<> status = Filesystem::Format(device_path, DISK_FORMAT_MINFS, default_mkfs_options);
   if (status.is_error()) {
     return status.take_error();
   }
@@ -603,7 +601,9 @@ zx::status<std::unique_ptr<FilesystemInstance>> FatFilesystem::Make(
     return ram_disk_or.take_error();
   }
   auto [ram_disk, device_path] = std::move(ram_disk_or).value();
-  zx::status<> status = Filesystem::Format(device_path, DISK_FORMAT_FAT);
+  mkfs_options_t mkfs_options = default_mkfs_options;
+  mkfs_options.sectors_per_cluster = 2;  // 1 KiB cluster size
+  zx::status<> status = Filesystem::Format(device_path, DISK_FORMAT_FAT, mkfs_options);
   if (status.is_error()) {
     return status.take_error();
   }
@@ -659,7 +659,12 @@ zx::status<std::unique_ptr<FilesystemInstance>> BlobfsFilesystem::Make(
     return result.take_error();
   }
   auto [device, device_path] = std::move(result).value();
-  zx::status<> status = Filesystem::Format(device_path, DISK_FORMAT_BLOBFS);
+  mkfs_options_t mkfs_options = default_mkfs_options;
+  if (options.blob_layout_format) {
+    mkfs_options.blob_layout_format =
+        blobfs::GetBlobLayoutFormatCommandLineArg(options.blob_layout_format.value());
+  }
+  zx::status<> status = Filesystem::Format(device_path, DISK_FORMAT_BLOBFS, mkfs_options);
   if (status.is_error()) {
     return status.take_error();
   }

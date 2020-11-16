@@ -2,42 +2,38 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/storage/blobfs/blobfs_fixtures.h"
+#include "src/storage/blobfs/test/integration/blobfs_fixtures.h"
 
-#include <fcntl.h>
-#include <fuchsia/io/llcpp/fidl.h>
+#include <blobfs/blob-layout.h>
 
-#include <fvm/format.h>
-#include <gtest/gtest.h>
+#include "src/storage/fs_test/fs_test_fixture.h"
 
-namespace {
+namespace blobfs {
 
-void CheckBlobfsInfo(fs::FilesystemTest* test) {
-  ::llcpp::fuchsia::io::FilesystemInfo info;
-  ASSERT_NO_FAILURES(test->GetFsInfo(&info));
-
-  const char kFsName[] = "blobfs";
-  const char* name = reinterpret_cast<const char*>(info.name.data());
-  ASSERT_STR_EQ(kFsName, name);
-  ASSERT_LE(info.used_nodes, info.total_nodes, "Used nodes greater than free nodes");
-  ASSERT_LE(info.used_bytes, info.total_bytes, "Used bytes greater than free bytes");
+fs_test::TestFilesystemOptions BlobfsDefaultTestParam() {
+  auto options = fs_test::TestFilesystemOptions::BlobfsWithoutFvm();
+  options.description = "Blobfs";
+  return options;
 }
 
-}  // namespace
-
-void BlobfsTest::CheckInfo() { CheckBlobfsInfo(this); }
-
-void BlobfsFixedDiskSizeTest::CheckInfo() { CheckBlobfsInfo(this); }
-
-void BlobfsTestWithFvm::CheckInfo() { CheckBlobfsInfo(this); }
-
-void BlobfsTestWithFvm::CheckPartitionSize() {
-  // Minimum size required by ResizePartition test:
-  const size_t kMinDataSize = 507 * kTestFvmSliceSize;
-  const size_t kMinFvmSize =
-      fvm::Header::FromDiskSize(fvm::kMaxUsablePartitions, kMinDataSize, kTestFvmSliceSize)
-          .fvm_partition_size;
-  ASSERT_GE(environment_->disk_size(), kMinFvmSize, "Insufficient disk space for FVM tests");
+fs_test::TestFilesystemOptions BlobfsWithFvmTestParam() {
+  auto options = fs_test::TestFilesystemOptions::DefaultBlobfs();
+  options.description = "BlobfsWithFvm";
+  return options;
 }
 
-void BlobfsFixedDiskSizeTestWithFvm::CheckInfo() { CheckBlobfsInfo(this); }
+fs_test::TestFilesystemOptions BlobfsWithCompactLayoutTestParam() {
+  auto options = BlobfsDefaultTestParam();
+  options.description = "BlobfsWithCompactLayout";
+  options.blob_layout_format = BlobLayoutFormat::kCompactMerkleTreeAtEnd;
+  return options;
+}
+
+fs_test::TestFilesystemOptions BlobfsWithFixedDiskSizeTestParam(uint64_t disk_size) {
+  auto options = BlobfsDefaultTestParam();
+  options.description = "BlobfsWithFixedDiskSize";
+  options.device_block_count = disk_size / options.device_block_size;
+  return options;
+}
+
+}  // namespace blobfs

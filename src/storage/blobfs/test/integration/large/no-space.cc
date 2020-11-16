@@ -23,16 +23,16 @@
 namespace blobfs {
 namespace {
 
-namespace fio = ::llcpp::fuchsia::io;
+using NoSpaceTest = ParameterizedBlobfsTest;
 
-void RunNoSpaceTest(fs_test::TestFilesystem& fs) {
+TEST_P(NoSpaceTest, NoSpace) {
   std::unique_ptr<BlobInfo> last_info = nullptr;
 
   // Keep generating blobs until we run out of space.
   size_t count = 0;
   while (true) {
     std::unique_ptr<BlobInfo> info;
-    ASSERT_NO_FATAL_FAILURE(GenerateRandomBlob(fs.mount_path(), 1 << 17, &info));
+    ASSERT_NO_FATAL_FAILURE(GenerateRandomBlob(fs().mount_path(), 1 << 17, &info));
 
     fbl::unique_fd fd(open(info->path, O_CREAT | O_RDWR));
     ASSERT_TRUE(fd) << "Failed to create blob";
@@ -62,9 +62,10 @@ void RunNoSpaceTest(fs_test::TestFilesystem& fs) {
   }
 }
 
-TEST_F(BlobfsTest, NoSpace) { RunNoSpaceTest(fs()); }
-
-TEST_F(BlobfsTestWithFvm, NoSpace) { RunNoSpaceTest(fs()); }
+INSTANTIATE_TEST_SUITE_P(/*no prefix*/, NoSpaceTest,
+                         testing::Values(BlobfsDefaultTestParam(), BlobfsWithFvmTestParam(),
+                                         BlobfsWithCompactLayoutTestParam()),
+                         testing::PrintToStringParamName());
 
 }  // namespace
 }  // namespace blobfs

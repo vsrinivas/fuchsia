@@ -13,8 +13,7 @@
 namespace blobfs {
 namespace {
 
-using SuperblockTest = BlobfsTest;
-using SuperblockTestWithFvm = BlobfsTestWithFvm;
+using SuperblockTest = ParameterizedBlobfsTest;
 
 void FsyncFilesystem(fs_test::TestFilesystem& fs) {
   // Open the root directory to fsync the filesystem.
@@ -29,25 +28,25 @@ void ReadSuperblock(const std::string& device_path, Superblock* info) {
   ASSERT_EQ(kBlobfsBlockSize, pread(device.get(), info, kBlobfsBlockSize, 0));
 }
 
-void RunCheckDirtyBitOnMountTest(fs_test::TestFilesystem& fs) {
+TEST_P(SuperblockTest, CheckDirtyBitOnMount) {
   Superblock info;
 
-  ASSERT_NO_FATAL_FAILURE(FsyncFilesystem(fs));
+  ASSERT_NO_FATAL_FAILURE(FsyncFilesystem(fs()));
 
   // Check if clean bit is unset.
-  ReadSuperblock(fs.DevicePath().value(), &info);
+  ReadSuperblock(fs().DevicePath().value(), &info);
   ASSERT_EQ(info.flags & kBlobFlagClean, 0u);
 
   // Unmount and check if clean bit is set.
-  ASSERT_TRUE(fs.Unmount().is_ok());
+  ASSERT_TRUE(fs().Unmount().is_ok());
 
-  ReadSuperblock(fs.DevicePath().value(), &info);
+  ReadSuperblock(fs().DevicePath().value(), &info);
   ASSERT_EQ(kBlobFlagClean, info.flags & kBlobFlagClean);
 }
 
-TEST_F(SuperblockTest, CheckDirtyBitOnMount) { RunCheckDirtyBitOnMountTest(fs()); }
-
-TEST_F(SuperblockTestWithFvm, CheckDirtyBitOnMount) { RunCheckDirtyBitOnMountTest(fs()); }
+INSTANTIATE_TEST_SUITE_P(/*no prefix*/, SuperblockTest,
+                         testing::Values(BlobfsDefaultTestParam(), BlobfsWithFvmTestParam()),
+                         testing::PrintToStringParamName());
 
 }  // namespace
 }  // namespace blobfs

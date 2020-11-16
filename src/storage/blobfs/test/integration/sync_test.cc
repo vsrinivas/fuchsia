@@ -76,7 +76,7 @@ TEST(SyncNandTest, Sync) {
   ASSERT_EQ(vmo.CreateAndMap(kVmoSize, "vmo"), ZX_OK);
   memset(vmo.start(), 0xff, kVmoSize);
 
-  auto options = BlobfsTest::DefaultOptions();
+  auto options = BlobfsDefaultTestParam();
   options.use_ram_nand = true;
   options.ram_nand_vmo = vmo.vmo().borrow();
   options.device_block_count = 0;  // Uses VMO size.

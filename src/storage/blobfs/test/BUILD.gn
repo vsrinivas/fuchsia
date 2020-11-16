@@ -136,6 +136,7 @@ test("blobfs-integration") {
   configs += [ "//build/config:all_source" ]
 
   sources = [
+    "integration/blobfs_fixtures.cc",
     "integration/blobfs_integration_test.cc",
     "integration/fdio_test.cc",
     "integration/fdio_test.h",
@@ -227,7 +228,10 @@ template("blobfs_large_integration_test") {
   test(test_name) {
     output_name = invoker.target_name
 
-    sources = invoker.sources
+    sources = [ "integration/blobfs_fixtures.cc" ]
+    if (defined(invoker.sources)) {
+      sources += invoker.sources
+    }
 
     deps = [
       ":load-generator",

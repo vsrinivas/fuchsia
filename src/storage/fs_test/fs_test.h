@@ -20,7 +20,9 @@
 #include <utility>
 #include <vector>
 
+#include <blobfs/blob-layout.h>
 #include <fbl/unique_fd.h>
+#include <fs-management/admin.h>
 #include <fs-management/format.h>
 #include <fs-management/mount.h>
 #include <ramdevice-client/ramnand.h>
@@ -54,6 +56,9 @@ struct TestFilesystemOptions {
   // inadvertently depend on it), but that won't work for very large ram-disks (they will trigger
   // OOMs), in which case they can be zero filled.
   bool zero_fill = false;
+
+  // The format blobfs should store blobs in.
+  std::optional<blobfs::BlobLayoutFormat> blob_layout_format;
 };
 
 std::ostream& operator<<(std::ostream& out, const TestFilesystemOptions& options);
@@ -111,7 +116,8 @@ class Filesystem {
 
  protected:
   // A wrapper around fs-management that can be used by subclasses if they so wish.
-  static zx::status<> Format(const std::string& device_path, disk_format_t format);
+  static zx::status<> Format(const std::string& device_path, disk_format_t format,
+                             const mkfs_options_t& options);
 };
 
 // Template that implementations can use to gain the SharedInstance method.

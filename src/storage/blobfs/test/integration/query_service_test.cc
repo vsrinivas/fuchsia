@@ -27,7 +27,7 @@ namespace {
 namespace fio = ::llcpp::fuchsia::io;
 namespace fuchsia_fs = ::llcpp::fuchsia::fs;
 
-class QueryServiceTest : public BlobfsTestWithFvm {
+class QueryServiceTest : public BlobfsWithFvmTest {
  protected:
   fuchsia_fs::Query::SyncClient ConnectToQueryService() {
     zx::channel query_client_end, query_server_end;

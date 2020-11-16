@@ -23,12 +23,11 @@
 namespace blobfs {
 namespace {
 
-namespace fio = ::llcpp::fuchsia::io;
-
+using FragmentationTest = ParameterizedBlobfsTest;
 // The following test attempts to fragment the underlying blobfs partition
 // assuming a trivial linear allocator. A more intelligent allocator may require
 // modifications to this test.
-void RunFragmentationTest(fs_test::TestFilesystem& fs) {
+TEST_P(FragmentationTest, Fragmentation) {
   // Keep generating blobs until we run out of space, in a pattern of large,
   // small, large, small, large.
   //
@@ -45,7 +44,7 @@ void RunFragmentationTest(fs_test::TestFilesystem& fs) {
   while (true) {
     std::unique_ptr<BlobInfo> info;
     ASSERT_NO_FATAL_FAILURE(
-        GenerateRandomBlob(fs.mount_path(), do_small_blob ? kSmallSize : kLargeSize, &info));
+        GenerateRandomBlob(fs().mount_path(), do_small_blob ? kSmallSize : kLargeSize, &info));
     fbl::unique_fd fd(open(info->path, O_CREAT | O_RDWR));
     ASSERT_TRUE(fd) << "Failed to create blob";
     ASSERT_EQ(0, ftruncate(fd.get(), info->size_data));
@@ -67,7 +66,7 @@ void RunFragmentationTest(fs_test::TestFilesystem& fs) {
   // We have filled up the disk with both small and large blobs.
   // Observe that we cannot add another large blob.
   std::unique_ptr<BlobInfo> info;
-  ASSERT_NO_FATAL_FAILURE(GenerateRandomBlob(fs.mount_path(), kLargeSize, &info));
+  ASSERT_NO_FATAL_FAILURE(GenerateRandomBlob(fs().mount_path(), kLargeSize, &info));
 
   // Calculate actual number of blocks required to store the blob (including the merkle tree).
   Inode large_inode;
@@ -75,7 +74,7 @@ void RunFragmentationTest(fs_test::TestFilesystem& fs) {
   size_t kLargeBlocks = ComputeNumMerkleTreeBlocks(large_inode) + BlobDataBlocks(large_inode);
 
   // We shouldn't have space (before we try allocating) ...
-  auto fs_info_or = fs.GetFsInfo();
+  auto fs_info_or = fs().GetFsInfo();
   ASSERT_TRUE(fs_info_or.is_ok());
   ASSERT_LT(fs_info_or->total_bytes - fs_info_or->used_bytes, kLargeBlocks * kBlobfsBlockSize);
 
@@ -98,7 +97,7 @@ void RunFragmentationTest(fs_test::TestFilesystem& fs) {
   ASSERT_GT(kSmallSize * (small_blobs.size() - 1), kLargeSize);
 
   // Validate that we have enough space (before we try allocating)...
-  fs_info_or = fs.GetFsInfo();
+  fs_info_or = fs().GetFsInfo();
   ASSERT_TRUE(fs_info_or.is_ok());
   ASSERT_GE(fs_info_or->total_bytes - fs_info_or->used_bytes, kLargeBlocks * kBlobfsBlockSize);
 
@@ -120,9 +119,10 @@ void RunFragmentationTest(fs_test::TestFilesystem& fs) {
   ASSERT_EQ(0, unlink(info->path));
 }
 
-TEST_F(BlobfsTest, Fragmentation) { RunFragmentationTest(fs()); }
-
-TEST_F(BlobfsTestWithFvm, Fragmentation) { RunFragmentationTest(fs()); }
+INSTANTIATE_TEST_SUITE_P(/*no prefix*/, FragmentationTest,
+                         testing::Values(BlobfsDefaultTestParam(), BlobfsWithFvmTestParam(),
+                                         BlobfsWithCompactLayoutTestParam()),
+                         testing::PrintToStringParamName());
 
 }  // namespace
 }  // namespace blobfs

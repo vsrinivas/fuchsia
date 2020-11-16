@@ -12,14 +12,9 @@
 
 namespace blobfs {
 
-class BlobfsTest : public fs_test::BaseFilesystemTest {
+class BaseBlobfsTest : public fs_test::BaseFilesystemTest {
  public:
-  static fs_test::TestFilesystemOptions DefaultOptions() {
-    return fs_test::TestFilesystemOptions::BlobfsWithoutFvm();
-  }
-
-  explicit BlobfsTest(fs_test::TestFilesystemOptions options = DefaultOptions())
-      : fs_test::BaseFilesystemTest(options) {}
+  using fs_test::BaseFilesystemTest::BaseFilesystemTest;
 
   int root_fd() {
     if (!root_fd_) {
@@ -32,32 +27,36 @@ class BlobfsTest : public fs_test::BaseFilesystemTest {
   fbl::unique_fd root_fd_;
 };
 
-// Base class for tests that create a dedicated disk of a given size.
-class BlobfsFixedDiskSizeTest : public BlobfsTest {
+// A test fixture for running tests with different blobfs settings.
+class ParameterizedBlobfsTest : public BaseBlobfsTest,
+                                public testing::WithParamInterface<fs_test::TestFilesystemOptions> {
  protected:
-  static fs_test::TestFilesystemOptions OptionsWithSize(uint64_t disk_size) {
-    auto options = fs_test::TestFilesystemOptions::BlobfsWithoutFvm();
-    options.device_block_count = disk_size / options.device_block_size;
-    return options;
-  }
-  explicit BlobfsFixedDiskSizeTest(uint64_t disk_size) : BlobfsTest(OptionsWithSize(disk_size)) {}
+  ParameterizedBlobfsTest() : BaseBlobfsTest(GetParam()) {}
 };
 
-class BlobfsTestWithFvm : public BlobfsTest {
- public:
-  BlobfsTestWithFvm() : BlobfsTest(fs_test::TestFilesystemOptions::DefaultBlobfs()) {}
+// Different blobfs settings to use with |ParameterizedBlobfsTest|.
+fs_test::TestFilesystemOptions BlobfsDefaultTestParam();
+fs_test::TestFilesystemOptions BlobfsWithFvmTestParam();
+fs_test::TestFilesystemOptions BlobfsWithCompactLayoutTestParam();
+fs_test::TestFilesystemOptions BlobfsWithFixedDiskSizeTestParam(uint64_t disk_size);
+
+// A test fixture for tests that only run against blobfs with the default settings.
+class BlobfsTest : public BaseBlobfsTest {
+ protected:
+  explicit BlobfsTest() : BaseBlobfsTest(BlobfsDefaultTestParam()) {}
 };
 
-// Base class for tests that create a dedicated disk of a given size.
-class BlobfsFixedDiskSizeTestWithFvm : public BlobfsTest {
- public:
-  static fs_test::TestFilesystemOptions OptionsWithSize(uint64_t disk_size) {
-    auto options = fs_test::TestFilesystemOptions::DefaultBlobfs();
-    options.device_block_count = disk_size / options.device_block_size;
-    return options;
-  }
-  explicit BlobfsFixedDiskSizeTestWithFvm(uint64_t disk_size)
-      : BlobfsTest(OptionsWithSize(disk_size)) {}
+// A test fixture for tests that only run against blobfs with a fixed disk size.
+class BlobfsFixedDiskSizeTest : public BaseBlobfsTest {
+ protected:
+  explicit BlobfsFixedDiskSizeTest(uint64_t disk_size)
+      : BaseBlobfsTest(BlobfsWithFixedDiskSizeTestParam(disk_size)) {}
+};
+
+// A test fixture for tests that only run against blobfs with FVM.
+class BlobfsWithFvmTest : public BaseBlobfsTest {
+ protected:
+  explicit BlobfsWithFvmTest() : BaseBlobfsTest(BlobfsWithFvmTestParam()) {}
 };
 
 }  // namespace blobfs
