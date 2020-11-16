@@ -1123,7 +1123,8 @@ func (ns *Netstack) addEndpoint(
 	syslog.Infof("NIC %s added", name)
 
 	if ep.Capabilities()&stack.CapabilityResolutionRequired > 0 {
-		if err := ns.stack.AddAddress(ifs.nicid, arp.ProtocolNumber, arp.ProtocolAddress); err != nil {
+		// TODO(github.com/google/gvisor/pull/4807): Remove once this change rolls.
+		if err := ns.stack.AddAddress(ifs.nicid, arp.ProtocolNumber, "arp"); err != nil && err != tcpip.ErrNotSupported {
 			return nil, fmt.Errorf("NIC %s: adding arp address failed: %w", name, WrapTcpIpError(err))
 		}
 	}
