@@ -228,13 +228,11 @@ bool is_pte_valid(pte_t pte) {
 
 void update_pte(volatile pte_t* pte, pte_t newval) { *pte = newval; }
 
-bool page_table_is_clear(volatile pte_t* page_table, uint page_size_shift) {
-  int i;
-  int count = 1U << (page_size_shift - 3);
-  pte_t pte;
+bool page_table_is_clear(const volatile pte_t* page_table, uint page_size_shift) {
+  const int count = 1U << (page_size_shift - 3);
 
-  for (i = 0; i < count; i++) {
-    pte = page_table[i];
+  for (int i = 0; i < count; i++) {
+    pte_t pte = page_table[i];
     if (pte != MMU_PTE_DESCRIPTOR_INVALID) {
       LTRACEF("page_table at %p still in use, index %d is %#" PRIx64 "\n", page_table, i, pte);
       return false;
@@ -263,13 +261,8 @@ zx_status_t ArmArchVmAspace::Query(vaddr_t vaddr, paddr_t* paddr, uint* mmu_flag
 }
 
 zx_status_t ArmArchVmAspace::QueryLocked(vaddr_t vaddr, paddr_t* paddr, uint* mmu_flags) {
-  ulong index;
   uint index_shift;
   uint page_size_shift;
-  pte_t pte;
-  pte_t pte_addr;
-  uint descriptor_type;
-  const volatile pte_t* page_table;
   vaddr_t vaddr_rem;
 
   canary_.Assert();
@@ -290,32 +283,32 @@ zx_status_t ArmArchVmAspace::QueryLocked(vaddr_t vaddr, paddr_t* paddr, uint* mm
     vaddr_t kernel_base = ~0UL << MMU_KERNEL_SIZE_SHIFT;
     vaddr_rem = vaddr - kernel_base;
 
-    index = vaddr_rem >> index_shift;
+    ulong __UNUSED index = vaddr_rem >> index_shift;
     ASSERT(index < MMU_KERNEL_PAGE_TABLE_ENTRIES_TOP);
   } else if (flags_ & ARCH_ASPACE_FLAG_GUEST) {
     index_shift = MMU_GUEST_TOP_SHIFT;
     page_size_shift = MMU_GUEST_PAGE_SIZE_SHIFT;
 
     vaddr_rem = vaddr;
-    index = vaddr_rem >> index_shift;
+    ulong __UNUSED index = vaddr_rem >> index_shift;
     ASSERT(index < MMU_GUEST_PAGE_TABLE_ENTRIES_TOP);
   } else {
     index_shift = MMU_USER_TOP_SHIFT;
     page_size_shift = MMU_USER_PAGE_SIZE_SHIFT;
 
     vaddr_rem = vaddr;
-    index = vaddr_rem >> index_shift;
+    ulong __UNUSED index = vaddr_rem >> index_shift;
     ASSERT(index < MMU_USER_PAGE_TABLE_ENTRIES_TOP);
   }
 
-  page_table = tt_virt_;
+  const volatile pte_t* page_table = tt_virt_;
 
   while (true) {
-    index = vaddr_rem >> index_shift;
+    const ulong index = vaddr_rem >> index_shift;
     vaddr_rem -= (vaddr_t)index << index_shift;
-    pte = page_table[index];
-    descriptor_type = pte & MMU_PTE_DESCRIPTOR_MASK;
-    pte_addr = pte & MMU_PTE_OUTPUT_ADDR_MASK;
+    const pte_t pte = page_table[index];
+    const uint descriptor_type = pte & MMU_PTE_DESCRIPTOR_MASK;
+    const paddr_t pte_addr = pte & MMU_PTE_OUTPUT_ADDR_MASK;
 
     LTRACEF("va %#" PRIxPTR ", index %lu, index_shift %u, rem %#" PRIxPTR ", pte %#" PRIx64 "\n",
             vaddr, index, index_shift, vaddr_rem, pte);
@@ -326,26 +319,24 @@ zx_status_t ArmArchVmAspace::QueryLocked(vaddr_t vaddr, paddr_t* paddr, uint* mm
 
     if (descriptor_type == ((index_shift > page_size_shift) ? MMU_PTE_L012_DESCRIPTOR_BLOCK
                                                             : MMU_PTE_L3_DESCRIPTOR_PAGE)) {
-      break;
+      if (paddr) {
+        *paddr = pte_addr + vaddr_rem;
+      }
+      if (mmu_flags) {
+        *mmu_flags = MmuFlagsFromPte(pte);
+      }
+      LTRACEF("va 0x%lx, paddr 0x%lx, flags 0x%x\n", vaddr, paddr ? *paddr : ~0UL,
+              mmu_flags ? *mmu_flags : ~0U);
+      return ZX_OK;
     }
 
     if (index_shift <= page_size_shift || descriptor_type != MMU_PTE_L012_DESCRIPTOR_TABLE) {
       PANIC_UNIMPLEMENTED;
     }
 
-    page_table = static_cast<volatile pte_t*>(paddr_to_physmap(pte_addr));
+    page_table = static_cast<const volatile pte_t*>(paddr_to_physmap(pte_addr));
     index_shift -= page_size_shift - 3;
   }
-
-  if (paddr) {
-    *paddr = pte_addr + vaddr_rem;
-  }
-  if (mmu_flags) {
-    *mmu_flags = MmuFlagsFromPte(pte);
-  }
-  LTRACEF("va 0x%lx, paddr 0x%lx, flags 0x%x\n", vaddr, paddr ? *paddr : ~0UL,
-          mmu_flags ? *mmu_flags : ~0U);
-  return ZX_OK;
 }
 
 zx_status_t ArmArchVmAspace::AllocPageTable(paddr_t* paddrp, uint page_size_shift) {
@@ -383,11 +374,9 @@ void ArmArchVmAspace::FreePageTable(void* vaddr, paddr_t paddr, uint page_size_s
   // currently we only support freeing a single page
   DEBUG_ASSERT(page_size_shift == PAGE_SIZE_SHIFT);
 
-  vm_page_t* page;
-
   LOCAL_KTRACE("page table free");
 
-  page = paddr_to_vm_page(paddr);
+  vm_page_t* page = paddr_to_vm_page(paddr);
   if (!page) {
     panic("bad page table paddr 0x%lx\n", paddr);
   }
@@ -471,35 +460,27 @@ void ArmArchVmAspace::FlushTLBEntry(vaddr_t vaddr, bool terminal) {
 ssize_t ArmArchVmAspace::UnmapPageTable(vaddr_t vaddr, vaddr_t vaddr_rel, size_t size,
                                         uint index_shift, uint page_size_shift,
                                         volatile pte_t* page_table) {
-  volatile pte_t* next_page_table;
-  vaddr_t index;
-  size_t chunk_size;
-  vaddr_t vaddr_rem;
-  vaddr_t block_size;
-  vaddr_t block_mask;
-  pte_t pte;
-  paddr_t page_table_paddr;
-  size_t unmap_size;
+  const vaddr_t block_size = 1UL << index_shift;
+  const vaddr_t block_mask = block_size - 1;
 
   LTRACEF(
       "vaddr 0x%lx, vaddr_rel 0x%lx, size 0x%lx, index shift %u, page_size_shift %u, page_table "
       "%p\n",
       vaddr, vaddr_rel, size, index_shift, page_size_shift, page_table);
 
-  unmap_size = 0;
+  size_t unmap_size = 0;
   while (size) {
-    block_size = 1UL << index_shift;
-    block_mask = block_size - 1;
-    vaddr_rem = vaddr_rel & block_mask;
-    chunk_size = ktl::min(size, block_size - vaddr_rem);
-    index = vaddr_rel >> index_shift;
+    const vaddr_t vaddr_rem = vaddr_rel & block_mask;
+    const size_t chunk_size = ktl::min(size, block_size - vaddr_rem);
+    const vaddr_t index = vaddr_rel >> index_shift;
 
-    pte = page_table[index];
+    const pte_t pte = page_table[index];
 
     if (index_shift > page_size_shift &&
         (pte & MMU_PTE_DESCRIPTOR_MASK) == MMU_PTE_L012_DESCRIPTOR_TABLE) {
-      page_table_paddr = pte & MMU_PTE_OUTPUT_ADDR_MASK;
-      next_page_table = static_cast<volatile pte_t*>(paddr_to_physmap(page_table_paddr));
+      const paddr_t page_table_paddr = pte & MMU_PTE_OUTPUT_ADDR_MASK;
+      volatile pte_t* next_page_table =
+          static_cast<volatile pte_t*>(paddr_to_physmap(page_table_paddr));
 
       // Recurse a level.
       UnmapPageTable(vaddr, vaddr_rem, chunk_size, index_shift - (page_size_shift - 3),
@@ -546,20 +527,13 @@ ssize_t ArmArchVmAspace::UnmapPageTable(vaddr_t vaddr, vaddr_t vaddr_rel, size_t
 ssize_t ArmArchVmAspace::MapPageTable(vaddr_t vaddr_in, vaddr_t vaddr_rel_in, paddr_t paddr_in,
                                       size_t size_in, pte_t attrs, uint index_shift,
                                       uint page_size_shift, volatile pte_t* page_table) {
-  ssize_t ret;
-  volatile pte_t* next_page_table;
-  vaddr_t index;
   vaddr_t vaddr = vaddr_in;
   vaddr_t vaddr_rel = vaddr_rel_in;
   paddr_t paddr = paddr_in;
   size_t size = size_in;
-  size_t chunk_size;
-  vaddr_t vaddr_rem;
-  vaddr_t block_size;
-  vaddr_t block_mask;
-  pte_t pte;
-  size_t mapped_size;
 
+  const vaddr_t block_size = 1UL << index_shift;
+  const vaddr_t block_mask = block_size - 1;
   LTRACEF("vaddr %#" PRIxPTR ", vaddr_rel %#" PRIxPTR ", paddr %#" PRIxPTR
           ", size %#zx, attrs %#" PRIx64 ", index shift %u, page_size_shift %u, page_table %p\n",
           vaddr, vaddr_rel, paddr, size, attrs, index_shift, page_size_shift, page_table);
@@ -575,14 +549,12 @@ ssize_t ArmArchVmAspace::MapPageTable(vaddr_t vaddr_in, vaddr_t vaddr_rel_in, pa
                    page_table);
   });
 
-  mapped_size = 0;
+  size_t mapped_size = 0;
   while (size) {
-    block_size = 1UL << index_shift;
-    block_mask = block_size - 1;
-    vaddr_rem = vaddr_rel & block_mask;
-    chunk_size = ktl::min(size, block_size - vaddr_rem);
-    index = vaddr_rel >> index_shift;
-    pte = page_table[index];
+    const vaddr_t vaddr_rem = vaddr_rel & block_mask;
+    const size_t chunk_size = ktl::min(size, block_size - vaddr_rem);
+    const vaddr_t index = vaddr_rel >> index_shift;
+    pte_t pte = page_table[index];
 
     // if we're at an unaligned address, not trying to map a block, and not at the terminal level,
     // recurse one more level of the page table tree
@@ -590,7 +562,8 @@ ssize_t ArmArchVmAspace::MapPageTable(vaddr_t vaddr_in, vaddr_t vaddr_rel_in, pa
         (index_shift > MMU_PTE_DESCRIPTOR_BLOCK_MAX_SHIFT)) {
       // Lookup the next level page table, allocating if required.
       bool allocated_page_table = false;
-      paddr_t page_table_paddr;
+      paddr_t page_table_paddr = 0;
+      volatile pte_t* next_page_table = nullptr;
 
       DEBUG_ASSERT(page_size_shift <= MMU_MAX_PAGE_SIZE_SHIFT);
 
@@ -627,9 +600,11 @@ ssize_t ArmArchVmAspace::MapPageTable(vaddr_t vaddr_in, vaddr_t vaddr_rel_in, pa
         default:
           PANIC_UNIMPLEMENTED;
       }
+      DEBUG_ASSERT(next_page_table);
 
-      ret = MapPageTable(vaddr, vaddr_rem, paddr, chunk_size, attrs,
-                         index_shift - (page_size_shift - 3), page_size_shift, next_page_table);
+      ssize_t ret =
+          MapPageTable(vaddr, vaddr_rem, paddr, chunk_size, attrs,
+                       index_shift - (page_size_shift - 3), page_size_shift, next_page_table);
       if (ret < 0) {
         if (allocated_page_table) {
           // We just allocated this page table. The unmap in err will not clean it up as the size
@@ -652,6 +627,7 @@ ssize_t ArmArchVmAspace::MapPageTable(vaddr_t vaddr_in, vaddr_t vaddr_rel_in, pa
         }
         return ret;
       }
+      DEBUG_ASSERT(static_cast<size_t>(ret) == chunk_size);
     } else {
       if (is_pte_valid(pte)) {
         LTRACEF("page table entry already in use, index %#" PRIxPTR ", %#" PRIx64 "\n", index, pte);
@@ -685,17 +661,12 @@ ssize_t ArmArchVmAspace::MapPageTable(vaddr_t vaddr_in, vaddr_t vaddr_rel_in, pa
 zx_status_t ArmArchVmAspace::ProtectPageTable(vaddr_t vaddr_in, vaddr_t vaddr_rel_in,
                                               size_t size_in, pte_t attrs, uint index_shift,
                                               uint page_size_shift, volatile pte_t* page_table) {
-  volatile pte_t* next_page_table;
-  vaddr_t index;
   vaddr_t vaddr = vaddr_in;
   vaddr_t vaddr_rel = vaddr_rel_in;
   size_t size = size_in;
-  size_t chunk_size;
-  vaddr_t vaddr_rem;
-  vaddr_t block_size;
-  vaddr_t block_mask;
-  paddr_t page_table_paddr;
-  pte_t pte;
+
+  const vaddr_t block_size = 1UL << index_shift;
+  const vaddr_t block_mask = block_size - 1;
 
   LTRACEF("vaddr %#" PRIxPTR ", vaddr_rel %#" PRIxPTR ", size %#" PRIxPTR ", attrs %#" PRIx64
           ", index shift %u, page_size_shift %u, page_table %p\n",
@@ -705,12 +676,11 @@ zx_status_t ArmArchVmAspace::ProtectPageTable(vaddr_t vaddr_in, vaddr_t vaddr_re
   DEBUG_ASSERT(((vaddr_rel | size) & ((1UL << page_size_shift) - 1)) == 0);
 
   while (size) {
-    block_size = 1UL << index_shift;
-    block_mask = block_size - 1;
-    vaddr_rem = vaddr_rel & block_mask;
-    chunk_size = ktl::min(size, block_size - vaddr_rem);
-    index = vaddr_rel >> index_shift;
-    pte = page_table[index];
+    const vaddr_t vaddr_rem = vaddr_rel & block_mask;
+    const size_t chunk_size = ktl::min(size, block_size - vaddr_rem);
+    const vaddr_t index = vaddr_rel >> index_shift;
+
+    pte_t pte = page_table[index];
 
     if (index_shift > page_size_shift &&
         (pte & MMU_PTE_DESCRIPTOR_MASK) == MMU_PTE_L012_DESCRIPTOR_BLOCK &&
@@ -728,8 +698,9 @@ zx_status_t ArmArchVmAspace::ProtectPageTable(vaddr_t vaddr_in, vaddr_t vaddr_re
 
     if (index_shift > page_size_shift &&
         (pte & MMU_PTE_DESCRIPTOR_MASK) == MMU_PTE_L012_DESCRIPTOR_TABLE) {
-      page_table_paddr = pte & MMU_PTE_OUTPUT_ADDR_MASK;
-      next_page_table = static_cast<volatile pte_t*>(paddr_to_physmap(page_table_paddr));
+      const paddr_t page_table_paddr = pte & MMU_PTE_OUTPUT_ADDR_MASK;
+      volatile pte_t* next_page_table =
+          static_cast<volatile pte_t*>(paddr_to_physmap(page_table_paddr));
 
       // Recurse a level.
       ProtectPageTable(vaddr, vaddr_rem, chunk_size, attrs, index_shift - (page_size_shift - 3),
