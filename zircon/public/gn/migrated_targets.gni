@@ -1,3 +1,7 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
 # When a library needs to be built both by the Zircon and Fuchsia builds,
 # its directory may contain a BUILD.gn and a BUILD.zircon.gn that are
 # symlinked together. This ensures they stay in sync easily.
