@@ -26,10 +26,12 @@ namespace {
 
 using fuchsia::virtualization::GuestConfig;
 
+constexpr uint64_t kDefaultMemory = 1ul << 30;
+
 // This is a locally administered MAC address (first byte 0x02) mixed with the
 // Google Organizationally Unique Identifier (00:1a:11). The host gets ff:ff:ff
 // and the guest gets 00:00:00 for the last three octets.
-static constexpr fuchsia::hardware::ethernet::MacAddress kGuestMacAddress = {
+constexpr fuchsia::hardware::ethernet::MacAddress kGuestMacAddress = {
     .octets = {0x02, 0x1a, 0x11, 0x00, 0x01, 0x00},
 };
 
@@ -398,6 +400,7 @@ void PrintCommandLineUsage(const char* program_name) {
   std::cerr << "\t--default-net           Enable a default net device (defaults to true)\n";
   std::cerr << "\t--memory=[bytes]        Allocate 'bytes' of memory for the guest.\n";
   std::cerr << "\t                        The suffixes 'k', 'M', and 'G' are accepted\n";
+  std::cerr << "\t                        (default " << kDefaultMemory << " bytes)\n";
   std::cerr << "\t--net=[spec]            Adds a net device with the given parameters\n";
   std::cerr << "\t--interrupt=[spec]      Adds a hardware interrupt mapping to the guest\n";
   std::cerr << "\t--virtio-balloon        Enable virtio-balloon (default)\n";
@@ -422,7 +425,7 @@ void PrintCommandLineUsage(const char* program_name) {
 
 void SetDefaults(GuestConfig* cfg) {
   if (!cfg->has_memory()) {
-    cfg->mutable_memory()->push_back({.size = 1ul << 30});
+    cfg->mutable_memory()->push_back({.size = kDefaultMemory});
   }
 
   for (const auto& [name, handler] : GetAllOptionHandlers()) {
