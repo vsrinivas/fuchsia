@@ -72,8 +72,15 @@ impl MetricsReporter for CobaltMetricsReporter {
                 );
             }
             Metrics::UpdateCheckFailureReason(reason) => {
+                let event_code = reason as u32;
                 self.cobalt_sender
-                    .log_event(mos_metrics_registry::UPDATE_CHECK_FAILURE_METRIC_ID, reason as u32);
+                    .log_event(mos_metrics_registry::UPDATE_CHECK_FAILURE_METRIC_ID, event_code);
+                self.cobalt_sender.log_event_count(
+                    mos_metrics_registry::UPDATE_CHECK_FAILURE_COUNT_METRIC_ID,
+                    event_code,
+                    0,
+                    1,
+                );
             }
             Metrics::UpdateCheckRetries(count) => {
                 self.cobalt_sender.log_event_count(
@@ -157,6 +164,21 @@ mod tests {
                 ],
                 component: None,
                 payload: EventPayload::Event(fidl_fuchsia_cobalt::Event),
+            }
+        );
+        assert_eq!(
+            receiver.try_next().unwrap().unwrap(),
+            CobaltEvent {
+                metric_id: mos_metrics_registry::UPDATE_CHECK_FAILURE_COUNT_METRIC_ID,
+                event_codes: vec![
+                    mos_metrics_registry::UpdateCheckFailureMetricDimensionReason::Configuration
+                        as u32
+                ],
+                component: None,
+                payload: EventPayload::EventCount(CountEvent {
+                    period_duration_micros: 0,
+                    count: 1
+                }),
             }
         );
     }
