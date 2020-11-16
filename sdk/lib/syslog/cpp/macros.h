@@ -36,7 +36,7 @@ class LogValue {
 
   std::string ToString(bool quote_if_string = false) const;
   void Log(::syslog::LogSeverity severity, const char* file, unsigned int line,
-           const char* condition, const char* tag) const;
+           const char* condition, const char* msg) const;
 
   operator bool() const { return !fit::holds_alternative<std::nullptr_t>(value_); }
 
@@ -165,8 +165,8 @@ bool ShouldCreateLogMessage(LogSeverity severity);
 }  // namespace syslog
 
 #define FX_SLOG(severity)                                                                    \
-  !FX_LOG_IS_ON(severity) ? (void)0 : ([](const char* tag, ::syslog::LogValue v = nullptr) { \
-    v.Log(::syslog::LOG_##severity, __FILE__, __LINE__, nullptr, tag);                       \
+  !FX_LOG_IS_ON(severity) ? (void)0 : ([](const char* msg, ::syslog::LogValue v = nullptr) { \
+    v.Log(::syslog::LOG_##severity, __FILE__, __LINE__, nullptr, msg);                       \
   })
 
 #define FX_LOG_STREAM(severity, tag) \

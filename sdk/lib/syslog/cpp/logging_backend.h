@@ -23,7 +23,7 @@ WEAK void WriteLog(syslog::LogSeverity severity, const char* file, unsigned int 
                    const char* tag, const char* condition, const std::string& msg);
 
 WEAK void WriteLogValue(syslog::LogSeverity severity, const char* file, unsigned int line,
-                        const char* tag, const char* condition, const syslog::LogValue& msg);
+                        const char* condition, const syslog::LogValue& value, const char* msg);
 
 }  // namespace syslog_backend
 

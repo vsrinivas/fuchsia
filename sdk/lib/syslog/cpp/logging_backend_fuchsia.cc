@@ -203,22 +203,28 @@ zx_koid_t GetKoid(zx_handle_t handle) {
 }
 
 template <typename T>
-std::string FullMessageString(const char* condition, const T& msg);
+std::string FullMessageString(const char* condition, const char* msg, const T& value);
 
 template <>
-std::string FullMessageString(const char* condition, const std::string& msg) {
+std::string FullMessageString(const char* condition, const char* msg, const std::string& value) {
   std::ostringstream stream;
 
-  if (condition)
+  if (condition) {
     stream << "Check failed: " << condition << ". ";
+  }
 
-  stream << msg;
+  if (msg) {
+    stream << msg;
+  }
+
+  stream << " " << value;
   return stream.str();
 }
 
 template <>
-std::string FullMessageString(const char* condition, const syslog::LogValue& msg) {
-  return FullMessageString(condition, msg.ToString());
+std::string FullMessageString(const char* condition, const char* msg,
+                              const syslog::LogValue& value) {
+  return FullMessageString(condition, msg, value.ToString());
 }
 
 void WriteValueToRecordWithKeyDeprecated(RecordState& record, Encoder<DataBuffer>& encoder,
@@ -280,7 +286,7 @@ class LogState {
   template <typename T>
   bool WriteLogToSocket(const zx::socket* socket, zx_time_t time, zx_koid_t pid, zx_koid_t tid,
                         syslog::LogSeverity severity, const char* file_name, unsigned int line,
-                        const char* tag, const char* condition, const T& msg) const;
+                        std::string& message, const char* condition, const T& value) const;
   bool WriteLogToFile(std::ofstream* file_ptr, zx_time_t time, zx_koid_t pid, zx_koid_t tid,
                       syslog::LogSeverity severity, const char* file_name, unsigned int line,
                       const char* tag, const char* condition, const std::string& msg) const;
@@ -296,8 +302,8 @@ class LogState {
 template <typename T>
 bool LogState::WriteLogToSocket(const zx::socket* socket, zx_time_t time, zx_koid_t pid,
                                 zx_koid_t tid, syslog::LogSeverity severity, const char* file_name,
-                                unsigned int line, const char* tag, const char* condition,
-                                const T& msg) const {
+                                unsigned int line, std::string& message, const char* condition,
+                                const T& value) const {
   std::unique_ptr<DataBuffer> buffer = std::make_unique<DataBuffer>();
   Encoder<DataBuffer> encoder(*buffer);
   auto record = encoder.Begin(time, ::fuchsia::diagnostics::Severity(severity));
@@ -305,6 +311,9 @@ bool LogState::WriteLogToSocket(const zx::socket* socket, zx_time_t time, zx_koi
   encoder.AppendArgumentValue(record, uint64_t(pid));
   encoder.AppendArgumentKey(record, SliceFromString(kTidFieldName));
   encoder.AppendArgumentValue(record, uint64_t(tid));
+
+  encoder.AppendArgumentKey(record, SliceFromString(kMessageFieldName));
+  encoder.AppendArgumentValue(record, SliceFromString(message));
 
   auto dropped_count = GetAndResetDropped();
   if (dropped_count) {
@@ -317,11 +326,6 @@ bool LogState::WriteLogToSocket(const zx::socket* socket, zx_time_t time, zx_koi
     encoder.AppendArgumentValue(record, SliceFromString(tags_[i]));
   }
 
-  if (tag) {
-    encoder.AppendArgumentKey(record, SliceFromString(kTagFieldName));
-    encoder.AppendArgumentValue(record, SliceFromString(tag));
-  }
-
   // TODO(fxbug.dev/56051): Enable this everywhere once doing so won't spam everything.
   if (severity >= syslog::LOG_ERROR) {
     encoder.AppendArgumentKey(record, SliceFromString(kFileFieldName));
@@ -331,7 +335,7 @@ bool LogState::WriteLogToSocket(const zx::socket* socket, zx_time_t time, zx_koi
     encoder.AppendArgumentValue(record, uint64_t(line));
   }
 
-  WriteMessageToRecordDeprecated(record, encoder, msg);  // See inline below
+  WriteMessageToRecordDeprecated(record, encoder, value);  // See inline below
   encoder.End(record);
   auto slice = buffer->GetSlice();
   auto status = socket->write(0, slice.data(), slice.size() * sizeof(log_word_t), nullptr);
@@ -463,14 +467,14 @@ LogState::LogState(const syslog::LogSettings& settings,
 
 template <typename T>
 void LogState::WriteLog(syslog::LogSeverity severity, const char* file_name, unsigned int line,
-                        const char* tag, const char* condition, const T& msg) const {
+                        const char* msg, const char* condition, const T& value) const {
   zx_koid_t tid = GetCurrentThreadKoid();
   zx_time_t time = zx_clock_get_monotonic();
 
   // Cached getter for a stringified version of the log message, so we stringify at most once.
-  auto msg_str = [as_str = std::string(), condition, &msg]() mutable -> const std::string& {
+  auto msg_str = [as_str = std::string(), condition, msg, &value]() mutable -> const std::string& {
     if (as_str.empty()) {
-      as_str = FullMessageString(condition, msg);
+      as_str = FullMessageString(condition, msg, value);
     }
 
     return as_str;
@@ -478,14 +482,18 @@ void LogState::WriteLog(syslog::LogSeverity severity, const char* file_name, uns
 
   if (fit::holds_alternative<std::ofstream>(descriptor_)) {
     auto& file = fit::get<std::ofstream>(descriptor_);
-    if (WriteLogToFile(&file, time, pid_, tid, severity, file_name, line, tag, condition,
+    if (WriteLogToFile(&file, time, pid_, tid, severity, file_name, line, nullptr, condition,
                        msg_str())) {
       return;
     }
   } else if (fit::holds_alternative<zx::socket>(descriptor_)) {
     auto& socket = fit::get<zx::socket>(descriptor_);
-    if (WriteLogToSocket(&socket, time, pid_, tid, severity, file_name, line, tag, condition,
-                         msg)) {
+    std::string message;
+    if (msg) {
+      message.assign(msg);
+    }
+    if (WriteLogToSocket(&socket, time, pid_, tid, severity, file_name, line, message, condition,
+                         value)) {
       return;
     }
   }
@@ -503,8 +511,8 @@ void SetLogSettings(const syslog::LogSettings& settings,
 syslog::LogSeverity GetMinLogLevel() { return LogState::Get().min_severity(); }
 
 void WriteLogValue(syslog::LogSeverity severity, const char* file_name, unsigned int line,
-                   const char* tag, const char* condition, const syslog::LogValue& msg) {
-  LogState::Get().WriteLog(severity, file_name, line, tag, condition, msg);
+                   const char* condition, const syslog::LogValue& value, const char* msg) {
+  LogState::Get().WriteLog(severity, file_name, line, msg, condition, value);
 }
 
 void WriteLog(syslog::LogSeverity severity, const char* file_name, unsigned int line,

@@ -20,8 +20,8 @@ TEST(StructuredLogging, Log) {
 TEST(StructuredLogging, BackendDirect) {
   syslog_backend::WriteLog(syslog::LOG_WARNING, "foo.cc", 42, "fake tag", "condition",
                            "Log message");
-  syslog_backend::WriteLogValue(syslog::LOG_WARNING, "foo.cc", 42, "fake tag", "condition",
-                                {"foo"_k = 42});
+  syslog_backend::WriteLogValue(syslog::LOG_WARNING, "foo.cc", 42, "condition", {"foo"_k = 42},
+                                "fake message");
   // TODO(fxbug.dev/57482): Figure out how to verify this appropriately.
 }
 

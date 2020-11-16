@@ -57,8 +57,13 @@ syslog::LogSeverity GetMinLogLevel() {
 }
 
 void WriteLogValue(syslog::LogSeverity severity, const char* file, unsigned int line,
-                   const char* tag, const char* condition, const syslog::LogValue& msg) {
-  WriteLog(severity, file, line, tag, condition, msg.ToString());
+                   const char* condition, const syslog::LogValue& value, const char* msg) {
+  std::string message(msg);
+  auto rest = value.ToString();
+  if (!rest.empty()) {
+    message += " " + value.ToString();
+  }
+  WriteLog(severity, file, line, nullptr, condition, message);
 }
 
 void WriteLog(syslog::LogSeverity severity, const char* file, unsigned int line, const char* tag,

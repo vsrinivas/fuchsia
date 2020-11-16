@@ -13,10 +13,7 @@ use fuchsia_async::{Socket, Task};
 use fuchsia_component::server::ServiceFs;
 use fuchsia_zircon as zx;
 use futures::prelude::*;
-use std::{
-    collections::{BTreeMap, BTreeSet},
-    ops::Range,
-};
+use std::{collections::BTreeMap, ops::Range};
 use tracing::*;
 
 /// Validate Log VMO formats written by 'puppet' programs controlled by
@@ -126,7 +123,7 @@ impl Puppet {
         assert_eq!(
             self.read_record().await?,
             RecordAssertion::new(&self.info, before..after, Severity::Warn)
-                .add_tag("test_log")
+                .add_string("message", "test_log")
                 .add_string("foo", "bar")
                 .build()
         );
@@ -140,7 +137,6 @@ impl Puppet {
 struct TestRecord {
     timestamp: i64,
     severity: Severity,
-    tags: BTreeSet<String>,
     arguments: BTreeMap<String, Value>,
 }
 
@@ -148,22 +144,12 @@ impl TestRecord {
     fn parse(buf: &[u8]) -> Result<Self, Error> {
         let Record { timestamp, severity, arguments } = parse_record(buf)?.0;
 
-        let mut tags = BTreeSet::new();
         let mut sorted_args = BTreeMap::new();
         for diagnostics_stream::Argument { name, value } in arguments {
-            if name == "tag" {
-                match value {
-                    Value::Text(t) => {
-                        tags.insert(t);
-                    }
-                    _ => anyhow::bail!("found non-text tag"),
-                }
-            } else {
-                sorted_args.insert(name, value);
-            }
+            sorted_args.insert(name, value);
         }
 
-        Ok(Self { timestamp, severity, tags, arguments: sorted_args })
+        Ok(Self { timestamp, severity, arguments: sorted_args })
     }
 }
 
@@ -177,7 +163,6 @@ impl PartialEq<RecordAssertion> for TestRecord {
 struct RecordAssertion {
     valid_times: Range<zx::Time>,
     severity: Severity,
-    tags: BTreeSet<String>,
     arguments: BTreeMap<String, Value>,
 }
 
@@ -187,12 +172,8 @@ impl RecordAssertion {
         valid_times: Range<zx::Time>,
         severity: Severity,
     ) -> RecordAssertionBuilder {
-        let mut builder = RecordAssertionBuilder {
-            valid_times,
-            severity,
-            tags: BTreeSet::new(),
-            arguments: BTreeMap::new(),
-        };
+        let mut builder =
+            RecordAssertionBuilder { valid_times, severity, arguments: BTreeMap::new() };
 
         builder.add_unsigned("pid", info.pid);
         builder.add_unsigned("tid", info.tid);
@@ -205,7 +186,6 @@ impl PartialEq<TestRecord> for RecordAssertion {
     fn eq(&self, rhs: &TestRecord) -> bool {
         self.valid_times.contains(&zx::Time::from_nanos(rhs.timestamp))
             && self.severity == rhs.severity
-            && self.tags == rhs.tags
             && self.arguments == rhs.arguments
     }
 }
@@ -213,7 +193,6 @@ impl PartialEq<TestRecord> for RecordAssertion {
 struct RecordAssertionBuilder {
     valid_times: Range<zx::Time>,
     severity: Severity,
-    tags: BTreeSet<String>,
     arguments: BTreeMap<String, Value>,
 }
 
@@ -222,14 +201,8 @@ impl RecordAssertionBuilder {
         RecordAssertion {
             valid_times: self.valid_times.clone(),
             severity: self.severity,
-            tags: std::mem::replace(&mut self.tags, Default::default()),
             arguments: std::mem::replace(&mut self.arguments, Default::default()),
         }
-    }
-
-    fn add_tag(&mut self, name: &str) -> &mut Self {
-        self.tags.insert(name.to_owned());
-        self
     }
 
     fn add_string(&mut self, name: &str, value: &str) -> &mut Self {

@@ -74,9 +74,9 @@ std::string LogValue::ToString(bool quote_if_string) const {
 }
 
 void LogValue::Log(::syslog::LogSeverity severity, const char* file, unsigned int line,
-                   const char* condition, const char* tag) const {
+                   const char* condition, const char* msg) const {
   file = severity > LOG_INFO ? StripDots(file) : StripPath(file);
-  return syslog_backend::WriteLogValue(severity, file, line, tag, condition, *this);
+  return syslog_backend::WriteLogValue(severity, file, line, condition, *this, msg);
 }
 
 std::string LogField::ToString() const { return "\"" + key_ + "\": " + value_.ToString(true); }
