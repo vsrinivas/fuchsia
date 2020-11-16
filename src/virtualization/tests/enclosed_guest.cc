@@ -121,7 +121,7 @@ zx_status_t EnclosedGuest::Start() {
   enclosing_environment_ =
       sys::testing::EnclosingEnvironment::Create(kRealm, real_env_, std::move(services));
   bool environment_running = RunLoopUntil(
-      &loop_, [this] { return enclosing_environment_->is_running(); },
+      GetLoop(), [this] { return enclosing_environment_->is_running(); },
       PeriodicLogger("Creating guest sandbox", zx::sec(10)));
   if (!environment_running) {
     FX_LOGS(ERROR) << "Timed out waiting for guest sandbox environment to become ready.";
@@ -156,13 +156,13 @@ zx_status_t EnclosedGuest::Start() {
                            launch_complete = true;
                          });
   RunLoopUntil(
-      &loop_, [&launch_complete]() { return launch_complete; },
+      GetLoop(), [&launch_complete]() { return launch_complete; },
       PeriodicLogger("Launching guest", zx::sec(10)));
 
   zx::socket serial_socket;
   guest_->GetSerial([&serial_socket](zx::socket s) { serial_socket = std::move(s); });
   bool socket_valid = RunLoopUntil(
-      &loop_, [&serial_socket] { return serial_socket.is_valid(); },
+      GetLoop(), [&serial_socket] { return serial_socket.is_valid(); },
       PeriodicLogger("Connecting to guest serial", zx::sec(10)));
   if (!socket_valid) {
     FX_LOGS(ERROR) << "Timed out waiting to connect to guest's serial.";
@@ -210,7 +210,7 @@ zx_status_t ZirconEnclosedGuest::LaunchInfo(fuchsia::virtualization::LaunchInfo*
 zx_status_t ZirconEnclosedGuest::WaitForSystemReady() {
   PeriodicLogger logger{"Waiting for guest system shell", zx::sec(10)};
   std::string ps;
-  for (size_t i = 0; i != kNumRetries; ++i) {
+  for (size_t i = 0; i != kNumRetries; i++) {
     logger.LogIfRequired();
     zx_status_t status = Execute({"ps"}, {}, &ps);
     if (status != ZX_OK) {
@@ -261,7 +261,7 @@ zx_status_t DebianEnclosedGuest::LaunchInfo(fuchsia::virtualization::LaunchInfo*
 
 zx_status_t DebianEnclosedGuest::WaitForSystemReady() {
   PeriodicLogger logger{"Waiting for guest system shell", zx::sec(10)};
-  for (size_t i = 0; i != kNumRetries; ++i) {
+  for (size_t i = 0; i != kNumRetries; i++) {
     logger.LogIfRequired();
     std::string response;
     zx_status_t status = Execute({"echo", "guest ready"}, {}, &response);
@@ -349,7 +349,7 @@ zx_status_t TerminaEnclosedGuest::SetupVsockServices() {
         server_ = std::move(result);
         return fit::ok();
       }));
-  if (!RunLoopUntil(&loop_, [this] { return server_ != nullptr; })) {
+  if (!RunLoopUntil(GetLoop(), [this] { return server_ != nullptr; })) {
     return ZX_ERR_TIMED_OUT;
   }
 
@@ -373,7 +373,7 @@ zx_status_t TerminaEnclosedGuest::WaitForSystemReady() {
   // The VM will connect to the StartupListener port when it's ready and we'll
   // create the maitred stub in |VmReady|.
   if (!RunLoopUntil(
-          &loop_, [this] { return maitred_ != nullptr; },
+          GetLoop(), [this] { return maitred_ != nullptr; },
           PeriodicLogger("Wait for maitred", zx::sec(1)))) {
     return ZX_ERR_TIMED_OUT;
   }

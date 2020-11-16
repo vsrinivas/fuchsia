@@ -106,10 +106,10 @@ class EnclosedGuest {
   // accept connections before the guest attempts to connect to them.
   virtual zx_status_t SetupVsockServices() { return ZX_OK; }
 
- protected:
-  async::Loop loop_;
+  async::Loop* GetLoop() { return &loop_; }
 
  private:
+  async::Loop loop_;
   std::shared_ptr<sys::ServiceDirectory> real_services_;
   fuchsia::sys::EnvironmentPtr real_env_;
   std::unique_ptr<sys::testing::EnclosingEnvironment> enclosing_environment_;
