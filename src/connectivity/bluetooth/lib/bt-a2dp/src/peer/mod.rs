@@ -38,9 +38,9 @@ use {
 
 /// For sending out-of-band commands over the A2DP peer.
 mod controller;
+pub use controller::ControllerPool;
 
 use crate::stream::{Stream, Streams};
-pub use controller::ControllerPool;
 
 /// A Peer represents an A2DP peer which may be connected to this device.
 /// Only one A2DP peer should exist for each Bluetooth peer.
@@ -190,12 +190,12 @@ impl Peer {
         }
     }
 
-    /// Open and start a media transport stream, connecting the local stream `local_id` to the
-    /// remote stream `remote_id`, configuring it with the MediaCodec capability.
-    /// Returns the MediaStream which can either be streamed from, or an error.
+    /// Open and start a media transport stream, connecting a compatible local stream to the remote
+    /// stream `remote_id`, configuring it with the MediaCodec capability `codec_params`.
+    /// Returns a future which should be awaited on.
+    /// The future returns Ok(()) if successfully started, and an appropriate error otherwise.
     pub fn stream_start(
         &self,
-        local_id: StreamEndpointId,
         remote_id: StreamEndpointId,
         codec_params: ServiceCapability,
     ) -> impl Future<Output = avdtp::Result<()>> {
@@ -205,6 +205,12 @@ impl Peer {
         let profile = self.profile.clone();
 
         async move {
+            let local_id = {
+                let strong = PeerInner::upgrade(peer.clone())?;
+                let stream_id = strong.lock().find_compatible_local(&codec_params)?;
+                stream_id
+            };
+
             trace!("Starting stream {} to remote {} with {:?}", local_id, remote_id, codec_params);
 
             let capabilities = vec![ServiceCapability::MediaTransport, codec_params];
@@ -446,6 +452,20 @@ impl PeerInner {
             peer.start_local_stream(&local_id)?;
         }
         Ok(())
+    }
+
+    /// Finds a stream in the local stream set which is compatible with the codec parameters.
+    /// Returns the local stream ID if found, or OutOfRange if one could not be found.
+    pub fn find_compatible_local(
+        &self,
+        codec_params: &ServiceCapability,
+    ) -> avdtp::Result<StreamEndpointId> {
+        let config = codec_params.try_into()?;
+        self.local
+            .compatible(config)
+            .map(|s| s.endpoint().local_id().clone())
+            .next()
+            .ok_or(avdtp::Error::OutOfRange)
     }
 
     /// Starts the stream which is in the local Streams with `local_id`
@@ -1106,8 +1126,6 @@ mod tests {
 
         let (remote, mut profile_request_stream, _, peer) = setup_peer_test();
 
-        // This needs to match the test stream.
-        let local_seid = 1_u8.try_into().unwrap();
         let remote_seid = 2_u8.try_into().unwrap();
 
         let codec_params = ServiceCapability::MediaCodec {
@@ -1116,7 +1134,7 @@ mod tests {
             codec_extra: vec![0x11, 0x45, 51, 51],
         };
 
-        let start_future = peer.stream_start(local_seid, remote_seid, codec_params);
+        let start_future = peer.stream_start(remote_seid, codec_params);
         pin_mut!(start_future);
 
         assert!(exec.run_until_stalled(&mut start_future).is_pending());
@@ -1170,8 +1188,6 @@ mod tests {
 
         let (remote, mut profile_request_stream, _, peer) = setup_peer_test();
 
-        // This needs to match the local stream id.
-        let local_seid = 1_u8.try_into().unwrap();
         let remote_seid = 2_u8.try_into().unwrap();
 
         let codec_params = ServiceCapability::MediaCodec {
@@ -1180,7 +1196,7 @@ mod tests {
             codec_extra: vec![0x11, 0x45, 51, 51],
         };
 
-        let start_future = peer.stream_start(local_seid, remote_seid, codec_params);
+        let start_future = peer.stream_start(remote_seid, codec_params);
         pin_mut!(start_future);
 
         assert!(exec.run_until_stalled(&mut start_future).is_pending());

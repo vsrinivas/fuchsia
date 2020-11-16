@@ -211,6 +211,7 @@ fn find_codec_capability(capabilities: &[ServiceCapability]) -> Option<&ServiceC
     capabilities.iter().find(|cap| cap.category() == ServiceCategory::MediaCodec)
 }
 
+/// A set of streams, indexed by their local endpoint ID.
 #[derive(Default)]
 pub struct Streams {
     streams: HashMap<StreamEndpointId, Stream>,
@@ -262,6 +263,11 @@ impl Streams {
     /// Returns streams that are in the open (established but not streaming) state
     pub fn open(&self) -> impl Iterator<Item = &Stream> {
         self.streams.values().filter(|s| s.endpoint().state() == &avdtp::StreamState::Open)
+    }
+
+    /// Finds streams in the set which are compatible with `codec_config`.
+    pub fn compatible(&self, codec_config: MediaCodecConfig) -> impl Iterator<Item = &Stream> {
+        self.streams.values().filter(move |s| s.requested_config_is_supported(&codec_config))
     }
 }
 

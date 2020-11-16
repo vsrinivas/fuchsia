@@ -16,16 +16,14 @@ use {
     fuchsia_inspect as inspect,
     fuchsia_inspect_derive::{AttachError, Inspect},
     log::{info, warn},
-    std::{collections::HashMap, convert::TryInto, sync::Arc},
+    std::{collections::HashMap, sync::Arc},
 };
-
-use crate::{AAC_SEID, SBC_SEID};
 
 pub type PeerSessionFn =
     dyn Fn(&PeerId) -> fasync::Task<Result<(Streams, CodecNegotiation, fasync::Task<()>), Error>>;
 
-/// ConnectedPeers owns the set of connected peers and manages peers based on
-/// discovery, connections and disconnections.
+/// ConnectedPeers manages the set of connected peers based on discovery, new connection, and
+/// peer session lifetime.
 pub struct ConnectedPeers {
     /// The set of connected peers.
     connected: DetachableMap<PeerId, Peer>,
@@ -79,21 +77,13 @@ impl ConnectedPeers {
         let (negotiated, remote_seid) =
             negotiation.select(&remote_streams).ok_or(format_err!("No compatible stream found"))?;
 
-        let local_seid = match negotiated.codec_type() {
-            Some(&avdtp::MediaCodecType::AUDIO_SBC) => SBC_SEID.try_into()?,
-            Some(&avdtp::MediaCodecType::AUDIO_AAC) => AAC_SEID.try_into()?,
-            _ => return Err(format_err!("Negotiated codec type not recognized.")),
-        };
-
         let strong = peer.upgrade().ok_or(format_err!("Disconnected"))?;
-        strong.stream_start(local_seid, remote_seid, negotiated).await.map_err(Into::into)
+        strong.stream_start(remote_seid, negotiated).await.map_err(Into::into)
     }
 
     pub fn found(&mut self, id: PeerId, desc: ProfileDescriptor) {
-        self.descriptors.insert(id, desc);
-        if let Some(peer) = self.get(&id) {
-            peer.set_descriptor(desc.clone());
-        }
+        self.descriptors.insert(id, desc.clone());
+        self.get(&id).map(|p| p.set_descriptor(desc));
     }
 
     /// Accept a channel that was connected to the peer `id`.  If `initiator` is true, we initiated
@@ -177,7 +167,7 @@ impl Inspect for &mut ConnectedPeers {
 mod tests {
     use super::*;
 
-    use bt_a2dp::media_types::*;
+    use bt_a2dp::{media_task::tests::TestMediaTaskBuilder, media_types::*, stream::Stream};
     use bt_avdtp::Request;
     use fidl::endpoints::create_proxy_and_stream;
     use fidl_fuchsia_bluetooth_bredr::{ProfileMarker, ProfileRequestStream};
@@ -185,7 +175,7 @@ mod tests {
     use fuchsia_inspect::assert_inspect_tree;
     use futures::channel::mpsc;
     use futures::{self, task::Poll, StreamExt};
-    use std::convert::TryFrom;
+    use std::convert::{TryFrom, TryInto};
 
     fn fake_cobalt_sender() -> (CobaltSender, mpsc::Receiver<CobaltEvent>) {
         const BUFFER_SIZE: usize = 100;
@@ -272,6 +262,25 @@ mod tests {
         exercise_avdtp(&mut exec, remote, &peer);
     }
 
+    // Arbitrarily chosen ID for the SBC stream endpoint.
+    const SBC_SEID: u8 = 9;
+
+    // Arbitrarily chosen ID for the AAC stream endpoint.
+    const AAC_SEID: u8 = 10;
+
+    fn build_test_stream(id: u8, codec_cap: avdtp::ServiceCapability) -> Stream {
+        let endpoint = avdtp::StreamEndpoint::new(
+            id,
+            avdtp::MediaType::Audio,
+            avdtp::EndpointType::Sink,
+            vec![avdtp::ServiceCapability::MediaTransport, codec_cap],
+        )
+        .expect("endpoint builds");
+        let task_builder = TestMediaTaskBuilder::new();
+
+        Stream::build(endpoint, task_builder.builder())
+    }
+
     #[test]
     fn connect_initiation_uses_negotiation() {
         let mut exec = fasync::Executor::new().expect("executor should build");
@@ -310,10 +319,15 @@ mod tests {
         let negotiation =
             CodecNegotiation::build(vec![aac_codec.clone(), sbc_codec.clone()]).unwrap();
 
+        let mut streams = Streams::new();
+        streams.insert(build_test_stream(SBC_SEID, sbc_codec.clone()));
+        streams.insert(build_test_stream(AAC_SEID, aac_codec.clone()));
+
         let session_fn: Box<PeerSessionFn> = Box::new(move |_peer_id| {
             let negotiation_clone = negotiation.clone();
-            fasync::Task::spawn(async {
-                Ok((Streams::new(), negotiation_clone, fasync::Task::spawn(async {})))
+            let new_streams = streams.as_new();
+            fasync::Task::spawn(async move {
+                Ok((new_streams, negotiation_clone, fasync::Task::spawn(async {})))
             })
         });
 

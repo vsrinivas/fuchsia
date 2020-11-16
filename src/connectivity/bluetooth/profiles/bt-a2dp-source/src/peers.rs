@@ -20,8 +20,6 @@ use {
     std::{convert::TryInto, sync::Arc},
 };
 
-use crate::{AAC_SEID, SBC_SEID};
-
 pub struct Peers {
     peers: DetachableMap<PeerId, Peer>,
     streams: stream::Streams,
@@ -242,14 +240,8 @@ async fn start_streaming(
     let (codec_caps, remote_seid) =
         negotiation.select(&remote_streams).ok_or(format_err!("No compatible stream found"))?;
 
-    let local_seid = match codec_caps.codec_type() {
-        Some(&avdtp::MediaCodecType::AUDIO_AAC) => AAC_SEID,
-        Some(&avdtp::MediaCodecType::AUDIO_SBC) => SBC_SEID,
-        _ => return Err(format_err!("Unsupported codec type")),
-    };
-
     let strong = peer.upgrade().ok_or(format_err!("Disconnected"))?;
-    strong.stream_start(local_seid.try_into()?, remote_seid, codec_caps).await.map_err(Into::into)
+    strong.stream_start(remote_seid, codec_caps).await.map_err(Into::into)
 }
 
 #[cfg(test)]
