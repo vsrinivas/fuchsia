@@ -40,7 +40,10 @@ fn monotonic_time() -> i64 {
     zx::Time::get_monotonic().into_nanos()
 }
 
-fn utc_time() -> i64 {
+fn kernel_utc() -> i64 {
+    // This deprecated call is used to compare the kernel clock to the userspace clock.
+    // Do not copy.
+    #[allow(deprecated)]
     zx::Time::get(zx::ClockId::UTC).into_nanos()
 }
 
@@ -98,7 +101,7 @@ impl TimeSet {
     pub fn now(clock: &zx::Clock) -> Self {
         TimeSet {
             monotonic: monotonic_time(),
-            kernel_utc: utc_time(),
+            kernel_utc: kernel_utc(),
             clock_utc: clock.read().map(zx::Time::into_nanos).unwrap_or(FAILED_TIME),
         }
     }

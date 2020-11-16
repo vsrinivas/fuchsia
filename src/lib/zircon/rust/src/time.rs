@@ -266,6 +266,7 @@ impl Time {
     /// Wraps the
     /// [zx_clock_get](https://fuchsia.dev/fuchsia-src/reference/syscalls/clock_get.md)
     /// syscall.
+    #[deprecated(note = "Users should instead use get_monotonic or fuchsia_runtime::utc_time")]
     pub fn get(clock_id: ClockId) -> Time {
         unsafe {
             let mut now: sys::zx_time_t = 0;

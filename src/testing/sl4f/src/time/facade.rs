@@ -38,6 +38,9 @@ impl TimeFacade {
     /// Returns the UTC time in millis since the Unix epoch, according to the kernel maintained
     /// UTC clock (ZX_CLOCK_UTC). This clock will soon be removed in favor of the userspace clock.
     pub fn kernel_time_millis() -> Result<u64, Error> {
+        // This deprecated call is used to compare the kernel clock to the userspace clock.
+        // Do not copy.
+        #[allow(deprecated)]
         Ok(zx::Time::get(zx::ClockId::UTC).into_nanos() as u64 / NANOS_IN_MILLIS)
     }
 

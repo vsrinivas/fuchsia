@@ -312,25 +312,9 @@ mod tests {
 
     #[test]
     fn monotonic_time_increases() {
-        let time1 = Time::get(ClockId::Monotonic);
+        let time1 = Time::get_monotonic();
         1_000.nanos().sleep();
-        let time2 = Time::get(ClockId::Monotonic);
-        assert!(time2 > time1);
-    }
-
-    #[test]
-    fn utc_time_increases() {
-        let time1 = Time::get(ClockId::UTC);
-        1_000.nanos().sleep();
-        let time2 = Time::get(ClockId::UTC);
-        assert!(time2 > time1);
-    }
-
-    #[test]
-    fn thread_time_increases() {
-        let time1 = Time::get(ClockId::Thread);
-        1_000.nanos().sleep();
-        let time2 = Time::get(ClockId::Thread);
+        let time2 = Time::get_monotonic();
         assert!(time2 > time1);
     }
 
@@ -365,9 +349,9 @@ mod tests {
     #[test]
     fn sleep() {
         let sleep_ns = 1.millis();
-        let time1 = Time::get(ClockId::Monotonic);
+        let time1 = Time::get_monotonic();
         sleep_ns.sleep();
-        let time2 = Time::get(ClockId::Monotonic);
+        let time2 = Time::get_monotonic();
         assert!(time2 > time1 + sleep_ns);
     }
 

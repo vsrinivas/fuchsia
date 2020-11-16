@@ -215,6 +215,9 @@ async fn loop_until_matching_time(
                     .map(|zx_time| zx_time.into_nanos() / 1_000_000_000),
                 Err(err) => Err(err),
             };
+            // This deprecated call is used to compare the kernel clock to the userspace clock.
+            // Do not copy.
+            #[allow(deprecated)]
             let kernel_utc_sec = zx::Time::get(zx::ClockId::UTC).into_nanos() / 1_000_000_000;
 
             return Err(anyhow::anyhow!(

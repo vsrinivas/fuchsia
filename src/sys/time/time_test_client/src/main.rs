@@ -91,6 +91,8 @@ struct KernelUtcMonitor {
     initial: DateTime<Utc>,
 }
 
+// Deprecated zx::Time::get calls are used here for debugging the kernel UTC clock. Do not copy.
+#[allow(deprecated)]
 impl KernelUtcMonitor {
     /// Creates a new `KernelUtcMonitor`, logging the initial state.
     pub fn new() -> Self {
