@@ -199,7 +199,7 @@ mod tests {
 
         for response in mock_responses {
             let response = serde_json::to_vec(&response).unwrap();
-            http.add_response(hyper::Response::new(response.into()));
+            http.add_response(hyper::Response::new(response));
         }
 
         let resolver = ResolverForTest::new(updater.repo, TEST_REPO_URL.parse().unwrap(), None)

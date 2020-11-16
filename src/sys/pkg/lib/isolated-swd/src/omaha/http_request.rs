@@ -5,22 +5,50 @@
 
 #![allow(dead_code)]
 
-use futures::{future::BoxFuture, prelude::*};
-use hyper::{Body, Client, Request, Response};
-use omaha_client::http_request::{Error, HttpRequest};
+use {
+    fuchsia_async::TimeoutExt,
+    futures::{future::BoxFuture, prelude::*},
+    hyper::{client::ResponseFuture, Body, Client, Request, Response},
+    omaha_client::http_request::{Error, HttpRequest},
+    std::time::Duration,
+};
 
 pub struct FuchsiaHyperHttpRequest {
+    timeout: Duration,
     client: Client<hyper_rustls::HttpsConnector<fuchsia_hyper::HyperConnector>, Body>,
 }
 
 impl HttpRequest for FuchsiaHyperHttpRequest {
-    fn request(&mut self, req: Request<Body>) -> BoxFuture<'_, Result<Response<Body>, Error>> {
-        self.client.request(req).map_err(|e| e.into()).boxed()
+    fn request(&mut self, req: Request<Body>) -> BoxFuture<'_, Result<Response<Vec<u8>>, Error>> {
+        // create the initial response future
+        let response = self.client.request(req);
+        let timeout = self.timeout;
+
+        collect_from_future(response).on_timeout(timeout, || Err(Error::new_timeout())).boxed()
     }
 }
 
+// Helper to clarify the types of the futures involved
+async fn collect_from_future(response_future: ResponseFuture) -> Result<Response<Vec<u8>>, Error> {
+    let response = response_future.await.map_err(|e| Error::from(e))?;
+    let (parts, body) = response.into_parts();
+    let collected_body = body
+        .try_fold(Vec::new(), |mut vec, b| async move {
+            vec.extend(b);
+            Ok(vec)
+        })
+        .await?;
+    Ok(Response::from_parts(parts, collected_body))
+}
+
 impl FuchsiaHyperHttpRequest {
+    /// Construct a new client that uses a default timeout.
     pub fn new() -> Self {
-        FuchsiaHyperHttpRequest { client: fuchsia_hyper::new_https_client() }
+        Self::using_timeout(Duration::from_secs(30))
+    }
+
+    /// Construct a new client which always uses the provided duration instead of the default
+    pub fn using_timeout(timeout: Duration) -> Self {
+        FuchsiaHyperHttpRequest { timeout, client: fuchsia_hyper::new_https_client() }
     }
 }

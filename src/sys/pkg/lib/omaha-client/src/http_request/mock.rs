@@ -5,6 +5,7 @@
 use crate::http_request::{Error, HttpRequest};
 use futures::future::BoxFuture;
 use futures::prelude::*;
+use http::StatusCode;
 use hyper::{Body, Request, Response};
 use pretty_assertions::assert_eq;
 use std::{cell::RefCell, collections::VecDeque, rc::Rc};
@@ -17,25 +18,25 @@ pub struct MockHttpRequest {
     // The last request made using this mock.
     request: Rc<RefCell<Request<Body>>>,
     // The queue of fake responses for the upcoming requests.
-    responses: VecDeque<Result<Response<Body>, Error>>,
+    responses: VecDeque<Result<Response<Vec<u8>>, Error>>,
 }
 
 impl HttpRequest for MockHttpRequest {
-    fn request(&mut self, req: Request<Body>) -> BoxFuture<'_, Result<Response<Body>, Error>> {
+    fn request(&mut self, req: Request<Body>) -> BoxFuture<'_, Result<Response<Vec<u8>>, Error>> {
         self.request.replace(req);
 
         future::ready(if let Some(resp) = self.responses.pop_front() {
             resp
         } else {
             // No response to return, generate a 500 internal server error
-            Ok(Response::builder().status(500).body(Body::empty()).unwrap())
+            Ok(Response::builder().status(StatusCode::INTERNAL_SERVER_ERROR).body(vec![]).unwrap())
         })
         .boxed()
     }
 }
 
 impl MockHttpRequest {
-    pub fn new(res: Response<Body>) -> Self {
+    pub fn new(res: Response<Vec<u8>>) -> Self {
         Self { responses: vec![Ok(res)].into(), ..Default::default() }
     }
 
@@ -51,7 +52,7 @@ impl MockHttpRequest {
         Rc::clone(&self.request)
     }
 
-    pub fn add_response(&mut self, res: Response<Body>) {
+    pub fn add_response(&mut self, res: Response<Vec<u8>>) {
         self.responses.push_back(Ok(res));
     }
 
@@ -105,22 +106,10 @@ impl MockHttpRequest {
     }
 }
 
-#[cfg(test)]
-async fn response_to_vec(response: Response<Body>) -> Vec<u8> {
-    response
-        .into_body()
-        .try_fold(Vec::new(), |mut vec, b| async move {
-            vec.extend(b);
-            Ok(vec)
-        })
-        .await
-        .unwrap()
-}
-
 #[test]
 fn test_mock() {
     let res_body = vec![1, 2, 3];
-    let mut mock = MockHttpRequest::new(Response::new(res_body.clone().into()));
+    let mut mock = MockHttpRequest::new(Response::new(res_body.clone()));
 
     let req_body = vec![4, 5, 6];
     let uri = "https://mock.uri/";
@@ -128,7 +117,7 @@ fn test_mock() {
         Request::get(uri).header("X-Custom-Foo", "Bar").body(req_body.clone().into()).unwrap();
     block_on(async {
         let response = mock.request(req).await.unwrap();
-        assert_eq!(res_body, response_to_vec(response).await);
+        assert_eq!(res_body, response.into_body());
 
         mock.assert_method(&hyper::Method::GET);
         mock.assert_uri(uri);
@@ -140,10 +129,10 @@ fn test_mock() {
 #[test]
 fn test_missing_response() {
     let res_body = vec![1, 2, 3];
-    let mut mock = MockHttpRequest::new(Response::new(res_body.clone().into()));
+    let mut mock = MockHttpRequest::new(Response::new(res_body.clone()));
     block_on(async {
         let response = mock.request(Request::default()).await.unwrap();
-        assert_eq!(res_body, response_to_vec(response).await);
+        assert_eq!(res_body, response.into_body());
 
         let response2 = mock.request(Request::default()).await.unwrap();
         assert_eq!(response2.status(), hyper::StatusCode::INTERNAL_SERVER_ERROR);
@@ -153,15 +142,15 @@ fn test_missing_response() {
 #[test]
 fn test_multiple_responses() {
     let res_body = vec![1, 2, 3];
-    let mut mock = MockHttpRequest::new(Response::new(res_body.clone().into()));
+    let mut mock = MockHttpRequest::new(Response::new(res_body.clone()));
     let res_body2 = vec![4, 5, 6];
-    mock.add_response(Response::new(res_body2.clone().into()));
+    mock.add_response(Response::new(res_body2.clone()));
 
     block_on(async {
         let response = mock.request(Request::default()).await.unwrap();
-        assert_eq!(res_body, response_to_vec(response).await);
+        assert_eq!(res_body, response.into_body());
 
         let response2 = mock.request(Request::default()).await.unwrap();
-        assert_eq!(res_body2, response_to_vec(response2).await);
+        assert_eq!(res_body2, response2.into_body());
     });
 }

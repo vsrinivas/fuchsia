@@ -27,7 +27,7 @@ use futures::{
     prelude::*,
     select,
 };
-use http::response::Parts;
+use http::{response::Parts, Response as HttpResponse};
 use log::{error, info, warn};
 use std::{
     cmp::min,
@@ -1037,7 +1037,8 @@ where
         builder: &RequestBuilder<'a>,
         co: &mut async_generator::Yield<StateMachineEvent>,
     ) -> Result<(Parts, Vec<u8>), OmahaRequestError> {
-        let (parts, body) = Self::make_request(&mut self.http, builder.build()?).await?;
+        let (parts, body) =
+            Self::make_request(&mut self.http, builder.build()?).await?.into_parts();
         // Clients MUST respect this header even if paired with non-successful HTTP response code.
         let server_dictated_poll_interval = parts.headers.get(X_RETRY_AFTER).and_then(|header| {
             match header
@@ -1081,23 +1082,12 @@ where
     async fn make_request(
         http_client: &mut HR,
         request: http::Request<hyper::Body>,
-    ) -> Result<(Parts, Vec<u8>), http_request::Error> {
+    ) -> Result<HttpResponse<Vec<u8>>, http_request::Error> {
         info!("Making http request to: {}", request.uri());
-        let res = http_client.request(request).await.map_err(|err| {
+        http_client.request(request).await.map_err(|err| {
             warn!("Unable to perform request: {}", err);
             err
-        })?;
-
-        let (parts, body) = res.into_parts();
-
-        let data = body
-            .try_fold(Vec::new(), |mut vec, b| async move {
-                vec.extend(b);
-                Ok(vec)
-            })
-            .await?;
-
-        Ok((parts, data))
+        })
     }
 
     /// This method takes the response bytes from Omaha, and converts them into a protocol::Response
@@ -1299,7 +1289,7 @@ mod tests {
               }]
             }});
             let response = serde_json::to_vec(&response).unwrap();
-            let http = MockHttpRequest::new(hyper::Response::new(response.into()));
+            let http = MockHttpRequest::new(HttpResponse::new(response));
 
             StateMachineBuilder::new_stub().http(http).oneshot().await.unwrap();
 
@@ -1324,7 +1314,7 @@ mod tests {
               }]
             }});
             let response = serde_json::to_vec(&response).unwrap();
-            let http = MockHttpRequest::new(hyper::Response::new(response.into()));
+            let http = MockHttpRequest::new(HttpResponse::new(response));
 
             let response = StateMachineBuilder::new_stub().http(http).oneshot().await.unwrap();
             assert_eq!("{00000000-0000-0000-0000-000000000001}", response.app_responses[0].app_id);
@@ -1337,7 +1327,7 @@ mod tests {
     #[test]
     fn test_report_parse_response_error() {
         block_on(async {
-            let http = MockHttpRequest::new(hyper::Response::new("invalid response".into()));
+            let http = MockHttpRequest::new(HttpResponse::new("invalid response".into()));
 
             let mut state_machine = StateMachineBuilder::new_stub().http(http).build().await;
 
@@ -1374,7 +1364,7 @@ mod tests {
               }],
             }});
             let response = serde_json::to_vec(&response).unwrap();
-            let http = MockHttpRequest::new(hyper::Response::new(response.into()));
+            let http = MockHttpRequest::new(HttpResponse::new(response));
 
             let mut state_machine = StateMachineBuilder::new_stub().http(http).build().await;
 
@@ -1420,7 +1410,7 @@ mod tests {
               }],
             }});
             let response = serde_json::to_vec(&response).unwrap();
-            let http = MockHttpRequest::new(hyper::Response::new(response.into()));
+            let http = MockHttpRequest::new(HttpResponse::new(response));
 
             let mut state_machine = StateMachineBuilder::new_stub()
                 .http(http)
@@ -1463,7 +1453,7 @@ mod tests {
               }],
             }});
             let response = serde_json::to_vec(&response).unwrap();
-            let http = MockHttpRequest::new(hyper::Response::new(response.into()));
+            let http = MockHttpRequest::new(HttpResponse::new(response));
 
             let policy_engine = MockPolicyEngine {
                 update_decision: UpdateDecision::DeferredByPolicy,
@@ -1510,7 +1500,7 @@ mod tests {
               }],
             }});
             let response = serde_json::to_vec(&response).unwrap();
-            let http = MockHttpRequest::new(hyper::Response::new(response.into()));
+            let http = MockHttpRequest::new(HttpResponse::new(response));
             let policy_engine = MockPolicyEngine {
                 update_decision: UpdateDecision::DeniedByPolicy,
                 ..MockPolicyEngine::default()
@@ -1585,8 +1575,8 @@ mod tests {
                 }]
             }});
             let response = serde_json::to_vec(&response).unwrap();
-            let mut http = MockHttpRequest::new(hyper::Response::new(response.clone().into()));
-            http.add_response(hyper::Response::new(response.into()));
+            let mut http = MockHttpRequest::new(HttpResponse::new(response.clone()));
+            http.add_response(HttpResponse::new(response));
             let last_request_viewer = MockHttpRequest::from_request_cell(http.get_request_cell());
             let apps = make_test_app_set();
 
@@ -1638,7 +1628,7 @@ mod tests {
               }]
             }});
             let response = serde_json::to_vec(&response).unwrap();
-            let http = MockHttpRequest::new(hyper::Response::new(response.into()));
+            let http = MockHttpRequest::new(HttpResponse::new(response));
 
             let response = StateMachineBuilder::new_stub().http(http).oneshot().await.unwrap();
 
@@ -1734,7 +1724,7 @@ mod tests {
             }});
             let response = serde_json::to_vec(&response).unwrap();
             let expected_omaha_response = response::parse_json_response(&response).unwrap();
-            let http = MockHttpRequest::new(hyper::Response::new(response.into()));
+            let http = MockHttpRequest::new(HttpResponse::new(response));
 
             let actual_omaha_response = StateMachineBuilder::new_stub()
                 .http(http)
@@ -1883,10 +1873,8 @@ mod tests {
               }]
             }});
             let response = serde_json::to_vec(&response).unwrap();
-            let response = hyper::Response::builder()
-                .header(X_RETRY_AFTER, 1234)
-                .body(response.into())
-                .unwrap();
+            let response =
+                HttpResponse::builder().header(X_RETRY_AFTER, 1234).body(response).unwrap();
             let http = MockHttpRequest::new(response);
             let storage = Rc::new(Mutex::new(MemStorage::new()));
 
@@ -1911,10 +1899,10 @@ mod tests {
     #[test]
     fn test_persist_server_dictated_poll_interval_http_error() {
         block_on(async {
-            let response = hyper::Response::builder()
+            let response = HttpResponse::builder()
                 .status(hyper::StatusCode::INTERNAL_SERVER_ERROR)
                 .header(X_RETRY_AFTER, 1234)
-                .body(hyper::Body::empty())
+                .body(vec![])
                 .unwrap();
             let http = MockHttpRequest::new(response);
             let storage = Rc::new(Mutex::new(MemStorage::new()));
@@ -1943,10 +1931,10 @@ mod tests {
     #[test]
     fn test_persist_server_dictated_poll_interval_max_duration() {
         block_on(async {
-            let response = hyper::Response::builder()
+            let response = HttpResponse::builder()
                 .status(hyper::StatusCode::INTERNAL_SERVER_ERROR)
                 .header(X_RETRY_AFTER, 123456789)
-                .body(hyper::Body::empty())
+                .body(vec![])
                 .unwrap();
             let http = MockHttpRequest::new(response);
             let storage = Rc::new(Mutex::new(MemStorage::new()));
@@ -2216,7 +2204,7 @@ mod tests {
               }],
             }});
             let response = serde_json::to_vec(&response).unwrap();
-            let http = MockHttpRequest::new(hyper::Response::new(response.into()));
+            let http = MockHttpRequest::new(HttpResponse::new(response));
             let storage = Rc::new(Mutex::new(MemStorage::new()));
 
             let mut mock_time = MockTimeSource::new_from_now();
@@ -2288,7 +2276,7 @@ mod tests {
               }],
             }});
             let response = serde_json::to_vec(&response).unwrap();
-            let http = MockHttpRequest::new(hyper::Response::new(response.into()));
+            let http = MockHttpRequest::new(HttpResponse::new(response));
             let mut state_machine = StateMachineBuilder::new_stub()
                 .http(http)
                 .installer(StubInstaller { should_fail: true })
@@ -2409,7 +2397,7 @@ mod tests {
           }],
         }});
         let response = serde_json::to_vec(&response).unwrap();
-        let http = MockHttpRequest::new(hyper::Response::new(response.into()));
+        let http = MockHttpRequest::new(HttpResponse::new(response));
         let mock_time = MockTimeSource::new_from_now();
         let next_update_time = mock_time.now();
         let (timer, mut timers) = BlockingTimer::new();
@@ -2452,7 +2440,7 @@ mod tests {
           }],
         }});
         let response = serde_json::to_vec(&response).unwrap();
-        let http = MockHttpRequest::new(hyper::Response::new(response.into()));
+        let http = MockHttpRequest::new(HttpResponse::new(response));
         let mock_time = MockTimeSource::new_from_now();
         let next_update_time = mock_time.now();
         let (timer, mut timers) = BlockingTimer::new();
@@ -2498,7 +2486,7 @@ mod tests {
           }],
         }});
         let response = serde_json::to_vec(&response).unwrap();
-        let http = MockHttpRequest::new(hyper::Response::new(response.into()));
+        let http = MockHttpRequest::new(HttpResponse::new(response));
         let mock_time = MockTimeSource::new_from_now();
 
         let (send_install, mut recv_install) = mpsc::channel(0);
@@ -2575,13 +2563,13 @@ mod tests {
           }],
         }});
         let response = serde_json::to_vec(&response).unwrap();
-        let mut http = MockHttpRequest::new(hyper::Response::new(response.clone().into()));
+        let mut http = MockHttpRequest::new(HttpResponse::new(response.clone()));
         // Responses to events.
-        http.add_response(hyper::Response::new(response.clone().into()));
-        http.add_response(hyper::Response::new(response.clone().into()));
-        http.add_response(hyper::Response::new(response.clone().into()));
+        http.add_response(HttpResponse::new(response.clone()));
+        http.add_response(HttpResponse::new(response.clone()));
+        http.add_response(HttpResponse::new(response.clone()));
         // Response to the ping.
-        http.add_response(hyper::Response::new(response.into()));
+        http.add_response(HttpResponse::new(response));
         let mut mock_time = MockTimeSource::new_from_now();
         mock_time.truncate_submicrosecond_walltime();
         let next_update_time = mock_time.now() + Duration::from_secs(1000);
@@ -2680,13 +2668,13 @@ mod tests {
           }],
         }});
         let response = serde_json::to_vec(&response).unwrap();
-        let mut http = MockHttpRequest::new(hyper::Response::new(response.clone().into()));
+        let mut http = MockHttpRequest::new(HttpResponse::new(response.clone()));
         // Responses to events.
-        http.add_response(hyper::Response::new(response.clone().into()));
-        http.add_response(hyper::Response::new(response.clone().into()));
-        http.add_response(hyper::Response::new(response.clone().into()));
+        http.add_response(HttpResponse::new(response.clone()));
+        http.add_response(HttpResponse::new(response.clone()));
+        http.add_response(HttpResponse::new(response.clone()));
         // Response to the ping.
-        http.add_response(hyper::Response::new(response.into()));
+        http.add_response(HttpResponse::new(response));
         let ping_request_viewer = MockHttpRequest::from_request_cell(http.get_request_cell());
         let second_ping_request_viewer =
             MockHttpRequest::from_request_cell(http.get_request_cell());
@@ -2825,7 +2813,7 @@ mod tests {
         block_on(async {
             let mut http = MockHttpRequest::empty();
             http.add_error(http_request::mock_errors::make_transport_error());
-            http.add_response(hyper::Response::new("".into()));
+            http.add_response(HttpResponse::new(vec![]));
             let response = json!({"response":{
               "server": "prod",
               "protocol": "3.0",
@@ -2835,7 +2823,7 @@ mod tests {
               }],
             }});
             let response = serde_json::to_vec(&response).unwrap();
-            http.add_response(hyper::Response::new(response.into()));
+            http.add_response(HttpResponse::new(response));
 
             let mut state_machine = StateMachineBuilder::new_stub().http(http).build().await;
 
@@ -2961,7 +2949,7 @@ mod tests {
           }],
         }});
         let response = serde_json::to_vec(&response).unwrap();
-        let http = MockHttpRequest::new(hyper::Response::new(response.into()));
+        let http = MockHttpRequest::new(HttpResponse::new(response));
         let (send_install, mut recv_install) = mpsc::channel(0);
         let (mut ctl, state_machine) = pool.run_until(
             StateMachineBuilder::new_stub()
@@ -3099,7 +3087,7 @@ mod tests {
               }],
             }});
             let response = serde_json::to_vec(&response).unwrap();
-            let http = MockHttpRequest::new(hyper::Response::new(response.into()));
+            let http = MockHttpRequest::new(HttpResponse::new(response));
             let mock_time = MockTimeSource::new_from_now();
             let progresses = StateMachineBuilder::new_stub()
                 .http(http)
@@ -3183,7 +3171,7 @@ mod tests {
             }],
         }});
         let response = serde_json::to_vec(&response).unwrap();
-        let http = MockHttpRequest::new(hyper::Response::new(response.into()));
+        let http = MockHttpRequest::new(HttpResponse::new(response));
         let mut mock_time = MockTimeSource::new_from_now();
         mock_time.truncate_submicrosecond_walltime();
         let storage = Rc::new(Mutex::new(MemStorage::new()));

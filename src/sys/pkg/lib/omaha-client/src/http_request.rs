@@ -2,14 +2,24 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use futures::future::BoxFuture;
-use futures::prelude::*;
-use hyper::{Body, Request, Response};
+use {
+    futures::future::BoxFuture,
+    futures::prelude::*,
+    hyper::{Body, Request, Response},
+};
 
 pub mod mock;
 
+/// A trait for providing HTTP capabilities to the StateMachine.
+///
+/// This trait is a wrapper around Hyper, to provide a simple request->response style of API for
+/// the state machine to use.
+///
+/// In particular, it's meant to be easy to mock for tests.
 pub trait HttpRequest {
-    fn request(&mut self, req: Request<Body>) -> BoxFuture<'_, Result<Response<Body>, Error>>;
+    /// Make a request, and return an Response, as the header Parts and collect the entire collected
+    /// Body as a Vec of bytes.
+    fn request(&mut self, req: Request<Body>) -> BoxFuture<'_, Result<Response<Vec<u8>>, Error>>;
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -28,11 +38,30 @@ pub struct Error {
 enum ErrorKind {
     User,
     Transport,
+    Timeout,
 }
 
 impl Error {
+    /// Create a timeout error
+    ///
+    /// This is valid for use in tests as well as production implementations of the trait, if
+    /// application-layer timeouts are being implemented.
+    pub fn new_timeout() -> Self {
+        Self { kind: ErrorKind::Timeout, source: None }
+    }
+
+    /// Returns true if this error the result of the Hyper API being incorrectly used (a "user"
+    /// error in Hyper)
     pub fn is_user(&self) -> bool {
         self.kind == ErrorKind::User
+    }
+
+    /// Returns true if this error is the result of a timeout when trying to full-fill the request
+    ///
+    /// Note: Connect timeouts may be returned as io errors,  not timeouts, depending on where in
+    /// the network / http client stack the timeout occurs in.
+    pub fn is_timeout(&self) -> bool {
+        self.kind == ErrorKind::Timeout
     }
 }
 
@@ -59,7 +88,7 @@ pub mod mock_errors {
 pub struct StubHttpRequest;
 
 impl HttpRequest for StubHttpRequest {
-    fn request(&mut self, _req: Request<Body>) -> BoxFuture<'_, Result<Response<Body>, Error>> {
-        future::ok(Response::new(Body::empty())).boxed()
+    fn request(&mut self, _req: Request<Body>) -> BoxFuture<'_, Result<Response<Vec<u8>>, Error>> {
+        future::ok(Response::default()).boxed()
     }
 }
