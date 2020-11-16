@@ -243,8 +243,10 @@ static bool test_mapping_oom() {
       EXPECT_EQ(aspace.Unmap(kMappingStart, kMappingPageCount, &unmapped), ZX_OK);
       EXPECT_EQ(unmapped, kMappingPageCount);
     } else {
-      // The arm aspace code isn't set up to return ZX_ERR_NO_MEMORY.
+      EXPECT_EQ(err, ZX_ERR_NO_MEMORY);
       avail_mmu_pages++;
+      // validate that all of the pages were consumed
+      EXPECT_TRUE(list_is_empty(&node));
     }
 
     // Destroying the aspace verifies that everything was cleaned up

@@ -222,7 +222,30 @@ void s2_pte_attr_to_mmu_flags(pte_t pte, uint* mmu_flags) {
   }
 }
 
-} // namespace
+bool is_pte_valid(pte_t pte) {
+  return (pte & MMU_PTE_DESCRIPTOR_MASK) != MMU_PTE_DESCRIPTOR_INVALID;
+}
+
+void update_pte(volatile pte_t* pte, pte_t newval) { *pte = newval; }
+
+bool page_table_is_clear(volatile pte_t* page_table, uint page_size_shift) {
+  int i;
+  int count = 1U << (page_size_shift - 3);
+  pte_t pte;
+
+  for (i = 0; i < count; i++) {
+    pte = page_table[i];
+    if (pte != MMU_PTE_DESCRIPTOR_INVALID) {
+      LTRACEF("page_table at %p still in use, index %d is %#" PRIx64 "\n", page_table, i, pte);
+      return false;
+    }
+  }
+
+  LTRACEF("page table at %p is clear\n", page_table);
+  return true;
+}
+
+}  // namespace
 
 uint ArmArchVmAspace::MmuFlagsFromPte(pte_t pte) {
   uint mmu_flags = 0;
@@ -246,7 +269,7 @@ zx_status_t ArmArchVmAspace::QueryLocked(vaddr_t vaddr, paddr_t* paddr, uint* mm
   pte_t pte;
   pte_t pte_addr;
   uint descriptor_type;
-  volatile pte_t* page_table;
+  const volatile pte_t* page_table;
   vaddr_t vaddr_rem;
 
   canary_.Assert();
@@ -397,14 +420,19 @@ zx_status_t ArmArchVmAspace::SplitLargePage(vaddr_t vaddr, uint index_shift, uin
   const uint next_size = 1U << next_shift;
   for (uint64_t i = 0, mapped_paddr = pte & MMU_PTE_OUTPUT_ADDR_MASK;
        i < MMU_KERNEL_PAGE_TABLE_ENTRIES; i++, mapped_paddr += next_size) {
+    // directly write to the pte, no need to update since this is
+    // a completely new table
     new_page_table[i] = mapped_paddr | attrs;
   }
 
   // Ensure all zeroing becomes visible prior to page table installation.
   __dmb(ARM_MB_ISHST);
 
-  page_table[pt_index] = paddr | MMU_PTE_L012_DESCRIPTOR_TABLE;
+  update_pte(&page_table[pt_index], paddr | MMU_PTE_L012_DESCRIPTOR_TABLE);
   LTRACEF("pte %p[%#" PRIxPTR "] = %#" PRIx64 "\n", page_table, pt_index, page_table[pt_index]);
+
+  // no need to update the page table count here since we're replacing a block entry with a table
+  // entry.
 
   // ensure that the update is observable from hardware page table walkers before TLB
   // operations can occur.
@@ -413,23 +441,6 @@ zx_status_t ArmArchVmAspace::SplitLargePage(vaddr_t vaddr, uint index_shift, uin
   FlushTLBEntry(vaddr, false);
 
   return ZX_OK;
-}
-
-static bool page_table_is_clear(volatile pte_t* page_table, uint page_size_shift) {
-  int i;
-  int count = 1U << (page_size_shift - 3);
-  pte_t pte;
-
-  for (i = 0; i < count; i++) {
-    pte = page_table[i];
-    if (pte != MMU_PTE_DESCRIPTOR_INVALID) {
-      LTRACEF("page_table at %p still in use, index %d is %#" PRIx64 "\n", page_table, i, pte);
-      return false;
-    }
-  }
-
-  LTRACEF("page table at %p is clear\n", page_table);
-  return true;
 }
 
 // use the appropriate TLB flush instruction to globally flush the modified entry
@@ -489,11 +500,16 @@ ssize_t ArmArchVmAspace::UnmapPageTable(vaddr_t vaddr, vaddr_t vaddr_rel, size_t
         (pte & MMU_PTE_DESCRIPTOR_MASK) == MMU_PTE_L012_DESCRIPTOR_TABLE) {
       page_table_paddr = pte & MMU_PTE_OUTPUT_ADDR_MASK;
       next_page_table = static_cast<volatile pte_t*>(paddr_to_physmap(page_table_paddr));
+
+      // Recurse a level.
       UnmapPageTable(vaddr, vaddr_rem, chunk_size, index_shift - (page_size_shift - 3),
                      page_size_shift, next_page_table);
+
+      // if we unmapped an entire page table leaf and/or the unmap made the level below us empty,
+      // free the page table
       if (chunk_size == block_size || page_table_is_clear(next_page_table, page_size_shift)) {
         LTRACEF("pte %p[0x%lx] = 0 (was page table)\n", page_table, index);
-        page_table[index] = MMU_PTE_DESCRIPTOR_INVALID;
+        update_pte(&page_table[index], MMU_PTE_DESCRIPTOR_INVALID);
 
         // ensure that the update is observable from hardware page table walkers before TLB
         // operations can occur.
@@ -504,9 +520,9 @@ ssize_t ArmArchVmAspace::UnmapPageTable(vaddr_t vaddr, vaddr_t vaddr_rel, size_t
 
         FreePageTable(const_cast<pte_t*>(next_page_table), page_table_paddr, page_size_shift);
       }
-    } else if (pte) {
+    } else if (is_pte_valid(pte)) {
       LTRACEF("pte %p[0x%lx] = 0\n", page_table, index);
-      page_table[index] = MMU_PTE_DESCRIPTOR_INVALID;
+      update_pte(&page_table[index], MMU_PTE_DESCRIPTOR_INVALID);
 
       // ensure that the update is observable from hardware page table walkers before TLB
       // operations can occur.
@@ -553,6 +569,12 @@ ssize_t ArmArchVmAspace::MapPageTable(vaddr_t vaddr_in, vaddr_t vaddr_rel_in, pa
     return ZX_ERR_INVALID_ARGS;
   }
 
+  auto cleanup = fbl::AutoCall([&]() {
+    AssertHeld(lock_);
+    UnmapPageTable(vaddr_in, vaddr_rel_in, size_in - size, index_shift, page_size_shift,
+                   page_table);
+  });
+
   mapped_size = 0;
   while (size) {
     block_size = 1UL << index_shift;
@@ -562,6 +584,8 @@ ssize_t ArmArchVmAspace::MapPageTable(vaddr_t vaddr_in, vaddr_t vaddr_rel_in, pa
     index = vaddr_rel >> index_shift;
     pte = page_table[index];
 
+    // if we're at an unaligned address, not trying to map a block, and not at the terminal level,
+    // recurse one more level of the page table tree
     if (((vaddr_rel | paddr) & block_mask) || (chunk_size != block_size) ||
         (index_shift > MMU_PTE_DESCRIPTOR_BLOCK_MAX_SHIFT)) {
       // Lookup the next level page table, allocating if required.
@@ -575,19 +599,19 @@ ssize_t ArmArchVmAspace::MapPageTable(vaddr_t vaddr_in, vaddr_t vaddr_rel_in, pa
           zx_status_t ret = AllocPageTable(&page_table_paddr, page_size_shift);
           if (ret) {
             TRACEF("failed to allocate page table\n");
-            goto err;
+            return ret;
           }
           allocated_page_table = true;
-          void *pt_vaddr = paddr_to_physmap(page_table_paddr);
+          void* pt_vaddr = paddr_to_physmap(page_table_paddr);
 
           LTRACEF("allocated page table, vaddr %p, paddr 0x%lx\n", pt_vaddr, page_table_paddr);
-          memset(pt_vaddr, MMU_PTE_DESCRIPTOR_INVALID, 1U << page_size_shift);
+          arch_zero_page(pt_vaddr);
 
           // ensure that the zeroing is observable from hardware page table walkers
           __dmb(ARM_MB_ISHST);
 
           pte = page_table_paddr | MMU_PTE_L012_DESCRIPTOR_TABLE;
-          page_table[index] = pte;
+          update_pte(&page_table[index], pte);
           LTRACEF("pte %p[%#" PRIxPTR "] = %#" PRIx64 "\n", page_table, index, pte);
           next_page_table = static_cast<volatile pte_t*>(pt_vaddr);
           break;
@@ -598,7 +622,7 @@ ssize_t ArmArchVmAspace::MapPageTable(vaddr_t vaddr_in, vaddr_t vaddr_rel_in, pa
           next_page_table = static_cast<volatile pte_t*>(paddr_to_physmap(page_table_paddr));
           break;
         case MMU_PTE_L012_DESCRIPTOR_BLOCK:
-          goto err;
+          return ZX_ERR_ALREADY_EXISTS;
 
         default:
           PANIC_UNIMPLEMENTED;
@@ -615,7 +639,7 @@ ssize_t ArmArchVmAspace::MapPageTable(vaddr_t vaddr_in, vaddr_t vaddr_rel_in, pa
           // Since we just allocated it there should be nothing in it, otherwise the MapPageTable
           // call would not have failed.
           DEBUG_ASSERT(page_table_is_clear(next_page_table, page_size_shift));
-          page_table[index] = MMU_PTE_DESCRIPTOR_INVALID;
+          update_pte(&page_table[index], MMU_PTE_DESCRIPTOR_INVALID);
 
           // ensure that the update is observable from hardware page table walkers before TLB
           // operations can occur.
@@ -626,12 +650,12 @@ ssize_t ArmArchVmAspace::MapPageTable(vaddr_t vaddr_in, vaddr_t vaddr_rel_in, pa
 
           FreePageTable(const_cast<pte_t*>(next_page_table), page_table_paddr, page_size_shift);
         }
-        goto err;
+        return ret;
       }
     } else {
-      if (pte) {
-        TRACEF("page table entry already in use, index %#" PRIxPTR ", %#" PRIx64 "\n", index, pte);
-        goto err;
+      if (is_pte_valid(pte)) {
+        LTRACEF("page table entry already in use, index %#" PRIxPTR ", %#" PRIx64 "\n", index, pte);
+        return ZX_ERR_ALREADY_EXISTS;
       }
 
       pte = paddr | attrs;
@@ -644,7 +668,7 @@ ssize_t ArmArchVmAspace::MapPageTable(vaddr_t vaddr_in, vaddr_t vaddr_rel_in, pa
         pte |= MMU_PTE_ATTR_NON_GLOBAL;
       }
       LTRACEF("pte %p[%#" PRIxPTR "] = %#" PRIx64 "\n", page_table, index, pte);
-      page_table[index] = pte;
+      update_pte(&page_table[index], pte);
     }
     vaddr += chunk_size;
     vaddr_rel += chunk_size;
@@ -653,11 +677,8 @@ ssize_t ArmArchVmAspace::MapPageTable(vaddr_t vaddr_in, vaddr_t vaddr_rel_in, pa
     mapped_size += chunk_size;
   }
 
+  cleanup.cancel();
   return mapped_size;
-
-err:
-  UnmapPageTable(vaddr_in, vaddr_rel_in, size_in - size, index_shift, page_size_shift, page_table);
-  return ZX_ERR_INTERNAL;
 }
 
 // NOTE: caller must DSB afterwards to ensure TLB entries are flushed
@@ -709,12 +730,14 @@ zx_status_t ArmArchVmAspace::ProtectPageTable(vaddr_t vaddr_in, vaddr_t vaddr_re
         (pte & MMU_PTE_DESCRIPTOR_MASK) == MMU_PTE_L012_DESCRIPTOR_TABLE) {
       page_table_paddr = pte & MMU_PTE_OUTPUT_ADDR_MASK;
       next_page_table = static_cast<volatile pte_t*>(paddr_to_physmap(page_table_paddr));
+
+      // Recurse a level.
       ProtectPageTable(vaddr, vaddr_rem, chunk_size, attrs, index_shift - (page_size_shift - 3),
                        page_size_shift, next_page_table);
-    } else if (pte) {
+    } else if (is_pte_valid(pte)) {
       pte = (pte & ~MMU_PTE_PERMISSION_MASK) | attrs;
       LTRACEF("pte %p[%#" PRIxPTR "] = %#" PRIx64 "\n", page_table, index, pte);
-      page_table[index] = pte;
+      update_pte(&page_table[index], pte);
 
       // ensure that the update is observable from hardware page table walkers before TLB
       // operations can occur.
@@ -770,11 +793,12 @@ bool ArmArchVmAspace::HarvestAccessedPageTable(vaddr_t vaddr, vaddr_t vaddr_rel_
                                    next_page_table, accessed_callback)) {
         flushed_tlb = true;
       }
-    } else if (pte) {
+    } else if (is_pte_valid(pte)) {
       if (pte & MMU_PTE_ATTR_AF) {
         const paddr_t pte_addr = pte & MMU_PTE_OUTPUT_ADDR_MASK;
         const paddr_t paddr = pte_addr + vaddr_rem;
         const uint mmu_flags = MmuFlagsFromPte(pte);
+
         // Invoke the callback to see if the accessed flag should be removed.
         if (accessed_callback(paddr, vaddr, mmu_flags)) {
           // Modifying the access flag does not require break-before-make for correctness and as we
@@ -782,7 +806,7 @@ bool ArmArchVmAspace::HarvestAccessedPageTable(vaddr_t vaddr, vaddr_t vaddr_rel_
           // potential concurrent modifications.
           pte = (pte & ~MMU_PTE_ATTR_AF);
           LTRACEF("pte %p[%#" PRIxPTR "] = %#" PRIx64 "\n", page_table, index, pte);
-          page_table[index] = pte;
+          update_pte(&page_table[index], pte);
 
           // ensure that the update is observable from hardware page table walkers before TLB
           // operations can occur.
@@ -833,9 +857,10 @@ void ArmArchVmAspace::MarkAccessedPageTable(vaddr_t vaddr, vaddr_t vaddr_rel_in,
           static_cast<volatile pte_t*>(paddr_to_physmap(page_table_paddr));
       MarkAccessedPageTable(vaddr, vaddr_rem, chunk_size, index_shift - (page_size_shift - 3),
                             page_size_shift, next_page_table);
-    } else if (pte) {
+    } else if (is_pte_valid(pte)) {
       pte |= MMU_PTE_ATTR_AF;
-      page_table[index] = pte;
+      update_pte(&page_table[index], pte);
+
       // If the access bit wasn't set then we know this entry isn't cached in any TLBs and so we do
       // not need to do any TLB maintenance and can just issue a dmb to ensure the hardware walker
       // sees the new entry. If the access bit was already set then this operation is a no-op and
@@ -1264,7 +1289,6 @@ zx_status_t ArmArchVmAspace::Init(vaddr_t base, size_t size, uint flags, page_al
     tt_phys_ = pa;
 
     // zero the top level translation table.
-    // XXX remove when PMM starts returning pre-zeroed pages.
     arch_zero_page(const_cast<pte_t*>(tt_virt_));
   }
   pt_pages_ = 1;
@@ -1297,11 +1321,7 @@ zx_status_t ArmArchVmAspace::Destroy() {
           pt_pages_);
   }
 
-  vm_page_t* page = paddr_to_vm_page(tt_phys_);
-  DEBUG_ASSERT(page);
-  pmm_free_page(page);
-  pt_pages_--;
-
+  // Flush the ASID or VMID associated with this aspace
   if (flags_ & ARCH_ASPACE_FLAG_GUEST) {
     paddr_t vttbr = arm64_vttbr(asid_, 0);
     __UNUSED zx_status_t status = arm64_el2_tlbi_vmid(vttbr);
@@ -1311,6 +1331,15 @@ zx_status_t ArmArchVmAspace::Destroy() {
     asid.Free(asid_);
     asid_ = MMU_ARM64_UNUSED_ASID;
   }
+
+  // Free the top level page table.
+  vm_page_t* page = paddr_to_vm_page(tt_phys_);
+  DEBUG_ASSERT(page);
+  pmm_free_page(page);
+  pt_pages_--;
+
+  tt_phys_ = 0;
+  tt_virt_ = nullptr;
 
   return ZX_OK;
 }
