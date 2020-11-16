@@ -1,4 +1,5 @@
 {
+    include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
     program: {
         binary: "bin/workstation_session",
     },
@@ -33,7 +34,6 @@
         },
         {
             protocol: [
-                "fuchsia.logger.LogSink",
                 "fuchsia.sys.Launcher",
                 "fuchsia.ui.focus.FocusChainListenerRegistry",
                 "fuchsia.ui.input.ImeService",
