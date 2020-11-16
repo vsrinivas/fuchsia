@@ -10,6 +10,7 @@ extend uint fuchsia.BIND_PLATFORM_DEV_VID {
 
 extend uint fuchsia.BIND_PLATFORM_DEV_PID {
   PBUS_TEST = 0x01,
+  FIRMWARE = 0x15,
 };
 
 extend uint fuchsia.BIND_PLATFORM_DEV_DID {

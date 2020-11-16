@@ -17,10 +17,7 @@ bind_rules("ddk-firmware-test-bind") {
   rules = "test-driver.bind"
   output = "test-driver-bind.h"
 
-  deps = [
-    "//src/devices/bind/fuchsia.platform",
-    "//src/devices/bind/fuchsia.test",
-  ]
+  deps = [ "//src/devices/bind/test.platform" ]
 }
 
 driver_module("ddk-firmware-test") {

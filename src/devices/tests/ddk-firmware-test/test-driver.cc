@@ -106,7 +106,7 @@ zx_status_t TestFirmwareDriver::CheckFirmware(zx_handle_t fw, size_t size) {
   if (size != strlen(TEST_FIRMWARE_CONTENTS)) {
     return ZX_ERR_FILE_BIG;
   }
-  std::unique_ptr<char> buf(static_cast<char*>(malloc(size)));
+  auto buf = std::make_unique<char[]>(size);
   vmo.read(buf.get(), 0, size);
 
   if (memcmp(buf.get(), TEST_FIRMWARE_CONTENTS, size) != 0) {
