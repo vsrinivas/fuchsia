@@ -149,19 +149,15 @@ zx_status_t BlobfsCreator::ProcessCustom(int argc, char** argv, uint8_t* process
       fprintf(stderr, "Not enough arguments for %s\n", argv[0]);
       return ZX_ERR_INVALID_ARGS;
     }
-    if (strcmp("padded", argv[1]) == 0) {
-      blob_layout_format_ = blobfs::BlobLayoutFormat::kPaddedMerkleTreeAtStart;
-      *processed = required_args;
-      return ZX_OK;
+    auto format = blobfs::ParseBlobLayoutFormatCommandLineArg(argv[1]);
+    if (format.is_error()) {
+      fprintf(stderr, "Invalid argument to %s, expected \"padded\" or \"compact\" but got \"%s\"\n",
+              argv[0], argv[1]);
+      return format.status_value();
     }
-    if (strcmp("compact", argv[1]) == 0) {
-      blob_layout_format_ = blobfs::BlobLayoutFormat::kCompactMerkleTreeAtEnd;
-      *processed = required_args;
-      return ZX_OK;
-    }
-    fprintf(stderr, "Invalid argument to %s, expected \"padded\" or \"compact\" but got \"%s\"\n",
-            argv[0], argv[1]);
-    return ZX_ERR_INVALID_ARGS;
+    blob_layout_format_ = format.value();
+    *processed = required_args;
+    return ZX_OK;
   }
   fprintf(stderr, "Argument not found: %s\n", argv[0]);
   return ZX_ERR_INVALID_ARGS;

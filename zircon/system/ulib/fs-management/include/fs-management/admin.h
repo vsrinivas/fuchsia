@@ -51,6 +51,8 @@ typedef struct mkfs_options {
   bool verbose;
   // The number of sectors per cluster on a FAT file systems or zero for the default.
   int sectors_per_cluster;
+  // Format blobfs should store blobs in.  The valid values are "padded" and "compact".
+  const char* blob_layout_format;
 } mkfs_options_t;
 
 __EXPORT

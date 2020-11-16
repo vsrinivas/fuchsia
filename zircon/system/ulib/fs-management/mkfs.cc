@@ -60,6 +60,12 @@ zx_status_t MkfsNativeFs(const char* binary, const char* device_path, LaunchCall
       argv.push_back(fvm_data_slices.c_str());
     }
   }
+
+  if (options->blob_layout_format) {
+    argv.push_back("--blob_layout_format");
+    argv.push_back(options->blob_layout_format);
+  }
+
   argv.push_back("mkfs");
   argv.push_back(nullptr);
 

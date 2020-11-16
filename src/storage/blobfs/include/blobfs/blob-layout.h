@@ -34,6 +34,14 @@ enum class BlobLayoutFormat : decltype(Superblock::blob_layout_format) {
   kCompactMerkleTreeAtEnd = 1,
 };
 
+// Returns an abbreviated version of the |BlobLayoutFormat|'s name for passing to blobfs tools on
+// the command line.
+const char* GetBlobLayoutFormatCommandLineArg(BlobLayoutFormat format);
+
+// Parses the output of |GetBlobLayoutFormatCommandLineArg| back to a |BlobLayoutFormat|.
+// Returns an error if |arg| is invalid.
+zx::status<BlobLayoutFormat> ParseBlobLayoutFormatCommandLineArg(const char* arg);
+
 // Returns whether |format| uses the compact Merkle tree format or not.
 bool ShouldUseCompactMerkleTreeFormat(BlobLayoutFormat format);
 

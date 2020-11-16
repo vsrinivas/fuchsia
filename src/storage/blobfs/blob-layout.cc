@@ -22,6 +22,9 @@ using ByteCountType = BlobLayout::ByteCountType;
 using BlockCountType = BlobLayout::BlockCountType;
 using BlockSizeType = BlobLayout::BlockSizeType;
 
+constexpr char kPaddedMerkleTreeAtStartCommandLineArg[] = "padded";
+constexpr char kCompactMerkleTreeAtEndCommandLineArg[] = "compact";
+
 // Rounds up |byte_count| to the next multiple of |blobfs_block_size|.
 ByteCountType RoundUpToBlockMultiple(ByteCountType byte_count, BlockSizeType blobfs_block_size) {
   return fbl::round_up(byte_count, blobfs_block_size);
@@ -239,6 +242,25 @@ class PaddedMerkleTreeAtStartBlobLayout : public BlobLayout {
 };
 
 }  // namespace
+
+const char* GetBlobLayoutFormatCommandLineArg(BlobLayoutFormat format) {
+  switch (format) {
+    case BlobLayoutFormat::kPaddedMerkleTreeAtStart:
+      return kPaddedMerkleTreeAtStartCommandLineArg;
+    case BlobLayoutFormat::kCompactMerkleTreeAtEnd:
+      return kCompactMerkleTreeAtEndCommandLineArg;
+  }
+}
+
+zx::status<BlobLayoutFormat> ParseBlobLayoutFormatCommandLineArg(const char* arg) {
+  if (strcmp(kPaddedMerkleTreeAtStartCommandLineArg, arg) == 0) {
+    return zx::ok(BlobLayoutFormat::kPaddedMerkleTreeAtStart);
+  }
+  if (strcmp(kCompactMerkleTreeAtEndCommandLineArg, arg) == 0) {
+    return zx::ok(BlobLayoutFormat::kCompactMerkleTreeAtEnd);
+  }
+  return zx::error(ZX_ERR_INVALID_ARGS);
+}
 
 bool ShouldUseCompactMerkleTreeFormat(BlobLayoutFormat format) {
   switch (format) {

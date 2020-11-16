@@ -22,6 +22,7 @@
 #include <optional>
 #include <utility>
 
+#include <blobfs/blob-layout.h>
 #include <blobfs/cache-policy.h>
 #include <blobfs/compression-settings.h>
 #include <blobfs/fsck.h>
@@ -39,6 +40,12 @@ namespace {
 
 using block_client::BlockDevice;
 using block_client::RemoteBlockDevice;
+
+// Parsed command line options for the different commands.
+struct Options {
+  blobfs::MountOptions mount_options;
+  blobfs::FilesystemOptions mkfs_options;
+};
 
 zx::resource AttemptToGetVmexResource() {
   zx::channel local, remote;
@@ -61,7 +68,7 @@ zx::resource AttemptToGetVmexResource() {
   return std::move(result.Unwrap()->vmex);
 }
 
-zx_status_t Mount(std::unique_ptr<BlockDevice> device, const blobfs::MountOptions& options) {
+zx_status_t Mount(std::unique_ptr<BlockDevice> device, const Options& options) {
   zx::channel outgoing_server = zx::channel(zx_take_startup_handle(PA_DIRECTORY_REQUEST));
   // TODO(fxbug.dev/34531): this currently supports both the old (data root only) and the new
   // (outgoing directory) behaviors. once all clients are moved over to using the new behavior,
@@ -98,21 +105,20 @@ zx_status_t Mount(std::unique_ptr<BlockDevice> device, const blobfs::MountOption
     FS_TRACE_WARN("blobfs: VMEX resource unavailable, executable blobs are unsupported\n");
   }
 
-  return blobfs::Mount(std::move(device), options, std::move(export_root), layout, std::move(vmex),
-                       std::move(diagnostics_dir));
+  return blobfs::Mount(std::move(device), options.mount_options, std::move(export_root), layout,
+                       std::move(vmex), std::move(diagnostics_dir));
 }
 
-zx_status_t Mkfs(std::unique_ptr<BlockDevice> device, const blobfs::MountOptions& options) {
+zx_status_t Mkfs(std::unique_ptr<BlockDevice> device, const Options& options) {
   // TODO(fxbug.dev/36663): Add support for setting the blob layout format.
-  return blobfs::FormatFilesystem(device.get(), blobfs::FilesystemOptions{});
+  return blobfs::FormatFilesystem(device.get(), options.mkfs_options);
 }
 
-zx_status_t Fsck(std::unique_ptr<BlockDevice> device, const blobfs::MountOptions& options) {
-  return blobfs::Fsck(std::move(device), options);
+zx_status_t Fsck(std::unique_ptr<BlockDevice> device, const Options& options) {
+  return blobfs::Fsck(std::move(device), options.mount_options);
 }
 
-typedef zx_status_t (*CommandFunction)(std::unique_ptr<BlockDevice> device,
-                                       const blobfs::MountOptions& options);
+typedef zx_status_t (*CommandFunction)(std::unique_ptr<BlockDevice> device, const Options& options);
 
 const struct {
   const char* name;
@@ -175,6 +181,9 @@ int usage() {
       "         -e|--eviction_policy |pol| Policy for when to evict pager-backed blobs with no\n"
       "                                    handles. |pol| can be one of NEVER_EVICT or\n"
       "                                    EVICT_IMMEDIATELY.\n"
+      "         -b|--blob_layout_format [padded|compact]\n"
+      "                                    The format blobfs should use to store blobs.  Only\n"
+      "                                    valid for mkfs.\n"
       "         -h|--help                  Display this message\n"
       "\n"
       "On Fuchsia, blobfs takes the block device argument by handle.\n"
@@ -189,8 +198,8 @@ int usage() {
   return ZX_ERR_INVALID_ARGS;
 }
 
-zx::status<blobfs::MountOptions> ProcessArgs(int argc, char** argv, CommandFunction* func) {
-  blobfs::MountOptions options;
+zx::status<Options> ProcessArgs(int argc, char** argv, CommandFunction* func) {
+  Options options{};
   while (1) {
     static struct option opts[] = {
 
@@ -201,6 +210,7 @@ zx::status<blobfs::MountOptions> ProcessArgs(int argc, char** argv, CommandFunct
         {"compression", required_argument, nullptr, 'c'},
         {"compression_level", required_argument, nullptr, 'l'},
         {"eviction_policy", required_argument, nullptr, 'e'},
+        {"blob_layout_format", required_argument, nullptr, 'b'},
         {"help", no_argument, nullptr, 'h'},
         {nullptr, 0, nullptr, 0},
     };
@@ -212,10 +222,10 @@ zx::status<blobfs::MountOptions> ProcessArgs(int argc, char** argv, CommandFunct
     }
     switch (c) {
       case 'r':
-        options.writability = blobfs::Writability::ReadOnlyFilesystem;
+        options.mount_options.writability = blobfs::Writability::ReadOnlyFilesystem;
         break;
       case 'm':
-        options.metrics = true;
+        options.mount_options.metrics = true;
         break;
       case 'c': {
         std::optional<blobfs::CompressionAlgorithm> algorithm = ParseAlgorithm(optarg);
@@ -223,7 +233,7 @@ zx::status<blobfs::MountOptions> ProcessArgs(int argc, char** argv, CommandFunct
           fprintf(stderr, "Invalid compression algorithm: %s\n", optarg);
           return zx::error(usage());
         }
-        options.compression_settings.compression_algorithm = *algorithm;
+        options.mount_options.compression_settings.compression_algorithm = *algorithm;
         break;
       }
       case 'l': {
@@ -232,7 +242,7 @@ zx::status<blobfs::MountOptions> ProcessArgs(int argc, char** argv, CommandFunct
           fprintf(stderr, "Invalid argument for --compression_level: %s\n", optarg);
           return zx::error(usage());
         }
-        options.compression_settings.compression_level = level;
+        options.mount_options.compression_settings.compression_level = level;
         break;
       }
       case 'e': {
@@ -241,19 +251,28 @@ zx::status<blobfs::MountOptions> ProcessArgs(int argc, char** argv, CommandFunct
           fprintf(stderr, "Invalid eviction policy: %s\n", optarg);
           return zx::error(usage());
         }
-        options.pager_backed_cache_policy = policy;
+        options.mount_options.pager_backed_cache_policy = policy;
         break;
       }
       case 'v':
-        options.verbose = true;
+        options.mount_options.verbose = true;
         break;
+      case 'b': {
+        auto format = blobfs::ParseBlobLayoutFormatCommandLineArg(optarg);
+        if (format.is_error()) {
+          fprintf(stderr, "Invalid blob layout format: %s\n", optarg);
+          return zx::error(usage());
+        }
+        options.mkfs_options.blob_layout_format = format.value();
+        break;
+      }
       case 'h':
       default:
         return zx::error(usage());
     }
   }
 
-  if (!options.compression_settings.IsValid()) {
+  if (!options.mount_options.compression_settings.IsValid()) {
     fprintf(stderr, "Invalid compression settings.\n");
     return zx::error(usage());
   }
@@ -288,7 +307,7 @@ int main(int argc, char** argv) {
   if (options_or.is_error()) {
     return EXIT_FAILURE;
   }
-  blobfs::MountOptions options = std::move(options_or).value();
+  const Options& options = options_or.value();
 
   zx::channel block_connection = zx::channel(zx_take_startup_handle(FS_HANDLE_BLOCK_DEVICE_ID));
   if (!block_connection.is_valid()) {
