@@ -155,11 +155,6 @@ fuchsia_test_package("iquery-tests") {
   test_components = [ ":iquery-bin-test" ]
 }
 
-# TODO: remove, transitional
-group("iquery") {
-  deps = []
-}
-
 group("tests") {
   testonly = true
 
