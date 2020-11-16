@@ -4,5 +4,8 @@
 
 group("tests") {
   testonly = true
-  deps = [ "flutter-runner-launch-smoke-test:tests" ]
+  deps = [
+    # TODO(fxbug.dev/64462) investigate flakes and turn back on.
+    #"flutter-runner-launch-smoke-test:tests",
+  ]
 }
