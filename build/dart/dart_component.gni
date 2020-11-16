@@ -53,9 +53,12 @@ import("//build/flutter/internal/flutter_dart_component.gni")
 #     The component manifest
 #     Type: path
 #
-#   main_package (required)
+#   main_package (optional)
 #     The name of the package containing main_dart
 #     Type: string
+#     Default: component_name with dashes replaced by underscores, if defined.
+#       Otherwise, the target_name with dashes replaced by underscores will be
+#       used.
 #
 #   component_name (optional)
 #     The name of the component.
@@ -82,13 +85,7 @@ import("//build/flutter/internal/flutter_dart_component.gni")
 #  testonly
 #  visibility
 template("dart_component") {
-  assert(defined(invoker.main_package), "Must define main_package")
   assert(defined(invoker.manifest), "Must define manifest")
-
-  _component_deps = []
-  if (defined(invoker.deps)) {
-    _component_deps += invoker.deps
-  }
 
   if (defined(invoker.build_cfg)) {
     _build_cfg = invoker.build_cfg
@@ -96,7 +93,10 @@ template("dart_component") {
     _build_cfg = dart_default_build_cfg
   }
 
-  _component_deps += [ _build_cfg.runner_dep ]
+  _component_deps = [ _build_cfg.runner_dep ]
+  if (defined(invoker.deps)) {
+    _component_deps += invoker.deps
+  }
 
   if (defined(invoker.main_dart)) {
     _main_dart = invoker.main_dart
@@ -104,14 +104,24 @@ template("dart_component") {
     _main_dart = "main.dart"
   }
 
+  if (defined(invoker.main_package)) {
+    _main_package = invoker.main_package
+  } else if (defined(invoker.component_name)) {
+    _main_package = string_replace(invoker.component_name, "-", "_")
+  } else {
+    _main_package = string_replace(target_name, "-", "_")
+  }
+
   flutter_dart_component(target_name) {
     forward_variables_from(invoker,
                            "*",
                            [
+                             "main_package",
                              "build_cfg",
                              "deps",
                              "main_dart",
                            ])
+    main_package = _main_package
     deps = _component_deps
     main_dart = _main_dart
     build_cfg = _build_cfg
