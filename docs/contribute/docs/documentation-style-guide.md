@@ -79,7 +79,7 @@ dashes (`-`) instead, using `{#section-title}`. Also, use dashes for file names.
 <span class="compare-better">Recommended</span>: Using dashes for anchors
 
 ```none
-## This is a section header {#this-is-a-section-header}
+ ## This is a section header {#this-is-a-section-header}
 ```
 
 ## Code samples
