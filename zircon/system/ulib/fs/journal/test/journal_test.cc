@@ -1335,8 +1335,6 @@ TEST_F(JournalTest, JournalWritesCausingCommitBlockWraparound) {
     Journal journal(&handler, take_info(), take_journal_buffer(), take_data_buffer(),
                     kJournalStartBlock, Journal::Options());
     EXPECT_EQ(journal.CommitTransaction({.metadata_operations = {operations[0]}}), ZX_OK);
-    journal.schedule_task(journal.Sync());
-    // This write will block until the prevoius operation completes.
     EXPECT_EQ(journal.CommitTransaction({.metadata_operations = {operations[1]}}), ZX_OK);
   }
 }

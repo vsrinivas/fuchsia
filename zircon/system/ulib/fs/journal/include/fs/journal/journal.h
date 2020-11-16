@@ -150,12 +150,6 @@ class Journal final : public fit::executor {
   // become available.
   size_t pending_ = 0;
 
-  // To implement |Sync()|, the journal must track all pending work, with the ability
-  // to react once all prior work (up to a point) has finished execution.
-  // This barrier enables a journal to generate new promises identifying when all prior
-  // tasks transmitted to |executor_| have completed.
-  fit::barrier barrier_;
-
   // Barrier for all outstanding data writes.
   fit::barrier data_barrier_;
 

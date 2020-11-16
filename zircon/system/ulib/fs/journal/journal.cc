@@ -93,8 +93,13 @@ void Journal::FlushPending() {
 
   // Once all the journal writes are done, we need to flush again to flush the writes to their final
   // locations.
-  schedule_task(barrier_.wrap(journal_sequencer_.wrap(
-      fit::make_promise([this]() { return ToVoidError(writer_.Flush()); }))));
+  schedule_task(journal_sequencer_.wrap(fit::make_promise([this]() -> fit::result<> {
+    if (writer_.HavePendingWork()) {
+      return ToVoidError(writer_.Flush());
+    } else {
+      return fit::ok();
+    }
+  })));
 
   // Blocks will still be reserved, but they'll shortly be in-flight and later released.
   pending_ = 0;
@@ -223,10 +228,10 @@ zx_status_t Journal::CommitTransaction(Transaction transaction) {
 
   fit::pending_task task;
   if (transaction.data_promise) {
-    task = barrier_.wrap(data_barrier_.wrap(std::move(transaction.data_promise))
-                             .and_then(std::move(ordered_promise)));
+    task = data_barrier_.wrap(std::move(transaction.data_promise))
+               .and_then(std::move(ordered_promise));
   } else {
-    task = barrier_.wrap(std::move(ordered_promise));
+    task = std::move(ordered_promise);
   }
 
   schedule_task(std::move(task));
@@ -236,14 +241,7 @@ zx_status_t Journal::CommitTransaction(Transaction transaction) {
 Journal::Promise Journal::Sync() {
   auto event = metrics()->NewLatencyEvent(fs_metrics::Event::kJournalSync);
   FlushPending();
-  return barrier_.sync().then(
-      [this](const fit::result<>& result) -> fit::result<void, zx_status_t> {
-        if (result.is_error()) {
-          return fit::error(ZX_ERR_IO_REFUSED);
-        } else {
-          return writer_.Sync();
-        }
-      });
+  return journal_sequencer_.wrap(fit::make_promise([this] { return writer_.Sync(); }));
 }
 
 }  // namespace fs

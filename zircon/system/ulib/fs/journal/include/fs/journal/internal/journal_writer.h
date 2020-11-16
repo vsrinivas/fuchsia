@@ -89,6 +89,8 @@ class JournalWriter {
 
   fit::result<void, zx_status_t> Flush();
 
+  bool HavePendingWork() const { return !pending_work_items_.empty(); }
+
  private:
   // Deactivates all writeback, calling all subsequent write operations to fail.
   void DisableWriteback() { transaction_handler_ = nullptr; }
