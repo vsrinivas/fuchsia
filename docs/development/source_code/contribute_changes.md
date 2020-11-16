@@ -5,8 +5,8 @@ Fuchsia project.
 
 ## Prerequisites
 
-Fuchsia manages commits through
-[Gerrit](https://fuchsia-review.googlesource.com){:.external}.
+Fuchsia manages git commits and code reviews through
+[Gerrit's](https://fuchsia-review.googlesource.com){:.external} web UI.
 
 Before you begin, you need to:
 
@@ -39,6 +39,10 @@ Do the following:
 1.  Copy the generated code and run it in a terminal of your workstation.
 
 ## Create a change in Gerrit {#create-a-change-in-gerrit}
+
+The Fuchsia project uses Gerrit's web-based UI to manage code and
+documentation reviews. When a commit is uploaded to Gerrit, it is referred to as
+as a **change**.
 
 To create a
 [change](https://gerrit-review.googlesource.com/Documentation/concept-changes.html){:.external}
@@ -99,8 +103,27 @@ After creating a change, to request a code review, do the following:
 where you're making your change or in one of its parents to find the best reviewers for your change.
 1. Click **SEND**.
 
-Check the Gerrit [Review UI documentation](https://gerrit-review.googlesource.com/Documentation/user-review-ui.html)
-for more information about how to use the Gerrit code review tool.
+#### Track your review
+
+To track the progress of your code review, use
+[Gerrit](https://fuchsia-review.googlesource.com){:.external}. For more
+information on how to use the Gerrit code review tool, see
+[Review UI documentation](https://gerrit-review.googlesource.com/Documentation/user-review-ui.html){:.external}.
+
+After you request a code review for your change, reviewers can score
+your change. Reviewers can label your change with a
+score of **-2**, **-1**, **0**, **+1**, or **+2**. For more information on
+review label definitions see, [Gerrit Code Review - Review Labels](https://gerrit-review.googlesource.com/Documentation/config-labels.html){:.external}.
+
+In order for your change to be submitted, you need a **Code Review Label +2**.
+A **Code Review Label +2** score can only be applied by a directory owner.
+
+#### Submit your change {#submit-a-change}
+
+A change can be submitted after a repository owner applies the
+**Code Review Label +2** to your change. When a change is submitted, the change
+is submitted to the Commit Queue (CQ). The Commit Queue verifies and
+merges changes to the `master` branch.
 
 ### Create and upload a patch
 
