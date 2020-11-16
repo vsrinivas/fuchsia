@@ -5,6 +5,9 @@
 /// The underlying frames used as units of data in RFCOMM.
 mod frame;
 
+/// Structures to support inspection.
+mod inspect;
+
 /// RFCOMM-specific types.
 mod types;
 

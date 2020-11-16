@@ -9,7 +9,9 @@ use {
     fidl_fuchsia_bluetooth_bredr::ProfileMarker,
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
+    fuchsia_inspect_derive::Inspect,
     futures::{self, channel::mpsc, future, sink::SinkExt, stream::StreamExt},
+    log::warn,
 };
 
 mod profile;
@@ -29,9 +31,13 @@ pub async fn main() -> Result<(), Error> {
     let (sender, receiver) = mpsc::channel(0);
     let mut clients = Vec::new();
 
-    let mut profile_registrar_fut = ProfileRegistrar::start(profile_svc, receiver);
-
     let mut fs = ServiceFs::new();
+
+    let inspect = fuchsia_inspect::Inspector::new();
+    if let Err(e) = inspect.serve(&mut fs) {
+        warn!("Could not serve inspect: {}", e);
+    }
+
     fs.dir("svc").add_fidl_service(move |stream| {
         let mut stream_sender = sender.clone();
         let task = fasync::Task::spawn(async move {
@@ -41,6 +47,12 @@ pub async fn main() -> Result<(), Error> {
     });
     fs.take_and_serve_directory_handle()?;
     let mut drive_service_fs = fs.collect::<()>();
+
+    let mut profile_registrar = ProfileRegistrar::new(profile_svc);
+    if let Err(e) = profile_registrar.iattach(inspect.root(), "rfcomm_server") {
+        warn!("Failed to attach to inspect: {}", e);
+    }
+    let mut profile_registrar_fut = profile_registrar.start(receiver);
 
     let _ = future::select(&mut profile_registrar_fut, &mut drive_service_fs).await;
 

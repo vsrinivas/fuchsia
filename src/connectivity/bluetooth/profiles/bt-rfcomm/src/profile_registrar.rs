@@ -13,6 +13,7 @@ use {
         types::PeerId,
         util::CollectExt,
     },
+    fuchsia_inspect_derive::Inspect,
     futures::{
         self,
         channel::mpsc,
@@ -80,27 +81,33 @@ enum AdvertiseStatus {
 /// together all the services, and re-register.
 /// The ProfileRegistrar also manages the `RfcommServer` - which is responsible for handling
 /// connections over the RFCOMM PSM.
+#[derive(Inspect)]
 pub struct ProfileRegistrar {
     /// An upstream provider of the Profile service. Typically provided by bt-host.
+    #[inspect(skip)]
     profile_upstream: bredr::ProfileProxy,
 
     /// The `active_registration` is the current processing task for connection requests
     /// from the upstream server.
+    #[inspect(skip)]
     active_registration: AdvertiseStatus,
 
     /// The currently advertised services.
+    #[inspect(skip)]
     registered_services: Services,
 
     /// Sender used to relay connection requests from the upstream server.
+    #[inspect(skip)]
     connection_sender: Option<mpsc::Sender<ConnectionEvent>>,
 
     /// The RFCOMM server that handles allocating server channels, incoming
     /// l2cap connections, outgoing l2cap connections, and multiplexing channels.
+    #[inspect(forward)]
     rfcomm_server: RfcommServer,
 }
 
 impl ProfileRegistrar {
-    fn new(profile_upstream: bredr::ProfileProxy) -> Self {
+    pub fn new(profile_upstream: bredr::ProfileProxy) -> Self {
         Self {
             profile_upstream,
             active_registration: AdvertiseStatus::NotAdvertising,
@@ -110,13 +117,9 @@ impl ProfileRegistrar {
         }
     }
 
-    /// Creates the `ProfileRegistrar` and returns a Task representing the running server.
-    pub fn start(
-        profile_upstream: bredr::ProfileProxy,
-        receiver: mpsc::Receiver<bredr::ProfileRequestStream>,
-    ) -> fasync::Task<()> {
-        let registrar = ProfileRegistrar::new(profile_upstream);
-        let handler_fut = registrar.handle_fidl_requests(receiver);
+    /// Creates and returns a Task representing the running server.
+    pub fn start(self, receiver: mpsc::Receiver<bredr::ProfileRequestStream>) -> fasync::Task<()> {
+        let handler_fut = self.handle_fidl_requests(receiver);
         fasync::Task::spawn(handler_fut)
     }
 

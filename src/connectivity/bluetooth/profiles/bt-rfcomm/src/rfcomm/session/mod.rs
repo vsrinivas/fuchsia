@@ -7,6 +7,8 @@ use {
     fidl_fuchsia_bluetooth::ErrorCode,
     fuchsia_async as fasync,
     fuchsia_bluetooth::types::{Channel, PeerId},
+    fuchsia_inspect as inspect,
+    fuchsia_inspect_derive::{AttachError, Inspect},
     futures::{
         channel::mpsc,
         future::BoxFuture,
@@ -41,6 +43,7 @@ use crate::rfcomm::frame::{
     },
     Encodable, Frame, FrameData, FrameParseError, UIHData, UserData,
 };
+use crate::rfcomm::inspect::SessionInspect;
 use crate::rfcomm::types::{CommandResponse, RfcommError, Role, ServerChannel, DLCI};
 
 /// A function used to relay an opened inbound RFCOMM channel to a local client.
@@ -164,6 +167,14 @@ pub struct SessionInner {
     /// The channel opened callback that is called anytime a new RFCOMM channel is opened. The
     /// `SessionInner` will relay the client end of the channel to this closure.
     channel_opened_fn: ChannelOpenedFn,
+    /// The inspect node for this object.
+    inspect: SessionInspect,
+}
+
+impl Inspect for &mut SessionInner {
+    fn iattach(self, parent: &inspect::Node, name: impl AsRef<str>) -> Result<(), AttachError> {
+        self.inspect.iattach(parent, name)
+    }
 }
 
 impl SessionInner {
@@ -182,6 +193,7 @@ impl SessionInner {
             pending_channels: HashMap::new(),
             outgoing_frame_sender,
             channel_opened_fn,
+            inspect: SessionInspect::default(),
         }
     }
 
@@ -800,7 +812,9 @@ impl SessionInner {
             };
         }
         // The `data_receiver` has closed, indicating peer disconnection.
-        inner.lock().await.cancel_pending_channels();
+        let mut w_inner = inner.lock().await;
+        w_inner.cancel_pending_channels();
+        w_inner.inspect.disconnect();
         Ok(())
     }
 }
@@ -810,8 +824,11 @@ impl SessionInner {
 /// A `Session` is represented by a processing task which processes incoming bytes
 /// from the remote peer. Any multiplexed RFCOMM channels will be delivered to the
 /// `clients` of the Session.
+#[derive(Inspect)]
 pub struct Session {
+    #[inspect(skip)]
     task: Option<fasync::Task<()>>,
+    #[inspect(forward)]
     inner: Arc<Mutex<SessionInner>>,
 }
 
@@ -1067,6 +1084,7 @@ mod tests {
             pending_channels: HashMap::new(),
             outgoing_frame_sender,
             channel_opened_fn,
+            inspect: SessionInspect::default(),
         };
         (session, outgoing_frames, channel_receiver)
     }
@@ -1227,6 +1245,39 @@ mod tests {
         };
         let mux_command2 = Frame::make_mux_command(Role::Initiator, data2);
         assert_matches!(outstanding_frames.register_frame(&mux_command2), Ok(true));
+    }
+
+    #[test]
+    fn test_session_inner_inspect() {
+        let mut exec = fasync::Executor::new().unwrap();
+        let inspect = inspect::Inspector::new();
+
+        // Setup SessionInner with inspect.
+        let (data_sender, data_receiver) = mpsc::channel(0);
+        let (mut inner, _outgoing_frames, _inbound_channels) = setup_session();
+        inner.iattach(inspect.root(), "session_test").expect("should attach to inspect tree");
+        let session = Arc::new(Mutex::new(inner));
+        // Default inspect tree.
+        fuchsia_inspect::assert_inspect_tree!(inspect, root: {
+            session_test: {
+                connected: "Connected",
+            },
+        });
+
+        // Run the Session task.
+        let mut session_task =
+            Box::pin(SessionInner::process_incoming_frames(session.clone(), data_receiver));
+        assert!(exec.run_until_stalled(&mut session_task).is_pending());
+
+        // Simulate peer disconnection.
+        drop(data_sender);
+        assert_matches!(exec.run_until_stalled(&mut session_task), Poll::Ready(Ok(_)));
+        // Inspect when Session is not active.
+        fuchsia_inspect::assert_inspect_tree!(inspect, root: {
+            session_test: {
+                connected: "Disconnected",
+            }
+        });
     }
 
     #[test]

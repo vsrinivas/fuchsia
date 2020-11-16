@@ -7,6 +7,8 @@ use {
     fidl_fuchsia_bluetooth::ErrorCode,
     fidl_fuchsia_bluetooth_bredr as bredr,
     fuchsia_bluetooth::types::{Channel, PeerId},
+    fuchsia_inspect as inspect,
+    fuchsia_inspect_derive::{AttachError, Inspect},
     futures::{lock::Mutex, FutureExt},
     log::{info, trace},
     std::{
@@ -95,11 +97,25 @@ pub struct RfcommServer {
     /// RFCOMM connections over a single L2CAP channel.
     /// There can only be one session per remote peer. See RFCOMM Section 5.2.
     sessions: HashMap<PeerId, Session>,
+
+    /// Inspect node for Sessions to attach to.
+    inspect: inspect::Node,
+}
+
+impl Inspect for &mut RfcommServer {
+    fn iattach(self, parent: &inspect::Node, name: impl AsRef<str>) -> Result<(), AttachError> {
+        self.inspect = parent.create_child(name);
+        Ok(())
+    }
 }
 
 impl RfcommServer {
     pub fn new() -> Self {
-        Self { clients: Arc::new(Clients::new()), sessions: HashMap::new() }
+        Self {
+            clients: Arc::new(Clients::new()),
+            sessions: HashMap::new(),
+            inspect: inspect::Node::default(),
+        }
     }
 
     /// Returns true if a session identified by `id` exists and is currently
@@ -186,7 +202,8 @@ impl RfcommServer {
             let clients = clients.clone();
             async move { clients.deliver_channel(peer_id, server_channel, channel).await }.boxed()
         });
-        let session = Session::create(id, l2cap, channel_opened_callback);
+        let mut session = Session::create(id, l2cap, channel_opened_callback);
+        let _ = session.iattach(&self.inspect, inspect::unique_name("peer_"));
         self.sessions.insert(id, session);
 
         Ok(())
