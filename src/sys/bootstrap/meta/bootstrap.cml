@@ -90,6 +90,7 @@
                 "fuchsia.kernel.RootJob",
                 "fuchsia.kernel.RootJobForInspect",
                 "fuchsia.kernel.Stats",
+                "fuchsia.metrics.MetricEventLoggerFactory",
                 "fuchsia.net.NameLookup",
                 "fuchsia.net.stack.Log",
                 "fuchsia.net.stack.Stack",
@@ -201,6 +202,7 @@
         {
             protocol: [
                 "fuchsia.cobalt.LoggerFactory",
+                "fuchsia.metrics.MetricEventLoggerFactory",
                 "fuchsia.tracing.provider.Registry",
             ],
             from: "parent",

@@ -158,6 +158,7 @@
                 "fuchsia.diagnostics.internal.SamplerController",
                 "fuchsia.exception.Handler",
                 "fuchsia.feedback.CrashReporter",
+                "fuchsia.metrics.MetricEventLoggerFactory",
                 "fuchsia.net.NameLookup",
                 "fuchsia.net.stack.Log",
                 "fuchsia.net.stack.Stack",
