@@ -236,14 +236,21 @@ impl RealmCapabilityHost {
     ) -> Result<(), fcomponent::Error> {
         child.collection.as_ref().ok_or(fcomponent::Error::InvalidArguments)?;
         let partial_moniker = PartialMoniker::new(child.name, child.collection);
-        let _ = realm.remove_dynamic_child(&partial_moniker).await.map_err(|e| match e {
-            ModelError::InstanceNotFoundInRealm { .. } => fcomponent::Error::InstanceNotFound,
-            ModelError::Unsupported { .. } => fcomponent::Error::Unsupported,
-            e => {
-                error!("remove_dynamic_child() failed: {:?}", e);
-                fcomponent::Error::Internal
-            }
-        })?;
+        let destroy_fut =
+            realm.remove_dynamic_child(&partial_moniker).await.map_err(|e| match e {
+                ModelError::InstanceNotFoundInRealm { .. } => fcomponent::Error::InstanceNotFound,
+                ModelError::Unsupported { .. } => fcomponent::Error::Unsupported,
+                e => {
+                    error!("remove_dynamic_child() failed: {:?}", e);
+                    fcomponent::Error::Internal
+                }
+            })?;
+        // This function returns as soon as the child is marked deleted, while actual destruction
+        // proceeds in the background.
+        fasync::Task::spawn(async move {
+            let _ = destroy_fut.await;
+        })
+        .detach();
         Ok(())
     }
 
@@ -811,12 +818,9 @@ mod tests {
 
         // Verify that the bindings happened (including the eager binding) and the component
         // topology matches expectations.
-        let expected_urls = vec![
-            "test:///root_resolved".to_string(),
-            "test:///system_resolved".to_string(),
-            "test:///eager_resolved".to_string(),
-        ];
-        assert_eq!(test.mock_runner.urls_run(), expected_urls);
+        let expected_urls =
+            &["test:///root_resolved", "test:///system_resolved", "test:///eager_resolved"];
+        test.mock_runner.wait_for_urls(expected_urls).await;
         assert_eq!("(system(eager))", test.hook.print());
     }
 
@@ -870,9 +874,8 @@ mod tests {
         assert_eq!(res.expect("failed to use echo service"), Some("hippos".to_string()));
 
         // Verify that the binding happened and the component topology matches expectations.
-        let expected_urls =
-            vec!["test:///root_resolved".to_string(), "test:///system_resolved".to_string()];
-        assert_eq!(test.mock_runner.urls_run(), expected_urls);
+        let expected_urls = &["test:///root_resolved", "test:///system_resolved"];
+        test.mock_runner.wait_for_urls(expected_urls).await;
         assert_eq!("(coll:system)", test.hook.print());
     }
 
@@ -896,6 +899,7 @@ mod tests {
         )
         .await;
         test.mock_runner.cause_failure("unrunnable");
+
         // Instance not found.
         {
             let mut child_ref = fsys::ChildRef { name: "missing".to_string(), collection: None };

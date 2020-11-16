@@ -27,6 +27,7 @@ use {
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
     fuchsia_zircon::{self as zx, AsHandleRef, Koid},
     futures::{
+        channel::oneshot,
         future::{AbortHandle, Abortable},
         lock::Mutex,
         prelude::*,
@@ -35,6 +36,7 @@ use {
         boxed::Box,
         collections::{HashMap, HashSet},
         convert::TryFrom,
+        mem,
         sync::{Arc, Mutex as SyncMutex, Weak},
     },
     vfs::{
@@ -175,9 +177,8 @@ struct MockRunnerInner {
     /// List of URLs started by this runner instance.
     urls_run: Vec<String>,
 
-    /// Map of URL to Vec of waiters that get notified when their associated URL is
-    /// "run" by the MockRunner.
-    url_waiters: HashMap<String, Vec<futures::channel::oneshot::Sender<()>>>,
+    /// Vector of waiters that wish to be notified when a new URL is run (used by `wait_for_urls`).
+    url_waiters: Vec<futures::channel::oneshot::Sender<()>>,
 
     /// Namespace for each component, mapping resolved URL to the component's namespace.
     namespaces: HashMap<String, Arc<Mutex<Vec<fcrunner::ComponentNamespaceEntry>>>>,
@@ -215,7 +216,7 @@ impl MockRunner {
         MockRunner {
             inner: SyncMutex::new(MockRunnerInner {
                 urls_run: vec![],
-                url_waiters: HashMap::new(),
+                url_waiters: vec![],
                 namespaces: HashMap::new(),
                 outgoing_host_fns: HashMap::new(),
                 runtime_host_fns: HashMap::new(),
@@ -237,11 +238,6 @@ impl MockRunner {
         self.add_failing_url(&format!("test:///{}_resolved", name))
     }
 
-    /// Return a list of URLs that have been run by this runner.
-    pub fn urls_run(&self) -> Vec<String> {
-        self.inner.lock().unwrap().urls_run.clone()
-    }
-
     /// Register `function` to serve the outgoing directory of component `name`
     pub fn add_host_fn(&self, name: &str, function: HostFn) {
         self.inner.lock().unwrap().outgoing_host_fns.insert(name.to_string(), Arc::new(function));
@@ -261,18 +257,27 @@ impl MockRunner {
         self.inner.lock().unwrap().runner_requests.clone()
     }
 
-    /// Returns a future that completes when `url` was launched by the runner. If `url` was
-    /// already launched, returns a future that completes immediately.
-    pub fn wait_for_url(&self, url: &str) -> impl Future<Output = ()> {
-        let (sender, receiver) = futures::channel::oneshot::channel();
-        let mut inner = self.inner.lock().unwrap();
-        if let Some(_) = inner.urls_run.iter().find(|&u| u == url) {
-            sender.send(()).expect("failed to send url notice");
-        } else {
-            let waiters = inner.url_waiters.entry(url.to_string()).or_insert_with(|| vec![]);
-            waiters.push(sender);
+    /// Returns a future that completes when `expected_url` is launched by the runner.
+    pub async fn wait_for_url(&self, expected_url: &str) {
+        self.wait_for_urls(&[expected_url]).await
+    }
+
+    /// Returns a future that completes when `expected_urls` were launched by the runner, in any
+    /// order.
+    pub async fn wait_for_urls(&self, expected_urls: &[&str]) {
+        loop {
+            let mut inner = self.inner.lock().unwrap();
+            let expected_urls: HashSet<&str> = expected_urls.iter().map(|s| *s).collect();
+            let urls_run: HashSet<&str> = inner.urls_run.iter().map(|s| s as &str).collect();
+            let (sender, receiver) = oneshot::channel();
+            if expected_urls.is_subset(&urls_run) {
+                return;
+            } else {
+                inner.url_waiters.push(sender);
+            }
+            drop(inner);
+            receiver.await.expect("failed to receive url notice")
         }
-        async move { receiver.await.expect("failed to receive url notice") }
     }
 
     pub fn abort_controller(&self, koid: &Koid) {
@@ -306,6 +311,8 @@ impl Runner for MockRunner {
         let outgoing_host_fn;
         let runtime_host_fn;
         let runner_requests;
+        let resolved_url = start_info.resolved_url.unwrap();
+
         // The koid is the only unique piece of information we have about a
         // component start request. Two start requests for the same component
         // URL look identical to the Runner, the only difference being the
@@ -315,8 +322,7 @@ impl Runner for MockRunner {
         {
             let mut state = self.inner.lock().unwrap();
 
-            // Resolve the URL, and trigger a failure if previously requested.
-            let resolved_url = start_info.resolved_url.unwrap();
+            // Trigger a failure if previously requested.
             if state.failing_urls.contains(&resolved_url) {
                 let status = RunnerError::component_launch_error(
                     resolved_url.clone(),
@@ -327,19 +333,6 @@ impl Runner for MockRunner {
                 return;
             }
 
-            // Record that this URL has been started.
-            state.urls_run.push(resolved_url.clone());
-            if let Some(waiters) = state.url_waiters.remove(&resolved_url) {
-                for waiter in waiters {
-                    waiter.send(()).expect("failed to send url notice");
-                }
-            }
-
-            // Create a namespace for the component.
-            state
-                .namespaces
-                .insert(resolved_url.clone(), Arc::new(Mutex::new(start_info.ns.unwrap())));
-
             // Fetch host functions, which will provide the outgoing and runtime directories
             // for the component.
             //
@@ -349,18 +342,31 @@ impl Runner for MockRunner {
             outgoing_host_fn = state.outgoing_host_fns.get(&resolved_url).map(Arc::clone);
             runtime_host_fn = state.runtime_host_fns.get(&resolved_url).map(Arc::clone);
             runner_requests = state.runner_requests.clone();
-        }
 
-        // Start serving the outgoing/runtime directories.
-        if let Some(outgoing_host_fn) = outgoing_host_fn {
-            outgoing_host_fn(start_info.outgoing_dir.unwrap());
+            // Create a namespace for the component.
+            state
+                .namespaces
+                .insert(resolved_url.clone(), Arc::new(Mutex::new(start_info.ns.unwrap())));
+
+            let abort_handle =
+                MockController::new(server_end, runner_requests, channel_koid).serve();
+            state.controllers.insert(channel_koid, abort_handle);
+
+            // Start serving the outgoing/runtime directories.
+            if let Some(outgoing_host_fn) = outgoing_host_fn {
+                outgoing_host_fn(start_info.outgoing_dir.unwrap());
+            }
+            if let Some(runtime_host_fn) = runtime_host_fn {
+                runtime_host_fn(start_info.runtime_dir.unwrap());
+            }
+
+            // Record that this URL has been started.
+            state.urls_run.push(resolved_url.clone());
+            let url_waiters = mem::replace(&mut state.url_waiters, vec![]);
+            for waiter in url_waiters {
+                waiter.send(()).expect("failed to send url notice");
+            }
         }
-        if let Some(runtime_host_fn) = runtime_host_fn {
-            runtime_host_fn(start_info.runtime_dir.unwrap());
-        }
-        let abort_handle = MockController::new(server_end, runner_requests, channel_koid).serve();
-        let mut state = self.inner.lock().unwrap();
-        state.controllers.insert(channel_koid, abort_handle);
     }
 }
 

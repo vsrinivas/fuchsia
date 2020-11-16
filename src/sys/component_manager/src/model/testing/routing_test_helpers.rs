@@ -304,7 +304,8 @@ impl RoutingTest {
         collection: &'a str,
         decl: ChildDecl,
     ) {
-        let component_name = self.bind_instance(&moniker).await.expect("bind instance failed");
+        let component_name =
+            self.bind_instance_and_wait_start(&moniker).await.expect("bind instance failed");
         let component_resolved_url = Self::resolved_url(&component_name);
         Self::check_namespace(component_name, &self.mock_runner, self.components.clone()).await;
         let namespace = self
@@ -341,7 +342,8 @@ impl RoutingTest {
 
     /// Checks a `use` declaration at `moniker` by trying to use `capability`.
     pub async fn check_use(&self, moniker: AbsoluteMoniker, check: CheckUse) {
-        let component_name = self.bind_instance(&moniker).await.expect("bind instance failed");
+        let component_name =
+            self.bind_instance_and_wait_start(&moniker).await.expect("bind instance failed");
         let component_resolved_url = Self::resolved_url(&component_name);
         let namespace = self
             .mock_runner
@@ -405,7 +407,7 @@ impl RoutingTest {
     }
 
     pub async fn bind_and_get_namespace(&self, moniker: AbsoluteMoniker) -> Arc<ManagedNamespace> {
-        let component_name = self.bind_instance(&moniker).await.unwrap();
+        let component_name = self.bind_instance_and_wait_start(&moniker).await.unwrap();
         let component_resolved_url = Self::resolved_url(&component_name);
         let namespace = self
             .mock_runner
@@ -532,7 +534,8 @@ impl RoutingTest {
         moniker: AbsoluteMoniker,
         bind_calls: Arc<Mutex<Vec<String>>>,
     ) {
-        let component_name = self.bind_instance(&moniker).await.expect("bind instance failed");
+        let component_name =
+            self.bind_instance_and_wait_start(&moniker).await.expect("bind instance failed");
         let component_resolved_url = Self::resolved_url(&component_name);
         let path = "/svc/fuchsia.sys2.Realm".try_into().unwrap();
         Self::check_namespace(component_name, &self.mock_runner, self.components.clone()).await;
@@ -548,7 +551,8 @@ impl RoutingTest {
     /// Checks that a use declaration of `path` at `moniker` can be opened with
     /// Fuchsia file operations.
     pub async fn check_open_file(&self, moniker: AbsoluteMoniker, path: CapabilityPath) {
-        let component_name = self.bind_instance(&moniker).await.expect("bind instance failed");
+        let component_name =
+            self.bind_instance_and_wait_start(&moniker).await.expect("bind instance failed");
         let component_resolved_url = Self::resolved_url(&component_name);
         Self::check_namespace(component_name, &self.mock_runner, self.components.clone()).await;
         let namespace = self.mock_runner.get_namespace(&component_resolved_url).unwrap();
@@ -606,23 +610,38 @@ impl RoutingTest {
     ///
     /// On success, returns the short name of the component.
     pub async fn bind_instance(&self, moniker: &AbsoluteMoniker) -> Result<String, ModelError> {
-        self.bind_instance_with_reason(moniker, BindReason::Eager).await
+        self.bind_instance_with(moniker, BindReason::Eager, false).await
     }
 
-    /// Attempt to bind the instance associated with the given moniker with a
-    /// provided reason.
+    /// Attempt to bind the instance associated with the given moniker with the
+    /// default reason of BindReason::Eager, and waits for the runner to start the component.
+    /// This method will only work if the component in question is using the default mock runner
+    /// (otherwise, it will hang).
     ///
     /// On success, returns the short name of the component.
-    async fn bind_instance_with_reason(
+    pub async fn bind_instance_and_wait_start(
+        &self,
+        moniker: &AbsoluteMoniker,
+    ) -> Result<String, ModelError> {
+        self.bind_instance_with(moniker, BindReason::Eager, true).await
+    }
+
+    async fn bind_instance_with(
         &self,
         moniker: &AbsoluteMoniker,
         reason: BindReason,
+        wait_for_start: bool,
     ) -> Result<String, ModelError> {
         self.model.bind(moniker, &reason).await?;
-        Ok(match moniker.path().last() {
+        let component_name = match moniker.path().last() {
             Some(part) => part.name().to_string(),
             None => self.root_component_name.to_string(),
-        })
+        };
+        if wait_for_start {
+            let resolved_url = Self::resolved_url(&component_name);
+            self.mock_runner.wait_for_url(&resolved_url).await;
+        }
+        Ok(component_name)
     }
 
     /// Wait for the given component to start running.

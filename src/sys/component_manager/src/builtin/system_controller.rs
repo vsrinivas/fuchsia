@@ -122,7 +122,6 @@ impl SystemControllerCapabilityProvider {
                     .detach();
                     ActionSet::register(self.model.root_realm.clone(), Action::Shutdown)
                         .await
-                        .await
                         .context("got error waiting for shutdown action to complete")?;
                     match responder.send() {
                         Ok(()) => {}
