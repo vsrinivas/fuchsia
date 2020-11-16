@@ -403,21 +403,32 @@ mod tests {
     async fn lifecycle_events_for_component() {
         let (_env, _app) = start_component("test-lifecycle").await.unwrap();
 
-        let results = ArchiveReader::new()
-            .snapshot::<Lifecycle>()
-            .await
-            .unwrap()
-            .into_iter()
-            // TODO(fxbug.dev/51165) use selectors for this filtering
-            .filter(|e| e.moniker.starts_with("test-lifecycle"))
-            .collect::<Vec<_>>();
-        assert!(results.len() >= 1, "should have at least a started event");
-
-        let started = &results[0];
-        assert_eq!(started.metadata.lifecycle_event_type, LifecycleType::Started);
-        assert_eq!(started.metadata.component_url, TEST_COMPONENT_URL);
-        assert_eq!(started.moniker, "test-lifecycle/inspect_test_component.cmx");
-        assert_eq!(started.payload, None);
+        // TODO(fxbug.dev/51165): use selectors for this filtering and remove the delayed retry
+        // which would be taken care of by the ArchiveReader itself.
+        loop {
+            let results = ArchiveReader::new()
+                .snapshot::<Lifecycle>()
+                .await
+                .unwrap()
+                .into_iter()
+                .filter(|e| e.moniker.starts_with("test-lifecycle"))
+                .collect::<Vec<_>>();
+            // Note: the ArchiveReader retries when the response is empty. However, here the
+            // response might not be empty (it can contain the archivist itself) but when we filter
+            // looking for the moniker we are interested on, that one might not be available.
+            // Metadata selectors would solve this as the archivist response would be empty and we
+            // wouldn't need to filter and retry here.
+            if results.is_empty() {
+                fasync::Timer::new(fasync::Time::after(RETRY_DELAY_MS.millis())).await;
+                continue;
+            }
+            let started = &results[0];
+            assert_eq!(started.metadata.lifecycle_event_type, LifecycleType::Started);
+            assert_eq!(started.metadata.component_url, TEST_COMPONENT_URL);
+            assert_eq!(started.moniker, "test-lifecycle/inspect_test_component.cmx");
+            assert_eq!(started.payload, None);
+            break;
+        }
     }
 
     #[fasync::run_singlethreaded(test)]
