@@ -941,9 +941,7 @@ static zx_status_t local_apic_maybe_interrupt(AutoVmcs* vmcs, LocalApicState* lo
     vmcs->Printf("Invalid interrupt vector: %u\n", vector);
     return ZX_ERR_NOT_SUPPORTED;
   } else if ((vector >= X86_INT_PLATFORM_BASE && !can_inject_external_int()) ||
-             (vector == X86_INT_NMI && !can_inject_nmi())
-
-  ) {
+             (vector == X86_INT_NMI && !can_inject_nmi())) {
     local_apic_state->interrupt_tracker.Track(vector, type);
     // If interrupts are disabled, we set VM exit on interrupt enable.
     vmcs->InterruptWindowExiting(true);
