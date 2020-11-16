@@ -74,9 +74,11 @@ template("zircon_runtime_library") {
     ]
   }
 
-  metadata_entries = exec_script("//build/unification/lib/format_metadata.py",
-                                 format_args,
-                                 "json")
+  metadata_entries =
+      exec_script(python_exe_src,
+                  [ rebase_path("//build/unification/lib/format_metadata.py",
+                                root_build_dir) ] + format_args,
+                  "json")
 
   group(target_name) {
     forward_variables_from(invoker, [ "visibility" ])

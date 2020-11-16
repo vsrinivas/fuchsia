@@ -30,8 +30,10 @@ rustc_library("spinel-rs-sys") {
   #
   # This change will then need to be approved by one of the OWNERS in
   # of this library.
-  exec_script("${graphics_compute_dir}/scripts/hash_dir.py",
+  exec_script(python_exe_src,
               [
+                rebase_path("${graphics_compute_dir}/scripts/hash_dir.py",
+                            root_build_dir),
                 rebase_path("${graphics_compute_dir}/spinel/include"),
                 "--compare",
                 rebase_path("spinel.c-api"),

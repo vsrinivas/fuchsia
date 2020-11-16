@@ -356,8 +356,10 @@ group("binaries.zircon") {
     # using a foreach loop takes 3 seconds, but the script takes 100ms. This
     # should go away when the build is unified.
     binaries =
-        exec_script("//build/zircon/read_zircon_binaries.py",
+        exec_script(python_exe_src,
                     [
+                      rebase_path("//build/zircon/read_zircon_binaries.py",
+                                  root_build_dir),
                       "--binaries-json",
                       rebase_path("$zircon_root_build_dir/binaries.json"),
                       "--root-build-dir",
