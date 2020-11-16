@@ -133,6 +133,8 @@ func driverHostCrash(hostName, exceptHost string) *stringInLogCheck {
 
 // StringInLogsChecks returns checks to detect bad strings in certain logs.
 func StringInLogsChecks() (ret []FailureModeCheck) {
+	// For fxbug.dev/59720.
+	ret = append(ret, &stringInLogCheck{String: "KERN: fatal page fault in user thread", Type: serialLogType})
 	// For fxbug.dev/57548.
 	// Hardware watchdog tripped, should not happen.
 	// This string is specified in u-boot.
@@ -149,8 +151,6 @@ func StringInLogsChecks() (ret []FailureModeCheck) {
 	ret = append(ret, &stringInLogCheck{String: fmt.Sprintf("botanist ERROR: %s: signal: segmentation fault", botanistconstants.QEMUInvocationErrorMsg), Type: swarmingOutputType})
 	// For fxbug.dev/61452.
 	ret = append(ret, &stringInLogCheck{String: fmt.Sprintf("botanist ERROR: %s", botanistconstants.FailedToResolveIPErrorMsg), Type: swarmingOutputType})
-	// For fxbug.dev/43355.
-	ret = append(ret, &stringInLogCheck{String: "Timed out loading dynamic linker from fuchsia.ldsvc.Loader", Type: swarmingOutputType})
 	// For fxbug.dev/53854.
 	ret = append(ret, driverHostCrash("composite-device", ""))
 	ret = append(ret, driverHostCrash("pci", ""))
@@ -166,6 +166,8 @@ func StringInLogsChecks() (ret []FailureModeCheck) {
 	// These are rather generic. New checks should probably go above here so that they run before these.
 	allLogTypes := []logType{serialLogType, swarmingOutputType, syslogType}
 	for _, lt := range allLogTypes {
+		// For fxbug.dev/43355.
+		ret = append(ret, &stringInLogCheck{String: "Timed out loading dynamic linker from fuchsia.ldsvc.Loader", Type: lt})
 		ret = append(ret, &stringInLogCheck{String: "ERROR: AddressSanitizer", Type: lt})
 		ret = append(ret, &stringInLogCheck{String: "ERROR: LeakSanitizer", Type: lt, ExceptBlocks: []*logBlock{
 			// Kernel out-of-memory test "OOMHard" may report false positive leaks.
