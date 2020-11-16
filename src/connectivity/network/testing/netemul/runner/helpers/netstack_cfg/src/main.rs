@@ -24,8 +24,8 @@ struct Opt {
     /// Endpoint name to retrieve from network.EndpointManager
     endpoint: String,
     #[structopt(long, short = "i")]
-    /// Static ip address to assign (don't forget /prefix termination). Omit to use DHCP.
-    ip: Option<String>,
+    /// Static ip addresses to assign (don't forget /prefix termination). Omit to use DHCP.
+    ips: Vec<String>,
     #[structopt(long, short = "g")]
     /// Ip address of the default gateway (useful when DHCP is not used).
     gateway: Option<String>,
@@ -81,15 +81,32 @@ async fn config_netstack(opt: Opt) -> Result<(), Error> {
         netstack.set_interface_status(nicid_u32, true).context("error setting interface status")?;
     log::info!("Added ethernet to stack.");
 
-    let subnet: Option<fidl_fuchsia_net::Subnet> = opt.ip.as_ref().map(|ip| {
-        ip.parse::<fidl_fuchsia_net_ext::Subnet>().expect("Can't parse provided ip").into()
-    });
+    let mut subnets: Vec<fidl_fuchsia_net::Subnet> = opt
+        .ips
+        .iter()
+        .map(|ip| {
+            ip.parse::<fidl_fuchsia_net_ext::Subnet>()
+                .with_context(|| format!("can't parse provided ip {}", ip))
+                .map(|subnet| subnet.into())
+        })
+        .collect::<Result<Vec<_>, _>>()?;
 
-    if let Some(mut subnet) = subnet {
-        let _ = netstack
-            .set_interface_address(nicid_u32, &mut subnet.addr, subnet.prefix_len)
-            .await
-            .context("set interface address error")?;
+    if !subnets.is_empty() {
+        for fidl_fuchsia_net::Subnet { addr, prefix_len } in &mut subnets {
+            let fidl_fuchsia_netstack::NetErr { status, message } = netstack
+                .set_interface_address(nicid_u32, addr, *prefix_len)
+                .await
+                .context("set interface address error")?;
+            if status != fidl_fuchsia_netstack::Status::Ok {
+                return Err(anyhow::anyhow!(
+                    "failed to set interface (id={}) address to {:?} with status = {:?}: {}",
+                    nicid_u32,
+                    addr,
+                    status,
+                    message
+                ));
+            }
+        }
     } else {
         let (dhcp_client, server_end) =
             fidl::endpoints::create_proxy::<fidl_fuchsia_net_dhcp::ClientMarker>()
@@ -157,26 +174,33 @@ async fn config_netstack(opt: Opt) -> Result<(), Error> {
     let () = fidl_fuchsia_net_interfaces_ext::wait_interface_with_id(
         fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&interface_state)?,
         &mut fidl_fuchsia_net_interfaces_ext::InterfaceState::Unknown(nicid.into()),
-        |properties| {
-            if !opt.skip_up_check && !properties.online.unwrap_or(false) {
-                log::info!("Found interface, but it's down. waiting.");
+        |fidl_fuchsia_net_interfaces::Properties { online, addresses, .. }| {
+            if !opt.skip_up_check && !online.unwrap_or(false) {
+                log::info!("Found interface with id {}, but it's down. waiting.", nicid);
                 return None;
             }
-            // If configuring a static address, make sure the address is present (this ensures that
-            // DAD has resolved for IPv6 addresses).
-            if subnet.is_some() {
-                if properties
-                    .addresses
-                    .as_ref()
-                    .map_or(false, |addresses| addresses.iter().any(|a| a.addr == subnet))
-                {
-                    Some(())
-                } else {
-                    log::info!("Found interface, but address not yet present. waiting.");
-                    None
-                }
-            } else {
+            // If configuring static addresses, make sure the addresses are present (this ensures
+            // that DAD has resolved for IPv6 addresses).
+            if subnets.iter().all(|subnet| {
+                addresses.as_ref().map_or(false, |addresses| {
+                    let present = addresses.iter().any(
+                        |fidl_fuchsia_net_interfaces::Address { addr, .. }| {
+                            addr.map_or(false, |addr| addr == *subnet)
+                        },
+                    );
+                    if !present {
+                        log::info!(
+                            "Found interface with id {}, but address {} not yet present. waiting.",
+                            nicid,
+                            fidl_fuchsia_net_ext::Subnet::from(*subnet),
+                        );
+                    }
+                    present
+                })
+            }) {
                 Some(())
+            } else {
+                None
             }
         },
     )

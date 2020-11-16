@@ -18,7 +18,7 @@ const SERVER_NAME: &str = "server";
 const CLIENT_NAME: &str = "client";
 const HELLO_MSG_REQ: &str = "Hello World from Client!";
 const HELLO_MSG_RSP: &str = "Hello World from Server!";
-const SERVER_IP: &str = "192.168.0.1";
+const SERVER_IPS: [&str; 2] = ["192.168.0.1", "192.168.0.3"];
 const PORT: i32 = 8080;
 
 pub struct BusConnection {
@@ -41,24 +41,32 @@ impl BusConnection {
 }
 
 async fn run_server() -> Result<(), Error> {
-    let listener =
-        TcpListener::bind(&format!("{}:{}", SERVER_IP, PORT)).context("Can't bind to address")?;
+    let listeners = SERVER_IPS
+        .iter()
+        .map(|ip| {
+            TcpListener::bind(&format!("{}:{}", ip, PORT))
+                .with_context(|| format!("can't bind to address {}", ip))
+        })
+        .collect::<Result<Vec<_>, _>>()?;
     log::info!("Waiting for connections...");
 
     let _bus = BusConnection::new(SERVER_NAME)?;
 
-    let (mut stream, remote) = listener.accept().context("Accept failed")?;
-    log::info!("Accepted connection from {}", remote);
-    let mut buffer = [0; 512];
-    let rd = stream.read(&mut buffer).context("read failed")?;
+    for listener in listeners {
+        let (mut stream, remote) = listener.accept().context("Accept failed")?;
+        log::info!("Accepted connection from {}", remote);
+        let mut buffer = [0; 512];
+        let rd = stream.read(&mut buffer).context("read failed")?;
 
-    let req = String::from_utf8_lossy(&buffer[0..rd]);
-    if req != HELLO_MSG_REQ {
-        return Err(format_err!("Got unexpected request from client: {}", req));
+        let req = String::from_utf8_lossy(&buffer[0..rd]);
+        if req != HELLO_MSG_REQ {
+            return Err(format_err!("Got unexpected request from client: {}", req));
+        }
+        log::info!("Got request {}", req);
+        stream.write(HELLO_MSG_RSP.as_bytes()).context("write failed")?;
+        stream.flush().context("flush failed")?;
     }
-    log::info!("Got request {}", req);
-    stream.write(HELLO_MSG_RSP.as_bytes()).context("write failed")?;
-    stream.flush().context("flush failed")?;
+
     Ok(())
 }
 
@@ -74,20 +82,24 @@ async fn run_client(gateway: Option<String>) -> Result<(), Error> {
     log::info!("Waiting for server...");
     let mut bus = BusConnection::new(CLIENT_NAME)?;
     let () = bus.wait_for_client(SERVER_NAME).await?;
-    log::info!("Connecting to server...");
-    let addr: SocketAddr = format!("{}:{}", SERVER_IP, PORT).parse()?;
-    let mut stream = TcpStream::connect(&addr).context("Tcp connection failed")?;
-    let request = HELLO_MSG_REQ.as_bytes();
-    stream.write(request)?;
-    stream.flush()?;
 
-    let mut buffer = [0; 512];
-    let rd = stream.read(&mut buffer)?;
-    let rsp = String::from_utf8_lossy(&buffer[0..rd]);
-    log::info!("Got response {}", rsp);
-    if rsp != HELLO_MSG_RSP {
-        return Err(format_err!("Got unexpected echo from server: {}", rsp));
+    for ip in SERVER_IPS.iter() {
+        log::info!("Connecting to server at IP address {}...", ip);
+        let addr: SocketAddr = format!("{}:{}", ip, PORT).parse()?;
+        let mut stream = TcpStream::connect(&addr).context("Tcp connection failed")?;
+        let request = HELLO_MSG_REQ.as_bytes();
+        stream.write(request)?;
+        stream.flush()?;
+
+        let mut buffer = [0; 512];
+        let rd = stream.read(&mut buffer)?;
+        let rsp = String::from_utf8_lossy(&buffer[0..rd]);
+        log::info!("Got response {}", rsp);
+        if rsp != HELLO_MSG_RSP {
+            return Err(format_err!("Got unexpected echo from server: {}", rsp));
+        }
     }
+
     Ok(())
 }
 
