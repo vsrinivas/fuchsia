@@ -119,6 +119,13 @@ async fn run() -> Result<()> {
     ffx_config::init_config(&app.config, &overrides, &app.env)?;
     let log_to_stdio = app.verbose || is_daemon(&app.subcommand);
     ffx_config::logging::init(log_to_stdio).await?;
+
+    // HACK(64402): hoist uses a lazy static initializer obfuscating access to inject
+    // this value by other means, so:
+    let _ = ffx_config::get("overnet.socket").await.map(|sockpath: String| {
+        std::env::set_var("ASCENDD", sockpath);
+    });
+
     ffx_lib_suite::ffx_plugin_impl(
         get_daemon_proxy,
         get_remote_proxy,

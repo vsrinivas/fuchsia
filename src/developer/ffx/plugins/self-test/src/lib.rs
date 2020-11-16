@@ -11,7 +11,7 @@ mod test;
 
 #[ffx_plugin()]
 pub async fn selftest(cmd: SelftestCommand) -> Result<()> {
-    let default_tests = tests![test_daemon_echo, test_daemon_stop,];
+    let default_tests = tests![test_isolated, test_daemon_echo, test_daemon_stop,];
     let mut target_tests = tests![test_target_list,];
 
     let mut tests = default_tests;
@@ -22,8 +22,18 @@ pub async fn selftest(cmd: SelftestCommand) -> Result<()> {
     run(tests, Duration::from_secs(cmd.timeout), Duration::from_secs(cmd.case_timeout)).await
 }
 
+async fn test_isolated() -> Result<()> {
+    let isolate = Isolate::new("isolated")?;
+
+    let out = isolate.ffx(&["config", "get", "test.is-isolated"]).output()?;
+    assert_eq!(String::from_utf8(out.stdout)?, "test.is-isolated: true\n");
+
+    Ok(())
+}
+
 async fn test_daemon_echo() -> Result<()> {
-    let out = ffx(&["daemon", "echo"]).output().context("failed to execute")?;
+    let isolate = Isolate::new("daemon-echo")?;
+    let out = isolate.ffx(&["daemon", "echo"]).output().context("failed to execute")?;
 
     let got = String::from_utf8(out.stdout)?;
     let want = "SUCCESS: received \"Ffx\"\n";
@@ -33,7 +43,8 @@ async fn test_daemon_echo() -> Result<()> {
 }
 
 async fn test_daemon_stop() -> Result<()> {
-    let out = ffx(&["daemon", "stop"]).output().context("failed to execute")?;
+    let isolate = Isolate::new("daemon-stop")?;
+    let out = isolate.ffx(&["daemon", "stop"]).output().context("failed to execute")?;
     let got = String::from_utf8(out.stdout)?;
     let want = "Stopped daemon.\n";
 
@@ -43,18 +54,20 @@ async fn test_daemon_stop() -> Result<()> {
 }
 
 async fn test_target_list() -> Result<()> {
+    let isolate = Isolate::new("target-list")?;
+
     let mut lines = Vec::<String>::new();
 
     // It takes a few moments to discover devices on the local network over
     // mdns, so we retry until timeout or a useful value.
     while lines.len() < 2 {
+        let mut cmd = isolate.ffx(&["target", "list"]);
+        cmd.stderr(Stdio::inherit());
         // Use blocking so that if we get stuck waiting on the subcommand, we
         // don't block the test case timeout.
         // TODO(fxbug.dev/60680): cover this issue in all cases by replacing
         // ffx() return type with a value that handles these semantics.
-        let stdout: Result<String> = fuchsia_async::Task::blocking(async {
-            let mut cmd = ffx(&["target", "list"]);
-            cmd.stderr(Stdio::inherit());
+        let stdout: Result<String> = fuchsia_async::Task::blocking(async move {
             let out = cmd.output().context("failed to execute")?;
             String::from_utf8(out.stdout).context("convert from utf8")
         })

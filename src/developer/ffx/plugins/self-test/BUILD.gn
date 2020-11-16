@@ -20,6 +20,7 @@ ffx_plugin("ffx_selftest") {
     "//src/lib/fuchsia-async",
     "//third_party/rust_crates:async-std",
     "//third_party/rust_crates:libc",
+    "//third_party/rust_crates:tempfile",
     "//third_party/rust_crates:termion",
   ]
 }
