@@ -253,7 +253,31 @@ mod tests {
     };
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn v1_component_loads_job_id_and_process_id() {
+    async fn get_capabilities_returns_capabilities() {
+        let test_dir = TempDir::new_in("/tmp").unwrap();
+        let root = test_dir.path();
+
+        // Create the following structure
+        // <root>
+        // |- fuchsia.foo
+        // |- hub
+        // |- svc
+        //    |- fuchsia.bar
+        File::create(root.join("fuchsia.foo")).unwrap();
+        File::create(root.join("hub")).unwrap();
+        fs::create_dir(root.join("svc")).unwrap();
+        File::create(root.join("svc/fuchsia.bar")).unwrap();
+
+        let root_dir = Directory::from_namespace(root.to_path_buf());
+        let capabilities = get_capabilities(root_dir).await;
+        assert_eq!(
+            capabilities,
+            vec!["fuchsia.bar".to_string(), "fuchsia.foo".to_string(), "hub".to_string()]
+        );
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn v1_component_loads_job_id_and_name_and_process_id_and_url() {
         let test_dir = TempDir::new_in("/tmp").unwrap();
         let root = test_dir.path();
 
@@ -265,17 +289,135 @@ mod tests {
         // |- process-id
         // |- url
         fs::create_dir(root.join("in")).unwrap();
-        let mut job_id = File::create(root.join("job-id")).unwrap();
-        job_id.write_all("12345".as_bytes()).unwrap();
-        File::create(root.join("name")).unwrap();
-        let mut process_id = File::create(root.join("process-id")).unwrap();
-        process_id.write_all("67890".as_bytes()).unwrap();
-        File::create(root.join("url")).unwrap();
+        File::create(root.join("job-id")).unwrap().write_all("12345".as_bytes()).unwrap();
+        File::create(root.join("name")).unwrap().write_all("cobalt.cmx".as_bytes()).unwrap();
+        File::create(root.join("process-id")).unwrap().write_all("67890".as_bytes()).unwrap();
+        File::create(root.join("url"))
+            .unwrap()
+            .write_all("fuchsia-pkg://fuchsia.com/cobalt#meta/cobalt.cmx".as_bytes())
+            .unwrap();
 
         let root_dir = Directory::from_namespace(root.to_path_buf());
         let v1_component = V1Component::create(root_dir).await;
 
         assert_eq!(v1_component.job_id, 12345);
+        assert_eq!(v1_component.name, "cobalt.cmx");
         assert_eq!(v1_component.process_id, 67890);
+        assert_eq!(v1_component.url, "fuchsia-pkg://fuchsia.com/cobalt#meta/cobalt.cmx");
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn v1_component_loads_merkleroot() {
+        let test_dir = TempDir::new_in("/tmp").unwrap();
+        let root = test_dir.path();
+
+        // Create the following structure
+        // <root>
+        // |- in
+        //    |- pkg
+        //       |- meta
+        // |- job-id
+        // |- name
+        // |- process-id
+        // |- url
+        fs::create_dir(root.join("in")).unwrap();
+        fs::create_dir(root.join("in/pkg")).unwrap();
+        File::create(root.join("in/pkg/meta"))
+            .unwrap()
+            .write_all(
+                "eb4c673a880a232cc05363ff27691107c89d5b2766d995f782dac1056ecfe8c9".as_bytes(),
+            )
+            .unwrap();
+        File::create(root.join("job-id")).unwrap().write_all("12345".as_bytes()).unwrap();
+        File::create(root.join("name")).unwrap();
+        File::create(root.join("process-id")).unwrap().write_all("67890".as_bytes()).unwrap();
+        File::create(root.join("url")).unwrap();
+
+        let root_dir = Directory::from_namespace(root.to_path_buf());
+        let v1_component = V1Component::create(root_dir).await;
+
+        assert_eq!(
+            v1_component.merkleroot,
+            Some("eb4c673a880a232cc05363ff27691107c89d5b2766d995f782dac1056ecfe8c9".to_string())
+        );
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn v1_component_loads_incoming_capabilities_and_outgoing_capabilities() {
+        let test_dir = TempDir::new_in("/tmp").unwrap();
+        let root = test_dir.path();
+
+        // Create the following structure
+        // <root>
+        // |- in
+        //    |- fuchsia.logger.logSink
+        // |- job-id
+        // |- name
+        // |- out
+        //    |- fuchsia.cobalt.Controller
+        // |- process-id
+        // |- url
+        fs::create_dir(root.join("in")).unwrap();
+        File::create(root.join("in/fuchsia.logger.logSink")).unwrap();
+        File::create(root.join("job-id")).unwrap().write_all("12345".as_bytes()).unwrap();
+        File::create(root.join("name")).unwrap();
+        fs::create_dir(root.join("out")).unwrap();
+        File::create(root.join("out/fuchsia.cobalt.Controller")).unwrap();
+        File::create(root.join("process-id")).unwrap().write_all("67890".as_bytes()).unwrap();
+        File::create(root.join("url")).unwrap();
+
+        let root_dir = Directory::from_namespace(root.to_path_buf());
+        let v1_component = V1Component::create(root_dir).await;
+
+        assert_eq!(v1_component.incoming_capabilities, vec!["fuchsia.logger.logSink".to_string()]);
+        assert_eq!(
+            v1_component.outgoing_capabilities,
+            Some(vec!["fuchsia.cobalt.Controller".to_string()])
+        );
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn v1_component_loads_child_components() {
+        let test_dir = TempDir::new_in("/tmp").unwrap();
+        let root = test_dir.path();
+
+        // Create the following structure
+        // <root>
+        // |- c
+        //    |- cobalt.cmx
+        //       |- 13579
+        //          |- in
+        //          |- job-id
+        //          |- name
+        //          |- process-id
+        //          |- url
+        // |- in
+        // |- job-id
+        // |- name
+        // |- process-id
+        // |- url
+        fs::create_dir(root.join("c")).unwrap();
+        fs::create_dir(root.join("c/cobalt.cmx")).unwrap();
+        let child_dir_name = root.join("c/cobalt.cmx/13579");
+        fs::create_dir(&child_dir_name).unwrap();
+        fs::create_dir(child_dir_name.join("in")).unwrap();
+        File::create(child_dir_name.join("job-id")).unwrap().write_all("54321".as_bytes()).unwrap();
+        File::create(child_dir_name.join("name")).unwrap();
+        File::create(child_dir_name.join("process-id"))
+            .unwrap()
+            .write_all("09876".as_bytes())
+            .unwrap();
+        File::create(child_dir_name.join("url")).unwrap();
+        fs::create_dir(root.join("in")).unwrap();
+        File::create(root.join("job-id")).unwrap().write_all("12345".as_bytes()).unwrap();
+        File::create(root.join("name")).unwrap();
+        File::create(root.join("process-id")).unwrap().write_all("67890".as_bytes()).unwrap();
+        File::create(root.join("url")).unwrap();
+
+        let root_dir = Directory::from_namespace(root.to_path_buf());
+        let v1_component = V1Component::create(root_dir).await;
+
+        let child_dir = Directory::from_namespace(child_dir_name);
+        assert_eq!(v1_component.child_components, vec![V1Component::create(child_dir).await]);
     }
 }
