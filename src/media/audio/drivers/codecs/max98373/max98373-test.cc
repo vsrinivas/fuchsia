@@ -21,6 +21,7 @@ struct Max98373Codec : public Max98373 {
 };
 
 TEST(Max98373Test, GetInfo) {
+  fake_ddk::Bind tester;
   mock_i2c::MockI2c unused_i2c;
   ddk::GpioProtocolClient unused_gpio;
   auto codec =
@@ -36,9 +37,13 @@ TEST(Max98373Test, GetInfo) {
     EXPECT_EQ(info.value().manufacturer.compare("Maxim"), 0);
     EXPECT_EQ(info.value().product_name.compare("MAX98373"), 0);
   }
+  codec->DdkAsyncRemove();
+  ASSERT_TRUE(tester.Ok());
+  codec.release()->DdkRelease();  // codec release managed by the DDK
 }
 
 TEST(Max98373Test, Reset) {
+  fake_ddk::Bind tester;
   mock_i2c::MockI2c mock_i2c;
 
   mock_i2c
@@ -64,10 +69,15 @@ TEST(Max98373Test, Reset) {
   // Delay to test we don't do other init I2C writes in another thread.
   zx::nanosleep(zx::deadline_after(zx::msec(100)));
   ASSERT_OK(client.Reset());
+  codec->DdkAsyncRemove();
+  ASSERT_TRUE(tester.Ok());
+  codec.release()->DdkRelease();  // codec release managed by the DDK
   mock_i2c.VerifyAndClear();
+  mock_gpio.VerifyAndClear();
 }
 
 TEST(Max98373Test, SetGainGood) {
+  fake_ddk::Bind tester;
   mock_i2c::MockI2c mock_i2c;
 
   mock_i2c.ExpectWriteStop({0x20, 0x3d, 0x40});  // -32dB.
@@ -87,10 +97,14 @@ TEST(Max98373Test, SetGainGood) {
   auto unused = client.GetInfo();
   static_cast<void>(unused);
 
+  codec->DdkAsyncRemove();
+  ASSERT_TRUE(tester.Ok());
+  codec.release()->DdkRelease();  // codec release managed by the DDK
   mock_i2c.VerifyAndClear();
 }
 
 TEST(Max98373Test, SetGainOurOfRangeLow) {
+  fake_ddk::Bind tester;
   mock_i2c::MockI2c mock_i2c;
 
   mock_i2c.ExpectWriteStop({0x20, 0x3d, 0x7f});  // -63.5dB.
@@ -110,10 +124,14 @@ TEST(Max98373Test, SetGainOurOfRangeLow) {
   auto unused = client.GetInfo();
   static_cast<void>(unused);
 
+  codec->DdkAsyncRemove();
+  ASSERT_TRUE(tester.Ok());
+  codec.release()->DdkRelease();  // codec release managed by the DDK
   mock_i2c.VerifyAndClear();
 }
 
 TEST(Max98373Test, SetGainOurOfRangeHigh) {
+  fake_ddk::Bind tester;
   mock_i2c::MockI2c mock_i2c;
 
   mock_i2c.ExpectWriteStop({0x20, 0x3d, 0x00});  // 0dB.
@@ -133,6 +151,9 @@ TEST(Max98373Test, SetGainOurOfRangeHigh) {
   auto unused = client.GetInfo();
   static_cast<void>(unused);
 
+  codec->DdkAsyncRemove();
+  ASSERT_TRUE(tester.Ok());
+  codec.release()->DdkRelease();  // codec release managed by the DDK
   mock_i2c.VerifyAndClear();
 }
 

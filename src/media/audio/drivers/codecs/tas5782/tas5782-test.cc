@@ -39,6 +39,7 @@ struct Tas5782Codec : public Tas5782 {
 };
 
 TEST(Tas5782Test, GoodSetDai) {
+  fake_ddk::Bind tester;
   mock_i2c::MockI2c mock_i2c;
   ddk::GpioProtocolClient unused_gpio0, unused_gpio1;
 
@@ -52,10 +53,14 @@ TEST(Tas5782Test, GoodSetDai) {
   DaiFormat format = GetDefaultDaiFormat();
   ASSERT_OK(client.SetDaiFormat(std::move(format)));
 
+  codec->DdkAsyncRemove();
+  ASSERT_TRUE(tester.Ok());
+  codec.release()->DdkRelease();  // codec release managed by the DDK
   mock_i2c.VerifyAndClear();
 }
 
 TEST(Tas5782Test, BadSetDai) {
+  fake_ddk::Bind tester;
   mock_i2c::MockI2c mock_i2c;
   ddk::GpioProtocolClient unused_gpio0, unused_gpio1;
 
@@ -77,10 +82,14 @@ TEST(Tas5782Test, BadSetDai) {
     EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, client.SetDaiFormat(std::move(format)));
   }
 
+  codec->DdkAsyncRemove();
+  ASSERT_TRUE(tester.Ok());
+  codec.release()->DdkRelease();  // codec release managed by the DDK
   mock_i2c.VerifyAndClear();
 }
 
 TEST(Tas5782Test, GetDai) {
+  fake_ddk::Bind tester;
   mock_i2c::MockI2c mock_i2c;
   ddk::GpioProtocolClient unused_gpio0, unused_gpio1;
 
@@ -105,10 +114,14 @@ TEST(Tas5782Test, GetDai) {
   EXPECT_EQ(formats.value()[0].bits_per_slot[0], 32);
   EXPECT_EQ(formats.value()[0].bits_per_sample.size(), 1);
   EXPECT_EQ(formats.value()[0].bits_per_sample[0], 32);
+  codec->DdkAsyncRemove();
+  ASSERT_TRUE(tester.Ok());
+  codec.release()->DdkRelease();  // codec release managed by the DDK
   mock_i2c.VerifyAndClear();
 }
 
 TEST(Tas5782Test, GetInfo) {
+  fake_ddk::Bind tester;
   mock_i2c::MockI2c unused_i2c;
   ddk::GpioProtocolClient unused_gpio0, unused_gpio1;
   auto codec = SimpleCodecServer::Create<Tas5782Codec>(
@@ -122,9 +135,13 @@ TEST(Tas5782Test, GetInfo) {
   EXPECT_EQ(info.value().unique_id.compare(""), 0);
   EXPECT_EQ(info.value().manufacturer.compare("Texas Instruments"), 0);
   EXPECT_EQ(info.value().product_name.compare("TAS5782m"), 0);
+  codec->DdkAsyncRemove();
+  ASSERT_TRUE(tester.Ok());
+  codec.release()->DdkRelease();  // codec release managed by the DDK
 }
 
 TEST(Tas5782Test, BridgedMode) {
+  fake_ddk::Bind tester;
   mock_i2c::MockI2c unused_i2c;
   ddk::GpioProtocolClient unused_gpio0, unused_gpio1;
   auto codec = SimpleCodecServer::Create<Tas5782Codec>(
@@ -136,9 +153,13 @@ TEST(Tas5782Test, BridgedMode) {
 
   auto bridgeable = client.IsBridgeable();
   ASSERT_FALSE(bridgeable.value());
+  codec->DdkAsyncRemove();
+  ASSERT_TRUE(tester.Ok());
+  codec.release()->DdkRelease();  // codec release managed by the DDK
 }
 
 TEST(Tas5782Test, GetGainFormat) {
+  fake_ddk::Bind tester;
   mock_i2c::MockI2c unused_i2c;
   ddk::GpioProtocolClient unused_gpio0, unused_gpio1;
   auto codec = SimpleCodecServer::Create<Tas5782Codec>(
@@ -152,9 +173,13 @@ TEST(Tas5782Test, GetGainFormat) {
   EXPECT_EQ(format.value().min_gain, -103.0);
   EXPECT_EQ(format.value().max_gain, 24.0);
   EXPECT_EQ(format.value().gain_step, 0.5);
+  codec->DdkAsyncRemove();
+  ASSERT_TRUE(tester.Ok());
+  codec.release()->DdkRelease();  // codec release managed by the DDK
 }
 
 TEST(Tas5782Test, GetPlugState) {
+  fake_ddk::Bind tester;
   mock_i2c::MockI2c unused_i2c;
   ddk::GpioProtocolClient unused_gpio0, unused_gpio1;
   auto codec = SimpleCodecServer::Create<Tas5782Codec>(
@@ -167,9 +192,13 @@ TEST(Tas5782Test, GetPlugState) {
   auto state = client.GetPlugState();
   EXPECT_EQ(state.value().hardwired, true);
   EXPECT_EQ(state.value().plugged, true);
+  codec->DdkAsyncRemove();
+  ASSERT_TRUE(tester.Ok());
+  codec.release()->DdkRelease();  // codec release managed by the DDK
 }
 
 TEST(Tas5782Test, Init) {
+  fake_ddk::Bind tester;
   mock_i2c::MockI2c mock_i2c;
   mock_i2c
       .ExpectWriteStop({0x02, 0x10})   // Enter standby.
@@ -185,7 +214,10 @@ TEST(Tas5782Test, Init) {
   ddk::GpioProtocolClient gpio0(mock_gpio0.GetProto());
   ddk::GpioProtocolClient gpio1(mock_gpio1.GetProto());
   mock_gpio0.ExpectWrite(ZX_OK, 0).ExpectWrite(ZX_OK, 1);  // Reset, set to 0 and then to 1.
-  mock_gpio1.ExpectWrite(ZX_OK, 0).ExpectWrite(ZX_OK, 1);  // Set to mute and then to unmute..
+  mock_gpio1.ExpectWrite(ZX_OK, 0).ExpectWrite(ZX_OK, 1);  // Set to mute and then to unmute.
+  // Shutdown.
+  mock_gpio0.ExpectWrite(ZX_OK, 0);  // Reset, set to 0 and then to 1.
+  mock_gpio1.ExpectWrite(ZX_OK, 0);  // Set to mute.
 
   auto codec =
       SimpleCodecServer::Create<Tas5782Codec>(std::move(i2c), std::move(gpio0), std::move(gpio1));
@@ -196,6 +228,9 @@ TEST(Tas5782Test, Init) {
 
   zx::nanosleep(zx::deadline_after(zx::msec(100)));
   client.Reset();
+  codec->DdkAsyncRemove();
+  ASSERT_TRUE(tester.Ok());
+  codec.release()->DdkRelease();  // codec release managed by the DDK
   mock_i2c.VerifyAndClear();
   mock_gpio0.VerifyAndClear();
   mock_gpio1.VerifyAndClear();

@@ -23,6 +23,7 @@ struct Tas58xxCodec : public Tas58xx {
 };
 
 TEST(Tas58xxTest, GoodSetDai) {
+  fake_ddk::Bind tester;
   mock_i2c::MockI2c mock_i2c;
   mock_i2c.ExpectWrite({0x67}).ExpectReadStop({0x00});  // Check DIE ID.
 
@@ -80,10 +81,14 @@ TEST(Tas58xxTest, GoodSetDai) {
     ASSERT_OK(client.SetDaiFormat(std::move(format)));
   }
 
+  codec->DdkAsyncRemove();
+  ASSERT_TRUE(tester.Ok());
+  codec.release()->DdkRelease();  // codec release managed by the DDK
   mock_i2c.VerifyAndClear();
 }
 
 TEST(Tas58xxTest, BadSetDai) {
+  fake_ddk::Bind tester;
   mock_i2c::MockI2c mock_i2c;
   mock_i2c.ExpectWrite({0x67}).ExpectReadStop({0x00});  // Check DIE ID.
 
@@ -146,10 +151,14 @@ TEST(Tas58xxTest, BadSetDai) {
     ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, client.SetDaiFormat(std::move(format)));
   }
 
+  codec->DdkAsyncRemove();
+  ASSERT_TRUE(tester.Ok());
+  codec.release()->DdkRelease();  // codec release managed by the DDK
   mock_i2c.VerifyAndClear();
 }
 
 TEST(Tas58xxTest, GetDai) {
+  fake_ddk::Bind tester;
   mock_i2c::MockI2c mock_i2c;
   mock_i2c.ExpectWrite({0x67}).ExpectReadStop({0x00});  // Check DIE ID.
 
@@ -184,6 +193,7 @@ TEST(Tas58xxTest, GetDai) {
 }
 
 TEST(Tas58xxTest, GetInfo5805) {
+  fake_ddk::Bind tester;
   mock_i2c::MockI2c mock_i2c;
   mock_i2c.ExpectWrite({0x67}).ExpectReadStop({0x00});  // Check DIE ID.
 
@@ -201,10 +211,14 @@ TEST(Tas58xxTest, GetInfo5805) {
     EXPECT_EQ(info.value().product_name.compare("TAS5805m"), 0);
   }
 
+  codec->DdkAsyncRemove();
+  ASSERT_TRUE(tester.Ok());
+  codec.release()->DdkRelease();  // codec release managed by the DDK
   mock_i2c.VerifyAndClear();
 }
 
 TEST(Tas58xxTest, GetInfo5825) {
+  fake_ddk::Bind tester;
   mock_i2c::MockI2c mock_i2c;
   mock_i2c.ExpectWrite({0x67}).ExpectReadStop({0x95});  // Check DIE ID.
 
@@ -222,10 +236,14 @@ TEST(Tas58xxTest, GetInfo5825) {
     EXPECT_EQ(info.value().product_name.compare("TAS5825m"), 0);
   }
 
+  codec->DdkAsyncRemove();
+  ASSERT_TRUE(tester.Ok());
+  codec.release()->DdkRelease();  // codec release managed by the DDK
   mock_i2c.VerifyAndClear();
 }
 
 TEST(Tas58xxTest, CheckState) {
+  fake_ddk::Bind tester;
   mock_i2c::MockI2c mock_i2c;
   mock_i2c.ExpectWrite({0x67}).ExpectReadStop({0x95});  // Check DIE ID.
 
@@ -249,10 +267,14 @@ TEST(Tas58xxTest, CheckState) {
     EXPECT_EQ(state.value().plugged, true);
   }
 
+  codec->DdkAsyncRemove();
+  ASSERT_TRUE(tester.Ok());
+  codec.release()->DdkRelease();  // codec release managed by the DDK
   mock_i2c.VerifyAndClear();
 }
 
 TEST(Tas58xxTest, SetGain) {
+  fake_ddk::Bind tester;
   mock_i2c::MockI2c mock_i2c;
   mock_i2c.ExpectWrite({0x67}).ExpectReadStop({0x95});  // Check DIE ID.
 
@@ -287,10 +309,14 @@ TEST(Tas58xxTest, SetGain) {
   auto unused = client.GetInfo();
   static_cast<void>(unused);
 
+  codec->DdkAsyncRemove();
+  ASSERT_TRUE(tester.Ok());
+  codec.release()->DdkRelease();  // codec release managed by the DDK
   mock_i2c.VerifyAndClear();
 }
 
 TEST(Tas58xxTest, Reset) {
+  fake_ddk::Bind tester;
   mock_i2c::MockI2c mock_i2c;
   mock_i2c.ExpectWrite({0x67}).ExpectReadStop({0x95});  // Check DIE ID.
 
@@ -320,18 +346,20 @@ TEST(Tas58xxTest, Reset) {
     ASSERT_OK(client.Reset());
   }
 
+  codec->DdkAsyncRemove();
+  ASSERT_TRUE(tester.Ok());
+  codec.release()->DdkRelease();  // codec release managed by the DDK
   mock_i2c.VerifyAndClear();
 }
 
 TEST(Tas58xxTest, Bridged) {
+  fake_ddk::Bind tester;
   mock_i2c::MockI2c mock_i2c;
   mock_i2c.ExpectWrite({0x67}).ExpectReadStop({0x95});  // Check DIE ID.
 
-  fake_ddk::Bind ddk;
-
   metadata::ti::TasConfig metadata = {};
   metadata.bridged = true;
-  ddk.SetMetadata(&metadata, sizeof(metadata));
+  tester.SetMetadata(&metadata, sizeof(metadata));
 
   auto codec = SimpleCodecServer::Create<Tas58xxCodec>(mock_i2c.GetProto());
   ASSERT_NOT_NULL(codec);
@@ -360,18 +388,20 @@ TEST(Tas58xxTest, Bridged) {
     ASSERT_OK(client.Reset());
   }
 
+  codec->DdkAsyncRemove();
+  ASSERT_TRUE(tester.Ok());
+  codec.release()->DdkRelease();  // codec release managed by the DDK
   mock_i2c.VerifyAndClear();
 }
 
 TEST(Tas58xxTest, StopStart) {
+  fake_ddk::Bind tester;
   mock_i2c::MockI2c mock_i2c;
   mock_i2c.ExpectWrite({0x67}).ExpectReadStop({0x95});  // Check DIE ID.
 
-  fake_ddk::Bind ddk;
-
   metadata::ti::TasConfig metadata = {};
   metadata.bridged = true;
-  ddk.SetMetadata(&metadata, sizeof(metadata));
+  tester.SetMetadata(&metadata, sizeof(metadata));
 
   auto codec = SimpleCodecServer::Create<Tas58xxCodec>(mock_i2c.GetProto());
   ASSERT_NOT_NULL(codec);
@@ -389,14 +419,16 @@ TEST(Tas58xxTest, StopStart) {
     ASSERT_OK(client.Start());
   }
 
+  codec->DdkAsyncRemove();
+  ASSERT_TRUE(tester.Ok());
+  codec.release()->DdkRelease();  // codec release managed by the DDK
   mock_i2c.VerifyAndClear();
 }
 
 TEST(Tas58xxTest, ExternalConfig) {
+  fake_ddk::Bind tester;
   mock_i2c::MockI2c mock_i2c;
   mock_i2c.ExpectWrite({0x67}).ExpectReadStop({0x95});  // Check DIE ID.
-
-  fake_ddk::Bind ddk;
 
   metadata::ti::TasConfig metadata = {};
   metadata.bridged = true;
@@ -412,7 +444,7 @@ TEST(Tas58xxTest, ExternalConfig) {
   metadata.init_sequence2[1].value = 0x44;
   metadata.init_sequence2[2].address = 0x55;
   metadata.init_sequence2[2].value = 0x66;
-  ddk.SetMetadata(&metadata, sizeof(metadata));
+  tester.SetMetadata(&metadata, sizeof(metadata));
 
   auto codec = SimpleCodecServer::Create<Tas58xxCodec>(mock_i2c.GetProto());
   ASSERT_NOT_NULL(codec);
@@ -442,6 +474,9 @@ TEST(Tas58xxTest, ExternalConfig) {
     ASSERT_OK(client.Reset());
   }
 
+  codec->DdkAsyncRemove();
+  ASSERT_TRUE(tester.Ok());
+  codec.release()->DdkRelease();  // codec release managed by the DDK
   mock_i2c.VerifyAndClear();
 }
 

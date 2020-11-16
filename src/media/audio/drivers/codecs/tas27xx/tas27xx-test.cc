@@ -46,10 +46,10 @@ TEST(Tas27xxTest, CodecInitGood) {
   ASSERT_NOT_NULL(codec);
 
   codec->DdkAsyncRemove();
+  ASSERT_TRUE(tester.Ok());
   codec.release()->DdkRelease();  // codec release managed by the DDK
   mock_i2c.VerifyAndClear();
   mock_fault.VerifyAndClear();
-  ASSERT_TRUE(tester.Ok());
 }
 
 TEST(Tas27xxTest, CodecInitBad) {
@@ -88,10 +88,10 @@ TEST(Tas27xxTest, CodecGetInfo) {
   ASSERT_EQ(info->product_name.compare("TAS2770"), 0);
 
   codec->DdkAsyncRemove();
+  ASSERT_TRUE(tester.Ok());
   codec.release()->DdkRelease();  // codec release managed by the DDK
   mock_i2c.VerifyAndClear();
   mock_fault.VerifyAndClear();
-  ASSERT_TRUE(tester.Ok());
 }
 
 TEST(Tas27xxTest, CodecReset) {
@@ -133,10 +133,10 @@ TEST(Tas27xxTest, CodecReset) {
   ASSERT_OK(client.Reset());
 
   codec->DdkAsyncRemove();
+  ASSERT_TRUE(tester.Ok());
   codec.release()->DdkRelease();  // codec release managed by the DDK
   mock_i2c.VerifyAndClear();
   mock_fault.VerifyAndClear();
-  ASSERT_TRUE(tester.Ok());
 }
 
 TEST(Tas27xxTest, CodecBridgedMode) {
@@ -160,10 +160,10 @@ TEST(Tas27xxTest, CodecBridgedMode) {
   client.SetBridgedMode(false);
 
   codec->DdkAsyncRemove();
+  ASSERT_TRUE(tester.Ok());
   codec.release()->DdkRelease();  // codec release managed by the DDK
   mock_i2c.VerifyAndClear();
   mock_fault.VerifyAndClear();
-  ASSERT_TRUE(tester.Ok());
 }
 
 TEST(Tas27xxTest, CodecDaiFormat) {
@@ -234,10 +234,10 @@ TEST(Tas27xxTest, CodecDaiFormat) {
   static_cast<void>(unused);
 
   codec->DdkAsyncRemove();
+  ASSERT_TRUE(tester.Ok());
   codec.release()->DdkRelease();  // codec release managed by the DDK
   mock_i2c.VerifyAndClear();
   mock_fault.VerifyAndClear();
-  ASSERT_TRUE(tester.Ok());
 }
 
 TEST(Tas27xxTest, CodecGain) {
@@ -291,10 +291,10 @@ TEST(Tas27xxTest, CodecGain) {
   static_cast<void>(unused);
 
   codec->DdkAsyncRemove();
+  ASSERT_TRUE(tester.Ok());
   codec.release()->DdkRelease();  // codec release managed by the DDK
   mock_i2c.VerifyAndClear();
   mock_fault.VerifyAndClear();
-  ASSERT_TRUE(tester.Ok());
 }
 
 TEST(Tas27xxTest, CodecPlugState) {
@@ -317,10 +317,10 @@ TEST(Tas27xxTest, CodecPlugState) {
   ASSERT_TRUE(state->plugged);
 
   codec->DdkAsyncRemove();
+  ASSERT_TRUE(tester.Ok());
   codec.release()->DdkRelease();  // codec release managed by the DDK
   mock_i2c.VerifyAndClear();
   mock_fault.VerifyAndClear();
-  ASSERT_TRUE(tester.Ok());
 }
 
 }  // namespace audio
