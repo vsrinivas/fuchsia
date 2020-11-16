@@ -27,6 +27,7 @@
 #include <memory>
 #include <utility>
 
+#include <blobfs/common.h>
 #include <blobfs/compression-settings.h>
 #include <blobfs/format.h>
 #include <blobfs/fsck.h>
@@ -298,6 +299,9 @@ zx_status_t Blobfs::Create(async_dispatcher_t* dispatcher, std::unique_ptr<Block
     FS_TRACE_INFO("blobfs: Using overridden compression level %d\n",
                   *(fs->write_compression_settings_.compression_level));
   }
+
+  FS_TRACE_INFO("blobfs: Using blob layout format: %s\n",
+                BlobLayoutFormatToString(GetBlobLayoutFormat(*superblock)));
 
   status = BlobCorruptionNotifier::Create(&(fs->blob_corruption_notifier_));
 

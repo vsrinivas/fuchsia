@@ -34,6 +34,9 @@ enum class BlobLayoutFormat : decltype(Superblock::blob_layout_format) {
   kCompactMerkleTreeAtEnd = 1,
 };
 
+// Returns enum name for |format|.
+const char* BlobLayoutFormatToString(BlobLayoutFormat format);
+
 // Returns an abbreviated version of the |BlobLayoutFormat|'s name for passing to blobfs tools on
 // the command line.
 const char* GetBlobLayoutFormatCommandLineArg(BlobLayoutFormat format);

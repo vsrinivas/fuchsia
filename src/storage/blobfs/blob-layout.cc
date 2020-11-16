@@ -243,6 +243,15 @@ class PaddedMerkleTreeAtStartBlobLayout : public BlobLayout {
 
 }  // namespace
 
+const char* BlobLayoutFormatToString(BlobLayoutFormat format) {
+  switch (format) {
+    case BlobLayoutFormat::kPaddedMerkleTreeAtStart:
+      return "kPaddedMerkleTreeAtStart";
+    case BlobLayoutFormat::kCompactMerkleTreeAtEnd:
+      return "kCompactMerkleTreeAtEnd";
+  }
+}
+
 const char* GetBlobLayoutFormatCommandLineArg(BlobLayoutFormat format) {
   switch (format) {
     case BlobLayoutFormat::kPaddedMerkleTreeAtStart:
