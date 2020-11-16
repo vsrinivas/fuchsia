@@ -7,6 +7,8 @@
 #ifndef ZIRCON_KERNEL_ARCH_X86_HYPERVISOR_VCPU_PRIV_H_
 #define ZIRCON_KERNEL_ARCH_X86_HYPERVISOR_VCPU_PRIV_H_
 
+#include <zircon/compiler.h>
+
 #include <hypervisor/state_invalidator.h>
 
 // clang-format off
@@ -221,6 +223,7 @@ class AutoVmcs : public hypervisor::StateInvalidator {
   ~AutoVmcs();
 
   void Invalidate() override;
+  void Printf(const char* msg, ...) const __PRINTFLIKE(2, 3);
   void InterruptWindowExiting(bool enable);
   void IssueInterrupt(uint32_t vector);
 
