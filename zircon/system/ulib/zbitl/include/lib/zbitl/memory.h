@@ -5,12 +5,13 @@
 #ifndef LIB_ZBITL_MEMORY_H_
 #define LIB_ZBITL_MEMORY_H_
 
+#include <zircon/assert.h>
+
 #include <cstring>
 
 #include <fbl/alloc_checker.h>
 #include <fbl/array.h>
 #include <fbl/span.h>
-#include <zircon/assert.h>
 
 #include "storage_traits.h"
 
@@ -29,6 +30,14 @@ class StorageTraits<fbl::Span<T>> {
 
   static fitx::result<error_type, uint32_t> Capacity(const Storage& storage) {
     return fitx::ok(static_cast<uint32_t>(storage.size()));
+  }
+
+  template <typename S = T, typename = std::enable_if_t<!std::is_const_v<S>>>
+  static fitx::result<error_type> EnsureCapacity(Storage& storage, uint32_t capacity_bytes) {
+    if (capacity_bytes > storage.size()) {
+      return fitx::error{error_type{}};
+    }
+    return fitx::ok();
   }
 
   static fitx::result<error_type, std::reference_wrapper<const zbi_header_t>> Header(

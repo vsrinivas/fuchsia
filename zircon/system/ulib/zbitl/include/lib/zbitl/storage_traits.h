@@ -73,7 +73,8 @@ struct StorageTraits {
     return fitx::error<error_type>{};
   }
 
-  /// Ensures that the capacity is at least that of the provided value
+  /// A specialization must define this if it also defines Write. This method
+  /// ensures that the capacity is at least that of the provided value
   /// (possibly larger), for specializations where such an operation is
   /// sensible.
   static fitx::result<error_type> EnsureCapacity(Storage& zbi, uint32_t capacity) {
@@ -271,6 +272,14 @@ struct StorageTraits<std::span<T, Extent>> {
   static fitx::result<error_type, uint32_t> Capacity(Storage& zbi) {
     return fitx::ok(static_cast<uint32_t>(
         std::min(zbi.size_bytes(), static_cast<size_t>(std::numeric_limits<uint32_t>::max()))));
+  }
+
+  template <typename S = T, typename = std::enable_if_t<!std::is_const_v<S>>>
+  static fitx::result<error_type> EnsureCapacity(Storage& zbi, uint32_t capacity_bytes) {
+    if (capacity_bytes > zbi.size()) {
+      return fitx::error{error_type{}};
+    }
+    return fitx::ok();
   }
 
   static fitx::result<error_type, std::reference_wrapper<const zbi_header_t>> Header(

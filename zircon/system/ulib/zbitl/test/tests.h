@@ -105,8 +105,7 @@ constexpr auto Next = [](auto it) { return ++it; };
 //   * `static payload_type AsPayload(storage_type&)` that returns the payload
 //     value representing the entire storage object.
 //
-// If the storage type is writable and extendable (i.e., supports
-// EnsureCapacity()), it must also provide:
+// If the storage type is writable, it must also provide:
 //   * `void Write(storage_type&, uint32_t offset, Bytes data)` that writes data
 //     to the provided offset.
 //
@@ -512,10 +511,6 @@ void TestCopyCreationByIteratorRange(TestDataZbiType type) {
 
 template <typename SrcTestTraits, typename DestTestTraits>
 void TestCopyingIntoSmallStorage() {
-  using DestStorage = typename DestTestTraits::storage_type;
-
-  static_assert(zbitl::View<DestStorage>::Traits::CanEnsureCapacity());
-
   files::ScopedTempDir dir;
 
   fbl::unique_fd fd;

@@ -21,7 +21,7 @@ class Image : public View<Storage, Check> {
   using typename View<Storage, Check>::iterator;
   using typename View<Storage, Check>::header_type;
 
-  static_assert(Traits::CanWrite(), "zbitl::Image can only backed by writable storage");
+  static_assert(Traits::CanWrite(), "zbitl::Image requires writable storage");
 
   // Copy/move-constructible or constructible from a Storage argument, like View.
   using View<Storage, Check>::View;
@@ -193,17 +193,10 @@ class Image : public View<Storage, Check> {
   fitx::result<Error> ResetContainer(uint32_t new_size) {
     ZX_DEBUG_ASSERT(new_size % ZBI_ALIGNMENT == 0);
 
-    if constexpr (Traits::CanEnsureCapacity()) {
-      if (auto result = Traits::EnsureCapacity(this->storage(), new_size); result.is_error()) {
-        return fitx::error{
-            Error{"cannot increase capacity", new_size, std::move(result.error_value())}};
-      }
-    } else {
-      if (auto result = Traits::Capacity(this->storage()); result.is_error()) {
-        return fitx::error{Error{"cannot determine capacity", 0, std::move(result.error_value())}};
-      } else if (new_size > result.value()) {
-        return fitx::error{Error{"storage type does not support capacity increase", result.value()}};
-      }
+    if (auto result = Traits::EnsureCapacity(this->storage(), new_size); result.is_error()) {
+      return fitx::error{Error{"cannot ensure sufficient capacity",
+                               static_cast<uint32_t>(this->size_bytes()),
+                               std::move(result.error_value())}};
     }
     if (auto result =
             this->WriteHeader(ZBI_CONTAINER_HEADER(new_size - uint32_t{sizeof(zbi_header_t)}), 0);

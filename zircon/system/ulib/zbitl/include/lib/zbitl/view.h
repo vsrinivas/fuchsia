@@ -164,9 +164,6 @@ class View {
     // Whether the unbuffered variation of Traits::Write() is defined.
     static constexpr bool CanUnbufferedWrite() { return SfinaeUnbufferedWrite(0); }
 
-    // Whether Traits::EnsureCapacity() is defined.
-    static constexpr bool CanEnsureCapacity() { return SfinaeEnsureCapacity(0); }
-
     // Gives an 'example' value of a type convertible to storage& that can be
     // used within a decltype context.
     static storage_type& storage_declval() {
@@ -254,6 +251,14 @@ class View {
 
     // This overload is chosen only if SFINAE detected a missing EnsureCapacity method.
     static constexpr bool SfinaeEnsureCapacity(...) { return false; }
+
+    // Whether Traits::EnsureCapacity() is defined.
+    static constexpr bool CanEnsureCapacity() { return SfinaeEnsureCapacity(0); }
+
+    static_assert(!CanUnbufferedWrite() || CanWrite(),
+                  "If an unbuffered Write() is implemented, so too must a buffered Write() be");
+    static_assert(CanEnsureCapacity() == CanWrite(),
+                  "Both Write() and EnsureCapacity() are expected to be implemented together");
   };
 
   /// The header is represented by an opaque type that can be dereferenced as
@@ -722,23 +727,12 @@ class View {
     using CopyTraits = typename View<std::decay_t<CopyStorage>>::Traits;
     using ErrorType = CopyError<std::decay_t<CopyStorage>>;
 
-    if constexpr (CopyTraits::CanEnsureCapacity()) {
-      if (auto result = CopyTraits::EnsureCapacity(to, to_offset + length); result.is_error()) {
-        return fitx::error{ErrorType{
-            .zbi_error = "cannot increase capacity",
-            .write_offset = to_offset + length,
-            .write_error = std::move(result).error_value(),
-        }};
-      }
-    } else {
-      if (auto to_capacity = CopyTraits::Capacity(to); to_capacity.is_error()) {
-        return fitx::error{ErrorType{
-            .zbi_error = "cannot determine capacity",
-            .write_error = std::move(to_capacity).error_value(),
-        }};
-      } else if (to_capacity.value() < to_offset + length) {
-        return fitx::error{ErrorType{"storage is too small to copy into"}};
-      }
+    if (auto result = CopyTraits::EnsureCapacity(to, to_offset + length); result.is_error()) {
+      return fitx::error{ErrorType{
+          .zbi_error = "cannot increase capacity",
+          .write_offset = to_offset + length,
+          .write_error = std::move(result).error_value(),
+      }};
     }
 
     auto payload = Traits::Payload(storage(), offset, length);
