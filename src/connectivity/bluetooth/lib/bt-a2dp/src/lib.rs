@@ -20,5 +20,8 @@ pub mod inspect;
 /// Peer tracking and signaling procedures
 pub mod peer;
 
+/// Collections of connected peers
+pub mod connected_peers;
+
 /// Real-time Transport Protocol parsing and packet building
 pub mod rtp;

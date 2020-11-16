@@ -66,7 +66,6 @@ rustc_binary("bin") {
 
   sources = [
     "src/avrcp_relay.rs",
-    "src/connected_peers.rs",
     "src/latm.rs",
     "src/main.rs",
     "src/player.rs",

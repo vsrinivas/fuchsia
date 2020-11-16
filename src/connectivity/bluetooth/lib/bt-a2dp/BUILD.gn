@@ -50,6 +50,7 @@ rustc_library("bt-a2dp") {
 
   sources = [
     "src/codec.rs",
+    "src/connected_peers.rs",
     "src/inspect.rs",
     "src/lib.rs",
     "src/media_task.rs",

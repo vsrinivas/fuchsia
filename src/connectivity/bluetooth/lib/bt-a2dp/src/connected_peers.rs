@@ -4,7 +4,6 @@
 
 use {
     anyhow::{format_err, Error},
-    bt_a2dp::{codec::CodecNegotiation, peer::Peer, stream::Streams},
     bt_avdtp as avdtp,
     fidl_fuchsia_bluetooth_bredr::{ProfileDescriptor, ProfileProxy},
     fuchsia_async as fasync,
@@ -19,8 +18,11 @@ use {
     std::{collections::HashMap, sync::Arc},
 };
 
+// TODO(fxbug.dev/54334): Cleanup Peer Session/Stream generation.
 pub type PeerSessionFn =
     dyn Fn(&PeerId) -> fasync::Task<Result<(Streams, CodecNegotiation, fasync::Task<()>), Error>>;
+
+use crate::{codec::CodecNegotiation, peer::Peer, stream::Streams};
 
 /// ConnectedPeers manages the set of connected peers based on discovery, new connection, and
 /// peer session lifetime.
@@ -33,17 +35,17 @@ pub struct ConnectedPeers {
     peer_session_gen: Box<PeerSessionFn>,
     /// Profile Proxy, used to connect new transport sockets.
     profile: ProfileProxy,
-    /// Cobalt logger to use and hand out to peers
-    cobalt_sender: CobaltSender,
+    /// Cobalt logger to use and hand out to peers, if we are using one.
+    cobalt_sender: Option<CobaltSender>,
     /// The 'peers' node of the inspect tree. All connected peers own a child node of this node.
     inspect: inspect::Node,
 }
 
 impl ConnectedPeers {
-    pub(crate) fn new(
+    pub fn new(
         peer_session_gen: Box<PeerSessionFn>,
         profile: ProfileProxy,
-        cobalt_sender: CobaltSender,
+        cobalt_sender: Option<CobaltSender>,
     ) -> Self {
         Self {
             connected: DetachableMap::new(),
@@ -88,19 +90,27 @@ impl ConnectedPeers {
 
     /// Accept a channel that was connected to the peer `id`.  If `initiator` is true, we initiated
     /// this connection (and should take the INT role)
-    pub async fn connected(&mut self, id: PeerId, channel: Channel, initiator: bool) {
-        if let Some(peer) = self.get(&id) {
+    /// Returns a weak peer pointer if connected (even if it was connected before) if successful.
+    pub async fn connected(
+        &mut self,
+        id: PeerId,
+        channel: Channel,
+        initiator: bool,
+    ) -> Result<DetachableWeak<PeerId, Peer>, Error> {
+        if let Some(weak) = self.get_weak(&id) {
+            let peer = weak.upgrade().ok_or(format_err!("Disconnected connecting transport"))?;
             if let Err(e) = peer.receive_channel(channel) {
                 warn!("{} failed to connect channel: {}", id, e);
+                return Err(e.into());
             }
-            return;
+            return Ok(weak);
         }
 
         let (streams, negotiation, session_task) = match (self.peer_session_gen)(&id).await {
             Ok(x) => x,
             Err(e) => {
                 warn!("Couldn't generate peer session for {}: {:?}", id, e);
-                return;
+                return Err(format_err!("Couldn't generate peer session"));
             }
         };
 
@@ -109,13 +119,8 @@ impl ConnectedPeers {
         info!("Adding new peer for {}", id);
         let avdtp_peer = avdtp::Peer::new(channel);
 
-        let mut peer = Peer::create(
-            id,
-            avdtp_peer,
-            streams,
-            self.profile.clone(),
-            Some(self.cobalt_sender.clone()),
-        );
+        let mut peer =
+            Peer::create(id, avdtp_peer, streams, self.profile.clone(), self.cobalt_sender.clone());
 
         if let Some(desc) = self.descriptors.get(&id) {
             peer.set_descriptor(desc.clone());
@@ -129,7 +134,7 @@ impl ConnectedPeers {
         let peer = match entry.try_insert(peer) {
             Err(_peer) => {
                 warn!("Peer connected while we were setting up peer: {}", id);
-                return;
+                return self.get_weak(&id).ok_or(format_err!("Peer missing"));
             }
             Ok(weak_peer) => weak_peer,
         };
@@ -153,6 +158,7 @@ impl ConnectedPeers {
             drop(session_task);
         })
         .detach();
+        self.get_weak(&id).ok_or(format_err!("Peer missing"))
     }
 }
 
@@ -167,7 +173,6 @@ impl Inspect for &mut ConnectedPeers {
 mod tests {
     use super::*;
 
-    use bt_a2dp::{media_task::tests::TestMediaTaskBuilder, media_types::*, stream::Stream};
     use bt_avdtp::Request;
     use fidl::endpoints::create_proxy_and_stream;
     use fidl_fuchsia_bluetooth_bredr::{ProfileMarker, ProfileRequestStream};
@@ -176,6 +181,8 @@ mod tests {
     use futures::channel::mpsc;
     use futures::{self, task::Poll, StreamExt};
     use std::convert::{TryFrom, TryInto};
+
+    use crate::{media_task::tests::TestMediaTaskBuilder, media_types::*, stream::Stream};
 
     fn fake_cobalt_sender() -> (CobaltSender, mpsc::Receiver<CobaltEvent>) {
         const BUFFER_SIZE: usize = 100;
@@ -241,7 +248,7 @@ mod tests {
         let id = PeerId(1);
         let (cobalt_sender, _) = fake_cobalt_sender();
 
-        let peers = ConnectedPeers::new(no_streams_session_fn(), proxy, cobalt_sender);
+        let peers = ConnectedPeers::new(no_streams_session_fn(), proxy, Some(cobalt_sender));
 
         (exec, id, peers, stream)
     }
@@ -252,12 +259,10 @@ mod tests {
 
         let (remote, channel) = Channel::create();
 
-        exec.run_singlethreaded(peers.connected(id, channel, false));
-
-        let peer = match peers.get(&id) {
-            None => panic!("Peer should be in ConnectedPeers after connection"),
-            Some(peer) => peer,
-        };
+        let peer = exec
+            .run_singlethreaded(peers.connected(id, channel, false))
+            .expect("peer should connect");
+        let peer = peer.upgrade().expect("peer should be connected");
 
         exercise_avdtp(&mut exec, remote, &peer);
     }
@@ -331,9 +336,9 @@ mod tests {
             })
         });
 
-        let mut peers = ConnectedPeers::new(session_fn, proxy, cobalt_sender);
+        let mut peers = ConnectedPeers::new(session_fn, proxy, Some(cobalt_sender));
 
-        exec.run_singlethreaded(peers.connected(id, channel, true));
+        assert!(exec.run_singlethreaded(peers.connected(id, channel, true)).is_ok());
 
         // Should discover remote streams, negotiate, and start.
 
@@ -410,7 +415,7 @@ mod tests {
 
         // Connect a peer, it should show up in the tree.
         let (_remote, channel) = Channel::create();
-        exec.run_singlethreaded(peers.connected(id, channel, false));
+        assert!(exec.run_singlethreaded(peers.connected(id, channel, false)).is_ok());
 
         assert_inspect_tree!(inspect, root: { peers: { peer_0: {
             id: "0000000000000001", local_streams: contains {}
@@ -423,7 +428,7 @@ mod tests {
 
         let (remote, channel) = Channel::create();
 
-        exec.run_singlethreaded(peers.connected(id, channel, false));
+        assert!(exec.run_singlethreaded(peers.connected(id, channel, false)).is_ok());
         run_to_stalled(&mut exec);
 
         // Disconnect the signaling channel, peer should be gone.
@@ -439,7 +444,7 @@ mod tests {
         let (mut exec, id, mut peers, _stream) = setup_connected_peer_test();
 
         let (remote, channel) = Channel::create();
-        exec.run_singlethreaded(peers.connected(id, channel, false));
+        assert!(exec.run_singlethreaded(peers.connected(id, channel, false)).is_ok());
         run_to_stalled(&mut exec);
 
         // Disconnect the signaling channel, peer should be gone.
@@ -452,7 +457,7 @@ mod tests {
         // Connect another peer with the same ID
         let (_remote, channel) = Channel::create();
 
-        exec.run_singlethreaded(peers.connected(id, channel, false));
+        assert!(exec.run_singlethreaded(peers.connected(id, channel, false)).is_ok());
         run_to_stalled(&mut exec);
 
         // Should be connected.

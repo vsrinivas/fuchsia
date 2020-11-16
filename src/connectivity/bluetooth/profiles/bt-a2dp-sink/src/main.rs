@@ -10,6 +10,7 @@ use {
     async_helpers::component_lifecycle::ComponentLifecycleServer,
     bt_a2dp::{
         codec::{CodecNegotiation, MediaCodecConfig},
+        connected_peers::{ConnectedPeers, PeerSessionFn},
         media_types::*,
         peer::ControllerPool,
         stream,
@@ -38,10 +39,8 @@ use {
 };
 
 use crate::avrcp_relay::AvrcpRelay;
-use crate::connected_peers::ConnectedPeers;
 
 mod avrcp_relay;
-mod connected_peers;
 mod latm;
 mod player;
 mod sink_task;
@@ -207,7 +206,7 @@ impl StreamsBuilder {
         Ok((player_request_stream, session_id))
     }
 
-    fn into_session_gen(self) -> Box<connected_peers::PeerSessionFn> {
+    fn into_session_gen(self) -> Box<PeerSessionFn> {
         Box::new(move |peer_id: &PeerId| {
             let clone = self.clone();
             let peer_id = peer_id.clone();
@@ -305,8 +304,7 @@ async fn handle_connection(
     controller_pool: &mut ControllerPool,
 ) {
     info!("Connection from {}: {:?}!", peer_id, channel);
-    peers.connected(peer_id.clone(), channel, initiate).await;
-    if let Some(peer) = peers.get_weak(&peer_id) {
+    if let Ok(peer) = peers.connected(peer_id.clone(), channel, initiate).await {
         // Add the controller to the peers
         controller_pool.peer_connected(peer_id.clone(), peer);
     }
@@ -417,10 +415,10 @@ async fn main() -> Result<(), Error> {
     let profile_svc = fuchsia_component::client::connect_to_service::<bredr::ProfileMarker>()
         .context("Failed to connect to Bluetooth Profile service")?;
 
-    let mut peers = connected_peers::ConnectedPeers::new(
+    let mut peers = ConnectedPeers::new(
         stream_gen.into_session_gen(),
         profile_svc.clone(),
-        cobalt_logger.clone(),
+        Some(cobalt_logger.clone()),
     );
     if let Err(e) = peers.iattach(&inspect.root(), "connected") {
         info!("Failed to attach to inspect: {:?}", e);
@@ -536,7 +534,7 @@ mod tests {
         let _ = exec.run_until_stalled(&mut futures::future::pending::<()>());
     }
 
-    fn no_streams_gen() -> Box<connected_peers::PeerSessionFn> {
+    fn no_streams_gen() -> Box<PeerSessionFn> {
         Box::new(|_peer_id| {
             fasync::Task::spawn(async {
                 Ok((
@@ -562,7 +560,7 @@ mod tests {
         let peers = Arc::new(Mutex::new(ConnectedPeers::new(
             no_streams_gen(),
             proxy.clone(),
-            cobalt_sender,
+            Some(cobalt_sender),
         )));
 
         let controller_pool = Arc::new(Mutex::new(ControllerPool::new()));
