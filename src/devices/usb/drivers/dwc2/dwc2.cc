@@ -259,12 +259,15 @@ zx_status_t Dwc2::HandleSetupRequest(size_t* out_actual) {
         SetAddress(static_cast<uint8_t>(setup->wValue));
         now = zx::clock::get_monotonic();
         elapsed = now - irq_timestamp_;
-        zxlogf(INFO,
-               "Took %i microseconds to reply to SET_ADDRESS interrupt\nStarted waiting at %p\nGot "
-               "hardware IRQ at %p\nFinished processing at %p",
-               static_cast<int>(elapsed.to_usecs()),
-               reinterpret_cast<void*>(wait_start_time_.get()),
-               reinterpret_cast<void*>(irq_timestamp_.get()), reinterpret_cast<void*>(now.get()));
+        zxlogf(
+            INFO,
+            "Took %i microseconds to reply to SET_ADDRESS interrupt\nStarted waiting at %lx\nGot "
+            "hardware IRQ at %lx\nFinished processing at %lx, context switch happened at %lx",
+            static_cast<int>(elapsed.to_usecs()), wait_start_time_.get(), irq_timestamp_.get(),
+            now.get(), irq_dispatch_timestamp_.get());
+        if (elapsed.to_msecs() > 2) {
+          zxlogf(ERROR, "Handling SET_ADDRESS took greater than 2ms");
+        }
         *out_actual = 0;
         return ZX_OK;
       case USB_REQ_SET_CONFIGURATION:
