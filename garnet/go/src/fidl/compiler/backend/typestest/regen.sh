@@ -112,6 +112,24 @@ do
     mv "${GOLDENS_SUB_DIR}/${hlcpp_source_name}" "${GOLDENS_SUB_DIR}/${hlcpp_source_name}.golden"
     mv "${GOLDENS_SUB_DIR}/${hlcpp_test_header_name}" "${GOLDENS_SUB_DIR}/${hlcpp_test_header_name}.golden"
 
+    # HLCPP codegen variation: natural types only
+    hlcpp_header_name=${json_name}.natural_types.h
+    hlcpp_source_name=${json_name}.natural_types.cc
+    echo "  hlcpp natural types: ${json_name} > ${hlcpp_header_name}, ${hlcpp_source_name}, and ${hlcpp_test_header_name}"
+    GOLDENS_SUB_DIR="$(ensure_goldens_dir 'hlcpp_natural_types')"
+    GOLDENS+=(
+      "${GOLDENS_SUB_DIR}/${hlcpp_header_name}.golden"
+      "${GOLDENS_SUB_DIR}/${hlcpp_source_name}.golden"
+    )
+    ${FIDLGEN_HLCPP} \
+        -json "$json_path" \
+        -experimental-split-generation-domain-objects \
+        -output-base "${GOLDENS_SUB_DIR}/${json_name}.natural_types" \
+        -include-base "${GOLDENS_SUB_DIR}" \
+        -clang-format-path "${PREBUILT_CLANG_DIR}/bin/clang-format"
+    mv "${GOLDENS_SUB_DIR}/${hlcpp_header_name}" "${GOLDENS_SUB_DIR}/${hlcpp_header_name}.golden"
+    mv "${GOLDENS_SUB_DIR}/${hlcpp_source_name}" "${GOLDENS_SUB_DIR}/${hlcpp_source_name}.golden"
+
     llcpp_header_name=${json_name}.llcpp.h
     llcpp_source_name=${json_name}.llcpp.cc
     echo "  llcpp: ${json_name} > ${llcpp_header_name} and ${llcpp_source_name}"

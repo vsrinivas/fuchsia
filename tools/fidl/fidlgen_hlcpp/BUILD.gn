@@ -17,7 +17,6 @@ go_library("gopkg") {
   ]
   sources = [
     "codegen/codegen.go",
-    "codegen/codegen_test.go",
     "codegen/header.tmpl.go",
     "codegen/implementation.tmpl.go",
     "codegen/natural_types_bits.tmpl.go",
@@ -32,6 +31,12 @@ go_library("gopkg") {
     "codegen/test_base.tmpl.go",
     "main.go",
   ]
+}
+
+go_library("gotestpkg") {
+  name = "go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_hlcpp/..."
+  deps = [ ":gopkg" ]
+  sources = [ "codegen/codegen_test.go" ]
 }
 
 go_binary("fidlgen_hlcpp") {
@@ -65,7 +70,7 @@ if (is_host) {
       rebase_path("$root_out_dir/test_data/fidlgen_hlcpp", root_build_dir),
     ]
     deps = [
-      ":gopkg",
+      ":gotestpkg",
       "//garnet/go/src/fidl/compiler/backend/typestest",
     ]
     non_go_deps = [ ":clang_format" ]
@@ -91,7 +96,10 @@ group("goldens") {
 
   deps = []
   foreach(target, fidl_testdata_targets - denylist) {
-    deps += [ "${target}_hlcpp" ]
+    deps += [
+      "${target}_cpp_natural_types",
+      "${target}_hlcpp",
+    ]
   }
 }
 

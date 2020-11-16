@@ -7,7 +7,6 @@ import("//build/go/go_test.gni")
 
 go_library("types") {
   sources = [
-    "config.go",
     "types.go",
     "types_test.go",
   ]

@@ -20,7 +20,6 @@ go_library("compiler") {
     "backend/common/strings_test.go",
     "backend/cpp/clang_formatter.go",
     "backend/cpp/ir.go",
-    "backend/types/config.go",
     "backend/types/types.go",
     "backend/types/types_test.go",
     "backend/typestest/testutil.go",

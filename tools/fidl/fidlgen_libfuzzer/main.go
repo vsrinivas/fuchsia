@@ -41,7 +41,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	config := types.Config{
+	config := codegen.Config{
 		OutputBase:  *outputBase,
 		IncludeBase: *includeBase,
 		IncludeStem: *includeStem,

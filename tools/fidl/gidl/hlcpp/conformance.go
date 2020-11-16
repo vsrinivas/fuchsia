@@ -19,7 +19,7 @@ import (
 var conformanceTmpl = template.Must(template.New("tmpl").Parse(`
 #include <gtest/gtest.h>
 
-#include <conformance/cpp/fidl.h>
+#include <conformance/cpp/natural_types.h>
 #include <lib/fidl/cpp/test/test_util.h>
 
 #ifdef __Fuchsia__

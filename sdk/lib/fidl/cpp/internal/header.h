@@ -5,6 +5,9 @@
 #ifndef LIB_FIDL_CPP_INTERNAL_HEADER_H_
 #define LIB_FIDL_CPP_INTERNAL_HEADER_H_
 
+// This header includes the necessary definitions to declare the high-level
+// C++ FIDL binding proxies and stubs.
+
 #include <lib/fit/function.h>
 #include <lib/fit/result.h>
 #include <lib/fit/variant.h>
@@ -46,13 +49,10 @@
 #include <lib/zx/vmo.h>
 #endif
 
-#include "lib/fidl/cpp/coding_traits.h"
-#include "lib/fidl/cpp/enum.h"
 #include "lib/fidl/cpp/internal/logging.h"
-#include "lib/fidl/trace.h"
+#include "lib/fidl/cpp/internal/natural_types_header.h"
 
 #ifdef __Fuchsia__
-#include "lib/fidl/cpp/interface_handle.h"
 #include "lib/fidl/cpp/interface_ptr.h"
 #include "lib/fidl/cpp/internal/proxy_controller.h"
 #include "lib/fidl/cpp/internal/stub_controller.h"
@@ -61,15 +61,5 @@
 #include "lib/fidl/cpp/service_handler_base.h"
 #include "lib/fidl/cpp/synchronous_interface_ptr.h"
 #endif
-
-#include "lib/fidl/cpp/comparison.h"
-#include "lib/fidl/cpp/internal/bitset.h"
-#include "lib/fidl/cpp/string.h"
-#include "lib/fidl/cpp/vector.h"
-
-// clone.h must be imported before any of the generated Clone methods are
-// defined, so that calls to Clone in clone.h are referencing the ADL
-// implementation and are not ambiguous.
-#include "lib/fidl/cpp/clone.h"
 
 #endif  // LIB_FIDL_CPP_INTERNAL_HEADER_H_

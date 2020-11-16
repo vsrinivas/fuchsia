@@ -12,6 +12,8 @@ import("//src/sys/build/components.gni")
 import("//src/tests/fidl/conformance_suite/gidl-conformance-suite.gni")
 import("//tools/fidl/gidl/gidl.gni")
 
+# The complete high-level C++ bindings library supporting both asynchronous
+# and synchronous APIs.
 sdk_source_set("cpp") {
   category = "partner"
 
@@ -20,11 +22,9 @@ sdk_source_set("cpp") {
   sources = [
     "binding.h",
     "binding_set.h",
-    "enum.h",
     "event_sender.h",
     "interface_ptr.h",
     "interface_ptr_set.h",
-    "internal/bitset.h",
     "internal/header.h",
     "internal/implementation.h",
     "internal/message_handler.cc",
@@ -65,14 +65,15 @@ sdk_source_set("cpp") {
   public_configs = [ "//sdk/config" ]
 }
 
+# The synchronous high-level C++ bindings library.
 sdk_source_set("cpp_sync") {
   category = "partner"
 
   sdk_name = "fidl_cpp_sync"
 
   sources = [
-    "interface_handle.h",
-    "interface_request.h",
+    "internal/logging.cc",
+    "internal/logging.h",
     "internal/message_sender.cc",
     "internal/message_sender.h",
     "internal/synchronous_proxy.cc",
@@ -92,6 +93,8 @@ sdk_source_set("cpp_sync") {
   ]
 }
 
+# The base library used to implement the natural domain-object types.
+# It should not contain message dispatching functionality.
 sdk_source_set("cpp_base") {
   category = "partner"
 
@@ -106,8 +109,12 @@ sdk_source_set("cpp_base") {
     "decoder.h",
     "encoder.cc",
     "encoder.h",
-    "internal/logging.cc",
-    "internal/logging.h",
+    "enum.h",
+    "interface_handle.h",
+    "interface_request.h",
+    "internal/bitset.h",
+    "internal/natural_types_header.h",
+    "internal/natural_types_implementation.h",
     "object_coding.h",
     "string.h",
     "traits.h",
@@ -126,7 +133,10 @@ sdk_source_set("cpp_base") {
   ]
 
   if (is_fuchsia) {
-    public_deps += [ "//zircon/public/lib/zx" ]
+    public_deps += [
+      "//zircon/public/lib/fidl",
+      "//zircon/public/lib/zx",
+    ]
   }
 }
 

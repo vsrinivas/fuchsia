@@ -10,10 +10,16 @@ const implementationTemplate = `
 
 #include <{{ .PrimaryHeader }}>
 
+{{ if IncludeProxiesAndStubs -}}
 #include "lib/fidl/cpp/internal/implementation.h"
+{{ else -}}
+#include "lib/fidl/cpp/internal/natural_types_implementation.h"
+{{- end }}
 
 {{ template "Implementation/NaturalTypes" . }}
+{{ if IncludeProxiesAndStubs -}}
 {{ template "Implementation/ProxiesAndStubs" . }}
+{{- end }}
 
 {{ end }}
 

@@ -123,6 +123,7 @@ template("gidl_hlcpp_conformance") {
   _gidl_cc_source_set(target_name) {
     type = "conformance"
     language = "hlcpp"
+    bindings_suffix = "_cpp_natural_types"
     forward_variables_from(invoker, "*")
   }
 }

@@ -5,17 +5,10 @@
 #ifndef LIB_FIDL_CPP_INTERNAL_IMPLEMENTATION_H_
 #define LIB_FIDL_CPP_INTERNAL_IMPLEMENTATION_H_
 
-#include <lib/fidl/internal.h>
-#include <stdint.h>
-#include <zircon/assert.h>
+// This header includes the necessary definitions to implement the high-level
+// C++ FIDL binding proxies and stubs.
 
-#include <limits>
-#include <memory>
-
-#include "lib/fidl/cpp/clone.h"
-#include "lib/fidl/cpp/comparison.h"
-#include "lib/fidl/cpp/encoder.h"
 #include "lib/fidl/cpp/internal/logging.h"
-#include "lib/fidl/cpp/traits.h"
+#include "lib/fidl/cpp/internal/natural_types_implementation.h"
 
 #endif  // LIB_FIDL_CPP_INTERNAL_IMPLEMENTATION_H_

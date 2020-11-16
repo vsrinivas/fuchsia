@@ -67,6 +67,10 @@ template("_fidl_cpp_codegen_impl") {
           "//prebuilt/third_party/clang/$host_platform/bin/clang-format"),
     ]
 
+    if (defined(invoker.additional_fidlgen_arguments)) {
+      args += invoker.additional_fidlgen_arguments
+    }
+
     deps = [ ":$fidl_target_name($fidl_toolchain)" ]
 
     metadata = {
@@ -361,9 +365,32 @@ template("fidl_cpp_family") {
     forward_variables_from(invoker, [ "testonly" ])
   }
 
+  natural_types_public_deps = [ "//sdk/lib/fidl/cpp:cpp_base" ]
+
   #
   # HLCPP Bindings
   #
+
+  # Define C++ natural types target.
+  # They are generated using the HLCPP backend.
+  fidl_cpp_codegen("${target_name}_cpp_natural_types") {
+    forward_variables_from(common_options, "*")
+    output_stem = "cpp/natural_types"
+    fidlgen_tool = "//tools/fidl/fidlgen_hlcpp"
+    additional_fidlgen_arguments =
+        [ "--experimental-split-generation-domain-objects" ]
+  }
+  fidl_cpp_library("${target_name}_cpp_natural_types") {
+    forward_variables_from(invoker,
+                           [
+                             "public_deps",
+                             "visibility",
+                           ])
+    forward_variables_from(common_options, "*")
+    output_stem = "cpp/natural_types"
+    target_suffix = "_cpp_natural_types"
+    additional_public_deps = natural_types_public_deps
+  }
 
   # Define HLCPP target.
   fidl_cpp_codegen("${target_name}_hlcpp") {

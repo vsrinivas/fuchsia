@@ -29,6 +29,10 @@ var generatorsUnused = flag.String("generators", "",
 var clangFormatPath = flag.String("clang-format-path", "",
 	"path to the clang-format tool.")
 
+// These options support only generating the domain objects and using them in LLCPP.
+var splitGenerationDomainObjects = flag.Bool("experimental-split-generation-domain-objects", false,
+	"[optional] only generate the domain object definitions for the data types in this library.")
+
 func flagsValid() bool {
 	return *jsonPath != "" && *outputBase != "" && *includeBase != ""
 }
@@ -45,12 +49,17 @@ func main() {
 		log.Fatal(err)
 	}
 
-	config := types.Config{
+	mode := codegen.Monolithic
+	if *splitGenerationDomainObjects {
+		mode = codegen.OnlyGenerateDomainObjects
+	}
+	config := codegen.Config{
 		OutputBase:  *outputBase,
 		IncludeBase: *includeBase,
 		IncludeStem: *includeStem,
 	}
-	if err := codegen.NewFidlGenerator().GenerateFidl(fidl, &config, *clangFormatPath); err != nil {
+	generator := codegen.NewFidlGenerator(mode)
+	if err := generator.GenerateFidl(fidl, &config, *clangFormatPath); err != nil {
 		log.Fatalf("Error running generator: %v", err)
 	}
 }

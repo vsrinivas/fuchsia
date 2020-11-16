@@ -10,7 +10,11 @@ const headerTemplate = `
 
 #pragma once
 
+{{ if IncludeProxiesAndStubs }}
 #include "lib/fidl/cpp/internal/header.h"
+{{- else }}
+#include "lib/fidl/cpp/internal/natural_types_header.h"
+{{- end }}
 
 {{ $root := . -}}
 {{ range .Headers -}}
@@ -18,7 +22,9 @@ const headerTemplate = `
 {{ end -}}
 
 {{ template "Header/NaturalTypes" . }}
+{{ if IncludeProxiesAndStubs -}}
 {{ template "Header/ProxiesAndStubs" . }}
+{{- end }}
 
 {{ end }}
 
