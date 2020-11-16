@@ -12,8 +12,8 @@ bind_rules("aml-thermal-s905d2g-legacy-bind") {
   output = "aml-thermal-bind.h"
   tests = "aml-thermal-s905d2g-legacy-bind-test.json"
   deps = [
+    "//src/devices/bind/amlogic.platform",
     "//src/devices/bind/fuchsia.composite",
-    "//src/devices/bind/fuchsia.platform",
   ]
 }
 

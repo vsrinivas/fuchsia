@@ -12,8 +12,8 @@ bind_rules("aml-sdmmc-bind") {
   output = "aml-sdmmc-bind.h"
   tests = "aml-sdmmc-bind-test.json"
   deps = [
+    "//src/devices/bind/amlogic.platform",
     "//src/devices/bind/fuchsia.composite",
-    "//src/devices/bind/fuchsia.platform",
   ]
 }
 

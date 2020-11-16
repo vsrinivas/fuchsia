@@ -3,10 +3,10 @@
 // found in the LICENSE file.
 
 using fuchsia.composite;
-using fuchsia.platform;
+using amlogic.platform;
 
 fuchsia.BIND_PROTOCOL == fuchsia.composite.BIND_PROTOCOL.DEVICE;
-fuchsia.BIND_PLATFORM_DEV_VID == fuchsia.platform.BIND_PLATFORM_DEV_VID.AMLOGIC;
+fuchsia.BIND_PLATFORM_DEV_VID == amlogic.platform.BIND_PLATFORM_DEV_VID.AMLOGIC;
 accept fuchsia.BIND_PLATFORM_DEV_DID {
   0x06,  // PDEV_DID_AMLOGIC_SDMMC_A
   0x07,  // PDEV_DID_AMLOGIC_SDMMC_B

@@ -1,0 +1,61 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library amlogic.platform;
+
+extend uint fuchsia.BIND_PLATFORM_DEV_VID {
+  AMLOGIC = 5,
+};
+
+extend uint fuchsia.BIND_PLATFORM_DEV_PID {
+  A113 = 0x01,
+  S912 = 0x02,
+  S905D2 = 0x03,
+  T931 = 0x04,
+  S905D3 = 0x05,
+  A311D = 0x06,
+};
+
+extend uint fuchsia.BIND_PLATFORM_DEV_DID {
+  GPIO = 0x01,
+  I2C = 0x02,
+  UART = 0x03,
+  AXG_CLK = 0x04,
+  GXL_CLK = 0x05,
+  SDMMC_A = 0x06,
+  SDMMC_B = 0x07,
+  SDMMC_C = 0x08,
+  ETH = 0x09,
+  THERMAL_PLL = 0x0A,
+  MAILBOX = 0x0B,
+  SCPI = 0x0C,
+  DISPLAY = 0x0D,
+  VIDEO = 0x0E,
+  RAW_NAND = 0x0F,
+  CANVAS = 0x10,
+  G12A_CLK = 0x11,
+  TDM = 0x12,
+  PDM = 0x13,
+  G12B_CLK = 0x14,
+  MIPI_CSI = 0x15,
+  SHERLOCK_PDM = 0x16,
+  MALI_INIT = 0x17,
+  USB_PHY_V2 = 0x18,
+  SPI = 0x19,
+  SECURE_MEM = 0x1A,
+  GE2D = 0x1B,
+  NNA = 0x1C,
+  PWM = 0x1D,
+  CPU = 0x1E,
+  PWM_INIT = 0x1F,
+  NELSON_PDM = 0x20,
+  NELSON_USB_PHY = 0x21,
+  SM1_CLK = 0x22,
+  VIDEO_ENC = 0x23,
+  RAM_CTL = 0x24,
+  HEVC_ENC = 0x25,
+  POWER = 0x26,
+  ASTRO_THERMISTOR = 0x27,
+  THERMAL_DDR = 0x28,
+};

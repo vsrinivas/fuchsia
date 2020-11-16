@@ -11,8 +11,8 @@ bind_rules("ge2d_bind") {
   output = "bind.h"
   tests = "bind_tests.json"
   deps = [
+    "//src/devices/bind/amlogic.platform",
     "//src/devices/bind/fuchsia.composite",
-    "//src/devices/bind/fuchsia.platform",
   ]
 }
 

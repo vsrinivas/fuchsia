@@ -9,7 +9,7 @@ bind_rules("aml_pdm-bind") {
   rules = "aml_pdm.bind"
   output = "aml_pdm-bind.h"
   tests = "tests.json"
-  deps = [ "//src/devices/bind/fuchsia.platform" ]
+  deps = [ "//src/devices/bind/amlogic.platform" ]
 }
 
 driver_module("astro-pdm-input") {
