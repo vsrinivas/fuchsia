@@ -1070,7 +1070,7 @@ zx_status_t brcmf_cfg80211_scan(struct net_device* ndev, const wlanif_scan_req_t
   }
   if (softap_ndev != nullptr && brcmf_test_bit_in_array(BRCMF_VIF_STATUS_AP_START_PENDING,
                                                         &ndev_to_vif(softap_ndev)->sme_state)) {
-    BRCMF_ERR("AP start request in progress, rejecting scan request, a retry is expected.");
+    BRCMF_INFO("AP start request in progress, rejecting scan request, a retry is expected.");
     return ZX_ERR_UNAVAILABLE;
   }
 
