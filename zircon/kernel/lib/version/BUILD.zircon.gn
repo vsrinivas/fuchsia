@@ -32,10 +32,12 @@ if (current_toolchain == default_toolchain) {
       visibility = [ ":*" ]
       script = "git-version-string.sh"
       outputs = [ version_string_file ]
-      depfile = "$target_gen_dir/git-version-string.d"
+      sources = [
+        "$zx/../.git/HEAD",
+        "$zx/../.git/index",
+      ]
       args = rebase_path([
                            version_string_file,
-                           depfile,
                            "$zx/../.git",
                          ],
                          root_build_dir)

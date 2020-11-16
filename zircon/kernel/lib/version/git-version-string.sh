@@ -8,8 +8,7 @@
 # https://opensource.org/licenses/MIT
 
 readonly OUTFILE="$1"
-readonly DEPFILE="$2"
-readonly GIT_DIR="$3"
+readonly GIT_DIR="$2"
 
 set -e
 
@@ -25,5 +24,3 @@ constexpr char kVersionString[] = \"${GIT_REV}\";"
 if [ ! -r "$OUTFILE" ] || [ "$(<"$OUTFILE")" != "$CONTENTS" ]; then
   echo "$CONTENTS" > "$OUTFILE"
 fi
-
-echo "$OUTFILE: $GIT_DIR/HEAD $GIT_DIR/index" > "$DEPFILE"

@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 # Copyright 2019 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
@@ -20,9 +20,9 @@ set -eu
 # The path of the integration repo.
 INTEGRATION="$1"
 # A path to populate with the latest commit date as an ISO 8601 timestamp.
-OUTPUT="$2"
+OUTPUT_FILE="$2"
 # A path to populate with the latest commit date as seconds since unix epoch.
-UNIX_OUTPUT="$3"
+UNIX_OUTPUT_FILE="$3"
 
 # Set the following options to make the output as stable as possible:
 # - GIT_CONFIG_NOSYSTEM=1   - Don't check /etc/gitconfig
@@ -33,5 +33,10 @@ UNIX_OUTPUT="$3"
 #                             formatting the time in the UTC timezone
 # - --format=%cd            - Print the CommitDate field only, respecting the
 #                             formatting given by the --date flag
-GIT_CONFIG_NOSYSTEM=1 TZ=UTC git --git-dir="$INTEGRATION"/.git log --date=iso-strict-local --format=%cd -n 1 > "$OUTPUT"
-GIT_CONFIG_NOSYSTEM=1 TZ=UTC git --git-dir="$INTEGRATION"/.git log --date=unix --format=%cd -n 1 > "$UNIX_OUTPUT"
+LATEST_OUTPUT=$(GIT_CONFIG_NOSYSTEM=1 TZ=UTC git --git-dir="$INTEGRATION"/.git log --date=iso-strict-local --format=%cd -n 1)
+LATEST_UNIX_OUTPUT=$(GIT_CONFIG_NOSYSTEM=1 TZ=UTC git --git-dir="$INTEGRATION"/.git log --date=unix --format=%cd -n 1)
+# Only produce output if it's changed
+if [[ ! -r "$OUTPUT_FILE" ]] || [[ "$(<"$OUTPUT_FILE")" != "$LATEST_OUTPUT" ]]; then
+  echo "${LATEST_OUTPUT}" > "${OUTPUT_FILE}"
+  echo "${LATEST_UNIX_OUTPUT}" > "${UNIX_OUTPUT_FILE}"
+fi
