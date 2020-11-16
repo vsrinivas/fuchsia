@@ -1,6 +1,6 @@
 # Event capabilities (Components v2) {#event-capabilities}
 
-<<../_v2_banner.md>>
+<<../../_v2_banner.md>>
 
 Event capabilities allow components receive or offer events under the scope of a
 particular realm.

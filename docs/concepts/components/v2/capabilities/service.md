@@ -1,6 +1,6 @@
 # Service capabilities (Components v2)
 
-<<../_v2_banner.md>>
+<<../../_v2_banner.md>>
 
 [Service capabilities][glossary-service] allow components to connect to
 [FIDL services][fidl-service] provided either by other components or the

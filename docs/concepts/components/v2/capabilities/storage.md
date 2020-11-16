@@ -1,6 +1,6 @@
 # Storage capabilities (Components v2)
 
-<<../_v2_banner.md>>
+<<../../_v2_banner.md>>
 
 [Storage capabilities][glossary-storage] are a way for components to receive
 _isolated_ access to a private storage directory. When a storage capability is
