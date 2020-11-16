@@ -26,6 +26,8 @@ pub use diagnostics_data::{assert_data_tree, tree_assertion, Inspect, Lifecycle,
 pub use fidl_fuchsia_diagnostics::DataType;
 pub use fuchsia_inspect_node_hierarchy::{NodeHierarchy, Property};
 
+pub type DiagnosticsHierarchy = NodeHierarchy;
+
 const RETRY_DELAY_MS: i64 = 300;
 
 /// An inspect tree selector for a component.
