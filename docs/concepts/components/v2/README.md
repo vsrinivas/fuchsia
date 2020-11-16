@@ -1,8 +1,3 @@
-# Components v1
-
-This section contains documentation about components in the legacy component
-framework ([components v1][glossary-components-v2]).
-
 # Components v2
 
 This section contains documentation about components in the new component
