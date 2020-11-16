@@ -38,8 +38,8 @@ class MessageGroup {
   // sent by the client. If request_id is not std::nullopt, will also mark this MessageGroup as
   // ready to respond to the client. If group is `kNoGroup, the MessageGroup will take ownership of
   // itself and free itself once the response has been sent.
-  zx_status_t ExpectResponses(int response_count, int request_count,
-                              std::optional<reqid_t> request_id) TA_EXCL(lock_);
+  [[nodiscard]] zx_status_t ExpectResponses(int response_count, int request_count,
+                                            std::optional<reqid_t> request_id) TA_EXCL(lock_);
 
   void Complete(zx_status_t status) TA_EXCL(lock_);
 

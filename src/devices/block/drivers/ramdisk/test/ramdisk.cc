@@ -1485,9 +1485,18 @@ TEST(RamdiskTests, RamdiskTestFifoSleepUnavailable) {
   ASSERT_EQ(client.Transaction(&requests[0], std::size(requests)), ZX_ERR_UNAVAILABLE);
 
   ASSERT_EQ(ramdisk_get_block_counts(ramdisk->ramdisk_client(), &counts), ZX_OK);
-  ASSERT_EQ(counts.received, 3);
-  ASSERT_EQ(counts.successful, 1);
-  ASSERT_EQ(counts.failed, 2);
+
+  // Depending on timing, the second request might not get sent to the ramdisk because the first one
+  // fails quickly before it has been sent (and the block driver will handle it), so there are two
+  // possible cases we might see.
+  if (counts.received == 2) {
+    EXPECT_EQ(counts.successful, 1);
+    EXPECT_EQ(counts.failed, 1);
+  } else {
+    EXPECT_EQ(counts.received, 3);
+    EXPECT_EQ(counts.successful, 1);
+    EXPECT_EQ(counts.failed, 2);
+  }
 
   // Wake the ramdisk back up
   ASSERT_EQ(ramdisk_wake(ramdisk->ramdisk_client()), ZX_OK);

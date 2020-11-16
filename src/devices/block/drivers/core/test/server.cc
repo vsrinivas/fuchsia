@@ -9,6 +9,7 @@
 
 #include <thread>
 
+#include <fbl/auto_call.h>
 #include <zxtest/zxtest.h>
 
 #include "test/stub-block-device.h"
@@ -101,6 +102,101 @@ TEST_F(ServerTestFixture, CloseFifo) {
 
   WaitForThreadExit();
   JoinThread();
+}
+
+TEST_F(ServerTestFixture, SplitRequestAfterFailedRequestReturnsFailure) {
+  ASSERT_OK(Server::Create(&client_, &fifo_, &server_));
+  CreateThread();
+  fbl::AutoCall cleanup([&] {
+    server_->Shutdown();
+    JoinThread();
+  });
+  zx::vmo vmo;
+  constexpr int kTestBlockCount = 257;
+  ASSERT_OK(zx::vmo::create(kTestBlockCount * kBlockSize, 0, &vmo));
+  vmoid_t vmoid;
+  ASSERT_OK(server_->AttachVmo(std::move(vmo), &vmoid));
+
+  block_fifo_request_t request = {
+      .opcode = BLOCKIO_WRITE | BLOCKIO_GROUP_ITEM,
+      .reqid = 100,
+      .group = 5,
+      .vmoid = vmoid,
+      .length = 4,
+      .vmo_offset = 0,
+      .dev_offset = 0,
+  };
+
+  blkdev_.set_callback([&](const block_op_t&) { return ZX_ERR_IO; });
+
+  size_t actual_count = 0;
+  ASSERT_OK(fifo_.write(&request, 1, &actual_count));
+  ASSERT_EQ(actual_count, 1);
+
+  request = {
+      .opcode = BLOCKIO_READ,
+      .reqid = 101,
+      .vmoid = vmoid,
+  };
+  ASSERT_OK(fifo_.write(&request, 1, &actual_count));
+  ASSERT_EQ(actual_count, 1);
+
+  block_fifo_response_t response;
+  zx_signals_t seen;
+  ASSERT_OK(fifo_.wait_one(ZX_FIFO_READABLE | ZX_FIFO_PEER_CLOSED, zx::time::infinite(), &seen));
+  ASSERT_OK(fifo_.read_one(&response));
+
+  // Should get the response for the read.
+  EXPECT_EQ(response.reqid, 101);
+
+  request = {
+      .opcode = BLOCKIO_WRITE | BLOCKIO_GROUP_ITEM | BLOCKIO_GROUP_LAST,
+      .reqid = 102,
+      .group = 5,
+      .vmoid = vmoid,
+      .length = kTestBlockCount,
+      .vmo_offset = 0,
+      .dev_offset = 0,
+  };
+  ASSERT_OK(fifo_.write(&request, 1, &actual_count));
+  ASSERT_EQ(actual_count, 1);
+
+  // It's the last one so it should trigger a response.
+  ASSERT_OK(fifo_.wait_one(ZX_FIFO_READABLE | ZX_FIFO_PEER_CLOSED, zx::time::infinite(), &seen));
+  ASSERT_OK(fifo_.read_one(&response));
+
+  EXPECT_EQ(response.reqid, 102);
+
+  // Make sure the group is correctly cleaned up and able to be used for another request.
+  blkdev_.set_callback({});
+
+  block_fifo_request_t requests[] = {
+      {
+          .opcode = BLOCKIO_WRITE | BLOCKIO_GROUP_ITEM,
+          .reqid = 103,
+          .group = 5,
+          .vmoid = vmoid,
+          .length = 257,
+          .vmo_offset = 0,
+          .dev_offset = 0,
+      },
+      {
+          .opcode = BLOCKIO_WRITE | BLOCKIO_GROUP_ITEM | BLOCKIO_GROUP_LAST,
+          .reqid = 104,
+          .group = 5,
+          .vmoid = vmoid,
+          .length = 257,
+          .vmo_offset = 0,
+          .dev_offset = 0,
+      },
+  };
+  ASSERT_OK(fifo_.write(requests, 2, &actual_count));
+  ASSERT_EQ(actual_count, 2);
+
+  ASSERT_OK(fifo_.wait_one(ZX_FIFO_READABLE | ZX_FIFO_PEER_CLOSED, zx::time::infinite(), &seen));
+  ASSERT_OK(fifo_.read_one(&response));
+
+  EXPECT_EQ(response.reqid, 104);
 }
 
 }  // namespace

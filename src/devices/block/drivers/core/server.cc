@@ -255,11 +255,16 @@ zx_status_t Server::ProcessReadWriteRequest(block_fifo_request_t* request) {
 
     if (request->group == kNoGroup) {
       oneshot_group = std::make_unique<MessageGroup>(*this);
-      oneshot_group->ExpectResponses(sub_txns, 1, request->reqid);
+      ZX_ASSERT(oneshot_group->ExpectResponses(sub_txns, 1, request->reqid) == ZX_OK);
       transaction_group = oneshot_group.get();
     } else {
-      groups_[request->group]->ExpectResponses(sub_txns - 1, 0, std::nullopt);
       transaction_group = groups_[request->group].get();
+      // If != ZX_OK, it means that we've just received a response to an earlier request that
+      // failed.  It should happen rarely because we called ExpectedResponses just prior to this
+      // function and it returned ZX_OK.  It's safe to continue at this point and just assume things
+      // are OK; it's not worth trying to handle this as a special case.
+      [[maybe_unused]] zx_status_t status =
+          transaction_group->ExpectResponses(sub_txns - 1, 0, std::nullopt);
     }
 
     uint32_t sub_txn_idx = 0;
@@ -434,8 +439,7 @@ zx_status_t Server::Serve() {
         status = groups_[group]->ExpectResponses(1, 1,
                                                  wants_reply ? std::optional{reqid} : std::nullopt);
         if (status != ZX_OK) {
-          zxlogf(WARNING, "Serve: Enqueue for group %d failed: %s", group,
-                 zx_status_get_string(status));
+          // This can happen if an earlier request that has been submitted has already failed.
           FinishTransaction(status, reqid, group);
           continue;
         }

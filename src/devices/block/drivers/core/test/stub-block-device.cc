@@ -6,5 +6,9 @@
 
 void StubBlockDevice::BlockQueue(block_op_t* operation, block_queue_callback completion_cb,
                                  void* cookie) {
-  completion_cb(cookie, ZX_OK, operation);
+  if (callback_) {
+    completion_cb(cookie, callback_(*operation), operation);
+  } else {
+    completion_cb(cookie, ZX_OK, operation);
+  }
 }

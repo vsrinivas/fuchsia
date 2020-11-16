@@ -26,8 +26,6 @@ zx_status_t MessageGroup::ExpectResponses(int response_count, int request_count,
 
   if (response_.status != ZX_OK) {
     // The operation failed already, don't bother with any more transactions.
-    zxlogf(WARNING, "Attempted to add more responses to transaction group that already failed: %s",
-           zx_status_get_string(response_.status));
     status = ZX_ERR_IO;
   }
 
