@@ -169,8 +169,13 @@ void vc_show_active() {
     vc_attach_gfx(vc);
     if ((vc->fd >= 0) && isatty(vc->fd)) {
       struct winsize sz = {};
-      sz.ws_col = vc->columns;
-      sz.ws_row = vc->rows;
+
+      ZX_DEBUG_ASSERT(vc->columns <= UINT16_MAX);
+      sz.ws_col = static_cast<uint16_t>(vc->columns);
+
+      ZX_DEBUG_ASSERT(vc->rows <= UINT16_MAX);
+      sz.ws_row = static_cast<uint16_t>(vc->rows);
+
       ioctl(vc->fd, TIOCSWINSZ, &sz);
     }
     if (vc == g_active_vc) {

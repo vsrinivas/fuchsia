@@ -10,6 +10,10 @@
 namespace hid {
 namespace usage {
 
+constexpr uint16_t UsageToUsagePage(uint32_t usage) { return static_cast<uint16_t>(usage >> 16); }
+
+constexpr uint16_t UsageToUsageId(uint32_t usage) { return static_cast<uint16_t>(usage); }
+
 enum class Page : uint16_t {
   kUndefined = 0x00,
   kGenericDesktop = 0x01,

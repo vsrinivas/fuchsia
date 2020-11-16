@@ -24,6 +24,7 @@
 #include <utility>
 
 #include <ddk/device.h>
+#include <hid-parser/usages.h>
 #include <hid/hid.h>
 #include <hid/usages.h>
 
@@ -56,6 +57,12 @@ int modifiers_from_fuchsia_key(llcpp::fuchsia::ui::input2::Key key) {
     default:
       return 0;
   }
+}
+
+uint8_t hid_usage_to_keycode(uint32_t hid_usage) {
+  uint16_t hid_usage_id = hid::usage::UsageToUsageId(hid_usage);
+  ZX_DEBUG_ASSERT(hid_usage_id <= UINT8_MAX);
+  return static_cast<uint8_t>(hid_usage_id);
 }
 
 int modifiers_from_keycode(uint8_t keycode) {
@@ -97,7 +104,7 @@ zx_status_t setup_keyboard_watcher(async_dispatcher_t* dispatcher, keypress_hand
 
 void Keyboard::TimerCallback(async_dispatcher_t* dispatcher, async::TaskBase* task,
                              zx_status_t status) {
-  handler_(repeating_key_, modifiers_);
+  handler_(repeating_keycode_, modifiers_);
 
   // increase repeat rate if we're not yet at the fastest rate
   if ((repeat_interval_ = repeat_interval_ * 3 / 4) < kHighRepeatKeyFreq) {
@@ -156,7 +163,8 @@ void Keyboard::ProcessInput(const ::llcpp::fuchsia::input::report::InputReport& 
 
       uint32_t hid_prev_key =
           *key_util::fuchsia_key_to_hid_key(static_cast<::fuchsia::ui::input2::Key>(prev_key));
-      if (repeat_enabled_ && is_repeating_ && (repeating_key_ == hid_prev_key)) {
+      uint8_t keycode = hid_usage_to_keycode(hid_prev_key);
+      if (repeat_enabled_ && is_repeating_ && (repeating_keycode_ == keycode)) {
         is_repeating_ = false;
         timer_task_.Cancel();
       }
@@ -173,14 +181,15 @@ void Keyboard::ProcessInput(const ::llcpp::fuchsia::input::report::InputReport& 
       }
       uint32_t hid_key =
           *key_util::fuchsia_key_to_hid_key(static_cast<::fuchsia::ui::input2::Key>(key));
-      if (repeat_enabled_ && !keycode_is_modifier(hid_key)) {
+      uint8_t keycode = hid_usage_to_keycode(hid_key);
+      if (repeat_enabled_ && !keycode_is_modifier(keycode)) {
         is_repeating_ = true;
         repeat_interval_ = kLowRepeatKeyFreq;
-        repeating_key_ = hid_key;
+        repeating_keycode_ = keycode;
         timer_task_.Cancel();
         timer_task_.PostDelayed(dispatcher_, repeat_interval_);
       }
-      handler_(hid_key, modifiers_);
+      handler_(keycode, modifiers_);
     }
   }
 
