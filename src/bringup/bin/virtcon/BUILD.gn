@@ -167,6 +167,7 @@ test("virtual-console-args-test") {
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fidl-async",
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
+    "//zircon/system/ulib/mock-boot-arguments",
   ]
 }
 

@@ -8,125 +8,50 @@
 #include <lib/async-loop/default.h>
 #include <lib/fidl-async/cpp/bind.h>
 
-#include <map>
-
-#include <fbl/auto_lock.h>
-#include <fbl/mutex.h>
+#include <mock-boot-arguments/server.h>
 #include <zxtest/zxtest.h>
 
-class FakeBootArgsServer final : public llcpp::fuchsia::boot::Arguments::Interface {
- public:
-  FakeBootArgsServer() {}
-
-  void SetBool(std::string key, bool value) {
-    fbl::AutoLock lock(&lock_);
-    bools_.insert_or_assign(key, value);
-  }
-
-  void SetString(std::string key, std::string value) {
-    fbl::AutoLock lock(&lock_);
-    strings_.insert_or_assign(key, value);
-  }
-
-  // llcpp::fuchsia::boot::Arguments::Interface methods:
-  void GetString(::fidl::StringView key, GetStringCompleter::Sync& completer) {
-    completer.Close(ZX_ERR_NOT_SUPPORTED);
-  }
-
-  void GetStrings(::fidl::VectorView<::fidl::StringView> keys,
-                  GetStringsCompleter::Sync& completer) {
-    fbl::AutoLock lock(&lock_);
-    std::vector<fidl::StringView> values;
-    for (auto& key : keys) {
-      std::string key_str = std::string(key.data(), key.size());
-      auto value = strings_.find(key_str);
-      if (value != strings_.end()) {
-        values.push_back(fidl::unowned_str(value->second));
-      } else {
-        values.push_back(fidl::StringView(nullptr, 0));
-      }
-    }
-    completer.Reply(fidl::VectorView<fidl::StringView>(
-        fidl::unowned_ptr_t<fidl::StringView>(values.data()), values.size()));
-  }
-
-  void GetBool(::fidl::StringView key, bool defaultval, GetBoolCompleter::Sync& completer) {
-    fbl::AutoLock lock(&lock_);
-    bool result = defaultval;
-    auto value = bools_.find(std::string(key.data()));
-    if (value != bools_.end()) {
-      result = value->second;
-    }
-    completer.Reply(result);
-  }
-
-  void GetBools(::fidl::VectorView<llcpp::fuchsia::boot::BoolPair> keys,
-                GetBoolsCompleter::Sync& completer) {
-    fbl::AutoLock lock(&lock_);
-    std::vector<uint8_t> values;
-    for (auto& bool_pair : keys) {
-      bool result = bool_pair.defaultval;
-      std::string key = std::string(bool_pair.key.data(), bool_pair.key.size());
-      auto value = bools_.find(key);
-      if (value != bools_.end()) {
-        result = value->second;
-      } else {
-      }
-      values.push_back(result);
-    }
-    completer.Reply(fidl::VectorView<bool>(
-        fidl::unowned_ptr_t<bool>(reinterpret_cast<bool*>(values.data())), values.size()));
-  }
-
-  void Collect(::fidl::StringView prefix, CollectCompleter::Sync& completer) {
-    completer.Close(ZX_ERR_NOT_SUPPORTED);
-  }
-
- private:
-  fbl::Mutex lock_;
-  std::map<std::string, bool> bools_ __TA_GUARDED(lock_);
-  std::map<std::string, std::string> strings_ __TA_GUARDED(lock_);
-};
-
-class ArgsTest : public zxtest::Test {
- public:
-  ArgsTest() : loop_(&kAsyncLoopConfigNoAttachToCurrentThread) { ASSERT_OK(loop_.StartThread()); }
-
-  void SetUp() override {
-    zx::channel client, server;
-    ASSERT_OK(zx::channel::create(0, &client, &server));
-    boot_args_server_.reset(new FakeBootArgsServer());
-    fidl::BindSingleInFlightOnly(loop_.dispatcher(), std::move(server), boot_args_server_.get());
-    boot_args_client_ = llcpp::fuchsia::boot::Arguments::SyncClient(std::move(client));
-  }
-
-  std::unique_ptr<FakeBootArgsServer> boot_args_server_;
-  llcpp::fuchsia::boot::Arguments::SyncClient boot_args_client_;
-
- private:
-  async::Loop loop_;
-};
-
-TEST_F(ArgsTest, CheckDisabled) {
+TEST(ArgsTest, CheckDisabled) {
+  async::Loop loop(&kAsyncLoopConfigNeverAttachToThread);
+  loop.StartThread();
   Arguments args;
 
-  boot_args_server_->SetBool("virtcon.disable", false);
-  ASSERT_EQ(ParseArgs(boot_args_client_, &args), ZX_OK);
+  llcpp::fuchsia::boot::Arguments::SyncClient boot_args;
+  mock_boot_arguments::Server boot_server;
+  std::map<std::string, std::string> arguments;
+
+  arguments["virtcon.disable"] = "false";
+  boot_server = mock_boot_arguments::Server(std::move(arguments));
+  boot_server.CreateClient(loop.dispatcher(), &boot_args);
+
+  ASSERT_EQ(ParseArgs(boot_args, &args), ZX_OK);
   ASSERT_FALSE(args.disable);
 
-  boot_args_server_->SetBool("virtcon.disable", true);
-  ASSERT_EQ(ParseArgs(boot_args_client_, &args), ZX_OK);
+  arguments["virtcon.disable"] = "true";
+  boot_server = mock_boot_arguments::Server(std::move(arguments));
+  boot_server.CreateClient(loop.dispatcher(), &boot_args);
+
+  ASSERT_EQ(ParseArgs(boot_args, &args), ZX_OK);
   ASSERT_TRUE(args.disable);
 }
 
-TEST_F(ArgsTest, CheckBootBools) {
-  boot_args_server_->SetBool("virtcon.disable", true);
-  boot_args_server_->SetBool("virtcon.keep-log-visible", true);
-  boot_args_server_->SetBool("virtcon.keyrepeat", true);
-  boot_args_server_->SetBool("virtcon.hide-on-boot", true);
+TEST(ArgsTest, CheckBootBools) {
+  async::Loop loop(&kAsyncLoopConfigNeverAttachToThread);
+  loop.StartThread();
+
+  llcpp::fuchsia::boot::Arguments::SyncClient boot_args;
+  mock_boot_arguments::Server boot_server;
+  std::map<std::string, std::string> arguments;
+
+  arguments["virtcon.disable"] = "true";
+  arguments["virtcon.keep-log-visible"] = "true";
+  arguments["virtcon.keyrepeat"] = "true";
+  arguments["virtcon.hide-on-boot"] = "true";
+  boot_server = mock_boot_arguments::Server(std::move(arguments));
+  boot_server.CreateClient(loop.dispatcher(), &boot_args);
 
   Arguments args;
-  ASSERT_EQ(ParseArgs(boot_args_client_, &args), ZX_OK);
+  ASSERT_EQ(ParseArgs(boot_args, &args), ZX_OK);
 
   ASSERT_TRUE(args.disable);
   ASSERT_TRUE(args.repeat_keys);
@@ -134,108 +59,177 @@ TEST_F(ArgsTest, CheckBootBools) {
   ASSERT_TRUE(args.hide_on_boot);
 }
 
-TEST_F(ArgsTest, CheckColorScheme) {
-  // Default scheme.
+TEST(ArgsTest, CheckColorScheme) {
+  async::Loop loop(&kAsyncLoopConfigNeverAttachToThread);
+  loop.StartThread();
   Arguments args;
-  ASSERT_EQ(ParseArgs(boot_args_client_, &args), ZX_OK);
-  ASSERT_EQ(args.color_scheme->front, 0x0F);
-  ASSERT_EQ(args.color_scheme->back, 0x00);
+
+  llcpp::fuchsia::boot::Arguments::SyncClient boot_args;
+  mock_boot_arguments::Server boot_server;
+  std::map<std::string, std::string> arguments;
+
+  // Default scheme.
+  {
+    arguments = std::map<std::string, std::string>();
+    boot_server = mock_boot_arguments::Server(std::move(arguments));
+    boot_server.CreateClient(loop.dispatcher(), &boot_args);
+
+    ASSERT_EQ(ParseArgs(boot_args, &args), ZX_OK);
+    ASSERT_EQ(args.color_scheme->front, 0x0F);
+    ASSERT_EQ(args.color_scheme->back, 0x00);
+  }
 
   // Dark Scheme.
   {
-    boot_args_server_->SetString("virtcon.colorscheme", "dark");
-    Arguments args;
-    ASSERT_EQ(ParseArgs(boot_args_client_, &args), ZX_OK);
+    arguments = std::map<std::string, std::string>();
+    arguments["virtcon.colorscheme"] = "dark";
+    boot_server = mock_boot_arguments::Server(std::move(arguments));
+    boot_server.CreateClient(loop.dispatcher(), &boot_args);
+
+    ASSERT_EQ(ParseArgs(boot_args, &args), ZX_OK);
     ASSERT_EQ(args.color_scheme->front, 0x0F);
     ASSERT_EQ(args.color_scheme->back, 0x00);
   }
 
   // Light Scheme.
   {
-    boot_args_server_->SetString("virtcon.colorscheme", "light");
-    Arguments args;
-    ASSERT_EQ(ParseArgs(boot_args_client_, &args), ZX_OK);
+    arguments = std::map<std::string, std::string>();
+    arguments["virtcon.colorscheme"] = "light";
+    boot_server = mock_boot_arguments::Server(std::move(arguments));
+    boot_server.CreateClient(loop.dispatcher(), &boot_args);
+
+    ASSERT_EQ(ParseArgs(boot_args, &args), ZX_OK);
     ASSERT_EQ(args.color_scheme->front, 0x00);
     ASSERT_EQ(args.color_scheme->back, 0x0F);
   }
 
   // Special Scheme.
   {
-    boot_args_server_->SetString("virtcon.colorscheme", "special");
-    Arguments args;
-    ASSERT_EQ(ParseArgs(boot_args_client_, &args), ZX_OK);
+    arguments = std::map<std::string, std::string>();
+    arguments["virtcon.colorscheme"] = "special";
+    boot_server = mock_boot_arguments::Server(std::move(arguments));
+    boot_server.CreateClient(loop.dispatcher(), &boot_args);
+
+    ASSERT_EQ(ParseArgs(boot_args, &args), ZX_OK);
     ASSERT_EQ(args.color_scheme->front, 0x0F);
     ASSERT_EQ(args.color_scheme->back, 0x04);
   }
 
   // Nonsense string == default scheme
   {
-    boot_args_server_->SetString("virtcon.colorscheme", "myamazingtheme");
-    Arguments args;
-    ASSERT_EQ(ParseArgs(boot_args_client_, &args), ZX_OK);
+    arguments = std::map<std::string, std::string>();
+    arguments["virtcon.colorscheme"] = "myamazingtheme";
+    boot_server = mock_boot_arguments::Server(std::move(arguments));
+    boot_server.CreateClient(loop.dispatcher(), &boot_args);
+
+    ASSERT_EQ(ParseArgs(boot_args, &args), ZX_OK);
     ASSERT_EQ(args.color_scheme->front, 0x0F);
     ASSERT_EQ(args.color_scheme->back, 0x00);
   }
 }
 
-TEST_F(ArgsTest, CheckFont) {
-  // Default
+TEST(ArgsTest, CheckFont) {
+  async::Loop loop(&kAsyncLoopConfigNeverAttachToThread);
+  loop.StartThread();
   Arguments args;
-  ASSERT_EQ(ParseArgs(boot_args_client_, &args), ZX_OK);
-  ASSERT_EQ(args.font, &gfx_font_9x16);
+
+  llcpp::fuchsia::boot::Arguments::SyncClient boot_args;
+  mock_boot_arguments::Server boot_server;
+  std::map<std::string, std::string> arguments;
+
+  // Default
+  {
+    arguments = std::map<std::string, std::string>();
+    boot_server = mock_boot_arguments::Server(std::move(arguments));
+    boot_server.CreateClient(loop.dispatcher(), &boot_args);
+
+    ASSERT_EQ(ParseArgs(boot_args, &args), ZX_OK);
+    ASSERT_EQ(args.font, &gfx_font_9x16);
+  }
 
   // 9x16
   {
-    boot_args_server_->SetString("virtcon.font", "9x16");
-    Arguments args;
-    ASSERT_EQ(ParseArgs(boot_args_client_, &args), ZX_OK);
+    arguments = std::map<std::string, std::string>();
+    arguments["virtcon.font"] = "9x16";
+    boot_server = mock_boot_arguments::Server(std::move(arguments));
+    boot_server.CreateClient(loop.dispatcher(), &boot_args);
+
+    ASSERT_EQ(ParseArgs(boot_args, &args), ZX_OK);
     ASSERT_EQ(args.font, &gfx_font_9x16);
   }
 
   // 18x32
   {
-    boot_args_server_->SetString("virtcon.font", "18x32");
-    Arguments args;
-    ASSERT_EQ(ParseArgs(boot_args_client_, &args), ZX_OK);
+    arguments = std::map<std::string, std::string>();
+    arguments["virtcon.font"] = "18x32";
+    boot_server = mock_boot_arguments::Server(std::move(arguments));
+    boot_server.CreateClient(loop.dispatcher(), &boot_args);
+
+    ASSERT_EQ(ParseArgs(boot_args, &args), ZX_OK);
     ASSERT_EQ(args.font, &gfx_font_18x32);
   }
 
   // Nonsense string == default
   {
-    boot_args_server_->SetString("virtcon.font", "ONEMILLION");
-    Arguments args;
-    ASSERT_EQ(ParseArgs(boot_args_client_, &args), ZX_OK);
+    arguments = std::map<std::string, std::string>();
+    arguments["virtcon.font"] = "ONEMILLION";
+    boot_server = mock_boot_arguments::Server(std::move(arguments));
+    boot_server.CreateClient(loop.dispatcher(), &boot_args);
+
+    ASSERT_EQ(ParseArgs(boot_args, &args), ZX_OK);
     ASSERT_EQ(args.font, &gfx_font_9x16);
   }
 }
 
-TEST_F(ArgsTest, CheckKeymap) {
-  // Default
+TEST(ArgsTest, CheckKeymap) {
+  async::Loop loop(&kAsyncLoopConfigNeverAttachToThread);
+  loop.StartThread();
   Arguments args;
-  ASSERT_EQ(ParseArgs(boot_args_client_, &args), ZX_OK);
-  ASSERT_EQ(args.keymap, qwerty_map);
+
+  llcpp::fuchsia::boot::Arguments::SyncClient boot_args;
+  mock_boot_arguments::Server boot_server;
+  std::map<std::string, std::string> arguments;
+
+  // Default
+  {
+    arguments = std::map<std::string, std::string>();
+    boot_server = mock_boot_arguments::Server(std::move(arguments));
+    boot_server.CreateClient(loop.dispatcher(), &boot_args);
+
+    ASSERT_EQ(ParseArgs(boot_args, &args), ZX_OK);
+    ASSERT_EQ(args.keymap, qwerty_map);
+  }
 
   // qwerty
   {
-    boot_args_server_->SetString("virtcon.keymap", "qwerty");
-    Arguments args;
-    ASSERT_EQ(ParseArgs(boot_args_client_, &args), ZX_OK);
+    arguments = std::map<std::string, std::string>();
+    arguments["virtcon.keymap"] = "qwerty";
+    boot_server = mock_boot_arguments::Server(std::move(arguments));
+    boot_server.CreateClient(loop.dispatcher(), &boot_args);
+
+    ASSERT_EQ(ParseArgs(boot_args, &args), ZX_OK);
     ASSERT_EQ(args.keymap, qwerty_map);
   }
 
   // dvorak
   {
-    boot_args_server_->SetString("virtcon.keymap", "dvorak");
-    Arguments args;
-    ASSERT_EQ(ParseArgs(boot_args_client_, &args), ZX_OK);
+    arguments = std::map<std::string, std::string>();
+    arguments["virtcon.keymap"] = "dvorak";
+    boot_server = mock_boot_arguments::Server(std::move(arguments));
+    boot_server.CreateClient(loop.dispatcher(), &boot_args);
+
+    ASSERT_EQ(ParseArgs(boot_args, &args), ZX_OK);
     ASSERT_EQ(args.keymap, dvorak_map);
   }
 
-  // nonsense string == defaul
+  // nonsense string == default.
   {
-    boot_args_server_->SetString("virtcon.keymap", "randomizedlayout");
-    Arguments args;
-    ASSERT_EQ(ParseArgs(boot_args_client_, &args), ZX_OK);
+    arguments = std::map<std::string, std::string>();
+    arguments["virtcon.keymap"] = "randomizedlayout";
+    boot_server = mock_boot_arguments::Server(std::move(arguments));
+    boot_server.CreateClient(loop.dispatcher(), &boot_args);
+
+    ASSERT_EQ(ParseArgs(boot_args, &args), ZX_OK);
     ASSERT_EQ(args.keymap, qwerty_map);
   }
 }

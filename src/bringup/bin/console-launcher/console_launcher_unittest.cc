@@ -8,101 +8,27 @@
 #include <lib/async-loop/default.h>
 #include <lib/fidl-async/cpp/bind.h>
 
-#include <map>
-
+#include <mock-boot-arguments/server.h>
 #include <zxtest/zxtest.h>
 
-class FakeBootArgsServer final : public llcpp::fuchsia::boot::Arguments::Interface {
- public:
-  FakeBootArgsServer() {}
+TEST(SystemInstanceTest, CheckBootArgParsing) {
+  std::map<std::string, std::string> arguments;
+  arguments["kernel.shell"] = "false";
+  arguments["console.shell"] = "true";
+  arguments["console.is_virtio"] = "true";
+  arguments["console.path"] = "/test/path";
+  arguments["TERM"] = "FAKE_TERM";
+  arguments["zircon.autorun.boot"] = "ls+/dev/class/";
+  arguments["zircon.autorun.system"] = "ls+/system-delayed";
 
-  void SetBool(std::string key, bool value) { bools_.insert_or_assign(key, value); }
+  async::Loop loop(&kAsyncLoopConfigNeverAttachToThread);
+  mock_boot_arguments::Server boot_server(std::move(arguments));
+  loop.StartThread();
 
-  void SetString(std::string key, std::string value) { strings_.insert_or_assign(key, value); }
+  llcpp::fuchsia::boot::Arguments::SyncClient boot_args;
+  boot_server.CreateClient(loop.dispatcher(), &boot_args);
 
-  // llcpp::fuchsia::boot::Arguments::Interface methods:
-  void GetString(::fidl::StringView key, GetStringCompleter::Sync& completer) {
-    completer.Close(ZX_ERR_NOT_SUPPORTED);
-  }
-
-  void GetStrings(::fidl::VectorView<::fidl::StringView> keys,
-                  GetStringsCompleter::Sync& completer) {
-    std::vector<fidl::StringView> values;
-    for (auto& key : keys) {
-      auto value = strings_.find(std::string(key.data()));
-      if (value != strings_.end()) {
-        values.push_back(fidl::unowned_str(value->second));
-      } else {
-        values.push_back(fidl::StringView(nullptr, 0));
-      }
-    }
-    completer.Reply(fidl::VectorView<fidl::StringView>(
-        fidl::unowned_ptr_t<fidl::StringView>(values.data()), values.size()));
-  }
-
-  void GetBool(::fidl::StringView key, bool defaultval, GetBoolCompleter::Sync& completer) {
-    bool result = defaultval;
-    auto value = bools_.find(std::string(key.data()));
-    if (value != bools_.end()) {
-      result = value->second;
-    }
-    completer.Reply(result);
-  }
-
-  void GetBools(::fidl::VectorView<llcpp::fuchsia::boot::BoolPair> keys,
-                GetBoolsCompleter::Sync& completer) {
-    std::vector<uint8_t> values;
-    for (auto& bool_pair : keys) {
-      bool result = bool_pair.defaultval;
-      auto value = bools_.find(std::string(bool_pair.key.data()));
-      if (value != bools_.end()) {
-        result = value->second;
-      }
-      values.push_back(result);
-    }
-    completer.Reply(fidl::VectorView<bool>(
-        fidl::unowned_ptr_t<bool>(reinterpret_cast<bool*>(values.data())), values.size()));
-  }
-
-  void Collect(::fidl::StringView prefix, CollectCompleter::Sync& completer) {
-    completer.Close(ZX_ERR_NOT_SUPPORTED);
-  }
-
- private:
-  std::map<std::string, bool> bools_;
-  std::map<std::string, std::string> strings_;
-};
-
-class SystemInstanceTest : public zxtest::Test {
- public:
-  SystemInstanceTest() : loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {
-    ASSERT_OK(loop_.StartThread());
-
-    zx::channel client, server;
-    ASSERT_OK(zx::channel::create(0, &client, &server));
-    boot_args_server_.reset(new FakeBootArgsServer());
-    fidl::BindSingleInFlightOnly(loop_.dispatcher(), std::move(server), boot_args_server_.get());
-    boot_args_client_ = llcpp::fuchsia::boot::Arguments::SyncClient(std::move(client));
-  }
-
-  std::unique_ptr<FakeBootArgsServer> boot_args_server_;
-  llcpp::fuchsia::boot::Arguments::SyncClient boot_args_client_;
-
- private:
-  async::Loop loop_;
-};
-
-TEST_F(SystemInstanceTest, CheckBootArgParsing) {
-  boot_args_server_->SetBool("kernel.shell", false);
-  boot_args_server_->SetBool("console.shell", true);
-  boot_args_server_->SetBool("console.is_virtio", true);
-  boot_args_server_->SetString("console.path", "/test/path");
-  boot_args_server_->SetString("TERM", "FAKE_TERM");
-  boot_args_server_->SetString("zircon.autorun.boot", "ls+/dev/class/");
-  boot_args_server_->SetString("zircon.autorun.system", "ls+/system-delayed");
-
-  std::optional<console_launcher::Arguments> args =
-      console_launcher::GetArguments(&boot_args_client_);
+  std::optional<console_launcher::Arguments> args = console_launcher::GetArguments(&boot_args);
   ASSERT_TRUE(args.has_value());
 
   ASSERT_TRUE(args->run_shell);
@@ -113,13 +39,20 @@ TEST_F(SystemInstanceTest, CheckBootArgParsing) {
   ASSERT_EQ(args->autorun_system.compare("ls+/system-delayed"), 0);
 }
 
-TEST_F(SystemInstanceTest, CheckBootArgDefaultStrings) {
-  boot_args_server_->SetBool("kernel.shell", true);
-  boot_args_server_->SetBool("console.shell", true);
-  boot_args_server_->SetBool("console.is_virtio", false);
+TEST(SystemInstanceTest, CheckBootArgDefaultStrings) {
+  std::map<std::string, std::string> arguments;
+  arguments["kernel.shell"] = "true";
+  arguments["console.shell"] = "true";
+  arguments["console.is_virtio"] = "false";
 
-  std::optional<console_launcher::Arguments> args =
-      console_launcher::GetArguments(&boot_args_client_);
+  async::Loop loop(&kAsyncLoopConfigNeverAttachToThread);
+  mock_boot_arguments::Server boot_server(std::move(arguments));
+  loop.StartThread();
+
+  llcpp::fuchsia::boot::Arguments::SyncClient boot_args;
+  boot_server.CreateClient(loop.dispatcher(), &boot_args);
+
+  std::optional<console_launcher::Arguments> args = console_launcher::GetArguments(&boot_args);
   ASSERT_TRUE(args.has_value());
 
   ASSERT_FALSE(args->run_shell);
