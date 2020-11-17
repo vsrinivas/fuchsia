@@ -70,19 +70,21 @@ how to check if a channel was closed and get an epitaph if there was one.
 Normally, the epitaph set for a routing failure is `ZX_ERR_UNAVAILABLE`.
 
 For a more detailed description of the error, check the kernel debuglog. Look
-for a message beginning with `ERROR: Failed to route` with the requesting
-component's [moniker][doc-monikers]. This error should give you a hint about
-what went wrong. Example:
+for a message beginning with `ERROR: Failed to route` that contains the
+requesting component's [moniker][doc-monikers]. This error should give you a
+hint about what went wrong. Example:
 
 ```
-> [component_manager] ERROR: Failed to route protocol `/svc/fuchsia.echo.Echo`
-> from component `/core:0/echo_client:0`: A `use from realm` declaration was
-> found at `/echo_client:0` for `/svc/fuchsia.echo.Echo`, but no matching
-> `offer` declaration was found in the parent
+ [component_manager] ERROR: Failed to route protocol `/svc/fuchsia.echo.Echo`
+ from component `/core:0/echo_client:0`: A `use from realm` declaration was
+ found at `/echo_client:0` for `/svc/fuchsia.echo.Echo`, but no matching
+ `offer` declaration was found in the parent
 ```
 
-For a self-contained example of failed routing that demonstrates the content of
-this section, refer to
+Depending on where the component runs the log may be tagged as belonging to the
+component, for example `[my_component]` instead of `[component_manager]`. For a
+self-contained example of failed routing that demonstrates the content of this
+section, refer to
 [//examples/components/routing_failed][example-routing-failed].
 
 ### Component fails to start {#troubleshoot-use-start}
@@ -117,12 +119,12 @@ The form of the error message is runner-dependent. For the ELF runner, look for 
 with `ERROR: Failed to start component`:
 
 ```
-> [component_manager] ERROR: Failed to start component
-> `fuchsia-pkg://fuchsia.com/components-routing-failed-example#meta/echo_server_bad.cm`: unable to
-> load component with url
-> "fuchsia-pkg://fuchsia.com/components-routing-failed-example#meta/echo_server_bad.cm": error
-> loading executable: "reading object at "bin/routing_failed_echo_server_oops" failed: A FIDL
-> client's channel was closed: PEER_CLOSED"
+[component_manager] ERROR: Failed to start component
+`fuchsia-pkg://fuchsia.com/components-routing-failed-example#meta/echo_server_bad.cm`: unable to
+load component with url
+"fuchsia-pkg://fuchsia.com/components-routing-failed-example#meta/echo_server_bad.cm": error
+loading executable: "reading object at "bin/routing_failed_echo_server_oops" failed: A FIDL
+client's channel was closed: PEER_CLOSED"
 ```
 
 In this case, the component failed to start because its binary was not present.
@@ -298,9 +300,9 @@ expose: [
 If this is the problem, you can expect to see an error like this in the logs:
 
 ```
-> ERROR: Failed to route protocol `/svc/fuchsia.test.Suite` from component
-> `/test_manager:0/...`: An `expose from #driver` declaration was found at `/test_manager:0/...`
-> for `/svc/fuchsia.test.Suite`, but no matching `expose` declaration was found in the child
+ERROR: Failed to route protocol `/svc/fuchsia.test.Suite` from component
+`/test_manager:0/...`: An `expose from #driver` declaration was found at `/test_manager:0/...`
+for `/svc/fuchsia.test.Suite`, but no matching `expose` declaration was found in the child
 ```
 
 ### The test driver does not use a test runner {#troubleshoot-test-runner}
