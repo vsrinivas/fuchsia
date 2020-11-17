@@ -190,16 +190,33 @@ otError otPlatRadioSetTransmitPower(otInstance *a_instance, int8_t a_power) {
   return sRadioSpinel.SetTransmitPower(a_power);
 }
 
-void otPlatDiagTxPowerSet(int8_t a_tx_power) { OT_UNUSED_VARIABLE(a_tx_power); }
+#if OPENTHREAD_CONFIG_DIAG_ENABLE
 
-void otPlatDiagChannelSet(uint8_t a_channel) { OT_UNUSED_VARIABLE(a_channel); }
+extern "C" otError otPlatDiagProcess(otInstance *a_instance, uint8_t *a_args_length, char *a_args[],
+                                     char *a_output, size_t a_output_max_len) {
+  OT_UNUSED_VARIABLE(a_instance);
+  OT_UNUSED_VARIABLE(a_args_length);
+  OT_UNUSED_VARIABLE(a_args);
+  OT_UNUSED_VARIABLE(a_output);
+  OT_UNUSED_VARIABLE(a_output_max_len);
+  return OT_ERROR_NOT_IMPLEMENTED;
+}
 
-bool otPlatDiagModeGet(void) { return false; }
+extern "C" void otPlatDiagModeSet(bool a_mode) { OT_UNUSED_VARIABLE(a_mode); }
 
-void otPlatDiagModeSet(bool a_mode) { OT_UNUSED_VARIABLE(a_mode); }
+extern "C" bool otPlatDiagModeGet(void) { return false; }
 
-void otPlatDiagRadioReceived(otInstance *a_instance, otRadioFrame *a_frame, otError a_error) {
+extern "C" void otPlatDiagTxPowerSet(int8_t a_tx_power) { OT_UNUSED_VARIABLE(a_tx_power); }
+
+extern "C" void otPlatDiagChannelSet(uint8_t a_channel) { OT_UNUSED_VARIABLE(a_channel); }
+
+extern "C" void otPlatDiagRadioReceived(otInstance *a_instance, otRadioFrame *a_frame,
+                                        otError a_error) {
   OT_UNUSED_VARIABLE(a_instance);
   OT_UNUSED_VARIABLE(a_frame);
   OT_UNUSED_VARIABLE(a_error);
 }
+
+extern "C" void otPlatDiagAlarmCallback(otInstance *a_instance) { OT_UNUSED_VARIABLE(a_instance); }
+
+#endif  // OPENTHREAD_CONFIG_DIAG_ENABLE
