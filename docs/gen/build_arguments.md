@@ -47,14 +47,14 @@ It will be set below and passed to other toolchains through toolchain_args
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1262
+From //build/config/BUILDCONFIG.gn:1266
 
 ### always_zedboot
 Build boot images that prefer Zedboot over local boot (only for EFI).
 
 **Current value (from the default):** `false`
 
-From //build/images/args.gni:111
+From //build/images/args.gni:114
 
 ### asan_default_options
 Default [AddressSanitizer](https://clang.llvm.org/docs/AddressSanitizer.html)
@@ -174,6 +174,13 @@ For build/images:fvm.blob.sparse.blk, use this argument.
 
 From //build/images/fvm.gni:57
 
+### blob_layout_format
+The format blobfs should store blobs in.
+
+**Current value (from the default):** `"padded"`
+
+From //build/images/args.gni:111
+
 ### blobfs_maximum_bytes
 In addition to reserving space for inodes and data, fs needs additional
 space for maintaining some internal data structures. So the
@@ -286,7 +293,7 @@ From //build/board.gni:7
 A list of package labels to include in the 'base' package set. Used by the
 board definition rather than the product definition.
 
-**Current value for `target_cpu = "arm64"`:** `["//src/power/power-manager", "//src/power/power-manager:base_config", "//garnet/bin/power_manager:base_config", "//garnet/bin/thermd", "//garnet/bin/thermd:config", "//garnet/packages/prod:drivers-support"]`
+**Current value for `target_cpu = "arm64"`:** `["//src/power/power-manager", "//src/power/power-manager:base_config", "//garnet/bin/thermd", "//garnet/bin/thermd:config", "//garnet/packages/prod:drivers-support"]`
 
 From //boards/arm64.gni:29
 
@@ -294,7 +301,7 @@ From //boards/arm64.gni:29
 
 From //build/board.gni:11
 
-**Current value for `target_cpu = "x64"`:** `["//src/power/power-manager", "//src/power/power-manager:base_config", "//garnet/bin/power_manager:base_config", "//garnet/bin/thermd", "//garnet/bin/thermd:config", "//garnet/packages/prod:drivers-support", "//src/hwinfo:default_board_config"]`
+**Current value for `target_cpu = "x64"`:** `["//src/power/power-manager", "//src/power/power-manager:base_config", "//garnet/bin/thermd", "//garnet/bin/thermd:config", "//garnet/packages/prod:drivers-support", "//src/hwinfo:default_board_config"]`
 
 From //boards/x64.gni:61
 
@@ -353,7 +360,7 @@ any kind of stable contract for users of the archive.
 
 **Current value (from the default):** `[]`
 
-From //build/images/args.gni:141
+From //build/images/args.gni:144
 
 ### board_zedboot_bootfs_labels
 A list of binary labels to include in the zedboot ZBI.
@@ -489,7 +496,7 @@ An action that accesses undeclared inputs or outputs will fail the build.
 
 **Current value (from the default):** `false`
 
-From //build/config/BUILDCONFIG.gn:2156
+From //build/config/BUILDCONFIG.gn:2160
 
 ### build_uefi_disk
 Generate a UEFI disk image
@@ -724,7 +731,7 @@ From //build/images/custom_signing.gni:23
 
 **Current value (from the default):** `"dart_jit_app"`
 
-From [//topaz/runtime/dart/dart_component.gni:24](https://fuchsia.googlesource.com/topaz/+/9da6371096ef5bd094ac89302c8d9899fc93c5b7/runtime/dart/dart_component.gni#24)
+From [//topaz/runtime/dart/dart_component.gni:24](https://fuchsia.googlesource.com/topaz/+/63ee76cccb8afddb2cb405d56f4e3f88ce941fab/runtime/dart/dart_component.gni#24)
 
 ### dart_default_build_cfg
 TODO(fxbug.dev/64153) renable aot builds
@@ -754,14 +761,14 @@ we use to build products.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/9da6371096ef5bd094ac89302c8d9899fc93c5b7/runtime/dart/config.gni#10)
+From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/63ee76cccb8afddb2cb405d56f4e3f88ce941fab/runtime/dart/config.gni#10)
 
 ### dart_space_dart
 Whether experimental space dart mode is enabled for Dart applications.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/dart_component.gni:43](https://fuchsia.googlesource.com/topaz/+/9da6371096ef5bd094ac89302c8d9899fc93c5b7/runtime/dart/dart_component.gni#43)
+From [//topaz/runtime/dart/dart_component.gni:43](https://fuchsia.googlesource.com/topaz/+/63ee76cccb8afddb2cb405d56f4e3f88ce941fab/runtime/dart/dart_component.gni#43)
 
 ### data_partition_manifest
 Path to manifest file containing data to place into the initial /data
@@ -969,7 +976,7 @@ This is just added to [`known_variants`](#known_variants).
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1025
+From //build/config/BUILDCONFIG.gn:1029
 
 ### fastboot_product
 
@@ -1011,7 +1018,7 @@ From //build/images/args.gni:52
 
 **Current value (from the default):** `"flutter_jit_app"`
 
-From [//topaz/runtime/dart/dart_component.gni:13](https://fuchsia.googlesource.com/topaz/+/9da6371096ef5bd094ac89302c8d9899fc93c5b7/runtime/dart/dart_component.gni#13)
+From [//topaz/runtime/dart/dart_component.gni:13](https://fuchsia.googlesource.com/topaz/+/63ee76cccb8afddb2cb405d56f4e3f88ce941fab/runtime/dart/dart_component.gni#13)
 
 ### flutter_default_build_cfg
 Non-product JIT
@@ -1051,14 +1058,14 @@ From //build/flutter/config.gni:10
 
 **Current value (from the default):** `true`
 
-From [//topaz/runtime/dart/dart_component.gni:34](https://fuchsia.googlesource.com/topaz/+/9da6371096ef5bd094ac89302c8d9899fc93c5b7/runtime/dart/dart_component.gni#34)
+From [//topaz/runtime/dart/dart_component.gni:34](https://fuchsia.googlesource.com/topaz/+/63ee76cccb8afddb2cb405d56f4e3f88ce941fab/runtime/dart/dart_component.gni#34)
 
 ### flutter_space_dart
 Whether experimental space dart mode is enabled for Flutter applications.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/dart_component.gni:40](https://fuchsia.googlesource.com/topaz/+/9da6371096ef5bd094ac89302c8d9899fc93c5b7/runtime/dart/dart_component.gni#40)
+From [//topaz/runtime/dart/dart_component.gni:40](https://fuchsia.googlesource.com/topaz/+/63ee76cccb8afddb2cb405d56f4e3f88ce941fab/runtime/dart/dart_component.gni#40)
 
 ### font_catalog_paths
 
@@ -1382,7 +1389,7 @@ Include fvm.blob.sparse.blk image into the build if set to true
 
 **Current value (from the default):** `false`
 
-From //build/images/args.gni:118
+From //build/images/args.gni:121
 
 ### include_internal_fonts
 Set to true to include internal fonts in the build.
@@ -1608,11 +1615,11 @@ Each element of the list is one variant, which is a scope defining:
 }, {
   configs = ["//build/config/sanitizers:ubsan"]
   remove_common_configs = ["//build/config:no_rtti"]
-  tags = ["instrumented", "instrumentation-runtime"]
+  tags = ["instrumented", "instrumentation-runtime", "ubsan"]
 }, {
   configs = ["//build/config/sanitizers:ubsan", "//build/config/sanitizers:sancov"]
   remove_common_configs = ["//build/config:no_rtti"]
-  tags = ["instrumented", "instrumentation-runtime", "sancov"]
+  tags = ["instrumented", "instrumentation-runtime", "sancov", "ubsan"]
 }, {
   configs = ["//build/config/sanitizers:asan"]
   host_only = {
@@ -1626,7 +1633,7 @@ Each element of the list is one variant, which is a scope defining:
   remove_shared_configs = ["//build/config:symbol_no_undefined"]
 }
   remove_common_configs = ["//build/config:no_rtti"]
-  tags = ["asan", "instrumentation-runtime", "instrumented", "lsan"]
+  tags = ["asan", "instrumentation-runtime", "instrumented", "lsan", "ubsan"]
   toolchain_args = { }
 }, {
   configs = ["//build/config/sanitizers:asan", "//build/config/sanitizers:sancov"]
@@ -1652,7 +1659,7 @@ Each element of the list is one variant, which is a scope defining:
   name = "ubsan-fuzzer"
   remove_common_configs = ["//build/config:icf", "//build/config:no_rtti"]
   remove_shared_configs = ["//build/config:symbol_no_undefined"]
-  tags = ["fuzzer", "instrumented", "instrumentation-runtime"]
+  tags = ["fuzzer", "instrumented", "instrumentation-runtime", "ubsan"]
 }, {
   name = "gcc"
   tags = ["gcc"]
@@ -1833,7 +1840,7 @@ Maximum allowable size for fuchsia.zbi
 
 **Current value for `target_cpu = "arm64"`:** `"16777216"`
 
-From //boards/arm64.gni:38
+From //boards/arm64.gni:37
 
 **Overridden from the default:** `"0"`
 
@@ -1841,7 +1848,7 @@ From //build/images/filesystem_limits.gni:31
 
 **Current value for `target_cpu = "x64"`:** `"16777216"`
 
-From //boards/x64.gni:71
+From //boards/x64.gni:70
 
 **Overridden from the default:** `"0"`
 
@@ -1868,7 +1875,7 @@ Maximum allowable size for zedboot.zbi
 
 **Current value for `target_cpu = "arm64"`:** `"16777216"`
 
-From //boards/arm64.gni:39
+From //boards/arm64.gni:38
 
 **Overridden from the default:** `"0"`
 
@@ -1876,7 +1883,7 @@ From //build/images/filesystem_limits.gni:34
 
 **Current value for `target_cpu = "x64"`:** `"16777216"`
 
-From //boards/x64.gni:72
+From //boards/x64.gni:71
 
 **Overridden from the default:** `"0"`
 
@@ -2022,7 +2029,7 @@ TODO(comfoltey) remove obsolete label override_recovery_label
 
 **Current value (from the default):** `""`
 
-From //build/images/args.gni:130
+From //build/images/args.gni:133
 
 ### persist_logs
 
@@ -2034,7 +2041,7 @@ From //build/persist_logs.gni:13
 
 **Current value (from the default):** `"//src/security/policy/pkgfs_non_static_pkgs_allowlist_eng.txt"`
 
-From //build/images/args.gni:115
+From //build/images/args.gni:118
 
 ### platform_enable_user_pci
 
@@ -2136,7 +2143,7 @@ Example value: "//build/images/recovery"
 
 **Current value (from the default):** `"//build/images/zedboot"`
 
-From //build/images/args.gni:127
+From //build/images/args.gni:130
 
 ### recovery_logo_path
 Path to file to use for recovery logo
@@ -2396,7 +2403,7 @@ is satisfied if any of the strings matches against the candidate string.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1252
+From //build/config/BUILDCONFIG.gn:1256
 
 ### select_variant_canonical
 *This should never be set as a build argument.*
@@ -2405,7 +2412,7 @@ See //build/toolchain/clang_toolchain.gni for details.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1257
+From //build/config/BUILDCONFIG.gn:1261
 
 ### select_variant_shortcuts
 List of short names for commonly-used variant selectors.  Normally this
@@ -2443,7 +2450,7 @@ a list that can be spliced into [`select_variant`](#select_variant).
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1071
+From //build/config/BUILDCONFIG.gn:1075
 
 ### shaderc_enable_spvc_parser
 Enables using the parsing built into spvc instead spirv-cross
@@ -2703,7 +2710,7 @@ From //zircon/public/gn/config/instrumentation/sanitizer_default_options.gni:40
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1045
+From //build/config/BUILDCONFIG.gn:1049
 
 ### universe_package_labels
 If you add package labels to this variable, the packages will be included
