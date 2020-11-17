@@ -24,6 +24,7 @@ constexpr size_t kHighHandleCount = (kMaxHandleCount * 7) / 8;
 KCOUNTER(handle_count_made, "handles.made")
 KCOUNTER(handle_count_duped, "handles.duped")
 KCOUNTER(handle_count_live, "handles.live")
+KCOUNTER(handle_count_alloc_failed, "handles.alloc.failed")
 
 // Masks for building a Handle's base_value, which ProcessDispatcher
 // uses to create zx_handle_t values.
@@ -103,6 +104,7 @@ void* HandleTableArena::Alloc(const fbl::RefPtr<Dispatcher>& dispatcher, const c
   void* addr = arena_.Alloc();
   size_t outstanding_handles = arena_.DiagnosticCount();
   if (unlikely(addr == nullptr)) {
+    kcounter_add(handle_count_alloc_failed, 1);
     printf("WARNING: Could not allocate %s handle (%zu outstanding)\n", what, outstanding_handles);
     return nullptr;
   }
