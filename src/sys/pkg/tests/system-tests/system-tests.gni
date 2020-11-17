@@ -24,10 +24,6 @@ _environment_service_account =
 #     the the form of `1234...`. Conflicts with `release_builder`.
 #   - Type: string
 #
-#   ota_to_recovery
-#   - Optional: OTA to recovery instead of rebooting to recovery. Default false.
-#   - Type: boolean
-#
 #   installer
 #   - Optional: Installer to use to install OTA.
 #   - Type: string
@@ -136,10 +132,6 @@ template("system_test_upgrade_suite") {
         "-cycle-count",
         invoker.cycle_count,
       ]
-    }
-
-    if (defined(invoker.ota_to_recovery) && invoker.ota_to_recovery) {
-      _args += [ "-ota-to-recovery" ]
     }
 
     if (defined(invoker.installer)) {

@@ -144,8 +144,6 @@ if (is_linux || is_mac) {
     release_builder = "fuchsia/global.ci/fuchsia-x64-release-build_only"
     service_account = _service_account
 
-    # FIXME(fxbug.dev/46175) This can be removed once NUCs support `dm reboot-recovery`.
-    ota_to_recovery = true
     environments = [
       {
         dimensions = {
@@ -163,8 +161,6 @@ if (is_linux || is_mac) {
     release_builder = "fuchsia/global.ci/fuchsia-x64-release-build_only"
     service_account = _service_account
 
-    # FIXME(fxbug.dev/46175) This can be removed once NUCs support `dm reboot-recovery`.
-    ota_to_recovery = true
     environments = [
       {
         dimensions = {
