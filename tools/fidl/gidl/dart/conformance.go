@@ -17,7 +17,7 @@ import (
 )
 
 var tmpl = template.Must(template.New("tmpls").Parse(`
-// @dart = 2.10
+// @dart = 2.8
 
 // Ignore unused imports so that GIDL tests can be commented out without error.
 // ignore_for_file: unused_import
