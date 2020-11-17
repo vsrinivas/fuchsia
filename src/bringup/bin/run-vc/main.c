@@ -59,6 +59,7 @@ int main(int argc, const char** argv) {
       session_manager, session_remote, &remote_status);
   zx_handle_close(session_manager);
   if (status != ZX_OK || remote_status != ZX_OK) {
+    zx_handle_close(session);
     fprintf(stderr, "run-vc: failed to create session: local: %s remote: %s\n",
             zx_status_get_string(status), zx_status_get_string(remote_status));
     return -1;
@@ -86,15 +87,18 @@ int main(int argc, const char** argv) {
   uint32_t type = PA_HND(PA_FD, FDIO_FLAG_USE_FOR_STDIO);
 
   fdio_spawn_action_t actions[2] = {
-      {.action = FDIO_SPAWN_ACTION_SET_NAME, .name = {.data = pname}},
-      {.action = FDIO_SPAWN_ACTION_ADD_HANDLE, .h = {.id = type, .handle = session}},
+      {.action = FDIO_SPAWN_ACTION_SET_NAME, .name.data = pname},
+      {.action = FDIO_SPAWN_ACTION_ADD_HANDLE, .h.id = type, .h.handle = session},
   };
+  // Clang static analyzer could not bind symexpr for session correctly to actions, so we need this
+  // unnecessary assignment to let it understand action array now contains the session handle.
+  // TODO(fxbug.dev/64385): Remove this line once the analyzer is improved.
+  actions[1].h.handle = session;
 
   char err_msg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH];
   status = fdio_spawn_etc(ZX_HANDLE_INVALID, flags, argv[0], argv, NULL, countof(actions), actions,
                           NULL, err_msg);
   if (status != ZX_OK) {
-    zx_handle_close(session);
     fprintf(stderr, "error %d (%s) launching: %s\n", status, zx_status_get_string(status), err_msg);
     return -1;
   }
