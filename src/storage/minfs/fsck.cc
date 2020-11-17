@@ -644,7 +644,7 @@ zx_status_t MinfsChecker::CheckUnlinkedInodes() {
     return ZX_ERR_BAD_STATE;
   }
 
-  if (unlinked_count > 0) {
+  if (unlinked_count > 0 && !fsck_options_.quiet) {
     FS_TRACE_WARN("minfs_check: Warning: %u unlinked inodes found\n", unlinked_count);
   }
 

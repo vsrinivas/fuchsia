@@ -751,17 +751,23 @@ zx_status_t Minfs::PurgeUnlinked() {
   ino_t next_ino = Info().unlinked_head;
   ino_t unlinked_count = 0;
 
+  if (next_ino == 0) {
+    ZX_DEBUG_ASSERT(Info().unlinked_tail == 0);
+    return ZX_OK;
+  }
+
   // Loop through the unlinked list and free all allocated resources.
-  while (next_ino != 0) {
+  fbl::RefPtr<VnodeMinfs> vn;
+  VnodeMinfs::Recreate(this, next_ino, &vn);
+  ZX_DEBUG_ASSERT(vn->GetInode()->last_inode == 0);
+
+  do {
     zx_status_t status;
-    fbl::RefPtr<VnodeMinfs> vn;
     std::unique_ptr<Transaction> transaction;
     if ((status = BeginTransaction(0, 0, &transaction)) != ZX_OK) {
       return status;
     }
-    VnodeMinfs::Recreate(this, next_ino, &vn);
 
-    ZX_DEBUG_ASSERT(vn->GetInode()->last_inode == last_ino);
     ZX_DEBUG_ASSERT(vn->GetInode()->link_count == 0);
 
     if ((status = InoFree(transaction.get(), vn.get())) != ZX_OK) {
@@ -776,15 +782,21 @@ zx_status_t Minfs::PurgeUnlinked() {
     if (next_ino == 0) {
       ZX_DEBUG_ASSERT(Info().unlinked_tail == last_ino);
       sb_->MutableInfo()->unlinked_tail = 0;
+    } else {
+      // Fix the last_inode pointer in the next inode.
+      VnodeMinfs::Recreate(this, next_ino, &vn);
+      ZX_DEBUG_ASSERT(vn->GetInode()->last_inode == last_ino);
+      vn->GetMutableInode()->last_inode = 0;
+      InodeUpdate(transaction.get(), next_ino, vn->GetInode());
     }
     CommitTransaction(std::move(transaction));
     unlinked_count++;
-  }
+  } while (next_ino != 0);
 
   ZX_DEBUG_ASSERT(Info().unlinked_head == 0);
   ZX_DEBUG_ASSERT(Info().unlinked_tail == 0);
 
-  if (unlinked_count > 0 && !mount_options_.quiet) {
+  if (!mount_options_.quiet) {
     FS_TRACE_WARN("minfs: Found and purged %u unlinked vnode(s) on mount\n", unlinked_count);
   }
 

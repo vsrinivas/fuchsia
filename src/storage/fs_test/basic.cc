@@ -102,6 +102,31 @@ TEST_P(FsckAfterEveryTransactionTest, SimpleOperationsSucceeds) {
   EXPECT_EQ(unlink(path.c_str()), 0);
 }
 
+TEST_P(FsckAfterEveryTransactionTest, PurgeOnRemountSucceeds) {
+  std::string foo = GetPath("foo").c_str();
+  std::string bar = GetPath("bar").c_str();
+  fbl::unique_fd fd1(open(foo.c_str(), O_CREAT | O_RDWR, 0666));
+  fbl::unique_fd fd2(open(bar.c_str(), O_CREAT | O_RDWR, 0666));
+
+  EXPECT_EQ(unlink(foo.c_str()), 0);
+  EXPECT_EQ(unlink(bar.c_str()), 0);
+  EXPECT_EQ(fsync(fd1.get()), 0);
+
+  // Stop any more writes going to the ram disk (so that the inodes aren't purged).
+  auto* ram_disk = fs().GetRamDisk();
+  EXPECT_EQ(ram_disk->SleepAfter(0).status_value(), ZX_OK);
+
+  EXPECT_EQ(fs().Unmount().status_value(), ZX_OK);
+
+  EXPECT_EQ(ram_disk->Wake().status_value(), ZX_OK);
+
+  // Now remount and the two files we deleted earlier should get purged and fsck will run after each
+  // one is purged.
+  mount_options_t mount_options = default_mount_options;
+  mount_options.fsck_after_every_transaction = true;
+  EXPECT_EQ(fs().MountWithOptions(mount_options).status_value(), ZX_OK);
+}
+
 INSTANTIATE_TEST_SUITE_P(
     /*no prefix*/, FsckAfterEveryTransactionTest,
     testing::ValuesIn(MapAndFilterAllTestFilesystems(
