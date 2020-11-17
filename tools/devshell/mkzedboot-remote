@@ -53,7 +53,6 @@ while [[ $# -ne 0 ]]; do
     usb_device=$1
     ;;
   --force)
-    shift
     force=true
     ;;
   -*)
@@ -114,10 +113,10 @@ image=""
 type=""
 
 # Try to get image for efi, if not found, try to get vboot image for cros
-image="$(ssh "${host}" "cd '$dir' && .jiri_root/bin/fx list-build-artifacts --expect-one --type blk mkzedboot")"
+image="$(ssh "${host}" "cd '$dir' && .jiri_root/bin/fx list-build-artifacts --allow-empty --type blk mkzedboot")"
 type="efi"
 if [[ -z "${image}" ]]; then
-   image="$(ssh "${host}" "cd '$dir' && .jiri_root/bin/fx list-build-artifacts --expect-one --type zbi.signed mkzedboot")"
+   image="$(ssh "${host}" "cd '$dir' && .jiri_root/bin/fx list-build-artifacts --allow-empty --type zbi.signed mkzedboot")"
    type="vboot"
 fi
 

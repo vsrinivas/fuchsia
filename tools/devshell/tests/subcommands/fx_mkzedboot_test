@@ -52,7 +52,7 @@ EOF
   # Set up list-build-artifacts mock
   btf::make_mock "${BT_TEMP_DIR}/tools/devshell/list-build-artifacts"
   cat > "${BT_TEMP_DIR}/tools/devshell/list-build-artifacts.mock_side_effects" << "EOF"
-if [[ "$@" == "--expect-one --type blk mkzedboot" ]] ; then
+if [[ "$@" == "--allow-empty --type blk mkzedboot" ]] ; then
   echo "zedboot.esp.blk"
 fi
 EOF
@@ -98,7 +98,7 @@ TEST_fx-mkzedboot-force-write() {
 TEST_fx-mkzedboot-efi() {
   # Set up "list-build-artifacts" mock for x64 EFI builds.
   cat > "${BT_TEMP_DIR}/tools/devshell/list-build-artifacts.mock_side_effects" << "EOF"
-if [[ "$@" == "--expect-one --type blk mkzedboot" ]] ; then
+if [[ "$@" == "--allow-empty --type blk mkzedboot" ]] ; then
   echo "zedboot.esp.blk"
 fi
 EOF
@@ -130,7 +130,7 @@ EOF
 TEST_fx-mkzedboot-vboot() {
   # Set up "list-build-artifacts" mock for chromebook builds.
   cat > "${BT_TEMP_DIR}/tools/devshell/list-build-artifacts.mock_side_effects" << "EOF"
-if [[ "$@" == "--expect-one --type zbi.signed mkzedboot" ]] ; then
+if [[ "$@" == "--allow-empty --type zbi.signed mkzedboot" ]] ; then
   echo "zedboot.vboot"
 fi
 EOF

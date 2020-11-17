@@ -92,7 +92,7 @@ function fx-mkzedboot {
 
   fx-info "done"
 
-  if [[ is_esp ]]; then
+  if [[ "${type}" == "efi" ]]; then
     fx-info "Writing zedboot for EFI"
     dd if="${image}" of="${usb_device}" seek=${esp_offset}
   else

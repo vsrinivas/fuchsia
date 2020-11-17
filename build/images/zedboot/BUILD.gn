@@ -171,6 +171,7 @@ if (custom_signing_script != "") {
         {
           archive = true
           if (use_zedboot_as_recovery) {
+            mkzedboot_mode = [ "vboot" ]
             bootserver_pave = [ "--zirconr" ]
             if (zircon_r_partition != "") {
               fastboot_flash = [ zircon_r_partition ]
@@ -199,6 +200,7 @@ if (custom_signing_script != "") {
         {
           archive = true
           if (use_zedboot_as_recovery) {
+            mkzedboot_mode = [ "vboot" ]
             bootserver_pave = [ "--zirconr" ]
             if (zircon_r_partition != "") {
               fastboot_flash = [ zircon_r_partition ]
