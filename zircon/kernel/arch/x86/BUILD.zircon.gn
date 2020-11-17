@@ -204,6 +204,7 @@ if (zx == "/") {
       "$zx/kernel/lib/perfmon",
       "$zx/kernel/lib/root_resource_filter",
       "$zx/kernel/lib/topology",
+      "$zx/kernel/lib/version",
       "$zx/kernel/object",
       "$zx/kernel/platform/pc",
       "$zx/system/ulib/bitmap",

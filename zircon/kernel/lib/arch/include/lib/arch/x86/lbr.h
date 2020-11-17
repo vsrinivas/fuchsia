@@ -150,6 +150,7 @@ struct LastBranchRecord {
 //   DEBUG_ASSERT(lbr_stack.is_supported());
 //   DEBUG_ASSERT(lbr_stack.is_enabled(msr_io));  // Previously enabled.
 //
+//   PrintfSymbolizerContext(stdout);
 //   printf("Last kernel branch records:\n");
 //   lbr_stack.ForEachRecord(msr_io, [](const LastBranchRecord& lbr) {
 //     // Only include branches that end in the kernel.
@@ -170,9 +171,7 @@ class LbrStack {
     Initialize(GetMicroarchitecture(std::forward<CpuidIoProvider>(io)), supports_pdcm);
   }
 
-  // TODO(joshuaseaton): define a default constructor in terms of the global
-  // CpuidIo objects when available.
-  // LbrStack() : LbrStack(arch::BootCpuidIo{}) {}
+  LbrStack() = delete;
 
   LbrStack(const LbrStack&) = default;
   LbrStack(LbrStack&&) = default;
