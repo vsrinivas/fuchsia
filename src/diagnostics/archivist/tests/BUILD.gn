@@ -18,6 +18,7 @@ group("tests") {
     "logs/cpp:test-spec",
     "logs/rust:test-spec",
     "unified_reader:test-spec",
+    "v2:tests",
   ]
 }
 

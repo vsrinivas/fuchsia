@@ -4,34 +4,61 @@
 
 use {
     cs::log_stats::{LogSeverity, LogStats},
+    diagnostics_data::Logs,
+    diagnostics_hierarchy::assert_data_tree,
+    diagnostics_testing::Severity,
     fuchsia_async as fasync,
     fuchsia_component::client::ScopedInstance,
     fuchsia_inspect::testing::{assert_inspect_tree, AnyProperty},
     fuchsia_inspect_contrib::reader::{ArchiveReader, Inspect},
+    fuchsia_zircon::DurationNum,
+    futures::stream::StreamExt,
     log::info,
     selectors,
 };
 
 const TEST_COMPONENT: &str =
     "fuchsia-pkg://fuchsia.com/archivist-integration-tests-v2#meta/stub_inspect_component.cm";
+const RETRY_DELAY_MS: i64 = 300;
 
 // Verifies that archivist attributes logs from this component.
 async fn verify_component_attributed(url: &str, expected_info_count: u64) {
-    let mut response = ArchiveReader::new()
-        .add_selector(format!(
-            "archivist:root/log_stats/by_component/{}:*",
-            selectors::sanitize_string_for_selectors(&url)
-        ))
-        .add_selector("archivist:root/event_stats/recent_events/*:*")
-        .snapshot::<Inspect>()
-        .await
-        .unwrap();
-    let hierarchy = response.pop().and_then(|r| r.payload).unwrap();
-    let log_stats = LogStats::new_with_root(LogSeverity::INFO, &hierarchy).await.unwrap();
-    let component_log_stats = log_stats.get_by_url(url).unwrap();
-    let info_log_count = component_log_stats.get_count(LogSeverity::INFO);
+    loop {
+        // TODO(fxbug.dev/51165): use selectors for this filtering and remove the delayed retry
+        // which would be taken care of by the ArchiveReader itself.
+        let mut response = ArchiveReader::new()
+            .add_selector(format!(
+                "archivist:root/log_stats/by_component/{}:*",
+                selectors::sanitize_string_for_selectors(&url)
+            ))
+            .add_selector("archivist:root/event_stats/recent_events/*:*")
+            .snapshot::<Inspect>()
+            .await
+            .unwrap();
+        let hierarchy = response.pop().and_then(|r| r.payload).unwrap();
+        let log_stats = LogStats::new_with_root(LogSeverity::INFO, &hierarchy).await.unwrap();
+        let component_log_stats = log_stats.get_by_url(url).unwrap();
+        let info_log_count = component_log_stats.get_count(LogSeverity::INFO);
+        if info_log_count != expected_info_count {
+            fasync::Timer::new(fasync::Time::after(RETRY_DELAY_MS.millis())).await;
+            continue;
+        }
+        return;
+    }
+}
 
-    assert_eq!(expected_info_count, info_log_count);
+async fn verify_attributed_log_content(logs: &[&str]) {
+    let (mut result, _) =
+        ArchiveReader::new().snapshot_then_subscribe::<Logs>().expect("snapshot then subscribe");
+    for log_str in logs {
+        let log_record = result.next().await.expect("received log");
+        assert_eq!(log_record.moniker, ".\\archivist:0/driver:0");
+        assert_eq!(log_record.metadata.severity, Severity::Info);
+        assert_data_tree!(log_record.payload.unwrap(), root: contains {
+            "message".to_string() => log_str.to_string(),
+            "tag".to_string() => "archivist_integration_tests".to_string(),
+        });
+    }
 }
 
 #[fasync::run_singlethreaded(test)]
@@ -67,4 +94,7 @@ async fn log_attribution() {
         2,
     )
     .await;
+
+    verify_attributed_log_content(&["This is a syslog message", "This is another syslog message"])
+        .await;
 }

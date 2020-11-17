@@ -52,7 +52,7 @@
         },
         {
             event_stream: [ "capability_requested" ],
-            as: "/svc/fuchsia.sys2.EventStream",
+            path: "/svc/fuchsia.sys2.EventStream",
         },
     ],
     expose: [
