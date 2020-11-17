@@ -48,13 +48,16 @@ func join(as artifacts, criticalPath bool) ([]ninjalog.Step, error) {
 	}
 
 	if criticalPath {
-		if err := as.graph.PopulateEdges(steps); err != nil {
-			return nil, err
-		}
-		var err error
-		steps, err = as.graph.PopulatedSteps()
+		s, err := func() ([]ninjalog.Step, error) {
+			if err := as.graph.PopulateEdges(steps); err != nil {
+				return nil, err
+			}
+			return as.graph.PopulatedSteps()
+		}()
 		if err != nil {
-			return nil, err
+			log.Print("No critical path information will be availabe in trace because the Ninja graph provided does not match the build.")
+		} else {
+			steps = s
 		}
 	}
 	return steps, nil

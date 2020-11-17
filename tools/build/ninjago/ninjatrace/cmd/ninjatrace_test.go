@@ -132,6 +132,28 @@ func TestJoin(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "missing step",
+			artifacts: artifacts{
+				// The graph is expecting an edge to output 3, but it's missing from `steps`.
+				steps: []ninjalog.Step{{Out: "1"}, {Out: "2"}},
+				graph: ninjagraph.Graph{
+					Nodes: map[int64]*ninjagraph.Node{
+						1: {
+							ID:   1,
+							Path: "1",
+							In:   edge1,
+							Outs: []*ninjagraph.Edge{edge2, edge3},
+						},
+						2: {ID: 2, Path: "2", In: edge2},
+						3: {ID: 3, Path: "3", In: edge3},
+					},
+					Edges: []*ninjagraph.Edge{edge1, edge2, edge3},
+				},
+			},
+			criticalPath: true,
+			wantSteps:    []ninjalog.Step{{Out: "1"}, {Out: "2"}},
+		},
 	} {
 		t.Run(v.name, func(t *testing.T) {
 			got, err := join(v.artifacts, v.criticalPath)
@@ -142,28 +164,5 @@ func TestJoin(t *testing.T) {
 				t.Fatalf("join(%+v, %t) got steps diff (-want, +got):\n%s", v.artifacts, v.criticalPath, diff)
 			}
 		})
-	}
-}
-
-func TestJoinMissingStep(t *testing.T) {
-	as := artifacts{
-		// The graph is expecting an edge to output 3, but it's missing from `steps`.
-		steps: []ninjalog.Step{{Out: "1"}, {Out: "2"}},
-		graph: ninjagraph.Graph{
-			Nodes: map[int64]*ninjagraph.Node{
-				1: {
-					ID:   1,
-					Path: "1",
-					In:   edge1,
-					Outs: []*ninjagraph.Edge{edge2, edge3},
-				},
-				2: {ID: 2, Path: "2", In: edge2},
-				3: {ID: 3, Path: "3", In: edge3},
-			},
-			Edges: []*ninjagraph.Edge{edge1, edge2, edge3},
-		},
-	}
-	if _, err := join(as, true); err == nil {
-		t.Fatalf("join(%+v, true) succeeded, want error", as)
 	}
 }
