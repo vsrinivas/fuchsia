@@ -32,15 +32,18 @@ namespace {
 KCOUNTER(vm_mapping_attribution_queries, "vm.attributed_pages.mapping.queries")
 KCOUNTER(vm_mapping_attribution_cache_hits, "vm.attributed_pages.mapping.cache_hits")
 KCOUNTER(vm_mapping_attribution_cache_misses, "vm.attributed_pages.mapping.cache_misses")
+KCOUNTER(vm_mappings_merged, "vm.aspace.mapping.merged_neighbors")
 
 }  // namespace
 
 VmMapping::VmMapping(VmAddressRegion& parent, vaddr_t base, size_t size, uint32_t vmar_flags,
-                     fbl::RefPtr<VmObject> vmo, uint64_t vmo_offset, uint arch_mmu_flags)
+                     fbl::RefPtr<VmObject> vmo, uint64_t vmo_offset, uint arch_mmu_flags,
+                     Mergeable mergeable)
     : VmAddressRegionOrMapping(base, size, vmar_flags, parent.aspace_.get(), &parent, true),
       object_(ktl::move(vmo)),
       object_offset_(vmo_offset),
-      arch_mmu_flags_(arch_mmu_flags) {
+      arch_mmu_flags_(arch_mmu_flags),
+      mergeable_(mergeable) {
   LTRACEF("%p aspace %p base %#" PRIxPTR " size %#zx offset %#" PRIx64 "\n", this, aspace_.get(),
           base_, size_, vmo_offset);
 }
@@ -189,9 +192,9 @@ zx_status_t VmMapping::ProtectLocked(vaddr_t base, size_t size, uint new_arch_mm
   if (base_ == base) {
     // Create a new mapping for the right half (has old perms)
     fbl::AllocChecker ac;
-    fbl::RefPtr<VmMapping> mapping(
-        fbl::AdoptRef(new (&ac) VmMapping(*parent_, base + size, size_ - size, flags_, object_,
-                                          object_offset_ + size, arch_mmu_flags_locked())));
+    fbl::RefPtr<VmMapping> mapping(fbl::AdoptRef(
+        new (&ac) VmMapping(*parent_, base + size, size_ - size, flags_, object_,
+                            object_offset_ + size, arch_mmu_flags_locked(), Mergeable::YES)));
     if (!ac.check()) {
       return ZX_ERR_NO_MEMORY;
     }
@@ -212,8 +215,9 @@ zx_status_t VmMapping::ProtectLocked(vaddr_t base, size_t size, uint new_arch_mm
     // Create a new mapping for the right half (has new perms)
     fbl::AllocChecker ac;
 
-    fbl::RefPtr<VmMapping> mapping(fbl::AdoptRef(new (&ac) VmMapping(
-        *parent_, base, size, flags_, object_, object_offset_ + base - base_, new_arch_mmu_flags)));
+    fbl::RefPtr<VmMapping> mapping(fbl::AdoptRef(
+        new (&ac) VmMapping(*parent_, base, size, flags_, object_, object_offset_ + base - base_,
+                            new_arch_mmu_flags, Mergeable::YES)));
     if (!ac.check()) {
       return ZX_ERR_NO_MEMORY;
     }
@@ -235,13 +239,15 @@ zx_status_t VmMapping::ProtectLocked(vaddr_t base, size_t size, uint new_arch_mm
   const uint64_t right_vmo_offset = center_vmo_offset + size;
 
   fbl::AllocChecker ac;
-  fbl::RefPtr<VmMapping> center_mapping(fbl::AdoptRef(new (&ac) VmMapping(
-      *parent_, base, size, flags_, object_, center_vmo_offset, new_arch_mmu_flags)));
+  fbl::RefPtr<VmMapping> center_mapping(
+      fbl::AdoptRef(new (&ac) VmMapping(*parent_, base, size, flags_, object_, center_vmo_offset,
+                                        new_arch_mmu_flags, Mergeable::YES)));
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
-  fbl::RefPtr<VmMapping> right_mapping(fbl::AdoptRef(new (&ac) VmMapping(
-      *parent_, base + size, right_size, flags_, object_, right_vmo_offset, arch_mmu_flags_)));
+  fbl::RefPtr<VmMapping> right_mapping(
+      fbl::AdoptRef(new (&ac) VmMapping(*parent_, base + size, right_size, flags_, object_,
+                                        right_vmo_offset, arch_mmu_flags_, Mergeable::YES)));
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
@@ -341,8 +347,9 @@ zx_status_t VmMapping::UnmapLocked(vaddr_t base, size_t size) {
   const size_t new_size = (base_ + size_) - new_base;
 
   fbl::AllocChecker ac;
-  fbl::RefPtr<VmMapping> mapping(fbl::AdoptRef(new (&ac) VmMapping(
-      *parent_, new_base, new_size, flags_, object_, vmo_offset, arch_mmu_flags_locked())));
+  fbl::RefPtr<VmMapping> mapping(
+      fbl::AdoptRef(new (&ac) VmMapping(*parent_, new_base, new_size, flags_, object_, vmo_offset,
+                                        arch_mmu_flags_locked(), Mergeable::YES)));
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
@@ -710,7 +717,6 @@ zx_status_t VmMapping::DestroyLocked() {
   if (status != ZX_OK) {
     return status;
   }
-
   // Unmap should have reset our size to 0
   DEBUG_ASSERT(size_ == 0);
 
@@ -908,4 +914,129 @@ void VmMapping::ActivateLocked() {
 void VmMapping::Activate() {
   Guard<Mutex> guard{object_->lock()};
   ActivateLocked();
+}
+
+void VmMapping::TryMergeRightNeighborLocked(VmMapping* right_candidate) {
+  // This code is tolerant of many 'miss calls' if mappings aren't mergeable or are not neighbours
+  // etc, but the caller should not be attempting to merge if these mappings are not actually from
+  // the same vmar parent. Doing so indicates something structurally wrong with the hierarchy.
+  DEBUG_ASSERT(parent_ == right_candidate->parent_);
+
+  AssertHeld(right_candidate->lock_ref());
+
+  // These tests are intended to be ordered such that we fail as fast as possible. As such testing
+  // for mergeability, which we commonly expect to succeed and not fail, is done last.
+
+  // Need to refer to the same object.
+  if (object_.get() != right_candidate->object_.get()) {
+    return;
+  }
+  // Aspace and VMO ranges need to be contiguous. Validate that the right candidate is actually to
+  // the right in addition to checking that base+size lines up for single scenario where base_+size_
+  // can overflow and becomes zero.
+  if (base_ + size_ != right_candidate->base_ || right_candidate->base_ < base_) {
+    return;
+  }
+  if (object_offset_locked() + size_ != right_candidate->object_offset_locked()) {
+    return;
+  }
+  // All flags need to be consistent.
+  if (flags_ != right_candidate->flags_) {
+    return;
+  }
+  if (arch_mmu_flags_locked() != right_candidate->arch_mmu_flags_locked()) {
+    return;
+  }
+  // Only merge live mappings.
+  if (state_ != LifeCycleState::ALIVE || right_candidate->state_ != LifeCycleState::ALIVE) {
+    return;
+  }
+  // Both need to be mergeable.
+  if (mergeable_ == Mergeable::NO || right_candidate->mergeable_ == Mergeable::NO) {
+    return;
+  }
+
+  // Destroy / DestroyLocked perform a lot more cleanup than we want, we just need to clear out a
+  // few things from right_candidate and then mark it as dead, as we do not want to clear out any
+  // arch page table mappings etc.
+  {
+    // Although it was safe to read size_ without holding the object lock, we need to acquire it to
+    // perform changes.
+    Guard<Mutex> guard{right_candidate->object_->lock()};
+    AssertHeld(object_->lock_ref());
+
+    set_size_locked(size_ + right_candidate->size_);
+    right_candidate->set_size_locked(0);
+
+    right_candidate->object_->RemoveMappingLocked(right_candidate);
+  }
+
+  // Detach from the VMO.
+  right_candidate->object_.reset();
+
+  // Detach the now dead region from the parent, ensuring our caller is correctly holding a refptr.
+  DEBUG_ASSERT(right_candidate->in_subregion_tree());
+  DEBUG_ASSERT(right_candidate->ref_count_debug() > 1);
+  parent_->subregions_.RemoveRegion(right_candidate);
+
+  // Mark it as dead.
+  right_candidate->parent_ = nullptr;
+  right_candidate->state_ = LifeCycleState::DEAD;
+
+  vm_mappings_merged.Add(1);
+}
+
+void VmMapping::TryMergeNeighborsLocked() {
+  canary_.Assert();
+
+  // Check that this mapping is mergeable and is currently in the correct lifecycle state.
+  if (mergeable_ == Mergeable::NO || state_ != LifeCycleState::ALIVE) {
+    return;
+  }
+  // As a VmMapping if we we are alive we by definition have a parent.
+  DEBUG_ASSERT(parent_);
+
+  // We expect there to be a RefPtr to us held beyond the one for the wavl tree ensuring that we
+  // cannot trigger our own destructor should we remove ourselves from the hierarchy.
+  DEBUG_ASSERT(ref_count_debug() > 1);
+
+  // First consider merging any mapping on our right, into |this|.
+  VmAddressRegionOrMapping* right_candidate = parent_->subregions_.FindRegion(base_ + size_);
+  if (right_candidate) {
+    // Request mapping as a refptr as we need to hold a refptr across the try merge.
+    if (fbl::RefPtr<VmMapping> mapping = right_candidate->as_vm_mapping()) {
+      TryMergeRightNeighborLocked(mapping.get());
+    }
+  }
+
+  // Now attempt to merge |this| with any left neighbor.
+  if (base_ == 0) {
+    return;
+  }
+  VmAddressRegionOrMapping* left_candidate = parent_->subregions_.FindRegion(base_ - 1);
+  if (!left_candidate) {
+    return;
+  }
+  if (auto mapping = left_candidate->as_vm_mapping()) {
+    // Attempt actual merge. If this succeeds then |this| is in the dead state, but that's fine as
+    // we are finished anyway.
+    AssertHeld(mapping->lock_ref());
+    mapping->TryMergeRightNeighborLocked(this);
+  }
+}
+
+void VmMapping::MarkMergeable(fbl::RefPtr<VmMapping>&& mapping) {
+  Guard<Mutex> guard{mapping->lock()};
+  // Now that we have the lock check this mapping is still alive and we haven't raced with some
+  // kind of destruction.
+  if (mapping->state_ != LifeCycleState::ALIVE) {
+    return;
+  }
+  // Skip marking any vdso segments mergeable. Although there is currently only one vdso segment and
+  // so it would never actually get merged, marking it mergeable is technically incorrect.
+  if (mapping->aspace_->vdso_code_mapping_ == mapping) {
+    return;
+  }
+  mapping->mergeable_ = Mergeable::YES;
+  mapping->TryMergeNeighborsLocked();
 }

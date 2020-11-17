@@ -168,7 +168,8 @@ zx_status_t VmAddressRegion::CreateSubVmarInternal(size_t offset, size_t size, u
   fbl::RefPtr<VmAddressRegionOrMapping> vmar;
   if (vmo) {
     vmar = fbl::AdoptRef(new (&ac) VmMapping(*this, new_base, size, vmar_flags, ktl::move(vmo),
-                                             is_upper_bound ? 0 : vmo_offset, arch_mmu_flags));
+                                             is_upper_bound ? 0 : vmo_offset, arch_mmu_flags,
+                                             VmMapping::Mergeable::NO));
   } else {
     vmar = fbl::AdoptRef(new (&ac) VmAddressRegion(*this, new_base, size, vmar_flags, name));
   }
@@ -283,7 +284,7 @@ zx_status_t VmAddressRegion::OverwriteVmMapping(vaddr_t base, size_t size, uint3
   fbl::AllocChecker ac;
   fbl::RefPtr<VmAddressRegionOrMapping> vmar;
   vmar = fbl::AdoptRef(new (&ac) VmMapping(*this, base, size, vmar_flags, ktl::move(vmo),
-                                           vmo_offset, arch_mmu_flags));
+                                           vmo_offset, arch_mmu_flags, VmMapping::Mergeable::NO));
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }

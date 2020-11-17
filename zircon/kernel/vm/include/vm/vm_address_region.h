@@ -649,6 +649,14 @@ class VmMapping final : public VmAddressRegionOrMapping,
       const fbl::Function<bool(vm_page*, uint64_t vmo_offset)>& accessed_callback) const
       TA_REQ(object_->lock());
 
+  // Marks this mapping as being a candidate for merging, and will immediately attempt to merge with
+  // any neighboring mappings. Making a mapping mergeable essentially indicates that you will no
+  // longer use this specific VmMapping instance to refer to the referenced region, and will access
+  // the region via the parent vmar in the future, and so the region merely needs to remain valid
+  // through some VmMapping.
+  // For this the function requires you to hand in your last remaining refptr to the mapping.
+  static void MarkMergeable(fbl::RefPtr<VmMapping>&& mapping);
+
   // Used to cache the page attribution count for this vmo range. Also tracks the vmo hierarchy
   // generation count and the mapping generation count at the time of caching the attributed page
   // count.
@@ -679,13 +687,16 @@ class VmMapping final : public VmAddressRegionOrMapping,
 
   fbl::Canary<fbl::magic("VMAP")> canary_;
 
+  enum class Mergeable : bool { YES = true, NO = false };
+
   // allow VmAddressRegion to manipulate VmMapping internals for construction
   // and bookkeeping
   friend class VmAddressRegion;
 
   // private constructors, use VmAddressRegion::Create...() instead
   VmMapping(VmAddressRegion& parent, vaddr_t base, size_t size, uint32_t vmar_flags,
-            fbl::RefPtr<VmObject> vmo, uint64_t vmo_offset, uint arch_mmu_flags);
+            fbl::RefPtr<VmObject> vmo, uint64_t vmo_offset, uint arch_mmu_flags,
+            Mergeable mergeable);
 
   zx_status_t DestroyLocked() TA_REQ(lock()) override;
 
@@ -706,6 +717,18 @@ class VmMapping final : public VmAddressRegionOrMapping,
   // is returned |base| and |virtual_len| hold undefined contents.
   bool ObjectRangeToVaddrRange(uint64_t offset, uint64_t len, vaddr_t* base,
                                uint64_t* virtual_len) const TA_REQ(object_->lock());
+
+  // Attempts to merge this mapping with any neighbors. It is the responsibility of the caller to
+  // ensure a refptr to this is being held, as on return |this| may be in the dead state and have
+  // removed itself from the hierarchy, dropping a refptr.
+  void TryMergeNeighborsLocked() TA_REQ(lock());
+
+  // Attempts to merge the given mapping into this one. This only succeeds if the candidate is
+  // placed just after |this|, both in the aspace and the vmo. See implementation for the full
+  // requirements for merging to succeed.
+  // The candidate must be held as a RefPtr by the caller so that this function does not trigger
+  // any VmMapping destructor by dropping the last reference when removing from the parent vmar.
+  void TryMergeRightNeighborLocked(VmMapping* right_candidate) TA_REQ(lock());
 
   // This should be called whenever a change is made to the vmo range we are mapping, that could
   // result in the page attribution count of that range changing.
@@ -739,6 +762,10 @@ class VmMapping final : public VmAddressRegionOrMapping,
 
   // used to detect recursions through the vmo fault path
   bool currently_faulting_ TA_GUARDED(object_->lock()) = false;
+
+  // Whether this mapping may be merged with other adjacent mappings. A mergeable mapping is just a
+  // region that can be represented by any VmMapping object, not specifically this one.
+  Mergeable mergeable_ TA_GUARDED(lock()) = Mergeable::NO;
 
   // Tracks the last cached page attribution count for the vmo range we are mapping.
   // Only used when |object_| is a VmObjectPaged.

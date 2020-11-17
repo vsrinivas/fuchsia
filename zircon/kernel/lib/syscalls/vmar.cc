@@ -171,7 +171,7 @@ zx_status_t sys_vmar_map(zx_handle_t handle, zx_vm_option_t options, uint64_t vm
   }
 
   // Setup a handler to destroy the new mapping if the syscall is unsuccessful.
-  auto cleanup_handler = fbl::MakeAutoCall([vm_mapping]() { vm_mapping->Destroy(); });
+  auto cleanup_handler = fbl::MakeAutoCall([&vm_mapping]() { vm_mapping->Destroy(); });
 
   if (do_map_range) {
     status = vm_mapping->MapRange(0, len, false);
@@ -186,6 +186,11 @@ zx_status_t sys_vmar_map(zx_handle_t handle, zx_vm_option_t options, uint64_t vm
   }
 
   cleanup_handler.cancel();
+
+  // This mapping will now always be used via the aspace so it is free to be merged into different
+  // actual mapping objects.
+  VmMapping::MarkMergeable(ktl::move(vm_mapping));
+
   return ZX_OK;
 }
 

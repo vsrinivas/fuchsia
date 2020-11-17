@@ -6,6 +6,7 @@
 
 #include <align.h>
 #include <assert.h>
+#include <bits.h>
 #include <lib/instrumentation/asan.h>
 #include <lib/unittest/unittest.h>
 #include <lib/unittest/user_memory.h>
@@ -1204,6 +1205,176 @@ static bool vmaspace_usercopy_accessed_fault_test() {
   status = vmo->ReadUser(Thread::Current::Get()->aspace(), mem->user_out<char>(), 0, sizeof(char));
   ASSERT_EQ(status, ZX_OK);
 
+  END_TEST;
+}
+
+// Tests that VmMappings that are marked mergeable behave correctly.
+static bool vmaspace_merge_mapping_test() {
+  BEGIN_TEST;
+
+  fbl::RefPtr<VmAspace> aspace = VmAspace::Create(0, "test aspace");
+
+  // Create a sub VMAR we'll use for all our testing.
+  fbl::RefPtr<VmAddressRegion> vmar;
+  ASSERT_OK(aspace->RootVmar()->CreateSubVmar(
+      0, PAGE_SIZE * 64, 0,
+      VMAR_FLAG_CAN_MAP_SPECIFIC | VMAR_FLAG_CAN_MAP_READ | VMAR_FLAG_CAN_MAP_WRITE, "test vmar",
+      &vmar));
+
+  // Create two different vmos to make mappings into.
+  fbl::RefPtr<VmObjectPaged> vmo1;
+  ASSERT_OK(VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, 0u, PAGE_SIZE * 4, &vmo1));
+  fbl::RefPtr<VmObjectPaged> vmo2;
+  ASSERT_OK(VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, 0u, PAGE_SIZE * 4, &vmo2));
+
+  // Declare some enums to make writing test cases more readable instead of having lots of bools.
+  enum MmuFlags { FLAG_TYPE_1, FLAG_TYPE_2 };
+  enum MarkMerge { MERGE, NO_MERGE };
+  enum MergeResult { MERGES_LEFT, DOES_NOT_MERGE };
+
+  // To avoid boilerplate declare some tests in a data driven way.
+  struct {
+    struct {
+      uint64_t vmar_offset;
+      fbl::RefPtr<VmObjectPaged> vmo;
+      uint64_t vmo_offset;
+      MmuFlags flags;
+      MergeResult merge_result;
+    } mappings[3];
+  } cases[] = {
+      // Simple two mapping merge
+      {{{0, vmo1, 0, FLAG_TYPE_1, DOES_NOT_MERGE},
+        {PAGE_SIZE, vmo1, PAGE_SIZE, FLAG_TYPE_1, MERGES_LEFT},
+        {}}},
+      // Simple three mapping merge
+      {{{0, vmo1, 0, FLAG_TYPE_1, DOES_NOT_MERGE},
+        {PAGE_SIZE, vmo1, PAGE_SIZE, FLAG_TYPE_1, MERGES_LEFT},
+        {PAGE_SIZE * 2, vmo1, PAGE_SIZE * 2, FLAG_TYPE_1, MERGES_LEFT}}},
+      // Different mapping flags should block merge
+      {{{0, vmo1, 0, FLAG_TYPE_2, DOES_NOT_MERGE},
+        {PAGE_SIZE, vmo1, PAGE_SIZE, FLAG_TYPE_1, DOES_NOT_MERGE},
+        {PAGE_SIZE * 2, vmo1, PAGE_SIZE * 2, FLAG_TYPE_1, MERGES_LEFT}}},
+      // Discontiguous aspace, but contiguous vmo should not work.
+      {{{0, vmo1, 0, FLAG_TYPE_1, DOES_NOT_MERGE},
+        {PAGE_SIZE * 2, vmo1, PAGE_SIZE, FLAG_TYPE_1, DOES_NOT_MERGE},
+        {}}},
+      // Similar discontiguous vmo, but contiguous aspace should not work.
+      {{{0, vmo1, 0, FLAG_TYPE_1, DOES_NOT_MERGE},
+        {PAGE_SIZE, vmo1, PAGE_SIZE * 2, FLAG_TYPE_1, DOES_NOT_MERGE},
+        {}}},
+      // Leaving a contiguous hole also does not work, mapping needs to actually join.
+      {{{0, vmo1, 0, FLAG_TYPE_1, DOES_NOT_MERGE},
+        {PAGE_SIZE * 2, vmo1, PAGE_SIZE * 2, FLAG_TYPE_1, DOES_NOT_MERGE},
+        {}}},
+      // Different vmo should not work.
+      {{{0, vmo2, 0, FLAG_TYPE_1, DOES_NOT_MERGE},
+        {PAGE_SIZE, vmo1, PAGE_SIZE, FLAG_TYPE_1, DOES_NOT_MERGE},
+        {PAGE_SIZE * 2, vmo1, PAGE_SIZE * 2, FLAG_TYPE_1, MERGES_LEFT}}},
+  };
+
+  for (auto& test : cases) {
+    // Want to test all combinations of placing the mappings in subvmars, we just choose this by
+    // iterating all the binary representations of 3 digits.
+    for (int sub_vmar_comination = 0; sub_vmar_comination < 0b1000; sub_vmar_comination++) {
+      const int use_subvmar[3] = {BIT_SET(sub_vmar_comination, 0), BIT_SET(sub_vmar_comination, 1),
+                                  BIT_SET(sub_vmar_comination, 2)};
+      // Iterate all orders of marking mergeable. For 3 mappings there are  6 possibilities.
+      for (int merge_order_combination = 0; merge_order_combination < 6;
+           merge_order_combination++) {
+        const bool even_merge = (merge_order_combination % 2) == 0;
+        const int first_merge = merge_order_combination / 2;
+        const int merge_order[3] = {first_merge, (first_merge + (even_merge ? 1 : 2)) % 3,
+                                    (first_merge + (even_merge ? 2 : 1)) % 3};
+
+        // Instantiate the requested mappings.
+        fbl::RefPtr<VmAddressRegion> vmars[3];
+        fbl::RefPtr<VmMapping> mappings[3];
+        MergeResult merge_result[3] = {DOES_NOT_MERGE, DOES_NOT_MERGE, DOES_NOT_MERGE};
+        for (int i = 0; i < 3; i++) {
+          if (test.mappings[i].vmo) {
+            uint mmu_flags = ARCH_MMU_FLAG_PERM_READ |
+                             (test.mappings[i].flags == FLAG_TYPE_1 ? ARCH_MMU_FLAG_PERM_WRITE : 0);
+            if (use_subvmar[i]) {
+              ASSERT_OK(vmar->CreateSubVmar(test.mappings[i].vmar_offset, PAGE_SIZE, 0,
+                                            VMAR_FLAG_SPECIFIC | VMAR_FLAG_CAN_MAP_SPECIFIC |
+                                                VMAR_FLAG_CAN_MAP_READ | VMAR_FLAG_CAN_MAP_WRITE,
+                                            "sub vmar", &vmars[i]));
+              ASSERT_OK(vmars[i]->CreateVmMapping(0, PAGE_SIZE, 0, VMAR_FLAG_SPECIFIC,
+                                                  test.mappings[i].vmo, test.mappings[i].vmo_offset,
+                                                  mmu_flags, "test mapping", &mappings[i]));
+            } else {
+              ASSERT_OK(vmar->CreateVmMapping(test.mappings[i].vmar_offset, PAGE_SIZE, 0,
+                                              VMAR_FLAG_SPECIFIC, test.mappings[i].vmo,
+                                              test.mappings[i].vmo_offset, mmu_flags,
+                                              "test mapping", &mappings[i]));
+            }
+          }
+          // By default we assume merging happens as declared in the test, unless either this our
+          // immediate left is in a subvmar, in which case merging is blocked.
+          if (use_subvmar[i] || (i > 0 && use_subvmar[i - 1])) {
+            merge_result[i] = DOES_NOT_MERGE;
+          } else {
+            merge_result[i] = test.mappings[i].merge_result;
+          }
+        }
+
+        // As we merge track expected mapping sizes and what we have merged
+        bool merged[3] = {false, false, false};
+        size_t expected_size[3] = {PAGE_SIZE, PAGE_SIZE, PAGE_SIZE};
+        // Mark each mapping as mergeable based on merge_order
+        for (const auto& mapping : merge_order) {
+          if (test.mappings[mapping].vmo) {
+            VmMapping::MarkMergeable(ktl::move(mappings[mapping]));
+            merged[mapping] = true;
+            // See if we have anything pending from the right
+            if (mapping < 2 && merged[mapping + 1] && merge_result[mapping + 1] == MERGES_LEFT) {
+              expected_size[mapping] += expected_size[mapping + 1];
+              expected_size[mapping + 1] = 0;
+            }
+            // See if we should merge to the left.
+            if (merge_result[mapping] == MERGES_LEFT && mapping > 0 && merged[mapping - 1]) {
+              if (expected_size[mapping - 1] == 0) {
+                expected_size[mapping - 2] += expected_size[mapping];
+              } else {
+                expected_size[mapping - 1] += expected_size[mapping];
+              }
+              expected_size[mapping] = 0;
+            }
+          }
+          // Validate sizes to ensure any expected merging happened.
+          for (int j = 0; j < 3; j++) {
+            if (test.mappings[j].vmo) {
+              EXPECT_EQ(mappings[j]->size(), expected_size[j]);
+              if (expected_size[j] == 0) {
+                EXPECT_EQ(nullptr, mappings[j]->vmo().get());
+              } else {
+                EXPECT_EQ(mappings[j]->vmo().get(), test.mappings[j].vmo.get());
+              }
+              EXPECT_EQ(mappings[j]->base(), vmar->base() + test.mappings[j].vmar_offset);
+            }
+          }
+        }
+
+        // Destroy any mappings and VMARs.
+        for (int i = 0; i < 3; i++) {
+          if (mappings[i]) {
+            if (merge_result[i] == MERGES_LEFT) {
+              EXPECT_EQ(mappings[i]->Destroy(), ZX_ERR_BAD_STATE);
+            } else {
+              EXPECT_EQ(mappings[i]->Destroy(), ZX_OK);
+            }
+          }
+          if (vmars[i]) {
+            EXPECT_OK(vmars[i]->Destroy());
+          }
+        }
+      }
+    }
+  }
+
+  // Cleanup the address space.
+  EXPECT_OK(vmar->Destroy());
+  EXPECT_OK(aspace->Destroy());
   END_TEST;
 }
 
@@ -4168,6 +4339,7 @@ VM_UNITTEST(vmaspace_create_smoke_test)
 VM_UNITTEST(vmaspace_alloc_smoke_test)
 VM_UNITTEST(vmaspace_accessed_test)
 VM_UNITTEST(vmaspace_usercopy_accessed_fault_test)
+VM_UNITTEST(vmaspace_merge_mapping_test)
 VM_UNITTEST(vmo_create_test)
 VM_UNITTEST(vmo_create_maximum_size)
 VM_UNITTEST(vmo_pin_test)
