@@ -327,7 +327,7 @@ class ClockSyncPipelineTest : public HermeticAudioTest {
   void RunSineTest(int32_t clock_slew_ppm, size_t num_frames_to_analyze, size_t input_freq) {
     constexpr double kInputSineMagnitude = 1.0;
     constexpr double kExpectedOutputSineMagnitude = 0.99;
-    constexpr double kExpectedNoiseFloorDb = -75.0;
+    constexpr double kExpectedNoiseFloorDb = -72.0;
     constexpr size_t kMaxPeakWidth = 2;
     constexpr bool kDebugOutputSineValues = false;
 
