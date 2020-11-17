@@ -43,18 +43,16 @@ async fn main() -> Result<(), Error> {
         pkgfs::control::Client::open_from_namespace().context("error opening pkgfs/ctl")?;
 
     let (static_packages, _blob_location, _pkgfs_inspect) = {
-        let static_packages_fut = get_static_packages(pkgfs_system.clone());
+        let static_packages_fut = get_static_packages(&pkgfs_system);
 
         let blob_location_fut = BlobLocation::new(
-            || Ok(pkgfs_system.clone()),
-            || Ok(pkgfs_versions.clone()),
+            &pkgfs_system,
+            &pkgfs_versions,
             inspector.root().create_child("blob-location"),
         );
 
-        let pkgfs_inspect_fut = PkgfsInspectState::new(
-            || Ok(pkgfs_system.clone()),
-            inspector.root().create_child("pkgfs"),
-        );
+        let pkgfs_inspect_fut =
+            PkgfsInspectState::new(&pkgfs_system, inspector.root().create_child("pkgfs"));
 
         future::join3(static_packages_fut, blob_location_fut, pkgfs_inspect_fut).await
     };
@@ -100,7 +98,7 @@ async fn main() -> Result<(), Error> {
 }
 
 // Deserializes the static packages list. Returns an empty StaticPackages on error.
-async fn get_static_packages(pkgfs_system: pkgfs::system::Client) -> Arc<StaticPackages> {
+async fn get_static_packages(pkgfs_system: &pkgfs::system::Client) -> Arc<StaticPackages> {
     Arc::new(get_static_packages_impl(pkgfs_system).await.unwrap_or_else(|e| {
         fx_log_err!("Failed to load static packages, assumping empty: {:#}", anyhow!(e));
         StaticPackages::empty()
@@ -108,7 +106,7 @@ async fn get_static_packages(pkgfs_system: pkgfs::system::Client) -> Arc<StaticP
 }
 
 async fn get_static_packages_impl(
-    pkgfs_system: pkgfs::system::Client,
+    pkgfs_system: &pkgfs::system::Client,
 ) -> Result<StaticPackages, Error> {
     let file = pkgfs_system
         .open_file("data/static_packages")

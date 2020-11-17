@@ -18,10 +18,7 @@ const INSPECT_EXEC_PROP_NAME: &str = "pkgfs-executability-restrictions-enabled";
 const DISABLE_RESTRICTIONS_FILE_PATH: &str = "data/pkgfs_disable_executability_restrictions";
 
 impl PkgfsInspectState {
-    pub async fn new(
-        system_image: impl FnOnce() -> Result<SystemImage, Error>,
-        node: finspect::Node,
-    ) -> Self {
+    pub async fn new(system_image: &SystemImage, node: finspect::Node) -> Self {
         match Self::load_pkgfs_exec_restrictions_enabled(system_image).await {
             Ok(enabled) => Self {
                 _exec_restrictions_enabled: node
@@ -42,11 +39,9 @@ impl PkgfsInspectState {
     }
 
     async fn load_pkgfs_exec_restrictions_enabled(
-        system_image: impl FnOnce() -> Result<SystemImage, Error>,
+        system_image: &SystemImage,
     ) -> Result<bool, Error> {
-        let pkgfs_system = system_image()?;
-
-        match pkgfs_system.open_file(DISABLE_RESTRICTIONS_FILE_PATH).await {
+        match system_image.open_file(DISABLE_RESTRICTIONS_FILE_PATH).await {
             Ok(_) => Ok(false),
             Err(pkgfs::system::SystemImageFileOpenError::NotFound) => Ok(true),
             // We expect this to get zx::Status::NOT_SUPPORTED in tests that
@@ -60,7 +55,6 @@ impl PkgfsInspectState {
 mod tests {
     use {
         super::*,
-        anyhow::anyhow,
         fuchsia_async as fasync,
         fuchsia_inspect::assert_inspect_tree,
         std::fs::{create_dir_all, File},
@@ -96,7 +90,7 @@ mod tests {
     }
 
     async fn assert_pkgfs_executability_restrictions_enabled(
-        system_image: impl FnOnce() -> Result<SystemImage, Error>,
+        system_image: &SystemImage,
         expected_state: String,
     ) {
         let inspector = finspect::Inspector::new();
@@ -115,30 +109,15 @@ mod tests {
     async fn inspect_pkgfs_versions_restrictions_enabled() {
         let env = TestPkgfs::new_with_restrictions_enabled(true);
 
-        assert_pkgfs_executability_restrictions_enabled(
-            || Ok(env.system_image()),
-            "true".to_string(),
-        )
-        .await;
+        assert_pkgfs_executability_restrictions_enabled(&env.system_image(), "true".to_string())
+            .await;
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn inspect_pkgfs_versions_restrictions_disabled() {
         let env = TestPkgfs::new_with_restrictions_enabled(false);
 
-        assert_pkgfs_executability_restrictions_enabled(
-            || Ok(env.system_image()),
-            "false".to_string(),
-        )
-        .await;
-    }
-
-    #[fasync::run_singlethreaded(test)]
-    async fn inspect_pkgfs_versions_restrictions_error() {
-        assert_pkgfs_executability_restrictions_enabled(
-            || Err(anyhow!("failed to get system image")),
-            "error".to_string(),
-        )
-        .await;
+        assert_pkgfs_executability_restrictions_enabled(&env.system_image(), "false".to_string())
+            .await;
     }
 }

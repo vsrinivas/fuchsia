@@ -43,8 +43,8 @@ impl BaseBlobs {
 
 impl BlobLocation {
     pub async fn new(
-        system_image: impl FnOnce() -> Result<SystemImage, Error>,
-        versions: impl FnOnce() -> Result<Versions, Error>,
+        system_image: &SystemImage,
+        versions: &Versions,
         node: finspect::Node,
     ) -> Self {
         match Self::load_base_blobs(system_image, versions).await {
@@ -69,10 +69,9 @@ impl BlobLocation {
     }
 
     async fn load_base_blobs(
-        system_image: impl FnOnce() -> Result<SystemImage, Error>,
-        versions: impl FnOnce() -> Result<Versions, Error>,
+        system_image: &SystemImage,
+        versions: &Versions,
     ) -> Result<HashSet<Hash>, Error> {
-        let system_image = system_image()?;
         let system_image_meta_file =
             system_image.open_file("meta").await.context("error opening system_image meta")?;
         let mut system_image_hash = String::new();
@@ -88,11 +87,9 @@ impl BlobLocation {
                 .context("open system_image data/static_packages")?,
         )?;
 
-        let versions = versions()?;
-
         let mut futures = std::iter::once(&system_image_hash)
             .chain(static_packages.hashes())
-            .map(|p| Self::package_blobs(&versions, p))
+            .map(|p| Self::package_blobs(versions, p))
             .collect::<FuturesUnordered<_>>();
 
         let mut ret = HashSet::new();
@@ -230,8 +227,8 @@ mod tests {
         let inspector = finspect::Inspector::new();
 
         let _blob_location = BlobLocation::new(
-            || Ok(env.system_image()),
-            || Ok(env.versions()),
+            &env.system_image(),
+            &env.versions(),
             inspector.root().create_child("blob-location"),
         )
         .await;
@@ -273,8 +270,8 @@ mod tests {
         let inspector = finspect::Inspector::new();
 
         let _blob_location = BlobLocation::new(
-            || Ok(env.system_image()),
-            || Ok(env.versions()),
+            &env.system_image(),
+            &env.versions(),
             inspector.root().create_child("blob-location"),
         )
         .await;
@@ -299,8 +296,8 @@ mod tests {
         let inspector = finspect::Inspector::new();
 
         let _blob_location = BlobLocation::new(
-            || Ok(env.system_image()),
-            || Ok(env.versions()),
+            &env.system_image(),
+            &env.versions(),
             inspector.root().create_child("blob-location"),
         )
         .await;
@@ -341,8 +338,8 @@ mod tests {
         let env = TestPkgfs::new(&system_image_hash, &static_packages, &versions_contents);
 
         let blob_location = BlobLocation::new(
-            || Ok(env.system_image()),
-            || Ok(env.versions()),
+            &env.system_image(),
+            &env.versions(),
             finspect::Inspector::new().root().create_child("blob-location"),
         )
         .await;
@@ -371,8 +368,8 @@ mod tests {
         let env = TestPkgfs::new(&system_image_hash, &static_packages, &versions_contents);
 
         let blob_location = BlobLocation::new(
-            || Ok(env.system_image()),
-            || Ok(env.versions()),
+            &env.system_image(),
+            &env.versions(),
             finspect::Inspector::new().root().create_child("blob-location"),
         )
         .await;
