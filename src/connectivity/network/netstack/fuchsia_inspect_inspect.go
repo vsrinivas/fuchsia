@@ -582,11 +582,9 @@ type socketInfoInspectImpl struct {
 
 func (impl *socketInfoInspectImpl) ReadData() inspect.Object {
 	var common stack.TransportEndpointInfo
-	var hardError *tcpip.Error
 	switch t := impl.info.(type) {
 	case *tcp.EndpointInfo:
 		common = t.TransportEndpointInfo
-		hardError = t.HardError
 	case *stack.TransportEndpointInfo:
 		common = *t
 	default:
@@ -645,10 +643,6 @@ func (impl *socketInfoInspectImpl) ReadData() inspect.Object {
 		{Key: "BindAddress", Value: inspect.PropertyValueWithStr(common.BindAddr.String())},
 		{Key: "BindNICID", Value: inspect.PropertyValueWithStr(strconv.FormatInt(int64(common.BindNICID), 10))},
 		{Key: "RegisterNICID", Value: inspect.PropertyValueWithStr(strconv.FormatInt(int64(common.RegisterNICID), 10))},
-	}
-
-	if hardError != nil {
-		properties = append(properties, inspect.Property{Key: "HardError", Value: inspect.PropertyValueWithStr(hardError.String())})
 	}
 
 	return inspect.Object{
