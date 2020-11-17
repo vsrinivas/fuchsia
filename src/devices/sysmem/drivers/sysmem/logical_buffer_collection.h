@@ -20,6 +20,7 @@
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
 
+#include "binding_handle.h"
 #include "device.h"
 
 namespace sysmem_driver {
@@ -223,7 +224,7 @@ class LogicalBufferCollection : public fbl::RefCounted<LogicalBufferCollection> 
 
   FidlAllocator allocator_;
 
-  using TokenMap = std::map<BufferCollectionToken*, std::unique_ptr<BufferCollectionToken>>;
+  using TokenMap = std::map<BufferCollectionToken*, BindingHandle<BufferCollectionToken>>;
   TokenMap token_views_;
 
   CollectionMap collection_views_;

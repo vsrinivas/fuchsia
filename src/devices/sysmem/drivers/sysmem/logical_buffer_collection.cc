@@ -270,7 +270,7 @@ void LogicalBufferCollection::BindSharedCollection(Device* parent_device,
 
   if (client_info) {
     // The info will be propagated into the logcial buffer collection when the token closes.
-    token->SetDebugClientInfo(client_info->name.data(), client_info->name.size(), client_info->id);
+    token->SetDebugClientInfo(client_info->name, client_info->id);
   }
 
   // At this point, the token will process the rest of its previously queued
@@ -2012,8 +2012,7 @@ fit::result<zx::vmo> LogicalBufferCollection::AllocateVmo(
   zx::vmo child_vmo;
   // Physical VMOs only support slices where the size (and offset) are page_size aligned,
   // so we should also round up when allocating.
-  size_t rounded_size_bytes =
-      fbl::round_up(settings.buffer_settings().size_bytes(), ZX_PAGE_SIZE);
+  size_t rounded_size_bytes = fbl::round_up(settings.buffer_settings().size_bytes(), ZX_PAGE_SIZE);
   if (rounded_size_bytes < settings.buffer_settings().size_bytes()) {
     LogError("size_bytes overflows when rounding to multiple of page_size");
     return fit::error();
