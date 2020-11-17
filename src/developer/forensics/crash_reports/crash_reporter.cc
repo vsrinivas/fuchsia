@@ -145,6 +145,13 @@ void CrashReporter::File(fuchsia::feedback::CrashReport report, FileCallback cal
     info_.LogCrashState(cobalt::CrashState::kDropped);
     return;
   }
+
+  if (reporting_policy_watcher_->CurrentPolicy() == ReportingPolicy::kDoNotFileAndDelete) {
+    callback(::fit::ok());
+    info_.LogCrashState(cobalt::CrashState::kDeleted);
+    return;
+  }
+
   const std::string program_name = report.program_name();
   const auto report_id = next_report_id_++;
 
