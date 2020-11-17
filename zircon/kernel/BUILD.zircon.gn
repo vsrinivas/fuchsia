@@ -70,6 +70,7 @@ if (current_toolchain == default_toolchain) {
         "$zx/system/ulib/fbl:headers.config",
 
         # <dev/iommu.h> has #include <fbl/name.h>
+        # <mexec.h> has #include <fbl/span.h>
         "lib/fbl:headers.config",
 
         # Everywhere has #include <zx/status.h>

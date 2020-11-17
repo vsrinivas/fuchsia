@@ -50,7 +50,6 @@ zx_library("pc") {
     "$zx/kernel/lib/unittest",
     "$zx/system/ulib/explicit-memory",
     "$zx/system/ulib/smbios",
-    "$zx/system/ulib/zbi",
     "$zx/system/ulib/zbitl",
     "$zx/third_party/ulib/cksum",
   ]

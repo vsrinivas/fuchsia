@@ -16,7 +16,6 @@
 #include <lib/userabi/userboot_internal.h>
 #include <lib/userabi/vdso.h>
 #include <lib/zircon-internal/default_stack_size.h>
-#include <mexec.h>
 #include <platform.h>
 #include <stdio.h>
 #include <trace.h>

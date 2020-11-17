@@ -21,9 +21,10 @@ zx_status_t zx_system_mexec_payload_get(zx_handle_t resource,
 ## DESCRIPTION
 
 `zx_system_mexec_payload_get()` accepts a resource handle and a
-pointer/length corresponding to an output buffer and fills the buffer with an
-incomplete ZBI containing a sequence of entries that should be appended to a
-ZBI before passing that image to [`zx_system_mexec()`].
+pointer/length corresponding to an output buffer. The head of the buffer is
+overwritten with an incomplete ZBI containing a sequence of entries that should
+be appended to a ZBI before passing that image to [`zx_system_mexec()`]; the
+tail of the buffer is left untouched.
 
 *resource* must be of type **ZX_RSRC_KIND_ROOT**.
 
@@ -45,6 +46,8 @@ the function returns **ZX_ERR_NOT_SUPPORTED**.
 
 **ZX_ERR_NOT_SUPPORTED**  `kernel.enable-debugging-syscalls` is not set to `true`
 on the kernel command line.
+
+**ZX_ERR_BUFFER_TOO_SMALL**  If the provided buffer is too small for the ZBI.
 
 ## SEE ALSO
 

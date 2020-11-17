@@ -10,7 +10,9 @@
 #include <lib/crashlog.h>
 #include <lib/debuglog.h>
 #include <lib/instrumentation/asan.h>
-#include <lib/zbi/zbi-cpp.h>
+#include <lib/zbitl/error_stdio.h>
+#include <lib/zbitl/image.h>
+#include <lib/zbitl/memory.h>
 #include <lib/zircon-internal/macros.h>
 #include <mexec.h>
 #include <platform.h>
@@ -24,10 +26,13 @@
 #include <zircon/syscalls/system.h>
 #include <zircon/types.h>
 
+#include <cstddef>
+
 #include <arch/arch_ops.h>
 #include <arch/mp.h>
 #include <dev/interrupt.h>
 #include <fbl/auto_call.h>
+#include <fbl/span.h>
 #include <kernel/mp.h>
 #include <kernel/range_check.h>
 #include <kernel/thread.h>
@@ -259,8 +264,7 @@ zx_status_t sys_system_mexec_payload_get(zx_handle_t resource, user_out_ptr<void
   }
 
   // Highly priviliged, only root resource should have access.
-  zx_status_t result = validate_resource(resource, ZX_RSRC_KIND_ROOT);
-  if (result != ZX_OK) {
+  if (zx_status_t result = validate_resource(resource, ZX_RSRC_KIND_ROOT); result != ZX_OK) {
     return result;
   }
 
@@ -270,47 +274,47 @@ zx_status_t sys_system_mexec_payload_get(zx_handle_t resource, user_out_ptr<void
   }
 
   fbl::AllocChecker ac;
-  ktl::unique_ptr<uint8_t[]> buffer;
-  buffer.reset(new (&ac) uint8_t[buffer_size]);
+  auto buffer = new (&ac) std::byte[buffer_size];
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
-  memset(buffer.get(), 0, buffer_size);
 
   // Create a zero length ZBI in the buffer.
-  zbi::Zbi image(buffer.get(), buffer_size);
-  zbi_result_t zbi_result = image.Reset();
-  if (zbi_result != ZBI_RESULT_OK) {
+  zbitl::Image image(fbl::Span<std::byte>{buffer, buffer_size});
+  if (auto result = image.clear(); result.is_error()) {
+    zbitl::PrintViewError(result.error_value());
     return ZX_ERR_INTERNAL;
   }
 
-  result = platform_mexec_patch_zbi(buffer.get(), buffer_size);
-  if (result != ZX_OK) {
+  if (zx_status_t result = platform_append_mexec_data(image.storage()); result != ZX_OK) {
     return result;
   }
 
   // Propagate any stashed crashlog to the next kernel.
   const fbl::RefPtr<VmObject> stashed_crashlog = crashlog_get_stashed();
   if (stashed_crashlog && stashed_crashlog->size() <= UINT32_MAX) {
-    size_t crashlog_len = stashed_crashlog->size();
-    uint8_t* bootdata_section;
-
-    zbi_result_t res =
-        image.CreateEntry(ZBI_TYPE_CRASHLOG, 0, 0, static_cast<uint32_t>(crashlog_len),
-                          reinterpret_cast<void**>(&bootdata_section));
-
-    if (res != ZBI_RESULT_OK) {
-      printf("mexec: could not append crashlog\n");
-      return ZX_ERR_INTERNAL;
+    // TODO(fxbug.dev/64272): inline when possible.
+    zbi_header_t header{};
+    header.type = ZBI_TYPE_CRASHLOG;
+    header.length = static_cast<uint32_t>(stashed_crashlog->size());
+    auto append_result = image.Append(header);
+    if (append_result.is_error()) {
+      printf("mexec: could not append crashlog: ");
+      zbitl::PrintViewError(append_result.error_value());
+      // The only possible storage error that can result from a span-backed
+      // Image would be a failure to increase the capacity.
+      return append_result.error_value().storage_error ? ZX_ERR_BUFFER_TOO_SMALL : ZX_ERR_INTERNAL;
     }
-
-    result = stashed_crashlog->Read(bootdata_section, 0, crashlog_len);
-    if (result != ZX_OK) {
+    auto it = std::move(append_result).value();
+    fbl::Span<std::byte> payload = (*it).payload;
+    if (zx_status_t result = stashed_crashlog->Read(payload.data(), 0, payload.size());
+        result != ZX_OK) {
       return result;
     }
   }
 
-  return user_buffer.reinterpret<uint8_t>().copy_array_to_user(buffer.get(), buffer_size);
+  return user_buffer.reinterpret<std::byte>().copy_array_to_user(image.storage().data(),
+                                                                 image.size_bytes());
 }
 
 // zx_status_t zx_system_mexec

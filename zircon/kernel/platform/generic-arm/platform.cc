@@ -52,7 +52,6 @@
 #include <kernel/thread.h>
 #endif
 
-#include <lib/zbi/zbi-cpp.h>
 #include <lib/zbitl/error_stdio.h>
 #include <lib/zbitl/image.h>
 #include <lib/zbitl/memory.h>
@@ -667,21 +666,16 @@ void platform_specific_halt(platform_halt_action suggested_action, zircon_crash_
     ;
 }
 
-zx_status_t platform_mexec_patch_zbi(uint8_t* zbi, const size_t len) {
-  // copy certain boot items provided by the bootloader or boot shim
-  // to the mexec zbi
-  zbi::Zbi image(zbi, len);
-
+zx_status_t platform_append_mexec_data(fbl::Span<std::byte> data_zbi) {
   auto mexec_data_image = GetMexecDataImage();
-  for (auto [header, payload] : mexec_data_image) {
-    zbi_result_t status = image.CreateEntryWithPayload(header->type, header->extra, header->flags,
-                                                       payload.data(), payload.size());
-    if (status != ZBI_RESULT_OK) {
-      return ZX_ERR_INTERNAL;
-    }
-  }
-
-  if (auto result = mexec_data_image.take_error(); result.is_error()) {
+  zbitl::Image image(data_zbi);
+  if (auto result = image.Extend(mexec_data_image.begin(), mexec_data_image.end());
+      result.is_error()) {
+    zbitl::PrintViewCopyError(result.error_value());
+    // The only possible storage error that can result from a span-backed Image
+    // would be a failure to increase the capacity.
+    return result.error_value().write_error ? ZX_ERR_BUFFER_TOO_SMALL : ZX_ERR_INTERNAL;
+  } else if (auto result = mexec_data_image.take_error(); result.is_error()) {
     zbitl::PrintViewError(result.error_value());
     return ZX_ERR_INTERNAL;
   }

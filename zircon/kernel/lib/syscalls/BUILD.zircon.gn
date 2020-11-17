@@ -83,7 +83,7 @@ if (is_kernel) {
       "$zx/kernel/object",
       "$zx/system/ulib/explicit-memory",
       "$zx/system/ulib/region-alloc",
-      "$zx/system/ulib/zbi",
+      "$zx/system/ulib/zbitl",
     ]
     if (current_cpu == "x64") {
       deps += [ "$zx/kernel/platform/pc" ]

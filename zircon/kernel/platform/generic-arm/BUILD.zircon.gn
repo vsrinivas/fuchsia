@@ -40,7 +40,6 @@ source_set("generic-arm") {
     "$zx/kernel/object",
     "$zx/kernel/vm",
     "$zx/system/ulib/explicit-memory",
-    "$zx/system/ulib/zbi",
     "$zx/system/ulib/zbitl",
   ]
 }

@@ -8,7 +8,12 @@
 // https://opensource.org/licenses/MIT
 
 #include <assert.h>
+#include <lib/zbitl/error_stdio.h>
+#include <lib/zbitl/image.h>
+#include <lib/zbitl/memory.h>
 #include <lib/zircon-internal/macros.h>
+
+#include <cstddef>
 
 #include <arch/mp.h>
 #include <arch/ops.h>
@@ -16,6 +21,7 @@
 #include <arch/x86/apic.h>
 #include <arch/x86/mmu.h>
 #include <arch/x86/pv.h>
+#include <fbl/array.h>
 #include <kernel/cpu_distance_map.h>
 #include <ktl/algorithm.h>
 
@@ -28,9 +34,6 @@
 #include <lib/debuglog.h>
 #include <lib/instrumentation/asan.h>
 #include <lib/system-topology.h>
-#include <lib/zbi/zbi-cpp.h>
-#include <lib/zbitl/error_stdio.h>
-#include <lib/zbitl/view.h>
 #include <mexec.h>
 #include <platform.h>
 #include <string.h>
@@ -445,9 +448,7 @@ static void e820_entry_walk(uint64_t base, uint64_t size, bool is_mem, void* voi
   ctx->ret = ZX_OK;
 }
 
-// Give the platform an opportunity to append any platform specific bootdata
-// sections.
-zx_status_t platform_mexec_patch_zbi(uint8_t* bootdata, const size_t len) {
+zx_status_t platform_append_mexec_data(fbl::Span<std::byte> data_zbi) {
   uint8_t e820buf[sizeof(e820entry_t) * 64];
 
   e820_walk_ctx ctx;
@@ -466,107 +467,111 @@ zx_status_t platform_mexec_patch_zbi(uint8_t* bootdata, const size_t len) {
     printf("mexec: error while enumerating e820 map. Retcode = %d\n", ctx.ret);
     return ctx.ret;
   }
-  zbi::Zbi image(bootdata, len);
-  zbi_result_t result;
-
-  const uint32_t kNoZbiFlags = 0;
-  const uint32_t kNoZbiExtra = 0;
 
   uint32_t section_length = (uint32_t)(sizeof(e820buf) - ctx.len);
-  result = image.CreateEntryWithPayload(ZBI_TYPE_E820_TABLE, kNoZbiExtra, kNoZbiFlags, e820buf,
-                                        section_length);
 
-  if (result != ZBI_RESULT_OK) {
-    printf(
-        "mexec: Failed to append e820 map to zbi. len = %lu, section "
-        "length = %u, retcode = %d\n",
-        len, section_length, result);
-    return ZX_ERR_INTERNAL;
+  zbitl::Image image(data_zbi);
+  // The only possible storage error that can result from a span-backed Image
+  // would be a failure to increase the capacity.
+  auto error = [](const auto& image_error) -> zx_status_t {
+    return image_error.storage_error ? ZX_ERR_BUFFER_TOO_SMALL : ZX_ERR_INTERNAL;
+  };
+
+  // TODO(fxbug.dev/64272): inline when possible.
+  zbi_header_t header{};
+  header.type = ZBI_TYPE_E820_TABLE;
+  if (auto result = image.Append(header, zbitl::AsBytes(e820buf, section_length));
+      result.is_error()) {
+    printf("mexec: failed to append E820 map to data ZBI: ");
+    zbitl::PrintViewError(result.error_value());
+    return error(result.error_value());
   }
 
-  // Append platform id
+  // Append platform ID.
   if (bootloader.platform_id_size) {
-    result = image.CreateEntryWithPayload(ZBI_TYPE_PLATFORM_ID, kNoZbiExtra, kNoZbiFlags,
-                                          reinterpret_cast<uint8_t*>(&bootloader.platform_id),
-                                          sizeof(bootloader.platform_id));
-    if (result != ZBI_RESULT_OK) {
-      printf(
-          "mexec: Failed to append platform id to bootdata. "
-          "len = %lu, section length = %lu, retcode = %d\n",
-          len, sizeof(bootloader.platform_id), result);
-      return ZX_ERR_INTERNAL;
+    // TODO(fxbug.dev/64272): inline when possible.
+    zbi_header_t header{};
+    header.type = ZBI_TYPE_PLATFORM_ID;
+    auto result = image.Append(header, zbitl::AsBytes(bootloader.platform_id));
+    if (result.is_error()) {
+      printf("mexec: failed to append platform ID to data ZBI: ");
+      zbitl::PrintViewError(result.error_value());
+      return error(result.error_value());
     }
   }
-  // Append information about the framebuffer to the bootdata
+  // Append information about the framebuffer to the data ZBI.
   if (bootloader.fb.base) {
-    result = image.CreateEntryWithPayload(ZBI_TYPE_FRAMEBUFFER, kNoZbiExtra, kNoZbiFlags,
-                                          (uint8_t*)&bootloader.fb, sizeof(bootloader.fb));
-    if (result != ZBI_RESULT_OK) {
-      printf(
-          "mexec: Failed to append framebuffer data to bootdata. "
-          "len = %lu, section length = %lu, retcode = %d\n",
-          len, sizeof(bootloader.fb), result);
-      return ZX_ERR_INTERNAL;
+    // TODO(fxbug.dev/64272): inline when possible.
+    zbi_header_t header{};
+    header.type = ZBI_TYPE_FRAMEBUFFER;
+    auto result = image.Append(header, zbitl::AsBytes(bootloader.fb));
+    if (result.is_error()) {
+      printf("mexec: failed to append framebuffer data to data ZBI: ");
+      zbitl::PrintViewError(result.error_value());
+      return error(result.error_value());
     }
   }
 
   if (bootloader.efi_system_table) {
-    result = image.CreateEntryWithPayload(ZBI_TYPE_EFI_SYSTEM_TABLE, kNoZbiExtra, kNoZbiFlags,
-                                          (uint8_t*)&bootloader.efi_system_table,
-                                          sizeof(bootloader.efi_system_table));
-    if (result != ZBI_RESULT_OK) {
-      printf(
-          "mexec: Failed to append efi sys table data to bootdata. "
-          "len = %lu, section length = %lu, retcode = %d\n",
-          len, sizeof(bootloader.efi_system_table), result);
-      return ZX_ERR_INTERNAL;
+    // TODO(fxbug.dev/64272): inline when possible.
+    zbi_header_t header{};
+    header.type = ZBI_TYPE_EFI_SYSTEM_TABLE;
+    auto result = image.Append(header, zbitl::AsBytes(bootloader.efi_system_table));
+    if (result.is_error()) {
+      printf("mexec: Failed to append EFI sys table data to data ZBI: ");
+      zbitl::PrintViewError(result.error_value());
+      return error(result.error_value());
     }
   }
 
   if (bootloader.acpi_rsdp) {
-    result =
-        image.CreateEntryWithPayload(ZBI_TYPE_ACPI_RSDP, kNoZbiExtra, kNoZbiFlags,
-                                     (uint8_t*)&bootloader.acpi_rsdp, sizeof(bootloader.acpi_rsdp));
-    if (result != ZBI_RESULT_OK) {
-      printf(
-          "mexec: Failed to append acpi rsdp data to bootdata. "
-          "len = %lu, section length = %lu, retcode = %d\n",
-          len, sizeof(bootloader.acpi_rsdp), result);
-      return ZX_ERR_INTERNAL;
+    // TODO(fxbug.dev/64272): inline when possible.
+    zbi_header_t header{};
+    header.type = ZBI_TYPE_ACPI_RSDP;
+    auto result = image.Append(header, zbitl::AsBytes(bootloader.acpi_rsdp));
+    if (result.is_error()) {
+      printf("mexec: failed to append ACPI RSDP data to data ZBI: ");
+      zbitl::PrintViewError(result.error_value());
+      return error(result.error_value());
     }
   }
 
   if (bootloader.smbios) {
-    result = image.CreateEntryWithPayload(ZBI_TYPE_SMBIOS, kNoZbiExtra, kNoZbiFlags,
-                                          (uint8_t*)&bootloader.smbios, sizeof(bootloader.smbios));
-    if (result != ZBI_RESULT_OK) {
-      printf(
-          "mexec: Failed to append smbios data to bootdata. len = %lu,"
-          " section length = %lu, retcode = %d\n",
-          len, sizeof(bootloader.smbios), result);
-      return ZX_ERR_INTERNAL;
+    // TODO(fxbug.dev/64272): inline when possible.
+    zbi_header_t header{};
+    header.type = ZBI_TYPE_SMBIOS;
+    auto result = image.Append(header, zbitl::AsBytes(bootloader.smbios));
+    if (result.is_error()) {
+      printf("mexec: failed to append SMBIOSs data to data ZBI: ");
+      zbitl::PrintViewError(result.error_value());
+      return error(result.error_value());
     }
   }
 
-  auto add_uart = [&image, len](uint32_t extra, auto&& uart) {
-    auto result = image.CreateEntryWithPayload(ZBI_TYPE_KERNEL_DRIVER, extra, kNoZbiFlags,
-                                               reinterpret_cast<uint8_t*>(&uart), sizeof(uart));
-    if (result != ZBI_RESULT_OK) {
-      printf(
-          "mexec: Failed to append uart data to bootdata. len = %zu, "
-          "section length = %zu, retcode = %d\n",
-          len, sizeof(uart), result);
-      return false;
+  auto add_uart = [&](uint32_t extra, auto bytes) -> zx_status_t {
+    // TODO(fxbug.dev/64272): inline when possible.
+    zbi_header_t header{};
+    header.type = ZBI_TYPE_KERNEL_DRIVER;
+    header.extra = extra;
+    auto result = image.Append(header, bytes);
+    if (result.is_error()) {
+      printf("mexec: failed to append UART data to data ZBI: ");
+      zbitl::PrintViewError(result.error_value());
+      return error(result.error_value());
     }
-    return true;
+    return ZX_OK;
   };
   if (auto pio_uart = ktl::get_if<dcfg_simple_pio_t>(&bootloader.uart)) {
-    if (!add_uart(KDRV_I8250_PIO_UART, *pio_uart)) {
-      return ZX_ERR_INTERNAL;
+    if (zx_status_t status =
+            add_uart(KDRV_I8250_PIO_UART, zbitl::AsBytes(pio_uart, sizeof(*pio_uart)));
+        status != ZX_OK) {
+      return status;
     }
   } else if (auto mmio_uart = ktl::get_if<dcfg_simple_t>(&bootloader.uart)) {
-    if (!add_uart(KDRV_I8250_MMIO_UART, *mmio_uart)) {
-      return ZX_ERR_INTERNAL;
+    if (zx_status_t status =
+            add_uart(KDRV_I8250_MMIO_UART, zbitl::AsBytes(mmio_uart, sizeof(*mmio_uart)));
+        status != ZX_OK) {
+      return status;
     }
   } else {
     ZX_DEBUG_ASSERT_MSG(ktl::get_if<ktl::monostate>(&bootloader.uart),
@@ -574,15 +579,14 @@ zx_status_t platform_mexec_patch_zbi(uint8_t* bootdata, const size_t len) {
   }
 
   if (bootloader.nvram.base) {
-    result = image.CreateEntryWithPayload(ZBI_TYPE_NVRAM, kNoZbiExtra, kNoZbiFlags,
-                                          (uint8_t*)&bootloader.nvram, sizeof(bootloader.nvram));
-
-    if (result != ZBI_RESULT_OK) {
-      printf(
-          "mexec: Failed to append nvram data to bootdata. len = %lu, "
-          "section length = %lu, retcode = %d\n",
-          len, sizeof(bootloader.nvram), result);
-      return ZX_ERR_INTERNAL;
+    // TODO(fxbug.dev/64272): inline when possible.
+    zbi_header_t header{};
+    header.type = ZBI_TYPE_NVRAM;
+    auto result = image.Append(header, zbitl::AsBytes(bootloader.nvram));
+    if (result.is_error()) {
+      printf("mexec: failed to append NVRAM data to data ZBI: ");
+      zbitl::PrintViewError(result.error_value());
+      return error(result.error_value());
     }
   }
 

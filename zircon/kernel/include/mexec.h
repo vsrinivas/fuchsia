@@ -11,7 +11,7 @@
 #define MEMMOV_OPS_SRC_OFFSET (8)
 #define MEMMOV_OPS_LEN_OFFSET (16)
 #define MEMMOV_OPS_STRUCT_LEN (24)
-#define MAX_OPS_PER_PAGE      (169)    // Calculated below
+#define MAX_OPS_PER_PAGE (169)  // Calculated below
 
 #ifndef __ASSEMBLER__
 
@@ -21,6 +21,7 @@
 #include <zircon/types.h>
 
 #include <fbl/ref_ptr.h>
+#include <fbl/span.h>
 #include <vm/vm_object.h>
 
 // Warning: The geometry of this struct is depended upon by the mexec assembly
@@ -42,10 +43,9 @@ static_assert(MAX_OPS_PER_PAGE_DEF == MAX_OPS_PER_PAGE,
 typedef void (*mexec_asm_func)(uint64_t arg0, uint64_t arg1, uint64_t arg2, uint64_t aux,
                                memmov_ops_t* ops, void* new_kernel_addr);
 
-/* Allow the platform to patch the zbi structure with any platform specific
- * data that might be necessary for the kernel that mexec is chain-loading.
- */
-zx_status_t platform_mexec_patch_zbi(uint8_t* bootdata, const size_t len);
+// Extend the provided data ZBI with the platform-specific items that might
+// be necessary for the kernel that mexec is chain-loading.
+zx_status_t platform_append_mexec_data(fbl::Span<std::byte> data_zbi);
 
 /* This function is called at the beginning of mexec.  Interrupts are not yet
  * disabled, but only one CPU is running.
@@ -66,7 +66,6 @@ void platform_mexec(mexec_asm_func mexec_assembly, memmov_ops_t* ops, uintptr_t 
  */
 zx_status_t alloc_pages_greater_than(paddr_t lower_bound, size_t count, size_t limit,
                                      paddr_t* paddrs);
-
 
 static_assert(__offsetof(memmov_ops_t, dst) == MEMMOV_OPS_DST_OFFSET, "");
 static_assert(__offsetof(memmov_ops_t, src) == MEMMOV_OPS_SRC_OFFSET, "");
