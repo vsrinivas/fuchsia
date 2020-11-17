@@ -165,6 +165,7 @@ template("ffx_plugin") {
                "//third_party/rust_crates:argh",
              ]
       non_rust_deps = [ "//third_party/boringssl" ]
+
       if (defined(invoker.args_with_unit_tests) &&
           invoker.args_with_unit_tests == true) {
         with_unit_tests = true

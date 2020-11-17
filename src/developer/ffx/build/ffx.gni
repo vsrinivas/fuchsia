@@ -56,7 +56,10 @@ template("ffx") {
              "//third_party/rust_crates:lazy_static",
              "//third_party/rust_crates:log",
            ]
-    non_rust_deps = [ "//third_party/boringssl" ]
+    non_rust_deps = [
+      "//src/lib/chunked-compression",
+      "//third_party/boringssl",
+    ]
     forward_variables_from(invoker,
                            "*",
                            [

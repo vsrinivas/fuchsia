@@ -5,7 +5,6 @@
 import("//build/host.gni")
 
 group("lib") {
-  testonly = true
   if (is_host) {
     public_deps = [
       "//src/security/scrutiny/lib/framework",

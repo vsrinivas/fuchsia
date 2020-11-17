@@ -57,12 +57,11 @@ impl Scrutiny {
         {
             logo::print_logo();
         }
-        WriteLogger::init(
+        let _ = WriteLogger::init(
             log_level,
             SimpleLogConfig::default(),
             File::create(config.runtime.logging.path.clone()).unwrap(),
-        )
-        .unwrap();
+        );
         let model = Arc::new(DataModel::connect(config.runtime.model.path.clone())?);
         let dispatcher = Arc::new(RwLock::new(ControllerDispatcher::new(Arc::clone(&model))));
         let visualizer = if let Some(server_config) = &config.runtime.server {
