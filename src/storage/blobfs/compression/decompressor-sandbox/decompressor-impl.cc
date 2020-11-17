@@ -12,6 +12,7 @@
 #include <fuchsia/scheduler/cpp/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/fzl/owned-vmo-mapper.h>
+#include <lib/fzl/vmo-mapper.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/trace/event.h>
 #include <lib/zx/thread.h>
@@ -32,7 +33,7 @@
 namespace {
 struct FifoInfo {
   zx::fifo fifo;
-  fzl::OwnedVmoMapper compressed_mapper;
+  zx::vmo compressed_vmo;
   fzl::OwnedVmoMapper decompressed_mapper;
 };
 }  // namespace
@@ -48,7 +49,7 @@ namespace blobfs {
 // use, with a path to optimize it later.
 // TODO(fxbug.dev/62395): Remove the need to repeatedly map and unmap the compressed mapper.
 zx_status_t DecompressChunkedPartial(const fzl::OwnedVmoMapper& decompressed_mapper,
-                                     const fzl::OwnedVmoMapper& compressed_mapper,
+                                     const fzl::VmoMapper& compressed_mapper,
                                      const llcpp::fuchsia::blobfs::internal::Range decompressed,
                                      const llcpp::fuchsia::blobfs::internal::Range compressed,
                                      size_t* bytes_decompressed) {
@@ -60,7 +61,7 @@ zx_status_t DecompressChunkedPartial(const fzl::OwnedVmoMapper& decompressed_map
 }
 
 zx_status_t DecompressFull(const fzl::OwnedVmoMapper& decompressed_mapper,
-                           const fzl::OwnedVmoMapper& compressed_mapper, size_t decompressed_length,
+                           const fzl::VmoMapper& compressed_mapper, size_t decompressed_length,
                            size_t compressed_length, CompressionAlgorithm algorithm,
                            size_t* bytes_decompressed) {
   std::unique_ptr<Decompressor> decompressor = nullptr;
@@ -73,12 +74,21 @@ zx_status_t DecompressFull(const fzl::OwnedVmoMapper& decompressed_mapper,
 }
 
 // The actual handling of a request on the fifo.
-void HandleFifo(const fzl::OwnedVmoMapper& compressed_mapper,
-                const fzl::OwnedVmoMapper& decompressed_mapper,
+void HandleFifo(const zx::vmo& compressed_vmo, const fzl::OwnedVmoMapper& decompressed_mapper,
                 const llcpp::fuchsia::blobfs::internal::DecompressRequest* request,
                 llcpp::fuchsia::blobfs::internal::DecompressResponse* response) {
   TRACE_DURATION("decompressor", "HandleFifo", "length", request->decompressed.size);
+  fzl::VmoMapper compressed_mapper;
+  zx_status_t status = compressed_mapper.Map(
+      compressed_vmo, 0, request->compressed.offset + request->compressed.size, ZX_VM_PERM_READ);
+  if (status != ZX_OK) {
+    response->status = status;
+    response->size = 0;
+    return;
+  }
+
   size_t bytes_decompressed = 0;
+
   switch (request->algorithm) {
     case llcpp::fuchsia::blobfs::internal::CompressionAlgorithm::CHUNKED_PARTIAL:
       response->status =
@@ -105,12 +115,13 @@ void HandleFifo(const fzl::OwnedVmoMapper& compressed_mapper,
   }
 
   response->size = bytes_decompressed;
+  // TODO(fxbug.dev/62395): Remove the need to repeatedly map and unmap the compressed mapper.
+  compressed_mapper.Unmap();
 }
 
 // Watches a fifo for requests to take data from the compressed_vmo and
 // extract the result into the memory region of decompressed_mapper.
-void WatchFifo(zx::fifo fifo, fzl::OwnedVmoMapper compressed_mapper,
-               fzl::OwnedVmoMapper decompressed_mapper) {
+void WatchFifo(zx::fifo fifo, zx::vmo compressed_vmo, fzl::OwnedVmoMapper decompressed_mapper) {
   constexpr zx_signals_t kFifoReadSignals = ZX_FIFO_READABLE | ZX_FIFO_PEER_CLOSED;
   constexpr zx_signals_t kFifoWriteSignals = ZX_FIFO_WRITABLE | ZX_FIFO_PEER_CLOSED;
   while (fifo.is_valid()) {
@@ -128,7 +139,7 @@ void WatchFifo(zx::fifo fifo, fzl::OwnedVmoMapper compressed_mapper,
     }
 
     llcpp::fuchsia::blobfs::internal::DecompressResponse response;
-    HandleFifo(compressed_mapper, decompressed_mapper, &request, &response);
+    HandleFifo(compressed_vmo, decompressed_mapper, &request, &response);
 
     fifo.wait_one(kFifoWriteSignals, zx::time::infinite(), &signal);
     if ((signal & ZX_FIFO_WRITABLE) == 0 ||
@@ -142,7 +153,7 @@ void WatchFifo(zx::fifo fifo, fzl::OwnedVmoMapper compressed_mapper,
 // by thrd_create_With_name().
 int WatchFifoWrapper(void* data) {
   std::unique_ptr<FifoInfo> info(static_cast<FifoInfo*>(data));
-  WatchFifo(std::move(info->fifo), std::move(info->compressed_mapper),
+  WatchFifo(std::move(info->fifo), std::move(info->compressed_vmo),
             std::move(info->decompressed_mapper));
   return 0;
 }
@@ -205,20 +216,9 @@ void DecompressorImpl::Create(zx::fifo server_end, zx::vmo compressed_vmo, zx::v
     return callback(status);
   }
 
-  status = compressed_vmo.get_size(&vmo_size);
-  if (status != ZX_OK) {
-    return callback(status);
-  }
-
-  fzl::OwnedVmoMapper compressed_mapper;
-  status = compressed_mapper.Map(std::move(compressed_vmo), vmo_size, ZX_VM_PERM_READ);
-  if (status != ZX_OK) {
-    return callback(status);
-  }
-
   thrd_t handler_thread;
   std::unique_ptr<FifoInfo> info = std::make_unique<FifoInfo>();
-  *info = {std::move(server_end), std::move(compressed_mapper), std::move(decompressed_mapper)};
+  *info = {std::move(server_end), std::move(compressed_vmo), std::move(decompressed_mapper)};
   if (thrd_create_with_name(&handler_thread, WatchFifoWrapper, info.release(),
                             "decompressor-fifo-thread") != thrd_success) {
     return callback(ZX_ERR_INTERNAL);
