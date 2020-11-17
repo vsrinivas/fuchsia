@@ -22,7 +22,7 @@ static const char* kAbrMagic = "\0AB0";
 
 /* Versioning for the on-disk A/B metadata. */
 static const uint8_t kAbrMajorVersion = 2;
-static const uint8_t kAbrMinorVersion = 0;
+static const uint8_t kAbrMinorVersion = 1;
 
 /* Maximum values for slot data. */
 static const uint8_t kAbrMaxPriority = 15;

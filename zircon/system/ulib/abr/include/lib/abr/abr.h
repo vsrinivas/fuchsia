@@ -69,6 +69,9 @@ typedef struct {
  *    - The retry counter will be modified if a slot is chosen which has not been marked successful.
  *    - The one-shot recovery field will be reset if it is handled.
  *    - Invalid metadata will be overwritten with default valid metadata.
+ *    - If the other slot is marked as successful, the success mark will be removed and its retry
+ *      counter will be reset to the maximum. This happens because booting the selected slot could
+ *      cause the other slot to become unable to successfully boot.
  *
  * Parameters:
  *    abr_ops - A populated instance of AbrOps. If |update_metadata| is false, then the

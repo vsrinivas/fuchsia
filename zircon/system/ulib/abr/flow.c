@@ -234,12 +234,27 @@ AbrSlotIndex AbrGetBootSlot(const AbrOps* abr_ops, bool update_metadata,
   }
 
   if (update_metadata) {
-    /* In addition to any changes that resulted from normalization, there is one change to be made
-     * here and that is to decrement the tries remaining for a slot not yet marked as successful.
+    /* In addition to any changes that resulted from normalization, there are a couple changes to be
+     * made here. First is to decrement the tries remaining for a slot not yet marked as successful.
      */
     if ((slot_to_boot != kAbrSlotIndexR) && !abr_data.slot_data[slot_to_boot].successful_boot) {
       abr_data.slot_data[slot_to_boot].tries_remaining--;
     }
+    /* Second is to clear the successful_boot bit from any successfully-marked slots that aren't the
+     * slot we're booting. It's possible that booting from one slot will render the other slot
+     * unbootable (say, by migrating a config file format in a shared partiton). Clearing these bits
+     * minimizes the risk we'll have an unhealthy slot marked "successful_boot", which would prevent
+     * the system from automatically booting into recovery.
+     */
+    if ((slot_to_boot != kAbrSlotIndexA) && abr_data.slot_data[kAbrSlotIndexA].successful_boot) {
+      abr_data.slot_data[kAbrSlotIndexA].tries_remaining = kAbrMaxTriesRemaining;
+      abr_data.slot_data[kAbrSlotIndexA].successful_boot = 0;
+    }
+    if ((slot_to_boot != kAbrSlotIndexB) && abr_data.slot_data[kAbrSlotIndexB].successful_boot) {
+      abr_data.slot_data[kAbrSlotIndexB].tries_remaining = kAbrMaxTriesRemaining;
+      abr_data.slot_data[kAbrSlotIndexB].successful_boot = 0;
+    }
+
     result = save_metadata_if_changed(abr_ops, &abr_data, &abr_data_orig);
     if (result != kAbrResultOk) {
       /* We have no choice but to proceed without updating metadata. */
@@ -341,7 +356,10 @@ AbrResult AbrMarkSlotSuccessful(const AbrOps* abr_ops, AbrSlotIndex slot_index) 
   abr_data.slot_data[slot_index].tries_remaining = 0;
   abr_data.slot_data[slot_index].successful_boot = 1;
 
-  /* Remove any success mark on the other slot. */
+  /* Remove any success mark on the other slot.
+   *
+   * TODO(fxbug.dev/64255): Remove this logic once the fix for fxbug.dev/64057 has rolled out.
+   */
   other_slot_index = 1 - slot_index;
   if (is_slot_bootable(&abr_data.slot_data[other_slot_index])) {
     abr_data.slot_data[other_slot_index].tries_remaining = kAbrMaxTriesRemaining;

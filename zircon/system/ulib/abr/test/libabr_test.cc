@@ -160,6 +160,101 @@ TEST(LibabrTest, GetBootSlotActiveSuccessfulA) { GetBootSlotActiveSuccessful(kAb
 
 TEST(LibabrTest, GetBootSlotActiveSuccessfulB) { GetBootSlotActiveSuccessful(kAbrSlotIndexB); }
 
+void GetBootSlotNeitherSuccessful(AbrSlotIndex slot_index) {
+  AbrSlotIndex other_slot_index = OtherSlot(slot_index);
+  FakeOps ops = FakeOpsWithInitializedMetadata();
+  ASSERT_EQ(kAbrResultOk, AbrMarkSlotActive(ops, other_slot_index));
+  ASSERT_EQ(kAbrResultOk, AbrMarkSlotActive(ops, slot_index));
+  bool is_slot_marked_successful = true;
+  EXPECT_EQ(slot_index, AbrGetBootSlot(ops, true, &is_slot_marked_successful));
+  EXPECT_FALSE(is_slot_marked_successful);
+  ValidateMetadata(ops.metadata_);
+
+  EXPECT_GT(ops.metadata_.slot_data[slot_index].priority, 0);
+  EXPECT_GT(ops.metadata_.slot_data[slot_index].tries_remaining, 0);
+  EXPECT_EQ(ops.metadata_.slot_data[slot_index].successful_boot, 0);
+  EXPECT_GT(ops.metadata_.slot_data[other_slot_index].priority, 0);
+  EXPECT_GT(ops.metadata_.slot_data[other_slot_index].tries_remaining, 0);
+  EXPECT_EQ(ops.metadata_.slot_data[other_slot_index].successful_boot, 0);
+}
+TEST(LibabrTest, GetBootSlotNeitherSuccessfulA) { GetBootSlotNeitherSuccessful(kAbrSlotIndexA); }
+TEST(LibabrTest, GetBootSlotNeitherSuccessfulB) { GetBootSlotNeitherSuccessful(kAbrSlotIndexB); }
+
+void GetBootSlotOnlyActiveSuccessful(AbrSlotIndex slot_index) {
+  AbrSlotIndex other_slot_index = OtherSlot(slot_index);
+  FakeOps ops = FakeOpsWithInitializedMetadata();
+  ASSERT_EQ(kAbrResultOk, AbrMarkSlotActive(ops, other_slot_index));
+  ASSERT_EQ(kAbrResultOk, AbrMarkSlotActive(ops, slot_index));
+  ASSERT_EQ(kAbrResultOk, AbrMarkSlotSuccessful(ops, slot_index));
+  bool is_slot_marked_successful = false;
+  EXPECT_EQ(slot_index, AbrGetBootSlot(ops, true, &is_slot_marked_successful));
+  EXPECT_TRUE(is_slot_marked_successful);
+  ValidateMetadata(ops.metadata_);
+
+  EXPECT_GT(ops.metadata_.slot_data[slot_index].priority, 0);
+  EXPECT_EQ(ops.metadata_.slot_data[slot_index].tries_remaining, 0);
+  EXPECT_NE(ops.metadata_.slot_data[slot_index].successful_boot, 0);
+  EXPECT_GT(ops.metadata_.slot_data[other_slot_index].priority, 0);
+  EXPECT_GT(ops.metadata_.slot_data[other_slot_index].tries_remaining, 0);
+  EXPECT_EQ(ops.metadata_.slot_data[other_slot_index].successful_boot, 0);
+}
+TEST(LibabrTest, GetBootSlotOnlyActiveSuccessfulA) {
+  GetBootSlotOnlyActiveSuccessful(kAbrSlotIndexA);
+}
+TEST(LibabrTest, GetBootSlotOnlyActiveSuccessfulB) {
+  GetBootSlotOnlyActiveSuccessful(kAbrSlotIndexB);
+}
+
+void GetBootSlotOnlyInactiveSuccessful(AbrSlotIndex slot_index) {
+  AbrSlotIndex other_slot_index = OtherSlot(slot_index);
+  FakeOps ops = FakeOpsWithInitializedMetadata();
+  ASSERT_EQ(kAbrResultOk, AbrMarkSlotActive(ops, other_slot_index));
+  ASSERT_EQ(kAbrResultOk, AbrMarkSlotActive(ops, slot_index));
+  ASSERT_EQ(kAbrResultOk, AbrMarkSlotSuccessful(ops, other_slot_index));
+  bool is_slot_marked_successful = true;
+  EXPECT_EQ(slot_index, AbrGetBootSlot(ops, true, &is_slot_marked_successful));
+  EXPECT_FALSE(is_slot_marked_successful);
+  ValidateMetadata(ops.metadata_);
+
+  EXPECT_GT(ops.metadata_.slot_data[slot_index].priority, 0);
+  EXPECT_GT(ops.metadata_.slot_data[slot_index].tries_remaining, 0);
+  EXPECT_EQ(ops.metadata_.slot_data[slot_index].successful_boot, 0);
+  // Success should be removed from the inactive slot.
+  EXPECT_GT(ops.metadata_.slot_data[other_slot_index].priority, 0);
+  EXPECT_EQ(ops.metadata_.slot_data[other_slot_index].tries_remaining, kAbrMaxTriesRemaining);
+  EXPECT_EQ(ops.metadata_.slot_data[other_slot_index].successful_boot, 0);
+}
+TEST(LibabrTest, GetBootSlotOnlyInactiveSuccessfulA) {
+  GetBootSlotOnlyInactiveSuccessful(kAbrSlotIndexA);
+}
+TEST(LibabrTest, GetBootSlotOnlyInactiveSuccessfulB) {
+  GetBootSlotOnlyInactiveSuccessful(kAbrSlotIndexB);
+}
+
+// This shouldn't happen in the wild, but we'll test it for completeness.
+void GetBootSlotBothSuccessful(AbrSlotIndex slot_index) {
+  AbrSlotIndex other_slot_index = OtherSlot(slot_index);
+  FakeOps ops = FakeOpsWithInitializedMetadata();
+  ASSERT_EQ(kAbrResultOk, AbrMarkSlotActive(ops, other_slot_index));
+  ASSERT_EQ(kAbrResultOk, AbrMarkSlotActive(ops, slot_index));
+  ASSERT_EQ(kAbrResultOk, AbrMarkSlotSuccessful(ops, other_slot_index));
+  ASSERT_EQ(kAbrResultOk, AbrMarkSlotSuccessful(ops, slot_index));
+  bool is_slot_marked_successful = false;
+  EXPECT_EQ(slot_index, AbrGetBootSlot(ops, true, &is_slot_marked_successful));
+  EXPECT_TRUE(is_slot_marked_successful);
+  ValidateMetadata(ops.metadata_);
+
+  EXPECT_GT(ops.metadata_.slot_data[slot_index].priority, 0);
+  EXPECT_EQ(ops.metadata_.slot_data[slot_index].tries_remaining, 0);
+  EXPECT_NE(ops.metadata_.slot_data[slot_index].successful_boot, 0);
+  // Success should be removed from the inactive slot.
+  EXPECT_GT(ops.metadata_.slot_data[other_slot_index].priority, 0);
+  EXPECT_EQ(ops.metadata_.slot_data[other_slot_index].tries_remaining, kAbrMaxTriesRemaining);
+  EXPECT_EQ(ops.metadata_.slot_data[other_slot_index].successful_boot, 0);
+}
+TEST(LibabrTest, GetBootSlotBothSuccessfulA) { GetBootSlotBothSuccessful(kAbrSlotIndexA); }
+TEST(LibabrTest, GetBootSlotBothSuccessfulB) { GetBootSlotBothSuccessful(kAbrSlotIndexB); }
+
 TEST(LibabrTest, GetBootSlotNoBootableSlot) {
   FakeOps ops = FakeOpsWithInitializedMetadata();
   EXPECT_EQ(kAbrSlotIndexR, AbrGetBootSlot(ops, false, nullptr));
