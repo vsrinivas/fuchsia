@@ -79,6 +79,7 @@ mod policy;
 mod power;
 mod privacy;
 mod setup;
+pub mod task;
 
 pub use display::LightSensorConfig;
 pub use light::light_hardware_configuration::LightHardwareConfiguration;
