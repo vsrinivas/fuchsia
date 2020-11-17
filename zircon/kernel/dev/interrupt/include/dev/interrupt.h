@@ -7,7 +7,6 @@
 #ifndef ZIRCON_KERNEL_DEV_INTERRUPT_INCLUDE_DEV_INTERRUPT_H_
 #define ZIRCON_KERNEL_DEV_INTERRUPT_INCLUDE_DEV_INTERRUPT_H_
 
-#include <stdbool.h>
 #include <sys/types.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>

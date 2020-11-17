@@ -9,7 +9,6 @@
 #define ZIRCON_KERNEL_INCLUDE_DEV_DISPLAY_H_
 
 #include <inttypes.h>
-#include <stdbool.h>
 #include <sys/types.h>
 #include <zircon/compiler.h>
 #include <zircon/pixelformat.h>

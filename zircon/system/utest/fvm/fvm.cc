@@ -23,7 +23,6 @@
 #include <lib/zx/fifo.h>
 #include <lib/zx/vmo.h>
 #include <poll.h>
-#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

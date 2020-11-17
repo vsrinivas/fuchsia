@@ -6,7 +6,6 @@
 #include <elf-search.h>
 #include <elf.h>
 #include <inttypes.h>
-#include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>

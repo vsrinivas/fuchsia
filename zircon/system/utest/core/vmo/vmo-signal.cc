@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include <assert.h>
-#include <stdbool.h>
 
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/object.h>

@@ -7,7 +7,6 @@
 #ifndef ZIRCON_KERNEL_LIB_CMDLINE_INCLUDE_LIB_CMDLINE_H_
 #define ZIRCON_KERNEL_LIB_CMDLINE_INCLUDE_LIB_CMDLINE_H_
 
-#include <stdbool.h>
 #include <stdint.h>
 #include <sys/types.h>
 #include <zircon/compiler.h>

@@ -8,7 +8,6 @@
 #ifndef ZIRCON_KERNEL_INCLUDE_POW2_H_
 #define ZIRCON_KERNEL_INCLUDE_POW2_H_
 
-#include <stdbool.h>
 #include <stdint.h>
 #include <sys/types.h>
 #include <zircon/compiler.h>

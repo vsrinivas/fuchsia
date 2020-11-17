@@ -5,7 +5,6 @@
 // https://opensource.org/licenses/MIT
 
 #include <lib/arch/intrin.h>
-#include <stdbool.h>
 #include <stdint.h>
 #include <string.h>
 #include <sys/types.h>

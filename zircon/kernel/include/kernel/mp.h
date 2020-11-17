@@ -9,7 +9,6 @@
 #define ZIRCON_KERNEL_INCLUDE_KERNEL_MP_H_
 
 #include <limits.h>
-#include <stdbool.h>
 #include <stdint.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>

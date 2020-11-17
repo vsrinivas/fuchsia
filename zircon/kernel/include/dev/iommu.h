@@ -9,7 +9,6 @@
 
 #include <inttypes.h>
 #include <lib/zircon-internal/thread_annotations.h>
-#include <stdbool.h>
 #include <sys/types.h>
 
 #include <fbl/intrusive_double_list.h>

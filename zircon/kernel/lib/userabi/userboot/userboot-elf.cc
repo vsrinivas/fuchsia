@@ -7,7 +7,6 @@
 #include "userboot-elf.h"
 
 #include <elf.h>
-#include <stdbool.h>
 #include <string.h>
 #include <zircon/compiler.h>
 #include <zircon/processargs.h>

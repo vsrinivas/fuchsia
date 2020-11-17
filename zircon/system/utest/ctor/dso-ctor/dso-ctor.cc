@@ -6,7 +6,6 @@
 
 #include <unittest/unittest.h>
 #include <sched.h>
-#include <stdbool.h>
 
 static bool dso_ctor_ran;
 
