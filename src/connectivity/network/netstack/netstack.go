@@ -36,7 +36,6 @@ import (
 	"gvisor.dev/gvisor/pkg/tcpip/header"
 	"gvisor.dev/gvisor/pkg/tcpip/link/loopback"
 	"gvisor.dev/gvisor/pkg/tcpip/link/sniffer"
-	"gvisor.dev/gvisor/pkg/tcpip/network/arp"
 	"gvisor.dev/gvisor/pkg/tcpip/network/ipv4"
 	"gvisor.dev/gvisor/pkg/tcpip/network/ipv6"
 	"gvisor.dev/gvisor/pkg/tcpip/stack"
@@ -1121,13 +1120,6 @@ func (ns *Netstack) addEndpoint(
 	}
 
 	syslog.Infof("NIC %s added", name)
-
-	if ep.Capabilities()&stack.CapabilityResolutionRequired > 0 {
-		// TODO(github.com/google/gvisor/pull/4807): Remove once this change rolls.
-		if err := ns.stack.AddAddress(ifs.nicid, arp.ProtocolNumber, "arp"); err != nil && err != tcpip.ErrNotSupported {
-			return nil, fmt.Errorf("NIC %s: adding arp address failed: %w", name, WrapTcpIpError(err))
-		}
-	}
 
 	if linkAddr := ep.LinkAddress(); len(linkAddr) > 0 {
 		dhcpClient := dhcp.NewClient(ns.stack, ifs.nicid, linkAddr, dhcpAcquisition, dhcpBackoff, dhcpRetransmission, ifs.dhcpAcquired)

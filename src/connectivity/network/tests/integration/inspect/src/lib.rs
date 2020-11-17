@@ -215,9 +215,8 @@ async fn inspect_nic() -> Result {
         .context("failed to wait for interfaces up and addresses configured")?;
     let loopback_id = loopback_props.id.ok_or(anyhow::anyhow!("loopback ID missing"))?;
     let loopback_addrs = AddressMatcher::new(&loopback_props);
-    // TODO(github.com/google/gvisor/pull/4807): Uncomment when this change rolls.
-    // let netdev_addrs = AddressMatcher::new(&netdev_props);
-    // let eth_addrs = AddressMatcher::new(&eth_props);
+    let netdev_addrs = AddressMatcher::new(&netdev_props);
+    let eth_addrs = AddressMatcher::new(&eth_props);
 
     let data = get_inspect_data(&env, "netstack-debug.cmx", "NICs", "interfaces")
         .await
@@ -254,8 +253,7 @@ async fn inspect_nic() -> Result {
                 }
             }
         },
-        // TODO(github.com/google/gvisor/pull/4807): Do equal comparison once this change rolls.
-        eth.id().to_string() => contains {
+        eth.id().to_string() => {
             Name: eth_props.name.ok_or(anyhow::anyhow!("eth name missing"))?,
             Loopback: "false",
             LinkOnline: "true",
@@ -268,11 +266,9 @@ async fn inspect_nic() -> Result {
             "DHCP enabled": "false",
             LinkAddress: fidl_fuchsia_net_ext::MacAddress::from(ETH_MAC).to_string(),
             // IPv4.
-            // TODO(github.com/google/gvisor/pull/4807): Uncomment when this change rolls.
-            // ProtocolAddress0: eth_addrs.clone(),
+            ProtocolAddress0: eth_addrs.clone(),
             // Link-local IPv6.
-            // TODO(github.com/google/gvisor/pull/4807): Uncomment when this change rolls.
-            // ProtocolAddress1: eth_addrs.clone(),
+            ProtocolAddress1: eth_addrs.clone(),
             Stats: {
                 DisabledRx: {
                     Bytes: AnyProperty,
@@ -298,8 +294,7 @@ async fn inspect_nic() -> Result {
                 TxWrites: contains {}
             }
         },
-        // TODO(github.com/google/gvisor/pull/4807): Do equal comparison once this change rolls.
-        netdev.id().to_string() => contains {
+        netdev.id().to_string() => {
             Name: netdev_props.name.ok_or(anyhow::anyhow!("netdev name missing"))?,
             Loopback: "false",
             LinkOnline: "true",
@@ -312,11 +307,9 @@ async fn inspect_nic() -> Result {
             "DHCP enabled": "false",
             LinkAddress: fidl_fuchsia_net_ext::MacAddress::from(NETDEV_MAC).to_string(),
             // IPv4.
-            // TODO(github.com/google/gvisor/pull/4807): Uncomment when this change rolls.
-            // ProtocolAddress0: netdev_addrs.clone(),
+            ProtocolAddress0: netdev_addrs.clone(),
             // Link-local IPv6.
-            // TODO(github.com/google/gvisor/pull/4807): Uncomment when this change rolls.
-            // ProtocolAddress1: netdev_addrs.clone(),
+            ProtocolAddress1: netdev_addrs.clone(),
             Stats: {
                 DisabledRx: {
                     Bytes: AnyProperty,
@@ -343,9 +336,8 @@ async fn inspect_nic() -> Result {
     });
 
     let () = loopback_addrs.check().context("loopback addresses match failed")?;
-    // TODO(github.com/google/gvisor/pull/4807): Uncomment when this change rolls.
-    // let () = eth_addrs.check().context("ethernet addresses match failed")?;
-    // let () = netdev_addrs.check().context("netdev addresses match failed")?;
+    let () = eth_addrs.check().context("ethernet addresses match failed")?;
+    let () = netdev_addrs.check().context("netdev addresses match failed")?;
 
     Ok(())
 }

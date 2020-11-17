@@ -563,10 +563,6 @@ func TestBridge(t *testing.T) {
 			// that constituent links are still routable.
 			bcaddr := tcpip.Address(bytes.Repeat([]byte{4}, testCase.addressSize))
 			bcsubnet := util.PointSubnet(bcaddr)
-			// TODO(github.com/google/gvisor/pull/4807): Remove once this change rolls.
-			if err := sb.AddAddress(sbEP2NICID, header.ARPProtocolNumber, "arp"); err != nil && err != tcpip.ErrNotSupported {
-				t.Fatal(fmt.Errorf("AddAddress failed: %s", err))
-			}
 			if err := sb.AddAddress(sbEP2NICID, testCase.protocolNumber, bcaddr); err != nil {
 				t.Fatal(fmt.Errorf("AddAddress failed: %s", err))
 			}
@@ -905,10 +901,6 @@ func makeStackWithEndpoint(nicID tcpip.NICID, ep stack.LinkEndpoint, protocolFac
 	if err := s.CreateNIC(nicID, ep); err != nil {
 		return nil, fmt.Errorf("CreateNIC failed: %s", err)
 	}
-	// TODO(github.com/google/gvisor/pull/4807): Remove once this change rolls.
-	if err := s.AddAddress(nicID, header.ARPProtocolNumber, "arp"); err != nil && err != tcpip.ErrNotSupported {
-		return nil, fmt.Errorf("AddAddress failed: %s", err)
-	}
 	if err := s.AddAddress(nicID, protocolNumber, addr); err != nil {
 		return nil, fmt.Errorf("AddAddress failed: %s", err)
 	}
@@ -952,10 +944,6 @@ func makeStackWithBridgedEndpoints(t *testing.T, protocolFactory stack.NetworkPr
 		t.Fatalf("CreateNIC failed: %s", err)
 	}
 	if err := stk.AddAddress(bID, protocolNumber, baddr); err != nil {
-		t.Fatalf("AddAddress failed: %s", err)
-	}
-	// TODO(github.com/google/gvisor/pull/4807): Remove once this change rolls.
-	if err := stk.AddAddress(bID, header.ARPProtocolNumber, "arp"); err != nil && err != tcpip.ErrNotSupported {
 		t.Fatalf("AddAddress failed: %s", err)
 	}
 
