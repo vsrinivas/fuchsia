@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "nand.h"
+#include "src/devices/nand/drivers/nand/nand.h"
 
 #include <lib/fake_ddk/fake_ddk.h>
 #include <lib/fzl/owned-vmo-mapper.h>

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "nand.h"
+#include "src/devices/nand/drivers/nand/nand.h"
 
 #include <lib/zx/time.h>
 #include <zircon/assert.h>
@@ -12,11 +12,12 @@
 #include <algorithm>
 #include <memory>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/io-buffer.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_lock.h>
+
+#include "src/devices/nand/drivers/nand/nand-bind.h"
 
 // TODO: Investigate elimination of unmap.
 // This code does vx_vmar_map/unmap and copies data in/out of the
@@ -370,22 +371,13 @@ zx_status_t NandDevice::Bind() {
   return DdkAdd(ddk::DeviceAddArgs("nand").set_props(props));
 }
 
-#ifndef TEST
 static constexpr zx_driver_ops_t nand_driver_ops = []() {
   zx_driver_ops_t ops = {};
   ops.version = DRIVER_OPS_VERSION;
   ops.bind = NandDevice::Create;
   return ops;
 }();
-#endif
 
 }  // namespace nand
 
-#ifndef TEST
-// The formatter does not play nice with these macros.
-// clang-format off
-ZIRCON_DRIVER_BEGIN(nand, nand::nand_driver_ops, "zircon", "0.1", 1)
-    BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_RAW_NAND),
-ZIRCON_DRIVER_END(nand)
-// clang-format on
-#endif
+ZIRCON_DRIVER(nand, nand::nand_driver_ops, "zircon", "0.1")

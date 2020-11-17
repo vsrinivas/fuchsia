@@ -7,16 +7,11 @@ import("//build/test.gni")
 import("//build/test/test_package.gni")
 
 driver_module("skip-block") {
-  configs += [
-    "//build/config:all_source",
-    "//build/config/fuchsia:enable_zircon_asserts",
-  ]
   configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
   configs += [
+    "//build/config:all_source",
     "//build/config/fuchsia:static_cpp_standard_library",
-    "//build/unification/config:zircon-migrated",
   ]
-  sources = []
   deps = [
     ":common",
     "//src/devices/lib/driver",
