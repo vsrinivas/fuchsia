@@ -75,8 +75,7 @@ success("ReverseOrdinalUnion") {
 success("FlexibleUnionUnknownValue") {
     // llcpp is tested by hand since it cannot construct unknown unions (and
     // they do not store bytes & handles), see fxr/423117
-    // TODO(fxbug.dev/64141): re-enable for Go
-    bindings_denylist = [go,llcpp],
+    bindings_denylist = [llcpp],
     value = TestFlexibleXUnionInStruct {
         xu: SampleXUnion{
             1234: {
@@ -98,7 +97,7 @@ success("FlexibleResourceUnionUnknownValue") {
     // llcpp is tested by hand since it cannot construct unknown unions (and
     // they do not store bytes & handles), see fxr/423117
     // TODO(fxbug.dev/64141): re-enable for Go
-    bindings_denylist = [go,llcpp],
+    bindings_denylist = [llcpp],
     value = TestFlexibleResourceXUnionInStruct {
         xu: SampleResourceXUnion{
             1234: {
@@ -119,8 +118,7 @@ success("FlexibleResourceUnionUnknownValue") {
 success("FlexibleResourceUnionUnknownValueWithHandles") {
     // llcpp is tested by hand since it cannot construct unknown unions (and
     // they do not store bytes & handles), see fxr/423117
-    // TODO(fxbug.dev/64141): re-enable for Go
-    bindings_denylist = [go,llcpp],
+    bindings_denylist = [llcpp],
     handle_defs = {
         #0 = event(),
         #1 = event(),
@@ -163,8 +161,6 @@ decode_failure("StrictUnionUnknownValue") {
 }
 
 decode_failure("StrictUnionUnknownValueWithHandles") {
-    // TODO(fxbug.dev/64141): re-enable for Go
-    bindings_denylist = [go],
     handle_defs = {
         #0 = event(),
         #1 = event(),

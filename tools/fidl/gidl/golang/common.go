@@ -85,19 +85,24 @@ func buildHandleInfos(handles []gidlir.Handle) string {
 	return builder.String()
 }
 
-func buildUnknownTableData(fields []gidlir.Field) string {
+func buildUnknownData(data gidlir.UnknownData) string {
+	return fmt.Sprintf(
+		"fidl.UnknownData{\nBytes: %s, \nHandles: %s,\n}",
+		buildBytes(data.Bytes),
+		buildHandleInfos(data.Handles))
+}
+
+func buildUnknownDataMap(fields []gidlir.Field) string {
 	if len(fields) == 0 {
 		return "nil"
 	}
 	var builder strings.Builder
 	builder.WriteString("map[uint64]fidl.UnknownData{\n")
 	for _, field := range fields {
-		unknownData := field.Value.(gidlir.UnknownData)
 		builder.WriteString(fmt.Sprintf(
-			"%d: fidl.UnknownData{\nBytes: %s, \nHandles: %s,\n},",
+			"%d: %s,",
 			field.Key.UnknownOrdinal,
-			buildBytes(unknownData.Bytes),
-			buildHandleInfos(unknownData.Handles)))
+			buildUnknownData(field.Value.(gidlir.UnknownData))))
 	}
 	builder.WriteString("}")
 	return builder.String()
@@ -184,11 +189,8 @@ func onRecord(value gidlir.Record, decl gidlmixer.RecordDeclaration) string {
 			if isTable {
 				unknownTableFields = append(unknownTableFields, field)
 			} else {
-				unknownData := field.Value.(gidlir.UnknownData)
 				fields = append(fields,
-					fmt.Sprintf("I_unknownData: %s", buildBytes(unknownData.Bytes)))
-				fields = append(fields,
-					fmt.Sprintf("I_unknownHandles: %s", buildHandleInfos(unknownData.Handles)))
+					fmt.Sprintf("I_unknownData: %s", buildUnknownData(field.Value.(gidlir.UnknownData))))
 			}
 			continue
 		}
@@ -205,7 +207,7 @@ func onRecord(value gidlir.Record, decl gidlmixer.RecordDeclaration) string {
 	}
 	if len(unknownTableFields) > 0 {
 		fields = append(fields,
-			fmt.Sprintf("I_unknownData: %s", buildUnknownTableData(unknownTableFields)))
+			fmt.Sprintf("I_unknownData: %s", buildUnknownDataMap(unknownTableFields)))
 	}
 
 	if len(fields) == 0 {
