@@ -54,6 +54,8 @@ go_library("lib") {
     "modules.go",
     "modules_test.go",
     "package_manifest.go",
+    "sdk_archives.go",
+    "sdk_archives_test.go",
     "sign.go",
     "sign_test.go",
     "tools.go",

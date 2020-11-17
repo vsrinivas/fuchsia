@@ -45,14 +45,15 @@ const (
 	targetDirName   = "targets"
 
 	// Names of directories to be uploaded to in GCS.
-	buildsDirName   = "builds"
-	buildAPIDirName = "build_api"
-	buildidDirName  = "buildid"
-	debugDirName    = "debug"
-	hostTestDirName = "host_tests"
-	imageDirName    = "images"
-	packageDirName  = "packages"
-	toolDirName     = "tools"
+	buildsDirName      = "builds"
+	buildAPIDirName    = "build_api"
+	buildidDirName     = "buildid"
+	debugDirName       = "debug"
+	hostTestDirName    = "host_tests"
+	imageDirName       = "images"
+	packageDirName     = "packages"
+	sdkArchivesDirName = "sdk"
+	toolDirName        = "tools"
 
 	// A record of all of the fuchsia debug symbols processed.
 	// This is eventually consumed by crash reporting infrastructure.
@@ -120,6 +121,10 @@ Uploads artifacts from a build to $GCS_BUCKET with the following structure:
 │   │   │   │   │   │   └── <package repo metadata files>
 │   │   │   │   │   └── keys
 │   │   │   │   │       └── <package repo keys>
+│   │   │   │   ├── sdk
+│   │   │   │   │   ├── <host-agnostic SDK archives>
+│   │   │   │   │   └── <OS-CPU>
+│   │   │   │   │       └── <host-specific SDK archives>
 │   │   │   │   ├── build_api
 │   │   │   │   │   └── <build API module JSON>
 |   |   |   |   ├── host_tests
@@ -250,6 +255,9 @@ func (cmd upCommand) execute(ctx context.Context, buildDir string) error {
 		}
 	}
 	files = append(files, buildAPIs...)
+
+	sdkArchives := artifactory.SDKArchiveUploads(m, path.Join(buildsUUIDDir, sdkArchivesDirName))
+	files = append(files, sdkArchives...)
 
 	// Sign the tools for release builds.
 	tools := artifactory.ToolUploads(m, path.Join(buildsUUIDDir, toolDirName))
