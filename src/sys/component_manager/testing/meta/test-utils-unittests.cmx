@@ -1,0 +1,5 @@
+{
+    "program": {
+        "binary": "bin/test_utils_lib_lib_test"
+    },
+}

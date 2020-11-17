@@ -7,15 +7,43 @@ use {
         descriptor::EventDescriptor,
         events::{Event, EventStream, ExitStatus},
     },
-    anyhow::{format_err, Error},
+    anyhow::Error,
     fidl_fuchsia_sys2 as fsys,
     regex::RegexSet,
-    std::convert::TryFrom,
+    std::{convert::TryFrom, fmt},
+    thiserror::Error,
 };
+#[derive(Debug, Error, PartialEq, Eq)]
+pub enum FieldMatcherError {
+    #[error("Missing field: `{field_name}`")]
+    MissingField { field_name: &'static str },
+    #[error("Field `{field_name}` mismatch. Expected: `{expected}`, Actual: `{actual}`")]
+    FieldMismatch { field_name: &'static str, expected: String, actual: String },
+}
+
+#[derive(Debug)]
+pub struct FieldMatcherErrors {
+    field_matcher_errors: Vec<FieldMatcherError>,
+}
+
+impl fmt::Display for FieldMatcherErrors {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        for err in &self.field_matcher_errors {
+            writeln!(f, "{}", err)?;
+        }
+        Ok(())
+    }
+}
+
+#[derive(Debug, Error)]
+pub enum EventMatcherError {
+    #[error("{errors}")]
+    FieldMatcherErrors { errors: FieldMatcherErrors },
+}
 
 // A matcher that implements this trait is able to match against values of type `T`.
 // A matcher corresponds to a field named `NAME`.
-trait RawFieldMatcher<T>: Clone + std::fmt::Debug {
+trait RawFieldMatcher<T>: Clone + std::fmt::Debug + ToString {
     const NAME: &'static str;
     fn matches(&self, other: &T) -> bool;
 }
@@ -32,6 +60,12 @@ impl EventTypeMatcher {
 
     pub fn value(&self) -> &fsys::EventType {
         &self.event_type
+    }
+}
+
+impl fmt::Display for EventTypeMatcher {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{:?}", self.event_type)
     }
 }
 
@@ -54,8 +88,14 @@ impl CapabilityNameMatcher {
     }
 }
 
+impl fmt::Display for CapabilityNameMatcher {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.capability_name)
+    }
+}
+
 impl RawFieldMatcher<String> for CapabilityNameMatcher {
-    const NAME: &'static str = "name";
+    const NAME: &'static str = "capability_name";
 
     fn matches(&self, other: &String) -> bool {
         self.capability_name == *other
@@ -77,6 +117,12 @@ impl MonikerMatcher {
     }
 }
 
+impl fmt::Display for MonikerMatcher {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{:?}", self.monikers)
+    }
+}
+
 impl RawFieldMatcher<String> for MonikerMatcher {
     const NAME: &'static str = "target_monikers";
 
@@ -93,6 +139,12 @@ pub enum ExitStatusMatcher {
     Clean,
     AnyCrash,
     Crash(i32),
+}
+
+impl fmt::Display for ExitStatusMatcher {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{:?}", self)
+    }
 }
 
 impl RawFieldMatcher<ExitStatus> for ExitStatusMatcher {
@@ -121,6 +173,12 @@ impl EventIsOkMatcher {
     }
 }
 
+impl fmt::Display for EventIsOkMatcher {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.event_is_ok)
+    }
+}
+
 impl RawFieldMatcher<bool> for EventIsOkMatcher {
     const NAME: &'static str = "event_is_ok";
 
@@ -135,7 +193,7 @@ impl RawFieldMatcher<bool> for EventIsOkMatcher {
 /// field error. Otherwise, the FieldMatcher delegates to the RawFieldMatcher to determine if the
 /// matcher matches against the raw field.
 trait FieldMatcher<T> {
-    fn matches(&self, other: &Option<T>) -> Result<(), Error>;
+    fn matches(&self, other: &Option<T>) -> Result<(), FieldMatcherError>;
 }
 
 impl<LeftHandSide, RightHandSide> FieldMatcher<RightHandSide> for Option<LeftHandSide>
@@ -143,18 +201,19 @@ where
     LeftHandSide: RawFieldMatcher<RightHandSide>,
     RightHandSide: std::fmt::Debug,
 {
-    fn matches(&self, other: &Option<RightHandSide>) -> Result<(), Error> {
+    fn matches(&self, other: &Option<RightHandSide>) -> Result<(), FieldMatcherError> {
         match (self, other) {
             (Some(value), Some(other_value)) => match value.matches(other_value) {
                 true => Ok(()),
-                false => Err(format_err!(
-                    "Field `{}` mismatch. Expected: {:?}, Actual: {:?}",
-                    LeftHandSide::NAME,
-                    value,
-                    other_value
-                )),
+                false => Err(FieldMatcherError::FieldMismatch {
+                    field_name: LeftHandSide::NAME,
+                    expected: value.to_string(),
+                    actual: format!("{:?}", other_value),
+                }),
             },
-            (Some(_), None) => Err(format_err!("Missing field `{}`.", LeftHandSide::NAME)),
+            (Some(_), None) => {
+                Err(FieldMatcherError::MissingField { field_name: LeftHandSide::NAME })
+            }
             (None, _) => Ok(()),
         }
     }
@@ -203,7 +262,7 @@ impl EventMatcher {
         self
     }
 
-    /// The expected capability id.
+    /// The expected capability name.
     pub fn capability_name(mut self, capability_name: impl Into<String>) -> Self {
         self.capability_name = Some(CapabilityNameMatcher::new(capability_name));
         self
@@ -240,12 +299,65 @@ impl EventMatcher {
         }
     }
 
-    pub fn matches(&self, other: &EventDescriptor) -> Result<(), Error> {
-        self.event_type.matches(&other.event_type)?;
-        self.target_monikers.matches(&other.target_moniker)?;
-        self.capability_name.matches(&other.capability_name)?;
-        self.exit_status.matches(&other.exit_status)?;
-        self.event_is_ok.matches(&other.event_is_ok)?;
+    pub fn matches(&self, other: &EventDescriptor) -> Result<(), EventMatcherError> {
+        let mut field_matcher_errors = vec![];
+
+        if let Err(e) = self.event_type.matches(&other.event_type) {
+            field_matcher_errors.push(e);
+        }
+        if let Err(e) = self.target_monikers.matches(&other.target_moniker) {
+            field_matcher_errors.push(e);
+        }
+        if let Err(e) = self.capability_name.matches(&other.capability_name) {
+            field_matcher_errors.push(e);
+        }
+        if let Err(e) = self.exit_status.matches(&other.exit_status) {
+            field_matcher_errors.push(e);
+        }
+        if let Err(e) = self.event_is_ok.matches(&other.event_is_ok) {
+            field_matcher_errors.push(e);
+        }
+        if !field_matcher_errors.is_empty() {
+            return Err(EventMatcherError::FieldMatcherErrors {
+                errors: FieldMatcherErrors { field_matcher_errors },
+            });
+        }
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn event_matcher_errors() {
+        let matcher =
+            EventMatcher::ok().capability_name("foobar").stop(Some(ExitStatusMatcher::AnyCrash));
+        let descriptor = EventDescriptor {
+            event_type: None,
+            capability_name: None,
+            target_moniker: None,
+            exit_status: Some(ExitStatus::Clean),
+            event_is_ok: Some(false),
+        };
+        let EventMatcherError::FieldMatcherErrors { errors } =
+            matcher.matches(&descriptor).unwrap_err();
+        assert!(errors
+            .field_matcher_errors
+            .contains(&FieldMatcherError::MissingField { field_name: "event_type" }));
+        assert!(errors
+            .field_matcher_errors
+            .contains(&FieldMatcherError::MissingField { field_name: "capability_name" }));
+        assert!(errors.field_matcher_errors.contains(&FieldMatcherError::FieldMismatch {
+            field_name: "event_is_ok",
+            expected: "true".to_string(),
+            actual: "false".to_string()
+        }));
+        assert!(errors.field_matcher_errors.contains(&FieldMatcherError::FieldMismatch {
+            field_name: "exit_status",
+            expected: "AnyCrash".to_string(),
+            actual: "Clean".to_string()
+        }));
     }
 }

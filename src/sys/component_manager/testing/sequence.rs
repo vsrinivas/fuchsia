@@ -170,6 +170,6 @@ impl EventGroup {
                 }
             }
         };
-        expected_event.matches(&event).map(|_| true)
+        expected_event.matches(&event).map(|_| true).map_err(|e| format_err!("{}", e))
     }
 }

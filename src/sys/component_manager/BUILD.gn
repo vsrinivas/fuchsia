@@ -333,6 +333,7 @@ group("tests") {
     ":component-manager-tests",
     "src/elf_runner/tests",
     "stress_tests",
+    "testing:test-utils-unittests",
     "tests",
   ]
 }
