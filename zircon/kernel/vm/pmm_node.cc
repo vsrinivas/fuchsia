@@ -28,9 +28,18 @@
 
 KCOUNTER(pmm_alloc_async, "vm.pmm.alloc.async")
 
+// The number of PMM allocation calls that have failed.
+KCOUNTER(pmm_alloc_failed, "vm.pmm.alloc.failed")
+
 namespace {
 
 void noop_callback(void* context, uint8_t idx) {}
+
+// Helper function that increments a counter and returns |status|.
+zx_status_t fail_with(zx_status_t status) {
+  kcounter_add(pmm_alloc_failed, 1);
+  return status;
+}
 
 }  // namespace
 
@@ -231,13 +240,13 @@ zx_status_t PmmNode::AllocPage(uint alloc_flags, vm_page_t** page_out, paddr_t* 
   if (unlikely(InOomStateLocked())) {
     if (alloc_flags & PMM_ALLOC_DELAY_OK) {
       // TODO(stevensd): Differentiate 'cannot allocate now' from 'can never allocate'
-      return ZX_ERR_NO_MEMORY;
+      return fail_with(ZX_ERR_NO_MEMORY);
     }
   }
 
   vm_page* page = list_remove_head_type(&free_list_, vm_page, queue_node);
   if (!page) {
-    return ZX_ERR_NO_MEMORY;
+    return fail_with(ZX_ERR_NO_MEMORY);
   }
 
   AllocPageHelperLocked(page);
@@ -275,7 +284,7 @@ zx_status_t PmmNode::AllocPages(size_t count, uint alloc_flags, list_node* list)
   Guard<Mutex> guard{&lock_};
 
   if (unlikely(count > free_count_)) {
-    return ZX_ERR_NO_MEMORY;
+    return fail_with(ZX_ERR_NO_MEMORY);
   }
 
   DecrementFreeCountLocked(count);
@@ -284,7 +293,7 @@ zx_status_t PmmNode::AllocPages(size_t count, uint alloc_flags, list_node* list)
     if (alloc_flags & PMM_ALLOC_DELAY_OK) {
       IncrementFreeCountLocked(count);
       // TODO(stevensd): Differentiate 'cannot allocate now' from 'can never allocate'
-      return ZX_ERR_NO_MEMORY;
+      return fail_with(ZX_ERR_NO_MEMORY);
     }
   }
 
@@ -352,7 +361,7 @@ zx_status_t PmmNode::AllocRange(paddr_t address, size_t count, list_node* list) 
   if (allocated != count) {
     // we were not able to allocate the entire run, free these pages
     FreeListLocked(list);
-    return ZX_ERR_NOT_FOUND;
+    return fail_with(ZX_ERR_NOT_FOUND);
   }
 
   return ZX_OK;
@@ -402,7 +411,7 @@ zx_status_t PmmNode::AllocContiguous(const size_t count, uint alloc_flags, uint8
   }
 
   LTRACEF("couldn't find run\n");
-  return ZX_ERR_NOT_FOUND;
+  return fail_with(ZX_ERR_NOT_FOUND);
 }
 
 void PmmNode::FreePageHelperLocked(vm_page* page) {
