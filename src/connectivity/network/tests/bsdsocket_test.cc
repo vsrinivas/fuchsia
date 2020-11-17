@@ -3421,6 +3421,37 @@ TEST(SocketKindTest, IoctlNameIndexLookupForNonSocketFd) {
   EXPECT_EQ(errno, ENOTTY) << strerror(errno);
 }
 
+TEST(IoctlTest, IoctlGetInterfaceAddresses_NullIfConf) {
+  fbl::unique_fd fd;
+  ASSERT_TRUE(fd = fbl::unique_fd(socket(AF_INET, SOCK_DGRAM, 0))) << strerror(errno);
+
+  ASSERT_EQ(ioctl(fd.get(), SIOCGIFCONF, nullptr), -1);
+  ASSERT_EQ(errno, EFAULT) << strerror(errno);
+}
+
+TEST(IoctlTest, IoctlGetInterfaceAddresses_PartialRecord) {
+  fbl::unique_fd fd;
+  ASSERT_TRUE(fd = fbl::unique_fd(socket(AF_INET, SOCK_DGRAM, 0))) << strerror(errno);
+
+  // Get the interface configuration information, but only pass an `ifc_len`
+  // large enough to hold a partial `struct ifreq`, and ensure that the buffer
+  // is not overwritten.
+  const char FILLER = 0xa;
+  struct ifreq ifr;
+  memset(&ifr, FILLER, sizeof(ifr));
+  struct ifconf ifc = {
+      .ifc_len = sizeof(ifr) - 1,
+      .ifc_req = &ifr,
+  };
+
+  ASSERT_EQ(ioctl(fd.get(), SIOCGIFCONF, &ifc), 0) << strerror(errno);
+  ASSERT_EQ(ifc.ifc_len, 0);
+  char* buffer = reinterpret_cast<char*>(&ifr);
+  for (size_t i = 0; i < sizeof(ifr); i++) {
+    EXPECT_EQ(buffer[i], FILLER) << i;
+  }
+}
+
 INSTANTIATE_TEST_SUITE_P(NetSocket, SocketKindTest,
                          ::testing::Combine(::testing::Values(AF_INET, AF_INET6),
                                             ::testing::Values(SOCK_DGRAM, SOCK_STREAM)),

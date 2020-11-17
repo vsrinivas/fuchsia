@@ -53,7 +53,10 @@ test("netstack_external_network_test_client") {
   if (is_linux || is_fuchsia) {
     sources = [ "external_network_test_client.cc" ]
   }
-  deps = [ "//src/lib/fxl/test:gtest_main" ]
+  deps = [
+    "//src/lib/fxl/test:gtest_main",
+    "//zircon/public/lib/fbl",
+  ]
 }
 
 test("netstack_fuchsia_c_api_test") {

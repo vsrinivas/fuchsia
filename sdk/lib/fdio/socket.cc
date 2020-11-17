@@ -377,6 +377,93 @@ Errno zxsio_posix_ioctl(fdio_t* io, int req, va_list va,
       ifr->ifr_ifindex = static_cast<int>(result.response().index);
       return Errno(Errno::Ok);
     }
+    case SIOCGIFCONF: {
+      struct ifconf* ifc_ptr = va_arg(va, struct ifconf*);
+      if (ifc_ptr == nullptr) {
+        return Errno(EFAULT);
+      }
+      struct ifconf& ifc = *ifc_ptr;
+
+      fsocket::Provider::SyncClient* provider;
+      zx_status_t status = fdio_get_socket_provider(&provider);
+      if (status != ZX_OK) {
+        return Errno(fdio_status_to_errno(status));
+      }
+      auto response = provider->GetInterfaceAddresses();
+      status = response.status();
+      if (status != ZX_OK) {
+        return Errno(fdio_status_to_errno(status));
+      }
+      const auto& interfaces = response.Unwrap()->interfaces;
+
+      // If `ifc_req` is NULL, return the necessary buffer size in bytes for
+      // receiving all available addresses in `ifc_len`.
+      //
+      // This allows the caller to determine the necessary buffer size
+      // beforehand, and is the documented manual behavior.
+      // See: https://man7.org/linux/man-pages/man7/netdevice.7.html
+      if (ifc.ifc_req == nullptr) {
+        int len = 0;
+        for (const auto& iface : interfaces) {
+          for (const auto& address : iface.addresses()) {
+            if (address.addr.which() == fnet::IpAddress::Tag::kIpv4) {
+              len += sizeof(struct ifreq);
+            }
+          }
+        }
+        ifc.ifc_len = len;
+        return Errno(Errno::Ok);
+      }
+
+      struct ifreq* ifr = ifc.ifc_req;
+      const auto buffer_full = [&] {
+        return ifr + 1 > ifc.ifc_req + ifc.ifc_len / sizeof(struct ifreq);
+      };
+      for (const auto& iface : interfaces) {
+        // Don't write past the caller-allocated buffer.
+        // C++ doesn't support break labels, so we check this in both the inner
+        // and outer loops.
+        if (buffer_full()) {
+          break;
+        }
+        // This should not happen, and would indicate a protocol error with
+        // fuchsia.posix.socket/Provider.GetInterfaceAddresses.
+        if (!iface.has_name() || !iface.has_addresses()) {
+          continue;
+        }
+
+        const auto& if_name = iface.name();
+        for (const auto& address : iface.addresses()) {
+          // Don't write past the caller-allocated buffer.
+          if (buffer_full()) {
+            break;
+          }
+          // SIOCGIFCONF only returns interface addresses of the AF_INET (IPv4)
+          // family for compatibility; this is the behavior documented in the
+          // manual. See: https://man7.org/linux/man-pages/man7/netdevice.7.html
+          const auto& addr = address.addr;
+          if (addr.which() != fnet::IpAddress::Tag::kIpv4) {
+            continue;
+          }
+
+          // Write interface name.
+          size_t len = std::min(if_name.size(), sizeof(ifr->ifr_name) - 1);
+          memcpy(ifr->ifr_name, if_name.data(), len);
+          ifr->ifr_name[len] = 0;
+
+          // Write interface address.
+          auto* s = reinterpret_cast<struct sockaddr_in*>(&ifr->ifr_addr);
+          const auto& ipv4 = addr.ipv4();
+          s->sin_family = AF_INET;
+          s->sin_port = 0;
+          std::copy(ipv4.addr.begin(), ipv4.addr.end(), reinterpret_cast<uint8_t*>(&s->sin_addr));
+
+          ifr++;
+        }
+      }
+      ifc.ifc_len = static_cast<int>((ifr - ifc.ifc_req) * sizeof(struct ifreq));
+      return Errno(Errno::Ok);
+    }
     default:
       return fallback(io, req, va);
   }
