@@ -5,10 +5,16 @@
 #ifndef SRC_DEVELOPER_SYSTEM_MONITOR_BIN_HARVESTER_TASK_TREE_H_
 #define SRC_DEVELOPER_SYSTEM_MONITOR_BIN_HARVESTER_TASK_TREE_H_
 
+#include <lib/syslog/cpp/macros.h>
+#include <lib/zx/channel.h>
+#include <zircon/status.h>
+#include <zircon/syscalls/object.h>
 #include <zircon/types.h>
 
 #include <map>
 #include <vector>
+
+#include "os.h"
 
 namespace harvester {
 
@@ -17,27 +23,29 @@ class TaskTree {
   struct Task {
     Task(zx_handle_t handle, zx_koid_t koid, zx_koid_t parent_koid)
         : handle(handle), koid(koid), parent_koid(parent_koid) {}
+
     zx_handle_t handle;
     zx_koid_t koid;
     zx_koid_t parent_koid;
   };
 
-  TaskTree() = default;
+  TaskTree() : os_(std::make_unique<OSImpl>()) {}
 
-  ~TaskTree() { Clear(); }
+  virtual ~TaskTree() { Clear(); }
 
   // Creates and stores handles to all tasks (threads, processes, and jobs)
   // descending from the root job. The first call to GatherJobs creates
   // a handle for each existing task. Subsequent calls create handles for
   // all new tasks, drawing from its cache of handles for existing tasks.
-  void Gather();
+  virtual void Gather();
 
   // Accessors to immutable lists of jobs/processes/threads.
-  const std::vector<Task>& Jobs() const { return jobs_; }
-  const std::vector<Task>& Processes() const { return processes_; }
-  const std::vector<Task>& Threads() const { return threads_; }
+  virtual const std::vector<Task>& Jobs() const { return jobs_; }
+  virtual const std::vector<Task>& Processes() const { return processes_; }
+  virtual const std::vector<Task>& Threads() const { return threads_; }
 
  protected:
+  std::unique_ptr<OS> os_;
   std::vector<Task> jobs_;
   std::vector<Task> processes_;
   std::vector<Task> threads_;
@@ -46,11 +54,6 @@ class TaskTree {
 
   // Clears all jobs/processes/threads information.
   void Clear();
-
-  // Fills |child_koids| with the child koids of |parent|.
-  zx_status_t GatherChildKoids(zx_handle_t parent, zx_koid_t parent_koid,
-                               int children_kind, const char* kind_name,
-                               std::vector<zx_koid_t>& child_koids);
 
   // Fills |child_handle| with a handle to |child_koid|, either from a cache or
   // newly-created.

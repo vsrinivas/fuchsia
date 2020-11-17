@@ -16,6 +16,7 @@
 #include "dockyard_proxy_grpc.h"
 #include "dockyard_proxy_local.h"
 #include "harvester.h"
+#include "os.h"
 #include "root_resource.h"
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/log_settings_command_line.h"
@@ -101,6 +102,8 @@ int main(int argc, char** argv) {
     exit(EXIT_CODE_GENERAL_ERROR);
   }
 
+  std::unique_ptr<harvester::OS> os = std::make_unique<harvester::OSImpl>();
+
   // Note: Neither of the following loops are "fast" or "slow" on their own.
   //       It's just a matter of what we choose to run on them.
   // Create a separate loop for quick calls (don't run long running functions on
@@ -121,7 +124,8 @@ int main(int argc, char** argv) {
     exit(EXIT_CODE_GENERAL_ERROR);
   }
   FX_LOGS(INFO) << "main thread " << pthread_self();
-  harvester::Harvester harvester(root_resource, std::move(dockyard_proxy));
+  harvester::Harvester harvester(
+      root_resource, std::move(dockyard_proxy), std::move(os));
   harvester.GatherDeviceProperties();
   harvester.GatherFastData(fast_calls_loop.dispatcher());
   harvester.GatherSlowData(slow_calls_loop.dispatcher());

@@ -12,56 +12,11 @@
 #include <lib/zx/channel.h>
 #include <zircon/status.h>
 
-#include <cstdio>
+#include "os.h"
 
 namespace harvester {
 
 const size_t kNumInitialKoids = 128;
-const size_t kNumExtraKoids = 10;
-
-zx_status_t TaskTree::GatherChildKoids(zx_handle_t parent,
-                                       zx_koid_t parent_koid, int children_kind,
-                                       const char* kind_name,
-                                       std::vector<zx_koid_t>& child_koids) {
-  size_t actual = 0;
-  size_t available = 0;
-  zx_status_t status;
-  int count = 0;
-
-  // This is inherently racy. Retry once with a bit of slop to try to
-  // get a complete list.
-  do {
-    status = zx_object_get_info(parent, children_kind, child_koids.data(),
-                                child_koids.size() * sizeof(zx_koid_t), &actual,
-                                &available);
-    if (status != ZX_OK) {
-      FX_LOGS(ERROR) << "zx_object_get_info(" << parent_koid << ", "
-                     << kind_name
-                     << ", ...) failed: " << zx_status_get_string(status)
-                     << " (" << status << ")";
-      // On error, empty child_koids so we don't pass through invalid
-      // information.
-      child_koids.clear();
-      return status;
-    }
-
-    if (actual < available) {
-      child_koids.resize(available + kNumExtraKoids);
-    }
-
-  } while (actual < available && count++ < 2);
-
-  // If we're still too small at least warn the user.
-  if (actual < available) {
-    FX_LOGS(WARNING) << "zx_object_get_info(" << parent_koid << ", "
-                     << kind_name << ", ...) truncated " << (available - actual)
-                     << "/" << available << " results";
-  }
-
-  child_koids.resize(actual);
-
-  return ZX_OK;
-}
 
 zx_status_t TaskTree::GetHandleForChildKoid(zx_koid_t child_koid,
                                             zx_handle_t parent,
@@ -98,9 +53,9 @@ void TaskTree::GatherThreadsForProcess(zx_handle_t parent_process,
   // Get the koids for the threads belonging to this process.
   std::vector<zx_koid_t> koids(kNumInitialKoids);
 
-  status = GatherChildKoids(parent_process, parent_process_koid,
-                            ZX_INFO_PROCESS_THREADS, "ZX_INFO_PROCESS_THREADS",
-                            koids);
+  status = os_->GetChildren(parent_process, parent_process_koid,
+                          ZX_INFO_PROCESS_THREADS, "ZX_INFO_PROCESS_THREADS",
+                          koids);
   if (status != ZX_OK) {
     return;
   }
@@ -125,8 +80,8 @@ void TaskTree::GatherProcessesForJob(zx_handle_t parent_job,
   // Get the koids for the processes under this job.
   std::vector<zx_koid_t> koids(kNumInitialKoids);
 
-  status = GatherChildKoids(parent_job, parent_job_koid, ZX_INFO_JOB_PROCESSES,
-                            "ZX_INFO_JOB_PROCESSES", koids);
+  status = os_->GetChildren(parent_job, parent_job_koid, ZX_INFO_JOB_PROCESSES,
+                          "ZX_INFO_JOB_PROCESSES", koids);
   if (status != ZX_OK) {
     return;
   }
@@ -157,8 +112,8 @@ void TaskTree::GatherProcessesAndJobsForJob(zx_handle_t parent_job,
   // Get the koids for the child jobs under this job.
   std::vector<zx_koid_t> koids(kNumInitialKoids);
 
-  status = GatherChildKoids(parent_job, parent_job_koid, ZX_INFO_JOB_CHILDREN,
-                            "ZX_INFO_JOB_CHILDREN", koids);
+  status = os_->GetChildren(parent_job, parent_job_koid, ZX_INFO_JOB_CHILDREN,
+                          "ZX_INFO_JOB_CHILDREN", koids);
   if (status != ZX_OK) {
     return;
   }

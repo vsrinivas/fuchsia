@@ -17,13 +17,13 @@ DockyardProxyStatus DockyardProxyFake::Init() {
 
 DockyardProxyStatus DockyardProxyFake::SendInspectJson(
     const std::string& stream_name, const std::string& json) {
-  sent_json_.emplace(stream_name, json);
+  sent_json_.insert_or_assign(stream_name, json);
   return DockyardProxyStatus::OK;
 }
 
 DockyardProxyStatus DockyardProxyFake::SendSample(
     const std::string& stream_name, uint64_t value) {
-  sent_values_.emplace(stream_name, value);
+  sent_values_.insert_or_assign(stream_name, value);
   return DockyardProxyStatus::OK;
 }
 
@@ -34,7 +34,7 @@ DockyardProxyStatus DockyardProxyFake::SendSampleList(const SampleList& list) {
     std::cout << "Sending " << sample.first << " " << sample.second
               << std::endl;
 #endif  // VERBOSE_OUTPUT
-    sent_values_.emplace(sample.first, sample.second);
+    sent_values_.insert_or_assign(sample.first, sample.second);
   }
   return DockyardProxyStatus::OK;
 }
@@ -47,7 +47,7 @@ DockyardProxyStatus DockyardProxyFake::SendStringSampleList(
     std::cout << "Sending " << sample.first << " " << sample.second
               << std::endl;
 #endif  // VERBOSE_OUTPUT
-    sent_strings_.emplace(sample.first, sample.second);
+    sent_strings_.insert_or_assign(sample.first, sample.second);
   }
   return DockyardProxyStatus::OK;
 }
@@ -63,14 +63,14 @@ DockyardProxyStatus DockyardProxyFake::SendSamples(
     std::cout << "Sending " << sample.first << " " << sample.second
               << std::endl;
 #endif  // VERBOSE_OUTPUT
-    sent_values_.emplace(sample.first, sample.second);
+    sent_values_.insert_or_assign(sample.first, sample.second);
   }
   for (const auto& sample : string_samples) {
 #ifdef VERBOSE_OUTPUT
     std::cout << "Sending " << sample.first << " " << sample.second
               << std::endl;
 #endif  // VERBOSE_OUTPUT
-    sent_strings_.emplace(sample.first, sample.second);
+    sent_strings_.insert_or_assign(sample.first, sample.second);
   }
   return DockyardProxyStatus::OK;
 }

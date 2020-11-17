@@ -19,17 +19,18 @@ class UnionFind {
  public:
   UnionFind() = default;
 
-  // Adds |element| to the forest.
+  // Adds |element| to the forest; returns false if element already exists.
   //
   // Find() calls MakeSet() to ensure it never operates on an invalid element,
   // so it's not necessary to call MakeSet() on an element before acting on it.
   // However, calling MakeSet() better expresses intent.
-  void MakeSet(T element) {
+  bool MakeSet(T element) {
     if (parent_.count(element)) {
-      return;
+      return false;
     }
 
     parent_.emplace(element, element);
+    return true;
   }
 
   // Find the representative element for |element|. Even when many items are in
@@ -37,16 +38,28 @@ class UnionFind {
   // ~constant time for all meaningful forest sizes.
   T Find(T element) {
     // Ensure element is in the forest.
-    MakeSet(element);
+    if (MakeSet(element)) {
+      return element;
+    }
 
-    // Base case: this is the representative element of the set.
+    // Base case: this is the representative element of the set. This is almost
+    // always true, especially when the ratio of Union/Find calls is low.
     if (parent_[element] == element) {
       return element;
     }
 
-    // Recurse: compress the path. Trees are shallow, so this should never
-    // overflow.
-    return parent_[element] = Find(parent_[element]);
+    // Iterate: use path halving. This still retains worst case complexity, but
+    // works in a single pass *without recursion*.
+    T current = element;
+    while (parent_[current] != current) {
+      // Representative elements always point to themselves, so this is always
+      // safe; In other words, if parent_ is a mapping, representative elements
+      // are fixed points.
+      parent_[current] = parent_[parent_[current]];
+      current = parent_[current];
+    }
+
+    return current;
   }
 
   // Given two elements, merge their sets.

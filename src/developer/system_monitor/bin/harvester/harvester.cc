@@ -25,9 +25,11 @@
 namespace harvester {
 
 Harvester::Harvester(zx_handle_t root_resource,
-                     std::unique_ptr<DockyardProxy> dockyard_proxy)
+                     std::unique_ptr<DockyardProxy> dockyard_proxy,
+                     std::unique_ptr<OS> os)
     : root_resource_(root_resource),
-      dockyard_proxy_(std::move(dockyard_proxy)) {}
+      dockyard_proxy_(std::move(dockyard_proxy)),
+      os_(std::move(os)) {}
 
 void Harvester::GatherDeviceProperties() {
   FX_VLOGS(1) << "Harvester::GatherDeviceProperties";
@@ -40,6 +42,8 @@ void Harvester::GatherDeviceProperties() {
   // dog food release).
   // gather_memory_digest_.GatherDeviceProperties();
   gather_tasks_.GatherDeviceProperties();
+
+  gather_vmos_.GatherDeviceProperties();
 }
 
 void Harvester::GatherFastData(async_dispatcher_t* dispatcher) {
@@ -62,6 +66,7 @@ void Harvester::GatherSlowData(async_dispatcher_t* dispatcher) {
 
   gather_channels_.PostUpdate(dispatcher, now, zx::sec(1));
   gather_processes_and_memory_.PostUpdate(dispatcher, now, zx::sec(2));
+  gather_vmos_.PostUpdate(dispatcher, now, zx::sec(2));
 }
 
 }  // namespace harvester

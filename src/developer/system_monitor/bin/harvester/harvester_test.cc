@@ -12,6 +12,7 @@
 #include <gtest/gtest.h>
 
 #include "dockyard_proxy_fake.h"
+#include "os.h"
 #include "root_resource.h"
 
 namespace {
@@ -33,10 +34,11 @@ class SystemMonitorHarvesterTest : public ::testing::Test {
     // Create a test harvester.
     std::unique_ptr<harvester::DockyardProxyFake> dockyard_proxy =
         std::make_unique<harvester::DockyardProxyFake>();
+    std::unique_ptr<harvester::OS> os = std::make_unique<harvester::OSImpl>();
 
     EXPECT_EQ(harvester::GetRootResource(&root_resource), ZX_OK);
     test_harvester = std::make_unique<harvester::Harvester>(
-        root_resource, std::move(dockyard_proxy));
+        root_resource, std::move(dockyard_proxy), std::move(os));
   }
 
   zx_handle_t GetHarvesterRootResource() const {

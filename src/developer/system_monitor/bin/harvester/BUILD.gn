@@ -43,8 +43,11 @@ source_set("lib") {
     "gather_tasks.h",
     "gather_threads_and_cpu.cc",
     "gather_threads_and_cpu.h",
+    "gather_vmos.cc",
+    "gather_vmos.h",
     "harvester.cc",
     "harvester.h",
+    "os.h",
     "root_resource.cc",
     "root_resource.h",
     "sample_bundle.cc",
@@ -125,11 +128,13 @@ executable("system_monitor_harvester_test") {
     "gather_processes_and_memory_test.cc",
     "gather_tasks_test.cc",
     "gather_threads_and_cpu_test.cc",
+    "gather_vmos_test.cc",
     "harvester_fake.h",
     "harvester_test.cc",
     "root_resource_test.cc",
     "sample_bundle_test.cc",
     "task_tree_test.cc",
+    "union_find_test.cc",
   ]
 
   deps = [
@@ -138,6 +143,8 @@ executable("system_monitor_harvester_test") {
     "//sdk/lib/fdio",
     "//sdk/lib/sys/cpp/testing:unit",
     "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
   ]
 }
 

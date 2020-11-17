@@ -11,9 +11,11 @@ class UnionFindTest : public ::testing::Test {};
 TEST_F(UnionFindTest, Singletons) {
   harvester::UnionFind<int> forest;
 
-  forest.MakeSet(0);
-  forest.MakeSet(1);
-  forest.MakeSet(3);
+  EXPECT_TRUE(forest.MakeSet(0));
+  EXPECT_TRUE(forest.MakeSet(1));
+  EXPECT_TRUE(forest.MakeSet(3));
+  // Inserting a second time should return false since 3 exists already.
+  EXPECT_FALSE(forest.MakeSet(3));
 
   // All elements are singletons. Find() implicitly inserts 2 as a singleton.
   EXPECT_EQ(0, forest.Find(0));
