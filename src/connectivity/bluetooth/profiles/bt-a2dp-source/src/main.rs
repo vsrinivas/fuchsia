@@ -10,16 +10,17 @@ use {
     async_helpers::component_lifecycle::ComponentLifecycleServer,
     bt_a2dp::{
         codec::{CodecNegotiation, MediaCodecConfig},
+        connected_peers::{ConnectedPeers, PeerSessionFn},
         media_types::*,
         peer::ControllerPool,
         stream,
     },
     bt_avdtp::{self as avdtp, ServiceCapability},
-    fidl::{encoding::Decodable, endpoints::create_request_stream},
+    fidl::endpoints::create_request_stream,
     fidl_fuchsia_bluetooth_bredr as bredr,
     fidl_fuchsia_bluetooth_component::LifecycleState,
     fidl_fuchsia_media::{AudioChannelId, AudioPcmMode, PcmFormat},
-    fuchsia_async as fasync,
+    fuchsia_async::{self as fasync, DurationExt},
     fuchsia_bluetooth::{
         profile::find_profile_descriptors,
         types::{PeerId, Uuid},
@@ -27,20 +28,19 @@ use {
     fuchsia_component::server::ServiceFs,
     fuchsia_inspect as inspect,
     fuchsia_inspect_derive::Inspect,
-    futures::{self, select, StreamExt, TryStreamExt},
+    fuchsia_zircon as zx,
+    futures::{self, lock::Mutex, select, StreamExt, TryStreamExt},
     log::{error, info, trace, warn},
     std::{convert::TryInto, sync::Arc},
 };
 
 mod encoding;
 mod pcm_audio;
-mod peers;
 mod source_task;
 mod sources;
 
 use crate::encoding::EncodedStream;
 use crate::pcm_audio::PcmAudio;
-use crate::peers::Peers;
 use sources::AudioSourceType;
 
 /// Make the SDP definition for the A2DP source service.
@@ -62,7 +62,7 @@ fn make_profile_service_definition() -> bredr::ServiceDefinition {
             major_version: 1,
             minor_version: 2,
         }]),
-        ..Decodable::new_empty()
+        ..bredr::ServiceDefinition::empty()
     }
 }
 
@@ -244,7 +244,7 @@ async fn main() -> Result<(), Error> {
             &mut service_defs.into_iter(),
             bredr::ChannelParameters {
                 channel_mode: Some(signaling_channel_mode),
-                ..Decodable::new_empty()
+                ..bredr::ChannelParameters::empty()
             },
             connect_client,
         )
@@ -267,22 +267,43 @@ async fn main() -> Result<(), Error> {
         build_aac_capability(PREFERRED_BITRATE_AAC)?,
         build_sbc_capability()?,
     ])?;
-    let mut peers =
-        Peers::new(streams, negotiation, profile_svc, signaling_channel_mode, controller_pool);
+
+    let peer_session_fn: Box<PeerSessionFn> = Box::new(move |_peer_id| {
+        let stream_clone = streams.as_new();
+        let negotiation_clone = negotiation.clone();
+        fasync::Task::spawn(async move {
+            let nothing_task = fasync::Task::spawn(async {});
+            Ok((stream_clone, negotiation_clone, nothing_task))
+        })
+    });
+
+    let mut peers = ConnectedPeers::new(peer_session_fn, profile_svc.clone(), None);
     if let Err(e) = peers.iattach(inspect.root(), "connected") {
         info!("Failed to attach peers to inspect: {:?}", e);
     }
 
     lifecycle.set(LifecycleState::Ready).await.expect("lifecycle server to set value");
 
-    handle_profile_events(peers, connect_requests, results_requests).await
+    handle_profile_events(
+        peers,
+        connect_requests,
+        results_requests,
+        controller_pool,
+        profile_svc,
+        signaling_channel_mode,
+    )
+    .await
 }
 
 async fn handle_profile_events(
-    mut peers: Peers,
+    peers: ConnectedPeers,
     mut connect_requests: bredr::ConnectionReceiverRequestStream,
     mut results_requests: bredr::SearchResultsRequestStream,
+    controller_pool: Arc<ControllerPool>,
+    profile: bredr::ProfileProxy,
+    signaling_channel_mode: bredr::ChannelMode,
 ) -> Result<(), Error> {
+    let peers = Arc::new(Mutex::new(peers));
     loop {
         select! {
             connect_request = connect_requests.try_next() => {
@@ -300,10 +321,10 @@ async fn handle_profile_events(
                         continue;
                     }
                 };
-                if let Err(e) = peers.connected(peer_id, channel) {
-                    info!("Error connecting peer {}: {:?}", peer_id, e);
-                    continue;
-                }
+                match peers.lock().await.connected(peer_id, channel, false).await {
+                    Err(e) => info!("Error connecting peer {}: {:?}", peer_id, e),
+                    Ok(weak) => controller_pool.peer_connected(peer_id.clone(), weak),
+                };
             },
             results_request = results_requests.try_next() => {
                 let result = match results_request? {
@@ -314,19 +335,74 @@ async fn handle_profile_events(
                 let peer_id: PeerId = peer_id.into();
                 info!("Discovered sink {} - protocol {:?}: {:?}", peer_id, protocol, attributes);
                 responder.send()?;
-                let profile = match find_profile_descriptors(&attributes) {
+                let desc = match find_profile_descriptors(&attributes) {
                     Ok(profiles) => profiles.into_iter().next().expect("at least one profile descriptor"),
                     Err(_) => {
                         info!("Couldn't find profile in peer {} search results, ignoring.", peer_id);
                         continue;
                     }
                 };
-                peers.discovered(peer_id, profile);
+                peers.lock().await.found(peer_id, desc);
+
+                fasync::Task::local(connect_after_timeout(peer_id, profile.clone(), peers.clone(), controller_pool.clone(), signaling_channel_mode)).detach();
             },
             complete => break,
         }
     }
     Ok(())
+}
+
+// Amount of time to wait after we detect a peer before we will initiate a signal connection.
+const INITIATOR_DELAY: zx::Duration = zx::Duration::from_seconds(2);
+
+async fn connect_after_timeout(
+    id: PeerId,
+    profile: bredr::ProfileProxy,
+    peers: Arc<Mutex<ConnectedPeers>>,
+    controller_pool: Arc<ControllerPool>,
+    channel_mode: bredr::ChannelMode,
+) {
+    info!("Waiting {:?} to connect to discovered peer {}", INITIATOR_DELAY, id);
+    fasync::Timer::new(INITIATOR_DELAY.after_now()).await;
+    if peers.lock().await.is_connected(&id) {
+        info!("After initiator delay, {} was connected, not connecting..", id);
+        return;
+    }
+    let channel = match profile
+        .connect(
+            &mut id.into(),
+            &mut bredr::ConnectParameters::L2cap(bredr::L2capParameters {
+                psm: Some(bredr::PSM_AVDTP),
+                parameters: Some(bredr::ChannelParameters {
+                    channel_mode: Some(channel_mode),
+                    ..bredr::ChannelParameters::empty()
+                }),
+                ..bredr::L2capParameters::empty()
+            }),
+        )
+        .await
+    {
+        Err(e) => {
+            warn!("FIDL error connecting to peer {}: {:?}", id, e);
+            return;
+        }
+        Ok(Err(code)) => {
+            info!("Couldn't connect to peer {}: {:?}", id, code);
+            return;
+        }
+        Ok(Ok(channel)) => channel,
+    };
+    let channel = match channel.try_into() {
+        Ok(chan) => chan,
+        Err(e) => {
+            warn!("No channel from peer {}: {:?}", id, e);
+            return;
+        }
+    };
+    match peers.lock().await.connected(id, channel, true).await {
+        Err(e) => info!("Error connecting peer {}: {:?}", id, e),
+        Ok(weak) => controller_pool.peer_connected(id, weak),
+    };
 }
 
 #[cfg(test)]
@@ -335,6 +411,18 @@ mod tests {
     use fidl::endpoints::create_proxy_and_stream;
     use futures::{pin_mut, task::Poll};
     use matches::assert_matches;
+
+    fn no_streams_gen() -> Box<PeerSessionFn> {
+        Box::new(|_peer_id| {
+            fasync::Task::spawn(async {
+                Ok((
+                    stream::Streams::new(),
+                    CodecNegotiation::build(vec![]).unwrap(),
+                    fasync::Task::spawn(async {}),
+                ))
+            })
+        })
+    }
 
     #[test]
     fn test_responds_to_search_results() {
@@ -349,15 +437,16 @@ mod tests {
                 .expect("ConnectionReceiver proxy should be created");
         let controller = Arc::new(ControllerPool::new());
 
-        let peers = Peers::new(
-            stream::Streams::new(),
-            CodecNegotiation::build(vec![]).expect("build empty codecs"),
+        let peers = ConnectedPeers::new(no_streams_gen(), profile_proxy.clone(), None);
+
+        let handler_fut = handle_profile_events(
+            peers,
+            connect_stream,
+            results_stream,
+            controller,
             profile_proxy,
             bredr::ChannelMode::Basic,
-            controller,
         );
-
-        let handler_fut = handle_profile_events(peers, connect_stream, results_stream);
         pin_mut!(handler_fut);
 
         let res = exec.run_until_stalled(&mut handler_fut);
