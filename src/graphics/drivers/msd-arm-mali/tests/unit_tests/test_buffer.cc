@@ -12,14 +12,14 @@ class TestMsdArmBuffer {
     auto buffer = MsdArmBuffer::Create(1024, "test-buffer");
     ASSERT_NE(nullptr, buffer);
     EXPECT_TRUE(buffer->EnsureRegionFlushed(100, 200));
-    EXPECT_EQ(100u, buffer->flushed_region_start_bytes_);
-    EXPECT_EQ(200u, buffer->flushed_region_end_bytes_);
+    EXPECT_EQ(100u, buffer->flushed_region_.start());
+    EXPECT_EQ(200u, buffer->flushed_region_.end());
     EXPECT_TRUE(buffer->EnsureRegionFlushed(0, 300));
-    EXPECT_EQ(0u, buffer->flushed_region_start_bytes_);
-    EXPECT_EQ(300u, buffer->flushed_region_end_bytes_);
+    EXPECT_EQ(0u, buffer->flushed_region_.start());
+    EXPECT_EQ(300u, buffer->flushed_region_.end());
     EXPECT_TRUE(buffer->EnsureRegionFlushed(0, 0));
-    EXPECT_EQ(0u, buffer->flushed_region_start_bytes_);
-    EXPECT_EQ(300u, buffer->flushed_region_end_bytes_);
+    EXPECT_EQ(0u, buffer->flushed_region_.start());
+    EXPECT_EQ(300u, buffer->flushed_region_.end());
   }
 };
 

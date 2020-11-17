@@ -11,6 +11,7 @@
 #include "msd.h"
 #include "platform_buffer.h"
 #include "platform_event.h"
+#include "region.h"
 
 class GpuMapping;
 
@@ -31,9 +32,13 @@ class MsdArmBuffer {
   void RemoveMapping(GpuMapping* mapping);
 
   bool SetCommittedPages(uint64_t start_page, uint64_t pages);
-  uint64_t start_committed_pages() const { return start_committed_pages_; }
-  uint64_t committed_page_count() const { return committed_page_count_; }
+  bool CommitPageRange(uint64_t start_page, uint64_t pages);
+  bool DecommitPageRange(uint64_t start_page, uint64_t pages);
+  uint64_t start_committed_pages() const { return committed_region_.start(); }
+  uint64_t committed_page_count() const { return committed_region_.length(); }
   bool EnsureRegionFlushed(uint64_t start_bytes, uint64_t end_bytes);
+
+  Region committed_region() const { return committed_region_; }
 
  private:
   friend class TestMsdArmBuffer;
@@ -44,10 +49,11 @@ class MsdArmBuffer {
   std::unique_ptr<magma::PlatformBuffer> platform_buf_;
 
   std::unordered_set<GpuMapping*> gpu_mappings_;
-  uint64_t start_committed_pages_ = {};
-  uint64_t committed_page_count_ = {};
-  uint64_t flushed_region_start_bytes_ = {};
-  uint64_t flushed_region_end_bytes_ = {};
+
+  // In pages.
+  Region committed_region_;
+  // In bytes.
+  Region flushed_region_;
 };
 
 class MsdArmAbiBuffer : public msd_buffer_t {

@@ -56,6 +56,8 @@ source_set("src") {
     "performance_counters.h",
     "power_manager.cc",
     "power_manager.h",
+    "region.cc",
+    "region.h",
     "registers.h",
   ]
 

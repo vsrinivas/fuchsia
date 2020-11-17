@@ -7,13 +7,22 @@
 
 #include <cstdint>
 #include <memory>
+#include <set>
 #include <vector>
 
 #include "magma_util/macros.h"
 #include "platform_bus_mapper.h"
+#include "region.h"
 
 class MsdArmBuffer;
 class MsdArmConnection;
+
+struct BusMappingCompare {
+  bool operator()(const std::unique_ptr<magma::PlatformBusMapper::BusMapping>& a,
+                  const std::unique_ptr<magma::PlatformBusMapper::BusMapping>& b) const {
+    return a->page_offset() < b->page_offset();
+  }
+};
 
 // A buffer may be mapped into a connection at multiple virtual addresses. The
 // connection owns the GpuMapping, so |owner_| is always valid. The buffer
@@ -37,13 +46,11 @@ class GpuMapping {
   uint64_t size() const { return size_; }
   uint64_t flags() const { return flags_; }
 
-  uint64_t pinned_page_count() const { return pinned_page_count_; }
-  void shrink_pinned_pages(uint64_t pages_removed,
-                           std::unique_ptr<magma::PlatformBusMapper::BusMapping> bus_mapping) {
-    DASSERT(pinned_page_count_ >= pages_removed);
-    pinned_page_count_ -= pages_removed;
+  void ReplaceBusMappings(std::unique_ptr<magma::PlatformBusMapper::BusMapping> bus_mapping) {
     if (bus_mapping) {
-      DASSERT(pinned_page_count_ == bus_mapping->page_count());
+      DASSERT(bus_mapping->page_offset() >= page_offset_);
+      DASSERT(bus_mapping->page_offset() + bus_mapping->page_count() <=
+              page_offset_ + (size_ / PAGE_SIZE));
       if (magma::kDebug) {
         // Check that the physical addresses of pages haven't changed
         // (e.g. due to being mapped to a new place with the iommu).
@@ -58,34 +65,57 @@ class GpuMapping {
           }
         }
       }
-
-      bus_mappings_.clear();
-      bus_mappings_.push_back(std::move(bus_mapping));
     }
+    bus_mappings_.clear();
+    Region bus_mapping_region;
+    if (bus_mapping) {
+      bus_mapping_region =
+          Region::FromStartAndLength(bus_mapping->page_offset(), bus_mapping->page_count());
+      bus_mappings_.insert(std::move(bus_mapping));
+    }
+    committed_region_in_buffer_ = bus_mapping_region;
   }
-  void grow_pinned_pages(std::unique_ptr<magma::PlatformBusMapper::BusMapping> bus_mapping) {
-    pinned_page_count_ += bus_mapping->page_count();
-    bus_mappings_.push_back(std::move(bus_mapping));
+  void AddBusMapping(std::unique_ptr<magma::PlatformBusMapper::BusMapping> bus_mapping) {
+    DASSERT(bus_mapping);
+    auto bus_mapping_region =
+        Region::FromStartAndLength(bus_mapping->page_offset(), bus_mapping->page_count());
+    if (!committed_region_in_buffer_.empty()) {
+      DASSERT(bus_mapping_region.IsAdjacentTo(committed_region_in_buffer()));
+    }
+    bus_mappings_.insert(std::move(bus_mapping));
+    committed_region_in_buffer_.Union(bus_mapping_region);
   }
 
   std::weak_ptr<MsdArmBuffer> buffer() const;
   void Remove() { owner_->RemoveMapping(addr_); }
   bool UpdateCommittedMemory() { return owner_->UpdateCommittedMemory(this); }
 
-  const std::vector<std::unique_ptr<magma::PlatformBusMapper::BusMapping>>& bus_mappings() {
+  const std::set<std::unique_ptr<magma::PlatformBusMapper::BusMapping>, BusMappingCompare>&
+  bus_mappings() {
     return bus_mappings_;
   }
+
+  // Returns committed region in pages relative to the start of the mapping.
+  Region committed_region() const {
+    return Region::FromStartAndLength(committed_region_in_buffer_.start() - page_offset_,
+                                      committed_region_in_buffer_.length());
+  }
+  Region committed_region_in_buffer() const { return committed_region_in_buffer_; }
 
  private:
   friend class TestConnection;
   const uint64_t addr_;
   const uint64_t page_offset_;
+  // In bytes
   const uint64_t size_;
   const uint64_t flags_;
+  // Region in pages relative to the beginning of the buffer. This is stored as an optimization so
+  // we don't have to union the regions in bus_mappings_ whenever this is queried.
+  Region committed_region_in_buffer_;
   Owner* const owner_;
-  uint64_t pinned_page_count_ = 0;
   std::weak_ptr<MsdArmBuffer> buffer_;
-  std::vector<std::unique_ptr<magma::PlatformBusMapper::BusMapping>> bus_mappings_;
+  // Bus mappings must be contiguous and completely cover committed_region_in_buffer_.
+  std::set<std::unique_ptr<magma::PlatformBusMapper::BusMapping>, BusMappingCompare> bus_mappings_;
 };
 
 #endif  // SRC_GRAPHICS_DRIVERS_MSD_ARM_MALI_SRC_GPU_MAPPING_H_

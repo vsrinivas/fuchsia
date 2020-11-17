@@ -32,6 +32,7 @@ source_set("tests_not_requiring_hardware") {
     "test_job_scheduler.cc",
     "test_performance_counters.cc",
     "test_power_manager.cc",
+    "test_region.cc",
   ]
 
   deps = [

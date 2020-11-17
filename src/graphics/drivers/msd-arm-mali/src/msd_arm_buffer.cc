@@ -50,8 +50,39 @@ bool MsdArmBuffer::SetCommittedPages(uint64_t start_page, uint64_t page_count) {
   if ((start_page + page_count) * PAGE_SIZE > platform_buffer()->size())
     return DRETF(false, "invalid parameters start_page %lu page_count %lu", start_page, page_count);
 
-  start_committed_pages_ = start_page;
-  committed_page_count_ = page_count;
+  committed_region_ = Region::FromStartAndLength(start_page, page_count);
+
+  bool success = true;
+  for (auto& mapping : gpu_mappings_) {
+    if (!mapping->UpdateCommittedMemory())
+      success = false;
+  }
+  return success;
+}
+
+bool MsdArmBuffer::CommitPageRange(uint64_t start_page, uint64_t page_count) {
+  if ((start_page + page_count) * PAGE_SIZE > platform_buffer()->size())
+    return DRETF(false, "invalid parameters start_page %lu page_count %lu", start_page, page_count);
+
+  committed_region_.Union(Region::FromStartAndLength(start_page, page_count));
+
+  bool success = true;
+  for (auto& mapping : gpu_mappings_) {
+    if (!mapping->UpdateCommittedMemory())
+      success = false;
+  }
+  return success;
+}
+
+bool MsdArmBuffer::DecommitPageRange(uint64_t start_page, uint64_t page_count) {
+  DASSERT((start_page + page_count) * PAGE_SIZE <= platform_buffer()->size());
+
+  auto decommit_region = Region::FromStartAndLength(start_page, page_count);
+  Region new_region(committed_region_);
+  if (!new_region.Subtract(decommit_region)) {
+    DLOG("Trying to decommit region in middle, ignoring");
+  }
+  committed_region_ = new_region;
   bool success = true;
   for (auto& mapping : gpu_mappings_) {
     if (!mapping->UpdateCommittedMemory())
@@ -62,28 +93,19 @@ bool MsdArmBuffer::SetCommittedPages(uint64_t start_page, uint64_t page_count) {
 
 bool MsdArmBuffer::EnsureRegionFlushed(uint64_t start_bytes, uint64_t end_bytes) {
   DASSERT(end_bytes >= start_bytes);
-  DASSERT(flushed_region_end_bytes_ >= flushed_region_start_bytes_);
-  if (start_bytes < flushed_region_start_bytes_) {
-    if (!platform_buf_->CleanCache(start_bytes, flushed_region_start_bytes_ - start_bytes, false))
+
+  Region new_flushed_region = flushed_region_;
+  new_flushed_region.Union(Region::FromStartAndEnd(start_bytes, end_bytes));
+  auto [left_to_flush, right_to_flush] = new_flushed_region.SubtractWithSplit(flushed_region_);
+  if (!left_to_flush.empty()) {
+    if (!platform_buf_->CleanCache(left_to_flush.start(), left_to_flush.length(), false))
       return DRETF(false, "CleanCache of start failed");
-
-    flushed_region_start_bytes_ = start_bytes;
   }
-
-  if (end_bytes > flushed_region_end_bytes_) {
-    bool region_exists = flushed_region_end_bytes_ != 0;
-    uint64_t flush_start;
-    if (region_exists) {
-      flush_start = flushed_region_end_bytes_;
-    } else {
-      flush_start = start_bytes;
-      flushed_region_start_bytes_ = flush_start;
-    }
-
-    if (!platform_buf_->CleanCache(flush_start, end_bytes - flush_start, false))
+  if (!right_to_flush.empty()) {
+    if (!platform_buf_->CleanCache(right_to_flush.start(), right_to_flush.length(), false))
       return DRETF(false, "CleanCache of end failed");
-    flushed_region_end_bytes_ = end_bytes;
   }
+  flushed_region_ = new_flushed_region;
   return true;
 }
 

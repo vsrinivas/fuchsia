@@ -95,7 +95,9 @@ class MsdArmConnection : public std::enable_shared_from_this<MsdArmConnection>,
   std::shared_ptr<AddressSpace::Owner> GetSharedPtr() override { return shared_from_this(); }
 
   bool PageInMemory(uint64_t address);
+  bool SetCommittedPagesForBuffer(MsdArmBuffer* buffer, uint64_t page_offset, uint64_t page_count);
   bool CommitMemoryForBuffer(MsdArmBuffer* buffer, uint64_t page_offset, uint64_t page_count);
+  bool DecommitMemoryForBuffer(MsdArmBuffer* buffer, uint64_t page_offset, uint64_t page_count);
 
   // This is slow because it iterates over all pages for all mappings. It should be used only
   // rarely.

@@ -320,51 +320,61 @@ bool MsdArmConnection::UpdateCommittedMemory(GpuMapping* mapping) __TA_NO_THREAD
   auto buffer = mapping->buffer().lock();
   DASSERT(buffer);
 
-  if (buffer->start_committed_pages() != mapping->page_offset() &&
-      (buffer->committed_page_count() > 0 || mapping->pinned_page_count() > 0))
-    return DRETF(false, "start of commit should match page offset");
+  Region committed_region = buffer->committed_region();
+  Region mapping_region =
+      Region::FromStartAndLength(mapping->page_offset(), mapping->size() / PAGE_SIZE);
 
-  uint64_t prev_committed_page_count = mapping->pinned_page_count();
-  DASSERT(prev_committed_page_count <= mapping->size() / PAGE_SIZE);
-  uint64_t committed_page_count =
-      std::min(buffer->committed_page_count(), mapping->size() / PAGE_SIZE);
-  if (prev_committed_page_count == committed_page_count) {
+  committed_region.Intersect(mapping_region);
+
+  // If the current set of bus mappings contain pages that are not in the region, we need to throw
+  // them out and make a new bus mapping.
+  if (!committed_region.Contains(mapping->committed_region_in_buffer())) {
+    auto regions_to_clear =
+        mapping->committed_region_in_buffer().SubtractWithSplit(committed_region);
+    for (auto region : regions_to_clear) {
+      if (region.empty())
+        continue;
+      address_space_->Clear(
+          mapping->gpu_va() + (region.start() - mapping->page_offset()) * PAGE_SIZE,
+          region.length() * PAGE_SIZE);
+    }
+    // Technically if there's an IOMMU the new mapping might be at a different address, so we'd need
+    // to update the GPU address space to represent that. However, on current systems (amlogic) that
+    // doesn't happen.
+    // TODO(fxbug.dev/32763): Shrink existing PMTs when that's supported.
+    std::unique_ptr<magma::PlatformBusMapper::BusMapping> bus_mapping;
+    if (committed_region.length() > 0) {
+      bus_mapping = owner_->GetBusMapper()->MapPageRangeBus(
+          buffer->platform_buffer(), committed_region.start(), committed_region.length());
+      if (!bus_mapping)
+        return DRETF(false, "Couldn't allocate new bus mapping");
+    }
+    mapping->ReplaceBusMappings(std::move(bus_mapping));
+    return true;
+  }
+
+  std::vector<Region> new_regions;
+
+  auto regions = committed_region.SubtractWithSplit(mapping->committed_region_in_buffer());
+  for (Region region : regions) {
+    if (!region.empty())
+      new_regions.push_back(region);
+  }
+
+  if (new_regions.empty()) {
     // Sometimes an access to a growable region that was just grown can fault.  Unlock the MMU
     // if that's detected so the access can be retried.
-    if (committed_page_count > 0)
+    if (committed_region.length() > 0)
       address_space_->Unlock();
     return true;
   }
 
-  if (committed_page_count < prev_committed_page_count) {
-    uint64_t pages_to_remove = prev_committed_page_count - committed_page_count;
-    address_space_->Clear(mapping->gpu_va() + committed_page_count * PAGE_SIZE,
-                          pages_to_remove * PAGE_SIZE);
-    // Technically if there's an IOMMU the new mapping might be at a different
-    // address, so we'd need to update the GPU address space to represent
-    // that. However, on current systems (amlogic) that doesn't
-    // happen.
-    // TODO(fxbug.dev/32763): Shrink existing PMTs when that's supported.
+  for (auto& region : new_regions) {
     std::unique_ptr<magma::PlatformBusMapper::BusMapping> bus_mapping =
-        owner_->GetBusMapper()->MapPageRangeBus(buffer->platform_buffer(), mapping->page_offset(),
-                                                committed_page_count);
-    // Call shrink_pinned_pages even if the bus mapping isn't created, because if the committed
-    // memory size is later increased, we need to ensure the previously-shrunk region is
-    // remapped into the GPU.
-    mapping->shrink_pinned_pages(pages_to_remove, std::move(bus_mapping));
-    if (!bus_mapping) {
-      DLOG("Failed to shrink bus mapping by %ld pages", pages_to_remove);
-      // The mapping is still usable, so don't count this as an error.
-    }
-  } else {
-    uint64_t pages_to_add = committed_page_count - prev_committed_page_count;
-    uint64_t page_offset_in_buffer = mapping->page_offset() + prev_committed_page_count;
-
-    std::unique_ptr<magma::PlatformBusMapper::BusMapping> bus_mapping =
-        owner_->GetBusMapper()->MapPageRangeBus(buffer->platform_buffer(), page_offset_in_buffer,
-                                                pages_to_add);
+        owner_->GetBusMapper()->MapPageRangeBus(buffer->platform_buffer(), region.start(),
+                                                region.length());
     if (!bus_mapping)
-      return DRETF(false, "Couldn't pin 0x%lx pages", pages_to_add);
+      return DRETF(false, "Couldn't pin region 0x%lx to 0x%lx", region.start(), region.length());
 
     magma_cache_policy_t cache_policy;
     magma_status_t status = buffer->platform_buffer()->GetCachePolicy(&cache_policy);
@@ -372,8 +382,7 @@ bool MsdArmConnection::UpdateCommittedMemory(GpuMapping* mapping) __TA_NO_THREAD
         (status != MAGMA_STATUS_OK || cache_policy == MAGMA_CACHE_POLICY_CACHED)) {
       // Flushing the region must happen after the region is mapped to the bus, as otherwise
       // the backing memory may not exist yet.
-      if (!buffer->EnsureRegionFlushed(page_offset_in_buffer * PAGE_SIZE,
-                                       (page_offset_in_buffer + pages_to_add) * PAGE_SIZE))
+      if (!buffer->EnsureRegionFlushed(region.start() * PAGE_SIZE, region.end() * PAGE_SIZE))
         return DRETF(false, "EnsureRegionFlushed failed");
     }
 
@@ -381,13 +390,15 @@ bool MsdArmConnection::UpdateCommittedMemory(GpuMapping* mapping) __TA_NO_THREAD
     // above completed.
     magma::barriers::WriteBarrier();
 
-    if (!address_space_->Insert(mapping->gpu_va() + prev_committed_page_count * PAGE_SIZE,
-                                bus_mapping.get(), page_offset_in_buffer * PAGE_SIZE,
-                                pages_to_add * PAGE_SIZE, access_flags)) {
+    uint64_t offset_in_mapping = (region.start() - mapping->page_offset()) * PAGE_SIZE;
+
+    if (!address_space_->Insert(mapping->gpu_va() + offset_in_mapping, bus_mapping.get(),
+                                region.start() * PAGE_SIZE, region.length() * PAGE_SIZE,
+                                access_flags)) {
       return DRETF(false, "Pages can't be inserted into address space");
     }
 
-    mapping->grow_pinned_pages(std::move(bus_mapping));
+    mapping->AddBusMapping(std::move(bus_mapping));
   }
 
   return true;
@@ -421,11 +432,14 @@ bool MsdArmConnection::PageInMemory(uint64_t address) {
     return false;
   }
   if (!(mapping.flags() & MAGMA_GPU_MAP_FLAG_GROWABLE)) {
+    Region committed_region = mapping.committed_region();
     MAGMA_LOG(WARNING,
               "Address 0x%lx at offset 0x%lx in non-growable mapping at 0x%lx, size 0x%lx, pinned "
-              "page size 0x%lx, flags 0x%lx",
+              "region start offset 0x%lx, pinned region length 0x%lx "
+              "flags 0x%lx",
               address, address - mapping.gpu_va(), mapping.gpu_va(), mapping.size(),
-              mapping.pinned_page_count() * PAGE_SIZE, mapping.flags());
+              committed_region.start() * PAGE_SIZE, committed_region.length() * PAGE_SIZE,
+              mapping.flags());
     return false;
   }
 
@@ -451,13 +465,25 @@ bool MsdArmConnection::PageInMemory(uint64_t address) {
 
   // The MMU command to update the page tables should automatically cause
   // the atom to continue executing.
-  return buffer->SetCommittedPages(buffer->start_committed_pages(), committed_page_count);
+  return buffer->CommitPageRange(buffer->start_committed_pages(), committed_page_count);
 }
 
 bool MsdArmConnection::CommitMemoryForBuffer(MsdArmBuffer* buffer, uint64_t page_offset,
                                              uint64_t page_count) {
   std::lock_guard<std::mutex> lock(address_lock_);
+  return buffer->CommitPageRange(page_offset, page_count);
+}
+
+bool MsdArmConnection::SetCommittedPagesForBuffer(MsdArmBuffer* buffer, uint64_t page_offset,
+                                                  uint64_t page_count) {
+  std::lock_guard<std::mutex> lock(address_lock_);
   return buffer->SetCommittedPages(page_offset, page_count);
+}
+
+bool MsdArmConnection::DecommitMemoryForBuffer(MsdArmBuffer* buffer, uint64_t page_offset,
+                                               uint64_t page_count) {
+  std::lock_guard<std::mutex> lock(address_lock_);
+  return buffer->DecommitPageRange(page_offset, page_count);
 }
 
 void MsdArmConnection::SetNotificationCallback(msd_connection_notification_callback_t callback,
@@ -649,9 +675,28 @@ magma_status_t msd_connection_commit_buffer(msd_connection_t* abi_connection,
                                             msd_buffer_t* abi_buffer, uint64_t page_offset,
                                             uint64_t page_count) {
   MsdArmConnection* connection = MsdArmAbiConnection::cast(abi_connection)->ptr().get();
-  if (!connection->CommitMemoryForBuffer(MsdArmAbiBuffer::cast(abi_buffer)->base_ptr().get(),
-                                         page_offset, page_count))
+  if (!connection->SetCommittedPagesForBuffer(MsdArmAbiBuffer::cast(abi_buffer)->base_ptr().get(),
+                                              page_offset, page_count))
     return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "CommitMemoryForBuffer failed");
+  return MAGMA_STATUS_OK;
+}
+
+magma_status_t msd_connection_buffer_range_op(msd_connection_t* abi_connection,
+                                              msd_buffer_t* abi_buffer, uint32_t options,
+                                              uint64_t start_offset, uint64_t length) {
+  MsdArmConnection* connection = MsdArmAbiConnection::cast(abi_connection)->ptr().get();
+  MsdArmBuffer* buffer = MsdArmAbiBuffer::cast(abi_buffer)->base_ptr().get();
+  if (options == MAGMA_BUFFER_RANGE_OP_POPULATE_TABLES) {
+    if (!connection->CommitMemoryForBuffer(buffer, start_offset / magma::page_size(),
+                                           length / magma::page_size()))
+      return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "CommitMemoryForBuffer failed");
+  } else if (options == MAGMA_BUFFER_RANGE_OP_DEPOPULATE_TABLES) {
+    if (!connection->DecommitMemoryForBuffer(buffer, start_offset / magma::page_size(),
+                                             length / magma::page_size()))
+      return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "CommitMemoryForBuffer failed");
+  } else {
+    return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "Invalid options %d", options);
+  }
   return MAGMA_STATUS_OK;
 }
 

@@ -44,7 +44,7 @@ bool PerformanceCounters::Enable() {
     if (!result) {
       return DRETF(false, "Unable to map perf counter buffer");
     }
-    result = buffer->SetCommittedPages(0, kPerfBufferSize / PAGE_SIZE);
+    result = buffer->CommitPageRange(0, kPerfBufferSize / PAGE_SIZE);
     if (!connection) {
       return DRETF(false, "Unable to commit pages for perf counter buffer");
     }
