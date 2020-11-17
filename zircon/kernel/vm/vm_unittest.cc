@@ -3006,6 +3006,104 @@ static bool vm_mapping_attribution_map_unmap_test() {
   END_TEST;
 }
 
+// Tests that page attribution caching at the VmMapping layer behaves as expected when
+// adjacent mappings are merged.
+static bool vm_mapping_attribution_merge_test() {
+  BEGIN_TEST;
+  AutoVmScannerDisable scanner_disable;
+
+  // Create a test VmAspace to temporarily switch to for creating test mappings.
+  fbl::RefPtr<VmAspace> aspace = VmAspace::Create(0, "test-aspace");
+  ASSERT_NONNULL(aspace);
+  EXPECT_EQ(aspace->is_user(), true);
+
+  // Create a VMO to map.
+  fbl::RefPtr<VmObjectPaged> vmo;
+  zx_status_t status =
+      VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, VmObjectPaged::kResizable, 16 * PAGE_SIZE, &vmo);
+  ASSERT_EQ(ZX_OK, status);
+
+  uint64_t expected_vmo_gen_count = 1;
+  EXPECT_EQ(true, verify_object_page_attribution(vmo.get(), expected_vmo_gen_count, 0u));
+
+  // Create some contiguous mappings, marked unmergeable (default behavior) to begin with.
+  struct {
+    fbl::RefPtr<VmMapping> ref = nullptr;
+    VmMapping* ptr = nullptr;
+    uint64_t expected_gen_count = 1;
+    uint64_t expected_page_count = 0;
+  } mappings[4];
+
+  uint64_t offset = 0;
+  static constexpr uint64_t kSize = 4 * PAGE_SIZE;
+  for (int i = 0; i < 4; i++) {
+    status =
+        aspace->RootVmar()->CreateVmMapping(offset, kSize, 0, VMAR_FLAG_SPECIFIC, vmo, offset,
+                                            kArchRwUserFlags, "test-mapping", &mappings[i].ref);
+    ASSERT_EQ(ZX_OK, status);
+    mappings[i].ptr = mappings[i].ref.get();
+    EXPECT_EQ(true, verify_object_page_attribution(vmo.get(), expected_vmo_gen_count, 0u));
+    EXPECT_EQ(true, verify_mapping_page_attribution(mappings[i].ptr, mappings[i].expected_gen_count,
+                                                    expected_vmo_gen_count,
+                                                    mappings[i].expected_page_count));
+    offset += kSize;
+  }
+  EXPECT_EQ(offset, 16ul * PAGE_SIZE);
+
+  // Commit pages in the VMO.
+  status = vmo->CommitRange(0, 16 * PAGE_SIZE);
+  ASSERT_EQ(ZX_OK, status);
+  expected_vmo_gen_count += 16;
+  for (int i = 0; i < 4; i++) {
+    mappings[i].expected_page_count += 4;
+    EXPECT_EQ(true, verify_object_page_attribution(vmo.get(), expected_vmo_gen_count, 16u));
+    EXPECT_EQ(true, verify_mapping_page_attribution(mappings[i].ptr, mappings[i].expected_gen_count,
+                                                    expected_vmo_gen_count,
+                                                    mappings[i].expected_page_count));
+  }
+
+  // Mark mappings 0 and 2 mergeable. This should not change anything since they're separated by an
+  // unmergeable mapping.
+  VmMapping::MarkMergeable(ktl::move(mappings[0].ref));
+  VmMapping::MarkMergeable(ktl::move(mappings[2].ref));
+  for (int i = 0; i < 4; i++) {
+    EXPECT_EQ(true, verify_object_page_attribution(vmo.get(), expected_vmo_gen_count, 16u));
+    EXPECT_EQ(true, verify_mapping_page_attribution(mappings[i].ptr, mappings[i].expected_gen_count,
+                                                    expected_vmo_gen_count,
+                                                    mappings[i].expected_page_count));
+  }
+
+  // Mark mapping 3 mergeable. This will merge mappings 2 and 3, destroying mapping 3 and moving all
+  // of its pages into mapping 2. Should also increment the generation count for mapping 2.
+  VmMapping::MarkMergeable(ktl::move(mappings[3].ref));
+  ++mappings[2].expected_gen_count;
+  mappings[2].expected_page_count += mappings[3].expected_page_count;
+  for (int i = 0; i < 3; i++) {
+    EXPECT_EQ(true, verify_object_page_attribution(vmo.get(), expected_vmo_gen_count, 16u));
+    EXPECT_EQ(true, verify_mapping_page_attribution(mappings[i].ptr, mappings[i].expected_gen_count,
+                                                    expected_vmo_gen_count,
+                                                    mappings[i].expected_page_count));
+  }
+
+  // Mark mapping 1 mergeable. This will merge mappings 0, 1 and 2, with only mapping 0 surviving
+  // the merge. All the VMO's pages will have been moved to mapping 0. Should also increment the
+  // generation count for mapping 0.
+  VmMapping::MarkMergeable(ktl::move(mappings[1].ref));
+  ++mappings[0].expected_gen_count;
+  mappings[0].expected_page_count += mappings[1].expected_page_count;
+  mappings[0].expected_page_count += mappings[2].expected_page_count;
+  EXPECT_EQ(true, verify_object_page_attribution(vmo.get(), expected_vmo_gen_count, 16u));
+  EXPECT_EQ(true, verify_mapping_page_attribution(mappings[0].ptr, mappings[0].expected_gen_count,
+                                                  expected_vmo_gen_count,
+                                                  mappings[0].expected_page_count));
+
+  // Free the test address space.
+  status = aspace->Destroy();
+  EXPECT_EQ(ZX_OK, status);
+
+  END_TEST;
+}
+
 // Test that a VmObjectPaged that is only referenced by its children gets removed by effectively
 // merging into its parent and re-homing all the children. This should also drop any VmCowPages
 // being held open.
@@ -4372,6 +4470,7 @@ VM_UNITTEST(vmo_attribution_dedup_test)
 VM_UNITTEST(vm_mapping_attribution_commit_decommit_test)
 VM_UNITTEST(vm_mapping_attribution_protect_test)
 VM_UNITTEST(vm_mapping_attribution_map_unmap_test)
+VM_UNITTEST(vm_mapping_attribution_merge_test)
 VM_UNITTEST(vmo_parent_merge_test)
 VM_UNITTEST(arch_noncontiguous_map)
 VM_UNITTEST(vm_kernel_region_test)
