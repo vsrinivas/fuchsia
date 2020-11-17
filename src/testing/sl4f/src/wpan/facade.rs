@@ -6,7 +6,7 @@ use crate::common_utils::lowpan_context::LowpanContext;
 use anyhow::Error;
 use fidl_fuchsia_lowpan::ConnectivityState as lowpan_ConnectivityState;
 use fidl_fuchsia_lowpan_device::{DeviceExtraProxy, DeviceProxy};
-use fidl_fuchsia_lowpan_test::DeviceTestProxy;
+use fidl_fuchsia_lowpan_test::{DeviceTestProxy, MacAddressFilterItem, MacAddressFilterMode};
 use parking_lot::{RwLock, RwLockUpgradableReadGuard};
 use serde::Serialize;
 
@@ -23,6 +23,39 @@ pub struct WpanFacade {
     device_extra: RwLock<Option<DeviceExtraProxy>>,
 }
 
+#[derive(Serialize)]
+pub struct MacAddressFilterItemDto {
+    mac_address: Option<Vec<u8>>,
+    rssi: Option<i8>,
+}
+
+#[derive(Serialize)]
+pub struct MacAddressFilterSettingsDto {
+    items: Option<Vec<MacAddressFilterItemDto>>,
+    mode: Option<MacAddressFilterModeDto>,
+}
+
+impl Into<MacAddressFilterItemDto> for MacAddressFilterItem {
+    fn into(self) -> MacAddressFilterItemDto {
+        MacAddressFilterItemDto { mac_address: self.mac_address, rssi: self.rssi }
+    }
+}
+
+#[derive(Serialize)]
+pub enum MacAddressFilterModeDto {
+    Disabled = 0,
+    Allow = 1,
+    Deny = 2,
+}
+impl Into<MacAddressFilterModeDto> for MacAddressFilterMode {
+    fn into(self) -> MacAddressFilterModeDto {
+        match self {
+            MacAddressFilterMode::Disabled => MacAddressFilterModeDto::Disabled,
+            MacAddressFilterMode::Allow => MacAddressFilterModeDto::Allow,
+            MacAddressFilterMode::Deny => MacAddressFilterModeDto::Deny,
+        }
+    }
+}
 #[derive(Serialize)]
 pub enum ConnectivityState {
     Inactive,
@@ -169,6 +202,26 @@ impl WpanFacade {
             },
             _ => bail!("DeviceExtra proxy is not set"),
         }
+    }
+
+    /// Returns the mac address filter settings from the DeviceTest proxy service.
+    pub async fn get_mac_address_filter_settings(
+        &self,
+    ) -> Result<MacAddressFilterSettingsDto, Error> {
+        let settings = match self.device_test.read().as_ref() {
+            Some(device_test) => device_test.get_mac_address_filter_settings().await?,
+            _ => bail!("DeviceTest proxy is not set!"),
+        };
+        Ok(MacAddressFilterSettingsDto {
+            mode: match settings.mode {
+                Some(mode) => Some(mode.into()),
+                None => None,
+            },
+            items: match settings.items {
+                Some(items) => Some(items.into_iter().map(|x| x.into()).collect()),
+                None => None,
+            },
+        })
     }
 
     fn to_connectivity_state(connectivity_state: lowpan_ConnectivityState) -> ConnectivityState {
@@ -330,5 +383,11 @@ mod tests {
     async fn test_get_panid() {
         let facade = MOCK_TESTER.create_facade_and_serve();
         MockTester::assert_wpan_fn(facade.0.get_panid(), facade.1).await;
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_get_mac_address_filter_settings() {
+        let facade = MOCK_TESTER.create_facade_and_serve();
+        MockTester::assert_wpan_fn(facade.0.get_mac_address_filter_settings(), facade.1).await;
     }
 }

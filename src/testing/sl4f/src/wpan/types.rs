@@ -5,6 +5,7 @@
 /// Supported Wpan commands.
 pub enum WpanMethod {
     GetIsCommissioned,
+    GetMacAddressFilterSettings,
     GetNcpChannel,
     GetNcpMacAddress,
     GetNcpRssi,
@@ -24,6 +25,7 @@ impl std::str::FromStr for WpanMethod {
     fn from_str(method: &str) -> Result<Self, Self::Err> {
         match method {
             "GetIsCommissioned" => Ok(WpanMethod::GetIsCommissioned),
+            "GetMacAddressFilterSettings" => Ok(WpanMethod::GetMacAddressFilterSettings),
             "GetNcpChannel" => Ok(WpanMethod::GetNcpChannel),
             "GetNcpMacAddress" => Ok(WpanMethod::GetNcpMacAddress),
             "GetNcpRssi" => Ok(WpanMethod::GetNcpRssi),

@@ -405,7 +405,12 @@ impl Driver for DummyDevice {
 
     async fn get_mac_address_filter_settings(&self) -> ZxResult<MacAddressFilterSettings> {
         Ok(MacAddressFilterSettings {
-            mode: Some(MacAddressFilterMode::Disabled),
+            mode: Some(MacAddressFilterMode::Allow),
+            items: Some(vec![MacAddressFilterItem {
+                mac_address: Some(vec![0xFF, 0xAA, 0xBB, 0xCC, 0x11, 0x22, 0x33, 0xFF]),
+                rssi: Some(8),
+                ..MacAddressFilterItem::empty()
+            }]),
             ..MacAddressFilterSettings::empty()
         })
     }

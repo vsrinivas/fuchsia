@@ -13,6 +13,9 @@ impl Facade for WpanFacade {
     async fn handle_request(&self, method: String, _args: Value) -> Result<Value, Error> {
         Ok(match method.parse()? {
             WpanMethod::GetIsCommissioned => to_value(self.get_is_commissioned().await?),
+            WpanMethod::GetMacAddressFilterSettings => {
+                to_value(self.get_mac_address_filter_settings().await?)
+            }
             WpanMethod::GetNcpChannel => to_value(self.get_ncp_channel().await?),
             WpanMethod::GetNcpMacAddress => to_value(self.get_ncp_mac_address().await?),
             WpanMethod::GetNcpRssi => to_value(self.get_ncp_rssi().await?),
