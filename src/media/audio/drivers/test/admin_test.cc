@@ -350,10 +350,10 @@ void AdminTest::ExpectPositionNotifyCount(uint32_t count) {
   double average_num_notif_periods_elapsed = position_notification_count_ - 0.5;
 
   // Furthermore, notification timing requirements for drivers are somewhat loose, so we include a
-  // tolerance range of +/- 0.75 notification periods.
-  auto min_allowed_time = ns_per_notification.get() * (average_num_notif_periods_elapsed - 0.75);
+  // tolerance range of +/- 2. notification periods.
+  auto min_allowed_time = ns_per_notification.get() * (average_num_notif_periods_elapsed - 2.);
   auto expected_time = ns_per_notification.get() * average_num_notif_periods_elapsed;
-  auto max_allowed_time = ns_per_notification.get() * (average_num_notif_periods_elapsed + 0.75);
+  auto max_allowed_time = ns_per_notification.get() * (average_num_notif_periods_elapsed + 2.);
 
   FX_LOGS(DEBUG) << "Timestamp delta from min/ideal/max: " << std::setw(10)
                  << (min_allowed_time - timestamp_duration) << " : " << std::setw(10)
