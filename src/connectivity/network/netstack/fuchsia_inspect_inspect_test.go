@@ -11,6 +11,7 @@ import (
 	"reflect"
 	"sort"
 	"strconv"
+	"strings"
 	"syscall/zx"
 	"syscall/zx/zxwait"
 	"testing"
@@ -28,6 +29,7 @@ import (
 	"gvisor.dev/gvisor/pkg/tcpip/header"
 	"gvisor.dev/gvisor/pkg/tcpip/network/ipv4"
 	"gvisor.dev/gvisor/pkg/tcpip/network/ipv6"
+	"gvisor.dev/gvisor/pkg/tcpip/stack"
 	"gvisor.dev/gvisor/pkg/tcpip/transport/tcp"
 	"gvisor.dev/gvisor/pkg/tcpip/transport/udp"
 	"gvisor.dev/gvisor/pkg/waiter"
@@ -580,6 +582,113 @@ func TestRouteInfoInspectImpl(t *testing.T) {
 
 			if diff := cmp.Diff(
 				inspect.Object{Name: "0", Properties: test.properties},
+				impl.ReadData(),
+				cmpopts.IgnoreUnexported(inspect.Object{}, inspect.Property{}, inspect.Metric{}),
+			); diff != "" {
+				t.Errorf("ReadData() mismatch (-want +got):\n%s", diff)
+			}
+		})
+	}
+}
+
+func TestNeighborTableInspectImpl(t *testing.T) {
+	ipv4Addr := tcpip.Address("\xc0\xa8\x01\x01")
+	ipv6Addr := tcpip.Address("\x00\x0a\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01")
+
+	impl := neighborTableInspectImpl{
+		name: neighborsLabel,
+		value: map[string]stack.NeighborEntry{
+			ipv4Addr.String(): {
+				Addr:           ipv4Addr,
+				LinkAddr:       "\x0a\x00\x00\x00\x00\x01",
+				State:          stack.Reachable,
+				UpdatedAtNanos: 1,
+			},
+			ipv6Addr.String(): {
+				Addr:           ipv6Addr,
+				LinkAddr:       "\x0a\x00\x00\x00\x00\x02",
+				State:          stack.Stale,
+				UpdatedAtNanos: 2,
+			},
+		},
+	}
+
+	children := impl.ListChildren()
+	if diff := cmp.Diff([]string{
+		ipv4Addr.String(), ipv6Addr.String(),
+	}, children, cmpopts.SortSlices(func(a, b string) bool {
+		return strings.Compare(a, b) < 0
+	})); diff != "" {
+		t.Errorf("ListChildren() mismatch (-want +got):\n%s", diff)
+	}
+	for _, childName := range children {
+		if child := impl.GetChild(childName); child == nil {
+			t.Errorf("got GetChild(%s) = nil, want non-nil", childName)
+		} else if _, ok := child.(*neighborInfoInspectImpl); !ok {
+			t.Errorf("got GetChild(%s) = %T, want %T", childName, child, &neighborInfoInspectImpl{})
+		}
+	}
+
+	childName := "not a real child"
+	if got := impl.GetChild(childName); got != nil {
+		t.Errorf("got GetChild(%s) = %s, want = nil", childName, got)
+	}
+
+	if diff := cmp.Diff(inspect.Object{
+		Name: neighborsLabel,
+	}, impl.ReadData(), cmpopts.IgnoreUnexported(inspect.Object{})); diff != "" {
+		t.Errorf("ReadData() mismatch (-want +got):\n%s", diff)
+	}
+}
+
+func TestNeighborInfoInspectImpl(t *testing.T) {
+	tests := []struct {
+		name     string
+		neighbor stack.NeighborEntry
+	}{
+		{
+			name: "IPv4",
+			neighbor: stack.NeighborEntry{
+				Addr:           "\xc0\xa8\x01\x01",
+				LinkAddr:       "\x0a\x00\x00\x00\x00\x01",
+				State:          stack.Reachable,
+				UpdatedAtNanos: 1,
+			},
+		},
+		{
+			name: "IPv6",
+			neighbor: stack.NeighborEntry{
+				Addr:           "\x00\x0a\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01",
+				LinkAddr:       "\x0a\x00\x00\x00\x00\x02",
+				State:          stack.Stale,
+				UpdatedAtNanos: 2,
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			impl := neighborInfoInspectImpl{value: test.neighbor}
+			if diff := cmp.Diff(impl.ListChildren(), []string(nil)); diff != "" {
+				t.Errorf("ListChildren() mismatch (-want +got):\n%s", diff)
+			}
+
+			childName := "not a real child"
+			if got := impl.GetChild(childName); got != nil {
+				t.Errorf("got GetChild(%s) = %s, want = nil", childName, got)
+			}
+
+			if diff := cmp.Diff(
+				inspect.Object{
+					Name: test.neighbor.Addr.String(),
+					Properties: []inspect.Property{
+						{Key: "Link address", Value: inspect.PropertyValueWithStr(test.neighbor.LinkAddr.String())},
+						{Key: "State", Value: inspect.PropertyValueWithStr(test.neighbor.State.String())},
+					},
+					Metrics: []inspect.Metric{
+						{Key: "Last updated", Value: inspect.MetricValueWithIntValue(test.neighbor.UpdatedAtNanos)},
+					},
+				},
 				impl.ReadData(),
 				cmpopts.IgnoreUnexported(inspect.Object{}, inspect.Property{}, inspect.Metric{}),
 			); diff != "" {

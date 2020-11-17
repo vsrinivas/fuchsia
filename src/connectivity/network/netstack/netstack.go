@@ -1156,6 +1156,24 @@ func (ns *Netstack) getIfStateInfo(nicInfo map[tcpip.NICID]stack.NICInfo) map[tc
 			info.dhcpInfo = ifs.mu.dhcp.Info()
 			info.dhcpStats = ifs.mu.dhcp.Stats()
 		}
+
+		{
+			neighbors, err := ns.stack.Neighbors(id)
+			switch err {
+			case nil:
+				info.neighbors = make(map[string]stack.NeighborEntry)
+				for _, n := range neighbors {
+					info.neighbors[n.Addr.String()] = n
+				}
+			case tcpip.ErrNotSupported:
+				// NIC does not have a neighbor table, skip.
+			case tcpip.ErrUnknownNICID:
+				_ = syslog.Warnf("getIfStateInfo: NIC removed before ns.stack.Neighbors(%d) could be called", id)
+			default:
+				_ = syslog.Errorf("getIfStateInfo: unexpected error from ns.stack.Neighbors(%d) = %s", id, err)
+			}
+		}
+
 		ifs.mu.Unlock()
 		info.controller = ifs.controller
 		ifStates[id] = info

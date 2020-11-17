@@ -4,10 +4,10 @@
 
 #![cfg(test)]
 
-use anyhow::Context as _;
+use anyhow::{format_err, Context as _, Error};
 use diagnostics_hierarchy::Property;
 use fidl_fuchsia_net_interfaces_ext::CloneExt as _;
-use net_declare::{fidl_mac, fidl_subnet};
+use net_declare::{fidl_ip, fidl_mac, fidl_subnet};
 use netemul::Endpoint as _;
 use netstack_testing_common::environments::{Netstack2, TestSandboxExt};
 use netstack_testing_common::Result;
@@ -218,6 +218,18 @@ async fn inspect_nic() -> Result {
     let netdev_addrs = AddressMatcher::new(&netdev_props);
     let eth_addrs = AddressMatcher::new(&eth_props);
 
+    // Populate the neighbor table so we can verify inspection of its entries.
+    const BOB_IP: fidl_fuchsia_net::IpAddress = fidl_ip!(192.168.0.1);
+    const BOB_MAC: fidl_fuchsia_net::MacAddress = fidl_mac!("02:0A:0B:0C:0D:0E");
+    let () = env
+        .connect_to_service::<fidl_fuchsia_net_neighbor::ControllerMarker>()
+        .context("failed to connect to Controller")?
+        .add_entry(eth.id(), &mut BOB_IP.clone(), &mut BOB_MAC.clone())
+        .await
+        .context("add_entry FIDL error")?
+        .map_err(fuchsia_zircon::Status::from_raw)
+        .context("add_entry failed")?;
+
     let data = get_inspect_data(&env, "netstack-debug.cmx", "NICs", "interfaces")
         .await
         .context("get_inspect_data failed")?;
@@ -292,6 +304,18 @@ async fn inspect_nic() -> Result {
                 RxWrites: contains {},
                 TxReads: contains {},
                 TxWrites: contains {}
+            },
+            Neighbors: {
+                fidl_fuchsia_net_ext::IpAddress::from(BOB_IP).to_string() => {
+                    "Link address": fidl_fuchsia_net_ext::MacAddress::from(BOB_MAC).to_string(),
+                    State: "Static",
+                    // TODO(fxbug.dev/64524): Use NonZeroIntProperty once we are
+                    // able to distinguish between signed and unsigned integers
+                    // from the fuchsia.diagnostics FIDL. This is currently not
+                    // possible because the inspect data is serialized into JSON
+                    // then converted back, losing type information.
+                    "Last updated": NonZeroUintProperty,
+                }
             }
         },
         netdev.id().to_string() => {
@@ -331,7 +355,8 @@ async fn inspect_nic() -> Result {
                 RxWrites: contains {},
                 TxReads: contains {},
                 TxWrites: contains {}
-            }
+            },
+            Neighbors: {}
         }
     });
 
@@ -340,6 +365,23 @@ async fn inspect_nic() -> Result {
     let () = netdev_addrs.check().context("netdev addresses match failed")?;
 
     Ok(())
+}
+
+/// A NonZeroUintProperty passes for non-zero, unsigned integers.
+pub struct NonZeroUintProperty;
+
+impl<K> fuchsia_inspect::testing::PropertyAssertion<K> for NonZeroUintProperty {
+    fn run(&self, actual: &Property<K>) -> core::result::Result<(), Error> {
+        match actual {
+            Property::Uint(_, v) if *v != 0 => Ok(()),
+            Property::Uint(_, v) if *v == 0 => {
+                Err(format_err!("expected non-zero integer, found 0"))
+            }
+            _ => {
+                Err(format_err!("expected non-zero integer, found {}", actual.discriminant_name()))
+            }
+        }
+    }
 }
 
 #[fuchsia_async::run_singlethreaded(test)]

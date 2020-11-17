@@ -41,15 +41,16 @@ type inspectInner interface {
 }
 
 const (
-	statsLabel    = "Stats"
-	socketInfo    = "Socket Info"
-	dhcpInfo      = "DHCP Info"
-	ethInfo       = "Ethernet Info"
-	netdeviceInfo = "Network Device Info"
-	rxReads       = "RxReads"
-	rxWrites      = "RxWrites"
-	txReads       = "TxReads"
-	txWrites      = "TxWrites"
+	statsLabel     = "Stats"
+	socketInfo     = "Socket Info"
+	dhcpInfo       = "DHCP Info"
+	neighborsLabel = "Neighbors"
+	ethInfo        = "Ethernet Info"
+	netdeviceInfo  = "Network Device Info"
+	rxReads        = "RxReads"
+	rxWrites       = "RxWrites"
+	txReads        = "TxReads"
+	txWrites       = "TxWrites"
 )
 
 // An adapter that implements fuchsia.inspect.InspectWithCtx using the above.
@@ -205,6 +206,7 @@ type ifStateInfo struct {
 	dhcpInfo            dhcp.Info
 	dhcpStats           *dhcp.Stats
 	controller          link.Controller
+	neighbors           map[string]stack.NeighborEntry
 }
 
 type nicInfoMapInspectImpl struct {
@@ -302,6 +304,9 @@ func (impl *nicInfoInspectImpl) ListChildren() []string {
 	if impl.value.dhcpEnabled {
 		children = append(children, dhcpInfo)
 	}
+	if impl.value.neighbors != nil {
+		children = append(children, neighborsLabel)
+	}
 
 	switch impl.value.controller.(type) {
 	case *eth.Client:
@@ -325,6 +330,11 @@ func (impl *nicInfoInspectImpl) GetChild(childName string) inspectInner {
 			name:  childName,
 			info:  impl.value.dhcpInfo,
 			stats: impl.value.dhcpStats,
+		}
+	case neighborsLabel:
+		return &neighborTableInspectImpl{
+			name:  childName,
+			value: impl.value.neighbors,
 		}
 	case ethInfo:
 		return &ethInfoInspectImpl{
@@ -742,5 +752,67 @@ func (*routeInfoInspectImpl) ListChildren() []string {
 }
 
 func (*routeInfoInspectImpl) GetChild(string) inspectInner {
+	return nil
+}
+
+var _ inspectInner = (*neighborTableInspectImpl)(nil)
+
+type neighborTableInspectImpl struct {
+	name  string
+	value map[string]stack.NeighborEntry
+}
+
+func (impl *neighborTableInspectImpl) ReadData() inspect.Object {
+	return inspect.Object{
+		Name: impl.name,
+	}
+}
+
+func (impl *neighborTableInspectImpl) ListChildren() []string {
+	children := make([]string, 0, len(impl.value))
+	for k := range impl.value {
+		children = append(children, k)
+	}
+	return children
+}
+
+func (impl *neighborTableInspectImpl) GetChild(childName string) inspectInner {
+	entry, ok := impl.value[childName]
+	if !ok {
+		syslog.VLogTf(syslog.DebugVerbosity, inspect.InspectName,
+			"GetChild: there is no entry for %q in the neighbor table",
+			childName,
+		)
+		return nil
+	}
+	return &neighborInfoInspectImpl{
+		value: entry,
+	}
+}
+
+var _ inspectInner = (*neighborInfoInspectImpl)(nil)
+
+type neighborInfoInspectImpl struct {
+	value stack.NeighborEntry
+}
+
+func (impl *neighborInfoInspectImpl) ReadData() inspect.Object {
+	return inspect.Object{
+		Name: impl.value.Addr.String(),
+		Properties: []inspect.Property{
+			{Key: "Link address", Value: inspect.PropertyValueWithStr(impl.value.LinkAddr.String())},
+			{Key: "State", Value: inspect.PropertyValueWithStr(impl.value.State.String())},
+		},
+		Metrics: []inspect.Metric{
+			{Key: "Last updated", Value: inspect.MetricValueWithIntValue(impl.value.UpdatedAtNanos)},
+		},
+	}
+}
+
+func (*neighborInfoInspectImpl) ListChildren() []string {
+	return nil
+}
+
+func (*neighborInfoInspectImpl) GetChild(string) inspectInner {
 	return nil
 }

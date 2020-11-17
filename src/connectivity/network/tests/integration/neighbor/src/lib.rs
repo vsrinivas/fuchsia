@@ -26,7 +26,7 @@ const BOB_MAC: fidl_fuchsia_net::MacAddress = fidl_mac!("02:0A:0B:0C:0D:0E");
 const BOB_IP: fidl_fuchsia_net::IpAddress = fidl_ip!(192.168.0.1);
 const SUBNET_PREFIX: u8 = 24;
 
-/// Helper type holding values pertinent to neighor tests.
+/// Helper type holding values pertinent to neighbor tests.
 struct NeighborEnvironment<'a> {
     env: TestEnvironment<'a>,
     ep: TestInterface<'a>,
