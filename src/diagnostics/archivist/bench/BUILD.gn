@@ -1,0 +1,44 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+import("//build/rust/rustc_binary.gni")
+import("//src/sys/build/components.gni")
+
+rustc_binary("bin") {
+  name = "archivist_benchmarks"
+  edition = "2018"
+  force_opt = "z"
+
+  # Match configs on archivist
+  configs += [ "//build/config/lto:thinlto" ]
+  configs -= [ "//build/config/lto:thinlto" ]
+  configs += [ "//build/config/lto:thinlto" ]
+  configs -= [ "//build/config/fuchsia:dynamic_rust_standard_library" ]
+
+  deps = [
+    "//src/developer/fuchsia-criterion",
+    "//src/diagnostics/archivist:lib",
+  ]
+
+  sources = [ "src/main.rs" ]
+}
+
+package("archivist-benchmarks") {
+  binaries = [
+    {
+      name = "archivist_benchmarks"
+      shell = true
+    },
+  ]
+  deps = [ ":bin" ]
+}
+
+group("bench") {
+  testonly = true
+  deps = [
+    ":archivist-benchmarks",
+    ":bin",
+  ]
+}

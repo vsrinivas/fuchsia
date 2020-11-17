@@ -256,6 +256,7 @@ group("tests") {
   public_deps = [
     ":archivist-fuzzers",
     ":archivist-tests",
+    "bench",
     "tests",
   ]
 }

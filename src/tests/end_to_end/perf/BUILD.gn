@@ -16,10 +16,11 @@ import("//build/testing/host_test_data.gni")
 # test executables.
 
 test_list = [
+  "archivist_benchmarks_test",
   "dart_inspect_benchmarks_test",
+  "fidlc_microbenchmarks_test",
   "garnet_input_latency_benchmarks_test",
   "kernel_boot_timeline_test",
-  "fidlc_microbenchmarks_test",
   "microbenchmarks_test",
   "netstack_benchmarks_test",
   "rust_inspect_benchmarks_test",
@@ -141,6 +142,7 @@ group("package_deps") {
   testonly = true
   public_deps = [
     "//src/connectivity/network/tests/benchmarks:netstack_benchmarks",
+    "//src/diagnostics/archivist/bench",
     "//src/lib/diagnostics/inspect/rust:benchmarks",
     "//src/tests/benchmarks:kernel-boot-benchmarks",
     "//src/tests/benchmarks/fidl:benchmarks",
