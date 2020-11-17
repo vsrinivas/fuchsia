@@ -2,9 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// This package implements the Zircon netboot protocol.
-//
-// TODO(fxbug.dev/35957): Add testing for this package.
+// Package netboot implements the Zircon netboot protocol.
 package netboot
 
 import (
