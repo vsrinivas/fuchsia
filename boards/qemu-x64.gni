@@ -55,7 +55,6 @@ board_system_image_deps = [
 board_package_labels = [
   "//src/power/power-manager",
   "//src/power/power-manager:base_config",
-  "//garnet/bin/power_manager:base_config",
   "//garnet/bin/thermd",
   "//garnet/bin/thermd:config",
   "//garnet/packages/prod:drivers-support",

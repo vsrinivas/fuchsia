@@ -6,7 +6,8 @@ import("//build/images/assemble_system.gni")
 
 assemble_system("guest") {
   base_packages = [
-    "//garnet/bin/power_manager:base_config",
+    "//src/power/power-manager",
+    "//src/power/power-manager:base_config",
     "//garnet/bin/run",
     "//garnet/bin/sysmgr",
     "//garnet/bin/trace",
