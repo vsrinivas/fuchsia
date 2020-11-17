@@ -39,9 +39,8 @@ const (
 	// DefaultInterfaceName is the name given to the emulated tap interface.
 	defaultInterfaceName = "qemu"
 
-	// DefaultQEMUNodename is the default nodename given to a target with the
-	// default QEMU MAC address.
-	DefaultQEMUNodename = "step-atom-yard-juicy"
+	// DefaultQEMUNodename is the default nodename given to a QEMU target.
+	DefaultQEMUNodename = "botanist-target-qemu"
 
 	// The size in bytes of minimimum desired size for the storage-full image.
 	// The image should be large enough to hold all downloaded test packages
