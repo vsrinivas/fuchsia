@@ -24,7 +24,7 @@ struct AddressMatcher {
 
 impl AddressMatcher {
     /// Creates an `AddressMatcher` from interface properties.
-    fn new(props: &fidl_fuchsia_net_interfaces::Properties, has_hwaddr: bool) -> Self {
+    fn new(props: &fidl_fuchsia_net_interfaces::Properties) -> Self {
         let set = props
             .addresses
             .iter()
@@ -37,13 +37,6 @@ impl AddressMatcher {
                     };
                     format!("[{}] {}", prefix, fidl_fuchsia_net_ext::Subnet::from(a))
                 })
-            })
-            .chain(if has_hwaddr {
-                // If we have a non-empty hardware address, assume that we're going to
-                // have the fixed ARP protocol address in the set.
-                Some("[arp] 617270/0".to_string())
-            } else {
-                None
             })
             .collect::<std::collections::HashSet<_>>();
 
@@ -221,9 +214,10 @@ async fn inspect_nic() -> Result {
         .await
         .context("failed to wait for interfaces up and addresses configured")?;
     let loopback_id = loopback_props.id.ok_or(anyhow::anyhow!("loopback ID missing"))?;
-    let loopback_addrs = AddressMatcher::new(&loopback_props, false);
-    let netdev_addrs = AddressMatcher::new(&netdev_props, true);
-    let eth_addrs = AddressMatcher::new(&eth_props, true);
+    let loopback_addrs = AddressMatcher::new(&loopback_props);
+    // TODO(github.com/google/gvisor/pull/4807): Uncomment when this change rolls.
+    // let netdev_addrs = AddressMatcher::new(&netdev_props);
+    // let eth_addrs = AddressMatcher::new(&eth_props);
 
     let data = get_inspect_data(&env, "netstack-debug.cmx", "NICs", "interfaces")
         .await
@@ -260,7 +254,8 @@ async fn inspect_nic() -> Result {
                 }
             }
         },
-        eth.id().to_string() => {
+        // TODO(github.com/google/gvisor/pull/4807): Do equal comparison once this change rolls.
+        eth.id().to_string() => contains {
             Name: eth_props.name.ok_or(anyhow::anyhow!("eth name missing"))?,
             Loopback: "false",
             LinkOnline: "true",
@@ -272,12 +267,12 @@ async fn inspect_nic() -> Result {
             Running: "true",
             "DHCP enabled": "false",
             LinkAddress: fidl_fuchsia_net_ext::MacAddress::from(ETH_MAC).to_string(),
-            // ARP.
-            ProtocolAddress0: eth_addrs.clone(),
             // IPv4.
-            ProtocolAddress1: eth_addrs.clone(),
+            // TODO(github.com/google/gvisor/pull/4807): Uncomment when this change rolls.
+            // ProtocolAddress0: eth_addrs.clone(),
             // Link-local IPv6.
-            ProtocolAddress2: eth_addrs.clone(),
+            // TODO(github.com/google/gvisor/pull/4807): Uncomment when this change rolls.
+            // ProtocolAddress1: eth_addrs.clone(),
             Stats: {
                 DisabledRx: {
                     Bytes: AnyProperty,
@@ -303,7 +298,8 @@ async fn inspect_nic() -> Result {
                 TxWrites: contains {}
             }
         },
-        netdev.id().to_string() => {
+        // TODO(github.com/google/gvisor/pull/4807): Do equal comparison once this change rolls.
+        netdev.id().to_string() => contains {
             Name: netdev_props.name.ok_or(anyhow::anyhow!("netdev name missing"))?,
             Loopback: "false",
             LinkOnline: "true",
@@ -315,12 +311,12 @@ async fn inspect_nic() -> Result {
             Running: "true",
             "DHCP enabled": "false",
             LinkAddress: fidl_fuchsia_net_ext::MacAddress::from(NETDEV_MAC).to_string(),
-            // ARP.
-            ProtocolAddress0: netdev_addrs.clone(),
             // IPv4.
-            ProtocolAddress1: netdev_addrs.clone(),
+            // TODO(github.com/google/gvisor/pull/4807): Uncomment when this change rolls.
+            // ProtocolAddress0: netdev_addrs.clone(),
             // Link-local IPv6.
-            ProtocolAddress2: netdev_addrs.clone(),
+            // TODO(github.com/google/gvisor/pull/4807): Uncomment when this change rolls.
+            // ProtocolAddress1: netdev_addrs.clone(),
             Stats: {
                 DisabledRx: {
                     Bytes: AnyProperty,
@@ -347,8 +343,9 @@ async fn inspect_nic() -> Result {
     });
 
     let () = loopback_addrs.check().context("loopback addresses match failed")?;
-    let () = eth_addrs.check().context("ethernet addresses match failed")?;
-    let () = netdev_addrs.check().context("netdev addresses match failed")?;
+    // TODO(github.com/google/gvisor/pull/4807): Uncomment when this change rolls.
+    // let () = eth_addrs.check().context("ethernet addresses match failed")?;
+    // let () = netdev_addrs.check().context("netdev addresses match failed")?;
 
     Ok(())
 }
