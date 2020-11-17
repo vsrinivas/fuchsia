@@ -117,17 +117,20 @@ impl MetricsReporter for CobaltMetricsReporter {
                     1,
                 );
             }
-            Metrics::RequestsPerCheck { count: _count, successful: _successful } => {
-                // FIXME(60589) Temporarily disable to allow for a soft migration while we rename
-                // this metric to `requests_per_check`.
-                /*
+            Metrics::RequestsPerCheck { count, successful } => {
                 self.cobalt_sender.log_event_count(
-                    mos_metrics_registry::UPDATE_CHECK_RETRIES_METRIC_ID,
-                    mos_metrics_registry::UpdateCheckRetriesMetricDimensionResult::Success,
+                    mos_metrics_registry::REQUESTS_PER_CHECK_METRIC_ID,
+                    match successful {
+                        true => {
+                            mos_metrics_registry::RequestsPerCheckMetricDimensionResult::Success
+                        }
+                        false => {
+                            mos_metrics_registry::RequestsPerCheckMetricDimensionResult::Failed
+                        }
+                    },
                     0,
                     count as i64,
                 );
-                */
             }
             Metrics::AttemptsToSucceed(count) => {
                 self.cobalt_sender.log_event_count(
@@ -247,28 +250,24 @@ mod tests {
         );
     }
 
-    // FIXME(60589) Temporarily disable to allow for a soft migration while we rename this metric
-    // to `requests_per_check`.
-    /*
     #[test]
-    fn test_report_update_check_retries() {
+    fn test_report_requests_per_check() {
         assert_metric(
-            Metrics::UpdateCheckRetries(3),
+            Metrics::RequestsPerCheck { count: 3, successful: true },
             CobaltEvent {
-                metric_id: mos_metrics_registry::UPDATE_CHECK_RETRIES_METRIC_ID,
+                metric_id: mos_metrics_registry::REQUESTS_PER_CHECK_METRIC_ID,
                 event_codes: vec![
-                    mos_metrics_registry::UpdateCheckRetriesMetricDimensionResult::Success
+                    mos_metrics_registry::RequestsPerCheckMetricDimensionResult::Success,
                 ]
                 .as_event_codes(),
                 component: None,
                 payload: EventPayload::EventCount(CountEvent {
                     period_duration_micros: 0,
-                    count: 3
+                    count: 3,
                 }),
-            }
+            },
         );
     }
-    */
 
     #[test]
     fn test_duration_to_cobalt_metrics() {
