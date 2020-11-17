@@ -34,6 +34,9 @@ KCOUNTER(counter_lockup_cs_exceeding_1000ms, "lockup_detector.critical_section.e
 KCOUNTER(counter_lockup_cs_exceeding_100000ms,
          "lockup_detector.critical_section.exceeding_ms.100000")
 
+// Counts the number of times the lockup detector has emitted a "no heartbeat" oops.
+KCOUNTER(counter_lockup_no_heartbeat_oops, "lockup_detector.no_heartbeat_oops")
+
 namespace {
 
 // Controls whether critical section checking is enabled and at how long is "too long".
@@ -127,6 +130,7 @@ void check_heartbeats_callback(Timer* timer, zx_time_t now, void*) {
         state->max_heartbeat_gap.store(age);
       }
       if (alert_limiter.Ready()) {
+        kcounter_add(counter_lockup_no_heartbeat_oops, 1);
         KERNEL_OOPS("lockup_detector: no heartbeat from CPU-%u in %" PRId64
                     " ms, last_heartbeat=%" PRId64 " now=%" PRId64 " (message rate limited)\n",
                     cpu, age / ZX_MSEC(1), last_heartbeat, now);
