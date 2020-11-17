@@ -21,6 +21,7 @@ use {
         startup::Arguments,
     },
     cm_rust::{ChildDecl, ComponentDecl, NativeIntoFidl},
+    cm_types::Url,
     fidl::endpoints::{self, Proxy, ServerEnd},
     fidl_fidl_examples_echo as echo, fidl_fuchsia_component_runner as fcrunner,
     fidl_fuchsia_data as fdata,
@@ -673,7 +674,7 @@ pub async fn new_test_model(
     }
 
     let args = Arguments {
-        root_component_url: format!("test:///{}", root_component),
+        root_component_url: Some(Url::new(format!("test:///{}", root_component)).unwrap()),
         ..Default::default()
     };
 

@@ -72,6 +72,7 @@ pub struct JobPolicyAllowlists {
 
 #[derive(Deserialize, Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
 #[repr(u32)]
+#[serde(rename_all = "snake_case")]
 pub enum OutDirContents {
     None,
     Hub,
@@ -447,7 +448,7 @@ mod tests {
                 },
             ],
             num_threads: 321,
-            out_dir_contents: "Svc",
+            out_dir_contents: "svc",
             root_component_url: "fuchsia-pkg://fuchsia.com/foo#meta/foo.cmx",
         }"#;
         let config = compile_str(input).expect("failed to compile");

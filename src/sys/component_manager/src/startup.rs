@@ -2,7 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use anyhow::{format_err, Error};
+use {
+    anyhow::{format_err, Error},
+    cm_types::Url,
+};
 
 /// Command line arguments that control component_manager's behavior. Use [Arguments::from_args()]
 /// or [Arguments::new()] to create an instance.
@@ -11,21 +14,29 @@ use anyhow::{format_err, Error};
 #[derive(Debug, Default, Clone, Eq, PartialEq)]
 pub struct Arguments {
     /// URL of the root component to launch.
-    pub root_component_url: String,
+    pub root_component_url: Option<Url>,
 
     /// Load component_manager's configuration from this path.
     pub config: String,
 }
 
 impl Arguments {
+    /// Parse `Arguments` from [std::env::args()].
+    ///
+    /// See [Arguments::new()] for more details.
+    pub fn from_args() -> Result<Self, Error> {
+        // Ignore first argument with executable name, then delegate to generic iterator impl.
+        Self::new(std::env::args().skip(1))
+    }
+
     /// Parse `Arguments` from the given String Iterator.
     ///
     /// This parser is relatively simple since component_manager is not a user-facing binary that
     /// requires or would benefit from more flexible UX. Recognized arguments are extracted from
     /// the given Iterator and used to create the returned struct. Unrecognized flags starting with
     /// "--" result in an error being returned. A single non-flag argument is expected for the root
-    /// component URL.
-    pub fn new<I>(iter: I) -> Result<Self, Error>
+    /// component URL. However, this field may be specified in the config file instead.
+    fn new<I>(iter: I) -> Result<Self, Error>
     where
         I: IntoIterator<Item = String>,
     {
@@ -40,28 +51,23 @@ impl Arguments {
             } else if arg.starts_with("--") {
                 return Err(format_err!("Unrecognized flag: {}", arg));
             } else {
-                if !args.root_component_url.is_empty() {
+                if args.root_component_url.is_some() {
                     return Err(format_err!("Multiple non-flag arguments given"));
                 }
-                args.root_component_url = arg;
+                match Url::new(arg) {
+                    Ok(url) => args.root_component_url = Some(url),
+                    Err(err) => {
+                        return Err(format_err!("Failed to parse root_component_url: {:?}", err));
+                    }
+                }
             }
         }
 
-        if args.root_component_url.is_empty() {
-            return Err(format_err!("No root component URL found"));
-        }
         if args.config.is_empty() {
             return Err(format_err!("No config file path found"));
         }
-        Ok(args)
-    }
 
-    /// Parse `Arguments` from [std::env::args()].
-    ///
-    /// See [Arguments::new()] for more details.
-    pub fn from_args() -> Result<Self, Error> {
-        // Ignore first argument with executable name, then delegate to generic iterator impl.
-        Self::new(std::env::args().skip(1))
+        Ok(args)
     }
 
     /// Returns a usage message for the supported arguments.
@@ -81,56 +87,76 @@ impl Arguments {
 
 #[cfg(test)]
 mod tests {
-    use {super::*, fuchsia_async as fasync};
+    use {super::*, lazy_static::lazy_static};
 
-    #[fasync::run_singlethreaded(test)]
-    async fn parse_arguments() -> Result<(), Error> {
-        let config_filename = || "foo".to_string();
-        let config = || "--config".to_string();
-        let dummy_url = || "fuchsia-pkg://fuchsia.com/pkg#meta/component.cm".to_string();
-        let dummy_url2 = || "fuchsia-pkg://fuchsia.com/pkg#meta/component2.cm".to_string();
-        let unknown_flag = || "--unknown".to_string();
+    lazy_static! {
+        static ref CONFIG_FILENAME: fn() -> String = || String::from("foo");
+        static ref CONFIG_FLAG: fn() -> String = || String::from("--config");
+        static ref DUMMY_URL: fn() -> Url =
+            || Url::new("fuchsia-pkg://fuchsia.com/pkg#meta/component.cm".to_owned()).unwrap();
+        static ref DUMMY_URL_AS_STR: fn() -> String = || DUMMY_URL().as_str().to_owned();
+    }
 
-        // Zero or multiple positional arguments is an error; must be exactly one URL.
+    #[test]
+    fn no_arguments() {
         assert!(Arguments::new(vec![]).is_err());
-        assert!(Arguments::new(vec![dummy_url(), dummy_url2()]).is_err());
+    }
 
-        // An unknown option is an error.
+    #[test]
+    fn no_config_file() {
+        assert!(Arguments::new(vec![DUMMY_URL_AS_STR(),]).is_err());
+        assert!(Arguments::new(vec![CONFIG_FLAG(),]).is_err());
+    }
+
+    #[test]
+    fn multiple_component_urls() {
+        assert!(Arguments::new(vec![DUMMY_URL_AS_STR(), DUMMY_URL_AS_STR(),]).is_err());
+    }
+
+    #[test]
+    fn bad_flag() {
+        let unknown_flag = || String::from("--unknown");
+
         assert!(Arguments::new(vec![unknown_flag()]).is_err());
-        assert!(Arguments::new(vec![unknown_flag(), dummy_url()]).is_err());
-        assert!(Arguments::new(vec![dummy_url(), unknown_flag()]).is_err());
+        assert!(Arguments::new(vec![unknown_flag(), DUMMY_URL_AS_STR()]).is_err());
+        assert!(Arguments::new(vec![DUMMY_URL_AS_STR(), unknown_flag()]).is_err());
+    }
 
-        // Single positional argument with no options is parsed correctly
+    #[test]
+    fn bad_component_url() {
+        let bad_url = || String::from("not a valid url");
+
+        assert!(Arguments::new(vec![CONFIG_FLAG(), CONFIG_FILENAME(), bad_url(),]).is_err());
+        assert!(Arguments::new(vec![bad_url(), CONFIG_FLAG(), CONFIG_FILENAME(),]).is_err());
+    }
+
+    #[test]
+    fn parse_arguments() {
+        let expected_arguments = Arguments {
+            config: CONFIG_FILENAME(),
+            root_component_url: Some(DUMMY_URL()),
+            ..Default::default()
+        };
+
+        // Single positional argument with no options is parsed correctly.
         assert_eq!(
-            Arguments::new(vec![config(), config_filename(), dummy_url()])
+            Arguments::new(vec![CONFIG_FLAG(), CONFIG_FILENAME(), DUMMY_URL_AS_STR()])
                 .expect("Unexpected error with just URL"),
-            Arguments {
-                config: config_filename(),
-                root_component_url: dummy_url(),
-                ..Default::default()
-            }
-        );
-        assert_eq!(
-            Arguments::new(vec![config(), config_filename(), dummy_url2()])
-                .expect("Unexpected error with just URL"),
-            Arguments {
-                config: config_filename(),
-                root_component_url: dummy_url2(),
-                ..Default::default()
-            }
+            expected_arguments
         );
 
         // Options are parsed correctly and do not depend on order.
         assert_eq!(
-            Arguments::new(vec![dummy_url(), config(), config_filename()])
+            Arguments::new(vec![DUMMY_URL_AS_STR(), CONFIG_FLAG(), CONFIG_FILENAME()])
                 .expect("Unexpected error with option"),
-            Arguments {
-                config: config_filename(),
-                root_component_url: dummy_url(),
-                ..Default::default()
-            }
+            expected_arguments
         );
 
-        Ok(())
+        // Parses argument with root component url omitted.
+        assert_eq!(
+            Arguments::new(vec![CONFIG_FLAG(), CONFIG_FILENAME()])
+                .expect("Unexpected error with no URL"),
+            Arguments { config: CONFIG_FILENAME(), ..Default::default() }
+        );
     }
 }

@@ -20,6 +20,7 @@ use {
         startup::Arguments,
     },
     cm_rust::*,
+    cm_types::Url,
     fidl::{
         self,
         endpoints::{self, create_proxy, ClientEnd, Proxy, ServerEnd},
@@ -241,7 +242,9 @@ impl RoutingTest {
         // Set up runners for the system, including a default runner "test_runner"
         // backed by mock_runner.
         let args = Arguments {
-            root_component_url: format!("test:///{}", builder.root_component),
+            root_component_url: Some(
+                Url::new(format!("test:///{}", builder.root_component)).unwrap(),
+            ),
             ..Default::default()
         };
         let config = RuntimeConfig {

@@ -1,6 +1,8 @@
 {
     maintain_utc_clock: false,
     use_builtin_process_launcher: false,
+    builtin_pkg_resolver: "appmgr_bridge",
+    out_dir_contents: "hub",
     namespace_capabilities: [
         {
             protocol: [
@@ -17,5 +19,4 @@
             rights: [ "r*" ],
         },
     ],
-    "builtin_pkg_resolver": "appmgr_bridge",
 }

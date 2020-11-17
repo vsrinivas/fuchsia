@@ -2,8 +2,10 @@
     debug: true,
     maintain_utc_clock: false,
     use_builtin_process_launcher: false,
-    num_threads: 2,
-    out_dir_contents: "hub",
+    num_threads: 1,
+    out_dir_contents: "svc",
+    root_component_url: "fuchsia-pkg://fuchsia.com/test_manager#meta/test_manager.cm",
+    builtin_pkg_resolver: "appmgr_bridge",
     namespace_capabilities: [
         {
             protocol: [
@@ -13,5 +15,4 @@
             ],
         },
     ],
-    builtin_pkg_resolver: "appmgr_bridge",
 }

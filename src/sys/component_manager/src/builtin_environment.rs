@@ -42,6 +42,8 @@ use {
             hooks::EventType,
             hub::Hub,
             model::{Model, ModelParams},
+            moniker::AbsoluteMoniker,
+            realm::BindReason,
             resolver::{Resolver, ResolverRegistrationError, ResolverRegistry},
         },
         root_realm_stop_notifier::RootRealmStopNotifier,
@@ -50,8 +52,9 @@ use {
     },
     anyhow::{format_err, Context as _, Error},
     cm_rust::CapabilityName,
+    cm_types::Url,
     fidl::endpoints::{create_endpoints, create_proxy, ServerEnd, ServiceMarker},
-    fidl_fuchsia_component_internal::BuiltinPkgResolver,
+    fidl_fuchsia_component_internal::{BuiltinPkgResolver, OutDirContents},
     fidl_fuchsia_io::{
         DirectoryMarker, DirectoryProxy, MODE_TYPE_DIRECTORY, OPEN_RIGHT_READABLE,
         OPEN_RIGHT_WRITABLE,
@@ -62,9 +65,10 @@ use {
     fuchsia_runtime::{take_startup_handle, HandleType},
     fuchsia_zircon::{self as zx, Clock, HandleBased},
     futures::{channel::oneshot, prelude::*},
-    log::{info, warn},
+    log::{error, info, warn},
     std::{
         path::PathBuf,
+        process,
         sync::{Arc, Weak},
     },
 };
@@ -216,8 +220,21 @@ impl BuiltinEnvironmentBuilder {
             None
         };
 
+        let root_component_url = match (
+            args.root_component_url.as_ref(),
+            runtime_config.root_component_url.as_ref(),
+        ) {
+            (Some(url), None) | (None, Some(url)) => url.clone(),
+            (None, None) => {
+                return Err(format_err!("`root_component_url` not provided. This field must be provided either as a command line argument or config file parameter."));
+            }
+            (Some(_), Some(_)) => {
+                return Err(format_err!("`root_component_url` set in two places: as a command line argument and a config file parameter. This field can only be set in one of those places."));
+            }
+        };
+
         let params = ModelParams {
-            root_component_url: args.root_component_url.clone(),
+            root_component_url: root_component_url.as_str().to_owned(),
             root_environment: Environment::new_root(
                 RunnerRegistry::new(runner_map),
                 self.resolvers,
@@ -245,8 +262,14 @@ impl BuiltinEnvironmentBuilder {
             })
             .collect();
 
-        Ok(BuiltinEnvironment::new(model, args, runtime_config, builtin_runners, self.utc_clock)
-            .await?)
+        Ok(BuiltinEnvironment::new(
+            model,
+            root_component_url,
+            runtime_config,
+            builtin_runners,
+            self.utc_clock,
+        )
+        .await?)
     }
 
     /// Checks if the appmgr loader service is available through our namespace and connects to it if
@@ -375,12 +398,14 @@ pub struct BuiltinEnvironment {
     pub event_stream_provider: Arc<EventStreamProvider>,
     pub event_logger: Option<Arc<EventLogger>>,
     pub execution_mode: ExecutionMode,
+    pub num_threads: usize,
+    pub out_dir_contents: OutDirContents,
 }
 
 impl BuiltinEnvironment {
     async fn new(
         model: Arc<Model>,
-        args: Arguments,
+        root_component_url: Url,
         runtime_config: Arc<RuntimeConfig>,
         builtin_runners: Vec<Arc<BuiltinRunner>>,
         utc_clock: Option<Arc<Clock>>,
@@ -389,6 +414,9 @@ impl BuiltinEnvironment {
             true => ExecutionMode::Debug,
             false => ExecutionMode::Production,
         };
+
+        let num_threads = runtime_config.num_threads.clone();
+        let out_dir_contents = runtime_config.out_dir_contents.clone();
 
         let event_logger = if runtime_config.debug {
             let event_logger = Arc::new(EventLogger::new());
@@ -576,7 +604,7 @@ impl BuiltinEnvironment {
         let stop_notifier = Arc::new(RootRealmStopNotifier::new());
         model.root_realm.hooks.install(stop_notifier.hooks()).await;
 
-        let hub = Arc::new(Hub::new(&model, args.root_component_url.clone())?);
+        let hub = Arc::new(Hub::new(&model, root_component_url.as_str().to_owned())?);
         model.root_realm.hooks.install(hub.hooks()).await;
 
         // Set up the capability ready notifier.
@@ -642,6 +670,8 @@ impl BuiltinEnvironment {
             event_stream_provider,
             event_logger,
             execution_mode,
+            num_threads,
+            out_dir_contents,
         })
     }
 
@@ -722,5 +752,46 @@ impl BuiltinEnvironment {
 
     pub async fn wait_for_root_realm_stop(&self) {
         self.stop_notifier.wait_for_root_realm_stop().await;
+    }
+
+    pub async fn run_root(&self) -> Result<(), Error> {
+        match self.out_dir_contents {
+            OutDirContents::None => Ok(()),
+            OutDirContents::Hub => {
+                self.bind_service_fs_to_out().await?;
+                self.model.start().await;
+                Ok(self.wait_for_root_realm_stop().await)
+            }
+            OutDirContents::Svc => {
+                let hub_proxy = self.bind_service_fs_for_hub().await?;
+                let root_moniker = AbsoluteMoniker::root();
+                match self.model.bind(&root_moniker, &BindReason::Root).await {
+                    Ok(_) => {
+                        // TODO: Exit the component manager when the root component's binding is lost
+                        // (when it terminates).
+                    }
+                    Err(error) => {
+                        error!("Failed to bind to root component: {:?}", error);
+                        process::exit(1);
+                    }
+                }
+
+                // List the services exposed by the root component (i.e., the session manager).
+                let expose_dir_proxy = io_util::open_directory(
+                    &hub_proxy,
+                    &PathBuf::from("exec/expose"),
+                    OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+                )
+                .expect("Failed to open directory");
+
+                // Bind the session manager's expose/svc to out/svc of this component, so sysmgr can find it and
+                // route service connections to it.
+                let mut fs = ServiceFs::<ServiceObj<'_, ()>>::new();
+                fs.add_remote("svc", expose_dir_proxy);
+
+                fs.take_and_serve_directory_handle()?;
+                Ok(fs.collect::<()>().await)
+            }
+        }
     }
 }

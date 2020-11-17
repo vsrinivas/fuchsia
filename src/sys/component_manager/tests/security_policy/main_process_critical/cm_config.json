@@ -8,4 +8,5 @@
         }
     },
     builtin_pkg_resolver: "appmgr_bridge",
+    out_dir_contents: "hub",
 }

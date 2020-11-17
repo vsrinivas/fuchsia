@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/component/config.gni")
 import("//build/rust/rustc_test.gni")
 import("//build/test/test_package.gni")
 
@@ -23,17 +24,21 @@ rustc_test("bin") {
   sources = [ "src/main.rs" ]
 }
 
+component_config("component_manager_config") {
+  sources = [ "config.json" ]
+}
+
 test_package("component_manager_for_test_integration_test") {
   deps = [
     ":bin",
+    ":component_manager_config",
     "//examples/tests:passing-test-example",
-    "//src/sys/component_manager:component_manager_debug_config",
-    "//src/sys/component_manager_for_test:bin",
+    "//src/sys/component_manager:bin",
   ]
 
   resources = [
     {
-      path = "${root_gen_dir}/src/sys/component_manager/component_manager_debug_config"
+      path = "${root_gen_dir}/src/sys/component_manager_for_test/tests/component_manager_config"
       dest = "component_manager_config"
     },
   ]
@@ -55,7 +60,7 @@ test_package("component_manager_for_test_integration_test") {
       name = "passing-test-example"
     },
     {
-      name = "component_manager_for_test_bin"
+      name = "component_manager"
     },
   ]
 

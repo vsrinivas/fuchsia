@@ -7,7 +7,7 @@
             "--config",
             "/pkg/data/component_manager_config"
         ],
-        "binary": "bin/component_manager_sfw"
+        "binary": "bin/component_manager"
     },
     "sandbox": {
         "dev": [
