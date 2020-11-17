@@ -143,6 +143,11 @@ class AmlogicDisplay
   // unexpected pixels to be visible on the screen.
   zx_status_t DisplayInit() TA_REQ(display_lock_);
 
+  // Power cycle the device and bring up clocks. Only needed when resuming the
+  // driver, as the bootloader will initialize the display when the machine is
+  // powered on.
+  zx_status_t RestartDisplay() TA_REQ(display_lock_);
+
   // Zircon handles
   zx::bti bti_;
   zx::interrupt inth_;

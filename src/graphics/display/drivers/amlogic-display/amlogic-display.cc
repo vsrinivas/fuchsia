@@ -104,6 +104,52 @@ void AmlogicDisplay::PopulateAddedDisplayArgs(added_display_args_t* args) {
   args->cursor_info_count = 0;
 }
 
+zx_status_t AmlogicDisplay::RestartDisplay() {
+  zx_status_t status;
+  fbl::AllocChecker ac;
+  vpu_->PowerOff();
+  vpu_->PowerOn();
+  vpu_->VppInit();
+  // Need to call this function since VPU/VPP registers were reset
+  vpu_->SetFirstTimeDriverLoad();
+  clock_ = fbl::make_unique_checked<amlogic_display::AmlogicDisplayClock>(&ac);
+  if (!ac.check()) {
+    return ZX_ERR_NO_MEMORY;
+  }
+  status = clock_->Init(fragments_[FRAGMENT_PDEV]);
+  if (status != ZX_OK) {
+    DISP_ERROR("Could not initialize Clock object\n");
+    return status;
+  }
+
+  // Enable all display related clocks
+  status = clock_->Enable(disp_setting_);
+  if (status != ZX_OK) {
+    DISP_ERROR("Could not enable display clocks!\n");
+    return status;
+  }
+
+  // Program and Enable DSI Host Interface
+  dsi_host_ = fbl::make_unique_checked<amlogic_display::AmlDsiHost>(
+      &ac, fragments_[FRAGMENT_PDEV], fragments_[FRAGMENT_DSI], fragments_[FRAGMENT_LCD_GPIO],
+      clock_->GetBitrate(), panel_type_);
+  if (!ac.check()) {
+    return ZX_ERR_NO_MEMORY;
+  }
+  status = dsi_host_->Init();
+  if (status != ZX_OK) {
+    DISP_ERROR("Could not initialize DSI Host\n");
+    return status;
+  }
+
+  status = dsi_host_->HostOn(disp_setting_);
+  if (status != ZX_OK) {
+    DISP_ERROR("DSI Host On failed! %d\n", status);
+    return status;
+  }
+  return ZX_OK;
+}
+
 zx_status_t AmlogicDisplay::DisplayInit() {
   zx_status_t status;
   fbl::AllocChecker ac;
@@ -120,12 +166,10 @@ zx_status_t AmlogicDisplay::DisplayInit() {
   }
 
   // Determine whether it's first time boot or not
-  bool skip_disp_init = false;
-  if (vpu_->SetFirstTimeDriverLoad()) {
+  const bool skip_disp_init = vpu_->SetFirstTimeDriverLoad();
+  if (skip_disp_init) {
     DISP_INFO("First time driver load. Skip display initialization\n");
-    skip_disp_init = true;
   } else {
-    skip_disp_init = false;
     DISP_INFO("Display driver reloaded. Initialize display system\n");
   }
 
@@ -149,51 +193,12 @@ zx_status_t AmlogicDisplay::DisplayInit() {
   // Populated internal structures based on predefined tables
   CopyDisplaySettings();
 
-  if (!skip_disp_init) {
-    vpu_->PowerOff();
-    vpu_->PowerOn();
-    vpu_->VppInit();
-    // Need to call this function since VPU/VPP registers were reset
-    vpu_->SetFirstTimeDriverLoad();
-    clock_ = fbl::make_unique_checked<amlogic_display::AmlogicDisplayClock>(&ac);
-    if (!ac.check()) {
-      return ZX_ERR_NO_MEMORY;
-    }
-    status = clock_->Init(fragments_[FRAGMENT_PDEV]);
-    if (status != ZX_OK) {
-      DISP_ERROR("Could not initialize Clock object\n");
-      return status;
-    }
-
-    // Enable all display related clocks
-    status = clock_->Enable(disp_setting_);
-    if (status != ZX_OK) {
-      DISP_ERROR("Could not enable display clocks!\n");
-      return status;
-    }
-
-    // Program and Enable DSI Host Interface
-    dsi_host_ = fbl::make_unique_checked<amlogic_display::AmlDsiHost>(
-        &ac, fragments_[FRAGMENT_PDEV], fragments_[FRAGMENT_DSI], fragments_[FRAGMENT_LCD_GPIO],
-        clock_->GetBitrate(), panel_type_);
-    if (!ac.check()) {
-      return ZX_ERR_NO_MEMORY;
-    }
-    status = dsi_host_->Init();
-    if (status != ZX_OK) {
-      DISP_ERROR("Could not initialize DSI Host\n");
-      return status;
-    }
-
-    status = dsi_host_->HostOn(disp_setting_);
-    if (status != ZX_OK) {
-      DISP_ERROR("DSI Host On failed! %d\n", status);
-      return status;
-    }
-  } else {
+  if (skip_disp_init) {
     // Make sure AFBC engine is on. Since bootloader does not use AFBC, it might not have powered
     // on AFBC engine.
     vpu_->AfbcPower(true);
+  } else {
+    RestartDisplay();
   }
 
   osd_ = fbl::make_unique_checked<amlogic_display::Osd>(
