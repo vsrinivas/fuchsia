@@ -19,6 +19,7 @@ const (
 	packageManifestModuleName  = "all_package_manifest_paths.json"
 	platformModuleName         = "platforms.json"
 	prebuiltBinaryModuleName   = "prebuilt_binaries.json"
+	sdkArchivesModuleName      = "sdk_archives.json"
 	testDurationsName          = "test_durations.json"
 	testModuleName             = "tests.json"
 	toolModuleName             = "tool_paths.json"
@@ -36,6 +37,7 @@ type Modules struct {
 	packageManifests  []string
 	platforms         []DimensionSet
 	prebuiltBins      []PrebuiltBinaries
+	sdkArchives       []SDKArchive
 	testSpecs         []TestSpec
 	testDurations     []TestDuration
 	tools             []Tool
@@ -83,6 +85,11 @@ func NewModules(buildDir string) (*Modules, error) {
 	}
 
 	m.prebuiltBins, err = loadPrebuiltBinaries(m.PrebuiltBinaryManifest())
+	if err != nil {
+		errMsgs = append(errMsgs, err.Error())
+	}
+
+	m.sdkArchives, err = loadSDKArchives(m.SDKArchivesManifest())
 	if err != nil {
 		errMsgs = append(errMsgs, err.Error())
 	}
@@ -191,6 +198,16 @@ func (m Modules) PrebuiltBinaries() []PrebuiltBinaries {
 // PrebuiltBinaryManifest returns the path to the manifest of prebuilt packages.
 func (m Modules) PrebuiltBinaryManifest() string {
 	return filepath.Join(m.BuildDir(), prebuiltBinaryModuleName)
+}
+
+// SDKArchives returns the build API module of SDK archives.
+func (m Modules) SDKArchives() []SDKArchive {
+	return m.sdkArchives
+}
+
+// SDKArchivesManifest returns the path to the manifest of SDK archives.
+func (m Modules) SDKArchivesManifest() string {
+	return filepath.Join(m.BuildDir(), sdkArchivesModuleName)
 }
 
 // TestDurations returns the build API module of test duration data.

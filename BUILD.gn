@@ -254,6 +254,7 @@ build_api_module("api") {
     ":package-repositories",
     ":platforms",
     ":prebuilt_binaries",
+    ":sdk_archives",
     ":test_durations",
     ":tests",
     ":tool_paths",
@@ -591,6 +592,39 @@ build_api_module("images") {
     # This has the images referred to by $qemu_kernel_label entries.
     "//build/zircon/zbi_tests",
   ]
+}
+
+# Describes the SDK archives that can be built, in the file:
+# "$root_build_dir/sdk_archives.json"
+#
+# If the GN arg build_sdk_archives=true, the file contains a list of JSON
+# objects with the following fields, otherwise the list is empty:
+#
+#   * name
+#     - Required: Name of the SDK.
+#     - Type: string
+#
+#   * label
+#     - Required: GN label of the associated `sdk` target.
+#     - Type: label_with_toolchain
+#
+#   * path
+#     - Required: Path to the built archive.
+#     - Type: path relative to $root_build_dir
+#
+#   * os
+#     - Required: OS is the operating system which the SDK is built for. A value
+#       of "fuchsia" indicates the SDK is host OS agnostic.
+#     - Type: string
+#
+#   * cpu
+#     - Required: CPU architecture which the SDK is built for.
+#     - Type: string
+#
+build_api_module("sdk_archives") {
+  testonly = true
+  data_keys = [ "sdk_archives" ]
+  deps = [ "//sdk:sdk2" ]
 }
 
 # Describes the platforms available for testing, in the file:

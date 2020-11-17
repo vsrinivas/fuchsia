@@ -283,6 +283,18 @@ template("sdk") {
       outputs = [ output_archive ]
 
       public_deps = [ ":$archive_generate_target_name" ]
+
+      metadata = {
+        sdk_archives = [
+          {
+            name = sdk_name
+            os = current_os
+            cpu = current_cpu
+            label = get_label_info(":$target_name", "label_with_toolchain")
+            path = rebase_path(output_archive, root_build_dir)
+          },
+        ]
+      }
     }
   } else {
     group(archive_target_name) {

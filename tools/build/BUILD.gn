@@ -33,6 +33,7 @@ go_library("build") {
     "images.go",
     "modules.go",
     "prebuilt_binaries.go",
+    "sdk_archives.go",
     "test_durations.go",
     "test_durations_test.go",
     "tests.go",
