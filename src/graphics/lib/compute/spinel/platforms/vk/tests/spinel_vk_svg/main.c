@@ -313,8 +313,8 @@ main(int argc, char const * argv[])
 
   vkGetPhysicalDeviceProperties(pds[0], &pdp);
 
-  uint32_t const vendor_id = (argc <= 2) ? pdp.vendorID : strtoul(argv[1], NULL, 16);
-  uint32_t const device_id = (argc <= 2) ? pdp.deviceID : strtoul(argv[2], NULL, 16);
+  uint32_t const vendor_id = (argc <= 2) ? pdp.vendorID : (uint32_t)strtoul(argv[1], NULL, 16);
+  uint32_t const device_id = (argc <= 2) ? pdp.deviceID : (uint32_t)strtoul(argv[2], NULL, 16);
 
   //
   // list all devices
@@ -961,9 +961,9 @@ main(int argc, char const * argv[])
   fprintf(stderr,
           "avail/alloc: %9lu = %9.3f MB / %9lu = %9.3f MB\n",
           status_block_pool.avail,
-          status_block_pool.avail / (1024.0 * 1024.0),
+          (double)status_block_pool.avail / (1024.0 * 1024.0),
           status_block_pool.inuse,
-          status_block_pool.inuse / (1024.0 * 1024.0));
+          (double)status_block_pool.inuse / (1024.0 * 1024.0));
 
   //
   // save buffer as PPM
