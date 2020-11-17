@@ -111,4 +111,8 @@ void Transaction::EnqueueData(storage::Operation operation, storage::BlockBuffer
 void Transaction::PinVnode(fbl::RefPtr<VnodeMinfs> vnode) {}
 #endif
 
+zx_status_t Transaction::ExtendBlockReservation(size_t reserve_blocks) {
+  return block_reservation_.ExtendReservation(this, reserve_blocks);
+}
+
 }  // namespace minfs

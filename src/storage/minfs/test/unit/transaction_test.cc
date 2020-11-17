@@ -174,6 +174,23 @@ TEST(TransactionTest, CreateTransactionWithReservations) {
   ASSERT_OK(minfs.CreateTransaction(kDefaultElements, kDefaultElements, &transaction));
 }
 
+// Creates a Transaction with inode and block reservations. Try to extend block reservation.
+TEST(TransactionTest, ExtendBlockReservation) {
+  FakeMinfs minfs;
+  std::unique_ptr<Transaction> transaction;
+  ASSERT_OK(minfs.CreateTransaction(kDefaultElements, kDefaultElements, &transaction));
+  ASSERT_OK(transaction->ExtendBlockReservation(kTotalElements - kDefaultElements));
+}
+
+// Creates a Transaction with inode and block reservations. Try to extend block reservation more
+// than available.
+TEST(TransactionTest, ExtendBlockReservationFails) {
+  FakeMinfs minfs;
+  std::unique_ptr<Transaction> transaction;
+  ASSERT_OK(minfs.CreateTransaction(kDefaultElements, kDefaultElements, &transaction));
+  ASSERT_NOT_OK(transaction->ExtendBlockReservation(kTotalElements + 1 - kDefaultElements));
+}
+
 // Creates a Transaction with the maximum possible number of inodes and blocks reserved.
 TEST(TransactionTest, CreateTransactionWithMaxBlockReservations) {
   FakeMinfs minfs;

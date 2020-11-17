@@ -76,6 +76,10 @@ class Transaction final : public PendingWork {
 
   void PinVnode(fbl::RefPtr<VnodeMinfs> vnode);
 
+  // Extends block reservation by |reserve_blocks| number of blocks. It may fail
+  // if the underlying allocator runs out of space.
+  zx_status_t ExtendBlockReservation(size_t reserve_blocks);
+
 #ifdef __Fuchsia__
   // Returns a vector of all enqueued metadata write operations.
   std::vector<storage::UnbufferedOperation> RemoveMetadataOperations() {
