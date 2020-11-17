@@ -33,6 +33,7 @@ sdk://fidl/fuchsia.data
 sdk://fidl/fuchsia.deprecatedtimezone
 sdk://fidl/fuchsia.developer.tiles
 sdk://fidl/fuchsia.diagnostics
+sdk://fidl/fuchsia.element
 sdk://fidl/fuchsia.factory
 sdk://fidl/fuchsia.factory.wlan
 sdk://fidl/fuchsia.feedback
@@ -50,6 +51,7 @@ sdk://fidl/fuchsia.input.report
 sdk://fidl/fuchsia.inspect
 sdk://fidl/fuchsia.intl
 sdk://fidl/fuchsia.io
+sdk://fidl/fuchsia.io2
 sdk://fidl/fuchsia.ldsvc
 sdk://fidl/fuchsia.legacymetrics
 sdk://fidl/fuchsia.location
@@ -68,6 +70,7 @@ sdk://fidl/fuchsia.media.target
 sdk://fidl/fuchsia.mediacodec
 sdk://fidl/fuchsia.mem
 sdk://fidl/fuchsia.memorypressure
+sdk://fidl/fuchsia.metrics
 sdk://fidl/fuchsia.migration
 sdk://fidl/fuchsia.modular
 sdk://fidl/fuchsia.net

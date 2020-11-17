@@ -55,9 +55,6 @@ template("sdk") {
   archive_target_name = "${target_name}_archive"
   fidl_json_target_name = "${target_name}_fidl_json"
 
-  if (!is_fuchsia) {
-    assert(false, "SDKs can only target Fuchsia")
-  }
   target_triple = target_cpu
   if (host_cpu == "x64") {
     host_triple_cpu = "x86_64"
@@ -256,7 +253,7 @@ template("sdk") {
   if (build_sdk_archives) {
     # Generates the final archive.
     local_archive = "$target_gen_dir/$target_name.tar.gz"
-
+    output_archive = "${root_out_dir}/sdk/archive/${sdk_name}.tar.gz"
     archive_generate_target_name = "${archive_target_name}_generate"
 
     compiled_action(archive_generate_target_name) {
@@ -283,7 +280,7 @@ template("sdk") {
 
       sources = [ local_archive ]
 
-      outputs = [ "$root_out_dir/sdk/archive/$sdk_name.tar.gz" ]
+      outputs = [ output_archive ]
 
       public_deps = [ ":$archive_generate_target_name" ]
     }

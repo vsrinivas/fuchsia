@@ -23,6 +23,15 @@ group("sdk") {
   ]
 }
 
+group("sdk2") {
+  testonly = true
+
+  public_deps = [
+    ":core2",
+    ":host_tools.all",
+  ]
+}
+
 group("tests") {
   testonly = true
 
@@ -335,6 +344,55 @@ sdk("core2") {
   deps = [ ":core_idk" ]
 }
 
+group("host_tools.all") {
+  testonly = true
+
+  public_deps = []
+  if (host_os == "linux") {
+    public_deps += [
+      ":host_tools.modular($host_arm64_toolchain)",
+      ":host_tools.modular($host_x64_toolchain)",
+    ]
+  } else if (host_os == "mac") {
+    public_deps += [ ":host_tools.modular($host_toolchain)" ]
+  }
+}
+
+if (is_host) {
+  sdk("host_tools.modular") {
+    testonly = true
+    id = sdk_id
+    category = "partner"
+    api = "host_tools_${current_os}_${current_cpu}.manifest"
+
+    deps = [
+      "tools:symbolize_sdk",
+      "//src/developer/ffx:bin_sdk",
+      "//src/sys/pkg/bin/far:bin_sdk",
+      "//src/sys/pkg/bin/pm:pm_bin_sdk",
+      "//tools/bootserver_old:bootserver_sdk",
+      "//tools/cmc:cmc_sdk",
+      "//tools/fidl/fidlgen_hlcpp:fidlgen_sdk",
+      "//tools/net/device-finder:device-finder_sdk",
+      "//tools/symbol-index:symbol_index_sdk",
+      "//zircon/tools/fidl:fidl-format_sdk",
+      "//zircon/tools/fidl:fidlc_sdk",
+      "//zircon/tools/fvm:fvm_sdk",
+      "//zircon/tools/merkleroot:merkleroot_sdk",
+      "//zircon/tools/minfs:minfs_sdk",
+      "//zircon/tools/zbi:zbi_sdk",
+    ]
+
+    # These tools can't currently be cross-compiled.
+    if (current_toolchain == host_toolchain) {
+      deps += [
+        "//src/developer/debug/zxdb:zxdb_sdk",
+        "//tools/fidlcat:fidlcat_sdk",
+      ]
+    }
+  }
+}
+
 sdk("bootstrap") {
   id = sdk_id
 
@@ -354,111 +412,6 @@ sdk("bootstrap") {
     "//zircon/public/sysroot:sysroot_sdk",
     "//zircon/system/ulib/zx:zx_sdk",
   ]
-}
-
-x64_hosts = [
-  "linux_x64",
-  "mac_x64",
-]
-arm64_hosts = [ "linux_arm64" ]
-all_hosts = x64_hosts + arm64_hosts
-
-toolchains = {
-  linux_x64 = "($host_x64_toolchain)"
-  linux_arm64 = "($host_arm64_toolchain)"
-  mac_x64 = "($host_x64_toolchain)"
-}
-
-host_tool_specs = [
-  [
-    "tools:symbolize_sdk",
-    all_hosts,
-  ],
-  [
-    "//src/developer/debug/zxdb:zxdb_sdk",
-    x64_hosts,
-  ],
-  [
-    "//src/developer/ffx:bin_sdk",
-    all_hosts,
-  ],
-  [
-    "//src/sys/pkg/bin/far:bin_sdk",
-    all_hosts,
-  ],
-  [
-    "//src/sys/pkg/bin/pm:pm_bin_sdk",
-    all_hosts,
-  ],
-  [
-    "//tools/bootserver_old:bootserver_sdk",
-    all_hosts,
-  ],
-  [
-    "//tools/cmc:cmc_sdk",
-    all_hosts,
-  ],
-  [
-    "//tools/fidl/fidlgen_hlcpp:fidlgen_sdk",
-    all_hosts,
-  ],
-  [
-    "//tools/fidlcat:fidlcat_sdk",
-    x64_hosts,
-  ],
-  [
-    "//tools/net/device-finder:device-finder_sdk",
-    all_hosts,
-  ],
-  [
-    "//tools/symbol-index:symbol_index_sdk",
-    all_hosts,
-  ],
-  [
-    "//zircon/tools/fidl:fidl-format_sdk",
-    all_hosts,
-  ],
-  [
-    "//zircon/tools/fidl:fidlc_sdk",
-    all_hosts,
-  ],
-  [
-    "//zircon/tools/fvm:fvm_sdk",
-    all_hosts,
-  ],
-  [
-    "//zircon/tools/merkleroot:merkleroot_sdk",
-    all_hosts,
-  ],
-  [
-    "//zircon/tools/minfs:minfs_sdk",
-    all_hosts,
-  ],
-  [
-    "//zircon/tools/zbi:zbi_sdk",
-    all_hosts,
-  ],
-]
-
-foreach(host, all_hosts) {
-  sdk("host_tools_" + host) {
-    id = sdk_id
-    category = "partner"
-    api = "host_tools_${host}.manifest"
-    testonly = true
-
-    deps = []
-
-    if (host_os + "_x64" == host || host_os + "_arm64" == host) {
-      foreach(tool_spec, host_tool_specs) {
-        foreach(tool_spec_host, tool_spec[1]) {
-          if (host == tool_spec_host) {
-            deps += [ tool_spec[0] + toolchains[host] ]
-          }
-        }
-      }
-    }
-  }
 }
 
 # The `modular_testing` SDK provides FIDL protocols and C++ libraries for writing hermetic
