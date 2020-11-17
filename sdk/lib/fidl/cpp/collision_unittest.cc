@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <fidl/test/collision/cpp/fidl.h>
-#include <gtest/gtest.h>
+#include <zxtest/zxtest.h>
 
 namespace fidl {
 namespace {

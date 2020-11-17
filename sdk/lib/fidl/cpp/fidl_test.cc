@@ -5,7 +5,7 @@
 #include <list>
 
 #include <fidl/test/misc/cpp/fidl.h>
-#include <gtest/gtest.h>
+#include <zxtest/zxtest.h>
 
 #include "lib/fidl/cpp/clone.h"
 #include "lib/fidl/cpp/optional.h"
@@ -18,19 +18,21 @@ namespace {
 // Takes a collection of distinct elements, and checks that the comparison
 // operators are correct.
 template <typename A>
-::testing::AssertionResult CheckComparison(const std::vector<A>& v) {
+bool CheckComparison(const std::vector<A>& v) {
   for (size_t i = 0; i < v.size(); ++i) {
     EXPECT_TRUE(fidl::Equals(v[i], fidl::Clone(v[i])));
     for (size_t j = 0; j < v.size(); ++j) {
       if ((i == j) != fidl::Equals(v[i], v[j])) {
-        return ::testing::AssertionFailure() << "fidl::Equals incorrect for " << i << " and " << j;
+        printf("fidl::Equals incorrect for %zu and %zu\n", i, j);
+        return false;
       }
       if ((i != j) != !fidl::Equals(v[i], v[j])) {
-        return ::testing::AssertionFailure() << "fidl::Equals incorrect for " << i << " and " << j;
+        printf("fidl::Equals incorrect for %zu and %zu\n", i, j);
+        return false;
       }
     }
   }
-  return ::testing::AssertionSuccess();
+  return true;
 }
 
 TEST(FidlTest, BitsComparison) {

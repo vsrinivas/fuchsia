@@ -4,7 +4,7 @@
 
 #include "lib/fidl/cpp/vector.h"
 
-#include <gtest/gtest.h>
+#include <zxtest/zxtest.h>
 
 namespace fidl {
 namespace {

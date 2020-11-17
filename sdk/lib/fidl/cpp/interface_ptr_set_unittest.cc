@@ -4,7 +4,7 @@
 
 #include "lib/fidl/cpp/interface_ptr_set.h"
 
-#include <gtest/gtest.h>
+#include <zxtest/zxtest.h>
 
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/test/async_loop_for_test.h"

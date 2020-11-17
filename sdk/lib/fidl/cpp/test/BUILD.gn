@@ -21,7 +21,7 @@ source_set("test") {
 
   deps = [
     "//sdk/lib/fidl/cpp",
-    "//third_party/googletest:gtest",
+    "//zircon/public/lib/zxtest",
   ]
 
   public_configs = [ "//sdk/config" ]

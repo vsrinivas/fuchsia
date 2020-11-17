@@ -10,7 +10,7 @@
   "pkg/fidl_cpp_base/include/lib/fidl/cpp/internal/bitset.h": "112110f8080e0a5fa560f7e5403f2609",
   "pkg/fidl_cpp_base/include/lib/fidl/cpp/internal/natural_types_header.h": "496fe9fba50fe6b2486185475e486fc2",
   "pkg/fidl_cpp_base/include/lib/fidl/cpp/internal/natural_types_implementation.h": "78b8e4dfcb074e5fcce2722506c3aaa9",
-  "pkg/fidl_cpp_base/include/lib/fidl/cpp/object_coding.h": "d38c011c0a9cfdf7f2453676cb1f3f2f",
+  "pkg/fidl_cpp_base/include/lib/fidl/cpp/object_coding.h": "1c74084475180496442f067ef2019ae6",
   "pkg/fidl_cpp_base/include/lib/fidl/cpp/string.h": "91a2ef9eede28af5a902d0e46dae7aa1",
   "pkg/fidl_cpp_base/include/lib/fidl/cpp/traits.h": "9a662d0b356f8ca126441598fbb7d169",
   "pkg/fidl_cpp_base/include/lib/fidl/cpp/transition.h": "ea5fd3c5abf19d39e0dda995f794d148",

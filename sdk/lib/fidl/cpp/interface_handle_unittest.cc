@@ -7,7 +7,7 @@
 #include <lib/zx/channel.h>
 
 #include <fidl/test/frobinator/cpp/fidl.h>
-#include <gtest/gtest.h>
+#include <zxtest/zxtest.h>
 
 #include "lib/fidl/cpp/test/async_loop_for_test.h"
 

@@ -6,7 +6,7 @@
 
 #include <map>
 
-#include <gtest/gtest.h>
+#include <zxtest/zxtest.h>
 
 #ifdef __Fuchsia__
 #include <lib/zx/channel.h>

@@ -10,7 +10,7 @@
 #include <utility>
 #include <vector>
 
-#include <gtest/gtest.h>
+#include <zxtest/zxtest.h>
 
 #include "fidl/test/unionmigration/cpp/fidl.h"
 #include "lib/fidl/cpp/event_sender.h"

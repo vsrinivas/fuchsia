@@ -16,7 +16,7 @@ import (
 )
 
 var conformanceTmpl = template.Must(template.New("tmpl").Parse(`
-#include <gtest/gtest.h>
+#include <zxtest/zxtest.h>
 
 #include <conformance/cpp/natural_types.h>
 #include <lib/fidl/cpp/test/test_util.h>

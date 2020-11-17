@@ -11,7 +11,7 @@
 #include <ios>
 #include <iostream>
 
-#include <gtest/gtest.h>
+#include <zxtest/zxtest.h>
 
 #include "lib/fidl/cpp/clone.h"
 
@@ -46,9 +46,9 @@ Output RoundTrip(const Input& input) {
   fidl::Clone(input).Encode(&encoder, offset);
   auto msg = encoder.GetMessage();
   const char* err_msg = nullptr;
-  EXPECT_EQ(ZX_OK, msg.Validate(Output::FidlType, &err_msg)) << err_msg;
+  EXPECT_EQ(ZX_OK, msg.Validate(Output::FidlType, &err_msg), "%s", err_msg);
 
-  EXPECT_EQ(ZX_OK, msg.Decode(Output::FidlType, &err_msg)) << err_msg;
+  EXPECT_EQ(ZX_OK, msg.Decode(Output::FidlType, &err_msg), "%s", err_msg);
   fidl::Decoder decoder(std::move(msg));
   Output output;
   Output::Decode(&decoder, &output, 0);
@@ -57,10 +57,10 @@ Output RoundTrip(const Input& input) {
 
 template <class Output>
 Output DecodedBytes(std::vector<uint8_t> input) {
-  Message message(BytePart(input.data(), input.capacity(), input.size()), HandlePart());
+  Message message(BytePart(input.data(), static_cast<uint32_t>(input.capacity()), static_cast<uint32_t>(input.size())), HandlePart());
 
   const char* error = nullptr;
-  EXPECT_EQ(ZX_OK, message.Decode(Output::FidlType, &error)) << error;
+  EXPECT_EQ(ZX_OK, message.Decode(Output::FidlType, &error), "%s", error);
 
   fidl::Decoder decoder(std::move(message));
   Output output;
@@ -71,11 +71,11 @@ Output DecodedBytes(std::vector<uint8_t> input) {
 
 template <class Output>
 Output DecodedBytes(std::vector<uint8_t> bytes, std::vector<zx_handle_t> handles) {
-  Message message(BytePart(bytes.data(), bytes.capacity(), bytes.size()),
-                  HandlePart(handles.data(), handles.capacity(), handles.size()));
+  Message message(BytePart(bytes.data(), static_cast<uint32_t>(bytes.capacity()), static_cast<uint32_t>(bytes.size())),
+                  HandlePart(handles.data(), static_cast<uint32_t>(handles.capacity()), static_cast<uint32_t>(handles.size())));
 
   const char* error = nullptr;
-  EXPECT_EQ(ZX_OK, message.Decode(Output::FidlType, &error)) << error;
+  EXPECT_EQ(ZX_OK, message.Decode(Output::FidlType, &error), "%s", error);
 
   fidl::Decoder decoder(std::move(message));
   Output output;
@@ -119,11 +119,11 @@ bool ValueToBytes(Input input, const std::vector<uint8_t>& bytes,
 template <class Output>
 void CheckDecodeFailure(std::vector<uint8_t> input, std::vector<zx_handle_t> handles,
                         const zx_status_t expected_failure_code) {
-  Message message(BytePart(input.data(), input.capacity(), input.size()),
-                  HandlePart(handles.data(), handles.capacity(), handles.size()));
+  Message message(BytePart(input.data(), static_cast<uint32_t>(input.capacity()), static_cast<uint32_t>(input.size())),
+                  HandlePart(handles.data(), static_cast<uint32_t>(handles.capacity()), static_cast<uint32_t>(handles.size())));
 
   const char* error = nullptr;
-  EXPECT_EQ(expected_failure_code, message.Decode(Output::FidlType, &error)) << error;
+  EXPECT_EQ(expected_failure_code, message.Decode(Output::FidlType, &error), "%s", error);
 }
 
 template <class Input>
@@ -133,7 +133,7 @@ void CheckEncodeFailure(const Input& input, const zx_status_t expected_failure_c
   fidl::Clone(input).Encode(&enc, offset);
   auto msg = enc.GetMessage();
   const char* error = nullptr;
-  EXPECT_EQ(expected_failure_code, msg.Validate(Input::FidlType, &error)) << error;
+  EXPECT_EQ(expected_failure_code, msg.Validate(Input::FidlType, &error), "%s", error);
 }
 
 }  // namespace util

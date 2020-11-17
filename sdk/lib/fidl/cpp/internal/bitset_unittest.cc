@@ -4,7 +4,7 @@
 
 #include "lib/fidl/cpp/internal/bitset.h"
 
-#include <gtest/gtest.h>
+#include <zxtest/zxtest.h>
 
 namespace fidl {
 namespace internal {

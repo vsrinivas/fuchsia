@@ -8,7 +8,7 @@
 #include <utility>
 #include <vector>
 
-#include <gtest/gtest.h>
+#include <zxtest/zxtest.h>
 
 #include "lib/fidl/cpp/interface_ptr.h"
 #include "lib/fidl/cpp/test/async_loop_for_test.h"

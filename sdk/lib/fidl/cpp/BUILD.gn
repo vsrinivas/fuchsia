@@ -173,7 +173,7 @@ gidl_hlcpp_conformance("conformance_test_sources") {
   fidl = conformance_suite_fidl_target
   deps = [
     ":test_util",
-    "//third_party/googletest:gtest",
+    "//zircon/public/lib/zxtest",
   ]
   if (is_fuchsia) {
     deps += [ ":handle_util" ]
@@ -203,7 +203,7 @@ source_set("host_test_sources") {
     ":cpp_base",
     ":test_util",
     "test:fidl_test",
-    "//third_party/googletest:gtest",
+    "//zircon/public/lib/zxtest",
   ]
 }
 
@@ -239,7 +239,7 @@ source_set("test_sources") {
     "test:collision_test",
     "test:fidl_test",
     "//sdk/lib/fidl/cpp/test",
-    "//third_party/googletest:gtest",
+    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/async-loop",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
@@ -258,9 +258,8 @@ executable("fidl_hlcpp_conformance_test") {
     ":conformance_test_sources",
     ":test_support",
     "//sdk/lib/fidl/cpp/test",
-    "//src/lib/fxl/test:gtest_main",
-    "//third_party/googletest:gtest",
     "//zircon/public/lib/fbl",
+    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
   ]
@@ -283,9 +282,8 @@ executable("fidl_hlcpp_unit_tests") {
     ":test_sources",
     ":test_support",
     "//sdk/lib/fidl/cpp/test",
-    "//src/lib/fxl/test:gtest_main",
-    "//third_party/googletest:gtest",
     "//zircon/public/lib/fbl",
+    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
   ]
@@ -308,8 +306,7 @@ if (is_linux || is_mac) {
   test("fidl_cpp_host_unittests") {
     deps = [
       ":host_test_sources",
-      "//src/lib/fxl/test:gtest_main",
-      "//third_party/googletest:gtest",
+      "//zircon/public/lib/zxtest",
     ]
   }
 }
@@ -318,8 +315,7 @@ if (is_linux || is_mac) {
   test("fidl_cpp_host_conformance_test") {
     deps = [
       ":conformance_test_sources",
-      "//src/lib/fxl/test:gtest_main",
-      "//third_party/googletest:gtest",
+      "//zircon/public/lib/zxtest",
     ]
   }
 }

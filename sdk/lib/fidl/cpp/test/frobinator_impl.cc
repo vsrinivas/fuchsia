@@ -8,7 +8,7 @@
 
 #include <utility>
 
-#include <gtest/gtest.h>
+#include <zxtest/zxtest.h>
 
 #include "lib/fit/result.h"
 

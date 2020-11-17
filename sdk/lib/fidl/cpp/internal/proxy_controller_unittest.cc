@@ -9,7 +9,7 @@
 #include <lib/fit/defer.h>
 #include <lib/zx/channel.h>
 
-#include <gtest/gtest.h>
+#include <zxtest/zxtest.h>
 
 #include "lib/fidl/cpp/string.h"
 #include "lib/fidl/cpp/test/async_loop_for_test.h"

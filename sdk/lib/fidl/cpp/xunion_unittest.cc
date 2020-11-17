@@ -8,7 +8,7 @@
 #include <vector>
 
 #include <fidl/test/misc/cpp/fidl.h>
-#include <gtest/gtest.h>
+#include <zxtest/zxtest.h>
 
 namespace fidl {
 namespace {

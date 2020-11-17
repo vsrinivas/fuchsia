@@ -6,7 +6,7 @@
 
 #include <map>
 
-#include <gtest/gtest.h>
+#include <zxtest/zxtest.h>
 
 #include "lib/fidl/cpp/clone.h"
 

@@ -8,7 +8,7 @@
 #include <lib/async-loop/default.h>
 #include <lib/fidl/cpp/message_buffer.h>
 
-#include <gtest/gtest.h>
+#include <zxtest/zxtest.h>
 
 #include "fidl/test/frobinator/cpp/fidl.h"
 #include "lib/fidl/cpp/binding.h"

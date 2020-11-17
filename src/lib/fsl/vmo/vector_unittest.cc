@@ -4,7 +4,7 @@
 
 #include "src/lib/fsl/vmo/vector.h"
 
-#include <gtest/gtest.h>
+#include <zxtest/zxtest.h>
 
 namespace fsl {
 namespace {
