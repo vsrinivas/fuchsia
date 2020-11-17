@@ -205,6 +205,13 @@ class VmAspace : public fbl::DoublyLinkedListable<VmAspace*>, public fbl::RefCou
 
   void InitializeAslr();
 
+  static constexpr uint arch_aspace_flags_from_flags(uint32_t flags) {
+    bool is_high_kernel = (flags & TYPE_MASK) == TYPE_KERNEL;
+    bool is_guest = (flags & TYPE_MASK) == TYPE_GUEST_PHYS;
+    return (is_high_kernel ? ARCH_ASPACE_FLAG_KERNEL : 0u) |
+           (is_guest ? ARCH_ASPACE_FLAG_GUEST : 0u);
+  }
+
   // internal page fault routine, friended to be only called by vmm_page_fault_handler
   zx_status_t PageFault(vaddr_t va, uint flags);
   friend zx_status_t vmm_page_fault_handler(vaddr_t va, uint flags);

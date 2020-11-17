@@ -79,13 +79,12 @@ class X86PageTableEpt final : public X86PageTableBase {
 
 class X86ArchVmAspace final : public ArchVmAspaceInterface {
  public:
-  X86ArchVmAspace();
+  X86ArchVmAspace(vaddr_t base, size_t size, uint mmu_flags, page_alloc_fn_t test_paf = nullptr);
   virtual ~X86ArchVmAspace();
 
   using ArchVmAspaceInterface::page_alloc_fn_t;
 
-  zx_status_t Init(vaddr_t base, size_t size, uint mmu_flags,
-                   page_alloc_fn_t test_paf = nullptr) override;
+  zx_status_t Init() override;
 
   zx_status_t Destroy() override;
 
@@ -131,15 +130,18 @@ class X86ArchVmAspace final : public ArchVmAspaceInterface {
     alignas(X86PageTableEpt) char ept[sizeof(X86PageTableEpt)];
   } page_table_storage_;
 
+  // Page allocate function, if set will be used instead of the default allocator
+  const page_alloc_fn_t test_page_alloc_func_ = nullptr;
+
   // This will be either a normal page table or an EPT, depending on whether
   // flags_ includes ARCH_ASPACE_FLAG_GUEST.
   X86PageTableBase* pt_;
 
-  uint flags_ = 0;
+  const uint flags_ = 0;
 
   // Range of address space.
-  vaddr_t base_ = 0;
-  size_t size_ = 0;
+  const vaddr_t base_ = 0;
+  const size_t size_ = 0;
 
   // CPUs that are currently executing in this aspace.
   // Actually an mp_cpu_mask_t, but header dependencies.

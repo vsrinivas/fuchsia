@@ -109,7 +109,12 @@ static inline size_t trim_to_aspace(VmAspace& aspace, vaddr_t vaddr, size_t size
 }
 
 VmAspace::VmAspace(vaddr_t base, size_t size, uint32_t flags, const char* name)
-    : base_(base), size_(size), flags_(flags), root_vmar_(nullptr), aslr_prng_(nullptr, 0) {
+    : base_(base),
+      size_(size),
+      flags_(flags),
+      root_vmar_(nullptr),
+      aslr_prng_(nullptr, 0),
+      arch_aspace_(base, size, arch_aspace_flags_from_flags(flags)) {
   DEBUG_ASSERT(size != 0);
   DEBUG_ASSERT(base + size - 1 >= base);
 
@@ -124,11 +129,7 @@ zx_status_t VmAspace::Init() {
   LTRACEF("%p '%s'\n", this, name_);
 
   // initialize the architecturally specific part
-  bool is_high_kernel = (flags_ & TYPE_MASK) == TYPE_KERNEL;
-  bool is_guest = (flags_ & TYPE_MASK) == TYPE_GUEST_PHYS;
-  uint arch_aspace_flags =
-      (is_high_kernel ? ARCH_ASPACE_FLAG_KERNEL : 0u) | (is_guest ? ARCH_ASPACE_FLAG_GUEST : 0u);
-  zx_status_t status = arch_aspace_.Init(base_, size_, arch_aspace_flags);
+  zx_status_t status = arch_aspace_.Init();
   if (status != ZX_OK) {
     return status;
   }

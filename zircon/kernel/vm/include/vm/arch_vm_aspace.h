@@ -44,7 +44,7 @@ class ArchVmAspaceInterface {
   // page tables.
   using page_alloc_fn_t = zx_status_t (*)(uint alloc_flags, vm_page** p, paddr_t* pa);
 
-  virtual zx_status_t Init(vaddr_t base, size_t size, uint mmu_flags, page_alloc_fn_t paf) = 0;
+  virtual zx_status_t Init() = 0;
 
   // ::Destroy expects the aspace to be fully unmapped, as any mapped regions
   // indicate incomplete cleanup at the higher layers.

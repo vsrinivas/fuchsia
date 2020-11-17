@@ -18,13 +18,12 @@
 
 class ArmArchVmAspace final : public ArchVmAspaceInterface {
  public:
-  ArmArchVmAspace();
+  ArmArchVmAspace(vaddr_t base, size_t size, uint mmu_flags, page_alloc_fn_t paf = nullptr);
   virtual ~ArmArchVmAspace();
 
   using ArchVmAspaceInterface::page_alloc_fn_t;
 
-  zx_status_t Init(vaddr_t base, size_t size, uint mmu_flags,
-                   page_alloc_fn_t test_paf = nullptr) override;
+  zx_status_t Init() override;
 
   zx_status_t Destroy() override;
 
@@ -112,7 +111,7 @@ class ArmArchVmAspace final : public ArchVmAspaceInterface {
   DECLARE_MUTEX(ArmArchVmAspace) lock_;
 
   // Page allocate function, if set will be used instead of the default allocator
-  page_alloc_fn_t test_page_alloc_func_ = nullptr;
+  const page_alloc_fn_t test_page_alloc_func_ = nullptr;
 
   uint16_t asid_ = MMU_ARM64_UNUSED_ASID;
 
@@ -124,11 +123,11 @@ class ArmArchVmAspace final : public ArchVmAspaceInterface {
   // table.
   size_t pt_pages_ = 0;
 
-  uint flags_ = 0;
+  const uint flags_ = 0;
 
   // Range of address space.
-  vaddr_t base_ = 0;
-  size_t size_ = 0;
+  const vaddr_t base_ = 0;
+  const size_t size_ = 0;
 };
 
 static inline paddr_t arm64_vttbr(uint16_t vmid, paddr_t baddr) {

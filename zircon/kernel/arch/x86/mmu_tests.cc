@@ -46,8 +46,8 @@ static bool x86_arch_vmaspace_usermmu_tests() {
     constexpr uint64_t kTestAspaceSize = 4ull * 1024 * 1024 * 1024;
     constexpr uintptr_t kTestVirtualAddress = kTestAspaceSize - PAGE_SIZE;
     // Basic test - make an aspace, map something, query it, check page tables, unmap
-    X86ArchVmAspace aspace;
-    EXPECT_EQ(ZX_OK, aspace.Init(0, kTestAspaceSize, /*mmu_flags=*/0));
+    X86ArchVmAspace aspace(0, kTestAspaceSize, /*mmu_flags=*/0);
+    EXPECT_EQ(ZX_OK, aspace.Init());
     uint64_t* const pml4 = reinterpret_cast<uint64_t*>(X86_PHYS_TO_VIRT(aspace.pt_phys()));
     // Expect no user mode mappings in an empty address space.
     for (uint i = 0; i < kUserPtPerPageTable; i++) {

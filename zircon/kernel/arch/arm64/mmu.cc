@@ -1206,45 +1206,36 @@ zx_status_t ArmArchVmAspace::MarkAccessed(vaddr_t vaddr, size_t count) {
   return ZX_OK;
 }
 
-zx_status_t ArmArchVmAspace::Init(vaddr_t base, size_t size, uint flags, page_alloc_fn_t paf) {
+zx_status_t ArmArchVmAspace::Init() {
   canary_.Assert();
-  LTRACEF("aspace %p, base %#" PRIxPTR ", size 0x%zx, flags 0x%x\n", this, base, size, flags);
+  LTRACEF("aspace %p, base %#" PRIxPTR ", size 0x%zx, flags 0x%x\n", this, base_, size_, flags_);
 
   Guard<Mutex> a{&lock_};
 
   // Validate that the base + size is sane and doesn't wrap.
-  DEBUG_ASSERT(size > PAGE_SIZE);
-  DEBUG_ASSERT(base + size - 1 > base);
+  DEBUG_ASSERT(size_ > PAGE_SIZE);
+  DEBUG_ASSERT(base_ + size_ - 1 > base_);
 
-  // Set the page allocation function. If set to null (default), pmm_alloc_page will be used.
-  test_page_alloc_func_ = paf;
-
-  flags_ = flags;
-  if (flags & ARCH_ASPACE_FLAG_KERNEL) {
+  if (flags_ & ARCH_ASPACE_FLAG_KERNEL) {
     // At the moment we can only deal with address spaces as globally defined.
-    DEBUG_ASSERT(base == ~0UL << MMU_KERNEL_SIZE_SHIFT);
-    DEBUG_ASSERT(size == 1UL << MMU_KERNEL_SIZE_SHIFT);
+    DEBUG_ASSERT(base_ == ~0UL << MMU_KERNEL_SIZE_SHIFT);
+    DEBUG_ASSERT(size_ == 1UL << MMU_KERNEL_SIZE_SHIFT);
 
-    base_ = base;
-    size_ = size;
     tt_virt_ = arm64_kernel_translation_table;
     tt_phys_ = vaddr_to_paddr(const_cast<pte_t*>(tt_virt_));
     asid_ = (uint16_t)MMU_ARM64_GLOBAL_ASID;
   } else {
     uint page_size_shift;
-    if (flags & ARCH_ASPACE_FLAG_GUEST) {
-      DEBUG_ASSERT(base + size <= 1UL << MMU_GUEST_SIZE_SHIFT);
+    if (flags_ & ARCH_ASPACE_FLAG_GUEST) {
+      DEBUG_ASSERT(base_ + size_ <= 1UL << MMU_GUEST_SIZE_SHIFT);
       page_size_shift = MMU_GUEST_PAGE_SIZE_SHIFT;
     } else {
-      DEBUG_ASSERT(base + size <= 1UL << MMU_USER_SIZE_SHIFT);
+      DEBUG_ASSERT(base_ + size_ <= 1UL << MMU_USER_SIZE_SHIFT);
       page_size_shift = MMU_USER_PAGE_SIZE_SHIFT;
       if (asid.Alloc(&asid_) != ZX_OK) {
         return ZX_ERR_NO_MEMORY;
       }
     }
-
-    base_ = base;
-    size_ = size;
 
     paddr_t pa;
 
@@ -1392,7 +1383,8 @@ zx_status_t arm64_mmu_translate(vaddr_t va, paddr_t* pa, bool user, bool write) 
   return ZX_OK;
 }
 
-ArmArchVmAspace::ArmArchVmAspace() = default;
+ArmArchVmAspace::ArmArchVmAspace(vaddr_t base, size_t size, uint mmu_flags, page_alloc_fn_t paf)
+    : test_page_alloc_func_(paf), flags_(mmu_flags), base_(base), size_(size) {}
 
 ArmArchVmAspace::~ArmArchVmAspace() {
   // Destroy() will have freed the final page table if it ran correctly, and further validated that

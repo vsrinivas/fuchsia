@@ -26,10 +26,10 @@
 
 static bool test_large_unaligned_region() {
   BEGIN_TEST;
-  ArchVmAspace aspace;
   vaddr_t base = 1UL << 20;
   size_t size = (1UL << 47) - base - (1UL << 20);
-  zx_status_t err = aspace.Init(1UL << 20, size, 0);
+  ArchVmAspace aspace(1UL << 20, size, 0);
+  zx_status_t err = aspace.Init();
   EXPECT_EQ(err, ZX_OK, "init aspace");
 
   const uint arch_rw_flags = ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE;
@@ -83,10 +83,10 @@ static bool test_large_unaligned_region_without_map() {
   BEGIN_TEST;
 
   {
-    ArchVmAspace aspace;
     vaddr_t base = 1UL << 20;
     size_t size = (1UL << 47) - base - (1UL << 20);
-    zx_status_t err = aspace.Init(1UL << 20, size, 0);
+    ArchVmAspace aspace(1UL << 20, size, 0);
+    zx_status_t err = aspace.Init();
     EXPECT_EQ(err, ZX_OK, "init aspace");
 
     const uint arch_rw_flags = ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE;
@@ -142,10 +142,10 @@ static bool test_large_region_protect() {
   };
 
   for (unsigned i = 0; i < ktl::size(target_vaddrs); i++) {
-    ArchVmAspace aspace;
     vaddr_t base = 1UL << 20;
     size_t size = (1UL << 47) - base - (1UL << 20);
-    zx_status_t err = aspace.Init(1UL << 20, size, 0);
+    ArchVmAspace aspace(1UL << 20, size, 0);
+    zx_status_t err = aspace.Init();
     EXPECT_EQ(err, ZX_OK, "init aspace");
 
     const uint arch_rw_flags = ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE;
@@ -227,10 +227,10 @@ static bool test_mapping_oom() {
       list_add_head(&node, &page->queue_node);
     }
 
-    ArchVmAspace aspace;
     vaddr_t base = 1UL << 20;
     size_t size = (1UL << 47) - base - (1UL << 20);
-    zx_status_t err = aspace.Init(base, size, 0, test_page_alloc_fn);
+    ArchVmAspace aspace(base, size, 0, test_page_alloc_fn);
+    zx_status_t err = aspace.Init();
     ASSERT_EQ(err, ZX_OK, "init aspace");
 
     const uint arch_rw_flags = ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE;

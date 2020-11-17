@@ -582,36 +582,34 @@ zx_status_t X86PageTableMmu::AliasKernelMappings() {
   return ZX_OK;
 }
 
-X86ArchVmAspace::X86ArchVmAspace() {}
+X86ArchVmAspace::X86ArchVmAspace(vaddr_t base, size_t size, uint mmu_flags,
+                                 page_alloc_fn_t test_paf)
+    : test_page_alloc_func_(test_paf), flags_(mmu_flags), base_(base), size_(size) {}
 
 /*
  * Fill in the high level x86 arch aspace structure and allocating a top level page table.
  */
-zx_status_t X86ArchVmAspace::Init(vaddr_t base, size_t size, uint mmu_flags,
-                                  page_alloc_fn_t test_paf) {
+zx_status_t X86ArchVmAspace::Init() {
   static_assert(sizeof(cpu_mask_t) == sizeof(active_cpus_), "err");
   canary_.Assert();
 
-  LTRACEF("aspace %p, base %#" PRIxPTR ", size 0x%zx, mmu_flags 0x%x\n", this, base, size,
-          mmu_flags);
+  LTRACEF("aspace %p, base %#" PRIxPTR ", size 0x%zx, mmu_flags 0x%x\n", this, base_, size_,
+          flags_);
 
-  flags_ = mmu_flags;
-  base_ = base;
-  size_ = size;
-  if (mmu_flags & ARCH_ASPACE_FLAG_KERNEL) {
+  if (flags_ & ARCH_ASPACE_FLAG_KERNEL) {
     X86PageTableMmu* mmu = new (&page_table_storage_.mmu) X86PageTableMmu();
     pt_ = mmu;
 
-    zx_status_t status = mmu->InitKernel(this, test_paf);
+    zx_status_t status = mmu->InitKernel(this, test_page_alloc_func_);
     if (status != ZX_OK) {
       return status;
     }
     LTRACEF("kernel aspace: pt phys %#" PRIxPTR ", virt %p\n", pt_->phys(), pt_->virt());
-  } else if (mmu_flags & ARCH_ASPACE_FLAG_GUEST) {
+  } else if (flags_ & ARCH_ASPACE_FLAG_GUEST) {
     X86PageTableEpt* ept = new (&page_table_storage_.ept) X86PageTableEpt();
     pt_ = ept;
 
-    zx_status_t status = ept->Init(this, test_paf);
+    zx_status_t status = ept->Init(this, test_page_alloc_func_);
     if (status != ZX_OK) {
       return status;
     }
@@ -620,7 +618,7 @@ zx_status_t X86ArchVmAspace::Init(vaddr_t base, size_t size, uint mmu_flags,
     X86PageTableMmu* mmu = new (&page_table_storage_.mmu) X86PageTableMmu();
     pt_ = mmu;
 
-    zx_status_t status = mmu->Init(this, test_paf);
+    zx_status_t status = mmu->Init(this, test_page_alloc_func_);
     if (status != ZX_OK) {
       return status;
     }

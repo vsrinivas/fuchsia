@@ -2917,8 +2917,8 @@ static bool arch_noncontiguous_map() {
   }
 
   {
-    ArchVmAspace aspace;
-    status = aspace.Init(USER_ASPACE_BASE, USER_ASPACE_SIZE, 0);
+    ArchVmAspace aspace(USER_ASPACE_BASE, USER_ASPACE_SIZE, 0);
+    status = aspace.Init();
     ASSERT_EQ(ZX_OK, status, "failed to init aspace\n");
 
     // Attempt to map a set of vm_page_t
