@@ -84,5 +84,35 @@ TEST_P(BasicTest, GrowingVolumeWithFileCount) {
 INSTANTIATE_TEST_SUITE_P(/*no prefix*/, BasicTest, testing::ValuesIn(AllTestFilesystems()),
                          testing::PrintToStringParamName());
 
+using FsckAfterEveryTransactionTest = FilesystemTest;
+
+TEST_P(FsckAfterEveryTransactionTest, SimpleOperationsSucceeds) {
+  EXPECT_EQ(fs().Unmount().status_value(), ZX_OK);
+  mount_options_t mount_options = default_mount_options;
+  mount_options.fsck_after_every_transaction = true;
+  EXPECT_EQ(fs().MountWithOptions(mount_options).status_value(), ZX_OK);
+
+  std::string path = GetPath("foobar");
+  fbl::unique_fd fd(open(path.c_str(), O_CREAT | O_RDWR, 0666));
+  EXPECT_TRUE(fd);
+  EXPECT_EQ(write(fd.get(), "hello", 5), 5);
+  fd.reset();
+  EXPECT_EQ(unlink(path.c_str()), 0);
+  EXPECT_EQ(mkdir(path.c_str(), 0777), 0);
+  EXPECT_EQ(unlink(path.c_str()), 0);
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    /*no prefix*/, FsckAfterEveryTransactionTest,
+    testing::ValuesIn(MapAndFilterAllTestFilesystems(
+        [](const TestFilesystemOptions& options) -> std::optional<TestFilesystemOptions> {
+          if (options.filesystem->GetTraits().supports_fsck_after_every_transaction) {
+            return options;
+          } else {
+            return std::nullopt;
+          }
+        })),
+    testing::PrintToStringParamName());
+
 }  // namespace
 }  // namespace fs_test

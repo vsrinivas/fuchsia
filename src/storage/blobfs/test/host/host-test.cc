@@ -203,7 +203,6 @@ TEST(BlobfsHostTest, WriteBlobWithPaddedFormatIsCorrect) {
 
   // Check that the blob can be read back and verified.
   BlobfsChecker checker(std::move(blobfs), {.repair = false});
-  EXPECT_EQ(checker.Initialize(), ZX_OK);
   EXPECT_EQ(checker.Check(), ZX_OK);
 }
 
@@ -221,7 +220,6 @@ TEST(BlobfsHostTest, WriteBlobWithCompactFormatAndSharedBlockIsCorrect) {
 
   // Check that the blob can be read back and verified.
   BlobfsChecker checker(std::move(blobfs), {.repair = false});
-  EXPECT_EQ(checker.Initialize(), ZX_OK);
   EXPECT_EQ(checker.Check(), ZX_OK);
 }
 
@@ -238,7 +236,6 @@ TEST(BlobfsHostTest, WriteBlobWithCompactFormatAndBlockIsNotSharedIsCorrect) {
 
   // Check that the blob can be read back and verified.
   BlobfsChecker checker(std::move(blobfs), {.repair = false});
-  EXPECT_EQ(checker.Initialize(), ZX_OK);
   EXPECT_EQ(checker.Check(), ZX_OK);
 }
 
@@ -254,7 +251,6 @@ TEST(BlobfsHostTest, WriteCompressedBlobWithCompactFormatAndSharedBlockIsCorrect
 
   // Check that the blob can be read back and verified.
   BlobfsChecker checker(std::move(blobfs), {.repair = false});
-  EXPECT_EQ(checker.Initialize(), ZX_OK);
   EXPECT_EQ(checker.Check(), ZX_OK);
 }
 
@@ -270,7 +266,6 @@ TEST(BlobfsHostTest, WriteCompressedBlobWithPaddedFormatIsCorrect) {
 
   // Check that the blob can be read back and verified.
   BlobfsChecker checker(std::move(blobfs), {.repair = false});
-  EXPECT_EQ(checker.Initialize(), ZX_OK);
   EXPECT_EQ(checker.Check(), ZX_OK);
 }
 
@@ -284,7 +279,6 @@ TEST(BlobfsHostTest, WriteEmptyBlobWithCompactFormatIsCorrect) {
 
   // Check that the blob can be read back and verified.
   BlobfsChecker checker(std::move(blobfs), {.repair = false});
-  EXPECT_EQ(checker.Initialize(), ZX_OK);
   EXPECT_EQ(checker.Check(), ZX_OK);
 }
 
@@ -353,7 +347,6 @@ TEST(BlobfsHostTest, VisitBlobsVisitsAllBlobsAndProvidesTheCorrectContents) {
 
   // Check that the blob can be read back and verified.
   BlobfsChecker checker(std::move(blobfs), {.repair = false});
-  EXPECT_EQ(checker.Initialize(), ZX_OK);
   EXPECT_EQ(checker.Check(), ZX_OK);
 }
 

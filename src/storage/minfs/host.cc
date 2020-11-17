@@ -127,15 +127,8 @@ int emu_mkfs(const char* path) {
   return Mkfs(bc.get());
 }
 
-static const minfs::MountOptions kDefaultMountOptions = {
-    .readonly_after_initialization = false,
-    .metrics = false,
-    .verbose = false,
-    .repair_filesystem = false,
-};
-
 int emu_mount_bcache(std::unique_ptr<minfs::Bcache> bc) {
-  zx_status_t status = minfs::Mount(std::move(bc), kDefaultMountOptions, &fake_fs.fake_root);
+  zx_status_t status = minfs::Mount(std::move(bc), minfs::MountOptions(), &fake_fs.fake_root);
   if (status != ZX_OK) {
     return -1;
   }

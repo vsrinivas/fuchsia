@@ -72,13 +72,15 @@ class BlobfsTestAtRevision : public testing::Test {
     ASSERT_TRUE(device);
     device_ = device.get();
     loop_.StartThread();
-    ASSERT_EQ(
-        Blobfs::Create(loop_.dispatcher(), std::move(device), MountOptions(), zx::resource(), &fs_),
-        ZX_OK);
+    ASSERT_EQ(Blobfs::Create(loop_.dispatcher(), std::move(device), GetMountOptions(),
+                             zx::resource(), &fs_),
+              ZX_OK);
     srand(testing::UnitTest::GetInstance()->random_seed());
   }
 
  protected:
+  virtual MountOptions GetMountOptions() const { return MountOptions(); }
+
   async::Loop loop_{&kAsyncLoopConfigNoAttachToCurrentThread};
   MockBlockDevice* device_ = nullptr;
   std::unique_ptr<Blobfs> fs_;
@@ -260,6 +262,38 @@ TEST_F(BlobfsTestWithLargeDevice, WritingBlobLargerThanWritebackCapacitySucceeds
   EXPECT_EQ(file->Read(buffer.get(), info->size_data, 0, &actual), ZX_OK);
   EXPECT_EQ(memcmp(buffer.get(), info->data.get(), info->size_data), 0);
 }
+
+#ifndef NDEBUG
+
+class FsckAtEndOfEveryTransactionTest : public BlobfsTest {
+ protected:
+  MountOptions GetMountOptions() const override {
+    MountOptions options = BlobfsTest::GetMountOptions();
+    options.fsck_at_end_of_every_transaction = true;
+    return options;
+  }
+};
+
+TEST_F(FsckAtEndOfEveryTransactionTest, FsckAtEndOfEveryTransaction) {
+  fbl::RefPtr<fs::Vnode> root;
+  ASSERT_EQ(fs_->OpenRootNode(&root), ZX_OK);
+  fs::Vnode* root_node = root.get();
+
+  std::unique_ptr<BlobInfo> info;
+  GenerateRealisticBlob("", 500123, GetBlobLayoutFormat(fs_->Info()), &info);
+  {
+    fbl::RefPtr<fs::Vnode> file;
+    ASSERT_EQ(root_node->Create(info->path + 1, 0, &file), ZX_OK);
+    EXPECT_EQ(file->Truncate(info->size_data), ZX_OK);
+    size_t actual;
+    EXPECT_EQ(file->Write(info->data.get(), info->size_data, 0, &actual), ZX_OK);
+    EXPECT_EQ(actual, info->size_data);
+    EXPECT_EQ(file->Close(), ZX_OK);
+  }
+  EXPECT_EQ(root_node->Unlink(info->path + 1, false), ZX_OK);
+}
+
+#endif  // !defined(NDEBUG)
 
 }  // namespace
 }  // namespace blobfs

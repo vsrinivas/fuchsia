@@ -52,6 +52,9 @@ struct FsckOptions {
   // If true, treat the volume as read-only and refrain from sending any writes to the volume,
   // including marking the volume as cleanly unmounted.
   bool read_only = false;
+
+  // If true, be sparing with messages.
+  bool quiet = false;
 };
 
 // Updates generation_count and checksum of the superblock.

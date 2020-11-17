@@ -34,16 +34,7 @@ zx_status_t Fsck(std::unique_ptr<block_client::BlockDevice> device, const MountO
   if (blobfs->writability() == Writability::ReadOnlyDisk) {
     checker_options.repair = false;
   }
-  BlobfsChecker checker(std::move(blobfs), checker_options);
-
-  // Apply writeback and validate FVM data before walking the contents of the filesystem.
-  status = checker.Initialize();
-  if (status != ZX_OK) {
-    FS_TRACE_ERROR("blobfs: Failed to initialize filesystem; not checking internals\n");
-    return status;
-  }
-
-  return checker.Check();
+  return BlobfsChecker(std::move(blobfs), checker_options).Check();
 }
 
 }  // namespace blobfs

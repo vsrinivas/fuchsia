@@ -86,8 +86,6 @@ blk_t LogicalBlockDoublyIndirect(blk_t doubly_indirect, blk_t indirect = 0, blk_
          (indirect * kMinfsDirectPerIndirect) + direct;
 }
 
-}  // namespace
-
 class MinfsChecker {
  public:
   static zx_status_t Create(std::unique_ptr<Bcache> bc, const FsckOptions& options,
@@ -106,14 +104,12 @@ class MinfsChecker {
   zx_status_t CheckAllocatedCounts() const;
   zx_status_t CheckSuperblockIntegrity() const;
 
-  // "Set once"-style flag to identify if anything nonconforming
-  // was found in the underlying filesystem -- even if it was fixed.
-  bool conforming_;
-
   void DumpStats();
 
+  bool conforming() const { return conforming_; }
+
  private:
-  MinfsChecker();
+  MinfsChecker(const FsckOptions& fsck_options) : fsck_options_(fsck_options) {}
 
   // Not copyable or movable
   MinfsChecker(const MinfsChecker&) = delete;
@@ -135,6 +131,12 @@ class MinfsChecker {
   std::optional<std::string> CheckDataBlock(blk_t bno, BlockInfo block_info);
   zx_status_t CheckFile(Inode* inode, ino_t ino);
 
+  const FsckOptions fsck_options_;
+
+  // "Set once"-style flag to identify if anything nonconforming
+  // was found in the underlying filesystem -- even if it was fixed.
+  bool conforming_ = true;
+
   std::unique_ptr<Minfs> fs_;
   RawBitmap checked_inodes_;
   RawBitmap checked_blocks_;
@@ -145,8 +147,8 @@ class MinfsChecker {
   // one <inode, offset, type>.
   std::map<blk_t, std::vector<BlockInfo>> blk_info_;
 
-  uint32_t alloc_inodes_;
-  uint32_t alloc_blocks_;
+  uint32_t alloc_inodes_ = 0;
+  uint32_t alloc_blocks_ = 0;
   fbl::Array<int32_t> links_;
 
   blk_t cached_doubly_indirect_;
@@ -772,23 +774,18 @@ zx_status_t MinfsChecker::CheckSuperblockIntegrity() const {
 #endif
 }
 
-MinfsChecker::MinfsChecker()
-    : conforming_(true), fs_(nullptr), alloc_inodes_(0), alloc_blocks_(0), links_() {}
-
 zx_status_t MinfsChecker::Create(std::unique_ptr<Bcache> bc, const FsckOptions& fsck_options,
                                  std::unique_ptr<MinfsChecker>* out) {
-  MountOptions options = {};
-  if (fsck_options.repair) {
-    options.readonly_after_initialization = false;
-    options.repair_filesystem = true;
-  } else {
-    options.readonly_after_initialization = false;
-    options.repair_filesystem = false;
-  }
-  options.fsck_after_every_transaction = false;
-  options.readonly = fsck_options.read_only;
   std::unique_ptr<Minfs> fs;
-  zx_status_t status = Minfs::Create(std::move(bc), options, &fs);
+  zx_status_t status = Minfs::Create(
+      std::move(bc),
+      MountOptions{
+          .readonly = fsck_options.read_only,
+          .repair_filesystem = fsck_options.repair,
+          .fsck_after_every_transaction = false,  // Explicit in case the default is overridden.
+          .quiet = fsck_options.quiet,
+      },
+      &fs);
   if (status != ZX_OK) {
     FS_TRACE_ERROR("MinfsChecker::Create Failed to Create Minfs: %d\n", status);
     return status;
@@ -796,7 +793,7 @@ zx_status_t MinfsChecker::Create(std::unique_ptr<Bcache> bc, const FsckOptions& 
 
   const Superblock& info = fs->Info();
 
-  auto checker = std::unique_ptr<MinfsChecker>(new MinfsChecker());
+  auto checker = std::unique_ptr<MinfsChecker>(new MinfsChecker(fsck_options));
   checker->links_.reset(new int32_t[info.inode_count]{0}, info.inode_count);
   checker->links_[0] = -1;
   checker->cached_doubly_indirect_ = 0;
@@ -816,32 +813,27 @@ zx_status_t MinfsChecker::Create(std::unique_ptr<Bcache> bc, const FsckOptions& 
 }
 
 void MinfsChecker::DumpStats() {
-  std::cerr << "Minfs fsck:" << std::endl
-            << "  inodes           : " << alloc_inodes_ - 1 << std::endl
-            << "  blocks           : " << alloc_blocks_ - 1 << std::endl
-            << "  indirect blocks  : " << indirect_blocks_ << std::endl
-            << "  directory blocks : " << directory_blocks_ << std::endl;
+  if (!fsck_options_.quiet) {
+    std::cerr << "Minfs fsck:" << std::endl
+              << "  inodes           : " << alloc_inodes_ - 1 << std::endl
+              << "  blocks           : " << alloc_blocks_ - 1 << std::endl
+              << "  indirect blocks  : " << indirect_blocks_ << std::endl
+              << "  directory blocks : " << directory_blocks_ << std::endl;
+  }
 }
 
-// Write Superblock and Backup Superblock to disk.
 #ifdef __Fuchsia__
-zx_status_t WriteSuperBlockAndBackupSuperblock(fs::DeviceTransactionHandler* transaction_handler,
+
+// Write Superblock and Backup Superblock to disk.
+zx_status_t WriteSuperblockAndBackupSuperblock(fs::DeviceTransactionHandler* transaction_handler,
                                                block_client::BlockDevice* device,
                                                Superblock* info) {
-#else
-zx_status_t WriteSuperBlockAndBackupSuperblock(fs::TransactionHandler* transaction_handler,
-                                               Superblock* info) {
-#endif
-#ifdef __Fuchsia__
   storage::VmoBuffer buffer;
   zx_status_t status =
       buffer.Initialize(transaction_handler->GetDevice(), 1, kMinfsBlockSize, "fsck-super-block");
   if (status != ZX_OK) {
     return status;
   }
-#else
-  storage::ArrayBuffer buffer(1, kMinfsBlockSize);
-#endif
   memcpy(buffer.Data(0), info, sizeof(*info));
   fs::BufferedOperationsBuilder builder;
   builder
@@ -860,7 +852,6 @@ zx_status_t WriteSuperBlockAndBackupSuperblock(fs::TransactionHandler* transacti
 }
 
 // Reads backup superblock from correct location depending on whether filesystem has FVM support.
-#ifdef __Fuchsia__
 zx_status_t ReadBackupSuperblock(fs::TransactionHandler* transaction_handler,
                                  block_client::BlockDevice* device, uint32_t max_blocks,
                                  uint32_t backup_location, Superblock* out_backup) {
@@ -883,6 +874,8 @@ zx_status_t ReadBackupSuperblock(fs::TransactionHandler* transaction_handler,
   return ZX_OK;
 }
 #endif
+
+}  // namespace
 
 // Repairs superblock from backup.
 #ifdef __Fuchsia__
@@ -918,7 +911,7 @@ zx_status_t RepairSuperblock(fs::DeviceTransactionHandler* transaction_handler,
   UpdateChecksum(&backup_info);
 
   // Update superblock and backup superblock.
-  status = WriteSuperBlockAndBackupSuperblock(transaction_handler, device, &backup_info);
+  status = WriteSuperblockAndBackupSuperblock(transaction_handler, device, &backup_info);
 
   if (status != ZX_OK) {
     FS_TRACE_ERROR("Fsck::RepairSuperblock failed to repair superblock from backup :%d", status);
@@ -1117,7 +1110,7 @@ zx_status_t Fsck(std::unique_ptr<Bcache> bc, const FsckOptions& options,
   r = chk->CheckSuperblockIntegrity();
   status |= (status != ZX_OK) ? 0 : r;
 
-  status |= (status != ZX_OK) ? 0 : (chk->conforming_ ? ZX_OK : ZX_ERR_BAD_STATE);
+  status |= (status != ZX_OK) ? 0 : (chk->conforming() ? ZX_OK : ZX_ERR_BAD_STATE);
   if (status != ZX_OK) {
     return status;
   }

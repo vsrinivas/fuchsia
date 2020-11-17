@@ -126,7 +126,7 @@ class Journal final : public fit::executor {
   }
 
   // See comment below for write_metadata_callback_ for how this might be used.
-  void set_write_metadata_callback(fit::callback<void(zx_status_t)> callback) {
+  void set_write_metadata_callback(fit::function<void()> callback) {
     write_metadata_callback_ = std::move(callback);
   }
 
@@ -178,7 +178,7 @@ class Journal final : public fit::executor {
   // device. This is after both the writes to the journal ring buffer and the actual metadata
   // resting place. This can be used, for example, to perform an fsck at the end of every
   // transaction (for testing purposes).
-  fit::callback<void(zx_status_t)> write_metadata_callback_;
+  fit::function<void()> write_metadata_callback_;
 };
 
 }  // namespace fs

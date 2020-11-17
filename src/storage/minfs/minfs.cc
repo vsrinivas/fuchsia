@@ -608,17 +608,16 @@ void Minfs::CommitTransaction(std::unique_ptr<Transaction> transaction) {
 #endif
 }
 
-void Minfs::FsckAtEndOfTransaction(zx_status_t status) {
+void Minfs::FsckAtEndOfTransaction() {
 #ifdef __Fuchsia__
-  if (status == ZX_OK) {
-    bc_->Pause();
-    {
-      std::unique_ptr<Bcache> bcache;
-      ZX_ASSERT(Bcache::Create(bc_->device(), bc_->Maxblk(), &bcache) == ZX_OK);
-      ZX_ASSERT(Fsck(std::move(bcache), FsckOptions{.read_only = true}, &bcache) == ZX_OK);
-    }
-    bc_->Resume();
+  bc_->Pause();
+  {
+    std::unique_ptr<Bcache> bcache;
+    ZX_ASSERT(Bcache::Create(bc_->device(), bc_->Maxblk(), &bcache) == ZX_OK);
+    ZX_ASSERT(Fsck(std::move(bcache), FsckOptions{.read_only = true, .quiet = true}, &bcache) ==
+              ZX_OK);
   }
+  bc_->Resume();
 #endif
 }
 
@@ -785,7 +784,7 @@ zx_status_t Minfs::PurgeUnlinked() {
   ZX_DEBUG_ASSERT(Info().unlinked_head == 0);
   ZX_DEBUG_ASSERT(Info().unlinked_tail == 0);
 
-  if (unlinked_count > 0) {
+  if (unlinked_count > 0 && !mount_options_.quiet) {
     FS_TRACE_WARN("minfs: Found and purged %u unlinked vnode(s) on mount\n", unlinked_count);
   }
 
@@ -1115,7 +1114,7 @@ zx_status_t Minfs::Create(std::unique_ptr<Bcache> bc, const MountOptions& option
   }
 
 #ifdef __Fuchsia__
-  if ((info.flags & kMinfsFlagClean) == 0) {
+  if ((info.flags & kMinfsFlagClean) == 0 && !options.quiet) {
     FS_TRACE_WARN("minfs: filesystem not unmounted cleanly.\n");
   }
 
@@ -1126,7 +1125,7 @@ zx_status_t Minfs::Create(std::unique_ptr<Bcache> bc, const MountOptions& option
     if (status != ZX_OK) {
       return status;
     }
-  } else {
+  } else if (!options.quiet) {
     FS_TRACE_WARN("minfs: Not replaying journal\n");
   }
 #endif
@@ -1164,6 +1163,12 @@ zx_status_t Minfs::Create(std::unique_ptr<Bcache> bc, const MountOptions& option
     if (status != ZX_OK) {
       FS_TRACE_ERROR("minfs: Cannot initialize journal\n");
       return status;
+    }
+
+    if (options.fsck_after_every_transaction) {
+      FS_TRACE_ERROR("minfs: Will fsck after every transaction\n");
+      fs->journal_->set_write_metadata_callback(
+          fit::bind_member(fs.get(), &Minfs::FsckAtEndOfTransaction));
     }
   }
 
@@ -1210,12 +1215,6 @@ zx_status_t Minfs::Create(std::unique_ptr<Bcache> bc, const MountOptions& option
       .repair_filesystem = options.repair_filesystem,
       .use_journal = true,
   };
-
-  if (options.fsck_after_every_transaction && fs->journal_) {
-    FS_TRACE_ERROR("minfs: Will fsck after every transaction\n");
-    fs->journal_->set_write_metadata_callback(
-        fit::bind_member(fs.get(), &Minfs::FsckAtEndOfTransaction));
-  }
 #endif  // defined(__Fuchsia__)
 
   *out = std::move(fs);

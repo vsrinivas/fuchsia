@@ -45,7 +45,6 @@
 namespace minfs {
 
 // Used by fsck
-class MinfsChecker;
 class Minfs;
 
 // An abstract Vnode class contains the following:

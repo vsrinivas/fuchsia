@@ -233,7 +233,7 @@ zx_status_t Server::ProcessReadWriteRequest(block_fifo_request_t* request) {
   // Hack to ensure that the vmo is valid.
   // In the future, this code will be responsible for pinning VMO pages,
   // and the completion will be responsible for un-pinning those same pages.
-  uint32_t bsz = info_.block_size;
+  uint64_t bsz = info_.block_size;
   zx_status_t status = iobuf->ValidateVmoHack(bsz * request->length, bsz * request->vmo_offset);
   if (status != ZX_OK) {
     return status;

@@ -104,6 +104,7 @@ class Filesystem {
     bool is_case_sensitive = true;
     bool supports_sparse_files = true;
     bool is_fat = false;
+    bool supports_fsck_after_every_transaction = false;
   };
 
   virtual zx::status<std::unique_ptr<FilesystemInstance>> Make(

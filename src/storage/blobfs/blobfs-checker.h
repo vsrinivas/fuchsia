@@ -28,9 +28,6 @@ class BlobfsChecker {
   BlobfsChecker(const BlobfsChecker&) = delete;
   BlobfsChecker& operator=(const BlobfsChecker&) = delete;
 
-  // Initialize validates the underlying FVM partition and optionally replays the journal.
-  zx_status_t Initialize();
-
   // Check validates the blobfs filesystem provided when the Checker was
   // constructed. It walks each of the inode and block allocation bitmaps
   // only once.

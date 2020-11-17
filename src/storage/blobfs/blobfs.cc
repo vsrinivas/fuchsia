@@ -103,10 +103,9 @@ zx_status_t Blobfs::Create(async_dispatcher_t* dispatcher, std::unique_ptr<Block
   }
   uint64_t blocks = (block_info.block_size * block_info.block_count) / kBlobfsBlockSize;
 
-  Writability writability = options.writability;
-  if (block_info.flags & BLOCK_FLAG_READONLY) {
-    FS_TRACE_WARN("blobfs: Mounting as read-only. WARNING: Journal will not be applied\n");
-    writability = blobfs::Writability::ReadOnlyDisk;
+  if (block_info.flags & BLOCK_FLAG_READONLY &&
+      (options.writability != blobfs::Writability::ReadOnlyDisk)) {
+    return ZX_ERR_ACCESS_DENIED;
   }
   if (kBlobfsBlockSize % block_info.block_size != 0) {
     FS_TRACE_ERROR("blobfs: Blobfs block size (%u) not divisible by device block size (%u)\n",
@@ -130,7 +129,7 @@ zx_status_t Blobfs::Create(async_dispatcher_t* dispatcher, std::unique_ptr<Block
   // Construct the Blobfs object, without intensive validation, since it
   // may require upgrades / journal replays to become valid.
   auto fs = std::unique_ptr<Blobfs>(new Blobfs(
-      dispatcher, std::move(device), superblock, writability, options.compression_settings,
+      dispatcher, std::move(device), superblock, options.writability, options.compression_settings,
       std::move(vmex_resource), options.pager_backed_cache_policy));
   fs->block_info_ = block_info;
 
@@ -154,21 +153,24 @@ zx_status_t Blobfs::Create(async_dispatcher_t* dispatcher, std::unique_ptr<Block
     fs->metrics_->Collect();
   }
 
-  if (writability == blobfs::Writability::ReadOnlyDisk) {
-    FS_TRACE_ERROR("blobfs: Replaying the journal requires a writable disk\n");
-    return ZX_ERR_ACCESS_DENIED;
+  JournalSuperblock journal_superblock;
+  if (options.writability != blobfs::Writability::ReadOnlyDisk) {
+    FS_TRACE_INFO("blobfs: Replaying journal\n");
+    auto journal_superblock_or = fs::ReplayJournal(fs.get(), fs.get(), JournalStartBlock(fs->info_),
+                                                   JournalBlocks(fs->info_), kBlobfsBlockSize);
+    if (journal_superblock_or.is_error()) {
+      FS_TRACE_ERROR("blobfs: Failed to replay journal\n");
+      return journal_superblock_or.error_value();
+    }
+    journal_superblock = std::move(journal_superblock_or.value());
+    FS_TRACE_DEBUG("blobfs: Journal replayed\n");
+    if (zx_status_t status = fs->ReloadSuperblock(); status != ZX_OK) {
+      FS_TRACE_ERROR("blobfs: Failed to re-load superblock\n");
+      return status;
+    }
   }
-  FS_TRACE_INFO("blobfs: Replaying journal\n");
-  auto journal_superblock_or = fs::ReplayJournal(fs.get(), fs.get(), JournalStartBlock(fs->info_),
-                                                 JournalBlocks(fs->info_), kBlobfsBlockSize);
-  if (journal_superblock_or.is_error()) {
-    FS_TRACE_ERROR("blobfs: Failed to replay journal\n");
-    return journal_superblock_or.error_value();
-  }
-  JournalSuperblock journal_superblock = std::move(journal_superblock_or.value());
-  FS_TRACE_DEBUG("blobfs: Journal replayed\n");
 
-  switch (writability) {
+  switch (options.writability) {
     case blobfs::Writability::Writable: {
       FS_TRACE_DEBUG("blobfs: Initializing journal for writeback\n");
       auto journal_or =
@@ -179,32 +181,23 @@ zx_status_t Blobfs::Create(async_dispatcher_t* dispatcher, std::unique_ptr<Block
         return journal_or.error_value();
       }
       fs->journal_ = std::move(journal_or.value());
-      if (zx_status_t status = fs->ReloadSuperblock(); status != ZX_OK) {
-        FS_TRACE_ERROR("blobfs: Failed to re-load superblock\n");
-        return status;
+#ifndef NDEBUG
+      if (options.fsck_at_end_of_every_transaction) {
+        fs->journal_->set_write_metadata_callback(
+            fit::bind_member(fs.get(), &Blobfs::FsckAtEndOfTransaction));
       }
-      {
-        // Change to true to enable fsck at the end of every transaction, which is useful to check
-        // that every transaction leaves the file system in a consistent state.
-        bool fsck_at_end_of_every_transaction = false;
-        if (fsck_at_end_of_every_transaction) {
-          fs->journal_->set_write_metadata_callback(
-              fit::bind_member(fs.get(), &Blobfs::FsckAtEndOfTransaction));
-        }
-      }
+#endif
       break;
     }
+    case blobfs::Writability::ReadOnlyDisk:
     case blobfs::Writability::ReadOnlyFilesystem:
       // Journal uninitialized.
       break;
-    default:
-      FS_TRACE_ERROR("blobfs: Unexpected writability option for journaling\n");
-      return ZX_ERR_NOT_SUPPORTED;
   }
 
   // Validate the FVM after replaying the journal.
   status = CheckFvmConsistency(&fs->info_, fs->Device(),
-                               /*repair=*/writability != blobfs::Writability::ReadOnlyDisk);
+                               /*repair=*/options.writability != blobfs::Writability::ReadOnlyDisk);
   if (status != ZX_OK) {
     FS_TRACE_ERROR("blobfs: FVM info check failed\n");
     return status;
@@ -281,7 +274,7 @@ zx_status_t Blobfs::Create(async_dispatcher_t* dispatcher, std::unique_ptr<Block
   // Additionally, we can now update the oldest_revision field if it needs to be updated.
   FS_TRACE_INFO("blobfs: detected oldest_revision %" PRIu64 ", current revision %" PRIu64 "\n",
                 fs->info_.oldest_revision, kBlobfsCurrentRevision);
-  if (writability == blobfs::Writability::Writable) {
+  if (options.writability == blobfs::Writability::Writable) {
     BlobTransaction transaction;
     fs->info_.flags &= ~kBlobFlagClean;
     if (fs->info_.oldest_revision > kBlobfsCurrentRevision) {
@@ -868,15 +861,12 @@ zx_status_t Blobfs::OpenRootNode(fbl::RefPtr<fs::Vnode>* out) {
 
 Journal* Blobfs::journal() { return journal_.get(); }
 
-void Blobfs::FsckAtEndOfTransaction(zx_status_t status) {
-  if (status == ZX_OK) {
-    std::scoped_lock lock(fsck_at_end_of_transaction_mutex_);
-    auto device =
-        std::make_unique<block_client::PassThroughReadOnlyBlockDevice>(block_device_.get());
-    MountOptions options;
-    options.writability = Writability::ReadOnlyDisk;
-    ZX_ASSERT(Fsck(std::move(device), options) == ZX_OK);
-  }
+void Blobfs::FsckAtEndOfTransaction() {
+  std::scoped_lock lock(fsck_at_end_of_transaction_mutex_);
+  auto device = std::make_unique<block_client::PassThroughReadOnlyBlockDevice>(block_device_.get());
+  MountOptions options;
+  options.writability = Writability::ReadOnlyDisk;
+  ZX_ASSERT(Fsck(std::move(device), options) == ZX_OK);
 }
 
 zx_status_t Blobfs::RunRequests(const std::vector<storage::BufferedOperation>& operations) {

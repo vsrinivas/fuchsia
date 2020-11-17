@@ -198,7 +198,15 @@ zx_status_t Journal::CommitTransaction(Transaction transaction) {
   }
   internal::JournalWorkItem work(std::move(reservation), std::move(buffered_operations));
   work.commit_callback = std::move(transaction.commit_callback);
-  work.complete_callback = std::move(transaction.complete_callback);
+  if (write_metadata_callback_) {
+    work.complete_callback = [this, callback = std::move(transaction.complete_callback)]() mutable {
+      if (callback)
+        callback();
+      write_metadata_callback_();
+    };
+  } else {
+    work.complete_callback = std::move(transaction.complete_callback);
+  }
 
   std::optional<internal::JournalWorkItem> trim_work;
   if (!transaction.trim.empty()) {
@@ -210,9 +218,6 @@ zx_status_t Journal::CommitTransaction(Transaction transaction) {
        trim_work = std::move(trim_work)]() mutable -> fit::result<void, zx_status_t> {
         fit::result<void, zx_status_t> result =
             writer_.WriteMetadata(std::move(work), std::move(trim_work));
-        if (write_metadata_callback_) {
-          write_metadata_callback_(result.is_ok() ? ZX_OK : result.error());
-        }
         return result;
       });
 

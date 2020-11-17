@@ -278,7 +278,7 @@ class Blobfs : public TransactionManager, public BlockIteratorProvider {
 
   // Runs fsck at the end of a transaction, just after metadata has been written. Used for testing
   // to be sure that all transactions leave the file system in a good state.
-  void FsckAtEndOfTransaction(zx_status_t status);
+  void FsckAtEndOfTransaction();
 
   static std::shared_ptr<BlobfsMetrics> CreateMetrics();
 

@@ -85,7 +85,6 @@ constexpr uint32_t kMxFsSyncCtime = (1 << 1);
 constexpr uint32_t kMinfsBlockCacheSize = 64;
 
 // Used by fsck
-class MinfsChecker;
 class VnodeMinfs;
 
 using SyncCallback = fs::Vnode::SyncCallback;
@@ -274,7 +273,7 @@ class Minfs :
 
   // Runs fsck at the end of a transaction, just after metadata has been written. Used for testing
   // to be sure that all transactions leave the file system in a good state.
-  void FsckAtEndOfTransaction(zx_status_t status);
+  void FsckAtEndOfTransaction();
 
 #ifdef __Fuchsia__
   // Returns the capacity of the writeback buffer, in blocks.

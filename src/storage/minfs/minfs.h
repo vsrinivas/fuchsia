@@ -82,6 +82,9 @@ struct MountOptions {
 
   // Number of slices to preallocate for data when the filesystem is created.
   uint32_t fvm_data_slices = 1;
+
+  // If true, don't log messages except for errors.
+  bool quiet = false;
 };
 
 uint32_t CalculateVsliceCount(const Superblock& info);

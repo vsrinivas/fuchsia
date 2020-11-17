@@ -29,6 +29,7 @@ class MinfsFilesystem : public FilesystemImpl<MinfsFilesystem> {
         .in_memory = false,
         .is_case_sensitive = true,
         .supports_sparse_files = true,
+        .supports_fsck_after_every_transaction = true,
     };
     return traits;
   }
