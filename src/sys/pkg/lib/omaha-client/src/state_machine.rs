@@ -575,7 +575,7 @@ where
 
                 self.app_set.update_from_omaha(&result.app_responses).await;
 
-                self.report_attempts_to_succeed(true).await;
+                self.report_attempts_to_successful_check(true).await;
 
                 // TODO: update consecutive_proxied_requests
             }
@@ -603,7 +603,7 @@ where
                 };
                 self.report_metrics(Metrics::UpdateCheckFailureReason(failure_reason));
 
-                self.report_attempts_to_succeed(false).await;
+                self.report_attempts_to_successful_check(false).await;
             }
         }
 
@@ -616,13 +616,13 @@ where
 
     /// Update `CONSECUTIVE_FAILED_UPDATE_CHECKS` in storage and report the metrics if `success`.
     /// Does not commit the change to storage.
-    async fn report_attempts_to_succeed(&mut self, success: bool) {
+    async fn report_attempts_to_successful_check(&mut self, success: bool) {
         let storage_ref = self.storage_ref.clone();
         let mut storage = storage_ref.lock().await;
         let attempts = storage.get_int(CONSECUTIVE_FAILED_UPDATE_CHECKS).await.unwrap_or(0) + 1;
         if success {
             storage.remove_or_log(CONSECUTIVE_FAILED_UPDATE_CHECKS).await;
-            self.report_metrics(Metrics::AttemptsToSucceed(attempts as u64));
+            self.report_metrics(Metrics::AttemptsToSuccessfulCheck(attempts as u64));
         } else {
             if let Err(e) = storage.set_int(CONSECUTIVE_FAILED_UPDATE_CHECKS, attempts).await {
                 error!("Unable to persist {}: {}", CONSECUTIVE_FAILED_UPDATE_CHECKS, e);
@@ -2494,7 +2494,7 @@ mod tests {
     }
 
     #[test]
-    fn test_report_attempts_to_succeed() {
+    fn test_report_attempts_to_successful_check() {
         block_on(async {
             let storage = Rc::new(Mutex::new(MemStorage::new()));
             let mut state_machine = StateMachineBuilder::new_stub()
@@ -2504,29 +2504,7 @@ mod tests {
                 .build()
                 .await;
 
-            state_machine.report_attempts_to_succeed(true).await;
-            {
-                let storage = storage.lock().await;
-                assert_eq!(storage.get_int(CONSECUTIVE_FAILED_UPDATE_CHECKS).await, None);
-                assert_eq!(storage.len(), 0);
-            }
-            assert_eq!(state_machine.metrics_reporter.metrics, vec![Metrics::AttemptsToSucceed(1)]);
-
-            state_machine.report_attempts_to_succeed(false).await;
-            {
-                let storage = storage.lock().await;
-                assert_eq!(storage.get_int(CONSECUTIVE_FAILED_UPDATE_CHECKS).await, Some(1));
-                assert_eq!(storage.len(), 1);
-            }
-
-            state_machine.report_attempts_to_succeed(false).await;
-            {
-                let storage = storage.lock().await;
-                assert_eq!(storage.get_int(CONSECUTIVE_FAILED_UPDATE_CHECKS).await, Some(2));
-                assert_eq!(storage.len(), 1);
-            }
-
-            state_machine.report_attempts_to_succeed(true).await;
+            state_machine.report_attempts_to_successful_check(true).await;
             {
                 let storage = storage.lock().await;
                 assert_eq!(storage.get_int(CONSECUTIVE_FAILED_UPDATE_CHECKS).await, None);
@@ -2534,7 +2512,32 @@ mod tests {
             }
             assert_eq!(
                 state_machine.metrics_reporter.metrics,
-                vec![Metrics::AttemptsToSucceed(1), Metrics::AttemptsToSucceed(3)]
+                vec![Metrics::AttemptsToSuccessfulCheck(1)]
+            );
+
+            state_machine.report_attempts_to_successful_check(false).await;
+            {
+                let storage = storage.lock().await;
+                assert_eq!(storage.get_int(CONSECUTIVE_FAILED_UPDATE_CHECKS).await, Some(1));
+                assert_eq!(storage.len(), 1);
+            }
+
+            state_machine.report_attempts_to_successful_check(false).await;
+            {
+                let storage = storage.lock().await;
+                assert_eq!(storage.get_int(CONSECUTIVE_FAILED_UPDATE_CHECKS).await, Some(2));
+                assert_eq!(storage.len(), 1);
+            }
+
+            state_machine.report_attempts_to_successful_check(true).await;
+            {
+                let storage = storage.lock().await;
+                assert_eq!(storage.get_int(CONSECUTIVE_FAILED_UPDATE_CHECKS).await, None);
+                assert_eq!(storage.len(), 0);
+            }
+            assert_eq!(
+                state_machine.metrics_reporter.metrics,
+                vec![Metrics::AttemptsToSuccessfulCheck(1), Metrics::AttemptsToSuccessfulCheck(3)]
             );
         });
     }

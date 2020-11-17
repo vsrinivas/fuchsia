@@ -31,8 +31,8 @@ pub enum Metrics {
     /// Number of omaha request attempts until a response within a single update check attempt,
     /// with a bool to hold whether that was a success or a failure.
     RequestsPerCheck { count: u64, successful: bool },
-    /// Number of update check attempts to get an update to succeed.
-    AttemptsToSucceed(u64),
+    /// Number of update check attempts to get an update check to succeed.
+    AttemptsToSuccessfulCheck(u64),
     /// Elapsed time from having finished applying the update to when finally
     /// running that software, it is sent after the reboot (and includes the
     /// rebooting time).

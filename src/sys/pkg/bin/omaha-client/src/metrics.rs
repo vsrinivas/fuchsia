@@ -132,13 +132,17 @@ impl MetricsReporter for CobaltMetricsReporter {
                     count as i64,
                 );
             }
-            Metrics::AttemptsToSucceed(count) => {
+            Metrics::AttemptsToSuccessfulCheck(_count) => {
+                // FIXME(60589) Temporarily disable to allow for a soft migration while we rename
+                // this metric to `update_attempts_per_check`.
+                /*
                 self.cobalt_sender.log_event_count(
                     mos_metrics_registry::ATTEMPTS_TO_SUCCEED_METRIC_ID,
                     mos_metrics_registry::AttemptsToSucceedMetricDimensionResult::Success,
                     0,
                     count as i64,
                 );
+                */
             }
             Metrics::WaitedForRebootDuration(duration) => {
                 if let Some(duration) =
