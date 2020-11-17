@@ -10,14 +10,11 @@
 package main
 
 import (
-	"bufio"
-	"compress/gzip"
 	"encoding/json"
 	"flag"
-	"io"
+	"fmt"
 	"log"
 	"os"
-	"path/filepath"
 	"runtime/pprof"
 	"time"
 
@@ -38,99 +35,126 @@ var (
 	cpuprofile = flag.String("cpuprofile", "", "file to write cpu profile")
 )
 
-func reader(fname string, rd io.Reader) (io.Reader, error) {
-	if filepath.Ext(fname) != ".gz" {
-		return bufio.NewReaderSize(rd, 512*1024), nil
-	}
-	return gzip.NewReader(bufio.NewReaderSize(rd, 512*1024))
+type artifacts struct {
+	steps    []ninjalog.Step
+	commands []compdb.Command
+	graph    ninjagraph.Graph
 }
 
-func convert(fname string) ([]ninjalog.Trace, error) {
-	f, err := os.Open(fname)
+func join(as artifacts, criticalPath bool) ([]ninjalog.Step, error) {
+	steps := as.steps
+	if len(as.commands) > 0 {
+		steps = ninjalog.Populate(steps, as.commands)
+	}
+
+	if criticalPath {
+		if err := as.graph.PopulateEdges(steps); err != nil {
+			return nil, err
+		}
+		var err error
+		steps, err = as.graph.PopulatedSteps()
+		if err != nil {
+			return nil, err
+		}
+	}
+	return steps, nil
+}
+
+func readArtifacts(logPath, compdbPath, graphPath string) (artifacts, error) {
+	var ret artifacts
+
+	f, err := os.Open(logPath)
 	if err != nil {
-		return nil, err
+		return artifacts{}, fmt.Errorf("opening ninjalog file: %v", err)
 	}
 	defer f.Close()
-	rd, err := reader(fname, f)
+	njl, err := ninjalog.Parse(logPath, f)
 	if err != nil {
-		return nil, err
+		return artifacts{}, fmt.Errorf("parsing ninjalog: %v", err)
 	}
+	// TODO(jayzhuang): Dedup and Populate could be methods on NinjaLog.
+	ret.steps = ninjalog.Dedup(njl.Steps)
 
-	njl, err := ninjalog.Parse(fname, rd)
-	if err != nil {
-		return nil, err
-	}
-	// TODO: Dedup and Populate could be methods on NinjaLog.
-	steps := ninjalog.Dedup(njl.Steps)
-	if *compdbPath != "" {
-		f, err := os.Open(*compdbPath)
+	if compdbPath != "" {
+		f, err := os.Open(compdbPath)
 		if err != nil {
-			return nil, err
+			return artifacts{}, fmt.Errorf("opening compdb file: %v", err)
 		}
 		defer f.Close()
-		commands, err := compdb.Parse(f)
+		ret.commands, err = compdb.Parse(f)
 		if err != nil {
-			return nil, err
+			return artifacts{}, fmt.Errorf("parsing compdb: %v", err)
 		}
-		steps = ninjalog.Populate(steps, commands)
 	}
 
-	if *criticalPath {
-		dotFile, err := os.Open(*graphPath)
+	if graphPath != "" {
+		f, err := os.Open(graphPath)
 		if err != nil {
-			return nil, err
+			return artifacts{}, fmt.Errorf("opening ninja graph file: %v", err)
 		}
-		defer dotFile.Close()
-		graph, err := ninjagraph.FromDOT(dotFile)
+		defer f.Close()
+		ret.graph, err = ninjagraph.FromDOT(f)
 		if err != nil {
-			return nil, err
-		}
-		if err := graph.PopulateEdges(steps); err != nil {
-			return nil, err
-		}
-		steps, err = graph.PopulatedSteps()
-		if err != nil {
-			return nil, err
+			return artifacts{}, fmt.Errorf("parsing ninja graph: %v", err)
 		}
 	}
-	return ninjalog.ToTraces(ninjalog.Flow(steps), 1), nil
+
+	return ret, nil
 }
 
-func output(fname string, traces []ninjalog.Trace) (err error) {
-	f, err := os.Create(fname)
+func createAndWriteTrace(path string, traces []ninjalog.Trace) (err error) {
+	f, err := os.Create(*traceJSON)
 	if err != nil {
-		return err
+		return fmt.Errorf("creating trace output file %q: %v", path, err)
 	}
 	defer func() {
-		cerr := f.Close()
-		if err == nil {
-			err = cerr
+		if cerr := f.Close(); cerr != nil && err == nil {
+			err = fmt.Errorf("closing trace ouptut file: %q: %v", path, err)
 		}
 	}()
-	js, err := json.Marshal(traces)
-	if err != nil {
-		return err
+
+	if err := json.NewEncoder(f).Encode(traces); err != nil {
+		return fmt.Errorf("writing trace: %v", err)
 	}
-	_, err = f.Write(js)
-	return err
+	return nil
 }
 
 func main() {
 	flag.Parse()
 
+	if *ninjalogPath == "" {
+		log.Fatalf("--ninjalog is required")
+	}
+
+	if *criticalPath {
+		if *graphPath == "" {
+			log.Fatalf("--graph must be set when --critical-path is true")
+		}
+	}
+
 	if *cpuprofile != "" {
 		f, err := os.Create(*cpuprofile)
 		if err != nil {
-			log.Fatal(err)
+			log.Fatalf("Failed to create CPU profile: %v", err)
 		}
-		pprof.StartCPUProfile(f)
+		defer f.Close()
+		if err := pprof.StartCPUProfile(f); err != nil {
+			log.Fatalf("Failed to start CPU profile: %v", err)
+		}
 		defer pprof.StopCPUProfile()
 	}
 
-	traces, err := convert(*ninjalogPath)
+	as, err := readArtifacts(*ninjalogPath, *compdbPath, *graphPath)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("Failed to read artifacts: %v", err)
 	}
+
+	steps, err := join(as, *criticalPath)
+	if err != nil {
+		log.Fatalf("Failed to join information from ninjalog, compdb and ninjagraph together: %v", err)
+	}
+	traces := ninjalog.ToTraces(ninjalog.Flow(steps), 1)
+
 	if *buildDir != "" {
 		interleaved, err := ninjalog.ClangTracesToInterleave(traces, *buildDir, *granularity)
 		if err != nil {
@@ -138,9 +162,10 @@ func main() {
 		}
 		traces = append(traces, interleaved...)
 	}
+
 	if *traceJSON != "" {
-		if err := output(*traceJSON, traces); err != nil {
-			log.Fatal(err)
+		if err := createAndWriteTrace(*traceJSON, traces); err != nil {
+			log.Fatalf("Failed to create and write trace: %v", err)
 		}
 	}
 }

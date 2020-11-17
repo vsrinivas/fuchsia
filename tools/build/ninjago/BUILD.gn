@@ -10,5 +10,6 @@ group("tests") {
     "compdb:compdb_tests($host_toolchain)",
     "ninjagraph:ninjagraph_tests($host_toolchain)",
     "ninjalog:ninjalog_tests($host_toolchain)",
+    "ninjatrace:ninjatrace_tests($host_toolchain)",
   ]
 }
