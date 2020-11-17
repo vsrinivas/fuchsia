@@ -73,7 +73,7 @@ TEST(BadAccessTest, ChannelReadHandle) {
   // Arbitrary valid handle to pass over the channel.
   ASSERT_OK(zx::process::self()->duplicate(ZX_RIGHT_SAME_RIGHTS, &valid_handle));
 
-  zx_handle_t input_handles[] = {valid_handle.get()};
+  zx_handle_t input_handles[] = {valid_handle.release()};
   ASSERT_OK(channel_a.write(/*flags=*/0, /*bytes=*/nullptr, /*num_bytes=*/0,
                             /*handles=*/input_handles,
                             /*num_handles=*/1));
