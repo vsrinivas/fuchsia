@@ -86,6 +86,9 @@ struct Options {
     /// flag indicating to use the dev time sources.
     #[argh(switch)]
     dev_time_sources: bool,
+    /// flag disabling delays, allowing a test to push samples frequently.
+    #[argh(switch)]
+    disable_delays: bool,
 }
 
 #[fasync::run_singlethreaded]
@@ -153,8 +156,15 @@ async fn main() -> Result<(), Error> {
             .map(|r| r.context("failed to wait for network reachability"));
 
     fasync::Task::spawn(async move {
-        maintain_utc(primary_track, monitor_track, optional_rtc, internet_reachable, diagnostics)
-            .await;
+        maintain_utc(
+            primary_track,
+            monitor_track,
+            optional_rtc,
+            internet_reachable,
+            diagnostics,
+            options.disable_delays,
+        )
+        .await;
     })
     .detach();
 
@@ -250,6 +260,7 @@ async fn maintain_utc<R: 'static, T: 'static, F: 'static, D: 'static>(
     optional_rtc: Option<R>,
     internet_reachable: F,
     diagnostics: Arc<D>,
+    disable_delays: bool,
 ) where
     R: Rtc,
     T: TimeSource,
@@ -285,21 +296,17 @@ async fn maintain_utc<R: 'static, T: 'static, F: 'static, D: 'static>(
     }
 
     info!("launching time source managers...");
+    let time_source_fn = match disable_delays {
+        true => TimeSourceManager::new_with_delays_disabled,
+        false => TimeSourceManager::new,
+    };
     let backstop = primary.clock.get_details().expect("failed to get UTC clock details").backstop;
-    let mut primary_source_manager = TimeSourceManager::new(
-        backstop,
-        Role::Primary,
-        primary.time_source,
-        Arc::clone(&diagnostics),
-    );
+    let mut primary_source_manager =
+        time_source_fn(backstop, Role::Primary, primary.time_source, Arc::clone(&diagnostics));
     primary_source_manager.warm_up();
     let monitor_source_manager_and_clock = optional_monitor.map(|monitor| {
-        let mut source_manager = TimeSourceManager::new(
-            backstop,
-            Role::Monitor,
-            monitor.time_source,
-            Arc::clone(&diagnostics),
-        );
+        let mut source_manager =
+            time_source_fn(backstop, Role::Monitor, monitor.time_source, Arc::clone(&diagnostics));
         source_manager.warm_up();
         (source_manager, monitor.clock)
     });
@@ -416,6 +423,7 @@ mod tests {
             Some(rtc.clone()),
             internet_reachable,
             Arc::clone(&diagnostics),
+            false,
         ));
 
         // Checking that the reported time source has been updated and the clocks are set.
@@ -485,6 +493,7 @@ mod tests {
             Some(rtc.clone()),
             internet_reachable,
             Arc::clone(&diagnostics),
+            false,
         )
         .boxed();
         let _ = executor.run_until_stalled(&mut fut2);
@@ -537,6 +546,7 @@ mod tests {
             Some(rtc.clone()),
             internet_reachable,
             Arc::clone(&diagnostics),
+            false,
         )
         .boxed();
         let _ = executor.run_until_stalled(&mut fut2);
@@ -600,6 +610,7 @@ mod tests {
             Some(rtc.clone()),
             internet_reachable,
             Arc::clone(&diagnostics),
+            false,
         )
         .boxed();
         let _ = executor.run_until_stalled(&mut fut2);

@@ -4,7 +4,8 @@
     ],
     "program": {
         "args": [
-            "--dev-time-sources"
+            "--dev-time-sources",
+            "--disable-delays"
         ],
         "binary": "bin/timekeeper"
     },

@@ -88,7 +88,6 @@ impl<T: TimeSource, D: Diagnostics> TimeSourceManager<T, D, KernelMonotonicProvi
     /// Constructs a new `TimeSourceManager` that reads monotonic times from the kernel and has
     /// the restart delay and minimum update delay set to zero. This makes the behavior more
     /// amenable to use in tests.
-    #[allow(unused)]
     pub fn new_with_delays_disabled(
         backstop: zx::Time,
         role: Role,
