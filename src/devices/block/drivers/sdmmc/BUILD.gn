@@ -90,6 +90,7 @@ test("sdmmc-test") {
     "//src/devices/testing/fake_ddk",
     "//src/lib/ddk",
     "//src/lib/ddktl",
+    "//src/lib/vmo_store",
     "//zircon/public/lib/mock-function",
     "//zircon/public/lib/pretty",
     "//zircon/public/lib/sync",

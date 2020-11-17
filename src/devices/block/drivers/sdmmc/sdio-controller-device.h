@@ -7,6 +7,7 @@
 
 #include <lib/sync/completion.h>
 #include <lib/zircon-internal/thread_annotations.h>
+#include <lib/zx/status.h>
 
 #include <array>
 #include <atomic>
@@ -18,8 +19,6 @@
 #include <fbl/array.h>
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
-
-#include <lib/zx/status.h>
 
 #include "sdio-function-device.h"
 #include "sdmmc-device.h"
@@ -62,6 +61,10 @@ class SdioControllerDevice : public SdioControllerDeviceType,
   zx_status_t SdioIntrPending(uint8_t fn_idx, bool* out_pending);
   zx_status_t SdioDoVendorControlRwByte(bool write, uint8_t addr, uint8_t write_byte,
                                         uint8_t* out_read_byte);
+  zx_status_t SdioRegisterVmo(uint8_t fn_idx, uint32_t vmo_id, zx::vmo vmo, uint64_t offset,
+                              uint64_t size);
+  zx_status_t SdioUnregisterVmo(uint8_t fn_idx, uint32_t vmo_id, zx::vmo* out_vmo);
+  zx_status_t SdioDoRwTxnNew(uint8_t fn_idx, const sdio_rw_txn_new_t* txn);
   void SdioRunDiagnostics();
 
   void InBandInterruptCallback();

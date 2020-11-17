@@ -363,6 +363,54 @@ zx_status_t SdmmcDevice::SdioIoRwExtended(uint32_t caps, bool write, uint32_t fn
   return ZX_OK;
 }
 
+zx_status_t SdmmcDevice::SdioIoRwExtended(uint32_t caps, bool write, uint8_t fn_idx,
+                                          uint32_t reg_addr, bool incr, uint32_t blk_count,
+                                          uint32_t blk_size,
+                                          fbl::Span<const sdmmc_buffer_region_t> buffers) {
+  uint32_t cmd_arg = 0;
+  if (write) {
+    cmd_arg |= SDIO_IO_RW_EXTD_RW_FLAG;
+  }
+  UpdateBits(&cmd_arg, SDIO_IO_RW_EXTD_FN_IDX_MASK, SDIO_IO_RW_EXTD_FN_IDX_LOC, fn_idx);
+  UpdateBits(&cmd_arg, SDIO_IO_RW_EXTD_REG_ADDR_MASK, SDIO_IO_RW_EXTD_REG_ADDR_LOC, reg_addr);
+  if (incr) {
+    cmd_arg |= SDIO_IO_RW_EXTD_OP_CODE_INCR;
+  }
+
+  if (blk_count > 1) {
+    if (caps & SDIO_CARD_MULTI_BLOCK) {
+      cmd_arg |= SDIO_IO_RW_EXTD_BLOCK_MODE;
+      UpdateBits(&cmd_arg, SDIO_IO_RW_EXTD_BYTE_BLK_COUNT_MASK, SDIO_IO_RW_EXTD_BYTE_BLK_COUNT_LOC,
+                 blk_count);
+    } else {
+      // Convert the request into byte mode?
+      return ZX_ERR_NOT_SUPPORTED;
+    }
+  } else {
+    // SDIO Spec Table 5-3
+    uint32_t arg_blk_size = (blk_size == 512) ? 0 : blk_size;
+    UpdateBits(&cmd_arg, SDIO_IO_RW_EXTD_BYTE_BLK_COUNT_MASK, SDIO_IO_RW_EXTD_BYTE_BLK_COUNT_LOC,
+               arg_blk_size);
+  }
+  sdmmc_req_new_t req = {};
+  req.cmd_idx = SDIO_IO_RW_DIRECT_EXTENDED;
+  req.arg = cmd_arg;
+  req.cmd_flags = write ? (SDIO_IO_RW_DIRECT_EXTENDED_FLAGS)
+                        : (SDIO_IO_RW_DIRECT_EXTENDED_FLAGS | SDMMC_CMD_READ),
+  req.blocksize = blk_size;
+  req.client_id = fn_idx;
+  req.buffers_list = buffers.data();
+  req.buffers_count = buffers.size();
+
+  uint32_t response[4] = {};
+  zx_status_t st = host_.RequestNew(&req, response);
+  if (st != ZX_OK) {
+    zxlogf(ERROR, "sdio: SDIO_IO_RW_DIRECT_EXTENDED failed, retcode = %d", st);
+    return st;
+  }
+  return ZX_OK;
+}
+
 // MMC ops
 
 zx_status_t SdmmcDevice::MmcSendOpCond(uint32_t ocr, uint32_t* rocr) {

@@ -4,6 +4,7 @@
 
 #include "sdio-controller-device.h"
 
+#include <lib/fzl/vmo-mapper.h>
 #include <lib/zx/vmo.h>
 
 #include <fbl/algorithm.h>
@@ -31,6 +32,31 @@ class SdioControllerDeviceTest : public zxtest::Test {
   void SetUp() override { sdmmc_.Reset(); }
 
  protected:
+  static sdmmc_buffer_region_t MakeBufferRegion(const zx::vmo& vmo, uint64_t offset,
+                                                uint64_t size) {
+    return {
+        .buffer =
+            {
+                .vmo = vmo.get(),
+            },
+        .type = SDMMC_BUFFER_TYPE_VMO_HANDLE,
+        .offset = offset,
+        .size = size,
+    };
+  }
+
+  static sdmmc_buffer_region_t MakeBufferRegion(uint32_t vmo_id, uint64_t offset, uint64_t size) {
+    return {
+        .buffer =
+            {
+                .vmo_id = vmo_id,
+            },
+        .type = SDMMC_BUFFER_TYPE_VMO_ID,
+        .offset = offset,
+        .size = size,
+    };
+  }
+
   FakeSdmmcDevice sdmmc_;
   SdioControllerDevice dut_;
 };
@@ -825,6 +851,124 @@ TEST_F(SdioControllerDeviceTest, RunDiagnostics) {
   EXPECT_OK(dut_.ProbeSdio());
 
   dut_.SdioRunDiagnostics();
+}
+
+TEST_F(SdioControllerDeviceTest, ScatterGatherRead) {
+  constexpr uint8_t kTestData[] = {0x17, 0xc6, 0xf4, 0x4a, 0x92, 0xc6, 0x09, 0x0a, 0x8c, 0x54, 0x08,
+                                   0x07, 0xde, 0x5f, 0x8d, 0x59, 0x0d, 0x90, 0x85, 0x6a, 0xe2, 0xa9,
+                                   0x00, 0x0e, 0xdf, 0x26, 0xe2, 0x17, 0x88, 0x4d, 0x3a, 0x72};
+
+  sdmmc_.set_command_callback(
+      SDIO_SEND_OP_COND, [](sdmmc_req_t* req) -> void { req->response[0] = OpCondFunctions(5); });
+  sdmmc_.Write(SDIO_CIA_CCCR_CARD_CAPS_ADDR, std::vector<uint8_t>{SDIO_CIA_CCCR_CARD_CAP_SMB}, 0);
+
+  // Set the maximum block size for function one to eight bytes.
+  sdmmc_.Write(0x0109, std::vector<uint8_t>{0x00, 0x10, 0x00}, 0);
+  sdmmc_.Write(0x1000, std::vector<uint8_t>{0x22, 0x2a, 0x01}, 0);
+  sdmmc_.Write(0x100e, std::vector<uint8_t>{0x08, 0x00}, 0);
+
+  sdmmc_.set_host_info({
+      .caps = 0,
+      .max_transfer_size = 1024,
+      .max_transfer_size_non_dma = 1024,
+      .prefs = 0,
+  });
+  EXPECT_OK(dut_.Init());
+
+  EXPECT_OK(dut_.ProbeSdio());
+  EXPECT_OK(dut_.SdioUpdateBlockSize(1, 4, false));
+
+  zx::vmo vmo1, vmo2, vmo3;
+  fzl::VmoMapper mapper1, mapper2, mapper3;
+
+  ASSERT_OK(mapper1.CreateAndMap(PAGE_SIZE, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, nullptr, &vmo1));
+  ASSERT_OK(mapper2.CreateAndMap(PAGE_SIZE, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, nullptr, &vmo2));
+  ASSERT_OK(mapper3.CreateAndMap(PAGE_SIZE, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, nullptr, &vmo3));
+
+  EXPECT_OK(dut_.SdioRegisterVmo(1, 1, std::move(vmo1), 8, 1024));
+  EXPECT_OK(dut_.SdioRegisterVmo(1, 2, std::move(vmo2), 32, 1024));
+
+  sdmmc_.Write(0x5000, fbl::Span(kTestData, countof(kTestData)), 1);
+
+  sdmmc_buffer_region_t buffers[3];
+  buffers[0] = MakeBufferRegion(1, 8, 4);
+  buffers[1] = MakeBufferRegion(2, 4, 12);
+  buffers[2] = MakeBufferRegion(vmo3, 0, 8);
+
+  sdio_rw_txn_new_t txn = {
+      .addr = 0x5000,
+      .incr = true,
+      .write = false,
+      .buffers_list = buffers,
+      .buffers_count = countof(buffers),
+  };
+  EXPECT_OK(dut_.SdioDoRwTxnNew(1, &txn));
+
+  EXPECT_BYTES_EQ(static_cast<uint8_t*>(mapper1.start()) + 16, kTestData, 4);
+  EXPECT_BYTES_EQ(static_cast<uint8_t*>(mapper2.start()) + 36, kTestData + 4, 12);
+  EXPECT_BYTES_EQ(mapper3.start(), kTestData + 16, 8);
+}
+
+TEST_F(SdioControllerDeviceTest, ScatterGatherWrite) {
+  constexpr uint8_t kTestData1[] = {0x17, 0xc6, 0xf4, 0x4a, 0x92, 0xc6, 0x09, 0x0a,
+                                    0x8c, 0x54, 0x08, 0x07, 0xde, 0x5f, 0x8d, 0x59};
+  constexpr uint8_t kTestData2[] = {0x0d, 0x90, 0x85, 0x6a, 0xe2, 0xa9, 0x00, 0x0e,
+                                    0xdf, 0x26, 0xe2, 0x17, 0x88, 0x4d, 0x3a, 0x72};
+  constexpr uint8_t kTestData3[] = {0x34, 0x83, 0x15, 0x31, 0x29, 0xa8, 0x4b, 0xe8,
+                                    0xd9, 0x1f, 0xa4, 0xf4, 0x8d, 0x3a, 0x27, 0x0c};
+
+  sdmmc_.set_command_callback(
+      SDIO_SEND_OP_COND, [](sdmmc_req_t* req) -> void { req->response[0] = OpCondFunctions(5); });
+  sdmmc_.Write(SDIO_CIA_CCCR_CARD_CAPS_ADDR, std::vector<uint8_t>{SDIO_CIA_CCCR_CARD_CAP_SMB}, 0);
+
+  // Set the maximum block size for function three to eight bytes.
+  sdmmc_.Write(0x0309, std::vector<uint8_t>{0x00, 0x10, 0x00}, 0);
+  sdmmc_.Write(0x1000, std::vector<uint8_t>{0x22, 0x2a, 0x01}, 0);
+  sdmmc_.Write(0x100e, std::vector<uint8_t>{0x08, 0x00}, 0);
+
+  sdmmc_.set_host_info({
+      .caps = 0,
+      .max_transfer_size = 1024,
+      .max_transfer_size_non_dma = 1024,
+      .prefs = 0,
+  });
+  EXPECT_OK(dut_.Init());
+
+  EXPECT_OK(dut_.ProbeSdio());
+  EXPECT_OK(dut_.SdioUpdateBlockSize(3, 4, false));
+
+  zx::vmo vmo1, vmo2, vmo3;
+  fzl::VmoMapper mapper1, mapper2, mapper3;
+
+  ASSERT_OK(mapper1.CreateAndMap(PAGE_SIZE, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, nullptr, &vmo1));
+  ASSERT_OK(mapper2.CreateAndMap(PAGE_SIZE, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, nullptr, &vmo2));
+  ASSERT_OK(mapper3.CreateAndMap(PAGE_SIZE, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, nullptr, &vmo3));
+
+  EXPECT_OK(dut_.SdioRegisterVmo(3, 1, std::move(vmo1), 0, 1024));
+  EXPECT_OK(dut_.SdioRegisterVmo(3, 3, std::move(vmo3), 8, 1024));
+
+  memcpy(mapper1.start(), kTestData1, sizeof(kTestData1));
+  memcpy(mapper2.start(), kTestData2, sizeof(kTestData2));
+  memcpy(mapper3.start(), kTestData3, sizeof(kTestData3));
+
+  sdmmc_buffer_region_t buffers[3];
+  buffers[0] = MakeBufferRegion(1, 8, 4);
+  buffers[1] = MakeBufferRegion(vmo2, 4, 12);
+  buffers[2] = MakeBufferRegion(3, 0, 8);
+
+  sdio_rw_txn_new_t txn = {
+      .addr = 0x1000,
+      .incr = true,
+      .write = true,
+      .buffers_list = buffers,
+      .buffers_count = countof(buffers),
+  };
+  EXPECT_OK(dut_.SdioDoRwTxnNew(3, &txn));
+
+  std::vector<uint8_t> actual = sdmmc_.Read(0x1000, 24, 3);
+  EXPECT_BYTES_EQ(actual.data(), kTestData1 + 8, 4);
+  EXPECT_BYTES_EQ(actual.data() + 4, kTestData2 + 4, 12);
+  EXPECT_BYTES_EQ(actual.data() + 16, kTestData3 + 8, 8);
 }
 
 }  // namespace sdmmc

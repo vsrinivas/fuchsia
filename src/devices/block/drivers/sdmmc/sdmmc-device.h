@@ -8,6 +8,7 @@
 #include <array>
 
 #include <ddktl/protocol/sdmmc.h>
+#include <fbl/span.h>
 #include <hw/sdmmc.h>
 
 namespace sdmmc {
@@ -55,6 +56,9 @@ class SdmmcDevice {
   zx_status_t SdioIoRwExtended(uint32_t caps, bool write, uint32_t fn_idx, uint32_t reg_addr,
                                bool incr, uint32_t blk_count, uint32_t blk_size, bool use_dma,
                                uint8_t* buf, zx_handle_t dma_vmo, uint64_t buf_offset);
+  zx_status_t SdioIoRwExtended(uint32_t caps, bool write, uint8_t fn_idx, uint32_t reg_addr,
+                               bool incr, uint32_t blk_count, uint32_t blk_size,
+                               fbl::Span<const sdmmc_buffer_region_t> buffers);
 
   // MMC ops
   zx_status_t MmcSendOpCond(uint32_t ocr, uint32_t* rocr);

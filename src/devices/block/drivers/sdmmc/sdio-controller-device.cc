@@ -636,6 +636,93 @@ zx_status_t SdioControllerDevice::SdioDoVendorControlRwByte(bool write, uint8_t 
   return SdioDoRwByte(write, 0, addr, write_byte, out_read_byte);
 }
 
+zx_status_t SdioControllerDevice::SdioRegisterVmo(uint8_t fn_idx, uint32_t vmo_id, zx::vmo vmo,
+                                                  uint64_t offset, uint64_t size) {
+  if (!SdioFnIdxValid(fn_idx) || fn_idx == 0) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  fbl::AutoLock lock(&lock_);
+  return sdmmc_.host().RegisterVmo(vmo_id, fn_idx, std::move(vmo), offset, size);
+}
+
+zx_status_t SdioControllerDevice::SdioUnregisterVmo(uint8_t fn_idx, uint32_t vmo_id,
+                                                    zx::vmo* out_vmo) {
+  if (!SdioFnIdxValid(fn_idx) || fn_idx == 0) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  fbl::AutoLock lock(&lock_);
+  return sdmmc_.host().UnregisterVmo(vmo_id, fn_idx, out_vmo);
+}
+
+zx_status_t SdioControllerDevice::SdioDoRwTxnNew(uint8_t fn_idx, const sdio_rw_txn_new_t* txn) {
+  if (!SdioFnIdxValid(fn_idx)) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  fbl::AutoLock lock(&lock_);
+
+  // TODO(fxbug.dev/62849): Add support for splitting buffers into multiple requests.
+  if (!(hw_info_.caps & SDIO_CARD_MULTI_BLOCK)) {
+    zxlogf(ERROR, "Card does not support block mode (fxbug.dev/62849)");
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  const uint32_t func_blk_size = funcs_[fn_idx].cur_blk_size;
+
+  uint32_t addr = txn->addr;
+  const sdmmc_buffer_region_t* buffers_list = txn->buffers_list;
+  for (size_t buffers_remaining = txn->buffers_count; buffers_remaining > 0;) {
+    size_t buffers_count = 0;
+    uint32_t block_count = 0;
+    while (buffers_count < buffers_remaining) {
+      // TODO(fxbug.dev/62849): Add support for buffers that are not a multiple of the block size.
+      if (buffers_list[buffers_count].size % func_blk_size != 0) {
+        zxlogf(ERROR, "Buffer size %zu is not a multiple of the block size (fxbug.dev/62849)",
+               buffers_list[buffers_count].size);
+        return ZX_ERR_INVALID_ARGS;
+      }
+
+      // TODO(fxbug.dev/62849): Add support for splitting buffers into multiple requests.
+      const size_t buffer_blocks = buffers_list[buffers_count].size / func_blk_size;
+      if (buffer_blocks > SDIO_IO_RW_EXTD_MAX_BLKS_PER_CMD) {
+        zxlogf(ERROR, "Buffer has %zu blocks, only %u supported (fxbug.dev/62849)", buffer_blocks,
+               SDIO_IO_RW_EXTD_MAX_BLKS_PER_CMD);
+        return ZX_ERR_NOT_SUPPORTED;
+      }
+
+      if (block_count + buffer_blocks > SDIO_IO_RW_EXTD_MAX_BLKS_PER_CMD) {
+        break;
+      }
+
+      buffers_count++;
+      block_count += buffer_blocks;
+    }
+
+    zx_status_t status =
+        sdmmc_.SdioIoRwExtended(hw_info_.caps, txn->write, fn_idx, addr, txn->incr, block_count,
+                                func_blk_size, fbl::Span(buffers_list, buffers_count));
+    if (status != ZX_OK) {
+      zxlogf(ERROR, "Error %s func %d: %d", txn->write ? "writing to" : "reading from", fn_idx,
+             status);
+      return status;
+    }
+
+    if (txn->incr) {
+      addr += block_count * func_blk_size;
+    }
+
+    buffers_list += buffers_count;
+    buffers_remaining -= buffers_count;
+  }
+
+  // TODO(fxbug.dev/62849): Do a final byte-mode cmd53 for transfers that are not a multiple of the
+  // block size.
+
+  return ZX_OK;
+}
+
 void SdioControllerDevice::SdioRunDiagnostics() {
   fbl::AutoLock lock(&lock_);
   if (tuned_) {

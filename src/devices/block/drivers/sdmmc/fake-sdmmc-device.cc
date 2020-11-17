@@ -4,6 +4,8 @@
 
 #include "fake-sdmmc-device.h"
 
+#include <lib/fzl/vmo-mapper.h>
+
 #include <hw/sdio.h>
 #include <hw/sdmmc.h>
 #include <zxtest/zxtest.h>
@@ -204,6 +206,99 @@ zx_status_t FakeSdmmcDevice::SdmmcRegisterInBandInterrupt(
   return ZX_OK;
 }
 
+zx_status_t FakeSdmmcDevice::SdmmcRegisterVmo(uint32_t vmo_id, uint8_t client_id, zx::vmo vmo,
+                                              uint64_t offset, uint64_t size) {
+  if (client_id >= countof(registered_vmos_)) {
+    return ZX_ERR_OUT_OF_RANGE;
+  }
+
+  return registered_vmos_[client_id]->RegisterWithKey(vmo_id, std::move(vmo),
+                                                      OwnedVmoInfo{.offset = offset, .size = size});
+}
+
+zx_status_t FakeSdmmcDevice::SdmmcUnregisterVmo(uint32_t vmo_id, uint8_t client_id,
+                                                zx::vmo* out_vmo) {
+  if (client_id >= countof(registered_vmos_)) {
+    return ZX_ERR_OUT_OF_RANGE;
+  }
+
+  vmo_store::StoredVmo<OwnedVmoInfo>* const vmo_info = registered_vmos_[client_id]->GetVmo(vmo_id);
+  if (!vmo_info) {
+    return ZX_ERR_NOT_FOUND;
+  }
+
+  zx_status_t status = vmo_info->vmo()->duplicate(ZX_RIGHT_SAME_RIGHTS, out_vmo);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  return registered_vmos_[client_id]->Unregister(vmo_id);
+}
+
+zx_status_t FakeSdmmcDevice::SdmmcRequestNew(const sdmmc_req_new_t* req, uint32_t out_response[4]) {
+  if (req->client_id >= countof(registered_vmos_)) {
+    return ZX_ERR_OUT_OF_RANGE;
+  }
+
+  fbl::Span buffers{req->buffers_list, req->buffers_count};
+  SdmmcVmoStore& owned_vmos = *registered_vmos_[req->client_id];
+
+  fzl::VmoMapper linear_vmo;
+  if (req->cmd_flags & SDMMC_RESP_DATA_PRESENT) {
+    size_t total_size = 0;
+    for (const sdmmc_buffer_region_t& buffer : buffers) {
+      total_size += buffer.size;
+    }
+
+    if (total_size % req->blocksize != 0) {
+      return ZX_ERR_INVALID_ARGS;
+    }
+
+    zx_status_t status = linear_vmo.CreateAndMap(total_size, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE);
+    if (status != ZX_OK) {
+      return status;
+    }
+
+    if (!(req->cmd_flags & SDMMC_CMD_READ)) {
+      uint8_t* const linear_buffer = static_cast<uint8_t*>(linear_vmo.start());
+      if ((status = CopySdmmcRegions(buffers, owned_vmos, linear_buffer, false)) != ZX_OK) {
+        return status;
+      }
+    }
+  }
+
+  sdmmc_req_t linear_req = {
+      .cmd_idx = req->cmd_idx,
+      .cmd_flags = req->cmd_flags,
+      .arg = req->arg,
+      .blockcount = static_cast<uint16_t>(linear_vmo.size() / req->blocksize),
+      .blocksize = static_cast<uint16_t>(req->blocksize),
+      .use_dma = false,
+      .dma_vmo = ZX_HANDLE_INVALID,
+      .virt_buffer = linear_vmo.start(),
+      .virt_size = linear_vmo.size(),
+      .buf_offset = 0,
+      .pmt = ZX_HANDLE_INVALID,
+      .probe_tuning_cmd = req->probe_tuning_cmd,
+      .response = {},
+      .status = ZX_OK,
+  };
+  zx_status_t status = SdmmcRequest(&linear_req);
+
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  memcpy(out_response, linear_req.response, sizeof(uint32_t) * 4);
+
+  if ((req->cmd_flags & SDMMC_RESP_DATA_PRESENT) && (req->cmd_flags & SDMMC_CMD_READ)) {
+    uint8_t* const linear_buffer = static_cast<uint8_t*>(linear_vmo.start());
+    return CopySdmmcRegions(buffers, owned_vmos, linear_buffer, true);
+  }
+
+  return ZX_OK;
+}
+
 std::vector<uint8_t> FakeSdmmcDevice::Read(size_t address, size_t size, uint8_t func) {
   std::map<size_t, std::unique_ptr<uint8_t[]>>& sectors = sectors_[func];
 
@@ -262,6 +357,43 @@ void FakeSdmmcDevice::Erase(size_t address, size_t size, uint8_t func) {
 
 void FakeSdmmcDevice::TriggerInBandInterrupt() const {
   interrupt_cb_.ops->callback(interrupt_cb_.ctx);
+}
+
+zx_status_t FakeSdmmcDevice::CopySdmmcRegions(fbl::Span<const sdmmc_buffer_region_t> regions,
+                                              SdmmcVmoStore& vmos, uint8_t* buffer,
+                                              const bool copy_to_regions) {
+  for (const sdmmc_buffer_region_t& region : regions) {
+    zx::unowned_vmo vmo;
+    uint64_t offset = 0;
+    if (region.type == SDMMC_BUFFER_TYPE_VMO_HANDLE) {
+      vmo = zx::unowned_vmo(region.buffer.vmo);
+    } else if (region.type == SDMMC_BUFFER_TYPE_VMO_ID) {
+      vmo_store::StoredVmo<OwnedVmoInfo>* const stored_vmo = vmos.GetVmo(region.buffer.vmo_id);
+      if (stored_vmo == nullptr) {
+        return ZX_ERR_NOT_FOUND;
+      }
+      if (region.size + region.offset > stored_vmo->meta().size) {
+        return ZX_ERR_OUT_OF_RANGE;
+      }
+
+      vmo = stored_vmo->vmo();
+      offset = stored_vmo->meta().offset;
+    }
+
+    zx_status_t status;
+    if (copy_to_regions) {
+      status = vmo->write(buffer, offset + region.offset, region.size);
+    } else {
+      status = vmo->read(buffer, offset + region.offset, region.size);
+    }
+    if (status != ZX_OK) {
+      return status;
+    }
+
+    buffer += region.size;
+  }
+
+  return ZX_OK;
 }
 
 }  // namespace sdmmc

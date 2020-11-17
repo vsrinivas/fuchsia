@@ -17,6 +17,8 @@
 #include <ddktl/protocol/sdmmc.h>
 #include <fbl/span.h>
 
+#include "src/lib/vmo_store/vmo_store.h"
+
 namespace sdmmc {
 
 class Bind : public fake_ddk::Bind {
@@ -133,7 +135,11 @@ class FakeSdmmcDevice : public ddk::SdmmcProtocol<FakeSdmmcDevice> {
   // This is a dummy value, not currently enforced.
   static constexpr size_t kBlockCount = 0x10000;
 
-  FakeSdmmcDevice() : proto_{.ops = &sdmmc_protocol_ops_, .ctx = this}, host_info_({}) {}
+  FakeSdmmcDevice() : proto_{.ops = &sdmmc_protocol_ops_, .ctx = this}, host_info_({}) {
+    for (auto& store : registered_vmos_) {
+      store.emplace(vmo_store::Options{});
+    }
+  }
 
   ddk::SdmmcProtocolClient GetClient() const { return ddk::SdmmcProtocolClient(&proto_); }
 
@@ -174,15 +180,9 @@ class FakeSdmmcDevice : public ddk::SdmmcProtocol<FakeSdmmcDevice> {
   zx_status_t SdmmcRequest(sdmmc_req_t* req);
   zx_status_t SdmmcRegisterInBandInterrupt(const in_band_interrupt_protocol_t* interrupt_cb);
   zx_status_t SdmmcRegisterVmo(uint32_t vmo_id, uint8_t client_id, zx::vmo vmo, uint64_t offset,
-                               uint64_t size) {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-  zx_status_t SdmmcUnregisterVmo(uint32_t vmo_id, uint8_t client_id, zx::vmo* out_vmo) {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-  zx_status_t SdmmcRequestNew(const sdmmc_req_new_t* req, uint32_t out_response[4]) {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
+                               uint64_t size);
+  zx_status_t SdmmcUnregisterVmo(uint32_t vmo_id, uint8_t client_id, zx::vmo* out_vmo);
+  zx_status_t SdmmcRequestNew(const sdmmc_req_new_t* req, uint32_t out_response[4]);
 
   std::vector<uint8_t> Read(size_t address, size_t size, uint8_t func = 0);
   void Write(size_t address, fbl::Span<const uint8_t> data, uint8_t func = 0);
@@ -210,6 +210,16 @@ class FakeSdmmcDevice : public ddk::SdmmcProtocol<FakeSdmmcDevice> {
   sdmmc_timing_t timing() const { return timing_; }
 
  private:
+  struct OwnedVmoInfo {
+    uint64_t offset;
+    uint64_t size;
+  };
+
+  using SdmmcVmoStore = vmo_store::VmoStore<vmo_store::HashTableStorage<uint32_t, OwnedVmoInfo>>;
+
+  static zx_status_t CopySdmmcRegions(fbl::Span<const sdmmc_buffer_region_t> regions,
+                                      SdmmcVmoStore& vmos, uint8_t* buffer, bool copy_to_regions);
+
   const sdmmc_protocol_t proto_;
   sdmmc_host_info_t host_info_;
   std::array<std::map<size_t, std::unique_ptr<uint8_t[]>>, SDIO_MAX_FUNCS> sectors_;
@@ -227,6 +237,7 @@ class FakeSdmmcDevice : public ddk::SdmmcProtocol<FakeSdmmcDevice> {
   sdmmc_timing_t timing_ = SDMMC_TIMING_MAX;
   std::optional<uint32_t> erase_group_start_;
   std::optional<uint32_t> erase_group_end_;
+  std::optional<SdmmcVmoStore> registered_vmos_[SDMMC_MAX_CLIENT_ID + 1];
 };
 
 }  // namespace sdmmc
