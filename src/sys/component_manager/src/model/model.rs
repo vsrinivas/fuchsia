@@ -4,9 +4,11 @@
 
 use {
     crate::capability::NamespaceCapabilities,
+    crate::config::RuntimeConfig,
     crate::model::{
         actions::Action,
         binding::Binder,
+        context::ModelContext,
         environment::Environment,
         error::ModelError,
         moniker::AbsoluteMoniker,
@@ -18,11 +20,13 @@ use {
 /// Parameters for initializing a component model, particularly the root of the component
 /// instance tree.
 pub struct ModelParams {
-    /// The URL of the root component.
     // TODO(viktard): Merge into RuntimeConfig
+    /// The URL of the root component.
     pub root_component_url: String,
     /// The environment provided to the root realm.
     pub root_environment: Environment,
+    /// Global runtime configuration for the component_manager.
+    pub runtime_config: Arc<RuntimeConfig>,
     /// The namespace capabilities offered by component manager
     pub namespace_capabilities: NamespaceCapabilities,
 }
@@ -33,6 +37,7 @@ pub struct ModelParams {
 /// instances at runtime.
 pub struct Model {
     pub root_realm: Arc<Realm>,
+    _context: Arc<ModelContext>,
     _component_manager_realm: Arc<ComponentManagerRealm>,
 }
 
@@ -41,12 +46,14 @@ impl Model {
     pub fn new(params: ModelParams) -> Model {
         let component_manager_realm =
             Arc::new(ComponentManagerRealm::new(params.namespace_capabilities));
+        let context = Arc::new(ModelContext::new(params.runtime_config));
         let root_realm = Arc::new(Realm::new_root_realm(
             params.root_environment,
+            Arc::downgrade(&context),
             Arc::downgrade(&component_manager_realm),
             params.root_component_url,
         ));
-        Model { root_realm, _component_manager_realm: component_manager_realm }
+        Model { root_realm, _context: context, _component_manager_realm: component_manager_realm }
     }
 
     /// Looks up a realm by absolute moniker. The component instance in the realm will be resolved

@@ -218,6 +218,7 @@ pub struct RunnerRegistration {
 mod tests {
     use {
         super::*,
+        crate::config::RuntimeConfig,
         crate::model::{
             binding::Binder,
             error::ModelError,
@@ -242,6 +243,7 @@ mod tests {
     fn test_from_decl() {
         let realm = Arc::new(Realm::new_root_realm(
             Environment::empty(),
+            Weak::new(),
             Weak::new(),
             "test:///root".to_string(),
         ));
@@ -310,6 +312,7 @@ mod tests {
         };
 
         let model = Arc::new(Model::new(ModelParams {
+            runtime_config: Arc::new(RuntimeConfig::default()),
             root_component_url: "test:///root".to_string(),
             root_environment: Environment::new_root(RunnerRegistry::new(runners), resolvers),
             namespace_capabilities: vec![],
@@ -372,6 +375,7 @@ mod tests {
         };
 
         let model = Arc::new(Model::new(ModelParams {
+            runtime_config: Arc::new(RuntimeConfig::default()),
             root_component_url: "test:///root".to_string(),
             root_environment: Environment::new_root(RunnerRegistry::new(runners), resolvers),
             namespace_capabilities: vec![],
@@ -438,6 +442,7 @@ mod tests {
         };
 
         let model = Arc::new(Model::new(ModelParams {
+            runtime_config: Arc::new(RuntimeConfig::default()),
             root_component_url: "test:///root".to_string(),
             root_environment: Environment::new_root(RunnerRegistry::new(runners), resolvers),
             namespace_capabilities: vec![],
@@ -502,6 +507,7 @@ mod tests {
         };
 
         let model = Arc::new(Model::new(ModelParams {
+            runtime_config: Arc::new(RuntimeConfig::default()),
             root_component_url: "test:///root".to_string(),
             root_environment: Environment::new_root(RunnerRegistry::new(runners), resolvers),
             namespace_capabilities: vec![],
@@ -552,6 +558,7 @@ mod tests {
             registry
         };
         let model = Arc::new(Model::new(ModelParams {
+            runtime_config: Arc::new(RuntimeConfig::default()),
             root_component_url: "test:///root".to_string(),
             root_environment: Environment::new_root(RunnerRegistry::default(), registry),
             namespace_capabilities: vec![],

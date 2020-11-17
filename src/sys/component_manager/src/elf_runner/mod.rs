@@ -5,8 +5,11 @@
 use {
     crate::{
         builtin::{process_launcher::ProcessLauncher, runner::BuiltinRunnerFactory},
-        config::{PolicyError, RuntimeConfig, ScopedPolicyChecker},
-        model::runner::{Runner, RunnerError},
+        config::RuntimeConfig,
+        model::{
+            policy::{PolicyError, ScopedPolicyChecker},
+            runner::{Runner, RunnerError},
+        },
     },
     anyhow::{format_err, Context as _, Error},
     async_trait::async_trait,

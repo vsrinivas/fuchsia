@@ -192,6 +192,7 @@ mod tests {
         let root_realm = Arc::new(Realm::new_root_realm(
             Environment::empty(),
             Weak::new(),
+            Weak::new(),
             "test://root".to_string(),
         ));
         let tree = DirTree::build_from_uses(routing_factory, root_realm.as_weak(), decl.clone());
@@ -269,6 +270,7 @@ mod tests {
         };
         let root_realm = Arc::new(Realm::new_root_realm(
             Environment::empty(),
+            Weak::new(),
             Weak::new(),
             "test://root".to_string(),
         ));

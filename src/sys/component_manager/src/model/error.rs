@@ -7,6 +7,7 @@ use {
         environment::EnvironmentError,
         events::error::EventsError,
         moniker::{AbsoluteMoniker, PartialMoniker},
+        policy::PolicyError,
         resolver::ResolverError,
         rights::RightsError,
         routing::RoutingError,
@@ -32,6 +33,8 @@ pub enum ModelError {
     InstanceNotFound { moniker: AbsoluteMoniker },
     #[error("component collection not found with name {}", name)]
     CollectionNotFound { name: String },
+    #[error("context not found")]
+    ContextNotFound,
     #[error("environment {} not found in realm {}", name, moniker)]
     EnvironmentNotFound { name: String, moniker: AbsoluteMoniker },
     #[error("environment {} in realm {} is not valid: {}", name, moniker, err)]
@@ -114,6 +117,11 @@ pub enum ModelError {
         #[source]
         err: EventsError,
     },
+    #[error("policy error")]
+    PolicyError {
+        #[source]
+        err: PolicyError,
+    },
 }
 
 impl ModelError {
@@ -138,6 +146,10 @@ impl ModelError {
 
     pub fn collection_not_found(name: impl Into<String>) -> ModelError {
         ModelError::CollectionNotFound { name: name.into() }
+    }
+
+    pub fn context_not_found() -> ModelError {
+        ModelError::ContextNotFound {}
     }
 
     pub fn environment_not_found(name: impl Into<String>, moniker: AbsoluteMoniker) -> ModelError {

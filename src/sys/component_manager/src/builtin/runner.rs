@@ -5,10 +5,11 @@ use {
     crate::{
         capability::{CapabilityProvider, CapabilitySource, InternalCapability},
         channel,
-        config::{RuntimeConfig, ScopedPolicyChecker},
+        config::RuntimeConfig,
         model::{
             error::ModelError,
             hooks::{Event, EventPayload, EventType, Hook, HooksRegistration},
+            policy::ScopedPolicyChecker,
             runner::Runner,
         },
     },

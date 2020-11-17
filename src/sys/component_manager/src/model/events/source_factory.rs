@@ -197,6 +197,7 @@ impl Hook for EventSourceFactory {
 mod tests {
     use {
         super::*,
+        crate::config::RuntimeConfig,
         crate::model::{
             environment::{Environment, RunnerRegistry},
             hooks::Hooks,
@@ -266,6 +267,7 @@ mod tests {
                 registry
             };
             Arc::new(Model::new(ModelParams {
+                runtime_config: Arc::new(RuntimeConfig::default()),
                 root_component_url: "test:///root".to_string(),
                 root_environment: Environment::new_root(
                     RunnerRegistry::default(),
@@ -300,6 +302,7 @@ mod tests {
         let model = {
             let resolver = ResolverRegistry::new();
             Arc::new(Model::new(ModelParams {
+                runtime_config: Arc::new(RuntimeConfig::default()),
                 root_component_url: "test:///root".to_string(),
                 root_environment: Environment::new_root(RunnerRegistry::default(), resolver),
                 namespace_capabilities: vec![],

@@ -5,12 +5,12 @@
 use {
     crate::{
         builtin::runner::BuiltinRunnerFactory,
-        config::ScopedPolicyChecker,
         model::{
             binding::Binder,
             environment::{Environment, RunnerRegistry},
             error::ModelError,
             moniker::AbsoluteMoniker,
+            policy::ScopedPolicyChecker,
             realm::{BindReason, Realm, WeakRealm},
             resolver::{Resolver, ResolverError, ResolverFut, ResolverRegistry},
             runner::{Runner, RunnerError},
@@ -384,6 +384,7 @@ impl Binder for FakeBinder {
         let root_component_url = "test:///root".to_string();
         Ok(Arc::new(Realm::new_root_realm(
             Environment::new_root(RunnerRegistry::default(), resolver),
+            Weak::new(),
             Weak::new(),
             root_component_url,
         )))

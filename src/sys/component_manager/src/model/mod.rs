@@ -15,9 +15,11 @@ pub mod realm;
 // fuctionality in this module. Factor out the externally-depended code into its own module.
 pub mod testing;
 
+pub(crate) mod context;
 pub(crate) mod environment;
 pub(crate) mod events;
 pub(crate) mod logging;
+pub(crate) mod policy;
 pub(crate) mod resolver;
 pub(crate) mod rights;
 pub(crate) mod routing;

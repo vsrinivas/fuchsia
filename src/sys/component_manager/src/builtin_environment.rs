@@ -233,12 +233,14 @@ impl BuiltinEnvironmentBuilder {
             }
         };
 
+        let runtime_config = Arc::new(runtime_config);
         let params = ModelParams {
             root_component_url: root_component_url.as_str().to_owned(),
             root_environment: Environment::new_root(
                 RunnerRegistry::new(runner_map),
                 self.resolvers,
             ),
+            runtime_config: Arc::clone(&runtime_config),
             namespace_capabilities: runtime_config.namespace_capabilities.clone(),
         };
         let model = Arc::new(Model::new(params));
@@ -253,7 +255,6 @@ impl BuiltinEnvironmentBuilder {
         }
 
         // Wrap BuiltinRunnerFactory in BuiltinRunner now that we have the definite RuntimeConfig.
-        let runtime_config = Arc::new(runtime_config);
         let builtin_runners = self
             .runners
             .into_iter()

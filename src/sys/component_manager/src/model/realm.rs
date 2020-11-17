@@ -9,6 +9,7 @@ use {
         model::{
             actions::{Action, ActionSet, Notification},
             binding,
+            context::{ModelContext, WeakModelContext},
             environment::Environment,
             error::ModelError,
             exposed_dir::ExposedDir,
@@ -154,6 +155,8 @@ pub struct Realm {
     pub abs_moniker: AbsoluteMoniker,
     /// The hooks scoped to this realm.
     pub hooks: Arc<Hooks>,
+    /// The context this realm is under.
+    context: WeakModelContext,
 
     // These locks must be taken in the order declared if held simultaneously.
     /// The component's mutable state.
@@ -208,6 +211,7 @@ impl Realm {
     /// Instantiates a new root realm.
     pub fn new_root_realm(
         environment: Environment,
+        context: Weak<ModelContext>,
         component_manager_realm: Weak<ComponentManagerRealm>,
         component_url: String,
     ) -> Self {
@@ -216,6 +220,7 @@ impl Realm {
             abs_moniker: AbsoluteMoniker::root(),
             component_url,
             // Started by main().
+            context: WeakModelContext::new(context),
             startup: fsys::StartupMode::Lazy,
             parent: WeakExtendedRealm::AboveRoot(component_manager_realm),
             state: Mutex::new(None),
@@ -252,6 +257,11 @@ impl Realm {
     /// Gets the parent, if it still exists, or returns an `InstanceNotFound` error.
     pub fn try_get_parent(&self) -> Result<ExtendedRealm, ModelError> {
         self.parent.upgrade()
+    }
+
+    /// Gets the context, if it exists, or returns a '`ContextNotFound` error.
+    pub fn try_get_context(&self) -> Result<Arc<ModelContext>, ModelError> {
+        self.context.upgrade()
     }
 
     /// Locks and returns a lazily resolved and populated `RealmState`.
@@ -861,6 +871,7 @@ impl RealmState {
                 abs_moniker: realm.abs_moniker.child(child_moniker.clone()),
                 component_url: child.url.clone(),
                 startup: child.startup,
+                context: realm.context.clone(),
                 parent: WeakExtendedRealm::Component(WeakRealm::from(realm)),
                 state: Mutex::new(None),
                 execution: Mutex::new(ExecutionState::new()),

@@ -455,6 +455,7 @@ mod tests {
         let realm = Arc::new(Realm::new_root_realm(
             Environment::empty(),
             Weak::new(),
+            Weak::new(),
             "test:///root".to_string(),
         ));
         let capability = ComponentCapability::Protocol(ProtocolDecl {
