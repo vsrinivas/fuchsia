@@ -210,14 +210,8 @@ impl RfcommServer {
     }
 }
 #[cfg(test)]
-pub(crate) mod tests {
+mod tests {
     use super::*;
-
-    use crate::rfcomm::{
-        frame::mux_commands::*,
-        frame::*,
-        types::{CommandResponse, Role, DLCI},
-    };
 
     use fidl::{
         encoding::Decodable,
@@ -229,24 +223,17 @@ pub(crate) mod tests {
     use futures::{pin_mut, task::Poll, AsyncWriteExt, StreamExt};
     use matches::assert_matches;
 
+    use crate::rfcomm::{
+        frame::mux_commands::*,
+        frame::*,
+        test_util::{expect_frame_received_by_peer, send_peer_frame},
+        types::{CommandResponse, Role, DLCI},
+    };
+
     fn setup_rfcomm_manager() -> (fasync::Executor, RfcommServer) {
         let exec = fasync::Executor::new().unwrap();
         let rfcomm = RfcommServer::new();
         (exec, rfcomm)
-    }
-
-    #[track_caller]
-    pub fn send_peer_frame(remote: &fidl::Socket, frame: Frame) {
-        let mut buf = vec![0; frame.encoded_len()];
-        assert!(frame.encode(&mut buf[..]).is_ok());
-        assert!(remote.write(&buf).is_ok());
-    }
-
-    #[track_caller]
-    pub fn expect_frame_received_by_peer(exec: &mut fasync::Executor, remote: &mut Channel) {
-        let mut vec = Vec::new();
-        let mut remote_fut = Box::pin(remote.read_datagram(&mut vec));
-        assert!(exec.run_until_stalled(&mut remote_fut).is_ready());
     }
 
     #[fasync::run_singlethreaded(test)]

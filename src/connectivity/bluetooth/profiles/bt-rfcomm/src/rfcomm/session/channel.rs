@@ -379,10 +379,11 @@ impl SessionChannel {
 mod tests {
     use super::*;
 
-    use crate::rfcomm::frame::{FrameData, UIHData};
-
     use futures::{channel::mpsc, pin_mut, task::Poll};
     use std::convert::TryFrom;
+
+    use crate::rfcomm::frame::FrameData;
+    use crate::rfcomm::test_util::{expect_frame, expect_pending, expect_user_data_frame};
 
     /// Creates and establishes a SessionChannel. If provided, sets the flow control mode to
     /// `flow_control`.
@@ -406,32 +407,6 @@ mod tests {
         assert!(session_channel.is_established());
 
         (session_channel, remote, frame_receiver)
-    }
-
-    #[track_caller]
-    fn expect_pending(exec: &mut fasync::Executor, outgoing_frames: &mut mpsc::Receiver<Frame>) {
-        let mut fut = Box::pin(outgoing_frames.next());
-        assert!(exec.run_until_stalled(&mut fut).is_pending());
-    }
-
-    #[track_caller]
-    fn expect_frame_with_credits(
-        exec: &mut fasync::Executor,
-        outgoing_frames: &mut mpsc::Receiver<Frame>,
-        expected_data: UserData,
-        expected_credits: Option<u8>,
-    ) {
-        let mut fut = Box::pin(outgoing_frames.next());
-        match exec.run_until_stalled(&mut fut) {
-            Poll::Ready(Some(frame)) => match frame.data {
-                FrameData::UnnumberedInfoHeaderCheck(UIHData::User(data)) => {
-                    assert_eq!(data, expected_data);
-                    assert_eq!(frame.credits, expected_credits);
-                }
-                x => panic!("Expected User frame but got: {:?}", x),
-            },
-            x => panic!("Expected ready frame but got: {:?}", x),
-        }
     }
 
     #[test]
@@ -473,7 +448,7 @@ mod tests {
 
         // Data should be processed by the SessionChannel, packed into an RFCOMM frame, and relayed
         // to peer.
-        expect_frame_with_credits(
+        expect_user_data_frame(
             &mut exec,
             &mut outgoing_frames,
             UserData { information: client_data },
@@ -482,13 +457,7 @@ mod tests {
 
         // Profile client no longer needs the RFCOMM channel - expect a Disc frame.
         drop(client);
-        let mut fut = Box::pin(outgoing_frames.next());
-        match exec.run_until_stalled(&mut fut) {
-            Poll::Ready(Some(frame)) => {
-                assert_eq!(frame.data, FrameData::Disconnect);
-            }
-            x => panic!("Expected ready with frame but got {:?}", x),
-        }
+        expect_frame(&mut exec, &mut outgoing_frames, FrameData::Disconnect, Some(dlci));
     }
 
     /// Tests the SessionChannel relay with default flow control parameters (credit-based
@@ -526,7 +495,7 @@ mod tests {
         {
             let mut data_received_by_client = Box::pin(client.next());
             assert!(exec.run_until_stalled(&mut data_received_by_client).is_ready());
-            expect_frame_with_credits(
+            expect_user_data_frame(
                 &mut exec,
                 &mut outgoing_frames,
                 UserData { information: vec![] },
@@ -551,7 +520,7 @@ mod tests {
 
         // The previously queued outgoing frame should be finally sent due to the credit refresh.
         // The received user data frame should be relayed to the client.
-        expect_frame_with_credits(
+        expect_user_data_frame(
             &mut exec,
             &mut outgoing_frames,
             UserData { information: client_data },
@@ -601,7 +570,7 @@ mod tests {
         // Data should be processed by the SessionChannel, packed into an RFCOMM frame, and relayed
         // using the `frame_sender`. There should be credits associated with the frame - we always
         // attempt to replenish with the (`HIGH_CREDIT_WATER_MARK` - remote_credits) amount.
-        expect_frame_with_credits(
+        expect_user_data_frame(
             &mut exec,
             &mut outgoing_frames,
             UserData { information: client_data },
@@ -642,7 +611,7 @@ mod tests {
             assert!(exec.run_until_stalled(&mut data_received_by_client).is_ready());
             // Because the remote credit count is low (see `initial_credits`), we expect to
             // preemptively send an empty data frame to the peer to refresh their credits.
-            expect_frame_with_credits(
+            expect_user_data_frame(
                 &mut exec,
                 &mut outgoing_frames,
                 UserData { information: vec![] },
@@ -657,7 +626,7 @@ mod tests {
             let mut send_fut = Box::pin(flow_controller.send_data_to_peer(data2a.clone()));
             assert!(exec.run_until_stalled(&mut send_fut).is_pending());
             // We have sufficient local credits (2), so frame should be sent. No credits to refresh.
-            expect_frame_with_credits(&mut exec, &mut outgoing_frames, data2a, None);
+            expect_user_data_frame(&mut exec, &mut outgoing_frames, data2a, None);
             assert!(exec.run_until_stalled(&mut send_fut).is_ready());
         }
         // 2b. RFCOMM client sends more data.
@@ -666,7 +635,7 @@ mod tests {
             let mut send_fut = Box::pin(flow_controller.send_data_to_peer(data2b.clone()));
             assert!(exec.run_until_stalled(&mut send_fut).is_pending());
             // We have sufficient local credits (1), so frame should be sent. No credits to refresh.
-            expect_frame_with_credits(&mut exec, &mut outgoing_frames, data2b, None);
+            expect_user_data_frame(&mut exec, &mut outgoing_frames, data2b, None);
             assert!(exec.run_until_stalled(&mut send_fut).is_ready());
         }
 
@@ -700,14 +669,14 @@ mod tests {
             assert!(exec.run_until_stalled(&mut receive_fut).is_pending());
             // Now that we've received 10 credits, we should send the queued user data
             // frames from 2c & 2d.
-            expect_frame_with_credits(
+            expect_user_data_frame(
                 &mut exec,
                 &mut outgoing_frames,
                 data2c,
                 None, // Don't expect to replenish (remote = MAX).
             );
             assert!(exec.run_until_stalled(&mut receive_fut).is_pending());
-            expect_frame_with_credits(
+            expect_user_data_frame(
                 &mut exec,
                 &mut outgoing_frames,
                 data2d,

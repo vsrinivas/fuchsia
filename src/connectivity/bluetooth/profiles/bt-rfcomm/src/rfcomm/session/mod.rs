@@ -992,8 +992,8 @@ mod tests {
     use std::convert::TryFrom;
 
     use crate::rfcomm::frame::mux_commands::*;
-    use crate::rfcomm::server::tests::{expect_frame_received_by_peer, send_peer_frame};
     use crate::rfcomm::session::multiplexer::ParameterNegotiationState;
+    use crate::rfcomm::test_util::*;
 
     /// Makes a DLC PN frame with arbitrary command parameters.
     /// `command_response` indicates whether the frame should be a command or response.
@@ -1100,52 +1100,9 @@ mod tests {
         expected: FrameData,
     ) {
         let mut handle_fut = Box::pin(session.handle_frame(frame));
-        let mut outgoing_frames_fut = Box::pin(outgoing_frames.next());
         assert!(exec.run_until_stalled(&mut handle_fut).is_pending());
-        match exec.run_until_stalled(&mut outgoing_frames_fut) {
-            Poll::Ready(Some(frame)) => {
-                assert_eq!(frame.data, expected);
-            }
-            x => panic!("Expected a frame but got {:?}", x),
-        }
+        expect_frame(exec, outgoing_frames, expected, None);
         assert!(exec.run_until_stalled(&mut handle_fut).is_ready());
-    }
-
-    /// Expects the provided `expected` frame data on the `outgoing_frames` receiver.
-    #[track_caller]
-    fn expect_frame(
-        exec: &mut fasync::Executor,
-        outgoing_frames: &mut mpsc::Receiver<Frame>,
-        expected: FrameData,
-        dlci: DLCI,
-    ) {
-        let mut outgoing_frames_fut = Box::pin(outgoing_frames.next());
-        match exec.run_until_stalled(&mut outgoing_frames_fut) {
-            Poll::Ready(Some(frame)) => {
-                assert_eq!(frame.data, expected);
-                assert_eq!(frame.dlci, dlci);
-            }
-            x => panic!("Expected a frame but got {:?}", x),
-        }
-    }
-
-    /// Expects the provided `expected` MuxCommand on the `outgoing_frames` receiver.
-    #[track_caller]
-    fn expect_mux_command(
-        exec: &mut fasync::Executor,
-        outgoing_frames: &mut mpsc::Receiver<Frame>,
-        expected: MuxCommandMarker,
-    ) {
-        let mut outgoing_frames_fut = Box::pin(outgoing_frames.next());
-        match exec.run_until_stalled(&mut outgoing_frames_fut) {
-            Poll::Ready(Some(frame)) => match frame.data {
-                FrameData::UnnumberedInfoHeaderCheck(UIHData::Mux(mux_command)) => {
-                    assert_eq!(mux_command.params.marker(), expected);
-                }
-                _ => panic!("Expected MuxCommand but got: {:?}", frame.data),
-            },
-            x => panic!("Expected a frame but got: {:?}", x),
-        }
     }
 
     /// Expects and returns the `channel` from the provided `receiver`.
@@ -1450,7 +1407,7 @@ mod tests {
                 &mut exec,
                 &mut outgoing_frames,
                 FrameData::UnnumberedAcknowledgement,
-                user_dlci,
+                Some(user_dlci),
             );
             assert!(exec.run_until_stalled(&mut handle_fut).is_pending());
             // We then expect to send our current Modem Signals to the peer.
@@ -1503,7 +1460,7 @@ mod tests {
                 &mut exec,
                 &mut outgoing_frames,
                 FrameData::UnnumberedAcknowledgement,
-                user_dlci,
+                Some(user_dlci),
             );
             assert!(exec.run_until_stalled(&mut handle_fut).is_pending());
             // After positively responding, we expect to send our current Modem Signals to indicate
@@ -1543,7 +1500,6 @@ mod tests {
 
         // Create and start a SessionInner that relays any opened RFCOMM channels.
         let (mut session, mut outgoing_frames, mut channel_receiver) = setup_session();
-        let mut outgoing_frames_stream = Box::pin(outgoing_frames.next());
         assert!(session.multiplexer().start(Role::Responder).is_ok());
 
         // Establish a user DLCI with an adequate amount of credits - the RFCOMM channel should
@@ -1588,16 +1544,12 @@ mod tests {
         let _ = profile_client_channel.as_ref().write(&response);
         // The data should be processed by the SessionChannel, packed as a user data
         // frame, and sent as an outgoing frame.
-        let expected_frame = Frame::make_user_data_frame(
-            Role::Responder,
-            user_dlci,
+        expect_user_data_frame(
+            &mut exec,
+            &mut outgoing_frames,
             UserData { information: response },
             Some(156), // CREDIT_HIGH_WATER_MARK - (100 (initial credits) - 1 (received frames))
         );
-        match exec.run_until_stalled(&mut outgoing_frames_stream) {
-            Poll::Ready(Some(frame)) => assert_eq!(frame, expected_frame),
-            x => panic!("Expected user data frame, got: {:?}", x),
-        }
     }
 
     #[test]
@@ -1605,7 +1557,6 @@ mod tests {
         let mut exec = fasync::Executor::new().unwrap();
 
         let (mut session, mut outgoing_frames, _rfcomm_channels) = setup_session();
-        let mut outgoing_frames_stream = Box::pin(outgoing_frames.next());
         assert!(session.multiplexer().start(Role::Responder).is_ok());
 
         let unsupported_command = 0xff;
@@ -1615,22 +1566,14 @@ mod tests {
         assert!(exec.run_until_stalled(&mut handle_fut).is_pending());
 
         // We expect an NSC Frame response.
-        let expected_frame = Frame::make_mux_command(
-            Role::Responder,
-            MuxCommand {
-                params: MuxCommandParams::NonSupported(NonSupportedCommandParams {
-                    cr_bit: true,
-                    non_supported_command: unsupported_command,
-                }),
-                command_response: CommandResponse::Response,
-            },
-        );
-        match exec.run_until_stalled(&mut outgoing_frames_stream) {
-            Poll::Ready(Some(frame)) => {
-                assert_eq!(frame, expected_frame);
-            }
-            x => panic!("Expected a frame but got: {:?}", x),
-        }
+        let expected = FrameData::UnnumberedInfoHeaderCheck(UIHData::Mux(MuxCommand {
+            params: MuxCommandParams::NonSupported(NonSupportedCommandParams {
+                cr_bit: true,
+                non_supported_command: unsupported_command,
+            }),
+            command_response: CommandResponse::Response,
+        }));
+        expect_frame(&mut exec, &mut outgoing_frames, expected, None);
         assert!(exec.run_until_stalled(&mut handle_fut).is_ready());
     }
 
@@ -1718,7 +1661,7 @@ mod tests {
                 &mut exec,
                 &mut outgoing_frames,
                 FrameData::SetAsynchronousBalancedMode,
-                DLCI::MUX_CONTROL_DLCI,
+                Some(DLCI::MUX_CONTROL_DLCI),
             );
             assert_matches!(exec.run_until_stalled(&mut start_mux_fut), Poll::Ready(Ok(_)));
         }
@@ -1757,7 +1700,7 @@ mod tests {
                 &mut exec,
                 &mut outgoing_frames,
                 FrameData::SetAsynchronousBalancedMode,
-                DLCI::MUX_CONTROL_DLCI,
+                Some(DLCI::MUX_CONTROL_DLCI),
             );
             assert_matches!(exec.run_until_stalled(&mut start_mux_fut), Poll::Ready(Ok(_)));
         }
@@ -1912,7 +1855,7 @@ mod tests {
                 &mut exec,
                 &mut outgoing_frames,
                 FrameData::SetAsynchronousBalancedMode,
-                DLCI::MUX_CONTROL_DLCI,
+                Some(DLCI::MUX_CONTROL_DLCI),
             );
             assert_matches!(exec.run_until_stalled(&mut open_fut), Poll::Ready(Ok(_)));
         }
@@ -1996,7 +1939,7 @@ mod tests {
                 &mut exec,
                 &mut outgoing_frames,
                 FrameData::SetAsynchronousBalancedMode,
-                expected_dlci,
+                Some(expected_dlci),
             );
             assert_matches!(exec.run_until_stalled(&mut open_fut), Poll::Ready(Ok(_)));
         }
@@ -2194,7 +2137,6 @@ mod tests {
         // Client should be notified that the second request failed.
         expect_channel_error(&mut exec, &mut outbound_channels2, ErrorCode::Failed);
         // First request should still be alive - nothing relayed.
-        let mut outbound_fut1 = Box::pin(outbound_channels1.next());
-        assert!(exec.run_until_stalled(&mut outbound_fut1).is_pending());
+        expect_pending(&mut exec, &mut outbound_channels1);
     }
 }

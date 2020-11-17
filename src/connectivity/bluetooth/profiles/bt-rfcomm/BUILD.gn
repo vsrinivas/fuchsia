@@ -57,6 +57,7 @@ rustc_binary("bin") {
     "src/rfcomm/session/channel.rs",
     "src/rfcomm/session/mod.rs",
     "src/rfcomm/session/multiplexer.rs",
+    "src/rfcomm/test_util.rs",
     "src/rfcomm/types.rs",
     "src/types.rs",
   ]

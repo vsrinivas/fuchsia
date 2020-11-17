@@ -8,13 +8,17 @@ mod frame;
 /// Structures to support inspection.
 mod inspect;
 
-/// RFCOMM-specific types.
-mod types;
+/// The RFCOMM server that manages connections.
+mod server;
 
 /// The RFCOMM Session that multiplexes connections over a single L2CAP channel.
 mod session;
 
-/// The RFCOMM server that processes connections.
-mod server;
+/// RFCOMM-specific types.
+mod types;
+
+/// Common helpers used in unit tests.
+#[cfg(test)]
+mod test_util;
 
 pub use crate::rfcomm::{server::RfcommServer, types::ServerChannel};
