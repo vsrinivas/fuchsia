@@ -7,6 +7,7 @@ package iomisc
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"regexp"
@@ -118,19 +119,10 @@ func ReadUntilMatch(ctx context.Context, m *MatchingReader, output io.Writer) ([
 
 	errs := make(chan error)
 	go func() {
-		for {
-			if _, err := io.Copy(output, m); err != nil {
-				errs <- err
-				break
-			}
+		if _, err := io.Copy(output, m); err != nil {
+			errs <- err
 		}
-	}()
-
-	mc := make(chan struct{})
-	go func() {
-		for m.Match() == nil {
-		}
-		mc <- struct{}{}
+		errs <- io.EOF
 	}()
 
 	select {
@@ -145,11 +137,13 @@ func ReadUntilMatch(ctx context.Context, m *MatchingReader, output io.Writer) ([
 		}
 		return nil, ctx.Err()
 	case err := <-errs:
+		if errors.Is(err, io.EOF) {
+			if match := m.Match(); match != nil {
+				return match, nil
+			}
+		}
 		return nil, err
-	case <-mc:
 	}
-
-	return m.Match(), nil
 }
 
 func min(a, b int) int {

@@ -7,6 +7,7 @@ package iomisc
 import (
 	"bytes"
 	"context"
+	"errors"
 	"io"
 	"regexp"
 	"testing"
@@ -130,23 +131,44 @@ func assertMatch(t *testing.T, m *MatchingReader, match []byte) {
 }
 
 func TestReadUntilMatch(t *testing.T) {
-	r, w := io.Pipe()
-	defer w.Close()
-	defer r.Close()
+	t.Run("success", func(t *testing.T) {
+		r, w := io.Pipe()
+		defer w.Close()
+		defer r.Close()
 
-	m := NewPatternMatchingReader(r, regexp.MustCompile("ABCD(E|F)"), 5)
+		m := NewPatternMatchingReader(r, regexp.MustCompile("ABCD(E|F)"), 5)
 
-	go func() {
-		w.Write([]byte("ABC"))
-		w.Write([]byte("D"))
-		w.Write([]byte("EFGH"))
-	}()
-	match, err := ReadUntilMatch(context.Background(), m, nil)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
+		go func() {
+			w.Write([]byte("ABC"))
+			w.Write([]byte("D"))
+			w.Write([]byte("EFGH"))
+		}()
 
-	if bytes.Compare(match, []byte("ABCDE")) != 0 {
-		t.Fatalf("expected match of ABCDE; not %q", match)
-	}
+		match, err := ReadUntilMatch(context.Background(), m, nil)
+
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if bytes.Compare(match, []byte("ABCDE")) != 0 {
+			t.Fatalf("expected match of ABCDE; not %q", match)
+		}
+	})
+
+	t.Run("read fails", func(t *testing.T) {
+		r, w := io.Pipe()
+		defer r.Close()
+
+		m := NewSequenceMatchingReader(r, "foo")
+
+		go func() {
+			w.Write([]byte("bar"))
+			w.Close()
+		}()
+
+		_, err := ReadUntilMatch(context.Background(), m, nil)
+
+		if !errors.Is(err, io.EOF) {
+			t.Errorf("ReadUntilMatch() returned %v, expected io.EOF", err)
+		}
+	})
 }
