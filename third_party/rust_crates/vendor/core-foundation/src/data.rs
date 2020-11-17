@@ -9,15 +9,16 @@
 
 //! Core Foundation byte buffers.
 
-use core_foundation_sys::base::kCFAllocatorDefault;
-use core_foundation_sys::base::CFIndex;
 pub use core_foundation_sys::data::*;
+use core_foundation_sys::base::CFIndex;
+use core_foundation_sys::base::{kCFAllocatorDefault};
 use std::ops::Deref;
 use std::slice;
 
 use base::{CFIndexConvertible, TCFType};
 
-declare_TCFType! {
+
+declare_TCFType!{
     /// A byte buffer.
     CFData, CFDataRef
 }
@@ -27,8 +28,9 @@ impl_CFTypeDescription!(CFData);
 impl CFData {
     pub fn from_buffer(buffer: &[u8]) -> CFData {
         unsafe {
-            let data_ref =
-                CFDataCreate(kCFAllocatorDefault, buffer.as_ptr(), buffer.len().to_CFIndex());
+            let data_ref = CFDataCreate(kCFAllocatorDefault,
+                                        buffer.as_ptr(),
+                                        buffer.len().to_CFIndex());
             TCFType::wrap_under_create_rule(data_ref)
         }
     }
@@ -37,13 +39,17 @@ impl CFData {
     /// read-only.
     #[inline]
     pub fn bytes<'a>(&'a self) -> &'a [u8] {
-        unsafe { slice::from_raw_parts(CFDataGetBytePtr(self.0), self.len() as usize) }
+        unsafe {
+            slice::from_raw_parts(CFDataGetBytePtr(self.0), self.len() as usize)
+        }
     }
 
     /// Returns the length of this byte buffer.
     #[inline]
     pub fn len(&self) -> CFIndex {
-        unsafe { CFDataGetLength(self.0) }
+        unsafe {
+            CFDataGetLength(self.0)
+        }
     }
 }
 

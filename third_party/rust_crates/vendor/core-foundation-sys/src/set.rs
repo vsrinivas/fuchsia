@@ -11,7 +11,8 @@ use std::os::raw::c_void;
 
 use base::{CFAllocatorRef, CFIndex, CFTypeID};
 
-pub type CFSetApplierFunction = extern "C" fn(value: *const c_void, context: *const c_void);
+pub type CFSetApplierFunction = extern "C" fn (value: *const c_void,
+                                               context: *const c_void);
 pub type CFSetRetainCallBack = *const u8;
 pub type CFSetReleaseCallBack = *const u8;
 pub type CFSetCopyDescriptionCallBack = *const u8;
@@ -34,7 +35,7 @@ pub struct __CFSet(c_void);
 
 pub type CFSetRef = *const __CFSet;
 
-extern "C" {
+extern {
     /*
      * CFSet.h
      */
@@ -42,21 +43,16 @@ extern "C" {
     pub static kCFTypeSetCallBacks: CFSetCallBacks;
 
     /* Creating Sets */
-    pub fn CFSetCreate(
-        allocator: CFAllocatorRef,
-        values: *const *const c_void,
-        numValues: CFIndex,
-        callBacks: *const CFSetCallBacks,
-    ) -> CFSetRef;
+    pub fn CFSetCreate(allocator: CFAllocatorRef, values: *const *const c_void, numValues: CFIndex,
+                       callBacks: *const CFSetCallBacks) -> CFSetRef;
 
     /* Applying a Function to Set Members */
-    pub fn CFSetApplyFunction(
-        theSet: CFSetRef,
-        applier: CFSetApplierFunction,
-        context: *const c_void,
-    );
+    pub fn CFSetApplyFunction(theSet: CFSetRef,
+                              applier: CFSetApplierFunction,
+                              context: *const c_void);
 
     pub fn CFSetGetCount(theSet: CFSetRef) -> CFIndex;
 
     pub fn CFSetGetTypeID() -> CFTypeID;
 }
+

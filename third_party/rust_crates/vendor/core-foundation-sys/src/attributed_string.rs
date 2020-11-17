@@ -7,10 +7,10 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
-use base::{CFAllocatorRef, CFIndex, CFRange, CFTypeID, CFTypeRef};
-use dictionary::CFDictionaryRef;
 use std::os::raw::c_void;
+use base::{CFAllocatorRef, CFTypeRef, CFIndex, CFRange, CFTypeID};
 use string::CFStringRef;
+use dictionary::CFDictionaryRef;
 
 #[repr(C)]
 pub struct __CFAttributedString(c_void);
@@ -18,7 +18,7 @@ pub struct __CFAttributedString(c_void);
 pub type CFAttributedStringRef = *const __CFAttributedString;
 pub type CFMutableAttributedStringRef = *const __CFAttributedString;
 
-extern "C" {
+extern {
     /* CFAttributedString */
 
     pub fn CFAttributedStringCreate(
@@ -34,9 +34,7 @@ extern "C" {
     /* CFMutableAttributedString */
 
     pub fn CFAttributedStringCreateMutableCopy(
-        allocator: CFAllocatorRef,
-        max_length: CFIndex,
-        astr: CFAttributedStringRef,
+        allocator: CFAllocatorRef, max_length: CFIndex, astr: CFAttributedStringRef
     ) -> CFMutableAttributedStringRef;
 
     pub fn CFAttributedStringCreateMutable(
@@ -45,10 +43,7 @@ extern "C" {
     ) -> CFMutableAttributedStringRef;
 
     pub fn CFAttributedStringReplaceString(
-        astr: CFMutableAttributedStringRef,
-        range: CFRange,
-        replacement: CFStringRef,
-    );
+        astr: CFMutableAttributedStringRef, range: CFRange, replacement: CFStringRef);
 
     pub fn CFAttributedStringSetAttribute(
         astr: CFMutableAttributedStringRef,

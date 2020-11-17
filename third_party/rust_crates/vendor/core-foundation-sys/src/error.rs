@@ -9,7 +9,7 @@
 
 use std::os::raw::c_void;
 
-use base::{CFIndex, CFTypeID};
+use base::{CFTypeID, CFIndex};
 use string::CFStringRef;
 
 #[repr(C)]

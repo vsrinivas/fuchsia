@@ -9,13 +9,12 @@
 
 //! A Boolean type.
 
-pub use core_foundation_sys::number::{
-    kCFBooleanFalse, kCFBooleanTrue, CFBooleanGetTypeID, CFBooleanRef,
-};
+pub use core_foundation_sys::number::{CFBooleanRef, CFBooleanGetTypeID, kCFBooleanTrue, kCFBooleanFalse};
 
 use base::TCFType;
 
-declare_TCFType! {
+
+declare_TCFType!{
     /// A Boolean type.
     ///
     /// FIXME(pcwalton): Should be a newtype struct, but that fails due to a Rust compiler bug.
@@ -26,11 +25,15 @@ impl_CFTypeDescription!(CFBoolean);
 
 impl CFBoolean {
     pub fn true_value() -> CFBoolean {
-        unsafe { TCFType::wrap_under_get_rule(kCFBooleanTrue) }
+        unsafe {
+            TCFType::wrap_under_get_rule(kCFBooleanTrue)
+        }
     }
 
     pub fn false_value() -> CFBoolean {
-        unsafe { TCFType::wrap_under_get_rule(kCFBooleanFalse) }
+        unsafe {
+            TCFType::wrap_under_get_rule(kCFBooleanFalse)
+        }
     }
 }
 

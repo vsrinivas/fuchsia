@@ -11,22 +11,18 @@
 
 pub use core_foundation_sys::dictionary::*;
 
-use core_foundation_sys::base::{kCFAllocatorDefault, CFRelease, CFTypeRef};
-use std::marker::PhantomData;
+use core_foundation_sys::base::{CFTypeRef, CFRelease, kCFAllocatorDefault};
 use std::mem;
 use std::os::raw::c_void;
 use std::ptr;
+use std::marker::PhantomData;
 
+use base::{ItemRef, FromVoid, ToVoid};
 use base::{CFIndexConvertible, TCFType};
-use base::{FromVoid, ItemRef, ToVoid};
 use ConcreteCFType;
 
 // consume the type parameters with PhantomDatas
-pub struct CFDictionary<K = *const c_void, V = *const c_void>(
-    CFDictionaryRef,
-    PhantomData<K>,
-    PhantomData<V>,
-);
+pub struct CFDictionary<K = *const c_void, V = *const c_void>(CFDictionaryRef, PhantomData<K>, PhantomData<V>);
 
 impl<K, V> Drop for CFDictionary<K, V> {
     fn drop(&mut self) {
@@ -40,25 +36,19 @@ impl_CFTypeDescription!(CFDictionary);
 unsafe impl ConcreteCFType for CFDictionary<*const c_void, *const c_void> {}
 
 impl<K, V> CFDictionary<K, V> {
-    pub fn from_CFType_pairs(pairs: &[(K, V)]) -> CFDictionary<K, V>
-    where
-        K: TCFType,
-        V: TCFType,
-    {
+    pub fn from_CFType_pairs(pairs: &[(K, V)]) -> CFDictionary<K, V> where K: TCFType, V: TCFType {
         let (keys, values): (Vec<CFTypeRef>, Vec<CFTypeRef>) = pairs
             .iter()
             .map(|&(ref key, ref value)| (key.as_CFTypeRef(), value.as_CFTypeRef()))
             .unzip();
 
         unsafe {
-            let dictionary_ref = CFDictionaryCreate(
-                kCFAllocatorDefault,
-                keys.as_ptr(),
-                values.as_ptr(),
-                keys.len().to_CFIndex(),
-                &kCFTypeDictionaryKeyCallBacks,
-                &kCFTypeDictionaryValueCallBacks,
-            );
+            let dictionary_ref = CFDictionaryCreate(kCFAllocatorDefault,
+                                                    keys.as_ptr(),
+                                                    values.as_ptr(),
+                                                    keys.len().to_CFIndex(),
+                                                    &kCFTypeDictionaryKeyCallBacks,
+                                                    &kCFTypeDictionaryValueCallBacks);
             TCFType::wrap_under_create_rule(dictionary_ref)
         }
     }
@@ -86,7 +76,9 @@ impl<K, V> CFDictionary<K, V> {
 
     #[inline]
     pub fn len(&self) -> usize {
-        unsafe { CFDictionaryGetCount(self.0) as usize }
+        unsafe {
+            CFDictionaryGetCount(self.0) as usize
+        }
     }
 
     #[inline]
@@ -95,19 +87,12 @@ impl<K, V> CFDictionary<K, V> {
     }
 
     #[inline]
-    pub fn contains_key(&self, key: &K) -> bool
-    where
-        K: ToVoid<K>,
-    {
+    pub fn contains_key(&self, key: &K) -> bool where K: ToVoid<K> {
         unsafe { CFDictionaryContainsKey(self.0, key.to_void()) != 0 }
     }
 
     #[inline]
-    pub fn find<'a, T: ToVoid<K>>(&'a self, key: T) -> Option<ItemRef<'a, V>>
-    where
-        V: FromVoid,
-        K: ToVoid<K>,
-    {
+    pub fn find<'a, T: ToVoid<K>>(&'a self, key: T) -> Option<ItemRef<'a, V>> where V: FromVoid, K: ToVoid<K> {
         unsafe {
             let mut value: *const c_void = ptr::null();
             if CFDictionaryGetValueIfPresent(self.0, key.to_void(), &mut value) != 0 {
@@ -123,11 +108,7 @@ impl<K, V> CFDictionary<K, V> {
     /// Panics if the key is not present in the dictionary. Use `find` to get an `Option` instead
     /// of panicking.
     #[inline]
-    pub fn get<'a, T: ToVoid<K>>(&'a self, key: T) -> ItemRef<'a, V>
-    where
-        V: FromVoid,
-        K: ToVoid<K>,
-    {
+    pub fn get<'a, T: ToVoid<K>>(&'a self, key: T) -> ItemRef<'a, V> where V: FromVoid, K: ToVoid<K> {
         let ptr = key.to_void();
         self.find(key).unwrap_or_else(|| panic!("No entry found for key {:p}", ptr))
     }
@@ -148,11 +129,7 @@ impl<K, V> CFDictionary<K, V> {
 }
 
 // consume the type parameters with PhantomDatas
-pub struct CFMutableDictionary<K = *const c_void, V = *const c_void>(
-    CFMutableDictionaryRef,
-    PhantomData<K>,
-    PhantomData<V>,
-);
+pub struct CFMutableDictionary<K = *const c_void, V = *const c_void>(CFMutableDictionaryRef, PhantomData<K>, PhantomData<V>);
 
 impl<K, V> Drop for CFMutableDictionary<K, V> {
     fn drop(&mut self) {
@@ -170,29 +147,22 @@ impl<K, V> CFMutableDictionary<K, V> {
 
     pub fn with_capacity(capacity: isize) -> Self {
         unsafe {
-            let dictionary_ref = CFDictionaryCreateMutable(
-                kCFAllocatorDefault,
-                capacity as _,
-                &kCFTypeDictionaryKeyCallBacks,
-                &kCFTypeDictionaryValueCallBacks,
-            );
+            let dictionary_ref = CFDictionaryCreateMutable(kCFAllocatorDefault,
+                                                           capacity as _,
+                                                           &kCFTypeDictionaryKeyCallBacks,
+                                                           &kCFTypeDictionaryValueCallBacks);
             TCFType::wrap_under_create_rule(dictionary_ref)
         }
     }
 
     pub fn copy_with_capacity(&self, capacity: isize) -> Self {
         unsafe {
-            let dictionary_ref =
-                CFDictionaryCreateMutableCopy(kCFAllocatorDefault, capacity as _, self.0);
+            let dictionary_ref = CFDictionaryCreateMutableCopy(kCFAllocatorDefault, capacity as _, self.0);
             TCFType::wrap_under_get_rule(dictionary_ref)
         }
     }
 
-    pub fn from_CFType_pairs(pairs: &[(K, V)]) -> CFMutableDictionary<K, V>
-    where
-        K: ToVoid<K>,
-        V: ToVoid<V>,
-    {
+    pub fn from_CFType_pairs(pairs: &[(K, V)]) -> CFMutableDictionary<K, V> where K: ToVoid<K>, V: ToVoid<V> {
         let mut result = Self::with_capacity(pairs.len() as _);
         for &(ref key, ref value) in pairs {
             result.add(key, value);
@@ -224,7 +194,9 @@ impl<K, V> CFMutableDictionary<K, V> {
 
     #[inline]
     pub fn len(&self) -> usize {
-        unsafe { CFDictionaryGetCount(self.0) as usize }
+        unsafe {
+            CFDictionaryGetCount(self.0) as usize
+        }
     }
 
     #[inline]
@@ -234,15 +206,13 @@ impl<K, V> CFMutableDictionary<K, V> {
 
     #[inline]
     pub fn contains_key(&self, key: *const c_void) -> bool {
-        unsafe { CFDictionaryContainsKey(self.0, key) != 0 }
+        unsafe {
+            CFDictionaryContainsKey(self.0, key) != 0
+        }
     }
 
     #[inline]
-    pub fn find<'a>(&'a self, key: &K) -> Option<ItemRef<'a, V>>
-    where
-        V: FromVoid,
-        K: ToVoid<K>,
-    {
+    pub fn find<'a>(&'a self, key: &K) -> Option<ItemRef<'a, V>> where V: FromVoid, K: ToVoid<K> {
         unsafe {
             let mut value: *const c_void = ptr::null();
             if CFDictionaryGetValueIfPresent(self.0, key.to_void(), &mut value) != 0 {
@@ -258,11 +228,7 @@ impl<K, V> CFMutableDictionary<K, V> {
     /// Panics if the key is not present in the dictionary. Use `find` to get an `Option` instead
     /// of panicking.
     #[inline]
-    pub fn get<'a>(&'a self, key: &K) -> ItemRef<'a, V>
-    where
-        V: FromVoid,
-        K: ToVoid<K>,
-    {
+    pub fn get<'a>(&'a self, key: &K) -> ItemRef<'a, V> where V: FromVoid, K: ToVoid<K> {
         let ptr = key.to_void();
         self.find(&key).unwrap_or_else(|| panic!("No entry found for key {:p}", ptr))
     }
@@ -285,40 +251,25 @@ impl<K, V> CFMutableDictionary<K, V> {
 
     /// Adds the key-value pair to the dictionary if no such key already exist.
     #[inline]
-    pub fn add(&mut self, key: &K, value: &V)
-    where
-        K: ToVoid<K>,
-        V: ToVoid<V>,
-    {
+    pub fn add(&mut self, key: &K, value: &V) where K: ToVoid<K>, V: ToVoid<V> {
         unsafe { CFDictionaryAddValue(self.0, key.to_void(), value.to_void()) }
     }
 
     /// Sets the value of the key in the dictionary.
     #[inline]
-    pub fn set(&mut self, key: K, value: V)
-    where
-        K: ToVoid<K>,
-        V: ToVoid<V>,
-    {
+    pub fn set(&mut self, key: K, value: V) where K: ToVoid<K>, V: ToVoid<V> {
         unsafe { CFDictionarySetValue(self.0, key.to_void(), value.to_void()) }
     }
 
     /// Replaces the value of the key in the dictionary.
     #[inline]
-    pub fn replace(&mut self, key: K, value: V)
-    where
-        K: ToVoid<K>,
-        V: ToVoid<V>,
-    {
+    pub fn replace(&mut self, key: K, value: V) where K: ToVoid<K>, V: ToVoid<V> {
         unsafe { CFDictionaryReplaceValue(self.0, key.to_void(), value.to_void()) }
     }
 
     /// Removes the value of the key from the dictionary.
     #[inline]
-    pub fn remove(&mut self, key: K)
-    where
-        K: ToVoid<K>,
-    {
+    pub fn remove(&mut self, key: K) where K: ToVoid<K> {
         unsafe { CFDictionaryRemoveValue(self.0, key.to_void()) }
     }
 
@@ -345,6 +296,7 @@ impl<'a, K, V> From<&'a CFDictionary<K, V>> for CFMutableDictionary<K, V> {
     }
 }
 
+
 #[cfg(test)]
 pub mod test {
     use super::*;
@@ -352,6 +304,7 @@ pub mod test {
     use boolean::CFBoolean;
     use number::CFNumber;
     use string::CFString;
+
 
     #[test]
     fn dictionary() {
@@ -405,10 +358,12 @@ pub mod test {
 
     #[test]
     fn dict_find_and_contains_key() {
-        let dict = CFDictionary::from_CFType_pairs(&[(
-            CFString::from_static_string("hello"),
-            CFBoolean::true_value(),
-        )]);
+        let dict = CFDictionary::from_CFType_pairs(&[
+            (
+                CFString::from_static_string("hello"),
+                CFBoolean::true_value(),
+            ),
+        ]);
         let key = CFString::from_static_string("hello");
         let invalid_key = CFString::from_static_string("foobar");
 
@@ -422,10 +377,9 @@ pub mod test {
 
     #[test]
     fn convert_immutable_to_mutable_dict() {
-        let dict: CFDictionary<CFString, CFBoolean> = CFDictionary::from_CFType_pairs(&[(
-            CFString::from_static_string("Foo"),
-            CFBoolean::true_value(),
-        )]);
+        let dict: CFDictionary<CFString, CFBoolean> = CFDictionary::from_CFType_pairs(&[
+            (CFString::from_static_string("Foo"), CFBoolean::true_value()),
+        ]);
         let mut mut_dict = CFMutableDictionary::from(&dict);
         assert_eq!(dict.retain_count(), 1);
         assert_eq!(mut_dict.retain_count(), 1);

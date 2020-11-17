@@ -9,7 +9,7 @@
 
 use std::os::raw::c_void;
 
-use base::{CFAllocatorRef, CFComparisonResult, CFTypeID};
+use base::{CFAllocatorRef, CFTypeID, CFComparisonResult};
 
 #[repr(C)]
 pub struct __CFBoolean(c_void);
@@ -21,10 +21,10 @@ pub type CFNumberType = u32;
 // members of enum CFNumberType
 // static kCFNumberSInt8Type:     CFNumberType = 1;
 // static kCFNumberSInt16Type:    CFNumberType = 2;
-pub static kCFNumberSInt32Type: CFNumberType = 3;
-pub static kCFNumberSInt64Type: CFNumberType = 4;
-pub static kCFNumberFloat32Type: CFNumberType = 5;
-pub static kCFNumberFloat64Type: CFNumberType = 6;
+pub static kCFNumberSInt32Type:    CFNumberType = 3;
+pub static kCFNumberSInt64Type:    CFNumberType = 4;
+pub static kCFNumberFloat32Type:   CFNumberType = 5;
+pub static kCFNumberFloat64Type:   CFNumberType = 6;
 // static kCFNumberCharType:      CFNumberType = 7;
 // static kCFNumberShortType:     CFNumberType = 8;
 // static kCFNumberIntType:       CFNumberType = 9;
@@ -43,7 +43,7 @@ pub enum __CFNumber {}
 
 pub type CFNumberRef = *const __CFNumber;
 
-extern "C" {
+extern {
     /*
      * CFNumber.h
      */
@@ -51,21 +51,10 @@ extern "C" {
     pub static kCFBooleanFalse: CFBooleanRef;
 
     pub fn CFBooleanGetTypeID() -> CFTypeID;
-    pub fn CFNumberCreate(
-        allocator: CFAllocatorRef,
-        theType: CFNumberType,
-        valuePtr: *const c_void,
-    ) -> CFNumberRef;
+    pub fn CFNumberCreate(allocator: CFAllocatorRef, theType: CFNumberType, valuePtr: *const c_void)
+                          -> CFNumberRef;
     //fn CFNumberGetByteSize
-    pub fn CFNumberGetValue(
-        number: CFNumberRef,
-        theType: CFNumberType,
-        valuePtr: *mut c_void,
-    ) -> bool;
-    pub fn CFNumberCompare(
-        date: CFNumberRef,
-        other: CFNumberRef,
-        context: *mut c_void,
-    ) -> CFComparisonResult;
+    pub fn CFNumberGetValue(number: CFNumberRef, theType: CFNumberType, valuePtr: *mut c_void) -> bool;
+    pub fn CFNumberCompare(date: CFNumberRef, other: CFNumberRef, context: *mut c_void) -> CFComparisonResult;
     pub fn CFNumberGetTypeID() -> CFTypeID;
 }

@@ -9,8 +9,8 @@
 
 //! Core Foundation time zone objects.
 
-use core_foundation_sys::base::kCFAllocatorDefault;
 pub use core_foundation_sys::timezone::*;
+use core_foundation_sys::base::kCFAllocatorDefault;
 
 use base::TCFType;
 use date::{CFDate, CFTimeInterval};
@@ -18,7 +18,8 @@ use date::{CFDate, CFTimeInterval};
 #[cfg(feature = "with-chrono")]
 use chrono::{FixedOffset, NaiveDateTime};
 
-declare_TCFType! {
+
+declare_TCFType!{
     /// A time zone.
     CFTimeZone, CFTimeZoneRef
 }
@@ -52,7 +53,9 @@ impl CFTimeZone {
     }
 
     pub fn seconds_from_gmt(&self, date: CFDate) -> CFTimeInterval {
-        unsafe { CFTimeZoneGetSecondsFromGMT(self.0, date.abs_time()) }
+        unsafe {
+            CFTimeZoneGetSecondsFromGMT(self.0, date.abs_time())
+        }
     }
 
     #[cfg(feature = "with-chrono")]
@@ -72,7 +75,7 @@ mod test {
     use super::CFTimeZone;
 
     #[cfg(feature = "with-chrono")]
-    use chrono::{FixedOffset, NaiveDateTime};
+    use chrono::{NaiveDateTime, FixedOffset};
 
     #[test]
     fn timezone_comparison() {

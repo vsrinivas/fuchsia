@@ -9,7 +9,7 @@
 
 use std::os::raw::{c_char, c_ushort, c_void};
 
-use base::{Boolean, CFAllocatorRef, CFIndex, CFOptionFlags, CFRange, CFTypeID};
+use base::{Boolean, CFOptionFlags, CFIndex, CFAllocatorRef, CFRange, CFTypeID};
 
 pub type UniChar = c_ushort;
 
@@ -45,6 +45,7 @@ pub static kCFStringEncodingUTF8: CFStringEncoding = 0x08000100;
 //static kCFStringEncodingUTF32: CFStringEncoding = 0x0c000100;
 //static kCFStringEncodingUTF32BE: CFStringEncoding = 0x18000100;
 //static kCFStringEncodingUTF32LE: CFStringEncoding = 0x1c000100;
+
 
 // CFStringEncodingExt.h
 
@@ -185,12 +186,13 @@ pub type CFStringEncodings = CFIndex;
 //static kCFStringEncodingUTF7: CFStringEncoding = 0x04000100;
 //static kCFStringEncodingUTF7_IMAP: CFStringEncoding = 0x0A10;
 //static kCFStringEncodingShiftJIS_X0213_00: CFStringEncoding = 0x0628; /* Deprecated */
+
 #[repr(C)]
 pub struct __CFString(c_void);
 
 pub type CFStringRef = *const __CFString;
 
-extern "C" {
+extern {
     /*
      * CFString.h
      */
@@ -203,28 +205,25 @@ extern "C" {
     //fn CFStringCreateByCombiningStrings
     //fn CFStringCreateCopy
     //fn CFStringCreateFromExternalRepresentation
-    pub fn CFStringCreateWithBytes(
-        alloc: CFAllocatorRef,
-        bytes: *const u8,
-        numBytes: CFIndex,
-        encoding: CFStringEncoding,
-        isExternalRepresentation: Boolean,
-    ) -> CFStringRef;
-    pub fn CFStringCreateWithBytesNoCopy(
-        alloc: CFAllocatorRef,
-        bytes: *const u8,
-        numBytes: CFIndex,
-        encoding: CFStringEncoding,
-        isExternalRepresentation: Boolean,
-        contentsDeallocator: CFAllocatorRef,
-    ) -> CFStringRef;
+    pub fn CFStringCreateWithBytes(alloc: CFAllocatorRef,
+                                   bytes: *const u8,
+                                   numBytes: CFIndex,
+                                   encoding: CFStringEncoding,
+                                   isExternalRepresentation: Boolean)
+                                   -> CFStringRef;
+    pub fn CFStringCreateWithBytesNoCopy(alloc: CFAllocatorRef,
+                                         bytes: *const u8,
+                                         numBytes: CFIndex,
+                                         encoding: CFStringEncoding,
+                                         isExternalRepresentation: Boolean,
+                                         contentsDeallocator: CFAllocatorRef)
+                                         -> CFStringRef;
     //fn CFStringCreateWithCharacters
     //fn CFStringCreateWithCharactersNoCopy
-    pub fn CFStringCreateWithCString(
-        alloc: CFAllocatorRef,
-        cStr: *const c_char,
-        encoding: CFStringEncoding,
-    ) -> CFStringRef;
+    pub fn CFStringCreateWithCString(alloc: CFAllocatorRef,
+                                     cStr: *const c_char,
+                                     encoding: CFStringEncoding)
+                                     -> CFStringRef;
     //fn CFStringCreateWithCStringNoCopy
     //fn CFStringCreateWithFormat
     //fn CFStringCreateWithFormatAndArguments
@@ -249,30 +248,27 @@ extern "C" {
 
     /* Accessing Characters */
     //fn CFStringCreateExternalRepresentation
-    pub fn CFStringGetBytes(
-        theString: CFStringRef,
-        range: CFRange,
-        encoding: CFStringEncoding,
-        lossByte: u8,
-        isExternalRepresentation: Boolean,
-        buffer: *mut u8,
-        maxBufLen: CFIndex,
-        usedBufLen: *mut CFIndex,
-    ) -> CFIndex;
+    pub fn CFStringGetBytes(theString: CFStringRef,
+                            range: CFRange,
+                            encoding: CFStringEncoding,
+                            lossByte: u8,
+                            isExternalRepresentation: Boolean,
+                            buffer: *mut u8,
+                            maxBufLen: CFIndex,
+                            usedBufLen: *mut CFIndex)
+                            -> CFIndex;
     //fn CFStringGetCharacterAtIndex
     //fn CFStringGetCharacters
     //fn CFStringGetCharactersPtr
     //fn CFStringGetCharacterFromInlineBuffer
-    pub fn CFStringGetCString(
-        theString: CFStringRef,
-        buffer: *mut c_char,
-        bufferSize: CFIndex,
-        encoding: CFStringEncoding,
-    ) -> Boolean;
-    pub fn CFStringGetCStringPtr(
-        theString: CFStringRef,
-        encoding: CFStringEncoding,
-    ) -> *const c_char;
+    pub fn CFStringGetCString(theString: CFStringRef,
+                              buffer: *mut c_char,
+                              bufferSize: CFIndex,
+                              encoding: CFStringEncoding)
+                              -> Boolean;
+    pub fn CFStringGetCStringPtr(theString: CFStringRef,
+                                 encoding: CFStringEncoding)
+                                 -> *const c_char;
     pub fn CFStringGetLength(theString: CFStringRef) -> CFIndex;
     //fn CFStringGetPascalString
     //fn CFStringGetPascalStringPtr
@@ -307,17 +303,17 @@ extern "C" {
     //fn CFShowStr
     pub fn CFStringGetTypeID() -> CFTypeID;
 
-/* String File System Representations */
-//fn CFStringCreateWithFileSystemRepresentation
-//fn CFStringGetFileSystemRepresentation
-//fn CFStringGetMaximumSizeOfFileSystemRepresentation
+    /* String File System Representations */
+    //fn CFStringCreateWithFileSystemRepresentation
+    //fn CFStringGetFileSystemRepresentation
+    //fn CFStringGetMaximumSizeOfFileSystemRepresentation
 
-/* Getting Paragraph Bounds */
-//fn CFStringGetParagraphBounds
+    /* Getting Paragraph Bounds */
+    //fn CFStringGetParagraphBounds
 
-/* Managing Surrogates */
-//fn CFStringGetLongCharacterForSurrogatePair
-//fn CFStringGetSurrogatePairForLongCharacter
-//fn CFStringIsSurrogateHighCharacter
-//fn CFStringIsSurrogateLowCharacter
+    /* Managing Surrogates */
+    //fn CFStringGetLongCharacterForSurrogatePair
+    //fn CFStringGetSurrogatePairForLongCharacter
+    //fn CFStringIsSurrogateHighCharacter
+    //fn CFStringIsSurrogateLowCharacter
 }

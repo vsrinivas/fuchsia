@@ -9,15 +9,13 @@
 
 use std::os::raw::c_void;
 
-use base::{Boolean, CFAllocatorRef, CFIndex, CFRange, CFTypeID};
+use base::{CFRange, CFIndex, CFAllocatorRef, CFTypeID, Boolean};
 use string::CFStringRef;
 
-pub type CFArrayRetainCallBack =
-    extern "C" fn(allocator: CFAllocatorRef, value: *const c_void) -> *const c_void;
+pub type CFArrayRetainCallBack = extern "C" fn(allocator: CFAllocatorRef, value: *const c_void) -> *const c_void;
 pub type CFArrayReleaseCallBack = extern "C" fn(allocator: CFAllocatorRef, value: *const c_void);
 pub type CFArrayCopyDescriptionCallBack = extern "C" fn(value: *const c_void) -> CFStringRef;
-pub type CFArrayEqualCallBack =
-    extern "C" fn(value1: *const c_void, value2: *const c_void) -> Boolean;
+pub type CFArrayEqualCallBack = extern "C" fn(value1: *const c_void, value2: *const c_void) -> Boolean;
 
 #[repr(C)]
 #[derive(Clone, Copy)]
@@ -34,20 +32,16 @@ pub struct __CFArray(c_void);
 
 pub type CFArrayRef = *const __CFArray;
 
-extern "C" {
+extern {
     /*
      * CFArray.h
      */
     pub static kCFTypeArrayCallBacks: CFArrayCallBacks;
 
-    pub fn CFArrayCreate(
-        allocator: CFAllocatorRef,
-        values: *const *const c_void,
-        numValues: CFIndex,
-        callBacks: *const CFArrayCallBacks,
-    ) -> CFArrayRef;
-    pub fn CFArrayCreateCopy(allocator: CFAllocatorRef, theArray: CFArrayRef) -> CFArrayRef;
-
+    pub fn CFArrayCreate(allocator: CFAllocatorRef, values: *const *const c_void,
+                     numValues: CFIndex, callBacks: *const CFArrayCallBacks) -> CFArrayRef;
+    pub fn CFArrayCreateCopy(allocator: CFAllocatorRef , theArray: CFArrayRef) -> CFArrayRef;
+    
     // CFArrayBSearchValues
     // CFArrayContainsValue
     pub fn CFArrayGetCount(theArray: CFArrayRef) -> CFIndex;
