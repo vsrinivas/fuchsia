@@ -5,7 +5,6 @@
 #ifndef SRC_LIB_ANALYTICS_CPP_CORE_DEV_TOOLS_GENERAL_PARAMETERS_H_
 #define SRC_LIB_ANALYTICS_CPP_CORE_DEV_TOOLS_GENERAL_PARAMETERS_H_
 
-#include "src/lib/analytics/cpp/core_dev_tools/toolchain.h"
 #include "src/lib/analytics/cpp/google_analytics/general_parameters.h"
 
 namespace analytics::core_dev_tools {

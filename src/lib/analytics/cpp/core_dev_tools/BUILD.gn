@@ -11,7 +11,6 @@ static_library("core_dev_tools") {
     "analytics.h",
     "general_parameters.h",
     "system_info.h",
-    "toolchain.h",
   ]
 
   sources = [
@@ -27,8 +26,6 @@ static_library("core_dev_tools") {
     "persistent_status.h",
     "system_info.cc",
     "system_info.h",
-    "toolchain.cc",
-    "toolchain.h",
   ]
 
   deps = [
@@ -37,9 +34,6 @@ static_library("core_dev_tools") {
     "//src/lib/analytics/cpp/metric_properties",
     "//src/lib/fxl",
     "//src/lib/uuid",
-
-    # TODO(fxbug.dev/57392): Move it back to //third_party once unification completes.
-    "//zircon/third_party/rapidjson",
   ]
 }
 
@@ -56,12 +50,6 @@ test("analytics_cpp_core_dev_tools_unittests") {
   ]
 }
 
-test("analytics_cpp_core_dev_tools_toolchain_manualtest") {
-  sources = [ "toolchain_manualtest.cc" ]
-
-  deps = [ ":core_dev_tools" ]
-}
-
 test("analytics_cpp_core_dev_tools_system_info_manualtest") {
   sources = [ "system_info_manualtest.cc" ]
 
@@ -73,7 +61,6 @@ group("tests") {
 
   deps = [
     ":analytics_cpp_core_dev_tools_system_info_manualtest",
-    ":analytics_cpp_core_dev_tools_toolchain_manualtest",
     ":analytics_cpp_core_dev_tools_unittests",
   ]
 }

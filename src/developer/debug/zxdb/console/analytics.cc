@@ -6,9 +6,9 @@
 
 #include "src/developer/debug/shared/message_loop.h"
 #include "src/developer/debug/zxdb/client/setting_schema_definition.h"
+#include "src/developer/debug/zxdb/common/version.h"
 #include "src/lib/analytics/cpp/core_dev_tools/general_parameters.h"
 #include "src/lib/analytics/cpp/core_dev_tools/system_info.h"
-#include "src/lib/analytics/cpp/core_dev_tools/toolchain.h"
 
 namespace zxdb {
 
@@ -20,7 +20,6 @@ constexpr char kEventActionInvoke[] = "invoke";
 }  // namespace
 
 using ::analytics::GetOsVersion;
-using ::analytics::GetToolchainInfo;
 using ::analytics::core_dev_tools::GeneralParameters;
 using ::analytics::core_dev_tools::SubLaunchStatus;
 
@@ -47,11 +46,9 @@ bool Analytics::IsEnabled(Session* session) {
 
 void Analytics::IfEnabledSendInvokeEvent(Session* session) {
   if (IsEnabled(session)) {
-    auto toolchain_info = GetToolchainInfo();
-
     GeneralParameters parameters;
     parameters.SetOsVersion(GetOsVersion());
-    parameters.SetApplicationVersion(toolchain_info.version);
+    parameters.SetApplicationVersion(kBuildVersion);
 
     // Set an empty application name (an) to make application version (av) usable. Otherwise, the
     // hit will be treated as invalid by Google Analytics.
