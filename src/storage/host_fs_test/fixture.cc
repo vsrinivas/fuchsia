@@ -69,7 +69,7 @@ int HostFilesystemTest::RunFsck() {
   }
 
   // The filesystem is never repaired on the host side.
-  return Fsck(std::move(block_cache), minfs::FsckOptions());
+  return Fsck(std::move(block_cache), minfs::FsckOptions{.quiet = true});
 }
 
 }  // namespace fs_test
