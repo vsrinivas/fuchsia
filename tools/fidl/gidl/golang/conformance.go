@@ -10,10 +10,10 @@ import (
 	"strconv"
 	"text/template"
 
-	fidlir "go.fuchsia.dev/fuchsia/garnet/go/src/fidl/compiler/backend/types"
 	gidlconfig "go.fuchsia.dev/fuchsia/tools/fidl/gidl/config"
 	gidlir "go.fuchsia.dev/fuchsia/tools/fidl/gidl/ir"
 	gidlmixer "go.fuchsia.dev/fuchsia/tools/fidl/gidl/mixer"
+	fidl "go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 )
 
 var conformanceTmpl = template.Must(template.New("conformanceTmpls").Parse(`
@@ -147,7 +147,7 @@ type decodeFailureCase struct {
 }
 
 // GenerateConformanceTests generates Go tests.
-func GenerateConformanceTests(gidl gidlir.All, fidl fidlir.Root, config gidlconfig.GeneratorConfig) ([]byte, error) {
+func GenerateConformanceTests(gidl gidlir.All, fidl fidl.Root, config gidlconfig.GeneratorConfig) ([]byte, error) {
 	schema := gidlmixer.BuildSchema(fidl)
 	encodeSuccessCases, err := encodeSuccessCases(gidl.EncodeSuccess, schema)
 	if err != nil {

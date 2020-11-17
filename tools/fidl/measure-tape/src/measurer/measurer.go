@@ -7,30 +7,29 @@ package measurer
 import (
 	"fmt"
 
-	fidlcommon "go.fuchsia.dev/fuchsia/garnet/go/src/fidl/compiler/backend/common"
-	fidlir "go.fuchsia.dev/fuchsia/garnet/go/src/fidl/compiler/backend/types"
+	fidl "go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 )
 
 type Measurer struct {
-	roots map[fidlcommon.LibraryName]fidlir.Root
+	roots map[fidl.LibraryName]fidl.Root
 	tapes map[string]*MeasuringTape
 }
 
-func (m *Measurer) RootLibraries() []fidlcommon.LibraryName {
-	var libraryNames []fidlcommon.LibraryName
+func (m *Measurer) RootLibraries() []fidl.LibraryName {
+	var libraryNames []fidl.LibraryName
 	for libraryName := range m.roots {
 		libraryNames = append(libraryNames, libraryName)
 	}
 	return libraryNames
 }
 
-func NewMeasurer(roots []fidlir.Root) *Measurer {
+func NewMeasurer(roots []fidl.Root) *Measurer {
 	m := &Measurer{
-		roots: make(map[fidlcommon.LibraryName]fidlir.Root),
+		roots: make(map[fidl.LibraryName]fidl.Root),
 		tapes: make(map[string]*MeasuringTape),
 	}
 	for _, root := range roots {
-		m.roots[fidlcommon.MustReadLibraryName(string(root.Name))] = root
+		m.roots[fidl.MustReadLibraryName(string(root.Name))] = root
 	}
 	return m
 }
@@ -54,7 +53,7 @@ type MeasuringTape struct {
 	kind TapeKind
 
 	// name stores the name of the declaration if relevant, i.e. Union, Struct, Table
-	name fidlcommon.Name
+	name fidl.Name
 	decl interface{}
 
 	inlineNumBytes int
@@ -88,7 +87,7 @@ type MeasuringTape struct {
 	elementMt *MeasuringTape
 }
 
-func (mt *MeasuringTape) Name() fidlcommon.Name {
+func (mt *MeasuringTape) Name() fidl.Name {
 	return mt.name
 }
 
@@ -99,7 +98,7 @@ type measuringTapeMember struct {
 }
 
 func (m *Measurer) MeasuringTapeFor(targetType string) (*MeasuringTape, error) {
-	name, err := fidlcommon.ReadName(targetType)
+	name, err := fidl.ReadName(targetType)
 	if err != nil {
 		return nil, err
 	}
@@ -120,11 +119,11 @@ func (m *Measurer) createMeasuringTape(kd keyedDecl) (*MeasuringTape, error) {
 		err  error
 	)
 	switch decl := kd.decl.(type) {
-	case fidlir.Struct:
+	case fidl.Struct:
 		tape, err = m.createStructMeasuringTape(decl)
-	case fidlir.Table:
+	case fidl.Table:
 		tape, err = m.createTableMeasuringTape(decl)
-	case fidlir.Union:
+	case fidl.Union:
 		tape, err = m.createUnionMeasuringTape(decl)
 	case primitiveDecl:
 		tape = &MeasuringTape{
@@ -135,7 +134,7 @@ func (m *Measurer) createMeasuringTape(kd keyedDecl) (*MeasuringTape, error) {
 		tape = &MeasuringTape{
 			kind:             Handle,
 			hasHandles:       true,
-			inlineNumBytes:   toSize(fidlir.Uint32),
+			inlineNumBytes:   toSize(fidl.Uint32),
 			inlineNumHandles: 1,
 		}
 	case stringDecl:
@@ -183,7 +182,7 @@ func (m *Measurer) createMeasuringTape(kd keyedDecl) (*MeasuringTape, error) {
 	return tape, nil
 }
 
-func (m *Measurer) createStructMeasuringTape(decl fidlir.Struct) (*MeasuringTape, error) {
+func (m *Measurer) createStructMeasuringTape(decl fidl.Struct) (*MeasuringTape, error) {
 	var membersMt []measuringTapeMember
 	for _, member := range decl.Members {
 		// all primitives including bits & enums are sized as part of the inline cost
@@ -201,7 +200,7 @@ func (m *Measurer) createStructMeasuringTape(decl fidlir.Struct) (*MeasuringTape
 	}
 	return &MeasuringTape{
 		kind:             Struct,
-		name:             fidlcommon.MustReadName(string(decl.Name)),
+		name:             fidl.MustReadName(string(decl.Name)),
 		decl:             decl,
 		inlineNumBytes:   decl.TypeShapeV1.InlineSize,
 		members:          membersMt,
@@ -211,7 +210,7 @@ func (m *Measurer) createStructMeasuringTape(decl fidlir.Struct) (*MeasuringTape
 	}, nil
 }
 
-func (m *Measurer) createTableMeasuringTape(decl fidlir.Table) (*MeasuringTape, error) {
+func (m *Measurer) createTableMeasuringTape(decl fidl.Table) (*MeasuringTape, error) {
 	var membersMt []measuringTapeMember
 	for _, member := range decl.SortedMembersNoReserved() {
 		memberDecl := m.toDecl(member.Type)
@@ -227,7 +226,7 @@ func (m *Measurer) createTableMeasuringTape(decl fidlir.Table) (*MeasuringTape, 
 	}
 	return &MeasuringTape{
 		kind:           Table,
-		name:           fidlcommon.MustReadName(string(decl.Name)),
+		name:           fidl.MustReadName(string(decl.Name)),
 		decl:           decl,
 		members:        membersMt,
 		hasHandles:     decl.TypeShapeV1.MaxHandles != 0,
@@ -236,7 +235,7 @@ func (m *Measurer) createTableMeasuringTape(decl fidlir.Table) (*MeasuringTape, 
 	}, nil
 }
 
-func (m *Measurer) createUnionMeasuringTape(decl fidlir.Union) (*MeasuringTape, error) {
+func (m *Measurer) createUnionMeasuringTape(decl fidl.Union) (*MeasuringTape, error) {
 	var membersMt []measuringTapeMember
 	for _, member := range decl.Members {
 		if member.Reserved {
@@ -254,10 +253,10 @@ func (m *Measurer) createUnionMeasuringTape(decl fidlir.Union) (*MeasuringTape, 
 	}
 	return &MeasuringTape{
 		kind:           Union,
-		name:           fidlcommon.MustReadName(string(decl.Name)),
+		name:           fidl.MustReadName(string(decl.Name)),
 		decl:           decl,
 		members:        membersMt,
-		isFlexible:     decl.Strictness == fidlir.IsFlexible,
+		isFlexible:     decl.Strictness == fidl.IsFlexible,
 		hasHandles:     decl.TypeShapeV1.MaxHandles != 0,
 		hasOutOfLine:   true,
 		inlineNumBytes: 24, // sizeof(fidl_xunion_t)
@@ -283,40 +282,40 @@ type arrayDecl struct {
 	elementDecl  keyedDecl
 }
 
-func (m *Measurer) toDecl(typ fidlir.Type) keyedDecl {
+func (m *Measurer) toDecl(typ fidl.Type) keyedDecl {
 	switch typ.Kind {
-	case fidlir.ArrayType:
+	case fidl.ArrayType:
 		return keyedDecl{
 			decl: arrayDecl{
 				elementCount: *typ.ElementCount,
 				elementDecl:  m.toDecl(*typ.ElementType),
 			},
 		}
-	case fidlir.VectorType:
+	case fidl.VectorType:
 		return keyedDecl{
 			nullable: typ.Nullable,
 			decl: vectorDecl{
 				elementDecl: m.toDecl(*typ.ElementType),
 			},
 		}
-	case fidlir.StringType:
+	case fidl.StringType:
 		return keyedDecl{
 			nullable: typ.Nullable,
 			decl:     stringDecl{},
 		}
-	case fidlir.HandleType:
+	case fidl.HandleType:
 		fallthrough
-	case fidlir.RequestType:
+	case fidl.RequestType:
 		return keyedDecl{
 			decl:     handleDecl{},
 			nullable: typ.Nullable,
 		}
-	case fidlir.PrimitiveType:
+	case fidl.PrimitiveType:
 		return keyedDecl{
 			decl: primitiveDecl{size: toSize(typ.PrimitiveSubtype)},
 		}
-	case fidlir.IdentifierType:
-		kd, ok := m.lookup(fidlcommon.MustReadName(string(typ.Identifier)))
+	case fidl.IdentifierType:
+		kd, ok := m.lookup(fidl.MustReadName(string(typ.Identifier)))
 		if !ok {
 			panic(typ)
 		}
@@ -327,7 +326,7 @@ func (m *Measurer) toDecl(typ fidlir.Type) keyedDecl {
 	}
 }
 
-func (m *Measurer) lookup(name fidlcommon.Name) (keyedDecl, bool) {
+func (m *Measurer) lookup(name fidl.Name) (keyedDecl, bool) {
 	root, ok := m.roots[name.LibraryName()]
 	if !ok {
 		return keyedDecl{}, false
@@ -372,15 +371,15 @@ func (m *Measurer) lookup(name fidlcommon.Name) (keyedDecl, bool) {
 	return keyedDecl{}, false
 }
 
-func toSize(subtype fidlir.PrimitiveSubtype) int {
+func toSize(subtype fidl.PrimitiveSubtype) int {
 	switch subtype {
-	case fidlir.Bool, fidlir.Int8, fidlir.Uint8:
+	case fidl.Bool, fidl.Int8, fidl.Uint8:
 		return 1
-	case fidlir.Int16, fidlir.Uint16:
+	case fidl.Int16, fidl.Uint16:
 		return 2
-	case fidlir.Int32, fidlir.Uint32, fidlir.Float32:
+	case fidl.Int32, fidl.Uint32, fidl.Float32:
 		return 4
-	case fidlir.Int64, fidlir.Uint64, fidlir.Float64:
+	case fidl.Int64, fidl.Uint64, fidl.Float64:
 		return 8
 	default:
 		panic(fmt.Sprintf("unknown subtype: %v", subtype))

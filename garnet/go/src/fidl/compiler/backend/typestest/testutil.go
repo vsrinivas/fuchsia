@@ -13,7 +13,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	"go.fuchsia.dev/fuchsia/garnet/go/src/fidl/compiler/backend/types"
+	"go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 )
 
 // AllExamples returns all examples by filename.
@@ -35,8 +35,8 @@ func AllExamples(basePath string) []string {
 }
 
 // GetExample retrieves an example by filename, and parses it.
-func GetExample(basePath, filename string) types.Root {
-	fidl, err := types.ReadJSONIr(filepath.Join(basePath, filename))
+func GetExample(basePath, filename string) fidlgen.Root {
+	fidl, err := fidlgen.ReadJSONIr(filepath.Join(basePath, filename))
 	if err != nil {
 		panic(err)
 	}

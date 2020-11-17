@@ -12,10 +12,7 @@ go_library("gopkg") {
     "flags.go",
   ]
 
-  deps = [
-    "//garnet/go/src/fidl/compiler/backend/common",
-    "//garnet/go/src/fidl/compiler/backend/types",
-  ]
+  deps = [ "//tools/fidl/lib/fidlgen" ]
 }
 
 go_binary("fidlmerge") {

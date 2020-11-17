@@ -13,8 +13,8 @@ import (
 	"strings"
 	"testing"
 
-	"go.fuchsia.dev/fuchsia/garnet/go/src/fidl/compiler/backend/cpp"
 	"go.fuchsia.dev/fuchsia/garnet/go/src/fidl/compiler/backend/typestest"
+	cpp "go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen_cpp"
 )
 
 // hostPlatform reproduces the same format os-arch variant as cipd does.

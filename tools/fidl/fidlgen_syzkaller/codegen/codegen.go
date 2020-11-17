@@ -8,7 +8,7 @@ import (
 	"io"
 	"text/template"
 
-	"go.fuchsia.dev/fuchsia/garnet/go/src/fidl/compiler/backend/types"
+	fidl "go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 )
 
 var syzDotTxtTmpl = func() *template.Template {
@@ -20,6 +20,6 @@ var syzDotTxtTmpl = func() *template.Template {
 	return tmpls.Lookup("GenerateSyscallDescription")
 }()
 
-func Compile(w io.Writer, root types.Root) error {
+func Compile(w io.Writer, root fidl.Root) error {
 	return syzDotTxtTmpl.Execute(w, compile(root))
 }

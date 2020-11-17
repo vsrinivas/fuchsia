@@ -11,53 +11,52 @@ import (
 	"sort"
 	"strings"
 
-	"go.fuchsia.dev/fuchsia/garnet/go/src/fidl/compiler/backend/common"
-	"go.fuchsia.dev/fuchsia/garnet/go/src/fidl/compiler/backend/types"
+	fidl "go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 )
 
-type EncodedCompoundIdentifier = types.EncodedCompoundIdentifier
+type EncodedCompoundIdentifier = fidl.EncodedCompoundIdentifier
 
 type Type struct {
 	Decl     string
-	DeclType types.DeclType
+	DeclType fidl.DeclType
 	Derives  derives
 }
 
 type Bits struct {
-	types.Bits
+	fidl.Bits
 	Name    string
 	Type    string
 	Members []BitsMember
 }
 
 type BitsMember struct {
-	types.BitsMember
+	fidl.BitsMember
 	Name  string
 	Value string
 }
 
 type Const struct {
-	types.Attributes
+	fidl.Attributes
 	Name  string
 	Type  string
 	Value string
 }
 
 type Enum struct {
-	types.Enum
+	fidl.Enum
 	Name    string
 	Type    string
 	Members []EnumMember
 }
 
 type EnumMember struct {
-	types.EnumMember
+	fidl.EnumMember
 	Name  string
 	Value string
 }
 
 type Union struct {
-	types.Union
+	fidl.Union
 	Derives derives
 	ECI     EncodedCompoundIdentifier
 	Name    string
@@ -65,9 +64,9 @@ type Union struct {
 }
 
 type UnionMember struct {
-	types.Attributes
+	fidl.Attributes
 	Type              string
-	OGType            types.Type
+	OGType            fidl.Type
 	Name              string
 	Ordinal           int
 	HasHandleMetadata bool
@@ -76,26 +75,26 @@ type UnionMember struct {
 }
 
 type ResultOkEntry struct {
-	OGType            types.Type
+	OGType            fidl.Type
 	Type              string
 	HasHandleMetadata bool
 	HandleWrapperName string
 }
 
 type Result struct {
-	types.Attributes
+	fidl.Attributes
 	ECI       EncodedCompoundIdentifier
 	Derives   derives
 	Name      string
 	Ok        []ResultOkEntry
-	ErrOGType types.Type
+	ErrOGType fidl.Type
 	ErrType   string
 	Size      int
 	Alignment int
 }
 
 type Struct struct {
-	types.Attributes
+	fidl.Attributes
 	ECI                     EncodedCompoundIdentifier
 	Derives                 derives
 	Name                    string
@@ -114,8 +113,8 @@ type Struct struct {
 }
 
 type StructMember struct {
-	types.Attributes
-	OGType            types.Type
+	fidl.Attributes
+	OGType            fidl.Type
 	Type              string
 	Name              string
 	Offset            int
@@ -134,7 +133,7 @@ type PaddingMarker struct {
 }
 
 type Table struct {
-	types.Table
+	fidl.Table
 	Derives derives
 	ECI     EncodedCompoundIdentifier
 	Name    string
@@ -142,8 +141,8 @@ type Table struct {
 }
 
 type TableMember struct {
-	types.Attributes
-	OGType            types.Type
+	fidl.Attributes
+	OGType            fidl.Type
 	Type              string
 	Name              string
 	Ordinal           int
@@ -153,7 +152,7 @@ type TableMember struct {
 }
 
 type Protocol struct {
-	types.Attributes
+	fidl.Attributes
 	ECI         EncodedCompoundIdentifier
 	Name        string
 	Methods     []Method
@@ -161,7 +160,7 @@ type Protocol struct {
 }
 
 type Method struct {
-	types.Attributes
+	fidl.Attributes
 	Ordinal        uint64
 	Name           string
 	CamelName      string
@@ -174,7 +173,7 @@ type Method struct {
 }
 
 type Parameter struct {
-	OGType            types.Type
+	OGType            fidl.Type
 	Type              string
 	BorrowedType      string
 	Name              string
@@ -189,14 +188,14 @@ type HandleMetadataWrapper struct {
 }
 
 type Service struct {
-	types.Attributes
+	fidl.Attributes
 	Name        string
 	Members     []ServiceMember
 	ServiceName string
 }
 
 type ServiceMember struct {
-	types.Attributes
+	fidl.Attributes
 	ProtocolType string
 	Name         string
 	CamelName    string
@@ -369,7 +368,7 @@ func hasReservedSuffix(str string) bool {
 	return false
 }
 
-func changeIfReserved(val types.Identifier) string {
+func changeIfReserved(val fidl.Identifier) string {
 	str := string(val)
 	if hasReservedSuffix(str) || isReservedWord(str) {
 		return str + "_"
@@ -377,93 +376,93 @@ func changeIfReserved(val types.Identifier) string {
 	return str
 }
 
-var primitiveTypes = map[types.PrimitiveSubtype]string{
-	types.Bool:    "bool",
-	types.Int8:    "i8",
-	types.Int16:   "i16",
-	types.Int32:   "i32",
-	types.Int64:   "i64",
-	types.Uint8:   "u8",
-	types.Uint16:  "u16",
-	types.Uint32:  "u32",
-	types.Uint64:  "u64",
-	types.Float32: "f32",
-	types.Float64: "f64",
+var primitiveTypes = map[fidl.PrimitiveSubtype]string{
+	fidl.Bool:    "bool",
+	fidl.Int8:    "i8",
+	fidl.Int16:   "i16",
+	fidl.Int32:   "i32",
+	fidl.Int64:   "i64",
+	fidl.Uint8:   "u8",
+	fidl.Uint16:  "u16",
+	fidl.Uint32:  "u32",
+	fidl.Uint64:  "u64",
+	fidl.Float32: "f32",
+	fidl.Float64: "f64",
 }
 
-var handleSubtypes = map[types.HandleSubtype]string{
-	types.Bti:          "Bti",
-	types.Channel:      "Channel",
-	types.Clock:        "Clock",
-	types.DebugLog:     "DebugLog",
-	types.Event:        "Event",
-	types.Eventpair:    "EventPair",
-	types.Exception:    "Exception",
-	types.Fifo:         "Fifo",
-	types.Guest:        "Guest",
-	types.Handle:       "Handle",
-	types.Interrupt:    "Interrupt",
-	types.Iommu:        "Iommu",
-	types.Job:          "Job",
-	types.Pager:        "Pager",
-	types.PciDevice:    "PciDevice",
-	types.Pmt:          "Pmt",
-	types.Port:         "Port",
-	types.Process:      "Process",
-	types.Profile:      "Profile",
-	types.Resource:     "Resource",
-	types.Socket:       "Socket",
-	types.Stream:       "Stream",
-	types.SuspendToken: "SuspendToken",
-	types.Thread:       "Thread",
-	types.Time:         "Timer",
-	types.Vcpu:         "Vcpu",
-	types.Vmar:         "Vmar",
-	types.Vmo:          "Vmo",
+var handleSubtypes = map[fidl.HandleSubtype]string{
+	fidl.Bti:          "Bti",
+	fidl.Channel:      "Channel",
+	fidl.Clock:        "Clock",
+	fidl.DebugLog:     "DebugLog",
+	fidl.Event:        "Event",
+	fidl.Eventpair:    "EventPair",
+	fidl.Exception:    "Exception",
+	fidl.Fifo:         "Fifo",
+	fidl.Guest:        "Guest",
+	fidl.Handle:       "Handle",
+	fidl.Interrupt:    "Interrupt",
+	fidl.Iommu:        "Iommu",
+	fidl.Job:          "Job",
+	fidl.Pager:        "Pager",
+	fidl.PciDevice:    "PciDevice",
+	fidl.Pmt:          "Pmt",
+	fidl.Port:         "Port",
+	fidl.Process:      "Process",
+	fidl.Profile:      "Profile",
+	fidl.Resource:     "Resource",
+	fidl.Socket:       "Socket",
+	fidl.Stream:       "Stream",
+	fidl.SuspendToken: "SuspendToken",
+	fidl.Thread:       "Thread",
+	fidl.Time:         "Timer",
+	fidl.Vcpu:         "Vcpu",
+	fidl.Vmar:         "Vmar",
+	fidl.Vmo:          "Vmo",
 }
 
-var handleSubtypeConsts = map[types.HandleSubtype]string{
-	types.Bti:          "BTI",
-	types.Channel:      "CHANNEL",
-	types.Clock:        "CLOCK",
-	types.DebugLog:     "LOG",
-	types.Event:        "EVENT",
-	types.Eventpair:    "EVENTPAIR",
-	types.Exception:    "EXCEPTION",
-	types.Fifo:         "FIFO",
-	types.Guest:        "GUEST",
-	types.Handle:       "NONE",
-	types.Interrupt:    "INTERRUPT",
-	types.Iommu:        "IOMMU",
-	types.Job:          "JOB",
-	types.Pager:        "PAGER",
-	types.PciDevice:    "PCI_DEVICE",
-	types.Pmt:          "PMT",
-	types.Port:         "PORT",
-	types.Process:      "PROCESS",
-	types.Profile:      "PROFILE",
-	types.Resource:     "RESOURCE",
-	types.Socket:       "SOCKET",
-	types.Stream:       "STREAM",
-	types.SuspendToken: "SUSPEND_TOKEN",
-	types.Thread:       "THREAD",
-	types.Time:         "TIMER",
-	types.Vcpu:         "VCPU",
-	types.Vmar:         "VMAR",
-	types.Vmo:          "VMO",
+var handleSubtypeConsts = map[fidl.HandleSubtype]string{
+	fidl.Bti:          "BTI",
+	fidl.Channel:      "CHANNEL",
+	fidl.Clock:        "CLOCK",
+	fidl.DebugLog:     "LOG",
+	fidl.Event:        "EVENT",
+	fidl.Eventpair:    "EVENTPAIR",
+	fidl.Exception:    "EXCEPTION",
+	fidl.Fifo:         "FIFO",
+	fidl.Guest:        "GUEST",
+	fidl.Handle:       "NONE",
+	fidl.Interrupt:    "INTERRUPT",
+	fidl.Iommu:        "IOMMU",
+	fidl.Job:          "JOB",
+	fidl.Pager:        "PAGER",
+	fidl.PciDevice:    "PCI_DEVICE",
+	fidl.Pmt:          "PMT",
+	fidl.Port:         "PORT",
+	fidl.Process:      "PROCESS",
+	fidl.Profile:      "PROFILE",
+	fidl.Resource:     "RESOURCE",
+	fidl.Socket:       "SOCKET",
+	fidl.Stream:       "STREAM",
+	fidl.SuspendToken: "SUSPEND_TOKEN",
+	fidl.Thread:       "THREAD",
+	fidl.Time:         "TIMER",
+	fidl.Vcpu:         "VCPU",
+	fidl.Vmar:         "VMAR",
+	fidl.Vmo:          "VMO",
 }
 
 type compiler struct {
-	decls                  types.DeclMap
-	library                types.LibraryIdentifier
+	decls                  fidl.DeclMap
+	library                fidl.LibraryIdentifier
 	externCrates           map[string]struct{}
-	requestResponsePayload map[types.EncodedCompoundIdentifier]types.Struct
-	structs                map[types.EncodedCompoundIdentifier]types.Struct
-	results                map[types.EncodedCompoundIdentifier]Result
+	requestResponsePayload map[fidl.EncodedCompoundIdentifier]fidl.Struct
+	structs                map[fidl.EncodedCompoundIdentifier]fidl.Struct
+	results                map[fidl.EncodedCompoundIdentifier]Result
 	handleMetadataWrappers map[string]HandleMetadataWrapper
 }
 
-func (c *compiler) inExternalLibrary(ci types.CompoundIdentifier) bool {
+func (c *compiler) inExternalLibrary(ci fidl.CompoundIdentifier) bool {
 	if len(ci.Library) != len(c.library) {
 		return true
 	}
@@ -475,27 +474,27 @@ func (c *compiler) inExternalLibrary(ci types.CompoundIdentifier) bool {
 	return false
 }
 
-func compileCamelIdentifier(val types.Identifier) string {
-	return common.ToUpperCamelCase(changeIfReserved(val))
+func compileCamelIdentifier(val fidl.Identifier) string {
+	return fidl.ToUpperCamelCase(changeIfReserved(val))
 }
 
-func compileLibraryName(library types.LibraryIdentifier) string {
+func compileLibraryName(library fidl.LibraryIdentifier) string {
 	parts := []string{"fidl"}
 	for _, part := range library {
 		parts = append(parts, string(part))
 	}
-	return changeIfReserved(types.Identifier(strings.Join(parts, "_")))
+	return changeIfReserved(fidl.Identifier(strings.Join(parts, "_")))
 }
 
-func compileSnakeIdentifier(val types.Identifier) string {
-	return common.ToSnakeCase(changeIfReserved(val))
+func compileSnakeIdentifier(val fidl.Identifier) string {
+	return fidl.ToSnakeCase(changeIfReserved(val))
 }
 
-func compileScreamingSnakeIdentifier(val types.Identifier) string {
-	return common.ConstNameToAllCapsSnake(changeIfReserved(val))
+func compileScreamingSnakeIdentifier(val fidl.Identifier) string {
+	return fidl.ConstNameToAllCapsSnake(changeIfReserved(val))
 }
 
-func (c *compiler) compileCompoundIdentifier(val types.CompoundIdentifier) string {
+func (c *compiler) compileCompoundIdentifier(val fidl.CompoundIdentifier) string {
 	strs := []string{}
 	if c.inExternalLibrary(val) {
 		externName := compileLibraryName(val.Library)
@@ -510,73 +509,73 @@ func (c *compiler) compileCompoundIdentifier(val types.CompoundIdentifier) strin
 	return strings.Join(strs, "::")
 }
 
-func (c *compiler) compileCamelCompoundIdentifier(eci types.EncodedCompoundIdentifier) string {
-	val := types.ParseCompoundIdentifier(eci)
-	val.Name = types.Identifier(compileCamelIdentifier(val.Name))
+func (c *compiler) compileCamelCompoundIdentifier(eci fidl.EncodedCompoundIdentifier) string {
+	val := fidl.ParseCompoundIdentifier(eci)
+	val.Name = fidl.Identifier(compileCamelIdentifier(val.Name))
 	return c.compileCompoundIdentifier(val)
 }
 
-func (c *compiler) compileSnakeCompoundIdentifier(eci types.EncodedCompoundIdentifier) string {
-	val := types.ParseCompoundIdentifier(eci)
-	val.Name = types.Identifier(compileSnakeIdentifier(val.Name))
+func (c *compiler) compileSnakeCompoundIdentifier(eci fidl.EncodedCompoundIdentifier) string {
+	val := fidl.ParseCompoundIdentifier(eci)
+	val.Name = fidl.Identifier(compileSnakeIdentifier(val.Name))
 	return c.compileCompoundIdentifier(val)
 }
 
-func (c *compiler) compileScreamingSnakeCompoundIdentifier(eci types.EncodedCompoundIdentifier) string {
-	val := types.ParseCompoundIdentifier(eci)
-	val.Name = types.Identifier(compileScreamingSnakeIdentifier(val.Name))
+func (c *compiler) compileScreamingSnakeCompoundIdentifier(eci fidl.EncodedCompoundIdentifier) string {
+	val := fidl.ParseCompoundIdentifier(eci)
+	val.Name = fidl.Identifier(compileScreamingSnakeIdentifier(val.Name))
 	return c.compileCompoundIdentifier(val)
 }
 
-func compileLiteral(val types.Literal, typ types.Type) string {
+func compileLiteral(val fidl.Literal, typ fidl.Type) string {
 	switch val.Kind {
-	case types.StringLiteral:
+	case fidl.StringLiteral:
 		return fmt.Sprintf("r###\"%s\"###", val.Value)
-	case types.NumericLiteral:
-		if typ.Kind == types.PrimitiveType &&
-			(typ.PrimitiveSubtype == types.Float32 || typ.PrimitiveSubtype == types.Float64) {
+	case fidl.NumericLiteral:
+		if typ.Kind == fidl.PrimitiveType &&
+			(typ.PrimitiveSubtype == fidl.Float32 || typ.PrimitiveSubtype == fidl.Float64) {
 			if !strings.ContainsRune(val.Value, '.') {
 				return fmt.Sprintf("%s.0", val.Value)
 			}
 			return val.Value
 		}
 		return val.Value
-	case types.TrueLiteral:
+	case fidl.TrueLiteral:
 		return "true"
-	case types.FalseLiteral:
+	case fidl.FalseLiteral:
 		return "false"
-	case types.DefaultLiteral:
+	case fidl.DefaultLiteral:
 		return "::Default::default()"
 	default:
 		panic(fmt.Sprintf("unknown literal kind: %v", val.Kind))
 	}
 }
 
-func (c *compiler) compileConstant(val types.Constant, typ types.Type) string {
+func (c *compiler) compileConstant(val fidl.Constant, typ fidl.Type) string {
 	switch val.Kind {
-	case types.IdentifierConstant:
-		parts := types.ParseCompoundIdentifier(val.Identifier)
-		if parts.Member == types.Identifier("") {
+	case fidl.IdentifierConstant:
+		parts := fidl.ParseCompoundIdentifier(val.Identifier)
+		if parts.Member == fidl.Identifier("") {
 			// Top-level constant.
-			parts.Name = types.Identifier(compileScreamingSnakeIdentifier(parts.Name))
+			parts.Name = fidl.Identifier(compileScreamingSnakeIdentifier(parts.Name))
 		} else {
 			// Bits or enum member.
-			parts.Name = types.Identifier(compileCamelIdentifier(parts.Name))
+			parts.Name = fidl.Identifier(compileCamelIdentifier(parts.Name))
 			// TODO(fxbug.dev/47034) For bits the member should be SCREAMING_SNAKE_CASE.
-			parts.Member = types.Identifier(compileCamelIdentifier(parts.Member))
+			parts.Member = fidl.Identifier(compileCamelIdentifier(parts.Member))
 		}
 		return c.compileCompoundIdentifier(parts)
-	case types.LiteralConstant:
+	case fidl.LiteralConstant:
 		return compileLiteral(val.Literal, typ)
 	default:
 		panic(fmt.Sprintf("unknown constant kind: %v", val.Kind))
 	}
 }
 
-func (c *compiler) compileConst(val types.Const) Const {
+func (c *compiler) compileConst(val fidl.Const) Const {
 	name := c.compileScreamingSnakeCompoundIdentifier(val.Name)
 	var r Const
-	if val.Type.Kind == types.StringType {
+	if val.Type.Kind == fidl.StringType {
 		r = Const{
 			Attributes: val.Attributes,
 			Type:       "&str",
@@ -594,14 +593,14 @@ func (c *compiler) compileConst(val types.Const) Const {
 	return r
 }
 
-func compilePrimitiveSubtype(val types.PrimitiveSubtype) string {
+func compilePrimitiveSubtype(val fidl.PrimitiveSubtype) string {
 	if t, ok := primitiveTypes[val]; ok {
 		return t
 	}
 	panic(fmt.Sprintf("unknown primitive type: %v", val))
 }
 
-func compileHandleSubtype(val types.HandleSubtype) string {
+func compileHandleSubtype(val fidl.HandleSubtype) string {
 	if t, ok := handleSubtypes[val]; ok {
 		return t
 	}
@@ -616,11 +615,11 @@ type FieldHandleInformation struct {
 	hasHandleMetadata bool
 }
 
-func (c *compiler) fieldHandleInformation(val *types.Type) FieldHandleInformation {
+func (c *compiler) fieldHandleInformation(val *fidl.Type) FieldHandleInformation {
 	if val.ElementType != nil {
 		return c.fieldHandleInformation(val.ElementType)
 	}
-	if val.Kind == types.RequestType {
+	if val.Kind == fidl.RequestType {
 		return FieldHandleInformation{
 			fullObjectType:    "fidl::ObjectType::CHANNEL",
 			fullRights:        "fidl::Rights::CHANNEL_DEFAULT",
@@ -629,12 +628,12 @@ func (c *compiler) fieldHandleInformation(val *types.Type) FieldHandleInformatio
 			hasHandleMetadata: true,
 		}
 	}
-	if val.Kind == types.IdentifierType {
+	if val.Kind == fidl.IdentifierType {
 		declType, ok := c.decls[val.Identifier]
 		if !ok {
 			panic(fmt.Sprintf("unknown identifier: %v", val.Identifier))
 		}
-		if declType == types.ProtocolDeclType {
+		if declType == fidl.ProtocolDeclType {
 			return FieldHandleInformation{
 				fullObjectType:    "fidl::ObjectType::CHANNEL",
 				fullRights:        "fidl::Rights::CHANNEL_DEFAULT",
@@ -644,7 +643,7 @@ func (c *compiler) fieldHandleInformation(val *types.Type) FieldHandleInformatio
 			}
 		}
 	}
-	if val.Kind != types.HandleType {
+	if val.Kind != fidl.HandleType {
 		return FieldHandleInformation{
 			fullObjectType:    "fidl::ObjectType::NONE",
 			fullRights:        "fidl::Rights::NONE",
@@ -666,17 +665,17 @@ func (c *compiler) fieldHandleInformation(val *types.Type) FieldHandleInformatio
 	}
 }
 
-func (c *compiler) compileType(val types.Type, borrowed bool) Type {
+func (c *compiler) compileType(val fidl.Type, borrowed bool) Type {
 	var r string
-	var declType types.DeclType
+	var declType fidl.DeclType
 	switch val.Kind {
-	case types.ArrayType:
+	case fidl.ArrayType:
 		t := c.compileType(*val.ElementType, borrowed)
 		r = fmt.Sprintf("[%s; %v]", t.Decl, *val.ElementCount)
 		if borrowed {
 			r = fmt.Sprintf("&mut %s", r)
 		}
-	case types.VectorType:
+	case fidl.VectorType:
 		t := c.compileType(*val.ElementType, borrowed)
 		var inner string
 		if borrowed {
@@ -684,7 +683,7 @@ func (c *compiler) compileType(val types.Type, borrowed bool) Type {
 			// encoding becomes a memcpy. Rust does not guarantee
 			// the bit patterns for bool values, so we omit them
 			// from the optimization.
-			if val.ElementType.Kind == types.PrimitiveType && val.ElementType.PrimitiveSubtype != types.Bool {
+			if val.ElementType.Kind == fidl.PrimitiveType && val.ElementType.PrimitiveSubtype != fidl.Bool {
 				inner = fmt.Sprintf("&[%s]", t.Decl)
 			} else {
 				inner = fmt.Sprintf("&mut dyn ExactSizeIterator<Item = %s>", t.Decl)
@@ -697,7 +696,7 @@ func (c *compiler) compileType(val types.Type, borrowed bool) Type {
 		} else {
 			r = inner
 		}
-	case types.StringType:
+	case fidl.StringType:
 		if borrowed {
 			if val.Nullable {
 				r = "Option<&str>"
@@ -711,34 +710,34 @@ func (c *compiler) compileType(val types.Type, borrowed bool) Type {
 				r = "String"
 			}
 		}
-	case types.HandleType:
+	case fidl.HandleType:
 		r = fmt.Sprintf("fidl::%s", compileHandleSubtype(val.HandleSubtype))
 		if val.Nullable {
 			r = fmt.Sprintf("Option<%s>", r)
 		}
-	case types.RequestType:
+	case fidl.RequestType:
 		r = c.compileCamelCompoundIdentifier(val.RequestSubtype)
 		r = fmt.Sprintf("fidl::endpoints::ServerEnd<%sMarker>", r)
 		if val.Nullable {
 			r = fmt.Sprintf("Option<%s>", r)
 		}
-	case types.PrimitiveType:
+	case fidl.PrimitiveType:
 		// Primitive types are small, simple, and never contain handles,
 		// so there's no need to borrow them
 		r = compilePrimitiveSubtype(val.PrimitiveSubtype)
-	case types.IdentifierType:
+	case fidl.IdentifierType:
 		t := c.compileCamelCompoundIdentifier(val.Identifier)
 		declType, ok := c.decls[val.Identifier]
 		if !ok {
 			panic(fmt.Sprintf("unknown identifier: %v", val.Identifier))
 		}
 		switch declType {
-		case types.BitsDeclType, types.EnumDeclType:
+		case fidl.BitsDeclType, fidl.EnumDeclType:
 			// Bits and enums are small, simple, and never contain handles,
 			// so no need to borrow
 			borrowed = false
 			fallthrough
-		case types.ConstDeclType, types.StructDeclType, types.UnionDeclType:
+		case fidl.ConstDeclType, fidl.StructDeclType, fidl.UnionDeclType:
 			if val.Nullable {
 				if borrowed {
 					r = fmt.Sprintf("Option<&mut %s>", t)
@@ -752,14 +751,14 @@ func (c *compiler) compileType(val types.Type, borrowed bool) Type {
 					r = t
 				}
 			}
-		case types.TableDeclType:
+		case fidl.TableDeclType:
 			if val.Nullable {
 				r = fmt.Sprintf("Option<%s>", t)
 			} else {
 				// TODO(fxbug.dev/42304): Replace with "&mut %s".
 				r = t
 			}
-		case types.ProtocolDeclType:
+		case fidl.ProtocolDeclType:
 			r = fmt.Sprintf("fidl::endpoints::ClientEnd<%sMarker>", t)
 			if val.Nullable {
 				r = fmt.Sprintf("Option<%s>", r)
@@ -777,7 +776,7 @@ func (c *compiler) compileType(val types.Type, borrowed bool) Type {
 	}
 }
 
-func (c *compiler) compileBits(val types.Bits) Bits {
+func (c *compiler) compileBits(val fidl.Bits) Bits {
 	e := Bits{
 		Bits:    val,
 		Name:    c.compileCamelCompoundIdentifier(val.Name),
@@ -795,7 +794,7 @@ func (c *compiler) compileBits(val types.Bits) Bits {
 	return e
 }
 
-func (c *compiler) compileEnum(val types.Enum) Enum {
+func (c *compiler) compileEnum(val fidl.Enum) Enum {
 	e := Enum{
 		Enum:    val,
 		Name:    c.compileCamelCompoundIdentifier(val.Name),
@@ -808,8 +807,8 @@ func (c *compiler) compileEnum(val types.Enum) Enum {
 			Name:       compileCamelIdentifier(v.Name),
 			// TODO(fxbug.dev/7660): When we expose types consistently in the IR, we
 			// will not need to plug this here.
-			Value: c.compileConstant(v.Value, types.Type{
-				Kind:             types.PrimitiveType,
+			Value: c.compileConstant(v.Value, fidl.Type{
+				Kind:             fidl.PrimitiveType,
 				PrimitiveSubtype: val.Type,
 			}),
 		})
@@ -817,7 +816,7 @@ func (c *compiler) compileEnum(val types.Enum) Enum {
 	return e
 }
 
-func (c *compiler) compileHandleMetadataWrapper(val *types.Type) (string, bool) {
+func (c *compiler) compileHandleMetadataWrapper(val *fidl.Type) (string, bool) {
 	hi := c.fieldHandleInformation(val)
 	name := fmt.Sprintf("HandleWrapperObjectType%sRights%s", hi.shortObjectType, hi.shortRights)
 	wrapper := HandleMetadataWrapper{
@@ -833,7 +832,7 @@ func (c *compiler) compileHandleMetadataWrapper(val *types.Type) (string, bool) 
 	return name, hi.hasHandleMetadata
 }
 
-func (c *compiler) compileParameterArray(payload types.EncodedCompoundIdentifier) []Parameter {
+func (c *compiler) compileParameterArray(payload fidl.EncodedCompoundIdentifier) []Parameter {
 	val, ok := c.requestResponsePayload[payload]
 	if !ok {
 		panic(fmt.Sprintf("unknown request/response struct: %v", payload))
@@ -854,7 +853,7 @@ func (c *compiler) compileParameterArray(payload types.EncodedCompoundIdentifier
 	return parameters
 }
 
-func (c *compiler) compileProtocol(val types.Protocol) Protocol {
+func (c *compiler) compileProtocol(val fidl.Protocol) Protocol {
 	r := Protocol{
 		Attributes:  val.Attributes,
 		ECI:         val.Name,
@@ -867,7 +866,7 @@ func (c *compiler) compileProtocol(val types.Protocol) Protocol {
 		name := compileSnakeIdentifier(v.Name)
 		camelName := compileCamelIdentifier(v.Name)
 		var foundResult *Result
-		if len(v.Response) == 1 && v.Response[0].Type.Kind == types.IdentifierType {
+		if len(v.Response) == 1 && v.Response[0].Type.Kind == fidl.IdentifierType {
 			responseType := v.Response[0].Type
 			if result, ok := c.results[responseType.Identifier]; ok {
 				foundResult = &result
@@ -895,7 +894,7 @@ func (c *compiler) compileProtocol(val types.Protocol) Protocol {
 	return r
 }
 
-func (c *compiler) compileService(val types.Service) Service {
+func (c *compiler) compileService(val fidl.Service) Service {
 	r := Service{
 		Attributes:  val.Attributes,
 		Name:        c.compileCamelCompoundIdentifier(val.Name),
@@ -917,7 +916,7 @@ func (c *compiler) compileService(val types.Service) Service {
 	return r
 }
 
-func (c *compiler) compileStructMember(val types.StructMember) StructMember {
+func (c *compiler) compileStructMember(val fidl.StructMember) StructMember {
 	memberType := c.compileType(val.Type, false)
 	hi := c.fieldHandleInformation(&val.Type)
 	return StructMember{
@@ -934,7 +933,7 @@ func (c *compiler) compileStructMember(val types.StructMember) StructMember {
 	}
 }
 
-func (c *compiler) populateFullStructMaskForStruct(mask []byte, val types.Struct, flatten bool) {
+func (c *compiler) populateFullStructMaskForStruct(mask []byte, val fidl.Struct, flatten bool) {
 	paddingEnd := val.TypeShapeV1.InlineSize - 1
 	for i := len(val.Members) - 1; i >= 0; i-- {
 		member := val.Members[i]
@@ -948,23 +947,23 @@ func (c *compiler) populateFullStructMaskForStruct(mask []byte, val types.Struct
 	}
 }
 
-func (c *compiler) populateFullStructMaskForType(mask []byte, typ *types.Type, flatten bool) {
+func (c *compiler) populateFullStructMaskForType(mask []byte, typ *fidl.Type, flatten bool) {
 	if typ.Nullable {
 		return
 	}
 	switch typ.Kind {
-	case types.ArrayType:
+	case fidl.ArrayType:
 		elemByteSize := len(mask) / *typ.ElementCount
 		for i := 0; i < *typ.ElementCount; i++ {
 			c.populateFullStructMaskForType(mask[i*elemByteSize:(i+1)*elemByteSize], typ.ElementType, flatten)
 		}
-	case types.IdentifierType:
-		if c.inExternalLibrary(types.ParseCompoundIdentifier(typ.Identifier)) {
+	case fidl.IdentifierType:
+		if c.inExternalLibrary(fidl.ParseCompoundIdentifier(typ.Identifier)) {
 			// This behavior is matched by computeUseFullStructCopy.
 			return
 		}
 		declType := c.decls[typ.Identifier]
-		if declType == types.StructDeclType {
+		if declType == fidl.StructDeclType {
 			st, ok := c.structs[typ.Identifier]
 			if !ok {
 				panic(fmt.Sprintf("struct not found: %v", typ.Identifier))
@@ -974,7 +973,7 @@ func (c *compiler) populateFullStructMaskForType(mask []byte, typ *types.Type, f
 	}
 }
 
-func (c *compiler) buildPaddingMarkers(val types.Struct, flatten bool) []PaddingMarker {
+func (c *compiler) buildPaddingMarkers(val fidl.Struct, flatten bool) []PaddingMarker {
 	var paddingMarkers []PaddingMarker
 
 	// Construct a mask across the whole struct with 0xff bytes where there is padding.
@@ -1035,7 +1034,7 @@ func (c *compiler) buildPaddingMarkers(val types.Struct, flatten bool) []Padding
 	return paddingMarkers
 }
 
-func (c *compiler) computeUseFidlStructCopyForStruct(st types.Struct) bool {
+func (c *compiler) computeUseFidlStructCopyForStruct(st fidl.Struct) bool {
 	for _, member := range st.Members {
 		if !c.computeUseFidlStructCopy(&member.Type) {
 			return false
@@ -1044,48 +1043,48 @@ func (c *compiler) computeUseFidlStructCopyForStruct(st types.Struct) bool {
 	return true
 }
 
-func (c *compiler) computeUseFidlStructCopy(typ *types.Type) bool {
+func (c *compiler) computeUseFidlStructCopy(typ *fidl.Type) bool {
 	if typ.Nullable {
 		return false
 	}
 	switch typ.Kind {
-	case types.ArrayType:
+	case fidl.ArrayType:
 		return c.computeUseFidlStructCopy(typ.ElementType)
-	case types.VectorType:
+	case fidl.VectorType:
 		return false
-	case types.StringType:
+	case fidl.StringType:
 		return false
-	case types.HandleType:
+	case fidl.HandleType:
 		return false
-	case types.RequestType:
+	case fidl.RequestType:
 		return false
-	case types.PrimitiveType:
+	case fidl.PrimitiveType:
 		switch typ.PrimitiveSubtype {
-		case types.Bool, types.Float32, types.Float64:
+		case fidl.Bool, fidl.Float32, fidl.Float64:
 			return false
 		}
 		return true
-	case types.IdentifierType:
-		if c.inExternalLibrary(types.ParseCompoundIdentifier(typ.Identifier)) {
+	case fidl.IdentifierType:
+		if c.inExternalLibrary(fidl.ParseCompoundIdentifier(typ.Identifier)) {
 			return false
 		}
 		declType := c.decls[typ.Identifier]
 		switch declType {
-		case types.BitsDeclType:
+		case fidl.BitsDeclType:
 			return false
-		case types.EnumDeclType:
+		case fidl.EnumDeclType:
 			return false
-		case types.ProtocolDeclType:
+		case fidl.ProtocolDeclType:
 			return false
-		case types.StructDeclType:
+		case fidl.StructDeclType:
 			st, ok := c.structs[typ.Identifier]
 			if !ok {
 				panic(fmt.Sprintf("struct not found: %v", typ.Identifier))
 			}
 			return c.computeUseFidlStructCopyForStruct(st)
-		case types.UnionDeclType:
+		case fidl.UnionDeclType:
 			return false
-		case types.TableDeclType:
+		case fidl.TableDeclType:
 			return false
 		default:
 			panic(fmt.Sprintf("unknown declaration type: %v", declType))
@@ -1095,7 +1094,7 @@ func (c *compiler) computeUseFidlStructCopy(typ *types.Type) bool {
 	}
 }
 
-func (c *compiler) compileStruct(val types.Struct) Struct {
+func (c *compiler) compileStruct(val fidl.Struct) Struct {
 	name := c.compileCamelCompoundIdentifier(val.Name)
 	r := Struct{
 		Attributes:              val.Attributes,
@@ -1119,7 +1118,7 @@ func (c *compiler) compileStruct(val types.Struct) Struct {
 	return r
 }
 
-func (c *compiler) compileUnionMember(val types.UnionMember) UnionMember {
+func (c *compiler) compileUnionMember(val fidl.UnionMember) UnionMember {
 	hi := c.fieldHandleInformation(&val.Type)
 	return UnionMember{
 		Attributes:        val.Attributes,
@@ -1133,7 +1132,7 @@ func (c *compiler) compileUnionMember(val types.UnionMember) UnionMember {
 	}
 }
 
-func (c *compiler) compileUnion(val types.Union) Union {
+func (c *compiler) compileUnion(val fidl.Union) Union {
 	r := Union{
 		Union:   val,
 		ECI:     val.Name,
@@ -1151,7 +1150,7 @@ func (c *compiler) compileUnion(val types.Union) Union {
 	return r
 }
 
-func (c *compiler) compileResultFromUnion(val types.Union, root Root) Result {
+func (c *compiler) compileResultFromUnion(val fidl.Union, root Root) Result {
 	r := Result{
 		Attributes: val.Attributes,
 		ECI:        val.Name,
@@ -1186,7 +1185,7 @@ func (c *compiler) compileResultFromUnion(val types.Union, root Root) Result {
 	return r
 }
 
-func (c *compiler) compileTable(table types.Table) Table {
+func (c *compiler) compileTable(table fidl.Table) Table {
 	var members []TableMember
 	for _, member := range table.SortedMembersNoReserved() {
 		hi := c.fieldHandleInformation(&member.Type)
@@ -1335,7 +1334,7 @@ func (c *compiler) fillDerives(ir *Root) {
 }
 
 func (dc *derivesCompiler) fillDerivesForECI(eci EncodedCompoundIdentifier) derives {
-	if dc.inExternalLibrary(types.ParseCompoundIdentifier(eci)) {
+	if dc.inExternalLibrary(fidl.ParseCompoundIdentifier(eci)) {
 		// We must be conservative with external types and assume they only
 		// derive the minimal set of traits that all types derive.
 		// TODO(fxbug.dev/61760): Make external type information available here.
@@ -1365,16 +1364,16 @@ func (dc *derivesCompiler) fillDerivesForECI(eci EncodedCompoundIdentifier) deri
 	var derivesOut derives
 typeSwitch:
 	switch declType {
-	case types.ConstDeclType:
+	case fidl.ConstDeclType:
 		panic("const decl should never have derives")
-	case types.BitsDeclType, types.EnumDeclType:
+	case fidl.BitsDeclType, fidl.EnumDeclType:
 		// Enums and bits are always simple, non-float primitives which
 		// implement all derivable traits except zerocopy.
 		derivesOut = derivesAllButZerocopy
-	case types.ProtocolDeclType:
+	case fidl.ProtocolDeclType:
 		// When a protocol is used as a type, it means a ClientEnd in Rust.
 		derivesOut = derivesAllButZerocopy.remove(derivesCopy, derivesClone)
-	case types.StructDeclType:
+	case fidl.StructDeclType:
 		st := dc.root.findStruct(eci)
 		if st == nil {
 			panic(fmt.Sprintf("struct not found: %v", eci))
@@ -1392,7 +1391,7 @@ typeSwitch:
 			derivesOut = derivesOut.remove(derivesAsBytes, derivesFromBytes)
 		}
 		st.Derives = derivesOut
-	case types.TableDeclType:
+	case fidl.TableDeclType:
 		table := dc.root.findTable(eci)
 		if table == nil {
 			panic(fmt.Sprintf("table not found: %v", eci))
@@ -1413,7 +1412,7 @@ typeSwitch:
 		}
 		derivesOut = derivesOut.and(derivesHashMap)
 		table.Derives = derivesOut
-	case types.UnionDeclType:
+	case fidl.UnionDeclType:
 		union := dc.root.findUnion(eci)
 		var result *Result
 		if union == nil {
@@ -1489,31 +1488,31 @@ typeSwitch:
 	return derivesOut
 }
 
-func (dc *derivesCompiler) fillDerivesForType(ogType types.Type) derives {
+func (dc *derivesCompiler) fillDerivesForType(ogType fidl.Type) derives {
 	switch ogType.Kind {
-	case types.ArrayType:
+	case fidl.ArrayType:
 		return dc.fillDerivesForType(*ogType.ElementType)
-	case types.VectorType:
+	case fidl.VectorType:
 		return derivesAllButZerocopy.remove(derivesCopy).and(dc.fillDerivesForType(*ogType.ElementType))
-	case types.StringType:
+	case fidl.StringType:
 		return derivesAllButZerocopy.remove(derivesCopy)
-	case types.HandleType, types.RequestType:
+	case fidl.HandleType, fidl.RequestType:
 		return derivesAllButZerocopy.remove(derivesCopy, derivesClone)
-	case types.PrimitiveType:
+	case fidl.PrimitiveType:
 		switch ogType.PrimitiveSubtype {
-		case types.Bool:
+		case fidl.Bool:
 			return derivesAllButZerocopy
-		case types.Int8, types.Int16, types.Int32, types.Int64:
+		case fidl.Int8, fidl.Int16, fidl.Int32, fidl.Int64:
 			return derivesAll
-		case types.Uint8, types.Uint16, types.Uint32, types.Uint64:
+		case fidl.Uint8, fidl.Uint16, fidl.Uint32, fidl.Uint64:
 			return derivesAll
-		case types.Float32, types.Float64:
+		case fidl.Float32, fidl.Float64:
 			// Floats don't have a total ordering due to NAN and its multiple representations.
 			return derivesAllButZerocopy.remove(derivesEq, derivesOrd, derivesHash)
 		default:
 			panic(fmt.Sprintf("unknown primitive type: %v", ogType.PrimitiveSubtype))
 		}
-	case types.IdentifierType:
+	case fidl.IdentifierType:
 		internalTypeDerives := dc.fillDerivesForECI(ogType.Identifier)
 		if ogType.Nullable {
 			// Nullable identifier types are put in an Option<Box<...>> and so aren't Copy
@@ -1525,17 +1524,17 @@ func (dc *derivesCompiler) fillDerivesForType(ogType types.Type) derives {
 	}
 }
 
-func Compile(r types.Root) Root {
+func Compile(r fidl.Root) Root {
 	r = r.ForBindings("rust")
 	root := Root{}
-	thisLibParsed := types.ParseLibraryName(r.Name)
+	thisLibParsed := fidl.ParseLibraryName(r.Name)
 	c := compiler{
 		r.DeclsWithDependencies(),
 		thisLibParsed,
 		map[string]struct{}{},
-		map[types.EncodedCompoundIdentifier]types.Struct{},
-		map[types.EncodedCompoundIdentifier]types.Struct{},
-		map[types.EncodedCompoundIdentifier]Result{},
+		map[fidl.EncodedCompoundIdentifier]fidl.Struct{},
+		map[fidl.EncodedCompoundIdentifier]fidl.Struct{},
+		map[fidl.EncodedCompoundIdentifier]Result{},
 		map[string]HandleMetadataWrapper{},
 	}
 

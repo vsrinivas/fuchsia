@@ -5,11 +5,8 @@
 import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 
-go_library("cpp") {
-  deps = [
-    "../common",
-    "../types",
-  ]
+go_library("fidlgen_cpp") {
+  deps = [ "//tools/fidl/lib/fidlgen" ]
   sources = [
     "clang_formatter.go",
     "ir.go",
@@ -18,7 +15,7 @@ go_library("cpp") {
 
 go_library("cpp_test") {
   deps = [
-    ":cpp",
+    ":fidlgen_cpp",
     "//third_party/golibs:github.com/google/go-cmp",
   ]
   sources = [ "ir_test.go" ]
@@ -26,8 +23,7 @@ go_library("cpp_test") {
 
 if (is_host) {
   go_test("fidlgen_cpp_ir_test") {
-    gopackages =
-        [ "go.fuchsia.dev/fuchsia/garnet/go/src/fidl/compiler/backend/cpp" ]
+    gopackages = [ "go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen_cpp" ]
     deps = [ ":cpp_test" ]
   }
 }

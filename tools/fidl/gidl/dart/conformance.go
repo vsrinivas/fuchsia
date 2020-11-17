@@ -10,11 +10,10 @@ import (
 	"strings"
 	"text/template"
 
-	fidlcommon "go.fuchsia.dev/fuchsia/garnet/go/src/fidl/compiler/backend/common"
-	fidlir "go.fuchsia.dev/fuchsia/garnet/go/src/fidl/compiler/backend/types"
 	gidlconfig "go.fuchsia.dev/fuchsia/tools/fidl/gidl/config"
 	gidlir "go.fuchsia.dev/fuchsia/tools/fidl/gidl/ir"
 	gidlmixer "go.fuchsia.dev/fuchsia/tools/fidl/gidl/mixer"
+	fidl "go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 )
 
 var tmpl = template.Must(template.New("tmpls").Parse(`
@@ -145,7 +144,7 @@ type decodeFailureCase struct {
 }
 
 // Generate generates dart tests.
-func GenerateConformanceTests(gidl gidlir.All, fidl fidlir.Root, config gidlconfig.GeneratorConfig) ([]byte, error) {
+func GenerateConformanceTests(gidl gidlir.All, fidl fidl.Root, config gidlconfig.GeneratorConfig) ([]byte, error) {
 	schema := gidlmixer.BuildSchema(fidl)
 	encodeSuccessCases, err := encodeSuccessCases(gidl.EncodeSuccess, schema)
 	if err != nil {
@@ -296,7 +295,7 @@ func wireFormatSupported(wireFormat gidlir.WireFormat) bool {
 }
 
 func testCaseName(baseName string, wireFormat gidlir.WireFormat) string {
-	return fidlcommon.SingleQuote(fmt.Sprintf("%s_%s", baseName, wireFormat))
+	return fidl.SingleQuote(fmt.Sprintf("%s_%s", baseName, wireFormat))
 }
 
 func encoderName(wireFormat gidlir.WireFormat) string {

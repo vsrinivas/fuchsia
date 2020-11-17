@@ -10,8 +10,8 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	fidlir "go.fuchsia.dev/fuchsia/garnet/go/src/fidl/compiler/backend/types"
 	"go.fuchsia.dev/fuchsia/tools/fidl/gidl/ir"
+	fidl "go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 )
 
 func TestParseValues(t *testing.T) {
@@ -574,16 +574,16 @@ func TestParseHandleDefs(t *testing.T) {
 		{
 			gidl: `{ #0 = event() }`,
 			expectedValue: []ir.HandleDef{
-				{Subtype: fidlir.Event},
+				{Subtype: fidl.Event},
 			},
 		},
 		// several handles
 		{
 			gidl: `{ #0 = event(), #1 = event(), #2 = event() }`,
 			expectedValue: []ir.HandleDef{
-				{Subtype: fidlir.Event},
-				{Subtype: fidlir.Event},
-				{Subtype: fidlir.Event},
+				{Subtype: fidl.Event},
+				{Subtype: fidl.Event},
+				{Subtype: fidl.Event},
 			},
 		},
 	}
@@ -1211,7 +1211,7 @@ func TestParseSucceedsHandles(t *testing.T) {
 				Handles:    []ir.Handle{0},
 			}},
 			HandleDefs: []ir.HandleDef{
-				{Subtype: fidlir.Event},
+				{Subtype: fidl.Event},
 			},
 		}},
 		DecodeSuccess: []ir.DecodeSuccess{{
@@ -1231,7 +1231,7 @@ func TestParseSucceedsHandles(t *testing.T) {
 				Handles:    []ir.Handle{0},
 			}},
 			HandleDefs: []ir.HandleDef{
-				{Subtype: fidlir.Event},
+				{Subtype: fidl.Event},
 			},
 		}},
 	}
@@ -1276,7 +1276,7 @@ func TestParseSucceedsHandlesDefinedAfter(t *testing.T) {
 				Handles:    []ir.Handle{0},
 			}},
 			HandleDefs: []ir.HandleDef{
-				{Subtype: fidlir.Event},
+				{Subtype: fidl.Event},
 			},
 		}},
 		DecodeSuccess: []ir.DecodeSuccess{{
@@ -1296,7 +1296,7 @@ func TestParseSucceedsHandlesDefinedAfter(t *testing.T) {
 				Handles:    []ir.Handle{0},
 			}},
 			HandleDefs: []ir.HandleDef{
-				{Subtype: fidlir.Event},
+				{Subtype: fidl.Event},
 			},
 		}},
 	}

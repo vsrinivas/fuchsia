@@ -13,12 +13,8 @@ import("//build/sdk/sdk_host_tool.gni")
 go_library("fidlgen_dart_lib") {
   name = "go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_dart/..."
 
-  deps = [ "//garnet/go/src/fidl:compiler" ]
-  if (is_linux || is_mac) {
-    non_go_deps = [ "goldens" ]
-  }
+  deps = [ "//tools/fidl/lib/fidlgen" ]
   sources = [
-    "backend/codegen_test.go",
     "backend/generator.go",
     "backend/ir/ir.go",
     "backend/templates/bits.tmpl.go",
@@ -31,6 +27,20 @@ go_library("fidlgen_dart_lib") {
     "backend/templates/union.tmpl.go",
     "fidlgen_dart.go",
   ]
+}
+
+go_library("fidlgen_dart_test_lib") {
+  name = "go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_dart/..."
+  testonly = true
+
+  deps = [
+    ":fidlgen_dart_lib",
+    "//garnet/go/src/fidl/compiler/backend/typestest",
+  ]
+  if (is_linux || is_mac) {
+    non_go_deps = [ "goldens" ]
+  }
+  sources = [ "backend/codegen_test.go" ]
 }
 
 go_binary("fidlgen_dart") {
@@ -48,7 +58,7 @@ if (is_host) {
   go_test("fidlgen_dart_backend_test") {
     gopackages = [ "go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_dart/backend" ]
 
-    deps = [ ":fidlgen_dart_lib" ]
+    deps = [ ":fidlgen_dart_test_lib" ]
     non_go_deps = [ ":copies" ]
   }
 }

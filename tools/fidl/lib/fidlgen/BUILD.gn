@@ -5,24 +5,37 @@
 import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 
-go_library("common") {
+go_library("fidlgen") {
   sources = [
     "formatter.go",
     "identifiers.go",
-    "identifiers_test.go",
     "names.go",
-    "names_test.go",
     "strings.go",
-    "strings_test.go",
+    "types.go",
   ]
 }
 
-go_test("fidlgen_common_test") {
-  gopackages =
-      [ "go.fuchsia.dev/fuchsia/garnet/go/src/fidl/compiler/backend/common" ]
+go_library("fidlgen_test_lib") {
+  sources = [
+    "identifiers_test.go",
+    "names_test.go",
+    "strings_test.go",
+    "types_test.go",
+  ]
+
+  deps = [ ":fidlgen" ]
+}
+
+go_test("fidlgen_lib_test") {
+  gopackages = [ "go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen" ]
 
   deps = [
-    ":common",
+    ":fidlgen_test_lib",
     "//third_party/golibs:github.com/google/go-cmp",
   ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":fidlgen_lib_test($host_toolchain)" ]
 }

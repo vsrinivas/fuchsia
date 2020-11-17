@@ -11,8 +11,7 @@ import (
 	"strconv"
 	"strings"
 
-	"go.fuchsia.dev/fuchsia/garnet/go/src/fidl/compiler/backend/common"
-	"go.fuchsia.dev/fuchsia/garnet/go/src/fidl/compiler/backend/types"
+	fidl "go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 )
 
 // Documented is embedded in structs for declarations that may hold documentation.
@@ -27,7 +26,7 @@ type Type struct {
 	AsyncDecl     string // type in async bindings when referring to async bindings
 	OptionalDecl  string // type when the value is optional
 	Nullable      bool
-	declType      types.DeclType
+	declType      fidl.DeclType
 	typedDataDecl string
 	typeExpr      string
 }
@@ -42,7 +41,7 @@ type Const struct {
 
 // Enum represents an enum declaration.
 type Enum struct {
-	types.Enum
+	fidl.Enum
 
 	Name       string
 	Members    []EnumMember
@@ -53,7 +52,7 @@ type Enum struct {
 
 // EnumMember represents a member of an enum declaration.
 type EnumMember struct {
-	types.EnumMember
+	fidl.EnumMember
 
 	Name  string
 	Value string
@@ -62,7 +61,7 @@ type EnumMember struct {
 
 // Bits represents a bits declaration.
 type Bits struct {
-	types.Bits
+	fidl.Bits
 
 	Name       string
 	Members    []BitsMember
@@ -89,7 +88,7 @@ type Union struct {
 	OptTypeSymbol string
 	OptTypeExpr   string
 	Documented
-	types.Strictness
+	fidl.Strictness
 }
 
 // UnionMember represents a member of a Union declaration.
@@ -312,45 +311,45 @@ func (ctx context) changeIfReserved(str string) string {
 	return str
 }
 
-var declForPrimitiveType = map[types.PrimitiveSubtype]string{
-	types.Bool:    "bool",
-	types.Int8:    "int",
-	types.Int16:   "int",
-	types.Int32:   "int",
-	types.Int64:   "int",
-	types.Uint8:   "int",
-	types.Uint16:  "int",
-	types.Uint32:  "int",
-	types.Uint64:  "int",
-	types.Float32: "double",
-	types.Float64: "double",
+var declForPrimitiveType = map[fidl.PrimitiveSubtype]string{
+	fidl.Bool:    "bool",
+	fidl.Int8:    "int",
+	fidl.Int16:   "int",
+	fidl.Int32:   "int",
+	fidl.Int64:   "int",
+	fidl.Uint8:   "int",
+	fidl.Uint16:  "int",
+	fidl.Uint32:  "int",
+	fidl.Uint64:  "int",
+	fidl.Float32: "double",
+	fidl.Float64: "double",
 }
 
-var typedDataDecl = map[types.PrimitiveSubtype]string{
-	types.Int8:    "Int8List",
-	types.Int16:   "Int16List",
-	types.Int32:   "Int32List",
-	types.Int64:   "Int64List",
-	types.Uint8:   "Uint8List",
-	types.Uint16:  "Uint16List",
-	types.Uint32:  "Uint32List",
-	types.Uint64:  "Uint64List",
-	types.Float32: "Float32List",
-	types.Float64: "Float64List",
+var typedDataDecl = map[fidl.PrimitiveSubtype]string{
+	fidl.Int8:    "Int8List",
+	fidl.Int16:   "Int16List",
+	fidl.Int32:   "Int32List",
+	fidl.Int64:   "Int64List",
+	fidl.Uint8:   "Uint8List",
+	fidl.Uint16:  "Uint16List",
+	fidl.Uint32:  "Uint32List",
+	fidl.Uint64:  "Uint64List",
+	fidl.Float32: "Float32List",
+	fidl.Float64: "Float64List",
 }
 
-var typeForPrimitiveSubtype = map[types.PrimitiveSubtype]string{
-	types.Bool:    "BoolType",
-	types.Int8:    "Int8Type",
-	types.Int16:   "Int16Type",
-	types.Int32:   "Int32Type",
-	types.Int64:   "Int64Type",
-	types.Uint8:   "Uint8Type",
-	types.Uint16:  "Uint16Type",
-	types.Uint32:  "Uint32Type",
-	types.Uint64:  "Uint64Type",
-	types.Float32: "Float32Type",
-	types.Float64: "Float64Type",
+var typeForPrimitiveSubtype = map[fidl.PrimitiveSubtype]string{
+	fidl.Bool:    "BoolType",
+	fidl.Int8:    "Int8Type",
+	fidl.Int16:   "Int16Type",
+	fidl.Int32:   "Int32Type",
+	fidl.Int64:   "Int64Type",
+	fidl.Uint8:   "Uint8Type",
+	fidl.Uint16:  "Uint16Type",
+	fidl.Uint32:  "Uint32Type",
+	fidl.Uint64:  "Uint64Type",
+	fidl.Float32: "Float32Type",
+	fidl.Float64: "Float64Type",
 }
 
 func docStringLink(nameWithBars string) string {
@@ -359,9 +358,9 @@ func docStringLink(nameWithBars string) string {
 
 var reLink = regexp.MustCompile("\\|([^\\|]+)\\|")
 
-// TODO(pascallouis): rethink how we depend on the types package.
+// TODO(pascallouis): rethink how we depend on the fidlgen package.
 type Annotated interface {
-	LookupAttribute(types.Identifier) (types.Attribute, bool)
+	LookupAttribute(fidl.Identifier) (fidl.Attribute, bool)
 }
 
 func docString(node Annotated) Documented {
@@ -437,7 +436,7 @@ func formatUnionMemberList(members []UnionMember) string {
 	return fmt.Sprintf("<int, $fidl.FidlType>{\n%s  }", strings.Join(lines, ""))
 }
 
-func formatLibraryName(library types.LibraryIdentifier) string {
+func formatLibraryName(library fidl.LibraryIdentifier) string {
 	parts := []string{}
 	for _, part := range library {
 		parts = append(parts, string(part))
@@ -445,7 +444,7 @@ func formatLibraryName(library types.LibraryIdentifier) string {
 	return strings.Join(parts, "_")
 }
 
-func typeExprForPrimitiveSubtype(val types.PrimitiveSubtype) string {
+func typeExprForPrimitiveSubtype(val fidl.PrimitiveSubtype) string {
 	t, ok := typeForPrimitiveSubtype[val]
 	if !ok {
 		log.Fatal("Unknown primitive subtype: ", val)
@@ -453,18 +452,18 @@ func typeExprForPrimitiveSubtype(val types.PrimitiveSubtype) string {
 	return fmt.Sprintf("$fidl.%s()", t)
 }
 
-func libraryPrefix(library types.LibraryIdentifier) string {
+func libraryPrefix(library fidl.LibraryIdentifier) string {
 	return fmt.Sprintf("lib$%s", formatLibraryName(library))
 }
 
 type compiler struct {
-	decls                  types.DeclMap
-	library                types.LibraryIdentifier
-	typesRoot              types.Root
-	requestResponsePayload map[types.EncodedCompoundIdentifier]types.Struct
+	decls                  fidl.DeclMap
+	library                fidl.LibraryIdentifier
+	typesRoot              fidl.Root
+	requestResponsePayload map[fidl.EncodedCompoundIdentifier]fidl.Struct
 }
 
-func (c *compiler) getPayload(name types.EncodedCompoundIdentifier) types.Struct {
+func (c *compiler) getPayload(name fidl.EncodedCompoundIdentifier) fidl.Struct {
 	val, ok := c.requestResponsePayload[name]
 	if !ok {
 		panic(fmt.Sprintf("Unknown request/response struct: %s", name))
@@ -472,7 +471,7 @@ func (c *compiler) getPayload(name types.EncodedCompoundIdentifier) types.Struct
 	return val
 }
 
-func (c *compiler) typeExprForMethod(val types.Method, request []StructMember, response []StructMember, name string) string {
+func (c *compiler) typeExprForMethod(val fidl.Method, request []StructMember, response []StructMember, name string) string {
 	var (
 		requestSize  = 0
 		responseSize = 0
@@ -499,7 +498,7 @@ func (c *compiler) typeExprForMethod(val types.Method, request []StructMember, r
 		requestSize, responseSize)
 }
 
-func (c *compiler) inExternalLibrary(ci types.CompoundIdentifier) bool {
+func (c *compiler) inExternalLibrary(ci fidl.CompoundIdentifier) bool {
 	if len(ci.Library) != len(c.library) {
 		return true
 	}
@@ -511,15 +510,15 @@ func (c *compiler) inExternalLibrary(ci types.CompoundIdentifier) bool {
 	return false
 }
 
-func (c *compiler) typeSymbolForCompoundIdentifier(ident types.CompoundIdentifier) string {
+func (c *compiler) typeSymbolForCompoundIdentifier(ident fidl.CompoundIdentifier) string {
 	return c._typeSymbolForCompoundIdentifier(ident, "Type")
 }
 
-func (c *compiler) optTypeSymbolForCompoundIdentifier(ident types.CompoundIdentifier) string {
+func (c *compiler) optTypeSymbolForCompoundIdentifier(ident fidl.CompoundIdentifier) string {
 	return c._typeSymbolForCompoundIdentifier(ident, "OptType")
 }
 
-func (c *compiler) _typeSymbolForCompoundIdentifier(ident types.CompoundIdentifier, suffix string) string {
+func (c *compiler) _typeSymbolForCompoundIdentifier(ident fidl.CompoundIdentifier, suffix string) string {
 	t := fmt.Sprintf("k%s_%s", ident.Name, suffix)
 	if c.inExternalLibrary(ident) {
 		return fmt.Sprintf("%s.%s", libraryPrefix(ident.Library), t)
@@ -527,15 +526,15 @@ func (c *compiler) _typeSymbolForCompoundIdentifier(ident types.CompoundIdentifi
 	return t
 }
 
-func (c *compiler) compileUpperCamelIdentifier(val types.Identifier, context context) string {
-	return context.changeIfReserved(common.ToUpperCamelCase(string(val)))
+func (c *compiler) compileUpperCamelIdentifier(val fidl.Identifier, context context) string {
+	return context.changeIfReserved(fidl.ToUpperCamelCase(string(val)))
 }
 
-func (c *compiler) compileLowerCamelIdentifier(val types.Identifier, context context) string {
-	return context.changeIfReserved(common.ToLowerCamelCase(string(val)))
+func (c *compiler) compileLowerCamelIdentifier(val fidl.Identifier, context context) string {
+	return context.changeIfReserved(fidl.ToLowerCamelCase(string(val)))
 }
 
-func (c *compiler) compileCompoundIdentifier(val types.CompoundIdentifier, context context) string {
+func (c *compiler) compileCompoundIdentifier(val fidl.CompoundIdentifier, context context) string {
 	strs := []string{}
 	if c.inExternalLibrary(val) {
 		strs = append(strs, libraryPrefix(val.Library))
@@ -544,28 +543,28 @@ func (c *compiler) compileCompoundIdentifier(val types.CompoundIdentifier, conte
 	return strings.Join(strs, ".")
 }
 
-func (c *compiler) compileUpperCamelCompoundIdentifier(val types.CompoundIdentifier, ext string, context context) string {
-	str := context.changeIfReserved(common.ToUpperCamelCase(string(val.Name))) + ext
-	val.Name = types.Identifier(str)
+func (c *compiler) compileUpperCamelCompoundIdentifier(val fidl.CompoundIdentifier, ext string, context context) string {
+	str := context.changeIfReserved(fidl.ToUpperCamelCase(string(val.Name))) + ext
+	val.Name = fidl.Identifier(str)
 	return c.compileCompoundIdentifier(val, context)
 }
 
-func (c *compiler) compileLowerCamelCompoundIdentifier(val types.CompoundIdentifier, ext string, context context) string {
+func (c *compiler) compileLowerCamelCompoundIdentifier(val fidl.CompoundIdentifier, ext string, context context) string {
 	constName := string(val.Name)
 	if string(val.Member) != "" {
 		constName = string(val.Member)
 	}
-	str := context.changeIfReserved(common.ToLowerCamelCase(string(constName))) + ext
-	val.Name = types.Identifier(str)
+	str := context.changeIfReserved(fidl.ToLowerCamelCase(string(constName))) + ext
+	val.Name = fidl.Identifier(str)
 	return c.compileCompoundIdentifier(val, context)
 }
 
-func (c *compiler) compileLiteral(val types.Literal) string {
+func (c *compiler) compileLiteral(val fidl.Literal) string {
 	switch val.Kind {
-	case types.StringLiteral:
+	case fidl.StringLiteral:
 		// TODO(abarth): Escape more characters (e.g., newline).
 		return fmt.Sprintf("%q", val.Value)
-	case types.NumericLiteral:
+	case fidl.NumericLiteral:
 		// TODO(fxbug.dev/7810): Once we expose resolved constants for defaults, e.g.
 		// in structs, we will not need ignore hex and binary values.
 		if strings.HasPrefix(val.Value, "0x") || strings.HasPrefix(val.Value, "0b") {
@@ -587,11 +586,11 @@ func (c *compiler) compileLiteral(val types.Literal) string {
 			panic(fmt.Sprintf("JSON IR contains invalid numeric literal: %s", val.Value))
 		}
 		return fmt.Sprintf("%#x", num)
-	case types.TrueLiteral:
+	case fidl.TrueLiteral:
 		return "true"
-	case types.FalseLiteral:
+	case fidl.FalseLiteral:
 		return "false"
-	case types.DefaultLiteral:
+	case fidl.DefaultLiteral:
 		return "default"
 	default:
 		log.Fatal("Unknown literal kind: ", val.Kind)
@@ -599,15 +598,15 @@ func (c *compiler) compileLiteral(val types.Literal) string {
 	}
 }
 
-func (c *compiler) compileConstant(val types.Constant, t *Type) string {
+func (c *compiler) compileConstant(val fidl.Constant, t *Type) string {
 	switch val.Kind {
-	case types.IdentifierConstant:
-		v := c.compileLowerCamelCompoundIdentifier(types.ParseCompoundIdentifier(val.Identifier), "", constantContext)
-		if t != nil && t.declType == types.EnumDeclType {
+	case fidl.IdentifierConstant:
+		v := c.compileLowerCamelCompoundIdentifier(fidl.ParseCompoundIdentifier(val.Identifier), "", constantContext)
+		if t != nil && t.declType == fidl.EnumDeclType {
 			v = fmt.Sprintf("%s.%s", t.Decl, v)
 		}
 		return v
-	case types.LiteralConstant:
+	case fidl.LiteralConstant:
 		return c.compileLiteral(val.Literal)
 	default:
 		log.Fatal("Unknown constant kind: ", val.Kind)
@@ -615,7 +614,7 @@ func (c *compiler) compileConstant(val types.Constant, t *Type) string {
 	}
 }
 
-func (c *compiler) compilePrimitiveSubtype(val types.PrimitiveSubtype) string {
+func (c *compiler) compilePrimitiveSubtype(val fidl.PrimitiveSubtype) string {
 	if t, ok := declForPrimitiveType[val]; ok {
 		return t
 	}
@@ -623,14 +622,14 @@ func (c *compiler) compilePrimitiveSubtype(val types.PrimitiveSubtype) string {
 	return ""
 }
 
-func (c *compiler) maybeCompileConstant(val *types.Constant, t *Type) string {
+func (c *compiler) maybeCompileConstant(val *fidl.Constant, t *Type) string {
 	if val == nil {
 		return "null"
 	}
 	return c.compileConstant(*val, t)
 }
 
-func (c *compiler) compileType(val types.Type) Type {
+func (c *compiler) compileType(val fidl.Type) Type {
 	nullablePrefix := ""
 	if val.Nullable {
 		nullablePrefix = "Nullable"
@@ -638,7 +637,7 @@ func (c *compiler) compileType(val types.Type) Type {
 	r := Type{}
 	r.Nullable = val.Nullable
 	switch val.Kind {
-	case types.ArrayType:
+	case fidl.ArrayType:
 		t := c.compileType(*val.ElementType)
 		if len(t.typedDataDecl) > 0 {
 			r.Decl = t.typedDataDecl
@@ -653,7 +652,7 @@ func (c *compiler) compileType(val types.Type) Type {
 		elementStr := fmt.Sprintf("element: %s", t.typeExpr)
 		elementCountStr := fmt.Sprintf("elementCount: %s", formatInt(val.ElementCount))
 		r.typeExpr = fmt.Sprintf("$fidl.ArrayType<%s, %s>(%s, %s)", t.Decl, r.Decl, elementStr, elementCountStr)
-	case types.VectorType:
+	case fidl.VectorType:
 		t := c.compileType(*val.ElementType)
 		if len(t.typedDataDecl) > 0 {
 			r.Decl = t.typedDataDecl
@@ -668,13 +667,13 @@ func (c *compiler) compileType(val types.Type) Type {
 		maybeElementCountStr := fmt.Sprintf("maybeElementCount: %s", formatInt(val.ElementCount))
 		r.typeExpr = fmt.Sprintf("$fidl.%sVectorType<%s, %s>(%s, %s)",
 			nullablePrefix, t.Decl, r.Decl, elementStr, maybeElementCountStr)
-	case types.StringType:
+	case fidl.StringType:
 		r.Decl = "String"
 		r.SyncDecl = r.Decl
 		r.AsyncDecl = r.Decl
 		r.typeExpr = fmt.Sprintf("$fidl.%sStringType(maybeElementCount: %s)",
 			nullablePrefix, formatInt(val.ElementCount))
-	case types.HandleType:
+	case fidl.HandleType:
 		var subtype string
 		switch val.HandleSubtype {
 		case "channel":
@@ -692,8 +691,8 @@ func (c *compiler) compileType(val types.Type) Type {
 		r.SyncDecl = r.Decl
 		r.AsyncDecl = r.Decl
 		r.typeExpr = fmt.Sprintf("$fidl.%s%sType()", nullablePrefix, subtype)
-	case types.RequestType:
-		compound := types.ParseCompoundIdentifier(val.RequestSubtype)
+	case fidl.RequestType:
+		compound := fidl.ParseCompoundIdentifier(val.RequestSubtype)
 		t := c.compileUpperCamelCompoundIdentifier(compound, "", declarationContext)
 		r.Decl = fmt.Sprintf("$fidl.InterfaceRequest<%s>", t)
 		if c.inExternalLibrary(compound) {
@@ -704,14 +703,14 @@ func (c *compiler) compileType(val types.Type) Type {
 		r.AsyncDecl = r.Decl
 		r.typeExpr = fmt.Sprintf("$fidl.%sInterfaceRequestType<%s>()",
 			nullablePrefix, t)
-	case types.PrimitiveType:
+	case fidl.PrimitiveType:
 		r.Decl = c.compilePrimitiveSubtype(val.PrimitiveSubtype)
 		r.SyncDecl = r.Decl
 		r.AsyncDecl = r.Decl
 		r.typedDataDecl = typedDataDecl[val.PrimitiveSubtype]
 		r.typeExpr = typeExprForPrimitiveSubtype(val.PrimitiveSubtype)
-	case types.IdentifierType:
-		compound := types.ParseCompoundIdentifier(val.Identifier)
+	case fidl.IdentifierType:
+		compound := fidl.ParseCompoundIdentifier(val.Identifier)
 		t := c.compileUpperCamelCompoundIdentifier(compound, "", declarationContext)
 		declType, ok := c.decls[val.Identifier]
 		if !ok {
@@ -719,17 +718,17 @@ func (c *compiler) compileType(val types.Type) Type {
 		}
 		r.declType = declType
 		switch r.declType {
-		case types.ConstDeclType:
+		case fidl.ConstDeclType:
 			fallthrough
-		case types.EnumDeclType:
+		case fidl.EnumDeclType:
 			fallthrough
-		case types.BitsDeclType:
+		case fidl.BitsDeclType:
 			fallthrough
-		case types.StructDeclType:
+		case fidl.StructDeclType:
 			fallthrough
-		case types.TableDeclType:
+		case fidl.TableDeclType:
 			fallthrough
-		case types.UnionDeclType:
+		case fidl.UnionDeclType:
 			r.Decl = t
 			if c.inExternalLibrary(compound) {
 				r.SyncDecl = fmt.Sprintf("sync$%s", t)
@@ -740,16 +739,16 @@ func (c *compiler) compileType(val types.Type) Type {
 			r.AsyncDecl = r.SyncDecl
 			if val.Nullable {
 				switch r.declType {
-				case types.UnionDeclType:
-					r.typeExpr = c.optTypeSymbolForCompoundIdentifier(types.ParseCompoundIdentifier(val.Identifier))
+				case fidl.UnionDeclType:
+					r.typeExpr = c.optTypeSymbolForCompoundIdentifier(fidl.ParseCompoundIdentifier(val.Identifier))
 				default:
 					r.typeExpr = fmt.Sprintf("$fidl.PointerType<%s>(element: %s)",
-						t, c.typeSymbolForCompoundIdentifier(types.ParseCompoundIdentifier(val.Identifier)))
+						t, c.typeSymbolForCompoundIdentifier(fidl.ParseCompoundIdentifier(val.Identifier)))
 				}
 			} else {
-				r.typeExpr = c.typeSymbolForCompoundIdentifier(types.ParseCompoundIdentifier(val.Identifier))
+				r.typeExpr = c.typeSymbolForCompoundIdentifier(fidl.ParseCompoundIdentifier(val.Identifier))
 			}
-		case types.InterfaceDeclType:
+		case fidl.InterfaceDeclType:
 
 			r.Decl = fmt.Sprintf("$fidl.InterfaceHandle<%s>", t)
 			if c.inExternalLibrary(compound) {
@@ -780,20 +779,20 @@ func (c *compiler) compileType(val types.Type) Type {
 	return r
 }
 
-func (c *compiler) compileConst(val types.Const) Const {
+func (c *compiler) compileConst(val fidl.Const) Const {
 	r := Const{
 		Type:       c.compileType(val.Type),
-		Name:       c.compileLowerCamelCompoundIdentifier(types.ParseCompoundIdentifier(val.Name), "", constantContext),
+		Name:       c.compileLowerCamelCompoundIdentifier(fidl.ParseCompoundIdentifier(val.Name), "", constantContext),
 		Value:      c.compileConstant(val.Value, nil),
 		Documented: docString(val),
 	}
-	if r.Type.declType == types.EnumDeclType {
+	if r.Type.declType == fidl.EnumDeclType {
 		r.Value = fmt.Sprintf("%s.%s", r.Type.Decl, r.Value)
 	}
 	return r
 }
 
-func (c *compiler) membersAsMapToNull(members []types.EnumMember) string {
+func (c *compiler) membersAsMapToNull(members []fidl.EnumMember) string {
 	var values []string
 	for _, member := range members {
 		values = append(values, fmt.Sprintf("%s:null", c.compileConstant(member.Value, nil)))
@@ -801,8 +800,8 @@ func (c *compiler) membersAsMapToNull(members []types.EnumMember) string {
 	return strings.Join(values, ",")
 }
 
-func (c *compiler) compileEnum(val types.Enum) Enum {
-	ci := types.ParseCompoundIdentifier(val.Name)
+func (c *compiler) compileEnum(val fidl.Enum) Enum {
+	ci := fidl.ParseCompoundIdentifier(val.Name)
 	n := c.compileUpperCamelCompoundIdentifier(ci, "", declarationContext)
 	e := Enum{
 		Enum:       val,
@@ -823,10 +822,10 @@ func (c *compiler) compileEnum(val types.Enum) Enum {
 	return e
 }
 
-func (c *compiler) compileBits(val types.Bits) Bits {
-	ci := types.ParseCompoundIdentifier(val.Name)
+func (c *compiler) compileBits(val fidl.Bits) Bits {
+	ci := fidl.ParseCompoundIdentifier(val.Name)
 	n := c.compileUpperCamelCompoundIdentifier(ci, "", declarationContext)
-	if val.Type.Kind != types.PrimitiveType {
+	if val.Type.Kind != fidl.PrimitiveType {
 		panic("unexpected, only primitives are allowed for bits declarations")
 	}
 	subtype := val.Type.PrimitiveSubtype
@@ -855,7 +854,7 @@ func (c *compiler) compileBits(val types.Bits) Bits {
 	return b
 }
 
-func (c *compiler) compileParameterArray(payload types.EncodedCompoundIdentifier) []StructMember {
+func (c *compiler) compileParameterArray(payload fidl.EncodedCompoundIdentifier) []StructMember {
 	var parameters []StructMember
 	for _, v := range c.getPayload(payload).Members {
 		parameters = append(parameters, c.compileStructMember(v))
@@ -863,12 +862,12 @@ func (c *compiler) compileParameterArray(payload types.EncodedCompoundIdentifier
 	return parameters
 }
 
-func (c *compiler) compileMethodResponse(method types.Method) MethodResponse {
+func (c *compiler) compileMethodResponse(method fidl.Method) MethodResponse {
 	var (
-		resultUnion    types.Union
-		resultType     types.Type
-		valueStruct    *types.Struct
-		valueType      types.Type
+		resultUnion    fidl.Union
+		resultType     fidl.Type
+		valueStruct    *fidl.Struct
+		valueType      fidl.Type
 		isResult       bool
 		isReponseUnion bool
 		parameters     []StructMember
@@ -881,7 +880,7 @@ func (c *compiler) compileMethodResponse(method types.Method) MethodResponse {
 	}
 	// That arg must be a non-nullable identifier
 	resultType = payload[0].Type
-	if resultType.Kind != types.IdentifierType || resultType.Nullable {
+	if resultType.Kind != fidl.IdentifierType || resultType.Nullable {
 		goto NotAResult
 	}
 	// That identifier is for a union
@@ -936,7 +935,7 @@ NotAResult:
 	}
 }
 
-func (c *compiler) compileMethod(val types.Method, protocol Interface, fidlProtocol types.Interface) Method {
+func (c *compiler) compileMethod(val fidl.Method, protocol Interface, fidlProtocol fidl.Interface) Method {
 	var (
 		name               = c.compileLowerCamelIdentifier(val.Name, methodContext)
 		request            []StructMember
@@ -985,8 +984,8 @@ func (c *compiler) compileMethod(val types.Method, protocol Interface, fidlProto
 	}
 }
 
-func (c *compiler) compileInterface(val types.Interface) Interface {
-	ci := types.ParseCompoundIdentifier(val.Name)
+func (c *compiler) compileInterface(val fidl.Interface) Interface {
+	ci := fidl.ParseCompoundIdentifier(val.Name)
 	r := Interface{
 		c.compileUpperCamelCompoundIdentifier(ci, "", declarationContext),
 		val.GetServiceName(),
@@ -1010,7 +1009,7 @@ func (c *compiler) compileInterface(val types.Interface) Interface {
 	return r
 }
 
-func (c *compiler) compileStructMember(val types.StructMember) StructMember {
+func (c *compiler) compileStructMember(val fidl.StructMember) StructMember {
 	t := c.compileType(val.Type)
 
 	defaultValue := ""
@@ -1031,8 +1030,8 @@ func (c *compiler) compileStructMember(val types.StructMember) StructMember {
 	}
 }
 
-func (c *compiler) compileStruct(val types.Struct) Struct {
-	ci := types.ParseCompoundIdentifier(val.Name)
+func (c *compiler) compileStruct(val fidl.Struct) Struct {
+	ci := fidl.ParseCompoundIdentifier(val.Name)
 	r := Struct{
 		Name:             c.compileUpperCamelCompoundIdentifier(ci, "", declarationContext),
 		Members:          []StructMember{},
@@ -1054,7 +1053,7 @@ func (c *compiler) compileStruct(val types.Struct) Struct {
 
 	if len(r.Members) == 0 {
 		r.Members = []StructMember{
-			c.compileStructMember(types.EmptyStructMember("reserved")),
+			c.compileStructMember(fidl.EmptyStructMember("reserved")),
 		}
 	}
 
@@ -1067,7 +1066,7 @@ func (c *compiler) compileStruct(val types.Struct) Struct {
 	return r
 }
 
-func (c *compiler) compileTableMember(val types.TableMember) TableMember {
+func (c *compiler) compileTableMember(val fidl.TableMember) TableMember {
 	t := c.compileType(val.Type)
 
 	defaultValue := ""
@@ -1085,8 +1084,8 @@ func (c *compiler) compileTableMember(val types.TableMember) TableMember {
 	}
 }
 
-func (c *compiler) compileTable(val types.Table) Table {
-	ci := types.ParseCompoundIdentifier(val.Name)
+func (c *compiler) compileTable(val fidl.Table) Table {
+	ci := fidl.ParseCompoundIdentifier(val.Name)
 	r := Table{
 		Name:       c.compileUpperCamelCompoundIdentifier(ci, "", declarationContext),
 		TypeSymbol: c.typeSymbolForCompoundIdentifier(ci),
@@ -1105,7 +1104,7 @@ func (c *compiler) compileTable(val types.Table) Table {
 	return r
 }
 
-func (c *compiler) compileUnion(val types.Union) Union {
+func (c *compiler) compileUnion(val fidl.Union) Union {
 	var members []UnionMember
 	for _, member := range val.Members {
 		if member.Reserved {
@@ -1122,7 +1121,7 @@ func (c *compiler) compileUnion(val types.Union) Union {
 		})
 	}
 
-	ci := types.ParseCompoundIdentifier(val.Name)
+	ci := fidl.ParseCompoundIdentifier(val.Name)
 	r := Union{
 		Name:          c.compileUpperCamelCompoundIdentifier(ci, "", declarationContext),
 		TagName:       c.compileUpperCamelCompoundIdentifier(ci, "Tag", declarationContext),
@@ -1149,14 +1148,14 @@ ctor: %s._ctor,
 }
 
 // Compile the language independent type definition into the Dart-specific representation.
-func Compile(r types.Root) Root {
+func Compile(r fidl.Root) Root {
 	r = r.ForBindings("dart")
 	root := Root{}
 	c := compiler{
 		decls:                  r.DeclsWithDependencies(),
-		library:                types.ParseLibraryName(r.Name),
+		library:                fidl.ParseLibraryName(r.Name),
 		typesRoot:              r,
-		requestResponsePayload: map[types.EncodedCompoundIdentifier]types.Struct{},
+		requestResponsePayload: map[fidl.EncodedCompoundIdentifier]fidl.Struct{},
 	}
 
 	root.LibraryName = fmt.Sprintf("fidl_%s", formatLibraryName(c.library))
@@ -1198,7 +1197,7 @@ func Compile(r types.Root) Root {
 			// We don't need to import our own package.
 			continue
 		}
-		library := types.ParseLibraryName(l.Name)
+		library := fidl.ParseLibraryName(l.Name)
 		root.Imports = append(root.Imports, Import{
 			LocalName: libraryPrefix(library),
 			AsyncURL:  fmt.Sprintf("package:fidl_%s/fidl_async.dart", formatLibraryName(library)),

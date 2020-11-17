@@ -11,7 +11,7 @@ import (
 	"strings"
 	"text/template"
 
-	fidlcommon "go.fuchsia.dev/fuchsia/garnet/go/src/fidl/compiler/backend/common"
+	fidl "go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 	"go.fuchsia.dev/fuchsia/tools/fidl/measure-tape/src/measurer"
 	"go.fuchsia.dev/fuchsia/tools/fidl/measure-tape/src/utils"
 )
@@ -124,7 +124,7 @@ func (cb *codeBuffer) CaseIterate(local, val measurer.Expression, body *measurer
 
 func (cb *codeBuffer) CaseSelectVariant(
 	val measurer.Expression,
-	targetType fidlcommon.Name,
+	targetType fidl.Name,
 	variants map[string]measurer.LocalWithBlock) {
 
 	cb.writef("match %s {\n", formatExpr{val})
@@ -132,7 +132,7 @@ func (cb *codeBuffer) CaseSelectVariant(
 		utils.ForAllVariantsInOrder(variants, func(member string, localWithBlock measurer.LocalWithBlock) {
 			if member != measurer.UnknownVariant {
 				cb.writef("%s::%s(%s) => {\n",
-					toTypeName(targetType), fidlcommon.ToUpperCamelCase(member),
+					toTypeName(targetType), fidl.ToUpperCamelCase(member),
 					formatExpr{localWithBlock.Local})
 			} else {
 				cb.writef("%s::__UnknownVariant { .. } => {\n", toTypeName(targetType))
@@ -220,14 +220,14 @@ func maybeUnwrap(val measurer.Expression) string {
 	return ""
 }
 
-func toCrateName(libraryName fidlcommon.LibraryName) string {
+func toCrateName(libraryName fidl.LibraryName) string {
 	return fmt.Sprintf("fidl_%s", strings.Join(libraryName.Parts(), "_"))
 }
 
-func toTypeName(declName fidlcommon.Name) string {
+func toTypeName(declName fidl.Name) string {
 	return fmt.Sprintf("%s::%s",
 		toCrateName(declName.LibraryName()),
-		fidlcommon.ToUpperCamelCase(declName.DeclarationName()))
+		fidl.ToUpperCamelCase(declName.DeclarationName()))
 }
 
 type tmplParams struct {

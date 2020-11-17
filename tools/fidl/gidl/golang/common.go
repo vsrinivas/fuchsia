@@ -13,10 +13,9 @@ import (
 	"strings"
 	"text/template"
 
-	fidlcommon "go.fuchsia.dev/fuchsia/garnet/go/src/fidl/compiler/backend/common"
-	fidlir "go.fuchsia.dev/fuchsia/garnet/go/src/fidl/compiler/backend/types"
 	gidlir "go.fuchsia.dev/fuchsia/tools/fidl/gidl/ir"
 	gidlmixer "go.fuchsia.dev/fuchsia/tools/fidl/gidl/mixer"
+	fidl "go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 )
 
 // withGoFmt wraps a template that produces Go source code, and formats the
@@ -59,9 +58,9 @@ func buildHandleDefs(defs []gidlir.HandleDef) string {
 	builder.WriteString("[]zx.ObjectType{\n")
 	for i, d := range defs {
 		switch d.Subtype {
-		case fidlir.Channel:
+		case fidl.Channel:
 			builder.WriteString("zx.ObjectTypeChannel,")
-		case fidlir.Event:
+		case fidl.Event:
 			builder.WriteString("zx.ObjectTypeEvent,")
 		default:
 			panic(fmt.Sprintf("unsupported handle subtype: %s", d.Subtype))
@@ -115,9 +114,9 @@ func visit(value interface{}, decl gidlmixer.Declaration) string {
 		}
 	case gidlir.RawFloat:
 		switch decl.(*gidlmixer.FloatDecl).Subtype() {
-		case fidlir.Float32:
+		case fidl.Float32:
 			return fmt.Sprintf("math.Float32frombits(%#b)", value)
-		case fidlir.Float64:
+		case fidl.Float64:
 			return fmt.Sprintf("math.Float64frombits(%#b)", value)
 		}
 	case string:
@@ -131,11 +130,11 @@ func visit(value interface{}, decl gidlmixer.Declaration) string {
 		rawHandle := fmt.Sprintf("handles[%d]", value)
 		handleDecl := decl.(*gidlmixer.HandleDecl)
 		switch handleDecl.Subtype() {
-		case fidlir.Handle:
+		case fidl.Handle:
 			return rawHandle
-		case fidlir.Channel:
+		case fidl.Channel:
 			return fmt.Sprintf("zx.Channel(%s)", rawHandle)
-		case fidlir.Event:
+		case fidl.Event:
 			return fmt.Sprintf("zx.Event(%s)", rawHandle)
 		default:
 			panic(fmt.Sprintf("Handle subtype not supported %s", handleDecl.Subtype()))
@@ -170,11 +169,11 @@ func onRecord(value gidlir.Record, decl gidlmixer.RecordDeclaration) string {
 		if field.Key.IsUnknown() {
 			tagValue = fmt.Sprintf("%d", field.Key.UnknownOrdinal)
 		} else {
-			fieldName := fidlcommon.ToUpperCamelCase(field.Key.Name)
+			fieldName := fidl.ToUpperCamelCase(field.Key.Name)
 			tagValue = fmt.Sprintf("%s%s", fullName, fieldName)
 		}
 		parts := strings.Split(string(decl.Name()), "/")
-		unqualifiedName := fidlcommon.ToLowerCamelCase(parts[len(parts)-1])
+		unqualifiedName := fidl.ToLowerCamelCase(parts[len(parts)-1])
 		fields = append(fields,
 			fmt.Sprintf("I_%sTag: %s", unqualifiedName, tagValue))
 	}
@@ -193,7 +192,7 @@ func onRecord(value gidlir.Record, decl gidlmixer.RecordDeclaration) string {
 			}
 			continue
 		}
-		fieldName := fidlcommon.ToUpperCamelCase(field.Key.Name)
+		fieldName := fidl.ToUpperCamelCase(field.Key.Name)
 		fieldDecl, ok := decl.Field(field.Key.Name)
 		if !ok {
 			panic(fmt.Sprintf("field %s not found", field.Key.Name))
@@ -255,11 +254,11 @@ func typeNameHelper(decl gidlmixer.Declaration, pointerPrefix string) string {
 		return fmt.Sprintf("%s[]%s", pointerPrefix, typeName(decl.Elem()))
 	case *gidlmixer.HandleDecl:
 		switch decl.Subtype() {
-		case fidlir.Handle:
+		case fidl.Handle:
 			return "zx.Handle"
-		case fidlir.Channel:
+		case fidl.Channel:
 			return "zx.Channel"
-		case fidlir.Event:
+		case fidl.Event:
 			return "zx.Event"
 		default:
 			panic(fmt.Sprintf("Handle subtype not supported %s", decl.Subtype()))
@@ -274,16 +273,16 @@ func declName(decl gidlmixer.NamedDeclaration) string {
 }
 
 // TODO(fxbug.dev/39407): Such utilities (and their accompanying tests) would be
-// useful as part of fidlcommon or fidlir to do FIDL-to-<target_lang>
+// useful as part of fidl or fidl to do FIDL-to-<target_lang>
 // conversion.
 func identifierName(qualifiedName string) string {
 	parts := strings.Split(qualifiedName, "/")
 	lastPartsIndex := len(parts) - 1
 	for i, part := range parts {
 		if i == lastPartsIndex {
-			parts[i] = fidlcommon.ToUpperCamelCase(part)
+			parts[i] = fidl.ToUpperCamelCase(part)
 		} else {
-			parts[i] = fidlcommon.ToSnakeCase(part)
+			parts[i] = fidl.ToSnakeCase(part)
 		}
 	}
 	return strings.Join(parts, ".")

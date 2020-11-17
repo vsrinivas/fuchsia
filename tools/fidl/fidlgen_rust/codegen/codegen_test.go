@@ -12,8 +12,8 @@ import (
 	"runtime"
 	"testing"
 
-	"go.fuchsia.dev/fuchsia/garnet/go/src/fidl/compiler/backend/common"
 	"go.fuchsia.dev/fuchsia/garnet/go/src/fidl/compiler/backend/typestest"
+	fidl "go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 )
 
 // hostPlatform reproduces the same format os-arch variant as cipd does.
@@ -48,7 +48,7 @@ func TestCodegen(t *testing.T) {
 			tree := Compile(typestest.GetExample(*testDataFlag, filename))
 			want := typestest.GetGolden(*testDataFlag, fmt.Sprintf("%s.rs.golden", filename))
 			buf := closeableBytesBuffer{}
-			formatter := common.NewFormatter(filepath.Join(*rustFmtFlag, "rustfmt"), "--config-path", *rustFmtConfigFlag)
+			formatter := fidl.NewFormatter(filepath.Join(*rustFmtFlag, "rustfmt"), "--config-path", *rustFmtConfigFlag)
 			actualFormattedImplDotRs, err := formatter.FormatPipe(&buf)
 			if err != nil {
 				t.Fatalf("unable to create format pipe: %s", err)

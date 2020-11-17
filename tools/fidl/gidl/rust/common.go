@@ -11,10 +11,9 @@ import (
 	"strconv"
 	"strings"
 
-	fidlcommon "go.fuchsia.dev/fuchsia/garnet/go/src/fidl/compiler/backend/common"
-	fidlir "go.fuchsia.dev/fuchsia/garnet/go/src/fidl/compiler/backend/types"
 	gidlir "go.fuchsia.dev/fuchsia/tools/fidl/gidl/ir"
 	gidlmixer "go.fuchsia.dev/fuchsia/tools/fidl/gidl/mixer"
+	fidl "go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 )
 
 func buildHandleDefs(defs []gidlir.HandleDef) string {
@@ -111,14 +110,14 @@ func visit(value interface{}, decl gidlmixer.Declaration) string {
 		}
 	case gidlir.RawFloat:
 		switch decl.(*gidlmixer.FloatDecl).Subtype() {
-		case fidlir.Float32:
+		case fidl.Float32:
 			return fmt.Sprintf("f32::from_bits(%#b)", value)
-		case fidlir.Float64:
+		case fidl.Float64:
 			return fmt.Sprintf("f64::from_bits(%#b)", value)
 		}
 	case string:
 		var expr string
-		if fidlcommon.PrintableASCII(value) {
+		if fidl.PrintableASCII(value) {
 			expr = fmt.Sprintf("String::from(%q)", value)
 		} else {
 			expr = fmt.Sprintf("std::str::from_utf8(b\"%s\").unwrap().to_string()", escapeStr(value))
@@ -162,50 +161,50 @@ func identifierName(qualifiedName string) string {
 	lastPartsIndex := len(parts) - 1
 	for i, part := range parts {
 		if i == lastPartsIndex {
-			parts[i] = fidlcommon.ToUpperCamelCase(part)
+			parts[i] = fidl.ToUpperCamelCase(part)
 		} else {
-			parts[i] = fidlcommon.ToSnakeCase(part)
+			parts[i] = fidl.ToSnakeCase(part)
 		}
 	}
 	return strings.Join(parts, "::")
 }
 
-func primitiveTypeName(subtype fidlir.PrimitiveSubtype) string {
+func primitiveTypeName(subtype fidl.PrimitiveSubtype) string {
 	switch subtype {
-	case fidlir.Bool:
+	case fidl.Bool:
 		return "bool"
-	case fidlir.Int8:
+	case fidl.Int8:
 		return "i8"
-	case fidlir.Uint8:
+	case fidl.Uint8:
 		return "u8"
-	case fidlir.Int16:
+	case fidl.Int16:
 		return "i16"
-	case fidlir.Uint16:
+	case fidl.Uint16:
 		return "u16"
-	case fidlir.Int32:
+	case fidl.Int32:
 		return "i32"
-	case fidlir.Uint32:
+	case fidl.Uint32:
 		return "u32"
-	case fidlir.Int64:
+	case fidl.Int64:
 		return "i64"
-	case fidlir.Uint64:
+	case fidl.Uint64:
 		return "u64"
-	case fidlir.Float32:
+	case fidl.Float32:
 		return "f32"
-	case fidlir.Float64:
+	case fidl.Float64:
 		return "f64"
 	default:
 		panic(fmt.Sprintf("unexpected subtype %v", subtype))
 	}
 }
 
-func handleTypeName(subtype fidlir.HandleSubtype) string {
+func handleTypeName(subtype fidl.HandleSubtype) string {
 	switch subtype {
-	case fidlir.Handle:
+	case fidl.Handle:
 		return "Handle"
-	case fidlir.Channel:
+	case fidl.Channel:
 		return "Channel"
-	case fidlir.Event:
+	case fidl.Event:
 		return "Event"
 	default:
 		panic(fmt.Sprintf("unsupported handle subtype: %s", subtype))
@@ -235,7 +234,7 @@ func onStruct(value gidlir.Record, decl *gidlmixer.StructDecl) string {
 			panic("unknown field not supported")
 		}
 		providedKeys[field.Key.Name] = struct{}{}
-		fieldName := fidlcommon.ToSnakeCase(field.Key.Name)
+		fieldName := fidl.ToSnakeCase(field.Key.Name)
 		fieldDecl, ok := decl.Field(field.Key.Name)
 		if !ok {
 			panic(fmt.Sprintf("field %s not found", field.Key.Name))
@@ -245,7 +244,7 @@ func onStruct(value gidlir.Record, decl *gidlmixer.StructDecl) string {
 	}
 	for _, key := range decl.FieldNames() {
 		if _, ok := providedKeys[key]; !ok {
-			fieldName := fidlcommon.ToSnakeCase(key)
+			fieldName := fidl.ToSnakeCase(key)
 			structFields = append(structFields, fmt.Sprintf("%s: None", fieldName))
 		}
 	}
@@ -259,7 +258,7 @@ func onTable(value gidlir.Record, decl *gidlmixer.TableDecl) string {
 		if field.Key.IsUnknown() {
 			panic("unknown field not supported")
 		}
-		fieldName := fidlcommon.ToSnakeCase(field.Key.Name)
+		fieldName := fidl.ToSnakeCase(field.Key.Name)
 		fieldDecl, ok := decl.Field(field.Key.Name)
 		if !ok {
 			panic(fmt.Sprintf("field %s not found", field.Key.Name))
@@ -296,7 +295,7 @@ func onUnion(value gidlir.Record, decl *gidlmixer.UnionDecl) string {
 				buildBytes(unknownData.Bytes))
 		}
 	} else {
-		fieldName := fidlcommon.ToUpperCamelCase(field.Key.Name)
+		fieldName := fidl.ToUpperCamelCase(field.Key.Name)
 		fieldDecl, ok := decl.Field(field.Key.Name)
 		if !ok {
 			panic(fmt.Sprintf("field %s not found", field.Key.Name))

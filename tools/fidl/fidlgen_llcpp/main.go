@@ -12,9 +12,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"go.fuchsia.dev/fuchsia/garnet/go/src/fidl/compiler/backend/cpp"
-	"go.fuchsia.dev/fuchsia/garnet/go/src/fidl/compiler/backend/types"
 	"go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_llcpp/codegen"
+	fidl "go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
+	cpp "go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen_cpp"
 )
 
 type flagsDef struct {
@@ -48,7 +48,7 @@ func (f flagsDef) valid() bool {
 	return *f.jsonPath != "" && *f.header != "" && *f.source != ""
 }
 
-func calcPrimaryHeader(fidl types.Root, headerPath string, includeStem string) (string, error) {
+func calcPrimaryHeader(fidl fidl.Root, headerPath string, includeStem string) (string, error) {
 	if *flags.includeBase != "" {
 		absoluteIncludeBase, err := filepath.Abs(*flags.includeBase)
 		if err != nil {
@@ -80,7 +80,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	fidl, err := types.ReadJSONIr(*flags.jsonPath)
+	fidl, err := fidl.ReadJSONIr(*flags.jsonPath)
 	if err != nil {
 		log.Fatal(err)
 	}

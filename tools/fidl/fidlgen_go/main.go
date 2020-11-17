@@ -11,8 +11,8 @@ import (
 	"os"
 	"path"
 
-	"go.fuchsia.dev/fuchsia/garnet/go/src/fidl/compiler/backend/types"
 	"go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_go/codegen"
+	fidl "go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 )
 
 type flagsDef struct {
@@ -56,7 +56,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	root, err := types.ReadJSONIr(*flags.jsonPath)
+	root, err := fidl.ReadJSONIr(*flags.jsonPath)
 	if err != nil {
 		log.Fatal(err)
 	}

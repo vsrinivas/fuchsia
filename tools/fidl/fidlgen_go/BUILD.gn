@@ -12,10 +12,7 @@ import("//zircon/tools/fidl/testdata/targets.gni")
 
 go_library("gopkg") {
   name = "go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_go/..."
-  deps = [
-    "//garnet/go/src/fidl/compiler/backend/common",
-    "//garnet/go/src/fidl/compiler/backend/types",
-  ]
+  deps = [ "//tools/fidl/lib/fidlgen" ]
   sources = [
     "codegen/bits.tmpl.go",
     "codegen/codegen.go",

@@ -9,8 +9,8 @@ import (
 	"log"
 	"os"
 
-	"go.fuchsia.dev/fuchsia/garnet/go/src/fidl/compiler/backend/types"
 	"go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_libfuzzer/codegen"
+	fidl "go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 )
 
 var jsonPath = flag.String("json", "",
@@ -36,7 +36,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	fidl, err := types.ReadJSONIr(*jsonPath)
+	ir, err := fidl.ReadJSONIr(*jsonPath)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -46,7 +46,7 @@ func main() {
 		IncludeBase: *includeBase,
 		IncludeStem: *includeStem,
 	}
-	if err := codegen.NewFidlGenerator().GenerateFidl(fidl, &config, *clangFormatPath); err != nil {
+	if err := codegen.NewFidlGenerator().GenerateFidl(ir, &config, *clangFormatPath); err != nil {
 		log.Fatalf("Error running generator: %v", err)
 	}
 }

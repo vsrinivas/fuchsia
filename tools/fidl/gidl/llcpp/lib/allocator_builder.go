@@ -9,9 +9,9 @@ import (
 	"strconv"
 	"strings"
 
-	fidlir "go.fuchsia.dev/fuchsia/garnet/go/src/fidl/compiler/backend/types"
 	gidlir "go.fuchsia.dev/fuchsia/tools/fidl/gidl/ir"
 	gidlmixer "go.fuchsia.dev/fuchsia/tools/fidl/gidl/mixer"
+	fidl "go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 )
 
 // Builds a LLCPP object using std::make_unique.
@@ -96,9 +96,9 @@ func (a *allocatorBuilder) visit(value interface{}, decl gidlmixer.Declaration, 
 		}
 	case gidlir.RawFloat:
 		switch decl.(*gidlmixer.FloatDecl).Subtype() {
-		case fidlir.Float32:
+		case fidl.Float32:
 			return fmt.Sprintf("([] { uint32_t u = %#b; float f; memcpy(&f, &u, 4); return f; })()", value)
-		case fidlir.Float64:
+		case fidl.Float64:
 			return fmt.Sprintf("([] { uint64_t u = %#b; double d; memcpy(&d, &u, 8); return d; })()", value)
 		}
 	case string:

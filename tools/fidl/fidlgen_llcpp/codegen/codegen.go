@@ -10,7 +10,7 @@ import (
 	"path/filepath"
 	"text/template"
 
-	"go.fuchsia.dev/fuchsia/garnet/go/src/fidl/compiler/backend/cpp"
+	cpp "go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen_cpp"
 )
 
 type Generator struct {

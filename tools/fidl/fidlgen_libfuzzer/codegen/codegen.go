@@ -12,8 +12,8 @@ import (
 	"strings"
 	"text/template"
 
-	"go.fuchsia.dev/fuchsia/garnet/go/src/fidl/compiler/backend/cpp"
-	"go.fuchsia.dev/fuchsia/garnet/go/src/fidl/compiler/backend/types"
+	fidl "go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
+	cpp "go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen_cpp"
 )
 
 type FidlGenerator struct {
@@ -72,7 +72,7 @@ type Config struct {
 }
 
 // GenerateFidl generates all files required for the C++ libfuzzer code.
-func (gen FidlGenerator) GenerateFidl(fidl types.Root, config *Config, clangFormatPath string) error {
+func (gen FidlGenerator) GenerateFidl(fidl fidl.Root, config *Config, clangFormatPath string) error {
 	tree := cpp.CompileLibFuzzer(fidl)
 	prepareTree(fidl.Name, config.IncludeStem, &tree)
 
@@ -128,7 +128,7 @@ func (gen FidlGenerator) GenerateFidl(fidl types.Root, config *Config, clangForm
 	return nil
 }
 
-func prepareTree(name types.EncodedLibraryIdentifier, includeStem string, tree *cpp.Root) {
+func prepareTree(name fidl.EncodedLibraryIdentifier, includeStem string, tree *cpp.Root) {
 	pkgPath := strings.Replace(string(name), ".", "/", -1)
 	tree.PrimaryHeader = pkgPath + "/" + includeStem + ".h"
 	tree.IncludeStem = includeStem

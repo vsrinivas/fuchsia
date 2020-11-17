@@ -10,9 +10,9 @@ import (
 	"path/filepath"
 	"text/template"
 
-	"go.fuchsia.dev/fuchsia/garnet/go/src/fidl/compiler/backend/common"
 	"go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_dart/backend/ir"
 	"go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_dart/backend/templates"
+	fidl "go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 )
 
 type FidlGenerator struct {
@@ -55,7 +55,7 @@ func writeFile(
 	}
 	defer generated.Close()
 
-	generatedPipe, err := common.NewFormatter(dartfmt).FormatPipe(generated)
+	generatedPipe, err := fidl.NewFormatter(dartfmt).FormatPipe(generated)
 	if err != nil {
 		return err
 	}

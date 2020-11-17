@@ -8,8 +8,8 @@ import (
 	"fmt"
 	"strings"
 
-	fidlir "go.fuchsia.dev/fuchsia/garnet/go/src/fidl/compiler/backend/types"
 	gidlmixer "go.fuchsia.dev/fuchsia/tools/fidl/gidl/mixer"
+	fidl "go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 )
 
 func typeNameImpl(decl gidlmixer.Declaration, ignoreNullable bool) string {
@@ -31,11 +31,11 @@ func typeNameImpl(decl gidlmixer.Declaration, ignoreNullable bool) string {
 		return fmt.Sprintf("fidl::VectorView<%s>", typeName(decl.Elem()))
 	case *gidlmixer.HandleDecl:
 		switch decl.Subtype() {
-		case fidlir.Handle:
+		case fidl.Handle:
 			return "zx::handle"
-		case fidlir.Channel:
+		case fidl.Channel:
 			return "zx::channel"
-		case fidlir.Event:
+		case fidl.Event:
 			return "zx::event"
 		default:
 			panic(fmt.Sprintf("Handle subtype not supported %s", decl.Subtype()))

@@ -11,9 +11,9 @@ import (
 	"path/filepath"
 	"testing"
 
-	"go.fuchsia.dev/fuchsia/garnet/go/src/fidl/compiler/backend/common"
 	"go.fuchsia.dev/fuchsia/garnet/go/src/fidl/compiler/backend/typestest"
 	"go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_dart/backend/ir"
+	fidl "go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 )
 
 func testDataPath(paths ...string) string {
@@ -46,7 +46,7 @@ func TestCodegenAsyncLibrary(t *testing.T) {
 
 			tree := ir.Compile(typestest.GetExample(fildgenDartPath, filename))
 			actualWr := new(closeableBytesBuffer)
-			actualWrPipe, err := common.NewFormatter(dartfmtPath).FormatPipe(actualWr)
+			actualWrPipe, err := fidl.NewFormatter(dartfmtPath).FormatPipe(actualWr)
 			if err != nil {
 				t.Fatalf("unable to create format pipe: %s", err)
 			}
@@ -71,7 +71,7 @@ func TestCodegenTestFile(t *testing.T) {
 
 			tree := ir.Compile(typestest.GetExample(fildgenDartPath, filename))
 			actualWr := new(closeableBytesBuffer)
-			actualWrPipe, err := common.NewFormatter(dartfmtPath).FormatPipe(actualWr)
+			actualWrPipe, err := fidl.NewFormatter(dartfmtPath).FormatPipe(actualWr)
 			if err != nil {
 				t.Fatalf("unable to create format pipe: %s", err)
 			}

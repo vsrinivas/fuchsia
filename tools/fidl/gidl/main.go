@@ -14,7 +14,6 @@ import (
 	"sort"
 	"strings"
 
-	fidlir "go.fuchsia.dev/fuchsia/garnet/go/src/fidl/compiler/backend/types"
 	gidlconfig "go.fuchsia.dev/fuchsia/tools/fidl/gidl/config"
 	gidldart "go.fuchsia.dev/fuchsia/tools/fidl/gidl/dart"
 	gidlgolang "go.fuchsia.dev/fuchsia/tools/fidl/gidl/golang"
@@ -25,6 +24,7 @@ import (
 	gidlreference "go.fuchsia.dev/fuchsia/tools/fidl/gidl/reference"
 	gidlrust "go.fuchsia.dev/fuchsia/tools/fidl/gidl/rust"
 	gidlwalker "go.fuchsia.dev/fuchsia/tools/fidl/gidl/walker"
+	fidl "go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 )
 
 // Generator is a function that generates conformance tests for a particular
@@ -32,7 +32,7 @@ import (
 // added as a suffix to the name of the file before the extension
 // (e.g. my_file.go -> my_file_test_name.go).
 // The first file is the "main output file".
-type Generator func(gidlir.All, fidlir.Root, gidlconfig.GeneratorConfig) ([]byte, error)
+type Generator func(gidlir.All, fidl.Root, gidlconfig.GeneratorConfig) ([]byte, error)
 
 var conformanceGenerators = map[string]Generator{
 	"go":    gidlgolang.GenerateConformanceTests,
@@ -131,12 +131,12 @@ func parseGidlIr(filename string) gidlir.All {
 	return result
 }
 
-func parseFidlJSONIr(filename string) fidlir.Root {
+func parseFidlJSONIr(filename string) fidl.Root {
 	bytes, err := ioutil.ReadFile(filename)
 	if err != nil {
 		panic(err)
 	}
-	var result fidlir.Root
+	var result fidl.Root
 	if err := json.Unmarshal(bytes, &result); err != nil {
 		panic(err)
 	}
@@ -159,7 +159,7 @@ func main() {
 		config.CppBenchmarksFidlLibrary = *flags.CppBenchmarksFidlLibrary
 	}
 
-	fidl := parseFidlJSONIr(*flags.JSONPath)
+	ir := parseFidlJSONIr(*flags.JSONPath)
 
 	var parsedGidlFiles []gidlir.All
 	for _, path := range flag.Args() {
@@ -173,13 +173,13 @@ func main() {
 
 	// TODO(fxbug.dev/7802): While transitioning "zx" from [Internal] to a normal
 	// library, tolerate but ignore a dependency on zx.
-	if len(fidl.Libraries) == 1 && fidl.Libraries[0].Name == "zx" {
-		fidl.Libraries = make([]fidlir.Library, 0)
+	if len(ir.Libraries) == 1 && ir.Libraries[0].Name == "zx" {
+		ir.Libraries = make([]fidl.Library, 0)
 	}
 
-	if len(fidl.Libraries) != 0 {
+	if len(ir.Libraries) != 0 {
 		var libs []string
-		for _, l := range fidl.Libraries {
+		for _, l := range ir.Libraries {
 			libs = append(libs, string(l.Name))
 		}
 		panic(fmt.Sprintf(
@@ -202,7 +202,7 @@ func main() {
 		log.Fatalf("unknown language for %s: %s", *flags.Type, language)
 	}
 
-	mainFile, err := generator(gidl, fidl, config)
+	mainFile, err := generator(gidl, ir, config)
 	if err != nil {
 		log.Fatal(err)
 	}

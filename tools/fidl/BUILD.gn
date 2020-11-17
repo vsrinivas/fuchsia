@@ -33,7 +33,8 @@ group("tests") {
     "fidlgen_rust:tests",
     "fidlgen_syzkaller:tests",
     "gidl:tests",
+    "lib/fidlgen:tests",
+    "lib/fidlgen_cpp:tests",
     "measure-tape:tests",
-    "//garnet/go/src/fidl/compiler/backend/cpp:tests",
   ]
 }

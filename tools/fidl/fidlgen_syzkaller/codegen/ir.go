@@ -8,8 +8,7 @@ import (
 	"fmt"
 	"strings"
 
-	"go.fuchsia.dev/fuchsia/garnet/go/src/fidl/compiler/backend/common"
-	"go.fuchsia.dev/fuchsia/garnet/go/src/fidl/compiler/backend/types"
+	fidl "go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 )
 
 const (
@@ -119,14 +118,14 @@ type Root struct {
 	Bits []Bits
 }
 
-type StructMap map[types.EncodedCompoundIdentifier]types.Struct
-type UnionMap map[types.EncodedCompoundIdentifier]types.Union
-type EnumMap map[types.EncodedCompoundIdentifier]types.Enum
-type BitsMap map[types.EncodedCompoundIdentifier]types.Bits
+type StructMap map[fidl.EncodedCompoundIdentifier]fidl.Struct
+type UnionMap map[fidl.EncodedCompoundIdentifier]fidl.Union
+type EnumMap map[fidl.EncodedCompoundIdentifier]fidl.Enum
+type BitsMap map[fidl.EncodedCompoundIdentifier]fidl.Bits
 
 type compiler struct {
 	// decls contains all top-level declarations for the FIDL source.
-	decls types.DeclMap
+	decls fidl.DeclMap
 
 	// structs contain all top-level struct definitions for the FIDL source.
 	structs StructMap
@@ -141,7 +140,7 @@ type compiler struct {
 	bits BitsMap
 
 	// library is the identifier for the current library.
-	library types.LibraryIdentifier
+	library fidl.LibraryIdentifier
 }
 
 var reservedWords = map[string]struct{}{
@@ -167,49 +166,49 @@ var reservedWords = map[string]struct{}{
 	"void":      {},
 }
 
-var primitiveTypes = map[types.PrimitiveSubtype]string{
-	types.Bool:    "int8",
-	types.Int8:    "int8",
-	types.Int16:   "int16",
-	types.Int32:   "int32",
-	types.Int64:   "int64",
-	types.Uint8:   "int8",
-	types.Uint16:  "int16",
-	types.Uint32:  "int32",
-	types.Uint64:  "int64",
-	types.Float32: "int32",
-	types.Float64: "int64",
+var primitiveTypes = map[fidl.PrimitiveSubtype]string{
+	fidl.Bool:    "int8",
+	fidl.Int8:    "int8",
+	fidl.Int16:   "int16",
+	fidl.Int32:   "int32",
+	fidl.Int64:   "int64",
+	fidl.Uint8:   "int8",
+	fidl.Uint16:  "int16",
+	fidl.Uint32:  "int32",
+	fidl.Uint64:  "int64",
+	fidl.Float32: "int32",
+	fidl.Float64: "int64",
 }
 
-var handleSubtypes = map[types.HandleSubtype]string{
-	types.Bti:          "zx_bti",
-	types.Channel:      "zx_chan",
-	types.Clock:        "zx_clock",
-	types.DebugLog:     "zx_log",
-	types.Event:        "zx_event",
-	types.Eventpair:    "zx_eventpair",
-	types.Exception:    "zx_exception",
-	types.Fifo:         "zx_fifo",
-	types.Guest:        "zx_guest",
-	types.Handle:       "zx_handle",
-	types.Interrupt:    "zx_interrupt",
-	types.Iommu:        "zx_iommu",
-	types.Job:          "zx_job",
-	types.Pager:        "zx_pager",
-	types.PciDevice:    "zx_pcidevice",
-	types.Pmt:          "zx_pmt",
-	types.Port:         "zx_port",
-	types.Process:      "zx_process",
-	types.Profile:      "zx_profile",
-	types.Resource:     "zx_resource",
-	types.Socket:       "zx_socket",
-	types.Stream:       "zx_stream",
-	types.SuspendToken: "zx_suspendtoken",
-	types.Thread:       "zx_thread",
-	types.Time:         "zx_timer",
-	types.Vcpu:         "zx_vcpu",
-	types.Vmar:         "zx_vmar",
-	types.Vmo:          "zx_vmo",
+var handleSubtypes = map[fidl.HandleSubtype]string{
+	fidl.Bti:          "zx_bti",
+	fidl.Channel:      "zx_chan",
+	fidl.Clock:        "zx_clock",
+	fidl.DebugLog:     "zx_log",
+	fidl.Event:        "zx_event",
+	fidl.Eventpair:    "zx_eventpair",
+	fidl.Exception:    "zx_exception",
+	fidl.Fifo:         "zx_fifo",
+	fidl.Guest:        "zx_guest",
+	fidl.Handle:       "zx_handle",
+	fidl.Interrupt:    "zx_interrupt",
+	fidl.Iommu:        "zx_iommu",
+	fidl.Job:          "zx_job",
+	fidl.Pager:        "zx_pager",
+	fidl.PciDevice:    "zx_pcidevice",
+	fidl.Pmt:          "zx_pmt",
+	fidl.Port:         "zx_port",
+	fidl.Process:      "zx_process",
+	fidl.Profile:      "zx_profile",
+	fidl.Resource:     "zx_resource",
+	fidl.Socket:       "zx_socket",
+	fidl.Stream:       "zx_stream",
+	fidl.SuspendToken: "zx_suspendtoken",
+	fidl.Thread:       "zx_thread",
+	fidl.Time:         "zx_timer",
+	fidl.Vcpu:         "zx_vcpu",
+	fidl.Vmar:         "zx_vmar",
+	fidl.Vmo:          "zx_vmo",
 }
 
 func isReservedWord(str string) bool {
@@ -217,7 +216,7 @@ func isReservedWord(str string) bool {
 	return ok
 }
 
-func changeIfReserved(val types.Identifier, ext string) string {
+func changeIfReserved(val fidl.Identifier, ext string) string {
 	str := string(val) + ext
 	if isReservedWord(str) {
 		return str + "_"
@@ -225,33 +224,33 @@ func changeIfReserved(val types.Identifier, ext string) string {
 	return str
 }
 
-func formatLibrary(library types.LibraryIdentifier, sep string) string {
+func formatLibrary(library fidl.LibraryIdentifier, sep string) string {
 	parts := []string{}
 	for _, part := range library {
 		parts = append(parts, string(part))
 	}
-	return changeIfReserved(types.Identifier(strings.Join(parts, sep)), "")
+	return changeIfReserved(fidl.Identifier(strings.Join(parts, sep)), "")
 }
 
-func formatLibraryPath(library types.LibraryIdentifier) string {
+func formatLibraryPath(library fidl.LibraryIdentifier) string {
 	return formatLibrary(library, "/")
 }
 
-func (c *compiler) compileIdentifier(id types.Identifier, ext string) string {
+func (c *compiler) compileIdentifier(id fidl.Identifier, ext string) string {
 	str := string(id)
-	str = common.ToSnakeCase(str)
-	return changeIfReserved(types.Identifier(str), ext)
+	str = fidl.ToSnakeCase(str)
+	return changeIfReserved(fidl.Identifier(str), ext)
 }
 
-func (c *compiler) compileCompoundIdentifier(eci types.EncodedCompoundIdentifier, ext string) string {
-	val := types.ParseCompoundIdentifier(eci)
+func (c *compiler) compileCompoundIdentifier(eci fidl.EncodedCompoundIdentifier, ext string) string {
+	val := fidl.ParseCompoundIdentifier(eci)
 	strs := []string{}
 	strs = append(strs, formatLibrary(val.Library, "_"))
 	strs = append(strs, changeIfReserved(val.Name, ext))
 	return strings.Join(strs, "_")
 }
 
-func (c *compiler) compilePrimitiveSubtype(val types.PrimitiveSubtype) Type {
+func (c *compiler) compilePrimitiveSubtype(val fidl.PrimitiveSubtype) Type {
 	// TODO(fxbug.dev/45007): Syzkaller does not support enum member references.
 	// When this changes, we need to remove all special handling such as
 	// ignoring specific files in the codegen test, or in the regen script.
@@ -261,18 +260,18 @@ func (c *compiler) compilePrimitiveSubtype(val types.PrimitiveSubtype) Type {
 	panic(fmt.Sprintf("unknown primitive type: %v", val))
 }
 
-func (c *compiler) compilePrimitiveSubtypeRange(val types.PrimitiveSubtype, valRange string) Type {
+func (c *compiler) compilePrimitiveSubtypeRange(val fidl.PrimitiveSubtype, valRange string) Type {
 	return Type(fmt.Sprintf("%s[%s]", c.compilePrimitiveSubtype(val), valRange))
 }
 
-func (c *compiler) compileHandleSubtype(val types.HandleSubtype) Type {
+func (c *compiler) compileHandleSubtype(val fidl.HandleSubtype) Type {
 	if t, ok := handleSubtypes[val]; ok {
 		return Type(t)
 	}
 	panic(fmt.Sprintf("unknown handle type: %v", val))
 }
 
-func (c *compiler) compileEnum(val types.Enum) Enum {
+func (c *compiler) compileEnum(val fidl.Enum) Enum {
 	e := Enum{
 		c.compileCompoundIdentifier(val.Name, ""),
 		string(c.compilePrimitiveSubtype(val.Type)),
@@ -284,7 +283,7 @@ func (c *compiler) compileEnum(val types.Enum) Enum {
 	return e
 }
 
-func (c *compiler) compileBits(val types.Bits) Bits {
+func (c *compiler) compileBits(val fidl.Bits) Bits {
 	e := Bits{
 		c.compileCompoundIdentifier(val.Name, ""),
 		string(c.compilePrimitiveSubtype(val.Type.PrimitiveSubtype)),
@@ -296,18 +295,18 @@ func (c *compiler) compileBits(val types.Bits) Bits {
 	return e
 }
 
-func (c *compiler) compileStructMember(p types.StructMember) (StructMember, *StructMember, *StructMember) {
+func (c *compiler) compileStructMember(p fidl.StructMember) (StructMember, *StructMember, *StructMember) {
 	var i StructMember
 	var o *StructMember
 	var h *StructMember
 
 	switch p.Type.Kind {
-	case types.PrimitiveType:
+	case fidl.PrimitiveType:
 		i = StructMember{
 			Type: c.compilePrimitiveSubtype(p.Type.PrimitiveSubtype),
 			Name: c.compileIdentifier(p.Name, ""),
 		}
-	case types.HandleType:
+	case fidl.HandleType:
 		i = StructMember{
 			Type: Type("flags[fidl_handle_presence, int32]"),
 			Name: c.compileIdentifier(p.Name, ""),
@@ -318,7 +317,7 @@ func (c *compiler) compileStructMember(p types.StructMember) (StructMember, *Str
 			Type: c.compileHandleSubtype(p.Type.HandleSubtype),
 			Name: c.compileIdentifier(p.Name, ""),
 		}
-	case types.RequestType:
+	case fidl.RequestType:
 		i = StructMember{
 			Type: Type("flags[fidl_handle_presence, int32]"),
 			Name: c.compileIdentifier(p.Name, ""),
@@ -329,9 +328,9 @@ func (c *compiler) compileStructMember(p types.StructMember) (StructMember, *Str
 			Type: Type(fmt.Sprintf("zx_chan_%s_server", c.compileCompoundIdentifier(p.Type.RequestSubtype, ""))),
 			Name: c.compileIdentifier(p.Name, ""),
 		}
-	case types.ArrayType:
-		inLine, outOfLine, handle := c.compileStructMember(types.StructMember{
-			Name: types.Identifier(c.compileIdentifier(p.Name, OutOfLineSuffix)),
+	case fidl.ArrayType:
+		inLine, outOfLine, handle := c.compileStructMember(fidl.StructMember{
+			Name: fidl.Identifier(c.compileIdentifier(p.Name, OutOfLineSuffix)),
 			Type: (*p.Type.ElementType),
 		})
 
@@ -355,7 +354,7 @@ func (c *compiler) compileStructMember(p types.StructMember) (StructMember, *Str
 				Name: c.compileIdentifier(p.Name, HandlesSuffix),
 			}
 		}
-	case types.StringType:
+	case fidl.StringType:
 		// Constant-size, in-line data
 		i = StructMember{
 			Type: Type("fidl_string"),
@@ -367,7 +366,7 @@ func (c *compiler) compileStructMember(p types.StructMember) (StructMember, *Str
 			Type: Type("fidl_aligned[stringnoz]"),
 			Name: c.compileIdentifier(p.Name, OutOfLineSuffix),
 		}
-	case types.VectorType:
+	case fidl.VectorType:
 		// Constant-size, in-line data
 		i = StructMember{
 			Type: Type("fidl_vector"),
@@ -375,8 +374,8 @@ func (c *compiler) compileStructMember(p types.StructMember) (StructMember, *Str
 		}
 
 		// Variable-size, out-of-line data
-		inLine, outOfLine, handle := c.compileStructMember(types.StructMember{
-			Name: types.Identifier(c.compileIdentifier(p.Name, OutOfLineSuffix)),
+		inLine, outOfLine, handle := c.compileStructMember(fidl.StructMember{
+			Name: fidl.Identifier(c.compileIdentifier(p.Name, OutOfLineSuffix)),
 			Type: (*p.Type.ElementType),
 		})
 		o = &StructMember{
@@ -398,24 +397,24 @@ func (c *compiler) compileStructMember(p types.StructMember) (StructMember, *Str
 				Name: c.compileIdentifier(p.Name, ""),
 			}
 		}
-	case types.IdentifierType:
+	case fidl.IdentifierType:
 		declType, ok := c.decls[p.Type.Identifier]
 		if !ok {
 			panic(fmt.Sprintf("unknown identifier: %v", p.Type.Identifier))
 		}
 
 		switch declType {
-		case types.EnumDeclType:
+		case fidl.EnumDeclType:
 			i = StructMember{
 				Type: Type(fmt.Sprintf("flags[%s, %s]", c.compileCompoundIdentifier(p.Type.Identifier, ""), c.compilePrimitiveSubtype(c.enums[p.Type.Identifier].Type))),
 				Name: c.compileIdentifier(p.Name, ""),
 			}
-		case types.BitsDeclType:
+		case fidl.BitsDeclType:
 			i = StructMember{
 				Type: Type(fmt.Sprintf("flags[%s, %s]", c.compileCompoundIdentifier(p.Type.Identifier, ""), c.compilePrimitiveSubtype(c.bits[p.Type.Identifier].Type.PrimitiveSubtype))),
 				Name: c.compileIdentifier(p.Name, ""),
 			}
-		case types.ProtocolDeclType:
+		case fidl.ProtocolDeclType:
 			i = StructMember{
 				Type: Type("flags[fidl_handle_presence, int32]"),
 				Name: c.compileIdentifier(p.Name, ""),
@@ -426,7 +425,7 @@ func (c *compiler) compileStructMember(p types.StructMember) (StructMember, *Str
 				Type: Type(fmt.Sprintf("zx_chan_%s_client", c.compileCompoundIdentifier(p.Type.Identifier, ""))),
 				Name: c.compileIdentifier(p.Name, ""),
 			}
-		case types.UnionDeclType:
+		case fidl.UnionDeclType:
 			_, outOfLine, handles := c.compileUnion(c.unions[p.Type.Identifier])
 
 			// Constant-size, in-line data
@@ -453,7 +452,7 @@ func (c *compiler) compileStructMember(p types.StructMember) (StructMember, *Str
 					Name: c.compileIdentifier(p.Name, ""),
 				}
 			}
-		case types.StructDeclType:
+		case fidl.StructDeclType:
 			// Fixed-size, in-line data.
 			i = StructMember{
 				Type: Type(c.compileCompoundIdentifier(p.Type.Identifier, InLineSuffix)),
@@ -500,7 +499,7 @@ func (members members) voidIfEmpty() members {
 func (members members) uint8PaddingIfEmpty() members {
 	if len(members) == 0 {
 		return []StructMember{
-			{Name: "padding", Type: Type(primitiveTypes[types.Uint8])},
+			{Name: "padding", Type: Type(primitiveTypes[fidl.Uint8])},
 		}
 	}
 	return members
@@ -510,7 +509,7 @@ type result struct {
 	Inline, OutOfLine, Handles members
 }
 
-func (c *compiler) compileStruct(p types.Struct) result {
+func (c *compiler) compileStruct(p fidl.Struct) result {
 	var result result
 	for _, m := range p.Members {
 		inLine, outOfLine, handles := c.compileStructMember(m)
@@ -525,7 +524,7 @@ func (c *compiler) compileStruct(p types.Struct) result {
 	return result
 }
 
-func (c *compiler) compileUnion(p types.Union) ([]StructMember, []StructMember, []StructMember) {
+func (c *compiler) compileUnion(p fidl.Union) ([]StructMember, []StructMember, []StructMember) {
 	var i, o, h []StructMember
 
 	for _, m := range p.Members {
@@ -533,10 +532,10 @@ func (c *compiler) compileUnion(p types.Union) ([]StructMember, []StructMember, 
 			continue
 		}
 
-		inLine, outOfLine, handles := c.compileStructMember(types.StructMember{
+		inLine, outOfLine, handles := c.compileStructMember(fidl.StructMember{
 			Type: m.Type,
 			Name: m.Name,
-			FieldShapeV1: types.FieldShape{
+			FieldShapeV1: fidl.FieldShape{
 				Offset:  m.Offset,
 				Padding: 0,
 			},
@@ -559,10 +558,10 @@ func (c *compiler) compileUnion(p types.Union) ([]StructMember, []StructMember, 
 	return i, o, h
 }
 
-func (c *compiler) compileParameters(name string, ordinal uint64, params []types.Parameter) (Struct, Struct) {
-	var args types.Struct
+func (c *compiler) compileParameters(name string, ordinal uint64, params []fidl.Parameter) (Struct, Struct) {
+	var args fidl.Struct
 	for _, p := range params {
-		args.Members = append(args.Members, types.StructMember{
+		args.Members = append(args.Members, fidl.StructMember{
 			Type:         p.Type,
 			Name:         p.Name,
 			FieldShapeV1: p.FieldShapeV1,
@@ -578,7 +577,7 @@ func (c *compiler) compileParameters(name string, ordinal uint64, params []types
 		}
 }
 
-func (c *compiler) compileMethod(protocolName types.EncodedCompoundIdentifier, val types.Method) Method {
+func (c *compiler) compileMethod(protocolName fidl.EncodedCompoundIdentifier, val fidl.Method) Method {
 	methodName := c.compileCompoundIdentifier(protocolName, string(val.Name))
 	r := Method{
 		Name:    methodName,
@@ -605,7 +604,7 @@ func (c *compiler) compileMethod(protocolName types.EncodedCompoundIdentifier, v
 	return r
 }
 
-func (c *compiler) compileProtocol(val types.Protocol) Protocol {
+func (c *compiler) compileProtocol(val fidl.Protocol) Protocol {
 	r := Protocol{
 		Name:              c.compileCompoundIdentifier(val.Name, ""),
 		ServiceNameString: strings.Trim(val.GetServiceName(), "\""),
@@ -616,10 +615,10 @@ func (c *compiler) compileProtocol(val types.Protocol) Protocol {
 	return r
 }
 
-func compile(fidlData types.Root) Root {
+func compile(fidlData fidl.Root) Root {
 	fidlData = fidlData.ForBindings("syzkaller")
 	root := Root{}
-	libraryName := types.ParseLibraryName(fidlData.Name)
+	libraryName := fidl.ParseLibraryName(fidlData.Name)
 	c := compiler{
 		decls:   fidlData.DeclsWithDependencies(),
 		structs: make(StructMap),

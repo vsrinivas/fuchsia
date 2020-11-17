@@ -2,15 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-package cpp
+package fidlgen_cpp
 
 import (
 	"fmt"
 	"sort"
 	"strings"
 
-	"go.fuchsia.dev/fuchsia/garnet/go/src/fidl/compiler/backend/common"
-	"go.fuchsia.dev/fuchsia/garnet/go/src/fidl/compiler/backend/types"
+	fidl "go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 )
 
 // This value needs to be kept in sync with the one defined in
@@ -100,7 +99,7 @@ type Type struct {
 	IsResource          bool
 	ExternalDeclaration bool
 
-	DeclarationName types.EncodedCompoundIdentifier
+	DeclarationName fidl.EncodedCompoundIdentifier
 
 	// Set iff IsArray || IsVector
 	ElementType *Type
@@ -142,7 +141,7 @@ func (t *Type) compileProperties(c compiler) {
 }
 
 type Const struct {
-	types.Attributes
+	fidl.Attributes
 	Extern    bool
 	Decorator string
 	Type      Type
@@ -161,7 +160,7 @@ func (co *Const) compileProperties(c compiler) {
 }
 
 type Bits struct {
-	types.Bits
+	fidl.Bits
 	Namespace string
 	Type      string
 	Name      string
@@ -181,13 +180,13 @@ func (b *Bits) compileProperties(c compiler) {
 }
 
 type BitsMember struct {
-	types.Attributes
+	fidl.Attributes
 	Name  string
 	Value string
 }
 
 type Enum struct {
-	types.Enum
+	fidl.Enum
 	Namespace string
 	Type      string
 	Name      string
@@ -205,13 +204,13 @@ func (e *Enum) compileProperties(c compiler) {
 }
 
 type EnumMember struct {
-	types.EnumMember
+	fidl.EnumMember
 	Name  string
 	Value string
 }
 
 type Union struct {
-	types.Union
+	fidl.Union
 	Namespace    string
 	Name         string
 	TableType    string
@@ -238,7 +237,7 @@ func (u *Union) compileProperties(c compiler) {
 }
 
 type UnionMember struct {
-	types.Attributes
+	fidl.Attributes
 	Ordinal     uint64
 	Type        Type
 	Name        string
@@ -248,7 +247,7 @@ type UnionMember struct {
 }
 
 func (um UnionMember) UpperCamelCaseName() string {
-	return common.ToUpperCamelCase(um.Name)
+	return fidl.ToUpperCamelCase(um.Name)
 }
 
 type TableFrameItem struct {
@@ -257,7 +256,7 @@ type TableFrameItem struct {
 }
 
 type Table struct {
-	types.Table
+	fidl.Table
 	Namespace      string
 	Name           string
 	TableType      string
@@ -287,7 +286,7 @@ func (t *Table) compileProperties(c compiler) {
 }
 
 type TableMember struct {
-	types.Attributes
+	fidl.Attributes
 	Type               Type
 	Name               string
 	DefaultValue       string
@@ -302,7 +301,7 @@ type TableMember struct {
 }
 
 type Struct struct {
-	types.Struct
+	fidl.Struct
 	Namespace     string
 	Name          string
 	TableType     string
@@ -337,7 +336,7 @@ func (s *Struct) compileProperties(c compiler) {
 }
 
 type StructMember struct {
-	types.Attributes
+	fidl.Attributes
 	Type         Type
 	Name         string
 	DefaultValue string
@@ -347,7 +346,7 @@ type StructMember struct {
 // protocolInner contains information about a Protocol that should be
 // filled out by the compiler.
 type protocolInner struct {
-	types.Attributes
+	fidl.Attributes
 	Namespace           string
 	Name                string
 	ClassName           string
@@ -425,7 +424,7 @@ func (p *Protocol) compileProperties(c compiler) {
 }
 
 type Service struct {
-	types.Attributes
+	fidl.Attributes
 	Namespace   string
 	Name        string
 	ServiceName string
@@ -443,7 +442,7 @@ func (s *Service) compileProperties(c compiler) {
 }
 
 type ServiceMember struct {
-	types.Attributes
+	fidl.Attributes
 	ProtocolType string
 	Name         string
 	MethodName   string
@@ -451,7 +450,7 @@ type ServiceMember struct {
 
 // TODO: There are common fields between Request and Response; consider factoring them out.
 type Method struct {
-	types.Attributes
+	fidl.Attributes
 	Name                 string
 	NameInLowerSnakeCase string
 	Ordinal              uint64
@@ -552,8 +551,8 @@ type Root struct {
 	Headers         []string
 	FuzzerHeaders   []string
 	HandleTypes     []string
-	Library         types.LibraryIdentifier
-	LibraryReversed types.LibraryIdentifier
+	Library         fidl.LibraryIdentifier
+	LibraryReversed fidl.LibraryIdentifier
 	Decls           []Decl
 }
 
@@ -831,18 +830,18 @@ var reservedWords = map[string]struct{}{
 	"EHWPOISON":       {},
 }
 
-var primitiveTypes = map[types.PrimitiveSubtype]string{
-	types.Bool:    "bool",
-	types.Int8:    "int8_t",
-	types.Int16:   "int16_t",
-	types.Int32:   "int32_t",
-	types.Int64:   "int64_t",
-	types.Uint8:   "uint8_t",
-	types.Uint16:  "uint16_t",
-	types.Uint32:  "uint32_t",
-	types.Uint64:  "uint64_t",
-	types.Float32: "float",
-	types.Float64: "double",
+var primitiveTypes = map[fidl.PrimitiveSubtype]string{
+	fidl.Bool:    "bool",
+	fidl.Int8:    "int8_t",
+	fidl.Int16:   "int16_t",
+	fidl.Int32:   "int32_t",
+	fidl.Int64:   "int64_t",
+	fidl.Uint8:   "uint8_t",
+	fidl.Uint16:  "uint16_t",
+	fidl.Uint32:  "uint32_t",
+	fidl.Uint64:  "uint64_t",
+	fidl.Float32: "float",
+	fidl.Float64: "double",
 }
 
 func isReservedWord(str string) bool {
@@ -850,7 +849,7 @@ func isReservedWord(str string) bool {
 	return ok
 }
 
-func changeIfReserved(i types.Identifier, ext string) string {
+func changeIfReserved(i fidl.Identifier, ext string) string {
 	str := string(i) + ext
 	if isReservedWord(str) {
 		return str + "_"
@@ -865,7 +864,7 @@ const (
 	changePartIfReserved identifierTransform = true
 )
 
-func formatLibrary(library types.LibraryIdentifier, sep string, identifierTransform identifierTransform) string {
+func formatLibrary(library fidl.LibraryIdentifier, sep string, identifierTransform identifierTransform) string {
 	parts := []string{}
 	for _, part := range library {
 		if identifierTransform == changePartIfReserved {
@@ -875,10 +874,10 @@ func formatLibrary(library types.LibraryIdentifier, sep string, identifierTransf
 		}
 	}
 	name := strings.Join(parts, sep)
-	return changeIfReserved(types.Identifier(name), "")
+	return changeIfReserved(fidl.Identifier(name), "")
 }
 
-func formatNamespace(library types.LibraryIdentifier, appendNamespace string) string {
+func formatNamespace(library fidl.LibraryIdentifier, appendNamespace string) string {
 	ns := "::" + formatLibrary(library, "::", changePartIfReserved)
 	if len(appendNamespace) > 0 {
 		ns = ns + "::" + appendNamespace
@@ -886,10 +885,10 @@ func formatNamespace(library types.LibraryIdentifier, appendNamespace string) st
 	return ns
 }
 
-func formatLLNamespace(library types.LibraryIdentifier, appendNamespace string) string {
+func formatLLNamespace(library fidl.LibraryIdentifier, appendNamespace string) string {
 	// Avoid user-defined llcpp library colliding with the llcpp namespace, by appending underscore.
 	if len(library) > 0 && library[0] == "llcpp" {
-		libraryRenamed := make([]types.Identifier, len(library))
+		libraryRenamed := make([]fidl.Identifier, len(library))
 		copy(libraryRenamed, library)
 		libraryRenamed[0] = "llcpp_"
 		library = libraryRenamed
@@ -897,27 +896,27 @@ func formatLLNamespace(library types.LibraryIdentifier, appendNamespace string) 
 	return "::llcpp" + formatNamespace(library, appendNamespace)
 }
 
-func formatLibraryPrefix(library types.LibraryIdentifier) string {
+func formatLibraryPrefix(library fidl.LibraryIdentifier) string {
 	return formatLibrary(library, "_", keepPartIfReserved)
 }
 
-func formatLibraryPath(library types.LibraryIdentifier) string {
+func formatLibraryPath(library fidl.LibraryIdentifier) string {
 	return formatLibrary(library, "/", keepPartIfReserved)
 }
 
 type compiler struct {
 	namespace          string
 	symbolPrefix       string
-	decls              types.DeclMap
-	declarations       map[types.EncodedCompoundIdentifier]Decl
-	library            types.LibraryIdentifier
-	handleTypes        map[types.HandleSubtype]struct{}
-	namespaceFormatter func(types.LibraryIdentifier, string) string
-	resultForStruct    map[types.EncodedCompoundIdentifier]*Result
-	resultForUnion     map[types.EncodedCompoundIdentifier]*Result
+	decls              fidl.DeclMap
+	declarations       map[fidl.EncodedCompoundIdentifier]Decl
+	library            fidl.LibraryIdentifier
+	handleTypes        map[fidl.HandleSubtype]struct{}
+	namespaceFormatter func(fidl.LibraryIdentifier, string) string
+	resultForStruct    map[fidl.EncodedCompoundIdentifier]*Result
+	resultForUnion     map[fidl.EncodedCompoundIdentifier]*Result
 }
 
-func (c *compiler) isInExternalLibrary(ci types.CompoundIdentifier) bool {
+func (c *compiler) isInExternalLibrary(ci fidl.CompoundIdentifier) bool {
 	if len(ci.Library) != len(c.library) {
 		return true
 	}
@@ -929,8 +928,8 @@ func (c *compiler) isInExternalLibrary(ci types.CompoundIdentifier) bool {
 	return false
 }
 
-func (c *compiler) compileCompoundIdentifier(eci types.EncodedCompoundIdentifier, ext, appendNamespace string, fullName bool) string {
-	val := types.ParseCompoundIdentifier(eci)
+func (c *compiler) compileCompoundIdentifier(eci fidl.EncodedCompoundIdentifier, ext, appendNamespace string, fullName bool) string {
+	val := fidl.ParseCompoundIdentifier(eci)
 	strs := []string{}
 	if fullName || c.isInExternalLibrary(val) {
 		strs = append(strs, c.namespaceFormatter(val.Library, appendNamespace))
@@ -942,8 +941,8 @@ func (c *compiler) compileCompoundIdentifier(eci types.EncodedCompoundIdentifier
 	return strings.Join(strs, "::")
 }
 
-func (c *compiler) compileTableType(eci types.EncodedCompoundIdentifier) string {
-	val := types.ParseCompoundIdentifier(eci)
+func (c *compiler) compileTableType(eci fidl.EncodedCompoundIdentifier) string {
+	val := fidl.ParseCompoundIdentifier(eci)
 	if c.isInExternalLibrary(val) {
 		panic(fmt.Sprintf("can't create table type for external identifier: %v", val))
 	}
@@ -951,11 +950,11 @@ func (c *compiler) compileTableType(eci types.EncodedCompoundIdentifier) string 
 	return fmt.Sprintf("%s_%sTable", c.symbolPrefix, val.Name)
 }
 
-func (c *compiler) compileLiteral(val types.Literal, typ types.Type) string {
+func (c *compiler) compileLiteral(val fidl.Literal, typ fidl.Type) string {
 	switch val.Kind {
-	case types.StringLiteral:
+	case fidl.StringLiteral:
 		return fmt.Sprintf("%q", val.Value)
-	case types.NumericLiteral:
+	case fidl.NumericLiteral:
 		if val.Value == "-9223372036854775808" || val.Value == "0x8000000000000000" {
 			// C++ only supports nonnegative literals and a value this large in absolute
 			// value cannot be represented as a nonnegative number in 64-bits.
@@ -969,7 +968,7 @@ func (c *compiler) compileLiteral(val types.Literal, typ types.Type) string {
 
 		// float32 literals must be marked as such.
 		if strings.ContainsRune(val.Value, '.') {
-			if typ.Kind == types.PrimitiveType && typ.PrimitiveSubtype == types.Float32 {
+			if typ.Kind == fidl.PrimitiveType && typ.PrimitiveSubtype == fidl.Float32 {
 				return fmt.Sprintf("%sf", val.Value)
 			} else {
 				return val.Value
@@ -980,39 +979,39 @@ func (c *compiler) compileLiteral(val types.Literal, typ types.Type) string {
 			return fmt.Sprintf("%su", val.Value)
 		}
 		return val.Value
-	case types.TrueLiteral:
+	case fidl.TrueLiteral:
 		return "true"
-	case types.FalseLiteral:
+	case fidl.FalseLiteral:
 		return "false"
-	case types.DefaultLiteral:
+	case fidl.DefaultLiteral:
 		return "default"
 	default:
 		panic(fmt.Sprintf("unknown literal kind: %v", val.Kind))
 	}
 }
 
-func (c *compiler) compileConstant(val types.Constant, t *Type, typ types.Type, appendNamespace string) string {
+func (c *compiler) compileConstant(val fidl.Constant, t *Type, typ fidl.Type, appendNamespace string) string {
 	switch val.Kind {
-	case types.IdentifierConstant:
+	case fidl.IdentifierConstant:
 		return c.compileCompoundIdentifier(val.Identifier, "", appendNamespace, false)
-	case types.LiteralConstant:
+	case fidl.LiteralConstant:
 		return c.compileLiteral(val.Literal, typ)
 	default:
 		panic(fmt.Sprintf("unknown constant kind: %v", val.Kind))
 	}
 }
 
-func (c *compiler) compilePrimitiveSubtype(val types.PrimitiveSubtype) string {
+func (c *compiler) compilePrimitiveSubtype(val fidl.PrimitiveSubtype) string {
 	if t, ok := primitiveTypes[val]; ok {
 		return t
 	}
 	panic(fmt.Sprintf("unknown primitive type: %v", val))
 }
 
-func (c *compiler) compileType(val types.Type) Type {
+func (c *compiler) compileType(val fidl.Type) Type {
 	r := Type{}
 	switch val.Kind {
-	case types.ArrayType:
+	case fidl.ArrayType:
 		t := c.compileType(*val.ElementType)
 		r.Decl = fmt.Sprintf("::std::array<%s, %v>", t.Decl, *val.ElementCount)
 		r.FullDecl = fmt.Sprintf("::std::array<%s, %v>", t.FullDecl, *val.ElementCount)
@@ -1022,7 +1021,7 @@ func (c *compiler) compileType(val types.Type) Type {
 		r.Kind = ArrayKind
 		r.ElementType = &t
 		r.ElementCount = *val.ElementCount
-	case types.VectorType:
+	case fidl.VectorType:
 		t := c.compileType(*val.ElementType)
 		r.LLDecl = fmt.Sprintf("::fidl::VectorView<%s>", t.LLDecl)
 		r.LLFamily = Vector
@@ -1036,7 +1035,7 @@ func (c *compiler) compileType(val types.Type) Type {
 		r.NeedsDtor = true
 		r.Kind = VectorKind
 		r.ElementType = &t
-	case types.StringType:
+	case fidl.StringType:
 		r.LLDecl = "::fidl::StringView"
 		r.LLFamily = String
 		if val.Nullable {
@@ -1047,7 +1046,7 @@ func (c *compiler) compileType(val types.Type) Type {
 		r.FullDecl = r.Decl
 		r.NeedsDtor = true
 		r.Kind = StringKind
-	case types.HandleType:
+	case fidl.HandleType:
 		c.handleTypes[val.HandleSubtype] = struct{}{}
 		r.Decl = fmt.Sprintf("::zx::%s", val.HandleSubtype)
 		r.FullDecl = r.Decl
@@ -1055,7 +1054,7 @@ func (c *compiler) compileType(val types.Type) Type {
 		r.LLFamily = Reference
 		r.NeedsDtor = true
 		r.Kind = HandleKind
-	case types.RequestType:
+	case fidl.RequestType:
 		r.Decl = fmt.Sprintf("::fidl::InterfaceRequest<%s>",
 			c.compileCompoundIdentifier(val.RequestSubtype, "", "", false))
 		r.FullDecl = fmt.Sprintf("::fidl::InterfaceRequest<%s>",
@@ -1064,20 +1063,20 @@ func (c *compiler) compileType(val types.Type) Type {
 		r.LLFamily = Reference
 		r.NeedsDtor = true
 		r.Kind = RequestKind
-	case types.PrimitiveType:
+	case fidl.PrimitiveType:
 		r.Decl = c.compilePrimitiveSubtype(val.PrimitiveSubtype)
 		r.FullDecl = r.Decl
 		r.LLDecl = r.Decl
 		r.LLFamily = TrivialCopy
 		r.Kind = PrimitiveKind
-	case types.IdentifierType:
+	case fidl.IdentifierType:
 		t := c.compileCompoundIdentifier(val.Identifier, "", "", false)
 		ft := c.compileCompoundIdentifier(val.Identifier, "", "", true)
 		declType, ok := c.decls[val.Identifier]
 		if !ok {
 			panic(fmt.Sprintf("unknown identifier: %v", val.Identifier))
 		}
-		if declType == types.ProtocolDeclType {
+		if declType == fidl.ProtocolDeclType {
 			r.Decl = fmt.Sprintf("::fidl::InterfaceHandle<class %s>", t)
 			r.FullDecl = fmt.Sprintf("::fidl::InterfaceHandle<class %s>", ft)
 			r.LLDecl = "::zx::channel"
@@ -1086,28 +1085,28 @@ func (c *compiler) compileType(val types.Type) Type {
 			r.Kind = ProtocolKind
 		} else {
 			switch declType {
-			case types.BitsDeclType:
+			case fidl.BitsDeclType:
 				r.Kind = BitsKind
 				r.LLFamily = TrivialCopy
-			case types.EnumDeclType:
+			case fidl.EnumDeclType:
 				r.Kind = EnumKind
 				r.LLFamily = TrivialCopy
-			case types.ConstDeclType:
+			case fidl.ConstDeclType:
 				r.Kind = ConstKind
 				r.LLFamily = Reference
-			case types.StructDeclType:
+			case fidl.StructDeclType:
 				r.Kind = StructKind
 				r.DeclarationName = val.Identifier
 				r.LLFamily = Reference
 				r.LLClass = ft
 				r.LLPointer = val.Nullable
-			case types.TableDeclType:
+			case fidl.TableDeclType:
 				r.Kind = TableKind
 				r.DeclarationName = val.Identifier
 				r.LLFamily = Reference
 				r.LLClass = ft
 				r.LLPointer = val.Nullable
-			case types.UnionDeclType:
+			case fidl.UnionDeclType:
 				r.Kind = UnionKind
 				r.DeclarationName = val.Identifier
 				r.LLFamily = Reference
@@ -1119,7 +1118,7 @@ func (c *compiler) compileType(val types.Type) Type {
 			if val.Nullable {
 				r.Decl = fmt.Sprintf("::std::unique_ptr<%s>", t)
 				r.FullDecl = fmt.Sprintf("::std::unique_ptr<%s>", ft)
-				if declType == types.UnionDeclType {
+				if declType == fidl.UnionDeclType {
 					r.LLDecl = fmt.Sprintf("%s", ft)
 				} else {
 					r.LLDecl = fmt.Sprintf("::fidl::tracking_ptr<%s>", ft)
@@ -1138,7 +1137,7 @@ func (c *compiler) compileType(val types.Type) Type {
 	return r
 }
 
-func (c *compiler) compileBits(val types.Bits, appendNamespace string) Bits {
+func (c *compiler) compileBits(val fidl.Bits, appendNamespace string) Bits {
 	r := Bits{
 		Bits:      val,
 		Namespace: c.namespace,
@@ -1157,8 +1156,8 @@ func (c *compiler) compileBits(val types.Bits, appendNamespace string) Bits {
 	return r
 }
 
-func (c *compiler) compileConst(val types.Const, appendNamespace string) Const {
-	if val.Type.Kind == types.StringType {
+func (c *compiler) compileConst(val fidl.Const, appendNamespace string) Const {
+	if val.Type.Kind == fidl.StringType {
 		return Const{
 			Attributes: val.Attributes,
 			Extern:     true,
@@ -1183,7 +1182,7 @@ func (c *compiler) compileConst(val types.Const, appendNamespace string) Const {
 	}
 }
 
-func (c *compiler) compileEnum(val types.Enum, appendNamespace string) Enum {
+func (c *compiler) compileEnum(val fidl.Enum, appendNamespace string) Enum {
 	r := Enum{
 		Enum:      val,
 		Namespace: c.namespace,
@@ -1196,8 +1195,8 @@ func (c *compiler) compileEnum(val types.Enum, appendNamespace string) Enum {
 			Name:       changeIfReserved(v.Name, ""),
 			// TODO(fxbug.dev/7660): When we expose types consistently in the IR, we
 			// will not need to plug this here.
-			Value: c.compileConstant(v.Value, nil, types.Type{
-				Kind:             types.PrimitiveType,
+			Value: c.compileConstant(v.Value, nil, fidl.Type{
+				Kind:             fidl.PrimitiveType,
 				PrimitiveSubtype: val.Type,
 			}, appendNamespace),
 		})
@@ -1205,7 +1204,7 @@ func (c *compiler) compileEnum(val types.Enum, appendNamespace string) Enum {
 	return r
 }
 
-func (c *compiler) compileParameterArray(val []types.Parameter) []Parameter {
+func (c *compiler) compileParameterArray(val []fidl.Parameter) []Parameter {
 	var params []Parameter = []Parameter{}
 	for _, v := range val {
 		params = append(params, Parameter{
@@ -1253,7 +1252,7 @@ func (m Method) NewLLContextProps(context LLContext) LLContextProps {
 	}
 }
 
-func (m Method) NewLLProps(protocolName string, reqTypeShape types.TypeShape, respTypeShape types.TypeShape) LLProps {
+func (m Method) NewLLProps(protocolName string, reqTypeShape fidl.TypeShape, respTypeShape fidl.TypeShape) LLProps {
 	return LLProps{
 		ProtocolName:      protocolName,
 		LinearizeRequest:  len(m.Request) > 0 && reqTypeShape.Depth > 0,
@@ -1263,7 +1262,7 @@ func (m Method) NewLLProps(protocolName string, reqTypeShape types.TypeShape, re
 	}
 }
 
-func (c *compiler) compileProtocol(val types.Protocol) *Protocol {
+func (c *compiler) compileProtocol(val fidl.Protocol) *Protocol {
 	protocolName := c.compileCompoundIdentifier(val.Name, "", "", false)
 	methods := []Method{}
 	for _, v := range val.Methods {
@@ -1292,7 +1291,7 @@ func (c *compiler) compileProtocol(val types.Protocol) *Protocol {
 		m := Method{
 			Attributes:              v.Attributes,
 			Name:                    name,
-			NameInLowerSnakeCase:    common.ToSnakeCase(name),
+			NameInLowerSnakeCase:    fidl.ToSnakeCase(name),
 			Ordinal:                 v.Ordinal,
 			OrdinalName:             fmt.Sprintf("k%s_%s_Ordinal", protocolName, v.Name),
 			HasRequest:              v.HasRequest,
@@ -1349,7 +1348,7 @@ func (c *compiler) compileProtocol(val types.Protocol) *Protocol {
 	return r
 }
 
-func (c *compiler) compileService(val types.Service) Service {
+func (c *compiler) compileService(val fidl.Service) Service {
 	s := Service{
 		Attributes:  val.Attributes,
 		Namespace:   c.namespace,
@@ -1363,7 +1362,7 @@ func (c *compiler) compileService(val types.Service) Service {
 	return s
 }
 
-func (c *compiler) compileServiceMember(val types.ServiceMember) ServiceMember {
+func (c *compiler) compileServiceMember(val fidl.ServiceMember) ServiceMember {
 	return ServiceMember{
 		Attributes:   val.Attributes,
 		ProtocolType: c.compileCompoundIdentifier(val.Type.Identifier, "", "", false),
@@ -1372,7 +1371,7 @@ func (c *compiler) compileServiceMember(val types.ServiceMember) ServiceMember {
 	}
 }
 
-func (c *compiler) compileStructMember(val types.StructMember, appendNamespace string) StructMember {
+func (c *compiler) compileStructMember(val fidl.StructMember, appendNamespace string) StructMember {
 	t := c.compileType(val.Type)
 
 	defaultValue := ""
@@ -1389,7 +1388,7 @@ func (c *compiler) compileStructMember(val types.StructMember, appendNamespace s
 	}
 }
 
-func (c *compiler) compileStruct(val types.Struct, appendNamespace string) Struct {
+func (c *compiler) compileStruct(val fidl.Struct, appendNamespace string) Struct {
 	name := c.compileCompoundIdentifier(val.Name, "", appendNamespace, false)
 	tableType := c.compileTableType(val.Name)
 	r := Struct{
@@ -1435,7 +1434,7 @@ func (c *compiler) compileStruct(val types.Struct, appendNamespace string) Struc
 
 	if len(r.Members) == 0 {
 		r.Members = []StructMember{
-			c.compileStructMember(types.EmptyStructMember("__reserved"), appendNamespace),
+			c.compileStructMember(fidl.EmptyStructMember("__reserved"), appendNamespace),
 		}
 	}
 
@@ -1460,7 +1459,7 @@ func (c *compiler) compileStruct(val types.Struct, appendNamespace string) Struc
 	return r
 }
 
-func (c *compiler) compileTableMember(val types.TableMember, appendNamespace string, index int) TableMember {
+func (c *compiler) compileTableMember(val fidl.TableMember, appendNamespace string, index int) TableMember {
 	t := c.compileType(val.Type)
 
 	defaultValue := ""
@@ -1484,7 +1483,7 @@ func (c *compiler) compileTableMember(val types.TableMember, appendNamespace str
 	}
 }
 
-func (c *compiler) compileTable(val types.Table, appendNamespace string) Table {
+func (c *compiler) compileTable(val fidl.Table, appendNamespace string) Table {
 	name := c.compileCompoundIdentifier(val.Name, "", appendNamespace, false)
 	tableType := c.compileTableType(val.Name)
 	r := Table{
@@ -1527,7 +1526,7 @@ func (c *compiler) compileTable(val types.Table, appendNamespace string) Table {
 	return r
 }
 
-func (c *compiler) compileUnionMember(val types.UnionMember) UnionMember {
+func (c *compiler) compileUnionMember(val fidl.UnionMember) UnionMember {
 	n := changeIfReserved(val.Name, "")
 	return UnionMember{
 		Attributes:  val.Attributes,
@@ -1535,12 +1534,12 @@ func (c *compiler) compileUnionMember(val types.UnionMember) UnionMember {
 		Type:        c.compileType(val.Type),
 		Name:        n,
 		StorageName: changeIfReserved(val.Name, "_"),
-		TagName:     fmt.Sprintf("k%s", common.ToUpperCamelCase(n)),
+		TagName:     fmt.Sprintf("k%s", fidl.ToUpperCamelCase(n)),
 		Offset:      val.Offset,
 	}
 }
 
-func (c *compiler) compileUnion(val types.Union) Union {
+func (c *compiler) compileUnion(val fidl.Union) Union {
 	name := c.compileCompoundIdentifier(val.Name, "", "", false)
 	tableType := c.compileTableType(val.Name)
 	r := Union{
@@ -1566,7 +1565,7 @@ func (c *compiler) compileUnion(val types.Union) Union {
 		if len(r.Members) != 2 {
 			panic(fmt.Sprintf("result union must have two members: %v", val.Name))
 		}
-		if val.Members[0].Type.Kind != types.IdentifierType {
+		if val.Members[0].Type.Kind != fidl.IdentifierType {
 			panic(fmt.Sprintf("value member of result union must be an identifier: %v", val.Name))
 		}
 		valueStructDeclType, ok := c.decls[val.Members[0].Type.Identifier]
@@ -1589,29 +1588,29 @@ func (c *compiler) compileUnion(val types.Union) Union {
 	return r
 }
 
-func compile(r types.Root, namespaceFormatter func(types.LibraryIdentifier, string) string) Root {
+func compile(r fidl.Root, namespaceFormatter func(fidl.LibraryIdentifier, string) string) Root {
 	root := Root{}
-	library := make(types.LibraryIdentifier, 0)
-	raw_library := make(types.LibraryIdentifier, 0)
-	for _, identifier := range types.ParseLibraryName(r.Name) {
+	library := make(fidl.LibraryIdentifier, 0)
+	raw_library := make(fidl.LibraryIdentifier, 0)
+	for _, identifier := range fidl.ParseLibraryName(r.Name) {
 		safe_name := changeIfReserved(identifier, "")
-		library = append(library, types.Identifier(safe_name))
+		library = append(library, fidl.Identifier(safe_name))
 		raw_library = append(raw_library, identifier)
 	}
 	c := compiler{
 		namespaceFormatter(library, ""),
 		formatLibraryPrefix(raw_library),
 		r.DeclsWithDependencies(),
-		map[types.EncodedCompoundIdentifier]Decl{},
-		types.ParseLibraryName(r.Name),
-		make(map[types.HandleSubtype]struct{}),
+		map[fidl.EncodedCompoundIdentifier]Decl{},
+		fidl.ParseLibraryName(r.Name),
+		make(map[fidl.HandleSubtype]struct{}),
 		namespaceFormatter,
-		make(map[types.EncodedCompoundIdentifier]*Result),
-		make(map[types.EncodedCompoundIdentifier]*Result),
+		make(map[fidl.EncodedCompoundIdentifier]*Result),
+		make(map[fidl.EncodedCompoundIdentifier]*Result),
 	}
 
 	root.Library = library
-	libraryReversed := make(types.LibraryIdentifier, len(library))
+	libraryReversed := make(fidl.LibraryIdentifier, len(library))
 	for i, j := 0, len(library)-1; i < len(library); i, j = i+1, j-1 {
 		libraryReversed[i] = library[j]
 	}
@@ -1682,7 +1681,7 @@ func compile(r types.Root, namespaceFormatter func(types.LibraryIdentifier, stri
 			// We don't need to include our own header.
 			continue
 		}
-		libraryIdent := types.ParseLibraryName(l.Name)
+		libraryIdent := fidl.ParseLibraryName(l.Name)
 		root.Headers = append(root.Headers, formatLibraryPath(libraryIdent))
 		root.FuzzerHeaders = append(root.FuzzerHeaders, formatLibraryPath(libraryIdent))
 	}
@@ -1703,14 +1702,14 @@ func compile(r types.Root, namespaceFormatter func(types.LibraryIdentifier, stri
 	return root
 }
 
-func CompileHL(r types.Root) Root {
+func CompileHL(r fidl.Root) Root {
 	return compile(r.ForBindings("hlcpp"), formatNamespace)
 }
 
-func CompileLL(r types.Root) Root {
+func CompileLL(r fidl.Root) Root {
 	return compile(r.ForBindings("llcpp"), formatLLNamespace)
 }
 
-func CompileLibFuzzer(r types.Root) Root {
+func CompileLibFuzzer(r fidl.Root) Root {
 	return compile(r.ForBindings("libfuzzer"), formatNamespace)
 }

@@ -492,28 +492,29 @@ Note: While `fx test fidl_bindings_test` prints test names as they run, it does 
 
 ##### Host
 
-| Name                     | Test Command                        | Coverage
-|--------------------------|-------------------------------------|---------------------------
-| walker, misc             | `fx test --host fidl-walker-host-tests`         |  //zircon/system/ulib/fidl
-| hlcpp unittests          | `fx test --host fidl_cpp_host_unittests`        |  //sdk/lib/fidl
-| hlcpp conformance tests  | `fx test --host fidl_cpp_host_conformance_test`         |  //sdk/lib/fidl
-| llcpp conformance tests  | `fx test --host fidl_llcpp_conformance_test`            |  //zircon/system/ulib/fidl/include/lib/fidl/llcpp
-| rust conformance tests   | `fx test --host fidl_rust_conformance_tests` | //src/lib/fidl/rust
-| rust fidl lib tests      | `fx test --host fidl_rust_lib_tests`     | //src/lib/fidl/rust
-| go conformance tests     | `fx test --host fidl_go_conformance_tests` | //third_party/go/syscall/zx/fidl
-| go fidl tests (extended) | `fx test --host go_extended_fidl_test` | //third_party/go/syscall/zx/fidl
-| go unsafevalue test      | `fx test --host go_unsafevalue_test` | //third_party/go/syscall/zx/fidl/internal/unsafevalue
+| Name                     | Test Command                                    | Coverage
+|--------------------------|-------------------------------------------------|---------------------------
+| walker, misc             | `fx test --host fidl-walker-host-tests`         | //zircon/system/ulib/fidl
+| hlcpp unittests          | `fx test --host fidl_cpp_host_unittests`        | //sdk/lib/fidl
+| hlcpp conformance tests  | `fx test --host fidl_cpp_host_conformance_test` | //sdk/lib/fidl
+| llcpp conformance tests  | `fx test --host fidl_llcpp_conformance_test`    | //zircon/system/ulib/fidl/include/lib/fidl/llcpp
+| rust conformance tests   | `fx test --host fidl_rust_conformance_tests`    | //src/lib/fidl/rust
+| rust fidl lib tests      | `fx test --host fidl_rust_lib_tests`            | //src/lib/fidl/rust
+| go conformance tests     | `fx test --host fidl_go_conformance_tests`      | //third_party/go/syscall/zx/fidl
+| go fidl tests (extended) | `fx test --host go_extended_fidl_test`          | //third_party/go/syscall/zx/fidl
+| go unsafevalue test      | `fx test --host go_unsafevalue_test`            | //third_party/go/syscall/zx/fidl/internal/unsafevalue
 
 #### Fidlgen tests
 
 | Name                     | Test Command                        | Coverage
 |--------------------------|-------------------------------------|---------------------------
-| fidlgen type definitions | `fx test fidlgen_types_test`        | //garnet/go/src/fidl/compiler/backend/types                               |
-| fidlgen hlcpp            | `fx test fidlgen_hlcpp_test`        | //tools/fidl/fidlgen_hlcpp                                                |
-| fidlgen llcpp            | `fx test fidlgen_llcpp_test`        | //tools/fidl/fidlgen_llcpp                                                |
-| fidlgen golang           | `fx test fidlgen_go_test`           | //tools/fidl/fidlgen_golang                                               |
-| fidlgen rust             | `fx test fidlgen_rust_test`         | //tools/fidl/fidlgen_rust                                                 |
-| fidlgen syzkaller        | `fx test fidlgen_syzkaller_test`    | //tools/fidl/fidlgen_syzkaller                                            |
+| fidlgen type definitions | `fx test fidlgen_lib_test`          | //tools/fidl/lib/fidlgen           |
+| fidlgen C++ specific IR  | `fx test fidlgen_cpp_ir_test`       | //tools/fidl/lib/fidlgen_cpp       |
+| fidlgen hlcpp            | `fx test fidlgen_hlcpp_test`        | //tools/fidl/fidlgen_hlcpp         |
+| fidlgen llcpp            | `fx test fidlgen_llcpp_test`        | //tools/fidl/fidlgen_llcpp         |
+| fidlgen golang           | `fx test fidlgen_go_test`           | //tools/fidl/fidlgen_golang        |
+| fidlgen rust             | `fx test fidlgen_rust_test`         | //tools/fidl/fidlgen_rust          |
+| fidlgen syzkaller        | `fx test fidlgen_syzkaller_test`    | //tools/fidl/fidlgen_syzkaller     |
 | fidlgen dart             | `fx test fidlgen_dart_backend_test` | //tools/fidl/fidlgen_dart
 
 #### Other

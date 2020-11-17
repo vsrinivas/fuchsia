@@ -9,8 +9,8 @@ import (
 	"log"
 	"os"
 
-	"go.fuchsia.dev/fuchsia/garnet/go/src/fidl/compiler/backend/types"
 	"go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_hlcpp/codegen"
+	fidl "go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 )
 
 // TODO(fxbug.dev/45483): Until all SDK consumers are moved off to using dedicated
@@ -44,7 +44,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	fidl, err := types.ReadJSONIr(*jsonPath)
+	ir, err := fidl.ReadJSONIr(*jsonPath)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -59,7 +59,7 @@ func main() {
 		IncludeStem: *includeStem,
 	}
 	generator := codegen.NewFidlGenerator(mode)
-	if err := generator.GenerateFidl(fidl, &config, *clangFormatPath); err != nil {
+	if err := generator.GenerateFidl(ir, &config, *clangFormatPath); err != nil {
 		log.Fatalf("Error running generator: %v", err)
 	}
 }

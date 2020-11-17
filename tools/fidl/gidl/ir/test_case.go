@@ -7,7 +7,7 @@ package ir
 import (
 	"strings"
 
-	fidlir "go.fuchsia.dev/fuchsia/garnet/go/src/fidl/compiler/backend/types"
+	fidl "go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 )
 
 type All struct {
@@ -78,17 +78,17 @@ func (list LanguageList) Includes(targetLanguage string) bool {
 }
 
 type HandleDef struct {
-	Subtype fidlir.HandleSubtype
+	Subtype fidl.HandleSubtype
 	// TODO(fxbug.dev/41920): Add a field for handle rights.
 }
 
-var supportedHandleSubtypes = map[fidlir.HandleSubtype]struct{}{
-	fidlir.Channel: {},
-	fidlir.Event:   {},
+var supportedHandleSubtypes = map[fidl.HandleSubtype]struct{}{
+	fidl.Channel: {},
+	fidl.Event:   {},
 }
 
-func HandleSubtypeByName(s string) (fidlir.HandleSubtype, bool) {
-	subtype := fidlir.HandleSubtype(s)
+func HandleSubtypeByName(s string) (fidl.HandleSubtype, bool) {
+	subtype := fidl.HandleSubtype(s)
 	_, ok := supportedHandleSubtypes[subtype]
 	if ok {
 		return subtype, true

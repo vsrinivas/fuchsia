@@ -11,11 +11,11 @@ import (
 	"strings"
 	"text/template"
 
-	fidlir "go.fuchsia.dev/fuchsia/garnet/go/src/fidl/compiler/backend/types"
 	gidlconfig "go.fuchsia.dev/fuchsia/tools/fidl/gidl/config"
 	gidlir "go.fuchsia.dev/fuchsia/tools/fidl/gidl/ir"
 	libllcpp "go.fuchsia.dev/fuchsia/tools/fidl/gidl/llcpp/lib"
 	gidlmixer "go.fuchsia.dev/fuchsia/tools/fidl/gidl/mixer"
+	fidl "go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 )
 
 var benchmarkTmpl = template.Must(template.New("tmpl").Parse(`
@@ -43,7 +43,7 @@ type benchmarkTmplInput struct {
 	Benchmarks []benchmark
 }
 
-func GenerateBenchmarks(gidl gidlir.All, fidl fidlir.Root, config gidlconfig.GeneratorConfig) ([]byte, error) {
+func GenerateBenchmarks(gidl gidlir.All, fidl fidl.Root, config gidlconfig.GeneratorConfig) ([]byte, error) {
 	schema := gidlmixer.BuildSchema(fidl)
 	tmplInput := benchmarkTmplInput{}
 	for _, gidlBenchmark := range gidl.Benchmark {

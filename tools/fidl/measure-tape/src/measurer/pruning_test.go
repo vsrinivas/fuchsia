@@ -7,14 +7,14 @@ package measurer
 import (
 	"testing"
 
-	fidlcommon "go.fuchsia.dev/fuchsia/garnet/go/src/fidl/compiler/backend/common"
+	fidl "go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 )
 
 func TestPruningCallerCallingEmptyCallee(t *testing.T) {
 	// caller -> callee (empty)
 	var (
-		callerID       = MethodID{TargetType: fidlcommon.MustReadName("fidl/Caller")}
-		calleeID       = MethodID{TargetType: fidlcommon.MustReadName("fidl/Callee")}
+		callerID       = MethodID{TargetType: fidl.MustReadName("fidl/Caller")}
+		calleeID       = MethodID{TargetType: fidl.MustReadName("fidl/Callee")}
 		caller, callee *Method
 	)
 	{
@@ -47,8 +47,8 @@ func TestPruningCallerCallingEmptyCallee(t *testing.T) {
 func TestPruningCallerCallingEmptyCalleeThroughSelectVariant(t *testing.T) {
 	// caller -> callee (empty)
 	var (
-		callerID       = MethodID{TargetType: fidlcommon.MustReadName("fidl/Caller")}
-		calleeID       = MethodID{TargetType: fidlcommon.MustReadName("fidl/Callee")}
+		callerID       = MethodID{TargetType: fidl.MustReadName("fidl/Caller")}
+		calleeID       = MethodID{TargetType: fidl.MustReadName("fidl/Callee")}
 		caller, callee *Method
 	)
 	{
@@ -58,7 +58,7 @@ func TestPruningCallerCallingEmptyCalleeThroughSelectVariant(t *testing.T) {
 		expr := exprLocal("value", Struct, false)
 		var body Block
 		body.emitAddNumBytes(exprNum(1))
-		body.emitSelectVariant(nil, fidlcommon.MustReadName("fidl/TargetType"), map[string]LocalWithBlock{
+		body.emitSelectVariant(nil, fidl.MustReadName("fidl/TargetType"), map[string]LocalWithBlock{
 			"member": {Body: &variantBlock},
 		})
 
@@ -95,9 +95,9 @@ func TestPruningCallerCallingEmptyCalleeThroughSelectVariant(t *testing.T) {
 func TestPruningOneCallingTwoCallingEmptyThree(t *testing.T) {
 	// one -> two -> three (empty)
 	var (
-		oneID           = MethodID{TargetType: fidlcommon.MustReadName("fidl/One")}
-		twoID           = MethodID{TargetType: fidlcommon.MustReadName("fidl/Two")}
-		threeID         = MethodID{TargetType: fidlcommon.MustReadName("fidl/Three")}
+		oneID           = MethodID{TargetType: fidl.MustReadName("fidl/One")}
+		twoID           = MethodID{TargetType: fidl.MustReadName("fidl/Two")}
+		threeID         = MethodID{TargetType: fidl.MustReadName("fidl/Three")}
 		one, two, three *Method
 	)
 	{

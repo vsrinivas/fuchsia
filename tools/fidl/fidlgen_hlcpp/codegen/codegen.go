@@ -10,8 +10,8 @@ import (
 	"path/filepath"
 	"text/template"
 
-	"go.fuchsia.dev/fuchsia/garnet/go/src/fidl/compiler/backend/cpp"
-	"go.fuchsia.dev/fuchsia/garnet/go/src/fidl/compiler/backend/types"
+	fidl "go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
+	cpp "go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen_cpp"
 )
 
 // CodeGenerationMode controls which subset of bindings code to generate.
@@ -112,7 +112,7 @@ func (gen *FidlGenerator) generateFile(filepath, clangFormatPath string, generat
 }
 
 // GenerateFidl generates all files required for the C++ bindings.
-func (gen *FidlGenerator) GenerateFidl(fidl types.Root, config *Config, clangFormatPath string) error {
+func (gen *FidlGenerator) GenerateFidl(fidl fidl.Root, config *Config, clangFormatPath string) error {
 	tree := cpp.CompileHL(fidl)
 
 	relStem, err := filepath.Rel(config.IncludeBase, config.OutputBase)

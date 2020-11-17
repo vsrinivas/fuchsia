@@ -13,26 +13,25 @@ import (
 	"path/filepath"
 	"text/template"
 
-	"go.fuchsia.dev/fuchsia/garnet/go/src/fidl/compiler/backend/common"
-	"go.fuchsia.dev/fuchsia/garnet/go/src/fidl/compiler/backend/types"
+	fidl "go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 )
 
-var primitiveTypes = map[types.PrimitiveSubtype]string{
-	types.Bool:    "bool",
-	types.Int8:    "int8_t",
-	types.Int16:   "int16_t",
-	types.Int32:   "int32_t",
-	types.Int64:   "int64_t",
-	types.Uint8:   "uint8_t",
-	types.Uint16:  "uint16_t",
-	types.Uint32:  "uint32_t",
-	types.Uint64:  "uint64_t",
-	types.Float32: "float",
-	types.Float64: "double",
+var primitiveTypes = map[fidl.PrimitiveSubtype]string{
+	fidl.Bool:    "bool",
+	fidl.Int8:    "int8_t",
+	fidl.Int16:   "int16_t",
+	fidl.Int32:   "int32_t",
+	fidl.Int64:   "int64_t",
+	fidl.Uint8:   "uint8_t",
+	fidl.Uint16:  "uint16_t",
+	fidl.Uint32:  "uint32_t",
+	fidl.Uint64:  "uint64_t",
+	fidl.Float32: "float",
+	fidl.Float64: "double",
 }
 
-func mustReadJSONIr(filename string) types.Root {
-	root, err := types.ReadJSONIr(filename)
+func mustReadJSONIr(filename string) fidl.Root {
+	root, err := fidl.ReadJSONIr(filename)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -62,21 +61,21 @@ func main() {
 	}
 }
 
-// Amendments to be applied to a types.Root
+// Amendments to be applied to a fidl.Root
 type Amendments struct {
-	ExcludedDecls []types.EncodedCompoundIdentifier `json:"exclusions,omitempty"`
+	ExcludedDecls []fidl.EncodedCompoundIdentifier `json:"exclusions,omitempty"`
 }
 
-func (a Amendments) Amend(root types.Root) types.Root {
+func (a Amendments) Amend(root fidl.Root) fidl.Root {
 	return a.ApplyExclusions(root)
 }
 
-func (a Amendments) ApplyExclusions(root types.Root) types.Root {
+func (a Amendments) ApplyExclusions(root fidl.Root) fidl.Root {
 	if len(a.ExcludedDecls) == 0 {
 		return root
 	}
 
-	excludeMap := make(map[types.EncodedCompoundIdentifier]struct{})
+	excludeMap := make(map[fidl.EncodedCompoundIdentifier]struct{})
 	for _, excludedDecl := range a.ExcludedDecls {
 		excludeMap[excludedDecl] = struct{}{}
 		delete(root.Decls, excludedDecl)
@@ -150,67 +149,67 @@ func (a Amendments) ApplyExclusions(root types.Root) types.Root {
 
 // Root struct passed as the initial 'dot' for the template.
 type Root struct {
-	types.Root
+	fidl.Root
 	OutputBase      string
 	templates       *template.Template
 	options         Options
-	constsByName    map[types.EncodedCompoundIdentifier]*types.Const
-	enumsByName     map[types.EncodedCompoundIdentifier]*types.Enum
-	protocolsByName map[types.EncodedCompoundIdentifier]*types.Protocol
-	structsByName   map[types.EncodedCompoundIdentifier]*types.Struct
-	tablesByName    map[types.EncodedCompoundIdentifier]*types.Table
-	unionsByName    map[types.EncodedCompoundIdentifier]*types.Union
-	librariesByName map[types.EncodedLibraryIdentifier]*types.Library
+	constsByName    map[fidl.EncodedCompoundIdentifier]*fidl.Const
+	enumsByName     map[fidl.EncodedCompoundIdentifier]*fidl.Enum
+	protocolsByName map[fidl.EncodedCompoundIdentifier]*fidl.Protocol
+	structsByName   map[fidl.EncodedCompoundIdentifier]*fidl.Struct
+	tablesByName    map[fidl.EncodedCompoundIdentifier]*fidl.Table
+	unionsByName    map[fidl.EncodedCompoundIdentifier]*fidl.Union
+	librariesByName map[fidl.EncodedLibraryIdentifier]*fidl.Library
 }
 
-func NewRoot(fidl types.Root, outputBase string, templates *template.Template, options Options) *Root {
-	constsByName := make(map[types.EncodedCompoundIdentifier]*types.Const)
-	for index, member := range fidl.Consts {
-		constsByName[member.Name] = &fidl.Consts[index]
+func NewRoot(ir fidl.Root, outputBase string, templates *template.Template, options Options) *Root {
+	constsByName := make(map[fidl.EncodedCompoundIdentifier]*fidl.Const)
+	for index, member := range ir.Consts {
+		constsByName[member.Name] = &ir.Consts[index]
 	}
 
-	enumsByName := make(map[types.EncodedCompoundIdentifier]*types.Enum)
-	for index, member := range fidl.Enums {
-		enumsByName[member.Name] = &fidl.Enums[index]
+	enumsByName := make(map[fidl.EncodedCompoundIdentifier]*fidl.Enum)
+	for index, member := range ir.Enums {
+		enumsByName[member.Name] = &ir.Enums[index]
 	}
 
-	protocolsByName := make(map[types.EncodedCompoundIdentifier]*types.Protocol)
-	for index, member := range fidl.Protocols {
-		protocolsByName[member.Name] = &fidl.Protocols[index]
+	protocolsByName := make(map[fidl.EncodedCompoundIdentifier]*fidl.Protocol)
+	for index, member := range ir.Protocols {
+		protocolsByName[member.Name] = &ir.Protocols[index]
 	}
 
 	// filter out all anonymous structs
-	allStructs := fidl.Structs
-	fidl.Structs = make([]types.Struct, 0)
+	allStructs := ir.Structs
+	ir.Structs = make([]fidl.Struct, 0)
 	for _, member := range allStructs {
 		if member.Anonymous {
 			continue
 		}
-		fidl.Structs = append(fidl.Structs, member)
+		ir.Structs = append(ir.Structs, member)
 	}
 
-	structsByName := make(map[types.EncodedCompoundIdentifier]*types.Struct)
-	for index, member := range fidl.Structs {
-		structsByName[member.Name] = &fidl.Structs[index]
+	structsByName := make(map[fidl.EncodedCompoundIdentifier]*fidl.Struct)
+	for index, member := range ir.Structs {
+		structsByName[member.Name] = &ir.Structs[index]
 	}
 
-	tablesByName := make(map[types.EncodedCompoundIdentifier]*types.Table)
-	for index, member := range fidl.Tables {
-		tablesByName[member.Name] = &fidl.Tables[index]
+	tablesByName := make(map[fidl.EncodedCompoundIdentifier]*fidl.Table)
+	for index, member := range ir.Tables {
+		tablesByName[member.Name] = &ir.Tables[index]
 	}
 
-	unionsByName := make(map[types.EncodedCompoundIdentifier]*types.Union)
-	for index, member := range fidl.Unions {
-		unionsByName[member.Name] = &fidl.Unions[index]
+	unionsByName := make(map[fidl.EncodedCompoundIdentifier]*fidl.Union)
+	for index, member := range ir.Unions {
+		unionsByName[member.Name] = &ir.Unions[index]
 	}
 
-	librariesByName := make(map[types.EncodedLibraryIdentifier]*types.Library)
-	for index, member := range fidl.Libraries {
-		librariesByName[member.Name] = &fidl.Libraries[index]
+	librariesByName := make(map[fidl.EncodedLibraryIdentifier]*fidl.Library)
+	for index, member := range ir.Libraries {
+		librariesByName[member.Name] = &ir.Libraries[index]
 	}
 
 	return &Root{
-		fidl,
+		ir,
 		outputBase,
 		templates,
 		options,
@@ -251,42 +250,42 @@ func (root Root) Output(ext string) string {
 }
 
 // Gets a constant by name.
-func (root Root) GetConst(name types.EncodedCompoundIdentifier) *types.Const {
+func (root Root) GetConst(name fidl.EncodedCompoundIdentifier) *fidl.Const {
 	return root.constsByName[name]
 }
 
 // Gets an enum by name.
-func (root Root) GetEnum(name types.EncodedCompoundIdentifier) *types.Enum {
+func (root Root) GetEnum(name fidl.EncodedCompoundIdentifier) *fidl.Enum {
 	return root.enumsByName[name]
 }
 
 // Gets a protocol by name.
-func (root Root) GetProtocol(name types.EncodedCompoundIdentifier) *types.Protocol {
+func (root Root) GetProtocol(name fidl.EncodedCompoundIdentifier) *fidl.Protocol {
 	return root.protocolsByName[name]
 }
 
 // Gets a struct by name.
-func (root Root) GetStruct(name types.EncodedCompoundIdentifier) *types.Struct {
+func (root Root) GetStruct(name fidl.EncodedCompoundIdentifier) *fidl.Struct {
 	return root.structsByName[name]
 }
 
 // Gets a struct by name.
-func (root Root) GetTable(name types.EncodedCompoundIdentifier) *types.Table {
+func (root Root) GetTable(name fidl.EncodedCompoundIdentifier) *fidl.Table {
 	return root.tablesByName[name]
 }
 
 // Gets a union by name.
-func (root Root) GetUnion(name types.EncodedCompoundIdentifier) *types.Union {
+func (root Root) GetUnion(name fidl.EncodedCompoundIdentifier) *fidl.Union {
 	return root.unionsByName[name]
 }
 
 // Gets a library by name.
-func (root Root) GetLibrary(name types.EncodedLibraryIdentifier) *types.Library {
+func (root Root) GetLibrary(name fidl.EncodedLibraryIdentifier) *fidl.Library {
 	return root.librariesByName[name]
 }
 
 // Generates code using the specified template.
-func GenerateFidl(templatePath string, fidl types.Root, outputBase *string, options Options) error {
+func GenerateFidl(templatePath string, ir fidl.Root, outputBase *string, options Options) error {
 	returnBytes, err := ioutil.ReadFile(templatePath)
 	if err != nil {
 		log.Fatalf("Error reading from %s: %v", templatePath, err)
@@ -294,11 +293,11 @@ func GenerateFidl(templatePath string, fidl types.Root, outputBase *string, opti
 
 	tmpls := template.New("Templates")
 
-	root := NewRoot(fidl, *outputBase, tmpls, options)
+	root := NewRoot(ir, *outputBase, tmpls, options)
 
 	funcMap := template.FuncMap{
 		// Gets the decltype for an EncodedCompoundIdentifier.
-		"declType": func(eci types.EncodedCompoundIdentifier) types.DeclType {
+		"declType": func(eci fidl.EncodedCompoundIdentifier) fidl.DeclType {
 			if root.Name == eci.LibraryName() {
 				return root.Decls[eci]
 			}
@@ -306,44 +305,44 @@ func GenerateFidl(templatePath string, fidl types.Root, outputBase *string, opti
 			return library.Decls[eci]
 		},
 		// Determines if an EncodedCompoundIdentifier refers to a local definition.
-		"isLocal": func(eci types.EncodedCompoundIdentifier) bool {
+		"isLocal": func(eci fidl.EncodedCompoundIdentifier) bool {
 			return root.Name == eci.LibraryName()
 		},
 		// Converts an identifier to snake case.
-		"toSnakeCase": func(id types.Identifier) string {
-			return common.ToSnakeCase(string(id))
+		"toSnakeCase": func(id fidl.Identifier) string {
+			return fidl.ToSnakeCase(string(id))
 		},
 		// Converts an identifier to upper camel case.
-		"toUpperCamelCase": func(id types.Identifier) string {
-			return common.ToUpperCamelCase(string(id))
+		"toUpperCamelCase": func(id fidl.Identifier) string {
+			return fidl.ToUpperCamelCase(string(id))
 		},
 		// Converts an identifier to lower camel case.
-		"toLowerCamelCase": func(id types.Identifier) string {
-			return common.ToLowerCamelCase(string(id))
+		"toLowerCamelCase": func(id fidl.Identifier) string {
+			return fidl.ToLowerCamelCase(string(id))
 		},
 		// Converts an identifier to friendly case.
-		"toFriendlyCase": func(id types.Identifier) string {
-			return common.ToFriendlyCase(string(id))
+		"toFriendlyCase": func(id fidl.Identifier) string {
+			return fidl.ToFriendlyCase(string(id))
 		},
 		// Removes a leading 'k' from an identifier.
-		"removeLeadingK": func(id types.Identifier) string {
-			return common.RemoveLeadingK(string(id))
+		"removeLeadingK": func(id fidl.Identifier) string {
+			return fidl.RemoveLeadingK(string(id))
 		},
 		// Gets an option value (as a string) by name.
 		"getOption": func(name string) string {
 			return root.options[name]
 		},
 		// Gets an option (as an Identifier) by name.
-		"getOptionAsIdentifier": func(name string) types.Identifier {
-			return types.Identifier(root.options[name])
+		"getOptionAsIdentifier": func(name string) fidl.Identifier {
+			return fidl.Identifier(root.options[name])
 		},
 		// Gets an option (as an EncodedLibraryIdentifier) by name.
-		"getOptionAsEncodedLibraryIdentifier": func(name string) types.EncodedLibraryIdentifier {
-			return types.EncodedLibraryIdentifier(root.options[name])
+		"getOptionAsEncodedLibraryIdentifier": func(name string) fidl.EncodedLibraryIdentifier {
+			return fidl.EncodedLibraryIdentifier(root.options[name])
 		},
 		// Gets an option (as an EncodedCompoundIdentifier) by name.
-		"getOptionAsEncodedCompoundIdentifier": func(name string) types.EncodedCompoundIdentifier {
-			return types.EncodedCompoundIdentifier(root.options[name])
+		"getOptionAsEncodedCompoundIdentifier": func(name string) fidl.EncodedCompoundIdentifier {
+			return fidl.EncodedCompoundIdentifier(root.options[name])
 		},
 		// Returns the template executed
 		"execTmpl": func(template string, data interface{}) (string, error) {
@@ -352,17 +351,17 @@ func GenerateFidl(templatePath string, fidl types.Root, outputBase *string, opti
 			return buffer.String(), err
 		},
 		// Determines if a protocol is discoverable.
-		"isDiscoverable": func(i types.Protocol) bool {
+		"isDiscoverable": func(i fidl.Protocol) bool {
 			_, found := i.LookupAttribute("Discoverable")
 			return found
 		},
 		// Determines if a method is transitional.
-		"isTransitional": func(m types.Method) bool {
+		"isTransitional": func(m fidl.Method) bool {
 			_, found := m.LookupAttribute("Transitional")
 			return found
 		},
 		// Converts a primitive subtype to its C equivalent.
-		"toCType": func(p types.PrimitiveSubtype) string {
+		"toCType": func(p fidl.PrimitiveSubtype) string {
 			return primitiveTypes[p]
 		},
 	}

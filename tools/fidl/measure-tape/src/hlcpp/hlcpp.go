@@ -13,7 +13,7 @@ import (
 	"text/template"
 	"time"
 
-	fidlcommon "go.fuchsia.dev/fuchsia/garnet/go/src/fidl/compiler/backend/common"
+	fidl "go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 	"go.fuchsia.dev/fuchsia/tools/fidl/measure-tape/src/measurer"
 	"go.fuchsia.dev/fuchsia/tools/fidl/measure-tape/src/utils"
 )
@@ -257,7 +257,7 @@ func (buf *codeBuffer) CaseIterate(local, val measurer.Expression, body *measure
 
 func (buf *codeBuffer) CaseSelectVariant(
 	val measurer.Expression,
-	targetType fidlcommon.Name,
+	targetType fidl.Name,
 	variants map[string]measurer.LocalWithBlock) {
 
 	buf.writef("switch (%s.Which()) {\n", formatExpr{val}.String())
@@ -273,7 +273,7 @@ func (buf *codeBuffer) CaseSelectVariant(
 					// TODO(fxbug.dev/51366): Improve local vars handling.
 					buf.writef("__attribute__((unused)) auto const& %s = %s.%s();\n",
 						formatExpr{local},
-						formatExpr{val}, fidlcommon.ToSnakeCase(member))
+						formatExpr{val}, fidl.ToSnakeCase(member))
 				}
 				buf.writeBlock(localWithBlock.Body)
 				buf.writef("break;\n")
@@ -328,19 +328,19 @@ func fmtMethodKind(kind measurer.MethodKind) string {
 	}
 }
 
-func fmtType(name fidlcommon.Name) string {
+func fmtType(name fidl.Name) string {
 	return fmt.Sprintf("::%s::%s", strings.Join(name.LibraryName().Parts(), "::"), name.DeclarationName())
 }
 
-func fmtKnownVariant(name fidlcommon.Name, variant string) string {
-	return fmt.Sprintf("%s::Tag::k%s", fmtType(name), fidlcommon.ToUpperCamelCase(variant))
+func fmtKnownVariant(name fidl.Name, variant string) string {
+	return fmt.Sprintf("%s::Tag::k%s", fmtType(name), fidl.ToUpperCamelCase(variant))
 }
 
-func fmtUnknownVariant(name fidlcommon.Name) string {
+func fmtUnknownVariant(name fidl.Name) string {
 	return fmt.Sprintf("%s::Tag::kUnknown", fmtType(name))
 }
 
-func fmtInvalidVariant(name fidlcommon.Name) string {
+func fmtInvalidVariant(name fidl.Name) string {
 	return fmt.Sprintf("%s::Tag::Invalid", fmtType(name))
 }
 
@@ -367,7 +367,7 @@ func (formatExpr) CaseMemberOf(val measurer.Expression, member string, _ measure
 	if kind := val.AssertKind(measurer.Struct, measurer.Union, measurer.Table); kind != measurer.Struct {
 		accessor = "()"
 	}
-	return fmt.Sprintf("%s%s%s%s", formatExpr{val}, getDerefOp(val), fidlcommon.ToSnakeCase(member), accessor)
+	return fmt.Sprintf("%s%s%s%s", formatExpr{val}, getDerefOp(val), fidl.ToSnakeCase(member), accessor)
 }
 
 func (formatExpr) CaseFidlAlign(val measurer.Expression) string {
@@ -386,7 +386,7 @@ func (formatExpr) CaseLength(val measurer.Expression) string {
 }
 
 func (formatExpr) CaseHasMember(val measurer.Expression, member string) string {
-	return fmt.Sprintf("%s%shas_%s()", formatExpr{val}, getDerefOp(val), fidlcommon.ToSnakeCase(member))
+	return fmt.Sprintf("%s%shas_%s()", formatExpr{val}, getDerefOp(val), fidl.ToSnakeCase(member))
 }
 
 func (formatExpr) CaseMult(lhs, rhs measurer.Expression) string {

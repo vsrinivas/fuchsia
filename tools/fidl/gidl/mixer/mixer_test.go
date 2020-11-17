@@ -15,8 +15,8 @@ import (
 	"strings"
 	"testing"
 
-	fidlir "go.fuchsia.dev/fuchsia/garnet/go/src/fidl/compiler/backend/types"
 	gidlir "go.fuchsia.dev/fuchsia/tools/fidl/gidl/ir"
+	fidl "go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 )
 
 var hostDir = map[string]string{"arm64": "host_arm64", "amd64": "host_x64"}[runtime.GOARCH]
@@ -38,7 +38,7 @@ func testSchema(t *testing.T) Schema {
 	if err != nil {
 		t.Fatalf("please \"fx build %s/test_data/gidl/mixer.test.fidl.json\" first then \"go test\" again", hostDir)
 	}
-	root := fidlir.Root{}
+	root := fidl.Root{}
 	if err = json.Unmarshal(bytes, &root); err != nil {
 		t.Fatalf("failed to unmarshal %s: %s", path, err)
 	}
@@ -84,9 +84,9 @@ func TestLookupDeclByNameFailure(t *testing.T) {
 }
 
 func TestLookupDeclByTypeSuccess(t *testing.T) {
-	typ := fidlir.Type{
-		Kind:             fidlir.PrimitiveType,
-		PrimitiveSubtype: fidlir.Bool,
+	typ := fidl.Type{
+		Kind:             fidl.PrimitiveType,
+		PrimitiveSubtype: fidl.Bool,
 	}
 	decl, ok := testSchema(t).lookupDeclByType(typ)
 	if !ok {
@@ -224,7 +224,7 @@ func TestBoolDeclConforms(t *testing.T) {
 func TestIntegerDeclConforms(t *testing.T) {
 	checkConforms(t,
 		context{},
-		&IntegerDecl{subtype: fidlir.Uint8, lower: 0, upper: 255},
+		&IntegerDecl{subtype: fidl.Uint8, lower: 0, upper: 255},
 		[]conformTest{
 			conformOk{uint64(0)},
 			conformOk{uint64(128)},
@@ -243,7 +243,7 @@ func TestIntegerDeclConforms(t *testing.T) {
 	)
 	checkConforms(t,
 		context{},
-		&IntegerDecl{subtype: fidlir.Int64, lower: -5, upper: 10},
+		&IntegerDecl{subtype: fidl.Int64, lower: -5, upper: 10},
 		[]conformTest{
 			conformOk{int64(-5)},
 			conformOk{int64(10)},
@@ -280,8 +280,8 @@ func TestFloatDeclConforms(t *testing.T) {
 		conformOk{gidlir.RawFloat(math.Float64bits(math.Inf(1)))},
 		conformOk{gidlir.RawFloat(math.Float64bits(math.NaN()))},
 	}
-	checkConforms(t, context{}, &FloatDecl{subtype: fidlir.Float32}, append(tests, tests32...))
-	checkConforms(t, context{}, &FloatDecl{subtype: fidlir.Float64}, append(tests, tests64...))
+	checkConforms(t, context{}, &FloatDecl{subtype: fidl.Float32}, append(tests, tests32...))
+	checkConforms(t, context{}, &FloatDecl{subtype: fidl.Float64}, append(tests, tests64...))
 }
 
 func TestStringDeclConforms(t *testing.T) {
@@ -322,7 +322,7 @@ func TestHandleDeclConforms(t *testing.T) {
 	// Cannot refer to any handles if there are no handle_defs.
 	checkConforms(t,
 		context{},
-		&HandleDecl{subtype: fidlir.Event, nullable: false},
+		&HandleDecl{subtype: fidl.Event, nullable: false},
 		[]conformTest{
 			conformFail{gidlir.Handle(-1), "out of range"},
 			conformFail{gidlir.Handle(0), "out of range"},
@@ -338,12 +338,12 @@ func TestHandleDeclConforms(t *testing.T) {
 	checkConforms(t,
 		context{
 			handleDefs: []gidlir.HandleDef{
-				{Subtype: fidlir.Event}, // #0
-				{Subtype: fidlir.Port},  // #1
-				{Subtype: fidlir.Event}, // #2
+				{Subtype: fidl.Event}, // #0
+				{Subtype: fidl.Port},  // #1
+				{Subtype: fidl.Event}, // #2
 			},
 		},
-		&HandleDecl{subtype: fidlir.Handle, nullable: false},
+		&HandleDecl{subtype: fidl.Handle, nullable: false},
 		[]conformTest{
 			conformOk{gidlir.Handle(0)},
 			conformOk{gidlir.Handle(1)},
@@ -359,12 +359,12 @@ func TestHandleDeclConforms(t *testing.T) {
 	checkConforms(t,
 		context{
 			handleDefs: []gidlir.HandleDef{
-				{Subtype: fidlir.Event}, // #0
-				{Subtype: fidlir.Port},  // #1
-				{Subtype: fidlir.Event}, // #2
+				{Subtype: fidl.Event}, // #0
+				{Subtype: fidl.Port},  // #1
+				{Subtype: fidl.Event}, // #2
 			},
 		},
-		&HandleDecl{subtype: fidlir.Event, nullable: false},
+		&HandleDecl{subtype: fidl.Event, nullable: false},
 		[]conformTest{
 			conformOk{gidlir.Handle(0)},
 			conformOk{gidlir.Handle(2)},
@@ -380,12 +380,12 @@ func TestHandleDeclConforms(t *testing.T) {
 	checkConforms(t,
 		context{
 			handleDefs: []gidlir.HandleDef{
-				{Subtype: fidlir.Event}, // #0
-				{Subtype: fidlir.Port},  // #1
-				{Subtype: fidlir.Event}, // #2
+				{Subtype: fidl.Event}, // #0
+				{Subtype: fidl.Port},  // #1
+				{Subtype: fidl.Event}, // #2
 			},
 		},
-		&HandleDecl{subtype: fidlir.Port, nullable: true},
+		&HandleDecl{subtype: fidl.Port, nullable: true},
 		[]conformTest{
 			conformOk{gidlir.Handle(1)},
 			conformOk{nil},
@@ -676,12 +676,12 @@ func TestArrayDeclConforms(t *testing.T) {
 		context{},
 		&ArrayDecl{
 			schema: testSchema(t),
-			typ: fidlir.Type{
-				Kind:         fidlir.ArrayType,
+			typ: fidl.Type{
+				Kind:         fidl.ArrayType,
 				ElementCount: &two,
-				ElementType: &fidlir.Type{
-					Kind:             fidlir.PrimitiveType,
-					PrimitiveSubtype: fidlir.Uint8,
+				ElementType: &fidl.Type{
+					Kind:             fidl.PrimitiveType,
+					PrimitiveSubtype: fidl.Uint8,
 				},
 			},
 		},
@@ -702,12 +702,12 @@ func TestVectorDeclConforms(t *testing.T) {
 		context{},
 		&VectorDecl{
 			schema: testSchema(t),
-			typ: fidlir.Type{
-				Kind:         fidlir.VectorType,
+			typ: fidl.Type{
+				Kind:         fidl.VectorType,
 				ElementCount: &two,
-				ElementType: &fidlir.Type{
-					Kind:             fidlir.PrimitiveType,
-					PrimitiveSubtype: fidlir.Uint8,
+				ElementType: &fidl.Type{
+					Kind:             fidl.PrimitiveType,
+					PrimitiveSubtype: fidl.Uint8,
 				},
 			},
 		},
@@ -726,17 +726,17 @@ func TestVectorDeclConformsWithHandles(t *testing.T) {
 	checkConforms(t,
 		context{
 			handleDefs: []gidlir.HandleDef{
-				{Subtype: fidlir.Event},
-				{Subtype: fidlir.Event},
+				{Subtype: fidl.Event},
+				{Subtype: fidl.Event},
 			},
 		},
 		&VectorDecl{
 			schema: testSchema(t),
-			typ: fidlir.Type{
-				Kind: fidlir.VectorType,
-				ElementType: &fidlir.Type{
-					Kind:          fidlir.HandleType,
-					HandleSubtype: fidlir.Event,
+			typ: fidl.Type{
+				Kind: fidl.VectorType,
+				ElementType: &fidl.Type{
+					Kind:          fidl.HandleType,
+					HandleSubtype: fidl.Event,
 				},
 			},
 		},
@@ -758,20 +758,20 @@ type visitor struct {
 	visited string
 }
 
-func (v *visitor) OnBool(bool)                                { v.visited = "Bool" }
-func (v *visitor) OnInt64(int64, fidlir.PrimitiveSubtype)     { v.visited = "Int64" }
-func (v *visitor) OnUint64(uint64, fidlir.PrimitiveSubtype)   { v.visited = "Uint64" }
-func (v *visitor) OnFloat64(float64, fidlir.PrimitiveSubtype) { v.visited = "Float64" }
-func (v *visitor) OnString(string, *StringDecl)               { v.visited = "String" }
-func (v *visitor) OnHandle(gidlir.Handle, *HandleDecl)        { v.visited = "Handle" }
-func (v *visitor) OnBits(interface{}, *BitsDecl)              { v.visited = "Bits" }
-func (v *visitor) OnEnum(interface{}, *EnumDecl)              { v.visited = "Enum" }
-func (v *visitor) OnStruct(gidlir.Record, *StructDecl)        { v.visited = "Struct" }
-func (v *visitor) OnTable(gidlir.Record, *TableDecl)          { v.visited = "Table" }
-func (v *visitor) OnUnion(gidlir.Record, *UnionDecl)          { v.visited = "Union" }
-func (v *visitor) OnArray([]interface{}, *ArrayDecl)          { v.visited = "Array" }
-func (v *visitor) OnVector([]interface{}, *VectorDecl)        { v.visited = "Vector" }
-func (v *visitor) OnNull(Declaration)                         { v.visited = "Null" }
+func (v *visitor) OnBool(bool)                              { v.visited = "Bool" }
+func (v *visitor) OnInt64(int64, fidl.PrimitiveSubtype)     { v.visited = "Int64" }
+func (v *visitor) OnUint64(uint64, fidl.PrimitiveSubtype)   { v.visited = "Uint64" }
+func (v *visitor) OnFloat64(float64, fidl.PrimitiveSubtype) { v.visited = "Float64" }
+func (v *visitor) OnString(string, *StringDecl)             { v.visited = "String" }
+func (v *visitor) OnHandle(gidlir.Handle, *HandleDecl)      { v.visited = "Handle" }
+func (v *visitor) OnBits(interface{}, *BitsDecl)            { v.visited = "Bits" }
+func (v *visitor) OnEnum(interface{}, *EnumDecl)            { v.visited = "Enum" }
+func (v *visitor) OnStruct(gidlir.Record, *StructDecl)      { v.visited = "Struct" }
+func (v *visitor) OnTable(gidlir.Record, *TableDecl)        { v.visited = "Table" }
+func (v *visitor) OnUnion(gidlir.Record, *UnionDecl)        { v.visited = "Union" }
+func (v *visitor) OnArray([]interface{}, *ArrayDecl)        { v.visited = "Array" }
+func (v *visitor) OnVector([]interface{}, *VectorDecl)      { v.visited = "Vector" }
+func (v *visitor) OnNull(Declaration)                       { v.visited = "Null" }
 
 func TestVisit(t *testing.T) {
 	tests := []struct {
@@ -780,11 +780,11 @@ func TestVisit(t *testing.T) {
 		expected string
 	}{
 		{false, &BoolDecl{}, "Bool"},
-		{int64(1), &IntegerDecl{subtype: fidlir.Int8}, "Int64"},
-		{uint64(1), &IntegerDecl{subtype: fidlir.Uint8}, "Uint64"},
-		{1.23, &FloatDecl{subtype: fidlir.Float32}, "Float64"},
+		{int64(1), &IntegerDecl{subtype: fidl.Int8}, "Int64"},
+		{uint64(1), &IntegerDecl{subtype: fidl.Uint8}, "Uint64"},
+		{1.23, &FloatDecl{subtype: fidl.Float32}, "Float64"},
 		{"foo", &StringDecl{}, "String"},
-		{gidlir.Handle(0), &HandleDecl{subtype: fidlir.Event}, "Handle"},
+		{gidlir.Handle(0), &HandleDecl{subtype: fidl.Event}, "Handle"},
 		{nil, &StringDecl{nullable: true}, "Null"},
 		// These values and decls are not fully initialized, but for the
 		// purposes of Visit() it should not matter.
