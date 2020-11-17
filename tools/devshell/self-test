@@ -36,6 +36,8 @@
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh \
     || exit $?
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/style.sh \
+    || exit $?
 
 declare -r test_framework_dir="${FUCHSIA_DIR}/tools/devshell/tests/lib"
 
@@ -45,9 +47,38 @@ usage() {
   fx-command-help
   echo
   echo "Available test scripts:"
-  for script_name in $(list_tests); do
-    echo "  //${script_name#${FUCHSIA_DIR}/}"
+  local has_not_in_cq=false
+  for script_name in $(list_tests | sort); do
+    local simple="${script_name#${FUCHSIA_DIR}/}"
+    echo -n "  //${simple}"
+    if ! is_in_buildgn "$simple"; then
+      echo "    $(style::echo --color red -n "(not in CQ)")"
+      has_not_in_cq=true
+    else
+      echo
+    fi
   done
+  if $has_not_in_cq; then
+    fx-warn "Some tests are not configured to run in CQ."
+    fx-warn "If possible, add them to //tools/devshell/BUILD.gn or //vendor/*/scripts/devshell/BUILD.gn"
+  fi
+}
+
+is_in_buildgn() {
+  # for performance reasons, this method uses a regular expression
+  # to look up in the corresponding BUILD.gn file. The exact search would
+  # require a more extensive GN walk and some assumptions about infra
+  # setup. The current heuristics is sufficiently stable as long as the
+  # corresponding BUILD.gn files keep the same structure.
+  local n="$1"
+  local buildgn="tools/devshell/BUILD.gn"
+  if [[ "$1" =~ ^vendor/(.*)/scripts/devshell/tests ]]; then
+    v="${BASH_REMATCH[1]}"
+    buildgn="vendor/${v}/scripts/devshell/BUILD.gn"
+  fi
+  local p="$(dirname "$buildgn")"
+  n="${n#$p/}"
+  grep -q "^\\s*\"$n\"" $buildgn
 }
 
 # //<dir>
