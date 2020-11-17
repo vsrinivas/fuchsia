@@ -157,4 +157,6 @@ void pmm_checker_check_all_free_pages();
 // incredibly expensive operation and should be used with care.
 void pmm_asan_poison_all_free_pages();
 
+int64_t pmm_get_alloc_failed_count();
+
 #endif  // ZIRCON_KERNEL_VM_INCLUDE_VM_PMM_H_

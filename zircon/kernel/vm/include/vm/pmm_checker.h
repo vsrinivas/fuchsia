@@ -88,6 +88,8 @@ class PmmChecker {
   // Otherwise, does nothing.
   void AssertPattern(vm_page_t* page);
 
+  static int64_t get_validation_failed_count();
+
  private:
   // The number of bytes to fill/validate.
   size_t fill_size_ = PAGE_SIZE;

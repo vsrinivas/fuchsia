@@ -291,6 +291,10 @@ void lockup_end() {
   Thread::Current::PrintBacktrace();
 }
 
+int64_t lockup_get_critical_section_oops_count() { return counter_lockup_cs_count.Value(); }
+
+int64_t lockup_get_no_heartbeat_oops_count() { return counter_lockup_no_heartbeat_oops.Value(); }
+
 namespace {
 
 void lockup_status() {

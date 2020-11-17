@@ -751,3 +751,5 @@ void PmmNode::InitRequestThread() {
       Thread::Create("pmm-node-request-thread", pmm_node_request_loop, this, HIGH_PRIORITY);
   request_thread_->Resume();
 }
+
+int64_t PmmNode::get_alloc_failed_count() { return pmm_alloc_failed.Value(); }

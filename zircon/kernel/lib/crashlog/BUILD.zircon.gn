@@ -10,6 +10,7 @@ zx_library("crashlog") {
   deps = [
     "$zx/kernel/lib/console",
     "$zx/kernel/lib/version",
+    "$zx/kernel/object:headers",
   ]
 
   # TODO: testonly

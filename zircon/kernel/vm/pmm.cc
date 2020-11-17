@@ -126,6 +126,8 @@ void pmm_checker_check_all_free_pages() { pmm_node.CheckAllFreePages(); }
 void pmm_asan_poison_all_free_pages() { pmm_node.PoisonAllFreePages(); }
 #endif
 
+int64_t pmm_get_alloc_failed_count() { return PmmNode::get_alloc_failed_count(); }
+
 static void pmm_checker_enable(size_t fill_size, PmmChecker::Action action) {
   // We might be changing the fill size.  If we increase the fill size while the checker is active,
   // we might spuriously assert so disable the checker.

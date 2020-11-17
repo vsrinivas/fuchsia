@@ -111,6 +111,8 @@ class PmmNode {
   // For test and diagnostic purposes.
   PmmChecker* Checker() { return &checker_; }
 
+  static int64_t get_alloc_failed_count();
+
  private:
   void FreePageHelperLocked(vm_page* page) TA_REQ(lock_);
   void FreeListLocked(list_node* list) TA_REQ(lock_);

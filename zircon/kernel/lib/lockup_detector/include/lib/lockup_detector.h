@@ -64,6 +64,12 @@ void lockup_begin(void);
 // Do not use directly.  Use |LOCKUP_END| macro instead.
 void lockup_end(void);
 
+// Returns the number of times a "critical section threshold exceeded" oops was triggered.
+int64_t lockup_get_critical_section_oops_count(void);
+
+// Returns the number of times a "no heartbeat" oops was triggered.
+int64_t lockup_get_no_heartbeat_oops_count(void);
+
 __END_CDECLS
 
 #endif  // ZIRCON_KERNEL_LIB_LOCKUP_DETECTOR_INCLUDE_LIB_LOCKUP_DETECTOR_H_

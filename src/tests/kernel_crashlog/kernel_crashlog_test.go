@@ -88,4 +88,7 @@ func TestKernelCrashlog(t *testing.T) {
 	// And a backtrace.
 	i.WaitForLogMessage("BACKTRACE")
 	i.WaitForLogMessage("{{{bt:0")
+
+	// And counters.
+	i.WaitForLogMessage("counters: ")
 }

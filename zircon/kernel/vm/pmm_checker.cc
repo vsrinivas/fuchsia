@@ -130,3 +130,7 @@ void PmmChecker::PrintStatus(FILE* f) const {
   fprintf(f, "PMM: pmm checker %s, fill size is %lu, action is %s\n",
           armed_ ? "enabled" : "disabled", fill_size_, ActionToString(action_));
 }
+
+int64_t PmmChecker::get_validation_failed_count() {
+  return counter_pattern_validation_failed.Value();
+}

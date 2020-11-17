@@ -135,6 +135,8 @@ class HandleTableArena {
 
   void Delete(Handle* handle);
 
+  static int64_t get_alloc_failed_count();
+
  private:
   // GetNewBaseValue is a helper needed to actually create a Handle.
   uint32_t GetNewBaseValue(void* addr);
