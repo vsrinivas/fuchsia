@@ -110,7 +110,10 @@ void launchpad_destroy(launchpad_t* lp) {
     return;
   zx_handle_close(lp->reserve_vmar);
   zx_handle_close_many(lp->special_handles, HND_SPECIAL_COUNT);
-  zx_handle_close_many(lp->handles, lp->handle_count);
+  if (lp->handle_count != 0) {
+    // If we have already free the handles, don't free them again.
+    zx_handle_close_many(lp->handles, lp->handle_count);
+  }
   free(lp->handles);
   free(lp->handles_info);
   free(lp->args);
