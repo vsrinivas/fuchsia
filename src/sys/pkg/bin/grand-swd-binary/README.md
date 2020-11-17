@@ -1,6 +1,6 @@
 # Grand SWD Binary
 
-This binary aggregates the `pkg-resolver` and (coming soon) the `ota-dependency-checker` into a
+This binary aggregates the `pkg-resolver` and the `system-update-committer` into a
 single binary to save disk space.  The Grand SWD Binary inspects `argv[0]` on start and invokes
 the appropriate binary based on the binary's name.
 

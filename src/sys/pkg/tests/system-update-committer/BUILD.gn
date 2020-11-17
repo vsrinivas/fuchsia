@@ -7,7 +7,7 @@ import("//build/testing/environments.gni")
 import("//src/sys/build/components.gni")
 
 rustc_test("test_driver") {
-  name = "ota_dependency_checker_integration_test"
+  name = "system_update_committer_integration_test"
   edition = "2018"
 
   deps = [
@@ -24,23 +24,24 @@ rustc_test("test_driver") {
 }
 
 fuchsia_component("component-under-test") {
-  component_name = "ota-dependency-checker"
-  manifest = "meta/ota-dependency-checker.cmx"
-  deps = [ "//src/sys/pkg/bin/ota-dependency-checker:renamed-grand-swd-binary" ]
+  component_name = "system-update-committer"
+  manifest = "meta/system-update-committer.cmx"
+  deps =
+      [ "//src/sys/pkg/bin/system-update-committer:renamed-grand-swd-binary" ]
   testonly = true
   visibility = [ ":*" ]
 }
 
 fuchsia_component("component") {
-  component_name = "ota-dependency-checker-integration-test"
-  manifest = "meta/ota-dependency-checker-integration-test.cmx"
+  component_name = "system-update-committer-integration-test"
+  manifest = "meta/system-update-committer-integration-test.cmx"
   deps = [ ":test_driver" ]
   testonly = true
   visibility = [ ":*" ]
 }
 
 fuchsia_test_package("package") {
-  package_name = "ota-dependency-checker-integration-tests"
+  package_name = "system-update-committer-integration-tests"
   test_components = [ ":component" ]
   deps = [ ":component-under-test" ]
 }

@@ -15,8 +15,8 @@ use {
     std::sync::Arc,
 };
 
-const OTA_DEPENDENCY_CHECKER_CMX: &str =
-    "fuchsia-pkg://fuchsia.com/ota-dependency-checker-integration-tests#meta/ota-dependency-checker.cmx";
+const SYSTEM_UPDATE_COMMITTER_CMX: &str =
+    "fuchsia-pkg://fuchsia.com/system-update-committer-integration-tests#meta/system-update-committer.cmx";
 
 struct TestEnv {
     env: NestedEnvironment,
@@ -41,17 +41,17 @@ impl TestEnv {
         });
 
         let env = fs
-            .create_salted_nested_environment("ota_dependency_checker_env")
+            .create_salted_nested_environment("system_update_committer_env")
             .expect("nested environment to create successfully");
         fasync::Task::spawn(fs.collect()).detach();
 
         Self { env, paver_service }
     }
 
-    async fn run_ota_dependency_checker(&self) -> Output {
-        AppBuilder::new(OTA_DEPENDENCY_CHECKER_CMX.to_owned())
+    async fn run_system_update_committer(&self) -> Output {
+        AppBuilder::new(SYSTEM_UPDATE_COMMITTER_CMX.to_owned())
             .output(self.env.launcher())
-            .expect("ota-dependency-checker to launch")
+            .expect("system-update-committer to launch")
             .await
             .expect("no errors while waiting for exit")
     }
@@ -61,9 +61,9 @@ impl TestEnv {
 async fn test_calls_paver() {
     let env = TestEnv::new();
 
-    let output = env.run_ota_dependency_checker().await;
+    let output = env.run_system_update_committer().await;
 
-    let () = output.ok().expect("ota-dependency-checker to exit with status code 0");
+    let () = output.ok().expect("system-update-committer to exit with status code 0");
     assert_eq!(
         env.paver_service.take_events(),
         vec![

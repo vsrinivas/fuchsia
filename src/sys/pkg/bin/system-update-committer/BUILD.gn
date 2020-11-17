@@ -5,10 +5,10 @@
 import("//build/rust/rustc_library.gni")
 import("//src/sys/build/components.gni")
 
-# `ota-dependency-checker` is conceptually a binary, but it built as a lib here so
+# `system-update-committer` is conceptually a binary, but it built as a lib here so
 # it can be aggregated into //src/sys/pkg/bin/grand-swd-binary to save disk space.
 rustc_library("lib") {
-  name = "ota-dependency-checker"
+  name = "system-update-committer"
   with_unit_tests = true
   edition = "2018"
 
@@ -43,33 +43,33 @@ resource("renamed-grand-swd-binary") {
   deps = [ "//src/sys/pkg/bin/grand-swd-binary" ]
   data_deps = [ "//src/sys/pkg/bin/grand-swd-binary" ]
   sources = [ "$root_out_dir/grand_swd_binary" ]
-  outputs = [ "bin/ota-dependency-checker" ]
+  outputs = [ "bin/system-update-committer" ]
   visibility = [
     ":*",
-    "//src/sys/pkg/tests/ota-dependency-checker/*",
+    "//src/sys/pkg/tests/system-update-committer/*",
   ]
 }
 
 fuchsia_component("component") {
-  component_name = "ota-dependency-checker"
-  manifest = "meta/ota-dependency-checker.cml"
+  component_name = "system-update-committer"
+  manifest = "meta/system-update-committer.cml"
   deps = [ ":renamed-grand-swd-binary" ]
 }
 
 fuchsia_package("package") {
-  package_name = "ota-dependency-checker"
+  package_name = "system-update-committer"
   deps = [ ":component" ]
 }
 
 fuchsia_component("test-component") {
   testonly = true
-  component_name = "ota-dependency-checker-test"
-  manifest = "meta/ota-dependency-checker-test.cml"
+  component_name = "system-update-committer-test"
+  manifest = "meta/system-update-committer-test.cml"
   deps = [ ":lib_test" ]
 }
 
 fuchsia_test_package("test-package") {
-  package_name = "ota-dependency-checker-tests"
+  package_name = "system-update-committer-tests"
   test_components = [ ":test-component" ]
 }
 

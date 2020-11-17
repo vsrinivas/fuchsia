@@ -1,6 +1,6 @@
 {
     program: {
-        binary: "bin/ota_dependency_checker_lib_test",
+        binary: "bin/system_update_committer_lib_test",
     },
     capabilities: [
         { protocol: "fuchsia.test.Suite" },

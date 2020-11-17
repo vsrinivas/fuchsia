@@ -12,14 +12,14 @@ use {
 mod check_and_set;
 
 pub fn main() -> Result<(), Error> {
-    fuchsia_syslog::init_with_tags(&["ota-dependency-checker"])
+    fuchsia_syslog::init_with_tags(&["system-update-committer"])
         .context("while initializing logger")?;
-    fx_log_info!("starting ota-dependency-checker");
+    fx_log_info!("starting system-update-committer");
 
     let mut executor = fasync::Executor::new().context("error creating executor")?;
     let () = executor.run_singlethreaded(main_inner_async())?;
 
-    fx_log_info!("shutting down ota-dependency-checker");
+    fx_log_info!("shutting down system-update-committer");
     Ok(())
 }
 

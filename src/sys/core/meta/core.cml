@@ -7,8 +7,8 @@
             url: "fuchsia-pkg://fuchsia.com/appmgr#meta/appmgr.cm",
         },
         {
-            name: "ota-dependency-checker",
-            url: "fuchsia-pkg://fuchsia.com/ota-dependency-checker#meta/ota-dependency-checker.cm",
+            name: "system-update-committer",
+            url: "fuchsia-pkg://fuchsia.com/system-update-committer#meta/system-update-committer.cm",
             startup: "eager",
         },
 
@@ -168,9 +168,9 @@
                 "#debug_serial",
                 "#font_provider",
                 "#log-stats",
-                "#ota-dependency-checker",
                 "#remote-control",
                 "#sampler",
+                "#system-update-committer",
                 "#temperature-logger",
                 "#test_manager",
             ],
@@ -178,7 +178,7 @@
         {
             protocol: "fuchsia.paver.Paver",
             from: "parent",
-            to: [ "#ota-dependency-checker" ],
+            to: [ "#system-update-committer" ],
         },
         {
             protocol: [

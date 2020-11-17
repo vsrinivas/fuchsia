@@ -33,9 +33,9 @@ group("core") {
   public_deps = [
     ":core_config",
     "bin/amber:pkgfs",
-    "bin/ota-dependency-checker:package",
     "bin/pkg-cache",
     "bin/pkg-resolver:pkg-resolver-bin",
+    "bin/system-update-committer:package",
     "bin/system-updater",
   ]
 }
@@ -43,9 +43,9 @@ group("core") {
 # Targets to include in the base package set for the core recovery image.
 group("recovery-core") {
   public_deps = [
-    "bin/ota-dependency-checker:package",
     "bin/pkg-cache",
     "bin/pkg-resolver:pkg-resolver-bin",
+    "bin/system-update-committer:package",
   ]
 }
 

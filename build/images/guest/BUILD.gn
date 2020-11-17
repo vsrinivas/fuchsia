@@ -19,7 +19,7 @@ assemble_system("guest") {
     "//src/sys/appmgr:component_id_index_no_restrict_storage",
     "//src/sys/appmgr",
     "//src/sys/core",
-    "//src/sys/pkg/bin/ota-dependency-checker:package",
+    "//src/sys/pkg/bin/system-update-committer:package",
     "//src/virtualization/packages/zircon_guest:services_config",
     "//src/virtualization/tests:virtualization_test_utils_pkg",
   ]

@@ -10,8 +10,8 @@ rustc_binary("grand-swd-binary") {
   edition = "2018"
 
   deps = [
-    "//src/sys/pkg/bin/ota-dependency-checker:lib",
     "//src/sys/pkg/bin/pkg-resolver:lib",
+    "//src/sys/pkg/bin/system-update-committer:lib",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:thiserror",
   ]
