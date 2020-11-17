@@ -1032,16 +1032,63 @@ fuchsia_unittest_package("timekeeper-unittests") {
     path is, then try your best guess and expect a helpful error message if
     your guess was not correct.
 
+### Legacy features
+
+The following special attributes are supported by the legacy `package()` template:
+
+*   `binaries`
+*   `drivers`
+*   `libraries`
+*   `loadable_modules`
+*   `tests`
+
+These are used with special syntax, which determines how the files that certain
+targets produce are packaged.
+For instance the `libraries` attribute installs resources in a special `lib/` directory,
+`drivers` are installed in `drivers/`, etc'.
+The legacy syntax looks like this:
+
+```
+package("my_driver_package") {
+  deps = [ ":my_driver" ]
+
+  drivers = [
+    {
+      name = "my_driver.so"
+    },
+  ]
+}
+```
+
+This special treatment is not necessary with the new templates. Simply add the
+necessary target to `deps = [ ... ]` and the packaging is done automatically.
+
+```
+fuchsia_component("my_driver_component") {
+  deps = [ ":my_driver" ]
+  ...
+}
+
+fuchsia_package("my_driver_package") {
+  deps = [ ":my_driver_component" ]
+  ...
+}
+```
+
+Additionally, legacy `package()` supports the `resources` attribute. This is
+replaced by adding a dependency on a `resource()` target.
+See also:
+
+*   [Listing the contents of a package](#listing-the-contents-of-a-package).
+*   [Additional packaged resources](#additional-packaged-resources).
+
 ### Unsupported features
 
 Note that some features of `package()` are unsupported moving forward. If your
 package depends on them then at this time it cannot be migrated to the new
 templates. These unsupported features include:
 
-*   Legacy `shell` binaries (deprecated global `/bin` directory)
-*   Legacy `drivers` (deprecated global `/driver` directory)
-*   Legacy `loadable_modules` and `libraries` (deprecated global `/lib`
-    directory)
+*   Legacy `shell` binaries (deprecated global `/bin` directory).
 *   Marking a test as disabled. Instead, change the test source code to mark it
     as disabled, or comment out the disabled test component from the build file.
 *   The [Component Index][component-index]. Components using the new templates
