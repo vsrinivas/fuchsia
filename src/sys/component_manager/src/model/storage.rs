@@ -328,7 +328,6 @@ mod tests {
         },
         cm_rust::*,
         fidl_fuchsia_io2 as fio2,
-        matches::assert_matches,
         std::convert::{TryFrom, TryInto},
     };
 
@@ -431,11 +430,10 @@ mod tests {
             .set_component_outgoing_host_fn("a", Box::new(|_| {}))
             .build()
             .await;
-        test.bind_instance_and_wait_start(&AbsoluteMoniker::root()).await.unwrap();
 
         // Try to open the storage. We expect an error.
         let relative_moniker = RelativeMoniker::new(vec![], vec!["c:0".into(), "coll:d:1".into()]);
-        let res = open_isolated_storage(
+        let err = open_isolated_storage(
             StorageCapabilitySource {
                 storage_provider: Some(Arc::clone(&test.model.root_realm)),
                 backing_directory_path: CapabilityPath::try_from("/data").unwrap().clone(),
@@ -446,11 +444,14 @@ mod tests {
             OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
             &BindReason::Eager,
         )
-        .await;
-        assert_matches!(
-            res,
-            Err(ModelError::RoutingError { err: RoutingError::OpenOutgoingFailed { .. } })
-        );
+        .await
+        .expect_err("open isolated storage not meant to succeed");
+        match err {
+            ModelError::RoutingError { err: RoutingError::OpenOutgoingFailed { .. } } => {}
+            _ => {
+                panic!("unexpected error: {:?}", err);
+            }
+        }
     }
 
     #[fuchsia_async::run_singlethreaded(test)]

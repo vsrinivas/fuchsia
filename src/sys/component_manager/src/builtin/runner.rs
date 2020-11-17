@@ -209,13 +209,13 @@ mod tests {
         // Case 1: The started component's moniker matches the allowlist entry above.
         let url = "xxx://test";
         start_component_through_hooks(&hooks, AbsoluteMoniker::from(vec!["foo:0"]), url).await?;
-        runner.wait_for_url(&url).await;
+        runner.wait_for_url(url).await;
         let checker = runner.last_checker().expect("No PolicyChecker held by MockRunner");
         assert_matches!(checker.ambient_mark_vmo_exec_allowed(), Ok(()));
 
         // Case 2: Moniker does not match allowlist entry.
         start_component_through_hooks(&hooks, AbsoluteMoniker::root(), url).await?;
-        runner.wait_for_url(&url).await;
+        runner.wait_for_url(url).await;
         let checker = runner.last_checker().expect("No PolicyChecker held by MockRunner");
         assert_matches!(checker.ambient_mark_vmo_exec_allowed(), Err(_));
 
@@ -341,6 +341,7 @@ mod tests {
         universe.bind_instance(&vec!["b:0"].into()).await.expect("bind failed");
 
         // Ensure the instances started up.
-        mock_runner.wait_for_urls(&["test:///a_resolved", "test:///b_resolved"]).await;
+        mock_runner.wait_for_url("test:///a_resolved").await;
+        mock_runner.wait_for_url("test:///b_resolved").await;
     }
 }

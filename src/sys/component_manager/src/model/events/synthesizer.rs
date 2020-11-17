@@ -218,10 +218,10 @@ mod tests {
     async fn synthesize_only_running() {
         let test = setup_synthesis_test().await;
 
-        // Bind: b, c, e. We should see Running events only for these.
+        // Bind: b, c, d. We should see Running events only for these.
         test.bind_instance(&vec!["b:0"].into()).await.expect("bind instance b success");
         test.bind_instance(&vec!["c:0"].into()).await.expect("bind instance c success");
-        test.bind_instance(&vec!["c:0", "e:0"].into()).await.expect("bind instance e success");
+        test.bind_instance(&vec!["c:0", "e:0"].into()).await.expect("bind instance d success");
 
         let registry = test.builtin_environment.event_registry.clone();
         let mut event_stream = create_stream(
@@ -231,20 +231,20 @@ mod tests {
         )
         .await;
 
-        // Bind f, this will be a Started event.
+        // Bind e, this will be a Started event.
         test.bind_instance(&vec!["c:0", "f:0"].into()).await.expect("bind instance success");
 
         let mut result_monikers = HashSet::new();
-        while result_monikers.len() < 5 {
+        for _ in 0..6 {
+            // We should see only 5 unique monikers, however there's a chance of receiving Started
+            // and Running for the instance we just bound if it happens to start while we are
+            // synthesizing. We assert that instance separately and count it once.
+            if result_monikers.len() == 4 {
+                break;
+            }
             let event = event_stream.next().await.expect("got running event");
             match event.event.result {
                 Ok(EventPayload::Running { .. }) => {
-                    if event.event.target_moniker.to_string() == "/c:0/f:0" {
-                        // There's a chance of receiving Started and Running for the instance we
-                        // just bound if it happens to start while we are synthesizing. We assert
-                        // that instance separately and count it once.
-                        continue;
-                    }
                     result_monikers.insert(event.event.target_moniker.to_string());
                 }
                 Ok(EventPayload::Started { .. }) => {
@@ -256,10 +256,18 @@ mod tests {
         }
 
         // Events might be out of order, sort them
-        let expected_monikers = vec!["/", "/b:0", "/c:0", "/c:0/e:0", "/c:0/f:0"];
+        let expected_monikers = vec!["/", "/b:0", "/c:0", "/c:0/e:0"];
         let mut result_monikers = Vec::from_iter(result_monikers.into_iter());
         result_monikers.sort();
         assert_eq!(expected_monikers, result_monikers);
+
+        let event = event_stream.next().await.expect("got started event");
+        match event.event.result {
+            Ok(EventPayload::Started { .. }) => {
+                assert_eq!("/c:0/f:0", event.event.target_moniker.to_string());
+            }
+            payload => panic!("Expected started. Got: {:?}", payload),
+        }
     }
 
     // Shows that we see Running a single time even if the subscription scopes intersect.

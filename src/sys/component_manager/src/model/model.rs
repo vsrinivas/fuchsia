@@ -93,10 +93,11 @@ pub mod tests {
     use {
         crate::{
             config::RuntimeConfig,
-            model::actions::Action,
+            model::actions::{Action, ActionStatus},
             model::testing::test_helpers::{new_test_model, ComponentDeclBuilder, TestModelResult},
         },
         fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
+        std::sync::Arc,
     };
 
     #[fasync::run_singlethreaded(test)]
@@ -116,11 +117,12 @@ pub mod tests {
         let TestModelResult { model, .. } =
             new_test_model("root", components, RuntimeConfig::default()).await;
 
-        let _ = model
+        model
             .root_realm
             .lock_actions()
             .await
-            .register_inner(&model.root_realm, Action::Shutdown);
+            .rep
+            .insert(Action::Shutdown, Arc::new(ActionStatus::new(false)));
 
         model.start().await;
     }

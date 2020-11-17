@@ -54,7 +54,7 @@ fn find_storage_provider(
 }
 
 async fn shutdown_component(child: ShutdownInfo) -> Result<ChildMoniker, ModelError> {
-    ActionSet::register(child.realm, Action::Shutdown).await?;
+    ActionSet::register(child.realm, Action::Shutdown).await.await?;
     Ok(child.moniker.clone())
 }
 

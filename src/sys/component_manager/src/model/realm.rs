@@ -7,7 +7,7 @@ use {
         capability::NamespaceCapabilities,
         channel,
         model::{
-            actions::{Action, ActionSet},
+            actions::{Action, ActionSet, Notification},
             binding,
             environment::Environment,
             error::ModelError,
@@ -28,7 +28,7 @@ use {
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync, fuchsia_zircon as zx,
     futures::future::TryFutureExt,
     futures::{
-        future::{join_all, AbortHandle, Abortable, BoxFuture, Either, Future, FutureExt},
+        future::{join_all, AbortHandle, Abortable, BoxFuture, Either, FutureExt},
         lock::{MappedMutexGuard, Mutex, MutexGuard},
         StreamExt,
     },
@@ -433,12 +433,12 @@ impl Realm {
         Ok(())
     }
 
-    /// Removes the dynamic child `partial_moniker`, returning a future that will execute the
-    /// destroy action.
+    /// Removes the dynamic child `partial_moniker`, returning the notification for the destroy
+    /// action which the caller may await on.
     pub async fn remove_dynamic_child(
         self: &Arc<Self>,
         partial_moniker: &PartialMoniker,
-    ) -> Result<impl Future<Output = Result<(), ModelError>>, ModelError> {
+    ) -> Result<Notification, ModelError> {
         let tup = {
             let state = self.lock_resolved_state().await?;
             state.live_child_realms.get(&partial_moniker).map(|t| t.clone())
@@ -446,9 +446,11 @@ impl Realm {
         if let Some(tup) = tup {
             let (instance, _) = tup;
             let child_moniker = ChildMoniker::from_partial(partial_moniker, instance);
-            ActionSet::register(self.clone(), Action::MarkDeleting(child_moniker.clone())).await?;
-            let fut = ActionSet::register(self.clone(), Action::DeleteChild(child_moniker));
-            Ok(fut)
+            ActionSet::register(self.clone(), Action::MarkDeleting(child_moniker.clone()))
+                .await
+                .await?;
+            let nf = ActionSet::register(self.clone(), Action::DeleteChild(child_moniker)).await;
+            Ok(nf)
         } else {
             Err(ModelError::instance_not_found_in_realm(
                 self.abs_moniker.clone(),
@@ -561,8 +563,10 @@ impl Realm {
             // above.
             if let Some(coll) = m.collection() {
                 if transient_colls.contains(coll) {
-                    ActionSet::register(self.clone(), Action::MarkDeleting(m.clone())).await?;
-                    let nf = ActionSet::register(self.clone(), Action::DeleteChild(m));
+                    ActionSet::register(self.clone(), Action::MarkDeleting(m.clone()))
+                        .await
+                        .await?;
+                    let nf = ActionSet::register(self.clone(), Action::DeleteChild(m)).await;
                     futures.push(nf);
                 }
             }
@@ -1010,7 +1014,7 @@ impl Runtime {
                 async move {
                     if let Ok(_) = controller_clone.on_closed().await {
                         if let Ok(realm) = realm.upgrade() {
-                            let _ = ActionSet::register(realm, Action::Stop).await;
+                            let _ = ActionSet::register(realm, Action::Stop).await.await;
                         }
                     }
                 },
@@ -1802,9 +1806,6 @@ pub mod tests {
             .bind(&vec![].into(), &BindReason::Root)
             .await
             .expect("failed to bind to root realm");
-        test.runner
-            .wait_for_urls(&["test:///root_resolved", "test:///a_resolved", "test:///b_resolved"])
-            .await;
 
         // Check that the eagerly-started 'b' has a runtime, which indicates
         // it is running.
@@ -1828,6 +1829,7 @@ pub mod tests {
         // Verify that a parent of the exited component can still be stopped
         // properly.
         ActionSet::register(test.look_up(a_moniker.clone()).await, Action::Shutdown)
+            .await
             .await
             .expect("Couldn't trigger shutdown");
         // Check that we get a stop even which corresponds to the parent.
