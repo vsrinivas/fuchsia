@@ -448,14 +448,9 @@ Thread* Scheduler::DequeueThread(SchedTime now) {
   if (likely(!fair_run_queue_.is_empty())) {
     return DequeueFairThread();
   }
-
-  // TODO(fbx/59720) : Re-enable work stealing once we have collected sufficient
-  // data for the reference bug.
-#if 0
   if (Thread* const thread = StealWork(now); thread != nullptr) {
     return thread;
   }
-#endif
   return &percpu::Get(this_cpu()).idle_thread;
 }
 
