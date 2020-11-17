@@ -26,6 +26,8 @@ bool FakeDdkSysmem::Init() {
     fflush(stderr);
     return false;
   }
+  // Avoid wasting fuzzer time outputting logs.
+  fake_ddk::kMinLogSeverity = FX_LOG_FATAL;
   // Pick a platform where AFBC textures will be used.
   static const sysmem_metadata_t metadata{
       .vid = PDEV_VID_AMLOGIC,
