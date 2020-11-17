@@ -16,7 +16,7 @@ use {
         client::{App, AppBuilder},
         server::{NestedEnvironment, ServiceFs},
     },
-    fuchsia_inspect::reader::NodeHierarchy,
+    fuchsia_inspect::reader::DiagnosticsHierarchy,
     fuchsia_pkg_testing::get_inspect_hierarchy,
     fuchsia_zircon as zx,
     futures::prelude::*,
@@ -193,7 +193,7 @@ impl<P: PkgFs> TestEnv<P> {
         }
     }
 
-    async fn inspect_hierarchy(&self) -> NodeHierarchy {
+    async fn inspect_hierarchy(&self) -> DiagnosticsHierarchy {
         get_inspect_hierarchy(&self.nested_environment_label, "pkg-cache-without-pkgfs.cmx").await
     }
 

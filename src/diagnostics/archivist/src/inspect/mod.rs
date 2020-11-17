@@ -12,9 +12,9 @@ use {
     anyhow::Error,
     collector::Moniker,
     diagnostics_data::{self as schema, Data, Inspect},
+    diagnostics_hierarchy::{DiagnosticsHierarchy, InspectHierarchyMatcher},
     fidl_fuchsia_diagnostics::{self, Selector},
     fuchsia_inspect::reader::PartialNodeHierarchy,
-    fuchsia_inspect_node_hierarchy::{InspectHierarchyMatcher, NodeHierarchy},
     fuchsia_zircon as zx,
     futures::prelude::*,
     log::error,
@@ -40,9 +40,9 @@ pub struct NodeHierarchyData {
     timestamp: zx::Time,
     // Errors encountered when processing this snapshot.
     errors: Vec<schema::Error>,
-    // Optional NodeHierarchy of the inspect hierarchy, in case reading fails
+    // Optional DiagnosticsHierarchy of the inspect hierarchy, in case reading fails
     // and we have errors to share with client.
-    hierarchy: Option<NodeHierarchy>,
+    hierarchy: Option<DiagnosticsHierarchy>,
 }
 
 impl Into<NodeHierarchyData> for SnapshotData {
@@ -85,7 +85,9 @@ pub struct ReaderServer {
     selectors: Option<Vec<Arc<Selector>>>,
 }
 
-fn convert_snapshot_to_node_hierarchy(snapshot: ReadSnapshot) -> Result<NodeHierarchy, Error> {
+fn convert_snapshot_to_node_hierarchy(
+    snapshot: ReadSnapshot,
+) -> Result<DiagnosticsHierarchy, Error> {
     match snapshot {
         ReadSnapshot::Single(snapshot) => Ok(PartialNodeHierarchy::try_from(snapshot)?.into()),
         ReadSnapshot::Tree(snapshot_tree) => Ok(snapshot_tree.try_into()?),
@@ -157,7 +159,7 @@ impl ReaderServer {
 
                     match node_hierarchy_data.hierarchy {
                         Some(node_hierarchy) => {
-                            match fuchsia_inspect_node_hierarchy::filter_node_hierarchy(
+                            match diagnostics_hierarchy::filter_hierarchy(
                                 node_hierarchy,
                                 &static_matcher,
                             ) {
@@ -205,7 +207,7 @@ impl ReaderServer {
                 .into_iter()
                 .map(|node_hierarchy_data| match node_hierarchy_data.hierarchy {
                     Some(node_hierarchy) => {
-                        match fuchsia_inspect_node_hierarchy::filter_node_hierarchy(
+                        match diagnostics_hierarchy::filter_hierarchy(
                             node_hierarchy,
                             &dynamic_matcher,
                         ) {
@@ -330,6 +332,7 @@ mod tests {
             logs::LogManager,
         },
         anyhow::format_err,
+        diagnostics_hierarchy::{trie::TrieIterableNode, DiagnosticsHierarchy},
         fdio,
         fidl::endpoints::{create_proxy_and_stream, DiscoverableService},
         fidl_fuchsia_diagnostics::{BatchIteratorMarker, BatchIteratorProxy, StreamMode},
@@ -338,7 +341,6 @@ mod tests {
         fuchsia_async::{self as fasync, Task},
         fuchsia_component::server::ServiceFs,
         fuchsia_inspect::{assert_inspect_tree, reader, testing::AnyProperty, Inspector},
-        fuchsia_inspect_node_hierarchy::{trie::TrieIterableNode, NodeHierarchy},
         fuchsia_zircon as zx,
         fuchsia_zircon::Peered,
         futures::future::join_all,
@@ -491,7 +493,7 @@ mod tests {
                                 b: 3.14,
                             }
                         });
-                        let partial_hierarchy: NodeHierarchy =
+                        let partial_hierarchy: DiagnosticsHierarchy =
                             PartialNodeHierarchy::try_from(vmo.as_ref().unwrap())
                                 .expect("failed to read hierarchy from vmo")
                                 .into();

@@ -3,12 +3,12 @@
 // found in the LICENSE file.
 
 use {
-    crate::{ArrayContent, Bucket, NodeHierarchy, Property},
+    crate::{ArrayContent, Bucket, DiagnosticsHierarchy, Property},
     base64,
     serde::ser::{Serialize, SerializeMap, SerializeSeq, Serializer},
 };
 
-impl<Key> Serialize for NodeHierarchy<Key>
+impl<Key> Serialize for DiagnosticsHierarchy<Key>
 where
     Key: AsRef<str>,
 {
@@ -21,7 +21,7 @@ where
 }
 
 pub struct SerializableHierarchyFields<'a, Key> {
-    pub(in crate) hierarchy: &'a NodeHierarchy<Key>,
+    pub(in crate) hierarchy: &'a DiagnosticsHierarchy<Key>,
 }
 
 impl<'a, Key> Serialize for SerializableHierarchyFields<'a, Key>
@@ -134,8 +134,8 @@ mod tests {
         assert_eq!(result, expected);
     }
 
-    fn test_hierarchy() -> NodeHierarchy {
-        NodeHierarchy::new(
+    fn test_hierarchy() -> DiagnosticsHierarchy {
+        DiagnosticsHierarchy::new(
             "root",
             vec![
                 Property::UintArray("array".to_string(), ArrayContent::Values(vec![0, 2, 4])),
@@ -143,7 +143,7 @@ mod tests {
                 Property::Bool("bool_false".to_string(), false),
             ],
             vec![
-                NodeHierarchy::new(
+                DiagnosticsHierarchy::new(
                     "a",
                     vec![
                         Property::Double("double".to_string(), 2.5),
@@ -159,7 +159,7 @@ mod tests {
                     ],
                     vec![],
                 ),
-                NodeHierarchy::new(
+                DiagnosticsHierarchy::new(
                     "b",
                     vec![
                         Property::Int("int".to_string(), -2),

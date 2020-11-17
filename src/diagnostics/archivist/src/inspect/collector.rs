@@ -182,6 +182,7 @@ mod tests {
     use {
         super::*,
         crate::events::types::InspectData,
+        diagnostics_hierarchy::DiagnosticsHierarchy,
         fdio,
         fidl::endpoints::DiscoverableService,
         fidl_fuchsia_inspect::TreeMarker,
@@ -189,7 +190,6 @@ mod tests {
         fuchsia_component::server::ServiceFs,
         fuchsia_inspect::reader::PartialNodeHierarchy,
         fuchsia_inspect::{assert_inspect_tree, reader, Inspector},
-        fuchsia_inspect_node_hierarchy::NodeHierarchy,
         fuchsia_zircon as zx,
         fuchsia_zircon::Peered,
         futures::{FutureExt, StreamExt},
@@ -338,7 +338,7 @@ mod tests {
                                 b: 3.14,
                             }
                         });
-                        let partial_hierarchy: NodeHierarchy =
+                        let partial_hierarchy: DiagnosticsHierarchy =
                             PartialNodeHierarchy::try_from(vmo.as_ref().unwrap())
                                 .expect("failed to read hierarchy from vmo")
                                 .into();

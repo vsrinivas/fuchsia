@@ -525,7 +525,7 @@ async fn do_dhcp(cmd: opts::DhcpEnum, netstack: NetstackProxy) -> Result<(), Err
 fn visit_inspect_object(
     t: &mut Table,
     prefix: &str,
-    fuchsia_inspect::reader::NodeHierarchy { name: _, properties, children, missing: _ }: &fuchsia_inspect::reader::NodeHierarchy,
+    fuchsia_inspect::reader::DiagnosticsHierarchy { name: _, properties, children, missing: _ }: &fuchsia_inspect::reader::DiagnosticsHierarchy,
 ) {
     use fuchsia_inspect::reader::Property::*;
 

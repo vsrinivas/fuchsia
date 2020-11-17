@@ -6,6 +6,7 @@ use {
     super::{validate::ROOT_ID, Data, LazyNode, Metrics, Node, Payload, Property, ROOT_NAME},
     crate::metrics::{BlockMetrics, BlockStatus},
     anyhow::{bail, format_err, Error},
+    diagnostics_hierarchy::LinkNodeDisposition,
     fuchsia_inspect::{
         self,
         format::{
@@ -15,7 +16,6 @@ use {
         },
         reader as ireader,
     },
-    fuchsia_inspect_node_hierarchy::LinkNodeDisposition,
     fuchsia_zircon::Vmo,
     std::{
         self,

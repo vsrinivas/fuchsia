@@ -248,7 +248,7 @@ mod test {
         super::*,
         anyhow::Error,
         diagnostics_data::Severity,
-        diagnostics_reader::{NodeHierarchy, Property},
+        diagnostics_reader::{DiagnosticsHierarchy, Property},
         fidl::endpoints::create_proxy,
         fidl_fuchsia_developer_remotecontrol::{
             ArchiveIteratorMarker, RemoteDiagnosticsBridgeMarker, RemoteDiagnosticsBridgeProxy,
@@ -328,7 +328,7 @@ mod test {
 
     fn make_log(timestamp: u64, msg: String) -> LogsData {
         let hierarchy =
-            NodeHierarchy::new("root", vec![Property::String(LogsField::Msg, msg)], vec![]);
+            DiagnosticsHierarchy::new("root", vec![Property::String(LogsField::Msg, msg)], vec![]);
         LogsData::for_logs(
             String::from("test/moniker"),
             Some(hierarchy),

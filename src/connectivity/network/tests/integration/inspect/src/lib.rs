@@ -5,8 +5,8 @@
 #![cfg(test)]
 
 use anyhow::Context as _;
+use diagnostics_hierarchy::Property;
 use fidl_fuchsia_net_interfaces_ext::CloneExt as _;
-use fuchsia_inspect_node_hierarchy::Property;
 use net_declare::{fidl_mac, fidl_subnet};
 use netemul::Endpoint as _;
 use netstack_testing_common::environments::{Netstack2, TestSandboxExt};
@@ -94,7 +94,7 @@ async fn get_inspect_data<'a>(
     component: impl Into<String>,
     tree_selector: impl Into<String>,
     file_prefix: &str,
-) -> Result<fuchsia_inspect_node_hierarchy::NodeHierarchy> {
+) -> Result<diagnostics_hierarchy::DiagnosticsHierarchy> {
     let archive = env
         .connect_to_service::<fidl_fuchsia_diagnostics::ArchiveAccessorMarker>()
         .context("failed to connect to archive accessor")?;

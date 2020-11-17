@@ -5,7 +5,7 @@
 use {
     crate::inspect::container::InspectArtifactsContainer,
     diagnostics_data::{self as schema, LifecycleType},
-    fuchsia_inspect_node_hierarchy::{NodeHierarchy, Property},
+    diagnostics_hierarchy::{DiagnosticsHierarchy, Property},
     fuchsia_zircon::{self as zx},
 };
 
@@ -25,7 +25,7 @@ pub struct LifecycleArtifactsContainer {
 /// snapshotted Lifecycle schema.
 pub struct LifecycleDataContainer {
     pub relative_moniker: Vec<String>,
-    pub payload: Option<NodeHierarchy>,
+    pub payload: Option<DiagnosticsHierarchy>,
     pub component_url: String,
     pub event_timestamp: zx::Time,
     pub lifecycle_type: schema::LifecycleType,
@@ -52,7 +52,7 @@ impl LifecycleDataContainer {
         component_url: String,
     ) -> Self {
         if let Some(component_start_time) = artifact.component_start_time {
-            let payload = NodeHierarchy::new(
+            let payload = DiagnosticsHierarchy::new(
                 "root",
                 vec![Property::Int(
                     "component_start_time".to_string(),

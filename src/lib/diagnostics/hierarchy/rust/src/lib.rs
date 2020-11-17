@@ -73,7 +73,7 @@ pub enum ArrayFormat {
 ///
 /// Each hierarchy consists of properties, and a map of named child hierarchies.
 #[derive(Clone, Debug, PartialEq)]
-pub struct NodeHierarchy<Key = String> {
+pub struct DiagnosticsHierarchy<Key = String> {
     /// The name of this node.
     pub name: String,
 
@@ -81,7 +81,7 @@ pub struct NodeHierarchy<Key = String> {
     pub properties: Vec<Property<Key>>,
 
     /// The children of this node.
-    pub children: Vec<NodeHierarchy<Key>>,
+    pub children: Vec<DiagnosticsHierarchy<Key>>,
 
     /// Values that were impossible to load.
     pub missing: Vec<MissingValue>,
@@ -122,11 +122,11 @@ fn name_partial_cmp(a: &str, b: &str) -> Ordering {
     }
 }
 
-impl<Key> NodeHierarchy<Key>
+impl<Key> DiagnosticsHierarchy<Key>
 where
     Key: AsRef<str>,
 {
-    /// Sorts the properties and children of the node hierarchy by name.
+    /// Sorts the properties and children of the diagnostics hierarchy by name.
     pub fn sort(&mut self) {
         self.properties.sort_by(|p1, p2| name_partial_cmp(p1.name(), p2.name()));
         self.children.sort_by(|c1, c2| name_partial_cmp(&c1.name, &c2.name));
@@ -136,31 +136,31 @@ where
     }
 
     pub fn new_root() -> Self {
-        NodeHierarchy::new("root", vec![], vec![])
+        DiagnosticsHierarchy::new("root", vec![], vec![])
     }
 
     pub fn new(
         name: impl Into<String>,
         properties: Vec<Property<Key>>,
-        children: Vec<NodeHierarchy<Key>>,
+        children: Vec<DiagnosticsHierarchy<Key>>,
     ) -> Self {
         Self { name: name.into(), properties, children, missing: vec![] }
     }
 
     /// Either returns an existing child of `self` with name `name` or creates
     /// a new child with name `name`.
-    pub fn get_or_add_child_mut<T>(&mut self, name: T) -> &mut NodeHierarchy<Key>
+    pub fn get_or_add_child_mut<T>(&mut self, name: T) -> &mut DiagnosticsHierarchy<Key>
     where
         T: AsRef<str>,
     {
         // We have to use indices to iterate here because the borrow checker cannot
         // deduce that there are no borrowed values in the else-branch.
-        // TODO(fxbug.dev/4601): We could make this cleaner by changing the NodeHierarchy
+        // TODO(fxbug.dev/4601): We could make this cleaner by changing the DiagnosticsHierarchy
         // children to hashmaps.
         match (0..self.children.len()).find(|&i| self.children[i].name == name.as_ref()) {
             Some(matching_index) => &mut self.children[matching_index],
             None => {
-                self.children.push(NodeHierarchy::new(name.as_ref(), vec![], vec![]));
+                self.children.push(DiagnosticsHierarchy::new(name.as_ref(), vec![], vec![]));
                 self.children
                     .last_mut()
                     .expect("We just added an entry so we cannot get None here.")
@@ -168,11 +168,11 @@ where
         }
     }
 
-    /// Add a child to this NodeHierarchy.
+    /// Add a child to this DiagnosticsHierarchy.
     ///
     /// Note: It is possible to create multiple children with the same name using this method, but
     /// readers may not support such a case.
-    pub fn add_child(&mut self, insert: NodeHierarchy<Key>) {
+    pub fn add_child(&mut self, insert: DiagnosticsHierarchy<Key>) {
         self.children.push(insert);
     }
 
@@ -185,7 +185,7 @@ where
     ///
     /// NOTE: Inspect VMOs may allow multiple nodes of the same name. In this case,
     ///        the first node found is returned.
-    pub fn get_or_add_node<T>(&mut self, node_path: &[T]) -> &mut NodeHierarchy<Key>
+    pub fn get_or_add_node<T>(&mut self, node_path: &[T]) -> &mut DiagnosticsHierarchy<Key>
     where
         T: AsRef<str>,
     {
@@ -218,9 +218,12 @@ where
         self.get_or_add_node(node_path).properties.push(property);
     }
 
-    /// Provides an iterator over the node hierarchy returning properties in pre-order.
+    /// Provides an iterator over the diagnostics hierarchy returning properties in pre-order.
     pub fn property_iter(&self) -> impl Iterator<Item = (Vec<&String>, Option<&Property<Key>>)> {
-        TrieIterableType { iterator: NodeHierarchyIterator::new(&self), _marker: PhantomData }
+        TrieIterableType {
+            iterator: DiagnosticsHierarchyIterator::new(&self),
+            _marker: PhantomData,
+        }
     }
 
     /// Adds a value that couldn't be read. This can happen when loading a lazy child.
@@ -233,12 +236,12 @@ where
     }
 
     /// Returns the child of the given |name| if one exists.
-    pub fn get_child(&self, name: &str) -> Option<&NodeHierarchy<Key>> {
+    pub fn get_child(&self, name: &str) -> Option<&DiagnosticsHierarchy<Key>> {
         self.children.iter().find(|node| node.name == name)
     }
 
     /// Returns the child of the given |path| if one exists.
-    pub fn get_child_by_path(&self, path: &[&str]) -> Option<&NodeHierarchy<Key>> {
+    pub fn get_child_by_path(&self, path: &[&str]) -> Option<&DiagnosticsHierarchy<Key>> {
         let mut result = Some(self);
         for name in path {
             result = result.and_then(|node| node.get_child(name));
@@ -280,11 +283,11 @@ property_type_getters!(
     [UintArray, uint_array, ArrayContent<u64>]
 );
 
-impl<Key> TrieIterableNode<String, Property<Key>> for NodeHierarchy<Key> {
+impl<Key> TrieIterableNode<String, Property<Key>> for DiagnosticsHierarchy<Key> {
     fn get_children(&self) -> HashMap<&String, &Self> {
         self.children
             .iter()
-            .map(|node_hierarchy| (&node_hierarchy.name, node_hierarchy))
+            .map(|diagnostics_hierarchy| (&diagnostics_hierarchy.name, diagnostics_hierarchy))
             .collect::<HashMap<&String, &Self>>()
     }
 
@@ -293,18 +296,18 @@ impl<Key> TrieIterableNode<String, Property<Key>> for NodeHierarchy<Key> {
     }
 }
 
-struct NodeHierarchyIterator<'a, Key> {
-    root: &'a NodeHierarchy<Key>,
+struct DiagnosticsHierarchyIterator<'a, Key> {
+    root: &'a DiagnosticsHierarchy<Key>,
     iterator_initialized: bool,
-    work_stack: Vec<TrieIterableWorkEvent<'a, String, NodeHierarchy<Key>>>,
+    work_stack: Vec<TrieIterableWorkEvent<'a, String, DiagnosticsHierarchy<Key>>>,
     curr_key: Vec<&'a String>,
-    curr_node: Option<&'a NodeHierarchy<Key>>,
+    curr_node: Option<&'a DiagnosticsHierarchy<Key>>,
     curr_val_index: usize,
 }
 
-impl<'a, Key> NodeHierarchyIterator<'a, Key> {
-    pub fn new(root: &'a NodeHierarchy<Key>) -> Self {
-        NodeHierarchyIterator {
+impl<'a, Key> DiagnosticsHierarchyIterator<'a, Key> {
+    pub fn new(root: &'a DiagnosticsHierarchy<Key>) -> Self {
+        DiagnosticsHierarchyIterator {
             root,
             iterator_initialized: false,
             work_stack: Vec::new(),
@@ -315,8 +318,8 @@ impl<'a, Key> NodeHierarchyIterator<'a, Key> {
     }
 }
 
-impl<'a, Key> TrieIterable<'a, String, Property<Key>> for NodeHierarchyIterator<'a, Key> {
-    type Node = NodeHierarchy<Key>;
+impl<'a, Key> TrieIterable<'a, String, Property<Key>> for DiagnosticsHierarchyIterator<'a, Key> {
+    type Node = DiagnosticsHierarchy<Key>;
 
     fn is_initialized(&self) -> bool {
         self.iterator_initialized
@@ -535,7 +538,7 @@ impl<T> Bucket<T> {
     }
 }
 
-/// Represents the content of a NodeHierarchy array property: a regular array or a
+/// Represents the content of a DiagnosticsHierarchy array property: a regular array or a
 /// linear/exponential histogram.
 #[derive(Debug, PartialEq, Clone)]
 pub enum ArrayContent<T> {
@@ -635,14 +638,14 @@ where
     }
 }
 
-/// Wrapper for the tools needed to filter a single NodeHierarchy based on selectors
+/// Wrapper for the tools needed to filter a single DiagnosticsHierarchy based on selectors
 /// known to be applicable to it.
 ///
 /// `component_node_selector` is a RegexSet of all path
 ///     selectors on a hierarchy.
 ///
 /// `node_property_selectors` is a vector of Regexs that match single named properties
-///     on a NodeHierarchy. NOTE: Their order is aligned with the vector of Regexes that created
+///     on a DiagnosticsHierarchy. NOTE: Their order is aligned with the vector of Regexes that created
 ///     the component_node_selector RegexSet, since each property selector is associated with
 ///     a particular node path selector.
 #[derive(Clone)]
@@ -734,16 +737,16 @@ pub struct PropertyEntry<Key = String> {
     //     can found at node c, under node b, which is under node a, which is under root.
     pub property_node_path: String,
 
-    // A clone of the property found in the node hierarchy at the node specified by
+    // A clone of the property found in the diagnostics hierarchy at the node specified by
     // `property_node_path`.
     pub property: Property<Key>,
 }
 
-// Applies a single selector to a NodeHierarchy, returning a vector of tuples for every property
+// Applies a single selector to a DiagnosticsHierarchy, returning a vector of tuples for every property
 // in the hierarchy matched by the selector.
 // TODO(fxbug.dev/47015): Benchmark performance issues with full-filters for selection.
-pub fn select_from_node_hierarchy<Key>(
-    root_node: NodeHierarchy<Key>,
+pub fn select_from_hierarchy<Key>(
+    root_node: DiagnosticsHierarchy<Key>,
     selector: Selector,
 ) -> Result<Vec<PropertyEntry<Key>>, Error>
 where
@@ -754,7 +757,7 @@ where
     // TODO(fxbug.dev/47015): Extraction doesn't require a full tree filter. Instead, the hierarchy
     // should be traversed like a state machine, and all matching nodes should search for
     // their properties.
-    let filtered_hierarchy = filter_node_hierarchy(root_node, &single_selector_hierarchy_matcher)?;
+    let filtered_hierarchy = filter_hierarchy(root_node, &single_selector_hierarchy_matcher)?;
 
     match filtered_hierarchy {
         Some(new_root) => Ok(new_root
@@ -776,7 +779,7 @@ where
     }
 }
 
-// Filters a node hierarchy using a set of path selectors and their associated property
+// Filters a diagnostics hierarchy using a set of path selectors and their associated property
 // selectors.
 //
 // - If the return type is Ok(Some()) that implies that the filter encountered no errors AND
@@ -784,18 +787,18 @@ where
 // - If the return type is Ok(None) that implies that the filter encountered no errors AND
 //    the tree was filtered to be empty at the end.
 // - If the return type is Error that implies the filter encountered errors.
-pub fn filter_node_hierarchy<Key>(
-    root_node: NodeHierarchy<Key>,
+pub fn filter_hierarchy<Key>(
+    root_node: DiagnosticsHierarchy<Key>,
     hierarchy_matcher: &InspectHierarchyMatcher,
-) -> Result<Option<NodeHierarchy<Key>>, Error>
+) -> Result<Option<DiagnosticsHierarchy<Key>>, Error>
 where
     Key: AsRef<str> + Clone,
 {
     let mut nodes_added = 0;
 
-    let mut new_root = NodeHierarchy::new(root_node.name.clone(), vec![], vec![]);
+    let mut new_root = DiagnosticsHierarchy::new(root_node.name.clone(), vec![], vec![]);
 
-    let mut working_node: &mut NodeHierarchy<Key> = &mut new_root;
+    let mut working_node: &mut DiagnosticsHierarchy<Key> = &mut new_root;
     let mut working_node_path: Option<String> = None;
     let mut working_property_regex_set: Option<RegexSet> = None;
 
@@ -895,7 +898,7 @@ mod tests {
 
     fn validate_hierarchy_iteration(
         mut results_vec: Vec<(Vec<String>, Option<Property>)>,
-        test_hierarchy: NodeHierarchy,
+        test_hierarchy: DiagnosticsHierarchy,
     ) {
         let expected_num_entries = results_vec.len();
         let mut num_entries = 0;
@@ -914,13 +917,13 @@ mod tests {
     }
 
     #[test]
-    fn test_node_hierarchy_iteration() {
+    fn test_diagnostics_hierarchy_iteration() {
         let double_array_data = vec![-1.2, 2.3, 3.4, 4.5, -5.6];
         let chars = ['a', 'b', 'c', 'd', 'e', 'f', 'g'];
         let string_data = chars.iter().cycle().take(6000).collect::<String>();
         let bytes_data = (0u8..=9u8).cycle().take(5000).collect::<Vec<u8>>();
 
-        let test_hierarchy = NodeHierarchy::new(
+        let test_hierarchy = DiagnosticsHierarchy::new(
             "root".to_string(),
             vec![
                 Property::Int("int-root".to_string(), 3),
@@ -929,7 +932,7 @@ mod tests {
                     ArrayContent::Values(double_array_data.clone()),
                 ),
             ],
-            vec![NodeHierarchy::new(
+            vec![DiagnosticsHierarchy::new(
                 "child-1".to_string(),
                 vec![
                     Property::Uint("property-uint".to_string(), 10),
@@ -941,7 +944,7 @@ mod tests {
                             .unwrap(),
                     ),
                 ],
-                vec![NodeHierarchy::new(
+                vec![DiagnosticsHierarchy::new(
                     "child-1-1".to_string(),
                     vec![
                         Property::Int("property-int".to_string(), -9),
@@ -1017,11 +1020,17 @@ mod tests {
     fn test_getters() {
         let a_prop = Property::Int("a".to_string(), 1);
         let b_prop = Property::Uint("b".to_string(), 2);
-        let child2 = NodeHierarchy::new("child2".to_string(), vec![], vec![]);
-        let child =
-            NodeHierarchy::new("child".to_string(), vec![b_prop.clone()], vec![child2.clone()]);
-        let hierarchy =
-            NodeHierarchy::new("root".to_string(), vec![a_prop.clone()], vec![child.clone()]);
+        let child2 = DiagnosticsHierarchy::new("child2".to_string(), vec![], vec![]);
+        let child = DiagnosticsHierarchy::new(
+            "child".to_string(),
+            vec![b_prop.clone()],
+            vec![child2.clone()],
+        );
+        let hierarchy = DiagnosticsHierarchy::new(
+            "root".to_string(),
+            vec![a_prop.clone()],
+            vec![child.clone()],
+        );
         assert_matches!(hierarchy.get_child("child"), Some(node) if *node == child);
         assert_matches!(hierarchy.get_child_by_path(&vec!["child", "child2"]),
                         Some(node) if *node == child2);
@@ -1032,7 +1041,7 @@ mod tests {
 
     #[test]
     fn test_edge_case_hierarchy_iteration() {
-        let root_only_with_one_property_hierarchy = NodeHierarchy::new(
+        let root_only_with_one_property_hierarchy = DiagnosticsHierarchy::new(
             "root".to_string(),
             vec![Property::Int("property-int".to_string(), -9)],
             vec![],
@@ -1043,16 +1052,20 @@ mod tests {
 
         validate_hierarchy_iteration(results_vec, root_only_with_one_property_hierarchy);
 
-        let empty_hierarchy = NodeHierarchy::new("root".to_string(), vec![], vec![]);
+        let empty_hierarchy = DiagnosticsHierarchy::new("root".to_string(), vec![], vec![]);
 
         let results_vec = vec![(vec!["root".to_string()], None)];
 
         validate_hierarchy_iteration(results_vec, empty_hierarchy);
 
-        let empty_root_populated_child = NodeHierarchy::new(
+        let empty_root_populated_child = DiagnosticsHierarchy::new(
             "root",
             vec![],
-            vec![NodeHierarchy::new("foo", vec![Property::Int("11".to_string(), -4)], vec![])],
+            vec![DiagnosticsHierarchy::new(
+                "foo",
+                vec![Property::Int("11".to_string(), -4)],
+                vec![],
+            )],
         );
 
         let results_vec = vec![
@@ -1065,8 +1078,11 @@ mod tests {
 
         validate_hierarchy_iteration(results_vec, empty_root_populated_child);
 
-        let empty_root_empty_child =
-            NodeHierarchy::new("root", vec![], vec![NodeHierarchy::new("foo", vec![], vec![])]);
+        let empty_root_empty_child = DiagnosticsHierarchy::new(
+            "root",
+            vec![],
+            vec![DiagnosticsHierarchy::new("foo", vec![], vec![])],
+        );
 
         let results_vec = vec![
             (vec!["root".to_string(), "foo".to_string()], None),
@@ -1124,7 +1140,7 @@ mod tests {
 
     #[test]
     fn add_to_hierarchy() {
-        let mut hierarchy = NodeHierarchy::new_root();
+        let mut hierarchy = DiagnosticsHierarchy::new_root();
         let prop_1 = Property::String("x".to_string(), "foo".to_string());
         let path_1 = vec!["root", "one"];
         let prop_2 = Property::Uint("c".to_string(), 3);
@@ -1136,16 +1152,16 @@ mod tests {
 
         assert_eq!(
             hierarchy,
-            NodeHierarchy {
+            DiagnosticsHierarchy {
                 name: "root".to_string(),
                 children: vec![
-                    NodeHierarchy {
+                    DiagnosticsHierarchy {
                         name: "one".to_string(),
                         properties: vec![prop_1],
                         children: vec![],
                         missing: vec![],
                     },
-                    NodeHierarchy {
+                    DiagnosticsHierarchy {
                         name: "two".to_string(),
                         properties: vec![prop_2, prop_2_prime],
                         children: vec![],
@@ -1162,7 +1178,7 @@ mod tests {
     #[should_panic]
     // Empty paths are meaningless on insertion and break the method invariant.
     fn no_empty_paths_allowed() {
-        let mut hierarchy = NodeHierarchy::<String>::new_root();
+        let mut hierarchy = DiagnosticsHierarchy::<String>::new_root();
         let path_1: Vec<&String> = vec![];
         hierarchy.get_or_add_node(&path_1);
     }
@@ -1172,14 +1188,14 @@ mod tests {
     // Paths provided to add must begin at the node we're calling
     // add() on.
     fn path_must_start_at_self() {
-        let mut hierarchy = NodeHierarchy::<String>::new_root();
+        let mut hierarchy = DiagnosticsHierarchy::<String>::new_root();
         let path_1 = vec!["not_root", "a"];
         hierarchy.get_or_add_node(&path_1);
     }
 
     #[test]
     fn sort_hierarchy() {
-        let mut hierarchy = NodeHierarchy::new(
+        let mut hierarchy = DiagnosticsHierarchy::new(
             "root",
             vec![
                 Property::String("x".to_string(), "foo".to_string()),
@@ -1187,7 +1203,7 @@ mod tests {
                 Property::Int("z".to_string(), -4),
             ],
             vec![
-                NodeHierarchy::new(
+                DiagnosticsHierarchy::new(
                     "foo",
                     vec![
                         Property::Int("11".to_string(), -4),
@@ -1196,13 +1212,13 @@ mod tests {
                     ],
                     vec![],
                 ),
-                NodeHierarchy::new("bar", vec![], vec![]),
+                DiagnosticsHierarchy::new("bar", vec![], vec![]),
             ],
         );
 
         hierarchy.sort();
 
-        let sorted_hierarchy = NodeHierarchy::new(
+        let sorted_hierarchy = DiagnosticsHierarchy::new(
             "root",
             vec![
                 Property::Uint("c".to_string(), 3),
@@ -1210,8 +1226,8 @@ mod tests {
                 Property::Int("z".to_string(), -4),
             ],
             vec![
-                NodeHierarchy::new("bar", vec![], vec![]),
-                NodeHierarchy::new(
+                DiagnosticsHierarchy::new("bar", vec![], vec![]),
+                DiagnosticsHierarchy::new(
                     "foo",
                     vec![
                         Property::Double("0".to_string(), 8.1),
@@ -1226,9 +1242,9 @@ mod tests {
     }
 
     fn parse_selectors_and_filter_hierarchy(
-        hierarchy: NodeHierarchy,
+        hierarchy: DiagnosticsHierarchy,
         test_selectors: Vec<&str>,
-    ) -> NodeHierarchy {
+    ) -> DiagnosticsHierarchy {
         let parsed_test_selectors = test_selectors
             .into_iter()
             .map(|selector_string| {
@@ -1242,7 +1258,7 @@ mod tests {
         let hierarchy_matcher: InspectHierarchyMatcher =
             (&parsed_test_selectors).try_into().unwrap();
 
-        let mut filtered_hierarchy = filter_node_hierarchy(hierarchy, &hierarchy_matcher)
+        let mut filtered_hierarchy = filter_hierarchy(hierarchy, &hierarchy_matcher)
             .expect("filtered hierarchy should succeed.")
             .expect("There should be an actual resulting hierarchy.");
         filtered_hierarchy.sort();
@@ -1250,18 +1266,18 @@ mod tests {
     }
 
     fn parse_selector_and_select_from_hierarchy(
-        hierarchy: NodeHierarchy,
+        hierarchy: DiagnosticsHierarchy,
         test_selector: &str,
     ) -> Vec<PropertyEntry> {
         let parsed_selector = selectors::parse_selector(test_selector)
             .expect("All test selectors are valid and parsable.");
 
-        select_from_node_hierarchy(hierarchy, parsed_selector)
+        select_from_hierarchy(hierarchy, parsed_selector)
             .expect("Selecting from hierarchy should succeed.")
     }
 
-    fn get_test_hierarchy() -> NodeHierarchy {
-        NodeHierarchy::new(
+    fn get_test_hierarchy() -> DiagnosticsHierarchy {
+        DiagnosticsHierarchy::new(
             "root",
             vec![
                 Property::String("x".to_string(), "foo".to_string()),
@@ -1269,23 +1285,23 @@ mod tests {
                 Property::Int("z".to_string(), -4),
             ],
             vec![
-                NodeHierarchy::new(
+                DiagnosticsHierarchy::new(
                     "foo",
                     vec![
                         Property::Int("11".to_string(), -4),
                         Property::Bytes("123".to_string(), "foo".bytes().into_iter().collect()),
                         Property::Double("0".to_string(), 8.1),
                     ],
-                    vec![NodeHierarchy::new(
+                    vec![DiagnosticsHierarchy::new(
                         "zed",
                         vec![Property::Int("13".to_string(), -4)],
                         vec![],
                     )],
                 ),
-                NodeHierarchy::new(
+                DiagnosticsHierarchy::new(
                     "bar",
                     vec![Property::Int("12".to_string(), -4)],
-                    vec![NodeHierarchy::new(
+                    vec![DiagnosticsHierarchy::new(
                         "zed",
                         vec![Property::Int("13/:".to_string(), -4)],
                         vec![],
@@ -1301,20 +1317,24 @@ mod tests {
 
         assert_eq!(
             parse_selectors_and_filter_hierarchy(get_test_hierarchy(), test_selectors),
-            NodeHierarchy::new(
+            DiagnosticsHierarchy::new(
                 "root",
                 vec![Property::Int("z".to_string(), -4),],
                 vec![
-                    NodeHierarchy::new(
+                    DiagnosticsHierarchy::new(
                         "bar",
                         vec![],
-                        vec![NodeHierarchy::new(
+                        vec![DiagnosticsHierarchy::new(
                             "zed",
                             vec![Property::Int("13/:".to_string(), -4)],
                             vec![],
                         )],
                     ),
-                    NodeHierarchy::new("foo", vec![Property::Int("11".to_string(), -4),], vec![],)
+                    DiagnosticsHierarchy::new(
+                        "foo",
+                        vec![Property::Int("11".to_string(), -4),],
+                        vec![],
+                    )
                 ],
             )
         );
@@ -1334,19 +1354,31 @@ mod tests {
 
         assert_eq!(
             parse_selectors_and_filter_hierarchy(get_test_hierarchy(), test_selectors),
-            NodeHierarchy::new("root", vec![], vec![NodeHierarchy::new("foo", vec![], vec![],)],)
+            DiagnosticsHierarchy::new(
+                "root",
+                vec![],
+                vec![DiagnosticsHierarchy::new("foo", vec![], vec![],)],
+            )
         );
     }
 
     #[test]
     fn test_subtree_selection_includes_empty_nodes() {
         let test_selectors = vec!["*:root"];
-        let mut empty_hierarchy = NodeHierarchy::new(
+        let mut empty_hierarchy = DiagnosticsHierarchy::new(
             "root",
             vec![],
             vec![
-                NodeHierarchy::new("foo", vec![], vec![NodeHierarchy::new("zed", vec![], vec![])]),
-                NodeHierarchy::new("bar", vec![], vec![NodeHierarchy::new("zed", vec![], vec![])]),
+                DiagnosticsHierarchy::new(
+                    "foo",
+                    vec![],
+                    vec![DiagnosticsHierarchy::new("zed", vec![], vec![])],
+                ),
+                DiagnosticsHierarchy::new(
+                    "bar",
+                    vec![],
+                    vec![DiagnosticsHierarchy::new("zed", vec![], vec![])],
+                ),
             ],
         );
 
@@ -1361,7 +1393,7 @@ mod tests {
     #[test]
     fn test_empty_tree_filtering() {
         // Subtree selection on the empty tree should produce the empty tree.
-        let mut empty_hierarchy = NodeHierarchy::new("root", vec![], vec![]);
+        let mut empty_hierarchy = DiagnosticsHierarchy::new("root", vec![], vec![]);
         empty_hierarchy.sort();
 
         let subtree_selector = vec!["*:root"];
@@ -1450,7 +1482,7 @@ mod tests {
 
     #[test]
     fn sort_numerical_value() {
-        let mut node_hierarchy = NodeHierarchy::new(
+        let mut diagnostics_hierarchy = DiagnosticsHierarchy::new(
             "root",
             vec![
                 Property::Double("2".to_string(), 2.3),
@@ -1459,18 +1491,18 @@ mod tests {
                 Property::String("1".to_string(), "test".to_string()),
             ],
             vec![
-                NodeHierarchy::new("123", vec![], vec![]),
-                NodeHierarchy::new("34", vec![], vec![]),
-                NodeHierarchy::new("4", vec![], vec![]),
-                NodeHierarchy::new("023", vec![], vec![]),
-                NodeHierarchy::new("12", vec![], vec![]),
-                NodeHierarchy::new("1", vec![], vec![]),
+                DiagnosticsHierarchy::new("123", vec![], vec![]),
+                DiagnosticsHierarchy::new("34", vec![], vec![]),
+                DiagnosticsHierarchy::new("4", vec![], vec![]),
+                DiagnosticsHierarchy::new("023", vec![], vec![]),
+                DiagnosticsHierarchy::new("12", vec![], vec![]),
+                DiagnosticsHierarchy::new("1", vec![], vec![]),
             ],
         );
-        node_hierarchy.sort();
+        diagnostics_hierarchy.sort();
         assert_eq!(
-            node_hierarchy,
-            NodeHierarchy::new(
+            diagnostics_hierarchy,
+            DiagnosticsHierarchy::new(
                 "root",
                 vec![
                     Property::Int("0".to_string(), -4),
@@ -1479,12 +1511,12 @@ mod tests {
                     Property::Uint("10".to_string(), 3),
                 ],
                 vec![
-                    NodeHierarchy::new("1", vec![], vec![]),
-                    NodeHierarchy::new("4", vec![], vec![]),
-                    NodeHierarchy::new("12", vec![], vec![]),
-                    NodeHierarchy::new("023", vec![], vec![]),
-                    NodeHierarchy::new("34", vec![], vec![]),
-                    NodeHierarchy::new("123", vec![], vec![]),
+                    DiagnosticsHierarchy::new("1", vec![], vec![]),
+                    DiagnosticsHierarchy::new("4", vec![], vec![]),
+                    DiagnosticsHierarchy::new("12", vec![], vec![]),
+                    DiagnosticsHierarchy::new("023", vec![], vec![]),
+                    DiagnosticsHierarchy::new("34", vec![], vec![]),
+                    DiagnosticsHierarchy::new("123", vec![], vec![]),
                 ]
             )
         );

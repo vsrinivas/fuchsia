@@ -7,8 +7,8 @@ pub mod variable;
 
 use {
     super::config::{self, DataFetcher, DiagnosticData, Source},
+    diagnostics_hierarchy::{ArrayContent, Property as DiagnosticProperty},
     fetch::{InspectFetcher, KeyValueFetcher, SelectorString, SelectorType, TextFetcher},
-    fuchsia_inspect_node_hierarchy::{ArrayContent, Property as DiagnosticProperty},
     injectable_time::{FakeTime, TimeSource},
     lazy_static::lazy_static,
     serde::{Deserialize, Deserializer},

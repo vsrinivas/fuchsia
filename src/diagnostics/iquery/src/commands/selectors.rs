@@ -9,7 +9,7 @@ use {
     },
     argh::FromArgs,
     async_trait::async_trait,
-    fuchsia_inspect_node_hierarchy::NodeHierarchy,
+    diagnostics_hierarchy::DiagnosticsHierarchy,
     selectors,
 };
 
@@ -63,7 +63,7 @@ impl Command for SelectorsCommand {
     }
 }
 
-fn get_selectors(component_selector: String, hierarchy: NodeHierarchy) -> Vec<String> {
+fn get_selectors(component_selector: String, hierarchy: DiagnosticsHierarchy) -> Vec<String> {
     hierarchy
         .property_iter()
         .flat_map(|(node_path, maybe_property)| maybe_property.map(|prop| (node_path, prop)))

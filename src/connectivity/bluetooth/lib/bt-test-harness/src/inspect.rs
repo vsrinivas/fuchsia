@@ -17,7 +17,9 @@ use {
         },
         hci_emulator::Emulator,
     },
-    fuchsia_inspect_contrib::reader::{ArchiveReader, ComponentSelector, Inspect, NodeHierarchy},
+    fuchsia_inspect_contrib::reader::{
+        ArchiveReader, ComponentSelector, DiagnosticsHierarchy, Inspect,
+    },
     fuchsia_zircon::DurationNum,
     futures::{future::BoxFuture, FutureExt},
     std::{
@@ -34,7 +36,7 @@ const RETRY_TIMEOUT_SECONDS: i64 = 1;
 #[derive(Default, Clone)]
 pub struct InspectState {
     pub moniker: Vec<String>,
-    pub hierarchies: Vec<NodeHierarchy>,
+    pub hierarchies: Vec<DiagnosticsHierarchy>,
 }
 
 #[derive(Clone)]

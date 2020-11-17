@@ -16,11 +16,11 @@ use {
     },
     anyhow,
     derivative::Derivative,
+    diagnostics_hierarchy::testing::DiagnosticsHierarchyGetter,
     fidl::endpoints::DiscoverableService,
     fidl_fuchsia_inspect::TreeMarker,
     fidl_fuchsia_io::{DirectoryMarker, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE},
     fuchsia_component::server::{ServiceFs, ServiceObjTrait},
-    fuchsia_inspect_node_hierarchy::testing::NodeHierarchyGetter,
     fuchsia_zircon::{self as zx, HandleBased},
     futures::{future::BoxFuture, prelude::*},
     lazy_static::lazy_static,
@@ -47,8 +47,8 @@ use {
 #[cfg(test)]
 use crate::format::block::Block;
 
-pub use fuchsia_inspect_node_hierarchy::{
-    ExponentialHistogramParams, LinearHistogramParams, NodeHierarchy,
+pub use diagnostics_hierarchy::{
+    DiagnosticsHierarchy, ExponentialHistogramParams, LinearHistogramParams,
 };
 pub use testing::{assert_inspect_tree, tree_assertion};
 
@@ -64,10 +64,11 @@ pub mod trie;
 mod utils;
 
 pub mod testing {
-    pub use fuchsia_inspect_node_hierarchy::{
+    pub use diagnostics_hierarchy::{
         assert_data_tree as assert_inspect_tree,
         testing::{
-            AnyProperty, HistogramAssertion, NodeHierarchyGetter, PropertyAssertion, TreeAssertion,
+            AnyProperty, DiagnosticsHierarchyGetter, HistogramAssertion, PropertyAssertion,
+            TreeAssertion,
         },
         tree_assertion,
     };
@@ -91,8 +92,8 @@ pub struct Inspector {
     pub(in crate) vmo: Option<Arc<zx::Vmo>>,
 }
 
-impl NodeHierarchyGetter<String> for Inspector {
-    fn get_node_hierarchy(&self) -> Cow<'_, NodeHierarchy> {
+impl DiagnosticsHierarchyGetter<String> for Inspector {
+    fn get_diagnostics_hierarchy(&self) -> Cow<'_, DiagnosticsHierarchy> {
         let hierarchy =
             futures::executor::block_on(async move { reader::read_from_inspector(self).await })
                 .expect("failed to get hierarchy");

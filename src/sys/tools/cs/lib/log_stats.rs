@@ -4,7 +4,7 @@
 
 use {
     anyhow::{format_err, Error},
-    fuchsia_inspect_contrib::reader::{ArchiveReader, Inspect, NodeHierarchy, Property},
+    fuchsia_inspect_contrib::reader::{ArchiveReader, DiagnosticsHierarchy, Inspect, Property},
     fuchsia_zircon as zx,
     std::{cmp::Reverse, collections::HashMap, fmt, str::FromStr},
 };
@@ -44,7 +44,10 @@ pub struct ComponentLogStats {
 }
 
 impl ComponentLogStats {
-    pub fn new(node: &NodeHierarchy, start_times: &HashMap<String, i64>) -> ComponentLogStats {
+    pub fn new(
+        node: &DiagnosticsHierarchy,
+        start_times: &HashMap<String, i64>,
+    ) -> ComponentLogStats {
         let component_url = node.name.clone();
         let short_name = {
             let last_slash_index = component_url.rfind("/");
@@ -131,7 +134,7 @@ impl LogStats {
 
     pub async fn new_with_root(
         min_severity: LogSeverity,
-        inspect_root: &NodeHierarchy,
+        inspect_root: &DiagnosticsHierarchy,
     ) -> Result<Self, Error> {
         let start_times = Self::extract_component_start_times(&inspect_root)?;
 
@@ -163,7 +166,7 @@ impl LogStats {
 
     // Extracts the component start times from the inspect hierarchy.
     fn extract_component_start_times(
-        inspect_root: &NodeHierarchy,
+        inspect_root: &DiagnosticsHierarchy,
     ) -> Result<HashMap<String, i64>, Error> {
         let mut res = HashMap::new();
         let events_node = inspect_root

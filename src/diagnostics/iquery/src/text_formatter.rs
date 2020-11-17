@@ -4,7 +4,7 @@
 
 use {
     diagnostics_data::InspectData,
-    fuchsia_inspect::reader::{ArrayContent, NodeHierarchy, Property},
+    fuchsia_inspect::reader::{ArrayContent, DiagnosticsHierarchy, Property},
     nom::HexDisplay,
     num_traits::Bounded,
     std::{
@@ -16,8 +16,8 @@ use {
 const INDENT: usize = 2;
 const HEX_DISPLAY_CHUNK_SIZE: usize = 16;
 
-pub fn format(path: &str, node_hierarchy: NodeHierarchy) -> String {
-    let result = output_hierarchy(node_hierarchy, 1);
+pub fn format(path: &str, diagnostics_hierarchy: DiagnosticsHierarchy) -> String {
+    let result = output_hierarchy(diagnostics_hierarchy, 1);
     format!("{}:\n{}", path, result)
 }
 
@@ -42,14 +42,14 @@ pub fn format_schema(schema: InspectData) -> String {
     result
 }
 
-fn output_hierarchy(node_hierarchy: NodeHierarchy, indent: usize) -> String {
+fn output_hierarchy(diagnostics_hierarchy: DiagnosticsHierarchy, indent: usize) -> String {
     let mut lines = vec![];
     let name_indent = " ".repeat(INDENT * indent);
     let value_indent = " ".repeat(INDENT * (indent + 1));
 
-    lines.push(format!("{}{}:", name_indent, node_hierarchy.name));
+    lines.push(format!("{}{}:", name_indent, diagnostics_hierarchy.name));
 
-    lines.extend(node_hierarchy.properties.into_iter().map(|property| match property {
+    lines.extend(diagnostics_hierarchy.properties.into_iter().map(|property| match property {
         Property::String(name, value) => format!("{}{} = {}", value_indent, name, value),
         Property::Int(name, value) => format!("{}{} = {}", value_indent, name, value),
         Property::Uint(name, value) => format!("{}{} = {}", value_indent, name, value),
@@ -65,7 +65,7 @@ fn output_hierarchy(node_hierarchy: NodeHierarchy, indent: usize) -> String {
     }));
 
     lines.extend(
-        node_hierarchy.children.into_iter().map(|child| output_hierarchy(child, indent + 1)),
+        diagnostics_hierarchy.children.into_iter().map(|child| output_hierarchy(child, indent + 1)),
     );
 
     lines.join("\n")

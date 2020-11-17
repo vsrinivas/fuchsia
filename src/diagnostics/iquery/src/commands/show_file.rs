@@ -12,7 +12,7 @@ use {
     argh::FromArgs,
     async_trait::async_trait,
     derivative::Derivative,
-    fuchsia_inspect_node_hierarchy::NodeHierarchy,
+    diagnostics_hierarchy::DiagnosticsHierarchy,
     serde::Serialize,
     std::str::FromStr,
 };
@@ -32,7 +32,7 @@ pub struct ShowFileCommand {
 pub struct ShowFileResultItem {
     path: String,
     #[derivative(Ord = "ignore", PartialOrd = "ignore")]
-    pub payload: NodeHierarchy,
+    pub payload: DiagnosticsHierarchy,
 }
 
 impl ToText for Vec<ShowFileResultItem> {

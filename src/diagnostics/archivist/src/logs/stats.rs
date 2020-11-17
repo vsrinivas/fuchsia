@@ -713,7 +713,7 @@ mod tests {
                 }
               }
         );
-        if tree_assertion.run(state.inspector.get_node_hierarchy().as_ref()).is_ok() {
+        if tree_assertion.run(state.inspector.get_diagnostics_hierarchy().as_ref()).is_ok() {
             return Err(format_err!("Should not retain more than {} logs", MAX_RECORDS_PER_BUCKET));
         }
 
@@ -968,7 +968,7 @@ mod tests {
                 }
               }
         );
-        match tree_assertion.run(state.inspector.get_node_hierarchy().as_ref()) {
+        match tree_assertion.run(state.inspector.get_diagnostics_hierarchy().as_ref()) {
             Ok(()) => Ok(()),
             Err(e) => Err(format_err!("Message not ignored: {} \n {}", msg_str, e)),
         }
@@ -992,7 +992,7 @@ mod tests {
                 }
               }
         );
-        match tree_assertion.run(state.inspector.get_node_hierarchy().as_ref()) {
+        match tree_assertion.run(state.inspector.get_diagnostics_hierarchy().as_ref()) {
             Ok(()) => Ok(()),
             Err(e) => Err(format_err!("Parsing failed for message: {} \n {}", msg_str, e)),
         }

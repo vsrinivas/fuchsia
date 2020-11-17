@@ -1522,7 +1522,7 @@ Look at how the integration test is setup:
       {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/diagnostics/inspect/codelab/rust/part_5/tests/integration_test.rs" region_tag="result_hierarchy" adjust_indentation="auto" %}
       ```
 
-      Add assertions on the returned `NodeHierarchy`.
+      Add assertions on the returned `DiagnosticsHierarchy`.
 
       - *Hint*: It may help to print the JSON output to view the schema.
 

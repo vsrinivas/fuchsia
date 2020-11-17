@@ -5,15 +5,15 @@
 use {
     fidl::endpoints::DiscoverableService,
     fidl_fuchsia_inspect::TreeMarker,
-    fuchsia_inspect::reader::{self, NodeHierarchy},
+    fuchsia_inspect::reader::{self, DiagnosticsHierarchy},
 };
 
-/// Get the Inspect `NodeHierarchy` for the component under test running in the nested environment.
+/// Get the Inspect `DiagnosticsHierarchy` for the component under test running in the nested environment.
 /// Requires sandbox:features:hub capability.
 pub async fn get_inspect_hierarchy(
     nested_environment_label: &str,
     component_name: &str,
-) -> NodeHierarchy {
+) -> DiagnosticsHierarchy {
     let pattern = format!(
         "/hub/r/{}/*/c/{}/*/out/diagnostics/{}",
         glob::Pattern::escape(nested_environment_label),

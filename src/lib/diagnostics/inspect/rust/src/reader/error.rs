@@ -4,7 +4,7 @@
 
 use crate::error;
 use crate::format::block_type::BlockType;
-use fuchsia_inspect_node_hierarchy::Error as HierarchyError;
+use diagnostics_hierarchy::Error as HierarchyError;
 use fuchsia_zircon as zx;
 use thiserror::Error;
 

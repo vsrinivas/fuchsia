@@ -21,7 +21,7 @@ use {
         server::{NestedEnvironment, ServiceFs},
     },
     fuchsia_inspect::{
-        assert_inspect_tree, reader::NodeHierarchy, testing::TreeAssertion, tree_assertion,
+        assert_inspect_tree, reader::DiagnosticsHierarchy, testing::TreeAssertion, tree_assertion,
     },
     fuchsia_pkg_testing::{get_inspect_hierarchy, make_packages_json},
     fuchsia_zircon as zx,
@@ -286,7 +286,7 @@ impl TestEnv {
         stream
     }
 
-    async fn inspect_hierarchy(&self) -> NodeHierarchy {
+    async fn inspect_hierarchy(&self) -> DiagnosticsHierarchy {
         get_inspect_hierarchy(
             &self.nested_environment_label,
             "omaha-client-service-for-integration-test.cmx",

@@ -7,7 +7,6 @@ group("tests") {
   deps = [
     "contrib/rust:tests",
     "derive:tests",
-    "node-hierarchy/rust:tests",
     "rust:tests",
   ]
 }

@@ -10,9 +10,9 @@ use {
         logs::{redact::Redactor, LogManager},
     },
     anyhow::{format_err, Error},
+    diagnostics_hierarchy::trie,
     fidl_fuchsia_diagnostics::{self, Selector},
     fidl_fuchsia_io::{DirectoryProxy, CLONE_FLAG_SAME_RIGHTS},
-    fuchsia_inspect_node_hierarchy::trie,
     fuchsia_zircon as zx, io_util, selectors,
     std::convert::TryInto,
     std::sync::Arc,
@@ -356,10 +356,9 @@ mod tests {
     use {
         super::*,
         crate::events::types::{ComponentIdentifier, LegacyIdentifier, RealmPath},
+        diagnostics_hierarchy::trie::TrieIterableNode,
         fidl_fuchsia_io::DirectoryMarker,
-        fuchsia_async as fasync,
-        fuchsia_inspect_node_hierarchy::trie::TrieIterableNode,
-        fuchsia_zircon as zx,
+        fuchsia_async as fasync, fuchsia_zircon as zx,
     };
 
     const TEST_URL: &'static str = "fuchsia-pkg://test";

@@ -5,7 +5,7 @@
 use {
     crate::{
         reader::{
-            error::ReaderError, MissingValueReason, NodeHierarchy, PartialNodeHierarchy,
+            error::ReaderError, DiagnosticsHierarchy, MissingValueReason, PartialNodeHierarchy,
             ReadableTree, Snapshot,
         },
         LinkNodeDisposition,
@@ -36,20 +36,23 @@ impl SnapshotTree {
 
 type SnapshotTreeMap = BTreeMap<String, Result<SnapshotTree, ReaderError>>;
 
-impl TryInto<NodeHierarchy> for SnapshotTree {
+impl TryInto<DiagnosticsHierarchy> for SnapshotTree {
     type Error = ReaderError;
 
-    fn try_into(mut self) -> Result<NodeHierarchy, Self::Error> {
+    fn try_into(mut self) -> Result<DiagnosticsHierarchy, Self::Error> {
         let partial = PartialNodeHierarchy::try_from(self.snapshot)?;
         Ok(expand(partial, &mut self.children))
     }
 }
 
-fn expand(partial: PartialNodeHierarchy, snapshot_children: &mut SnapshotTreeMap) -> NodeHierarchy {
+fn expand(
+    partial: PartialNodeHierarchy,
+    snapshot_children: &mut SnapshotTreeMap,
+) -> DiagnosticsHierarchy {
     // TODO(miguelfrde): remove recursion or limit depth.
     let children =
         partial.children.into_iter().map(|child| expand(child, snapshot_children)).collect();
-    let mut hierarchy = NodeHierarchy::new(partial.name, partial.properties, children);
+    let mut hierarchy = DiagnosticsHierarchy::new(partial.name, partial.properties, children);
     for link_value in partial.links {
         let result = snapshot_children.remove(&link_value.content);
         if result.is_none() {
@@ -57,7 +60,7 @@ fn expand(partial: PartialNodeHierarchy, snapshot_children: &mut SnapshotTreeMap
             continue;
         }
         // TODO(miguelfrde): remove recursion or limit depth.
-        let result: Result<NodeHierarchy, ReaderError> =
+        let result: Result<DiagnosticsHierarchy, ReaderError> =
             result.unwrap().and_then(|snapshot_tree| snapshot_tree.try_into());
         match result {
             Err(_) => {
@@ -79,7 +82,7 @@ fn expand(partial: PartialNodeHierarchy, snapshot_children: &mut SnapshotTreeMap
     hierarchy
 }
 
-pub async fn read<T>(tree: &T) -> Result<NodeHierarchy, ReaderError>
+pub async fn read<T>(tree: &T) -> Result<DiagnosticsHierarchy, ReaderError>
 where
     T: ReadableTree + Send + Sync,
 {
@@ -141,7 +144,7 @@ mod tests {
         let inspector = test_inspector();
         let mut snapshot_tree = load_snapshot_tree(&inspector).await?;
 
-        let root_hierarchy: NodeHierarchy =
+        let root_hierarchy: DiagnosticsHierarchy =
             PartialNodeHierarchy::try_from(snapshot_tree.snapshot)?.into();
         assert_eq!(snapshot_tree.children.keys().collect::<Vec<&String>>(), vec!["lazy-node-0"]);
         assert_inspect_tree!(root_hierarchy, root: {
@@ -149,7 +152,7 @@ mod tests {
         });
 
         let mut lazy_node = snapshot_tree.children.remove("lazy-node-0").unwrap().unwrap();
-        let lazy_node_hierarchy: NodeHierarchy =
+        let lazy_node_hierarchy: DiagnosticsHierarchy =
             PartialNodeHierarchy::try_from(lazy_node.snapshot)?.into();
         assert_eq!(lazy_node.children.keys().collect::<Vec<&String>>(), vec!["lazy-values-0"]);
         assert_inspect_tree!(lazy_node_hierarchy, root: {

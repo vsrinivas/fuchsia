@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use diagnostics_hierarchy::{DiagnosticsHierarchy, Property};
 use fidl_fuchsia_diagnostics::{DataType, Severity as FidlSeverity};
-use fuchsia_inspect_node_hierarchy::{NodeHierarchy, Property};
 use serde::{
     self,
     de::{DeserializeOwned, Deserializer},
@@ -17,7 +17,7 @@ use std::{
     str::FromStr,
 };
 
-pub use fuchsia_inspect_node_hierarchy::{assert_data_tree, tree_assertion};
+pub use diagnostics_hierarchy::{assert_data_tree, tree_assertion};
 
 const SCHEMA_VERSION: u64 = 1;
 
@@ -323,7 +323,7 @@ pub struct Data<D: DiagnosticsData> {
     pub moniker: String,
 
     /// Payload containing diagnostics data, if the payload exists, else None.
-    pub payload: Option<NodeHierarchy<D::Key>>,
+    pub payload: Option<DiagnosticsHierarchy<D::Key>>,
 
     /// Schema version.
     #[serde(default)]
@@ -334,7 +334,7 @@ pub type InspectData = Data<Inspect>;
 pub type LifecycleData = Data<Lifecycle>;
 pub type LogsData = Data<Logs>;
 
-pub type LogsHierarchy = NodeHierarchy<LogsField>;
+pub type LogsHierarchy = DiagnosticsHierarchy<LogsField>;
 pub type LogsProperty = Property<LogsField>;
 
 impl Data<Lifecycle> {
@@ -342,7 +342,7 @@ impl Data<Lifecycle> {
     pub fn for_lifecycle_event(
         moniker: impl Into<String>,
         lifecycle_event_type: LifecycleType,
-        payload: Option<NodeHierarchy>,
+        payload: Option<DiagnosticsHierarchy>,
         component_url: impl Into<String>,
         timestamp: impl Into<Timestamp>,
         errors: Vec<Error>,
@@ -368,7 +368,7 @@ impl Data<Inspect> {
     /// Creates a new data instance for inspect.
     pub fn for_inspect(
         moniker: impl Into<String>,
-        inspect_hierarchy: Option<NodeHierarchy>,
+        inspect_hierarchy: Option<DiagnosticsHierarchy>,
         timestamp_nanos: impl Into<Timestamp>,
         component_url: impl Into<String>,
         filename: impl Into<String>,
@@ -573,7 +573,7 @@ impl Metadata {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use fuchsia_inspect_node_hierarchy::Property;
+    use diagnostics_hierarchy::Property;
     use pretty_assertions;
     use serde_json::json;
 
@@ -581,7 +581,7 @@ mod tests {
 
     #[test]
     fn test_canonical_json_inspect_formatting() {
-        let mut hierarchy = NodeHierarchy::new(
+        let mut hierarchy = DiagnosticsHierarchy::new(
             "root",
             vec![Property::String("x".to_string(), "foo".to_string())],
             vec![],

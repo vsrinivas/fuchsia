@@ -4,11 +4,11 @@
 
 use {
     anyhow::{format_err, Error},
+    diagnostics_hierarchy::{self, DiagnosticsHierarchy, Property, PropertyEntry},
     fidl_fuchsia_wlan_policy as fidl_policy,
     fidl_fuchsia_wlan_tap::{self as wlantap, WlantapPhyProxy},
     fuchsia_inspect::testing::{assert_inspect_tree, AnyProperty},
     fuchsia_inspect_contrib::reader::{ArchiveReader, ComponentSelector},
-    fuchsia_inspect_node_hierarchy::{self, NodeHierarchy, Property, PropertyEntry},
     fuchsia_zircon::DurationNum,
     pin_utils::pin_mut,
     selectors,
@@ -129,9 +129,9 @@ async fn connect_future(
     .await;
 }
 
-fn select_properties(hierarchy: NodeHierarchy, selector: &str) -> Vec<PropertyEntry> {
+fn select_properties(hierarchy: DiagnosticsHierarchy, selector: &str) -> Vec<PropertyEntry> {
     let parsed_selector = selectors::parse_selector(selector).expect("expect valid selector.");
-    fuchsia_inspect_node_hierarchy::select_from_node_hierarchy(hierarchy, parsed_selector)
+    diagnostics_hierarchy::select_from_hierarchy(hierarchy, parsed_selector)
         .expect("Selecting from hierarchy should succeed.")
 }
 
@@ -303,7 +303,7 @@ async fn verify_wlan_inspect() {
     helper.stop().await;
 }
 
-async fn get_inspect_hierarchy() -> Result<NodeHierarchy, Error> {
+async fn get_inspect_hierarchy() -> Result<DiagnosticsHierarchy, Error> {
     ArchiveReader::new()
         .add_selector(ComponentSelector::new(vec!["wlanstack.cmx".to_string()]))
         .get()

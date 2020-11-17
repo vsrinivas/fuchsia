@@ -6,13 +6,13 @@ use {
     anyhow::Error,
     bt_test_harness::{access::AccessHarness, inspect::InspectHarness},
     fuchsia_bluetooth::{expect_eq, expectation::asynchronous::ExpectableExt},
-    fuchsia_inspect_contrib::reader::NodeHierarchy,
+    fuchsia_inspect_contrib::reader::DiagnosticsHierarchy,
     test_harness::run_suite,
 };
 
 const GAP_CHILD_NODE: &str = "system";
 
-fn hierarchy_has_child(hierarchy: &NodeHierarchy, name: &str) -> bool {
+fn hierarchy_has_child(hierarchy: &DiagnosticsHierarchy, name: &str) -> bool {
     hierarchy.children.iter().find(|c| c.name == name).is_some()
 }
 

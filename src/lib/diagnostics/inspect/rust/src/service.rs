@@ -124,7 +124,7 @@ mod tests {
         super::*,
         crate::{
             assert_inspect_tree,
-            reader::{NodeHierarchy, PartialNodeHierarchy},
+            reader::{DiagnosticsHierarchy, PartialNodeHierarchy},
             Inspector,
         },
         fidl_fuchsia_inspect::{
@@ -223,7 +223,7 @@ mod tests {
         Ok(())
     }
 
-    fn parse_content(tree_content: TreeContent) -> Result<NodeHierarchy, Error> {
+    fn parse_content(tree_content: TreeContent) -> Result<DiagnosticsHierarchy, Error> {
         let buffer = tree_content.buffer.unwrap();
         Ok(PartialNodeHierarchy::try_from(&buffer.vmo)?.into())
     }

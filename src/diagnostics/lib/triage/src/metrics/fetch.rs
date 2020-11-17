@@ -5,7 +5,7 @@
 use {
     super::MetricValue,
     anyhow::{anyhow, bail, Context, Error, Result},
-    fuchsia_inspect_node_hierarchy::NodeHierarchy,
+    diagnostics_hierarchy::DiagnosticsHierarchy,
     lazy_static::lazy_static,
     regex::Regex,
     selectors,
@@ -75,7 +75,7 @@ impl TryFrom<String> for SelectorString {
 }
 
 pub struct ComponentInspectInfo {
-    processed_data: NodeHierarchy,
+    processed_data: DiagnosticsHierarchy,
     moniker: Vec<String>,
 }
 
@@ -209,8 +209,8 @@ impl TryFrom<Vec<JsonValue>> for InspectFetcher {
                         bail!("Neither 'payload' nor 'contents' found in Inspect component")
                     })
                 })?;
-                let processed_data: NodeHierarchy = serde_json::from_value(raw_contents.clone())
-                    .with_context(|| {
+                let processed_data: DiagnosticsHierarchy =
+                    serde_json::from_value(raw_contents.clone()).with_context(|| {
                         format!(
                             "Unable to deserialize Inspect contents for {} to node hierarchy",
                             path
@@ -258,7 +258,7 @@ impl InspectFetcher {
             }
             found_component = true;
             let selector = selectors::parse_selector(selector_string)?;
-            for value in fuchsia_inspect_node_hierarchy::select_from_node_hierarchy(
+            for value in diagnostics_hierarchy::select_from_hierarchy(
                 component.processed_data.clone(),
                 selector,
             )?

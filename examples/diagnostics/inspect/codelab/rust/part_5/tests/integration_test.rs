@@ -17,7 +17,7 @@ use {
 use {
     anyhow::format_err,
     fuchsia_inspect::testing::{assert_inspect_tree, AnyProperty},
-    fuchsia_inspect_contrib::reader::{ArchiveReader, ComponentSelector, NodeHierarchy},
+    fuchsia_inspect_contrib::reader::{ArchiveReader, ComponentSelector, DiagnosticsHierarchy},
 };
 // [END include_test_stuff]
 
@@ -65,7 +65,7 @@ impl IntegrationTest {
     }
 
     // [START get_inspect]
-    async fn get_inspect_hierarchy(&self) -> Result<NodeHierarchy, Error> {
+    async fn get_inspect_hierarchy(&self) -> Result<DiagnosticsHierarchy, Error> {
         ArchiveReader::new()
             .add_selector(ComponentSelector::new(vec![
                 self.environment_label.clone(),

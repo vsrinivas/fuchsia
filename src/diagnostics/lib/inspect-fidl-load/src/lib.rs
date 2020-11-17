@@ -8,7 +8,7 @@ use {
     fidl_fuchsia_inspect_deprecated::{InspectMarker, InspectProxy, MetricValue, PropertyValue},
     fidl_fuchsia_io::NodeInfo,
     fuchsia_async as fasync,
-    fuchsia_inspect::reader::{NodeHierarchy, Property},
+    fuchsia_inspect::reader::{DiagnosticsHierarchy, Property},
     fuchsia_zircon as zx, io_util,
 };
 
@@ -30,7 +30,7 @@ pub async fn is_valid_file(filename: &str) -> bool {
 }
 
 /// Loads an inspect node hierarchy in the given path.
-pub async fn load_hierarchy_from_path(path: &str) -> Result<NodeHierarchy, Error> {
+pub async fn load_hierarchy_from_path(path: &str) -> Result<DiagnosticsHierarchy, Error> {
     let (client, server) = zx::Channel::create()?;
     fdio::service_connect(path, server)?;
     let inspect_proxy = InspectProxy::new(fasync::Channel::from_channel(client)?);
@@ -39,7 +39,7 @@ pub async fn load_hierarchy_from_path(path: &str) -> Result<NodeHierarchy, Error
 }
 
 /// Loads an inspect node hierarchy from the given root inspect node.
-pub async fn load_hierarchy(proxy: InspectProxy) -> Result<NodeHierarchy, Error> {
+pub async fn load_hierarchy(proxy: InspectProxy) -> Result<DiagnosticsHierarchy, Error> {
     let mut pending_nodes = vec![];
     let root = read_node(proxy).await?;
     pending_nodes.push(root);
@@ -74,7 +74,7 @@ pub async fn load_hierarchy(proxy: InspectProxy) -> Result<NodeHierarchy, Error>
 
 struct PartialNodeHierarchy {
     proxy: InspectProxy,
-    hierarchy: NodeHierarchy,
+    hierarchy: DiagnosticsHierarchy,
     pending_children: Vec<String>,
 }
 
@@ -97,7 +97,7 @@ async fn read_node(proxy: InspectProxy) -> Result<PartialNodeHierarchy, Error> {
     }));
 
     let pending_children = proxy.list_children().await?;
-    let hierarchy = NodeHierarchy::new(&object.name, properties, vec![]);
+    let hierarchy = DiagnosticsHierarchy::new(&object.name, properties, vec![]);
     Ok(PartialNodeHierarchy { proxy, hierarchy, pending_children })
 }
 

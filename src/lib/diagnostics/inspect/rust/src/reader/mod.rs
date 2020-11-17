@@ -11,8 +11,8 @@ use {
         },
         utils, Inspector,
     },
+    diagnostics_hierarchy::{testing::DiagnosticsHierarchyGetter, *},
     fidl_fuchsia_inspect::TreeProxy,
-    fuchsia_inspect_node_hierarchy::{testing::NodeHierarchyGetter, *},
     fuchsia_zircon::Vmo,
     maplit::btreemap,
     std::{borrow::Cow, cmp::min, collections::BTreeMap, convert::TryFrom},
@@ -20,8 +20,9 @@ use {
 
 pub use {
     crate::reader::readable_tree::ReadableTree,
-    fuchsia_inspect_node_hierarchy::{
-        ArrayContent, ArrayFormat, Bucket, LinkNodeDisposition, LinkValue, NodeHierarchy, Property,
+    diagnostics_hierarchy::{
+        ArrayContent, ArrayFormat, Bucket, DiagnosticsHierarchy, LinkNodeDisposition, LinkValue,
+        Property,
     },
 };
 
@@ -31,19 +32,21 @@ mod readable_tree;
 pub mod snapshot;
 mod tree_reader;
 
-/// Read a NodeHierarchy from an |Inspector| object.
-pub async fn read_from_inspector(inspector: &Inspector) -> Result<NodeHierarchy, ReaderError> {
+/// Read a DiagnosticsHierarchy from an |Inspector| object.
+pub async fn read_from_inspector(
+    inspector: &Inspector,
+) -> Result<DiagnosticsHierarchy, ReaderError> {
     tree_reader::read(inspector).await
 }
 
-/// Read a NodeHierarchy from a |Tree| connection.
-pub async fn read_from_tree(tree: &TreeProxy) -> Result<NodeHierarchy, ReaderError> {
+/// Read a DiagnosticsHierarchy from a |Tree| connection.
+pub async fn read_from_tree(tree: &TreeProxy) -> Result<DiagnosticsHierarchy, ReaderError> {
     tree_reader::read(tree).await
 }
 
 /// A partial node hierarchy represents a node in an inspect tree without
 /// the linked (lazy) nodes expanded.
-/// Usually a client would prefer to use a `NodeHierarchy` to get the full
+/// Usually a client would prefer to use a `DiagnosticsHierarchy` to get the full
 /// inspect tree.
 #[derive(Clone, Debug, PartialEq)]
 pub struct PartialNodeHierarchy {
@@ -82,11 +85,11 @@ impl PartialNodeHierarchy {
     }
 }
 
-/// Transforms the partial hierarchy into a `NodeHierarchy`. If the node hierarchy had
+/// Transforms the partial hierarchy into a `DiagnosticsHierarchy`. If the node hierarchy had
 /// unexpanded links, those will appear as missing values.
-impl Into<NodeHierarchy> for PartialNodeHierarchy {
-    fn into(self) -> NodeHierarchy {
-        let hierarchy = NodeHierarchy {
+impl Into<DiagnosticsHierarchy> for PartialNodeHierarchy {
+    fn into(self) -> DiagnosticsHierarchy {
+        let hierarchy = DiagnosticsHierarchy {
             name: self.name,
             children: self.children.into_iter().map(|child| child.into()).collect(),
             properties: self.properties,
@@ -103,9 +106,9 @@ impl Into<NodeHierarchy> for PartialNodeHierarchy {
     }
 }
 
-impl NodeHierarchyGetter<String> for PartialNodeHierarchy {
-    fn get_node_hierarchy(&self) -> Cow<'_, NodeHierarchy> {
-        let hierarchy: NodeHierarchy = self.clone().into();
+impl DiagnosticsHierarchyGetter<String> for PartialNodeHierarchy {
+    fn get_diagnostics_hierarchy(&self) -> Cow<'_, DiagnosticsHierarchy> {
+        let hierarchy: DiagnosticsHierarchy = self.clone().into();
         if !hierarchy.missing.is_empty() {
             panic!(
                 "Missing links: {:?}",
@@ -698,13 +701,13 @@ mod tests {
         // UTF8 character.  Then build a new node hierarchy based off those bytes, see if invalid
         // string is converted into a valid UTF8 string with some information lost.
         buf[byte_offset] = 0xFE;
-        let hierarchy: NodeHierarchy = PartialNodeHierarchy::try_from(Snapshot::build(&buf))
+        let hierarchy: DiagnosticsHierarchy = PartialNodeHierarchy::try_from(Snapshot::build(&buf))
             .expect("creating node hierarchy")
             .into();
 
         assert_eq!(
             hierarchy,
-            NodeHierarchy::new(
+            DiagnosticsHierarchy::new(
                 "root",
                 vec![Property::String("property".to_string(), "\u{FFFD}ello world".to_string())],
                 vec![],

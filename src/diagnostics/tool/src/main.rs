@@ -4,12 +4,12 @@
 use {
     anyhow::Error,
     diagnostics_data::InspectData,
+    diagnostics_hierarchy::{self, DiagnosticsHierarchy, InspectHierarchyMatcher, Property},
     difference::{
         self,
         Difference::{Add, Rem, Same},
     },
     fidl_fuchsia_diagnostics::Selector,
-    fuchsia_inspect_node_hierarchy::{self, InspectHierarchyMatcher, NodeHierarchy, Property},
     selectors,
     std::cmp::{max, min},
     std::collections::HashSet,
@@ -188,7 +188,7 @@ fn filter_json_schema_by_selectors(
         .expect("Snapshot contained an unparsable path.");
 
     if schema.payload.is_none() {
-        schema.payload = Some(NodeHierarchy::new(
+        schema.payload = Some(DiagnosticsHierarchy::new(
             "root",
             vec![Property::String(
                 "filter error".to_string(),
@@ -208,8 +208,7 @@ fn filter_json_schema_by_selectors(
 
             let inspect_matcher: InspectHierarchyMatcher = (&matched_selectors).try_into().unwrap();
 
-            match fuchsia_inspect_node_hierarchy::filter_node_hierarchy(hierarchy, &inspect_matcher)
-            {
+            match diagnostics_hierarchy::filter_hierarchy(hierarchy, &inspect_matcher) {
                 Ok(Some(filtered)) => {
                     schema.payload = Some(filtered);
                     Some(schema)
@@ -220,7 +219,7 @@ fn filter_json_schema_by_selectors(
                     None
                 }
                 Err(e) => {
-                    schema.payload = Some(NodeHierarchy::new(
+                    schema.payload = Some(DiagnosticsHierarchy::new(
                         "root",
                         vec![Property::String(
                             "filter error".to_string(),
@@ -236,7 +235,7 @@ fn filter_json_schema_by_selectors(
             }
         }
         Err(e) => {
-            schema.payload = Some(NodeHierarchy::new(
+            schema.payload = Some(DiagnosticsHierarchy::new(
                 "root",
                 vec![Property::String(
                     "filter error".to_string(),
@@ -353,7 +352,7 @@ fn generate_selectors<'a>(
 ) -> Result<String, Error> {
     struct MatchedHierarchy {
         moniker: Vec<String>,
-        hierarchy: NodeHierarchy,
+        hierarchy: DiagnosticsHierarchy,
     }
 
     let matching_hierarchies: Vec<MatchedHierarchy> = data
@@ -412,7 +411,7 @@ fn generate_selectors<'a>(
         }
     }
 
-    // NodeHierarchy has an intentionally non-deterministic iteration order, but for client
+    // DiagnosticsHierarchy has an intentionally non-deterministic iteration order, but for client
     // facing tools we'll want to sort the outputs.
     output.sort();
 

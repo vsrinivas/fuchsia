@@ -4,13 +4,13 @@
 use {
     crate::config::{DataType, MetricConfig, ProjectConfig, SamplerConfig},
     anyhow::{format_err, Context, Error},
+    diagnostics_hierarchy::Property,
     diagnostics_reader::{ArchiveReader, Inspect},
     fidl_fuchsia_cobalt::{
         CobaltEvent, CountEvent, EventPayload, LoggerFactoryMarker, LoggerFactoryProxy, LoggerProxy,
     },
     fuchsia_async::{self as fasync, futures::StreamExt},
     fuchsia_component::client::connect_to_service,
-    fuchsia_inspect_node_hierarchy::Property,
     fuchsia_zircon as zx,
     futures::{future::join_all, stream::FuturesUnordered},
     itertools::Itertools,

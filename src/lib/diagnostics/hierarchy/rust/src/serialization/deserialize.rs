@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::{ArrayContent, Bucket, NodeHierarchy, Property},
+    crate::{ArrayContent, Bucket, DiagnosticsHierarchy, Property},
     lazy_static::lazy_static,
     paste,
     serde::{
@@ -26,13 +26,13 @@ impl<'de, Key> Visitor<'de> for RootVisitor<Key>
 where
     Key: FromStr + Clone + Hash + Eq + AsRef<str>,
 {
-    type Value = NodeHierarchy<Key>;
+    type Value = DiagnosticsHierarchy<Key>;
 
     fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         formatter.write_str("there should be a single root")
     }
 
-    fn visit_map<V>(self, mut map: V) -> Result<NodeHierarchy<Key>, V::Error>
+    fn visit_map<V>(self, mut map: V) -> Result<DiagnosticsHierarchy<Key>, V::Error>
     where
         V: MapAccess<'de>,
     {
@@ -58,7 +58,7 @@ where
     }
 }
 
-impl<'de, Key> Deserialize<'de> for NodeHierarchy<Key>
+impl<'de, Key> Deserialize<'de> for DiagnosticsHierarchy<Key>
 where
     Key: FromStr + Clone + Hash + Eq + AsRef<str>,
 {
@@ -108,7 +108,7 @@ impl<Key: AsRef<str> + Clone> FieldValue<Key> {
         !matches!(self, Self::Node(_))
     }
 
-    fn into_node(self, key: &Key) -> Option<NodeHierarchy<Key>> {
+    fn into_node(self, key: &Key) -> Option<DiagnosticsHierarchy<Key>> {
         match self {
             Self::Node(map) => {
                 let mut properties = vec![];
@@ -120,7 +120,7 @@ impl<Key: AsRef<str> + Clone> FieldValue<Key> {
                         children.push(value.into_node(&map_key).unwrap());
                     }
                 }
-                Some(NodeHierarchy::new(key.as_ref(), properties, children))
+                Some(DiagnosticsHierarchy::new(key.as_ref(), properties, children))
             }
             _ => None,
         }
@@ -402,7 +402,7 @@ mod tests {
     #[test]
     fn deserialize_json() {
         let json_string = get_single_json_hierarchy();
-        let mut parsed_hierarchy: NodeHierarchy =
+        let mut parsed_hierarchy: DiagnosticsHierarchy =
             serde_json::from_str(&json_string).expect("deserialized");
         let mut expected_hierarchy = get_unambigious_deserializable_hierarchy();
         parsed_hierarchy.sort();
@@ -415,7 +415,7 @@ mod tests {
         let mut original_hierarchy = get_unambigious_deserializable_hierarchy();
         let result =
             serde_json::to_string(&original_hierarchy).expect("failed to format hierarchy");
-        let mut parsed_hierarchy: NodeHierarchy =
+        let mut parsed_hierarchy: DiagnosticsHierarchy =
             serde_json::from_str(&result).expect("deserialized");
         parsed_hierarchy.sort();
         original_hierarchy.sort();
@@ -424,7 +424,7 @@ mod tests {
 
     #[test]
     fn test_exp_histogram() {
-        let mut hierarchy = NodeHierarchy::new(
+        let mut hierarchy = DiagnosticsHierarchy::new(
             "root".to_string(),
             vec![Property::UintArray(
                 "histogram".to_string(),
@@ -452,7 +452,7 @@ mod tests {
         });
         let result_json = serde_json::json!(hierarchy);
         assert_eq!(result_json, expected_json);
-        let mut parsed_hierarchy: NodeHierarchy =
+        let mut parsed_hierarchy: DiagnosticsHierarchy =
             serde_json::from_value(result_json).expect("deserialized");
         parsed_hierarchy.sort();
         hierarchy.sort();
@@ -460,8 +460,8 @@ mod tests {
     }
 
     // Creates a hierarchy that isn't lossy due to its unambigious values.
-    fn get_unambigious_deserializable_hierarchy() -> NodeHierarchy {
-        NodeHierarchy::new(
+    fn get_unambigious_deserializable_hierarchy() -> DiagnosticsHierarchy {
+        DiagnosticsHierarchy::new(
             "root",
             vec![
                 Property::UintArray(
@@ -472,7 +472,7 @@ mod tests {
                 Property::Bool("bool_false".to_string(), false),
             ],
             vec![
-                NodeHierarchy::new(
+                DiagnosticsHierarchy::new(
                     "a",
                     vec![
                         Property::Double("double".to_string(), 2.5),
@@ -487,7 +487,7 @@ mod tests {
                     ],
                     vec![],
                 ),
-                NodeHierarchy::new(
+                DiagnosticsHierarchy::new(
                     "b",
                     vec![
                         Property::Int("int".to_string(), -2),

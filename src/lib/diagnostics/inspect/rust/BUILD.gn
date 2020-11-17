@@ -17,7 +17,7 @@ rustc_library("fuchsia-inspect") {
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//sdk/fidl/fuchsia.mem:fuchsia.mem-rustc",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
-    "//src/lib/diagnostics/inspect/node-hierarchy/rust",
+    "//src/lib/diagnostics/hierarchy/rust",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",

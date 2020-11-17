@@ -19,7 +19,7 @@ use futures::{channel::mpsc, prelude::*};
 use tracing::*;
 
 pub use diagnostics_data::{Inspect, Lifecycle, LifecycleType, Logs, Severity};
-pub use fuchsia_inspect_node_hierarchy::assert_data_tree;
+pub use diagnostics_hierarchy::assert_data_tree;
 
 const ARCHIVIST_URL: &str =
     "fuchsia-pkg://fuchsia.com/archivist-for-embedding#meta/archivist-for-embedding.cmx";

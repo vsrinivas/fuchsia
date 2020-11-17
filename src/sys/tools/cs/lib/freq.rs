@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    fuchsia_inspect_contrib::reader::{ArchiveReader, Inspect, NodeHierarchy},
+    fuchsia_inspect_contrib::reader::{ArchiveReader, DiagnosticsHierarchy, Inspect},
     std::fmt::{Display, Formatter, Result},
 };
 
@@ -22,7 +22,7 @@ impl Display for BlobFrequency {
     }
 }
 
-async fn get_blobfs_tree(reader: ArchiveReader) -> Option<NodeHierarchy<String>> {
+async fn get_blobfs_tree(reader: ArchiveReader) -> Option<DiagnosticsHierarchy<String>> {
     let mut response = reader.snapshot::<Inspect>().await.unwrap();
 
     for data in response.drain(..) {

@@ -7,16 +7,16 @@ use {
         lifecycle::container::LifecycleArtifactsContainer,
     },
     diagnostics_data::{self as schema},
+    diagnostics_hierarchy::DiagnosticsHierarchy,
     fuchsia_async::{self as fasync},
     fuchsia_inspect::reader::snapshot::{Snapshot, SnapshotTree},
-    fuchsia_inspect_node_hierarchy::NodeHierarchy,
     fuchsia_zircon::{self as zx},
 };
 
 pub enum ReadSnapshot {
     Single(Snapshot),
     Tree(SnapshotTree),
-    Finished(NodeHierarchy),
+    Finished(DiagnosticsHierarchy),
 }
 
 pub struct DiagnosticsArtifactsContainer {

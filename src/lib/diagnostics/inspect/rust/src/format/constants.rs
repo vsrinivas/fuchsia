@@ -2,9 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-pub use fuchsia_inspect_node_hierarchy::{
-    EXPONENTIAL_HISTOGRAM_EXTRA_SLOTS, LINEAR_HISTOGRAM_EXTRA_SLOTS,
-};
+pub use diagnostics_hierarchy::{EXPONENTIAL_HISTOGRAM_EXTRA_SLOTS, LINEAR_HISTOGRAM_EXTRA_SLOTS};
 
 /// Bytes per page
 pub const PAGE_SIZE_BYTES: usize = 4096;

@@ -17,7 +17,7 @@ rustc_library("lib") {
     "fidl:controller-rustc",
     "//sdk/fidl/fuchsia.cobalt:fuchsia.cobalt-rustc",
     "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics-rustc",
-    "//src/lib/diagnostics/inspect/node-hierarchy/rust",
+    "//src/lib/diagnostics/hierarchy/rust",
     "//src/lib/diagnostics/reader/rust",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",

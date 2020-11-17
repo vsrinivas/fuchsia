@@ -182,7 +182,7 @@ impl TestService {
         }
     }
 
-    async fn inspect_tree(&mut self) -> inspect::NodeHierarchy {
+    async fn inspect_tree(&mut self) -> inspect::DiagnosticsHierarchy {
         ArchiveReader::new()
             .with_archive(self.archive.clone())
             .add_selector(ComponentSelector::new(vec![MEDIASESSION_CMX.to_string()]))

@@ -22,7 +22,7 @@ use {
     },
 };
 
-pub use fuchsia_inspect_node_hierarchy::{ArrayFormat, LinkNodeDisposition};
+pub use diagnostics_hierarchy::{ArrayFormat, LinkNodeDisposition};
 
 /// Format in which the property will be read.
 #[derive(Debug, PartialEq, Eq, FromPrimitive, ToPrimitive)]

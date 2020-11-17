@@ -5,10 +5,10 @@ use super::buffer::Accounted;
 use super::error::StreamError;
 use byteorder::{ByteOrder, LittleEndian};
 use diagnostics_data::{LogError, Timestamp};
+use diagnostics_hierarchy::DiagnosticsHierarchy;
 use diagnostics_stream::{Severity as StreamSeverity, Value};
 use fidl_fuchsia_logger::{LogLevelFilter, LogMessage, MAX_DATAGRAM_LEN_BYTES};
 use fidl_fuchsia_sys_internal::SourceIdentity;
-use fuchsia_inspect_node_hierarchy::NodeHierarchy;
 use fuchsia_syslog::COMPONENT_NAME_PLACEHOLDER_TAG;
 use fuchsia_zircon as zx;
 use lazy_static::lazy_static;
@@ -77,7 +77,7 @@ impl Message {
         size_bytes: usize,
         dropped_before: u64,
         source: &SourceIdentity,
-        mut payload: NodeHierarchy<LogsField>,
+        mut payload: DiagnosticsHierarchy<LogsField>,
     ) -> Self {
         payload.sort();
         let mut errors = vec![];

@@ -30,7 +30,7 @@ use {
         server::{NestedEnvironment, ServiceFs},
     },
     fuchsia_inspect::{
-        reader::{self, NodeHierarchy},
+        reader::{self, DiagnosticsHierarchy},
         testing::TreeAssertion,
     },
     fuchsia_merkle::{Hash, MerkleTree},
@@ -791,7 +791,7 @@ impl<P: PkgFs> TestEnv<P> {
         Ok(proxy)
     }
 
-    pub async fn pkg_resolver_inspect_hierarchy(&self) -> NodeHierarchy {
+    pub async fn pkg_resolver_inspect_hierarchy(&self) -> DiagnosticsHierarchy {
         let pattern = format!(
             "/hub/r/{}/*/c/pkg-resolver.cmx/*/out/diagnostics/{}",
             glob::Pattern::escape(&self.nested_environment_label),

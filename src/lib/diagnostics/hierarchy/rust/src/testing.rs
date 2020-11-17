@@ -4,8 +4,9 @@
 
 use {
     crate::{
-        ArrayContent, ArrayFormat, Bucket, ExponentialHistogramParams, LinearHistogramParams,
-        NodeHierarchy, Property, EXPONENTIAL_HISTOGRAM_EXTRA_SLOTS, LINEAR_HISTOGRAM_EXTRA_SLOTS,
+        ArrayContent, ArrayFormat, Bucket, DiagnosticsHierarchy, ExponentialHistogramParams,
+        LinearHistogramParams, Property, EXPONENTIAL_HISTOGRAM_EXTRA_SLOTS,
+        LINEAR_HISTOGRAM_EXTRA_SLOTS,
     },
     anyhow::{bail, format_err, Error},
     difference::{Changeset, Difference},
@@ -130,7 +131,7 @@ macro_rules! tree_assertion {
 }
 
 /// Macro to simplify tree matching in tests. The first argument is the actual tree passed as a
-/// `NodeHierarchyGetter` (e.g. a `NodeHierarchy` or an `Inspector`). The second argument is given
+/// `DiagnosticsHierarchyGetter` (e.g. a `DiagnosticsHierarchy` or an `Inspector`). The second argument is given
 /// to `tree_assertion!` which creates a `TreeAssertion` to validate the tree.
 ///
 /// Each leaf value must be a type that implements either `PropertyAssertion` or `TreeAssertion`.
@@ -138,21 +139,21 @@ macro_rules! tree_assertion {
 /// Example:
 /// ```
 /// // Actual tree
-/// let node_hierarchy = NodeHierarchy {
+/// let diagnostics_hierarchy = DiagnosticsHierarchy {
 ///     name: "key".to_string(),
 ///     properties: vec![
 ///         Property::String("sub".to_string(), "sub_value".to_string()),
 ///         Property::String("sub2".to_string(), "sub2_value".to_string()),
 ///     ],
 ///     children: vec![
-///        NodeHierarchy {
+///        DiagnosticsHierarchy {
 ///            name: "child1".to_string(),
 ///            properties: vec![
 ///                Property::Int("child1_sub".to_string(), 10i64),
 ///            ],
 ///            children: vec![],
 ///        },
-///        NodeHierarchy {
+///        DiagnosticsHierarchy {
 ///            name: "child2".to_string(),
 ///            properties: vec![
 ///                Property::Uint("child2_sub".to_string(), 20u64),
@@ -163,7 +164,7 @@ macro_rules! tree_assertion {
 /// };
 ///
 /// assert_data_tree!(
-///     node_hierarchy,
+///     diagnostics_hierarchy,
 ///     key: {
 ///         sub: AnyProperty,   // only verify that `sub` is a property of `key`
 ///         sub2: "sub2_value",
@@ -179,7 +180,7 @@ macro_rules! tree_assertion {
 ///
 /// In order to do a partial match on a tree, use the `contains` keyword:
 /// ```
-/// assert_data_tree!(node_hierarchy, key: contains {
+/// assert_data_tree!(diagnostics_hierarchy, key: contains {
 ///     sub: "sub_value",
 ///     child1: contains {},
 /// });
@@ -189,7 +190,7 @@ macro_rules! tree_assertion {
 /// expression), you'll need to use `=>` instead of `:`:
 ///
 /// ```
-/// assert_data_tree!(node_hierarchy, key: {
+/// assert_data_tree!(diagnostics_hierarchy, key: {
 ///     key_fn() => "value",
 /// })
 /// ```
@@ -205,7 +206,7 @@ macro_rules! tree_assertion {
 /// `TreeAssertion`s made elsewhere can be included bodily in the macro, but must always be followed
 /// by a trailing comma:
 /// assert_data_tree!(
-///     node_hierarchy,
+///     diagnostics_hierarchy,
 ///     key: {
 ///         make_child_tree_assertion(), // required trailing comma
 ///     }
@@ -217,24 +218,24 @@ macro_rules! tree_assertion {
 /// behavior for reading properties or children with duplicate names is not well defined.
 #[macro_export]
 macro_rules! assert_data_tree {
-    ($node_hierarchy:expr, $($rest:tt)+) => {{
+    ($diagnostics_hierarchy:expr, $($rest:tt)+) => {{
         let tree_assertion = $crate::tree_assertion!($($rest)+);
 
-        use $crate::testing::NodeHierarchyGetter as _;
-        if let Err(e) = tree_assertion.run($node_hierarchy.get_node_hierarchy().as_ref()) {
+        use $crate::testing::DiagnosticsHierarchyGetter as _;
+        if let Err(e) = tree_assertion.run($diagnostics_hierarchy.get_diagnostics_hierarchy().as_ref()) {
             panic!("tree assertion fails: {}", e);
         }
     }};
 }
 
-/// A type which can function as a "view" into a node hierarchy, optionally allocating a new
+/// A type which can function as a "view" into a diagnostics hierarchy, optionally allocating a new
 /// instance to service a request.
-pub trait NodeHierarchyGetter<K: Clone> {
-    fn get_node_hierarchy(&self) -> Cow<'_, NodeHierarchy<K>>;
+pub trait DiagnosticsHierarchyGetter<K: Clone> {
+    fn get_diagnostics_hierarchy(&self) -> Cow<'_, DiagnosticsHierarchy<K>>;
 }
 
-impl<K: Clone> NodeHierarchyGetter<K> for NodeHierarchy<K> {
-    fn get_node_hierarchy(&self) -> Cow<'_, NodeHierarchy<K>> {
+impl<K: Clone> DiagnosticsHierarchyGetter<K> for DiagnosticsHierarchy<K> {
+    fn get_diagnostics_hierarchy(&self) -> Cow<'_, DiagnosticsHierarchy<K>> {
         Cow::Borrowed(self)
     }
 }
@@ -282,7 +283,7 @@ macro_rules! eq_or_bail {
     }}
 }
 
-/// Struct for matching against a Data tree (NodeHierarchy).
+/// Struct for matching against a Data tree (DiagnosticsHierarchy).
 pub struct TreeAssertion<K = String> {
     /// Expected name of the node being compared against
     name: String,
@@ -327,7 +328,7 @@ where
 
     /// Check whether |actual| tree satisfies criteria defined by `TreeAssertion`. Return `Ok` if
     /// assertion passes and `Error` if assertion fails.
-    pub fn run(&self, actual: &NodeHierarchy<K>) -> Result<(), Error> {
+    pub fn run(&self, actual: &DiagnosticsHierarchy<K>) -> Result<(), Error> {
         eq_or_bail!(self.name, actual.name, "node `{}` - expected node name != actual", self.path);
 
         if self.exact_match {
@@ -579,8 +580,8 @@ mod tests {
 
     #[test]
     fn test_exact_match_simple() {
-        let node_hierarchy = simple_tree();
-        assert_data_tree!(node_hierarchy, key: {
+        let diagnostics_hierarchy = simple_tree();
+        assert_data_tree!(diagnostics_hierarchy, key: {
             sub: "sub_value",
             sub2: "sub2_value",
         });
@@ -588,8 +589,8 @@ mod tests {
 
     #[test]
     fn test_exact_match_complex() {
-        let node_hierarchy = complex_tree();
-        assert_data_tree!(node_hierarchy, key: {
+        let diagnostics_hierarchy = complex_tree();
+        assert_data_tree!(diagnostics_hierarchy, key: {
             sub: "sub_value",
             sub2: "sub2_value",
             child1: {
@@ -604,8 +605,8 @@ mod tests {
     #[test]
     #[should_panic]
     fn test_exact_match_mismatched_property_name() {
-        let node_hierarchy = simple_tree();
-        assert_data_tree!(node_hierarchy, key: {
+        let diagnostics_hierarchy = simple_tree();
+        assert_data_tree!(diagnostics_hierarchy, key: {
             sub: "sub_value",
             sub3: "sub2_value",
         });
@@ -614,8 +615,8 @@ mod tests {
     #[test]
     #[should_panic]
     fn test_exact_match_mismatched_child_name() {
-        let node_hierarchy = complex_tree();
-        assert_data_tree!(node_hierarchy, key: {
+        let diagnostics_hierarchy = complex_tree();
+        assert_data_tree!(diagnostics_hierarchy, key: {
             sub: "sub_value",
             sub2: "sub2_value",
             child1: {
@@ -630,8 +631,8 @@ mod tests {
     #[test]
     #[should_panic]
     fn test_exact_match_mismatched_property_name_in_child() {
-        let node_hierarchy = complex_tree();
-        assert_data_tree!(node_hierarchy, key: {
+        let diagnostics_hierarchy = complex_tree();
+        assert_data_tree!(diagnostics_hierarchy, key: {
             sub: "sub_value",
             sub2: "sub2_value",
             child1: {
@@ -646,8 +647,8 @@ mod tests {
     #[test]
     #[should_panic]
     fn test_exact_match_mismatched_property_value() {
-        let node_hierarchy = simple_tree();
-        assert_data_tree!(node_hierarchy, key: {
+        let diagnostics_hierarchy = simple_tree();
+        assert_data_tree!(diagnostics_hierarchy, key: {
             sub: "sub2_value",
             sub2: "sub2_value",
         });
@@ -656,8 +657,8 @@ mod tests {
     #[test]
     #[should_panic]
     fn test_exact_match_missing_property() {
-        let node_hierarchy = simple_tree();
-        assert_data_tree!(node_hierarchy, key: {
+        let diagnostics_hierarchy = simple_tree();
+        assert_data_tree!(diagnostics_hierarchy, key: {
             sub: "sub_value",
         });
     }
@@ -665,8 +666,8 @@ mod tests {
     #[test]
     #[should_panic]
     fn test_exact_match_missing_child() {
-        let node_hierarchy = complex_tree();
-        assert_data_tree!(node_hierarchy, key: {
+        let diagnostics_hierarchy = complex_tree();
+        assert_data_tree!(diagnostics_hierarchy, key: {
             sub: "sub_value",
             sub2: "sub2_value",
             child1: {
@@ -677,13 +678,13 @@ mod tests {
 
     #[test]
     fn test_partial_match_success() {
-        let node_hierarchy = complex_tree();
+        let diagnostics_hierarchy = complex_tree();
 
         // only verify the top tree name
-        assert_data_tree!(node_hierarchy, key: contains {});
+        assert_data_tree!(diagnostics_hierarchy, key: contains {});
 
         // verify parts of the tree
-        assert_data_tree!(node_hierarchy, key: contains {
+        assert_data_tree!(diagnostics_hierarchy, key: contains {
             sub: "sub_value",
             child1: contains {},
         });
@@ -692,16 +693,16 @@ mod tests {
     #[test]
     #[should_panic]
     fn test_partial_match_nonexistent_property() {
-        let node_hierarchy = simple_tree();
-        assert_data_tree!(node_hierarchy, key: contains {
+        let diagnostics_hierarchy = simple_tree();
+        assert_data_tree!(diagnostics_hierarchy, key: contains {
             sub3: AnyProperty,
         });
     }
 
     #[test]
     fn test_ignore_property_value() {
-        let node_hierarchy = simple_tree();
-        assert_data_tree!(node_hierarchy, key: {
+        let diagnostics_hierarchy = simple_tree();
+        assert_data_tree!(diagnostics_hierarchy, key: {
             sub: AnyProperty,
             sub2: "sub2_value",
         });
@@ -710,8 +711,8 @@ mod tests {
     #[test]
     #[should_panic]
     fn test_ignore_property_value_property_name_is_still_checked() {
-        let node_hierarchy = simple_tree();
-        assert_data_tree!(node_hierarchy, key: {
+        let diagnostics_hierarchy = simple_tree();
+        assert_data_tree!(diagnostics_hierarchy, key: {
             sub1: AnyProperty,
             sub2: "sub2_value",
         })
@@ -719,32 +720,32 @@ mod tests {
 
     #[test]
     fn test_expr_key_syntax() {
-        let node_hierarchy = NodeHierarchy::new(
+        let diagnostics_hierarchy = DiagnosticsHierarchy::new(
             "key",
             vec![Property::String("@time".to_string(), "1.000".to_string())],
             vec![],
         );
-        assert_data_tree!(node_hierarchy, key: {
+        assert_data_tree!(diagnostics_hierarchy, key: {
             "@time": "1.000"
         });
     }
 
     #[test]
     fn test_var_key_syntax() {
-        let node_hierarchy = NodeHierarchy::new(
+        let diagnostics_hierarchy = DiagnosticsHierarchy::new(
             "key",
             vec![Property::String("@time".to_string(), "1.000".to_string())],
             vec![],
         );
         let time_key = "@time";
-        assert_data_tree!(node_hierarchy, key: {
+        assert_data_tree!(diagnostics_hierarchy, key: {
             var time_key: "1.000"
         });
     }
 
     #[test]
     fn test_arrays() {
-        let node_hierarchy = NodeHierarchy::new(
+        let diagnostics_hierarchy = DiagnosticsHierarchy::new(
             "key",
             vec![
                 Property::UintArray("@uints".to_string(), ArrayContent::Values(vec![1, 2, 3])),
@@ -756,7 +757,7 @@ mod tests {
             ],
             vec![],
         );
-        assert_data_tree!(node_hierarchy, key: {
+        assert_data_tree!(diagnostics_hierarchy, key: {
             "@uints": vec![1u64, 2, 3],
             "@ints": vec![-2i64, -4, 0],
             "@doubles": vec![1.3, 2.5, -3.6]
@@ -765,7 +766,7 @@ mod tests {
 
     #[test]
     fn test_histograms() {
-        let node_hierarchy = NodeHierarchy::new(
+        let diagnostics_hierarchy = DiagnosticsHierarchy::new(
             "key",
             vec![
                 Property::UintArray(
@@ -818,7 +819,7 @@ mod tests {
         exponential_assertion.insert_values(vec![
             -3.1, -2.2, -1.3, 0.0, 1.1, 1.2, 2.5, 2.8, 2.0, 3.1, 4.2, 5.3, 6.4, 7.5, 8.6,
         ]);
-        assert_data_tree!(node_hierarchy, key: {
+        assert_data_tree!(diagnostics_hierarchy, key: {
             "@linear-uints": linear_assertion,
             "@linear-ints": vec![
                 Bucket { floor: i64::MIN, upper: 6, count: 8 },
@@ -846,13 +847,13 @@ mod tests {
 
     #[test]
     fn test_matching_tree_assertion_expression() {
-        let node_hierarchy = complex_tree();
+        let diagnostics_hierarchy = complex_tree();
         let child1 = tree_assertion!(
             child1: {
                 child1_sub: 10i64,
             }
         );
-        assert_data_tree!(node_hierarchy, key: {
+        assert_data_tree!(diagnostics_hierarchy, key: {
             sub: "sub_value",
             sub2: "sub2_value",
             child1,
@@ -867,22 +868,22 @@ mod tests {
     #[test]
     #[should_panic]
     fn test_matching_non_unique_property_fails() {
-        let node_hierarchy = non_unique_prop_tree();
-        assert_data_tree!(node_hierarchy, key: { prop: "prop_value#0" });
+        let diagnostics_hierarchy = non_unique_prop_tree();
+        assert_data_tree!(diagnostics_hierarchy, key: { prop: "prop_value#0" });
     }
 
     #[test]
     #[should_panic]
     fn test_matching_non_unique_property_fails_2() {
-        let node_hierarchy = non_unique_prop_tree();
-        assert_data_tree!(node_hierarchy, key: { prop: "prop_value#1" });
+        let diagnostics_hierarchy = non_unique_prop_tree();
+        assert_data_tree!(diagnostics_hierarchy, key: { prop: "prop_value#1" });
     }
 
     #[test]
     #[should_panic]
     fn test_matching_non_unique_property_fails_3() {
-        let node_hierarchy = non_unique_prop_tree();
-        assert_data_tree!(node_hierarchy, key: {
+        let diagnostics_hierarchy = non_unique_prop_tree();
+        assert_data_tree!(diagnostics_hierarchy, key: {
             prop: "prop_value#0",
             prop: "prop_value#1",
         });
@@ -891,8 +892,8 @@ mod tests {
     #[test]
     #[should_panic]
     fn test_matching_non_unique_child_fails() {
-        let node_hierarchy = non_unique_child_tree();
-        assert_data_tree!(node_hierarchy, key: {
+        let diagnostics_hierarchy = non_unique_child_tree();
+        assert_data_tree!(diagnostics_hierarchy, key: {
             child: {
                 prop: 10i64
             }
@@ -902,8 +903,8 @@ mod tests {
     #[test]
     #[should_panic]
     fn test_matching_non_unique_child_fails_2() {
-        let node_hierarchy = non_unique_child_tree();
-        assert_data_tree!(node_hierarchy, key: {
+        let diagnostics_hierarchy = non_unique_child_tree();
+        assert_data_tree!(diagnostics_hierarchy, key: {
             child: {
                 prop: 20i64
             }
@@ -913,8 +914,8 @@ mod tests {
     #[test]
     #[should_panic]
     fn test_matching_non_unique_child_fails_3() {
-        let node_hierarchy = non_unique_child_tree();
-        assert_data_tree!(node_hierarchy, key: {
+        let diagnostics_hierarchy = non_unique_child_tree();
+        assert_data_tree!(diagnostics_hierarchy, key: {
             child: {
                 prop: 10i64,
             },
@@ -924,8 +925,8 @@ mod tests {
         });
     }
 
-    fn simple_tree() -> NodeHierarchy {
-        NodeHierarchy::new(
+    fn simple_tree() -> DiagnosticsHierarchy {
+        DiagnosticsHierarchy::new(
             "key",
             vec![
                 Property::String("sub".to_string(), "sub_value".to_string()),
@@ -935,20 +936,20 @@ mod tests {
         )
     }
 
-    fn complex_tree() -> NodeHierarchy {
-        NodeHierarchy::new(
+    fn complex_tree() -> DiagnosticsHierarchy {
+        DiagnosticsHierarchy::new(
             "key",
             vec![
                 Property::String("sub".to_string(), "sub_value".to_string()),
                 Property::String("sub2".to_string(), "sub2_value".to_string()),
             ],
             vec![
-                NodeHierarchy::new(
+                DiagnosticsHierarchy::new(
                     "child1",
                     vec![Property::Int("child1_sub".to_string(), 10i64)],
                     vec![],
                 ),
-                NodeHierarchy::new(
+                DiagnosticsHierarchy::new(
                     "child2",
                     vec![Property::Uint("child2_sub".to_string(), 20u64)],
                     vec![],
@@ -957,8 +958,8 @@ mod tests {
         )
     }
 
-    fn non_unique_prop_tree() -> NodeHierarchy {
-        NodeHierarchy::new(
+    fn non_unique_prop_tree() -> DiagnosticsHierarchy {
+        DiagnosticsHierarchy::new(
             "key",
             vec![
                 Property::String("prop".to_string(), "prop_value#0".to_string()),
@@ -968,13 +969,21 @@ mod tests {
         )
     }
 
-    fn non_unique_child_tree() -> NodeHierarchy {
-        NodeHierarchy::new(
+    fn non_unique_child_tree() -> DiagnosticsHierarchy {
+        DiagnosticsHierarchy::new(
             "key",
             vec![],
             vec![
-                NodeHierarchy::new("child", vec![Property::Int("prop".to_string(), 10i64)], vec![]),
-                NodeHierarchy::new("child", vec![Property::Int("prop".to_string(), 20i64)], vec![]),
+                DiagnosticsHierarchy::new(
+                    "child",
+                    vec![Property::Int("prop".to_string(), 10i64)],
+                    vec![],
+                ),
+                DiagnosticsHierarchy::new(
+                    "child",
+                    vec![Property::Int("prop".to_string(), 20i64)],
+                    vec![],
+                ),
             ],
         )
     }

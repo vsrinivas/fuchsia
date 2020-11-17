@@ -9,11 +9,12 @@ use {
         DiffType,
     },
     anyhow::{bail, format_err, Error},
-    base64, difference,
-    fuchsia_inspect::{self, format::block::ArrayFormat},
-    fuchsia_inspect_node_hierarchy::{
-        ArrayContent, LinkNodeDisposition, NodeHierarchy, Property as iProperty,
+    base64,
+    diagnostics_hierarchy::{
+        ArrayContent, DiagnosticsHierarchy, LinkNodeDisposition, Property as iProperty,
     },
+    difference,
+    fuchsia_inspect::{self, format::block::ArrayFormat},
     num_derive::{FromPrimitive, ToPrimitive},
     std::{
         self,
@@ -1130,8 +1131,8 @@ enum ArrayType {
     Double = 6,
 }
 
-impl From<NodeHierarchy> for Data {
-    fn from(hierarchy: NodeHierarchy) -> Self {
+impl From<DiagnosticsHierarchy> for Data {
+    fn from(hierarchy: DiagnosticsHierarchy) -> Self {
         let mut nodes = HashMap::new();
         let mut properties = HashMap::new();
 
@@ -1240,7 +1241,7 @@ mod tests {
 
     #[test]
     fn test_parse_hierarchy() -> Result<(), Error> {
-        let hierarchy = NodeHierarchy {
+        let hierarchy = DiagnosticsHierarchy {
             name: "root".to_string(),
             properties: vec![
                 iProperty::String("string".to_string(), "value".to_string()),
@@ -1248,10 +1249,10 @@ mod tests {
                 iProperty::Int("int".to_string(), -5i64),
                 iProperty::Double("double".to_string(), 2.5f64),
             ],
-            children: vec![NodeHierarchy {
+            children: vec![DiagnosticsHierarchy {
                 name: "child".to_string(),
                 properties: vec![iProperty::Bytes("bytes".to_string(), vec![1u8, 2u8])],
-                children: vec![NodeHierarchy {
+                children: vec![DiagnosticsHierarchy {
                     name: "grandchild".to_string(),
                     properties: vec![
                         iProperty::UintArray(

@@ -173,7 +173,7 @@ mod tests {
     use {
         super::*,
         crate::assert_inspect_tree,
-        fuchsia_inspect_node_hierarchy::{NodeHierarchy, Property},
+        diagnostics_hierarchy::{DiagnosticsHierarchy, Property},
         std::convert::TryFrom,
     };
 

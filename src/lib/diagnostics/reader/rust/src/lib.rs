@@ -23,10 +23,8 @@ use std::{
 };
 
 pub use diagnostics_data::{assert_data_tree, tree_assertion, Inspect, Lifecycle, Logs, Severity};
+pub use diagnostics_hierarchy::{DiagnosticsHierarchy, Property};
 pub use fidl_fuchsia_diagnostics::DataType;
-pub use fuchsia_inspect_node_hierarchy::{NodeHierarchy, Property};
-
-pub type DiagnosticsHierarchy = NodeHierarchy;
 
 const RETRY_DELAY_MS: i64 = 300;
 
@@ -547,7 +545,7 @@ mod tests {
                                         called = true;
                                         let result = Data::for_inspect(
                                             "moniker",
-                                            Some(NodeHierarchy::new(
+                                            Some(DiagnosticsHierarchy::new(
                                                 "root",
                                                 vec![Property::Uint("x".to_string(), 1)],
                                                 vec![],

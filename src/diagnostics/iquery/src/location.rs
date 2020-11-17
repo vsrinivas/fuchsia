@@ -9,7 +9,7 @@ use {
     fidl_fuchsia_inspect_deprecated::InspectMarker,
     fidl_fuchsia_io::NodeInfo,
     files_async,
-    fuchsia_inspect::reader::{self, NodeHierarchy, PartialNodeHierarchy},
+    fuchsia_inspect::reader::{self, DiagnosticsHierarchy, PartialNodeHierarchy},
     fuchsia_zircon::DurationNum,
     futures::stream::StreamExt,
     inspect_fidl_load as inspect_fidl, io_util,
@@ -152,7 +152,7 @@ impl TryFrom<PathBuf> for InspectLocation {
 #[derive(Debug)]
 pub struct InspectObject {
     pub location: InspectLocation,
-    pub hierarchy: Option<NodeHierarchy>,
+    pub hierarchy: Option<DiagnosticsHierarchy>,
 }
 
 impl InspectObject {
