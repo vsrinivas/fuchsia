@@ -42,16 +42,16 @@ impl DataController for ModelStatsController {
             bootfs_files = zbi.bootfs.len();
         }
         if let Ok(components) = model.get::<Components>() {
-            components_len = components.entries.len();
+            components_len = components.len();
         }
         if let Ok(packages) = model.get::<Packages>() {
-            packages_len = packages.entries.len();
+            packages_len = packages.len();
         }
         if let Ok(manifests) = model.get::<Manifests>() {
-            manifests_len = manifests.entries.len();
+            manifests_len = manifests.len();
         }
         if let Ok(routes) = model.get::<Routes>() {
-            routes_len = routes.entries.len();
+            routes_len = routes.len();
         }
 
         let stats = ModelStats {

@@ -8,7 +8,10 @@ use {
     serde::{Deserialize, Serialize},
     std::collections::HashMap,
     uuid::Uuid,
+    core::slice::Iter,
 };
+
+
 
 /// Defines a component. Each component has a unique id which is used to link
 /// it in the Route table. Each component also has a url and a version. This
@@ -26,6 +29,24 @@ pub struct Component {
 #[derive(Default, Deserialize, Serialize, Debug, Clone, PartialEq, Eq)]
 pub struct Components {
     pub entries: Vec<Component>,
+}
+
+impl Components {
+    pub fn new(entries: Vec<Component>) -> Self {
+        Self { entries }
+    }
+
+    pub fn len(&self) -> usize {
+        self.entries.len()
+    }
+
+    pub fn iter(&self) -> Iter<'_, Component> {
+        self.entries.iter()
+    }
+
+    pub fn push(&mut self, value: Component) {
+        self.entries.push(value)
+    }
 }
 
 impl DataCollection for Components {
@@ -49,6 +70,24 @@ pub struct Packages {
     pub entries: Vec<Package>,
 }
 
+impl Packages {
+    pub fn new(entries: Vec<Package>) -> Self {
+        Self { entries }
+    }
+
+    pub fn len(&self) -> usize {
+        self.entries.len()
+    }
+
+    pub fn iter(&self) -> Iter<'_, Package> {
+        self.entries.iter()
+    }
+
+    pub fn push(&mut self, value: Package) {
+        self.entries.push(value)
+    }
+}
+
 impl DataCollection for Packages {
     fn uuid() -> Uuid {
         Uuid::parse_str("80d8b6ab-6ba5-45bc-9461-ba9cc9e0c55b").unwrap()
@@ -67,6 +106,24 @@ pub struct ComponentInstance {
 #[derive(Default, Deserialize, Serialize, Debug, Clone, PartialEq, Eq)]
 pub struct ComponentInstances {
     pub entries: Vec<ComponentInstance>,
+}
+
+impl ComponentInstances {
+    pub fn new(entries: Vec<ComponentInstance>) -> Self {
+        Self { entries }
+    }
+
+    pub fn len(&self) -> usize {
+        self.entries.len()
+    }
+
+    pub fn iter(&self) -> Iter<'_, ComponentInstance> {
+        self.entries.iter()
+    }
+
+    pub fn push(&mut self, value: ComponentInstance) {
+        self.entries.push(value)
+    }
 }
 
 impl DataCollection for ComponentInstances {
@@ -97,6 +154,24 @@ pub struct Manifests {
     pub entries: Vec<Manifest>,
 }
 
+impl Manifests {
+    pub fn new(entries: Vec<Manifest>) -> Self {
+        Self { entries }
+    }
+
+    pub fn len(&self) -> usize {
+        self.entries.len()
+    }
+
+    pub fn iter(&self) -> Iter<'_, Manifest> {
+        self.entries.iter()
+    }
+
+    pub fn push(&mut self, value: Manifest) {
+        self.entries.push(value)
+    }
+}
+
 impl DataCollection for Manifests {
     fn uuid() -> Uuid {
         Uuid::parse_str("324da08b-5ab8-43f1-8ff1-4687f32c7712").unwrap()
@@ -122,6 +197,24 @@ pub struct Routes {
     pub entries: Vec<Route>,
 }
 
+impl Routes {
+    pub fn new(entries: Vec<Route>) -> Self {
+        Self { entries }
+    }
+
+    pub fn len(&self) -> usize {
+        self.entries.len()
+    }
+
+    pub fn iter(&self) -> Iter<'_, Route> {
+        self.entries.iter()
+    }
+
+    pub fn push(&mut self, value: Route) {
+        self.entries.push(value)
+    }
+}
+
 impl DataCollection for Routes {
     fn uuid() -> Uuid {
         Uuid::parse_str("6def84c2-afea-458d-bd36-7dc550e84e90").unwrap()
@@ -140,6 +233,24 @@ pub struct Protocol {
 #[derive(Default, Deserialize, Serialize, Debug, Clone, PartialEq, Eq)]
 pub struct Protocols {
     pub entries: Vec<Protocol>,
+}
+
+impl Protocols {
+    pub fn new(entries: Vec<Protocol>) -> Self {
+        Self { entries }
+    }
+
+    pub fn len(&self) -> usize {
+        self.entries.len()
+    }
+
+    pub fn iter(&self) -> Iter<'_, Protocol> {
+        self.entries.iter()
+    }
+
+    pub fn push(&mut self, value: Protocol) {
+        self.entries.push(value)
+    }
 }
 
 impl DataCollection for Protocols {

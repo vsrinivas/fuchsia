@@ -15,7 +15,7 @@ use {
 /// Converts a component_url to an internal component_id.
 pub fn component_from_url(model: Arc<DataModel>, url: &str) -> Option<Component> {
     if let Ok(components) = model.get::<Components>() {
-        for component in components.entries.iter() {
+        for component in components.iter() {
             if component.url == url {
                 return Some(component.clone());
             }
@@ -109,7 +109,7 @@ mod tests {
 
         let comp = make_component(123, "fake_url", 0, false);
         let mut components = Components::default();
-        components.entries.push(comp.clone());
+        components.push(comp.clone());
         model.set(components).unwrap();
 
         let request = DefaultComponentRequest { component_id: Some(json!(123)), url: None };
@@ -125,7 +125,7 @@ mod tests {
 
         let comp = make_component(123, "fake_url", 0, false);
         let mut components = Components::default();
-        components.entries.push(comp.clone());
+        components.push(comp.clone());
         model.set(components).unwrap();
 
         let request = DefaultComponentRequest { component_id: Some(json!("123")), url: None };
@@ -140,7 +140,7 @@ mod tests {
         let model = Arc::new(DataModel::connect(uri).unwrap());
         let comp = make_component(123, "fake_url", 0, false);
         let mut components = Components::default();
-        components.entries.push(comp.clone());
+        components.push(comp.clone());
         model.set(components).unwrap();
         let request =
             DefaultComponentRequest { component_id: None, url: Some("fake_url".to_string()) };
@@ -155,7 +155,7 @@ mod tests {
         let model = Arc::new(DataModel::connect(uri).unwrap());
         let comp = make_component(123, "fake_url", 0, false);
         let mut components = Components::default();
-        components.entries.push(comp.clone());
+        components.push(comp.clone());
         model.set(components).unwrap();
         let request = DefaultComponentRequest { component_id: None, url: None };
         assert!(request.component_id(model).is_err());
@@ -168,7 +168,7 @@ mod tests {
         let model = Arc::new(DataModel::connect(uri).unwrap());
         let comp = make_component(123, "fake_url", 0, false);
         let mut components = Components::default();
-        components.entries.push(comp.clone());
+        components.push(comp.clone());
         model.set(components).unwrap();
         let request = DefaultComponentRequest { component_id: Some(json!(125)), url: None };
         assert!(request.component_id(model).is_err());

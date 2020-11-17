@@ -453,10 +453,10 @@ impl DataCollector for PackageDataCollector {
         for (_, val) in response.components.into_iter() {
             model_comps.push(val);
         }
-        model.set(Components { entries: model_comps })?;
-        model.set(Packages { entries: response.packages })?;
-        model.set(Manifests { entries: response.manifests })?;
-        model.set(Routes { entries: response.routes })?;
+        model.set(Components::new(model_comps))?;
+        model.set(Packages::new(response.packages))?;
+        model.set(Manifests::new(response.manifests))?;
+        model.set(Routes::new(response.routes))?;
         if let Some(zbi) = response.zbi {
             model.set(zbi)?;
         } else {

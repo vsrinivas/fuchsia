@@ -50,7 +50,7 @@ impl DataController for ComponentGraphController {
         let req: DefaultComponentRequest = serde_json::from_value(value)?;
         let component_id = req.component_id(model.clone())?;
         let components = model.get::<Components>()?;
-        for component in components.entries.iter() {
+        for component in components.iter() {
             if component.id as i64 == component_id {
                 return Ok(serde_json::to_value(component)?);
             }
@@ -95,7 +95,7 @@ impl DataController for ComponentManifestGraphController {
         let component_id = req.component_id(model.clone())?;
 
         let manifests = model.get::<Manifests>()?;
-        for manifest in manifests.entries.iter() {
+        for manifest in manifests.iter() {
             if manifest.component_id as i64 == component_id {
                 if let ManifestData::Version1(data) = &manifest.manifest {
                     return Ok(serde_json::from_str(data)?);
@@ -165,8 +165,8 @@ mod tests {
         let comp1 = make_component(1, "fake_url", 0, false);
         let comp2 = make_component(2, "fake_url_2", 0, true);
         let mut components = Components::default();
-        components.entries.push(comp1.clone());
-        components.entries.push(comp2.clone());
+        components.push(comp1.clone());
+        components.push(comp2.clone());
         model.set(components).unwrap();
 
         let controller = ComponentsGraphController::default();
@@ -187,8 +187,8 @@ mod tests {
         let comp_1 = make_component(1, "fake_url", 0, false);
         let comp_2 = make_component(2, "fake_url_2", 0, true);
         let mut components = Components::default();
-        components.entries.push(comp_1.clone());
-        components.entries.push(comp_2.clone());
+        components.push(comp_1.clone());
+        components.push(comp_2.clone());
         model.set(components).unwrap();
 
         let controller = ComponentGraphController::default();
@@ -217,8 +217,8 @@ mod tests {
         let comp1 = make_component(1, "fake_url", 0, false);
         let comp2 = make_component(2, "fake_url_2", 0, true);
         let mut components = Components::default();
-        components.entries.push(comp1.clone());
-        components.entries.push(comp2.clone());
+        components.push(comp1.clone());
+        components.push(comp2.clone());
         model.set(components).unwrap();
 
         let controller = ComponentGraphController::default();
@@ -237,13 +237,13 @@ mod tests {
         let comp1 = make_component(1, "fake_url", 0, false);
         let comp2 = make_component(2, "fake_url_2", 0, true);
         let mut components = Components::default();
-        components.entries.push(comp1.clone());
-        components.entries.push(comp2.clone());
+        components.push(comp1.clone());
+        components.push(comp2.clone());
         model.set(components).unwrap();
 
         let manifest1 = make_manifest(1, "{\"sandbox\": \"fake_manifest\"}");
         let mut manifests = Manifests::default();
-        manifests.entries.push(manifest1.clone());
+        manifests.push(manifest1.clone());
         model.set(manifests).unwrap();
 
         let controller = ComponentManifestGraphController::default();
@@ -263,13 +263,13 @@ mod tests {
         let comp1 = make_component(1, "fake_url", 0, false);
         let comp2 = make_component(2, "fake_url_2", 0, true);
         let mut components = Components::default();
-        components.entries.push(comp1.clone());
-        components.entries.push(comp2.clone());
+        components.push(comp1.clone());
+        components.push(comp2.clone());
         model.set(components).unwrap();
 
         let manifest1 = make_manifest(1, "{\"fake_manifest\": \"fake_manifest\"");
         let mut manifests = Manifests::default();
-        manifests.entries.push(manifest1.clone());
+        manifests.push(manifest1.clone());
         model.set(manifests).unwrap();
 
         let controller = ComponentManifestGraphController::default();
@@ -288,13 +288,13 @@ mod tests {
         let comp1 = make_component(1, "fake_url", 0, false);
         let comp2 = make_component(2, "fake_url_2", 0, true);
         let mut components = Components::default();
-        components.entries.push(comp1.clone());
-        components.entries.push(comp2.clone());
+        components.push(comp1.clone());
+        components.push(comp2.clone());
         model.set(components).unwrap();
 
         let manifest1 = make_manifest(1, "{\"sandbox\": \"fake_manifest\"}");
         let mut manifests = Manifests::default();
-        manifests.entries.push(manifest1.clone());
+        manifests.push(manifest1.clone());
         model.set(manifests).unwrap();
 
         let controller = ComponentManifestGraphController::default();

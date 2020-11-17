@@ -52,7 +52,7 @@ mod tests {
         let model = Arc::new(DataModel::connect(uri).unwrap());
         let packages_controller = PackagesGraphController::default();
         let mut packages = Packages::default();
-        packages.entries.push(Package {
+        packages.push(Package {
             url: "foo".to_string(),
             merkle: "bar".to_string(),
             contents: HashMap::new(),

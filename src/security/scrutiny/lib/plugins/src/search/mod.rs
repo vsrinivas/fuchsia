@@ -55,14 +55,14 @@ mod tests {
         let model = data_model();
         let search = ComponentSearchController::default();
         model
-            .set(Components {
-                entries: vec![Component {
+            .set(Components::new(
+                vec![Component {
                     id: 0,
                     url: "foo".to_string(),
                     version: 0,
                     inferred: false,
                 }],
-            })
+            ))
             .unwrap();
         let request_one = ComponentSearchRequest { url: "foo".to_string() };
         let request_two = ComponentSearchRequest { url: "bar".to_string() };
@@ -81,13 +81,13 @@ mod tests {
         let model = data_model();
         let search = ManifestSearchController::default();
         model
-            .set(Manifests {
-                entries: vec![Manifest {
+            .set(Manifests::new(
+                vec![Manifest {
                     component_id: 0,
                     manifest: ManifestData::Version1("foo".to_string()),
                     uses: vec![],
                 }],
-            })
+            ))
             .unwrap();
         let request_one = ManifestSearchRequest { manifest: "foo".to_string() };
         let request_two = ManifestSearchRequest { manifest: "bar".to_string() };
@@ -108,13 +108,13 @@ mod tests {
         let mut contents = HashMap::new();
         contents.insert("foo".to_string(), "bar".to_string());
         model
-            .set(Packages {
-                entries: vec![Package {
+            .set(Packages::new(
+                vec![Package {
                     url: "test_url".to_string(),
                     merkle: "test_merkle".to_string(),
                     contents,
                 }],
-            })
+            ))
             .unwrap();
         let request_one = PackageSearchRequest { files: "foo".to_string() };
         let request_two = PackageSearchRequest { files: "bar".to_string() };
@@ -133,15 +133,15 @@ mod tests {
         let model = data_model();
         let search = RouteSearchController::default();
         model
-            .set(Routes {
-                entries: vec![Route {
+            .set(Routes::new(
+                vec![Route {
                     id: 0,
                     src_id: 1,
                     dst_id: 2,
                     service_name: "foo".to_string(),
                     protocol_id: 0,
                 }],
-            })
+            ))
             .unwrap();
         let request_one = RouteSearchRequest { service_name: "foo".to_string() };
         let request_two = RouteSearchRequest { service_name: "bar".to_string() };

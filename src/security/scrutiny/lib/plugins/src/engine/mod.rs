@@ -130,9 +130,8 @@ mod tests {
         let model_stats = ModelStatsController::default();
         assert_eq!(model_stats.query(model.clone(), json!("")).is_ok(), true);
         model
-            .set(Components {
-                entries: vec![Component { id: 1, url: "".to_string(), version: 1, inferred: true }],
-            })
+            .set(Components::new(vec![Component { id: 1, url: "".to_string(), version: 1, inferred: true }],
+            ))
             .unwrap();
         let response = model_stats.query(model.clone(), json!("")).unwrap();
         let stats: ModelStats = serde_json::from_value(response).unwrap();
