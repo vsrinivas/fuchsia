@@ -7,7 +7,6 @@
 #include <fuchsia/scheduler/cpp/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/fzl/owned-vmo-mapper.h>
-#include <lib/fzl/vmo-mapper.h>
 #include <lib/zx/thread.h>
 #include <limits.h>
 #include <zircon/status.h>
@@ -28,16 +27,27 @@ namespace pager {
 
 UserPager::UserPager(BlobfsMetrics* metrics) : metrics_(metrics) {}
 
-zx::status<std::unique_ptr<UserPager>> UserPager::Create(std::unique_ptr<TransferBuffer> buffer,
-                                                         BlobfsMetrics* metrics) {
-  ZX_DEBUG_ASSERT(metrics != nullptr && buffer != nullptr && buffer->vmo().is_valid());
+zx::status<std::unique_ptr<UserPager>> UserPager::Create(
+    std::unique_ptr<TransferBuffer> buffer, std::unique_ptr<TransferBuffer> compressed_buffer,
+    BlobfsMetrics* metrics) {
+  ZX_DEBUG_ASSERT(metrics != nullptr && buffer != nullptr && buffer->vmo().is_valid() &&
+                  compressed_buffer != nullptr && compressed_buffer->vmo().is_valid());
 
   TRACE_DURATION("blobfs", "UserPager::Create");
 
   auto pager = std::unique_ptr<UserPager>(new UserPager(metrics));
-  pager->transfer_buffer_ = std::move(buffer);
+  pager->uncompressed_transfer_buffer_ = std::move(buffer);
+  pager->compressed_transfer_buffer_ = std::move(compressed_buffer);
 
-  zx_status_t status = zx::vmo::create(kDecompressionBufferSize, 0, &pager->decompression_buffer_);
+  zx_status_t status = pager->compressed_mapper_.Map(pager->compressed_transfer_buffer_->vmo(), 0,
+                                                     kTransferBufferSize, ZX_VM_PERM_READ);
+  if (status != ZX_OK) {
+    FS_TRACE_ERROR("blobfs: Failed to map the compressed TransferBuffer: %s\n",
+                   zx_status_get_string(status));
+    return zx::error(status);
+  }
+
+  status = zx::vmo::create(kDecompressionBufferSize, 0, &pager->decompression_buffer_);
   if (status != ZX_OK) {
     FS_TRACE_ERROR("blobfs: Failed to create decompression buffer: %s\n",
                    zx_status_get_string(status));
@@ -201,12 +211,12 @@ PagerErrorStatus UserPager::TransferUncompressedPagesToVmo(uint64_t requested_of
   auto decommit = fbl::MakeAutoCall([this, length = length]() {
     // Decommit pages in the transfer buffer that might have been populated. All blobs share the
     // same transfer buffer - this prevents data leaks between different blobs.
-    transfer_buffer_->vmo().op_range(ZX_VMO_OP_DECOMMIT, 0, fbl::round_up(length, kBlobfsBlockSize),
-                                     nullptr, 0);
+    uncompressed_transfer_buffer_->vmo().op_range(
+        ZX_VMO_OP_DECOMMIT, 0, fbl::round_up(length, kBlobfsBlockSize), nullptr, 0);
   });
 
   // Read from storage into the transfer buffer.
-  auto populate_status = transfer_buffer_->Populate(offset, length, info);
+  auto populate_status = uncompressed_transfer_buffer_->Populate(offset, length, info);
   if (!populate_status.is_ok()) {
     FS_TRACE_ERROR("blobfs: TransferUncompressed: Failed to populate transfer vmo: %s\n",
                    populate_status.status_string());
@@ -222,8 +232,8 @@ PagerErrorStatus UserPager::TransferUncompressedPagesToVmo(uint64_t requested_of
   // transfering the pages to the destination VMO.
   static_assert(kBlobfsBlockSize % PAGE_SIZE == 0);
   if (rounded_length > length) {
-    zx_status_t status = transfer_buffer_->vmo().op_range(ZX_VMO_OP_ZERO, length,
-                                                          rounded_length - length, nullptr, 0);
+    zx_status_t status = uncompressed_transfer_buffer_->vmo().op_range(
+        ZX_VMO_OP_ZERO, length, rounded_length - length, nullptr, 0);
     if (status != ZX_OK) {
       FS_TRACE_ERROR(
           "blobfs: TransferUncompressed: Failed to remove Merkle tree from transfer buffer: %s\n",
@@ -240,7 +250,8 @@ PagerErrorStatus UserPager::TransferUncompressedPagesToVmo(uint64_t requested_of
     auto unmap = fbl::MakeAutoCall([&]() { mapping.Unmap(); });
 
     // Map the transfer VMO in order to pass the verifier a pointer to the data.
-    zx_status_t status = mapping.Map(transfer_buffer_->vmo(), 0, rounded_length, ZX_VM_PERM_READ);
+    zx_status_t status =
+        mapping.Map(uncompressed_transfer_buffer_->vmo(), 0, rounded_length, ZX_VM_PERM_READ);
     if (status != ZX_OK) {
       FS_TRACE_ERROR("blobfs: TransferUncompressed: Failed to map transfer buffer: %s\n",
                      zx_status_get_string(status));
@@ -257,7 +268,8 @@ PagerErrorStatus UserPager::TransferUncompressedPagesToVmo(uint64_t requested_of
 
   ZX_DEBUG_ASSERT(offset % PAGE_SIZE == 0);
   // Move the pages from the transfer buffer to the destination VMO.
-  zx_status_t status = pager_.supply_pages(vmo, offset, rounded_length, transfer_buffer_->vmo(), 0);
+  zx_status_t status =
+      pager_.supply_pages(vmo, offset, rounded_length, uncompressed_transfer_buffer_->vmo(), 0);
   if (status != ZX_OK) {
     FS_TRACE_ERROR("blobfs: TransferUncompressed: Failed to supply pages to paged VMO: %s\n",
                    zx_status_get_string(status));
@@ -298,29 +310,19 @@ PagerErrorStatus UserPager::TransferChunkedPagesToVmo(uint64_t requested_offset,
   size_t read_offset = fbl::round_down(mapping.compressed_offset, kBlobfsBlockSize);
   size_t read_len = (mapping.compressed_length + offset_of_compressed_data);
 
-  auto populate_status = transfer_buffer_->Populate(read_offset, read_len, info);
+  auto decommit_compressed = fbl::MakeAutoCall([this, length = read_len]() {
+    // Decommit pages in the transfer buffer that might have been populated. All blobs share the
+    // same transfer buffer - this prevents data leaks between different blobs.
+    compressed_transfer_buffer_->vmo().op_range(
+        ZX_VMO_OP_DECOMMIT, 0, fbl::round_up(length, kBlobfsBlockSize), nullptr, 0);
+  });
+
+  auto populate_status = compressed_transfer_buffer_->Populate(read_offset, read_len, info);
   if (!populate_status.is_ok()) {
     FS_TRACE_ERROR("blobfs: TransferChunked: Failed to populate transfer vmo: %s\n",
                    populate_status.status_string());
     return ToPagerErrorStatus(populate_status.status_value());
   }
-
-  auto decommit_compressed = fbl::MakeAutoCall([this, length = read_len]() {
-    // Decommit pages in the transfer buffer that might have been populated. All blobs share the
-    // same transfer buffer - this prevents data leaks between different blobs.
-    transfer_buffer_->vmo().op_range(ZX_VMO_OP_DECOMMIT, 0, fbl::round_up(length, kBlobfsBlockSize),
-                                     nullptr, 0);
-  });
-
-  // Map the transfer VMO in order to pass the decompressor a pointer to the data.
-  fzl::VmoMapper compressed_mapper;
-  zx_status_t status = compressed_mapper.Map(transfer_buffer_->vmo(), 0, read_len, ZX_VM_PERM_READ);
-  if (status != ZX_OK) {
-    FS_TRACE_ERROR("blobfs: TransferChunked: Failed to map transfer buffer: %s\n",
-                   zx_status_get_string(status));
-    return ToPagerErrorStatus(status);
-  }
-  auto unmap_compression = fbl::MakeAutoCall([&]() { compressed_mapper.Unmap(); });
 
   auto decommit_decompressed = fbl::MakeAutoCall([this, length = mapping.decompressed_length]() {
     // Decommit pages in the decompression buffer that might have been populated. All blobs share
@@ -331,8 +333,9 @@ PagerErrorStatus UserPager::TransferChunkedPagesToVmo(uint64_t requested_offset,
 
   // Map the decompression VMO.
   fzl::VmoMapper decompressed_mapper;
-  if ((status = decompressed_mapper.Map(decompression_buffer_, 0, mapping.decompressed_length,
-                                        ZX_VM_PERM_READ | ZX_VM_PERM_WRITE)) != ZX_OK) {
+  if (zx_status_t status =
+          decompressed_mapper.Map(decompression_buffer_, 0, mapping.decompressed_length,
+                                  ZX_VM_PERM_READ | ZX_VM_PERM_WRITE) != ZX_OK) {
     FS_TRACE_ERROR("blobfs: TransferChunked: Failed to map decompress buffer: %s\n",
                    zx_status_get_string(status));
     return ToPagerErrorStatus(status);
@@ -342,8 +345,8 @@ PagerErrorStatus UserPager::TransferChunkedPagesToVmo(uint64_t requested_offset,
   // Decompress the data
   fs::Ticker ticker(metrics_->Collecting());
   size_t decompressed_size = mapping.decompressed_length;
-  uint8_t* src = static_cast<uint8_t*>(compressed_mapper.start()) + offset_of_compressed_data;
-  status =
+  uint8_t* src = static_cast<uint8_t*>(compressed_mapper_.start()) + offset_of_compressed_data;
+  zx_status_t status =
       info.decompressor->DecompressRange(decompressed_mapper.start(), &decompressed_size, src,
                                          mapping.compressed_length, mapping.decompressed_offset);
   if (status != ZX_OK) {

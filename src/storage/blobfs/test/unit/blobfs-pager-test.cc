@@ -197,15 +197,19 @@ class MockBlobFactory {
   bool data_corruption_ = false;
 };
 
+using BlobRegistry = std::map<char, std::unique_ptr<MockBlob>>;
+
 // Mock transfer buffer. Defines the |TransferBuffer| interface such that the result of reads on
 // distinct mock blobs can be verified.
 class MockTransferBuffer : public TransferBuffer {
  public:
-  static std::unique_ptr<MockTransferBuffer> Create(size_t sz) {
+  static std::unique_ptr<MockTransferBuffer> Create(size_t sz, BlobRegistry* registry) {
     EXPECT_EQ(sz % ZX_PAGE_SIZE, 0ul);
     zx::vmo vmo;
     EXPECT_EQ(zx::vmo::create(sz, 0, &vmo), ZX_OK);
-    return std::unique_ptr<MockTransferBuffer>(new MockTransferBuffer(std::move(vmo)));
+    std::unique_ptr<MockTransferBuffer> buffer(new MockTransferBuffer(std::move(vmo)));
+    buffer->blob_registry_ = registry;
+    return buffer;
   }
 
   void SetFailureMode(PagerErrorStatus mode) {
@@ -217,13 +221,6 @@ class MockTransferBuffer : public TransferBuffer {
       mapping_.Map(vmo_, 0, ZX_PAGE_SIZE, ZX_VM_PERM_READ);
     }
     failure_mode_ = mode;
-  }
-
-  MockBlob* RegisterBlob(char identifier, std::unique_ptr<MockBlob> blob) {
-    EXPECT_EQ(blob_registry_.find(identifier), blob_registry_.end());
-    auto blob_ptr = blob.get();
-    blob_registry_[identifier] = std::move(blob);
-    return blob_ptr;
   }
 
   void SetDoPartialTransfer(bool do_partial_transfer = true) {
@@ -241,8 +238,8 @@ class MockTransferBuffer : public TransferBuffer {
       return zx::error(ZX_ERR_IO_REFUSED);
     }
     char identifier = static_cast<char>(info.identifier);
-    EXPECT_NE(blob_registry_.find(identifier), blob_registry_.end());
-    const MockBlob& blob = *blob_registry_[identifier];
+    EXPECT_NE(blob_registry_->find(identifier), blob_registry_->end());
+    const MockBlob& blob = *(blob_registry_->at(identifier));
     EXPECT_EQ(offset % kBlobfsBlockSize, 0ul);
     EXPECT_LE(offset + length, blob.raw_data_size());
     // Fill the transfer buffer with the blob's data, to service page requests.
@@ -267,27 +264,34 @@ class MockTransferBuffer : public TransferBuffer {
     return zx::ok();
   }
 
+  void AssertNoCommittedBytes() const {
+    zx_info_vmo_t info;
+    ASSERT_EQ(ZX_OK, vmo_.get_info(ZX_INFO_VMO, &info, sizeof(info), nullptr, nullptr));
+    ASSERT_EQ(0ul, info.committed_bytes);
+  }
+
   const zx::vmo& vmo() const final { return vmo_; }
 
  private:
   explicit MockTransferBuffer(zx::vmo vmo) : vmo_(std::move(vmo)) {}
 
   zx::vmo vmo_;
-  // Used to induce failures (zx_pager_supply_pages will return ZX_ERR_BAD_STATE if the supply
-  // VMO is mapped. See |failure_mode_|.
   fzl::VmoMapper mapping_;
-  std::map<char, std::unique_ptr<MockBlob>> blob_registry_ = {};
+  BlobRegistry* blob_registry_;
   bool do_partial_transfer_ = false;
   PagerErrorStatus failure_mode_ = PagerErrorStatus::kOK;
   bool do_merkle_tree_at_end_of_data_ = false;
 };
 
 class BlobfsPagerTest : public testing::Test {
- public:
+ protected:
   void SetUp() override {
-    auto buffer = MockTransferBuffer::Create(kTransferBufferSize);
+    auto buffer = MockTransferBuffer::Create(kTransferBufferSize, &blob_registry_);
+    auto compressed_buffer = MockTransferBuffer::Create(kTransferBufferSize, &blob_registry_);
     buffer_ = buffer.get();
-    auto status_or_pager = UserPager::Create(std::move(buffer), &metrics_);
+    compressed_buffer_ = compressed_buffer.get();
+    auto status_or_pager =
+        UserPager::Create(std::move(buffer), std::move(compressed_buffer), &metrics_);
     ASSERT_TRUE(status_or_pager.is_ok());
     pager_ = std::move(status_or_pager).value();
     factory_ = std::make_unique<MockBlobFactory>(pager_.get(), &metrics_);
@@ -297,14 +301,16 @@ class BlobfsPagerTest : public testing::Test {
                        CompressionAlgorithm algorithm = CompressionAlgorithm::UNCOMPRESSED,
                        size_t sz = kDefaultBlobSize) {
     std::unique_ptr<MockBlob> blob = factory_->CreateBlob(identifier, algorithm, sz);
-    return buffer_->RegisterBlob(identifier, std::move(blob));
+    EXPECT_EQ(blob_registry_.find(identifier), blob_registry_.end());
+    auto blob_ptr = blob.get();
+    blob_registry_[identifier] = std::move(blob);
+    return blob_ptr;
   }
 
   void ResetPager() { pager_.reset(); }
 
-  MockTransferBuffer& transfer_buffer() { return *buffer_; }
-
   void SetFailureMode(PagerErrorStatus mode) {
+    compressed_buffer_->SetFailureMode(mode);
     buffer_->SetFailureMode(mode);
     if (mode == PagerErrorStatus::kErrDataIntegrity) {
       factory_->SetDataCorruption(true);
@@ -313,11 +319,12 @@ class BlobfsPagerTest : public testing::Test {
     }
   }
 
- private:
   BlobfsMetrics metrics_{false};
   std::unique_ptr<UserPager> pager_;
+  BlobRegistry blob_registry_ = {};
   // Owned by |pager_|.
   MockTransferBuffer* buffer_ = nullptr;
+  MockTransferBuffer* compressed_buffer_ = nullptr;
   std::unique_ptr<MockBlobFactory> factory_;
 };
 
@@ -444,6 +451,24 @@ TEST_F(BlobfsPagerTest, ReadRandomMultipleBlobsMultithreaded) {
   }
 }
 
+TEST_F(BlobfsPagerTest, NoLeakTransferData_Uncompressed) {
+  MockBlob* blob = CreateBlob();
+  RandomBlobReader reader;
+  for (int i = 0; i < kNumReadRequests; i++) {
+    reader.ReadOnce(blob);
+    buffer_->AssertNoCommittedBytes();
+  }
+}
+
+TEST_F(BlobfsPagerTest, NoLeakTransferData_ZstdChunked) {
+  MockBlob* blob = CreateBlob('x', CompressionAlgorithm::CHUNKED);
+  RandomBlobReader reader;
+  for (int i = 0; i < kNumReadRequests; i++) {
+    reader.ReadOnce(blob);
+    compressed_buffer_->AssertNoCommittedBytes();
+  }
+}
+
 TEST_F(BlobfsPagerTest, CommitRange_ExactLength) {
   MockBlob* blob = CreateBlob();
   // Attempt to commit the entire blob. The zx_vmo_op_range(ZX_VMO_OP_COMMIT) call will return
@@ -543,7 +568,7 @@ TEST_F(BlobfsPagerTest, PartiallyCommittedBuffer) {
   // The blob contents must be zero, since we want verification to pass but we also want the
   // data to only be half filled (the other half defaults to zero because it is decommitted.)
   MockBlob* blob = CreateBlob('\0', CompressionAlgorithm::UNCOMPRESSED);
-  transfer_buffer().SetDoPartialTransfer();
+  buffer_->SetDoPartialTransfer();
   blob->CommitRange(0, kDefaultPagedVmoSize);
 }
 
@@ -654,7 +679,7 @@ TEST_F(BlobfsPagerTest, ReadWithMerkleTreeSharingTheLastBlockWithData) {
   // The blob verifier checks that the end of the blob is zeroed.  The pager needs to remove the
   // Merkle tree from the last block of the data before trying to verify the blob or verification
   // will fail.
-  transfer_buffer().SetDoMerkleTreeAtEndOfData();
+  buffer_->SetDoMerkleTreeAtEndOfData();
   blob->Read(0, blob_size);
 }
 
