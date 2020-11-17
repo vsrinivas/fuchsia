@@ -63,8 +63,8 @@ bool VmoReadOrWriteMapTestImpl(perftest::RepeatState* state, uint32_t copy_size,
 
   if (do_write) {
     while (state->KeepRunning()) {
-      ASSERT_OK(zx::vmar::root_self()->map(
-          ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | flags, 0, vmo, 0, copy_size, &mapped_addr));
+      ASSERT_OK(zx::vmar::root_self()->map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | flags, 0, vmo, 0,
+                                           copy_size, &mapped_addr));
       if (user_memcpy) {
         std::memcpy(reinterpret_cast<void*>(mapped_addr), buffer.data(), copy_size);
       } else {
@@ -75,8 +75,8 @@ bool VmoReadOrWriteMapTestImpl(perftest::RepeatState* state, uint32_t copy_size,
     }
   } else {  // read
     while (state->KeepRunning()) {
-      ASSERT_OK(zx::vmar::root_self()->map(
-          ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | flags, 0, vmo, 0, copy_size, &mapped_addr));
+      ASSERT_OK(zx::vmar::root_self()->map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | flags, 0, vmo, 0,
+                                           copy_size, &mapped_addr));
       if (user_memcpy) {
         std::memcpy(buffer.data(), reinterpret_cast<void*>(mapped_addr), copy_size);
       } else {
@@ -99,16 +99,16 @@ bool VmoReadOrWriteMapRangeTest(perftest::RepeatState* state, uint32_t copy_size
   return VmoReadOrWriteMapTestImpl(state, copy_size, do_write, ZX_VM_MAP_RANGE, user_memcpy);
 }
 
-// Measure the time taken to clone a vmo and destroy it. If do_map=true, then
-// this function tests the case where the original vmo is mapped; otherwise
-// it tests the case where the original vmo is not mapped.
-bool VmoCloneTest(perftest::RepeatState* state, uint32_t copy_size, bool do_map) {
-  if (do_map) {
+// Measure the time taken to clone a vmo and destroy it. If map_size is non zero,
+// then this function tests the case where the original vmo is mapped in chunks
+// of map_size; otherwise it tests the case where the original vmo is not mapped.
+bool VmoCloneTest(perftest::RepeatState* state, uint32_t copy_size, uint32_t map_size) {
+  if (map_size > 0) {
     state->DeclareStep("map");
   }
   state->DeclareStep("clone");
   state->DeclareStep("close");
-  if (do_map) {
+  if (map_size > 0) {
     state->DeclareStep("unmap");
   }
 
@@ -116,11 +116,20 @@ bool VmoCloneTest(perftest::RepeatState* state, uint32_t copy_size, bool do_map)
   ASSERT_OK(zx::vmo::create(copy_size, 0, &vmo));
   ASSERT_OK(vmo.op_range(ZX_VMO_OP_COMMIT, 0, copy_size, nullptr, 0));
 
+  zx::vmar vmar;
+  zx_vaddr_t addr = 0;
+  // Allocate a single vmar so we have a single reserved block if mapping in using multiple chunks.
+  ASSERT_OK(zx::vmar::root_self()->allocate2(
+      ZX_VM_CAN_MAP_SPECIFIC | ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE, 0, copy_size, &vmar,
+      &addr));
+
   while (state->KeepRunning()) {
-    zx_vaddr_t addr = 0;
-    if (do_map) {
-      ASSERT_OK(zx::vmar::root_self()->map(ZX_VM_MAP_RANGE | ZX_VM_PERM_READ, 0, vmo, 0, copy_size,
-                                           &addr));
+    if (map_size > 0) {
+      zx_vaddr_t chunk_addr;
+      for (uint32_t off = 0; off < copy_size; off += map_size) {
+        ASSERT_OK(vmar.map(ZX_VM_MAP_RANGE | ZX_VM_PERM_READ | ZX_VM_SPECIFIC, off, vmo, off,
+                           map_size, &chunk_addr));
+      }
       state->NextStep();
     }
 
@@ -130,9 +139,9 @@ bool VmoCloneTest(perftest::RepeatState* state, uint32_t copy_size, bool do_map)
 
     clone.reset();
 
-    if (do_map) {
+    if (map_size > 0) {
       state->NextStep();
-      ASSERT_OK(zx::vmar::root_self()->unmap(addr, copy_size));
+      ASSERT_OK(vmar.unmap(addr, copy_size));
     }
   }
 
@@ -224,7 +233,15 @@ void RegisterTests() {
 
   for (bool map : {false, true}) {
     auto clone_name = fbl::StringPrintf("Vmo/Clone%s", map ? "Map" : "");
-    RegisterVmoTest(clone_name.c_str(), VmoCloneTest, map);
+    RegisterVmoTest(clone_name.c_str(), [map](perftest::RepeatState* state, uint32_t size) {
+      return VmoCloneTest(state, size, map ? size : 0);
+    });
+  }
+  for (unsigned map_chunk_kb : {4, 64, 2048, 32768}) {
+    constexpr uint32_t vmo_size_kb = 32768;
+    auto name = fbl::StringPrintf("Vmo/CloneMap%usegments/%ukbytes", vmo_size_kb / map_chunk_kb,
+                                  vmo_size_kb);
+    perftest::RegisterTest(name.c_str(), VmoCloneTest, vmo_size_kb * 1024, map_chunk_kb * 1024);
   }
 
   for (bool do_write : {false, true}) {
