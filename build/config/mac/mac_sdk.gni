@@ -12,14 +12,17 @@ declare_args() {
   mac_sdk_path = ""
 }
 
-find_sdk_args = [
+_script = "//build/mac/find_sdk.py"
+_find_sdk_args = [
+  "-S",  # https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=62771
+  rebase_path(_script, root_build_dir),
   "--print-sdk-path",
   mac_sdk_min,
 ]
-find_sdk_lines =
-    exec_script("//build/mac/find_sdk.py", find_sdk_args, "list lines")
-mac_sdk_version = find_sdk_lines[1]
+_find_sdk_lines =
+    exec_script(python_exe_src, _find_sdk_args, "list lines", [ _script ])
+mac_sdk_version = _find_sdk_lines[1]
 
 if (mac_sdk_path == "") {
-  mac_sdk_path = find_sdk_lines[0]
+  mac_sdk_path = _find_sdk_lines[0]
 }

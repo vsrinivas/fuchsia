@@ -95,7 +95,11 @@ template("hotsort_gen_target") {
 
   # Generate the hotsort_gen command line arguments from our GN variables.
 
-  _gen_args = []
+  gen_script = "${_hotsort_dir}/hotsort_gen/hotsort_gen_list_shaders.py"
+  _gen_args = [
+    "-S",  # https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=62771
+    rebase_path(gen_script, root_build_dir),
+  ]
 
   # NOTE: Start with the parameters that are also sent to
   # `hotsort_gen_list_shaders.py`.
@@ -246,10 +250,10 @@ template("hotsort_gen_target") {
   if (!_hotsort_check_shader_names && defined(invoker.shader_names)) {
     _hs_comp_names = invoker.shader_names
   } else {
-    _hs_comp_names =
-        exec_script("${_hotsort_dir}/hotsort_gen/hotsort_gen_list_shaders.py",
-                    _gen_list_shaders_args,
-                    "list lines")
+    _hs_comp_names = exec_script(python_exe_src,
+                                 _gen_list_shaders_args,
+                                 "list lines",
+                                 [ gen_script ])
 
     if (!_hotsort_check_shader_names) {
       print(
