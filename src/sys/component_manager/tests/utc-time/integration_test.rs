@@ -12,14 +12,18 @@ use fuchsia_zircon as zx;
 use futures::{channel::oneshot, lock::Mutex, prelude::*};
 use log::*;
 use std::sync::Arc;
+use test_util::assert_geq;
 use test_utils_lib::{injectors::*, matcher::EventMatcher, opaque_test::OpaqueTestBuilder};
 use vfs::{
     directory::entry::DirectoryEntry, execution_scope::ExecutionScope, file::pcb::read_only_static,
     pseudo_directory,
 };
 
+/// Offset the maintainer component uses from backstop to set the UTC time.
+const TEST_OFFSET: zx::Duration = zx::Duration::from_minutes(2);
+
 #[fasync::run_singlethreaded(test)]
-async fn builtin_time_service_routed() -> Result<(), Error> {
+async fn builtin_time_service_and_clock_routed() -> Result<(), Error> {
     fuchsia_syslog::init().unwrap();
     fuchsia_syslog::set_severity(fuchsia_syslog::levels::WARN);
 
@@ -49,27 +53,29 @@ async fn builtin_time_service_routed() -> Result<(), Error> {
 
     // Start a component_manager as a v1 component, with the extra `--maintain-utc-clock` flag.
     debug!("starting component_manager");
-    let test = OpaqueTestBuilder::new(
-        "fuchsia-pkg://fuchsia.com/utc-time-tests#meta/consumer-component.cm",
-    )
-    .component_manager_url("fuchsia-pkg://fuchsia.com/utc-time-tests#meta/component_manager.cmx")
-    .config("/pkg/data/cm_config")
-    .add_dir_handle("/boot", client.into())
-    .build()
-    .await
-    .expect("failed to start the OpaqueTest");
+    let test = OpaqueTestBuilder::new("fuchsia-pkg://fuchsia.com/utc-time-tests#meta/realm.cm")
+        .component_manager_url(
+            "fuchsia-pkg://fuchsia.com/utc-time-tests#meta/component_manager.cmx",
+        )
+        .config("/pkg/data/cm_config")
+        .add_dir_handle("/boot", client.into())
+        .build()
+        .await
+        .expect("failed to start the OpaqueTest");
     let event_source = test
         .connect_to_event_source()
         .await
         .expect("failed to connect to the BlockingEventSource protocol");
 
-    // Inject a TestOutcomeCapability which the component under test will request
+    // Inject TestOutcomeCapabilities which the components launched by component manager request
     // and use to report back the test outcome.
-    // The TestOutcomeCapability can only be used once, so multiple components
-    // requesting this will panic.
-    debug!("injecting TestOutcomeCapability");
-    let (capability, test_case) = test_outcome_report();
-    capability.inject(&event_source, EventMatcher::ok()).await;
+    // The capabilities can only be used once, so multiple components requesting this will panic.
+    debug!("injecting capabilities");
+    let (maintain_capability, maintain_fut) = test_outcome_report();
+    maintain_capability.inject(&event_source, EventMatcher::ok().moniker("/maintainer:*")).await;
+
+    let (client_capability, client_fut) = test_outcome_report();
+    client_capability.inject(&event_source, EventMatcher::ok().moniker("/time_client:*")).await;
 
     // Unblock the component_manager.
     debug!("starting component tree");
@@ -77,21 +83,30 @@ async fn builtin_time_service_routed() -> Result<(), Error> {
 
     // Await the test result.
     debug!("waiting for test outcome");
-    let actual_backstop_time = test_case.await.expect("failed to wait on test")?;
-    assert_eq!(actual_backstop_time, expected_backstop_time);
+    let maintain_result = maintain_fut.await??;
+    let client_result = client_fut.await??;
+
+    // Check that times reported by the maintainer and client agree.
+    assert_eq!(expected_backstop_time.into_nanos(), maintain_result.backstop);
+    assert_eq!(expected_backstop_time.into_nanos(), client_result.backstop);
+    let expected_current_time = expected_backstop_time + TEST_OFFSET;
+    assert_geq!(expected_current_time.into_nanos(), maintain_result.current_time);
+    assert_geq!(client_result.current_time, maintain_result.current_time);
+
     Ok(())
 }
+
+type TestResult = Result<ftest::SuccessOutcome, Error>;
 
 /// The TestOutcomeCapability that can be injected in order for a component under test
 /// to report back test outcomes.
 pub struct TestOutcomeCapability {
-    sender: Mutex<Option<oneshot::Sender<Result<zx::Time, Error>>>>,
+    sender: Mutex<Option<oneshot::Sender<TestResult>>>,
 }
 
-/// Create a TestOutcomeCapablity and Receiver pair.
-fn test_outcome_report() -> (Arc<TestOutcomeCapability>, oneshot::Receiver<Result<zx::Time, Error>>)
-{
-    let (sender, receiver) = oneshot::channel::<Result<zx::Time, Error>>();
+/// Create a TestOutcomeCapability and Receiver pair.
+fn test_outcome_report() -> (Arc<TestOutcomeCapability>, oneshot::Receiver<TestResult>) {
+    let (sender, receiver) = oneshot::channel::<TestResult>();
     (Arc::new(TestOutcomeCapability { sender: Mutex::new(Some(sender)) }), receiver)
 }
 
@@ -111,18 +126,16 @@ impl ProtocolInjector for TestOutcomeCapability {
             .send(match request_stream.next().await {
                 Some(outcome) => outcome.map_err(|e| e.into()).and_then(
                     |ftest::TestOutcomeReportRequest::Report { outcome, responder }| {
-                        responder.send().context("failed to send response to client")?;
+                        responder.send().context("failed to send response")?;
                         match outcome {
-                            ftest::TestOutcome::Success(ftest::SuccessOutcome {
-                                backstop_nanos,
-                            }) => Ok(zx::Time::from_nanos(backstop_nanos)),
+                            ftest::TestOutcome::Success(success) => Ok(success),
                             ftest::TestOutcome::Failed(ftest::FailedOutcome { message }) => {
                                 Err(anyhow!("test failed: {}", &message))
                             }
                         }
                     },
                 ),
-                None => Err(anyhow!("test component finished without a response")),
+                None => Err(anyhow!("channel finished without a response")),
             })
             .expect("failed to send outcome on channel");
         Ok(())

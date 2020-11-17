@@ -4,13 +4,16 @@
 
 library componentmanager.test;
 
+using zx;
+
 union TestOutcome {
     1: SuccessOutcome success;
     2: FailedOutcome failed;
 };
 
 struct SuccessOutcome {
-    int64 backstop_nanos;
+    zx.time backstop;
+    zx.time current_time;
 };
 
 struct FailedOutcome {

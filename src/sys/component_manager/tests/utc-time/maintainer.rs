@@ -20,7 +20,7 @@ async fn main() -> Result<(), Error> {
 
     let test_proxy = client::connect_to_service::<ftest::TestOutcomeReportMarker>()?;
 
-    let result: Result<i64, Error> = async {
+    let result: Result<_, Error> = async {
         debug!("requesting fuchsia.time.Maintenance");
         let time_maintenance_proxy = client::connect_to_service::<ftime::MaintenanceMarker>()
             .context("failed to connect to fuchsia.time.Maintenance")?;
@@ -33,17 +33,21 @@ async fn main() -> Result<(), Error> {
         let details =
             clock.get_details().map_err(|s| anyhow!("failed to get clock details: {}", s))?;
         debug!("got clock details");
+        let set_time = details.backstop + TEST_OFFSET;
         clock
-            .update(ClockUpdate::new().value(details.backstop + TEST_OFFSET).error_bounds(100))
+            .update(ClockUpdate::new().value(set_time).error_bounds(100))
             .map_err(|s| anyhow!("failed to update the clock: {}", s))?;
         debug!("updated clock");
-        Ok(details.backstop.into_nanos())
+        Ok((details.backstop.into_nanos(), set_time.into_nanos()))
     }
     .await;
     match result {
-        Ok(backstop_nanos) => {
+        Ok((backstop, current_time)) => {
             test_proxy
-                .report(&mut ftest::TestOutcome::Success(ftest::SuccessOutcome { backstop_nanos }))
+                .report(&mut ftest::TestOutcome::Success(ftest::SuccessOutcome {
+                    backstop,
+                    current_time,
+                }))
                 .await
                 .expect("failed to report success");
             Ok(())

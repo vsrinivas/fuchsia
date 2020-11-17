@@ -1,0 +1,35 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    children: [
+        {
+            name: "maintainer",
+            url: "fuchsia-pkg://fuchsia.com/utc-time-tests#meta/maintainer-component.cm",
+            startup: "eager",
+        },
+        {
+            name: "time_client",
+            url: "fuchsia-pkg://fuchsia.com/utc-time-tests#meta/time-client.cm",
+            startup: "eager",
+        },
+    ],
+    offer: [
+        {
+            protocol: [ "fuchsia.time.Maintenance" ],
+            from: "parent",
+            to: [ "#maintainer" ],
+        },
+        {
+            protocol: [
+                "componentmanager.test.TestOutcomeReport",
+                "fuchsia.logger.LogSink",
+            ],
+            from: "parent",
+            to: [
+                "#maintainer",
+                "#time_client",
+            ],
+        },
+    ],
+}
