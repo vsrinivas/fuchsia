@@ -541,7 +541,6 @@
                 "fuchsia.sys.Environment",
                 "fuchsia.sys.Launcher",
                 "fuchsia.tracing.controller.Controller",
-                "fuchsia.wlan.service.Wlan",
             ],
             from: "parent",
             to: [ "#driver_manager" ],

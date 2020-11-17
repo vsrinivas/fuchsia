@@ -62,7 +62,6 @@
                 "fuchsia.ui.views.ViewRefInstalled",
                 "fuchsia.update.channel.Provider",
                 "fuchsia.update.channelcontrol.ChannelControl",
-                "fuchsia.wlan.service.Wlan",
             ],
         },
         {

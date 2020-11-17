@@ -40,8 +40,7 @@
                          "fuchsia.sys.Environment",
                          "fuchsia.sys.Launcher",
                          "fuchsia.tracing.controller.Controller",
-                         "fuchsia.tracing.provider.Registry",
-                         "fuchsia.wlan.service.Wlan"
+                         "fuchsia.tracing.provider.Registry"
                     ]
                 }
             }
@@ -109,8 +108,7 @@
                          "fuchsia.sys.Environment",
                          "fuchsia.sys.Launcher",
                          "fuchsia.tracing.controller.Controller",
-                         "fuchsia.tracing.provider.Registry",
-                         "fuchsia.wlan.service.Wlan"
+                         "fuchsia.tracing.provider.Registry"
                     ]
                 }
             }
@@ -155,8 +153,7 @@
                          "fuchsia.sys.Environment",
                          "fuchsia.sys.Launcher",
                          "fuchsia.tracing.controller.Controller",
-                         "fuchsia.tracing.provider.Registry",
-                         "fuchsia.wlan.service.Wlan"
+                         "fuchsia.tracing.provider.Registry"
                     ]
                 }
             }
@@ -201,8 +198,7 @@
                          "fuchsia.sys.Environment",
                          "fuchsia.sys.Launcher",
                          "fuchsia.tracing.controller.Controller",
-                         "fuchsia.tracing.provider.Registry",
-                         "fuchsia.wlan.service.Wlan"
+                         "fuchsia.tracing.provider.Registry"
                     ]
                 }
             }
@@ -247,8 +243,7 @@
                          "fuchsia.sys.Environment",
                          "fuchsia.sys.Launcher",
                          "fuchsia.tracing.controller.Controller",
-                         "fuchsia.tracing.provider.Registry",
-                         "fuchsia.wlan.service.Wlan"
+                         "fuchsia.tracing.provider.Registry"
                     ]
                 }
             }
@@ -293,8 +288,7 @@
                          "fuchsia.sys.Environment",
                          "fuchsia.sys.Launcher",
                          "fuchsia.tracing.controller.Controller",
-                         "fuchsia.tracing.provider.Registry",
-                         "fuchsia.wlan.service.Wlan"
+                         "fuchsia.tracing.provider.Registry"
                     ]
                 }
             }
@@ -339,8 +333,7 @@
                          "fuchsia.sys.Environment",
                          "fuchsia.sys.Launcher",
                          "fuchsia.tracing.controller.Controller",
-                         "fuchsia.tracing.provider.Registry",
-                         "fuchsia.wlan.service.Wlan"
+                         "fuchsia.tracing.provider.Registry"
                     ]
                 }
             }
@@ -385,8 +378,7 @@
                          "fuchsia.sys.Environment",
                          "fuchsia.sys.Launcher",
                          "fuchsia.tracing.controller.Controller",
-                         "fuchsia.tracing.provider.Registry",
-                         "fuchsia.wlan.service.Wlan"
+                         "fuchsia.tracing.provider.Registry"
                     ]
                 }
             }
@@ -431,8 +423,7 @@
                          "fuchsia.sys.Environment",
                          "fuchsia.sys.Launcher",
                          "fuchsia.tracing.controller.Controller",
-                         "fuchsia.tracing.provider.Registry",
-                         "fuchsia.wlan.service.Wlan"
+                         "fuchsia.tracing.provider.Registry"
                     ]
                 }
             }
