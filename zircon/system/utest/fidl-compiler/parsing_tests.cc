@@ -553,4 +553,40 @@ struct Empty{};
   ASSERT_ERR(warnings[0], fidl::WarnDocCommentMustBeFollowedByDeclaration);
 }
 
+TEST(ParsingTests, final_member_missing_semicolon) {
+  TestLibrary library(R"FIDL(
+library example;
+
+struct Struct {
+    uint8 uint_value;
+    string foo // error: missing semicolon
+};
+)FIDL");
+
+  std::unique_ptr<fidl::raw::File> ast;
+  EXPECT_FALSE(library.Parse(&ast));
+  const auto& errors = library.errors();
+  ASSERT_EQ(errors.size(), 1);
+  ASSERT_ERR(errors[0], fidl::ErrUnexpectedTokenOfKind);
+}
+
+TEST(ParsingTests, final_member_missing_name_and_semicolon) {
+  TestLibrary library(R"FIDL(
+library example;
+
+struct Struct {
+    uint8 uint_value;
+    string
+}; // error: want field name, got "}"
+   // error: want "}", got EOF
+)FIDL");
+
+  std::unique_ptr<fidl::raw::File> ast;
+  EXPECT_FALSE(library.Parse(&ast));
+  const auto& errors = library.errors();
+  ASSERT_EQ(errors.size(), 2);
+  ASSERT_ERR(errors[0], fidl::ErrUnexpectedTokenOfKind);
+  ASSERT_ERR(errors[1], fidl::ErrUnexpectedTokenOfKind);
+}
+
 }  // namespace

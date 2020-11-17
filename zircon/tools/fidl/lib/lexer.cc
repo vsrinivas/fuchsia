@@ -242,6 +242,9 @@ void Lexer::SkipWhitespace() {
 }
 
 Token Lexer::Lex() {
+  assert(token_start_ <= end_of_file_ && "Already reached EOF");
+  assert(current_ <= end_of_file_ + 1 && "current_ is past null terminator");
+
   do {
     SkipWhitespace();
 

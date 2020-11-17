@@ -286,4 +286,48 @@ protocol Protocol {
   ASSERT_ERR(errors[7], fidl::ErrExpectedProtocolMember);
 }
 
+TEST(RecoverableParsingTests, recover_final_member_missing_semicolon) {
+  TestLibrary library(R"FIDL(
+library example;
+
+struct Struct {
+    uint8 uint_value;
+    string foo // First error
+};
+
+// Recovered back to top-level parsing.
+struct Good {};
+
+extra_token // Second error
+)FIDL");
+  EXPECT_FALSE(library.Compile());
+  const auto& errors = library.errors();
+  ASSERT_EQ(errors.size(), 2);
+  ASSERT_ERR(errors[0], fidl::ErrUnexpectedTokenOfKind);
+  ASSERT_ERR(errors[1], fidl::ErrExpectedDeclaration);
+}
+
+TEST(RecoverableParsingTests, recover_final_member_missing_name_and_semicolon) {
+  TestLibrary library(R"FIDL(
+library example;
+
+struct Struct {
+    uint8 uint_value;
+    string }; // First error
+
+// Does not recover back to top-level parsing. End the struct.
+};
+
+// Back to top-level parsing.
+struct Good {};
+
+extra_token // Second error
+)FIDL");
+  EXPECT_FALSE(library.Compile());
+  const auto& errors = library.errors();
+  ASSERT_EQ(errors.size(), 2);
+  ASSERT_ERR(errors[0], fidl::ErrUnexpectedTokenOfKind);
+  ASSERT_ERR(errors[1], fidl::ErrExpectedDeclaration);
+}
+
 }  // namespace

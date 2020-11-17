@@ -40,6 +40,8 @@ class Lexer {
     previous_end_ = token_start_ = current_;
   }
 
+  // Lexes and returns the next token. Must not be called again after returning
+  // Token::Kind::kEndOfFile.
   Token Lex();
 
  private:

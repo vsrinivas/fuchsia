@@ -141,6 +141,8 @@ class Parser {
     previous_token_ = token;
   }
 
+  bool ConsumedEOF() const { return previous_token_.kind() == Token::Kind::kEndOfFile; }
+
   enum class OnNoMatch {
     kReportAndConsume,  // on failure, report error and return consumed token
     kReportAndRecover,  // on failure, report error and return std::nullopt
@@ -151,8 +153,10 @@ class Parser {
   // a unique_ptr<Diagnostic> on failure, or nullptr on a match.
   // See #OfKind, and #IdentifierOfSubkind for the two most common predicates.
   // If the predicate doesn't match, ReadToken follows the OnNoMatch enum.
+  // Must not be called again after returning Token::Kind::kEndOfFile.
   template <class Predicate>
   std::optional<Token> ReadToken(Predicate p, OnNoMatch on_no_match) {
+    assert(!ConsumedEOF() && "Already consumed EOF");
     std::unique_ptr<Diagnostic> error = p(Peek());
     if (error) {
       switch (on_no_match) {
@@ -168,7 +172,11 @@ class Parser {
       }
     }
     auto token = previous_token_ = last_token_;
-    last_token_ = Lex();
+    // Don't lex any more if we hit EOF. Note: This means that after consuming
+    // EOF, Peek() will make it seem as if there's a second EOF.
+    if (token.kind() != Token::Kind::kEndOfFile) {
+      last_token_ = Lex();
+    }
     UpdateMarks(token);
     return token;
   }

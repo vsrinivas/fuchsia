@@ -1619,6 +1619,10 @@ bool Parser::ConsumeTokensUntil(std::set<Token::Kind> exit_tokens) {
 }
 
 Parser::RecoverResult Parser::RecoverToEndOfDecl() {
+  if (ConsumedEOF()) {
+    return RecoverResult::Failure;
+  }
+
   RecoverAllErrors();
 
   static const auto exit_tokens = std::set<Token::Kind>{
@@ -1643,6 +1647,10 @@ Parser::RecoverResult Parser::RecoverToEndOfDecl() {
 }
 
 Parser::RecoverResult Parser::RecoverToEndOfMember() {
+  if (ConsumedEOF()) {
+    return RecoverResult::Failure;
+  }
+
   RecoverAllErrors();
 
   static const auto exit_tokens = std::set<Token::Kind>{
@@ -1665,6 +1673,10 @@ Parser::RecoverResult Parser::RecoverToEndOfMember() {
 }
 
 Parser::RecoverResult Parser::RecoverToEndOfParam() {
+  if (ConsumedEOF()) {
+    return RecoverResult::Failure;
+  }
+
   RecoverAllErrors();
 
   static const auto exit_tokens = std::set<Token::Kind>{
