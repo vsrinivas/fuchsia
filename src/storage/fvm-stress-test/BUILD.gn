@@ -4,31 +4,23 @@
 
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
-import("//build/rust/rustc_test.gni")
-import("//build/test/test_package.gni")
 import("//src/sys/build/components.gni")
 
-rustc_library("fvm-stress-test-lib") {
+rustc_library("lib") {
+  name = "fvm_stress_test_lib"
   edition = "2018"
   source_root = "lib/mod.rs"
 
   deps = [
-    "//garnet/lib/rust/files_async",
-    "//garnet/lib/rust/io_util",
-    "//sdk/fidl/fuchsia.device:fuchsia.device-rustc",
-    "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block-rustc",
     "//sdk/fidl/fuchsia.hardware.block.partition:fuchsia.hardware.block.partition-rustc",
     "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume-rustc",
-    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/storage/block_client/rust:remote-block-device",
     "//src/lib/storage/ramdevice_client",
     "//src/lib/zircon/rust:fuchsia-zircon",
-    "//src/sys/component_manager/testing:test_utils_lib",
-    "//src/sys/pkg/lib/fuchsia-hash",
-    "//src/sys/pkg/lib/fuchsia-merkle",
+    "//src/storage/stress-test-utils",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:log",  # for recording messages
@@ -39,26 +31,24 @@ rustc_library("fvm-stress-test-lib") {
   sources = [
     "lib/fvm.rs",
     "lib/mod.rs",
-    "lib/state.rs",
-    "lib/test_instance.rs",
-    "lib/utils.rs",
+    "lib/operator.rs",
   ]
 
   non_rust_deps = [ "//zircon/system/ulib/fs-management" ]
 }
 
 rustc_binary("stressor-bin") {
-  testonly = true
-  name = "stressor"
+  name = "fvm_stressor"
   edition = "2018"
   source_root = "main.rs"
 
   deps = [
-    ":fvm-stress-test-lib",
+    ":lib",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/syslog/rust:syslog",
     "//src/lib/zircon/rust:fuchsia-zircon",
+    "//src/storage/stress-test-utils",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:argh",
     "//third_party/rust_crates:futures",
@@ -82,12 +72,6 @@ fuchsia_component("no-crash-stressor") {
   deps = [ ":stressor-bin" ]
 }
 
-fuchsia_component("root") {
-  testonly = true
-  manifest = "meta/root.cml"
-  deps = [ "//src/lib/isolated_devmgr/v2_component:isolated-devmgr" ]
-}
-
 fuchsia_test_package("fvm-stress-test") {
   test_components = [
     ":crashable-stressor",
@@ -106,7 +90,6 @@ fuchsia_test_package("fvm-stress-test") {
       },
     ]
   }
-  deps = [ ":root" ]
 }
 
 group("tests") {

@@ -6,13 +6,13 @@ use {
     crate::fvm::Volume,
     fuchsia_async::Task,
     fuchsia_zircon::Status,
-    log::{debug, info},
+    log::debug,
     rand::{rngs::SmallRng, seq::SliceRandom, Rng, SeedableRng},
     std::collections::HashMap,
 };
 
 #[derive(Debug)]
-enum FvmOperation {
+enum VolumeOperation {
     Append,
     Truncate,
     NewRange,
@@ -174,10 +174,6 @@ impl VSliceRanges {
     pub fn random_index(&self, rng: &mut SmallRng) -> usize {
         rng.gen_range(0, self.ranges.len())
     }
-
-    pub fn num_allocated_slices(&self) -> u64 {
-        self.ranges.iter().fold(0, |val, r| val + r.len())
-    }
 }
 
 // In-memory state of an FVM Volume
@@ -193,9 +189,6 @@ pub struct VolumeOperator {
 
     // Random number generator used for all operations
     rng: SmallRng,
-
-    // Number of operations this operator must complete.
-    num_operations: u64,
 }
 
 fn generate_data(seed: u128, size: usize) -> Vec<u8> {
@@ -213,12 +206,11 @@ impl VolumeOperator {
         rng: SmallRng,
         max_slices_in_extend: u64,
         max_vslice_count: u64,
-        num_operations: u64,
     ) -> Self {
         let vslice_ranges = VSliceRanges::new(max_vslice_count, max_slices_in_extend);
         let slice_seeds = HashMap::new();
 
-        VolumeOperator { volume, rng, vslice_ranges, slice_seeds, num_operations }
+        VolumeOperator { volume, rng, vslice_ranges, slice_seeds }
     }
 
     async fn extend_volume(&mut self, range: &VSliceRange) -> Result<(), Status> {
@@ -340,59 +332,49 @@ impl VolumeOperator {
         Ok(())
     }
 
-    // Returns a list of operations that are valid to perform,
-    // given the current state of the filesystem.
-    fn get_operation_list(&mut self) -> Vec<FvmOperation> {
-        vec![
-            FvmOperation::Verify,
-            FvmOperation::Append,
-            FvmOperation::Truncate,
-            FvmOperation::NewRange,
-        ]
-    }
-
-    // Perform a single operation on the given volume.
-    async fn do_operation(&mut self, operation: &FvmOperation) -> Result<(), Status> {
-        match operation {
-            FvmOperation::Append => self.append().await?,
-            FvmOperation::Truncate => self.truncate().await.expect("Truncation failed"),
-            FvmOperation::NewRange => self.new_range().await?,
-            FvmOperation::Verify => self.verify().await.expect("Verification failed"),
-        }
-        Ok(())
-    }
-
-    async fn iteration(&mut self, index: u64) {
-        let operations = self.get_operation_list();
-        let operation = operations.choose(&mut self.rng).unwrap();
-
-        debug!(">>>>>>>>> [OPERATION {}] {:?}", index, operation);
-        let result = self.do_operation(operation).await;
-        debug!("<<<<<<<<< [OPERATION {}] {:?} [Result: {:?}]", index, operation, result);
-    }
-
     async fn initialize_slice_zero(&mut self) {
         let fill_range = VSliceRange::new(0, 1);
         self.fill_range(&fill_range).await.unwrap();
         self.vslice_ranges.insert(fill_range);
     }
 
-    async fn do_operations(mut self) {
-        self.initialize_slice_zero().await;
-
-        for index in 1..=self.num_operations {
-            self.iteration(index).await;
-        }
-
-        // Attempt to destroy the volume, returning all slices back to the
-        // FVM volume manager.
-        info!("Freeing {} slices in volume", self.vslice_ranges.num_allocated_slices());
-        self.volume.destroy().await.unwrap();
+    // Returns a list of operations that are valid to perform,
+    // given the current state of the filesystem.
+    fn get_operation_list(&self) -> Vec<VolumeOperation> {
+        vec![
+            VolumeOperation::Verify,
+            VolumeOperation::Append,
+            VolumeOperation::Truncate,
+            VolumeOperation::NewRange,
+        ]
     }
 
-    // Start a new thread for this operator and run as many operations
-    // as possible before the volume disconnects.
-    pub fn run(self) -> Task<()> {
-        Task::blocking(async move { self.do_operations().await })
+    // Perform a single operation on the given volume.
+    async fn do_operation(&mut self, operation: &VolumeOperation) -> Result<(), Status> {
+        match operation {
+            VolumeOperation::Append => self.append().await?,
+            VolumeOperation::Truncate => self.truncate().await.expect("Truncation failed"),
+            VolumeOperation::NewRange => self.new_range().await?,
+            VolumeOperation::Verify => self.verify().await.expect("Verification failed"),
+        }
+        Ok(())
+    }
+
+    async fn do_random_operations(mut self, num_operations: u64) {
+        for index in 1..=num_operations {
+            let operations = self.get_operation_list();
+            let operation = operations.choose(&mut self.rng).unwrap();
+
+            debug!("{} ---->>>> {:?}", index, operation);
+            let result = self.do_operation(operation).await;
+            debug!("{} <<<<---- {:?} [{:?}]", index, operation, result);
+        }
+    }
+
+    pub fn run(mut self, num_operations: u64) -> Task<()> {
+        Task::blocking(async move {
+            self.initialize_slice_zero().await;
+            self.do_random_operations(num_operations).await;
+        })
     }
 }

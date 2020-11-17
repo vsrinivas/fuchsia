@@ -5,14 +5,11 @@
 use {
     anyhow::Error,
     argh::FromArgs,
-    fasync::futures::future::join_all,
     fuchsia_async as fasync,
-    fuchsia_zircon::Vmo,
-    futures::SinkExt,
-    fvm_stress_test_lib::test_instance::TestInstance,
-    log::{debug, info, set_logger, set_max_level, LevelFilter},
-    rand::{rngs::SmallRng, FromEntropy, Rng, SeedableRng},
-    std::{thread::sleep, time::Duration},
+    fvm_stress_test_lib::run_test,
+    log::info,
+    log::LevelFilter,
+    stress_test_utils::{Environment, StdoutLogger},
 };
 
 #[derive(Clone, Debug, FromArgs)]
@@ -43,10 +40,6 @@ struct Args {
     /// defaults to 3 volumes.
     #[argh(option, short = 'n', default = "3")]
     num_volumes: u64,
-
-    /// use syslog for stressor output
-    #[argh(switch)]
-    syslog: bool,
 
     /// size of one block of the ramdisk (in bytes)
     #[argh(option, default = "512")]
@@ -82,146 +75,37 @@ struct Args {
     rebind_probability: f64,
 }
 
-// A simple logger that prints to stdout
-struct SimpleStdoutLogger;
-
-impl log::Log for SimpleStdoutLogger {
-    fn enabled(&self, _metadata: &log::Metadata<'_>) -> bool {
-        true
+impl Environment for Args {
+    fn init_logger(&self) {
+        let filter = self.log_filter.unwrap_or(LevelFilter::Debug);
+        StdoutLogger::init(filter);
     }
 
-    fn log(&self, record: &log::Record<'_>) {
-        if self.enabled(record.metadata()) {
-            match record.level() {
-                log::Level::Info => {
-                    println!("{}", record.args());
-                }
-                log::Level::Error => {
-                    eprintln!("{}: {}", record.level(), record.args());
-                }
-                _ => {
-                    println!("{}: {}", record.level(), record.args());
-                }
-            }
-        }
+    fn seed(&self) -> Option<u128> {
+        self.seed
     }
-
-    fn flush(&self) {}
 }
 
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
     // Get arguments from command line
     let args: Args = argh::from_env();
+    let rng = args.setup_env();
 
-    if args.syslog {
-        // Use syslog
-        fuchsia_syslog::init().unwrap();
-    } else {
-        // Initialize SimpleStdoutLogger
-        set_logger(&SimpleStdoutLogger).expect("Failed to set SimpleLogger as global logger");
-    }
-
-    if let Some(filter) = args.log_filter {
-        set_max_level(filter);
-    } else {
-        set_max_level(LevelFilter::Debug);
-    }
-
-    let seed = if let Some(seed_value) = args.seed {
-        seed_value
-    } else {
-        // Use entropy to generate a new seed
-        let mut temp_rng = SmallRng::from_entropy();
-        temp_rng.gen()
-    };
-
-    let num_operations =
-        if let Some(operations) = args.num_operations { operations } else { u64::MAX };
-
-    let mut rng = SmallRng::from_seed(seed.to_le_bytes());
-
-    info!("------------------ fvm_stressor is starting -------------------");
-    info!("ARGUMENTS = {:#?}", args);
-    info!("SEED FOR THIS INVOCATION = {}", seed);
-    info!("------------------------------------------------------------------");
-
-    {
-        // Setup a panic handler that prints out details of this invocation
-        let seed = seed.clone();
-        let args = args.clone();
-        let default_panic_hook = std::panic::take_hook();
-        std::panic::set_hook(Box::new(move |panic_info| {
-            println!("");
-            println!("------------------ fvm_stressor has crashed -------------------");
-            println!("ARGUMENTS = {:#?}", args);
-            println!("SEED FOR THIS INVOCATION = {}", seed);
-            println!("------------------------------------------------------------------");
-            println!("");
-            default_panic_hook(panic_info);
-        }));
-    }
-
-    // Create the VMO that the ramdisk is backed by
-    let vmo_size = args.ramdisk_block_count * args.ramdisk_block_size;
-    let vmo = Vmo::create(vmo_size).unwrap();
-
-    // Create the first test instance, setup FVM on the ramdisk and wait until it is ready.
-    let mut instance = TestInstance::init(&vmo, args.fvm_slice_size, args.ramdisk_block_size).await;
-
-    // Create the volume operators
-    let (tasks, mut senders) = instance
-        .create_volumes_and_operators(
-            &mut rng,
-            args.num_volumes,
-            args.fvm_slice_size,
-            args.max_slices_in_extend,
-            args.max_vslice_count,
-            num_operations,
-        )
-        .await;
-
-    // Send the initial block path to all operators
-    for sender in senders.iter_mut() {
-        let _ = sender.send(instance.block_path()).await;
-    }
-
-    if args.disconnect_secs > 0 {
-        // Create the disconnection task
-        let args = args.clone();
-        fasync::Task::blocking(async move {
-            loop {
-                sleep(Duration::from_secs(args.disconnect_secs));
-
-                if rng.gen_bool(args.rebind_probability) {
-                    debug!("Rebinding FVM");
-                    instance.rebind().await;
-                } else {
-                    // Crash the old instance and replace it with a new instance.
-                    // This will cause the component tree to be taken down abruptly.
-                    debug!("Crashing FVM");
-                    instance.crash();
-                    instance = TestInstance::existing(&vmo, args.ramdisk_block_size).await;
-                }
-
-                // Give the new block path to the operators.
-                // Ignore the result because some operators may have completed.
-                let path = instance.block_path();
-                for sender in senders.iter_mut() {
-                    let _ = sender.send(path.clone()).await;
-                }
-            }
-        })
-        .detach();
-    }
-
-    if args.num_operations.is_some() {
-        // Wait for the operator tasks to finish
-        join_all(tasks).await;
-    } else {
-        // Wait for the time limit
-        sleep(Duration::from_secs(args.time_limit_secs));
-    }
+    run_test(
+        rng,
+        args.ramdisk_block_count,
+        args.fvm_slice_size,
+        args.ramdisk_block_size,
+        args.num_volumes,
+        args.max_slices_in_extend,
+        args.max_vslice_count,
+        args.disconnect_secs,
+        args.rebind_probability,
+        args.time_limit_secs,
+        args.num_operations,
+    )
+    .await;
 
     info!("Stress test is exiting successfully!");
 

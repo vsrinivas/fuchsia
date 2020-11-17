@@ -9,7 +9,7 @@
             "--rebind-probability",
             "0.1"
         ],
-        "binary": "bin/stressor"
+        "binary": "bin/fvm_stressor"
     },
     "sandbox": {
         "features": [
