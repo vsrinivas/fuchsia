@@ -20,10 +20,7 @@ use {
     chrono::Utc,
     fuchsia_async::{self as fasync, net::TcpListener, Task},
     fuchsia_hyper,
-    futures::{
-        future::{BoxFuture, RemoteHandle},
-        prelude::*,
-    },
+    futures::{future::BoxFuture, prelude::*},
     hyper::{
         server::{accept::from_stream, Server},
         service::{make_service_fn, service_fn},
@@ -47,10 +44,9 @@ pub mod fault_injection;
 /// connection state.
 pub struct TestServer {
     stop: futures::channel::oneshot::Sender<()>,
-    wait_stop: RemoteHandle<()>,
     addr: SocketAddr,
     use_https: bool,
-    _task: Task<()>,
+    task: Task<()>,
 }
 
 /// Base trait that all Handlers implement.
@@ -58,6 +54,12 @@ pub trait Handler: 'static + Send + Sync {
     /// A Handler impl signals that it wishes to handle a request by returning a response for it,
     /// otherwise it returns None.
     fn handles(&self, request: &Request<Body>) -> Option<BoxFuture<'_, Response<Body>>>;
+}
+
+impl Handler for Arc<dyn Handler> {
+    fn handles(&self, request: &Request<Body>) -> Option<BoxFuture<'_, Response<Body>>> {
+        (**self).handles(request)
+    }
 }
 
 impl TestServer {
@@ -83,9 +85,9 @@ impl TestServer {
     }
 
     /// Gracefully signal the server to stop and returns a future that resolves when it terminates.
-    pub fn stop(self) -> RemoteHandle<()> {
+    pub fn stop(self) -> impl Future<Output = ()> {
         self.stop.send(()).expect("remote end to still be open");
-        self.wait_stop
+        self.task
     }
 
     /// Internal helper which iterates over all Handlers until it finds one that will respond to the
@@ -210,18 +212,17 @@ impl TestServerBuilder {
 
         let (stop, rx_stop) = futures::channel::oneshot::channel();
 
-        let (server, wait_stop) = Server::builder(from_stream(connections))
+        let server = Server::builder(from_stream(connections))
             .executor(fuchsia_hyper::Executor)
             .serve(make_svc)
             .with_graceful_shutdown(
                 rx_stop.map(|res| res.unwrap_or_else(|futures::channel::oneshot::Canceled| ())),
             )
-            .unwrap_or_else(|e| panic!("error serving repo over http: {}", e))
-            .remote_handle();
+            .unwrap_or_else(|e| panic!("error serving repo over http: {}", e));
 
         let task = fasync::Task::spawn(server);
 
-        TestServer { stop, wait_stop, addr, use_https, _task: task }
+        TestServer { stop, addr, use_https, task }
     }
 }
 
@@ -287,10 +288,29 @@ mod tests {
     use fasync::TimeoutExt;
 
     #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_start_stop() {
+        let server = TestServer::builder().start();
+        server.stop().await;
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
     async fn test_empty_server_404s() {
         let server = TestServer::builder().start();
         let result = get(server.local_url()).await;
         assert_eq!(result.unwrap().status(), StatusCode::NOT_FOUND);
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_shared_handler() {
+        let shared: Arc<dyn Handler> = Arc::new(StaticResponse::ok_body("shared"));
+
+        let server = TestServer::builder()
+            .handler(ForPath::new("/a", Arc::clone(&shared)))
+            .handler(shared)
+            .start();
+
+        assert_eq!(get_body_as_string(server.local_url_for_path("/a")).await.unwrap(), "shared");
+        assert_eq!(get_body_as_string(server.local_url_for_path("/foo")).await.unwrap(), "shared");
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -327,7 +347,7 @@ mod tests {
     async fn test_hang() {
         let server = TestServer::builder().handler(Hang).start();
         let result = get(server.local_url_for_path("ignored"))
-            .on_timeout(std::time::Duration::from_secs(5), || Err(anyhow!("timed out")))
+            .on_timeout(std::time::Duration::from_secs(1), || Err(anyhow!("timed out")))
             .await;
         assert_eq!(result.unwrap_err().to_string(), Error::msg("timed out").to_string());
     }
@@ -336,7 +356,7 @@ mod tests {
     async fn test_hang_body() {
         let server = TestServer::builder().handler(HangBody::content_length(500)).start();
         let result = get_body_as_string(server.local_url_for_path("ignored"))
-            .on_timeout(std::time::Duration::from_secs(5), || Err(anyhow!("timed out")))
+            .on_timeout(std::time::Duration::from_secs(1), || Err(anyhow!("timed out")))
             .await;
         assert_eq!(result.unwrap_err().to_string(), Error::msg("timed out").to_string());
     }
