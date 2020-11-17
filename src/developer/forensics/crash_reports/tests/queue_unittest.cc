@@ -8,6 +8,7 @@
 #include <lib/zx/time.h>
 
 #include <memory>
+#include <vector>
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
@@ -32,12 +33,6 @@ namespace forensics {
 namespace crash_reports {
 namespace {
 
-using inspect::testing::ChildrenMatch;
-using inspect::testing::NameMatches;
-using inspect::testing::NodeMatches;
-using inspect::testing::PropertyList;
-using inspect::testing::StringIs;
-using inspect::testing::UintIs;
 using testing::Contains;
 using testing::ElementsAre;
 using testing::IsEmpty;
@@ -141,7 +136,7 @@ class QueueTest : public UnitTestFixture {
   void SetUpQueue(std::vector<CrashServer::UploadStatus> upload_attempt_results =
                       std::vector<CrashServer::UploadStatus>{}) {
     report_id_ = 1;
-    state_ = QueueOps::SetStateToLeaveAsPending;
+    reporting_policy_ = QueueOps::SetReportingPolicyUndecided;
     expected_queue_contents_.clear();
     upload_attempt_results_ = upload_attempt_results;
     next_upload_attempt_result_ = upload_attempt_results_.cbegin();
@@ -161,9 +156,10 @@ class QueueTest : public UnitTestFixture {
   enum class QueueOps {
     AddNewReport,
     DeleteOneReport,
-    SetStateToArchive,
-    SetStateToUpload,
-    SetStateToLeaveAsPending,
+    SetReportingPolicyArchive,
+    SetReportingPolicyDelete,
+    SetReportingPolicyUpload,
+    SetReportingPolicyUndecided,
   };
 
   void ApplyQueueOps(const std::vector<QueueOps>& ops) {
@@ -171,12 +167,9 @@ class QueueTest : public UnitTestFixture {
       switch (op) {
         case QueueOps::AddNewReport:
           FX_CHECK(queue_->Add(MakeReport(report_id_)));
+          AddExpectedReport(report_id_);
           RunLoopUntilIdle();
           ++report_id_;
-          if (!queue_->IsEmpty()) {
-            AddExpectedReport(queue_->LatestReport());
-          }
-          SetExpectedQueueContents();
           break;
         case QueueOps::DeleteOneReport:
           if (!expected_queue_contents_.empty()) {
@@ -188,25 +181,39 @@ class QueueTest : public UnitTestFixture {
                   expected_queue_contents_.end());
             }
           }
-          SetExpectedQueueContents();
           break;
-        case QueueOps::SetStateToArchive:
-          state_ = QueueOps::SetStateToArchive;
+        case QueueOps::SetReportingPolicyDelete:
+          reporting_policy_ = QueueOps::SetReportingPolicyDelete;
+          reporting_policy_watcher_.Set(ReportingPolicy::kDoNotFileAndDelete);
+          expected_queue_contents_.clear();
+          break;
+        case QueueOps::SetReportingPolicyArchive:
+          reporting_policy_ = QueueOps::SetReportingPolicyArchive;
           reporting_policy_watcher_.Set(ReportingPolicy::kArchive);
-          SetExpectedQueueContents();
           break;
-        case QueueOps::SetStateToUpload:
-          state_ = QueueOps::SetStateToUpload;
+        case QueueOps::SetReportingPolicyUpload:
+          reporting_policy_ = QueueOps::SetReportingPolicyUpload;
           reporting_policy_watcher_.Set(ReportingPolicy::kUpload);
-          SetExpectedQueueContents();
+          SimulateUploadAll();
           break;
-        case QueueOps::SetStateToLeaveAsPending:
-          state_ = QueueOps::SetStateToLeaveAsPending;
+        case QueueOps::SetReportingPolicyUndecided:
+          reporting_policy_ = QueueOps::SetReportingPolicyUndecided;
           reporting_policy_watcher_.Set(ReportingPolicy::kUndecided);
-          SetExpectedQueueContents();
           break;
       }
     }
+    RunLoopUntilIdle();
+  }
+
+  void SimulatePerioidUpload() {
+    RunLoopFor(kPeriodicUploadDuration);
+    SimulateUploadAll();
+  }
+
+  void SimulateNetworkReachable() {
+    network_reachability_provider_->TriggerOnNetworkReachable(true);
+    RunLoopUntilIdle();
+    SimulateUploadAll();
   }
 
   void CheckQueueContents() {
@@ -238,101 +245,108 @@ class QueueTest : public UnitTestFixture {
   LogTags tags_;
   std::unique_ptr<Queue> queue_;
   std::vector<ReportId> expected_queue_contents_;
-  std::unique_ptr<stubs::NetworkReachabilityProvider> network_reachability_provider_;
 
  private:
+  void SimulateUploadAll() {
+    if (reporting_policy_ != QueueOps::SetReportingPolicyUpload) {
+      return;
+    }
+
+    std::vector<ReportId> new_expected_queue_contents;
+    for (const auto& id : expected_queue_contents_) {
+      if (*next_upload_attempt_result_ == CrashServer::UploadStatus::kFailure) {
+        new_expected_queue_contents.push_back(id);
+      }
+
+      ++next_upload_attempt_result_;
+    }
+    expected_queue_contents_.swap(new_expected_queue_contents);
+  }
+
   void AddExpectedReport(const ReportId& uuid) {
     // Add a report to the back of the expected queue contents if and only if it is expected
     // to be in the queue after processing.
-    if (state_ != QueueOps::SetStateToUpload) {
-      expected_queue_contents_.push_back(uuid);
-    } else if (*next_upload_attempt_result_ == CrashServer::UploadStatus::kFailure) {
-      expected_queue_contents_.push_back(uuid);
-      ++next_upload_attempt_result_;
-    }
-  }
-
-  size_t SetExpectedQueueContents() {
-    if (state_ == QueueOps::SetStateToArchive) {
-      const size_t old_size = expected_queue_contents_.size();
-      expected_queue_contents_.clear();
-      return old_size;
-    } else if (state_ == QueueOps::SetStateToUpload) {
-      std::vector<ReportId> new_queue_contents;
-      for (const auto& uuid : expected_queue_contents_) {
-        // We expect the reports we failed to upload to still be pending.
+    switch (reporting_policy_) {
+      case QueueOps::SetReportingPolicyUpload:
         if (*next_upload_attempt_result_ == CrashServer::UploadStatus::kFailure) {
-          new_queue_contents.push_back(uuid);
+          expected_queue_contents_.push_back(uuid);
         }
         ++next_upload_attempt_result_;
-      }
-      expected_queue_contents_.swap(new_queue_contents);
-      return new_queue_contents.size() - expected_queue_contents_.size();
+        break;
+      case QueueOps::SetReportingPolicyUndecided:
+        expected_queue_contents_.push_back(uuid);
+        break;
+      case QueueOps::SetReportingPolicyDelete:
+      case QueueOps::SetReportingPolicyArchive:
+        break;
+      case QueueOps::AddNewReport:
+      case QueueOps::DeleteOneReport:
+        FX_CHECK(false);
+        break;
     }
-    return 0;
   }
 
   size_t report_id_ = 1;
-  QueueOps state_ = QueueOps::SetStateToLeaveAsPending;
+  QueueOps reporting_policy_ = QueueOps::SetReportingPolicyUndecided;
   std::vector<CrashServer::UploadStatus> upload_attempt_results_;
   std::vector<CrashServer::UploadStatus>::const_iterator next_upload_attempt_result_;
 
   TestReportingPolicyWatcher reporting_policy_watcher_;
   NetworkWatcher network_watcher_;
   timekeeper::TestClock clock_;
+  std::unique_ptr<stubs::NetworkReachabilityProvider> network_reachability_provider_;
   std::unique_ptr<SnapshotManager> snapshot_manager_;
   std::unique_ptr<StubCrashServer> crash_server_;
   std::shared_ptr<InfoContext> info_context_;
   std::shared_ptr<cobalt::Logger> cobalt_;
 };
 
-TEST_F(QueueTest, Check_EmptyQueue_OnZeroAdds) {
-  SetUpQueue();
-  CheckQueueContents();
-  EXPECT_TRUE(queue_->IsEmpty());
-}
-
-TEST_F(QueueTest, Check_NotIsEmptyQueue_OnStateSetToLeaveAsPending_MultipleReports) {
+TEST_F(QueueTest, Check_Add_ReportingPolicyUndecided) {
   SetUpQueue();
   ApplyQueueOps({
-      QueueOps::AddNewReport,
-      QueueOps::AddNewReport,
-      QueueOps::AddNewReport,
-      QueueOps::AddNewReport,
+      QueueOps::SetReportingPolicyUndecided,
       QueueOps::AddNewReport,
   });
   CheckQueueContents();
-  EXPECT_EQ(queue_->Size(), 5u);
+  EXPECT_EQ(queue_->Size(), 1u);
 }
 
-TEST_F(QueueTest, Check_IsEmptyQueue_OnStateSetToArchive_MultipleReports) {
+TEST_F(QueueTest, Check_Add_ReportingPolicyDoNotFileAndDelete) {
+  SetUpQueue({kUploadFailed});
+  ApplyQueueOps({
+      QueueOps::SetReportingPolicyUpload,
+      QueueOps::AddNewReport,
+      QueueOps::SetReportingPolicyDelete,
+  });
+  CheckQueueContents();
+  EXPECT_TRUE(queue_->IsEmpty());
+
+  EXPECT_THAT(ReceivedCobaltEvents(),
+              UnorderedElementsAreArray({
+                  cobalt::Event(cobalt::CrashState::kDeleted),
+                  cobalt::Event(cobalt::UploadAttemptState::kUploadAttempt, 1u),
+                  cobalt::Event(cobalt::UploadAttemptState::kDeleted, 1u),
+              }));
+}
+
+TEST_F(QueueTest, Check_Add_ReportingPolicyArchive) {
   SetUpQueue();
   ApplyQueueOps({
-      QueueOps::SetStateToArchive,
-      QueueOps::AddNewReport,
+      QueueOps::SetReportingPolicyArchive,
       QueueOps::AddNewReport,
   });
   CheckQueueContents();
   EXPECT_TRUE(queue_->IsEmpty());
+
+  EXPECT_THAT(ReceivedCobaltEvents(), UnorderedElementsAreArray({
+                                          cobalt::Event(cobalt::CrashState::kArchived),
+                                      }));
 }
 
-TEST_F(QueueTest, Check_IsEmptyQueue_OnStateSetToArchive_MultipleReports_OneGarbageCollected) {
-  SetUpQueue();
-  ApplyQueueOps({
-      QueueOps::AddNewReport,
-      QueueOps::AddNewReport,
-      QueueOps::AddNewReport,
-      QueueOps::DeleteOneReport,
-      QueueOps::SetStateToArchive,
-  });
-  CheckQueueContents();
-  EXPECT_TRUE(queue_->IsEmpty());
-}
-
-TEST_F(QueueTest, Check_EarlyUploadSucceeds) {
+TEST_F(QueueTest, Check_Add_ReportingPolicyUpload_SuccessfulEarlyUpload) {
   SetUpQueue({kUploadSuccessful});
   ApplyQueueOps({
-      QueueOps::SetStateToUpload,
+      QueueOps::SetReportingPolicyUpload,
       QueueOps::AddNewReport,
   });
   CheckQueueContents();
@@ -340,7 +354,129 @@ TEST_F(QueueTest, Check_EarlyUploadSucceeds) {
   CheckAttachmentKeysOnServer();
   EXPECT_TRUE(queue_->IsEmpty());
 
-  RunLoopUntilIdle();
+  EXPECT_THAT(ReceivedCobaltEvents(),
+              UnorderedElementsAreArray({
+                  cobalt::Event(cobalt::CrashState::kUploaded),
+                  cobalt::Event(cobalt::UploadAttemptState::kUploadAttempt, 1u),
+                  cobalt::Event(cobalt::UploadAttemptState::kUploaded, 1u),
+              }));
+}
+
+TEST_F(QueueTest, Check_Add_ReportingPolicyUpload_FailedEarlyUpload) {
+  SetUpQueue({kUploadFailed});
+  ApplyQueueOps({
+      QueueOps::SetReportingPolicyUpload,
+      QueueOps::AddNewReport,
+  });
+  CheckQueueContents();
+  EXPECT_EQ(queue_->Size(), 1u);
+
+  EXPECT_THAT(ReceivedCobaltEvents(),
+              UnorderedElementsAreArray({
+                  cobalt::Event(cobalt::UploadAttemptState::kUploadAttempt, 1u),
+              }));
+}
+
+TEST_F(QueueTest, Check_UploadTaskRunsPeriodically) {
+  SetUpQueue({kUploadSuccessful, kUploadSuccessful});
+  ApplyQueueOps({
+      QueueOps::AddNewReport,
+      QueueOps::SetReportingPolicyUpload,
+  });
+  SimulatePerioidUpload();
+
+  CheckQueueContents();
+  CheckAnnotationsOnServer();
+  CheckAttachmentKeysOnServer();
+  EXPECT_TRUE(queue_->IsEmpty());
+
+  ApplyQueueOps({
+      QueueOps::AddNewReport,
+  });
+  SimulatePerioidUpload();
+
+  CheckQueueContents();
+  CheckAnnotationsOnServer();
+  CheckAttachmentKeysOnServer();
+  EXPECT_TRUE(queue_->IsEmpty());
+
+  EXPECT_THAT(ReceivedCobaltEvents(),
+              UnorderedElementsAreArray({
+                  cobalt::Event(cobalt::CrashState::kUploaded),
+                  cobalt::Event(cobalt::UploadAttemptState::kUploadAttempt, 1u),
+                  cobalt::Event(cobalt::UploadAttemptState::kUploaded, 1u),
+                  cobalt::Event(cobalt::CrashState::kUploaded),
+                  cobalt::Event(cobalt::UploadAttemptState::kUploadAttempt, 1u),
+                  cobalt::Event(cobalt::UploadAttemptState::kUploaded, 1u),
+              }));
+}
+
+TEST_F(QueueTest, Check_ReportingPolicyChangesCancelUploadTask) {
+  SetUpQueue({kUploadFailed, kUploadFailed});
+  ApplyQueueOps({
+      QueueOps::AddNewReport,
+      QueueOps::SetReportingPolicyUpload,
+      QueueOps::SetReportingPolicyUndecided,
+  });
+  SimulatePerioidUpload();
+
+  CheckQueueContents();
+  EXPECT_EQ(queue_->Size(), 1u);
+
+  ApplyQueueOps({
+      QueueOps::SetReportingPolicyUpload,
+      QueueOps::SetReportingPolicyDelete,
+  });
+  SimulatePerioidUpload();
+
+  CheckQueueContents();
+  EXPECT_TRUE(queue_->IsEmpty());
+
+  EXPECT_THAT(ReceivedCobaltEvents(),
+              UnorderedElementsAreArray({
+                  cobalt::Event(cobalt::CrashState::kDeleted),
+                  cobalt::Event(cobalt::UploadAttemptState::kUploadAttempt, 1u),
+                  cobalt::Event(cobalt::UploadAttemptState::kUploadAttempt, 2u),
+                  cobalt::Event(cobalt::UploadAttemptState::kDeleted, 2u),
+              }));
+}
+
+TEST_F(QueueTest, Check_UploadOnNetworkReachable) {
+  SetUpQueue({kUploadFailed, kUploadSuccessful});
+
+  ApplyQueueOps({
+      QueueOps::AddNewReport,
+      QueueOps::SetReportingPolicyUpload,
+  });
+  EXPECT_EQ(queue_->Size(), 1u);
+
+  SimulateNetworkReachable();
+
+  CheckQueueContents();
+  CheckAnnotationsOnServer();
+  CheckAttachmentKeysOnServer();
+  EXPECT_TRUE(queue_->IsEmpty());
+
+  EXPECT_THAT(ReceivedCobaltEvents(),
+              UnorderedElementsAreArray({
+                  cobalt::Event(cobalt::CrashState::kUploaded),
+                  cobalt::Event(cobalt::UploadAttemptState::kUploadAttempt, 1u),
+                  cobalt::Event(cobalt::UploadAttemptState::kUploadAttempt, 2u),
+                  cobalt::Event(cobalt::UploadAttemptState::kUploaded, 2u),
+              }));
+}
+
+TEST_F(QueueTest, Check_ReportGarbageCollected) {
+  SetUpQueue({kUploadSuccessful});
+  ApplyQueueOps({
+      QueueOps::AddNewReport,
+      QueueOps::DeleteOneReport,
+      QueueOps::SetReportingPolicyUpload,
+      QueueOps::AddNewReport,
+  });
+  CheckQueueContents();
+  EXPECT_TRUE(queue_->IsEmpty());
+
   EXPECT_THAT(ReceivedCobaltEvents(),
               UnorderedElementsAreArray({
                   cobalt::Event(cobalt::CrashState::kUploaded),
@@ -352,7 +488,7 @@ TEST_F(QueueTest, Check_EarlyUploadSucceeds) {
 TEST_F(QueueTest, Check_EarlyUploadThrottled) {
   SetUpQueue({kUploadThrottled});
   ApplyQueueOps({
-      QueueOps::SetStateToUpload,
+      QueueOps::SetReportingPolicyUpload,
       QueueOps::AddNewReport,
   });
   CheckQueueContents();
@@ -373,7 +509,7 @@ TEST_F(QueueTest, Check_ThrottledReportDropped) {
   SetUpQueue({kUploadThrottled});
   ApplyQueueOps({
       QueueOps::AddNewReport,
-      QueueOps::SetStateToUpload,
+      QueueOps::SetReportingPolicyUpload,
   });
   CheckQueueContents();
   CheckAnnotationsOnServer();
@@ -386,326 +522,6 @@ TEST_F(QueueTest, Check_ThrottledReportDropped) {
                   cobalt::Event(cobalt::CrashState::kUploadThrottled),
                   cobalt::Event(cobalt::UploadAttemptState::kUploadAttempt, 1u),
                   cobalt::Event(cobalt::UploadAttemptState::kUploadThrottled, 1u),
-              }));
-}
-
-TEST_F(QueueTest, Check_IsEmptyQueue_OnSuccessfulUpload_MultipleReports) {
-  SetUpQueue(std::vector<CrashServer::UploadStatus>(5u, kUploadSuccessful));
-  ApplyQueueOps({
-      QueueOps::AddNewReport,
-      QueueOps::AddNewReport,
-      QueueOps::AddNewReport,
-      QueueOps::AddNewReport,
-      QueueOps::AddNewReport,
-      QueueOps::SetStateToUpload,
-  });
-  CheckQueueContents();
-  CheckAnnotationsOnServer();
-  CheckAttachmentKeysOnServer();
-  EXPECT_TRUE(queue_->IsEmpty());
-}
-
-TEST_F(QueueTest, Check_NotIsEmptyQueue_OnFailedUpload_MultipleReports) {
-  SetUpQueue(std::vector<CrashServer::UploadStatus>(5u, kUploadFailed));
-  ApplyQueueOps({
-      QueueOps::AddNewReport,
-      QueueOps::AddNewReport,
-      QueueOps::AddNewReport,
-      QueueOps::AddNewReport,
-      QueueOps::AddNewReport,
-      QueueOps::SetStateToUpload,
-  });
-  CheckQueueContents();
-  CheckAnnotationsOnServer();
-  CheckAttachmentKeysOnServer();
-  EXPECT_FALSE(queue_->IsEmpty());
-}
-
-TEST_F(QueueTest, Check_IsEmptyQueue_OnSuccessfulUpload_OneGarbageCollected) {
-  SetUpQueue({kUploadSuccessful});
-  ApplyQueueOps({
-      QueueOps::AddNewReport,
-      QueueOps::DeleteOneReport,
-      QueueOps::SetStateToUpload,
-      QueueOps::AddNewReport,
-  });
-  CheckQueueContents();
-  CheckAnnotationsOnServer();
-  CheckAttachmentKeysOnServer();
-  EXPECT_TRUE(queue_->IsEmpty());
-}
-
-TEST_F(QueueTest, Check_IsEmptyQueue_OnSuccessfulUpload_MultipleGarbageCollected_MultipleReports) {
-  SetUpQueue({kUploadSuccessful});
-  ApplyQueueOps({
-      QueueOps::AddNewReport,
-      QueueOps::DeleteOneReport,
-      QueueOps::AddNewReport,
-      QueueOps::DeleteOneReport,
-      QueueOps::AddNewReport,
-      QueueOps::DeleteOneReport,
-      QueueOps::AddNewReport,
-      QueueOps::DeleteOneReport,
-      QueueOps::AddNewReport,
-      QueueOps::DeleteOneReport,
-      QueueOps::AddNewReport,
-      QueueOps::SetStateToUpload,
-  });
-  CheckQueueContents();
-  CheckAnnotationsOnServer();
-  CheckAttachmentKeysOnServer();
-  EXPECT_TRUE(queue_->IsEmpty());
-}
-
-TEST_F(QueueTest, Check_NotIsEmptyQueue_OnMixedUploadResults_MultipleReports) {
-  SetUpQueue({
-      kUploadSuccessful,
-      kUploadSuccessful,
-      kUploadFailed,
-      kUploadFailed,
-      kUploadSuccessful,
-  });
-  ApplyQueueOps({
-      QueueOps::AddNewReport,
-      QueueOps::AddNewReport,
-      QueueOps::AddNewReport,
-      QueueOps::AddNewReport,
-      QueueOps::AddNewReport,
-      QueueOps::SetStateToUpload,
-  });
-  CheckQueueContents();
-  CheckAnnotationsOnServer();
-  CheckAttachmentKeysOnServer();
-  EXPECT_EQ(queue_->Size(), 2u);
-}
-
-TEST_F(QueueTest,
-       Check_NotIsEmptyQueue_OnMixedUploadResults_MultipleGarbageCollected_MultipleReports) {
-  SetUpQueue({
-      kUploadSuccessful,
-      kUploadSuccessful,
-      kUploadFailed,
-      kUploadFailed,
-      kUploadSuccessful,
-  });
-  ApplyQueueOps({
-      QueueOps::AddNewReport,
-      QueueOps::AddNewReport,
-      QueueOps::AddNewReport,
-      QueueOps::AddNewReport,
-      QueueOps::AddNewReport,
-      QueueOps::AddNewReport,
-      QueueOps::AddNewReport,
-      QueueOps::DeleteOneReport,
-      QueueOps::DeleteOneReport,
-      QueueOps::SetStateToUpload,
-  });
-  CheckQueueContents();
-  CheckAnnotationsOnServer();
-  CheckAttachmentKeysOnServer();
-  EXPECT_EQ(queue_->Size(), 2u);
-}
-
-TEST_F(QueueTest, Check_UploadAll_CancelledAndPosted) {
-  SetUpQueue({
-      kUploadFailed,
-      kUploadSuccessful,
-      kUploadFailed,
-  });
-
-  // The upload task shouldn't run.
-  ApplyQueueOps({
-      QueueOps::SetStateToLeaveAsPending,
-      QueueOps::AddNewReport,
-  });
-  RunLoopFor(kPeriodicUploadDuration);
-  EXPECT_FALSE(queue_->IsEmpty());
-
-  // The upload task should upload the report.
-  ApplyQueueOps({
-      QueueOps::SetStateToUpload,
-  });
-  RunLoopFor(kPeriodicUploadDuration);
-  EXPECT_TRUE(queue_->IsEmpty());
-
-  // The state change should cancel the upload task.
-  ApplyQueueOps({
-      QueueOps::SetStateToLeaveAsPending,
-      QueueOps::AddNewReport,
-  });
-  RunLoopFor(kPeriodicUploadDuration);
-  EXPECT_FALSE(queue_->IsEmpty());
-
-  // The state change should cancel the upload task.
-  ApplyQueueOps({
-      QueueOps::SetStateToUpload,
-      QueueOps::SetStateToArchive,
-      QueueOps::AddNewReport,
-  });
-  RunLoopFor(kPeriodicUploadDuration);
-  EXPECT_TRUE(queue_->IsEmpty());
-}
-
-TEST_F(QueueTest, Check_UploadAll_ScheduledTwice) {
-  SetUpQueue({
-      kUploadFailed,
-      kUploadSuccessful,
-      kUploadFailed,
-      kUploadSuccessful,
-  });
-  ApplyQueueOps({
-      QueueOps::AddNewReport,
-      QueueOps::SetStateToUpload,
-  });
-  ASSERT_FALSE(queue_->IsEmpty());
-
-  RunLoopFor(kPeriodicUploadDuration);
-  EXPECT_TRUE(queue_->IsEmpty());
-
-  ApplyQueueOps({
-      QueueOps::SetStateToLeaveAsPending,
-      QueueOps::AddNewReport,
-      QueueOps::SetStateToUpload,
-  });
-  ASSERT_FALSE(queue_->IsEmpty());
-
-  RunLoopFor(kPeriodicUploadDuration);
-  EXPECT_TRUE(queue_->IsEmpty());
-}
-
-TEST_F(QueueTest, Check_UploadAllTwice_OnNetworkReachable) {
-  // Setup crash report upload outcome
-  SetUpQueue({
-      // First crash report: automatic upload fails (no early upload as upload not enabled at
-      // first), succeed when the network becomes reachable.
-      kUploadFailed,
-      kUploadSuccessful,
-      // Second crash report: automatic upload fails (no early upload as upload not enabled at
-      // first), succeed when then network becomes reachable.
-      kUploadFailed,
-      kUploadSuccessful,
-  });
-
-  // First crash report: automatic upload fails. Succeed on the second upload attempt when the
-  // network becomes reachable.
-  ApplyQueueOps({
-      QueueOps::AddNewReport,
-      QueueOps::SetStateToUpload,
-  });
-  ASSERT_FALSE(queue_->IsEmpty());
-  network_reachability_provider_->TriggerOnNetworkReachable(true);
-  RunLoopUntilIdle();
-  EXPECT_TRUE(queue_->IsEmpty());
-
-  // Second crash report: Insert a new crash report that fails to upload at first,
-  // and then check that it gets uploaded when the network becomes reachable again.
-  ApplyQueueOps({
-      QueueOps::SetStateToLeaveAsPending,
-      QueueOps::AddNewReport,
-      QueueOps::SetStateToUpload,
-  });
-  ASSERT_FALSE(queue_->IsEmpty());
-  network_reachability_provider_->TriggerOnNetworkReachable(false);
-  RunLoopUntilIdle();
-  EXPECT_FALSE(queue_->IsEmpty());
-  network_reachability_provider_->TriggerOnNetworkReachable(true);
-  RunLoopUntilIdle();
-  EXPECT_TRUE(queue_->IsEmpty());
-}
-
-TEST_F(QueueTest, Check_UploadAll_OnReconnect_NetworkReachable) {
-  // Setup crash report upload outcome: Automatic upload fails,
-  // succeed when the network becomes reachable
-  SetUpQueue({
-      kUploadFailed,
-      kUploadSuccessful,
-  });
-
-  // Automatic crash report upload fails.
-  ApplyQueueOps({
-      QueueOps::AddNewReport,
-      QueueOps::SetStateToUpload,
-  });
-  ASSERT_FALSE(queue_->IsEmpty());
-
-  // Close the connection to the network reachability service.
-  network_reachability_provider_->CloseConnection();
-
-  // We run the loop longer than the delay to account for the nondeterminism of
-  // backoff::ExponentialBackoff.
-  RunLoopFor(zx::min(3));
-
-  // We should be re-connected to the network reachability service.
-  // Test upload on network reachable.
-  network_reachability_provider_->TriggerOnNetworkReachable(false);
-  RunLoopUntilIdle();
-  EXPECT_FALSE(queue_->IsEmpty());
-  network_reachability_provider_->TriggerOnNetworkReachable(true);
-  RunLoopUntilIdle();
-  EXPECT_TRUE(queue_->IsEmpty());
-}
-
-TEST_F(QueueTest, Check_Skip_UploadAll_StateIsLeaveAsPending) {
-  SetUpQueue();
-
-  // Automatic crash report upload fails.
-  ApplyQueueOps({
-      QueueOps::SetStateToLeaveAsPending,
-      QueueOps::AddNewReport,
-  });
-  ASSERT_FALSE(queue_->IsEmpty());
-
-  // The periodic upload task shouldn't cause reports to be uploaded.
-  RunLoopFor(kPeriodicUploadDuration);
-  EXPECT_FALSE(queue_->IsEmpty());
-
-  // The network becoming reachable shouldn't cause reports to be uploaded.
-  network_reachability_provider_->TriggerOnNetworkReachable(true);
-  RunLoopUntilIdle();
-  EXPECT_FALSE(queue_->IsEmpty());
-}
-
-TEST_F(QueueTest, Check_Cobalt) {
-  SetUpQueue({
-      kUploadSuccessful,
-      kUploadSuccessful,
-      kUploadFailed,
-      kUploadFailed,
-      kUploadSuccessful,
-      kUploadThrottled,
-  });
-  ApplyQueueOps({
-      QueueOps::AddNewReport,
-      QueueOps::AddNewReport,
-      QueueOps::AddNewReport,
-      QueueOps::AddNewReport,
-      QueueOps::AddNewReport,
-      QueueOps::AddNewReport,
-      QueueOps::SetStateToUpload,
-      QueueOps::SetStateToArchive,
-  });
-
-  RunLoopUntilIdle();
-  EXPECT_THAT(ReceivedCobaltEvents(),
-              UnorderedElementsAreArray({
-                  cobalt::Event(cobalt::CrashState::kUploaded),
-                  cobalt::Event(cobalt::CrashState::kUploaded),
-                  cobalt::Event(cobalt::CrashState::kUploaded),
-                  cobalt::Event(cobalt::CrashState::kUploadThrottled),
-                  cobalt::Event(cobalt::CrashState::kArchived),
-                  cobalt::Event(cobalt::CrashState::kArchived),
-                  cobalt::Event(cobalt::UploadAttemptState::kUploadAttempt, 1u),
-                  cobalt::Event(cobalt::UploadAttemptState::kUploaded, 1u),
-                  cobalt::Event(cobalt::UploadAttemptState::kUploadAttempt, 1u),
-                  cobalt::Event(cobalt::UploadAttemptState::kUploaded, 1u),
-                  cobalt::Event(cobalt::UploadAttemptState::kUploadAttempt, 1u),
-                  cobalt::Event(cobalt::UploadAttemptState::kUploaded, 1u),
-                  cobalt::Event(cobalt::UploadAttemptState::kUploadAttempt, 1u),
-                  cobalt::Event(cobalt::UploadAttemptState::kUploadThrottled, 1u),
-                  cobalt::Event(cobalt::UploadAttemptState::kUploadAttempt, 1u),
-                  cobalt::Event(cobalt::UploadAttemptState::kArchived, 1u),
-                  cobalt::Event(cobalt::UploadAttemptState::kUploadAttempt, 1u),
-                  cobalt::Event(cobalt::UploadAttemptState::kArchived, 1u),
               }));
 }
 
@@ -716,7 +532,7 @@ TEST_F(QueueTest, Check_CobaltMultipleUploadAttempts) {
       kUploadSuccessful,
   });
   ApplyQueueOps({
-      QueueOps::SetStateToUpload,
+      QueueOps::SetReportingPolicyUpload,
       QueueOps::AddNewReport,
       QueueOps::AddNewReport,
   });

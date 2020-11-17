@@ -23,12 +23,16 @@ void QueueInfo::MarkReportAsUploaded(const std::string& server_report_id,
   context_->Cobalt().LogCount(cobalt::UploadAttemptState::kUploaded, upload_attempts);
 }
 
-void QueueInfo::MarkReportAsArchived(const uint64_t upload_attempts) {
+void QueueInfo::MarkReportAsArchived() {
   context_->Cobalt().LogOccurrence(cobalt::CrashState::kArchived);
+}
+
+void QueueInfo::MarkReportAsDeleted(const uint64_t upload_attempts) {
+  context_->Cobalt().LogOccurrence(cobalt::CrashState::kDeleted);
 
   // We log if it was attempted at least once.
   if (upload_attempts > 0) {
-    context_->Cobalt().LogCount(cobalt::UploadAttemptState::kArchived, upload_attempts);
+    context_->Cobalt().LogCount(cobalt::UploadAttemptState::kDeleted, upload_attempts);
   }
 }
 

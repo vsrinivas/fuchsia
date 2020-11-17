@@ -42,8 +42,13 @@ bool Queue::Contains(const ReportId report_id) const {
 }
 
 bool Queue::Add(Report report) {
+  if (reporting_policy_ == ReportingPolicy::kDoNotFileAndDelete) {
+    info_.MarkReportAsDeleted(0u);
+    return true;
+  }
+
   // Attempt to upload a report before putting it in the store.
-  if (state_ == State::Upload) {
+  if (reporting_policy_ == ReportingPolicy::kUpload) {
     if (Upload(report)) {
       return true;
     }
@@ -63,7 +68,7 @@ bool Queue::Add(Report report) {
     return false;
   }
 
-  if (state_ == State::Archive) {
+  if (reporting_policy_ == ReportingPolicy::kArchive) {
     Archive(report_id);
   } else {
     pending_reports_.push_back(report_id);
@@ -97,16 +102,15 @@ bool Queue::Upload(const Report& report) {
 
 void Queue::Archive(const ReportId report_id) {
   FX_LOGST(INFO, tags_->Get(report_id)) << "Archiving local report under /tmp/reports";
-  info_.MarkReportAsArchived(upload_attempts_[report_id]);
-  FreeResources(report_id);
+  info_.MarkReportAsArchived();
+  // In Archive mode, the report is never placed in |pending_| nor |upload_attemps_|.
 }
 
 void Queue::GarbageCollect(const ReportId report_id) {
   FX_LOGST(INFO, tags_->Get(report_id)) << "Garbage collected local report";
   info_.MarkReportAsGarbageCollected(upload_attempts_[report_id]);
   FreeResources(report_id);
-  pending_reports_.erase(std::remove(pending_reports_.begin(), pending_reports_.end(), report_id),
-                         pending_reports_.end());
+  pending_reports_.erase(std::find(pending_reports_.begin(), pending_reports_.end(), report_id));
 }
 
 void Queue::FreeResources(const ReportId report_id) {
@@ -148,15 +152,15 @@ size_t Queue::UploadAll() {
   return new_pending_reports.size() - pending_reports_.size();
 }
 
-size_t Queue::ArchiveAll() {
+void Queue::DeleteAll() {
+  FX_LOGS(INFO) << fxl::StringPrintf("Deleting all %zu pending reports", pending_reports_.size());
   for (const auto& report_id : pending_reports_) {
-    Archive(report_id);
+    info_.MarkReportAsDeleted(upload_attempts_[report_id]);
+    FreeResources(report_id);
   }
 
-  const size_t successful = pending_reports_.size();
   pending_reports_.clear();
-
-  return successful;
+  store_.RemoveAll();
 }
 
 // The queue is inheritly conservative with uploading crash reports meaning that a report that is
@@ -166,35 +170,35 @@ size_t Queue::ArchiveAll() {
 // never have to worry that a report that shouldn't be uploaded ends up being uploaded when the
 // reporting policy changes.
 void Queue::WatchReportingPolicy(ReportingPolicyWatcher* watcher) {
-  auto ChangeState = [this](const ReportingPolicy policy) {
-    switch (policy) {
-      // TODO(fxbug.dev/62362): Behave differently for Archive and Delete.
-      case ReportingPolicy::kArchive:
+  auto OnReportingPolicyChange = [this](const ReportingPolicy policy) {
+    reporting_policy_ = policy;
+    switch (reporting_policy_) {
       case ReportingPolicy::kDoNotFileAndDelete:
-        state_ = State::Archive;
         upload_all_every_fifteen_minutes_task_.Cancel();
-        ArchiveAll();
+        DeleteAll();
         break;
       case ReportingPolicy::kUpload:
-        state_ = State::Upload;
         UploadAllEveryFifteenMinutes();
         break;
+      case ReportingPolicy::kArchive:
+        // The reporting policy shouldn't change to Archive outside of tests.
+        break;
       case ReportingPolicy::kUndecided:
-        state_ = State::LeaveAsPending;
         upload_all_every_fifteen_minutes_task_.Cancel();
         break;
     }
   };
 
-  ChangeState(watcher->CurrentPolicy());
-  watcher->OnPolicyChange([=](const ReportingPolicy policy) { ChangeState(policy); });
+  OnReportingPolicyChange(watcher->CurrentPolicy());
+  watcher->OnPolicyChange([=](const ReportingPolicy policy) { OnReportingPolicyChange(policy); });
 }
 
 void Queue::WatchNetwork(NetworkWatcher* network_watcher) {
   network_watcher->Register([this](const bool network_is_reachable) {
     if (network_is_reachable) {
       // Save the size of |pending_reports_| because UploadAll mutates |pending_reports_|.
-      if (const auto pending = pending_reports_.size(); state_ == State::Upload && pending > 0) {
+      if (const auto pending = pending_reports_.size();
+          reporting_policy_ == ReportingPolicy::kUpload && pending > 0) {
         const auto uploaded = UploadAll();
         FX_LOGS(INFO) << fxl::StringPrintf(
             "Successfully uploaded %zu of %zu pending crash reports on network reachable ",
@@ -205,7 +209,8 @@ void Queue::WatchNetwork(NetworkWatcher* network_watcher) {
 }
 
 void Queue::UploadAllEveryFifteenMinutes() {
-  if (const auto pending = pending_reports_.size(); state_ == State::Upload && pending > 0) {
+  if (const auto pending = pending_reports_.size();
+      reporting_policy_ == ReportingPolicy::kUpload && pending > 0) {
     const auto uploaded = UploadAll();
     FX_LOGS(INFO) << fxl::StringPrintf(
         "Successfully uploaded %zu of %zu pending crash reports as part of the "

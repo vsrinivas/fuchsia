@@ -26,7 +26,7 @@
 namespace forensics {
 namespace crash_reports {
 
-// Queues pending reports and processes them according to its internal State.
+// Queues pending reports and processes them according to the reporting policy.
 class Queue {
  public:
   Queue(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
@@ -48,20 +48,12 @@ class Queue {
   ReportId LatestReport() { return pending_reports_.back(); }
 
  private:
-  // How the queue should handle processing existing pending reports and new reports.
-  enum class State {
-    Archive,
-    Upload,
-    LeaveAsPending,
-  };
-
-  // Archives all pending reports and clears the queue. Returns the number of reports successfully
-  // archived.
-  size_t ArchiveAll();
-
   // Attempts to upload all pending reports and removes the successfully uploaded reports from the
   // queue. Returns the number of reports successfully uploaded.
   size_t UploadAll();
+
+  // Deletes all of the reports in the queue and store.
+  void DeleteAll();
 
   // Attempts to upload a report
   //
@@ -86,7 +78,7 @@ class Queue {
   SnapshotManager* snapshot_manager_;
   QueueInfo info_;
 
-  State state_ = State::LeaveAsPending;
+  ReportingPolicy reporting_policy_{ReportingPolicy::kUndecided};
 
   std::vector<ReportId> pending_reports_;
 

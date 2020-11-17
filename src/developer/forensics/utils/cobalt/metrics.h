@@ -21,16 +21,14 @@ enum class CrashState {
   kDropped = cobalt_registry::CrashMetricDimensionState::Dropped,
   kUploadThrottled = cobalt_registry::CrashMetricDimensionState::UploadThrottled,
   kOnDeviceQuotaReached = cobalt_registry::CrashMetricDimensionState::OnDeviceQuotaReached,
+  kDeleted = cobalt_registry::CrashMetricDimensionState::Deleted,
 };
 
 enum class UploadAttemptState {
   kUnknown = cobalt_registry::CrashUploadAttemptsMetricDimensionState::Unknown,
   kUploadAttempt = cobalt_registry::CrashUploadAttemptsMetricDimensionState::UploadAttempt,
   kUploaded = cobalt_registry::CrashUploadAttemptsMetricDimensionState::Uploaded,
-  // TODO(fxbug.dev/62362): Change this to
-  // `kDeleted = cobalt_registry::CrashUploadAttemptsMetricDimensionState::Deleted`
-  // once Archive has been renamed to Deleted.
-  kArchived = 3u,
+  kDeleted = cobalt_registry::CrashUploadAttemptsMetricDimensionState::Deleted,
   kGarbageCollected = cobalt_registry::CrashUploadAttemptsMetricDimensionState::GarbageCollected,
   kUploadThrottled = cobalt_registry::CrashUploadAttemptsMetricDimensionState::UploadThrottled,
 };
