@@ -39,14 +39,20 @@ mod tests {
     #[test]
     fn test_mock_metrics_reporter() {
         let mut mock = MockMetricsReporter::new();
-        let result = mock.report_metrics(Metrics::UpdateCheckResponseTime(Duration::from_secs(2)));
+        let result = mock.report_metrics(Metrics::UpdateCheckResponseTime {
+            response_time: Duration::from_secs(2),
+            successful: true,
+        });
         assert!(result.is_ok(), "{:?}", result);
     }
 
     #[test]
     fn test_mock_metrics_reporter_error() {
         let mut mock = MockMetricsReporter::new_failing();
-        let result = mock.report_metrics(Metrics::UpdateCheckResponseTime(Duration::from_secs(5)));
+        let result = mock.report_metrics(Metrics::UpdateCheckResponseTime {
+            response_time: Duration::from_secs(5),
+            successful: true,
+        });
         assert!(result.is_err());
     }
 }

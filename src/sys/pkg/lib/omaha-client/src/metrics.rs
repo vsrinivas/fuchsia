@@ -15,8 +15,9 @@ pub use stub::StubMetricsReporter;
 /// The list of metrics that can be reported.
 #[derive(Debug, Eq, PartialEq)]
 pub enum Metrics {
-    /// Elapsed time from sending an update check to getting a response from Omaha.
-    UpdateCheckResponseTime(Duration),
+    /// Elapsed time from sending an update check to getting a response from Omaha, with a bool to
+    /// hold whether that was a success or a failure.
+    UpdateCheckResponseTime { response_time: Duration, successful: bool },
     /// Elapsed time from the previous update check to the current update check.
     UpdateCheckInterval(Duration),
     /// Elapsed time from starting an update to having successfully applied it.

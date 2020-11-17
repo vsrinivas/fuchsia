@@ -57,6 +57,8 @@ const CONSECUTIVE_FAILED_UPDATE_CHECKS: &str = "consecutive_failed_update_checks
 const CHECK_REBOOT_ALLOWED_INTERVAL: Duration = Duration::from_secs(30 * 60);
 // This header contains the number of seconds client must not contact server again.
 const X_RETRY_AFTER: &str = "X-Retry-After";
+// How many requests we will make to Omaha before giving up.
+const MAX_OMAHA_REQUEST_ATTEMPTS: u64 = 3;
 
 /// This is the core state machine for a client's update check.  It is instantiated and used to
 /// perform update checks over time or to perform a single update check process.
@@ -658,12 +660,38 @@ where
         let session_id = GUID::new();
         request_builder = request_builder.session_id(session_id.clone());
 
-        let update_check_start_time = Instant::now();
         let mut omaha_request_attempt = 1;
-        let max_omaha_request_attempts = 3;
+
+        // Attempt in an loop of up to MAX_OMAHA_REQUEST_ATTEMPTS to communicate with Omaha.
+        // exit the loop early on success or an error that isn't related to a transport issue.
         let (_parts, data) = loop {
+            // Mark the start time for the request to omaha.
+            let omaha_check_start_time = self.time_source.now_in_monotonic();
             request_builder = request_builder.request_id(GUID::new());
-            match self.do_omaha_request_and_update_context(&request_builder, co).await {
+            let result = self.do_omaha_request_and_update_context(&request_builder, co).await;
+
+            // Report the response time of the omaha request.
+            {
+                // don't use Instant::elapsed(), it doesn't use the right TimeSource, and can panic!
+                // as a result
+                let now = self.time_source.now_in_monotonic();
+                let duration = now.checked_duration_since(omaha_check_start_time);
+
+                if let Some(response_time) = duration {
+                    self.report_metrics(Metrics::UpdateCheckResponseTime {
+                        response_time,
+                        successful: result.is_ok(),
+                    });
+                } else {
+                    // If this happens, it's a bug.
+                    error!(
+                        "now: {:?}, is before omaha_check_start_time: {:?}",
+                        now, omaha_check_start_time
+                    );
+                }
+            }
+
+            match result {
                 Ok(res) => {
                     break res;
                 }
@@ -681,7 +709,7 @@ where
                     warn!("Unable to contact Omaha: {:?}", e);
                     // Don't retry if the error was caused by user code, which means we weren't
                     // using the library correctly.
-                    if omaha_request_attempt >= max_omaha_request_attempts
+                    if omaha_request_attempt >= MAX_OMAHA_REQUEST_ATTEMPTS
                         || e.is_user()
                         || self.context.state.server_dictated_poll_interval.is_some()
                     {
@@ -691,7 +719,7 @@ where
                 }
                 Err(OmahaRequestError::HttpStatus(e)) => {
                     warn!("Unable to contact Omaha: {:?}", e);
-                    if omaha_request_attempt >= max_omaha_request_attempts
+                    if omaha_request_attempt >= MAX_OMAHA_REQUEST_ATTEMPTS
                         || self.context.state.server_dictated_poll_interval.is_some()
                     {
                         self.set_state(State::ErrorCheckingForUpdate, co).await;
@@ -710,7 +738,6 @@ where
             omaha_request_attempt += 1;
         };
 
-        self.report_metrics(Metrics::UpdateCheckResponseTime(update_check_start_time.elapsed()));
         self.report_metrics(Metrics::UpdateCheckRetries(omaha_request_attempt));
 
         let response = match Self::parse_omaha_response(&data) {
@@ -1752,11 +1779,85 @@ mod tests {
                 .oneshot()
                 .await;
 
-            assert!(!metrics_reporter.metrics.is_empty());
-            match &metrics_reporter.metrics[0] {
-                Metrics::UpdateCheckResponseTime(_) => {} // expected
-                metric => panic!("Unexpected metric {:?}", metric),
+            // FIXME(https://github.com/rust-lang/rustfmt/issues/4530) rustfmt doesn't wrap slice
+            // patterns yet.
+            #[rustfmt::skip]
+            assert_matches!(
+                metrics_reporter.metrics.as_slice(),
+                [
+                    Metrics::UpdateCheckResponseTime { response_time: _, successful: true },
+                    Metrics::UpdateCheckRetries(1),
+                ]
+            );
+        });
+    }
+
+    #[test]
+    fn test_metrics_report_update_check_response_time_on_failure() {
+        block_on(async {
+            let mut metrics_reporter = MockMetricsReporter::new();
+            let mut http = MockHttpRequest::default();
+
+            for _ in 0..MAX_OMAHA_REQUEST_ATTEMPTS {
+                http.add_error(http_request::mock_errors::make_transport_error());
             }
+
+            // Note: we exit the update loop before we fetch the successful result, so we never see
+            // this result.
+            http.add_response(hyper::Response::default());
+
+            let _response = StateMachineBuilder::new_stub()
+                .http(http)
+                .metrics_reporter(&mut metrics_reporter)
+                .oneshot()
+                .await;
+
+            // FIXME(https://github.com/rust-lang/rustfmt/issues/4530) rustfmt doesn't wrap slice
+            // patterns yet.
+            #[rustfmt::skip]
+            assert_matches!(
+                metrics_reporter.metrics.as_slice(),
+                [
+                    Metrics::UpdateCheckResponseTime { response_time: _, successful: false },
+                    Metrics::UpdateCheckResponseTime { response_time: _, successful: false },
+                    Metrics::UpdateCheckResponseTime { response_time: _, successful: false },
+
+                    // FIXME(60589): We should be reporting retry errors.
+                    //Metrics::UpdateCheckRetries(3),
+                ]
+            );
+        });
+    }
+
+    #[test]
+    fn test_metrics_report_update_check_response_time_on_failure_followed_by_success() {
+        block_on(async {
+            let mut metrics_reporter = MockMetricsReporter::new();
+            let mut http = MockHttpRequest::default();
+
+            for _ in 0..MAX_OMAHA_REQUEST_ATTEMPTS - 1 {
+                http.add_error(http_request::mock_errors::make_transport_error());
+            }
+            http.add_response(hyper::Response::default());
+
+            let _response = StateMachineBuilder::new_stub()
+                .http(http)
+                .metrics_reporter(&mut metrics_reporter)
+                .oneshot()
+                .await;
+
+            // FIXME(https://github.com/rust-lang/rustfmt/issues/4530) rustfmt doesn't wrap slice
+            // patterns yet.
+            #[rustfmt::skip]
+            assert_matches!(
+                metrics_reporter.metrics.as_slice(),
+                [
+                    Metrics::UpdateCheckResponseTime { response_time: _, successful: false },
+                    Metrics::UpdateCheckResponseTime { response_time: _, successful: false },
+                    Metrics::UpdateCheckResponseTime { response_time: _, successful: true },
+                    Metrics::UpdateCheckRetries(3),
+                ]
+            );
         });
     }
 

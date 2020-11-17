@@ -7,8 +7,9 @@ use anyhow::Error;
 use fidl_fuchsia_cobalt::CobaltEvent;
 use fuchsia_cobalt::{CobaltConnector, CobaltSender, ConnectionType};
 use futures::prelude::*;
-use log::info;
+use log::{info, warn};
 use omaha_client::metrics::{Metrics, MetricsReporter};
+use std::{convert::TryFrom, time::Duration};
 
 /// A MetricsReporter trait implementation that send metrics to Cobalt.
 pub struct CobaltMetricsReporter {
@@ -30,46 +31,80 @@ impl CobaltMetricsReporter {
     }
 }
 
+fn duration_to_cobalt_micros(duration: Duration, metric_name: &str) -> Option<i64> {
+    if let Ok(micros) = i64::try_from(duration.as_micros()) {
+        Some(micros)
+    } else {
+        warn!("Unable to report {} due to overflow: {:?}", metric_name, duration);
+        None
+    }
+}
+
 impl MetricsReporter for CobaltMetricsReporter {
     fn report_metrics(&mut self, metrics: Metrics) -> Result<(), Error> {
         info!("Reporting metrics to Cobalt: {:?}", metrics);
         match metrics {
-            Metrics::UpdateCheckResponseTime(duration) => {
-                self.cobalt_sender.log_elapsed_time(
-                    mos_metrics_registry::UPDATE_CHECK_RESPONSE_TIME_METRIC_ID,
-                    mos_metrics_registry::UpdateCheckResponseTimeMetricDimensionResult::Success
-                        as u32,
-                    duration.as_micros() as i64,
-                );
+            Metrics::UpdateCheckResponseTime { response_time, successful } => {
+                if let Some(response_time) =
+                    duration_to_cobalt_micros(response_time, "Metrics::UpdateCheckResponseTime")
+                {
+                    self.cobalt_sender.log_elapsed_time(
+                        mos_metrics_registry::UPDATE_CHECK_RESPONSE_TIME_METRIC_ID,
+                        match successful {
+                            true => {
+                                mos_metrics_registry::UpdateCheckResponseTimeMetricDimensionResult::Success
+                            }
+                            false => {
+                                mos_metrics_registry::UpdateCheckResponseTimeMetricDimensionResult::Failed
+                            }
+                        },
+                        response_time,
+                    );
+                }
             }
             Metrics::UpdateCheckInterval(duration) => {
-                self.cobalt_sender.log_elapsed_time(
-                    mos_metrics_registry::UPDATE_CHECK_INTERVAL_METRIC_ID,
-                    mos_metrics_registry::UpdateCheckIntervalMetricDimensionResult::Success as u32,
-                    duration.as_micros() as i64,
-                );
+                if let Some(duration) =
+                    duration_to_cobalt_micros(duration, "Metrics::UpdateCheckInterval")
+                {
+                    self.cobalt_sender.log_elapsed_time(
+                        mos_metrics_registry::UPDATE_CHECK_INTERVAL_METRIC_ID,
+                        mos_metrics_registry::UpdateCheckIntervalMetricDimensionResult::Success,
+                        duration,
+                    );
+                }
             }
             Metrics::SuccessfulUpdateDuration(duration) => {
-                self.cobalt_sender.log_elapsed_time(
-                    mos_metrics_registry::UPDATE_DURATION_METRIC_ID,
-                    mos_metrics_registry::UpdateDurationMetricDimensionResult::Success as u32,
-                    duration.as_micros() as i64,
-                );
+                if let Some(duration) =
+                    duration_to_cobalt_micros(duration, "Metrics::SuccessfulUpdateDuration")
+                {
+                    self.cobalt_sender.log_elapsed_time(
+                        mos_metrics_registry::UPDATE_DURATION_METRIC_ID,
+                        mos_metrics_registry::UpdateDurationMetricDimensionResult::Success,
+                        duration,
+                    );
+                }
             }
             Metrics::FailedUpdateDuration(duration) => {
-                self.cobalt_sender.log_elapsed_time(
-                    mos_metrics_registry::UPDATE_DURATION_METRIC_ID,
-                    mos_metrics_registry::UpdateDurationMetricDimensionResult::Failed as u32,
-                    duration.as_micros() as i64,
-                );
+                if let Some(duration) =
+                    duration_to_cobalt_micros(duration, "Metrics::FailedUpdateDuration")
+                {
+                    self.cobalt_sender.log_elapsed_time(
+                        mos_metrics_registry::UPDATE_DURATION_METRIC_ID,
+                        mos_metrics_registry::UpdateDurationMetricDimensionResult::Failed,
+                        duration,
+                    );
+                }
             }
             Metrics::SuccessfulUpdateFromFirstSeen(duration) => {
-                self.cobalt_sender.log_elapsed_time(
-                    mos_metrics_registry::UPDATE_DURATION_FROM_FIRST_SEEN_METRIC_ID,
-                    mos_metrics_registry::UpdateDurationFromFirstSeenMetricDimensionResult::Success
-                        as u32,
-                    duration.as_micros() as i64,
-                );
+                if let Some(duration) =
+                    duration_to_cobalt_micros(duration, "Metrics::SuccessfulUpdateFromFirstSeen")
+                {
+                    self.cobalt_sender.log_elapsed_time(
+                        mos_metrics_registry::UPDATE_DURATION_FROM_FIRST_SEEN_METRIC_ID,
+                        mos_metrics_registry::UpdateDurationFromFirstSeenMetricDimensionResult::Success,
+                        duration,
+                    );
+                }
             }
             Metrics::UpdateCheckFailureReason(reason) => {
                 let event_code = reason as u32;
@@ -85,7 +120,7 @@ impl MetricsReporter for CobaltMetricsReporter {
             Metrics::UpdateCheckRetries(count) => {
                 self.cobalt_sender.log_event_count(
                     mos_metrics_registry::UPDATE_CHECK_RETRIES_METRIC_ID,
-                    mos_metrics_registry::UpdateCheckRetriesMetricDimensionResult::Success as u32,
+                    mos_metrics_registry::UpdateCheckRetriesMetricDimensionResult::Success,
                     0,
                     count as i64,
                 );
@@ -93,23 +128,26 @@ impl MetricsReporter for CobaltMetricsReporter {
             Metrics::AttemptsToSucceed(count) => {
                 self.cobalt_sender.log_event_count(
                     mos_metrics_registry::ATTEMPTS_TO_SUCCEED_METRIC_ID,
-                    mos_metrics_registry::AttemptsToSucceedMetricDimensionResult::Success as u32,
+                    mos_metrics_registry::AttemptsToSucceedMetricDimensionResult::Success,
                     0,
                     count as i64,
                 );
             }
             Metrics::WaitedForRebootDuration(duration) => {
-                self.cobalt_sender.log_elapsed_time(
-                    mos_metrics_registry::WAITED_FOR_REBOOT_DURATION_METRIC_ID,
-                    mos_metrics_registry::WaitedForRebootDurationMetricDimensionResult::Success
-                        as u32,
-                    duration.as_micros() as i64,
-                );
+                if let Some(duration) =
+                    duration_to_cobalt_micros(duration, "Metrics::WaitedForRebootDuration")
+                {
+                    self.cobalt_sender.log_elapsed_time(
+                        mos_metrics_registry::WAITED_FOR_REBOOT_DURATION_METRIC_ID,
+                        mos_metrics_registry::WaitedForRebootDurationMetricDimensionResult::Success,
+                        duration,
+                    );
+                }
             }
             Metrics::FailedBootAttempts(count) => {
                 self.cobalt_sender.log_event_count(
                     mos_metrics_registry::FAILED_BOOT_ATTEMPTS_METRIC_ID,
-                    mos_metrics_registry::FailedBootAttemptsMetricDimensionResult::Success as u32,
+                    mos_metrics_registry::FailedBootAttemptsMetricDimensionResult::Success,
                     0,
                     count as i64,
                 );
@@ -122,6 +160,7 @@ impl MetricsReporter for CobaltMetricsReporter {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use cobalt_client::traits::AsEventCodes;
     use fidl_fuchsia_cobalt::{CountEvent, EventPayload};
     use omaha_client::metrics::UpdateCheckFailureReason;
     use std::time::Duration;
@@ -130,7 +169,10 @@ mod tests {
     fn test_report_update_check_response_time() {
         let (mut reporter, mut receiver) = CobaltMetricsReporter::new_mock();
         reporter
-            .report_metrics(Metrics::UpdateCheckResponseTime(Duration::from_millis(10)))
+            .report_metrics(Metrics::UpdateCheckResponseTime {
+                response_time: Duration::from_millis(10),
+                successful: true,
+            })
             .unwrap();
         assert_eq!(
             receiver.try_next().unwrap().unwrap(),
@@ -138,8 +180,8 @@ mod tests {
                 metric_id: mos_metrics_registry::UPDATE_CHECK_RESPONSE_TIME_METRIC_ID,
                 event_codes: vec![
                     mos_metrics_registry::UpdateCheckResponseTimeMetricDimensionResult::Success
-                        as u32
-                ],
+                ]
+                .as_event_codes(),
                 component: None,
                 payload: EventPayload::ElapsedMicros(10 * 1000),
             }
@@ -160,8 +202,8 @@ mod tests {
                 metric_id: mos_metrics_registry::UPDATE_CHECK_FAILURE_METRIC_ID,
                 event_codes: vec![
                     mos_metrics_registry::UpdateCheckFailureMetricDimensionReason::Configuration
-                        as u32
-                ],
+                ]
+                .as_event_codes(),
                 component: None,
                 payload: EventPayload::Event(fidl_fuchsia_cobalt::Event),
             }
@@ -192,8 +234,9 @@ mod tests {
             CobaltEvent {
                 metric_id: mos_metrics_registry::UPDATE_CHECK_RETRIES_METRIC_ID,
                 event_codes: vec![
-                    mos_metrics_registry::UpdateCheckRetriesMetricDimensionResult::Success as u32
-                ],
+                    mos_metrics_registry::UpdateCheckRetriesMetricDimensionResult::Success
+                ]
+                .as_event_codes(),
                 component: None,
                 payload: EventPayload::EventCount(CountEvent {
                     period_duration_micros: 0,
@@ -201,5 +244,15 @@ mod tests {
                 }),
             }
         );
+    }
+
+    #[test]
+    fn test_duration_to_cobalt_metrics() {
+        assert_eq!(duration_to_cobalt_micros(Duration::from_micros(0), "test"), Some(0));
+        assert_eq!(
+            duration_to_cobalt_micros(Duration::from_micros(std::i64::MAX as u64), "test"),
+            Some(std::i64::MAX)
+        );
+        assert_eq!(duration_to_cobalt_micros(Duration::from_micros(std::u64::MAX), "test"), None);
     }
 }

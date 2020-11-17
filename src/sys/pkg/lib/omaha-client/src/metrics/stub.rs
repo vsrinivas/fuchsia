@@ -25,7 +25,10 @@ mod tests {
     #[test]
     fn test_stub_metrics_reporter() {
         let mut stub = StubMetricsReporter;
-        let result = stub.report_metrics(Metrics::UpdateCheckResponseTime(Duration::from_secs(2)));
+        let result = stub.report_metrics(Metrics::UpdateCheckResponseTime {
+            response_time: Duration::from_secs(2),
+            successful: true,
+        });
         assert!(result.is_ok(), "{:?}", result);
     }
 }
