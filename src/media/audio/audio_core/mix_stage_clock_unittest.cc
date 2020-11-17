@@ -80,7 +80,7 @@ static constexpr float kMicroSrcSecondaryErrPpmMultiplier = 0.9;
 static constexpr float kAdjustableSecondaryErrPpmMultiplier = -25;
 
 static constexpr int32_t kMicroSrcLimitMixCountOneUsecErr = 4;
-static constexpr int32_t kAdjustableLimitMixCountOneUsecErr = 100;
+static constexpr int32_t kAdjustableLimitMixCountOneUsecErr = 105;
 
 static constexpr int32_t kMicroSrcLimitMixCountOnePercentErr = 12;
 static constexpr int32_t kAdjustableLimitMixCountOnePercentErr = 135;
@@ -94,7 +94,7 @@ static constexpr int32_t kAdjustableMixCountSettledVerificationPeriod = 20;
 
 // Error thresholds
 static constexpr auto kMicroSrcLimitSettledErr = zx::duration(15);
-static constexpr auto kAdjustableLimitSettledErr = zx::duration(50);
+static constexpr auto kAdjustableLimitSettledErr = zx::duration(60);
 
 // When tuning a new set of PID coefficients, set this to enable additional logging.
 constexpr bool kDisplayForPidCoefficientsTuning = false;
