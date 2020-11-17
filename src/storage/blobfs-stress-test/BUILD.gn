@@ -77,7 +77,6 @@ test_package("blobfs-stress-test") {
   deps = [
     ":blobfs-stress-test-bin",
     ":mounter",
-    "//src/lib/isolated_devmgr/v2_component:isolated-devmgr",
     "//src/storage/bin/blobfs:blobfs",
   ]
 
@@ -140,5 +139,14 @@ package("blobfs-stressor") {
       dest = "blobfs_stressor"
       shell = true
     },
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":blobfs-stress-test",
+    "//src/lib/isolated_devmgr/v2_component:isolated-devmgr",
+    "//src/sys/component_manager:component-manager",
   ]
 }

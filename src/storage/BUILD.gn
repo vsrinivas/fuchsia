@@ -11,7 +11,7 @@ group("tests") {
   deps = [
     "bin:tests",
     "blobfs-corrupt:tests",
-    "blobfs-stress-test",
+    "blobfs-stress-test:tests",
     "blobfs/test",
     "conformance:tests",
     "ext4:tests",
@@ -21,7 +21,7 @@ group("tests") {
     "fs_test:tests",
     "fshost:tests",
     "fuchsia-fatfs:tests",
-    "fvm-stress-test",
+    "fvm-stress-test:tests",
     "host_fs_test:tests",
     "lib:tests",
     "minfs:tests",

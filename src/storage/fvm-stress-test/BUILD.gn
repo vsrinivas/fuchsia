@@ -108,3 +108,12 @@ fuchsia_test_package("fvm-stress-test") {
   }
   deps = [ ":root" ]
 }
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":fvm-stress-test",
+    "//src/lib/isolated_devmgr/v2_component:isolated-devmgr",
+    "//src/sys/component_manager:component-manager",
+  ]
+}

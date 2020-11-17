@@ -125,3 +125,11 @@ test_package("scenic-stress-tests") {
     resources += vulkan_validation_layers.resources
   }
 }
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":scenic-stress-tests",
+    "//src/sys/component_manager:component-manager",
+  ]
+}

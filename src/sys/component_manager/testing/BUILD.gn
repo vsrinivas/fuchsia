@@ -4,6 +4,13 @@
 
 import("//build/rust/rustc_library.gni")
 
+# NOTE: Ensure that //src/sys/component_manager:component-manager is
+# also built as part of your test. Currently it is not possible to
+# create this dependency automatically.
+#
+# TODO(fxbug.dev/64460): Create a stronger dependency between test_utils_lib
+# and //src/sys/component_manager:component-manager
+
 rustc_library("test_utils_lib") {
   name = "test_utils_lib"
   edition = "2018"
@@ -47,8 +54,4 @@ rustc_library("test_utils_lib") {
     "sequence.rs",
     "trigger_capability.rs",
   ]
-
-  # OpaqueTest requires that component_manager.cmx exists
-  # for its default configuration
-  non_rust_deps = [ "//src/sys/component_manager:component-manager" ]
 }
