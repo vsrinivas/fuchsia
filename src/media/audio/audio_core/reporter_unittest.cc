@@ -3,6 +3,7 @@
 
 #include "src/media/audio/audio_core/reporter.h"
 
+#include <lib/fit/single_threaded_executor.h>
 #include <lib/inspect/testing/cpp/inspect.h>
 
 #include "src/lib/fxl/strings/string_printf.h"
@@ -28,11 +29,13 @@ using ::testing::IsEmpty;
 using ::testing::IsSupersetOf;
 
 ::testing::Matcher<const ::inspect::Hierarchy&> NodeAlive(const std::string& name) {
-  return NodeMatches(AllOf(NameMatches(name), PropertyList(Contains(BoolIs("alive", true)))));
+  return NodeMatches(
+      AllOf(NameMatches(name), PropertyList(Contains(UintIs("time since death (ns)", 0)))));
 }
 
 ::testing::Matcher<const ::inspect::Hierarchy&> NodeDead(const std::string& name) {
-  return NodeMatches(AllOf(NameMatches(name), PropertyList(Contains(BoolIs("alive", false)))));
+  return NodeMatches(
+      AllOf(NameMatches(name), Not(PropertyList(Contains(UintIs("time since death (ns)", 0))))));
 }
 
 class ReporterTest : public testing::ThreadingModelFixture {
@@ -52,6 +55,17 @@ class ReporterTest : public testing::ThreadingModelFixture {
     }
 
     return inspect::Hierarchy();
+  }
+
+  inspect::Hierarchy GetHierarchyLazyValues() {
+    fit::result<inspect::Hierarchy> result;
+    fit::single_threaded_executor exec;
+    exec.schedule_task(
+        inspect::ReadFromInspector(under_test_.inspector())
+            .then([&](fit::result<inspect::Hierarchy>& res) { result = std::move(res); }));
+    exec.run();
+    EXPECT_TRUE(result.is_ok());
+    return result.take_value();
   }
 
   Reporter under_test_;
@@ -124,7 +138,7 @@ TEST_F(ReporterTest, AddRemoveDevices) {
                                                    fxl::StringPrintf("input_thread_%lu", k)));
   }
 
-  EXPECT_THAT(GetHierarchy(),
+  EXPECT_THAT(GetHierarchyLazyValues(),
               ChildrenMatch(IsSupersetOf(
                   {AllOf(NodeMatches(NameMatches("output devices")),
                          ChildrenMatch(UnorderedElementsAre(
@@ -146,7 +160,7 @@ TEST_F(ReporterTest, AddRemoveDevices) {
   inputs[2].Drop();
   inputs[3].Drop();
 
-  EXPECT_THAT(GetHierarchy(),
+  EXPECT_THAT(GetHierarchyLazyValues(),
               ChildrenMatch(
                   IsSupersetOf({AllOf(NodeMatches(NameMatches("output devices")),
                                       ChildrenMatch(UnorderedElementsAre(
@@ -163,7 +177,7 @@ TEST_F(ReporterTest, AddRemoveDevices) {
   inputs[4].Drop();
 
   // Garbage collect [0].
-  EXPECT_THAT(GetHierarchy(),
+  EXPECT_THAT(GetHierarchyLazyValues(),
               ChildrenMatch(IsSupersetOf(
                   {AllOf(NodeMatches(NameMatches("output devices")),
                          ChildrenMatch(UnorderedElementsAre(
@@ -207,19 +221,19 @@ TEST_F(ReporterTest, DeviceMetrics) {
                                           PropertyList(UnorderedElementsAre(
                                               UintIs("count", 0), UintIs("duration (ns)", 0),
                                               UintIs("session count", 0))))))),
-                    NodeMatches(AllOf(
-                        NameMatches("output_device"),
-                        PropertyList(UnorderedElementsAre(
-                            BoolIs("alive", true), DoubleIs("gain db", 0.0), BoolIs("muted", false),
-                            BoolIs("agc supported", false), BoolIs("agc enabled", false),
-                            StringIs("mixer thread name", "output_thread"))))))))),
+                    NodeMatches(
+                        AllOf(NameMatches("output_device"),
+                              PropertyList(UnorderedElementsAre(
+                                  DoubleIs("gain db", 0.0), BoolIs("muted", false),
+                                  BoolIs("agc supported", false), BoolIs("agc enabled", false),
+                                  StringIs("mixer thread name", "output_thread"))))))))),
           AllOf(NodeMatches(NameMatches("input devices")),
-                ChildrenMatch(UnorderedElementsAre(NodeMatches(AllOf(
-                    NameMatches("input_device"),
-                    PropertyList(UnorderedElementsAre(
-                        BoolIs("alive", true), DoubleIs("gain db", 0.0), BoolIs("muted", false),
-                        BoolIs("agc supported", false), BoolIs("agc enabled", false),
-                        StringIs("mixer thread name", "input_thread")))))))),
+                ChildrenMatch(UnorderedElementsAre(NodeMatches(
+                    AllOf(NameMatches("input_device"),
+                          PropertyList(UnorderedElementsAre(
+                              DoubleIs("gain db", 0.0), BoolIs("muted", false),
+                              BoolIs("agc supported", false), BoolIs("agc enabled", false),
+                              StringIs("mixer thread name", "input_thread")))))))),
           AllOf(NodeMatches(NameMatches("renderers")), ChildrenMatch(IsEmpty())),
           AllOf(NodeMatches(NameMatches("capturers")), ChildrenMatch(IsEmpty())))));
 
@@ -348,7 +362,7 @@ TEST_F(ReporterTest, AddRemoveClientPorts) {
   }
 
   EXPECT_THAT(
-      GetHierarchy(),
+      GetHierarchyLazyValues(),
       ChildrenMatch(IsSupersetOf(
           {AllOf(NodeMatches(NameMatches("renderers")),
                  ChildrenMatch(UnorderedElementsAre(NodeAlive("1"), NodeAlive("2"), NodeAlive("3"),
@@ -367,7 +381,7 @@ TEST_F(ReporterTest, AddRemoveClientPorts) {
   capturers[3].Drop();
 
   EXPECT_THAT(
-      GetHierarchy(),
+      GetHierarchyLazyValues(),
       ChildrenMatch(IsSupersetOf(
           {AllOf(NodeMatches(NameMatches("renderers")),
                  ChildrenMatch(UnorderedElementsAre(NodeDead("1"), NodeDead("2"), NodeDead("3"),
@@ -380,7 +394,7 @@ TEST_F(ReporterTest, AddRemoveClientPorts) {
   capturers[4].Drop();
 
   // Garbage collect [0].
-  EXPECT_THAT(GetHierarchy(),
+  EXPECT_THAT(GetHierarchyLazyValues(),
               ChildrenMatch(IsSupersetOf(
                   {AllOf(NodeMatches(NameMatches("renderers")),
                          ChildrenMatch(UnorderedElementsAre(NodeDead("2"), NodeDead("3"),
@@ -409,14 +423,14 @@ TEST_F(ReporterTest, RendererMetrics) {
                                         StringIs("sample format", "unknown"), UintIs("channels", 0),
                                         UintIs("frames per second", 0))))),
                   AllOf(NodeMatches(NameMatches("payload buffers")), ChildrenMatch(IsEmpty())))),
-              NodeMatches(
-                  AllOf(NameMatches("1"),
-                        PropertyList(UnorderedElementsAre(
-                            BoolIs("alive", true), DoubleIs("gain db", 0.0), BoolIs("muted", false),
-                            UintIs("calls to SetGainWithRamp", 0), UintIs("min lead time (ns)", 0),
-                            DoubleIs("pts continuity threshold (s)", 0.0),
-                            DoubleIs("final stream gain (post-volume) dbfs", 0),
-                            StringIs("usage", "default"))))))))))));
+              NodeMatches(AllOf(
+                  NameMatches("1"),
+                  PropertyList(UnorderedElementsAre(
+                      DoubleIs("gain db", 0.0), BoolIs("muted", false),
+                      UintIs("calls to SetGainWithRamp", 0), UintIs("min lead time (ns)", 0),
+                      DoubleIs("pts continuity threshold (s)", 0.0),
+                      DoubleIs("final stream gain (post-volume) dbfs", 0),
+                      StringIs("usage", "default"))))))))))));
 
   renderer->SetUsage(RenderUsage::MEDIA);
   renderer->SetFormat(
@@ -469,7 +483,7 @@ TEST_F(ReporterTest, RendererMetrics) {
               NodeMatches(AllOf(
                   NameMatches("1"),
                   PropertyList(UnorderedElementsAre(
-                      BoolIs("alive", true), DoubleIs("gain db", -1.0), BoolIs("muted", true),
+                      DoubleIs("gain db", -1.0), BoolIs("muted", true),
                       UintIs("calls to SetGainWithRamp", 2), UintIs("min lead time (ns)", 1000000),
                       DoubleIs("pts continuity threshold (s)", 5.0),
                       DoubleIs("final stream gain (post-volume) dbfs", -6.0),
@@ -495,13 +509,13 @@ TEST_F(ReporterTest, CapturerMetrics) {
                                         StringIs("sample format", "unknown"), UintIs("channels", 0),
                                         UintIs("frames per second", 0))))),
                   AllOf(NodeMatches(NameMatches("payload buffers")), ChildrenMatch(IsEmpty())))),
-              NodeMatches(
-                  AllOf(NameMatches("1"),
-                        PropertyList(UnorderedElementsAre(
-                            BoolIs("alive", true), DoubleIs("gain db", 0.0), BoolIs("muted", false),
-                            UintIs("min fence time (ns)", 0), UintIs("calls to SetGainWithRamp", 0),
-                            StringIs("usage", "default"),
-                            StringIs("mixer thread name", "thread"))))))))))));
+              NodeMatches(AllOf(
+                  NameMatches("1"),
+                  PropertyList(UnorderedElementsAre(
+                      DoubleIs("gain db", 0.0), BoolIs("muted", false),
+                      UintIs("min fence time (ns)", 0), UintIs("calls to SetGainWithRamp", 0),
+                      StringIs("usage", "default"),
+                      StringIs("mixer thread name", "thread"))))))))))));
 
   capturer->SetUsage(CaptureUsage::FOREGROUND);
   capturer->SetFormat(
@@ -545,13 +559,13 @@ TEST_F(ReporterTest, CapturerMetrics) {
                             NodeMatches(AllOf(NameMatches("10"), PropertyList(UnorderedElementsAre(
                                                                      UintIs("size", 8192),
                                                                      UintIs("packets", 1)))))))))),
-              NodeMatches(AllOf(NameMatches("1"),
-                                PropertyList(UnorderedElementsAre(
-                                    BoolIs("alive", true), DoubleIs("gain db", -1.0),
-                                    BoolIs("muted", true), UintIs("min fence time (ns)", 2'000'000),
-                                    UintIs("calls to SetGainWithRamp", 2),
-                                    StringIs("usage", "CaptureUsage::FOREGROUND"),
-                                    StringIs("mixer thread name", "thread"))))))))))));
+              NodeMatches(
+                  AllOf(NameMatches("1"), PropertyList(UnorderedElementsAre(
+                                              DoubleIs("gain db", -1.0), BoolIs("muted", true),
+                                              UintIs("min fence time (ns)", 2'000'000),
+                                              UintIs("calls to SetGainWithRamp", 2),
+                                              StringIs("usage", "CaptureUsage::FOREGROUND"),
+                                              StringIs("mixer thread name", "thread"))))))))))));
 }
 
 }  // namespace

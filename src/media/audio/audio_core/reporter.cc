@@ -220,7 +220,6 @@ class DeviceDriverInfo {
  private:
   inspect::Node node_;
   inspect::StringProperty name_;
-  inspect::BoolProperty alive_;
   inspect::UintProperty total_delay_;
   inspect::UintProperty external_delay_;
   inspect::UintProperty fifo_delay_;
@@ -269,7 +268,6 @@ class Reporter::OutputDeviceImpl : public Reporter::OutputDevice {
  public:
   OutputDeviceImpl(Reporter::Impl& impl, const std::string& name, const std::string& thread_name)
       : node_(impl.outputs_node.CreateChild(name)),
-        alive_(node_.CreateBool("alive", true)),
         thread_name_(node_.CreateString("mixer thread name", thread_name)),
         driver_info_(node_),
         gain_info_(node_),
@@ -288,9 +286,17 @@ class Reporter::OutputDeviceImpl : public Reporter::OutputDevice {
                 .impl = impl,
                 .is_underflow = true,
                 .cobalt_component_id = AudioSessionDurationMetricDimensionComponent::OutputPipeline,
-            })) {}
+            })) {
+    time_since_death_ = node_.CreateLazyValues("OutputDeviceTimeSinceDeath", [this] {
+      inspect::Inspector i;
+      i.GetRoot().CreateUint(
+          "time since death (ns)",
+          time_of_death_ ? (zx::clock::get_monotonic() - time_of_death_.value()).get() : 0, &i);
+      return fit::make_ok_promise(std::move(i));
+    });
+  }
 
-  void Destroy() override { alive_.Set(false); }
+  void Destroy() override { time_of_death_ = zx::clock::get_monotonic(); }
 
   void StartSession(zx::time start_time) override {
     device_underflows_->StartSession(start_time);
@@ -319,24 +325,32 @@ class Reporter::OutputDeviceImpl : public Reporter::OutputDevice {
 
  private:
   inspect::Node node_;
-  inspect::BoolProperty alive_;
+  inspect::LazyNode time_since_death_;
   inspect::StringProperty thread_name_;
   DeviceDriverInfo driver_info_;
   DeviceGainInfo gain_info_;
   std::unique_ptr<OverflowUnderflowTracker> device_underflows_;
   std::unique_ptr<OverflowUnderflowTracker> pipeline_underflows_;
+  std::optional<zx::time> time_of_death_;
 };
 
 class Reporter::InputDeviceImpl : public Reporter::InputDevice {
  public:
   InputDeviceImpl(Reporter::Impl& impl, const std::string& name, const std::string& thread_name)
       : node_(impl.inputs_node.CreateChild(name)),
-        alive_(node_.CreateBool("alive", true)),
         thread_name_(node_.CreateString("mixer thread name", thread_name)),
         driver_info_(node_),
-        gain_info_(node_) {}
+        gain_info_(node_) {
+    time_since_death_ = node_.CreateLazyValues("InputDeviceTimeSinceDeath", [this] {
+      inspect::Inspector i;
+      i.GetRoot().CreateUint(
+          "time since death (ns)",
+          time_of_death_ ? (zx::clock::get_monotonic() - time_of_death_.value()).get() : 0, &i);
+      return fit::make_ok_promise(std::move(i));
+    });
+  }
 
-  void Destroy() override { alive_.Set(false); }
+  void Destroy() override { time_of_death_ = zx::clock::get_monotonic(); }
 
   void StartSession(zx::time start_time) override {}
   void StopSession(zx::time stop_time) override {}
@@ -350,10 +364,11 @@ class Reporter::InputDeviceImpl : public Reporter::InputDevice {
 
  private:
   inspect::Node node_;
-  inspect::BoolProperty alive_;
+  inspect::LazyNode time_since_death_;
   inspect::StringProperty thread_name_;
   DeviceDriverInfo driver_info_;
   DeviceGainInfo gain_info_;
+  std::optional<zx::time> time_of_death_;
 };
 
 class ClientPort {
@@ -424,7 +439,6 @@ class Reporter::RendererImpl : public Reporter::Renderer {
   RendererImpl(Reporter::Impl& impl)
       : node_(impl.renderers_node.CreateChild(impl.NextRendererName())),
         client_port_(node_),
-        alive_(node_.CreateBool("alive", true)),
         min_lead_time_ns_(node_.CreateUint("min lead time (ns)", 0)),
         pts_continuity_threshold_seconds_(node_.CreateDouble("pts continuity threshold (s)", 0.0)),
         final_stream_gain_(node_.CreateDouble("final stream gain (post-volume) dbfs", 0.0)),
@@ -435,9 +449,17 @@ class Reporter::RendererImpl : public Reporter::Renderer {
             .impl = impl,
             .is_underflow = true,
             .cobalt_component_id = AudioSessionDurationMetricDimensionComponent::Renderer,
-        })) {}
+        })) {
+    time_since_death_ = node_.CreateLazyValues("RendererTimeSinceDeath", [this] {
+      inspect::Inspector i;
+      i.GetRoot().CreateUint(
+          "time since death (ns)",
+          time_of_death_ ? (zx::clock::get_monotonic() - time_of_death_.value()).get() : 0, &i);
+      return fit::make_ok_promise(std::move(i));
+    });
+  }
 
-  void Destroy() override { alive_.Set(false); }
+  void Destroy() override { time_of_death_ = zx::clock::get_monotonic(); }
 
   void StartSession(zx::time start_time) override { underflows_->StartSession(start_time); }
   void StopSession(zx::time stop_time) override { underflows_->StopSession(stop_time); }
@@ -475,12 +497,13 @@ class Reporter::RendererImpl : public Reporter::Renderer {
  private:
   inspect::Node node_;
   ClientPort client_port_;
-  inspect::BoolProperty alive_;
+  inspect::LazyNode time_since_death_;
   inspect::UintProperty min_lead_time_ns_;
   inspect::DoubleProperty pts_continuity_threshold_seconds_;
   inspect::DoubleProperty final_stream_gain_;
   inspect::StringProperty usage_;
   std::unique_ptr<OverflowUnderflowTracker> underflows_;
+  std::optional<zx::time> time_of_death_;
 };
 
 class Reporter::CapturerImpl : public Reporter::Capturer {
@@ -488,7 +511,6 @@ class Reporter::CapturerImpl : public Reporter::Capturer {
   CapturerImpl(Reporter::Impl& impl, const std::string& thread_name)
       : node_(impl.capturers_node.CreateChild(impl.NextCapturerName())),
         client_port_(node_),
-        alive_(node_.CreateBool("alive", true)),
         min_fence_time_ns_(node_.CreateUint("min fence time (ns)", 0)),
         usage_(node_.CreateString("usage", "default")),
         thread_name_(node_.CreateString("mixer thread name", thread_name)),
@@ -498,9 +520,17 @@ class Reporter::CapturerImpl : public Reporter::Capturer {
             .impl = impl,
             .is_underflow = false,
             .cobalt_component_id = AudioSessionDurationMetricDimensionComponent::Capturer,
-        })) {}
+        })) {
+    time_since_death_ = node_.CreateLazyValues("CapturerTimeSinceDeath", [this] {
+      inspect::Inspector i;
+      i.GetRoot().CreateUint(
+          "time since death (ns)",
+          time_of_death_ ? (zx::clock::get_monotonic() - time_of_death_.value()).get() : 0, &i);
+      return fit::make_ok_promise(std::move(i));
+    });
+  }
 
-  void Destroy() override { alive_.Set(false); }
+  void Destroy() override { time_of_death_ = zx::clock::get_monotonic(); }
 
   void StartSession(zx::time start_time) override { overflows_->StartSession(start_time); }
   void StopSession(zx::time stop_time) override { overflows_->StopSession(stop_time); }
@@ -531,11 +561,12 @@ class Reporter::CapturerImpl : public Reporter::Capturer {
  private:
   inspect::Node node_;
   ClientPort client_port_;
-  inspect::BoolProperty alive_;
+  inspect::LazyNode time_since_death_;
   inspect::UintProperty min_fence_time_ns_;
   inspect::StringProperty usage_;
   inspect::StringProperty thread_name_;
   std::unique_ptr<OverflowUnderflowTracker> overflows_;
+  std::optional<zx::time> time_of_death_;
 };
 
 ////////////////////////////////////////////////////////////////////////////////
