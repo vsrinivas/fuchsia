@@ -527,6 +527,9 @@ func commandForTest(test *testsharder.Test, useRuntests bool, remoteOutputDir st
 		if timeout > 0 {
 			command = append(command, "-i", fmt.Sprintf("%d", int64(timeout.Seconds())))
 		}
+		if test.RealmLabel != "" {
+			command = append(command, "--realm-label", test.RealmLabel)
+		}
 		if test.PackageURL != "" {
 			command = append(command, test.PackageURL)
 		} else {
@@ -550,6 +553,11 @@ func commandForTest(test *testsharder.Test, useRuntests bool, remoteOutputDir st
 
 			if timeout > 0 {
 				command = append(command, fmt.Sprintf("--timeout=%d", int64(timeout.Seconds())))
+			}
+
+			// run-test-component supports realm-label but run-test-suite does not
+			if test.RealmLabel != "" {
+				command = append(command, "--realm-label", test.RealmLabel)
 			}
 		}
 		command = append(command, test.PackageURL)

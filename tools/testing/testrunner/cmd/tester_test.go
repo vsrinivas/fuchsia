@@ -615,6 +615,17 @@ func TestCommandForTest(t *testing.T) {
 			expected: []string{"runtests", "--output", "REMOTE_DIR", "-i", "1", "/path/to/test"},
 		},
 		{
+			name:        "use runtests realm-label",
+			useRuntests: true,
+			test: testsharder.Test{
+				Test: build.Test{
+					Path: "/path/to/test",
+				},
+				RealmLabel: "testrealm",
+			},
+			expected: []string{"runtests", "--output", "REMOTE_DIR", "--realm-label", "testrealm", "/path/to/test"},
+		},
+		{
 			name:        "system path",
 			useRuntests: false,
 			test: testsharder.Test{
@@ -655,6 +666,18 @@ func TestCommandForTest(t *testing.T) {
 				}},
 			timeout:  time.Second,
 			expected: []string{"run-test-component", "--max-log-severity=ERROR", "--timeout=1", "fuchsia-pkg://example.com/test.cmx"},
+		},
+		{
+			name:        "components v1 realm label",
+			useRuntests: false,
+			test: testsharder.Test{
+				Test: build.Test{
+					Path:       "/path/to/test",
+					PackageURL: "fuchsia-pkg://example.com/test.cmx",
+				},
+				RealmLabel: "testrealm",
+			},
+			expected: []string{"run-test-component", "--realm-label", "testrealm", "fuchsia-pkg://example.com/test.cmx"},
 		},
 		{
 			name:        "components v2",
