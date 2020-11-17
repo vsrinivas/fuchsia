@@ -664,7 +664,7 @@ where
 
         // Attempt in an loop of up to MAX_OMAHA_REQUEST_ATTEMPTS to communicate with Omaha.
         // exit the loop early on success or an error that isn't related to a transport issue.
-        let (_parts, data) = loop {
+        let loop_result = loop {
             // Mark the start time for the request to omaha.
             let omaha_check_start_time = self.time_source.now_in_monotonic();
             request_builder = request_builder.request_id(GUID::new());
@@ -693,17 +693,17 @@ where
 
             match result {
                 Ok(res) => {
-                    break res;
+                    break Ok(res);
                 }
                 Err(OmahaRequestError::Json(e)) => {
                     error!("Unable to construct request body! {:?}", e);
                     self.set_state(State::ErrorCheckingForUpdate, co).await;
-                    return Err(UpdateCheckError::OmahaRequest(e.into()));
+                    break Err(UpdateCheckError::OmahaRequest(e.into()));
                 }
                 Err(OmahaRequestError::HttpBuilder(e)) => {
                     error!("Unable to construct HTTP request! {:?}", e);
                     self.set_state(State::ErrorCheckingForUpdate, co).await;
-                    return Err(UpdateCheckError::OmahaRequest(e.into()));
+                    break Err(UpdateCheckError::OmahaRequest(e.into()));
                 }
                 Err(OmahaRequestError::HttpTransport(e)) => {
                     warn!("Unable to contact Omaha: {:?}", e);
@@ -714,7 +714,7 @@ where
                         || self.context.state.server_dictated_poll_interval.is_some()
                     {
                         self.set_state(State::ErrorCheckingForUpdate, co).await;
-                        return Err(UpdateCheckError::OmahaRequest(e.into()));
+                        break Err(UpdateCheckError::OmahaRequest(e.into()));
                     }
                 }
                 Err(OmahaRequestError::HttpStatus(e)) => {
@@ -723,7 +723,7 @@ where
                         || self.context.state.server_dictated_poll_interval.is_some()
                     {
                         self.set_state(State::ErrorCheckingForUpdate, co).await;
-                        return Err(UpdateCheckError::OmahaRequest(e.into()));
+                        break Err(UpdateCheckError::OmahaRequest(e.into()));
                     }
                 }
             }
@@ -738,7 +738,12 @@ where
             omaha_request_attempt += 1;
         };
 
-        self.report_metrics(Metrics::UpdateCheckRetries(omaha_request_attempt));
+        self.report_metrics(Metrics::RequestsPerCheck {
+            count: omaha_request_attempt,
+            successful: loop_result.is_ok(),
+        });
+
+        let (_parts, data) = loop_result?;
 
         let response = match Self::parse_omaha_response(&data) {
             Ok(res) => res,
@@ -1786,7 +1791,7 @@ mod tests {
                 metrics_reporter.metrics.as_slice(),
                 [
                     Metrics::UpdateCheckResponseTime { response_time: _, successful: true },
-                    Metrics::UpdateCheckRetries(1),
+                    Metrics::RequestsPerCheck { count: 1, successful: true },
                 ]
             );
         });
@@ -1821,9 +1826,7 @@ mod tests {
                     Metrics::UpdateCheckResponseTime { response_time: _, successful: false },
                     Metrics::UpdateCheckResponseTime { response_time: _, successful: false },
                     Metrics::UpdateCheckResponseTime { response_time: _, successful: false },
-
-                    // FIXME(60589): We should be reporting retry errors.
-                    //Metrics::UpdateCheckRetries(3),
+                    Metrics::RequestsPerCheck { count: 3, successful: false },
                 ]
             );
         });
@@ -1855,14 +1858,14 @@ mod tests {
                     Metrics::UpdateCheckResponseTime { response_time: _, successful: false },
                     Metrics::UpdateCheckResponseTime { response_time: _, successful: false },
                     Metrics::UpdateCheckResponseTime { response_time: _, successful: true },
-                    Metrics::UpdateCheckRetries(3),
+                    Metrics::RequestsPerCheck { count: 3, successful: true },
                 ]
             );
         });
     }
 
     #[test]
-    fn test_metrics_report_update_check_retries() {
+    fn test_metrics_report_requests_per_check() {
         block_on(async {
             let mut metrics_reporter = MockMetricsReporter::new();
             let _response = StateMachineBuilder::new_stub()
@@ -1870,12 +1873,67 @@ mod tests {
                 .oneshot()
                 .await;
 
-            assert!(metrics_reporter.metrics.contains(&Metrics::UpdateCheckRetries(1)));
+            assert!(metrics_reporter
+                .metrics
+                .contains(&Metrics::RequestsPerCheck { count: 1, successful: true }));
         });
     }
 
     #[test]
-    fn test_update_check_retries_backoff_with_mock_timer() {
+    fn test_metrics_report_requests_per_check_on_failure_followed_by_success() {
+        block_on(async {
+            let mut metrics_reporter = MockMetricsReporter::new();
+            let mut http = MockHttpRequest::default();
+
+            for _ in 0..MAX_OMAHA_REQUEST_ATTEMPTS - 1 {
+                http.add_error(http_request::mock_errors::make_transport_error());
+            }
+
+            http.add_response(hyper::Response::default());
+
+            let _response = StateMachineBuilder::new_stub()
+                .http(http)
+                .metrics_reporter(&mut metrics_reporter)
+                .oneshot()
+                .await;
+
+            assert!(!metrics_reporter.metrics.is_empty());
+            assert!(metrics_reporter.metrics.contains(&Metrics::RequestsPerCheck {
+                count: MAX_OMAHA_REQUEST_ATTEMPTS,
+                successful: true
+            }));
+        });
+    }
+
+    #[test]
+    fn test_metrics_report_requests_per_check_on_failure() {
+        block_on(async {
+            let mut metrics_reporter = MockMetricsReporter::new();
+            let mut http = MockHttpRequest::default();
+
+            for _ in 0..MAX_OMAHA_REQUEST_ATTEMPTS {
+                http.add_error(http_request::mock_errors::make_transport_error());
+            }
+
+            // Note we will give up before we get this successful request.
+            http.add_response(hyper::Response::default());
+
+            let _response = StateMachineBuilder::new_stub()
+                .http(http)
+                .metrics_reporter(&mut metrics_reporter)
+                .oneshot()
+                .await;
+
+            assert!(!metrics_reporter.metrics.is_empty());
+            assert!(metrics_reporter.metrics.contains(&Metrics::RequestsPerCheck {
+                count: MAX_OMAHA_REQUEST_ATTEMPTS,
+                successful: false
+            }));
+        });
+    }
+
+    #[test]
+    fn test_requests_per_check_backoff_with_mock_timer() {
         block_on(async {
             let mut timer = MockTimer::new();
             timer.expect_for_range(Duration::from_millis(500), Duration::from_millis(1500));

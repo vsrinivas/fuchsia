@@ -117,13 +117,17 @@ impl MetricsReporter for CobaltMetricsReporter {
                     1,
                 );
             }
-            Metrics::UpdateCheckRetries(count) => {
+            Metrics::RequestsPerCheck { count: _count, successful: _successful } => {
+                // FIXME(60589) Temporarily disable to allow for a soft migration while we rename
+                // this metric to `requests_per_check`.
+                /*
                 self.cobalt_sender.log_event_count(
                     mos_metrics_registry::UPDATE_CHECK_RETRIES_METRIC_ID,
                     mos_metrics_registry::UpdateCheckRetriesMetricDimensionResult::Success,
                     0,
                     count as i64,
                 );
+                */
             }
             Metrics::AttemptsToSucceed(count) => {
                 self.cobalt_sender.log_event_count(
@@ -165,26 +169,44 @@ mod tests {
     use omaha_client::metrics::UpdateCheckFailureReason;
     use std::time::Duration;
 
+    fn assert_metric(metrics: Metrics, event: CobaltEvent) {
+        let (mut reporter, mut receiver) = CobaltMetricsReporter::new_mock();
+        reporter.report_metrics(metrics).unwrap();
+        assert_eq!(receiver.try_next().unwrap().unwrap(), event);
+    }
+
     #[test]
     fn test_report_update_check_response_time() {
-        let (mut reporter, mut receiver) = CobaltMetricsReporter::new_mock();
-        reporter
-            .report_metrics(Metrics::UpdateCheckResponseTime {
+        assert_metric(
+            Metrics::UpdateCheckResponseTime {
                 response_time: Duration::from_millis(10),
                 successful: true,
-            })
-            .unwrap();
-        assert_eq!(
-            receiver.try_next().unwrap().unwrap(),
+            },
             CobaltEvent {
                 metric_id: mos_metrics_registry::UPDATE_CHECK_RESPONSE_TIME_METRIC_ID,
                 event_codes: vec![
-                    mos_metrics_registry::UpdateCheckResponseTimeMetricDimensionResult::Success
+                    mos_metrics_registry::UpdateCheckResponseTimeMetricDimensionResult::Success,
                 ]
                 .as_event_codes(),
                 component: None,
                 payload: EventPayload::ElapsedMicros(10 * 1000),
-            }
+            },
+        );
+
+        assert_metric(
+            Metrics::UpdateCheckResponseTime {
+                response_time: Duration::from_millis(10),
+                successful: false,
+            },
+            CobaltEvent {
+                metric_id: mos_metrics_registry::UPDATE_CHECK_RESPONSE_TIME_METRIC_ID,
+                event_codes: vec![
+                    mos_metrics_registry::UpdateCheckResponseTimeMetricDimensionResult::Failed,
+                ]
+                .as_event_codes(),
+                component: None,
+                payload: EventPayload::ElapsedMicros(10 * 1000),
+            },
         );
     }
 
@@ -225,12 +247,13 @@ mod tests {
         );
     }
 
+    // FIXME(60589) Temporarily disable to allow for a soft migration while we rename this metric
+    // to `requests_per_check`.
+    /*
     #[test]
     fn test_report_update_check_retries() {
-        let (mut reporter, mut receiver) = CobaltMetricsReporter::new_mock();
-        reporter.report_metrics(Metrics::UpdateCheckRetries(3)).unwrap();
-        assert_eq!(
-            receiver.try_next().unwrap().unwrap(),
+        assert_metric(
+            Metrics::UpdateCheckRetries(3),
             CobaltEvent {
                 metric_id: mos_metrics_registry::UPDATE_CHECK_RETRIES_METRIC_ID,
                 event_codes: vec![
@@ -245,6 +268,7 @@ mod tests {
             }
         );
     }
+    */
 
     #[test]
     fn test_duration_to_cobalt_metrics() {
