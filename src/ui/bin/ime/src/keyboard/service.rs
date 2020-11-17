@@ -24,13 +24,13 @@ use crate::keyboard::{keyboard2, keyboard3};
 pub struct Service {
     ime_service: ImeService,
     keyboard2: Arc<Mutex<keyboard2::Service>>,
-    keyboard3: Arc<Mutex<keyboard3::KeyboardService>>,
+    keyboard3: keyboard3::KeyboardService,
 }
 
 impl Service {
     pub async fn new(ime_service: ImeService) -> Result<Service, Error> {
         let keyboard2 = Arc::new(Mutex::new(keyboard2::Service::new().await?));
-        let keyboard3 = Arc::new(Mutex::new(keyboard3::KeyboardService::new().await?));
+        let keyboard3 = keyboard3::KeyboardService::new().await?;
         Ok(Service { ime_service, keyboard2, keyboard3 })
     }
 
@@ -49,13 +49,11 @@ impl Service {
                             responder,
                             ..
                         } => {
-                            keyboard3.lock().await.handle_focus_change(view_ref).await;
+                            keyboard3.handle_focus_change(view_ref).await;
                             responder.send()?;
                         }
                         ui_input::ImeServiceRequest::DispatchKey3 { event, responder, .. } => {
                             let was_handled = keyboard3
-                                .lock()
-                                .await
                                 .handle_key_event(event)
                                 .await
                                 .context("error handling input3 keyboard event")?;
@@ -98,7 +96,7 @@ impl Service {
     pub fn spawn_keyboard3_service(&self, stream: ui_input3::KeyboardRequestStream) {
         let keyboard3 = self.keyboard3.clone();
         fuchsia_async::Task::spawn(
-            async move { keyboard3.lock().await.spawn_service(stream).await }
+            async move { keyboard3.spawn_service(stream).await }
                 .unwrap_or_else(|e: anyhow::Error| fx_log_err!("couldn't run: {:?}", e)),
         )
         .detach();
