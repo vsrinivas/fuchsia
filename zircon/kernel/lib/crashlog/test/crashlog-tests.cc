@@ -5,10 +5,11 @@
 // https://opensource.org/licenses/MIT
 
 #include <lib/crashlog.h>
+#include <lib/crashlog/panic_buffer.h>
 #include <lib/unittest/unittest.h>
 
-#include <ktl/unique_ptr.h>
 #include <ktl/string_view.h>
+#include <ktl/unique_ptr.h>
 
 namespace {
 
@@ -22,8 +23,7 @@ bool BasicTest() {
   auto buffer = ktl::make_unique<char[]>(&ac, kLargeBufferSize);
   ASSERT_TRUE(ac.check());
 
-  size_t len = crashlog_to_string(buffer.get(), kLargeBufferSize,
-                                  ZirconCrashReason::NoCrash);
+  size_t len = crashlog_to_string(buffer.get(), kLargeBufferSize, ZirconCrashReason::NoCrash);
   EXPECT_LE(len, kLargeBufferSize);
   EXPECT_GT(len, 0u);
 
@@ -41,8 +41,7 @@ bool OomTest() {
   auto buffer = ktl::make_unique<char[]>(&ac, kLargeBufferSize);
   ASSERT_TRUE(ac.check());
 
-  size_t len = crashlog_to_string(buffer.get(), kLargeBufferSize,
-                                  ZirconCrashReason::Oom);
+  size_t len = crashlog_to_string(buffer.get(), kLargeBufferSize, ZirconCrashReason::Oom);
   EXPECT_LE(len, kLargeBufferSize);
   EXPECT_GT(len, 0u);
 
@@ -71,10 +70,30 @@ bool TruncationTest() {
   END_TEST;
 }
 
+bool PanicBufferTest() {
+  BEGIN_TEST;
+
+  PanicBuffer b;
+  ASSERT_EQ(0u, strlen(b.c_str()));
+
+  const char kMsg[] = "hello";
+  b.Append(kMsg);
+  ASSERT_FALSE(strcmp(b.c_str(), kMsg));
+
+  // Grossly over append.
+  for (unsigned i = 0; i < PanicBuffer::kMaxSize; ++i) {
+    b.Append(kMsg);
+  }
+  ASSERT_EQ(PanicBuffer::kMaxSize - 1, strlen(b.c_str()));
+
+  END_TEST;
+}
+
 }  // namespace
 
 UNITTEST_START_TESTCASE(crashlog_tests)
 UNITTEST("basic", BasicTest)
 UNITTEST("oom", OomTest)
 UNITTEST("truncation", TruncationTest)
+UNITTEST("panic_buffer", PanicBufferTest)
 UNITTEST_END_TESTCASE(crashlog_tests, "crashlog", "crashlog tests")

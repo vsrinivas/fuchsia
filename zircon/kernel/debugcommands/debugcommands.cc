@@ -44,6 +44,7 @@ static int cmd_recurse(int argc, const cmd_args *argv, uint32_t flags);
 static int cmd_cmdline(int argc, const cmd_args *argv, uint32_t flags);
 static int cmd_crash_user_read(int argc, const cmd_args *argv, uint32_t flags);
 static int cmd_crash_pmm_use_after_free(int argc, const cmd_args *argv, uint32_t flags);
+static int cmd_crash_assert(int argc, const cmd_args *argv, uint32_t flags);
 
 STATIC_COMMAND_START
 STATIC_COMMAND_MASKED("dd", "display memory in dwords", &cmd_display_mem, CMD_AVAIL_ALWAYS)
@@ -64,6 +65,7 @@ STATIC_COMMAND("crash_recurse", "intentionally overrun the stack by recursing", 
 STATIC_COMMAND("crash_user_read", "intentionally read user memory", &cmd_crash_user_read)
 STATIC_COMMAND("crash_pmm_use_after_free", "intentionally corrupt the pmm free list",
                &cmd_crash_pmm_use_after_free)
+STATIC_COMMAND("crash_assert", "intentionally crash by failing an assert", &cmd_crash_assert)
 STATIC_COMMAND("cmdline", "display kernel commandline", &cmd_cmdline)
 STATIC_COMMAND("sleep", "sleep number of seconds", &cmd_sleep)
 STATIC_COMMAND("sleepm", "sleep number of milliseconds", &cmd_sleep)
@@ -431,6 +433,12 @@ static int cmd_crash_pmm_use_after_free(int argc, const cmd_args *argv, uint32_t
   *reinterpret_cast<char *>(va) = 'X';
 
   printf("crash_pmm_use_after_free done\n");
+  return -1;
+}
+
+static int cmd_crash_assert(int argc, const cmd_args *argv, uint32_t flags) {
+  constexpr int kValue = 42;
+  ASSERT_MSG(kValue == 0, "value %d\n", kValue);
   return -1;
 }
 

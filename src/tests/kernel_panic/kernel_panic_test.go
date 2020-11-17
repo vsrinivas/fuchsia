@@ -165,3 +165,41 @@ func TestPmmCheckerOopsAndPanic(t *testing.T) {
 	i.WaitForLogMessage("pmm checker found unexpected pattern in page at")
 	i.WaitForLogMessage("dump of page follows")
 }
+
+// See that `k crash_assert` crashes the kernel.
+func TestCrashAssert(t *testing.T) {
+	distro, err := qemu.Unpack()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer distro.Delete()
+	arch, err := distro.TargetCPU()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	i := distro.Create(qemu.Params{
+		Arch:          arch,
+		ZBI:           zbiPath(t),
+		AppendCmdline: cmdline,
+	})
+
+	err = i.Start()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer i.Kill()
+
+	// Wait for the system to finish booting.
+	i.WaitForLogMessage("usage: k <command>")
+
+	// Crash the kernel.
+	i.RunCommand("k crash_assert")
+
+	// See that it panicked.
+	i.WaitForLogMessage("ZIRCON KERNEL PANIC")
+
+	// See that it was an assert failure and that the assert message was printed.
+	i.WaitForLogMessage("ASSERT FAILED")
+	i.WaitForLogMessage("value 42")
+}

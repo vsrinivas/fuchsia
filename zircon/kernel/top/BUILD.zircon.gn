@@ -15,6 +15,7 @@ source_set("top") {
     "$zx/kernel/dev/hw_rng",
     "$zx/kernel/kernel",
     "$zx/kernel/lib/counters",
+    "$zx/kernel/lib/crashlog",
     "$zx/kernel/lib/debuglog",
     "$zx/kernel/lib/init",
     "$zx/kernel/lib/io",

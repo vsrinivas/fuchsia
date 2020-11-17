@@ -190,6 +190,7 @@ func StringInLogsChecks() (ret []FailureModeCheck) {
 			{startString: "RUN   TestBasicCrash", endString: "PASS: TestBasicCrash"},
 			{startString: "RUN   TestSMAPViolation", endString: "PASS: TestSMAPViolation"},
 			{startString: "RUN   TestPmmCheckerOopsAndPanic", endString: "PASS: TestPmmCheckerOopsAndPanic"},
+			{startString: "RUN   TestCrashAssert", endString: "PASS: TestCrashAssert"},
 		}})
 	}
 	// These may be in the output of tests, but the syslogType doesn't contain any test output.

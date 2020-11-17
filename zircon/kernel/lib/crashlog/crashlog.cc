@@ -4,10 +4,11 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include "lib/crashlog.h"
+
 #include <ctype.h>
 #include <inttypes.h>
 #include <lib/console.h>
-#include <lib/crashlog.h>
 #include <lib/lockup_detector.h>
 #include <lib/version.h>
 #include <platform.h>
@@ -28,6 +29,14 @@
 #include <vm/vm.h>
 
 crashlog_t crashlog = {};
+
+PanicBuffer panic_buffer;
+
+FILE stdout_panic_buffer{[](void*, ktl::string_view str) {
+                           panic_buffer.Append(str);
+                           return stdout->Write(str);
+                         },
+                         nullptr};
 
 namespace {
 
@@ -192,6 +201,15 @@ size_t crashlog_to_string(char* out, const size_t out_len, zircon_crash_reason_t
           HandleTableArena::get_alloc_failed_count(), pmm_get_alloc_failed_count(),
           PmmChecker::get_validation_failed_count(), lockup_get_critical_section_oops_count(),
           lockup_get_no_heartbeat_oops_count());
+
+  // Finally, include the contents of the panic buffer (which may be empty).
+  //
+  // The panic buffer is the last thing we print.  Space is limited so if the panic/assert message
+  // was long we may not be able to include the whole thing.  That's OK.  The panic buffer is a
+  // "nice to have" and we've already printed the primary diagnostics (register dump and backtrace).
+  fprintf(&outfile.stream_, "panic buffer: %s\n", panic_buffer.c_str());
+
+  fprintf(&outfile.stream_, "\n");
 
   return total_size();
 }

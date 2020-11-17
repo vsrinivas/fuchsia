@@ -22,8 +22,11 @@ func zbiPath(t *testing.T) string {
 	return filepath.Join(exPath, "../fuchsia.zbi")
 }
 
-// See that the kernel stows a crashlog upon panicking.
-func TestKernelCrashlog(t *testing.T) {
+type specific func(*qemu.Instance)
+
+// Boots an instance, |crash_cmd|, waits for the system to reboot, prints the recovered crash report
+// and calls |s| to match against test case specific output.
+func testCommon(t *testing.T, crash_cmd string, s specific) {
 	distro, err := qemu.Unpack()
 	if err != nil {
 		t.Fatal(err)
@@ -64,7 +67,7 @@ func TestKernelCrashlog(t *testing.T) {
 	i.WaitForLogMessage("usage: k <command>")
 
 	// Crash the kernel.
-	i.RunCommand("k crash")
+	i.RunCommand(crash_cmd)
 	i.WaitForLogMessage("ZIRCON KERNEL PANIC")
 
 	// Now that the kernel has panicked, it should reboot.  Wait for it to come back up.
@@ -79,16 +82,37 @@ func TestKernelCrashlog(t *testing.T) {
 	// See that the crashlog looks reasonable.
 	i.WaitForLogMessage("ZIRCON REBOOT REASON (KERNEL PANIC)")
 
-	// See that it contains ESR and FAR.
-	//
-	// This is a regression test for fxbug.dev/52182.
-	i.WaitForLogMessage("esr:         0x96000045")
-	i.WaitForLogMessage("far:                0x1")
+	s(i)
+}
 
-	// And a backtrace.
-	i.WaitForLogMessage("BACKTRACE")
-	i.WaitForLogMessage("{{{bt:0")
+// See that the kernel stows a crashlog upon panicking.
+func TestKernelCrashlog(t *testing.T) {
+	testCommon(t, "k crash", func(i *qemu.Instance) {
+		// See that the crash report contains ESR and FAR.
+		//
+		// This is a regression test for fxbug.dev/52182.
+		i.WaitForLogMessage("esr:         0x96000045")
+		i.WaitForLogMessage("far:                0x1")
 
-	// And counters.
-	i.WaitForLogMessage("counters: ")
+		// And a backtrace and counters.
+		i.WaitForLogMessage("BACKTRACE")
+		i.WaitForLogMessage("{{{bt:0")
+		i.WaitForLogMessage("counters: ")
+	})
+}
+
+// See that when the kernel crashes because of an assert failure the crashlog contains the assert
+// message.
+func TestKernelCrashlogAssert(t *testing.T) {
+	testCommon(t, "k crash_assert", func(i *qemu.Instance) {
+		// See that there's a backtrace, followed by some counters, and finally the assert
+		// message.
+		i.WaitForLogMessage("BACKTRACE")
+		i.WaitForLogMessage("{{{bt:0")
+		i.WaitForLogMessage("counters: ")
+		i.WaitForLogMessage("panic buffer: ")
+		i.WaitForLogMessage("KERNEL PANIC")
+		i.WaitForLogMessage("ASSERT FAILED")
+		i.WaitForLogMessage("value 42")
+	})
 }

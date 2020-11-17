@@ -9,6 +9,7 @@
 
 #include <align.h>
 #include <ctype.h>
+#include <lib/crashlog.h>
 #include <platform.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -19,6 +20,7 @@
 
 #include <arch/ops.h>
 #include <dev/hw_rng.h>
+#include <kernel/lockdep.h>
 #include <kernel/spinlock.h>
 #include <ktl/algorithm.h>
 #include <platform/debug.h>
@@ -36,10 +38,11 @@ namespace {
 __ALWAYS_INLINE inline void PanicStart(void* pc, void* frame) {
   platform_panic_start();
 
-  printf(
-      "\n"
-      "*** KERNEL PANIC (caller pc: %p, stack frame: %p):\n"
-      "*** ", pc, frame);
+  fprintf(&stdout_panic_buffer,
+          "\n"
+          "*** KERNEL PANIC (caller pc: %p, stack frame: %p):\n"
+          "*** ",
+          pc, frame);
 }
 
 // Finish a system panic.
@@ -51,7 +54,7 @@ __ALWAYS_INLINE inline void PanicStart(void* pc, void* frame) {
 // appearing in the backtrace.
 __ALWAYS_INLINE __NO_RETURN inline void PanicFinish() {
   // Add a newline between the panic message and the stack trace.
-  printf("\n");
+  fprintf(&stdout_panic_buffer, "\n");
 
   platform_halt(HALT_ACTION_HALT, ZirconCrashReason::Panic);
 }
@@ -78,12 +81,12 @@ void panic(const char* fmt, ...) {
   // Print the user message.
   va_list ap;
   va_start(ap, fmt);
-  vprintf(fmt, ap);
+  vfprintf(&stdout_panic_buffer, fmt, ap);
   va_end(ap);
 
   // Add a newline to the end of the panic message if it was missing.
   if (!EndsWith(fmt, '\n')) {
-    printf("\n");
+    fprintf(&stdout_panic_buffer, "\n");
   }
 
   PanicFinish();
@@ -93,15 +96,15 @@ void assert_fail_msg(const char* file, int line, const char* expression, const c
   PanicStart(__GET_CALLER(), __GET_FRAME());
 
   // Print the user message.
-  printf("ASSERT FAILED at (%s:%d): %s\n", file, line, expression);
+  fprintf(&stdout_panic_buffer, "ASSERT FAILED at (%s:%d): %s\n", file, line, expression);
   va_list ap;
   va_start(ap, fmt);
-  vprintf(fmt, ap);
+  vfprintf(&stdout_panic_buffer, fmt, ap);
   va_end(ap);
 
   // Add a newline to the end of the panic message if it was missing.
   if (!EndsWith(fmt, '\n')) {
-    printf("\n");
+    fprintf(&stdout_panic_buffer, "\n");
   }
 
   PanicFinish();
@@ -109,7 +112,7 @@ void assert_fail_msg(const char* file, int line, const char* expression, const c
 
 void assert_fail(const char* file, int line, const char* expression) {
   PanicStart(__GET_CALLER(), __GET_FRAME());
-  printf("ASSERT FAILED at (%s:%d): %s\n", file, line, expression);
+  fprintf(&stdout_panic_buffer, "ASSERT FAILED at (%s:%d): %s\n", file, line, expression);
   PanicFinish();
 }
 

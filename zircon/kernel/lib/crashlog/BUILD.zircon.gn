@@ -6,9 +6,13 @@
 
 zx_library("crashlog") {
   kernel = true
-  sources = [ "crashlog.cc" ]
+  sources = [
+    "crashlog.cc",
+    "panic_buffer.cc",
+  ]
   deps = [
     "$zx/kernel/lib/console",
+    "$zx/kernel/lib/counters",
     "$zx/kernel/lib/version",
     "$zx/kernel/object:headers",
   ]

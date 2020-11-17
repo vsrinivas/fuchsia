@@ -7,6 +7,7 @@
 #ifndef ZIRCON_KERNEL_LIB_CRASHLOG_INCLUDE_LIB_CRASHLOG_H_
 #define ZIRCON_KERNEL_LIB_CRASHLOG_INCLUDE_LIB_CRASHLOG_H_
 
+#include <lib/crashlog/panic_buffer.h>
 #include <zircon/boot/crash-reason.h>
 
 #include <vm/vm_object.h>
@@ -44,5 +45,10 @@ void crashlog_stash(fbl::RefPtr<VmObject> crashlog);
 
 // Returns the previously stashed recovered crashlog, or nullptr.
 fbl::RefPtr<VmObject> crashlog_get_stashed();
+
+extern PanicBuffer panic_buffer;
+
+// A FILE that writes to both |stdout| and the global |panic_buffer|.
+extern FILE stdout_panic_buffer;
 
 #endif  // ZIRCON_KERNEL_LIB_CRASHLOG_INCLUDE_LIB_CRASHLOG_H_
