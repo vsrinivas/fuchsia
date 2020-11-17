@@ -37,6 +37,11 @@ all_variant_tags = [
   # collection.
   "sancov",
 
+  # The `replaces-allocator` tag is used for instrumentation runtimes that
+  # provide alternative implementations of the standard C/C++ memory allocation
+  # APIs.
+  "replaces-allocator",
+
   # The `lsan` tag is used for variants that implement leak checking.
   "lsan",
 

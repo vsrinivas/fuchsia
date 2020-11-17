@@ -252,6 +252,7 @@ standard_sanitizer_variants = [
         "instrumentation-runtime",
         "instrumented",
         "lsan",
+        "replaces-allocator",
         "useronly",
       ]
     }

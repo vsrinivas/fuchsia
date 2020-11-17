@@ -5,152 +5,322 @@
 if (zx != "/") {
   import("//build/test.gni")
   import("//build/testing/bootfs_test.gni")
-}
-import("scudo_sources.gni")
-
-# A template used to build the scudo library as a source_set(),
-# The caller should provide the list of sources, and an optional
-# visibility list.
-#
-# This is used to share most settings between the test and production
-# versions of the s
-#
-# Arguments:
-#   sources
-#     [list of paths] List of source files to use for this source set.
-#
-#   visibility (optional)
-#     [list of paths] GN visibility list to be applied to the source set.
-#
-template("scudo_source_set") {
-  not_needed(invoker, [ "exclude_flags_cpp" ])
-  source_set(target_name) {
-    forward_variables_from(invoker, "*")
-
-    include_dirs = [ "src/include" ]
-
-    if (!defined(deps)) {
-      deps = []
-    }
-    deps += [
-      "$zx/system/ulib/runtime",
-      "$zx/system/ulib/sync",
-    ]
-    if (zx == "/" || zircon_toolchain != false) {
-      # Tell the code to use "scudo_platform_tls_slot.h" and where to find it.
-      # This uses libc internals, so it needs access to the internal headers.
-      defines = [ "SCUDO_HAS_PLATFORM_TLS_SLOT=1" ]
-      include_dirs += [ "." ]
-      deps += [ "$zx/third_party/ulib/musl:musl_internal" ]
-
-      # This library is linked into libc, which is used by libfuzzer.
-      # Don't instrument it to avoid getting noise in code coverage.
-      # TODO(fxbug.dev/25073): Once a cleaner solution is found, remove this.
-      configs += [ "$zx_build_config:no_fuzzer" ]
-    } else {
-      deps += [ "//src/zircon/lib/zircon" ]
-    }
-  }
-}
-
-# Most of the code can be shared between the production and test versions.
-scudo_source_set("scudo-except-flags") {
-  sources = scudo_sources - [ "src/flags.cpp" ]
-  visibility = [ ":*" ]
-}
-
-# The production version refers to `__scudo_default_options`.
-scudo_source_set("scudo") {
-  sources = [ "src/flags.cpp" ]
-  deps = [ ":scudo-except-flags" ]
-}
-
-if (zx != "/") {
-  # The test version avoids that symbol name since it also affects the system
-  # libc and not only the code under test.  Instead it renames the function to a
-  # safe name for the test.  The test code that defines its own function by this
-  # name also uses this config so it renames its definition to match.
-  config("testonly-options") {
-    visibility = [ ":*" ]
-    defines = [ "__scudo_default_options=testonly_scudo_default_options" ]
-  }
-
-  source_set("scudo-flags-testonly") {
-    visibility = [ ":*" ]
-    testonly = true
-    configs += [ ":testonly-options" ]
-    sources = [ "src/flags.cpp" ]
-    include_dirs = [ "src/include" ]
-  }
 
   group("tests") {
     testonly = true
     deps = [ ":scudo-bootfs-test" ]
   }
 
-  # This is also included in the standalone core-tests.
-  source_set("unittests") {
-    testonly = true
-
-    visibility = [
-      ":*",
-      "//zircon/system/utest/core:*",
-    ]
-
-    configs += [ ":testonly-options" ]
-
-    scudo_test_sources = [
-      "atomic_test.cpp",
-      "bytemap_test.cpp",
-      "checksum_test.cpp",
-      "chunk_test.cpp",
-      "combined_test.cpp",
-      "flags_test.cpp",
-      "list_test.cpp",
-      "map_test.cpp",
-      "mutex_test.cpp",
-      "primary_test.cpp",
-      "quarantine_test.cpp",
-      "release_test.cpp",
-      "report_test.cpp",
-      "scudo_unit_test.h",
-      "scudo_unit_test_main.cpp",
-      "secondary_test.cpp",
-      "size_class_map_test.cpp",
-      "stats_test.cpp",
-      "strings_test.cpp",
-      "tsd_test.cpp",
-      "vector_test.cpp",
-      "wrappers_c_test.cpp",
-
-      # TODO(mcgrathr): scudo_sources.gni omits wrappers_cpp.cpp
-      #"wrappers_cpp_test.cpp",
-    ]
-    sources = []
-    foreach(file, scudo_test_sources) {
-      sources += [ "src/tests/$file" ]
-    }
-
-    include_dirs = [
-      "src/include",
-      "src",
-    ]
-
-    deps = [
-      ":scudo-except-flags",
-      ":scudo-flags-testonly",
-      "//zircon/public/lib/sync",
-      "//zircon/public/lib/zxtest",
-    ]
-  }
-
-  test("scudo-unittests") {
-    # zxtest provides the main function for the standalone unittests executable.
-    deps = [ ":unittests" ]
-  }
-
   bootfs_test("scudo-bootfs-test") {
     name = "scudo-unittests"
     deps = [ ":scudo-unittests" ]
   }
+}
+
+if (zx == "/") {
+  _this_variant_tags = toolchain.tags
+} else {
+  _this_variant_tags = toolchain_variant.tags
+}
+variant_replaces_allocator = _this_variant_tags + [ "replaces-allocator" ] -
+                             [ "replaces-allocator" ] != _this_variant_tags
+
+assert(is_fuchsia)
+
+scudo_sources = []
+foreach(file,
+        [
+          "checksum.cpp",
+          "common.cpp",
+          "crc32_hw.cpp",
+          "flags.cpp",
+          "flags_parser.cpp",
+          "fuchsia.cpp",
+          "release.cpp",
+          "report.cpp",
+          "string_utils.cpp",
+        ]) {
+  scudo_sources += [ "src/$file" ]
+}
+
+gwp_asan_sources = []
+foreach(file,
+        [
+          "common.cpp",
+          "common.h",
+          "crash_handler.cpp",
+          "crash_handler.h",
+          "definitions.h",
+          "guarded_pool_allocator.cpp",
+          "guarded_pool_allocator.h",
+          "mutex.h",
+          "optional/backtrace.h",
+          "optional/backtrace_fuchsia.cpp",
+          "optional/segv_handler.h",
+          "optional/segv_handler_fuchsia.cpp",
+          "options.h",
+          "options.inc",
+          "platform_specific/common_fuchsia.cpp",
+          "platform_specific/guarded_pool_allocator_fuchsia.cpp",
+          "platform_specific/guarded_pool_allocator_tls.h",
+          "platform_specific/mutex_fuchsia.cpp",
+          "platform_specific/mutex_fuchsia.h",
+          "platform_specific/mutex_posix.h",
+          "platform_specific/utilities_fuchsia.cpp",
+          "stack_trace_compressor.cpp",
+          "stack_trace_compressor.h",
+          "utilities.cpp",
+          "utilities.h",
+        ]) {
+  gwp_asan_sources += [ "gwp_asan/$file" ]
+}
+
+# The code needs to be compiled separately for production and test use for two
+# reasons.
+#
+# The first reason only affects the flag-parsing code (src/flags.cpp): it uses
+# the `__scudo_default_options` callback function.  The test code wants to
+# define this to set special options needed by certain tests.  But defining it
+# by that name will also affect the production Scudo built into libc, which the
+# test should not do (and it makes it very hard to e.g. debug the test linked
+# against a libc containing a slightly different version of Scudo than the code
+# under test).  So both the flag-parsing code and the test code must be
+# compiled with `-D__scudo_default_options=<some other name>` to make the test
+# code safe.
+#
+# TODO(fxbug.dev/64175): The second reason is similar but more subtle and it
+# affects much of the code, both the Scudo code proper and the gwp_asan code it
+# incorporates.  These both use thread-local state that is directly located in
+# the thread structure when the code is built into libc, because normal
+# `thread_local` C++ variables are not available inside libc itself (due to
+# implementation constraints in the dynamic linker).  If the test code is built
+# the same way, then it will clobber the thread-local state of the libc
+# Scudo/gwp_asan code, which the test should not do.
+
+group("common") {
+  visibility = [ ":*" ]
+
+  public_configs = [ ":common.config" ]
+  public_deps = [
+    "$zx/system/ulib/runtime",
+    "$zx/system/ulib/sync",
+  ]
+  if (zx == "/" || zircon_toolchain != false) {
+    public_deps += [ "$zx/system/ulib/zircon" ]
+  } else {
+    public_deps += [ "//src/zircon/lib/zircon" ]
+  }
+}
+
+config("common.config") {
+  visibility = [ ":*" ]
+
+  include_dirs = [
+    ".",
+    "src",
+    "src/include",
+  ]
+
+  defines = [ "GWP_ASAN_HOOKS=1" ]
+}
+
+group("libc") {
+  visibility = [ ":*" ]
+
+  public_configs = [ ":libc.config" ]
+  public_deps = [
+    ":common",
+
+    # The local headers introduced by libc.config (below) use libc internals,
+    # so they need access to the internal headers.
+    "$zx/third_party/ulib/musl:musl_internal",
+  ]
+}
+
+config("libc.config") {
+  visibility = [ ":*" ]
+
+  # Tell the scudo and gwp_asan code to use our headers.
+  defines = [
+    "SCUDO_HAS_PLATFORM_TLS_SLOT=1",
+    "GWP_ASAN_PLATFORM_TLS_HEADER=<gwp_asan_platform_tls_slot.h>",
+  ]
+
+  # This library is linked into libc, which is used by libfuzzer.
+  # Don't instrument it to avoid getting noise in code coverage.
+  # TODO(fxbug.dev/25073): Once a cleaner solution is found, remove this.
+  configs = [ "$zx_build_config:no_fuzzer" ]
+}
+
+group("testonly") {
+  visibility = [ ":*" ]
+  testonly = true
+
+  public_deps = [
+    ":common",
+    "$zx/system/ulib/zxtest",
+  ]
+  public_configs = [ ":testonly.config" ]
+}
+
+config("testonly.config") {
+  visibility = [ ":*" ]
+
+  # TODO(crbug.com/gn/214): testonly = true
+
+  # The test version avoids that symbol name since it also affects the system
+  # libc and not only the code under test.  Instead it renames the function to
+  # a safe name for the test.  The test code that defines its own function by
+  # this name also uses this config so it renames its definition to match.
+  defines = [ "__scudo_default_options=testonly_scudo_default_options" ]
+}
+
+source_set("scudo") {
+  sources = scudo_sources
+
+  # These define the public API entry points (malloc et al).  They cannot be
+  # included in the test code without polluting the test harness and other
+  # unrelated code with the allocator code under test.  So they are only
+  # included in libc itself, not in the test build.
+  sources += [
+    "src/wrappers_c.cpp",
+    # "src/wrappers_cpp.cpp", TODO(mcgrathr): maybe use this later
+  ]
+
+  deps = [
+    ":gwp_asan",
+    ":libc",
+  ]
+
+  # GWP-ASan is opt-in via the SCUDO_OPTIONS environment variable.
+  defines = [ "SCUDO_DEFAULT_OPTIONS=GWP_ASAN_Enabled=false" ]
+}
+
+source_set("scudo.testonly") {
+  visibility = [ ":*" ]
+  testonly = true
+
+  sources = scudo_sources
+  public_deps = [
+    ":gwp_asan.testonly",
+    ":testonly",
+  ]
+}
+
+source_set("gwp_asan") {
+  visibility = [ ":*" ]
+
+  sources = gwp_asan_sources
+  deps = [ ":libc" ]
+}
+
+source_set("gwp_asan.testonly") {
+  visibility = [ ":*" ]
+  testonly = true
+
+  sources = gwp_asan_sources
+  public_deps = [ ":testonly" ]
+}
+
+# This is also included in the standalone core-tests.
+source_set("unittests") {
+  visibility = [
+    ":*",
+    "$zx/system/utest/core:*",
+  ]
+  testonly = true
+
+  scudo_test_sources = [
+    "atomic_test.cpp",
+    "bytemap_test.cpp",
+    "checksum_test.cpp",
+    "chunk_test.cpp",
+    "combined_test.cpp",
+    "flags_test.cpp",
+    "list_test.cpp",
+    "map_test.cpp",
+    "mutex_test.cpp",
+    "primary_test.cpp",
+    "quarantine_test.cpp",
+    "release_test.cpp",
+    "report_test.cpp",
+    "scudo_unit_test.h",
+    "scudo_unit_test_main.cpp",
+    "secondary_test.cpp",
+    "size_class_map_test.cpp",
+    "stats_test.cpp",
+    "strings_test.cpp",
+    "tsd_test.cpp",
+    "vector_test.cpp",
+  ]
+  sources = []
+  foreach(file, scudo_test_sources) {
+    sources += [ "src/tests/$file" ]
+  }
+
+  deps = [
+    ":scudo.testonly",
+    #":gwp_asan-unittests", # TODO(mcgrathr,kostyak): when ported to zxtest
+  ]
+
+  # The public API tests both assume Scudo's behavior rather than purely kosher
+  # standard behavior and they include testing error cases.  The instrumented
+  # runtimes' allocators often make error cases or dubiously kosher uses fatal.
+  if (!variant_replaces_allocator) {
+    deps += [ ":wrapper-tests" ]
+  }
+}
+
+# These tests use the public API, so they are testing what's actually in libc
+# rather than the isolated test code.
+source_set("wrapper-tests") {
+  visibility = [ ":*" ]
+  testonly = true
+
+  sources = [
+    "src/tests/scudo_unit_test.h",
+    "src/tests/wrappers_c_test.cpp",
+
+    # TODO(mcgrathr): see src/wrappers_cpp.cpp inclusion above.
+    #"src/tests/wrappers_cpp_test.cpp",
+  ]
+
+  deps = [
+    ":common",
+    "$zx/system/ulib/zxtest",
+  ]
+}
+
+source_set("gwp_asan-unittests") {
+  visibility = [ ":*" ]
+  testonly = true
+
+  gwp_asan_test_sources = [
+    "alignment.cpp",
+    "backtrace.cpp",
+    "basic.cpp",
+    "compression.cpp",
+    "crash_handler_api.cpp",
+    "driver.cpp",
+    "enable_disable.cpp",
+    "harness.cpp",
+    "harness.h",
+    "iterate.cpp",
+    "late_init.cpp",
+    "mutex_test.cpp",
+    "slot_reuse.cpp",
+    "thread_contention.cpp",
+  ]
+  sources = []
+  foreach(file, gwp_asan_test_sources) {
+    sources += [ "gwp_asan/tests/$file" ]
+  }
+
+  deps = [ ":gwp_asan.testonly" ]
+}
+
+test("scudo-unittests") {
+  # zxtest provides the main function for the standalone unittests
+  # executable.
+  deps = [ ":unittests" ]
 }

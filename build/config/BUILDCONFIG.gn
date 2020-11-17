@@ -821,6 +821,7 @@ _asan_variant = {
     "instrumentation-runtime",
     "instrumented",
     "lsan",
+    "replaces-allocator",
   ]
 }
 
