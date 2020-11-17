@@ -1,0 +1,40 @@
+[
+  {
+    "name": "Success",
+    "expected": "match",
+    "device": {
+      "fuchsia.BIND_PROTOCOL": "fuchsia.nand.BIND_PROTOCOL.DEVICE",
+      "fuchsia.BIND_NAND_CLASS": "fuchsia.nand.BIND_NAND_CLASS.PARTMAP"
+    }
+  },
+  {
+    "name": "IncorrectClass",
+    "expected": "abort",
+    "device": {
+      "fuchsia.BIND_PROTOCOL": "fuchsia.nand.BIND_PROTOCOL.DEVICE",
+      "fuchsia.BIND_NAND_CLASS": "fuchsia.nand.BIND_NAND_CLASS.TEST"
+    }
+  },
+  {
+    "name": "MissingClass",
+    "expected": "abort",
+    "device": {
+      "fuchsia.BIND_PROTOCOL": "fuchsia.nand.BIND_PROTOCOL.DEVICE"
+    }
+  },
+  {
+    "name": "IncorrectProtocol",
+    "expected": "abort",
+    "device": {
+      "fuchsia.BIND_PROTOCOL": "fuchsia.hardware.block.BIND_PROTOCOL.DEVICE",
+      "fuchsia.BIND_NAND_CLASS": "fuchsia.nand.BIND_NAND_CLASS.PARTMAP"
+    }
+  },
+  {
+    "name": "MissingProtocol",
+    "expected": "abort",
+    "device": {
+      "fuchsia.BIND_NAND_CLASS": "fuchsia.nand.BIND_NAND_CLASS.PARTMAP"
+    }
+  }
+]

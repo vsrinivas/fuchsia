@@ -1,7 +1,7 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-#include "nandpart.h"
+#include "src/devices/nand/drivers/nandpart/nandpart.h"
 
 #include <assert.h>
 #include <inttypes.h>
@@ -16,7 +16,6 @@
 #include <algorithm>
 #include <memory>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
@@ -26,7 +25,8 @@
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 
-#include "nandpart-utils.h"
+#include "src/devices/nand/drivers/nandpart/nandpart-bind.h"
+#include "src/devices/nand/drivers/nandpart/nandpart-utils.h"
 
 namespace nand {
 namespace {
@@ -307,9 +307,4 @@ static constexpr zx_driver_ops_t driver_ops = []() {
 
 }  // namespace nand
 
-// clang-format off
-ZIRCON_DRIVER_BEGIN(nandpart, nand::driver_ops, "zircon", "0.1", 2)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_NAND),
-    BI_MATCH_IF(EQ, BIND_NAND_CLASS, fuchsia_hardware_nand_Class_PARTMAP),
-ZIRCON_DRIVER_END(nandpart)
-    // clang-format on
+ZIRCON_DRIVER(nandpart, nand::driver_ops, "zircon", "0.1")
