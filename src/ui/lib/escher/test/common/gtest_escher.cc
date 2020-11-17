@@ -104,7 +104,7 @@ void EscherEnvironment::SetUp() {
 #if !ESCHER_USE_RUNTIME_GLSL
     LoadShadersFromDisk(hack_filesystem_);
 #endif
-    escher_ = std::make_unique<Escher>(vulkan_device_, hack_filesystem_);
+    escher_ = std::make_unique<Escher>(vulkan_device_, hack_filesystem_, /*gpu_allocator*/ nullptr);
     FX_CHECK(escher_);
 
 #if ESCHER_USE_RUNTIME_GLSL

@@ -33,7 +33,9 @@ class Escher final : public MeshBuilderFactory, public ShaderProgramFactory {
   // up to the application to eventually destroy them, and also to ensure that
   // they outlive the Escher instance.
   explicit Escher(VulkanDeviceQueuesPtr device);
-  Escher(VulkanDeviceQueuesPtr device, HackFilesystemPtr filesystem);
+  // If |gpu_allocator| is nullptr, a default allocator will be created.
+  Escher(VulkanDeviceQueuesPtr device, HackFilesystemPtr filesystem,
+         std::shared_ptr<GpuAllocator> gpu_allocator);
   ~Escher();
 
   EscherWeakPtr GetWeakPtr() { return weak_factory_.GetWeakPtr(); }
@@ -168,7 +170,7 @@ class Escher final : public MeshBuilderFactory, public ShaderProgramFactory {
   VulkanContext vulkan_context_;
 
   // These can be constructed without an EscherWeakPtr.
-  std::unique_ptr<GpuAllocator> gpu_allocator_;
+  std::shared_ptr<GpuAllocator> gpu_allocator_;
   std::unique_ptr<impl::CommandBufferSequencer> command_buffer_sequencer_;
   std::unique_ptr<impl::CommandBufferPool> command_buffer_pool_;
   std::unique_ptr<impl::CommandBufferPool> transfer_command_buffer_pool_;

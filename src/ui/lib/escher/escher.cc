@@ -75,12 +75,20 @@ std::unique_ptr<impl::MeshManager> NewMeshManager(impl::CommandBufferPool* main_
 //   - this approach
 //   - including additional headers in escher.h, instead of forward-declaring
 // Since many files include escher.h, it is worthwhile to forward-declare as much as possible.
-Escher::Escher(VulkanDeviceQueuesPtr device) : Escher(std::move(device), HackFilesystem::New()) {}
+Escher::Escher(VulkanDeviceQueuesPtr device)
+    : Escher(device, HackFilesystem::New(), /*gpu_allocator*/ nullptr) {}
 
-Escher::Escher(VulkanDeviceQueuesPtr device, HackFilesystemPtr filesystem)
+// Helper which either returns the provided allocator, or if it is nullptr returns a new one.
+static std::shared_ptr<GpuAllocator> EnsureAllocator(std::shared_ptr<GpuAllocator> allocator,
+                                                     const VulkanContext& vulkan_context) {
+  return allocator ? std::move(allocator) : std::make_shared<VmaGpuAllocator>(vulkan_context);
+}
+
+Escher::Escher(VulkanDeviceQueuesPtr device, HackFilesystemPtr filesystem,
+               std::shared_ptr<GpuAllocator> gpu_allocator_in)
     : device_(std::move(device)),
       vulkan_context_(device_->GetVulkanContext()),
-      gpu_allocator_(std::make_unique<VmaGpuAllocator>(vulkan_context_)),
+      gpu_allocator_(EnsureAllocator(std::move(gpu_allocator_in), vulkan_context_)),
       command_buffer_sequencer_(std::make_unique<impl::CommandBufferSequencer>()),
       command_buffer_pool_(NewCommandBufferPool(vulkan_context_, command_buffer_sequencer_.get(),
                                                 /*use_protected_memory=*/false)),

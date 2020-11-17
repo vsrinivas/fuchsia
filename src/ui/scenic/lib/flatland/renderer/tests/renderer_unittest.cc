@@ -29,9 +29,8 @@ void GetVmoHostPtr(uint8_t** vmo_host,
   const zx::vmo& image_vmo = collection_info.buffers[idx].vmo;
   auto image_vmo_bytes = collection_info.settings.buffer_settings.size_bytes;
   ASSERT_TRUE(image_vmo_bytes > 0);
-  auto status = zx::vmar::root_self()->map(ZX_VM_PERM_WRITE | ZX_VM_PERM_READ,
-                                           0, image_vmo, 0, image_vmo_bytes,
-                                           reinterpret_cast<uintptr_t*>(vmo_host));
+  auto status = zx::vmar::root_self()->map(ZX_VM_PERM_WRITE | ZX_VM_PERM_READ, 0, image_vmo, 0,
+                                           image_vmo_bytes, reinterpret_cast<uintptr_t*>(vmo_host));
   EXPECT_EQ(status, ZX_OK);
 }
 
@@ -352,48 +351,48 @@ TEST_F(NullRendererTest, AsyncEventSignalTest) {
 
 VK_TEST_F(VulkanRendererTest, RegisterCollectionTest) {
   auto env = escher::test::EscherEnvironment::GetGlobalTestEnvironment();
-  auto unique_escher =
-      std::make_unique<escher::Escher>(env->GetVulkanDevice(), env->GetFilesystem());
+  auto unique_escher = std::make_unique<escher::Escher>(
+      env->GetVulkanDevice(), env->GetFilesystem(), /*gpu_allocator*/ nullptr);
   VkRenderer renderer(std::move(unique_escher));
   RegisterCollectionTest(&renderer, sysmem_allocator_.get());
 }
 
 VK_TEST_F(VulkanRendererTest, SameTokenTwiceTest) {
   auto env = escher::test::EscherEnvironment::GetGlobalTestEnvironment();
-  auto unique_escher =
-      std::make_unique<escher::Escher>(env->GetVulkanDevice(), env->GetFilesystem());
+  auto unique_escher = std::make_unique<escher::Escher>(
+      env->GetVulkanDevice(), env->GetFilesystem(), /*gpu_allocator*/ nullptr);
   VkRenderer renderer(std::move(unique_escher));
   SameTokenTwiceTest(&renderer, sysmem_allocator_.get());
 }
 
 VK_TEST_F(VulkanRendererTest, BadTokenTest) {
   auto env = escher::test::EscherEnvironment::GetGlobalTestEnvironment();
-  auto unique_escher =
-      std::make_unique<escher::Escher>(env->GetVulkanDevice(), env->GetFilesystem());
+  auto unique_escher = std::make_unique<escher::Escher>(
+      env->GetVulkanDevice(), env->GetFilesystem(), /*gpu_allocator*/ nullptr);
   VkRenderer renderer(std::move(unique_escher));
   BadTokenTest(&renderer, sysmem_allocator_.get());
 }
 
 VK_TEST_F(VulkanRendererTest, ValidationTest) {
   auto env = escher::test::EscherEnvironment::GetGlobalTestEnvironment();
-  auto unique_escher =
-      std::make_unique<escher::Escher>(env->GetVulkanDevice(), env->GetFilesystem());
+  auto unique_escher = std::make_unique<escher::Escher>(
+      env->GetVulkanDevice(), env->GetFilesystem(), /*gpu_allocator*/ nullptr);
   VkRenderer renderer(std::move(unique_escher));
   ValidationTest(&renderer, sysmem_allocator_.get());
 }
 
 VK_TEST_F(VulkanRendererTest, DeregistrationTest) {
   auto env = escher::test::EscherEnvironment::GetGlobalTestEnvironment();
-  auto unique_escher =
-      std::make_unique<escher::Escher>(env->GetVulkanDevice(), env->GetFilesystem());
+  auto unique_escher = std::make_unique<escher::Escher>(
+      env->GetVulkanDevice(), env->GetFilesystem(), /*gpu_allocator*/ nullptr);
   VkRenderer renderer(std::move(unique_escher));
   DeregistrationTest(&renderer, sysmem_allocator_.get());
 }
 
 VK_TEST_F(VulkanRendererTest, DISABLED_MultithreadingTest) {
   auto env = escher::test::EscherEnvironment::GetGlobalTestEnvironment();
-  auto unique_escher =
-      std::make_unique<escher::Escher>(env->GetVulkanDevice(), env->GetFilesystem());
+  auto unique_escher = std::make_unique<escher::Escher>(
+      env->GetVulkanDevice(), env->GetFilesystem(), /*gpu_allocator*/ nullptr);
   VkRenderer renderer(std::move(unique_escher));
   MultithreadingTest(&renderer);
 }
@@ -401,8 +400,8 @@ VK_TEST_F(VulkanRendererTest, DISABLED_MultithreadingTest) {
 VK_TEST_F(VulkanRendererTest, AsyncEventSignalTest) {
   SKIP_TEST_IF_ESCHER_USES_DEVICE(VirtualGpu);
   auto env = escher::test::EscherEnvironment::GetGlobalTestEnvironment();
-  auto unique_escher =
-      std::make_unique<escher::Escher>(env->GetVulkanDevice(), env->GetFilesystem());
+  auto unique_escher = std::make_unique<escher::Escher>(
+      env->GetVulkanDevice(), env->GetFilesystem(), /*gpu_allocator*/ nullptr);
   VkRenderer renderer(std::move(unique_escher));
   AsyncEventSignalTest(&renderer, sysmem_allocator_.get(), /*use_vulkan*/ true);
 }
@@ -422,8 +421,8 @@ VK_TEST_F(VulkanRendererTest, AsyncEventSignalTest) {
 VK_TEST_F(VulkanRendererTest, RenderTest) {
   SKIP_TEST_IF_ESCHER_USES_DEVICE(VirtualGpu);
   auto env = escher::test::EscherEnvironment::GetGlobalTestEnvironment();
-  auto unique_escher =
-      std::make_unique<escher::Escher>(env->GetVulkanDevice(), env->GetFilesystem());
+  auto unique_escher = std::make_unique<escher::Escher>(
+      env->GetVulkanDevice(), env->GetFilesystem(), /*gpu_allocator*/ nullptr);
   VkRenderer renderer(std::move(unique_escher));
 
   // First create the pair of sysmem tokens, one for the client, one for the renderer.
@@ -575,8 +574,8 @@ VK_TEST_F(VulkanRendererTest, RenderTest) {
 VK_TEST_F(VulkanRendererTest, TransparencyTest) {
   SKIP_TEST_IF_ESCHER_USES_DEVICE(VirtualGpu);
   auto env = escher::test::EscherEnvironment::GetGlobalTestEnvironment();
-  auto unique_escher =
-      std::make_unique<escher::Escher>(env->GetVulkanDevice(), env->GetFilesystem());
+  auto unique_escher = std::make_unique<escher::Escher>(
+      env->GetVulkanDevice(), env->GetFilesystem(), /*gpu_allocator*/ nullptr);
   VkRenderer renderer(std::move(unique_escher));
 
   // First create the pair of sysmem tokens, one for the client, one for the renderer.

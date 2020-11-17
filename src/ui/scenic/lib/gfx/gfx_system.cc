@@ -139,17 +139,18 @@ escher::EscherUniquePtr GfxSystem::CreateEscher(sys::ComponentContext* app_conte
 #if ESCHER_USE_RUNTIME_GLSL
   escher::GlslangInitializeProcess();
 #endif
-  return escher::EscherUniquePtr(new escher::Escher(vulkan_device_queues, std::move(shader_fs)),
-                                 // Custom deleter.
-                                 // The vulkan instance is a stack variable, but it is a
-                                 // fxl::RefPtr, so we can store by value.
-                                 [=](escher::Escher* escher) {
-                                   vulkan_instance->DeregisterDebugReportCallback(callback_handle);
+  return escher::EscherUniquePtr(
+      new escher::Escher(vulkan_device_queues, std::move(shader_fs), /*gpu_allocator*/ nullptr),
+      // Custom deleter.
+      // The vulkan instance is a stack variable, but it is a
+      // fxl::RefPtr, so we can store by value.
+      [=](escher::Escher* escher) {
+        vulkan_instance->DeregisterDebugReportCallback(callback_handle);
 #if ESCHER_USE_RUNTIME_GLSL
-                                   escher::GlslangFinalizeProcess();
+        escher::GlslangFinalizeProcess();
 #endif
-                                   delete escher;
-                                 });
+        delete escher;
+      });
 }
 
 void GfxSystem::DumpSessionMapResources(

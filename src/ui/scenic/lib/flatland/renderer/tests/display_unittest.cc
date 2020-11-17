@@ -98,8 +98,8 @@ VK_TEST_F(DisplayTest, SetAllConstraintsTest) {
 
   // Create the VK renderer.
   auto env = escher::test::EscherEnvironment::GetGlobalTestEnvironment();
-  auto unique_escher =
-      std::make_unique<escher::Escher>(env->GetVulkanDevice(), env->GetFilesystem());
+  auto unique_escher = std::make_unique<escher::Escher>(
+      env->GetVulkanDevice(), env->GetFilesystem(), /*gpu_allocator*/ nullptr);
   flatland::VkRenderer renderer(std::move(unique_escher));
 
   // First create the pair of sysmem tokens, one for the client, one for the renderer.

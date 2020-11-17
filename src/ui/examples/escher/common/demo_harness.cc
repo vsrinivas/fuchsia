@@ -265,7 +265,8 @@ void DemoHarness::CreateEscher() {
   TRACE_DURATION("gfx", "DemoHarness::CreateEscher");
 
   FX_CHECK(!escher_);
-  escher_ = std::make_unique<escher::Escher>(device_queues_, filesystem_);
+  escher_ =
+      std::make_unique<escher::Escher>(device_queues_, filesystem_, /*gpu_allocator*/ nullptr);
 
   // Replace Escher's default pipeline builder.
   {
