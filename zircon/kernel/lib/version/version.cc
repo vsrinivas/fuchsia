@@ -79,11 +79,11 @@ const char* version_string() { return kVersionString; }
 
 const char* elf_build_id_string() { return gElfBuildIdString; }
 
-void print_version(void) {
-  printf("version:\n");
-  printf("\tarch:     %s\n", ARCH);
-  printf("\tzx_system_get_version_string: %s\n", kVersionString);
-  printf("\tELF build ID: %s\n", gElfBuildIdString);
+void print_version() {
+  dprintf(ALWAYS, "version:\n");
+  dprintf(ALWAYS, "\tarch:     %s\n", ARCH);
+  dprintf(ALWAYS, "\tzx_system_get_version_string: %s\n", kVersionString);
+  dprintf(ALWAYS, "\tELF build ID: %s\n", gElfBuildIdString);
 }
 
 void PrintSymbolizerContext(FILE* f) {
@@ -117,9 +117,7 @@ STATIC_COMMAND_START
 STATIC_COMMAND("version", "print version", &cmd_version)
 STATIC_COMMAND_END(version)
 
-#if LK_DEBUGLEVEL > 0
-static void print_version_init(uint) { print_version(); }
+static void print_version_init(uint level) { print_version(); }
 
 // print the version string if any level of debug is set
 LK_INIT_HOOK(version, print_version_init, LK_INIT_LEVEL_HEAP - 1)
-#endif
