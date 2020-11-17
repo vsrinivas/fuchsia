@@ -26,6 +26,14 @@ zx_status_t AllocatorReservation::Reserve(PendingWork* transaction, size_t reser
   return status;
 }
 
+zx_status_t AllocatorReservation::ExtendReservation(PendingWork* transaction, size_t reserved) {
+  zx_status_t status = allocator_.Reserve({}, transaction, reserved);
+  if (status == ZX_OK) {
+    reserved_ += reserved;
+  }
+  return status;
+}
+
 size_t AllocatorReservation::Allocate() {
   ZX_ASSERT(reserved_ > 0);
   reserved_--;

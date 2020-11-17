@@ -145,6 +145,49 @@ TEST(AllocatorTest, ReserveTwiceFails) {
   ASSERT_EQ(allocator->GetAvailable(), kTotalElements);
 }
 
+TEST(AllocatorTest, ExtendReservationByZeroDoesNotFail) {
+  std::unique_ptr<Allocator> allocator;
+  ASSERT_NO_FATAL_FAILURE(CreateAllocator(&allocator));
+
+  // Initialize an empty AllocatorReservation (with no reserved units);
+  ASSERT_EQ(allocator->GetAvailable(), kTotalElements);
+  AllocatorReservation reservation(allocator.get());
+  ASSERT_EQ(ZX_OK, reservation.Reserve(nullptr, 1));
+
+  ASSERT_EQ(ZX_OK, reservation.ExtendReservation(nullptr, 0));
+  ASSERT_EQ(allocator->GetAvailable(), kTotalElements - 1);
+}
+
+TEST(AllocatorTest, ExtendReservationByFewBlocks) {
+  std::unique_ptr<Allocator> allocator;
+  ASSERT_NO_FATAL_FAILURE(CreateAllocator(&allocator));
+  constexpr size_t kInitialReservation = 3;
+  constexpr size_t kExtendedReservation = 8;
+
+  // Initialize an empty AllocatorReservation (with no reserved units);
+  ASSERT_EQ(allocator->GetAvailable(), kTotalElements);
+  AllocatorReservation reservation(allocator.get());
+  ASSERT_EQ(ZX_OK, reservation.Reserve(nullptr, kInitialReservation));
+
+  ASSERT_EQ(ZX_OK, reservation.ExtendReservation(nullptr, kExtendedReservation));
+  ASSERT_EQ(allocator->GetAvailable(),
+            kTotalElements - (kInitialReservation + kExtendedReservation));
+}
+
+TEST(AllocatorTest, OverExtendFails) {
+  std::unique_ptr<Allocator> allocator;
+  ASSERT_NO_FATAL_FAILURE(CreateAllocator(&allocator));
+  constexpr size_t kInitialReservation = 3;
+  constexpr size_t kExtendedReservation = kTotalElements + 1 - kInitialReservation;
+
+  AllocatorReservation reservation(allocator.get());
+  ASSERT_EQ(ZX_OK, reservation.Reserve(nullptr, kInitialReservation));
+
+  // Attempt to extend reservation more elements than the allocator has.
+  ASSERT_NE(ZX_OK, reservation.ExtendReservation(nullptr, kExtendedReservation));
+  ASSERT_EQ(allocator->GetAvailable(), kTotalElements - kInitialReservation);
+}
+
 fbl::Array<size_t> CreateArray(size_t size) {
   fbl::Array<size_t> array(new size_t[size], size);
   memset(array.data(), 0, sizeof(size_t) * size);
@@ -204,6 +247,14 @@ void PerformFree(Allocator* allocator, const fbl::Array<size_t>& indices) {
   ASSERT_EQ(allocator->GetAvailable(), indices.size() + free_count);
 }
 
+void ReserveAndExtend(AllocatorReservation& reservation, size_t elements) {
+  size_t extend_by = elements / 2;
+  size_t reserve = elements - extend_by;
+  ASSERT_EQ(ZX_OK, reservation.Reserve(nullptr, reserve));
+  ASSERT_EQ(ZX_OK, reservation.ExtendReservation(nullptr, extend_by));
+  ASSERT_EQ(reservation.GetReserved(), elements);
+}
+
 TEST(AllocatorTest, Allocate) {
   std::unique_ptr<Allocator> allocator;
   ASSERT_NO_FATAL_FAILURE(CreateAllocator(&allocator));
@@ -212,7 +263,7 @@ TEST(AllocatorTest, Allocate) {
   {
     // Reserve all of the elements.
     AllocatorReservation reservation(allocator.get());
-    ASSERT_EQ(ZX_OK, reservation.Reserve(nullptr, kTotalElements));
+    ReserveAndExtend(reservation, kTotalElements);
 
     // Allocate half of the reservation's reserved elements.
     ASSERT_NO_FATAL_FAILURE(PerformAllocate(kTotalElements / 2, &reservation, &indices));
