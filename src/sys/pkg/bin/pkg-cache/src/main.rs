@@ -3,15 +3,15 @@
 // found in the LICENSE file.
 
 use {
-    crate::blob_location::BlobLocation,
-    crate::pkgfs_inspect::PkgfsInspectState,
+    crate::{blob_location::BlobLocation, pkgfs_inspect::PkgfsInspectState},
     anyhow::{anyhow, Context as _, Error},
-    cobalt_sw_delivery_registry as metrics, fuchsia_async as fasync,
+    cobalt_sw_delivery_registry as metrics,
+    fuchsia_async::Task,
     fuchsia_cobalt::{CobaltConnector, ConnectionType},
     fuchsia_component::server::ServiceFs,
     fuchsia_inspect as finspect,
     fuchsia_syslog::{self, fx_log_err, fx_log_info},
-    futures::{future, prelude::*, stream::FuturesUnordered, StreamExt, TryFutureExt},
+    futures::prelude::*,
     std::sync::Arc,
     system_image::StaticPackages,
 };
@@ -23,22 +23,17 @@ mod pkgfs_inspect;
 
 const COBALT_CONNECTOR_BUFFER_SIZE: usize = 1000;
 
-fn main() -> Result<(), Error> {
+#[fuchsia_async::run_singlethreaded]
+async fn main() -> Result<(), Error> {
     fuchsia_syslog::init_with_tags(&["pkg-cache"]).expect("can't init logger");
     fuchsia_trace_provider::trace_provider_create_with_fdio();
     fx_log_info!("starting package cache service");
 
-    let mut executor = fasync::Executor::new().context("error creating executor")?;
-    executor.run_singlethreaded(main_inner_async())
-}
-
-async fn main_inner_async() -> Result<(), Error> {
     let inspector = finspect::Inspector::new();
-    let futures = FuturesUnordered::new();
 
     let (cobalt_sender, cobalt_fut) = CobaltConnector { buffer_size: COBALT_CONNECTOR_BUFFER_SIZE }
         .serve(ConnectionType::project_id(metrics::PROJECT_ID));
-    futures.push(cobalt_fut.boxed_local());
+    let cobalt_fut = Task::spawn(cobalt_fut);
 
     let pkgfs_system =
         pkgfs::system::Client::open_from_namespace().context("error opening /pkgfs/system")?;
@@ -47,55 +42,59 @@ async fn main_inner_async() -> Result<(), Error> {
     let pkgfs_ctl =
         pkgfs::control::Client::open_from_namespace().context("error opening pkgfs/ctl")?;
 
-    let static_packages = get_static_packages(pkgfs_system.clone()).await;
+    let (static_packages, _blob_location, _pkgfs_inspect) = {
+        let static_packages_fut = get_static_packages(pkgfs_system.clone());
 
-    let cache_cb = {
-        let pkgfs_ctl = Clone::clone(&pkgfs_ctl);
-        move |stream| {
-            let cobalt_sender = cobalt_sender.clone();
-            fasync::Task::spawn(
-                cache_service::serve(
-                    Clone::clone(&pkgfs_versions),
-                    Clone::clone(&pkgfs_ctl),
-                    static_packages.clone(),
-                    stream,
-                    cobalt_sender,
-                )
-                .unwrap_or_else(|e| {
-                    fx_log_err!("error handling PackageCache connection {:#}", anyhow!(e))
-                }),
-            )
-            .detach()
-        }
+        let blob_location_fut = BlobLocation::new(
+            || Ok(pkgfs_system.clone()),
+            || Ok(pkgfs_versions.clone()),
+            inspector.root().create_child("blob-location"),
+        );
+
+        let pkgfs_inspect_fut = PkgfsInspectState::new(
+            || Ok(pkgfs_system.clone()),
+            inspector.root().create_child("pkgfs"),
+        );
+
+        future::join3(static_packages_fut, blob_location_fut, pkgfs_inspect_fut).await
     };
 
-    let gc_cb = move |stream| {
-        fasync::Task::spawn(gc_service::serve(Clone::clone(&pkgfs_ctl), stream).unwrap_or_else(
-            |e| fx_log_err!("error handling SpaceManager connection {:#}", anyhow!(e)),
-        ))
-        .detach()
-    };
+    enum IncomingService {
+        PackageCache(fidl_fuchsia_pkg::PackageCacheRequestStream),
+        SpaceManager(fidl_fuchsia_space::ManagerRequestStream),
+    }
 
     let mut fs = ServiceFs::new();
-    fs.dir("svc").add_fidl_service(cache_cb).add_fidl_service(gc_cb);
-
-    let blob_location_fut = BlobLocation::new(
-        || Ok(pkgfs_system.clone()),
-        || Ok(pkgfs::versions::Client::open_from_namespace()?),
-        inspector.root().create_child("blob-location"),
-    );
-
-    let pkgfs_inspect_fut =
-        PkgfsInspectState::new(|| Ok(pkgfs_system.clone()), inspector.root().create_child("pkgfs"));
-
-    let (_blob_location, _pkgfs_inspect) = future::join(blob_location_fut, pkgfs_inspect_fut).await;
-
     inspector.serve(&mut fs)?;
-
     fs.take_and_serve_directory_handle()?;
-    futures.push(fs.collect().boxed_local());
+    fs.dir("svc")
+        .add_fidl_service(IncomingService::PackageCache)
+        .add_fidl_service(IncomingService::SpaceManager);
 
-    futures.collect::<()>().await;
+    let () = fs
+        .for_each_concurrent(None, move |svc| {
+            match svc {
+                IncomingService::PackageCache(stream) => Task::spawn(
+                    cache_service::serve(
+                        pkgfs_versions.clone(),
+                        pkgfs_ctl.clone(),
+                        Arc::clone(&static_packages),
+                        stream,
+                        cobalt_sender.clone(),
+                    )
+                    .map(|res| res.context("while serving fuchsia.pkg.PackageCache")),
+                ),
+                IncomingService::SpaceManager(stream) => Task::spawn(
+                    gc_service::serve(pkgfs_ctl.clone(), stream)
+                        .map(|res| res.context("while serving fuchsia.space.Manager")),
+                ),
+            }
+            .unwrap_or_else(|e| {
+                fx_log_err!("error handling fidl connection: {:#}", anyhow!(e));
+            })
+        })
+        .await;
+    cobalt_fut.await;
 
     Ok(())
 }
