@@ -47,7 +47,7 @@ It will be set below and passed to other toolchains through toolchain_args
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1266
+From //build/config/BUILDCONFIG.gn:1267
 
 ### always_zedboot
 Build boot images that prefer Zedboot over local boot (only for EFI).
@@ -496,7 +496,7 @@ An action that accesses undeclared inputs or outputs will fail the build.
 
 **Current value (from the default):** `false`
 
-From //build/config/BUILDCONFIG.gn:2160
+From //build/config/BUILDCONFIG.gn:2161
 
 ### build_uefi_disk
 Generate a UEFI disk image
@@ -731,7 +731,7 @@ From //build/images/custom_signing.gni:23
 
 **Current value (from the default):** `"dart_jit_app"`
 
-From [//topaz/runtime/dart/dart_component.gni:24](https://fuchsia.googlesource.com/topaz/+/63ee76cccb8afddb2cb405d56f4e3f88ce941fab/runtime/dart/dart_component.gni#24)
+From [//topaz/runtime/dart/dart_component.gni:24](https://fuchsia.googlesource.com/topaz/+/8334e88a02e1bb3a6d2eadf7e965182979c972d4/runtime/dart/dart_component.gni#24)
 
 ### dart_default_build_cfg
 TODO(fxbug.dev/64153) renable aot builds
@@ -761,14 +761,14 @@ we use to build products.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/63ee76cccb8afddb2cb405d56f4e3f88ce941fab/runtime/dart/config.gni#10)
+From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/8334e88a02e1bb3a6d2eadf7e965182979c972d4/runtime/dart/config.gni#10)
 
 ### dart_space_dart
 Whether experimental space dart mode is enabled for Dart applications.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/dart_component.gni:43](https://fuchsia.googlesource.com/topaz/+/63ee76cccb8afddb2cb405d56f4e3f88ce941fab/runtime/dart/dart_component.gni#43)
+From [//topaz/runtime/dart/dart_component.gni:43](https://fuchsia.googlesource.com/topaz/+/8334e88a02e1bb3a6d2eadf7e965182979c972d4/runtime/dart/dart_component.gni#43)
 
 ### data_partition_manifest
 Path to manifest file containing data to place into the initial /data
@@ -976,7 +976,7 @@ This is just added to [`known_variants`](#known_variants).
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1029
+From //build/config/BUILDCONFIG.gn:1030
 
 ### fastboot_product
 
@@ -1018,7 +1018,7 @@ From //build/images/args.gni:52
 
 **Current value (from the default):** `"flutter_jit_app"`
 
-From [//topaz/runtime/dart/dart_component.gni:13](https://fuchsia.googlesource.com/topaz/+/63ee76cccb8afddb2cb405d56f4e3f88ce941fab/runtime/dart/dart_component.gni#13)
+From [//topaz/runtime/dart/dart_component.gni:13](https://fuchsia.googlesource.com/topaz/+/8334e88a02e1bb3a6d2eadf7e965182979c972d4/runtime/dart/dart_component.gni#13)
 
 ### flutter_default_build_cfg
 Non-product JIT
@@ -1058,14 +1058,14 @@ From //build/flutter/config.gni:10
 
 **Current value (from the default):** `true`
 
-From [//topaz/runtime/dart/dart_component.gni:34](https://fuchsia.googlesource.com/topaz/+/63ee76cccb8afddb2cb405d56f4e3f88ce941fab/runtime/dart/dart_component.gni#34)
+From [//topaz/runtime/dart/dart_component.gni:34](https://fuchsia.googlesource.com/topaz/+/8334e88a02e1bb3a6d2eadf7e965182979c972d4/runtime/dart/dart_component.gni#34)
 
 ### flutter_space_dart
 Whether experimental space dart mode is enabled for Flutter applications.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/dart_component.gni:40](https://fuchsia.googlesource.com/topaz/+/63ee76cccb8afddb2cb405d56f4e3f88ce941fab/runtime/dart/dart_component.gni#40)
+From [//topaz/runtime/dart/dart_component.gni:40](https://fuchsia.googlesource.com/topaz/+/8334e88a02e1bb3a6d2eadf7e965182979c972d4/runtime/dart/dart_component.gni#40)
 
 ### font_catalog_paths
 
@@ -1625,7 +1625,7 @@ Each element of the list is one variant, which is a scope defining:
   host_only = {
   remove_shared_configs = ["//build/config:symbol_no_undefined"]
 }
-  tags = ["asan", "instrumentation-runtime", "instrumented", "lsan"]
+  tags = ["asan", "instrumentation-runtime", "instrumented", "lsan", "replaces-allocator"]
   toolchain_args = { }
 }, {
   configs = ["//build/config/sanitizers:asan", "//build/config/sanitizers:ubsan"]
@@ -1633,14 +1633,14 @@ Each element of the list is one variant, which is a scope defining:
   remove_shared_configs = ["//build/config:symbol_no_undefined"]
 }
   remove_common_configs = ["//build/config:no_rtti"]
-  tags = ["asan", "instrumentation-runtime", "instrumented", "lsan", "ubsan"]
+  tags = ["asan", "instrumentation-runtime", "instrumented", "lsan", "replaces-allocator", "ubsan"]
   toolchain_args = { }
 }, {
   configs = ["//build/config/sanitizers:asan", "//build/config/sanitizers:sancov"]
   host_only = {
   remove_shared_configs = ["//build/config:symbol_no_undefined"]
 }
-  tags = ["asan", "instrumentation-runtime", "instrumented", "lsan", "sancov"]
+  tags = ["asan", "instrumentation-runtime", "instrumented", "lsan", "replaces-allocator", "sancov"]
   toolchain_args = { }
 }, {
   configs = ["//build/config/sanitizers:asan", "//build/config/fuzzer", "//build/config/sanitizers:rust-asan", "//build/config:icf"]
@@ -1650,7 +1650,7 @@ Each element of the list is one variant, which is a scope defining:
   name = "asan-fuzzer"
   remove_common_configs = ["//build/config:icf"]
   remove_shared_configs = ["//build/config:symbol_no_undefined"]
-  tags = ["asan", "instrumentation-runtime", "instrumented", "lsan", "fuzzer"]
+  tags = ["asan", "instrumentation-runtime", "instrumented", "lsan", "replaces-allocator", "fuzzer"]
   toolchain_args = {
   asan_default_options = "alloc_dealloc_mismatch=0:check_malloc_usable_size=0:detect_odr_violation=0:max_uar_stack_size_log=16:print_scariness=1:allocator_may_return_null=1:detect_leaks=0:detect_stack_use_after_return=1:malloc_context_size=128:print_summary=1:print_suppressions=0:strict_memcmp=0:symbolize=0"
 }
@@ -1666,7 +1666,7 @@ Each element of the list is one variant, which is a scope defining:
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:921
+From //build/config/BUILDCONFIG.gn:922
 
 ### launch_basemgr_on_boot
 Indicates whether to include basemgr.cmx in the boot sequence for the
@@ -2403,7 +2403,7 @@ is satisfied if any of the strings matches against the candidate string.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1256
+From //build/config/BUILDCONFIG.gn:1257
 
 ### select_variant_canonical
 *This should never be set as a build argument.*
@@ -2412,7 +2412,7 @@ See //build/toolchain/clang_toolchain.gni for details.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1261
+From //build/config/BUILDCONFIG.gn:1262
 
 ### select_variant_shortcuts
 List of short names for commonly-used variant selectors.  Normally this
@@ -2450,7 +2450,7 @@ a list that can be spliced into [`select_variant`](#select_variant).
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1075
+From //build/config/BUILDCONFIG.gn:1076
 
 ### shaderc_enable_spvc_parser
 Enables using the parsing built into spvc instead spirv-cross
@@ -2710,7 +2710,7 @@ From //zircon/public/gn/config/instrumentation/sanitizer_default_options.gni:40
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1049
+From //build/config/BUILDCONFIG.gn:1050
 
 ### universe_package_labels
 If you add package labels to this variable, the packages will be included
