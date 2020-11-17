@@ -21,8 +21,7 @@ const (
 	StopOnSuccess RunAlgorithm = "STOP_ON_SUCCESS"
 )
 
-// Test is a struct used to hold information about a build.Test and the number
-// of times to run it.
+// Test is a struct used to hold information about a build.Test and how to run it.
 type Test struct {
 	build.Test
 
@@ -31,6 +30,9 @@ type Test struct {
 
 	// RunAlgorithm determines how `Runs` will be used to run the test.
 	RunAlgorithm RunAlgorithm `json:"run_algorithm,omitempty"`
+
+	// RealmLabel is an optional arg passed to run-test-component to specify a realm
+	RealmLabel string `json:"realm_label",omitempty"`
 }
 
 func (t *Test) applyModifier(m TestModifier) {

@@ -493,3 +493,12 @@ func normalizeTestName(name string) string {
 	trimmedName := strings.TrimLeft(name, "/")
 	return strings.ReplaceAll(trimmedName, "/", "_")
 }
+
+// Applies the realm label to all tests on all shards provided.
+func ApplyRealmLabel(shards []*Shard, realmLabel string) {
+	for _, shard := range shards {
+		for i := range shard.Tests {
+			shard.Tests[i].RealmLabel = realmLabel
+		}
+	}
+}

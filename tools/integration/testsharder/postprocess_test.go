@@ -920,3 +920,55 @@ func TestExtractDeps(t *testing.T) {
 		shardHasExpectedDeps(t, buildDir, tests, expected)
 	})
 }
+
+func TestApplyRealmLabel(t *testing.T) {
+	shardTests1 := []Test{
+		{Test: build.Test{Name: "test1", OS: linux, CPU: "arm64"}},
+		{Test: build.Test{Name: "test2", OS: linux, CPU: "arm64"}},
+	}
+
+	shardTests2 := []Test{
+		{Test: build.Test{Name: "test3", OS: linux, CPU: x64}},
+		{Test: build.Test{Name: "test4", OS: linux, CPU: x64}},
+	}
+
+	t.Run("realm label applies to all tests on all shards", func(t *testing.T) {
+		shards := []*Shard{
+			{Name: "foo", Tests: shardTests1},
+			{Name: "bar", Tests: shardTests2},
+		}
+
+		ApplyRealmLabel(shards, "testrealm")
+
+		expected := []*Shard{
+			{
+				Name: "foo",
+				Tests: []Test{
+					{
+						Test:       build.Test{Name: "test1", OS: linux, CPU: "arm64"},
+						RealmLabel: "testrealm",
+					},
+					{
+						Test:       build.Test{Name: "test2", OS: linux, CPU: "arm64"},
+						RealmLabel: "testrealm",
+					},
+				},
+			},
+			{
+				Name: "bar",
+				Tests: []Test{
+					{
+						Test:       build.Test{Name: "test3", OS: linux, CPU: x64},
+						RealmLabel: "testrealm",
+					},
+					{
+						Test:       build.Test{Name: "test4", OS: linux, CPU: x64},
+						RealmLabel: "testrealm",
+					},
+				},
+			},
+		}
+
+		assertEqual(t, expected, shards)
+	})
+}
