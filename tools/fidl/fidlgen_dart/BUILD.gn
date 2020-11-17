@@ -9,6 +9,7 @@ import("//build/go/go_test.gni")
 import("//build/go/toolchain.gni")
 import("//build/host.gni")
 import("//build/sdk/sdk_host_tool.gni")
+import("//zircon/tools/fidl/testdata/targets.gni")
 
 go_library("fidlgen_dart_lib") {
   name = "go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_dart/..."
@@ -102,6 +103,28 @@ install_host_tools("host") {
   outputs = [ "fidlgen_dart" ]
 }
 
+group("goldens") {
+  testonly = true
+
+  denylist = [
+    # TODO(fxbug.dev/62763): Fix undefined_identifier errors.
+    "//zircon/tools/fidl/testdata:fidl.test.consts",
+
+    # TODO(fxbug.dev/62761): Fix error about default value not being constant.
+    "//zircon/tools/fidl/testdata/struct_default_value_enum_library_reference:example",
+  ]
+
+  deps = []
+  foreach(target, fidl_testdata_targets - denylist) {
+    deps += [ "$target($dart_toolchain)" ]
+  }
+}
+
 group("tests") {
   # TODO(ianloic): put fidlgen_dart non-host test targets here
+  testonly = true
+  deps = [
+    ":fidlgen_dart_backend_test($host_toolchain)",
+    ":goldens",
+  ]
 }
