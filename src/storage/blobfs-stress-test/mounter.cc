@@ -11,6 +11,7 @@
 #include <zircon/status.h>
 #include <zircon/types.h>
 
+#include <blobfs/blob-layout.h>
 #include <fs-management/admin.h>
 #include <fs-management/launch.h>
 #include <fs-management/mount.h>
@@ -87,8 +88,15 @@ int main(int argc, char** argv) {
   std::string fvm_device_path = fvm_partition_or.value();
 
   FX_LOGS(INFO) << "Creating blobfs partition at " << fvm_device_path;
+  // TODO(fxbug.dev/64764): Configure the blob layout format from the tests.
+  // Use the compact blob layout for the stress tests.  The stress test framework doesn't currently
+  // support specifying blobfs options on a per test basis and since the compact layout will soon be
+  // replacing the padded layout all the stress tests are run against the compact layout.
+  mkfs_options blobfs_options = default_mkfs_options;
+  blobfs_options.blob_layout_format =
+      blobfs::GetBlobLayoutFormatCommandLineArg(blobfs::BlobLayoutFormat::kCompactMerkleTreeAtEnd);
   auto status =
-      mkfs(fvm_device_path.c_str(), DISK_FORMAT_BLOBFS, launch_stdio_sync, &default_mkfs_options);
+      mkfs(fvm_device_path.c_str(), DISK_FORMAT_BLOBFS, launch_stdio_sync, &blobfs_options);
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "Error creating blobfs partition: " << zx_status_get_string(status);
     return -1;
