@@ -1,0 +1,35 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+action("installer") {
+  testonly = true
+  script = "//scripts/mkinstaller/mkinstaller.py"
+  outputs = [ "$target_out_dir/$target_name.img" ]
+  dest_image = rebase_path("$target_out_dir/$target_name.img", root_build_dir)
+  args = [
+    "--create",
+    "--force",
+    "--cgpt-path",
+    "host-tools/cgpt",
+    "--build-dir",
+    ".",
+    dest_image,
+  ]
+
+  # this pulls in all the image dependencies we need.
+  deps = [
+    "//build/images:paver-script",
+    "//tools/vboot_reference:cgpt_host",
+  ]
+
+  metadata = {
+    images = [
+      {
+        name = "installer"
+        path = dest_image
+        type = "installer"
+      },
+    ]
+  }
+}

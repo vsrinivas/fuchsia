@@ -19,7 +19,17 @@ import typing
 
 from typing import List
 
-import paths
+try:
+  global CGPT_BIN
+  import paths
+  CGPT_BIN = os.path.join(paths.PREBUILT_DIR, 'tools/cgpt',
+                                paths.PREBUILT_PLATFORM, 'cgpt')
+except ImportError as e:
+  # If we're being run via `fx`, we take paths for cgpt and the Fuchsia images from
+  # the `import paths` above. Otherwise, we expect the paths to be provided via
+  # command-line arguments. The command-line arguments also override the autodetected
+  # paths if they're both present.
+  pass
 
 if sys.hexversion < 0x030700F0:
   logging.critical(
@@ -169,8 +179,6 @@ class Image:
         file_size: total size of the image, in bytes
         partitions: list of |Partition| objects to write to disk.
   """
-  CGPT_BIN = os.path.join(paths.PREBUILT_DIR, 'tools/cgpt',
-                          paths.PREBUILT_PLATFORM, 'cgpt')
   SECTOR_SIZE = 512
   GPT_SECTORS = 2048
   CROS_RESERVED_SECTORS = 2048
@@ -191,7 +199,7 @@ class Image:
     self.AddPartition(reserved_part)
 
   def _Cgpt(self, args):
-    args = [Image.CGPT_BIN] + args
+    args = [CGPT_BIN] + args
     return subprocess.run(args, capture_output=True)
 
   def _CgptAdd(self, part, offset):
@@ -298,19 +306,22 @@ class Image:
     logging.info('Done.')
     self.file.close()
 
-
-def GetPartitions():
+def GetPartitions(build_dir):
   """Get all partitions to be written to the output image.
 
   The list of partitions is currently determined by the IMAGES dict
   at the top of this file.
 
+  Args:
+    build_dir: path to the build directory containing images.
+
   Returns:
     a list of |Partition| objects to be written to the disk.
   """
   images = {}
+  images_file = os.path.join(build_dir, 'images.json')
   try:
-    with open(paths.FUCHSIA_BUILD_DIR + '/images.json') as f:
+    with open(images_file) as f:
       images_list = json.load(f)
       for image in images_list:
         images[make_unique_name(image['name'], image['type'])] = image
@@ -326,7 +337,7 @@ def GetPartitions():
       continue
 
     for part_type in image.guids:
-      full_path = os.path.join(paths.FUCHSIA_BUILD_DIR, images[image.unique_name()]['path'])
+      full_path = os.path.join(build_dir, images[image.unique_name()]['path'])
       ret.append(Partition(full_path, part_type, image.name))
       # Assume that any non-installer partition is a bootable partition.
       if part_type != WORKSTATION_INSTALLER_GPT_GUID:
@@ -414,7 +425,10 @@ def Main(args):
       logging.critical('Cannot write to {}. Please check file permissions!'.format(path))
       return 1
 
-  parts = GetPartitions()
+  build_dir = args.build_dir
+  if build_dir == '':
+    build_dir = paths.FUCHSIA_BUILD_DIR
+  parts = GetPartitions(build_dir)
   if not parts:
     return 1
 
@@ -450,15 +464,29 @@ if __name__ == '__main__':
       help='Block size (optionally suffixed by K, M, G) to write. Default is 2M'
   )
   parser.add_argument(
-    '-v',
-    '--verbose',
-    action='store_true',
-    help='Be verbose while creating disk images.'
+      '-v',
+      '--verbose',
+      action='store_true',
+      help='Be verbose while creating disk images.'
+  )
+  parser.add_argument(
+      '--cgpt-path',
+      type=str,
+      default='',
+      help='Path to cgpt in the Fuchsia tree. The script will try and guess if no path is provided.'
+  )
+  parser.add_argument(
+      '--build-dir',
+      type=str,
+      default='',
+      help='Path to the Fuchsia build directory. The script will try and guess if no path is provided.'
   )
   parser.add_argument('FILE', help='Path to USB device or installer image')
   argv = parser.parse_args()
   level = logging.WARNING
   if argv.verbose:
     level = logging.DEBUG
+  if argv.cgpt_path:
+    CGPT_BIN = argv.cgpt_path
   logging.basicConfig(format='mkinstaller: %(levelname)s: %(message)s', level=level)
   sys.exit(Main(argv))
