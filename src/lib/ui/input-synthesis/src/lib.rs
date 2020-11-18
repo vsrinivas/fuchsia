@@ -33,6 +33,7 @@ pub async fn media_button_event_command(
         camera_disable,
         &mut legacy_backend::InputDeviceRegistry::new(),
     )
+    .await
 }
 
 /// Simulates a key press of specified `usage`.
@@ -51,7 +52,7 @@ pub async fn media_button_event_command(
 /// Per fxbug.dev/63532, this method will be replaced with a method that deals in
 /// `fuchsia.input.Key`s, instead of HID Usage IDs.
 pub async fn keyboard_event_command(usage: u32, key_event_duration: Duration) -> Result<(), Error> {
-    keyboard_event(usage, key_event_duration, &mut legacy_backend::InputDeviceRegistry::new())
+    keyboard_event(usage, key_event_duration, &mut legacy_backend::InputDeviceRegistry::new()).await
 }
 
 /// Simulates `input` being typed on a keyboard, with `key_event_duration` between key events.
@@ -71,7 +72,7 @@ pub async fn keyboard_event_command(usage: u32, key_event_duration: Duration) ->
 /// * `key_event_duration` of zero is permitted, and will result in events being generated as
 ///    quickly as possible.
 pub async fn text_command(input: String, key_event_duration: Duration) -> Result<(), Error> {
-    text(input, key_event_duration, &mut legacy_backend::InputDeviceRegistry::new())
+    text(input, key_event_duration, &mut legacy_backend::InputDeviceRegistry::new()).await
 }
 
 /// Simulates `tap_event_count` taps at coordinates `(x, y)` for a touchscreen with horizontal
@@ -98,6 +99,7 @@ pub async fn tap_event_command(
         duration,
         &mut legacy_backend::InputDeviceRegistry::new(),
     )
+    .await
 }
 
 /// Simulates `tap_event_count` times to repeat the multi-finger-taps, for touchscreen with
@@ -122,6 +124,7 @@ pub async fn multi_finger_tap_event_command(
         duration,
         &mut legacy_backend::InputDeviceRegistry::new(),
     )
+    .await
 }
 
 /// Simulates swipe from coordinates `(x0, y0)` to `(x1, y1)` for a touchscreen with
@@ -154,6 +157,7 @@ pub async fn swipe_command(
         duration,
         &mut legacy_backend::InputDeviceRegistry::new(),
     )
+    .await
 }
 
 /// Simulates swipe with fingers starting at `start_fingers`, and moving to `end_fingers`,
@@ -200,6 +204,7 @@ pub async fn multi_finger_swipe_command(
         duration,
         &mut legacy_backend::InputDeviceRegistry::new(),
     )
+    .await
 }
 
 #[cfg(test)]

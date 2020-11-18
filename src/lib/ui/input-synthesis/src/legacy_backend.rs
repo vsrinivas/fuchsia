@@ -5,6 +5,7 @@
 use {
     crate::{synthesizer, usages::Usages},
     anyhow::Error,
+    async_trait::async_trait,
     fidl::endpoints,
     fidl_fuchsia_ui_input::{
         self, Axis, AxisScale, DeviceDescriptor, InputDeviceMarker, InputDeviceProxy,
@@ -123,6 +124,7 @@ struct InputDevice {
     fidl_proxy: InputDeviceProxy,
 }
 
+#[async_trait(?Send)]
 impl synthesizer::InputDevice for self::InputDevice {
     fn media_buttons(
         &mut self,
@@ -163,6 +165,10 @@ impl synthesizer::InputDevice for self::InputDevice {
         self.fidl_proxy
             .dispatch_report(&mut self::multi_finger_tap(fingers, time))
             .map_err(Into::into)
+    }
+
+    async fn serve_reports(self: Box<Self>) -> Result<(), Error> {
+        Ok(())
     }
 }
 
@@ -544,6 +550,21 @@ mod tests {
                     },
                     ..
             })] if **report == TouchscreenReport { touches: vec![] }
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn serve_reports_resolves_immediately() -> Result<(), Error> {
+        let mut executor =
+            fasync::Executor::new().expect("internal error: failed to create executor");
+        let (fidl_proxy, _request_stream) =
+            endpoints::create_proxy_and_stream::<InputDeviceMarker>()?;
+        let mut input_device = Box::new(InputDevice { fidl_proxy });
+        input_device.multi_finger_tap(None, 900)?; // Sends `InputReport`.
+        assert_matches!(
+            executor.run_until_stalled(&mut input_device.serve_reports()),
+            Poll::Ready(Ok(()))
         );
         Ok(())
     }

@@ -5,6 +5,7 @@
 use {
     crate::{inverse_keymap::InverseKeymap, keymaps},
     anyhow::{ensure, Error},
+    async_trait::async_trait,
     fidl_fuchsia_ui_input::{self, KeyboardReport, Touch},
     fuchsia_zircon as zx,
     std::{convert::TryFrom, thread, time::Duration},
@@ -25,6 +26,7 @@ pub trait InputDeviceRegistry {
 // Note that the input-synthesis crate deliberately chooses not to "sub-type" input devices.
 // This avoids additional code complexity, and allows the crate to support tests that
 // deliberately send events that do not match the expected event type for a device.
+#[async_trait(?Send)]
 pub trait InputDevice {
     fn media_buttons(
         &mut self,
@@ -40,6 +42,22 @@ pub trait InputDevice {
     fn key_press_usage(&mut self, usage: Option<u32>, time: u64) -> Result<(), Error>;
     fn tap(&mut self, pos: Option<(u32, u32)>, time: u64) -> Result<(), Error>;
     fn multi_finger_tap(&mut self, fingers: Option<Vec<Touch>>, time: u64) -> Result<(), Error>;
+
+    // Returns a `Future` which resolves when all input reports for this device
+    // have been sent to the FIDL peer, or when an error occurs.
+    //
+    // The possible errors are implementation-specific, but may include:
+    // * Errors reading from the FIDL peer
+    // * Errors writing to the FIDL peer
+    //
+    // # Resolves to
+    // * `Ok(())` if all reports were written successfully
+    // * `Err` otherwise
+    //
+    // # Note
+    // When the future resolves, input reports may still be sitting unread in the
+    // channel to the FIDL peer.
+    async fn serve_reports(self: Box<Self>) -> Result<(), Error>;
 }
 
 fn monotonic_nanos() -> Result<u64, Error> {
@@ -62,7 +80,7 @@ fn repeat_with_delay(
     Ok(())
 }
 
-pub(crate) fn media_button_event(
+pub(crate) async fn media_button_event(
     volume_up: bool,
     volume_down: bool,
     mic_mute: bool,
@@ -80,10 +98,11 @@ pub(crate) fn media_button_event(
         pause,
         camera_disable,
         monotonic_nanos()?,
-    )
+    )?;
+    input_device.serve_reports().await
 }
 
-pub(crate) fn keyboard_event(
+pub(crate) async fn keyboard_event(
     usage: u32,
     duration: Duration,
     registry: &mut dyn InputDeviceRegistry,
@@ -102,10 +121,12 @@ pub(crate) fn keyboard_event(
             // Key released.
             device.key_press_usage(None, monotonic_nanos()?)
         },
-    )
+    )?;
+
+    input_device.serve_reports().await
 }
 
-pub(crate) fn text(
+pub(crate) async fn text(
     input: String,
     key_event_duration: Duration,
     registry: &mut dyn InputDeviceRegistry,
@@ -123,10 +144,10 @@ pub(crate) fn text(
         }
     }
 
-    Ok(())
+    input_device.serve_reports().await
 }
 
-pub fn tap_event(
+pub async fn tap_event(
     x: u32,
     y: u32,
     width: u32,
@@ -150,10 +171,12 @@ pub fn tap_event(
             // Touch up.
             device.tap(None, monotonic_nanos()?)
         },
-    )
+    )?;
+
+    input_device.serve_reports().await
 }
 
-pub(crate) fn multi_finger_tap_event(
+pub(crate) async fn multi_finger_tap_event(
     fingers: Vec<Touch>,
     width: u32,
     height: u32,
@@ -176,10 +199,12 @@ pub(crate) fn multi_finger_tap_event(
             // Touch up.
             device.multi_finger_tap(None, monotonic_nanos()?)
         },
-    )
+    )?;
+
+    input_device.serve_reports().await
 }
 
-pub(crate) fn swipe(
+pub(crate) async fn swipe(
     x0: u32,
     y0: u32,
     x1: u32,
@@ -199,9 +224,10 @@ pub(crate) fn swipe(
         duration,
         registry,
     )
+    .await
 }
 
-pub(crate) fn multi_finger_swipe(
+pub(crate) async fn multi_finger_swipe(
     start_fingers: Vec<(u32, u32)>,
     end_fingers: Vec<(u32, u32)>,
     width: u32,
@@ -300,7 +326,9 @@ pub(crate) fn multi_finger_swipe(
             }
         },
         |_, _| Ok(()),
-    )
+    )?;
+
+    input_device.serve_reports().await
 }
 
 #[cfg(test)]
@@ -402,6 +430,7 @@ mod tests {
             fidl_proxy: FidlInputDeviceProxy,
         }
 
+        #[async_trait(?Send)]
         impl InputDevice for FakeInputDevice {
             fn media_buttons(
                 &mut self,
@@ -502,6 +531,10 @@ mod tests {
                     })
                     .map_err(Into::into)
             }
+
+            async fn serve_reports(self: Box<Self>) -> Result<(), Error> {
+                Ok(())
+            }
         }
 
         impl FakeInputDevice {
@@ -525,7 +558,8 @@ mod tests {
         #[fasync::run_singlethreaded(test)]
         async fn media_event_report() -> Result<(), Error> {
             let mut fake_event_listener = FakeInputDeviceRegistry::new();
-            media_button_event(true, false, true, false, true, true, &mut fake_event_listener)?;
+            media_button_event(true, false, true, false, true, true, &mut fake_event_listener)
+                .await?;
             assert_eq!(
                 project!(fake_event_listener.get_events().await, media_buttons),
                 [Ok(Some(MediaButtonsReport {
@@ -543,7 +577,7 @@ mod tests {
         #[fasync::run_singlethreaded(test)]
         async fn keyboard_event_report() -> Result<(), Error> {
             let mut fake_event_listener = FakeInputDeviceRegistry::new();
-            keyboard_event(40, Duration::from_millis(0), &mut fake_event_listener)?;
+            keyboard_event(40, Duration::from_millis(0), &mut fake_event_listener).await?;
             assert_eq!(
                 project!(fake_event_listener.get_events().await, keyboard),
                 [
@@ -557,7 +591,7 @@ mod tests {
         #[fasync::run_singlethreaded(test)]
         async fn text_event_report() -> Result<(), Error> {
             let mut fake_event_listener = FakeInputDeviceRegistry::new();
-            text("A".to_string(), Duration::from_millis(0), &mut fake_event_listener)?;
+            text("A".to_string(), Duration::from_millis(0), &mut fake_event_listener).await?;
             assert_eq!(
                 project!(fake_event_listener.get_events().await, keyboard),
                 [
@@ -585,7 +619,8 @@ mod tests {
                 1,
                 Duration::from_millis(0),
                 &mut fake_event_listener,
-            )?;
+            )
+            .await?;
             assert_eq!(
                 project!(fake_event_listener.get_events().await, touchscreen),
                 [
@@ -606,7 +641,8 @@ mod tests {
         #[fasync::run_singlethreaded(test)]
         async fn tap_event_report() -> Result<(), Error> {
             let mut fake_event_listener = FakeInputDeviceRegistry::new();
-            tap_event(10, 10, 1000, 1000, 1, Duration::from_millis(0), &mut fake_event_listener)?;
+            tap_event(10, 10, 1000, 1000, 1, Duration::from_millis(0), &mut fake_event_listener)
+                .await?;
             assert_eq!(
                 project!(fake_event_listener.get_events().await, touchscreen),
                 [
@@ -632,7 +668,8 @@ mod tests {
                 2,
                 Duration::from_millis(0),
                 &mut fake_event_listener,
-            )?;
+            )
+            .await?;
             assert_eq!(
                 project!(fake_event_listener.get_events().await, touchscreen),
                 [
@@ -664,7 +701,8 @@ mod tests {
                 2,
                 Duration::from_millis(0),
                 &mut fake_event_listener,
-            )?;
+            )
+            .await?;
             assert_eq!(
                 project!(fake_event_listener.get_events().await, touchscreen),
                 [
@@ -694,7 +732,8 @@ mod tests {
                 2,
                 Duration::from_millis(0),
                 &mut fake_event_listener,
-            )?;
+            )
+            .await?;
             assert_eq!(
                 project!(fake_event_listener.get_events().await, touchscreen),
                 [
@@ -736,7 +775,8 @@ mod tests {
                 2,
                 Duration::from_millis(0),
                 &mut fake_event_listener,
-            )?;
+            )
+            .await?;
             assert_eq!(
                 project!(fake_event_listener.get_events().await, touchscreen),
                 [
@@ -778,7 +818,8 @@ mod tests {
                 0,
                 Duration::from_millis(0),
                 &mut fake_event_listener,
-            )?;
+            )
+            .await?;
             assert_eq!(
                 project!(fake_event_listener.get_events().await, touchscreen),
                 [
@@ -799,7 +840,8 @@ mod tests {
         async fn events_use_monotonic_time() -> Result<(), Error> {
             let mut fake_event_listener = FakeInputDeviceRegistry::new();
             let synthesis_start_time = monotonic_nanos()?;
-            media_button_event(true, false, true, false, true, true, &mut fake_event_listener)?;
+            media_button_event(true, false, true, false, true, true, &mut fake_event_listener)
+                .await?;
 
             let synthesis_end_time = monotonic_nanos()?;
             let fidl_result = fake_event_listener
@@ -892,6 +934,7 @@ mod tests {
         // events themselves are not important to the test.
         struct FakeInputDevice;
 
+        #[async_trait(?Send)]
         impl InputDevice for FakeInputDevice {
             fn media_buttons(
                 &mut self,
@@ -925,12 +968,16 @@ mod tests {
             ) -> Result<(), Error> {
                 Ok(())
             }
+
+            async fn serve_reports(self: Box<Self>) -> Result<(), Error> {
+                Ok(())
+            }
         }
 
         #[fasync::run_until_stalled(test)]
         async fn media_button_event_registers_media_buttons_device() -> Result<(), Error> {
             let mut registry = FakeInputDeviceRegistry::new();
-            media_button_event(false, false, false, false, false, false, &mut registry)?;
+            media_button_event(false, false, false, false, false, false, &mut registry).await?;
             assert_matches!(registry.device_types.as_slice(), [DeviceType::MediaButtons]);
             Ok(())
         }
@@ -938,7 +985,7 @@ mod tests {
         #[fasync::run_until_stalled(test)]
         async fn keyboard_event_registers_keyboard() -> Result<(), Error> {
             let mut registry = FakeInputDeviceRegistry::new();
-            keyboard_event(40, Duration::from_millis(0), &mut registry)?;
+            keyboard_event(40, Duration::from_millis(0), &mut registry).await?;
             assert_matches!(registry.device_types.as_slice(), [DeviceType::Keyboard]);
             Ok(())
         }
@@ -946,7 +993,7 @@ mod tests {
         #[fasync::run_until_stalled(test)]
         async fn text_event_registers_keyboard() -> Result<(), Error> {
             let mut registry = FakeInputDeviceRegistry::new();
-            text("A".to_string(), Duration::from_millis(0), &mut registry)?;
+            text("A".to_string(), Duration::from_millis(0), &mut registry).await?;
             assert_matches!(registry.device_types.as_slice(), [DeviceType::Keyboard]);
             Ok(())
         }
@@ -954,7 +1001,8 @@ mod tests {
         #[fasync::run_until_stalled(test)]
         async fn multi_finger_tap_event_registers_touchscreen() -> Result<(), Error> {
             let mut registry = FakeInputDeviceRegistry::new();
-            multi_finger_tap_event(vec![], 1000, 1000, 1, Duration::from_millis(0), &mut registry)?;
+            multi_finger_tap_event(vec![], 1000, 1000, 1, Duration::from_millis(0), &mut registry)
+                .await?;
             assert_matches!(registry.device_types.as_slice(), [DeviceType::Touchscreen]);
             Ok(())
         }
@@ -962,7 +1010,7 @@ mod tests {
         #[fasync::run_until_stalled(test)]
         async fn tap_event_registers_touchscreen() -> Result<(), Error> {
             let mut registry = FakeInputDeviceRegistry::new();
-            tap_event(0, 0, 1000, 1000, 1, Duration::from_millis(0), &mut registry)?;
+            tap_event(0, 0, 1000, 1000, 1, Duration::from_millis(0), &mut registry).await?;
             assert_matches!(registry.device_types.as_slice(), [DeviceType::Touchscreen]);
             Ok(())
         }
@@ -970,7 +1018,7 @@ mod tests {
         #[fasync::run_until_stalled(test)]
         async fn swipe_registers_touchscreen() -> Result<(), Error> {
             let mut registry = FakeInputDeviceRegistry::new();
-            swipe(0, 0, 1, 1, 1000, 1000, 1, Duration::from_millis(0), &mut registry)?;
+            swipe(0, 0, 1, 1, 1000, 1000, 1, Duration::from_millis(0), &mut registry).await?;
             assert_matches!(registry.device_types.as_slice(), [DeviceType::Touchscreen]);
             Ok(())
         }
@@ -986,7 +1034,8 @@ mod tests {
                 1,
                 Duration::from_millis(0),
                 &mut registry,
-            )?;
+            )
+            .await?;
             assert_matches!(registry.device_types.as_slice(), [DeviceType::Touchscreen]);
             Ok(())
         }

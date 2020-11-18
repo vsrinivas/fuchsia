@@ -111,6 +111,7 @@ async fn main() -> Result<(), Error> {
         Duration::from_millis(100 * num_tap_events),
         &mut InputDeviceRegistry::new_with_path(svc_dir_path),
     )
+    .await
     .unwrap();
 
     info!("Sent all tap events");
