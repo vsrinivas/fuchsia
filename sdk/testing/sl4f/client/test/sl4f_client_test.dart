@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:quiver/testing/async.dart';
@@ -12,6 +13,20 @@ import 'package:mockito/mockito.dart';
 import 'package:sl4f/sl4f.dart';
 
 class MockDump extends Mock implements Dump {}
+
+class MockHttpClient extends Mock implements HttpClient {}
+
+class MockHttpRequest extends Mock implements HttpClientRequest {}
+
+class MockHttpResponse extends Mock implements HttpClientResponse {
+  final Stream<List<int>> data;
+  MockHttpResponse(this.data);
+
+  @override
+  Stream<S> transform<S>(StreamTransformer<List<int>, S> streamTransformer) {
+    return streamTransformer.bind(data);
+  }
+}
 
 class MockIOSink extends Mock implements IOSink {}
 
@@ -363,11 +378,19 @@ void main() {
     test('null url throws exception', () {
       expect(() => Sl4f.fromUrl(null), throwsA(TypeMatcher<ArgumentError>()));
     });
-    test('header is set', () {
-      Sl4f client =
-          Sl4f.fromUrl(Uri.http('sl4f.com:1234', ''), {'testKey': 'testValue'});
-      expect(client.headers, contains('testKey'));
-      expect(client.headers['testKey'], equals('testValue'));
+    test('uses user provided HttpClient', () async {
+      final mockHttpClient = MockHttpClient();
+      final mockRequest = MockHttpRequest();
+      final mockResponse =
+          MockHttpResponse(Stream.value(utf8.encoder.convert('{}')));
+      when(mockHttpClient.postUrl(any))
+          .thenAnswer((_) => Future.value(mockRequest));
+      when(mockRequest.close()).thenAnswer((_) => Future.value(mockResponse));
+
+      Sl4f client = Sl4f.fromUrl(Uri.http('sl4f.com:1234', ''), mockHttpClient);
+      await client.request('method');
+
+      verify(mockHttpClient.postUrl(any));
     });
   });
 }

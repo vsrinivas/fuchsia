@@ -74,7 +74,7 @@ class Sl4f {
   static const _sl4fHttpDefaultPort = 80;
   static final _portSuffixRe = RegExp(r':\d+$');
 
-  final _client = HttpClient();
+  final HttpClient _client;
 
   /// Authority (IP, hostname, etc.) of the device under test.
   String get target {
@@ -103,28 +103,20 @@ class Sl4f {
   /// [TcpProxyController] proxy controller used to open ports to device.
   TcpProxyController get proxy => _proxy;
 
-  /// Additional HTTP headers to send with each request.
-  ///
-  /// These may be used by proxy servers.
-  final Map<String, String> headers;
-
-  /// Additional [Cookie]s to send with each request.
-  final List<Cookie> cookies;
-
   /// Create a new Sl4f instance that connects to a given [target] address and
   /// uses the [ssh] connection.
   ///
   /// Most of the time users should use [Sl4f.fromEnvironment] to instantiate
   /// [Sl4f] using environment variables provided by `fx` and the CI/CQ infra.
   ///
-  /// Optionally specify [headers] and [cookies] to attach those to all requests.
+  /// Optionally specify an HTTP [client] to use for all requests.
   Sl4f(String target, this.ssh,
       [int port = _sl4fHttpDefaultPort,
       List<int> proxyPorts = const [],
-      this.headers = const {},
-      this.cookies = const []])
+      HttpClient client])
       : assert(target != null && target.isNotEmpty),
-        targetUrl = Uri.http('$target:$port', '') {
+        targetUrl = Uri.http('$target:$port', ''),
+        _client = client ?? HttpClient() {
     if (_portSuffixRe.hasMatch(target)) {
       throw ArgumentError('Target argument cannot contain a port. '
           'Use the port argument instead.');
@@ -136,14 +128,14 @@ class Sl4f {
 
   /// Creates a new Sl4f client instance that sends requests to [targetUrl],
   ///
-  /// Optionally specify [headers] and [cookies] to attach those to all requests.
+  /// Optionally specify an HTTP [client] to use for all requests.
   ///
   /// This constructor explicitly disables SSH access to the target hosting the Sl4f server.
   /// Use this for constructing a "pure HTTP" client for talking to Sl4f servers.
   /// (The Sl4f server itself has no concept of SSH).
-  Sl4f.fromUrl(this.targetUrl,
-      [this.headers = const {}, this.cookies = const []])
-      : ssh = null {
+  Sl4f.fromUrl(this.targetUrl, [HttpClient client])
+      : ssh = null,
+        _client = client ?? HttpClient() {
     if (targetUrl == null) {
       throw ArgumentError('targetUrl cannot be null');
     }
@@ -287,8 +279,6 @@ class Sl4f {
     // https://www.jsonrpc.org/specification#request_object).
     final body = jsonEncode({'id': '', 'method': method, 'params': params});
     final httpRequest = await _client.postUrl(targetUrl);
-    headers.forEach(httpRequest.headers.add);
-    cookies.forEach(httpRequest.cookies.add);
     httpRequest
       ..contentLength = body.length
       ..write(body);
