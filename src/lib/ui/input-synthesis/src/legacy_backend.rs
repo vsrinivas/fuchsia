@@ -125,7 +125,7 @@ struct InputDevice {
 
 impl synthesizer::InputDevice for self::InputDevice {
     fn media_buttons(
-        &self,
+        &mut self,
         volume_up: bool,
         volume_down: bool,
         mic_mute: bool,
@@ -147,19 +147,19 @@ impl synthesizer::InputDevice for self::InputDevice {
             .map_err(Into::into)
     }
 
-    fn key_press(&self, keyboard: KeyboardReport, time: u64) -> Result<(), Error> {
+    fn key_press(&mut self, keyboard: KeyboardReport, time: u64) -> Result<(), Error> {
         self.fidl_proxy.dispatch_report(&mut self::key_press(keyboard, time)).map_err(Into::into)
     }
 
-    fn key_press_usage(&self, usage: Option<u32>, time: u64) -> Result<(), Error> {
+    fn key_press_usage(&mut self, usage: Option<u32>, time: u64) -> Result<(), Error> {
         self.fidl_proxy.dispatch_report(&mut self::key_press_usage(usage, time)).map_err(Into::into)
     }
 
-    fn tap(&self, pos: Option<(u32, u32)>, time: u64) -> Result<(), Error> {
+    fn tap(&mut self, pos: Option<(u32, u32)>, time: u64) -> Result<(), Error> {
         self.fidl_proxy.dispatch_report(&mut self::tap(pos, time)).map_err(Into::into)
     }
 
-    fn multi_finger_tap(&self, fingers: Option<Vec<Touch>>, time: u64) -> Result<(), Error> {
+    fn multi_finger_tap(&mut self, fingers: Option<Vec<Touch>>, time: u64) -> Result<(), Error> {
         self.fidl_proxy
             .dispatch_report(&mut self::multi_finger_tap(fingers, time))
             .map_err(Into::into)
@@ -284,7 +284,7 @@ mod tests {
                         Ok(r) => r,
                         Err(e) => return Err(anyhow::Error::from(e)) as Result<(), Error>,
                     };
-                let input_device = InputDevice { fidl_proxy };
+                let mut input_device = InputDevice { fidl_proxy };
                 input_device
                     .media_buttons(volume_up, volume_down, mic_mute, reset, pause, camera_disable, event_time)?;
                 std::mem::drop(input_device);  // Close channel to terminate stream.
@@ -332,7 +332,7 @@ mod tests {
     async fn key_press_populates_report_correctly() -> Result<(), Error> {
         let (fidl_proxy, request_stream) =
             endpoints::create_proxy_and_stream::<InputDeviceMarker>()?;
-        let input_device = InputDevice { fidl_proxy };
+        let mut input_device = InputDevice { fidl_proxy };
         input_device.key_press(KeyboardReport { pressed_keys: vec![1, 2, 3] }, 200)?;
         std::mem::drop(input_device); // Close channel to terminate stream.
 
@@ -362,7 +362,7 @@ mod tests {
     {
         let (fidl_proxy, request_stream) =
             endpoints::create_proxy_and_stream::<InputDeviceMarker>()?;
-        let input_device = InputDevice { fidl_proxy };
+        let mut input_device = InputDevice { fidl_proxy };
         input_device.key_press_usage(Some(1), 300)?;
         std::mem::drop(input_device); // Close channel to terminate stream.
 
@@ -392,7 +392,7 @@ mod tests {
     {
         let (fidl_proxy, request_stream) =
             endpoints::create_proxy_and_stream::<InputDeviceMarker>()?;
-        let input_device = InputDevice { fidl_proxy };
+        let mut input_device = InputDevice { fidl_proxy };
         input_device.key_press_usage(None, 400)?;
         std::mem::drop(input_device); // Close channel to terminate stream.
 
@@ -421,7 +421,7 @@ mod tests {
     async fn tap_populates_report_correctly_when_finger_is_present() -> Result<(), Error> {
         let (fidl_proxy, request_stream) =
             endpoints::create_proxy_and_stream::<InputDeviceMarker>()?;
-        let input_device = InputDevice { fidl_proxy };
+        let mut input_device = InputDevice { fidl_proxy };
         input_device.tap(Some((10, 20)), 500)?;
         std::mem::drop(input_device); // Close channel to terminate stream.
 
@@ -452,7 +452,7 @@ mod tests {
     async fn tap_populates_report_correctly_when_finger_is_absent() -> Result<(), Error> {
         let (fidl_proxy, request_stream) =
             endpoints::create_proxy_and_stream::<InputDeviceMarker>()?;
-        let input_device = InputDevice { fidl_proxy };
+        let mut input_device = InputDevice { fidl_proxy };
         input_device.tap(None, 600)?;
         std::mem::drop(input_device); // Close channel to terminate stream.
 
@@ -482,7 +482,7 @@ mod tests {
     ) -> Result<(), Error> {
         let (fidl_proxy, request_stream) =
             endpoints::create_proxy_and_stream::<InputDeviceMarker>()?;
-        let input_device = InputDevice { fidl_proxy };
+        let mut input_device = InputDevice { fidl_proxy };
         input_device.multi_finger_tap(
             Some(vec![
                 Touch { finger_id: 1, x: 99, y: 100, width: 10, height: 20 },
@@ -523,7 +523,7 @@ mod tests {
     ) -> Result<(), Error> {
         let (fidl_proxy, request_stream) =
             endpoints::create_proxy_and_stream::<InputDeviceMarker>()?;
-        let input_device = InputDevice { fidl_proxy };
+        let mut input_device = InputDevice { fidl_proxy };
         input_device.multi_finger_tap(None, 800)?;
         std::mem::drop(input_device); // Close channel to terminate stream.
 

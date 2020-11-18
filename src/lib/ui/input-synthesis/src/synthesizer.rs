@@ -27,7 +27,7 @@ pub trait InputDeviceRegistry {
 // deliberately send events that do not match the expected event type for a device.
 pub trait InputDevice {
     fn media_buttons(
-        &self,
+        &mut self,
         volume_up: bool,
         volume_down: bool,
         mic_mute: bool,
@@ -36,10 +36,10 @@ pub trait InputDevice {
         camera_disable: bool,
         time: u64,
     ) -> Result<(), Error>;
-    fn key_press(&self, keyboard: KeyboardReport, time: u64) -> Result<(), Error>;
-    fn key_press_usage(&self, usage: Option<u32>, time: u64) -> Result<(), Error>;
-    fn tap(&self, pos: Option<(u32, u32)>, time: u64) -> Result<(), Error>;
-    fn multi_finger_tap(&self, fingers: Option<Vec<Touch>>, time: u64) -> Result<(), Error>;
+    fn key_press(&mut self, keyboard: KeyboardReport, time: u64) -> Result<(), Error>;
+    fn key_press_usage(&mut self, usage: Option<u32>, time: u64) -> Result<(), Error>;
+    fn tap(&mut self, pos: Option<(u32, u32)>, time: u64) -> Result<(), Error>;
+    fn multi_finger_tap(&mut self, fingers: Option<Vec<Touch>>, time: u64) -> Result<(), Error>;
 }
 
 fn monotonic_nanos() -> Result<u64, Error> {
@@ -49,13 +49,14 @@ fn monotonic_nanos() -> Result<u64, Error> {
 fn repeat_with_delay(
     times: usize,
     delay: Duration,
-    f1: impl Fn(usize) -> Result<(), Error>,
-    f2: impl Fn(usize) -> Result<(), Error>,
+    device: &mut dyn InputDevice,
+    f1: impl Fn(usize, &mut dyn InputDevice) -> Result<(), Error>,
+    f2: impl Fn(usize, &mut dyn InputDevice) -> Result<(), Error>,
 ) -> Result<(), Error> {
     for i in 0..times {
-        f1(i)?;
+        f1(i, device)?;
         thread::sleep(delay);
-        f2(i)?;
+        f2(i, device)?;
     }
 
     Ok(())
@@ -70,7 +71,8 @@ pub(crate) fn media_button_event(
     camera_disable: bool,
     registry: &mut dyn InputDeviceRegistry,
 ) -> Result<(), Error> {
-    registry.add_media_buttons_device()?.media_buttons(
+    let mut input_device = registry.add_media_buttons_device()?;
+    input_device.media_buttons(
         volume_up,
         volume_down,
         mic_mute,
@@ -86,18 +88,19 @@ pub(crate) fn keyboard_event(
     duration: Duration,
     registry: &mut dyn InputDeviceRegistry,
 ) -> Result<(), Error> {
-    let input_device = registry.add_keyboard_device()?;
+    let mut input_device = registry.add_keyboard_device()?;
 
     repeat_with_delay(
         1,
         duration,
-        |_| {
+        input_device.as_mut(),
+        |_i, device| {
             // Key pressed.
-            input_device.key_press_usage(Some(usage), monotonic_nanos()?)
+            device.key_press_usage(Some(usage), monotonic_nanos()?)
         },
-        |_| {
+        |_i, device| {
             // Key released.
-            input_device.key_press_usage(None, monotonic_nanos()?)
+            device.key_press_usage(None, monotonic_nanos()?)
         },
     )
 }
@@ -107,7 +110,7 @@ pub(crate) fn text(
     key_event_duration: Duration,
     registry: &mut dyn InputDeviceRegistry,
 ) -> Result<(), Error> {
-    let input_device = registry.add_keyboard_device()?;
+    let mut input_device = registry.add_keyboard_device()?;
     let key_sequence = InverseKeymap::new(keymaps::QWERTY_MAP)
         .derive_key_sequence(&input)
         .ok_or_else(|| anyhow::format_err!("Cannot translate text to key sequence"))?;
@@ -132,19 +135,20 @@ pub fn tap_event(
     duration: Duration,
     registry: &mut dyn InputDeviceRegistry,
 ) -> Result<(), Error> {
-    let input_device = registry.add_touchscreen_device(width, height)?;
+    let mut input_device = registry.add_touchscreen_device(width, height)?;
     let tap_duration = duration / tap_event_count as u32;
 
     repeat_with_delay(
         tap_event_count,
         tap_duration,
-        |_| {
+        input_device.as_mut(),
+        |_i, device| {
             // Touch down.
-            input_device.tap(Some((x, y)), monotonic_nanos()?)
+            device.tap(Some((x, y)), monotonic_nanos()?)
         },
-        |_| {
+        |_i, device| {
             // Touch up.
-            input_device.tap(None, monotonic_nanos()?)
+            device.tap(None, monotonic_nanos()?)
         },
     )
 }
@@ -157,19 +161,20 @@ pub(crate) fn multi_finger_tap_event(
     duration: Duration,
     registry: &mut dyn InputDeviceRegistry,
 ) -> Result<(), Error> {
-    let input_device = registry.add_touchscreen_device(width, height)?;
+    let mut input_device = registry.add_touchscreen_device(width, height)?;
     let multi_finger_tap_duration = duration / tap_event_count as u32;
 
     repeat_with_delay(
         tap_event_count,
         multi_finger_tap_duration,
-        |_| {
+        input_device.as_mut(),
+        |_i, device| {
             // Touch down.
-            input_device.multi_finger_tap(Some(fingers.clone()), monotonic_nanos()?)
+            device.multi_finger_tap(Some(fingers.clone()), monotonic_nanos()?)
         },
-        |_| {
+        |_i, device| {
             // Touch up.
-            input_device.multi_finger_tap(None, monotonic_nanos()?)
+            device.multi_finger_tap(None, monotonic_nanos()?)
         },
     )
 }
@@ -216,7 +221,7 @@ pub(crate) fn multi_finger_swipe(
         "fingers exceed capacity of `finger_id`!"
     );
 
-    let input_device = registry.add_touchscreen_device(width, height)?;
+    let mut input_device = registry.add_touchscreen_device(width, height)?;
 
     // Note: coordinates are coverted to `f64` before subtraction, because u32 subtraction
     // would overflow when swiping from higher coordinates to lower coordinates.
@@ -249,11 +254,12 @@ pub(crate) fn multi_finger_swipe(
     repeat_with_delay(
         move_event_count + 2, // +2 to account for DOWN and UP events
         swipe_event_delay,
-        |i| {
+        input_device.as_mut(),
+        |i, device| {
             let time = monotonic_nanos()?;
             match i {
                 // DOWN
-                0 => input_device.multi_finger_tap(
+                0 => device.multi_finger_tap(
                     Some(
                         start_fingers
                             .iter()
@@ -270,7 +276,7 @@ pub(crate) fn multi_finger_swipe(
                     time,
                 ),
                 // MOVE
-                i if i <= move_event_count => input_device.multi_finger_tap(
+                i if i <= move_event_count => device.multi_finger_tap(
                     Some(
                         start_fingers
                             .iter()
@@ -289,11 +295,11 @@ pub(crate) fn multi_finger_swipe(
                     time,
                 ),
                 // UP
-                i if i == (move_event_count + 1) => input_device.multi_finger_tap(None, time),
+                i if i == (move_event_count + 1) => device.multi_finger_tap(None, time),
                 i => panic!("unexpected loop iteration {}", i),
             }
         },
-        |_| Ok(()),
+        |_, _| Ok(()),
     )
 }
 
@@ -398,7 +404,7 @@ mod tests {
 
         impl InputDevice for FakeInputDevice {
             fn media_buttons(
-                &self,
+                &mut self,
                 volume_up: bool,
                 volume_down: bool,
                 mic_mute: bool,
@@ -428,7 +434,7 @@ mod tests {
                     .map_err(Into::into)
             }
 
-            fn key_press(&self, keyboard: KeyboardReport, time: u64) -> Result<(), Error> {
+            fn key_press(&mut self, keyboard: KeyboardReport, time: u64) -> Result<(), Error> {
                 self.fidl_proxy
                     .dispatch_report(&mut InputReport {
                         event_time: time,
@@ -443,7 +449,7 @@ mod tests {
                     .map_err(Into::into)
             }
 
-            fn key_press_usage(&self, usage: Option<u32>, time: u64) -> Result<(), Error> {
+            fn key_press_usage(&mut self, usage: Option<u32>, time: u64) -> Result<(), Error> {
                 self.key_press(
                     KeyboardReport {
                         pressed_keys: match usage {
@@ -456,7 +462,7 @@ mod tests {
                 .map_err(Into::into)
             }
 
-            fn tap(&self, pos: Option<(u32, u32)>, time: u64) -> Result<(), Error> {
+            fn tap(&mut self, pos: Option<(u32, u32)>, time: u64) -> Result<(), Error> {
                 match pos {
                     Some((x, y)) => self.multi_finger_tap(
                         Some(vec![Touch {
@@ -474,7 +480,7 @@ mod tests {
             }
 
             fn multi_finger_tap(
-                &self,
+                &mut self,
                 fingers: Option<Vec<Touch>>,
                 time: u64,
             ) -> Result<(), Error> {
@@ -888,7 +894,7 @@ mod tests {
 
         impl InputDevice for FakeInputDevice {
             fn media_buttons(
-                &self,
+                &mut self,
                 _volume_up: bool,
                 _volume_down: bool,
                 _mic_mute: bool,
@@ -900,20 +906,20 @@ mod tests {
                 Ok(())
             }
 
-            fn key_press(&self, _keyboard: KeyboardReport, _time: u64) -> Result<(), Error> {
+            fn key_press(&mut self, _keyboard: KeyboardReport, _time: u64) -> Result<(), Error> {
                 Ok(())
             }
 
-            fn key_press_usage(&self, _usage: Option<u32>, _time: u64) -> Result<(), Error> {
+            fn key_press_usage(&mut self, _usage: Option<u32>, _time: u64) -> Result<(), Error> {
                 Ok(())
             }
 
-            fn tap(&self, _pos: Option<(u32, u32)>, _time: u64) -> Result<(), Error> {
+            fn tap(&mut self, _pos: Option<(u32, u32)>, _time: u64) -> Result<(), Error> {
                 Ok(())
             }
 
             fn multi_finger_tap(
-                &self,
+                &mut self,
                 _fingers: Option<Vec<Touch>>,
                 _time: u64,
             ) -> Result<(), Error> {
