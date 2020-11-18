@@ -41,47 +41,51 @@ constexpr uint32_t kMaxExpectedBufferCount = 18;
 }  // namespace
 
 CodecClient::CodecClient(async::Loop* loop, thrd_t loop_thread,
-                         fidl::InterfaceHandle<fuchsia::sysmem::Allocator> sysmem)
+                         fuchsia::sysmem::AllocatorHandle sysmem)
     : loop_(loop), dispatcher_(loop_->dispatcher()), loop_thread_(loop_thread) {
   // Only one request is ever created, so we create it in the constructor to
   // avoid needing any manual enforcement that we only do this once.
-  temp_codec_request_ = codec_.NewRequest(loop_->dispatcher());
-  // We want the error handler set up before any error can possibly be generated
-  // by the channel so there's no chance of missing an error.  The async::Loop
-  // that we'll use is already running separately from the current thread.
-  codec_.set_error_handler([this](zx_status_t status) {
-    // Obviously a non-example client that continues to have a purpose even if
-    // one of its codecs dies would want to handle errors in a more contained
-    // way.
-    //
-    // TODO(dustingreen): get and print epitaph once that's possible.
-    if (!in_lax_mode_) {
-      ZX_PANIC("codec_ failed - !in_lax_mode_\n");
-    } else {
-      FX_PLOGS(WARNING, status) << "codec_ failed - in_lax_mode_";
-      connection_lost_ = true;
-      output_pending_condition_.notify_all();
-      is_sync_complete_condition_.notify_all();
-      input_free_packet_list_not_empty_.notify_all();
-    }
-  });
-
-  // We treat event setup as much as possible like a hidden part of creating the
-  // CodecPtr.  If NewBinding() has !is_valid(), we rely on the Codec server to
-  // close the Codec channel async.
-  codec_.events().OnStreamFailed = fit::bind_member(this, &CodecClient::OnStreamFailed);
-  codec_.events().OnInputConstraints = fit::bind_member(this, &CodecClient::OnInputConstraints);
-  codec_.events().OnFreeInputPacket = fit::bind_member(this, &CodecClient::OnFreeInputPacket);
-  codec_.events().OnOutputConstraints = fit::bind_member(this, &CodecClient::OnOutputConstraints);
-  codec_.events().OnOutputFormat = fit::bind_member(this, &CodecClient::OnOutputFormat);
-  codec_.events().OnOutputPacket = fit::bind_member(this, &CodecClient::OnOutputPacket);
-  codec_.events().OnOutputEndOfStream = fit::bind_member(this, &CodecClient::OnOutputEndOfStream);
+  fuchsia::media::StreamProcessorHandle codec_handle;
+  temp_codec_request_ = codec_handle.NewRequest();
 
   // Bind sysmem_ using FIDL thread.  This is ok because all communication with
   // sysmem also happens via FIDL thread so will queue after this posted lambda.
-  PostToFidlThread([this, sysmem = std::move(sysmem)]() mutable {
+  PostToFidlThread([this, sysmem = std::move(sysmem),
+                    codec_handle = std::move(codec_handle)]() mutable {
     zx_status_t bind_status = sysmem_.Bind(std::move(sysmem), dispatcher_);
     ZX_ASSERT(bind_status == ZX_OK);
+
+    codec_ = codec_handle.Bind();
+    // We want the error handler set up before any error can possibly be generated
+    // by the channel so there's no chance of missing an error.  The async::Loop
+    // that we'll use is already running separately from the current thread.
+    codec_.set_error_handler([this](zx_status_t status) {
+      // Obviously a non-example client that continues to have a purpose even if
+      // one of its codecs dies would want to handle errors in a more contained
+      // way.
+      //
+      // TODO(dustingreen): get and print epitaph once that's possible.
+      if (!in_lax_mode_) {
+        ZX_PANIC("codec_ failed - !in_lax_mode_\n");
+      } else {
+        FX_PLOGS(WARNING, status) << "codec_ failed - in_lax_mode_";
+        connection_lost_ = true;
+        output_pending_condition_.notify_all();
+        is_sync_complete_condition_.notify_all();
+        input_free_packet_list_not_empty_.notify_all();
+      }
+    });
+
+    // We treat event setup as much as possible like a hidden part of creating the
+    // CodecPtr.  If NewBinding() has !is_valid(), we rely on the Codec server to
+    // close the Codec channel async.
+    codec_.events().OnStreamFailed = fit::bind_member(this, &CodecClient::OnStreamFailed);
+    codec_.events().OnInputConstraints = fit::bind_member(this, &CodecClient::OnInputConstraints);
+    codec_.events().OnFreeInputPacket = fit::bind_member(this, &CodecClient::OnFreeInputPacket);
+    codec_.events().OnOutputConstraints = fit::bind_member(this, &CodecClient::OnOutputConstraints);
+    codec_.events().OnOutputFormat = fit::bind_member(this, &CodecClient::OnOutputFormat);
+    codec_.events().OnOutputPacket = fit::bind_member(this, &CodecClient::OnOutputPacket);
+    codec_.events().OnOutputEndOfStream = fit::bind_member(this, &CodecClient::OnOutputEndOfStream);
   });
 }
 
@@ -291,18 +295,11 @@ void CodecClient::Stop() {
   ZX_DEBUG_ASSERT(thrd_current() != loop_thread_);
   OneShotEvent unbind_and_loop_lambdas_done;
   PostToFidlThread([this, &unbind_and_loop_lambdas_done] {
-    if (codec_.is_bound()) {
-      codec_.Unbind();
-    }
-    if (sysmem_.is_bound()) {
-      sysmem_.Unbind();
-    }
-    if (input_buffer_collection_.is_bound()) {
-      input_buffer_collection_.Unbind();
-    }
-    if (output_buffer_collection_.is_bound()) {
-      output_buffer_collection_.Unbind();
-    }
+    codec_ = nullptr;
+    sysmem_ = nullptr;
+    input_buffer_collection_ = nullptr;
+    output_buffer_collection_ = nullptr;
+
     // Any lambdas previously queued (by any handlers for the bindings we're
     // unbinding just above) need to be done also, so fence those by re-posting.
     //

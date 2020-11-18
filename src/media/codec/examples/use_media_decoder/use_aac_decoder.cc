@@ -114,10 +114,9 @@ std::unique_ptr<uint8_t[]> make_AudioSpecificConfig_from_ADTS_header(
 //     an example, this will tend to be set.  When used as a test, this will not
 //     be set.
 // out_md - SHA256_DIGEST_LENGTH bytes long
-void use_aac_decoder(async::Loop* main_loop, fuchsia::mediacodec::CodecFactoryPtr codec_factory,
-                     fidl::InterfaceHandle<fuchsia::sysmem::Allocator> sysmem,
-                     const std::string& input_adts_file, const std::string& output_wav_file,
-                     uint8_t* out_md) {
+void use_aac_decoder(async::Loop* main_loop, fuchsia::mediacodec::CodecFactoryHandle codec_factory,
+                     fuchsia::sysmem::AllocatorHandle sysmem, const std::string& input_adts_file,
+                     const std::string& output_wav_file, uint8_t* out_md) {
   memset(out_md, 0, SHA256_DIGEST_LENGTH);
 
   // In this example code, we're using this async::Loop for everything
@@ -181,12 +180,6 @@ void use_aac_decoder(async::Loop* main_loop, fuchsia::mediacodec::CodecFactoryPt
   std::unique_ptr<uint8_t[]> input_bytes = read_whole_file(input_adts_file.c_str(), &input_size);
   VLOGF("done reading adts file.");
 
-  codec_factory.set_error_handler([](zx_status_t status) {
-    // TODO(dustingreen): get and print CodecFactory channel epitaph once that's
-    // possible.
-    LOGF("codec_factory failed - unexpected\n");
-  });
-
   VLOGF("before make_AudioSpecificConfig_from_ADTS_header()...");
   VLOGF("input_bytes->get(): %p", input_bytes.get());
   std::unique_ptr<uint8_t[]> asc = make_AudioSpecificConfig_from_ADTS_header(&input_bytes);
@@ -222,45 +215,21 @@ void use_aac_decoder(async::Loop* main_loop, fuchsia::mediacodec::CodecFactoryPt
   // CodecClient in advance of the channel potentially being closed.
   VLOGF("before CodecClient::CodecClient()...");
   CodecClient codec_client(&fidl_loop, fidl_thread, std::move(sysmem));
+
   async::PostTask(
-      main_loop->dispatcher(), [&codec_factory, create_params = std::move(create_params),
-                                codec_client_request = codec_client.GetTheRequestOnce()]() mutable {
+      main_loop->dispatcher(), [codec_factory = std::move(codec_factory),
+                                create_params = std::move(create_params), &codec_client]() mutable {
         VLOGF("before codec_factory->CreateDecoder() (async)");
-        codec_factory->CreateDecoder(std::move(create_params), std::move(codec_client_request));
+        auto codec_client_request = codec_client.GetTheRequestOnce();
+        // Bind the CodecFactory's InterfaceHandle to an InterfacePtr to send
+        // the CreateDecoder message.
+        auto codec_factory_ptr = codec_factory.Bind();
+        codec_factory_ptr->CreateDecoder(std::move(create_params), std::move(codec_client_request));
+        // Now that we've sent the CreateDecoder message, we can safely close
+        // our end of the CodecFactory channel.
       });
   VLOGF("before codec_client.Start()...");
-  // This does a Sync(), so after this we can drop the CodecFactory without it
-  // potentially cancelling our Codec create.
   codec_client.Start();
-
-  // We don't need the CodecFactory any more, and at this point any Codec
-  // creation errors have had a chance to arrive via the
-  // codec_factory.set_error_handler() lambda.
-  //
-  // Unbind() is only safe to call on the interfaces's dispatcher thread.  We
-  // also want to block the current thread until this is done, to avoid
-  // codec_factory potentially disappearing before this posted work finishes.
-  std::mutex unbind_mutex;
-  std::condition_variable unbind_done_condition;
-  bool unbind_done = false;
-  async::PostTask(main_loop->dispatcher(),
-                  [&codec_factory, &unbind_mutex, &unbind_done, &unbind_done_condition] {
-                    codec_factory.Unbind();
-                    {  // scope lock
-                      std::lock_guard<std::mutex> lock(unbind_mutex);
-                      unbind_done = true;
-                    }  // ~lock
-                    unbind_done_condition.notify_all();
-                    // All of codec_factory, unbind_mutex, unbind_done,
-                    // unbind_done_condition are potentially gone by this point.
-                  });
-  {  // scope lock
-    std::unique_lock<std::mutex> lock(unbind_mutex);
-    while (!unbind_done) {
-      unbind_done_condition.wait(lock);
-    }
-  }  // ~lock
-  FX_DCHECK(unbind_done);
 
   // We use a separate thread to provide input data, separate thread for output
   // data, and a separate FIDL thread (started above).  This is to avoid the
@@ -593,6 +562,5 @@ void use_aac_decoder(async::Loop* main_loop, fuchsia::mediacodec::CodecFactoryPt
   // success
   // ~codec_client
   // ~loop
-  // ~codec_factory
   return;
 }

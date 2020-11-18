@@ -33,9 +33,8 @@
 //     non-empty, output audio data to the specified wav file.  When used as
 //     an example, this will tend to be set.  When used as a test, this will not
 //     be set.
-void use_aac_decoder(async::Loop* main_loop, fuchsia::mediacodec::CodecFactoryPtr codec_factory,
-                     fidl::InterfaceHandle<fuchsia::sysmem::Allocator> sysmem,
-                     const std::string& input_adts_file, const std::string& output_wav_file,
-                     uint8_t out_md[SHA256_DIGEST_LENGTH]);
+void use_aac_decoder(async::Loop* main_loop, fuchsia::mediacodec::CodecFactoryHandle codec_factory,
+                     fuchsia::sysmem::AllocatorHandle sysmem, const std::string& input_adts_file,
+                     const std::string& output_wav_file, uint8_t out_md[SHA256_DIGEST_LENGTH]);
 
 #endif  // SRC_MEDIA_CODEC_EXAMPLES_USE_MEDIA_DECODER_USE_AAC_DECODER_H_

@@ -639,30 +639,17 @@ void VideoDecoderRunner::Run() {
         if (params_.is_secure_input) {
           decoder_params.set_secure_input_mode(fuchsia::mediacodec::SecureMemoryMode::ON);
         }
-        params_.codec_factory->CreateDecoder(std::move(decoder_params),
-                                             std::move(codec_client_request));
+        // Bind the fuchsia::media::CodecFactoryHandle to a CodecFactoryPtr so we can send a
+        // CreateDecoder message. This unbinds params_.codec_factory.
+        auto codec_factory_ptr = params_.codec_factory.Bind();
+        codec_factory_ptr->CreateDecoder(std::move(decoder_params),
+                                         std::move(codec_client_request));
+        // Now that the CreateDecoder message is sent, we no longer need to keep a channel open
+        // to the CodecFactory so we can just let codec_factory_ptr fall out of scope.
       });
 
   VLOGF("before codec_client.Start()...");
-  // This does a Sync(), so after this we can drop the CodecFactory without it
-  // potentially cancelling our Codec create.
   codec_client_->Start();
-
-  // We don't need the CodecFactory any more, and at this point any Codec
-  // creation errors have had a chance to arrive via the
-  // codec_factory.set_error_handler() lambda.
-  //
-  // Unbind() is only safe to call on the interfaces's dispatcher thread.  We
-  // also want to block the current thread until this is done, to avoid
-  // codec_factory potentially disappearing before this posted work finishes.
-  OneShotEvent unbind_done_event;
-  async::PostTask(params_.fidl_loop->dispatcher(), [this, &unbind_done_event] {
-    params_.codec_factory.Unbind();
-    unbind_done_event.Signal();
-    // codec_factory and unbind_done_event are potentially gone by this
-    // point.
-  });
-  unbind_done_event.Wait();
 
   VLOGF("before starting in_thread...");
   auto in_thread = std::make_unique<std::thread>([this]() {

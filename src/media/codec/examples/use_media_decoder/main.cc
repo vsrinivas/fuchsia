@@ -118,22 +118,14 @@ int main(int argc, char* argv[]) {
     component_context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
   });
 
-  fuchsia::mediacodec::CodecFactoryPtr codec_factory;
-  fuchsia::sysmem::AllocatorPtr sysmem;
-  codec_factory.set_error_handler([](zx_status_t status) {
-    // TODO(dustingreen): get and print CodecFactory channel epitaph once that's
-    // possible.
-    FX_PLOGS(ERROR, status) << "codec_factory failed - unexpected";
-  });
-  sysmem.set_error_handler(
-      [](zx_status_t status) { FX_PLOGS(FATAL, status) << "sysmem failed - unexpected"; });
-  to_run_on_fidl_thread.emplace_back(
-      [&component_context, fidl_dispatcher, &codec_factory, &sysmem]() mutable {
-        component_context->svc()->Connect<fuchsia::mediacodec::CodecFactory>(
-            codec_factory.NewRequest(fidl_dispatcher));
-        component_context->svc()->Connect<fuchsia::sysmem::Allocator>(
-            sysmem.NewRequest(fidl_dispatcher));
-      });
+  // This creates handles for channels for these protocols and connects them to
+  // the namespace entries for these protocols. These handles will be bound to
+  // InterfacePtr bindings objects on the fidl_thread as the binding objects
+  // can only be safely used from a single thread.
+  fuchsia::mediacodec::CodecFactoryHandle codec_factory;
+  fuchsia::sysmem::AllocatorHandle sysmem;
+  component_context->svc()->Connect<fuchsia::mediacodec::CodecFactory>(codec_factory.NewRequest());
+  component_context->svc()->Connect<fuchsia::sysmem::Allocator>(sysmem.NewRequest());
 
   std::string input_file = command_line.positional_args()[0];
   std::string output_file_name;
