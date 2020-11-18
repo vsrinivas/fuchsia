@@ -72,49 +72,11 @@ void add(std::vector<std::unique_ptr<T>>* elements, Fn producer_fn) {
 }  // namespace
 
 Parser::Parser(Lexer* lexer, Reporter* reporter, ExperimentalFlags experimental_flags)
-    : lexer_(lexer), reporter_(reporter), experimental_flags_(experimental_flags) {
-  handle_subtype_table_ = {
-      {"bti", types::HandleSubtype::kBti},
-      {"channel", types::HandleSubtype::kChannel},
-      {"clock", types::HandleSubtype::kClock},
-      {"debuglog", types::HandleSubtype::kLog},
-      {"event", types::HandleSubtype::kEvent},
-      {"eventpair", types::HandleSubtype::kEventpair},
-      {"exception", types::HandleSubtype::kException},
-      {"fifo", types::HandleSubtype::kFifo},
-      {"guest", types::HandleSubtype::kGuest},
-      {"interrupt", types::HandleSubtype::kInterrupt},
-      {"iommu", types::HandleSubtype::kIommu},
-      {"job", types::HandleSubtype::kJob},
-      {"pager", types::HandleSubtype::kPager},
-      {"pcidevice", types::HandleSubtype::kPciDevice},
-      {"pmt", types::HandleSubtype::kPmt},
-      {"port", types::HandleSubtype::kPort},
-      {"process", types::HandleSubtype::kProcess},
-      {"profile", types::HandleSubtype::kProfile},
-      {"resource", types::HandleSubtype::kResource},
-      {"socket", types::HandleSubtype::kSocket},
-      {"stream", types::HandleSubtype::kStream},
-      {"suspendtoken", types::HandleSubtype::kSuspendToken},
-      {"thread", types::HandleSubtype::kThread},
-      {"timer", types::HandleSubtype::kTimer},
-      {"vcpu", types::HandleSubtype::kVcpu},
-      {"vmar", types::HandleSubtype::kVmar},
-      {"vmo", types::HandleSubtype::kVmo},
-  };
-
-  state_ = State::kNormal;
+    : lexer_(lexer),
+      reporter_(reporter),
+      experimental_flags_(experimental_flags),
+      state_(State::kNormal) {
   last_token_ = Lex();
-}
-
-bool Parser::LookupHandleSubtype(const raw::Identifier* identifier,
-                                 std::optional<types::HandleSubtype>* out_handle_subtype) {
-  auto lookup = handle_subtype_table_.find(identifier->span().data());
-  if (lookup == handle_subtype_table_.end()) {
-    return false;
-  }
-  *out_handle_subtype = lookup->second;
-  return true;
 }
 
 std::nullptr_t Parser::Fail() { return Fail(ErrUnexpectedToken); }
@@ -528,13 +490,6 @@ std::unique_ptr<raw::TypeConstructor> Parser::ParseTypeConstructor() {
   if (!Ok())
     return Fail();
   std::unique_ptr<raw::TypeConstructor> maybe_arg_type_ctor;
-  // Either handle_subtype or handle_subtype_identifier will be set.
-  // handle_subtype is the old version with a hardcoded set of handle subtypes,
-  // handle_subtype_identifier is used otherwise, which allows deferral of the
-  // mapping (which is looked up in the handle resource later). Old handle
-  // subtypes are handle<job>, whereas new fidl-defined handle subtypes are
-  // constraints, e.g. handle:JOB.
-  std::optional<types::HandleSubtype> handle_subtype;
   std::unique_ptr<raw::Constant> handle_rights;
   if (MaybeConsumeToken(OfKind(Token::Kind::kLeftAngle))) {
     if (!Ok())
@@ -560,6 +515,10 @@ std::unique_ptr<raw::TypeConstructor> Parser::ParseTypeConstructor() {
   if (MaybeConsumeToken(OfKind(Token::Kind::kColon))) {
     if (!Ok())
       return Fail();
+    // TODO(fxbug.dev/64629): To properly generalize handle, while supporting
+    // all the features which currently exist, we will need to parse a much more
+    // liberal grammar at this stage (a 'type constructor'), and defer the
+    // interpretation of this data to the compilation step.
     if (identifier->components.back()->span().data() == "handle") {
       if (MaybeConsumeToken(OfKind(Token::Kind::kLeftAngle))) {
         handle_subtype_identifier = ParseIdentifier();
@@ -589,8 +548,8 @@ std::unique_ptr<raw::TypeConstructor> Parser::ParseTypeConstructor() {
 
   return std::make_unique<raw::TypeConstructor>(
       scope.GetSourceElement(), std::move(identifier), std::move(maybe_arg_type_ctor),
-      handle_subtype, std::move(handle_subtype_identifier), std::move(handle_rights),
-      std::move(maybe_size), nullability);
+      std::move(handle_subtype_identifier), std::move(handle_rights), std::move(maybe_size),
+      nullability);
 }
 
 std::unique_ptr<raw::BitsMember> Parser::ParseBitsMember() {

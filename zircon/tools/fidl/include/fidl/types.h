@@ -35,6 +35,9 @@ enum struct Resourceness {
 // kept in sync with this. Eventually, they will be generated from
 // fidl declarations. This is currently tested by fidl-compiler's
 // TypesTests's handle_subtype test.
+// TODO(fxbug.dev/64629): Remove this enumeration once handle generalization is
+// fully implemented. The enum `obj_type` defined in the FIDL library zx will
+// become the only source of truth.
 enum struct HandleSubtype : uint32_t {
   // special case to indicate subtype is not specified.
   kHandle = 0,

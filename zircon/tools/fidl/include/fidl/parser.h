@@ -225,9 +225,6 @@ class Parser {
     };
   }
 
-  bool LookupHandleSubtype(const raw::Identifier* identifier,
-                           std::optional<types::HandleSubtype>* out_handle_subtype);
-
   std::nullptr_t Fail();
   std::nullptr_t Fail(std::unique_ptr<Diagnostic> err);
   template <typename... Args>
@@ -374,8 +371,6 @@ class Parser {
   void RecoverOneError() { recovered_errors_++; }
   void RecoverAllErrors() { recovered_errors_ = reporter_->errors().size(); }
   size_t recovered_errors_ = 0;
-
-  std::map<std::string_view, types::HandleSubtype> handle_subtype_table_;
 
   Lexer* lexer_;
   Reporter* reporter_;

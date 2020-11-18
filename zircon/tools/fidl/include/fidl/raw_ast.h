@@ -251,14 +251,12 @@ class TypeConstructor final : public SourceElement {
  public:
   TypeConstructor(SourceElement const& element, std::unique_ptr<CompoundIdentifier> identifier,
                   std::unique_ptr<TypeConstructor> maybe_arg_type_ctor,
-                  std::optional<types::HandleSubtype> handle_subtype,
                   std::unique_ptr<Identifier> handle_subtype_identifier,
                   std::unique_ptr<Constant> handle_rights, std::unique_ptr<Constant> maybe_size,
                   types::Nullability nullability)
       : SourceElement(element),
         identifier(std::move(identifier)),
         maybe_arg_type_ctor(std::move(maybe_arg_type_ctor)),
-        handle_subtype(handle_subtype),
         handle_subtype_identifier(std::move(handle_subtype_identifier)),
         handle_rights(std::move(handle_rights)),
         maybe_size(std::move(maybe_size)),
