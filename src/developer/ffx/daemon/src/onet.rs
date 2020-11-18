@@ -15,7 +15,6 @@ use {
     futures::channel::oneshot,
     futures::future::FutureExt,
     futures::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt},
-    std::collections::BTreeSet,
     std::future::Future,
     std::io,
     std::os::unix::io::{FromRawFd, IntoRawFd},
@@ -54,7 +53,7 @@ async fn latency_sensitive_copy(
 }
 
 impl HostPipeChild {
-    pub async fn new(addrs: BTreeSet<TargetAddr>) -> Result<HostPipeChild> {
+    pub async fn new(addrs: Vec<TargetAddr>) -> Result<HostPipeChild> {
         let mut inner = build_ssh_command(addrs, vec!["remote_control_runner"])
             .await?
             .stdout(Stdio::piped())
@@ -146,7 +145,7 @@ impl HostPipeConnection {
 
     fn new_with_cmd<F>(
         target: WeakTarget,
-        cmd_func: impl FnOnce(BTreeSet<TargetAddr>) -> F + Send + Copy + 'static,
+        cmd_func: impl FnOnce(Vec<TargetAddr>) -> F + Send + Copy + 'static,
         relaunch_command_delay: Duration,
     ) -> impl Future<Output = Result<(), String>> + Send
     where
@@ -242,7 +241,7 @@ mod test {
         }
     }
 
-    async fn start_child_normal_operation(_t: BTreeSet<TargetAddr>) -> Result<HostPipeChild> {
+    async fn start_child_normal_operation(_t: Vec<TargetAddr>) -> Result<HostPipeChild> {
         Ok(HostPipeChild::fake_new(
             std::process::Command::new("yes")
                 .arg("test-command")
@@ -253,7 +252,7 @@ mod test {
         ))
     }
 
-    async fn start_child_internal_failure(_t: BTreeSet<TargetAddr>) -> Result<HostPipeChild> {
+    async fn start_child_internal_failure(_t: Vec<TargetAddr>) -> Result<HostPipeChild> {
         Err(anyhow!(ERR_CTX))
     }
 

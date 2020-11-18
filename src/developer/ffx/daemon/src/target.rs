@@ -26,6 +26,7 @@ use {
     futures::future,
     futures::lock::Mutex,
     futures::prelude::*,
+    std::cmp::Ordering,
     std::collections::{BTreeSet, HashMap},
     std::default::Default,
     std::fmt,
@@ -71,7 +72,7 @@ pub trait SshAddrFetcher {
 macro_rules! assign_and_break_if_link_local {
     ($res:ident, $addr:ident $(,)?) => {
         $res = Some($addr.clone());
-        if $addr.ip().is_link_local_addr() {
+        if $addr.ip().is_local_addr() {
             break;
         }
     };
@@ -87,7 +88,7 @@ impl<'a, T: Copy + IntoIterator<Item = &'a TargetAddr>> SshAddrFetcher for &'a T
                         IpAddr::V6(_) => {
                             // Only overwrite if this is a link-local addr, else
                             // keep the first one found.
-                            if addr.ip().is_link_local_addr() {
+                            if addr.ip().is_local_addr() {
                                 assign_and_break_if_link_local!(res, addr);
                             }
                         }
@@ -104,11 +105,6 @@ impl<'a, T: Copy + IntoIterator<Item = &'a TargetAddr>> SshAddrFetcher for &'a T
         }
         res
     }
-}
-
-#[async_trait]
-pub trait TargetAddrFetcher: Send + Sync {
-    async fn target_addrs(&self) -> BTreeSet<TargetAddr>;
 }
 
 #[async_trait]
@@ -242,6 +238,45 @@ impl ConnectionState {
     }
 }
 
+#[derive(Debug, Clone, Hash)]
+pub(crate) struct TargetAddrEntry {
+    addr: TargetAddr,
+    timestamp: DateTime<Utc>,
+}
+
+impl PartialEq for TargetAddrEntry {
+    fn eq(&self, other: &Self) -> bool {
+        self.addr.eq(&other.addr)
+    }
+}
+
+impl Eq for TargetAddrEntry {}
+
+impl From<(TargetAddr, DateTime<Utc>)> for TargetAddrEntry {
+    fn from(t: (TargetAddr, DateTime<Utc>)) -> Self {
+        let (addr, timestamp) = t;
+        Self { addr, timestamp }
+    }
+}
+
+impl From<TargetAddr> for TargetAddrEntry {
+    fn from(addr: TargetAddr) -> Self {
+        Self { addr, timestamp: Utc::now() }
+    }
+}
+
+impl Ord for TargetAddrEntry {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.addr.cmp(&other.addr)
+    }
+}
+
+impl PartialOrd for TargetAddrEntry {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
 #[derive(Debug, Default)]
 #[cfg_attr(test, derive(Clone, PartialEq, Eq))]
 pub struct TargetState {
@@ -252,7 +287,7 @@ struct TargetInner {
     nodename: String,
     state: Mutex<TargetState>,
     last_response: RwLock<DateTime<Utc>>,
-    addrs: RwLock<BTreeSet<TargetAddr>>,
+    addrs: RwLock<BTreeSet<TargetAddrEntry>>,
     // used for Fastboot
     serial: RwLock<Option<String>>,
 }
@@ -275,7 +310,11 @@ impl TargetInner {
     }
 
     pub fn new_with_addrs(nodename: &str, addrs: BTreeSet<TargetAddr>) -> Self {
-        Self { nodename: nodename.to_string(), addrs: RwLock::new(addrs), ..Default::default() }
+        Self {
+            nodename: nodename.to_string(),
+            addrs: RwLock::new(addrs.iter().map(|e| (*e, Utc::now()).into()).collect()),
+            ..Default::default()
+        }
     }
 
     pub fn new_with_serial(nodename: &str, serial: &str) -> Self {
@@ -295,13 +334,6 @@ impl TargetInner {
             last_response: RwLock::new(time),
             ..Default::default()
         }
-    }
-}
-
-#[async_trait]
-impl TargetAddrFetcher for TargetInner {
-    async fn target_addrs(&self) -> BTreeSet<TargetAddr> {
-        self.addrs.read().await.clone()
     }
 }
 
@@ -501,20 +533,34 @@ impl Target {
         self.inner.last_response.read().await.clone()
     }
 
-    pub async fn addrs(&self) -> BTreeSet<TargetAddr> {
-        self.inner.addrs.read().await.clone()
+    pub async fn addrs(&self) -> Vec<TargetAddr> {
+        let mut addrs = self.inner.addrs.read().await.iter().cloned().collect::<Vec<_>>();
+        addrs.sort_by(|a, b| b.timestamp.cmp(&a.timestamp));
+        addrs.drain(..).map(|e| e.addr).collect()
     }
 
     #[cfg(test)]
     pub(crate) async fn addrs_insert(&self, t: TargetAddr) {
-        self.inner.addrs.write().await.insert(t);
+        self.inner.addrs.write().await.replace(t.into());
+    }
+
+    #[cfg(test)]
+    pub(crate) async fn addrs_insert_entry(&self, t: TargetAddrEntry) {
+        self.inner.addrs.write().await.replace(t);
     }
 
     async fn addrs_extend<T>(&self, iter: T)
     where
         T: IntoIterator<Item = TargetAddr>,
     {
-        self.inner.addrs.write().await.extend(iter);
+        let now = Utc::now();
+        let mut addrs = self.inner.addrs.write().await;
+        // This is functionally the same as the regular extend function, instead
+        // replacing each item. This is to ensure that the timestamps are
+        // updated as they are seen.
+        iter.into_iter().for_each(move |e| {
+            let _ = addrs.replace((e, now.clone()).into());
+        });
     }
 
     async fn update_last_response(&self, other: DateTime<Utc>) {
@@ -635,7 +681,7 @@ pub struct TargetAddr {
 }
 
 impl Ord for TargetAddr {
-    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+    fn cmp(&self, other: &Self) -> Ordering {
         let this_socket = SocketAddr::from(self);
         let other_socket = SocketAddr::from(other);
         this_socket.cmp(&other_socket)
@@ -643,7 +689,7 @@ impl Ord for TargetAddr {
 }
 
 impl PartialOrd for TargetAddr {
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
     }
 }
@@ -1239,7 +1285,8 @@ mod test {
 
         // Will crash if any addresses are missing.
         for address in conv_addrs {
-            let _ = addrs.get(&TargetAddr::from(address)).unwrap();
+            let address = TargetAddr::from(address);
+            assert!(addrs.iter().any(|&a| a == address));
         }
     }
 
@@ -1256,11 +1303,13 @@ mod test {
         let t = Target::new("clam-chowder-is-tasty");
         let t2 = Target::new("this-is-a-crunchy-falafel");
         let t3 = Target::new("i-should-probably-eat-lunch");
+        let t4 = Target::new("i-should-probably-eat-lunch");
 
         let tc = TargetCollection::new();
         tc.merge_insert(t).await;
         tc.merge_insert(t2).await;
         tc.merge_insert(t3).await;
+        tc.merge_insert(t4).await;
 
         let events = tc.synthesize_events().await;
         assert_eq!(events.len(), 3);
@@ -1460,5 +1509,37 @@ mod test {
             })
             .await
             .unwrap();
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_target_addresses_order_preserved() {
+        let t = Target::new("this-is-a-target-i-guess");
+        let addrs_pre = vec![
+            SocketAddr::V6(SocketAddrV6::new("fe80::1".parse().unwrap(), 0, 0, 0)),
+            SocketAddr::V4(SocketAddrV4::new(Ipv4Addr::new(127, 0, 0, 1), 0)),
+            SocketAddr::V4(SocketAddrV4::new(Ipv4Addr::new(129, 0, 0, 1), 0)),
+            SocketAddr::V6(SocketAddrV6::new("f111::3".parse().unwrap(), 0, 0, 0)),
+            SocketAddr::V6(SocketAddrV6::new("fe80::1".parse().unwrap(), 0, 0, 0)),
+            SocketAddr::V6(SocketAddrV6::new("fe80::2".parse().unwrap(), 0, 0, 2)),
+        ];
+        let mut addrs_post = addrs_pre
+            .iter()
+            .cloned()
+            .enumerate()
+            .map(|(i, e)| {
+                (TargetAddr::from(e), Utc.ymd(2014 + (i as i32), 10, 31).and_hms(9, 10, 12)).into()
+            })
+            .collect::<Vec<TargetAddrEntry>>();
+        for a in addrs_post.iter().cloned() {
+            t.addrs_insert_entry(a).await;
+        }
+
+        // Removes expected duplicate address. Should be marked as a duplicate
+        // and also removed from the very beginning as a more-recent version
+        // is added later.
+        addrs_post.remove(0);
+        // The order should be: last one inserted should show up first.
+        addrs_post.reverse();
+        assert_eq!(addrs_post.drain(..).map(|e| e.addr).collect::<Vec<_>>(), t.addrs().await);
     }
 }
