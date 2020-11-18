@@ -24,7 +24,7 @@ rustc_test("bin") {
   sources = [ "src/lib.rs" ]
 
   inputs = [
-    "config/observer_config.json",
+    "config/archivist_config.json",
     "config/all_selectors.txt",
   ]
 }

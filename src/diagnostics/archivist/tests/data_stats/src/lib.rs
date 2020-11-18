@@ -19,7 +19,7 @@ use {
 const ARCHIVIST_URL: &str =
     "fuchsia-pkg://fuchsia.com/archivist-integration-tests#meta/data_stats_test_archivist.cmx";
 const ALL_SELECTORS: &[u8] = include_bytes!("../config/all_selectors.txt");
-const ARCHIVIST_CONFIG: &[u8] = include_bytes!("../config/observer_config.json");
+const ARCHIVIST_CONFIG: &[u8] = include_bytes!("../config/archivist_config.json");
 
 // Number of seconds to wait before timing out polling the reader for pumped results.
 static READ_TIMEOUT_SECONDS: i64 = 5;

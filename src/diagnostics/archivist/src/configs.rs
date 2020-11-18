@@ -8,7 +8,6 @@ use {
     fuchsia_inspect as inspect,
     selectors::parse_selector_file,
     serde::Deserialize,
-    serde_json5,
     std::path::{Path, PathBuf},
     std::{collections::BTreeMap, fs},
 };
@@ -151,7 +150,7 @@ pub fn parse_config(path: impl AsRef<Path>) -> Result<Config, Error> {
     let path = path.as_ref();
     let json_string: String =
         fs::read_to_string(path).with_context(|| format!("parsing config: {}", path.display()))?;
-    let config: Config = serde_json5::from_str(&json_string).context("parsing json config")?;
+    let config: Config = serde_json::from_str(&json_string).context("parsing json config")?;
     if let Some(summarized_dirs) = &config.summarized_dirs {
         if summarized_dirs.iter().any(|(dir, _)| dir == "archive") {
             return Err(format_err!("Invalid name 'archive' in summarized dirs"));
@@ -182,7 +181,6 @@ mod tests {
         let test_config_file_name = config_path.join("test_config.json");
         let test_config = r#"
                 {
-                  // Test comment for json5 portability.
                   "max_archive_size_bytes": 10485760,
                   "max_event_group_size_bytes": 262144,
                   "num_threads": 4,
@@ -204,7 +202,6 @@ mod tests {
         let test_config_file_name = config_path.join("test_config.json");
         let test_config = r#"
                 {
-                  // Test comment for json5 portability.
                   "max_archive_size_bytes": 10485760,
                   "max_event_group_size_bytes": 262144,
                   "num_threads": 4,
@@ -234,7 +231,6 @@ mod tests {
         let test_config_file_name = config_path.join("test_config.json");
         let test_config = r#"
                 {
-                  // Test comment for json5 portability.
                   "max_archive_size_bytes": 10485760,
                   "max_event_group_size_bytes": 262144,
                   "num_threads": 1

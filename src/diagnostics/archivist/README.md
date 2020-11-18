@@ -1,33 +1,35 @@
 # Diagnostics Archivist
 
-Reviewed on: 2019-08-30
+Reviewed on: 2020-11-16
 
-logger is the main logging service on Fuchsia. It provides the
-[`fuchsia.logger.LogSink`][fidl-file] service which components use to log
-messages, and the [`fuchsia.logger.Log`][fidl-file] service which
-[`log_listener`][log_listener] uses to read back logs. It has a 4 MB rotating
-buffer in which all logs are stored. It also reads the kernel log and merges log
-messages from it into its buffer.
+Archivist collects component lifecycle events, inspect snapshots, and log streams on Fuchsia,
+making them available over the `fuchsia.diagnostics/ArchiveAccessor` protocol.
 
 ## Building
 
-This project is included in the `core` build product.
+This project is included in the `bringup` build product and most others as a result.
 
 ## Running
 
-The diagnostics archivist is started on-demand by clients connecting to the `LogSink` protocol. In
-practice this means an instance is usually running already.
+The production Archivist is "mounted" in the component topology in the [bootstrap] realm.
+
+Tests run by `run-test-component` have an Archivist embedded in the test realm when either
+`fuchsia.logger/LogSink` or `fuchsia.logger/Log` is requested.
+
+Realms can run their own Archivist by running `meta/archivist-for-embedding.cmx` from the
+`archivist` package. This has a number of sharp edges today and the Diagnostics team recommends
+consulting with us in the process of writing a new integration.
 
 ## Testing
 
-Unit tests are available in the `archivist_tests` package.
+Unit tests are available in the `archivist-tests` package.
 
-Integration tests for system logging are available in the `logger_integration_tests` package.
+Integration tests for system logging are available in these packages:
 
-```
-$ fx run-test archivist_tests
-$ fx run-test logger_integration_tests
-```
+* `archivist-integration-tests`
+* `archivist-integration-tests-v2`
+* `logs-redaction`
+* `test-logs-from-crashes`
 
 ## Source layout
 
@@ -35,6 +37,17 @@ The entrypoint is located in `src/main.rs`, with the rest of the code living in
 `src/*.rs` files. Unit tests are co-located with the code and integration tests
 are located in the `tests/` directory.
 
-[log_listener]: ../../../garnet/bin/log_listener/README.md
-[sysmgr]: ../../sys/sysmgr/README.md
-[fidl-file]: ../../../zircon/system/fidl/fuchsia-logger/logger.fidl
+Each data type the Archivist supports has a directory:
+
+* `src/inspect`
+* `src/lifecycle`
+* `src/logs`
+
+## Configuration
+
+Archivist accepts a configuration file to allow product-specific configuration separately from its
+package. The configuration file must be valid JSON with a single object at the top level. Its path
+within Archivist's namespace is defined by the `--config-path` argument. See `src/configs.rs` for
+details about supported configuration fields.
+
+[bootstrap]: /src/sys/bootstrap/meta/bootstrap.cml
