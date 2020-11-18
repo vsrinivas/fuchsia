@@ -154,6 +154,8 @@ where
         mut path: Path,
         server_end: ServerEnd<NodeMarker>,
     ) {
+        // See if the path has a next segment, if so we want to traverse down
+        // the directory. Otherwise we've arrived at the right directory.
         let (name, path_ref) = match path.next_with_ref() {
             (path_ref, Some(name)) => (name, path_ref),
             (_, None) => {
@@ -419,7 +421,11 @@ where
 
         let mut this = self.inner.lock();
 
-        // I assume we should send these events even even when `src == dst`.  In practice, a
+        // If src doesn't exist, don't do the other stuff.
+        if !this.entries.contains_key(&src) {
+            return Err(Status::NOT_FOUND);
+        }
+        // I assume we should send these events even when `src == dst`.  In practice, a
         // particular client may not be aware that the names match, but may still rely on the fact
         // that the events occur.
         //
@@ -442,6 +448,9 @@ where
         }
 
         let entry = match this.entries.remove(&src) {
+            // This is truly surprising since this was checked previously, but
+            // we leave this in place instead of doing `unwrap` on the chance
+            // the earlier check is carelessly removed.
             None => return Err(Status::NOT_FOUND),
             Some(entry) => entry,
         };

@@ -126,7 +126,16 @@ fn rename_within_directory() {
 
         open_as_file_assert_content!(&proxy, ro_flags, "passwd", "/dev/fs /");
 
-        let root_token = assert_get_token!(&proxy);
+        let mut root_token = assert_get_token!(&proxy);
+        // This should return an error because the source file does not exist
+        assert_rename_err!(
+            &proxy,
+            "file-does-not-exist",
+            root_token,
+            "file-will-not-exist",
+            Status::NOT_FOUND
+        );
+        root_token = assert_get_token!(&proxy);
         assert_rename!(&proxy, "passwd", root_token, "fstab");
 
         open_as_file_assert_err!(&proxy, ro_flags, "passwd", Status::NOT_FOUND);
@@ -251,9 +260,21 @@ fn rename_within_directory_with_watchers() {
 
         open_as_file_assert_content!(&proxy, ro_flags, "passwd", "/dev/fs /");
 
-        let root_token = assert_get_token!(&proxy);
+        let mut root_token = assert_get_token!(&proxy);
+        // This should return an error because the source file does not exist
+        assert_rename_err!(
+            &proxy,
+            "file-does-not-exist",
+            root_token,
+            "file-will-not-exist",
+            Status::NOT_FOUND
+        );
+
+        root_token = assert_get_token!(&proxy);
         assert_rename!(&proxy, "passwd", root_token, "fstab");
 
+        // If the unsuccessful rename produced events, they will be read first
+        // instead of the expected events for the successful rename.
         assert_watcher_one_message_watched_events!(watcher_client, { REMOVED, "passwd" });
         assert_watcher_one_message_watched_events!(watcher_client, { ADDED, "fstab" });
 
