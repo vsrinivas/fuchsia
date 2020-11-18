@@ -4,6 +4,7 @@
 
 #include "aml-sdmmc.h"
 
+#include <lib/fake-bti/bti.h>
 #include <lib/fake_ddk/fake_ddk.h>
 #include <threads.h>
 
@@ -15,60 +16,6 @@
 #include <zxtest/zxtest.h>
 
 #include "aml-sdmmc-regs.h"
-
-namespace {
-
-constexpr zx_handle_t kFakeBtiHandle = 1234;
-
-uint8_t pin_count = 0;
-bool contiguous = true;
-
-}  // namespace
-
-__EXPORT
-zx_status_t zx_bti_pin(zx_handle_t bti_handle, uint32_t options, zx_handle_t vmo, uint64_t offset,
-                       uint64_t size, zx_paddr_t* addrs, size_t addrs_count, zx_handle_t* out) {
-  if (bti_handle != kFakeBtiHandle) {
-    return ZX_ERR_BAD_HANDLE;
-  }
-
-  for (size_t i = 0; i < addrs_count; i++) {
-    addrs[i] = (pin_count << 24) | (PAGE_SIZE * (i + 1) * (contiguous ? 1 : 2));
-  }
-
-  pin_count++;
-  *out = pin_count;
-  return ZX_OK;
-}
-
-__EXPORT
-zx_status_t zx_bti_release_quarantine(zx_handle_t bti_handle) {
-  return bti_handle == kFakeBtiHandle ? ZX_OK : ZX_ERR_BAD_HANDLE;
-}
-
-__EXPORT
-zx_status_t zx_pmt_unpin(zx_handle_t pmt_handle) { return ZX_OK; }
-
-__EXPORT
-zx_status_t zx_vmo_create_contiguous(zx_handle_t bti_handle, size_t size, uint32_t alignment_log2,
-                                     zx_handle_t* out) {
-  constexpr uint32_t kPageSizeShift = 12;
-
-  if (bti_handle != kFakeBtiHandle) {
-    return ZX_ERR_BAD_HANDLE;
-  }
-  if (size == 0) {
-    return ZX_ERR_INVALID_ARGS;
-  }
-  if (alignment_log2 == 0) {
-    alignment_log2 = kPageSizeShift;
-  }
-  if (alignment_log2 < kPageSizeShift || alignment_log2 >= (8 * sizeof(uint64_t))) {
-    return ZX_ERR_INVALID_ARGS;
-  }
-
-  return zx_vmo_create(size, 0, out);
-}
 
 namespace sdmmc {
 
@@ -142,9 +89,6 @@ class AmlSdmmcTest : public zxtest::Test {
   AmlSdmmcTest() : mmio_({FakeMmioPtr(&mmio_), 0, 0, ZX_HANDLE_INVALID}) {}
 
   void SetUp() override {
-    pin_count = 0;
-    contiguous = true;
-
     registers_.reset(new uint8_t[S912_SD_EMMC_B_LENGTH]);
     memset(registers_.get(), 0, S912_SD_EMMC_B_LENGTH);
 
@@ -157,7 +101,13 @@ class AmlSdmmcTest : public zxtest::Test {
 
     mmio_ = ddk::MmioBuffer(mmio_buffer);
 
-    zx::bti bti{kFakeBtiHandle};
+    memset(bti_paddrs_, 0, sizeof(bti_paddrs_));
+    bti_paddrs_[0] = PAGE_SIZE;  // This is passed to AmlSdmmc::Init().
+
+    zx::bti bti;
+    ASSERT_OK(fake_bti_create_with_paddrs(bti_paddrs_, countof(bti_paddrs_),
+                                          bti.reset_and_get_address()));
+
     dut_ = new TestAmlSdmmc(mmio_buffer, std::move(bti));
 
     dut_->set_board_config({
@@ -201,6 +151,28 @@ class AmlSdmmcTest : public zxtest::Test {
     }
     return info.koid;
   }
+
+  void InitializeContiguousPaddrs(const size_t vmos) {
+    // Start at 1 because one paddr has already been read to create the DMA descriptor buffer.
+    for (size_t i = 0; i < vmos; i++) {
+      bti_paddrs_[i + 1] = (i << 24) | PAGE_SIZE;
+    }
+  }
+
+  void InitializeSingleVmoPaddrs(const size_t pages) {
+    // Start at 1 because one paddr has already been read to create the DMA descriptor buffer.
+    for (size_t i = 0; i < pages; i++) {
+      bti_paddrs_[i + 1] = PAGE_SIZE * (i + 1);
+    }
+  }
+
+  void InitializeNonContiguousPaddrs(const size_t vmos) {
+    for (size_t i = 0; i < vmos; i++) {
+      bti_paddrs_[i + 1] = PAGE_SIZE * (i + 1) * 2;
+    }
+  }
+
+  zx_paddr_t bti_paddrs_[64] = {};
 
   ddk::MmioBuffer mmio_;
   TestAmlSdmmc* dut_ = nullptr;
@@ -583,7 +555,8 @@ TEST_F(AmlSdmmcTest, RequestsFailAfterSuspend) {
 
 TEST_F(AmlSdmmcTest, UnownedVmosBlockMode) {
   ASSERT_OK(dut_->Init());
-  pin_count = 0;
+
+  InitializeContiguousPaddrs(10);
 
   zx::vmo vmos[10] = {};
   sdmmc_buffer_region_t buffers[10];
@@ -646,7 +619,8 @@ TEST_F(AmlSdmmcTest, UnownedVmosBlockMode) {
 
 TEST_F(AmlSdmmcTest, UnownedVmosNotBlockSizeMultiple) {
   ASSERT_OK(dut_->Init());
-  pin_count = 0;
+
+  InitializeContiguousPaddrs(10);
 
   zx::vmo vmos[10] = {};
   sdmmc_buffer_region_t buffers[10];
@@ -681,7 +655,8 @@ TEST_F(AmlSdmmcTest, UnownedVmosNotBlockSizeMultiple) {
 
 TEST_F(AmlSdmmcTest, UnownedVmosByteMode) {
   ASSERT_OK(dut_->Init());
-  pin_count = 0;
+
+  InitializeContiguousPaddrs(10);
 
   zx::vmo vmos[10] = {};
   sdmmc_buffer_region_t buffers[10];
@@ -743,10 +718,10 @@ TEST_F(AmlSdmmcTest, UnownedVmosByteMode) {
 
 TEST_F(AmlSdmmcTest, UnownedVmoByteModeMultiBlock) {
   ASSERT_OK(dut_->Init());
-  pin_count = 0;
 
   zx::vmo vmo;
   ASSERT_OK(zx::vmo::create(PAGE_SIZE, 0, &vmo));
+  InitializeContiguousPaddrs(1);
 
   sdmmc_buffer_region_t buffer = {
       .buffer =
@@ -803,10 +778,10 @@ TEST_F(AmlSdmmcTest, UnownedVmoByteModeMultiBlock) {
 
 TEST_F(AmlSdmmcTest, UnownedVmoOffsetNotAligned) {
   ASSERT_OK(dut_->Init());
-  pin_count = 0;
 
   zx::vmo vmo;
   ASSERT_OK(zx::vmo::create(PAGE_SIZE, 0, &vmo));
+  InitializeContiguousPaddrs(1);
 
   sdmmc_buffer_region_t buffer = {
       .buffer =
@@ -835,11 +810,11 @@ TEST_F(AmlSdmmcTest, UnownedVmoOffsetNotAligned) {
 
 TEST_F(AmlSdmmcTest, UnownedVmoSingleBufferMultipleDescriptors) {
   ASSERT_OK(dut_->Init());
-  pin_count = 0;
 
   zx::vmo vmo;
-  const size_t pages = fbl::round_up<size_t, size_t>(32 * 514, PAGE_SIZE);
-  ASSERT_OK(zx::vmo::create(pages, 0, &vmo));
+  const size_t pages = ((32 * 514) / PAGE_SIZE) + 1;
+  ASSERT_OK(zx::vmo::create(pages * PAGE_SIZE, 0, &vmo));
+  InitializeSingleVmoPaddrs(pages);
 
   sdmmc_buffer_region_t buffer = {
       .buffer =
@@ -898,12 +873,11 @@ TEST_F(AmlSdmmcTest, UnownedVmoSingleBufferMultipleDescriptors) {
 
 TEST_F(AmlSdmmcTest, UnownedVmoSingleBufferNotPageAligned) {
   ASSERT_OK(dut_->Init());
-  pin_count = 0;
-  contiguous = false;
 
   zx::vmo vmo;
-  const size_t pages = fbl::round_up<size_t, size_t>(32 * 514, PAGE_SIZE);
-  ASSERT_OK(zx::vmo::create(pages, 0, &vmo));
+  const size_t pages = ((32 * 514) / PAGE_SIZE) + 1;
+  ASSERT_OK(zx::vmo::create(pages * PAGE_SIZE, 0, &vmo));
+  InitializeNonContiguousPaddrs(pages);
 
   sdmmc_buffer_region_t buffer = {
       .buffer =
@@ -932,12 +906,11 @@ TEST_F(AmlSdmmcTest, UnownedVmoSingleBufferNotPageAligned) {
 
 TEST_F(AmlSdmmcTest, UnownedVmoSingleBufferPageAligned) {
   ASSERT_OK(dut_->Init());
-  pin_count = 0;
-  contiguous = false;
 
   zx::vmo vmo;
-  const size_t pages = fbl::round_up<size_t, size_t>(32 * 514, PAGE_SIZE);
-  ASSERT_OK(zx::vmo::create(pages, 0, &vmo));
+  const size_t pages = ((32 * 514) / PAGE_SIZE) + 1;
+  ASSERT_OK(zx::vmo::create(pages * PAGE_SIZE, 0, &vmo));
+  InitializeNonContiguousPaddrs(pages);
 
   sdmmc_buffer_region_t buffer = {
       .buffer =
@@ -996,7 +969,8 @@ TEST_F(AmlSdmmcTest, UnownedVmoSingleBufferPageAligned) {
 
 TEST_F(AmlSdmmcTest, OwnedVmosBlockMode) {
   ASSERT_OK(dut_->Init());
-  pin_count = 0;
+
+  InitializeContiguousPaddrs(10);
 
   sdmmc_buffer_region_t buffers[10];
   for (uint32_t i = 0; i < countof(buffers); i++) {
@@ -1072,7 +1046,8 @@ TEST_F(AmlSdmmcTest, OwnedVmosBlockMode) {
 
 TEST_F(AmlSdmmcTest, OwnedVmosNotBlockSizeMultiple) {
   ASSERT_OK(dut_->Init());
-  pin_count = 0;
+
+  InitializeContiguousPaddrs(10);
 
   sdmmc_buffer_region_t buffers[10];
   for (uint32_t i = 0; i < countof(buffers); i++) {
@@ -1108,7 +1083,8 @@ TEST_F(AmlSdmmcTest, OwnedVmosNotBlockSizeMultiple) {
 
 TEST_F(AmlSdmmcTest, OwnedVmosByteMode) {
   ASSERT_OK(dut_->Init());
-  pin_count = 0;
+
+  InitializeContiguousPaddrs(10);
 
   sdmmc_buffer_region_t buffers[10];
   for (uint32_t i = 0; i < countof(buffers); i++) {
@@ -1171,10 +1147,10 @@ TEST_F(AmlSdmmcTest, OwnedVmosByteMode) {
 
 TEST_F(AmlSdmmcTest, OwnedVmoByteModeMultiBlock) {
   ASSERT_OK(dut_->Init());
-  pin_count = 0;
 
   zx::vmo vmo;
   ASSERT_OK(zx::vmo::create(PAGE_SIZE, 0, &vmo));
+  InitializeContiguousPaddrs(1);
   EXPECT_OK(dut_->SdmmcRegisterVmo(1, 0, std::move(vmo), 0, 512));
 
   sdmmc_buffer_region_t buffer = {
@@ -1232,10 +1208,10 @@ TEST_F(AmlSdmmcTest, OwnedVmoByteModeMultiBlock) {
 
 TEST_F(AmlSdmmcTest, OwnedVmoOffsetNotAligned) {
   ASSERT_OK(dut_->Init());
-  pin_count = 0;
 
   zx::vmo vmo;
   ASSERT_OK(zx::vmo::create(PAGE_SIZE, 0, &vmo));
+  InitializeContiguousPaddrs(1);
   EXPECT_OK(dut_->SdmmcRegisterVmo(1, 0, std::move(vmo), 2, 512));
 
   sdmmc_buffer_region_t buffer = {
@@ -1265,12 +1241,12 @@ TEST_F(AmlSdmmcTest, OwnedVmoOffsetNotAligned) {
 
 TEST_F(AmlSdmmcTest, OwnedVmoSingleBufferMultipleDescriptors) {
   ASSERT_OK(dut_->Init());
-  pin_count = 0;
 
   zx::vmo vmo;
-  const size_t pages = fbl::round_up<size_t, size_t>(32 * 514, PAGE_SIZE);
-  ASSERT_OK(zx::vmo::create(pages, 0, &vmo));
-  EXPECT_OK(dut_->SdmmcRegisterVmo(1, 0, std::move(vmo), 8, pages - 8));
+  const size_t pages = ((32 * 514) / PAGE_SIZE) + 1;
+  ASSERT_OK(zx::vmo::create(pages * PAGE_SIZE, 0, &vmo));
+  InitializeSingleVmoPaddrs(pages);
+  EXPECT_OK(dut_->SdmmcRegisterVmo(1, 0, std::move(vmo), 8, (pages * PAGE_SIZE) - 8));
 
   sdmmc_buffer_region_t buffer = {
       .buffer =
@@ -1330,13 +1306,12 @@ TEST_F(AmlSdmmcTest, OwnedVmoSingleBufferMultipleDescriptors) {
 
 TEST_F(AmlSdmmcTest, OwnedVmoSingleBufferNotPageAligned) {
   ASSERT_OK(dut_->Init());
-  pin_count = 0;
-  contiguous = false;
 
   zx::vmo vmo;
-  const size_t pages = fbl::round_up<size_t, size_t>(32 * 514, PAGE_SIZE);
-  ASSERT_OK(zx::vmo::create(pages, 0, &vmo));
-  EXPECT_OK(dut_->SdmmcRegisterVmo(1, 0, std::move(vmo), 8, pages - 8));
+  const size_t pages = ((32 * 514) / PAGE_SIZE) + 1;
+  ASSERT_OK(zx::vmo::create(pages * PAGE_SIZE, 0, &vmo));
+  InitializeNonContiguousPaddrs(pages);
+  EXPECT_OK(dut_->SdmmcRegisterVmo(1, 0, std::move(vmo), 8, (pages * PAGE_SIZE) - 8));
 
   sdmmc_buffer_region_t buffer = {
       .buffer =
@@ -1365,13 +1340,12 @@ TEST_F(AmlSdmmcTest, OwnedVmoSingleBufferNotPageAligned) {
 
 TEST_F(AmlSdmmcTest, OwnedVmoSingleBufferPageAligned) {
   ASSERT_OK(dut_->Init());
-  pin_count = 0;
-  contiguous = false;
 
   zx::vmo vmo;
-  const size_t pages = fbl::round_up<size_t, size_t>(32 * 514, PAGE_SIZE);
-  ASSERT_OK(zx::vmo::create(pages, 0, &vmo));
-  EXPECT_OK(dut_->SdmmcRegisterVmo(1, 0, std::move(vmo), 16, pages - 16));
+  const size_t pages = ((32 * 514) / PAGE_SIZE) + 1;
+  ASSERT_OK(zx::vmo::create(pages * PAGE_SIZE, 0, &vmo));
+  InitializeNonContiguousPaddrs(pages);
+  EXPECT_OK(dut_->SdmmcRegisterVmo(1, 0, std::move(vmo), 16, (pages * PAGE_SIZE) - 16));
 
   sdmmc_buffer_region_t buffer = {
       .buffer =
@@ -1430,12 +1404,11 @@ TEST_F(AmlSdmmcTest, OwnedVmoSingleBufferPageAligned) {
 
 TEST_F(AmlSdmmcTest, OwnedVmoWritePastEnd) {
   ASSERT_OK(dut_->Init());
-  pin_count = 0;
-  contiguous = false;
 
   zx::vmo vmo;
-  const size_t pages = fbl::round_up<size_t, size_t>(32 * 514, PAGE_SIZE);
-  ASSERT_OK(zx::vmo::create(pages, 0, &vmo));
+  const size_t pages = ((32 * 514) / PAGE_SIZE) + 1;
+  ASSERT_OK(zx::vmo::create(pages * PAGE_SIZE, 0, &vmo));
+  InitializeNonContiguousPaddrs(pages);
   EXPECT_OK(dut_->SdmmcRegisterVmo(1, 0, std::move(vmo), 32, 32 * 384));
 
   sdmmc_buffer_region_t buffer = {
@@ -1498,7 +1471,6 @@ TEST_F(AmlSdmmcTest, OwnedVmoWritePastEnd) {
 
 TEST_F(AmlSdmmcTest, SeparateClientVmoSpaces) {
   ASSERT_OK(dut_->Init());
-  pin_count = 0;
 
   zx::vmo vmo;
   ASSERT_OK(zx::vmo::create(PAGE_SIZE, 0, &vmo));
@@ -1538,7 +1510,8 @@ TEST_F(AmlSdmmcTest, SeparateClientVmoSpaces) {
 
 TEST_F(AmlSdmmcTest, RequestWithOwnedAndUnownedVmos) {
   ASSERT_OK(dut_->Init());
-  pin_count = 0;
+
+  InitializeContiguousPaddrs(10);
 
   zx::vmo vmos[5] = {};
   sdmmc_buffer_region_t buffers[10];
