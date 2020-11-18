@@ -24,7 +24,6 @@ namespace audio_fidl = ::llcpp::fuchsia::hardware::audio;
 
 static constexpr uint32_t kTestFrameRate1 = 48000;
 static constexpr uint32_t kTestFrameRate2 = 96000;
-static constexpr size_t kMaxLanes = 4;
 static constexpr float kTestGain = 2.f;
 static constexpr float kTestDeltaGain = 1.f;
 
@@ -100,18 +99,6 @@ struct CodecTest : public DeviceType, public SimpleCodecServer {
   sync_completion_t set_gain_completion_;
 };
 
-struct AmlTdmOutDeviceTest : public AmlTdmOutDevice {
-  static std::unique_ptr<AmlTdmOutDeviceTest> Create(ddk_mock::MockMmioRegRegion& region) {
-    return std::make_unique<AmlTdmOutDeviceTest>(region.GetMmioBuffer(), HIFI_PLL, TDM_OUT_C,
-                                                 FRDDR_C, MCLK_C, 0,
-                                                 metadata::AmlVersion::kS905D2G);
-  }
-  AmlTdmOutDeviceTest(ddk::MmioBuffer mmio, ee_audio_mclk_src_t clk_src, aml_tdm_out_t tdm,
-                      aml_frddr_t ddr, aml_tdm_mclk_t mclk, uint32_t fifo_depth,
-                      metadata::AmlVersion version)
-      : AmlTdmOutDevice(std::move(mmio), clk_src, tdm, ddr, mclk, fifo_depth, version) {}
-};
-
 struct AmlG12I2sOutTest : public AmlG12TdmStream {
   void SetCommonDefaults() {
     metadata_.is_input = false;
@@ -132,7 +119,7 @@ struct AmlG12I2sOutTest : public AmlG12TdmStream {
     SetCommonDefaults();
     codecs_.push_back(SimpleCodecClient());
     codecs_[0].SetProtocol(codec_protocol);
-    aml_audio_ = AmlTdmOutDeviceTest::Create(region);
+    aml_audio_ = std::make_unique<AmlTdmConfigDevice>(metadata_, region.GetMmioBuffer());
     metadata_.tdm.number_of_codecs = 1;
     metadata_.tdm.codecs[0] = metadata::Codec::Tas27xx;
   }
@@ -145,7 +132,7 @@ struct AmlG12I2sOutTest : public AmlG12TdmStream {
     codecs_.push_back(SimpleCodecClient());
     codecs_[0].SetProtocol(codec_protocol1);
     codecs_[1].SetProtocol(codec_protocol2);
-    aml_audio_ = AmlTdmOutDeviceTest::Create(region);
+    aml_audio_ = std::make_unique<AmlTdmConfigDevice>(metadata_, region.GetMmioBuffer());
     metadata_.tdm.number_of_codecs = 2;
     metadata_.tdm.codecs[0] = metadata::Codec::Tas27xx;
     metadata_.tdm.codecs[1] = metadata::Codec::Tas27xx;
@@ -179,7 +166,7 @@ struct AmlG12I2sOutTest : public AmlG12TdmStream {
       return status;
     }
 
-    return InitHW();
+    return aml_audio_->InitHW(metadata_, AUDIO_SET_FORMAT_REQ_BITMASK_DISABLED, kTestFrameRate1);
   }
 
   zx_status_t GetBuffer(const audio_proto::RingBufGetBufferReq& req, uint32_t* out_num_rb_frames,
@@ -242,6 +229,7 @@ struct AmlG12PcmOutTest : public AmlG12I2sOutTest {
     metadata_.tdm.bits_per_slot = 16;
     metadata_.tdm.number_of_codecs = 0;
     metadata_.tdm.sclk_on_raising = true;
+    aml_audio_ = std::make_unique<AmlTdmConfigDevice>(metadata_, region.GetMmioBuffer());
   }
 };
 
@@ -293,6 +281,7 @@ struct AmlG12LjtOutTest : public AmlG12I2sOutTest {
     metadata_.tdm.type = metadata::TdmType::StereoLeftJustified;
     metadata_.tdm.bits_per_sample = 16;
     metadata_.tdm.bits_per_slot = 16;
+    aml_audio_ = std::make_unique<AmlTdmConfigDevice>(metadata_, region.GetMmioBuffer());
   }
 };
 
@@ -344,6 +333,7 @@ struct AmlG12Tdm1OutTest : public AmlG12I2sOutTest {
     metadata_.lanes_enable_mask[0] = 0xf;
     metadata_.tdm.type = metadata::TdmType::Tdm1;
     metadata_.tdm.bits_per_slot = 16;
+    aml_audio_ = std::make_unique<AmlTdmConfigDevice>(metadata_, region.GetMmioBuffer());
   }
 };
 
@@ -777,39 +767,8 @@ TEST(AmlG12Tdm, I2sOutChangeRate96K) {
   controller->DdkRelease();
 }
 
-struct AmlTdmOutDeviceMuteTest : public AmlTdmOutDevice {
-  AmlTdmOutDeviceMuteTest(ddk_mock::MockMmioRegRegion& region)
-      : AmlTdmOutDevice(region.GetMmioBuffer(), HIFI_PLL, TDM_OUT_C, FRDDR_C, MCLK_C, 0,
-                        metadata::AmlVersion::kS905D2G) {}
-  zx_status_t ConfigTdmLane(size_t lane, uint32_t enable_mask, uint32_t mute_mask) override {
-    if (lane >= kMaxLanes) {
-      return ZX_ERR_INTERNAL;
-    }
-    last_enable_mask_[lane] = enable_mask;
-    last_mute_mask_[lane] = mute_mask;
-    return ZX_OK;
-  }
-  uint32_t last_enable_mask_[kMaxLanes] = {};
-  uint32_t last_mute_mask_[kMaxLanes] = {};
-};
-
 TEST(AmlG12Tdm, EnableAndMuteChannelsPcm1Channel) {
   fake_ddk::Bind tester;
-
-  struct AmlG12PcmOutMuteTest : public AmlG12I2sOutTest {
-    AmlG12PcmOutMuteTest(codec_protocol_t* codec_protocol, ddk_mock::MockMmioRegRegion& region,
-                         ddk::PDev pdev, ddk::GpioProtocolClient enable_gpio)
-        : AmlG12I2sOutTest(codec_protocol, region, std::move(pdev), std::move(enable_gpio)) {
-      metadata_.number_of_channels = 1;
-      metadata_.dai_number_of_channels = 1;
-      metadata_.lanes_enable_mask[0] = 1;  // 1 channel.
-      metadata_.tdm.type = metadata::TdmType::Tdm1;
-      metadata_.tdm.bits_per_slot = 16;
-      metadata_.tdm.sclk_on_raising = true;
-      aml_audio_ = std::make_unique<AmlTdmOutDeviceMuteTest>(region);
-    }
-    AmlTdmDevice* GetAmlTdmDevice() { return aml_audio_.get(); }
-  };
 
   auto codec = SimpleCodecServer::Create<CodecTest>(fake_ddk::kFakeParent);
   auto codec_proto = codec->GetProto();
@@ -817,33 +776,38 @@ TEST(AmlG12Tdm, EnableAndMuteChannelsPcm1Channel) {
   constexpr size_t kRegSize = S905D2_EE_AUDIO_LENGTH / sizeof(uint32_t);  // in 32 bits chunks.
   fbl::Array<ddk_mock::MockMmioReg> regs =
       fbl::Array(new ddk_mock::MockMmioReg[kRegSize], kRegSize);
-  ddk_mock::MockMmioRegRegion unused_mock(regs.data(), sizeof(uint32_t), kRegSize);
+  ddk_mock::MockMmioRegRegion mock(regs.data(), sizeof(uint32_t), kRegSize);
+
   ddk::PDev unused_pdev;
   ddk::MockGpio enable_gpio;
   enable_gpio.ExpectWrite(ZX_OK, 0);
-  auto controller = audio::SimpleAudioStream::Create<AmlG12PcmOutMuteTest>(
-      &codec_proto, unused_mock, unused_pdev, enable_gpio.GetProto());
+  auto controller = audio::SimpleAudioStream::Create<AmlG12PcmOutTest>(
+      &codec_proto, mock, unused_pdev, enable_gpio.GetProto());
   ASSERT_NOT_NULL(controller);
 
   audio_fidl::Device::SyncClient client_wrap(std::move(tester.FidlClient()));
   audio_fidl::Device::ResultOf::GetChannel channel_wrap = client_wrap.GetChannel();
   ASSERT_EQ(channel_wrap.status(), ZX_OK);
-
   audio_fidl::StreamConfig::SyncClient client(std::move(channel_wrap->channel));
 
-  auto aml = static_cast<AmlTdmOutDeviceMuteTest*>(controller->GetAmlTdmDevice());
-
-  ZX_ASSERT(metadata::kMaxNumberOfLanes >= 2);  // Test assumes at least 2.
-
-  // 1 channels enabled 1 lane.
-
-  // Initially 1 channel enabled nothing muted.
-  EXPECT_EQ(aml->last_enable_mask_[0], 1);
-  EXPECT_EQ(aml->last_enable_mask_[1], 0);
-  EXPECT_EQ(aml->last_mute_mask_[0], 0);
-  EXPECT_EQ(aml->last_mute_mask_[1], 0);
-
   // 1st case configure and keep everything enabled.
+  // Clear all muting.
+  mock[0x5ac].ExpectWrite(0);  // TDMOUT MUTE0.
+  mock[0x5b0].ExpectWrite(0);  // TDMOUT MUTE1.
+  mock[0x5b4].ExpectWrite(0);  // TDMOUT MUTE2.
+  mock[0x5b8].ExpectWrite(0);  // TDMOUT MUTE3.
+
+  // Enable 1 channel.
+  mock[0x58c].ExpectWrite(1);  // TDMOUT MASK0.
+  mock[0x590].ExpectWrite(0);  // TDMOUT MASK1.
+  mock[0x594].ExpectWrite(0);  // TDMOUT MASK2.
+  mock[0x598].ExpectWrite(0);  // TDMOUT MASK3.
+
+  // Nothing muted.
+  mock[0x5ac].ExpectWrite(0);  // TDMOUT MUTE0.
+  mock[0x5b0].ExpectWrite(0);  // TDMOUT MUTE1.
+  mock[0x5b4].ExpectWrite(0);  // TDMOUT MUTE2.
+  mock[0x5b8].ExpectWrite(0);  // TDMOUT MUTE3.
   {
     zx::channel local, remote;
     ASSERT_OK(zx::channel::create(0, &local, &remote));
@@ -859,13 +823,25 @@ TEST(AmlG12Tdm, EnableAndMuteChannelsPcm1Channel) {
     auto props = audio_fidl::RingBuffer::Call::GetProperties(zx::unowned_channel(local));
     ASSERT_OK(props.status());
   }
-  // Still one channel enabled, nothing muted.
-  EXPECT_EQ(aml->last_enable_mask_[0], 1);
-  EXPECT_EQ(aml->last_enable_mask_[1], 0);
-  EXPECT_EQ(aml->last_mute_mask_[0], 0);
-  EXPECT_EQ(aml->last_mute_mask_[1], 0);
 
   // 2nd case, disable the channel.
+  // Clear all muting.
+  mock[0x5ac].ExpectWrite(0);  // TDMOUT MUTE0.
+  mock[0x5b0].ExpectWrite(0);  // TDMOUT MUTE1.
+  mock[0x5b4].ExpectWrite(0);  // TDMOUT MUTE2.
+  mock[0x5b8].ExpectWrite(0);  // TDMOUT MUTE3.
+
+  // Enable 1 channel.
+  mock[0x58c].ExpectWrite(1);  // TDMOUT MASK0.
+  mock[0x590].ExpectWrite(0);  // TDMOUT MASK1.
+  mock[0x594].ExpectWrite(0);  // TDMOUT MASK2.
+  mock[0x598].ExpectWrite(0);  // TDMOUT MASK3.
+
+  // Mute the 1 channel.
+  mock[0x5ac].ExpectWrite(1);  // TDMOUT MUTE0.
+  mock[0x5b0].ExpectWrite(0);  // TDMOUT MUTE1.
+  mock[0x5b4].ExpectWrite(0);  // TDMOUT MUTE2.
+  mock[0x5b8].ExpectWrite(0);  // TDMOUT MUTE3.
   {
     zx::channel local, remote;
     ASSERT_OK(zx::channel::create(0, &local, &remote));
@@ -881,12 +857,8 @@ TEST(AmlG12Tdm, EnableAndMuteChannelsPcm1Channel) {
     auto props = audio_fidl::RingBuffer::Call::GetProperties(zx::unowned_channel(local));
     ASSERT_OK(props.status());
   }
-  // Now the channel gets muted.
-  EXPECT_EQ(aml->last_enable_mask_[0], 1);
-  EXPECT_EQ(aml->last_enable_mask_[1], 0);
-  EXPECT_EQ(aml->last_mute_mask_[0], 1);  // Mutes 1 channel in lane 0.
-  EXPECT_EQ(aml->last_mute_mask_[1], 0);
 
+  mock.VerifyAll();
   controller->DdkAsyncRemove();
   EXPECT_TRUE(tester.Ok());
   enable_gpio.VerifyAndClear();
@@ -902,48 +874,51 @@ TEST(AmlG12Tdm, EnableAndMuteChannelsTdm2Lanes) {
                                ddk::GpioProtocolClient enable_gpio)
         : AmlG12I2sOutTest(codec_protocol, region, std::move(pdev), std::move(enable_gpio)) {
       metadata_.number_of_channels = 4;
-      metadata_.lanes_enable_mask[0] = 3;  // L + R tweeters.
-      metadata_.lanes_enable_mask[1] = 3;  // Woofer in lane 1.
+      metadata_.lanes_enable_mask[0] = 0x3;
+      metadata_.lanes_enable_mask[1] = 0x3;
       metadata_.tdm.type = metadata::TdmType::Tdm1;
       metadata_.tdm.bits_per_slot = 16;
-      aml_audio_ = std::make_unique<AmlTdmOutDeviceMuteTest>(region);
+      aml_audio_ = std::make_unique<AmlTdmConfigDevice>(metadata_, region.GetMmioBuffer());
     }
-    AmlTdmDevice* GetAmlTdmDevice() { return aml_audio_.get(); }
   };
-
   auto codec = SimpleCodecServer::Create<CodecTest>(fake_ddk::kFakeParent);
   auto codec_proto = codec->GetProto();
 
   constexpr size_t kRegSize = S905D2_EE_AUDIO_LENGTH / sizeof(uint32_t);  // in 32 bits chunks.
   fbl::Array<ddk_mock::MockMmioReg> regs =
       fbl::Array(new ddk_mock::MockMmioReg[kRegSize], kRegSize);
-  ddk_mock::MockMmioRegRegion unused_mock(regs.data(), sizeof(uint32_t), kRegSize);
+  ddk_mock::MockMmioRegRegion mock(regs.data(), sizeof(uint32_t), kRegSize);
+
   ddk::PDev unused_pdev;
   ddk::MockGpio enable_gpio;
   enable_gpio.ExpectWrite(ZX_OK, 0);
   auto controller = audio::SimpleAudioStream::Create<AmlG12Tdm2LanesOutMuteTest>(
-      &codec_proto, unused_mock, unused_pdev, enable_gpio.GetProto());
+      &codec_proto, mock, unused_pdev, enable_gpio.GetProto());
   ASSERT_NOT_NULL(controller);
 
   audio_fidl::Device::SyncClient client_wrap(std::move(tester.FidlClient()));
   audio_fidl::Device::ResultOf::GetChannel channel_wrap = client_wrap.GetChannel();
   ASSERT_EQ(channel_wrap.status(), ZX_OK);
-
   audio_fidl::StreamConfig::SyncClient client(std::move(channel_wrap->channel));
 
-  auto aml = static_cast<AmlTdmOutDeviceMuteTest*>(controller->GetAmlTdmDevice());
-
-  ZX_ASSERT(metadata::kMaxNumberOfLanes >= 2);  // Test assumes at least 2.
-
-  // 4 channels enabled 2 lanes.
-
-  // Initially 4 channels enabled nothing muted.
-  EXPECT_EQ(aml->last_enable_mask_[0], 3);
-  EXPECT_EQ(aml->last_enable_mask_[1], 3);
-  EXPECT_EQ(aml->last_mute_mask_[0], 0);
-  EXPECT_EQ(aml->last_mute_mask_[1], 0);
-
   // 1st case configure and keep everything enabled.
+  // Clear all muting.
+  mock[0x5ac].ExpectWrite(0);  // TDMOUT MUTE0.
+  mock[0x5b0].ExpectWrite(0);  // TDMOUT MUTE1.
+  mock[0x5b4].ExpectWrite(0);  // TDMOUT MUTE2.
+  mock[0x5b8].ExpectWrite(0);  // TDMOUT MUTE3.
+
+  // Enable 2 channels in lane 0 and 2 channels in lane 1.
+  mock[0x58c].ExpectWrite(3);  // TDMOUT MASK0.
+  mock[0x590].ExpectWrite(3);  // TDMOUT MASK1.
+  mock[0x594].ExpectWrite(0);  // TDMOUT MASK2.
+  mock[0x598].ExpectWrite(0);  // TDMOUT MASK3.
+
+  // Nothing muted.
+  mock[0x5ac].ExpectWrite(0);  // TDMOUT MUTE0.
+  mock[0x5b0].ExpectWrite(0);  // TDMOUT MUTE1.
+  mock[0x5b4].ExpectWrite(0);  // TDMOUT MUTE2.
+  mock[0x5b8].ExpectWrite(0);  // TDMOUT MUTE3.
   {
     zx::channel local, remote;
     ASSERT_OK(zx::channel::create(0, &local, &remote));
@@ -959,13 +934,25 @@ TEST(AmlG12Tdm, EnableAndMuteChannelsTdm2Lanes) {
     auto props = audio_fidl::RingBuffer::Call::GetProperties(zx::unowned_channel(local));
     ASSERT_OK(props.status());
   }
-  // Still all enabled, nothing muted.
-  EXPECT_EQ(aml->last_enable_mask_[0], 3);
-  EXPECT_EQ(aml->last_enable_mask_[1], 3);
-  EXPECT_EQ(aml->last_mute_mask_[0], 0);
-  EXPECT_EQ(aml->last_mute_mask_[1], 0);
 
   // 2nd case configure and enable only one channel.
+  // Clear all muting.
+  mock[0x5ac].ExpectWrite(0);  // TDMOUT MUTE0.
+  mock[0x5b0].ExpectWrite(0);  // TDMOUT MUTE1.
+  mock[0x5b4].ExpectWrite(0);  // TDMOUT MUTE2.
+  mock[0x5b8].ExpectWrite(0);  // TDMOUT MUTE3.
+
+  // Enable 2 channels in lane 0 and 2 channels in lane 1.
+  mock[0x58c].ExpectWrite(3);  // TDMOUT MASK0.
+  mock[0x590].ExpectWrite(3);  // TDMOUT MASK1.
+  mock[0x594].ExpectWrite(0);  // TDMOUT MASK2.
+  mock[0x598].ExpectWrite(0);  // TDMOUT MASK3.
+
+  // Mute 1 channel in lane 0 and 2 channels in lane 1.
+  mock[0x5ac].ExpectWrite(2);  // TDMOUT MUTE0.
+  mock[0x5b0].ExpectWrite(3);  // TDMOUT MUTE1.
+  mock[0x5b4].ExpectWrite(0);  // TDMOUT MUTE2.
+  mock[0x5b8].ExpectWrite(0);  // TDMOUT MUTE3.
   {
     zx::channel local, remote;
     ASSERT_OK(zx::channel::create(0, &local, &remote));
@@ -980,13 +967,25 @@ TEST(AmlG12Tdm, EnableAndMuteChannelsTdm2Lanes) {
     auto props = audio_fidl::RingBuffer::Call::GetProperties(zx::unowned_channel(local));
     ASSERT_OK(props.status());
   }
-  // Now 3 channels get muted.
-  EXPECT_EQ(aml->last_enable_mask_[0], 3);
-  EXPECT_EQ(aml->last_enable_mask_[1], 3);
-  EXPECT_EQ(aml->last_mute_mask_[0], 2);  // Mutes 1 channel in lane 0.
-  EXPECT_EQ(aml->last_mute_mask_[1], 3);  // Mutes 2 channels in lane 1.
 
   // 3rd case configure and enable 2 channels.
+  // Clear all muting.
+  mock[0x5ac].ExpectWrite(0);  // TDMOUT MUTE0.
+  mock[0x5b0].ExpectWrite(0);  // TDMOUT MUTE1.
+  mock[0x5b4].ExpectWrite(0);  // TDMOUT MUTE2.
+  mock[0x5b8].ExpectWrite(0);  // TDMOUT MUTE3.
+
+  // Enable 2 channels in lane 0 and 2 channels in lane 1.
+  mock[0x58c].ExpectWrite(3);  // TDMOUT MASK0.
+  mock[0x590].ExpectWrite(3);  // TDMOUT MASK1.
+  mock[0x594].ExpectWrite(0);  // TDMOUT MASK2.
+  mock[0x598].ExpectWrite(0);  // TDMOUT MASK3.
+
+  // Mute 1 channels in lane 0 and 1 channel in lane 1.
+  mock[0x5ac].ExpectWrite(1);  // TDMOUT MUTE0.
+  mock[0x5b0].ExpectWrite(1);  // TDMOUT MUTE1.
+  mock[0x5b4].ExpectWrite(0);  // TDMOUT MUTE2.
+  mock[0x5b8].ExpectWrite(0);  // TDMOUT MUTE3.
   {
     zx::channel local, remote;
     ASSERT_OK(zx::channel::create(0, &local, &remote));
@@ -1001,12 +1000,8 @@ TEST(AmlG12Tdm, EnableAndMuteChannelsTdm2Lanes) {
     auto props = audio_fidl::RingBuffer::Call::GetProperties(zx::unowned_channel(local));
     ASSERT_OK(props.status());
   }
-  // Now 2 channels get muted.
-  EXPECT_EQ(aml->last_enable_mask_[0], 3);
-  EXPECT_EQ(aml->last_enable_mask_[1], 3);
-  EXPECT_EQ(aml->last_mute_mask_[0], 1);  // Mutes 1 channel in lane 0.
-  EXPECT_EQ(aml->last_mute_mask_[1], 1);  // Mutes 1 channel in lane 1.
 
+  mock.VerifyAll();
   controller->DdkAsyncRemove();
   EXPECT_TRUE(tester.Ok());
   enable_gpio.VerifyAndClear();
@@ -1016,53 +1011,44 @@ TEST(AmlG12Tdm, EnableAndMuteChannelsTdm2Lanes) {
 TEST(AmlG12Tdm, EnableAndMuteChannelsTdm1Lane) {
   fake_ddk::Bind tester;
 
-  struct AmlG12Tdm1LaneOutMuteTest : public AmlG12I2sOutTest {
-    AmlG12Tdm1LaneOutMuteTest(codec_protocol_t* codec_protocol, ddk_mock::MockMmioRegRegion& region,
-                              ddk::PDev pdev, ddk::GpioProtocolClient enable_gpio)
-        : AmlG12I2sOutTest(codec_protocol, region, std::move(pdev), std::move(enable_gpio)) {
-      metadata_.number_of_channels = 4;
-      metadata_.dai_number_of_channels = 4;
-      metadata_.lanes_enable_mask[0] = 0xf;  // All 4 speakers in lane 0.
-      metadata_.tdm.type = metadata::TdmType::Tdm1;
-      metadata_.tdm.bits_per_slot = 16;
-      aml_audio_ = std::make_unique<AmlTdmOutDeviceMuteTest>(region);
-    }
-    AmlTdmDevice* GetAmlTdmDevice() { return aml_audio_.get(); }
-  };
-
   auto codec = SimpleCodecServer::Create<CodecTest>(fake_ddk::kFakeParent);
   auto codec_proto = codec->GetProto();
 
   constexpr size_t kRegSize = S905D2_EE_AUDIO_LENGTH / sizeof(uint32_t);  // in 32 bits chunks.
   fbl::Array<ddk_mock::MockMmioReg> regs =
       fbl::Array(new ddk_mock::MockMmioReg[kRegSize], kRegSize);
-  ddk_mock::MockMmioRegRegion unused_mock(regs.data(), sizeof(uint32_t), kRegSize);
+  ddk_mock::MockMmioRegRegion mock(regs.data(), sizeof(uint32_t), kRegSize);
+
   ddk::PDev unused_pdev;
   ddk::MockGpio enable_gpio;
   enable_gpio.ExpectWrite(ZX_OK, 0);
-  auto controller = audio::SimpleAudioStream::Create<AmlG12Tdm1LaneOutMuteTest>(
-      &codec_proto, unused_mock, unused_pdev, enable_gpio.GetProto());
+  auto controller = audio::SimpleAudioStream::Create<AmlG12Tdm1OutTest>(
+      &codec_proto, mock, unused_pdev, enable_gpio.GetProto());
   ASSERT_NOT_NULL(controller);
 
   audio_fidl::Device::SyncClient client_wrap(std::move(tester.FidlClient()));
   audio_fidl::Device::ResultOf::GetChannel channel_wrap = client_wrap.GetChannel();
   ASSERT_EQ(channel_wrap.status(), ZX_OK);
-
   audio_fidl::StreamConfig::SyncClient client(std::move(channel_wrap->channel));
 
-  auto aml = static_cast<AmlTdmOutDeviceMuteTest*>(controller->GetAmlTdmDevice());
-
-  ZX_ASSERT(metadata::kMaxNumberOfLanes >= 2);  // Test assumes at least 2.
-
-  // 4 channels enabled 1 lane.
-
-  // Initially 4 channels enabled nothing muted.
-  EXPECT_EQ(aml->last_enable_mask_[0], 0xf);
-  EXPECT_EQ(aml->last_enable_mask_[1], 0);
-  EXPECT_EQ(aml->last_mute_mask_[0], 0);
-  EXPECT_EQ(aml->last_mute_mask_[1], 0);
-
   // 1st case configure and keep everything enabled.
+  // Clear all muting.
+  mock[0x5ac].ExpectWrite(0);  // TDMOUT MUTE0.
+  mock[0x5b0].ExpectWrite(0);  // TDMOUT MUTE1.
+  mock[0x5b4].ExpectWrite(0);  // TDMOUT MUTE2.
+  mock[0x5b8].ExpectWrite(0);  // TDMOUT MUTE3.
+
+  // Enable 4 channels in lane 0.
+  mock[0x58c].ExpectWrite(0xf);  // TDMOUT MASK0.
+  mock[0x590].ExpectWrite(0);    // TDMOUT MASK1.
+  mock[0x594].ExpectWrite(0);    // TDMOUT MASK2.
+  mock[0x598].ExpectWrite(0);    // TDMOUT MASK3.
+
+  // Nothing muted.
+  mock[0x5ac].ExpectWrite(0);  // TDMOUT MUTE0.
+  mock[0x5b0].ExpectWrite(0);  // TDMOUT MUTE1.
+  mock[0x5b4].ExpectWrite(0);  // TDMOUT MUTE2.
+  mock[0x5b8].ExpectWrite(0);  // TDMOUT MUTE3.
   {
     zx::channel local, remote;
     ASSERT_OK(zx::channel::create(0, &local, &remote));
@@ -1078,13 +1064,25 @@ TEST(AmlG12Tdm, EnableAndMuteChannelsTdm1Lane) {
     auto props = audio_fidl::RingBuffer::Call::GetProperties(zx::unowned_channel(local));
     ASSERT_OK(props.status());
   }
-  // Still all enabled, nothing muted.
-  EXPECT_EQ(aml->last_enable_mask_[0], 0xf);
-  EXPECT_EQ(aml->last_enable_mask_[1], 0);
-  EXPECT_EQ(aml->last_mute_mask_[0], 0);
-  EXPECT_EQ(aml->last_mute_mask_[1], 0);
 
   // 2nd case configure and enable only one channel.
+  // Clear all muting.
+  mock[0x5ac].ExpectWrite(0);  // TDMOUT MUTE0.
+  mock[0x5b0].ExpectWrite(0);  // TDMOUT MUTE1.
+  mock[0x5b4].ExpectWrite(0);  // TDMOUT MUTE2.
+  mock[0x5b8].ExpectWrite(0);  // TDMOUT MUTE3.
+
+  // Enable 4 channels in lane 0.
+  mock[0x58c].ExpectWrite(0xf);  // TDMOUT MASK0.
+  mock[0x590].ExpectWrite(0);    // TDMOUT MASK1.
+  mock[0x594].ExpectWrite(0);    // TDMOUT MASK2.
+  mock[0x598].ExpectWrite(0);    // TDMOUT MASK3.
+
+  // Mute 3 channels in lane 0.
+  mock[0x5ac].ExpectWrite(0xe);  // TDMOUT MUTE0.
+  mock[0x5b0].ExpectWrite(0);    // TDMOUT MUTE1.
+  mock[0x5b4].ExpectWrite(0);    // TDMOUT MUTE2.
+  mock[0x5b8].ExpectWrite(0);    // TDMOUT MUTE3.
   {
     zx::channel local, remote;
     ASSERT_OK(zx::channel::create(0, &local, &remote));
@@ -1099,13 +1097,25 @@ TEST(AmlG12Tdm, EnableAndMuteChannelsTdm1Lane) {
     auto props = audio_fidl::RingBuffer::Call::GetProperties(zx::unowned_channel(local));
     ASSERT_OK(props.status());
   }
-  // Now 3 channels get muted.
-  EXPECT_EQ(aml->last_enable_mask_[0], 0xf);
-  EXPECT_EQ(aml->last_enable_mask_[1], 0);
-  EXPECT_EQ(aml->last_mute_mask_[0], 0xe);  // Mutes 3 channels in lane 0.
-  EXPECT_EQ(aml->last_mute_mask_[1], 0);
 
   // 3rd case configure and enable 2 channels.
+  // Clear all muting.
+  mock[0x5ac].ExpectWrite(0);  // TDMOUT MUTE0.
+  mock[0x5b0].ExpectWrite(0);  // TDMOUT MUTE1.
+  mock[0x5b4].ExpectWrite(0);  // TDMOUT MUTE2.
+  mock[0x5b8].ExpectWrite(0);  // TDMOUT MUTE3.
+
+  // Enable 2 channels in lane 0 and 2 channels in lane 1.
+  mock[0x58c].ExpectWrite(0xf);  // TDMOUT MASK0.
+  mock[0x590].ExpectWrite(0);    // TDMOUT MASK1.
+  mock[0x594].ExpectWrite(0);    // TDMOUT MASK2.
+  mock[0x598].ExpectWrite(0);    // TDMOUT MASK3.
+
+  // Mute 2 channels in lane 0.
+  mock[0x5ac].ExpectWrite(5);  // TDMOUT MUTE0.
+  mock[0x5b0].ExpectWrite(0);  // TDMOUT MUTE1.
+  mock[0x5b4].ExpectWrite(0);  // TDMOUT MUTE2.
+  mock[0x5b8].ExpectWrite(0);  // TDMOUT MUTE3.
   {
     zx::channel local, remote;
     ASSERT_OK(zx::channel::create(0, &local, &remote));
@@ -1120,28 +1130,13 @@ TEST(AmlG12Tdm, EnableAndMuteChannelsTdm1Lane) {
     auto props = audio_fidl::RingBuffer::Call::GetProperties(zx::unowned_channel(local));
     ASSERT_OK(props.status());
   }
-  // Now 2 channels get muted.
-  EXPECT_EQ(aml->last_enable_mask_[0], 0xf);
-  EXPECT_EQ(aml->last_enable_mask_[1], 0);
-  EXPECT_EQ(aml->last_mute_mask_[0], 0x5);  // Mutes 2 channels in lane 0.
-  EXPECT_EQ(aml->last_mute_mask_[1], 0);
 
+  mock.VerifyAll();
   controller->DdkAsyncRemove();
   EXPECT_TRUE(tester.Ok());
   enable_gpio.VerifyAndClear();
   controller->DdkRelease();
 }
-
-struct AmlTdmInDeviceTest : public AmlTdmInDevice {
-  static std::unique_ptr<AmlTdmInDeviceTest> Create(ddk_mock::MockMmioRegRegion& region) {
-    return std::make_unique<AmlTdmInDeviceTest>(region.GetMmioBuffer(), HIFI_PLL, TDM_IN_C, TODDR_C,
-                                                MCLK_C, 0, metadata::AmlVersion::kS905D2G);
-  }
-  AmlTdmInDeviceTest(ddk::MmioBuffer mmio, ee_audio_mclk_src_t clk_src, aml_tdm_in_t tdm,
-                     aml_toddr_t ddr, aml_tdm_mclk_t mclk, uint32_t fifo_depth,
-                     metadata::AmlVersion version)
-      : AmlTdmInDevice(std::move(mmio), clk_src, tdm, ddr, mclk, fifo_depth, version) {}
-};
 
 struct AmlG12I2sInTest : public AmlG12TdmStream {
   AmlG12I2sInTest(ddk_mock::MockMmioRegRegion& region, ddk::PDev pdev,
@@ -1159,7 +1154,7 @@ struct AmlG12I2sInTest : public AmlG12TdmStream {
     metadata_.tdm.bits_per_sample = 16;
     metadata_.tdm.bits_per_slot = 32;
     metadata_.tdm.number_of_codecs = 0;
-    aml_audio_ = AmlTdmInDeviceTest::Create(region);
+    aml_audio_ = std::make_unique<AmlTdmConfigDevice>(metadata_, region.GetMmioBuffer());
   }
 
   zx_status_t Init() __TA_REQUIRES(domain_token()) override {
@@ -1184,9 +1179,7 @@ struct AmlG12I2sInTest : public AmlG12TdmStream {
 
     unique_id_ = AUDIO_STREAM_UNIQUE_ID_BUILTIN_SPEAKERS;
 
-    InitHW();
-
-    return ZX_OK;
+    return aml_audio_->InitHW(metadata_, AUDIO_SET_FORMAT_REQ_BITMASK_DISABLED, kTestFrameRate1);
   }
 };
 
@@ -1200,6 +1193,7 @@ struct AmlG12PcmInTest : public AmlG12I2sInTest {
     metadata_.tdm.type = metadata::TdmType::Tdm1;
     metadata_.tdm.bits_per_slot = 16;
     metadata_.tdm.sclk_on_raising = true;
+    aml_audio_ = std::make_unique<AmlTdmConfigDevice>(metadata_, region.GetMmioBuffer());
   }
 };
 

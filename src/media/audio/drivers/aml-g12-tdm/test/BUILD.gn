@@ -10,6 +10,7 @@ executable("aml-g12-tdm-test-bin") {
   configs += [ "//build/config:all_source" ]
   testonly = true
   sources = [
+    "../aml-tdm-config-device.cc",
     "../audio-stream.cc",
     "test.cc",
   ]

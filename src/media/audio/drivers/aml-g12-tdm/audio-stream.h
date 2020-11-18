@@ -25,6 +25,8 @@
 #include <fbl/mutex.h>
 #include <soc/aml-common/aml-tdm-audio.h>
 
+#include "aml-tdm-config-device.h"
+
 namespace audio {
 namespace aml_g12 {
 
@@ -46,13 +48,12 @@ class AmlG12TdmStream : public SimpleAudioStream {
 
   // Protected for unit test.
   zx_status_t InitCodec();
-  zx_status_t InitHW();
   zx_status_t InitPDev();
   void InitDaiFormats();
   zx_status_t InitCodecsGain() __TA_REQUIRES(domain_token());
 
   std::vector<SimpleCodecClient> codecs_;
-  std::unique_ptr<AmlTdmDevice> aml_audio_;
+  std::unique_ptr<AmlTdmConfigDevice> aml_audio_;
   metadata::AmlConfig metadata_ = {};
 
  private:

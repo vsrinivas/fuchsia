@@ -25,7 +25,10 @@ driver_module("aml-g12-tdm") {
     "//build/config/fuchsia:static_cpp_standard_library",
     "//build/unification/config:zircon-migrated",
   ]
-  sources = [ "audio-stream.cc" ]
+  sources = [
+    "aml-tdm-config-device.cc",
+    "audio-stream.cc",
+  ]
 
   deps = [
     ":aml-g12-tdm-bind",
