@@ -39,9 +39,9 @@ declare -rx KBUILD_BUILD_HOST="fuchsia.com"
 
 case "${1}" in
 arm64)
-  type aarch64-linux-gnu-gcc ||
-    { echo "Required package gcc-aarch64-linux-gnu is not installed."
-      echo "(sudo apt install gcc-aarch64-linux-gnu)"; exit 1; }
+  type aarch64-linux-gnu-gcc-9 ||
+    { echo "Required package gcc-aarch64-linux-gnu-9 is not installed."
+      echo "(sudo apt install gcc-aarch64-linux-gnu-9)"; exit 1; }
 
   declare -rx ARCH=arm64
   declare -x CROSS_COMPILE=aarch64-linux-gnu-
@@ -53,6 +53,9 @@ x64)
 *)
   usage;;
 esac
+
+# Current default branch isn't compatible with gcc10
+declare -x CC=${CROSS_COMPILE}gcc-9
 
 if [ -n "${LINUX_BRANCH}" ]; then
   # Shallow clone the repository.
@@ -74,8 +77,9 @@ fi
 
 # Build Linux.
 pushd "${LINUX_DIR}"
-make "${LINUX_DEFCONFIG}"
-make -j $(getconf _NPROCESSORS_ONLN)
+# CC must be specified on the command line to override the setting in Makefile
+make CC=${CC} "${LINUX_DEFCONFIG}"
+make CC=${CC} -j $(getconf _NPROCESSORS_ONLN)
 popd
 
 if [ -n "${LINUX_OUT}" ]; then
