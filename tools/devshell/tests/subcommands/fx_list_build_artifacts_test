@@ -180,20 +180,20 @@ EOF
 }
 
 TEST_fx-list-build-artifacts-no-mode() {
-  BT_EXPECT_FAIL ${fx} list-build-artifacts 1> /dev/null 2> stderr
+  BT_EXPECT_FAIL "${fx}" list-build-artifacts 1> /dev/null 2> stderr
   BT_EXPECT_FILE_CONTAINS_SUBSTRING stderr "MODE must be specified"
 }
 
 TEST_fx-list-build-artifacts-allow-empty-and-expect-one() {
-  BT_EXPECT_FAIL ${fx} list-build-artifacts images --allow-empty --expect-one 1> /dev/null 2> stderr
+  BT_EXPECT_FAIL "${fx}" list-build-artifacts images --allow-empty --expect-one 1> /dev/null 2> stderr
   BT_EXPECT_FILE_CONTAINS_SUBSTRING stderr "cannot set both --allow-empty and --expect-one"
 }
 
 TEST_fx-list-build-artifacts-unknown-name() {
-  BT_EXPECT_FAIL ${fx} list-build-artifacts images --name unknown 1> /dev/null 2> stderr
+  BT_EXPECT_FAIL "${fx}" list-build-artifacts images --name unknown 1> /dev/null 2> stderr
   BT_EXPECT_FILE_CONTAINS_SUBSTRING stderr "found no artifacts in the GN graph of type \"images\" with (name, os, cpu, type) == (\"unknown\", \"\*\", \"\*\", \"\*\")"
 
-  BT_EXPECT_FAIL ${fx} list-build-artifacts tools --name unknown 1> /dev/null 2> stderr
+  BT_EXPECT_FAIL "${fx}" list-build-artifacts tools --name unknown 1> /dev/null 2> stderr
   # Filtering for tools should default to HOST_OS and HOST_CPU.
   BT_EXPECT_FILE_CONTAINS_SUBSTRING stderr "found no artifacts in the GN graph of type \"tools\" with (name, os, cpu, type) == (\"unknown\", \"${HOST_OS}\", \"${HOST_CPU}\", \"\*\")"
 }
@@ -252,7 +252,7 @@ TEST_fx-list-build-artifacts-tools-by-os() {
   BT_EXPECT_EQ "$(${fx} list-build-artifacts tools --allow-empty --os unknown)" ""
 
   # CPU-filtering should default to HOST_CPU.
-  BT_EXPECT_EQ "$(${fx} list-build-artifacts tools --allow-empty --os ${HOST_OS})" "host_${HOST_CPU}/bootserver host_${HOST_CPU}/botanist"
+  BT_EXPECT_EQ "$(${fx} list-build-artifacts tools --allow-empty --os "${HOST_OS}")" "host_${HOST_CPU}/bootserver host_${HOST_CPU}/botanist"
 }
 
 TEST_fx-list-build-artifacts-generated-sources() {

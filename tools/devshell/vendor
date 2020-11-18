@@ -19,8 +19,8 @@ function main {
     for d in "${FUCHSIA_DIR}"/vendor/*; do
       # list all subcommands with summaries, grouped by categories
       commands vendor "$(basename "$d")" | xargs awk \
-        -v hide_contrib=${hide_contrib} \
-        -v show_deprecated=${show_deprecated} \
+        -v hide_contrib="${hide_contrib}" \
+        -v show_deprecated="${show_deprecated}" \
         -f "${FUCHSIA_DIR}/scripts/fx-help.awk"
     done
 

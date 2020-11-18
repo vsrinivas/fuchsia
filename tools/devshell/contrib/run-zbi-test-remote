@@ -110,6 +110,6 @@ for arg in "${cmdline_args[@]}" ; do
   args+=(-c "$arg")
 done
 
-bootserver="$(fetch_or_build_tool ${host} ${dir} ${artifact_dir} bootserver)"
+bootserver="$(fetch_or_build_tool "${host}" ${dir} "${artifact_dir}" bootserver)"
 cd "${artifact_dir}"
 exec "${bootserver}" --boot "${zbi_test}" -- "${args[@]}"

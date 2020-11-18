@@ -51,7 +51,7 @@ TEST_noargs_uses_prebuilt_new_binary() {
   btf::make_mock "${BT_TEMP_DIR}/prebuilt/gui_tools/fuchsia_devtools/macos-extracted-temp"
   btf::make_mock "${BT_TEMP_DIR}/prebuilt/gui_tools/fuchsia_devtools/linux/fuchsia_devtools"
 
-  BT_EXPECT ${fx} fdt
+  BT_EXPECT "${fx}" fdt
 
   if [[ $HOST_PLATFORM == "mac-x64" ]]; then
     BT_EXPECT btf::does-mock-args-contain "${unzip}.mock_state" "-d ${BT_TEMP_DIR}/prebuilt/gui_tools/fuchsia_devtools/macos-extracted-temp"
@@ -64,7 +64,7 @@ TEST_noargs_uses_prebuilt_old_binary() {
   btf::make_mock "${BT_TEMP_DIR}/prebuilt/gui_tools/fuchsia_devtools/macos-extracted-temp"
   btf::make_mock "${BT_TEMP_DIR}/prebuilt/gui_tools/system_monitor/linux/fuchsia_devtools"
 
-  BT_EXPECT ${fx} fdt
+  BT_EXPECT "${fx}" fdt
 
   if [[ $HOST_PLATFORM == "mac-x64" ]]; then
     BT_EXPECT btf::does-mock-args-contain "${unzip}.mock_state" "-d ${BT_TEMP_DIR}/prebuilt/gui_tools/fuchsia_devtools/macos-extracted-temp"
@@ -75,7 +75,7 @@ TEST_noargs_uses_prebuilt_old_binary() {
 TEST_prebuilt_unavailable() {
   local out="${BT_TEMP_DIR}/_fx_test_output"
 
-  BT_EXPECT_FAIL ${fx} fdt > "${out}"
+  BT_EXPECT_FAIL "${fx}" fdt > "${out}"
   BT_EXPECT_FILE_CONTAINS_SUBSTRING "${out}" "JIRI"
 }
 
@@ -85,7 +85,7 @@ TEST_uses_cipd_for_latest_new_binary() {
   btf::make_mock "${BT_TEMP_DIR}/prebuilt/gui_tools/download/fuchsia_devtools/macos-extracted-temp"
   btf::make_mock "${BT_TEMP_DIR}/prebuilt/gui_tools/download/fuchsia_devtools/linux/fuchsia_devtools"
 
-  BT_EXPECT ${fx} fdt latest
+  BT_EXPECT "${fx}" fdt latest
 
   if [[ $HOST_PLATFORM == "mac-x64" ]]; then
     BT_EXPECT btf::does-mock-args-contain "${unzip}.mock_state" "-d ${BT_TEMP_DIR}/prebuilt/gui_tools/download/fuchsia_devtools/macos-extracted-temp"
@@ -99,7 +99,7 @@ TEST_uses_cipd_for_latest_old_binary() {
   btf::make_mock "${BT_TEMP_DIR}/prebuilt/gui_tools/download/fuchsia_devtools/macos-extracted-temp"
   btf::make_mock "${BT_TEMP_DIR}/prebuilt/gui_tools/download/system_monitor/linux/fuchsia_devtools"
 
-  BT_EXPECT ${fx} fdt latest
+  BT_EXPECT "${fx}" fdt latest
 
   if [[ $HOST_PLATFORM == "mac-x64" ]]; then
     BT_EXPECT btf::does-mock-args-contain "${unzip}.mock_state" "-d ${BT_TEMP_DIR}/prebuilt/gui_tools/download/fuchsia_devtools/macos-extracted-temp"
@@ -136,7 +136,7 @@ EOF
 EOF
   fi
 
-  BT_EXPECT ${fx} fdt
+  BT_EXPECT "${fx}" fdt
 
   if [[ $HOST_PLATFORM == "mac-x64" ]]; then
     FDT="$FDT_MOVED"

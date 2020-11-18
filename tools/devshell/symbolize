@@ -112,7 +112,7 @@ function exit-with-warning {
              "authenticated in gcloud and you have permission to access" \
              "the remote symbols servers.\nSee \`fx help symbolize\` for more information"
   fi
-  exit ${error_code}
+  exit "${error_code}"
 }
 
 declare ids_txt=()

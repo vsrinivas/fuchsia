@@ -56,7 +56,7 @@ EOF
 
 # Ensure that formatting an unchanged tree works
 TEST_fx-format-code-no-args() {
-  BT_EXPECT ${fx} format-code 2> stderr
+  BT_EXPECT "${fx}" format-code 2> stderr
 }
 
 # Ensure that the commands for common file types are sensible.
@@ -71,7 +71,7 @@ TEST_fx-format-code-commands() {
   )
   local csfiles
   printf -v csfiles ",%s" "${files[@]}"
-  BT_EXPECT ${fx} format-code --verbose --files="${csfiles:1}" > "${out}"
+  BT_EXPECT "${fx}" format-code --verbose --files="${csfiles:1}" > "${out}"
   BT_EXPECT grep -q -E '"clang-format.*cplusplus.cc"' "${out}"
   BT_EXPECT grep -q -E '"gn format.*gn.gn"' "${out}"
   BT_EXPECT grep -q -E '"gn format.*gn.gni"' "${out}"

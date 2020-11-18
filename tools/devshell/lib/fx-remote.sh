@@ -11,7 +11,7 @@ function load_remote_info {
   local current_host="$1"
   # if remote_host is not given, check if there's cached info
   if [[ -z "${current_host}" && -f "${FUCHSIA_DIR}/${_REMOTE_INFO_CACHE_FILE}" ]]; then
-    cached="$(<${FUCHSIA_DIR}/${_REMOTE_INFO_CACHE_FILE})"
+    cached="$(<"${FUCHSIA_DIR}"/${_REMOTE_INFO_CACHE_FILE})"
     remote_host=${cached%:*}
     remote_dir=${cached#*:}
     {
@@ -68,12 +68,12 @@ function fetch_or_build_tool {
   local local_dir="$3"
   local tool_name="$4"
 
-  local tool="$(ssh "${host}" "cd ${remote_checkout} && .jiri_root/bin/fx list-build-artifacts --build --allow-empty --os ${HOST_OS} --cpu ${HOST_CPU}" --name ${tool_name} tools)"
+  local tool="$(ssh "${host}" "cd ${remote_checkout} && .jiri_root/bin/fx list-build-artifacts --build --allow-empty --os ${HOST_OS} --cpu ${HOST_CPU}" --name "${tool_name}" tools)"
   if [[ -n "${tool}" ]] ; then
     local remote_build_dir="$(get_remote_build_dir "${host}" "${remote_checkout}")" || exit $?
     rsync --compress --partial --progress --relative "${host}:${remote_build_dir}/./${tool}" "${local_dir}" >&2 || exit $?
   else
-    tool="$(fx-command-run list-build-artifacts --build --expect-one --name ${tool_name} tools)" || exit $?
+    tool="$(fx-command-run list-build-artifacts --build --expect-one --name "${tool_name}" tools)" || exit $?
     rm -f "${local_dir}/${tool}"
     mkdir -p "${local_dir}/$(dirname "$tool")"
     cp "${FUCHSIA_BUILD_DIR}/${tool}" "${local_dir}/${tool}"

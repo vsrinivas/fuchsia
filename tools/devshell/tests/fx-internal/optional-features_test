@@ -44,11 +44,11 @@ EOF
   # check that the command, when executed through fx, works as intended for
   # an optional feature. It should return 0 (true), since the feature
   # is not disabled explicitly, hence enabled.
-  BT_EXPECT ${fx} ${cmd}
+  BT_EXPECT "${fx}" ${cmd}
 
   # Now it should return false, since the feature is explicitly disabled
   # in the fx invocation.
-  BT_EXPECT_FAIL ${fx} --disable=${valid_feature} ${cmd}
+  BT_EXPECT_FAIL "${fx}" --disable="${valid_feature}" ${cmd}
 }
 
 TEST_features_are_valid() {

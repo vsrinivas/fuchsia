@@ -183,7 +183,7 @@ function main {
       gn_args+=" import(\"//${board}\") import(\"//${product}\")"
       ;;
     *)
-      fx-error Unable to parse PRODUCT.BOARD goal \"$1\"
+      fx-error Unable to parse PRODUCT.BOARD goal \""$1"\"
       explain-goal-argument
       return 1
       ;;
@@ -469,7 +469,7 @@ host_labels+=["
   fx-build-dir-write "${config_build_dir}"
 
   if [[ -f "${build_dir}/rust-project.json" ]]; then
-    ln -f -s "${build_dir}/rust-project.json" $FUCHSIA_DIR/rust-project.json
+    ln -f -s "${build_dir}/rust-project.json" "$FUCHSIA_DIR"/rust-project.json
   fi
 
   if [[ "${use_goma}" -eq 1 ]] && [[ "${ensure_goma}" -eq 1 ]]; then

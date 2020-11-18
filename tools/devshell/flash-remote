@@ -98,7 +98,7 @@ artifact_dir="${FUCHSIA_DIR}/out/fetched"
 fetch_remote_build_artifacts "${host}" "${dir}" "${artifact_dir}" flash $build
 
 if "${flash}"; then
-  fetch_or_build_tool ${host} ${dir} "${artifact_dir}" fastboot
+  fetch_or_build_tool "${host}" ${dir} "${artifact_dir}" fastboot
   cd "${artifact_dir}"
   fx-flash "${serial}" "${device}"
 fi

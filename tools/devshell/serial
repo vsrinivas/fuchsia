@@ -54,7 +54,7 @@ if [[ ! -r "$DEVICE" ]]; then
     owninggroup=$(stat "$DEVICE" --printf="%G")
     if [[ ! -r "$DEVICE" ]]; then
       fx-error "$DEVICE is not readable by $USER"
-      fx-error " fix: sudo usermod -a -G "$owninggroup" $USER"
+      fx-error " fix: sudo usermod -a -G ""$owninggroup"" $USER"
       fx-error "You need to start a new login session for a group change to take effect"
       exit 1
     fi

@@ -26,7 +26,7 @@ TEST_fxvendor_exec() {
   local cmd_path="${BT_TEMP_DIR}/vendor/company1/scripts/devshell/mycommand"
   btf::make_mock "$cmd_path"
 
-  BT_EXPECT ${fx} vendor company1 mycommand arg1 arg2
+  BT_EXPECT "${fx}" vendor company1 mycommand arg1 arg2
   # ensure that 'mycommand arg1 arg2' was called
   btf::expect-mock-args "${cmd_path}" "arg1" "arg2"
 }
@@ -39,7 +39,7 @@ TEST_fxvendor_conflict_vendor() {
   btf::make_mock "${vendor_cmd}"
   btf::make_mock "${nonvendor_cmd}"
 
-  BT_EXPECT ${fx} vendor company1 mycommand arg1 arg2
+  BT_EXPECT "${fx}" vendor company1 mycommand arg1 arg2
   btf::expect-mock-args "${vendor_cmd}" "arg1" "arg2"
   BT_EXPECT_FILE_DOES_NOT_EXIST "${nonvendor_cmd}.mock_state"
 }
@@ -52,7 +52,7 @@ TEST_fxvendor_conflict_nonvendor() {
   btf::make_mock "${vendor_cmd}"
   btf::make_mock "${nonvendor_cmd}"
 
-  BT_EXPECT ${fx} mycommand argA argB
+  BT_EXPECT "${fx}" mycommand argA argB
   btf::expect-mock-args "${nonvendor_cmd}" "argA" "argB"
   BT_EXPECT_FILE_DOES_NOT_EXIST "${vendor_cmd}.mock_state"
 }
@@ -65,7 +65,7 @@ TEST_fxvendor_metadata() {
   mkdir -p "$(dirname "${metadata_path}")"
   echo '#### EXECUTABLE=${FUCHSIA_DIR}/prebuilt/mytool/binary' > "${metadata_path}"
 
-  BT_EXPECT ${fx} vendor company1 mycommand arg1 arg2
+  BT_EXPECT "${fx}" vendor company1 mycommand arg1 arg2
   # ensure that 'binary arg1 arg2' was called
   btf::expect-mock-args "${binary_path}" "arg1" "arg2"
 }
@@ -77,7 +77,7 @@ TEST_fxvendor_nonvendorcmd() {
   local nonvendor_path="${BT_TEMP_DIR}/tools/devshell/nonvendorcmd"
   btf::make_mock "$nonvendor_path"
 
-  BT_EXPECT_FAIL ${fx} vendor company1 nonvendorcmd \>\& _stderr
+  BT_EXPECT_FAIL "${fx}" vendor company1 nonvendorcmd \>\& _stderr
 }
 
 BT_RUN_TESTS "$@"

@@ -78,7 +78,7 @@ TEST_getdeviceaddr_resolved_ipv6_addresses_setdevice() {
     "c1::8" "::8" "::" "fe80::7:8%eth0" "fe80::7:8%1" )
   for addr in "${addrs[@]}"; do
     # fx syntax requires that IPv6 address is surrounded by square brackets
-    BT_EXPECT ${fx} set-device "[${addr}]" >/dev/null
+    BT_EXPECT "${fx}" set-device "[${addr}]" >/dev/null
     BT_EXPECT_EQ "$(${fx} get-device-addr)" "${addr}"
     BT_EXPECT_FILE_DOES_NOT_EXIST "${devfinder}.mock_state"
     BT_EXPECT_FILE_DOES_NOT_EXIST "${devfinder}.mock_state.1"

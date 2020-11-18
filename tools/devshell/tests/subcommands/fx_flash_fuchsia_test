@@ -41,7 +41,7 @@ if [[ "\$1" == "devices" ]]; then
   echo "97300YCABZZ5AA	fastboot"
 fi
 INPUT
-  BT_EXPECT ${fx} flash
+  BT_EXPECT "${fx}" flash
   source "${flash_script}.mock_state"
   BT_EXPECT [[ "${BT_MOCK_ARGS[1]}" == "--ssh-key="*".ssh/fuchsia_authorized_keys" ]]
 }
@@ -54,13 +54,13 @@ if [[ "\$1" == "devices" ]]; then
   echo "97300YCABZZ5AA	fastboot"
 fi
 INPUT
-  BT_EXPECT ${fx} flash 2>/dev/null
+  BT_EXPECT "${fx}" flash 2>/dev/null
   source "${flash_script}.mock_state"
   btf::expect-mock-args "${flash_script}" --recovery
 }
 
 TEST_fx_flash_with_serial() {
-  BT_EXPECT ${fx} flash -s 12345
+  BT_EXPECT "${fx}" flash -s 12345
   source "${flash_script}.mock_state"
   btf::expect-mock-args "${flash_script}" \
     "--ssh-key=${BT_TEMP_DIR}/.ssh/fuchsia_authorized_keys" \

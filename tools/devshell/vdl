@@ -91,7 +91,7 @@ VDL_PROTO="/tmp/vdl_proto"
 function find_unused_tcp_port {
   local server_port="${1}"
   local max_port=59759
-  while ss -latn | grep -q :${server_port} && server_port < ${max_port}; do
+  while ss -latn | grep -q :"${server_port}" && server_port < ${max_port}; do
     server_port=$((${server_port} + 1))
   done
   echo "${server_port}"

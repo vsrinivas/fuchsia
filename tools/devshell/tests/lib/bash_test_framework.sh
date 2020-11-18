@@ -241,7 +241,7 @@ declare -r -i MAX_ERROR_STATUS=255  # 0-255 is the range of values available for
 # functions and variables should not be called / used by test scripts.
 
 # Constants
-readonly _BTF_HOST_SCRIPT_NAME="$(basename $0)"
+readonly _BTF_HOST_SCRIPT_NAME="$(basename "$0")"
 readonly _BTF_HOST_SCRIPT_DIR="$(cd "$(dirname "$0")" >/dev/null 2>&1 && pwd)"
 readonly _BTF_HOST_SCRIPT="${_BTF_HOST_SCRIPT_DIR}/${_BTF_HOST_SCRIPT_NAME}"
 readonly _BTF_ASSERT_ERROR_COUNT_MESSAGE_PREFIX="Current error count is"
@@ -401,7 +401,7 @@ btf::abort() {
   else
     btf::error "$@"
   fi
-  exit ${status}
+  exit "${status}"
 }
 
 #######################################
@@ -461,7 +461,7 @@ btf::success() {
 btf::_end_of_test() {
   local -i status=$1
   printf "%s" "${_BTF_END_OF_TEST_MARKER}"
-  exit ${status}
+  exit "${status}"
 }
 
 #######################################
@@ -477,7 +477,7 @@ btf::_assert_failed() {
   fi
   echo ". ${_BTF_ASSERT_ERROR_COUNT_MESSAGE_PREFIX} ${_btf_test_error_count}."
   # mark a controlled end of test, and return the error count from the subshell to main process
-  btf::_end_of_test ${_btf_test_error_count}
+  btf::_end_of_test "${_btf_test_error_count}"
 }
 
 #######################################
@@ -511,7 +511,7 @@ btf::_fail() {
   local test_file_loc="${BASH_SOURCE[$((2+source_offset))]#$BT_TEMP_DIR/}:${BASH_LINENO[$((1+source_offset))]}"
   printf "${_BTF_FAIL} ${test_file_loc}: (${called_function}) ${format_string}\n" "$@"
   : $(( _btf_test_error_count++ ))
-  return ${status}
+  return "${status}"
 }
 
 #######################################
@@ -676,7 +676,7 @@ BT_EXPECT_GOOD_STATUS() {
     return 0
   fi
   # return the given non-zero status (instead of 1, this time)
-  btf::_fail ${status} "Returned status '${status}' is not a success" "$@"
+  btf::_fail "${status}" "Returned status '${status}' is not a success" "$@"
 }
 
 #######################################
@@ -1111,10 +1111,10 @@ btf::_sanity_check_mocks() {
       extension=${file##*.}
       if ! [[ "${extension}" =~ ${valid_extensions} ]]; then
         local suggestion=". Valid mock extensions are: ${valid_extensions//|/, }"
-        extension_simplified="$(btf::_simplify_mock_extension ${extension})"
+        extension_simplified="$(btf::_simplify_mock_extension "${extension}")"
         local valid_extensions_array=( ${valid_extensions//|/ } )
         for valid_extension in "${valid_extensions_array[@]}"; do
-          valid_simplified="$(btf::_simplify_mock_extension ${valid_extension})"
+          valid_simplified="$(btf::_simplify_mock_extension "${valid_extension}")"
           if [[ "${extension_simplified}" == "${valid_simplified}" ]]; then
             suggestion=". Perhaps you meant to use the extension '${valid_extension}'"
           fi
@@ -1540,7 +1540,7 @@ btf::_run_tests_in_isolation() {
   # Do not return from the function.
   # Exit the script, with error count (0 if PASSED), so the
   # host script is not responsible for propagating the error.
-  exit ${total_error_count}
+  exit "${total_error_count}"
 }
 
 #######################################

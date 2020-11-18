@@ -35,7 +35,7 @@ BT_SET_UP() {
 
 # Test that fetching artifacts and launching local emulator works.
 TEST_fetch_and_launch() {
-  BT_EXPECT ${fx} emu-remote 127.0.0.1 dir
+  BT_EXPECT "${fx}" emu-remote 127.0.0.1 dir
   btf::expect-mock-args "$rsyncmock" "-z" "-P" \
       "127.0.0.1:/{multiboot.bin,fuchsia.zbi,obj/build/images/fvm.blk}" \
       "out/fetched/"

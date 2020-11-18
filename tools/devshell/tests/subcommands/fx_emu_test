@@ -42,7 +42,7 @@ EOF
 
 # Test that -c arguments are added to the end of the kernel command line.
 TEST_kernel_cmdline_append() {
-  BT_EXPECT ${fx} emu --headless -a off --experiment-arm64 -c foobar
+  BT_EXPECT "${fx}" emu --headless -a off --experiment-arm64 -c foobar
   source "${PREBUILT_AEMU_DIR}/emulator.mock_state"
 
   # The last arg will contain the kernel command line string.
@@ -55,7 +55,7 @@ TEST_kernel_cmdline_append() {
 
 # Test that -A argument works.
 TEST_arch_arm64() {
-  BT_EXPECT ${fx} emu --headless -a off --experiment-arm64 -A arm64
+  BT_EXPECT "${fx}" emu --headless -a off --experiment-arm64 -A arm64
   source "${PREBUILT_AEMU_DIR}/emulator.mock_state"
 
   local machine_arg="$(get_machine_arg)"
@@ -64,7 +64,7 @@ TEST_arch_arm64() {
 
 # Test that -A argument works.
 TEST_arch_x64() {
-  BT_EXPECT ${fx} emu --headless -a off -A x64
+  BT_EXPECT "${fx}" emu --headless -a off -A x64
   source "${PREBUILT_AEMU_DIR}/emulator.mock_state"
 
   local machine_arg="$(get_machine_arg)"
@@ -74,7 +74,7 @@ TEST_arch_x64() {
 get_machine_arg() {
   for i in "${!BT_MOCK_ARGS[@]}"; do
     if [[ "${BT_MOCK_ARGS[$i]}" == "-machine" ]]; then
-      echo ${BT_MOCK_ARGS[(($i + 1))]}
+      echo "${BT_MOCK_ARGS[(($i + 1))]}"
       return
     fi
   done
@@ -110,7 +110,7 @@ elif [[ \$2 == "extend" ]]; then
 fi
 EOF
 
-  BT_EXPECT ${fx} emu --headless -a off
+  BT_EXPECT "${fx}" emu --headless -a off
 
   local created_fvm_path=$(cat "${created_fvm_path_file}")
   BT_EXPECT btf::does-mock-args-contain \

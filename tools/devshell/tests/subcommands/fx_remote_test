@@ -53,7 +53,7 @@ TEST_fx-remote-config-file() {
   local testdir=~/myfuchsia/directory
   local out="${BT_TEMP_DIR}/output.log"
 
-  BT_EXPECT ${fx} serve-remote "$testhost" "$testdir" >>${out} 2>&1
+  BT_EXPECT "${fx}" serve-remote "$testhost" "$testdir" >>"${out}" 2>&1
   BT_EXPECT_FILE_CONTAINS "${BT_TEMP_DIR}/.fx-remote-config" "${testhost}:${testdir}"
 }
 
@@ -64,7 +64,7 @@ TEST_fx-remote-default-args() {
   local out="${BT_TEMP_DIR}/output.log"
 
   echo "${testhost}:${testdir}" > "${BT_TEMP_DIR}/.fx-remote-config"
-  BT_EXPECT ${fx} serve-remote >>${out} 2>&1
+  BT_EXPECT "${fx}" serve-remote >>"${out}" 2>&1
   btf::does-mock-args-contain "${ssh_mock}.mock_state.1" "$testhost"
 }
 
@@ -77,7 +77,7 @@ TEST_fx-remote-args-given() {
   local out="${BT_TEMP_DIR}/output.log"
 
   echo "${testhost}:${testdir}" > "${BT_TEMP_DIR}/.fx-remote-config"
-  BT_EXPECT ${fx} serve-remote "$anotherhost" "${testdir}" >>${out} 2>&1
+  BT_EXPECT "${fx}" serve-remote "$anotherhost" "${testdir}" >>"${out}" 2>&1
   BT_EXPECT_FILE_CONTAINS "${BT_TEMP_DIR}/.fx-remote-config" "${anotherhost}:${testdir}"
   btf::does-mock-args-contain "${ssh_mock}.mock_state.1" "$anotherhost"
 }
@@ -101,7 +101,7 @@ TEST_fx-pave-remote-args-given() {
   } >> "${BT_TEMP_DIR}/tools/devshell/lib/fx-remote.sh"
 
   echo "${testhost}:${testdir}" > "${BT_TEMP_DIR}/.fx-remote-config"
-  BT_EXPECT ${fx} pave-remote --no-pave "$anotherhost" "${testdir}" >>${out} 2>&1
+  BT_EXPECT "${fx}" pave-remote --no-pave "$anotherhost" "${testdir}" >>"${out}" 2>&1
   BT_EXPECT_FILE_CONTAINS "${BT_TEMP_DIR}/.fx-remote-config" "${anotherhost}:${testdir}"
   btf::does-mock-args-contain "${ssh_mock}.mock_state" "$anotherhost"
 }

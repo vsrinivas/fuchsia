@@ -9,9 +9,9 @@
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/../lib/vars.sh || exit $?
 
 if [[ "$(uname -s)" = "Darwin" ]]; then
-  device_date=`date +%Y-%m-%dT%T`
+  device_date=$(date +%Y-%m-%dT%T)
 else
-  device_date=`date -Iseconds`
+  device_date=$(date -Iseconds)
 fi
 
 echo "Setting device's clock to ${device_date}"

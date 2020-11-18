@@ -72,15 +72,15 @@ function format-cc-file() {
     # Only update changed lines.
     local changed_line_commands=$(git-print-changed-lines "$1" "--lines=%dF:%dL ")
     if [[ -n ${changed_line_commands} ]]; then
-        print-and-execute ${CLANG_CMD} ${changed_line_commands} "$1"
+        print-and-execute "${CLANG_CMD}" "${changed_line_commands}" "$1"
     fi
   else
     # Update entire files.
-    print-and-execute ${CLANG_CMD} "$1"
+    print-and-execute "${CLANG_CMD}" "$1"
   fi
   # Unconditionally update header guards.
   if [[ $1 =~ .*\.h ]]; then
-    print-and-execute ${FIX_HEADER_GUARDS_CMD} "$1"
+    print-and-execute "${FIX_HEADER_GUARDS_CMD}" "$1"
   fi
 }
 
@@ -91,7 +91,7 @@ function format-full-file() {
   if [ -n "${CHANGED_LINES}" ]; then
     echo "Warning: cannot format only modified lines; formatting full file ${file}" >&2
   fi
-  print-and-execute ${command} "${file}"
+  print-and-execute "${command}" "${file}"
 }
 
 # Format the given file.
@@ -157,7 +157,7 @@ while [ $# -gt 0 ]; do
         $(fx-gn desc \
             "${FUCHSIA_BUILD_DIR}" "${ARG#--target=}" sources)) &&
         RUST_ENTRY_POINT=$(canonicalize "${FUCHSIA_DIR}" \
-            $(fx rustfmt --print-sources ${ARG#--target=})) ;;
+            $(fx rustfmt --print-sources "${ARG#--target=}")) ;;
     --) break ;;
     *) usage && printf "Unknown flag %s\n" "${ARG}" && exit 1 ;;
   esac
@@ -251,7 +251,7 @@ for file in ${FILES[@]}; do
   [[ ! -f "${file}" ]] && continue
 
   # Format the file
-  format-file ${file}
+  format-file "${file}"
 done
 
 # If a Markdown change is present (including a deletion of a markdown file),
