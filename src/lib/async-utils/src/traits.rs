@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 //! Traits that are useful for working with async code, but do not fit into a more specific
-//! category. These are often extension traits for types that are not defined by `async_helpers`.
+//! category. These are often extension traits for types that are not defined by `async_utils`.
 
 use core::task::Poll;
 

@@ -29,6 +29,7 @@ rustc_binary("bin") {
     "//src/connectivity/lib/net-declare",
     "//src/connectivity/management/network-manager/core/interface:lib",
     "//src/connectivity/network/lib/dns_server_watcher",
+    "//src/lib/async-utils",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",

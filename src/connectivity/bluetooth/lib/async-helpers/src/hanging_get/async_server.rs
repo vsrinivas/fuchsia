@@ -4,7 +4,7 @@
 
 use {
     crate::{hanging_get::error::HangingGetServerError, responding_channel as responding},
-    async_utils::stream_epitaph::*,
+    async_utils::stream::{StreamItem, WithEpitaph},
     core::hash::Hash,
     futures::{channel::mpsc, select, SinkExt, StreamExt},
     std::collections::HashMap,

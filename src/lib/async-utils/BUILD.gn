@@ -17,7 +17,11 @@ rustc_library("async-utils") {
     "//third_party/rust_crates:slab",
   ]
 
-  test_deps = [ "//src/lib/fuchsia-async" ]
+  test_deps = [
+    "//src/lib/fuchsia-async",
+    "//third_party/rust_crates:futures-test",
+    "//third_party/rust_crates:proptest",
+  ]
 
   sources = [
     "src/event.rs",
@@ -26,7 +30,7 @@ rustc_library("async-utils") {
     "src/hanging_get/client.rs",
     "src/hanging_get/mod.rs",
     "src/lib.rs",
-    "src/stream_epitaph.rs",
+    "src/stream.rs",
     "src/traits.rs",
   ]
 }

@@ -7,5 +7,3 @@
 pub mod component_lifecycle;
 pub mod hanging_get;
 pub mod responding_channel;
-/// Additional Useful Stream Combinators and Utilities
-pub mod stream;

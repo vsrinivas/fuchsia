@@ -12,5 +12,6 @@ pub mod event;
 pub mod fold;
 pub mod futures;
 pub mod hanging_get;
-pub mod stream_epitaph;
+/// Additional Useful Stream Combinators and Utilities
+pub mod stream;
 pub mod traits;

@@ -27,8 +27,7 @@
 
 use {
     anyhow::Error,
-    async_helpers::stream::{IndexedStreams, WithTag},
-    async_utils::stream_epitaph::{StreamItem, WithEpitaph},
+    async_utils::stream::{IndexedStreams, StreamItem, WithEpitaph, WithTag},
     fidl_fuchsia_bluetooth_host::HostProxy,
     fidl_fuchsia_bluetooth_sys::{
         InputCapability, OutputCapability,

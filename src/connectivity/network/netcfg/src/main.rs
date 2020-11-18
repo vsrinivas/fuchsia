@@ -100,7 +100,7 @@ const MAX_ADD_DEVICE_ATTEMPTS: u8 = 3;
 ///
 /// DNS server watcher streams may be added or removed at runtime as the watchers
 /// are started or stopped.
-type DnsServerWatchers<'a> = async_helpers::stream::StreamMap<
+type DnsServerWatchers<'a> = async_utils::stream::StreamMap<
     DnsServersUpdateSource,
     stream::BoxStream<
         'a,

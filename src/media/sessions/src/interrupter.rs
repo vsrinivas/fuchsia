@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use crate::Result;
-use async_helpers::stream::StreamMap;
+use async_utils::stream::StreamMap;
 use fidl::endpoints::create_request_stream;
 use fidl_fuchsia_media::*;
 use fuchsia_syslog::fx_log_warn;

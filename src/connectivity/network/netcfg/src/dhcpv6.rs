@@ -7,7 +7,7 @@ use fidl_fuchsia_net_dhcpv6 as fnet_dhcpv6;
 use fidl_fuchsia_net_name as fnet_name;
 
 use anyhow::Context as _;
-use async_helpers::stream::WithTag as _;
+use async_utils::stream::WithTag as _;
 use dns_server_watcher::{DnsServers, DnsServersUpdateSource};
 use futures::future::TryFutureExt as _;
 use futures::stream::StreamExt as _;

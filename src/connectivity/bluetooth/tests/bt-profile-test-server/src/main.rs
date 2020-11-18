@@ -6,8 +6,7 @@
 
 use {
     anyhow::{format_err, Error},
-    async_helpers::stream::WithTag,
-    async_utils::stream_epitaph::{StreamItem, WithEpitaph},
+    async_utils::stream::{StreamItem, WithEpitaph, WithTag},
     fidl::endpoints::ClientEnd,
     fidl_fuchsia_bluetooth::ErrorCode,
     fidl_fuchsia_bluetooth_bredr::{

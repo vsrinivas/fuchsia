@@ -11,7 +11,7 @@ use crate::{
     proxies::{observer::*, player::*},
     Result, SessionId, CHANNEL_BUFFER_SIZE,
 };
-use async_helpers::stream::StreamMap;
+use async_utils::stream::StreamMap;
 use fidl::{
     encoding::Decodable,
     endpoints::{ClientEnd, ServerEnd},

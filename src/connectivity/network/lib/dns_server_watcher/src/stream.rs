@@ -6,7 +6,7 @@
 
 use fidl_fuchsia_net_name::{DnsServerWatcherProxy, DnsServer_};
 
-use async_helpers::stream::WithTag as _;
+use async_utils::stream::WithTag as _;
 use futures::{future::TryFutureExt as _, stream::Stream};
 
 /// The possible sources of DNS server updates.

@@ -24,7 +24,6 @@ rustc_library("async-helpers") {
     "//third_party/rust_crates:log",
     "//third_party/rust_crates:parking_lot",
     "//third_party/rust_crates:pin-utils",
-    "//third_party/rust_crates:proptest",
     "//third_party/rust_crates:slab",
     "//third_party/rust_crates:thiserror",
   ]
@@ -38,7 +37,6 @@ rustc_library("async-helpers") {
     "src/hanging_get/test_util.rs",
     "src/lib.rs",
     "src/responding_channel.rs",
-    "src/stream.rs",
   ]
 }
 

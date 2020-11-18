@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    async_helpers::stream::{StreamMap, Tagged, WithTag},
+    async_utils::stream::{StreamMap, Tagged, WithTag},
     fuchsia_bluetooth::types::{HostId, PeerId},
     futures::{
         future::BoxFuture,
