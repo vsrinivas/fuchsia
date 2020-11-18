@@ -55,7 +55,7 @@ function usage() {
 }
 
 function zap-commas() {
-  echo $1 | tr ',' '\n'
+  printf %s "$1" | tr ',' '\n'
 }
 
 function get-diff-base() {
