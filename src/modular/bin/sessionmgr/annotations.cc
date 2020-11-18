@@ -4,6 +4,11 @@
 
 #include "src/modular/bin/sessionmgr/annotations.h"
 
+#include <lib/syslog/cpp/macros.h>
+
+#include "src/lib/fxl/strings/join_strings.h"
+#include "src/modular/lib/string_escape/string_escape.h"
+
 namespace modular::annotations {
 
 using Annotation = fuchsia::modular::Annotation;
@@ -103,6 +108,44 @@ fuchsia::session::Annotations ToSessionAnnotations(
   return session_annotations;
 }
 
+fuchsia::element::AnnotationKey ToElementAnnotationKey(const std::string& key) {
+  auto parts = modular::SplitEscapedString(std::string_view(key), kNamespaceValueSeparator);
+
+  FX_DCHECK(parts.size() <= 2u) << "Annotation key cannot contain multiple separators: " << key;
+  if (parts.size() == 2u) {
+    return fuchsia::element::AnnotationKey{.namespace_ = std::string(parts[0]),
+                                           .value = std::string(parts[1])};
+  }
+
+  return fuchsia::element::AnnotationKey{.namespace_ = element::annotations::kGlobalNamespace,
+                                         .value = key};
+}
+
+fuchsia::element::Annotation ToElementAnnotation(const fuchsia::modular::Annotation& annotation) {
+  fuchsia::element::AnnotationValue value;
+  if (annotation.value->is_buffer()) {
+    fuchsia::mem::Buffer buffer;
+    annotation.value->buffer().Clone(&buffer);
+    value = fuchsia::element::AnnotationValue::WithBuffer(std::move(buffer));
+  } else {
+    value = fuchsia::element::AnnotationValue::WithText(std::string{annotation.value->text()});
+  }
+
+  return fuchsia::element::Annotation{.key = ToElementAnnotationKey(annotation.key),
+                                      .value = std::move(value)};
+}
+
+std::vector<fuchsia::element::Annotation> ToElementAnnotations(
+    const std::vector<fuchsia::modular::Annotation>& annotations) {
+  std::vector<fuchsia::element::Annotation> element_annotations;
+  element_annotations.reserve(annotations.size());
+
+  std::transform(annotations.begin(), annotations.end(), std::back_inserter(element_annotations),
+                 ToElementAnnotation);
+
+  return element_annotations;
+}
+
 }  // namespace modular::annotations
 
 namespace session::annotations {
@@ -137,3 +180,46 @@ std::vector<fuchsia::modular::Annotation> ToModularAnnotations(
 }
 
 }  // namespace session::annotations
+
+namespace element::annotations {
+
+std::string ToModularAnnotationKey(const fuchsia::element::AnnotationKey& key) {
+  if (key.namespace_ == kGlobalNamespace) {
+    return key.value;
+  }
+
+  static std::string separator{modular::annotations::kNamespaceValueSeparator};
+
+  std::array<std::string, 2> pieces = {modular::StringEscape(key.namespace_, separator),
+                                       modular::StringEscape(key.value, separator)};
+  return fxl::JoinStrings(pieces, separator);
+}
+
+fuchsia::modular::Annotation ToModularAnnotation(const fuchsia::element::Annotation& annotation) {
+  std::unique_ptr<fuchsia::modular::AnnotationValue> value;
+  if (annotation.value.is_buffer()) {
+    fuchsia::mem::Buffer buffer;
+    annotation.value.buffer().Clone(&buffer);
+    value = std::make_unique<fuchsia::modular::AnnotationValue>(
+        fuchsia::modular::AnnotationValue::WithBuffer(std::move(buffer)));
+  } else {
+    value = std::make_unique<fuchsia::modular::AnnotationValue>(
+        fuchsia::modular::AnnotationValue::WithText(std::string{annotation.value.text()}));
+  }
+
+  return fuchsia::modular::Annotation{.key = ToModularAnnotationKey(annotation.key),
+                                      .value = std::move(value)};
+}
+
+std::vector<fuchsia::modular::Annotation> ToModularAnnotations(
+    const std::vector<fuchsia::element::Annotation>& annotations) {
+  std::vector<fuchsia::modular::Annotation> modular_annotations;
+  modular_annotations.reserve(annotations.size());
+
+  std::transform(annotations.begin(), annotations.end(), std::back_inserter(modular_annotations),
+                 ToModularAnnotation);
+
+  return modular_annotations;
+}
+
+}  // namespace element::annotations

@@ -190,7 +190,14 @@ source_set("annotations") {
     "annotations.h",
   ]
 
+  deps = [
+    "//sdk/lib/syslog/cpp",
+    "//src/lib/fxl",
+    "//src/modular/lib/string_escape",
+  ]
+
   public_deps = [
+    "//sdk/fidl/fuchsia.element",
     "//sdk/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.session",
   ]

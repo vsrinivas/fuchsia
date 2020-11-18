@@ -5,12 +5,17 @@
 #ifndef SRC_MODULAR_BIN_SESSIONMGR_ANNOTATIONS_H_
 #define SRC_MODULAR_BIN_SESSIONMGR_ANNOTATIONS_H_
 
+#include <fuchsia/element/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/session/cpp/fidl.h>
 
 #include <vector>
 
 namespace modular::annotations {
+
+// Separator between a |fuchsia::element::AnnotationKey| namespace and value when converting keys
+// to and from a |fuchsia::modular::Annotation| that stores the key as a single string.
+constexpr char kNamespaceValueSeparator = '|';
 
 using Annotation = fuchsia::modular::Annotation;
 
@@ -34,6 +39,21 @@ fuchsia::session::Annotation ToSessionAnnotation(const fuchsia::modular::Annotat
 fuchsia::session::Annotations ToSessionAnnotations(
     const std::vector<fuchsia::modular::Annotation>& annotations);
 
+// Converts a |fuchsia::modular::Annotation| key to a |fuchsia::element::AnnotationKey|.
+//
+// If the key contains a separator from being previously converted from an element
+// |AnnotationKey|, the key is parsed to extract a namespace and value. Otherwise, the
+// resulting |AnnotationKey| uses the "global" namespace and the key for the value, as-is.
+fuchsia::element::AnnotationKey ToElementAnnotationKey(const std::string& key);
+
+// Converts a |fuchsia::modular::Annotation| to a equivalent |fuchsia::element::Annotation|.
+fuchsia::element::Annotation ToElementAnnotation(const fuchsia::modular::Annotation& annotation);
+
+// Converts a vector of |fuchsia::modular::Annotation|s to a vector of
+// |fuchsia::element::Annotation|s.
+std::vector<fuchsia::element::Annotation> ToElementAnnotations(
+    const std::vector<fuchsia::modular::Annotation>& annotations);
+
 }  // namespace modular::annotations
 
 namespace session::annotations {
@@ -49,5 +69,26 @@ std::vector<fuchsia::modular::Annotation> ToModularAnnotations(
     const fuchsia::session::Annotations& annotations);
 
 }  // namespace session::annotations
+
+namespace element::annotations {
+
+// The global key namespace, used for keys shared across all clients.
+constexpr char kGlobalNamespace[] = "global";
+
+// Converts a |fuchsia::element::AnnotationKey| to a |fuchsia::modular::Annotation| key.
+//
+// If the key namespace is "global", the value is returned as-is. Otherwise, the key namespace and
+// value are escaped and joined with a separator.
+std::string ToModularAnnotationKey(const fuchsia::element::AnnotationKey& key);
+
+// Converts a |fuchsia::element::Annotation| to an equivalent |fuchsia::modular::Annotation|.
+fuchsia::modular::Annotation ToModularAnnotation(const fuchsia::element::Annotation& annotation);
+
+// Converts a vector of |fuchsia::modular::Annotation|s to a vector of equivalent
+// |fuchsia::element::Annotation|s.
+std::vector<fuchsia::modular::Annotation> ToModularAnnotations(
+    const std::vector<fuchsia::element::Annotation>& annotations);
+
+}  // namespace element::annotations
 
 #endif  // SRC_MODULAR_BIN_SESSIONMGR_ANNOTATIONS_H_

@@ -175,21 +175,109 @@ TEST(AnnotationsTest, ToSessionAnnotationBuffer) {
   fuchsia::mem::Buffer buffer{};
   ASSERT_TRUE(fsl::VmoFromString(kTestAnnotationValue, &buffer));
 
-  auto modular_annotation = Annotation {
-      .key = kTestAnnotationKey,
-      .value = fidl::MakeOptional(AnnotationValue::WithBuffer(std::move(buffer)))
-  };
+  auto modular_annotation =
+      Annotation{.key = kTestAnnotationKey,
+                 .value = fidl::MakeOptional(AnnotationValue::WithBuffer(std::move(buffer)))};
 
   // Set the buffer again because it was moved into |annotation.value|.
   ASSERT_TRUE(fsl::VmoFromString(kTestAnnotationValue, &buffer));
 
   auto expected_annotation = fuchsia::session::Annotation{
       .key = kTestAnnotationKey,
-      .value = fidl::MakeOptional(fuchsia::session::Value::WithBuffer(std::move(buffer)))
-  };
+      .value = fidl::MakeOptional(fuchsia::session::Value::WithBuffer(std::move(buffer)))};
 
   EXPECT_THAT(ToSessionAnnotation(modular_annotation),
               session::annotations::AnnotationEq(ByRef(expected_annotation)));
+}
+
+TEST(AnnotationsTest, ToElementAnnotationKeyGlobal) {
+  auto annotation_key = "test_annotation_key";
+
+  auto expected_annotation = fuchsia::element::AnnotationKey{
+      .namespace_ = element::annotations::kGlobalNamespace, .value = annotation_key};
+
+  EXPECT_TRUE(fidl::Equals(expected_annotation, ToElementAnnotationKey(annotation_key)));
+}
+
+TEST(AnnotationsTest, ToElementAnnotationKeySeparated) {
+  auto annotation_key = "test_namespace|test_value";
+
+  auto expected_annotation =
+      fuchsia::element::AnnotationKey{.namespace_ = "test_namespace", .value = "test_value"};
+
+  EXPECT_TRUE(fidl::Equals(expected_annotation, ToElementAnnotationKey(annotation_key)));
+}
+
+TEST(AnnotationsTest, ToElementAnnotationKeySeparatedEscaped) {
+  auto annotation_key = "test\\|namespace|test\\|value";
+
+  auto expected_annotation =
+      fuchsia::element::AnnotationKey{.namespace_ = "test\\|namespace", .value = "test\\|value"};
+
+  EXPECT_TRUE(fidl::Equals(expected_annotation, ToElementAnnotationKey(annotation_key)));
+}
+
+TEST(AnnotationsTest, ToElementAnnotation) {
+  constexpr char kTestAnnotationKey[] = "test_key";
+  constexpr char kTestAnnotationValue[] = "test_value";
+
+  Annotation modular_annotation = MakeAnnotation(kTestAnnotationKey, kTestAnnotationValue);
+
+  auto expected_annotation = fuchsia::element::Annotation{
+      .key = ToElementAnnotationKey(kTestAnnotationKey),
+      .value = fuchsia::element::AnnotationValue::WithText(kTestAnnotationValue)};
+
+  auto actual_annotation = ToElementAnnotation(modular_annotation);
+
+  EXPECT_THAT(expected_annotation, element::annotations::AnnotationEq(ByRef(actual_annotation)));
+}
+
+TEST(AnnotationsTest, ToElementAnnotations) {
+  constexpr char kTestAnnotationKey1[] = "test_key_1";
+  constexpr char kTestAnnotationKey2[] = "test_key_2";
+  constexpr char kTestAnnotationValue1[] = "test_value_1";
+  constexpr char kTestAnnotationValue2[] = "test_value_2";
+
+  std::vector<Annotation> modular_annotations;
+  modular_annotations.push_back(MakeAnnotation(kTestAnnotationKey1, kTestAnnotationValue1));
+  modular_annotations.push_back(MakeAnnotation(kTestAnnotationKey2, kTestAnnotationValue2));
+
+  std::vector<fuchsia::element::Annotation> element_annotations;
+  element_annotations.push_back(fuchsia::element::Annotation{
+      .key = ToElementAnnotationKey(kTestAnnotationKey1),
+      .value = fuchsia::element::AnnotationValue::WithText(kTestAnnotationValue1)});
+  element_annotations.push_back(fuchsia::element::Annotation{
+      .key = ToElementAnnotationKey(kTestAnnotationKey2),
+      .value = fuchsia::element::AnnotationValue::WithText(kTestAnnotationValue2)});
+
+  auto actual_annotations = ToElementAnnotations(modular_annotations);
+
+  EXPECT_THAT(
+      actual_annotations,
+      UnorderedElementsAre(element::annotations::AnnotationEq(ByRef(element_annotations[0])),
+                           element::annotations::AnnotationEq(ByRef(element_annotations[1]))));
+}
+
+TEST(AnnotationsTest, ToElementAnnotationBuffer) {
+  static constexpr auto kTestAnnotationKey = "annotation_key";
+  static constexpr auto kTestAnnotationValue = "annotation_value";
+
+  fuchsia::mem::Buffer buffer{};
+  ASSERT_TRUE(fsl::VmoFromString(kTestAnnotationValue, &buffer));
+
+  auto modular_annotation =
+      Annotation{.key = kTestAnnotationKey,
+                 .value = fidl::MakeOptional(AnnotationValue::WithBuffer(std::move(buffer)))};
+
+  // Set the buffer again because it was moved into |annotation.value|.
+  ASSERT_TRUE(fsl::VmoFromString(kTestAnnotationValue, &buffer));
+
+  auto expected_annotation = fuchsia::element::Annotation{
+      .key = ToElementAnnotationKey(kTestAnnotationKey),
+      .value = fuchsia::element::AnnotationValue::WithBuffer(std::move(buffer))};
+
+  EXPECT_THAT(ToElementAnnotation(modular_annotation),
+              element::annotations::AnnotationEq(ByRef(expected_annotation)));
 }
 
 }  // namespace
@@ -302,3 +390,122 @@ TEST(SessionAnnotationsTest, ToModularAnnotationsWithCustomAnnotations) {
 
 }  // namespace
 }  // namespace session::annotations
+
+namespace element::annotations {
+namespace {
+
+using Annotation = fuchsia::element::Annotation;
+using AnnotationKey = fuchsia::element::AnnotationKey;
+using AnnotationValue = fuchsia::element::AnnotationValue;
+
+using ::testing::ByRef;
+using ::testing::UnorderedElementsAre;
+
+TEST(ElementAnnotationsTest, ToModularAnnotationKey) {
+  auto annotation_key = AnnotationKey{.namespace_ = "test_namespace", .value = "test_value"};
+
+  EXPECT_EQ("test_namespace|test_value", ToModularAnnotationKey(annotation_key));
+}
+
+TEST(ElementAnnotationsTest, ToModularAnnotationKeyGlobal) {
+  auto annotation_key = AnnotationKey{.namespace_ = kGlobalNamespace, .value = "test_value"};
+
+  EXPECT_EQ("test_value", ToModularAnnotationKey(annotation_key));
+}
+
+TEST(ElementAnnotationsTest, ToModularAnnotationKeyEscaped) {
+  auto annotation_key = AnnotationKey{.namespace_ = "test|namespace", .value = "test|value"};
+
+  EXPECT_EQ("test\\|namespace|test\\|value", ToModularAnnotationKey(annotation_key));
+}
+
+TEST(ElementAnnotationsTest, ToModularAnnotationText) {
+  static constexpr auto kTestAnnotationKey = "annotation_key";
+  static constexpr auto kTestAnnotationValue = "annotation_value";
+
+  auto annotation_key = modular::annotations::ToElementAnnotationKey(kTestAnnotationKey);
+  auto annotation = Annotation{.key = fidl::Clone(annotation_key),
+                               .value = AnnotationValue::WithText(kTestAnnotationValue)};
+
+  auto modular_annotation = fuchsia::modular::Annotation{
+      .key = ToModularAnnotationKey(annotation_key),
+      .value =
+          fidl::MakeOptional(fuchsia::modular::AnnotationValue::WithText(kTestAnnotationValue))};
+
+  EXPECT_THAT(ToModularAnnotation(annotation),
+              modular::annotations::AnnotationEq(ByRef(modular_annotation)));
+}
+
+TEST(ElementAnnotationsTest, ToModularAnnotationBuffer) {
+  static constexpr auto kTestAnnotationKey = "annotation_key";
+  static constexpr auto kTestAnnotationValue = "annotation_value";
+
+  fuchsia::mem::Buffer buffer{};
+  ASSERT_TRUE(fsl::VmoFromString(kTestAnnotationValue, &buffer));
+
+  auto annotation_key = modular::annotations::ToElementAnnotationKey(kTestAnnotationKey);
+  auto annotation = Annotation{.key = fidl::Clone(annotation_key),
+                               .value = AnnotationValue::WithBuffer(std::move(buffer))};
+
+  // Set the buffer again because it was moved into |annotation.value|.
+  ASSERT_TRUE(fsl::VmoFromString(kTestAnnotationValue, &buffer));
+
+  auto modular_annotation = fuchsia::modular::Annotation{
+      .key = ToModularAnnotationKey(annotation_key),
+      .value =
+          fidl::MakeOptional(fuchsia::modular::AnnotationValue::WithBuffer(std::move(buffer)))};
+
+  EXPECT_THAT(ToModularAnnotation(annotation),
+              modular::annotations::AnnotationEq(ByRef(modular_annotation)));
+}
+
+TEST(ElementAnnotationsTest, ToModularAnnotationsEmpty) {
+  auto modular_annotations = ToModularAnnotations({});
+  EXPECT_TRUE(modular_annotations.empty());
+}
+
+TEST(ElementAnnotationsTest, ToModularAnnotations) {
+  static constexpr auto kTestTextAnnotationKey = "text_annotation_key";
+  static constexpr auto kTestTextAnnotationValue = "text_annotation_value";
+  static constexpr auto kTestBufferAnnotationKey = "buffer_annotation_key";
+  static constexpr auto kTestBufferAnnotationValue = "buffer_annotation_value";
+
+  fuchsia::mem::Buffer buffer{};
+  ASSERT_TRUE(fsl::VmoFromString(kTestBufferAnnotationValue, &buffer));
+
+  auto text_annotation_key = modular::annotations::ToElementAnnotationKey(kTestTextAnnotationKey);
+  auto text_annotation = Annotation{.key = fidl::Clone(text_annotation_key),
+                                    .value = AnnotationValue::WithText(kTestTextAnnotationValue)};
+
+  auto buffer_annotation_key =
+      modular::annotations::ToElementAnnotationKey(kTestBufferAnnotationKey);
+  auto buffer_annotation = Annotation{.key = fidl::Clone(buffer_annotation_key),
+                                      .value = AnnotationValue::WithBuffer(std::move(buffer))};
+
+  std::vector<fuchsia::element::Annotation> annotations;
+  annotations.push_back(std::move(text_annotation));
+  annotations.push_back(std::move(buffer_annotation));
+
+  auto modular_annotations = ToModularAnnotations(annotations);
+
+  auto expected_text_annotation = fuchsia::modular::Annotation{
+      .key = ToModularAnnotationKey(text_annotation_key),
+      .value = fidl::MakeOptional(
+          fuchsia::modular::AnnotationValue::WithText(kTestTextAnnotationValue))};
+
+  // Set the buffer again because it was moved into |buffer_annotation.value|.
+  ASSERT_TRUE(fsl::VmoFromString(kTestBufferAnnotationValue, &buffer));
+
+  auto expected_buffer_annotation = fuchsia::modular::Annotation{
+      .key = ToModularAnnotationKey(buffer_annotation_key),
+      .value =
+          fidl::MakeOptional(fuchsia::modular::AnnotationValue::WithBuffer(std::move(buffer)))};
+
+  EXPECT_THAT(
+      modular_annotations,
+      UnorderedElementsAre(modular::annotations::AnnotationEq(ByRef(expected_text_annotation)),
+                           modular::annotations::AnnotationEq(ByRef(expected_buffer_annotation))));
+}
+
+}  // namespace
+}  // namespace element::annotations
