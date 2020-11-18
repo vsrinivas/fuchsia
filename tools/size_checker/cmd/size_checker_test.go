@@ -446,16 +446,16 @@ func Test_writeOutputSizes(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ioutil.ReadFile() failed; %v", err)
 	}
-	var unmarshalled map[string]interface{}
+	var unmarshalled map[string]int64
 	if err := json.Unmarshal(wroteBytes, &unmarshalled); err != nil {
 		t.Errorf("json.Unmarshal() failed: %v", err)
 	}
 
-	if val, ok := unmarshalled["a"]; !ok || val.(float64) != 1 {
+	if val, ok := unmarshalled["a"]; !ok || val != 1 {
 		t.Fatalf("json size output missing expected key/value entry for binary")
 	}
 
-	if val, ok := unmarshalled["a.budget"]; !ok || val.(float64) != 2 {
+	if val, ok := unmarshalled["a.budget"]; !ok || val != 2 {
 		t.Fatalf("json size output missing expected key/value entry for budget")
 	}
 
