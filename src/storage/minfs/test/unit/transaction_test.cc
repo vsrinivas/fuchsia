@@ -401,6 +401,7 @@ class MockVnodeMinfs : public VnodeMinfs, public fbl::Recyclable<MockVnodeMinfs>
                       blk_t count) final {}
   bool HasPendingAllocation(blk_t vmo_offset) final { return false; }
   void CancelPendingWriteback() final {}
+  bool DirtyCacheEnabled() const final { return false; }
 
   // fs::Vnode interface.
   fs::VnodeProtocolSet GetProtocols() const final { return fs::VnodeProtocol::kFile; }

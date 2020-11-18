@@ -4,12 +4,19 @@
 
 #include "src/storage/minfs/file.h"
 #include "src/storage/minfs/minfs_private.h"
+#include "zircon/assert.h"
 
 // This file contains host specific minfs::File code.
 
 namespace minfs {
 
 File::~File() = default;
+
+// We don't enable dirty cache on host.
+bool File::DirtyCacheEnabled() const {
+  ZX_ASSERT(!Minfs::DirtyCacheEnabled());
+  return false;
+}
 
 zx::status<> File::ForceFlushTransaction(std::unique_ptr<Transaction> transaction) {
   // Ensure this Vnode remains alive while it has an operation in-flight.

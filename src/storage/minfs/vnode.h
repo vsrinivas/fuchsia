@@ -178,6 +178,9 @@ class VnodeMinfs : public fs::Vnode,
   zx::unowned_vmo vmo() const { return zx::unowned_vmo(vmo_.get()); }
 
 #endif
+  // Returns true if dirty pages can be cached.
+  virtual bool DirtyCacheEnabled() const = 0;
+
   Minfs* Vfs() { return fs_; }
 
   // Local implementations of read, write, and truncate functions which

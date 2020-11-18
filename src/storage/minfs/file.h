@@ -51,6 +51,7 @@ class File final : public VnodeMinfs, public fbl::Recyclable<File> {
   bool HasPendingAllocation(blk_t vmo_offset) final;
   void CancelPendingWriteback() final;
 #endif
+  bool DirtyCacheEnabled() const final;
 
   // fs::Vnode interface.
   fs::VnodeProtocolSet GetProtocols() const final;
