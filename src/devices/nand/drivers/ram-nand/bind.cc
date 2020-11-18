@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <ddk/binding.h>
 #include <ddk/driver.h>
 
-#include "ram-nand-ctl.h"
+#include "src/devices/nand/drivers/ram-nand/ram-nand-bind.h"
+#include "src/devices/nand/drivers/ram-nand/ram-nand-ctl.h"
 
 static constexpr zx_driver_ops_t ram_nand_driver_ops = []() {
   zx_driver_ops_t ops = {};
@@ -14,5 +14,4 @@ static constexpr zx_driver_ops_t ram_nand_driver_ops = []() {
   return ops;
 }();
 
-ZIRCON_DRIVER_BEGIN(ram_nand, ram_nand_driver_ops, "zircon", "0.1", 1)
-BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_MISC_PARENT), ZIRCON_DRIVER_END(ram_nand)
+ZIRCON_DRIVER(ram_nand, ram_nand_driver_ops, "zircon", "0.1")

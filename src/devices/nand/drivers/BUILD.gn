@@ -11,6 +11,7 @@ group("tests") {
     "cadence-hpnfc:tests",
     "nand:tests",
     "nandpart:tests",
+    "ram-nand:tests",
     "skip-block:tests",
   ]
 }
