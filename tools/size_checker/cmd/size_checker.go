@@ -643,11 +643,15 @@ func writeOutputSizes(sizes map[string]*ComponentSize, outPath string) error {
 
 	encoder := json.NewEncoder(f)
 	encoder.SetIndent("", "  ")
-	simpleSizes := make(map[string]int64)
+	simpleSizes := make(map[string]interface{})
 	budgetSuffix := ".budget"
+	// Use the size_limits gni file as the source of truth/reference for budget
+	// info until we're able to provide better contextual links.
+	ownerSuffix := ".owner"
 	for name, cs := range sizes {
 		simpleSizes[name] = cs.Size
 		simpleSizes[name+budgetSuffix] = cs.Budget
+		simpleSizes[name+ownerSuffix] = "http://goto.google.com/fuchsia-binary-size-limits"
 	}
 	if err := encoder.Encode(&simpleSizes); err != nil {
 		log.Fatal("failed to encode simpleSizes: ", err)
