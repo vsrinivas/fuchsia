@@ -122,7 +122,7 @@ template("banjo_dummy_c_target") {
                              "visibility",
                            ])
 
-    public_deps = [ "//zircon/public/sysroot" ]
+    public_deps = [ "//zircon/public/sysroot:headers" ]
     deps = [ "//src/zircon/lib/zircon" ]
   }
 }

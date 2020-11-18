@@ -25,6 +25,11 @@ template("fidl_tables") {
 
     deps = [ ":${main_target_name}_compile($fidl_toolchain)" ]
     public_deps = [ "//zircon/public/lib/fidl_base" ]
+    if (is_fuchsia) {
+      public_deps += [ "//zircon/public/sysroot:headers" ]
+    } else {
+      public_deps += [ "//zircon/system/ulib/zircon:zircon-headers" ]
+    }
   }
 }
 
@@ -73,9 +78,13 @@ template("fidl_c_target") {
     deps = [
       ":${main_target_name}_compile($fidl_toolchain)",
       ":${main_target_name}_tables",
-      "//src/zircon/lib/zircon",
     ]
     public_deps = [ "//zircon/public/lib/fidl" ]
+    if (is_fuchsia) {
+      public_deps += [ "//zircon/public/sysroot:headers" ]
+    } else {
+      public_deps += [ "//zircon/system/ulib/zircon:zircon-headers" ]
+    }
 
     if (defined(invoker.deps)) {
       public_deps += invoker.deps

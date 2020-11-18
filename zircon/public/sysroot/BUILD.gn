@@ -5,34 +5,48 @@
 # IMPORTANT: This file serves to build the Fuchsia platform sysroot, used
 # at build time to provide the C library, the Zircon VDSO, and a few linker
 # stubs for legacy link targets like libm.so. Plus all associated headers.
-#
-# For the SDK sysroot generation, see //zircon/public/sysroot/sdk/BUILD.gn
-# instead.
-#
-# The platform sysroot is generated in out/default/sysroot_toolchain/sysrot/
-# as follows based on the content of sysroot_entries.gni files:
-#
-#       include/
-#         ...     # C library and Zircon headers
-#       lib/
-#         libc.so       # Linker stub redirecting to the link-time C library.
-#         libzircon.so  # Linker stub redirecting to the link-time Zircon VDSO.
-#         Scrt1.o       # Stub to C runtime startup object file.
-#         libdl.so      # Stub library redirection to libc.so
-#         libm.so       # Stub library redirecting to libc.so
-#         libpthread.so # Stub library redirecting to libc.so
-#         librt.so      # Stub library redirecting to libc.so
-#       dist/
-#         lib/
-#           ld.so.1     # Stripped C library acting as dynamic loader.
-#                       # NOTE: This file may be unused, and ripe for deletion.
-#
-#   Note that this happens exclusively in the "sysroot_toolchain".
-#
+
 sysroot_toolchain = "//build/zircon:sysroot_toolchain"
+sysroot_dir = get_label_info(":sysroot($sysroot_toolchain)", "root_out_dir")
+sysroot_dir += "/sysroot"
 
 if (current_toolchain != sysroot_toolchain) {
-  group("sysroot") {
+  # Depend on this to only require the Zircon headers, but not link to the
+  # C library or Zircon VDSO.
+  group("headers") {
+    public_deps = [ ":$target_name($sysroot_toolchain)" ]
+  }
+
+  # Any regular Fuchsia binary should depend on this target to ensure the
+  # sysroot is properly setup, i.e. all headers are present and the C library,
+  # VDSO library and stub libraries are built.
+  group("cpp_binary_deps") {
+    public_deps = [ ":$target_name($sysroot_toolchain)" ]
+  }
+
+  # An additional dependency for executable() Fuchsia user binaries. It adds
+  # the C runtime startup object code.
+  group("crt1_deps") {
+    public_deps = [ ":$target_name($sysroot_toolchain)" ]
+  }
+
+  # Rust binaries should depend on this target only.
+  group("rust_binary_deps") {
+    public_deps = [ ":$target_name($sysroot_toolchain)" ]
+  }
+
+  # Go binaries should depend on this targe tonly.
+  group("go_binary_deps") {
+    public_deps = [ ":$target_name($sysroot_toolchain)" ]
+  }
+
+  # A special dependency that ensure that the uninstrumented C library is
+  # available in the system package as /lib/ld.so.1. For more details read
+  # //zircon/system/ulib/c/libc_toolchain.gni
+  #
+  # In practice, should only be used by the package() template, and some
+  # prebuilt driver binaries.
+  group("system_libc_deps") {
     public_deps = [ ":$target_name($sysroot_toolchain)" ]
   }
 } else {
@@ -145,7 +159,7 @@ if (current_toolchain != sysroot_toolchain) {
     output_conversion = "json"
   }
 
-  action("sysroot_headers") {
+  action("headers") {
     inputs = [ sysroot_entries_json_file ]
     outputs = sysroot_headers
     depfile = "$root_out_dir/sysroot_headers.d"
@@ -175,6 +189,27 @@ if (current_toolchain != sysroot_toolchain) {
   }
 
   group("sysroot") {
-    deps = sysroot_deps + [ ":sysroot_headers" ]
+    deps = sysroot_deps + [ ":headers" ]
+  }
+
+  # TODO(60613): Split sysroot into the proper dependencies.
+  group("cpp_binary_deps") {
+    deps = [ ":sysroot" ]
+  }
+
+  group("crt1_deps") {
+    # Nothing for now
+  }
+
+  group("rust_binary_deps") {
+    deps = [ ":sysroot" ]
+  }
+
+  group("go_binary_deps") {
+    deps = [ ":sysroot" ]
+  }
+
+  group("system_libc_deps") {
+    data_deps = [ system_libc_target ]
   }
 }

@@ -9,6 +9,7 @@ import("//build/sdk/sdk_noop_atom.gni")
 # See (fxbug.dev/60613) for details.
 group("zircon") {
   public_configs = [ ":zircon.config" ]
+  public_deps = [ "//zircon/public/sysroot:cpp_binary_deps" ]
 }
 
 config("zircon.config") {

@@ -765,6 +765,10 @@ if (toolchain_variant.with_shared || toolchain_variant.is_pic_default) {
             deps = []
           }
 
+          if (zircon_toolchain == false) {
+            deps += [ "//zircon/public/sysroot:cpp_binary_deps" ]
+          }
+
           # Add zircon dependency for the profile variant. TODO(fxbug.dev/61522): Remove this.
           if (toolchain_variant.tags + [ "profile" ] - [ "profile" ] !=
               toolchain_variant.tags) {
@@ -1697,11 +1701,23 @@ template("variant_target") {
       # dependency tree in order to correctly capture the active toolchain
       # variant.
       if (is_fuchsia) {
+        if (!defined(deps)) {
+          deps = []
+        }
         if (!defined(data_deps)) {
           data_deps = []
         }
         if (zircon_toolchain == false) {
+          # TODO(60613): Remove line below once sysroot generation moves to the Fuchsia build.
           data_deps += [ "//build/unification/lib/sysroot" ]
+          if (defined(crate_root)) {
+            deps += [ "//zircon/public/sysroot:rust_binary_deps" ]
+          } else {
+            deps += [ "//zircon/public/sysroot:cpp_binary_deps" ]
+            if (target_type == "executable" || target_type == "test") {
+              deps += [ "//zircon/public/sysroot:crt1_deps" ]
+            }
+          }
         }
 
         # NOTE: invoker.crate_root will be defined when building a Rust crate
@@ -1719,7 +1735,7 @@ template("variant_target") {
         }
         if (should_add_shared_cpp_runtime) {
           data_deps += [ "//build/toolchain/runtime:shared-libc++-deps" ]
-        } else if (!defined(invoker.crate_root)) {
+        } else if (!defined(crate_root)) {
           # Even when compiling statically, some runtime dependencies might
           # be needed when performing instrumented builds, because the
           # compiler-generated machine code will contain imports to
@@ -2275,6 +2291,51 @@ foreach(_target_type,
 
         args += [ "--" ] + _invoker_args
       }
+    }
+  }
+}
+
+# When generating Fuchsia user binaries, ensure the right sysroot-related
+# dependencies are added to source_set() and static_library() instances
+# automatically.
+if (is_fuchsia && zircon_toolchain == false) {
+  template("source_set") {
+    source_set(target_name) {
+      forward_variables_from(invoker,
+                             "*",
+                             [
+                               "testonly",
+                               "visibility",
+                             ])
+      forward_variables_from(invoker,
+                             [
+                               "testonly",
+                               "visibility",
+                             ])
+      if (!defined(deps)) {
+        deps = []
+      }
+      deps += [ "//zircon/public/sysroot:headers" ]
+    }
+  }
+
+  template("static_library") {
+    static_library(target_name) {
+      forward_variables_from(invoker,
+                             "*",
+                             [
+                               "testonly",
+                               "visibility",
+                             ])
+      forward_variables_from(invoker,
+                             [
+                               "testonly",
+                               "visibility",
+                             ])
+      if (!defined(deps)) {
+        deps = []
+      }
+      deps += [ "//zircon/public/sysroot:headers" ]
     }
   }
 }
