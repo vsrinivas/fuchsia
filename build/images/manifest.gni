@@ -18,26 +18,6 @@ declare_args() {
   extra_manifest_args = []
 }
 
-# Manifests inherited from Zircon.
-# Paths in these manifest are relative to this build's root directory.
-zircon_boot_manifests = []
-zircon_boot_manifests_deps = []
-zircon_aux_manifests = []
-zircon_aux_manifests_deps = []
-
-foreach(flavor, [ "legacy-aux" ]) {
-  _aux_flavor = {
-  }
-  _aux_flavor = {
-    target = "//build/unification/images:$flavor"
-    gen_dir = get_label_info(target, "target_out_dir")
-    name = get_label_info(target, "name")
-    file = "$gen_dir/$name.unification.manifest"
-  }
-  zircon_aux_manifests += [ _aux_flavor.file ]
-  zircon_aux_manifests_deps += [ _aux_flavor.target ]
-}
-
 # Action target that generates a response file in GN's "shlex" format.
 #
 # Parameters
@@ -202,16 +182,10 @@ template("generate_manifest") {
     # they just supply libraries that might satisfy dependencies.
     sources += [ runtime_deps_manifest ]
     deps += [ ":${runtime_deps_manifest_target}" ]
-    sources += zircon_aux_manifests + zircon_boot_manifests
-    deps += zircon_aux_manifests_deps + zircon_boot_manifests_deps
-    foreach(manifest,
-            [ runtime_deps_manifest ] + zircon_aux_manifests +
-                zircon_boot_manifests) {
-      response_file_contents += [
-        "--cwd=.",
-        "--manifest=" + rebase_path(manifest),
-      ]
-    }
+    response_file_contents += [
+      "--cwd=.",
+      "--manifest=" + rebase_path(runtime_deps_manifest),
+    ]
 
     manifests = []
 
@@ -272,13 +246,6 @@ template("generate_manifest") {
         # binaries selected here have to be found by target name in a
         # previously-processed manifest.
         response_file_contents += [ "--groups=${manifest.groups}" ]
-        sources += zircon_boot_manifests
-        foreach(manifest, zircon_boot_manifests) {
-          response_file_contents += [
-            "--cwd=.",
-            "--manifest=" + rebase_path(manifest),
-          ]
-        }
       }
     }
 

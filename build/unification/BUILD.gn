@@ -5,8 +5,5 @@
 group("unification") {
   testonly = true
 
-  deps = [
-    "images",
-    "zbi",
-  ]
+  deps = [ "zbi" ]
 }
