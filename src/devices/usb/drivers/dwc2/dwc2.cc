@@ -6,9 +6,12 @@
 
 #include <lib/sync/completion.h>
 #include <lib/zx/clock.h>
+#include <lib/zx/profile.h>
 #include <lib/zx/time.h>
 #include <threads.h>
+#include <zircon/status.h>
 #include <zircon/syscalls.h>
+#include <zircon/threads.h>
 
 #include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
@@ -920,7 +923,25 @@ void Dwc2::DdkInit(ddk::InitTxn txn) {
 
 int Dwc2::IrqThread() {
   auto* mmio = get_mmio();
-
+  const zx::duration capacity = zx::usec(125);
+  const zx::duration deadline = zx::msec(1);
+  const zx::duration period = deadline;
+  zx::profile profile;
+  zx_status_t status =
+      device_get_deadline_profile(parent_, capacity.get(), deadline.get(), period.get(),
+                                  "src/devices/usb/drivers/dwc2", profile.reset_and_get_address());
+  if (status != ZX_OK) {
+    zxlogf(WARNING, "%s Failed to get deadline profile: %s", __FUNCTION__,
+           zx_status_get_string(status));
+  } else {
+    status = zx_object_set_profile(thrd_get_zx_handle(thrd_current()), profile.get(), 0);
+    if (status != ZX_OK) {
+      // This should be an error since we won't be able to guarantee we can meet deadlines.
+      // Failure to meet deadlines can result in undefined behavior on the bus.
+      zxlogf(ERROR, "%s: Failed to apply deadline profile to IRQ thread: %s", __FUNCTION__,
+             zx_status_get_string(status));
+    }
+  }
   while (1) {
     wait_start_time_ = zx::clock::get_monotonic();
     auto wait_res = irq_.wait(&irq_timestamp_);
