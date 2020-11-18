@@ -320,7 +320,7 @@ static const struct iwl_pci_device iwl_devices[] = {
     {IWL_PCI_DEVICE(0x08B2, 0xC220, iwl7260_2n_cfg)},
     {IWL_PCI_DEVICE(0x08B1, 0xC420, iwl7260_2n_cfg)},
 
-#if 0  // NEEDS_PORTING
+#if 0   // NEEDS_PORTING
     /* 3160 Series */
     {IWL_PCI_DEVICE(0x08B3, 0x0070, iwl3160_2ac_cfg)},
     {IWL_PCI_DEVICE(0x08B3, 0x0072, iwl3160_2ac_cfg)},
@@ -412,7 +412,7 @@ static const struct iwl_pci_device iwl_devices[] = {
     {IWL_PCI_DEVICE(0x095A, 0x9400, iwl7265_2ac_cfg)},
     {IWL_PCI_DEVICE(0x095A, 0x9E10, iwl7265_2ac_cfg)},
 
-#if 0  // NEEDS_PORTING
+#if 0   // NEEDS_PORTING
     /* 8000 Series */
     {IWL_PCI_DEVICE(0x24F3, 0x0010, iwl8260_2ac_cfg)},
     {IWL_PCI_DEVICE(0x24F3, 0x1010, iwl8260_2ac_cfg)},
@@ -498,7 +498,7 @@ static const struct iwl_pci_device iwl_devices[] = {
 #endif  // CPTCFG_IWLMVM
 
 #if CPTCFG_IWLMVM || CPTCFG_IWLFMAC
-#if 0  // NEEDS_PORTING
+#if 0   // NEEDS_PORTING
     /* 9000 Series */
     {IWL_PCI_DEVICE(0x02F0, 0x0030, iwl9560_2ac_cfg_soc)},
     {IWL_PCI_DEVICE(0x02F0, 0x0034, iwl9560_2ac_cfg_soc)},
@@ -959,10 +959,12 @@ static zx_status_t iwl_find_pci_device(uint16_t device_id, uint16_t subsystem_de
   return ZX_ERR_NOT_FOUND;
 }
 
+void iwl_pci_unbind(struct iwl_trans* trans) { iwl_trans_pcie_unbind(trans); }
+
 void iwl_pci_release(void* ctx) {
   struct iwl_trans* trans = (struct iwl_trans*)ctx;
 
-#if 0  // NEEDS_PORTING
+#if 0   // NEEDS_PORTING
     /* if RTPM was in use, restore it to the state before probe */
     if (trans->runtime_pm_mode != IWL_PLAT_PM_MODE_DISABLED) {
         /* We should not call forbid here, but we do for now.
@@ -975,10 +977,7 @@ void iwl_pci_release(void* ctx) {
 
   iwl_drv_stop(trans->drv);
 
-#if 0  // NEEDS_PORTING
-    iwl_trans_pcie_free(trans);
-#endif  // NEEDS_PORTING
-  free(trans);
+  iwl_trans_pcie_free(trans);
 }
 
 zx_status_t iwl_pci_create(void* ctx, zx_device_t* parent, struct iwl_trans** out_trans,
@@ -1114,7 +1113,7 @@ zx_status_t iwl_pci_start(struct iwl_trans* iwl_trans, zx_device_t* zxdev) {
     goto fail_stop_device;
   }
 
-#if 0  // NEEDS_PORTING
+#if 0   // NEEDS_PORTING
     /* if RTPM is in use, enable it in our device */
     if (iwl_trans->runtime_pm_mode != IWL_PLAT_PM_MODE_DISABLED) {
         /* We explicitly set the device to active here to
@@ -1367,5 +1366,5 @@ static const struct dev_pm_ops iwl_dev_pm_ops = {
 
 #define IWL_PM_OPS NULL
 
-#endif /* CONFIG_PM_SLEEP */
+#endif  /* CONFIG_PM_SLEEP */
 #endif  // NEEDS_PORTING

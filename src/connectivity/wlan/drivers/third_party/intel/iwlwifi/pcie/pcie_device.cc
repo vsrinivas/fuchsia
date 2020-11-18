@@ -57,8 +57,14 @@ fail_post_add:
   return status;
 }
 
+void PcieDevice::DdkUnbind(ddk::UnbindTxn txn) {
+  IWL_INFO(this, "Unbinding pcie device\n");
+  iwl_pci_unbind(iwl_trans_);
+  txn.Reply();
+}
+
 void PcieDevice::DdkRelease() {
-  IWL_INFO(this, "Releasing device\n");
+  IWL_INFO(this, "Releasing pcie device\n");
   iwl_pci_release(iwl_trans_);
 
   delete this;

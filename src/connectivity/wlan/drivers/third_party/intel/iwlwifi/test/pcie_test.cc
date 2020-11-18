@@ -128,6 +128,7 @@ class PcieDdkTester : public fake_ddk::Bind {
   }
 
   wlan::iwlwifi::PcieDevice* dev() { return dev_; }
+  fake_ddk::Bind& ddk() { return *this; }
   FakePci fake_pci_;
 
  protected:
@@ -152,7 +153,9 @@ TEST(PcieDdkTester, DeviceLifeCycle) {
   // Create() allocates and binds the device.
   EXPECT_OK(wlan::iwlwifi::PcieDevice::Create(nullptr, fake_ddk::kFakeParent, false),
             "Bind failed");
+
   tester.dev()->DdkAsyncRemove();
+  EXPECT_OK(tester.ddk().WaitUntilRemove());
   tester.dev()->DdkRelease();
 
   EXPECT_TRUE(tester.Ok());

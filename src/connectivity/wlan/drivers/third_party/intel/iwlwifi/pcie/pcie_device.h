@@ -16,6 +16,7 @@ class PcieDevice : public Device {
  public:
   // ::ddk::Device implementation.
   void DdkRelease();
+  void DdkUnbind(ddk::UnbindTxn txn);
 
   // Creates and binds PcieDevice instance. On success hands device off to device lifecycle
   // management.
