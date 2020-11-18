@@ -283,8 +283,19 @@ if (current_toolchain == default_toolchain) {
     group("legacy-$cpu") {
       testonly = true
       deps = [
+        ":legacy-aux-$cpu",
         ":legacy-deps-$cpu",
         ":legacy-tests-$cpu",
+      ]
+    }
+
+    build_api_module("legacy_sysroot-$cpu") {
+      testonly = true
+      data_keys = [ "legacy_sysroot" ]
+      walk_keys = [ "legacy_barrier" ]
+      deps = [
+        ":all-ulib-$cpu",
+        ":asan-ulib-$cpu",
       ]
     }
   }
@@ -297,6 +308,28 @@ foreach(cpu, standard_fuchsia_cpus) {
       testonly = true
       cpu = cpu
       deps = [ ":legacy-tests-deps-$cpu" ]
+    }
+
+    # The legacy Fuchsia GN build needs to consume a manifest of libraries
+    # built for ASan (and all the libraries themselves).  When the main
+    # build is ASan, it needs to find the non-ASan libraries here too.
+    manifest_file("legacy-aux-$cpu") {
+      testonly = true
+      deps = [
+        ":all-ulib-$cpu",
+        ":instrumented-ulib-$cpu",
+
+        # Include the tests so their libraries are in the aux manifest
+        # when individual binaries are drawn from the tests manifest.
+        ":legacy-tests-deps-$cpu",
+      ]
+      metadata = {
+        # This prevents build_api_module("legacy-$cpu") from visiting the
+        # ASan incarnations of all the libraries.  The legacy build wants
+        # only the manifest of ASan shared libraries.  It wants the targets
+        # themselves only from the primary build.
+        legacy_barrier = []
+      }
     }
   }
 
@@ -319,6 +352,70 @@ foreach(cpu, standard_fuchsia_cpus) {
     direct = true
     deps = [ "$zx/system/utest" ]
   }
+
+  environment_redirect("all-ulib-$cpu") {
+    testonly = true
+    cpu = cpu
+    environment_label = "$zx/public/gn/toolchain:user"
+    shlib = true
+    exclude_variant_tags = [ "instrumented" ]
+    deps = [ "$zx/system/ulib" ]
+  }
+
+  foreach(tag,
+          [
+            "instrumented",
+            "asan",
+          ]) {
+    environment_redirect("$tag-ulib-$cpu") {
+      testonly = true
+      cpu = cpu
+      environment_label = "$zx/public/gn/toolchain:user"
+      deps = [ ":$tag-ulib-redirect" ]
+    }
+  }
+}
+
+if (toolchain.environment == "user") {
+  foreach(tag,
+          [
+            "instrumented",
+            "asan",
+          ]) {
+    variants = []
+    foreach(selector, toolchain.variant_selectors) {
+      if (selector.tags + [ tag ] - [ tag ] != selector.tags) {
+        variants += [ selector.variant ]
+        variants -= [ selector.variant ]
+        variants += [ selector.variant ]
+      }
+    }
+    group("$tag-ulib-redirect") {
+      testonly = true
+      visibility = [ ":*" ]
+      deps = []
+      foreach(variant, variants) {
+        deps += [ ":$tag-ulib-redirect.$variant" ]
+      }
+    }
+    foreach(variant, variants) {
+      environment_redirect("$tag-ulib-redirect.$variant") {
+        testonly = true
+        visibility = [ ":$tag-ulib-redirect" ]
+        variant = variant
+
+        # NOTE: Order of deps items is important.
+        deps = [ "$zx/system/ulib" ]
+        foreach(dep, toolchain.implicit_deps) {
+          if (dep == "$dep") {
+            deps += [ dep ]
+          } else {
+            deps += dep.add
+          }
+        }
+      }
+    }
+  }
 }
 
 build_api_module("legacy_images") {
@@ -340,6 +437,10 @@ foreach(cpu, standard_fuchsia_cpus) {
 
     # Add the dependencies of legacy-aux directly, as that target sets a barrier
     # that's not desirable here.
-    deps += [ ":legacy-tests-deps-$cpu" ]
+    deps += [
+      ":all-ulib-$cpu",
+      ":instrumented-ulib-$cpu",
+      ":legacy-tests-deps-$cpu",
+    ]
   }
 }

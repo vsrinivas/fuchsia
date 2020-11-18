@@ -15,5 +15,10 @@ assert(current_cpu != "")
 
 group("ulib") {
   testonly = true
-  deps = []
+  deps = [
+    "$zx/kernel/lib/boot-options",
+    "c",
+    "c:crt1",
+    "zircon",
+  ]
 }

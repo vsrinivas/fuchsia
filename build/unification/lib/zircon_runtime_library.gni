@@ -1,0 +1,91 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+assert(is_fuchsia, "Zircon libraries only available for Fuchsia targets")
+
+import("//build/config/fuchsia/zircon.gni")
+import("//build/unification/images/artifacts.gni")
+
+# Creates a group with distribution_entries metadata that looks like:
+#
+#   {
+#     destination = "lib/libtest-xxxxx.so"
+#     label = '//build/unification/lib/toolchain:libtest"
+#     source = "../../prebuilt/third_party/..../libtest-xxxxx.so"
+#   }
+#
+# Exposes a library provided by the ZN build to the manifest metadata collection
+# scheme.
+#
+# This template allows such libraries and their various variants to be included
+# in manifests generated from metadata.
+#
+# Parameters
+#
+#   library (required)
+#     [string] Name of the library to expose.
+template("zircon_runtime_library") {
+  assert(defined(invoker.library), "Must provide a library")
+
+  _variant_suffix = ""
+  if (toolchain_variant.instrumented && toolchain_variant.name != "") {
+    # Fuzzers just use the base variant.
+    _variant_suffix +=
+        "." + string_replace(toolchain_variant.name, "-fuzzer", "")
+  }
+  name = "lib.${invoker.library}" + _variant_suffix
+
+  # TODO(tmandry): Remove fallback logic once clang toolchain rolls.
+  fallback_name = false
+  if (defined(invoker.fallback)) {
+    fallback_name = "lib.${invoker.fallback}" + _variant_suffix
+  }
+
+  artifact = false
+  foreach(entry, zircon_artifacts) {
+    if (entry.name == name || entry.name == fallback_name) {
+      assert(artifact == false, "Duplicate Zircon library: $name")
+      artifact = entry
+    }
+  }
+  assert(artifact != false, "Could not find Zircon library: $name")
+  assert(artifact.deps == [],
+         "Cannot handle Zircon library $name, deps not supported")
+
+  script = "//build/unification/lib/format_metadata.py"
+  format_args = [
+    "-S",  # https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=62771
+    rebase_path(script, root_build_dir),
+    "--zircon-build-dir",
+    rebase_path(zircon_root_build_dir),
+    "--build-dir",
+    rebase_path(root_build_dir),
+
+    # NOTE: not including the toolchain here as this target can be reached from
+    # different paths due to its hacky nature, and label stability is key to
+    # ensure the build does not fail due to a bogus duplicate.
+    # This will go away naturally when these libraries are handled directly in
+    # the GN build.
+    "--label",
+    get_label_info(":$target_name", "label_no_toolchain"),
+  ]
+  foreach(line, artifact.lines) {
+    format_args += [
+      "--entry",
+      line,
+    ]
+  }
+
+  metadata_entries =
+      exec_script(python_exe_src, format_args, "json", [ script ])
+
+  group(target_name) {
+    forward_variables_from(invoker, [ "visibility" ])
+    metadata = {
+      # Used by the distribution_manifest template.
+      distribution_entries_barrier = []
+      distribution_entries = metadata_entries
+    }
+  }
+}

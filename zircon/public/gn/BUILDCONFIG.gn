@@ -782,6 +782,8 @@ template("library") {
           deps += invoker.deps
         }
 
+        toolchain_label = get_label_info(":$target_name", "toolchain")
+
         metadata = {
           if (defined(invoker.metadata)) {
             # The $metadata set on library() goes on the source_set().
@@ -806,6 +808,27 @@ template("library") {
           forward_variables_from(legacy_metadata, "*")
           if (defined(invoker.metadata)) {
             forward_variables_from(invoker.metadata, [ "legacy_sysroot" ])
+          }
+
+          # Make the manifest describing this library available to the build
+          # API module for unification.
+          # The manifest is not published for fuzzer variants.
+          if (string_replace(toolchain_label, "fuzzer", "") ==
+              toolchain_label) {
+            zx_manifest = [
+              {
+                label = get_label_info(":$target_name", "label_with_toolchain")
+                name = "lib.$_library_name"
+                if (toolchain.tags + [ "instrumented" ] - [ "instrumented" ] !=
+                    toolchain.tags) {
+                  name += toolchain.variant_suffix
+                }
+                toolchain = toolchain_label
+                path = rebase_path(zx_manifest_file, root_build_dir)
+                cpu = current_cpu
+                os = current_os
+              },
+            ]
           }
         }
       }
