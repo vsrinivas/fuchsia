@@ -184,7 +184,7 @@ is_port_used() {
   fi | grep -q "^$1$"
 }
 
-if is_port_used "${local_port}"; then
+if is_port_used ${local_port}; then
   fx-error "Local port ${local_port} is not available. Please try specifying"\
            "a different port using --port flag."
   exit 1
@@ -266,7 +266,7 @@ cleanup_processes_and_ports() {
   child_pids=$(jobs -p)
   if [[ -n "${child_pids}" ]]; then
     # Note: child_pids must be expanded to args here.
-    kill "${child_pids}" 2> /dev/null
+    kill ${child_pids} 2> /dev/null
     wait 2> /dev/null
   fi
 

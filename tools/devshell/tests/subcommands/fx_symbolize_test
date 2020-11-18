@@ -26,7 +26,7 @@ BT_SET_UP() {
 }
 
 TEST_symbolize_local() {
-  BT_EXPECT "${fx}" symbolize --experimental
+  BT_EXPECT ${fx} symbolize --experimental
   source "${symbolizer}.mock_state"
   local symbol_args="$(count_symbol_server_args)"
   BT_EXPECT_EQ "${symbol_args}" "0" "symbolizer should not get any --symbol-server arguments: ${symbol_args}"
@@ -35,7 +35,7 @@ TEST_symbolize_local() {
 TEST_symbolize_remote() {
   mkdir -p "${BT_TEMP_DIR}/.home/.fuchsia/debug"
   touch "${BT_TEMP_DIR}/.home/.fuchsia/debug/googleapi_auth"
-  BT_EXPECT HOME="${BT_TEMP_DIR}/.home" "${fx}" symbolize --experimental -r
+  BT_EXPECT HOME="${BT_TEMP_DIR}/.home" ${fx} symbolize --experimental -r
   source "${symbolizer}.mock_state"
   local symbol_args="$(count_symbol_server_args)"
   BT_EXPECT_EQ $((symbol_args>0)) "1" "symbolizer should get at least one --symbol-server argument: ${symbol_args}"
@@ -48,7 +48,7 @@ count_symbol_server_args() {
       ((symbol_server_args++))
     fi
   done
-  echo "${symbol_server_args}"
+  echo ${symbol_server_args}
 }
 
 BT_RUN_TESTS "$@"

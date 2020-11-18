@@ -31,7 +31,7 @@ case $1 in
     ;;
 esac
 
-"${FUCHSIA_DIR}"/tools/ssh-keys/gen-ssh-keys.sh || exit $?
+${FUCHSIA_DIR}/tools/ssh-keys/gen-ssh-keys.sh || exit $?
 
 if $check; then
   privkey="$(get-ssh-privkey)"

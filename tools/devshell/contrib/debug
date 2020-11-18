@@ -124,14 +124,14 @@ if [[ -z "${port}" ]]; then
 fi
 
 if [[ -n "${target_core}" ]]; then
-  crash_reports_dir=$(fx-command-run shell ls /tmp/r/sys | grep crash_reports)
+  crash_reports_dir=`fx-command-run shell ls /tmp/r/sys | grep crash_reports`
   if [[ -z "${crash_reports_dir}" ]]; then
     fx-error "Could not find crash reports directory on target"
     exit 1
   fi
 
-  core_name=$(fx-command-run shell \
-    "cd /tmp/r/sys/${crash_reports_dir}/reports 2>/dev/null && find . -name minidump.dmp -type f")
+  core_name=`fx-command-run shell \
+    "cd /tmp/r/sys/${crash_reports_dir}/reports 2>/dev/null && find . -name minidump.dmp -type f"`
 
   if [[ -z "${core_name}" ]]; then
     fx-error "No cores available on device"

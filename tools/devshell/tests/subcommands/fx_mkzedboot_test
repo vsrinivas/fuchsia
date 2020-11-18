@@ -60,7 +60,7 @@ EOF
   # Set up a fake USB device; just a plain 128MiB file.
   USB_DRIVE="${BT_TEMP_DIR}/dev/sda"
   dd if=/dev/zero of="${USB_DRIVE}" bs=1024 seek=$((128*1024-1)) count=1 >/dev/null 2>/dev/null
-  echo "${USB_DRIVE}" > "${BT_TEMP_DIR}"/tools/devshell/list-usb-disks.mock_stdout
+  echo ${USB_DRIVE} > ${BT_TEMP_DIR}/tools/devshell/list-usb-disks.mock_stdout
 
   # Set up mocked replacements for system utils.
   export PATH="${BT_TEMP_DIR}/bin:${PATH}"
@@ -69,25 +69,25 @@ EOF
 # Ensure that help is displayed if not argument is given.
 TEST_fx-mkzedboot-no-args() {
   local out="${BT_TEMP_DIR}/_fx_mkzedboot_output"
-  BT_EXPECT_FAIL "${fx}" mkzedboot >"$out" 2>&1
+  BT_EXPECT_FAIL ${fx} mkzedboot >"$out" 2>&1
   BT_EXPECT_FILE_CONTAINS_SUBSTRING "$out" 'device argument required'
 }
 
 # Ensure that invalid USB disks are detected.
 TEST_fx-mkzedboot-invalid-arg() {
   local out="${BT_TEMP_DIR}/_fx_mkzedboot_output"
-  BT_EXPECT_FAIL "${fx}" mkzedboot /xxx/invalid >"$out" 2>&1
+  BT_EXPECT_FAIL ${fx} mkzedboot /xxx/invalid >"$out" 2>&1
   BT_EXPECT_FILE_CONTAINS_SUBSTRING "$out" 'does not look like a USB device'
 }
 
 # "force" should allow us to write to something that doesn't look like a USB device.
 TEST_fx-mkzedboot-force-write() {
   # Modify "list-usb-disks" to not return anything as a USB disk.
-  echo > "${BT_TEMP_DIR}"/tools/devshell/list-usb-disks.mock_stdout
+  echo > ${BT_TEMP_DIR}/tools/devshell/list-usb-disks.mock_stdout
 
   local out="${BT_TEMP_DIR}/_fx_mkzedboot_output"
   # Force write to the USB drive.
-  BT_EXPECT "${fx}" mkzedboot -f "${USB_DRIVE}" >"$out" 2>&1
+  BT_EXPECT ${fx} mkzedboot -f ${USB_DRIVE} >"$out" 2>&1
 
   # Ensure we wrote to the file.
   source "${BT_TEMP_DIR}/bin/dd.mock_state"
@@ -105,7 +105,7 @@ EOF
 
   local out="${BT_TEMP_DIR}/_fx_mkzedboot_output"
   # Write to /dev/sda
-  BT_ASSERT "${fx}" mkzedboot "${USB_DRIVE}" >"$out" 2>&1
+  BT_ASSERT ${fx} mkzedboot ${USB_DRIVE} >"$out" 2>&1
 
   # Ensure we created the GPT.
   source "${BT_TEMP_DIR}/prebuilt/tools/cgpt/linux-x64/cgpt.mock_state.1"
@@ -136,7 +136,7 @@ fi
 EOF
   local out="${BT_TEMP_DIR}/_fx_mkzedboot_output"
   # Write to /dev/sda
-  BT_ASSERT "${fx}" mkzedboot "${USB_DRIVE}" >"$out" 2>&1
+  BT_ASSERT ${fx} mkzedboot ${USB_DRIVE} >"$out" 2>&1
 
   # Ensure we created the GPT.
   source "${BT_TEMP_DIR}/prebuilt/tools/cgpt/linux-x64/cgpt.mock_state.1"

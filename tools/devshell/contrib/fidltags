@@ -24,10 +24,10 @@ main () {
         exit
     fi
 
-    "${FUCHSIA_DIR}"/scripts/generate-fidl-tags.py \
-        --build-dir="${FUCHSIA_BUILD_DIR}" \
-        --zircon-build-dir="${ZIRCON_BUILDROOT}" \
-        --output="${FUCHSIA_DIR}"/fidl-tags
+    ${FUCHSIA_DIR}/scripts/generate-fidl-tags.py \
+        --build-dir=${FUCHSIA_BUILD_DIR} \
+        --zircon-build-dir=${ZIRCON_BUILDROOT} \
+        --output=${FUCHSIA_DIR}/fidl-tags
 }
 
 main "$@"

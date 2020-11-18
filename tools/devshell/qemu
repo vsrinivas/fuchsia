@@ -41,7 +41,7 @@ args=(
 # build-produced image file, which could cause timestamp issues with that file.
 # Construction of the new ZBI adds ~/.ssh/fuchsia_authorized_keys for SSH
 # access.
-imgdir="$(mktemp -d "${FUCHSIA_BUILD_DIR}"/tmp.XXX)"
+imgdir="$(mktemp -d ${FUCHSIA_BUILD_DIR}/tmp.XXX)"
 if [[ ! -d "${imgdir}" ]]; then
   echo >&2 "Failed to create temporary directory"
   exit 1

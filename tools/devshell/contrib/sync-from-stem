@@ -13,7 +13,7 @@
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/../lib/vars.sh || exit $?
 fx-config-read
 if [ $# -gt 0 ]; then
-  "${FUCHSIA_DIR}"/scripts/sync-from-stem.py "$@"
+  ${FUCHSIA_DIR}/scripts/sync-from-stem.py "$@"
 else
-  "${FUCHSIA_DIR}"/scripts/sync-from-stem.py "${FUCHSIA_DIR}"
+  ${FUCHSIA_DIR}/scripts/sync-from-stem.py "${FUCHSIA_DIR}"
 fi

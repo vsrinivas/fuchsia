@@ -166,7 +166,7 @@ while true; do
       # The tr is present as the output sometimes contains spurious control characters.
       clock=$(with-pinned-target fx-command-run shell clock --monotonic)
       if [[ -n ${clock} ]]; then
-        uptime=$(echo "$clock" | tr '[[:cntrl:]]' ' ' )
+        uptime=$(echo $clock | tr '[[:cntrl:]]' ' ' )
         log "Target uptime: $(( $uptime / 1000000000 ))"
         state="ready"
       else

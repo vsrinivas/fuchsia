@@ -181,7 +181,7 @@ if [ -z "${select_filters}" ]; then
     fx-command-run build triage
   fi
 
-  $triage_exe "${flags}"
+  $triage_exe ${flags}
 
 else
   temp_dir=$(mktemp -d)

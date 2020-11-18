@@ -54,7 +54,7 @@ path: /pkgfs/packages/${test_name}/0/test/${test_name}
 EOF
   echo "${test_name}" > "${BT_TEMP_DIR}/out/default/base_packages.list"
   local out="${BT_TEMP_DIR}/output.log"
-  ${fx} run-test ${test_name} >"${out}" 2>&1
+  ${fx} run-test ${test_name} >${out} 2>&1
   # check that "fx update-if-in-base" was called
   btf::expect-mock-args "${BT_TEMP_DIR}/tools/devshell/update-if-in-base" "${test_name}"
 }
@@ -82,7 +82,7 @@ package_url: ${component2_url}
 path: /pkgfs/packages/example_package_test/0/test/example_package_test
 EOF
   local out="${BT_TEMP_DIR}/output.log"
-  ${fx} run-test example_package >"${out}" 2>&1
+  ${fx} run-test example_package >${out} 2>&1
   # check if "fx shell" was executed properly for runtests syntax
   btf::expect-mock-args "${BT_TEMP_DIR}/tools/devshell/shell" \
     "runtests" "${component1_url}" "${component2_url}"

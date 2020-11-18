@@ -68,7 +68,7 @@ fi
 if [[ -z "${output_dir}" ]]; then
   # Generate an output directory.
   # Format is /tmp/snapshots/<YearMonthDay_HourMinuteSecond>
-  uuid=$(date +"%Y%m%d_%H%M%S")
+  uuid=`date +"%Y%m%d_%H%M%S"`
   output_dir="/tmp/snapshots/${uuid}"
   mkdir -p "${output_dir}"
   if [[ "$?" -ne 0 ]]; then

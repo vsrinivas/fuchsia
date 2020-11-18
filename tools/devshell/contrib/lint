@@ -55,7 +55,7 @@ function usage() {
 }
 
 function zap-commas() {
-  echo "$1" | tr ',' '\n'
+  echo $1 | tr ',' '\n'
 }
 
 function get-diff-base() {
@@ -326,7 +326,7 @@ call_linters() {
 }
 
 for file in ${FILES}; do
-  add_file_to_linter "${file}"
+  add_file_to_linter ${file}
 done
 
 call_linters || exit $?

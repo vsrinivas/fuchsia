@@ -99,7 +99,7 @@ function main {
     echo >&2 Stopping "${target} with killall $(basename "${target}") ..."
     fx-command-run shell killall "$(basename "${target}")" || true
   fi
-  echo >&2 Running "${target} with run ""${target}"" ..."
+  echo >&2 Running "${target} with run "${target}" ..."
   fx-command-run shell run "${target}" "$@"
   ((r += $?))
   return r

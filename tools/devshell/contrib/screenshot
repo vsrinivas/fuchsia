@@ -76,7 +76,7 @@ fi
 if [[ ! -z $mog_opts ]]; then
   # Also add a black border so it's easier to see the image when
   # pasted into the bug database.
-  mogrify -bordercolor black -border 3 "$mog_opts" "$TMP_FILE"
+  mogrify -bordercolor black -border 3 $mog_opts “$TMP_FILE”
 fi
 
 mv -f "$TMP_FILE" "$OUT"

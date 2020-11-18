@@ -59,7 +59,7 @@ function main {
 
   # swap the in-tree rust-project.json to point at newly used directory
   if [[ -f "${build_dir}/rust-project.json" ]]; then
-    ln -f -s "${build_dir}/rust-project.json" "$FUCHSIA_DIR"/rust-project.json
+    ln -f -s "${build_dir}/rust-project.json" $FUCHSIA_DIR/rust-project.json
   fi
 
   if [[ -e "${full_build_dir}/args.gn" ]]; then

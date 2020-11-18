@@ -49,7 +49,7 @@ EOF
 
 TEST_fx_vdl_default() {
   local out="${BT_TEMP_DIR}/output.log"
-  BT_EXPECT "${fx}" vdl >>"${out}" 2>&1
+  BT_EXPECT ${fx} vdl >>${out} 2>&1
   btf::expect-mock-args "${PREBUILT_VDL_DIR}/device_launcher.mock_state.1" \
     "--action=start" _ANY_ _ANY_ _ANY_ _ANY_ \
     "--resize_fvm=2G" \
@@ -64,7 +64,7 @@ TEST_fx_vdl_default() {
 
 TEST_fx_vdl_tuntap() {
   local out="${BT_TEMP_DIR}/output.log"
-  BT_EXPECT "${fx}" vdl -N  >>"${out}" 2>&1
+  BT_EXPECT ${fx} vdl -N  >>${out} 2>&1
   btf::expect-mock-args "${PREBUILT_VDL_DIR}/device_launcher.mock_state.1" \
   "--action=start" _ANY_ _ANY_ _ANY_ _ANY_ \
   "--resize_fvm=2G" \
@@ -79,7 +79,7 @@ TEST_fx_vdl_tuntap() {
 
 TEST_fx_vdl_headless_tuntap() {
   local out="${BT_TEMP_DIR}/output.log"
-  BT_EXPECT "${fx}" vdl -N --headless >>"${out}" 2>&1
+  BT_EXPECT ${fx} vdl -N --headless >>${out} 2>&1
 
   btf::expect-mock-args "${PREBUILT_VDL_DIR}/device_launcher.mock_state.1" \
   "--action=start" _ANY_ _ANY_ _ANY_ _ANY_ \
@@ -95,7 +95,7 @@ TEST_fx_vdl_headless_tuntap() {
 
 TEST_fx_vdl_tuntap_script() {
   local out="${BT_TEMP_DIR}/output.log"
-  BT_EXPECT "${fx}" vdl -N -u "./script" >>"${out}" 2>&1
+  BT_EXPECT ${fx} vdl -N -u "./script" >>${out} 2>&1
 
   btf::expect-mock-args "${PREBUILT_VDL_DIR}/device_launcher.mock_state.1" \
   "--action=start" _ANY_ _ANY_ _ANY_ _ANY_ \

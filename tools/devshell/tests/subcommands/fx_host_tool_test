@@ -37,18 +37,18 @@ EOF
 }
 
 TEST_tool_executed() {
-  BT_EXPECT "${fx}" host-tool "device-finder" "--flag1" "arg1"
+  BT_EXPECT ${fx} host-tool "device-finder" "--flag1" "arg1"
   btf::expect-mock-args "${devfinder}" "--flag1" "arg1"
 }
 
 TEST_tool_not_built() {
-  BT_EXPECT "${fx}" host-tool "device-finder" "--flag1" "arg1"
+  BT_EXPECT ${fx} host-tool "device-finder" "--flag1" "arg1"
   # tool exists, so build should not be called
   BT_ASSERT_FILE_DOES_NOT_EXIST "${BT_TEMP_DIR}/tools/devshell/build.mock_state"
 }
 
 TEST_force_build() {
-  BT_EXPECT "${fx}" host-tool --force-build "device-finder" "--flag1" "arg1"
+  BT_EXPECT ${fx} host-tool --force-build "device-finder" "--flag1" "arg1"
   # tool exists, but build should be called anyway because --force-build
   BT_ASSERT_FILE_EXISTS "${BT_TEMP_DIR}/tools/devshell/build.mock_state"
 }
@@ -62,7 +62,7 @@ TEST_build_if_not_found() {
     mv "${devfinder}_backup" "${devfinder}"
 EOF
 
-  BT_EXPECT "${fx}" host-tool "device-finder" "--flag1" "arg1"
+  BT_EXPECT ${fx} host-tool "device-finder" "--flag1" "arg1"
   BT_ASSERT_FILE_EXISTS "${BT_TEMP_DIR}/tools/devshell/build.mock_state"
   btf::expect-mock-args "${devfinder}" "--flag1" "arg1"
 }
@@ -72,7 +72,7 @@ TEST_no_build() {
   mv "${devfinder}" "${devfinder}_backup"
 
   # should fail because tool cannot be found
-  BT_EXPECT_FAIL "${fx}" host-tool "--no-build" "device-finder" "--flag1" "arg1" 2> /dev/null
+  BT_EXPECT_FAIL ${fx} host-tool "--no-build" "device-finder" "--flag1" "arg1" 2> /dev/null
 
   # ensure that build was not called
   BT_ASSERT_FILE_DOES_NOT_EXIST "${BT_TEMP_DIR}/tools/devshell/build.mock_state"

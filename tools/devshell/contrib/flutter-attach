@@ -61,7 +61,7 @@ if [[ ! -x "$FUCHSIA_ATTACH_BIN" ]]; then
 fi
 
 # The flutter tool expects the working directory is the fuchsia root.
-cd "${FUCHSIA_DIR}" || exit
+cd "${FUCHSIA_DIR}"
 
 "${FUCHSIA_ATTACH_BIN}" \
   "--dart-sdk=${PREBUILT_DART}" \

@@ -57,18 +57,18 @@ else
   )
 fi
 
-(cd "$FUCHSIA_DIR"; "$PREBUILT_RUST_DIR"/bin/cargo vendor \
-  --manifest-path "$FUCHSIA_DIR"/third_party/rust_crates/Cargo.toml \
-  "$FUCHSIA_DIR"/third_party/rust_crates/vendor \
+(cd $FUCHSIA_DIR; $PREBUILT_RUST_DIR/bin/cargo vendor \
+  --manifest-path $FUCHSIA_DIR/third_party/rust_crates/Cargo.toml \
+  $FUCHSIA_DIR/third_party/rust_crates/vendor \
   -q)
 
-(cd "$FUCHSIA_DIR"; $GNAW_BIN \
-   --manifest-path "$FUCHSIA_DIR"/third_party/rust_crates/Cargo.toml \
-   --project-root "$FUCHSIA_DIR" \
-   --cargo "$CARGO" \
-  -o "$FUCHSIA_DIR"/third_party/rust_crates/BUILD.gn \
-  --gn-bin "$PREBUILT_GN" \
+(cd $FUCHSIA_DIR; $GNAW_BIN \
+   --manifest-path $FUCHSIA_DIR/third_party/rust_crates/Cargo.toml \
+   --project-root $FUCHSIA_DIR \
+   --cargo $CARGO \
+  -o $FUCHSIA_DIR/third_party/rust_crates/BUILD.gn \
+  --gn-bin $PREBUILT_GN \
   --skip-root)
 
-"$FUCHSIA_DIR"/scripts/rust/check_rust_licenses.py \
-  --directory "$FUCHSIA_DIR"/third_party/rust_crates/vendor
+$FUCHSIA_DIR/scripts/rust/check_rust_licenses.py \
+  --directory $FUCHSIA_DIR/third_party/rust_crates/vendor

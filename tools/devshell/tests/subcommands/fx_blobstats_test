@@ -46,33 +46,33 @@ BT_SET_UP() {
   cp "${DATA_DIR}/blobs.json" "${BT_TEMP_DIR}/out/default/blobs.json"
 
   IMAGES_DIR="${BT_TEMP_DIR}/out/default/obj/build/images"
-  mkdir -p "${IMAGES_DIR}"
+  mkdir -p ${IMAGES_DIR}
   cp "${DATA_DIR}/blob.manifest" "${IMAGES_DIR}/blob.manifest"
 
   SNAPSHOT_DIR="${BT_TEMP_DIR}/out/default/obj/src/developer/forensics/snapshot/snapshot"
-  mkdir -p "${SNAPSHOT_DIR}"
+  mkdir -p ${SNAPSHOT_DIR}
   cp "${DATA_DIR}/snapshot_meta.far" "${SNAPSHOT_DIR}/meta.far"
   cp "${DATA_DIR}/snapshot_blobs.json" "${SNAPSHOT_DIR}/blobs.json"
 
   WLANIF_DIR="${BT_TEMP_DIR}/out/default/obj/src/connectivity/wlan/drivers/wlanif/wlanif"
-  mkdir -p "${WLANIF_DIR}"
+  mkdir -p ${WLANIF_DIR}
   cp "${DATA_DIR}/wlanif_meta.far" "${WLANIF_DIR}/meta.far"
   cp "${DATA_DIR}/wlanif_blobs.json" "${WLANIF_DIR}/blobs.json"
 
   ARM64_SHARED_DIR="${BT_TEMP_DIR}/out/default/arm64-shared"
-  mkdir -p "${ARM64_SHARED_DIR}"
+  mkdir -p ${ARM64_SHARED_DIR}
   cp "${DATA_DIR}/wlanif.so" "${ARM64_SHARED_DIR}/wlanif.so"
 }
 
 # Test that "fx blobstats" generates valid csv files
 TEST_fxblobstats_csv() {
   local out="${BT_TEMP_DIR}/_fx_blobstats_output"
-  BT_EXPECT "${fx}" blobstats > "${out}"
+  BT_EXPECT ${fx} blobstats > "${out}"
   BT_ASSERT_FILE_EXISTS "${BT_TEMP_DIR}/out/default/blobs.csv"
   BT_ASSERT_FILE_EXISTS "${BT_TEMP_DIR}/out/default/packages.csv"
 
   GOLDEN_DIR="${BT_TEMP_DIR}/out/default/golden"
-  mkdir -p "${GOLDEN_DIR}"
+  mkdir -p ${GOLDEN_DIR}
   cp "${DATA_DIR}/blobs.csv" "${GOLDEN_DIR}/blobs.csv"
   cp "${DATA_DIR}/packages.csv" "${GOLDEN_DIR}/packages.csv"
 

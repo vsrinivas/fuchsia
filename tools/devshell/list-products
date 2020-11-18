@@ -13,7 +13,7 @@
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh || exit $?
 
-cd "${FUCHSIA_DIR}" || exit
+cd "${FUCHSIA_DIR}"
 product_gnis=($(echo {.,vendor/*}/products/*.gni | xargs -n 1 basename | sort))
 for product in "${product_gnis[@]}"
 do

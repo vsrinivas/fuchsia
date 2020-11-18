@@ -66,7 +66,7 @@ function normalize_local_gn_key {
 function normalize_remote_gn_key {
   # shellcheck disable=SC2029
   ssh ${ssh_base_args[@]+"${ssh_base_args[@]}"} "${host}" \
-    "[[ -f \"$_SSH_IDENTITY\" ]]" || return "${_ERROR_NO_KEY}"
+    "[[ -f \"$_SSH_IDENTITY\" ]]" || return ${_ERROR_NO_KEY}
 }
 
 # If a key exists in either //.ssh or HOME/.ssh, copy to the other location

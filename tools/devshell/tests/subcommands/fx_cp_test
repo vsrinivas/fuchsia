@@ -28,21 +28,21 @@ BT_SET_UP() {
 
 # ensure that "fx -d ipv4:port cp" calls sftp with expected address and port number
 TEST_cp_ipv4_port() {
-  BT_EXPECT "${fx}" -d "127.0.0.1:8022" cp --to-host /tmp/file_in_fuchsia_target /tmp/file_in_host
+  BT_EXPECT ${fx} -d "127.0.0.1:8022" cp --to-host /tmp/file_in_fuchsia_target /tmp/file_in_host
   BT_EXPECT btf::does-mock-args-contain "${sftp}.mock_state" "-P" "8022"
   BT_EXPECT btf::does-mock-args-contain "${sftp}.mock_state" "[127.0.0.1]"
 }
 
 # ensure that "fx -d [ipv6]:port cp" calls sftp with expected address and port number
 TEST_cp_ipv6_port() {
-  BT_EXPECT "${fx}" -d "[fe80::7:8%eth0]:222" cp --to-host /tmp/file_in_fuchsia_target /tmp/file_in_host
+  BT_EXPECT ${fx} -d "[fe80::7:8%eth0]:222" cp --to-host /tmp/file_in_fuchsia_target /tmp/file_in_host
   BT_EXPECT btf::does-mock-args-contain "${sftp}.mock_state" "-P" "222"
   BT_EXPECT btf::does-mock-args-contain "${sftp}.mock_state" "[fe80::7:8%eth0]"
 }
 
 # ensure that "fx -d addr cp" calls sftp with expected address and no port number
 TEST_cp_addr() {
-  BT_EXPECT "${fx}" -d "127.0.0.1" cp --to-host /tmp/file_in_fuchsia_target /tmp/file_in_host
+  BT_EXPECT ${fx} -d "127.0.0.1" cp --to-host /tmp/file_in_fuchsia_target /tmp/file_in_host
   BT_EXPECT btf::does-mock-args-contain "${sftp}.mock_state" "[127.0.0.1]"
   BT_EXPECT btf::does-mock-args-not-contain "${sftp}.mock_state" "-P"
 }

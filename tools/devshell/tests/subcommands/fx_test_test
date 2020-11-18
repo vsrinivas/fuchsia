@@ -47,7 +47,7 @@ BT_SET_UP() {
 TEST_fxtest_info() {
   cp "${DATA_DIR}/tests_multiple_in_package.json" "${BT_TEMP_DIR}/out/default/tests.json"
   local out="${BT_TEMP_DIR}/_fx_test_output"
-  BT_EXPECT "${fx}" test --info --exact > "${out}"
+  BT_EXPECT ${fx} test --info --exact > "${out}"
   BT_EXPECT_EQ "$(sed -n 's/^package_url: \(.*\)/\1/p' "${out}" | wc -l)" 7
 }
 
@@ -56,7 +56,7 @@ TEST_fxtest_package_server_integration() {
   cp "${DATA_DIR}/tests_package_server_integration.json" "${BT_TEMP_DIR}/out/default/tests.json"
   local out="${BT_TEMP_DIR}/_fx_test_output"
   local testname="overflow_fuzzer_test"
-  BT_EXPECT "${fx}" test ${testname} > "${out}"
+  BT_EXPECT ${fx} test ${testname} > ${out}
   # ensure that is-package-server-running was called
   BT_ASSERT_FILE_EXISTS "${BT_TEMP_DIR}/tools/devshell/is-package-server-running.mock_state"
   # ensure that update-if-in-base was called with the proper testname
@@ -68,7 +68,7 @@ TEST_fxtest_build() {
   cp "${DATA_DIR}/tests_package_server_integration.json" "${BT_TEMP_DIR}/out/default/tests.json"
   local out="${BT_TEMP_DIR}/_fx_test_output"
   local testname="overflow_fuzzer_test"
-  BT_EXPECT "${fx}" test ${testname} > "${out}"
+  BT_EXPECT ${fx} test ${testname} > ${out}
   # ensure that fx build was called
   # TODO: once fx test calls fx build with a specific target, check it here as well
   BT_ASSERT_FILE_EXISTS "${BT_TEMP_DIR}/tools/devshell/build.mock_state"
@@ -80,7 +80,7 @@ TEST_fxtest_build_failure_exits_with_nonzero_status() {
   local out="${BT_TEMP_DIR}/_fx_test_output"
   local testname="overflow_fuzzer_test"
   echo 1 > "${BT_TEMP_DIR}/tools/devshell/build.mock_status"
-  BT_EXPECT_FAIL "${fx}" test ${testname} > "${out}"
+  BT_EXPECT_FAIL ${fx} test ${testname} > ${out}
   # ensure that fx build was called
   # TODO: once fx test calls fx build with a specific target, check it here as well
   BT_ASSERT_FILE_EXISTS "${BT_TEMP_DIR}/tools/devshell/build.mock_state"
@@ -91,7 +91,7 @@ TEST_fxtest_nobuild() {
   cp "${DATA_DIR}/tests_package_server_integration.json" "${BT_TEMP_DIR}/out/default/tests.json"
   local out="${BT_TEMP_DIR}/_fx_test_output"
   local testname="overflow_fuzzer_test"
-  BT_EXPECT "${fx}" test --no-build ${testname} > "${out}"
+  BT_EXPECT ${fx} test --no-build ${testname} > ${out}
   # ensure that fx build was called
   # TODO: once fx test calls fx build with a specific target, check it here as well
   BT_ASSERT_FILE_DOES_NOT_EXIST "${BT_TEMP_DIR}/tools/devshell/build.mock_state"
@@ -104,7 +104,7 @@ TEST_fxtest_fails_with_no_package_server() {
   local out="${BT_TEMP_DIR}/_fx_test_output"
   local testname1="overflow_fuzzer_test"
   echo 1 > "${BT_TEMP_DIR}/tools/devshell/is-package-server-running.mock_status"
-  BT_EXPECT_FAIL "${fx}" test --no-build ${testname} > "${out}"
+  BT_EXPECT_FAIL ${fx} test --no-build ${testname} > ${out}
   # ensure that fx is-package-server-running was called
   BT_ASSERT_FILE_EXISTS "${BT_TEMP_DIR}/tools/devshell/is-package-server-running.mock_state"
 }
@@ -121,12 +121,12 @@ TEST_fxtest_hashpinnning() {
   local hash2="7a604498e05fa012391b6b51da9cc74ff6a6a9d25b1376de98125c194232bfa1"
 
   # expect that "fx shell run-test-component URL-WITH-HASH" was executed
-  BT_EXPECT "${fx}" test --no-build ${testname1} >> "${out}"
+  BT_EXPECT ${fx} test --no-build ${testname1} >> "${out}"
   local packageUrl1="fuchsia-pkg://fuchsia.com/example-fuzzers?hash=${hash1}#meta/overflow_fuzzer_test.cmx"
   btf::expect-mock-args "${BT_TEMP_DIR}/tools/devshell/shell" "run-test-component" "${packageUrl1}"
 
   # expect that "fx shell run-test-component URL-WITH-HASH" was executed
-  BT_EXPECT "${fx}" test --no-build ${testname2} >> "${out}"
+  BT_EXPECT ${fx} test --no-build ${testname2} >> "${out}"
   local packageUrl2="fuchsia-pkg://fuchsia.com/hello_world_cpp_tests?hash=${hash2}#meta/hello_world_cpp_unittests.cmx"
   btf::expect-mock-args "${BT_TEMP_DIR}/tools/devshell/shell.mock_state.2" "run-test-component" "${packageUrl2}"
 }
@@ -147,7 +147,7 @@ TEST_fxtest_updated_hash() {
   sed -i 's/${hash_old}/${hash_new}/g' ${BT_TEMP_DIR}/out/default/amber-files/repository/targets.json
 EOF
   # expect that "fx shell run-test-component URL-WITH-HASH" executes with the new hash, not the old one
-  BT_EXPECT "${fx}" test ${testname1} >> "${out}"
+  BT_EXPECT ${fx} test ${testname1} >> "${out}"
   local packageUrl="fuchsia-pkg://fuchsia.com/example-fuzzers?hash=${hash_new}#meta/overflow_fuzzer_test.cmx"
   btf::expect-mock-args "${BT_TEMP_DIR}/tools/devshell/shell" "run-test-component" "${packageUrl}"
 }
@@ -171,7 +171,7 @@ EOF
   local out="${BT_TEMP_DIR}/_fx_test_output"
 
   # expect that "fx shell run-test-component URL-WITHOUT-HASH" is executed
-  BT_EXPECT "${fx}" test --no-build overflow_fuzzer_test >> "${out}"
+  BT_EXPECT ${fx} test --no-build overflow_fuzzer_test >> "${out}"
   btf::expect-mock-args "${BT_TEMP_DIR}/tools/devshell/shell" \
     "run-test-component" "fuchsia-pkg://fuchsia.com/example-fuzzers#meta/overflow_fuzzer_test.cmx"
 }
@@ -194,7 +194,7 @@ EOF
   local out="${BT_TEMP_DIR}/_fx_test_output"
 
   # expect "fx shell build updates"
-  BT_EXPECT "${fx}" test overflow_fuzzer_test >> "${out}"
+  BT_EXPECT ${fx} test overflow_fuzzer_test >> "${out}"
   btf::expect-mock-args "${BT_TEMP_DIR}/tools/devshell/build" "updates"
 }
 
@@ -217,7 +217,7 @@ EOF
   btf::make_hosttools_mock "example_host_test" > /dev/null
 
   # expect "fx shell build"
-  BT_EXPECT "${fx}" test --e2e example_host_test >> "${out}"
+  BT_EXPECT ${fx} test --e2e example_host_test >> "${out}"
   btf::expect-mock-args "${BT_TEMP_DIR}/tools/devshell/build"
 }
 
@@ -240,7 +240,7 @@ EOF
   btf::make_hosttools_mock "example_host_test" > /dev/null
 
   # expect "fx shell build"
-  BT_EXPECT "${fx}" test example_host_test >> "${out}"
+  BT_EXPECT ${fx} test example_host_test >> "${out}"
   btf::expect-mock-args "${BT_TEMP_DIR}/tools/devshell/build" "host_x64/example_host_test"
 }
 
@@ -283,30 +283,30 @@ EOF
   exit 0
 EOF
   # check if environemnt is as expected for a user-defined IPV4 device and SSH port
-  BT_EXPECT "${fx}" -d 1.1.1.1:8123 test -o --e2e example_host_test | grep "TESTING_E2E_VARS" > "${out}"
+  BT_EXPECT ${fx} -d 1.1.1.1:8123 test -o --e2e example_host_test | grep "TESTING_E2E_VARS" > "${out}"
   BT_EXPECT_FILE_CONTAINS_SUBSTRING "${out}" "FUCHSIA_DEVICE_ADDR=1.1.1.1"
   BT_EXPECT_FILE_CONTAINS_SUBSTRING "${out}" "FUCHSIA_SSH_PORT=8123"
   BT_EXPECT_FILE_CONTAINS_SUBSTRING "${out}" "FUCHSIA_SSH_KEY=..*"   # ensures no empty definition
   BT_EXPECT_FILE_CONTAINS_SUBSTRING "${out}" "FUCHSIA_TEST_OUTDIR=..*" # ensures no empty definition
 
   # check if environemnt is as expected for a user-defined IPV6 device and SSH port
-  BT_EXPECT "${fx}" -d '[::1]:1111' test -o --e2e example_host_test | grep "TESTING_E2E_VARS" > "${out}"
+  BT_EXPECT ${fx} -d '[::1]:1111' test -o --e2e example_host_test | grep "TESTING_E2E_VARS" > "${out}"
   BT_EXPECT_FILE_CONTAINS_SUBSTRING "${out}" "FUCHSIA_DEVICE_ADDR=[::1]"
   BT_EXPECT_FILE_CONTAINS_SUBSTRING "${out}" "FUCHSIA_SSH_PORT=1111"
   BT_EXPECT_FILE_CONTAINS_SUBSTRING "${out}" "FUCHSIA_SSH_KEY=..*"   # ensures no empty definition
   BT_EXPECT_FILE_CONTAINS_SUBSTRING "${out}" "FUCHSIA_TEST_OUTDIR=..*" # ensures no empty definition
 
   # no device set, test should not be given a fuchsia_ssh_port, and fuchsia_device_addr must be defined as empty
-  BT_EXPECT "${fx}" test -o --e2e example_host_test | grep "TESTING_E2E_VARS" > "${out}"
+  BT_EXPECT ${fx} test -o --e2e example_host_test | grep "TESTING_E2E_VARS" > "${out}"
   BT_EXPECT_FILE_CONTAINS_SUBSTRING "${out}" 'FUCHSIA_DEVICE_ADDR=$'  # ensures empty definition
   BT_EXPECT_EMPTY "$(grep FUCHSIA_SSH_PORT "${out}")" "unexpected FUCHSIA_SSH_PORT"
 
   # if defined in the caller's environment, sl4f_http_port is passed as is
-  BT_EXPECT SL4F_HTTP_PORT=9099 "${fx}" test -o --e2e example_host_test | grep "TESTING_E2E_VARS" > "${out}"
+  BT_EXPECT SL4F_HTTP_PORT=9099 ${fx} test -o --e2e example_host_test | grep "TESTING_E2E_VARS" > "${out}"
   BT_EXPECT_FILE_CONTAINS_SUBSTRING "${out}" "SL4F_HTTP_PORT=9099"
 
   # fuchsia_test_outdir must be a valid and writable directory
-  BT_EXPECT "${fx}" test -o --e2e example_host_test > "${out}"
+  BT_EXPECT ${fx} test -o --e2e example_host_test > "${out}"
   local test_out_dir="$(sed -n "s/.* FUCHSIA_TEST_OUTDIR=\(.*\)/\1/p" "${out}")"
   BT_EXPECT touch "${test_out_dir}/test_file"
 }
@@ -338,7 +338,7 @@ EOF
     sed -i 's/beforefxbuild/afterfxbuild/' "${BT_TEMP_DIR}/out/default/tests.json"
 EOF
 
-  BT_EXPECT "${fx}" test example_host_test > "${out}"
+  BT_EXPECT ${fx} test example_host_test > ${out}
 
   btf::expect-mock-args "${test_exec}.mock_state" "afterfxbuild"
 }

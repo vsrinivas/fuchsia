@@ -28,21 +28,21 @@ BT_SET_UP() {
 }
 
 TEST_klog_local() {
-  BT_EXPECT "${fx}" klog --legacy
+  BT_EXPECT ${fx} klog --legacy
   source "${symbolize}.mock_state"
   local symbol_args="$(count_symbol_server_args)"
   BT_EXPECT_EQ "${symbol_args}" "0" "symbolize should not get any -symbol-server arguments: ${symbol_args}"
 }
 
 TEST_klog_remote() {
-  BT_EXPECT "${fx}" klog --legacy -r
+  BT_EXPECT ${fx} klog --legacy -r
   source "${symbolize}.mock_state"
   local symbol_args="$(count_symbol_server_args)"
   BT_EXPECT_EQ $((symbol_args>0)) "1" "symbolize should get at least one -symbol-server argument: ${symbol_args}"
 }
 
 TEST_klog_remote_long() {
-  BT_EXPECT "${fx}" klog --legacy --remote-symbols
+  BT_EXPECT ${fx} klog --legacy --remote-symbols
   source "${symbolize}.mock_state"
   local symbol_args="$(count_symbol_server_args)"
   BT_EXPECT_EQ $((symbol_args>0)) "1" "symbolize should get at least one -symbol-server argument: ${symbol_args}"
@@ -55,7 +55,7 @@ count_symbol_server_args() {
       ((symbol_server_args++))
     fi
   done
-  echo "${symbol_server_args}"
+  echo ${symbol_server_args}
 }
 
 BT_RUN_TESTS "$@"

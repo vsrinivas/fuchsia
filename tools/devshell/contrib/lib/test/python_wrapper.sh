@@ -8,4 +8,4 @@
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&2 && pwd)"/../lib/vars.sh || exit $?
 fx-config-read
 
-"${FUCHSIA_DIR}/tools/devshell/contrib/lib/test/$(basename "$0").py" "${@:1}" --out-dir="$FUCHSIA_BUILD_DIR"
+"${FUCHSIA_DIR}/tools/devshell/contrib/lib/test/$(basename $0).py" "${@:1}" --out-dir=$FUCHSIA_BUILD_DIR

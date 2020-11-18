@@ -129,7 +129,7 @@ style::attribute() {
       return 1
     fi
   fi
-  echo "${attribute}"
+  echo ${attribute}
 }
 
 style::color() {
@@ -146,7 +146,7 @@ style::color() {
       return 1
     fi
   fi
-  echo "${color}"
+  echo ${color}
 }
 
 style::background() {
@@ -190,12 +190,12 @@ and then the command's normal parameters."
         ;;
       --color)
         shift; name="$1"; shift
-        styles="${styles}${semicolon}$(style::color "$name" || exit $?)" || return $?
+        styles="${styles}${semicolon}$(style::color $name || exit $?)" || return $?
         semicolon=';'
         ;;
       --background)
         shift; name="$1"; shift
-        styles="${styles}${semicolon}$(style::background "$name" || exit $?)" || return $?
+        styles="${styles}${semicolon}$(style::background $name || exit $?)" || return $?
         semicolon=';'
         ;;
       --indent)
@@ -204,13 +204,13 @@ and then the command's normal parameters."
         ;;
       --*)
         name="${1:2}"
-        code=$(style::attribute "$name" 0)
+        code=$(style::attribute $name 0)
         if (( code )); then
           shift
           styles="${styles}${semicolon}${code}"
           semicolon=';'
         else
-          code=$(style::color "$name" 0)
+          code=$(style::color $name 0)
           if (( code )); then
             shift
             styles="${styles}${semicolon}${code}"
@@ -287,11 +287,11 @@ style::_echo_with_styles() {
 
     style::usage "$2" "${funcname}" "echo" "\
 Default style options for ${funcname}:
-  $(style::echo "${style_options}" --stdout \""${style_options}"\")"
+  $(style::echo ${style_options} --stdout \"${style_options}\")"
 
     return
   fi
-  style::echo "${style_options}" "$@" || return $?
+  style::echo ${style_options} "$@" || return $?
 }
 
 style::error() {

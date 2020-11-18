@@ -33,7 +33,7 @@ BT_SET_UP() {
 
 # ensure that "fx codesize --help" runs
 TEST_codesize_help() {
-  BT_EXPECT "${fx}" codesize --help &> /dev/null
+  BT_EXPECT ${fx} codesize --help &> /dev/null
 }
 
 BT_RUN_TESTS "$@"

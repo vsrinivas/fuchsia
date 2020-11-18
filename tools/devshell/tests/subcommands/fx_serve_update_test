@@ -96,13 +96,13 @@ TEST_fx_serve_updates() {
   # The pm tool needs to exist.
   BT_ASSERT_FILE_EXISTS "${PM}"
 
-  cd data/fx_serve_update_test || exit
+  cd data/fx_serve_update_test
 
   # Build the package from the manifest.
   "${PM}" -o testpackage -m testpackage.manifest build
 
   # Archive the package to a .far.
-  (cd testpackage || exit; "${PM}" archive)
+  (cd testpackage; "${PM}" archive)
 
   # Generate an empty repo and fill it with the .far.
   "${PM}" newrepo -repo "${REPODIR}"
