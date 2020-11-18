@@ -31,6 +31,7 @@ pub enum CommandEnum {
     Filter(Filter),
     Fwd(Fwd),
     If(If),
+    IpFwd(IpFwd),
     Log(Log),
     Neigh(Neigh),
     Route(Route),
@@ -288,6 +289,31 @@ pub struct IfList {
     #[argh(positional)]
     pub name_pattern: Option<String>,
 }
+
+#[derive(FromArgs, Clone, Debug)]
+#[argh(subcommand, name = "ip-fwd")]
+/// commands for IP forwarding
+pub struct IpFwd {
+    #[argh(subcommand)]
+    pub ip_fwd_cmd: IpFwdEnum,
+}
+
+#[derive(FromArgs, Clone, Debug)]
+#[argh(subcommand)]
+pub enum IpFwdEnum {
+    Disable(IpFwdDisable),
+    Enable(IpFwdEnable),
+}
+
+#[derive(FromArgs, Clone, Debug)]
+#[argh(subcommand, name = "disable")]
+/// disables IP forwarding
+pub struct IpFwdDisable {}
+
+#[derive(FromArgs, Clone, Debug)]
+#[argh(subcommand, name = "enable")]
+/// enables IP forwarding
+pub struct IpFwdEnable {}
 
 #[derive(FromArgs, Clone, Debug)]
 #[argh(subcommand, name = "log")]

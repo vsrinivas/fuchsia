@@ -89,6 +89,9 @@ async fn main() -> Result<(), Error> {
         CommandEnum::Filter(Filter { filter_cmd: cmd }) => {
             do_filter(cmd, filter).await.context("failed during filter command")
         }
+        CommandEnum::IpFwd(IpFwd { ip_fwd_cmd: cmd }) => {
+            do_ip_fwd(cmd, stack).await.context("failed during ip-fwd command")
+        }
         CommandEnum::Log(crate::opts::Log { log_cmd: cmd }) => {
             do_log(cmd, log).await.context("failed during log command")
         }
@@ -415,6 +418,26 @@ async fn do_filter(cmd: opts::FilterEnum, filter: FilterProxy) -> Result<(), Err
                 "error setting RDR rules"
             )?;
             info!("successfully set RDR rules");
+        }
+    }
+    Ok(())
+}
+
+async fn do_ip_fwd(cmd: opts::IpFwdEnum, stack: StackProxy) -> Result<(), Error> {
+    match cmd {
+        IpFwdEnum::Enable(IpFwdEnable {}) => {
+            let () = stack
+                .enable_ip_forwarding()
+                .await
+                .context("fuchsia.net.stack/Stack.EnableIpForwarding FIDL error")?;
+            info!("Enabled IP forwarding");
+        }
+        IpFwdEnum::Disable(IpFwdDisable {}) => {
+            let () = stack
+                .disable_ip_forwarding()
+                .await
+                .context("fuchsia.net.stack/Stack.DisableIpForwarding FIDL error")?;
+            info!("Disabled IP forwarding");
         }
     }
     Ok(())
@@ -1466,5 +1489,47 @@ mod tests {
         let ((), ()) = futures::future::try_join(neigh, neigh_succeeds)
             .await
             .expect("neigh config update should succeed");
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_ip_fwd_enable() {
+        let (stack, mut requests) =
+            fidl::endpoints::create_proxy_and_stream::<netstack::StackMarker>()
+                .expect("creating a request stream and proxy for testing should succeed");
+        let op = do_ip_fwd(IpFwdEnum::Enable(IpFwdEnable {}), stack);
+        let op_succeeds = async {
+            let responder = requests
+                .try_next()
+                .await
+                .expect("ip-fwd FIDL error")
+                .expect("request stream should not have ended")
+                .into_enable_ip_forwarding()
+                .expect("request should be of type EnableIpForwarding");
+            let () = responder.send().expect("responder.send should succeed");
+            Ok(())
+        };
+        let ((), ()) =
+            futures::future::try_join(op, op_succeeds).await.expect("fwd enable should succeed");
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_ip_fwd_disable() {
+        let (stack, mut requests) =
+            fidl::endpoints::create_proxy_and_stream::<netstack::StackMarker>()
+                .expect("creating a request stream and proxy for testing should succeed");
+        let op = do_ip_fwd(IpFwdEnum::Disable(IpFwdDisable {}), stack);
+        let op_succeeds = async {
+            let responder = requests
+                .try_next()
+                .await
+                .expect("fwd FIDL error")
+                .expect("request stream should not have ended")
+                .into_disable_ip_forwarding()
+                .expect("request should be of type DisableIpForwarding");
+            let () = responder.send().expect("responder.send should succeed");
+            Ok(())
+        };
+        let ((), ()) =
+            futures::future::try_join(op, op_succeeds).await.expect("fwd disable should succeed");
     }
 }
