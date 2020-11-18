@@ -56,7 +56,6 @@ func (cmd *listCmd) listDevices(ctx context.Context) ([]*fuchsiaDevice, error) {
 }
 
 func (cmd *listCmd) execute(ctx context.Context) error {
-	cmd.mdnsHandler = listMDNSHandler
 	devices, err := cmd.listDevices(ctx)
 	if err != nil {
 		return err

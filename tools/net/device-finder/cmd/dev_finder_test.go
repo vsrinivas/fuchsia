@@ -189,7 +189,6 @@ func (m *fakeMDNS) Start(_ context.Context, port int) error {
 }
 
 func newDevFinderCmd(
-	handler mDNSHandler,
 	answerDomains []string,
 	sendEmptyData bool,
 	sendTooShortData bool,
@@ -197,14 +196,13 @@ func newDevFinderCmd(
 	nbDiscover nbDiscoverFunc,
 ) devFinderCmd {
 	cmd := devFinderCmd{
-		mdnsHandler: handler,
-		mdnsAddrs:   "ff02::fb,224.0.0.251",
-		mdnsPorts:   "5353",
-		timeout:     10 * time.Millisecond,
-		netboot:     true,
-		mdns:        true,
-		ipv6:        st.ipv6,
-		ipv4:        st.ipv4,
+		mdnsAddrs: "ff02::fb,224.0.0.251",
+		mdnsPorts: "5353",
+		timeout:   10 * time.Millisecond,
+		netboot:   true,
+		mdns:      true,
+		ipv6:      st.ipv6,
+		ipv4:      st.ipv4,
 		newMDNSFunc: func(addr string) mdnsInterface {
 			return &fakeMDNS{
 				// Every device is behind a NAT, so the target
@@ -331,7 +329,6 @@ func runSubTests(t *testing.T, node string, f func(*testing.T, subtest)) {
 func TestFilterDevices(t *testing.T) {
 	nbDiscover := nilNBDiscoverFunc
 	cmd := newDevFinderCmd(
-		listMDNSHandler,
 		[]string{},
 		false,
 		false,
@@ -379,7 +376,6 @@ func TestListDevices(t *testing.T) {
 	runSubTests(t, "", func(t *testing.T, s subtest) {
 		cmd := listCmd{
 			devFinderCmd: newDevFinderCmd(
-				listMDNSHandler,
 				[]string{
 					fuchsiaMDNSNodename1,
 					fuchsiaMDNSNodename2,
@@ -419,7 +415,6 @@ func TestListDevice_allProtocolsDisabled(t *testing.T) {
 	nbDiscover := nilNBDiscoverFunc
 	cmd := listCmd{
 		devFinderCmd: newDevFinderCmd(
-			listMDNSHandler,
 			[]string{
 				fuchsiaMDNSNodename1,
 				fuchsiaMDNSNodename2,
@@ -440,7 +435,6 @@ func TestListDevices_emptyData(t *testing.T) {
 	nbDiscover := nilNBDiscoverFunc
 	cmd := listCmd{
 		devFinderCmd: newDevFinderCmd(
-			listMDNSHandler,
 			[]string{
 				fuchsiaMDNSNodename1,
 				fuchsiaMDNSNodename2,
@@ -462,7 +456,6 @@ func TestListDevices_duplicateDevices(t *testing.T) {
 		nbDiscover := nilNBDiscoverFunc
 		cmd := listCmd{
 			devFinderCmd: newDevFinderCmd(
-				listMDNSHandler,
 				[]string{
 					fuchsiaMDNSNodename1,
 					fuchsiaMDNSNodename1,
@@ -502,7 +495,6 @@ func TestStartMDNSHandlers(t *testing.T) {
 	runSubTests(t, "", func(t *testing.T, s subtest) {
 		nbDiscover := nilNBDiscoverFunc
 		cmd := newDevFinderCmd(
-			listMDNSHandler,
 			[]string{
 				fuchsiaMDNSNodename1,
 				fuchsiaMDNSNodename2,
@@ -569,7 +561,6 @@ func TestListDevices_tooShortData(t *testing.T) {
 	nbDiscover := nilNBDiscoverFunc
 	cmd := listCmd{
 		devFinderCmd: newDevFinderCmd(
-			listMDNSHandler,
 			[]string{
 				fuchsiaMDNSNodename1,
 				fuchsiaMDNSNodename2,
@@ -602,7 +593,6 @@ func TestResolveDevices(t *testing.T) {
 	runSubTests(t, node, func(t *testing.T, s subtest) {
 		cmd := resolveCmd{
 			devFinderCmd: newDevFinderCmd(
-				listMDNSHandler,
 				[]string{
 					fuchsiaMDNSNodename1,
 					fuchsiaMDNSNodename2,
@@ -632,7 +622,6 @@ func TestResolveDevices_allProtocolsDisabled(t *testing.T) {
 	nbDiscover := nilNBDiscoverFunc
 	cmd := resolveCmd{
 		devFinderCmd: newDevFinderCmd(
-			listMDNSHandler,
 			[]string{
 				fuchsiaMDNSNodename1,
 			},

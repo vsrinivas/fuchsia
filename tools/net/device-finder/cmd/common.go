@@ -81,8 +81,7 @@ type devFinderCmd struct {
 	// Used to visit flags after parsing, necessary for complex if-set logic.
 	flagSet *flag.FlagSet
 
-	mdnsHandler mDNSHandler
-	finders     []deviceFinder
+	finders []deviceFinder
 
 	// Only for testing.
 	newMDNSFunc    newMDNSFunc
@@ -213,7 +212,7 @@ func startMDNSHandlers(ctx context.Context, cmd *devFinderCmd, packet mdns.Packe
 			m := cmd.newMDNS(addr)
 			m.AddHandler(func(addr net.Addr, rxPacket mdns.Packet) {
 				response := mDNSResponse{devAddr: addr, rxPacket: rxPacket}
-				cmd.mdnsHandler(cmd, response, f)
+				listMDNSHandler(cmd, response, f)
 			})
 			m.AddErrorHandler(func(err error) {
 				f <- &fuchsiaDevice{err: err}
@@ -233,9 +232,6 @@ func startMDNSHandlers(ctx context.Context, cmd *devFinderCmd, packet mdns.Packe
 }
 
 func (cmd *devFinderCmd) sendMDNSPacket(ctx context.Context, packet mdns.Packet, f chan *fuchsiaDevice) error {
-	if cmd.mdnsHandler == nil {
-		return fmt.Errorf("packet handler is nil")
-	}
 	if cmd.timeout <= 0 {
 		return fmt.Errorf("invalid timeout value: %s", cmd.timeout)
 	}
@@ -340,46 +336,51 @@ func (cmd *devFinderCmd) filterInboundDevices(ctx context.Context, f <-chan *fuc
 	defer cancel()
 	defer cmd.close()
 	devices := make(map[string]*fuchsiaDevice)
-	resolveDomains := make(map[string]*fuchsiaDevice)
 	for _, d := range domains {
-		resolveDomains[d] = nil
+		devices[d] = nil
 	}
 	for {
 		select {
 		case <-ctx.Done():
-			if len(resolveDomains) == 0 {
-				return sortDeviceMap(devices), nil
-			}
-			return sortDeviceMap(resolveDomains), nil
+			return sortDeviceMap(devices), nil
 		case device := <-f:
 			if err := device.err; err != nil {
 				return nil, err
 			}
+
 			if cmd.shouldIgnoreIP(device.addr) {
 				continue
 			}
-			if len(resolveDomains) == 0 {
-				devices[device.domain] = device
-				if cmd.deviceLimit != 0 && len(devices) == cmd.deviceLimit {
+
+			if d, ok := devices[device.domain]; len(domains) == 0 || ok {
+				// Bias the results to link local ipv6 addresses
+				if d == nil || isLinkLocal6(device.addr) {
+					devices[device.domain] = device
+				}
+			}
+
+			if cmd.deviceLimit != 0 {
+				c := cmd.deviceLimit
+				for _, d := range devices {
+					if d != nil {
+						c--
+					}
+				}
+				if c == 0 {
 					return sortDeviceMap(devices), nil
 				}
 			}
-			if d, ok := resolveDomains[device.domain]; ok {
-				// Bias results to link-local ipv6
-				if d == nil || isLinkLocal6(device.addr) {
-					resolveDomains[device.domain] = device
-				}
 
-				needMoreDevices := false
-				for _, d := range resolveDomains {
-					// Wait until all devices are found and ideally ipv6 link local.
-					if d == nil || !isLinkLocal6(d.addr) {
-						needMoreDevices = true
-					}
+			// When not looking for specific domains, wait until timeout.
+			keepWaiting := len(domains) == 0
+			for _, domain := range domains {
+				// If any domain does not yet have a desired link-local ipv6 address, keep waiting.
+				if d, ok := devices[domain]; !ok || d == nil || (cmd.ipv6 && !isLinkLocal6(d.addr)) {
+					keepWaiting = true
 				}
-				if !needMoreDevices {
-					return sortDeviceMap(resolveDomains), nil
-				}
+			}
+			if !keepWaiting {
+				return sortDeviceMap(devices), nil
 			}
 		}
 	}

@@ -101,26 +101,9 @@ func (m *mdnsFinder) list(ctx context.Context, f chan *fuchsiaDevice) error {
 	return m.cmd.sendMDNSPacket(ctx, listPacket, f)
 }
 
-func resolveMDNSHandler(cmd *devFinderCmd, resp mDNSResponse, f chan<- *fuchsiaDevice) {
-	for _, a := range resp.rxPacket.Answers {
-		if a.Type == mdns.A && !cmd.ipv4 || a.Type == mdns.AAAA && !cmd.ipv6 {
-			continue
-		}
-		fdev := parseAnswer(cmd, a, resp)
-		if fdev != nil {
-			f <- fdev
-		}
-	}
-}
-
 func (m *mdnsFinder) resolve(ctx context.Context, f chan *fuchsiaDevice, domains ...string) error {
-	for _, domain := range domains {
-		mdnsDomain := fmt.Sprintf("%s.local", domain)
-		if err := m.cmd.sendMDNSPacket(ctx, mdns.QuestionPacket(mdnsDomain), f); err != nil {
-			return err
-		}
-	}
-	return nil
+	// Note: domains is ignored for mdns, and is filtered by the cmd filter callback.
+	return m.list(ctx, f)
 }
 
 func (m *mdnsFinder) close() {}
