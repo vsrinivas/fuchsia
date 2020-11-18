@@ -221,7 +221,7 @@ TEST_F(DeviceEnumerationTest, AstroTest) {
       "astro-buttons/hid-buttons",
       "sys/platform/05:00:2/aml-i2c",
       "sys/platform/05:03:17/aml-gpu",
-      "sys/platform/05:00:18/aml-usb-phy-v2",
+      "aml-usb-phy-v2",
       "class/bt-transport/000",
       "class/bt-hci/000",
 
@@ -449,7 +449,7 @@ TEST_F(DeviceEnumerationTest, SherlockTest) {
       "sys/platform/00:00:1e/dw-dsi",
       "display/amlogic-display/display-controller",
       "class/dsi-base/000",
-      "sys/platform/05:00:18/aml-usb-phy-v2",
+      "aml-usb-phy-v2",
 
       // XHCI driver will not be loaded if we are in USB peripheral mode.
       // "xhci/xhci/usb-bus",

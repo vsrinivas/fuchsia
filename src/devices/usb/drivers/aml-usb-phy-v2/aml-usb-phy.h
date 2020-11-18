@@ -12,9 +12,11 @@
 #include <threads.h>
 
 #include <ddktl/device.h>
+#include <ddktl/protocol/registers.h>
 #include <ddktl/protocol/usb/phy.h>
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
+#include <soc/aml-common/aml-registers.h>
 
 #include "dwc2-device.h"
 #include "xhci-device.h"
@@ -35,7 +37,7 @@ class AmlUsbPhy : public AmlUsbPhyType, public ddk::UsbPhyProtocol<AmlUsbPhy, dd
     PERIPHERAL,
   };
 
-  explicit AmlUsbPhy(zx_device_t* parent) : AmlUsbPhyType(parent), pdev_(parent) {}
+  explicit AmlUsbPhy(zx_device_t* parent) : AmlUsbPhyType(parent) {}
 
   static zx_status_t Create(void* ctx, zx_device_t* parent);
 
@@ -74,7 +76,7 @@ class AmlUsbPhy : public AmlUsbPhyType, public ddk::UsbPhyProtocol<AmlUsbPhy, dd
   int IrqThread();
 
   ddk::PDev pdev_;
-  std::optional<ddk::MmioBuffer> reset_mmio_;
+  ::llcpp::fuchsia::hardware::registers::Device::SyncClient reset_register_;
   std::optional<ddk::MmioBuffer> usbctrl_mmio_;
   std::optional<ddk::MmioBuffer> usbphy20_mmio_;
   std::optional<ddk::MmioBuffer> usbphy21_mmio_;

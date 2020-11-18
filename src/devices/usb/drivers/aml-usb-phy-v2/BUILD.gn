@@ -17,6 +17,7 @@ driver_module("aml-usb-phy-v2") {
   sources = [ "aml-usb-phy.cc" ]
   deps = [
     "//sdk/banjo/ddk.protocol.platform.device",
+    "//sdk/banjo/ddk.protocol.registers",
     "//sdk/banjo/ddk.protocol.usb.phy",
     "//sdk/fidl/fuchsia.hardware.registers:fuchsia.hardware.registers_llcpp",
     "//src/devices/bus/lib/device-protocol-pdev",
@@ -46,6 +47,7 @@ test("aml-usb-phy-test") {
   deps = [
     "//sdk/banjo/ddk.protocol.composite",
     "//sdk/banjo/ddk.protocol.platform.device",
+    "//sdk/banjo/ddk.protocol.registers",
     "//sdk/banjo/ddk.protocol.usb",
     "//sdk/banjo/ddk.protocol.usb.dci",
     "//sdk/banjo/ddk.protocol.usb.phy",
@@ -55,6 +57,7 @@ test("aml-usb-phy-test") {
     "//src/devices/lib/amlogic",
     "//src/devices/lib/driver",
     "//src/devices/lib/mmio",
+    "//src/devices/registers/testing/mock-registers",
     "//src/devices/testing/fake-mmio-reg",
     "//src/devices/testing/fake_ddk",
     "//src/devices/usb/lib/usb",

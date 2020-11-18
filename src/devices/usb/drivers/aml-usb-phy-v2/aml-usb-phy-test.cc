@@ -26,13 +26,14 @@
 #include <fbl/mutex.h>
 #include <zxtest/zxtest.h>
 
+#include "src/devices/registers/testing/mock-registers/mock-registers.h"
 #include "usb-phy-regs.h"
 
 struct zx_device : std::enable_shared_from_this<zx_device> {
   std::list<std::shared_ptr<zx_device>> devices;
   std::weak_ptr<zx_device> parent;
   std::vector<zx_device_prop_t> props;
-  pdev_protocol_t pdev_ops;
+  fake_ddk::Protocol ops;
   zx_protocol_device_t dev_ops;
   virtual ~zx_device() = default;
 };
@@ -40,18 +41,68 @@ struct zx_device : std::enable_shared_from_this<zx_device> {
 namespace aml_usb_phy {
 
 enum class RegisterIndex : size_t {
-  Reset = 0,
-  Control = 1,
-  Phy0 = 2,
-  Phy1 = 3,
+  Control = 0,
+  Phy0 = 1,
+  Phy1 = 2,
 };
 
-constexpr auto kRegisterBanks = 5;
+constexpr auto kRegisterBanks = 3;
 constexpr auto kRegisterCount = 2048;
 
-class FakeDevice : public ddk::PDevProtocol<FakeDevice, ddk::base_protocol> {
+class FakeComposite : public ddk::CompositeProtocol<FakeComposite> {
  public:
-  FakeDevice() : pdev_({&pdev_protocol_ops_, this}) {
+  explicit FakeComposite(zx_device_t* parent)
+      : proto_({&composite_protocol_ops_, this}), parent_(parent) {}
+
+  const composite_protocol_t* proto() const { return &proto_; }
+
+  uint32_t CompositeGetFragmentCount() { return static_cast<uint32_t>(kNumFragments); }
+
+  // In typical usage of fake_ddk, kFakeParent is the only device that exists, and all faked
+  // protocols are bound to it. Hence, the list of fragments is a repeated list of the parent
+  // device.
+  void CompositeGetFragments(zx_device_t** comp_list, size_t comp_count, size_t* comp_actual) {
+    size_t comp_cur;
+
+    for (comp_cur = 0; comp_cur < comp_count; comp_cur++) {
+      comp_list[comp_cur] = parent_;
+    }
+
+    if (comp_actual != nullptr) {
+      *comp_actual = comp_cur;
+    }
+  }
+
+  void CompositeGetFragmentsNew(composite_device_fragment_t* comp_list, size_t comp_count,
+                                size_t* comp_actual) {
+    size_t comp_cur;
+
+    for (comp_cur = 0; comp_cur < comp_count; comp_cur++) {
+      strncpy(comp_list[comp_cur].name, "unamed-fragment", 32);
+      comp_list[comp_cur].device = parent_;
+    }
+
+    if (comp_actual != nullptr) {
+      *comp_actual = comp_cur;
+    }
+  }
+
+  bool CompositeGetFragment(const char* name, zx_device_t** out) {
+    *out = parent_;
+    return true;
+  }
+
+ private:
+  // AmlUsbPhy expects three fragments -- pdev, reset1_registers, and reset1_level device.
+  static constexpr size_t kNumFragments = 3;
+
+  composite_protocol_t proto_;
+  zx_device_t* parent_;
+};
+
+class FakePDev : public ddk::PDevProtocol<FakePDev, ddk::base_protocol> {
+ public:
+  FakePDev() : pdev_({&pdev_protocol_ops_, this}) {
     // Initialize register read/write hooks.
     for (size_t i = 0; i < kRegisterBanks; i++) {
       for (size_t c = 0; c < kRegisterCount; c++) {
@@ -72,7 +123,7 @@ class FakeDevice : public ddk::PDevProtocol<FakeDevice, ddk::base_protocol> {
     callback_ = std::move(callback);
   }
 
-  const pdev_protocol_t* pdev() const { return &pdev_; }
+  const pdev_protocol_t* proto() const { return &pdev_; }
 
   zx_status_t PDevGetMmio(uint32_t index, pdev_mmio_t* out_mmio) {
     out_mmio->offset = reinterpret_cast<size_t>(&regions_[index]);
@@ -101,7 +152,7 @@ class FakeDevice : public ddk::PDevProtocol<FakeDevice, ddk::base_protocol> {
 
   zx_status_t PDevGetBoardInfo(pdev_board_info_t* out_info) { return ZX_ERR_NOT_SUPPORTED; }
 
-  ~FakeDevice() {}
+  ~FakePDev() {}
 
  private:
   std::optional<fit::function<void(size_t bank, size_t reg, uint64_t value)>> callback_;
@@ -134,17 +185,21 @@ class Ddk : public fake_ddk::Bind {
   }
   zx_status_t DeviceGetProtocol(const zx_device_t* device, uint32_t proto_id,
                                 void* protocol) override {
-    if (proto_id != ZX_PROTOCOL_PDEV) {
-      return ZX_ERR_NOT_SUPPORTED;
+    auto out = reinterpret_cast<fake_ddk::Protocol*>(protocol);
+    for (const auto& proto : protocols_) {
+      if (proto_id == proto.id) {
+        out->ops = proto.proto.ops;
+        out->ctx = proto.proto.ctx;
+        return ZX_OK;
+      }
     }
-    *static_cast<pdev_protocol_t*>(protocol) = *const_cast<pdev_protocol_t*>(&device->pdev_ops);
-    return ZX_OK;
+    return ZX_ERR_NOT_SUPPORTED;
   }
   zx_status_t DeviceAdd(zx_driver_t* drv, zx_device_t* parent, device_add_args_t* args,
                         zx_device_t** out) override {
     auto dev = std::make_shared<zx_device>();
-    dev->pdev_ops.ctx = args->ctx;
-    dev->pdev_ops.ops = static_cast<pdev_protocol_ops_t*>(args->proto_ops);
+    dev->ops.ctx = args->ctx;
+    dev->ops.ops = args->proto_ops;
     if (args->props) {
       dev->props.resize(args->prop_count);
       memcpy(dev->props.data(), args->props, args->prop_count * sizeof(zx_device_prop_t));
@@ -159,7 +214,7 @@ class Ddk : public fake_ddk::Bind {
     events_signal_.Signal();
 
     if (dev->dev_ops.init) {
-      dev->dev_ops.init(dev->pdev_ops.ctx);
+      dev->dev_ops.init(dev->ops.ctx);
     }
     return ZX_OK;
   }
@@ -173,7 +228,7 @@ class Ddk : public fake_ddk::Bind {
       // Call the unbind hook. When unbind replies, |DeviceRemove| will handle
       // unbinding and releasing the children, then releasing the device itself.
       if (device->dev_ops.unbind) {
-        device->dev_ops.unbind(device->pdev_ops.ctx);
+        device->dev_ops.unbind(device->ops.ctx);
       } else {
         // The unbind hook has not been implemented, so we can reply to the unbind immediately.
         DeviceRemove(device);
@@ -189,12 +244,13 @@ class Ddk : public fake_ddk::Bind {
 
     auto parent = device->parent.lock();
     if (parent && parent->dev_ops.child_pre_release) {
-      parent->dev_ops.child_pre_release(parent->pdev_ops.ctx, device->pdev_ops.ctx);
+      parent->dev_ops.child_pre_release(parent->ops.ctx, device->ops.ctx);
     }
-    device->dev_ops.release(device->pdev_ops.ctx);
+
+    device->dev_ops.release(device->ops.ctx);
 
     fbl::AutoLock lock(&events_lock_);
-    events_.push(Event{EventType::DEVICE_RELEASED, device->pdev_ops.ctx});
+    events_.push(Event{EventType::DEVICE_RELEASED, device->ops.ctx});
 
     // Remove it from the parent's devices list so that we don't try
     // to unbind it again when cleaning up at the end of the test with |DestroyDevices|.
@@ -215,7 +271,7 @@ class Ddk : public fake_ddk::Bind {
       // Call the unbind hook. When unbind replies, |DeviceRemove| will handle
       // unbinding and releasing the children, then releasing the device itself.
       if (dev->dev_ops.unbind) {
-        dev->dev_ops.unbind(dev->pdev_ops.ctx);
+        dev->dev_ops.unbind(dev->ops.ctx);
       } else {
         // The unbind hook has not been implemented, so we can reply to the unbind immediately.
         DeviceRemove(dev.get());
@@ -251,76 +307,89 @@ class Ddk : public fake_ddk::Bind {
   std::vector<std::thread> async_remove_threads_;
 };
 
-TEST(AmlUsbPhy, DoesNotCrash) {
-  Ddk ddk;
-  auto pdev = std::make_unique<FakeDevice>();
-  auto root_device = std::make_shared<zx_device_t>();
-  root_device->pdev_ops = *pdev->pdev();
-  zx::interrupt irq;
-  ASSERT_OK(zx::interrupt::create(zx::resource(), 0, ZX_INTERRUPT_VIRTUAL, &irq));
-  ASSERT_OK(AmlUsbPhy::Create(nullptr, root_device.get()));
-  ddk.DestroyDevices(root_device.get());
-}
+// Fixture that supports tests of AmlUsbPhy::Create.
+class AmlUsbPhyTest : public zxtest::Test {
+ public:
+  AmlUsbPhyTest() : root_device_(std::make_shared<zx_device_t>()), composite_(parent()) {
+    static constexpr size_t kNumBindProtocols = 3;
 
-TEST(AmlUsbPhy, FIDLWrites) {
-  Ddk ddk;
-  auto pdev = std::make_unique<FakeDevice>();
-  auto root_device = std::make_shared<zx_device_t>();
-  root_device->pdev_ops = *pdev->pdev();
-  zx::interrupt irq;
-  bool written = false;
-  pdev->SetWriteCallback([&](uint64_t bank, uint64_t index, size_t value) {
-    if ((bank == 4) && (index = 5) && (value == 42)) {
-      written = true;
-    }
-  });
-  ASSERT_OK(zx::interrupt::create(zx::resource(), 0, ZX_INTERRUPT_VIRTUAL, &irq));
-  ASSERT_OK(AmlUsbPhy::Create(nullptr, root_device.get()));
-  fake_ddk::FidlMessenger fidl;
-  fidl.SetMessageOp(root_device->devices.front().get(),
-                    [](void* ctx, fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
-                      auto dev = static_cast<zx_device_t*>(ctx);
-                      return dev->dev_ops.message(dev->pdev_ops.ctx, msg, txn);
-                    });
+    loop_.StartThread();
+    registers_device_ = std::make_unique<mock_registers::MockRegistersDevice>(loop_.dispatcher());
 
-  llcpp::fuchsia::hardware::registers::Device::SyncClient device(std::move(fidl.local()));
-  ddk.DestroyDevices(root_device.get());
-}
+    fbl::Array<fake_ddk::ProtocolEntry> protocols(new fake_ddk::ProtocolEntry[kNumBindProtocols],
+                                                  kNumBindProtocols);
+    protocols[0] = {ZX_PROTOCOL_COMPOSITE,
+                    *reinterpret_cast<const fake_ddk::Protocol*>(composite_.proto())};
+    protocols[1] = {ZX_PROTOCOL_PDEV, *reinterpret_cast<const fake_ddk::Protocol*>(pdev_.proto())};
+    protocols[2] = {ZX_PROTOCOL_REGISTERS,
+                    *reinterpret_cast<const fake_ddk::Protocol*>(registers_device_->proto())};
+    ddk_.SetProtocols(std::move(protocols));
 
-TEST(AmlUsbPhy, SetMode) {
-  Ddk ddk;
-  auto pdev = std::make_unique<FakeDevice>();
-  auto root_device = std::make_shared<zx_device_t>();
-  root_device->pdev_ops = *pdev->pdev();
-  ASSERT_OK(AmlUsbPhy::Create(nullptr, root_device.get()));
+    registers()->ExpectWrite<uint32_t>(aml_registers::RESET1_LEVEL_OFFSET,
+                                       aml_registers::RESET1_LEVEL_MASK,
+                                       aml_registers::RESET1_LEVEL_MASK);
+    registers()->ExpectWrite<uint32_t>(aml_registers::RESET1_REGISTER_OFFSET,
+                                       aml_registers::RESET1_REGISTER_UNKNOWN_1_MASK,
+                                       aml_registers::RESET1_REGISTER_UNKNOWN_1_MASK);
+    registers()->ExpectWrite<uint32_t>(aml_registers::RESET1_REGISTER_OFFSET,
+                                       aml_registers::RESET1_REGISTER_UNKNOWN_2_MASK,
+                                       aml_registers::RESET1_REGISTER_UNKNOWN_2_MASK);
+    registers()->ExpectWrite<uint32_t>(aml_registers::RESET1_REGISTER_OFFSET,
+                                       aml_registers::RESET1_REGISTER_UNKNOWN_2_MASK,
+                                       aml_registers::RESET1_REGISTER_UNKNOWN_2_MASK);
+    ASSERT_OK(AmlUsbPhy::Create(nullptr, parent()));
+  }
 
+  void TearDown() override {
+    EXPECT_OK(registers()->VerifyAll());
+
+    ddk_.DestroyDevices(parent());
+    ddk_.JoinAsyncRemoveThreads();
+
+    loop_.Shutdown();
+  }
+
+  zx_device_t* parent() { return reinterpret_cast<zx_device_t*>(root_device_.get()); }
+
+  mock_registers::MockRegisters* registers() { return registers_device_->fidl_service(); }
+
+ protected:
+  async::Loop loop_{&kAsyncLoopConfigNeverAttachToThread};
+  std::shared_ptr<zx_device> root_device_;
+  Ddk ddk_;
+  FakeComposite composite_;
+  FakePDev pdev_;
+  std::unique_ptr<mock_registers::MockRegistersDevice> registers_device_;
+};
+
+TEST_F(AmlUsbPhyTest, SetMode) {
   // The aml-usb-phy device should be added.
-  auto event = ddk.WaitForEvent();
+  auto event = ddk_.WaitForEvent();
   ASSERT_EQ(event.type, Ddk::EventType::DEVICE_ADDED);
   auto root_ctx = static_cast<AmlUsbPhy*>(event.device_ctx);
 
   // Wait for host mode to be set by the irq thread. This should add the xhci child device.
-  event = ddk.WaitForEvent();
+  event = ddk_.WaitForEvent();
   ASSERT_EQ(event.type, Ddk::EventType::DEVICE_ADDED);
   auto xhci_ctx = event.device_ctx;
   ASSERT_NE(xhci_ctx, root_ctx);
   ASSERT_EQ(root_ctx->mode(), AmlUsbPhy::UsbMode::HOST);
 
-  ddk::PDev client(&root_device->pdev_ops);
+  ddk::PDev client(pdev_.proto());
   std::optional<ddk::MmioBuffer> usbctrl_mmio;
-  ASSERT_OK(client.MapMmio(1, &usbctrl_mmio));
+  ASSERT_OK(client.MapMmio(0, &usbctrl_mmio));
 
   // Switch to peripheral mode. This will be read by the irq thread.
   USB_R5_V2::Get().FromValue(0).set_iddig_curr(1).WriteTo(&usbctrl_mmio.value());
   // Wake up the irq thread.
-  pdev->Interrupt();
+  pdev_.Interrupt();
 
-  event = ddk.WaitForEvent();
+  event = ddk_.WaitForEvent();
   ASSERT_EQ(event.type, Ddk::EventType::DEVICE_ADDED);
   auto dwc2_ctx = event.device_ctx;
   ASSERT_NE(dwc2_ctx, root_ctx);
 
-  event = ddk.WaitForEvent();
+  event = ddk_.WaitForEvent();
   ASSERT_EQ(event.type, Ddk::EventType::DEVICE_RELEASED);
   ASSERT_EQ(event.device_ctx, xhci_ctx);
 
@@ -329,22 +398,18 @@ TEST(AmlUsbPhy, SetMode) {
   // Switch back to host mode. This will be read by the irq thread.
   USB_R5_V2::Get().FromValue(0).set_iddig_curr(0).WriteTo(&usbctrl_mmio.value());
   // Wake up the irq thread.
-  pdev->Interrupt();
+  pdev_.Interrupt();
 
-  event = ddk.WaitForEvent();
+  event = ddk_.WaitForEvent();
   ASSERT_EQ(event.type, Ddk::EventType::DEVICE_ADDED);
   xhci_ctx = event.device_ctx;
   ASSERT_NE(xhci_ctx, root_ctx);
 
-  event = ddk.WaitForEvent();
+  event = ddk_.WaitForEvent();
   ASSERT_EQ(event.type, Ddk::EventType::DEVICE_RELEASED);
   ASSERT_EQ(event.device_ctx, dwc2_ctx);
 
   ASSERT_EQ(root_ctx->mode(), AmlUsbPhy::UsbMode::HOST);
-
-  ddk.DestroyDevices(root_device.get());
-
-  ddk.JoinAsyncRemoveThreads();
 }
 
 }  // namespace aml_usb_phy

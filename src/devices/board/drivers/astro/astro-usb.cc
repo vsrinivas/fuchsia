@@ -15,6 +15,7 @@
 #include <ddk/mmio-buffer.h>
 #include <ddk/platform-defs.h>
 #include <ddk/usb-peripheral-config.h>
+#include <soc/aml-common/aml-registers.h>
 #include <soc/aml-s905d2/s905d2-hw.h>
 #include <usb/dwc2/metadata.h>
 
@@ -142,10 +143,6 @@ static const pbus_dev_t xhci_dev = []() {
 
 static const pbus_mmio_t usb_phy_mmios[] = {
     {
-        .base = S905D2_RESET_BASE,
-        .length = S905D2_RESET_LENGTH,
-    },
-    {
         .base = S905D2_USBCTRL_BASE,
         .length = S905D2_USBCTRL_LENGTH,
     },
@@ -198,6 +195,17 @@ static const pbus_dev_t usb_phy_dev = []() {
 static const zx_bind_inst_t root_match[] = {
     BI_MATCH(),
 };
+static const zx_bind_inst_t reset_register_match[] = {
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_REGISTERS),
+    BI_MATCH_IF(EQ, BIND_REGISTER_ID, aml_registers::REGISTER_USB_PHY_V2_RESET),
+};
+static const device_fragment_part_t reset_register_fragment[] = {
+    {countof(root_match), root_match},
+    {countof(reset_register_match), reset_register_match},
+};
+static const device_fragment_t usb_phy_fragments[] = {
+    {"register-reset", countof(reset_register_fragment), reset_register_fragment},
+};
 static const zx_bind_inst_t xhci_phy_match[] = {
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_USB_PHY),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_GENERIC),
@@ -226,7 +234,8 @@ static const device_fragment_t dwc2_fragments[] = {
 };
 
 zx_status_t Astro::UsbInit() {
-  zx_status_t status = pbus_.DeviceAdd(&usb_phy_dev);
+  zx_status_t status = pbus_.CompositeDeviceAdd(&usb_phy_dev, usb_phy_fragments,
+                                                countof(usb_phy_fragments), UINT32_MAX);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: DeviceAdd(usb_phy) failed %d", __func__, status);
     return status;

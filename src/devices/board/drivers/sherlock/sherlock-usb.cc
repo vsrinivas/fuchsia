@@ -16,6 +16,7 @@
 #include <ddk/platform-defs.h>
 #include <ddk/usb-peripheral-config.h>
 #include <fbl/auto_call.h>
+#include <soc/aml-common/aml-registers.h>
 #include <usb/dwc2/metadata.h>
 
 #include "sherlock.h"
@@ -131,10 +132,6 @@ constexpr pbus_irq_t xhci_irqs[] = {
 
 constexpr pbus_mmio_t usb_phy_mmios[] = {
     {
-        .base = T931_RESET_BASE,
-        .length = T931_RESET_LENGTH,
-    },
-    {
         .base = T931_USBCTRL_BASE,
         .length = T931_USBCTRL_LENGTH,
     },
@@ -209,6 +206,17 @@ static const pbus_dev_t usb_phy_dev = []() {
 static const zx_bind_inst_t root_match[] = {
     BI_MATCH(),
 };
+static const zx_bind_inst_t reset_register_match[] = {
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_REGISTERS),
+    BI_MATCH_IF(EQ, BIND_REGISTER_ID, aml_registers::REGISTER_USB_PHY_V2_RESET),
+};
+static const device_fragment_part_t reset_register_fragment[] = {
+    {countof(root_match), root_match},
+    {countof(reset_register_match), reset_register_match},
+};
+static const device_fragment_t usb_phy_fragments[] = {
+    {"register-reset", countof(reset_register_fragment), reset_register_fragment},
+};
 static const zx_bind_inst_t xhci_phy_match[] = {
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_USB_PHY),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_GENERIC),
@@ -239,7 +247,8 @@ static const device_fragment_t dwc2_fragments[] = {
 }  // namespace
 
 zx_status_t Sherlock::UsbInit() {
-  auto status = pbus_.DeviceAdd(&usb_phy_dev);
+  auto status = pbus_.CompositeDeviceAdd(&usb_phy_dev, usb_phy_fragments,
+                                         countof(usb_phy_fragments), UINT32_MAX);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: DeviceAdd failed %d", __func__, status);
     return status;

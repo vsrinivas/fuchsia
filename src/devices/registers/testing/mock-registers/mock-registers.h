@@ -81,7 +81,6 @@ class MockRegisters : public ::llcpp::fuchsia::hardware::registers::Device::Inte
     auto value = expect_read.front();
     expect_read.pop();
     if (value.first == mask) {
-      printf("Read %u\n", static_cast<uint32_t>(value.second));
       completer.ReplySuccess(static_cast<T>(value.second));
     } else {
       completer.ReplyError(ZX_ERR_INVALID_ARGS);
@@ -90,7 +89,6 @@ class MockRegisters : public ::llcpp::fuchsia::hardware::registers::Device::Inte
 
   template <typename T, typename Completer>
   void WriteRegister(uint64_t offset, T mask, T value, Completer& completer) {
-    printf("Write %u\n", static_cast<uint32_t>(value));
     auto& expect_write = GetExpectWrite<T>()[offset];
     if (expect_write.empty()) {
       completer.ReplyError(ZX_ERR_NOT_SUPPORTED);

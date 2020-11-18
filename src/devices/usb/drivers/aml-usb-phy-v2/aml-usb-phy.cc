@@ -27,7 +27,6 @@
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <hw/reg.h>
-#include <soc/aml-common/aml-g12-reset.h>
 
 #include "usb-phy-regs.h"
 
@@ -83,19 +82,26 @@ void AmlUsbPhy::InitPll(ddk::MmioBuffer* mmio) {
 }
 
 zx_status_t AmlUsbPhy::InitPhy() {
-  auto* reset_mmio = &*reset_mmio_;
   auto* usbctrl_mmio = &*usbctrl_mmio_;
 
   // first reset USB
-  auto reset_1_level = aml_reset::RESET_1::GetLevel().ReadFrom(reset_mmio);
   // The bits being manipulated here are not documented.
-  reset_1_level.set_reg_value(reset_1_level.reg_value() | (0x3 << 16));
-  reset_1_level.WriteTo(reset_mmio);
+  auto level_result = reset_register_.WriteRegister32(aml_registers::RESET1_LEVEL_OFFSET,
+                                                      aml_registers::RESET1_LEVEL_MASK,
+                                                      aml_registers::RESET1_LEVEL_MASK);
+  if ((level_result.status() != ZX_OK) || level_result->result.is_err()) {
+    zxlogf(ERROR, "%s: Reset Level Write failed\n", __func__);
+    return ZX_ERR_INTERNAL;
+  }
 
   // amlogic_new_usbphy_reset_v2()
-  auto reset_1 = aml_reset::RESET_1::Get().ReadFrom(reset_mmio);
-  reset_1.set_usb(1);
-  reset_1.WriteTo(reset_mmio);
+  auto register_result1 = reset_register_.WriteRegister32(
+      aml_registers::RESET1_REGISTER_OFFSET, aml_registers::RESET1_REGISTER_UNKNOWN_1_MASK,
+      aml_registers::RESET1_REGISTER_UNKNOWN_1_MASK);
+  if ((register_result1.status() != ZX_OK) || register_result1->result.is_err()) {
+    zxlogf(ERROR, "%s: Reset Register Write on 1 << 2 failed\n", __func__);
+    return ZX_ERR_INTERNAL;
+  }
   // FIXME(voydanoff) this delay is very long, but it is what the Amlogic Linux kernel is doing.
   zx::nanosleep(zx::deadline_after(zx::usec(500)));
 
@@ -113,10 +119,14 @@ zx_status_t AmlUsbPhy::InitPhy() {
     zx::nanosleep(zx::deadline_after(zx::usec(10)));
 
     // amlogic_new_usbphy_reset_phycfg_v2()
-    reset_1.ReadFrom(reset_mmio);
     // The bit being manipulated here is not documented.
-    reset_1.set_reg_value(reset_1.reg_value() | (1 << 16));
-    reset_1.WriteTo(reset_mmio);
+    auto register_result2 = reset_register_.WriteRegister32(
+        aml_registers::RESET1_REGISTER_OFFSET, aml_registers::RESET1_REGISTER_UNKNOWN_2_MASK,
+        aml_registers::RESET1_REGISTER_UNKNOWN_2_MASK);
+    if ((register_result2.status() != ZX_OK) || register_result2->result.is_err()) {
+      zxlogf(ERROR, "%s: Reset Register Write on 1 << 16 failed\n", __func__);
+      return ZX_ERR_INTERNAL;
+    }
 
     zx::nanosleep(zx::deadline_after(zx::usec(50)));
 
@@ -325,32 +335,50 @@ void AmlUsbPhy::RemoveDwc2Device(SetModeCompletion completion) {
 }
 
 zx_status_t AmlUsbPhy::Init() {
+  zx_status_t status = ZX_OK;
+
+  ddk::CompositeProtocolClient composite(parent());
+  if (!composite.is_valid()) {
+    zxlogf(ERROR, "AmlUsbPhy: Could not get composite protocol");
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  pdev_ = ddk::PDev(composite);
   if (!pdev_.is_valid()) {
     zxlogf(ERROR, "AmlUsbPhy::Init: could not get platform device protocol");
     return ZX_ERR_NOT_SUPPORTED;
   }
 
+  ddk::RegistersProtocolClient reset_register(composite, "register-reset");
+  if (!reset_register.is_valid()) {
+    zxlogf(ERROR, "%s: could not get reset_register fragment", __func__);
+    return ZX_ERR_NO_RESOURCES;
+  }
+  zx::channel register_client_end, register_server_end;
+  if ((status = zx::channel::create(0, &register_client_end, &register_server_end)) != ZX_OK) {
+    zxlogf(ERROR, "%s: could not create channel %d\n", __func__, status);
+    return status;
+  }
+  reset_register.Connect(std::move(register_server_end));
+  reset_register_ =
+      ::llcpp::fuchsia::hardware::registers::Device::SyncClient(std::move(register_client_end));
+
   size_t actual;
-  auto status =
-      DdkGetMetadata(DEVICE_METADATA_PRIVATE, pll_settings_, sizeof(pll_settings_), &actual);
+  status = DdkGetMetadata(DEVICE_METADATA_PRIVATE, pll_settings_, sizeof(pll_settings_), &actual);
   if (status != ZX_OK || actual != sizeof(pll_settings_)) {
     zxlogf(ERROR, "AmlUsbPhy::Init could not get metadata for PLL settings");
     return ZX_ERR_INTERNAL;
   }
 
-  status = pdev_.MapMmio(0, &reset_mmio_);
+  status = pdev_.MapMmio(0, &usbctrl_mmio_);
   if (status != ZX_OK) {
     return status;
   }
-  status = pdev_.MapMmio(1, &usbctrl_mmio_);
+  status = pdev_.MapMmio(1, &usbphy20_mmio_);
   if (status != ZX_OK) {
     return status;
   }
-  status = pdev_.MapMmio(2, &usbphy20_mmio_);
-  if (status != ZX_OK) {
-    return status;
-  }
-  status = pdev_.MapMmio(3, &usbphy21_mmio_);
+  status = pdev_.MapMmio(2, &usbphy21_mmio_);
   if (status != ZX_OK) {
     return status;
   }
@@ -440,6 +468,6 @@ static constexpr zx_driver_ops_t driver_ops = []() {
 }  // namespace aml_usb_phy
 
 ZIRCON_DRIVER_BEGIN(aml_usb_phy, aml_usb_phy::driver_ops, "zircon", "0.1", 3)
-BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PDEV),
+BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_COMPOSITE),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_AMLOGIC),
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_AML_USB_PHY_V2), ZIRCON_DRIVER_END(aml_usb_phy)

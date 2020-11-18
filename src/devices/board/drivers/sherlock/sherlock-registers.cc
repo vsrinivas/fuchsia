@@ -17,6 +17,7 @@ namespace sherlock {
 namespace {
 
 enum MmioMetadataIdx {
+  RESET_MMIO,
 #ifdef FACTORY_BUILD
   USB_FACTORY_MMIO,
 #endif  // FACTORY_BUILD
@@ -28,6 +29,10 @@ enum MmioMetadataIdx {
 
 zx_status_t Sherlock::RegistersInit() {
   const pbus_mmio_t registers_mmios[] = {
+      {
+          .base = T931_RESET_BASE,
+          .length = T931_RESET_LENGTH,
+      },
 #ifdef FACTORY_BUILD
       {
           .base = T931_USB_BASE,
@@ -41,10 +46,28 @@ zx_status_t Sherlock::RegistersInit() {
   mmio_entries.set_data(allocator.make<registers::MmioMetadataEntry[]>(MMIO_COUNT));
   mmio_entries.set_count(MMIO_COUNT);
 
+  mmio_entries[RESET_MMIO] = registers::BuildMetadata(allocator, RESET_MMIO);
+
   fidl::VectorView<registers::RegistersMetadataEntry> register_entries;
   register_entries.set_data(
-      allocator.make<registers::RegistersMetadataEntry[]>(registers::REGISTER_ID_COUNT));
-  register_entries.set_count(registers::REGISTER_ID_COUNT);
+      allocator.make<registers::RegistersMetadataEntry[]>(aml_registers::REGISTER_ID_COUNT));
+  register_entries.set_count(aml_registers::REGISTER_ID_COUNT);
+
+  register_entries[aml_registers::REGISTER_USB_PHY_V2_RESET] =
+      registers::BuildMetadata(allocator, aml_registers::REGISTER_USB_PHY_V2_RESET, RESET_MMIO,
+                               std::vector<registers::MaskEntryBuilder<uint32_t>>{
+                                   {
+                                       .mask = aml_registers::RESET1_REGISTER_UNKNOWN_1_MASK |
+                                               aml_registers::RESET1_REGISTER_UNKNOWN_2_MASK,
+                                       .mmio_offset = T931_RESET1_REGISTER,
+                                       .reg_count = 1,
+                                   },
+                                   {
+                                       .mask = aml_registers::RESET1_LEVEL_MASK,
+                                       .mmio_offset = T931_RESET1_LEVEL,
+                                       .reg_count = 1,
+                                   },
+                               });
 
 #ifdef FACTORY_BUILD
   mmio_entries[USB_FACTORY_MMIO] = registers::BuildMetadata(allocator, USB_FACTORY_MMIO);
@@ -65,7 +88,7 @@ zx_status_t Sherlock::RegistersInit() {
       registers::BuildMetadata(allocator, std::move(mmio_entries), std::move(register_entries));
   fidl::OwnedEncodedMessage<registers::Metadata> encoded_metadata(&metadata);
   if (!encoded_metadata.ok() || (encoded_metadata.error() != nullptr)) {
-    zxlogf(ERROR, "%s: Could not build metadata %s\n", __FILE__, encoded_metadata.error());
+    zxlogf(ERROR, "%s: Could not build metadata %s\n", __func__, encoded_metadata.error());
     return encoded_metadata.status();
   }
 
