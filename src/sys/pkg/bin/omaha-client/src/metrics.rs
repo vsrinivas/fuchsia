@@ -132,17 +132,13 @@ impl MetricsReporter for CobaltMetricsReporter {
                     count as i64,
                 );
             }
-            Metrics::AttemptsToSuccessfulCheck(_count) => {
-                // FIXME(60589) Temporarily disable to allow for a soft migration while we rename
-                // this metric to `update_attempts_per_check`.
-                /*
+            Metrics::AttemptsToSuccessfulCheck(count) => {
                 self.cobalt_sender.log_event_count(
-                    mos_metrics_registry::ATTEMPTS_TO_SUCCEED_METRIC_ID,
-                    mos_metrics_registry::AttemptsToSucceedMetricDimensionResult::Success,
+                    mos_metrics_registry::ATTEMPTS_TO_SUCCESSFUL_CHECK_METRIC_ID,
+                    mos_metrics_registry::AttemptsToSuccessfulCheckMetricDimensionResult::Success,
                     0,
                     count as i64,
                 );
-                */
             }
             Metrics::WaitedForRebootDuration(duration) => {
                 if let Some(duration) =
@@ -262,6 +258,25 @@ mod tests {
                 metric_id: mos_metrics_registry::REQUESTS_PER_CHECK_METRIC_ID,
                 event_codes: vec![
                     mos_metrics_registry::RequestsPerCheckMetricDimensionResult::Success,
+                ]
+                .as_event_codes(),
+                component: None,
+                payload: EventPayload::EventCount(CountEvent {
+                    period_duration_micros: 0,
+                    count: 3,
+                }),
+            },
+        );
+    }
+
+    #[test]
+    fn test_report_attempts_to_successful_check() {
+        assert_metric(
+            Metrics::AttemptsToSuccessfulCheck(3),
+            CobaltEvent {
+                metric_id: mos_metrics_registry::ATTEMPTS_TO_SUCCESSFUL_CHECK_METRIC_ID,
+                event_codes: vec![
+                    mos_metrics_registry::AttemptsToSuccessfulCheckMetricDimensionResult::Success,
                 ]
                 .as_event_codes(),
                 component: None,
