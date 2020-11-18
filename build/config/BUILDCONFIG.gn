@@ -1558,6 +1558,10 @@ template("variant_target") {
   target_variant = false
   if (select_variant_canonical != []) {
     # See if there is a selector that matches this target.
+    # IMPORTANT: The selection logic below is replicated in
+    # //zircon/system/ulib/c/libc_toolchain.gni due to specific
+    # sysroot-related requirements. See comments in this file for
+    # more details. ALWAYS KEEP THEM IN SYNC!
     selected = false
     foreach(selector, select_variant_canonical) {
       # The first match wins.

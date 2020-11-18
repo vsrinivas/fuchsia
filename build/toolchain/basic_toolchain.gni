@@ -14,6 +14,9 @@ import("//build/toolchain/default_tools.gni")
 #     a global variable (e.g. go_toolchain or dart_toolchain).
 #     Type: GN label
 #
+#  toolchain_args: Optional
+#     A scope of extra toolchain_args keys for this toolchain instance.
+#
 # NOTE: This also ensures this defines the global `toolchain_variant.base`
 # variable, allowing BUILDCONFIG.gn to detect that this is not the default
 # toolchain (see the definition of in_default_toolchain in that file for
@@ -34,6 +37,9 @@ template("basic_toolchain") {
       description = copy_description
     }
     toolchain_args = {
+      if (defined(invoker.toolchain_args)) {
+        forward_variables_from(invoker.toolchain_args, "*")
+      }
       toolchain_variant = {
       }
       toolchain_variant = {

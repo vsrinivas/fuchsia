@@ -39,24 +39,17 @@ if (zx == "/") {
   # so this assumes this file is only included in the Zircon build
   # from the toolchain that actually builds the C library.
   sysroot_libc_toolchain = current_toolchain
-  sysroot_libc_target_out_label = "target_out_dir"
+
+  # The GN label used to build the C library
+  sysroot_libc_target = "$zx/system/ulib/c($sysroot_libc_toolchain)"
+
+  # The stripped and unstripped paths to the C library binaries.
+  _sysroot_libc_out_dir = get_label_info(sysroot_libc_target, "target_out_dir")
+  sysroot_libc_stripped = _sysroot_libc_out_dir + "/libc.so"
+  sysroot_libc_unstripped = _sysroot_libc_out_dir + "/libc.so.debug"
 } else {
-  # For the Fuchsia build, variant-generated binaries are always copied
-  # to the root_out_dir of the base toolchain, so the location is always
-  # known, even from different GN toolchain() contexts, e.g. the ones
-  # used when executing //zircon/public/sysroot/BUILD.gn.
-  sysroot_libc_toolchain = "//zircon/system/ulib/c:user.libc_$target_cpu"
-  sysroot_libc_target_out_label = "root_out_dir"
+  import("//zircon/system/ulib/c/libc_toolchain.gni")
 }
-
-# The GN label used to build the C library
-sysroot_libc_target = "$zx/system/ulib/c($sysroot_libc_toolchain)"
-
-# The stripped and unstripped paths to the C library binaries.
-sysroot_libc_out_dir =
-    get_label_info(sysroot_libc_target, sysroot_libc_target_out_label)
-sysroot_libc_stripped = sysroot_libc_out_dir + "/libc.so"
-sysroot_libc_unstripped = sysroot_libc_out_dir + "/libc.so.debug"
 
 _rebased_libc_unstripped = rebase_path(sysroot_libc_unstripped, root_build_dir)
 _rebased_libc_stripped = rebase_path(sysroot_libc_stripped, root_build_dir)
