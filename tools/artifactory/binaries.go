@@ -120,6 +120,12 @@ func debugBinaryUploads(mods binModules, debugNamespace, buildidNamespace string
 				Deduplicate: true,
 				Compress:    true,
 			})
+			uploads = append(uploads, Upload{
+				Source:      breakpadSrc,
+				Destination: fmt.Sprintf("%s/%s/breakpad", buildidNamespace, id),
+				Deduplicate: true,
+				Compress:    true,
+			})
 		}
 
 		// At this point, fuchsiaBuildIDs should reflect all binaries built

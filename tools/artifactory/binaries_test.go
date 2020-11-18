@@ -10,9 +10,9 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"reflect"
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
 	"go.fuchsia.dev/fuchsia/tools/build"
 )
 
@@ -158,6 +158,12 @@ func TestDebugBinaryUploads(t *testing.T) {
 			Deduplicate: true,
 		},
 		{
+			Source:      filepath.Join(buildDir, "gen", "first.sym"),
+			Destination: "BUILDID_NAMESPACE/first/breakpad",
+			Compress:    true,
+			Deduplicate: true,
+		},
+		{
 			Source:      filepath.Join(buildDir, ".build-id", "se", "cond.debug"),
 			Destination: "DEBUG_NAMESPACE/second.debug",
 			Compress:    true,
@@ -172,6 +178,12 @@ func TestDebugBinaryUploads(t *testing.T) {
 		{
 			Source:      filepath.Join(buildDir, "host", "gen", "second.sym"),
 			Destination: "DEBUG_NAMESPACE/second.sym",
+			Compress:    true,
+			Deduplicate: true,
+		},
+		{
+			Source:      filepath.Join(buildDir, "host", "gen", "second.sym"),
+			Destination: "BUILDID_NAMESPACE/second/breakpad",
 			Compress:    true,
 			Deduplicate: true,
 		},
@@ -212,6 +224,12 @@ func TestDebugBinaryUploads(t *testing.T) {
 			Deduplicate: true,
 		},
 		{
+			Source:      filepath.Join(checkout, ".build-id", "pr", "ebuiltA.sym"),
+			Destination: "BUILDID_NAMESPACE/prebuiltA/breakpad",
+			Compress:    true,
+			Deduplicate: true,
+		},
+		{
 			Source:      filepath.Join(checkout, ".build-id", "pr", "ebuiltB.debug"),
 			Destination: "DEBUG_NAMESPACE/prebuiltB.debug",
 			Compress:    true,
@@ -229,6 +247,12 @@ func TestDebugBinaryUploads(t *testing.T) {
 			Compress:    true,
 			Deduplicate: true,
 		},
+		{
+			Source:      filepath.Join(checkout, ".build-id", "pr", "ebuiltB.sym"),
+			Destination: "BUILDID_NAMESPACE/prebuiltB/breakpad",
+			Compress:    true,
+			Deduplicate: true,
+		},
 	}
 	expectedIDs := []string{"first", "prebuiltA"}
 
@@ -236,11 +260,11 @@ func TestDebugBinaryUploads(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to generate debug binary uploads: %v", err)
 	}
-	if !reflect.DeepEqual(actualUploads, expectedUploads) {
-		t.Fatalf("unexpected debug binary uploads:\nexpected:\n%#v\nactual:\n%#v\n", expectedUploads, actualUploads)
+	if diff := cmp.Diff(expectedUploads, actualUploads); diff != "" {
+		t.Fatalf("unexpected debug binary uploads (-want +got):\n%s", diff)
 	}
-	if !reflect.DeepEqual(actualIDs, expectedIDs) {
-		t.Fatalf("unexpected build IDs:\nexpected:\n%#v\nactual:\n%#v\n", expectedIDs, actualIDs)
+	if diff := cmp.Diff(expectedIDs, actualIDs); diff != "" {
+		t.Fatalf("unexpected build IDs (-want +got):\n%s", diff)
 	}
 }
 
