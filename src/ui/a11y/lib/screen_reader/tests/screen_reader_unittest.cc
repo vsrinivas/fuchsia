@@ -83,7 +83,7 @@ class ScreenReaderTest : public gtest::TestLoopFixture {
   void InitializeScreenReader() {
     screen_reader_ = std::make_unique<a11y::ScreenReader>(
         std::move(context_), view_manager_.get(), gesture_listener_registry_.get(),
-        mock_tts_manager_.get(), std::move(mock_action_registry_));
+        mock_tts_manager_.get(), announce_screen_reader_enabled_, std::move(mock_action_registry_));
     screen_reader_->BindGestures(mock_gesture_handler_.get());
     gesture_listener_registry_->Register(mock_gesture_listener_->NewBinding(), []() {});
 
@@ -135,6 +135,7 @@ class ScreenReaderTest : public gtest::TestLoopFixture {
     RunLoopUntilIdle();
   }
 
+  bool announce_screen_reader_enabled_ = true;
   std::unique_ptr<MockSemanticTreeServiceFactory> factory_;
   MockSemanticTreeServiceFactory* factory_ptr_;
   std::unique_ptr<sys::testing::ComponentContextProvider> context_provider_;
@@ -285,6 +286,19 @@ TEST_F(ScreenReaderTest, SemanticEventsTriggerScreenReaderAction) {
       {.event_type = a11y::SemanticsEventType::kSemanticTreeUpdated});
   EXPECT_THAT(mock_action_registry_ptr_->invoked_actions(),
               ElementsAre(StrEq("Recover A11Y Focus Action")));
+}
+
+TEST_F(ScreenReaderTest, ScreenReaderSilentWhenSpecifiedDuringInit) {
+  announce_screen_reader_enabled_ = false;
+  InitializeScreenReader();
+
+  // No output should be spoken until the tts engine is connected.
+  EXPECT_TRUE(mock_speaker_ptr_->message_ids().empty());
+
+  ConnectSpeakerAndEngine();
+
+  // No output should be spoken since reboot was not user-initiated.
+  EXPECT_TRUE(mock_speaker_ptr_->message_ids().empty());
 }
 
 }  // namespace
