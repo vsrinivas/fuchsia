@@ -25,6 +25,7 @@ source_set("lib") {
 
   public_deps = [
     "//sdk/lib/syslog/cpp",
+    "//zircon/public/lib/async",
     "//zircon/public/lib/async-cpp",
   ]
 }

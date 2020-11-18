@@ -27,7 +27,10 @@ source_set("lib") {
     "my_component_v2_cpp.h",
   ]
 
-  public_deps = [ "//zircon/public/lib/async-cpp" ]
+  public_deps = [
+    "//zircon/public/lib/async",
+    "//zircon/public/lib/async-cpp",
+  ]
 }
 
 executable("bin") {

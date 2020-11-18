@@ -23,7 +23,10 @@ source_set("lib") {
     "{{snake_case PROJECT_NAME}}.h",
   ]
 
-  public_deps = [ "//zircon/public/lib/async-cpp" ]
+  public_deps = [
+    "//zircon/public/lib/async",
+    "//zircon/public/lib/async-cpp",
+  ]
 }
 
 executable("bin") {
