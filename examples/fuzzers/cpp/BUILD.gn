@@ -44,6 +44,12 @@ fuzzer("noop_fuzzer") {
   sources = [ "noop.cc" ]
 }
 
+fuzzer("extended_sandbox") {
+  sources = [ "extended_sandbox.cc" ]
+  deps = [ "//src/lib/files" ]
+  features = [ "isolated-cache-storage" ]
+}
+
 # Uses non-default output name. See the corresponding scope in //examples/fuzzer:fuzzing-examples
 fuzzer("oom_fuzzer") {
   output_name = "out_of_memory_fuzzer"

@@ -30,6 +30,9 @@ import("//src/sys/build/fuchsia_component.gni")
 #     [label] If present, includes program arguments in the component manifest
 #       to use the corpus when testing.
 #
+#   features, services (optional)
+#     [list of strings] Extra (v1) sandbox features/services for the fuzzer and test components.
+#
 template("fuzzer_test_component") {
   assert(defined(invoker.fuzzer),
          "missing 'fuzzer' for fuzzer_test_component($target_name)")
@@ -54,8 +57,19 @@ template("fuzzer_test_component") {
       args += [ "pkg/data/" + rebase_path(corpus_path, "//") ]
     }
     args += [ "data/corpus" ]
-    services = [ "fuchsia.logger.LogSink" ]
-    features = [ "isolated-persistent-storage" ]
+    forward_variables_from(invoker,
+                           [
+                             "features",
+                             "services",
+                           ])
+    if (!defined(features)) {
+      features = []
+    }
+    if (!defined(services)) {
+      services = []
+    }
+    services += [ "fuchsia.logger.LogSink" ]
+    features += [ "isolated-persistent-storage" ]
     metadata = {
       fuzz_spec = [
         {

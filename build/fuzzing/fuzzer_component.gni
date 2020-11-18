@@ -28,6 +28,9 @@ import("//src/sys/build/fuchsia_component.gni")
 #       includes the fuzzer binary. It may also include the fuzzer corpus and dictionary, when
 #       present.
 #
+#   features, services (optional)
+#     [list of strings] Extra (v1) sandbox features/services for the fuzzer and test components.
+#
 #   options (optional)
 #     [list of strings] Key-value pairs representing libFuzzer options, e.g. "foo=bar". See
 #       See https://llvm.org/docs/LibFuzzer.html#options.
@@ -51,11 +54,22 @@ template("fuzzer_component") {
         args += [ "-$option" ]
       }
     }
-    services = [
+    forward_variables_from(invoker,
+                           [
+                             "features",
+                             "services",
+                           ])
+    if (!defined(features)) {
+      features = []
+    }
+    if (!defined(services)) {
+      services = []
+    }
+    services += [
       "fuchsia.logger.LogSink",
       "fuchsia.process.Launcher",
     ]
-    features = [
+    features += [
       "isolated-persistent-storage",
       "isolated-temp",
     ]

@@ -34,6 +34,10 @@ fuzzers_package("fuzzing-examples") {
     "cpp:corpus_fuzzer_without_corpus",
     "cpp:dictionary_fuzzer",
     "cpp:dictionary_fuzzer_without_dictionary",
+    {
+      label = "cpp:extended_sandbox"
+      fuzz_host = false
+    },
     "cpp:fuzzed_data_provider_fuzzer",
     "cpp:noop_fuzzer",
     {
