@@ -158,3 +158,20 @@ group("debugging") {
     "//src/zircon/bundles:debugging",
   ]
 }
+
+# Group including all drivers in the fuchsia repo. Useful for ensuring
+# all driver continue to build without needing to build every board.
+group("drivers-build-only") {
+  testonly = true
+  deps = [
+    "//examples/drivers/fifo:demo-fifo",
+    "//src/camera:drivers",
+    "//src/connectivity/bundles:drivers",
+    "//src/devices/bundles:drivers",
+    "//src/graphics/bundles:drivers",
+    "//src/lib/isolated_devmgr:crash-device",
+    "//src/media/bundles:drivers",
+    "//src/ui/bundles:drivers",
+    "//zircon/third_party/dev/ethernet/e1000:e1000",
+  ]
+}
