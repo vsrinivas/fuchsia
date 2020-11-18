@@ -26,12 +26,12 @@ use {
         prelude::*,
     },
     io_util,
-    log::{debug, error, warn},
     parking_lot::RwLock,
     std::{
         path::{Path, PathBuf},
         sync::Arc,
     },
+    tracing::{debug, error, warn},
 };
 
 /// Spawns controller sends stop signal.
@@ -47,7 +47,7 @@ fn spawn_controller(mut stream: ControllerRequestStream, mut stop_sender: mpsc::
         }
         .map(|o: Result<(), fidl::Error>| {
             if let Err(e) = o {
-                error!("error serving controller: {}", e);
+                error!(%e, "error serving controller");
             }
         }),
     )
@@ -216,9 +216,8 @@ impl Archivist {
                     // We'd normally fail if we couldn't create the archive, but for now we include
                     // a warning.
                     warn!(
-                        "Failed to create archive at {}: {:?}",
-                        archive_path.to_string_lossy(),
-                        e
+                        path = %archive_path.display(), ?e,
+                        "Failed to create archive"
                     );
                     Err(e)
                 })

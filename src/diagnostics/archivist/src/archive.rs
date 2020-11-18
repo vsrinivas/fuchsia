@@ -19,7 +19,6 @@ use {
     futures::StreamExt,
     itertools::Itertools,
     lazy_static::lazy_static,
-    log::{debug, error, warn},
     parking_lot::{Mutex, RwLock},
     regex::Regex,
     serde::{Deserialize, Serialize},
@@ -30,6 +29,7 @@ use {
     std::io::Write,
     std::path::{Path, PathBuf},
     std::sync::Arc,
+    tracing::{debug, error, warn},
 };
 
 // Keep only the 50 most recent events.
@@ -629,15 +629,15 @@ async fn populate_inspect_repo(
                     )
                     .unwrap_or_else(|e| {
                         warn!(
-                            "Failed to add inspect artifacts for component: {:?} to repository: {:?}",
-                            identifier, e
+                            component = ?identifier, ?e,
+                            "Failed to add inspect artifacts to repository"
                         );
                     });
             }
             Err(e) => {
                 warn!(
-                    "Failed to clone diagnostics proxy of component {:?} for a repository: {:?}",
-                    identifier, e
+                    component = ?identifier, ?e,
+                    "Failed to clone diagnostics proxy for a repository",
                 );
             }
         }
@@ -662,9 +662,8 @@ fn add_new_component(
             )
             .unwrap_or_else(|e| {
                 error!(
-                    "Failed to add new component: {:?} to repository: {:?}",
-                    identifier.clone(),
-                    e
+                    id = ?identifier, ?e,
+                    "Failed to add new component to repository",
                 );
             });
     }
@@ -846,7 +845,7 @@ pub async fn run_archivist(archivist_state: ArchivistState, mut events: Componen
         process_event(state.clone(), event).await.unwrap_or_else(|e| {
             let mut state = state.lock();
             inspect_log!(state.log_node, event: "Failed to log event", result: format!("{:?}", e));
-            error!("Failed to log event: {:?}", e);
+            error!(?e, "Failed to log event");
         });
     }
 }

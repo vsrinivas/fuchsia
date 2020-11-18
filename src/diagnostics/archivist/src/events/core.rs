@@ -8,8 +8,8 @@ use {
     async_trait::async_trait,
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
     futures::{channel::mpsc, SinkExt, TryStreamExt},
-    log::error,
     std::convert::TryInto,
+    tracing::error,
 };
 
 #[async_trait]
@@ -43,7 +43,7 @@ impl EventStreamServer {
         fasync::Task::spawn(async move {
             self.handle_request_stream(stream)
                 .await
-                .unwrap_or_else(|e: Error| error!("failed to run event stream server: {:?}", e));
+                .unwrap_or_else(|e: Error| error!(?e, "failed to run event stream server"));
         })
         .detach();
     }

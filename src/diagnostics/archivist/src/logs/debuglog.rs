@@ -18,7 +18,7 @@ use fuchsia_component::client::connect_to_service;
 use fuchsia_zircon as zx;
 use futures::stream::{unfold, Stream, TryStreamExt};
 use lazy_static::lazy_static;
-use log::warn;
+use tracing::warn;
 
 pub const KERNEL_URL: &str = "fuchsia-boot://kernel";
 lazy_static! {
@@ -135,7 +135,7 @@ pub fn convert_debuglog_to_log_message(buf: &[u8]) -> Option<Message> {
 
     let mut contents = match String::from_utf8(buf[32..(32 + data_len)].to_vec()) {
         Err(e) => {
-            warn!("Received non-UTF8 from the debuglog. ({:?})", e);
+            warn!(?e, "Received non-UTF8 from the debuglog.");
             return None;
         }
         Ok(s) => s,

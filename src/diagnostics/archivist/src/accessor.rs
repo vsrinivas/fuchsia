@@ -23,11 +23,11 @@ use {
     fuchsia_inspect::NumericProperty,
     fuchsia_zircon as zx,
     futures::prelude::*,
-    log::warn,
     parking_lot::RwLock,
     selectors,
     serde::Serialize,
     std::sync::Arc,
+    tracing::warn,
 };
 
 /// ArchiveAccessor represents an incoming connection from a client to an Archivist
@@ -163,7 +163,7 @@ impl ArchiveAccessor {
                 let (requests, control) = match result_stream.into_stream_and_control_handle() {
                     Ok(r) => r,
                     Err(e) => {
-                        warn!("Couldn't bind results channel to executor: {:?}", e);
+                        warn!(?e, "Couldn't bind results channel to executor.");
                         continue;
                     }
                 };

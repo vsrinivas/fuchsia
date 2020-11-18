@@ -77,6 +77,7 @@ mod tests {
     use fuchsia_inspect::assert_inspect_tree;
     use fuchsia_inspect_derive::WithInspect;
     use futures::StreamExt;
+    use tracing::error;
 
     impl Accounted for (i32, usize) {
         fn bytes_used(&self) -> usize {
@@ -97,7 +98,7 @@ mod tests {
                 match item {
                     arc_list::LazyItem::Next(i) => items.push((*i).clone()),
                     arc_list::LazyItem::ItemsDropped(n) => {
-                        log::warn!("dropped {} messages while collecting a backfill snapshot", n);
+                        error!(%n, "dropped messages while collecting a backfill snapshot");
                     }
                 }
             }

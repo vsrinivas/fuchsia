@@ -13,8 +13,8 @@ use {
     },
     fuchsia_async as fasync,
     futures::{channel::mpsc, SinkExt, TryStreamExt},
-    log::error,
     std::convert::TryInto,
+    tracing::error,
 };
 
 #[async_trait]
@@ -41,9 +41,9 @@ impl EventListenerServer {
 
     fn spawn(self, stream: ComponentEventListenerRequestStream) {
         fasync::Task::spawn(async move {
-            self.handle_request_stream(stream).await.unwrap_or_else(|e: Error| {
-                error!("failed to run v1 events processing server: {:?}", e)
-            });
+            self.handle_request_stream(stream)
+                .await
+                .unwrap_or_else(|e: Error| error!(?e, "failed to run v1 events processing server"));
         })
         .detach();
     }

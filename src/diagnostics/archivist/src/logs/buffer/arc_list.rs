@@ -4,7 +4,6 @@
 
 use fidl_fuchsia_diagnostics::StreamMode;
 use futures::prelude::*;
-use log::trace;
 // we use parking_lot here instead of futures::lock because Cursor::get_next is recursive
 use parking_lot::Mutex;
 use std::{
@@ -13,6 +12,7 @@ use std::{
     sync::{Arc, Weak},
     task::{Context, Poll, Waker},
 };
+use tracing::trace;
 
 /// A singly-linked-list which allows for concurrent lazy iteration and mutation of its
 /// contents.

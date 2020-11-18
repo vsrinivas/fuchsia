@@ -17,13 +17,13 @@ use {
     fuchsia_inspect::reader::PartialNodeHierarchy,
     fuchsia_zircon as zx,
     futures::prelude::*,
-    log::error,
     parking_lot::RwLock,
     selectors,
     std::{
         convert::{TryFrom, TryInto},
         sync::Arc,
     },
+    tracing::error,
 };
 
 pub mod collector;
@@ -170,7 +170,7 @@ impl ReaderServer {
                                     hierarchy: filtered_hierarchy_opt,
                                 },
                                 Err(e) => {
-                                    error!("Archivist failed to filter a node hierarchy: {:?}", e);
+                                    error!(?e, "Failed to filter a node hierarchy");
                                     NodeHierarchyData {
                                         filename: node_hierarchy_data.filename,
                                         timestamp: node_hierarchy_data.timestamp,
@@ -272,8 +272,8 @@ impl ReaderServer {
                 )
                 .unwrap_or_else(|err| {
                     error!(
-                        "Failed to evaluate client selectors for: {:?} Error: {:?}",
-                        pumped_inspect_data.relative_moniker, err
+                        moniker = ?pumped_inspect_data.relative_moniker, ?err,
+                        "Failed to evaluate client selectors",
                     );
                     Vec::new()
                 });
@@ -284,7 +284,7 @@ impl ReaderServer {
                     match (&matching_selectors).try_into() {
                         Ok(hierarchy_matcher) => Some(hierarchy_matcher),
                         Err(e) => {
-                            error!("Failed to create hierarchy matcher: {:?}", e);
+                            error!(?e, "Failed to create hierarchy matcher");
                             None
                         }
                     }

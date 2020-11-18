@@ -17,8 +17,8 @@ use {
     fuchsia_component::client::connect_to_service,
     fuchsia_component::server::MissingStartupHandle,
     fuchsia_syslog, fuchsia_zircon as zx,
-    log::{debug, error, info, warn},
     std::path::PathBuf,
+    tracing::{debug, error, info, warn},
 };
 
 /// Monitor, collect, and store diagnostics from components.

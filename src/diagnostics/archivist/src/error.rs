@@ -4,8 +4,8 @@
 
 use fidl_fuchsia_diagnostics::{self, BatchIteratorControlHandle};
 use fuchsia_zircon_status::Status as ZxStatus;
-use log::warn;
 use thiserror::Error;
+use tracing::warn;
 
 #[derive(Debug, Error)]
 pub enum AccessorError {
@@ -57,7 +57,7 @@ pub enum AccessorError {
 
 impl AccessorError {
     pub fn close(self, control: BatchIteratorControlHandle) {
-        warn!("Closing BatchIterator: {}", &self);
+        warn!(error = %self, "Closing BatchIterator.");
         let epitaph = match self {
             AccessorError::MissingDataType => ZxStatus::INVALID_ARGS,
             AccessorError::EmptySelectors

@@ -6,7 +6,6 @@ use {
     fidl_fuchsia_diagnostics::{FormattedContent, StreamMode, MAXIMUM_ENTRIES_PER_BATCH},
     fuchsia_zircon as zx,
     futures::prelude::*,
-    log::{error, warn},
     serde::Serialize,
     std::{
         convert::TryInto,
@@ -15,6 +14,7 @@ use {
         sync::Arc,
         task::{Context, Poll},
     },
+    tracing::{error, warn},
 };
 
 pub type FormattedStream =
@@ -189,9 +189,9 @@ where
         batch.push_str("]");
         if batch.len() > self.max_packet_size {
             error!(
-                "returned a string longer than maximum specified (actual {}, max {})",
-                batch.len(),
-                self.max_packet_size
+                actual = batch.len(),
+                max = self.max_packet_size,
+                "returned a string longer than maximum specified",
             )
         }
 

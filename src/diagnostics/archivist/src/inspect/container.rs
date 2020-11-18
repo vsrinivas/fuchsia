@@ -15,9 +15,9 @@ use {
     fuchsia_inspect::reader::snapshot::{Snapshot, SnapshotTree},
     fuchsia_zircon::{self as zx, DurationNum},
     inspect_fidl_load as deprecated_inspect,
-    log::error,
     std::convert::TryFrom,
     std::sync::Arc,
+    tracing::error,
 };
 
 pub struct InspectArtifactsContainer {

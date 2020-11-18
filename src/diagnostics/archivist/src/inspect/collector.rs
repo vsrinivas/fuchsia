@@ -13,12 +13,12 @@ use {
     futures::stream::StreamExt,
     futures::{FutureExt, TryFutureExt},
     io_util,
-    log::error,
     parking_lot::Mutex,
     pin_utils::pin_mut,
     std::collections::HashMap,
     std::path::{Path, PathBuf},
     std::sync::Arc,
+    tracing::error,
 };
 
 /// Mapping from a diagnostics filename to the underlying encoding of that
@@ -117,8 +117,8 @@ impl InspectDataCollector {
                     }
                     ty @ _ => {
                         error!(
-                            "found an inspect file '{}' of unexpected type {:?}",
-                            &entry.name, ty
+                            file = %entry.name, ?ty,
+                            "found an inspect file of unexpected type",
                         );
                     }
                 },

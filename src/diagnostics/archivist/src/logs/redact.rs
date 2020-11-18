@@ -20,7 +20,7 @@ pub const REDACTED_CANARY_MESSAGE: &str = "Log redaction canary: \
     Email: <REDACTED>, IPv4: <REDACTED>, IPv6: <REDACTED>, UUID: <REDACTED>";
 
 pub fn emit_canary() {
-    log::info!("{}", UNREDACTED_CANARY_MESSAGE);
+    tracing::info!("{}", UNREDACTED_CANARY_MESSAGE);
 }
 
 /// A `Redactor` is responsible for removing text patterns that seem like user data in logs.

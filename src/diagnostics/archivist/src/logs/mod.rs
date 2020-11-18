@@ -19,8 +19,8 @@ use fuchsia_inspect as inspect;
 use fuchsia_inspect_derive::Inspect;
 use fuchsia_zircon as zx;
 use futures::{channel::mpsc, lock::Mutex, prelude::*};
-use log::{debug, error, trace, warn};
 use std::sync::Arc;
+use tracing::{debug, error, trace, warn};
 
 mod buffer;
 pub mod debuglog;
@@ -97,7 +97,7 @@ impl LogManager {
         let mut messages = match kernel_logger.existing_logs().await {
             Ok(messages) => messages,
             Err(e) => {
-                error!("failed to read from kernel log, important logs may be missing: {}", e);
+                error!(%e, "failed to read from kernel log, important logs may be missing");
                 return;
             }
         };
@@ -118,7 +118,7 @@ impl LogManager {
             })
             .await;
         if let Err(e) = res {
-            error!("failed to drain kernel log, important logs may be missing: {}", e);
+            error!(%e, "failed to drain kernel log, important logs may be missing");
         }
     }
 
@@ -169,7 +169,7 @@ impl LogManager {
                 }
             }
             Ok(None) => warn!("local realm already gave out LogConnectionListener, skipping logs"),
-            Err(e) => error!("error retrieving LogConnectionListener from LogConnector: {}", e),
+            Err(e) => error!(%e, "error retrieving LogConnectionListener from LogConnector"),
         }
     }
 
@@ -198,7 +198,7 @@ impl LogManager {
                         }
                         Err(e) => {
                             control_handle.shutdown();
-                            warn!("error creating socket from {:?}: {}", source, e)
+                            warn!(?source, %e, "error creating socket")
                         }
                     };
                 }
@@ -212,11 +212,11 @@ impl LogManager {
                         }
                         Err(e) => {
                             control_handle.shutdown();
-                            warn!("error creating socket from {:?}: {}", source, e)
+                            warn!(?source, %e, "error creating socket")
                         }
                     };
                 }
-                Err(e) => error!("error handling log sink from {:?}: {}", source, e),
+                Err(e) => error!(?source, %e, "error handling log sink"),
             }
         }
     }
@@ -240,7 +240,7 @@ impl LogManager {
                 Err(error::StreamError::Closed) => return,
                 Err(e) => {
                     self.inner.lock().await.stats.record_closed_stream();
-                    warn!("closing socket from {:?}: {}", log_stream.source_url(), e);
+                    warn!(source = ?log_stream.source_url(), %e, "closing socket");
                     return;
                 }
             }
@@ -285,7 +285,7 @@ impl LogManager {
             match request {
                 fsys::EventStreamRequest::OnEvent { event, .. } => {
                     if let Err(e) = self.handle_event(event, sender.clone()) {
-                        error!("Unable to process event: {}", e);
+                        error!(%e, "Unable to process event");
                     }
                 }
             }
@@ -452,7 +452,7 @@ impl LogManager {
     pub fn forward_logs(self) {
         fasync::Task::spawn(async move {
             if let Err(e) = self.init_forwarders().await {
-                error!("couldn't forward logs: {}", e);
+                error!(%e, "couldn't forward logs");
             }
         })
         .detach();

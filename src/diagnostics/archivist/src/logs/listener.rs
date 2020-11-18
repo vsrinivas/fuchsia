@@ -8,9 +8,9 @@ use fidl_fuchsia_logger::{
 };
 use fuchsia_async::Task;
 use futures::prelude::*;
-use log::{debug, error, trace};
 use std::{sync::Arc, task::Poll};
 use thiserror::Error;
+use tracing::{debug, error, trace};
 
 mod asbestos;
 mod filter;
@@ -146,7 +146,7 @@ impl Listener {
             if e.is_closed() {
                 self.status = Status::Stale;
             } else {
-                error!("Error calling listener: {:?}", e);
+                error!(?e, "Error calling listener");
             }
         }
     }

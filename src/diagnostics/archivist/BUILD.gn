@@ -57,7 +57,6 @@ rustc_library("lib") {
     "//third_party/rust_crates:itertools",
     "//third_party/rust_crates:lazy_static",
     "//third_party/rust_crates:libc",
-    "//third_party/rust_crates:log",
     "//third_party/rust_crates:parking_lot",
     "//third_party/rust_crates:paste",
     "//third_party/rust_crates:pin-project",
@@ -69,6 +68,7 @@ rustc_library("lib") {
     "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:tempfile",
     "//third_party/rust_crates:thiserror",
+    "//third_party/rust_crates:tracing",
   ]
 
   test_deps = [ "//third_party/rust_crates:matches" ]
@@ -147,8 +147,8 @@ rustc_binary("bin") {
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:argh",
     "//third_party/rust_crates:futures",
-    "//third_party/rust_crates:log",
     "//third_party/rust_crates:thiserror",
+    "//third_party/rust_crates:tracing",
   ]
 
   sources = [ "src/main.rs" ]

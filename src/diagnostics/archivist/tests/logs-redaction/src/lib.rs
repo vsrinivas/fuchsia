@@ -3,6 +3,7 @@
 
 use anyhow::Error;
 use archivist_lib::logs::redact::{REDACTED_CANARY_MESSAGE, UNREDACTED_CANARY_MESSAGE};
+use diagnostics_data::LogsData;
 use diagnostics_reader::{ArchiveReader, Logs};
 use fidl_fuchsia_diagnostics::ArchiveAccessorMarker;
 use fidl_fuchsia_sys::ComponentControllerEvent;
@@ -20,38 +21,16 @@ use tracing::debug;
 async fn canary_is_redacted_with_filtering() {
     debug!("test started");
     let env = TestEnv::with_filtering().await.unwrap();
-    debug!("retrieving logs from feedback accessor");
-    let feedback_logs = env.feedback_reader.snapshot::<Logs>().await.unwrap();
-    let all_logs = env.all_reader.snapshot::<Logs>().await.unwrap();
-
-    let (unredacted, redacted) = all_logs
-        .into_iter()
-        .zip(feedback_logs)
-        .find(|(u, _)| u.msg() == Some(UNREDACTED_CANARY_MESSAGE))
-        .unwrap();
-    debug!(unredacted = %unredacted.msg().unwrap());
-    if unredacted.msg().unwrap() == UNREDACTED_CANARY_MESSAGE {
-        assert_eq!(redacted.msg().unwrap(), REDACTED_CANARY_MESSAGE);
-    }
+    let redacted = env.get_feedback_canary().await;
+    assert_eq!(redacted.msg().unwrap().trim_end(), REDACTED_CANARY_MESSAGE);
 }
 
 #[fuchsia::test]
 async fn canary_is_unredacted_without_filtering() {
     debug!("test started");
     let env = TestEnv::without_filtering().await.unwrap();
-    debug!("retrieving logs from feedback accessor");
-    let feedback_logs = env.feedback_reader.snapshot::<Logs>().await.unwrap();
-    let all_logs = env.all_reader.snapshot::<Logs>().await.unwrap();
-
-    let (unredacted, redacted) = all_logs
-        .into_iter()
-        .zip(feedback_logs)
-        .find(|(u, _)| u.msg() == Some(UNREDACTED_CANARY_MESSAGE))
-        .unwrap();
-    debug!(unredacted = %unredacted.msg().unwrap());
-    if unredacted.msg().unwrap() == UNREDACTED_CANARY_MESSAGE {
-        assert_eq!(redacted.msg().unwrap(), UNREDACTED_CANARY_MESSAGE);
-    }
+    let redacted = env.get_feedback_canary().await;
+    assert_eq!(redacted.msg().unwrap().trim_end(), UNREDACTED_CANARY_MESSAGE);
 }
 
 const ARCHIVIST_URL: &str =
@@ -66,6 +45,22 @@ struct TestEnv {
 }
 
 impl TestEnv {
+    /// Get the redaction canary message from the FeedbackArchiveAccessor reader. Relies on ordering
+    /// being identical between ArchiveAccessor snapshot and FeedbackArchiveAccessor snapshot.
+    async fn get_feedback_canary(&self) -> LogsData {
+        debug!("retrieving logs from feedback accessor");
+        let feedback_logs = self.feedback_reader.snapshot::<Logs>().await.unwrap();
+        let all_logs = self.all_reader.snapshot::<Logs>().await.unwrap();
+
+        let (unredacted, redacted) = all_logs
+            .into_iter()
+            .zip(feedback_logs)
+            .find(|(u, _)| u.msg().unwrap().contains(UNREDACTED_CANARY_MESSAGE))
+            .unwrap();
+        debug!(unredacted = %unredacted.msg().unwrap());
+        redacted
+    }
+
     async fn without_filtering() -> Result<Self, Error> {
         Self::new(false).await
     }

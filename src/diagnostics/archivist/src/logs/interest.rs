@@ -5,10 +5,10 @@ use {
     fidl_fuchsia_diagnostics::{Interest, StringSelector},
     fidl_fuchsia_logger::{LogInterestSelector, LogSinkControlHandle},
     fidl_fuchsia_sys_internal::SourceIdentity,
-    log::warn,
     std::collections::HashMap,
     std::convert::TryFrom,
     std::sync::{Arc, Weak},
+    tracing::warn,
 };
 
 /// Type used to identify the intended component target specified by an
@@ -82,7 +82,7 @@ impl InterestDispatcher {
                                 });
                             }
                         }
-                        _ => warn!("Unexpected component selector moniker segment {:?}", segment),
+                        _ => warn!(?segment, "Unexpected component selector moniker segment"),
                     };
                 });
             };
@@ -101,7 +101,7 @@ impl InterestDispatcher {
     /// levels associated with any active LogSink clients.
     pub async fn update_selectors<'a>(&mut self, selectors: Vec<LogInterestSelector>) {
         if !self.selectors.is_empty() {
-            warn!("Overriding existing selectors: {:?} with {:?}", &self.selectors, &selectors);
+            warn!(existing = ?self.selectors, new = ?selectors, "Overriding selectors");
         }
         selectors.iter().for_each(|s| {
             if let Some(segments) = &s.selector.moniker_segments {
@@ -121,7 +121,7 @@ impl InterestDispatcher {
                                 },
                             );
                         }
-                        _ => warn!("Unexpected component selector moniker segment {:?}", segment),
+                        _ => warn!(?segment, "Unexpected component selector moniker segment"),
                     };
                 });
             };
@@ -143,8 +143,8 @@ impl InterestDispatcher {
             });
         } else {
             warn!(
-                "Failed to notify interest listener - unable to find LogSinkControlHandle for {:?}",
-                component
+                ?component,
+                "Failed to notify interest listener - unable to find LogSinkControlHandle"
             );
         }
     }
