@@ -11,9 +11,12 @@
 //       with respect to external rust crates.
 use spinel_pack::{self as spinel_pack};
 
+use std::fmt::Debug;
+
 mod driver;
 mod flow_window;
 mod spinel;
+mod tun;
 
 #[cfg(test)]
 #[macro_export]
@@ -29,16 +32,22 @@ mod prelude {
 
     pub use anyhow::{format_err, Context as _};
     pub use fasync::TimeoutExt as _;
+    pub use fidl_fuchsia_net_ext as fnet_ext;
     pub use fuchsia_async as fasync;
     pub use fuchsia_syslog::macros::*;
     pub use fuchsia_zircon_status::Status as ZxStatus;
     pub use futures::prelude::*;
     pub use spinel_pack::prelude::*;
+
+    pub use net_declare::{fidl_ip, fidl_ip_v6};
 }
 
 use crate::prelude::*;
 
-use crate::driver::SpinelDriver;
+use crate::driver::{NetworkInterface, SpinelDriver};
+use crate::spinel::SpinelDeviceSink;
+use crate::tun::*;
+
 use anyhow::Error;
 use fidl_fuchsia_factory_lowpan::{FactoryRegisterMarker, FactoryRegisterProxyInterface};
 use fidl_fuchsia_lowpan_device::{RegisterMarker, RegisterProxyInterface};
@@ -74,19 +83,21 @@ struct DriverArgs {
     pub name: String,
 }
 
-async fn run_driver<N, RP, RFP>(
+async fn run_driver<N, RP, RFP, NI>(
     name: N,
     registry: RP,
     factory_registry: Option<RFP>,
     spinel_device_proxy: SpinelDeviceProxy,
+    net_if: NI,
 ) -> Result<(), Error>
 where
     N: AsRef<str>,
     RP: RegisterProxyInterface,
     RFP: FactoryRegisterProxyInterface,
+    NI: NetworkInterface + Debug,
 {
     let name = name.as_ref();
-    let driver = SpinelDriver::from(spinel_device_proxy);
+    let driver = SpinelDriver::new(SpinelDeviceSink::new(spinel_device_proxy), net_if);
     let driver_ref = &driver;
 
     let lowpan_device_task = register_and_serve_driver(name, registry, driver_ref).boxed_local();
@@ -187,10 +198,16 @@ async fn main() -> Result<(), Error> {
     fuchsia_syslog::init_with_tags(&["lowpan-spinel-driver"]).context("initialize logging")?;
 
     let (_app, spinel_device) = if args.use_ot_stack {
-        connect_to_spinel_device_proxy()?
+        connect_to_spinel_device_proxy().context("connect_to_spinel_device_proxy")?
     } else {
-        connect_to_spinel_device_proxy_hack().await?
+        connect_to_spinel_device_proxy_hack()
+            .await
+            .context("connect_to_spinel_device_proxy_hack")?
     };
+
+    let network_device_interface = TunNetworkInterface::try_new(Some(args.name.clone()))
+        .await
+        .context("Unable to start TUN driver")?;
 
     run_driver(
         args.name,
@@ -198,6 +215,7 @@ async fn main() -> Result<(), Error> {
             .context("Failed to connect to Lowpan Registry service")?,
         connect_to_service_at::<FactoryRegisterMarker>(args.service_prefix.as_str()).ok(),
         spinel_device,
+        network_device_interface,
     )
     .await
 }

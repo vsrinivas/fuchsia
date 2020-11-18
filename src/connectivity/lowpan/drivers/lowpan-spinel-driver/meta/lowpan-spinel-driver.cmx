@@ -16,6 +16,9 @@
             "fuchsia.factory.lowpan.FactoryRegister",
             "fuchsia.lowpan.device.Register",
             "fuchsia.lowpan.spinel.Device",
+            "fuchsia.net.interfaces.State",
+            "fuchsia.net.stack.Stack",
+            "fuchsia.net.tun.Control",
             "fuchsia.sys.Launcher"
         ]
     }

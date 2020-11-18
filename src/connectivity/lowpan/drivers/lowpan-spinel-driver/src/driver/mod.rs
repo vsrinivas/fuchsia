@@ -9,6 +9,7 @@ mod error_adapter;
 mod inbound;
 mod init;
 mod misc;
+mod network;
 mod tasks;
 
 #[cfg(test)]
@@ -47,11 +48,13 @@ macro_rules! ncp_cmd_timeout (
 
 pub use crate::ncp_cmd_timeout;
 
+pub use network::*;
+
 /// High-level LoWPAN driver implementation for Spinel-based devices.
 /// It covers the basic high-level state machine as well as
 /// the task definitions for all API commands.
 #[derive(Debug)]
-pub struct SpinelDriver<DS> {
+pub struct SpinelDriver<DS, NI> {
     /// Handles sending commands and routing responses.
     frame_handler: FrameHandler<DS>,
 
@@ -76,10 +79,12 @@ pub struct SpinelDriver<DS> {
 
     /// Debug Output Buffer
     ncp_debug_buffer: parking_lot::Mutex<Vec<u8>>,
+
+    net_if: NI,
 }
 
-impl<DS: SpinelDeviceClient> From<DS> for SpinelDriver<DS> {
-    fn from(device_sink: DS) -> Self {
+impl<DS: SpinelDeviceClient, NI> SpinelDriver<DS, NI> {
+    pub fn new(device_sink: DS, net_if: NI) -> Self {
         SpinelDriver {
             frame_handler: FrameHandler::new(device_sink.clone()),
             device_sink,
@@ -89,14 +94,7 @@ impl<DS: SpinelDeviceClient> From<DS> for SpinelDriver<DS> {
             exclusive_task_lock: Default::default(),
             did_vend_main_task: Default::default(),
             ncp_debug_buffer: Default::default(),
+            net_if,
         }
-    }
-}
-
-impl From<fidl_fuchsia_lowpan_spinel::DeviceProxy>
-    for SpinelDriver<SpinelDeviceSink<fidl_fuchsia_lowpan_spinel::DeviceProxy>>
-{
-    fn from(device_proxy: fidl_fuchsia_lowpan_spinel::DeviceProxy) -> Self {
-        SpinelDriver::from(SpinelDeviceSink::new(device_proxy))
     }
 }

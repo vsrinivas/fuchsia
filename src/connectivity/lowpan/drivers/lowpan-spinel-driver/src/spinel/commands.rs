@@ -265,3 +265,73 @@ impl<V: TryPack + Debug + Send> RequestDesc for CmdPropValueSet<V> {
         }
     }
 }
+
+#[derive(Debug, Copy, Clone)]
+pub struct CmdPropValueInsert<V: Debug>(pub Prop, pub V);
+
+impl<V: TryPack + Debug + Send> RequestDesc for CmdPropValueInsert<V> {
+    type Result = ();
+
+    fn write_request(&self, buffer: &mut dyn io::Write) -> io::Result<()> {
+        Cmd::PropValueInsert.try_pack(buffer)?;
+        self.0.try_pack(buffer)?;
+        self.1.try_pack(buffer)?;
+        Ok(())
+    }
+
+    fn on_response(
+        self,
+        response: Result<SpinelFrameRef<'_>, Canceled>,
+    ) -> Result<Self::Result, Error> {
+        let frame = response?;
+        match (frame.cmd, SpinelPropValueRef::try_unpack_from_slice(frame.payload)?) {
+            (Cmd::PropValueIs, SpinelPropValueRef { prop, .. }) if prop == self.0 => Ok(()),
+            (Cmd::PropValueInserted, SpinelPropValueRef { prop, .. }) if prop == self.0 => Ok(()),
+            (Cmd::PropValueIs, SpinelPropValueRef { prop: Prop::LastStatus, value }) => {
+                Err(<Status as TryUnpackAs<SpinelUint>>::try_unpack_as_from_slice(value)?.into())
+            }
+            (Cmd::PropValueIs, SpinelPropValueRef { prop, value }) => Err(format_err!(
+                "Unexpected response to \"insert {:?}\": \"{:?} is {:?}\"",
+                self.0,
+                prop,
+                value
+            )),
+            _ => Err(format_err!("Unexpected response to \"insert {:?}\": {:?}", self.0, frame)),
+        }
+    }
+}
+
+#[derive(Debug, Copy, Clone)]
+pub struct CmdPropValueRemove<V: Debug>(pub Prop, pub V);
+
+impl<V: TryPack + Debug + Send> RequestDesc for CmdPropValueRemove<V> {
+    type Result = ();
+
+    fn write_request(&self, buffer: &mut dyn io::Write) -> io::Result<()> {
+        Cmd::PropValueRemove.try_pack(buffer)?;
+        self.0.try_pack(buffer)?;
+        self.1.try_pack(buffer)?;
+        Ok(())
+    }
+
+    fn on_response(
+        self,
+        response: Result<SpinelFrameRef<'_>, Canceled>,
+    ) -> Result<Self::Result, Error> {
+        let frame = response?;
+        match (frame.cmd, SpinelPropValueRef::try_unpack_from_slice(frame.payload)?) {
+            (Cmd::PropValueIs, SpinelPropValueRef { prop, .. }) if prop == self.0 => Ok(()),
+            (Cmd::PropValueRemoved, SpinelPropValueRef { prop, .. }) if prop == self.0 => Ok(()),
+            (Cmd::PropValueIs, SpinelPropValueRef { prop: Prop::LastStatus, value }) => {
+                Err(<Status as TryUnpackAs<SpinelUint>>::try_unpack_as_from_slice(value)?.into())
+            }
+            (Cmd::PropValueIs, SpinelPropValueRef { prop, value }) => Err(format_err!(
+                "Unexpected response to \"remove {:?}\": \"{:?} is {:?}\"",
+                self.0,
+                prop,
+                value
+            )),
+            _ => Err(format_err!("Unexpected response to \"remove {:?}\": {:?}", self.0, frame)),
+        }
+    }
+}

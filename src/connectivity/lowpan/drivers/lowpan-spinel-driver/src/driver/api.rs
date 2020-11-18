@@ -23,7 +23,7 @@ use spinel_pack::TryUnpack;
 use std::convert::TryInto;
 
 /// Helpers for API-related tasks.
-impl<DS: SpinelDeviceClient> SpinelDriver<DS> {
+impl<DS: SpinelDeviceClient, NI: NetworkInterface> SpinelDriver<DS, NI> {
     async fn set_scan_mask(&self, scan_mask: Option<&Vec<u16>>) -> Result<(), Error> {
         if let Some(mask) = scan_mask {
             let u8_mask = mask.iter().try_fold(
@@ -109,7 +109,7 @@ impl<DS: SpinelDeviceClient> SpinelDriver<DS> {
 
 /// API-related tasks. Implementation of [`lowpan_driver_common::Driver`].
 #[async_trait]
-impl<DS: SpinelDeviceClient> LowpanDriver for SpinelDriver<DS> {
+impl<DS: SpinelDeviceClient, NI: NetworkInterface> LowpanDriver for SpinelDriver<DS, NI> {
     async fn provision_network(&self, params: ProvisioningParams) -> ZxResult<()> {
         use std::convert::TryInto;
         fx_log_info!("Got provision command: {:?}", params);
@@ -129,7 +129,7 @@ impl<DS: SpinelDeviceClient> LowpanDriver for SpinelDriver<DS> {
         };
 
         // Wait for our turn.
-        let _lock = self.wait_for_api_task_lock().await;
+        let _lock = self.wait_for_api_task_lock("provision_network").await?;
 
         // Wait until we are ready.
         self.wait_for_state(DriverState::is_initialized).await;
@@ -216,7 +216,7 @@ impl<DS: SpinelDeviceClient> LowpanDriver for SpinelDriver<DS> {
         fx_log_info!("Got leave command");
 
         // Wait for our turn.
-        let _lock = self.wait_for_api_task_lock().await;
+        let _lock = self.wait_for_api_task_lock("leave_network").await?;
 
         // Wait until we are ready.
         self.wait_for_state(DriverState::is_initialized).await;
@@ -252,7 +252,7 @@ impl<DS: SpinelDeviceClient> LowpanDriver for SpinelDriver<DS> {
         fx_log_info!("Got set active command: {:?}", enabled);
 
         // Wait for our turn.
-        let _lock = self.wait_for_api_task_lock().await;
+        let _lock = self.wait_for_api_task_lock("set_active").await?;
 
         // Wait until we are initialized, if we aren't already.
         self.wait_for_state(DriverState::is_initialized).await;
@@ -278,6 +278,9 @@ impl<DS: SpinelDeviceClient> LowpanDriver for SpinelDriver<DS> {
     async fn get_supported_network_types(&self) -> ZxResult<Vec<String>> {
         fx_log_info!("Got get_supported_network_types command");
 
+        // Wait for our turn.
+        let _lock = self.wait_for_api_task_lock("get_supported_network_types").await?;
+
         // Wait until we are ready.
         self.wait_for_state(DriverState::is_initialized).await;
 
@@ -298,7 +301,7 @@ impl<DS: SpinelDeviceClient> LowpanDriver for SpinelDriver<DS> {
         fx_log_info!("Got get_supported_channels command");
 
         // Wait for our turn.
-        let _lock = self.wait_for_api_task_lock().await;
+        let _lock = self.wait_for_api_task_lock("get_supported_channels").await?;
 
         traceln!("Got API task lock, waiting until we are ready.");
 
@@ -412,9 +415,24 @@ impl<DS: SpinelDeviceClient> LowpanDriver for SpinelDriver<DS> {
 
     async fn form_network(
         &self,
-        _params: ProvisioningParams,
+        params: ProvisioningParams,
         progress: fidl::endpoints::ServerEnd<ProvisioningMonitorMarker>,
     ) {
+        fx_log_info!("Got form command: {:?}", params);
+
+        // Wait for our turn.
+        let _lock = match self.wait_for_api_task_lock("form_network").await {
+            Ok(x) => x,
+            Err(x) => {
+                fx_log_info!("Failed waiting for API task lock: {:?}", x);
+                return;
+            }
+        };
+
+        // Wait until we are ready.
+        self.wait_for_state(DriverState::is_initialized).await;
+
+        // TODO: Implement form_network()
         // We don't care about errors here because
         // we are simply reporting that this isn't implemented.
         let _ = progress.close_with_epitaph(ZxStatus::NOT_SUPPORTED);
@@ -422,9 +440,24 @@ impl<DS: SpinelDeviceClient> LowpanDriver for SpinelDriver<DS> {
 
     async fn join_network(
         &self,
-        _params: ProvisioningParams,
+        params: ProvisioningParams,
         progress: fidl::endpoints::ServerEnd<ProvisioningMonitorMarker>,
     ) {
+        fx_log_info!("Got join command: {:?}", params);
+
+        // Wait for our turn.
+        let _lock = match self.wait_for_api_task_lock("join_network").await {
+            Ok(x) => x,
+            Err(x) => {
+                fx_log_info!("Failed waiting for API task lock: {:?}", x);
+                return;
+            }
+        };
+
+        // Wait until we are ready.
+        self.wait_for_state(DriverState::is_initialized).await;
+
+        // TODO: Implement join_network()
         // We don't care about errors here because
         // we are simply reporting that this isn't implemented.
         let _ = progress.close_with_epitaph(ZxStatus::NOT_SUPPORTED);
@@ -462,7 +495,7 @@ impl<DS: SpinelDeviceClient> LowpanDriver for SpinelDriver<DS> {
 
         let init_task = async move {
             // Wait for our turn.
-            let lock = self.wait_for_api_task_lock().await;
+            let lock = self.wait_for_api_task_lock("start_energy_scan").await?;
 
             // Wait until we are ready.
             self.wait_for_state(DriverState::is_initialized).await;
@@ -557,7 +590,7 @@ impl<DS: SpinelDeviceClient> LowpanDriver for SpinelDriver<DS> {
 
         let init_task = async move {
             // Wait for our turn.
-            let lock = self.wait_for_api_task_lock().await;
+            let lock = self.wait_for_api_task_lock("start_network_scan").await?;
 
             // Wait until we are ready.
             self.wait_for_state(DriverState::is_initialized).await;
@@ -662,7 +695,7 @@ impl<DS: SpinelDeviceClient> LowpanDriver for SpinelDriver<DS> {
         self.frame_handler.clear();
 
         // Wait for our turn.
-        let _lock = self.wait_for_api_task_lock().await;
+        let _lock = self.wait_for_api_task_lock("reset").await?;
 
         // Clear the frame handler one more time and prepare for (re)initialization.
         self.frame_handler.clear();
@@ -786,7 +819,7 @@ impl<DS: SpinelDeviceClient> LowpanDriver for SpinelDriver<DS> {
     }
 }
 
-impl<DS: SpinelDeviceClient> SpinelDriver<DS> {
+impl<DS: SpinelDeviceClient, NI: NetworkInterface> SpinelDriver<DS, NI> {
     fn device_state_snapshot(&self) -> DeviceState {
         let driver_state = self.driver_state.lock();
         DeviceState {

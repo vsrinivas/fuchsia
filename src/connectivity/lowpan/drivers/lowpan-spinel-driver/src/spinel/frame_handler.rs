@@ -312,6 +312,28 @@ where
         // Wait for the response
         receiver.await?
     }
+
+    /// Sends a request to the device, but does not wait for a response.
+    ///
+    /// `request` can be any type that implements the [`RequestDesc`] trait.
+    pub async fn send_request_ignore_response<RD>(&self, request: RD) -> Result<(), Error>
+    where
+        RD: RequestDesc,
+    {
+        let mut buffer: Vec<u8> = vec![Header::new(0, None).unwrap().into()];
+
+        traceln!("FrameHandler::send_request_ignore_response: building request");
+
+        // Append the actual request to the rest of the buffer.
+        request.write_request(&mut buffer)?;
+
+        traceln!("FrameHandler::send_request_ignore_response: Sending frame: {:?}", buffer);
+
+        // Actually send our request.
+        self.spinel_sink.lock().await.send(&buffer).await?;
+
+        Ok(())
+    }
 }
 
 #[cfg(test)]

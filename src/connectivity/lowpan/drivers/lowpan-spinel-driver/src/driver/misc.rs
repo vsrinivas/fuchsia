@@ -14,8 +14,10 @@ use futures::TryFutureExt;
 use lowpan_driver_common::{FutureExt as _, ZxResult};
 use spinel_pack::TryOwnedUnpack;
 
+const STD_IPV6_NET_PREFIX_LEN: u8 = 64;
+
 /// Miscellaneous private methods
-impl<DS: SpinelDeviceClient> SpinelDriver<DS> {
+impl<DS: SpinelDeviceClient, NI: NetworkInterface> SpinelDriver<DS, NI> {
     /// This method is called whenever it is observed that the
     /// NCP is acting in a weird or spurious manner. This could
     /// be due to timeouts or bad byte packing, for example.
@@ -33,8 +35,15 @@ impl<DS: SpinelDeviceClient> SpinelDriver<DS> {
     ///
     /// This is used to ensure that certain API tasks
     /// do not execute simultaneously.
-    pub(super) async fn wait_for_api_task_lock(&self) -> futures::lock::MutexGuard<'_, ()> {
-        self.exclusive_task_lock.lock().await
+    ///
+    /// The `description` field is used to describe who is holding
+    /// the lock. It is used only for debugging purposes.
+    pub(super) async fn wait_for_api_task_lock(
+        &self,
+        _description: &'static str,
+    ) -> ZxResult<futures::lock::MutexGuard<'_, ()>> {
+        // In the future, `description` will be used for debugging purposes.
+        Ok(self.exclusive_task_lock.lock().await)
     }
 
     /// Decorates the given future with error mapping,
@@ -65,7 +74,7 @@ impl<DS: SpinelDeviceClient> SpinelDriver<DS> {
 }
 
 /// State synchronization
-impl<DS: SpinelDeviceClient> SpinelDriver<DS> {
+impl<DS: SpinelDeviceClient, NI: NetworkInterface> SpinelDriver<DS, NI> {
     fn print_ncp_debug_line(&self, line: &[u8]) {
         match std::str::from_utf8(line) {
             Ok(line) => fx_log_warn!("NCP-DEBUG: {:?}", line),
@@ -138,9 +147,24 @@ impl<DS: SpinelDeviceClient> SpinelDriver<DS> {
 
                 if new_role != driver_state.role {
                     fx_log_info!("Role changed from {:?} to {:?}", driver_state.role, new_role);
+
                     driver_state.role = new_role;
-                    std::mem::drop(driver_state);
-                    self.driver_state_change.trigger();
+
+                    let new_connectivity_state =
+                        driver_state.connectivity_state.role_updated(new_role);
+                    if new_connectivity_state != driver_state.connectivity_state {
+                        let old_connectivity_state = driver_state.connectivity_state;
+                        driver_state.connectivity_state = new_connectivity_state;
+                        std::mem::drop(driver_state);
+                        self.driver_state_change.trigger();
+                        self.on_connectivity_state_change(
+                            new_connectivity_state,
+                            old_connectivity_state,
+                        );
+                    } else {
+                        std::mem::drop(driver_state);
+                        self.driver_state_change.trigger();
+                    }
                 }
             }
 
@@ -231,6 +255,82 @@ impl<DS: SpinelDeviceClient> SpinelDriver<DS> {
                     self.driver_state_change.trigger();
                 }
             }
+
+            Prop::Ipv6(PropIpv6::LlAddr) => {
+                let value = std::net::Ipv6Addr::try_unpack_from_slice(value)?;
+
+                let mut driver_state = self.driver_state.lock();
+
+                if value == driver_state.link_local_addr {
+                    return Ok(());
+                }
+
+                if !driver_state.link_local_addr.is_unspecified() {
+                    let subnet = Subnet {
+                        addr: driver_state.link_local_addr,
+                        prefix_len: STD_IPV6_NET_PREFIX_LEN,
+                    };
+                    self.net_if.remove_address(&subnet)?;
+                }
+
+                if !value.is_unspecified() {
+                    let subnet = Subnet { addr: value, prefix_len: STD_IPV6_NET_PREFIX_LEN };
+                    self.net_if.add_address(&subnet)?;
+                }
+
+                driver_state.link_local_addr = value;
+                std::mem::drop(driver_state);
+                self.driver_state_change.trigger();
+            }
+
+            Prop::Ipv6(PropIpv6::MlAddr) => {
+                let value = std::net::Ipv6Addr::try_unpack_from_slice(value)?;
+
+                let mut driver_state = self.driver_state.lock();
+
+                if value == driver_state.mesh_local_addr {
+                    return Ok(());
+                }
+
+                if !driver_state.mesh_local_addr.is_unspecified() {
+                    let subnet = Subnet {
+                        addr: driver_state.mesh_local_addr,
+                        prefix_len: STD_IPV6_NET_PREFIX_LEN,
+                    };
+                    self.net_if.remove_address(&subnet)?;
+                }
+
+                if !value.is_unspecified() {
+                    let subnet = Subnet { addr: value, prefix_len: STD_IPV6_NET_PREFIX_LEN };
+                    self.net_if.add_address(&subnet)?;
+                }
+
+                driver_state.mesh_local_addr = value;
+                std::mem::drop(driver_state);
+                self.driver_state_change.trigger();
+            }
+
+            Prop::Ipv6(PropIpv6::AddressTable) => {
+                let value = AddressTable::try_unpack_from_slice(value)?;
+
+                let mut driver_state = self.driver_state.lock();
+
+                if value != driver_state.address_table {
+                    for changed_address in driver_state.address_table.symmetric_difference(&value) {
+                        if value.contains(changed_address) {
+                            fx_log_info!("--- Address Added: {:?}", changed_address);
+                            self.net_if.add_address(&changed_address.subnet)?;
+                        } else {
+                            fx_log_info!("--- Address Removed: {:?}", changed_address);
+                            self.net_if.remove_address(&changed_address.subnet)?;
+                        }
+                    }
+                    driver_state.address_table = value;
+                    std::mem::drop(driver_state);
+                    self.driver_state_change.trigger();
+                }
+            }
+
             _ => {}
         }
         Ok(())

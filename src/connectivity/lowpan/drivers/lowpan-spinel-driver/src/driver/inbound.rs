@@ -9,7 +9,7 @@ use futures::prelude::*;
 
 use anyhow::Error;
 
-impl<DS: SpinelDeviceClient> SpinelDriver<DS> {
+impl<DS: SpinelDeviceClient, NI: NetworkInterface> SpinelDriver<DS, NI> {
     /// Method for handling inbound frames and pushing them
     /// to where they need to go.
     ///
@@ -21,7 +21,7 @@ impl<DS: SpinelDeviceClient> SpinelDriver<DS> {
     ///
     /// Resets are a special case and are handled directly.
     /// Everything else is delegated as described above.
-    fn on_inbound_frame(&self, frame: &[u8]) -> Result<(), Error> {
+    async fn on_inbound_frame(&self, frame: &[u8]) -> Result<(), Error> {
         // Parse the header.
         let frame = SpinelFrameRef::try_unpack_from_slice(frame).context("on_inbound_frame")?;
 
@@ -37,7 +37,14 @@ impl<DS: SpinelDeviceClient> SpinelDriver<DS> {
             Cmd::PropValueIs => {
                 let prop_value = SpinelPropValueRef::try_unpack_from_slice(frame.payload)
                     .context("on_inbound_frame:PropValueIs")?;
-                self.on_prop_value_is(prop_value.prop, prop_value.value)?;
+
+                if prop_value.prop == Prop::Stream(PropStream::Net) {
+                    let network_packet = NetworkPacket::try_unpack_from_slice(prop_value.value)
+                        .context("on_inbound_frame:parsing_net_packet")?;
+                    self.net_if.inbound_packet_to_stack(network_packet.packet).await?;
+                } else {
+                    self.on_prop_value_is(prop_value.prop, prop_value.value)?;
+                }
 
                 // We handle resets explicitly here.
                 // An actionable reset is defined as an unsolicited (TID Zero/None)
@@ -97,12 +104,19 @@ impl<DS: SpinelDeviceClient> SpinelDriver<DS> {
     pub fn wrap_inbound_stream<'a, T>(
         &'a self,
         device_stream: T,
-    ) -> impl Stream<Item = Result<(), Error>> + Unpin + Send + 'a
+    ) -> impl Stream<Item = Result<(), Error>> + Send + 'a
     where
-        T: futures::stream::Stream<Item = Result<Vec<u8>, Error>> + Unpin + Send + 'a,
+        T: futures::stream::Stream<Item = Result<Vec<u8>, Error>> + Send + 'a,
     {
         let wrapped_future = device_stream
-            .and_then(move |f| futures::future::ready(self.on_inbound_frame(&f)))
+            .and_then(move |f| {
+                async move {
+                    // Note that this really does need to be an async block
+                    // in order to keep the lifetime of `f` in scope for the
+                    // duration of the async call.
+                    self.on_inbound_frame(&f).await
+                }
+            })
             .or_else(move |err| {
                 futures::future::ready(match err {
                     // I/O errors are fatal.
@@ -128,7 +142,9 @@ impl<DS: SpinelDeviceClient> SpinelDriver<DS> {
     }
 }
 
-impl SpinelDriver<SpinelDeviceSink<fidl_fuchsia_lowpan_spinel::DeviceProxy>> {
+impl<NI: NetworkInterface>
+    SpinelDriver<SpinelDeviceSink<fidl_fuchsia_lowpan_spinel::DeviceProxy>, NI>
+{
     /// Takes the inbound frame stream from `SpinelDeviceSink::take_stream()`,
     /// adds the frame-handling logic, and returns the resulting stream.
     ///
@@ -138,7 +154,7 @@ impl SpinelDriver<SpinelDeviceSink<fidl_fuchsia_lowpan_spinel::DeviceProxy>> {
     /// This method is only available if the type of `DS` is
     /// `SpinelDeviceSink<fidl_fuchsia_lowpan_spinel::DeviceProxy>`.
     /// In all other cases you must use `wrap_inbound_stream()` instead.
-    pub fn take_inbound_stream(&self) -> impl Stream<Item = Result<(), Error>> + Unpin + Send + '_ {
+    pub fn take_inbound_stream(&self) -> impl Stream<Item = Result<(), Error>> + Send + '_ {
         self.wrap_inbound_stream(self.device_sink.take_stream())
     }
 }

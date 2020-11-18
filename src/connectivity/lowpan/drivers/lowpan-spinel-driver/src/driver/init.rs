@@ -11,7 +11,7 @@ use anyhow::Error;
 use fasync::Time;
 use futures::future::ready;
 
-impl<DS: SpinelDeviceClient> SpinelDriver<DS> {
+impl<DS: SpinelDeviceClient, NI: NetworkInterface> SpinelDriver<DS, NI> {
     /// Returns a snapshot of the current connectivity state.
     #[allow(dead_code)]
     pub(super) fn get_init_state(&self) -> InitState {

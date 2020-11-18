@@ -33,6 +33,15 @@ pub(super) struct DriverState {
     ///
     /// This is kept in sync by [`SpinelDriver::on_prop_value_is()`].
     pub(super) identity: Identity,
+
+    /// The current set of addresses configured for this interface.
+    pub(super) address_table: AddressTable,
+
+    /// The current link-local address
+    pub(super) link_local_addr: std::net::Ipv6Addr,
+
+    /// The current mesh-local address
+    pub(super) mesh_local_addr: std::net::Ipv6Addr,
 }
 
 impl Clone for DriverState {
@@ -43,6 +52,9 @@ impl Clone for DriverState {
             caps: self.caps.clone(),
             role: self.role.clone(),
             identity: self.identity.clone(),
+            address_table: self.address_table.clone(),
+            link_local_addr: self.link_local_addr.clone(),
+            mesh_local_addr: self.mesh_local_addr.clone(),
         }
     }
 }
@@ -58,6 +70,9 @@ impl PartialEq for DriverState {
             && self.identity.panid.eq(&other.identity.panid)
             && self.identity.raw_name.eq(&other.identity.raw_name)
             && self.identity.xpanid.eq(&other.identity.xpanid)
+            && self.address_table.eq(&other.address_table)
+            && self.link_local_addr.eq(&other.link_local_addr)
+            && self.mesh_local_addr.eq(&other.mesh_local_addr)
     }
 }
 
@@ -71,6 +86,9 @@ impl Default for DriverState {
             caps: Default::default(),
             role: Role::Detached,
             identity: Identity::empty(),
+            address_table: Default::default(),
+            link_local_addr: std::net::Ipv6Addr::UNSPECIFIED,
+            mesh_local_addr: std::net::Ipv6Addr::UNSPECIFIED,
         }
     }
 }
@@ -145,6 +163,9 @@ pub(super) trait ConnectivityStateExt {
     /// Returns true if the current state is invalid during initialization.
     fn is_invalid_during_initialization(&self) -> bool;
 
+    /// Returns true if the current state allows network packets to be sent and received.
+    fn is_online(&self) -> bool;
+
     /// Returns the next state to switch to if the device
     /// is *activated* (for example, by a call to `set_active(true)`)
     fn activated(&self) -> ConnectivityState;
@@ -160,6 +181,10 @@ pub(super) trait ConnectivityStateExt {
     /// Returns the next state to switch to if the device
     /// is *unprovisioned* (for example, by a call to `leave_network()`).
     fn unprovisioned(&self) -> ConnectivityState;
+
+    /// Returns the next state to switch to if the device
+    /// role changes.
+    fn role_updated(&self, role: Role) -> ConnectivityState;
 }
 
 impl ConnectivityStateExt for ConnectivityState {
@@ -193,7 +218,7 @@ impl ConnectivityStateExt for ConnectivityState {
         self.is_active() && self.is_ready()
     }
 
-    fn is_invalid_during_initialization(&self) -> bool {
+    fn is_online(&self) -> bool {
         match self {
             ConnectivityState::Inactive => false,
             ConnectivityState::Ready => false,
@@ -204,6 +229,10 @@ impl ConnectivityStateExt for ConnectivityState {
             ConnectivityState::Isolated => true,
             ConnectivityState::Commissioning => true,
         }
+    }
+
+    fn is_invalid_during_initialization(&self) -> bool {
+        self.is_online()
     }
 
     fn activated(&self) -> ConnectivityState {
@@ -250,6 +279,22 @@ impl ConnectivityStateExt for ConnectivityState {
             state => state.clone(),
         }
     }
+
+    fn role_updated(&self, role: Role) -> ConnectivityState {
+        match self {
+            ConnectivityState::Attaching | ConnectivityState::Commissioning => match role {
+                Role::Detached => self.clone(),
+                _ => ConnectivityState::Attached,
+            },
+
+            ConnectivityState::Attached | ConnectivityState::Isolated => match role {
+                Role::Detached => ConnectivityState::Isolated,
+                _ => ConnectivityState::Attached,
+            },
+
+            state => state.clone(),
+        }
+    }
 }
 
 /// Enumeration describing the initialization state of the
@@ -289,7 +334,7 @@ impl InitState {
     }
 }
 
-impl<DS: SpinelDeviceClient> SpinelDriver<DS> {
+impl<DS: SpinelDeviceClient, NI: NetworkInterface> SpinelDriver<DS, NI> {
     /// Asynchronous task that waits for the given `DriverState`
     /// snapshot predicate closure to return true.
     ///
@@ -310,6 +355,10 @@ impl<DS: SpinelDeviceClient> SpinelDriver<DS> {
             }
             self.driver_state_change.wait().await;
         }
+    }
+
+    pub(super) fn get_connectivity_state(&self) -> ConnectivityState {
+        self.driver_state.lock().connectivity_state
     }
 
     /// Called whenever the driver state has changed.

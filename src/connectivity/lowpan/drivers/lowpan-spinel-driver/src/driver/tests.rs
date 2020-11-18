@@ -12,7 +12,7 @@ use crate::spinel::mock::PROP_DEBUG_LOGGING_TEST;
 use fidl_fuchsia_lowpan::{Credential, Identity, ProvisioningParams, NET_TYPE_THREAD_1_X};
 use lowpan_driver_common::Driver as _;
 
-impl<DS> SpinelDriver<DS> {
+impl<DS, NI> SpinelDriver<DS, NI> {
     pub(super) fn get_driver_state_snapshot(&self) -> DriverState {
         self.driver_state.lock().clone()
     }
@@ -21,8 +21,8 @@ impl<DS> SpinelDriver<DS> {
 #[fasync::run_until_stalled(test)]
 async fn test_spinel_lowpan_driver() {
     let (device_client, device_stream, ncp_task) = new_fake_spinel_pair();
-
-    let driver = SpinelDriver::from(device_client);
+    let network_interface = DummyNetworkInterface::default();
+    let driver = SpinelDriver::new(device_client, network_interface);
     let driver_stream = driver.wrap_inbound_stream(device_stream);
 
     assert_eq!(driver.get_driver_state_snapshot().caps.len(), 0);

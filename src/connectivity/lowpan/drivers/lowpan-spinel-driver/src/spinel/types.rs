@@ -6,6 +6,7 @@ use super::enums::*;
 use anyhow::{format_err, Context as _};
 use core::convert::{TryFrom, TryInto};
 use spinel_pack::*;
+use std::collections::HashSet;
 use std::io;
 use std::num::NonZeroU8;
 
@@ -161,6 +162,31 @@ pub struct EnergyScanResult {
     pub channel: u8,
     pub rssi: i8,
 }
+
+/// A spinel IPv6 subnet
+#[spinel_packed("6C")]
+#[derive(Debug, Hash, Clone, Eq, PartialEq)]
+pub struct Subnet {
+    pub addr: std::net::Ipv6Addr,
+    pub prefix_len: u8,
+}
+
+/// A spinel address table entry from SPINEL_PROP_IPV6_ADDRESS_TABLE
+#[spinel_packed("D")]
+#[derive(Debug, Hash, Clone, Eq, PartialEq)]
+pub struct AddressTableEntry {
+    pub subnet: Subnet,
+}
+
+/// A spinel network packet
+#[spinel_packed("dD")]
+#[derive(Debug, Hash, Clone, Eq, PartialEq)]
+pub struct NetworkPacket<'a> {
+    pub packet: &'a [u8],
+    pub metadata: &'a [u8],
+}
+
+pub type AddressTable = HashSet<AddressTableEntry>;
 
 #[cfg(test)]
 mod tests {
