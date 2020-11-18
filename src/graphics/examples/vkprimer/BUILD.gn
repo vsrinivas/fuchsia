@@ -62,7 +62,10 @@ vulkan_executable("bin") {
   if (is_fuchsia) {
     include_dirs += [ "//src/graphics/examples/vkprimer/fuchsia" ]
 
-    deps += [ "//src/lib/vulkan" ]
+    deps += [
+      "//src/lib/vulkan",
+      "//src/lib/vulkan/swapchain",
+    ]
 
     sources += [
       "fuchsia/vulkan_surface.cc",

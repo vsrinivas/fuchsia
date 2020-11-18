@@ -23,7 +23,6 @@
 #include "vulkan_render_pass.h"
 #include "vulkan_surface.h"
 #include "vulkan_swapchain.h"
-#include "vulkan_sync.h"
 
 #include <vulkan/vulkan.hpp>
 
@@ -87,7 +86,7 @@ TEST(TransactionElimination, ForeignQueue) {
   // First command buffer does a transition to queue family foreign and back.
   auto command_buffers = std::make_unique<VulkanCommandBuffers>(
       logical_device, command_pool, *framebuffer, extent, *render_pass->render_pass(),
-      *graphics_pipeline->graphics_pipeline());
+      graphics_pipeline->graphics_pipeline());
   command_buffers->set_image_for_foreign_transition(*offscreen_image_view->image());
   ASSERT_TRUE(command_buffers->Init());
 
@@ -108,7 +107,7 @@ TEST(TransactionElimination, ForeignQueue) {
 
   auto command_buffers2 = std::make_unique<VulkanCommandBuffers>(
       logical_device, command_pool, *framebuffer, extent, *render_pass2->render_pass(),
-      *graphics_pipeline->graphics_pipeline());
+      graphics_pipeline->graphics_pipeline());
   ASSERT_TRUE(command_buffers2->Init());
 
   ASSERT_TRUE(DrawAllFrames(*logical_device, *command_buffers2));

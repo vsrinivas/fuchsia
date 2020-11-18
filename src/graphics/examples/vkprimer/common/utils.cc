@@ -5,6 +5,7 @@
 #include "utils.h"
 
 #include <cassert>
+#include <cstdio>
 #include <optional>
 #include <unordered_set>
 
@@ -27,7 +28,7 @@ namespace vkp {
 //
 static bool EnumerateProperties(SearchProp search_prop, vk::PhysicalDevice phys_device,
                                 const char *layer,
-                                std::unordered_set<std::string> *props_found_set) {
+                                std::unordered_set<std::string> *enumerated_props) {
   std::optional<vk::ResultValue<std::vector<vk::ExtensionProperties>>> rv_ext;
   std::optional<vk::ResultValue<std::vector<vk::LayerProperties>>> rv_layer;
   std::vector<vk::ExtensionProperties> ext_props;
@@ -68,54 +69,58 @@ static bool EnumerateProperties(SearchProp search_prop, vk::PhysicalDevice phys_
 
   if (search_prop == INSTANCE_LAYER_PROP) {
     for (auto &prop : layer_props) {
-      props_found_set->insert(std::string(prop.layerName));
+      enumerated_props->insert(std::string(prop.layerName));
     }
   } else {
     for (auto &prop : ext_props) {
-      props_found_set->insert(std::string(prop.extensionName));
+      enumerated_props->insert(std::string(prop.extensionName));
     }
   }
 
   return true;
 }
 
-bool FindMatchingProperties(const std::vector<const char *> &desired_props, SearchProp search_prop,
+bool FindRequiredProperties(const std::vector<const char *> &required_props, SearchProp search_prop,
                             vk::PhysicalDevice phys_device, const char *layer,
                             std::vector<std::string> *missing_props_out) {
-  std::unordered_set<std::string> props_found_set;
+  std::unordered_set<std::string> enumerated_props_set;
 
   // Match Vulkan properties.  "Vulkan properties" are those
   // found when the layer argument is set to null.
-  bool success = EnumerateProperties(search_prop, phys_device, nullptr, &props_found_set);
+  bool success = EnumerateProperties(search_prop, phys_device, nullptr, &enumerated_props_set);
 
   if (!success) {
     if (missing_props_out) {
-      missing_props_out->insert(missing_props_out->end(), desired_props.begin(),
-                                desired_props.end());
+      missing_props_out->insert(missing_props_out->end(), required_props.begin(),
+                                required_props.end());
     }
     RTN_MSG(false, "Unable to match vulkan properties.\n");
   }
 
   // Match layer properties.
   if (search_prop != INSTANCE_LAYER_PROP && layer &&
-      props_found_set.size() != desired_props.size()) {
-    success = EnumerateProperties(search_prop, phys_device, layer, &props_found_set);
+      enumerated_props_set.size() != required_props.size()) {
+    success = EnumerateProperties(search_prop, phys_device, layer, &enumerated_props_set);
   }
 
+  bool has_missing_props = false;
+
+  // Add missing properties to |missing_props_out| if required.
   if (missing_props_out) {
-    for (const auto &prop : desired_props) {
-      auto iter = props_found_set.find(prop);
-      if (iter == props_found_set.end()) {
-        missing_props_out->emplace_back(*iter);
+    for (const auto &prop : required_props) {
+      auto iter = enumerated_props_set.find(prop);
+      if (iter == enumerated_props_set.end()) {
+        missing_props_out->emplace_back(prop);
+        has_missing_props = true;
       }
     }
   }
 
-  if (missing_props_out && !missing_props_out->empty()) {
+  if (has_missing_props) {
     PrintProps(*missing_props_out);
   }
 
-  return props_found_set.size() == desired_props.size();
+  return (success && !has_missing_props);
 }
 
 bool FindGraphicsQueueFamilies(vk::PhysicalDevice phys_device, VkSurfaceKHR surface,

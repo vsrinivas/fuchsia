@@ -20,31 +20,39 @@ static const char *s_instance_layer_name = nullptr;
 
 static const char *s_instance_validation_layer_name = "VK_LAYER_KHRONOS_validation";
 
-static VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallback(
-    VkDebugUtilsMessageSeverityFlagBitsEXT msg_severity, VkDebugUtilsMessageTypeFlagsEXT msg_type,
-    const VkDebugUtilsMessengerCallbackDataEXT *callback_data, void *user_data) {
-  std::cerr << "VKCB Layer Layer: " << callback_data->pMessage << std::endl;
+static VKAPI_ATTR VkBool32 VKAPI_CALL
+DebugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT severity, VkDebugUtilsMessageTypeFlagsEXT type,
+              const VkDebugUtilsMessengerCallbackDataEXT *callback_data, void *user_data) {
+  std::string severity_str{};
+  if (severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT) {
+    severity_str = "VERBOSE";
+  } else if (severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT) {
+    severity_str = "INFO";
+  } else if (severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT) {
+    severity_str = "WARNING";
+  } else if (severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT) {
+    severity_str = "ERROR";
+  }
 
-  if (msg_type & VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT) {
-    std::cout << "VKCB Type General" << std::endl;
+  std::string type_str{};
+  if (type & VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT) {
+    type_str = "General";
+  } else if (type & VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT) {
+    type_str = "Validation";
+  } else if (type & VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT) {
+    type_str = "Performance";
+  } else {
+    type_str = "Unknown";
   }
-  if (msg_type & VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT) {
-    std::cout << "VKCB Type Layer" << std::endl;
-  }
-  if (msg_type & VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT) {
-    std::cout << "VKCB Type Performance" << std::endl;
-  }
-  if (msg_severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT) {
-    std::cout << "VKCB Severity Verbose" << std::endl;
-  }
-  if (msg_severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT) {
-    std::cout << "VKCB Severity Info" << std::endl;
-  }
-  if (msg_severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT) {
-    std::cout << "VKCB Severity Warning" << std::endl;
-  }
-  if (msg_severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT) {
-    std::cout << "VKCB Severity Error" << std::endl;
+
+  if (severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT) {
+    std::cerr << "VK[" << severity_str << "]\tType: " << type_str << "\tMessage:\n\t"
+              << callback_data->pMessage << std::endl
+              << std::endl;
+  } else {
+    std::cout << "VK[" << severity_str << "]\tType: " << type_str << "\tMessage:\n\t"
+              << callback_data->pMessage << std::endl
+              << std::endl;
   }
   return VK_FALSE;
 }
@@ -64,11 +72,11 @@ bool VulkanLayer::Init() {
   dispatch_loader_.init(instance, vkGetInstanceProcAddr);
 
   vk::DebugUtilsMessengerCreateInfoEXT info;
-  info.messageSeverity = vk::DebugUtilsMessageSeverityFlagBitsEXT::eVerbose |
+  info.messageSeverity = vk::DebugUtilsMessageSeverityFlagBitsEXT::eInfo |
                          vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning |
                          vk::DebugUtilsMessageSeverityFlagBitsEXT::eError;
 #if VERBOSE_LOGGING
-  info.messageSeverity |= vk::DebugUtilsMessageSeverityFlagBitsEXT::eInfo;
+  info.messageSeverity |= vk::DebugUtilsMessageSeverityFlagBitsEXT::eVerbose;
 #endif
 
   info.messageType = vk::DebugUtilsMessageTypeFlagBitsEXT::eGeneral |
@@ -90,11 +98,19 @@ void VulkanLayer::AppendRequiredInstanceExtensions(std::vector<const char *> *ex
 }
 
 void VulkanLayer::AppendRequiredInstanceLayers(std::vector<const char *> *layers) {
-  layers->emplace_back(s_instance_layer_name);
+  if (s_instance_layer_name) {
+    layers->emplace_back(s_instance_layer_name);
+  } else {
+    fprintf(stderr, "INFO: %s: No instance layer added to VkInstance.\n", __func__);
+  }
 }
 
 void VulkanLayer::AppendValidationInstanceLayers(std::vector<const char *> *layers) {
-  layers->emplace_back(s_instance_validation_layer_name);
+  if (s_instance_validation_layer_name) {
+    layers->emplace_back(s_instance_validation_layer_name);
+  } else {
+    fprintf(stderr, "INFO: %s: No validation layer added to VkInstance.\n", __func__);
+  }
 }
 
 void VulkanLayer::AppendRequiredDeviceLayers(std::vector<const char *> *layers) {
@@ -103,7 +119,7 @@ void VulkanLayer::AppendRequiredDeviceLayers(std::vector<const char *> *layers) 
 
 bool VulkanLayer::CheckValidationLayerSupport() {
   const std::vector<const char *> validation_layers(1, s_instance_validation_layer_name);
-  return !FindMatchingProperties(validation_layers, vkp::INSTANCE_LAYER_PROP,
-                                 nullptr /* phys_device */, nullptr /* layer */,
-                                 nullptr /* missing_props */);
+  return FindRequiredProperties(validation_layers, vkp::INSTANCE_LAYER_PROP,
+                                nullptr /* phys_device */, nullptr /* layer */,
+                                nullptr /* missing_props */);
 }

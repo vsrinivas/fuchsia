@@ -17,6 +17,15 @@ VulkanGraphicsPipeline::VulkanGraphicsPipeline(std::shared_ptr<VulkanLogicalDevi
                                                std::shared_ptr<VulkanRenderPass> render_pass)
     : initialized_(false), device_(device), extent_(extent), render_pass_(render_pass) {}
 
+VulkanGraphicsPipeline::~VulkanGraphicsPipeline() {
+  if (initialized_) {
+    const auto &device = device_->device();
+    device->destroyPipelineLayout(pipeline_layout_);
+    device->destroyPipeline(graphics_pipeline_);
+    initialized_ = false;
+  }
+}
+
 bool VulkanGraphicsPipeline::Init() {
   if (initialized_) {
     RTN_MSG(false, "VulkanGraphicsPipeline is already initialized.\n");
@@ -70,11 +79,11 @@ bool VulkanGraphicsPipeline::Init() {
   VulkanFixedFunctions fixed_functions(extent_);
 
   vk::PipelineLayoutCreateInfo pipeline_layout_info;
-  auto rv_layout = device.createPipelineLayoutUnique(pipeline_layout_info);
+  auto rv_layout = device.createPipelineLayout(pipeline_layout_info);
   if (vk::Result::eSuccess != rv_layout.result) {
     RTN_MSG(false, "VK Error: 0x%x - Failed to create pipeline layout.\n", rv_layout.result);
   }
-  pipeline_layout_ = std::move(rv_layout.value);
+  pipeline_layout_ = rv_layout.value;
 
   VulkanFixedFunctions &ff = fixed_functions;
   vk::GraphicsPipelineCreateInfo pipeline_info;
@@ -86,20 +95,21 @@ bool VulkanGraphicsPipeline::Init() {
   pipeline_info.setPRasterizationState(&ff.rasterizer_info());
   pipeline_info.setPMultisampleState(&ff.multisample_info());
   pipeline_info.setPColorBlendState(&ff.color_blending_info());
-  pipeline_info.layout = *pipeline_layout_;
+  pipeline_info.layout = pipeline_layout_;
   pipeline_info.renderPass = *render_pass_->render_pass();
   pipeline_info.basePipelineIndex = -1;
-  auto rv_pipelines = device.createGraphicsPipelinesUnique(vk::PipelineCache(), {pipeline_info});
-  if (vk::Result::eSuccess != rv_pipelines.result) {
-    RTN_MSG(false, "VK Error: 0x%x - Failed to create pipelines.\n", rv_pipelines.result);
+  // TODO(fxbug.dev/62319): Use vk::Device::createGraphicsPipelinesUnique once
+  // the invalid copy-ctor usage is fixed.
+  auto [rv_pipelines, pipelines] =
+      device.createGraphicsPipelines(vk::PipelineCache(), {pipeline_info});
+  if (vk::Result::eSuccess != rv_pipelines) {
+    RTN_MSG(false, "VK Error: 0x%x - Failed to create pipelines.\n", rv_pipelines);
   }
-  graphics_pipeline_ = std::move(rv_pipelines.value[0]);
+  graphics_pipeline_ = pipelines[0];
 
   initialized_ = true;
 
   return true;
 }
 
-const vk::UniquePipeline &VulkanGraphicsPipeline::graphics_pipeline() const {
-  return graphics_pipeline_;
-}
+const vk::Pipeline &VulkanGraphicsPipeline::graphics_pipeline() const { return graphics_pipeline_; }

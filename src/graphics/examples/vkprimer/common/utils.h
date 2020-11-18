@@ -23,10 +23,13 @@ enum SearchProp { INSTANCE_EXT_PROP, INSTANCE_LAYER_PROP, PHYS_DEVICE_EXT_PROP }
 
 //
 // Using the vkEnumerate* entrypoints, search for all elements of
-// |desired_props| to look for a match.  If all elements are found,
+// |required_props| to look for a match.  If all elements are found,
 // return true.  If any are missing, return false and populate
 // |missing_props_out| with the missing properties. If nullptr is
 // passed for |missing_props_out|, it will be ignored.
+//
+// If |layer| is not nullptr, constrain the property search to the
+// specified layer only.
 //
 // The type of enumeration entrypoint used is selected using the
 // |search_prop| parameter.  Those 3 selectable entrypoints are:
@@ -35,9 +38,9 @@ enum SearchProp { INSTANCE_EXT_PROP, INSTANCE_LAYER_PROP, PHYS_DEVICE_EXT_PROP }
 //   vk::enumerateInstanceLayerProperties
 //   vk::enumerateDeviceExtensionProperties
 //
-bool FindMatchingProperties(const std::vector<const char *> &desired_props, SearchProp search_prop,
+bool FindRequiredProperties(const std::vector<const char *> &required_props, SearchProp search_prop,
                             vk::PhysicalDevice phys_device, const char *layer,
-                            std::vector<std::string> *missing_propss_out);
+                            std::vector<std::string> *missing_props_out);
 
 // Find graphics queue families for |surface|.  Populate |queue_family_indices|
 // if it is non-null.  Returns true if a graphics queue family is found.

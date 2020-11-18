@@ -15,8 +15,10 @@ class VulkanGraphicsPipeline {
  public:
   VulkanGraphicsPipeline(std::shared_ptr<VulkanLogicalDevice> device, const vk::Extent2D &extent,
                          std::shared_ptr<VulkanRenderPass> render_pass);
+  ~VulkanGraphicsPipeline();
+
   bool Init();
-  const vk::UniquePipeline &graphics_pipeline() const;
+  const vk::Pipeline &graphics_pipeline() const;
 
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(VulkanGraphicsPipeline);
@@ -26,8 +28,8 @@ class VulkanGraphicsPipeline {
   const vk::Extent2D extent_;
   std::shared_ptr<VulkanRenderPass> render_pass_;
 
-  vk::UniquePipelineLayout pipeline_layout_;
-  vk::UniquePipeline graphics_pipeline_;
+  vk::PipelineLayout pipeline_layout_;
+  vk::Pipeline graphics_pipeline_;
 };
 
 #endif  // SRC_GRAPHICS_EXAMPLES_VKPRIMER_COMMON_VULKAN_GRAPHICS_PIPELINE_H_

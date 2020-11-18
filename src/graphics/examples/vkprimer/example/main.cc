@@ -4,6 +4,7 @@
 
 #include <unistd.h>
 
+#include <limits>
 #include <memory>
 #include <vector>
 
@@ -20,7 +21,6 @@
 #include "vulkan_render_pass.h"
 #include "vulkan_surface.h"
 #include "vulkan_swapchain.h"
-#include "vulkan_sync.h"
 
 #include <vulkan/vulkan.hpp>
 
@@ -29,12 +29,12 @@
 #include <GLFW/glfw3.h>
 #endif
 
-static bool DrawFrame(const VulkanLogicalDevice& logical_device, const VulkanSync& sync,
-                      const VulkanSwapchain& swap_chain,
-                      const VulkanCommandBuffers& command_buffers);
+static bool DrawFrame(const VulkanLogicalDevice& logical_device, const VulkanSwapchain& swap_chain,
+                      const VulkanCommandBuffers& command_buffers,
+                      const std::vector<vk::UniqueFence>& fences);
 
-static bool DrawOffscreenFrame(const VulkanLogicalDevice& logical_device, const VulkanSync& sync,
-                               const VulkanCommandBuffers& command_buffers);
+static bool DrawOffscreenFrame(const VulkanLogicalDevice& logical_device,
+                               const VulkanCommandBuffers& command_buffers, const vk::Fence& fence);
 
 static bool Readback(const VulkanLogicalDevice& logical_device, const VulkanImageView& image_view);
 
@@ -161,31 +161,44 @@ int main(int argc, char* argv[]) {
   // COMMAND BUFFER
   auto command_buffers = std::make_unique<VulkanCommandBuffers>(
       logical_device, command_pool, *framebuffer, extent, *render_pass->render_pass(),
-      *graphics_pipeline->graphics_pipeline());
+      graphics_pipeline->graphics_pipeline());
   if (!command_buffers->Init()) {
     RTN_MSG(1, "Command Buffer Initialization Failed.\n");
   }
 
-  // SYNC
-  auto sync = std::make_unique<VulkanSync>(logical_device, 3 /* max_frames_in_flight */);
-  if (!sync->Init()) {
-    RTN_MSG(1, "Sync Initialization Failed.\n");
+  // Offscreen drawing submission fence.
+  const vk::UniqueDevice& device = logical_device->device();
+  const vk::FenceCreateInfo fence_info(vk::FenceCreateFlagBits::eSignaled);
+  auto [r_offscren_fence, offscreen_fence] = device->createFenceUnique(fence_info);
+  if (r_offscren_fence != vk::Result::eSuccess) {
+    RTN_MSG(1, "Failed to create offscreen submission fence.\n");
+  }
+
+  // Onscreen drawing submission fences.
+  // There is a 1/1/1 mapping between swapchain image view / command buffer / fence.
+  std::vector<vk::UniqueFence> fences;
+  for (size_t i = 0; i < image_views.size(); i++) {
+    auto [r_fence, fence] = device->createFenceUnique(fence_info);
+    if (r_fence != vk::Result::eSuccess) {
+      RTN_MSG(1, "Failed to create onscreen submission fence.\n");
+    }
+    fences.emplace_back(std::move(fence));
   }
 
 #if USE_GLFW
   while (!glfwWindowShouldClose(window)) {
     glfwPollEvents();
     if (offscreen) {
-      DrawOffscreenFrame(*logical_device, *sync, *command_buffers);
+      DrawOffscreenFrame(*logical_device, *command_buffers, offscreen_fence.get());
     } else {
-      DrawFrame(*logical_device, *sync, *swap_chain, *command_buffers);
+      DrawFrame(*logical_device, *swap_chain, *command_buffers, fences);
     }
   }
 #else
   if (offscreen) {
-    DrawOffscreenFrame(*logical_device, *sync, *command_buffers);
+    DrawOffscreenFrame(*logical_device, *command_buffers, offscreen_fence.get());
   } else {
-    DrawFrame(*logical_device, *sync, *swap_chain, *command_buffers);
+    DrawFrame(*logical_device, *swap_chain, *command_buffers, fences);
   }
   sleep(3);
 #endif
@@ -203,26 +216,31 @@ int main(int argc, char* argv[]) {
   return 0;
 }
 
-bool DrawFrame(const VulkanLogicalDevice& logical_device, const VulkanSync& sync,
-               const VulkanSwapchain& swap_chain, const VulkanCommandBuffers& command_buffers) {
-  static int current_frame = 0;
-
+bool DrawFrame(const VulkanLogicalDevice& logical_device, const VulkanSwapchain& swap_chain,
+               const VulkanCommandBuffers& command_buffers,
+               const std::vector<vk::UniqueFence>& fences) {
   // Compact variables for readability derived from |current_frame|.
   const vk::UniqueDevice& device = logical_device.device();
 
-  const vk::Fence& fence = *(sync.in_flight_fences()[current_frame]);
+  auto [r_image_available_semaphore, image_available_semaphore] =
+      device->createSemaphore(vk::SemaphoreCreateInfo{});
+  if (r_image_available_semaphore != vk::Result::eSuccess) {
+    RTN_MSG(false, "VK Error: 0x%0x - Failed to create image available semaphore.",
+            r_image_available_semaphore);
+  }
 
-  const vk::Semaphore& image_available_semaphore =
-      *(sync.image_available_semaphores()[current_frame]);
-  const vk::Semaphore& render_finished_semaphore =
-      *(sync.render_finished_semaphores()[current_frame]);
-
-  // Wait for any outstanding command buffers to be processed.
-  device->waitForFences({fence}, VK_TRUE, std::numeric_limits<uint64_t>::max());
-  device->resetFences({fence});
+  auto [r_render_finished_semaphore, render_finished_semaphore] =
+      device->createSemaphore(vk::SemaphoreCreateInfo{});
+  if (r_render_finished_semaphore != vk::Result::eSuccess) {
+    RTN_MSG(false, "VK Error: 0x%0x - Failed to create image available semaphore.",
+            r_render_finished_semaphore);
+  }
 
   // Obtain next swap chain image in which to draw.
-  auto [result, image_index] =
+  // The timeout makes this a blocking call if no swapchain images, and therefore
+  // command buffers, are available so there is no need to wait for a submission fence
+  // before calling acquireNextImageKHR().
+  auto [result, swapchain_image_index] =
       device->acquireNextImageKHR(*swap_chain.swap_chain(), std::numeric_limits<uint64_t>::max(),
                                   image_available_semaphore, nullptr);
   if (vk::Result::eSuccess != result) {
@@ -233,7 +251,7 @@ bool DrawFrame(const VulkanLogicalDevice& logical_device, const VulkanSync& sync
   const vk::PipelineStageFlags image_available_wait_stage =
       vk::PipelineStageFlagBits::eColorAttachmentOutput;
 
-  vk::CommandBuffer command_buffer = *(command_buffers.command_buffers()[image_index]);
+  vk::CommandBuffer command_buffer = *(command_buffers.command_buffers()[swapchain_image_index]);
 
   vk::SubmitInfo submit_info;
   submit_info.waitSemaphoreCount = 1;
@@ -244,6 +262,12 @@ bool DrawFrame(const VulkanLogicalDevice& logical_device, const VulkanSync& sync
   submit_info.signalSemaphoreCount = 1;
   submit_info.pSignalSemaphores = &render_finished_semaphore;
 
+  // No guarantees that we're done with the acquired swap chain image and therefore
+  // the command buffer we're about to use so wait on the command buffer's fence.
+  const vk::Fence& fence = fences[swapchain_image_index].get();
+  device->waitForFences(1, &fence, VK_TRUE, std::numeric_limits<uint64_t>::max());
+  device->resetFences(1, &fence);
+
   if (logical_device.queue().submit(1, &submit_info, fence) != vk::Result::eSuccess) {
     RTN_MSG(false, "Failed to submit draw command buffer.\n");
   }
@@ -252,38 +276,29 @@ bool DrawFrame(const VulkanLogicalDevice& logical_device, const VulkanSync& sync
   present_info.waitSemaphoreCount = 1;
   present_info.pWaitSemaphores = &render_finished_semaphore;
   present_info.swapchainCount = 1;
-  present_info.setPSwapchains(&(*swap_chain.swap_chain()));
-  present_info.pImageIndices = &image_index;
+  present_info.setPSwapchains(&(swap_chain.swap_chain().get()));
+  present_info.pImageIndices = &swapchain_image_index;
 
   logical_device.queue().presentKHR(&present_info);
-
-  current_frame = (current_frame + 1) % sync.max_frames_in_flight();
 
   return true;
 }
 
-bool DrawOffscreenFrame(const VulkanLogicalDevice& logical_device, const VulkanSync& sync,
-                        const VulkanCommandBuffers& command_buffers) {
-  static int current_frame = 0;
-
-  const vk::UniqueDevice& device = logical_device.device();
-  const vk::Fence& fence = *(sync.in_flight_fences()[0]);
-
-  // Wait for any outstanding command buffers to be processed.
-  device->waitForFences({fence}, VK_TRUE, std::numeric_limits<uint64_t>::max());
-  device->resetFences({fence});
-
-  vk::CommandBuffer command_buffer = *(command_buffers.command_buffers()[0]);
-
+bool DrawOffscreenFrame(const VulkanLogicalDevice& logical_device,
+                        const VulkanCommandBuffers& command_buffers, const vk::Fence& fence) {
+  vk::CommandBuffer command_buffer = command_buffers.command_buffers()[0].get();
   vk::SubmitInfo submit_info;
   submit_info.commandBufferCount = 1;
   submit_info.pCommandBuffers = &command_buffer;
 
+  // Wait for any outstanding command buffers to be processed.
+  const vk::UniqueDevice& device = logical_device.device();
+  device->waitForFences(1, &fence, VK_TRUE, std::numeric_limits<uint64_t>::max());
+  device->resetFences(1, &fence);
+
   if (logical_device.queue().submit(1, &submit_info, fence) != vk::Result::eSuccess) {
     RTN_MSG(false, "Failed to submit draw command buffer.\n");
   }
-
-  current_frame = (current_frame + 1) % sync.max_frames_in_flight();
 
   return true;
 }

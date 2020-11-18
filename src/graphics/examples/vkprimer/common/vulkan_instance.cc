@@ -15,7 +15,6 @@ static const std::vector<const char *> s_required_props = {
     VK_KHR_EXTERNAL_MEMORY_CAPABILITIES_EXTENSION_NAME,
     VK_KHR_EXTERNAL_SEMAPHORE_CAPABILITIES_EXTENSION_NAME,
     VK_KHR_SURFACE_EXTENSION_NAME,
-    VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME,
 #ifdef __Fuchsia__
     VK_FUCHSIA_IMAGEPIPE_SURFACE_EXTENSION_NAME,
 #endif
@@ -43,14 +42,18 @@ std::vector<const char *> GetExtensionsGLFW() {
   return extensions;
 }
 #else
-std::vector<const char *> GetExtensions_Private(std::vector<const char *> *layers) {
-  const char *kMagmaLayer = "VK_LAYER_FUCHSIA_imagepipe_swapchain_fb";
-
+std::vector<const char *> GetExtensionsPrivate() {
   std::vector<const char *> extensions;
   std::vector<std::string> missing_props;
 
-  if (!FindMatchingProperties(s_required_props, vkp::INSTANCE_EXT_PROP, nullptr /* phys_device */,
-                              kMagmaLayer, &missing_props)) {
+#ifdef __Fuchsia__
+  const char *kMagmaLayer = "VK_LAYER_FUCHSIA_imagepipe_swapchain_fb";
+#else
+  const char *kMagmaLayer = nullptr;
+#endif
+
+  if (FindRequiredProperties(s_required_props, vkp::INSTANCE_EXT_PROP, nullptr /* phys_device */,
+                             kMagmaLayer, &missing_props)) {
     extensions.insert(extensions.end(), s_required_props.begin(), s_required_props.end());
   }
 
@@ -74,11 +77,11 @@ bool VulkanInstance::Init(bool enable_validation) {
 
   // Application Info
   vk::ApplicationInfo app_info;
-  app_info.apiVersion = VK_MAKE_VERSION(1, 0, 0);
+  const uint32_t kMajor = 1;
+  const uint32_t kMinor = 1;
+  app_info.apiVersion = VK_MAKE_VERSION(kMajor, kMinor, 0);
   app_info.pApplicationName = "VkPrimer";
-  app_info.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
-  app_info.pEngineName = "No Engine";
-  app_info.engineVersion = VK_MAKE_VERSION(1, 0, 0);
+  fprintf(stdout, "\nVulkan Instance API Version: %d.%d\n\n", kMajor, kMinor);
 
   // Instance Create Info
   vk::InstanceCreateInfo create_info;
@@ -101,14 +104,14 @@ bool VulkanInstance::Init(bool enable_validation) {
   create_info.enabledLayerCount = static_cast<uint32_t>(layers_.size());
   create_info.ppEnabledLayerNames = layers_.data();
 
-  fprintf(stderr, "Enabled Instance Extensions:\n");
+  fprintf(stdout, "Enabled Instance Extensions:\n");
   PrintProps(extensions_);
 
-  fprintf(stderr, "Enabled layers:\n");
+  fprintf(stdout, "Enabled layers:\n");
   for (auto &layer : layers_) {
-    fprintf(stderr, "\t%s\n", layer);
+    fprintf(stdout, "\t%s\n", layer);
   }
-  fprintf(stderr, "\n");
+  fprintf(stdout, "\n");
 
   auto rv = vk::createInstanceUnique(create_info);
   if (vk::Result::eSuccess != rv.result) {
@@ -124,7 +127,7 @@ std::vector<const char *> VulkanInstance::GetExtensions() {
 #if USE_GLFW
   extensions_ = GetExtensionsGLFW();
 #else
-  extensions_ = GetExtensions_Private(&layers_);
+  extensions_ = GetExtensionsPrivate();
 #endif
 
   return extensions_;

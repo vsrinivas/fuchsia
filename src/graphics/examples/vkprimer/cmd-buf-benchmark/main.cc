@@ -20,7 +20,6 @@
 #include "vulkan_render_pass.h"
 #include "vulkan_surface.h"
 #include "vulkan_swapchain.h"
-#include "vulkan_sync.h"
 
 #include <vulkan/vulkan.hpp>
 
@@ -149,16 +148,11 @@ int main(int argc, char* argv[]) {
   // COMMAND BUFFER
   auto command_buffers = std::make_unique<VulkanCommandBuffers>(
       logical_device, command_pool, *framebuffer, extent, *render_pass->render_pass(),
-      *graphics_pipeline->graphics_pipeline());
+      graphics_pipeline->graphics_pipeline());
   if (!command_buffers->Init()) {
     RTN_MSG(1, "Command Buffer Initialization Failed.\n");
   }
 
-  // SYNC
-  auto sync = std::make_unique<VulkanSync>(logical_device, 3 /* max_frames_in_flight */);
-  if (!sync->Init()) {
-    RTN_MSG(1, "Sync Initialization Failed.\n");
-  }
   sleep(1);
 
   // Warm up and force the driver to allocate all the memory it will need for the command buffer.

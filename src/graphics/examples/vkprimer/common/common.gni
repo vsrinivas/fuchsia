@@ -34,8 +34,6 @@ common_files = [
   "vulkan_shader.h",
   "vulkan_swapchain.cc",
   "vulkan_swapchain.h",
-  "vulkan_sync.cc",
-  "vulkan_sync.h",
 ]
 
 common_sources = []
