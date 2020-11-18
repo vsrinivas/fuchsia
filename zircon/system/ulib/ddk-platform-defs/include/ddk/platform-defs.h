@@ -54,6 +54,7 @@ __BEGIN_CDECLS
 #define PDEV_DID_POWER_DOMAIN_COMPOSITE 0x27  // Power domain, as a composite device
 #define PDEV_DID_DW_SPI                 0x28  // Designware SPI
 #define PDEV_DID_REGISTERS              0x29  // Registers device
+#define PDEV_DID_DAI_TEST               0x2A  // DAI testing codec
 
 // QEMU emulator
 #define PDEV_VID_QEMU               0x01

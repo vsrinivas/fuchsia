@@ -19,6 +19,8 @@
 
 // Enables BT PCM audio.
 // #define ENABLE_BT
+// Enable DAI mode for BT PCM audio.
+// #define ENABLE_DAI_MODE
 
 namespace astro {
 
@@ -61,7 +63,22 @@ static const zx_bind_inst_t codec_match[] = {
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, kCodecVid),
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, kCodecDid),
 };
-
+#ifdef ENABLE_BT
+#ifdef ENABLE_DAI_MODE
+static const zx_bind_inst_t dai_out_match[] = {
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_DAI),
+    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_AMLOGIC),
+    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_AMLOGIC_S905D2),
+    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_AMLOGIC_DAI_OUT),
+};
+static const zx_bind_inst_t dai_in_match[] = {
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_DAI),
+    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_AMLOGIC),
+    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_AMLOGIC_S905D2),
+    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_AMLOGIC_DAI_IN),
+};
+#endif
+#endif
 static const device_fragment_part_t i2c_fragment[] = {
     {countof(root_match), root_match},
     {countof(i2c_match), i2c_match},
@@ -80,9 +97,25 @@ static const device_fragment_part_t codec_fragment[] = {
     {countof(root_match), root_match},
     {countof(codec_match), codec_match},
 };
-
 #ifdef ENABLE_BT
+#ifdef ENABLE_DAI_MODE
+static const device_fragment_part_t dai_out_fragment[] = {
+    {countof(root_match), root_match},
+    {countof(dai_out_match), dai_out_match},
+};
+static const device_fragment_part_t dai_in_fragment[] = {
+    {countof(root_match), root_match},
+    {countof(dai_in_match), dai_in_match},
+};
+static const device_fragment_t dai_test_out_fragments[] = {
+    {"dai-out", countof(dai_out_fragment), dai_out_fragment},
+};
+static const device_fragment_t dai_test_in_fragments[] = {
+    {"dai-in", countof(dai_in_fragment), dai_in_fragment},
+};
+#else
 static const device_fragment_t tdm_pcm_fragments[] = {};
+#endif
 #endif
 static const device_fragment_t tdm_i2s_fragments[] = {
     {"gpio", countof(enable_gpio_fragment), enable_gpio_fragment},
@@ -205,23 +238,57 @@ zx_status_t Astro::AudioInit() {
         },
     };
 
+    // Add DAI or controller driver depending on ENABLE_DAI_MODE.
     pbus_dev_t tdm_dev = {};
-    tdm_dev.name = "astro-pcm-audio-out";
     tdm_dev.vid = PDEV_VID_AMLOGIC;
     tdm_dev.pid = PDEV_PID_AMLOGIC_S905D2;
-    tdm_dev.did = PDEV_DID_AMLOGIC_TDM;
     tdm_dev.mmio_list = audio_mmios;
     tdm_dev.mmio_count = countof(audio_mmios);
     tdm_dev.bti_list = pcm_out_btis;
     tdm_dev.bti_count = countof(pcm_out_btis);
     tdm_dev.metadata_list = tdm_metadata;
     tdm_dev.metadata_count = countof(tdm_metadata);
+#ifdef ENABLE_DAI_MODE
+    tdm_dev.name = "astro-pcm-dai-out";
+    tdm_dev.did = PDEV_DID_AMLOGIC_DAI_OUT;
+    status = pbus_.DeviceAdd(&tdm_dev);
+#else
+    tdm_dev.name = "astro-pcm-audio-out";
+    tdm_dev.did = PDEV_DID_AMLOGIC_TDM;
     status = pbus_.CompositeDeviceAdd(&tdm_dev, tdm_pcm_fragments, countof(tdm_pcm_fragments),
                                       UINT32_MAX);
+#endif
+    if (status != ZX_OK) {
+      zxlogf(ERROR, "%s: Add DAI/controller driver failed: %d", __FILE__, status);
+      return status;
+    }
+
+#ifdef ENABLE_DAI_MODE
+    // Add test driver.
+    bool is_input = false;
+    const device_metadata_t test_metadata[] = {
+        {
+            .type = DEVICE_METADATA_PRIVATE,
+            .data = &is_input,
+            .length = sizeof(is_input),
+        },
+    };
+    zx_device_prop_t props[] = {{BIND_PLATFORM_DEV_VID, 0, PDEV_VID_GENERIC},
+                                {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_DAI_TEST}};
+    composite_device_desc_t comp_desc = {};
+    comp_desc.props = props;
+    comp_desc.props_count = countof(props);
+    comp_desc.coresident_device_index = UINT32_MAX;
+    comp_desc.fragments = dai_test_out_fragments;
+    comp_desc.fragments_count = countof(dai_test_out_fragments);
+    comp_desc.metadata_list = test_metadata;
+    comp_desc.metadata_count = countof(test_metadata);
+    status = DdkAddComposite("astro-dai-test-out", &comp_desc);
     if (status != ZX_OK) {
       zxlogf(ERROR, "%s: PCM CompositeDeviceAdd failed: %d", __FILE__, status);
       return status;
     }
+#endif
   }
 #endif
   // Add TDM OUT to the codec.
@@ -331,25 +398,60 @@ zx_status_t Astro::AudioInit() {
             .data_size = sizeof(metadata),
         },
     };
+    // Add DAI or controller driver depending on ENABLE_DAI_MODE.
     pbus_dev_t tdm_dev = {};
-    tdm_dev.name = "astro-pcm-audio-in";
     tdm_dev.vid = PDEV_VID_AMLOGIC;
     tdm_dev.pid = PDEV_PID_AMLOGIC_S905D2;
-    tdm_dev.did = PDEV_DID_AMLOGIC_TDM;
     tdm_dev.mmio_list = audio_mmios;
     tdm_dev.mmio_count = countof(audio_mmios);
     tdm_dev.bti_list = pcm_in_btis;
     tdm_dev.bti_count = countof(pcm_in_btis);
     tdm_dev.metadata_list = tdm_metadata;
     tdm_dev.metadata_count = countof(tdm_metadata);
+#ifdef ENABLE_DAI_MODE
+    tdm_dev.name = "astro-pcm-dai-in";
+    tdm_dev.did = PDEV_DID_AMLOGIC_DAI_IN;
+    status = pbus_.DeviceAdd(&tdm_dev);
+#else
+    tdm_dev.name = "astro-pcm-audio-in";
+    tdm_dev.did = PDEV_DID_AMLOGIC_TDM;
     status = pbus_.CompositeDeviceAdd(&tdm_dev, tdm_pcm_fragments, countof(tdm_pcm_fragments),
                                       UINT32_MAX);
+#endif
     if (status != ZX_OK) {
       zxlogf(ERROR, "%s: PCM CompositeDeviceAdd failed: %d", __FILE__, status);
       return status;
     }
   }
+
+#ifdef ENABLE_DAI_MODE
+  // Add test driver.
+  bool is_input = true;
+  const device_metadata_t test_metadata[] = {
+      {
+          .type = DEVICE_METADATA_PRIVATE,
+          .data = &is_input,
+          .length = sizeof(is_input),
+      },
+  };
+  zx_device_prop_t props[] = {{BIND_PLATFORM_DEV_VID, 0, PDEV_VID_GENERIC},
+                              {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_DAI_TEST}};
+  composite_device_desc_t comp_desc = {};
+  comp_desc.props = props;
+  comp_desc.props_count = countof(props);
+  comp_desc.coresident_device_index = UINT32_MAX;
+  comp_desc.fragments = dai_test_in_fragments;
+  comp_desc.fragments_count = countof(dai_test_in_fragments);
+  comp_desc.metadata_list = test_metadata;
+  comp_desc.metadata_count = countof(test_metadata);
+  status = DdkAddComposite("astro-dai-test-in", &comp_desc);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s: PCM CompositeDeviceAdd failed: %d", __FILE__, status);
+    return status;
+  }
 #endif
+#endif
+
   status = pbus_.DeviceAdd(&pdm_dev);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: PDM DeviceAdd failed: %d", __FILE__, status);
