@@ -39,16 +39,7 @@ group("images") {
 # IMPORTANT NOTE: this target is now frozen, please do not add any more
 # dependencies to it.
 aggregate_manifest("legacy-aux") {
-  deps = [
-    ":lib.c",
-    ":lib.c.asan",
-    ":lib.c.asan-ubsan",
-    ":lib.c.profile",
-    ":lib.c.sancov",
-    ":lib.c.ubsan",
-    ":lib.c.ubsan-sancov",
-    ":lib.c.ubsan-sancov-full",
-  ]
+  deps = []
 
   reference = "legacy-aux-$target_cpu"
 }

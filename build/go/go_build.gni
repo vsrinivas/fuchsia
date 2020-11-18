@@ -275,8 +275,6 @@ template("go_build") {
 
       if (is_fuchsia) {
         deps += [
-          # TODO(60613) Remove once sysroot generation moves to the Fuchsia build.
-          "//build/unification/lib/sysroot",
           "//sdk/lib/fdio",
           "//zircon/public/sysroot:go_binary_deps",
         ]

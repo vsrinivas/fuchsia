@@ -2,9 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/unification/lib/zircon_runtime_library.gni")
-
-# The sysroot currently only provides a single library, libc.
-zircon_runtime_library("sysroot") {
-  library = "c"
+# TODO(60613): Remove the //vendor/... targets that depend on this.
+group("sysroot") {
+  deps = [ "//zircon/public/sysroot:system_libc_deps" ]
 }
