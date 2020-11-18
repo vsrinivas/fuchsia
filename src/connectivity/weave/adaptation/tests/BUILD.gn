@@ -120,9 +120,6 @@ executable("group_key_store_unittests") {
   output_name = "group_key_store_unittests"
   sources = [ "group_key_store_unittests.cpp" ]
   deps = [ ":common_test_deps" ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("platform_case_auth_delegate_unittests") {
@@ -130,9 +127,6 @@ executable("platform_case_auth_delegate_unittests") {
   output_name = "platform_case_auth_delegate_unittests"
   sources = [ "platform_case_auth_delegate_unittests.cpp" ]
   deps = [ ":common_test_deps" ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("weave_platform_manager_unittests") {
