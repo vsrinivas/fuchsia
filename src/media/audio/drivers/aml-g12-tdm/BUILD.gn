@@ -54,10 +54,60 @@ driver_module("aml-g12-tdm") {
   ]
 }
 
+bind_rules("aml-g12-tdm-dai-bind") {
+  rules = "aml_tdm_dai.bind"
+  output = "aml_tdm_dai_bind.h"
+  tests = "tests.json"
+  deps = [
+    "//src/devices/bind/fuchsia.composite",
+    "//src/devices/bind/fuchsia.platform",
+  ]
+}
+
+driver_module("aml-g12-tdm-dai") {
+  configs += [
+    "//build/config:all_source",
+    "//build/config/fuchsia:enable_zircon_asserts",
+  ]
+  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
+  configs += [
+    "//build/config/fuchsia:static_cpp_standard_library",
+    "//build/unification/config:zircon-migrated",
+  ]
+  sources = [
+    "aml-tdm-config-device.cc",
+    "dai.cc",
+  ]
+
+  deps = [
+    ":aml-g12-tdm-dai-bind",
+    "//sdk/banjo/ddk.protocol.audio",
+    "//sdk/banjo/ddk.protocol.composite",
+    "//sdk/banjo/ddk.protocol.platform.device",
+    "//sdk/fidl/fuchsia.hardware.audio",
+    "//src/devices/bus/lib/device-protocol-pdev",
+    "//src/devices/lib/amlogic",
+    "//src/devices/lib/driver",
+    "//src/devices/lib/mmio",
+    "//src/lib/ddk",
+    "//src/lib/ddktl",
+    "//zircon/public/lib/async-cpp",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fit",
+    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/fzl",
+
+    # TODO(andresoportus): Remove depedency on TLS (maybe done by C++ bindings unification).
+    "//zircon/system/ulib/async-loop:async-loop-default",
+  ]
+}
+
 group("tests") {
   testonly = true
   deps = [
     ":aml-g12-tdm-bind_test",
-    "test:test-package",
+    "test:dai-test-package",
+    "test:stream-test-package",
   ]
 }

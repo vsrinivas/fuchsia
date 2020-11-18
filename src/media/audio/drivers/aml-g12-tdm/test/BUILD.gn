@@ -12,7 +12,7 @@ executable("aml-g12-tdm-test-bin") {
   sources = [
     "../aml-tdm-config-device.cc",
     "../audio-stream.cc",
-    "test.cc",
+    "stream-test.cc",
   ]
   deps = [
     "../:aml-g12-tdm-bind",
@@ -47,10 +47,54 @@ executable("aml-g12-tdm-test-bin") {
   configs += [ "//build/config:Wno-conversion" ]
 }
 
-fuchsia_unittest_package("test-package") {
+executable("aml-g12-tdm-dai-test-bin") {
+  configs += [ "//build/config:all_source" ]
+  testonly = true
+  sources = [
+    "../aml-tdm-config-device.cc",
+    "../dai.cc",
+    "dai-test.cc",
+  ]
+  deps = [
+    "../:aml-g12-tdm-dai-bind",
+    "//sdk/banjo/ddk.protocol.audio",
+    "//sdk/banjo/ddk.protocol.composite",
+    "//sdk/banjo/ddk.protocol.platform.device",
+    "//sdk/fidl/fuchsia.hardware.audio",
+    "//src/devices/bus/lib/device-protocol-pdev",
+    "//src/devices/lib/amlogic",
+    "//src/devices/lib/mmio",
+    "//src/devices/testing/fake-bti",
+    "//src/devices/testing/fake-mmio-reg",
+    "//src/devices/testing/fake_ddk",
+    "//src/lib/ddk",
+    "//src/lib/ddktl",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/sync",
+    "//zircon/public/lib/zircon-internal",
+    "//zircon/public/lib/zx",
+    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/fzl",
+
+    # TODO(andresoportus): Remove depedency on TLS (maybe done by C++ bindings unification).
+    "//zircon/system/ulib/async-loop:async-loop-default",
+  ]
+}
+
+fuchsia_unittest_package("stream-test-package") {
   package_name = "aml-g12-tdm-test"
   executable_path = "bin/aml-g12-tdm-test-bin"
   deps = [ ":aml-g12-tdm-test-bin" ]
+  test_specs = {
+    environments = basic_envs
+  }
+}
+
+fuchsia_unittest_package("dai-test-package") {
+  package_name = "aml-g12-tdm-dai-test"
+  executable_path = "bin/aml-g12-tdm-dai-test-bin"
+  deps = [ ":aml-g12-tdm-dai-test-bin" ]
   test_specs = {
     environments = basic_envs
   }

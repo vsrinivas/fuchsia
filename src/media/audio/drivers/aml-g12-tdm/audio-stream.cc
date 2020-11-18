@@ -43,10 +43,6 @@ AmlG12TdmStream::AmlG12TdmStream(zx_device_t* parent, bool is_input, ddk::PDev p
       pdev_(std::move(pdev)),
       enable_gpio_(std::move(enable_gpio)) {}
 
-// See //docs/concepts/drivers/driver_interfaces/audio_codec.md for a description of DAI terms used.
-// See //src/lib/ddktl/include/ddktl/metadata/audio.h for descriptions of audio metadata.
-// See //src/devices/lib/amlogic/include/soc/aml-common/aml-audio.h for descriptions of AMLogic
-// specific metadata.
 void AmlG12TdmStream::InitDaiFormats() {
   frame_rate_ = AmlTdmConfigDevice::kSupportedFrameRates[0];
   for (size_t i = 0; i < metadata_.codecs.number_of_codecs; ++i) {

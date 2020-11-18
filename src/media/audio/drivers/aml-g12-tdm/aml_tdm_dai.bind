@@ -1,0 +1,18 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+using fuchsia.composite;
+using fuchsia.platform;
+
+fuchsia.BIND_PROTOCOL == fuchsia.platform.BIND_PROTOCOL.DEVICE;
+fuchsia.BIND_PLATFORM_DEV_VID == fuchsia.platform.BIND_PLATFORM_DEV_VID.AMLOGIC;
+accept fuchsia.BIND_PLATFORM_DEV_DID {
+ 0x29, // PDEV_DID_AMLOGIC_DAI_OUT
+ 0x2A, // PDEV_DID_AMLOGIC_DAI_IN
+}
+accept fuchsia.BIND_PLATFORM_DEV_PID {
+  3, // PDEV_PID_AMLOGIC_S905D2
+  4, // PDEV_PID_AMLOGIC_T931
+  5, // PDEV_PID_AMLOGIC_S905D3
+}
