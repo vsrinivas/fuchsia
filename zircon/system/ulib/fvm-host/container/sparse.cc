@@ -453,31 +453,6 @@ zx_status_t SparseContainer::Commit() {
   // Write each partition out to sparse file
   for (unsigned i = 0; i < image_.partition_count; i++) {
     fvm::PartitionDescriptor partition = partitions_[i].descriptor;
-    // For this case write a single extent with the right magic and GUID.
-    // For now we just do this for minfs, there is no need to generalize.
-    // All this code will be rewritten because is unmantainable.
-    if ((partition.flags & fvm::kSparseFlagCorrupted) != 0) {
-      fprintf(stderr, "fvm: Adding empty partition with Data Type guid.\n");
-      std::vector<uint8_t> data(minfs::kMinfsBlockSize, 0);
-      minfs::Superblock sb = {};
-      sb.magic0 = 0;
-      sb.magic1 = 0;
-      uint64_t blocks_per_slices = image_.slice_size / minfs::kMinfsBlockSize;
-      uint64_t slice_count = 0;
-
-      for (auto extent : partitions_[i].extents) {
-        slice_count += extent.slice_count;
-      }
-
-      for (uint64_t i = 0; i < blocks_per_slices * slice_count; ++i) {
-        // Fill up the slice we have.
-        if (WriteData(data.data(), data.size()) != ZX_OK) {
-          fprintf(stderr, "Failed to write corrupted minfs partition.\n");
-          return ZX_ERR_IO;
-        }
-      }
-      continue;
-    }
     Format* format = partitions_[i].format.get();
     vslice_info_t vslice_info;
     // Write out each extent in the partition
