@@ -101,6 +101,17 @@ set_defaults("driver_module") {
   # tells the linker to link against it statically. This is safe for drivers which
   # don't depend on the standard library as well as the linker will not have any
   # symbols to resolve.
-  configs += [ "//build/config/fuchsia:driver_static_cpp_standard_library.TEMPORARY-FOR-TRANSITION" ]
   configs += [ "//build/config/fuchsia:no_cpp_standard_library" ]
+}
+
+# TODO(64400): Temporary to allow out of tree users to soft migrate.
+template("driver_module_new") {
+  driver_module(target_name) {
+    forward_variables_from(invoker, "*")
+  }
+}
+
+set_defaults("driver_module_new") {
+  configs = default_shared_library_configs
+  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
 }
