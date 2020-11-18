@@ -222,7 +222,7 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 			defer conn.Close()
 		}
 
-		if err := r.startTargets(ctx, targets); err != nil {
+		if err := r.startTargets(ctx, targets, socketPath); err != nil {
 			return fmt.Errorf("%s: %w", constants.FailedToStartTargetMsg, err)
 		}
 		defer func() {
@@ -236,7 +236,7 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 	return eg.Wait()
 }
 
-func (r *RunCommand) startTargets(ctx context.Context, targets []target.Target) error {
+func (r *RunCommand) startTargets(ctx context.Context, targets []target.Target, serialSocketPath string) error {
 	bootMode := bootserver.ModePave
 	if r.netboot {
 		bootMode = bootserver.ModeNetboot
@@ -254,7 +254,7 @@ func (r *RunCommand) startTargets(ctx context.Context, targets []target.Target) 
 			}
 			defer closeFunc()
 
-			return t.Start(ctx, imgs, r.zirconArgs)
+			return t.Start(ctx, imgs, r.zirconArgs, serialSocketPath)
 		})
 	}
 	return eg.Wait()

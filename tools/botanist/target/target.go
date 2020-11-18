@@ -24,7 +24,7 @@ type Target interface {
 	SSHKey() string
 
 	// Start starts the target.
-	Start(context.Context, []bootserver.Image, []string) error
+	Start(ctx context.Context, images []bootserver.Image, args []string, serialSocketPath string) error
 
 	// Stop stops the target.
 	Stop(context.Context) error

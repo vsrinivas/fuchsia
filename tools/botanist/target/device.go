@@ -14,6 +14,8 @@ import (
 	"net"
 
 	"go.fuchsia.dev/fuchsia/tools/bootserver"
+	"go.fuchsia.dev/fuchsia/tools/lib/iomisc"
+	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 	"go.fuchsia.dev/fuchsia/tools/net/netboot"
 	"go.fuchsia.dev/fuchsia/tools/net/netutil"
 	"go.fuchsia.dev/fuchsia/tools/net/tftp"
@@ -25,6 +27,10 @@ import (
 const (
 	// Command to dump the zircon debug log over serial.
 	dlogCmd = "\ndlog\n"
+
+	// String to look for in serial log that indicates system booted. From
+	// https://fuchsia.googlesource.com/fuchsia/+/6f93c82725f9d5e0a2a5c3be4ae7f4d4fe12c755/zircon/kernel/top/main.cc#65
+	bootedLogSignature = "printing enabled\r\n"
 )
 
 // DeviceConfig contains the static properties of a target device.
@@ -131,7 +137,7 @@ func (t *DeviceTarget) SSHKey() string {
 }
 
 // Start starts the device target.
-func (t *DeviceTarget) Start(ctx context.Context, images []bootserver.Image, args []string) error {
+func (t *DeviceTarget) Start(ctx context.Context, images []bootserver.Image, args []string, serialSocketPath string) error {
 	if t.tftp == nil {
 		// Discover the node on the network and initialize a tftp client to
 		// talk to it.
@@ -183,7 +189,20 @@ func (t *DeviceTarget) Start(ctx context.Context, images []bootserver.Image, arg
 	}
 
 	// Boot Fuchsia.
-	return bootserver.Boot(ctx, t.Tftp(), images, args, authorizedKeys)
+	if err := bootserver.Boot(ctx, t.Tftp(), images, args, authorizedKeys); err != nil {
+		return err
+	}
+
+	if serialSocketPath != "" {
+		logger.Debugf(ctx, "watching serial for string that indicates device has booted: %q", bootedLogSignature)
+		socket, err := net.Dial("unix", serialSocketPath)
+		if err != nil {
+			return fmt.Errorf("failed to open serial socket connection: %v", err)
+		}
+		defer socket.Close()
+		_, err = iomisc.ReadUntilMatch(ctx, iomisc.NewSequenceMatchingReader(socket, bootedLogSignature), nil)
+	}
+	return err
 }
 
 // Stop stops the device.

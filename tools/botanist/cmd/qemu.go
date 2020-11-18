@@ -121,7 +121,7 @@ func (cmd *QEMUCommand) execute(ctx context.Context, cmdlineArgs []string) error
 	default:
 		return fmt.Errorf("unknown qemu type %q", cmd.qemuType)
 	}
-	if err := t.Start(ctx, imgs, cmdlineArgs); err != nil {
+	if err := t.Start(ctx, imgs, cmdlineArgs, ""); err != nil {
 		return err
 	}
 

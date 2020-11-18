@@ -19,7 +19,7 @@ type mockTarget struct {
 	startErr error
 }
 
-func (t *mockTarget) Start(ctx context.Context, images []bootserver.Image, args []string) error {
+func (t *mockTarget) Start(ctx context.Context, images []bootserver.Image, args []string, _ string) error {
 	return t.startErr
 }
 

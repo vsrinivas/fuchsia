@@ -185,7 +185,7 @@ func (t *QEMUTarget) SSHKey() string {
 }
 
 // Start starts the QEMU target.
-func (t *QEMUTarget) Start(ctx context.Context, images []bootserver.Image, args []string) (err error) {
+func (t *QEMUTarget) Start(ctx context.Context, images []bootserver.Image, args []string, _ string) (err error) {
 	if t.process != nil {
 		return fmt.Errorf("a process has already been started with PID %d", t.process.Pid)
 	}

@@ -29,7 +29,7 @@ import (
 type deviceTarget interface {
 	Tftp() tftp.Client
 	Serial() io.ReadWriteCloser
-	Start(context.Context, []bootserver.Image, []string) error
+	Start(context.Context, []bootserver.Image, []string, string) error
 }
 
 // ZedbootCommand is a Command implementation for running the testing workflow on a device
@@ -171,7 +171,7 @@ func (cmd *ZedbootCommand) runAgainstTargets(ctx context.Context, devices []devi
 	for _, device := range devices {
 		device := device
 		eg.Go(func() error {
-			return device.Start(ctx, imgs, cmdlineArgs)
+			return device.Start(ctx, imgs, cmdlineArgs, "")
 		})
 	}
 	if err := eg.Wait(); err != nil {
