@@ -105,14 +105,17 @@ struct TypeAlias;
 struct TypeConstructor final {
   struct FromTypeAlias {
     FromTypeAlias(const TypeAlias* decl, const Type* maybe_arg_type, const Size* maybe_size,
+                  std::optional<types::HandleSubtype> maybe_handle_subtype,
                   types::Nullability nullability) noexcept
         : decl(decl),
           maybe_arg_type(maybe_arg_type),
           maybe_size(maybe_size),
+          maybe_handle_subtype(maybe_handle_subtype),
           nullability(nullability) {}
     const TypeAlias* decl;
     const Type* maybe_arg_type;
     const Size* maybe_size;
+    std::optional<types::HandleSubtype> maybe_handle_subtype;
     // TODO(pascallouis): Make this const.
     types::Nullability nullability;
   };
@@ -146,6 +149,7 @@ struct TypeConstructor final {
   bool compiling = false;
   bool compiled = false;
   const Type* type = nullptr;
+  types::HandleSubtype handle_subtype_identifier_resolved;
   std::optional<FromTypeAlias> from_type_alias;
 };
 

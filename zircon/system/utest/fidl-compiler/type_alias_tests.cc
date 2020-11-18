@@ -320,6 +320,77 @@ using alias_of_vector_of_string = vector<string>;
   EXPECT_EQ(from_type_alias.nullability, fidl::types::Nullability::kNullable);
 }
 
+TEST(TypeAliasTests, handle_parametrized_on_decl) {
+  TestLibrary library(R"FIDL(
+library example;
+
+enum obj_type : uint32 {
+    VMO = 3;
+};
+
+resource_definition handle : uint32 {
+    properties {
+        obj_type subtype;
+    };
+};
+
+resource struct Message {
+    alias_of_handle_of_vmo h;
+};
+
+using alias_of_handle_of_vmo = handle:VMO;
+)FIDL");
+  ASSERT_TRUE(library.Compile());
+  auto msg = library.LookupStruct("Message");
+  ASSERT_NOT_NULL(msg);
+  ASSERT_EQ(msg->members.size(), 1);
+
+  auto type = msg->members[0].type_ctor->type;
+  ASSERT_EQ(type->kind, fidl::flat::Type::Kind::kHandle);
+  ASSERT_EQ(type->nullability, fidl::types::Nullability::kNonnullable);
+
+  auto handle_type = static_cast<const fidl::flat::HandleType*>(type);
+  ASSERT_EQ(handle_type->subtype, fidl::types::HandleSubtype::kVmo);
+
+  auto from_type_alias = msg->members[0].type_ctor->from_type_alias.value();
+  EXPECT_STR_EQ(fidl::NameFlatName(from_type_alias.decl->name).c_str(),
+                "example/alias_of_handle_of_vmo");
+  EXPECT_NULL(from_type_alias.maybe_arg_type);
+  EXPECT_NULL(from_type_alias.maybe_size);
+  EXPECT_FALSE(from_type_alias.maybe_handle_subtype);
+  EXPECT_EQ(from_type_alias.nullability, fidl::types::Nullability::kNonnullable);
+}
+
+// TODO(fxbug.dev/7807): We are removing partial type aliasing as we are working
+// towards implementing FTP-052, and therefore are not putting in special
+// work to support this with the `using` keyword since that will soon be
+// deprecated.
+TEST(TypeAliasTests, invalid_handle_parametrized_on_use_is_not_supported) {
+  TestLibrary library(R"FIDL(
+library example;
+
+enum obj_type : uint32 {
+    VMO = 3;
+};
+
+resource_definition handle : uint32 {
+    properties {
+        obj_type subtype;
+    };
+};
+
+using alias_of_handle = handle;
+
+resource struct MyStruct {
+    alias_of_handle:VMO h;
+};
+)FIDL");
+  ASSERT_FALSE(library.Compile());
+  const auto& errors = library.errors();
+  ASSERT_EQ(errors.size(), 1);
+  ASSERT_ERR(errors[0], fidl::ErrCouldNotParseSizeBound);
+}
+
 TEST(TypeAliasTests, invalid_cannot_parametrize_twice) {
   TestLibrary library(R"FIDL(
 library example;
@@ -437,8 +508,3 @@ using foo.bar.baz = uint8;
 }
 
 }  // namespace
-// TODO(pascallouis): Test various handle parametrization scenarios, and
-// capture maybe_handle_subtype into FromTypeAlias struct.
-// As noted in the TypeAliasTypeTemplate, there is a bug currently where
-// handle parametrization of a type template is not properly passed down,
-// and as a result gets lost.

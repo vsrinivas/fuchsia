@@ -70,12 +70,12 @@ class TestServerBase : public fio2::Directory::Interface {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void Rename(fidl::StringView src, zx::handle dst_parent_token, fidl::StringView dst,
+  void Rename(fidl::StringView src, zx::event dst_parent_token, fidl::StringView dst,
               RenameCompleter::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void Link(fidl::StringView src, zx::handle dst_parent_token, fidl::StringView dst,
+  void Link(fidl::StringView src, zx::event dst_parent_token, fidl::StringView dst,
             LinkCompleter::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }

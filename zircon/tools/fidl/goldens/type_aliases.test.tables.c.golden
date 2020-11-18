@@ -20,9 +20,9 @@ static const struct FidlCodedVector Vector9nonnullable27String4294967295nonnulla
 
 static const struct FidlCodedVector Vector5nonnullable28someotherlibrary_ReferenceMeTable = {.tag=kFidlTypeVector, .element=(fidl_type_t*)(&someotherlibrary_ReferenceMeTable), .max_count=5u, .element_size=1u, .nullable=kFidlNullability_Nonnullable};
 
-static const struct FidlCodedHandle HandlehandlenonnullableTable = {.tag=kFidlTypeHandle, .handle_subtype=ZX_OBJ_TYPE_NONE, .handle_rights=2147483648u, .nullable=kFidlNullability_Nonnullable};
+static const struct FidlCodedHandle HandlechannelnonnullableTable = {.tag=kFidlTypeHandle, .handle_subtype=ZX_OBJ_TYPE_CHANNEL, .handle_rights=2147483648u, .nullable=kFidlNullability_Nonnullable};
 
-static const struct FidlCodedHandle HandlehandlenullableTable = {.tag=kFidlTypeHandle, .handle_subtype=ZX_OBJ_TYPE_NONE, .handle_rights=2147483648u, .nullable=kFidlNullability_Nullable};
+static const struct FidlCodedHandle HandlechannelnullableTable = {.tag=kFidlTypeHandle, .handle_subtype=ZX_OBJ_TYPE_CHANNEL, .handle_rights=2147483648u, .nullable=kFidlNullability_Nullable};
 
 
 static bool EnumValidatorFor_example_obj_type(uint64_t v) {
@@ -45,9 +45,9 @@ static const struct FidlStructElement Fields29example_ExampleOfUseOfAliases[] = 
     /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset=56u, .field_type=(fidl_type_t*)(&Vector9nonnullable27String4294967295nonnullableTable)}},
     /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset=72u, .field_type=(fidl_type_t*)(&Vector5nonnullable27String4294967295nonnullableTable)}},
     /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset=88u, .field_type=(fidl_type_t*)(&Vector5nonnullable28someotherlibrary_ReferenceMeTable)}},
-    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_Resource},.offset=104u, .field_type=(fidl_type_t*)(&HandlehandlenonnullableTable)}},
-    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_Resource},.offset=108u, .field_type=(fidl_type_t*)(&HandlehandlenonnullableTable)}},
-    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_Resource},.offset=112u, .field_type=(fidl_type_t*)(&HandlehandlenullableTable)}},
+    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_Resource},.offset=104u, .field_type=(fidl_type_t*)(&HandlechannelnonnullableTable)}},
+    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_Resource},.offset=108u, .field_type=(fidl_type_t*)(&HandlechannelnonnullableTable)}},
+    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_Resource},.offset=112u, .field_type=(fidl_type_t*)(&HandlechannelnullableTable)}},
     /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset=116u, .header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Padding32,.is_resource=kFidlIsResource_NotResource},.mask_32=4294967295u}}
 };
 const struct FidlCodedStruct example_ExampleOfUseOfAliasesTable = {.tag=kFidlTypeStruct, .elements=Fields29example_ExampleOfUseOfAliases, .element_count=11u, .size=120u, .name="example/ExampleOfUseOfAliases"};

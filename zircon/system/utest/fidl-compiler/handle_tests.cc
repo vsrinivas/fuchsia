@@ -175,18 +175,27 @@ resource struct MyStruct {
   EXPECT_FALSE(a->handle_subtype.has_value());
   EXPECT_TRUE(a->handle_subtype_identifier.has_value());
   ASSERT_TRUE(a->handle_subtype_identifier.value().span()->data() == "THREAD");
+  ASSERT_EQ(fidl::flat::Type::Kind::kHandle, a->type->kind);
+  auto a_handle_type = static_cast<const fidl::flat::HandleType*>(a->type);
+  ASSERT_EQ(fidl::types::HandleSubtype::kThread, a_handle_type->subtype);
   ASSERT_NULL(a->handle_rights);
 
   auto b = library.LookupStruct("MyStruct")->members[1].type_ctor.get();
   EXPECT_FALSE(b->handle_subtype.has_value());
   EXPECT_TRUE(b->handle_subtype_identifier.has_value());
   ASSERT_TRUE(b->handle_subtype_identifier.value().span()->data() == "PROCESS");
+  ASSERT_EQ(fidl::flat::Type::Kind::kHandle, b->type->kind);
+  auto b_handle_type = static_cast<const fidl::flat::HandleType*>(b->type);
+  ASSERT_EQ(fidl::types::HandleSubtype::kProcess, b_handle_type->subtype);
   ASSERT_NULL(b->handle_rights);
 
   auto c = library.LookupStruct("MyStruct")->members[2].type_ctor.get();
   EXPECT_FALSE(c->handle_subtype.has_value());
   EXPECT_TRUE(c->handle_subtype_identifier.has_value());
   ASSERT_TRUE(c->handle_subtype_identifier.value().span()->data() == "VMO");
+  ASSERT_EQ(fidl::flat::Type::Kind::kHandle, c->type->kind);
+  auto c_handle_type = static_cast<const fidl::flat::HandleType*>(c->type);
+  ASSERT_EQ(fidl::types::HandleSubtype::kVmo, c_handle_type->subtype);
   ASSERT_NOT_NULL(c->handle_rights);
   ASSERT_EQ(
       static_cast<const fidl::flat::NumericConstantValue<uint32_t>&>(c->handle_rights->Value())

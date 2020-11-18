@@ -622,6 +622,21 @@ class TypeAliasTypeTemplate final : public TypeTemplate {
       size = args.size;
     }
 
+    std::optional<types::HandleSubtype> handle_subtype;
+    if (decl_->partial_type_ctor->handle_subtype) {
+      if (args.handle_subtype) {
+        return Fail(ErrCannotParametrizeTwice, args.span);
+      }
+      handle_subtype = decl_->partial_type_ctor->handle_subtype;
+    } else if (decl_->partial_type_ctor->handle_subtype_identifier) {
+      if (args.handle_subtype) {
+        return Fail(ErrCannotParametrizeTwice, args.span);
+      }
+      handle_subtype = decl_->partial_type_ctor->handle_subtype_identifier_resolved;
+    } else {
+      handle_subtype = args.handle_subtype;
+    }
+
     types::Nullability nullability;
     if (decl_->partial_type_ctor->nullability == types::Nullability::kNullable) {
       if (args.nullability == types::Nullability::kNullable) {
@@ -632,16 +647,13 @@ class TypeAliasTypeTemplate final : public TypeTemplate {
       nullability = args.nullability;
     }
 
-    if (!typespace_->CreateNotOwned(decl_->partial_type_ctor->name, arg_type,
-                                    // TODO(pascallouis): Oops, that's wrong. Need to pass handle
-                                    // parametrization down.
-                                    std::optional<types::HandleSubtype>(),
+    if (!typespace_->CreateNotOwned(decl_->partial_type_ctor->name, arg_type, handle_subtype,
                                     decl_->partial_type_ctor->handle_rights.get(), size,
                                     nullability, out_type, nullptr))
       return false;
     if (out_from_type_alias)
-      *out_from_type_alias =
-          TypeConstructor::FromTypeAlias(decl_, args.arg_type, args.size, args.nullability);
+      *out_from_type_alias = TypeConstructor::FromTypeAlias(decl_, args.arg_type, args.size,
+                                                            args.handle_subtype, args.nullability);
     return true;
   }
 
@@ -3560,12 +3572,12 @@ bool Library::CompileTypeConstructor(TypeConstructor* type_ctor) {
            "cannot have both new and old style handle syntax");
     handle_subtype = type_ctor->handle_subtype;
   } else if (type_ctor->handle_subtype_identifier) {
-    types::HandleSubtype subtype;
-    if (!ResolveHandleSubtypeIdentifier(type_ctor, &subtype)) {
+    if (!ResolveHandleSubtypeIdentifier(type_ctor,
+                                        &type_ctor->handle_subtype_identifier_resolved)) {
       return Fail(ErrCouldNotResolveHandleSubtype, type_ctor->name.span(),
                   type_ctor->handle_subtype_identifier.value());
     }
-    handle_subtype = subtype;
+    handle_subtype = type_ctor->handle_subtype_identifier_resolved;
   }
 
   if (type_ctor->handle_rights)
