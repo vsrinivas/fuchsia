@@ -65,6 +65,12 @@ zx_library("vm") {
 }
 
 source_set("tests") {
-  sources = [ "vm_unittest.cc" ]
+  sources = [
+    "unittests/aspace_unittest.cc",
+    "unittests/pmm_unittest.cc",
+    "unittests/test_helper.cc",
+    "unittests/vmo_unittest.cc",
+    "unittests/vmpl_unittest.cc",
+  ]
   deps = [ "$zx/kernel/lib/unittest" ]
 }
