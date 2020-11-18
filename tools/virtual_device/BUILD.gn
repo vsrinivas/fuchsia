@@ -5,17 +5,20 @@
 import("//build/go/go_binary.gni")
 import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
+import("//build/testing/golden_file.gni")
+import("//third_party/protobuf/proto_library.gni")
 
 go_library("fvd_lib") {
+  source_dir = "cmd/fvd"
   sources = [
     "main.go",
     "main_test.go",
   ]
   deps = [
+    ":proto",
     "//third_party/golibs:github.com/golang/protobuf",
     "//third_party/golibs:github.com/google/go-cmp",
     "//third_party/golibs:google.golang.org/protobuf",
-    "//tools/virtual_device/proto",
   ]
 }
 
@@ -27,7 +30,10 @@ go_test("fvd_test") {
 
 group("tests") {
   testonly = true
-  deps = [ ":fvd_test" ]
+  deps = [
+    ":fvd_test",
+    ":pb_go_diff",
+  ]
 }
 
 go_binary("fvd") {
@@ -49,4 +55,29 @@ action("default") {
     "default",
   ]
   deps = [ ":fvd($host_toolchain)" ]
+}
+
+proto_library("proto_lib") {
+  sources = [ "proto/virtual_device.proto" ]
+  generate_cc = false
+  generate_go = true
+  generate_python = false
+}
+
+go_library("proto") {
+  name = "go.fuchsia.dev/fuchsia/tools/virtual_device/proto"
+  source_dir = "$root_gen_dir/go-proto-gen/src/tools/virtual_device/proto"
+  sources = [ "virtual_device.pb.go" ]
+  deps = [ "//third_party/golibs:github.com/golang/protobuf" ]
+  non_go_deps = [ ":proto_lib" ]
+}
+
+# We keep a checked-in copy of the generated .pb.go file so that regular Go
+# toolchain commands work with this code. So make sure the generated file stays
+# up to date with the source-of-truth .proto file.
+golden_file("pb_go_diff") {
+  current = "$root_gen_dir/go-proto-gen/src/tools/virtual_device/proto/virtual_device.pb.go"
+  golden = "proto/virtual_device.pb.go"
+  deps = [ ":proto_lib_gen" ]
+  warn_on_changes = false
 }
