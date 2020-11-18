@@ -24,6 +24,8 @@
 #include <fs/vfs_types.h>
 #include <safemath/checked_math.h>
 
+#include "zircon/assert.h"
+
 #ifdef __Fuchsia__
 #include <lib/fidl-utils/bind.h>
 #include <zircon/syscalls.h>
@@ -40,13 +42,6 @@
 namespace minfs {
 
 File::File(Minfs* fs) : VnodeMinfs(fs) {}
-
-File::~File() {
-#ifdef __Fuchsia__
-  ZX_DEBUG_ASSERT_MSG(allocation_state_.GetNodeSize() == GetInode()->size,
-                      "File being destroyed with pending updates to the inode size");
-#endif
-}
 
 #ifdef __Fuchsia__
 
@@ -286,15 +281,8 @@ zx_status_t File::Write(const void* data, size_t len, size_t offset, size_t* out
 
   // If anything was written, enqueue operations allocated within WriteInternal.
   if (*out_actual != 0) {
-    // Ensure this Vnode remains alive while it has an operation in-flight.
-    transaction->PinVnode(fbl::RefPtr(this));
-
-#ifdef __Fuchsia__
-    AllocateAndCommitData(std::move(transaction));
-#else
-    InodeSync(transaction.get(), kMxFsSyncMtime);  // Successful writes updates mtime
-    Vfs()->CommitTransaction(std::move(transaction));
-#endif
+    auto status = FlushTransaction(std::move(transaction));
+    ZX_ASSERT(status.is_ok());
   }
 
   return ZX_OK;
@@ -341,13 +329,8 @@ zx_status_t File::Truncate(size_t len) {
   // later, the act of truncating may have allocated indirect blocks.
   //
   // Ensure our inode is consistent with that metadata.
-  transaction->PinVnode(fbl::RefPtr(this));
-#ifdef __Fuchsia__
-  AllocateAndCommitData(std::move(transaction));
-#else
-  InodeSync(transaction.get(), kMxFsSyncMtime);
-  Vfs()->CommitTransaction(std::move(transaction));
-#endif
+  auto result = FlushTransaction(std::move(transaction));
+  ZX_ASSERT(result.is_ok());
   return ZX_OK;
 }
 

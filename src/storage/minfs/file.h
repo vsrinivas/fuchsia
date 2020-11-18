@@ -59,6 +59,12 @@ class File final : public VnodeMinfs, public fbl::Recyclable<File> {
   zx_status_t Append(const void* data, size_t len, size_t* out_end, size_t* out_actual) final;
   zx_status_t Truncate(size_t len) final;
 
+  // Flushes(sends the transaction to journaling layer to be written to journal and disk) or caches
+  // current transaction.
+  zx::status<> FlushTransaction(std::unique_ptr<Transaction> transaction, bool force_flush = false);
+
+  // Sends the transaction to journaling layer to be written to journal and disk.
+  zx::status<> ForceFlushTransaction(std::unique_ptr<Transaction> transaction);
 #ifdef __Fuchsia__
   // Allocate all data blocks pending in |allocation_state_|.
   void AllocateAndCommitData(std::unique_ptr<Transaction> transaction);
