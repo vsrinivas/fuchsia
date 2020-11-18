@@ -6,7 +6,6 @@
 group("debugging") {
   deps = [
     "//src/diagnostics/archivist:bootfs",
-    "//src/diagnostics/dlog",
     "//src/diagnostics/iquery:bootfs",
   ]
 }

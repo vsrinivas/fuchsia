@@ -127,7 +127,7 @@ This aggregate log is run through the equivalent of `fx symbolize` before upload
 [`fuchsia.logger.LogListenerSafe`]: https://fuchsia.dev/reference/fidl/fuchsia.logger#LogListenerSafe
 [printed over the kernel console]: /zircon/kernel/lib/debuglog/debuglog.cc
 [forwarded over UDP by netsvc]: /src/bringup/bin/netsvc/debuglog.cc
-[`dlog`]: /src/diagnostics/dlog/dlog.c
+[`dlog`]: /src/bringup/bin/dlog/README.md
 [botanist]: /tools/botanist/cmd/main.go
 [testrunner]: /tools/testing/testrunner/cmd/main.go
 [Swarming]: https://chromium.googlesource.com/infra/luci/luci-py/+/HEAD/appengine/swarming/doc/README.md
