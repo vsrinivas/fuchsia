@@ -60,8 +60,10 @@ void App::DoClose(int fd) {
     FX_LOGS(ERROR) << "Invalid fd: " << fd;
     return;
   }
+  // Here |waiters_| is valid only during tunnel restart, after pairing is complete.
+  // It is empty in other scenarios.
   if (waiters_.erase(fd) == 0) {
-    FX_LOGS(ERROR) << "Couldnt find fd " << fd << " in waiters_";
+    FX_LOGS(DEBUG) << "Couldnt find fd " << fd << " in waiters_";
     return;
   }
 
