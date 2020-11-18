@@ -22,7 +22,6 @@
 #define LOCAL_TRACE 0
 
 KCOUNTER(root_resource_created, "resource.root.created")
-KCOUNTER(hypervisor_resource_created, "resource.hypervisor.created")
 KCOUNTER(vmex_resource_created, "resource.vmex.created")
 KCOUNTER(mmio_resource_created, "resource.mmio.created")
 KCOUNTER(irq_resource_created, "resource.irq.created")
@@ -72,7 +71,6 @@ zx_status_t ResourceDispatcher::Create(KernelHandle<ResourceDispatcher>* handle,
   RegionAllocator::Region::UPtr region_uptr = nullptr;
   switch (kind) {
     case ZX_RSRC_KIND_ROOT:
-    case ZX_RSRC_KIND_HYPERVISOR:
     case ZX_RSRC_KIND_VMEX:
       // It does not make sense for an abstract resource type to have a base/size tuple
       if (base || size) {
@@ -165,7 +163,6 @@ zx_status_t ResourceDispatcher::CreateRangedRoot(KernelHandle<ResourceDispatcher
   switch (kind) {
     // TODO(smpham): remove this when root resource is removed.
     case ZX_RSRC_KIND_ROOT:
-    case ZX_RSRC_KIND_HYPERVISOR:
     case ZX_RSRC_KIND_VMEX:
       // The Create() method should be used for making these resource kinds.
       return ZX_ERR_WRONG_TYPE;
@@ -215,9 +212,6 @@ ResourceDispatcher::ResourceDispatcher(zx_rsrc_kind_t kind, uint64_t base, uint6
   switch (kind_) {
     case ZX_RSRC_KIND_ROOT:
       kcounter_add(root_resource_created, 1);
-      break;
-    case ZX_RSRC_KIND_HYPERVISOR:
-      kcounter_add(hypervisor_resource_created, 1);
       break;
     case ZX_RSRC_KIND_VMEX:
       kcounter_add(vmex_resource_created, 1);
@@ -334,13 +328,6 @@ void ResourceDispatcher::Dump() {
         printf("%.*s", kTypeLen, "root");
         printf("\t%8lu", r.get_koid());
         pad_field(kFlagLen);  // Root has no flags
-        printf("\t%.*s", kNameLen, name);
-        printf("\n");
-        break;
-      case ZX_RSRC_KIND_HYPERVISOR:
-        printf("%.*s", kTypeLen, "hypervisor");
-        printf("\t%8lu", r.get_koid());
-        printf("\t%.*s", kFlagLen, flag_str);
         printf("\t%.*s", kNameLen, name);
         printf("\n");
         break;

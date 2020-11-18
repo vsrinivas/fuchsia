@@ -20,12 +20,11 @@ typedef uint32_t zx_rsrc_kind_t;
 #define ZX_RSRC_KIND_MMIO ((zx_rsrc_kind_t)0u)
 #define ZX_RSRC_KIND_IRQ ((zx_rsrc_kind_t)1u)
 #define ZX_RSRC_KIND_IOPORT ((zx_rsrc_kind_t)2u)
-#define ZX_RSRC_KIND_HYPERVISOR ((zx_rsrc_kind_t)3u)
-#define ZX_RSRC_KIND_ROOT ((zx_rsrc_kind_t)4u)
-#define ZX_RSRC_KIND_VMEX ((zx_rsrc_kind_t)5u)
-#define ZX_RSRC_KIND_SMC ((zx_rsrc_kind_t)6u)
-#define ZX_RSRC_KIND_SYSTEM ((zx_rsrc_kind_t)7u)
-#define ZX_RSRC_KIND_COUNT ((zx_rsrc_kind_t)8u)
+#define ZX_RSRC_KIND_ROOT ((zx_rsrc_kind_t)3u)
+#define ZX_RSRC_KIND_VMEX ((zx_rsrc_kind_t)4u)
+#define ZX_RSRC_KIND_SMC ((zx_rsrc_kind_t)5u)
+#define ZX_RSRC_KIND_SYSTEM ((zx_rsrc_kind_t)6u)
+#define ZX_RSRC_KIND_COUNT ((zx_rsrc_kind_t)7u)
 
 typedef uint32_t zx_rsrc_flags_t;
 #define ZX_RSRC_FLAG_EXCLUSIVE ((zx_rsrc_flags_t)0x00010000u)

@@ -216,10 +216,10 @@ void RsrcKindName(zx_rsrc_kind_t kind, fidl_codec::PrettyPrinter& printer) {
     RsrcKindNameCase(ZX_RSRC_KIND_MMIO);
     RsrcKindNameCase(ZX_RSRC_KIND_IRQ);
     RsrcKindNameCase(ZX_RSRC_KIND_IOPORT);
-    RsrcKindNameCase(ZX_RSRC_KIND_HYPERVISOR);
     RsrcKindNameCase(ZX_RSRC_KIND_ROOT);
     RsrcKindNameCase(ZX_RSRC_KIND_VMEX);
     RsrcKindNameCase(ZX_RSRC_KIND_SMC);
+    RsrcKindNameCase(ZX_RSRC_KIND_SYSTEM);
     RsrcKindNameCase(ZX_RSRC_KIND_COUNT);
     default:
       printer << kind;

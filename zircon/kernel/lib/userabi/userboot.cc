@@ -57,9 +57,6 @@ HandleOwner get_resource_handle(zx_rsrc_kind_t kind) {
     case ZX_RSRC_KIND_IOPORT:
       strlcpy(name, "io_port", ZX_MAX_NAME_LEN);
       break;
-    case ZX_RSRC_KIND_HYPERVISOR:
-      strlcpy(name, "hypervisor", ZX_MAX_NAME_LEN);
-      break;
     case ZX_RSRC_KIND_ROOT:
       strlcpy(name, "root", ZX_MAX_NAME_LEN);
       break;
@@ -77,7 +74,6 @@ HandleOwner get_resource_handle(zx_rsrc_kind_t kind) {
   KernelHandle<ResourceDispatcher> rsrc;
   zx_status_t result;
   switch (kind) {
-    case ZX_RSRC_KIND_HYPERVISOR:
     case ZX_RSRC_KIND_ROOT:
     case ZX_RSRC_KIND_VMEX:
       result = ResourceDispatcher::Create(&rsrc, &rights, kind, 0, 0, 0, name);

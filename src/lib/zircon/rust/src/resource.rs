@@ -118,7 +118,6 @@ bitflags! {
        const MMIO       = sys::ZX_RSRC_KIND_MMIO;
        const IRQ        = sys::ZX_RSRC_KIND_IRQ;
        const IOPORT     = sys::ZX_RSRC_KIND_IOPORT;
-       const HYPERVISOR = sys::ZX_RSRC_KIND_HYPERVISOR;
        const ROOT       = sys::ZX_RSRC_KIND_ROOT;
        const VMEX       = sys::ZX_RSRC_KIND_VMEX;
        const SMC        = sys::ZX_RSRC_KIND_SMC;

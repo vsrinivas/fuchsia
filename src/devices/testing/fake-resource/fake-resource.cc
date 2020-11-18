@@ -60,9 +60,9 @@ class Resource final : public fake_object::Object {
   Resource(zx_paddr_t base, size_t size, zx_rsrc_kind_t kind, zx_rsrc_flags_t flags,
            const char* name, size_t name_len)
       : base_(base), size_(size), kind_(kind), is_exclusive_(flags & ZX_RSRC_FLAG_EXCLUSIVE) {
-    ZX_ASSERT_MSG(kind_ != ZX_RSRC_KIND_IRQ && kind_ != ZX_RSRC_KIND_HYPERVISOR &&
-                      kind_ != ZX_RSRC_KIND_VMEX && kind_ != ZX_RSRC_KIND_SMC,
-                  "fake-resource: unsupported kind: %u\n", kind);
+    ZX_ASSERT_MSG(
+        kind_ != ZX_RSRC_KIND_IRQ && kind_ != ZX_RSRC_KIND_VMEX && kind_ != ZX_RSRC_KIND_SMC,
+        "fake-resource: unsupported kind: %u\n", kind);
     memcpy(name_.data(), name, name_len);
   }
 };
