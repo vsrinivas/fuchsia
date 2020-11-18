@@ -24,7 +24,8 @@ zx_status_t sys_guest_create(zx_handle_t resource, uint32_t options, user_out_ha
   if (options != 0u)
     return ZX_ERR_INVALID_ARGS;
 
-  zx_status_t status = validate_resource(resource, ZX_RSRC_KIND_HYPERVISOR);
+  zx_status_t status =
+      validate_ranged_resource(resource, ZX_RSRC_KIND_SYSTEM, ZX_RSRC_SYSTEM_HYPERVISOR_BASE, 1);
   if (status != ZX_OK)
     return status;
 

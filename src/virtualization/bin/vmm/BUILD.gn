@@ -126,6 +126,7 @@ source_set("lib") {
   public_deps = [
     "//sdk/fidl/fuchsia.boot",
     "//sdk/fidl/fuchsia.hardware.ethernet:fuchsia.hardware.ethernet_c",
+    "//sdk/fidl/fuchsia.kernel",
     "//sdk/fidl/fuchsia.sysinfo",
     "//sdk/fidl/fuchsia.virtualization.vmm",
     "//sdk/lib/sys/cpp",

@@ -5,9 +5,9 @@
 #ifndef SRC_VIRTUALIZATION_LIB_GUEST_INTERACTION_TEST_INTEGRATION_TEST_LIB_H_
 #define SRC_VIRTUALIZATION_LIB_GUEST_INTERACTION_TEST_INTEGRATION_TEST_LIB_H_
 
+#include <fuchsia/kernel/cpp/fidl.h>
 #include <fuchsia/net/stack/cpp/fidl.h>
 #include <fuchsia/netstack/cpp/fidl.h>
-#include <fuchsia/sysinfo/cpp/fidl.h>
 #include <fuchsia/virtualization/cpp/fidl.h>
 #include <lib/sys/cpp/testing/enclosing_environment.h>
 #include <lib/sys/cpp/testing/test_with_environment.h>
@@ -118,8 +118,8 @@ class GuestInteractionTest : public sys::testing::TestWithEnvironment {
     services_->AddServiceWithLaunchInfo(std::move(guest_manager_launch_info),
                                         fuchsia::virtualization::Manager::Name_);
 
-    // Allow sysinfo service
-    services_->AllowParentService(fuchsia::sysinfo::SysInfo::Name_);
+    // Allow hypervisor resource for virtualization.
+    services_->AllowParentService(fuchsia::kernel::HypervisorResource::Name_);
   }
 };
 

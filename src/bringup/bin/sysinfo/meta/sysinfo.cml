@@ -12,7 +12,6 @@
             rights: [ "rw*" ],
             path: "/dev",
         },
-        { protocol: "fuchsia.boot.RootResource" },
         { protocol: "fuchsia.boot.WriteOnlyLog" },
     ],
     expose: [

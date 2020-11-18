@@ -2,7 +2,7 @@
     "facets": {
         "fuchsia.test": {
             "system-services": [
-                "fuchsia.sysinfo.SysInfo"
+                "fuchsia.kernel.HypervisorResource"
             ]
         }
     },
@@ -17,10 +17,10 @@
             "isolated-persistent-storage"
         ],
         "services": [
+            "fuchsia.kernel.HypervisorResource",
             "fuchsia.netemul.network.Endpoint",
             "fuchsia.sys.Environment",
             "fuchsia.sys.Loader",
-            "fuchsia.sysinfo.SysInfo",
             "fuchsia.virtualization.Manager",
             "fuchsia.virtualization.Realm"
         ]

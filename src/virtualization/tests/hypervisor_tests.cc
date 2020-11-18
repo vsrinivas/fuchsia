@@ -4,6 +4,7 @@
 
 #include <fcntl.h>
 #include <fuchsia/boot/cpp/fidl.h>
+#include <fuchsia/kernel/cpp/fidl.h>
 #include <fuchsia/sysinfo/cpp/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
@@ -105,33 +106,43 @@ typedef struct test {
 static zx_status_t get_root_resource(zx::resource* resource) {
   fuchsia::boot::RootResourceSyncPtr root_resource;
   auto path = std::string("/svc/") + fuchsia::boot::RootResource::Name_;
-  fdio_service_connect(path.data(), root_resource.NewRequest().TakeChannel().release());
+  zx_status_t status =
+      fdio_service_connect(path.data(), root_resource.NewRequest().TakeChannel().release());
+  if (status != ZX_OK) {
+    return status;
+  }
   return root_resource->Get(resource);
 }
 
-static fuchsia::sysinfo::SysInfoSyncPtr get_sysinfo() {
-  fuchsia::sysinfo::SysInfoSyncPtr sysinfo;
-  auto path = std::string("/svc/") + fuchsia::sysinfo::SysInfo::Name_;
-  fdio_service_connect(path.data(), sysinfo.NewRequest().TakeChannel().release());
-  return sysinfo;
-}
-
 static zx_status_t get_hypervisor_resource(zx::resource* resource) {
-  fuchsia::sysinfo::SysInfoSyncPtr sysinfo = get_sysinfo();
+  fuchsia::kernel::HypervisorResourceSyncPtr hypervisor_rsrc;
+  auto path = std::string("/svc/") + fuchsia::kernel::HypervisorResource::Name_;
+  zx_status_t status =
+      fdio_service_connect(path.data(), hypervisor_rsrc.NewRequest().TakeChannel().release());
+  if (status != ZX_OK) {
+    return status;
+  }
 
-  zx_status_t fidl_status;
-  zx_status_t status = sysinfo->GetHypervisorResource(&fidl_status, resource);
-  return status != ZX_OK ? status : fidl_status;
+  return hypervisor_rsrc->Get(resource);
 }
 
 #ifdef __aarch64__
 
+static zx_status_t get_sysinfo(fuchsia::sysinfo::SysInfoSyncPtr* sysinfo) {
+  auto path = std::string("/svc/") + fuchsia::sysinfo::SysInfo::Name_;
+  return fdio_service_connect(path.data(), sysinfo->NewRequest().TakeChannel().release());
+}
+
 static zx_status_t get_interrupt_controller_info(
     fuchsia::sysinfo::InterruptControllerInfoPtr* info) {
-  fuchsia::sysinfo::SysInfoSyncPtr sysinfo = get_sysinfo();
+  fuchsia::sysinfo::SysInfoSyncPtr sysinfo;
+  zx_status_t status = get_sysinfo(&sysinfo);
+  if (status != ZX_OK) {
+    return status;
+  }
 
   zx_status_t fidl_status;
-  zx_status_t status = sysinfo->GetInterruptControllerInfo(&fidl_status, info);
+  status = sysinfo->GetInterruptControllerInfo(&fidl_status, info);
   return status != ZX_OK ? status : fidl_status;
 }
 

@@ -98,21 +98,4 @@ TEST(SysinfoTest, GetInterruptControllerInfo) {
             "interrupt controller type is unknown");
 }
 
-TEST(SysinfoTest, GetHypervisorResource) {
-  // Get the resource handle from the driver.
-  fbl::unique_fd fd(open(kSysinfoPath.c_str(), O_RDWR));
-  ASSERT_TRUE(fd.is_valid(), "Can't open sysinfo");
-
-  zx::channel channel;
-  ASSERT_OK(fdio_get_service_handle(fd.release(), channel.reset_and_get_address()),
-            "Failed to get channel");
-  SysInfo::SyncClient sysinfo(std::move(channel));
-
-  // Test fuchsia::sysinfo::SysInfo.GetHypervisorResource().
-  auto result = sysinfo.GetHypervisorResource();
-  ASSERT_TRUE(result.ok(), "Failed to get hypervisor resource");
-  ASSERT_OK(result->status, "Failed to get hypervisor resource");
-  EXPECT_NE(result->resource, ZX_HANDLE_INVALID, "hypervisor handle is invalid");
-}
-
 }  // namespace sysinfo

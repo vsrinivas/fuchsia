@@ -5,6 +5,7 @@
 #include "src/virtualization/tests/enclosed_guest.h"
 
 #include <fcntl.h>
+#include <fuchsia/kernel/cpp/fidl.h>
 #include <fuchsia/netstack/cpp/fidl.h>
 #include <fuchsia/sysinfo/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
@@ -115,6 +116,13 @@ zx_status_t EnclosedGuest::Start() {
   status = services->AllowParentService(fuchsia::sysinfo::SysInfo::Name_);
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "Failure adding sysinfo service: " << zx_status_get_string(status);
+    return status;
+  }
+
+  status = services->AllowParentService(fuchsia::kernel::HypervisorResource::Name_);
+  if (status != ZX_OK) {
+    FX_LOGS(ERROR) << "Failure adding hypervisor resource service: "
+                   << zx_status_get_string(status);
     return status;
   }
 

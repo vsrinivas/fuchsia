@@ -1,5 +1,21 @@
 # Components
+fuchsia-pkg://fuchsia.com/netemul-sandbox#meta/netemul-sandbox.cmx
+fuchsia-pkg://fuchsia.com/vmm#meta/vmm.cmx
 # Component Tests
 fuchsia-pkg://fuchsia.com/component-manager-tests#meta/component_manager_boot_env_tests.cmx
+fuchsia-pkg://fuchsia.com/guest_interaction_tests#meta/guest_interaction_service_test.cmx
+fuchsia-pkg://fuchsia.com/guest_interaction_tests#meta/server_daemon_test.cmx
+fuchsia-pkg://fuchsia.com/hypervisor-tests-pkg#meta/hypervisor_tests.cmx
+fuchsia-pkg://fuchsia.com/netdump-integration-tests#meta/netemul-sandbox.cmx
+fuchsia-pkg://fuchsia.com/netemul-dhcp-tests#meta/dhcp-validity-test.cmx
+fuchsia-pkg://fuchsia.com/netstack-integration-tests#meta/netemul-sandbox.cmx
+fuchsia-pkg://fuchsia.com/netstack-integration-tests#meta/netemul-sandbox.cmx
+fuchsia-pkg://fuchsia.com/netstack3-tests#meta/netemul-sandbox.cmx
+fuchsia-pkg://fuchsia.com/ping3-tests#meta/netemul-sandbox.cmx
 fuchsia-pkg://fuchsia.com/policy-integration-tests#meta/hypervisor_resource_allowed.cmx
-
+fuchsia-pkg://fuchsia.com/virtualization-block-tests#meta/virtualization_block_tests.cmx
+fuchsia-pkg://fuchsia.com/virtualization-core-tests#meta/virtualization_core_tests.cmx
+fuchsia-pkg://fuchsia.com/virtualization-gpu-tests#meta/virtualization_gpu_tests.cmx
+fuchsia-pkg://fuchsia.com/virtualization-input-tests#meta/virtualization_input_tests.cmx
+fuchsia-pkg://fuchsia.com/virtualization-net-tests#meta/virtualization_net_tests.cmx
+fuchsia-pkg://fuchsia.com/virtualization-vsock-tests#meta/virtualization_vsock_tests.cmx

@@ -6,8 +6,10 @@
 #define SRC_VIRTUALIZATION_BIN_VMM_SYSINFO_H_
 
 #include <fuchsia/boot/cpp/fidl.h>
+#include <fuchsia/kernel/cpp/fidl.h>
 #include <fuchsia/sysinfo/cpp/fidl.h>
 
+static constexpr char kHypervisorResourceSvc[] = "/svc/fuchsia.kernel.HypervisorResource";
 static constexpr char kSysInfoPath[] = "/svc/fuchsia.sysinfo.SysInfo";
 static constexpr char kRootResourceSvc[] = "/svc/fuchsia.boot.RootResource";
 
@@ -15,6 +17,12 @@ static inline fuchsia::sysinfo::SysInfoSyncPtr get_sysinfo() {
   fuchsia::sysinfo::SysInfoSyncPtr device;
   fdio_service_connect(kSysInfoPath, device.NewRequest().TakeChannel().release());
   return device;
+}
+
+static inline zx_status_t get_hypervisor_resource(zx::resource* resource) {
+  fuchsia::kernel::HypervisorResourceSyncPtr svc;
+  fdio_service_connect(kHypervisorResourceSvc, svc.NewRequest().TakeChannel().release());
+  return svc->Get(resource);
 }
 
 static inline zx_status_t get_root_resource(zx::resource* resource) {

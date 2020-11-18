@@ -159,6 +159,7 @@ source_set("lib") {
 
   deps = [
     ":guest_console",
+    "//sdk/fidl/fuchsia.kernel",
     "//sdk/fidl/fuchsia.sysinfo",
     "//src/virtualization/bin/vmm:guest_config",
   ]
@@ -437,6 +438,7 @@ executable("hypervisor_tests") {
 
   deps = [
     "//sdk/fidl/fuchsia.boot",
+    "//sdk/fidl/fuchsia.kernel",
     "//sdk/fidl/fuchsia.sysinfo",
     "//sdk/lib/fdio",
     "//zircon/public/lib/fbl",

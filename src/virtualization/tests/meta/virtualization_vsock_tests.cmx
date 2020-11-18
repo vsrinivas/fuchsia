@@ -2,6 +2,7 @@
     "facets": {
         "fuchsia.test": {
             "system-services": [
+                "fuchsia.kernel.HypervisorResource",
                 "fuchsia.sysinfo.SysInfo"
             ]
         }
@@ -14,6 +15,7 @@
     },
     "sandbox": {
         "services": [
+            "fuchsia.kernel.HypervisorResource",
             "fuchsia.sys.Environment",
             "fuchsia.sys.Loader",
             "fuchsia.sysinfo.SysInfo"

@@ -74,10 +74,6 @@ class FakeSysinfo : public ::llcpp::fuchsia::sysinfo::SysInfo::Interface {
     fidl::BindSingleInFlightOnly(dispatcher, std::move(remote), this);
   }
 
-  void GetHypervisorResource(GetHypervisorResourceCompleter::Sync& completer) {
-    completer.Reply(ZX_ERR_NOT_SUPPORTED, zx::resource());
-  }
-
   void GetBoardName(GetBoardNameCompleter::Sync& completer) {
     completer.Reply(ZX_OK, fidl::StringView{board_, sizeof(board_)});
   }

@@ -70,9 +70,6 @@ class PlatformBus : public PlatformBusType,
   zx_status_t PBusRegisterSysSuspendCallback(const pbus_sys_suspend_t* suspend_cbin);
 
   // SysInfo protocol implementation.
-  void GetHypervisorResource(GetHypervisorResourceCompleter::Sync& completer) {
-    completer.Reply(ZX_ERR_NOT_SUPPORTED, zx::resource());
-  }
   void GetBoardName(GetBoardNameCompleter::Sync& completer);
   void GetBoardRevision(GetBoardRevisionCompleter::Sync& completer);
   void GetBootloaderVendor(GetBootloaderVendorCompleter::Sync& completer);

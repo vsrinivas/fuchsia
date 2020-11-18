@@ -22,9 +22,6 @@ struct InterruptControllerInfo {
 
 [Discoverable, ForDeprecatedCBindings]
 protocol SysInfo {
-    /// Return the hypervisor resource (with only ZX_RIGHT_TRANSFER).
-    GetHypervisorResource() -> (zx.status status, zx.handle:RESOURCE? resource);
-
     /// Return the board name for the platform we are running on.
     GetBoardName() -> (zx.status status, string:BOARD_NAME_LEN? name);
 

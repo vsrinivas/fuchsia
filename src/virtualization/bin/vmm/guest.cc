@@ -5,7 +5,6 @@
 #include "src/virtualization/bin/vmm/guest.h"
 
 #include <fcntl.h>
-#include <fuchsia/sysinfo/c/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
@@ -41,16 +40,6 @@ static constexpr uint32_t trap_kind(TrapType type) {
   }
 }
 
-static zx_status_t get_hypervisor_resource(const fuchsia::sysinfo::SysInfoSyncPtr& sysinfo,
-                                           zx::resource* resource) {
-  zx_status_t fidl_status;
-  zx_status_t status = sysinfo->GetHypervisorResource(&fidl_status, resource);
-  if (status != ZX_OK) {
-    return status;
-  }
-  return fidl_status;
-}
-
 static constexpr uint32_t cache_policy(fuchsia::virtualization::MemoryPolicy policy) {
   switch (policy) {
     case fuchsia::virtualization::MemoryPolicy::HOST_DEVICE:
@@ -61,9 +50,8 @@ static constexpr uint32_t cache_policy(fuchsia::virtualization::MemoryPolicy pol
 }
 
 zx_status_t Guest::Init(const std::vector<fuchsia::virtualization::MemorySpec>& memory) {
-  fuchsia::sysinfo::SysInfoSyncPtr sysinfo = get_sysinfo();
   zx::resource hypervisor_resource;
-  zx_status_t status = get_hypervisor_resource(sysinfo, &hypervisor_resource);
+  zx_status_t status = get_hypervisor_resource(&hypervisor_resource);
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "Failed to get hypervisor resource " << status;
     return status;
@@ -119,8 +107,7 @@ zx_status_t Guest::Init(const std::vector<fuchsia::virtualization::MemorySpec>& 
     zx_gpaddr_t addr;
     status = vmar_.map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_PERM_EXECUTE | ZX_VM_SPECIFIC |
                            ZX_VM_REQUIRE_NON_RESIZABLE,
-                       spec.base, vmo, 0, spec.size,
-                       &addr);
+                       spec.base, vmo, 0, spec.size, &addr);
     if (status != ZX_OK) {
       FX_LOGS(ERROR) << "Failed to map guest physical memory " << status;
       return status;

@@ -5,7 +5,6 @@
 #include "sysinfo.h"
 
 #include <fcntl.h>
-#include <fuchsia/boot/llcpp/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fdio.h>
 #include <stdio.h>
@@ -20,12 +19,6 @@
 #include <fbl/unique_fd.h>
 
 namespace sysinfo {
-void SysInfo::GetHypervisorResource(GetHypervisorResourceCompleter::Sync &completer) {
-  zx::resource hypervisor;
-  zx_status_t status = GetHypervisorResource(&hypervisor);
-  completer.Reply(status, std::move(hypervisor));
-}
-
 void SysInfo::GetBoardName(GetBoardNameCompleter::Sync &completer) {
   std::string board_name;
   zx_status_t status = GetBoardName(&board_name);
@@ -48,37 +41,6 @@ void SysInfo::GetInterruptControllerInfo(GetInterruptControllerInfoCompleter::Sy
   llcpp::fuchsia::sysinfo::InterruptControllerInfo info = {};
   zx_status_t status = GetInterruptControllerInfo(&info);
   completer.Reply(status, fidl::unowned_ptr(&info));
-}
-
-// TODO(fxbug.dev/43777): Separate out GetHypervisorResource from sysinfo
-zx_status_t SysInfo::GetHypervisorResource(zx::resource *hypervisor) {
-  zx::channel local, remote;
-  zx_status_t status = zx::channel::create(0, &local, &remote);
-  if (status != ZX_OK) {
-    printf("sysinfo: channel create failed: %s\n", zx_status_get_string(status));
-    return status;
-  }
-  auto svc_name = "/svc/" + std::string(llcpp::fuchsia::boot::RootResource::Name);
-  status = fdio_service_connect(svc_name.c_str(), remote.release());
-  if (status != ZX_OK) {
-    printf("sysinfo: Could not connect to RootResource service: %s\n",
-           zx_status_get_string(status));
-    return status;
-  }
-
-  llcpp::fuchsia::boot::RootResource::SyncClient client(std::move(local));
-  auto result = client.Get();
-  if (result.status() != ZX_OK) {
-    printf("sysinfo: Could not retrieve RootResource: %s\n", zx_status_get_string(result.status()));
-    return result.status();
-  }
-  zx::resource root_resource(std::move(result->resource));
-
-  const char name[] = "hypervisor";
-  status = zx::resource::create(root_resource, ZX_RSRC_KIND_HYPERVISOR, 0, 0, name, sizeof(name),
-                                hypervisor);
-
-  return status;
 }
 
 zx_status_t SysInfo::GetBoardName(std::string *board_name) {

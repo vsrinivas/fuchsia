@@ -55,7 +55,7 @@
         },
         "fuchsia.test": {
             "system-services": [
-                "fuchsia.sysinfo.SysInfo"
+                "fuchsia.kernel.HypervisorResource"
             ]
         }
     },
@@ -65,7 +65,7 @@
     "runner": "fuchsia-pkg://fuchsia.com/netemul_runner#meta/netemul_runner.cmx",
     "sandbox": {
         "services": [
-            "fuchsia.sysinfo.SysInfo"
+            "fuchsia.kernel.HypervisorResource"
         ]
     }
 }

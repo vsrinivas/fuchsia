@@ -2,7 +2,7 @@
     "facets": {
         "fuchsia.test": {
             "system-services": [
-                "fuchsia.sysinfo.SysInfo"
+                "fuchsia.kernel.HypervisorResource"
             ]
         }
     },
@@ -17,9 +17,9 @@
             "isolated-persistent-storage"
         ],
         "services": [
+            "fuchsia.kernel.HypervisorResource",
             "fuchsia.sys.Environment",
-            "fuchsia.sys.Loader",
-            "fuchsia.sysinfo.SysInfo"
+            "fuchsia.sys.Loader"
         ]
     }
 }
