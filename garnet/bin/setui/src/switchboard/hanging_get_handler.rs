@@ -493,6 +493,7 @@ mod tests {
                 response = Some(Ok(Some(SettingResponse::Brightness(DisplayInfo::new(
                     false,
                     value,
+                    true,
                     LowLightMode::Disable,
                     ThemeMode::Unknown,
                 )))));
