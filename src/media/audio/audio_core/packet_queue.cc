@@ -27,13 +27,13 @@ namespace {
 // to TRACE or SPEW, all client-side underflows are logged -- at log_level -1: VLOG TRACE -- as
 // specified by kUnderflowTraceInterval. If set to INFO, we log less often, at log_level 1: INFO,
 // throttling by the factor kUnderflowInfoInterval. If set to WARNING or higher, we throttle these
-// even more, specified by kUnderflowErrorInterval. Note: by default we set NDEBUG builds to WARNING
-// and DEBUG builds to INFO. To disable all logging of client-side underflows, set kLogUnderflow to
-// false.
+// even more, specified by kUnderflowWarningInterval. Note: by default we set NDEBUG builds to
+// WARNING and DEBUG builds to INFO. To disable all logging of client-side underflows, set
+// kLogUnderflow to false.
 static constexpr bool kLogUnderflow = true;
 static constexpr uint16_t kUnderflowTraceInterval = 1;
 static constexpr uint16_t kUnderflowInfoInterval = 10;
-static constexpr uint16_t kUnderflowErrorInterval = 100;
+static constexpr uint16_t kUnderflowWarningInterval = 100;
 
 }  // namespace
 
@@ -200,12 +200,12 @@ void PacketQueue::ReportUnderflow(Fixed frac_source_start, Fixed frac_source_mix
 
   if constexpr (kLogUnderflow) {
     auto underflow_msec = static_cast<double>(underflow_duration.to_nsecs()) / ZX_MSEC(1);
-    if ((kUnderflowErrorInterval > 0) && (underflow_count % kUnderflowErrorInterval == 0)) {
-      FX_LOGS(ERROR) << "PACKET QUEUE UNDERFLOW #" << underflow_count + 1 << " (1/"
-                     << kUnderflowErrorInterval << "): source-start "
-                     << ffl::Format(frac_source_start).c_str() << " missed mix-point "
-                     << ffl::Format(frac_source_mix_point).c_str() << " by " << std::setprecision(4)
-                     << underflow_msec << " ms";
+    if ((kUnderflowWarningInterval > 0) && (underflow_count % kUnderflowWarningInterval == 0)) {
+      FX_LOGS(WARNING) << "PACKET QUEUE UNDERFLOW #" << underflow_count + 1 << " (1/"
+                       << kUnderflowWarningInterval << "): source-start "
+                       << ffl::Format(frac_source_start).c_str() << " missed mix-point "
+                       << ffl::Format(frac_source_mix_point).c_str() << " by "
+                       << std::setprecision(4) << underflow_msec << " ms";
 
     } else if ((kUnderflowInfoInterval > 0) && (underflow_count % kUnderflowInfoInterval == 0)) {
       FX_LOGS(INFO) << "PACKET QUEUE UNDERFLOW #" << underflow_count + 1 << " (1/"
@@ -233,10 +233,10 @@ void PacketQueue::ReportPartialUnderflow(Fixed frac_source_offset, int64_t dest_
   if (frac_source_offset >= 4) {
     auto partial_underflow_count = std::atomic_fetch_add<uint16_t>(&partial_underflow_count_, 1u);
     if constexpr (kLogUnderflow) {
-      if ((kUnderflowErrorInterval > 0) &&
-          (partial_underflow_count % kUnderflowErrorInterval == 0)) {
+      if ((kUnderflowWarningInterval > 0) &&
+          (partial_underflow_count % kUnderflowWarningInterval == 0)) {
         FX_LOGS(WARNING) << "PACKET QUEUE SHIFT #" << partial_underflow_count + 1 << " (1/"
-                         << kUnderflowErrorInterval << "): shifted by "
+                         << kUnderflowWarningInterval << "): shifted by "
                          << ffl::Format(frac_source_offset).c_str() << " source frames and "
                          << dest_mix_offset << " mix (output) frames";
       } else if ((kUnderflowInfoInterval > 0) &&

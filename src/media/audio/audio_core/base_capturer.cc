@@ -28,7 +28,7 @@ namespace {
 // client-side overflows are logged. If set to INFO or higher, we log less often.
 static constexpr bool kLogCaptureOverflow = true;
 static constexpr uint16_t kCaptureOverflowInfoInterval = 10;
-static constexpr uint16_t kCaptureOverflowErrorInterval = 100;
+static constexpr uint16_t kCaptureOverflowWarningInterval = 100;
 
 // Currently, the time we spend mixing must also be taken into account when reasoning about the
 // capture presentation delay. Today (before any attempt at optimization), a particularly heavy mix
@@ -644,9 +644,9 @@ void BaseCapturer::ReportOverflow(zx::time start_time, zx::time end_time) {
   overflow_count_++;
   if constexpr (kLogCaptureOverflow) {
     auto duration_ms = static_cast<double>((end_time - start_time).to_nsecs()) / ZX_MSEC(1);
-    if ((overflow_count_ - 1) % kCaptureOverflowErrorInterval == 0) {
-      FX_LOGS(ERROR) << "CAPTURE OVERERFLOW #" << overflow_count_ << " lasted "
-                     << std::setprecision(4) << duration_ms << " ms";
+    if ((overflow_count_ - 1) % kCaptureOverflowWarningInterval == 0) {
+      FX_LOGS(WARNING) << "CAPTURE OVERERFLOW #" << overflow_count_ << " lasted "
+                       << std::setprecision(4) << duration_ms << " ms";
     } else if ((overflow_count_ - 1) % kCaptureOverflowInfoInterval == 0) {
       FX_LOGS(INFO) << "CAPTURE OVERERFLOW #" << overflow_count_ << " lasted "
                     << std::setprecision(4) << duration_ms << " ms";
