@@ -2398,6 +2398,7 @@ static void brcmf_cfg80211_escan_timeout_worker(WorkItem* work) {
   struct brcmf_cfg80211_info* cfg =
       containerof(work, struct brcmf_cfg80211_info, escan_timeout_work);
 
+  BRCMF_WARN("Scan timed out, sending notification of aborted scan");
   brcmf_notify_escan_complete(cfg, cfg->escan_info.ifp, true, true);
 }
 
@@ -2425,6 +2426,7 @@ static zx_status_t brcmf_cfg80211_escan_handler(struct brcmf_if* ifp,
   BRCMF_DBG_EVENT(ifp, e, "%d", [](uint32_t reason) { return reason; });
 
   if (status == BRCMF_E_STATUS_ABORT) {
+    BRCMF_WARN("Firmware aborted escan: %d", e->reason);
     goto chk_scan_end;
   }
 
@@ -2486,6 +2488,9 @@ chk_scan_end:
     cfg->escan_info.escan_state = WL_ESCAN_STATE_IDLE;
     if (cfg->int_escan_map || cfg->scan_request) {
       aborted = status != BRCMF_E_STATUS_SUCCESS;
+      if (aborted) {
+        BRCMF_WARN("Sending notification of aborted scan: %d", status);
+      }
       brcmf_notify_escan_complete(cfg, ifp, aborted, false);
     } else {
       BRCMF_DBG(SCAN, "Ignored scan complete result 0x%x", status);
@@ -2552,6 +2557,7 @@ static zx_status_t brcmf_start_internal_escan(struct brcmf_if* ifp, uint32_t fwm
       BRCMF_DBG(SCAN, "aborting internal scan: map=%u", cfg->int_escan_map);
     }
     /* Abort any on-going scan */
+    BRCMF_WARN("Starting internal scan, aborting existing scan in progress");
     brcmf_abort_scanning(cfg);
   }
 
@@ -5523,6 +5529,7 @@ zx_status_t brcmf_cfg80211_del_iface(struct brcmf_cfg80211_info* cfg, struct wir
   if (ndev) {
     if (brcmf_test_bit_in_array(BRCMF_SCAN_STATUS_BUSY, &cfg->scan_status) &&
         cfg->escan_info.ifp == ndev_to_if(ndev)) {
+      BRCMF_WARN("Aborting scan, interface being removed");
       brcmf_notify_escan_complete(cfg, ndev_to_if(ndev), true, true);
     }
 
