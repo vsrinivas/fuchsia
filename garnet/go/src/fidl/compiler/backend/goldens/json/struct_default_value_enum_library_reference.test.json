@@ -5,7 +5,9 @@
     {
       "name": "dependent",
       "declarations": {
-        "dependent/MyEnum": "enum"
+        "dependent/MyEnum": {
+          "kind": "enum"
+        }
       }
     }
   ],

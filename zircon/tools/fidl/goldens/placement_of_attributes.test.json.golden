@@ -5,7 +5,10 @@
     {
       "name": "exampleusing",
       "declarations": {
-        "exampleusing/Empty": "struct"
+        "exampleusing/Empty": {
+          "kind": "struct",
+          "resource": false
+        }
       }
     }
   ],

@@ -907,7 +907,7 @@ func formatLibraryPath(library fidl.LibraryIdentifier) string {
 type compiler struct {
 	namespace          string
 	symbolPrefix       string
-	decls              fidl.DeclMap
+	decls              fidl.DeclInfoMap
 	declarations       map[fidl.EncodedCompoundIdentifier]Decl
 	library            fidl.LibraryIdentifier
 	handleTypes        map[fidl.HandleSubtype]struct{}
@@ -1072,10 +1072,11 @@ func (c *compiler) compileType(val fidl.Type) Type {
 	case fidl.IdentifierType:
 		t := c.compileCompoundIdentifier(val.Identifier, "", "", false)
 		ft := c.compileCompoundIdentifier(val.Identifier, "", "", true)
-		declType, ok := c.decls[val.Identifier]
+		declInfo, ok := c.decls[val.Identifier]
 		if !ok {
 			panic(fmt.Sprintf("unknown identifier: %v", val.Identifier))
 		}
+		declType := declInfo.Type
 		if declType == fidl.ProtocolDeclType {
 			r.Decl = fmt.Sprintf("::fidl::InterfaceHandle<class %s>", t)
 			r.FullDecl = fmt.Sprintf("::fidl::InterfaceHandle<class %s>", ft)
@@ -1568,11 +1569,11 @@ func (c *compiler) compileUnion(val fidl.Union) Union {
 		if val.Members[0].Type.Kind != fidl.IdentifierType {
 			panic(fmt.Sprintf("value member of result union must be an identifier: %v", val.Name))
 		}
-		valueStructDeclType, ok := c.decls[val.Members[0].Type.Identifier]
+		valueStructDeclInfo, ok := c.decls[val.Members[0].Type.Identifier]
 		if !ok {
 			panic(fmt.Sprintf("unknown identifier: %v", val.Members[0].Type.Identifier))
 		}
-		if valueStructDeclType != "struct" {
+		if valueStructDeclInfo.Type != "struct" {
 			panic(fmt.Sprintf("first member of result union not a struct: %v", val.Name))
 		}
 		result := Result{

@@ -5,15 +5,26 @@
     {
       "name": "bottom",
       "declarations": {
-        "bottom/Foo": "struct"
+        "bottom/Foo": {
+          "kind": "struct",
+          "resource": false
+        }
       }
     },
     {
       "name": "middle",
       "declarations": {
-        "middle/Middle": "interface",
-        "middle/SomeLongAnonymousPrefix0": "struct",
-        "middle/SomeLongAnonymousPrefix1": "struct"
+        "middle/Middle": {
+          "kind": "interface"
+        },
+        "middle/SomeLongAnonymousPrefix0": {
+          "kind": "struct",
+          "resource": true
+        },
+        "middle/SomeLongAnonymousPrefix1": {
+          "kind": "struct",
+          "resource": true
+        }
       }
     }
   ],

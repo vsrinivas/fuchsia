@@ -926,6 +926,56 @@
                 }
             }
         },
+        "external-declarations-map": {
+            "description": "Definition of declarations of an external library",
+            "type": "object",
+            "patternProperties": {
+                ".*": {
+                    "oneOf": [
+                        {
+                            "type": "object",
+                            "required": [
+                                "kind",
+                                "resource"
+                            ],
+                            "properties": {
+                                "kind": {
+                                    "type": "string",
+                                    "enum": [
+                                        "struct",
+                                        "table",
+                                        "union"
+                                    ]
+                                },
+                                "resource": {
+                                    "type": "boolean"
+                                }
+                            }
+                        },
+                        {
+                            "type": "object",
+                            "required": [
+                                "kind"
+                            ],
+                            "properties": {
+                                "kind": {
+                                    "type": "string",
+                                    "enum": [
+                                        "bits",
+                                        "const",
+                                        "enum",
+                                        "interface",
+                                        "service",
+                                        "experimental_resource",
+                                        "type_alias"
+                                    ]
+                                }
+                            }
+                        }
+                    ]
+                }
+            }
+        },
         "library": {
             "description": "Definition of library",
             "type": "object",
@@ -940,7 +990,7 @@
                 },
                 "declarations": {
                     "description": "Declarations of library",
-                    "$ref": "#/definitions/declarations-map"
+                    "$ref": "#/definitions/external-declarations-map"
                 }
             }
         },

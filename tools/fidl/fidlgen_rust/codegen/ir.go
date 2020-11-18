@@ -453,7 +453,7 @@ var handleSubtypeConsts = map[fidl.HandleSubtype]string{
 }
 
 type compiler struct {
-	decls                  fidl.DeclMap
+	decls                  fidl.DeclInfoMap
 	library                fidl.LibraryIdentifier
 	externCrates           map[string]struct{}
 	requestResponsePayload map[fidl.EncodedCompoundIdentifier]fidl.Struct
@@ -629,11 +629,11 @@ func (c *compiler) fieldHandleInformation(val *fidl.Type) FieldHandleInformation
 		}
 	}
 	if val.Kind == fidl.IdentifierType {
-		declType, ok := c.decls[val.Identifier]
+		declInfo, ok := c.decls[val.Identifier]
 		if !ok {
 			panic(fmt.Sprintf("unknown identifier: %v", val.Identifier))
 		}
-		if declType == fidl.ProtocolDeclType {
+		if declInfo.Type == fidl.ProtocolDeclType {
 			return FieldHandleInformation{
 				fullObjectType:    "fidl::ObjectType::CHANNEL",
 				fullRights:        "fidl::Rights::CHANNEL_DEFAULT",
@@ -727,10 +727,11 @@ func (c *compiler) compileType(val fidl.Type, borrowed bool) Type {
 		r = compilePrimitiveSubtype(val.PrimitiveSubtype)
 	case fidl.IdentifierType:
 		t := c.compileCamelCompoundIdentifier(val.Identifier)
-		declType, ok := c.decls[val.Identifier]
+		declInfo, ok := c.decls[val.Identifier]
 		if !ok {
 			panic(fmt.Sprintf("unknown identifier: %v", val.Identifier))
 		}
+		declType = declInfo.Type
 		switch declType {
 		case fidl.BitsDeclType, fidl.EnumDeclType:
 			// Bits and enums are small, simple, and never contain handles,
@@ -962,7 +963,7 @@ func (c *compiler) populateFullStructMaskForType(mask []byte, typ *fidl.Type, fl
 			// This behavior is matched by computeUseFullStructCopy.
 			return
 		}
-		declType := c.decls[typ.Identifier]
+		declType := c.decls[typ.Identifier].Type
 		if declType == fidl.StructDeclType {
 			st, ok := c.structs[typ.Identifier]
 			if !ok {
@@ -1068,7 +1069,7 @@ func (c *compiler) computeUseFidlStructCopy(typ *fidl.Type) bool {
 		if c.inExternalLibrary(fidl.ParseCompoundIdentifier(typ.Identifier)) {
 			return false
 		}
-		declType := c.decls[typ.Identifier]
+		declType := c.decls[typ.Identifier].Type
 		switch declType {
 		case fidl.BitsDeclType:
 			return false
@@ -1360,7 +1361,7 @@ func (dc *derivesCompiler) fillDerivesForECI(eci EncodedCompoundIdentifier) deri
 	deriveStatus.recursing = true
 	dc.statuses[eci] = deriveStatus
 
-	declType := dc.decls[eci]
+	declType := dc.decls[eci].Type
 	var derivesOut derives
 typeSwitch:
 	switch declType {

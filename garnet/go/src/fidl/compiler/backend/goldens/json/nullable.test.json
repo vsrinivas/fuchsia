@@ -5,24 +5,60 @@
     {
       "name": "zx",
       "declarations": {
-        "zx/CHANNEL_MAX_MSG_BYTES": "const",
-        "zx/CHANNEL_MAX_MSG_HANDLES": "const",
-        "zx/MAX_NAME_LEN": "const",
-        "zx/MAX_CPUS": "const",
-        "zx/obj_type": "enum",
-        "zx/handle": "experimental_resource",
-        "zx/status": "type_alias",
-        "zx/time": "type_alias",
-        "zx/duration": "type_alias",
-        "zx/ticks": "type_alias",
-        "zx/koid": "type_alias",
-        "zx/vaddr": "type_alias",
-        "zx/paddr": "type_alias",
-        "zx/paddr32": "type_alias",
-        "zx/gpaddr": "type_alias",
-        "zx/off": "type_alias",
-        "zx/procarg": "type_alias",
-        "zx/signals": "type_alias"
+        "zx/CHANNEL_MAX_MSG_BYTES": {
+          "kind": "const"
+        },
+        "zx/CHANNEL_MAX_MSG_HANDLES": {
+          "kind": "const"
+        },
+        "zx/MAX_NAME_LEN": {
+          "kind": "const"
+        },
+        "zx/MAX_CPUS": {
+          "kind": "const"
+        },
+        "zx/obj_type": {
+          "kind": "enum"
+        },
+        "zx/handle": {
+          "kind": "experimental_resource"
+        },
+        "zx/status": {
+          "kind": "type_alias"
+        },
+        "zx/time": {
+          "kind": "type_alias"
+        },
+        "zx/duration": {
+          "kind": "type_alias"
+        },
+        "zx/ticks": {
+          "kind": "type_alias"
+        },
+        "zx/koid": {
+          "kind": "type_alias"
+        },
+        "zx/vaddr": {
+          "kind": "type_alias"
+        },
+        "zx/paddr": {
+          "kind": "type_alias"
+        },
+        "zx/paddr32": {
+          "kind": "type_alias"
+        },
+        "zx/gpaddr": {
+          "kind": "type_alias"
+        },
+        "zx/off": {
+          "kind": "type_alias"
+        },
+        "zx/procarg": {
+          "kind": "type_alias"
+        },
+        "zx/signals": {
+          "kind": "type_alias"
+        }
       }
     }
   ],

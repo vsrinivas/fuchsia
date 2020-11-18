@@ -5,7 +5,10 @@
     {
       "name": "middle",
       "declarations": {
-        "middle/Bar": "struct"
+        "middle/Bar": {
+          "kind": "struct",
+          "resource": false
+        }
       }
     }
   ],

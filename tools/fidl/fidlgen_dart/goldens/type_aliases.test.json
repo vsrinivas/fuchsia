@@ -5,7 +5,10 @@
     {
       "name": "someotherlibrary",
       "declarations": {
-        "someotherlibrary/ReferenceMe": "struct"
+        "someotherlibrary/ReferenceMe": {
+          "kind": "struct",
+          "resource": false
+        }
       }
     }
   ],

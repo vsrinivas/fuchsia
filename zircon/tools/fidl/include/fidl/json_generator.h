@@ -136,9 +136,14 @@ class JSONGenerator : public utils::JsonWriter<JSONGenerator> {
   void GenerateTypeAndFromTypeAlias(const flat::TypeConstructor& value,
                                     Position position = Position::kSubsequent);
   void GenerateRequest(const std::string& prefix, const flat::Struct& value);
-  void GenerateDeclarationsEntry(int count, const flat::Name& name, std::string_view decl);
+  void GenerateDeclarationsEntry(int count, const flat::Name& name, std::string_view decl_kind);
   void GenerateDeclarationsMember(const flat::Library* library,
                                   Position position = Position::kSubsequent);
+  void GenerateExternalDeclarationsEntry(int count, const flat::Name& name,
+                                         std::string_view decl_kind,
+                                         std::optional<types::Resourceness> maybe_resourceness);
+  void GenerateExternalDeclarationsMember(const flat::Library* library,
+                                          Position position = Position::kSubsequent);
   void GenerateTypeShapes(const flat::Object& object);
   void GenerateTypeShapes(std::string prefix, const flat::Object& object,
                           bool is_request_or_response = false);

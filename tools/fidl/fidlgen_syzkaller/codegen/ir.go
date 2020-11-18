@@ -125,7 +125,7 @@ type BitsMap map[fidl.EncodedCompoundIdentifier]fidl.Bits
 
 type compiler struct {
 	// decls contains all top-level declarations for the FIDL source.
-	decls fidl.DeclMap
+	decls fidl.DeclInfoMap
 
 	// structs contain all top-level struct definitions for the FIDL source.
 	structs StructMap
@@ -398,12 +398,12 @@ func (c *compiler) compileStructMember(p fidl.StructMember) (StructMember, *Stru
 			}
 		}
 	case fidl.IdentifierType:
-		declType, ok := c.decls[p.Type.Identifier]
+		declInfo, ok := c.decls[p.Type.Identifier]
 		if !ok {
 			panic(fmt.Sprintf("unknown identifier: %v", p.Type.Identifier))
 		}
 
-		switch declType {
+		switch declInfo.Type {
 		case fidl.EnumDeclType:
 			i = StructMember{
 				Type: Type(fmt.Sprintf("flags[%s, %s]", c.compileCompoundIdentifier(p.Type.Identifier, ""), c.compilePrimitiveSubtype(c.enums[p.Type.Identifier].Type))),

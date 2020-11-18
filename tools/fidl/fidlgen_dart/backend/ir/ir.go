@@ -457,7 +457,7 @@ func libraryPrefix(library fidl.LibraryIdentifier) string {
 }
 
 type compiler struct {
-	decls                  fidl.DeclMap
+	decls                  fidl.DeclInfoMap
 	library                fidl.LibraryIdentifier
 	typesRoot              fidl.Root
 	requestResponsePayload map[fidl.EncodedCompoundIdentifier]fidl.Struct
@@ -712,11 +712,11 @@ func (c *compiler) compileType(val fidl.Type) Type {
 	case fidl.IdentifierType:
 		compound := fidl.ParseCompoundIdentifier(val.Identifier)
 		t := c.compileUpperCamelCompoundIdentifier(compound, "", declarationContext)
-		declType, ok := c.decls[val.Identifier]
+		declInfo, ok := c.decls[val.Identifier]
 		if !ok {
 			log.Fatal("Unknown identifier: ", val.Identifier)
 		}
-		r.declType = declType
+		r.declType = declInfo.Type
 		switch r.declType {
 		case fidl.ConstDeclType:
 			fallthrough

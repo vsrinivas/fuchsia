@@ -419,7 +419,7 @@ type Root struct {
 // compiler contains the state necessary for recursive compilation.
 type compiler struct {
 	// decls contains all top-level declarations for the FIDL source.
-	decls fidl.DeclMap
+	decls fidl.DeclInfoMap
 
 	// library is the identifier for the current library.
 	library fidl.LibraryIdentifier
@@ -570,11 +570,11 @@ func (c *compiler) computeHandleSubtype(t fidl.Type) (fidl.ObjectType, bool) {
 	case fidl.RequestType:
 		return fidl.ObjectTypeChannel, true
 	case fidl.IdentifierType:
-		declType, ok := c.decls[t.Identifier]
+		declInfo, ok := c.decls[t.Identifier]
 		if !ok {
 			panic(fmt.Sprintf("unknown identifier: %v", t.Identifier))
 		}
-		if declType == fidl.ProtocolDeclType {
+		if declInfo.Type == fidl.ProtocolDeclType {
 			return fidl.ObjectTypeChannel, true
 		}
 	case fidl.ArrayType, fidl.VectorType:
@@ -706,11 +706,11 @@ func (c *compiler) compileType(val fidl.Type) (r Type, t StackOfBoundsTag) {
 		r = c.compilePrimitiveSubtype(val.PrimitiveSubtype)
 	case fidl.IdentifierType:
 		e := c.compileCompoundIdentifier(val.Identifier, true, "")
-		declType, ok := c.decls[val.Identifier]
+		declInfo, ok := c.decls[val.Identifier]
 		if !ok {
 			panic(fmt.Sprintf("unknown identifier: %v", val.Identifier))
 		}
-		switch declType {
+		switch declInfo.Type {
 		case fidl.BitsDeclType:
 			fallthrough
 		case fidl.EnumDeclType:
@@ -728,7 +728,7 @@ func (c *compiler) compileType(val fidl.Type) (r Type, t StackOfBoundsTag) {
 				r = Type(e)
 			}
 		default:
-			panic(fmt.Sprintf("unknown declaration type: %v", declType))
+			panic(fmt.Sprintf("unknown declaration type: %v", declInfo.Type))
 		}
 	default:
 		panic(fmt.Sprintf("unknown type kind: %v", val.Kind))

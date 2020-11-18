@@ -866,7 +866,13 @@ const (
 	InterfaceDeclType DeclType = "interface"
 )
 
+type DeclInfo struct {
+	Type         DeclType `json:"kind"`
+	Resourceness `json:"resource,omitempty"`
+}
+
 type DeclMap map[EncodedCompoundIdentifier]DeclType
+type DeclInfoMap map[EncodedCompoundIdentifier]DeclInfo
 
 func (dt DeclType) IsPrimitive() bool {
 	switch dt {
@@ -880,7 +886,7 @@ func (dt DeclType) IsPrimitive() bool {
 // Library represents a FIDL dependency on a separate library.
 type Library struct {
 	Name  EncodedLibraryIdentifier `json:"name,omitempty"`
-	Decls DeclMap                  `json:"declarations,omitempty"`
+	Decls DeclInfoMap              `json:"declarations,omitempty"`
 }
 
 // Root is the top-level object for a FIDL library.
@@ -904,12 +910,22 @@ type Root struct {
 	Interfaces []Protocol
 }
 
-// DeclsWithDependencies returns a single DeclMap containing the FIDL
+// DeclsWithDependencies returns a single DeclInfoMap containing the FIDL
 // library's declarations and those of its dependencies.
-func (r *Root) DeclsWithDependencies() DeclMap {
-	decls := DeclMap{}
+func (r *Root) DeclsWithDependencies() DeclInfoMap {
+	resourceness := make(map[EncodedCompoundIdentifier]Resourceness, len(r.Structs)+len(r.Tables)+len(r.Unions))
+	for _, v := range r.Structs {
+		resourceness[v.Name] = v.Resourceness
+	}
+	for _, v := range r.Tables {
+		resourceness[v.Name] = v.Resourceness
+	}
+	for _, v := range r.Unions {
+		resourceness[v.Name] = v.Resourceness
+	}
+	decls := DeclInfoMap{}
 	for k, v := range r.Decls {
-		decls[k] = v
+		decls[k] = DeclInfo{Type: v, Resourceness: resourceness[k]}
 	}
 	for _, l := range r.Libraries {
 		for k, v := range l.Decls {

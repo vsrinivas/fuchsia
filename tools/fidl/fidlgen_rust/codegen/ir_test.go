@@ -402,8 +402,8 @@ func TestBuildPaddingMarkersFlatteningStruct(t *testing.T) {
 		},
 	}
 	c := compiler{
-		decls: map[fidl.EncodedCompoundIdentifier]fidl.DeclType{
-			innerStructIdentifier: fidl.StructDeclType,
+		decls: map[fidl.EncodedCompoundIdentifier]fidl.DeclInfo{
+			innerStructIdentifier: {Type: fidl.StructDeclType, Resourceness: false},
 		},
 		structs: map[fidl.EncodedCompoundIdentifier]fidl.Struct{
 			innerStructIdentifier: innerStruct,
@@ -461,8 +461,8 @@ func TestBuildPaddingMarkersFlatteningArray(t *testing.T) {
 		},
 	}
 	c := compiler{
-		decls: map[fidl.EncodedCompoundIdentifier]fidl.DeclType{
-			innerStructIdentifier: fidl.StructDeclType,
+		decls: map[fidl.EncodedCompoundIdentifier]fidl.DeclInfo{
+			innerStructIdentifier: {Type: fidl.StructDeclType, Resourceness: false},
 		},
 		structs: map[fidl.EncodedCompoundIdentifier]fidl.Struct{
 			innerStructIdentifier: innerStruct,

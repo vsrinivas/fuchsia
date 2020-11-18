@@ -302,7 +302,7 @@ func GenerateFidl(templatePath string, ir fidl.Root, outputBase *string, options
 				return root.Decls[eci]
 			}
 			library := root.GetLibrary(eci.LibraryName())
-			return library.Decls[eci]
+			return library.Decls[eci].Type
 		},
 		// Determines if an EncodedCompoundIdentifier refers to a local definition.
 		"isLocal": func(eci fidl.EncodedCompoundIdentifier) bool {

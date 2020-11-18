@@ -586,7 +586,7 @@ void JSONGenerator::Generate(const flat::Library* library) {
   GenerateObject([&]() {
     auto library_name = flat::LibraryName(library, ".");
     GenerateObjectMember("name", library_name, Position::kFirst);
-    GenerateDeclarationsMember(library);
+    GenerateExternalDeclarationsMember(library);
   });
 }
 
@@ -615,7 +615,7 @@ void JSONGenerator::GenerateFieldShapes(const flat::Struct::Member& struct_membe
 }
 
 void JSONGenerator::GenerateDeclarationsEntry(int count, const flat::Name& name,
-                                              std::string_view decl) {
+                                              std::string_view decl_kind) {
   if (count == 0) {
     Indent();
     EmitNewlineWithIndent();
@@ -623,7 +623,7 @@ void JSONGenerator::GenerateDeclarationsEntry(int count, const flat::Name& name,
     EmitObjectSeparator();
   }
   EmitObjectKey(NameFlatName(name));
-  EmitString(decl);
+  EmitString(decl_kind);
 }
 
 void JSONGenerator::GenerateDeclarationsMember(const flat::Library* library, Position position) {
@@ -660,6 +660,62 @@ void JSONGenerator::GenerateDeclarationsMember(const flat::Library* library, Pos
 
     for (const auto& decl : library->type_alias_declarations_)
       GenerateDeclarationsEntry(count++, decl->name, "type_alias");
+  });
+}
+
+void JSONGenerator::GenerateExternalDeclarationsEntry(
+    int count, const flat::Name& name, std::string_view decl_kind,
+    std::optional<types::Resourceness> maybe_resourceness) {
+  if (count == 0) {
+    Indent();
+    EmitNewlineWithIndent();
+  } else {
+    EmitObjectSeparator();
+  }
+  EmitObjectKey(NameFlatName(name));
+  GenerateObject([&]() {
+    GenerateObjectMember("kind", decl_kind, Position::kFirst);
+    if (maybe_resourceness) {
+      GenerateObjectMember("resource", *maybe_resourceness == types::Resourceness::kResource);
+    }
+  });
+}
+
+void JSONGenerator::GenerateExternalDeclarationsMember(const flat::Library* library,
+                                                       Position position) {
+  GenerateObjectPunctuation(position);
+  EmitObjectKey("declarations");
+  GenerateObject([&]() {
+    int count = 0;
+    for (const auto& decl : library->bits_declarations_)
+      GenerateExternalDeclarationsEntry(count++, decl->name, "bits", std::nullopt);
+
+    for (const auto& decl : library->const_declarations_)
+      GenerateExternalDeclarationsEntry(count++, decl->name, "const", std::nullopt);
+
+    for (const auto& decl : library->enum_declarations_)
+      GenerateExternalDeclarationsEntry(count++, decl->name, "enum", std::nullopt);
+
+    for (const auto& decl : library->resource_declarations_)
+      GenerateExternalDeclarationsEntry(count++, decl->name, "experimental_resource", std::nullopt);
+
+    for (const auto& decl : library->protocol_declarations_)
+      GenerateExternalDeclarationsEntry(count++, decl->name, "interface", std::nullopt);
+
+    for (const auto& decl : library->service_declarations_)
+      GenerateExternalDeclarationsEntry(count++, decl->name, "service", std::nullopt);
+
+    for (const auto& decl : library->struct_declarations_)
+      GenerateExternalDeclarationsEntry(count++, decl->name, "struct", decl->resourceness);
+
+    for (const auto& decl : library->table_declarations_)
+      GenerateExternalDeclarationsEntry(count++, decl->name, "table", decl->resourceness);
+
+    for (const auto& decl : library->union_declarations_)
+      GenerateExternalDeclarationsEntry(count++, decl->name, "union", decl->resourceness);
+
+    for (const auto& decl : library->type_alias_declarations_)
+      GenerateExternalDeclarationsEntry(count++, decl->name, "type_alias", std::nullopt);
   });
 }
 
