@@ -61,8 +61,6 @@ impl From<SettingResponse> for DisplaySettings {
                 display_settings.brightness_value = Some(info.manual_brightness_value);
             }
 
-            display_settings.screen_enabled = Some(info.screen_enabled);
-
             display_settings.theme = match info.theme_mode {
                 ThemeMode::Unknown => None,
                 ThemeMode::Default => {
@@ -90,8 +88,6 @@ fn to_request(settings: DisplaySettings) -> Option<SettingRequest> {
     let mut request = None;
     if let Some(brightness_value) = settings.brightness_value {
         request = Some(SettingRequest::SetBrightness(brightness_value));
-    } else if let Some(screen_enabled) = settings.screen_enabled {
-        request = Some(SettingRequest::SetScreenEnabled(screen_enabled));
     } else if let Some(enable_auto_brightness) = settings.auto_brightness {
         request = Some(SettingRequest::SetAutoBrightness(enable_auto_brightness));
     } else if let Some(low_light_mode) = settings.low_light_mode {

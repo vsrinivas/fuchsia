@@ -242,106 +242,21 @@ async fn test_no_theme_set() {
     assert_eq!(settings.theme, None);
 }
 
-// Tests that the FIDL calls for screen enabled result in appropriate
-// commands sent to the switchboard.
-#[fuchsia_async::run_until_stalled(test)]
-async fn test_screen_enabled_with_storage_controller() {
-    let display_proxy = setup_display_env().await;
-
-    // Test that if screen is turned off, it is reflected.
-    let mut display_settings = DisplaySettings::empty();
-    display_settings.auto_brightness = Some(false);
-    display_settings.screen_enabled = Some(false);
-    display_proxy.set(display_settings).await.expect("set completed").expect("set successful");
-
-    let settings = display_proxy.watch().await.expect("watch completed");
-
-    assert_eq!(settings.screen_enabled, Some(false));
-
-    // Test that if display is turned back on, it is reflected.
-    let mut display_settings = DisplaySettings::empty();
-    display_settings.screen_enabled = Some(true);
-    display_proxy.set(display_settings).await.expect("set completed").expect("set successful");
-
-    let settings = display_proxy.watch().await.expect("watch completed");
-
-    assert_eq!(settings.screen_enabled, Some(true));
-
-    // Test that if auto brightness is turned on, the display and auto brightness are on.
-    let mut display_settings = DisplaySettings::empty();
-    display_settings.auto_brightness = Some(true);
-    display_proxy.set(display_settings).await.expect("set completed").expect("set successful");
-
-    let settings = display_proxy.watch().await.expect("watch completed");
-
-    assert_eq!(settings.auto_brightness, Some(true));
-    assert_eq!(settings.screen_enabled, Some(true));
-}
-
-// Tests that the FIDL calls for screen enabled result in appropriate
-// commands sent to the switchboard.
-#[fuchsia_async::run_until_stalled(test)]
-async fn test_screen_enabled_with_brightness_controller() {
-    let (display_proxy, _) = setup_brightness_display_env().await;
-
-    // Test that if screen is turned off, it is reflected.
-    let mut display_settings = DisplaySettings::empty();
-    display_settings.auto_brightness = Some(false);
-    display_settings.screen_enabled = Some(false);
-    display_proxy.set(display_settings).await.expect("set completed").expect("set successful");
-
-    let settings = display_proxy.watch().await.expect("watch completed");
-
-    assert_eq!(settings.screen_enabled, Some(false));
-
-    // Test that if display is turned back on, it is reflected.
-    let mut display_settings = DisplaySettings::empty();
-    display_settings.screen_enabled = Some(true);
-    display_proxy.set(display_settings).await.expect("set completed").expect("set successful");
-
-    let settings = display_proxy.watch().await.expect("watch completed");
-
-    assert_eq!(settings.screen_enabled, Some(true));
-
-    // Test that if auto brightness is turned on, the display and auto brightness are on.
-    let mut display_settings = DisplaySettings::empty();
-    display_settings.auto_brightness = Some(true);
-    display_proxy.set(display_settings).await.expect("set completed").expect("set successful");
-
-    let settings = display_proxy.watch().await.expect("watch completed");
-
-    assert_eq!(settings.auto_brightness, Some(true));
-    assert_eq!(settings.screen_enabled, Some(true));
-}
-
 // Makes sure that settings are restored from storage when service comes online.
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_display_restore_with_storage_controller() {
     // Ensure auto-brightness value is restored correctly.
-    validate_restore_with_storage_controller(
-        0.7,
-        true,
-        true,
-        LowLightMode::Enable,
-        ThemeMode::Default,
-    )
-    .await;
+    validate_restore_with_storage_controller(0.7, true, LowLightMode::Enable, ThemeMode::Default)
+        .await;
 
     // Ensure manual-brightness value is restored correctly.
-    validate_restore_with_storage_controller(
-        0.9,
-        false,
-        true,
-        LowLightMode::Disable,
-        ThemeMode::Default,
-    )
-    .await;
+    validate_restore_with_storage_controller(0.9, false, LowLightMode::Disable, ThemeMode::Default)
+        .await;
 }
 
 async fn validate_restore_with_storage_controller(
     manual_brightness: f32,
     auto_brightness: bool,
-    screen_enabled: bool,
     low_light_mode: LowLightMode,
     theme_mode: ThemeMode,
 ) {
@@ -355,7 +270,6 @@ async fn validate_restore_with_storage_controller(
         let info = DisplayInfo {
             manual_brightness_value: manual_brightness,
             auto_brightness,
-            screen_enabled,
             low_light_mode,
             theme_mode,
         };
@@ -389,7 +303,6 @@ async fn test_display_restore_with_brightness_controller() {
     validate_restore_with_brightness_controller(
         0.7,
         true,
-        true,
         LowLightMode::Enable,
         ThemeMode::Default,
     )
@@ -399,7 +312,6 @@ async fn test_display_restore_with_brightness_controller() {
     validate_restore_with_brightness_controller(
         0.9,
         false,
-        true,
         LowLightMode::Disable,
         ThemeMode::Default,
     )
@@ -409,7 +321,6 @@ async fn test_display_restore_with_brightness_controller() {
 async fn validate_restore_with_brightness_controller(
     manual_brightness: f32,
     auto_brightness: bool,
-    screen_enabled: bool,
     low_light_mode: LowLightMode,
     theme_mode: ThemeMode,
 ) {
@@ -428,7 +339,6 @@ async fn validate_restore_with_brightness_controller(
         let info = DisplayInfo {
             manual_brightness_value: manual_brightness,
             auto_brightness,
-            screen_enabled,
             low_light_mode,
             theme_mode,
         };
