@@ -488,6 +488,7 @@ sdk("fuchsia_dart") {
     # makes it impossible to land certain changes without breaking
     # //topaz.
     # If a FIDL deps is part of the SDK, it should be explicitly listed here.
+    "//sdk/fidl/fuchsia.element:fuchsia.element_sdk",
     "//sdk/fidl/fuchsia.hardware.audio:fuchsia.hardware.audio_sdk",
     "//tools/fidl/fidlgen_dart:fidlgen_dart_sdk_legacy($host_toolchain)",
     "//topaz/public/dart/composition_delegate:composition_delegate_sdk($dart_toolchain)",

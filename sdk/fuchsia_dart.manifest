@@ -15,6 +15,7 @@ sdk://docs/metadata_schemas
 sdk://docs/modular_config_schema
 sdk://fidl/fuchsia.auth
 sdk://fidl/fuchsia.diagnostics
+sdk://fidl/fuchsia.element
 sdk://fidl/fuchsia.hardware.audio
 sdk://fidl/fuchsia.images
 sdk://fidl/fuchsia.input
