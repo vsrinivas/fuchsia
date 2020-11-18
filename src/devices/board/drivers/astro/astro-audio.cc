@@ -190,12 +190,12 @@ zx_status_t Astro::AudioInit() {
     metadata.unique_id = AUDIO_STREAM_UNIQUE_ID_BUILTIN_BT;
     metadata.bus = metadata::AmlBus::TDM_A;
     metadata.version = metadata::AmlVersion::kS905D2G;
-    metadata.tdm.type = metadata::TdmType::Pcm;
-    metadata.tdm.sclk_on_raising = true;
-    metadata.tdm.bits_per_sample = 16;
-    metadata.tdm.bits_per_slot = 16;
-    metadata.number_of_channels = 1;
-    metadata.dai_number_of_channels = 1;
+    metadata.dai.type = metadata::DaiType::Tdm1;
+    metadata.dai.sclk_on_raising = true;
+    metadata.dai.bits_per_sample = 16;
+    metadata.dai.bits_per_slot = 16;
+    metadata.ring_buffer.number_of_channels = 1;
+    metadata.dai.number_of_channels = 1;
     metadata.lanes_enable_mask[0] = 1;
     pbus_metadata_t tdm_metadata[] = {
         {
@@ -251,11 +251,11 @@ zx_status_t Astro::AudioInit() {
     metadata.unique_id = AUDIO_STREAM_UNIQUE_ID_BUILTIN_SPEAKERS;
     metadata.bus = metadata::AmlBus::TDM_B;
     metadata.version = metadata::AmlVersion::kS905D2G;
-    metadata.tdm.type = metadata::TdmType::I2s;
-    metadata.number_of_channels = 1;
+    metadata.dai.type = metadata::DaiType::I2s;
+    metadata.ring_buffer.number_of_channels = 1;
     metadata.lanes_enable_mask[0] = 1;
-    metadata.tdm.number_of_codecs = 1;
-    metadata.tdm.codecs[0] = metadata::Codec::Tas27xx;
+    metadata.codecs.number_of_codecs = 1;
+    metadata.codecs.types[0] = metadata::CodecType::Tas27xx;
     // Report our external delay based on the chosen frame rate.  Note that these
     // delays were measured on Astro hardware, and should be pretty good, but they
     // will not be perfect.  One reason for this is that we are not taking any
@@ -263,12 +263,12 @@ zx_status_t Astro::AudioInit() {
     // up to 1 frame worth of startup error ever time that the output starts.
     // Also note that this is really nothing to worry about.  Hitting our target
     // to within 20.8uSec (for 48k) is pretty good.
-    metadata.tdm.number_of_external_delays = 2;
-    metadata.tdm.external_delays[0].frequency = 48'000;
-    metadata.tdm.external_delays[0].nsecs = ZX_USEC(125);
-    metadata.tdm.external_delays[1].frequency = 96'000;
-    metadata.tdm.external_delays[1].nsecs = ZX_NSEC(83333);
-    metadata.codecs_channels_mask[0] = (1 << 0);
+    metadata.codecs.number_of_external_delays = 2;
+    metadata.codecs.external_delays[0].frequency = 48'000;
+    metadata.codecs.external_delays[0].nsecs = ZX_USEC(125);
+    metadata.codecs.external_delays[1].frequency = 96'000;
+    metadata.codecs.external_delays[1].nsecs = ZX_NSEC(83333);
+    metadata.codecs.channels_to_use_bitmask[0] = (1 << 0);
     pbus_metadata_t tdm_metadata[] = {
         {
             .type = DEVICE_METADATA_PRIVATE,
@@ -316,12 +316,12 @@ zx_status_t Astro::AudioInit() {
     metadata.unique_id = AUDIO_STREAM_UNIQUE_ID_BUILTIN_BT;
     metadata.bus = metadata::AmlBus::TDM_A;
     metadata.version = metadata::AmlVersion::kS905D2G;
-    metadata.tdm.type = metadata::TdmType::Pcm;
-    metadata.tdm.sclk_on_raising = true;
-    metadata.tdm.bits_per_sample = 16;
-    metadata.tdm.bits_per_slot = 16;
-    metadata.number_of_channels = 1;
-    metadata.dai_number_of_channels = 1;
+    metadata.dai.type = metadata::DaiType::Tdm1;
+    metadata.dai.sclk_on_raising = true;
+    metadata.dai.bits_per_sample = 16;
+    metadata.dai.bits_per_slot = 16;
+    metadata.ring_buffer.number_of_channels = 1;
+    metadata.dai.number_of_channels = 1;
     metadata.swaps = 0x0200;
     metadata.lanes_enable_mask[1] = 1;
     pbus_metadata_t tdm_metadata[] = {

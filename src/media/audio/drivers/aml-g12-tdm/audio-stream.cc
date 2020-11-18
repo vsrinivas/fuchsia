@@ -49,22 +49,22 @@ AmlG12TdmStream::AmlG12TdmStream(zx_device_t* parent, bool is_input, ddk::PDev p
 // specific metadata.
 void AmlG12TdmStream::InitDaiFormats() {
   frame_rate_ = AmlTdmConfigDevice::kSupportedFrameRates[0];
-  for (size_t i = 0; i < metadata_.tdm.number_of_codecs; ++i) {
+  for (size_t i = 0; i < metadata_.codecs.number_of_codecs; ++i) {
     // Only the PCM signed sample format is supported.
     dai_formats_[i].sample_format = SampleFormat::PCM_SIGNED;
     dai_formats_[i].frame_rate = frame_rate_;
-    dai_formats_[i].bits_per_sample = metadata_.tdm.bits_per_sample;
-    dai_formats_[i].bits_per_slot = metadata_.tdm.bits_per_slot;
-    dai_formats_[i].number_of_channels = metadata_.dai_number_of_channels;
-    dai_formats_[i].channels_to_use_bitmask = metadata_.codecs_channels_mask[i];
-    switch (metadata_.tdm.type) {
-      case metadata::TdmType::I2s:
+    dai_formats_[i].bits_per_sample = metadata_.dai.bits_per_sample;
+    dai_formats_[i].bits_per_slot = metadata_.dai.bits_per_slot;
+    dai_formats_[i].number_of_channels = metadata_.dai.number_of_channels;
+    dai_formats_[i].channels_to_use_bitmask = metadata_.codecs.channels_to_use_bitmask[i];
+    switch (metadata_.dai.type) {
+      case metadata::DaiType::I2s:
         dai_formats_[i].frame_format = FrameFormat::I2S;
         break;
-      case metadata::TdmType::StereoLeftJustified:
+      case metadata::DaiType::StereoLeftJustified:
         dai_formats_[i].frame_format = FrameFormat::STEREO_LEFT;
         break;
-      case metadata::TdmType::Tdm1:
+      case metadata::DaiType::Tdm1:
         dai_formats_[i].frame_format = FrameFormat::TDM1;
         break;
       default:
@@ -101,7 +101,7 @@ zx_status_t AmlG12TdmStream::InitPDev() {
   zx_device_t* fragments[FRAGMENT_COUNT] = {};
   composite_get_fragments(&composite, fragments, countof(fragments), &actual);
   // Either only pdev or pdev + enable gpio + codecs.
-  if (actual != 1 && actual != metadata_.tdm.number_of_codecs + 2) {
+  if (actual != 1 && actual != metadata_.codecs.number_of_codecs + 2) {
     zxlogf(ERROR, "%s could not get the correct number of fragments %lu", __FILE__, actual);
     return ZX_ERR_NOT_SUPPORTED;
   }
@@ -117,8 +117,8 @@ zx_status_t AmlG12TdmStream::InitPDev() {
     return status;
   }
 
-  ZX_ASSERT(metadata_.tdm.number_of_codecs <= 8);
-  for (size_t i = 0; i < metadata_.tdm.number_of_codecs; ++i) {
+  ZX_ASSERT(metadata_.codecs.number_of_codecs <= 8);
+  for (size_t i = 0; i < metadata_.codecs.number_of_codecs; ++i) {
     codecs_.push_back(SimpleCodecClient());
     status = codecs_[i].SetProtocol(fragments[FRAGMENT_CODEC_0 + i]);
     if (status != ZX_OK) {
@@ -158,7 +158,7 @@ zx_status_t AmlG12TdmStream::InitPDev() {
     return status;
   }
 
-  for (size_t i = 0; i < metadata_.tdm.number_of_codecs; ++i) {
+  for (size_t i = 0; i < metadata_.codecs.number_of_codecs; ++i) {
     auto info = codecs_[i].GetInfo();
     if (info.is_error()) {
       zxlogf(ERROR, "%s could get codec info %d", __func__, status);
@@ -207,9 +207,9 @@ void AmlG12TdmStream::UpdateCodecsGainStateFromCurrent() {
 }
 
 void AmlG12TdmStream::UpdateCodecsGainState(GainState state) {
-  for (size_t i = 0; i < metadata_.tdm.number_of_codecs; ++i) {
+  for (size_t i = 0; i < metadata_.codecs.number_of_codecs; ++i) {
     auto state2 = state;
-    state2.gain += metadata_.tdm.codecs_delta_gains[i];
+    state2.gain += metadata_.codecs.delta_gains[i];
     if (override_mute_) {
       state2.muted = true;
     }
@@ -218,14 +218,14 @@ void AmlG12TdmStream::UpdateCodecsGainState(GainState state) {
 }
 
 zx_status_t AmlG12TdmStream::InitCodecsGain() {
-  if (metadata_.tdm.number_of_codecs) {
+  if (metadata_.codecs.number_of_codecs) {
     // Set our gain capabilities.
     float min_gain = std::numeric_limits<float>::lowest();
     float max_gain = std::numeric_limits<float>::max();
     float gain_step = std::numeric_limits<float>::lowest();
     bool can_all_mute = true;
     bool can_all_agc = true;
-    for (size_t i = 0; i < metadata_.tdm.number_of_codecs; ++i) {
+    for (size_t i = 0; i < metadata_.codecs.number_of_codecs; ++i) {
       auto format = codecs_[i].GetGainFormat();
       if (format.is_error()) {
         return format.error_value();
@@ -292,14 +292,14 @@ zx_status_t AmlG12TdmStream::Init() {
   strncpy(prod_name_, metadata_.product_name, sizeof(prod_name_));
   unique_id_ = metadata_.unique_id;
   const char* tdm_type = nullptr;
-  switch (metadata_.tdm.type) {
-    case metadata::TdmType::I2s:
+  switch (metadata_.dai.type) {
+    case metadata::DaiType::I2s:
       tdm_type = "i2s";
       break;
-    case metadata::TdmType::StereoLeftJustified:
+    case metadata::DaiType::StereoLeftJustified:
       tdm_type = "ljt";
       break;
-    case metadata::TdmType::Tdm1:
+    case metadata::DaiType::Tdm1:
       tdm_type = "tdm1";
       break;
   }
@@ -331,14 +331,14 @@ void AmlG12TdmStream::ProcessRingNotification() {
 
 zx_status_t AmlG12TdmStream::ChangeFormat(const audio_proto::StreamSetFmtReq& req) {
   fifo_depth_ = aml_audio_->fifo_depth();
-  for (size_t i = 0; i < metadata_.tdm.number_of_external_delays; ++i) {
-    if (metadata_.tdm.external_delays[i].frequency == req.frames_per_second) {
-      external_delay_nsec_ = metadata_.tdm.external_delays[i].nsecs;
+  for (size_t i = 0; i < metadata_.codecs.number_of_external_delays; ++i) {
+    if (metadata_.codecs.external_delays[i].frequency == req.frames_per_second) {
+      external_delay_nsec_ = metadata_.codecs.external_delays[i].nsecs;
       break;
     }
   }
   if (req.frames_per_second != frame_rate_ || req.channels_to_use_bitmask != channels_to_use_) {
-    for (size_t i = 0; i < metadata_.tdm.number_of_codecs; ++i) {
+    for (size_t i = 0; i < metadata_.codecs.number_of_codecs; ++i) {
       // Put codecs in safe state for rate change
       auto status = codecs_[i].Stop();
       if (status != ZX_OK) {
@@ -348,7 +348,7 @@ zx_status_t AmlG12TdmStream::ChangeFormat(const audio_proto::StreamSetFmtReq& re
     }
 
     frame_rate_ = req.frames_per_second;
-    for (size_t i = 0; i < metadata_.tdm.number_of_codecs; ++i) {
+    for (size_t i = 0; i < metadata_.codecs.number_of_codecs; ++i) {
       dai_formats_[i].frame_rate = frame_rate_;
     }
     channels_to_use_ = req.channels_to_use_bitmask;
@@ -357,7 +357,7 @@ zx_status_t AmlG12TdmStream::ChangeFormat(const audio_proto::StreamSetFmtReq& re
       zxlogf(ERROR, "%s failed to reinitialize the HW", __FILE__);
       return status;
     }
-    for (size_t i = 0; i < metadata_.tdm.number_of_codecs; ++i) {
+    for (size_t i = 0; i < metadata_.codecs.number_of_codecs; ++i) {
       status = codecs_[i].SetDaiFormat(dai_formats_[i]);
       if (status != ZX_OK) {
         zxlogf(ERROR, "%s failed to set the DAI format", __FILE__);
@@ -376,7 +376,7 @@ zx_status_t AmlG12TdmStream::ChangeFormat(const audio_proto::StreamSetFmtReq& re
 }
 
 void AmlG12TdmStream::ShutdownHook() {
-  for (size_t i = 0; i < metadata_.tdm.number_of_codecs; ++i) {
+  for (size_t i = 0; i < metadata_.codecs.number_of_codecs; ++i) {
     // safe the codec so it won't throw clock errors when tdm bus shuts down
     codecs_[i].Stop();
   }
@@ -469,8 +469,9 @@ zx_status_t AmlG12TdmStream::AddFormats() {
   // Add the range for basic audio support.
   audio_stream_format_range_t range;
 
-  range.min_channels = metadata_.number_of_channels;
-  range.max_channels = metadata_.number_of_channels;
+  range.min_channels = metadata_.ring_buffer.number_of_channels;
+  range.max_channels = metadata_.ring_buffer.number_of_channels;
+  ZX_ASSERT(metadata_.ring_buffer.bytes_per_sample == 2);
   range.sample_formats = AUDIO_SAMPLE_FORMAT_16BIT;
   ZX_ASSERT(sizeof(AmlTdmConfigDevice::kSupportedFrameRates) / sizeof(uint32_t) == 2);
   ZX_ASSERT(AmlTdmConfigDevice::kSupportedFrameRates[0] == 48'000);
@@ -538,7 +539,7 @@ static zx_status_t audio_bind(void* ctx, zx_device_t* device) {
   zx_device_t* fragments[FRAGMENT_COUNT] = {};
   composite_get_fragments(&composite, fragments, countof(fragments), &actual);
   // Either only pdev or pdev + enable gpio + codecs.
-  if (actual != 1 && actual != metadata.tdm.number_of_codecs + 2) {
+  if (actual != 1 && actual != metadata.codecs.number_of_codecs + 2) {
     zxlogf(ERROR, "%s could not get the correct number of fragments %lu", __FILE__, actual);
     return ZX_ERR_NOT_SUPPORTED;
   }

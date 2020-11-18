@@ -170,9 +170,10 @@ zx_status_t Mt8167::AudioInit() {
       },
   };
 
-  metadata::Codec out_codec = metadata::Codec::Tas5782;  // Default to PDEV_PID_MEDIATEK_8167S_REF.
+  metadata::CodecType out_codec =
+      metadata::CodecType::Tas5782;  // Default to PDEV_PID_MEDIATEK_8167S_REF.
   if (board_info_.pid == PDEV_PID_CLEO) {
-    out_codec = metadata::Codec::Tas58xx;
+    out_codec = metadata::CodecType::Tas58xx;
   }
   pbus_metadata_t out_metadata[] = {
       {

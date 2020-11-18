@@ -75,10 +75,10 @@ zx_status_t AmlTdmConfigDevice::InitHW(const metadata::AmlConfig& metadata,
   uint32_t lanes_mutes[kMaxLanes] = {};
   // bitoffset defines samples start relative to the edge of fsync.
   uint8_t bitoffset = metadata.is_input ? 4 : 3;
-  if (metadata.tdm.type == metadata::TdmType::I2s) {
+  if (metadata.dai.type == metadata::DaiType::I2s) {
     bitoffset--;
   }
-  if (metadata.tdm.sclk_on_raising) {
+  if (metadata.dai.sclk_on_raising) {
     bitoffset--;
   }
 
@@ -98,9 +98,9 @@ zx_status_t AmlTdmConfigDevice::InitHW(const metadata::AmlConfig& metadata,
       lane_start = channel;
     }
   }
-  device_->ConfigTdmSlot(bitoffset, static_cast<uint8_t>(metadata.dai_number_of_channels - 1),
-                         metadata.tdm.bits_per_slot - 1, metadata.tdm.bits_per_sample - 1,
-                         metadata.mix_mask, metadata.tdm.type == metadata::TdmType::I2s);
+  device_->ConfigTdmSlot(bitoffset, static_cast<uint8_t>(metadata.dai.number_of_channels - 1),
+                         metadata.dai.bits_per_slot - 1, metadata.dai.bits_per_sample - 1,
+                         metadata.mix_mask, metadata.dai.type == metadata::DaiType::I2s);
   device_->ConfigTdmSwaps(metadata.swaps);
   for (size_t i = 0; i < kMaxLanes; ++i) {
     status = device_->ConfigTdmLane(i, metadata.lanes_enable_mask[i], lanes_mutes[i]);
@@ -131,20 +131,20 @@ zx_status_t AmlTdmConfigDevice::InitHW(const metadata::AmlConfig& metadata,
   }
   if (metadata.sClockDivFactor) {
     uint32_t frame_sync_clks = 0;
-    switch (metadata.tdm.type) {
-      case metadata::TdmType::I2s:
-      case metadata::TdmType::StereoLeftJustified:
+    switch (metadata.dai.type) {
+      case metadata::DaiType::I2s:
+      case metadata::DaiType::StereoLeftJustified:
         // For I2S and Stereo Left Justified we have a 50% duty cycle, hence the frame sync clocks
         // is set to the size of one slot.
-        frame_sync_clks = metadata.tdm.bits_per_slot;
+        frame_sync_clks = metadata.dai.bits_per_slot;
         break;
-      case metadata::TdmType::Tdm1:
+      case metadata::DaiType::Tdm1:
         frame_sync_clks = 1;
         break;
     }
     status = device_->SetSclkDiv(metadata.sClockDivFactor - 1, frame_sync_clks - 1,
-                                 (metadata.tdm.bits_per_slot * metadata.dai_number_of_channels) - 1,
-                                 !metadata.tdm.sclk_on_raising);
+                                 (metadata.dai.bits_per_slot * metadata.dai.number_of_channels) - 1,
+                                 !metadata.dai.sclk_on_raising);
     if (status != ZX_OK) {
       zxlogf(ERROR, "%s could not configure SCLK %d", __FILE__, status);
       return status;
@@ -164,34 +164,43 @@ zx_status_t AmlTdmConfigDevice::InitHW(const metadata::AmlConfig& metadata,
 }
 
 zx_status_t AmlTdmConfigDevice::Normalize(metadata::AmlConfig& metadata) {
+  if (metadata.ring_buffer.bytes_per_sample == 0) {
+    metadata.ring_buffer.bytes_per_sample = 2;
+  }
+  // Only 16 bits samples supported.
+  if (metadata.ring_buffer.bytes_per_sample != 2) {
+    zxlogf(ERROR, "%s metadata unsupported bytes per sample %u", __FILE__,
+           metadata.ring_buffer.bytes_per_sample);
+    return ZX_ERR_NOT_SUPPORTED;
+  }
   // Only the PCM signed sample format is supported.
-  if (metadata.tdm.sample_format != metadata::SampleFormat::PcmSigned) {
+  if (metadata.dai.sample_format != metadata::SampleFormat::PcmSigned) {
     zxlogf(ERROR, "%s metadata unsupported sample type %d", __FILE__,
-           static_cast<int>(metadata.tdm.sample_format));
+           static_cast<int>(metadata.dai.sample_format));
     return ZX_ERR_NOT_SUPPORTED;
   }
-  if (metadata.tdm.type == metadata::TdmType::I2s ||
-      metadata.tdm.type == metadata::TdmType::StereoLeftJustified) {
-    metadata.dai_number_of_channels = 2;
+  if (metadata.dai.type == metadata::DaiType::I2s ||
+      metadata.dai.type == metadata::DaiType::StereoLeftJustified) {
+    metadata.dai.number_of_channels = 2;
   }
-  if (metadata.tdm.bits_per_sample == 0) {
-    metadata.tdm.bits_per_sample = 16;
+  if (metadata.dai.bits_per_sample == 0) {
+    metadata.dai.bits_per_sample = 16;
   }
-  if (metadata.tdm.bits_per_slot == 0) {
-    metadata.tdm.bits_per_slot = 32;
+  if (metadata.dai.bits_per_slot == 0) {
+    metadata.dai.bits_per_slot = 32;
   }
-  if (metadata.tdm.bits_per_slot != 32 && metadata.tdm.bits_per_slot != 16) {
-    zxlogf(ERROR, "%s metadata unsupported bits per slot %d", __FILE__, metadata.tdm.bits_per_slot);
+  if (metadata.dai.bits_per_slot != 32 && metadata.dai.bits_per_slot != 16) {
+    zxlogf(ERROR, "%s metadata unsupported bits per slot %d", __FILE__, metadata.dai.bits_per_slot);
     return ZX_ERR_NOT_SUPPORTED;
   }
-  if (metadata.tdm.bits_per_sample != 32 && metadata.tdm.bits_per_sample != 16) {
+  if (metadata.dai.bits_per_sample != 32 && metadata.dai.bits_per_sample != 16) {
     zxlogf(ERROR, "%s metadata unsupported bits per sample %d", __FILE__,
-           metadata.tdm.bits_per_sample);
+           metadata.dai.bits_per_sample);
     return ZX_ERR_NOT_SUPPORTED;
   }
-  if (metadata.tdm.bits_per_sample > metadata.tdm.bits_per_slot) {
+  if (metadata.dai.bits_per_sample > metadata.dai.bits_per_slot) {
     zxlogf(ERROR, "%s metadata unsupported bits per sample bits per slot combination %u/%u",
-           __FILE__, metadata.tdm.bits_per_sample, metadata.tdm.bits_per_slot);
+           __FILE__, metadata.dai.bits_per_sample, metadata.dai.bits_per_slot);
     return ZX_ERR_NOT_SUPPORTED;
   }
 

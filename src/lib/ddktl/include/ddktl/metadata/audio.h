@@ -11,14 +11,14 @@ namespace metadata {
 static constexpr uint32_t kMaxNumberOfCodecs = 8;
 static constexpr uint32_t kMaxNumberOfExternalDelays = 8;
 
-enum class Codec : uint32_t {
+enum class CodecType : uint32_t {
   Tas27xx,
   Tas5782,
   Tas58xx,
   Tas5720,
 };
 
-enum class TdmType : uint32_t {
+enum class DaiType : uint32_t {
   I2s,
   StereoLeftJustified,
   Tdm1,
@@ -35,17 +35,28 @@ struct ExternalDelay {
   int64_t nsecs;
 };
 
-struct Tdm {
-  TdmType type;
+struct RingBuffer {
+  uint8_t number_of_channels;
+  uint8_t bytes_per_sample;  // If not specified (set to 0), then 2 bytes.
+};
+
+struct Dai {
+  DaiType type;
+  uint8_t number_of_channels;  // If not specified (set to 0), then 2 for stereo types like I2S.
   SampleFormat sample_format;  // Defaults to PcmSigned.
   uint8_t bits_per_sample;     // If not specified (set to 0), then 16 bits.
   uint8_t bits_per_slot;       // If not specified (set to 0), then 32 bits.
   bool sclk_on_raising;        // Invert the usual clocking out on falling edge.
-  uint32_t number_of_codecs;
-  Codec codecs[kMaxNumberOfCodecs];
-  float codecs_delta_gains[kMaxNumberOfCodecs];
+};
+
+struct Codecs {
+  uint8_t number_of_codecs;
+  CodecType types[kMaxNumberOfCodecs];
+  float delta_gains[kMaxNumberOfCodecs];
   uint32_t number_of_external_delays;
   ExternalDelay external_delays[kMaxNumberOfExternalDelays];
+  // Channel to enable in each codec.
+  uint8_t channels_to_use_bitmask[kMaxNumberOfCodecs];
 };
 
 }  // namespace metadata

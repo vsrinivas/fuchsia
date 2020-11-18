@@ -63,10 +63,10 @@ zx_status_t Mt8167AudioStreamOut::InitPdev() {
     return ZX_ERR_NO_RESOURCES;
   }
 
-  metadata::Codec codec;
-  status = device_get_metadata(parent(), DEVICE_METADATA_PRIVATE, &codec, sizeof(metadata::Codec),
-                               &actual);
-  if (status != ZX_OK || sizeof(metadata::Codec) != actual) {
+  metadata::CodecType codec;
+  status = device_get_metadata(parent(), DEVICE_METADATA_PRIVATE, &codec,
+                               sizeof(metadata::CodecType), &actual);
+  if (status != ZX_OK || sizeof(metadata::CodecType) != actual) {
     zxlogf(ERROR, "%s device_get_metadata failed %d", __FILE__, status);
     return status;
   }

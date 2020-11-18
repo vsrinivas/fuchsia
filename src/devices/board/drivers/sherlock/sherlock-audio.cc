@@ -421,47 +421,49 @@ zx_status_t Sherlock::AudioInit() {
   metadata.bus = metadata::AmlBus::TDM_C;
   metadata.version = metadata::AmlVersion::kS905D2G;  // Also works with T931G.
   if (is_sherlock) {
-    metadata.tdm.type = metadata::TdmType::I2s;
-    metadata.tdm.number_of_codecs = 3;
-    metadata.tdm.codecs[0] = metadata::Codec::Tas5720;
-    metadata.tdm.codecs[1] = metadata::Codec::Tas5720;
-    metadata.tdm.codecs[2] = metadata::Codec::Tas5720;
-    metadata.number_of_channels = 4;
+    metadata.dai.type = metadata::DaiType::I2s;
+    metadata.codecs.number_of_codecs = 3;
+    metadata.codecs.types[0] = metadata::CodecType::Tas5720;
+    metadata.codecs.types[1] = metadata::CodecType::Tas5720;
+    metadata.codecs.types[2] = metadata::CodecType::Tas5720;
+    metadata.ring_buffer.number_of_channels = 4;
     metadata.swaps = 0x1032;
     metadata.lanes_enable_mask[0] = 3;
     metadata.lanes_enable_mask[1] = 3;
 #ifndef FACTORY_BUILD
     // Boost the woofer above tweeters by 7.1db analog and 5.5db digital needed for this product.
     // Only applicable in non-factory environments.
-    metadata.tdm.codecs_delta_gains[0] = 0.f;
-    metadata.tdm.codecs_delta_gains[1] = -12.6f;
-    metadata.tdm.codecs_delta_gains[2] = -12.6f;
-#endif  // FACTORY_BUILD
-    metadata.codecs_channels_mask[0] = (1 << 0);  // Woofer.
-    metadata.codecs_channels_mask[1] = (1 << 1);  // L tweeter.
-    metadata.codecs_channels_mask[2] = (1 << 0);  // R tweeter.
-    metadata.mix_mask = (1 << 1);                 // Mix lane 1's L + R for woofer.
+    metadata.codecs.delta_gains[0] = 0.f;
+    metadata.codecs.delta_gains[1] = -12.6f;
+    metadata.codecs.delta_gains[2] = -12.6f;
+#endif                                                      // FACTORY_BUILD
+    metadata.codecs.channels_to_use_bitmask[0] = (1 << 0);  // Woofer.
+    metadata.codecs.channels_to_use_bitmask[1] = (1 << 1);  // L tweeter.
+    metadata.codecs.channels_to_use_bitmask[2] = (1 << 0);  // R tweeter.
+    metadata.mix_mask = (1 << 1);                           // Mix lane 1's L + R for woofer.
   } else if (is_ernie) {
-    metadata.tdm.type = metadata::TdmType::Tdm1;
-    metadata.tdm.number_of_codecs = 2;
-    metadata.tdm.codecs[0] = metadata::Codec::Tas58xx;
-    metadata.tdm.codecs[1] = metadata::Codec::Tas58xx;
-    metadata.tdm.bits_per_sample = 16;
-    metadata.tdm.bits_per_slot = 16;
-    metadata.number_of_channels = 4;
-    metadata.dai_number_of_channels = 4;
+    metadata.dai.type = metadata::DaiType::Tdm1;
+    metadata.codecs.number_of_codecs = 2;
+    metadata.codecs.types[0] = metadata::CodecType::Tas58xx;
+    metadata.codecs.types[1] = metadata::CodecType::Tas58xx;
+    metadata.dai.bits_per_sample = 16;
+    metadata.dai.bits_per_slot = 16;
+    metadata.ring_buffer.number_of_channels = 4;
+    metadata.dai.number_of_channels = 4;
     metadata.swaps = 0x10;
     metadata.lanes_enable_mask[0] = 0xf;
-    metadata.codecs_channels_mask[0] = (1 << 0) | (1 << 1);  // First 2 channels in a shared TDM.
-    metadata.codecs_channels_mask[1] = (1 << 2) | (1 << 3);  // Second 2 channels in a shared TDM.
-  } else {                                                   // Luis
-    metadata.tdm.type = metadata::TdmType::I2s;
-    metadata.tdm.number_of_codecs = 1;
-    metadata.tdm.codecs[0] = metadata::Codec::Tas58xx;
-    metadata.number_of_channels = 2;
+    metadata.codecs.channels_to_use_bitmask[0] =
+        (1 << 0) | (1 << 1);  // First 2 channels in a shared TDM.
+    metadata.codecs.channels_to_use_bitmask[1] =
+        (1 << 2) | (1 << 3);  // Second 2 channels in a shared TDM.
+  } else {                    // Luis
+    metadata.dai.type = metadata::DaiType::I2s;
+    metadata.codecs.number_of_codecs = 1;
+    metadata.codecs.types[0] = metadata::CodecType::Tas58xx;
+    metadata.ring_buffer.number_of_channels = 2;
     metadata.swaps = 0x10;
     metadata.lanes_enable_mask[0] = 3;
-    metadata.codecs_channels_mask[0] = (1 << 0) | (1 << 1);  // Woofer + Tweeter.
+    metadata.codecs.channels_to_use_bitmask[0] = (1 << 0) | (1 << 1);  // Woofer + Tweeter.
   }
   pbus_metadata_t tdm_metadata[] = {
       {
@@ -521,12 +523,12 @@ zx_status_t Sherlock::AudioInit() {
     metadata.unique_id = AUDIO_STREAM_UNIQUE_ID_BUILTIN_BT;
     metadata.bus = metadata::AmlBus::TDM_A;
     metadata.version = metadata::AmlVersion::kS905D2G;
-    metadata.tdm.type = metadata::TdmType::Tdm1;
-    metadata.tdm.sclk_on_raising = true;
-    metadata.tdm.bits_per_sample = 16;
-    metadata.tdm.bits_per_slot = 16;
-    metadata.number_of_channels = 1;
-    metadata.dai_number_of_channels = 1;
+    metadata.dai.type = metadata::DaiType::Tdm1;
+    metadata.dai.sclk_on_raising = true;
+    metadata.dai.bits_per_sample = 16;
+    metadata.dai.bits_per_slot = 16;
+    metadata.ring_buffer.number_of_channels = 1;
+    metadata.dai.number_of_channels = 1;
     metadata.lanes_enable_mask[0] = 1;
     pbus_metadata_t tdm_metadata[] = {
         {
@@ -621,12 +623,12 @@ zx_status_t Sherlock::AudioInit() {
     metadata.unique_id = AUDIO_STREAM_UNIQUE_ID_BUILTIN_BT;
     metadata.bus = metadata::AmlBus::TDM_A;
     metadata.version = metadata::AmlVersion::kS905D2G;
-    metadata.tdm.type = metadata::TdmType::Tdm1;
-    metadata.tdm.sclk_on_raising = true;
-    metadata.tdm.bits_per_sample = 16;
-    metadata.tdm.bits_per_slot = 16;
-    metadata.number_of_channels = 1;
-    metadata.dai_number_of_channels = 1;
+    metadata.dai.type = metadata::DaiType::Tdm1;
+    metadata.dai.sclk_on_raising = true;
+    metadata.dai.bits_per_sample = 16;
+    metadata.dai.bits_per_slot = 16;
+    metadata.ring_buffer.number_of_channels = 1;
+    metadata.dai.number_of_channels = 1;
     metadata.swaps = 0x0200;
     metadata.lanes_enable_mask[1] = 1;
     pbus_metadata_t tdm_metadata[] = {

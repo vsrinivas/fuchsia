@@ -32,10 +32,6 @@ struct AmlConfig {
   uint32_t mClockDivFactor;
   uint32_t sClockDivFactor;
   audio_stream_unique_id_t unique_id;
-  uint8_t number_of_channels;  // Total number of channels in the ring buffer.
-  // How many channels in the DAI, we only support one per AmlConfig (and hence driver) instance.
-  // Not needed for stereo TDM types like I2S (implicitly 2).
-  uint32_t dai_number_of_channels;
   uint32_t swaps;  // Configures routing, one channel per nibble.
   // Lanes is a AMLogic specific concept allowing routing to different input/outputs, for instance
   // 2 lanes can be used to send audio to 2 different DAI interfaces. What bits are enabled in
@@ -43,9 +39,9 @@ struct AmlConfig {
   uint32_t lanes_enable_mask[kMaxNumberOfLanes];
   AmlBus bus;
   AmlVersion version;
-  Tdm tdm;
-  // Channel to enable in each codec.
-  uint8_t codecs_channels_mask[metadata::kMaxNumberOfCodecs];
+  RingBuffer ring_buffer;
+  Dai dai;
+  Codecs codecs;
   // Configures L+R mixing, one bit per channel pair.
   uint8_t mix_mask;
 };

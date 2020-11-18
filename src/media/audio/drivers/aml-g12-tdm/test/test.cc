@@ -104,14 +104,14 @@ struct AmlG12I2sOutTest : public AmlG12TdmStream {
     metadata_.is_input = false;
     metadata_.mClockDivFactor = 10;
     metadata_.sClockDivFactor = 25;
-    metadata_.number_of_channels = 2;
-    metadata_.dai_number_of_channels = 2;
+    metadata_.ring_buffer.number_of_channels = 2;
     metadata_.lanes_enable_mask[0] = 3;
     metadata_.bus = metadata::AmlBus::TDM_C;
     metadata_.version = metadata::AmlVersion::kS905D2G;
-    metadata_.tdm.type = metadata::TdmType::I2s;
-    metadata_.tdm.bits_per_sample = 16;
-    metadata_.tdm.bits_per_slot = 32;
+    metadata_.dai.type = metadata::DaiType::I2s;
+    metadata_.dai.number_of_channels = 2;
+    metadata_.dai.bits_per_sample = 16;
+    metadata_.dai.bits_per_slot = 32;
   }
   AmlG12I2sOutTest(codec_protocol_t* codec_protocol, ddk_mock::MockMmioRegRegion& region,
                    ddk::PDev pdev, ddk::GpioProtocolClient enable_gpio)
@@ -120,8 +120,8 @@ struct AmlG12I2sOutTest : public AmlG12TdmStream {
     codecs_.push_back(SimpleCodecClient());
     codecs_[0].SetProtocol(codec_protocol);
     aml_audio_ = std::make_unique<AmlTdmConfigDevice>(metadata_, region.GetMmioBuffer());
-    metadata_.tdm.number_of_codecs = 1;
-    metadata_.tdm.codecs[0] = metadata::Codec::Tas27xx;
+    metadata_.codecs.number_of_codecs = 1;
+    metadata_.codecs.types[0] = metadata::CodecType::Tas27xx;
   }
   AmlG12I2sOutTest(codec_protocol_t* codec_protocol1, codec_protocol_t* codec_protocol2,
                    ddk_mock::MockMmioRegRegion& region, ddk::PDev pdev,
@@ -133,11 +133,11 @@ struct AmlG12I2sOutTest : public AmlG12TdmStream {
     codecs_[0].SetProtocol(codec_protocol1);
     codecs_[1].SetProtocol(codec_protocol2);
     aml_audio_ = std::make_unique<AmlTdmConfigDevice>(metadata_, region.GetMmioBuffer());
-    metadata_.tdm.number_of_codecs = 2;
-    metadata_.tdm.codecs[0] = metadata::Codec::Tas27xx;
-    metadata_.tdm.codecs[1] = metadata::Codec::Tas27xx;
-    metadata_.tdm.codecs_delta_gains[0] = kTestDeltaGain;
-    metadata_.tdm.codecs_delta_gains[1] = 0.f;
+    metadata_.codecs.number_of_codecs = 2;
+    metadata_.codecs.types[0] = metadata::CodecType::Tas27xx;
+    metadata_.codecs.types[1] = metadata::CodecType::Tas27xx;
+    metadata_.codecs.delta_gains[0] = kTestDeltaGain;
+    metadata_.codecs.delta_gains[1] = 0.f;
   }
 
   zx_status_t Init() __TA_REQUIRES(domain_token()) override {
@@ -222,13 +222,13 @@ struct AmlG12PcmOutTest : public AmlG12I2sOutTest {
   AmlG12PcmOutTest(codec_protocol_t* codec_protocol, ddk_mock::MockMmioRegRegion& region,
                    ddk::PDev pdev, ddk::GpioProtocolClient enable_gpio)
       : AmlG12I2sOutTest(codec_protocol, region, std::move(pdev), std::move(enable_gpio)) {
-    metadata_.number_of_channels = 1;
-    metadata_.dai_number_of_channels = 1;
+    metadata_.ring_buffer.number_of_channels = 1;
     metadata_.lanes_enable_mask[0] = 1;
-    metadata_.tdm.type = metadata::TdmType::Tdm1;
-    metadata_.tdm.bits_per_slot = 16;
-    metadata_.tdm.number_of_codecs = 0;
-    metadata_.tdm.sclk_on_raising = true;
+    metadata_.dai.type = metadata::DaiType::Tdm1;
+    metadata_.dai.number_of_channels = 1;
+    metadata_.dai.bits_per_slot = 16;
+    metadata_.codecs.number_of_codecs = 0;
+    metadata_.dai.sclk_on_raising = true;
     aml_audio_ = std::make_unique<AmlTdmConfigDevice>(metadata_, region.GetMmioBuffer());
   }
 };
@@ -276,11 +276,11 @@ struct AmlG12LjtOutTest : public AmlG12I2sOutTest {
   AmlG12LjtOutTest(codec_protocol_t* codec_protocol, ddk_mock::MockMmioRegRegion& region,
                    ddk::PDev pdev, ddk::GpioProtocolClient enable_gpio)
       : AmlG12I2sOutTest(codec_protocol, region, std::move(pdev), std::move(enable_gpio)) {
-    metadata_.number_of_channels = 2;
+    metadata_.ring_buffer.number_of_channels = 2;
     metadata_.lanes_enable_mask[0] = 3;
-    metadata_.tdm.type = metadata::TdmType::StereoLeftJustified;
-    metadata_.tdm.bits_per_sample = 16;
-    metadata_.tdm.bits_per_slot = 16;
+    metadata_.dai.type = metadata::DaiType::StereoLeftJustified;
+    metadata_.dai.bits_per_sample = 16;
+    metadata_.dai.bits_per_slot = 16;
     aml_audio_ = std::make_unique<AmlTdmConfigDevice>(metadata_, region.GetMmioBuffer());
   }
 };
@@ -328,11 +328,11 @@ struct AmlG12Tdm1OutTest : public AmlG12I2sOutTest {
   AmlG12Tdm1OutTest(codec_protocol_t* codec_protocol, ddk_mock::MockMmioRegRegion& region,
                     ddk::PDev pdev, ddk::GpioProtocolClient enable_gpio)
       : AmlG12I2sOutTest(codec_protocol, region, std::move(pdev), std::move(enable_gpio)) {
-    metadata_.number_of_channels = 4;
-    metadata_.dai_number_of_channels = 4;
+    metadata_.ring_buffer.number_of_channels = 4;
     metadata_.lanes_enable_mask[0] = 0xf;
-    metadata_.tdm.type = metadata::TdmType::Tdm1;
-    metadata_.tdm.bits_per_slot = 16;
+    metadata_.dai.type = metadata::DaiType::Tdm1;
+    metadata_.dai.number_of_channels = 4;
+    metadata_.dai.bits_per_slot = 16;
     aml_audio_ = std::make_unique<AmlTdmConfigDevice>(metadata_, region.GetMmioBuffer());
   }
 };
@@ -873,11 +873,11 @@ TEST(AmlG12Tdm, EnableAndMuteChannelsTdm2Lanes) {
                                ddk_mock::MockMmioRegRegion& region, ddk::PDev pdev,
                                ddk::GpioProtocolClient enable_gpio)
         : AmlG12I2sOutTest(codec_protocol, region, std::move(pdev), std::move(enable_gpio)) {
-      metadata_.number_of_channels = 4;
+      metadata_.ring_buffer.number_of_channels = 4;
       metadata_.lanes_enable_mask[0] = 0x3;
       metadata_.lanes_enable_mask[1] = 0x3;
-      metadata_.tdm.type = metadata::TdmType::Tdm1;
-      metadata_.tdm.bits_per_slot = 16;
+      metadata_.dai.type = metadata::DaiType::Tdm1;
+      metadata_.dai.bits_per_slot = 16;
       aml_audio_ = std::make_unique<AmlTdmConfigDevice>(metadata_, region.GetMmioBuffer());
     }
   };
@@ -1145,15 +1145,15 @@ struct AmlG12I2sInTest : public AmlG12TdmStream {
     metadata_.is_input = true;
     metadata_.mClockDivFactor = 10;
     metadata_.sClockDivFactor = 25;
-    metadata_.number_of_channels = 2;
-    metadata_.dai_number_of_channels = 2;
+    metadata_.ring_buffer.number_of_channels = 2;
+    metadata_.dai.number_of_channels = 2;
     metadata_.lanes_enable_mask[0] = 3;
     metadata_.bus = metadata::AmlBus::TDM_C;
     metadata_.version = metadata::AmlVersion::kS905D2G;
-    metadata_.tdm.type = metadata::TdmType::I2s;
-    metadata_.tdm.bits_per_sample = 16;
-    metadata_.tdm.bits_per_slot = 32;
-    metadata_.tdm.number_of_codecs = 0;
+    metadata_.dai.type = metadata::DaiType::I2s;
+    metadata_.dai.bits_per_sample = 16;
+    metadata_.dai.bits_per_slot = 32;
+    metadata_.codecs.number_of_codecs = 0;
     aml_audio_ = std::make_unique<AmlTdmConfigDevice>(metadata_, region.GetMmioBuffer());
   }
 
@@ -1187,12 +1187,12 @@ struct AmlG12PcmInTest : public AmlG12I2sInTest {
   AmlG12PcmInTest(ddk_mock::MockMmioRegRegion& region, ddk::PDev pdev,
                   ddk::GpioProtocolClient enable_gpio)
       : AmlG12I2sInTest(region, std::move(pdev), std::move(enable_gpio)) {
-    metadata_.number_of_channels = 1;
-    metadata_.dai_number_of_channels = 1;
+    metadata_.ring_buffer.number_of_channels = 1;
+    metadata_.dai.number_of_channels = 1;
     metadata_.lanes_enable_mask[0] = 1;
-    metadata_.tdm.type = metadata::TdmType::Tdm1;
-    metadata_.tdm.bits_per_slot = 16;
-    metadata_.tdm.sclk_on_raising = true;
+    metadata_.dai.type = metadata::DaiType::Tdm1;
+    metadata_.dai.bits_per_slot = 16;
+    metadata_.dai.sclk_on_raising = true;
     aml_audio_ = std::make_unique<AmlTdmConfigDevice>(metadata_, region.GetMmioBuffer());
   }
 };
@@ -1317,14 +1317,14 @@ metadata::AmlConfig GetDefaultMetadata() {
   metadata.is_input = false;
   metadata.mClockDivFactor = 10;
   metadata.sClockDivFactor = 25;
-  metadata.number_of_channels = 2;
-  metadata.dai_number_of_channels = 2;
+  metadata.ring_buffer.number_of_channels = 2;
+  metadata.dai.number_of_channels = 2;
   metadata.lanes_enable_mask[0] = 3;
   metadata.bus = metadata::AmlBus::TDM_C;
   metadata.version = metadata::AmlVersion::kS905D2G;
-  metadata.tdm.type = metadata::TdmType::I2s;
-  metadata.tdm.bits_per_sample = 16;
-  metadata.tdm.bits_per_slot = 32;
+  metadata.dai.type = metadata::DaiType::I2s;
+  metadata.dai.bits_per_sample = 16;
+  metadata.dai.bits_per_slot = 32;
   return metadata;
 }
 
@@ -1364,7 +1364,7 @@ struct AmlG12TdmTest : public zxtest::Test {
   void TestRingBufferSize(uint8_t number_of_channels, uint32_t frames_req,
                           uint32_t frames_expected) {
     auto metadata = GetDefaultMetadata();
-    metadata.number_of_channels = number_of_channels;
+    metadata.ring_buffer.number_of_channels = number_of_channels;
     tester_.SetMetadata(&metadata, sizeof(metadata));
 
     ddk::GpioProtocolClient unused_gpio;
