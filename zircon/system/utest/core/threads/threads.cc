@@ -1057,7 +1057,14 @@ class RegisterWriteSetup {
   using SaveFunc = void (*)();
 
   RegisterWriteSetup() = default;
-  ~RegisterWriteSetup() { zx_handle_close(thread_handle_); }
+
+  ~RegisterWriteSetup() {
+    // If the thread is still suspended, it means we have not called DoSave
+    // yet and the thread is still hanging. We need to terminate it.
+    if (suspend_token_ != ZX_HANDLE_INVALID) {
+      ASSERT_NO_FATAL_FAILURES(ExitThread());
+    }
+  }
 
   zx_handle_t thread_handle() const { return thread_handle_; }
 
@@ -1107,6 +1114,20 @@ class RegisterWriteSetup {
               ZX_OK);
 
     memcpy(out, &stack.regs_got, sizeof(RegisterStruct));
+  }
+
+  void ExitThread() {
+    ASSERT_NE(suspend_token_, ZX_HANDLE_INVALID);
+    // Tell the thread to exit.
+    p_.store(kTestAtomicExitValue);
+    // Resume the thread.
+    ASSERT_EQ(zx_handle_close(suspend_token_), ZX_OK);
+    suspend_token_ = ZX_HANDLE_INVALID;
+    // Wait for the thread termination to complete.
+    ASSERT_EQ(zx_object_wait_one(thread_handle_, ZX_THREAD_TERMINATED, ZX_TIME_INFINITE, NULL),
+                                 ZX_OK);
+    zx_handle_close(thread_handle_);
+    thread_handle_ = ZX_HANDLE_INVALID;
   }
 
  private:
@@ -1516,7 +1537,7 @@ TEST(Threads, WritingArmFlagsRegister) {
   }
   value.store(kTestAtomicExitValue);
   ASSERT_EQ(zx_object_wait_one(thread_handle, ZX_THREAD_TERMINATED, ZX_TIME_INFINITE, NULL), ZX_OK);
-
+  ASSERT_EQ(zx_handle_close(thread_handle), ZX_OK);
 // Clean up.
 #endif
 }
