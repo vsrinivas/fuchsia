@@ -7,6 +7,8 @@
 #include "helper/test_device_helper.h"
 #include "magma.h"
 #include "magma_vendor_queries.h"
+#include "magma_vsi_vip_devices.h"
+#include "magma_vsi_vip_types.h"
 #include "platform_buffer.h"
 
 constexpr uint32_t kPageSize = 4096;
@@ -28,6 +30,22 @@ TEST(TestQuery, AddressSpaceRange) {
 
 TEST(TestQuery, Sram) {
   magma::TestDeviceBase test_device(MAGMA_VENDOR_ID_VSI);
+
+  uint32_t identity_buffer;
+  EXPECT_EQ(MAGMA_STATUS_OK,
+            magma_query_returns_buffer2(test_device.device(), kMsdVsiVendorQueryChipIdentity,
+                                        &identity_buffer));
+
+  magma_vsi_vip_chip_identity identity;
+  {
+    auto buffer = magma::PlatformBuffer::Import(identity_buffer);
+    ASSERT_TRUE(buffer);
+    ASSERT_TRUE(buffer->Read(&identity, 0, sizeof(identity)));
+  }
+  if (identity.chip_model == 0x8000 && identity.customer_id == MAGMA_VSI_VIP_NELSON_CUSTOMER_ID) {
+    // Nelson has no AXI SRAM.
+    GTEST_SKIP();
+  }
 
   uint32_t sram_buffer;
   EXPECT_EQ(MAGMA_STATUS_OK,

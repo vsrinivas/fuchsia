@@ -16,6 +16,7 @@
 #include "magma_util/macros.h"
 #include "magma_util/register_io.h"
 #include "magma_util/thread.h"
+#include "magma_vsi_vip_devices.h"
 #include "magma_vsi_vip_types.h"
 #include "mapped_batch.h"
 #include "msd.h"
@@ -45,6 +46,12 @@ class MsdVsiDevice : public msd_device_t,
 
   uint32_t device_id() const { return device_id_; }
   uint32_t revision() const { return revision_; }
+  uint32_t customer_id() const { return customer_id_; }
+
+  // Returns whether an AXI SRAM is expected.
+  bool HasAxiSram() const {
+    return (!((device_id() == 0x8000) && (customer_id() == MAGMA_VSI_VIP_NELSON_CUSTOMER_ID)));
+  }
 
   bool Shutdown();
   bool IsIdle();
@@ -224,6 +231,7 @@ class MsdVsiDevice : public msd_device_t,
   std::unique_ptr<GpuFeatures> gpu_features_;
   uint32_t device_id_ = 0;
   uint32_t revision_ = 0;
+  uint32_t customer_id_ = 0;
   std::unique_ptr<magma::PlatformBusMapper> bus_mapper_;
   std::unique_ptr<PageTableArrays> page_table_arrays_;
   std::unique_ptr<PageTableSlotAllocator> page_table_slot_allocator_;

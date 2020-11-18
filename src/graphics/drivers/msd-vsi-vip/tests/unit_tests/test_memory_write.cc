@@ -21,7 +21,18 @@ int etnaviv_cl_test_gc7000(int argc, char* argv[]);
 #include "src/graphics/drivers/msd-vsi-vip/src/msd_vsi_device.h"
 #include "src/graphics/drivers/msd-vsi-vip/tests/mock/mock_mapped_batch.h"
 
-TEST(MsdVsiDevice, MemoryWrite) { EXPECT_EQ(0, etnaviv_cl_test_gc7000(0, nullptr)); }
+TEST(MsdVsiDevice, MemoryWrite) {
+  {
+    // Not supported for Nelson.
+    std::unique_ptr<MsdVsiDevice> device =
+        MsdVsiDevice::Create(GetTestDeviceHandle(), false /* start_device_thread */);
+    if ((device->device_id() == 0x8000) &&
+        (device->customer_id() == MAGMA_VSI_VIP_NELSON_CUSTOMER_ID)) {
+      GTEST_SKIP();
+    }
+  }
+  EXPECT_EQ(0, etnaviv_cl_test_gc7000(0, nullptr));
+}
 
 class TestMsdVsiDevice : public drm_test_info {
  public:

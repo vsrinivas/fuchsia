@@ -120,15 +120,18 @@ bool MsdVsiDevice::Init(void* device_handle) {
 
   register_io_ = std::make_unique<magma::RegisterIo>(std::move(mmio));
 
-  external_sram_ = platform_device_->platform_device()->GetMmioBuffer(kSramMmioIndex);
-  if (!external_sram_)
-    return DRETF(false, "GetMmioBuffer(%d) failed", kSramMmioIndex);
-
-  if (!external_sram_->SetCachePolicy(MAGMA_CACHE_POLICY_WRITE_COMBINING))
-    return DRETF(false, "Failed setting cache policy on external SRAM");
-
   device_id_ = registers::ChipId::Get().ReadFrom(register_io_.get()).chip_id().get();
-  DLOG("Detected vsi chip id 0x%x", device_id_);
+  customer_id_ = registers::CustomerId::Get().ReadFrom(register_io_.get()).customer_id().get();
+  DLOG("Detected vsi chip id 0x%x customer id 0x%x", device_id_, customer_id_);
+
+  if (HasAxiSram()) {
+    external_sram_ = platform_device_->platform_device()->GetMmioBuffer(kSramMmioIndex);
+    if (!external_sram_)
+      return DRETF(false, "GetMmioBuffer(%d) failed", kSramMmioIndex);
+
+    if (!external_sram_->SetCachePolicy(MAGMA_CACHE_POLICY_WRITE_COMBINING))
+      return DRETF(false, "Failed setting cache policy on external SRAM");
+  }
 
   if (device_id_ != 0x7000 && device_id_ != 0x8000)
     return DRETF(false, "Unspported gpu model 0x%x\n", device_id_);
@@ -1149,8 +1152,7 @@ magma_status_t MsdVsiDevice::ChipIdentity(magma_vsi_vip_chip_identity* out_ident
       registers::ProductId::Get().ReadFrom(register_io_.get()).product_id().get();
   out_identity->chip_flags = 0x4;
   out_identity->eco_id = registers::EcoId::Get().ReadFrom(register_io_.get()).eco_id().get();
-  out_identity->customer_id =
-      registers::CustomerId::Get().ReadFrom(register_io_.get()).customer_id().get();
+  out_identity->customer_id = customer_id();
   return MAGMA_STATUS_OK;
 }
 
@@ -1171,7 +1173,8 @@ magma_status_t MsdVsiDevice::ChipOption(magma_vsi_vip_chip_option* out_option) {
 }
 
 magma_status_t MsdVsiDevice::QuerySram(uint32_t* handle_out) {
-  DASSERT(external_sram_);
+  if (!external_sram_)
+    return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "Device has no external SRAM");
 
   if (external_sram_->HasChildren())
     return DRET_MSG(MAGMA_STATUS_ACCESS_DENIED, "External SRAM has children");
@@ -1184,7 +1187,11 @@ magma_status_t MsdVsiDevice::QuerySram(uint32_t* handle_out) {
   memset(ptr, 0, external_sram_->size());
 
   // Client looks for phys addr in the first few bytes
-  *reinterpret_cast<uint64_t*>(ptr) = platform_device_->GetExternalSramPhysicalBase();
+  std::optional<uint64_t> sram_base = platform_device_->GetExternalSramPhysicalBase();
+  if (!sram_base.has_value()) {
+    return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "Could not get external sram physical base");
+  }
+  *reinterpret_cast<uint64_t*>(ptr) = sram_base.value();
 
   external_sram_->UnmapCpu();
 

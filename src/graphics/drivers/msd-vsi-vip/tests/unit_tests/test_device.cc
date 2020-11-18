@@ -80,6 +80,9 @@ TEST_F(MsdVsiDeviceTest, ChipOption) {
 }
 
 TEST_F(MsdVsiDeviceTest, QuerySram) {
+  if (!device_->HasAxiSram()) {
+    GTEST_SKIP();
+  }
   uint32_t sram_buffer;
   EXPECT_EQ(MAGMA_STATUS_OK, msd_device_query_returns_buffer(
                                  device_.get(), kMsdVsiVendorQueryExternalSram, &sram_buffer));

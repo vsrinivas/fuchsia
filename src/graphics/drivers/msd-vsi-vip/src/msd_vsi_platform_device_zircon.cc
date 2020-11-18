@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <optional>
+
 #include <ddk/device.h>
 #include <magma_util/platform/zircon/zircon_platform_device.h>
 
@@ -10,14 +12,16 @@
 class MsdVsiPlatformDeviceZircon : public MsdVsiPlatformDevice {
  public:
   MsdVsiPlatformDeviceZircon(std::unique_ptr<magma::PlatformDevice> platform_device,
-                             uint64_t external_sram_phys_base)
+                             std::optional<uint64_t> external_sram_phys_base)
       : MsdVsiPlatformDevice(std::move(platform_device)),
         external_sram_phys_base_(external_sram_phys_base) {}
 
-  uint64_t GetExternalSramPhysicalBase() const override { return external_sram_phys_base_; }
+  std::optional<uint64_t> GetExternalSramPhysicalBase() const override {
+    return external_sram_phys_base_;
+  }
 
  private:
-  uint64_t external_sram_phys_base_;
+  std::optional<uint64_t> external_sram_phys_base_;
 };
 
 std::unique_ptr<MsdVsiPlatformDevice> MsdVsiPlatformDevice::Create(void* platform_device_handle) {
@@ -32,11 +36,10 @@ std::unique_ptr<MsdVsiPlatformDevice> MsdVsiPlatformDevice::Create(void* platfor
   zx_status_t status =
       device_get_metadata(zircon_device->zx_device(), 0 /*type*/, &external_sram_phys_base,
                           sizeof(external_sram_phys_base), &actual);
-  if (status != ZX_OK)
-    return DRETP(nullptr, "device_get_metadata failed: %d", status);
+  if (status == ZX_OK)
+    DASSERT(actual == sizeof(external_sram_phys_base));
 
-  DASSERT(actual == sizeof(external_sram_phys_base));
-
-  return std::make_unique<MsdVsiPlatformDeviceZircon>(std::move(platform_device),
-                                                      external_sram_phys_base);
+  return std::make_unique<MsdVsiPlatformDeviceZircon>(
+      std::move(platform_device),
+      status == ZX_OK ? std::optional<uint64_t>(external_sram_phys_base) : std::nullopt);
 }
