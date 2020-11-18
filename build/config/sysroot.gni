@@ -10,9 +10,8 @@ declare_args() {
 if (current_os == target_os && target_sysroot != "") {
   sysroot = target_sysroot
 } else if (is_fuchsia) {
-  sysroot = get_label_info(
-                "//zircon/public/sysroot(//build/zircon:sysroot_toolchain)",
-                "root_out_dir") + "/sysroot"
+  sysroot = get_label_info("//build/config/fuchsia:compiler_sysroot",
+                           "target_gen_dir")
 } else if (is_linux) {
   sysroot = "//prebuilt/third_party/sysroot/linux"
 } else if (is_mac) {

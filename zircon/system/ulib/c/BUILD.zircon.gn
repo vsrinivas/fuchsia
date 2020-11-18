@@ -75,17 +75,8 @@ if (zx == "/") {
 }
 
 if (zx != "/" && zircon_toolchain == false) {
-  import("libc_toolchain.gni")
-
-  _libc_toolchain = sysroot_libc_base_toolchain
-  if (toolchain_variant.suffix != "") {
-    _libc_toolchain += string_replace(toolchain_variant.suffix, "-fuzzer", "")
-  } else {
-    _libc_toolchain = system_libc_toolchain
-  }
-
   group("c") {
-    public_deps = [ ":c(${_libc_toolchain})" ]
+    public_deps = [ ":c(//zircon/system/ulib/c:user.libc_$target_cpu)" ]
   }
 } else {
   zx_library("c") {
@@ -97,14 +88,13 @@ if (zx != "/" && zircon_toolchain == false) {
     sdk_migrated = true
 
     if (zx == "/") {
-      # Do not export the C library to the Fuchsia build system anymore.
-      install_path = false
-      sdk_migrated = true
-    } else {
       # At link time and in DT_SONAME, musl is known as libc.so.  But the
       # (only) place it needs to be installed at runtime is where the
       # PT_INTERP strings embedded in executables point, which is ld.so.1.
-      install_name = "ld.so.1"
+      install_path = "lib/${toolchain.libprefix}ld.so.1"
+    } else {
+      # TODO(60613): Enable this once the sysroot moves entirely to the Fuchsia build.
+      # install_name = "ld.so.1"
 
       metadata = {
         runtime_deps_manifest_lines =
@@ -176,7 +166,7 @@ if (zx != "/" && zircon_toolchain == false) {
   # trace-engine and whatnot that are completely un-needed and also
   # interfere with sysroot generation.
   group("crt1") {
-    public_deps = [ ":crt1($_libc_toolchain)" ]
+    public_deps = [ ":crt1(//zircon/system/ulib/c:user.libc_$current_cpu)" ]
   }
 } else {
   source_set("crt1") {

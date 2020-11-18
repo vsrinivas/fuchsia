@@ -1708,6 +1708,8 @@ template("variant_target") {
           data_deps = []
         }
         if (zircon_toolchain == false) {
+          # TODO(60613): Remove line below once sysroot generation moves to the Fuchsia build.
+          data_deps += [ "//build/unification/lib/sysroot" ]
           if (defined(crate_root)) {
             deps += [ "//zircon/public/sysroot:rust_binary_deps" ]
           } else {

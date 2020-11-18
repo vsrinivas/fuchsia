@@ -21,17 +21,7 @@ if (current_toolchain != sysroot_toolchain) {
   # sysroot is properly setup, i.e. all headers are present and the C library,
   # VDSO library and stub libraries are built.
   group("cpp_binary_deps") {
-    # This public_deps list will ensure the sysroot is populated with
-    # the system headers, and linker stubs. However, we need to depend
-    # on the real libraries to collect the right metadata as well.
     public_deps = [ ":$target_name($sysroot_toolchain)" ]
-
-    # The following deps entries ensure that the right variant of the
-    # C library and VDSO are linked to the current linkable binary.
-    deps = [
-      "//zircon/system/ulib/c",
-      "//zircon/system/ulib/zircon",
-    ]
   }
 
   # An additional dependency for executable() Fuchsia user binaries. It adds
@@ -61,12 +51,7 @@ if (current_toolchain != sysroot_toolchain) {
   }
 } else {
   import("//build/config/fuchsia/zircon.gni")
-
-  import("//zircon/system/ulib/c/sysroot_entries.gni")
-  import("//zircon/system/ulib/zircon/sysroot_entries.gni")
-  sysroot_entries =
-      sysroot_uninstrumented_libc_entries + sysroot_instrumented_libc_entries +
-      sysroot_crt1_entries + sysroot_vdso_entries
+  import("//build/config/fuchsia/zircon_legacy_vars.gni")
 
   sysroot_dir = get_label_info(":sysroot($sysroot_toolchain)", "root_out_dir")
   sysroot_dir += "/sysroot"
@@ -119,7 +104,9 @@ if (current_toolchain != sysroot_toolchain) {
   #
   sysroot_headers = []
   sysroot_headers_deps = []
-  foreach(entry, sysroot_entries) {
+  sysroot_deps = []
+  i = 0
+  foreach(entry, zircon_legacy_sysroot) {
     if (defined(entry.sdk)) {
       sdk = {
       }
@@ -137,18 +124,38 @@ if (current_toolchain != sysroot_toolchain) {
             sysroot_headers_deps += sdk.deps
           }
         }
+      } else if (defined(sdk.link)) {
+        file = "$sysroot_dir/${sdk.link}"
+
+        # Only copy link libraries to the sysroot, because copying
+        # distribution libraries will populate the build's metadata
+        # with unwanted installation entries for /lib/ld.so.1 (e.g.
+        # when using the "gcc" variant).
+        i = i + 1
+        copy_target = "copy_$i"
+        sysroot_deps += [ ":$copy_target" ]
+        copy(copy_target) {
+          visibility = [ ":sysroot" ]
+          sources = [ "$zircon_root_build_dir/${sdk.source}" ]
+          outputs = [ file ]
+          forward_variables_from(sdk, [ "deps" ])
+        }
       }
     }
   }
 
   # Write sysroot_entries to a JSON file that will get parsed
   # by our populate_sysroot_headers.py script below.
+  import("//zircon/system/ulib/c/sysroot_entries.gni")
+  import("//zircon/system/ulib/zircon/sysroot_entries.gni")
   sysroot_entries_json_file = "$root_out_dir/sysroot-entries.json"
 
   generated_file("sysroot-entries-json") {
     visibility = [ ":*" ]
-    contents = sysroot_entries
     outputs = [ sysroot_entries_json_file ]
+    contents = sysroot_uninstrumented_libc_entries +
+               sysroot_instrumented_libc_entries + sysroot_crt1_entries +
+               sysroot_vdso_entries
     output_conversion = "json"
   }
 
@@ -181,99 +188,25 @@ if (current_toolchain != sysroot_toolchain) {
     visibility = [ ":*" ]
   }
 
-  # Copy the unstripped C library to the sysroot as libc.so, as this will be used
-  # for Rust and Go binaries.
-  copy("sysroot_libc") {
-    outputs = [ "$sysroot_dir/lib/libc.so" ]
-    sources = [ rebase_path(system_libc_unstripped, ".", root_build_dir) ]
-    deps = [ system_libc_target ]
+  group("sysroot") {
+    deps = sysroot_deps + [ ":headers" ]
   }
 
-  # Copy the unstripped Zircon library to the sysroot, this is used to support
-  # '-lzircon' that might still appear in build commands in certain build
-  # configurations.
-  copy("sysroot_libzircon") {
-    outputs = [ "$sysroot_dir/lib/libzircon.so" ]
-    sources = [ sysroot_vdso_unstripped ]
-    deps = [ sysroot_vdso_target ]
-  }
-
-  # Copy the C runtime startup object to the sysroot.
-  copy("sysroot_crt1") {
-    outputs = [ "$sysroot_dir/lib/Scrt1.o" ]
-    sources = [ sysroot_crt1_obj ]
-    deps = [ sysroot_crt1_target ]
-  }
-
-  # When generating the build commands to link Rust binaries, GN will actually
-  # create build commands that include '-lc.so' and '-lzircon.so' to the final
-  # linker (instead of '-lc' and '-lzircon'.
-  #
-  # That's because GN will list of library dependencies, and convert each one
-  # of them into an '-l<something>' argument by removing the "lib" prefix and
-  # the file's extension.
-  #
-  # In the case of the C library and the VDSO, dependencies will point to
-  # 'libc.so.debug' and 'libzircon.so.debug', the unstripped versions, so
-  # the '.debug' extension is removed, but the '.so' suffix remains.
-  #
-  # A simple way to work-around the issue is to provide linker stub named
-  # 'libc.so.so' and 'libzircon.so.so' that redirect to the real library.
-  generated_file("sysroot_libc_rust") {
-    outputs = [ "$sysroot_dir/lib/libc.so.so" ]
-    contents = [ "INPUT(libc.so)" ]
-  }
-
-  generated_file("sysroot_libzircon_rust") {
-    outputs = [ "$sysroot_dir/lib/libzircon.so.so" ]
-    contents = [ "INPUT(libzircon.so)" ]
-  }
-
-  sysroot_binary_deps = [
-    ":sysroot_libc",
-    ":sysroot_libc_rust",
-    ":sysroot_libzircon",
-    ":sysroot_libzircon_rust",
-  ]
-
-  # Generate empty linker stubs for legacy system libraries, whose API
-  # is fully implemented by the C library.
-  sysroot_binary_stub_deps = []
-
-  foreach(stub,
-          [
-            "libdl",
-            "libm",
-            "libpthread",
-            "librt",
-          ]) {
-    generated_file("sysroot_$stub") {
-      outputs = [ "$sysroot_dir/lib/$stub.so" ]
-      contents = [ "/* DUMMY */" ]
-    }
-    sysroot_binary_stub_deps += [ ":sysroot_$stub" ]
-  }
-
-  sysroot_binary_deps += sysroot_binary_stub_deps
-
+  # TODO(60613): Split sysroot into the proper dependencies.
   group("cpp_binary_deps") {
-    deps = sysroot_binary_deps + [ ":headers" ]
+    deps = [ ":sysroot" ]
   }
 
   group("crt1_deps") {
-    # This ensures that the C runtime startup object is built and copied to
-    # the sysroot, but not added as a link-time dependency. This is necessary
-    # because the compiler will implicitly inject the sysroot's Scrt1.o into the
-    # final link command anyway.
-    deps = [ ":sysroot_crt1" ]
+    # Nothing for now
   }
 
   group("rust_binary_deps") {
-    deps = sysroot_binary_deps + [ ":headers" ]
+    deps = [ ":sysroot" ]
   }
 
   group("go_binary_deps") {
-    deps = sysroot_binary_deps + [ ":headers" ]
+    deps = [ ":sysroot" ]
   }
 
   group("system_libc_deps") {

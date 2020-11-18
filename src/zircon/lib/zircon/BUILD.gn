@@ -8,7 +8,13 @@ import("//build/sdk/sdk_noop_atom.gni")
 # the Zircon VDSO, a.k.a. libzircon.so.
 # See (fxbug.dev/60613) for details.
 group("zircon") {
-  deps = [ "//zircon/system/ulib/zircon" ]
+  public_configs = [ ":zircon.config" ]
+  public_deps = [ "//zircon/public/sysroot:cpp_binary_deps" ]
+}
+
+config("zircon.config") {
+  visibility = [ ":lib" ]
+  libs = [ "zircon" ]
 }
 
 # The zircon library is not a real SDK atom since it is provided
