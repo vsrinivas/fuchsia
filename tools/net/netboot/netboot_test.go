@@ -267,6 +267,7 @@ func TestDiscover(t *testing.T) {
 	c := newClientWithPorts(port, port+1)
 	if _, err := c.Discover(context.Background(), nodename); err != nil {
 		t.Errorf("discovery: %v", err)
+		t.Log("Note this test requires a specific local network configuration. Make sure you can run `fx emu -N --headless`.")
 	}
 }
 
@@ -299,6 +300,7 @@ func TestDiscoverAll(t *testing.T) {
 	got, err := c.DiscoverAll(context.Background())
 	if err != nil {
 		t.Fatalf("discover all: %v", err)
+		t.Log("Note this test requires a specific local network configuration. Make sure you can run `fx emu -N --headless`.")
 	}
 	m := make(map[string]*Target)
 	for _, target := range got {
