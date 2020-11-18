@@ -10,7 +10,6 @@
 #include <lib/fdio/unsafe.h>
 #include <lib/fdio/watcher.h>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
@@ -19,6 +18,8 @@
 #include <ddktl/fidl.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
+
+#include "src/devices/tests/ddk-power/test-power-child-bind.h"
 
 using llcpp::fuchsia::device::DevicePerformanceStateInfo;
 using llcpp::fuchsia::device::DevicePowerStateInfo;
@@ -249,8 +250,4 @@ static zx_driver_ops_t test_power_child_driver_ops = []() -> zx_driver_ops_t {
   return ops;
 }();
 
-// clang-format off
-ZIRCON_DRIVER_BEGIN(TestPowerChild, test_power_child_driver_ops, "zircon", "0.1", 1)
-  BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_TEST_POWER_CHILD),
-ZIRCON_DRIVER_END(TestPowerChild)
-    // clang-format on
+ZIRCON_DRIVER(TestPowerChild, test_power_child_driver_ops, "zircon", "0.1")
