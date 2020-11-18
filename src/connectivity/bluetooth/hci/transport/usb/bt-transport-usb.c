@@ -3,6 +3,8 @@
 // found in the LICENSE file.
 
 #include <assert.h>
+#include <lib/sync/completion.h>
+#include <stdatomic.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -80,30 +82,105 @@ typedef struct {
 
   mtx_t mutex;
   size_t parent_req_size;
+  volatile atomic_size_t allocated_requests_count;
+  atomic_size_t pending_request_count;
+  sync_completion_t requests_freed_completion;
+  // Whether or not we are being unbound.
+  // Protected by pending_request_lock.
+  bool unbound;
+  // pending_request_lock may be held whether or not mutex is held.
+  // If mutex is held, this must be acquired AFTER mutex is locked.
+  // Should never be acquired before mutex.
+  mtx_t pending_request_lock;
+  cnd_t pending_requests_completed;
 } hci_t;
+
+typedef void (*usb_callback_t)(void* ctx, usb_request_t* req);
 
 static void hci_event_complete(void* ctx, usb_request_t* req);
 static void hci_acl_read_complete(void* ctx, usb_request_t* req);
 
+// Allocates a USB request and keeps track of how many requests have been allocated.
+static zx_status_t instrumented_request_alloc(hci_t* cdc, usb_request_t** out, uint64_t data_size,
+                                              uint8_t ep_address, size_t req_size) {
+  atomic_fetch_add(&cdc->allocated_requests_count, 1);
+  return usb_request_alloc(out, data_size, ep_address, req_size);
+}
+
+// Releases a USB request and decrements the usage count.
+// Signals a completion when all requests have been released.
+static void instrumented_request_release(hci_t* cdc, usb_request_t* req) {
+  usb_request_release(req);
+  atomic_fetch_add(&cdc->allocated_requests_count, -1);
+  if ((atomic_load(&cdc->allocated_requests_count) == 0)) {
+    sync_completion_signal(&cdc->requests_freed_completion);
+  }
+}
+
+// usb_request_callback is a hook that is inserted for every USB request
+// which guarantees the following conditions:
+// * No completions will be invoked during driver unbind.
+// * pending_request_count shall indicate the number of requests outstanding.
+// * pending_requests_completed shall be asserted when the number of requests pending equals zero.
+// * Requests are properly freed during shutdown.
+static void usb_request_callback(hci_t* cdc, usb_request_t* req) {
+  // Invoke the real completion if not shutting down.
+  mtx_lock(&cdc->pending_request_lock);
+  if (!cdc->unbound) {
+    // Request callback pointer is stored at the end of the usb_request_t after
+    // other data that has been appended to the request by drivers elsewhere in the stack.
+    // memcpy is necessary here to prevent undefined behavior since there are no guarantees
+    // about the alignment of data that other drivers append to the usb_request_t.
+    usb_callback_t callback;
+    memcpy(&callback, (unsigned char*)(req) + cdc->parent_req_size + sizeof(usb_req_internal_t),
+           sizeof(callback));
+    // Our threading model allows a callback to immediately re-queue a request here
+    // which would result in attempting to recursively lock pending_request_lock.
+    // Unlocking the mutex is necessary to prevent a crash.
+    mtx_unlock(&cdc->pending_request_lock);
+    callback(cdc, req);
+    mtx_lock(&cdc->pending_request_lock);
+  } else {
+    instrumented_request_release(cdc, req);
+  }
+  int pending_request_count = (int)atomic_fetch_add(&cdc->pending_request_count, -1);
+  // Since atomic_fetch_add returns the value that was in pending_request_count prior to
+  // decrementing, there are no pending requests when the value returned is 1.
+  if (pending_request_count == 1) {
+    cnd_signal(&cdc->pending_requests_completed);
+  }
+  mtx_unlock(&cdc->pending_request_lock);
+}
+
+static void usb_request_send(void* ctx, usb_protocol_t* function, usb_request_t* req,
+                             usb_callback_t callback) {
+  hci_t* cdc = ctx;
+  mtx_lock(&cdc->pending_request_lock);
+  if (cdc->unbound) {
+    mtx_unlock(&cdc->pending_request_lock);
+    return;
+  }
+  atomic_fetch_add(&cdc->pending_request_count, 1);
+  mtx_unlock(&cdc->pending_request_lock);
+  usb_request_complete_t internal_completion;
+  internal_completion.callback = (void*)usb_request_callback;
+  internal_completion.ctx = ctx;
+  memcpy((unsigned char*)(req) + cdc->parent_req_size + sizeof(usb_req_internal_t), &callback,
+         sizeof(callback));
+  usb_request_queue(function, req, &internal_completion);
+}
+
 static void queue_acl_read_requests_locked(hci_t* hci) {
   usb_request_t* req = NULL;
-  usb_request_complete_t complete = {
-      .callback = hci_acl_read_complete,
-      .ctx = hci,
-  };
   while ((req = usb_req_list_remove_head(&hci->free_acl_read_reqs, hci->parent_req_size)) != NULL) {
-    usb_request_queue(&hci->usb, req, &complete);
+    usb_request_send(hci, &hci->usb, req, hci_acl_read_complete);
   }
 }
 
 static void queue_interrupt_requests_locked(hci_t* hci) {
   usb_request_t* req = NULL;
-  usb_request_complete_t complete = {
-      .callback = hci_event_complete,
-      .ctx = hci,
-  };
   while ((req = usb_req_list_remove_head(&hci->free_event_reqs, hci->parent_req_size)) != NULL) {
-    usb_request_queue(&hci->usb, req, &complete);
+    usb_request_send(hci, &hci->usb, req, hci_event_complete);
   }
 }
 
@@ -124,7 +201,8 @@ static void snoop_channel_write_locked(hci_t* hci, uint8_t flags, uint8_t* bytes
   uint8_t snoop_buffer[length + 1];
   snoop_buffer[0] = flags;
   memcpy(snoop_buffer + 1, bytes, length);
-  zx_status_t status = zx_channel_write(hci->snoop_channel, 0, snoop_buffer, length + 1, NULL, 0);
+  zx_status_t status =
+      zx_channel_write(hci->snoop_channel, 0, snoop_buffer, (uint32_t)(length + 1), NULL, 0);
   if (status < 0) {
     if (status != ZX_ERR_PEER_CLOSED) {
       zxlogf(ERROR, "bt-transport-usb: failed to write to snoop channel: %s",
@@ -148,6 +226,7 @@ static void hci_event_complete(void* ctx, usb_request_t* req) {
   if (req->response.status != ZX_OK) {
     zxlogf(ERROR, "bt-transport-usb: request completed with error status %d (%s). Removing device",
            req->response.status, zx_status_get_string(req->response.status));
+    instrumented_request_release(ctx, req);
     remove_device_locked(hci);
     goto out2;
   }
@@ -170,7 +249,8 @@ static void hci_event_complete(void* ctx, usb_request_t* req) {
   if (hci->event_buffer_offset == 0 && length >= 2) {
     if (packet_size == length) {
       if (hci->cmd_channel != ZX_HANDLE_INVALID) {
-        zx_status_t status = zx_channel_write(hci->cmd_channel, 0, buffer, length, NULL, 0);
+        zx_status_t status =
+            zx_channel_write(hci->cmd_channel, 0, buffer, (uint32_t)length, NULL, 0);
         if (status < 0) {
           zxlogf(ERROR, "bt-transport-usb: hci_event_complete failed to write: %s",
                  zx_status_get_string(status));
@@ -200,7 +280,7 @@ static void hci_event_complete(void* ctx, usb_request_t* req) {
   // check to see if we have a full packet
   if (packet_size <= hci->event_buffer_offset) {
     zx_status_t status =
-        zx_channel_write(hci->cmd_channel, 0, hci->event_buffer, packet_size, NULL, 0);
+        zx_channel_write(hci->cmd_channel, 0, hci->event_buffer, (uint32_t)packet_size, NULL, 0);
     if (status < 0) {
       zxlogf(ERROR, "bt-transport-usb: failed to write: %s", zx_status_get_string(status));
     }
@@ -208,7 +288,7 @@ static void hci_event_complete(void* ctx, usb_request_t* req) {
     snoop_channel_write_locked(hci, bt_hci_snoop_flags(BT_HCI_SNOOP_TYPE_EVT, true),
                                hci->event_buffer, packet_size);
 
-    uint32_t remaining = hci->event_buffer_offset - packet_size;
+    uint32_t remaining = (uint32_t)(hci->event_buffer_offset - packet_size);
     memmove(hci->event_buffer, hci->event_buffer + packet_size, remaining);
     hci->event_buffer_offset = 0;
     hci->event_buffer_packet_length = 0;
@@ -230,6 +310,7 @@ static void hci_acl_read_complete(void* ctx, usb_request_t* req) {
   if (req->response.status != ZX_OK) {
     zxlogf(ERROR, "bt-transport-usb: request completed with error status %d (%s). Removing device",
            req->response.status, zx_status_get_string(req->response.status));
+    instrumented_request_release(ctx, req);
     remove_device_locked(hci);
     mtx_unlock(&hci->mutex);
     return;
@@ -246,7 +327,7 @@ static void hci_acl_read_complete(void* ctx, usb_request_t* req) {
   if (hci->acl_channel == ZX_HANDLE_INVALID) {
     zxlogf(ERROR, "bt-transport-usb: ACL data received while channel is closed");
   } else {
-    status = zx_channel_write(hci->acl_channel, 0, buffer, req->response.actual, NULL, 0);
+    status = zx_channel_write(hci->acl_channel, 0, buffer, (uint32_t)req->response.actual, NULL, 0);
     if (status < 0) {
       zxlogf(ERROR, "bt-transport-usb: hci_acl_read_complete failed to write: %s",
              zx_status_get_string(status));
@@ -273,6 +354,7 @@ static void hci_acl_write_complete(void* ctx, usb_request_t* req) {
     zxlogf(ERROR, "bt-transport-usb: request completed with error status %d (%s). Removing device",
            req->response.status, zx_status_get_string(req->response.status));
     remove_device_locked(hci);
+    instrumented_request_release(ctx, req);
     mtx_unlock(&hci->mutex);
     return;
   }
@@ -394,11 +476,7 @@ static void hci_handle_acl_read_events(hci_t* hci, zx_wait_item_t* acl_item) {
     size_t result = usb_request_copy_to(req, buf, length, 0);
     ZX_ASSERT(result == length);
     req->header.length = length;
-    usb_request_complete_t complete = {
-        .callback = hci_acl_write_complete,
-        .ctx = hci,
-    };
-    usb_request_queue(&hci->usb, req, &complete);
+    usb_request_send(hci, &hci->usb, req, hci_acl_write_complete);
   }
 
   return;
@@ -486,7 +564,7 @@ static zx_status_t hci_open_channel(hci_t* hci, zx_handle_t* in_channel, zx_hand
   if (!hci->read_thread_running) {
     hci_build_read_wait_items_locked(hci);
     thrd_t read_thread;
-    thrd_create_with_name(&read_thread, hci_read_thread, hci, "bt_usb_read_thread");
+    thrd_create(&read_thread, hci_read_thread, hci);
     hci->read_thread_running = true;
     thrd_detach(read_thread);
   } else {
@@ -504,7 +582,9 @@ static void hci_unbind(void* ctx) {
 
   // Close the transport channels so that the host stack is notified of device removal.
   mtx_lock(&hci->mutex);
-
+  mtx_lock(&hci->pending_request_lock);
+  hci->unbound = true;
+  mtx_unlock(&hci->pending_request_lock);
   zx_device_t* unbinding_zxdev = hci->zxdev;
   hci->zxdev = NULL;
 
@@ -513,7 +593,11 @@ static void hci_unbind(void* ctx) {
   channel_cleanup_locked(hci, &hci->snoop_channel);
 
   mtx_unlock(&hci->mutex);
-
+  mtx_lock(&hci->pending_request_lock);
+  while (atomic_load(&hci->pending_request_count)) {
+    cnd_wait(&hci->pending_requests_completed, &hci->pending_request_lock);
+  }
+  mtx_unlock(&hci->pending_request_lock);
   device_unbind_reply(unbinding_zxdev);
 }
 
@@ -524,18 +608,22 @@ static void hci_release(void* ctx) {
 
   usb_request_t* req;
   while ((req = usb_req_list_remove_head(&hci->free_event_reqs, hci->parent_req_size)) != NULL) {
-    usb_request_release(req);
+    instrumented_request_release(hci, req);
   }
   while ((req = usb_req_list_remove_head(&hci->free_acl_read_reqs, hci->parent_req_size)) != NULL) {
-    usb_request_release(req);
+    instrumented_request_release(hci, req);
   }
   while ((req = usb_req_list_remove_head(&hci->free_acl_write_reqs, hci->parent_req_size)) !=
          NULL) {
-    usb_request_release(req);
+    instrumented_request_release(hci, req);
   }
 
   mtx_unlock(&hci->mutex);
-
+  // Wait for all the requests in the pipeline to asynchronously fail.
+  // Either the completion routine or the submitter should free the requests.
+  // It shouldn't be possible to have any "stray" requests that aren't in-flight at this point,
+  // so this is guaranteed to complete.
+  sync_completion_wait(&hci->requests_freed_completion, ZX_TIME_INFINITE);
   free(hci);
 }
 
@@ -606,7 +694,7 @@ static zx_protocol_device_t hci_device_proto = {
     .release = hci_release,
 };
 
-static zx_status_t hci_bind(void* ctx, zx_device_t* device) {
+zx_status_t hci_bind(void* ctx, zx_device_t* device) {
   zxlogf(DEBUG, "hci_bind");
   usb_protocol_t usb;
 
@@ -671,15 +759,17 @@ static zx_status_t hci_bind(void* ctx, zx_device_t* device) {
   zx_event_create(0, &hci->channels_changed_evt);
 
   mtx_init(&hci->mutex, mtx_plain);
+  mtx_init(&hci->pending_request_lock, mtx_plain);
+  cnd_init(&hci->pending_requests_completed);
 
   hci->usb_zxdev = device;
   memcpy(&hci->usb, &usb, sizeof(hci->usb));
 
   hci->parent_req_size = usb_get_request_size(&hci->usb);
-  size_t req_size = hci->parent_req_size + sizeof(usb_req_internal_t);
+  size_t req_size = hci->parent_req_size + sizeof(usb_req_internal_t) + sizeof(void*);
   for (int i = 0; i < EVENT_REQ_COUNT; i++) {
     usb_request_t* req;
-    status = usb_request_alloc(&req, intr_max_packet, intr_addr, req_size);
+    status = instrumented_request_alloc(hci, &req, intr_max_packet, intr_addr, req_size);
     if (status != ZX_OK) {
       goto fail;
     }
@@ -688,7 +778,7 @@ static zx_status_t hci_bind(void* ctx, zx_device_t* device) {
   }
   for (int i = 0; i < ACL_READ_REQ_COUNT; i++) {
     usb_request_t* req;
-    status = usb_request_alloc(&req, ACL_MAX_FRAME_SIZE, bulk_in_addr, req_size);
+    status = instrumented_request_alloc(hci, &req, ACL_MAX_FRAME_SIZE, bulk_in_addr, req_size);
     if (status != ZX_OK) {
       goto fail;
     }
@@ -697,7 +787,7 @@ static zx_status_t hci_bind(void* ctx, zx_device_t* device) {
   }
   for (int i = 0; i < ACL_WRITE_REQ_COUNT; i++) {
     usb_request_t* req;
-    status = usb_request_alloc(&req, ACL_MAX_FRAME_SIZE, bulk_out_addr, req_size);
+    status = instrumented_request_alloc(hci, &req, ACL_MAX_FRAME_SIZE, bulk_out_addr, req_size);
     if (status != ZX_OK) {
       goto fail;
     }
@@ -729,7 +819,6 @@ static zx_status_t hci_bind(void* ctx, zx_device_t* device) {
       .props = props,
       .prop_count = countof(props),
   };
-
   status = device_add(device, &args, &hci->zxdev);
   if (status == ZX_OK) {
     return ZX_OK;
