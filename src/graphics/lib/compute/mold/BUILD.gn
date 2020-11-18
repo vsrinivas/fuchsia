@@ -39,11 +39,11 @@ rustc_library("mold") {
 config("mold-performance") {
   rustflags = [ "-Copt-level=3" ]
 
-  if (board_name == "chromebook-x64") {
-    rustflags += [ "-Ctarget-cpu=skylake" ]
+  if (target_cpu == "x64") {
+    rustflags += [ "-Ctarget-cpu=haswell" ]
   }
 
-  if (board_name == "astro" || board_name == "sherlock") {
+  if (target_cpu == "arm64") {
     rustflags += [ "-Ctarget-cpu=cortex-a53" ]
   }
 }
