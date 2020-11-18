@@ -256,6 +256,33 @@ pub fn input3_key_to_hid_usage(key: fidl_fuchsia_input::Key) -> u32 {
     fidl_fuchsia_input::Key::into_primitive(key) & 0xFFFF
 }
 
+/// Converts a USB HID Usage ID to the corresponding input3 [`Key`].
+///
+/// The Usage ID is interpreted in the context of Usage Page 0x07 ("Keyboard/Keypad"),
+/// except that:
+/// * 0xe8 is interpreted as Usage Page 0x0c, Usage ID 0xe9 (Volume Increment)
+/// * 0xe9 is interpreted as Usage Page 0x0c, Usage ID 0xea (Volume Decrement)
+///
+/// These exceptions provide backwards compatibility with Root Presenter's input
+/// pipeline.
+///
+/// # Parameters
+/// - `usage_id`: The Usage ID to convert to its input3 [`Key`] equivalent.
+///
+/// # Future directions
+/// Per fxbug.dev/63974, this method will be replaced with a method that deals in
+/// `fuchsia.input.Key`s, instead of HID Usage IDs.
+#[cfg(test)] // TODO(fxbug.dev/63985) remove `cfg`
+pub(crate) fn hid_usage_to_input3_key(usage_id: u16) -> Option<fidl_fuchsia_input::Key> {
+    if usage_id == Usages::HidUsageKeyVolUp as u16 {
+        Some(fidl_fuchsia_input::Key::MediaVolumeIncrement)
+    } else if usage_id == Usages::HidUsageKeyVolDown as u16 {
+        Some(fidl_fuchsia_input::Key::MediaVolumeDecrement)
+    } else {
+        fidl_fuchsia_input::Key::from_primitive(u32::from(usage_id) | 0x0007_0000)
+    }
+}
+
 /// Returns true if the `key` is considered to be a modifier key.
 ///
 /// # Parameters
@@ -292,7 +319,7 @@ pub fn is_modifier3(key: fidl_fuchsia_input::Key) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use {super::*, test_case::test_case};
 
     #[test]
     fn input3_key_to_hid() {
@@ -312,5 +339,12 @@ mod tests {
         assert!(!is_modifier3(fidl_fuchsia_input::Key::LeftShift));
         assert!(!is_modifier3(fidl_fuchsia_input::Key::LeftMeta));
         assert!(!is_modifier3(fidl_fuchsia_input::Key::LeftCtrl));
+    }
+
+    #[test_case(Usages::HidUsageKeyVolUp => fidl_fuchsia_input::Key::MediaVolumeIncrement; "volume_up")]
+    #[test_case(Usages::HidUsageKeyVolDown => fidl_fuchsia_input::Key::MediaVolumeDecrement; "volume_down")]
+    #[test_case(Usages::HidUsageKeyA => fidl_fuchsia_input::Key::A; "letter_a")]
+    fn hid_usage_to_input3_key(usage: Usages) -> fidl_fuchsia_input::Key {
+        super::hid_usage_to_input3_key(usage as u16).expect("conversion yielded None")
     }
 }
