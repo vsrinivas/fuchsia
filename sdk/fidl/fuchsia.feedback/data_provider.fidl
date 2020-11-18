@@ -14,7 +14,7 @@ using zx;
 protocol DataProvider {
     /// Returns a snapshot of the device's state.
     ///
-    /// `snpashot` may be empty if there was an issue generating the snpashot.
+    /// `snapshot` may be empty if there was an issue generating the snapshot.
     GetSnapshot(GetSnapshotParameters params) -> (Snapshot snapshot);
 
     /// Returns an image of the current view encoded in the provided `encoding`.
