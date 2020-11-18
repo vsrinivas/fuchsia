@@ -83,7 +83,7 @@ sdk_molecule("license") {
 sdk("zircon_sysroot") {
   category = "internal"
 
-  deps = [ "//zircon/public/sysroot:sysroot_sdk" ]
+  deps = [ "//zircon/public/sysroot/sdk:sysroot_sdk" ]
 }
 
 sdk("e2e_testing") {
@@ -313,7 +313,7 @@ sdk_molecule("core_idk") {
     "//src/lib/vulkan:vulkan_layers",
     "//third_party/Vulkan-Loader:libvulkan_sdk",
     "//third_party/Vulkan-Loader:vulkan_license",
-    "//zircon/public/sysroot:sysroot_sdk",
+    "//zircon/public/sysroot/sdk:sysroot_sdk",
   ]
 }
 
@@ -409,7 +409,7 @@ sdk("bootstrap") {
     "//zircon/public/lib/async:async_sdk",
     "//zircon/public/lib/async-cpp:async-cpp_sdk",
     "//zircon/public/lib/sync:sync_sdk",
-    "//zircon/public/sysroot:sysroot_sdk",
+    "//zircon/public/sysroot/sdk:sysroot_sdk",
     "//zircon/system/ulib/zx:zx_sdk",
   ]
 }
@@ -449,7 +449,7 @@ sdk("firmware") {
 
   deps = [
     "//src/firmware/lib/zbi:zbi_sdk",
-    "//zircon/public/sysroot:sysroot_sdk",
+    "//zircon/public/sysroot/sdk:sysroot_sdk",
     "//zircon/system/ulib/abr:abr_sdk",
   ]
 }

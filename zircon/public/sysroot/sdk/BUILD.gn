@@ -1,0 +1,132 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# IMPORTANT: This file is used to build the Fuchsia SDK sysroot for the
+# current target architecture only, i.e. the set of files that will be exported
+# to the SDK's sysroot atom. This does not setup the platform sysroot.
+# See //zircon/public/sysroot/BUILD.gn for details on the latter.
+#
+# Note however that both files parse the same inputs collected from
+# sysroot_entries.gni files. See below for details.
+import("//build/config/fuchsia/zircon_legacy_vars.gni")
+import("//build/sdk/sdk_atom.gni")
+
+# Collect the metadata for the SDK.
+file_base = "arch/$target_cpu/sysroot"
+sdk_files = []
+
+version_content = {
+  root = file_base
+
+  include_dir = "$file_base/include"
+  dist_dir = ""
+  headers = []
+  link_libs = []
+  dist_libs = []
+  debug_libs = []
+}
+
+foreach(entry, zircon_legacy_sysroot) {
+  if (defined(entry.sdk)) {
+    sdk = {
+    }
+    sdk = entry.sdk
+    if (!defined(sdk.no_export) || !sdk.no_export) {
+      # Ignore entries with 'no_export = true'
+      if (defined(sdk.headers)) {
+        # This has to generate a separate copy() target for each file.
+        dir = rebase_path(sdk.include_dir, "", zircon_root_build_dir)
+        foreach(file, sdk.headers) {
+          version_content.headers += [ "$file_base/include/$file" ]
+          sdk_files += [
+            {
+              source = "$dir/$file"
+              dest = "$file_base/include/$file"
+            },
+          ]
+        }
+      } else if (defined(sdk.debug)) {
+        version_content.debug_libs +=
+            [ rebase_path(sdk.source, "", zircon_root_build_dir) ]
+      } else {
+        # This is just a single copy() target.
+        if (defined(sdk.link)) {
+          version_content.link_libs += [ "$file_base/${sdk.link}" ]
+          sdk_files += [
+            {
+              source = rebase_path(sdk.source, "", zircon_root_build_dir)
+              dest = "$file_base/${sdk.link}"
+            },
+          ]
+        } else if (defined(sdk.dist)) {
+          version_content.dist_libs += [ "$file_base/${sdk.dist}" ]
+          version_content.dist_dir = file_base
+          sdk_files += [
+            {
+              source = rebase_path(sdk.source, "", zircon_root_build_dir)
+              dest = "$file_base/${sdk.dist}"
+            },
+          ]
+        } else {
+          assert(false, "confused by $sdk")
+        }
+      }
+    }
+  }
+}
+
+sysroot_meta_json_file = "$target_gen_dir/sysroot.meta.in.json"
+
+generated_file("sysroot-meta-json") {
+  outputs = [ sysroot_meta_json_file ]
+  visibility = [ ":*" ]
+  contents = {
+    type = "sysroot"
+    name = "sysroot"
+    versions = {
+      if (target_cpu == "arm64") {
+        arm64 = version_content
+      } else if (target_cpu == "x64") {
+        x64 = version_content
+      } else {
+        assert(false, "Unknown CPU type: $target_cpu")
+      }
+    }
+  }
+  output_conversion = "json"
+}
+
+action("sysroot-meta") {
+  visibility = [ ":*" ]
+  script = "//build/zircon/sdk_build_id.py"
+  sources = [ sysroot_meta_json_file ]
+  outputs = [
+    "$target_out_dir/sysroot.meta.out.json",
+    "$target_out_dir/sysroot.debug.manifest",
+  ]
+  args = [
+    "--input=" + rebase_path(sources[0], root_build_dir),
+    "--output=" + rebase_path(outputs[0], root_build_dir),
+    "--manifest=" + rebase_path(outputs[1], root_build_dir),
+    "--location=/versions/$target_cpu/debug_libs",
+  ]
+  deps = [ ":sysroot-meta-json" ]
+}
+meta_outputs = get_target_outputs(":sysroot-meta")
+
+sdk_atom("sysroot_sdk") {
+  id = "sdk://pkg/sysroot"
+  category = "partner"
+
+  non_sdk_deps = [ ":sysroot-meta" ]
+
+  meta = {
+    dest = "pkg/sysroot/meta.json"
+    schema = "sysroot"
+    source = meta_outputs[0]
+  }
+
+  files = sdk_files
+  file_list = meta_outputs[1]
+}

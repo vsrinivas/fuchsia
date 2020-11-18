@@ -2,92 +2,105 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/config/fuchsia/zircon.gni")
-import("//build/config/fuchsia/zircon_legacy_vars.gni")
-import("//build/sdk/sdk_atom.gni")
-
+# IMPORTANT: This file serves to build the Fuchsia platform sysroot, used
+# at build time to provide the C library, the Zircon VDSO, and a few linker
+# stubs for legacy link targets like libm.so. Plus all associated headers.
+#
+# For the SDK sysroot generation, see //zircon/public/sysroot/sdk/BUILD.gn
+# instead.
+#
+# The platform sysroot is generated in out/default/sysroot_toolchain/sysrot/
+# as follows based on the content of sysroot_entries.gni files:
+#
+#       include/
+#         ...     # C library and Zircon headers
+#       lib/
+#         libc.so       # Linker stub redirecting to the link-time C library.
+#         libzircon.so  # Linker stub redirecting to the link-time Zircon VDSO.
+#         Scrt1.o       # Stub to C runtime startup object file.
+#         libdl.so      # Stub library redirection to libc.so
+#         libm.so       # Stub library redirecting to libc.so
+#         libpthread.so # Stub library redirecting to libc.so
+#         librt.so      # Stub library redirecting to libc.so
+#       dist/
+#         lib/
+#           ld.so.1     # Stripped C library acting as dynamic loader.
+#                       # NOTE: This file may be unused, and ripe for deletion.
+#
+#   Note that this happens exclusively in the "sysroot_toolchain".
+#
 sysroot_toolchain = "//build/zircon:sysroot_toolchain"
-sysroot_dir = get_label_info(":sysroot($sysroot_toolchain)", "root_out_dir")
-sysroot_dir += "/sysroot"
 
-# Collect the metadata for the SDK.
-file_base = "arch/$target_cpu/sysroot"
-sdk_files = []
+if (current_toolchain != sysroot_toolchain) {
+  group("sysroot") {
+    public_deps = [ ":$target_name($sysroot_toolchain)" ]
+  }
+} else {
+  import("//build/config/fuchsia/zircon.gni")
+  import("//build/config/fuchsia/zircon_legacy_vars.gni")
 
-version_content = {
-  root = file_base
+  sysroot_dir = get_label_info(":sysroot($sysroot_toolchain)", "root_out_dir")
+  sysroot_dir += "/sysroot"
 
-  include_dir = "$file_base/include"
-  dist_dir = ""
-  headers = []
-  link_libs = []
-  dist_libs = []
-  debug_libs = []
-}
-
-# Turn the information from Zircon into a set of copy() rules for the
-# sysroot while filling in $version_content.
-#
-# For historical reasons, only the scopes with an `sdk` key are considered
-# here. Each value associated with an `sdk` key is a scope itself, with the
-# following schema:
-#
-# If `include_dir` is present then:
-#
-#   include_dir (optional)
-#     [GN path] A GN path to a subdirectory containing zero or more headers
-#     to copy to the sysroot's include directory.
-#
-#   headers (optional)
-#     [list of paths] Required if `include_dir` is specified, ignored otherwise.
-#     A list of header sub-paths, relative to `include_dir`, that must be
-#     copied to the sysroot directory.
-#
-#   no_export (optional)
-#     [boolean] Ignored if `include_dir` is not used. A flag that is set to
-#     indicate that the set of headers described in the current entry should
-#     not be exported to the SDK sysroot (though they will still be copied
-#     to the platform's sysroot). This is useful for <zircon/device/*.h>
-#     headers, as well as `testonly-cdecls.inc`.
-#
-# Otherwise, if `include_dir` is _not_ present:
-#
-#   source (optional)
-#     [path] A path, relative to the current root build directory, where
-#     to find the source file to be copied into the sysroot, where destination
-#     is specified by one of the ` link`, `debug` or `dist` keys described
-#     below. Ignored if `include_dir` is present.
-#
-#   debug (optional)
-#   dist (optional)
-#   link (optional)
-#     [path] A path relative to the sysroot directory, that specifies where
-#     the `source` file needs to be copied into the SDK. Only one of these
-#     keys can be used per entry. For the platform SDK, onle `dist` and `link`
-#     are used. The SDK sysroot will use all three though.
-#
-#   deps (optional)
-#     [list of labels] A list of labels to dependencies for this entry,
-#     this should correspond to the GN target that built the `source`
-#     file, once the sysroot generation is moved to the Fuchsia build.
-#
-# IMPORTANT: The populate_sysroot_headers.py script in this directory relies
-# on this exact schema definition. Keep it in sync if the schema changes!
-#
-sysroot_deps = []
-sysroot_headers = []
-sysroot_headers_deps = []
-i = 0
-foreach(entry, zircon_legacy_sysroot) {
-  if (defined(entry.sdk)) {
-    sdk = {
-    }
-    sdk = entry.sdk
-    if (defined(sdk.headers)) {
-      # This has to generate a separate copy() target for each file.
-      dir = rebase_path(sdk.include_dir, "", zircon_root_build_dir)
-      foreach(file, sdk.headers) {
-        if (current_toolchain == sysroot_toolchain) {
+  # For historical reasons, only the scopes with an `sdk` key are considered
+  # here. Each value associated with an `sdk` key is a scope itself, with the
+  # following schema:
+  #
+  # If `include_dir` is present then:
+  #
+  #   include_dir (optional)
+  #     [GN path] A GN path to a subdirectory containing zero or more headers
+  #     to copy to the sysroot's include directory.
+  #
+  #   headers (optional)
+  #     [list of paths] Required if `include_dir` is specified, ignored otherwise.
+  #     A list of header sub-paths, relative to `include_dir`, that must be
+  #     copied to the sysroot directory.
+  #
+  #   no_export (optional)
+  #     [boolean] Ignored if `include_dir` is not used. A flag that is set to
+  #     indicate that the set of headers described in the current entry should
+  #     not be exported to the SDK sysroot (though they will still be copied
+  #     to the platform's sysroot). This is useful for <zircon/device/*.h>
+  #     headers, as well as `testonly-cdecls.inc`.
+  #
+  # Otherwise, if `include_dir` is _not_ present:
+  #
+  #   source (optional)
+  #     [path] A path, relative to the current root build directory, where
+  #     to find the source file to be copied into the sysroot, where destination
+  #     is specified by one of the ` link`, `debug` or `dist` keys described
+  #     below. Ignored if `include_dir` is present.
+  #
+  #   debug (optional)
+  #   dist (optional)
+  #   link (optional)
+  #     [path] A path relative to the sysroot directory, that specifies where
+  #     the `source` file needs to be copied into the SDK. Only one of these
+  #     keys can be used per entry. For the platform SDK, onle `dist` and `link`
+  #     are used. The SDK sysroot will use all three though.
+  #
+  #   deps (optional)
+  #     [list of labels] A list of labels to dependencies for this entry,
+  #     this should correspond to the GN target that built the `source`
+  #     file, once the sysroot generation is moved to the Fuchsia build.
+  #
+  # IMPORTANT: The populate_sysroot_headers.py script in this directory relies
+  # on this exact schema definition. Keep it in sync if the schema changes!
+  #
+  sysroot_headers = []
+  sysroot_headers_deps = []
+  sysroot_deps = []
+  i = 0
+  foreach(entry, zircon_legacy_sysroot) {
+    if (defined(entry.sdk)) {
+      sdk = {
+      }
+      sdk = entry.sdk
+      if (defined(sdk.headers)) {
+        # This has to generate a separate copy() target for each file.
+        dir = rebase_path(sdk.include_dir, "", root_build_dir)
+        foreach(file, sdk.headers) {
           sysroot_headers += [ "$sysroot_dir/include/$file" ]
           if (defined(sdk.deps)) {
             # Some dependencies are necessary for auto-generated headers.
@@ -97,59 +110,28 @@ foreach(entry, zircon_legacy_sysroot) {
             sysroot_headers_deps += sdk.deps
           }
         }
-        no_export = defined(sdk.no_export) && sdk.no_export
-        if (!no_export) {
-          version_content.headers += [ "$file_base/include/$file" ]
-          sdk_files += [
-            {
-              source = "$dir/$file"
-              dest = "$file_base/include/$file"
-            },
-          ]
-        }
-      }
-    } else if (defined(sdk.debug)) {
-      version_content.debug_libs +=
-          [ rebase_path(sdk.source, "", zircon_root_build_dir) ]
-    } else {
-      # This is just a single copy() target.
-      if (defined(sdk.link)) {
+      } else if (defined(sdk.link)) {
         file = "$sysroot_dir/${sdk.link}"
-        version_content.link_libs += [ "$file_base/${sdk.link}" ]
-        sdk_files += [
-          {
-            source = rebase_path(sdk.source, "", zircon_root_build_dir)
-            dest = "$file_base/${sdk.link}"
-          },
-        ]
-      } else if (defined(sdk.dist)) {
-        file = "$sysroot_dir/${sdk.dist}"
-        version_content.dist_libs += [ "$file_base/${sdk.dist}" ]
-        version_content.dist_dir = file_base
-        sdk_files += [
-          {
-            source = rebase_path(sdk.source, "", zircon_root_build_dir)
-            dest = "$file_base/${sdk.dist}"
-          },
-        ]
-      } else {
-        assert(false, "confused by $sdk")
-      }
-      i = i + 1
-      if (current_toolchain == sysroot_toolchain) {
+
+        # Only copy link libraries to the sysroot, because copying
+        # distribution libraries will populate the build's metadata
+        # with unwanted installation entries for /lib/ld.so.1 (e.g.
+        # when using the "gcc" variant).
+        i = i + 1
         copy_target = "copy_$i"
         sysroot_deps += [ ":$copy_target" ]
         copy(copy_target) {
           visibility = [ ":sysroot" ]
           sources = [ "$zircon_root_build_dir/${sdk.source}" ]
           outputs = [ file ]
+          forward_variables_from(sdk, [ "deps" ])
         }
       }
     }
   }
-}
 
-if (current_toolchain == sysroot_toolchain) {
+  # Write sysroot_entries to a JSON file that will get parsed
+  # by our populate_sysroot_headers.py script below.
   import("//zircon/system/ulib/c/sysroot_entries.gni")
   import("//zircon/system/ulib/zircon/sysroot_entries.gni")
   sysroot_entries_json_file = "$root_out_dir/sysroot-entries.json"
@@ -195,66 +177,4 @@ if (current_toolchain == sysroot_toolchain) {
   group("sysroot") {
     deps = sysroot_deps + [ ":sysroot_headers" ]
   }
-} else {
-  group("sysroot") {
-    assert(sysroot_deps == [])
-    assert(sysroot_headers == [])
-    assert(sysroot_headers_deps == [])
-    public_deps = [ ":sysroot($sysroot_toolchain)" ]
-  }
-}
-
-sysroot_meta_json_file = "$target_gen_dir/sysroot.meta.in.json"
-
-generated_file("sysroot-meta-json") {
-  outputs = [ sysroot_meta_json_file ]
-  visibility = [ ":*" ]
-  contents = {
-    type = "sysroot"
-    name = "sysroot"
-    versions = {
-      if (target_cpu == "arm64") {
-        arm64 = version_content
-      } else if (target_cpu == "x64") {
-        x64 = version_content
-      } else {
-        assert(false, "Unknown CPU type: $target_cpu")
-      }
-    }
-  }
-  output_conversion = "json"
-}
-
-action("sysroot-meta") {
-  visibility = [ ":*" ]
-  script = "//build/zircon/sdk_build_id.py"
-  sources = [ sysroot_meta_json_file ]
-  outputs = [
-    "$target_out_dir/sysroot.meta.out.json",
-    "$target_out_dir/sysroot.debug.manifest",
-  ]
-  args = [
-    "--input=" + rebase_path(sources[0], root_build_dir),
-    "--output=" + rebase_path(outputs[0], root_build_dir),
-    "--manifest=" + rebase_path(outputs[1], root_build_dir),
-    "--location=/versions/$target_cpu/debug_libs",
-  ]
-  deps = [ ":sysroot-meta-json" ]
-}
-meta_outputs = get_target_outputs(":sysroot-meta")
-
-sdk_atom("sysroot_sdk") {
-  id = "sdk://pkg/sysroot"
-  category = "partner"
-
-  non_sdk_deps = [ ":sysroot-meta" ]
-
-  meta = {
-    dest = "pkg/sysroot/meta.json"
-    schema = "sysroot"
-    source = meta_outputs[0]
-  }
-
-  files = sdk_files
-  file_list = meta_outputs[1]
 }
