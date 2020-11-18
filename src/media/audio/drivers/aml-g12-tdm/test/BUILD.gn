@@ -24,6 +24,8 @@ executable("aml-g12-tdm-test-bin") {
     "//src/devices/i2c/testing/mock-i2c",
     "//src/devices/lib/amlogic",
     "//src/devices/lib/mmio",
+    "//src/devices/testing/fake-bti",
+    "//src/devices/testing/fake-mmio-reg",
     "//src/devices/testing/fake_ddk",
     "//src/devices/testing/mock-mmio-reg",
     "//src/lib/ddk",

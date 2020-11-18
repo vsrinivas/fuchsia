@@ -8,6 +8,7 @@
 #include <math.h>
 #include <string.h>
 
+#include <numeric>
 #include <optional>
 #include <utility>
 
@@ -36,13 +37,8 @@ enum {
   FRAGMENT_COUNT,
 };
 
-constexpr size_t kMaxNumberOfChannels = 2;
 constexpr size_t kMinSampleRate = 48000;
 constexpr size_t kMaxSampleRate = 96000;
-constexpr size_t kBytesPerSample = 2;
-// Calculate ring buffer size for 1 second of 16-bit, max rate.
-constexpr size_t kRingBufferSize = fbl::round_up<size_t, size_t>(
-    kMaxSampleRate * kBytesPerSample * kMaxNumberOfChannels, PAGE_SIZE);
 
 AmlG12TdmStream::AmlG12TdmStream(zx_device_t* parent, bool is_input, ddk::PDev pdev,
                                  const ddk::GpioProtocolClient enable_gpio)
@@ -265,7 +261,7 @@ zx_status_t AmlG12TdmStream::InitPDev() {
   std::optional<ddk::MmioBuffer> mmio;
   status = pdev_.MapMmio(0, &mmio);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s could get mmio %d", __func__, status);
+    zxlogf(ERROR, "%s could not get mmio %d", __func__, status);
     return status;
   }
 
@@ -320,14 +316,12 @@ zx_status_t AmlG12TdmStream::InitPDev() {
     zxlogf(ERROR, "%s failed to create TDM device", __func__);
     return ZX_ERR_NO_MEMORY;
   }
-
-  // Initialize the ring buffer
-  status = InitBuffer(kRingBufferSize);
+  // Initial setup of one page of buffer, just to be safe.
+  status = InitBuffer(PAGE_SIZE);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s failed to init buffer %d", __FILE__, status);
     return status;
   }
-
   status = aml_audio_->SetBuffer(pinned_ring_buffer_.region(0).phys_addr,
                                  pinned_ring_buffer_.region(0).size);
   if (status != ZX_OK) {
@@ -585,22 +579,34 @@ zx_status_t AmlG12TdmStream::SetGain(const audio_proto::SetGainReq& req) {
 
 zx_status_t AmlG12TdmStream::GetBuffer(const audio_proto::RingBufGetBufferReq& req,
                                        uint32_t* out_num_rb_frames, zx::vmo* out_buffer) {
-  uint32_t rb_frames = static_cast<uint32_t>(pinned_ring_buffer_.region(0).size) / frame_size_;
-
-  if (req.min_ring_buffer_frames > rb_frames) {
-    return ZX_ERR_OUT_OF_RANGE;
+  size_t ring_buffer_size =
+      fbl::round_up<size_t, size_t>(req.min_ring_buffer_frames * frame_size_,
+                                    std::lcm(frame_size_, aml_audio_->GetBufferAlignment()));
+  size_t out_frames = ring_buffer_size / frame_size_;
+  if (out_frames > std::numeric_limits<uint32_t>::max()) {
+    return ZX_ERR_INVALID_ARGS;
   }
-  zx_status_t status;
-  constexpr uint32_t rights = ZX_RIGHT_READ | ZX_RIGHT_WRITE | ZX_RIGHT_MAP | ZX_RIGHT_TRANSFER;
-  status = ring_buffer_vmo_.duplicate(rights, out_buffer);
+
+  size_t vmo_size = fbl::round_up<size_t, size_t>(ring_buffer_size, PAGE_SIZE);
+  auto status = InitBuffer(vmo_size);
   if (status != ZX_OK) {
+    zxlogf(ERROR, "%s failed to init buffer %d", __FILE__, status);
     return status;
   }
 
-  *out_num_rb_frames = rb_frames;
-
-  aml_audio_->SetBuffer(pinned_ring_buffer_.region(0).phys_addr, rb_frames * frame_size_);
-
+  constexpr uint32_t rights = ZX_RIGHT_READ | ZX_RIGHT_WRITE | ZX_RIGHT_MAP | ZX_RIGHT_TRANSFER;
+  status = ring_buffer_vmo_.duplicate(rights, out_buffer);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s failed to duplicate VMO %d", __FILE__, status);
+    return status;
+  }
+  status = aml_audio_->SetBuffer(pinned_ring_buffer_.region(0).phys_addr, ring_buffer_size);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s failed to set buffer %d", __FILE__, status);
+    return status;
+  }
+  // This is safe because of the overflow check we made above.
+  *out_num_rb_frames = static_cast<uint32_t>(out_frames);
   return ZX_OK;
 }
 
@@ -664,6 +670,7 @@ zx_status_t AmlG12TdmStream::InitBuffer(size_t size) {
     zxlogf(ERROR, "%s could not release quarantine bti - %d", __func__, status);
     return status;
   }
+  pinned_ring_buffer_.Unpin();
   status = zx_vmo_create_contiguous(bti_.get(), size, 0, ring_buffer_vmo_.reset_and_get_address());
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s failed to allocate ring buffer vmo - %d", __func__, status);
@@ -676,8 +683,10 @@ zx_status_t AmlG12TdmStream::InitBuffer(size_t size) {
     return status;
   }
   if (pinned_ring_buffer_.region_count() != 1) {
-    zxlogf(ERROR, "%s buffer is not contiguous", __func__);
-    return ZX_ERR_NO_MEMORY;
+    if (!AllowNonContiguousRingBuffer()) {
+      zxlogf(ERROR, "%s buffer is not contiguous", __func__);
+      return ZX_ERR_NO_MEMORY;
+    }
   }
 
   return ZX_OK;

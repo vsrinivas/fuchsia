@@ -3,11 +3,13 @@
 // found in the LICENSE file.
 
 #include <fuchsia/hardware/audio/llcpp/fidl.h>
+#include <lib/fake-bti/bti.h>
 #include <lib/fake_ddk/fake_ddk.h>
 #include <lib/simple-codec/simple-codec-server.h>
 #include <lib/sync/completion.h>
 
 #include <ddktl/protocol/composite.h>
+#include <fake-mmio-reg/fake-mmio-reg.h>
 #include <mock-mmio-reg/mock-mmio-reg.h>
 #include <mock/ddktl/protocol/gpio.h>
 #include <soc/aml-s905d2/s905d2-hw.h>
@@ -1269,5 +1271,151 @@ TEST(AmlG12Tdm, InitializePcmIn) {
   controller->DdkRelease();
 }
 
+class FakePDev : public ddk::PDevProtocol<FakePDev, ddk::base_protocol> {
+ public:
+  FakePDev() : proto_({&pdev_protocol_ops_, this}) {
+    regs_ = std::make_unique<ddk_fake::FakeMmioReg[]>(kRegCount);
+    mmio_ = std::make_unique<ddk_fake::FakeMmioRegRegion>(regs_.get(), sizeof(uint32_t), kRegCount);
+  }
+
+  const pdev_protocol_t* proto() const { return &proto_; }
+
+  zx_status_t PDevGetMmio(uint32_t index, pdev_mmio_t* out_mmio) {
+    EXPECT_EQ(index, 0);
+    out_mmio->offset = reinterpret_cast<size_t>(this);
+    return ZX_OK;
+  }
+
+  zx_status_t PDevGetInterrupt(uint32_t index, uint32_t flags, zx::interrupt* out_irq) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+  zx_status_t PDevGetBti(uint32_t index, zx::bti* out_bti) {
+    return fake_bti_create(out_bti->reset_and_get_address());
+  }
+  zx_status_t PDevGetSmc(uint32_t index, zx::resource* out_resource) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+  zx_status_t PDevGetDeviceInfo(pdev_device_info_t* out_info) { return ZX_ERR_NOT_SUPPORTED; }
+  zx_status_t PDevGetBoardInfo(pdev_board_info_t* out_info) { return ZX_ERR_NOT_SUPPORTED; }
+
+  ddk::MmioBuffer mmio() { return ddk::MmioBuffer(mmio_->GetMmioBuffer()); }
+  ddk_fake::FakeMmioReg& reg(size_t ix) {
+    return regs_[ix >> 2];  // AML registers are in virtual address units.
+  }
+
+ private:
+  static constexpr size_t kRegCount =
+      S905D2_EE_AUDIO_LENGTH / sizeof(uint32_t);  // in 32 bits chunks.
+  pdev_protocol_t proto_;
+  std::unique_ptr<ddk_fake::FakeMmioReg[]> regs_;
+  std::unique_ptr<ddk_fake::FakeMmioRegRegion> mmio_;
+};
+
+class TestAmlG12TdmStream : public AmlG12TdmStream {
+ public:
+  explicit TestAmlG12TdmStream(ddk::PDev pdev, const ddk::GpioProtocolClient enable_gpio)
+      : AmlG12TdmStream(fake_ddk::kFakeParent, false, std::move(pdev), std::move(enable_gpio)) {}
+  bool AllowNonContiguousRingBuffer() override { return true; }
+};
+
+metadata::AmlConfig GetDefaultMetadata() {
+  metadata::AmlConfig metadata = {};
+  metadata.is_input = false;
+  metadata.mClockDivFactor = 10;
+  metadata.sClockDivFactor = 25;
+  metadata.number_of_channels = 2;
+  metadata.dai_number_of_channels = 2;
+  metadata.lanes_enable_mask[0] = 3;
+  metadata.bus = metadata::AmlBus::TDM_C;
+  metadata.version = metadata::AmlVersion::kS905D2G;
+  metadata.tdm.type = metadata::TdmType::I2s;
+  metadata.tdm.bits_per_sample = 16;
+  metadata.tdm.bits_per_slot = 32;
+  return metadata;
+}
+
+struct AmlG12TdmTest : public zxtest::Test {
+  void SetUp() override {
+    static composite_protocol_ops_t composite_protocol = {
+        .get_fragment_count = GetFragmentCount,
+        .get_fragments = GetFragments,
+        .get_fragments_new = GetFragmentsNew,
+        .get_fragment = GetFragment,
+    };
+    static constexpr size_t kNumBindProtocols = 2;
+    fbl::Array<fake_ddk::ProtocolEntry> protocols(new fake_ddk::ProtocolEntry[kNumBindProtocols],
+                                                  kNumBindProtocols);
+    protocols[0] = {ZX_PROTOCOL_PDEV, *reinterpret_cast<const fake_ddk::Protocol*>(pdev_.proto())};
+    protocols[1] = {ZX_PROTOCOL_COMPOSITE, {.ops = &composite_protocol, .ctx = this}};
+    tester_.SetProtocols(std::move(protocols));
+  }
+
+  static bool GetFragment(void*, const char* name, zx_device_t** out) {
+    *out = fake_ddk::kFakeParent;
+    return true;
+  }
+  static uint32_t GetFragmentCount(void*) { return 2; }
+  static void GetFragments(void*, zx_device_t** out_fragment_list, size_t fragment_count,
+                           size_t* out_fragment_actual) {
+    out_fragment_list[0] = fake_ddk::kFakeParent;  // FRAGMENT_PDEV
+    out_fragment_list[1] = fake_ddk::kFakeParent;  // FRAGMENT_ENABLE_GPIO
+    *out_fragment_actual = 2;
+  }
+  static void GetFragmentsNew(void*, composite_device_fragment_t* out_fragment_list,
+                              size_t fragment_count, size_t* out_fragment_actual) {
+    out_fragment_list[0].device = fake_ddk::kFakeParent;  // FRAGMENT_PDEV
+    out_fragment_list[1].device = fake_ddk::kFakeParent;  // FRAGMENT_ENABLE_GPIO
+    *out_fragment_actual = 2;
+  }
+  void TestRingBufferSize(uint8_t number_of_channels, uint32_t frames_req,
+                          uint32_t frames_expected) {
+    auto metadata = GetDefaultMetadata();
+    metadata.number_of_channels = number_of_channels;
+    tester_.SetMetadata(&metadata, sizeof(metadata));
+
+    ddk::GpioProtocolClient unused_gpio;
+    auto stream = audio::SimpleAudioStream::Create<TestAmlG12TdmStream>(pdev_.proto(), unused_gpio);
+    audio_fidl::Device::SyncClient client_wrap(std::move(tester_.FidlClient()));
+    audio_fidl::Device::ResultOf::GetChannel ch = client_wrap.GetChannel();
+    ASSERT_EQ(ch.status(), ZX_OK);
+    audio_fidl::StreamConfig::SyncClient client(std::move(ch->channel));
+    zx::channel local, remote;
+    ASSERT_OK(zx::channel::create(0, &local, &remote));
+    fidl::aligned<audio_fidl::PcmFormat> pcm_format = GetDefaultPcmFormat();
+    pcm_format.value.number_of_channels = number_of_channels;
+    auto builder = audio_fidl::Format::UnownedBuilder();
+    builder.set_pcm_format(fidl::unowned_ptr(&pcm_format));
+    client.CreateRingBuffer(builder.build(), std::move(remote));
+
+    auto vmo = audio_fidl::RingBuffer::Call::GetVmo(zx::unowned_channel(local), frames_req, 0);
+    ASSERT_OK(vmo.status());
+    ASSERT_EQ(vmo.Unwrap()->result.response().num_frames, frames_expected);
+
+    stream->DdkAsyncRemove();
+    EXPECT_TRUE(tester_.Ok());
+    stream->DdkRelease();
+  }
+
+  FakePDev pdev_;
+  fake_ddk::Bind tester_;
+};
+
+// With 16 bits samples, frame size is 2 x number of channels bytes.
+// Frames returned are rounded to HW buffer alignment (8 bytes) and frame size.
+TEST_F(AmlG12TdmTest, RingBufferSize1) { TestRingBufferSize(2, 1, 2); }  // Rounded to HW buffer.
+TEST_F(AmlG12TdmTest, RingBufferSize2) { TestRingBufferSize(2, 3, 4); }  // Rounded to HW buffer.
+TEST_F(AmlG12TdmTest, RingBufferSize3) { TestRingBufferSize(3, 1, 4); }  // Rounded to both.
+TEST_F(AmlG12TdmTest, RingBufferSize4) { TestRingBufferSize(3, 3, 4); }  // Rounded to both.
+TEST_F(AmlG12TdmTest, RingBufferSize5) { TestRingBufferSize(8, 1, 1); }  // Rounded to frame size.
+TEST_F(AmlG12TdmTest, RingBufferSize6) { TestRingBufferSize(8, 3, 3); }  // Rounded to frame size.
+
 }  // namespace aml_g12
 }  // namespace audio
+
+// Redefine PDevMakeMmioBufferWeak per the recommendation in pdev.h.
+zx_status_t ddk::PDevMakeMmioBufferWeak(const pdev_mmio_t& pdev_mmio,
+                                        std::optional<MmioBuffer>* mmio, uint32_t cache_policy) {
+  auto* test_harness = reinterpret_cast<audio::aml_g12::FakePDev*>(pdev_mmio.offset);
+  mmio->emplace(test_harness->mmio());
+  return ZX_OK;
+}

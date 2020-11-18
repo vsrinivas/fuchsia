@@ -65,6 +65,7 @@ class AmlG12TdmStream : public SimpleAudioStream {
   void ProcessRingNotification();
   void UpdateCodecsGainState(GainState state) __TA_REQUIRES(domain_token());
   void UpdateCodecsGainStateFromCurrent() __TA_REQUIRES(domain_token());
+  virtual bool AllowNonContiguousRingBuffer() { return false; }
 
   uint32_t us_per_notification_ = 0;
   DaiFormat dai_formats_[metadata::kMaxNumberOfCodecs] = {};

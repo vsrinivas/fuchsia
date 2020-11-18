@@ -43,6 +43,9 @@ class AmlTdmDevice {
   // must resize in lower 32-bits of address space.
   virtual zx_status_t SetBuffer(zx_paddr_t buf, size_t len) = 0;
 
+  // Get HW alignment required in the buffer in bytes.
+  static uint32_t GetBufferAlignment() { return 8; }
+
   // Returns offset of dma pointer in the ring buffer.
   virtual uint32_t GetRingPosition() = 0;
 
