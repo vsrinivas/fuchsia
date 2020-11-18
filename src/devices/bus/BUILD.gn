@@ -2,6 +2,38 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+group("drivers") {
+  testonly = true
+  deps = [
+    "drivers/pci:bus-pci",
+    "drivers/pci:bus-pci.proxy",
+    "drivers/pci/test:pci_fake",
+    "drivers/pci/test:pci_fake.proxy",
+    "drivers/pci/test:pci_protocol_test_driver",
+    "drivers/platform:platform-bus",
+    "drivers/platform:platform-bus.proxy",
+    "drivers/platform/test:test-board",
+    "drivers/platform/test:test-bti",
+    "drivers/platform/test:test-bti-board",
+    "drivers/platform/test:test-child-1",
+    "drivers/platform/test:test-child-2",
+    "drivers/platform/test:test-child-2.proxy",
+    "drivers/platform/test:test-child-3",
+    "drivers/platform/test:test-clock",
+    "drivers/platform/test:test-composite",
+    "drivers/platform/test:test-goldfish-address-space",
+    "drivers/platform/test:test-goldfish-pipe",
+    "drivers/platform/test:test-gpio",
+    "drivers/platform/test:test-i2c",
+    "drivers/platform/test:test-parent",
+    "drivers/platform/test:test-power",
+    "drivers/platform/test:test-pwm",
+    "drivers/platform/test:test-rpmb",
+    "drivers/platform/test:test-spi",
+    "drivers/platform/test:test-vreg",
+  ]
+}
+
 group("tests") {
   testonly = true
   deps = [ "drivers:tests" ]

@@ -2,6 +2,19 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+group("drivers") {
+  testonly = true
+  deps = [
+    "drivers/aml-meson-power",
+    "drivers/as370-power",
+    "drivers/msm8x53-power",
+    "drivers/mtk-power",
+    "drivers/power",
+    "drivers/silergy:sy-buck",
+    "drivers/vs680-power",
+  ]
+}
+
 group("tests") {
   testonly = true
 

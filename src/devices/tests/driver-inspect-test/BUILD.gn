@@ -32,7 +32,10 @@ driver_module("driver") {
     "//src/lib/ddktl",
     "//zircon/system/ulib/inspect",
   ]
-  visibility = [ ":*" ]
+  visibility = [
+    ":*",
+    "//src/devices/bundles:drivers",
+  ]
 }
 
 test("tests") {

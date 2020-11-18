@@ -28,6 +28,8 @@ driver_module("c18") {
     "//src/devices/lib/mmio",
     "//src/devices/lib/mt8167",
     "//src/devices/lib/mt8183",
+    "//src/lib/ddk",
+    "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//src/lib/ddktl",
     "//zircon/public/lib/zx",
   ]

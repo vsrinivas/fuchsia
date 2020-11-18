@@ -2,6 +2,19 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+group("drivers") {
+  testonly = true
+  deps = [
+    "drivers/aml-thermal-s905d2g",
+    "drivers/aml-thermal-s905d2g-legacy",
+    "drivers/aml-thermal-s912",
+    "drivers/as370-thermal",
+    "drivers/astro-thermistor",
+    "drivers/mtk-thermal",
+    "drivers/vs680-thermal",
+  ]
+}
+
 group("tests") {
   testonly = true
 

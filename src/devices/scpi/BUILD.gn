@@ -5,16 +5,7 @@
 group("drivers") {
   testonly = true
   deps = [
-    "drivers/aml-cpu",
-    "drivers/aml-cpu-legacy",
-  ]
-}
-
-group("tests") {
-  testonly = true
-
-  deps = [
-    "bin:tests",
-    "drivers:tests",
+    "drivers/aml-scpi-s912:aml-scpi-s912.mailbox",
+    "drivers/aml-scpi-s912:scpi",
   ]
 }

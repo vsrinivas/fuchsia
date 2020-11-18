@@ -2,6 +2,31 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+group("drivers") {
+  testonly = true
+  deps = [
+    "drivers/aml-usb-phy-v2",
+    "drivers/as370-usb-phy",
+    "drivers/dwc2",
+    "drivers/mt-musb-host",
+    "drivers/mt-musb-peripheral",
+    "drivers/nelson-usb-phy",
+    "drivers/usb-bus",
+    "drivers/usb-composite",
+    "drivers/usb-dfu",
+    "drivers/usb-hub",
+    "drivers/usb-hub-rewrite",
+    "drivers/usb-peripheral",
+    "drivers/usb-peripheral-test",
+    "drivers/usb-virtual-bus:usb-virtual-bus",
+    "drivers/usb-virtual-bus:virtual-bus-tester",
+    "drivers/usb-virtual-bus:virtual-bus-tester-function",
+    "drivers/xhci:xhci-x86",
+    "drivers/xhci-rewrite:xhci",
+    "tests/usb-hci-test:driver",
+  ]
+}
+
 group("tests") {
   testonly = true
 

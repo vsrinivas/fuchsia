@@ -30,7 +30,10 @@ driver_module("driver") {
     "//zircon/public/lib/zxtest",
   ]
 
-  visibility = [ ":*" ]
+  visibility = [
+    ":*",
+    "//src/devices/bundles:drivers",
+  ]
 }
 
 test("tests") {

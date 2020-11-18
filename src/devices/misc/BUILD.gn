@@ -2,6 +2,17 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+group("drivers") {
+  testonly = true
+  deps = [
+    "drivers/builtin",
+    "drivers/cpu-trace",
+    "drivers/test",
+    "drivers/virtio-rng:virtio_rng",
+    "drivers/virtio-socket:virtio_socket",
+  ]
+}
+
 group("tests") {
   testonly = true
 

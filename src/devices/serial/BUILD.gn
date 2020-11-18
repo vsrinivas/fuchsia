@@ -2,6 +2,22 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+group("drivers") {
+  testonly = true
+  deps = [
+    "drivers/aml-uart",
+    "drivers/ftdi:ftdi",
+    "drivers/ftdi:ftdi-fake-usb",
+    "drivers/intel-serialio",
+    "drivers/serial",
+    "drivers/serial-async",
+    "drivers/uart16550",
+    "drivers/usb-cdc-acm:fake-usb-cdc-acm",
+    "drivers/usb-cdc-acm:usb-cdc-acm",
+    "drivers/virtio-console:virtio_console",
+  ]
+}
+
 group("tests") {
   testonly = true
 

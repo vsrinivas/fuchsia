@@ -2,6 +2,17 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+group("drivers") {
+  deps = [
+    "drivers/amlogic-clk",
+    "drivers/as370-clk",
+    "drivers/clock",
+    "drivers/msm8x53-clk",
+    "drivers/mtk-clk",
+    "drivers/vs680-clk",
+  ]
+}
+
 group("tests") {
   testonly = true
   deps = [

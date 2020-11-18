@@ -2,6 +2,62 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+# This contains a list of all drivers in the devices area.
+group("drivers") {
+  testonly = true
+  deps = [
+    "//src/devices/bin/driver_host:driver-host-test-child-driver",
+    "//src/devices/bin/driver_host:driver-host-test-driver",
+    "//src/devices/block:drivers",
+    "//src/devices/board:drivers",
+    "//src/devices/bus:drivers",
+    "//src/devices/clock:drivers",
+    "//src/devices/cpu:drivers",
+    "//src/devices/fw:drivers",
+    "//src/devices/gpio:drivers",
+    "//src/devices/i2c:drivers",
+    "//src/devices/internal/drivers/fragment:fragment",
+    "//src/devices/internal/drivers/fragment:fragment.proxy",
+    "//src/devices/light-sensor:drivers",
+    "//src/devices/mcu:drivers",
+    "//src/devices/misc:drivers",
+    "//src/devices/ml:drivers",
+    "//src/devices/nand:drivers",
+    "//src/devices/power:drivers",
+    "//src/devices/pwm:drivers",
+    "//src/devices/ram:drivers",
+    "//src/devices/rtc:drivers",
+    "//src/devices/scpi:drivers",
+    "//src/devices/securemem:drivers",
+    "//src/devices/serial:drivers",
+    "//src/devices/shareddma:drivers",
+    "//src/devices/spi:drivers",
+    "//src/devices/sysmem:drivers",
+    "//src/devices/tee:drivers",
+    "//src/devices/temperature:drivers",
+    "//src/devices/tests/bind-debugger-test:bind-debugger-test-driver",
+    "//src/devices/tests/bind-fail-test:driver",
+    "//src/devices/tests/ddk-environment-test:ddk-environment-test",
+    "//src/devices/tests/ddk-fidl-test:fidl-async-llcpp-driver",
+    "//src/devices/tests/ddk-fidl-test:fidl-llcpp-driver",
+    "//src/devices/tests/ddk-instance-lifecycle-test:driver",
+    "//src/devices/tests/ddk-lifecycle:ddk-lifecycle-test",
+    "//src/devices/tests/ddk-metadata-test:driver",
+    "//src/devices/tests/ddk-power:ddk-power-test",
+    "//src/devices/tests/ddk-power:ddk-power-test-child",
+    "//src/devices/tests/ddk-runcompatibilityhook:ddk-runcompatibilityhook-test",
+    "//src/devices/tests/ddk-runcompatibilityhook:ddk-runcompatibilityhook-test-child",
+    "//src/devices/tests/driver-inspect-test:driver",
+    "//src/devices/tests/isolateddevmgr:isolateddevmgr-test-driver",
+    "//src/devices/tests/mock-device:mock-device",
+    "//src/devices/tests/sysdev:sysdev",
+    "//src/devices/tests/unit-test-test:unit-test-fail",
+    "//src/devices/tests/unit-test-test:unit-test-pass",
+    "//src/devices/thermal:drivers",
+    "//src/devices/usb:drivers",
+  ]
+}
+
 # This target contains drivers that are present on the boot partition of all
 # products.
 group("bootstrap-dev") {

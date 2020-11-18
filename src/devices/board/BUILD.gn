@@ -2,6 +2,33 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+group("drivers") {
+  deps = [
+    "drivers/as370",
+    "drivers/astro",
+    "drivers/c18",
+    "drivers/integration-test",
+    "drivers/machina",
+    "drivers/msm8998",
+    "drivers/msm8x53-som",
+    "drivers/mt8167s_ref",
+    "drivers/nelson",
+    "drivers/qemu-arm64",
+    "drivers/sherlock:luis",
+    "drivers/sherlock:luis-factory",
+    "drivers/sherlock:luis-factory-rndis",
+    "drivers/sherlock:sherlock",
+    "drivers/sherlock:sherlock-factory",
+    "drivers/sherlock:sherlock-factory-rndis",
+    "drivers/vim2",
+    "drivers/vim3",
+    "drivers/vs680-evk",
+  ]
+
+  if (current_cpu == "x64") {
+    deps += [ "drivers/x86:platform-bus-x86" ]
+  }
+}
 group("tests") {
   testonly = true
   deps = [ "drivers:tests" ]

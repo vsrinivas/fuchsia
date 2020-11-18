@@ -2,6 +2,19 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+group("drivers") {
+  testonly = true
+  deps = [
+    "drivers/aml-axg-gpio",
+    "drivers/aml-gxl-gpio",
+    "drivers/as370-gpio",
+    "drivers/gpio",
+    "drivers/gpio-test",
+    "drivers/mt-8167",
+    "drivers/qcom-gpio",
+  ]
+}
+
 group("tests") {
   testonly = true
 
