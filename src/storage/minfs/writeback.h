@@ -5,9 +5,13 @@
 #ifndef SRC_STORAGE_MINFS_WRITEBACK_H_
 #define SRC_STORAGE_MINFS_WRITEBACK_H_
 
+#include <lib/zx/status.h>
+
 #include <memory>
 #include <utility>
 #include <vector>
+
+#include <fbl/ref_ptr.h>
 
 #ifdef __Fuchsia__
 #include <lib/fzl/owned-vmo-mapper.h>
@@ -22,13 +26,13 @@
 #include <fbl/intrusive_hash_table.h>
 #include <fbl/intrusive_single_list.h>
 #include <fbl/macros.h>
-#include <fbl/ref_ptr.h>
 #include <fs/queue.h>
 #include <fs/transaction/buffered_operations_builder.h>
 #include <fs/vfs.h>
 
 #include "src/storage/minfs/allocator_reservation.h"
 #include "src/storage/minfs/bcache.h"
+#include "src/storage/minfs/cached_block_transaction.h"
 #include "src/storage/minfs/format.h"
 #include "src/storage/minfs/pending_work.h"
 
@@ -51,14 +55,19 @@ class Transaction final : public PendingWork {
   static zx_status_t Create(TransactionalFs* minfs, size_t reserve_inodes, size_t reserve_blocks,
                             InodeManager* inode_manager, std::unique_ptr<Transaction>* out);
 
+  // Creates a Transaction object from CachedBlockTransaction. Consumes cached_transaction.
+  static std::unique_ptr<Transaction> FromCachedBlockTransaction(
+      TransactionalFs* minfs, std::unique_ptr<CachedBlockTransaction> cached_transaction);
+
   Transaction() = delete;
 
-  explicit Transaction(TransactionalFs* minfs);
+  explicit Transaction(TransactionalFs* minfs,
+                       std::unique_ptr<CachedBlockTransaction> cached_transaction = nullptr);
 
   ~Transaction() final;
 
   AllocatorReservation& inode_reservation() { return inode_reservation_; }
-  AllocatorReservation& block_reservation() { return block_reservation_; }
+  AllocatorReservation& block_reservation() { return *block_reservation_; }
 
   ////////////////
   // PendingWork interface.
@@ -66,9 +75,9 @@ class Transaction final : public PendingWork {
   void EnqueueMetadata(storage::Operation operation, storage::BlockBuffer* buffer) final;
   void EnqueueData(storage::Operation operation, storage::BlockBuffer* buffer) final;
 
-  size_t AllocateBlock() final { return block_reservation_.Allocate(); }
+  size_t AllocateBlock() final { return block_reservation_->Allocate(); }
 
-  void DeallocateBlock(size_t block) final { return block_reservation_.Deallocate(block); }
+  void DeallocateBlock(size_t block) final { return block_reservation_->Deallocate(block); }
 
   ////////////////
   // Other methods.
@@ -91,9 +100,20 @@ class Transaction final : public PendingWork {
     return data_operations_.TakeOperations();
   }
 
-  size_t SwapBlock(size_t old_bno) { return block_reservation_.Swap(old_bno); }
+  size_t SwapBlock(size_t old_bno) { return block_reservation_->Swap(old_bno); }
 
   std::vector<fbl::RefPtr<VnodeMinfs>> RemovePinnedVnodes();
+
+  // Returns the block reservations within |transaction| and consumes |transaction|.
+  // Asserts that there are no inode reservations.
+  static std::unique_ptr<AllocatorReservation> TakeBlockReservations(
+      std::unique_ptr<Transaction> transaction) {
+    // When consuming transaction, we ignore any pending data and matadata operations
+    // as they will be enqueued again.
+    ZX_ASSERT(transaction->inode_reservation_.GetReserved() == 0);
+    return (std::move(transaction->block_reservation_));
+  }
+
 #else
   std::vector<storage::BufferedOperation> TakeOperations() { return builder_.TakeOperations(); }
 #endif
@@ -109,7 +129,7 @@ class Transaction final : public PendingWork {
 #endif
 
   AllocatorReservation inode_reservation_;
-  AllocatorReservation block_reservation_;
+  std::unique_ptr<AllocatorReservation> block_reservation_;
 };
 
 }  // namespace minfs
