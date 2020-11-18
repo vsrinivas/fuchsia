@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "skip-block.h"
+#include "src/devices/nand/drivers/skip-block/skip-block.h"
 
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/sync/completion.h>
@@ -26,6 +26,8 @@
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
+
+#include "src/devices/nand/drivers/skip-block/skip-block-bind.h"
 
 namespace nand {
 
@@ -721,12 +723,4 @@ static constexpr zx_driver_ops_t driver_ops = []() {
 
 }  // namespace nand
 
-// clang-format off
-ZIRCON_DRIVER_BEGIN(skip_block, nand::driver_ops, "zircon", "0.1", 5)
-    BI_GOTO_IF(NE, BIND_AUTOBIND, 0, 758),
-    BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_NAND),
-    BI_LABEL(758),
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_NAND),
-    BI_MATCH_IF(EQ, BIND_NAND_CLASS, fuchsia_hardware_nand_Class_BBS),
-ZIRCON_DRIVER_END(skip_block)
-    // clang-format on
+ZIRCON_DRIVER(skip_block, nand::driver_ops, "zircon", "0.1")

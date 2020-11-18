@@ -1,0 +1,88 @@
+[
+  {
+    "name": "SuccessAutoBound",
+    "expected": "match",
+    "device": {
+      "fuchsia.BIND_AUTOBIND": "1",
+      "fuchsia.BIND_PROTOCOL": "fuchsia.nand.BIND_PROTOCOL.DEVICE",
+      "fuchsia.BIND_NAND_CLASS": "fuchsia.nand.BIND_NAND_CLASS.BBS"
+    }
+  },
+  {
+    "name": "SuccessManualBound",
+    "expected": "match",
+    "device": {
+      "fuchsia.BIND_AUTOBIND": "0",
+      "fuchsia.BIND_PROTOCOL": "fuchsia.nand.BIND_PROTOCOL.DEVICE",
+      "fuchsia.BIND_NAND_CLASS": "fuchsia.nand.BIND_NAND_CLASS.BBS"
+    }
+  },
+  {
+    "name": "IncorrectClassAuto",
+    "expected": "abort",
+    "device": {
+      "fuchsia.BIND_AUTOBIND": "1",
+      "fuchsia.BIND_PROTOCOL": "fuchsia.nand.BIND_PROTOCOL.DEVICE",
+      "fuchsia.BIND_NAND_CLASS": "fuchsia.nand.BIND_NAND_CLASS.TEST"
+    }
+  },
+  {
+    "name": "IncorrectClassManual",
+    "expected": "match",
+    "device": {
+      "fuchsia.BIND_AUTOBIND": "0",
+      "fuchsia.BIND_PROTOCOL": "fuchsia.nand.BIND_PROTOCOL.DEVICE",
+      "fuchsia.BIND_NAND_CLASS": "fuchsia.nand.BIND_NAND_CLASS.TEST"
+    }
+  },
+  {
+    "name": "MissingClass",
+    "expected": "abort",
+    "device": {
+      "fuchsia.BIND_AUTOBIND": "1",
+      "fuchsia.BIND_PROTOCOL": "fuchsia.nand.BIND_PROTOCOL.DEVICE"
+    }
+  },
+  {
+    "name": "MissingClassManual",
+    "expected": "match",
+    "device": {
+      "fuchsia.BIND_AUTOBIND": "0",
+      "fuchsia.BIND_PROTOCOL": "fuchsia.nand.BIND_PROTOCOL.DEVICE"
+    }
+  },
+  {
+    "name": "IncorrectProtocol",
+    "expected": "abort",
+    "device": {
+      "fuchsia.BIND_AUTOBIND": "1",
+      "fuchsia.BIND_PROTOCOL": "fuchsia.hardware.block.BIND_PROTOCOL.DEVICE",
+      "fuchsia.BIND_NAND_CLASS": "fuchsia.nand.BIND_NAND_CLASS.BBS"
+    }
+  },
+  {
+    "name": "IncorrectProtocolManual",
+    "expected": "abort",
+    "device": {
+      "fuchsia.BIND_AUTOBIND": "0",
+      "fuchsia.BIND_PROTOCOL": "fuchsia.hardware.block.BIND_PROTOCOL.DEVICE",
+      "fuchsia.BIND_NAND_CLASS": "fuchsia.nand.BIND_NAND_CLASS.BBS"
+    }
+  },
+  {
+    "name": "MissingProtocol",
+    "expected": "abort",
+    "device": {
+      "fuchsia.BIND_AUTOBIND": "1",
+      "fuchsia.BIND_NAND_CLASS": "fuchsia.nand.BIND_NAND_CLASS.BBS"
+    }
+  },
+  {
+    "name": "MissingProtocolManual",
+    "expected": "abort",
+    "device": {
+      "fuchsia.BIND_AUTOBIND": "0",
+      "fuchsia.BIND_NAND_CLASS": "fuchsia.nand.BIND_NAND_CLASS.BBS"
+    }
+  }
+]
