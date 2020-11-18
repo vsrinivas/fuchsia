@@ -1,4 +1,4 @@
-# Extending the Inspect File Format
+# Extending the Inspect file format
 
 [TOC]
 

@@ -49,9 +49,9 @@ toc:
   # - title: "VMO Lifecycle"
   #   path: /docs/reference/diagnostics/inspect/lifecycle.md
 
-  - title: "Hosting Inspect VMOs"
+  - title: "Hosting inspect VMOs"
     path: /docs/reference/diagnostics/inspect/tree.md
-  - title: "Validating Implementations"
+  - title: "Validating implementations"
     section:
     - title: "Validator"
       path: /docs/reference/diagnostics/inspect/validator/README.md
@@ -66,7 +66,7 @@ toc:
   # - title: "Connections & Lifecycle"
   #   path: /docs/reference/diagnostics/logs/connections.md
 
-  - title: "Message Encoding"
+  - title: "Message encoding"
     path: /docs/reference/diagnostics/logs/encoding.md
 
   # TODO(fxbug.dev/60815)
@@ -101,7 +101,7 @@ toc:
   #   - title: "System Monitor"
   #     path: /docs/reference/diagnostics/consumers/system-monitor.md
 
-  - title: "Local/Development"
+  - title: "Local and development"
     section:
     - title: "iquery"
       path: /docs/reference/diagnostics/consumers/iquery.md

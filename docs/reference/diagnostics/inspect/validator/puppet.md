@@ -1,4 +1,5 @@
-# Inspect Validator Puppet Architecture
+# Inspect validator puppet architecture
+
 ## Overview
 
 The Validator program sends FIDL commands to control a "puppet" program, which

@@ -1,4 +1,4 @@
-# Validator Architecture
+# Validator architecture
 
 Validator applies automated interactive tests to a stateful library such as
 Inspect or file systems - an interactive golden file framework.
@@ -12,7 +12,7 @@ calls.
 * A reference implementation or simulation of the desired behavior.
 * Analysis of puppet results, comparison to local results, and reporting.
 
-## Inspect Validator
+## Inspect validator
 
 The Inspect Validator implementation includes:
 

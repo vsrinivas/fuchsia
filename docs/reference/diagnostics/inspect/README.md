@@ -1,4 +1,4 @@
-# Inspect Reference
+# Inspect reference
 
 <!-- * [Accessing Inspect data](/docs/reference/diagnostics/inspect/access.md) -->
 * Inspect VMOs
