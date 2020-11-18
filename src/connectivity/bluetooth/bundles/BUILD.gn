@@ -7,7 +7,7 @@ import("//build/cipd.gni")
 group("vim2-bluetooth-hci") {
   deps = [
     "//src/connectivity/bluetooth/hci/transport/uart:bt-transport-uart",
-    "//src/connectivity/bluetooth/hci/vendor/broadcom:bt-hci-broadcom-transitional",
+    "//src/connectivity/bluetooth/hci/vendor/broadcom:bt-hci-broadcom",
   ]
   data_deps = []
   if (internal_access) {
