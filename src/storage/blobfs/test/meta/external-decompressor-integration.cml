@@ -1,0 +1,27 @@
+{
+    program: {
+        binary: "test/external_decompressor_integration",
+    },
+    capabilities: [
+        { protocol: "fuchsia.test.Suite" },
+    ],
+    use: [
+        { runner: "gtest_runner" },
+        {
+            protocol: [
+                "fuchsia.logger.LogSink",
+                "fuchsia.process.Launcher",
+            ],
+        },
+        {
+            protocol: "fuchsia.blobfs.internal.DecompressorCreator",
+            path: "/svc_blobfs/fuchsia.blobfs.internal.DecompressorCreator",
+        },
+    ],
+    expose: [
+        {
+            protocol: "fuchsia.test.Suite",
+            from: "self",
+        },
+    ],
+}

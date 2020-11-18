@@ -14,6 +14,7 @@ assert(!defined(zx) || zx != "/",
 
 import("//build/fidl/fidl.gni")
 import("//build/unification/zx_library.gni")
+import("//src/sys/build/components.gni")
 
 declare_args() {
   # Set this to true when configuring gn args to enable blobfs page-in
@@ -176,6 +177,7 @@ zx_library("blobfs") {
       "//zircon/system/ulib/fs/metrics:metrics-inspect",
     ]
     deps += [
+      ":fuchsia.blobfs.internal",
       ":fuchsia.blobfs.internal_llcpp",
       "//sdk/fidl/fuchsia.blobfs:fuchsia.blobfs_c",
       "//sdk/fidl/fuchsia.blobfs:fuchsia.blobfs_llcpp",
@@ -271,4 +273,9 @@ executable("decompressor") {
     "//zircon/system/ulib/trace",
     "//zircon/system/ulib/trace-provider:trace-provider-with-fdio",
   ]
+}
+
+fuchsia_component("decompressor-sandbox") {
+  manifest = "meta/decompressor-sandbox.cml"
+  deps = [ ":decompressor" ]
 }

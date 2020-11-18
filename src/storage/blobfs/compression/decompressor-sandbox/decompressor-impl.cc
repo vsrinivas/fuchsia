@@ -93,7 +93,8 @@ void HandleFifo(const fzl::OwnedVmoMapper& compressed_mapper,
         bytes_decompressed = 0;
         response->status = ZX_ERR_NOT_SUPPORTED;
       } else {
-        CompressionAlgorithm algorithm = CompressionAlgorithmFidlToLocal(request->algorithm);
+        CompressionAlgorithm algorithm =
+            ExternalDecompressorClient::CompressionAlgorithmFidlToLocal(request->algorithm);
         response->status =
             DecompressFull(decompressed_mapper, compressed_mapper, request->decompressed.size,
                            request->compressed.size, algorithm, &bytes_decompressed);

@@ -129,6 +129,31 @@ test("blobfs-host") {
   ]
 }
 
+test("external_decompressor_integration") {
+  sources = [ "integration/external-decompressor_test.cc" ]
+  deps = [
+    "//src/lib/fxl/test:gtest_main",
+    "//src/storage/blobfs:blobfs",
+    "//src/storage/blobfs:fuchsia.blobfs.internal",
+    "//src/storage/blobfs:private_headers",
+    "//third_party/googletest:gtest",
+    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/fzl",
+  ]
+}
+
+fuchsia_unittest_component("external-decompressor-integration") {
+  manifest = "meta/external-decompressor-integration.cml"
+  deps = [
+    ":external_decompressor_integration",
+    ":test-binary",
+  ]
+}
+
+fuchsia_unittest_component("external-decompressor-runner") {
+  manifest = "meta/external-decompressor-runner.cml"
+}
+
 test("blobfs-integration") {
   output_name = "blobfs-integration-test"
 
@@ -287,6 +312,11 @@ fuchsia_test_package("blobfs-integration-package") {
     ":blobfs-no-space-component",
     ":blobfs-use-second-bitmap-component",
     ":executable-mount-test",
+    ":external-decompressor-runner",
+  ]
+  deps = [
+    ":external-decompressor-integration",
+    "//src/storage/blobfs:decompressor-sandbox",
   ]
 }
 

@@ -1,0 +1,25 @@
+{
+    program: {
+        binary: "bin/decompressor",
+        args: [],
+    },
+    capabilities: [
+        { protocol: "fuchsia.blobfs.internal.DecompressorCreator" },
+    ],
+    use: [
+        { runner: "elf" },
+        {
+            protocol: [
+                "fuchsia.logger.LogSink",
+                "fuchsia.scheduler.ProfileProvider",
+                "fuchsia.tracing.provider.Registry",
+            ],
+        },
+    ],
+    expose: [
+        {
+            protocol: "fuchsia.blobfs.internal.DecompressorCreator",
+            from: "self",
+        },
+    ],
+}
