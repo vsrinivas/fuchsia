@@ -170,4 +170,8 @@ command and not the tests.''')
           '''Whether to also run tests that have been marked disabled/ignored by
 the test author. Run 'fx shell run-test-suite --help' for more info about this
 flag.''')
+  ..addOption('timeout',
+      defaultsTo: '0',
+      help: '''Test timeout in seconds. Run 'fx shell run-test-suite --help' or
+'fx shell run-test-component --help' for more info about this flag.''')
   ..addFlag('verbose', abbr: 'v', defaultsTo: false, negatable: false);

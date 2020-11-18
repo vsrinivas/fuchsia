@@ -69,7 +69,9 @@
 ##     --[no-]also-run-disabled-tests    Whether to also run tests that have been marked disabled/ignored by
 ##                                       the test author. Run 'fx shell run-test-suite --help' for more info about this
 ##                                       flag.
-## -v, --verbose
+##    --timeout                          Test timeout in seconds. Run 'fx shell run-test-suite --help' or
+##                                      'fx shell run-test-component --help' for more info about this flag.
+##    -v, --verbose
 ##
 ## Examples:
 ##

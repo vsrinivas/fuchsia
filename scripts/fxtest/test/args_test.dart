@@ -459,6 +459,19 @@ void main() {
           isNot(contains('--also-run-disabled-tests')));
     });
 
+    test('with --timeout', () {
+      var testsConfig = TestsConfig.fromRawArgs(
+        rawArgs: ['--timeout=5'],
+        fxEnv: FakeFxEnv.shared,
+      );
+      expect(testsConfig.flags.timeout, 5);
+
+      expect(testsConfig.runnerTokens[TestType.suite], contains('--timeout'));
+      expect(testsConfig.runnerTokens[TestType.suite], contains('5'));
+      expect(testsConfig.runnerTokens[TestType.component],
+          contains('--timeout=5'));
+    });
+
     test('with --count', () {
       var testsConfig = TestsConfig.fromRawArgs(
         rawArgs: ['--count=22'],

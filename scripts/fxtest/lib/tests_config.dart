@@ -47,6 +47,7 @@ class Flags {
   final bool shouldUpdateIfInBase;
   final bool shouldUsePackageHash;
   final int slowThreshold;
+  final int timeout;
 
   // flags for v2 tests
   final String testFilter;
@@ -79,6 +80,7 @@ class Flags {
     this.shouldUpdateIfInBase = true,
     this.shouldUsePackageHash = true,
     this.slowThreshold = 0,
+    this.timeout = 0,
     this.testFilter,
     this.count,
     this.runDisabledTests = false,
@@ -116,6 +118,7 @@ class Flags {
         shouldUpdateIfInBase: argResults['updateifinbase'],
         shouldUsePackageHash: argResults['use-package-hash'],
         slowThreshold: int.parse(argResults['slow'] ?? '0'),
+        timeout: int.parse(argResults['timeout'] ?? '0'),
         count: argResults['count'],
         runDisabledTests: argResults['also-run-disabled-tests']);
   }
@@ -216,6 +219,9 @@ class TestsConfig {
     if (flags.minSeverityLogs != null) {
       v1runnerTokens.add('--min-severity-logs=${flags.minSeverityLogs}');
     }
+    if (flags.timeout > 0) {
+      v1runnerTokens.add('--timeout=${flags.timeout}');
+    }
 
     var v2runnerTokens = <String>[];
     if (flags.testFilter != null) {
@@ -226,6 +232,9 @@ class TestsConfig {
     }
     if (flags.runDisabledTests) {
       v2runnerTokens.add('--also-run-disabled-tests');
+    }
+    if (flags.timeout > 0) {
+      v2runnerTokens..add('--timeout')..add(flags.timeout.toString());
     }
 
     return TestsConfig(
