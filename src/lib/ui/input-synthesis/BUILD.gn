@@ -31,6 +31,10 @@ rustc_library("input-synthesis") {
     "src/keymaps.rs",
     "src/legacy_backend.rs",
     "src/lib.rs",
+    "src/modern_backend/input_device.rs",
+    "src/modern_backend/input_device_registry.rs",
+    "src/modern_backend/input_reports_reader.rs",
+    "src/modern_backend/mod.rs",
     "src/synthesizer.rs",
     "src/usages.rs",
   ]

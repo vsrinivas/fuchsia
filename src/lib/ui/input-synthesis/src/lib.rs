@@ -15,6 +15,8 @@ pub mod legacy_backend;
 pub mod synthesizer;
 pub mod usages;
 
+mod modern_backend;
+
 /// Simulates a media button event.
 pub async fn media_button_event_command(
     volume_up: bool,
