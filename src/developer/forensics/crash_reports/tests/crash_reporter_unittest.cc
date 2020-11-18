@@ -106,6 +106,8 @@ const std::map<std::string, std::string> kEmptyAnnotations = {};
 constexpr char kDefaultAttachmentBundleKey[] = "feedback.attachment.bundle.key";
 constexpr char kEmptyAttachmentBundleKey[] = "empty.attachment.key";
 
+constexpr zx::duration kSnapshotSharedRequestWindow = zx::sec(5);
+
 Attachment BuildAttachment(const std::string& key, const std::string& value) {
   Attachment attachment;
   attachment.key = key;
@@ -137,6 +139,7 @@ std::vector<testing::internal::PairMatcher<K, V>> Linearize(const std::map<K, V>
 class CrashReporterTest : public UnitTestFixture {
  public:
   void SetUp() override {
+    clock_.Set(zx::time(0u));
     info_context_ =
         std::make_shared<InfoContext>(&InspectRoot(), &clock_, dispatcher(), services());
     crash_register_ = std::make_unique<CrashRegister>(
@@ -154,8 +157,8 @@ class CrashReporterTest : public UnitTestFixture {
   void SetUpCrashReporter(
       Config config, const std::vector<CrashServer::UploadStatus>& upload_attempt_results = {}) {
     auto snapshot_manager = std::make_unique<SnapshotManager>(
-        dispatcher(), services(), std::make_unique<timekeeper::TestClock>(), zx::sec(5),
-        StorageSize::Gigabytes(1u), StorageSize::Gigabytes(1u));
+        dispatcher(), services(), &clock_, kSnapshotSharedRequestWindow, StorageSize::Gigabytes(1u),
+        StorageSize::Gigabytes(1u));
     auto crash_server = std::make_unique<StubCrashServer>(upload_attempt_results);
 
     crash_server_ = crash_server.get();
@@ -279,12 +282,13 @@ class CrashReporterTest : public UnitTestFixture {
     FX_CHECK(crash_reporter_ != nullptr)
         << "crash_reporter_ is nullptr. Call SetUpCrashReporter() or one of its variants "
            "at the beginning of a test case.";
-    ::fit::result<void, zx_status_t> out_result;
+    std::optional<::fit::result<void, zx_status_t>> out_result{std::nullopt};
     crash_reporter_->File(
         std::move(report),
         [&out_result](::fit::result<void, zx_status_t> result) { out_result = std::move(result); });
-    FX_CHECK(RunLoopUntilIdle());
-    return out_result;
+    RunLoopFor(kSnapshotSharedRequestWindow);
+    FX_CHECK(out_result.has_value());
+    return out_result.value();
   }
 
   // Files one crash report.
@@ -438,12 +442,8 @@ TEST_F(CrashReporterTest, EnforcesQuota) {
   SetUpDeviceIdProviderServer(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));
   SetUpUtcProviderServer({kExternalResponse});
 
-  for (size_t i = 0; i < kDailyPerProductQuota; ++i) {
+  for (size_t i = 0; i < kDailyPerProductQuota + 1; ++i) {
     ASSERT_TRUE(FileOneCrashReport().is_ok());
-  }
-
-  for (size_t i = 0; i < kDailyPerProductQuota; ++i) {
-    ASSERT_TRUE(FileOneCrashReport().is_error());
   }
 }
 
@@ -923,7 +923,7 @@ TEST_F(CrashReporterTest, Check_CobaltAfterQuotaReached) {
   SetUpDeviceIdProviderServer(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));
   SetUpUtcProviderServer({kExternalResponse});
 
-  EXPECT_TRUE(FileOneCrashReport().is_error());
+  EXPECT_TRUE(FileOneCrashReport().is_ok());
   EXPECT_THAT(ReceivedCobaltEvents(), UnorderedElementsAreArray({
                                           cobalt::Event(cobalt::CrashState::kOnDeviceQuotaReached),
                                       }));

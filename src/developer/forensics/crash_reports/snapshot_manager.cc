@@ -59,12 +59,11 @@ std::shared_ptr<T> MakeShared(T&& t) {
 
 SnapshotManager::SnapshotManager(async_dispatcher_t* dispatcher,
                                  std::shared_ptr<sys::ServiceDirectory> services,
-                                 std::unique_ptr<timekeeper::Clock> clock,
-                                 zx::duration shared_request_window,
+                                 timekeeper::Clock* clock, zx::duration shared_request_window,
                                  StorageSize max_annotations_size, StorageSize max_archives_size)
     : dispatcher_(dispatcher),
       services_(std::move(services)),
-      clock_(std::move(clock)),
+      clock_(clock),
       shared_request_window_(shared_request_window),
       max_annotations_size_(max_annotations_size),
       current_annotations_size_(0u),
@@ -95,13 +94,13 @@ void SnapshotManager::Connect() {
     FX_PLOGS(WARNING, status) << "Lost connection to fuchisa.feedback.DataProvider";
 
     for (auto& request : requests_) {
-      if (!request.is_pending) {
+      if (!request->is_pending) {
         continue;
       }
 
       FidlSnapshot snapshot;
       AddAnnotation("debug.snapshot.error", ToReason(Error::kConnectionError), &snapshot);
-      CompleteWithSnapshot(request.uuid, std::move(snapshot));
+      CompleteWithSnapshot(request->uuid, std::move(snapshot));
     }
 
     // Call EnforceSizeLimits after the for-loop to not invalidate |request_| while it's being
@@ -137,8 +136,8 @@ Snapshot SnapshotManager::GetSnapshot(const SnapshotUuid& uuid) {
 
   SnapshotUuid uuid;
 
-  if (UseLatestRequest(current_time)) {
-    uuid = requests_.back().uuid;
+  if (UseLatestRequest()) {
+    uuid = requests_.back()->uuid;
   } else {
     uuid = MakeNewSnapshotRequest(current_time, timeout);
   }
@@ -206,21 +205,21 @@ void SnapshotManager::Release(const SnapshotUuid& uuid) {
     FX_CHECK(request->blocked_promises.empty());
   }
 
-  requests_.erase(
-      std::remove_if(requests_.begin(), requests_.end(),
-                     [uuid](const SnapshotRequest& request) { return uuid == request.uuid; }));
+  requests_.erase(std::remove_if(
+      requests_.begin(), requests_.end(),
+      [uuid](const std::unique_ptr<SnapshotRequest>& request) { return uuid == request->uuid; }));
   data_.erase(uuid);
 }
 
 SnapshotUuid SnapshotManager::MakeNewSnapshotRequest(const zx::time start_time,
                                                      const zx::duration timeout) {
   const auto uuid = uuid::Generate();
-  requests_.emplace_back(SnapshotRequest{
+  requests_.emplace_back(std::unique_ptr<SnapshotRequest>(new SnapshotRequest{
       .uuid = uuid,
-      .start_time = start_time,
       .is_pending = true,
       .blocked_promises = {},
-  });
+      .delayed_get_snapshot = async::TaskClosure(),
+  }));
   data_.emplace(uuid, SnapshotData{
                           .num_clients_with_uuid = 0,
                           .annotations_size = StorageSize::Bytes(0u),
@@ -229,20 +228,24 @@ SnapshotUuid SnapshotManager::MakeNewSnapshotRequest(const zx::time start_time,
                           .archive = nullptr,
                       });
 
-  if (!data_provider_.is_bound()) {
-    Connect();
-  }
+  requests_.back()->delayed_get_snapshot.set_handler([this, timeout, uuid]() {
+    if (!data_provider_.is_bound()) {
+      Connect();
+    }
 
-  GetSnapshotParameters params;
+    GetSnapshotParameters params;
 
-  // Give 15s for the packaging of the snapshot and the round-trip between the client and
-  // the server and the rest is given to each data collection.
-  params.set_collection_timeout_per_data((timeout - zx::sec(15)).get());
+    // Give 15s for the packaging of the snapshot and the round-trip between the client and
+    // the server and the rest is given to each data collection.
+    params.set_collection_timeout_per_data((timeout - zx::sec(15)).get());
 
-  data_provider_->GetSnapshot(std::move(params), [this, uuid](FidlSnapshot snapshot) {
-    CompleteWithSnapshot(uuid, std::move(snapshot));
-    EnforceSizeLimits();
+    data_provider_->GetSnapshot(std::move(params), [this, uuid](FidlSnapshot snapshot) {
+      CompleteWithSnapshot(uuid, std::move(snapshot));
+      EnforceSizeLimits();
+    });
   });
+  requests_.back()->delayed_get_snapshot.PostForTime(dispatcher_,
+                                                     start_time + shared_request_window_);
 
   return uuid;
 }
@@ -326,18 +329,18 @@ void SnapshotManager::CompleteWithSnapshot(const SnapshotUuid& uuid, FidlSnapsho
 }
 
 void SnapshotManager::EnforceSizeLimits() {
-  std::vector<SnapshotRequest> surviving_requests;
+  std::vector<std::unique_ptr<SnapshotRequest>> surviving_requests;
   for (auto& request : requests_) {
     // If the request is pending or the size limits aren't exceeded, keep the request.
-    if (request.is_pending || (current_annotations_size_ <= max_annotations_size_ &&
-                               current_archives_size_ <= max_archives_size_)) {
+    if (request->is_pending || (current_annotations_size_ <= max_annotations_size_ &&
+                                current_archives_size_ <= max_archives_size_)) {
       surviving_requests.push_back(std::move(request));
 
       // Continue in order to keep the rest of the requests alive.
       continue;
     }
 
-    auto* data = FindSnapshotData(request.uuid);
+    auto* data = FindSnapshotData(request->uuid);
     FX_CHECK(data);
 
     // Drop |request|'s annotations if necessary.
@@ -353,7 +356,7 @@ void SnapshotManager::EnforceSizeLimits() {
     // Delete the SnapshotRequest and SnapshotData if the annotations and archive have been
     // dropped, either in this iteration of the loop or a prior one.
     if (!data->annotations && !data->archive) {
-      data_.erase(request.uuid);
+      data_.erase(request->uuid);
       continue;
     }
 
@@ -377,20 +380,22 @@ void SnapshotManager::DropArchive(SnapshotData* data) {
   data->archive_size = StorageSize::Bytes(0u);
 }
 
-bool SnapshotManager::UseLatestRequest(const zx::time time) const {
+bool SnapshotManager::UseLatestRequest() const {
   if (requests_.empty()) {
     return false;
   }
 
-  return (time >= requests_.back().start_time) &&
-         (time < requests_.back().start_time + shared_request_window_);
+  // Whether the FIDL call for the latest request has already been made or not. If it has, the
+  // snapshot might not contain all the logs up until now for instance so it's better to create a
+  // new request.
+  return requests_.back()->delayed_get_snapshot.is_pending();
 }
 
 SnapshotManager::SnapshotRequest* SnapshotManager::FindSnapshotRequest(const SnapshotUuid& uuid) {
-  auto request =
-      std::find_if(requests_.begin(), requests_.end(),
-                   [uuid](const SnapshotRequest& request) { return uuid == request.uuid; });
-  return (request == requests_.end()) ? nullptr : &(*request);
+  auto request = std::find_if(
+      requests_.begin(), requests_.end(),
+      [uuid](const std::unique_ptr<SnapshotRequest>& request) { return uuid == request->uuid; });
+  return (request == requests_.end()) ? nullptr : request->get();
 }
 
 SnapshotManager::SnapshotData* SnapshotManager::FindSnapshotData(const SnapshotUuid& uuid) {

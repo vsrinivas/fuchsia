@@ -56,7 +56,7 @@ auto Vector(const std::map<K, V>& annotations) {
 class SnapshotManagerTest : public UnitTestFixture {
  public:
   SnapshotManagerTest()
-      : UnitTestFixture(), clock_(nullptr), executor_(dispatcher()), snapshot_manager_(nullptr) {}
+      : UnitTestFixture(), clock_(), executor_(dispatcher()), snapshot_manager_(nullptr) {}
 
  protected:
   void SetUp() override {
@@ -64,10 +64,9 @@ class SnapshotManagerTest : public UnitTestFixture {
   }
 
   void SetUpSnapshotManager(StorageSize max_annotations_size, StorageSize max_archives_size) {
-    clock_ = new timekeeper::TestClock();
+    clock_.Set(zx::time(0u));
     snapshot_manager_ = std::make_unique<SnapshotManager>(
-        dispatcher(), services(), std::unique_ptr<timekeeper::TestClock>(clock_), kWindow,
-        max_annotations_size, max_archives_size);
+        dispatcher(), services(), &clock_, kWindow, max_annotations_size, max_archives_size);
   }
 
   void SetUpDefaultDataProviderServer() {
@@ -94,7 +93,7 @@ class SnapshotManagerTest : public UnitTestFixture {
 
   bool is_server_bound() { return data_provider_server_->IsBound(); }
 
-  timekeeper::TestClock* clock_;
+  timekeeper::TestClock clock_;
   async::Executor executor_;
   std::unique_ptr<SnapshotManager> snapshot_manager_;
 
@@ -108,8 +107,11 @@ TEST_F(SnapshotManagerTest, Check_GetSnapshotUuid) {
   std::optional<std::string> uuid{std::nullopt};
   ScheduleGetSnapshotUuidAndThen(zx::duration::infinite(),
                                  ([&uuid](const std::string& new_uuid) { uuid = new_uuid; }));
+  // |uuid| should only have a value once |kWindow| has passed.
   RunLoopUntilIdle();
+  ASSERT_FALSE(uuid.has_value());
 
+  RunLoopFor(kWindow);
   ASSERT_TRUE(uuid.has_value());
 }
 
@@ -131,7 +133,8 @@ TEST_F(SnapshotManagerTest, Check_GetSnapshotUuidRequestsCombined) {
                                      ++num_uuid1;
                                    }));
   }
-  clock_->Set(clock_->Now() + kWindow);
+  RunLoopFor(kWindow);
+  ASSERT_EQ(num_uuid1, kNumRequests);
 
   size_t num_uuid2{0};
   std::optional<std::string> uuid2{std::nullopt};
@@ -146,9 +149,7 @@ TEST_F(SnapshotManagerTest, Check_GetSnapshotUuidRequestsCombined) {
                                      ++num_uuid2;
                                    }));
   }
-  RunLoopUntilIdle();
-
-  ASSERT_EQ(num_uuid1, kNumRequests);
+  RunLoopFor(kWindow);
   ASSERT_EQ(num_uuid2, kNumRequests);
 
   ASSERT_TRUE(uuid1.has_value());
@@ -162,7 +163,7 @@ TEST_F(SnapshotManagerTest, Check_Get) {
   std::optional<std::string> uuid{std::nullopt};
   ScheduleGetSnapshotUuidAndThen(zx::duration::infinite(),
                                  ([&uuid](const std::string& new_uuid) { uuid = new_uuid; }));
-  RunLoopUntilIdle();
+  RunLoopFor(kWindow);
 
   ASSERT_TRUE(uuid.has_value());
   auto snapshot = snapshot_manager_->GetSnapshot(uuid.value());
@@ -179,7 +180,7 @@ TEST_F(SnapshotManagerTest, Check_SetsDebugAnnotations) {
   std::optional<std::string> uuid{std::nullopt};
   ScheduleGetSnapshotUuidAndThen(zx::duration::infinite(),
                                  ([&uuid](const std::string& new_uuid) { uuid = new_uuid; }));
-  RunLoopUntilIdle();
+  RunLoopFor(kWindow);
 
   ASSERT_TRUE(uuid.has_value());
   auto snapshot = snapshot_manager_->GetSnapshot(uuid.value());
@@ -201,9 +202,9 @@ TEST_F(SnapshotManagerTest, Check_ConnectionFailure) {
     ScheduleGetSnapshotUuidAndThen(
         zx::duration::infinite(),
         ([&uuids](const std::string& new_uuid) { uuids.push_back(new_uuid); }));
-    clock_->Set(clock_->Now() + kWindow);
+    clock_.Set(clock_.Now() + kWindow);
   }
-  RunLoopUntilIdle();
+  RunLoopFor(kWindow);
 
   ASSERT_EQ(uuids.size(), kNumRequests);
   for (const auto& uuid : uuids) {
@@ -224,17 +225,17 @@ TEST_F(SnapshotManagerTest, Check_AnnotationsMaxSizeIsEnforced) {
   std::optional<std::string> uuid1{std::nullopt};
   ScheduleGetSnapshotUuidAndThen(zx::duration::infinite(),
                                  ([&uuid1](const std::string& new_uuid) { uuid1 = new_uuid; }));
-  RunLoopUntilIdle();
+  RunLoopFor(kWindow);
 
   ASSERT_TRUE(uuid1.has_value());
   ASSERT_TRUE(snapshot_manager_->GetSnapshot(uuid1.value()).LockAnnotations());
 
-  clock_->Set(clock_->Now() + kWindow);
+  clock_.Set(clock_.Now() + kWindow);
 
   std::optional<std::string> uuid2{std::nullopt};
   ScheduleGetSnapshotUuidAndThen(zx::duration::infinite(),
                                  ([&uuid2](const std::string& new_uuid) { uuid2 = new_uuid; }));
-  RunLoopUntilIdle();
+  RunLoopFor(kWindow);
 
   ASSERT_TRUE(uuid2.has_value());
   ASSERT_TRUE(snapshot_manager_->GetSnapshot(uuid2.value()).LockAnnotations());
@@ -252,7 +253,7 @@ TEST_F(SnapshotManagerTest, Check_Release) {
   std::optional<std::string> uuid{std::nullopt};
   ScheduleGetSnapshotUuidAndThen(zx::duration::infinite(),
                                  ([&uuid](const std::string& new_uuid) { uuid = new_uuid; }));
-  RunLoopUntilIdle();
+  RunLoopFor(kWindow);
 
   ASSERT_TRUE(uuid.has_value());
   {
@@ -282,17 +283,17 @@ TEST_F(SnapshotManagerTest, Check_ArchivesMaxSizeIsEnforced) {
   std::optional<std::string> uuid1{std::nullopt};
   ScheduleGetSnapshotUuidAndThen(zx::duration::infinite(),
                                  ([&uuid1](const std::string& new_uuid) { uuid1 = new_uuid; }));
-  RunLoopUntilIdle();
+  RunLoopFor(kWindow);
 
   ASSERT_TRUE(uuid1.has_value());
   ASSERT_TRUE(snapshot_manager_->GetSnapshot(uuid1.value()).LockArchive());
 
-  clock_->Set(clock_->Now() + kWindow);
+  clock_.Set(clock_.Now() + kWindow);
 
   std::optional<std::string> uuid2{std::nullopt};
   ScheduleGetSnapshotUuidAndThen(zx::duration::infinite(),
                                  ([&uuid2](const std::string& new_uuid) { uuid2 = new_uuid; }));
-  RunLoopUntilIdle();
+  RunLoopFor(kWindow);
 
   ASSERT_TRUE(uuid2.has_value());
   ASSERT_TRUE(snapshot_manager_->GetSnapshot(uuid2.value()).LockArchive());
@@ -306,7 +307,7 @@ TEST_F(SnapshotManagerTest, Check_Timeout) {
   std::optional<std::string> uuid{std::nullopt};
   ScheduleGetSnapshotUuidAndThen(zx::sec(0),
                                  ([&uuid](const std::string& new_uuid) { uuid = new_uuid; }));
-  RunLoopUntilIdle();
+  RunLoopFor(kWindow);
 
   ASSERT_TRUE(uuid.has_value());
   auto snapshot = snapshot_manager_->GetSnapshot(uuid.value());

@@ -36,8 +36,7 @@ class CrashServerTest : public gtest::TestLoopFixture {
       : loader_loop_(&kAsyncLoopConfigNoAttachToCurrentThread),
         loader_context_provider_(loader_loop_.dispatcher()),
         snapshot_manager_(dispatcher(), loader_context_provider_.public_service_directory(),
-                          std::make_unique<timekeeper::TestClock>(), zx::min(0),
-                          StorageSize::Bytes(0u), StorageSize::Bytes(0u)),
+                          &clock_, zx::min(0), StorageSize::Bytes(0u), StorageSize::Bytes(0u)),
         tags_(),
         crash_server_(loader_context_provider_.public_service_directory(), kUrl, &snapshot_manager_,
                       &tags_) {
@@ -66,6 +65,7 @@ class CrashServerTest : public gtest::TestLoopFixture {
   sys::testing::ComponentContextProvider loader_context_provider_;
   std::unique_ptr<stubs::Loader> loader_server_;
 
+  timekeeper::TestClock clock_;
   SnapshotManager snapshot_manager_;
   LogTags tags_;
   CrashServer crash_server_;

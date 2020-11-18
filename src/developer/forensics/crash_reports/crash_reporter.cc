@@ -42,11 +42,13 @@ constexpr zx::duration kChannelOrDeviceIdTimeout = zx::sec(30);
 constexpr zx::duration kSnapshotTimeout = zx::min(2);
 
 // If a crash report arrives within |kSnapshotSharedRequestWindow| of a call to
+// SnapshotManager::GetSnapshotUuid that schedules a call to
 // fuchsia.feedback.DataProvider/GetSnapshot, the returned snapshot will be used in the resulting
 // report.
 //
-// If the value is too large, data gets stale, e.g., logs, and if it is too low the benefit of using
-// the same snapshot in multiple reports is lost.
+// If the value it too large, crash reports may take too long to generate, but if the value is too
+// small, the benefits of combining calls to fuchsia.feedback.DataProvider/GetSnapshot may not be
+// fully realized.
 constexpr zx::duration kSnapshotSharedRequestWindow = zx::sec(5);
 
 // Returns what the initial ReportId should be, based on the contents of the store in the
@@ -87,9 +89,9 @@ std::unique_ptr<CrashReporter> CrashReporter::TryCreate(
     async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
     timekeeper::Clock* clock, std::shared_ptr<InfoContext> info_context, Config config,
     const ErrorOr<std::string>& build_version, CrashRegister* crash_register) {
-  std::unique_ptr<SnapshotManager> snapshot_manager = std::make_unique<SnapshotManager>(
-      dispatcher, services, std::make_unique<timekeeper::SystemClock>(),
-      kSnapshotSharedRequestWindow, kSnapshotAnnotationsMaxSize, kSnapshotArchivesMaxSize);
+  std::unique_ptr<SnapshotManager> snapshot_manager =
+      std::make_unique<SnapshotManager>(dispatcher, services, clock, kSnapshotSharedRequestWindow,
+                                        kSnapshotAnnotationsMaxSize, kSnapshotArchivesMaxSize);
 
   auto tags = std::make_unique<LogTags>();
 
@@ -152,6 +154,10 @@ void CrashReporter::File(fuchsia::feedback::CrashReport report, FileCallback cal
     return;
   }
 
+  // Execute the callback informing the client the report has been filed. The rest of the async flow
+  // can take quite some time and blocking clients would defeat the purpose of sharing the snapshot.
+  callback(::fit::ok());
+
   const std::string program_name = report.program_name();
   const auto report_id = next_report_id_++;
 
@@ -166,7 +172,7 @@ void CrashReporter::File(fuchsia::feedback::CrashReport report, FileCallback cal
             return ::fit::error(
                 CrashReporterError{cobalt::CrashState::kDropped, "failed GetProduct"});
           })
-          .and_then([this](
+          .and_then([this, report_id](
                         Product& product) -> ::fit::promise<promise_tuple_t, CrashReporterError> {
             if (!product_quotas_.HasQuotaRemaining(product)) {
               return ::fit::make_result_promise<promise_tuple_t, CrashReporterError>(
@@ -181,6 +187,8 @@ void CrashReporter::File(fuchsia::feedback::CrashReport report, FileCallback cal
             auto snapshot_uuid_promise = snapshot_manager_->GetSnapshotUuid(kSnapshotTimeout);
             auto device_id_promise = device_id_provider_ptr_.GetId(kChannelOrDeviceIdTimeout);
             auto product_promise = ::fit::make_ok_promise(std::move(product));
+
+            FX_LOGST(INFO, tags_->Get(report_id)) << "Generating report";
 
             return ::fit::join_promises(std::move(snapshot_uuid_promise),
                                         std::move(device_id_promise), std::move(product_promise))
@@ -197,7 +205,6 @@ void CrashReporter::File(fuchsia::feedback::CrashReport report, FileCallback cal
             auto device_id = std::move(std::get<1>(results));
             auto product = std::get<2>(results).take_value();
 
-            FX_LOGST(INFO, tags_->Get(report_id)) << "Generating report";
             std::optional<Report> final_report =
                 MakeReport(std::move(report), report_id, snapshot_uuid, utc_provider_.CurrentTime(),
                            device_id, build_version_, product);
@@ -213,17 +220,14 @@ void CrashReporter::File(fuchsia::feedback::CrashReport report, FileCallback cal
 
             return ::fit::ok();
           })
-          .then([this, callback = std::move(callback),
-                 report_id](::fit::result<void, CrashReporterError>& result) {
+          .then([this, report_id](::fit::result<void, CrashReporterError>& result) {
             if (result.is_error()) {
               FX_LOGST(ERROR, tags_->Get(report_id))
                   << "Failed to file report: " << result.error().log_message << ". Won't retry";
               tags_->Unregister(report_id);
               info_.LogCrashState(result.error().crash_state);
-              callback(::fit::error(ZX_ERR_INTERNAL));
             } else {
               info_.LogCrashState(cobalt::CrashState::kFiled);
-              callback(::fit::ok());
             }
           });
 

@@ -6,6 +6,7 @@
 #define SRC_DEVELOPER_FORENSICS_CRASH_REPORTS_SNAPSHOT_MANAGER_H_
 
 #include <fuchsia/feedback/cpp/fidl.h>
+#include <lib/async/cpp/task.h>
 #include <lib/async/dispatcher.h>
 #include <lib/fit/promise.h>
 #include <lib/sys/cpp/service_directory.h>
@@ -38,7 +39,7 @@ using SnapshotUuid = std::string;
 class SnapshotManager {
  public:
   SnapshotManager(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
-                  std::unique_ptr<timekeeper::Clock> clock, zx::duration shared_request_window,
+                  timekeeper::Clock* clock, zx::duration shared_request_window,
                   StorageSize max_annotations_size, StorageSize max_archives_size);
 
   // Returns a promise of a snapshot uuid. No uuid will be returned if |timeout| expires.
@@ -63,15 +64,19 @@ class SnapshotManager {
 
  private:
   // State associated with an async call to fuchsia.feedback.DataProvider/GetSnapshot.
-  //  * The uuid of the request's snapshot.
-  //  * The time the request was made.
-  //  * Whether the request is pending.
-  //  * Promises that are waiting on the call to complete.
   struct SnapshotRequest {
+    // The uuid of the request's snapshot.
     SnapshotUuid uuid;
-    zx::time start_time;
+
+    // Whether the request is pending.
     bool is_pending;
+
+    // Promises that are waiting on the call to complete.
     std::vector<::fit::suspended_task> blocked_promises;
+
+    // The actual request that we delay by |shared_request_window_| after the SnapshotRequest is
+    // created.
+    async::TaskClosure delayed_get_snapshot;
   };
 
   // State associated with a snapshot.
@@ -91,9 +96,9 @@ class SnapshotManager {
   // Connect to fuchsia.feedback.DataProvider.
   void Connect();
 
-  // Determine if |time| is in [|start_time|, |start_time| + |shared_request_window_|) of the most
-  // recent request.
-  bool UseLatestRequest(zx::time time) const;
+  // Determine if the most recent SnapshotRequest's delayed call to
+  // fuchsia.feedback.DataProvider/GetSnapshopt has executed.
+  bool UseLatestRequest() const;
 
   // Find the Snapshot{Request,Data} with Uuid |uuid|. If none exists, return nullptr.
   SnapshotRequest* FindSnapshotRequest(const SnapshotUuid& uuid);
@@ -124,7 +129,7 @@ class SnapshotManager {
 
   async_dispatcher_t* dispatcher_;
   std::shared_ptr<sys::ServiceDirectory> services_;
-  std::unique_ptr<timekeeper::Clock> clock_;
+  timekeeper::Clock* clock_;
 
   fuchsia::feedback::DataProviderPtr data_provider_;
 
@@ -136,7 +141,7 @@ class SnapshotManager {
   StorageSize max_archives_size_;
   StorageSize current_archives_size_;
 
-  std::vector<SnapshotRequest> requests_;
+  std::vector<std::unique_ptr<SnapshotRequest>> requests_;
   std::map<SnapshotUuid, SnapshotData> data_;
 
   // SnapshotUuid and annotations to return under specific conditions, e.g., garbage collection,
