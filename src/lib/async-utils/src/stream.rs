@@ -38,7 +38,6 @@ pub enum StreamItem<T, E> {
 pub struct StreamWithEpitaph<S, E> {
     inner: S,
     epitaph: Option<E>,
-    terminated: bool,
 }
 
 // The `Unpin` bounds are not strictly necessary, but make for a more convenient
@@ -51,13 +50,12 @@ where
 {
     type Item = StreamItem<T, E>;
     fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
-        if self.terminated {
+        if self.epitaph.is_none() {
             return Poll::Ready(None);
         }
         match Pin::new(&mut self.inner).poll_next(cx) {
             Poll::Ready(None) => {
-                let mut this = self.get_mut();
-                this.terminated = true;
+                let this = self.get_mut();
                 let ep = this.epitaph.take().map(StreamItem::Epitaph);
                 assert!(ep.is_some(), "epitaph must be present if stream is not terminated");
                 Poll::Ready(ep)
@@ -75,7 +73,7 @@ where
     T: Unpin,
 {
     fn is_terminated(&self) -> bool {
-        self.terminated
+        self.epitaph.is_none()
     }
 }
 
@@ -91,7 +89,7 @@ where
     T: Stream,
 {
     fn with_epitaph<E>(self, epitaph: E) -> StreamWithEpitaph<T, E> {
-        StreamWithEpitaph { inner: self, epitaph: Some(epitaph), terminated: false }
+        StreamWithEpitaph { inner: self, epitaph: Some(epitaph) }
     }
 }
 
