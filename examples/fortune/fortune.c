@@ -17,7 +17,7 @@ static const char* kFortunes[4] = {
 };
 
 int main(int argc, char** argv) {
-  srand(time(0));
+  srand((unsigned int)time(0));
   printf("%s\n", kFortunes[rand() % kFortunesSize]);
   return 0;
 }

@@ -10,12 +10,12 @@
 #define MIN(a, b) ((a < b) ? a : b)
 
 // Returns the length of the longst line of the message.
-static int LongestLineLength(int argc, char** argv) {
-  int max_len = 0;
-  int cur_line = 0;
+static size_t LongestLineLength(int argc, char** argv) {
+  size_t max_len = 0;
+  size_t cur_line = 0;
 
   for (int i = 0; i < argc; i++) {
-    int word_len = strlen(argv[i]) + 1;
+    size_t word_len = strlen(argv[i]) + 1;
 
     // If the word itself is too long to fit in a line, then
     // we return the maximum width.
@@ -34,19 +34,19 @@ static int LongestLineLength(int argc, char** argv) {
   return max_len;
 }
 
-static void PrintPaddedBreak(int pad) {
-  for (int i = 0; i < pad; i++) {
+static void PrintPaddedBreak(size_t pad) {
+  for (size_t i = 0; i < pad; i++) {
     printf(" ");
   }
   printf(" |\n");
 }
 
 // Prints the message
-static void PrintMessage(int argc, char** argv, int longest) {
-  int cur_line_len = 0;
+static void PrintMessage(int argc, char** argv, size_t longest) {
+  size_t cur_line_len = 0;
 
   for (int i = 0; i < argc; i++) {
-    int word_len = strlen(argv[i]) + 1;
+    size_t word_len = strlen(argv[i]) + 1;
 
     if (cur_line_len == 0)
       printf("| ");
@@ -79,10 +79,10 @@ static void PrintMessage(int argc, char** argv, int longest) {
     // Otherwise, we print the current word and move on.
     if (word_len > MAX_WIDTH) {
       char* str = argv[i];
-      int processed = 0;
-      for (int j = 0; j <= word_len / MAX_WIDTH; j++) {
-        int len = MIN(MAX_WIDTH, strlen(str));
-        printf("%.*s", len, str);
+      size_t processed = 0;
+      for (size_t j = 0; j <= word_len / MAX_WIDTH; j++) {
+        size_t len = MIN(MAX_WIDTH, strlen(str));
+        printf("%.*s", (int)len, str);
         PrintPaddedBreak(longest - len);
         str += len;
         processed += len;
@@ -109,17 +109,17 @@ int main(int argc, char** argv) {
   }
 
   // No wordwrap because I'm too lazy.
-  int bubble_width = LongestLineLength(argc - 1, argv + 1) + 1;
+  size_t bubble_width = LongestLineLength(argc - 1, argv + 1) + 1;
 
   printf(" _");
-  for (int i = 0; i < bubble_width; i++)
+  for (size_t i = 0; i < bubble_width; i++)
     printf("_");
   printf(" \n");
 
   PrintMessage(argc - 1, argv + 1, bubble_width - 1);
 
   printf(" -");
-  for (int i = 0; i < bubble_width; i++)
+  for (size_t i = 0; i < bubble_width; i++)
     printf("-");
   printf(" \n");
 
