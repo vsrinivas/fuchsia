@@ -31,7 +31,7 @@ std::string CurrentTime(timekeeper::Clock* clock) {
     return current_time.value();
   } else {
     FX_LOGS(ERROR) << "Failed to get current UTC time";
-    return "<unknown>";
+    return "unknown";
   }
 }
 

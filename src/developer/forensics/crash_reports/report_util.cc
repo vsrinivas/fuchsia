@@ -180,7 +180,8 @@ void AddCrashServerAnnotations(const std::string& program_name,
   if (product.version.HasValue()) {
     (*annotations)["version"] = product.version.Value();
   } else {
-    (*annotations)["version"] = "<unknown>";
+    // The crash server requires a version and expects alphanumeric, punctuation, and space only.
+    (*annotations)["version"] = "unknown";
     (*annotations)["debug.version.error"] = ToReason(product.version.Error());
   }
   if (product.channel.HasValue()) {
@@ -188,9 +189,9 @@ void AddCrashServerAnnotations(const std::string& program_name,
   } else {
     // "channel" is a required field on the crash server that defaults to the empty string. But on
     // Fuchsia, the system update channel can be the empty string in the case of a fresh pave
-    // typically. So in case the channel is unavailable, we set the value to "<unknown>" to
+    // typically. So in case the channel is unavailable, we set the value to "unknown" to
     // distinguish it from the default empty string value it would get on the crash server.
-    (*annotations)["channel"] = "<unknown>";
+    (*annotations)["channel"] = "unknown";
     (*annotations)["debug.channel.error"] = ToReason(product.channel.Error());
   }
 
@@ -203,7 +204,8 @@ void AddCrashServerAnnotations(const std::string& program_name,
   if (os_version.HasValue()) {
     (*annotations)["osVersion"] = os_version.Value();
   } else {
-    (*annotations)["osVersion"] = "<unknown>";
+    // The crash server requires a version and expects alphanumeric, punctuation, and space only.
+    (*annotations)["osVersion"] = "unknown";
     (*annotations)["debug.os.version.error"] = ToReason(os_version.Error());
   }
 

@@ -520,7 +520,7 @@ TEST_F(CrashReporterTest, Check_UnknownChannel) {
 
   ASSERT_NE(crash_server_->latest_annotations().find("channel"),
             crash_server_->latest_annotations().end());
-  EXPECT_EQ(crash_server_->latest_annotations().at("channel"), "<unknown>");
+  EXPECT_EQ(crash_server_->latest_annotations().at("channel"), "unknown");
 
   ASSERT_NE(crash_server_->latest_annotations().find("debug.channel.error"),
             crash_server_->latest_annotations().end());
