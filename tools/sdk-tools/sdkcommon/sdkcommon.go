@@ -235,11 +235,40 @@ func (sdk SDKProperties) GetAddressByName(deviceName string) (string, error) {
 // RunSSHCommand runs the command provided in args on the given target device.
 // The customSSHconfig is optional and overrides the SSH configuration defined by the SDK.
 // privateKey is optional to specify a private key to use to access the device.
-func (sdk SDKProperties) RunSSHCommand(targetAddress string, customSSHConfig string, privateKey string, args []string) (string, error) {
+// verbose adds the -v flag to ssh.
+// The return value is the stdout.
+func (sdk SDKProperties) RunSSHCommand(targetAddress string, customSSHConfig string, privateKey string, verbose bool, args []string) (string, error) {
 
+	cmdArgs, err := buildSSHArgs(sdk, targetAddress, customSSHConfig, privateKey, verbose, args)
+	if err != nil {
+		return "", err
+	}
+
+	return runSSH(cmdArgs, false)
+}
+
+// RunSSHShell runs the command provided in args on the given target device and
+// uses the system stdin, stdout, stderr. Returns when the ssh process exits.
+// The customSSHconfig is optional and overrides the SSH configuration defined by the SDK.
+// privateKey is optional to specify a private key to use to access the device.
+// verbose adds the -v flag to ssh.
+// The return value is the stdout.
+func (sdk SDKProperties) RunSSHShell(targetAddress string, customSSHConfig string, privateKey string, verbose bool, args []string) error {
+
+	cmdArgs, err := buildSSHArgs(sdk, targetAddress, customSSHConfig, privateKey, verbose, args)
+	if err != nil {
+		return err
+	}
+	_, err = runSSH(cmdArgs, true)
+	return err
+
+}
+
+func buildSSHArgs(sdk SDKProperties, targetAddress string, customSSHConfig string,
+	privateKey string, verbose bool, args []string) ([]string, error) {
 	if customSSHConfig == "" || privateKey == "" {
 		if err := checkSSHConfig(sdk); err != nil {
-			return "", err
+			return []string{}, err
 		}
 	}
 
@@ -252,12 +281,15 @@ func (sdk SDKProperties) RunSSHCommand(targetAddress string, customSSHConfig str
 	if privateKey != "" {
 		cmdArgs = append(cmdArgs, "-i", privateKey)
 	}
+	if verbose {
+		cmdArgs = append(cmdArgs, "-v")
+	}
 
 	cmdArgs = append(cmdArgs, targetAddress)
 
 	cmdArgs = append(cmdArgs, args...)
 
-	return runSSH(cmdArgs)
+	return cmdArgs, nil
 }
 
 func getFuchsiaSSHConfigFile(sdk SDKProperties) string {

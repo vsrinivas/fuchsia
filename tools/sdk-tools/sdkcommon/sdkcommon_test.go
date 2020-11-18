@@ -127,17 +127,17 @@ func TestRunSSHCommand(t *testing.T) {
 	customSSHConfig := ""
 	privateKey := ""
 	args := []string{"echo", "$SSH_CONNECTION"}
-	if _, err := testSDK.RunSSHCommand(targetAddress, customSSHConfig, privateKey, args); err != nil {
+	if _, err := testSDK.RunSSHCommand(targetAddress, customSSHConfig, privateKey, false, args); err != nil {
 		t.Fatal(err)
 	}
 
-	if _, err := testSDK.RunSSHCommand(targetAddress, customSSHConfig, privateKey, args); err != nil {
+	if _, err := testSDK.RunSSHCommand(targetAddress, customSSHConfig, privateKey, false, args); err != nil {
 		t.Fatal(err)
 	}
 
 	customSSHConfig = "custom-sshconfig"
 	os.Setenv("FSERVE_TEST_USE_CUSTOM_SSH_CONFIG", "1")
-	if _, err := testSDK.RunSSHCommand(targetAddress, customSSHConfig, privateKey, args); err != nil {
+	if _, err := testSDK.RunSSHCommand(targetAddress, customSSHConfig, privateKey, false, args); err != nil {
 		t.Fatal(err)
 	}
 
@@ -145,7 +145,7 @@ func TestRunSSHCommand(t *testing.T) {
 	privateKey = "private-key"
 	os.Setenv("FSERVE_TEST_USE_CUSTOM_SSH_CONFIG", "")
 	os.Setenv("FSERVE_TEST_USE_PRIVATE_KEY", "1")
-	if _, err := testSDK.RunSSHCommand(targetAddress, customSSHConfig, privateKey, args); err != nil {
+	if _, err := testSDK.RunSSHCommand(targetAddress, customSSHConfig, privateKey, false, args); err != nil {
 		t.Fatal(err)
 	}
 }

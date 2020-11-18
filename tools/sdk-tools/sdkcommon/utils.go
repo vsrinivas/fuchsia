@@ -28,12 +28,19 @@ func runGSUtil(args []string) (string, error) {
 	return string(out), err
 }
 
-func runSSH(args []string) (string, error) {
+func runSSH(args []string, interactive bool) (string, error) {
 	path, err := ExecLookPath("ssh")
 	if err != nil {
 		return "", fmt.Errorf("could not find ssh on path: %v", err)
 	}
 	cmd := ExecCommand(path, args...)
+	if interactive {
+		cmd.Stderr = os.Stderr
+		cmd.Stdout = os.Stdout
+		cmd.Stdin = os.Stdin
+		return "", cmd.Run()
+	}
+
 	out, err := cmd.Output()
 	if err != nil {
 		var exitError *exec.ExitError

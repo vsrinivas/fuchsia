@@ -459,7 +459,8 @@ func setPackageSource(ctx context.Context, sdk sdkcommon.SDKProperties, repoPort
 	sshArgs := []string{"amber_ctl", "add_src", "-n", name, "-f",
 		fmt.Sprintf("http://%v:%v/config.json", hostIP, repoPort)}
 
-	if _, err = sdk.RunSSHCommand(targetAddress, sshConfig, privateKey, sshArgs); err != nil {
+	verbose := level == logger.DebugLevel || level == logger.TraceLevel
+	if _, err = sdk.RunSSHCommand(targetAddress, sshConfig, privateKey, verbose, sshArgs); err != nil {
 		return fmt.Errorf("Could not set package server address on device: %v", err)
 	}
 
@@ -471,7 +472,8 @@ func getHostIPAddressFromTarget(sdk sdkcommon.SDKProperties, targetAddress strin
 
 	var sshArgs = []string{"echo", "$SSH_CONNECTION"}
 
-	connectionString, err := sdk.RunSSHCommand(targetAddress, sshConfig, privateKey, sshArgs)
+	verbose := level == logger.DebugLevel || level == logger.TraceLevel
+	connectionString, err := sdk.RunSSHCommand(targetAddress, sshConfig, privateKey, verbose, sshArgs)
 
 	if err != nil {
 		return "", err
