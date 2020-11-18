@@ -28,6 +28,7 @@ In your program's directory:
 empty struct with `#[derive(FromArgs, Debug, PartialEq)]`.)
     1. Make sure to derive PartialEq on your arg struct.
     1. Annotate your struct with `#[argh(subcommand, name = "your-choice")]`.
+    1. Add `pub const PROGRAM_NAME: &str = "your-choice";`
 1. Also from lib.rs, export the `main` funtion with this signature:
 `pub async fn main(args: CommandLine) -> Result<(), Error>`
     1. Remove the `#[fasync::run_singlethreaded]` or similar lines.
@@ -40,7 +41,8 @@ In `//src/diagnostics/launcher`:
 
 1. Add your library to `deps` in BUILD.gn
 1. Add your `CommandLine` struct to the `ChildArgs` enum in main.rs
-1. Call your library's `main` from the `match` in main()
+1. Add your program's `PROGRAM_NAME` to the first `match` in main()
+1. Call your library's `main` from the second `match` in main()
 
 To invoke a program that has been integrated in `launcher`:
 

@@ -19,6 +19,9 @@ use fuchsia_inspect_derive::WithInspect;
 use futures::{future::join, prelude::*};
 use tracing::*;
 
+/// The name of the subcommand and the logs-tag.
+pub const PROGRAM_NAME: &str = "log-stats";
+
 /// Empty command line args, just to give Launcher the subcommand name "log-stats"
 #[derive(FromArgs, Debug, PartialEq)]
 #[argh(subcommand, name = "log-stats")]

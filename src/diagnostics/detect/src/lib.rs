@@ -28,6 +28,9 @@ const PROGRAM_CONFIG_PATH: &str = "/config/data/config.json";
 const SIGNATURE_PREFIX: &str = "fuchsia-detect-";
 const MINIMUM_SIGNATURE_INTERVAL_NANOS: i64 = 3600 * 1_000_000_000;
 
+/// The name of the subcommand and the logs-tag.
+pub const PROGRAM_NAME: &str = "detect";
+
 /// Command line args
 #[derive(FromArgs, Debug, PartialEq)]
 #[argh(subcommand, name = "detect")]

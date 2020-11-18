@@ -40,9 +40,9 @@ rustc_library("lib") {
   with_unit_tests = true
 
   deps = [
-    "fidl:controller-rustc",
     "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics-rustc",
     "//src/diagnostics/archivist:lib",
+    "//src/diagnostics/control:controller-rustc",
     "//src/lib/diagnostics/inspect/derive",
     "//src/lib/diagnostics/inspect/rust",
     "//src/lib/diagnostics/reader/rust",

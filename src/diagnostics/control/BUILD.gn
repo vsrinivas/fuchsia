@@ -7,5 +7,9 @@ import("//build/fidl/fidl.gni")
 fidl("controller") {
   name = "fuchsia.diagnostics.internal"
 
-  sources = [ "controller.fidl" ]
+  sources = [
+    "detect_controller.fidl",
+    "log_stats_controller.fidl",
+    "sampler_controller.fidl",
+  ]
 }

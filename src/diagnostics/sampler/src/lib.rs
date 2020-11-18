@@ -6,6 +6,9 @@ use {anyhow::Error, argh::FromArgs, log::warn};
 mod config;
 mod executor;
 
+/// The name of the subcommand and the logs-tag.
+pub const PROGRAM_NAME: &str = "lapis";
+
 /// args used to configure lapis.
 #[derive(Debug, Default, FromArgs, PartialEq)]
 #[argh(subcommand, name = "lapis")]
