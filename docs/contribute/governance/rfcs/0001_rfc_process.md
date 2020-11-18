@@ -211,7 +211,7 @@ section](#how-decisions-are-made) below for more details about how the project
 decides whether to accept an RFC.
 
 After all the stakeholders have weighed in with their Code-Review flags, send an
-email to rfc-editors@fuchsia.com to prompt the Eng Council to decide whether to
+email to eng-council@fuchsia.dev to prompt the Eng Council to decide whether to
 accept your RFC.
 
 #### Step 5: Submit

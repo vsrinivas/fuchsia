@@ -4,7 +4,51 @@ The Fuchsia RFC process is intended to provide a consistent and transparent path
 for making project-wide, technical decisions. For example, the RFC process can
 be used to evolve the project roadmap and the system architecture.
 
+The RFC process is detailed in [RFC-0001: Fuchsia Request for Comments process](0001_rfc_process.md), along with [RFC-0006: Addendum of the RFC process for Zircon](0006_addendum_to_rfc_process_for_zircon.md).
+
+## Summary of the process
+
+- Review [criteria for requiring an RFC](#criteria).
+- Socialize your idea.
+- Draft your RFC using this [template](TEMPLATE.md).
+- Iterate your idea with appropriate stakeholders.
+- After stakeholders signoff, email eng-council@fuchsia.dev to prompt the Eng Council to decide whether to accept your RFC.
+- If your RFC is accepted, a member of the Eng Council will comment on your change stating that the RFC is accepted, will assign the RFC a number and mark your change Code-Review +2. Your RFC can now be landed.
+
+## Criteria for requiring an RFC {#criteria}
+
+Criteria for requiring an RFC is detailed in [RFC-0001](0001_rfc_process.md).
+
+The following kinds of changes must use the RFC process.
+
+- Changing the project roadmap
+- Adding constraints on future development
+- Making project policy
+- Changing the system architecture
+- Delegating decision-making authority
+- Escalations
+
+In addition, changes in the source directories:
+
+- /zircon
+- /src/zircon
+- /src/bringup
+
+that meet the following criteria must use the RFC process as described in [RFC0006: Addendum of the RFC Process for Zircon](0006_addendum_to_rfc_process_for_zircon.md).
+
+- Adding or removing Zircon system interfaces.
+- Changing resource handling behaviors.
+- Modifying isolation guarantees.
+- Significant changes of performance or memory use.
+- Favoring a single platform.
+- Adding or Downgrading support for a platform.
+- New build configurations.
+
 Note: Documents are sorted by date reviewed.
+
+## Active RFCs
+
+[Gerrit link](https://fuchsia-review.googlesource.com/q/dir:docs/contribute/governance/rfcs+is:open)
 
 ## Accepted proposals
 
@@ -27,6 +71,3 @@ RFC      | Submitted | Reviewed | Title
 -------- | --------- | -------- | ------
 _(none)_ | &nbsp;    | &nbsp;   | &nbsp;
 
-## Process
-
-See [RFC-0001: Fuchsia Request for Comments (RFC) process](0001_rfc_process.md)
