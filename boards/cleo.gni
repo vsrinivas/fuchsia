@@ -47,9 +47,10 @@ board_zedboot_bootfs_labels += _common_bootfs_deps
 board_recovery_bootfs_labels += _common_bootfs_deps
 
 use_vbmeta = true
-avb_key = "//zircon/third_party/tools/android/avb/test/data/testkey_atx_psk.pem"
+avb_key =
+    "//third_party/android/platform/external/avb/test/data/testkey_atx_psk.pem"
 avb_atx_metadata =
-    "//zircon/third_party/tools/android/avb/test/data/atx_metadata.bin"
+    "//third_party/android/platform/external/avb/test/data/atx_metadata.bin"
 zvb_partition_name = "boot"
 
 # partitions for fx flash to flash
