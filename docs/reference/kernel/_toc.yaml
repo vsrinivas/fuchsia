@@ -1,4 +1,4 @@
-# Copyright 2020 The Fuchsia Authors. All rights reserved.
+#Copyright 2020 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
@@ -6,6 +6,8 @@
 # before making changes to this file, and add a member of the fuchsia.dev
 # team as reviewer.
 toc:
+- title: "Overview"
+  path: /docs/reference/kernel/README.md
 - title: "Kernel command line options"
   path: /docs/reference/kernel/kernel_cmdline.md
 - title: "Kernel boot options (not yet in use: TODO(fxbug.dev/53594))"
