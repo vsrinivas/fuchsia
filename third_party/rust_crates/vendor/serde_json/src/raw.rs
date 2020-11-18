@@ -1,14 +1,12 @@
-use std::fmt::{self, Debug, Display};
-use std::mem;
-
+use crate::error::Error;
+use crate::lib::*;
 use serde::de::value::BorrowedStrDeserializer;
 use serde::de::{
     self, Deserialize, DeserializeSeed, Deserializer, IntoDeserializer, MapAccess, Unexpected,
     Visitor,
 };
+use serde::forward_to_deserialize_any;
 use serde::ser::{Serialize, SerializeStruct, Serializer};
-
-use error::Error;
 
 /// Reference to a range of bytes encompassing a single valid JSON value in the
 /// input data.
@@ -20,10 +18,19 @@ use error::Error;
 /// When serializing, a value of this type will retain its original formatting
 /// and will not be minified or pretty-printed.
 ///
+/// # Note
+///
+/// `RawValue` is only available if serde\_json is built with the `"raw_value"`
+/// feature.
+///
+/// ```toml
+/// [dependencies]
+/// serde_json = { version = "1.0", features = ["raw_value"] }
+/// ```
+///
 /// # Example
 ///
-/// ```edition2018
-/// # use serde_derive::{Deserialize, Serialize};
+/// ```
 /// use serde::{Deserialize, Serialize};
 /// use serde_json::{Result, value::RawValue};
 ///
@@ -43,7 +50,7 @@ use error::Error;
 /// // keys into a single "info" key holding an array of code and payload.
 /// //
 /// // This could be done equivalently using serde_json::Value as the type for
-/// // payload, but &RawValue will perform netter because it does not require
+/// // payload, but &RawValue will perform better because it does not require
 /// // memory allocation. The correct range of bytes is borrowed from the input
 /// // data and pasted verbatim into the output.
 /// fn rearrange(input: &str) -> Result<String> {
@@ -69,8 +76,8 @@ use error::Error;
 ///
 /// The typical usage of `RawValue` will be in the borrowed form:
 ///
-/// ```edition2018
-/// # use serde_derive::Deserialize;
+/// ```
+/// # use serde::Deserialize;
 /// # use serde_json::value::RawValue;
 /// #
 /// #[derive(Deserialize)]
@@ -92,24 +99,14 @@ use error::Error;
 /// [`serde_json::from_slice`]: ../fn.from_slice.html
 /// [`serde_json::from_reader`]: ../fn.from_reader.html
 ///
-/// ```edition2018
-/// # use serde_derive::Deserialize;
+/// ```
+/// # use serde::Deserialize;
 /// # use serde_json::value::RawValue;
 /// #
 /// #[derive(Deserialize)]
 /// struct SomeStruct {
 ///     raw_value: Box<RawValue>,
 /// }
-/// ```
-///
-/// # Note
-///
-/// `RawValue` is only available if serde\_json is built with the `"raw_value"`
-/// feature.
-///
-/// ```toml
-/// [dependencies]
-/// serde_json = { version = "1.0", features = ["raw_value"] }
 /// ```
 #[repr(C)]
 pub struct RawValue {
@@ -172,7 +169,7 @@ impl RawValue {
     /// - the input has capacity equal to its length.
     pub fn from_string(json: String) -> Result<Box<Self>, Error> {
         {
-            let borrowed = ::from_str::<&Self>(&json)?;
+            let borrowed = crate::from_str::<&Self>(&json)?;
             if borrowed.json.len() < json.len() {
                 return Ok(borrowed.to_owned());
             }
@@ -184,8 +181,7 @@ impl RawValue {
     ///
     /// # Example
     ///
-    /// ```edition2018
-    /// # use serde_derive::Deserialize;
+    /// ```
     /// use serde::Deserialize;
     /// use serde_json::{Result, value::RawValue};
     ///
@@ -219,7 +215,67 @@ impl RawValue {
     }
 }
 
-pub const TOKEN: &'static str = "$serde_json::private::RawValue";
+/// Convert a `T` into a boxed `RawValue`.
+///
+/// # Example
+///
+/// ```
+/// // Upstream crate
+/// # #[derive(Serialize)]
+/// pub struct Thing {
+///     foo: String,
+///     bar: Option<String>,
+///     extra_data: Box<RawValue>,
+/// }
+///
+/// // Local crate
+/// use serde::Serialize;
+/// use serde_json::value::{to_raw_value, RawValue};
+///
+/// #[derive(Serialize)]
+/// struct MyExtraData {
+///     a: u32,
+///     b: u32,
+/// }
+///
+/// let my_thing = Thing {
+///     foo: "FooVal".into(),
+///     bar: None,
+///     extra_data: to_raw_value(&MyExtraData { a: 1, b: 2 }).unwrap(),
+/// };
+/// # assert_eq!(
+/// #     serde_json::to_value(my_thing).unwrap(),
+/// #     serde_json::json!({
+/// #         "foo": "FooVal",
+/// #         "bar": null,
+/// #         "extra_data": { "a": 1, "b": 2 }
+/// #     })
+/// # );
+/// ```
+///
+/// # Errors
+///
+/// This conversion can fail if `T`'s implementation of `Serialize` decides to
+/// fail, or if `T` contains a map with non-string keys.
+///
+/// ```
+/// use std::collections::BTreeMap;
+///
+/// // The keys in this map are vectors, not strings.
+/// let mut map = BTreeMap::new();
+/// map.insert(vec![32, 64], "x86");
+///
+/// println!("{}", serde_json::value::to_raw_value(&map).unwrap_err());
+/// ```
+pub fn to_raw_value<T>(value: &T) -> Result<Box<RawValue>, Error>
+where
+    T: Serialize,
+{
+    let json_string = crate::to_string(value)?;
+    Ok(RawValue::from_owned(json_string.into_boxed_str()))
+}
+
+pub const TOKEN: &str = "$serde_json::private::RawValue";
 
 impl Serialize for RawValue {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>

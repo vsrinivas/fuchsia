@@ -107,7 +107,7 @@ semver = "0.9.0"
 serde = { version = "1.0.116", features = ["derive"] }
 serde_cbor = "0.11.1"
 serde_derive = "1.0.116"
-serde_json = "1"
+serde_json = "1.0.59"
 serde_json5 = "0.1.0"
 slab = "0.4"
 socket2 = { version = "0.3.12", features = ["reuseport", "unix"] }
@@ -369,9 +369,6 @@ deps = [ "//third_party/rust_crates/compat/rust-crypto" ]
 [gn.package.ryu."1.0.3"]
 rustflags = ["--cfg=integer128", "--cfg=must_use_return", "--cfg=maybe_uninit"]
 
-[gn.package.ryu."0.2.7"]
-rustflags = ["--cfg=integer128", "--cfg=must_use_return"]
-
 [gn.package.proc-macro-nested."0.1.4"]
 rustflags = []
 env_vars = ["OUT_DIR=../../../compat/proc-macro-nested"]
@@ -498,3 +495,6 @@ env_vars = [ "CARGO_PKG_VERSION=0.2.60" ]
 
 [gn.package.cxxbridge-cmd."0.3.5".binary.cxxbridge]
 output_name = "cxxbridge"
+
+[gn.package.serde_json."1.0.59"]
+rustflags = ["--cfg=limb_width_64"]

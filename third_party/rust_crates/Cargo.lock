@@ -604,7 +604,7 @@ dependencies = [
  "bstr",
  "csv-core",
  "itoa",
- "ryu 1.0.3",
+ "ryu",
  "serde",
 ]
 
@@ -2732,12 +2732,6 @@ dependencies = [
 
 [[package]]
 name = "ryu"
-version = "0.2.7"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "eb9e9b8cde282a9fe6a42dd4681319bfb63f121b8a8ee9439c6f4107e58a46f7"
-
-[[package]]
-name = "ryu"
 version = "1.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "535622e6be132bccd223f4bb2b8ac8d53cda3c7a6394944d3b2b33fb974f9d76"
@@ -2870,12 +2864,12 @@ dependencies = [
 
 [[package]]
 name = "serde_json"
-version = "1.0.38"
+version = "1.0.59"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "27dce848e7467aa0e2fcaf0a413641499c0b745452aaca1194d24dedde9e13c9"
+checksum = "dcac07dbffa1c65e7f816ab9eba78eb142c6d44410f4eeba1e26e4f5dfa56b95"
 dependencies = [
  "itoa",
- "ryu 0.2.7",
+ "ryu",
  "serde",
 ]
 

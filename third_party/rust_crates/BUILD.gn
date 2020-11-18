@@ -567,7 +567,7 @@ group("serde_derive") {
 }
 
 group("serde_json") {
-  deps = [ ":serde_json-v1_0_38" ]
+  deps = [ ":serde_json-v1_0_59" ]
 }
 
 group("serde_json5") {
@@ -1725,7 +1725,7 @@ rust_library("cargo_metadata-v0_9_1") {
   deps += [ ":semver-v0_9_0" ]
   deps += [ ":serde-v1_0_116" ]
   deps += [ ":serde_derive-v1_0_116($host_toolchain)" ]
-  deps += [ ":serde_json-v1_0_38" ]
+  deps += [ ":serde_json-v1_0_59" ]
 
   rustenv = []
 
@@ -2056,7 +2056,7 @@ rust_library("criterion-v0_2_11") {
   deps += [ ":rayon-core-v1_7_0" ]
   deps += [ ":serde-v1_0_116" ]
   deps += [ ":serde_derive-v1_0_116($host_toolchain)" ]
-  deps += [ ":serde_json-v1_0_38" ]
+  deps += [ ":serde_json-v1_0_59" ]
   deps += [ ":walkdir-v2_3_1" ]
 
   rustenv = []
@@ -3380,7 +3380,7 @@ rust_library("handlebars-v2_0_0-beta_2") {
   deps += [ ":quick-error-v1_2_2" ]
   deps += [ ":regex-v1_3_5" ]
   deps += [ ":serde-v1_0_116" ]
-  deps += [ ":serde_json-v1_0_38" ]
+  deps += [ ":serde_json-v1_0_59" ]
   deps += [ ":walkdir-v2_3_1" ]
 
   rustenv =
@@ -3896,7 +3896,7 @@ rust_library("jsonway-v2_0_0") {
 
   deps = []
   deps += [ ":serde-v1_0_116" ]
-  deps += [ ":serde_json-v1_0_38" ]
+  deps += [ ":serde_json-v1_0_59" ]
 
   rustenv = []
 
@@ -6742,7 +6742,7 @@ rust_library("rouille-v3_0_0") {
   deps += [ ":rand-v0_5_6" ]
   deps += [ ":serde-v1_0_116" ]
   deps += [ ":serde_derive-v1_0_116($host_toolchain)" ]
-  deps += [ ":serde_json-v1_0_38" ]
+  deps += [ ":serde_json-v1_0_59" ]
   deps += [ ":sha1-v0_6_0" ]
   deps += [ ":term-v0_5_1" ]
   deps += [ ":threadpool-v1_7_1" ]
@@ -7227,29 +7227,6 @@ rust_library("rusty-fork-v0_2_1") {
   ]
 }
 
-rust_library("ryu-v0_2_7") {
-  crate_name = "ryu"
-  crate_root = "//third_party/rust_crates/vendor/ryu-0.2.7/src/lib.rs"
-  output_name = "ryu-247bfca05763f946"
-  configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
-  ]
-
-  deps = []
-
-  rustenv = []
-
-  rustflags = [
-    "--cap-lints=allow",
-    "--edition=2015",
-    "-Cmetadata=247bfca05763f946",
-    "-Cextra-filename=-247bfca05763f946",
-    "--cfg=integer128",
-    "--cfg=must_use_return",
-  ]
-}
-
 rust_library("ryu-v1_0_3") {
   crate_name = "ryu"
   crate_root = "//third_party/rust_crates/vendor/ryu/src/lib.rs"
@@ -7640,10 +7617,10 @@ rust_proc_macro("serde_derive-v1_0_116") {
   ]
 }
 
-rust_library("serde_json-v1_0_38") {
+rust_library("serde_json-v1_0_59") {
   crate_name = "serde_json"
   crate_root = "//third_party/rust_crates/vendor/serde_json/src/lib.rs"
-  output_name = "serde_json-e16cf83bbc279b95"
+  output_name = "serde_json-7635f31531fde4db"
   configs -= [
     "//build/config:rust_edition_2018",
     "//build/config:rust_2018_idioms",
@@ -7651,17 +7628,19 @@ rust_library("serde_json-v1_0_38") {
 
   deps = []
   deps += [ ":itoa-v0_4_3" ]
-  deps += [ ":ryu-v0_2_7" ]
+  deps += [ ":ryu-v1_0_3" ]
   deps += [ ":serde-v1_0_116" ]
 
   rustenv = []
 
   rustflags = [
     "--cap-lints=allow",
-    "--edition=2015",
-    "-Cmetadata=e16cf83bbc279b95",
-    "-Cextra-filename=-e16cf83bbc279b95",
+    "--edition=2018",
+    "-Cmetadata=7635f31531fde4db",
+    "-Cextra-filename=-7635f31531fde4db",
     "--cfg=feature=\"default\"",
+    "--cfg=feature=\"std\"",
+    "--cfg=limb_width_64",
   ]
 }
 
@@ -9701,7 +9680,7 @@ rust_library("valico-v2_4_2") {
   deps += [ ":publicsuffix-v1_5_2" ]
   deps += [ ":regex-v1_3_5" ]
   deps += [ ":serde-v1_0_116" ]
-  deps += [ ":serde_json-v1_0_38" ]
+  deps += [ ":serde_json-v1_0_59" ]
   deps += [ ":url-v1_7_2" ]
   deps += [ ":uuid-v0_7_2" ]
 
