@@ -6,7 +6,9 @@ import("//build/cipd.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/driver_package.gni")
 
-config_tas5805m = "audio/config/tas5805m_config.h"
+if (internal_access) {
+  config_tas5805m = "audio/config/tas5805m_config.h"
+}
 
 driver_package("nelson") {
   deps = [ ":nelson-module" ]
