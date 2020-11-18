@@ -25,6 +25,8 @@
 
 #include <ddk/protocol/wlanphyimpl.h>
 
+#include "src/connectivity/wlan/lib/common/cpp/include/wlan/common/macaddr.h"
+
 /* for brcmu_d11inf */
 #include "brcmu_d11.h"
 #include "core.h"
@@ -506,6 +508,9 @@ zx_status_t brcmf_notify_escan_complete(struct brcmf_cfg80211_info* cfg, struct 
 void brcmf_enable_mpc(struct brcmf_if* ndev, int mpc);
 void brcmf_abort_scanning(struct brcmf_cfg80211_info* cfg);
 void brcmf_free_net_device_vif(struct net_device* ndev);
+
+// Helpers
+zx_status_t brcmf_gen_ap_macaddr(struct brcmf_if* ifp, wlan::common::MacAddr& out_mac_addr);
 
 // Event handlers
 zx_status_t brcmf_notify_channel_switch(struct brcmf_if* ifp, const struct brcmf_event_msg* e,

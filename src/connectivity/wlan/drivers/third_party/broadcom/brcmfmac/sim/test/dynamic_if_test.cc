@@ -167,7 +167,13 @@ uint16_t DynamicIfTest::GetChanspec(bool is_ap_iface, zx_status_t expect_result)
 TEST_F(DynamicIfTest, CreateDestroy) {
   Init();
 
-  ASSERT_EQ(StartInterface(WLAN_INFO_MAC_ROLE_CLIENT, &client_ifc_), ZX_OK);
+  ASSERT_EQ(StartInterface(WLAN_INFO_MAC_ROLE_CLIENT, &client_ifc_, std::nullopt, kFakeMac), ZX_OK);
+
+  // Verify whether the provided MAC addr is used when creating the client iface.
+  common::MacAddr client_mac;
+  client_ifc_.GetMacAddr(&client_mac);
+  EXPECT_EQ(client_mac, kFakeMac);
+
   DeleteInterface(&client_ifc_);
   EXPECT_EQ(DeviceCount(), 1U);
 
@@ -196,6 +202,30 @@ TEST_F(DynamicIfTest, CreateApWithSameMacAsClient) {
             ZX_ERR_ALREADY_EXISTS);
   EXPECT_EQ(DeviceCount(), static_cast<size_t>(2));
   DeleteInterface(&client_ifc_);
+  EXPECT_EQ(DeviceCount(), static_cast<size_t>(1));
+}
+
+// Ensure AP uses auto-gen MAC address when MAC address is not specified in the
+// StartInterface request.
+TEST_F(DynamicIfTest, CreateApWithNoMACAddress) {
+  Init();
+  brcmf_simdev* sim = device_->GetSim();
+
+  // Get the expected auto-gen MAC addr that AP will use when no MAC addr is passed.
+  // Note, since the default MAC addr of client iface is same as the AP iface, we use
+  // that to figure out the auto-gen MAC addr.
+  struct brcmf_if* ifp = brcmf_get_ifp(sim->drvr, 0);
+  wlan::common::MacAddr expected_mac_addr;
+  EXPECT_EQ(brcmf_gen_ap_macaddr(ifp, expected_mac_addr), ZX_OK);
+
+  // Ensure passing nullopt for mac_addr results in use of auto generated MAC address.
+  EXPECT_EQ(StartInterface(WLAN_INFO_MAC_ROLE_AP, &softap_ifc_, std::nullopt, std::nullopt), ZX_OK);
+  common::MacAddr softap_mac;
+  softap_ifc_.GetMacAddr(&softap_mac);
+  EXPECT_EQ(softap_mac, expected_mac_addr);
+
+  EXPECT_EQ(DeviceCount(), static_cast<size_t>(2));
+  DeleteInterface(&softap_ifc_);
   EXPECT_EQ(DeviceCount(), static_cast<size_t>(1));
 }
 
