@@ -21,11 +21,13 @@
  */
 mod fake_archive_accessor;
 mod fake_crash_reporter;
+mod fake_crash_reporting_product_register;
 
 use {
     anyhow::{bail, Error},
     fake_archive_accessor::FakeArchiveAccessor,
     fake_crash_reporter::FakeCrashReporter,
+    fake_crash_reporting_product_register::FakeCrashReportingProductRegister,
     fuchsia_async as fasync,
     futures::{channel::mpsc, FutureExt, SinkExt, StreamExt},
     log::*,
@@ -184,14 +186,19 @@ async fn run_a_test(test_data: TestData) -> Result<(), Error> {
         .inject(&event_source, EventMatcher::ok().capability_name(CONFIG_DATA_CAPABILITY_NAME))
         .await;
 
-    let capability =
+    let registration_capability =
+        FakeCrashReportingProductRegister::new(done_waiter.get_signaler());
+    registration_capability.inject(&event_source, EventMatcher::ok()).await;
+
+    let archive_capability =
         FakeArchiveAccessor::new(&test_data, events_sender.clone(), done_waiter.get_signaler());
-    capability
+    archive_capability
         .inject(&event_source, EventMatcher::ok().capability_name(ARCHIVE_ACCESSOR_CAPABILITY_NAME))
         .await;
 
-    let capability = FakeCrashReporter::new(events_sender.clone(), done_waiter.get_signaler());
-    capability.inject(&event_source, EventMatcher::ok()).await;
+    let report_capability =
+        FakeCrashReporter::new(events_sender.clone(), done_waiter.get_signaler());
+    report_capability.inject(&event_source, EventMatcher::ok()).await;
 
     // Unblock the component_manager.
     event_source.start_component_tree().await;
@@ -209,9 +216,21 @@ async fn run_a_test(test_data: TestData) -> Result<(), Error> {
     }
     let events = drain(events_receiver).await?;
     let end_time = std::time::Instant::now();
-    let minimum_test_time = CHECK_PERIOD_SECONDS * (test_data.inspect_data.len() as u64);
-    let too_fast = end_time - start_time < std::time::Duration::new(minimum_test_time, 0);
-    match evaluate_test_results(&test_data, &events) {
+    let minimum_test_time_seconds = CHECK_PERIOD_SECONDS * (test_data.inspect_data.len() as u64);
+
+    // Product-name registration is oneway FIDL - the test can proceed without it
+    // having arrived and been recorded. To avoid any possibility of flakes, if the
+    // test takes less than 10 seconds, only insist that no error was detected; don't insist that
+    // a correct registration has arrived.
+    if registration_capability.detected_error()
+        || (minimum_test_time_seconds >= 10
+            && !registration_capability.detected_good_registration())
+    {
+        error!("Test {} failed: Incorrect registration.", test_data.name);
+        bail!("Test {} failed: Incorrect registration.", test_data.name);
+    }
+    let too_fast = end_time - start_time < std::time::Duration::new(minimum_test_time_seconds, 0);
+    match evaluate_test_events(&test_data, &events) {
         Ok(()) => {}
         Err(e) => {
             error!("Test {} failed: {}", test_data.name, e);
@@ -240,7 +259,7 @@ async fn drain(mut stream: TestEventReceiver) -> Result<Vec<TestEvent>, Error> {
     }
 }
 
-fn evaluate_test_results(test: &TestData, events: &Vec<TestEvent>) -> Result<(), Error> {
+fn evaluate_test_events(test: &TestData, events: &Vec<TestEvent>) -> Result<(), Error> {
     if test.bails {
         match events.len() {
             0 => return Ok(()),

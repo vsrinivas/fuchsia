@@ -37,7 +37,7 @@ const CONFIG: &str = r#"
             trigger: "widgets > 2",
             type: "Snapshot",
             repeat: "Seconds(1)",
-            signature: "You_are $illy!, BᗷB♥B"
+            signature: "This_is $illy!, BᗷB♥B"
         },
         sentence_signature: {
             trigger: "widgets > 2",
@@ -60,7 +60,7 @@ pub fn test() -> TestData {
         inspect_data: vec![INSPECT.to_string()],
         config_files: vec![config, enable],
         snapshots: vec![vec![
-            "fuchsia-detect-you-are--illy---b-b-b".to_string(),
+            "fuchsia-detect-this-is--illy---b-b-b".to_string(),
             "fuchsia-detect-there-was-an-error".to_string(),
         ]],
         bails: false,

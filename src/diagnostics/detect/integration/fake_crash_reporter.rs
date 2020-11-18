@@ -4,16 +4,9 @@
 
 use {
     super::{DoneSignaler, TestEvent, TestEventSender},
-    anyhow::{
-        bail,
-        //anyhow,
-        Context,
-        Error,
-    },
+    anyhow::{bail, Context, Error},
     async_trait::async_trait,
-    //fidl::endpoints::ServerEnd,
     fidl_fuchsia_feedback as fcrash,
-    //fuchsia_async as fasync,
     futures::{SinkExt, StreamExt},
     log::*,
     std::sync::Arc,
@@ -88,7 +81,10 @@ impl ProtocolInjector for FakeCrashReporter {
                         }
                     }
                 }
-                Some(Err(e)) => bail!("{}", e),
+                Some(Err(e)) => {
+                    self.done_signaler.signal_done().await;
+                    bail!("{}", e);
+                }
                 None => break,
             }
         }

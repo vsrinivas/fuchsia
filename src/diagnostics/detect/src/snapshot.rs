@@ -6,6 +6,17 @@
 
 use log::{error, warn};
 
+// Name of the crash-report product we're filing against.
+const CRASH_PRODUCT_NAME: &'static str = "FuchsiaDetect";
+// CRASH_PROGRAM_NAME serves two purposes:
+// 1) It is sent with the crash report. It may show up on the server as
+//   "process type".
+// 2) The on-device crash reporting program associates this string with the
+//   "product" CRASH_PRODUCT_NAME we're requesting to file against, so we
+//   only have to send the program name and not the product name with each
+//   crash report request.
+//   This association is registered via a call to
+//   CrashReportingProductRegister.upsert().
 const CRASH_PROGRAM_NAME: &str = "triage_detect";
 
 #[derive(Debug)]
@@ -38,10 +49,15 @@ use std::rc::Rc;
 /// FIDL dependencies:
 ///     - fuchsia.feedback.CrashReporter: CrashReportHandler uses this protocol to communicate
 ///       with the CrashReporter service in order to file crash reports.
+///     - fuchsia.feedback.CrashReportingProductRegister: CrashReportHandler uses this protocol
+///       to communicate with the CrashReportingProductRegister service in order to configure
+///       the crash reporting product it will be filing on.
 ///
 
 /// Path to the CrashReporter service.
 const CRASH_REPORTER_SVC: &'static str = "/svc/fuchsia.feedback.CrashReporter";
+/// Path to the CrashReportingProductRegister service.
+const CRASH_REGISTER_SVC: &'static str = "/svc/fuchsia.feedback.CrashReportingProductRegister";
 
 /// The maximum number of pending crash report requests. This is needed because the FIDL API to file
 /// a crash report does not return until the crash report has been fully generated, which can take
@@ -97,6 +113,18 @@ impl CrashReportHandlerBuilder {
     }
 
     pub fn build(self) -> Result<Rc<CrashReportHandler>, Error> {
+        // Proxy is only pre-set for tests. If a proxy was not specified,
+        // this is a good time to configure for our crash reporting product.
+        if matches!(self.proxy, None) {
+            let config_proxy = connect_proxy::<fidl_feedback::CrashReportingProductRegisterMarker>(
+                &CRASH_REGISTER_SVC.to_string(),
+            )?;
+            let product_config = fidl_feedback::CrashReportingProduct {
+                name: Some(CRASH_PRODUCT_NAME.to_string()),
+                ..fidl_feedback::CrashReportingProduct::empty()
+            };
+            config_proxy.upsert(&CRASH_PROGRAM_NAME.to_string(), product_config)?;
+        }
         // Connect to the CrashReporter service if a proxy wasn't specified
         let proxy = if self.proxy.is_some() {
             self.proxy.unwrap()
@@ -123,11 +151,6 @@ pub struct CrashReportHandler {
 }
 
 impl CrashReportHandler {
-    /// Default name to use for `program_name` in the crash report. Using "device" here to align
-    /// with other device/hardware crash types that use the same name (brownout, hardware watchdog
-    /// timeout, power cycles, etc.).
-    const DEFAULT_PROGRAM_NAME: &'static str = CRASH_PROGRAM_NAME;
-
     /// Handle a FileCrashReport message by sending the specified crash report signature over the
     /// channel to the crash report sender.
     pub fn request_snapshot(&self, request: SnapshotRequest) -> Result<(), Error> {
@@ -172,7 +195,7 @@ impl CrashReportHandler {
     ) -> Result<(), Error> {
         warn!("Filing crash report, signature '{}'", payload.signature);
         let report = fidl_feedback::CrashReport {
-            program_name: Some(CrashReportHandler::DEFAULT_PROGRAM_NAME.to_string()),
+            program_name: Some(CRASH_PROGRAM_NAME.to_string()),
             specific_report: Some(fidl_feedback::SpecificCrashReport::Generic(
                 fidl_feedback::GenericCrashReport {
                     crash_signature: Some(payload.signature),

@@ -52,6 +52,7 @@ rustc_test("integration_test_bin") {
     "fake_archive_accessor/archivist_accessor.rs",
     "fake_archive_accessor/archivist_server.rs",
     "fake_crash_reporter.rs",
+    "fake_crash_reporting_product_register.rs",
     "integration_test.rs",
     "test_filing_enable.rs",
     "test_snapshot_sanitizing.rs",

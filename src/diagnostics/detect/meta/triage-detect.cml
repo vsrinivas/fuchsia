@@ -14,6 +14,10 @@
             from: "parent",
         },
         {
+            protocol: "fuchsia.feedback.CrashReportingProductRegister",
+            from: "parent",
+        },
+        {
             protocol: "fuchsia.diagnostics.FeedbackArchiveAccessor",
             from: "parent",
         },
