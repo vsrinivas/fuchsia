@@ -46,11 +46,11 @@ class ExampleOfUseOfAliases final {
   ::std::vector<::someotherlibrary::ReferenceMe>
       field_of_vec_at_most_5_of_reference_me{};
 
-  ::zx::handle field_of_channel{};
+  ::zx::channel field_of_channel{};
 
-  ::zx::handle field_of_client_end{};
+  ::zx::channel field_of_client_end{};
 
-  ::zx::handle field_of_nullable_client_end{};
+  ::zx::channel field_of_nullable_client_end{};
 
   static inline ::std::unique_ptr<ExampleOfUseOfAliases> New() {
     return ::std::make_unique<ExampleOfUseOfAliases>();
@@ -118,7 +118,7 @@ struct IsMemcpyCompatible<::example::ExampleOfUseOfAliases>
               ::std::vector<::someotherlibrary::ReferenceMe>>::value &&
           IsMemcpyCompatible<::std::vector<::std::string>>::value &&
           IsMemcpyCompatible<::std::vector<uint32_t>>::value &&
-          IsMemcpyCompatible<::zx::handle>::value &&
+          IsMemcpyCompatible<::zx::channel>::value &&
           IsMemcpyCompatible<uint32_t>::value> {};
 
 inline zx_status_t Clone(const ::example::ExampleOfUseOfAliases& value,

@@ -50,9 +50,9 @@ pub struct ExampleOfUseOfAliases {
     pub field_of_vec_of_strings_at_most_nine: Vec<String>,
     pub field_of_vec_of_strings_at_most_5: Vec<String>,
     pub field_of_vec_at_most_5_of_reference_me: Vec<fidl_someotherlibrary::ReferenceMe>,
-    pub field_of_channel: fidl::Handle,
-    pub field_of_client_end: fidl::Handle,
-    pub field_of_nullable_client_end: Option<fidl::Handle>,
+    pub field_of_channel: fidl::Channel,
+    pub field_of_client_end: fidl::Channel,
+    pub field_of_nullable_client_end: Option<fidl::Channel>,
 }
 
 fidl_struct! {
@@ -87,26 +87,26 @@ fidl_struct! {
       offset_v1: 88,
     },
     field_of_channel {
-      ty: fidl::Handle,
+      ty: fidl::Channel,
       offset_v1: 104,
       handle_metadata: {
-        handle_subtype: fidl::ObjectType::NONE,
+        handle_subtype: fidl::ObjectType::CHANNEL,
         handle_rights: fidl::Rights::from_bits_const(2147483648).unwrap(),
       },
     },
     field_of_client_end {
-      ty: fidl::Handle,
+      ty: fidl::Channel,
       offset_v1: 108,
       handle_metadata: {
-        handle_subtype: fidl::ObjectType::NONE,
+        handle_subtype: fidl::ObjectType::CHANNEL,
         handle_rights: fidl::Rights::from_bits_const(2147483648).unwrap(),
       },
     },
     field_of_nullable_client_end {
-      ty: Option<fidl::Handle>,
+      ty: Option<fidl::Channel>,
       offset_v1: 112,
       handle_metadata: {
-        handle_subtype: fidl::ObjectType::NONE,
+        handle_subtype: fidl::ObjectType::CHANNEL,
         handle_rights: fidl::Rights::from_bits_const(2147483648).unwrap(),
       },
     },

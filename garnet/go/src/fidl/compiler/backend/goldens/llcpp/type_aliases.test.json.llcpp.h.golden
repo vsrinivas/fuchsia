@@ -29,7 +29,7 @@
 #include <lib/fidl/llcpp/sync_call.h>
 #include <lib/fidl/llcpp/transaction.h>
 #include <lib/fidl/txn_header.h>
-#include <lib/zx/handle.h>
+#include <lib/zx/channel.h>
 #endif  // __Fuchsia__
 #include <someotherlibrary/llcpp/fidl.h>
 #include <zircon/fidl.h>
@@ -76,11 +76,11 @@ struct ExampleOfUseOfAliases {
   ::fidl::VectorView<::llcpp::someotherlibrary::ReferenceMe>
       field_of_vec_at_most_5_of_reference_me = {};
 
-  ::zx::handle field_of_channel = {};
+  ::zx::channel field_of_channel = {};
 
-  ::zx::handle field_of_client_end = {};
+  ::zx::channel field_of_client_end = {};
 
-  ::zx::handle field_of_nullable_client_end = {};
+  ::zx::channel field_of_nullable_client_end = {};
   void _CloseHandles();
 
   class UnownedEncodedMessage final {

@@ -149,9 +149,9 @@ class Handles final {
 
   ::zx::handle aliased_plain_handle_field{};
 
-  ::zx::handle aliased_subtype_handle_field{};
+  ::zx::vmo aliased_subtype_handle_field{};
 
-  ::zx::handle aliased_rights_handle_field{};
+  ::zx::vmo aliased_rights_handle_field{};
 
   ::fidl::InterfaceHandle<class SomeProtocol> some_protocol{};
 

@@ -1203,7 +1203,7 @@
         {
           "type": {
             "kind": "handle",
-            "subtype": "handle",
+            "subtype": "vmo",
             "rights": 2147483648,
             "nullable": false
           },
@@ -1227,7 +1227,7 @@
         {
           "type": {
             "kind": "handle",
-            "subtype": "handle",
+            "subtype": "vmo",
             "rights": 1,
             "nullable": false
           },

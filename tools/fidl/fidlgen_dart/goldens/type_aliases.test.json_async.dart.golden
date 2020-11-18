@@ -118,9 +118,9 @@ class ExampleOfUseOfAliases extends $fidl.Struct {
     List<String>? fieldOfVecOfStringsAtMostNine,
     List<String>? fieldOfVecOfStringsAtMost5,
     List<lib$someotherlibrary.ReferenceMe>? fieldOfVecAtMost5OfReferenceMe,
-    $zircon.Handle? fieldOfChannel,
-    $zircon.Handle? fieldOfClientEnd,
-    $zircon.Handle? fieldOfNullableClientEnd,
+    $zircon.Channel? fieldOfChannel,
+    $zircon.Channel? fieldOfClientEnd,
+    $zircon.Channel? fieldOfNullableClientEnd,
   }) : this(
           fieldOfU32: fieldOfU32 ?? $orig.fieldOfU32,
           fieldOfVecAtMostFiveOfString: fieldOfVecAtMostFiveOfString ??
@@ -164,9 +164,9 @@ class ExampleOfUseOfAliases extends $fidl.Struct {
   final List<String> fieldOfVecOfStringsAtMostNine;
   final List<String> fieldOfVecOfStringsAtMost5;
   final List<lib$someotherlibrary.ReferenceMe> fieldOfVecAtMost5OfReferenceMe;
-  final $zircon.Handle fieldOfChannel;
-  final $zircon.Handle fieldOfClientEnd;
-  final $zircon.Handle? fieldOfNullableClientEnd;
+  final $zircon.Channel fieldOfChannel;
+  final $zircon.Channel fieldOfClientEnd;
+  final $zircon.Channel? fieldOfNullableClientEnd;
 
   @override
   List<Object?> get $fields {
@@ -199,9 +199,9 @@ class ExampleOfUseOfAliases extends $fidl.Struct {
   static const $fieldType6 = $fidl.VectorType<lib$someotherlibrary.ReferenceMe,
           List<lib$someotherlibrary.ReferenceMe>>(
       element: lib$someotherlibrary.kReferenceMe_Type, maybeElementCount: 5);
-  static const $fieldType7 = $fidl.HandleType();
-  static const $fieldType8 = $fidl.HandleType();
-  static const $fieldType9 = $fidl.NullableHandleType();
+  static const $fieldType7 = $fidl.ChannelType();
+  static const $fieldType8 = $fidl.ChannelType();
+  static const $fieldType9 = $fidl.NullableChannelType();
 
   @override
   void $encode($fidl.Encoder $encoder, int $offset) {

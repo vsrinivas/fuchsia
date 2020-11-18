@@ -247,8 +247,8 @@ type Handles struct {
 	VmoHandle                 _zx.VMO                             `fidl_offset_v1:"104" fidl_handle_subtype:"3" fidl_handle_rights:"2147483648" fidl_bounds:"0"`
 	RightsHandle              _zx.VMO                             `fidl_offset_v1:"108" fidl_handle_subtype:"3" fidl_handle_rights:"1" fidl_bounds:"0"`
 	AliasedPlainHandleField   _zx.Handle                          `fidl_offset_v1:"112" fidl_handle_subtype:"0" fidl_handle_rights:"2147483648" fidl_bounds:"0"`
-	AliasedSubtypeHandleField _zx.Handle                          `fidl_offset_v1:"116" fidl_handle_subtype:"0" fidl_handle_rights:"2147483648" fidl_bounds:"0"`
-	AliasedRightsHandleField  _zx.Handle                          `fidl_offset_v1:"120" fidl_handle_subtype:"0" fidl_handle_rights:"1" fidl_bounds:"0"`
+	AliasedSubtypeHandleField _zx.VMO                             `fidl_offset_v1:"116" fidl_handle_subtype:"3" fidl_handle_rights:"2147483648" fidl_bounds:"0"`
+	AliasedRightsHandleField  _zx.VMO                             `fidl_offset_v1:"120" fidl_handle_subtype:"3" fidl_handle_rights:"1" fidl_bounds:"0"`
 	SomeProtocol              SomeProtocolWithCtxInterface        `fidl_offset_v1:"124" fidl_handle_subtype:"4"`
 	RequestSomeProtocol       SomeProtocolWithCtxInterfaceRequest `fidl_offset_v1:"128" fidl_handle_subtype:"4" fidl_bounds:"0"`
 }

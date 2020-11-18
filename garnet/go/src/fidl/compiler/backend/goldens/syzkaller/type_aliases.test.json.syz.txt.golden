@@ -27,8 +27,8 @@ example_ExampleOfUseOfAliasesOutOfLine {
 } [packed]
 example_ExampleOfUseOfAliasesHandles {
        field_of_vec_at_most_5_of_reference_me array[someotherlibrary_ReferenceMeHandles]
-       field_of_channel zx_handle
-       field_of_client_end zx_handle
-       field_of_nullable_client_end zx_handle
+       field_of_channel zx_chan
+       field_of_client_end zx_chan
+       field_of_nullable_client_end zx_chan
 } [packed]
 

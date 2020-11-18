@@ -58,9 +58,9 @@ type ExampleOfUseOfAliases struct {
 	FieldOfVecOfStringsAtMostNine  []string                       `fidl_offset_v1:"56" fidl_bounds:"9,"`
 	FieldOfVecOfStringsAtMost5     []string                       `fidl_offset_v1:"72" fidl_bounds:"5,"`
 	FieldOfVecAtMost5OfReferenceMe []someotherlibrary.ReferenceMe `fidl_offset_v1:"88" fidl_bounds:"5"`
-	FieldOfChannel                 _zx.Handle                     `fidl_offset_v1:"104" fidl_handle_subtype:"0" fidl_handle_rights:"2147483648" fidl_bounds:"0"`
-	FieldOfClientEnd               _zx.Handle                     `fidl_offset_v1:"108" fidl_handle_subtype:"0" fidl_handle_rights:"2147483648" fidl_bounds:"0"`
-	FieldOfNullableClientEnd       _zx.Handle                     `fidl_offset_v1:"112" fidl_handle_subtype:"0" fidl_handle_rights:"2147483648" fidl_bounds:"1"`
+	FieldOfChannel                 _zx.Channel                    `fidl_offset_v1:"104" fidl_handle_subtype:"4" fidl_handle_rights:"2147483648" fidl_bounds:"0"`
+	FieldOfClientEnd               _zx.Channel                    `fidl_offset_v1:"108" fidl_handle_subtype:"4" fidl_handle_rights:"2147483648" fidl_bounds:"0"`
+	FieldOfNullableClientEnd       _zx.Channel                    `fidl_offset_v1:"112" fidl_handle_subtype:"4" fidl_handle_rights:"2147483648" fidl_bounds:"1"`
 }
 
 var _mExampleOfUseOfAliases = _bindings.CreateLazyMarshaler(ExampleOfUseOfAliases{})

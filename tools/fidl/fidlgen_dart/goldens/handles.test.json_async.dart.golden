@@ -389,8 +389,8 @@ class Handles extends $fidl.Struct {
     $zircon.Vmo? vmoHandle,
     $zircon.Vmo? rightsHandle,
     $zircon.Handle? aliasedPlainHandleField,
-    $zircon.Handle? aliasedSubtypeHandleField,
-    $zircon.Handle? aliasedRightsHandleField,
+    $zircon.Vmo? aliasedSubtypeHandleField,
+    $zircon.Vmo? aliasedRightsHandleField,
     $fidl.InterfaceHandle<SomeProtocol>? someProtocol,
     $fidl.InterfaceRequest<SomeProtocol>? requestSomeProtocol,
   }) : this(
@@ -461,8 +461,8 @@ class Handles extends $fidl.Struct {
   final $zircon.Vmo vmoHandle;
   final $zircon.Vmo rightsHandle;
   final $zircon.Handle aliasedPlainHandleField;
-  final $zircon.Handle aliasedSubtypeHandleField;
-  final $zircon.Handle aliasedRightsHandleField;
+  final $zircon.Vmo aliasedSubtypeHandleField;
+  final $zircon.Vmo aliasedRightsHandleField;
   final $fidl.InterfaceHandle<SomeProtocol> someProtocol;
   final $fidl.InterfaceRequest<SomeProtocol> requestSomeProtocol;
 
@@ -534,8 +534,8 @@ class Handles extends $fidl.Struct {
   static const $fieldType26 = $fidl.VmoType();
   static const $fieldType27 = $fidl.VmoType();
   static const $fieldType28 = $fidl.HandleType();
-  static const $fieldType29 = $fidl.HandleType();
-  static const $fieldType30 = $fidl.HandleType();
+  static const $fieldType29 = $fidl.VmoType();
+  static const $fieldType30 = $fidl.VmoType();
   static const $fieldType31 = $fidl.InterfaceHandleType<SomeProtocol>();
   static const $fieldType32 = $fidl.InterfaceRequestType<SomeProtocol>();
 

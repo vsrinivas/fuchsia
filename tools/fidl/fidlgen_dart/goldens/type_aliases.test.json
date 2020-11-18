@@ -305,7 +305,7 @@
         {
           "type": {
             "kind": "handle",
-            "subtype": "handle",
+            "subtype": "channel",
             "rights": 2147483648,
             "nullable": false
           },
@@ -329,7 +329,7 @@
         {
           "type": {
             "kind": "handle",
-            "subtype": "handle",
+            "subtype": "channel",
             "rights": 2147483648,
             "nullable": false
           },
@@ -353,7 +353,7 @@
         {
           "type": {
             "kind": "handle",
-            "subtype": "handle",
+            "subtype": "channel",
             "rights": 2147483648,
             "nullable": true
           },

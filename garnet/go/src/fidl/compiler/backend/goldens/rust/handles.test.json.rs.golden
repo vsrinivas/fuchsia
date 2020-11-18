@@ -130,8 +130,8 @@ pub struct Handles {
     pub vmo_handle: fidl::Vmo,
     pub rights_handle: fidl::Vmo,
     pub aliased_plain_handle_field: fidl::Handle,
-    pub aliased_subtype_handle_field: fidl::Handle,
-    pub aliased_rights_handle_field: fidl::Handle,
+    pub aliased_subtype_handle_field: fidl::Vmo,
+    pub aliased_rights_handle_field: fidl::Vmo,
     pub some_protocol: fidl::endpoints::ClientEnd<SomeProtocolMarker>,
     pub request_some_protocol: fidl::endpoints::ServerEnd<SomeProtocolMarker>,
 }
@@ -372,18 +372,18 @@ fidl_struct! {
       },
     },
     aliased_subtype_handle_field {
-      ty: fidl::Handle,
+      ty: fidl::Vmo,
       offset_v1: 116,
       handle_metadata: {
-        handle_subtype: fidl::ObjectType::NONE,
+        handle_subtype: fidl::ObjectType::VMO,
         handle_rights: fidl::Rights::from_bits_const(2147483648).unwrap(),
       },
     },
     aliased_rights_handle_field {
-      ty: fidl::Handle,
+      ty: fidl::Vmo,
       offset_v1: 120,
       handle_metadata: {
-        handle_subtype: fidl::ObjectType::NONE,
+        handle_subtype: fidl::ObjectType::VMO,
         handle_rights: fidl::Rights::from_bits_const(1).unwrap(),
       },
     },

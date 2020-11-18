@@ -73,8 +73,8 @@ fidl_test_handles_HandlesHandles {
        vmo_handle zx_vmo
        rights_handle zx_vmo
        aliased_plain_handle_field zx_handle
-       aliased_subtype_handle_field zx_handle
-       aliased_rights_handle_field zx_handle
+       aliased_subtype_handle_field zx_vmo
+       aliased_rights_handle_field zx_vmo
        some_protocol zx_chan_fidl_test_handles_SomeProtocol_client
        request_some_protocol zx_chan_fidl_test_handles_SomeProtocol_server
 } [packed]
