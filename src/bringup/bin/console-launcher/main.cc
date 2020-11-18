@@ -82,33 +82,41 @@ int main(int argv, char** argc) {
         << "Failed to redirect stdout to debuglog, assuming test environment and continuing";
   }
 
+  // Anything before the log_to_debuglog check should go through stdout, so if there are errors
+  // they will make it to the debuglog.
+  printf("console-launcher: running\n");
+
   llcpp::fuchsia::boot::Arguments::SyncClient boot_args;
   status = ConnectToBootArgs(&boot_args);
   if (status != ZX_OK) {
+    fprintf(stderr, "console-launcher: failed to get boot args: %s\n",
+            zx_status_get_string(status));
     return 1;
   }
 
   llcpp::fuchsia::boot::WriteOnlyLog::SyncClient log_client;
   status = ConnectToWriteLog(&log_client);
   if (status != ZX_OK) {
+    fprintf(stderr, "console-launcher: failed to get write log: %s\n",
+            zx_status_get_string(status));
     return 1;
   }
 
   std::optional<console_launcher::Arguments> args = console_launcher::GetArguments(&boot_args);
   if (!args) {
-    FX_LOGS(ERROR) << "console-launcher: Failed to get arguments";
+    fprintf(stderr, "console-launcher: Failed to get arguments\n");
     return 1;
   }
 
+  // Past this point we should be using logging instead of stdout.
   if (args->log_to_debuglog) {
     zx_status_t status = log_to_debuglog(&log_client);
     if (status != ZX_OK) {
-      LOGF(ERROR, "Failed to reconfigure logger to use debuglog: %s", zx_status_get_string(status));
+      fprintf(stderr, "Failed to reconfigure logger to use debuglog: %s\n",
+              zx_status_get_string(status));
       return status;
     }
   }
-
-  LOGF(INFO, "console-launcher: running");
 
   status = console_launcher::SetupVirtcon(&boot_args);
   if (status != ZX_OK) {
@@ -137,6 +145,7 @@ int main(int argv, char** argc) {
   if (!args->autorun_boot.empty()) {
     auto result = log_client.Get();
     if (result.status() != ZX_OK) {
+      LOGF(ERROR, "console-launcher: failed to get debuglog '%s'", result.status_string());
       return result.status();
     }
     status = autorun.SetupBootCmd(args->autorun_boot, launcher.shell_job(), std::move(result->log));
@@ -147,6 +156,7 @@ int main(int argv, char** argc) {
   if (!args->autorun_system.empty()) {
     auto result = log_client.Get();
     if (result.status() != ZX_OK) {
+      LOGF(ERROR, "console-launcher: failed to get debuglog '%s'", result.status_string());
       return result.status();
     }
     status =
@@ -159,11 +169,14 @@ int main(int argv, char** argc) {
   while (true) {
     status = launcher.LaunchShell(*args);
     if (status != ZX_OK) {
+      LOGF(ERROR, "console-launcher: failed to launch shell '%s'", zx_status_get_string(status));
       return 1;
     }
 
     status = launcher.WaitForShellExit();
     if (status != ZX_OK) {
+      LOGF(ERROR, "console-launcher: failed to wait for shell exit: '%s'",
+           zx_status_get_string(status));
       return 1;
     }
   }
