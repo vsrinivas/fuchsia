@@ -12,6 +12,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/dispatcher.h>
+#include <lib/fzl/vmo-mapper.h>
 #include <lib/zx/pager.h>
 
 #include <memory>
@@ -95,7 +96,8 @@ class UserPager {
   // A new thread is created and started to process page fault requests.
   // |buffer| is used to retrieve and buffer data from the underlying storage.
   [[nodiscard]] static zx::status<std::unique_ptr<UserPager>> Create(
-      std::unique_ptr<TransferBuffer> buffer, BlobfsMetrics* metrics);
+      std::unique_ptr<TransferBuffer> compressed_buffer, std::unique_ptr<TransferBuffer> buffer,
+      BlobfsMetrics* metrics);
 
   // Returns the pager handle.
   const zx::pager& Pager() const { return pager_; }
@@ -167,7 +169,15 @@ class UserPager {
   // NOTE: Per the constraints imposed by |zx_pager_supply_pages|, the VMO owned by this buffer
   // needs to be unmapped before calling |zx_pager_supply_pages|. Map |transfer_buffer_.vmo()| only
   // when an explicit address is required, e.g. for verification, and unmap it immediately after.
-  std::unique_ptr<TransferBuffer> transfer_buffer_;
+  std::unique_ptr<TransferBuffer> uncompressed_transfer_buffer_;
+
+  // Scratch buffer for pager transfers of compressed data.
+  // Unlike the above transfer buffer, this never needs to be unmapped since we will be calling
+  // |zx_pager_supply_pages| on the |decompression_buffer_|.
+  std::unique_ptr<TransferBuffer> compressed_transfer_buffer_;
+
+  // A persistent mapping for |compressed_transfer_buffer_|.
+  fzl::VmoMapper compressed_mapper_;
 
   // Scratch buffer for decompression.
   // NOTE: Per the constraints imposed by |zx_pager_supply_pages|, this needs to be unmapped before
