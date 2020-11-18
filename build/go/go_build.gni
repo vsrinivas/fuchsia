@@ -7,6 +7,7 @@ import("//build/config/sysroot.gni")
 import("//build/host.gni")
 import("//build/sdk/sdk_host_tool.gni")
 import("//build/toolchain/breakpad.gni")
+import("//build/toolchain/concurrent_jobs.gni")
 
 declare_args() {
   #   gocache_dir
@@ -163,13 +164,12 @@ template("go_build") {
                                "testonly",
                                "visibility",
                              ])
+      forward_variables_from(concurrent_jobs.local, "*")
 
       deps = []
       if (defined(invoker.non_go_deps)) {
         deps += invoker.non_go_deps
       }
-
-      pool = "//build/go:pool($default_toolchain)"
 
       if (use_strip) {
         # Ensure that the 'canonical' output path of $root_out_dir/$output_name

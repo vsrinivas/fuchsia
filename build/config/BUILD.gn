@@ -9,6 +9,7 @@ import("//build/config/compiler.gni")
 import("//build/config/linker.gni")
 import("//build/rust/config.gni")
 import("//build/toolchain/ccache.gni")
+import("//build/toolchain/concurrent_jobs.gni")
 import("//build/toolchain/goma.gni")
 import("//build/unification/global_variables.gni")
 
@@ -1100,4 +1101,9 @@ config("thread_safety_annotations") {
     cflags = [ "-Wthread-safety" ]
     defines = [ "_LIBCPP_ENABLE_THREAD_SAFETY_ANNOTATIONS" ]
   }
+}
+
+# Tools that must be executed locally.
+pool("local") {
+  depth = default_concurrent_jobs.local
 }

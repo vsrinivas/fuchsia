@@ -8,6 +8,7 @@ import("//build/dart/dart_package_config.gni")
 import("//build/dart/toolchain.gni")
 import("//build/json/validate_json.gni")
 import("//build/sdk/sdk_atom.gni")
+import("//build/toolchain/concurrent_jobs.gni")
 
 declare_args() {
   # Enable all dart analysis
@@ -356,13 +357,13 @@ if (current_toolchain == dart_toolchain) {
 
       # Runs analysis on the sources.
       action(analysis_target_name) {
+        forward_variables_from(concurrent_jobs.local, "*")
+
         script = "//build/dart/run_analysis.py"
 
         depfile = "$target_gen_dir/$target_name.analysis.d"
 
         output_file = "$target_gen_dir/$target_name.analyzed"
-
-        pool = "//build/dart:dart_pool($dart_toolchain)"
 
         inputs = [
                    dart_analyzer_binary,

@@ -4,7 +4,6 @@
 
 import("//build/rust/toolchain.gni")
 import("//build/toolchain/basic_toolchain.gni")
-import("//build/toolchain/concurrent_jobs.gni")
 
 group("disable_strict_sources_check_allowlist") {
   #  ________  _________  ________  ________

@@ -6,6 +6,7 @@ import("//build/config/clang/clang.gni")
 import("//build/rust/config.gni")
 import("//build/toolchain/breakpad.gni")
 import("//build/toolchain/ccache.gni")
+import("//build/toolchain/concurrent_jobs.gni")
 import("//build/toolchain/default_tools.gni")
 import("//build/toolchain/goma.gni")
 
@@ -139,6 +140,7 @@ template("clang_toolchain") {
     lib_dir_switch = "-L"
 
     tool("cc") {
+      forward_variables_from(concurrent_jobs.goma, "*")
       depfile = "{{output}}.d"
       command = "$cc -MD -MF $depfile {{defines}} {{include_dirs}} {{cflags}} {{cflags_c}} -c {{source}} -o {{output}}"
       command_launcher = compiler_prefix
@@ -149,6 +151,7 @@ template("clang_toolchain") {
     }
 
     tool("cxx") {
+      forward_variables_from(concurrent_jobs.goma, "*")
       depfile = "{{output}}.d"
       command = "$cxx -MD -MF $depfile {{defines}} {{include_dirs}} {{cflags}} {{cflags_cc}} -c {{source}} -o {{output}}"
       command_launcher = compiler_prefix
@@ -159,6 +162,7 @@ template("clang_toolchain") {
     }
 
     tool("asm") {
+      forward_variables_from(concurrent_jobs.goma, "*")
       depfile = "{{output}}.d"
       command = "$cc -MD -MF $depfile {{defines}} {{include_dirs}} {{asmflags}} -c {{source}} -o {{output}}"
       command_launcher = compiler_prefix
@@ -169,6 +173,7 @@ template("clang_toolchain") {
     }
 
     tool("objc") {
+      forward_variables_from(concurrent_jobs.local, "*")
       depfile = "{{output}}.d"
       command = "$cc -MD -MF $depfile {{defines}} {{include_dirs}} {{cflags}} {{cflags_c}} {{cflags_objc}} -c {{source}} -o {{output}}"
       command_launcher = compiler_prefix
@@ -179,6 +184,7 @@ template("clang_toolchain") {
     }
 
     tool("objcxx") {
+      forward_variables_from(concurrent_jobs.local, "*")
       depfile = "{{output}}.d"
       command = "$cxx -MD -MF $depfile {{defines}} {{include_dirs}} {{cflags}} {{cflags_c}} {{cflags_objcc}} -c {{source}} -o {{output}}"
       command_launcher = compiler_prefix
@@ -189,7 +195,7 @@ template("clang_toolchain") {
     }
 
     tool("rust_bin") {
-      pool = "//build/rust/toolchain:pool($default_toolchain)"
+      forward_variables_from(concurrent_jobs.local, "*")
       outname = "{{target_output_name}}{{output_extension}}"
       outfile = "{{output_dir}}/$outname"
       depfile = "$outfile.d"
@@ -259,7 +265,7 @@ template("clang_toolchain") {
     }
 
     tool("rust_rlib") {
-      pool = "//build/rust/toolchain:pool($default_toolchain)"
+      forward_variables_from(concurrent_jobs.local, "*")
       depfile = "{{output}}.d"
 
       # TODO(fxbug.dev/47565): Replacement for rustenv
@@ -275,7 +281,7 @@ template("clang_toolchain") {
     }
 
     tool("rust_staticlib") {
-      pool = "//build/rust/toolchain:pool($default_toolchain)"
+      forward_variables_from(concurrent_jobs.local, "*")
       depfile = "{{output}}.d"
 
       # TODO(fxbug.dev/47565): Replacement for rustenv
@@ -292,7 +298,7 @@ template("clang_toolchain") {
     }
 
     tool("rust_cdylib") {
-      pool = "//build/rust/toolchain:pool($default_toolchain)"
+      forward_variables_from(concurrent_jobs.local, "*")
       depfile = "{{output}}.d"
 
       ld_location_env = ""
@@ -347,7 +353,7 @@ template("clang_toolchain") {
     }
 
     tool("rust_dylib") {
-      pool = "//build/rust/toolchain:pool($default_toolchain)"
+      forward_variables_from(concurrent_jobs.local, "*")
       outname = "{{target_output_name}}{{output_extension}}"
       outfile = "{{output_dir}}/$outname"
       depfile = "$outfile.d"
@@ -418,7 +424,7 @@ template("clang_toolchain") {
     }
 
     tool("rust_macro") {
-      pool = "//build/rust/toolchain:pool($default_toolchain)"
+      forward_variables_from(concurrent_jobs.local, "*")
       depfile = "{{output}}.d"
 
       # TODO(fxbug.dev/47565): Replacement for rustenv
@@ -438,6 +444,7 @@ template("clang_toolchain") {
     }
 
     tool("alink") {
+      forward_variables_from(concurrent_jobs.local, "*")
       rspfile = "{{output}}.rsp"
       command =
           "rm -f {{output}} && $ar {{arflags}} rcsD {{output}} \"@$rspfile\""
@@ -450,10 +457,10 @@ template("clang_toolchain") {
     }
 
     tool("solink") {
+      forward_variables_from(concurrent_jobs.local, "*")
       outname = "{{target_output_name}}{{output_extension}}"
       outfile = "{{output_dir}}/$outname"
       rspfile = "$outfile.rsp"
-      pool = "//build/toolchain:link($default_toolchain)"
       unstripped_outfile = outfile
       if (use_strip) {
         unstripped_outfile = "{{output_dir}}/lib.unstripped/{{target_output_name}}{{output_extension}}"
@@ -499,10 +506,10 @@ template("clang_toolchain") {
     }
 
     tool("solink_module") {
+      forward_variables_from(concurrent_jobs.local, "*")
       outname = "{{target_output_name}}{{output_extension}}"
       outfile = "{{output_dir}}/$outname"
       rspfile = "$outfile.rsp"
-      pool = "//build/toolchain:link($default_toolchain)"
       if (use_strip) {
         unstripped_outfile = "{{output_dir}}/lib.unstripped/{{target_output_name}}{{output_extension}}"
       } else {
@@ -549,9 +556,9 @@ template("clang_toolchain") {
     }
 
     tool("link") {
+      forward_variables_from(concurrent_jobs.local, "*")
       outfile = "{{output_dir}}/{{target_output_name}}{{output_extension}}"
       rspfile = "$outfile.rsp"
-      pool = "//build/toolchain:link($default_toolchain)"
       unstripped_outfile = outfile
       if (use_strip) {
         unstripped_outfile = "{{output_dir}}/exe.unstripped/{{target_output_name}}{{output_extension}}"

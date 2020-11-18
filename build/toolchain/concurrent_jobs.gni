@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/config/lto/config.gni")
+import("//build/toolchain/goma.gni")
 
 _script = "get_concurrent_jobs.py"
 _args = [
@@ -13,26 +14,37 @@ _args = [
 if (use_thinlto) {
   _args += [
     "--memory-per-job",
-    "link=2GB",
+    "local=2GB",
   ]
 } else if (use_lto) {
   _args += [
     "--memory-per-job",
-    "link=4GB",
+    "local=4GB",
   ]
 } else {
   _args += [
     "--memory-per-job",
-    "link=1GB",
+    "local=1GB",
   ]
 }
 _args += [
   "--memory-per-job",
-  "rust=2GB",
-  "--memory-per-job",
   "dart=1GB",
-  "--memory-per-job",
-  "go=1GB",
 ]
 default_concurrent_jobs =
     exec_script(python_exe_src, _args, "json", [ _script ])
+
+concurrent_jobs = {
+  # Specific configuration for tools that run on Goma
+  goma = {
+    if (!use_goma) {
+      # Without Goma, these tools resort to running locally
+      pool = "//build/config:local($default_toolchain)"
+    }
+  }
+
+  # Configuration for tools that must run locally
+  local = {
+    pool = "//build/config:local($default_toolchain)"
+  }
+}

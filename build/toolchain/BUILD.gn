@@ -3,21 +3,6 @@
 # found in the LICENSE file.
 
 import("//build/toolchain/clang_toolchain_suite.gni")
-import("//build/toolchain/concurrent_jobs.gni")
-
-declare_args() {
-  # Maximum number of concurrent link jobs.
-  #
-  # We often want to run fewer links at once than we do compiles, because
-  # linking is memory-intensive. The default to use varies by platform and by
-  # the amount of memory available, so we call out to a script to get the right
-  # value.
-  concurrent_link_jobs = default_concurrent_jobs.link
-}
-
-pool("link") {
-  depth = concurrent_link_jobs
-}
 
 clang_host_toolchain_suite("host_x64") {
   toolchain_cpu = "x64"
