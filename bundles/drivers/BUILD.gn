@@ -14,6 +14,11 @@ group("bootstrap") {
   ]
 }
 
+# Drivers which are meant only for non-user facing products.
+group("bootstrap-eng") {
+  deps = [ "//src/devices/misc/drivers/cpu-trace" ]
+}
+
 group("usb-host-stack") {
   deps = [
     "//src/connectivity/bluetooth/hci/transport/usb:bt-transport-usb",
