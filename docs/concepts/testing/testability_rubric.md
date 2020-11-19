@@ -145,6 +145,17 @@ be automatically included for tests that are determined to be affected.
 
 Note: This feature is not currently supported for bringup builders.
 
+{% dynamic if user.is_googler %}
+
+Note: Multiplying internal tests on public changes is not allowed, to avoid
+leaking confidential information. If you want to multiply an internal test,
+use `fx make-integration-patch` to create an internal CL that patches your CL
+into the integration repository. Then add the necessary MULTIPLY line to the
+integration CL instead of the original public CL, and CQ+1 the integration
+CL.
+
+{% dynamic endif %},
+
 As a testability reviewer, if a change adds or modifies tests, you
 should make sure the author correctly tests for flakiness using the MULTIPLY
 feature as described below.
