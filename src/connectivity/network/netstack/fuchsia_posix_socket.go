@@ -1405,6 +1405,44 @@ func (sp *providerImpl) InterfaceNameToIndex(_ fidl.Context, name string) (socke
 	return socket.ProviderInterfaceNameToIndexResultWithErr(int32(zx.ErrNotFound)), nil
 }
 
+// Adapted from helper function `nicStateFlagsToLinux` in gvisor's
+// sentry/socket/netstack package.
+func nicInfoFlagsToFIDL(info stack.NICInfo) socket.InterfaceFlags {
+	ifs := info.Context.(*ifState)
+	var bits socket.InterfaceFlags
+	flags := info.Flags
+	if flags.Loopback {
+		bits |= socket.InterfaceFlagsLoopback
+	}
+	if flags.Running {
+		bits |= socket.InterfaceFlagsRunning
+	}
+	if flags.Promiscuous {
+		bits |= socket.InterfaceFlagsPromisc
+	}
+	// Check `IsUpLocked` because netstack interfaces are always defined to be
+	// `Up` in gVisor.
+	ifs.mu.Lock()
+	if ifs.IsUpLocked() {
+		bits |= socket.InterfaceFlagsUp
+	}
+	ifs.mu.Unlock()
+	// Approximate that all interfaces support multicasting.
+	bits |= socket.InterfaceFlagsMulticast
+	return bits
+}
+
+func (sp *providerImpl) InterfaceNameToFlags(_ fidl.Context, name string) (socket.ProviderInterfaceNameToFlagsResult, error) {
+	for _, info := range sp.ns.stack.NICInfo() {
+		if info.Name == name {
+			return socket.ProviderInterfaceNameToFlagsResultWithResponse(socket.ProviderInterfaceNameToFlagsResponse{
+				Flags: nicInfoFlagsToFIDL(info),
+			}), nil
+		}
+	}
+	return socket.ProviderInterfaceNameToFlagsResultWithErr(int32(zx.ErrNotFound)), nil
+}
+
 func (sp *providerImpl) GetInterfaceAddresses(fidl.Context) ([]socket.InterfaceAddresses, error) {
 	nicInfos := sp.ns.stack.NICInfo()
 
@@ -1441,24 +1479,11 @@ func (sp *providerImpl) GetInterfaceAddresses(fidl.Context) ([]socket.InterfaceA
 
 		// gVisor assumes interfaces are always up, which is not the case on Fuchsia,
 		// so overwrite it with Fuchsia's interface state.
-		ifs := info.Context.(*ifState)
-		var bits uint32
-		flags := info.Flags
-		if flags.Running {
-			bits |= C.IFF_RUNNING
-		}
-		if flags.Promiscuous {
-			bits |= C.IFF_PROMISC
-		}
-		if flags.Loopback {
-			bits |= C.IFF_LOOPBACK
-		}
-		ifs.mu.Lock()
-		if ifs.IsUpLocked() {
-			bits |= C.IFF_UP
-		}
-		ifs.mu.Unlock()
-		resultInfo.SetFlags(bits)
+		bits := nicInfoFlagsToFIDL(info)
+		// TODO(fxbug.dev/64758): don't `SetFlags` once all clients are
+		// transitioned to use `interface_flags`.
+		resultInfo.SetFlags(uint32(bits))
+		resultInfo.SetInterfaceFlags(bits)
 
 		resultInfos = append(resultInfos, resultInfo)
 	}

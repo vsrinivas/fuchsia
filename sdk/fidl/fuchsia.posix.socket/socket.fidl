@@ -129,9 +129,15 @@ table InterfaceAddresses {
     2: interface_name name;
     /// Contains the interface flags, as returned by the SIOCGIFFLAGS ioctl
     /// operation.
+    ///
+    /// TODO(fxbug.dev/64758): remove this once all clients are transitioned to
+    /// use more strongly-typed `interface_flags`.
     3: uint32 flags;
     /// All addresses currently assigned to the interface.
     4: vector<fuchsia.net.Subnet>:MAX addresses;
+    /// Contains the interface flags, as returned by the SIOCGIFFLAGS ioctl
+    /// operation.
+    5: InterfaceFlags interface_flags;
 };
 
 /// A socket's domain.
@@ -178,6 +184,28 @@ enum StreamSocketProtocol {
     TCP = 0;
 };
 
+/// Bits representing the interface flags as returned by the SIOCGIFFLAGS ioctl
+/// operation. These bitmasks are intended to track the C API definition. For
+/// example, `InterfaceFlags.UP` corresponds to `IFF_UP`, etc.
+bits InterfaceFlags : uint16 {
+    UP = 0x1;
+    BROADCAST = 0x2;
+    DEBUG = 0x4;
+    LOOPBACK = 0x8;
+    POINTTOPOINT = 0x10;
+    NOTRAILERS = 0x20;
+    RUNNING = 0x40;
+    NOARP = 0x80;
+    PROMISC = 0x100;
+    ALLMULTI = 0x200;
+    LEADER = 0x400;
+    FOLLOWER = 0x800;
+    MULTICAST = 0x1000;
+    PORTSEL = 0x2000;
+    AUTOMEDIA = 0x4000;
+    DYNAMIC = 0x8000;
+};
+
 /// Provider implements the POSIX sockets API.
 [Discoverable]
 protocol Provider {
@@ -192,6 +220,9 @@ protocol Provider {
     /// Looks up an interface by its name and returns its index. Returns `ZX_ERR_NOT_FOUND` if the
     /// specified name doesn't exist.
     InterfaceNameToIndex(interface_name name) -> (uint64 index) error zx.status;
+    /// Looks up an interface by its name and returns its flags. Returns `ZX_ERR_NOT_FOUND` if the
+    /// specified name doesn't exist.
+    InterfaceNameToFlags(interface_name name) -> (InterfaceFlags flags) error zx.status;
 
     /// Requests a list of [`fuchsia.posix.socket.InterfaceAddresses`]
     /// describing the network interfaces on the system.

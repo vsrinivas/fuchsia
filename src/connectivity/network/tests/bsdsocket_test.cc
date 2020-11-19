@@ -3354,7 +3354,7 @@ TEST_P(NetSocketTest, SocketPeekTest) {
 
 INSTANTIATE_TEST_SUITE_P(NetSocket, NetSocketTest, ::testing::Values(SOCK_DGRAM, SOCK_STREAM));
 
-TEST_P(SocketKindTest, IoctlIndexNameLookupRoundTrip) {
+TEST_P(SocketKindTest, IoctlInterfaceLookupRoundTrip) {
   fbl::unique_fd fd;
   ASSERT_TRUE(fd = NewSocket()) << strerror(errno);
 
@@ -3374,38 +3374,68 @@ TEST_P(SocketKindTest, IoctlIndexNameLookupRoundTrip) {
   ASSERT_EQ(ioctl(fd.get(), SIOCGIFINDEX, &ifr_ntoi), 0) << strerror(errno);
   EXPECT_EQ(ifr_ntoi.ifr_ifindex, 1);
 
-  struct ifreq ifr_ntoi_err;
-  memset(ifr_ntoi_err.ifr_name, 0xdead, IFNAMSIZ);
+  struct ifreq ifr_err;
+  memset(ifr_err.ifr_name, 0xdead, IFNAMSIZ);
   // Although the first few bytes of ifr_name contain the correct name, there is no null terminator
   // and the remaining bytes are gibberish, should match no interfaces.
-  memcpy(ifr_ntoi_err.ifr_name, ifr_iton.ifr_name, strnlen(ifr_iton.ifr_name, IFNAMSIZ));
-  ASSERT_EQ(ioctl(fd.get(), SIOCGIFINDEX, &ifr_ntoi_err), -1);
-  EXPECT_EQ(errno, ENODEV) << strerror(errno);
+  memcpy(ifr_err.ifr_name, ifr_iton.ifr_name, strnlen(ifr_iton.ifr_name, IFNAMSIZ));
+
+  struct ioctl_request {
+    std::string name;
+    unsigned long request;
+  };
+  const ioctl_request requests[] = {
+      {
+          .name = "SIOCGIFINDEX",
+          .request = SIOCGIFINDEX,
+      },
+      {
+          .name = "SIOCGIFFLAGS",
+          .request = SIOCGIFFLAGS,
+      },
+  };
+  for (const auto& request : requests) {
+    ASSERT_EQ(ioctl(fd.get(), request.request, &ifr_err), -1) << request.name;
+    EXPECT_EQ(errno, ENODEV) << request.name << ": " << strerror(errno);
+  }
 }
 
-TEST_P(SocketKindTest, IoctlIndexToNameNotFound) {
+TEST_P(SocketKindTest, IoctlInterfaceNotFound) {
   fbl::unique_fd fd;
   ASSERT_TRUE(fd = NewSocket()) << strerror(errno);
+
   // Invalid ifindex "-1" should match no interfaces.
   struct ifreq ifr_iton = {
       .ifr_ifindex = -1,
   };
   ASSERT_EQ(ioctl(fd.get(), SIOCGIFNAME, &ifr_iton), -1);
   EXPECT_EQ(errno, ENODEV) << strerror(errno);
-}
 
-TEST_P(SocketKindTest, IoctlNameToIndexNotFound) {
-  fbl::unique_fd fd;
-  ASSERT_TRUE(fd = NewSocket()) << strerror(errno);
-  // Emtpy name should match no interface.
-  struct ifreq ifr_ntoi = {
+  // Empty name should match no interface.
+  struct ifreq ifr = {
       .ifr_name = 0,
   };
-  ASSERT_EQ(ioctl(fd.get(), SIOCGIFINDEX, &ifr_ntoi), -1);
-  EXPECT_EQ(errno, ENODEV) << strerror(errno);
+  struct ioctl_request {
+    std::string name;
+    unsigned long request;
+  };
+  const ioctl_request requests[] = {
+      {
+          .name = "SIOCGIFINDEX",
+          .request = SIOCGIFINDEX,
+      },
+      {
+          .name = "SIOCGIFFLAGS",
+          .request = SIOCGIFFLAGS,
+      },
+  };
+  for (const auto& request : requests) {
+    ASSERT_EQ(ioctl(fd.get(), request.request, &ifr), -1) << request.name;
+    EXPECT_EQ(errno, ENODEV) << request.name << ": " << strerror(errno);
+  }
 }
 
-TEST(SocketKindTest, IoctlNameIndexLookupForNonSocketFd) {
+TEST(SocketKindTest, IoctlLookupForNonSocketFd) {
   fbl::unique_fd fd;
   ASSERT_TRUE(fd = fbl::unique_fd(open("/", O_RDONLY | O_DIRECTORY))) << strerror(errno);
 
@@ -3415,10 +3445,75 @@ TEST(SocketKindTest, IoctlNameIndexLookupForNonSocketFd) {
   ASSERT_EQ(ioctl(fd.get(), SIOCGIFNAME, &ifr_iton), -1);
   EXPECT_EQ(errno, ENOTTY) << strerror(errno);
 
-  struct ifreq ifr_ntoi;
-  strcpy(ifr_ntoi.ifr_name, "loblah");
-  ASSERT_EQ(ioctl(fd.get(), SIOCGIFINDEX, &ifr_ntoi), -1);
-  EXPECT_EQ(errno, ENOTTY) << strerror(errno);
+  struct ifreq ifr;
+  strcpy(ifr.ifr_name, "loblah");
+  struct ioctl_request {
+    std::string name;
+    unsigned long request;
+  };
+  const ioctl_request requests[] = {
+      {
+          .name = "SIOCGIFINDEX",
+          .request = SIOCGIFINDEX,
+      },
+      {
+          .name = "SIOCGIFFLAGS",
+          .request = SIOCGIFFLAGS,
+      },
+  };
+  for (const auto& request : requests) {
+    ASSERT_EQ(ioctl(fd.get(), request.request, &ifr), -1) << request.name;
+    EXPECT_EQ(errno, ENOTTY) << request.name << ": " << strerror(errno);
+  }
+}
+
+TEST(IoctlTest, IoctlGetInterfaceFlags) {
+  fbl::unique_fd fd;
+  ASSERT_TRUE(fd = fbl::unique_fd(socket(AF_INET, SOCK_DGRAM, 0))) << strerror(errno);
+
+  struct ifreq ifr_ntof = {
+      .ifr_name = "lo",
+  };
+  ASSERT_EQ(ioctl(fd.get(), SIOCGIFFLAGS, &ifr_ntof), 0) << strerror(errno);
+  struct expected_flag {
+    std::string name;
+    short bitmask;
+    bool value;
+  };
+  const expected_flag flags[] = {
+      {
+          .name = "IFF_UP",
+          .bitmask = IFF_UP,
+          .value = true,
+      },
+      {
+          .name = "IFF_LOOPBACK",
+          .bitmask = IFF_LOOPBACK,
+          .value = true,
+      },
+      {
+          .name = "IFF_RUNNING",
+          .bitmask = IFF_RUNNING,
+          .value = true,
+      },
+      {
+          .name = "IFF_PROMISC",
+          .bitmask = IFF_PROMISC,
+          .value = false,
+      },
+  };
+  for (const auto& flag : flags) {
+    EXPECT_EQ(static_cast<bool>(ifr_ntof.ifr_flags & flag.bitmask), flag.value)
+        << std::bitset<16>(ifr_ntof.ifr_flags) << ", " << std::bitset<16>(flag.bitmask);
+  }
+  // Don't check strict equality of `ifr_ntof.ifr_flags` with expected flag
+  // values, except on Fuchsia, because gVisor does not set all the interface
+  // flags that Linux does.
+#if defined(__Fuchsia__)
+  uint16_t expected_flags = IFF_UP | IFF_LOOPBACK | IFF_RUNNING | IFF_MULTICAST;
+  ASSERT_EQ(ifr_ntof.ifr_flags, expected_flags)
+      << std::bitset<16>(ifr_ntof.ifr_flags) << ", " << std::bitset<16>(expected_flags);
+#endif
 }
 
 TEST(IoctlTest, IoctlGetInterfaceAddresses_NullIfConf) {

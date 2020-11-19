@@ -321,6 +321,24 @@ zx_status_t base_setsockopt(zx::unowned_channel channel, int level, int optname,
   return ZX_OK;
 }
 
+// Prevent divergence in flag bitmasks between libc and fuchsia.posix.socket FIDL library.
+static_assert(static_cast<uint16_t>(fsocket::InterfaceFlags::UP) == IFF_UP);
+static_assert(static_cast<uint16_t>(fsocket::InterfaceFlags::BROADCAST) == IFF_BROADCAST);
+static_assert(static_cast<uint16_t>(fsocket::InterfaceFlags::DEBUG) == IFF_DEBUG);
+static_assert(static_cast<uint16_t>(fsocket::InterfaceFlags::LOOPBACK) == IFF_LOOPBACK);
+static_assert(static_cast<uint16_t>(fsocket::InterfaceFlags::POINTTOPOINT) == IFF_POINTOPOINT);
+static_assert(static_cast<uint16_t>(fsocket::InterfaceFlags::NOTRAILERS) == IFF_NOTRAILERS);
+static_assert(static_cast<uint16_t>(fsocket::InterfaceFlags::RUNNING) == IFF_RUNNING);
+static_assert(static_cast<uint16_t>(fsocket::InterfaceFlags::NOARP) == IFF_NOARP);
+static_assert(static_cast<uint16_t>(fsocket::InterfaceFlags::PROMISC) == IFF_PROMISC);
+static_assert(static_cast<uint16_t>(fsocket::InterfaceFlags::ALLMULTI) == IFF_ALLMULTI);
+static_assert(static_cast<uint16_t>(fsocket::InterfaceFlags::LEADER) == IFF_MASTER);
+static_assert(static_cast<uint16_t>(fsocket::InterfaceFlags::FOLLOWER) == IFF_SLAVE);
+static_assert(static_cast<uint16_t>(fsocket::InterfaceFlags::MULTICAST) == IFF_MULTICAST);
+static_assert(static_cast<uint16_t>(fsocket::InterfaceFlags::PORTSEL) == IFF_PORTSEL);
+static_assert(static_cast<uint16_t>(fsocket::InterfaceFlags::AUTOMEDIA) == IFF_AUTOMEDIA);
+static_assert(static_cast<uint16_t>(fsocket::InterfaceFlags::DYNAMIC) == IFF_DYNAMIC);
+
 Errno zxsio_posix_ioctl(fdio_t* io, int req, va_list va,
                         Errno (*fallback)(fdio_t* io, int req, va_list va)) {
   switch (req) {
@@ -341,7 +359,7 @@ Errno zxsio_posix_ioctl(fdio_t* io, int req, va_list va,
         if (result.err() == ZX_ERR_NOT_FOUND) {
           return Errno(ENODEV);
         }
-        return Errno(fdio_status_to_errno(status));
+        return Errno(fdio_status_to_errno(result.err()));
       }
       auto const& name = result.response().name;
       const size_t n = std::min(name.size(), sizeof(ifr->ifr_name));
@@ -372,9 +390,37 @@ Errno zxsio_posix_ioctl(fdio_t* io, int req, va_list va,
         if (result.err() == ZX_ERR_NOT_FOUND) {
           return Errno(ENODEV);
         }
-        return Errno(fdio_status_to_errno(status));
+        return Errno(fdio_status_to_errno(result.err()));
       }
       ifr->ifr_ifindex = static_cast<int>(result.response().index);
+      return Errno(Errno::Ok);
+    }
+    case SIOCGIFFLAGS: {
+      fsocket::Provider::SyncClient* provider;
+      zx_status_t status = fdio_get_socket_provider(&provider);
+      if (status != ZX_OK) {
+        return Errno(fdio_status_to_errno(status));
+      }
+      struct ifreq* ifr = va_arg(va, struct ifreq*);
+      fidl::StringView name(ifr->ifr_name, strnlen(ifr->ifr_name, sizeof(ifr->ifr_name) - 1));
+      auto response = provider->InterfaceNameToFlags(std::move(name));
+      status = response.status();
+      if (status != ZX_OK) {
+        if (status == ZX_ERR_INVALID_ARGS) {
+          // FIDL calls will return ZX_ERR_INVALID_ARGS if the passed string
+          // (`name` in this case) fails UTF-8 validation.
+          return Errno(ENODEV);
+        }
+        return Errno(fdio_status_to_errno(status));
+      }
+      auto const& result = response.Unwrap()->result;
+      if (result.is_err()) {
+        if (result.err() == ZX_ERR_NOT_FOUND) {
+          return Errno(ENODEV);
+        }
+        return Errno(fdio_status_to_errno(result.err()));
+      }
+      ifr->ifr_flags = static_cast<uint16_t>(result.response().flags);
       return Errno(Errno::Ok);
     }
     case SIOCGIFCONF: {

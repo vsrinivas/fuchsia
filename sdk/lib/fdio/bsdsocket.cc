@@ -601,7 +601,7 @@ int getifaddrs(struct ifaddrs** ifap) {
       }
 
       if (iface.has_flags()) {
-        ifs->ifa.ifa_flags = iface.flags();
+        ifs->ifa.ifa_flags = static_cast<uint16_t>(iface.interface_flags());
       }
 
       *ifap = &ifs->ifa;

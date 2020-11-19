@@ -150,6 +150,10 @@ where
                 // TODO(https://fxbug.dev/48969): implement this method.
                 responder_send!(responder, &mut Err(zx::Status::NOT_FOUND.into_raw()));
             }
+            psocket::ProviderRequest::InterfaceNameToFlags { name: _, responder } => {
+                // TODO(https://fxbug.dev/48969): implement this method.
+                responder_send!(responder, &mut Err(zx::Status::NOT_FOUND.into_raw()));
+            }
             psocket::ProviderRequest::StreamSocket { domain: _, proto: _, responder } => {
                 responder_send!(responder, &mut Err(Errno::Eprotonosupport));
             }
