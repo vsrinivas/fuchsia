@@ -2,9 +2,16 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 import("//zircon/system/ulib/devmgr-integration-test/isolated_devmgr.gni")
+
+bind_rules("ddk-fidl-bind") {
+  rules = "ddk-fidl.bind"
+  output = "ddk-fidl-bind.h"
+  deps = [ "//src/devices/bind/test.platform" ]
+}
 
 driver_module("fidl-llcpp-driver") {
   configs += [
@@ -19,18 +26,22 @@ driver_module("fidl-llcpp-driver") {
   sources = [ "fidl-llcpp-driver.cc" ]
 
   deps = [
+    ":ddk-fidl-bind",
     "//src/devices/lib/driver",
     "//src/devices/tests/fuchsia-hardware-test:fuchsia.hardware.test_llcpp",
     "//src/lib/ddk",
-
-    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
-    "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//src/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/fidl-utils",
   ]
+}
+
+bind_rules("ddk-fidl-async-bind") {
+  rules = "ddk-fidl-async.bind"
+  output = "ddk-fidl-async-bind.h"
+  deps = [ "//src/devices/bind/test.platform" ]
 }
 
 driver_module("fidl-async-llcpp-driver") {
@@ -46,12 +57,10 @@ driver_module("fidl-async-llcpp-driver") {
   sources = [ "fidl-async-llcpp-driver.cc" ]
 
   deps = [
+    ":ddk-fidl-async-bind",
     "//src/devices/lib/driver",
     "//src/devices/tests/fuchsia-hardware-test:fuchsia.hardware.test_llcpp",
     "//src/lib/ddk",
-
-    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
-    "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//src/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zircon-internal",

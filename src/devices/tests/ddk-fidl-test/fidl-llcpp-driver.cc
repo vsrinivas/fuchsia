@@ -2,17 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "fidl-llcpp-driver.h"
+#include "src/devices/tests/ddk-fidl-test/fidl-llcpp-driver.h"
 
 #include <memory>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/driver.h>
 #include <ddk/platform-defs.h>
 #include <ddktl/device.h>
 #include <fbl/auto_lock.h>
 #include <fbl/function.h>
+
+#include "src/devices/tests/ddk-fidl-test/ddk-fidl-bind.h"
 
 namespace fidl {
 
@@ -67,10 +68,4 @@ constexpr zx_driver_ops_t driver_ops = []() {
 
 }  // namespace fidl
 
-// clang-format off
-ZIRCON_DRIVER_BEGIN(ddk_fidl, fidl::driver_ops, "zircon", "0.1", 3)
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_TEST),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_DDKFIDL_TEST),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_TEST_DDKFIDL),
-ZIRCON_DRIVER_END(ddk_fidl)
-    // clang-format on
+ZIRCON_DRIVER(ddk_fidl, fidl::driver_ops, "zircon", "0.1")
