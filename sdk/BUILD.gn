@@ -23,12 +23,15 @@ group("sdk") {
   ]
 }
 
-group("sdk2") {
+group("sdk.modular") {
   testonly = true
 
   public_deps = [
-    ":core2",
+    ":bootstrap",
+    ":core.modular",
     ":host_tools.all",
+    ":modular_testing",
+    ":zircon_sysroot",
   ]
 }
 
@@ -332,12 +335,12 @@ sdk("core") {
   ]
 }
 
-sdk("core2") {
+sdk("core.modular") {
   id = sdk_id
 
   category = "partner"
 
-  api = "core2.manifest"
+  api = "core.modular.manifest"
 
   testonly = true
 

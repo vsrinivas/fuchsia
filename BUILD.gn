@@ -624,7 +624,7 @@ build_api_module("images") {
 build_api_module("sdk_archives") {
   testonly = true
   data_keys = [ "sdk_archives" ]
-  deps = [ "//sdk:sdk2" ]
+  deps = [ "//sdk:sdk.modular" ]
 }
 
 # Describes the platforms available for testing, in the file:
