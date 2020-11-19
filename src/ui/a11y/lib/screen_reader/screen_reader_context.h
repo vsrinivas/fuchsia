@@ -108,19 +108,6 @@ class ScreenReaderContext {
   std::string locale_id_;
 };
 
-class ScreenReaderContextFactory {
- public:
-  ScreenReaderContextFactory() = default;
-  virtual ~ScreenReaderContextFactory() = default;
-
-  virtual std::unique_ptr<ScreenReaderContext> CreateScreenReaderContext(
-      std::unique_ptr<A11yFocusManager> a11y_focus_manager, TtsManager* tts_manager,
-      std::string locale_id = "en-US") {
-    return std::make_unique<ScreenReaderContext>(std::move(a11y_focus_manager), tts_manager,
-                                                 locale_id);
-  }
-};
-
 }  // namespace a11y
 
 #endif  // SRC_UI_A11Y_LIB_SCREEN_READER_SCREEN_READER_CONTEXT_H_

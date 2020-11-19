@@ -16,15 +16,11 @@ const float kDefaultMagnificationZoomFactor = 1.0;
 
 App::App(sys::ComponentContext* context, a11y::ViewManager* view_manager,
          a11y::TtsManager* tts_manager, a11y::ColorTransformManager* color_transform_manager,
-         a11y::GestureListenerRegistry* gesture_listener_registry,
-         a11y::BootInfoManager* boot_info_manager,
-         a11y::ScreenReaderContextFactory* screen_reader_context_factory,
-         inspect::Node inspect_node)
+         a11y::GestureListenerRegistry* gesture_listener_registry, inspect::Node inspect_node)
     : view_manager_(view_manager),
       tts_manager_(tts_manager),
       color_transform_manager_(color_transform_manager),
       gesture_listener_registry_(gesture_listener_registry),
-      screen_reader_context_factory_(screen_reader_context_factory),
       inspect_node_(std::move(inspect_node)),
       inspect_property_intl_property_provider_disconnected_(
           inspect_node_.CreateBool(kIntlPropertyProviderDisconnectedInspectName, false)) {
@@ -33,11 +29,6 @@ App::App(sys::ComponentContext* context, a11y::ViewManager* view_manager,
   FX_DCHECK(tts_manager);
   FX_DCHECK(color_transform_manager);
   FX_DCHECK(gesture_listener_registry_);
-  FX_DCHECK(boot_info_manager);
-
-  // The screen reader should announce that it is on at boot iff the boot was
-  // user-initiated.
-  state_.set_announce_screen_reader_enabled(boot_info_manager->LastRebootWasUserInitiated());
 
   context->outgoing()->AddPublicService(semantics_manager_bindings_.GetHandler(view_manager_));
   context->outgoing()->AddPublicService(magnifier_bindings_.GetHandler(&magnifier_));
@@ -124,18 +115,12 @@ void App::FinishSetUp() {
 
 void App::SetState(A11yManagerState state) {
   state_ = state;
+
   UpdateScreenReaderState();
   UpdateMagnifierState();
   UpdateColorTransformState();
   // May rely on screen reader existence.
   UpdateGestureManagerState();
-
-  // The first call to SetState() will set the screen reader enabled setting to its
-  // value at boot time. This first call to SetState() should result in screen
-  // reader output iff the screen reader is enabled at boot AND the boot is
-  // user-initiated. Once this initial value has been set, all subsequent
-  // enables of the screen reader should be announced.
-  state_.set_announce_screen_reader_enabled(true);
 }
 
 void App::UpdateScreenReaderState() {
@@ -257,11 +242,10 @@ std::unique_ptr<a11y::ScreenReader> App::InitializeScreenReader() {
   if (i18n_profile_ && i18n_profile_->has_locales() && !i18n_profile_->locales().empty()) {
     locale_id = i18n_profile_->locales()[0].id;
   }
-  auto screen_reader_context = screen_reader_context_factory_->CreateScreenReaderContext(
+  auto screen_reader_context = std::make_unique<a11y::ScreenReaderContext>(
       std::move(a11y_focus_manager), tts_manager_, locale_id);
   auto screen_reader = std::make_unique<a11y::ScreenReader>(
-      std::move(screen_reader_context), view_manager_, gesture_listener_registry_, tts_manager_,
-      state_.announce_screen_reader_enabled());
+      std::move(screen_reader_context), view_manager_, gesture_listener_registry_, tts_manager_);
   view_manager_->GetSemanticsEventManager()->Register(
       screen_reader->GetSemanticsEventListenerWeakPtr());
   return screen_reader;
