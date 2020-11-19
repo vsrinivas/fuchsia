@@ -701,7 +701,7 @@ From //build/images/custom_signing.gni:23
 
 **Current value (from the default):** `"dart_jit_app"`
 
-From [//topaz/runtime/dart/dart_component.gni:24](https://fuchsia.googlesource.com/topaz/+/8334e88a02e1bb3a6d2eadf7e965182979c972d4/runtime/dart/dart_component.gni#24)
+From [//topaz/runtime/dart/dart_component.gni:25](https://fuchsia.googlesource.com/topaz/+/bcde3510e3f01bd925318040f9d7f7152bb49714/runtime/dart/dart_component.gni#25)
 
 ### dart_default_build_cfg
 TODO(fxbug.dev/64153) renable aot builds
@@ -731,14 +731,14 @@ we use to build products.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/8334e88a02e1bb3a6d2eadf7e965182979c972d4/runtime/dart/config.gni#10)
+From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/bcde3510e3f01bd925318040f9d7f7152bb49714/runtime/dart/config.gni#10)
 
 ### dart_space_dart
 Whether experimental space dart mode is enabled for Dart applications.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/dart_component.gni:43](https://fuchsia.googlesource.com/topaz/+/8334e88a02e1bb3a6d2eadf7e965182979c972d4/runtime/dart/dart_component.gni#43)
+From [//topaz/runtime/dart/dart_component.gni:44](https://fuchsia.googlesource.com/topaz/+/bcde3510e3f01bd925318040f9d7f7152bb49714/runtime/dart/dart_component.gni#44)
 
 ### data_partition_manifest
 Path to manifest file containing data to place into the initial /data
@@ -988,7 +988,7 @@ From //build/images/args.gni:52
 
 **Current value (from the default):** `"flutter_jit_app"`
 
-From [//topaz/runtime/dart/dart_component.gni:13](https://fuchsia.googlesource.com/topaz/+/8334e88a02e1bb3a6d2eadf7e965182979c972d4/runtime/dart/dart_component.gni#13)
+From [//topaz/runtime/dart/dart_component.gni:14](https://fuchsia.googlesource.com/topaz/+/bcde3510e3f01bd925318040f9d7f7152bb49714/runtime/dart/dart_component.gni#14)
 
 ### flutter_default_build_cfg
 Non-product JIT
@@ -1028,14 +1028,14 @@ From //build/flutter/config.gni:10
 
 **Current value (from the default):** `true`
 
-From [//topaz/runtime/dart/dart_component.gni:34](https://fuchsia.googlesource.com/topaz/+/8334e88a02e1bb3a6d2eadf7e965182979c972d4/runtime/dart/dart_component.gni#34)
+From [//topaz/runtime/dart/dart_component.gni:35](https://fuchsia.googlesource.com/topaz/+/bcde3510e3f01bd925318040f9d7f7152bb49714/runtime/dart/dart_component.gni#35)
 
 ### flutter_space_dart
 Whether experimental space dart mode is enabled for Flutter applications.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/dart_component.gni:40](https://fuchsia.googlesource.com/topaz/+/8334e88a02e1bb3a6d2eadf7e965182979c972d4/runtime/dart/dart_component.gni#40)
+From [//topaz/runtime/dart/dart_component.gni:41](https://fuchsia.googlesource.com/topaz/+/bcde3510e3f01bd925318040f9d7f7152bb49714/runtime/dart/dart_component.gni#41)
 
 ### font_catalog_paths
 
@@ -1290,7 +1290,7 @@ is produced by the build.
 
 **Current value for `target_cpu = "arm64"`:** `[]`
 
-From //products/bringup.gni:45
+From //products/bringup.gni:46
 
 **Overridden from the default:** `[]`
 
@@ -1298,7 +1298,7 @@ From //BUILD.gn:59
 
 **Current value for `target_cpu = "x64"`:** `[]`
 
-From //products/bringup.gni:45
+From //products/bringup.gni:46
 
 **Overridden from the default:** `[]`
 
@@ -2061,7 +2061,7 @@ From //src/graphics/lib/magma/gnbuild/magma.gni:32
 ### product_bootfs_labels
 A list of binary labels to include in ZBIs built for this product.
 
-**Current value for `target_cpu = "arm64"`:** `["//build/info:bootfs", "//bundles:bootstrap", "//bundles:debugging", "//bundles/bringup:manual_testing", "//bundles/drivers:bootstrap", "//bundles/drivers:usb-host-stack", "//bundles/drivers:usb-peripheral-stack", "//bundles/drivers:utils", "//src/testing/runtests", "//src/sys/component_manager:component_manager_config_bootfs_resource"]`
+**Current value for `target_cpu = "arm64"`:** `["//build/info:bootfs", "//bundles:bootstrap", "//bundles:debugging", "//bundles/bringup:manual_testing", "//bundles/drivers:bootstrap", "//bundles/drivers:bootstrap-eng", "//bundles/drivers:usb-host-stack", "//bundles/drivers:usb-peripheral-stack", "//bundles/drivers:utils", "//src/testing/runtests", "//src/sys/component_manager:component_manager_config_bootfs_resource"]`
 
 From //products/core.gni:107
 
@@ -2069,7 +2069,7 @@ From //products/core.gni:107
 
 From //build/product.gni:7
 
-**Current value for `target_cpu = "x64"`:** `["//build/info:bootfs", "//bundles:bootstrap", "//bundles:debugging", "//bundles/bringup:manual_testing", "//bundles/drivers:bootstrap", "//bundles/drivers:usb-host-stack", "//bundles/drivers:usb-peripheral-stack", "//bundles/drivers:utils", "//src/testing/runtests", "//src/sys/component_manager:component_manager_config_bootfs_resource"]`
+**Current value for `target_cpu = "x64"`:** `["//build/info:bootfs", "//bundles:bootstrap", "//bundles:debugging", "//bundles/bringup:manual_testing", "//bundles/drivers:bootstrap", "//bundles/drivers:bootstrap-eng", "//bundles/drivers:usb-host-stack", "//bundles/drivers:usb-peripheral-stack", "//bundles/drivers:utils", "//src/testing/runtests", "//src/sys/component_manager:component_manager_config_bootfs_resource"]`
 
 From //products/core.gni:107
 
