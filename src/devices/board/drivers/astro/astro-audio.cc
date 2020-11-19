@@ -126,32 +126,6 @@ static const device_fragment_t codec_fragments[] = {
     {"gpio", countof(fault_gpio_fragment), fault_gpio_fragment},
 };
 
-// PDM input configurations
-static const pbus_mmio_t pdm_mmios[] = {
-    {.base = S905D2_EE_PDM_BASE, .length = S905D2_EE_PDM_LENGTH},
-    {.base = S905D2_EE_AUDIO_BASE, .length = S905D2_EE_AUDIO_LENGTH},
-};
-
-static const pbus_bti_t pdm_btis[] = {
-    {
-        .iommu_index = 0,
-        .bti_id = BTI_AUDIO_IN,
-    },
-};
-
-static const pbus_dev_t pdm_dev = []() {
-  pbus_dev_t dev = {};
-  dev.name = "astro-audio-in";
-  dev.vid = PDEV_VID_AMLOGIC;
-  dev.pid = PDEV_PID_AMLOGIC_S905D2;
-  dev.did = PDEV_DID_AMLOGIC_PDM;
-  dev.mmio_list = pdm_mmios;
-  dev.mmio_count = countof(pdm_mmios);
-  dev.bti_list = pdm_btis;
-  dev.bti_count = countof(pdm_btis);
-  return dev;
-}();
-
 zx_status_t Astro::AudioInit() {
   zx_status_t status;
 
@@ -452,12 +426,53 @@ zx_status_t Astro::AudioInit() {
 #endif
 #endif
 
-  status = pbus_.DeviceAdd(&pdm_dev);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: PDM DeviceAdd failed: %d", __FILE__, status);
-    return status;
-  }
+  // Input device.
+  {
+    metadata::AmlPdmConfig metadata = {};
+    snprintf(metadata.manufacturer, sizeof(metadata.manufacturer), "Spacely Sprockets");
+    snprintf(metadata.product_name, sizeof(metadata.product_name), "astro");
+    metadata.number_of_channels = 2;
+    metadata.version = metadata::AmlVersion::kS905D2G;
+    metadata.sysClockDivFactor = 4;
+    metadata.dClockDivFactor = 250;
+    pbus_metadata_t pdm_metadata[] = {
+        {
+            .type = DEVICE_METADATA_PRIVATE,
+            .data_buffer = &metadata,
+            .data_size = sizeof(metadata),
+        },
+    };
 
+    static const pbus_mmio_t pdm_mmios[] = {
+        {.base = S905D2_EE_PDM_BASE, .length = S905D2_EE_PDM_LENGTH},
+        {.base = S905D2_EE_AUDIO_BASE, .length = S905D2_EE_AUDIO_LENGTH},
+    };
+
+    static const pbus_bti_t pdm_btis[] = {
+        {
+            .iommu_index = 0,
+            .bti_id = BTI_AUDIO_IN,
+        },
+    };
+
+    pbus_dev_t dev_in = {};
+    dev_in.name = "astro-audio-pdm-in";
+    dev_in.vid = PDEV_VID_AMLOGIC;
+    dev_in.pid = PDEV_PID_AMLOGIC_S905D2;
+    dev_in.did = PDEV_DID_AMLOGIC_PDM;
+    dev_in.mmio_list = pdm_mmios;
+    dev_in.mmio_count = countof(pdm_mmios);
+    dev_in.bti_list = pdm_btis;
+    dev_in.bti_count = countof(pdm_btis);
+    dev_in.metadata_list = pdm_metadata;
+    dev_in.metadata_count = countof(pdm_metadata);
+
+    status = pbus_.DeviceAdd(&dev_in);
+    if (status != ZX_OK) {
+      zxlogf(ERROR, "%s adding audio input device failed %d", __FILE__, status);
+      return status;
+    }
+  }
   return ZX_OK;
 }
 
