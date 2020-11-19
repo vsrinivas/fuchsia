@@ -8,7 +8,10 @@ use fidl_fuchsia_cobalt::CobaltEvent;
 use fuchsia_cobalt::{CobaltConnector, CobaltSender, ConnectionType};
 use futures::prelude::*;
 use log::{info, warn};
-use omaha_client::metrics::{Metrics, MetricsReporter};
+use omaha_client::{
+    metrics::{ClockType, Metrics, MetricsReporter},
+    protocol::request::InstallSource,
+};
 use std::{convert::TryFrom, time::Duration};
 
 /// A MetricsReporter trait implementation that send metrics to Cobalt.
@@ -62,14 +65,34 @@ impl MetricsReporter for CobaltMetricsReporter {
                     );
                 }
             }
-            Metrics::UpdateCheckInterval(duration) => {
-                if let Some(duration) =
-                    duration_to_cobalt_micros(duration, "Metrics::UpdateCheckInterval")
+            Metrics::UpdateCheckInterval { interval, clock, install_source } => {
+                if let Some(interval) =
+                    duration_to_cobalt_micros(interval, "Metrics::UpdateCheckInterval")
                 {
+                    let clock = match clock {
+                        ClockType::Monotonic => {
+                            mos_metrics_registry::UpdateCheckIntervalMetricDimensionClock::Monotonic
+                        }
+                        ClockType::Wall => {
+                            mos_metrics_registry::UpdateCheckIntervalMetricDimensionClock::Wall
+                        }
+                    };
+                    let install_source = match install_source {
+                        InstallSource::ScheduledTask => {
+                            mos_metrics_registry::UpdateCheckIntervalMetricDimensionInitiator::ScheduledTask
+                        }
+                        InstallSource::OnDemand => {
+                            mos_metrics_registry::UpdateCheckIntervalMetricDimensionInitiator::OnDemand
+                        }
+                    };
                     self.cobalt_sender.log_elapsed_time(
                         mos_metrics_registry::UPDATE_CHECK_INTERVAL_METRIC_ID,
-                        mos_metrics_registry::UpdateCheckIntervalMetricDimensionResult::Success,
-                        duration,
+                        (
+                            mos_metrics_registry::UpdateCheckIntervalMetricDimensionResult::Success,
+                            clock,
+                            install_source,
+                        ),
+                        interval,
                     );
                 }
             }
@@ -209,6 +232,46 @@ mod tests {
                 .as_event_codes(),
                 component: None,
                 payload: EventPayload::ElapsedMicros(10 * 1000),
+            },
+        );
+    }
+
+    #[test]
+    fn test_report_update_check_interval() {
+        assert_metric(
+            Metrics::UpdateCheckInterval {
+                interval: Duration::from_millis(10),
+                clock: ClockType::Monotonic,
+                install_source: InstallSource::OnDemand,
+            },
+            CobaltEvent {
+                metric_id: mos_metrics_registry::UPDATE_CHECK_INTERVAL_METRIC_ID,
+                event_codes: (
+                    mos_metrics_registry::UpdateCheckIntervalMetricDimensionResult::Success,
+                    mos_metrics_registry::UpdateCheckIntervalMetricDimensionClock::Monotonic,
+                    mos_metrics_registry::UpdateCheckIntervalMetricDimensionInitiator::OnDemand,
+                )
+                    .as_event_codes(),
+                component: None,
+                payload: EventPayload::ElapsedMicros(10 * 1000),
+            },
+        );
+        assert_metric(
+            Metrics::UpdateCheckInterval {
+                interval: Duration::from_millis(20),
+                clock: ClockType::Wall,
+                install_source: InstallSource::ScheduledTask,
+            },
+            CobaltEvent {
+                metric_id: mos_metrics_registry::UPDATE_CHECK_INTERVAL_METRIC_ID,
+                event_codes: (
+                    mos_metrics_registry::UpdateCheckIntervalMetricDimensionResult::Success,
+                    mos_metrics_registry::UpdateCheckIntervalMetricDimensionClock::Wall,
+                    mos_metrics_registry::UpdateCheckIntervalMetricDimensionInitiator::ScheduledTask,
+                )
+                    .as_event_codes(),
+                component: None,
+                payload: EventPayload::ElapsedMicros(20 * 1000),
             },
         );
     }

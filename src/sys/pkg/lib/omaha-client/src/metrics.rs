@@ -2,8 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use anyhow::Error;
-use std::{cell::RefCell, rc::Rc, time::Duration};
+use {
+    crate::protocol::request::InstallSource,
+    anyhow::Error,
+    std::{cell::RefCell, rc::Rc, time::Duration},
+};
 
 #[cfg(test)]
 mod mock;
@@ -19,7 +22,7 @@ pub enum Metrics {
     /// hold whether that was a success or a failure.
     UpdateCheckResponseTime { response_time: Duration, successful: bool },
     /// Elapsed time from the previous update check to the current update check.
-    UpdateCheckInterval(Duration),
+    UpdateCheckInterval { interval: Duration, clock: ClockType, install_source: InstallSource },
     /// Elapsed time from starting an update to having successfully applied it.
     SuccessfulUpdateDuration(Duration),
     /// Elapsed time from first seeing an update to having successfully applied it.
@@ -48,6 +51,12 @@ pub enum UpdateCheckFailureReason {
     Proxy = 2,
     Configuration = 3,
     Internal = 4,
+}
+
+#[derive(Debug, Eq, PartialEq)]
+pub enum ClockType {
+    Monotonic,
+    Wall,
 }
 
 pub trait MetricsReporter {

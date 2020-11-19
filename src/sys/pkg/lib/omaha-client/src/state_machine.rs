@@ -7,7 +7,7 @@ use crate::{
     configuration::Config,
     http_request::{self, HttpRequest},
     installer::{Installer, Plan},
-    metrics::{Metrics, MetricsReporter, UpdateCheckFailureReason},
+    metrics::{ClockType, Metrics, MetricsReporter, UpdateCheckFailureReason},
     policy::{CheckDecision, PolicyEngine, UpdateDecision},
     protocol::{
         self,
@@ -525,14 +525,19 @@ where
 
     /// Report update check interval based on the last check time stored in storage.
     /// It will also persist the new last check time to storage.
-    async fn report_check_interval(&mut self) {
+    async fn report_check_interval(&mut self, install_source: InstallSource) {
         // Clone the Rc first to avoid borrowing self for the rest of the function.
         let storage_ref = self.storage_ref.clone();
         let mut storage = storage_ref.lock().await;
         let now = self.time_source.now();
         if let Some(last_check_time) = storage.get_time(LAST_CHECK_TIME).await {
             match now.wall_duration_since(last_check_time) {
-                Ok(duration) => self.report_metrics(Metrics::UpdateCheckInterval(duration)),
+                Ok(interval) => self.report_metrics(Metrics::UpdateCheckInterval {
+                    interval,
+                    // TODO(fxbug.dev/60449): report monotonic when using monotonic time
+                    clock: ClockType::Wall,
+                    install_source,
+                }),
                 Err(e) => warn!("Last check time is in the future: {}", e),
             }
         }
@@ -649,7 +654,7 @@ where
     ) -> Result<update_check::Response, UpdateCheckError> {
         self.set_state(State::CheckingForUpdates, co).await;
 
-        self.report_check_interval().await;
+        self.report_check_interval(request_params.source.clone()).await;
 
         // Construct a request for the app(s).
         let config = self.config.clone();
@@ -2255,7 +2260,7 @@ mod tests {
                 .build()
                 .await;
 
-            state_machine.report_check_interval().await;
+            state_machine.report_check_interval(InstallSource::ScheduledTask).await;
             // No metrics should be reported because no last check time in storage.
             assert!(state_machine.metrics_reporter.metrics.is_empty());
             {
@@ -2265,16 +2270,20 @@ mod tests {
                 assert!(storage.committed());
             }
             // A second update check should report metrics.
-            let duration = Duration::from_micros(999999);
-            mock_time.advance(duration);
+            let interval = Duration::from_micros(999999);
+            mock_time.advance(interval);
 
             let later_time = mock_time.now();
 
-            state_machine.report_check_interval().await;
+            state_machine.report_check_interval(InstallSource::ScheduledTask).await;
 
             assert_eq!(
                 state_machine.metrics_reporter.metrics,
-                vec![Metrics::UpdateCheckInterval(duration)]
+                vec![Metrics::UpdateCheckInterval {
+                    interval,
+                    clock: ClockType::Wall,
+                    install_source: InstallSource::ScheduledTask,
+                }]
             );
             let storage = state_machine.storage_ref.lock().await;
             assert_eq!(storage.get_time(LAST_CHECK_TIME).await.unwrap(), later_time.wall);
