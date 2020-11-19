@@ -70,6 +70,7 @@ class StackProviderImplTest : public gtest::TestLoopFixture {
     TestLoopFixture::SetUp();
 
     // Initialize the weave stack
+    PlatformMgrImpl().SetDispatcher(dispatcher());
     ConfigurationMgrImpl().SetDelegate(std::make_unique<ConfigurationManagerDelegateImpl>());
     ConnectivityMgrImpl().SetDelegate(std::make_unique<ConnectivityManagerDelegateImpl>());
     ThreadStackMgrImpl().SetDelegate(std::make_unique<ThreadStackManagerDelegateImpl>());

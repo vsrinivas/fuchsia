@@ -10,6 +10,10 @@ namespace nl {
 namespace Weave {
 namespace DeviceLayer {
 
+enum WeaveDevicePlatformEventType {
+  kShutdownRequest = DeviceEventType::kRange_PublicPlatformSpecific,
+};
+
 /**
  * Represents platform-specific event information for the Fuchsia platform.
  */

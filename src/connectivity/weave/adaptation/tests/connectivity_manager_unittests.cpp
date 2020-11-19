@@ -107,6 +107,11 @@ class FakeNetInterfaces : public fuchsia::net::interfaces::testing::State_TestBa
     SendPendingEvent();
   }
 
+  void Close(zx_status_t epitaph_value = ZX_OK) {
+    watcher_binding_.Close(epitaph_value);
+    state_binding_.Close(epitaph_value);
+  }
+
  private:
   async_dispatcher_t* dispatcher_;
   fuchsia::net::interfaces::Watcher::WatchCallback watch_callback_;
@@ -397,6 +402,19 @@ TEST_F(ConnectivityManagerTest, OnPlatformEvent) {
   account_pairing_event.AccountPairingChange.IsPairedToAccount = false;
   Delegate()->OnPlatformEvent(&account_pairing_event);
   EXPECT_FALSE(Delegate()->GetServiceTunnelStarted());
+}
+
+TEST_F(ConnectivityManagerTest, RequestShutdownOnFidlError) {
+  PlatformMgr().AddEventHandler(HandleApplicationEvent, (intptr_t)this);
+  auto remove_event_handler =
+      fit::defer([&] { PlatformMgr().RemoveEventHandler(HandleApplicationEvent, (intptr_t)this); });
+
+  EXPECT_TRUE(application_events_.empty());
+  fake_net_interfaces_.Close(ZX_ERR_PEER_CLOSED);
+  RunLoopUntilIdle();
+
+  EXPECT_EQ(application_events_.size(), 1UL);
+  EXPECT_EQ(application_events_[0].Type, WeaveDevicePlatformEventType::kShutdownRequest);
 }
 
 }  // namespace testing

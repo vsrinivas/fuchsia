@@ -173,6 +173,7 @@ class StackImplTest : public gtest::TestLoopFixture {
         fake_weave_factory_data_manager_.GetHandler(dispatcher()));
 
     // Initialize the weave stack
+    PlatformMgrImpl().SetDispatcher(dispatcher());
     ConfigurationMgrImpl().SetDelegate(std::make_unique<ConfigurationManagerDelegateImpl>());
     ConnectivityMgrImpl().SetDelegate(std::make_unique<ConnectivityManagerDelegateImpl>());
     NetworkProvisioningSvrImpl().SetDelegate(

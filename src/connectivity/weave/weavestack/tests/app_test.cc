@@ -24,21 +24,37 @@ namespace weavestack {
 namespace {
 using nl::Weave::DeviceLayer::ConfigurationManagerDelegateImpl;
 using nl::Weave::DeviceLayer::ConfigurationMgrImpl;
-using nl::Weave::DeviceLayer::ConnectivityManagerDelegateImpl;
+using nl::Weave::DeviceLayer::ConnectivityManagerImpl;
 using nl::Weave::DeviceLayer::ConnectivityMgrImpl;
 using nl::Weave::DeviceLayer::PlatformMgr;
 using nl::Weave::DeviceLayer::PlatformMgrImpl;
 using nl::Weave::DeviceLayer::ThreadStackManagerDelegateImpl;
 using nl::Weave::DeviceLayer::ThreadStackMgrImpl;
+using nl::Weave::DeviceLayer::WeaveDeviceEvent;
+using nl::Weave::DeviceLayer::WeaveDevicePlatformEventType;
 using nl::Weave::DeviceLayer::Internal::NetworkProvisioningServerDelegateImpl;
 using nl::Weave::DeviceLayer::Internal::NetworkProvisioningServerImpl;
 using nl::Weave::DeviceLayer::Internal::NetworkProvisioningSvrImpl;
+
+class ConnectivityManagerTestDelegate : public ConnectivityManagerImpl::Delegate {
+ public:
+  ~ConnectivityManagerTestDelegate() {}
+
+  WEAVE_ERROR Init() { return WEAVE_NO_ERROR; }
+  bool IsServiceTunnelConnected() { return false; }
+  bool IsServiceTunnelRestricted() { return false; }
+  void OnPlatformEvent(const WeaveDeviceEvent* event) {}
+};
+
 void SetDefaultDelegates() {
   ConfigurationMgrImpl().SetDelegate(std::make_unique<ConfigurationManagerDelegateImpl>());
-  ConnectivityMgrImpl().SetDelegate(std::make_unique<ConnectivityManagerDelegateImpl>());
   NetworkProvisioningSvrImpl().SetDelegate(
       std::make_unique<NetworkProvisioningServerDelegateImpl>());
   ThreadStackMgrImpl().SetDelegate(std::make_unique<ThreadStackManagerDelegateImpl>());
+  // The default delegate for the ConnectivityManager is replaced with a test
+  // delegate that does not initialize. This is to prevent the failure of
+  // binding to the net interface from immediately shutting down the stack.
+  ConnectivityMgrImpl().SetDelegate(std::make_unique<ConnectivityManagerTestDelegate>());
 }
 
 void ClearDelegates() {
@@ -112,6 +128,22 @@ TEST(App, CallInitAgain) {
   EXPECT_EQ(ZX_OK, app.Init());
   EXPECT_EQ(ZX_ERR_BAD_STATE, app.Init());
   app.Quit();
+  ClearDelegates();
+}
+
+TEST(App, RequestShutdown) {
+  auto app = App();
+  SetDefaultDelegates();
+  EXPECT_EQ(ZX_OK, app.Init());
+  EXPECT_EQ(ASYNC_LOOP_RUNNABLE, app.loop()->GetState());
+
+  const WeaveDeviceEvent shutdown_request = {
+      .Type = WeaveDevicePlatformEventType::kShutdownRequest,
+  };
+  PlatformMgrImpl().PostEvent(&shutdown_request);
+  EXPECT_EQ(ZX_ERR_CANCELED, app.Run());
+
+  EXPECT_EQ(ASYNC_LOOP_QUIT, app.loop()->GetState());
   ClearDelegates();
 }
 

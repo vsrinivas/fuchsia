@@ -163,6 +163,15 @@ WEAVE_ERROR ConnectivityManagerDelegateImpl::Init() {
     FX_LOGS(ERROR) << "Failed to register state watcher." << zx_status_get_string(err);
     return err;
   }
+  state_.set_error_handler([](zx_status_t status) {
+    // Treat connection loss to netstack as fatal and inform applications that
+    // they should attempt a graceful shutdown / restart.
+    FX_LOGS(ERROR) << "Disconnected from netstack: " << zx_status_get_string(status);
+    const WeaveDeviceEvent shutdown_request = {
+        .Type = WeaveDevicePlatformEventType::kShutdownRequest,
+    };
+    PlatformMgrImpl().PostEvent(&shutdown_request);
+  });
 
   fuchsia::net::interfaces::WatcherOptions options;
   state_->GetWatcher(std::move(options), watcher_.NewRequest());
@@ -260,14 +269,14 @@ void ConnectivityManagerDelegateImpl::OnInterfaceEvent(fuchsia::net::interfaces:
     }
     if (event.is_changed() && properties.has_online()) {
       PlatformMgr().ScheduleWork(
-        [](intptr_t context) {
-          ConnectivityManagerDelegateImpl* delegate = (ConnectivityManagerDelegateImpl*)context;
-          WEAVE_ERROR err = delegate->RefreshEndpoints();
-        if (err != WEAVE_NO_ERROR) {
-          FX_LOGS(ERROR)<< "MessageLayer.RefreshEndpoints() failed: " << nl::ErrorStr(err);
-        }
-      },
-      (intptr_t)this);
+          [](intptr_t context) {
+            ConnectivityManagerDelegateImpl* delegate = (ConnectivityManagerDelegateImpl*)context;
+            WEAVE_ERROR err = delegate->RefreshEndpoints();
+            if (err != WEAVE_NO_ERROR) {
+              FX_LOGS(ERROR) << "MessageLayer.RefreshEndpoints() failed: " << nl::ErrorStr(err);
+            }
+          },
+          (intptr_t)this);
     }
   } else if (event.is_removed()) {
     routable_v4_interfaces.erase(event.removed());

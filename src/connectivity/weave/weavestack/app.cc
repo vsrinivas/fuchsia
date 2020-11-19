@@ -15,6 +15,7 @@ namespace weavestack {
 namespace {
 using nl::Weave::DeviceLayer::PlatformMgr;
 using nl::Weave::DeviceLayer::PlatformMgrImpl;
+using nl::Weave::DeviceLayer::WeaveDeviceEvent;
 }  // namespace
 
 // TODO(fxbug.dev/59699): Implement system/platform timer in openweave
@@ -44,6 +45,21 @@ void App::Quit() {
   ClearWaiters();
   ClearFds();
   PlatformMgrImpl().ShutdownWeaveStack();
+  PlatformMgr().RemoveEventHandler(&App::OnPlatformEvent, reinterpret_cast<intptr_t>(this));
+}
+
+void App::OnPlatformEvent(const WeaveDeviceEvent* event, intptr_t arg) {
+  switch (event->Type) {
+    case nl::Weave::DeviceLayer::kShutdownRequest:
+      // The adaptation layer may request a shutdown of weavestack. Platform events
+      // are posted on the dispatcher, so shutting down the loop here will prevent
+      // processing any socket data that might be in-flight.
+      FX_LOGS(WARNING) << "Received shutdown request.";
+      App* app = reinterpret_cast<App*>(arg);
+      FX_DCHECK(app && app->loop());
+      app->loop()->Quit();
+      break;
+  }
 }
 
 void App::TrampolineDoClose(int fd, intptr_t arg) {
@@ -80,6 +96,8 @@ zx_status_t App::Init() {
     return ZX_ERR_BAD_STATE;
   }
 
+  // Set dispatcher before initializing the stack, which may reach out to other
+  // components on the system to acquire initial state.
   PlatformMgrImpl().SetDispatcher(loop_.dispatcher());
 
   WEAVE_ERROR err = PlatformMgr().InitWeaveStack();
@@ -88,9 +106,13 @@ zx_status_t App::Init() {
     return ZX_ERR_INTERNAL;
   }
 
+  // Set handlers after initializing the weavestack, which resets its initial
+  // handler variables on startup.
+  PlatformMgr().AddEventHandler(&App::OnPlatformEvent, reinterpret_cast<intptr_t>(this));
   PlatformMgrImpl().GetInetLayer().SetPlatformSocketCloseHandler(TrampolineDoClose,
                                                                  reinterpret_cast<intptr_t>(this));
 
+  // Kick FD handler to start the task loop.
   sleep_task_ = std::make_unique<async::TaskClosure>([this] { FdHandler(ZX_OK, 0); });
 
   bootstrap_impl_ =
@@ -182,7 +204,7 @@ void App::FdHandler(zx_status_t status, uint32_t zero) {
   int res = select(fds_.num_fds, &fds_.read_fds, &fds_.write_fds, &fds_.except_fds, &sleep_time);
   if (res < 0) {
     FX_LOGS(ERROR) << "failed to select on fds: " << strerror(errno);
-    loop_.Shutdown();
+    loop_.Quit();
     return;
   }
 
@@ -198,7 +220,7 @@ void App::FdHandler(zx_status_t status, uint32_t zero) {
   status = StartFdWaiters();
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "failed to wait for next packet: " << status;
-    loop_.Shutdown();
+    loop_.Quit();
   }
 }
 
@@ -207,14 +229,13 @@ zx_status_t App::Run(zx::time deadline, bool once) {
     zx_status_t status = StartFdWaiters();
     if (status != ZX_OK) {
       FX_LOGS(ERROR) << "failed to wait for first packet: " << status;
-      loop_.Shutdown();
+      loop_.Quit();
     }
   });
   if (status != ZX_OK) {
     return status;
   }
-  status = loop_.Run(deadline, once);
-  return status;
+  return loop_.Run(deadline, once);
 }
 
 }  // namespace weavestack

@@ -42,21 +42,28 @@ class App {
   void ClearWaiters();
   void ClearFds();
   void FdHandler(zx_status_t status, uint32_t zero);
+
+  // Event handler for openweave-core platform events.
+  static void OnPlatformEvent(const nl::Weave::DeviceLayer::WeaveDeviceEvent* event, intptr_t arg);
+
   // Static handler to trampoline callbacks to an App instance.
   // |fd| refers to an fd to be closed.
   // |arg| is a pointer to the App instance.
   static void TrampolineDoClose(int fd, intptr_t arg);
+
   // DoClose will perform the required cleanup for the given
   // |fd| before closing |fd|. Register DoClose as a pre-socket
   // close handler which gets invoked, whenever openweave-core
   // is about to close a socket.
   void DoClose(int fd);
+
   struct {
     fd_set read_fds;
     fd_set write_fds;
     fd_set except_fds;
     int num_fds;
   } fds_;
+
   std::map<int, std::unique_ptr<fsl::FDWaiter>> waiters_;
   async::Loop loop_{&kAsyncLoopConfigAttachToCurrentThread};
   bool initialized_ = false;
