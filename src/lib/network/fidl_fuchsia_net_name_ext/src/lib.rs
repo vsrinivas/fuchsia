@@ -55,34 +55,8 @@ impl FromExt<fname::Dhcpv6DnsServerSource> for fname::DnsServerSource {
     }
 }
 
-// TODO(fxbug.dev/61760): Clone isn't derived for these types
-// because they have transitive dependencies in an external library
-/// Extension trait that provides a manual implementation of `Clone`.
-pub trait CloneExt {
-    /// Returns a copy of the value.
-    fn clone(&self) -> Self;
-}
-
-impl CloneExt for fname::DnsServer_ {
-    fn clone(&self) -> fname::DnsServer_ {
-        fname::DnsServer_ {
-            address: self.address.clone(),
-            source: self.source.as_ref().map(|x| x.clone()),
-            ..fname::DnsServer_::empty()
-        }
-    }
-}
-
-impl<T: CloneExt> CloneExt for Vec<T> {
-    fn clone(&self) -> Self {
-        self.iter().map(CloneExt::clone).collect()
-    }
-}
-
 #[cfg(test)]
 mod tests {
-    use fidl_fuchsia_net as fnet;
-
     use super::*;
 
     #[test]
@@ -107,21 +81,5 @@ mod tests {
             ..fname::Dhcpv6DnsServerSource::empty()
         };
         assert_eq!(fname::DnsServerSource::Dhcpv6(a.clone()), a.into_ext());
-    }
-
-    #[test]
-    fn test_clone() {
-        let a = fname::DnsServer_ {
-            address: Some(fnet::SocketAddress::Ipv4(fnet::Ipv4SocketAddress {
-                address: fnet::Ipv4Address { addr: [8, 8, 4, 4] },
-                port: 53,
-            })),
-            source: Some(fname::DnsServerSource::Dhcp(fname::DhcpDnsServerSource {
-                source_interface: Some(1),
-                ..fname::DhcpDnsServerSource::empty()
-            })),
-            ..fname::DnsServer_::empty()
-        };
-        assert_eq!(a.clone(), a);
     }
 }

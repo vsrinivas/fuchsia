@@ -4,7 +4,6 @@
 
 #[cfg(test)]
 use {
-    crate::fidl_clone::FIDLClone,
     crate::handler::device_storage::testing::*,
     crate::switchboard::accessibility_types::{AccessibilityInfo, ColorBlindnessType},
     crate::switchboard::base::SettingType,

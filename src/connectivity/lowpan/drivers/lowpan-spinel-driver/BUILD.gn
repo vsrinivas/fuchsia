@@ -52,7 +52,6 @@ rustc_binary("bin") {
 
   sources = [
     "src/driver/api.rs",
-    "src/driver/clone_ext.rs",
     "src/driver/driver_state.rs",
     "src/driver/error_adapter.rs",
     "src/driver/inbound.rs",

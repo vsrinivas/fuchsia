@@ -401,9 +401,10 @@ func TestBuildPaddingMarkersFlatteningStruct(t *testing.T) {
 			},
 		},
 	}
+	resourceness := fidl.IsValueType
 	c := compiler{
 		decls: map[fidl.EncodedCompoundIdentifier]fidl.DeclInfo{
-			innerStructIdentifier: {Type: fidl.StructDeclType, Resourceness: false},
+			innerStructIdentifier: {Type: fidl.StructDeclType, Resourceness: &resourceness},
 		},
 		structs: map[fidl.EncodedCompoundIdentifier]fidl.Struct{
 			innerStructIdentifier: innerStruct,
@@ -460,9 +461,10 @@ func TestBuildPaddingMarkersFlatteningArray(t *testing.T) {
 			},
 		},
 	}
+	resourceness := fidl.IsValueType
 	c := compiler{
 		decls: map[fidl.EncodedCompoundIdentifier]fidl.DeclInfo{
-			innerStructIdentifier: {Type: fidl.StructDeclType, Resourceness: false},
+			innerStructIdentifier: {Type: fidl.StructDeclType, Resourceness: &resourceness},
 		},
 		structs: map[fidl.EncodedCompoundIdentifier]fidl.Struct{
 			innerStructIdentifier: innerStruct,

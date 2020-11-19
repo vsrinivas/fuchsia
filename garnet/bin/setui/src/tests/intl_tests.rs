@@ -21,7 +21,6 @@ use {
     std::sync::Arc,
 };
 
-use crate::fidl_clone::FIDLClone;
 use crate::switchboard::intl_types::IntlInfo;
 
 const ENV_NAME: &str = "settings_service_intl_test_environment";

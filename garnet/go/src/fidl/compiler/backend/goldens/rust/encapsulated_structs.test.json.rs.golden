@@ -157,7 +157,6 @@ fidl_struct_copy! {
 }
 
 #[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
-
 pub struct NonInlineStructTestStruct {
     pub element: Option<Box<Int16Int8>>,
     pub h: fidl::Handle,
@@ -190,7 +189,6 @@ fidl_struct! {
 }
 
 #[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
-
 pub struct TopLevelStruct {
     pub a: StructPaddingTestStruct,
     pub b: NonInlineStructTestStruct,

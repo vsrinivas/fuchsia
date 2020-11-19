@@ -48,7 +48,6 @@ fidl_xunion! {
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
-
 pub struct StructWithNullableString {
     pub val: Option<String>,
 }
@@ -67,7 +66,6 @@ fidl_struct! {
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
-
 pub struct StructWithNullableVector {
     pub val: Option<Vec<i32>>,
 }
@@ -86,7 +84,6 @@ fidl_struct! {
 }
 
 #[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
-
 pub struct StructWithNullableHandle {
     pub val: Option<fidl::Vmo>,
 }
@@ -109,7 +106,6 @@ fidl_struct! {
 }
 
 #[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
-
 pub struct StructWithNullableProtocol {
     pub val: Option<fidl::endpoints::ClientEnd<SimpleProtocolMarker>>,
 }
@@ -132,7 +128,6 @@ fidl_struct! {
 }
 
 #[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
-
 pub struct StructWithNullableRequest {
     pub val: Option<fidl::endpoints::ServerEnd<SimpleProtocolMarker>>,
 }
@@ -176,7 +171,6 @@ fidl_struct_copy! {
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
-
 pub struct StructWithNullableStruct {
     pub val: Option<Box<Int32Wrapper>>,
 }
@@ -195,7 +189,6 @@ fidl_struct! {
 }
 
 #[derive(Debug, Clone, PartialEq, PartialOrd)]
-
 pub struct StructWithNullableUnion {
     pub val: Option<Box<SimpleUnion>>,
 }

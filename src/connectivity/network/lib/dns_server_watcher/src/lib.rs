@@ -16,7 +16,6 @@ use fidl_fuchsia_net_name::{
     DhcpDnsServerSource, Dhcpv6DnsServerSource, DnsServerSource, DnsServer_, NdpDnsServerSource,
     StaticDnsServerSource,
 };
-use fidl_fuchsia_net_name_ext::CloneExt;
 
 pub use self::stream::*;
 
@@ -91,11 +90,8 @@ impl DnsServers {
     /// See `consolidated` for details on ordering.
     fn consolidate_filter_map<T, F: Fn(DnsServer_) -> Option<T>>(&self, f: F) -> Vec<T> {
         let Self { default, netstack, dhcpv6 } = self;
-        let mut servers = netstack
-            .iter()
-            .chain(dhcpv6.values().flatten())
-            .map(CloneExt::clone)
-            .collect::<Vec<_>>();
+        let mut servers =
+            netstack.iter().chain(dhcpv6.values().flatten()).cloned().collect::<Vec<_>>();
         // Sorting happens before deduplication to ensure that when multiple sources report the same
         // address, the highest priority source wins.
         //

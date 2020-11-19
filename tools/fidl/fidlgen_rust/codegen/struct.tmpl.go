@@ -13,7 +13,7 @@ const structTmpl = `
 ///{{ . }}
 {{- end}}
 {{ .Derives }}
-{{ if .UseFidlStructCopy -}}
+{{- if .UseFidlStructCopy }}
 #[repr(C)]
 {{- end }}
 pub struct {{ .Name }} {

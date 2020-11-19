@@ -86,7 +86,6 @@ fidl_xunion! {
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
-
 pub struct SandwichUnionSize8Alignment4 {
     pub before: u32,
     pub union: UnionSize8Alignment4,
@@ -125,7 +124,6 @@ fidl_struct! {
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
-
 pub struct SandwichUnionSize12Alignment4 {
     pub before: u32,
     pub union: UnionSize12Alignment4,
@@ -190,7 +188,6 @@ fidl_struct_copy! {
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
-
 pub struct SandwichUnionSize24Alignment8 {
     pub before: u32,
     pub union: UnionSize24Alignment8,
@@ -229,7 +226,6 @@ fidl_struct! {
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
-
 pub struct SandwichUnionSize36Alignment4 {
     pub before: u32,
     pub union: UnionSize36Alignment4,

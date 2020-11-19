@@ -25,8 +25,7 @@ use {
     futures::future::{self, MaybeDone, TryFutureExt},
 };
 
-#[derive(Debug, PartialEq)]
-
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct Foo {
     pub field: fidl_dependent::MyEnum,
 }

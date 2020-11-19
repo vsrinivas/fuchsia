@@ -41,7 +41,6 @@ fidl_strict_enum! {
 }
 
 #[derive(Debug, PartialEq)]
-
 pub struct ExampleOfUseOfAliases {
     pub field_of_u32: u32,
     pub field_of_vec_at_most_five_of_string: Vec<String>,

@@ -67,7 +67,6 @@ fidl_xunion! {
 }
 
 #[derive(Debug, PartialEq)]
-
 pub struct HandlesInTypes {
     pub normal_handle: fidl::Vmo,
     pub handle_in_vec: Vec<fidl::Vmo>,

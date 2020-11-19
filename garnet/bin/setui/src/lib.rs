@@ -67,7 +67,6 @@ mod device;
 mod display;
 mod do_not_disturb;
 mod factory_reset;
-mod fidl_clone;
 mod fidl_processor;
 mod input;
 mod inspect;

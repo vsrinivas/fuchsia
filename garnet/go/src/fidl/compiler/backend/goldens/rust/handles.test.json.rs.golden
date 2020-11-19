@@ -99,7 +99,6 @@ fidl_strict_enum! {
 }
 
 #[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
-
 pub struct Handles {
     pub plain_handle: fidl::Handle,
     pub bti_handle: fidl::Bti,

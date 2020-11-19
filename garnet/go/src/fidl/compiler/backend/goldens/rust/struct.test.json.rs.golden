@@ -26,7 +26,6 @@ use {
 };
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
-
 pub struct Simple {
     pub f1: u8,
     pub f2: bool,
@@ -50,7 +49,6 @@ fidl_struct! {
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
-
 pub struct BasicStruct {
     pub x: u32,
     pub y: String,

@@ -14,55 +14,6 @@ use fidl_fuchsia_net_interfaces as fidl_interfaces;
 
 type Result<T = ()> = std::result::Result<T, anyhow::Error>;
 
-// TODO(fxbug.dev/61760): Clone isn't derived for these types
-// because they have transitive dependencies in an external library
-/// Manual implementation of `Clone`.
-pub trait CloneExt {
-    /// Returns a copy of the value.
-    fn clone(&self) -> Self;
-}
-
-impl CloneExt for fidl_interfaces::Event {
-    fn clone(&self) -> Self {
-        match self {
-            Self::Added(properties) => Self::Added(properties.clone()),
-            Self::Existing(properties) => Self::Existing(properties.clone()),
-            Self::Idle(empty) => Self::Idle(*empty),
-            Self::Changed(properties) => Self::Changed(properties.clone()),
-            Self::Removed(id) => Self::Removed(*id),
-        }
-    }
-}
-
-impl CloneExt for fidl_interfaces::Properties {
-    fn clone(&self) -> Self {
-        fidl_interfaces::Properties {
-            addresses: self
-                .addresses
-                .as_ref()
-                .map(|addresses| addresses.iter().map(|a| a.clone()).collect()),
-            device_class: self.device_class.as_ref().map(|c| c.clone()),
-            name: self.name.clone(),
-            ..*self
-        }
-    }
-}
-
-impl CloneExt for fidl_interfaces::Address {
-    fn clone(&self) -> Self {
-        fidl_interfaces::Address { ..*self }
-    }
-}
-
-impl CloneExt for fidl_interfaces::DeviceClass {
-    fn clone(&self) -> Self {
-        match self {
-            Self::Loopback(empty) => Self::Loopback(*empty),
-            Self::Device(c) => Self::Device(*c),
-        }
-    }
-}
-
 fn apply_change(
     properties: &mut fidl_interfaces::Properties,
     fidl_interfaces::Properties {

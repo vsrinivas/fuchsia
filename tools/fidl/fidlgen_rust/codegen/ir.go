@@ -754,11 +754,10 @@ func (c *compiler) compileType(val fidl.Type, borrowed bool) Type {
 			}
 		case fidl.TableDeclType:
 			if val.Nullable {
-				r = fmt.Sprintf("Option<%s>", t)
-			} else {
-				// TODO(fxbug.dev/42304): Replace with "&mut %s".
-				r = t
+				panic("tables cannot be nullable")
 			}
+			// TODO(fxbug.dev/42304): Replace with "&mut %s".
+			r = t
 		case fidl.ProtocolDeclType:
 			r = fmt.Sprintf("fidl::endpoints::ClientEnd<%sMarker>", t)
 			if val.Nullable {
@@ -1225,7 +1224,6 @@ const (
 	derivesAll derives = (1 << iota) - 1
 
 	derivesMinimal            derives = derivesDebug | derivesPartialEq
-	derivesHashMap            derives = derivesDebug | derivesClone | derivesEq | derivesPartialEq
 	derivesMinimalNonResource derives = derivesMinimal | derivesClone
 	derivesAllButZerocopy     derives = derivesAll & ^derivesAsBytes & ^derivesFromBytes
 )
@@ -1335,20 +1333,44 @@ func (c *compiler) fillDerives(ir *Root) {
 }
 
 func (dc *derivesCompiler) fillDerivesForECI(eci EncodedCompoundIdentifier) derives {
+	declInfo, ok := dc.decls[eci]
+	if !ok {
+		panic(fmt.Sprintf("declaration not found: %v", eci))
+	}
+
+	// TODO(fxbug.dev/61760): Make external type information available here.
+	// Currently, we conservatively assume external structs/tables/unions only
+	// derive the minimal set of traits, plus Clone for value types (not having
+	// Clone is especially annoying, so we put resourceness of external types
+	// into the IR as a stopgap solution).
 	if dc.inExternalLibrary(fidl.ParseCompoundIdentifier(eci)) {
-		// We must be conservative with external types and assume they only
-		// derive the minimal set of traits that all types derive.
-		// TODO(fxbug.dev/61760): Make external type information available here.
-		return derivesMinimal
+		switch declInfo.Type {
+		case fidl.StructDeclType, fidl.TableDeclType, fidl.UnionDeclType:
+			if declInfo.IsValueType() {
+				return derivesMinimalNonResource
+			}
+			return derivesMinimal
+		}
+	}
+
+	// Return early for declaration types that do not require recursion.
+	switch declInfo.Type {
+	case fidl.ConstDeclType:
+		panic("const decl should never have derives")
+	case fidl.BitsDeclType, fidl.EnumDeclType:
+		// Enums and bits are always simple, non-float primitives which
+		// implement all derivable traits except zerocopy.
+		return derivesAllButZerocopy
+	case fidl.ProtocolDeclType:
+		// When a protocol is used as a type, it means a ClientEnd in Rust.
+		return derivesAllButZerocopy.remove(derivesCopy, derivesClone)
 	}
 
 	topMostCall := dc.topMostCall
 	if dc.topMostCall {
 		dc.topMostCall = false
 	}
-
 	deriveStatus := dc.statuses[eci]
-
 	if deriveStatus.recursing {
 		// If we've already seen the current type while recursing,
 		// the algorithm has already explored all of the other fields contained
@@ -1357,23 +1379,12 @@ func (dc *derivesCompiler) fillDerivesForECI(eci EncodedCompoundIdentifier) deri
 		dc.didShortCircuitOnRecursion = true
 		return derivesAll
 	}
-
 	deriveStatus.recursing = true
 	dc.statuses[eci] = deriveStatus
 
-	declType := dc.decls[eci].Type
 	var derivesOut derives
 typeSwitch:
-	switch declType {
-	case fidl.ConstDeclType:
-		panic("const decl should never have derives")
-	case fidl.BitsDeclType, fidl.EnumDeclType:
-		// Enums and bits are always simple, non-float primitives which
-		// implement all derivable traits except zerocopy.
-		derivesOut = derivesAllButZerocopy
-	case fidl.ProtocolDeclType:
-		// When a protocol is used as a type, it means a ClientEnd in Rust.
-		derivesOut = derivesAllButZerocopy.remove(derivesCopy, derivesClone)
+	switch declInfo.Type {
 	case fidl.StructDeclType:
 		st := dc.root.findStruct(eci)
 		if st == nil {
@@ -1411,7 +1422,6 @@ typeSwitch:
 		} else {
 			derivesOut = derivesOut.andUnknownNonResource()
 		}
-		derivesOut = derivesOut.and(derivesHashMap)
 		table.Derives = derivesOut
 	case fidl.UnionDeclType:
 		union := dc.root.findUnion(eci)
@@ -1433,7 +1443,7 @@ typeSwitch:
 			for _, member := range union.Members {
 				derivesOut = derivesOut.and(dc.fillDerivesForType(member.OGType))
 			}
-			if union.Strictness.IsFlexible() {
+			if union.IsFlexible() {
 				if union.IsResourceType() {
 					derivesOut = derivesOut.andUnknown()
 				} else {
@@ -1456,7 +1466,7 @@ typeSwitch:
 			result.Derives = derivesOut
 		}
 	default:
-		panic(fmt.Sprintf("unknown declaration type: %v", declType))
+		panic(fmt.Sprintf("unknown declaration type: %v", declInfo.Type))
 	}
 	if topMostCall || !dc.didShortCircuitOnRecursion {
 		// Our completed result is only valid if it's either at top-level
@@ -1516,7 +1526,10 @@ func (dc *derivesCompiler) fillDerivesForType(ogType fidl.Type) derives {
 	case fidl.IdentifierType:
 		internalTypeDerives := dc.fillDerivesForECI(ogType.Identifier)
 		if ogType.Nullable {
-			// Nullable identifier types are put in an Option<Box<...>> and so aren't Copy
+			// A nullable struct/union gets put in Option<Box<...>> and so
+			// cannot derive Copy, AsBytes, or FromBytes. Bits, enums, and
+			// tables are never nullable. The only other possibility for an
+			// identifier type is a protocol, which cannot derive these either.
 			return internalTypeDerives.remove(derivesCopy, derivesAsBytes, derivesFromBytes)
 		}
 		return internalTypeDerives

@@ -26,7 +26,6 @@ use {
 };
 
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
-
 pub struct ByteAndBytes {
     pub single_byte: u8,
     pub many_bytes: Vec<u8>,

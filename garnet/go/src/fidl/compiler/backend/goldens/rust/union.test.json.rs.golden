@@ -486,7 +486,6 @@ fidl_xunion! {
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
-
 pub struct Pizza {
     pub toppings: Vec<String>,
 }
@@ -505,7 +504,6 @@ fidl_struct! {
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
-
 pub struct Pasta {
     pub sauce: String,
 }
@@ -524,7 +522,6 @@ fidl_struct! {
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
-
 pub struct NullableUnionStruct {
     pub the_union: Option<Box<Union>>,
 }
@@ -548,7 +545,6 @@ pub struct Empty;
 fidl_empty_struct!(Empty);
 
 #[derive(Debug, Clone, PartialEq)]
-
 pub struct StructWithNullableXUnion {
     pub x1: Option<Box<OlderSimpleUnion>>,
 }

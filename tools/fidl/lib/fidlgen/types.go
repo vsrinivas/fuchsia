@@ -867,8 +867,9 @@ const (
 )
 
 type DeclInfo struct {
-	Type         DeclType `json:"kind"`
-	Resourceness `json:"resource,omitempty"`
+	Type DeclType `json:"kind"`
+	// Present for structs, tables, and unions.
+	*Resourceness `json:"resource,omitempty"`
 }
 
 type DeclMap map[EncodedCompoundIdentifier]DeclType
@@ -925,7 +926,9 @@ func (r *Root) DeclsWithDependencies() DeclInfoMap {
 	}
 	decls := DeclInfoMap{}
 	for k, v := range r.Decls {
-		decls[k] = DeclInfo{Type: v, Resourceness: resourceness[k]}
+		ptr := new(Resourceness)
+		*ptr = resourceness[k]
+		decls[k] = DeclInfo{Type: v, Resourceness: ptr}
 	}
 	for _, l := range r.Libraries {
 		for k, v := range l.Decls {

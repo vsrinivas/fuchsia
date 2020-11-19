@@ -6,7 +6,6 @@
 
 use anyhow::{format_err, Context as _, Error};
 use diagnostics_hierarchy::Property;
-use fidl_fuchsia_net_interfaces_ext::CloneExt as _;
 use net_declare::{fidl_ip, fidl_mac, fidl_subnet};
 use netemul::Endpoint as _;
 use netstack_testing_common::environments::{Netstack2, TestSandboxExt};
