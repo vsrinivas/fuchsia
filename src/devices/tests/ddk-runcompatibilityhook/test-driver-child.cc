@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <ddk/binding.h>
+#include <optional>
+
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
@@ -10,9 +11,9 @@
 #include <ddk/platform-defs.h>
 #include <ddktl/device.h>
 #include <fbl/alloc_checker.h>
-#include <optional>
 
-#include "test-metadata.h"
+#include "src/devices/tests/ddk-runcompatibilityhook/test-compatibility-hook-child-bind.h"
+#include "src/devices/tests/ddk-runcompatibilityhook/test-metadata.h"
 
 class TestCompatibilityHookDriverChild;
 using DeviceType = ddk::Device<TestCompatibilityHookDriverChild, ddk::Unbindable>;
@@ -69,8 +70,4 @@ static zx_driver_ops_t test_compatibility_hook_child_driver_ops = []() -> zx_dri
   return ops;
 }();
 
-// clang-format off
-ZIRCON_DRIVER_BEGIN(TestCompatibilityHookChild, test_compatibility_hook_child_driver_ops, "zircon", "0.1", 1)
-    BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_TEST_COMPAT_CHILD),
-ZIRCON_DRIVER_END(TestCompatibilityHookChild)
-    // clang-format on
+ZIRCON_DRIVER(TestCompatibilityHookChild, test_compatibility_hook_child_driver_ops, "zircon", "0.1")
