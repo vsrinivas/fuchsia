@@ -188,21 +188,32 @@ func (t *DeviceTarget) Start(ctx context.Context, images []bootserver.Image, arg
 		}
 	}
 
+	bootedLogChan := make(chan error)
+	if serialSocketPath != "" {
+		// Start searching for the string before we reboot, otherwise we can miss it.
+		go func() {
+			logger.Debugf(ctx, "watching serial for string that indicates device has booted: %q", bootedLogSignature)
+			socket, err := net.Dial("unix", serialSocketPath)
+			if err != nil {
+				bootedLogChan <- fmt.Errorf("failed to open serial socket connection: %v", err)
+				return
+			}
+			defer socket.Close()
+			_, err = iomisc.ReadUntilMatch(ctx, iomisc.NewSequenceMatchingReader(socket, bootedLogSignature), nil)
+			bootedLogChan <- err
+		}()
+	}
+
 	// Boot Fuchsia.
 	if err := bootserver.Boot(ctx, t.Tftp(), images, args, authorizedKeys); err != nil {
 		return err
 	}
 
 	if serialSocketPath != "" {
-		logger.Debugf(ctx, "watching serial for string that indicates device has booted: %q", bootedLogSignature)
-		socket, err := net.Dial("unix", serialSocketPath)
-		if err != nil {
-			return fmt.Errorf("failed to open serial socket connection: %v", err)
-		}
-		defer socket.Close()
-		_, err = iomisc.ReadUntilMatch(ctx, iomisc.NewSequenceMatchingReader(socket, bootedLogSignature), nil)
+		return <-bootedLogChan
 	}
-	return err
+
+	return nil
 }
 
 // Stop stops the device.
