@@ -58,13 +58,14 @@ zx_status_t vmm_page_fault_handler(vaddr_t addr, uint flags) {
   TRACEF("thread %s va %#" PRIxPTR ", flags 0x%x\n", current_thread->name, addr, flags);
 #endif
 
-  ktrace(TAG_PAGE_FAULT, (uint32_t)(addr >> 32), (uint32_t)addr, flags, arch_curr_cpu_num());
-
   // get the address space object this pointer is in
   VmAspace* aspace = VmAspace::vaddr_to_aspace(addr);
   if (!aspace) {
+    printf("PageFault: could not find address space\n");
     return ZX_ERR_NOT_FOUND;
   }
+
+  ktrace(TAG_PAGE_FAULT, (uint32_t)(addr >> 32), (uint32_t)addr, flags, arch_curr_cpu_num());
 
   // page fault it
   zx_status_t status = aspace->PageFault(addr, flags);
