@@ -292,7 +292,8 @@ impl DisplayMetrics {
 
     // TODO(fxbug.dev/23621): Don't lie.
     /// The display pixel density used as default when no other default device matches.
-    const DEFAULT_DENSITY: f32 = 9.0;
+    /// This results in a logical to physical pixel ratio of 1.0.
+    const DEFAULT_DENSITY: f32 = 5.24;
 
     /// Returns a default display pixel density based on the provided display dimensions.
     ///
