@@ -76,11 +76,7 @@ set -e
 readonly GOMA_AUTH="$PREBUILT_GOMA_DIR/goma_auth.py"
 readonly GOMA_CTL="$PREBUILT_GOMA_DIR/goma_ctl.py"
 readonly GOMACC="$PREBUILT_GOMA_DIR/gomacc"
-readonly GOMA_HTTP2_PROXY="$PREBUILT_GOMA_DIR/http_proxy"
-readonly GOMA_HTTP2_PROXY_PORT="8199"
 GOMA_CACHE_DIR="${FUCHSIA_DIR}/.jiri_root/goma_cache"
-# The URL of the backend cannot be read from prebuilt. Hard-code it for now.
-BACKEND_URL="rbe-prod1.endpoints.fuchsia-infra-goma-prod.cloud.goog"
 
 if [[ ! -x "$GOMA_AUTH" || ! -x "$GOMA_CTL" ]]; then
   echo "*** $PREBUILT_GOMA_DIR is not current."
@@ -89,7 +85,7 @@ if [[ ! -x "$GOMA_AUTH" || ! -x "$GOMA_CTL" ]]; then
 fi
 
 function main {
-  local login_args=() update=false
+  local login_args=() update=false use_http2=true use_local_cache=true
 
   while [ $# -gt 0 ]; do
     case "$1" in
@@ -151,47 +147,19 @@ function main {
     echo "*** to restart goma with your desired cache location."
     echo ""
   fi
-
   if $use_http2; then
-    if [[ -n "$GOMA_SERVER_HOST" ]]; then
-      BACKEND_URL=$GOMA_SERVER_HOST
-    fi
-    setup-http2-proxy
-    # TODO(haowei): Remove these after HTTP2 proxy is merged into goma_ctl.
     echo "*** Using Goma experimental HTTP2 proxy."
     echo "*** If you experiencing instability, please run: "
     echo "*** \`fx goma --kill && fx goma --disable-http2\`"
     echo "*** to restart goma without HTTP2 proxy."
     echo ""
-    GOMA_LOCAL_OUTPUT_CACHE_DIR="$goma_tmp_dir" GOMA_SERVER_HOST=127.0.0.1 GOMA_SERVER_PORT="$GOMA_HTTP2_PROXY_PORT" GOMA_USE_SSL=false "$GOMA_CTL" ensure_start
-  else
-    GOMA_LOCAL_OUTPUT_CACHE_DIR="$goma_tmp_dir" "$GOMA_CTL" ensure_start
   fi
+
+  GOMACTL_USE_PROXY="$use_http2" GOMA_LOCAL_OUTPUT_CACHE_DIR="$goma_tmp_dir" "$GOMA_CTL" ensure_start
 }
 
 function kill-goma {
-  set +e
-  pgrep http_proxy > /dev/null
-  retcode=$?
-  set -e
-  if [ $retcode -eq 0 ]; then
-    killall http_proxy
-  fi
   "$GOMA_CTL" ensure_stop
-}
-
-function setup-http2-proxy {
-  set +e
-  pgrep http_proxy > /dev/null
-  retcode=$?
-  set -e
-  if [ $retcode -eq 0 ]; then
-    return
-  fi
-  (
-    trap '' 1
-    "$GOMA_HTTP2_PROXY" -server-host "$BACKEND_URL" -port "$GOMA_HTTP2_PROXY_PORT" >/dev/null 2>&1 &
-  )
 }
 
 # TODO(mcgrathr): Remove this after some period when old installs are gone.
