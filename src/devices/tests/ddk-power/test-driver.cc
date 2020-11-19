@@ -4,7 +4,6 @@
 
 #include <fuchsia/device/power/test/llcpp/fidl.h>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
@@ -13,6 +12,8 @@
 #include <ddktl/fidl.h>
 #include <ddktl/protocol/empty-protocol.h>
 #include <fbl/alloc_checker.h>
+
+#include "src/devices/tests/ddk-power/test-power-bind.h"
 
 using llcpp::fuchsia::device::DevicePerformanceStateInfo;
 using llcpp::fuchsia::device::DevicePowerState;
@@ -132,9 +133,4 @@ static zx_driver_ops_t test_power_hook_driver_ops = []() -> zx_driver_ops_t {
   return ops;
 }();
 
-// clang-format off
-ZIRCON_DRIVER_BEGIN(TestPower, test_power_hook_driver_ops, "zircon", "0.1", 2)
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_TEST),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_POWER_TEST),
-ZIRCON_DRIVER_END(TestPower)
-    // clang-format on
+ZIRCON_DRIVER(TestPower, test_power_hook_driver_ops, "zircon", "0.1")
