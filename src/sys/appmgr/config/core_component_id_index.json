@@ -227,6 +227,16 @@
                     "sys"
                 ]
             }
-        }
+        },
+        {
+            instance_id: "76777fb21aa060c86680f0fbd7cbd4734ef6b239b429ac4d9cb2a9d08792033d",
+            appmgr_moniker: {
+                url: "fuchsia-pkg://fuchsia.com/cobalt_system_metrics#meta/cobalt_system_metrics.cmx",
+                realm_path: [
+                    "app",
+                    "sys"
+                ]
+            }
+        },
     ]
 }
