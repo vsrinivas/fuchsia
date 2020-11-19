@@ -59,7 +59,6 @@ group("infratools") {
     "//tools/build:tools",
     "//tools/debug:tools",
     "//tools/testing:tools",
-    "//tools/testing/affectedtests",
     "//zircon/tools/fvm",
     "//zircon/tools/minfs",
   ]

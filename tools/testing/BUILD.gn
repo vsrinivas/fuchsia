@@ -6,7 +6,6 @@ group("tools") {
   testonly = true
 
   deps = [
-    "affectedtests",
     "resultdb",
     "seriallistener",
     "tefmocheck",
@@ -19,7 +18,6 @@ group("tests") {
   testonly = true
 
   deps = [
-    "affectedtests:tests",
     "resultdb:tests",
     "runtests:tests",
     "tap:tap_tests",
