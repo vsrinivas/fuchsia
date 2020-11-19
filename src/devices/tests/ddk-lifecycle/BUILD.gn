@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/fidl/fidl.gni")
 import("//build/test.gni")
@@ -10,6 +11,12 @@ import("//zircon/system/ulib/devmgr-integration-test/isolated_devmgr.gni")
 fidl("fuchsia.device.lifecycle.test") {
   sources = [ "lifecycle.test.fidl" ]
   public_deps = [ "//zircon/vdso/zx" ]
+}
+
+bind_rules("test-lifecycle-bind") {
+  rules = "test-lifecycle.bind"
+  output = "test-lifecycle-bind.h"
+  deps = [ "//src/devices/bind/test.platform" ]
 }
 
 driver_module("ddk-lifecycle-test") {
@@ -28,12 +35,10 @@ driver_module("ddk-lifecycle-test") {
   ]
   deps = [
     ":fuchsia.device.lifecycle.test_llcpp",
+    ":test-lifecycle-bind",
     "//sdk/lib/fdio",
     "//src/devices/lib/driver",
     "//src/lib/ddk",
-
-    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
-    "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//src/lib/ddktl",
     "//zircon/public/lib/sync",
   ]
