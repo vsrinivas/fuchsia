@@ -32,6 +32,10 @@ import("//build/zbi/zbi_input.gni")
 import("//src/sys/component_index/component_index.gni")
 import("//src/sys/pkg/bin/pm/pm.gni")
 
+recovery_is_zedboot =
+    get_label_info(recovery_label, "label_with_toolchain") ==
+    get_label_info("//build/images/zedboot", "label_with_toolchain")
+
 # update_manifest is for the "update.manifest" target below.
 update_manifest = []
 
@@ -1433,30 +1437,36 @@ default_image_deps += [ ":board_tools" ]
 action("filesystem_sizes.json") {
   testonly = true
   script = "format_filesystem_sizes.py"
-  deps = filesystem_sizes_deps + [
-           ":fuchsia",
-           "zedboot:zbi",
-         ]
+  deps = filesystem_sizes_deps + [ ":fuchsia" ]
+  if (recovery_is_zedboot) {
+    deps += [ "zedboot:zbi" ]
+  }
   output_name = "$root_build_dir/filesystem_sizes.json"
   outputs = [ output_name ]
   fuchsia_target_outputs = get_target_outputs(":fuchsia")
 
-  # Can't use get_target_outputs() because this defined in another file.
-  zedboot_zbi_file = "$root_out_dir/zedboot.zbi"
-  inputs =
-      filesystem_sizes_inputs + fuchsia_target_outputs + [ zedboot_zbi_file ]
+  inputs = filesystem_sizes_inputs + fuchsia_target_outputs
+  if (recovery_is_zedboot) {
+    # Can't use get_target_outputs() because this defined in another file.
+    inputs += [ "$root_out_dir/zedboot.zbi" ]
+  }
+
   args = filesystem_sizes_args + [
            "--fuchsia-zbi",
            rebase_path(fuchsia_target_outputs[0]),
-           "--zedboot-zbi",
-           rebase_path(zedboot_zbi_file),
            "--max-fuchsia-zbi-size",
            max_fuchsia_zbi_size,
-           "--max-zedboot-zbi-size",
-           max_zedboot_zbi_size,
            "--output",
            rebase_path(output_name),
          ]
+  if (recovery_is_zedboot) {
+    args += [
+      "--zedboot-zbi",
+      rebase_path("$root_out_dir/zedboot.zbi"),
+      "--max-zedboot-zbi-size",
+      max_zedboot_zbi_size,
+    ]
+  }
 }
 
 # Pseudo-target to record information about the sizes of filesystems assembled
@@ -1472,16 +1482,6 @@ group("record_filesystem_sizes") {
 ###
 ### Paver and flash scripts, and archives using those images and zedboot's images.
 ###
-
-# Flash scripts use a different recovery target depending on if it's zedboot or
-# a separate recovery image.
-# Once we properly pull image metadata from images.json instead of hardcoding it
-# into the generated script we won't need this anymore.
-recovery_is_zedboot = false
-if (get_label_info(recovery_label, "label_with_toolchain") ==
-    get_label_info("zedboot", "label_with_toolchain")) {
-  recovery_is_zedboot = true
-}
 
 action("flash_script") {
   # Required for dependency on testonly firmware image targets.
@@ -1697,29 +1697,6 @@ paver_targets = [
     }
   },
   {
-    name = "zedboot-script"
-    outputs = [ "$root_build_dir/pave-zedboot.sh" ]
-    deps = [ ":bootserver" ]
-    if (bootfs_only) {
-      deps += [ "bringup" ]
-      switch = "--netboot="
-    } else {
-      deps += [ "zedboot" ]
-      switch = "--pave_zedboot="
-    }
-    extra_bootserver_arguments = "--allow-zedboot-version-mismatch"
-    metadata = {
-      images = [
-        {
-          name = name
-          path = "pave-zedboot.sh"
-          type = "script"
-        },
-      ]
-      image_paths = [ "IMAGE_PAVE_ZEDBOOT_SH=pave-zedboot.sh" ]
-    }
-  },
-  {
     name = "paver-script"
     outputs = [ "$root_build_dir/pave.sh" ]
     deps = [ ":bootserver" ]
@@ -1744,6 +1721,34 @@ paver_targets = [
   },
 ]
 
+if (recovery_is_zedboot) {
+  paver_targets += [
+    {
+      name = "zedboot-script"
+      outputs = [ "$root_build_dir/pave-zedboot.sh" ]
+      deps = [ ":bootserver" ]
+      if (bootfs_only) {
+        deps += [ "bringup" ]
+        switch = "--netboot="
+      } else {
+        deps += [ "zedboot" ]
+        switch = "--pave_zedboot="
+      }
+      extra_bootserver_arguments = "--allow-zedboot-version-mismatch"
+      metadata = {
+        images = [
+          {
+            name = name
+            path = "pave-zedboot.sh"
+            type = "script"
+          },
+        ]
+        image_paths = [ "IMAGE_PAVE_ZEDBOOT_SH=pave-zedboot.sh" ]
+      }
+    },
+  ]
+}
+
 # Name the entrypoint scripts in images.json as well, as that they are
 # presently the stable API to perform a pave/netboot/etc. without botanist.
 
@@ -1762,7 +1767,6 @@ foreach(format, archive_formats) {
         ":archive-extras",
         ":flash_script_archive",
         ":paver-script",
-        "zedboot",
       ]
       metadata = {
         archives = [
@@ -2368,9 +2372,12 @@ group("default-images") {
     ":flash_script",
     ":paver-script",
     ":qemu-kernel",
-    ":zedboot-script",
     recovery_label,
   ]
+
+  if (recovery_is_zedboot) {
+    deps += [ ":zedboot-script" ]
+  }
 
   if (build_uefi_disk) {
     deps += [ ":uefi-disk" ]
