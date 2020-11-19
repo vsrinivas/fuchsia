@@ -5,15 +5,15 @@
 #ifndef SRC_GRAPHICS_EXAMPLES_VKPRIMER_COMMON_VULKAN_GRAPHICS_PIPELINE_H_
 #define SRC_GRAPHICS_EXAMPLES_VKPRIMER_COMMON_VULKAN_GRAPHICS_PIPELINE_H_
 
+#include "device.h"
 #include "src/lib/fxl/macros.h"
-#include "vulkan_logical_device.h"
 #include "vulkan_render_pass.h"
 
 #include <vulkan/vulkan.hpp>
 
 class VulkanGraphicsPipeline {
  public:
-  VulkanGraphicsPipeline(std::shared_ptr<VulkanLogicalDevice> device, const vk::Extent2D &extent,
+  VulkanGraphicsPipeline(std::shared_ptr<vkp::Device> vkp_device, const vk::Extent2D &extent,
                          std::shared_ptr<VulkanRenderPass> render_pass);
   ~VulkanGraphicsPipeline();
 
@@ -24,7 +24,7 @@ class VulkanGraphicsPipeline {
   FXL_DISALLOW_COPY_AND_ASSIGN(VulkanGraphicsPipeline);
 
   bool initialized_;
-  std::shared_ptr<VulkanLogicalDevice> device_;
+  std::shared_ptr<vkp::Device> vkp_device_;
   const vk::Extent2D extent_;
   std::shared_ptr<VulkanRenderPass> render_pass_;
 

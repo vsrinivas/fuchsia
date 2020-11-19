@@ -7,6 +7,7 @@
 #include <memory>
 #include <vector>
 
+#include "device.h"
 #include "utils.h"
 #include "vulkan_command_buffers.h"
 #include "vulkan_command_pool.h"
@@ -15,7 +16,6 @@
 #include "vulkan_image_view.h"
 #include "vulkan_instance.h"
 #include "vulkan_layer.h"
-#include "vulkan_logical_device.h"
 #include "vulkan_physical_device.h"
 #include "vulkan_render_pass.h"
 #include "vulkan_surface.h"
@@ -32,7 +32,7 @@ void glfwErrorCallback(int error, const char* description) {
   fprintf(stderr, "glfwErrorCallback: %d : %s\n", error, description);
 }
 
-static bool DrawAllFrames(const VulkanLogicalDevice& logical_device,
+static bool DrawAllFrames(const vkp::Device& vkp_device,
                           const VulkanCommandBuffers& command_buffers);
 
 int main(int argc, char* argv[]) {
@@ -87,9 +87,9 @@ int main(int argc, char* argv[]) {
   }
 
   // LOGICAL DEVICE
-  auto logical_device = std::make_shared<VulkanLogicalDevice>(
-      physical_device->phys_device(), surface->surface(), kEnableValidation);
-  if (!logical_device->Init()) {
+  auto vkp_device = std::make_shared<vkp::Device>(physical_device->phys_device(),
+                                                  surface->surface(), kEnableValidation);
+  if (!vkp_device->Init()) {
     RTN_MSG(1, "Logical Device Initialization Failed.\n");
   }
 
@@ -108,7 +108,7 @@ int main(int argc, char* argv[]) {
     std::shared_ptr<VulkanImageView> offscreen_image_view;
     // IMAGE VIEW
     offscreen_image_view =
-        std::make_shared<VulkanImageView>(logical_device, physical_device, vk::Extent2D{64, 64});
+        std::make_shared<VulkanImageView>(vkp_device, physical_device, vk::Extent2D{64, 64});
     if (!offscreen_image_view->Init()) {
       RTN_MSG(1, "Image View Initialization Failed.\n");
     }
@@ -119,20 +119,20 @@ int main(int argc, char* argv[]) {
   }
 
   // RENDER PASS
-  auto render_pass = std::make_shared<VulkanRenderPass>(logical_device, image_format, true);
+  auto render_pass = std::make_shared<VulkanRenderPass>(vkp_device, image_format, true);
   if (!render_pass->Init()) {
     RTN_MSG(1, "Render Pass Initialization Failed.\n");
   }
 
   // GRAPHICS PIPELINE
   auto graphics_pipeline =
-      std::make_unique<VulkanGraphicsPipeline>(logical_device, extent, render_pass);
+      std::make_unique<VulkanGraphicsPipeline>(vkp_device, extent, render_pass);
   if (!graphics_pipeline->Init()) {
     RTN_MSG(1, "Graphics Pipeline Initialization Failed.\n");
   }
 
   // FRAMEBUFFER
-  auto framebuffer = std::make_unique<VulkanFramebuffer>(logical_device, extent,
+  auto framebuffer = std::make_unique<VulkanFramebuffer>(vkp_device, extent,
                                                          *render_pass->render_pass(), image_views);
   if (!framebuffer->Init()) {
     RTN_MSG(1, "Framebuffer Initialization Failed.\n");
@@ -140,14 +140,14 @@ int main(int argc, char* argv[]) {
 
   // COMMAND POOL
   auto command_pool = std::make_shared<VulkanCommandPool>(
-      logical_device, physical_device->phys_device(), surface->surface());
+      vkp_device, physical_device->phys_device(), surface->surface());
   if (!command_pool->Init()) {
     RTN_MSG(1, "Command Pool Initialization Failed.\n");
   }
 
   // COMMAND BUFFER
   auto command_buffers = std::make_unique<VulkanCommandBuffers>(
-      logical_device, command_pool, *framebuffer, extent, *render_pass->render_pass(),
+      vkp_device, command_pool, *framebuffer, extent, *render_pass->render_pass(),
       graphics_pipeline->graphics_pipeline());
   if (!command_buffers->Init()) {
     RTN_MSG(1, "Command Buffer Initialization Failed.\n");
@@ -156,18 +156,18 @@ int main(int argc, char* argv[]) {
   sleep(1);
 
   // Warm up and force the driver to allocate all the memory it will need for the command buffer.
-  if (!DrawAllFrames(*logical_device, *command_buffers)) {
+  if (!DrawAllFrames(*vkp_device, *command_buffers)) {
     RTN_MSG(1, "First DrawAllFrames Failed.\n");
   }
 
-  logical_device->device()->waitIdle();
+  vkp_device->get().waitIdle();
 
   auto start_time = std::chrono::steady_clock::now();
 
-  if (!DrawAllFrames(*logical_device, *command_buffers)) {
+  if (!DrawAllFrames(*vkp_device, *command_buffers)) {
     RTN_MSG(1, "Second DrawAllFrames Failed.\n");
   }
-  logical_device->device()->waitIdle();
+  vkp_device->get().waitIdle();
   auto end_time = std::chrono::steady_clock::now();
 
   fprintf(stderr, "End time: %lld\n",
@@ -181,8 +181,7 @@ int main(int argc, char* argv[]) {
   return 0;
 }
 
-bool DrawAllFrames(const VulkanLogicalDevice& logical_device,
-                   const VulkanCommandBuffers& command_buffers) {
+bool DrawAllFrames(const vkp::Device& device, const VulkanCommandBuffers& command_buffers) {
   vk::SubmitInfo submit_info;
   submit_info.commandBufferCount = static_cast<uint32_t>(command_buffers.command_buffers().size());
   std::vector<vk::CommandBuffer> command_buffer(submit_info.commandBufferCount);
@@ -191,7 +190,7 @@ bool DrawAllFrames(const VulkanLogicalDevice& logical_device,
   }
   submit_info.pCommandBuffers = command_buffer.data();
 
-  if (logical_device.queue().submit(1, &submit_info, vk::Fence()) != vk::Result::eSuccess) {
+  if (device.queue().submit(1, &submit_info, vk::Fence()) != vk::Result::eSuccess) {
     RTN_MSG(false, "Failed to submit draw command buffer.\n");
   }
   return true;

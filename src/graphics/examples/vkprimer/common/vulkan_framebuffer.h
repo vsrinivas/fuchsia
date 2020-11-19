@@ -7,14 +7,14 @@
 
 #include <vector>
 
+#include "device.h"
 #include "src/lib/fxl/macros.h"
-#include "vulkan_logical_device.h"
 
 #include <vulkan/vulkan.hpp>
 
 class VulkanFramebuffer {
  public:
-  VulkanFramebuffer(std::shared_ptr<VulkanLogicalDevice> device, const vk::Extent2D &extent,
+  VulkanFramebuffer(std::shared_ptr<vkp::Device> device, const vk::Extent2D &extent,
                     const vk::RenderPass &render_pass,
                     const std::vector<vk::ImageView> &image_views);
   bool Init();
@@ -24,7 +24,7 @@ class VulkanFramebuffer {
   FXL_DISALLOW_COPY_AND_ASSIGN(VulkanFramebuffer);
 
   bool initialized_;
-  std::shared_ptr<VulkanLogicalDevice> device_;
+  std::shared_ptr<vkp::Device> device_;
   vk::Extent2D extent_;
   std::vector<vk::ImageView> image_views_;
   std::unique_ptr<vk::RenderPass> render_pass_;

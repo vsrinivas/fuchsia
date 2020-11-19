@@ -29,41 +29,37 @@ namespace vkp {
 static bool EnumerateProperties(SearchProp search_prop, vk::PhysicalDevice phys_device,
                                 const char *layer,
                                 std::unordered_set<std::string> *enumerated_props) {
-  std::optional<vk::ResultValue<std::vector<vk::ExtensionProperties>>> rv_ext;
-  std::optional<vk::ResultValue<std::vector<vk::LayerProperties>>> rv_layer;
+  std::optional<vk::ResultValue<std::vector<vk::ExtensionProperties>>> rv_ext_props;
+  std::optional<vk::ResultValue<std::vector<vk::LayerProperties>>> rv_layer_props;
   std::vector<vk::ExtensionProperties> ext_props;
   std::vector<vk::LayerProperties> layer_props;
   switch (search_prop) {
     case INSTANCE_EXT_PROP:
       if (layer) {
-        rv_ext = vk::enumerateInstanceExtensionProperties(std::string(layer));
+        rv_ext_props = vk::enumerateInstanceExtensionProperties(std::string(layer));
       } else {
-        rv_ext = vk::enumerateInstanceExtensionProperties(nullptr);
+        rv_ext_props = vk::enumerateInstanceExtensionProperties(nullptr);
       }
-      if (vk::Result::eSuccess != rv_ext->result) {
-        RTN_MSG(false, "VK Error: 0x%x - Failed to enumerate extension properties.",
-                rv_ext->result);
-      }
-      ext_props = rv_ext->value;
+      RTN_IF_VKH_ERR(false, rv_ext_props->result,
+                     "Failed to enumerate instance extension properties.\n");
+      ext_props = rv_ext_props->value;
       break;
     case INSTANCE_LAYER_PROP:
-      rv_layer = vk::enumerateInstanceLayerProperties();
-      if (vk::Result::eSuccess != rv_layer->result) {
-        RTN_MSG(false, "VK Error: 0x%x - Failed to enumerate layer properties.", rv_layer->result);
-      }
-      layer_props = rv_layer->value;
+      rv_layer_props = vk::enumerateInstanceLayerProperties();
+      RTN_IF_VKH_ERR(false, rv_layer_props->result,
+                     "Failed to enumerate instance layer properties.\n");
+      layer_props = rv_layer_props->value;
       break;
     case PHYS_DEVICE_EXT_PROP:
       assert(phys_device && "Null phys device used for phys device property query.");
       if (layer) {
-        rv_ext = phys_device.enumerateDeviceExtensionProperties(std::string(layer));
+        rv_ext_props = phys_device.enumerateDeviceExtensionProperties(std::string(layer));
       } else {
-        rv_ext = phys_device.enumerateDeviceExtensionProperties(nullptr);
+        rv_ext_props = phys_device.enumerateDeviceExtensionProperties(nullptr);
       }
-      if (vk::Result::eSuccess != rv_ext->result) {
-        RTN_MSG(false, "VK Error: 0x%x - Failed to enumerate layer properties.", rv_ext->result);
-      }
-      ext_props = rv_ext->value;
+      RTN_IF_VKH_ERR(false, rv_ext_props->result,
+                     "Failed to enumerate device extension properties.\n");
+      ext_props = rv_ext_props->value;
       break;
   }
 
@@ -128,11 +124,9 @@ bool FindGraphicsQueueFamilies(vk::PhysicalDevice phys_device, VkSurfaceKHR surf
   auto queue_families = phys_device.getQueueFamilyProperties();
   int queue_family_index = 0;
   for (const auto &queue_family : queue_families) {
-    auto rv = phys_device.getSurfaceSupportKHR(queue_family_index, surface);
-    if (vk::Result::eSuccess != rv.result) {
-      RTN_MSG(false, "VK Error: 0x%x - Failed to get surface present support.", rv.result);
-    }
-    const vk::Bool32 present_support = rv.value;
+    auto [r_present_support, present_support] =
+        phys_device.getSurfaceSupportKHR(queue_family_index, surface);
+    RTN_IF_VKH_ERR(false, r_present_support, "Failed to get surface present support.\n");
 
     if ((queue_family.queueCount > 0) && (queue_family.queueFlags & vk::QueueFlagBits::eGraphics) &&
         present_support) {

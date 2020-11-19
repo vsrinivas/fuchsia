@@ -8,16 +8,16 @@
 #include <memory>
 #include <vector>
 
+#include "device.h"
 #include "src/lib/fxl/macros.h"
 #include "vulkan_command_pool.h"
 #include "vulkan_framebuffer.h"
-#include "vulkan_logical_device.h"
 
 #include <vulkan/vulkan.hpp>
 
 class VulkanCommandBuffers {
  public:
-  VulkanCommandBuffers(std::shared_ptr<VulkanLogicalDevice> device,
+  VulkanCommandBuffers(std::shared_ptr<vkp::Device> vkp_device,
                        std::shared_ptr<VulkanCommandPool> command_pool,
                        const VulkanFramebuffer &framebuffer, const vk::Extent2D &extent,
                        const vk::RenderPass &render_pass, const vk::Pipeline &graphics_pipeline);
@@ -32,8 +32,10 @@ class VulkanCommandBuffers {
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(VulkanCommandBuffers);
 
+  void AddForeignTransitionImageBarriers(const vk::UniqueCommandBuffer &command_buffer);
+
   bool initialized_;
-  std::shared_ptr<VulkanLogicalDevice> device_;
+  std::shared_ptr<vkp::Device> vkp_device_;
   std::shared_ptr<VulkanCommandPool> command_pool_;
 
   struct InitParams {

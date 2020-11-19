@@ -9,6 +9,7 @@
 
 #include <gtest/gtest.h>
 
+#include "device.h"
 #include "hwcpipe.h"
 #include "utils.h"
 #include "vulkan_command_buffers.h"
@@ -18,7 +19,6 @@
 #include "vulkan_image_view.h"
 #include "vulkan_instance.h"
 #include "vulkan_layer.h"
-#include "vulkan_logical_device.h"
 #include "vulkan_physical_device.h"
 #include "vulkan_render_pass.h"
 #include "vulkan_surface.h"
@@ -32,7 +32,7 @@ uint32_t GetCounterValue(const hwcpipe::GpuMeasurements* gpu, hwcpipe::GpuCounte
   return it->second.get<uint32_t>();
 }
 
-static bool DrawAllFrames(const VulkanLogicalDevice& logical_device,
+static bool DrawAllFrames(const vkp::Device& vkp_device,
                           const VulkanCommandBuffers& command_buffers);
 
 // Test that transfering an image to a foreign queue and back doesn't prevent transaction
@@ -51,9 +51,9 @@ TEST(TransactionElimination, ForeignQueue) {
   auto physical_device = std::make_shared<VulkanPhysicalDevice>(instance, surface->surface());
   ASSERT_TRUE(physical_device->Init());
 
-  auto logical_device = std::make_shared<VulkanLogicalDevice>(
-      physical_device->phys_device(), surface->surface(), kEnableValidation);
-  ASSERT_TRUE(logical_device->Init());
+  auto vkp_device = std::make_shared<vkp::Device>(physical_device->phys_device(),
+                                                  surface->surface(), kEnableValidation);
+  ASSERT_TRUE(vkp_device->Init());
 
   vk::Format image_format;
   vk::Extent2D extent;
@@ -61,31 +61,31 @@ TEST(TransactionElimination, ForeignQueue) {
   std::vector<vk::ImageView> image_views;
   std::shared_ptr<VulkanImageView> offscreen_image_view;
   offscreen_image_view =
-      std::make_shared<VulkanImageView>(logical_device, physical_device, vk::Extent2D{64, 64});
+      std::make_shared<VulkanImageView>(vkp_device, physical_device, vk::Extent2D{64, 64});
   ASSERT_TRUE(offscreen_image_view->Init());
 
   image_format = offscreen_image_view->format();
   extent = offscreen_image_view->extent();
   image_views.emplace_back(*(offscreen_image_view->view()));
 
-  auto render_pass = std::make_shared<VulkanRenderPass>(logical_device, image_format, true);
+  auto render_pass = std::make_shared<VulkanRenderPass>(vkp_device, image_format, true);
   ASSERT_TRUE(render_pass->Init());
 
   auto graphics_pipeline =
-      std::make_unique<VulkanGraphicsPipeline>(logical_device, extent, render_pass);
+      std::make_unique<VulkanGraphicsPipeline>(vkp_device, extent, render_pass);
   ASSERT_TRUE(graphics_pipeline->Init());
 
-  auto framebuffer = std::make_unique<VulkanFramebuffer>(logical_device, extent,
+  auto framebuffer = std::make_unique<VulkanFramebuffer>(vkp_device, extent,
                                                          *render_pass->render_pass(), image_views);
   ASSERT_TRUE(framebuffer->Init());
 
   auto command_pool = std::make_shared<VulkanCommandPool>(
-      logical_device, physical_device->phys_device(), surface->surface());
+      vkp_device, physical_device->phys_device(), surface->surface());
   ASSERT_TRUE(command_pool->Init());
 
   // First command buffer does a transition to queue family foreign and back.
   auto command_buffers = std::make_unique<VulkanCommandBuffers>(
-      logical_device, command_pool, *framebuffer, extent, *render_pass->render_pass(),
+      vkp_device, command_pool, *framebuffer, extent, *render_pass->render_pass(),
       graphics_pipeline->graphics_pipeline());
   command_buffers->set_image_for_foreign_transition(*offscreen_image_view->image());
   ASSERT_TRUE(command_buffers->Init());
@@ -94,24 +94,24 @@ TEST(TransactionElimination, ForeignQueue) {
   pipe.set_enabled_gpu_counters(pipe.gpu_profiler()->supported_counters());
   pipe.run();
 
-  ASSERT_TRUE(DrawAllFrames(*logical_device, *command_buffers));
-  logical_device->device()->waitIdle();
+  ASSERT_TRUE(DrawAllFrames(*vkp_device, *command_buffers));
+  vkp_device->get().waitIdle();
   auto sample = pipe.sample();
   EXPECT_EQ(0u, GetCounterValue(sample.gpu, hwcpipe::GpuCounter::TransactionEliminations));
 
   // Second render pass and command buffers do a transition from eTransferSrcOptimal instead of
   // eUndefined, since otherwise transaction elimination would be disabled.
-  auto render_pass2 = std::make_shared<VulkanRenderPass>(logical_device, image_format, true);
+  auto render_pass2 = std::make_shared<VulkanRenderPass>(vkp_device, image_format, true);
   render_pass2->set_initial_layout(vk::ImageLayout::eTransferSrcOptimal);
   ASSERT_TRUE(render_pass2->Init());
 
   auto command_buffers2 = std::make_unique<VulkanCommandBuffers>(
-      logical_device, command_pool, *framebuffer, extent, *render_pass2->render_pass(),
+      vkp_device, command_pool, *framebuffer, extent, *render_pass2->render_pass(),
       graphics_pipeline->graphics_pipeline());
   ASSERT_TRUE(command_buffers2->Init());
 
-  ASSERT_TRUE(DrawAllFrames(*logical_device, *command_buffers2));
-  logical_device->device()->waitIdle();
+  ASSERT_TRUE(DrawAllFrames(*vkp_device, *command_buffers2));
+  vkp_device->get().waitIdle();
   auto sample2 = pipe.sample();
   constexpr uint32_t kTransactionMinTileSize = 16;
   constexpr uint32_t kTransactionMaxTileSize = 32;
@@ -122,8 +122,7 @@ TEST(TransactionElimination, ForeignQueue) {
   EXPECT_LE((64u / kTransactionMaxTileSize) * (64u / kTransactionMaxTileSize), eliminated_count);
 }
 
-bool DrawAllFrames(const VulkanLogicalDevice& logical_device,
-                   const VulkanCommandBuffers& command_buffers) {
+bool DrawAllFrames(const vkp::Device& vkp_device, const VulkanCommandBuffers& command_buffers) {
   vk::SubmitInfo submit_info;
   submit_info.commandBufferCount = command_buffers.command_buffers().size();
   std::vector<vk::CommandBuffer> command_buffer(submit_info.commandBufferCount);
@@ -132,7 +131,7 @@ bool DrawAllFrames(const VulkanLogicalDevice& logical_device,
   }
   submit_info.pCommandBuffers = command_buffer.data();
 
-  if (logical_device.queue().submit(1, &submit_info, vk::Fence()) != vk::Result::eSuccess) {
+  if (vkp_device.queue().submit(1, &submit_info, vk::Fence()) != vk::Result::eSuccess) {
     RTN_MSG(false, "Failed to submit draw command buffer.\n");
   }
   return true;

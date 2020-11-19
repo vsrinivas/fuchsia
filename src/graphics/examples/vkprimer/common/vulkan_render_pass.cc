@@ -6,14 +6,15 @@
 
 #include "utils.h"
 
-VulkanRenderPass::VulkanRenderPass(std::shared_ptr<VulkanLogicalDevice> device,
+VulkanRenderPass::VulkanRenderPass(std::shared_ptr<vkp::Device> vkp_device,
                                    const vk::Format &image_format, bool offscreen)
-    : initialized_(false), device_(device), image_format_(image_format), offscreen_(offscreen) {}
+    : initialized_(false),
+      vkp_device_(vkp_device),
+      image_format_(image_format),
+      offscreen_(offscreen) {}
 
 bool VulkanRenderPass::Init() {
-  if (initialized_) {
-    RTN_MSG(false, "VulkanRenderPass is already initialized.\n");
-  }
+  RTN_IF_MSG(false, initialized_, "VulkanRenderPass is already initialized.\n");
 
   vk::AttachmentDescription color_attachment;
   if (offscreen_) {
@@ -44,11 +45,9 @@ bool VulkanRenderPass::Init() {
   render_pass_info.pSubpasses = &subpass;
   render_pass_info.subpassCount = 1;
 
-  auto rv = device_->device()->createRenderPassUnique(render_pass_info);
-  if (vk::Result::eSuccess != rv.result) {
-    RTN_MSG(false, "VK Error: 0x%x - Failed to create render pass.", rv.result);
-  }
-  render_pass_ = std::move(rv.value);
+  auto [r_render_pass, render_pass] = vkp_device_->get().createRenderPassUnique(render_pass_info);
+  RTN_IF_VKH_ERR(false, r_render_pass, "Failed to create render pass.\n");
+  render_pass_ = std::move(render_pass);
 
   initialized_ = true;
   return true;

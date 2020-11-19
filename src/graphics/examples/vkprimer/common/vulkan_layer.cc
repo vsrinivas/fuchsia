@@ -63,9 +63,7 @@ VulkanLayer::VulkanLayer(std::shared_ptr<VulkanInstance> instance)
     : initialized_(false), instance_(instance) {}
 
 bool VulkanLayer::Init() {
-  if (initialized_) {
-    RTN_MSG(false, "VulkanLayer is already initialized.\n");
-  }
+  RTN_IF_MSG(false, initialized_, "VulkanLayer is already initialized.\n");
 
   const auto &instance = *instance_->instance();
   dispatch_loader_ = vk::DispatchLoaderDynamic();
@@ -84,11 +82,10 @@ bool VulkanLayer::Init() {
                      vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation;
   info.pfnUserCallback = DebugCallback;
 
-  auto rv = instance.createDebugUtilsMessengerEXTUnique(info, nullptr, dispatch_loader_);
-  if (vk::Result::eSuccess != rv.result) {
-    RTN_MSG(false, "VK Error: 0x%x - Failed to create debug messenger.", rv.result);
-  }
-  debug_messenger_ = std::move(rv.value);
+  auto [r_messenger, messenger] =
+      instance.createDebugUtilsMessengerEXTUnique(info, nullptr, dispatch_loader_);
+  RTN_IF_VKH_ERR(false, r_messenger, "Failed to create debug messenger.\n");
+  debug_messenger_ = std::move(messenger);
   initialized_ = true;
   return true;
 }

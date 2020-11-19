@@ -71,9 +71,7 @@ bool VulkanInstance::Init(bool enable_validation, GLFWwindow *window) {
 #else
 bool VulkanInstance::Init(bool enable_validation) {
 #endif
-  if (enable_validation && !VulkanLayer::CheckValidationLayerSupport()) {
-    RTN_MSG(false, "Validation layers requested, but not available!");
-  }
+  RTN_IF_MSG(false, (initialized_ == true), "Already initialized.\n");
 
   // Application Info
   vk::ApplicationInfo app_info;
@@ -84,15 +82,15 @@ bool VulkanInstance::Init(bool enable_validation) {
   fprintf(stdout, "\nVulkan Instance API Version: %d.%d\n\n", kMajor, kMinor);
 
   // Instance Create Info
-  vk::InstanceCreateInfo create_info;
-  create_info.pApplicationInfo = &app_info;
+  vk::InstanceCreateInfo instance_info;
+  instance_info.pApplicationInfo = &app_info;
 
   // Extensions
   extensions_ = GetExtensions();
   VulkanLayer::AppendRequiredInstanceExtensions(&extensions_);
 
-  create_info.enabledExtensionCount = static_cast<uint32_t>(extensions_.size());
-  create_info.ppEnabledExtensionNames = extensions_.data();
+  instance_info.enabledExtensionCount = static_cast<uint32_t>(extensions_.size());
+  instance_info.ppEnabledExtensionNames = extensions_.data();
 
   // Layers
   VulkanLayer::AppendRequiredInstanceLayers(&layers_);
@@ -101,8 +99,8 @@ bool VulkanInstance::Init(bool enable_validation) {
     VulkanLayer::AppendValidationInstanceLayers(&layers_);
   }
 
-  create_info.enabledLayerCount = static_cast<uint32_t>(layers_.size());
-  create_info.ppEnabledLayerNames = layers_.data();
+  instance_info.enabledLayerCount = static_cast<uint32_t>(layers_.size());
+  instance_info.ppEnabledLayerNames = layers_.data();
 
   fprintf(stdout, "Enabled Instance Extensions:\n");
   PrintProps(extensions_);
@@ -113,12 +111,9 @@ bool VulkanInstance::Init(bool enable_validation) {
   }
   fprintf(stdout, "\n");
 
-  auto rv = vk::createInstanceUnique(create_info);
-  if (vk::Result::eSuccess != rv.result) {
-    RTN_MSG(false, "VK Error: 0x%x - Failed to create instance.", rv.result);
-  }
-  instance_ = std::move(rv.value);
-
+  auto [r_instance, instance] = vk::createInstanceUnique(instance_info);
+  RTN_IF_VKH_ERR(false, r_instance, "Failed to create instance\n");
+  instance_ = std::move(instance);
   initialized_ = true;
   return true;
 }

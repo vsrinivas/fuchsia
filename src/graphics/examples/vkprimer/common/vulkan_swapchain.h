@@ -7,9 +7,9 @@
 
 #include <vector>
 
+#include "device.h"
 #include "src/lib/fxl/macros.h"
 #include "surface_phys_device_params.h"
-#include "vulkan_logical_device.h"
 #include "vulkan_surface.h"
 
 #include <vulkan/vulkan.hpp>
@@ -22,7 +22,7 @@ class VulkanSwapchain {
     std::vector<vk::PresentModeKHR> present_modes;
   };
 
-  VulkanSwapchain(vk::PhysicalDevice phys_device, std::shared_ptr<VulkanLogicalDevice> device,
+  VulkanSwapchain(vk::PhysicalDevice phys_device, std::shared_ptr<vkp::Device> vkp_device,
                   std::shared_ptr<VulkanSurface> surface);
   VulkanSwapchain() = delete;
 
@@ -42,7 +42,7 @@ class VulkanSwapchain {
   FXL_DISALLOW_COPY_AND_ASSIGN(VulkanSwapchain);
 
   bool initialized_;
-  std::shared_ptr<VulkanLogicalDevice> device_;
+  std::shared_ptr<vkp::Device> vkp_device_;
   vk::Extent2D extent_;
   vk::Format image_format_;
   std::vector<vk::UniqueImageView> image_views_;

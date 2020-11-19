@@ -5,6 +5,8 @@
 common_path = "//src/graphics/examples/vkprimer/common/"
 
 common_files = [
+  "device.cc",
+  "device.h",
   "surface_phys_device_params.h",
   "utils.cc",
   "utils.h",
@@ -24,8 +26,6 @@ common_files = [
   "vulkan_instance.h",
   "vulkan_layer.cc",
   "vulkan_layer.h",
-  "vulkan_logical_device.cc",
-  "vulkan_logical_device.h",
   "vulkan_physical_device.cc",
   "vulkan_physical_device.h",
   "vulkan_render_pass.cc",

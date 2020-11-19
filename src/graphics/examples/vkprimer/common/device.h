@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_GRAPHICS_EXAMPLES_VKPRIMER_COMMON_VULKAN_LOGICAL_DEVICE_H_
-#define SRC_GRAPHICS_EXAMPLES_VKPRIMER_COMMON_VULKAN_LOGICAL_DEVICE_H_
+#ifndef SRC_GRAPHICS_EXAMPLES_VKPRIMER_COMMON_DEVICE_H_
+#define SRC_GRAPHICS_EXAMPLES_VKPRIMER_COMMON_DEVICE_H_
 
 #include <vector>
 
@@ -12,18 +12,20 @@
 
 #include <vulkan/vulkan.hpp>
 
-class VulkanLogicalDevice {
+namespace vkp {
+
+class Device {
  public:
-  VulkanLogicalDevice(const vk::PhysicalDevice &phys_device, const VkSurfaceKHR &surface,
-                      const bool enabled_validation);
+  Device(const vk::PhysicalDevice &phys_device, const VkSurfaceKHR &surface,
+         const bool enabled_validation);
 
   bool Init();
-  const vk::UniqueDevice &device() const;
+  const vk::Device &get() const;
   vk::Queue queue() const;
   uint32_t queue_family_index() const { return queue_family_index_; }
 
  private:
-  FXL_DISALLOW_COPY_ASSIGN_AND_MOVE(VulkanLogicalDevice);
+  FXL_DISALLOW_COPY_ASSIGN_AND_MOVE(Device);
 
   bool AssignSuitableDevice(const std::vector<VkDevice> &devices);
 
@@ -40,4 +42,6 @@ class VulkanLogicalDevice {
   vk::UniqueDevice device_;
 };
 
-#endif  // SRC_GRAPHICS_EXAMPLES_VKPRIMER_COMMON_VULKAN_LOGICAL_DEVICE_H_
+}  // namespace vkp
+
+#endif  // SRC_GRAPHICS_EXAMPLES_VKPRIMER_COMMON_DEVICE_H_

@@ -6,14 +6,14 @@
 
 #include "utils.h"
 
-VulkanCommandBuffers::VulkanCommandBuffers(std::shared_ptr<VulkanLogicalDevice> device,
+VulkanCommandBuffers::VulkanCommandBuffers(std::shared_ptr<vkp::Device> vkp_device,
                                            std::shared_ptr<VulkanCommandPool> command_pool,
                                            const VulkanFramebuffer &framebuffer,
                                            const vk::Extent2D &extent,
                                            const vk::RenderPass &render_pass,
                                            const vk::Pipeline &graphics_pipeline)
     : initialized_(false),
-      device_(device),
+      vkp_device_(vkp_device),
       command_pool_(command_pool),
       command_buffers_(framebuffer.framebuffers().size()) {
   params_ = std::make_unique<InitParams>(framebuffer, extent, render_pass, graphics_pipeline);
@@ -29,20 +29,16 @@ VulkanCommandBuffers::InitParams::InitParams(const VulkanFramebuffer &framebuffe
       graphics_pipeline_(graphics_pipeline) {}
 
 bool VulkanCommandBuffers::Init() {
-  if (initialized_) {
-    RTN_MSG(false, "VulkanCommandBuffers already initialized.\n");
-  }
+  RTN_IF_MSG(false, initialized_, "VulkanCommandBuffers already initialized.\n");
 
   vk::CommandBufferAllocateInfo alloc_info;
   alloc_info.setCommandBufferCount(static_cast<uint32_t>(command_buffers_.size()));
   alloc_info.setCommandPool(*command_pool_->command_pool());
   alloc_info.level = vk::CommandBufferLevel::ePrimary;
 
-  auto rv_alloc = device_->device()->allocateCommandBuffersUnique(alloc_info);
-  if (vk::Result::eSuccess != rv_alloc.result) {
-    RTN_MSG(false, "VK Error: 0x%x - Failed to allocate command buffers.", rv_alloc.result);
-  }
-  command_buffers_ = std::move(rv_alloc.value);
+  auto [r_cmd_bufs, cmd_bufs] = vkp_device_->get().allocateCommandBuffersUnique(alloc_info);
+  RTN_IF_VKH_ERR(false, r_cmd_bufs, "Failed to allocate command buffers.\n");
+  command_buffers_ = std::move(cmd_bufs);
 
   vk::ClearValue clear_color;
   clear_color.setColor(std::array<float, 4>({0.5f, 0.0f, 0.5f, 1.0f}));
@@ -52,11 +48,8 @@ bool VulkanCommandBuffers::Init() {
     const auto &framebuffer = *(framebuffer_iter++);
 
     vk::CommandBufferBeginInfo begin_info;
-
-    auto result = command_buffer->begin(&begin_info);
-    if (vk::Result::eSuccess != result) {
-      RTN_MSG(false, "VK Error: 0x%x - Failed to begin command buffer.", result);
-    }
+    begin_info.flags = vk::CommandBufferUsageFlagBits::eSimultaneousUse;
+    RTN_IF_VKH_ERR(false, command_buffer->begin(&begin_info), "Failed to begin command buffer.\n");
 
     vk::Rect2D render_area;
     render_area.extent = params_->extent_;
@@ -74,39 +67,9 @@ bool VulkanCommandBuffers::Init() {
     command_buffer->draw(3 /* vertexCount */, 1 /* instanceCount */, 0 /* firstVertex */,
                          0 /* firstInstance */);
     command_buffer->endRenderPass();
+
     if (image_for_foreign_transition_) {
-      vk::ImageMemoryBarrier barrier;
-      barrier.setSrcAccessMask(vk::AccessFlagBits::eShaderWrite)
-          .setOldLayout(vk::ImageLayout::eTransferSrcOptimal)
-          .setNewLayout(vk::ImageLayout::eTransferSrcOptimal)
-          .setSrcQueueFamilyIndex(queue_family_)
-          .setDstQueueFamilyIndex(VK_QUEUE_FAMILY_EXTERNAL)
-          .setSubresourceRange(vk::ImageSubresourceRange()
-                                   .setAspectMask(vk::ImageAspectFlagBits::eColor)
-                                   .setLevelCount(1)
-                                   .setLayerCount(1))
-          .setImage(image_for_foreign_transition_);
-
-      command_buffer->pipelineBarrier(vk::PipelineStageFlagBits::eAllGraphics,
-                                      vk::PipelineStageFlagBits::eAllGraphics, {}, {}, {},
-                                      {barrier});
-
-      // This barrier should transition it back
-      vk::ImageMemoryBarrier barrier2;
-      barrier2.setSrcAccessMask(vk::AccessFlagBits::eShaderWrite)
-          .setOldLayout(vk::ImageLayout::eTransferSrcOptimal)
-          .setNewLayout(vk::ImageLayout::eTransferSrcOptimal)
-          .setSrcQueueFamilyIndex(VK_QUEUE_FAMILY_EXTERNAL)
-          .setDstQueueFamilyIndex(queue_family_)
-          .setSubresourceRange(vk::ImageSubresourceRange()
-                                   .setAspectMask(vk::ImageAspectFlagBits::eColor)
-                                   .setLevelCount(1)
-                                   .setLayerCount(1))
-          .setImage(image_for_foreign_transition_);
-
-      command_buffer->pipelineBarrier(vk::PipelineStageFlagBits::eAllGraphics,
-                                      vk::PipelineStageFlagBits::eAllGraphics, {}, {}, {},
-                                      {barrier2});
+      AddForeignTransitionImageBarriers(command_buffer);
     }
     command_buffer->end();
   }
@@ -114,6 +77,32 @@ bool VulkanCommandBuffers::Init() {
   params_.reset();
   initialized_ = true;
   return true;
+}
+
+void VulkanCommandBuffers::AddForeignTransitionImageBarriers(
+    const vk::UniqueCommandBuffer &command_buffer) {
+  vk::ImageMemoryBarrier barrier;
+  barrier.setSrcAccessMask(vk::AccessFlagBits::eShaderWrite)
+      .setOldLayout(vk::ImageLayout::eTransferSrcOptimal)
+      .setNewLayout(vk::ImageLayout::eTransferSrcOptimal)
+      .setSrcQueueFamilyIndex(queue_family_)
+      .setDstQueueFamilyIndex(VK_QUEUE_FAMILY_EXTERNAL)
+      .setSubresourceRange(vk::ImageSubresourceRange()
+                               .setAspectMask(vk::ImageAspectFlagBits::eColor)
+                               .setLevelCount(1)
+                               .setLayerCount(1))
+      .setImage(image_for_foreign_transition_);
+
+  command_buffer->pipelineBarrier(vk::PipelineStageFlagBits::eAllGraphics,
+                                  vk::PipelineStageFlagBits::eAllGraphics, {}, {}, {}, {barrier});
+
+  // This barrier should transition it back
+  vk::ImageMemoryBarrier barrier2(barrier);
+  barrier2.setSrcQueueFamilyIndex(barrier.dstQueueFamilyIndex);
+  barrier2.setDstQueueFamilyIndex(barrier.srcQueueFamilyIndex);
+
+  command_buffer->pipelineBarrier(vk::PipelineStageFlagBits::eAllGraphics,
+                                  vk::PipelineStageFlagBits::eAllGraphics, {}, {}, {}, {barrier2});
 }
 
 const std::vector<vk::UniqueCommandBuffer> &VulkanCommandBuffers::command_buffers() const {

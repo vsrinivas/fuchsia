@@ -12,16 +12,16 @@
 #include "vulkan_fixed_functions.h"
 #include "vulkan_shader.h"
 
-VulkanGraphicsPipeline::VulkanGraphicsPipeline(std::shared_ptr<VulkanLogicalDevice> device,
+VulkanGraphicsPipeline::VulkanGraphicsPipeline(std::shared_ptr<vkp::Device> vkp_device,
                                                const vk::Extent2D &extent,
                                                std::shared_ptr<VulkanRenderPass> render_pass)
-    : initialized_(false), device_(device), extent_(extent), render_pass_(render_pass) {}
+    : initialized_(false), vkp_device_(vkp_device), extent_(extent), render_pass_(render_pass) {}
 
 VulkanGraphicsPipeline::~VulkanGraphicsPipeline() {
   if (initialized_) {
-    const auto &device = device_->device();
-    device->destroyPipelineLayout(pipeline_layout_);
-    device->destroyPipeline(graphics_pipeline_);
+    const vk::Device &device = vkp_device_->get();
+    device.destroyPipelineLayout(pipeline_layout_);
+    device.destroyPipeline(graphics_pipeline_);
     initialized_ = false;
   }
 }
@@ -55,19 +55,17 @@ bool VulkanGraphicsPipeline::Init() {
     RTN_MSG(false, "Can't read fragment spv file.\n");
   }
 
-  const vk::Device &device = *device_->device();
+  const vk::Device &device = vkp_device_->get();
 
-  auto rv = VulkanShader::CreateShaderModule(device, vert_shader_buffer);
-  if (vk::Result::eSuccess != rv.result) {
-    RTN_MSG(false, "VK Error: 0x%x - Failed to create vtx shader module.\n", rv.result);
-  }
-  vk::UniqueShaderModule vert_shader_module = std::move(rv.value);
+  auto [r_vshader_module, vshader_module] =
+      VulkanShader::CreateShaderModule(device, vert_shader_buffer);
+  RTN_IF_VKH_ERR(false, r_vshader_module, "Failed to create vtx shader module.\n");
+  vk::UniqueShaderModule vert_shader_module = std::move(vshader_module);
 
-  rv = VulkanShader::CreateShaderModule(device, frag_shader_buffer);
-  if (vk::Result::eSuccess != rv.result) {
-    RTN_MSG(false, "VK Error: 0x%x - Failed to create frag shader module.\n", rv.result);
-  }
-  vk::UniqueShaderModule frag_shader_module = std::move(rv.value);
+  auto [r_fshader_module, fshader_module] =
+      VulkanShader::CreateShaderModule(device, frag_shader_buffer);
+  RTN_IF_VKH_ERR(false, r_fshader_module, "Failed to create frag shader module.\n");
+  vk::UniqueShaderModule frag_shader_module = std::move(fshader_module);
 
   vk::PipelineShaderStageCreateInfo shader_stages[2];
   shader_stages[0].module = *vert_shader_module;

@@ -17,6 +17,35 @@
     return err;                                    \
   }
 
+// Log and return if |cond| is true.
+#define RTN_IF_MSG(err, cond, ...)                 \
+  if ((cond)) {                                    \
+    fprintf(stderr, "%s:%d ", __FILE__, __LINE__); \
+    fprintf(stderr, __VA_ARGS__);                  \
+    return err;                                    \
+  }
+
+// Log and return based on VkResult |r|.
+#define RTN_IF_VK_ERR(err, r, ...)                                      \
+  if (r != VK_SUCCESS) {                                                \
+    fprintf(stderr, "%s:%d:\n\t(vk::Result::e%s) ", __FILE__, __LINE__, \
+            vk::to_string(vk::Result(r)).c_str());                      \
+    fprintf(stderr, __VA_ARGS__);                                       \
+    fprintf(stderr, "\n");                                              \
+    fflush(stderr);                                                     \
+    return err;                                                         \
+  }
+
+// Log and return based on vk::Result |r|.
+#define RTN_IF_VKH_ERR(err, r, ...)                                                                \
+  if (r != vk::Result::eSuccess) {                                                                 \
+    fprintf(stderr, "%s:%d:\n\t(vk::Result::e%s) ", __FILE__, __LINE__, vk::to_string(r).c_str()); \
+    fprintf(stderr, __VA_ARGS__);                                                                  \
+    fprintf(stderr, "\n");                                                                         \
+    fflush(stderr);                                                                                \
+    return err;                                                                                    \
+  }
+
 namespace vkp {
 
 enum SearchProp { INSTANCE_EXT_PROP, INSTANCE_LAYER_PROP, PHYS_DEVICE_EXT_PROP };

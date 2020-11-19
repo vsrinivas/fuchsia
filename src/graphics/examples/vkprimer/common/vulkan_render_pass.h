@@ -5,14 +5,14 @@
 #ifndef SRC_GRAPHICS_EXAMPLES_VKPRIMER_COMMON_VULKAN_RENDER_PASS_H_
 #define SRC_GRAPHICS_EXAMPLES_VKPRIMER_COMMON_VULKAN_RENDER_PASS_H_
 
+#include "device.h"
 #include "src/lib/fxl/macros.h"
-#include "vulkan_logical_device.h"
 
 #include <vulkan/vulkan.hpp>
 
 class VulkanRenderPass {
  public:
-  VulkanRenderPass(std::shared_ptr<VulkanLogicalDevice> device, const vk::Format &image_format,
+  VulkanRenderPass(std::shared_ptr<vkp::Device> vkp_device, const vk::Format &image_format,
                    bool offscreen);
 
   void set_initial_layout(vk::ImageLayout initial_layout) { initial_layout_ = initial_layout; }
@@ -24,7 +24,7 @@ class VulkanRenderPass {
   FXL_DISALLOW_COPY_AND_ASSIGN(VulkanRenderPass);
 
   bool initialized_;
-  std::shared_ptr<VulkanLogicalDevice> device_;
+  std::shared_ptr<vkp::Device> vkp_device_;
   const vk::Format image_format_;
   bool offscreen_;
   vk::UniqueRenderPass render_pass_;

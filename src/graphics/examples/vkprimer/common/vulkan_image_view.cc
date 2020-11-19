@@ -6,53 +6,49 @@
 
 #include "utils.h"
 
-VulkanImageView::VulkanImageView(std::shared_ptr<VulkanLogicalDevice> device,
+VulkanImageView::VulkanImageView(std::shared_ptr<vkp::Device> vkp_device,
                                  std::shared_ptr<VulkanPhysicalDevice> phys_device,
                                  const vk::Extent2D &extent)
-    : initialized_(false), device_(device), phys_device_(phys_device), extent_(extent) {}
+    : initialized_(false), vkp_device_(vkp_device), phys_device_(phys_device), extent_(extent) {}
 
 bool VulkanImageView::Init() {
   if (initialized_ == true) {
     RTN_MSG(false, "VulkanImageView is already initialized.\n");
   }
 
-  const auto &device = device_->device();
+  const vk::Device &device = vkp_device_->get();
   format_ = vk::Format::eB8G8R8A8Unorm;
 
   // Create vk::Image.
-  vk::ImageCreateInfo info;
-  info.extent = vk::Extent3D(extent_.width, extent_.height, 1);
-  info.arrayLayers = 1;
-  info.format = format_;
-  info.imageType = vk::ImageType::e2D;
-  info.initialLayout = vk::ImageLayout::eUndefined;
-  info.tiling = vk::ImageTiling::eLinear;
-  info.mipLevels = 1;
-  info.samples = vk::SampleCountFlagBits::e1;
-  info.sharingMode = vk::SharingMode::eExclusive;
-  info.usage = vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eTransferSrc;
-  auto rv = device->createImageUnique(info);
-  if (vk::Result::eSuccess != rv.result) {
-    RTN_MSG(false, "VK Error: 0x%x - Failed to create image.", rv.result);
-  }
-  image_ = std::move(rv.value);
+  vk::ImageCreateInfo image_info;
+  image_info.extent = vk::Extent3D(extent_.width, extent_.height, 1);
+  image_info.arrayLayers = 1;
+  image_info.format = format_;
+  image_info.imageType = vk::ImageType::e2D;
+  image_info.initialLayout = vk::ImageLayout::eUndefined;
+  image_info.tiling = vk::ImageTiling::eLinear;
+  image_info.mipLevels = 1;
+  image_info.samples = vk::SampleCountFlagBits::e1;
+  image_info.sharingMode = vk::SharingMode::eExclusive;
+  image_info.usage =
+      vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eTransferSrc;
+  auto [r_image, image] = device.createImageUnique(image_info);
+  RTN_IF_VKH_ERR(false, r_image, "Failed to create image.\n");
+  image_ = std::move(image);
 
   // Allocate memory for |image_| and bind it.
-  auto image_memory_requirements = device->getImageMemoryRequirements(*image_);
+  auto image_memory_requirements = device.getImageMemoryRequirements(*image_);
   vk::MemoryAllocateInfo alloc_info;
   alloc_info.allocationSize = image_memory_requirements.size;
   alloc_info.memoryTypeIndex = vkp::FindMemoryIndex(
       phys_device_->phys_device(), image_memory_requirements.memoryTypeBits,
       vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
-  auto alloc_rv = device->allocateMemoryUnique(alloc_info);
-  if (vk::Result::eSuccess != alloc_rv.result) {
-    RTN_MSG(false, "VK Error: 0x%x - Failed to allocate device memory for image.", alloc_rv.result);
-  }
-  image_memory_ = std::move(alloc_rv.value);
-  auto bind_rv = device->bindImageMemory(*image_, *image_memory_, 0);
-  if (vk::Result::eSuccess != bind_rv) {
-    RTN_MSG(false, "VK Error: 0x%x - Failed to bind device memory to image.", bind_rv);
-  }
+  auto [r_image_memory, image_memory] = device.allocateMemoryUnique(alloc_info);
+  RTN_IF_VKH_ERR(false, r_image_memory, "Failed to allocate device memory for image.\n");
+  image_memory_ = std::move(image_memory);
+
+  RTN_IF_VKH_ERR(false, device.bindImageMemory(*image_, *image_memory_, 0),
+                 "Failed to bind device memory to image.\n");
 
   // Create vk::ImageView on |image_|.
   vk::ImageSubresourceRange range;
@@ -65,11 +61,9 @@ bool VulkanImageView::Init() {
   view_info.subresourceRange = range;
   view_info.viewType = vk::ImageViewType::e2D;
   view_info.image = *image_;
-  auto rvv = device->createImageViewUnique(view_info);
-  if (vk::Result::eSuccess != rvv.result) {
-    RTN_MSG(false, "VK Error: 0x%x - Failed to create image view.", rv.result);
-  }
-  view_ = std::move(rvv.value);
+  auto [r_image_view, image_view] = device.createImageViewUnique(view_info);
+  RTN_IF_VKH_ERR(false, r_image_view, "Failed to create image view.\n");
+  view_ = std::move(image_view);
 
   initialized_ = true;
 
