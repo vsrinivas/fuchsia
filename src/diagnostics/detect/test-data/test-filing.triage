@@ -1,0 +1,14 @@
+{
+    select: {
+        // Need a selector or it won't try to get Inspect data and the test won't terminate.
+        meaningless: "INSPECT:missing:root:missing",
+    },
+    act: {
+        always: {
+            trigger: "3 > 2",
+            type: "Snapshot",
+            repeat: "Hours(1)",
+            signature: "detect-yes",
+        },
+    },
+}

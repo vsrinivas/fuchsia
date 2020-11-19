@@ -50,13 +50,13 @@ const CONFIG: &str = r#"
 "#;
 
 pub fn test() -> TestData {
-    let config = ConfigFile { name: "file.config".to_string(), contents: CONFIG.to_string() };
+    let config = ConfigFile { name: "file.triage".to_string(), contents: CONFIG.to_string() };
     let enable = ConfigFile {
         name: "config.json".to_string(),
         contents: "{enable_filing: true}".to_string(),
     };
     TestData {
-        name: "Snapshot throttle".to_string(),
+        name: "Snapshot sanitizing".to_string(),
         inspect_data: vec![INSPECT.to_string()],
         config_files: vec![config, enable],
         snapshots: vec![vec![

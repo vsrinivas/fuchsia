@@ -10,7 +10,7 @@ use {
     anyhow::{Context, Error},
     archivist_lib::{archivist, configs, diagnostics, logs},
     argh::FromArgs,
-    fidl_fuchsia_diagnostics_internal::LogStatsControllerMarker,
+    fidl_fuchsia_diagnostics_internal::{DetectControllerMarker, LogStatsControllerMarker},
     fidl_fuchsia_sys2::EventSourceMarker,
     fidl_fuchsia_sys_internal::{ComponentEventProviderMarker, LogConnectorMarker},
     fuchsia_async as fasync,
@@ -48,6 +48,10 @@ pub struct Args {
     /// serve fuchsia.diagnostics.test.Controller
     #[argh(switch)]
     install_controller: bool,
+
+    /// connect to fuchsia.diagnostics.internal.DetectController
+    #[argh(switch)]
+    connect_to_detect: bool,
 
     /// connect to fuchsia.diagnostics.internal.LogStatsController
     #[argh(switch)]
@@ -127,6 +131,15 @@ fn main() -> Result<(), Error> {
             .run_singlethreaded(logs::KernelDebugLog::new())
             .context("Failed to read kernel logs")?;
         fasync::Task::spawn(archivist.log_manager().clone().drain_debuglog(debuglog)).detach();
+    }
+
+    let _detect;
+    if opt.connect_to_detect {
+        info!("Starting detect service.");
+        _detect = connect_to_service::<DetectControllerMarker>();
+        if let Err(e) = &_detect {
+            error!("Couldn't connect to detect: {}", e);
+        }
     }
 
     let _stats;

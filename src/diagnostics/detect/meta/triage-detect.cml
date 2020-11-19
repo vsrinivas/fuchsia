@@ -3,10 +3,16 @@
     program: {
         binary: "bin/launcher",
         args: [
+            "detect",
             "--check-every",
             "Minutes(2)",
         ],
     },
+    capabilities: [
+        {
+            protocol: [ "fuchsia.diagnostics.internal.DetectController" ],
+        },
+    ],
     use: [
         { runner: "elf" },
         {
@@ -25,6 +31,12 @@
             directory: "config-data",
             rights: [ "r*" ],
             path: "/config/data",
+        },
+    ],
+    expose: [
+        {
+            protocol: [ "fuchsia.diagnostics.internal.DetectController" ],
+            from: "self",
         },
     ],
 }

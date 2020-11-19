@@ -23,7 +23,7 @@ use {
 };
 
 const MINIMUM_CHECK_TIME_NANOS: i64 = 60 * 1_000_000_000;
-const CONFIG_GLOB: &str = "/config/data/*.config";
+const CONFIG_GLOB: &str = "/config/data/*.triage";
 const PROGRAM_CONFIG_PATH: &str = "/config/data/config.json";
 const SIGNATURE_PREFIX: &str = "fuchsia-detect-";
 const MINIMUM_SIGNATURE_INTERVAL_NANOS: i64 = 3600 * 1_000_000_000;

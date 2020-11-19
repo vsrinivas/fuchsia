@@ -67,7 +67,7 @@ mod test {
     #[test]
     fn library_calls_work() -> Result<(), Error> {
         fuchsia_syslog::init_with_tags(&["detect"]).unwrap();
-        let configs = hashmap! { "foo.config".to_string() => CONFIG.to_string() };
+        let configs = hashmap! { "foo.triage".to_string() => CONFIG.to_string() };
         let lib = TriageLib::new(configs)?;
         let data = vec![DiagnosticData::new(
             "inspect.json".to_string(),

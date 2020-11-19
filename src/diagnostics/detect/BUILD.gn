@@ -57,6 +57,7 @@ rustc_library("lib") {
 }
 
 fuchsia_component("triage-detect-component") {
+  component_name = "triage-detect"
   deps = [
     "//src/diagnostics/config/triage:triage-detect",
     "//src/diagnostics/launcher:bin",

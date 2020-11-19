@@ -20,6 +20,10 @@
             url: "fuchsia-pkg://fuchsia.com/activity#meta/activity.cm",
         },
         {
+            name: "detect",
+            url: "fuchsia-pkg://fuchsia.com/triage-detect#meta/triage-detect.cm",
+        },
+        {
             name: "log-stats",
             url: "fuchsia-pkg://fuchsia.com/log-stats#meta/log-stats.cm",
         },
@@ -161,11 +165,17 @@
             ],
         },
         {
+            protocol: [ "fuchsia.diagnostics.FeedbackArchiveAccessor" ],
+            from: "parent",
+            to: [ "#detect" ],
+        },
+        {
             protocol: [ "fuchsia.logger.LogSink" ],
             from: "parent",
             to: [
                 "#activity",
                 "#debug_serial",
+                "#detect",
                 "#font_provider",
                 "#log-stats",
                 "#remote-control",
@@ -244,6 +254,16 @@
             to: [ "#appmgr" ],
         },
         {
+            protocol: "fuchsia.feedback.CrashReporter",
+            from: "#appmgr",
+            to: [ "#detect" ],
+        },
+        {
+            protocol: "fuchsia.feedback.CrashReportingProductRegister",
+            from: "#appmgr",
+            to: [ "#detect" ],
+        },
+        {
             protocol: "fuchsia.fonts.Provider",
             from: "#font_provider",
             to: [ "#appmgr" ],
@@ -267,6 +287,12 @@
             from: "parent",
             to: [ "#temperature-logger" ],
             subdir: "temperature-logger",
+        },
+        {
+            directory: "config-data",
+            from: "parent",
+            to: [ "#detect" ],
+            subdir: "triage-detect",
         },
         {
             protocol: [
@@ -380,6 +406,10 @@
         {
             protocol: [ "fuchsia.appmgr.Startup" ],
             from: "#appmgr",
+        },
+        {
+            protocol: [ "fuchsia.diagnostics.internal.DetectController" ],
+            from: "#detect",
         },
         {
             protocol: [ "fuchsia.diagnostics.internal.LogStatsController" ],

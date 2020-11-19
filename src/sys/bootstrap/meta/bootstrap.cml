@@ -633,6 +633,7 @@
         // Weak services from appmgr and diagnostics products.
         {
             protocol: [
+                "fuchsia.diagnostics.internal.DetectController",
                 "fuchsia.diagnostics.internal.LogStatsController",
                 "fuchsia.diagnostics.internal.SamplerController",
                 "fuchsia.sys.internal.ComponentEventProvider",

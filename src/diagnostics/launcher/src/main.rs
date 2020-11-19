@@ -10,8 +10,8 @@ use {
     fuchsia_async as fasync,
 };
 
-#[derive(FromArgs, PartialEq, Debug)]
 /// Top-level command.
+#[derive(FromArgs, PartialEq, Debug)]
 struct LauncherArgs {
     #[argh(subcommand)]
     program: ChildArgs,

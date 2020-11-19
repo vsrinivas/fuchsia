@@ -26,7 +26,7 @@ const CONFIG: &str = r#"
 "#;
 
 pub fn test_with_enable() -> TestData {
-    let config = ConfigFile { name: "file.config".to_string(), contents: CONFIG.to_string() };
+    let config = ConfigFile { name: "file.triage".to_string(), contents: CONFIG.to_string() };
     let enable = ConfigFile {
         name: "config.json".to_string(),
         contents: "{enable_filing: true}".to_string(),
@@ -41,7 +41,7 @@ pub fn test_with_enable() -> TestData {
 }
 
 pub fn test_bad_enable() -> TestData {
-    let config = ConfigFile { name: "file.config".to_string(), contents: CONFIG.to_string() };
+    let config = ConfigFile { name: "file.triage".to_string(), contents: CONFIG.to_string() };
     let disable =
         ConfigFile { name: "config.json".to_string(), contents: "{enable_filing: 1}".to_string() };
     TestData {
@@ -56,7 +56,7 @@ pub fn test_bad_enable() -> TestData {
 }
 
 pub fn test_false_enable() -> TestData {
-    let config = ConfigFile { name: "file.config".to_string(), contents: CONFIG.to_string() };
+    let config = ConfigFile { name: "file.triage".to_string(), contents: CONFIG.to_string() };
     let disable = ConfigFile {
         name: "config.json".to_string(),
         contents: "{enable_filing: false}".to_string(),
@@ -72,7 +72,7 @@ pub fn test_false_enable() -> TestData {
 }
 
 pub fn test_no_enable() -> TestData {
-    let config = ConfigFile { name: "file.config".to_string(), contents: CONFIG.to_string() };
+    let config = ConfigFile { name: "file.triage".to_string(), contents: CONFIG.to_string() };
     let disable = ConfigFile { name: "config.json".to_string(), contents: "{}".to_string() };
     TestData {
         name: "Without Enable".to_string(),
@@ -85,7 +85,7 @@ pub fn test_no_enable() -> TestData {
 }
 
 pub fn test_without_file() -> TestData {
-    let config = ConfigFile { name: "file.config".to_string(), contents: CONFIG.to_string() };
+    let config = ConfigFile { name: "file.triage".to_string(), contents: CONFIG.to_string() };
     TestData {
         name: "Without Program Config File".to_string(),
         // Detect will fetch data and decide that it would have filed, but will not file.

@@ -3,6 +3,7 @@
         binary: "bin/archivist",
         args: [
             "--consume-own-logs",
+            "--connect-to-detect",
             "--connect-to-log-stats",
             "--config-path",
             "/config/data/archivist_config.json",
@@ -33,6 +34,7 @@
         {
             protocol: [
                 "fuchsia.boot.ReadOnlyLog",
+                "fuchsia.diagnostics.internal.DetectController",
                 "fuchsia.diagnostics.internal.LogStatsController",
                 "fuchsia.diagnostics.internal.SamplerController",
                 "fuchsia.sys.internal.ComponentEventProvider",

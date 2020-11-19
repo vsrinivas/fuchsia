@@ -65,7 +65,7 @@ const CONFIG: &str = r#"
 "#;
 
 pub fn test() -> TestData {
-    let config = ConfigFile { name: "file.config".to_string(), contents: CONFIG.to_string() };
+    let config = ConfigFile { name: "file.triage".to_string(), contents: CONFIG.to_string() };
     let enable = ConfigFile {
         name: "config.json".to_string(),
         contents: "{enable_filing: true}".to_string(),

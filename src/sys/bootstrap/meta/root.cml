@@ -154,6 +154,7 @@
             protocol: [
                 "fuchsia.amber.Control",
                 "fuchsia.cobalt.LoggerFactory",
+                "fuchsia.diagnostics.internal.DetectController",
                 "fuchsia.diagnostics.internal.LogStatsController",
                 "fuchsia.diagnostics.internal.SamplerController",
                 "fuchsia.exception.Handler",
