@@ -1,4 +1,4 @@
-# Inspect file format
+# Inspect the VMO file format
 
 [TOC]
 

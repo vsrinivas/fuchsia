@@ -1,4 +1,4 @@
-# Extending the Inspect file format
+# Extending the VMO file format
 
 [TOC]
 
