@@ -411,6 +411,10 @@ class XhciHarness : public zxtest::Test {
     return device_->UsbHciResetEndpoint(device_id, ep_address);
   }
 
+  zx_status_t CancelAllCommand(uint32_t device_id, uint8_t ep_address) {
+    return device_->UsbHciCancelAll(device_id, ep_address);
+  }
+
   zx_status_t CompleteCommand(TRB* trb, CommandCompletionEvent* event) {
     std::unique_ptr<TRBContext> context;
     zx_status_t status = device_->get_command_ring()->CompleteTRB(trb, &context);
@@ -845,6 +849,43 @@ TEST_F(XhciMmioHarness, QueueNormalRequest) {
   ring->CompleteTRB(trb, &context);
   context->request->Complete(ZX_OK, sizeof(void*));
   ASSERT_TRUE(invoked);
+}
+
+TEST_F(XhciMmioHarness, CancelAllOnDisabledEndpoint) {
+  ConnectDevice(1, USB_SPEED_HIGH);
+  uint64_t paddr;
+  {
+    auto& state = device_->get_device_state()[0];
+    fbl::AutoLock _(&state.transaction_lock());
+    state.GetTransferRing(0).set_stall(true);
+    paddr = state.GetTransferRing(0).PeekCommandRingControlRegister(0).value().reg_value();
+  }
+  zx_status_t cancel_status;
+  auto cr = FakeTRB::get(crcr()->next);
+  Control control_trb = Control::FromTRB(cr);
+  ASSERT_EQ(control_trb.Type(), Control::AddressDeviceCommand);
+  CommandCompletionEvent event;
+  event.set_CompletionCode(CommandCompletionEvent::Success);
+  ASSERT_OK(CompleteCommand(cr, &event));
+  bool got_stop_endpoint = false;
+  SetDoorbellListener([&](uint8_t doorbell, uint8_t target) {
+    if (doorbell == 0) {
+      cr = FakeTRB::get(cr->next);
+      Control control = Control::FromTRB(cr);
+      switch (control.Type()) {
+        case Control::StopEndpointCommand: {
+          auto cancel_command = reinterpret_cast<StopEndpoint*>(cr);
+          ASSERT_EQ(cancel_command->ENDPOINT(), 2);
+          ASSERT_EQ(cancel_command->SLOT(), 1);
+          got_stop_endpoint = true;
+          ASSERT_OK(CompleteCommand(cr, &event));
+        } break;
+      }
+    }
+  });
+  cancel_status = CancelAllCommand(0, 1);
+  ASSERT_TRUE(got_stop_endpoint);
+  ASSERT_EQ(cancel_status, ZX_ERR_IO_NOT_PRESENT);
 }
 
 TEST_F(XhciMmioHarness, ResetEndpointTestSuccessCase) {

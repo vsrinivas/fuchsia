@@ -1654,6 +1654,9 @@ TRBPromise UsbXhci::UsbHciCancelAllAsync(uint32_t device_id, uint8_t ep_address)
           TRB* new_ptr = nullptr;
           fbl::AutoLock _(&state->transaction_lock());
           index = static_cast<uint8_t>(XhciEndpointIndex(ep_address) - 1);
+          if (!state->GetTransferRing(index).active()) {
+            return fit::make_error_promise(ZX_ERR_IO_NOT_PRESENT);
+          }
           trbs = state->GetTransferRing(index).TakePendingTRBs();
           for (auto& trb : trbs) {
             new_ptr = trb.trb;
