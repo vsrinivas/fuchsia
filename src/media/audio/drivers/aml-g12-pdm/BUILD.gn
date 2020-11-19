@@ -50,5 +50,8 @@ driver_module("aml-g12-pdm") {
 
 group("tests") {
   testonly = true
-  deps = [ ":aml_g12_pdm_bind_test" ]
+  deps = [
+    ":aml_g12_pdm_bind_test",
+    "test:test-package",
+  ]
 }

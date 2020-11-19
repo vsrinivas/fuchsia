@@ -4,6 +4,7 @@
 
 #include "audio-stream-in.h"
 
+#include <lib/zx/clock.h>
 #include <math.h>
 
 #include <optional>
@@ -17,13 +18,14 @@
 
 #include "src/media/audio/drivers/aml-g12-pdm/aml_g12_pdm_bind.h"
 
-namespace audio {
+namespace audio::aml_g12 {
 
 constexpr size_t kMinSampleRate = 48000;
 constexpr size_t kMaxSampleRate = 96000;
 
-AudioStreamIn::AudioStreamIn(zx_device_t* parent)
-    : SimpleAudioStream(parent, true /* is input */) {}
+AudioStreamIn::AudioStreamIn(zx_device_t* parent) : SimpleAudioStream(parent, true /* is input */) {
+  frames_per_second_ = kMinSampleRate;
+}
 
 zx_status_t AudioStreamIn::Create(void* ctx, zx_device_t* parent) {
   auto stream = audio::SimpleAudioStream::Create<AudioStreamIn>(parent);
@@ -101,12 +103,12 @@ zx_status_t AudioStreamIn::InitPDev() {
   std::optional<ddk::MmioBuffer> mmio0, mmio1;
   status = pdev2.MapMmio(0, &mmio0);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s could not map mmio %d", __FUNCTION__, status);
+    zxlogf(ERROR, "%s could not map mmio0 %d", __FUNCTION__, status);
     return status;
   }
   status = pdev2.MapMmio(1, &mmio1);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s could not map mmio %d", __FUNCTION__, status);
+    zxlogf(ERROR, "%s could not map mmio1 %d", __FUNCTION__, status);
     return status;
   }
 
@@ -126,20 +128,38 @@ zx_status_t AudioStreamIn::InitPDev() {
 
   lib_->SetBuffer(pinned_ring_buffer_.region(0).phys_addr, pinned_ring_buffer_.region(0).size);
 
-  // Enable first metadata_.number_of_channels channels.
-  lib_->ConfigPdmIn(static_cast<uint8_t>((1 << metadata_.number_of_channels) - 1));
-
-  lib_->Sync();
+  InitHw();
 
   return ZX_OK;
+}
+
+void AudioStreamIn::InitHw() {
+  // Enable first metadata_.number_of_channels channels.
+  lib_->ConfigPdmIn(static_cast<uint8_t>((1 << metadata_.number_of_channels) - 1));
+  uint8_t mute_slots = 0;
+  // Set muted slots from channels_to_use_bitmask limited to channels in use.
+  if (channels_to_use_bitmask_ != AUDIO_SET_FORMAT_REQ_BITMASK_DISABLED)
+    mute_slots =
+        static_cast<uint8_t>(~channels_to_use_bitmask_ & ((1 << metadata_.number_of_channels) - 1));
+  lib_->SetMute(mute_slots);
+  lib_->SetRate(frames_per_second_);
+  lib_->Sync();
 }
 
 zx_status_t AudioStreamIn::ChangeFormat(const audio_proto::StreamSetFmtReq& req) {
   fifo_depth_ = lib_->fifo_depth();
   external_delay_nsec_ = 0;
 
-  lib_->SetRate(req.frames_per_second);
+  if (req.channels != metadata_.number_of_channels) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+  if (req.frames_per_second != 48'000 && req.frames_per_second != 96'000) {
+    return ZX_ERR_INVALID_ARGS;
+  }
   frames_per_second_ = req.frames_per_second;
+  channels_to_use_bitmask_ = req.channels_to_use_bitmask;
+
+  InitHw();
 
   return ZX_OK;
 }
@@ -175,8 +195,9 @@ zx_status_t AudioStreamIn::Start(uint64_t* out_start_time) {
   if (notifs) {
     size_t size = 0;
     ring_buffer_vmo_.get_size(&size);
-    notification_rate_ = zx::duration(zx_duration_from_msec(
-        pinned_ring_buffer_.region(0).size / (frame_size_ * frames_per_second_ / 1000 * notifs)));
+    notification_rate_ =
+        zx::duration(zx_duration_from_usec(1'000 * pinned_ring_buffer_.region(0).size /
+                                           (frame_size_ * frames_per_second_ / 1'000 * notifs)));
     notify_timer_.PostDelayed(dispatcher(), notification_rate_);
   } else {
     notification_rate_ = {};
@@ -194,6 +215,7 @@ void AudioStreamIn::ProcessRingNotification() {
   audio_proto::RingBufPositionNotify resp = {};
   resp.hdr.cmd = AUDIO_RB_POSITION_NOTIFY;
 
+  resp.monotonic_time = zx::clock::get_monotonic().get();
   resp.ring_buffer_pos = lib_->GetRingPosition();
   NotifyPosition(resp);
 }
@@ -242,8 +264,10 @@ zx_status_t AudioStreamIn::InitBuffer(size_t size) {
     return status;
   }
   if (pinned_ring_buffer_.region_count() != 1) {
-    zxlogf(ERROR, "%s buffer is not contiguous", __func__);
-    return ZX_ERR_NO_MEMORY;
+    if (!AllowNonContiguousRingBuffer()) {
+      zxlogf(ERROR, "%s buffer is not contiguous", __func__);
+      return ZX_ERR_NO_MEMORY;
+    }
   }
 
   return ZX_OK;
@@ -256,6 +280,6 @@ static constexpr zx_driver_ops_t driver_ops = []() {
   return ops;
 }();
 
-}  // namespace audio
+}  // namespace audio::aml_g12
 
-ZIRCON_DRIVER(aml_g12_pdm, audio::driver_ops, "zircon", "0.1")
+ZIRCON_DRIVER(aml_g12_pdm, audio::aml_g12::driver_ops, "zircon", "0.1")

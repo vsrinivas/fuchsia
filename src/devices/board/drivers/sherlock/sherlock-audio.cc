@@ -560,47 +560,54 @@ zx_status_t Sherlock::AudioInit() {
   }
 #endif
 
-  // Add PDM IN.
-  static constexpr pbus_mmio_t pdm_mmios[] = {
-      {.base = T931_EE_PDM_BASE, .length = T931_EE_PDM_LENGTH},
-      {.base = T931_EE_AUDIO_BASE, .length = T931_EE_AUDIO_LENGTH},
-  };
+  // Input device.
+  {
+    metadata::AmlPdmConfig metadata = {};
+    snprintf(metadata.manufacturer, sizeof(metadata.manufacturer), "Spacely Sprockets");
+    snprintf(metadata.product_name, sizeof(metadata.product_name), "sherlock");
+    metadata.number_of_channels = is_sherlock ? 2 : 3;
+    metadata.version = metadata::AmlVersion::kS905D2G;
+    metadata.sysClockDivFactor = 4;
+    metadata.dClockDivFactor = 250;
+    pbus_metadata_t pdm_metadata[] = {
+        {
+            .type = DEVICE_METADATA_PRIVATE,
+            .data_buffer = &metadata,
+            .data_size = sizeof(metadata),
+        },
+    };
 
-  static constexpr pbus_bti_t pdm_btis[] = {
-      {
-          .iommu_index = 0,
-          .bti_id = BTI_AUDIO_IN,
-      },
-  };
+    static constexpr pbus_mmio_t pdm_mmios[] = {
+        {.base = T931_EE_PDM_BASE, .length = T931_EE_PDM_LENGTH},
+        {.base = T931_EE_AUDIO_BASE, .length = T931_EE_AUDIO_LENGTH},
+    };
 
-  uint8_t channel_count = 2;
-  if (!is_sherlock) {
-    channel_count = 3;
-  }
-  pbus_metadata_t pdm_metadata[] = {
-      {
-          .type = DEVICE_METADATA_PRIVATE,
-          .data_buffer = &channel_count,
-          .data_size = sizeof(channel_count),
-      },
-  };
-  pbus_dev_t pdm_dev = {};
-  char pdm_name[device_name_max_length];
-  snprintf(pdm_name, sizeof(pdm_name), "%s-pdm-audio-in", product_name);
-  pdm_dev.name = pdm_name;
-  pdm_dev.vid = PDEV_VID_AMLOGIC;
-  pdm_dev.pid = PDEV_PID_AMLOGIC_T931;
-  pdm_dev.did = PDEV_DID_SHERLOCK_PDM;
-  pdm_dev.mmio_list = pdm_mmios;
-  pdm_dev.mmio_count = countof(pdm_mmios);
-  pdm_dev.bti_list = pdm_btis;
-  pdm_dev.bti_count = countof(pdm_btis);
-  pdm_dev.metadata_list = pdm_metadata;
-  pdm_dev.metadata_count = countof(pdm_metadata);
-  status = pbus_.DeviceAdd(&pdm_dev);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s pbus_.DeviceAdd failed %d", __FUNCTION__, status);
-    return status;
+    static constexpr pbus_bti_t pdm_btis[] = {
+        {
+            .iommu_index = 0,
+            .bti_id = BTI_AUDIO_IN,
+        },
+    };
+
+    pbus_dev_t dev_in = {};
+    char pdm_name[device_name_max_length];
+    snprintf(pdm_name, sizeof(pdm_name), "%s-pdm-audio-in", product_name);
+    dev_in.name = pdm_name;
+    dev_in.vid = PDEV_VID_AMLOGIC;
+    dev_in.pid = PDEV_PID_AMLOGIC_T931;
+    dev_in.did = PDEV_DID_AMLOGIC_PDM;
+    dev_in.mmio_list = pdm_mmios;
+    dev_in.mmio_count = countof(pdm_mmios);
+    dev_in.bti_list = pdm_btis;
+    dev_in.bti_count = countof(pdm_btis);
+    dev_in.metadata_list = pdm_metadata;
+    dev_in.metadata_count = countof(pdm_metadata);
+
+    status = pbus_.DeviceAdd(&dev_in);
+    if (status != ZX_OK) {
+      zxlogf(ERROR, "%s adding audio input device failed %d", __FILE__, status);
+      return status;
+    }
   }
 
 #ifdef ENABLE_BT

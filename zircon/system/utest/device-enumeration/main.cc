@@ -485,7 +485,7 @@ TEST_F(DeviceEnumerationTest, SherlockTest) {
       "aml-video-enc",
       "aml-hevc-enc",
       "sys/platform/05:04:17/aml-gpu",
-      "sys/platform/05:04:16/sherlock-audio-in",
+      "sys/platform/05:04:13/sherlock-audio-pdm-in",
       "sherlock-i2s-audio-out",
       "ft5726-touch",
       "tee/optee",
@@ -518,7 +518,7 @@ TEST_F(DeviceEnumerationTest, SherlockTest) {
 TEST_F(DeviceEnumerationTest, LuisTest) {
   static const char* kDevicePaths[] = {
       "imx355-sensor",
-      "sys/platform/05:04:16/sherlock-audio-in",
+      "sys/platform/05:04:13/luis-audio-pdm-in",
       "luis-i2s-audio-out",
       "sherlock-buttons/hid-buttons",
       "ft8201-touch",

@@ -20,7 +20,7 @@
 #include <ddktl/protocol/platform/device.h>
 #include <soc/aml-common/aml-pdm-audio.h>
 
-namespace audio {
+namespace audio::aml_g12 {
 
 class AudioStreamIn : public SimpleAudioStream {
  public:
@@ -37,20 +37,22 @@ class AudioStreamIn : public SimpleAudioStream {
   zx_status_t SetGain(const audio_proto::SetGainReq& req) override;
   void RingBufferShutdown() TA_REQ(domain_token()) override;
   void ShutdownHook() __TA_REQUIRES(domain_token()) override;
+  explicit AudioStreamIn(zx_device_t* parent);
 
  private:
   friend class fbl::RefPtr<AudioStreamIn>;
   friend class SimpleAudioStream;
 
-  explicit AudioStreamIn(zx_device_t* parent);
-
   zx_status_t AddFormats() TA_REQ(domain_token());
   zx_status_t InitBuffer(size_t size) TA_REQ(domain_token());
   zx_status_t InitPDev() TA_REQ(domain_token());
+  void InitHw();
   void ProcessRingNotification();
+  virtual bool AllowNonContiguousRingBuffer() { return false; }
 
   zx::duration notification_rate_ = {};
   uint32_t frames_per_second_ = 0;
+  uint64_t channels_to_use_bitmask_ = AUDIO_SET_FORMAT_REQ_BITMASK_DISABLED;
   async::TaskClosureMethod<AudioStreamIn, &AudioStreamIn::ProcessRingNotification> notify_timer_
       __TA_GUARDED(domain_token()){this};
 
@@ -60,6 +62,6 @@ class AudioStreamIn : public SimpleAudioStream {
   zx::bti bti_;
   metadata::AmlPdmConfig metadata_ = {};
 };
-}  // namespace audio
+}  // namespace audio::aml_g12
 
 #endif  // SRC_MEDIA_AUDIO_DRIVERS_AML_G12_PDM_AUDIO_STREAM_IN_H_
