@@ -15,7 +15,6 @@ extend uint fuchsia.BIND_PLATFORM_DEV_VID {
   NINETY_SIX_BOARDS = 2,
   GOOGLE = 3,
   KHADAS = 4,
-  AMLOGIC = 5,
   BROADCOM = 6,
   HARDKERNEL = 7,
   INTEL = 8,
