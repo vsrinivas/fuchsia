@@ -36,7 +36,6 @@ static_assert(offsetof(Superblock, abm_slices) ==                       0x60);
 static_assert(offsetof(Superblock, ino_slices) ==                       0x64);
 static_assert(offsetof(Superblock, dat_slices) ==                       0x68);
 static_assert(offsetof(Superblock, journal_slices) ==                   0x6c);
-static_assert(offsetof(Superblock, blob_layout_format) ==               0x70);
 static_assert(offsetof(Superblock, oldest_revision) ==                  0x78);
 
 // Ensure that the padding between two members doesn't change
@@ -56,8 +55,7 @@ static_assert(PADDING_LENGTH(Superblock, deprecated1,            abm_slices) == 
 static_assert(PADDING_LENGTH(Superblock, abm_slices,             ino_slices) ==             0);
 static_assert(PADDING_LENGTH(Superblock, ino_slices,             dat_slices) ==             0);
 static_assert(PADDING_LENGTH(Superblock, dat_slices,             journal_slices) ==         0);
-static_assert(PADDING_LENGTH(Superblock, journal_slices,         blob_layout_format) ==     0);
-static_assert(PADDING_LENGTH(Superblock, blob_layout_format,     oldest_revision) ==        7);
+static_assert(PADDING_LENGTH(Superblock, journal_slices,         oldest_revision) ==        8);
 static_assert(PADDING_LENGTH(Superblock, oldest_revision,        reserved) ==               0);
 
 // Ensure that the padding at the end of structure doesn't change

@@ -16,7 +16,7 @@ namespace blobfs {
 // Possible formats for how a blob can be layed out in storage.
 // This enum is serialized and stored in blobfs's superblock which prevents the enum values from
 // being changed.
-enum class BlobLayoutFormat : decltype(Superblock::blob_layout_format) {
+enum class BlobLayoutFormat : uint8_t {
   // The "Padded Merkle Tree at Start" layout stores the Merkle tree in the padded format at the
   // start of the blob.  The data is stored at the start of the block following the Merkle tree.
   // | block 001 | block 002 | block 003 | block 004 | block 005 | ... | block 579 | block 580 |

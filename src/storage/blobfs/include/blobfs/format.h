@@ -44,7 +44,7 @@ constexpr uint64_t kBlobfsMagic1  = (0x985000d4d4d3d314ULL);
 // The revision is used to updated the oldest_revision field in the header.
 //
 // See //src/storage/docs/versioning.md for more.
-constexpr uint32_t kBlobfsCurrentFormatVersion = 0x00000008;
+constexpr uint32_t kBlobfsCurrentFormatVersion = 0x00000009;
 constexpr uint64_t kBlobfsCurrentRevision = 0x00000001;
 
 constexpr uint32_t kBlobFlagClean          = 1;
@@ -120,8 +120,7 @@ struct __PACKED Superblock {
   uint32_t journal_slices;  // Slices allocated to journal section.
   // End FVM-specific fields
 
-  uint8_t blob_layout_format;  // The layout format that the blobs are in.
-  uint8_t zeroes[7];           // Padding. Set to zeroes, can be reclaimed.
+  uint8_t zeroes[8];  // Padding. Set to zeroes, can be reclaimed.
   // The oldest revision of the software that has written to this blobfs instance. When opening for
   // writes, the driver should check this and lower it if the current revision is lower than the one
   // stored in this header. This does not say anything about backwards-compatibility, that is

@@ -12,9 +12,6 @@
 
 #include <blobfs/blob-layout.h>
 #include <blobfs/format.h>
-#include <digest/digest.h>
-#include <digest/merkle-tree.h>
-#include <digest/node-digest.h>
 #include <fs/trace.h>
 #include <safemath/checked_math.h>
 
@@ -26,8 +23,6 @@
 #endif
 
 #include <blobfs/common.h>
-
-using digest::Digest;
 
 namespace blobfs {
 
@@ -70,22 +65,31 @@ void DumpSuperblock(const Superblock& info, FILE* out) {
           "\n"
           "info.journal_slices: %" PRIu32
           "\n"
-          "info.blob_layout_format: %" PRIu8
-          "\n"
           "info.oldest_revision: %" PRIu64 "\n",
           info.magic0, info.magic1, info.format_version, info.flags, info.block_size,
           info.data_block_count, info.journal_block_count, info.inode_count, info.alloc_block_count,
           info.alloc_inode_count, info.slice_size, info.abm_slices, info.ino_slices,
-          info.dat_slices, info.journal_slices, info.blob_layout_format, info.oldest_revision);
+          info.dat_slices, info.journal_slices, info.oldest_revision);
 }
 
-// Validates that this version of blobfs knows how to handle |format|.
-bool IsValidBlobLayoutFormat(BlobLayoutFormat format) {
-  switch (format) {
-    case BlobLayoutFormat::kPaddedMerkleTreeAtStart:
-    case BlobLayoutFormat::kCompactMerkleTreeAtEnd:
-      return true;
+uint32_t GetBlobfsFormatVersionFromOptions(const FilesystemOptions& options) {
+  if (options.blob_layout_format == BlobLayoutFormat::kCompactMerkleTreeAtEnd) {
+    return 0x9;
   }
+  return 0x8;
+}
+
+bool CheckFilesystemAndDriverCompatibility(uint32_t format_version) {
+  if (format_version == kBlobfsCurrentFormatVersion) {
+    return true;
+  }
+  // Driver version 9 is compatible with filesystem version 8.
+  if (format_version == 0x8 && kBlobfsCurrentFormatVersion == 0x9) {
+    return true;
+  }
+  FS_TRACE_ERROR(
+      "blobfs: Filesystem and Driver are incompatible. FS Version: %08x. Driver version: %08x\n",
+      format_version, kBlobfsCurrentFormatVersion);
   return false;
 }
 
@@ -98,9 +102,7 @@ zx_status_t CheckSuperblock(const Superblock* info, uint64_t max) {
     FS_TRACE_ERROR("blobfs: bad magic\n");
     return ZX_ERR_INVALID_ARGS;
   }
-  if (info->format_version != kBlobfsCurrentFormatVersion) {
-    FS_TRACE_ERROR("blobfs: FS Version: %08x. Driver version: %08x\n", info->format_version,
-                   kBlobfsCurrentFormatVersion);
+  if (!CheckFilesystemAndDriverCompatibility(info->format_version)) {
     DumpSuperblock(*info, stderr);
     return ZX_ERR_INVALID_ARGS;
   }
@@ -196,11 +198,6 @@ zx_status_t CheckSuperblock(const Superblock* info, uint64_t max) {
       return ZX_ERR_INVALID_ARGS;
     }
   }
-
-  if (!IsValidBlobLayoutFormat(static_cast<BlobLayoutFormat>(info->blob_layout_format))) {
-    FS_TRACE_ERROR("blobfs: Unkown blob layout format: %u\n", info->blob_layout_format);
-    return ZX_ERR_INVALID_ARGS;
-  }
   return ZX_OK;
 }
 
@@ -230,7 +227,7 @@ void InitializeSuperblock(uint64_t block_count, const FilesystemOptions& options
   memset(info, 0x00, sizeof(*info));
   info->magic0 = kBlobfsMagic0;
   info->magic1 = kBlobfsMagic1;
-  info->format_version = kBlobfsCurrentFormatVersion;
+  info->format_version = GetBlobfsFormatVersionFromOptions(options);
   info->flags = kBlobFlagClean;
   info->block_size = kBlobfsBlockSize;
   // TODO(planders): Consider modifying the inode count if we are low on space.
@@ -238,8 +235,6 @@ void InitializeSuperblock(uint64_t block_count, const FilesystemOptions& options
   info->inode_count = inodes;
   info->alloc_block_count = kStartBlockMinimum;
   info->alloc_inode_count = 0;
-  info->blob_layout_format =
-      static_cast<decltype(Superblock::blob_layout_format)>(options.blob_layout_format);
   info->oldest_revision = options.oldest_revision;
 
   // Temporarily set the data_block_count to the total block_count so we can estimate the number
@@ -275,11 +270,10 @@ void InitializeSuperblock(uint64_t block_count, const FilesystemOptions& options
 }
 
 BlobLayoutFormat GetBlobLayoutFormat(const Superblock& info) {
-  BlobLayoutFormat format = static_cast<BlobLayoutFormat>(info.blob_layout_format);
-  ZX_ASSERT_MSG(IsValidBlobLayoutFormat(format),
-                "Invalid blob layout format.  Use CheckSuperblock to validate the Superblock "
-                "before using it.");
-  return format;
+  if (info.format_version >= 0x9) {
+    return BlobLayoutFormat::kCompactMerkleTreeAtEnd;
+  }
+  return BlobLayoutFormat::kPaddedMerkleTreeAtStart;
 }
 
 constexpr char kBlobVmoNamePrefix[] = "blob";
