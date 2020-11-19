@@ -61,7 +61,9 @@ void lk_main() {
   dlog_init_early();
 
   // we can safely printf now since we have both the debuglog and the current thread
-  // set which holds a per-line buffer
+  // set which holds a per-line buffer.
+  // NOTE: botanist depends on this string being printed to serial. If this changes,
+  // that code must be changed as well. See fxbug.dev/59963#c20.
   dprintf(SPEW, "printing enabled\n");
 
   // deal with any static constructors

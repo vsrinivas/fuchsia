@@ -30,6 +30,8 @@ const (
 
 	// String to look for in serial log that indicates system booted. From
 	// https://fuchsia.googlesource.com/fuchsia/+/6f93c82725f9d5e0a2a5c3be4ae7f4d4fe12c755/zircon/kernel/top/main.cc#65
+	// Note that the string in the source code there ends with "\n", while what we actually
+	// see over serial ends with "\r\n". This change is made in the zircon uart code.
 	bootedLogSignature = "printing enabled\r\n"
 )
 
