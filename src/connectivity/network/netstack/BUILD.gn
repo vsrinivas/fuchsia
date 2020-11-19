@@ -190,6 +190,7 @@ go_library("netstack_lib") {
     "fidlconv/fidlconv.go",
     "fidlconv/fidlconv_test.go",
     "filter/endpoint.go",
+    "filter/endpointstate.go",
     "filter/errors.go",
     "filter/fidlconv.go",
     "filter/fidlconv_test.go",

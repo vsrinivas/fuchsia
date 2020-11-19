@@ -59,15 +59,6 @@ type Client struct {
 	now            func() time.Time
 }
 
-type dhcpClientState uint8
-
-const (
-	initSelecting dhcpClientState = iota
-	bound
-	renewing
-	rebinding
-)
-
 // Stats collects DHCP statistics per client.
 type Stats struct {
 	InitAcquire                 tcpip.StatCounter
