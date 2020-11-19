@@ -301,15 +301,7 @@ impl Authenticating {
         ind: fidl_mlme::SaeHandshakeIndication,
         context: &mut Context,
     ) -> Result<(), anyhow::Error> {
-        let supplicant = match &mut self.cmd.protection {
-            Protection::Rsna(rsna) => &mut rsna.supplicant,
-            _ => bail!("Unexpected SAE handshake indication"),
-        };
-
-        let mut updates = UpdateSink::default();
-        supplicant.on_sae_handshake_ind(&mut updates)?;
-        process_sae_updates(updates, ind.peer_sta_address, context);
-        Ok(())
+        process_sae_handshake_ind(&mut self.cmd.protection, ind, context)
     }
 
     fn on_sae_frame_rx(
@@ -317,16 +309,7 @@ impl Authenticating {
         frame: fidl_mlme::SaeFrame,
         context: &mut Context,
     ) -> Result<(), anyhow::Error> {
-        let peer_sta_address = frame.peer_sta_address.clone();
-        let supplicant = match &mut self.cmd.protection {
-            Protection::Rsna(rsna) => &mut rsna.supplicant,
-            _ => bail!("Unexpected SAE frame recieved"),
-        };
-
-        let mut updates = UpdateSink::default();
-        supplicant.on_sae_frame_rx(&mut updates, frame)?;
-        process_sae_updates(updates, peer_sta_address, context);
-        Ok(())
+        process_sae_frame_rx(&mut self.cmd.protection, frame, context)
     }
 
     fn handle_timeout(
@@ -336,25 +319,15 @@ impl Authenticating {
         state_change_ctx: &mut Option<StateChangeContext>,
         context: &mut Context,
     ) -> Result<Self, Idle> {
-        match event {
-            Event::SaeTimeout(timer) => {
-                let supplicant = match &mut self.cmd.protection {
-                    Protection::Rsna(rsna) => &mut rsna.supplicant,
-                    _ => return Ok(self),
-                };
-
-                let mut updates = UpdateSink::default();
-                if let Err(e) = supplicant.on_sae_timeout(&mut updates, timer.0) {
-                    // An error in handling a timeout means that we may have no way to abort a
-                    // failed handshake. Drop to idle.
-                    state_change_ctx.set_msg(format!("failed to handle SAE timeout: {:?}", e));
-                    return Err(Idle { cfg: self.cfg });
-                }
-                process_sae_updates(updates, self.cmd.bss.bssid, context);
+        match process_sae_timeout(&mut self.cmd.protection, self.cmd.bss.bssid, event, context) {
+            Ok(()) => Ok(self),
+            Err(e) => {
+                // An error in handling a timeout means that we may have no way to abort a
+                // failed handshake. Drop to idle.
+                state_change_ctx.set_msg(format!("failed to handle SAE timeout: {:?}", e));
+                return Err(Idle { cfg: self.cfg });
             }
-            _ => (),
         }
-        Ok(self)
     }
 }
 
@@ -527,6 +500,42 @@ impl Associating {
         });
 
         Idle { cfg: self.cfg }
+    }
+
+    // Sae management functions
+
+    fn on_sae_handshake_ind(
+        &mut self,
+        ind: fidl_mlme::SaeHandshakeIndication,
+        context: &mut Context,
+    ) -> Result<(), anyhow::Error> {
+        process_sae_handshake_ind(&mut self.cmd.protection, ind, context)
+    }
+
+    fn on_sae_frame_rx(
+        &mut self,
+        frame: fidl_mlme::SaeFrame,
+        context: &mut Context,
+    ) -> Result<(), anyhow::Error> {
+        process_sae_frame_rx(&mut self.cmd.protection, frame, context)
+    }
+
+    fn handle_timeout(
+        mut self,
+        _event_id: EventId,
+        event: Event,
+        state_change_ctx: &mut Option<StateChangeContext>,
+        context: &mut Context,
+    ) -> Result<Self, Idle> {
+        match process_sae_timeout(&mut self.cmd.protection, self.cmd.bss.bssid, event, context) {
+            Ok(()) => Ok(self),
+            Err(e) => {
+                // An error in handling a timeout means that we may have no way to abort a
+                // failed handshake. Drop to idle.
+                state_change_ctx.set_msg(format!("failed to handle SAE timeout: {:?}", e));
+                return Err(Idle { cfg: self.cfg });
+            }
+        }
     }
 }
 
@@ -805,6 +814,20 @@ impl ClientState {
                     let idle = associating.on_disassociate_ind(ind, &mut state_change_ctx, context);
                     transition.to(idle).into()
                 }
+                MlmeEvent::OnSaeHandshakeInd { ind } => {
+                    let (transition, mut associating) = state.release_data();
+                    if let Err(e) = associating.on_sae_handshake_ind(ind, context) {
+                        error!("Failed to process SaeHandshakeInd: {:?}", e);
+                    }
+                    transition.to(associating).into()
+                }
+                MlmeEvent::OnSaeFrameRx { frame } => {
+                    let (transition, mut associating) = state.release_data();
+                    if let Err(e) = associating.on_sae_frame_rx(frame, context) {
+                        error!("Failed to process SaeFrameRx: {:?}", e);
+                    }
+                    transition.to(associating).into()
+                }
                 _ => state.into(),
             },
             Self::Associated(mut state) => match event {
@@ -855,6 +878,13 @@ impl ClientState {
                 match authenticating.handle_timeout(event_id, event, &mut state_change_ctx, context)
                 {
                     Ok(authenticating) => transition.to(authenticating).into(),
+                    Err(idle) => transition.to(idle).into(),
+                }
+            }
+            Self::Associating(state) => {
+                let (transition, associating) = state.release_data();
+                match associating.handle_timeout(event_id, event, &mut state_change_ctx, context) {
+                    Ok(associating) => transition.to(associating).into(),
                     Err(idle) => transition.to(idle).into(),
                 }
             }
@@ -1073,6 +1103,62 @@ fn process_sae_updates(updates: UpdateSink, peer_sta_address: [u8; 6], context: 
             _ => (),
         }
     }
+}
+
+fn process_sae_handshake_ind(
+    protection: &mut Protection,
+    ind: fidl_mlme::SaeHandshakeIndication,
+    context: &mut Context,
+) -> Result<(), anyhow::Error> {
+    let supplicant = match protection {
+        Protection::Rsna(rsna) => &mut rsna.supplicant,
+        _ => bail!("Unexpected SAE handshake indication"),
+    };
+
+    let mut updates = UpdateSink::default();
+    supplicant.on_sae_handshake_ind(&mut updates)?;
+    process_sae_updates(updates, ind.peer_sta_address, context);
+    Ok(())
+}
+
+fn process_sae_frame_rx(
+    protection: &mut Protection,
+    frame: fidl_mlme::SaeFrame,
+    context: &mut Context,
+) -> Result<(), anyhow::Error> {
+    let peer_sta_address = frame.peer_sta_address.clone();
+    let supplicant = match protection {
+        Protection::Rsna(rsna) => &mut rsna.supplicant,
+        _ => bail!("Unexpected SAE frame recieved"),
+    };
+
+    let mut updates = UpdateSink::default();
+    supplicant.on_sae_frame_rx(&mut updates, frame)?;
+    process_sae_updates(updates, peer_sta_address, context);
+    Ok(())
+}
+
+fn process_sae_timeout(
+    protection: &mut Protection,
+    bssid: [u8; 6],
+    event: Event,
+    context: &mut Context,
+) -> Result<(), anyhow::Error> {
+    match event {
+        Event::SaeTimeout(timer) => {
+            let supplicant = match protection {
+                Protection::Rsna(rsna) => &mut rsna.supplicant,
+                // Ignore timeouts if we're not using SAE.
+                _ => return Ok(()),
+            };
+
+            let mut updates = UpdateSink::default();
+            supplicant.on_sae_timeout(&mut updates, timer.0)?;
+            process_sae_updates(updates, bssid, context);
+        }
+        _ => (),
+    }
+    Ok(())
 }
 
 fn log_state_change(
@@ -1688,7 +1774,7 @@ mod tests {
 
         // doesn't matter what we mock here
         let update = SecAssocUpdate::Status(SecAssocStatus::EssSaEstablished);
-        suppl_mock.set_on_eapol_frame_results(vec![update]);
+        suppl_mock.set_on_eapol_frame_updates(vec![update]);
 
         // (mlme->sme) Send an EapolInd with bad eapol data
         let eapol_ind = create_eapol_ind(bssid.clone(), vec![1, 2, 3, 4]);
@@ -2233,6 +2319,149 @@ mod tests {
         assert!(state.status().connected_to.unwrap().signal_report_time < time_c);
     }
 
+    fn test_sae_frame_rx_tx(
+        mock_supplicant_controller: MockSupplicantController,
+        state: ClientState,
+    ) -> ClientState {
+        let mut h = TestHelper::new();
+        let frame_rx = fidl_mlme::SaeFrame {
+            peer_sta_address: [0xaa; 6],
+            result_code: fidl_mlme::AuthenticateResultCodes::Success,
+            seq_num: 1,
+            sae_fields: vec![1, 2, 3, 4, 5],
+        };
+        let frame_tx = fidl_mlme::SaeFrame {
+            peer_sta_address: [0xbb; 6],
+            result_code: fidl_mlme::AuthenticateResultCodes::Success,
+            seq_num: 2,
+            sae_fields: vec![1, 2, 3, 4, 5, 6, 7, 8],
+        };
+        mock_supplicant_controller
+            .set_on_sae_frame_rx_updates(vec![SecAssocUpdate::TxSaeFrame(frame_tx)]);
+        let state =
+            state.on_mlme_event(MlmeEvent::OnSaeFrameRx { frame: frame_rx }, &mut h.context);
+        assert_variant!(h.mlme_stream.try_next(), Ok(Some(MlmeRequest::SaeFrameTx(_))));
+        state
+    }
+
+    #[test]
+    fn sae_sends_frame_in_authenticating() {
+        let (supplicant, suppl_mock) = mock_psk_supplicant();
+        let (cmd, _recv) = connect_command_wpa3(supplicant);
+        let state = authenticating_state(cmd);
+        let end_state = test_sae_frame_rx_tx(suppl_mock, state);
+        assert_variant!(end_state, ClientState::Authenticating(_))
+    }
+
+    #[test]
+    fn sae_sends_frame_in_associating() {
+        let (supplicant, suppl_mock) = mock_psk_supplicant();
+        let (cmd, _recv) = connect_command_wpa3(supplicant);
+        let state = associating_state(cmd);
+        let end_state = test_sae_frame_rx_tx(suppl_mock, state);
+        assert_variant!(end_state, ClientState::Associating(_))
+    }
+
+    fn test_sae_frame_ind_resp(
+        mock_supplicant_controller: MockSupplicantController,
+        state: ClientState,
+    ) -> ClientState {
+        let mut h = TestHelper::new();
+        let ind = fidl_mlme::SaeHandshakeIndication { peer_sta_address: [0xaa; 6] };
+        // For the purposes of the test, skip the rx/tx and just say we succeeded.
+        mock_supplicant_controller.set_on_sae_handshake_ind_updates(vec![
+            SecAssocUpdate::SaeAuthStatus(AuthStatus::Success),
+        ]);
+        let state = state.on_mlme_event(MlmeEvent::OnSaeHandshakeInd { ind }, &mut h.context);
+
+        let resp = assert_variant!(
+            h.mlme_stream.try_next(),
+            Ok(Some(MlmeRequest::SaeHandshakeResp(resp))) => resp);
+        assert_eq!(resp.result_code, fidl_mlme::AuthenticateResultCodes::Success);
+        state
+    }
+
+    #[test]
+    fn sae_ind_in_authenticating() {
+        let (supplicant, suppl_mock) = mock_psk_supplicant();
+        let (cmd, _recv) = connect_command_wpa3(supplicant);
+        let state = authenticating_state(cmd);
+        let end_state = test_sae_frame_ind_resp(suppl_mock, state);
+        assert_variant!(end_state, ClientState::Authenticating(_))
+    }
+
+    #[test]
+    fn sae_ind_in_associating() {
+        let (supplicant, suppl_mock) = mock_psk_supplicant();
+        let (cmd, _recv) = connect_command_wpa3(supplicant);
+        let state = associating_state(cmd);
+        let end_state = test_sae_frame_ind_resp(suppl_mock, state);
+        assert_variant!(end_state, ClientState::Associating(_))
+    }
+
+    fn test_sae_timeout(
+        mock_supplicant_controller: MockSupplicantController,
+        state: ClientState,
+    ) -> ClientState {
+        let mut h = TestHelper::new();
+        let frame_tx = fidl_mlme::SaeFrame {
+            peer_sta_address: [0xbb; 6],
+            result_code: fidl_mlme::AuthenticateResultCodes::Success,
+            seq_num: 2,
+            sae_fields: vec![1, 2, 3, 4, 5, 6, 7, 8],
+        };
+        mock_supplicant_controller
+            .set_on_sae_timeout_updates(vec![SecAssocUpdate::TxSaeFrame(frame_tx)]);
+        let state = state.handle_timeout(1, event::SaeTimeout(2).into(), &mut h.context);
+        assert_variant!(h.mlme_stream.try_next(), Ok(Some(MlmeRequest::SaeFrameTx(_))));
+        state
+    }
+
+    fn test_sae_timeout_failure(
+        mock_supplicant_controller: MockSupplicantController,
+        state: ClientState,
+    ) {
+        let mut h = TestHelper::new();
+        mock_supplicant_controller
+            .set_on_sae_timeout_failure(anyhow::anyhow!("Failed to process timeout"));
+        let state = state.handle_timeout(1, event::SaeTimeout(2).into(), &mut h.context);
+        assert_variant!(state, ClientState::Idle(_))
+    }
+
+    #[test]
+    fn sae_timeout_in_authenticating() {
+        let (supplicant, suppl_mock) = mock_psk_supplicant();
+        let (cmd, _recv) = connect_command_wpa3(supplicant);
+        let state = authenticating_state(cmd);
+        let end_state = test_sae_timeout(suppl_mock, state);
+        assert_variant!(end_state, ClientState::Authenticating(_));
+    }
+
+    #[test]
+    fn sae_timeout_in_associating() {
+        let (supplicant, suppl_mock) = mock_psk_supplicant();
+        let (cmd, _recv) = connect_command_wpa3(supplicant);
+        let state = associating_state(cmd);
+        let end_state = test_sae_timeout(suppl_mock, state);
+        assert_variant!(end_state, ClientState::Associating(_));
+    }
+
+    #[test]
+    fn sae_timeout_failure_in_authenticating() {
+        let (supplicant, suppl_mock) = mock_psk_supplicant();
+        let (cmd, _recv) = connect_command_wpa3(supplicant);
+        let state = authenticating_state(cmd);
+        test_sae_timeout_failure(suppl_mock, state);
+    }
+
+    #[test]
+    fn sae_timeout_failure_in_associating() {
+        let (supplicant, suppl_mock) = mock_psk_supplicant();
+        let (cmd, _recv) = connect_command_wpa3(supplicant);
+        let state = associating_state(cmd);
+        test_sae_timeout_failure(suppl_mock, state);
+    }
+
     // Helper functions and data structures for tests
     struct TestHelper {
         mlme_stream: MlmeStream,
@@ -2270,7 +2499,7 @@ mod tests {
         suppl_mock: &MockSupplicantController,
         update_sink: UpdateSink,
     ) -> ClientState {
-        suppl_mock.set_on_eapol_frame_results(update_sink);
+        suppl_mock.set_on_eapol_frame_updates(update_sink);
         // (mlme->sme) Send an EapolInd
         let eapol_ind = create_eapol_ind(bssid.clone(), test_utils::eapol_key_frame().into());
         state.on_mlme_event(eapol_ind, &mut helper.context)
@@ -2496,6 +2725,25 @@ mod tests {
         let (responder, receiver) = Responder::new();
         let bss = fake_bss!(Wpa2, ssid: b"wpa2".to_vec());
         let rsne = Rsne::wpa2_psk_ccmp_rsne();
+        let cmd = ConnectCommand {
+            bss: Box::new(bss),
+            responder: Some(responder),
+            protection: Protection::Rsna(Rsna {
+                negotiated_protection: NegotiatedProtection::from_rsne(&rsne)
+                    .expect("invalid NegotiatedProtection"),
+                supplicant: Box::new(supplicant),
+            }),
+            radio_cfg: RadioConfig::default(),
+        };
+        (cmd, receiver)
+    }
+
+    fn connect_command_wpa3(
+        supplicant: MockSupplicant,
+    ) -> (ConnectCommand, oneshot::Receiver<ConnectResult>) {
+        let (responder, receiver) = Responder::new();
+        let bss = fake_bss!(Wpa3, ssid: b"wpa3".to_vec());
+        let rsne = Rsne::wpa3_ccmp_rsne();
         let cmd = ConnectCommand {
             bss: Box::new(bss),
             responder: Some(responder),
