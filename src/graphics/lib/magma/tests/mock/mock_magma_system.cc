@@ -471,5 +471,7 @@ magma_status_t magma_buffer_get_info(magma_connection_t connection, magma_buffer
 
 magma_status_t magma_get_buffer_handle(magma_connection_t connection, magma_buffer_t buffer,
                                        magma_handle_t* handle_out) {
-  return MAGMA_STATUS_UNIMPLEMENTED;
+  if (!reinterpret_cast<magma::PlatformBuffer*>(buffer)->duplicate_handle(handle_out))
+    return DRET(MAGMA_STATUS_INVALID_ARGS);
+  return MAGMA_STATUS_OK;
 }
