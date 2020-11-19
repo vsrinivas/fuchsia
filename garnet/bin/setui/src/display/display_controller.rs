@@ -27,15 +27,27 @@ impl DeviceStorageCompatible for DisplayInfo {
         DisplayInfo::new(
             false,                 /*auto_brightness_enabled*/
             0.5,                   /*brightness_value*/
+            true,                  /*screen_enabled*/
             LowLightMode::Disable, /*low_light_mode*/
             ThemeMode::Unknown,    /*theme_mode*/
         )
     }
 
     fn deserialize_from(value: &String) -> Self {
-        Self::extract(&value).unwrap_or_else(|_| {
-            DisplayInfoV1::extract(&value).map_or(Self::default_value(), Self::from)
-        })
+        Self::extract(&value)
+            .unwrap_or_else(|_| Self::from(DisplayInfoV2::deserialize_from(&value)))
+    }
+}
+
+impl From<DisplayInfoV2> for DisplayInfo {
+    fn from(v2: DisplayInfoV2) -> Self {
+        DisplayInfo {
+            auto_brightness: v2.auto_brightness,
+            manual_brightness_value: v2.manual_brightness_value,
+            screen_enabled: true,
+            low_light_mode: v2.low_light_mode,
+            theme_mode: v2.theme_mode,
+        }
     }
 }
 
@@ -145,23 +157,34 @@ where
                 )
             }
             SettingRequest::SetBrightness(brightness_value) => {
-                let mut display_info = self.client.read().await.clone();
+                let mut display_info = self.client.read().await;
                 display_info.auto_brightness = false;
                 display_info.manual_brightness_value = brightness_value;
                 Some(self.brightness_manager.update_brightness(display_info, &self.client).await)
             }
             SettingRequest::SetAutoBrightness(auto_brightness_enabled) => {
-                let mut display_info = self.client.read().await.clone();
+                let mut display_info = self.client.read().await;
                 display_info.auto_brightness = auto_brightness_enabled;
                 Some(self.brightness_manager.update_brightness(display_info, &self.client).await)
             }
             SettingRequest::SetLowLightMode(low_light_mode) => {
-                let mut display_info = self.client.read().await.clone();
+                let mut display_info = self.client.read().await;
                 display_info.low_light_mode = low_light_mode;
                 Some(self.brightness_manager.update_brightness(display_info, &self.client).await)
             }
+            SettingRequest::SetScreenEnabled(enabled) => {
+                let mut display_info = self.client.read().await;
+                display_info.screen_enabled = enabled;
+
+                // Set auto brightness to the opposite of the screen off state. If the screen is
+                // turned off, auto brightness must be on so that the screen off component can
+                // detect the changes. If the screen is turned on, the default behavior is to turn
+                // it to full manual brightness.
+                display_info.auto_brightness = !enabled;
+                Some(write(&self.client, display_info, false).await.into_handler_result())
+            }
             SettingRequest::SetThemeMode(theme_mode) => {
-                let mut display_info = self.client.read().await.clone();
+                let mut display_info = self.client.read().await;
                 display_info.theme_mode = theme_mode;
                 Some(write(&self.client, display_info, false).await.into_handler_result())
             }
@@ -205,9 +228,48 @@ impl DeviceStorageCompatible for DisplayInfoV1 {
     }
 }
 
-impl From<DisplayInfoV1> for DisplayInfo {
+/// The following struct should never be modified.  It represents an old
+/// version of the display settings.
+#[derive(PartialEq, Debug, Clone, Copy, Serialize, Deserialize)]
+pub struct DisplayInfoV2 {
+    pub manual_brightness_value: f32,
+    pub auto_brightness: bool,
+    pub low_light_mode: LowLightMode,
+    pub theme_mode: ThemeMode,
+}
+
+impl DisplayInfoV2 {
+    pub const fn new(
+        auto_brightness: bool,
+        manual_brightness_value: f32,
+        low_light_mode: LowLightMode,
+        theme_mode: ThemeMode,
+    ) -> DisplayInfoV2 {
+        DisplayInfoV2 { manual_brightness_value, auto_brightness, low_light_mode, theme_mode }
+    }
+}
+
+impl DeviceStorageCompatible for DisplayInfoV2 {
+    const KEY: &'static str = "display_infoV2";
+
+    fn default_value() -> Self {
+        DisplayInfoV2::new(
+            false,                 /*auto_brightness_enabled*/
+            0.5,                   /*brightness_value*/
+            LowLightMode::Disable, /*low_light_mode*/
+            ThemeMode::Unknown,    /*theme_mode*/
+        )
+    }
+
+    fn deserialize_from(value: &String) -> Self {
+        Self::extract(&value)
+            .unwrap_or_else(|_| Self::from(DisplayInfoV1::deserialize_from(&value)))
+    }
+}
+
+impl From<DisplayInfoV1> for DisplayInfoV2 {
     fn from(v1: DisplayInfoV1) -> Self {
-        DisplayInfo {
+        DisplayInfoV2 {
             auto_brightness: v1.auto_brightness,
             manual_brightness_value: v1.manual_brightness_value,
             low_light_mode: v1.low_light_mode,
@@ -217,7 +279,34 @@ impl From<DisplayInfoV1> for DisplayInfo {
 }
 
 #[test]
-fn test_display_migration() {
+fn test_display_migration_v1_to_v2() {
+    const BRIGHTNESS_VALUE: f32 = 0.6;
+    let mut v1 = DisplayInfoV1::default_value();
+    v1.manual_brightness_value = BRIGHTNESS_VALUE;
+
+    let serialized_v1 = v1.serialize_to();
+
+    let v2 = DisplayInfoV2::deserialize_from(&serialized_v1);
+
+    assert_eq!(v2.manual_brightness_value, BRIGHTNESS_VALUE);
+    assert_eq!(v2.theme_mode, ThemeMode::Unknown);
+}
+
+#[test]
+fn test_display_migration_v2_to_current() {
+    const BRIGHTNESS_VALUE: f32 = 0.6;
+    let mut v2 = DisplayInfoV2::default_value();
+    v2.manual_brightness_value = BRIGHTNESS_VALUE;
+
+    let serialized_v2 = v2.serialize_to();
+
+    let current = DisplayInfo::deserialize_from(&serialized_v2);
+
+    assert_eq!(current.manual_brightness_value, BRIGHTNESS_VALUE);
+    assert_eq!(current.screen_enabled, true);
+}
+#[test]
+fn test_display_migration_v1_to_current() {
     const BRIGHTNESS_VALUE: f32 = 0.6;
     let mut v1 = DisplayInfoV1::default_value();
     v1.manual_brightness_value = BRIGHTNESS_VALUE;
@@ -228,4 +317,5 @@ fn test_display_migration() {
 
     assert_eq!(current.manual_brightness_value, BRIGHTNESS_VALUE);
     assert_eq!(current.theme_mode, ThemeMode::Unknown);
+    assert_eq!(current.screen_enabled, true);
 }
