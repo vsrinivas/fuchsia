@@ -64,9 +64,8 @@ toc:
   - title: "Overview"
     path: /docs/reference/diagnostics/logs
 
-  # TODO(fxbug.dev/60814)
-  # - title: "Connections & Lifecycle"
-  #   path: /docs/reference/diagnostics/logs/connections.md
+  - title: "Attributing LogSink connections"
+    path: /docs/reference/diagnostics/logs/attribution.md
 
   - title: "Message encoding"
     path: /docs/reference/diagnostics/logs/encoding.md
