@@ -222,7 +222,7 @@ As well as a `JsonValue` class with the following methods:
   JsonValue.withStringValue(String)`: Constructors for each variant.
 * `JsonValueTag get $tag`: Getter for the tag corresponding to this the
   [variant][union-lexicon] of this union.
-* `int get intValue` and `String get stringValue`: Getter for the underlying
+* `int? get intValue` and `String? get stringValue`: Getter for the underlying
   value. If the instance's variant does not match the getter method, `null` is
   returned.
 * `String toString()`: Returns a readable string of the `JsonValue`.
@@ -230,6 +230,14 @@ As well as a `JsonValue` class with the following methods:
 * `Object get $data`: Getter for the underlying union data.
 * `bool operator ==(dynamic other)`: Equality operator that performs deep
    comparison when compared to another `JsonValue` of the same variant.
+
+Flexible unions have additional methods for interacting with unknown data:
+
+* `const JsonValue.with$UnknownData(int ordinal, fidl.UnknownRawData data)`:
+  Constructor for a value with an unknown variant set. This should only be used
+  for testing, e.g. to check that code handles unknown unions correctly.
+* `fidl.UnknownRawData? get $unknownData`: Returns the bytes and handles of the
+  unknown data if this union contains an unknown variant, or null otherwise.
 
 Example usage:
 

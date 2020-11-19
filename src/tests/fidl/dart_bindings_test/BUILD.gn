@@ -88,6 +88,7 @@ dart_test_component("bindings-test-component") {
     "table_test.dart",
     "tostring_test.dart",
     "twoway_test.dart",
+    "union_test.dart",
   ]
 
   deps = [

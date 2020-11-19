@@ -56,6 +56,17 @@ class {{ .Name }} extends $fidl.XUnion {
 
 {{- end }}
 
+  $fidl.UnknownRawData? get $unknownData {
+    switch (_ordinal) {
+{{- range .Members }}
+    case {{ .Ordinal }}:
+{{- end }}
+      return null;
+    default:
+      return _data;
+    }
+  }
+
   @override
   String toString() {
     switch (_ordinal) {

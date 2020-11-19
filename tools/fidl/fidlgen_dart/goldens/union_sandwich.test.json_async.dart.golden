@@ -67,6 +67,15 @@ class UnionSize8Alignment4 extends $fidl.XUnion {
     return _data;
   }
 
+  $fidl.UnknownRawData? get $unknownData {
+    switch (_ordinal) {
+      case 1:
+        return null;
+      default:
+        return _data;
+    }
+  }
+
   @override
   String toString() {
     switch (_ordinal) {
@@ -135,6 +144,15 @@ class UnionSize12Alignment4 extends $fidl.XUnion {
       return null;
     }
     return _data;
+  }
+
+  $fidl.UnknownRawData? get $unknownData {
+    switch (_ordinal) {
+      case 1:
+        return null;
+      default:
+        return _data;
+    }
   }
 
   @override
@@ -209,6 +227,15 @@ class UnionSize24Alignment8 extends $fidl.XUnion {
     return _data;
   }
 
+  $fidl.UnknownRawData? get $unknownData {
+    switch (_ordinal) {
+      case 1:
+        return null;
+      default:
+        return _data;
+    }
+  }
+
   @override
   String toString() {
     switch (_ordinal) {
@@ -277,6 +304,15 @@ class UnionSize36Alignment4 extends $fidl.XUnion {
       return null;
     }
     return _data;
+  }
+
+  $fidl.UnknownRawData? get $unknownData {
+    switch (_ordinal) {
+      case 1:
+        return null;
+      default:
+        return _data;
+    }
   }
 
   @override

@@ -80,6 +80,16 @@ class PizzaOrPasta extends $fidl.XUnion {
     return _data;
   }
 
+  $fidl.UnknownRawData? get $unknownData {
+    switch (_ordinal) {
+      case 1:
+      case 2:
+        return null;
+      default:
+        return _data;
+    }
+  }
+
   @override
   String toString() {
     switch (_ordinal) {
@@ -164,6 +174,16 @@ class ExplicitPizzaOrPasta extends $fidl.XUnion {
       return null;
     }
     return _data;
+  }
+
+  $fidl.UnknownRawData? get $unknownData {
+    switch (_ordinal) {
+      case 1:
+      case 4:
+        return null;
+      default:
+        return _data;
+    }
   }
 
   @override
@@ -259,6 +279,16 @@ class FlexiblePizzaOrPasta extends $fidl.XUnion {
     return _data;
   }
 
+  $fidl.UnknownRawData? get $unknownData {
+    switch (_ordinal) {
+      case 1:
+      case 2:
+        return null;
+      default:
+        return _data;
+    }
+  }
+
   @override
   String toString() {
     switch (_ordinal) {
@@ -344,6 +374,16 @@ class StrictPizzaOrPasta extends $fidl.XUnion {
       return null;
     }
     return _data;
+  }
+
+  $fidl.UnknownRawData? get $unknownData {
+    switch (_ordinal) {
+      case 1:
+      case 2:
+        return null;
+      default:
+        return _data;
+    }
   }
 
   @override
@@ -443,6 +483,17 @@ class Union extends $fidl.XUnion {
       return null;
     }
     return _data;
+  }
+
+  $fidl.UnknownRawData? get $unknownData {
+    switch (_ordinal) {
+      case 1:
+      case 2:
+      case 3:
+        return null;
+      default:
+        return _data;
+    }
   }
 
   @override
@@ -559,6 +610,17 @@ class FlexibleUnion extends $fidl.XUnion {
     return _data;
   }
 
+  $fidl.UnknownRawData? get $unknownData {
+    switch (_ordinal) {
+      case 1:
+      case 2:
+      case 3:
+        return null;
+      default:
+        return _data;
+    }
+  }
+
   @override
   String toString() {
     switch (_ordinal) {
@@ -670,6 +732,17 @@ class StrictUnion extends $fidl.XUnion {
     return _data;
   }
 
+  $fidl.UnknownRawData? get $unknownData {
+    switch (_ordinal) {
+      case 1:
+      case 2:
+      case 3:
+        return null;
+      default:
+        return _data;
+    }
+  }
+
   @override
   String toString() {
     switch (_ordinal) {
@@ -755,6 +828,15 @@ class FieldCollision extends $fidl.XUnion {
     return _data;
   }
 
+  $fidl.UnknownRawData? get $unknownData {
+    switch (_ordinal) {
+      case 1:
+        return null;
+      default:
+        return _data;
+    }
+  }
+
   @override
   String toString() {
     switch (_ordinal) {
@@ -837,6 +919,16 @@ class ExplicitUnion extends $fidl.XUnion {
       return null;
     }
     return _data;
+  }
+
+  $fidl.UnknownRawData? get $unknownData {
+    switch (_ordinal) {
+      case 1:
+      case 3:
+        return null;
+      default:
+        return _data;
+    }
   }
 
   @override
@@ -925,6 +1017,16 @@ class ReverseOrdinalUnion extends $fidl.XUnion {
       return null;
     }
     return _data;
+  }
+
+  $fidl.UnknownRawData? get $unknownData {
+    switch (_ordinal) {
+      case 2:
+      case 1:
+        return null;
+      default:
+        return _data;
+    }
   }
 
   @override
@@ -1017,6 +1119,16 @@ class FlexibleFoo extends $fidl.XUnion {
     return _data;
   }
 
+  $fidl.UnknownRawData? get $unknownData {
+    switch (_ordinal) {
+      case 1:
+      case 2:
+        return null;
+      default:
+        return _data;
+    }
+  }
+
   @override
   String toString() {
     switch (_ordinal) {
@@ -1101,6 +1213,16 @@ class StrictFoo extends $fidl.XUnion {
       return null;
     }
     return _data;
+  }
+
+  $fidl.UnknownRawData? get $unknownData {
+    switch (_ordinal) {
+      case 1:
+      case 2:
+        return null;
+      default:
+        return _data;
+    }
   }
 
   @override
@@ -1192,6 +1314,16 @@ class ExplicitFoo extends $fidl.XUnion {
     return _data;
   }
 
+  $fidl.UnknownRawData? get $unknownData {
+    switch (_ordinal) {
+      case 2:
+      case 1:
+        return null;
+      default:
+        return _data;
+    }
+  }
+
   @override
   String toString() {
     switch (_ordinal) {
@@ -1276,6 +1408,16 @@ class ExplicitStrictFoo extends $fidl.XUnion {
       return null;
     }
     return _data;
+  }
+
+  $fidl.UnknownRawData? get $unknownData {
+    switch (_ordinal) {
+      case 3:
+      case 2:
+        return null;
+      default:
+        return _data;
+    }
   }
 
   @override
@@ -1367,6 +1509,16 @@ class OlderSimpleUnion extends $fidl.XUnion {
       return null;
     }
     return _data;
+  }
+
+  $fidl.UnknownRawData? get $unknownData {
+    switch (_ordinal) {
+      case 1:
+      case 2:
+        return null;
+      default:
+        return _data;
+    }
   }
 
   @override
@@ -1471,6 +1623,17 @@ class NewerSimpleUnion extends $fidl.XUnion {
       return null;
     }
     return _data;
+  }
+
+  $fidl.UnknownRawData? get $unknownData {
+    switch (_ordinal) {
+      case 1:
+      case 2:
+      case 3:
+        return null;
+      default:
+        return _data;
+    }
   }
 
   @override
@@ -1580,6 +1743,17 @@ class StrictSimpleXUnion extends $fidl.XUnion {
     return _data;
   }
 
+  $fidl.UnknownRawData? get $unknownData {
+    switch (_ordinal) {
+      case 1:
+      case 2:
+      case 3:
+        return null;
+      default:
+        return _data;
+    }
+  }
+
   @override
   String toString() {
     switch (_ordinal) {
@@ -1664,6 +1838,15 @@ class XUnionContainingEmptyStruct extends $fidl.XUnion {
     return _data;
   }
 
+  $fidl.UnknownRawData? get $unknownData {
+    switch (_ordinal) {
+      case 1:
+        return null;
+      default:
+        return _data;
+    }
+  }
+
   @override
   String toString() {
     switch (_ordinal) {
@@ -1733,6 +1916,15 @@ class StrictBoundedXUnion extends $fidl.XUnion {
       return null;
     }
     return _data;
+  }
+
+  $fidl.UnknownRawData? get $unknownData {
+    switch (_ordinal) {
+      case 1:
+        return null;
+      default:
+        return _data;
+    }
   }
 
   @override
@@ -1822,6 +2014,16 @@ class ExplicitXUnion extends $fidl.XUnion {
       return null;
     }
     return _data;
+  }
+
+  $fidl.UnknownRawData? get $unknownData {
+    switch (_ordinal) {
+      case 1:
+      case 4:
+        return null;
+      default:
+        return _data;
+    }
   }
 
   @override

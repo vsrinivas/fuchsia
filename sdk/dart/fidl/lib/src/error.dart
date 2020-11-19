@@ -15,7 +15,8 @@ enum FidlErrorCode {
   fidlInvalidBit,
   fidlInvalidEnumValue,
   fidlIntOutOfRange,
-  fidlNonEmptyStringWithNullBody
+  fidlNonEmptyStringWithNullBody,
+  fidlNonResourceHandle,
 }
 
 class FidlError implements Exception {

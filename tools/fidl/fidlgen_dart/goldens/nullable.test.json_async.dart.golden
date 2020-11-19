@@ -81,6 +81,16 @@ class SimpleUnion extends $fidl.XUnion {
     return _data;
   }
 
+  $fidl.UnknownRawData? get $unknownData {
+    switch (_ordinal) {
+      case 1:
+      case 2:
+        return null;
+      default:
+        return _data;
+    }
+  }
+
   @override
   String toString() {
     switch (_ordinal) {

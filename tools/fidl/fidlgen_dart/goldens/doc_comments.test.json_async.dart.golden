@@ -364,6 +364,15 @@ class StrictUnion extends $fidl.XUnion {
     return _data;
   }
 
+  $fidl.UnknownRawData? get $unknownData {
+    switch (_ordinal) {
+      case 1:
+        return null;
+      default:
+        return _data;
+    }
+  }
+
   @override
   String toString() {
     switch (_ordinal) {
@@ -438,6 +447,15 @@ class FlexibleUnion extends $fidl.XUnion {
       return null;
     }
     return _data;
+  }
+
+  $fidl.UnknownRawData? get $unknownData {
+    switch (_ordinal) {
+      case 1:
+        return null;
+      default:
+        return _data;
+    }
   }
 
   @override
