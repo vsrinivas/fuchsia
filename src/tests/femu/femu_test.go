@@ -52,3 +52,44 @@ func TestFemu(t *testing.T) {
 	// This message indicates that FEMU has successfully come up and that the Fuchsia system is fairly functional.
 	i.WaitForLogMessage("[component_manager] INFO: Component manager is starting up...")
 }
+
+func TestFemuWithDisk(t *testing.T) {
+	exDir := execDir(t)
+	distro, err := emulator.UnpackFrom(filepath.Join(exDir, "test_data"), emulator.DistributionParams{
+		Emulator: emulator.Femu,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer distro.Delete()
+
+	arch, err := distro.TargetCPU()
+	if err != nil {
+		t.Fatal(err)
+	}
+	i := distro.Create(emulator.Params{
+		Arch:          arch,
+		ZBI:           filepath.Join(exDir, "../fuchsia.zbi"),
+		AppendCmdline: cmdline,
+		Disks: []emulator.Disk{
+			{
+				// Doesn't have to be in a "real" disk format, it just has to be there so we can validate that it's detected.
+				Path: filepath.Join(exDir, "../fuchsia.zbi"),
+				USB:  false,
+			},
+		},
+	})
+
+	err = i.Start()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer i.Kill()
+
+	// This message indicates that disks have been bound.
+	i.WaitForLogMessage("fshost: /dev/class/block/000")
+
+	// Check that the emulated disk is there.
+	i.RunCommand("lsblk")
+	i.WaitForLogMessage("/dev/sys/pci/00:01.0/virtio-block/block")
+}

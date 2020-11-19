@@ -90,6 +90,12 @@ const (
 	Femu
 )
 
+// Disk represents a single disk that will be attached to the virtual machine.
+type Disk struct {
+	Path string
+	USB  bool
+}
+
 // Params describes how to run an emulator instance.
 type Params struct {
 	Arch             Arch
@@ -98,6 +104,7 @@ type Params struct {
 	Networking       bool
 	DisableKVM       bool
 	DisableDebugExit bool
+	Disks            []Disk
 }
 
 // Instance is a live emulator instance.
@@ -291,6 +298,27 @@ func (d *Distribution) appendCommonArgs(params Params, args []string) []string {
 	} else if d.Emulator == Femu {
 		args = d.appendCommonFemuArgs(params, args)
 	}
+
+	diskParams := []string{}
+	hasUsbDisk := false
+
+	for i, disk := range params.Disks {
+		drive_id := fmt.Sprintf("disk%02d", i)
+		diskParams = append(diskParams, "-drive", "if=none,id="+drive_id+",file="+disk.Path+",format=raw")
+		if disk.USB {
+			hasUsbDisk = true
+			diskParams = append(diskParams, "-device", "usb-storage,drive="+drive_id)
+		} else {
+			diskParams = append(diskParams, "-device", "virtio-blk-pci,drive="+drive_id)
+		}
+	}
+
+	if hasUsbDisk {
+		// If we have USB disks, we also need to emulate a USB host controller.
+		args = append(args, "-device", "qemu-xhci,id=xhci")
+	}
+
+	args = append(args, diskParams...)
 
 	// Ask QEMU to emit a message on stderr once the VM is running
 	// so we'll know whether QEMU has started or not.
