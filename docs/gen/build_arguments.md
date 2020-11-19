@@ -47,7 +47,7 @@ It will be set below and passed to other toolchains through toolchain_args
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1267
+From //build/config/BUILDCONFIG.gn:1271
 
 ### always_zedboot
 Build boot images that prefer Zedboot over local boot (only for EFI).
@@ -234,7 +234,7 @@ to accommodate the large number of metrics entries.
 
 **Current value (from the default):** `false`
 
-From //src/storage/blobfs/BUILD.gn:23
+From //src/storage/blobfs/BUILD.gn:24
 
 ### board_bootfs_labels
 A list of binary labels to include in the ZBI.
@@ -496,7 +496,7 @@ An action that accesses undeclared inputs or outputs will fail the build.
 
 **Current value (from the default):** `false`
 
-From //build/config/BUILDCONFIG.gn:2161
+From //build/config/BUILDCONFIG.gn:2181
 
 ### build_uefi_disk
 Generate a UEFI disk image
@@ -633,36 +633,6 @@ errors we explicitly reduce the number of jobs.
 **Current value (from the default):** `32`
 
 From //build/dart/BUILD.gn:15
-
-### concurrent_go_jobs
-Maximum number of Go processes to run in parallel.
-
-**Current value (from the default):** `32`
-
-From //build/go/BUILD.gn:11
-
-### concurrent_link_jobs
-Maximum number of concurrent link jobs.
-
-We often want to run fewer links at once than we do compiles, because
-linking is memory-intensive. The default to use varies by platform and by
-the amount of memory available, so we call out to a script to get the right
-value.
-
-**Current value (from the default):** `32`
-
-From //build/toolchain/BUILD.gn:15
-
-### concurrent_rust_jobs
-Maximum number of Rust processes to run in parallel.
-
-We run multiple rustc jobs in parallel, each of which can cause significant
-amount of memory, especially when using LTO. To avoid out-of-memory errors
-we explicitly reduce the number of jobs.
-
-**Current value (from the default):** `32`
-
-From //build/rust/toolchain/BUILD.gn:15
 
 ### config_have_heap
 Tells openweave to include files that require heap access.
@@ -828,7 +798,7 @@ Enable all strict deps.
 
 **Current value (from the default):** `false`
 
-From //build/dart/dart_library.gni:17
+From //build/dart/dart_library.gni:18
 
 ### disable_kernel_pci
 Disable kernel PCI driver support. A counterpart of the the build
@@ -844,14 +814,14 @@ TODO(fxbug.dev/36723, fxbug.dev/6623) Remove this flag once issues are resolved
 
 **Current value (from the default):** `false`
 
-From //build/dart/dart_library.gni:21
+From //build/dart/dart_library.gni:22
 
 ### enable_dart_analysis
 Enable all dart analysis
 
 **Current value (from the default):** `true`
 
-From //build/dart/dart_library.gni:14
+From //build/dart/dart_library.gni:15
 
 ### enable_frame_pointers
 Controls whether the compiler emits full stack frames for function calls.
@@ -864,7 +834,7 @@ remove this option when the issues are addressed.
 
 **Current value (from the default):** `true`
 
-From //build/config/BUILD.gn:24
+From //build/config/BUILD.gn:25
 
 ### enable_gfx_subsystem
 
@@ -976,7 +946,7 @@ This is just added to [`known_variants`](#known_variants).
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1030
+From //build/config/BUILDCONFIG.gn:1034
 
 ### fastboot_product
 
@@ -1214,7 +1184,7 @@ From //src/graphics/lib/magma/gnbuild/magma.gni:17
 
 **Current value (from the default):** `false`
 
-From //build/go/go_build.gni:20
+From //build/go/go_build.gni:21
 
 ### gocache_dir
   gocache_dir
@@ -1224,7 +1194,7 @@ From //build/go/go_build.gni:20
 
 **Current value (from the default):** `"/b/s/w/ir/x/w/root_build_dir/fidling/.gocache"`
 
-From //build/go/go_build.gni:16
+From //build/go/go_build.gni:17
 
 ### goldfish_control_use_composite_device
 
@@ -1666,7 +1636,7 @@ Each element of the list is one variant, which is a scope defining:
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:922
+From //build/config/BUILDCONFIG.gn:926
 
 ### launch_basemgr_on_boot
 Indicates whether to include basemgr.cmx in the boot sequence for the
@@ -1907,6 +1877,18 @@ From //products/core.gni:15
 **Overridden from the default:** `[]`
 
 From //build/images/args.gni:69
+
+### minfs_enable_dirty_cache
+Set this to true when configuring gn args to enable minfs dirty cache.
+This is a compile time argument instead of mount time argument because
+we conditionally want to enable dirty cache only on specific
+configurations. Once it is enabled, we want the board to run all instances
+of minfs, including # data and all minfs created to run test, should enable
+dirty cache. This ensures that we run what we test.
+
+**Current value (from the default):** `false`
+
+From //src/storage/minfs/BUILD.gn:12
 
 ### minfs_maximum_bytes
 
@@ -2216,7 +2198,7 @@ TODO(fxbug.dev/57302): Enable v0 mangling by default.
 
 **Current value (from the default):** `false`
 
-From //build/config/BUILD.gn:32
+From //build/config/BUILD.gn:33
 
 ### rustc_lib_dir
 Path to rustc lib directory.
@@ -2403,7 +2385,7 @@ is satisfied if any of the strings matches against the candidate string.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1257
+From //build/config/BUILDCONFIG.gn:1261
 
 ### select_variant_canonical
 *This should never be set as a build argument.*
@@ -2412,7 +2394,7 @@ See //build/toolchain/clang_toolchain.gni for details.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1262
+From //build/config/BUILDCONFIG.gn:1266
 
 ### select_variant_shortcuts
 List of short names for commonly-used variant selectors.  Normally this
@@ -2450,7 +2432,7 @@ a list that can be spliced into [`select_variant`](#select_variant).
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1076
+From //build/config/BUILDCONFIG.gn:1080
 
 ### shaderc_enable_spvc_parser
 Enables using the parsing built into spvc instead spirv-cross
@@ -2710,7 +2692,7 @@ From //zircon/public/gn/config/instrumentation/sanitizer_default_options.gni:40
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1050
+From //build/config/BUILDCONFIG.gn:1054
 
 ### universe_package_labels
 If you add package labels to this variable, the packages will be included
@@ -2957,7 +2939,7 @@ From //src/lib/vulkan/build/config.gni:16
 
 **Current value (from the default):** `""`
 
-From //src/graphics/examples/vkprimer/common/common.gni:48
+From //src/graphics/examples/vkprimer/common/common.gni:46
 
 ### warn_on_sdk_changes
 Whether to only warn when an SDK has been modified.
