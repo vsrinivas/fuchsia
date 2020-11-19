@@ -233,6 +233,7 @@ mod tests {
     use super::*;
     use {
         std::fs::{self, File},
+        std::io::Write,
         tempfile::TempDir,
     };
 
@@ -258,5 +259,389 @@ mod tests {
             capabilities,
             vec!["fuchsia.bar".to_string(), "fuchsia.foo".to_string(), "hub".to_string()]
         );
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn execution_loads_empty_directories_with_out_and_runtime() {
+        let test_dir = TempDir::new_in("/tmp").unwrap();
+        let root = test_dir.path();
+
+        // Create the following structure
+        // <root>
+        // |- exec
+        //    |- expose
+        //    |- in
+        //    |- out
+        //    |- runtime
+        let exec = root.join("exec");
+        fs::create_dir(&exec).unwrap();
+        fs::create_dir(exec.join("expose")).unwrap();
+        fs::create_dir(exec.join("in")).unwrap();
+        fs::create_dir(exec.join("out")).unwrap();
+        fs::create_dir(exec.join("runtime")).unwrap();
+
+        let exec_dir = Directory::from_namespace(exec.to_path_buf());
+        let execution = Execution::new(exec_dir).await;
+
+        assert_eq!(execution.elf_runtime, None);
+        assert_eq!(execution.incoming_capabilities, Vec::<String>::new());
+        assert_eq!(execution.outgoing_capabilities.unwrap(), Vec::<String>::new());
+        assert_eq!(execution.exposed_capabilities, Vec::<String>::new());
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn execution_loads_empty_directories_without_out_and_runtime() {
+        let test_dir = TempDir::new_in("/tmp").unwrap();
+        let root = test_dir.path();
+
+        // Create the following structure
+        // <root>
+        // |- exec
+        //    |- expose
+        //    |- in
+        let exec = root.join("exec");
+        fs::create_dir(&exec).unwrap();
+        fs::create_dir(exec.join("expose")).unwrap();
+        fs::create_dir(exec.join("in")).unwrap();
+
+        let exec_dir = Directory::from_namespace(exec.to_path_buf());
+        let execution = Execution::new(exec_dir).await;
+
+        assert_eq!(execution.elf_runtime, None);
+        assert_eq!(execution.incoming_capabilities, Vec::<String>::new());
+        assert_eq!(execution.outgoing_capabilities, None);
+        assert_eq!(execution.exposed_capabilities, Vec::<String>::new());
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn execution_loads_elf_runtime() {
+        let test_dir = TempDir::new_in("/tmp").unwrap();
+        let root = test_dir.path();
+
+        // Create the following structure
+        // <root>
+        // |- exec
+        //    |- expose
+        //    |- in
+        //    |- runtime
+        //       |- elf
+        //          |- job-id
+        //          |- process-id
+        let exec = root.join("exec");
+        fs::create_dir(&exec).unwrap();
+        fs::create_dir(exec.join("expose")).unwrap();
+        fs::create_dir(exec.join("in")).unwrap();
+        fs::create_dir(exec.join("runtime")).unwrap();
+        fs::create_dir(exec.join("runtime/elf")).unwrap();
+        File::create(exec.join("runtime/elf/job_id"))
+            .unwrap()
+            .write_all("12345".as_bytes())
+            .unwrap();
+        File::create(exec.join("runtime/elf/process_id"))
+            .unwrap()
+            .write_all("67890".as_bytes())
+            .unwrap();
+
+        let exec_dir = Directory::from_namespace(exec.to_path_buf());
+        let execution = Execution::new(exec_dir).await;
+
+        assert_eq!(execution.elf_runtime.unwrap(), ElfRuntime { job_id: 12345, process_id: 67890 });
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn execution_loads_incoming_capabilities() {
+        let test_dir = TempDir::new_in("/tmp").unwrap();
+        let root = test_dir.path();
+
+        // Create the following structure
+        // <root>
+        // |- exec
+        //    |- expose
+        //    |- in
+        //       |- pkg
+        let exec = root.join("exec");
+        fs::create_dir(&exec).unwrap();
+        fs::create_dir(exec.join("expose")).unwrap();
+        fs::create_dir(exec.join("in")).unwrap();
+        fs::create_dir(exec.join("in/pkg")).unwrap();
+
+        let exec_dir = Directory::from_namespace(exec.to_path_buf());
+        let execution = Execution::new(exec_dir).await;
+
+        assert_eq!(execution.incoming_capabilities, vec!["pkg".to_string()]);
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn execution_loads_outgoing_capabilities() {
+        let test_dir = TempDir::new_in("/tmp").unwrap();
+        let root = test_dir.path();
+
+        // Create the following structure
+        // <root>
+        // |- exec
+        //    |- expose
+        //    |- in
+        //    |- out
+        //       |- fidl.examples.routing.echo.Echo
+        let exec = root.join("exec");
+        fs::create_dir(&exec).unwrap();
+        fs::create_dir(exec.join("expose")).unwrap();
+        fs::create_dir(exec.join("in")).unwrap();
+        fs::create_dir(exec.join("out")).unwrap();
+        fs::create_dir(exec.join("out/fidl.examples.routing.echo.Echo")).unwrap();
+
+        let exec_dir = Directory::from_namespace(exec.to_path_buf());
+        let execution = Execution::new(exec_dir).await;
+
+        assert_eq!(
+            execution.outgoing_capabilities.unwrap(),
+            vec!["fidl.examples.routing.echo.Echo".to_string()]
+        );
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn execution_loads_exposed_capabilities() {
+        let test_dir = TempDir::new_in("/tmp").unwrap();
+        let root = test_dir.path();
+
+        // Create the following structure
+        // <root>
+        // |- exec
+        //    |- expose
+        //       |- pkgfs
+        //    |- in
+        //    |- out
+        let exec = root.join("exec");
+        fs::create_dir(&exec).unwrap();
+        fs::create_dir(exec.join("expose")).unwrap();
+        fs::create_dir(exec.join("expose/pkgfs")).unwrap();
+        fs::create_dir(exec.join("in")).unwrap();
+        fs::create_dir(exec.join("out")).unwrap();
+
+        let exec_dir = Directory::from_namespace(exec.to_path_buf());
+        let execution = Execution::new(exec_dir).await;
+
+        assert_eq!(execution.exposed_capabilities, vec!["pkgfs".to_string()]);
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn v2_component_loads_component_type_and_id_and_name_and_url() {
+        let test_dir = TempDir::new_in("/tmp").unwrap();
+        let root = test_dir.path();
+
+        // Create the following structure
+        // <root>
+        // |- children
+        // |- component_type
+        // |- id
+        // |- url
+        fs::create_dir(root.join("children")).unwrap();
+        File::create(root.join("component_type")).unwrap().write_all("static".as_bytes()).unwrap();
+        File::create(root.join("id")).unwrap().write_all("0".as_bytes()).unwrap();
+        File::create(root.join("url"))
+            .unwrap()
+            .write_all("fuchsia-boot:///#meta/root.cm".as_bytes())
+            .unwrap();
+
+        let v2_component = V2Component::explore(root.to_path_buf()).await;
+
+        assert_eq!(v2_component.appmgr_root_v1_realm, None);
+        assert_eq!(v2_component.children, vec![]);
+        assert_eq!(v2_component.component_type, "static");
+        assert_eq!(v2_component.execution, None);
+        assert_eq!(v2_component.id, 0);
+        assert_eq!(v2_component.name, "<root>");
+        assert_eq!(v2_component.url, "fuchsia-boot:///#meta/root.cm");
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn v2_component_loads_children() {
+        let test_dir = TempDir::new_in("/tmp").unwrap();
+        let root = test_dir.path();
+
+        // Create the following structure
+        // <root>
+        // |- children
+        //    |- bootstrap
+        //       |- children
+        //       |- component_type
+        //       |- id
+        //       |- url
+        // |- component_type
+        // |- id
+        // |- url
+        fs::create_dir(root.join("children")).unwrap();
+        let bootstrap = root.join("children/bootstrap");
+        fs::create_dir(&bootstrap).unwrap();
+        fs::create_dir(bootstrap.join("children")).unwrap();
+        File::create(bootstrap.join("component_type"))
+            .unwrap()
+            .write_all("static".as_bytes())
+            .unwrap();
+        File::create(bootstrap.join("id")).unwrap().write_all("0".as_bytes()).unwrap();
+        File::create(bootstrap.join("url"))
+            .unwrap()
+            .write_all("fuchsia-boot:///#meta/bootstrap.cm".as_bytes())
+            .unwrap();
+
+        File::create(root.join("component_type")).unwrap().write_all("static".as_bytes()).unwrap();
+        File::create(root.join("id")).unwrap().write_all("0".as_bytes()).unwrap();
+        File::create(root.join("url"))
+            .unwrap()
+            .write_all("fuchsia-boot:///#meta/root.cm".as_bytes())
+            .unwrap();
+
+        let v2_component = V2Component::explore(root.to_path_buf()).await;
+
+        assert_eq!(
+            v2_component.children,
+            vec![V2Component {
+                name: "bootstrap".to_string(),
+                url: "fuchsia-boot:///#meta/bootstrap.cm".to_string(),
+                id: 0,
+                component_type: "static".to_string(),
+                appmgr_root_v1_realm: None,
+                execution: None,
+                children: vec![],
+            }],
+        );
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn v2_component_loads_execution() {
+        let test_dir = TempDir::new_in("/tmp").unwrap();
+        let root = test_dir.path();
+
+        // Create the following structure
+        // <root>
+        // |- children
+        // |- component_type
+        // |- exec
+        //    |- expose
+        //    |- in
+        //    |- runtime
+        //       |- elf
+        //          |- job-id
+        //          |- process-id
+        // |- id
+        // |- url
+        fs::create_dir(root.join("children")).unwrap();
+        File::create(root.join("component_type")).unwrap().write_all("static".as_bytes()).unwrap();
+        let exec = root.join("exec");
+        fs::create_dir(&exec).unwrap();
+        fs::create_dir(exec.join("expose")).unwrap();
+        fs::create_dir(exec.join("in")).unwrap();
+        fs::create_dir(exec.join("runtime")).unwrap();
+        fs::create_dir(exec.join("runtime/elf")).unwrap();
+        File::create(exec.join("runtime/elf/job_id"))
+            .unwrap()
+            .write_all("12345".as_bytes())
+            .unwrap();
+        File::create(exec.join("runtime/elf/process_id"))
+            .unwrap()
+            .write_all("67890".as_bytes())
+            .unwrap();
+        File::create(root.join("id")).unwrap().write_all("0".as_bytes()).unwrap();
+        File::create(root.join("url"))
+            .unwrap()
+            .write_all("fuchsia-boot:///#meta/root.cm".as_bytes())
+            .unwrap();
+
+        let v2_component = V2Component::explore(root.to_path_buf()).await;
+
+        assert_eq!(
+            v2_component.execution.unwrap().elf_runtime.unwrap(),
+            ElfRuntime { job_id: 12345, process_id: 67890 }
+        );
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn appmgr_explores_v1_realm() {
+        let test_dir = TempDir::new_in("/tmp").unwrap();
+        let root = test_dir.path();
+
+        // Create the following structure
+        // <root>
+        // |- children
+        //       |- appmgr
+        //          |- children
+        //          |- component_type
+        //          |- exec
+        //             |- expose
+        //             |- in
+        //             |- out
+        //                |- hub
+        //                   |- c
+        //                   |- job-id
+        //                   |- name
+        //                   |- r
+        //          |- id
+        //          |- url
+        // |- component_type
+        // |- id
+        // |- url
+        fs::create_dir(root.join("children")).unwrap();
+        let appmgr = root.join("children/appmgr");
+        fs::create_dir(root.join(&appmgr)).unwrap();
+        File::create(root.join("component_type")).unwrap().write_all("static".as_bytes()).unwrap();
+        File::create(root.join("id")).unwrap().write_all("0".as_bytes()).unwrap();
+        File::create(root.join("url"))
+            .unwrap()
+            .write_all("fuchsia-boot:///#meta/root.cm".as_bytes())
+            .unwrap();
+
+        fs::create_dir(appmgr.join("children")).unwrap();
+        File::create(appmgr.join("component_type"))
+            .unwrap()
+            .write_all("static".as_bytes())
+            .unwrap();
+
+        let exec = appmgr.join("exec");
+        fs::create_dir(&exec).unwrap();
+        fs::create_dir(exec.join("expose")).unwrap();
+        fs::create_dir(exec.join("in")).unwrap();
+        fs::create_dir(exec.join("out")).unwrap();
+
+        let hub = exec.join("out/hub");
+        fs::create_dir(&hub).unwrap();
+        fs::create_dir(hub.join("c")).unwrap();
+        File::create(hub.join("job-id")).unwrap().write_all("12345".as_bytes()).unwrap();
+        File::create(hub.join("name")).unwrap().write_all("sysmgr.cmx".as_bytes()).unwrap();
+        fs::create_dir(hub.join("r")).unwrap();
+
+        File::create(appmgr.join("id")).unwrap().write_all("0".as_bytes()).unwrap();
+        File::create(appmgr.join("url"))
+            .unwrap()
+            .write_all("fuchsia-pkg://fuchsia.com/appmgr#meta/appmgr.cm".as_bytes())
+            .unwrap();
+
+        let v2_component = V2Component::explore(root.to_path_buf()).await;
+
+        let v1_hub_dir = Directory::from_namespace(appmgr.join("exec/out/hub"));
+        assert_eq!(v2_component.appmgr_root_v1_realm, None);
+
+        assert_eq!(
+            v2_component.children,
+            vec![V2Component {
+                name: "appmgr".to_string(),
+                url: "fuchsia-pkg://fuchsia.com/appmgr#meta/appmgr.cm".to_string(),
+                id: 0,
+                component_type: "static".to_string(),
+                appmgr_root_v1_realm: Some(V1Realm::create(v1_hub_dir).await),
+                execution: Some(Execution {
+                    elf_runtime: None,
+                    incoming_capabilities: vec![],
+                    outgoing_capabilities: Some(vec!["hub".to_string()]),
+                    exposed_capabilities: vec![],
+                }),
+                children: vec![],
+            }],
+        );
+
+        assert_eq!(v2_component.component_type, "static");
+        assert_eq!(v2_component.execution, None);
+        assert_eq!(v2_component.id, 0);
+        assert_eq!(v2_component.name, "<root>");
+        assert_eq!(v2_component.url, "fuchsia-boot:///#meta/root.cm");
     }
 }
