@@ -98,6 +98,10 @@ bool TestLogIntegerHistogram(CobaltTestAppLogger* logger, util::SystemClockInter
                              fuchsia::cobalt::ControllerSyncPtr* cobalt_controller,
                              size_t backfill_days, uint32_t project_id);
 
+bool TestLogString(CobaltTestAppLogger* logger, util::SystemClockInterface* clock,
+                   fuchsia::cobalt::ControllerSyncPtr* cobalt_controller,
+                   size_t backfill_days, uint32_t project_id);
+
 }  // namespace testapp
 }  // namespace cobalt
 

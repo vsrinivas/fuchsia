@@ -75,6 +75,9 @@ class CobaltTestAppLogger {
   bool LogIntegerHistogram(uint32_t metric_id, std::vector<uint32_t> indices,
                            const std::map<uint32_t, uint64_t>& histogram_map);
 
+  // Synchronously invokes LogString() using the given parameters.
+  bool LogString(uint32_t metric_id, std::vector<uint32_t> indices, const std::string& string_value);
+
   // Synchronously invokes LogCustomEvent() for an event of type
   // cobalt.CobaltMetricsTestProto, using the given parameter values.
   bool LogCustomMetricsTestProto(uint32_t metric_id, const std::string& query_val,

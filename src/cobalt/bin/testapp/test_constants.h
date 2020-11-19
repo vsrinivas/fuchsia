@@ -64,21 +64,24 @@ const std::string kStreamingTimeComponentNames[] = {"ModuleA", "ModuleB", "Modul
 const int kStreamingTimeNumWindowSizes = 2;
 
 // update_duration_new metric constants.
-const int32_t kUpdateDurationNewErrorNameIndices[] = {0, 1, 2};
-const int32_t kUpdateDurationNewStageIndices[] = {0, 1, 2};
+const uint32_t kUpdateDurationNewErrorNameIndices[] = {0, 1, 2};
+const uint32_t kUpdateDurationNewStageIndices[] = {0, 1, 2};
 const int64_t kUpdateDurationNewValues[] = {-1, 0, 1, 10, 702};
 
 // features_active_new metric constants.
-const int32_t kFeaturesActiveNewSkillIndices[] = {0, 1, 2, 3};
+const uint32_t kFeaturesActiveNewSkillIndices[] = {0, 1, 2, 3};
 const int64_t kFeaturesActiveNewCounts[] = {1, 2, 10, 42};
 
 // power_usage_new metric constants.
-const int32_t kPowerUsageNewIndices[] = {0, 1};
+const uint32_t kPowerUsageNewIndices[] = {0, 1};
 const int32_t kPowerUsageNewBuckets = 52;
 
 // bandwidth_usage_new metric constants.
-const int32_t kBandwidthUsageNewIndices[] = {0, 1};
+const uint32_t kBandwidthUsageNewIndices[] = {0, 1};
 const int64_t kBandwidthUsageNewBuckets = 22;
+
+// error_occurred_components metric constants.
+const uint32_t kErrorOccurredComponentsIndices[] = {0, 1, 2};
 
 // The number of locally aggregated observations that should be generated for
 // each locally aggregated report in the test_app2 project for a day, assuming

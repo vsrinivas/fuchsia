@@ -112,6 +112,9 @@ bool CobaltTestApp::DoLocalAggregationTests(const size_t backfill_days) {
   CONNECT_AND_TRY_TEST_TWICE(
       TestLogIntegerHistogram(&logger_, clock_.get(), &cobalt_controller_, backfill_days, project_id),
       backfill_days);
+  CONNECT_AND_TRY_TEST_TWICE(
+      TestLogString(&logger_, clock_.get(), &cobalt_controller_, backfill_days, project_id),
+      backfill_days);
 
   return true;
 }

@@ -626,5 +626,52 @@ bool TestLogIntegerHistogram(CobaltTestAppLogger* logger, SystemClockInterface* 
   return SendAndCheckSuccess("TestLogIntegerHistogram", logger);
 }
 
+// error_occurred_components using STRING metric.
+//
+// For each of the three event_codes, log each of the five application components.
+bool TestLogString(CobaltTestAppLogger* logger, SystemClockInterface* clock,
+                   fuchsia::cobalt::ControllerSyncPtr* cobalt_controller,
+                   const size_t backfill_days, uint32_t project_id) {
+  FX_LOGS(INFO) << "========================";
+  FX_LOGS(INFO) << "TestLogString";
+
+  // All string data is aggregated into a single observation.
+  std::map<std::pair<uint32_t, uint32_t>, uint64_t> expected_num_obs;
+  std::map<std::pair<uint32_t, uint32_t>, uint64_t> expect_no_obs;
+  expected_num_obs[{cobalt_registry::kErrorOccurredComponentsMetricId,
+                    cobalt_registry::kErrorOccurredComponentsErrorCountsReportId}] = 1;
+  expect_no_obs[{cobalt_registry::kErrorOccurredComponentsMetricId,
+                 cobalt_registry::kErrorOccurredComponentsErrorCountsReportId}] = 0;
+
+  uint32_t day_index = CurrentDayIndex(clock);
+  for (uint32_t skillIndex : kErrorOccurredComponentsIndices) {
+    for (std::string component : kApplicationComponentNames) {
+      if (!logger->LogString(cobalt_registry::kErrorOccurredComponentsMetricId, {skillIndex}, component)) {
+        FX_LOGS(INFO) << "LogString(" << cobalt_registry::kErrorOccurredComponentsMetricId << ", {"
+                      << skillIndex << "}, " << component << ")";
+        FX_LOGS(INFO) << "TestLogString : FAIL";
+        return false;
+      }
+    }
+  }
+
+  if (CurrentDayIndex(clock) != day_index) {
+    // TODO(fxb/52750) The date has changed mid-test. We are currently unable to
+    // deal with this so we fail this test and our caller may try again.
+    FX_LOGS(INFO) << "Quitting test because the date has changed mid-test.";
+    return false;
+  }
+
+  if (!GenerateObsAndCheckCount(day_index, cobalt_controller, project_id, expected_num_obs)) {
+    FX_LOGS(INFO) << "TestLogString : FAIL";
+    return false;
+  }
+  if (!GenerateObsAndCheckCount(day_index, cobalt_controller, project_id, expect_no_obs)) {
+    FX_LOGS(INFO) << "TestLogString : FAIL";
+    return false;
+  }
+  return SendAndCheckSuccess("TestLogString", logger);
+}
+
 }  // namespace testapp
 }  // namespace cobalt

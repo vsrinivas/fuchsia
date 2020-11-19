@@ -172,6 +172,18 @@ bool CobaltTestAppLogger::LogIntegerHistogram(uint32_t metric_id, std::vector<ui
   return true;
 }
 
+bool CobaltTestAppLogger::LogString(uint32_t metric_id, std::vector<uint32_t> indices,
+                                    const std::string& string_value) {
+  fuchsia::metrics::Status status = fuchsia::metrics::Status::INTERNAL_ERROR;
+  metric_event_logger_->LogString(metric_id, string_value, indices, &status);
+  FX_VLOGS(1) << "LogString(" << string_value << ") => " << StatusToString(status);
+  if (status != fuchsia::metrics::Status::OK) {
+    FX_LOGS(ERROR) << "LogString() => " << StatusToString(status);
+    return false;
+  }
+  return true;
+}
+
 bool CobaltTestAppLogger::LogCustomMetricsTestProto(uint32_t metric_id,
                                                     const std::string& query_val,
                                                     const int64_t wait_time_val,
