@@ -838,6 +838,7 @@ zx::status<aml_sdmmc_desc_t*> AmlSdmmc::PopulateDescriptors(const sdmmc_req_new_
 
     auto cmd = AmlSdmmcCmdCfg::Get().FromValue(desc->cmd_info);
     if (desc != descs()) {
+      cmd = AmlSdmmcCmdCfg::Get().FromValue(0);
       cmd.set_no_resp(1).set_no_cmd(1);
       desc->cmd_arg = 0;
       desc->resp_addr = 0;

@@ -10,6 +10,7 @@
 
 #include <vector>
 
+#include <hw/sdio.h>
 #include <hw/sdmmc.h>
 #include <mmio-ptr/fake.h>
 #include <soc/aml-s912/s912-hw.h>
@@ -74,7 +75,7 @@ class TestAmlSdmmc : public AmlSdmmc {
 
   void SetRequestInterruptStatus(uint32_t status) { interrupt_status_ = status; }
 
-  const aml_sdmmc_desc_t* descs() { return AmlSdmmc::descs(); }
+  aml_sdmmc_desc_t* descs() { return AmlSdmmc::descs(); }
 
  private:
   std::vector<uint8_t> request_results_;
@@ -1626,6 +1627,74 @@ TEST_F(AmlSdmmcTest, RequestWithOwnedAndUnownedVmos) {
   EXPECT_EQ(descs[9].cmd_arg, 0);
   EXPECT_EQ(descs[9].data_addr, (9 << 24) | (PAGE_SIZE + 64));
   EXPECT_EQ(descs[9].resp_addr, 0);
+}
+
+TEST_F(AmlSdmmcTest, ResetCmdInfoBits) {
+  ASSERT_OK(dut_->Init());
+
+  bti_paddrs_[1] = 0x1897'7000;
+  bti_paddrs_[2] = 0x1997'8000;
+  bti_paddrs_[3] = 0x1997'e000;
+
+  // Make sure the appropriate cmd_info bits get cleared.
+  dut_->descs()[0].cmd_info = 0xffff'ffff;
+  dut_->descs()[1].cmd_info = 0xffff'ffff;
+  dut_->descs()[2].cmd_info = 0xffff'ffff;
+
+  zx::vmo vmo;
+  ASSERT_OK(zx::vmo::create(PAGE_SIZE * 3, 0, &vmo));
+  EXPECT_OK(dut_->SdmmcRegisterVmo(1, 2, std::move(vmo), 0, PAGE_SIZE * 3));
+
+  sdmmc_buffer_region_t buffer = {
+      .buffer = {.vmo_id = 1},
+      .type = SDMMC_BUFFER_TYPE_VMO_ID,
+      .offset = 0,
+      .size = 10752,
+  };
+
+  sdmmc_req_new_t request = {
+      .cmd_idx = SDIO_IO_RW_DIRECT_EXTENDED,
+      .cmd_flags = SDIO_IO_RW_DIRECT_EXTENDED_FLAGS | SDMMC_CMD_READ,
+      .arg = 0x29000015,
+      .blocksize = 512,
+      .probe_tuning_cmd = false,
+      .client_id = 2,
+      .buffers_list = &buffer,
+      .buffers_count = 1,
+  };
+  uint32_t response[4] = {};
+  AmlSdmmcCfg::Get().ReadFrom(&mmio_).set_blk_len(0).WriteTo(&mmio_);
+  EXPECT_OK(dut_->SdmmcRequestNew(&request, response));
+  EXPECT_EQ(AmlSdmmcCfg::Get().ReadFrom(&mmio_).blk_len(), 9);
+
+  const aml_sdmmc_desc_t* descs = dut_->descs();
+  auto expected_desc_cfg = AmlSdmmcCmdCfg::Get()
+                               .FromValue(0)
+                               .set_len(8)
+                               .set_block_mode(1)
+                               .set_timeout(AmlSdmmcCmdCfg::kDefaultCmdTimeout)
+                               .set_data_io(1)
+                               .set_data_wr(0)
+                               .set_resp_num(1)
+                               .set_cmd_idx(SDIO_IO_RW_DIRECT_EXTENDED)
+                               .set_owner(1);
+
+  EXPECT_EQ(descs[0].cmd_info, expected_desc_cfg.reg_value());
+  EXPECT_EQ(descs[0].cmd_arg, 0x29000015);
+  EXPECT_EQ(descs[0].data_addr, 0x1897'7000);
+  EXPECT_EQ(descs[0].resp_addr, 0);
+
+  expected_desc_cfg.set_no_resp(1).set_no_cmd(1).set_resp_num(0).set_cmd_idx(0);
+  EXPECT_EQ(descs[1].cmd_info, expected_desc_cfg.reg_value());
+  EXPECT_EQ(descs[1].cmd_arg, 0);
+  EXPECT_EQ(descs[1].data_addr, 0x1997'8000);
+  EXPECT_EQ(descs[1].resp_addr, 0);
+
+  expected_desc_cfg.set_len(5).set_end_of_chain(1);
+  EXPECT_EQ(descs[2].cmd_info, expected_desc_cfg.reg_value());
+  EXPECT_EQ(descs[2].cmd_arg, 0);
+  EXPECT_EQ(descs[2].data_addr, 0x1997'e000);
+  EXPECT_EQ(descs[2].resp_addr, 0);
 }
 
 }  // namespace sdmmc
