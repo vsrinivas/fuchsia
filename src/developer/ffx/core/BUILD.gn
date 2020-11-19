@@ -13,6 +13,7 @@ if (is_host) {
 
     deps = [
       "macro:lib",
+      "version:lib",
       "//sdk/fidl/fuchsia.developer.bridge:fuchsia.developer.bridge-rustc",
       "//sdk/fidl/fuchsia.developer.remotecontrol:fuchsia.developer.remotecontrol-rustc",
       "//src/lib/fuchsia-async",
@@ -38,5 +39,6 @@ group("tests") {
   deps = [
     ":lib_test($host_toolchain)",
     "macro:tests($host_toolchain)",
+    "version:tests($host_toolchain)",
   ]
 }

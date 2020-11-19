@@ -16,7 +16,7 @@ use {
     async_std::task,
     async_trait::async_trait,
     chrono::Utc,
-    ffx_core::TryStreamUtilExt,
+    ffx_core::{build_info, TryStreamUtilExt},
     fidl::endpoints::ServiceMarker,
     fidl_fuchsia_developer_bridge::{
         DaemonError, DaemonRequest, DaemonRequestStream, FastbootError, TargetAddrInfo,
@@ -386,6 +386,9 @@ impl Daemon {
                         Err(_) => Err(DaemonError::Timeout),
                     })
                     .context("sending client response");
+            }
+            DaemonRequest::GetVersionInfo { responder } => {
+                return responder.send(build_info()).context("sending GetVersionInfo response");
             }
         }
         Ok(())

@@ -2,11 +2,34 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/rust/rustc_library.gni")
+import("//build/rust/rustc_macro.gni")
 import("//src/developer/ffx/build/ffx_plugin.gni")
 
 ffx_plugin("ffx_version") {
   version = "0.1.0"
   edition = "2018"
+  with_unit_tests = true
 
-  sources = [ "src/args.rs" ]
+  deps = [
+    "//sdk/fidl/fuchsia.developer.bridge:fuchsia.developer.bridge-rustc",
+    "//sdk/fidl/fuchsia.developer.remotecontrol:fuchsia.developer.remotecontrol-rustc",
+    "//src/connectivity/overnet/lib/hoist",
+    "//src/developer/ffx/config:lib",
+    "//src/developer/ffx/core:lib",
+    "//src/diagnostics/lib/selectors",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-async",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:argh",
+    "//third_party/rust_crates:async-std",
+    "//third_party/rust_crates:chrono",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:log",
+  ]
+
+  sources = [
+    "src/args.rs",
+    "src/lib.rs",
+  ]
 }

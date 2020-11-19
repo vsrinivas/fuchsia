@@ -15,6 +15,8 @@ use {
     std::task::{Context, Poll},
 };
 
+pub use ffx_build_version::build_info;
+
 // Error type for wrapping errors known to an `ffx` command and whose occurrence should
 // not a priori be considered a bug in ffx.
 // TODO(fxbug.dev/57592): consider extending this to allow custom types from plugins.

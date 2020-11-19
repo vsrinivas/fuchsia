@@ -10,6 +10,7 @@ fidl("fuchsia.developer.bridge") {
     "daemon.fidl",
     "fastboot.fidl",
     "target.fidl",
+    "version.fidl",
   ]
   public_deps = [
     "//sdk/fidl/fuchsia.developer.remotecontrol",

@@ -69,4 +69,7 @@ protocol Daemon {
     ///   running the function to completion.
     GetSshAddress(string:fuchsia.device.DEVICE_NAME_MAX? target, zx.duration timeout)
         -> (TargetAddrInfo ip) error DaemonError;
+
+    // Retrieves version information about this daemon instance.
+    GetVersionInfo() -> (VersionInfo info);
 };

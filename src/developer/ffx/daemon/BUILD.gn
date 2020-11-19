@@ -23,6 +23,7 @@ if (is_host) {
       "//src/developer/ffx:ffx_lib_args",
       "//src/developer/ffx/config:lib",
       "//src/developer/ffx/core:lib",
+      "//src/developer/ffx/core/version:lib",
       "//src/lib/fidl/rust/fidl",
       "//src/lib/fuchsia-async",
       "//src/lib/mdns/rust:mdns",

@@ -7,4 +7,11 @@ use {argh::FromArgs, ffx_core::ffx_command};
 #[ffx_command()]
 #[derive(FromArgs, Debug, PartialEq)]
 #[argh(subcommand, name = "version", description = "Print out ffx tool and daemon versions")]
-pub struct EmulatorCommand {}
+pub struct VersionCommand {
+    #[argh(
+        switch,
+        short = 'v',
+        description = "if true, includes details about both ffx and the daemon"
+    )]
+    pub verbose: bool,
+}

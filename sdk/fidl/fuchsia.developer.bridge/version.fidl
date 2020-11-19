@@ -1,0 +1,17 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.developer.bridge;
+
+const uint16 MAX_GIT_COMMIT_LENGTH = 40;
+const uint16 MAX_BUILD_VERSION_LENGTH = 100;
+
+table VersionInfo {
+    // Git commit hash of HEAD at build time.
+    1: string:MAX_GIT_COMMIT_LENGTH commit_hash;
+    // UTC timestamp of the HEAD commit in seconds.
+    2: uint64 commit_timestamp;
+    // The build version, pulled from //build/info
+    3: string:MAX_BUILD_VERSION_LENGTH build_version;
+};
