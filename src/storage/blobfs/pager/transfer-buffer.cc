@@ -93,8 +93,7 @@ zx::status<> StorageBackedTransferBuffer::Populate(uint64_t offset, uint64_t len
     metrics_->paged_read_metrics().IncrementDiskRead(CompressionAlgorithm::UNCOMPRESSED,
                                                      block_count * kBlobfsBlockSize, ticker.End());
   } else {
-    // TODO(xbhatnag): Get the correct compression algorithm. We're making an assumption here.
-    metrics_->paged_read_metrics().IncrementDiskRead(CompressionAlgorithm::CHUNKED,
+    metrics_->paged_read_metrics().IncrementDiskRead(info.decompressor->algorithm(),
                                                      block_count * kBlobfsBlockSize, ticker.End());
   }
   return zx::ok();
