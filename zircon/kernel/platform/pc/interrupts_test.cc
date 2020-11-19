@@ -163,7 +163,8 @@ bool TestUnregisterInterruptHandlerNotRegistered() {
   END_TEST;
 }
 
-bool TestRegisterInterruptHandlerTooMany() {
+// TODO(fxbug.dev/64871): Remove the [[maybe_unused]] annotation.
+[[maybe_unused]] bool TestRegisterInterruptHandlerTooMany() {
   BEGIN_TEST;
 
   FakeIoApic::Reset();
@@ -305,7 +306,8 @@ UNITTEST_START_TESTCASE(pc_interrupt_tests)
 UNITTEST("RegisterInterruptHandler", TestRegisterInterruptHandler)
 UNITTEST("RegisterInterruptHandlerTwice", TestRegisterInterruptHandlerTwice)
 UNITTEST("UnregisterInterruptHandlerNotRegistered", TestUnregisterInterruptHandlerNotRegistered)
-UNITTEST("RegisterInterruptHandlerTooMany", TestRegisterInterruptHandlerTooMany)
+// TODO(fxbug.dev/64871): RegisterInterruptHandlerTooMany is disabled because it triggers a bug.
+// UNITTEST("RegisterInterruptHandlerTooMany", TestRegisterInterruptHandlerTooMany)
 UNITTEST("HandlerAllocationAlignment", TestHandlerAllocationAlignment)
 UNITTEST("PvEoi", TestPvEoi)
 UNITTEST_END_TESTCASE(pc_interrupt_tests, "pc_interrupt", "Tests for external interrupts")
