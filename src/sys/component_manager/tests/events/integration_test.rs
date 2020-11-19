@@ -17,6 +17,7 @@ use {
 
 #[fasync::run_singlethreaded(test)]
 async fn async_event_source_test() {
+    fuchsia_syslog::init().unwrap();
     let test = OpaqueTest::default(
         "fuchsia-pkg://fuchsia.com/events_integration_test#meta/async_reporter.cm",
     )
@@ -44,6 +45,7 @@ async fn async_event_source_test() {
 
 #[fasync::run_singlethreaded(test)]
 async fn echo_interposer_test() {
+    fuchsia_syslog::init().unwrap();
     let test = OpaqueTest::default(
         "fuchsia-pkg://fuchsia.com/events_integration_test#meta/interpose_echo_realm.cm",
     )
@@ -69,6 +71,7 @@ async fn echo_interposer_test() {
 
 #[fasync::run_singlethreaded(test)]
 async fn scoped_events_test() {
+    fuchsia_syslog::init().unwrap();
     let test =
         OpaqueTest::default("fuchsia-pkg://fuchsia.com/events_integration_test#meta/echo_realm.cm")
             .await
@@ -114,6 +117,7 @@ async fn scoped_events_test() {
 
 #[fasync::run_singlethreaded(test)]
 async fn realm_offered_event_source_test() {
+    fuchsia_syslog::init().unwrap();
     let test = OpaqueTest::default(
         "fuchsia-pkg://fuchsia.com/events_integration_test#meta/realm_offered_root.cm",
     )
@@ -141,6 +145,7 @@ async fn realm_offered_event_source_test() {
 
 #[fasync::run_singlethreaded(test)]
 async fn nested_event_source_test() {
+    fuchsia_syslog::init().unwrap();
     let test = OpaqueTest::default(
         "fuchsia-pkg://fuchsia.com/events_integration_test#meta/nested_reporter.cm",
     )
@@ -167,6 +172,7 @@ async fn nested_event_source_test() {
 
 #[fasync::run_singlethreaded(test)]
 async fn chained_interposer_test() {
+    fuchsia_syslog::init().unwrap();
     let test = OpaqueTest::default(
         "fuchsia-pkg://fuchsia.com/events_integration_test#meta/chained_interpose_echo_realm.cm",
     )
@@ -202,6 +208,7 @@ async fn expect_and_get_timestamp<T: Event>(
 #[ignore]
 #[fasync::run_singlethreaded(test)]
 async fn event_dispatch_order_test() {
+    fuchsia_syslog::init().unwrap();
     let test = OpaqueTest::default(
         "fuchsia-pkg://fuchsia.com/events_integration_test#meta/event_dispatch_order_root.cm",
     )
@@ -231,6 +238,7 @@ async fn event_dispatch_order_test() {
 
 #[fasync::run_singlethreaded(test)]
 async fn event_capability_ready() {
+    fuchsia_syslog::init().unwrap();
     const NUM_CAPABILITIES: usize = 4;
 
     let test = OpaqueTest::default(
@@ -266,6 +274,7 @@ async fn event_capability_ready() {
 
 #[fasync::run_singlethreaded(test)]
 async fn resolved_error_test() {
+    fuchsia_syslog::init().unwrap();
     let test = OpaqueTest::default(
         "fuchsia-pkg://fuchsia.com/events_integration_test#meta/resolved_error_reporter.cm",
     )
@@ -285,6 +294,7 @@ async fn resolved_error_test() {
 
 #[fasync::run_singlethreaded(test)]
 async fn synthesis_test() {
+    fuchsia_syslog::init().unwrap();
     let test = OpaqueTest::default(
         "fuchsia-pkg://fuchsia.com/events_integration_test#meta/synthesis_reporter.cm",
     )
@@ -320,6 +330,7 @@ async fn synthesis_test() {
 
 #[fasync::run_singlethreaded(test)]
 async fn static_event_stream_capability_requested_test() {
+    fuchsia_syslog::init().unwrap();
     let test = OpaqueTest::default(
         "fuchsia-pkg://fuchsia.com/events_integration_test#meta/trigger_realm.cm",
     )
@@ -343,6 +354,7 @@ async fn static_event_stream_capability_requested_test() {
 
 #[fasync::run_singlethreaded(test)]
 async fn dir_capability_routed_test() {
+    fuchsia_syslog::init().unwrap();
     let test = OpaqueTest::default(
         "fuchsia-pkg://fuchsia.com/events_integration_test#meta/file_contents_reporter.cm",
     )
