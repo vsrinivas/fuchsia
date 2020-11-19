@@ -29,6 +29,30 @@ class AudioBuffer {
  public:
   using SampleT = typename SampleFormatTraits<SampleFormat>::SampleT;
 
+  // Create an interleaved AudioBuffer, from a vector of 1-channel AudioBufferSlices
+  static AudioBuffer Interleave(const std::vector<AudioBufferSlice<SampleFormat>>& channel_slices) {
+    FX_CHECK(channel_slices.size());
+    auto format = Format::Create<SampleFormat>(channel_slices.size(),
+                                               channel_slices[0].format().frames_per_second())
+                      .take_value();
+    auto buffer = AudioBuffer<SampleFormat>(format, channel_slices[0].NumFrames());
+    auto buffer_fps = buffer.format().frames_per_second();
+    auto buffer_frames = buffer.NumFrames();
+
+    // Write out the interleaved buffer, one channel at a time
+    for (auto chan = 0u; chan < channel_slices.size(); ++chan) {
+      auto slice = channel_slices[chan];
+      FX_CHECK(slice.format().channels() == 1);
+      FX_CHECK(slice.format().frames_per_second() == buffer_fps);
+      FX_CHECK(slice.NumFrames() == buffer_frames);
+
+      for (auto frame = 0u; frame < buffer_frames; ++frame) {
+        buffer.samples()[buffer.SampleIndex(frame, chan)] = slice.SampleAt(frame, 0);
+      }
+    }
+    return buffer;
+  }
+
   AudioBuffer(const Format& f, size_t num_frames)
       : format_(Format::Create<SampleFormat>(f.channels(), f.frames_per_second()).take_value()),
         samples_(num_frames * f.channels()) {
@@ -58,21 +82,25 @@ class AudioBuffer {
 
   // For debugging, display a given range of frames in aligned columns. Column width is a power-of-2
   // based on sample width and number of channels. For row 0, display space until the first frame.
-  void Display(size_t start_frame, size_t end_frame) const {
+  void Display(size_t start_frame, size_t end_frame, std::string tag = "") const {
     start_frame = std::min(start_frame, NumFrames());
     end_frame = std::min(end_frame, NumFrames());
-    printf("\n\n Frames %zu to %zu: ", start_frame, end_frame);
 
-    // Frames that fit in a 200-char row (9 for row label, 1 between samps, +1 between frames)...
+    if (tag.size()) {
+      printf("%s\n", tag.c_str());
+    }
+    printf("  Frames %zu to %zu:", start_frame, end_frame);
+
+    // Frames that fit in a 200-char row (11 for row label, 1 between samps, +1 between frames)...
     size_t frames_per_row =
-        (200 - 9) /
+        (200 - 11) /
         ((format_.channels() * (SampleFormatTraits<SampleFormat>::kCharsPerSample + 1)) + 1);
     // ...rounded _down_ to the closest power-of-2, for quick visual scanning.
     frames_per_row = fbl::roundup_pow2(frames_per_row + 1) / 2;
 
     for (auto frame = fbl::round_down(start_frame, frames_per_row); frame < end_frame; ++frame) {
       if (frame % frames_per_row == 0) {
-        printf("\n [%6lu] ", frame);
+        printf("\n  [%6lu] ", frame);
       } else {
         printf(" ");
       }

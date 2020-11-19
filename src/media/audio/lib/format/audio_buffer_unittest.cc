@@ -109,4 +109,48 @@ TEST(AudioBufferTest, AppendSlice) {
   EXPECT_EQ(slice2.NumBytes(), 8u);
 }
 
+// Multiple mono AudioBufferSlice can be interleaved to an AudioBuffer
+TEST(AudioBufferTest, Interleave) {
+  constexpr uint32_t kFrameRate = 32000;
+  const Format kFormat1 = Format::Create(fuchsia::media::AudioStreamType{
+                                             .sample_format = kSampleFormat,
+                                             .channels = 1,
+                                             .frames_per_second = kFrameRate,
+                                         })
+                              .take_value();
+
+  // Mono 20 frames, with values 0..19
+  AudioBuffer<kSampleFormat> buffer(kFormat1, 20);
+  for (auto frame = 0u; frame < 20; ++frame) {
+    buffer.samples()[frame] = frame;
+  }
+
+  // Slice #0 has vals 0..3; #1 has 4..7; #2 8..11; #3 12..15; #4 16..19.
+  auto slices = std::vector<AudioBufferSlice<kSampleFormat>>();
+  slices.push_back(AudioBufferSlice(&buffer, 0, 4));
+  slices.push_back(AudioBufferSlice(&buffer, 4, 8));
+  slices.push_back(AudioBufferSlice(&buffer, 8, 12));
+  slices.push_back(AudioBufferSlice(&buffer, 12, 16));
+  slices.push_back(AudioBufferSlice(&buffer, 16, 20));
+
+  // Interleave these five slices into a 5-channel file.
+  auto interleaved = AudioBuffer<kSampleFormat>::Interleave(slices);
+  EXPECT_EQ(interleaved.format().channels(), 5u);
+
+  // All characteristics except channels must match the original slices.
+  EXPECT_EQ(interleaved.NumFrames(), 4u);
+  EXPECT_EQ(interleaved.format().frames_per_second(), kFrameRate);
+  EXPECT_EQ(interleaved.format().sample_format(), kSampleFormat);
+
+  // In resulting buffer, first frame has values [0,4,8,12,16], second frame [1,5,9,13,17], etc.
+  for (auto frame = 0u; frame < interleaved.NumFrames(); ++frame) {
+    // Within a frame, values should increase by 4 with each successive channel.
+    EXPECT_EQ(interleaved.SampleAt(frame, 0), static_cast<int16_t>(frame));
+    EXPECT_EQ(interleaved.SampleAt(frame, 1), interleaved.SampleAt(frame, 0) + 4);
+    EXPECT_EQ(interleaved.SampleAt(frame, 2), interleaved.SampleAt(frame, 1) + 4);
+    EXPECT_EQ(interleaved.SampleAt(frame, 3), interleaved.SampleAt(frame, 2) + 4);
+    EXPECT_EQ(interleaved.SampleAt(frame, 4), interleaved.SampleAt(frame, 3) + 4);
+  }
+}
+
 }  // namespace media::audio
