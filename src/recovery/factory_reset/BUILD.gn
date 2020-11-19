@@ -143,9 +143,6 @@ test("factory_reset_unittests") {
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/ramdevice-client",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 isolated_devmgr_unittest_package("factory-reset-tests") {
