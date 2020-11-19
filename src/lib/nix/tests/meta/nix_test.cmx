@@ -10,6 +10,9 @@
         "binary": "test/nix-test"
     },
     "sandbox": {
+        "features": [
+            "isolated-temp"
+        ],
         "services": [
             "fuchsia.boot.WriteOnlyLog"
         ]

@@ -16,11 +16,13 @@ static_library("nix") {
     "include/sys/epoll.h",
     "include/sys/inotify.h",
     "include/sys/random.h",
+    "include/sys/sendfile.h",
   ]
   sources = [
     "epoll.cc",
     "inotify.cc",
     "random.cc",
+    "sendfile.cc",
   ]
   deps = [
     "//sdk/fidl/fuchsia.posix.socket",

@@ -25,6 +25,7 @@ test("nix") {
     "epoll_unittests.cc",
     "inotify_unittests.cc",
     "random_unittests.cc",
+    "sendfile_unittests.cc",
   ]
 
   deps = [
@@ -43,6 +44,7 @@ test("nix_hosttests") {
       # prebuilt sysroot has been upgraded to a version that includes getrandom(2).
       "epoll_unittests.cc",
       "inotify_unittests.cc",
+      "sendfile_unittests.cc",
     ]
   }
 
