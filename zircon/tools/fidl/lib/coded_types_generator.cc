@@ -266,7 +266,7 @@ void CodedTypesGenerator::CompileFields(const flat::Decl* decl, const WireFormat
                 CompileType(parameter.type, coded::CodingContext::kOutsideEnvelope, wire_format);
             if (!coded_parameter_type->is_noop) {
               request_elements.push_back(coded::StructField(
-                  type_shape.is_resource, parameter.offset, coded_parameter_type));
+                  type_shape.is_resource ? types::Resourceness::kResource : types::Resourceness::kValue, parameter.offset, coded_parameter_type));
               is_noop = false;
             }
             if (parameter.padding != 0) {
@@ -310,7 +310,7 @@ void CodedTypesGenerator::CompileFields(const flat::Decl* decl, const WireFormat
             CompileType(member.type, coded::CodingContext::kOutsideEnvelope, wire_format);
         if (!coded_member_type->is_noop) {
           struct_elements.push_back(
-              coded::StructField(type_shape.is_resource, member.offset, coded_member_type));
+              coded::StructField(type_shape.is_resource ? types::Resourceness::kResource : types::Resourceness::kValue, member.offset, coded_member_type));
           is_noop = false;
         }
         if (member.padding != 0) {
@@ -469,7 +469,7 @@ void CodedTypesGenerator::CompileDecl(const flat::Decl* decl, const WireFormat w
           std::make_unique<coded::TableType>(
               std::move(table_name), std::vector<coded::TableField>(),
               table_decl->typeshape(wire_format).InlineSize(), NameFlatName(table_decl->name),
-              table_decl->resourceness == types::Resourceness::kResource));
+              table_decl->resourceness));
       break;
     }
     case flat::Decl::Kind::kStruct: {
@@ -498,14 +498,14 @@ void CodedTypesGenerator::CompileDecl(const flat::Decl* decl, const WireFormat w
           auto nullable_xunion_type = std::make_unique<coded::XUnionType>(
               std::move(nullable_xunion_name), std::vector<coded::XUnionField>(),
               NameFlatName(union_decl->name), types::Nullability::kNullable, union_decl->strictness,
-              union_decl->resourceness == types::Resourceness::kResource);
+              union_decl->resourceness);
           coded::XUnionType* nullable_xunion_ptr = nullable_xunion_type.get();
           coded_types_.push_back(std::move(nullable_xunion_type));
 
           auto xunion_type = std::make_unique<coded::XUnionType>(
               std::move(union_name), std::vector<coded::XUnionField>(),
               NameFlatName(union_decl->name), types::Nullability::kNonnullable,
-              union_decl->strictness, union_decl->resourceness == types::Resourceness::kResource);
+              union_decl->strictness, union_decl->resourceness);
           xunion_type->maybe_reference_type = nullable_xunion_ptr;
           named_coded_types_.emplace(decl->name, std::move(xunion_type));
           break;

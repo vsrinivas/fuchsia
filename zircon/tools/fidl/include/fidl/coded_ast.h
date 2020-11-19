@@ -47,10 +47,10 @@ struct Type;
 struct StructType;
 
 struct StructField {
-  StructField(bool is_resource, uint32_t offset, const Type* type)
-      : is_resource(is_resource), offset(offset), type(type) {}
+  StructField(types::Resourceness resourceness, uint32_t offset, const Type* type)
+      : resourceness(resourceness), offset(offset), type(type) {}
 
-  bool is_resource;
+  types::Resourceness resourceness;
   const uint32_t offset;
   const Type* type;
 };
@@ -241,36 +241,35 @@ struct StructPointerType : public Type {
   const StructType* element_type;
 };
 
-// TODO(fcz): make resourceness consistent with strictness
 struct TableType : public Type {
   TableType(std::string name, std::vector<TableField> fields, uint32_t size, std::string qname,
-            bool is_resource)
+            types::Resourceness resourceness)
       : Type(Kind::kTable, std::move(name), size, true, false),
         fields(std::move(fields)),
         qname(std::move(qname)),
-        is_resource(is_resource) {}
+        resourceness(resourceness) {}
 
   std::vector<TableField> fields;
   std::string qname;
-  bool is_resource;
+  types::Resourceness resourceness;
 };
 
 struct XUnionType : public Type {
   XUnionType(std::string name, std::vector<XUnionField> fields, std::string qname,
-             types::Nullability nullability, types::Strictness strictness, bool is_resource)
+             types::Nullability nullability, types::Strictness strictness, types::Resourceness resourceness)
       : Type(Kind::kXUnion, std::move(name), 24u, true, false),
         fields(std::move(fields)),
         qname(std::move(qname)),
         nullability(nullability),
         strictness(strictness),
-        is_resource(is_resource) {}
+        resourceness(resourceness) {}
 
   std::vector<XUnionField> fields;
   const std::string qname;
   types::Nullability nullability;
   types::Strictness strictness;
   XUnionType* maybe_reference_type = nullptr;
-  bool is_resource;
+  types::Resourceness resourceness;
 };
 
 struct MessageType : public Type {

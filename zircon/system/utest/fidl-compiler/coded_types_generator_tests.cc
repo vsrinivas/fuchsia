@@ -1003,7 +1003,7 @@ union NonResourceUnion {
     ASSERT_EQ(fidl::coded::Type::Kind::kXUnion, type->kind);
 
     auto coded_union = static_cast<const fidl::coded::XUnionType*>(type);
-    EXPECT_EQ(true, coded_union->is_resource);
+    EXPECT_EQ(fidl::types::Resourceness::kResource, coded_union->resourceness);
   }
 
   {
@@ -1013,7 +1013,7 @@ union NonResourceUnion {
     ASSERT_EQ(fidl::coded::Type::Kind::kXUnion, type->kind);
 
     auto coded_union = static_cast<const fidl::coded::XUnionType*>(type);
-    EXPECT_EQ(false, coded_union->is_resource);
+    EXPECT_EQ(fidl::types::Resourceness::kValue, coded_union->resourceness);
   }
 }
 
@@ -1041,7 +1041,7 @@ table NonResourceTable {
     ASSERT_EQ(fidl::coded::Type::Kind::kTable, type->kind);
 
     auto coded_table = static_cast<const fidl::coded::TableType*>(type);
-    EXPECT_EQ(true, coded_table->is_resource);
+    EXPECT_EQ(fidl::types::Resourceness::kResource, coded_table->resourceness);
   }
 
   {
@@ -1051,7 +1051,7 @@ table NonResourceTable {
     ASSERT_EQ(fidl::coded::Type::Kind::kTable, type->kind);
 
     auto coded_table = static_cast<const fidl::coded::TableType*>(type);
-    EXPECT_EQ(false, coded_table->is_resource);
+    EXPECT_EQ(fidl::types::Resourceness::kValue, coded_table->resourceness);
   }
 }
 

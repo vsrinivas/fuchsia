@@ -134,6 +134,16 @@ void Emit(std::ostream* file, types::Strictness strictness) {
   }
 }
 
+void Emit(std::ostream* file, types::Resourceness resourceness) {
+  switch (resourceness) {
+    case types::Resourceness::kResource:
+      Emit(file, "kFidlIsResource_Resource");
+      break;
+    case types::Resourceness::kValue:
+      Emit(file, "kFidlIsResource_NotResource");
+      break;
+  }
+}
 }  // namespace
 
 template <typename Collection>
@@ -243,11 +253,7 @@ void TablesGenerator::Generate(const coded::TableType& table_type) {
   Emit(&tables_file_, ", .field_count=");
   Emit(&tables_file_, static_cast<uint32_t>(table_type.fields.size()));
   Emit(&tables_file_, ", .is_resource=");
-  if (table_type.is_resource) {
-    Emit(&tables_file_, "kFidlIsResource_Resource");
-  } else {
-    Emit(&tables_file_, "kFidlIsResource_NotResource");
-  }
+  Emit(&tables_file_, table_type.resourceness);
   Emit(&tables_file_, ", .name=\"");
   Emit(&tables_file_, table_type.qname);
   Emit(&tables_file_, "\"};\n\n");
@@ -277,11 +283,7 @@ void TablesGenerator::Generate(const coded::XUnionType& xunion_type) {
   Emit(&tables_file_, "\", .strictness=");
   Emit(&tables_file_, xunion_type.strictness);
   Emit(&tables_file_, ", .is_resource=");
-  if (xunion_type.is_resource) {
-    Emit(&tables_file_, "kFidlIsResource_Resource");
-  } else {
-    Emit(&tables_file_, "kFidlIsResource_NotResource");
-  }
+  Emit(&tables_file_, xunion_type.resourceness);
   Emit(&tables_file_, "};\n");
 }
 
@@ -413,11 +415,7 @@ void TablesGenerator::Generate(const coded::StructField& field) {
   Emit(&tables_file_, "kFidlStructElementType_Field");
   Emit(&tables_file_, ", ");
   Emit(&tables_file_, ".is_resource=");
-  if (field.is_resource) {
-    Emit(&tables_file_, "kFidlIsResource_Resource");
-  } else {
-    Emit(&tables_file_, "kFidlIsResource_NotResource");
-  }
+  Emit(&tables_file_, field.resourceness);
   Emit(&tables_file_, "},");
   Emit(&tables_file_, ".offset=");
   Emit(&tables_file_, field.offset);
