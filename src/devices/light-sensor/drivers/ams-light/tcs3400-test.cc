@@ -79,6 +79,8 @@ TEST(Tcs3400Test, InputReport) {
   mock_i2c.ExpectWriteStop({0x81, 0x01});  // integration time (ATIME).
   mock_i2c.ExpectWriteStop({0x8f, 0x03});  // control (for AGAIN).
 
+  mock_i2c.ExpectWrite({0x93}).ExpectReadStop({0x00});  // Saturated bit, not set
+
   // Raw clear.
   mock_i2c.ExpectWrite({0x94}).ExpectReadStop({0x12});
   mock_i2c.ExpectWrite({0x95}).ExpectReadStop({0x34});
@@ -129,6 +131,64 @@ TEST(Tcs3400Test, InputReport) {
   uint16_t blue_light = 0;
   memcpy(&blue_light, &report.blue, sizeof(blue_light));
   EXPECT_EQ(0x8877, blue_light);
+
+  mock_i2c.VerifyAndClear();
+  device.ShutDown();
+}
+
+TEST(Tcs3400Test, InputReportSaturated) {
+  fake_ddk::Bind tester;
+  metadata::LightSensorParams parameters = {};
+  parameters.gain = 64;
+  parameters.integration_time_ms = 612;  // For atime = 0x01.
+
+  tester.SetMetadata(&parameters, sizeof(metadata::LightSensorParams));
+
+  ddk::MockGpio mock_gpio;
+  mock_gpio.ExpectConfigIn(ZX_OK, GPIO_NO_PULL);
+  zx::interrupt irq;
+  mock_gpio.ExpectGetInterrupt(ZX_OK, ZX_INTERRUPT_MODE_EDGE_LOW, std::move(irq));
+  mock_i2c::MockI2c mock_i2c;
+  mock_i2c.ExpectWriteStop({0x81, 0x01});  // integration time (ATIME).
+  mock_i2c.ExpectWriteStop({0x8f, 0x03});  // control (for AGAIN).
+
+  mock_i2c.ExpectWrite({0x93}).ExpectReadStop({0x80});  // Saturated bit, set
+  mock_i2c.ExpectWriteStop({0xe6, 0x00});               // Clearing saturated bit.
+
+  ddk::I2cChannel i2c(mock_i2c.GetProto());
+  zx::port port;
+  ASSERT_OK(zx::port::create(ZX_PORT_BIND_TO_INTERRUPT, &port));
+
+  struct Tcs3400DeviceTest : public Tcs3400Device {
+    Tcs3400DeviceTest(zx_device_t* device, ddk::I2cChannel i2c, gpio_protocol_t gpio, zx::port port)
+        : Tcs3400Device(device, std::move(i2c), gpio, std::move(port)) {}
+    void ShutDown() override { Tcs3400Device::ShutDown(); }
+  };
+  Tcs3400DeviceTest device(fake_ddk::kFakeParent, std::move(i2c), *mock_gpio.GetProto(),
+                           std::move(port));
+  EXPECT_OK(device.InitMetadata());
+
+  ambient_light_input_rpt_t report = {};
+  size_t actual = 0;
+  EXPECT_OK(device.HidbusGetReport(HID_REPORT_TYPE_INPUT, AMBIENT_LIGHT_RPT_ID_INPUT, &report,
+                                   sizeof(report), &actual));
+  EXPECT_EQ(sizeof(report), actual);
+
+  EXPECT_EQ(AMBIENT_LIGHT_RPT_ID_INPUT, report.rpt_id);
+
+  // Use memcpy() to avoid loading a misaligned pointer in this packed struct.
+  uint16_t clear_light = 0;
+  memcpy(&clear_light, &report.illuminance, sizeof(clear_light));
+  EXPECT_EQ(65085, clear_light);
+  uint16_t red_light = 0;
+  memcpy(&red_light, &report.red, sizeof(red_light));
+  EXPECT_EQ(21067, red_light);
+  uint16_t green_light = 0;
+  memcpy(&green_light, &report.green, sizeof(green_light));
+  EXPECT_EQ(20395, green_light);
+  uint16_t blue_light = 0;
+  memcpy(&blue_light, &report.blue, sizeof(blue_light));
+  EXPECT_EQ(20939, blue_light);
 
   mock_i2c.VerifyAndClear();
   device.ShutDown();

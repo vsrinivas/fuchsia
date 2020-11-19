@@ -32,6 +32,7 @@ driver_module("ams-light") {
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
+    "//zircon/public/lib/zxc",
     "//zircon/system/ulib/hid",
 
     # TODO(fxb/38132): Migrate to the new bind rules and delete the below
@@ -69,6 +70,7 @@ test("ams-light-test") {
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
+    "//zircon/public/lib/zxc",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/hid",
 

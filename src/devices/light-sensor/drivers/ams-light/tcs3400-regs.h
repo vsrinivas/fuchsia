@@ -41,6 +41,10 @@
 #define TCS_I2C_ENABLE_WAIT_ENABLE                  TCS_I2C_BIT(3)
 #define TCS_I2C_ENABLE_INT_ENABLE                   TCS_I2C_BIT(4)
 #define TCS_I2C_ENABLE_SLEEP_AFTER_INT              TCS_I2C_BIT(6)
+
+#define TCS_I2C_STATUS_AVALID                       TCS_I2C_BIT(0)
+#define TCS_I2C_STATUS_AINT                         TCS_I2C_BIT(4)
+#define TCS_I2C_STATUS_ASAT                         TCS_I2C_BIT(7)
 // clang-format on
 
 #endif  // SRC_DEVICES_LIGHT_SENSOR_DRIVERS_AMS_LIGHT_TCS3400_REGS_H_

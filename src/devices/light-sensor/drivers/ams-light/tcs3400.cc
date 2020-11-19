@@ -31,6 +31,11 @@ namespace {
 constexpr zx_duration_t INTERRUPTS_HYSTERESIS = ZX_MSEC(100);
 constexpr uint8_t SAMPLES_TO_TRIGGER = 0x01;
 
+constexpr uint16_t kMaxSaturationRed = 21'067;
+constexpr uint16_t kMaxSaturationGreen = 20'395;
+constexpr uint16_t kMaxSaturationBlue = 20'939;
+constexpr uint16_t kMaxSaturationClear = 65'085;
+
 #define GET_BYTE(val, shift) static_cast<uint8_t>((val >> shift) & 0xFF)
 
 // TODO(fxbug.dev/37765): -Waddress-of-packed-member warns on pointers to members of
@@ -58,6 +63,33 @@ enum {
 
 namespace tcs {
 
+zx::status<bool> Tcs3400Device::CheckIfSaturated() {
+  const uint8_t read_status = TCS_I2C_STATUS;
+  zx_status_t status;
+  uint8_t tcs_status;
+  fbl::AutoLock lock(&i2c_lock_);
+  status = i2c_.WriteReadSync(&read_status, 1, &tcs_status, 1);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "Tcs3400Device::check_saturated: i2c_write_read_sync failed: %d", status);
+    return zx::error(status);
+  }
+  bool is_saturated_now = tcs_status & TCS_I2C_STATUS_ASAT;
+  if (is_saturated_now) {
+    uint8_t cmd[] = {TCS_I2C_CICLEAR, 0x00};
+    status = i2c_.WriteSync(cmd, sizeof(cmd));
+    if (status != ZX_OK) {
+      zxlogf(ERROR, "Tcs3400Device::check_saturated: i2c_write_sync failed: %d", status);
+      return zx::error(status);
+    }
+    // only log one message per saturation event
+    if (!saturated_) {
+      zxlogf(INFO, "Tcs3400Device::check_saturated: sensor saturated");
+    }
+  }
+  saturated_ = is_saturated_now;
+  return zx::ok(saturated_);
+}
+
 zx_status_t Tcs3400Device::FillInputRpt() {
   input_rpt_.rpt_id = AMBIENT_LIGHT_RPT_ID_INPUT;
   struct Regs {
@@ -70,6 +102,21 @@ zx_status_t Tcs3400Device::FillInputRpt() {
       {UNALIGNED_U16_PTR(&input_rpt_.green), TCS_I2C_GDATAH, TCS_I2C_GDATAL},
       {UNALIGNED_U16_PTR(&input_rpt_.blue), TCS_I2C_BDATAH, TCS_I2C_BDATAL},
   };
+  auto is_saturated = CheckIfSaturated();
+  if (is_saturated.is_error()) {
+    return is_saturated.error_value();
+  }
+  if (is_saturated.value()) {
+    // Return very bright value if saturated so that users can adjust
+    // screens etc accordingly.
+    input_rpt_.red = kMaxSaturationRed;
+    input_rpt_.green = kMaxSaturationGreen;
+    input_rpt_.blue = kMaxSaturationBlue;
+    input_rpt_.illuminance = kMaxSaturationClear;
+    input_rpt_.state = HID_USAGE_SENSOR_STATE_READY_VAL;
+    return ZX_OK;
+  }
+
   for (const auto& i : regs) {
     uint8_t buf_h, buf_l;
     zx_status_t status;
