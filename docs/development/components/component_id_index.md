@@ -100,9 +100,15 @@ component_id_index("my_component_id_index") {
 In order to add a component to the index, you must insert an entry into the
 appropriate index file. Currently, `fuchsia.git`'s components are listed in the
 [core_component_id_index.json](/src/sys/appmgr/config/core_component_id_index.json)
-index. Components outside `fuchsia.git` are listed in a separate index file,
-probably located under a `//vendor` repository where the relevant product is
-defined.
+index file.
+
+{% dynamic if user.is_googler %}
+
+Note: Outside of fuchsia.git, you can usually find a *component_id_index.json
+file in the `bundles/config` directory of a specific `//vendor` repository hosting
+a product's configuration.
+
+{% dynamic endif %}
 
 ### Add an entry to the index
 
