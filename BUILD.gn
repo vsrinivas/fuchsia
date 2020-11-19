@@ -686,6 +686,7 @@ build_api_module("tests") {
   testonly = true
   data_keys = [ "tests" ]
   deps = [
+    "//:host",
     "//build:tests",
     "//build/images:packages",
     "//sdk",
