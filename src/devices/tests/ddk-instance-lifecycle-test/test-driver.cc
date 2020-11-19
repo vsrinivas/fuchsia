@@ -4,8 +4,8 @@
 
 #include <fuchsia/device/instancelifecycle/test/llcpp/fidl.h>
 #include <lib/zx/channel.h>
+#include <zircon/errors.h>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
@@ -13,8 +13,8 @@
 #include <ddktl/device.h>
 #include <ddktl/fidl.h>
 
-#include "test-driver-child.h"
-#include "zircon/errors.h"
+#include "src/devices/tests/ddk-instance-lifecycle-test/test-driver-child.h"
+#include "src/devices/tests/ddk-instance-lifecycle-test/test-lifecycle-bind.h"
 
 namespace {
 
@@ -73,9 +73,4 @@ zx_driver_ops_t driver_ops = []() -> zx_driver_ops_t {
 
 }  // namespace
 
-// clang-format off
-ZIRCON_DRIVER_BEGIN(TestLifecycle, driver_ops, "zircon", "0.1", 2)
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_TEST),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_INSTANCE_LIFECYCLE_TEST),
-ZIRCON_DRIVER_END(TestLifecycle)
-    // clang-format on
+ZIRCON_DRIVER(TestLifecycle, driver_ops, "zircon", "0.1")
