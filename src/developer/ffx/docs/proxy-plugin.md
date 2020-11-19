@@ -1,10 +1,9 @@
-#Using FIDL Proxies with Plugins
+# Using FIDL proxies with plugins
 
 FFX plugins can communicate with a target device using FIDL through
 [Overnet](https://fuchsia.googlesource.com/fuchsia/+/HEAD/src/connectivity/overnet/).
 
-Extending the example from the [plugins](plugins.md) page we can add
-FIDL proxies to the parameter list for plugins:
+The examples in this doc extend the example code from the [plugins](plugins.md) page.
 
 First we add a dependency to the plugin's `BUILD.gn` file:
 
@@ -18,15 +17,19 @@ ffx_plugin("ffx_example") {
   deps = [
     "//sdk/fidl/fuchsia.device:fuchsia.device-rustc",
   ]
+  sources = [
+    "src/args.rs",
+    "src/lib.rs",
+  ]
 }
 ```
 
-This makes the FIDL proxy bindings available for import in the
+This makes the FIDL proxy bindings available for usage in the
 plugin. In this case you can now import `NameProviderProxy`.
 
 ```rust
 use {
-    anyhow::Error,
+    anyhow::Result,
     ffx_core::ffx_plugin,
     ffx_example_args::ExampleCommand,
     fidl_fuchsia_device::NameProviderProxy,
@@ -38,18 +41,10 @@ Now that the type is imported, the proxy can be used in the plugin
 function. FFX plugins can accept proxies in the parameter list:
 
 ```rust
-#[ffx_plugin(
-    NameProviderProxy = "core/appmgr:out:fuchsia.device.NameProvider"
-)]
 pub async fn example(
     name_proxy: NameProviderProxy,
     _cmd: ExampleCommand,
-) -> Result<(), Error> {
-    if let Ok(name) = name_proxy.get_device_name().await? {
-        println!("Hello, {}", name);
-    }
-    Ok(())
-}
+) -> Result<()> { }
 ```
 
 In order to correctly connect a proxy to the FIDL service on the
@@ -61,8 +56,32 @@ of the function signature:
 
 ```rust
 #[ffx_plugin(
-    fdevice::NameProviderProxy = "core/appmgr:out:fuchsia.device.NameProvider"
+    NameProviderProxy = "core/appmgr:out:fuchsia.device.NameProvider"
 )]
+```
+
+Putting it all together, your `src/lib.rs` file should look like:
+
+```rust
+use {
+    anyhow::Result,
+    ffx_core::ffx_plugin,
+    ffx_example_args::ExampleCommand,
+    fidl_fuchsia_device::NameProviderProxy,
+};
+
+#[ffx_plugin(
+    NameProviderProxy = "core/appmgr:out:fuchsia.device.NameProvider"
+)]
+pub async fn example(
+    name_proxy: NameProviderProxy,
+    _cmd: ExampleCommand,
+) -> Result<()> {
+    if let Ok(name) = name_proxy.get_device_name().await? {
+        println!("Hello, {}", name);
+    }
+    Ok(())
+}
 ```
 
 And that's it.  The plugin should now be able to communicate with
