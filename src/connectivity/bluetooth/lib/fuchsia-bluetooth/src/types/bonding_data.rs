@@ -876,39 +876,15 @@ mod tests {
         use super::*;
 
         fn empty_data() -> sys::BondingData {
-            sys::BondingData {
-                identifier: None,
-                address: None,
-                local_address: None,
-                name: None,
-                le: None,
-                bredr: None,
-                ..sys::BondingData::empty()
-            }
+            sys::BondingData::empty()
         }
 
         fn empty_bredr_data() -> sys::BredrData {
-            sys::BredrData {
-                address: None,
-                role_preference: None,
-                link_key: None,
-                services: None,
-                ..sys::BredrData::empty()
-            }
+            sys::BredrData::empty()
         }
 
         fn empty_le_data() -> sys::LeData {
-            sys::LeData {
-                address: None,
-                services: None,
-                connection_parameters: None,
-                ltk: None,
-                peer_ltk: None,
-                local_ltk: None,
-                irk: None,
-                csrk: None,
-                ..sys::LeData::empty()
-            }
+            sys::LeData::empty()
         }
 
         fn default_ltk() -> sys::Ltk {
