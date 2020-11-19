@@ -12,27 +12,47 @@ rustc_library("fuchsia-hyper") {
   version = "0.1.0"
   with_unit_tests = true
   deps = [
-    "//garnet/lib/rust/webpki-roots-fuchsia",
-    "//sdk/fidl/fuchsia.posix.socket:fuchsia.posix.socket-rustc",
-    "//src/lib/fuchsia-async",
-    "//src/lib/fuchsia-component",
-    "//src/lib/tcp-stream-ext",
-    "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:http",
     "//third_party/rust_crates:hyper",
     "//third_party/rust_crates:hyper-rustls",
-    "//third_party/rust_crates:libc",
     "//third_party/rust_crates:rustls",
-    "//third_party/rust_crates:socket2",
     "//third_party/rust_crates:tokio",
   ]
-  test_deps = [
-    "//src/lib/fidl/rust/fidl",
-    "//third_party/rust_crates:matches",
-  ]
+  if (is_host) {
+    deps += [
+      "//third_party/rust_crates:async-std",
+      "//third_party/rust_crates:rustls-native-certs-v0_3_0",
+      "//third_party/rust_crates:tower-service-v0_3_0",
+      "//third_party/rust_crates:webpki",
+    ]
+    test_deps = [
+      "//src/lib/fuchsia-async",
+      "//third_party/rust_crates:anyhow",
+    ]
+  } else {
+    deps += [
+      "//garnet/lib/rust/webpki-roots-fuchsia",
+      "//sdk/fidl/fuchsia.posix.socket:fuchsia.posix.socket-rustc",
+      "//src/lib/fuchsia-async",
+      "//src/lib/fuchsia-component",
+      "//src/lib/tcp-stream-ext",
+      "//src/lib/zircon/rust:fuchsia-zircon",
+      "//third_party/rust_crates:libc",
+      "//third_party/rust_crates:socket2",
+    ]
+    test_deps = [
+      "//src/lib/fidl/rust/fidl",
+      "//third_party/rust_crates:matches",
+    ]
+  }
 
   sources = [ "src/lib.rs" ]
+  if (is_host) {
+    sources += [ "src/not_fuchsia.rs" ]
+  } else {
+    sources += [ "src/fuchsia.rs" ]
+  }
 }
 
 test_package("fuchsia-hyper-tests") {
@@ -48,5 +68,8 @@ test_package("fuchsia-hyper-tests") {
 
 group("tests") {
   testonly = true
-  deps = [ ":fuchsia-hyper-tests" ]
+  deps = [
+    ":fuchsia-hyper-tests",
+    ":fuchsia-hyper_test($host_toolchain)",
+  ]
 }
