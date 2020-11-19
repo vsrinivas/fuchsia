@@ -7,6 +7,8 @@
 ###############################################################################
 source_set("attachment_providers") {
   sources = [
+    "archive_accessor_ptr.cc",
+    "archive_accessor_ptr.h",
     "inspect_ptr.cc",
     "inspect_ptr.h",
     "kernel_log_ptr.cc",

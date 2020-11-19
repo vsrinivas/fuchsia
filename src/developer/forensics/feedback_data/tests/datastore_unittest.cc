@@ -20,8 +20,8 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include "src/developer/forensics/feedback_data/attachments/archive_accessor_ptr.h"
 #include "src/developer/forensics/feedback_data/annotations/types.h"
-#include "src/developer/forensics/feedback_data/attachments/inspect_ptr.h"
 #include "src/developer/forensics/feedback_data/attachments/types.h"
 #include "src/developer/forensics/feedback_data/constants.h"
 #include "src/developer/forensics/feedback_data/system_log_recorder/encoding/production_encoding.h"
