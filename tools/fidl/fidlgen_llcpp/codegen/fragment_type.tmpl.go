@@ -26,7 +26,7 @@ const fragmentTypeTmpl = `
 {{- end -}}
 
 {{- define "TypeCloseHandles" }}
-  {{- if or (eq .ArgumentType.Kind HandleKind) (eq .ArgumentType.Kind RequestKind) (eq .ArgumentType.Kind ProtocolKind)}}
+  {{- if or (eq .ArgumentType.Kind TypeKinds.Handle) (eq .ArgumentType.Kind TypeKinds.Request) (eq .ArgumentType.Kind TypeKinds.Protocol)}}
     {{- if .Pointer }}
       {{- if .Nullable }}
       if ({{- template "ArgumentName" . }} != nullptr) {
@@ -38,14 +38,14 @@ const fragmentTypeTmpl = `
     {{- else }}
       {{- template "ArgumentName" . }}.reset();
     {{- end }}
-  {{- else if eq .ArgumentType.Kind ArrayKind }}
+  {{- else if eq .ArgumentType.Kind TypeKinds.Array }}
     {
       {{ .ArgumentType.ElementType.LLDecl }}* {{ .ArgumentName }}_element = {{ template "ArgumentValue" . }}.data();
       for (size_t i = 0; i < {{ template "ArgumentValue" . }}.size(); ++i, ++{{ .ArgumentName }}_element) {
         {{- template "TypeCloseHandles" NewTypedArgumentElement .ArgumentName .ArgumentType.ElementType }}
       }
     }
-  {{- else if eq .ArgumentType.Kind VectorKind }}
+  {{- else if eq .ArgumentType.Kind TypeKinds.Vector }}
     {
       {{ .ArgumentType.ElementType.LLDecl }}* {{ .ArgumentName }}_element = {{ template "ArgumentValue" . }}.mutable_data();
       for (uint64_t i = 0; i < {{ template "ArgumentValue" . }}.count(); ++i, ++{{ .ArgumentName }}_element) {

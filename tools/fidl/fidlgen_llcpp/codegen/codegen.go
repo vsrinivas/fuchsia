@@ -30,8 +30,10 @@ type TypedArgument struct {
 // These are the helper functions we inject for use by the templates.
 var (
 	utilityFuncs = template.FuncMap{
-		"Kinds": func() interface{} { return cpp.Kinds },
-		"Eq":    func(a interface{}, b interface{}) bool { return a == b },
+		"Kinds":       func() interface{} { return cpp.Kinds },
+		"FamilyKinds": func() interface{} { return cpp.FamilyKinds },
+		"TypeKinds":   func() interface{} { return cpp.TypeKinds },
+		"Eq":          func(a interface{}, b interface{}) bool { return a == b },
 		"StackUse": func(props cpp.LLContextProps) int {
 			return props.StackUseRequest + props.StackUseResponse
 		},
@@ -60,68 +62,11 @@ var (
 				MutableAccess: false}
 		},
 	}
-	familyKindFuncs = template.FuncMap{
-		"TrivialCopy": func() cpp.FamilyKind {
-			return cpp.TrivialCopy
-		},
-		"Reference": func() cpp.FamilyKind {
-			return cpp.Reference
-		},
-		"String": func() cpp.FamilyKind {
-			return cpp.String
-		},
-		"Vector": func() cpp.FamilyKind {
-			return cpp.Vector
-		},
-	}
-	typeKindFuncs = template.FuncMap{
-		"ArrayKind": func() cpp.TypeKind {
-			return cpp.ArrayKind
-		},
-		"VectorKind": func() cpp.TypeKind {
-			return cpp.VectorKind
-		},
-		"StringKind": func() cpp.TypeKind {
-			return cpp.StringKind
-		},
-		"HandleKind": func() cpp.TypeKind {
-			return cpp.HandleKind
-		},
-		"RequestKind": func() cpp.TypeKind {
-			return cpp.RequestKind
-		},
-		"PrimitiveKind": func() cpp.TypeKind {
-			return cpp.PrimitiveKind
-		},
-		"BitsKind": func() cpp.TypeKind {
-			return cpp.BitsKind
-		},
-		"EnumKind": func() cpp.TypeKind {
-			return cpp.EnumKind
-		},
-		"ConstKind": func() cpp.TypeKind {
-			return cpp.ConstKind
-		},
-		"StructKind": func() cpp.TypeKind {
-			return cpp.StructKind
-		},
-		"TableKind": func() cpp.TypeKind {
-			return cpp.TableKind
-		},
-		"UnionKind": func() cpp.TypeKind {
-			return cpp.UnionKind
-		},
-		"ProtocolKind": func() cpp.TypeKind {
-			return cpp.ProtocolKind
-		},
-	}
 )
 
 func NewGenerator() *Generator {
 	tmpls := template.New("LLCPPTemplates").
-		Funcs(utilityFuncs).
-		Funcs(familyKindFuncs).
-		Funcs(typeKindFuncs)
+		Funcs(utilityFuncs)
 	templates := []string{
 		fragmentBitsTmpl,
 		fragmentClientTmpl,

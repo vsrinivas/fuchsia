@@ -6,13 +6,13 @@ package codegen
 
 const fragmentProtocolTmpl = `
 {{- define "ArgumentDeclaration" -}}
-  {{- if eq .Type.LLFamily TrivialCopy }}
+  {{- if eq .Type.LLFamily FamilyKinds.TrivialCopy }}
   {{ .Type.LLDecl }} {{ .Name }}
-  {{- else if eq .Type.LLFamily Reference }}
+  {{- else if eq .Type.LLFamily FamilyKinds.Reference }}
   {{ .Type.LLDecl }}& {{ .Name }}
-  {{- else if eq .Type.LLFamily String }}
+  {{- else if eq .Type.LLFamily FamilyKinds.String }}
   const {{ .Type.LLDecl }}& {{ .Name }}
-  {{- else if eq .Type.LLFamily Vector }}
+  {{- else if eq .Type.LLFamily FamilyKinds.Vector }}
   {{ .Type.LLDecl }}& {{ .Name }}
   {{- end }}
 {{- end }}
@@ -35,13 +35,13 @@ const fragmentProtocolTmpl = `
 {{- define "InitMessage" -}}
   {{- range $index, $param := . }}
   {{- if $index }}, {{- else }}: {{- end}}
-    {{- if eq $param.Type.LLFamily TrivialCopy }}
+    {{- if eq $param.Type.LLFamily FamilyKinds.TrivialCopy }}
       {{ $param.Name }}({{ $param.Name }})
-    {{- else if eq $param.Type.LLFamily Reference }}
+    {{- else if eq $param.Type.LLFamily FamilyKinds.Reference }}
       {{ $param.Name }}(std::move({{ $param.Name }}))
-    {{- else if eq $param.Type.LLFamily String }}
+    {{- else if eq $param.Type.LLFamily FamilyKinds.String }}
       {{ $param.Name }}(::fidl::unowned_ptr_t<const char>({{ $param.Name }}.data()), {{ $param.Name }}.size())
-    {{- else if eq $param.Type.LLFamily Vector }}
+    {{- else if eq $param.Type.LLFamily FamilyKinds.Vector }}
       {{ $param.Name }}(::fidl::unowned_ptr_t<{{ $param.Type.ElementType.LLDecl }}>({{ $param.Name }}.mutable_data()), {{ $param.Name }}.count())
     {{- end }}
   {{- end }}

@@ -42,39 +42,50 @@ type Decl interface {
 	compileProperties(c compiler)
 }
 
-type FamilyKind string
+type familyKind namespacedEnumMember
 
-const (
+type familyKinds struct {
 	// TrivialCopy identifies values for whom a copy is trivial (like integers)
-	TrivialCopy FamilyKind = "TrivialCopy"
-	// Reference identifies values with a non trivial copy for which we use a reference on the
-	// caller argument.
-	Reference FamilyKind = "Reference"
-	// String identifies string values for which we can use a const reference and for which we can
-	// optimize the field construction.
-	String FamilyKind = "String"
-	// Vector identifies vector values for which we can use a reference and for which we can
-	// optimize the field construction.
-	Vector FamilyKind = "Vector"
-)
+	TrivialCopy familyKind
 
-type TypeKind string
+	// Reference identifies values with a non trivial copy for which we use a
+	// reference on the caller argument.
+	Reference familyKind
 
-const (
-	ArrayKind     TypeKind = "Array"
-	VectorKind    TypeKind = "Vector"
-	StringKind    TypeKind = "String"
-	HandleKind    TypeKind = "Handle"
-	RequestKind   TypeKind = "Request"
-	PrimitiveKind TypeKind = "Primitive"
-	BitsKind      TypeKind = "Bits"
-	EnumKind      TypeKind = "Enum"
-	ConstKind     TypeKind = "Const"
-	StructKind    TypeKind = "Struct"
-	TableKind     TypeKind = "Table"
-	UnionKind     TypeKind = "Union"
-	ProtocolKind  TypeKind = "Protocol"
-)
+	// String identifies string values for which we can use a const reference
+	// and for which we can optimize the field construction.
+	String familyKind
+
+	// Vector identifies vector values for which we can use a reference and for
+	// which we can optimize the field construction.
+	Vector familyKind
+}
+
+// FamilyKinds are general categories identifying what operation we should use
+// to pass a value without a move (LLCPP). It also defines the way we should
+// initialize a field.
+var FamilyKinds = namespacedEnum(familyKinds{}).(familyKinds)
+
+type typeKind namespacedEnumMember
+
+type typeKinds struct {
+	Array     typeKind
+	Vector    typeKind
+	String    typeKind
+	Handle    typeKind
+	Request   typeKind
+	Primitive typeKind
+	Bits      typeKind
+	Enum      typeKind
+	Const     typeKind
+	Struct    typeKind
+	Table     typeKind
+	Union     typeKind
+	Protocol  typeKind
+}
+
+// TypeKinds are the kinds of declarations (arrays, primitives, structs, ...).
+var TypeKinds = namespacedEnum(typeKinds{}).(typeKinds)
 
 type Type struct {
 	Decl string
@@ -88,13 +99,13 @@ type Type struct {
 
 	// Defines what operation we should use to pass a value without a move (LLCPP). It also
 	// defines the way we should initialize a field.
-	LLFamily FamilyKind
+	LLFamily familyKind
 
 	// NeedsDtor indicates whether this type needs to be destructed explicitely
 	// or not.
 	NeedsDtor bool
 
-	Kind TypeKind
+	Kind typeKind
 
 	IsResource          bool
 	ExternalDeclaration bool
@@ -108,7 +119,7 @@ type Type struct {
 }
 
 func (t Type) IsPrimitiveType() bool {
-	return t.Kind == PrimitiveKind || t.Kind == BitsKind || t.Kind == EnumKind
+	return t.Kind == TypeKinds.Primitive || t.Kind == TypeKinds.Bits || t.Kind == TypeKinds.Enum
 }
 
 func (t *Type) compileProperties(c compiler) {
@@ -122,19 +133,19 @@ func (t *Type) compileProperties(c compiler) {
 		}
 	} else {
 		switch t.Kind {
-		case ArrayKind:
+		case TypeKinds.Array:
 			fallthrough
-		case VectorKind:
+		case TypeKinds.Vector:
 			t.ElementType.compileProperties(c)
 			t.IsResource = t.ElementType.IsResource
 			t.ExternalDeclaration = t.ElementType.ExternalDeclaration
 			t.LLClass = t.ElementType.LLClass
 			t.LLPointer = t.ElementType.LLPointer
-		case HandleKind:
+		case TypeKinds.Handle:
 			fallthrough
-		case RequestKind:
+		case TypeKinds.Request:
 			fallthrough
-		case ProtocolKind:
+		case TypeKinds.Protocol:
 			t.IsResource = true
 		}
 	}
@@ -1016,15 +1027,15 @@ func (c *compiler) compileType(val fidl.Type) Type {
 		r.Decl = fmt.Sprintf("::std::array<%s, %v>", t.Decl, *val.ElementCount)
 		r.FullDecl = fmt.Sprintf("::std::array<%s, %v>", t.FullDecl, *val.ElementCount)
 		r.LLDecl = fmt.Sprintf("::fidl::Array<%s, %v>", t.LLDecl, *val.ElementCount)
-		r.LLFamily = Reference
+		r.LLFamily = FamilyKinds.Reference
 		r.NeedsDtor = true
-		r.Kind = ArrayKind
+		r.Kind = TypeKinds.Array
 		r.ElementType = &t
 		r.ElementCount = *val.ElementCount
 	case fidl.VectorType:
 		t := c.compileType(*val.ElementType)
 		r.LLDecl = fmt.Sprintf("::fidl::VectorView<%s>", t.LLDecl)
-		r.LLFamily = Vector
+		r.LLFamily = FamilyKinds.Vector
 		if val.Nullable {
 			r.Decl = fmt.Sprintf("::fidl::VectorPtr<%s>", t.Decl)
 			r.FullDecl = fmt.Sprintf("::fidl::VectorPtr<%s>", t.FullDecl)
@@ -1033,11 +1044,11 @@ func (c *compiler) compileType(val fidl.Type) Type {
 			r.FullDecl = fmt.Sprintf("::std::vector<%s>", t.FullDecl)
 		}
 		r.NeedsDtor = true
-		r.Kind = VectorKind
+		r.Kind = TypeKinds.Vector
 		r.ElementType = &t
 	case fidl.StringType:
 		r.LLDecl = "::fidl::StringView"
-		r.LLFamily = String
+		r.LLFamily = FamilyKinds.String
 		if val.Nullable {
 			r.Decl = "::fidl::StringPtr"
 		} else {
@@ -1045,30 +1056,30 @@ func (c *compiler) compileType(val fidl.Type) Type {
 		}
 		r.FullDecl = r.Decl
 		r.NeedsDtor = true
-		r.Kind = StringKind
+		r.Kind = TypeKinds.String
 	case fidl.HandleType:
 		c.handleTypes[val.HandleSubtype] = struct{}{}
 		r.Decl = fmt.Sprintf("::zx::%s", val.HandleSubtype)
 		r.FullDecl = r.Decl
 		r.LLDecl = r.Decl
-		r.LLFamily = Reference
+		r.LLFamily = FamilyKinds.Reference
 		r.NeedsDtor = true
-		r.Kind = HandleKind
+		r.Kind = TypeKinds.Handle
 	case fidl.RequestType:
 		r.Decl = fmt.Sprintf("::fidl::InterfaceRequest<%s>",
 			c.compileCompoundIdentifier(val.RequestSubtype, "", "", false))
 		r.FullDecl = fmt.Sprintf("::fidl::InterfaceRequest<%s>",
 			c.compileCompoundIdentifier(val.RequestSubtype, "", "", true))
 		r.LLDecl = "::zx::channel"
-		r.LLFamily = Reference
+		r.LLFamily = FamilyKinds.Reference
 		r.NeedsDtor = true
-		r.Kind = RequestKind
+		r.Kind = TypeKinds.Request
 	case fidl.PrimitiveType:
 		r.Decl = c.compilePrimitiveSubtype(val.PrimitiveSubtype)
 		r.FullDecl = r.Decl
 		r.LLDecl = r.Decl
-		r.LLFamily = TrivialCopy
-		r.Kind = PrimitiveKind
+		r.LLFamily = FamilyKinds.TrivialCopy
+		r.Kind = TypeKinds.Primitive
 	case fidl.IdentifierType:
 		t := c.compileCompoundIdentifier(val.Identifier, "", "", false)
 		ft := c.compileCompoundIdentifier(val.Identifier, "", "", true)
@@ -1081,36 +1092,36 @@ func (c *compiler) compileType(val fidl.Type) Type {
 			r.Decl = fmt.Sprintf("::fidl::InterfaceHandle<class %s>", t)
 			r.FullDecl = fmt.Sprintf("::fidl::InterfaceHandle<class %s>", ft)
 			r.LLDecl = "::zx::channel"
-			r.LLFamily = Reference
+			r.LLFamily = FamilyKinds.Reference
 			r.NeedsDtor = true
-			r.Kind = ProtocolKind
+			r.Kind = TypeKinds.Protocol
 		} else {
 			switch declType {
 			case fidl.BitsDeclType:
-				r.Kind = BitsKind
-				r.LLFamily = TrivialCopy
+				r.Kind = TypeKinds.Bits
+				r.LLFamily = FamilyKinds.TrivialCopy
 			case fidl.EnumDeclType:
-				r.Kind = EnumKind
-				r.LLFamily = TrivialCopy
+				r.Kind = TypeKinds.Enum
+				r.LLFamily = FamilyKinds.TrivialCopy
 			case fidl.ConstDeclType:
-				r.Kind = ConstKind
-				r.LLFamily = Reference
+				r.Kind = TypeKinds.Const
+				r.LLFamily = FamilyKinds.Reference
 			case fidl.StructDeclType:
-				r.Kind = StructKind
+				r.Kind = TypeKinds.Struct
 				r.DeclarationName = val.Identifier
-				r.LLFamily = Reference
+				r.LLFamily = FamilyKinds.Reference
 				r.LLClass = ft
 				r.LLPointer = val.Nullable
 			case fidl.TableDeclType:
-				r.Kind = TableKind
+				r.Kind = TypeKinds.Table
 				r.DeclarationName = val.Identifier
-				r.LLFamily = Reference
+				r.LLFamily = FamilyKinds.Reference
 				r.LLClass = ft
 				r.LLPointer = val.Nullable
 			case fidl.UnionDeclType:
-				r.Kind = UnionKind
+				r.Kind = TypeKinds.Union
 				r.DeclarationName = val.Identifier
-				r.LLFamily = Reference
+				r.LLFamily = FamilyKinds.Reference
 				r.LLClass = ft
 			default:
 				panic(fmt.Sprintf("unknown declaration type: %v", declType))

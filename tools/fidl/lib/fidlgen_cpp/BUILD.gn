@@ -9,6 +9,7 @@ go_library("fidlgen_cpp") {
   deps = [ "//tools/fidl/lib/fidlgen" ]
   sources = [
     "clang_formatter.go",
+    "enum.go",
     "ir.go",
   ]
 }
@@ -18,7 +19,10 @@ go_library("cpp_test") {
     ":fidlgen_cpp",
     "//third_party/golibs:github.com/google/go-cmp",
   ]
-  sources = [ "ir_test.go" ]
+  sources = [
+    "enum_test.go",
+    "ir_test.go",
+  ]
 }
 
 if (is_host) {

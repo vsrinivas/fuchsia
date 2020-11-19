@@ -272,22 +272,22 @@ class {{ .Name }}::Builder final {
   bool {{ .MethodHasName }}() const {
     return max_ordinal_ >= {{ .Ordinal }} && frame_ptr_->{{ .Name }}_.data != nullptr;
   }
-  {{- if eq .Type.Kind TableKind }}
+  {{- if eq .Type.Kind TypeKinds.Table }}
   {{ .Type.LLDecl }}::Builder& get_builder_{{ .Name }}() {
     ZX_ASSERT({{ .MethodHasName }}());
     return *reinterpret_cast<{{ .Type.LLDecl }}::Builder*>(&*frame_ptr_->{{ .Name }}_.data);
   }
   {{- end }}
-  {{- if eq .Type.Kind ArrayKind }}
-  {{- if eq .Type.ElementType.Kind TableKind }}
+  {{- if eq .Type.Kind TypeKinds.Array }}
+  {{- if eq .Type.ElementType.Kind TypeKinds.Table }}
   ::fidl::Array<{{ .Type.ElementType.LLDecl }}::Builder, {{ .Type.ElementCount }}>& get_builders_{{ .Name }}() {
     ZX_ASSERT({{ .MethodHasName }}());
     return *reinterpret_cast<::fidl::Array<{{ .Type.ElementType.LLDecl }}::Builder, {{ .Type.ElementCount }}>*>(&*frame_ptr_->{{ .Name }}_.data);
   }
   {{- end }}
   {{- end }}
-  {{- if eq .Type.Kind VectorKind }}
-  {{- if eq .Type.ElementType.Kind TableKind }}
+  {{- if eq .Type.Kind TypeKinds.Vector }}
+  {{- if eq .Type.ElementType.Kind TypeKinds.Table }}
   ::fidl::VectorView<{{ .Type.ElementType.LLDecl }}::Builder>& get_builders_{{ .Name }}() {
     ZX_ASSERT({{ .MethodHasName }}());
     return *reinterpret_cast<::fidl::VectorView<{{ .Type.ElementType.LLDecl }}::Builder>*>(&*frame_ptr_->{{ .Name }}_.data);
@@ -342,22 +342,22 @@ public:
   bool {{ .MethodHasName }}() const {
     return max_ordinal_ >= {{ .Ordinal }} && frame_.{{ .Name }}_.data != nullptr;
   }
-  {{- if eq .Type.Kind TableKind }}
+  {{- if eq .Type.Kind TypeKinds.Table }}
   {{ .Type.LLDecl }}::Builder& get_builder_{{ .Name }}() {
     ZX_ASSERT({{ .MethodHasName }}());
     return *reinterpret_cast<{{ .Type.LLDecl }}::Builder*>(&*frame_.{{ .Name }}_.data);
   }
   {{- end }}
-  {{- if eq .Type.Kind ArrayKind }}
-  {{- if eq .Type.ElementType.Kind TableKind }}
+  {{- if eq .Type.Kind TypeKinds.Array }}
+  {{- if eq .Type.ElementType.Kind TypeKinds.Table }}
   ::fidl::Array<{{ .Type.ElementType.LLDecl }}::Builder, {{ .Type.ElementCount }}>& get_builders_{{ .Name }}() {
     ZX_ASSERT({{ .MethodHasName }}());
     return *reinterpret_cast<::fidl::Array<{{ .Type.ElementType.LLDecl }}::Builder, {{ .Type.ElementCount }}>*>(&*frame_.{{ .Name }}_.data);
   }
   {{- end }}
   {{- end }}
-  {{- if eq .Type.Kind VectorKind }}
-  {{- if eq .Type.ElementType.Kind TableKind }}
+  {{- if eq .Type.Kind TypeKinds.Vector }}
+  {{- if eq .Type.ElementType.Kind TypeKinds.Table }}
   ::fidl::VectorView<{{ .Type.ElementType.LLDecl }}::Builder>& get_builders_{{ .Name }}() {
     ZX_ASSERT({{ .MethodHasName }}());
     return *reinterpret_cast<::fidl::VectorView<{{ .Type.ElementType.LLDecl }}::Builder>*>(&*frame_.{{ .Name }}_.data);
