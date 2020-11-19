@@ -12,7 +12,10 @@ go_library("sdkcommon") {
     "utils.go",
   ]
   deps = [ "//tools/lib/logger" ]
-  non_go_deps = [ "//tools/net/device-finder:host" ]
+  non_go_deps = [
+    "//src/developer/ffx:bin_sdk($host_toolchain)",
+    "//tools/net/device-finder:host",
+  ]
 }
 
 go_test("sdkcommon-test") {

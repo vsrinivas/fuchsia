@@ -5,6 +5,8 @@
 package sdkcommon
 
 import (
+	"bufio"
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -39,12 +41,58 @@ type GCSImage struct {
 	Version string
 }
 
+// Property keys used to get and set device configuration
+const (
+	DeviceNameKey  string = "device-name"
+	BucketKey      string = "bucket"
+	ImageKey       string = "image"
+	DeviceIPKey    string = "device-ip"
+	SSHPortKey     string = "ssh-port"
+	PackageRepoKey string = "package-repo"
+	PackagePortKey string = "package-port"
+	DefaultKey     string = "default"
+	// Top level key for storing data.
+	deviceConfigurationKey string = "DeviceConfiguration"
+	defaultDeviceKey       string = "_DEFAULT_DEVICE_"
+)
+
+var validPropertyNames = [...]string{
+	DeviceNameKey,
+	BucketKey,
+	ImageKey,
+	DeviceIPKey,
+	SSHPortKey,
+	PackageRepoKey,
+	PackagePortKey,
+	DefaultKey,
+}
+
+// DeviceConfig holds all the properties that are configured
+// for a given devce.
+type DeviceConfig struct {
+	DeviceName  string `json:"device-name"`
+	Bucket      string `json:"bucket"`
+	Image       string `json:"image"`
+	DeviceIP    string `json:"device-ip"`
+	SSHPort     string `json:"ssh-port"`
+	PackageRepo string `json:"package-repo"`
+	PackagePort string `json:"package-port"`
+	IsDefault   bool   `json:"default"`
+}
+
 // SDKProperties holds the common data for SDK tools.
 // These values should be set or initialized by calling
 // (sdk *SDKProperties) Init().
 type SDKProperties struct {
-	DataPath string
-	Version  string
+	DataPath                 string
+	Version                  string
+	globalPropertiesFilename string
+}
+
+// Builds the data key for the given segments.
+func getDeviceDataKey(segments []string) string {
+	var fullKey = []string{deviceConfigurationKey}
+	return strings.Join(append(fullKey, segments...), ".")
 }
 
 // DefaultGetUserHomeDir is the default implmentation of GetUserHomeDir()
@@ -73,9 +121,13 @@ func DefaultGetHostname() (string, error) {
 	return os.Hostname()
 }
 
-// GetUserHomeDir allow mocking
+// GetUserHomeDir to allow mocking.
 var GetUserHomeDir = DefaultGetUserHomeDir
+
+// GetUsername to allow mocking.
 var GetUsername = DefaultGetUsername
+
+// GetHostname to allow mocking.
 var GetHostname = DefaultGetHostname
 
 // Init initializes the SDK properties.
@@ -102,7 +154,9 @@ func (sdk *SDKProperties) Init() error {
 	} else {
 		log.Warningf("Cannot find SDK manifest file %v", manifestFile)
 	}
-	return nil
+
+	sdk.globalPropertiesFilename = filepath.Join(sdk.DataPath, "global_ffx_props.json")
+	return initFFXGlobalConfig(*sdk)
 }
 
 // getSDKVersion reads the manifest JSON file and returns the "id" property.
@@ -128,34 +182,104 @@ func getSDKVersion(manifestFilePath string) (string, error) {
 }
 
 // GetDefaultPackageRepoDir returns the path to the package repository.
-// This is the default package repository path, thinking there will
-// be other repositories in the future.
+// If the value has been set with `fconfig`, use that value.
+// Otherwise if there is a default target defined, return the target
+// specific path.
+// Lastly, if there is nothing, return the default repo path.
 func (sdk SDKProperties) GetDefaultPackageRepoDir() (string, error) {
+	value, err := sdk.GetFuchsiaProperty("", PackageRepoKey)
+
+	// An error from GetFuchsiaProperty will be caused by either a failure
+	// to execute `ffx` or the data returned from `ffx` is unable to be parsed.
+	// If that is the case, then it should be treated as an error.
+	if err != nil {
+		return "", err
+	}
+	if value == "" {
+		// If no default value is explicitly set for the default device,
+		// check for the name of the default device and if set, use it
+		// to create a default repo path specific for that device.
+		defaultTargetName, err := sdk.GetDefaultDeviceName()
+
+		// If there is an error getting the default device name,
+		// this is caused by a problem executing `ffx` or the data
+		// returned cannot be parsed. These are serious problems and
+		// are returned as errors.
+		if err != nil {
+			return "", err
+		}
+		if defaultTargetName != "" {
+			return filepath.Join(sdk.DataPath, defaultTargetName,
+				"packages", "amber-files"), nil
+		}
+	}
+
+	// As a last resort, `ffx` and the data are working as intended,
+	// but no default has been configured, so fall back to the generic
+	// legacy path.
 	return filepath.Join(sdk.DataPath, "packages", "amber-files"), nil
 }
 
 // GetDefaultGCSBucket returns the default GCS bucket name.
 func (sdk SDKProperties) GetDefaultGCSBucket() (string, error) {
+	value, err := sdk.GetFuchsiaProperty("", BucketKey)
+	if err != nil {
+		return "", err
+	}
+	if value != "" {
+		return value, nil
+	}
 	return "fuchsia", nil
 }
 
 // GetDefaultGCSImage returns the default GCS image name.
 func (sdk SDKProperties) GetDefaultGCSImage() (string, error) {
+	value, err := sdk.GetFuchsiaProperty("", ImageKey)
+	if err != nil {
+		return "", err
+	}
+	if value != "" {
+		return value, nil
+	}
 	return "", nil
 }
 
 // GetDefaultPackageServerPort returns the TCP port the package server should use.
 func (sdk SDKProperties) GetDefaultPackageServerPort() (string, error) {
+	value, err := sdk.GetFuchsiaProperty("", PackagePortKey)
+	if err != nil {
+		return "", err
+	}
+	if value != "" {
+		return value, nil
+	}
 	return "8083", nil
 }
 
-// GetDefaultDeviceName returns the default target device name.
+// GetDefaultDeviceName returns the name of the target device to use by default.
 func (sdk SDKProperties) GetDefaultDeviceName() (string, error) {
-	return "", nil
+	dataKey := getDeviceDataKey([]string{defaultDeviceKey})
+	data, err := getDeviceConfiguationData(sdk, dataKey)
+	if err != nil {
+		return "", err
+	}
+	if name, ok := data[dataKey].(string); ok {
+		return name, nil
+	} else if len(data) == 0 {
+		return "", nil
+	}
+	return "", fmt.Errorf("Cannot parse default device from %v", data)
 }
 
 // GetDefaultDeviceIPAddress returns the default target device IP address.
 func (sdk SDKProperties) GetDefaultDeviceIPAddress() (string, error) {
+	value, err := sdk.GetFuchsiaProperty("", DeviceIPKey)
+	if err != nil {
+		return "", err
+	}
+	if value != "" {
+		return value, nil
+	}
 	return "", nil
 }
 
@@ -524,4 +648,324 @@ func moveLegacyKeys(sdk SDKProperties, destAuthFile string, destKeyFile string) 
 		}
 	}
 	return nil
+}
+
+// GetValidPropertyNames returns the list of valid properties for a
+// device configuration.
+func (sdk SDKProperties) GetValidPropertyNames() []string {
+	return validPropertyNames[:]
+}
+
+// IsValidProperty returns true if the property is a valid
+// property name.
+func (sdk SDKProperties) IsValidProperty(property string) bool {
+	for _, item := range validPropertyNames {
+		if item == property {
+			return true
+		}
+	}
+	return false
+}
+
+// GetFuchsiaProperty returns the value for the given property for the given device.
+// If the device name is empty, the default device is used via GetDefaultDeviceName().
+// It is an error if the property cannot be found.
+func (sdk SDKProperties) GetFuchsiaProperty(device string, property string) (string, error) {
+	var err error
+	deviceName := device
+	if deviceName == "" {
+		if deviceName, err = sdk.GetDefaultDeviceName(); err != nil {
+			return "", err
+		}
+	}
+	propertyKey := getDeviceDataKey([]string{deviceName, property})
+	configData, err := getDeviceConfiguationData(sdk, propertyKey)
+	if err != nil {
+		return "", fmt.Errorf("Could not read configuration data : %v", err)
+	}
+	if len(configData) == 0 {
+		return "", nil
+	}
+	if value, ok := configData[propertyKey]; ok {
+		if retval, ok := value.(string); ok {
+			return retval, nil
+		}
+		return "", fmt.Errorf("Could not get value from  %v", value)
+	}
+	return "", fmt.Errorf("Could not find property %v.%v", deviceName, property)
+}
+
+// GetDeviceConfigurations returns a list of all device configurations.
+func (sdk SDKProperties) GetDeviceConfigurations() ([]DeviceConfig, error) {
+	var configs []DeviceConfig
+
+	// Get all config data.
+	configData, err := getDeviceConfiguationData(sdk, deviceConfigurationKey)
+	if err != nil {
+		return configs, fmt.Errorf("Could not read configuration data : %v", err)
+	}
+	if len(configData) == 0 {
+		return configs, nil
+	}
+
+	defaultDeviceName, err := sdk.GetDefaultDeviceName()
+	if err != nil {
+		return configs, err
+	}
+
+	if deviceConfigMap, ok := configData[deviceConfigurationKey].(map[string]interface{}); ok {
+		for k, v := range deviceConfigMap {
+			if !isReservedProperty(k) {
+				if device, ok := mapToDeviceConfig(v); ok {
+					device.IsDefault = defaultDeviceName == device.DeviceName
+					configs = append(configs, device)
+				}
+			}
+		}
+		return configs, nil
+
+	}
+	return configs, fmt.Errorf("Could not read configuration data: %v", configData)
+}
+
+// GetDeviceConfiguration returns the configuration for the device with the given name.
+func (sdk SDKProperties) GetDeviceConfiguration(name string) (DeviceConfig, error) {
+	var deviceConfig DeviceConfig
+
+	dataKey := getDeviceDataKey([]string{name})
+	configData, err := getDeviceConfiguationData(sdk, dataKey)
+	if err != nil {
+		return deviceConfig, fmt.Errorf("Could not read configuration data : %v", err)
+	}
+	if len(configData) == 0 {
+		return deviceConfig, nil
+	}
+
+	if deviceData, ok := configData[dataKey]; ok {
+		if deviceConfig, ok := mapToDeviceConfig(deviceData); ok {
+			defaultDeviceName, err := sdk.GetDefaultDeviceName()
+			if err != nil {
+				return deviceConfig, err
+			}
+			deviceConfig.IsDefault = deviceConfig.DeviceName == defaultDeviceName
+			return deviceConfig, nil
+		}
+		return deviceConfig, fmt.Errorf("Cannot parse DeviceConfig from %v", configData)
+	}
+	return deviceConfig, fmt.Errorf("Cannot parse DeviceData.%v from %v", name, configData)
+}
+
+// SaveDeviceConfiguration persists the given device configuration properties.
+func (sdk SDKProperties) SaveDeviceConfiguration(newConfig DeviceConfig) error {
+
+	// Create a map of key to value to store.
+	dataMap := make(map[string]string)
+	dataMap[getDeviceDataKey([]string{newConfig.DeviceName, DeviceNameKey})] = newConfig.DeviceName
+	dataMap[getDeviceDataKey([]string{newConfig.DeviceName, BucketKey})] = newConfig.Bucket
+	dataMap[getDeviceDataKey([]string{newConfig.DeviceName, DeviceIPKey})] = newConfig.DeviceIP
+	dataMap[getDeviceDataKey([]string{newConfig.DeviceName, ImageKey})] = newConfig.Image
+	dataMap[getDeviceDataKey([]string{newConfig.DeviceName, PackagePortKey})] = newConfig.PackagePort
+	dataMap[getDeviceDataKey([]string{newConfig.DeviceName, PackageRepoKey})] = newConfig.PackageRepo
+	dataMap[getDeviceDataKey([]string{newConfig.DeviceName, SSHPortKey})] = newConfig.SSHPort
+	if newConfig.IsDefault {
+		dataMap[getDeviceDataKey([]string{defaultDeviceKey})] = newConfig.DeviceName
+	}
+
+	for key, value := range dataMap {
+		err := writeConfigurationData(sdk, key, value)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// RemoveDeviceConfiguration removes the device settings for the given name.
+func (sdk SDKProperties) RemoveDeviceConfiguration(deviceName string) error {
+	dataKey := getDeviceDataKey([]string{deviceName})
+
+	args := []string{"config", "remove", "--level", "global", dataKey}
+
+	if _, err := runFFX(sdk, args); err != nil {
+		return fmt.Errorf("Error removing %s configuration: %v", deviceName, err)
+	}
+
+	defaultDeviceName, err := sdk.GetDefaultDeviceName()
+	if err != nil {
+		return err
+	}
+	if defaultDeviceName == deviceName {
+		err := writeConfigurationData(sdk, getDeviceDataKey([]string{defaultDeviceKey}), "")
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func initFFXGlobalConfig(sdk SDKProperties) error {
+	args := []string{"config", "env"}
+	var (
+		err    error
+		output []byte
+		line   string
+	)
+	if output, err = runFFX(sdk, args); err != nil {
+		return fmt.Errorf("Error getting config environment %v", err)
+	}
+	reader := bufio.NewReader(bytes.NewReader(output))
+	hasGlobal := false
+	for !hasGlobal {
+		line, err = reader.ReadString('\n')
+		if err != nil {
+			if err.Error() == "EOF" {
+				break
+			} else {
+				return err
+			}
+		}
+		if strings.HasPrefix(strings.TrimSpace(line), "Global") {
+			break
+		}
+	}
+	doSetEnv := len(line) == 0
+	if len(line) > 0 {
+		const (
+			prefix    = "Global:"
+			prefixLen = len(prefix)
+		)
+		index := strings.Index(line, "Global:")
+		if index > len(line) {
+			return fmt.Errorf("Cannot parse `Global:` prefix from %v", line)
+		}
+		filename := strings.TrimSpace(line[index+prefixLen:])
+		_, err := os.Stat(filename)
+		doSetEnv = os.IsNotExist(err)
+
+	}
+	if doSetEnv {
+		// Create the global config level
+		if len(sdk.globalPropertiesFilename) == 0 {
+			return fmt.Errorf("Cannot initialize property config, global file name is empty: %v", sdk)
+		}
+		args := []string{"config", "env", "set", sdk.globalPropertiesFilename, "--level", "global"}
+		if _, err := runFFX(sdk, args); err != nil {
+			return fmt.Errorf("Error initializing global properties environment: %v", err)
+		}
+	}
+	return nil
+}
+
+// writeConfigurationData calls `ffx` to store the value at the specified key.
+func writeConfigurationData(sdk SDKProperties, key string, value string) error {
+	args := []string{"config", "set", "--level", "global", key, value}
+	if output, err := runFFX(sdk, args); err != nil {
+		return fmt.Errorf("Error writing %v = %v: %v %v", key, value, err, string(output))
+	}
+	return nil
+}
+
+// getDeviceConfiguationData calls `ffx` to read the data at the specified key.
+func getDeviceConfiguationData(sdk SDKProperties, key string) (map[string]interface{}, error) {
+	var (
+		data   map[string]interface{}
+		err    error
+		output []byte
+	)
+
+	args := []string{"config", "get", key}
+
+	if output, err = runFFX(sdk, args); err != nil {
+		return data, fmt.Errorf("Error reading %v: %v %v", key, err, string(output))
+	}
+	if len(output) > 0 {
+		jsonString := string(output)
+
+		// Check for the key not being set.
+		if strings.HasSuffix(jsonString, ": none\n") {
+			return data, nil
+		}
+
+		// wrap the response in {} and double quote the key so it is suitable for json unmarshaling.
+		index := strings.IndexByte(jsonString, ':')
+		fullJSONString := "{\"" + jsonString[:index] + "\"" + jsonString[index:] + "}"
+		err := json.Unmarshal([]byte(fullJSONString), &data)
+		if err != nil {
+			return data, fmt.Errorf("Error parsing configuration data %v: %s", err, fullJSONString)
+		}
+	}
+	return data, nil
+}
+
+// runFFX executes ffx with the given args, returning stdout. If there is an error,
+// the error will usually be of type *ExitError.
+func runFFX(sdk SDKProperties, args []string) ([]byte, error) {
+	toolsDir, err := sdk.GetToolsDir()
+	if err != nil {
+		return []byte{}, fmt.Errorf("Could not determine tools directory %v", err)
+	}
+	cmd := filepath.Join(toolsDir, "ffx")
+
+	ffx := ExecCommand(cmd, args...)
+
+	output, err := ffx.Output()
+	if err != nil {
+		if exiterr, ok := err.(*exec.ExitError); ok {
+			return []byte{}, fmt.Errorf("Error %v running ffx: %v", exiterr.ExitCode(), string(exiterr.Stderr))
+		}
+	}
+	return output, nil
+}
+
+// isReservedProperty used to differenciate between properties used
+// internally and device names.
+func isReservedProperty(property string) bool {
+	switch property {
+	case defaultDeviceKey:
+		return true
+	}
+	return false
+}
+
+// mapToDeviceConfig converts the map returned by json into a DeviceConfig struct.
+func mapToDeviceConfig(data interface{}) (DeviceConfig, bool) {
+	var (
+		device     DeviceConfig
+		deviceData map[string]interface{}
+		ok         bool
+		value      string
+	)
+
+	if deviceData, ok = data.(map[string]interface{}); ok {
+		for _, key := range validPropertyNames {
+			// the Default flag is stored else where, so don't try to
+			// key it from the map.
+			if key == DefaultKey {
+				continue
+			}
+			if val, ok := deviceData[key].(string); ok {
+				value = val
+			} else {
+				fmt.Fprintf(os.Stderr, "Cannot get %v from %v", key, deviceData)
+				continue
+			}
+			switch key {
+			case BucketKey:
+				device.Bucket = value
+			case DeviceIPKey:
+				device.DeviceIP = value
+			case DeviceNameKey:
+				device.DeviceName = value
+			case ImageKey:
+				device.Image = value
+			case PackagePortKey:
+				device.PackagePort = value
+			case PackageRepoKey:
+				device.PackageRepo = value
+			case SSHPortKey:
+				device.SSHPort = value
+			}
+		}
+	}
+	return device, ok
 }

@@ -247,6 +247,252 @@ func mockedUserProperty(value string) func() (string, error) {
 	}
 }
 
+func TestGetDefaultDeviceName(t *testing.T) {
+	sdk := SDKProperties{}
+
+	ExecCommand = helperCommandForGetFuchsiaProperty
+	defer func() { ExecCommand = exec.Command }()
+
+	val, err := sdk.GetDefaultDeviceName()
+	if err != nil {
+		t.Fatalf("unexpected err %v", err)
+	}
+	if val != "fake-target-device-name" {
+		t.Fatalf("Unexpected default device name. Expected fake-target-device-name got: %v", val)
+	}
+	ExecCommand = helperCommandForNoDefaultDevice
+	val, err = sdk.GetDefaultDeviceName()
+	if err != nil {
+		t.Fatalf("unexpected err %v", err)
+	}
+	if val != "" {
+		t.Fatalf("Unexpected default device name. Expected no name got: %v", val)
+	}
+}
+
+func TestGetFuchsiaProperty(t *testing.T) {
+	sdk := SDKProperties{}
+
+	ExecCommand = helperCommandForGetFuchsiaProperty
+	defer func() { ExecCommand = exec.Command }()
+
+	testData := []struct {
+		device, property, expected, errString string
+	}{
+		{"", "device-name", "fake-target-device-name", ""},
+		{"some-other-device", "device-name", "", ""},
+		{"some-other-device", "random-property", "", ""},
+		{"", "random-property", "", ""},
+	}
+
+	for _, data := range testData {
+		val, err := sdk.GetFuchsiaProperty(data.device, data.property)
+		if err != nil {
+			if data.errString == "" {
+				t.Fatalf("Unexpected error getting property %s.%s: %v", data.device, data.property, err)
+			} else if !strings.Contains(fmt.Sprintf("%v", err), data.errString) {
+				t.Fatalf("Expected error message %v not found in error %v", data.errString, err)
+			}
+			t.Fatalf("unexpected err %v", err)
+		}
+		if val != data.expected {
+			t.Fatalf("GetFuchsiaProperyFailed %s.%s = %s, expected %s", data.device, data.property, val, data.expected)
+		}
+	}
+}
+
+func TestGetDeviceConfigurations(t *testing.T) {
+	sdk := SDKProperties{}
+
+	ExecCommand = helperCommandForGetFuchsiaProperty
+	defer func() { ExecCommand = exec.Command }()
+
+	val, err := sdk.GetDeviceConfigurations()
+	if err != nil {
+		t.Fatalf("unexpected err %v", err)
+	}
+	if len(val) != 2 {
+		t.Errorf("TestGetDeviceConfigurations expected 2 devices: %v", val)
+	}
+}
+
+func TestGetDeviceConfiguration(t *testing.T) {
+	sdk := SDKProperties{}
+	ExecCommand = helperCommandForGetFuchsiaProperty
+	defer func() { ExecCommand = exec.Command }()
+
+	const deviceName string = "another-target-device-name"
+	val, err := sdk.GetDeviceConfiguration(deviceName)
+	if err != nil {
+		t.Fatalf("unexpected err %v", err)
+	}
+	if val.DeviceName != deviceName {
+		t.Errorf("TestGetDeviceConfiguration failed. Expected configuration for %v:  %v", deviceName, val)
+	}
+
+	val, err = sdk.GetDeviceConfiguration("unknown-device")
+	if err != nil {
+		t.Fatalf("unexpected err %v", err)
+	}
+	if val.DeviceName != "" {
+		t.Errorf("TestGetDeviceConfiguration failed. Expected empty configuration for %v:  %v", "unknown-device", val)
+	}
+}
+
+func TestSaveDeviceConfiguration(t *testing.T) {
+	sdk := SDKProperties{}
+	ExecCommand = helperCommandForSetTesting
+	defer func() { ExecCommand = exec.Command }()
+
+	newDevice := DeviceConfig{
+		DeviceName:  "new-device-name",
+		DeviceIP:    "1.1.1.1",
+		Image:       "image-name",
+		Bucket:      "buck-name",
+		PackagePort: "8000",
+		PackageRepo: "new/device/repo",
+		SSHPort:     "22",
+	}
+	err := sdk.SaveDeviceConfiguration(newDevice)
+	if err != nil {
+		t.Fatalf("unexpected err %v", err)
+	}
+}
+
+func TestRemoveDeviceConfiguration(t *testing.T) {
+	sdk := SDKProperties{}
+
+	ExecCommand = helperCommandForRemoveTesting
+	defer func() { ExecCommand = exec.Command }()
+
+	deviceName := "old-device-name"
+
+	err := sdk.RemoveDeviceConfiguration(deviceName)
+	if err != nil {
+		t.Fatalf("unexpected err %v", err)
+	}
+
+	err = sdk.RemoveDeviceConfiguration("unknown-device")
+	if err == nil {
+		t.Fatal("expected error but did not get one.")
+	}
+	expectedErrorMessage := "Error removing unknown-device configuration"
+	if !strings.HasPrefix(fmt.Sprintf("%v", err), expectedErrorMessage) {
+		t.Fatalf("Expected `%v` in error: %v ", expectedErrorMessage, err)
+	}
+}
+
+var tempGlobalSettingsFile = ""
+
+func TestInitProperties(t *testing.T) {
+	sdk := SDKProperties{
+		globalPropertiesFilename: "/some/file.json",
+	}
+
+	ExecCommand = helperCommandForInitEnv
+	defer func() { ExecCommand = exec.Command }()
+
+	tempGlobalSettingsFile = filepath.Join(t.TempDir(), "global-config.json")
+	defer func() { tempGlobalSettingsFile = "" }()
+	emptyFile, err := os.Create(tempGlobalSettingsFile)
+	if err != nil {
+		t.Fatal(err)
+	}
+	emptyFile.Close()
+
+	err = initFFXGlobalConfig(sdk)
+	if err != nil {
+		t.Fatalf("unexpected err %v", err)
+	}
+
+	ExecCommand = helperCommandForInitEnvNoExistingFile
+	err = initFFXGlobalConfig(sdk)
+	if err != nil {
+		t.Fatalf("unexpected err %v", err)
+	}
+}
+
+func helperCommandForInitEnv(command string, s ...string) (cmd *exec.Cmd) {
+	cs := []string{"-test.run=TestFakeFfx", "--"}
+	cs = append(cs, command)
+	cs = append(cs, s...)
+
+	cmd = exec.Command(os.Args[0], cs...)
+
+	// Set this in the enviroment, so we can control the result.
+	cmd.Env = append(os.Environ(), "GO_WANT_HELPER_PROCESS=1")
+	cmd.Env = append(cmd.Env, "ALLOW_ENV=1")
+	// Pass file so when it is checked, it exists.
+	if tempGlobalSettingsFile != "" {
+		cmd.Env = append(cmd.Env, fmt.Sprintf("GLOBAL_SETTINGS_FILE=%v", tempGlobalSettingsFile))
+	}
+
+	return cmd
+}
+
+func helperCommandForInitEnvNoExistingFile(command string, s ...string) (cmd *exec.Cmd) {
+	cs := []string{"-test.run=TestFakeFfx", "--"}
+	cs = append(cs, command)
+	cs = append(cs, s...)
+
+	cmd = exec.Command(os.Args[0], cs...)
+
+	// Set this in the enviroment, so we can control the result.
+	cmd.Env = append(os.Environ(), "GO_WANT_HELPER_PROCESS=1")
+	cmd.Env = append(cmd.Env, "ALLOW_ENV=1")
+	cmd.Env = append(cmd.Env, "ALLOW_SET=1")
+	cmd.Env = append(cmd.Env, fmt.Sprintf("GLOBAL_SETTINGS_FILE=%v", "/file/does/not/exist.json"))
+
+	return cmd
+}
+
+func helperCommandForGetFuchsiaProperty(command string, s ...string) (cmd *exec.Cmd) {
+	cs := []string{"-test.run=TestFakeFfx", "--"}
+	cs = append(cs, command)
+	cs = append(cs, s...)
+
+	cmd = exec.Command(os.Args[0], cs...)
+	// Set this in the enviroment, so we can control the result.
+	cmd.Env = append(os.Environ(), "GO_WANT_HELPER_PROCESS=1")
+	return cmd
+}
+
+func helperCommandForNoDefaultDevice(command string, s ...string) (cmd *exec.Cmd) {
+	cs := []string{"-test.run=TestFakeFfx", "--"}
+	cs = append(cs, command)
+	cs = append(cs, s...)
+
+	cmd = exec.Command(os.Args[0], cs...)
+	// Set this in the enviroment, so we can control the result.
+	cmd.Env = append(os.Environ(), "GO_WANT_HELPER_PROCESS=1")
+	cmd.Env = append(cmd.Env, "NO_DEFAULT_DEVICE=1")
+
+	return cmd
+}
+func helperCommandForSetTesting(command string, s ...string) (cmd *exec.Cmd) {
+	cs := []string{"-test.run=TestFakeFfx", "--"}
+	cs = append(cs, command)
+	cs = append(cs, s...)
+
+	cmd = exec.Command(os.Args[0], cs...)
+	// Set this in the enviroment, so we can control the result.
+	cmd.Env = append(os.Environ(), "GO_WANT_HELPER_PROCESS=1")
+	cmd.Env = append(cmd.Env, "ALLOW_SET=1")
+	return cmd
+}
+func helperCommandForRemoveTesting(command string, s ...string) (cmd *exec.Cmd) {
+	cs := []string{"-test.run=TestFakeFfx", "--"}
+	cs = append(cs, command)
+	cs = append(cs, s...)
+
+	cmd = exec.Command(os.Args[0], cs...)
+	// Set this in the enviroment, so we can control the result.
+	cmd.Env = append(os.Environ(), "GO_WANT_HELPER_PROCESS=1")
+	cmd.Env = append(cmd.Env, "ALLOW_SET=1")
+	cmd.Env = append(cmd.Env, "ALLOW_REMOVE=1")
+	return cmd
+}
+
 func TestFakeSDKCommon(t *testing.T) {
 	t.Helper()
 	if os.Getenv("GO_WANT_HELPER_PROCESS") != "1" {
@@ -350,6 +596,164 @@ func fakeDeviceFinder(args []string) {
 	}
 	if !ok {
 		fmt.Fprintf(os.Stderr, "unexpected ssh args  %v exepected %v", args, expected)
+		os.Exit(1)
+	}
+}
+
+func TestFakeFfx(*testing.T) {
+	if os.Getenv("GO_WANT_HELPER_PROCESS") != "1" {
+		return
+	}
+	defer os.Exit(0)
+
+	args := os.Args
+	for len(args) > 0 {
+		if args[0] == "--" {
+			args = args[1:]
+			break
+		}
+		args = args[1:]
+	}
+	if len(args) == 0 {
+		fmt.Fprintf(os.Stderr, "No command\n")
+		os.Exit(2)
+	}
+	if args[1] != "config" {
+		fmt.Fprintf(os.Stderr, "Unexpected command %v, expected `config`", args[1])
+		os.Exit(2)
+	}
+	switch args[2] {
+	case "env":
+		if os.Getenv("ALLOW_ENV") != "1" {
+			fmt.Fprintf(os.Stderr, "Verb `env` not allowed")
+			os.Exit(2)
+		}
+		handleEnvFake(args[3:])
+	case "get":
+		handleGetFake(args[3:])
+	case "set":
+		if os.Getenv("ALLOW_SET") != "1" {
+			fmt.Fprintf(os.Stderr, "Verb `set` not allowed")
+			os.Exit(2)
+		}
+		handleSetFake(args[3:])
+	case "remove":
+		handleRemoveFake(args[3:])
+	default:
+		fmt.Fprintf(os.Stderr, "Unexpected verb %v", args[2])
+		os.Exit(2)
+	}
+}
+
+func handleEnvFake(args []string) {
+	if len(args) == 0 {
+		fmt.Printf("\nEnvironment:\n\tUser: /home/someuser/some/path/.ffx_user_config.json\n\tBuild:  none\n\tGlobal: %v\n", os.Getenv("GLOBAL_SETTINGS_FILE"))
+	} else if args[0] == "set" {
+		if len(args) != 4 {
+			fmt.Fprintf(os.Stderr, "env set expects 3 args, got %v", args[1:])
+			os.Exit(2)
+		}
+		if len(args[1]) <= 0 {
+			fmt.Fprintf(os.Stderr, "env set requires a filename: %v", args[1:])
+			os.Exit(2)
+		}
+		if args[2] != "--level" || args[3] != "global" {
+			fmt.Fprintf(os.Stderr, "env set should only set global level %v", args[1:])
+			os.Exit(2)
+		}
+	} else {
+		fmt.Fprintf(os.Stderr, "Unexpected env %v", args)
+		os.Exit(2)
+	}
+}
+
+func handleGetFake(args []string) {
+	switch args[0] {
+	case "DeviceConfiguration._DEFAULT_DEVICE_":
+		if os.Getenv("NO_DEFAULT_DEVICE") != "1" {
+			fmt.Println("DeviceConfiguration._DEFAULT_DEVICE_: \"fake-target-device-name\"")
+		} else {
+			fmt.Println("DeviceConfiguration._DEFAULT_DEVICE_: none")
+		}
+	case "DeviceConfiguration.fake-target-device-name.device-name":
+		fmt.Printf("DeviceConfiguration.fake-target-device-name.device-name: \"fake-target-device-name\"\n")
+	case "DeviceConfiguration":
+		fmt.Printf(`DeviceConfiguration: {
+			"_DEFAULT_DEVICE_":"atom-slaw-cozy-rigor",
+			"fake-target-device-name":{
+				"bucket":"fuchsia-bucket","device-ip":"","device-name":"fake-target-device-name","image":"release","package-port":"","package-repo":"","ssh-port":"22"
+			},
+			"another-target-device-name":{
+				"bucket":"fuchsia-bucket","device-ip":"","device-name":"another-target-device-name","image":"release","package-port":"","package-repo":"","ssh-port":"22"
+			}
+			}`)
+	case "DeviceConfiguration.another-target-device-name":
+		fmt.Println(`DeviceConfiguration.another-target-device-name:{
+				"bucket":"fuchsia-bucket","device-ip":"","device-name":"another-target-device-name","image":"release","package-port":"","package-repo":"","ssh-port":"22"
+			}`)
+	default:
+		fmt.Printf("%v: none\n", args[0])
+	}
+}
+
+func handleSetFake(args []string) {
+	sdk := SDKProperties{}
+	// All sets should be at the global level
+	if args[0] != "--level" || args[1] != "global" {
+		fmt.Fprintf(os.Stderr, "set command should only be used at global level: %v", args)
+		os.Exit(1)
+	}
+	if len(args) > 4 {
+		fmt.Fprintf(os.Stderr, "Invalid number of arguments expected 4 got: %v", args)
+		os.Exit(1)
+	}
+	// Check the property name
+	parts := strings.Split(args[2], ".")
+	switch len(parts) {
+	case 3:
+		// This is a device setting
+		if parts[0] != "DeviceConfiguration" || parts[1] != "new-device-name" {
+			fmt.Fprintf(os.Stderr, "Expected device property name format. Got: %v", parts)
+			os.Exit(1)
+		}
+		if !sdk.IsValidProperty(parts[2]) {
+			fmt.Fprintf(os.Stderr, "Invalid property name for a device: %v", parts)
+			os.Exit(1)
+		}
+
+	case 2:
+		// Setting a reserved property
+		if parts[0] != "DeviceConfiguration" || !isReservedProperty(parts[1]) {
+			fmt.Fprintf(os.Stderr, "Unexpected property being set: %v", parts)
+			os.Exit(1)
+		}
+	default:
+		fmt.Fprintf(os.Stderr, "Unexpected property being set: %v", parts)
+		os.Exit(1)
+	}
+}
+
+func handleRemoveFake(args []string) {
+	// All removes should be at the global level
+	if args[0] != "--level" || args[1] != "global" {
+		fmt.Fprintf(os.Stderr, "remove command should only be used at global level: %v", args)
+		os.Exit(1)
+	}
+	if len(args) > 4 {
+		fmt.Fprintf(os.Stderr, "Invalid number of arguments expected 4 got: %v", args)
+		os.Exit(1)
+	}
+	// Check the property name
+	parts := strings.Split(args[2], ".")
+	switch len(parts) {
+	case 2:
+		if parts[0] != "DeviceConfiguration" || parts[1] != "old-device-name" {
+			fmt.Fprintf(os.Stderr, `BUG: An internal command error occurred.
+			Config key not found`)
+			os.Exit(1)
+		}
+	default:
+		fmt.Fprintf(os.Stderr, "Unexpected property being removed: %v", parts)
 		os.Exit(1)
 	}
 }
