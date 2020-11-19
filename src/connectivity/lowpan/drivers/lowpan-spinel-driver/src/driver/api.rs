@@ -152,6 +152,7 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> LowpanDriver for SpinelDriver
 
             // Set the network name.
             if let Some(network_name) = params.identity.raw_name {
+                let network_name = std::str::from_utf8(&network_name)?.to_string();
                 self.frame_handler
                     .send_request(
                         CmdPropValueSet(PropNet::NetworkName.into(), network_name).verify(),

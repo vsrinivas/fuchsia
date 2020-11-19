@@ -34,7 +34,7 @@ impl Default for FakeSpinelDevice {
         properties.insert(Prop::Net(PropNet::StackUp), vec![0x00]);
         properties.insert(Prop::Net(PropNet::Role), vec![0x00]);
 
-        properties.insert(Prop::Net(PropNet::NetworkName), vec![]);
+        properties.insert(Prop::Net(PropNet::NetworkName), vec![0]);
         properties.insert(Prop::Net(PropNet::Xpanid), vec![0, 0, 0, 0, 0, 0, 0, 0]);
         properties.insert(Prop::Net(PropNet::MasterKey), vec![]);
         properties.insert(Prop::Mac(PropMac::Panid), vec![0, 0]);
@@ -61,7 +61,7 @@ impl FakeSpinelDevice {
         properties.insert(Prop::Net(PropNet::InterfaceUp), vec![0x00]);
         properties.insert(Prop::Net(PropNet::StackUp), vec![0x00]);
         properties.insert(Prop::Net(PropNet::Role), vec![0x00]);
-        properties.insert(Prop::Net(PropNet::NetworkName), vec![]);
+        properties.insert(Prop::Net(PropNet::NetworkName), vec![0]);
         properties.insert(Prop::Net(PropNet::MasterKey), vec![]);
         properties.insert(Prop::Net(PropNet::Xpanid), vec![0, 0, 0, 0, 0, 0, 0, 0]);
         properties.insert(Prop::Mac(PropMac::Panid), vec![0, 0]);
@@ -404,29 +404,41 @@ impl FakeSpinelDevice {
                 }
             }
             prop => {
-                let mut properties = self.properties.lock();
-                if let Some(value) = properties.get_mut(&prop) {
-                    value.clear();
-                    value.extend_from_slice(new_value);
-                    spinel_write!(
-                        &mut response,
-                        "CiiD",
-                        frame.header,
-                        Cmd::PropValueIs,
-                        prop,
-                        new_value
-                    )
-                    .unwrap();
-                } else {
+                if prop == Prop::Net(PropNet::NetworkName) && new_value.last() != Some(&0) {
                     spinel_write!(
                         &mut response,
                         "Ciii",
                         frame.header,
                         Cmd::PropValueIs,
                         Prop::LastStatus,
-                        Status::PropNotFound
+                        Status::ParseError
                     )
                     .unwrap();
+                } else {
+                    let mut properties = self.properties.lock();
+                    if let Some(value) = properties.get_mut(&prop) {
+                        value.clear();
+                        value.extend_from_slice(new_value);
+                        spinel_write!(
+                            &mut response,
+                            "CiiD",
+                            frame.header,
+                            Cmd::PropValueIs,
+                            prop,
+                            new_value
+                        )
+                        .unwrap();
+                    } else {
+                        spinel_write!(
+                            &mut response,
+                            "Ciii",
+                            frame.header,
+                            Cmd::PropValueIs,
+                            Prop::LastStatus,
+                            Status::PropNotFound
+                        )
+                        .unwrap();
+                    }
                 }
             }
         }
