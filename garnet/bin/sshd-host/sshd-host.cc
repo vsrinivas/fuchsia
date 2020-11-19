@@ -14,7 +14,7 @@
 
 #include "garnet/bin/sshd-host/service.h"
 
-const int kPort = 22;
+const uint16_t kPort = 22;
 const char* kKeyGenArgs[] = {"/pkg/bin/hostkeygen", nullptr};
 
 int main(int /*argc*/, const char** /*argv*/) {

@@ -31,7 +31,7 @@ zx_status_t make_child_job(const zx::job& parent, std::string name, zx::job* job
 // Service relies on the default async dispatcher and is not thread safe.
 class Service {
  public:
-  explicit Service(int port);
+  explicit Service(uint16_t port);
   ~Service();
 
  private:
@@ -39,7 +39,7 @@ class Service {
   void Launch(int conn, const std::string& peer_name);
   void ProcessTerminated(zx::process process, zx::job job);
 
-  int port_;
+  uint16_t port_;
   int sock_;
   fsl::FDWaiter waiter_;
   zx::job job_;

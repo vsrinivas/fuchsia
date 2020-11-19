@@ -132,7 +132,7 @@ zx_status_t make_child_job(const zx::job& parent, std::string name, zx::job* job
   return ZX_OK;
 }
 
-Service::Service(int port) : port_(port) {
+Service::Service(uint16_t port) : port_(port) {
   sock_ = socket(AF_INET6, SOCK_STREAM, IPPROTO_TCP);
   if (sock_ < 0) {
     FX_LOGS(ERROR) << "Failed to create socket: " << strerror(errno);
