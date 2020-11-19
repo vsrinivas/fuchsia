@@ -994,57 +994,63 @@ TEST(VmoTestCase, ZeroPage) {
 }
 
 TEST(VmoTestCase, Cache) {
-  zx_handle_t vmo;
+  zx::vmo vmo;
   const size_t size = PAGE_SIZE;
 
-  EXPECT_OK(zx_vmo_create(size, 0, &vmo), "creation for cache_policy");
+  EXPECT_OK(zx::vmo::create(size, 0, &vmo), "creation for cache_policy");
 
   // clean vmo can have all valid cache policies set
-  EXPECT_OK(zx_vmo_set_cache_policy(vmo, ZX_CACHE_POLICY_CACHED));
-  EXPECT_OK(zx_vmo_set_cache_policy(vmo, ZX_CACHE_POLICY_UNCACHED));
-  EXPECT_OK(zx_vmo_set_cache_policy(vmo, ZX_CACHE_POLICY_UNCACHED_DEVICE));
-  EXPECT_OK(zx_vmo_set_cache_policy(vmo, ZX_CACHE_POLICY_WRITE_COMBINING));
+  EXPECT_OK(vmo.set_cache_policy(ZX_CACHE_POLICY_CACHED));
+  EXPECT_OK(vmo.set_cache_policy(ZX_CACHE_POLICY_UNCACHED));
+  EXPECT_OK(vmo.set_cache_policy(ZX_CACHE_POLICY_UNCACHED_DEVICE));
+  EXPECT_OK(vmo.set_cache_policy(ZX_CACHE_POLICY_WRITE_COMBINING));
 
   // bad cache policy
-  EXPECT_EQ(ZX_ERR_INVALID_ARGS, zx_vmo_set_cache_policy(vmo, ZX_CACHE_POLICY_MASK + 1));
+  EXPECT_EQ(ZX_ERR_INVALID_ARGS, vmo.set_cache_policy(ZX_CACHE_POLICY_MASK + 1));
 
   // map the vmo, make sure policy doesn't set
   uintptr_t ptr;
-  EXPECT_OK(zx_vmar_map(zx_vmar_root_self(), ZX_VM_PERM_READ, 0, vmo, 0, size, &ptr));
-  EXPECT_EQ(ZX_ERR_BAD_STATE, zx_vmo_set_cache_policy(vmo, ZX_CACHE_POLICY_CACHED));
-  EXPECT_OK(zx_vmar_unmap(zx_vmar_root_self(), ptr, size));
-  EXPECT_OK(zx_vmo_set_cache_policy(vmo, ZX_CACHE_POLICY_CACHED));
+  EXPECT_OK(zx::vmar::root_self()->map(ZX_VM_PERM_READ, 0, vmo, 0, size, &ptr));
+  EXPECT_EQ(ZX_ERR_BAD_STATE, vmo.set_cache_policy(ZX_CACHE_POLICY_CACHED));
+  EXPECT_OK(zx::vmar::root_self()->unmap(ptr, size));
+  EXPECT_OK(vmo.set_cache_policy(ZX_CACHE_POLICY_CACHED));
 
   // clone the vmo, make sure policy doesn't set
-  zx_handle_t clone;
-  EXPECT_OK(zx_vmo_create_child(vmo, ZX_VMO_CHILD_COPY_ON_WRITE, 0, size, &clone));
-  EXPECT_EQ(ZX_ERR_BAD_STATE, zx_vmo_set_cache_policy(vmo, ZX_CACHE_POLICY_CACHED));
-  EXPECT_OK(zx_handle_close(clone));
-  EXPECT_OK(zx_vmo_set_cache_policy(vmo, ZX_CACHE_POLICY_CACHED));
+  zx::vmo clone;
+  EXPECT_OK(vmo.create_child(ZX_VMO_CHILD_COPY_ON_WRITE, 0, size, &clone));
+  EXPECT_EQ(ZX_ERR_BAD_STATE, vmo.set_cache_policy(ZX_CACHE_POLICY_CACHED));
+  clone.reset();
+  EXPECT_OK(vmo.set_cache_policy(ZX_CACHE_POLICY_CACHED));
 
   // clone the vmo, try to set policy on the clone
-  EXPECT_OK(zx_vmo_create_child(vmo, ZX_VMO_CHILD_COPY_ON_WRITE, 0, size, &clone));
-  EXPECT_EQ(ZX_ERR_BAD_STATE, zx_vmo_set_cache_policy(clone, ZX_CACHE_POLICY_CACHED));
-  EXPECT_OK(zx_handle_close(clone));
+  EXPECT_OK(vmo.create_child(ZX_VMO_CHILD_COPY_ON_WRITE, 0, size, &clone));
+  EXPECT_EQ(ZX_ERR_BAD_STATE, clone.set_cache_policy(ZX_CACHE_POLICY_CACHED));
+  clone.reset();
 
   // set the policy, make sure future clones do not go through
-  EXPECT_OK(zx_vmo_set_cache_policy(vmo, ZX_CACHE_POLICY_UNCACHED));
-  EXPECT_EQ(ZX_ERR_BAD_STATE,
-            zx_vmo_create_child(vmo, ZX_VMO_CHILD_COPY_ON_WRITE, 0, size, &clone));
-  EXPECT_OK(zx_vmo_set_cache_policy(vmo, ZX_CACHE_POLICY_CACHED));
-  EXPECT_OK(zx_vmo_create_child(vmo, ZX_VMO_CHILD_COPY_ON_WRITE, 0, size, &clone));
-  EXPECT_OK(zx_handle_close(clone));
+  EXPECT_OK(vmo.set_cache_policy(ZX_CACHE_POLICY_UNCACHED));
+  EXPECT_EQ(ZX_ERR_BAD_STATE, vmo.create_child(ZX_VMO_CHILD_COPY_ON_WRITE, 0, size, &clone));
+  EXPECT_OK(vmo.set_cache_policy(ZX_CACHE_POLICY_CACHED));
+  EXPECT_OK(vmo.create_child(ZX_VMO_CHILD_COPY_ON_WRITE, 0, size, &clone));
+  clone.reset();
 
   // set the policy, make sure vmo read/write do not work
   char c;
-  EXPECT_OK(zx_vmo_set_cache_policy(vmo, ZX_CACHE_POLICY_UNCACHED));
-  EXPECT_EQ(ZX_ERR_BAD_STATE, zx_vmo_read(vmo, &c, 0, sizeof(c)));
-  EXPECT_EQ(ZX_ERR_BAD_STATE, zx_vmo_write(vmo, &c, 0, sizeof(c)));
-  EXPECT_OK(zx_vmo_set_cache_policy(vmo, ZX_CACHE_POLICY_CACHED));
-  EXPECT_OK(zx_vmo_read(vmo, &c, 0, sizeof(c)));
-  EXPECT_OK(zx_vmo_write(vmo, &c, 0, sizeof(c)));
+  EXPECT_OK(vmo.set_cache_policy(ZX_CACHE_POLICY_UNCACHED));
+  EXPECT_EQ(ZX_ERR_BAD_STATE, vmo.read(&c, 0, sizeof(c)));
+  EXPECT_EQ(ZX_ERR_BAD_STATE, vmo.write(&c, 0, sizeof(c)));
+  EXPECT_OK(vmo.set_cache_policy(ZX_CACHE_POLICY_CACHED));
+  EXPECT_OK(vmo.read(&c, 0, sizeof(c)));
+  EXPECT_OK(vmo.write(&c, 0, sizeof(c)));
 
-  EXPECT_OK(zx_handle_close(vmo), "close handle");
+  vmo.reset();
+
+  // Create a large sparsely populated VMO and check setting cache policy works.
+  EXPECT_OK(zx::vmo::create(size << 40, 0, &vmo));
+  c = 42;
+  EXPECT_OK(vmo.write(&c, 1ull << 50, sizeof(c)));
+  EXPECT_OK(vmo.set_cache_policy(ZX_CACHE_POLICY_UNCACHED));
+  vmo.reset();
 }
 
 TEST(VmoTestCase, PhysicalSlice) {
