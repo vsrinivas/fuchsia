@@ -655,8 +655,7 @@ void PcieDevice::DisableLocked() {
   // forwarding windows, in the case of a bridge).  Flag the device as
   // disabled from here on out.
   DEBUG_ASSERT(dev_lock_.lock().IsHeld());
-  TRACEF("WARNING - Disabling device %02x:%02x.%01x due to unsatisfiable configuration\n", bus_id_,
-         dev_id_, func_id_);
+  printf("PCI: Disabling device %02x:%02x.%01x\n", bus_id_, dev_id_, func_id_);
 
   // Flag the device as disabled.  Close the device's MMIO/PIO windows, shut
   // off device initiated accesses to the bus, disable legacy interrupts.

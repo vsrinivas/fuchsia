@@ -28,10 +28,7 @@ class PcieRoot : public fbl::WAVLTreeContainable<fbl::RefPtr<PcieRoot>>, public 
 
   // PCIE roots are already at the top of the topology so there
   // is no action necessary.
-  zx_status_t EnableBusMasterUpstream(bool) override {
-    TRACE_ENTRY;
-    return ZX_OK;
-  }
+  zx_status_t EnableBusMasterUpstream(bool enable) override { return ZX_OK; }
   // Properties
   PcieBusDriver& driver() { return bus_drv_; }
   RegionAllocator& pf_mmio_regions() final { return bus_drv_.pf_mmio_regions(); }
