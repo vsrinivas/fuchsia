@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"go.fuchsia.dev/fuchsia/src/testing/qemu"
+	"go.fuchsia.dev/fuchsia/src/testing/emulator"
 )
 
 func zbiPath(t *testing.T) string {
@@ -23,7 +23,7 @@ func zbiPath(t *testing.T) string {
 }
 
 func TestKernelLockupDetectorCriticalSection(t *testing.T) {
-	distro, err := qemu.Unpack()
+	distro, err := emulator.Unpack()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -33,7 +33,7 @@ func TestKernelLockupDetectorCriticalSection(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	d := distro.Create(qemu.Params{
+	d := distro.Create(emulator.Params{
 		Arch: arch,
 		ZBI:  zbiPath(t),
 
@@ -71,7 +71,7 @@ func TestKernelLockupDetectorCriticalSection(t *testing.T) {
 }
 
 func TestKernelLockupDetectorHeartbeat(t *testing.T) {
-	distro, err := qemu.Unpack()
+	distro, err := emulator.Unpack()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -81,7 +81,7 @@ func TestKernelLockupDetectorHeartbeat(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	d := distro.Create(qemu.Params{
+	d := distro.Create(emulator.Params{
 		Arch: arch,
 		ZBI:  zbiPath(t),
 

@@ -24,7 +24,7 @@ if (is_linux) {
 
     source_dir = "//src/recovery/simulator/support"
 
-    deps = [ "//src/testing/qemu" ]
+    deps = [ "//src/testing/emulator" ]
 
     sources = [ "support.go" ]
   }
@@ -38,7 +38,7 @@ if (is_linux) {
       source_dir = "//src/recovery/simulator/$split_name"
       deps = [
         ":recovery_simulator_support_lib",
-        "//src/testing/qemu",
+        "//src/testing/emulator",
       ]
       forward_variables_from(invoker, [ "sources" ])
     }

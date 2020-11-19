@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"go.fuchsia.dev/fuchsia/src/testing/qemu"
+	"go.fuchsia.dev/fuchsia/src/testing/emulator"
 )
 
 func zbiPath(t *testing.T) string {
@@ -24,7 +24,7 @@ func zbiPath(t *testing.T) string {
 }
 
 func TestShutdown(t *testing.T) {
-	distro, err := qemu.Unpack()
+	distro, err := emulator.Unpack()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -34,7 +34,7 @@ func TestShutdown(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	i := distro.Create(qemu.Params{
+	i := distro.Create(emulator.Params{
 		Arch:             arch,
 		ZBI:              zbiPath(t),
 		AppendCmdline:    "devmgr.log-to-debuglog",

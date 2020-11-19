@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"go.fuchsia.dev/fuchsia/src/testing/qemu"
+	"go.fuchsia.dev/fuchsia/src/testing/emulator"
 )
 
 const cmdline = "devmgr.log-to-debuglog kernel.oom.behavior=reboot"
@@ -27,7 +27,7 @@ func zbiPath(t *testing.T) string {
 // Triggers the OOM signal without leaking memory. Verifies that fileystems are shut down and the
 // system reboots in a somewhat orderly fashion.
 func TestOOMSignal(t *testing.T) {
-	distro, err := qemu.Unpack()
+	distro, err := emulator.Unpack()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -37,7 +37,7 @@ func TestOOMSignal(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	i := distro.Create(qemu.Params{
+	i := distro.Create(emulator.Params{
 		Arch:          arch,
 		ZBI:           zbiPath(t),
 		AppendCmdline: cmdline,
@@ -76,7 +76,7 @@ func TestOOMSignal(t *testing.T) {
 // Leaks memory until an out of memory event is triggered, then backs off.  Verifies that the system
 // reboots.
 func TestOOM(t *testing.T) {
-	distro, err := qemu.Unpack()
+	distro, err := emulator.Unpack()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -86,7 +86,7 @@ func TestOOM(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	i := distro.Create(qemu.Params{
+	i := distro.Create(emulator.Params{
 		Arch:          arch,
 		ZBI:           zbiPath(t),
 		AppendCmdline: cmdline,
@@ -132,7 +132,7 @@ func TestOOM(t *testing.T) {
 // be terminated (e.g. because a page fault cannot commit).  As a result, the reboot sequence may be
 // less orderly and predictable.
 func TestOOMHard(t *testing.T) {
-	distro, err := qemu.Unpack()
+	distro, err := emulator.Unpack()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -142,7 +142,7 @@ func TestOOMHard(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	i := distro.Create(qemu.Params{
+	i := distro.Create(emulator.Params{
 		Arch:          arch,
 		ZBI:           zbiPath(t),
 		AppendCmdline: cmdline,

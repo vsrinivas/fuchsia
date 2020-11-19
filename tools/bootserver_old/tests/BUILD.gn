@@ -43,7 +43,7 @@ if (is_linux) {
     testonly = true
     name = "go.fuchsia.dev/fuchsia/tools/bootserver_old/tests/..."
     deps = [
-      "//src/testing/qemu",
+      "//src/testing/emulator",
       "//tools/net/netutil",
       "//tools/net/tftp",
     ]

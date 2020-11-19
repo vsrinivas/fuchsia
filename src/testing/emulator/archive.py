@@ -11,15 +11,11 @@ import os
 
 def main():
     parser = argparse.ArgumentParser('Archives a directory')
-    parser.add_argument('--src',
-                        help='Path to the directory to archive',
-                        required=True)
-    parser.add_argument('--dst',
-                        help='Path to the archive',
-                        required=True)
-    parser.add_argument('--depfile',
-                        help='Path to dependency file',
-                        required=True)
+    parser.add_argument(
+        '--src', help='Path to the directory to archive', required=True)
+    parser.add_argument('--dst', help='Path to the archive', required=True)
+    parser.add_argument(
+        '--depfile', help='Path to dependency file', required=True)
     args = parser.parse_args()
 
     deps = []
@@ -38,4 +34,4 @@ def main():
 
 
 if __name__ == "__main__":
-  sys.exit(main())
+    sys.exit(main())

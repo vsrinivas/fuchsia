@@ -7,12 +7,12 @@ package main
 import (
 	"testing"
 
-	"go.fuchsia.dev/fuchsia/src/testing/qemu"
+	"go.fuchsia.dev/fuchsia/src/testing/emulator"
 	"go.fuchsia.dev/fuchsia/src/tests/disable_syscalls/support"
 )
 
 func TestDisableDebuggingOutputOnlySerialSyscalls(t *testing.T) {
-	distro, err := qemu.Unpack()
+	distro, err := emulator.Unpack()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -26,7 +26,7 @@ func TestDisableDebuggingOutputOnlySerialSyscalls(t *testing.T) {
 		"/boot/bin/syscall-check",
 		support.ToolPath(t, "minfs"),
 		support.ToolPath(t, "zbi"),
-		qemu.Params{
+		emulator.Params{
 			Arch:          arch,
 			ZBI:           support.ZbiPath(t),
 			AppendCmdline: "kernel.enable-debugging-syscalls=false kernel.enable-serial-syscalls=output-only",

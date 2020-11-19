@@ -22,7 +22,7 @@ if (is_linux) {
 
     name = "fuchsia.googlesource.com/tests/kernel_crashlog"
 
-    deps = [ "//src/testing/qemu" ]
+    deps = [ "//src/testing/emulator" ]
 
     sources = [ "kernel_crashlog_test.go" ]
   }

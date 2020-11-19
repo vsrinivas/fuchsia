@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"go.fuchsia.dev/fuchsia/src/testing/qemu"
+	"go.fuchsia.dev/fuchsia/src/testing/emulator"
 )
 
 func zbiPath(t *testing.T) string {
@@ -22,12 +22,12 @@ func zbiPath(t *testing.T) string {
 	return filepath.Join(exPath, "../fuchsia.zbi")
 }
 
-type specific func(*qemu.Instance)
+type specific func(*emulator.Instance)
 
 // Boots an instance, |crash_cmd|, waits for the system to reboot, prints the recovered crash report
 // and calls |s| to match against test case specific output.
 func testCommon(t *testing.T, crash_cmd string, s specific) {
-	distro, err := qemu.Unpack()
+	distro, err := emulator.Unpack()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -36,14 +36,14 @@ func testCommon(t *testing.T, crash_cmd string, s specific) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if arch != qemu.Arm64 {
+	if arch != emulator.Arm64 {
 		// TODO(maniscalco): Flesh out the qemu/x64 support for stowing/retrieving a
 		// crashlog.
 		t.Skipf("Skipping test. This test only supports arm64 targets.\n")
 		return
 	}
 
-	i := distro.Create(qemu.Params{
+	i := distro.Create(emulator.Params{
 		Arch: arch,
 		ZBI:  zbiPath(t),
 
@@ -87,7 +87,7 @@ func testCommon(t *testing.T, crash_cmd string, s specific) {
 
 // See that the kernel stows a crashlog upon panicking.
 func TestKernelCrashlog(t *testing.T) {
-	testCommon(t, "k crash", func(i *qemu.Instance) {
+	testCommon(t, "k crash", func(i *emulator.Instance) {
 		// See that the crash report contains ESR and FAR.
 		//
 		// This is a regression test for fxbug.dev/52182.
@@ -104,7 +104,7 @@ func TestKernelCrashlog(t *testing.T) {
 // See that when the kernel crashes because of an assert failure the crashlog contains the assert
 // message.
 func TestKernelCrashlogAssert(t *testing.T) {
-	testCommon(t, "k crash_assert", func(i *qemu.Instance) {
+	testCommon(t, "k crash_assert", func(i *emulator.Instance) {
 		// See that there's a backtrace, followed by some counters, and finally the assert
 		// message.
 		i.WaitForLogMessage("BACKTRACE")

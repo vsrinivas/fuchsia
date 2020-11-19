@@ -20,7 +20,7 @@ import (
 	"testing"
 	"time"
 
-	"go.fuchsia.dev/fuchsia/src/testing/qemu"
+	"go.fuchsia.dev/fuchsia/src/testing/emulator"
 )
 
 var hostDir = map[string]string{"arm64": "host_arm64", "amd64": "host_x64"}[runtime.GOARCH]
@@ -176,8 +176,8 @@ func AttemptPaveNoBind(t *testing.T, shouldWork bool) {
 }
 
 // StartQemu starts a QEMU instance with the given kernel commandline args.
-func StartQemu(t *testing.T, appendCmdline, modeString string) *qemu.Instance {
-	distro, err := qemu.UnpackFrom(*TestDataDir)
+func StartQemu(t *testing.T, appendCmdline, modeString string) *emulator.Instance {
+	distro, err := emulator.UnpackFrom(*TestDataDir, emulator.DistributionParams{})
 	if err != nil {
 		t.Fatalf("Failed to unpack QEMU: %s", err)
 	}
@@ -194,7 +194,7 @@ func StartQemu(t *testing.T, appendCmdline, modeString string) *qemu.Instance {
 	if err != nil {
 		t.Fatal(err)
 	}
-	instance := distro.Create(qemu.Params{
+	instance := distro.Create(emulator.Params{
 		Arch:          arch,
 		ZBI:           zbi,
 		AppendCmdline: appendCmdline,

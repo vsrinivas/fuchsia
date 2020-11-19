@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"go.fuchsia.dev/fuchsia/src/testing/qemu"
+	"go.fuchsia.dev/fuchsia/src/testing/emulator"
 )
 
 const cmdline = "console.shell=true kernel.bypass-debuglog=true zircon.autorun.boot=/boot/bin/sh+-c+k"
@@ -25,7 +25,7 @@ func zbiPath(t *testing.T) string {
 }
 
 func TestConsoleIsLaunched(t *testing.T) {
-	distro, err := qemu.Unpack()
+	distro, err := emulator.Unpack()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -35,7 +35,7 @@ func TestConsoleIsLaunched(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	i := distro.Create(qemu.Params{
+	i := distro.Create(emulator.Params{
 		Arch:          arch,
 		ZBI:           zbiPath(t),
 		AppendCmdline: cmdline,

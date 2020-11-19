@@ -12,7 +12,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"go.fuchsia.dev/fuchsia/src/testing/qemu"
+	"go.fuchsia.dev/fuchsia/src/testing/emulator"
 )
 
 func zbiPath(t *testing.T) string {
@@ -44,7 +44,7 @@ func startAscendd(t *testing.T) *exec.Cmd {
 
 // Test that ascendd can connect to overnetstack via serial.
 func TestOvernetSerial(t *testing.T) {
-	distro, err := qemu.Unpack()
+	distro, err := emulator.Unpack()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -54,7 +54,7 @@ func TestOvernetSerial(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	i := distro.Create(qemu.Params{
+	i := distro.Create(emulator.Params{
 		Arch:          arch,
 		ZBI:           zbiPath(t),
 		AppendCmdline: "devmgr.log-to-debuglog console.shell=false kernel.enable-debugging-syscalls=true kernel.enable-serial-syscalls=true",
@@ -72,7 +72,7 @@ func TestOvernetSerial(t *testing.T) {
 
 // Test that ascendd can connect to overnetstack via serial.
 func TestNoSpinningIfNoSerial(t *testing.T) {
-	distro, err := qemu.Unpack()
+	distro, err := emulator.Unpack()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -82,7 +82,7 @@ func TestNoSpinningIfNoSerial(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	i := distro.Create(qemu.Params{
+	i := distro.Create(emulator.Params{
 		Arch:          arch,
 		ZBI:           zbiPath(t),
 		AppendCmdline: "console.shell=false kernel.enable-debugging-syscalls=false kernel.enable-serial-syscalls=false",

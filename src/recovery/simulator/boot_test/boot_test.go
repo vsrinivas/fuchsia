@@ -8,12 +8,12 @@ import (
 	"testing"
 
 	"go.fuchsia.dev/fuchsia/src/recovery/simulator/support"
-	"go.fuchsia.dev/fuchsia/src/testing/qemu"
+	"go.fuchsia.dev/fuchsia/src/testing/emulator"
 )
 
-// TestUnpack checks that we can unpack qemu.
+// TestUnpack checks that we can unpack emulator.
 func TestBoot(t *testing.T) {
-	distro, err := qemu.Unpack()
+	distro, err := emulator.Unpack()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -24,7 +24,7 @@ func TestBoot(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	i := distro.Create(qemu.Params{
+	i := distro.Create(emulator.Params{
 		Arch: arch,
 		ZBI:  support.ZbiPath(t),
 	})

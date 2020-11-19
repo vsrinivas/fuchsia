@@ -20,7 +20,7 @@ if (is_linux) {
   go_library("lib") {
     testonly = true
 
-    deps = [ "//src/testing/qemu" ]
+    deps = [ "//src/testing/emulator" ]
 
     sources = [ "limited_netsvc_test.go" ]
   }

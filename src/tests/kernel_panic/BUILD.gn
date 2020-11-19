@@ -11,7 +11,7 @@ group("tests") {
 
   deps = []
 
-  # kernel_panic_tests uses //src/testing/qemu, which only works on
+  # kernel_panic_tests uses //src/testing/emulator, which only works on
   # linux.
   if (host_os == "linux") {
     deps += [ ":kernel_panic_tests($host_toolchain)" ]
@@ -22,7 +22,7 @@ if (is_linux) {
   go_library("lib") {
     testonly = true
 
-    deps = [ "//src/testing/qemu" ]
+    deps = [ "//src/testing/emulator" ]
 
     sources = [ "kernel_panic_test.go" ]
   }

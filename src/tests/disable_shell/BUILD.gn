@@ -26,7 +26,7 @@ if (is_linux) {
 
     source_dir = "//src/tests/disable_shell/support"
 
-    deps = [ "//src/testing/qemu" ]
+    deps = [ "//src/testing/emulator" ]
 
     sources = [ "support.go" ]
   }
@@ -45,7 +45,7 @@ if (is_linux) {
       source_dir = "//src/tests/disable_shell/$split_name"
       deps = [
         ":disable_shell_support_lib",
-        "//src/testing/qemu",
+        "//src/testing/emulator",
       ]
       forward_variables_from(invoker, [ "sources" ])
     }

@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"go.fuchsia.dev/fuchsia/src/testing/qemu"
+	"go.fuchsia.dev/fuchsia/src/testing/emulator"
 )
 
 const cmdline = "kernel.halt-on-panic=true kernel.bypass-debuglog=true zircon.autorun.boot=/boot/bin/sh+-c+k"
@@ -26,7 +26,7 @@ func zbiPath(t *testing.T) string {
 
 // See that `k crash` crashes the kernel.
 func TestBasicCrash(t *testing.T) {
-	distro, err := qemu.Unpack()
+	distro, err := emulator.Unpack()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -36,7 +36,7 @@ func TestBasicCrash(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	i := distro.Create(qemu.Params{
+	i := distro.Create(emulator.Params{
 		Arch:          arch,
 		ZBI:           zbiPath(t),
 		AppendCmdline: cmdline,
@@ -61,7 +61,7 @@ func TestBasicCrash(t *testing.T) {
 
 // See that an SMAP violation is fatal.
 func TestSMAPViolation(t *testing.T) {
-	distro, err := qemu.Unpack()
+	distro, err := emulator.Unpack()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -70,12 +70,12 @@ func TestSMAPViolation(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if arch != qemu.X64 {
+	if arch != emulator.X64 {
 		t.Skipf("Skipping test. This test only supports x64 targets.\n")
 		return
 	}
 
-	i := distro.Create(qemu.Params{
+	i := distro.Create(emulator.Params{
 		Arch:          arch,
 		ZBI:           zbiPath(t),
 		AppendCmdline: cmdline,
@@ -103,7 +103,7 @@ func TestSMAPViolation(t *testing.T) {
 //
 // Verify both oops and panic actions.
 func TestPmmCheckerOopsAndPanic(t *testing.T) {
-	distro, err := qemu.Unpack()
+	distro, err := emulator.Unpack()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -112,12 +112,12 @@ func TestPmmCheckerOopsAndPanic(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if arch != qemu.X64 {
+	if arch != emulator.X64 {
 		t.Skipf("Skipping test. This test only supports x64 targets.\n")
 		return
 	}
 
-	i := distro.Create(qemu.Params{
+	i := distro.Create(emulator.Params{
 		Arch:          arch,
 		ZBI:           zbiPath(t),
 		AppendCmdline: cmdline,
@@ -168,7 +168,7 @@ func TestPmmCheckerOopsAndPanic(t *testing.T) {
 
 // See that `k crash_assert` crashes the kernel.
 func TestCrashAssert(t *testing.T) {
-	distro, err := qemu.Unpack()
+	distro, err := emulator.Unpack()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -178,7 +178,7 @@ func TestCrashAssert(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	i := distro.Create(qemu.Params{
+	i := distro.Create(emulator.Params{
 		Arch:          arch,
 		ZBI:           zbiPath(t),
 		AppendCmdline: cmdline,

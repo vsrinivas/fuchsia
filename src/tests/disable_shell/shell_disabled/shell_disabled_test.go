@@ -8,12 +8,12 @@ import (
 	"testing"
 	"time"
 
-	"go.fuchsia.dev/fuchsia/src/testing/qemu"
+	"go.fuchsia.dev/fuchsia/src/testing/emulator"
 	"go.fuchsia.dev/fuchsia/src/tests/disable_shell/support"
 )
 
 func TestShellDisabled(t *testing.T) {
-	distro, err := qemu.Unpack()
+	distro, err := emulator.Unpack()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -23,7 +23,7 @@ func TestShellDisabled(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	i := distro.Create(qemu.Params{
+	i := distro.Create(emulator.Params{
 		Arch:          arch,
 		ZBI:           support.ZbiPath(t),
 		AppendCmdline: "devmgr.log-to-debuglog console.shell=false",
@@ -42,7 +42,7 @@ func TestShellDisabled(t *testing.T) {
 }
 
 func TestAutorunDisabled(t *testing.T) {
-	distro, err := qemu.Unpack()
+	distro, err := emulator.Unpack()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -52,7 +52,7 @@ func TestAutorunDisabled(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	i := distro.Create(qemu.Params{
+	i := distro.Create(emulator.Params{
 		Arch:          arch,
 		ZBI:           support.ZbiPath(t),
 		AppendCmdline: "devmgr.log-to-debuglog console.shell=false zircon.autorun.boot=foobar",

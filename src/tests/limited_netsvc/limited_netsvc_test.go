@@ -16,7 +16,7 @@ import (
 	"testing"
 	"time"
 
-	"go.fuchsia.dev/fuchsia/src/testing/qemu"
+	"go.fuchsia.dev/fuchsia/src/testing/emulator"
 	"go.fuchsia.dev/fuchsia/tools/net/netutil"
 	"go.fuchsia.dev/fuchsia/tools/net/tftp"
 )
@@ -67,7 +67,7 @@ func cmdWithTimeout(t *testing.T, shouldWork bool, name string, arg ...string) {
 	}
 }
 
-func attemptNetcp(t *testing.T, i *qemu.Instance, shouldWork bool) {
+func attemptNetcp(t *testing.T, i *emulator.Instance, shouldWork bool) {
 	cmdWithTimeout(
 		t, shouldWork,
 		toolPath(t, "netcp"),
@@ -89,7 +89,7 @@ func randomTokenAsString() string {
 	return ret
 }
 
-func attemptNetruncmd(t *testing.T, i *qemu.Instance, shouldWork bool) {
+func attemptNetruncmd(t *testing.T, i *emulator.Instance, shouldWork bool) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
@@ -120,15 +120,15 @@ func attemptNetruncmd(t *testing.T, i *qemu.Instance, shouldWork bool) {
 	}
 }
 
-func attemptNetls(t *testing.T, i *qemu.Instance, shouldWork bool) {
+func attemptNetls(t *testing.T, i *emulator.Instance, shouldWork bool) {
 	cmdWithTimeout(t, shouldWork, toolPath(t, "netls"))
 }
 
-func attemptNetaddr(t *testing.T, i *qemu.Instance, shouldWork bool) {
+func attemptNetaddr(t *testing.T, i *emulator.Instance, shouldWork bool) {
 	cmdWithTimeout(t, shouldWork, toolPath(t, "netaddr"))
 }
 
-func attemptTftp(t *testing.T, i *qemu.Instance, shouldWork bool) {
+func attemptTftp(t *testing.T, i *emulator.Instance, shouldWork bool) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
@@ -165,7 +165,7 @@ func attemptTftp(t *testing.T, i *qemu.Instance, shouldWork bool) {
 	}
 }
 
-func attemptLoglistener(t *testing.T, i *qemu.Instance, shouldWork bool) {
+func attemptLoglistener(t *testing.T, i *emulator.Instance, shouldWork bool) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
@@ -195,8 +195,8 @@ func attemptLoglistener(t *testing.T, i *qemu.Instance, shouldWork bool) {
 	}
 }
 
-func setupQemu(t *testing.T, appendCmdline string, modeString string) (*qemu.Instance, func()) {
-	distro, err := qemu.Unpack()
+func setupQemu(t *testing.T, appendCmdline string, modeString string) (*emulator.Instance, func()) {
+	distro, err := emulator.Unpack()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -205,7 +205,7 @@ func setupQemu(t *testing.T, appendCmdline string, modeString string) (*qemu.Ins
 		t.Fatal(err)
 	}
 
-	i := distro.Create(qemu.Params{
+	i := distro.Create(emulator.Params{
 		Arch:          arch,
 		ZBI:           zbiPath(t),
 		AppendCmdline: appendCmdline,

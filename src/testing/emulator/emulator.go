@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-package qemu
+package emulator
 
 import (
 	"archive/tar"
@@ -71,6 +71,7 @@ func untar(dst string, src string) error {
 type Distribution struct {
 	testDataDir  string
 	unpackedPath string
+	Emulator     Emulator
 }
 
 // Arch is the architecture to emulate.
@@ -81,7 +82,15 @@ const (
 	Arm64
 )
 
-// Params describes how to run a QEMU instance.
+// Emulator is the emulator to use.
+type Emulator int
+
+const (
+	Qemu Emulator = iota
+	Femu
+)
+
+// Params describes how to run an emulator instance.
 type Params struct {
 	Arch             Arch
 	ZBI              string
@@ -91,13 +100,19 @@ type Params struct {
 	DisableDebugExit bool
 }
 
-// Instance is a live QEMU instance.
+// Instance is a live emulator instance.
 type Instance struct {
-	cmd    *exec.Cmd
-	piped  *exec.Cmd
-	stdin  *bufio.Writer
-	stdout *bufio.Reader
-	stderr *bufio.Reader
+	cmd      *exec.Cmd
+	piped    *exec.Cmd
+	stdin    *bufio.Writer
+	stdout   *bufio.Reader
+	stderr   *bufio.Reader
+	emulator Emulator
+}
+
+// DistributionParams is passed to UnpackFrom().
+type DistributionParams struct {
+	Emulator Emulator
 }
 
 // Unpack unpacks the QEMU distribution.
@@ -108,21 +123,26 @@ func Unpack() (*Distribution, error) {
 	if err != nil {
 		return nil, err
 	}
-	return UnpackFrom(filepath.Join(filepath.Dir(ex), "test_data"))
+	return UnpackFrom(filepath.Join(filepath.Dir(ex), "test_data"), DistributionParams{Emulator: Qemu})
 }
 
-// UnpackFrom unpacks the QEMU distribution.
+// UnpackFrom unpacks the emulator distribution.
 //
-// path is the path to host_x64/test_data containing qemu/qemu.tar.gz.
-func UnpackFrom(path string) (*Distribution, error) {
-	// Since QEMU will be started from a different directory, make the base path
+// path is the path to host_x64/test_data containing the emulator.
+// emulator is the emulator to unpack.
+func UnpackFrom(path string, distroParams DistributionParams) (*Distribution, error) {
+	// Since the emulator will be started from a different directory, make the base path
 	// absolute.
 	path, err := filepath.Abs(path)
 	if err != nil {
 		return nil, err
 	}
-	archivePath := filepath.Join(path, "qemu", "qemu.tar.gz")
-	unpackedPath, err := ioutil.TempDir("", "qemu-distro")
+	emulator_file := "qemu.tar.gz"
+	if distroParams.Emulator == Femu {
+		emulator_file = "femu.tar.gz"
+	}
+	archivePath := filepath.Join(path, "emulator", emulator_file)
+	unpackedPath, err := ioutil.TempDir("", "emulator-distro")
 	if err != nil {
 		return nil, err
 	}
@@ -130,15 +150,19 @@ func UnpackFrom(path string) (*Distribution, error) {
 		os.RemoveAll(unpackedPath)
 		return nil, err
 	}
-	return &Distribution{testDataDir: path, unpackedPath: unpackedPath}, nil
+	return &Distribution{testDataDir: path, unpackedPath: unpackedPath, Emulator: distroParams.Emulator}, nil
 }
 
-// Delete removes the QEMU-related artifacts.
+// Delete removes the emulator-related artifacts.
 func (d *Distribution) Delete() error {
 	return os.RemoveAll(d.unpackedPath)
 }
 
 func (d *Distribution) systemPath(arch Arch) string {
+	if d.Emulator == Femu {
+		// FEMU has one binary for all arches.
+		return filepath.Join(d.unpackedPath, "emulator")
+	}
 	switch arch {
 	case X64:
 		return filepath.Join(d.unpackedPath, "bin", "qemu-system-x86_64")
@@ -151,9 +175,9 @@ func (d *Distribution) systemPath(arch Arch) string {
 func (d *Distribution) kernelPath(arch Arch) string {
 	switch arch {
 	case X64:
-		return filepath.Join(d.testDataDir, "qemu", "multiboot.bin")
+		return filepath.Join(d.testDataDir, "emulator", "multiboot.bin")
 	case Arm64:
-		return filepath.Join(d.testDataDir, "qemu", "qemu-boot-shim.bin")
+		return filepath.Join(d.testDataDir, "emulator", "qemu-boot-shim.bin")
 	}
 	return ""
 }
@@ -176,7 +200,7 @@ func hostSupportsKVM(arch Arch) bool {
 
 // TargetCPU returs the target CPU used by the build that produced this library.
 func (d *Distribution) TargetCPU() (Arch, error) {
-	path := filepath.Join(d.testDataDir, "qemu", "target_cpu.txt")
+	path := filepath.Join(d.testDataDir, "emulator", "target_cpu.txt")
 	bytes, err := ioutil.ReadFile(path)
 	if err != nil {
 		return X64, err
@@ -192,13 +216,6 @@ func (d *Distribution) TargetCPU() (Arch, error) {
 }
 
 func (d *Distribution) appendCommonQemuArgs(params Params, args []string) []string {
-	args = append(args, "-kernel", d.kernelPath(params.Arch))
-	args = append(args, "-nographic", "-smp", "4,threads=2")
-
-	// Ask QEMU to emit a message on stderr once the VM is running
-	// so we'll know whether QEMU has started or not.
-	args = append(args, "-trace", "enable=vm_state_notify")
-
 	// Append architecture specific QEMU options.  These options
 	// are meant to mirror those used by `fx qemu`.
 	if params.Arch == Arm64 {
@@ -216,13 +233,73 @@ func (d *Distribution) appendCommonQemuArgs(params Params, args []string) []stri
 		panic("unsupported architecture")
 	}
 
-	args = append(args, "-m", "8192")
-
 	if params.Networking {
 		args = append(args, "-nic", "tap,ifname=qemu,script=no,downscript=no,model=virtio-net-pci")
 	} else {
 		args = append(args, "-nic", "none")
 	}
+
+	return args
+}
+
+func (d *Distribution) appendCommonFemuArgs(params Params, args []string) []string {
+	// These options should mirror what's used by `fx emu`.
+
+	if params.Arch == Arm64 {
+		args = append(args, "-avd-arch arm64")
+	}
+
+	args = append(args, "-feature", "VirtioInput,GLDirectMem,KVM,Vulkan")
+	args = append(args, "-gpu", "auto")
+	args = append(args, "-no-window")
+
+	// Everything after `-fuchsia` is passed directly to qemu by femu.
+	args = append(args, "-fuchsia")
+	// `fx emu` has slightly different semantics to `fx qemu` for architecture-specific stuff.
+	if params.Arch == Arm64 {
+		args = append(args, "-machine", "virt")
+	} else if params.Arch == X64 {
+		args = append(args, "-machine", "q35")
+		if !params.DisableKVM && hostSupportsKVM(params.Arch) {
+			args = append(args, "-enable-kvm")
+			args = append(args, "-cpu", "host,migratable=no,+invtsc")
+		} else {
+			args = append(args, "-cpu", "Haswell,+smap,-check,-fsgsbase")
+		}
+		if !params.DisableDebugExit {
+			args = append(args, "-device", "isa-debug-exit,iobase=0xf4,iosize=0x04")
+		}
+	} else {
+		panic("unsupported architecture")
+	}
+	args = append(args, "-vga", "none")
+
+	if params.Networking {
+		args = append(args, "-netdev", "type=tap,ifname=qemu,id=net0,script=no")
+		args = append(args, "-device", "virtio-net-pci,vectors=8,netdev=net0,mac=52:54:00:63:5e:7a")
+	} else {
+		args = append(args, "-net", "none")
+	}
+
+	return args
+}
+
+func (d *Distribution) appendCommonArgs(params Params, args []string) []string {
+	args = append(args, "-kernel", d.kernelPath(params.Arch))
+	if d.Emulator == Qemu {
+		args = d.appendCommonQemuArgs(params, args)
+	} else if d.Emulator == Femu {
+		args = d.appendCommonFemuArgs(params, args)
+	}
+
+	// Ask QEMU to emit a message on stderr once the VM is running
+	// so we'll know whether QEMU has started or not.
+	args = append(args, "-trace", "enable=vm_state_notify")
+	args = append(args, "-smp", "4,threads=2")
+
+	args = append(args, "-m", "8192")
+	args = append(args, "-nographic")
+
 	return args
 }
 
@@ -235,19 +312,21 @@ func getCommonKernelCmdline(params Params) string {
 	return cmdline
 }
 
-// Create creates an instance of QEMU with the given parameters.
+// Create creates an instance of the emulator with the given parameters.
 func (d *Distribution) Create(params Params) *Instance {
 	if params.ZBI == "" {
 		panic("ZBI must be specified")
 	}
-	args := []string{"-initrd", params.ZBI}
-	args = d.appendCommonQemuArgs(params, args)
+	args := []string{}
+	args = d.appendCommonArgs(params, args)
+	args = append(args, "-initrd", params.ZBI)
 	args = append(args, "-append", getCommonKernelCmdline(params))
 	path := d.systemPath(params.Arch)
 	fmt.Printf("Running %s %s\n", path, args)
 
 	i := &Instance{
-		cmd: exec.Command(path, args...),
+		cmd:      exec.Command(path, args...),
+		emulator: d.Emulator,
 	}
 	// QEMU looks in the cwd for some specially named files, in particular
 	// multiboot.bin, so avoid picking those up accidentally. See
@@ -258,19 +337,19 @@ func (d *Distribution) Create(params Params) *Instance {
 	return i
 }
 
-// RunNonInteractive runs an instance of QEMU that runs a single command and
+// RunNonInteractive runs an instance of the emulator that runs a single command and
 // returns the log that results from doing so.
 //
 // This mode is non-interactive and is intended specifically to test the case
 // where the serial port has been disabled. The following modifications are
-// made to the QEMU invocation compared with Create()/Start():
+// made to the emulator invocation compared with Create()/Start():
 //
 //  - amalgamate the given ZBI into a larger one that includes an additional
 //    entry of a script which includes commands to run.
 //  - that script mounts a disk created on the host in /tmp, and runs the
 //    given command with output redirected to a file also on the /tmp disk
 //  - the script triggers shutdown of the machine
-//  - after qemu shutdown, the log file is extracted and returned.
+//  - after emulator shutdown, the log file is extracted and returned.
 //
 // In order to achieve this, here we need to create the host minfs
 // file system, write the commands to run, build the augmented .zbi to
@@ -316,12 +395,13 @@ dm poweroff
 		return "", "", err
 	}
 
-	// Build up the qemu command line from common arguments and the extra goop to
+	// Build up the emulator command line from common arguments and the extra goop to
 	// add the temporary disk at 00:06.0. This follows how infra runs qemu with an
 	// extra disk via botanist.
 	path := d.systemPath(params.Arch)
-	args := []string{"-initrd", zbi}
-	args = d.appendCommonQemuArgs(params, args)
+	args := []string{}
+	args = d.appendCommonArgs(params, args)
+	args = append(args, "-initrd", zbi)
 	args = append(args, "-object", "iothread,id=resultiothread")
 	args = append(args, "-drive", "id=resultdisk,file="+fs+",format=raw,if=none,cache=unsafe,aio=threads")
 	args = append(args, "-device", "virtio-blk-pci,drive=resultdisk,iothread=resultiothread,addr=6.0")
@@ -371,12 +451,12 @@ dm poweroff
 	return string(retLog), string(retErr), nil
 }
 
-// Start the QEMU instance.
+// Start the emulator instance.
 func (i *Instance) Start() error {
 	return i.StartPiped(nil)
 }
 
-// StartPiped starts the QEMU instance with stdin/stdout piped through a
+// StartPiped starts the emulator instance with stdin/stdout piped through a
 // different process.
 //
 // Assumes that the stderr from the piped process should replace the stdout
@@ -416,23 +496,32 @@ func (i *Instance) StartPiped(piped *exec.Cmd) error {
 
 	startErr := i.cmd.Start()
 
-	// Look for very early log message to validate that qemu likely started
-	// correctly. Loop for a while to give qemu a chance to boot.
-
+	// Look for very early log message to validate that the emulator likely started
+	// correctly. Loop for a while to give the emulator a chance to boot.
 	fmt.Println("Checking for QEMU boot...")
 	for j := 0; j < 100; j++ {
-		// The flag `-trace enable=vm_state_notify` will cause qemu to
-		// print this message early in boot.
-		if i.checkForLogMessage(i.stderr, "vm_state_notify running") == nil {
-			break
+
+		if i.emulator == Femu {
+			// FEMU isn't built with support for outputting trace events.
+			// Instead we look for a message that occurs very early during Zircon boot.
+			if i.checkForLogMessage(i.stdout, "welcome to Zircon") == nil {
+				break
+			}
+		} else {
+			// The flag `-trace enable=vm_state_notify` will cause qemu to
+			// print this message early in boot.
+			if i.checkForLogMessage(i.stderr, "vm_state_notify running") == nil {
+				break
+			}
 		}
+
 		time.Sleep(100 * time.Millisecond)
 	}
 
 	return startErr
 }
 
-// Kill terminates the QEMU instance.
+// Kill terminates the emulator instance.
 func (i *Instance) Kill() error {
 	var err error
 	if i.piped != nil {
@@ -444,7 +533,7 @@ func (i *Instance) Kill() error {
 	return err
 }
 
-// Wait for the QEMU instance to terminate
+// Wait for the emulator instance to terminate
 func (i *Instance) Wait() (*os.ProcessState, error) {
 	if i.piped != nil {
 		if ps, err := i.piped.Process.Wait(); err != nil {
@@ -455,7 +544,7 @@ func (i *Instance) Wait() (*os.ProcessState, error) {
 	return ps, err
 }
 
-// RunCommand runs the given command in the serial console for the QEMU
+// RunCommand runs the given command in the serial console for the emulator
 // instance.
 func (i *Instance) RunCommand(cmd string) error {
 	_, err := fmt.Fprintf(i.stdin, "%s\n", cmd)
@@ -472,7 +561,7 @@ func (i *Instance) RunCommand(cmd string) error {
 	return err
 }
 
-// WaitForLogMessage reads log messages from the QEMU instance until it reads a
+// WaitForLogMessage reads log messages from the emulator instance until it reads a
 // message that contains the given string.
 //
 // panic()s on error (and in particular if the string is not seen until EOF).
@@ -544,7 +633,7 @@ func (i *Instance) AssertLogMessageNotSeenWithinTimeout(notSeen string, timeout 
 // Reset screen mode: ESC [ ? 7 l
 // Move cursor home: ESC [ 2 J
 // All text attributes off: ESC [ 0 m
-const qemuClearPrefix = "\x1b\x63\x1b\x5b\x3f\x37\x6c\x1b\x5b\x32\x4a\x1b\x5b\x30\x6d"
+const emuClearPrefix = "\x1b\x63\x1b\x5b\x3f\x37\x6c\x1b\x5b\x32\x4a\x1b\x5b\x30\x6d"
 
 // Reads all messages from |r| and tests if |msg| appears. Returns error if any.
 func (i *Instance) checkForLogMessage(b *bufio.Reader, msg string) error {
@@ -561,11 +650,11 @@ func (i *Instance) checkForLogMessage(b *bufio.Reader, msg string) error {
 			return err
 		}
 
-		// Drop the QEMU clearing preamble as it makes it difficult to see output
-		// when there's multiple qemu runs in a single binary.
+		// Drop the clearing preamble as it makes it difficult to see output
+		// when there's multiple emulator runs in a single binary.
 		toPrint := line
-		if strings.HasPrefix(toPrint, qemuClearPrefix) {
-			toPrint = toPrint[len(qemuClearPrefix):]
+		if strings.HasPrefix(toPrint, emuClearPrefix) {
+			toPrint = toPrint[len(emuClearPrefix):]
 		}
 		fmt.Print(toPrint)
 		if strings.Contains(line, msg) {

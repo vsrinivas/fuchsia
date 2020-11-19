@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"go.fuchsia.dev/fuchsia/src/testing/qemu"
+	"go.fuchsia.dev/fuchsia/src/testing/emulator"
 )
 
 func zbiPath(t *testing.T) string {
@@ -31,7 +31,7 @@ const (
 
 // RebootWithCommand is a test helper that boots a qemu instance then reboots it by issuing cmd.
 func RebootWithCommand(t *testing.T, cmd string, kind ExpectedRebootType) {
-	distro, err := qemu.Unpack()
+	distro, err := emulator.Unpack()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -41,7 +41,7 @@ func RebootWithCommand(t *testing.T, cmd string, kind ExpectedRebootType) {
 		t.Fatal(err)
 	}
 
-	i := distro.Create(qemu.Params{
+	i := distro.Create(emulator.Params{
 		Arch:          arch,
 		ZBI:           zbiPath(t),
 		AppendCmdline: "devmgr.log-to-debuglog",

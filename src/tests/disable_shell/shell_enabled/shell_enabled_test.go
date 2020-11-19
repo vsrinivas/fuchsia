@@ -7,12 +7,12 @@ package main
 import (
 	"testing"
 
-	"go.fuchsia.dev/fuchsia/src/testing/qemu"
+	"go.fuchsia.dev/fuchsia/src/testing/emulator"
 	"go.fuchsia.dev/fuchsia/src/tests/disable_shell/support"
 )
 
 func TestShellEnabled(t *testing.T) {
-	distro, err := qemu.Unpack()
+	distro, err := emulator.Unpack()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -22,7 +22,7 @@ func TestShellEnabled(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	i := distro.Create(qemu.Params{
+	i := distro.Create(emulator.Params{
 		Arch:          arch,
 		ZBI:           support.ZbiPath(t),
 		AppendCmdline: "devmgr.log-to-debuglog console.shell=true",
@@ -41,7 +41,7 @@ func TestShellEnabled(t *testing.T) {
 }
 
 func TestAutorunEnabled(t *testing.T) {
-	distro, err := qemu.Unpack()
+	distro, err := emulator.Unpack()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -52,7 +52,7 @@ func TestAutorunEnabled(t *testing.T) {
 	}
 
 	tokenFromSerial := support.RandomTokenAsString()
-	i := distro.Create(qemu.Params{
+	i := distro.Create(emulator.Params{
 		Arch: arch,
 		ZBI:  support.ZbiPath(t),
 		AppendCmdline: "devmgr.log-to-debuglog console.shell=true " +

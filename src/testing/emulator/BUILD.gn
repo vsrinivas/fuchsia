@@ -6,16 +6,16 @@ import("//build/config/fuchsia/zircon.gni")
 import("//build/go/go_library.gni")
 import("//build/testing/host_test_data.gni")
 
-# Currently, we only support working with the QEMU simulator on Linux.
+# Currently, we only support working with QEMU or FEMU on Linux.
 if (is_linux) {
   # The infrastructure does not provide a way for host tests to access
   # qemu, so we need to archive our own copy of qemu from the source
   # tree.
-  action("archive") {
+  action("archive-qemu") {
     testonly = true
     visibility = [ ":*" ]
 
-    archive_path = "$root_out_dir/test_data/qemu/qemu.tar.gz"
+    archive_path = "$root_out_dir/test_data/emulator/qemu.tar.gz"
     outputs = [ archive_path ]
 
     depfile = "${archive_path}.d"
@@ -25,6 +25,27 @@ if (is_linux) {
     args = [
       "--src",
       rebase_path("//prebuilt/third_party/qemu/${host_platform}"),
+      "--dst",
+      rebase_path(archive_path, root_build_dir),
+      "--depfile",
+      rebase_path(depfile, root_build_dir),
+    ]
+  }
+
+  action("archive-femu") {
+    testonly = true
+    visibility = [ ":*" ]
+
+    archive_path = "$root_out_dir/test_data/emulator/femu.tar.gz"
+    outputs = [ archive_path ]
+
+    depfile = "${archive_path}.d"
+
+    script = "archive.py"
+
+    args = [
+      "--src",
+      rebase_path("//prebuilt/third_party/aemu/${host_platform}"),
       "--dst",
       rebase_path(archive_path, root_build_dir),
       "--depfile",
@@ -46,10 +67,10 @@ if (is_linux) {
     }
 
     sources = [ "$root_build_dir/$kernel_binary" ]
-    outputs = [ "$root_out_dir/test_data/qemu/$kernel_binary" ]
+    outputs = [ "$root_out_dir/test_data/emulator/$kernel_binary" ]
   }
 
-  target_cpu_txt = "$root_out_dir/test_data/qemu/target_cpu.txt"
+  target_cpu_txt = "$root_out_dir/test_data/emulator/target_cpu.txt"
   generated_file("target_cpu_txt") {
     testonly = true
     contents = target_cpu
@@ -57,21 +78,24 @@ if (is_linux) {
   }
 
   host_test_data("test_data") {
-    sources = [ target_cpu_txt ] + get_target_outputs(":archive")
+    sources = [ target_cpu_txt ] + get_target_outputs(":archive-qemu") +
+              get_target_outputs(":archive-femu")
     deps = [
-      ":archive",
+      ":archive-femu",
+      ":archive-qemu",
       ":kernel",
       ":target_cpu_txt",
     ]
   }
 
-  go_library("qemu") {
+  go_library("emulator") {
     testonly = true
     non_go_deps = [
-      ":archive",
+      ":archive-femu",
+      ":archive-qemu",
       ":kernel",
       ":test_data",
     ]
-    sources = [ "qemu.go" ]
+    sources = [ "emulator.go" ]
   }
 }
