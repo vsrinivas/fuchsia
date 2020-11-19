@@ -300,11 +300,10 @@ void InputSystem::Register(fuchsia::ui::pointerinjector::Config config,
       [this](zx_koid_t descendant, zx_koid_t ancestor) {
         return IsDescendantAndConnected(scene_graph_->view_tree(), descendant, ancestor);
       },
-      std::move(inject_func));
+      std::move(inject_func),
+      /*on_channel_closed*/
+      [this, id] { injectors_.erase(id); });
   FX_CHECK(success) << "Injector already exists.";
-
-  // Remove the injector if the channel has an error.
-  injectors_.at(id).SetErrorHandler([this, id](zx_status_t status) { injectors_.erase(id); });
 
   callback();
 }

@@ -125,12 +125,14 @@ Injector::Injector(InjectorSettings settings, Viewport viewport,
                    fidl::InterfaceRequest<fuchsia::ui::pointerinjector::Device> device,
                    fit::function<bool(/*descendant*/ zx_koid_t, /*ancestor*/ zx_koid_t)>
                        is_descendant_and_connected,
-                   fit::function<void(const InternalPointerEvent&, StreamId)> inject)
+                   fit::function<void(const InternalPointerEvent&, StreamId)> inject,
+                   fit::function<void()> on_channel_closed)
     : binding_(this, std::move(device)),
       settings_(std::move(settings)),
       viewport_(std::move(viewport)),
       is_descendant_and_connected_(std::move(is_descendant_and_connected)),
-      inject_(std::move(inject)) {
+      inject_(std::move(inject)),
+      on_channel_closed_(std::move(on_channel_closed)) {
   FX_DCHECK(is_descendant_and_connected_);
   FX_DCHECK(inject_);
   FX_LOGS(INFO) << "Injector : Registered new injector with "
@@ -139,15 +141,12 @@ Injector::Injector(InjectorSettings settings, Viewport viewport,
                 << " Dispatch Policy: " << static_cast<uint32_t>(settings_.dispatch_policy)
                 << " Context koid: " << settings_.context_koid
                 << " and Target koid: " << settings_.target_koid;
-  // Set a default error handler for correct cleanup.
-  SetErrorHandler([](auto...) {});
-}
 
-void Injector::SetErrorHandler(fit::function<void(zx_status_t)> error_handler) {
-  binding_.set_error_handler([this, error_handler = std::move(error_handler)](zx_status_t status) {
+  binding_.set_error_handler([this](zx_status_t) {
     // Clean up ongoing streams before calling the supplied error handler.
     CancelOngoingStreams();
-    error_handler(status);
+    // NOTE: Triggers destruction of this object.
+    on_channel_closed_();
   });
 }
 
@@ -285,8 +284,9 @@ void Injector::CancelOngoingStreams() {
 
 void Injector::CloseChannel(zx_status_t epitaph) {
   CancelOngoingStreams();
-  // NOTE: Triggers destruction of this object.
   binding_.Close(epitaph);
+  // NOTE: Triggers destruction of this object.
+  on_channel_closed_();
 }
 
 }  // namespace input

@@ -39,15 +39,14 @@ class Injector : public fuchsia::ui::pointerinjector::Device {
            fidl::InterfaceRequest<fuchsia::ui::pointerinjector::Device> injector,
            fit::function<bool(/*descendant*/ zx_koid_t, /*ancestor*/ zx_koid_t)>
                is_descendant_and_connected,
-           fit::function<void(const InternalPointerEvent&, StreamId stream_id)> inject);
+           fit::function<void(const InternalPointerEvent&, StreamId stream_id)> inject,
+           fit::function<void()> on_channel_closed);
 
   static bool IsValidConfig(const fuchsia::ui::pointerinjector::Config& config);
 
   // |fuchsia::ui::pointerinjector::Device|
   void Inject(std::vector<fuchsia::ui::pointerinjector::Event> events,
               InjectCallback callback) override;
-
-  void SetErrorHandler(fit::function<void(zx_status_t)> error_handler);
 
  private:
   // Return value is either both valid, {ZX_OK, valid stream id} or both
@@ -87,7 +86,12 @@ class Injector : public fuchsia::ui::pointerinjector::Device {
   fit::function<bool(/*descendant*/ zx_koid_t, /*ancestor*/ zx_koid_t)>
       is_descendant_and_connected_;
 
-  fit::function<void(const InternalPointerEvent&, StreamId)> inject_;
+  // Used to inject the event into InputSystem for dispatch to clients.
+  const fit::function<void(const InternalPointerEvent&, StreamId)> inject_;
+
+  // Called both when an error is triggered by either the remote or the local side of the channel.
+  // Triggers destruction of this object.
+  const fit::function<void()> on_channel_closed_;
 };
 
 }  // namespace input

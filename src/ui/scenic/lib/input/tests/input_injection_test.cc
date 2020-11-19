@@ -572,7 +572,8 @@ TEST(InjectorTest, InjectedEvents_ShouldTriggerTheInjectLambda) {
       InjectorSettingsTemplate(), ViewportTemplate(), injector.NewRequest(),
       /*is_descendant_and_connected=*/
       [&connectivity_is_good](zx_koid_t, zx_koid_t) { return connectivity_is_good; },
-      /*inject=*/[&num_injections](auto...) { ++num_injections; });
+      /*inject=*/[&num_injections](auto...) { ++num_injections; },
+      /*on_channel_closed=*/[] {});
 
   {  // Inject one event.
     bool injection_callback_fired = false;
@@ -639,7 +640,8 @@ TEST(InjectorTest, InjectionWithNoEvent_ShouldCloseChannel) {
       /*is_descendant_and_connected=*/
       [](auto...) { return true; },
       /*inject=*/
-      [](auto...) {});
+      [](auto...) {},
+      /*on_channel_closed=*/[] {});
 
   bool injection_callback_fired = false;
   // Inject nothing.
@@ -671,7 +673,8 @@ TEST(InjectorTest, ClientClosingChannel_ShouldTriggerCancelEvents_ForEachOngoing
       [&cancelled_streams](const scenic_impl::input::InternalPointerEvent& event, StreamId) {
         if (event.phase == scenic_impl::input::Phase::CANCEL)
           cancelled_streams.push_back(event.pointer_id);
-      });
+      },
+      /*on_channel_closed=*/[] {});
 
   // Start three streams and end one.
   {
@@ -737,7 +740,8 @@ TEST(InjectorTest, ServerClosingChannel_ShouldTriggerCancelEvents_ForEachOngoing
       [&cancelled_streams](const scenic_impl::input::InternalPointerEvent& event, StreamId) {
         if (event.phase == scenic_impl::input::Phase::CANCEL)
           cancelled_streams.push_back(event.pointer_id);
-      });
+      },
+      /*on_channel_closed=*/[] {});
 
   // Start three streams and end one.
   {
@@ -800,7 +804,8 @@ TEST(InjectorTest, InjectionOfEmptyEvent_ShouldCloseChannel) {
       /*is_descendant_and_connected=*/
       [](zx_koid_t, zx_koid_t) { return true; },
       /*inject=*/
-      [&injection_lambda_fired](auto...) { injection_lambda_fired = true; });
+      [&injection_lambda_fired](auto...) { injection_lambda_fired = true; },
+      /*on_channel_closed=*/[] {});
 
   bool injection_callback_fired = false;
   fuchsia::ui::pointerinjector::Event event;
@@ -813,6 +818,68 @@ TEST(InjectorTest, InjectionOfEmptyEvent_ShouldCloseChannel) {
   EXPECT_FALSE(injection_lambda_fired);
   EXPECT_FALSE(injection_callback_fired);
   EXPECT_TRUE(error_callback_fired);
+}
+
+TEST(InjectorTest, ClientClosingChannel_ShouldTriggerOnChannelClosedLambda) {
+  // Test loop to be able to control dispatch without having to create an entire test class
+  // subclassing TestLoopFixture.
+  async::TestLoop test_loop;
+  async_set_default_dispatcher(test_loop.dispatcher());
+
+  // Set up an isolated Injector.
+  fuchsia::ui::pointerinjector::DevicePtr injector;
+
+  bool client_error_callback_fired = false;
+  injector.set_error_handler(
+      [&client_error_callback_fired](zx_status_t) { client_error_callback_fired = true; });
+
+  bool on_channel_closed_callback_fired = false;
+  scenic_impl::input::Injector injector_impl(
+      InjectorSettingsTemplate(), ViewportTemplate(), injector.NewRequest(),
+      /*is_descendant_and_connected=*/[](auto...) { return true; },
+      /*inject=*/[](auto...) {},
+      /*on_channel_closed=*/
+      [&on_channel_closed_callback_fired] { on_channel_closed_callback_fired = true; });
+
+  // Close the client side channel.
+  injector = {};
+  test_loop.RunUntilIdle();
+
+  EXPECT_FALSE(client_error_callback_fired);
+  EXPECT_TRUE(on_channel_closed_callback_fired);
+}
+
+TEST(InjectorTest, ServerClosingChannel_ShouldTriggerOnChannelClosedLambda) {
+  // Test loop to be able to control dispatch without having to create an entire test class
+  // subclassing TestLoopFixture.
+  async::TestLoop test_loop;
+  async_set_default_dispatcher(test_loop.dispatcher());
+
+  // Set up an isolated Injector.
+  fuchsia::ui::pointerinjector::DevicePtr injector;
+
+  bool client_error_callback_fired = false;
+  injector.set_error_handler(
+      [&client_error_callback_fired](zx_status_t) { client_error_callback_fired = true; });
+
+  bool on_channel_closed_callback_fired = false;
+  scenic_impl::input::Injector injector_impl(
+      InjectorSettingsTemplate(), ViewportTemplate(), injector.NewRequest(),
+      /*is_descendant_and_connected=*/[](auto...) { return true; },
+      /*inject=*/[](auto...) {},
+      /*on_channel_closed=*/
+      [&on_channel_closed_callback_fired] { on_channel_closed_callback_fired = true; });
+
+  // Inject an event with missing fields to cause the channel to close.
+  {
+    std::vector<fuchsia::ui::pointerinjector::Event> events;
+    events.emplace_back();
+    injector->Inject(std::move(events), [] {});
+  }
+  test_loop.RunUntilIdle();
+
+  EXPECT_TRUE(client_error_callback_fired);
+  EXPECT_TRUE(on_channel_closed_callback_fired);
 }
 
 // Test for lazy connectivity detection.
@@ -842,7 +909,8 @@ TEST(InjectorTest, InjectionWithBadConnectivity_ShouldCloseChannel) {
       /*inject=*/
       [&num_cancel_events](const scenic_impl::input::InternalPointerEvent& event, StreamId) {
         num_cancel_events += event.phase == scenic_impl::input::Phase::CANCEL ? 1 : 0;
-      });
+      },
+      /*on_channel_closed=*/[] {});
 
   // Start event stream while connectivity is good.
   {
@@ -917,7 +985,8 @@ TEST_P(InjectorInvalidEventsTest, InjectEventWithMissingField_ShouldCloseChannel
       /*is_descendant_and_connected=*/
       [](auto...) { return true; },
       /*inject=*/
-      [](auto...) {});
+      [](auto...) {},
+      /*on_channel_closed=*/[] {});
 
   bool injection_callback_fired = false;
   std::vector<fuchsia::ui::pointerinjector::Event> events;
@@ -972,7 +1041,8 @@ TEST_P(InjectorGoodEventStreamTest,
       /*is_descendant_and_connected=*/
       [](auto...) { return true; },  // Always true.
       /*inject=*/
-      [](auto...) {});
+      [](auto...) {},
+      /*on_channel_closed=*/[] {});
 
   std::vector<fuchsia::ui::pointerinjector::Event> events;
   for (auto [pointer_id, phase] : GetParam()) {
@@ -1005,7 +1075,8 @@ TEST_P(InjectorGoodEventStreamTest,
       /*is_descendant_and_connected=*/
       [](auto...) { return true; },  // Always true.
       /*inject=*/
-      [](auto...) {});
+      [](auto...) {},
+      /*on_channel_closed=*/[] {});
 
   for (auto [pointer_id, phase] : GetParam()) {
     bool injection_callback_fired = false;
@@ -1067,7 +1138,8 @@ TEST_P(InjectorBadEventStreamTest, InjectionWithBadEventStream_ShouldCloseChanne
   scenic_impl::input::Injector injector_impl(
       InjectorSettingsTemplate(), ViewportTemplate(), injector.NewRequest(),
       /*is_descendant_and_connected=*/[](auto...) { return true; },
-      /*inject=*/[](auto...) {});
+      /*inject=*/[](auto...) {},
+      /*on_channel_closed=*/[] {});
 
   fuchsia::ui::pointerinjector::Event event = InjectionEventTemplate();
 
@@ -1101,7 +1173,8 @@ TEST_P(InjectorBadEventStreamTest, InjectionWithBadEventStream_ShouldCloseChanne
   scenic_impl::input::Injector injector_impl(
       InjectorSettingsTemplate(), ViewportTemplate(), injector.NewRequest(),
       /*is_descendant_and_connected=*/[](auto...) { return true; },
-      /*inject=*/[](auto...) {});
+      /*inject=*/[](auto...) {},
+      /*on_channel_closed=*/[] {});
 
   // Run event stream.
   for (auto [pointer_id, phase] : GetParam()) {
@@ -1132,7 +1205,8 @@ TEST(InjectorTest, InjectedViewport_ShouldNotTriggerInjectLambda) {
   scenic_impl::input::Injector injector_impl(
       InjectorSettingsTemplate(), ViewportTemplate(), injector.NewRequest(),
       /*is_descendant_and_connected=*/[](zx_koid_t, zx_koid_t) { return true; },
-      /*inject=*/[&inject_lambda_fired](auto...) { inject_lambda_fired = true; });
+      /*inject=*/[&inject_lambda_fired](auto...) { inject_lambda_fired = true; },
+      /*on_channel_closed=*/[] {});
 
   {
     bool injection_callback_fired = false;
@@ -1305,7 +1379,8 @@ TEST_P(InjectorBadViewportTest, InjectBadViewport_ShouldCloseChannel) {
   scenic_impl::input::Injector injector_impl(
       InjectorSettingsTemplate(), ViewportTemplate(), injector.NewRequest(),
       /*is_descendant_and_connected=*/[](zx_koid_t, zx_koid_t) { return true; },
-      /*inject=*/[&inject_lambda_fired](auto...) { inject_lambda_fired = true; });
+      /*inject=*/[&inject_lambda_fired](auto...) { inject_lambda_fired = true; },
+      /*on_channel_closed=*/[] {});
 
   fuchsia::ui::pointerinjector::Event event;
   {
