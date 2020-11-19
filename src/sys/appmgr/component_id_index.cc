@@ -135,12 +135,13 @@ ComponentIdIndex::ComponentIdIndex(ComponentIdIndex::MonikerToInstanceId moniker
 fit::result<fbl::RefPtr<ComponentIdIndex>, ComponentIdIndex::Error>
 ComponentIdIndex::CreateFromAppmgrConfigDir(const fbl::unique_fd& appmgr_config_dir) {
   if (!files::IsFileAt(appmgr_config_dir.get(), kIndexFilePath)) {
+    FX_LOGS(WARNING) << "Could not find component instance ID index file = " << kIndexFilePath;
     return fit::ok(fbl::AdoptRef(new ComponentIdIndex({}, false)));
   }
 
   std::string file_contents;
   if (!files::ReadFileToStringAt(appmgr_config_dir.get(), kIndexFilePath, &file_contents)) {
-    FX_LOGS(ERROR) << "Could not read instance ID index file.";
+    FX_LOGS(ERROR) << "Could not read component instance ID index file.";
     return fit::error(Error::INVALID_JSON);
   }
 
@@ -153,7 +154,7 @@ ComponentIdIndex::CreateFromIndexContents(const std::string& index_contents) {
   rapidjson::Document doc;
   doc.Parse(index_contents.c_str());
   if (doc.HasParseError()) {
-    FX_LOGS(ERROR) << "Could not json-parse instance ID index file.";
+    FX_LOGS(ERROR) << "Could not json-parse component instance ID index file.";
     return fit::error(Error::INVALID_JSON);
   }
 
@@ -208,6 +209,8 @@ ComponentIdIndex::CreateFromIndexContents(const std::string& index_contents) {
       }
     }
   }
+
+  FX_LOGS(INFO) << "Found " << instances.Size() << " entries in component instance ID index.";
 
   return fit::ok(
       fbl::AdoptRef(new ComponentIdIndex(moniker_to_id, restrict_isolated_persistent_storage)));

@@ -68,6 +68,9 @@ Appmgr::Appmgr(async_dispatcher_t* dispatcher, AppmgrArgs args)
   // 1. Create root realm.
   fbl::unique_fd appmgr_config_dir(
       open("/pkgfs/packages/config-data/0/meta/data/appmgr", O_RDONLY));
+  if (!appmgr_config_dir.is_valid()) {
+    FX_LOGS(ERROR) << "Could not open appmgr's config dir. error = " << appmgr_config_dir.get();
+  }
   fit::result<fbl::RefPtr<ComponentIdIndex>, ComponentIdIndex::Error> component_id_index =
       ComponentIdIndex::CreateFromAppmgrConfigDir(appmgr_config_dir);
   FX_CHECK(component_id_index) << "Cannot read component ID Index. error = "
