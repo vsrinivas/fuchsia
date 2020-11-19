@@ -77,8 +77,7 @@ class StoryProviderImpl::StopStoryCall : public Operation<> {
 };
 
 // Loads a StoryRuntimeContainer object and stores it in
-// |story_provider_impl.story_runtime_containers_| so that the story is ready
-// to be run.
+// |story_provider_impl.story_runtime_containers_| so that the story is ready to be run.
 class StoryProviderImpl::LoadStoryRuntimeCall : public Operation<StoryRuntimeContainer*> {
  public:
   LoadStoryRuntimeCall(StoryProviderImpl* const story_provider_impl,

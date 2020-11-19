@@ -5,6 +5,7 @@
 #ifndef SRC_MODULAR_BIN_SESSIONMGR_STARTUP_AGENT_LAUNCHER_IMPL_H_
 #define SRC_MODULAR_BIN_SESSIONMGR_STARTUP_AGENT_LAUNCHER_IMPL_H_
 
+#include <fuchsia/element/cpp/fidl.h>
 #include <fuchsia/intl/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
 #include <lib/fidl/cpp/binding_set.h>
@@ -32,6 +33,7 @@ class StartupAgentLauncher : public AgentServicesFactory {
           session_restart_controller_connector,
       fidl::InterfaceRequestHandler<fuchsia::intl::PropertyProvider>
           intl_property_provider_connector,
+      fidl::InterfaceRequestHandler<fuchsia::element::Manager> element_manager_connector,
       fuchsia::sys::ServiceList additional_services_for_agents,
       fit::function<bool()> is_terminating_cb);
 
@@ -94,6 +96,8 @@ class StartupAgentLauncher : public AgentServicesFactory {
       session_restart_controller_connector_;
   fit::function<void(fidl::InterfaceRequest<fuchsia::intl::PropertyProvider>)>
       intl_property_provider_connector_;
+  fit::function<void(fidl::InterfaceRequest<fuchsia::element::Manager>)> element_manager_connector_;
+
   fuchsia::sys::ServiceList additional_services_for_agents_;
   sys::ServiceDirectory additional_services_for_agents_directory_;
 

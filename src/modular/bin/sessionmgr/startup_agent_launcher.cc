@@ -4,8 +4,6 @@
 
 #include "src/modular/bin/sessionmgr/startup_agent_launcher.h"
 
-#include <fuchsia/bluetooth/le/cpp/fidl.h>
-#include <fuchsia/cobalt/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/svc/cpp/service_namespace.h>
 #include <lib/syslog/cpp/macros.h>
@@ -46,11 +44,13 @@ StartupAgentLauncher::StartupAgentLauncher(
     fidl::InterfaceRequestHandler<fuchsia::modular::SessionRestartController>
         session_restart_controller_connector,
     fidl::InterfaceRequestHandler<fuchsia::intl::PropertyProvider> intl_property_provider_connector,
+    fidl::InterfaceRequestHandler<fuchsia::element::Manager> element_manager_connector,
     fuchsia::sys::ServiceList additional_services_for_agents,
     fit::function<bool()> is_terminating_cb)
     : puppet_master_connector_(std::move(puppet_master_connector)),
       session_restart_controller_connector_(std::move(session_restart_controller_connector)),
       intl_property_provider_connector_(std::move(intl_property_provider_connector)),
+      element_manager_connector_(std::move(element_manager_connector)),
       additional_services_for_agents_(std::move(additional_services_for_agents)),
       additional_services_for_agents_directory_(
           std::move(additional_services_for_agents_.host_directory)),
@@ -157,6 +157,10 @@ std::vector<std::string> StartupAgentLauncher::AddAgentServices(
     service_names.push_back(fuchsia::intl::PropertyProvider::Name_);
     service_namespace->AddService<fuchsia::intl::PropertyProvider>(
         [this, url](auto request) { intl_property_provider_connector_(std::move(request)); });
+
+    service_names.push_back(fuchsia::element::Manager::Name_);
+    service_namespace->AddService<fuchsia::element::Manager>(
+        [this, url](auto request) { element_manager_connector_(std::move(request)); });
   }
 
   for (const auto& name : additional_services_for_agents_.names) {

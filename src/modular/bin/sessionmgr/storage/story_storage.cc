@@ -5,6 +5,7 @@
 #include "src/modular/bin/sessionmgr/storage/story_storage.h"
 
 #include <fuchsia/modular/internal/cpp/fidl.h>
+#include <lib/fdio/directory.h>
 #include <lib/fidl/cpp/clone.h>
 #include <lib/fit/result.h>
 #include <lib/syslog/cpp/macros.h>
@@ -16,11 +17,24 @@
 
 namespace modular {
 
+fuchsia::modular::ModuleData CloneModuleData(const fuchsia::modular::ModuleData& module_data) {
+  fuchsia::modular::ModuleData copy;
+  fidl::Clone(module_data, &copy);
+
+  if (module_data.has_additional_services() &&
+      module_data.additional_services().host_directory.is_valid()) {
+    copy.mutable_additional_services()->host_directory =
+        zx::channel(fdio_service_clone(module_data.additional_services().host_directory.get()));
+  }
+
+  return copy;
+}
+
 void StoryStorage::WriteModuleData(ModuleData module_data) {
   auto module_path = fidl::Clone(module_data.module_path());
   auto key = EncodeModulePath(module_path);
-  auto saved = CloneOptional(module_data);
-  module_data_backing_storage_[key] = std::move(*saved);
+  auto saved = CloneModuleData(module_data);
+  module_data_backing_storage_[key] = std::move(saved);
 
   module_data_updated_watchers_.Notify(module_data);
 }
@@ -53,9 +67,7 @@ std::vector<ModuleData> StoryStorage::ReadAllModuleData() {
   std::vector<ModuleData> vec;
   vec.reserve(module_data_backing_storage_.size());
   for (auto& it : module_data_backing_storage_) {
-    ModuleData elem;
-    it.second.Clone(&elem);
-    vec.push_back(std::move(elem));
+    vec.push_back(CloneModuleData(it.second));
   }
   return vec;
 }

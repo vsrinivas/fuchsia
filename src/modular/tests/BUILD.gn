@@ -237,6 +237,25 @@ executable("component_context_test") {
   ]
 }
 
+executable("element_manager_test") {
+  testonly = true
+
+  sources = [ "element_manager_test.cc" ]
+
+  deps = [
+    ":fuchsia.testing.modular",
+    "//sdk/fidl/fuchsia.element",
+    "//sdk/lib/sys/cpp/testing:integration",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/modular/bin/sessionmgr:annotations",
+    "//src/modular/bin/sessionmgr/testing:annotations_matchers",
+    "//src/modular/lib/modular_test_harness/cpp:test_harness_fixture",
+    "//src/modular/lib/pseudo_dir:pseudo_dir_server",
+    "//third_party/googletest:gmock",
+    "//zircon/public/lib/fit",
+  ]
+}
+
 executable("stories_share_session_runners_test") {
   testonly = true
 
@@ -346,6 +365,10 @@ test_package("modular_integration_tests") {
       name = "stories_share_session_runners_test"
       environments = basic_envs
     },
+    {
+      name = "element_manager_test"
+      environments = basic_envs
+    },
   ]
 
   deps = [
@@ -353,6 +376,7 @@ test_package("modular_integration_tests") {
     ":agent_session_restart_test",
     ":basemgr_test",
     ":component_context_test",
+    ":element_manager_test",
     ":inspect_session_test",
     ":intents_test",
     ":module_context_test",

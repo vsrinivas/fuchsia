@@ -41,7 +41,7 @@ class ModuleContextImpl : fuchsia::modular::ModuleContext {
   // property. The last item in this list is this module's name. |module_path|
   // can be used to internally name resources that belong to this module
   // (message queues, Links).
-  ModuleContextImpl(const ModuleContextInfo& info, const fuchsia::modular::ModuleData* module_data,
+  ModuleContextImpl(const ModuleContextInfo& info, fuchsia::modular::ModuleData module_data,
                     fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> service_provider_request);
 
   ~ModuleContextImpl() override;
@@ -52,10 +52,9 @@ class ModuleContextImpl : fuchsia::modular::ModuleContext {
 
   // Identifies the module by its path, holds the URL of the running module, and
   // the link it was started with.
-  const fuchsia::modular::ModuleData* const module_data_;
+  fuchsia::modular::ModuleData module_data_;
 
-  // Not owned. The StoryControllerImpl for the Story in which this Module
-  // lives.
+  // Not owned. The StoryControllerImpl for the Story in which this Module lives.
   StoryControllerImpl* const story_controller_impl_;
 
   // The session environment
@@ -65,9 +64,14 @@ class ModuleContextImpl : fuchsia::modular::ModuleContext {
 
   fidl::BindingSet<fuchsia::modular::ModuleContext> bindings_;
 
-  // A service provider that represents the services to be added into an
-  // application's namespace.
+  // A service provider that represents the services to be added into an application's namespace.
   component::ServiceProviderImpl service_provider_impl_;
+
+  // A directory that contains services passed to this module through
+  // |ModuleData.additional_services|.
+  //
+  // Only valid when |module_data_.additional_services| is set and has a valid |host_directory|.
+  std::unique_ptr<sys::ServiceDirectory> additional_services_dir_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ModuleContextImpl);
 };

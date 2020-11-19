@@ -89,6 +89,34 @@ fuchsia::modular::Annotation ToModularAnnotation(const fuchsia::element::Annotat
 std::vector<fuchsia::modular::Annotation> ToModularAnnotations(
     const std::vector<fuchsia::element::Annotation>& annotations);
 
+// Returns true if the given |AnnotationKey| is valid.
+//
+// Valid keys must have a non-empty namespace.
+bool IsValidKey(const fuchsia::element::AnnotationKey& key);
+
 }  // namespace element::annotations
+
+namespace std {
+
+// A specialization of std::equal_to that allows |AnnotationKey| to be stored in |unordered_set|s
+// and |unordered_map|s.
+template <>
+struct equal_to<fuchsia::element::AnnotationKey> {
+  bool operator()(const fuchsia::element::AnnotationKey& lhs,
+                  const fuchsia::element::AnnotationKey& rhs) const {
+    return fidl::Equals(lhs, rhs);
+  }
+};
+
+// A specialization of std::hash that allows |AnnotationKey| to be stored in |unordered_set|s
+// and |unordered_map|s.
+template <>
+struct hash<fuchsia::element::AnnotationKey> {
+  size_t operator()(const fuchsia::element::AnnotationKey& key) const {
+    return std::hash<std::string>()(key.namespace_) ^ std::hash<std::string>()(key.value);
+  }
+};
+
+}  // namespace std
 
 #endif  // SRC_MODULAR_BIN_SESSIONMGR_ANNOTATIONS_H_

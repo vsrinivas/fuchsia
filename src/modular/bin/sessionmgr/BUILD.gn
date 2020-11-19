@@ -35,12 +35,17 @@ source_set("sessionmgr_lib") {
   sources = [
     "argv_injecting_launcher.cc",
     "argv_injecting_launcher.h",
+    "element_controller_impl.cc",
+    "element_controller_impl.h",
+    "element_manager_impl.cc",
+    "element_manager_impl.h",
     "sessionmgr_impl.cc",
     "sessionmgr_impl.h",
   ]
 
   public_deps = [
     ":startup_agent_launcher",
+    "//sdk/fidl/fuchsia.element",
     "//sdk/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.modular.internal",
     "//sdk/fidl/fuchsia.modular.session",
@@ -57,6 +62,7 @@ source_set("sessionmgr_lib") {
   ]
 
   deps = [
+    ":annotations",
     ":component_context",
     ":session_ctl",
     ":startup_agent_launcher",
@@ -65,6 +71,7 @@ source_set("sessionmgr_lib") {
     "//sdk/lib/sys/inspect/cpp",
     "//sdk/lib/ui/scenic/cpp",
     "//src/lib/fsl",
+    "//src/lib/uuid",
     "//src/modular/bin/basemgr/cobalt",
     "//src/modular/bin/sessionmgr/puppet_master:make_production_impl",
     "//src/modular/bin/sessionmgr/puppet_master:puppet_master_impl",
@@ -165,12 +172,11 @@ source_set("startup_agent_launcher") {
     ":agent_services_factory",
     ":rate_limited_retry",
     "agent_runner",
-    "//sdk/fidl/fuchsia.bluetooth.le",
-    "//sdk/fidl/fuchsia.cobalt",
+    "//sdk/fidl/fuchsia.element",
     "//sdk/fidl/fuchsia.intl",
     "//sdk/fidl/fuchsia.modular",
     "//sdk/lib/syslog/cpp",
-    "//src/modular/bin/basemgr/cobalt",
+    "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/modular/lib/connect",
   ]
 }
@@ -204,8 +210,44 @@ source_set("annotations") {
 }
 
 hermetic_tests_package("sessionmgr_unittests") {
-  deps = [ ":annotations_unittest" ]
+  deps = [
+    ":annotations_unittest",
+    ":element_controller_impl_unittest",
+    ":element_manager_impl_unittest",
+  ]
   environments = basic_envs
+}
+
+executable("element_manager_impl_unittest") {
+  testonly = true
+
+  sources = [ "element_manager_impl_unittest.cc" ]
+
+  deps = [
+    ":annotations",
+    ":sessionmgr_lib",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/modular/bin/sessionmgr/testing:annotations_matchers",
+    "//src/modular/lib/testing:test_with_session_storage",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+  ]
+}
+
+executable("element_controller_impl_unittest") {
+  testonly = true
+
+  sources = [ "element_controller_impl_unittest.cc" ]
+
+  deps = [
+    ":annotations",
+    ":sessionmgr_lib",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/modular/bin/sessionmgr/testing:annotations_matchers",
+    "//src/modular/lib/testing:test_with_session_storage",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+  ]
 }
 
 executable("annotations_unittest") {

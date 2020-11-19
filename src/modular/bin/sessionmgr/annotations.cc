@@ -222,4 +222,6 @@ std::vector<fuchsia::modular::Annotation> ToModularAnnotations(
   return modular_annotations;
 }
 
+bool IsValidKey(const fuchsia::element::AnnotationKey& key) { return !key.namespace_.empty(); }
+
 }  // namespace element::annotations

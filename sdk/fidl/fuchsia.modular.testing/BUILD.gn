@@ -16,6 +16,7 @@ fidl("fuchsia.modular.testing") {
   sources = [ "test_harness.fidl" ]
 
   public_deps = [
+    "//sdk/fidl/fuchsia.element",
     "//sdk/fidl/fuchsia.mem",
     "//sdk/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.modular.session",

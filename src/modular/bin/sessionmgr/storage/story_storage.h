@@ -19,6 +19,11 @@ using fuchsia::modular::ModuleDataPtr;
 
 namespace modular {
 
+// Returns a copy of |module_data|.
+//
+// Unlike fidl::Clone, this method clones |additional_services.host_directory| if it's set.
+fuchsia::modular::ModuleData CloneModuleData(const fuchsia::modular::ModuleData& module_data);
+
 // A callback passed to |StoryStorage.SubscribeModuleDataUpdated| that is called when the
 // ModuleData was added or updated.
 //

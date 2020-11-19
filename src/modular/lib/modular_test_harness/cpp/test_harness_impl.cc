@@ -45,8 +45,9 @@ constexpr char kSessionAgentFakeInterceptionCmx[] = R"(
 {
   "sandbox": {
     "services": [
-      "fuchsia.modular.PuppetMaster",
-      "fuchsia.modular.ComponentContext"
+      "fuchsia.element.Manager",
+      "fuchsia.modular.ComponentContext",
+      "fuchsia.modular.PuppetMaster"
     ]
   }
 }
@@ -117,13 +118,18 @@ void TestHarnessImpl::ConnectToModularService(fuchsia::modular::testing::Modular
   switch (service.Which()) {
     case fuchsia::modular::testing::ModularService::Tag::kPuppetMaster: {
       BufferSessionAgentService(std::move(service.puppet_master()));
-    } break;
-
+      break;
+    }
     case fuchsia::modular::testing::ModularService::Tag::kComponentContext: {
       BufferSessionAgentService(std::move(service.component_context()));
-    } break;
-
+      break;
+    }
+    case fuchsia::modular::testing::ModularService::Tag::kElementManager: {
+      BufferSessionAgentService(std::move(service.element_manager()));
+      break;
+    }
     case fuchsia::modular::testing::ModularService::Tag::Invalid:
+    default:
       assert(false && "should not have improperly constructed ModularService");
       return;
   }

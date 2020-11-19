@@ -7,7 +7,6 @@
 
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/modular/internal/cpp/fidl.h>
-#include <fuchsia/modular/session/cpp/fidl.h>
 #include <fuchsia/session/cpp/fidl.h>
 #include <fuchsia/ui/policy/cpp/fidl.h>
 #include <fuchsia/ui/views/cpp/fidl.h>
@@ -20,6 +19,7 @@
 #include "src/modular/bin/sessionmgr/agent_runner/agent_runner.h"
 #include "src/modular/bin/sessionmgr/argv_injecting_launcher.h"
 #include "src/modular/bin/sessionmgr/component_context_impl.h"
+#include "src/modular/bin/sessionmgr/element_manager_impl.h"
 #include "src/modular/bin/sessionmgr/puppet_master/puppet_master_impl.h"
 #include "src/modular/bin/sessionmgr/puppet_master/story_command_executor.h"
 #include "src/modular/bin/sessionmgr/session_ctl.h"
@@ -65,6 +65,7 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
   void InitializeSessionShell(fuchsia::modular::session::AppConfig session_shell_config,
                               fuchsia::ui::views::ViewToken view_token);
   void InitializePuppetMaster();
+  void InitializeElementManager();
   void InitializeSessionCtl();
 
   void RunSessionShell(fuchsia::modular::session::AppConfig session_shell_config);
@@ -155,6 +156,7 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
 
   std::unique_ptr<StoryCommandExecutor> story_command_executor_;
   std::unique_ptr<PuppetMasterImpl> puppet_master_impl_;
+  std::unique_ptr<ElementManagerImpl> element_manager_impl_;
 
   std::unique_ptr<SessionCtl> session_ctl_;
 

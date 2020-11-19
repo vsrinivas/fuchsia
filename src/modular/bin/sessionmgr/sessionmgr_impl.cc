@@ -4,6 +4,8 @@
 
 #include "src/modular/bin/sessionmgr/sessionmgr_impl.h"
 
+#include <fuchsia/element/cpp/fidl.h>
+#include <fuchsia/session/cpp/fidl.h>
 #include <fuchsia/ui/app/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <lib/syslog/cpp/macros.h>
@@ -114,6 +116,7 @@ void SessionmgrImpl::Initialize(
 
   // Create |puppet_master_| before |agent_runner_| to ensure agents can use it when terminating.
   InitializePuppetMaster();
+  InitializeElementManager();
 
   InitializeStartupAgentLauncher(std::move(additional_services_for_agents));
   InitializeAgentRunner(config_accessor_.session_shell_app_config().url());
@@ -239,6 +242,13 @@ void SessionmgrImpl::InitializeStartupAgentLauncher(
         }
         sessionmgr_context_->svc()->Connect<fuchsia::intl::PropertyProvider>(std::move(request));
       },
+      [this](fidl::InterfaceRequest<fuchsia::element::Manager> request) {
+        if (terminating_) {
+          request.Close(ZX_ERR_UNAVAILABLE);
+          return;
+        }
+        element_manager_impl_->Connect(std::move(request));
+      },
       std::move(additional_services_for_agents), [this]() { return terminating_; });
   OnTerminate(Reset(&startup_agent_launcher_));
 }
@@ -327,6 +337,13 @@ void SessionmgrImpl::InitializePuppetMaster() {
   OnTerminate(Reset(&puppet_master_impl_));
 }
 
+void SessionmgrImpl::InitializeElementManager() {
+  FX_DCHECK(session_storage_);
+
+  element_manager_impl_ = std::make_unique<ElementManagerImpl>(session_storage_.get());
+  OnTerminate(Reset(&element_manager_impl_));
+}
+
 void SessionmgrImpl::InitializeSessionCtl() {
   FX_DCHECK(puppet_master_impl_);
 
@@ -400,6 +417,15 @@ void SessionmgrImpl::RunSessionShell(fuchsia::modular::session::AppConfig sessio
       return;
     }
     puppet_master_impl_->Connect(std::move(request));
+  });
+
+  service_list->names.push_back(fuchsia::element::Manager::Name_);
+  session_shell_services_.AddService<fuchsia::element::Manager>([this](auto request) {
+    if (terminating_) {
+      request.Close(ZX_ERR_UNAVAILABLE);
+      return;
+    }
+    element_manager_impl_->Connect(std::move(request));
   });
 
   // The services in |session_shell_services_| are provided through the

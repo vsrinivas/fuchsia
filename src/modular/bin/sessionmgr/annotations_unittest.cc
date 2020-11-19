@@ -507,5 +507,15 @@ TEST(ElementAnnotationsTest, ToModularAnnotations) {
                            modular::annotations::AnnotationEq(ByRef(expected_buffer_annotation))));
 }
 
+TEST(ElementAnnotationsTest, IsValidKey) {
+  auto key = AnnotationKey{.namespace_ = "test_namespace", .value = "test_value"};
+  EXPECT_TRUE(IsValidKey(key));
+}
+
+TEST(ElementAnnotationsTest, IsValidKeyEmptyNamespace) {
+  auto key = AnnotationKey{.namespace_ = "", .value = "test_value"};
+  EXPECT_FALSE(IsValidKey(key));
+}
+
 }  // namespace
 }  // namespace element::annotations

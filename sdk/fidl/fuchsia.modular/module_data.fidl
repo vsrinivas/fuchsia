@@ -4,6 +4,8 @@
 
 library fuchsia.modular;
 
+using fuchsia.sys;
+
 /// Information about a Module instance in a story.
 resource table ModuleData {
     /// The URL of the Module binary.
@@ -49,6 +51,11 @@ resource table ModuleData {
     ///
     /// The `Annotation.value` field of each `Annotation` is always set.
     9: vector<Annotation>:MAX_ANNOTATIONS_PER_MODULE annotations;
+
+    /// Services passed to the module.
+    ///
+    /// This is only set for modules that represent elements.
+    10: fuchsia.sys.ServiceList additional_services;
 };
 
 enum ModuleSource {

@@ -291,17 +291,23 @@ class StoryControllerImpl::LaunchModuleCall : public Operation<> {
     fuchsia::sys::ServiceProviderPtr module_context_provider;
     auto module_context_provider_request = module_context_provider.NewRequest();
     auto service_list = fuchsia::sys::ServiceList::New();
-    for (auto service_name : story_controller_impl_->story_provider_impl_->component_context_info()
-                                 .agent_runner->GetAgentServices()) {
+    for (const auto& service_name :
+         story_controller_impl_->story_provider_impl_->component_context_info()
+             .agent_runner->GetAgentServices()) {
       service_list->names.push_back(service_name);
     }
     service_list->names.push_back(fuchsia::modular::ComponentContext::Name_);
     service_list->names.push_back(fuchsia::modular::ModuleContext::Name_);
     service_list->names.push_back(fuchsia::intl::PropertyProvider::Name_);
+    if (module_data_.has_additional_services()) {
+      for (const auto& service_name : module_data_.additional_services().names) {
+        service_list->names.push_back(service_name);
+      }
+    }
     service_list->provider = std::move(module_context_provider);
 
     auto running_mod_info = std::make_unique<RunningModInfo>();
-    running_mod_info->module_data = CloneOptional(module_data_);
+    running_mod_info->module_data = fidl::MakeOptional(CloneModuleData(module_data_));
 
     auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
     scenic::ViewRefPair view_ref_pair = scenic::ViewRefPair::New();
@@ -322,18 +328,16 @@ class StoryControllerImpl::LaunchModuleCall : public Operation<> {
         story_controller_impl_->story_provider_impl_->session_environment(),
     };
 
-    running_mod_info->module_context_impl = std::make_unique<ModuleContextImpl>(
-        module_context_info, running_mod_info->module_data.get(),
-        std::move(module_context_provider_request));
+    running_mod_info->module_context_impl =
+        std::make_unique<ModuleContextImpl>(module_context_info, CloneModuleData(module_data_),
+                                            std::move(module_context_provider_request));
 
     running_mod_info->InitializeInspectProperties(story_controller_impl_);
 
     story_controller_impl_->running_mod_infos_.emplace_back(std::move(running_mod_info));
 
     for (auto& i : story_controller_impl_->watchers_.ptrs()) {
-      fuchsia::modular::ModuleData module_data;
-      module_data_.Clone(&module_data);
-      (*i)->OnModuleAdded(std::move(module_data));
+      (*i)->OnModuleAdded(CloneModuleData(module_data_));
     }
   }
 
@@ -358,7 +362,7 @@ class StoryControllerImpl::LaunchModuleInShellCall : public Operation<> {
     FlowToken flow{this};
 
     operation_queue_.Add(
-        std::make_unique<LaunchModuleCall>(story_controller_impl_, fidl::Clone(module_data_),
+        std::make_unique<LaunchModuleCall>(story_controller_impl_, CloneModuleData(module_data_),
                                            [this, flow] { MaybeConnectViewToStoryShell(flow); }));
   }
 
@@ -599,7 +603,7 @@ class StoryControllerImpl::OnModuleDataUpdatedCall : public Operation<> {
  public:
   OnModuleDataUpdatedCall(StoryControllerImpl* const story_controller_impl,
                           fuchsia::modular::ModuleData module_data)
-      : Operation("StoryControllerImpl::LedgerNotificationCall", [] {}),
+      : Operation("StoryControllerImpl::OnModuleDataUpdatedCall", [] {}),
         story_controller_impl_(story_controller_impl),
         module_data_(std::move(module_data)) {}
 
@@ -726,6 +730,7 @@ class StoryControllerImpl::StartCall : public Operation<> {
         continue;
       }
       FX_CHECK(module_data.has_intent());
+
       operation_queue_.Add(std::make_unique<LaunchModuleInShellCall>(
           story_controller_impl_, std::move(module_data), [flow] {}));
     }
@@ -761,7 +766,7 @@ StoryControllerImpl::StoryControllerImpl(std::string story_id,
           }
           running_mod_info->UpdateInspectProperties();
         }
-        OnModuleDataUpdated(fidl::Clone(module_data));
+        OnModuleDataUpdated(CloneModuleData(module_data));
         return WatchInterest::kContinue;
       });
 }
