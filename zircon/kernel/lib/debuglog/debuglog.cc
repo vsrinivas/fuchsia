@@ -193,15 +193,34 @@ zx_status_t DLog::write(uint32_t severity, uint32_t flags, ktl::string_view str)
     holding_thread_lock = thread_lock.HolderCpu() == arch_curr_cpu_num();
   }
 
-  [this, holding_thread_lock]() TA_NO_THREAD_SAFETY_ANALYSIS {
-    // if we happen to be called from within the global thread lock, use a
-    // special version of event signal
-    if (holding_thread_lock) {
-      this->event.SignalThreadLocked();
+  // Signal the event.
+  if (holding_thread_lock) {
+    // If we happen to be holding the global thread lock, use a special version of event signal.
+    AssertHeld<ThreadLock, IrqSave>(*ThreadLock::Get());
+    event.SignalThreadLocked();
+  } else {
+    // TODO(fxbug.dev/64884): Once fxbug.dev/64884 is fixed, we can replace the following
+    // conditional statement with a call to Signal.
+    //
+    // We're not holding the thread lock.
+    if (arch_num_spinlocks_held() == 0 ||
+        Thread::Current::Get()->preemption_state().PreemptOrReschedDisabled()) {
+      // If we're not holding any spinlocks, then we can call Signal.  And if we are holding a
+      // spinlock, but we're running in a preempt/reschedule disabled context, we can still call
+      // Signal because it will defer the reschedule until preempt/reschedule are re-enabled.
+      event.Signal();
     } else {
-      this->event.Signal();
+      // We are holding at least one (non thread lock) spinlock and we aren't running in an preempt
+      // or reschedule disabled context, which means it's unsafe to reschedule this CPU until after
+      // we have released the held spinlock(s).  We can't call Singal here.  The best we can do at
+      // this point is call SignalNoResched and hope that something triggers a reschedule soon.
+      //
+      // TODO(fxbug.dev/64884): There is a bug here.  Calling SignalNoResched will not trigger an
+      // immediate reschedule and will not set up a deferred reschedule.  This code path may result
+      // in "lost reschedules".
+      event.SignalNoResched();
     }
-  }();
+  }
 
   return ZX_OK;
 }
