@@ -13,6 +13,7 @@
 #include "src/developer/debug/shared/buffered_fd.h"
 #include "src/developer/debug/shared/logging/logging.h"
 #include "src/developer/debug/shared/message_loop_poll.h"
+#include "src/developer/debug/zxdb/client/analytics_scope.h"
 #include "src/developer/debug/zxdb/client/job.h"
 #include "src/developer/debug/zxdb/client/session.h"
 #include "src/developer/debug/zxdb/client/setting_schema_definition.h"
@@ -20,10 +21,8 @@
 #include "src/developer/debug/zxdb/common/version.h"
 #include "src/developer/debug/zxdb/console/actions.h"
 #include "src/developer/debug/zxdb/console/analytics.h"
-#include "src/developer/debug/zxdb/console/analytics_scope.h"
 #include "src/developer/debug/zxdb/console/command_line_options.h"
 #include "src/developer/debug/zxdb/console/console_impl.h"
-#include "src/developer/debug/zxdb/console/google_analytics_client.h"
 #include "src/developer/debug/zxdb/console/output_buffer.h"
 #include "src/developer/debug/zxdb/console/verbs.h"
 #include "src/developer/debug/zxdb/symbols/system_symbols.h"
@@ -197,7 +196,7 @@ bool EarlyProcessAnalyticsOptions(const CommandLineOptions& options) {
 }  // namespace
 
 int ConsoleMain(int argc, const char* argv[]) {
-  AnalyticsScope _scope;
+  AnalyticsScope<Analytics> _scope;
   CommandLineOptions options;
   std::vector<std::string> params;
   cmdline::Status status = ParseCommandLine(argc, argv, &options, &params);

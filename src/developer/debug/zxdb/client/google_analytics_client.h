@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVELOPER_DEBUG_ZXDB_CONSOLE_GOOGLE_ANALYTICS_CLIENT_H_
-#define SRC_DEVELOPER_DEBUG_ZXDB_CONSOLE_GOOGLE_ANALYTICS_CLIENT_H_
+#ifndef SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_GOOGLE_ANALYTICS_CLIENT_H_
+#define SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_GOOGLE_ANALYTICS_CLIENT_H_
 
 #include "src/lib/analytics/cpp/google_analytics/client.h"
 
@@ -27,4 +27,4 @@ class GoogleAnalyticsClient : public analytics::google_analytics::Client {
 
 }  // namespace zxdb
 
-#endif  // SRC_DEVELOPER_DEBUG_ZXDB_CONSOLE_GOOGLE_ANALYTICS_CLIENT_H_
+#endif  // SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_GOOGLE_ANALYTICS_CLIENT_H_

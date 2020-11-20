@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/test.gni")
 import("//build/testing/host_test_data.gni")
 
 static_library("client") {
@@ -11,6 +12,7 @@ static_library("client") {
   ]
 
   public = [
+    "analytics_scope.h",
     "arch_info.h",
     "breakpoint.h",
     "breakpoint_location.h",
@@ -27,6 +29,7 @@ static_library("client") {
     "finish_thread_controller.h",
     "frame.h",
     "frame_fingerprint.h",
+    "google_analytics_client.h",
     "job.h",
     "map_setting_store.h",
     "memory_dump.h",
@@ -64,6 +67,7 @@ static_library("client") {
   ]
 
   sources = [
+    "analytics_scope.h",
     "arch_info.cc",
     "breakpoint.cc",
     "breakpoint_action.cc",
@@ -90,6 +94,8 @@ static_library("client") {
     "frame_impl.h",
     "frame_symbol_data_provider.cc",
     "frame_symbol_data_provider.h",
+    "google_analytics_client.cc",
+    "google_analytics_client.h",
     "job.cc",
     "map_setting_store.cc",
     "memory_dump.cc",
@@ -140,6 +146,8 @@ static_library("client") {
     "//src/developer/debug/zxdb/common",
     "//src/developer/debug/zxdb/expr",
     "//src/developer/debug/zxdb/symbols",
+    "//src/lib/analytics/cpp/core_dev_tools",
+    "//src/lib/analytics/cpp/google_analytics",
     "//src/lib/containers/cpp",
     "//src/lib/fxl",
     "//src/lib/llvm:LLVMAArch64Desc",
@@ -297,4 +305,9 @@ source_set("tests") {
     # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
     "//build/config:Wno-conversion",
   ]
+}
+
+test("zxdb_google_analytics_client_manualtest") {
+  sources = [ "google_analytics_client_manualtest.cc" ]
+  deps = [ ":client" ]
 }

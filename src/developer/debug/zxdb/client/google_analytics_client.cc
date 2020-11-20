@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/debug/zxdb/console/google_analytics_client.h"
+#include "src/developer/debug/zxdb/client/google_analytics_client.h"
 
 #include <lib/fit/bridge.h>
 #include <lib/syslog/cpp/macros.h>

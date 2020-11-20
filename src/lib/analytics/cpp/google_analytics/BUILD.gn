@@ -8,7 +8,7 @@ static_library("google_analytics") {
   # implementation specific to zxdb and fidlcat. Please feel free to contact the owners if you
   # would like to add support to other C++ programs.
   visibility = [
-    "//src/developer/debug/zxdb/console:*",
+    "//src/developer/debug/zxdb/client:*",
     "//src/lib/analytics/cpp/*",
     "//tools/fidlcat/lib:*",
   ]

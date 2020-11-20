@@ -1,7 +1,7 @@
 # Testing the lite Google Analytics client (manually)
 Compile `zxdb_google_analytics_client_manualtest`
 ```
-fx set core.x64  --with '//src/developer/debug/zxdb/console:zxdb_google_analytics_client_manualtest(//build/toolchain:host_x64)'
+fx set core.x64  --with '//src/developer/debug/zxdb/client:zxdb_google_analytics_client_manualtest(//build/toolchain:host_x64)'
 _
 ```
 

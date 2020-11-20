@@ -2,20 +2,49 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/debug/zxdb/console/google_analytics_client_manualtest.h"
-
+#include <lib/fit/result.h>
 #include <stdio.h>
-
-#include <string>
 
 #include "src/developer/debug/shared/message_loop.h"
 #include "src/developer/debug/shared/message_loop_poll.h"
+#include "src/developer/debug/zxdb/client/google_analytics_client.h"
 
 using zxdb::GoogleAnalyticsClient;
 using zxdb::GoogleAnalyticsEvent;
 using zxdb::GoogleAnalyticsNetError;
 using zxdb::GoogleAnalyticsNetErrorType;
-using zxdb::ProcessAddEventResult;
+
+namespace {
+
+int ProcessAddEventResult(const fit::result<void, GoogleAnalyticsNetError>& result) {
+  int ret = 1;
+  if (result.is_ok()) {
+    printf("AddEvent success!\n");
+    ret = 0;
+  } else {
+    const auto& error = result.error();
+    std::string error_type;
+    switch (error.type()) {
+      case GoogleAnalyticsNetErrorType::kConnectionError: {
+        error_type = "Connection error";
+        break;
+      }
+      case GoogleAnalyticsNetErrorType::kUnexpectedResponseCode: {
+        error_type = "Unexpected response code";
+        break;
+      }
+      case GoogleAnalyticsNetErrorType::kAbandoned: {
+        error_type = "Abandoned";
+        break;
+      }
+    }
+    fprintf(stderr, "AddEvent failed: %s - %s\n", error_type.c_str(), error.details().c_str());
+    ret = 1;
+  }
+  return ret;
+}
+
+}  // namespace
 
 int main(int argc, char* argv[]) {
   if (argc != 3) {
@@ -28,9 +57,9 @@ int main(int argc, char* argv[]) {
 
   GoogleAnalyticsClient::CurlGlobalInit();
   auto ga_client = GoogleAnalyticsClient();
-  ga_client.set_tracking_id(tracking_id);
-  ga_client.set_client_id(client_id);
-  ga_client.set_user_agent("Fuchsia-tools-lib-analytics");
+  ga_client.SetTrackingId(tracking_id);
+  ga_client.SetClientId(client_id);
+  ga_client.SetUserAgent("Fuchsia-tools-lib-analytics");
 
   auto event = GoogleAnalyticsEvent("test event", "test", "test label", 12345);
 
@@ -61,35 +90,3 @@ int main(int argc, char* argv[]) {
 
   return ret;
 }
-
-namespace zxdb {
-
-int ProcessAddEventResult(const fit::result<void, GoogleAnalyticsNetError>& result) {
-  int ret = 1;
-  if (result.is_ok()) {
-    printf("AddEvent success!\n");
-    ret = 0;
-  } else {
-    const auto& error = result.error();
-    std::string error_type;
-    switch (error.type()) {
-      case GoogleAnalyticsNetErrorType::kConnectionError: {
-        error_type = "Connection error";
-        break;
-      }
-      case GoogleAnalyticsNetErrorType::kUnexpectedResponseCode: {
-        error_type = "Unexpected response code";
-        break;
-      }
-      case GoogleAnalyticsNetErrorType::kAbandoned: {
-        error_type = "Abandoned";
-        break;
-      }
-    }
-    fprintf(stderr, "AddEvent failed: %s - %s\n", error_type.c_str(), error.details().c_str());
-    ret = 1;
-  }
-  return ret;
-}
-
-}  // namespace zxdb

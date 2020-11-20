@@ -5,21 +5,21 @@
 #ifndef SRC_DEVELOPER_DEBUG_ZXDB_CONSOLE_ANALYTICS_H_
 #define SRC_DEVELOPER_DEBUG_ZXDB_CONSOLE_ANALYTICS_H_
 
+#include "src/developer/debug/zxdb/client/analytics_scope.h"
+#include "src/developer/debug/zxdb/client/google_analytics_client.h"
 #include "src/developer/debug/zxdb/client/session.h"
-#include "src/developer/debug/zxdb/console/google_analytics_client.h"
 #include "src/lib/analytics/cpp/core_dev_tools/analytics.h"
 
 namespace zxdb {
 
 class Analytics : public analytics::core_dev_tools::Analytics<Analytics> {
-  friend class analytics::core_dev_tools::Analytics<Analytics>;
-
  public:
   static void Init(Session& session, analytics::core_dev_tools::SubLaunchStatus sub_launch_status);
   static void IfEnabledSendInvokeEvent(Session* session);
 
  private:
-  friend class AnalyticsScope;
+  friend class analytics::core_dev_tools::Analytics<Analytics>;
+  friend class AnalyticsScope<Analytics>;
 
   // Move base class Init() to private. Users of this class can only call Init(Session& session).
   using analytics::core_dev_tools::Analytics<Analytics>::Init;
