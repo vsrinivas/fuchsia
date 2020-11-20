@@ -45,9 +45,9 @@ LogStatsFetcherImpl::LogStatsFetcherImpl(
     fit::function<fuchsia::diagnostics::ArchiveAccessorPtr()> connector,
     std::unordered_map<std::string, ComponentEventCode> component_code_map, abs_clock::Clock* clock)
     : executor_(dispatcher),
-      archive_reader_(connector(), {"bootstrap/archivist:root/log_stats:*",
-                                    "bootstrap/archivist:root/log_stats/by_component/*:error_logs",
-                                    "bootstrap/archivist:root/log_stats/granular_stats"}),
+      archive_reader_(connector(),
+                      {"core/log-stats:root:*", "core/log-stats:root/by_component/*:error_logs",
+                       "core/log-stats:root/granular_stats"}),
       component_code_map_(std::move(component_code_map)),
       clock_(clock) {
   // This establishes a baseline for error counts so that the next call to FetchMetrics() only
@@ -102,8 +102,7 @@ void LogStatsFetcherImpl::OnInspectSnapshotReady(
 bool LogStatsFetcherImpl::CalculateTotalErrorCount(const inspect::contrib::DiagnosticsData& inspect,
                                                    uint64_t* result) {
   // Find the total error count.
-  const rapidjson::Value& total_error_count_value =
-      inspect.GetByPath({"root", "log_stats", "error_logs"});
+  const rapidjson::Value& total_error_count_value = inspect.GetByPath({"root", "error_logs"});
   if (!total_error_count_value.IsUint64()) {
     FX_LOGS(ERROR) << "error_logs doesn't exist or is not a uint64";
     return false;
@@ -126,9 +125,9 @@ bool LogStatsFetcherImpl::CalculateTotalErrorCount(const inspect::contrib::Diagn
 bool LogStatsFetcherImpl::CalculatePerComponentErrorCount(
     const inspect::contrib::DiagnosticsData& inspect, uint64_t total_error_count,
     std::unordered_map<ComponentEventCode, uint64_t>* result) {
-  const rapidjson::Value& component_list = inspect.GetByPath({"root", "log_stats", "by_component"});
+  const rapidjson::Value& component_list = inspect.GetByPath({"root", "by_component"});
   if (!component_list.IsObject()) {
-    FX_LOGS(ERROR) << "root/log_stats/by_component doesn't exist or is not an object";
+    FX_LOGS(ERROR) << "root/by_component doesn't exist or is not an object";
     return false;
   }
   uint64_t tracked_error_count_diff = 0;
@@ -189,8 +188,7 @@ bool LogStatsFetcherImpl::CalculatePerComponentErrorCount(
 
 bool LogStatsFetcherImpl::CalculateKlogCount(const inspect::contrib::DiagnosticsData& inspect,
                                              uint64_t* result) {
-  const rapidjson::Value& new_klog_count_value =
-      inspect.GetByPath({"root", "log_stats", "kernel_logs"});
+  const rapidjson::Value& new_klog_count_value = inspect.GetByPath({"root", "kernel_logs"});
   if (!new_klog_count_value.IsUint64()) {
     FX_LOGS(ERROR) << "kernel_logs doesn't exist or is not a uint64";
     return false;
@@ -208,8 +206,7 @@ bool LogStatsFetcherImpl::CalculateKlogCount(const inspect::contrib::Diagnostics
 
 bool LogStatsFetcherImpl::PopulateGranularStats(const inspect::contrib::DiagnosticsData& inspect,
                                                 std::vector<GranularStatsRecord>* granular_stats) {
-  const rapidjson::Value& granular_stats_value =
-      inspect.GetByPath({"root", "log_stats", "granular_stats"});
+  const rapidjson::Value& granular_stats_value = inspect.GetByPath({"root", "granular_stats"});
   if (!granular_stats_value.IsObject()) {
     FX_LOGS(ERROR) << "granular_stats doesn't exist or is not an object";
     return false;

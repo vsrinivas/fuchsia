@@ -18,21 +18,19 @@ const std::unordered_map<std::string, ComponentEventCode> kComponentCodeMap = {
 
 const char kBaselineArchive[] = R"(
 {
-  "moniker": "bootstrap/archivist",
+  "moniker": "core/log-stats",
   "payload": {
     "root": {
-      "log_stats": {
-        "error_logs": 8,
-        "kernel_logs": 5,
-        "by_component": {
-           "fuchsia-pkg://fuchsia.com/appmgr#meta/appmgr.cm": {
-             "error_logs": 4
-           }
-        },
-        "granular_stats": {
-          "0": {
-            "overflowed": false
+      "error_logs": 8,
+      "kernel_logs": 5,
+      "by_component": {
+          "fuchsia-pkg://fuchsia.com/appmgr#meta/appmgr.cm": {
+            "error_logs": 4
           }
+      },
+      "granular_stats": {
+        "0": {
+          "overflowed": false
         }
       }
     }
@@ -78,21 +76,19 @@ class LogStatsFetcherImplTest : public gtest::TestLoopFixture {
 TEST_F(LogStatsFetcherImplTest, Simple) {
   const char archive[] = R"(
 {
-  "moniker": "bootstrap/archivist",
+  "moniker": "core/log-stats",
   "payload": {
     "root": {
-      "log_stats": {
-        "error_logs": 11,
-        "kernel_logs": 6,
-        "by_component": {
-           "fuchsia-pkg://fuchsia.com/appmgr#meta/appmgr.cm": {
-             "error_logs": 6
-           }
-        },
-        "granular_stats": {
-          "0": {
-            "overflowed": false
+      "error_logs": 11,
+      "kernel_logs": 6,
+      "by_component": {
+          "fuchsia-pkg://fuchsia.com/appmgr#meta/appmgr.cm": {
+            "error_logs": 6
           }
+      },
+      "granular_stats": {
+        "0": {
+          "overflowed": false
         }
       }
     }
@@ -115,21 +111,19 @@ TEST_F(LogStatsFetcherImplTest, Simple) {
 TEST_F(LogStatsFetcherImplTest, CountDrops) {
   const char archive[] = R"(
 {
-  "moniker": "bootstrap/archivist",
+  "moniker": "core/log-stats",
   "payload": {
     "root": {
-      "log_stats": {
-        "error_logs": 4,
-        "kernel_logs": 2,
-        "by_component": {
-           "fuchsia-pkg://fuchsia.com/appmgr#meta/appmgr.cm": {
-             "error_logs": 1
-           }
-        },
-        "granular_stats": {
-          "0": {
-            "overflowed": false
+      "error_logs": 4,
+      "kernel_logs": 2,
+      "by_component": {
+          "fuchsia-pkg://fuchsia.com/appmgr#meta/appmgr.cm": {
+            "error_logs": 1
           }
+      },
+      "granular_stats": {
+        "0": {
+          "overflowed": false
         }
       }
     }
@@ -152,24 +146,22 @@ TEST_F(LogStatsFetcherImplTest, CountDrops) {
 TEST_F(LogStatsFetcherImplTest, MultipleComponents) {
   const char archive[] = R"(
 {
-  "moniker": "bootstrap/archivist",
+  "moniker": "core/log-stats",
   "payload": {
     "root": {
-      "log_stats": {
-        "error_logs": 12,
-        "kernel_logs": 6,
-        "by_component": {
-           "fuchsia-pkg://fuchsia.com/appmgr#meta/appmgr.cm": {
-             "error_logs": 6
-           },
-           "fuchsia-pkg://fuchsia.com/sysmgr#meta/sysmgr.cmx": {
-             "error_logs": 1
-           }
-        },
-        "granular_stats": {
-          "0": {
-            "overflowed": false
+      "error_logs": 12,
+      "kernel_logs": 6,
+      "by_component": {
+          "fuchsia-pkg://fuchsia.com/appmgr#meta/appmgr.cm": {
+            "error_logs": 6
+          },
+          "fuchsia-pkg://fuchsia.com/sysmgr#meta/sysmgr.cmx": {
+            "error_logs": 1
           }
+      },
+      "granular_stats": {
+        "0": {
+          "overflowed": false
         }
       }
     }
@@ -191,24 +183,22 @@ TEST_F(LogStatsFetcherImplTest, MultipleComponents) {
 TEST_F(LogStatsFetcherImplTest, NotInAllowlist) {
   const char archive[] = R"(
 {
-  "moniker": "bootstrap/archivist",
+  "moniker": "core/log-stats",
   "payload": {
     "root": {
-      "log_stats": {
-        "error_logs": 11,
-        "kernel_logs": 6,
-        "by_component": {
-           "fuchsia-pkg://fuchsia.com/appmgr#meta/appmgr.cm": {
-             "error_logs": 6
-           },
-           "fuchsia-pkg://fuchsia.com/foo#meta/bar.cmx": {
-             "error_logs": 1
-           }
-        },
-        "granular_stats": {
-          "0": {
-            "overflowed": false
+      "error_logs": 11,
+      "kernel_logs": 6,
+      "by_component": {
+          "fuchsia-pkg://fuchsia.com/appmgr#meta/appmgr.cm": {
+            "error_logs": 6
+          },
+          "fuchsia-pkg://fuchsia.com/foo#meta/bar.cmx": {
+            "error_logs": 1
           }
+      },
+      "granular_stats": {
+        "0": {
+          "overflowed": false
         }
       }
     }
@@ -230,21 +220,19 @@ TEST_F(LogStatsFetcherImplTest, NotInAllowlist) {
 TEST_F(LogStatsFetcherImplTest, GranularStats) {
   const char archive[] = R"(
 {
-  "moniker": "bootstrap/archivist",
+  "moniker": "core/log-stats",
   "payload": {
     "root": {
-      "log_stats": {
-        "error_logs": 8,
-        "kernel_logs": 5,
-        "by_component": {},
-        "granular_stats": {
+      "error_logs": 8,
+      "kernel_logs": 5,
+      "by_component": {},
+      "granular_stats": {
+        "0": {
+          "overflowed": false,
           "0": {
-            "overflowed": false,
-            "0": {
-              "file_path": "path/to/file.cc",
-              "line_no": 123,
-              "count": 3
-            }
+            "file_path": "path/to/file.cc",
+            "line_no": 123,
+            "count": 3
           }
         }
       }
@@ -275,34 +263,32 @@ TEST_F(LogStatsFetcherImplTest, GranularStats) {
   // Bucket 1 is created. It should not be reported until at least 30 minutes has passed.
   const char archive2[] = R"(
 {
-  "moniker": "bootstrap/archivist",
+  "moniker": "core/log-stats",
   "payload": {
     "root": {
-      "log_stats": {
-        "error_logs": 8,
-        "kernel_logs": 5,
-        "by_component": {},
-        "granular_stats": {
+      "error_logs": 8,
+      "kernel_logs": 5,
+      "by_component": {},
+      "granular_stats": {
+        "0": {
+          "overflowed": false,
           "0": {
-            "overflowed": false,
-            "0": {
-              "file_path": "path/to/file.cc",
-              "line_no": 123,
-              "count": 3
-            }
+            "file_path": "path/to/file.cc",
+            "line_no": 123,
+            "count": 3
+          }
+        },
+        "1": {
+          "overflowed": false,
+          "0": {
+            "file_path": "another_file.cc",
+            "line_no": 15,
+            "count": 1
           },
           "1": {
-            "overflowed": false,
-            "0": {
-              "file_path": "another_file.cc",
-              "line_no": 15,
-              "count": 1
-            },
-            "1": {
-              "file_path": "src/lib/test.cpp",
-              "line_no": 150,
-              "count": 5
-            }
+            "file_path": "src/lib/test.cpp",
+            "line_no": 150,
+            "count": 5
           }
         }
       }
