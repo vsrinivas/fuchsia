@@ -508,6 +508,74 @@ TEST_F(DriverRunnerTest, StartSecondDriver_SameDriverHost) {
   Unbind();
 }
 
+// Start the root driver, and then start a second driver that we match based on
+// node properties.
+TEST_F(DriverRunnerTest, StartSecondDriver_UseProperties) {
+  DriverIndex driver_index([](auto args) -> zx::status<MatchResult> {
+    if (args.has_name() && strncmp("root", args.name().data(), args.name().size()) == 0) {
+      return zx::ok(MatchResult{
+          .url = "fuchsia-boot:///#meta/root-driver.cm",
+          .matched_args = std::move(args),
+      });
+    } else if (args.has_properties() && args.properties()[0].key() == 0x1985 &&
+               args.properties()[0].value() == 0x2301) {
+      return zx::ok(MatchResult{
+          .url = "fuchsia-boot:///#meta/second-driver.cm",
+          .matched_args = std::move(args),
+      });
+    } else {
+      return zx::error(ZX_ERR_NOT_FOUND);
+    }
+  });
+  DriverRunner driver_runner(ConnectToRealm(), &driver_index, loop().dispatcher());
+
+  driver_host().SetStartHandler([this](fdf::DriverStartArgs start_args, auto driver) {
+    auto& entries = start_args.program().entries();
+    EXPECT_EQ(2u, entries.size());
+    EXPECT_EQ("binary", entries[0].key);
+    EXPECT_EQ("driver/root-driver.so", entries[0].value->str());
+    EXPECT_EQ("colocate", entries[1].key);
+    EXPECT_EQ("false", entries[1].value->str());
+
+    realm().SetCreateChildHandler([](fsys::CollectionRef collection, fsys::ChildDecl decl) {
+      EXPECT_EQ("drivers", collection.name);
+      EXPECT_EQ("driver-2", decl.name());
+      EXPECT_EQ("fuchsia-boot:///#meta/second-driver.cm", decl.url());
+    });
+    realm().SetBindChildHandler([this](fsys::ChildRef child, auto exposed_dir) {
+      EXPECT_EQ("drivers", child.collection);
+      EXPECT_EQ("driver-2", child.name);
+      EXPECT_EQ(ZX_OK, driver_dir_binding().Bind(std::move(exposed_dir), loop().dispatcher()));
+    });
+
+    fdf::NodePtr root_node;
+    EXPECT_EQ(ZX_OK, root_node.Bind(start_args.mutable_node()->TakeChannel(), loop().dispatcher()));
+    fdf::NodeAddArgs args;
+    args.mutable_properties()->emplace_back(
+        std::move(fdf::NodeProperty().set_key(0x1985).set_value(0x2301)));
+    fdf::NodeControllerPtr node_controller;
+    root_node->AddChild(std::move(args), node_controller.NewRequest(loop().dispatcher()), {});
+  });
+  ASSERT_TRUE(StartRootDriver("root", &driver_runner).is_ok());
+
+  driver_host().SetStartHandler([](fdf::DriverStartArgs start_args, auto driver) {
+    auto& entries = start_args.program().entries();
+    EXPECT_EQ(2u, entries.size());
+    EXPECT_EQ("binary", entries[0].key);
+    EXPECT_EQ("driver/second-driver.so", entries[0].value->str());
+    EXPECT_EQ("colocate", entries[1].key);
+    EXPECT_EQ("true", entries[1].value->str());
+    EXPECT_TRUE(start_args.exposed_dir().is_valid());
+  });
+  StartDriver(&driver_runner, {
+                                  .url = "fuchsia-boot:///#meta/second-driver.cm",
+                                  .binary = "driver/second-driver.so",
+                                  .colocate = true,
+                              });
+
+  Unbind();
+}
+
 // Start the root driver, and then add a child node that does not bind to a
 // second driver.
 TEST_F(DriverRunnerTest, StartSecondDriver_UnknownNode) {
