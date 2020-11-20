@@ -5,6 +5,7 @@
 use {
     anyhow::{format_err, Error},
     fuchsia_bluetooth::types::Channel,
+    futures::future::BoxFuture,
     std::convert::TryFrom,
     thiserror::Error,
 };
@@ -265,6 +266,14 @@ impl CommandResponse {
         };
         Ok(command_response)
     }
+}
+
+/// SignaledTasks represent a task or object that is currently running.
+/// Typically a SignaledTask will run a background task that is active until dropped.
+pub trait SignaledTask {
+    /// Returns a Future that finishes when the running task finishes for any reason.
+    /// If this task has already finished, the returned future should immediately resolve.
+    fn finished(&mut self) -> BoxFuture<'static, ()>;
 }
 
 #[cfg(test)]

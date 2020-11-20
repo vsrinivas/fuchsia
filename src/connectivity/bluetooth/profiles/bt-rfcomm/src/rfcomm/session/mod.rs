@@ -10,12 +10,10 @@ use {
     fuchsia_inspect as inspect,
     fuchsia_inspect_derive::{AttachError, Inspect},
     futures::{
-        channel::mpsc,
-        future::BoxFuture,
+        channel::{mpsc, oneshot},
+        future::{BoxFuture, Shared},
         lock::Mutex,
-        select,
-        task::{noop_waker_ref, Context},
-        FutureExt, SinkExt, StreamExt,
+        select, FutureExt, SinkExt, StreamExt,
     },
     log::{error, info, trace, warn},
     std::{
@@ -44,7 +42,7 @@ use crate::rfcomm::frame::{
     Encodable, Frame, FrameData, FrameParseError, UIHData, UserData,
 };
 use crate::rfcomm::inspect::SessionInspect;
-use crate::rfcomm::types::{CommandResponse, RfcommError, Role, ServerChannel, DLCI};
+use crate::rfcomm::types::{CommandResponse, RfcommError, Role, ServerChannel, SignaledTask, DLCI};
 
 /// A function used to relay an opened inbound RFCOMM channel to a local client.
 type ChannelOpenedFn =
@@ -827,9 +825,12 @@ impl SessionInner {
 #[derive(Inspect)]
 pub struct Session {
     #[inspect(skip)]
-    task: Option<fasync::Task<()>>,
+    _task: fasync::Task<()>,
     #[inspect(forward)]
     inner: Arc<Mutex<SessionInner>>,
+    /// Shared termination future.
+    #[inspect(skip)]
+    terminated: Shared<BoxFuture<'static, ()>>,
 }
 
 impl Session {
@@ -847,13 +848,16 @@ impl Session {
             frames_to_peer_sender,
             channel_opened_callback,
         )));
-        let task = fasync::Task::spawn(Session::session_task(
+        let (termination_sender, receiver) = oneshot::channel();
+        let terminated = receiver.map(|_| ()).boxed().shared();
+        let _task = fasync::Task::spawn(Session::session_task(
             id,
             l2cap_channel,
             session_inner.clone(),
             frame_receiver,
+            termination_sender,
         ));
-        Self { task: Some(task), inner: session_inner }
+        Self { _task, inner: session_inner, terminated }
     }
 
     /// Processing task that drives the work for an RFCOMM Session with a peer.
@@ -873,6 +877,7 @@ impl Session {
         l2cap: Channel,
         session_inner: Arc<Mutex<SessionInner>>,
         frame_receiver: mpsc::Receiver<Frame>,
+        termination_sender: oneshot::Sender<()>,
     ) {
         // `Session::peer_processing_task()` uses this mpsc::channel to relay data received from the
         // peer to the `session_inner`.
@@ -896,7 +901,9 @@ impl Session {
                 let _ = session_task.await;
             }
         }
+        // Session has finished; notify any subscribed clients.
         info!("Session with peer {:?} ended", id);
+        let _ = termination_sender.send(());
     }
 
     /// Processes incoming data from the `l2cap_channel` connected to the remote peer and
@@ -945,7 +952,7 @@ impl Session {
 
     /// Requests to open a new RFCOMM channel for the provided `server_channel`.
     pub async fn open_rfcomm_channel(
-        &mut self,
+        &self,
         server_channel: ServerChannel,
         channel_opened_cb: ChannelRequestFn,
     ) {
@@ -954,31 +961,11 @@ impl Session {
             warn!("Couldn't open RFCOMM channel: {:?}", e);
         }
     }
+}
 
-    /// Returns true if the Session is currently active - namely, it's processing `task` is
-    /// still active.
-    pub fn is_active(&mut self) -> bool {
-        // The usage of `noop_waker_ref` is contingent on the `task` not being polled
-        // elsewhere.
-        // Each RFCOMM Session is stored as a spawned fasync::Task.
-        // The `task` itself is never polled directly anywhere else as there is no need to
-        // drive it to completion. Thus, `is_active()` is the only location in which
-        // the `task` is polled to determine if the RFCOMM Session processing task is ready
-        // or not. When the task completes, the `poll_unpin()` call will resolve to ready, and the
-        // task will be set to None. This prevents future calls to `is_active()` from
-        // polling an already completed future.
-        self.task = self
-            .task
-            .take()
-            .map(|mut task| {
-                if task.poll_unpin(&mut Context::from_waker(noop_waker_ref())).is_pending() {
-                    Some(task)
-                } else {
-                    None
-                }
-            })
-            .flatten();
-        self.task.is_some()
+impl SignaledTask for Session {
+    fn finished(&mut self) -> BoxFuture<'static, ()> {
+        self.terminated.clone().boxed()
     }
 }
 
@@ -1039,7 +1026,9 @@ mod tests {
         let (frame_sender, frame_receiver) = mpsc::channel(0);
         let session_inner =
             Arc::new(Mutex::new(SessionInner::create(frame_sender, channel_opened_fn)));
-        let session_fut = Session::session_task(PeerId(1), local, session_inner, frame_receiver);
+        let (sender, _receiver) = oneshot::channel();
+        let session_fut =
+            Session::session_task(PeerId(1), local, session_inner, frame_receiver, sender);
 
         (session_fut, remote)
     }
@@ -1263,6 +1252,33 @@ mod tests {
         remote.as_ref().write(&frame_bytes[..]).expect("Should send");
 
         assert!(exec.run_until_stalled(&mut processing_fut).is_pending());
+    }
+
+    #[test]
+    fn test_peer_disconnection_notifies_termination_future() {
+        let mut exec = fasync::Executor::new().unwrap();
+
+        let id = PeerId(992);
+        let (local, remote) = Channel::create();
+        let channel_opened_fn = Box::new(|_server_channel, _channel| async { Ok(()) }.boxed());
+        let mut session = Session::create(id, local, channel_opened_fn);
+
+        // Session should still be active.
+        let mut closed_fut = session.finished();
+        assert!(exec.run_until_stalled(&mut closed_fut).is_pending());
+
+        // Peer disconnects - the termination future should resolve.
+        drop(remote);
+        assert!(exec.run_until_stalled(&mut closed_fut).is_ready());
+
+        // Trying to check again if the Session has terminated is OK - should resolve immediately.
+        let mut closed_fut2 = session.finished();
+        assert!(exec.run_until_stalled(&mut closed_fut2).is_ready());
+
+        // Although unlikely, checking after the Session has gone out of scope resolves immediately.
+        let mut closed_fut3 = session.finished();
+        drop(session);
+        assert!(exec.run_until_stalled(&mut closed_fut3).is_ready());
     }
 
     #[test]
@@ -1961,7 +1977,7 @@ mod tests {
 
         let (local, mut remote) = Channel::create();
         let (channel_open_fn, _inbound_channels) = create_inbound_relay();
-        let mut session = Session::create(PeerId(42), local, channel_open_fn);
+        let session = Session::create(PeerId(42), local, channel_open_fn);
         let (outbound_fn, mut outbound_channels) = create_outbound_relay();
 
         // Local profile client requests to open an RFCOMM channel.
@@ -2068,7 +2084,7 @@ mod tests {
 
         let (local, mut remote) = Channel::create();
         let (channel_open_fn, _inbound_channels) = create_inbound_relay();
-        let mut session = Session::create(PeerId(321), local, channel_open_fn);
+        let session = Session::create(PeerId(321), local, channel_open_fn);
         let (outbound_fn, mut outbound_channels) = create_outbound_relay();
 
         // 1. Simulate local profile client requesting to open an RFCOMM channel.

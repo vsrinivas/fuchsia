@@ -5,8 +5,11 @@
 use {
     anyhow::{format_err, Error},
     fidl_fuchsia_bluetooth::ErrorCode,
-    fidl_fuchsia_bluetooth_bredr as bredr,
-    fuchsia_bluetooth::types::{Channel, PeerId},
+    fidl_fuchsia_bluetooth_bredr as bredr, fuchsia_async as fasync,
+    fuchsia_bluetooth::{
+        detachable_map::DetachableMap,
+        types::{Channel, PeerId},
+    },
     fuchsia_inspect as inspect,
     fuchsia_inspect_derive::{AttachError, Inspect},
     futures::{lock::Mutex, FutureExt},
@@ -19,7 +22,7 @@ use {
 };
 
 use crate::profile::build_rfcomm_protocol;
-use crate::rfcomm::{session::Session, ServerChannel};
+use crate::rfcomm::{session::Session, types::SignaledTask, ServerChannel};
 
 /// Manages the current clients of the RFCOMM server. Provides an API for
 /// registering, unregistering, and relaying RFCOMM channels to clients.
@@ -93,10 +96,10 @@ pub struct RfcommServer {
     /// The currently registered profile clients of the RFCOMM server.
     clients: Arc<Clients>,
 
-    /// Sessions between us and a remote peer. Each Session will multiplex
+    /// Active sessions between us and a remote peer. Each Session will multiplex
     /// RFCOMM connections over a single L2CAP channel.
     /// There can only be one session per remote peer. See RFCOMM Section 5.2.
-    sessions: HashMap<PeerId, Session>,
+    sessions: DetachableMap<PeerId, Session>,
 
     /// Inspect node for Sessions to attach to.
     inspect: inspect::Node,
@@ -113,7 +116,7 @@ impl RfcommServer {
     pub fn new() -> Self {
         Self {
             clients: Arc::new(Clients::new()),
-            sessions: HashMap::new(),
+            sessions: DetachableMap::new(),
             inspect: inspect::Node::default(),
         }
     }
@@ -122,10 +125,7 @@ impl RfcommServer {
     /// active.
     /// An RFCOMM Session is active if there is a currently running processing task.
     pub fn is_active_session(&mut self, id: &PeerId) -> bool {
-        if let Some(session) = self.sessions.get_mut(id) {
-            return session.is_active();
-        }
-        false
+        self.sessions.get(id).map_or(false, |session| session.upgrade().is_some())
     }
 
     /// Returns the number of available server channels in this server.
@@ -165,8 +165,10 @@ impl RfcommServer {
         responder: bredr::ProfileConnectResponder,
     ) -> Result<(), Error> {
         trace!("Received request to open RFCOMM channel {:?} with peer {:?}", server_channel, id);
-        match self.sessions.get_mut(&id) {
+
+        match self.sessions.get(&id).and_then(|s| s.upgrade()) {
             None => {
+                // Peer either disconnected or doesn't exist.
                 let _ = responder.send(&mut Err(ErrorCode::Failed));
                 Err(format_err!("Invalid peer ID {:?}", id))
             }
@@ -204,11 +206,21 @@ impl RfcommServer {
         });
         let mut session = Session::create(id, l2cap, channel_opened_callback);
         let _ = session.iattach(&self.inspect, inspect::unique_name("peer_"));
+        let closed_fut = session.finished();
         self.sessions.insert(id, session);
+
+        // Task eagerly removes the Session from the set of active sessions upon termination.
+        let detached_session = self.sessions.get(&id).expect("just inserted");
+        fasync::Task::spawn(async move {
+            let _ = closed_fut.await;
+            detached_session.detach();
+        })
+        .detach();
 
         Ok(())
     }
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;
