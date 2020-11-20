@@ -30,22 +30,33 @@ var mockProtocol = protocolInner{
 	},
 }.build()
 
-var toName = cmp.Transformer("ToName", func(m Method) string {
-	return m.Name
-})
+var toNames = func(methods []Method) []string {
+	s := []string{}
+	for _, m := range methods {
+		s = append(s, m.Name)
+	}
+	return s
+}
+
+func assertEmpty(t *testing.T, diff string) {
+	t.Helper()
+	if len(diff) > 0 {
+		t.Fatalf("Expected empty diff, got %s", diff)
+	}
+}
 
 func TestMatchOneWayMethods(t *testing.T) {
-	cmp.Diff(mockProtocol.OneWayMethods, []string{"OneWay"}, toName)
+	assertEmpty(t, cmp.Diff(toNames(mockProtocol.OneWayMethods), []string{"OneWay"}))
 }
 
 func TestMatchTwoWayMethods(t *testing.T) {
-	cmp.Diff(mockProtocol.TwoWayMethods, []string{"TwoWay"}, toName)
+	assertEmpty(t, cmp.Diff(toNames(mockProtocol.TwoWayMethods), []string{"TwoWay"}))
 }
 
 func TestMatchClientMethods(t *testing.T) {
-	cmp.Diff(mockProtocol.ClientMethods, []string{"OneWay", "TwoWay"}, toName)
+	assertEmpty(t, cmp.Diff(toNames(mockProtocol.ClientMethods), []string{"OneWay", "TwoWay"}))
 }
 
 func TestMatchEvents(t *testing.T) {
-	cmp.Diff(mockProtocol.Events, []string{"Event"}, toName)
+	assertEmpty(t, cmp.Diff(toNames(mockProtocol.Events), []string{"Event"}))
 }
