@@ -57,7 +57,7 @@ void TestCloning() {
     {
       auto first = view.begin();
       EXPECT_EQ(sizeof(zbi_header_t), first.item_offset());
-      auto copy_result = view.Copy(first, Next(first));
+      auto copy_result = view.Copy(first, std::next(first));
       ASSERT_FALSE(copy_result.is_error()) << ViewCopyErrorString(copy_result.error_value());
 
       auto created = std::move(copy_result).value();
@@ -69,7 +69,7 @@ void TestCloning() {
       // byte-for-byte equality.
       zbitl::CrcCheckingView<decltype(created)> created_view(std::move(created));
       auto created_first = created_view.begin();
-      EXPECT_EQ(created_view.end(), Next(created_first));  // Should only have one item.
+      EXPECT_EQ(created_view.end(), std::next(created_first));  // Should only have one item.
       zbi_header_t src_header = *((*first).header);
       zbi_header_t dest_header = *((*created_first).header);
       EXPECT_EQ(HeaderToTuple(src_header), HeaderToTuple(dest_header));
@@ -81,9 +81,9 @@ void TestCloning() {
     // kSecondItemOnPageBoundary, copying the second item.
     // item offset % ZX_PAGE_SIZE == 0, and so we do not expect a clone.
     {
-      auto second = Next(view.begin());
+      auto second = std::next(view.begin());
       EXPECT_EQ(0u, second.item_offset() % ZX_PAGE_SIZE);
-      auto copy_result = view.Copy(second, Next(second));
+      auto copy_result = view.Copy(second, std::next(second));
       ASSERT_FALSE(copy_result.is_error()) << ViewCopyErrorString(copy_result.error_value());
 
       auto created = std::move(copy_result).value();
@@ -94,7 +94,7 @@ void TestCloning() {
       // byte-for-byte equality.
       zbitl::CrcCheckingView<decltype(created)> created_view(std::move(created));
       auto created_first = created_view.begin();
-      EXPECT_EQ(created_view.end(), Next(created_first));  // Should only have one item.
+      EXPECT_EQ(created_view.end(), std::next(created_first));  // Should only have one item.
       zbi_header_t src_header = *((*second).header);
       zbi_header_t dest_header = *((*created_first).header);
       EXPECT_EQ(HeaderToTuple(src_header), HeaderToTuple(dest_header));
@@ -124,7 +124,7 @@ void TestCloning() {
     {
       auto first = view.begin();
       EXPECT_EQ(sizeof(zbi_header_t), first.item_offset());
-      auto copy_result = view.Copy(first, Next(first));
+      auto copy_result = view.Copy(first, std::next(first));
       ASSERT_FALSE(copy_result.is_error()) << ViewCopyErrorString(copy_result.error_value());
 
       auto created = std::move(copy_result).value();
@@ -136,7 +136,7 @@ void TestCloning() {
       // byte-for-byte equality.
       zbitl::CrcCheckingView<decltype(created)> created_view(std::move(created));
       auto created_first = created_view.begin();
-      EXPECT_EQ(created_view.end(), Next(created_first));  // Should only have one item.
+      EXPECT_EQ(created_view.end(), std::next(created_first));  // Should only have one item.
       zbi_header_t src_header = *((*first).header);
       zbi_header_t dest_header = *((*created_first).header);
       EXPECT_EQ(HeaderToTuple(src_header), HeaderToTuple(dest_header));
@@ -150,9 +150,9 @@ void TestCloning() {
     // a clone with a single discard item.
     {
       constexpr uint32_t kSecondItemSize = 240;
-      auto second = Next(view.begin());
+      auto second = std::next(view.begin());
       EXPECT_EQ(kSecondItemSize, second.item_offset());
-      auto copy_result = view.Copy(second, Next(second));
+      auto copy_result = view.Copy(second, std::next(second));
       ASSERT_FALSE(copy_result.is_error()) << ViewCopyErrorString(copy_result.error_value());
 
       auto created = std::move(copy_result).value();
@@ -164,8 +164,8 @@ void TestCloning() {
       // byte-for-byte equality.
       zbitl::CrcCheckingView<decltype(created)> created_view(std::move(created));
       auto created_first = created_view.begin();
-      auto createdSecond = Next(created_first);
-      EXPECT_EQ(created_view.end(), Next(createdSecond));  // Should have two items.
+      auto createdSecond = std::next(created_first);
+      EXPECT_EQ(created_view.end(), std::next(createdSecond));  // Should have two items.
 
       zbi_header_t src_header = *((*second).header);
       zbi_header_t dest1_header = *((*created_first).header);

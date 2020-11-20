@@ -59,16 +59,6 @@ std::string GetExpectedJson(TestDataZbiType type);
 void OpenTestDataZbi(TestDataZbiType type, std::string_view work_dir, fbl::unique_fd* fd,
                      size_t* num_bytes);
 
-// Annoyingly, we are unable to currently use std::next on zbitl::View's
-// iterator, as that requires the class to define `value_type` in its namespace
-// (among other things) - and neither GCC nor Clang acknowledge that it is
-// ineherited from the parent namespace by default, and GCC can't abide by
-// explicitly redefining it in the former.
-//
-// `auto it` ensures a decayed copy/move into the `it` argument, so a call
-// should not modify the input iterator.
-constexpr auto Next = [](auto it) { return ++it; };
-
 //
 // Each type of storage under test is expected to implement a "test traits"
 // struct with the following properties:
@@ -438,7 +428,7 @@ void TestCopyCreationByIteratorRange(TestDataZbiType type) {
   {
     auto first = view.begin();
 
-    auto copy_result = view.Copy(first, Next(first));
+    auto copy_result = view.Copy(first, std::next(first));
     EXPECT_FALSE(copy_result.is_error()) << ViewCopyErrorString(copy_result.error_value());
 
     auto created = std::move(copy_result).value();
@@ -468,8 +458,8 @@ void TestCopyCreationByIteratorRange(TestDataZbiType type) {
   }
 
   // [begin() + 1, end()).
-  if (Next(view.begin()) != view.end()) {
-    auto copy_result = view.Copy(Next(view.begin()), view.end());
+  if (std::next(view.begin()) != view.end()) {
+    auto copy_result = view.Copy(std::next(view.begin()), view.end());
     EXPECT_FALSE(copy_result.is_error()) << ViewCopyErrorString(copy_result.error_value());
 
     auto created = std::move(copy_result).value();
@@ -695,7 +685,7 @@ void TestCopyingByIteratorRange(TestDataZbiType type) {
     auto copy = copy_context.TakeStorage();
 
     auto first = view.begin();
-    auto copy_result = view.Copy(copy, first, Next(view.begin()));
+    auto copy_result = view.Copy(copy, first, std::next(view.begin()));
     EXPECT_FALSE(copy_result.is_error()) << ViewCopyErrorString(copy_result.error_value());
 
     zbitl::View copy_view(std::move(copy));
@@ -718,12 +708,12 @@ void TestCopyingByIteratorRange(TestDataZbiType type) {
   }
 
   // [begin() + 1, end()).
-  if (Next(view.begin()) != view.end()) {
+  if (std::next(view.begin()) != view.end()) {
     typename DestTestTraits::Context copy_context;
     ASSERT_NO_FATAL_FAILURE(DestTestTraits::Create(kMaxZbiSize, &copy_context));
     auto copy = copy_context.TakeStorage();
 
-    auto first = Next(view.begin());
+    auto first = std::next(view.begin());
     {
       auto result = view.Copy(copy, first, view.end());
       EXPECT_FALSE(result.is_error()) << ViewCopyErrorString(result.error_value());
