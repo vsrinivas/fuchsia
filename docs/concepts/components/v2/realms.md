@@ -107,7 +107,7 @@ declarations, see [children][children].
 ### Dynamic children
 
 A *dynamic child* is a component instance that was created at runtime in a
-[component collection](#component-collections). A dynamic child is always scoped
+[component collection](#collections). A dynamic child is always scoped
 to a particular collection. Dynamic children can be used to support use cases
 where the existence or cardinality of component instances cannot be determined
 in advance. For example, a testing realm might declare a collection in which
