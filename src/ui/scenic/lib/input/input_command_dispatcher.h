@@ -50,7 +50,6 @@ class InputCommandDispatcher : public CommandDispatcher {
   // Per-command dispatch logic.
   void DispatchCommand(const fuchsia::ui::input::SendKeyboardInputCmd& command);
   void DispatchCommand(const fuchsia::ui::input::SetHardKeyboardDeliveryCmd& command);
-  void DispatchCommand(const fuchsia::ui::input::SetParallelDispatchCmd& command);
 
   // Enqueue the keyboard event into an EventReporter.
   static void ReportKeyboardEvent(EventReporter* reporter,
@@ -65,9 +64,6 @@ class InputCommandDispatcher : public CommandDispatcher {
   std::shared_ptr<EventReporter> event_reporter_;
   fxl::WeakPtr<gfx::SceneGraph> scene_graph_;
   InputSystem* const input_system_ = nullptr;
-
-  // TODO(fxbug.dev/24258): Remove when gesture disambiguation is the default.
-  bool parallel_dispatch_ = true;
 };
 
 }  // namespace input

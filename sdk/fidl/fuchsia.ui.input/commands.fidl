@@ -13,7 +13,7 @@ union Command {
     /// Command to enable/disable delivery of hard keyboard events.
     3: SetHardKeyboardDeliveryCmd set_hard_keyboard_delivery;
 
-    /// Command to enable/disable parallel delivery of input events.
+    /// Obsolete. This command is a no-op.
     4: SetParallelDispatchCmd set_parallel_dispatch;
 };
 
@@ -37,12 +37,7 @@ struct SetHardKeyboardDeliveryCmd {
     bool delivery_request;
 };
 
-/// Typically, clients that participate in the hit test should receive input
-/// events in parallel. This behavior is required for gesture disambiguation.
-///
-/// This command, typically set by the root presenter, allows disabling parallel
-/// dispatch; it is part of the input v2 transition work.
-// TODO(fxbug.dev/24258): Remove after gesture disambiguation is implemented.
+/// Obsolete. This command is a no-op.
 struct SetParallelDispatchCmd {
     bool parallel_dispatch;
 };

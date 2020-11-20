@@ -132,7 +132,7 @@ TEST_F(FocusAvoidanceTest, ViewHierarchyByScenic) {
   {
     const std::vector<InputEvent>& events = client_1.events();
 
-    EXPECT_EQ(events.size(), 5u);
+    EXPECT_EQ(events.size(), 3u);
 
     EXPECT_TRUE(events[0].is_pointer());
     EXPECT_TRUE(PointerMatches(events[0].pointer(), 1u, PointerEventPhase::ADD, 0.5, 0.5));
@@ -143,13 +143,7 @@ TEST_F(FocusAvoidanceTest, ViewHierarchyByScenic) {
     EXPECT_TRUE(events[2].is_pointer());
     EXPECT_TRUE(PointerMatches(events[2].pointer(), 1u, PointerEventPhase::DOWN, 0.5, 0.5));
 
-    EXPECT_TRUE(events[3].is_pointer());
-    EXPECT_TRUE(PointerMatches(events[3].pointer(), 2u, PointerEventPhase::ADD, 4.5, 4.5));
-
     // No unfocus event here!
-
-    EXPECT_TRUE(events[4].is_pointer());
-    EXPECT_TRUE(PointerMatches(events[4].pointer(), 2u, PointerEventPhase::DOWN, 4.5, 4.5));
   }
 
   {

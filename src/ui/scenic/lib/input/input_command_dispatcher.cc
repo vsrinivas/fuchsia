@@ -53,11 +53,13 @@ void InputCommandDispatcher::DispatchCommand(ScenicCommand command,
     DispatchCommand(input.send_keyboard_input());
   } else if (input.is_send_pointer_input()) {
     input_system_->DispatchPointerCommand(input.send_pointer_input(), session_id_,
-                                          parallel_dispatch_);
+                                          /*parallel_dispatch*/ false);
   } else if (input.is_set_hard_keyboard_delivery()) {
     DispatchCommand(input.set_hard_keyboard_delivery());
   } else if (input.is_set_parallel_dispatch()) {
-    DispatchCommand(input.set_parallel_dispatch());
+    if (input.set_parallel_dispatch().parallel_dispatch) {
+      FX_LOGS(WARNING) << "Scenic: Parallel dispatch request is ignored and disabled.";
+    }
   }
 }
 
@@ -110,14 +112,6 @@ void InputCommandDispatcher::DispatchCommand(
   } else {
     input_system_->hard_keyboard_requested().erase(session_id_);
   }
-}
-
-void InputCommandDispatcher::DispatchCommand(
-    const fuchsia::ui::input::SetParallelDispatchCmd& command) {
-  TRACE_DURATION("input", "dispatch_command", "command", "SetParallelDispatchCmd");
-  FX_LOGS(INFO) << "Scenic: Parallel dispatch is turned "
-                << (command.parallel_dispatch ? "ON" : "OFF");
-  parallel_dispatch_ = command.parallel_dispatch;
 }
 
 void InputCommandDispatcher::ReportKeyboardEvent(EventReporter* reporter,

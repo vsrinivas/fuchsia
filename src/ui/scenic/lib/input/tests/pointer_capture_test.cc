@@ -215,7 +215,7 @@ TEST_F(PointerCaptureTest, IfAnotherViewGetsInput_ListenerShouldOnlyGetCapturedI
   EXPECT_EQ(pointerCaptureClient->listener_.events_.size(), 1u);
 }
 
-TEST_F(PointerCaptureTest, WhenParellelDispatchOn_ShouldOnlyGetOneEvent) {
+TEST_F(PointerCaptureTest, DISABLED_WhenParellelDispatchOn_ShouldOnlyGetOneEvent) {
   auto [view_token1, view_holder_token1] = scenic::ViewTokenPair::New();
   auto [view_token2, view_holder_token2] = scenic::ViewTokenPair::New();
   auto [root_session, root_resources] = CreateScene();

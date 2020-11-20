@@ -59,18 +59,19 @@ class CoordinateTransformTest : public InputSystemTest {
 // Similarly, View 2 creates its rectangle in the bottom right quadrant; the View's origin marked
 // 'y'.
 //
-// The hit test occurs at the center of the screen (colocated with View 2's origin at 'y'), at (4,4)
-// in device space. The touch events move diagonally up and to the right, and we have the following
-// correspondence of coordinates:
+// The hit test occurs at the center of the screen (colocated with View 2's origin at 'y'), at
+// (4.5,4.5) in device space. The touch events move diagonally up and to the right, and we have the
+// following correspondence of coordinates:
 //
 // Event  Mark  Device      View-1      View-2
-// ADD    y     (4.5,4.5)   (4.5,4.5)   (0.5, 0.5)
-// DOWN   y     (4.5,4.5)   (4.5,4.5)   (0.5, 0.5)
-// MOVE   M     (5.5,3.5)   (5.5,3.5)   (1.5,-0.5)
-// UP     U     (6.5,2.5)   (6.5,2.5)   (2.5,-1.5)
-// REMOVE U     (6.5,2.5)   (6.5,2.5)   (2.5,-1.5)
+// ADD    y     (4.5,4.5)   N/A         (0.5, 0.5)
+// DOWN   y     (4.5,4.5)   N/A         (0.5, 0.5)
+// MOVE   M     (5.5,3.5)   N/A         (1.5,-0.5)
+// UP     U     (6.5,2.5)   N/A         (2.5,-1.5)
+// REMOVE U     (6.5,2.5)   N/A         (2.5,-1.5)
 //
-// N.B. View 1 sits *above* View 2 in elevation; hence, View 1 should receive the focus event.
+// N.B. View 2 sits *above* View 1 in elevation; hence, only View 2 should receive touch and focus
+// events.
 //
 // N.B. This test is carefully constructed to avoid Vulkan functionality.
 TEST_F(CoordinateTransformTest, Translated) {
@@ -91,10 +92,10 @@ TEST_F(CoordinateTransformTest, Translated) {
     holder_2.SetViewProperties(k5x5x1);
 
     scene->AddChild(holder_1);
-    holder_1.SetTranslation(0, 0, -2);
+    holder_1.SetTranslation(0, 0, -1);  // elevation 1
 
     scene->AddChild(holder_2);
-    holder_2.SetTranslation(4, 4, -1);
+    holder_2.SetTranslation(4, 4, -2);  // elevation 2
 
     RequestToPresent(session);
   }
@@ -111,8 +112,6 @@ TEST_F(CoordinateTransformTest, Translated) {
                                     /*pointer id*/ 1, PointerEventType::TOUCH);
     // A touch sequence that starts in the direct center of the 9x9 display.
     // The sequence ends 2x2 diagonally away (north-east) from the touch down.
-    // Note that although this gesture escapes the bounds of view 1, we expect delivery to be
-    // latched to it due to it being under DOWN.
     session->Enqueue(pointer.Add(4.5, 4.5));
     session->Enqueue(pointer.Down(4.5, 4.5));
     session->Enqueue(pointer.Move(5.5, 3.5));
@@ -124,55 +123,36 @@ TEST_F(CoordinateTransformTest, Translated) {
   {
     const std::vector<InputEvent>& events = client_1.events();
 
-    EXPECT_EQ(events.size(), 6u);
-
-    EXPECT_TRUE(events[0].is_pointer());
-    EXPECT_TRUE(PointerMatches(events[0].pointer(), 1u, PointerEventPhase::ADD, 4.5, 4.5));
-
-    EXPECT_TRUE(events[1].is_focus());
-    EXPECT_TRUE(events[1].focus().focused);
-
-    EXPECT_TRUE(events[2].is_pointer());
-    EXPECT_TRUE(PointerMatches(events[2].pointer(), 1u, PointerEventPhase::DOWN, 4.5, 4.5));
-
-    EXPECT_TRUE(events[3].is_pointer());
-    EXPECT_TRUE(PointerMatches(events[3].pointer(), 1u, PointerEventPhase::MOVE, 5.5, 3.5));
-
-    EXPECT_TRUE(events[4].is_pointer());
-    EXPECT_TRUE(PointerMatches(events[4].pointer(), 1u, PointerEventPhase::UP, 6.5, 2.5));
-
-    EXPECT_TRUE(events[5].is_pointer());
-    EXPECT_TRUE(PointerMatches(events[5].pointer(), 1u, PointerEventPhase::REMOVE, 6.5, 2.5));
+    EXPECT_EQ(events.size(), 0u);  // Occluded and thus excluded.
   }
 
   {
     const std::vector<InputEvent>& events = client_2.events();
 
-    EXPECT_EQ(events.size(), 5u);
+    EXPECT_EQ(events.size(), 6u);
 
-    EXPECT_TRUE(events[0].is_pointer());
+    ASSERT_TRUE(events[0].is_pointer());
     EXPECT_TRUE(PointerMatches(events[0].pointer(), 1u, PointerEventPhase::ADD, 0.5, 0.5));
 
-    EXPECT_TRUE(events[1].is_pointer());
-    EXPECT_TRUE(PointerMatches(events[1].pointer(), 1u, PointerEventPhase::DOWN, 0.5, 0.5));
+    ASSERT_TRUE(events[1].is_focus());
+    EXPECT_TRUE(events[1].focus().focused);
 
-    EXPECT_TRUE(events[2].is_pointer());
-    EXPECT_TRUE(PointerMatches(events[2].pointer(), 1u, PointerEventPhase::MOVE, 1.5, -0.5));
+    ASSERT_TRUE(events[2].is_pointer());
+    EXPECT_TRUE(PointerMatches(events[2].pointer(), 1u, PointerEventPhase::DOWN, 0.5, 0.5));
 
-    EXPECT_TRUE(events[3].is_pointer());
-    EXPECT_TRUE(PointerMatches(events[3].pointer(), 1u, PointerEventPhase::UP, 2.5, -1.5));
+    ASSERT_TRUE(events[3].is_pointer());
+    EXPECT_TRUE(PointerMatches(events[3].pointer(), 1u, PointerEventPhase::MOVE, 1.5, -0.5));
 
-    EXPECT_TRUE(events[4].is_pointer());
-    EXPECT_TRUE(PointerMatches(events[4].pointer(), 1u, PointerEventPhase::REMOVE, 2.5, -1.5));
+    ASSERT_TRUE(events[4].is_pointer());
+    EXPECT_TRUE(PointerMatches(events[4].pointer(), 1u, PointerEventPhase::UP, 2.5, -1.5));
 
-#if 0
-    for (const auto& event : events)
-      FX_LOGS(INFO) << "Client got: " << event;  // Handy debugging.
-#endif
+    ASSERT_TRUE(events[5].is_pointer());
+    EXPECT_TRUE(PointerMatches(events[5].pointer(), 1u, PointerEventPhase::REMOVE, 2.5, -1.5));
   }
 }
 
 // This test verifies scaling applied to a view subgraph behind another.
+// The scaling performed to the "behind" view does not affect coordinates for the "front" view.
 TEST_F(CoordinateTransformTest, ScaledBehind) {
   // v1 is in front, not scaled
   auto [v1, vh1] = scenic::ViewTokenPair::New();
@@ -219,32 +199,27 @@ TEST_F(CoordinateTransformTest, ScaledBehind) {
   {
     const std::vector<InputEvent>& events = client_1.events();
 
-    EXPECT_EQ(events.size(), 3u);
+    ASSERT_EQ(events.size(), 3u);
 
-    EXPECT_TRUE(events[0].is_pointer());
+    ASSERT_TRUE(events[0].is_pointer());
     EXPECT_TRUE(PointerMatches(events[0].pointer(), 1u, PointerEventPhase::ADD, 1.5, 1.5));
 
-    EXPECT_TRUE(events[1].is_focus());
+    ASSERT_TRUE(events[1].is_focus());
     EXPECT_TRUE(events[1].focus().focused);
 
-    EXPECT_TRUE(events[2].is_pointer());
+    ASSERT_TRUE(events[2].is_pointer());
     EXPECT_TRUE(PointerMatches(events[2].pointer(), 1u, PointerEventPhase::DOWN, 1.5, 1.5));
   }
 
   {
     const std::vector<InputEvent>& events = client_2.events();
 
-    EXPECT_EQ(events.size(), 2u);
-
-    EXPECT_TRUE(events[0].is_pointer());
-    EXPECT_TRUE(PointerMatches(events[0].pointer(), 1u, PointerEventPhase::ADD, 1.5 / 4, 1.5 / 4));
-
-    EXPECT_TRUE(events[1].is_pointer());
-    EXPECT_TRUE(PointerMatches(events[1].pointer(), 1u, PointerEventPhase::DOWN, 1.5 / 4, 1.5 / 4));
+    EXPECT_EQ(events.size(), 0u);  // Occluded and thus excluded.
   }
 }
 
 // This test verifies scaling applied to a view subgraph in front of another.
+// The scaling performed to the "front" view ought to be observable.
 TEST_F(CoordinateTransformTest, ScaledInFront) {
   // v1 is in front and scaled 4x
   auto [v1, vh1] = scenic::ViewTokenPair::New();
@@ -291,28 +266,22 @@ TEST_F(CoordinateTransformTest, ScaledInFront) {
   {
     const std::vector<InputEvent>& events = client_1.events();
 
-    EXPECT_EQ(events.size(), 3u);
+    ASSERT_EQ(events.size(), 3u);
 
-    EXPECT_TRUE(events[0].is_pointer());
+    ASSERT_TRUE(events[0].is_pointer());
     EXPECT_TRUE(PointerMatches(events[0].pointer(), 1u, PointerEventPhase::ADD, 1.5 / 4, 1.5 / 4));
 
-    EXPECT_TRUE(events[1].is_focus());
+    ASSERT_TRUE(events[1].is_focus());
     EXPECT_TRUE(events[1].focus().focused);
 
-    EXPECT_TRUE(events[2].is_pointer());
+    ASSERT_TRUE(events[2].is_pointer());
     EXPECT_TRUE(PointerMatches(events[2].pointer(), 1u, PointerEventPhase::DOWN, 1.5 / 4, 1.5 / 4));
   }
 
   {
     const std::vector<InputEvent>& events = client_2.events();
 
-    EXPECT_EQ(events.size(), 2u);
-
-    EXPECT_TRUE(events[0].is_pointer());
-    EXPECT_TRUE(PointerMatches(events[0].pointer(), 1u, PointerEventPhase::ADD, 1.5, 1.5));
-
-    EXPECT_TRUE(events[1].is_pointer());
-    EXPECT_TRUE(PointerMatches(events[1].pointer(), 1u, PointerEventPhase::DOWN, 1.5, 1.5));
+    EXPECT_EQ(events.size(), 0u);  // Occluded and thus excluded.
   }
 }
 
