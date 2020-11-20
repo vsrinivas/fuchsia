@@ -238,10 +238,9 @@ std::pair<zx_status_t, StreamId> Injector::ValidatePointerSample(
     return {ZX_ERR_INVALID_ARGS, kInvalidStreamId};
   }
 
-  // Enforce event stream ordering rules.
+  // Enforce event stream ordering rules. It keeps the event stream clean for downstream clients.
   const auto stream_id = ValidateEventStream(pointer_sample.pointer_id(), pointer_sample.phase());
   if (stream_id == kInvalidStreamId) {
-    FX_LOGS(ERROR) << "Inject() called with invalid event stream";
     return {ZX_ERR_BAD_STATE, kInvalidStreamId};
   }
 
@@ -252,7 +251,16 @@ StreamId Injector::ValidateEventStream(uint32_t pointer_id, EventPhase phase) {
   const bool stream_is_ongoing = ongoing_streams_.count(pointer_id) > 0;
   const bool double_add = stream_is_ongoing && phase == EventPhase::ADD;
   const bool invalid_start = !stream_is_ongoing && phase != EventPhase::ADD;
-  if (double_add || invalid_start) {
+  if (double_add) {
+    FX_LOGS(ERROR) << "Inject() called with invalid event stream: double-add, ptr-id: "
+                   << pointer_id << ", stream-event-count: " << ongoing_streams_.count(pointer_id)
+                   << ", phase: " << (int) phase;
+    return kInvalidStreamId;
+  }
+  if (invalid_start) {
+    FX_LOGS(ERROR) << "Inject() called with invalid event stream: invalid-start, ptr-id: "
+                   << pointer_id << ", stream-event-count: " << ongoing_streams_.count(pointer_id)
+                   << ", phase: " << (int) phase;
     return kInvalidStreamId;
   }
 
