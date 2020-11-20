@@ -39,6 +39,7 @@ use {
     static_assertions::assert_eq_size,
     std::{
         any::Any,
+        boxed::Box,
         clone::Clone,
         collections::{btree_map, BTreeMap},
         iter,
@@ -86,6 +87,8 @@ where
     _connection: PhantomData<Connection>,
 
     fs: SimpleFilesystem<Self>,
+
+    not_found_handler: Mutex<Option<Box<dyn FnMut(&str) + Send + Sync + 'static>>>,
 }
 
 struct Inner {
@@ -104,6 +107,7 @@ where
             mutable,
             _connection: PhantomData,
             fs: SimpleFilesystem::new(),
+            not_found_handler: Mutex::new(None),
         })
     }
 
@@ -139,6 +143,15 @@ where
                 Ok(entry)
             }
         }
+    }
+    /// Registers a given function to be used when an item that is not present is opened. Typically
+    /// used for logging.
+    pub fn set_not_found_handler(
+        self: Arc<Self>,
+        handler: Box<dyn FnMut(&str) + Send + Sync + 'static>,
+    ) {
+        let mut this = self.not_found_handler.lock();
+        this.replace(handler);
     }
 }
 
@@ -181,14 +194,31 @@ where
             }
         };
 
+        // Create copies so if this fails to open we can call the not found handler
+        let ref_copy = self.clone();
+        let name_copy = name.clone().to_string();
+
         // Do not hold the mutex more than necessary.  Plus, [`parking_lot::Mutex`] is not
         // re-entrant.  So we need to make sure to release the lock before we call `open()` is it
         // may turn out to be a recursive call, in case the directory contains itself directly or
         // through a number of other directories.  `get_entry` is responsible for locking `self`
         // and it will unlock it before returning.
-        match self.get_entry(scope.clone(), flags, mode, name, path_ref) {
-            Err(status) => send_on_open_with_error(flags, server_end, status),
-            Ok(entry) => entry.open(scope, flags, mode, path, server_end),
+        let found = match self.get_entry(scope.clone(), flags, mode, name, path_ref) {
+            Err(status) => {
+                send_on_open_with_error(flags, server_end, status);
+                false
+            }
+            Ok(entry) => {
+                entry.open(scope, flags, mode, path, server_end);
+                true
+            }
+        };
+
+        if !found {
+            let mut handler = ref_copy.not_found_handler.lock();
+            if let Some(handler) = handler.as_mut() {
+                handler(&name_copy);
+            }
         }
     }
 

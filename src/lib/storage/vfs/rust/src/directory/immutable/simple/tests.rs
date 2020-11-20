@@ -47,7 +47,7 @@ use {
     static_assertions::assert_eq_size,
     std::sync::{
         atomic::{AtomicUsize, Ordering},
-        Arc,
+        Arc, Mutex,
     },
     vfs_macros::pseudo_directory,
 };
@@ -233,6 +233,30 @@ fn one_file_open_existing() {
         assert_close!(file);
 
         assert_close!(root);
+    });
+}
+
+#[test]
+fn one_file_open_missing_not_found_handler() {
+    let root = pseudo_directory! {
+        "file" => read_only_static("Content"),
+    };
+
+    let last_handler_value = Arc::new(Mutex::new(None));
+
+    {
+        let last_handler_value = last_handler_value.clone();
+        root.clone().set_not_found_handler(Box::new(move |path| {
+            *last_handler_value.lock().unwrap() = Some(path.to_string());
+        }));
+    }
+
+    run_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
+        let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
+        open_as_file_assert_err!(&root, flags, "file2", Status::NOT_FOUND);
+
+        assert_close!(root);
+        assert_eq!(Some("file2".to_string()), *last_handler_value.lock().unwrap())
     });
 }
 
