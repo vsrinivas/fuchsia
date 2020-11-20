@@ -18,6 +18,8 @@ table Destination {
     2: fuchsia.net.MacAddress mac;
     /// The interface identifier over which the destination can be reached.
     3: fuchsia.net.interface_id interface_id;
+    /// The preferred local IP address used to communicate with the destination.
+    4: fuchsia.net.IpAddress source_address;
 };
 
 /// A resolved route.

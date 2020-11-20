@@ -34,22 +34,26 @@ async fn test_resolve_loopback_route() -> Result {
         .context("failed to connect to routes/State")?;
     let routes = &routes;
 
-    let test = |remote: fidl_fuchsia_net::IpAddress| async move {
+    let test = |remote: fidl_fuchsia_net::IpAddress, source: fidl_fuchsia_net::IpAddress| async move {
         assert_eq!(
             resolve(routes, remote).await.context("error resolving remote")?,
             fidl_fuchsia_net_routes::Resolved::Direct(fidl_fuchsia_net_routes::Destination {
                 address: Some(remote),
                 mac: None,
                 interface_id: Some(1),
+                source_address: Some(source),
                 ..fidl_fuchsia_net_routes::Destination::empty()
             }),
         );
         Result::Ok(())
     };
 
-    let () =
-        test(fidl_ip!(127.0.0.1)).await.context("error testing resolution for IPv4 loopback")?;
-    let () = test(fidl_ip!(::1)).await.context("error testing resolution for IPv6 loopback")?;
+    let () = test(fidl_ip!(127.0.0.1), fidl_ip!(127.0.0.1))
+        .await
+        .context("error testing resolution for IPv4 loopback")?;
+    let () = test(fidl_ip!(::1), fidl_ip!(::1))
+        .await
+        .context("error testing resolution for IPv6 loopback")?;
 
     Ok(())
 }
@@ -171,11 +175,13 @@ async fn test_resolve_route() -> Result {
     let do_test = |gateway: fidl_fuchsia_net::IpAddress,
                    unreachable_peer: fidl_fuchsia_net::IpAddress,
                    unspecified: fidl_fuchsia_net::IpAddress,
-                   public_ip: fidl_fuchsia_net::IpAddress| async move {
+                   public_ip: fidl_fuchsia_net::IpAddress,
+                   source_address: fidl_fuchsia_net::IpAddress| async move {
         let gateway_node = || fidl_fuchsia_net_routes::Destination {
             address: Some(gateway),
             mac: Some(gateway_mac),
             interface_id: Some(interface_id),
+            source_address: Some(source_address),
             ..fidl_fuchsia_net_routes::Destination::empty()
         };
 
@@ -225,16 +231,22 @@ async fn test_resolve_route() -> Result {
         Result::Ok(())
     };
 
-    let () =
-        do_test(GATEWAY_IP_V4.addr, fidl_ip!(192.168.0.3), fidl_ip!(0.0.0.0), fidl_ip!(8.8.8.8))
-            .await
-            .context("IPv4 route lookup failed")?;
+    let () = do_test(
+        GATEWAY_IP_V4.addr,
+        fidl_ip!(192.168.0.3),
+        fidl_ip!(0.0.0.0),
+        fidl_ip!(8.8.8.8),
+        HOST_IP_V4.addr,
+    )
+    .await
+    .context("IPv4 route lookup failed")?;
 
     let () = do_test(
         GATEWAY_IP_V6.addr,
         fidl_ip!(3080::3),
         fidl_ip!(::),
         fidl_ip!(2001:4860:4860::8888),
+        HOST_IP_V6.addr,
     )
     .await
     .context("IPv6 route lookup failed")?;
