@@ -12,9 +12,11 @@
 #include <utility>
 
 #include <fvm/format.h>
+#include <fvm/snapshot-metadata-format.h>
 #include <fvm/sparse-reader.h>
 
 #include "fvm-host/container.h"
+#include "fvm-host/format.h"
 
 #if defined(__APPLE__)
 #include <sys/disk.h>
@@ -479,7 +481,7 @@ zx_status_t FvmContainer::AddPartition(const char* path, const char* type_name,
   format->Guid(guid);
   fvm::PartitionDescriptor descriptor;
   format->GetPartitionInfo(&descriptor);
-  if ((status = info_.AllocatePartition(&descriptor, guid, &vpart_index)) != ZX_OK) {
+  if ((status = info_.AllocatePartition(descriptor, guid, &vpart_index)) != ZX_OK) {
     fprintf(stderr, "Failed to allocate partition: %d\n", status);
     return status;
   }
@@ -556,17 +558,23 @@ zx_status_t FvmContainer::AddPartition(const char* path, const char* type_name,
   return ZX_OK;
 }
 
-zx_status_t FvmContainer::AddReservationPartition(size_t num_slices) {
+zx_status_t FvmContainer::AddSnapshotMetadataPartition(size_t reserved_slices) {
   info_.CheckValid();
 
-  auto vpart_or = info_.AllocatePartition(fvm::VPartitionEntry::CreateReservationPartition());
+  auto vpart_or = info_.AllocatePartition(fvm::VPartitionEntry::CreateSnapshotMetadataPartition());
   if (vpart_or.is_error()) {
     return vpart_or.status_value();
   }
   uint32_t vpart_index = vpart_or.value();
 
+  // TODO(fxbug.dev/59567): Add partition/extent entries describing blobfs.
+  std::vector<fvm::PartitionSnapshotState> partition_states{};
+  std::vector<fvm::SnapshotExtentType> extent_types{};
+  auto format =
+      std::make_unique<InternalSnapshotMetaFormat>(slice_size_, partition_states, extent_types);
+
   zx_status_t status;
-  if ((status = info_.GrowForSlices(num_slices)) != ZX_OK) {
+  if ((status = info_.GrowForSlices(reserved_slices)) != ZX_OK) {
     fprintf(stderr, "Failed to resize metadata buffer: %d\n", status);
     return status;
   }
@@ -574,7 +582,7 @@ zx_status_t FvmContainer::AddReservationPartition(size_t num_slices) {
   // Allocate all slices for this partition
   uint32_t pslice_start = 0;
   uint32_t pslice_total = 0;
-  for (size_t i = 0; i < num_slices; ++i) {
+  for (size_t i = 0; i < reserved_slices; ++i) {
     uint32_t pslice;
 
     if ((status = info_.AllocateSlice(vpart_index, i, &pslice)) != ZX_OK) {
@@ -599,14 +607,15 @@ zx_status_t FvmContainer::AddReservationPartition(size_t num_slices) {
   if ((status = info_.GetPartition(vpart_index, &entry)) != ZX_OK) {
     return status;
   }
-  ZX_ASSERT(entry->slices == num_slices);
+  ZX_ASSERT(entry->slices == reserved_slices);
 
   FvmPartitionInfo partition;
-  partition.format = nullptr;
+  partition.format = std::move(format);
   partition.vpart_index = vpart_index;
   partition.pslice_start = pslice_start;
-  partition.slice_count = num_slices;
+  partition.slice_count = reserved_slices;
   partitions_.push_back(std::move(partition));
+
   return ZX_OK;
 }
 

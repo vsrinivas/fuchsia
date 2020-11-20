@@ -42,7 +42,7 @@ class FvmInfo {
   zx_status_t Write(fvm::host::FileWrapper* wrapper, size_t disk_offset, size_t disk_size);
 
   // Allocates new partition (in memory) with a single slice.
-  zx_status_t AllocatePartition(const fvm::PartitionDescriptor* partition, uint8_t* guid,
+  zx_status_t AllocatePartition(const fvm::PartitionDescriptor& partition, uint8_t* guid,
                                 uint32_t* vpart_index);
 
   // Allocates new partition (in memory).

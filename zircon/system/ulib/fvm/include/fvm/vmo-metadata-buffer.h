@@ -10,7 +10,7 @@
 
 #include <memory>
 
-#include <fvm/metadata.h>
+#include <fvm/metadata-buffer.h>
 
 namespace fvm {
 

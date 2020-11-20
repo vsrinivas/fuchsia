@@ -20,6 +20,7 @@
 #include <fs-management/mount.h>
 #include <fvm/format.h>
 #include <fvm/fvm-sparse.h>
+#include <fvm/snapshot-metadata.h>
 
 #include "src/storage/minfs/bcache.h"
 #include "src/storage/minfs/format.h"
@@ -270,6 +271,33 @@ class BlobfsFormat final : public Format {
   uint32_t SlicesToBlocks(uint32_t slice_count) const;
   zx_status_t ComputeSlices(uint64_t inode_count, uint64_t data_blocks,
                             uint64_t journal_block_count);
+};
+
+class InternalSnapshotMetaFormat final : public Format {
+ public:
+  InternalSnapshotMetaFormat(size_t slice_size,
+                             const std::vector<fvm::PartitionSnapshotState>& partitions,
+                             const std::vector<fvm::SnapshotExtentType>& extents);
+  ~InternalSnapshotMetaFormat() override;
+  zx_status_t MakeFvmReady(size_t slice_size, uint32_t vpart_index, FvmReservation* reserve) final {
+    return ZX_OK;
+  }
+  zx_status_t GetVsliceRange(unsigned extent_index, vslice_info_t* vslice_info) const final;
+  zx_status_t GetSliceCount(uint32_t* slices_out) const final;
+  zx_status_t FillBlock(size_t block_offset) final;
+  zx_status_t EmptyBlock() final;
+  void* Data() final;
+  uint32_t BlockSize() const final;
+  uint32_t BlocksPerSlice() const final;
+
+ private:
+  const char* Name() const final;
+
+  size_t slice_size_ = 0;
+  // When FillBlock(0) is called, we read from meta_. Otherwise we read from zero_buf_.
+  bool reading_from_meta_ = false;
+  std::unique_ptr<uint8_t[]> zero_buf_;
+  fvm::SnapshotMetadata meta_;
 };
 
 #endif  // FVM_HOST_FORMAT_H_

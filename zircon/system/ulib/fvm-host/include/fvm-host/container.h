@@ -58,8 +58,10 @@ class Container {
   virtual zx_status_t AddPartition(const char* path, const char* type_name,
                                    FvmReservation* reserve) = 0;
 
-  // Adds a partition which is used to reserve |num_slices| slices for FVM's internal use.
-  virtual zx_status_t AddReservationPartition(size_t num_slices) = 0;
+  // Adds a partition to store snapshot metadata. This must be called if any partitions enable A/B
+  // snapshots, a condition which is checked before finalizing the image.
+  // Must be called at most once.
+  virtual zx_status_t AddSnapshotMetadataPartition(size_t reserved_slices) = 0;
 
   // Creates a partition of a given size and type, rounded to nearest slice. This is,
   // will allocate minimum amount of slices and the rest for the data region.
@@ -119,7 +121,7 @@ class FvmContainer final : public Container {
   zx_status_t Extend(size_t length);
   size_t SliceSize() const final;
   zx_status_t AddPartition(const char* path, const char* type_name, FvmReservation* reserve) final;
-  zx_status_t AddReservationPartition(size_t num_slices) final;
+  zx_status_t AddSnapshotMetadataPartition(size_t reserved_slices) final;
 
   uint64_t CalculateDiskSize() const final;
 
@@ -294,7 +296,7 @@ class SparseContainer final : public Container {
   size_t SliceSize() const final;
   size_t SliceCount() const;
   zx_status_t AddPartition(const char* path, const char* type_name, FvmReservation* reserve) final;
-  zx_status_t AddReservationPartition(size_t num_slices) final;
+  zx_status_t AddSnapshotMetadataPartition(size_t reserved_slices) final;
 
   // Decompresses the contents of the sparse file (if they are compressed), and writes the output
   // to |path|.
@@ -328,8 +330,7 @@ class SparseContainer final : public Container {
   zx_status_t InitExisting();
 
   zx_status_t AllocatePartition(std::unique_ptr<Format> format, FvmReservation* reserve);
-  zx_status_t AllocateExtent(uint32_t part_index, uint64_t slice_start, uint64_t slice_count,
-                             uint64_t extent_length);
+  zx_status_t AllocateExtent(uint32_t part_index, fvm::ExtentDescriptor extent);
 
   zx_status_t PrepareWrite(size_t max_len);
   zx_status_t WriteData(const void* data, size_t length);

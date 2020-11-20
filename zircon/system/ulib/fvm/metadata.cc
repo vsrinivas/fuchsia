@@ -37,17 +37,8 @@ fbl::Span<const uint8_t> ContainerToSpan(const T& container) {
 
 }  // namespace
 
-size_t MetadataBuffer::BytesNeeded(const fvm::Header& header) {
+size_t Metadata::BytesNeeded(const fvm::Header& header) {
   return header.GetMetadataAllocatedBytes();
-}
-
-HeapMetadataBuffer::HeapMetadataBuffer(std::unique_ptr<uint8_t[]> buffer, size_t size)
-    : buffer_(std::move(buffer)), size_(size) {}
-
-HeapMetadataBuffer::~HeapMetadataBuffer() = default;
-
-std::unique_ptr<MetadataBuffer> HeapMetadataBuffer::Create(size_t size) const {
-  return std::make_unique<HeapMetadataBuffer>(std::unique_ptr<uint8_t[]>(new uint8_t[size]), size);
 }
 
 Metadata::Metadata(std::unique_ptr<MetadataBuffer> data, SuperblockType active_header)
@@ -120,7 +111,7 @@ size_t Metadata::MetadataOffset(SuperblockType type) const {
 const MetadataBuffer* Metadata::Get() const { return data_.get(); }
 
 zx::status<Metadata> Metadata::CopyWithNewDimensions(const Header& dimensions) const {
-  if (MetadataBuffer::BytesNeeded(dimensions) < data_->size()) {
+  if (BytesNeeded(dimensions) < data_->size()) {
     return zx::error(ZX_ERR_BUFFER_TOO_SMALL);
   }
   const Header& header = GetHeader();
@@ -212,7 +203,7 @@ zx::status<Metadata> Metadata::Synthesize(const fvm::Header& header,
     return zx::error(ZX_ERR_INVALID_ARGS);
   }
 
-  size_t buffer_size = MetadataBuffer::BytesNeeded(header);
+  size_t buffer_size = BytesNeeded(header);
   std::unique_ptr<uint8_t[]> buf(new uint8_t[buffer_size]);
 
   // TODO(fxbug.dev/59980) The first entries in the partition/slice tables must be unused.

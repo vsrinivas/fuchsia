@@ -54,13 +54,12 @@ enum SparseFlags {
   // If set, indicates zero filling is not required which is otherwise expected for extents where
   // extent_length < slice_count.
   kSparseFlagZeroFillNotRequired = 0x8,
-  // Indicates a partition which is reserved for FVM's internal use. These partitions behave
-  // normally for the most part, but FVM need not expose them as mountable partitions during
-  // binding.
-  kSparseFlagReservationPartition = 0x10,
+  // Indicates a partition which is reserved for FVM's internal use. These partitions are used
+  // by FVM to store internal metadata.
+  kSparseFlagSnapshotMetadataPartition = 0x10,
   // The final value is the bitwise-OR of all other flags
   kSparseFlagAllValid = kSparseFlagLz4 | kSparseFlagZxcrypt | kSparseFlagCorrupted |
-                        kSparseFlagZeroFillNotRequired | kSparseFlagReservationPartition,
+                        kSparseFlagZeroFillNotRequired | kSparseFlagSnapshotMetadataPartition,
 };
 
 struct __attribute__((packed)) SparseImage {

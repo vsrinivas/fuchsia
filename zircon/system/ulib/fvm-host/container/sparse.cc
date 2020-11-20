@@ -240,7 +240,7 @@ zx_status_t SparseContainer::Verify() const {
     start = end;
     xprintf("Found partition %u with %u extents\n", i, partitions_[i].descriptor.extent_count);
 
-    if (partitions_[i].descriptor.flags & fvm::kSparseFlagReservationPartition) {
+    if (partitions_[i].descriptor.flags & fvm::kSparseFlagSnapshotMetadataPartition) {
       // Reserve partitions need no verification.
       continue;
     }
@@ -419,7 +419,7 @@ zx_status_t SparseContainer::Commit() {
     }
     // Write out each extent in the partition
     for (unsigned j = 0; j < partition.extent_count; j++) {
-      fvm::ExtentDescriptor extent = partitions_[i].extents[j];
+      fvm::ExtentDescriptor& extent = partitions_[i].extents[j];
       header_length += sizeof(fvm::ExtentDescriptor);
       // If format is non-null, then we should zero fill if the slice requests it.
       if (format) {
@@ -471,25 +471,27 @@ zx_status_t SparseContainer::Commit() {
       }
 
       // Write out each block in the extent
+      size_t bytes_written = 0;
       for (unsigned k = 0; k < vslice_info.slice_count * format->BlocksPerSlice(); ++k) {
-        if (k == vslice_info.block_count) {
+        if (k >= vslice_info.block_count) {
           // Zero fill, but only if compression is enabled and it has been requested; we wrote an
           // appropriate extent entry earlier.
           if (!(flags_ & fvm::kSparseFlagLz4) || !vslice_info.zero_fill) {
             break;
           }
           format->EmptyBlock();
-        } else if (k < vslice_info.block_count &&
-                   format->FillBlock(vslice_info.block_offset + k) != ZX_OK) {
+        } else if (format->FillBlock(vslice_info.block_offset + k) != ZX_OK) {
           fprintf(stderr, "Failed to read block\n");
           return ZX_ERR_IO;
         }
+        bytes_written += format->BlockSize();
 
         if (WriteData(format->Data(), format->BlockSize()) != ZX_OK) {
           fprintf(stderr, "Failed to write data to sparse file\n");
           return ZX_ERR_IO;
         }
       }
+      ZX_ASSERT(bytes_written == partitions_[i].extents[j].extent_length);
     }
   }
 
@@ -608,8 +610,13 @@ zx_status_t SparseContainer::AddCorruptedPartition(const char* type, uint64_t ta
   zx_status_t status = ZX_OK;
 
   // Allocate two slices to account for zxcrypt.
-  if ((status = AllocateExtent(static_cast<uint32_t>(partition_index), /*vslice_offset=*/0,
-                               /*slice_count=*/2, minfs::kMinfsBlockSize)) != ZX_OK) {
+  fvm::ExtentDescriptor extent{
+      .magic = fvm::kExtentDescriptorMagic,
+      .slice_start = 0,
+      .slice_count = 2,
+      .extent_length = minfs::kMinfsBlockSize,
+  };
+  if ((status = AllocateExtent(static_cast<uint32_t>(partition_index), extent)) != ZX_OK) {
     return status;
   }
   return status;
@@ -632,24 +639,36 @@ zx_status_t SparseContainer::AddPartition(const char* path, const char* type_nam
   return ZX_OK;
 }
 
-zx_status_t SparseContainer::AddReservationPartition(size_t num_slices) {
+zx_status_t SparseContainer::AddSnapshotMetadataPartition(size_t reserved_slices) {
   uint64_t partition_index = image_.partition_count;
-  fvm::VPartitionEntry entry = fvm::VPartitionEntry::CreateReservationPartition();
+  fvm::VPartitionEntry entry = fvm::VPartitionEntry::CreateSnapshotMetadataPartition();
   SparsePartitionInfo info;
   auto& descriptor = info.descriptor;
   info.format = nullptr;
   descriptor.magic = fvm::kPartitionDescriptorMagic;
   memcpy(descriptor.type, entry.type, sizeof(kDataType));
   memcpy(descriptor.name, entry.unsafe_name, sizeof(descriptor.name));
-  descriptor.flags = fvm::kSparseFlagReservationPartition;
+  descriptor.flags = fvm::kSparseFlagSnapshotMetadataPartition;
   descriptor.extent_count = 0;
+
+  // TODO(fxbug.dev/59567): Add partition/extent entries describing blobfs.
+  std::vector<fvm::PartitionSnapshotState> partition_states{};
+  std::vector<fvm::SnapshotExtentType> extent_types{};
+  info.format =
+      std::make_unique<InternalSnapshotMetaFormat>(slice_size_, partition_states, extent_types);
+
+  fvm::ExtentDescriptor extent{
+      .magic = fvm::kExtentDescriptorMagic,
+      .slice_start = 0u,
+      .slice_count = reserved_slices,
+      .extent_length = info.format->BlockSize(),
+  };
 
   image_.header_length += sizeof(fvm::PartitionDescriptor);
   partitions_.push_back(std::move(info));
   image_.partition_count++;
 
-  return AllocateExtent(static_cast<uint32_t>(partition_index), /*vslice_offset=*/0,
-                        /*slice_count=*/num_slices, fvm::kBlockSize);
+  return AllocateExtent(static_cast<uint32_t>(partition_index), extent);
 }
 
 zx_status_t SparseContainer::Decompress(const char* path) {
@@ -690,45 +709,45 @@ zx_status_t SparseContainer::AllocatePartition(std::unique_ptr<Format> format,
     return ZX_ERR_INTERNAL;
   }
 
-  vslice_info_t vslice_info;
   unsigned i = 0;
   uint64_t extent_length;
 
-  while ((status = format->GetVsliceRange(i++, &vslice_info)) == ZX_OK) {
-    if (mul_overflow(vslice_info.block_count, format->BlockSize(), &extent_length)) {
+  while (true) {
+    vslice_info_t extent;
+    if ((status = format->GetVsliceRange(i++, &extent)) != ZX_OK) {
+      if (status == ZX_ERR_OUT_OF_RANGE)
+        break;
+      return status;
+    }
+    if (mul_overflow(extent.block_count, format->BlockSize(), &extent_length)) {
       fprintf(stderr, "Multiplication overflow when getting extent length\n");
       return ZX_ERR_OUT_OF_RANGE;
     }
-    if ((status = AllocateExtent(part_index, vslice_info.vslice_start / format->BlocksPerSlice(),
-                                 vslice_info.slice_count, extent_length)) != ZX_OK) {
+    fvm::ExtentDescriptor extent_descriptor{
+        .magic = fvm::kExtentDescriptorMagic,
+        .slice_start = extent.vslice_start / format->BlocksPerSlice(),
+        .slice_count = extent.slice_count,
+        .extent_length = extent_length,
+    };
+    if ((status = AllocateExtent(part_index, extent_descriptor)) != ZX_OK) {
       return status;
     }
-  }
-
-  // This is expected if we have read all the other slices.
-  if (status != ZX_ERR_OUT_OF_RANGE) {
-    return status;
   }
 
   partitions_[part_index].format = std::move(format);
   return ZX_OK;
 }
 
-zx_status_t SparseContainer::AllocateExtent(uint32_t part_index, uint64_t slice_start,
-                                            uint64_t slice_count, uint64_t extent_length) {
+zx_status_t SparseContainer::AllocateExtent(uint32_t part_index, fvm::ExtentDescriptor extent) {
   if (part_index >= image_.partition_count) {
     fprintf(stderr, "Partition is not yet allocated\n");
     return ZX_ERR_OUT_OF_RANGE;
   }
 
+  ZX_ASSERT(extent.magic == fvm::kExtentDescriptorMagic);
   ZX_ASSERT(slice_size_ == image_.slice_size);
-  ZX_ASSERT((slice_count * image_.slice_size) >= extent_length);
+  ZX_ASSERT((extent.slice_count * image_.slice_size) >= extent.extent_length);
   SparsePartitionInfo* partition = &partitions_[part_index];
-  fvm::ExtentDescriptor extent;
-  extent.magic = fvm::kExtentDescriptorMagic;
-  extent.slice_start = slice_start;
-  extent.slice_count = slice_count;
-  extent.extent_length = extent_length;
   partition->extents.push_back(extent);
 
   if (partition->extents.size() != ++partition->descriptor.extent_count) {
@@ -737,7 +756,7 @@ zx_status_t SparseContainer::AllocateExtent(uint32_t part_index, uint64_t slice_
   }
 
   image_.header_length += sizeof(fvm::ExtentDescriptor);
-  extent_size_ += extent_length;
+  extent_size_ += extent.extent_length;
   dirty_ = true;
   return ZX_OK;
 }

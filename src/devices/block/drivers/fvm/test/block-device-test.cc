@@ -314,8 +314,7 @@ TEST_F(BlockDeviceTestAtNextRevision, UpdateOldestRevision) {
   EXPECT_NE(first_metadata_type, second_metadata_type);
 
   // The newly active header should have the oldest revision downgraded to the current one.
-  EXPECT_EQ(second_metadata_or.value().GetHeader().oldest_revision,
-            fvm::kCurrentRevision);
+  EXPECT_EQ(second_metadata_or.value().GetHeader().oldest_revision, fvm::kCurrentRevision);
 }
 
 // Tests that opening a device at a older "oldest revision" doesn't change the oldest revision.

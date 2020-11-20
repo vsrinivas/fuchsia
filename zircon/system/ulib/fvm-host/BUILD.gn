@@ -33,6 +33,7 @@ zx_library("fvm-host") {
     "format.cc",
     "format/blobfs.cc",
     "format/format.cc",
+    "format/internal-snapshot-meta.cc",
     "format/minfs.cc",
     "fvm-info.cc",
     "sparse-paver.cc",

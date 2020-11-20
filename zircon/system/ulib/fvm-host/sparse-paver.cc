@@ -33,14 +33,13 @@ zx_status_t SparsePaver::AddPartition(const SparsePartitionInfo* partition,
   }
 
   uint32_t vpart_index;
-  const fvm::PartitionDescriptor* descriptor = &partition->descriptor;
-  zx_status_t status = info_.AllocatePartition(descriptor, guid, &vpart_index);
+  zx_status_t status = info_.AllocatePartition(partition->descriptor, guid, &vpart_index);
   if (status != ZX_OK) {
     return status;
   }
 
   // Allocate all slices for this partition.
-  for (uint32_t i = 0; i < descriptor->extent_count; i++) {
+  for (uint32_t i = 0; i < partition->descriptor.extent_count; i++) {
     status = AddExtent(vpart_index, &partition->extents[i], reader);
     if (status != ZX_OK) {
       return status;

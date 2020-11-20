@@ -11,41 +11,9 @@
 #include <limits>
 
 #include <fvm/format.h>
+#include <fvm/metadata-buffer.h>
 
 namespace fvm {
-
-// MetadataBuffer is an interface for a buffer that contains FVM metadata.
-class MetadataBuffer {
- public:
-  virtual ~MetadataBuffer() = default;
-  // Returns the minimum number of bytes needed for a |MetadataBuffer| object to back FVM metadata
-  // described by |header|.
-  static size_t BytesNeeded(const Header& header);
-
-  // Creates an uninitialized |MetadataBuffer| which has capacity for at least |size| bytes.
-  // This is intentionally non-static so inheriting classes can override it to return the
-  // appropriate type. In general the instance's fields/methods will not be accessed.
-  virtual std::unique_ptr<MetadataBuffer> Create(size_t size) const = 0;
-
-  virtual void* data() const = 0;
-  virtual size_t size() const = 0;
-};
-
-// HeapMetadataBuffer is an instance of |MetadataBuffer| backed by a heap-allocated buffer.
-class HeapMetadataBuffer : public MetadataBuffer {
- public:
-  HeapMetadataBuffer(std::unique_ptr<uint8_t[]> buffer, size_t size);
-  ~HeapMetadataBuffer() override;
-
-  std::unique_ptr<MetadataBuffer> Create(size_t size) const override;
-
-  void* data() const override { return buffer_.get(); }
-  size_t size() const override { return size_; }
-
- private:
-  std::unique_ptr<uint8_t[]> buffer_;
-  size_t size_;
-};
 
 // Metadata is an in-memory representation of the metadata for an FVM image.
 //
@@ -64,6 +32,10 @@ class Metadata {
   Metadata& operator=(const Metadata&) = delete;
   Metadata(Metadata&&) noexcept;
   Metadata& operator=(Metadata&&) noexcept;
+
+  // Returns the minimum number of bytes needed for a |MetadataBuffer| object to back FVM metadata
+  // described by |header|.
+  static size_t BytesNeeded(const Header& header);
 
   // Attempts to parse the FVM metadata stored at |data_a| and |data_b|, picking the latest copy.
   // The copy with the latest generation (that is also valid) will be retained; the other is

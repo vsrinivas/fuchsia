@@ -69,7 +69,7 @@ zx_status_t FvmInfo::Load(fvm::host::FileWrapper* file, uint64_t disk_offset, ui
     fprintf(stderr, "Invalid magic; not an fvm image\n");
     return ZX_ERR_IO;
   }
-  size_t metadata_size = fvm::MetadataBuffer::BytesNeeded(header);
+  size_t metadata_size = fvm::Metadata::BytesNeeded(header);
 
   // Read both copies of the metadata in full.
   std::unique_ptr<uint8_t[]> metadata_a_raw(new uint8_t[metadata_size]);
@@ -199,7 +199,7 @@ zx_status_t FvmInfo::GrowForSlices(size_t slice_count) {
   return Grow(dimensions);
 }
 
-zx_status_t FvmInfo::AllocatePartition(const fvm::PartitionDescriptor* partition, uint8_t* guid,
+zx_status_t FvmInfo::AllocatePartition(const fvm::PartitionDescriptor& partition, uint8_t* guid,
                                        uint32_t* vpart_index) {
   CheckValid();
   for (uint32_t index = vpart_hint_; index < SuperBlock().GetPartitionTableEntryCount(); ++index) {
@@ -212,9 +212,9 @@ zx_status_t FvmInfo::AllocatePartition(const fvm::PartitionDescriptor* partition
 
     // Make sure this vpartition has not already been allocated
     if (vpart->IsFree()) {
-      *vpart = fvm::VPartitionEntry(partition->type, guid, 0,
-                                    fvm::VPartitionEntry::StringFromArray(partition->name),
-                                    partition->flags);
+      *vpart = fvm::VPartitionEntry(partition.type, guid, 0,
+                                    fvm::VPartitionEntry::StringFromArray(partition.name),
+                                    partition.flags);
       vpart_hint_ = index + 1;
       dirty_ = true;
       *vpart_index = index;
