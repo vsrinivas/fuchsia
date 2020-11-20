@@ -327,7 +327,7 @@ zx_status_t AmlRawNand::AmlGetECCCorrections(int ecc_pages, uint32_t nand_page,
     info = reinterpret_cast<struct AmlInfoFormat*>(AmlInfoPtr(i));
     if (info->ecc.eccerr_cnt == AML_ECC_UNCORRECTABLE_CNT) {
       if (!controller_params_.rand_mode) {
-        zxlogf(ERROR, "%s: ECC failure (non-randomized)@%u", __func__, nand_page);
+        zxlogf(WARNING, "%s: ECC failure (non-randomized)@%u", __func__, nand_page);
         stats.failed++;
         return ZX_ERR_IO_DATA_INTEGRITY;
       }
@@ -346,7 +346,7 @@ zx_status_t AmlRawNand::AmlGetECCCorrections(int ecc_pages, uint32_t nand_page,
       // depend on the quality of the NAND, the wear of the NAND etc.
       zero_bits = info->zero_bits & AML_ECC_UNCORRECTABLE_CNT;
       if (zero_bits >= controller_params_.ecc_strength) {
-        zxlogf(ERROR, "%s: ECC failure (randomized)@%u zero_bits=%u", __func__, nand_page,
+        zxlogf(WARNING, "%s: ECC failure (randomized)@%u zero_bits=%u", __func__, nand_page,
                zero_bits);
         stats.failed++;
         return ZX_ERR_IO_DATA_INTEGRITY;
@@ -577,7 +577,7 @@ zx_status_t AmlRawNand::RawNandReadPageHwecc(uint32_t nand_page, void* data, siz
     status = AmlGetOOBByte(reinterpret_cast<uint8_t*>(oob), oob_actual);
   status = AmlGetECCCorrections(ecc_pages, nand_page, ecc_correct);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: Uncorrectable ECC error on read", __func__);
+    zxlogf(WARNING, "%s: Uncorrectable ECC error on read", __func__);
     *ecc_correct = controller_params_.ecc_strength + 1;
   }
   return status;
