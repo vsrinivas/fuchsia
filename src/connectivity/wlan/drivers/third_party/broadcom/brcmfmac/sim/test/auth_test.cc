@@ -755,7 +755,6 @@ TEST_F(AuthTest, WrongSecTypeAuthFail) {
   EXPECT_EQ(assoc_status_, WLAN_ASSOC_RESULT_REFUSED_REASON_UNSPECIFIED);
 }
 
-#if 0  // Will be re-enabled the test cases after fxr/412343 is checked in.
 // Verify a normal SAE authentication work flow in driver.
 TEST_F(AuthTest, WPA3Test) {
   Init();
@@ -868,6 +867,5 @@ TEST_F(AuthTest, WPA3WrongBssid) {
   EXPECT_EQ(assoc_status_, WLAN_ASSOC_RESULT_REFUSED_REASON_UNSPECIFIED);
   EXPECT_EQ(sae_auth_state_, COMMIT);
 }
-#endif
 
 }  // namespace wlan::brcmfmac
