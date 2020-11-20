@@ -4,8 +4,6 @@
 
 #include "sim-frame.h"
 
-#include "fbl/span.h"
-
 namespace wlan::simulation {
 
 /* InformationElement function implementations.*/
@@ -225,12 +223,19 @@ SimAuthFrame::SimAuthFrame(const SimAuthFrame& auth) : SimManagementFrame(auth) 
   seq_num_ = auth.seq_num_;
   auth_type_ = auth.auth_type_;
   status_ = auth.status_;
+  payload_ = auth.payload_;
 }
 
 SimAuthFrame::~SimAuthFrame() = default;
 SimManagementFrame::SimMgmtFrameType SimAuthFrame::MgmtFrameType() const { return FRAME_TYPE_AUTH; }
 
 SimFrame* SimAuthFrame::CopyFrame() const { return new SimAuthFrame(*this); }
+
+void SimAuthFrame::AddChallengeText(fbl::Span<const uint8_t> text) {
+  // Clear the existing challenge text before setting new one.
+  payload_.clear();
+  payload_.insert(payload_.begin(), text.begin(), text.end());
+}
 
 /* SimDeauthFrame function implementations.*/
 SimDeauthFrame::SimDeauthFrame(const SimDeauthFrame& deauth) : SimManagementFrame(deauth) {

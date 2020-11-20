@@ -186,11 +186,21 @@ void FakeAp::ScheduleProbeResp(const common::MacAddr& dst) {
   environment_->ScheduleNotification(std::move(handler), probe_resp_interval_);
 }
 
-void FakeAp::ScheduleAuthResp(uint16_t seq_num_in, const common::MacAddr& dst,
-                              SimAuthType auth_type, uint16_t status) {
+void FakeAp::ScheduleAuthResp(std::shared_ptr<const SimAuthFrame> auth_frame_in, uint16_t status) {
+  SimAuthFrame auth_resp_frame(bssid_, auth_frame_in->src_addr_, auth_frame_in->seq_num_,
+                               auth_frame_in->auth_type_, status);
+  auth_resp_frame.sec_proto_type_ = security_.sec_type;
+  if (security_.auth_handling_mode == AUTH_TYPE_SAE) {
+    // Here we copy the SAE payload from the auth req frame to auth resp frame without any
+    // modification for test purpose.
+    auth_resp_frame.payload_ = auth_frame_in->payload_;
+  } else {
+    // The seq_num of SAE authentication frame is {1, 1, 2, 2} instead of {1, 2, 3, 4}.
+    auth_resp_frame.seq_num_ += 1;
+  }
+
   auto handler = std::make_unique<std::function<void()>>();
-  *handler =
-      std::bind(&FakeAp::HandleAuthRespNotification, this, seq_num_in + 1, dst, auth_type, status);
+  *handler = std::bind(&FakeAp::HandleAuthRespNotification, this, auth_resp_frame);
   environment_->ScheduleNotification(std::move(handler), auth_resp_interval_);
 }
 
@@ -313,28 +323,40 @@ void FakeAp::RxMgmtFrame(std::shared_ptr<const SimManagementFrame> mgmt_frame) {
       }
 
       if (assoc_handling_mode_ == ASSOC_REFUSED) {
-        ScheduleAuthResp(auth_req_frame->seq_num_, auth_req_frame->src_addr_,
-                         auth_req_frame->auth_type_, WLAN_STATUS_CODE_REFUSED);
+        ScheduleAuthResp(auth_req_frame, WLAN_STATUS_CODE_REFUSED);
         return;
       }
 
       if (security_.sec_type != auth_req_frame->sec_proto_type_) {
-        ScheduleAuthResp(auth_req_frame->seq_num_, auth_req_frame->src_addr_,
-                         auth_req_frame->auth_type_, WLAN_STATUS_CODE_REFUSED);
+        ScheduleAuthResp(auth_req_frame, WLAN_STATUS_CODE_REFUSED);
         return;
       }
 
+      // If it's not matching AP's authentication handling mode, just reply a refuse.
+      if (auth_req_frame->auth_type_ != security_.auth_handling_mode) {
+        RemoveClient(auth_req_frame->src_addr_);
+        ScheduleAuthResp(auth_req_frame, WLAN_STATUS_CODE_REFUSED);
+        return;
+      }
+
+      // Filt out frames in which sec_type does not match auth_type.
       if ((security_.sec_type == SEC_PROTO_TYPE_WPA1 ||
            security_.sec_type == SEC_PROTO_TYPE_WPA2) &&
-          auth_req_frame->auth_type_ == AUTH_TYPE_SHARED_KEY) {
-        ScheduleAuthResp(auth_req_frame->seq_num_, auth_req_frame->src_addr_,
-                         auth_req_frame->auth_type_, WLAN_STATUS_CODE_REFUSED);
+          auth_req_frame->auth_type_ != AUTH_TYPE_OPEN) {
+        ScheduleAuthResp(auth_req_frame, WLAN_STATUS_CODE_REFUSED);
         return;
       }
 
-      // Filt out invalid authentication request frames.
+      if (security_.sec_type == SEC_PROTO_TYPE_WPA3 &&
+          auth_req_frame->auth_type_ != AUTH_TYPE_SAE) {
+        ScheduleAuthResp(auth_req_frame, WLAN_STATUS_CODE_REFUSED);
+        return;
+      }
+
+      // Filt out frames in which seq_num does not match auth_type.
       if (auth_req_frame->seq_num_ != 1 &&
-          (auth_req_frame->seq_num_ != 3 || auth_req_frame->auth_type_ == AUTH_TYPE_OPEN)) {
+          (auth_req_frame->seq_num_ != 3 || auth_req_frame->auth_type_ == AUTH_TYPE_OPEN) &&
+          (auth_req_frame->seq_num_ != 2 || auth_req_frame->auth_type_ != AUTH_TYPE_SAE)) {
         RemoveClient(auth_req_frame->src_addr_);
         return;
       }
@@ -342,14 +364,6 @@ void FakeAp::RxMgmtFrame(std::shared_ptr<const SimManagementFrame> mgmt_frame) {
       // Status of auth req should be WLAN_STATUS_CODE_SUCCESS
       if (auth_req_frame->status_ != WLAN_STATUS_CODE_SUCCESS) {
         RemoveClient(auth_req_frame->src_addr_);
-        return;
-      }
-
-      // If it's not matching AP's authentication handling mode, just reply a refuse.
-      if (auth_req_frame->auth_type_ != security_.auth_handling_mode) {
-        RemoveClient(auth_req_frame->src_addr_);
-        ScheduleAuthResp(auth_req_frame->seq_num_, auth_req_frame->src_addr_,
-                         auth_req_frame->auth_type_, WLAN_STATUS_CODE_REFUSED);
         return;
       }
 
@@ -366,35 +380,50 @@ void FakeAp::RxMgmtFrame(std::shared_ptr<const SimManagementFrame> mgmt_frame) {
         client = AddClient(auth_req_frame->src_addr_);
       }
 
-      if (security_.auth_handling_mode == AUTH_TYPE_OPEN) {
-        // Even when the client status is AUTHENTICATED, we will send out a auth resp frame to let
-        // client's status catch up in a same pace as AP.
-        client->status_ = Client::AUTHENTICATED;
-      } else if (security_.auth_handling_mode == AUTH_TYPE_SHARED_KEY) {
-        if (client->status_ == Client::NOT_AUTHENTICATED) {
-          // We've already checked whether the seq_num is 1.
-          client->status_ = Client::AUTHENTICATING;
-        } else if (client->status_ == Client::AUTHENTICATING) {
-          if (auth_req_frame->seq_num_ == 3) {
-            if (security_.expect_challenge_failure) {
-              // Refuse authentication if this AP has been configured to.
-              // TODO (fxb/61139): Actually check the challenge response rather than hardcoding
-              // authentication success or failure using expect_challenge_failure.
-              RemoveClient(auth_req_frame->src_addr_);
-              ScheduleAuthResp(auth_req_frame->seq_num_, auth_req_frame->src_addr_,
-                               auth_req_frame->auth_type_, WLAN_STATUS_CODE_CHALLENGE_FAILURE);
-              return;
-            }
+      switch (security_.auth_handling_mode) {
+        case AUTH_TYPE_OPEN:
+          // Even when the client status is AUTHENTICATED, we will send out a auth resp frame to let
+          // client's status catch up in a same pace as AP.
+          client->status_ = Client::AUTHENTICATED;
+          break;
+        case AUTH_TYPE_SHARED_KEY:
+          if (client->status_ == Client::NOT_AUTHENTICATED) {
+            // We've already checked whether the seq_num is 1.
+            client->status_ = Client::AUTHENTICATING;
+          } else if (client->status_ == Client::AUTHENTICATING) {
+            if (auth_req_frame->seq_num_ == 3) {
+              if (security_.expect_challenge_failure) {
+                // Refuse authentication if this AP has been configured to.
+                // TODO (fxb/61139): Actually check the challenge response rather than hardcoding
+                // authentication success or failure using expect_challenge_failure.
+                RemoveClient(auth_req_frame->src_addr_);
+                ScheduleAuthResp(auth_req_frame, WLAN_STATUS_CODE_CHALLENGE_FAILURE);
+                return;
+              }
 
-            client->status_ = Client::AUTHENTICATED;
+              client->status_ = Client::AUTHENTICATED;
+            }
+            // If the seq num is 1, we will just send out a resp and keep the status.
           }
-          // If the seq num is 1, we will just send out a resp and keep the status.
-        }
-        // If the status is already AUTHENTICATED, we will just send out a resp and keep the status.
+          // If the status is already AUTHENTICATED, we will just send out a resp and keep the
+          // status.
+          break;
+        case AUTH_TYPE_SAE:
+          if (client->status_ == Client::NOT_AUTHENTICATED) {
+            // We've already checked whether the seq_num is 1.
+            client->status_ = Client::AUTHENTICATING;
+          } else if (client->status_ == Client::AUTHENTICATING) {
+            if (auth_req_frame->seq_num_ == 2) {
+              client->status_ = Client::AUTHENTICATED;
+            }
+          }
+
+          break;
+        default:
+          ZX_ASSERT_MSG(false, "Unsupported auth_handling_mode.");
       }
 
-      ScheduleAuthResp(auth_req_frame->seq_num_, auth_req_frame->src_addr_,
-                       auth_req_frame->auth_type_, WLAN_STATUS_CODE_SUCCESS);
+      ScheduleAuthResp(auth_req_frame, WLAN_STATUS_CODE_SUCCESS);
       break;
     }
 
@@ -497,9 +526,7 @@ void FakeAp::HandleProbeRespNotification(common::MacAddr dst) {
   environment_->Tx(probe_resp_frame, tx_info_, this);
 }
 
-void FakeAp::HandleAuthRespNotification(uint16_t seq_num, common::MacAddr dst,
-                                        SimAuthType auth_type, uint16_t status) {
-  SimAuthFrame auth_resp_frame(bssid_, dst, seq_num, auth_type, status);
+void FakeAp::HandleAuthRespNotification(SimAuthFrame auth_resp_frame) {
   environment_->Tx(auth_resp_frame, tx_info_, this);
 }
 

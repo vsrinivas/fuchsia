@@ -11,6 +11,7 @@
 #include <memory>
 #include <optional>
 
+#include "fbl/span.h"
 #include "sim-sta-ifc.h"
 #include "src/connectivity/wlan/lib/common/cpp/include/wlan/common/mac_frame.h"
 
@@ -32,11 +33,12 @@ enum SimSecProtoType {
   SEC_PROTO_TYPE_OPEN,
   SEC_PROTO_TYPE_WEP,
   SEC_PROTO_TYPE_WPA1,
-  SEC_PROTO_TYPE_WPA2
+  SEC_PROTO_TYPE_WPA2,
+  SEC_PROTO_TYPE_WPA3
 };
 
 // AUTH_TYPE used by AP and authentication frame
-enum SimAuthType { AUTH_TYPE_OPEN, AUTH_TYPE_SHARED_KEY };
+enum SimAuthType { AUTH_TYPE_OPEN, AUTH_TYPE_SHARED_KEY, AUTH_TYPE_SAE };
 
 class InformationElement {
  public:
@@ -265,10 +267,14 @@ class SimAuthFrame : public SimManagementFrame {
   SimMgmtFrameType MgmtFrameType() const override;
 
   SimFrame* CopyFrame() const override;
+  void AddChallengeText(fbl::Span<const uint8_t> text);
 
   uint16_t seq_num_;
   SimAuthType auth_type_;
   uint16_t status_;
+
+  // Payload for authentication frame, especially being used for SAE process for now.
+  std::vector<uint8_t> payload_;
 };
 
 class SimDeauthFrame : public SimManagementFrame {

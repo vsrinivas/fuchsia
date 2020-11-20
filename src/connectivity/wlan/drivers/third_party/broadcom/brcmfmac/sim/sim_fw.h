@@ -164,7 +164,17 @@ class SimFirmware {
       NOT_AUTHENTICATED,
       EXPECTING_SECOND,
       EXPECTING_FOURTH,
-      AUTHENTICATED
+
+      // These are states for SAE external supplicant authentication. The real firmware reuses
+      // states of normal SHARED_KEY authentication, here we add seperate states for SAE
+      // authentication to make the logic more readable.
+      EXPECTING_EXTERNAL_COMMIT,
+      EXPECTING_AP_COMMIT,
+      EXPECTING_EXTERNAL_CONFIRM,
+      EXPECTING_AP_CONFIRM,
+      EXPECTING_EXTERNAL_HANDSHAKE_RESP,
+
+      AUTHENTICATED,
     } state = NOT_AUTHENTICATED;
 
     uint64_t auth_timer_id;
@@ -324,6 +334,7 @@ class SimFirmware {
                                    const common::MacAddr& bssid, uint32_t reason);
   void HandleAuthReq(std::shared_ptr<const simulation::SimAuthFrame> frame);
   void HandleAuthResp(std::shared_ptr<const simulation::SimAuthFrame> frame);
+  zx_status_t HandleScbAssoc(const brcmf_ext_auth* ext_auth);
   // Generic scan operations
   zx_status_t ScanStart(std::unique_ptr<ScanOpts> opts);
   void ScanContinue();
@@ -379,6 +390,14 @@ class SimFirmware {
   void RxDeauthReq(std::shared_ptr<const simulation::SimDeauthFrame> frame);
 
   void StopSoftAP(uint16_t ifidx);
+
+  // Update the SAE status when firmware receives an auth frame from remote stations.
+  zx_status_t RemoteUpdateExternalSaeStatus(uint16_t seq_num, uint16_t status_code,
+                                            const uint8_t* sae_payload, size_t text_len);
+  // Update the SAE status when firmware receives an auth frame from the driver.
+  zx_status_t LocalUpdateExternalSaeStatus(uint16_t seq_num, uint16_t status_code,
+                                           const uint8_t* sae_payload, size_t text_len);
+
   // Allocate a buffer for an event (brcmf_event)
   std::shared_ptr<std::vector<uint8_t>> CreateEventBuffer(size_t requested_size,
                                                           brcmf_event_msg_be** msg_be,

@@ -25,6 +25,7 @@
 #include <optional>
 
 #include <third_party/bcmdhd/crossdriver/dhd.h>
+#include <wlan/common/mac_frame.h>
 
 #include "ddk/protocol/wlan/info.h"
 #include "ddk/protocol/wlanif.h"
@@ -171,8 +172,9 @@ zx_status_t SimFirmware::BusTxCtl(unsigned char* msg, unsigned int len) {
   dcmd = reinterpret_cast<brcmf_proto_bcdc_dcmd*>(msg);
   // The variable-length payload immediately follows the header
   uint8_t* data = reinterpret_cast<uint8_t*>(dcmd) + hdr_size;
+  size_t data_len = len - hdr_size;
 
-  if (dcmd->len > (len - hdr_size)) {
+  if (dcmd->len > data_len) {
     BRCMF_DBG(SIM, "BCDC total message length (%zd) exceeds buffer size (%u)", dcmd->len + hdr_size,
               len);
     // The real firmware allows the true buffer size (dcmd->len) to exceed the length of the txctl
@@ -432,8 +434,12 @@ zx_status_t SimFirmware::BusTxCtl(unsigned char* msg, unsigned int len) {
           memcpy(assoc_opts->ssid.ssid, join_params->ssid_le.SSID, IEEE80211_MAX_SSID_LEN);
 
           AssocInit(std::move(assoc_opts), channel);
+
           BRCMF_DBG(SIM, "Auth start from C_SET_SSID");
-          AuthStart();
+          // Schedule AuthStart to break the call chain for SAE authentication.
+          auto callback = std::make_unique<std::function<void()>>();
+          *callback = std::bind(&SimFirmware::AuthStart, this);
+          hw_.RequestCallback(std::move(callback), zx::msec(0));
         }
       }
       break;
@@ -456,6 +462,38 @@ zx_status_t SimFirmware::BusTxCtl(unsigned char* msg, unsigned int len) {
       scan_state_.state = ScanState::STOPPED;
       break;
     }
+    case BRCMF_C_SCB_AUTHENTICATE: {
+      if ((status = SIM_FW_CHK_CMD_LEN(dcmd->len, sizeof(int32_t))) == ZX_OK) {
+        if (ifidx != kClientIfidx) {
+          ZX_ASSERT_MSG(false, "SAE authentication only supported on client iface.");
+        }
+
+        auto sae_frame = reinterpret_cast<brcmf_sae_auth_frame*>(data);
+
+        if (memcmp(sae_frame->mac_hdr.addr1.byte, assoc_state_.opts->bssid.byte, ETH_ALEN) ||
+            memcmp(sae_frame->mac_hdr.addr3.byte, assoc_state_.opts->bssid.byte, ETH_ALEN)) {
+          BRCMF_ERR("Dest addr does not match in SAE frame from external supplicant.");
+          return ZX_ERR_INVALID_ARGS;
+        }
+
+        // Authentication algorithm field must be SAE.
+        if (sae_frame->auth_hdr.auth_algorithm_number != BRCMF_AUTH_MODE_SAE) {
+          BRCMF_ERR("Authentication algorithm number does not match SAE algorithm number");
+          return ZX_ERR_INVALID_ARGS;
+        }
+
+        if ((status = LocalUpdateExternalSaeStatus(
+                 sae_frame->auth_hdr.auth_txn_seq_number, sae_frame->auth_hdr.status_code,
+                 sae_frame->sae_payload,
+                 data_len - offsetof(struct brcmf_sae_auth_frame, sae_payload))) != ZX_OK) {
+          BRCMF_ERR("Update SAE status failed with auth frame from external supllicant.");
+          return ZX_ERR_BAD_STATE;
+        }
+      }
+
+      break;
+    }
+
     default:
       BRCMF_DBG(SIM, "Unimplemented firmware message %d", dcmd->cmd);
       return ZX_ERR_NOT_SUPPORTED;
@@ -836,6 +874,7 @@ void SimFirmware::AssocScanDone() {
 
 void SimFirmware::AssocClearContext() {
   hw_.CancelCallback(assoc_state_.assoc_timer_id);
+  AuthClearContext();
   SetAssocState(AssocState::NOT_ASSOCIATED);
   assoc_state_.opts = nullptr;
   assoc_state_.scan_results.clear();
@@ -858,8 +897,10 @@ void SimFirmware::AssocHandleFailure() {
   }
   if (assoc_state_.num_attempts >= assoc_max_retries_
       // The firmware has been observed to not retry when there is an
-      // authentication challenge failure.
-      || assoc_state_.state == AssocState::AUTHENTICATION_CHALLENGE_FAILURE) {
+      // authentication challenge failure. Also when firmware is doing external supplicant SAE auth,
+      // it won't retry, because the retry is controlled by external supplicant.
+      || assoc_state_.state == AssocState::AUTHENTICATION_CHALLENGE_FAILURE ||
+      auth_state_.sec_type == simulation::SEC_PROTO_TYPE_WPA3) {
     BRCMF_DBG(SIM, "Assoc failed. Send E_SET_SSID with failure");
     SendEventToDriver(0, nullptr, BRCMF_E_ASSOC, BRCMF_E_STATUS_FAIL, kClientIfidx, nullptr, 0, 30,
                       assoc_state_.opts->bssid);
@@ -883,13 +924,20 @@ void SimFirmware::AuthStart() {
   hw_.RequestCallback(std::move(callback), kAuthTimeout, &auth_state_.auth_timer_id);
 
   ZX_ASSERT(auth_state_.state == AuthState::NOT_AUTHENTICATED);
-  simulation::SimAuthType auth_type;
-  if (iface_tbl_[kClientIfidx].auth_type == BRCMF_AUTH_MODE_OPEN) {
-    // Sequence number start from 0, end with at most 3.
-    auth_type = simulation::AUTH_TYPE_OPEN;
-  } else {
-    // When iface_tbl_[kClientIfidx].auth_type == BRCMF_AUTH_MODE_AUTO
-    auth_type = simulation::AUTH_TYPE_SHARED_KEY;
+  simulation::SimAuthType auth_type = simulation::AUTH_TYPE_OPEN;
+  switch (iface_tbl_[kClientIfidx].auth_type) {
+    case BRCMF_AUTH_MODE_OPEN:
+      // Sequence number start from 0, end with at most 3.
+      auth_type = simulation::AUTH_TYPE_OPEN;
+      break;
+    case BRCMF_AUTH_MODE_AUTO:
+      auth_type = simulation::AUTH_TYPE_SHARED_KEY;
+      break;
+    case BRCMF_AUTH_MODE_SAE:
+      auth_type = simulation::AUTH_TYPE_SAE;
+      break;
+    default:
+      ZX_ASSERT_MSG(false, "Auth type not supported.");
   }
 
   simulation::SimAuthFrame auth_req_frame(srcAddr, bssid, 1, auth_type, WLAN_AUTH_RESULT_SUCCESS);
@@ -899,28 +947,60 @@ void SimFirmware::AuthStart() {
     auth_state_.sec_type = simulation::SEC_PROTO_TYPE_WEP;
   }
 
-  if (iface_tbl_[kClientIfidx].wpa_auth == WPA_AUTH_PSK) {
-    ZX_ASSERT((iface_tbl_[kClientIfidx].wsec & (uint32_t)WSEC_NONE) == 0U);
-    auth_state_.sec_type = simulation::SEC_PROTO_TYPE_WPA1;
+  switch (iface_tbl_[kClientIfidx].wpa_auth) {
+    case WPA_AUTH_PSK:
+      ZX_ASSERT((iface_tbl_[kClientIfidx].wsec & (uint32_t)WSEC_NONE) == 0U);
+      auth_state_.sec_type = simulation::SEC_PROTO_TYPE_WPA1;
+      break;
+    case WPA2_AUTH_PSK:
+      ZX_ASSERT((iface_tbl_[kClientIfidx].wsec & (uint32_t)WSEC_NONE) == 0U);
+      auth_state_.sec_type = simulation::SEC_PROTO_TYPE_WPA2;
+      break;
+    case WPA3_AUTH_SAE_PSK:
+      ZX_ASSERT((iface_tbl_[kClientIfidx].wsec & (uint32_t)WSEC_NONE) == 0U);
+      auth_state_.sec_type = simulation::SEC_PROTO_TYPE_WPA3;
+      break;
+    default:
+      ZX_ASSERT_MSG(auth_state_.sec_type == simulation::SEC_PROTO_TYPE_WEP ||
+                        auth_state_.sec_type == simulation::SEC_PROTO_TYPE_OPEN,
+                    "Upper layer auth type not supported.");
+      /* No action needed for WEP or OPEN*/
+      break;
   }
 
-  if (iface_tbl_[kClientIfidx].wpa_auth == WPA2_AUTH_PSK) {
-    ZX_ASSERT((iface_tbl_[kClientIfidx].wsec & (uint32_t)WSEC_NONE) == 0U);
-    auth_state_.sec_type = simulation::SEC_PROTO_TYPE_WPA2;
-  }
+  if (auth_state_.sec_type == simulation::SEC_PROTO_TYPE_WPA3) {
+    auto buf = std::make_unique<std::vector<uint8_t>>(sizeof(brcmf_ext_auth));
+    auto ext_auth_data = reinterpret_cast<brcmf_ext_auth*>(buf->data());
 
-  auth_req_frame.sec_proto_type_ = auth_state_.sec_type;
-  auth_state_.state = AuthState::EXPECTING_SECOND;
-  hw_.Tx(auth_req_frame);
+    // Set the data values, though driver only cares about the bssid.
+    ext_auth_data->ssid.SSID_len = assoc_state_.opts->ssid.len;
+    memcpy(ext_auth_data->ssid.SSID, assoc_state_.opts->ssid.ssid, IEEE80211_MAX_SSID_LEN);
+    bssid.CopyTo(ext_auth_data->bssid);
+    ext_auth_data->key_mgmt_suite = WPA3_AUTH_SAE_PSK;
+    ext_auth_data->status = BRCMF_E_STATUS_SUCCESS;
+    auth_state_.state = AuthState::EXPECTING_EXTERNAL_COMMIT;
+    SendEventToDriver(sizeof(brcmf_ext_auth), std::move(buf), BRCMF_E_START_AUTH,
+                      BRCMF_E_STATUS_SUCCESS, kClientIfidx);
+  } else {
+    auth_req_frame.sec_proto_type_ = auth_state_.sec_type;
+    auth_state_.state = AuthState::EXPECTING_SECOND;
+    hw_.Tx(auth_req_frame);
+  }
 }
 
 // The authentication frame might be an authentication response for client iface, or it could also
 // be an authentication req from a potential client for softap iface.
 void SimFirmware::RxAuthFrame(std::shared_ptr<const simulation::SimAuthFrame> frame) {
-  if (frame->seq_num_ == 1) {
-    HandleAuthReq(frame);
+  if (frame->sec_proto_type_ == simulation::SEC_PROTO_TYPE_WPA3) {
+    ZX_ASSERT(frame->auth_type_ == simulation::AUTH_TYPE_SAE);
+    RemoteUpdateExternalSaeStatus(frame->seq_num_, frame->status_, frame->payload_.data(),
+                                  frame->payload_.size());
   } else {
-    HandleAuthResp(frame);
+    if (frame->seq_num_ == 1) {
+      HandleAuthReq(frame);
+    } else {
+      HandleAuthResp(frame);
+    }
   }
 }
 
@@ -1046,6 +1126,133 @@ void SimFirmware::HandleAuthResp(std::shared_ptr<const simulation::SimAuthFrame>
       AssocStart();
     }
   }
+}
+
+zx_status_t SimFirmware::HandleScbAssoc(const brcmf_ext_auth* ext_auth) {
+  if (auth_state_.state != AuthState::EXPECTING_EXTERNAL_HANDSHAKE_RESP) {
+    BRCMF_ERR("Unexpected HANDSHAKE_RESP from external supplicant.");
+    return ZX_ERR_BAD_STATE;
+  }
+
+  if (memcmp(assoc_state_.opts->bssid.byte, ext_auth->bssid, ETH_ALEN)) {
+    BRCMF_ERR("bssid does not match in SAE handshake resp.");
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  if (assoc_state_.opts->ssid.len != ext_auth->ssid.SSID_len ||
+      memcmp(ext_auth->ssid.SSID, assoc_state_.opts->ssid.ssid, ext_auth->ssid.SSID_len)) {
+    BRCMF_ERR("ssid does not match in SAE handshake resp.");
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  if (ext_auth->status != WLAN_AUTH_RESULT_SUCCESS) {
+    BRCMF_DBG(SIM, "SAE authentication failed from external supplicant.");
+    AssocHandleFailure();
+    return ZX_OK;
+  }
+
+  // Handshake resp received from AP, cancel timer.
+  hw_.CancelCallback(auth_state_.auth_timer_id);
+
+  auth_state_.state = AuthState::AUTHENTICATED;
+  AssocStart();
+  return ZX_OK;
+}
+
+zx_status_t SimFirmware::RemoteUpdateExternalSaeStatus(uint16_t seq_num, uint16_t status_code,
+                                                       const uint8_t* sae_payload,
+                                                       size_t text_len) {
+  ZX_ASSERT(sae_payload != nullptr);
+  if (seq_num != 1 && seq_num != 2) {
+    BRCMF_ERR("Invalid sequence number in SAE auth frame.");
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  if (seq_num == 1 && auth_state_.state != AuthState::EXPECTING_AP_COMMIT) {
+    BRCMF_ERR("Unexpected COMMIT auth frame from AP.");
+    return ZX_ERR_BAD_STATE;
+  }
+
+  if (seq_num == 2 && auth_state_.state != AuthState::EXPECTING_AP_CONFIRM) {
+    BRCMF_ERR("Unexpected CONFIRM auth frame from AP.");
+    return ZX_ERR_BAD_STATE;
+  }
+
+  // Frame received from AP, cancel timer.
+  hw_.CancelCallback(auth_state_.auth_timer_id);
+
+  // construct auth frame and send up to external supplicant.
+  size_t buf_size = sizeof(wlan::Authentication) + text_len;
+  auto buf = std::make_unique<std::vector<uint8_t>>(buf_size);
+  auto pframe_hdr = reinterpret_cast<wlan::Authentication*>(buf->data());
+
+  pframe_hdr->auth_txn_seq_number = seq_num;
+  pframe_hdr->status_code = WLAN_AUTH_RESULT_SUCCESS;
+  pframe_hdr->auth_algorithm_number = BRCMF_AUTH_MODE_SAE;
+  memcpy(buf->data() + sizeof(wlan::Authentication), sae_payload, text_len);
+
+  auto callback = std::make_unique<std::function<void()>>();
+  *callback = std::bind(&SimFirmware::AssocHandleFailure, this);
+  hw_.RequestCallback(std::move(callback), kAuthTimeout, &auth_state_.auth_timer_id);
+
+  // Update state
+  if (seq_num == 1)
+    auth_state_.state = AuthState::EXPECTING_EXTERNAL_CONFIRM;
+  else
+    auth_state_.state = AuthState::EXPECTING_EXTERNAL_HANDSHAKE_RESP;
+
+  SendEventToDriver(buf_size, std::move(buf), BRCMF_E_AUTH, BRCMF_E_STATUS_SUCCESS, kClientIfidx);
+
+  return ZX_OK;
+}
+
+zx_status_t SimFirmware::LocalUpdateExternalSaeStatus(uint16_t seq_num, uint16_t status_code,
+                                                      const uint8_t* sae_payload, size_t text_len) {
+  ZX_ASSERT(sae_payload != nullptr);
+  if (seq_num != 1 && seq_num != 2) {
+    BRCMF_ERR("Invalid sequence number in SAE auth frame.");
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  common::MacAddr srcAddr(GetMacAddr(kClientIfidx));
+  common::MacAddr bssid(assoc_state_.opts->bssid);
+  // Create a template auth_req_frame, might be modified later.
+  simulation::SimAuthFrame auth_req_frame(srcAddr, bssid, 1, simulation::AUTH_TYPE_SAE,
+                                          WLAN_AUTH_RESULT_SUCCESS);
+
+  if (seq_num == 1 && auth_state_.state != AuthState::EXPECTING_EXTERNAL_COMMIT) {
+    BRCMF_ERR("Unexpected COMMIT auth frame from external supplicant. seq_num: %u, state: %u",
+              seq_num, auth_state_.state);
+    return ZX_ERR_BAD_STATE;
+  }
+
+  if (seq_num == 2 && auth_state_.state != AuthState::EXPECTING_EXTERNAL_CONFIRM) {
+    BRCMF_ERR("Unexpected CONFIRM auth frame from external supplicant. seq_num: %u, state: %u",
+              seq_num, auth_state_.state);
+    return ZX_ERR_BAD_STATE;
+  }
+
+  // Frame received from external supplicant, cancel timer.
+  hw_.CancelCallback(auth_state_.auth_timer_id);
+
+  auth_req_frame.status_ = status_code;
+  auth_req_frame.seq_num_ = seq_num;
+  auth_req_frame.AddChallengeText(fbl::Span(sae_payload, text_len));
+  auth_req_frame.sec_proto_type_ = auth_state_.sec_type;
+
+  auto callback = std::make_unique<std::function<void()>>();
+  *callback = std::bind(&SimFirmware::AssocHandleFailure, this);
+  hw_.RequestCallback(std::move(callback), kAuthTimeout, &auth_state_.auth_timer_id);
+
+  hw_.Tx(auth_req_frame);
+
+  // Update state
+  if (seq_num == 1)
+    auth_state_.state = AuthState::EXPECTING_AP_COMMIT;
+  else
+    auth_state_.state = AuthState::EXPECTING_AP_CONFIRM;
+
+  return ZX_OK;
 }
 
 // Remove the client from the list. If found return true else false.
@@ -1297,7 +1504,7 @@ void SimFirmware::HandleDisconnectForClientIF(
     // The client could receive a deauth even after disassociation. Notify the driver always
     SendEventToDriver(0, nullptr, BRCMF_E_DEAUTH_IND, BRCMF_E_STATUS_SUCCESS, kClientIfidx, 0, 0,
                       reason);
-    if (assoc_state_.state == AuthState::AUTHENTICATED) {
+    if (auth_state_.state == AuthState::AUTHENTICATED) {
       AuthClearContext();
     }
     // DEAUTH implies disassoc, so continue
@@ -1726,6 +1933,27 @@ zx_status_t SimFirmware::IovarsSet(uint16_t ifidx, const char* name_buf, const v
     auto allmulti = reinterpret_cast<const uint32_t*>(value);
     iface_tbl_[ifidx].allmulti = *allmulti;
     return ZX_OK;
+  }
+
+  if (!std::strcmp(name, "scb_assoc")) {
+    if (value_len < sizeof(brcmf_ext_auth)) {
+      return ZX_ERR_IO;
+    }
+
+    if (ifidx != kClientIfidx) {
+      BRCMF_ERR("Should not do SAE on iface other than client iface.");
+      return ZX_ERR_INVALID_ARGS;
+    }
+
+    // This is an iovar to move firmware from SAE external supplicant authentication to assoc stage,
+    // so client interface should be allocated
+    if (!iface_tbl_[kClientIfidx].allocated) {
+      BRCMF_ERR("Client iface has not been allocated.");
+      return ZX_ERR_BAD_STATE;
+    }
+
+    auto ext_auth = reinterpret_cast<const brcmf_ext_auth*>(value);
+    return HandleScbAssoc(ext_auth);
   }
   // FIXME: For now, just pretend that we successfully set the value even when we did nothing
   BRCMF_DBG(SIM, "Ignoring request to set iovar '%s'", name);

@@ -125,8 +125,7 @@ class FakeAp : public StationIfc {
   void ScheduleNextBeacon();
   void ScheduleAssocResp(uint16_t status, const common::MacAddr& dst);
   void ScheduleProbeResp(const common::MacAddr& dst);
-  void ScheduleAuthResp(uint16_t seq_num_in, const common::MacAddr& dst, SimAuthType auth_type,
-                        uint16_t status);
+  void ScheduleAuthResp(std::shared_ptr<const SimAuthFrame> auth_frame_in, uint16_t status);
   void ScheduleQosData(bool toDS, bool fromDS, const common::MacAddr& addr1,
                        const common::MacAddr& addr2, const common::MacAddr& addr3,
                        const std::vector<uint8_t>& payload);
@@ -136,8 +135,7 @@ class FakeAp : public StationIfc {
   void HandleStopCsaBeaconNotification();
   void HandleAssocRespNotification(uint16_t status, common::MacAddr dst);
   void HandleProbeRespNotification(common::MacAddr dst);
-  void HandleAuthRespNotification(uint16_t seq_num, common::MacAddr dst, SimAuthType auth_type,
-                                  uint16_t status);
+  void HandleAuthRespNotification(SimAuthFrame auth_resp_frame);
   void HandleQosDataNotification(bool toDS, bool fromDS, const common::MacAddr& addr1,
                                  const common::MacAddr& addr2, const common::MacAddr& addr3,
                                  const std::vector<uint8_t>& payload);
