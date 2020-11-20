@@ -2,34 +2,33 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/fidl/fidl.gni")
+
+bind_rules("mock-device-bind") {
+  rules = "mock-device.bind"
+  output = "mock-device-bind.h"
+  deps = [ "//src/devices/bind/fuchsia.test" ]
+  disable_autobind = true
+}
 
 driver_module("mock-device") {
   test = true
   testonly = true
-  configs += [
-    "//build/config:all_source",
-    "//build/config/fuchsia:enable_zircon_asserts",
-  ]
   configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
-  configs += [
-    "//build/config/fuchsia:static_cpp_standard_library",
-    "//build/unification/config:zircon-migrated",
-  ]
+  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
   sources = [
     "device.cc",
     "fidl.cc",
   ]
   deps = [
     ":fuchsia.device.mock_llcpp",
+    ":mock-device-bind",
     "//sdk/banjo/ddk.protocol.test",
     "//sdk/lib/fdio",
     "//src/devices/lib/driver",
     "//src/lib/ddk",
-
-    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
-    "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//src/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fidl",

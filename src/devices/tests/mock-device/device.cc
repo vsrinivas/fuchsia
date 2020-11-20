@@ -17,7 +17,6 @@
 #include <memory>
 #include <optional>
 
-#include <ddk/binding.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/protocol/test.h>
@@ -29,6 +28,7 @@
 
 #include "ddktl/suspend-txn.h"
 #include "fidl.h"
+#include "src/devices/tests/mock-device/mock-device-bind.h"
 
 namespace mock_device {
 
@@ -528,6 +528,4 @@ const zx_driver_ops_t kMockDeviceOps = []() {
 
 }  // namespace mock_device
 
-ZIRCON_DRIVER_BEGIN(mock_device, mock_device::kMockDeviceOps, "zircon", "0.1", 2)
-BI_ABORT_IF_AUTOBIND, BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_TEST),
-    ZIRCON_DRIVER_END(test_sysdev)
+ZIRCON_DRIVER(mock_device, mock_device::kMockDeviceOps, "zircon", "0.1")
