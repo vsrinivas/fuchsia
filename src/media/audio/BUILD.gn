@@ -46,7 +46,10 @@ group("drivers") {
 }
 
 fuzzers_package("audio_fuzzers") {
-  fuzzers = [ "audio_core:audio_core_fuzzer" ]
+  fuzzers = [
+    "audio_core:audio_core_fuzzer",
+    "audio_core/test/api/fuzzer:api-fuzzer",
+  ]
 }
 
 group("tests") {
