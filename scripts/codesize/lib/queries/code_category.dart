@@ -5,6 +5,7 @@
 // @dart = 2.8
 
 import 'dart:core';
+import 'package:collection/collection.dart';
 
 import '../common_util.dart';
 import '../render/ast.dart';
@@ -52,19 +53,6 @@ typedef Matcher = bool Function(String, CompileUnitContext, ProgramContext);
 /// Marker interface that all FIDL categories will implement.
 class SomeFidlCategory {}
 
-/// List of `CodeCategory`s checked by the query.
-const List<CodeCategory> _allCategories = [
-  CppCodingTableCategory(),
-  HlcppDomainObjectCategory(),
-  LlcppDomainObjectCategory(),
-  HlcppRuntimeCategory(),
-  LlcppRuntimeCategory(),
-  CFidlCategory(),
-  GoFidlCategory(),
-  RustFidlCategory(),
-  UntraceableCategory(),
-];
-
 class Uncategorized extends CodeCategory {
   const Uncategorized();
 
@@ -103,55 +91,68 @@ class CodeCategoryQuery extends Query {
     }
   }
 
-  Map<Symbol, CodeCategory> analyzeCompileUnit(
+  Map<Symbol, Set<CodeCategory>> analyzeCompileUnit(
       CompileUnit compileUnit, Report report) {
-    final symbolCategories = <Symbol, CodeCategory>{};
+    final symbolCategories = <Symbol, Set<CodeCategory>>{};
+    if (compileUnit.symbols == null) return symbolCategories;
 
     /// Match the symbol against the match functions from all the categories.
-    /// Additionally, assert that the (symbol, compileUnit) pair matches up to
-    /// one category. This guards against the categories themselves being too
-    /// permissive.
-    CodeCategory matchAtMostOneCategory(Symbol symbol, CompileUnit compileUnit,
+    Set<CodeCategory> matchCategories(Symbol symbol, CompileUnit compileUnit,
         Report report, Matcher Function(CodeCategory) toMatchFunction) {
-      CodeCategory matchedCategory;
-      for (final category in _allCategories) {
+      final matchedCategories = <CodeCategory>{};
+      for (final category in _compatibleCategories) {
         if (toMatchFunction(category)(
             symbol.name, compileUnit.context, report.context)) {
-          if (matchedCategory != null) {
-            throw Exception('More than one code category in '
-                '${report.context.name}. ${symbol.name}\n'
-                'was both $matchedCategory and $category.\n'
-                'Compile unit: ${compileUnit.name}');
-          }
-          matchedCategory = category;
+          matchedCategories.add(category);
         }
       }
-      return matchedCategory;
-    }
 
-    if (compileUnit.symbols == null) return symbolCategories;
+      // Special safeguard for exclusive code category rules: a symbol cannot
+      // simultaneously belong to two exclusive code categories. This guards
+      // against the categories themselves being too permissive.
+      CodeCategory firstExclusiveCategory;
+      for (final category in _exclusiveCategories) {
+        if (toMatchFunction(category)(
+            symbol.name, compileUnit.context, report.context)) {
+          if (firstExclusiveCategory != null) {
+            throw Exception('More than one exclusive category in '
+                '${report.context.name}.\n'
+                'Symbol: ${symbol.name}\n'
+                'was both $firstExclusiveCategory and $category.\n'
+                'Compile unit: ${compileUnit.name}\n');
+          }
+          firstExclusiveCategory = category;
+          matchedCategories.add(category);
+        }
+      }
+      return matchedCategories;
+    }
 
     // First pass
     for (final symbol in compileUnit.symbols) {
-      symbolCategories[symbol] = matchAtMostOneCategory(
-          symbol, compileUnit, report, (category) => category.match);
+      symbolCategories.putIfAbsent(symbol, () => <CodeCategory>{});
+      symbolCategories[symbol].addAll(matchCategories(
+          symbol, compileUnit, report, (category) => category.match));
     }
 
     // Second pass.
     // During the second pass, we only allow the category of a symbol to go from
-    // `uncategorized` to some meaningful category, or stay in the same
+    // "no categories" to some meaningful category, or stay in the same
     // category. Switching categories during `rematch` indicates potentially
     // buggy category matches, hence we noisily fail in that case.
     for (final symbol in compileUnit.symbols) {
-      final matchedCategory = symbolCategories[symbol];
-      final rematchedCategory = matchAtMostOneCategory(
+      final matchedCategories = symbolCategories[symbol];
+      final rematchedCategories = matchCategories(
           symbol, compileUnit, report, (category) => category.rematch);
-      if (matchedCategory == null) {
-        symbolCategories[symbol] = rematchedCategory ?? uncategorized;
-      } else if (rematchedCategory != null &&
-          matchedCategory != rematchedCategory) {
-        throw Exception('${symbol.name} went from $matchedCategory '
-            'to $rematchedCategory during rematch');
+      if (matchedCategories.isEmpty) {
+        symbolCategories[symbol] = rematchedCategories;
+      } else if (rematchedCategories.isNotEmpty &&
+          !_compareCategories.equals(matchedCategories, rematchedCategories)) {
+        throw Exception('${symbol.name} went from $matchedCategories '
+            'to $rematchedCategories during rematch');
+      }
+      if (symbolCategories[symbol].isEmpty) {
+        symbolCategories[symbol] = <CodeCategory>{uncategorized};
       }
     }
 
@@ -174,19 +175,48 @@ class CodeCategoryQuery extends Query {
     }
   }
 
-  void _addStats(SizeInfo sizes, CodeCategory category, String binaryName) {
-    _tallies[category]
-      ..size += sizes.fileActual
-      ..count += 1;
-    _statsByBinary[category].putIfAbsent(binaryName, Tally.zero)
-      ..size += sizes.fileActual
-      ..count += 1;
+  void _addStats(
+      SizeInfo sizes, Set<CodeCategory> categories, String binaryName) {
+    for (final category in categories) {
+      _tallies[category]
+        ..size += sizes.fileActual
+        ..count += 1;
+      _statsByBinary[category].putIfAbsent(binaryName, Tally.zero)
+        ..size += sizes.fileActual
+        ..count += 1;
+    }
   }
+
+  /// Code categories that are mutually exclusive with one another.
+  /// A symbol may only match up to one of these categories.
+  static const List<CodeCategory> _exclusiveCategories = [
+    CppCodingTableCategory(),
+    HlcppDomainObjectCategory(),
+    LlcppDomainObjectCategory(),
+    HlcppRuntimeCategory(),
+    LlcppRuntimeCategory(),
+    CFidlCategory(),
+    GoFidlCategory(),
+    RustFidlCategory(),
+    UntraceableCategory(),
+  ];
+
+  /// Code categories that are compatible with one another, and with the
+  /// exclusive categories. A symbol may match any number of these categories.
+  static const List<CodeCategory> _compatibleCategories = [];
+
+  /// List of `CodeCategory`s checked by the query.
+  static const List<CodeCategory> _allCategories = [
+    ..._exclusiveCategories,
+    ..._compatibleCategories
+  ];
 
   final _tallies = Map<CodeCategory, Tally>.fromEntries(
       (_allCategories + [uncategorized]).map((s) => MapEntry(s, Tally.zero())));
   final _statsByBinary = Map<CodeCategory, Map<String, Tally>>.fromEntries(
       (_allCategories + [uncategorized]).map((s) => MapEntry(s, {})));
+
+  static const _compareCategories = SetEquality<CodeCategory>();
 
   @override
   String toString() {
@@ -233,8 +263,6 @@ class CodeCategoryReport implements QueryReport {
     _allFidlStatistics =
         Statistics(allFidlStatsByBinary.entries.map((e) => e.value));
     _allFidlSortedBinaries = sortBinaries(allFidlStatsByBinary);
-    _allSymbolsStatistics = Statistics(
-        _statsByBinary.values.fold(<String, Tally>{}, mergeMapInto).values);
   }
 
   Node<StyledString> _printCategory(
@@ -306,11 +334,6 @@ class CodeCategoryReport implements QueryReport {
               ];
             })())
           ]),
-      Node(
-          title: SizeRecord(
-              name: AddColor.white(Plain(
-                  'Total across ${_allSymbolsStatistics.count} binaries')),
-              tally: _allSymbolsStatistics.sum)),
     ];
   }
 
@@ -326,7 +349,6 @@ class CodeCategoryReport implements QueryReport {
   List<MapEntry<String, Tally>> _cppFidlSortedBinaries;
   Statistics _allFidlStatistics;
   List<MapEntry<String, Tally>> _allFidlSortedBinaries;
-  Statistics _allSymbolsStatistics;
 }
 
 String stripReportSuffix(String name) {

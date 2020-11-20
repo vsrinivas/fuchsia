@@ -78,7 +78,7 @@ class UniqueSymbolQuery extends Query {
             symbol.name, () => SymbolMetadata.initial(symbol.name));
         _stats[symbol.name]
           ..tally += Tally(symbol.sizes.fileActual, 1)
-          ..categories.add(category)
+          ..categories.addAll(category)
           ..compileUnits.add(compileUnit.name)
           ..programs.add(report.context.name);
         if (symbol.maybeRustCrate != null && symbol.maybeRustCrate.isNotEmpty) {
