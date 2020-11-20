@@ -25,10 +25,7 @@ group("deprecated_bare_tests_allowlist") {
   #    \|_________|
   # This is an allowlist of packages that have bare tests which haven't been converted to components yet.
   # This is only intended to be used as a temporary allowlist. Do not add to this list.
-  visibility = [
-    "//topaz/runtime/dart/utils:run_vmservice_object_tests",
-    "//topaz/runtime/dart_runner/examples/goodbye_dart:goodbye_dart_test",
-  ]
+  visibility = [ "//topaz/runtime/dart/utils:run_vmservice_object_tests" ]
 }
 
 group("deprecated_package_underscore") {
@@ -719,18 +716,6 @@ group("deprecated_package_underscore") {
     "//topaz/public/dart/fuchsia_services:fuchsia_services_package_integration_tests_pkg",
     "//topaz/public/dart/fuchsia_vfs:fuchsia_vfs_package_unittests_pkg",
     "//topaz/public/dart/fuchsia_webview_flutter/examples/webview_mod:webview_mod_pkg",
-    "//topaz/runtime/dart_runner/examples/goodbye_dart:goodbye_dart_aot_pkg",
-    "//topaz/runtime/dart_runner/examples/goodbye_dart:goodbye_dart_jit_pkg",
-    "//topaz/runtime/dart_runner/examples/goodbye_dart:goodbye_dart_test",
-    "//topaz/runtime/dart_runner/examples/hello_app_dart:hello_app_dart_aot_pkg",
-    "//topaz/runtime/dart_runner/examples/hello_app_dart:hello_app_dart_jit_pkg",
-    "//topaz/runtime/dart_runner/examples/hello_dart:hello_dart_aot_pkg",
-    "//topaz/runtime/dart_runner/examples/hello_dart:hello_dart_aot_product_pkg",
-    "//topaz/runtime/dart_runner/examples/hello_dart:hello_dart_debug_pkg",
-    "//topaz/runtime/dart_runner/examples/hello_dart:hello_dart_jit_pkg",
-    "//topaz/runtime/dart_runner/examples/hello_dart:hello_dart_jit_product_pkg",
-    "//topaz/runtime/dart_runner/integration:dart_aot_runner_test_pkg",
-    "//topaz/runtime/dart_runner/integration:dart_jit_runner_test_pkg",
     "//topaz/shell/story_shell_labs:story_shell_labs_pkg",
     "//topaz/tests/dart_fidl_benchmarks:dart_fidl_benchmarks_pkg",
   ]
