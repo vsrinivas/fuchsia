@@ -41,8 +41,14 @@ impl Context {
             .await
             .and_then(|t| u64::try_from(t).ok())
             .map(Duration::from_micros);
+
+        // last_check_time isn't really last_update_time, but we're not persisting our
+        // between-check wall time for reporting, and this is a reasonable-enough proxy.
         Context {
-            schedule: UpdateCheckSchedule::builder().last_time(last_update_time).build(),
+            schedule: UpdateCheckSchedule::builder()
+                .last_time(last_update_time)
+                .last_check_time(last_update_time)
+                .build(),
             state: ProtocolState { server_dictated_poll_interval, ..Default::default() },
         }
     }

@@ -16,7 +16,7 @@ use crate::{
     },
     request_builder::{self, RequestBuilder, RequestParams},
     storage::{Storage, StorageExt},
-    time::{ComplexTime, TimeSource, Timer},
+    time::{ComplexTime, PartialComplexTime, TimeSource, Timer},
 };
 
 use anyhow::anyhow;
@@ -47,7 +47,6 @@ mod observer;
 use observer::StateMachineProgressObserver;
 pub use observer::{InstallProgress, StateMachineEvent};
 
-const LAST_CHECK_TIME: &str = "last_check_time";
 const INSTALL_PLAN_ID: &str = "install_plan_id";
 const UPDATE_FIRST_SEEN_TIME: &str = "update_first_seen_time";
 const UPDATE_FINISH_TIME: &str = "update_finish_time";
@@ -526,26 +525,42 @@ where
     /// Report update check interval based on the last check time stored in storage.
     /// It will also persist the new last check time to storage.
     async fn report_check_interval(&mut self, install_source: InstallSource) {
-        // Clone the Rc first to avoid borrowing self for the rest of the function.
-        let storage_ref = self.storage_ref.clone();
-        let mut storage = storage_ref.lock().await;
         let now = self.time_source.now();
-        if let Some(last_check_time) = storage.get_time(LAST_CHECK_TIME).await {
-            match now.wall_duration_since(last_check_time) {
+
+        match self.context.schedule.last_update_check_time {
+            // This is our first run; report the interval between that time and now,
+            // and update the context with the complex time.
+            Some(PartialComplexTime::Wall(t)) => match now.wall_duration_since(t) {
                 Ok(interval) => self.report_metrics(Metrics::UpdateCheckInterval {
                     interval,
-                    // TODO(fxbug.dev/60449): report monotonic when using monotonic time
                     clock: ClockType::Wall,
                     install_source,
                 }),
                 Err(e) => warn!("Last check time is in the future: {}", e),
-            }
+            },
+
+            // We've reported an update check before, or we at least have a
+            // PartialComplexTime with a monotonic component. Report our interval
+            // between these Instants. (N.B. strictly speaking, we should only
+            // ever have a PCT::Complex here.)
+            Some(PartialComplexTime::Complex(t)) => match now.mono.checked_duration_since(t.mono) {
+                Some(interval) => self.report_metrics(Metrics::UpdateCheckInterval {
+                    interval,
+                    clock: ClockType::Monotonic,
+                    install_source,
+                }),
+                None => error!("Monotonic time in the past"),
+            },
+
+            // No last check time in storage, and no big deal. We'll continue from
+            // monotonic time from now on. This is the only place other than loading
+            // context from storage where the time can be set, so it's either unset
+            // because no storage, or a complex time. No need to match
+            // Some(PartialComplexTime::Monotonic)
+            _ => {}
         }
-        if let Err(e) = storage.set_time(LAST_CHECK_TIME, now).await {
-            error!("Unable to persist {}: {}", LAST_CHECK_TIME, e);
-            return;
-        }
-        storage.commit_or_log().await;
+
+        self.context.schedule.last_update_check_time = now.into();
     }
 
     /// Perform update check and handle the result, including updating the update check context
@@ -1714,8 +1729,10 @@ mod tests {
                 .await;
 
             // The resultant schedule should only contain the timestamp of the above update check.
-            let expected_schedule =
-                UpdateCheckSchedule::builder().last_time(mock_time.now()).build();
+            let expected_schedule = UpdateCheckSchedule::builder()
+                .last_time(mock_time.now())
+                .last_check_time(mock_time.now())
+                .build();
 
             assert_eq!(actual_schedules, vec![expected_schedule]);
         });
@@ -2248,32 +2265,22 @@ mod tests {
     }
 
     #[test]
-    fn test_report_check_interval() {
+    fn test_report_check_interval_with_no_storage() {
         block_on(async {
             let mut mock_time = MockTimeSource::new_from_now();
-            mock_time.truncate_submicrosecond_walltime();
-            let start_time = mock_time.now();
             let mut state_machine = StateMachineBuilder::new_stub()
                 .policy_engine(StubPolicyEngine::new(mock_time.clone()))
                 .metrics_reporter(MockMetricsReporter::new())
-                .storage(Rc::new(Mutex::new(MemStorage::new())))
                 .build()
                 .await;
 
             state_machine.report_check_interval(InstallSource::ScheduledTask).await;
-            // No metrics should be reported because no last check time in storage.
+            // No metrics should be reported because no LAST_UPDATE_TIME in storage.
             assert!(state_machine.metrics_reporter.metrics.is_empty());
-            {
-                let storage = state_machine.storage_ref.lock().await;
-                assert_eq!(storage.get_time(LAST_CHECK_TIME).await.unwrap(), start_time.wall);
-                assert_eq!(storage.len(), 1);
-                assert!(storage.committed());
-            }
+
             // A second update check should report metrics.
             let interval = Duration::from_micros(999999);
             mock_time.advance(interval);
-
-            let later_time = mock_time.now();
 
             state_machine.report_check_interval(InstallSource::ScheduledTask).await;
 
@@ -2281,14 +2288,60 @@ mod tests {
                 state_machine.metrics_reporter.metrics,
                 vec![Metrics::UpdateCheckInterval {
                     interval,
-                    clock: ClockType::Wall,
+                    clock: ClockType::Monotonic,
                     install_source: InstallSource::ScheduledTask,
                 }]
             );
-            let storage = state_machine.storage_ref.lock().await;
-            assert_eq!(storage.get_time(LAST_CHECK_TIME).await.unwrap(), later_time.wall);
-            assert_eq!(storage.len(), 1);
-            assert!(storage.committed());
+        });
+    }
+
+    #[test]
+    fn test_report_check_interval_mono_transition() {
+        block_on(async {
+            let mut mock_time = MockTimeSource::new_from_now();
+            let mut state_machine = StateMachineBuilder::new_stub()
+                .policy_engine(StubPolicyEngine::new(mock_time.clone()))
+                .metrics_reporter(MockMetricsReporter::new())
+                .build()
+                .await;
+
+            // Make sure that, provided a wall time, we get an initial report
+            // using the wall time.
+            let initial_duration = Duration::from_secs(999);
+            let initial_time = mock_time.now_in_walltime() - initial_duration;
+            state_machine.context.schedule.last_update_check_time =
+                Some(PartialComplexTime::Wall(initial_time));
+            state_machine.report_check_interval(InstallSource::ScheduledTask).await;
+
+            // Advance one more time, and this time we should see a monotonic delta.
+            let interval = Duration::from_micros(999999);
+            mock_time.advance(interval);
+            state_machine.report_check_interval(InstallSource::ScheduledTask).await;
+
+            // One final time, to demonstrate monotonic time edges to
+            // monotonic time.
+            mock_time.advance(interval);
+            state_machine.report_check_interval(InstallSource::ScheduledTask).await;
+            assert_eq!(
+                state_machine.metrics_reporter.metrics,
+                vec![
+                    Metrics::UpdateCheckInterval {
+                        interval: initial_duration,
+                        clock: ClockType::Wall,
+                        install_source: InstallSource::ScheduledTask,
+                    },
+                    Metrics::UpdateCheckInterval {
+                        interval,
+                        clock: ClockType::Monotonic,
+                        install_source: InstallSource::ScheduledTask,
+                    },
+                    Metrics::UpdateCheckInterval {
+                        interval,
+                        clock: ClockType::Monotonic,
+                        install_source: InstallSource::ScheduledTask,
+                    },
+                ]
+            );
         });
     }
 

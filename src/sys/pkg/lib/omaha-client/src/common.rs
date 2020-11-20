@@ -317,8 +317,15 @@ pub struct CheckOptions {
 /// This describes the data around the scheduling of update checks
 #[derive(Clone, Copy, Default, PartialEq)]
 pub struct UpdateCheckSchedule {
+    // TODO(fxb/64804): Theoretically last_update_time and last_update_check_time
+    // do not need to coexist and we can do all the reporting we want via
+    // last_update_time. However, the last update check metric doesn't (as currently
+    // worded) match up with what last_update_time actually records.
     /// When the last update check was attempted (start time of the check process).
     pub last_update_time: Option<PartialComplexTime>,
+
+    /// When the last update check was attempted.
+    pub last_update_check_time: Option<PartialComplexTime>,
 
     /// When the next update should happen.
     pub next_update_time: Option<CheckTiming>,
@@ -356,6 +363,7 @@ impl CheckTiming {
 #[derive(Clone, Debug, Default)]
 pub struct ScheduleBuilder {
     last_time: Option<PartialComplexTime>,
+    last_check_time: Option<PartialComplexTime>,
     next_timing: Option<CheckTiming>,
 }
 
@@ -367,6 +375,16 @@ impl ScheduleBuilder {
         self
     }
 
+    /// Set the last_check_time for the under-construction UpdateCheckSchedule.
+    /// This method takes both ComplexTime and Option<ComplexTime>.
+    pub fn last_check_time(
+        mut self,
+        last_check_time: impl Into<Option<PartialComplexTime>>,
+    ) -> Self {
+        self.last_check_time = last_check_time.into();
+        self
+    }
+
     /// Set the CheckTiming for the next update check to use.
     pub fn next_timing(mut self, next_timing: impl Into<Option<CheckTiming>>) -> Self {
         self.next_timing = next_timing.into();
@@ -375,7 +393,11 @@ impl ScheduleBuilder {
 
     /// Build the UpdateCheckSchedule.
     pub fn build(self) -> UpdateCheckSchedule {
-        UpdateCheckSchedule { last_update_time: self.last_time, next_update_time: self.next_timing }
+        UpdateCheckSchedule {
+            last_update_time: self.last_time,
+            last_update_check_time: self.last_check_time,
+            next_update_time: self.next_timing,
+        }
     }
 }
 
