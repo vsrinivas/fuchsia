@@ -141,6 +141,10 @@
                     "description": "Fully qualified name of the bits",
                     "$ref": "#/definitions/compound-identifier"
                 },
+                "location": {
+                    "description": "Source location of the declaration",
+                    "$ref": "#/definitions/location"
+                },
                 "type": {
                     "description": "Type of the bits",
                     "$ref": "#/definitions/type"
@@ -173,6 +177,10 @@
                 "name": {
                     "description": "Name of the bits member",
                     "$ref": "#/definitions/identifier"
+                },
+                "location": {
+                    "description": "Source location of the declaration",
+                    "$ref": "#/definitions/location"
                 },
                 "maybe_attributes": {
                     "description": "Optional list of attributes of the bits member",
@@ -1369,22 +1377,6 @@
                 "expression": {
                     "description": "Original in source constant value, may be a const expression.",
                     "type": "string"
-                }
-            }
-        },
-        "default-literal": {
-            "description": "Definition of default literal",
-            "type": "object",
-            "required": [
-                "kind"
-            ],
-            "properties": {
-                "kind": {
-                    "description": "Selection of default literal type",
-                    "type": "string",
-                    "enum": [
-                        "default"
-                    ]
                 }
             }
         },
