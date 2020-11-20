@@ -10,7 +10,7 @@
 #include <zircon/compiler.h>
 
 #define BOOT_STACK_ALIGN 16
-#define BOOT_STACK_SIZE 4096
+#define BOOT_STACK_SIZE 16384
 
 #if __has_feature(shadow_call_stack)
 #define BOOT_SHADOW_CALL_STACK_SIZE 512
