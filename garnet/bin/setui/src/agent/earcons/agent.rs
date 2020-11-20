@@ -9,7 +9,7 @@ use crate::agent::earcons::bluetooth_handler::BluetoothHandler;
 use crate::agent::earcons::volume_change_handler::VolumeChangeHandler;
 use crate::blueprint_definition;
 use crate::internal::agent::Payload;
-use crate::internal::event::{self, Publisher};
+use crate::internal::event::Publisher;
 use crate::internal::switchboard;
 use crate::message::base::MessageEvent;
 use crate::service_context::{ExternalServiceProxy, ServiceContextHandle};
@@ -30,7 +30,6 @@ pub struct Agent {
     publisher: Publisher,
     sound_player_connection: Arc<Mutex<Option<ExternalServiceProxy<PlayerProxy>>>>,
     switchboard_messenger: switchboard::message::Messenger,
-    event_factory: event::message::Factory,
 }
 
 /// Params that are common to handlers of the earcons agent.
@@ -54,7 +53,6 @@ impl Agent {
             publisher: context.get_publisher(),
             sound_player_connection: Arc::new(Mutex::new(None)),
             switchboard_messenger: messenger_result.unwrap(),
-            event_factory: context.event_factory().clone(),
         };
 
         fasync::Task::spawn(async move {
@@ -82,7 +80,6 @@ impl Agent {
         };
 
         if let Err(e) = VolumeChangeHandler::create(
-            &self.event_factory,
             self.publisher.clone(),
             common_earcons_params.clone(),
             self.switchboard_messenger.clone(),

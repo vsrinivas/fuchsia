@@ -6,16 +6,15 @@ use crate::agent::earcons::agent::CommonEarconsParams;
 use crate::agent::earcons::sound_ids::{VOLUME_CHANGED_SOUND_ID, VOLUME_MAX_SOUND_ID};
 use crate::agent::earcons::utils::{connect_to_sound_player, play_sound};
 use crate::audio::{create_default_modified_timestamps, ModifiedTimestamps};
-use crate::input::VolumeGain;
-use crate::internal::event::{self, Event};
+use crate::internal::event;
 use crate::internal::switchboard;
-use crate::message::base::{Audience, MessageEvent, MessengerType};
+use crate::message::base::Audience;
 use crate::message::receptor::extract_payload;
 use crate::switchboard::base::{
     AudioInfo, AudioStream, AudioStreamType, SettingRequest, SettingResponse, SettingType,
 };
 
-use anyhow::{format_err, Context, Error};
+use anyhow::Error;
 use fuchsia_async as fasync;
 use fuchsia_syslog::{fx_log_debug, fx_log_err};
 use futures::StreamExt;
@@ -25,7 +24,6 @@ use std::collections::{HashMap, HashSet};
 pub struct VolumeChangeHandler {
     common_earcons_params: CommonEarconsParams,
     last_user_volumes: HashMap<AudioStreamType, f32>,
-    volume_button_event: VolumeGain,
     modified_timestamps: ModifiedTimestamps,
     switchboard_messenger: switchboard::message::Messenger,
     publisher: event::Publisher,
@@ -42,16 +40,10 @@ const VOLUME_CHANGED_FILE_PATH: &str = "volume-changed.wav";
 
 impl VolumeChangeHandler {
     pub async fn create(
-        event_factory: &event::message::Factory,
         publisher: event::Publisher,
         params: CommonEarconsParams,
         switchboard_messenger: switchboard::message::Messenger,
     ) -> Result<(), Error> {
-        let (_, event_receptor) = event_factory
-            .create(MessengerType::Unbound)
-            .await
-            .map_err(|e| format_err!(e))
-            .context("Initializing VolumeChangeHandler")?;
         let mut receptor = switchboard_messenger
             .message(
                 switchboard::Payload::Action(switchboard::Action::Request(
@@ -90,7 +82,6 @@ impl VolumeChangeHandler {
             let mut handler = Self {
                 common_earcons_params: params,
                 last_user_volumes,
-                volume_button_event: VolumeGain::Neutral,
                 modified_timestamps: create_default_modified_timestamps(),
                 switchboard_messenger: switchboard_messenger.clone(),
                 publisher,
@@ -103,8 +94,7 @@ impl VolumeChangeHandler {
                 )
                 .send()
                 .fuse();
-            let event_receptor = event_receptor.fuse();
-            futures::pin_mut!(listen_receptor, event_receptor);
+            futures::pin_mut!(listen_receptor);
 
             loop {
                 futures::select! {
@@ -113,11 +103,6 @@ impl VolumeChangeHandler {
                             switchboard::Payload::Listen(switchboard::Listen::Update(setting))
                         ) = extract_payload(volume_change_event) {
                             handler.on_changed_setting(setting, volume_tx.clone()).await;
-                        }
-                    }
-                    event = event_receptor.select_next_some() => {
-                        if let MessageEvent::Message(event::Payload::Event(event), _) = event {
-                            handler.on_button_event(event).await;
                         }
                     }
                     volume_response = volume_rx.next() => {
@@ -134,17 +119,9 @@ impl VolumeChangeHandler {
         Ok(())
     }
 
-    /// Called when a new media button input event is available from the
-    /// listener. Stores the last event.
-    async fn on_button_event(&mut self, event: Event) {
-        if let Event::MediaButtons(event::media_buttons::Event::OnVolume(volume_gain)) = event {
-            self.volume_button_event = volume_gain;
-        }
-    }
-
-    /// Called when a setting `VolumeChangeHandler` has registered as a listener
-    /// for indicates there is a new value. Requests the updated value from
-    /// the `Switchboard`.
+    /// Called when a new value is indicated for a setting for which
+    /// `VolumeChangeHandler` has registered as a listener. Requests the
+    /// updated value from the `Switchboard`.
     async fn on_changed_setting(
         &mut self,
         setting_type: SettingType,
@@ -211,12 +188,10 @@ impl VolumeChangeHandler {
         new_user_volume: f32,
         stream_type: AudioStreamType,
     ) {
-        let volume_up_max_pressed =
-            new_user_volume == MAX_VOLUME && self.volume_button_event == VolumeGain::Up;
+        let volume_is_max = new_user_volume == MAX_VOLUME;
         let last_user_volume = self.last_user_volumes.get(&stream_type);
 
         // Logging for debugging volume changes.
-        fx_log_debug!("[earcons_agent] Volume up pressed while max: {}", volume_up_max_pressed);
         fx_log_debug!(
             "[earcons_agent] New {:?} user volume: {:?}, Last {:?} user volume: {:?}",
             stream_type,
@@ -225,7 +200,7 @@ impl VolumeChangeHandler {
             last_user_volume,
         );
 
-        if last_user_volume != Some(&new_user_volume) || volume_up_max_pressed {
+        if last_user_volume != Some(&new_user_volume) || volume_is_max {
             if last_user_volume != None {
                 // On restore, the last media user volume is set for the first time, and registers
                 // as different from the last seen volume, because it is initially None. Don't play
@@ -365,7 +340,6 @@ mod tests {
                 sound_player_connection: Arc::new(Mutex::new(None)),
             },
             last_user_volumes,
-            volume_button_event: VolumeGain::Neutral,
             modified_timestamps: old_timestamps,
             publisher,
         };
