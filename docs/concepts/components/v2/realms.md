@@ -16,15 +16,20 @@ along with its set of children.
 Realms play a special role in the component framework. A realm is an
 *encapsulation boundary* for component instances. This means:
 
-*   Realms act as a capability boundary. It's up to the realm to decide whether
+-   Realms act as a capability boundary. It's up to the realm to decide whether
     a capability originating in the realm can be routed to component instances
     outside of the realm. This is accomplished through an [`expose`][expose]
     declaration in a [component manifest][component-manifests].
-*   The internal structure of a [sub-realm](#definitions) is opaque to the
+-   The internal structure of a [sub-realm](#definitions) is opaque to the
     parent component instance. For example, the sub-realm could be structured
     either as one or multiple component instances, and from the perspective of
     the parent component instance this looks the same as long as the sub-realm
     [exposes][expose] the same set of capabilities.
+
+A realm also acts as an *ownership boundary*, that is, a child component
+instance is the root of a sub-realm which is owned by the parent, who controls
+its existence. See [Child component instances](#child-component-instances) for
+more information.
 
 ## Definitions
 
@@ -39,7 +44,7 @@ This section contains definitions for basic terminology about realms.
 
 Here is an example of a realm with a capability routed through it:
 
-<br>![Realm example](realm_example.png)<br>
+<br>![Realm example](images/realm_example.png)<br>
 
 In this example, the `shell` component has two children: `tools` and `services`.
 `services` has two children, `logger` and `echo`, while `tools` has one child
@@ -154,7 +159,7 @@ TODO: service directories as an example
 
 The following diagram illustrates a realm with a collection:
 
-<br>![Collection example](collection_example.png)<br>
+<br>![Collection example](images/collection_example.png)<br>
 
 In this example, the `shell` component declares a static child `console` and a
 collection `(tools)`, highlighted by the grey background (the `()` notation
@@ -179,13 +184,13 @@ them available to any component instance in the realm. Read
 [Environments][environments] for information on what properties are configurable
 through the environment.
 
-## The Realm framework service {#realm-framework-service}
+## The Realm framework protocol {#realm-framework-protocol}
 
-There is a [framework service][framework-services] available to every component,
-[`fuchsia.sys2.Realm`][realm.fidl]. The `Realm` service provides APIs for a
-component instance to manage the children in its realm, such as binding to
-children and creating dynamic children. See the linked FIDL definitions for full
-documentation.
+There is a [framework protocol][framework-protocols] available to every
+component, [`fuchsia.sys2.Realm`][realm.fidl]. The `Realm` protocol provides
+APIs for a component instance to manage the children in its realm, such as
+binding to children and creating dynamic children. See the linked FIDL
+definitions for full documentation.
 
 [children]: ./component_manifests.md#children
 [collections]: ./component_manifests.md#collections
@@ -194,7 +199,7 @@ documentation.
 [component-urls]: /docs/concepts/components/component_urls.md
 [environments]: ./environments.md
 [expose]: ./component_manifests.md#expose
-[framework-services]: ./component_manifests.md#framework-services
+[framework-protocols]: ./component_manifests.md#framework-protocols
 [glossary-storage]: /docs/glossary.md#storage-capability
 [monikers]: ./monikers.md
 [offer]: ./component_manifests.md#offer

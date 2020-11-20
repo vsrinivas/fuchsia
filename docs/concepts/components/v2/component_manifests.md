@@ -206,7 +206,7 @@ use: [
 For an example of how these keywords interact, consider the following component
 instance tree:
 
-<br>![Capability routing example](capability_routing_example.png)<br>
+<br>![Capability routing example](images/capability_routing_example.png)<br>
 
 In this example, the `echo` component instance provides an `fuchsia.Echo`
 protocol in its outgoing directory. This protocol is routed to the `echo_tool`
