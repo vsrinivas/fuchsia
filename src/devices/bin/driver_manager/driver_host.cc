@@ -37,6 +37,71 @@ DriverHost::~DriverHost() {
   LOGF(INFO, "Destroyed driver_host %p", this);
 }
 
+struct FdioSpawnActionWithHandle {
+  fdio_spawn_action_t action;
+  zx_handle_t handle;
+};
+
+// FdioSpawnActions maintains a fdio_spawn_action_t array and all the handles associated with the
+// actions. All the handles would be closed on destruction unless 'GetActions' is called and then
+// caller should pass the returned actions array that owns the handles to fdio_spawn_etc to transfer
+// the handles.
+class FdioSpawnActions {
+ public:
+  ~FdioSpawnActions() {
+    for (FdioSpawnActionWithHandle action_with_handle : actions_with_handle_) {
+      if (action_with_handle.handle != ZX_HANDLE_INVALID) {
+        zx_handle_close(action_with_handle.handle);
+      }
+    }
+  }
+
+  void AddAction(fdio_spawn_action_t action) {
+    zx::channel invalid_object;
+    FdioSpawnActionWithHandle action_with_handle = {
+        .action = action,
+        .handle = ZX_HANDLE_INVALID,
+    };
+    actions_with_handle_.push_back(action_with_handle);
+  }
+
+  void AddActionWithHandle(fdio_spawn_action_t action, zx::object_base* object) {
+    zx::channel invalid_object;
+    action.h.handle = object->get();
+    FdioSpawnActionWithHandle action_with_handle = {
+        .action = action,
+        .handle = object->release(),
+    };
+    actions_with_handle_.push_back(action_with_handle);
+  }
+
+  void AddActionWithNamespace(fdio_spawn_action_t action, zx::object_base* object) {
+    zx::channel invalid_object;
+    action.ns.handle = object->get();
+    FdioSpawnActionWithHandle action_with_handle = {
+        .action = action,
+        .handle = object->release(),
+    };
+    actions_with_handle_.push_back(action_with_handle);
+  }
+
+  std::vector<fdio_spawn_action_t> GetActions() {
+    // Return the stored actions array along with the ownership for all the associated objects back
+    // to the caller.
+    // Caller should call fdio_spawn_etc immediately after this call and this class's state would be
+    // reinitialized.
+    std::vector<fdio_spawn_action_t> actions;
+    for (FdioSpawnActionWithHandle action_with_handle : actions_with_handle_) {
+      actions.push_back(action_with_handle.action);
+    }
+    actions_with_handle_.clear();
+    return actions;
+  }
+
+ private:
+  std::vector<FdioSpawnActionWithHandle> actions_with_handle_;
+};
+
 zx_status_t DriverHost::Launch(const DriverHostConfig& config, fbl::RefPtr<DriverHost>* out) {
   zx::channel hrpc, dh_hrpc;
   zx_status_t status = zx::channel::create(0, &hrpc, &dh_hrpc);
@@ -60,25 +125,32 @@ zx_status_t DriverHost::Launch(const DriverHostConfig& config, fbl::RefPtr<Drive
     }
   }
 
-  constexpr size_t kMaxActions = 6;
-  fdio_spawn_action_t actions[kMaxActions];
-  size_t actions_count = 0;
+  FdioSpawnActions fdio_spawn_actions;
+  fdio_spawn_actions.AddAction(
+      fdio_spawn_action_t{.action = FDIO_SPAWN_ACTION_SET_NAME, .name = {.data = config.name}});
 
-  actions[actions_count++] =
-      fdio_spawn_action_t{.action = FDIO_SPAWN_ACTION_SET_NAME, .name = {.data = config.name}};
-  actions[actions_count++] = fdio_spawn_action_t{
-      .action = FDIO_SPAWN_ACTION_ADD_NS_ENTRY,
-      .ns = {.prefix = "/svc", .handle = config.fs_provider->CloneFs("driver_host_svc").release()},
-  };
-  actions[actions_count++] = fdio_spawn_action_t{
-      .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
-      .h = {.id = PA_HND(PA_USER0, 0), .handle = hrpc.release()},
-  };
+  auto fs_object = config.fs_provider->CloneFs("driver_host_svc");
+  fdio_spawn_actions.AddActionWithNamespace(
+      fdio_spawn_action_t{
+          .action = FDIO_SPAWN_ACTION_ADD_NS_ENTRY,
+          .ns = {.prefix = "/svc"},
+      },
+      &fs_object);
+
+  fdio_spawn_actions.AddActionWithHandle(
+      fdio_spawn_action_t{
+          .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
+          .h = {.id = PA_HND(PA_USER0, 0)},
+      },
+      &hrpc);
+
   if (resource.is_valid()) {
-    actions[actions_count++] = fdio_spawn_action_t{
-        .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
-        .h = {.id = PA_HND(PA_RESOURCE, 0), .handle = resource.release()},
-    };
+    fdio_spawn_actions.AddActionWithHandle(
+        fdio_spawn_action_t{
+            .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
+            .h = {.id = PA_HND(PA_RESOURCE, 0)},
+        },
+        &resource);
   }
 
   uint32_t flags = FDIO_SPAWN_CLONE_ENVIRON | FDIO_SPAWN_CLONE_STDIO | FDIO_SPAWN_CLONE_UTC_CLOCK;
@@ -92,24 +164,27 @@ zx_status_t DriverHost::Launch(const DriverHostConfig& config, fbl::RefPtr<Drive
       return status;
     }
 
-    actions[actions_count++] = fdio_spawn_action_t{
-        .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
-        .h = {.id = PA_HND(PA_LDSVC_LOADER, 0), .handle = loader_service_client.release()},
-    };
+    fdio_spawn_actions.AddActionWithHandle(
+        fdio_spawn_action_t{
+            .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
+            .h = {.id = PA_HND(PA_LDSVC_LOADER, 0)},
+        },
+        &loader_service_client);
   }
 
-  actions[actions_count++] = fdio_spawn_action_t{
-      .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
-      .h = {.id = PA_DIRECTORY_REQUEST, .handle = diagnostics_server.release()},
-  };
-
-  ZX_ASSERT(actions_count <= kMaxActions);
+  fdio_spawn_actions.AddActionWithHandle(
+      fdio_spawn_action_t{
+          .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
+          .h = {.id = PA_DIRECTORY_REQUEST},
+      },
+      &diagnostics_server);
 
   zx::process proc;
   char err_msg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH];
   const char* const argv[] = {config.binary, nullptr};
-  status = fdio_spawn_etc(config.job->get(), flags, argv[0], argv, config.env, actions_count,
-                          actions, proc.reset_and_get_address(), err_msg);
+  std::vector<fdio_spawn_action_t> actions = fdio_spawn_actions.GetActions();
+  status = fdio_spawn_etc(config.job->get(), flags, argv[0], argv, config.env, actions.size(),
+                          actions.data(), proc.reset_and_get_address(), err_msg);
   if (status != ZX_OK) {
     LOGF(ERROR, "Failed to launch driver_host '%s': %s", config.name, err_msg);
     return status;
