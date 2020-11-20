@@ -30,8 +30,8 @@ var mockProtocol = protocolInner{
 	},
 }.build()
 
-var toNames = func(methods []Method) []string {
-	s := []string{}
+func toNames(methods []Method) []string {
+	var s []string
 	for _, m := range methods {
 		s = append(s, m.Name)
 	}
