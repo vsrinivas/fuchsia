@@ -535,12 +535,20 @@ void DriverOutput::OnDriverStartComplete() {
 
   // We started with a buffer full of silence.  Set up our bookkeeping so we
   // consider ourselves to have generated and sent up to our low-water mark's
-  // worth of silence already, then start to generate real frames.  This value
-  // should be the sum of the fifo frames and the low water frames.
-  int64_t fd_frames = driver()->fifo_depth_frames();
-  frames_sent_ = fd_frames + low_water_frames_;
+  // worth of silence already beyond the where the current safe write frame
+  // in the ring buffer is.
+  //
+  // We read from async::Now and convert to reference time to simplify unit
+  // tests that mock out time using async::Now.
+  //
+  // TODO(57377): Keep reference clocks in sync with mono time under test.
+  auto mono_time = async::Now(mix_domain().dispatcher());
+  auto ref_time = reference_clock().ReferenceTimeFromMonotonicTime(mono_time);
+  int64_t output_frames_consumed = RefTimeToSafeWriteFrame(ref_time);
+  frames_sent_ = output_frames_consumed + low_water_frames_;
 
   if (VERBOSE_TIMING_DEBUG) {
+    auto fd_frames = driver()->fifo_depth_frames();
     FX_LOGS(INFO) << "Audio output: FIFO depth (" << fd_frames << " frames " << std::fixed
                   << std::setprecision(3) << rate.Inverse().Scale(fd_frames) / 1000000.0
                   << " mSec) Low Water (" << frames_sent_ << " frames " << std::fixed
