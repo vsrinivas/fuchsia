@@ -36,10 +36,11 @@ class DriverHostComponent : public fbl::DoublyLinkedListable<std::unique_ptr<Dri
                       fbl::DoublyLinkedList<std::unique_ptr<DriverHostComponent>>* driver_hosts);
 
   zx::status<zx::channel> Start(
-      zx::channel node, fidl::VectorView<llcpp::fuchsia::driver::framework::NodeSymbol> symbols,
+      zx::channel node, fidl::VectorView<fidl::StringView> offers,
+      fidl::VectorView<llcpp::fuchsia::driver::framework::NodeSymbol> symbols,
       llcpp::fuchsia::data::Dictionary program,
       fidl::VectorView<llcpp::fuchsia::component::runner::ComponentNamespaceEntry> ns,
-      zx::channel outgoing_dir);
+      zx::channel outgoing_dir, zx::channel exposed_dir);
 
  private:
   fidl::Client<llcpp::fuchsia::driver::framework::DriverHost> driver_host_;
@@ -57,11 +58,14 @@ class Node : public llcpp::fuchsia::driver::framework::NodeController::Interface
              public llcpp::fuchsia::driver::framework::Node::Interface,
              public fbl::DoublyLinkedListable<std::unique_ptr<Node>> {
  public:
+  using Offers = std::vector<fidl::StringView>;
   using Symbols = std::vector<llcpp::fuchsia::driver::framework::NodeSymbol>;
 
-  Node(Node* parent, DriverBinder* driver_binder, async_dispatcher_t* dispatcher, Symbols symbols);
+  Node(Node* parent, DriverBinder* driver_binder, async_dispatcher_t* dispatcher, Offers offers,
+       Symbols symbols);
   ~Node() override;
 
+  fidl::VectorView<fidl::StringView> offers();
   fidl::VectorView<llcpp::fuchsia::driver::framework::NodeSymbol> symbols();
   DriverHostComponent* parent_driver_host() const;
   void set_driver_host(DriverHostComponent* driver_host);
@@ -81,6 +85,7 @@ class Node : public llcpp::fuchsia::driver::framework::NodeController::Interface
   Node* parent_;
   DriverBinder* driver_binder_;
   async_dispatcher_t* dispatcher_;
+  Offers offers_;
   Symbols symbols_;
 
   DriverHostComponent* driver_host_ = nullptr;

@@ -34,8 +34,10 @@ DriverHostComponent::DriverHostComponent(
                    [this, driver_hosts](auto) { driver_hosts->erase(*this); }) {}
 
 zx::status<zx::channel> DriverHostComponent::Start(
-    zx::channel node, fidl::VectorView<fdf::NodeSymbol> symbols, fdata::Dictionary program,
-    fidl::VectorView<frunner::ComponentNamespaceEntry> ns, zx::channel outgoing_dir) {
+    zx::channel node, fidl::VectorView<fidl::StringView> offers,
+    fidl::VectorView<llcpp::fuchsia::driver::framework::NodeSymbol> symbols,
+    fdata::Dictionary program, fidl::VectorView<frunner::ComponentNamespaceEntry> ns,
+    zx::channel outgoing_dir, zx::channel exposed_dir) {
   zx::channel client_end, server_end;
   zx_status_t status = zx::channel::create(0, &client_end, &server_end);
   if (status != ZX_OK) {
@@ -44,10 +46,12 @@ zx::status<zx::channel> DriverHostComponent::Start(
 
   auto args = fdf::DriverStartArgs::UnownedBuilder()
                   .set_node(fidl::unowned_ptr(&node))
+                  .set_offers(fidl::unowned_ptr(&offers))
                   .set_symbols(fidl::unowned_ptr(&symbols))
                   .set_program(fidl::unowned_ptr(&program))
                   .set_ns(fidl::unowned_ptr(&ns))
-                  .set_outgoing_dir(fidl::unowned_ptr(&outgoing_dir));
+                  .set_outgoing_dir(fidl::unowned_ptr(&outgoing_dir))
+                  .set_exposed_dir(fidl::unowned_ptr(&exposed_dir));
   auto start = driver_host_->Start(args.build(), std::move(server_end));
   if (!start.ok()) {
     auto binary = start_args::program_value(program, "binary").value_or("");
@@ -57,11 +61,12 @@ zx::status<zx::channel> DriverHostComponent::Start(
   return zx::ok(std::move(client_end));
 }
 
-Node::Node(Node* parent, DriverBinder* driver_binder, async_dispatcher_t* dispatcher,
+Node::Node(Node* parent, DriverBinder* driver_binder, async_dispatcher_t* dispatcher, Offers offers,
            Symbols symbols)
     : parent_(parent),
       driver_binder_(driver_binder),
       dispatcher_(dispatcher),
+      offers_(std::move(offers)),
       symbols_(std::move(symbols)) {}
 
 Node::~Node() {
@@ -72,6 +77,8 @@ Node::~Node() {
     binding_->Unbind();
   }
 }
+
+fidl::VectorView<fidl::StringView> Node::offers() { return fidl::unowned_vec(offers_); }
 
 fidl::VectorView<fdf::NodeSymbol> Node::symbols() { return fidl::unowned_vec(symbols_); }
 
@@ -108,33 +115,57 @@ void Node::Remove(RemoveCompleter::Sync& completer) {
 
 void Node::AddChild(fdf::NodeAddArgs args, zx::channel controller, zx::channel node,
                     AddChildCompleter::Sync& completer) {
+  auto name = args.has_name() ? std::move(args.name()) : fidl::StringView();
+  Offers offers;
+  if (args.has_offers()) {
+    offers.reserve(args.offers().count());
+    std::unordered_set<std::string_view> names;
+    for (auto& offer : args.offers()) {
+      auto inserted = names.emplace(offer.data(), offer.size()).second;
+      if (!inserted) {
+        LOGF(ERROR, "Failed to add Node '%.*s', duplicate offer '%.*s'", name.size(), name.data(),
+             offer.size(), offer.data());
+        completer.Close(ZX_ERR_INVALID_ARGS);
+        return;
+      }
+      offers.emplace_back(fidl::heap_copy_str(offer));
+    }
+  }
   Symbols symbols;
   if (args.has_symbols()) {
     symbols.reserve(args.symbols().count());
     std::unordered_set<std::string_view> names;
     for (auto& symbol : args.symbols()) {
-      auto& name = symbol.name();
-      auto inserted = names.emplace(name.data(), name.size()).second;
+      if (!symbol.has_name()) {
+        LOGF(ERROR, "Failed to add Node '%.*s', a symbol is missing a name", name.size(),
+             name.data());
+      }
+      if (!symbol.has_address()) {
+        LOGF(ERROR, "Failed to add Node '%.*s', symbol '%.*s' is missing an address", name.size(),
+             name.data(), symbol.name().size(), symbol.name().data());
+      }
+      auto inserted = names.emplace(symbol.name().data(), symbol.name().size()).second;
       if (!inserted) {
-        LOGF(ERROR, "Failed to add Node '%.*s', duplicate symbol '%.*s'", args.name().size(),
-             args.name().data(), name.size(), name.data());
+        LOGF(ERROR, "Failed to add Node '%.*s', duplicate symbol '%.*s'", name.size(), name.data(),
+             symbol.name().size(), symbol.name().data());
         completer.Close(ZX_ERR_INVALID_ARGS);
         return;
       }
       symbols.emplace_back(
           fdf::NodeSymbol::Builder(std::make_unique<fdf::NodeSymbol::Frame>())
-              .set_name(std::make_unique<fidl::StringView>(fidl::heap_copy_str(name)))
+              .set_name(std::make_unique<fidl::StringView>(fidl::heap_copy_str(symbol.name())))
               .set_address(std::make_unique<zx_vaddr_t>(symbol.address()))
               .build());
     }
   }
-  auto child = std::make_unique<Node>(this, driver_binder_, dispatcher_, std::move(symbols));
+  auto child = std::make_unique<Node>(this, driver_binder_, dispatcher_, std::move(offers),
+                                      std::move(symbols));
 
   auto bind_controller = fidl::BindServer<fdf::NodeController::Interface>(
       dispatcher_, std::move(controller), child.get());
   if (bind_controller.is_error()) {
-    LOGF(ERROR, "Failed to bind channel to NodeController '%.*s': %s", args.name().size(),
-         args.name().data(), zx_status_get_string(bind_controller.error()));
+    LOGF(ERROR, "Failed to bind channel to NodeController '%.*s': %s", name.size(), name.data(),
+         zx_status_get_string(bind_controller.error()));
     completer.Close(bind_controller.error());
     return;
   }
@@ -145,8 +176,8 @@ void Node::AddChild(fdf::NodeAddArgs args, zx::channel controller, zx::channel n
         dispatcher_, std::move(node), child.get(),
         [](fdf::Node::Interface* node, auto, auto) { static_cast<Node*>(node)->Remove(); });
     if (bind_node.is_error()) {
-      LOGF(ERROR, "Failed to bind channel to Node '%.*s': %s", args.name().size(),
-           args.name().data(), zx_status_get_string(bind_node.error()));
+      LOGF(ERROR, "Failed to bind channel to Node '%.*s': %s", name.size(), name.data(),
+           zx_status_get_string(bind_node.error()));
       completer.Close(bind_node.error());
       return;
     }
@@ -154,8 +185,8 @@ void Node::AddChild(fdf::NodeAddArgs args, zx::channel controller, zx::channel n
   } else {
     auto bind_result = driver_binder_->Bind(child.get(), std::move(args));
     if (bind_result.is_error()) {
-      LOGF(ERROR, "Failed to bind driver to Node '%.*s': %s", args.name().size(),
-           args.name().data(), bind_result.status_string());
+      LOGF(ERROR, "Failed to bind driver to Node '%.*s': %s", name.size(), name.data(),
+           bind_result.status_string());
       completer.Close(bind_result.status_value());
       return;
     }
@@ -176,7 +207,7 @@ DriverRunner::DriverRunner(zx::channel realm, DriverIndex* driver_index,
     : realm_(std::move(realm), dispatcher),
       driver_index_(driver_index),
       dispatcher_(dispatcher),
-      root_node_(nullptr, this, dispatcher, {}) {}
+      root_node_(nullptr, this, dispatcher, {}, {}) {}
 
 zx::status<> DriverRunner::PublishComponentRunner(const fbl::RefPtr<fs::PseudoDir>& svc_dir) {
   const auto service = [this](zx::channel request) {
@@ -248,9 +279,17 @@ void DriverRunner::Start(frunner::ComponentStartInfo start_info, zx::channel con
     completer.Close(status);
     return;
   }
+  zx::channel exposed_dir(fdio_service_clone(driver_args.exposed_dir.get()));
+  if (!exposed_dir.is_valid()) {
+    LOGF(ERROR, "Failed to clone exposed directory for driver '%.*s'",
+         start_info.resolved_url().size(), start_info.resolved_url().data());
+    completer.Close(ZX_ERR_INTERNAL);
+    return;
+  }
   auto start =
-      driver_host->Start(std::move(client_end), std::move(symbols), std::move(start_info.program()),
-                         std::move(start_info.ns()), std::move(start_info.outgoing_dir()));
+      driver_host->Start(std::move(client_end), driver_args.node->offers(), std::move(symbols),
+                         std::move(start_info.program()), std::move(start_info.ns()),
+                         std::move(start_info.outgoing_dir()), std::move(exposed_dir));
   if (start.is_error()) {
     completer.Close(start.error_value());
     return;
