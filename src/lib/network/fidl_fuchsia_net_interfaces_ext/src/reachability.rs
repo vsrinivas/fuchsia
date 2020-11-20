@@ -2,11 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::{Update, UpdateResult, WatcherOperationError};
+
 use fidl_fuchsia_net as fnet;
 use fidl_fuchsia_net_interfaces as fnet_interfaces;
-use futures::TryFutureExt as _;
+use futures::{Stream, TryStreamExt};
 use net_types::{LinkLocalAddress as _, ScopeableAddress as _};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
+use thiserror::Error;
 
 /// Returns true iff the supplied [`fnet_interfaces::Properties`] (expected to be fully populated)
 /// appears to provide network connectivity, i.e. is not loopback, is online, and has a default
@@ -62,32 +65,81 @@ pub fn is_globally_routable(
     })
 }
 
-/// Returns a future which resolves when any network interface's properties satisfy
-/// [`is_globally_routable`].
-///
-/// Network interface property events are consumed from a watcher created via `interface_state`.
-pub fn wait_for_reachability(
-    interface_state: &fnet_interfaces::StateProxy,
-) -> impl futures::Future<Output = Result<(), anyhow::Error>> {
-    futures::future::ready(crate::event_stream_from_state(interface_state)).and_then(
-        |event_stream| async {
-            crate::wait_interface(event_stream, &mut HashMap::new(), |if_map| {
-                if if_map.values().any(is_globally_routable) {
-                    Some(())
+/// Wraps `event_stream` and returns a stream which yields the reachability status as a bool (true
+/// iff there exists an interface with properties that satisfy [`is_globally_routable`]) whenever
+/// it changes.
+pub fn to_reachability_stream(
+    event_stream: impl Stream<Item = Result<fnet_interfaces::Event, fidl::Error>>,
+) -> impl Stream<Item = Result<bool, WatcherOperationError<HashMap<u64, fnet_interfaces::Properties>>>>
+{
+    let mut if_map = HashMap::new();
+    let mut reachable = None;
+    let mut reachable_ids = HashSet::new();
+    event_stream.map_err(WatcherOperationError::EventStream).try_filter_map(move |event| {
+        futures::future::ready(if_map.update(event).map_err(WatcherOperationError::Update).map(
+            |changed| {
+                match changed {
+                    UpdateResult::Existing(properties)
+                    | UpdateResult::Added(properties)
+                    | UpdateResult::Changed(properties) => {
+                        if let Some(id) = properties.id {
+                            if is_globally_routable(properties) {
+                                let _present: bool = reachable_ids.insert(id);
+                            } else {
+                                let _removed: bool = reachable_ids.remove(&id);
+                            }
+                        }
+                    }
+                    UpdateResult::Removed(id) => {
+                        let _removed: bool = reachable_ids.remove(&id);
+                    }
+                    UpdateResult::NoChange => {
+                        return None;
+                    }
+                }
+                let new_reachable = Some(!reachable_ids.is_empty());
+                if reachable != new_reachable {
+                    reachable = new_reachable;
+                    reachable
                 } else {
                     None
                 }
-            })
-            .await
-        },
-    )
+            },
+        ))
+    })
+}
+
+/// Reachability status stream operational errors.
+#[derive(Error, Debug)]
+pub enum OperationError<B: Update + std::fmt::Debug> {
+    #[error("watcher operation error: {0}")]
+    Watcher(WatcherOperationError<B>),
+    #[error("reachability status stream ended unexpectedly")]
+    UnexpectedEnd,
+}
+
+/// Returns a future which resolves when any network interface observed through `event_stream`
+/// has properties which satisfy [`is_globally_routable`].
+pub async fn wait_for_reachability(
+    event_stream: impl Stream<Item = Result<fnet_interfaces::Event, fidl::Error>>,
+) -> Result<(), OperationError<HashMap<u64, fnet_interfaces::Properties>>> {
+    futures::pin_mut!(event_stream);
+    let rtn = to_reachability_stream(event_stream)
+        .map_err(OperationError::Watcher)
+        .try_filter_map(|reachable| futures::future::ok(if reachable { Some(()) } else { None }))
+        .try_next()
+        .await
+        .and_then(|item| item.ok_or_else(|| OperationError::UnexpectedEnd));
+    rtn
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
+    use anyhow::Context as _;
     use fidl_fuchsia_hardware_network as fnetwork;
+    use futures::FutureExt as _;
     use net_declare::fidl_subnet;
 
     const IPV4_LINK_LOCAL: fnet::Subnet = fidl_subnet!(169.254.0.1/16);
@@ -95,9 +147,9 @@ mod tests {
     const IPV4_GLOBAL: fnet::Subnet = fidl_subnet!(192.168.0.1/16);
     const IPV6_GLOBAL: fnet::Subnet = fidl_subnet!(100::1/64);
 
-    fn valid_interface() -> fnet_interfaces::Properties {
+    fn valid_interface(id: u64) -> fnet_interfaces::Properties {
         fnet_interfaces::Properties {
-            id: Some(1),
+            id: Some(id),
             name: Some("test1".to_string()),
             device_class: Some(fnet_interfaces::DeviceClass::Device(
                 fnetwork::DeviceClass::Ethernet,
@@ -129,27 +181,28 @@ mod tests {
 
     #[test]
     fn test_is_globally_routable() {
+        const ID: u64 = 1;
         // These combinations are not globally routable.
         assert!(!is_globally_routable(&fnet_interfaces::Properties {
             device_class: None,
-            ..valid_interface()
+            ..valid_interface(ID)
         }));
         assert!(!is_globally_routable(&fnet_interfaces::Properties {
             device_class: Some(fnet_interfaces::DeviceClass::Loopback(fnet_interfaces::Empty {})),
-            ..valid_interface()
+            ..valid_interface(ID)
         }));
         assert!(!is_globally_routable(&fnet_interfaces::Properties {
             online: Some(false),
-            ..valid_interface()
+            ..valid_interface(ID)
         }));
         assert!(!is_globally_routable(&fnet_interfaces::Properties {
             addresses: Some(vec![]),
-            ..valid_interface()
+            ..valid_interface(ID)
         }));
         assert!(!is_globally_routable(&fnet_interfaces::Properties {
             has_default_ipv4_route: Some(false),
             has_default_ipv6_route: Some(false),
-            ..valid_interface()
+            ..valid_interface(ID)
         }));
         assert!(!is_globally_routable(&fnet_interfaces::Properties {
             addresses: Some(vec![fnet_interfaces::Address {
@@ -157,7 +210,7 @@ mod tests {
                 ..fnet_interfaces::Address::empty()
             }]),
             has_default_ipv4_route: Some(false),
-            ..valid_interface()
+            ..valid_interface(ID)
         }));
         assert!(!is_globally_routable(&fnet_interfaces::Properties {
             addresses: Some(vec![fnet_interfaces::Address {
@@ -165,7 +218,7 @@ mod tests {
                 ..fnet_interfaces::Address::empty()
             }]),
             has_default_ipv6_route: Some(false),
-            ..valid_interface()
+            ..valid_interface(ID)
         }));
         assert!(!is_globally_routable(&fnet_interfaces::Properties {
             addresses: Some(vec![fnet_interfaces::Address {
@@ -173,7 +226,7 @@ mod tests {
                 ..fnet_interfaces::Address::empty()
             }]),
             has_default_ipv6_route: Some(true),
-            ..valid_interface()
+            ..valid_interface(ID)
         }));
         assert!(!is_globally_routable(&fnet_interfaces::Properties {
             addresses: Some(vec![fnet_interfaces::Address {
@@ -181,11 +234,11 @@ mod tests {
                 ..fnet_interfaces::Address::empty()
             }]),
             has_default_ipv4_route: Some(true),
-            ..valid_interface()
+            ..valid_interface(ID)
         }));
 
         // These combinations are globally routable.
-        assert!(is_globally_routable(&valid_interface()));
+        assert!(is_globally_routable(&valid_interface(ID)));
         assert!(is_globally_routable(&fnet_interfaces::Properties {
             addresses: Some(vec![fnet_interfaces::Address {
                 addr: Some(IPV4_GLOBAL),
@@ -193,7 +246,7 @@ mod tests {
             }]),
             has_default_ipv4_route: Some(true),
             has_default_ipv6_route: Some(false),
-            ..valid_interface()
+            ..valid_interface(ID)
         }));
         assert!(is_globally_routable(&fnet_interfaces::Properties {
             addresses: Some(vec![fnet_interfaces::Address {
@@ -202,7 +255,79 @@ mod tests {
             }]),
             has_default_ipv4_route: Some(false),
             has_default_ipv6_route: Some(true),
-            ..valid_interface()
+            ..valid_interface(ID)
         }));
+    }
+
+    #[test]
+    fn test_to_reachability_stream() -> Result<(), anyhow::Error> {
+        let (sender, receiver) = futures::channel::mpsc::unbounded();
+        let mut reachability_stream = to_reachability_stream(receiver);
+        for (event, want) in vec![
+            (fnet_interfaces::Event::Idle(fnet_interfaces::Empty {}), None),
+            // Added events
+            (
+                fnet_interfaces::Event::Added(fnet_interfaces::Properties {
+                    online: Some(false),
+                    ..valid_interface(1)
+                }),
+                Some(false),
+            ),
+            (fnet_interfaces::Event::Added(valid_interface(2)), Some(true)),
+            (
+                fnet_interfaces::Event::Added(fnet_interfaces::Properties {
+                    online: Some(false),
+                    ..valid_interface(3)
+                }),
+                None,
+            ),
+            // Changed events
+            (
+                fnet_interfaces::Event::Changed(fnet_interfaces::Properties {
+                    id: Some(2),
+                    online: Some(false),
+                    ..fnet_interfaces::Properties::empty()
+                }),
+                Some(false),
+            ),
+            (
+                fnet_interfaces::Event::Changed(fnet_interfaces::Properties {
+                    id: Some(1),
+                    online: Some(true),
+                    ..fnet_interfaces::Properties::empty()
+                }),
+                Some(true),
+            ),
+            (
+                fnet_interfaces::Event::Changed(fnet_interfaces::Properties {
+                    id: Some(3),
+                    online: Some(true),
+                    ..fnet_interfaces::Properties::empty()
+                }),
+                None,
+            ),
+            // Removed events
+            (fnet_interfaces::Event::Removed(1), None),
+            (fnet_interfaces::Event::Removed(3), Some(false)),
+            (fnet_interfaces::Event::Removed(2), None),
+        ] {
+            let () = sender.unbounded_send(Ok(event.clone())).context("failed to send event")?;
+            let got = reachability_stream.try_next().now_or_never();
+            if let Some(want_reachable) = want {
+                let r = got.ok_or_else(|| {
+                    anyhow::anyhow!("reachability status stream unexpectedly yielded nothing")
+                })?;
+                let item = r.context("reachability status stream error")?;
+                let got_reachable = item.ok_or_else(|| {
+                    anyhow::anyhow!("reachability status stream ended unexpectedly")
+                })?;
+                assert_eq!(got_reachable, want_reachable);
+            } else {
+                if got.is_some() {
+                    panic!("got {:?} from reachability stream after event {:?}, want None as reachability status should not have changed", got, event);
+                }
+            }
+        }
+        Ok(())
     }
 }

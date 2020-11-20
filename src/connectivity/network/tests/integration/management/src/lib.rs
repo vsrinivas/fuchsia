@@ -16,7 +16,7 @@ use fuchsia_async::{DurationExt as _, TimeoutExt as _};
 use fuchsia_zircon as zx;
 
 use anyhow::Context as _;
-use futures::future::FutureExt as _;
+use futures::future::{FutureExt as _, TryFutureExt as _};
 use futures::stream::{self, StreamExt as _};
 use net_declare::fidl_ip_v4;
 use net_types::ip as net_types_ip;
@@ -313,12 +313,12 @@ async fn test_wlan_ap_dhcp_server<E: netemul::Endpoint>(name: &str) -> Result {
                 })
             },
         )
+        .map_err(anyhow::Error::from)
         .on_timeout(ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT.after_now(), || {
-            Err(anyhow::anyhow!(
-                "timed out waiting for OnInterfaceseChanged event with a WLAN AP interface"
-            ))
+            Err(anyhow::anyhow!("timed out"))
         })
-        .await?;
+        .await
+        .context("failed to wait for presence of a WLAN AP interface")?;
 
         // Check the DHCP server's configured parameters.
         let dhcp_server = environment
@@ -411,10 +411,9 @@ async fn test_wlan_ap_dhcp_server<E: netemul::Endpoint>(name: &str) -> Result {
                 })
             },
         )
+        .map_err(anyhow::Error::from)
         .on_timeout(ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT.after_now(), || {
-            Err(anyhow::anyhow!(
-                "timed out waiting for OnInterfaceseChanged event with a WLAN AP interface"
-            ))
+            Err(anyhow::anyhow!("timed out"))
         })
         .await
         .context("wait for host interface to be configured")?;

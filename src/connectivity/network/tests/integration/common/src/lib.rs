@@ -22,6 +22,7 @@ use fuchsia_zircon as zx;
 use anyhow::Context as _;
 use futures::future::{FusedFuture, Future, FutureExt as _};
 use futures::stream::{Stream, StreamExt, TryStreamExt};
+use futures::TryFutureExt as _;
 use net_types::ethernet::Mac;
 use net_types::ip as net_types_ip;
 use packet::serialize::{InnerPacketBuilder, Serializer};
@@ -155,11 +156,9 @@ pub async fn wait_for_non_loopback_interface_up<
             })
         },
     )
-    .on_timeout(timeout.after_now(), || {
-        Err(anyhow::anyhow!(
-            "timed out waiting for OnInterfaceseChanged event with a non-loopback interface"
-        ))
-    })
+    .map_err(anyhow::Error::from)
+    .on_timeout(timeout.after_now(), || Err(anyhow::anyhow!("timed out")))
+    .map(|r| r.context("failed to wait for non-loopback interface up"))
     .fuse();
     fuchsia_async::pin_mut!(wait_for_interface);
     futures::select! {

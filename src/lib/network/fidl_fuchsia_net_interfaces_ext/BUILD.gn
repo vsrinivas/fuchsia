@@ -15,7 +15,6 @@ rustc_library("fidl_fuchsia_net_interfaces_ext") {
     "//src/connectivity/lib/net-types",
     "//src/lib/async-utils",
     "//src/lib/fidl/rust/fidl",
-    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:thiserror",
   ]
@@ -23,6 +22,7 @@ rustc_library("fidl_fuchsia_net_interfaces_ext") {
     "//sdk/fidl/fuchsia.hardware.network:fuchsia.hardware.network-rustc",
     "//src/connectivity/lib/net-declare",
     "//src/lib/fuchsia-async",
+    "//third_party/rust_crates:anyhow",
   ]
 
   sources = [

@@ -943,16 +943,15 @@ async fn test_interfaces_watcher() -> Result {
 
     async fn assert_blocked<S>(stream: &mut S) -> Result
     where
-        S: futures::stream::TryStream<Error = anyhow::Error> + std::marker::Unpin,
+        S: futures::stream::TryStream<Error = fidl::Error> + std::marker::Unpin,
         <S as futures::TryStream>::Ok: std::fmt::Debug,
     {
         stream
             .try_next()
-            .and_then(|e| {
-                futures::future::ready(match e {
-                    Some(event) => Ok(Some(event)),
-                    None => Err(anyhow::anyhow!("watcher event stream ended")),
-                })
+            .map(|event| {
+                let event = event.context("event stream error")?;
+                let event = event.ok_or_else(|| anyhow::anyhow!("watcher event stream ended"))?;
+                Ok(Some(event))
             })
             .on_timeout(
                 fuchsia_async::Time::after(fuchsia_zircon::Duration::from_millis(50)),
@@ -993,10 +992,8 @@ async fn test_interfaces_watcher() -> Result {
     });
     async fn try_next<S>(stream: &mut S) -> Result<fidl_fuchsia_net_interfaces::Event>
     where
-        S: futures::stream::TryStream<
-                Ok = fidl_fuchsia_net_interfaces::Event,
-                Error = anyhow::Error,
-            > + Unpin,
+        S: futures::stream::TryStream<Ok = fidl_fuchsia_net_interfaces::Event, Error = fidl::Error>
+            + Unpin,
     {
         stream.try_next().await?.ok_or_else(|| anyhow::anyhow!("watcher event stream ended"))
     }
@@ -1087,31 +1084,47 @@ async fn test_interfaces_watcher() -> Result {
         }
     };
     const LL_ADDR_COUNT: usize = 1;
+    let want_online = true;
     let ll_addrs = async_utils::fold::try_fold_while(
-        blocking_stream,
+        blocking_stream.map(|r| r.context("blocking event stream error")),
+        (false, None),
+        fold_fn(want_online, LL_ADDR_COUNT),
+    )
+    .await
+    .context("error processing events")
+    .and_then(|fold_res| {
+        fold_res.short_circuited().map_err(|(online_changed, addresses)| {
+            anyhow::anyhow!(
+                "event stream ended unexpectedly, final state online_changed={} addresses={:?}",
+                online_changed,
+                addresses
+            )
+        })
+    })
+    .with_context(|| {
+        format!(
+            "error while waiting for interface online={} and LL addr count={}",
+            want_online, LL_ADDR_COUNT
+        )
+    })?;
+    let addrs = async_utils::fold::try_fold_while(
+        stream.map(|r| r.context("non-blocking event stream error")),
         (false, None),
         fold_fn(true, LL_ADDR_COUNT),
     )
-    .await?
-    .short_circuited()
-    .map_err(|(online_changed, addresses)| {
-        anyhow::anyhow!(
-            "watcher event stream ended unexpectedly, final state online_changed={} addresses={:?}",
-            online_changed,
-            addresses
-        )
-    })?;
-    let addrs =
-        async_utils::fold::try_fold_while(stream, (false, None), fold_fn(true, LL_ADDR_COUNT))
-            .await?
-            .short_circuited()
-            .map_err(|(online_changed, addresses)| {
-                anyhow::anyhow!(
-            "watcher event stream ended unexpectedly, final state online_changed={} addresses={:?}",
-            online_changed,
-            addresses
-        )
-            })?;
+    .await
+    .context("error processing events")
+    .and_then(|fold_res| {
+        fold_res.short_circuited().map_err(|(online_changed, addresses)| {
+            anyhow::anyhow!(
+                "watcher event stream ended unexpectedly, final state online_changed={} addresses={:?}",
+                online_changed,
+                addresses
+            )
+        })
+    })
+    .with_context(|| format!("error while waiting for interface online={} and LL addr={}",
+            want_online, LL_ADDR_COUNT))?;
     assert_eq!(ll_addrs, addrs);
     let blocking_stream = fidl_fuchsia_net_interfaces_ext::event_stream(blocking_watcher.clone());
     pin_utils::pin_mut!(blocking_stream);
@@ -1195,28 +1208,37 @@ async fn test_interfaces_watcher() -> Result {
     let () = assert_blocked(&mut blocking_stream).await?;
     let () = dev.set_link_up(false).await.context("failed to bring device up")?;
     const LL_ADDR_COUNT_AFTER_LINK_DOWN: usize = 0;
+    let want_online = false;
     let addresses = async_utils::fold::try_fold_while(
-        blocking_stream,
+        blocking_stream.map(|r| r.context("blocking event stream error")),
         (false, None),
-        fold_fn(false, LL_ADDR_COUNT_AFTER_LINK_DOWN),
+        fold_fn(want_online, LL_ADDR_COUNT_AFTER_LINK_DOWN),
     )
-    .await?
-    .short_circuited()
-    .map_err(|(online_changed, addresses)| {
-        anyhow::anyhow!(
-            "watcher event stream ended unexpectedly, final state online_changed={} addresses={:?}",
-            online_changed,
-            addresses
-        )
-    })?;
+    .await
+    .context("error processing events")
+    .and_then(|fold_res| {
+        fold_res.short_circuited().map_err(|(online_changed, addresses)| {
+            anyhow::anyhow!(
+                "watcher event stream ended unexpectedly, final state online_changed={} addresses={:?}",
+                online_changed,
+                addresses
+            )
+        })
+    })
+    .with_context(|| format!("error while waiting for interface online={} and LL addr count={}",
+            want_online, LL_ADDR_COUNT_AFTER_LINK_DOWN))?;
     assert!(addresses.is_subset(&ll_addrs), "got {:?}, want a subset of {:?}", addresses, ll_addrs);
     assert_eq!(
         async_utils::fold::try_fold_while(
-            stream,
+            stream.map(|r| r.context("non-blocking event stream error")),
             (false, None),
             fold_fn(false, LL_ADDR_COUNT_AFTER_LINK_DOWN)
         )
-        .await?,
+        .await
+        .with_context(|| format!(
+            "error while waiting for interface online={} and LL addr count={}",
+            want_online, LL_ADDR_COUNT_AFTER_LINK_DOWN
+        ))?,
         async_utils::fold::FoldResult::ShortCircuited(addresses),
     );
     let blocking_stream = fidl_fuchsia_net_interfaces_ext::event_stream(blocking_watcher);

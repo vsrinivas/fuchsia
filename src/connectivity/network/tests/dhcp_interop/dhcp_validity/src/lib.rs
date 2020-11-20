@@ -13,6 +13,7 @@ use {
     },
     fuchsia_async::TimeoutExt as _,
     fuchsia_component::client,
+    futures::TryFutureExt as _,
     netemul_guest_lib::wait_for_command_completion,
     std::time::Duration,
 };
@@ -58,16 +59,17 @@ pub async fn verify_v4_addr_present(addr: fnet::IpAddress, timeout: Duration) ->
                 .find_map(|a| if a.addr?.addr == addr { Some(()) } else { None })
         },
     )
+    .map_err(anyhow::Error::from)
     .on_timeout(timeout, || Err(anyhow::anyhow!("timed out")))
     .await
-    .map_err(|e| {
-        e.context(format!(
-            "DHCPv4 client got unexpected addresses: {}, address missing: {:?}",
+    .with_context(|| {
+        format!(
+            "failed to wait for address {:?}, final interfaces state: {}",
+            addr,
             if_map.iter().fold(String::from("addresses present:"), |s, (id, properties)| {
                 s + &format!(" {:?}: {:?}", id, properties.addresses)
             }),
-            addr
-        ))
+        )
     })
 }
 

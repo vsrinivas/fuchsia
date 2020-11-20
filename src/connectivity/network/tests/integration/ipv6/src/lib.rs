@@ -16,8 +16,7 @@ use fuchsia_component::client::AppBuilder;
 use fuchsia_zircon as zx;
 
 use anyhow::{self, Context};
-use futures::future::{self, Future, FutureExt as _};
-use futures::stream::TryStreamExt as _;
+use futures::{future, Future, FutureExt as _, TryFutureExt as _, TryStreamExt as _};
 use net_types::ethernet::Mac;
 use net_types::ip::{self as net_types_ip, Ip};
 use net_types::{SpecifiedAddress, Witness};
@@ -394,7 +393,7 @@ async fn slaac_with_privacy_extensions<E: netemul::Endpoint>(name: &str) -> Resu
         .connect_to_service::<fidl_fuchsia_net_interfaces::StateMarker>()
         .context("failed to connect to fuchsia.net.interfaces/State")?;
     let expected_addrs = 2;
-    let () = fidl_fuchsia_net_interfaces_ext::wait_interface_with_id(
+    fidl_fuchsia_net_interfaces_ext::wait_interface_with_id(
         fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&interface_state)?,
         &mut fidl_fuchsia_net_interfaces_ext::InterfaceState::Unknown(iface.id()),
         |properties| {
@@ -421,6 +420,7 @@ async fn slaac_with_privacy_extensions<E: netemul::Endpoint>(name: &str) -> Resu
             }
         },
     )
+    .map_err(anyhow::Error::from)
     .on_timeout(
         (EXPECTED_DAD_RETRANSMIT_TIMER * EXPECTED_DUP_ADDR_DETECT_TRANSMITS * expected_addrs
             + ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT)
@@ -428,8 +428,7 @@ async fn slaac_with_privacy_extensions<E: netemul::Endpoint>(name: &str) -> Resu
         || Err(anyhow::anyhow!("timed out")),
     )
     .await
-    .context("failed to wait for SLAAC addresses")?;
-    Ok(())
+    .context("failed to wait for SLAAC addresses to be generated")
 }
 
 /// Adds `ipv6_consts::LINK_LOCAL_ADDR` to the interface and makes sure a Neighbor Solicitation
@@ -603,7 +602,7 @@ async fn duplicate_address_detection<E: netemul::Endpoint>(name: &str) -> Result
     let interface_state = environment
         .connect_to_service::<fidl_fuchsia_net_interfaces::StateMarker>()
         .context("failed to connect to fuchsia.net.interfaces/State")?;
-    let () = fidl_fuchsia_net_interfaces_ext::wait_interface_with_id(
+    fidl_fuchsia_net_interfaces_ext::wait_interface_with_id(
         fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&interface_state)?,
         &mut fidl_fuchsia_net_interfaces_ext::InterfaceState::Unknown(iface.id()),
         |properties| {
@@ -619,6 +618,7 @@ async fn duplicate_address_detection<E: netemul::Endpoint>(name: &str) -> Result
             })
         },
     )
+    .map_err(anyhow::Error::from)
     .on_timeout(
         (EXPECTED_DAD_RETRANSMIT_TIMER * EXPECTED_DUP_ADDR_DETECT_TRANSMITS
             + ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT)
@@ -626,11 +626,9 @@ async fn duplicate_address_detection<E: netemul::Endpoint>(name: &str) -> Result
         || Err(anyhow::anyhow!("timed out")),
     )
     .await
-    .context(format!(
-        "failed to wait for address {} to be assigned",
-        ipv6_consts::LINK_LOCAL_ADDR
-    ))?;
-    Ok(())
+    .with_context(|| {
+        format!("failed to wait for address {} to be assigned", ipv6_consts::LINK_LOCAL_ADDR)
+    })
 }
 
 #[variants_test]
@@ -891,6 +889,7 @@ async fn slaac_regeneration_after_dad_failure<E: netemul::Endpoint>(name: &str) 
             }
         },
     )
+    .map_err(anyhow::Error::from)
     .on_timeout(
         (EXPECTED_DAD_RETRANSMIT_TIMER * EXPECTED_DUP_ADDR_DETECT_TRANSMITS * expected_addrs
             + ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT)

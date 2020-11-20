@@ -593,5 +593,6 @@ mod helpers {
             },
         )
         .await
+        .context("failed to wait for interface online")
     }
 }

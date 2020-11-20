@@ -6,6 +6,7 @@
 
 use anyhow::Context as _;
 use fuchsia_async::TimeoutExt as _;
+use futures::future::TryFutureExt as _;
 use futures::stream::{self, StreamExt as _, TryStreamExt as _};
 use net_declare::{fidl_ip_v4, fidl_subnet};
 use netstack_testing_common::environments::{KnownServices, Netstack2, TestSandboxExt as _};
@@ -149,21 +150,22 @@ async fn client_acquires_addr(
                      name: _,
                      .. // TODO(fxbug.dev/63727): Remove this when we have a validated type.
                 }| {
-                   addresses.as_ref()?.iter().find_map(
-                       |fidl_fuchsia_net_interfaces::Address { addr, .. /* TODO(fxbug.dev/63727): Remove this when we have a validated type. */ }| {
+                    addresses.as_ref()?.iter().find_map(
+                        |fidl_fuchsia_net_interfaces::Address { addr, .. /* TODO(fxbug.dev/63727): Remove this when we have a validated type. */ }| {
 
-                           addr.and_then(|subnet| {
-                               let fidl_fuchsia_net::Subnet { addr, prefix_len: _ } = subnet;
-                               match addr {
-                                   fidl_fuchsia_net::IpAddress::Ipv4(_) => Some(subnet),
-                                   fidl_fuchsia_net::IpAddress::Ipv6(_) => None,
-                               }
-                           })
-                       },
-                   )
-               },
-           )
-           .on_timeout(
+                            addr.and_then(|subnet| {
+                                let fidl_fuchsia_net::Subnet { addr, prefix_len: _ } = subnet;
+                                match addr {
+                                    fidl_fuchsia_net::IpAddress::Ipv4(_) => Some(subnet),
+                                    fidl_fuchsia_net::IpAddress::Ipv6(_) => None,
+                                }
+                            })
+                        },
+                    )
+                },
+            )
+            .map_err(anyhow::Error::from)
+            .on_timeout(
                 // Netstack's DHCP client retries every 3 seconds. At the time of writing, dhcpd
                 // loses the race here and only starts after the first request from the DHCP
                 // client, which results in a 3 second toll. This test typically takes ~4.5
@@ -172,7 +174,7 @@ async fn client_acquires_addr(
                 || Err(anyhow::anyhow!("timed out")),
             )
             .await
-            .context("failed to observe DHCP acquisition on client ep {}")?;
+            .context("failed to observe DHCP acquisition on client ep")?;
             assert_eq!(addr, want_addr);
 
             // Address acquired; bind is expected to succeed.

@@ -34,8 +34,8 @@ use {
     fuchsia_component::server::ServiceFs,
     fuchsia_zircon as zx,
     futures::{
-        future::{self, OptionFuture},
-        FutureExt as _, StreamExt as _,
+        future::{self, Future, FutureExt as _, OptionFuture},
+        stream::StreamExt as _,
     },
     log::{info, warn},
     std::sync::Arc,
@@ -151,9 +151,11 @@ async fn main() -> Result<(), Error> {
     let interface_state_service =
         fuchsia_component::client::connect_to_service::<finterfaces::StateMarker>()
             .context("failed to connect to fuchsia.net.interfaces/State")?;
-    let internet_reachable =
-        fidl_fuchsia_net_interfaces_ext::wait_for_reachability(&interface_state_service)
-            .map(|r| r.context("failed to wait for network reachability"));
+    let internet_reachable = fidl_fuchsia_net_interfaces_ext::wait_for_reachability(
+        fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&interface_state_service)
+            .context("failed to create network interface event stream")?,
+    )
+    .map(|r| r.context("reachability status stream error"));
 
     fasync::Task::spawn(async move {
         maintain_utc(
@@ -264,7 +266,7 @@ async fn maintain_utc<R: 'static, T: 'static, F: 'static, D: 'static>(
 ) where
     R: Rtc,
     T: TimeSource,
-    F: futures::Future<Output = Result<(), Error>>,
+    F: Future<Output = Result<(), Error>>,
     D: Diagnostics,
 {
     info!("record the state at initialization.");
@@ -352,7 +354,6 @@ mod tests {
             time_source::{Event as TimeSourceEvent, FakeTimeSource, Sample},
         },
         fidl_fuchsia_time_external as ftexternal, fuchsia_zircon as zx,
-        futures::FutureExt,
         lazy_static::lazy_static,
         std::task::Poll,
     };
