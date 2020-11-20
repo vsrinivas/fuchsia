@@ -45,6 +45,17 @@ async fn main() {
         ]]
     );
 
+    treasure.insert(
+        ".\\archivist:0/routing-tests:0/offers-to-children-unavailable:0/child-open-unrequested:0"
+            .to_string(),
+        vec![vec![
+            "No capability available",
+            "fidl.test.components.Trigger",
+            "/routing-tests:0/offers-to-children-unavailable:0/child-open-unrequested:0",
+            "`use` declaration",
+        ]],
+    );
+
     if let Ok((mut result, _)) = reader.snapshot_then_subscribe::<Logs>() {
         while let Some(log_record) = result.next().await {
             if let Some(log_str) = log_record.msg() {

@@ -49,6 +49,9 @@ async fn verify_routing_failure_messages() {
                 EventMatcher::ok().r#type(events::Stopped::TYPE).moniker(
                     "/routing-tests:0/offers-to-children-unavailable:0/child-for-offer-from-sibling:0",
                 ),
+                EventMatcher::ok().r#type(events::Stopped::TYPE).moniker(
+                    "/routing-tests:0/offers-to-children-unavailable:0/child-open-unrequested:0",
+                ),
                 EventMatcher::ok()
                     .r#type(events::Stopped::TYPE)
                     .moniker("/reader:0")
@@ -72,6 +75,12 @@ async fn verify_routing_failure_messages() {
                     .capability_name("fuchsia.logger.LogSink")
                     .moniker(
                         "/routing-tests:0/offers-to-children-unavailable:0/child-for-offer-from-sibling:0",
+                    ),
+                EventMatcher::ok()
+                    .r#type(events::CapabilityRouted::TYPE)
+                    .capability_name("fuchsia.logger.LogSink")
+                    .moniker(
+                        "/routing-tests:0/offers-to-children-unavailable:0/child-open-unrequested:0",
                     ),
                 EventMatcher::ok()
                     .r#type(events::CapabilityRouted::TYPE)

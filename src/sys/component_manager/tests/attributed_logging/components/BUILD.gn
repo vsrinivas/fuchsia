@@ -55,6 +55,13 @@ fuchsia_component("empty-component") {
   deps = [ ":empty" ]
 }
 
+fuchsia_component("without-use") {
+  testonly = true
+  manifest = "meta/without-use.cml"
+  component_name = "without-use"
+  deps = [ ":use-unoffered" ]
+}
+
 fuchsia_component("use-unoffered-component") {
   testonly = true
   manifest = "meta/use-unoffered.cml"
@@ -82,5 +89,6 @@ group("all-components") {
     ":reader",
     ":routing-tests",
     ":use-unoffered-component",
+    ":without-use",
   ]
 }

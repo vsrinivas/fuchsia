@@ -28,6 +28,13 @@
             name: "child-that-doesnt-expose",
             url: "fuchsia-pkg://fuchsia.com/attributed-logging-test#meta/empty.cm",
         },
+
+        // A child which doesn't `use` the Trigger capability, but tries to open it.
+        {
+            name: "child-open-unrequested",
+            url: "fuchsia-pkg://fuchsia.com/attributed-logging-test#meta/without-use.cm",
+            startup: "eager",
+        },
     ],
     offer: [
         {
@@ -36,12 +43,16 @@
             to: [
                 "#child-for-offer-from-parent",
                 "#child-for-offer-from-sibling",
+                "#child-open-unrequested",
             ],
         },
         {
             protocol: [ "fidl.test.components.Trigger" ],
             from: "parent",
-            to: [ "#child-for-offer-from-parent" ],
+            to: [
+                "#child-for-offer-from-parent",
+                "#child-open-unrequested",
+            ],
         },
         {
             protocol: [ "fidl.test.components.Trigger" ],

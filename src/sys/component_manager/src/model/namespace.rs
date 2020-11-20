@@ -424,6 +424,8 @@ impl IncomingNamespace {
         realm: WeakRealm,
     ) -> Result<(), ModelError> {
         let use_clone = use_.clone();
+        // Used later to attach a not found handler to namespace directories.
+        let not_found_realm_copy = realm.clone();
         let route_open_fn = Box::new(
             move |flags: u32,
                   mode: u32,
@@ -473,7 +475,43 @@ impl IncomingNamespace {
             },
         );
 
-        let service_dir = svc_dirs.entry(use_.target_path.dirname.clone()).or_insert(pfs::simple());
+        let service_dir = svc_dirs.entry(use_.target_path.dirname.clone()).or_insert_with(|| {
+            let new_dir = pfs::simple();
+            // Grab a copy of the directory path, it will be needed if we log a
+            // failed open request.
+            let dir_path = use_.target_path.dirname.clone();
+            new_dir.clone().set_not_found_handler(Box::new(move |path| {
+                // Clone the realm pointer and pass the copy into the logger.
+                let realm_for_logger = not_found_realm_copy.clone();
+                let requested_path = format!("{}/{}", dir_path, path);
+
+                // Spawn a task which logs the error. It would be nicer to not
+                // spawn a task, but locking the realm is async and this
+                // closure is not.
+                fasync::Task::spawn(async move {
+                    match realm_for_logger.upgrade() {
+                        Ok(target_realm) => {
+                            let execution = target_realm.lock_execution().await;
+                            let logger = match &execution.runtime {
+                                Some(Runtime { namespace: Some(ns), .. }) => ns.get_logger(),
+                                _ => &MODEL_LOGGER,
+                            };
+                            logger.log(
+                                Level::Warn,
+                                format_args!(
+                                    "No capability available at path {} for component {}, \
+                                     verify the component has the proper `use` declaration.",
+                                    requested_path, target_realm.abs_moniker
+                                ),
+                            );
+                        }
+                        Err(_) => {}
+                    }
+                })
+                .detach();
+            }));
+            new_dir
+        });
         service_dir
             .clone()
             .add_entry(
