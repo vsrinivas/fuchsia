@@ -14,11 +14,10 @@ set -o pipefail
 # cd to fuchsia checkout root.
 cd "$( dirname "${BASH_SOURCE[0]}" )/../../../../.."
 
-scripts/fx set core.x64 --with //tools/integration/cmd/fint:proto
-# TODO(garymm): We should probably build the :proto target instead, but currently
-# that builds a static library which is unnecesarily slow. We should fix the
-# proto_library() GN template so it doesn't unnecessarily declare a static_library.
-scripts/fx ninja -C out/default tools/integration/cmd/fint:proto_gen
-# TODO(garymm): Support descpb.bin file.
+scripts/fx set core.x64 --with //tools/integration/cmd/fint:context,//tools/integration/cmd/fint:static
+scripts/fx ninja -C out/default tools/integration/cmd/fint:context tools/integration/cmd/fint:static
+
 cp out/default/gen/go-proto-gen/src/tools/integration/cmd/fint/proto/*.pb.go \
+  tools/integration/cmd/fint/proto/
+cp out/default/obj/tools/integration/cmd/fint/*.desc.pb \
   tools/integration/cmd/fint/proto/

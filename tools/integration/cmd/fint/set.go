@@ -148,6 +148,12 @@ func runGen(
 		"--fail-on-unused-args",
 	}
 
+	if staticSpec.GenerateCompdb {
+		genCmd = append(genCmd, "--export-compile-commands")
+	}
+	if staticSpec.GenerateIde {
+		genCmd = append(genCmd, "--ide=json")
+	}
 	if staticSpec.CollectMetrics {
 		tracelogPath := filepath.Join(contextSpec.BuildDir, fuchsiaGNTrace)
 		genCmd = append(genCmd, fmt.Sprintf("--tracelog=%s", tracelogPath))

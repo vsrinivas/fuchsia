@@ -89,4 +89,10 @@ message Static {
   // Whether to use goma for running ninja. Will be ignored (and goma will not
   // be used) when building with some experimental toolchain versions.
   bool use_goma = 18;
+
+  // Whether to generate a listing of the commands run during the build.
+  bool generate_compdb = 19;
+
+  // Whether to generate an IDE project.json file containing target information.
+  bool generate_ide = 20;
 }

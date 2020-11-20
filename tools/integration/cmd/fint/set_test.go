@@ -52,6 +52,24 @@ func TestRunGen(t *testing.T) {
 				fmt.Sprintf("--tracelog=%s", filepath.Join(contextSpec.BuildDir, fuchsiaGNTrace)),
 			},
 		},
+		{
+			name: "generate compdb",
+			staticSpec: &fintpb.Static{
+				GenerateCompdb: true,
+			},
+			expectedOptions: []string{
+				"--export-compile-commands",
+			},
+		},
+		{
+			name: "generate IDE project",
+			staticSpec: &fintpb.Static{
+				GenerateIde: true,
+			},
+			expectedOptions: []string{
+				"--ide=json",
+			},
+		},
 	}
 
 	for _, tc := range testCases {
