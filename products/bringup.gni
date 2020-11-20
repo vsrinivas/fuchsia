@@ -43,4 +43,4 @@ cache_package_labels = []
 
 universe_package_labels = [ "//tools/net/device-finder:host" ]
 
-host_labels = []
+host_labels = [ "//tools/devshell:fx" ]

@@ -1,10 +1,35 @@
 # Copyright 2020 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
-
-# Tests for fx scripts
 import("//build/go/go_test.gni")
 import("//scripts/sdk/gn/test/build/host_script_test.gni")
+
+if (!is_host) {
+  group("fx") {
+    testonly = true
+    deps = []
+  }
+} else {
+  group("fx") {
+    testonly = true
+    deps = [
+      "//src/sys/pkg/bin/pm:host",
+      "//third_party/openssh-portable/fuchsia/developer-keys:ssh_config($default_toolchain)",
+      "//tools/debug/symbolize",
+      "//tools/net/device-finder:host",
+      "//tools/symbol-index:symbol-index",
+
+      # For `fx format-code`.
+      "//zircon/tools/fidl:fidl-format",
+
+      # For `fx lint`.
+      "//zircon/tools/fidl:fidl-lint",
+    ]
+  }
+}
+
+# Tests need to be in the default toolchain, because build_api_module only
+# collects metadata (into tests.json) from the default toolchain.
 group("tests") {
   testonly = true
   deps = [ ":fx_script_tests($host_toolchain)" ]
@@ -121,10 +146,10 @@ host_script_test_data("fx_bash_tests") {
         "//tools/devshell/lib/fvm.sh",
         "//tools/devshell/lib/fx-cmd-locator.sh",
         "//tools/devshell/lib/fx-flash.sh",
+        "//tools/devshell/lib/fx-mkzedboot.sh",
         "//tools/devshell/lib/fx-optional-features.sh",
         "//tools/devshell/lib/fx-remote.sh",
         "//tools/devshell/lib/image_build_vars.sh",
-        "//tools/devshell/lib/fx-mkzedboot.sh",
         "//tools/devshell/lib/metrics.sh",
         "//tools/devshell/lib/platform.sh",
         "//tools/devshell/lib/style.sh",
@@ -187,6 +212,7 @@ generated_file("run_fx_bash_tests_driver") {
   }
 }
 
+# This is the entrypoint for the fx script tests.
 host_script_test("fx_script_tests") {
   # Script path is relative to $testroot
   test_root = "fx_bash_tests"

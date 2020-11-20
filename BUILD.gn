@@ -742,7 +742,6 @@ build_api_module("tool_paths") {
   data_keys = [ "tool_paths" ]
   walk_keys = [ "tool_barrier" ]
   deps = [
-    ":devshell-tools",
     ":tool_paths.llvm-tools",
     ":tool_paths.metadata",
     "//build/images:packages",
@@ -914,7 +913,6 @@ build_api_module("all_package_manifest_paths") {
 group("default") {
   testonly = true
   deps = [
-    "//:devshell-tools",
     "//:host",
     "//build:tests",
     "//build/images:packages",
@@ -955,19 +953,6 @@ group("additional_universe_packages") {
   testonly = true
   visibility = [ "//build/images:universe_packages" ]
   public_deps = universe_package_labels
-}
-
-group("devshell-tools") {
-  # The following tools are used by devshell scripts that can be used
-  # before a build is complete, and should always be part of the build graph.
-  # See fxbug.dev/60822 for additional context.
-  deps = [
-    # For `fx format-code`.
-    "//zircon/tools/fidl:fidl-format($host_toolchain)",
-
-    # For `fx lint`.
-    "//zircon/tools/fidl:fidl-lint($host_toolchain)",
-  ]
 }
 
 group("host") {

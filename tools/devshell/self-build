@@ -1,0 +1,24 @@
+#!/bin/bash
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+#### CATEGORY=Build
+### build the minimal host dependencies to run fx main workflows
+
+## Usage:
+##     fx self-build
+##        Executes some sanity checks and performs the equivalent of
+##        'fx build --no-zircon :host'
+##
+
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh \
+    || exit $?
+
+
+if [[ $# -ne 0 ]]; then
+  usage
+  exit 0
+fi
+
+fx-command-exec build --no-zircon :host
