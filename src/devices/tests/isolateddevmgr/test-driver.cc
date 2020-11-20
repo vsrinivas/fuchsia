@@ -6,13 +6,14 @@
 
 #include <vector>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/platform-defs.h>
 #include <ddktl/device.h>
 #include <fbl/alloc_checker.h>
+
+#include "src/devices/tests/isolateddevmgr/metadata-test-bind.h"
 
 class IsolatedDevMgrTestDriver;
 using DeviceType = ddk::Device<IsolatedDevMgrTestDriver, ddk::Unbindable, ddk::Messageable>;
@@ -81,11 +82,4 @@ static constexpr zx_driver_ops_t isolateddevmgr_test_driver_ops = []() -> zx_dri
   return ops;
 }();
 
-// clang-format off
-ZIRCON_DRIVER_BEGIN(metadataTest, isolateddevmgr_test_driver_ops, "zircon", "0.1", 4)
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_TEST),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_METADATA_TEST),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_TEST_CHILD_1),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_TEST_CHILD_2),
-ZIRCON_DRIVER_END(metadataTest)
-    // clang-format on
+ZIRCON_DRIVER(metadata-test, isolateddevmgr_test_driver_ops, "zircon", "0.1")

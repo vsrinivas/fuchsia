@@ -2,29 +2,27 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 import("//zircon/system/ulib/devmgr-integration-test/isolated_devmgr.gni")
 
+bind_rules("metadata-test-bind") {
+  rules = "metadata-test.bind"
+  output = "metadata-test-bind.h"
+  deps = [ "//src/devices/bind/test.platform" ]
+}
+
 driver_module("isolateddevmgr-test-driver") {
-  configs += [
-    "//build/config:all_source",
-    "//build/config/fuchsia:enable_zircon_asserts",
-  ]
   configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
-  configs += [
-    "//build/config/fuchsia:static_cpp_standard_library",
-    "//build/unification/config:zircon-migrated",
-  ]
+  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
   sources = [ "test-driver.cc" ]
   deps = [
+    ":metadata-test-bind",
     "//sdk/fidl/fuchsia.device.manager.test:fuchsia.device.manager.test_c",
     "//sdk/lib/fdio",
     "//src/devices/lib/driver",
     "//src/lib/ddk",
-
-    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
-    "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//src/lib/ddktl",
   ]
 }
