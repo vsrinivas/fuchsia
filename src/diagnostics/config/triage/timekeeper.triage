@@ -1,0 +1,203 @@
+{
+    select: {
+        backstop: "INSPECT:timekeeper.cmx:root:backstop",
+        current_utc: "INSPECT:timekeeper.cmx:root/current:clock_utc",
+        kernel_utc: "INSPECT:timekeeper.cmx:root/current:kernel_utc",
+        primary_source_status: "INSPECT:timekeeper.cmx:root/primary_time_source:status",
+        primary_estimate_0_counter: "INSPECT:timekeeper.cmx:root/primary_track/estimate_0:counter",
+        rtc_initialization: "INSPECT:timekeeper.cmx:root/real_time_clock:initialization",
+        rtc_write_failure_count: "INSPECT:timekeeper.cmx:root/real_time_clock:write_failures",
+    },
+    eval: {
+        // It would be much better to use network_available time, but that's not
+        // always present. Assume that the only condition we have a source
+        // without status is because we were waiting for network before
+        // connecting.
+        network_probably_unavailable: "primary_source_status == \"Launched\"",
+        primary_source_unhealthy: "And(primary_source_status != \"Launched\", primary_source_status != \"Ok\")",
+        primary_estimate_ok: "primary_estimate_0_counter > 0",
+        clock_started: "current_utc > backstop",
+        clock_difference: "current_utc - kernel_utc",
+        rtc_present: "And(rtc_initialization != \"NoDevices\", rtc_initialization != \"InvalidBeforeBackstop\")",
+        rtc_read_ok: "rtc_initialization == \"Succeeded\"",
+    },
+    act: {
+        not_started_due_to_network: {
+            type: "Warning",
+            trigger: "And(Not(clock_started), network_probably_unavailable)",
+            print: "Time not yet available, suspect network has never been connected",
+        },
+        not_started_other_reason: {
+            type: "Warning",
+            trigger: "And(Not(clock_started), Not(network_probably_unavailable))",
+            print: "Time not yet available even though network has probably been connected",
+        },
+        rtc_time_only: {
+            type: "Warning",
+            trigger: "And(clock_started, Not(primary_estimate_ok))",
+            print: "Time is available from RTC but not network, network may have never been connected",
+        },
+        started_but_source_unhealthy: {
+            type: "Warning",
+            trigger: "And(clock_started, primary_source_unhealthy)",
+            print: "Time is available but time source is reporting unhealthy. See timekeeper.cmx/primary_time_source",
+        },
+        clock_inconsistency: {
+            type: "Warning",
+            trigger: "And(clock_started, Or(clock_difference > 2000000000, clock_difference < -2000000000))",
+            print: "Kernel and Userspace UTC clocks differ by more than 2 seconds, file bugs in the Time component",
+        },
+        rtc_could_not_be_read: {
+            type: "Warning",
+            trigger: "And(rtc_present, Not(rtc_read_ok))",
+            print: "Real time clock present but could not be read. See timekeeper.cmx:root/real_time_clock. File bugs in the Time component",
+        },
+        rtc_write_failures: {
+            type: "Warning",
+            trigger: "And(rtc_present, rtc_write_failure_count > 0)",
+            print: "Failures while writing to real time clock. See timekeeper.cmx:root/real_time_clock. File bugs in the Time component",
+        },
+
+        // TODO(jsankey): Once we've worked out a way to use fields that are
+        // currently optional, add actions for the following conditions:
+        // * Covariance higher than expected
+        // * Last time update older than expected
+        // * Time source errors present
+        // * Sample validation errors present
+        // * Monitor track problems present
+        // * Large jumps in time
+    },
+    test: {
+        status_ok: {
+            yes: [],
+            no: [
+                "not_started_due_to_network",
+                "not_started_other_reason",
+                "started_but_source_unhealthy",
+                "rtc_time_only",
+            ],
+            values: {
+                backstop: 33333,
+                current_utc: 123456789,
+                primary_source_status: "Ok",
+                primary_estimate_0_counter: 1,
+            },
+        },
+        no_time_network_problem: {
+            yes: [
+                "not_started_due_to_network",
+            ],
+            no: [
+                "not_started_other_reason",
+                "started_but_source_unhealthy",
+                "rtc_time_only",
+            ],
+            values: {
+                backstop: 33333,
+                current_utc: 33333,
+                primary_source_status: "Launched",
+                primary_estimate_0_counter: 0,
+            },
+        },
+        no_time_other_problem: {
+            yes: [
+                "not_started_other_reason",
+            ],
+            no: [
+                "not_started_due_to_network",
+                "started_but_source_unhealthy",
+                "rtc_time_only",
+            ],
+            values: {
+                backstop: 33333,
+                current_utc: 33333,
+                primary_source_status: "Ok",
+                primary_estimate_0_counter: 0,
+            },
+        },
+        rtc_time_only: {
+            yes: [
+                "rtc_time_only",
+            ],
+            no: [
+                "not_started_due_to_network",
+                "not_started_other_reason",
+                "started_but_source_unhealthy",
+            ],
+            values: {
+                backstop: 33333,
+                current_utc: 12345789,
+                primary_source_status: "Ok",
+                primary_estimate_0_counter: 0,
+            },
+        },
+        clocks_consistent: {
+            yes: [],
+            no: [
+                "clock_inconsistency",
+            ],
+            values: {
+                backstop: 3333,
+                current_utc: 4000000000,
+                kernel_utc: 5000000000,
+            },
+        },
+        kernel_clock_exceeds_userspace_clock: {
+            yes: [
+                "clock_inconsistency",
+            ],
+            no: [],
+            values: {
+                backstop: 3333,
+                current_utc: 4000000000,
+                kernel_utc: 7000000000,
+            },
+        },
+        userspace_clock_exceeds_kernel_clock: {
+            yes: [
+                "clock_inconsistency",
+            ],
+            no: [],
+            values: {
+                backstop: 3333,
+                current_utc: 9000000000,
+                kernel_utc: 6000000000,
+            },
+        },
+        rtc_ok: {
+            yes: [],
+            no: [
+                "rtc_could_not_be_read",
+                "rtc_write_failures",
+            ],
+            values: {
+                rtc_initialization: "InvalidBeforeBackstop",
+                rtc_write_failure_count: 0,
+            },
+        },
+        rtc_read_failure: {
+            yes: [
+                "rtc_could_not_be_read",
+            ],
+            no: [
+                "rtc_write_failures",
+            ],
+            values: {
+                rtc_initialization: "ConnectionFailed",
+                rtc_write_failure_count: 0,
+            },
+        },
+        rtc_write_failure: {
+            yes: [
+                "rtc_write_failures",
+            ],
+            no: [
+                "rtc_could_not_be_read",
+            ],
+            values: {
+                rtc_initialization: "Succeeded",
+                rtc_write_failure_count: 2,
+            },
+        },
+    },
+}

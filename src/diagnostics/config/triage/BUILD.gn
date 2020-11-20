@@ -26,6 +26,7 @@ triage_files = [
   "scenic.triage",
   "stash.triage",
   "stash_secure.triage",
+  "timekeeper.triage",
   "timezone.triage",
 ]
 
