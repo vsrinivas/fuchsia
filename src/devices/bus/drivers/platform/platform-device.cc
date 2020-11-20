@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "platform-device.h"
+#include "src/devices/bus/drivers/platform/platform-device.h"
 
 #include <assert.h>
 #include <lib/zircon-internal/align.h>
@@ -19,7 +19,7 @@
 #include <ddk/platform-defs.h>
 #include <fbl/function.h>
 
-#include "platform-bus.h"
+#include "src/devices/bus/drivers/platform/platform-bus.h"
 
 namespace platform_bus {
 

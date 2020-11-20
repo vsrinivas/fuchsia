@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "platform-proxy.h"
+#include "src/devices/bus/drivers/platform/platform-proxy.h"
 
 #include <lib/zircon-internal/align.h>
 #include <stdint.h>
@@ -13,10 +13,11 @@
 
 #include <utility>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_lock.h>
+
+#include "src/devices/bus/drivers/platform/platform-bus-bind.h"
 
 namespace platform_bus {
 
@@ -265,7 +266,4 @@ static constexpr zx_driver_ops_t proxy_driver_ops = []() {
 
 }  // namespace platform_bus
 
-// clang-format off
-ZIRCON_DRIVER_BEGIN(platform_bus_proxy, platform_bus::proxy_driver_ops, "zircon", "0.1", 1)
-  BI_ABORT_IF_AUTOBIND,
-ZIRCON_DRIVER_END(platform_bus_proxy)
+ZIRCON_DRIVER(platform_bus_proxy, platform_bus::proxy_driver_ops, "zircon", "0.1")

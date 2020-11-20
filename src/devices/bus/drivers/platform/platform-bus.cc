@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "platform-bus.h"
+#include "src/devices/bus/drivers/platform/platform-bus.h"
 
 #include <assert.h>
 #include <fuchsia/boot/c/fidl.h>
@@ -16,7 +16,6 @@
 
 #include <algorithm>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
@@ -26,7 +25,8 @@
 #include <fbl/algorithm.h>
 #include <fbl/auto_lock.h>
 
-#include "cpu-trace.h"
+#include "src/devices/bus/drivers/platform/cpu-trace.h"
+#include "src/devices/bus/drivers/platform/platform-bus-bind.h"
 
 namespace platform_bus {
 
@@ -656,8 +656,4 @@ static constexpr zx_driver_ops_t driver_ops = []() {
 
 }  // namespace platform_bus
 
-// clang-format off
-ZIRCON_DRIVER_BEGIN(platform_bus, platform_bus::driver_ops, "zircon", "0.1", 1)
-  // devmgr loads us directly, so we need no binding information here
-  BI_ABORT_IF_AUTOBIND,
-ZIRCON_DRIVER_END(platform_bus)
+ZIRCON_DRIVER(platform_bus, platform_bus::driver_ops, "zircon", "0.1")

@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 import("//src/sys/build/components.gni")
@@ -13,16 +14,14 @@ group("platform") {
   ]
 }
 
+bind_rules("platform-bus-bind") {
+  output = "platform-bus-bind.h"
+  disable_autobind = true
+}
+
 driver_module("platform-bus") {
-  configs += [
-    "//build/config:all_source",
-    "//build/config/fuchsia:enable_zircon_asserts",
-  ]
   configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
   configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
-  if (is_fuchsia) {
-    configs += [ "//build/unification/config:zircon-migrated" ]
-  }
   sources = [
     "cpu-trace.cc",
     "device-resources.cc",
@@ -30,6 +29,7 @@ driver_module("platform-bus") {
     "platform-device.cc",
   ]
   deps = [
+    ":platform-bus-bind",
     "//sdk/banjo/ddk.protocol.clockimpl",
     "//sdk/banjo/ddk.protocol.gpio",
     "//sdk/banjo/ddk.protocol.gpioimpl",
@@ -55,23 +55,14 @@ driver_module("platform-bus") {
 }
 
 driver_module("platform-bus.proxy") {
-  configs += [
-    "//build/config:all_source",
-    "//build/config/fuchsia:enable_zircon_asserts",
-  ]
   configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
   configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
-  if (is_fuchsia) {
-    configs += [ "//build/unification/config:zircon-migrated" ]
-  }
   sources = [ "platform-proxy.cc" ]
   deps = [
+    ":platform-bus-bind",
     "//sdk/banjo/ddk.protocol.platform.device",
     "//src/devices/lib/driver",
     "//src/lib/ddk",
-
-    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
-    "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//src/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/sync",
@@ -89,6 +80,7 @@ test("platform-bus-unittest") {
     "platform-device.cc",
   ]
   deps = [
+    ":platform-bus-bind",
     "//sdk/banjo/ddk.protocol.clockimpl",
     "//sdk/banjo/ddk.protocol.gpio",
     "//sdk/banjo/ddk.protocol.gpioimpl",
