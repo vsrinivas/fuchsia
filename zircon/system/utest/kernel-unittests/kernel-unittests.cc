@@ -50,4 +50,25 @@ TEST(KernelUnittests, run_kernel_unittests) {
   ASSERT_EQ(call_status, ZX_OK);
 }
 
+// Run certain unit tests in loops, to shake out flakes.
+TEST(KernelUnittests, repeated_run_certain_unittests) {
+  constexpr std::array commands{ "ut timer", "ut pi" };
+  constexpr int kLoops = 10;
+
+  zx_handle_t channel;
+  zx_status_t status = connect_to_service("/svc/fuchsia.kernel.DebugBroker", &channel);
+  ASSERT_OK(status);
+
+  for (int i = 0; i < kLoops; i++) {
+    for (auto command : commands) {
+      zx_status_t call_status;
+      status = fuchsia_kernel_DebugBrokerSendDebugCommand(channel, command, strlen(command),
+                                                          &call_status);
+      ASSERT_OK(status);
+      ASSERT_OK(call_status);
+    }
+  }
+  zx_handle_close(channel);
+}
+
 }  // namespace
