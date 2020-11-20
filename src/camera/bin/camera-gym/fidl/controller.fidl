@@ -4,33 +4,23 @@
 
 library fuchsia.camera.gym;
 
-const uint32 MAX_COMMAND_ITEMS = 64;
-
 /// CommandError is the return status for the transactions between the camera-gym CLI front end and
 /// the instance of camera-gym running.
 enum CommandError {
-    OUT_OF_RANGE = 1; // Argument value out of range
-};
-
-/// "clear" command shall clear the stored command list.
-struct ClearCommand {
-};
-
-/// "sleep-ms" command shall delay execution of the next command.
-struct SleepMsCommand {
-    uint32 delay; // How long to wait in milliseconds
+    NO_EXECUTE = 1; // No entity to execute command
+    OUT_OF_RANGE = 2; // Argument value out of range
 };
 
 /// "set-config" command shall call SetCurrentConfiguration for current camera.
 struct SetConfigCommand {
     uint32 config_id; // Which configuration?
-    bool sync; // Wait until operation completes
+    bool async; // Do not wait until operation completes before returning
 };
 
 /// "add-stream" command shall add the specified stream to the collage.
 struct AddStreamCommand {
     uint32 stream_id; // Which stream?
-    bool sync; // Wait until operation completes
+    bool async; // Do not wait until operation completes before returning
 };
 
 /// "set-crop" command shall set the crop region for the specified stream.
@@ -40,7 +30,7 @@ struct SetCropCommand {
     float32 y; // Crop region
     float32 width; // Crop region
     float32 height; // Crop region
-    bool sync; // Wait until operation completes
+    bool async; // Do not wait until operation completes before returning
 };
 
 /// "set-resolution" command shall set the output resolution for the specified stream.
@@ -48,19 +38,20 @@ struct SetResolutionCommand {
     uint32 stream_id; // Which stream?
     uint32 width; // New resolution
     uint32 height; // New resolution
-    bool sync; // Wait until operation completes
+    bool async; // Do not wait until operation completes before returning
 };
 
 union Command {
-    1: ClearCommand clear;
-    2: SleepMsCommand sleep_ms;
-    3: SetConfigCommand set_config;
-    4: AddStreamCommand add_stream;
-    5: SetCropCommand set_crop;
-    6: SetResolutionCommand set_resolution;
+    1: SetConfigCommand set_config;
+    2: AddStreamCommand add_stream;
+    3: SetCropCommand set_crop;
+    4: SetResolutionCommand set_resolution;
 };
 
 [Discoverable]
 protocol Controller {
-    SendCommands(vector<Command>:MAX_COMMAND_ITEMS commands) -> () error CommandError;
+    // SendCommand sends a single Command to camera-gym to execute.
+    //
+    // The error return indicates reason for failure of execution.
+    SendCommand(Command command) -> () error CommandError;
 };
