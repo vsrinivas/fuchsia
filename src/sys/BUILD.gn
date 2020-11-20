@@ -5,6 +5,7 @@
 group("sys") {
   testonly = true
   deps = [
+    "activity",
     "component_manager:component-manager",
     "component_test_runner",
     "core",
@@ -16,6 +17,7 @@ group("sys") {
 group("tests") {
   testonly = true
   deps = [
+    "activity:tests",
     "appmgr:tests",
     "build:tests",
     "component_index:tests",

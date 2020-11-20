@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_UI_BIN_ACTIVITY_ACTIVITY_CONTROL_CONNECTION_H_
-#define SRC_UI_BIN_ACTIVITY_ACTIVITY_CONTROL_CONNECTION_H_
+#ifndef SRC_SYS_ACTIVITY_ACTIVITY_CONTROL_CONNECTION_H_
+#define SRC_SYS_ACTIVITY_ACTIVITY_CONTROL_CONNECTION_H_
 
 #include <fuchsia/ui/activity/control/cpp/fidl.h>
 #include <inttypes.h>
@@ -16,8 +16,8 @@
 
 #include <src/lib/fxl/macros.h>
 
-#include "src/ui/bin/activity/common.h"
-#include "src/ui/bin/activity/state_machine_driver.h"
+#include "src/sys/activity/common.h"
+#include "src/sys/activity/state_machine_driver.h"
 
 namespace activity {
 
@@ -49,4 +49,4 @@ class ActivityControlConnection : public fuchsia::ui::activity::control::Control
 
 }  // namespace activity
 
-#endif  // SRC_UI_BIN_ACTIVITY_ACTIVITY_CONTROL_CONNECTION_H_
+#endif  // SRC_SYS_ACTIVITY_ACTIVITY_CONTROL_CONNECTION_H_

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/ui/bin/activity/state_machine_driver.h"
+#include "src/sys/activity/state_machine_driver.h"
 
 #include <fuchsia/ui/activity/cpp/fidl.h>
 
@@ -11,7 +11,7 @@
 #include <optional>
 
 #include "lib/gtest/test_loop_fixture.h"
-#include "src/ui/bin/activity/activity_state_machine.h"
+#include "src/sys/activity/activity_state_machine.h"
 
 namespace {
 

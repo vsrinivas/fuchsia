@@ -12,8 +12,8 @@
 
 #include <memory>
 
-#include "src/ui/bin/activity/activity_app.h"
-#include "src/ui/bin/activity/state_machine_driver.h"
+#include "src/sys/activity/activity_app.h"
+#include "src/sys/activity/state_machine_driver.h"
 
 int main(void) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);

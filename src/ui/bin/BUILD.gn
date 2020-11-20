@@ -4,8 +4,6 @@
 
 group("bin") {
   deps = [
-    "activity",
-    "activity/ctl:activity-ctl",
     "brightness_manager",
     "default_hardware_ime",
     "headless_root_presenter",
@@ -19,7 +17,6 @@ group("tests") {
   testonly = true
 
   deps = [
-    "activity:tests",
     "brightness_manager:brightness_manager_tests",
     "default_hardware_ime:tests",
     "headless_root_presenter/tests",

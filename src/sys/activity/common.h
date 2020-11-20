@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_UI_BIN_ACTIVITY_COMMON_H_
-#define SRC_UI_BIN_ACTIVITY_COMMON_H_
+#ifndef SRC_SYS_ACTIVITY_COMMON_H_
+#define SRC_SYS_ACTIVITY_COMMON_H_
 
 #include <inttypes.h>
 
@@ -14,4 +14,4 @@ using OngoingActivityId = uint32_t;
 
 }  // namespace activity
 
-#endif  // SRC_UI_BIN_ACTIVITY_COMMON_H_
+#endif  // SRC_SYS_ACTIVITY_COMMON_H_

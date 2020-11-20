@@ -2,15 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/ui/bin/activity/activity_provider_connection.h"
+#include "src/sys/activity/activity_provider_connection.h"
 
 #include <fuchsia/ui/activity/cpp/fidl.h>
 
 #include <memory>
 
 #include "garnet/public/lib/gtest/test_loop_fixture.h"
-#include "src/ui/bin/activity/fake_listener.h"
-#include "src/ui/bin/activity/state_machine_driver.h"
+#include "src/sys/activity/fake_listener.h"
+#include "src/sys/activity/state_machine_driver.h"
 
 namespace {
 

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_UI_BIN_ACTIVITY_FAKE_LISTENER_H_
-#define SRC_UI_BIN_ACTIVITY_FAKE_LISTENER_H_
+#ifndef SRC_SYS_ACTIVITY_FAKE_LISTENER_H_
+#define SRC_SYS_ACTIVITY_FAKE_LISTENER_H_
 
 #include <fuchsia/ui/activity/cpp/fidl.h>
 
@@ -48,4 +48,4 @@ class FakeListener : public fuchsia::ui::activity::Listener {
 }  // namespace testing
 }  // namespace activity
 
-#endif  // SRC_UI_BIN_ACTIVITY_FAKE_LISTENER_H_
+#endif  // SRC_SYS_ACTIVITY_FAKE_LISTENER_H_

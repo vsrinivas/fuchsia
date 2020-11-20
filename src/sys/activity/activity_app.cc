@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/ui/bin/activity/activity_app.h"
+#include "src/sys/activity/activity_app.h"
 
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/clock.h>

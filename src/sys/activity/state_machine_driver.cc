@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/ui/bin/activity/state_machine_driver.h"
+#include "src/sys/activity/state_machine_driver.h"
 
 #include <fuchsia/ui/activity/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
@@ -18,8 +18,8 @@
 #include <map>
 
 #include "src/lib/fxl/memory/weak_ptr.h"
-#include "src/ui/bin/activity/activity_state_machine.h"
-#include "src/ui/bin/activity/common.h"
+#include "src/sys/activity/activity_state_machine.h"
+#include "src/sys/activity/common.h"
 
 namespace activity {
 

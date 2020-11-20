@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_UI_BIN_ACTIVITY_STATE_MACHINE_DRIVER_H_
-#define SRC_UI_BIN_ACTIVITY_STATE_MACHINE_DRIVER_H_
+#ifndef SRC_SYS_ACTIVITY_STATE_MACHINE_DRIVER_H_
+#define SRC_SYS_ACTIVITY_STATE_MACHINE_DRIVER_H_
 
 #include <fuchsia/ui/activity/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
@@ -16,8 +16,8 @@
 
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
-#include "src/ui/bin/activity/activity_state_machine.h"
-#include "src/ui/bin/activity/common.h"
+#include "src/sys/activity/activity_state_machine.h"
+#include "src/sys/activity/common.h"
 
 namespace activity {
 
@@ -125,4 +125,4 @@ class StateMachineDriver {
 
 }  // namespace activity
 
-#endif  // SRC_UI_BIN_ACTIVITY_STATE_MACHINE_DRIVER_H_
+#endif  // SRC_SYS_ACTIVITY_STATE_MACHINE_DRIVER_H_

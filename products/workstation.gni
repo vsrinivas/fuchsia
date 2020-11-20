@@ -20,7 +20,7 @@ base_package_labels += [
   "//src/identity/bin:tier_2",
   "//src/media/audio/bundles:services",
   "//src/power:battery",
-  "//src/ui/bin/activity",
+  "//src/sys/activity",
   "//src/ui/bin/brightness_manager",
   "//src/ui/bin/shortcut",
   "//third_party/openssh-portable:openssh-tools",

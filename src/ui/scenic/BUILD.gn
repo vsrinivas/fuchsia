@@ -18,7 +18,7 @@ group("runtime") {
     ":scenic",
     "//garnet/bin/sysmem_connector",
     "//src/graphics/bin/vulkan_loader",
-    "//src/ui/bin/activity",
+    "//src/sys/activity",
     "//src/ui/bin/ime:ime_service",
     "//src/ui/bin/root_presenter",
     "//src/ui/bin/root_presenter:configs",

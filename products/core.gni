@@ -65,6 +65,7 @@ base_package_labels += [
   "//src/recovery/factory_reset",
   "//src/security/policy:appmgr_policy_eng",
   "//src/security/root_ssl_certificates",
+  "//src/sys/activity",
   "//src/sys/appmgr",
   "//src/sys/appmgr:appmgr_scheme_config",
 
@@ -81,7 +82,6 @@ base_package_labels += [
   "//src/sys/time/network_time_service:network-time-service",
   "//src/sys/time/httpsdate_time_source:httpsdate-time-source",
   "//src/sys/time/timekeeper",
-  "//src/ui/bin/activity",
 
   "//third_party/openssh-portable/fuchsia/developer-keys:ssh_config",
 ]

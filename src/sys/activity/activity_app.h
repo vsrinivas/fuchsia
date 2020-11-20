@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_UI_BIN_ACTIVITY_ACTIVITY_APP_H_
-#define SRC_UI_BIN_ACTIVITY_ACTIVITY_APP_H_
+#ifndef SRC_SYS_ACTIVITY_ACTIVITY_APP_H_
+#define SRC_SYS_ACTIVITY_ACTIVITY_APP_H_
 
 #include <fuchsia/ui/activity/control/cpp/fidl.h>
 #include <fuchsia/ui/activity/cpp/fidl.h>
@@ -14,9 +14,9 @@
 #include <memory>
 
 #include "src/lib/fxl/macros.h"
-#include "src/ui/bin/activity/activity_control_connection.h"
-#include "src/ui/bin/activity/activity_provider_connection.h"
-#include "src/ui/bin/activity/activity_tracker_connection.h"
+#include "src/sys/activity/activity_control_connection.h"
+#include "src/sys/activity/activity_provider_connection.h"
+#include "src/sys/activity/activity_tracker_connection.h"
 
 namespace activity {
 
@@ -58,4 +58,4 @@ class ActivityApp {
 
 }  // namespace activity
 
-#endif  // SRC_UI_BIN_ACTIVITY_ACTIVITY_APP_H_
+#endif  // SRC_SYS_ACTIVITY_ACTIVITY_APP_H_

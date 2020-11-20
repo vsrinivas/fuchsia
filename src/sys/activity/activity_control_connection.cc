@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/ui/bin/activity/activity_control_connection.h"
+#include "src/sys/activity/activity_control_connection.h"
 
 #include <fuchsia/ui/activity/control/cpp/fidl.h>
 #include <lib/async/cpp/time.h>

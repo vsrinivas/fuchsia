@@ -151,7 +151,7 @@ group("package_deps") {
     "//topaz/tests/dart-inspect-benchmarks",
 
     # These are used by garnet_input_latency_benchmarks.
-    "//src/ui/bin/activity",
+    "//src/sys/activity",
     "//src/ui/examples:simplest_app",
     "//src/ui/examples:yuv_to_image_pipe",
     "//src/ui/tools:present_view",
