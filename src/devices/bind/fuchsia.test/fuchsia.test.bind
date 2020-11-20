@@ -9,6 +9,7 @@ extend uint fuchsia.BIND_PROTOCOL {
   COMPAT_CHILD = 81,
   POWER_CHILD = 82,
   PARENT = 83,
+  DEVHOST = 124,
 };
 
 extend uint fuchsia.BIND_PLATFORM_DEV_PID {

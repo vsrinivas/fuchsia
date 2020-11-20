@@ -9,7 +9,6 @@
 #include <lib/fdio/unsafe.h>
 #include <lib/fdio/watcher.h>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
@@ -19,6 +18,7 @@
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
 
+#include "src/devices/bin/driver_host/test-devhost-child-bind.h"
 #include "src/devices/bin/driver_host/test-metadata.h"
 
 class TestDevhostDriverChild;
@@ -77,8 +77,4 @@ static zx_driver_ops_t test_devhost_child_driver_ops = []() -> zx_driver_ops_t {
   return ops;
 }();
 
-// clang-format off
-ZIRCON_DRIVER_BEGIN(test-devhost-child, test_devhost_child_driver_ops, "zircon", "0.1", 1)
-  BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_DEVHOST_TEST),
-ZIRCON_DRIVER_END(test-devhost-child)
-    // clang-format on
+ZIRCON_DRIVER(test-devhost-child, test_devhost_child_driver_ops, "zircon", "0.1")
