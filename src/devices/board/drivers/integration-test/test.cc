@@ -13,7 +13,6 @@
 
 #include <memory>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
@@ -24,6 +23,8 @@
 #include <ddktl/protocol/platform/bus.h>
 #include <fbl/array.h>
 #include <fbl/vector.h>
+
+#include "src/devices/board/drivers/integration-test/test-bus-bind.h"
 
 namespace board_test {
 
@@ -197,7 +198,4 @@ static constexpr zx_driver_ops_t driver_ops = []() {
 
 }  // namespace board_test
 
-ZIRCON_DRIVER_BEGIN(test_bus, board_test::driver_ops, "zircon", "0.1", 3)
-BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PBUS),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_TEST),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_INTEGRATION_TEST), ZIRCON_DRIVER_END(test_bus)
+ZIRCON_DRIVER(test_bus, board_test::driver_ops, "zircon", "0.1")
