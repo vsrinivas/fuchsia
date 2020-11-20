@@ -3,8 +3,9 @@
 # found in the LICENSE file.
 
 import("//build/fidl/fidl.gni")
+import("//sdk/cts/build/cts.gni")
 
-source_set("test") {
+cts_source_set("test") {
   testonly = true
 
   public = [

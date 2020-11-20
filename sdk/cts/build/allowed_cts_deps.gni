@@ -5,9 +5,18 @@
 # Individual dependencies that are approved for use in CTS.
 ALLOWED_CTS_DEPS = [
   "//sdk/cts/tools/package_manager:pm_test_package_gather_deps",
+  "//sdk/lib/fidl/cpp/test:collision_test",
+  "//sdk/lib/fidl/cpp/test:fidl_test",
+  "//sdk/lib/fidl/cpp:cpp",
+  "//sdk/lib/fidl/cpp:cpp_base",
+  "//sdk/lib/fidl/cpp:conformance_test_sources",
+  "//sdk/lib/fidl/cpp:union_migration_test_fidl",
   "//sdk/testing/sl4f/client:client",
   "//src/sys/pkg/bin/pm:host",
   "//zircon/public/lib/zxtest:zxtest",
+  "//zircon/system/ulib/async-loop:async-loop",
+  "//zircon/system/ulib/async-loop:async-loop-cpp",
+  "//zircon/system/ulib/async-loop:async-loop-default",
 ]
 
 # All targets in these directories and their subdirectories are approved for use in CTS.

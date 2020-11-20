@@ -8,6 +8,7 @@ import("//build/package.gni")
 import("//build/test.gni")
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
+import("//sdk/cts/build/cts.gni")
 import("//src/sys/build/components.gni")
 import("//src/tests/fidl/conformance_suite/gidl-conformance-suite.gni")
 import("//tools/fidl/gidl/gidl.gni")
@@ -140,7 +141,7 @@ sdk_source_set("cpp_base") {
   }
 }
 
-source_set("test_util") {
+cts_source_set("test_util") {
   testonly = true
 
   sources = [ "test/test_util.h" ]
@@ -148,7 +149,7 @@ source_set("test_util") {
   public_deps = [ ":cpp_base" ]
 }
 
-source_set("handle_util") {
+cts_source_set("handle_util") {
   testonly = true
 
   sources = [
@@ -159,7 +160,7 @@ source_set("handle_util") {
   public_deps = [ "//zircon/public/lib/zx" ]
 }
 
-source_set("test_support") {
+cts_source_set("test_support") {
   testonly = true
 
   public = [ "test/async_loop_for_test.h" ]
@@ -180,7 +181,7 @@ gidl_hlcpp_conformance("conformance_test_sources") {
   }
 }
 
-source_set("host_test_sources") {
+cts_source_set("host_test_sources") {
   testonly = true
 
   sources = [
@@ -207,7 +208,7 @@ source_set("host_test_sources") {
   ]
 }
 
-source_set("test_sources") {
+cts_source_set("test_sources") {
   testonly = true
 
   # TODO(jamesr): Make this an sdk source set
@@ -248,7 +249,7 @@ source_set("test_sources") {
   public_configs = [ "//sdk/config" ]
 }
 
-executable("fidl_hlcpp_conformance_test") {
+cts_executable("fidl_hlcpp_conformance_test") {
   visibility = [ ":*" ]
   testonly = true
 
@@ -258,20 +259,19 @@ executable("fidl_hlcpp_conformance_test") {
     ":conformance_test_sources",
     ":test_support",
     "//sdk/lib/fidl/cpp/test",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
   ]
 }
 
-fuchsia_unittest_component("fidl-hlcpp-conformance-test") {
+cts_fuchsia_unittest_component("fidl-hlcpp-conformance-test") {
   visibility = [ ":*" ]
   executable_path = "bin/fidl_hlcpp_conformance_test"
   deps = [ ":fidl_hlcpp_conformance_test" ]
 }
 
-executable("fidl_hlcpp_unit_tests") {
+cts_executable("fidl_hlcpp_unit_tests") {
   visibility = [ ":*" ]
   testonly = true
 
@@ -282,20 +282,19 @@ executable("fidl_hlcpp_unit_tests") {
     ":test_sources",
     ":test_support",
     "//sdk/lib/fidl/cpp/test",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
   ]
 }
 
-fuchsia_unittest_component("fidl-hlcpp-unit-tests") {
+cts_fuchsia_unittest_component("fidl-hlcpp-unit-tests") {
   visibility = [ ":*" ]
   executable_path = "bin/fidl_hlcpp_unit_tests"
   deps = [ ":fidl_hlcpp_unit_tests" ]
 }
 
-fuchsia_test_package("fidl-hlcpp-tests") {
+cts_fuchsia_test_package("fidl-hlcpp-tests") {
   test_components = [
     ":fidl-hlcpp-conformance-test",
     ":fidl-hlcpp-unit-tests",
