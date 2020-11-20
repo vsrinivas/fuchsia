@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 import("//build/test/test_package.gni")
@@ -146,6 +147,44 @@ test("driver_host_test") {
   ]
 }
 
+bind_rules("unit-test-fail-bind") {
+  rules = "unit-test-fail.bind"
+  output = "unit-test-fail-bind.h"
+  deps = [ "//src/devices/bind/fuchsia.test" ]
+  disable_autobind = true
+}
+
+driver_module("unit-test-fail") {
+  test = true
+  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
+  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
+  sources = [ "unit-test-fail.cc" ]
+  deps = [
+    ":unit-test-fail-bind",
+    "//src/devices/lib/driver",
+    "//src/lib/ddk",
+  ]
+}
+
+bind_rules("unit-test-pass-bind") {
+  rules = "unit-test-pass.bind"
+  output = "unit-test-pass-bind.h"
+  deps = [ "//src/devices/bind/fuchsia.test" ]
+  disable_autobind = true
+}
+
+driver_module("unit-test-pass") {
+  test = true
+  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
+  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
+  sources = [ "unit-test-pass.cc" ]
+  deps = [
+    ":unit-test-pass-bind",
+    "//src/devices/lib/driver",
+    "//src/lib/ddk",
+  ]
+}
+
 isolated_devmgr_unittest_package("driver-host-tests") {
   executable_path = "test/driver_host_test"
 
@@ -153,11 +192,11 @@ isolated_devmgr_unittest_package("driver-host-tests") {
     ":driver-host-test-child-driver",
     ":driver-host-test-driver",
     ":driver_host_test",
+    ":unit-test-fail",
+    ":unit-test-pass",
     "//src/devices/board/drivers/integration-test",
     "//src/devices/bus/drivers/platform",
     "//src/devices/misc/drivers/test",
     "//src/devices/tests/sysdev",
-    "//src/devices/tests/unit-test-test:unit-test-fail",
-    "//src/devices/tests/unit-test-test:unit-test-pass",
   ]
 }

@@ -4,10 +4,11 @@
 
 #include <stdio.h>
 
-#include <ddk/binding.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/platform-defs.h>
+
+#include "src/devices/bin/driver_host/unit-test-fail-bind.h"
 
 static zx_device_t* dev = NULL;
 
@@ -43,9 +44,4 @@ static constexpr zx_driver_ops_t driver_ops = []() -> zx_driver_ops_t {
   return ops;
 }();
 
-// clang-format off
-ZIRCON_DRIVER_BEGIN(unit_test_fail, driver_ops, "zircon", "0.1", 2)
-    BI_ABORT_IF_AUTOBIND,
-    BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_TEST),
-ZIRCON_DRIVER_END(unit_test_fail)
-    // clang-format on
+ZIRCON_DRIVER(unit_test_fail, driver_ops, "zircon", "0.1")

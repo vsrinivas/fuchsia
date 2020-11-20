@@ -8,6 +8,8 @@ group("drivers") {
   deps = [
     "//src/devices/bin/driver_host:driver-host-test-child-driver",
     "//src/devices/bin/driver_host:driver-host-test-driver",
+    "//src/devices/bin/driver_host:unit-test-fail",
+    "//src/devices/bin/driver_host:unit-test-pass",
     "//src/devices/block:drivers",
     "//src/devices/board:drivers",
     "//src/devices/bus:drivers",
@@ -51,8 +53,6 @@ group("drivers") {
     "//src/devices/tests/isolateddevmgr:isolateddevmgr-test-driver",
     "//src/devices/tests/mock-device:mock-device",
     "//src/devices/tests/sysdev:sysdev",
-    "//src/devices/tests/unit-test-test:unit-test-fail",
-    "//src/devices/tests/unit-test-test:unit-test-pass",
     "//src/devices/thermal:drivers",
     "//src/devices/usb:drivers",
   ]
