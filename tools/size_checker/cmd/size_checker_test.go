@@ -470,7 +470,7 @@ func TestCustomDisplay(t *testing.T) {
 		{
 			newNodeWithSize("hello", 3*1024*1024),
 			3,
-			"      hello                              |   3.00 MiB           \n",
+			"      hello                                                                      |   3.00 MiB           \n",
 		},
 		{
 			newNodeWithDisplay("hashAAAA", displayAsBlob),

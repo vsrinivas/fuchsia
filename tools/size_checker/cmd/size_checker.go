@@ -203,7 +203,7 @@ func displayAsDefault(node *Node, level int) string {
 	if level > 1 {
 		path = filepath.Base(path)
 	}
-	var maxLen = 40 - 2*level
+	var maxLen = 80 - 2*level
 	if maxLen < 0 {
 		maxLen = 0
 	}
@@ -216,7 +216,7 @@ func displayAsDefault(node *Node, level int) string {
 		path = "..." + path[startPos:]
 	}
 	path = fmt.Sprintf("%s%s", strings.Repeat("  ", level), path)
-	ret := fmt.Sprintf("%-40s | %10s %10s\n", path, formatSize(node.size), copies)
+	ret := fmt.Sprintf("%-80s | %10s %10s\n", path, formatSize(node.size), copies)
 	for _, n := range node.children {
 		ret += n.storageBreakdown(level + 1)
 	}
@@ -671,7 +671,7 @@ func generateReport(outputSizes map[string]*ComponentSize, showBudgetOnly bool, 
 	}
 	sort.Strings(componentNames)
 	report.WriteString("\n")
-	report.WriteString(fmt.Sprintf("%-40s | %-10s | %-10s | %-10s\n", "Component", "Size", "Budget", "Remaining"))
+	report.WriteString(fmt.Sprintf("%-80s | %-10s | %-10s | %-10s\n", "Component", "Size", "Budget", "Remaining"))
 	report.WriteString(strings.Repeat("-", 79) + "\n")
 	for _, componentName := range componentNames {
 		var componentSize = outputSizes[componentName]
@@ -699,7 +699,7 @@ func generateReport(outputSizes map[string]*ComponentSize, showBudgetOnly bool, 
 		totalBudget += componentSize.Budget
 		totalRemaining += remainingBudget
 		report.WriteString(
-			fmt.Sprintf("%-40s | %10s | %10s | %s%10s%s\n", componentName, formatSize(componentSize.Size), formatSize(componentSize.Budget), startColorCharacter, formatSize(remainingBudget), endColorCharacter))
+			fmt.Sprintf("%-80s | %10s | %10s | %s%10s%s\n", componentName, formatSize(componentSize.Size), formatSize(componentSize.Budget), startColorCharacter, formatSize(remainingBudget), endColorCharacter))
 		if !showBudgetOnly {
 			for _, n := range componentSize.nodes {
 				report.WriteString(n.storageBreakdown(1))
@@ -708,10 +708,10 @@ func generateReport(outputSizes map[string]*ComponentSize, showBudgetOnly bool, 
 		}
 
 	}
-	report.WriteString(strings.Repeat("-", 79) + "\n")
+	report.WriteString(strings.Repeat("-", 119) + "\n")
 
-	report.WriteString(fmt.Sprintf("%-40s | %10s | %10s | %10s\n", "Total", formatSize(totalSize), formatSize(totalBudget), formatSize(totalRemaining)))
-	report.WriteString(fmt.Sprintf("%-40s | %10s | %10s | %10s\n", "Allocated System Data Budget", formatSize(totalBudget), formatSize(blobFsBudget), formatSize(blobFsBudget-totalBudget)))
+	report.WriteString(fmt.Sprintf("%-80s | %10s | %10s | %10s\n", "Total", formatSize(totalSize), formatSize(totalBudget), formatSize(totalRemaining)))
+	report.WriteString(fmt.Sprintf("%-80s | %10s | %10s | %10s\n", "Allocated System Data Budget", formatSize(totalBudget), formatSize(blobFsBudget), formatSize(blobFsBudget-totalBudget)))
 
 	if totalSize > blobFsBudget {
 		report.WriteString(
