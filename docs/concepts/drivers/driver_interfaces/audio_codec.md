@@ -209,16 +209,16 @@ notifications are added to Banjo.
 
 ### Power Control {#power-control}
 
-TODO(andresoportus).
+TODO(fxbug.dev/63522).
 
 ### Peripheral Control {#peripheral-control}
 
-TODO(andresoportus).
+TODO(fxbug.dev/64878).
 
 ### Signal Processing Control {#signal-processing-control}
 
-TODO(andresoportus).
+TODO(fxbug.dev/64877).
 
 ### Content Protection {#content-protection}
 
-TODO(andresoportus).
+TODO(fxbug.dev/63523).

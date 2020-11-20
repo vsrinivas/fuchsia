@@ -64,7 +64,8 @@ interface as shown below:
 
 Another way to architect drivers with the engine/codec split is to have a codec
 providing the streaming audio interface, and the audio engine providing a
-[DAI interface](audio_dai.md). For example a aml-g12-tdm-dai driver for the
+[DAI interface](audio_dai.md). For example a
+[aml-g12-tdm-dai](/src/media/audio/drivers/aml-g12-tdm/dai.cc) driver for the
 AMLogic g12 audio subsystem (audio engine) providing the DAI interface for other
 drivers or applications to use, and a codec can drive the engine and provide
 the streaming interface to applications like audio-driver-ctl.

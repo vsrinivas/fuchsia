@@ -45,7 +45,9 @@ any other driver (see [DDK](/docs/concepts/drivers/ddk-tutorial.md)).
 
 ## Protocol definition
 
-The DAI protocol is defined in FIDL at dai.fidl and dai_format.fidl.
+The DAI protocol is defined in FIDL at
+[dai.fidl](/sdk/fidl/fuchsia.hardware.audio/dai.fidl) and
+[dai_format.fidl](/sdk/fidl/fuchsia.hardware.audio/dai_format.fidl).
 
 Because the DDK does not currently provide a way to directly get a FIDL channel
 for communication, we define a way to get a channel via
