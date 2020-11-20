@@ -125,7 +125,7 @@ group("tests") {
     "//tools/qemu:tests($host_toolchain)",
     "//tools/sdk-tools:tests($host_toolchain)",
     "//tools/serial:tests($host_toolchain)",
-    "//tools/size_checker/cmd:tests",
+    "//tools/size_checker:tests($host_toolchain)",
     "//tools/symbol-index:tests",
     "//tools/symbolizer:tests",
     "//tools/testing:tests($host_toolchain)",
