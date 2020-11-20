@@ -4,6 +4,8 @@
 
 import("//src/sys/build/components.gni")
 
+visibility = [ ":*" ]
+
 ###############################################################################
 # EXECUTABLES
 ###############################################################################
@@ -436,4 +438,6 @@ group("tests") {
   testonly = true
 
   public_deps = [ ":feedback-utils-tests" ]
+
+  visibility += [ "//src/developer/forensics:tests" ]
 }

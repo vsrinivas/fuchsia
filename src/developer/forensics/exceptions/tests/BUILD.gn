@@ -3,6 +3,8 @@
 
 import("//src/sys/build/components.gni")
 
+visibility = [ ":*" ]
+
 ###############################################################################
 # SOURCES
 ###############################################################################
@@ -256,4 +258,6 @@ group("tests") {
     "//src/developer/forensics:copy-pkg",
     "//src/developer/forensics/testing/fakes:fake-crash-reporter",
   ]
+
+  visibility += [ "//src/developer/forensics:tests" ]
 }

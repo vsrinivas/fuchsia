@@ -3,6 +3,8 @@
 
 import("//build/fidl/fidl.gni")
 
+visibility = [ "//src/developer/forensics/exceptions/*" ]
+
 fidl("fuchsia.exception.internal") {
   sources = [ "crash_reporter.internal.fidl" ]
 

@@ -4,6 +4,8 @@
 
 import("//build/config.gni")
 
+visibility = [ "//src/developer/forensics/feedback_data/*" ]
+
 ###############################################################################
 # SOURCES
 ###############################################################################
@@ -35,8 +37,6 @@ source_set("constants") {
     "//sdk/fidl/fuchsia.feedback",
     "//src/developer/forensics/utils/cobalt",
   ]
-
-  visibility = [ "//src/developer/forensics/feedback_data/*" ]
 }
 
 source_set("data_provider") {
@@ -244,6 +244,8 @@ source_set("main") {
     "//src/developer/forensics/utils/component",
     "//zircon/public/lib/zx",
   ]
+
+  visibility += [ "//src/developer/forensics/*" ]
 }
 
 ###############################################################################
@@ -254,4 +256,6 @@ config_data("sysmgr_config") {
 
   sources = [ "config/sysmgr.config" ]
   outputs = [ "device_id_provider.config" ]
+
+  visibility += [ "*" ]
 }

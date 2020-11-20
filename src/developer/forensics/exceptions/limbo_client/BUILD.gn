@@ -4,6 +4,8 @@
 
 import("//src/sys/build/components.gni")
 
+visibility = [ "//src/developer/forensics/exceptions/*" ]
+
 source_set("lib") {
   sources = [
     "limbo_client.cc",
@@ -50,4 +52,6 @@ fuchsia_component("component") {
 
 fuchsia_package("limbo-client") {
   deps = [ ":component" ]
+
+  visibility += [ "*" ]
 }

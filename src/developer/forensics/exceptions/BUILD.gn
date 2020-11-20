@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+visibility = [ "//src/developer/forensics/exceptions/*" ]
+
 ###############################################################################
 # SOURCES
 ###############################################################################
@@ -54,4 +56,6 @@ source_set("main") {
     "//src/developer/forensics/exceptions:constants",
     "//src/developer/forensics/utils/component",
   ]
+
+  visibility += [ "//src/developer/forensics:*" ]
 }

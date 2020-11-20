@@ -5,6 +5,8 @@
 import("//build/config.gni")
 import("//src/sys/build/components.gni")
 
+visibility = [ ":*" ]
+
 ###############################################################################
 # EXECUTABLES
 ###############################################################################
@@ -553,4 +555,6 @@ group("tests") {
     "//src/sys/pkg/bin/system-update-checker",
     "//src/sys/time/timekeeper",
   ]
+
+  visibility += [ "//src/developer/forensics:tests" ]
 }

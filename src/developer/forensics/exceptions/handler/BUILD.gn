@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+visibility = [ "//src/developer/forensics/exceptions/*" ]
+
 ###############################################################################
 # SOURCES
 ###############################################################################
@@ -56,4 +58,6 @@ source_set("main") {
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
   ]
+
+  visibility += [ "//src/developer/forensics:*" ]
 }

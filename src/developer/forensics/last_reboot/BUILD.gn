@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+visibility = [ "//src/developer/forensics/last_reboot/*" ]
+
 ###############################################################################
 # SOURCES
 ###############################################################################
@@ -37,6 +39,8 @@ source_set("main") {
 
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
+
+  visibility += [ "//src/developer/forensics:*" ]
 }
 
 source_set("main_service") {
@@ -86,8 +90,6 @@ source_set("reboot_reason") {
   ]
 
   deps = [ "//sdk/lib/syslog/cpp" ]
-
-  visibility = [ "//src/developer/forensics/last_reboot/*" ]
 }
 
 source_set("reboot_watcher") {

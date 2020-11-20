@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+visibility = [ "//src/developer/forensics/feedback_data/*" ]
+
 ###############################################################################
 # SOURCES
 ###############################################################################
@@ -77,4 +79,6 @@ source_set("types") {
     "//sdk/lib/syslog/cpp",
     "//src/developer/forensics/utils:errors",
   ]
+
+  visibility += [ "//src/developer/forensics/testing:gpretty_printers" ]
 }

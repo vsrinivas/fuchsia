@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+visibility = [ "//src/developer/forensics/crash_reports/*" ]
+
 ###############################################################################
 # SOURCES
 ###############################################################################
@@ -53,8 +55,6 @@ source_set("constants") {
   sources = [ "constants.h" ]
 
   public_deps = [ "//src/developer/forensics/utils:storage_size" ]
-
-  visibility = [ "//src/developer/forensics/crash_reports/*" ]
 }
 
 source_set("crash_register") {
@@ -186,6 +186,8 @@ source_set("main") {
     "//src/developer/forensics/utils/component",
     "//src/lib/timekeeper:system",
   ]
+
+  visibility += [ "//src/developer/forensics:*" ]
 }
 
 source_set("network_watcher") {

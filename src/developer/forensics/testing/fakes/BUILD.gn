@@ -5,10 +5,7 @@
 import("//build/fidl/fidl.gni")
 import("//src/sys/build/components.gni")
 
-visibility = [
-  "//src/developer/feedback/*",
-  "//src/developer/forensics/*",
-]
+visibility = [ "//src/developer/forensics/*" ]
 
 ###############################################################################
 # PACKAGES

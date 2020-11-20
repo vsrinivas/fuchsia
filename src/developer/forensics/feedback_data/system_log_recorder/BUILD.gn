@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+visibility = [ "//src/developer/forensics/feedback_data/*" ]
+
 ###############################################################################
 # SOURCES
 ###############################################################################
@@ -21,6 +23,8 @@ source_set("main") {
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/trace-provider:trace-provider-with-fdio",
   ]
+
+  visibility += [ "//src/developer/forensics/*" ]
 }
 
 source_set("src") {
