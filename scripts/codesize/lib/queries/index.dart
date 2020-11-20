@@ -14,10 +14,10 @@ import 'dart:math' as math;
 import '../common_util.dart';
 import '../render/ast.dart';
 import '../types.dart';
+import 'binary_names.dart';
 import 'categories/categories.dart';
 import 'code_category.dart';
 import 'crates.dart';
-import 'dump_names.dart';
 import 'source_lang.dart';
 import 'unique_symbol.dart';
 
@@ -294,7 +294,7 @@ class QueryFactory {
 const List<QueryFactory> allQueries = [
   QueryFactory(CodeCategoryQuery, CodeCategoryQuery.description),
   QueryFactory(SourceLangQuery, SourceLangQuery.description),
-  QueryFactory(DumpNamesQuery, DumpNamesQuery.description),
+  QueryFactory(BinaryNamesQuery, BinaryNamesQuery.description),
   QueryFactory(CratesQuery, CratesQuery.description),
   QueryFactory(UniqueSymbolQuery, UniqueSymbolQuery.description),
 ];

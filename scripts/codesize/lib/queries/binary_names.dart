@@ -11,8 +11,8 @@ import '../render/ast.dart';
 import '../types.dart';
 import 'index.dart';
 
-class DumpNamesQuery extends Query implements QueryReport {
-  DumpNamesQuery({this.sortBySize = false});
+class BinaryNamesQuery extends Query implements QueryReport {
+  BinaryNamesQuery({this.sortBySize = false});
 
   final bool sortBySize;
 
@@ -31,7 +31,7 @@ class DumpNamesQuery extends Query implements QueryReport {
   @override
   void mergeWith(Iterable<Query> others) {
     for (final other in others) {
-      if (other is DumpNamesQuery) {
+      if (other is BinaryNamesQuery) {
         _stats.addAll(other._stats);
       } else {
         throw Exception('$other must be $runtimeType');

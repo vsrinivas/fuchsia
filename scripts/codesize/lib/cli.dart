@@ -9,6 +9,7 @@ import 'dart:io';
 import 'package:args/args.dart';
 
 import 'common_util.dart';
+import 'crash_handling.dart';
 import 'io.dart';
 import 'queries/index.dart' as queries;
 import 'queries/index.dart';
@@ -101,10 +102,10 @@ ParsedArgs parseArgs(List<String> args) {
 The syntax for specifying optional arguments to queries is similar to Dart
 function calls and passing arguments by name, with the exception that strings
 and string-like argument values are un-quoted. For instance, to specify the
-`sortBySize` argument to `DumpNames`, one could write on the command line:
+`sortBySize` argument to `BinaryNames`, one could write on the command line:
 
       # Use single-quotes to escape any special characters on the shell.
-      fx codesize 'DumpNames(sortBySize: true)'
+      fx codesize 'BinaryNames(sortBySize: true)'
 
 ''');
 
@@ -170,7 +171,7 @@ fx codesize --only-lang=cpp 'UniqueSymbol(showCompileUnit: true, showProgram: tr
 
   CachingBehavior cachingBehavior;
   if (argResults[cache] && argResults[noCache])
-    throw Exception('--cache and --no-cache cannot both be specified');
+    throw KnownFailure('--cache and --no-cache cannot both be specified');
   if (argResults[cache])
     cachingBehavior = CachingBehavior.alwaysUseCache;
   else if (argResults[noCache])
@@ -257,7 +258,7 @@ QueryThunk parseQueryConstructor(
   } else {
     name = constructor.substring(0, startOfArgs);
     if (constructor[constructor.length - 1] != ')') {
-      throw Exception('$constructor should end with `)`');
+      throw KnownFailure('$constructor should end with `)`');
     }
     args = parseQueryConstructorArgs(
         constructor.substring(startOfArgs + 1, constructor.length - 1));
@@ -266,7 +267,10 @@ QueryThunk parseQueryConstructor(
   if (queries.containsKey(name)) {
     f = queries[name];
   } else {
-    throw Exception('Query `$name` not found. Pick from: ${queries.keys}');
+    if (name == 'DumpNames') {
+      throw KnownFailure('DumpNames have been renamed to BinaryNames');
+    }
+    throw KnownFailure('Query `$name` not found. Pick from: ${queries.keys}');
   }
   return () => ReflectQuery.instantiate(f, args);
 }

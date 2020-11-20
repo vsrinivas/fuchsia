@@ -30,10 +30,10 @@ Future<void> main(List<String> args) =>
     runWithIo<io.Standard, void>(() => mainImpl(args));
 
 Future<void> mainImpl(List<String> args) async {
-  final parsedArgs = cli.parseArgs(args);
-  if (parsedArgs == null) return;
-
   await crash_handling.withExceptionHandler(() async {
+    final parsedArgs = cli.parseArgs(args);
+    if (parsedArgs == null) return;
+
     // The high-level flow of the program:
     // - Generate bloaty reports if they aren't already cached.
     // - Run requested queries on those reports.
