@@ -134,6 +134,7 @@ class AudioOutput : public AudioDevice {
 
   std::unique_ptr<OutputPipeline> pipeline_;
   Reporter::Container<Reporter::OutputDevice>::Ptr reporter_;
+  ThreadCpuTimer cpu_timer_;
 };
 
 }  // namespace media::audio

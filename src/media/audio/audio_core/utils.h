@@ -11,6 +11,7 @@
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/zx/profile.h>
+#include <lib/zx/thread.h>
 #include <stdint.h>
 #include <zircon/device/audio.h>
 #include <zircon/types.h>
@@ -84,6 +85,50 @@ void AcquireAudioCoreImplProfile(sys::ComponentContext* context,
 
 void AcquireRelativePriorityProfile(uint32_t priority, sys::ComponentContext* context,
                                     fit::function<void(zx::profile)> callback);
+
+// A timer which computes the amount of time the current thread spends scheduled
+// (running) on a CPU, or queued.
+class ThreadCpuTimer {
+ public:
+  // Start running the timer on the current thread.
+  void Start() {
+    thread_ = zx::thread::self();
+    start_status_ =
+        thread_->get_info(ZX_INFO_TASK_RUNTIME, &start_, sizeof(start_), nullptr, nullptr);
+    end_status_ = ZX_ERR_BAD_STATE;
+  }
+
+  // Stop running the timer.
+  void Stop() {
+    end_status_ = thread_->get_info(ZX_INFO_TASK_RUNTIME, &end_, sizeof(end_), nullptr, nullptr);
+  }
+
+  // Reports how long the current thread spent running on a CPU. See ZX_INFO_TASK_RUNTIME.
+  // Cannot be called while the timer is running; the timer must be stopped.
+  zx::duration cpu() const {
+    if (start_status_ != ZX_OK || end_status_ != ZX_OK) {
+      return zx::duration::infinite_past();
+    }
+    return zx::duration(end_.cpu_time) - zx::duration(start_.cpu_time);
+  }
+
+  // Reports how long the current thread spent waiting to run. See ZX_INFO_TASK_RUNTIME.
+  // Does not include time spent blocked; only includes time the thread is "ready" but waiting.
+  // Cannot be called while the timer is running; the timer must be stopped.
+  zx::duration queue() const {
+    if (start_status_ != ZX_OK || end_status_ != ZX_OK) {
+      return zx::duration::infinite_past();
+    }
+    return zx::duration(end_.queue_time) - zx::duration(start_.queue_time);
+  }
+
+ private:
+  zx::unowned_thread thread_;
+  zx_info_task_runtime_t start_;
+  zx_info_task_runtime_t end_;
+  zx_status_t start_status_;
+  zx_status_t end_status_;
+};
 
 }  // namespace media::audio
 

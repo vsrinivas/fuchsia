@@ -56,6 +56,7 @@ void AudioOutput::Process() {
     // SetNextSchedTimeMono, we consider it an error and shut down.
     ClearNextSchedTime();
     auto ref_now = reference_clock().ReferenceTimeFromMonotonicTime(mono_now);
+    cpu_timer_.Start();
 
     uint32_t frames_remaining;
     do {
@@ -104,11 +105,14 @@ void AudioOutput::Process() {
 
     auto mono_end = async::Now(mix_domain().dispatcher());
     if (auto dt = mono_end - mono_now; dt > MixDeadline()) {
+      cpu_timer_.Stop();
       TRACE_INSTANT("audio", "AudioOutput::MIX_UNDERFLOW", TRACE_SCOPE_THREAD);
       TRACE_ALERT("audio", "audiounderflow");
       FX_LOGS(ERROR) << "PIPELINE UNDERFLOW: Mixer ran for " << std::setprecision(4)
                      << static_cast<double>(dt.to_nsecs()) / ZX_MSEC(1) << " ms, overran goal of "
-                     << static_cast<double>(MixDeadline().to_nsecs()) / ZX_MSEC(1) << " ms";
+                     << static_cast<double>(MixDeadline().to_nsecs()) / ZX_MSEC(1)
+                     << " ms; thread spent " << cpu_timer_.cpu().get() << " ns on CPU, "
+                     << cpu_timer_.queue().get() << " ns queued";
 
       reporter().PipelineUnderflow(mono_now + MixDeadline(), mono_end);
     }
