@@ -482,10 +482,6 @@ sdk("fuchsia_dart") {
     # //sdk/fidl/fuchsia.ui.views.
     "//sdk/fidl/fuchsia.intl:fuchsia.intl_sdk",
 
-    # Temporarily added so it can be depeneded on by fuchsis_scenic_flutter until
-    # it moves to //sdk/dart.
-    "//sdk/fidl/fuchsia.ui.pointerinjector:fuchsia.ui.pointerinjector_sdk",
-
     # Direct FIDL deps.
     # Relying on transitive deps originating in fuchsia.git
     # makes it impossible to land certain changes without breaking
