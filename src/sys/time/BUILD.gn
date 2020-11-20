@@ -5,7 +5,6 @@
 # Packages needed for time synchronization in recovery images
 group("recovery") {
   deps = [
-    "httpsdate_time_source:httpsdate-time-source",
     "network_time_service:network-time-service",
     "timekeeper",
   ]
