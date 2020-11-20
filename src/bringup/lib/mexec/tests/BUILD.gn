@@ -2,9 +2,33 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/testing/zbi_test.gni")
+import("//src/bringup/lib/mexec/testing/zbi_test.gni")
+
 group("tests") {
   testonly = true
+  deps = [ ":mexec-smoke-test" ]
+}
 
-  # TODO(joshuaseaton): move the contents of //src/zircon/tests/mexec here.
-  deps = [ "//src/zircon/tests/mexec" ]
+executable("no-op-success") {
+  testonly = true
+  sources = [ "no-op-success.cc" ]
+}
+
+zbi_test("smoke-zbi-test") {
+  assert(current_cpu != "")
+
+  args = [ "userboot=bin/no-op-success" ]
+  deps = [
+    ":no-op-success",
+    "//build/unification/zbi:kernel",
+  ]
+}
+
+mexec_zbi_test("mexec-smoke-test") {
+  child_zbi = ":smoke-zbi-test.zbi"
+
+  # Force that data ZBI to be put above the 4GiB mark in physical memory; this
+  # covers an edge case that can arise with particularly large ZBIs.
+  args = [ "kernel.mexec-force-high-ramdisk=true" ]
 }

@@ -4,8 +4,8 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
-import("//build/testing/mexec_zbi_test.gni")
 import("//build/testing/zircon_zbi_tests.gni")
+import("//src/bringup/lib/mexec/testing/zbi_test.gni")
 import("common_tests.gni")
 
 # We create mexec-chainloading variations of all of the phys ZBI tests.

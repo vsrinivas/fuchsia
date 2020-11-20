@@ -1,0 +1,20 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+executable("zbi-test-entry") {
+  testonly = true
+  output_name = "mexec-zbi-test-entry"
+  sources = [ "zbi-test-entry.cc" ]
+  deps = [
+    "//sdk/fidl/fuchsia.device.manager:fuchsia.device.manager_llcpp",
+    "//sdk/lib/fdio",
+    "//src/bringup/lib/mexec",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/fidl:fidl-llcpp",
+    "//zircon/system/ulib/zbitl",
+    "//zircon/system/ulib/zx",
+  ]
+}
