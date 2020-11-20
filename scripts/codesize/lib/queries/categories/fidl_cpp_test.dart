@@ -24,7 +24,7 @@ void main() {
       pos('bla/bla/bla/fuchsia/sdk/fidl/fuchsia_net/fuchsia_net_tables.c');
     });
 
-    void Function() neg(String name) => () => expect(
+    Function neg(String name) => () => expect(
         CompileUnitContext(name).isNameCppCodingTables, equals(false),
         reason: '`$name` should not match any of the compile unit name regexes '
             'for coding tables');
@@ -50,7 +50,7 @@ void main() {
       pos('third_party/some_toolchain_dir/fuchsia/sdk/fidl/fuchsia_io/fuchsia_io_cc_codegen.cc/fuchsia/io/cpp/fidl.cc');
     });
 
-    void Function() neg(String name) => () => expect(
+    Function neg(String name) => () => expect(
         CompileUnitContext(name).isNameHlcppDomainObject, equals(false),
         reason: '`$name` should not match any of the compile unit name regexes '
             'for HLCPP domain objects');
@@ -84,7 +84,7 @@ void main() {
       pos(r'int fidl::internal::SingleUseMessageHandler::InvokeImpl<fuchsia::io::(anonymous namespace)::Directory_NodeGetFlags_ResponseHandler(fit::function_impl<16ul, false, void (int, unsigned int)>)::$_28>(fidl::internal::SingleUseMessageHandler*, fidl::Message&&)');
     });
 
-    void Function() neg(String name) =>
+    Function neg(String name) =>
         () => expect(category.match(name, compileUnit, program), equals(false),
             reason: '`$name` should not match any of the symbol name regexes '
                 'for HLCPP domain objects');
@@ -143,7 +143,7 @@ void main() {
       pos(r'fidl::FidlTransformWithCallback(unsigned int, fidl_type const*, unsigned char const*, unsigned int, char const**, std::__2::function<int (unsigned char const*, unsigned int)> const&)');
     });
 
-    void Function() neg(String name) =>
+    Function neg(String name) =>
         () => expect(category.match(name, compileUnit, program), equals(false),
             reason: '`$name` should not match any of the symbol name regexes '
                 'for HLCPP runtime');

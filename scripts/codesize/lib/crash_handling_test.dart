@@ -75,8 +75,7 @@ void main() {
         () => runWithIo<MockIo, void>(() async {
               await withExceptionHandler(
                   () => throw KnownFailure('example failure'));
-              // ignore: avoid_as
-              MockIo io = Io.get() as MockIo;
+              MockIo io = Io.get();
 
               // The exit code of a known exception.
               expect(io.mockExitCode, equals(2));
@@ -95,8 +94,7 @@ void main() {
         () => runWithIo<MockIo, void>(() async {
               await withExceptionHandler(
                   () => throw Exception('unexpected error'));
-              // ignore: avoid_as
-              MockIo io = Io.get() as MockIo;
+              MockIo io = Io.get();
 
               /// The exit code of an unexpected error.
               /// From https://fuchsia.dev/fuchsia-src/concepts/api/cli#execution_success_and_failure,

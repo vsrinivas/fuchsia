@@ -75,7 +75,7 @@ void main() {
           <String, String>{'b': 'true'});
       expect(result, isA<FooBoolStringArg>());
       expect((result as FooBoolStringArg)._b, equals(true));
-      expect((result)._s, equals('42'));
+      expect((result as FooBoolStringArg)._s, equals('42'));
     });
   });
 }

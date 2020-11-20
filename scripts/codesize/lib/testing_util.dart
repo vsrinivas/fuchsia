@@ -9,7 +9,7 @@ import 'dart:io';
 Directory locateTestData() {
   // See the `//scripts/codesize:bloaty_reports` target in `BUILD.gn`.
   final buildDirTestData =
-      Directory('${Directory(Platform.environment['PWD']!).absolute.path}/'
+      Directory('${Directory(Platform.environment['PWD']).absolute.path}/'
           'host_x64/test_data/codesize');
   Directory testData;
   if (buildDirTestData.existsSync()) {

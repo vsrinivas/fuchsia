@@ -171,6 +171,7 @@ body>ul>li li {
 extension _css on Color {
   String get className => 'codesize-color-$colorName';
 
+  // All codepaths in the switch will always return.
   String get colorName {
     switch (this) {
       case Color.gray:
@@ -182,5 +183,6 @@ extension _css on Color {
         // we'll swap around the black and white color in HTML.
         return 'black';
     }
+    throw Exception('Unreachable');
   }
 }
