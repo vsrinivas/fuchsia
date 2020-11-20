@@ -142,7 +142,13 @@ void DriverHost::Start(fdf::DriverStartArgs start_args, zx::channel request,
   // Once we receive the VMO from the call to GetBuffer, we can load the driver
   // into this driver host. We move the storage and encoded for start_args into
   // this callback to extend its lifetime.
-  fidl::Client<fio::File> file(std::move(client_end), loop_->dispatcher());
+  fidl::Client<fio::File> file(
+      std::move(client_end), loop_->dispatcher(), [binary = binary.value()](fidl::UnbindInfo info) {
+        if (info.status != ZX_OK) {
+          LOGF(ERROR, "Failed to start driver '/pkg/%s', could not open library: %s", binary.data(),
+               zx_status_get_string(info.status));
+        }
+      });
   auto file_ptr = file.get();
   auto callback = [this, request = std::move(request), completer = completer.ToAsync(),
                    binary = std::move(binary.value()), message = std::move(message),
