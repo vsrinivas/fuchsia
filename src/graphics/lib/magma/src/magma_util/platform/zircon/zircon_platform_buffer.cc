@@ -311,24 +311,30 @@ bool ZirconPlatformBuffer::CommitPages(uint64_t start_page_index, uint64_t page_
   return true;
 }
 
-bool ZirconPlatformBuffer::DecommitPages(uint64_t start_page_index, uint64_t page_count) const {
-  TRACE_DURATION("magma", "DeommitPages", "start_page_index",
+magma::Status ZirconPlatformBuffer::DecommitPages(uint64_t start_page_index,
+                                                  uint64_t page_count) const {
+  TRACE_DURATION("magma", "DecommitPages", "start_page_index",
                  TA_UINT32(static_cast<uint32_t>(start_page_index)), "page_count",
                  TA_UINT32(static_cast<uint32_t>(page_count)));
   if (!page_count)
-    return true;
+    return MAGMA_STATUS_OK;
 
   if ((start_page_index + page_count) * PAGE_SIZE > size())
-    return DRETF(false, "offset + length greater than buffer size");
+    return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "offset + length greater than buffer size");
 
   const uint64_t op_start = start_page_index * PAGE_SIZE;
   const uint64_t op_size = page_count * PAGE_SIZE;
   zx_status_t status = vmo_.op_range(ZX_VMO_OP_DECOMMIT, op_start, op_size, nullptr, 0);
 
-  if (status != ZX_OK)
-    return DRETF(false, "failed to commit vmo pages: %d", status);
-
-  return true;
+  switch (status) {
+    case ZX_OK:
+      return MAGMA_STATUS_OK;
+    case ZX_ERR_BAD_STATE:
+      // Most likely, the memory was pinned so it couldn't be decommitted.
+      return DRET(MAGMA_STATUS_BAD_STATE);
+    default:
+      return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "failed to commit vmo pages: %d", status);
+  }
 }
 
 bool ZirconPlatformBuffer::GetBufferInfo(magma_buffer_info_t* buffer_info_out) const {

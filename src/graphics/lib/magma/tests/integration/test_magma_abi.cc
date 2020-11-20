@@ -1129,7 +1129,7 @@ TEST(MagmaAbi, CommitBuffer) {
   EXPECT_EQ(MAGMA_STATUS_INVALID_ARGS,
             magma_buffer_range_op(connection.connection(), buffer, MAGMA_BUFFER_RANGE_OP_DECOMMIT,
                                   0, page_size() + 1));
-  EXPECT_EQ(MAGMA_STATUS_MEMORY_ERROR,
+  EXPECT_EQ(MAGMA_STATUS_INVALID_ARGS,
             magma_buffer_range_op(connection.connection(), buffer, MAGMA_BUFFER_RANGE_OP_DECOMMIT,
                                   page_size(), buffer_size));
   EXPECT_EQ(MAGMA_STATUS_OK,

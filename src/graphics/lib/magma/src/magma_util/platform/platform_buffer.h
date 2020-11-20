@@ -74,7 +74,7 @@ class PlatformBuffer {
 
   // Tries to ensure the pages are not backed by memory, and resets their contents to 0. May fail if
   // the VMO is pinned.
-  virtual bool DecommitPages(uint64_t start_page_index, uint64_t page_count) const = 0;
+  virtual magma::Status DecommitPages(uint64_t start_page_index, uint64_t page_count) const = 0;
 
   virtual bool GetBufferInfo(magma_buffer_info_t* buffer_info_out) const = 0;
 

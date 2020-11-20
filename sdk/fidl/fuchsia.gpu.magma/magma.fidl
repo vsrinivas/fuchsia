@@ -25,6 +25,8 @@ enum Status {
     CONNECTION_LOST = 6;
     TIMED_OUT = 7;
     UNIMPLEMENTED = 8;
+    /// An object was not in the right state for an operation on it.
+    BAD_STATE = 9;
 };
 
 enum BufferOp {

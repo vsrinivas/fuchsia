@@ -332,10 +332,9 @@ magma_status_t magma_buffer_range_op(magma_connection_t connection, magma_buffer
       return MAGMA_STATUS_OK;
     }
     case MAGMA_BUFFER_RANGE_OP_DECOMMIT: {
-      if (!platform_buffer->DecommitPages(start_offset / magma::page_size(),
-                                          length / magma::page_size()))
-        return DRET(MAGMA_STATUS_MEMORY_ERROR);
-      return MAGMA_STATUS_OK;
+      return platform_buffer
+          ->DecommitPages(start_offset / magma::page_size(), length / magma::page_size())
+          .get();
     }
     default:
       return DRET(MAGMA_STATUS_INVALID_ARGS);

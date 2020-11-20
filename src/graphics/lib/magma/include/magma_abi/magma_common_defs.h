@@ -44,7 +44,9 @@ extern "C" {
 #define MAGMA_STATUS_CONNECTION_LOST (-6)
 #define MAGMA_STATUS_TIMED_OUT (-7)
 #define MAGMA_STATUS_UNIMPLEMENTED (-8)
-#define MAGMA_STATUS_ALIAS_FOR_LAST MAGMA_STATUS_UNIMPLEMENTED
+// This error means that an object was not in the right state for an operation on it.
+#define MAGMA_STATUS_BAD_STATE (-9)
+#define MAGMA_STATUS_ALIAS_FOR_LAST MAGMA_STATUS_BAD_STATE
 
 // possible values for magma_cache_operation_t
 #define MAGMA_CACHE_OPERATION_CLEAN 0
