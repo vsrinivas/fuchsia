@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "sysdev.h"
+#include "src/devices/tests/sysdev/sysdev.h"
 
 #include <fuchsia/boot/c/fidl.h>
 #include <lib/zx/channel.h>
@@ -14,11 +14,12 @@
 
 #include <memory>
 
-#include <ddk/binding.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/platform-defs.h>
 #include <ddktl/device.h>
+
+#include "src/devices/tests/sysdev/sysdev-bind.h"
 
 namespace {
 
@@ -151,8 +152,4 @@ static constexpr zx_driver_ops_t driver_ops = []() {
 
 }  // namespace
 
-// clang-format off
-ZIRCON_DRIVER_BEGIN(test_sysdev, driver_ops, "zircon", "0.1", 1)
-    BI_ABORT_IF_AUTOBIND,
-ZIRCON_DRIVER_END(test_sysdev)
-    // clang-format on
+ZIRCON_DRIVER(test_sysdev, driver_ops, "zircon", "0.1")
