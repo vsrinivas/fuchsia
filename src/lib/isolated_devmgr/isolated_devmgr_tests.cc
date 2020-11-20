@@ -36,9 +36,9 @@ class DevmgrTest : public ::gtest::RealLoopFixture {
   const board_test::DeviceEntry kCrashDeviceEntry = []() {
     board_test::DeviceEntry entry = {};
     strcpy(entry.name, "crash-device");
-    entry.vid = PDEV_VID_GENERIC;
+    entry.vid = PDEV_VID_TEST;
     entry.pid = PDEV_PID_GENERIC;
-    entry.did = PDEV_DID_CRASH_TEST;
+    entry.did = PDEV_DID_TEST_CRASH;
     return entry;
   }();
 
@@ -142,7 +142,7 @@ TEST_F(DevmgrTest, ExceptionCallback) {
   bool exception = false;
   devmgr->SetExceptionCallback([&exception]() { exception = true; });
 
-  ASSERT_EQ(devmgr->WaitForFile("sys/platform/00:00:24"), ZX_OK);
+  ASSERT_EQ(devmgr->WaitForFile("sys/platform/11:00:1f"), ZX_OK);
 
   zx_handle_t dir;
   ASSERT_EQ(fdio_get_service_handle(devmgr->root(), &dir), ZX_OK);
@@ -151,7 +151,7 @@ TEST_F(DevmgrTest, ExceptionCallback) {
     // keep trying to open crash-device until we see an exception
     zx::channel a, b;
     EXPECT_EQ(zx::channel::create(0, &a, &b), ZX_OK);
-    fdio_service_connect_at(dir, "sys/platform/00:00:24/crash-device", b.release());
+    fdio_service_connect_at(dir, "sys/platform/11:00:1f/crash-device", b.release());
 
     return exception;
   });

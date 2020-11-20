@@ -48,7 +48,6 @@ __BEGIN_CDECLS
 #define PDEV_DID_CAMERA_CONTROLLER      0x21  // Camera Controller
 #define PDEV_DID_CADENCE_HPNFC          0x22  // Cadence NAND Flash controller
 #define PDEV_DID_OT_RADIO               0x23  // OpenThread radio
-#define PDEV_DID_CRASH_TEST             0x24  // Crash-device
 #define PDEV_DID_GOODIX_GTX8X           0x25  // Goodix GTx8X touch controllers
 #define PDEV_DID_RADAR_SENSOR           0x26  // Radar Sensor
 #define PDEV_DID_POWER_DOMAIN_COMPOSITE 0x27  // Power domain, as a composite device
@@ -283,6 +282,7 @@ __BEGIN_CDECLS
 #define PDEV_DID_TEST_GOLDFISH_PIPE 0x1C
 #define PDEV_DID_TEST_GOLDFISH_ADDRESS_SPACE     0x1D
 #define PDEV_DID_TEST_GOLDFISH_CONTROL_COMPOSITE 0x1E
+#define PDEV_DID_TEST_CRASH         0x1F
 
 // ARM
 #define PDEV_VID_ARM                0x12

@@ -4,10 +4,11 @@
 
 #include <memory>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/platform-defs.h>
 #include <ddktl/device.h>
+
+#include "src/lib/isolated_devmgr/crash-device-bind.h"
 
 namespace crash {
 
@@ -52,10 +53,4 @@ static constexpr zx_driver_ops_t driver_ops = []() {
 
 }  // namespace crash
 
-// clang-format off
-ZIRCON_DRIVER_BEGIN(crash_device, crash::driver_ops, "fuchsia", "0.1", 3)
-            BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_GENERIC),
-            BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_GENERIC),
-            BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_CRASH_TEST),
-ZIRCON_DRIVER_END(crash_device)
-    // clang-format on
+ZIRCON_DRIVER(crash_device, crash::driver_ops, "fuchsia", "0.1")
