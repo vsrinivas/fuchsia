@@ -70,25 +70,33 @@ struct Sprite {
 // [END primitives]
 
 // [START bits]
-bits InfoFeatures : uint32 {
-    WLAN = 0x00000001;      // If present, this device represents WLAN hardware
-    SYNTH = 0x00000002;     // If present, this device is synthetic (not backed by h/w)
-    LOOPBACK = 0x00000004;  // If present, this device receives all messages it sends
+strict bits InfoFeatures : uint8 {
+    /// If present, this device represents WLAN hardware
+    WLAN = 0x01;
+    /// If present, this device is synthetic (not backed by h/w)
+    SYNTH = 0x02;
+    /// If present, this device receives all messages it sends
+    LOOPBACK = 0x04;
+};
+
+// Underlying type is assumed to be uint32.
+flexible bits AllowableSegments {
+    TOLL_ROADS = 0b001;
+    HIGHWAYS = 0b010;
+    BIKE_PATHS = 0b100;
 };
 // [END bits]
 
 // [START enums]
-// An enum declared at library scope.
-enum Beverage : uint8 {
+flexible enum Beverage : uint8 {
     WATER = 0;
     COFFEE = 1;
     TEA = 2;
     WHISKEY = 3;
 };
 
-// An enum declared at library scope.
 // Underlying type is assumed to be uint32.
-enum Vessel {
+strict enum Vessel {
     CUP = 0;
     BOWL = 1;
     TUREEN = 2;
@@ -168,21 +176,18 @@ table Profile {
 struct Left {};
 struct Right {};
 // [START unions-use]
-strict union StrictEither {
-    1: Left left;
-    2: Right right;
-};
-
-union ImplicitlyStrictEither {
-    1: Left left;
-    2: Right right;
-};
-
-flexible union FlexibleEither {
+union Either {
     1: Left left;
     2: Right right;
 };
 // [END unions-use]
+
+// [START strict-vs-flexible]
+flexible union FlexibleEither {
+    1: Left left;
+    2: Right right;
+};
+// [END strict-vs-flexible]
 
 protocol RealCalculator {};
 // [START endpoints]

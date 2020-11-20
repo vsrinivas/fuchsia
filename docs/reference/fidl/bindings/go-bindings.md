@@ -102,13 +102,21 @@ const (
   FileModeRead    FileMode = 1
   FileModeWrite   FileMode = 2
   FileModeExecute FileMode = 4
+  FileMode_Mask   FileMode = 7
 )
 ```
+
+The `FileMode_Mask` value is a bitmask that contains every bits member defined
+in the FIDL schema.
 
 In addition, it provides the following methods for `FileMode`:
 
 * `func (x FileMode) String() string`: Returns a human readable string of the
   bits.
+* `func (x FileMode) GetUnknownBits() uint64`: Returns a value that contains only
+  the unknown members from this bits value, as a `uint64`.
+* `func (x FileMode) HasUnknownBits() bool`: Returns whether this value contains
+  any unknown bits.
 
 Example usage:
 
@@ -137,8 +145,20 @@ const (
 )
 ```
 
+For `flexible` enums, an unknown placeholder member will be generated as well:
+
+```golang
+	LocationType_Unknown LocationType = 0x7fffffff
+```
+
+If the `enum` has a member tagged with the [`[Unknown]`][unknown-attr] attribute,
+the generated unknown variable will have the same value as the tagged unknown
+member.
+
 In addition, it provides the following methods for `LocationType`:
 
+* `func (x LocationType) IsUnknown() bool`: Returns whether this enum value
+  is unknown.
 * `func (x LocationType) String() string`: Returns a human readable string of the enum.
 
 Example usage:
@@ -210,6 +230,13 @@ type JsonValue struct {
   SetStringValue(stringValue string)`: Sets the union to contain a specific
   variant, updating the tag accordingly.
 
+If `JsonValue` is `flexible` it will have the following additional methods:
+
+* `func (_m *JsonValue) GetUnknownData() fidl.UnknownData`: Returns the raw
+  bytes and handles of the unknown data. The slice of handles is returned in
+  [traversal order][traversal], and is guaranteed to be empty if the table is
+  not annotated with the `resource` modifier.
+
 The FIDL toolchain also generates factory functions for constructing instances
 of `JsonValue`:
 
@@ -278,6 +305,12 @@ type User struct {
   specified default value if not present.
 * `func (u *User) ClearAge()` and `func (u *User) ClearName()`: Clears the
   presence of a field.
+* `func (u *User) HasUnknownData() bool`: Checks for the presence of any unknown
+  fields.
+* `func (u *User) GetUnknownData() map[uint64]fidl.UnknownData`: Returns a map
+  from ordinal to bytes and handles for any unknown fields. The list of handles
+  is returned in [traversal order][traversal], and is guaranteed to be empty if
+  the table is a [value][lang-resource] type.
 
 Example usage:
 
@@ -465,5 +498,8 @@ protocol name.
 [lang-tables]: /docs/reference/fidl/language/language.md#tables
 [lang-unions]: /docs/reference/fidl/language/language.md#unions
 [lang-protocols]: /docs/reference/fidl/language/language.md#protocols
+[lang-resource]: /docs/reference/fidl/language/language.md#value-vs-resource
 [lang-protocol-composition]: /docs/reference/fidl/language/language.md#protocol-composition
 [union-lexicon]: /docs/reference/fidl/language/lexicon.md#union-terms
+[traversal]: /docs/reference/fidl/language/wire-format/README.md#traversal-order
+[unknown-attr]: /docs/reference/fidl/language/attributes.md#unknown

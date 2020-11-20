@@ -59,7 +59,7 @@ level when some clients cannot be migrated atomically:
 | protocol | method        | ✅ | [⚠️](#protocol-method-add) | [⚠️](#protocol-method-remove) | [⚠️](#protocol-method-rename) | ❌ | ❌ | -- |
 | method   | parameter     | ❌ | ❌ | ❌ | [⚠️](#method-parameter-rename) | ❌ | -- | -- |
 | struct   | field         | ❌ | ❌ | ❌ | ❌ | ❌ | -- | ✅ |
-| table    | field         | ✅ | [⚠️](#table-field-add) | [⚠️](#table-field-remove) | [⚠️](#table-field-rename) | ❌ | ❌ | -- |
+| table    | field         | ✅ | [✅](#table-field-add) | [✅️](#table-field-remove) | [⚠️](#table-field-rename) | ❌ | ❌ | -- |
 | union    | variant       | ✅ | [⚠️](#union-variant-add) | [⚠️](#union-variant-remove) | [⚠️](#union-variant-rename) | ❌ | ❌ | -- |
 | enum     | member        | ✅ | [⚠️](#enum-member-add) | [⚠️](#enum-member-remove) | [⚠️](#enum-member-rename) | ❌ | -- | ✅ |
 | bits     | member        | ✅ | [⚠️](#bits-member-add) | [⚠️](#bits-member-remove) | [⚠️](#bits-member-rename) | ❌ | -- | ✅ |
@@ -130,17 +130,14 @@ method parameter is source-compatible.
 
 ABI: It is binary-compatible to add a table field.
 
-API: It is source-compatible to add a table field. However, all uses of the Rust
-bindings must use the form `SomeTable { x: Member(1), ..SomeTable::empty() }` as
-[described in the overview][rust-bindings-tables].
+API: It is source-compatible to add a table field.
 
 ### Removing a table field {#table-field-remove}
 
 ABI: It is binary-compatible to remove a table field.
 
 API: There must not be any use of the field to ensure a source-compatible
-removal. In Rust, this entails using the form `SomeTable { x: Member(1),
-..SomeTable::empty() }` as [described in the overview][rust-bindings-tables].
+removal.
 
 ### Renaming a table field {#table-field-rename}
 
@@ -233,6 +230,90 @@ It is safe to update the value of a `const` declaration. In rare circumstances,
 such a change could cause source-compatibility issues if the constant is used in
 static asserts which would fail with the updated value.
 
+## Modifiers {#modifiers}
+
+### Strict vs flexible {#strict-flexible}
+
+Changing the strictness modifier of an enum, bits, or union declaration is
+binary-compatible. Changing from `flexible` to `strict` may cause runtime
+validation errors as unknown data for a previously flexible type will start
+being rejected.
+
+Generally, changing the strictness on a declaration is source-incompatible, but
+possible to [soft transition][soft transitions].
+Details for each declaration and binding are provided below.
+
+#### Bits
+
+Changing a bits declaration from `strict` to `flexible` is:
+
+* Source-compatible in LLCPP, Rust, Go, and Dart.
+* Source-incompatible in HLCPP.
+  * Any usages of the bits type as a template parameter must be removed first,
+    since strict bits are generated as an `enum class` and flexible bits are
+    generated as a `class` (which cannot be used as a non-type template
+    parameter).
+
+Changing a bits declaration from `flexible` to `strict` is:
+
+* Source-compatible Go, and Dart
+* Source-incompatible in Rust, HLCPP and LLCPP.
+  * Transitions from `flexible` to `strict` will require removing usages of
+    [`flexible`-only APIs][bindings-ref].
+  * In Rust, certain methods are provided for both strict and flexible bits, but
+    usages for strict bits cause a deprecation warning during compation which
+    could become errors if using `-Dwarning` or `#![deny(warnings)]`.
+
+#### Enums
+
+Changing an enum declaration from `strict` to `flexible` is:
+
+* Source-compatible in Go and Dart.
+* Source-incompatible in Rust, HLCPP, and LLCPP.
+  * In Rust, any `match` statements must be updated to handle unknown enum
+    values [when using a `match` statement](#switch-evolvability).
+  * In HLCPP and LLCPP, any uses of the enum as a template parameter must be
+    removed first. This is because strict enums are generated as an `enum class`
+    whereas flexible enums are generated as a `class`, which cannot be used as a
+    non-type template parameter.
+  * In HLCPP, the bit mask is a `const` in the top level library namespace for
+    strict bits, but a `static const` member of the generated class for flexible
+    bits.
+
+After changing from `strict` to `flexible`, care must be taken to correctly
+handle any unknown enums.
+
+`strict` enums that already have a specific member to represent the unknown case
+can transition to being `flexible` by using the [`[Unknown]`][unknown-attr]
+attribute.
+
+Changing an enum declaration from `flexible` to `strict` is:
+
+* Source-incompatible in all bindings.
+ * To make this change, any usages of [`flexible`-only APIs][bindings-ref], such
+   as uses of the unknown placeholder, must be removed first.
+
+#### Unions
+
+Changing a union declaration from `strict` to `flexible` is source-compatible,
+and changing from `flexible` to `strict` is source-incompatible. To perform the
+latter, any usages [`flexible`-only APIs][bindings-ref] for the union must be
+removed before it can be changed to `strict`.
+
+### Value vs resource
+
+Adding or removing the `resource` modifier on a struct, table, or union is
+binary-compatible. Removing the `resource` modifier may cause runtime validation
+errors: flexible types, such as tables and flexible unions, will now fail to
+decode any unknown data (i.e. unknown variants for flexible unions and unknown
+fields for tables) that contains handles. Note that this particular scenario
+does not apply to LLCPP because LLCPP never stores unknown handles.
+
+Adding or removing the `resource` modifier is not source-compatible.
+Furthermore, bindings are encouraged to diverge APIs if they can leverage the
+value type versus resource type distinction for specific benefits in the target
+language (see [FTP-057][ftp-057-motivation] for context).
+
 ## General advice
 
 ### Safely removing members {#safely-removing-members}
@@ -284,6 +365,7 @@ they often accompany other incompatible changes:
 * `[Doc]`
 * `[MaxBytes]`
 * `[MaxHandles]`
+* `[Unknown]
 
 ### Constraints {#constraints}
 
@@ -300,15 +382,6 @@ readers to avoid emitting values which would then be rejected at runtime.
 
 API: Relaxing or tightening constraints is source-compatible.
 
-### Modifiers {#modifiers}
-
-Adding or removing the `strict` modifier on an enum, bits, or union declaration
-is a source-incompatible and binary-incompatible change.
-
-Adding or removing the `resource` modifier on a struct, table, or union
-declaration is a source-incompatible change.
-<!-- TODO(fxbug.dev/59962): Binary compatible with one exception. -->
-
 ### Evolving switch on enums, or union tag {#switch-evolvability}
 
 When adding an enum member (or adding a union variant), any switch on the enum
@@ -323,13 +396,18 @@ switch on the enum (respectively the union tag) must first evolve to replace the
 soon to be removed member (resp. variant) by a default case.
 
 Note: A union tag is the discriminator indicating which variant is currently
-held by the union. This is often an enum in languages which do not support ADTs
-like C++.
+held by the union (see [lexicon][lexicon-tag]). This is often an enum in
+languages which do not support ADTs like C++.
 
 <!-- xrefs -->
 [transitional]: /docs/reference/fidl/language/attributes.md#transitional
 [transitional-rust]: /docs/reference/fidl/bindings/rust-bindings.md#transitional
+[rust-enum-macro]: /docs/reference/fidl/bindings/rust-bindings.md#types-enums
 [selector]: /docs/reference/fidl/language/attributes.md#selector
 [soft transitions]: /docs/contribute/governance/rfcs/0002_platform_versioning.md#terminology
 [Platform Versioning]: /docs/contribute/governance/rfcs/0002_platform_versioning.md
 [rust-bindings-tables]: /docs/reference/fidl/bindings/rust-bindings.md#types-tables
+[lexicon-tag]: /docs/reference/fidl/language/lexicon.md#union-terms
+[bindings-ref]: /docs/reference/fidl/bindings/overview.md
+[unknown-attr]: /docs/reference/fidl/language/attributes.md#unknown
+[ftp-057-motivation]: /docs/contribute/governance/fidl/ftp/ftp-057.md#motivation

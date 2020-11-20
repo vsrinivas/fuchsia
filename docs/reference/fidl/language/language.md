@@ -237,14 +237,14 @@ We also alias **`byte`** to mean **`uint8`** as a [built-in alias](#built-in-ali
 
 ### Bits {#bits}
 
-*   Named bit types.
-*   Discrete subset of bit values chosen from an underlying integer primitive
-    type.
-*   Not nullable.
-*   Bits must have at least one member.
-*   Serializing or deserializing a bits value which has a bit set that is not a
-    member of the bits declaration is a validation error.
-
+* Named bit types.
+* Discrete subset of bit values chosen from an underlying integer primitive
+  type.
+* Not nullable.
+* Bits must have at least one member.
+* Bits can either be [`strict` or `flexible`](#strict-vs-flexible).
+  <!-- TODO(fxbug.dev/64463): update default -->
+  * Bits default to `strict`.
 
 #### Use
 
@@ -254,13 +254,14 @@ We also alias **`byte`** to mean **`uint8`** as a [built-in alias](#built-in-ali
 
 ### Enums {#enums}
 
-*   Proper enumerated types.
-*   Discrete subset of named values chosen from an underlying integer primitive
-    type.
-*   Not nullable.
-*   Enums must have at least one member.
-*   Serializing or deserializing an enum from a value which is not defined in
-    FIDL is a validation error.
+* Proper enumerated types.
+* Discrete subset of named values chosen from an underlying integer primitive
+  type.
+* Not nullable.
+* Enums must have at least one member.
+* Enums can be [`strict` or `flexible`](#strict-vs-flexible).
+  <!-- TODO(fxbug.dev/64463): update default -->
+  * Enums default to `strict`.
 
 #### Declaration
 
@@ -458,15 +459,18 @@ table Profile {
 
 ### Unions {#unions}
 
-*   Record type consisting of an ordinal and an envelope.
-*   Ordinal indicates member selection, envelope holds contents.
-*   Declaration can be modified after deployment, while maintaining ABI
-    compatibility. See the [Compatibility Guide][union-compat] for
-    source-compatibility considerations.
-*   Declaration can have the [`resource` modifier](#value-vs-resource).
-*   Reference may be nullable.
-*   Unions contain one or more members. A union with no members would have no
-    inhabitants and thus would make little sense in a wire format.
+* Record type consisting of an ordinal and an envelope.
+* Ordinal indicates member selection, envelope holds contents.
+* Declaration can be modified after deployment, while maintaining ABI
+  compatibility. See the [Compatibility Guide][union-compat] for
+  source-compatibility considerations.
+* Declaration can have the [`resource` modifier](#value-vs-resource).
+* Reference may be nullable.
+* Unions contain one or more members. A union with no members would have no
+  inhabitants and thus would make little sense in a wire format.
+* Unions can either be [`strict` or `flexible`](#strict-vs-flexible).
+  <!-- TODO(fxbug.dev/64463): update default -->
+  * Unions default to `strict`.
 
 #### Declaration
 
@@ -474,28 +478,48 @@ table Profile {
 {%includecode gerrit_repo="fuchsia/samples" gerrit_path="src/calculator/fidl/calculator.fidl" region_tag="union" %}
 ```
 
-#### Use
+#### Use {#unions-use}
 
 Unions are denoted by their declared name (e.g. **Result**) and nullability:
 
-*   **`Result`** : non-nullable Result
-*   **`Result?`** : nullable Result
-
-Unions can also be declared as strict or flexible. If neither strict nor flexible
-is specified, the union is considered to be strict.
+*   **`Either`** : non-nullable Result
+*   **`Either?`** : nullable Result
 
 ```fidl
 {%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/language_reference.test.fidl" region_tag="unions-use" %}
 ```
 
-Seralizing or deserializing a union from a value with an ordinal that is not
-defined is a validation error for strict unions, but is allowed and exposed to
-the user as unknown data for flexible unions. In the above example, it is
-possible for `FlexibleEither` to evolve to carry a third variant. A client aware
-of the previous definition of `FlexibleEither` without the third variant can
-still receive a union from a server which has been updated to contain the larger
-set of variants. If the union is of the unknown variant, the data is exposed as
-unknown data by the bindings.
+### Strict vs. Flexible {#strict-vs-flexible}
+
+FIDL declarations can either have strict or flexible behavior. For strict types
+only, serializing or deserializing a value which contains data not described
+in the declaration is a validation error.
+
+In this example:
+
+```fidl
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/language_reference.test.fidl" region_tag="strict-vs-flexible" %}
+```
+
+By virtue of being flexible, it is simpler for `FlexibleEither` to evolve to
+carry a third variant.. A client aware of the previous definition of
+`FlexibleEither` without the third variant can still receive a union from a
+server which has been updated to contain the larger set of variants. If the
+union is of the unknown variant, bindings may expose it as unknown data (i.e. as
+raw bytes and handles) to the user and allow re-encoding the unknown union (e.g.
+to support proxy-like use cases). The methods provided for interacting with
+unknown data for flexible types are described in detail in the [bindings
+reference][bindings-ref].
+
+Bits, enums, and unions can be declared to either have strict or flexible
+behavior. Tables always have flexible behavior, and structs always have strict
+behavior.
+
+More details are discussed in
+[FTP-033: Handling of Unknown Fields and Strictness][ftp-033].
+
+Note: A type that is both flexible and a [value type](#value-vs-resource) will
+not allow deserializing unknown data that contains handles.
 
 ### Value vs. Resource {#value-vs-resource}
 
@@ -778,6 +802,7 @@ for you that contains commonly used Zircon definitions.
 <!-- xref -->
 [mixin]: https://en.wikipedia.org/wiki/Mixin
 [ftp-023]: /docs/contribute/governance/fidl/ftp/ftp-023.md
+[ftp-033]: /docs/contribute/governance/fidl/ftp/ftp-033.md
 [ftp-057]: /docs/contribute/governance/fidl/ftp/ftp-057.md
 [fidl-overview]: /docs/concepts/fidl/overview.md
 [fidl-grammar]: /docs/reference/fidl/language/grammar.md
@@ -785,3 +810,4 @@ for you that contains commonly used Zircon definitions.
 [naming-style]: /docs/development/languages/fidl/guides/style.md#Names
 [union-compat]: /docs/development/languages/fidl/guides/abi-api-compat.md#union
 [resource-compat]: /docs/development/languages/fidl/guides/abi-api-compat.md#modifiers
+[bindings-reference]: /docs/reference/fidl/bindings/overview.md

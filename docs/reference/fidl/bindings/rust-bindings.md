@@ -129,6 +129,17 @@ The FIDL toolchain generates an equivalent set of
 `FileMode::Execute`. Bits members using screaming snake case are converted to
 camel case in the generated Rust code.
 
+The bitflags struct also has the following methods implemented for it:
+
+* `get_unknown_bits(&self) -> u16`: Returns a primitive value containing only the
+  unknown members from this bits value.
+* `has_unknown_bits(&self) -> bool`: Returns whether this value contains any
+  unknown bits.
+
+These two methods are provided for both `strict` as well as `flexible` bits to make
+it easier to transition between `strict` and `flexible`, but the methods are marked as `#[deprecated]` for `strict` bits. `get_unknown_bits` and `has_unknown_bits` will
+always return `0` and `false` respectively, for `strict` bits.
+
 The generated `bitflags` struct always has the complete set of [`[#derive]`
  rules](#derives).
 
@@ -161,9 +172,30 @@ pub enum LocationType {
 
 With the following methods:
 
-* `from_primitive(prim: u32) -> Option<LocationType>`: Returns `Some` of the enum
+* `from_primitive(prim: u32) -> Option<Self>`: Returns `Some` of the enum
   variant corresponding to the discriminant value if any, and `None` otherwise.
 * `into_primitive(&self) -> u32`: Returns the underlying discriminant value.
+
+There are also the following methods, which are deprecated for `strict` enums
+but exist for both `strict` and `flexible` enums to facilitate transitioning
+between the two:
+
+* `validate(self) -> Result<Self, u32>`: Returns `Ok` of the value if it
+  corresponds to a known member, or an `Err` of the underlying primitive value
+  otherwise. Always returns the latter for `strict` enum types.
+* `is_unknown(&self) -> bool`: Returns whether this enum is unknown. Always
+  returns `false` for `strict` enum types.
+
+There are also methods that are only generated for `flexible` enums:
+
+* `from_primitive_allow_unknown(prim: u32) -> Self`: Create an instance of the
+  enum from an primitive value.
+* `unknown() -> Self`: Return a placeholder unknown enum value. If the enum
+  contains a member marked with [`[Unknown]`][unknown-attr], then the value
+  returned by this method contains the value of specified unknown member.
+
+`flexible` enums also have a `ColorUnknown` macro that should be used to match
+against unknown members.
 
 The generated `enum` always has the complete set of [`[#derive]` rules](#derives).
 
@@ -294,7 +326,8 @@ For aggregate types, such as structs, unions, and tables, the set of derives is
 determined by starting with the list of all possible derives and then removing
 some based on the fields that are transitively present in the type. For example,
 aggregate types that transitively contain a `vector` do not derive `Copy`, and
-types that contain a `handle` do not derive `Copy` and `Clone`. When in doubt,
+types that my contain a `handle` (i.e. types that are not marked as
+[`resource`][lang-resource]) do not derive `Copy` and `Clone`. When in doubt,
 refer to the generated code to check which traits are derived by a specific
 type. See [Appendix B](#fill-derives) for implementation details.
 
@@ -601,3 +634,4 @@ The calculation of traits derivation rules is visible in
 [lang-protocols]: /docs/reference/fidl/language/language.md#protocols
 [lang-protocol-composition]: /docs/reference/fidl/language/language.md#protocol-composition
 [tutorial]: /docs/development/languages/fidl/tutorials/rust
+[lang-resource]: /docs/reference/fidl/language/language.md#value-vs-resource

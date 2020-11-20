@@ -84,18 +84,23 @@ Given the [bits][lang-bits] definition:
 ```
 
 The FIDL toolchain generates a `FileMode` class with a static member for each
-flag, as well as a `mask` member that contains a mask of all bits members (in
+flag, as well as a `kMask` member that contains a mask of all bits members (in
 this example `0b111`):
 
 * `const static FileMode READ`
 * `const static FileMode WRITE`
 * `const static FileMode EXECUTE`
-* `const static FileMode mask`
+* `const static FileMode kMask`
 
 `FileMode` provides the following methods:
 
-* `explicit constexpr FileMode(uint16_t)`: Constructor for `FileMode`, which
-  uses the specified underlying type (in this example `uint16_t`).
+* `explicit constexpr FileMode(uint16_t)`: Constructs a value from an underlying
+  primitive value, preserving any unknown bit members.
+* `constexpr static fit::optional<FileMode> TryFrom(uint16_t value)`: Constructs an
+  instance of the bits from an underlying primitive value if the value does not
+  contain any unknown members, and returns `fit::nullopt` otherwise.
+* `constexpr static FileMode TruncatingUnknown(uint16_t value)`: Constructs an instance
+  of the bits from an underlying primitive value, clearing any unknown members.
 * Bitwise operators: Implementations for the `|`, `|=`, `&`, `&=`, `^`, `^=`,
   and `~` operators are provided, allowing bitwise operations on the bits like
   `mode |= FileMode::EXECUTE`.
@@ -107,6 +112,18 @@ Example usage:
 ```c++
 {%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/unittests/main.cc" region_tag="bits" adjust_indentation="auto" exclude_regexp="^TEST|^}" %}
 ```
+
+#### Flexible bits {#flexible-bits}
+
+Flexible bits have the following additional methods:
+
+* `constexpr FileMode unknown_bits() const`: Returns a bits value that contains
+  only the unknown members from this bits value.
+* `constexpr bool has_unknown_bits() const`: Returns whether this value contains
+  any unknown bits.
+
+Note: When applying bitwise negation to bits values that contain unknown
+members, the resulting bits value is only defined for the known bits.
 
 ### Enums {#enums}
 
@@ -132,6 +149,32 @@ Example usage:
 ```c++
 {%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/unittests/main.cc" region_tag="enums" adjust_indentation="auto" exclude_regexp="^TEST|^}" %}
 ```
+
+#### Flexible enums {#flexible-enums}
+
+Flexible enums are implemented as a `class` instead of an `enum class`, with the
+following methods:
+
+* `constexpr LocationType()`: Default constructor which initializes the enum to
+  an unspecified unknown value.
+* `constexpr LocationType(uint32_t value)`: Explicit constructor that takes in a
+  value of the underlying type of the enum.
+* `constexpr bool IsUnknown()`: Returns whether the enum value is unknown.
+* `constexpr static LocationType Unknown()`: Returns an enum value that is
+  guaranteed to be treated as unknown. If the enum has a member annotated with
+  [`[Unknown]`][unknown-attr], then the value of that member is returned. If
+  there is no such member, then the underlying value of the returned enum member
+  is unspecified.
+* `explicit constexpr operator int32_t() const`: Converts the enum back to its
+  underlying value
+
+The generated class contains a static member for each enum member, which are
+guaranteed to match the members of the `enum class` in the equivalent
+`strict enum`:
+
+* `const static LocationType MUSEUM`
+* `const static LocationType AIRPORT`
+* `const static LocationType RESTAURANT`
 
 ### Structs {#structs}
 
@@ -233,16 +276,12 @@ generated `Tag`:
 When a FIDL message containing a union with an unknown variant is decoded into
 `JsonValue`, `JsonValue::Which()` will return `JsonValue::Tag::kUnknown`.
 
-A flexible `JsonValue` also has the following extra methods:
-
-* `void* unknownData() const`: Returns the raw bytes of the union variant. This
-  method fails with an assertion error if the variant is *not* unknown.
-
-Encoding a union with an unknown variant will write the unknown data and the
-original [ordinal][union-lexicon] back onto the wire.
+Encoding a union with an unknown variant is not supported and will cause
+an encoding failure.
 
 The decoding operation will fail when encountering an unknown variant at a
-non-flexible union type.
+`strict` union type, or when encountering an unknown variant containing
+handles at a flexible non-resource union type.
 
 ### Tables {#tables}
 
@@ -305,6 +344,9 @@ Example usage:
 
 In addition to assigning fields with `std::unique_ptr`, any of the allocation
 strategies described in the [tutorial][llcpp-allocation] can also be used.
+
+Note: Tables with unknown fields will decode successfully but
+will fail to encode.
 
 ## Protocols {#protocols}
 
@@ -1013,3 +1055,4 @@ then decoding it. In that case, the values can't use any handle.
 [lang-protocols]: /docs/reference/fidl/language/language.md#protocols
 [lang-protocol-composition]: /docs/reference/fidl/language/language.md#protocol-composition
 [union-lexicon]: /docs/reference/fidl/language/lexicon.md#union-terms
+[unknown-attr]: /docs/reference/fidl/language/attributes.md#unknown

@@ -119,6 +119,32 @@ For cases where the generated code includes a type wrapping the underlying
 numeric bits value, it SHOULD be possible to convert between the raw value and
 the wrapper type. It is RECOMMENDED for this conversion to be explicit.
 
+Bindings MAY provide functions for converting a primitive value of the underlying
+type of a `bits` to the `bits` type itself. These converters may be of several
+flavors:
+
+* Possibly failing (or returning null) if the input value contains any unknown
+  bits.
+* Truncates any unknown bits from the input value.
+* For [flexible](#strict-flexible) bits only: Keeps any unknown bits from the input value.
+
+#### Unknown data {#unknown-bits}
+
+For [flexible](#strict-flexible) bits:
+
+* Bindings MUST provide methods for checking if the value contains any unknown
+  bits, and additionally MAY provide methods for retrieving those unknown bits.
+* The bitwise not operator unsets all unknown members, regardless of
+  their previous values (but works as expected for known members). The
+  other bitwise operators retain the same semantics for unknown bits members as
+  for known members.
+
+Note: In some languages, it is difficult or impossible to prevent users from
+manually creating an instance of a `bits` type from a primitive, therefore
+preventing bindings designers from restricting strict bits values to having a
+properly restricted domain. In this case, it is acceptable to provide the
+"flexible only" APIs to strict bits as well.
+
 ### Enum support
 
 Bindings MUST provide generated values for each enum member. These values SHOULD
@@ -127,6 +153,22 @@ be scoped to each enum.
 For cases where the generated code includes a type wrapping the underlying
 numeric enum value, it SHOULD be possible to convert between the raw value and
 the wrapper type. It is RECOMMENDED for this conversion to be explicit.
+
+#### Unknown data {#unknown-enums}
+
+For [flexible](#strict-flexible) enums:
+
+* Bindings MUST provide a way for users to determine if an enum is unknown,
+  including making it possible to match against the enum (for
+  languages that support `switch`, `match`, or similar constructs).
+* Bindings MAY expose the (possibly unknown) underlying raw value of the enum.
+* Bindings MUST provide a way to obtain a valid unknown enum, without the
+  user needing to provide an explicit unknown raw primitive value. If one of the
+  enum members is annotated with the [`[Unknown]`][unknown-attr] attribute,
+  then this unknown enum constructor MUST use the value of the annotated
+  member. Otherwise, the value used by the unknown constructor is unspecified.
+* The `[Unknown]` member MUST be treated as unknown in any
+  function that determines whether a value is unknown.
 
 ### Struct support
 
@@ -174,16 +216,9 @@ Examples of this exist for the
 [HLCPP](https://fuchsia-review.googlesource.com/c/fuchsia/+/309246/) and
 [Go](https://fuchsia-review.googlesource.com/c/fuchsia/+/313205/) bindings.
 
-#### Flexible unions
+#### Unknown data {#unknown-unions}
 
-The bindings MUST succeed when decoding a flexible union with an unknown
-variant. The behavior of such a union can vary. Bindings MAY provide ways for
-the user to read the underlying raw bytes and handles of the payload, as well as
-the unknown ordinal. Bindings SHOULD either provide access to both bytes and
-handles, or neither.
-
-For bindings that support storing accessing the unknown bytes, handles, and
-ordinals:
+For [flexible unions](#strict-flexible):
 
 * Bindings MAY provide a constructor to create a union with an unknown variant
   with specified ordinal, bytes, and handles.
@@ -194,12 +229,10 @@ ordinals:
     with unknown variants in roundabout ways, such as by manually decoding raw
     bytes.
   * Usage of this constructor is discouraged in production code.
-* Bindings SHOULD support re-encoding the union, writing the unknown ordinal,
-  bytes, and handles back onto the wire.
-
-For bindings that do not store the unknown bytes, handles, and ordinal:
-
-* Bindings SHOULD fail to encode rather than send a message with missing data.
+* Bindings MUST provide a way to determine whether the union has an unknown
+  variant.
+* Bindings MAY provide getters and setters for the unknown variant,
+  similar to methods generated for the union's known variants.
 
 ### Table support
 
@@ -219,6 +252,70 @@ for fields that have a value. For example, in Rust this can be accomplished
 using the `::empty()` constructor along with struct update syntax. Supporting
 construction this ways allows users to write code that is robust against
 addition of new fields to the table.
+
+#### Unknown data {#unknown-tables}
+
+All tables are [flexible](#strict-flexible).
+
+Bindings MUST provide a way to determine whether the table included any
+unknown fields during decoding.
+
+For bindings that store the unknown data in the decoded value,
+bindings MAY provide a way for users to read and write the unknown ordinals,
+bytes, and handles. Being able to modify the unknown data is useful for
+testing, but should be discouraged in production code.
+
+### Strict and flexible types {#strict-flexible}
+
+Examples of FIDL types and their corresponding unknown data include:
+
+FIDL Type | Unknown Data | Unknown Data Type
+----------|--------------|-------------------
+union | unknown variant | ordinal, bytes, and handles
+table | unknown fields | map from ordinal to corresponding bytes and handles
+enum | unknown variant | same as the underlying type of the `enum`
+bits | unknown bits | same as the underlying type of the `bits`
+
+Strict types MUST fail to decode when encountering any unknown data.
+and flexible types MUST succeed when decoding a value with unknown data (with
+one exception, see [value types and resource types](#value-resource)).
+
+In general, the underlying unknown data can either be discarded during decoding,
+or be stored within the decoded type. In either case, the type SHOULD indicate
+whether it encountered unknown data or not when decoding.
+If the unknown data is stored, bindings MAY provide ways for the user to
+access this data, though bindings SHOULD either provide access to all of the
+parts of the unknown data (e.g. for unions and tables: handles, bytes, and
+ordinals) or to none of them. Refer to the
+[enum support](#unknown-enums), [bits support](#unknown-bits),
+[union support](#unknown-unions), and [table support](#unknown-tables) sections
+for specific guidance on the design of these APIs.
+
+If any part of the unknown data is discarded, the decoded value SHOULD
+fail to re-encode rather than send a message with missing data. On the other
+hand, if all of the unknown data is stored, the decoded value SHOULD
+support re-encoding back onto the wire.
+
+Bindings authors SHOULD favor optimizing `strict` types, possibly at the expense
+of `flexible` types. For example, if there is a design tradeoff between the two,
+bindings authors SHOULD prefer optimizing the `strict` types.
+
+Changing a type from strict to flexible MUST be [transitionable][soft-transitions].
+
+### Value types and resource types {#value-resource}
+
+Value types MUST NOT contain handles, and resource types MAY contain
+handles.
+
+In the interaction between value types and flexible types, the requirements of
+the value type supersedes the requirements of the flexible type when they are
+in conflict. In other words, in the case where:
+
+* a type stores unknown data, and encounters handles in the unknown data during
+  decoding, and
+* the type is value type.
+
+decoding MUST fail.
 
 ## Protocol support
 
@@ -419,3 +516,5 @@ interface Hasher {
 [go-generated-code-comment]: https://github.com/golang/go/issues/13560#issuecomment-288457920
 [attributes]: /docs/reference/fidl/language/attributes.md
 [llcpp]: /docs/reference/fidl/bindings/llcpp-bindings.md
+[source-compatible]: /docs/development/languages/fidl/guides/abi-api-compat.md#strict-flexible
+[soft transitions]: /docs/contribute/governance/rfcs/0002_platform_versioning.md#terminology

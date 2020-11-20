@@ -110,12 +110,14 @@ Given the [bits][lang-bits] definition:
 ```
 
 The FIDL toolchain generates a `FileMode` class with `static const` variables
-for each bits member, as well as for a `FileMode` with no flags set:
+for each bits member, as well as for a `FileMode` with no flag set (`$none`)
+or every flag set (`$mask`):
 
 * `static const FileMode read`
 * `static const FileMode write`
 * `static const FileMode execute`
 * `static const FileMode $none`
+* `static const FileMode $mask`
 
 `FileMode` provides the following methods:
 
@@ -124,6 +126,8 @@ for each bits member, as well as for a `FileMode` with no flags set:
 * `FileMode operator |(FileMode other)`: Bitwise or operator.
 * `FileMode operator &(FileMode other)`: Bitwise and operator.
 * `bool operator(dynamic other)`: Equality operator.
+* `int getUnknownBits()`: Returns only the set bits that are unknown.
+* `bool hasUnknownBits()`: Returns whether this value contains any unknown bits.
 
 Example usage:
 
@@ -154,15 +158,21 @@ As well as the following variables:
   or `LocationType.restaurant`)
 * `static const List<LocationType> $values`: A list of all of the LocationTypes.
 
+For `flexible` enums, an unknown placeholder member will be generated as well:
+
+* `static const LocationType $unknown`
+
+If the `enum` has a member tagged with the [`[Unknown]`][unknown-attr] attribute,
+the placeholder variable will have the same value as the tagged unknown
+member.
+
 `LocationType` provides the following methods:
 
-* `factory LocationType(int v)`: Factory constructor that returns the
-  corresponding `LocationType` static const variable (`museum`, `airport`, or
-  `restaurant`) if the input matches one of the discriminants, or throws
-  otherwise.
 * `static LocationType $valueOf(String name)`: Look up a string name in the
   `$valuesMap`.
 * `String toString()`: Returns a readable representation of the `LocationType`.
+* `bool isUnknown()`: Returns whether this enum is unknown. Always returns `false`
+  for `strict` enum types.
 
 Example usage:
 
@@ -279,10 +289,18 @@ Given the [table][lang-tables] definition:
 
 The FIDL toolchain generates a `User` class that defines the following methods:
 
-* `const User({age, name})`: Constructor for `User`.
+* `const User({$unknownData, age, name})`: Constructor for `User`. Contains an
+  optional parameter for each field as well as a map containing any unknown
+  fields, as a `Map<int, fidl.UnknownRawData>`. Specifying a value for the
+  unknown fields should only be done for testing, e.g. to test that a table with
+  unknown fields is handled correctly.
 * `int get age`: Getter for the `age` field.
 * `String get name`: Getter for the `name` field.
 * `Map<int, dynamic> get $fields`: Returns a map of ordinals to field values.
+* `Map<int, fidl.UnknownRawData>? get $unknownData`: Returns a map of ordinals
+  to unknown field values (i.e. bytes and handles). The list of handles is
+  returned in [traversal order][traversal], and is guaranteed to be empty if the
+  table is a [value][lang-resource] type.
 * `bool operator ==(dynamic other)`: Equality operator that performs deep
   comparison when compared to another `User`.
 
@@ -498,6 +516,8 @@ and all events are implemented by returning a Stream with a single
 [lang-structs]: /docs/reference/fidl/language/language.md#structs
 [lang-tables]: /docs/reference/fidl/language/language.md#tables
 [lang-unions]: /docs/reference/fidl/language/language.md#unions
+[lang-resource]: /docs/reference/fidl/language/language.md#value-vs-resource
 [lang-protocols]: /docs/reference/fidl/language/language.md#protocols
 [lang-protocol-composition]: /docs/reference/fidl/language/language.md#protocol-composition
 [union-lexicon]: /docs/reference/fidl/language/lexicon.md#union-terms
+[unknown-attr]: /docs/reference/fidl/language/attributes.md#unknown

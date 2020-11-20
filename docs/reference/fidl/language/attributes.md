@@ -12,6 +12,7 @@ The following FIDL attributes are supported:
 * [`[Selector]`](#selector)
 * [`[Transitional]`](#transitional)
 * [`[Transport]`](#transport)
+* [`[Unknown]`](#unknown)
 
 ## Scope
 
@@ -55,10 +56,11 @@ Note: Not implemented.
 **USAGE**: `[Discoverable]`
 
 **MEANING**:
-Causes the service's name to be made available for lookup.
-A service with a `[Discoverable]` attribute can be found at run-time.
-That is to say, you can "request" this service, and zircon will locate it
-and provide access to it.
+Automatically generates a path name for the annotated protocol. That is to say,
+a `[Discoverable]` protocol can be served under the generated name, and clients
+that connect to that protocol can search for it under the same generated name.
+This makes it possible to have a client search for the correct name without
+manually ensuring that the lookup name matches the one passed on the server side.
 
 ## `[Doc]` {#doc}
 
@@ -172,6 +174,20 @@ The default is `Channel` if none specified.
 If you do specify a value or values, then only those values are used (e.g.,
 specifying `[Transport="Foo"]` disables `Channel` and uses only
 `Foo`).
+
+## `[Unknown]` {#unknown}
+
+**USAGE**: `[Unknown]`
+
+**MEANING**:
+`[Unknown]` can be placed on an enum member to indicate that this member represents
+a specific unknown placeholder. Its purpose is to make it possible to transition a strict enum
+that was manually implementing flexible behavior with an extra "unknown" member
+to transition into a flexible enum: annotating the member representing unknown
+with the `[Unknown]` attribute before transitioning to flexible ensures that
+the `[Unknown]` member is treated as unknown data, instead of as a
+known member. Once usages of the `[Unknown]` member are removed, the member is
+no longer necessary.
 
 <!-- xrefs -->
 [channel]: /docs/reference/kernel_objects/channel.md

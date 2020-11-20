@@ -120,6 +120,41 @@ Example usage:
 {%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/unittests/main.cc" region_tag="bits" adjust_indentation="auto" exclude_regexp="^TEST|^}" %}
 ```
 
+#### Flexible bits {#flexible-bits}
+
+Flexible bits are implemented as a `class` instead of an `enum class`, with
+the following additional methods:
+
+* `constexpr FileMode()`: Default constructor that initializes a value with no
+  bits set.
+* `constexpr FileMode(uint16_t)`: Constructs a value from an underlying
+   primitive value, preserving any unknown bit members.
+* `constexpr fit::optional<FileMode> TryFrom(uint16_t value)`: Constructs an
+  instance of the bits from an underlying primitive value if the value does not
+  contain any unknown members, and returns `fit::nullopt` otherwise.
+* `constexpr FileMode TruncatingUnknown(uint16_t value)`: Constructs an instance
+  of the bits from an underlying primitive value, clearing any unknown members.
+* `constexpr FileMode unknown_bits() const`: Returns a bits value that contains
+  only the unknown members from this bits value.
+* `constexpr bool has_unknown_bits() const`: Returns whether this value contains
+  any unknown bits.
+* `explicit constexpr operator uint16_t() const`: Converts the bits value back
+  to its underlying primitive value.
+* `explicit constexpr operator bool() const`: Returns whether any bits are set.
+
+<!-- TODO(fxbug.dev/64760): mask value should be consistent -->
+The generated class contains a static number for each bits member as well as
+for the bits mask. These correspond exactly with the members of the `enum class`
+value, with the addition a `kMask` member that replaces `FileModeMask`.
+
+* `const static FileMode READ`
+* `const static FileMode WRITE`
+* `const static FileMode EXECUTE`
+* `const static FileMode kMask`
+
+Note: When applying bitwise negation to bits values that contain unknown
+members, the resulting bits value is only defined for the known bits.
+
 ### Enums {#enums}
 
 Given the [enum][lang-enums] definition:
@@ -144,6 +179,32 @@ Example usage:
 ```c++
 {%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/unittests/main.cc" region_tag="enums" adjust_indentation="auto" exclude_regexp="^TEST|^}" %}
 ```
+
+#### Flexible enums {#flexible-enums}
+
+Flexible enums are implemented as a `class` instead of an `enum class`, with
+the following methods:
+
+* `constexpr LocationType()`: Default constructor which initializes the enum to
+  an unspecified unknown value.
+* `constexpr LocationType(uint32_t value)`: Explicit constructor that takes in a
+  value of the underlying type of the enum.
+* `constexpr bool IsUnknown()`: Returns whether the enum value is unknown.
+* `constexpr static LocationType Unknown()`: Returns an enum value that is
+  guaranteed to be treated as unknown. If the enum has a member annotated with
+  [`[Unknown]`][unknown-attr], then the value of that member is returned. If
+  there is no such member, then the underlying value of the returned enum member
+  is unspecified.
+* `explicit constexpr operator int32_t() const`: Converts the enum back to its
+  underlying value
+
+The generated class contains a static member for each enum member, which are
+guaranteed to match the members of the `enum class` in the equivalent
+`strict enum`:
+
+* `const static LocationType MUSEUM`
+* `const static LocationType AIRPORT`
+* `const static LocationType RESTAURANT`
 
 ### Structs {#structs}
 
@@ -265,19 +326,39 @@ When a FIDL message containing a union with an unknown variant is decoded into
 `JsonValue`, `JsonValue::Which()` returns `JsonValue::Tag::kUnknown`, and
 `JsonValue::Ordinal()` returns the unknown ordinal.
 
-A flexible `JsonValue` also has the following extra methods:
+A flexible `JsonValue` type will have extra methods for interacting with unknown
+data which will depend on whether the type is a
+[value or resource type][lang-resource]. Value types will not have
+unknown data methods that reference `zx::handle`.
 
-* `const vector<uint8_t>* UnknownData() const`: Returns the raw bytes of the
+A flexible `JsonValue` that is a resource type has the following extra
+methods:
+
+* `const vector<uint8_t>* UnknownBytes() const`: Returns the raw bytes of the
   union variant if it is unknown, or `nullptr` otherwise.
+* `const vector<zx::handle>* UnknownHandles() const`: Returns the handles of the
+  union variant in [traversal order][traversal] if it is unknown, or
+  `nullptr` otherwise.
+* `JsonValue& SetUnknownData(fidl_xunion_tag_t ordinal, vector<uint8_t> bytes,
+  vector<zx::handle> handles)`: Similar to the setter methods for the known
+  members, this sets the union to an unknown variant with the specified ordinal,
+  bytes, and handles. This method should only be used for testing, e.g. to
+  ensure that code can handle unknown data correctly.
 
-HLCPP does not support encoding a `JsonValue` if it has an unknown ordinal.
-Re-encoding a union with an unknown variant does not write the unknown bytes
-back onto the wire, instead encoding an absent union. Therefore, encoding a
-message with an uninitialized union only succeeds if this union is allowed to be
-absent (i.e. if it is specified as `JsonValue?` instead of `JsonValue`).
+A flexible `JsonValue` not annotated with `resource` has the following extra
+methods
+
+* `const vector<uint8_t>* UnknownBytes() const`: Returns the raw bytes of the
+  union variant if it is unknown, or `nullptr` otherwise.
+* `JsonValue& SetUnknownData(fidl_xunion_tag_t ordinal, vector<uint8_t> bytes)`:
+  Similar to the setter methods for the known members, this sets the union to an
+  unknown variant with the specified ordinal and bytes. This method should only
+  be used for testing, e.g. to ensure that code can handle unknown data
+  correctly.
 
 Non-flexible (i.e. `strict`) unions fail when decoding a data containing an
-unknown variant.
+unknown variant. Flexible non-resource unions fail when decoding data containing
+an unknown variant with handles.
 
 ### Tables {#tables}
 
@@ -304,6 +385,31 @@ The FIDL toolchain generates a `User` class with the following methods:
 * `User& set_age(uint8_t)` and `User& set_name(std::string)`: Field setters.
 * `void clear_age()` and `void clear_name()`: Clear the value of a field by
   calling its destructor
+
+The `User` class will also provide methods for interacting with unknown fields
+which will depend on whether the type is a [value or resource type][lang-resource].
+Tables that are a value type will not have unknown
+data methods that reference `zx::handle`, and will fail to decode data with
+unknown fields that contain handles.
+
+A resource `User` will have the following methods:
+
+* `const std::map<uint64_t, fidl::UnknownData>>& UnknownData() const`: Returns a
+  map from ordinal to bytes and handles. The handles are guaranteed to be in
+  [traversal order][traversal].
+* `void SetUnknownDataEntry(uint32_t ordinal, fidl::UnknownData&& data)`: Set
+  the bytes and handles of an unknown field if it doesn't already exist. This
+  method should only be used for testing, e.g. to check that tables with unknown
+  fields are handled correctly.
+
+A non-resource `User` will have the following methods:
+
+* `const std::map<uint64_t, vector<uint8_t>& UnknownData() const`: Returns a
+  map from ordinal to bytes.
+* `void SetUnknownDataEntry(uint32_t ordinal, vector<uint8_t>&& data)`: Set
+  the bytes of an unknown field if it doesn't already exist. This method should
+  only be used for testing, e.g. to check that tables with unknown fields are
+  handled correctly.
 
 `User` also has the following associated generated values:
 * `UserPtr`: an alias to `unique_ptr<User>`.
@@ -570,4 +676,7 @@ For the same `TicTacToe` protocol listed above, the FIDL toolchain generates a
 [lang-unions]: /docs/reference/fidl/language/language.md#unions
 [lang-protocols]: /docs/reference/fidl/language/language.md#protocols
 [lang-protocol-composition]: /docs/reference/fidl/language/language.md#protocol-composition
+[lang-resource]: /docs/reference/fidl/language/language.md#value-vs-resource
 [union-lexicon]: /docs/reference/fidl/language/lexicon.md#union-terms
+[unknown-attr]: /docs/reference/fidl/language/attributes.md#unknown
+[traversal]: /docs/reference/fidl/language/wire-format/README.md#traversal-order

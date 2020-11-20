@@ -49,7 +49,7 @@ The [transactional messages](#transactional-messages) section, describes how
 a transactional message is composed of a header message optionally followed
 by a body message.
 
-### Traversal Order
+### Traversal Order {#traversal-order}
 
 The **traversal order** of a message is determined by a recursive depth-first
 walk of all of the **objects** it contains, as obtained by following the chain
