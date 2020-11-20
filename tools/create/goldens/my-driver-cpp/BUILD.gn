@@ -58,6 +58,7 @@ driver_package("pkg") {
 test("unit-tests") {
   sources = [
     "my_driver_cpp.cc",
+    "my_driver_cpp.h",
     "unit-tests.cc",
   ]
   deps = [

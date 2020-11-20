@@ -54,6 +54,7 @@ driver_package("pkg") {
 test("unit-tests") {
   sources = [
     "{{snake_case PROJECT_NAME}}.cc",
+    "{{snake_case PROJECT_NAME}}.h",
     "unit-tests.cc",
   ]
   deps = [
