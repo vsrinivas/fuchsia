@@ -70,7 +70,7 @@ third_party_go_library("cloud.google.com/go/storage") {
     ":google.golang.org/api/iterator",
     ":google.golang.org/api/option",
     ":google.golang.org/api/storage/v1",
-    ":google.golang.org/api/transport/http",
+    ":google.golang.org/api/transport",
     ":google.golang.org/genproto/googleapis/iam/v1",
   ]
 }
@@ -283,12 +283,12 @@ third_party_go_library("google.golang.org/api/storage/v1") {
     ":google.golang.org/api/gensupport",
     ":google.golang.org/api/googleapi",
     ":google.golang.org/api/option",
-    ":google.golang.org/api/transport/http",
+    ":google.golang.org/api/transport",
   ]
 }
-third_party_go_library("google.golang.org/api/transport/http") {
-  name = "google.golang.org/api/transport/http/..."
-  source_dir = "//third_party/golibs/github.com/googleapis/google-api-go-client/transport/http"
+third_party_go_library("google.golang.org/api/transport") {
+  name = "google.golang.org/api/transport/..."
+  source_dir = "//third_party/golibs/github.com/googleapis/google-api-go-client/transport"
   deps = [
     ":go.opencensus.io",
     ":google.golang.org/api/googleapi",
