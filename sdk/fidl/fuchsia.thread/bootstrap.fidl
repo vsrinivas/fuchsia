@@ -1,0 +1,44 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.thread;
+
+using fuchsia.mem as mem;
+
+/// Protocol to allow components to provide initial configuration data derived from
+/// an existing Thread implementation to ensure continuity of the Thread network and
+/// other thread settings.
+[Discoverable]
+protocol Bootstrap {
+    /// Import a json data file containing the Thread configuration as created by
+    /// [ThreadConfigManager]
+    /// (https://fuchsia.googlesource.com/fuchsia/+/refs/heads/master/src/connectivity/openthread/third_party/openthread/platform/thread_config_manager.cc).
+    /// The json format is:
+    /// {
+    ///   "key1" : [ base64_encoded_string1_1, base64_encoded_string1_2, ... ],
+    ///   "key2" : [ base64_encoded_string2_1, base64_encoded_string2_2, ... ],
+    ///   ...
+    /// }
+    /// where key1, key2 etc are decimal representation of uint16_t values.
+    /// base64_encoded_strings are created from a vector of uint16_t values.
+    /// This json format is equivalent to thread settings file in POSIX which
+    /// is binary file having the information encoded as:
+    /// 2 bytes of key1, 2 bytes of value_len1, 'value_len1' bytes of 'value1',
+    /// 2 bytes of key2, 2 bytes of value_len2, 'value_len2' bytes of 'value2',
+    /// 2 bytes of key1, 2 bytes of value_len3, 'value_len3' bytes of 'value3',
+    /// 2 bytes of key2, 2 bytes of value_len4, 'value_len4' bytes of 'value4.
+    /// The POSIX binary file is simply a sequence of bytes and allows for
+    /// duplicate keys. This is converted to json format above with values
+    /// transformed as:
+    /// base64_encoded_string1_1 = base64_encode(value1[0:value_len1])
+    /// base64_encoded_string1_2 = base64_encode(value2[0:value_len2])
+    /// base64_encoded_string2_1 = base64_encode(value3[0:value_len3])
+    /// base64_encoded_string2_2 = base64_encode(value4[0:value_len4])
+    /// Keys are simply decimal representation of uint16_t keys in double quotes.
+    ///
+    /// Settings are guaranteed to have been persisted upon successful
+    /// completion of this call. The channel will be closed if importing
+    /// settings fail.
+    ImportThreadSettings(mem.Buffer thread_settings_json) -> ();
+};

@@ -94,6 +94,7 @@ sdk://fidl/fuchsia.sys
 sdk://fidl/fuchsia.sys.test
 sdk://fidl/fuchsia.sysinfo
 sdk://fidl/fuchsia.sysmem
+sdk://fidl/fuchsia.thread
 sdk://fidl/fuchsia.tracing.provider
 sdk://fidl/fuchsia.ui.activity
 sdk://fidl/fuchsia.ui.activity.control
