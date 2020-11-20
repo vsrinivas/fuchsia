@@ -3163,8 +3163,17 @@ where
 }
 
 /// Implements the FIDL `Encodable` and `Decodable` traits for an enum
-/// representing a FIDL xunion. Also implements the `ordinal()` method returning
-/// the ordinal corresponding to the union's active variant.
+/// representing a FIDL xunion. For flexible resource xunions, also generates:
+///
+/// ```rust
+/// pub fn unknown(ordinal: u64, data: fidl::UnknownData) -> Self;
+/// pub fn validate(self) -> Result<Self, fidl::UnknownData>;
+/// pub fn is_unknown(&self) -> bool;
+/// ```
+///
+/// For flexible value xunions it uses `Vec<u8>` instead of `fidl::UnknownData`.
+/// For strict xunions, it provides `validate` and `is_unknown` for ease of
+/// transition, but with deprecation notices.
 #[macro_export]
 macro_rules! fidl_xunion {
     (
@@ -3181,14 +3190,102 @@ macro_rules! fidl_xunion {
                 )?
             },
         )*],
-        // Flexible xunions only: the resource_unknown_member and
-        // value_unknown_member represent the name of the unknown variant for
-        // resource types and value types, respectively, and are mutually
-        // exclusive (they cannot both be present).
+        // Strict xunions only: provide either `strict_resource: true` or
+        // `strict_value: true` based on resourceness.
+        $( strict_resource: $strict_resource:expr, )?
+        $( strict_value: $strict_value:expr, )?
+        // Flexible xunions only: provide the name of the unknown variant using
+        // either `resource_unknown_member` or `value_unknown_member`.
         $( resource_unknown_member: $resource_unknown_name:ident, )?
         $( value_unknown_member: $value_unknown_name:ident, )?
     ) => {
         impl $name {
+            // Strict resource case.
+            $(
+                #[deprecated = "Strict unions should not use validate()"]
+                #[inline]
+                pub fn validate(self) -> std::result::Result<Self, (u64, $crate::encoding::UnknownData)> {
+                    $strict_resource; // dummy use for expansion
+                    Ok(self)
+                }
+
+                #[deprecated = "Strict unions should not use is_unknown()"]
+                #[inline]
+                pub fn is_unknown(&self) -> bool {
+                    false
+                }
+            )?
+
+            // Strict value case.
+            $(
+                #[deprecated = "Strict unions should not use validate()"]
+                #[inline]
+                pub fn validate(self) -> std::result::Result<Self, (u64, Vec<u8>)> {
+                    $strict_value; // dummy use for expansion
+                    Ok(self)
+                }
+
+                #[deprecated = "Strict unions should not use is_unknown()"]
+                #[inline]
+                pub fn is_unknown(&self) -> bool {
+                    false
+                }
+            )?
+
+            // Flexible resource case.
+            $(
+                #[inline]
+                pub fn unknown(ordinal: u64, data: $crate::encoding::UnknownData) -> Self {
+                    #[allow(deprecated)]
+                    Self::$resource_unknown_name { ordinal, data }
+                }
+
+                #[inline]
+                pub fn validate(self) -> std::result::Result<Self, (u64, $crate::encoding::UnknownData)> {
+                    match self {
+                        #[allow(deprecated)]
+                        Self::$resource_unknown_name { ordinal, data } => Err((ordinal, data)),
+                        _ => Ok(self)
+                    }
+                }
+
+                #[inline]
+                pub fn is_unknown(&self) -> bool {
+                    match self {
+                        #[allow(deprecated)]
+                        Self::$resource_unknown_name { .. } => true,
+                        _ => false,
+                    }
+                }
+            )?
+
+            // Flexible value case.
+            $(
+                #[inline]
+                pub fn unknown(ordinal: u64, bytes: Vec<u8>) -> Self {
+                    #[allow(deprecated)]
+                    Self::$value_unknown_name { ordinal, bytes }
+                }
+
+                #[inline]
+                pub fn validate(self) -> std::result::Result<Self, (u64, Vec<u8>)> {
+                    match self {
+                        #[allow(deprecated)]
+                        Self::$value_unknown_name { ordinal, bytes } => Err((ordinal, bytes)),
+                        _ => Ok(self)
+                    }
+                }
+
+                #[inline]
+                pub fn is_unknown(&self) -> bool {
+                    match self {
+                        #[allow(deprecated)]
+                        Self::$value_unknown_name { .. } => true,
+                        _ => false,
+                    }
+                }
+            )?
+
             #[inline]
             fn ordinal(&self) -> u64 {
                 match *self {
@@ -3229,7 +3326,7 @@ macro_rules! fidl_xunion {
                         },
                     )*
                     $(
-                        $name::$resource_unknown_name { ordinal: _, bytes, handles } => {
+                        $name::$resource_unknown_name { ordinal: _, data: $crate::encoding::UnknownData { bytes, handles } } => {
                             // Throw the raw data from the unrecognized variant
                             // back onto the wire. This will allow correct proxies even in
                             // the event that they don't yet recognize this union variant.
@@ -3272,7 +3369,10 @@ macro_rules! fidl_xunion {
                     return $name::$member_name($crate::fidl_new_empty!($member_ty));
                 )*
                 $(
-                    $name::$resource_unknown_name { ordinal: 0, bytes: vec![], handles: vec![] }
+                    $name::$resource_unknown_name {
+                        ordinal: 0,
+                        data: $crate::encoding::UnknownData { bytes: vec![], handles: vec![] }
+                    }
                 )?
                 $(
                     $name::$value_unknown_name { ordinal: 0, bytes: vec![] }
@@ -3358,7 +3458,10 @@ macro_rules! fidl_xunion {
                                     for _ in 0..num_handles {
                                         handles.push(decoder.take_next_handle()?);
                                     }
-                                    *self = $name::$resource_unknown_name { ordinal, bytes, handles };
+                                    *self = $name::$resource_unknown_name {
+                                        ordinal,
+                                        data: $crate::encoding::UnknownData { bytes, handles },
+                                    };
                                 }
                             )?
                             $(
@@ -3385,6 +3488,15 @@ macro_rules! fidl_xunion {
             }
         }
     }
+}
+
+/// Container for the raw bytes and handles of an unknown envelope payload.
+#[derive(Debug, Default, Eq, PartialEq)]
+pub struct UnknownData {
+    /// Unknown bytes.
+    pub bytes: Vec<u8>,
+    /// Unknown handles.
+    pub handles: Vec<Handle>,
 }
 
 /// Header for transactional FIDL messages
@@ -4002,6 +4114,12 @@ impl<T: Encodable> Encodable for &mut T {
 
 #[cfg(test)]
 mod test {
+    // Silence dead code errors from unused functions produced by macros like
+    // `fidl_bits!`, `fidl_xunion!`, etc. To the compiler, it's as if we defined
+    // a pub fn in a private mod and never used it. Unfortunately placing this
+    // attribute directly on the macro invocations does not work.
+    #![allow(dead_code)]
+
     use super::*;
     use matches::assert_matches;
     use std::{f32, f64, fmt, i64, u64};
@@ -4281,7 +4399,6 @@ mod test {
     #[test]
     fn encode_decode_flexible_enum() {
         #[derive(Debug, Copy, Clone, Eq, PartialEq)]
-        #[non_exhaustive]
         enum Animal {
             Dog,
             Cat,
@@ -4324,6 +4441,131 @@ mod test {
             Animal::from_primitive(Animal::Cat.into_primitive()).expect("should be cat"),
             Animal::from_primitive_allow_unknown(123),
             Animal::unknown(),
+        ];
+    }
+
+    #[test]
+    fn encode_decode_strict_xunion() {
+        #[derive(Debug, Clone, Eq, PartialEq)]
+        enum Thing {
+            Uint32(u32),
+            String(String),
+        }
+        fidl_xunion! {
+            name: Thing,
+            members: [
+                Uint32 {
+                    ty: u32,
+                    ordinal: 1,
+                },
+                String {
+                    ty: String,
+                    ordinal: 2,
+                },
+            ],
+            strict_value: true,
+        }
+
+        // You can use the flexible methods on strict types, but it produces a
+        // deprecation warning.
+        #[allow(deprecated)]
+        let is_unknown = Thing::Uint32(42).is_unknown();
+        assert_eq!(is_unknown, false);
+        #[allow(deprecated)]
+        let validate = Thing::String("hello".to_owned()).validate();
+        assert_eq!(validate, Ok(Thing::String("hello".to_owned())));
+
+        identities![Thing::Uint32(42), Thing::String("hello".to_owned()),];
+    }
+
+    #[test]
+    fn encode_decode_flexible_value_xunion() {
+        #[derive(Debug, Clone, Eq, PartialEq)]
+        enum Thing {
+            Uint32(u32),
+            String(String),
+            __Unknown { ordinal: u64, bytes: Vec<u8> },
+        }
+        fidl_xunion! {
+            name: Thing,
+            members: [
+                Uint32 {
+                    ty: u32,
+                    ordinal: 1,
+                },
+                String {
+                    ty: String,
+                    ordinal: 2,
+                },
+            ],
+            value_unknown_member: __Unknown,
+        }
+
+        assert_eq!(Thing::Uint32(42).is_unknown(), false);
+        assert_eq!(Thing::String("hello".to_owned()).is_unknown(), false);
+        assert_eq!(Thing::Uint32(42).validate(), Ok(Thing::Uint32(42)));
+        assert_eq!(
+            Thing::String("hello".to_owned()).validate(),
+            Ok(Thing::String("hello".to_owned()))
+        );
+        assert_eq!(Thing::unknown(0, vec![]).is_unknown(), true);
+        assert_eq!(Thing::unknown(0, vec![]).validate(), Err((0, vec![])));
+
+        identities![
+            Thing::Uint32(42),
+            Thing::String("hello".to_owned()),
+            Thing::unknown(0, vec![]),
+            Thing::unknown(999, vec![1, 2, 3, 4, 5, 6, 7, 8]),
+        ];
+    }
+
+    #[test]
+    fn encode_decode_flexible_resource_xunion() {
+        #[derive(Debug, Eq, PartialEq)]
+        enum Thing {
+            Uint32(u32),
+            String(String),
+            __Unknown { ordinal: u64, data: UnknownData },
+        }
+        fidl_xunion! {
+            name: Thing,
+            members: [
+                Uint32 {
+                    ty: u32,
+                    ordinal: 1,
+                },
+                String {
+                    ty: String,
+                    ordinal: 2,
+                },
+            ],
+            resource_unknown_member: __Unknown,
+        }
+
+        assert_eq!(Thing::Uint32(42).is_unknown(), false);
+        assert_eq!(Thing::String("hello".to_owned()).is_unknown(), false);
+        assert_eq!(Thing::Uint32(42).validate(), Ok(Thing::Uint32(42)));
+        assert_eq!(
+            Thing::String("hello".to_owned()).validate(),
+            Ok(Thing::String("hello".to_owned()))
+        );
+        assert_eq!(
+            Thing::unknown(0, UnknownData { bytes: vec![], handles: vec![] }).is_unknown(),
+            true
+        );
+        assert_eq!(
+            Thing::unknown(0, UnknownData { bytes: vec![], handles: vec![] }).validate(),
+            Err((0, UnknownData { bytes: vec![], handles: vec![] }))
+        );
+
+        identities![
+            Thing::Uint32(42),
+            Thing::String("hello".to_owned()),
+            Thing::unknown(0, Default::default()),
+            Thing::unknown(
+                999,
+                UnknownData { bytes: vec![1, 2, 3, 4, 5, 6, 7, 8], handles: vec![] }
+            ),
         ];
     }
 
@@ -4383,6 +4625,7 @@ mod test {
                     ordinal: 2,
                 },
             ],
+            strict_value: true,
         };
 
         for ctx in CONTEXTS {
@@ -4426,6 +4669,7 @@ mod test {
                     ordinal: 2,
                 },
             ],
+            strict_value: true,
         };
 
         for ctx in CONTEXTS {
@@ -5138,6 +5382,7 @@ mod test {
                 ordinal: 1,
             },
         ],
+        strict_value: true,
     }
 
     // This is a resource union, as a resource member is added in
@@ -5146,7 +5391,7 @@ mod test {
     pub enum TestSampleXUnion {
         U(u32),
         St(SimpleTable),
-        __UnknownVariant { ordinal: u64, bytes: Vec<u8>, handles: Vec<Handle> },
+        __Unknown { ordinal: u64, data: UnknownData },
     }
     fidl_xunion! {
         name: TestSampleXUnion,
@@ -5160,7 +5405,7 @@ mod test {
                 ordinal: 0x6f317664,
             },
         ],
-        resource_unknown_member: __UnknownVariant,
+        resource_unknown_member: __Unknown,
     }
 
     #[derive(Debug, PartialEq)]
@@ -5180,12 +5425,13 @@ mod test {
                 ordinal: 0x6f317664,
             },
         ],
+        strict_value: true,
     }
 
     #[derive(Debug, PartialEq)]
     pub enum TestSampleXUnionExpanded {
         SomethinElse(Handle),
-        __UnknownVariant { ordinal: u64, bytes: Vec<u8>, handles: Vec<Handle> },
+        __Unknown { ordinal: u64, data: UnknownData },
     }
     fidl_xunion! {
         name: TestSampleXUnionExpanded,
@@ -5199,7 +5445,7 @@ mod test {
                 },
             },
         ],
-        resource_unknown_member: __UnknownVariant,
+        resource_unknown_member: __Unknown,
     }
 
     #[test]
@@ -5320,7 +5566,7 @@ mod test {
         #[derive(Debug, PartialEq)]
         enum XUnion {
             Variant(Vec<u8>),
-            __UnknownVariant { ordinal: u64, bytes: Vec<u8> },
+            __Unknown { ordinal: u64, bytes: Vec<u8> },
         }
         fidl_xunion! {
             name: XUnion,
@@ -5330,7 +5576,7 @@ mod test {
                     ordinal: 1,
                 },
             ],
-            value_unknown_member: __UnknownVariant,
+            value_unknown_member: __Unknown,
         }
 
         identities![
@@ -5354,6 +5600,7 @@ mod test {
                     ordinal: 0xffffffffu64,
                 },
             ],
+            strict_value: true,
         };
 
         for ctx in CONTEXTS {
@@ -5485,9 +5732,7 @@ mod zx_test {
             .expect("Decoding TestSampleXUnion failed");
 
             // Ensure we've recorded the unknown variant
-            if let TestSampleXUnion::__UnknownVariant { .. } = intermediate_missing_variant {
-                // ok
-            } else {
+            if !intermediate_missing_variant.is_unknown() {
                 panic!("unexpected variant")
             }
 

@@ -43,14 +43,18 @@ fidl_strict_enum! {
 #[derive(Debug, PartialEq)]
 pub enum UnionWithHandle {
     H(fidl::Vmo),
+    #[deprecated = "Use `UnionWithHandle::unknown()` to construct and `UnionWithHandleUnknown!()` to exhaustively match."]
     #[doc(hidden)]
-    __UnknownVariant {
+    __Unknown {
         ordinal: u64,
-        bytes: Vec<u8>,
-        handles: Vec<fidl::Handle>,
+        data: fidl::UnknownData,
     },
 }
-
+/// Pattern that matches an unknown UnionWithHandle member.
+#[macro_export]
+macro_rules! UnionWithHandleUnknown {
+	() => { _ };
+}
 fidl_xunion! {
     name: UnionWithHandle,
     members: [
@@ -63,7 +67,7 @@ fidl_xunion! {
             },
         },
     ],
-    resource_unknown_member: __UnknownVariant,
+    resource_unknown_member: __Unknown,
 }
 
 #[derive(Debug, PartialEq)]

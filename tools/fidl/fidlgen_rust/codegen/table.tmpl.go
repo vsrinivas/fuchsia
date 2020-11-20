@@ -17,7 +17,7 @@ pub struct {{ .Name }} {
   {{- end}}
   pub {{ .Name }}: Option<{{ .Type }}>,
   {{- end }}
-  #[deprecated = "Use ` + "`..{{ .Name }}::empty()`" + ` to construct and ` + "`..`" + ` to match."]
+  #[deprecated = "Use ` + "`..{{ .Name }}::empty()` to construct and `..`" + ` to match."]
   #[doc(hidden)]
   pub __non_exhaustive: (),
 }

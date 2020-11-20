@@ -23,7 +23,8 @@ pub enum {{ .Name }} {
 	{{ .Name }}{{ if $.IsStrict }} = {{ .Value }}{{ end }},
 	{{- end }}
 	{{- if .IsFlexible }}
-	#[deprecated = "Use {{ .Name }}::unknown() to construct, {{ .Name }}Unknown!() to exhaustively match"]
+	#[deprecated = "Use ` + "`{{ .Name }}::unknown()` to construct and `{{ .Name }}Unknown!()`" + ` to exhaustively match."]
+	#[doc(hidden)]
 	__Unknown({{ .Type }}),
 	{{- end }}
 }

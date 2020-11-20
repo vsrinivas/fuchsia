@@ -10,7 +10,7 @@ use bitfield::bitfield;
 use std::convert::TryFrom;
 
 pub use fidl_fuchsia_diagnostics::Severity;
-pub use fidl_fuchsia_diagnostics_stream::{Argument, Record, Value};
+pub use fidl_fuchsia_diagnostics_stream::{Argument, Record, Value, ValueUnknown};
 
 pub mod encode;
 pub mod parse;

@@ -17,18 +17,27 @@ pub enum {{ .Name }} {
 	{{- end }}
 	{{ .Name }}({{ .Type }}),
 	{{- end }}
-	{{- if not .Strictness }}
+	{{- if .IsFlexible }}
+	#[deprecated = "Use ` + "`{{ .Name }}::unknown()` to construct and `{{ .Name }}Unknown!()`" + ` to exhaustively match."]
 	#[doc(hidden)]
-	__UnknownVariant {
+	__Unknown {
 		ordinal: u64,
-		bytes: Vec<u8>,
 		{{- if .IsResourceType }}
-		handles: Vec<fidl::Handle>,
+		data: fidl::UnknownData,
+		{{- else }}
+		bytes: Vec<u8>,
 		{{- end }}
 	},
 	{{- end }}
 }
 
+{{- if .IsFlexible }}
+/// Pattern that matches an unknown {{ .Name }} member.
+#[macro_export]
+macro_rules! {{ .Name }}Unknown {
+	() => { _ };
+}
+{{- end }}
 fidl_xunion! {
 	name: {{ .Name }},
 	members: [
@@ -45,8 +54,10 @@ fidl_xunion! {
 		},
 	{{- end }}
 	],
-	{{- if not .Strictness }}
-	{{ if .IsResourceType }}resource{{ else }}value{{ end }}_unknown_member: __UnknownVariant,
+	{{- if .IsStrict }}
+	strict_{{ if .IsResourceType }}resource{{ else }}value{{ end }}: true,
+	{{- else }}
+	{{ if .IsResourceType }}resource{{ else }}value{{ end }}_unknown_member: __Unknown,
 	{{- end }}
 }
 {{- end }}

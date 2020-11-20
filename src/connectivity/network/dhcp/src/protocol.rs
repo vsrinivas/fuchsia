@@ -1778,9 +1778,7 @@ impl FidlCompatible<fidl_fuchsia_net_dhcp::Option_> for DhcpOption {
             fidl_fuchsia_net_dhcp::Option_::RebindingTimeValue(v) => {
                 Ok(DhcpOption::RebindingTimeValue(v))
             }
-            fidl_fuchsia_net_dhcp::Option_::__UnknownVariant { .. } => {
-                Err(ProtocolError::UnknownFidlOption)
-            }
+            fidl_fuchsia_net_dhcp::Option_Unknown!() => Err(ProtocolError::UnknownFidlOption),
         }
     }
 }

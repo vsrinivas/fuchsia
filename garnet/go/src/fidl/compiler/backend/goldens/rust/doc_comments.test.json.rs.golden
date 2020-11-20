@@ -109,7 +109,8 @@ pub enum MyFlexibleEnum {
     ///
     /// BAR member comment #3
     Bar,
-    #[deprecated = "Use MyFlexibleEnum::unknown() to construct, MyFlexibleEnumUnknown!() to exhaustively match"]
+    #[deprecated = "Use `MyFlexibleEnum::unknown()` to construct and `MyFlexibleEnumUnknown!()` to exhaustively match."]
+    #[doc(hidden)]
     __Unknown(u32),
 }
 /// Pattern that matches an unknown MyFlexibleEnum member.
@@ -138,7 +139,6 @@ pub enum StrictUnion {
     /// union member comment #3
     Field(i32),
 }
-
 fidl_xunion! {
     name: StrictUnion,
     members: [
@@ -147,6 +147,7 @@ fidl_xunion! {
             ordinal: 1,
         },
     ],
+    strict_value: true,
 }
 
 /// flexible union comment #1
@@ -158,10 +159,15 @@ pub enum FlexibleUnion {
     ///
     /// union member comment #3
     Field(i32),
+    #[deprecated = "Use `FlexibleUnion::unknown()` to construct and `FlexibleUnionUnknown!()` to exhaustively match."]
     #[doc(hidden)]
-    __UnknownVariant { ordinal: u64, bytes: Vec<u8> },
+    __Unknown { ordinal: u64, bytes: Vec<u8> },
 }
-
+/// Pattern that matches an unknown FlexibleUnion member.
+#[macro_export]
+macro_rules! FlexibleUnionUnknown {
+	() => { _ };
+}
 fidl_xunion! {
     name: FlexibleUnion,
     members: [
@@ -170,7 +176,7 @@ fidl_xunion! {
             ordinal: 1,
         },
     ],
-    value_unknown_member: __UnknownVariant,
+    value_unknown_member: __Unknown,
 }
 
 /// struct comment #1

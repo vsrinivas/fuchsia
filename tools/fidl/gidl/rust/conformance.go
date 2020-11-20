@@ -20,7 +20,7 @@ var conformanceTmpl = template.Must(template.New("conformanceTmpls").Parse(`
 #![allow(unused_imports)]
 
 use {
-	fidl::{AsHandleRef, Error, Handle, HandleInfo, ObjectType, Rights},
+	fidl::{AsHandleRef, Error, Handle, HandleInfo, ObjectType, Rights, UnknownData},
 	fidl::encoding::{Context, Decodable, Decoder, Encoder},
 	fidl_conformance as conformance,
 	fuchsia_zircon_status::Status,

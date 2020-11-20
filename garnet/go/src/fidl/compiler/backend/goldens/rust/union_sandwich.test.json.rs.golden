@@ -29,7 +29,6 @@ use {
 pub enum UnionSize8Alignment4 {
     Variant(u32),
 }
-
 fidl_xunion! {
     name: UnionSize8Alignment4,
     members: [
@@ -38,13 +37,13 @@ fidl_xunion! {
             ordinal: 1,
         },
     ],
+    strict_value: true,
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub enum UnionSize12Alignment4 {
     Variant([u8; 6]),
 }
-
 fidl_xunion! {
     name: UnionSize12Alignment4,
     members: [
@@ -53,13 +52,13 @@ fidl_xunion! {
             ordinal: 1,
         },
     ],
+    strict_value: true,
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub enum UnionSize24Alignment8 {
     Variant(StructSize16Alignment8),
 }
-
 fidl_xunion! {
     name: UnionSize24Alignment8,
     members: [
@@ -68,13 +67,13 @@ fidl_xunion! {
             ordinal: 1,
         },
     ],
+    strict_value: true,
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub enum UnionSize36Alignment4 {
     Variant([u8; 32]),
 }
-
 fidl_xunion! {
     name: UnionSize36Alignment4,
     members: [
@@ -83,6 +82,7 @@ fidl_xunion! {
             ordinal: 1,
         },
     ],
+    strict_value: true,
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]

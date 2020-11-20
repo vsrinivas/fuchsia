@@ -409,7 +409,7 @@ impl<'a> ValidationContext<'a> {
             fsys::CapabilityDecl::Storage(storage) => self.validate_storage_decl(&storage),
             fsys::CapabilityDecl::Runner(runner) => self.validate_runner_decl(&runner),
             fsys::CapabilityDecl::Resolver(resolver) => self.validate_resolver_decl(&resolver),
-            fsys::CapabilityDecl::__UnknownVariant { .. } => {
+            fsys::CapabilityDeclUnknown!() => {
                 self.errors.push(Error::invalid_field("ComponentDecl", "capability"));
             }
         }
@@ -511,7 +511,7 @@ impl<'a> ValidationContext<'a> {
             fsys::UseDecl::EventStream(e) => {
                 self.validate_event_stream(e);
             }
-            fsys::UseDecl::__UnknownVariant { .. } => {
+            fsys::UseDeclUnknown!() => {
                 self.errors.push(Error::invalid_field("ComponentDecl", "use"));
             }
         }
@@ -1109,7 +1109,7 @@ impl<'a> ValidationContext<'a> {
                     }
                 }
             }
-            fsys::ExposeDecl::__UnknownVariant { .. } => {
+            fsys::ExposeDeclUnknown!() => {
                 self.errors.push(Error::invalid_field("ComponentDecl", "expose"));
             }
         }
@@ -1306,7 +1306,7 @@ impl<'a> ValidationContext<'a> {
             fsys::OfferDecl::Event(e) => {
                 self.validate_event_offer_fields(e);
             }
-            fsys::OfferDecl::__UnknownVariant { .. } => {
+            fsys::OfferDeclUnknown!() => {
                 self.errors.push(Error::invalid_field("ComponentDecl", "offer"));
             }
         }

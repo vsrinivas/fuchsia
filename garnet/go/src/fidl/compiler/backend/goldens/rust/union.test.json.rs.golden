@@ -32,7 +32,6 @@ pub enum PizzaOrPasta {
     Pizza(Pizza),
     Pasta(Pasta),
 }
-
 fidl_xunion! {
     name: PizzaOrPasta,
     members: [
@@ -45,6 +44,7 @@ fidl_xunion! {
             ordinal: 2,
         },
     ],
+    strict_value: true,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
@@ -52,7 +52,6 @@ pub enum ExplicitPizzaOrPasta {
     Pizza(Pizza),
     Pasta(Pasta),
 }
-
 fidl_xunion! {
     name: ExplicitPizzaOrPasta,
     members: [
@@ -65,19 +64,25 @@ fidl_xunion! {
             ordinal: 4,
         },
     ],
+    strict_value: true,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum FlexiblePizzaOrPasta {
     Pizza(Pizza),
     Pasta(Pasta),
+    #[deprecated = "Use `FlexiblePizzaOrPasta::unknown()` to construct and `FlexiblePizzaOrPastaUnknown!()` to exhaustively match."]
     #[doc(hidden)]
-    __UnknownVariant {
+    __Unknown {
         ordinal: u64,
         bytes: Vec<u8>,
     },
 }
-
+/// Pattern that matches an unknown FlexiblePizzaOrPasta member.
+#[macro_export]
+macro_rules! FlexiblePizzaOrPastaUnknown {
+	() => { _ };
+}
 fidl_xunion! {
     name: FlexiblePizzaOrPasta,
     members: [
@@ -90,7 +95,7 @@ fidl_xunion! {
             ordinal: 2,
         },
     ],
-    value_unknown_member: __UnknownVariant,
+    value_unknown_member: __Unknown,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
@@ -98,7 +103,6 @@ pub enum StrictPizzaOrPasta {
     Pizza(Pizza),
     Pasta(Pasta),
 }
-
 fidl_xunion! {
     name: StrictPizzaOrPasta,
     members: [
@@ -111,6 +115,7 @@ fidl_xunion! {
             ordinal: 2,
         },
     ],
+    strict_value: true,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
@@ -119,7 +124,6 @@ pub enum Union {
     StringNeedsConstructor(String),
     VectorStringAlsoNeedsConstructor(Vec<String>),
 }
-
 fidl_xunion! {
     name: Union,
     members: [
@@ -136,6 +140,7 @@ fidl_xunion! {
             ordinal: 3,
         },
     ],
+    strict_value: true,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -143,13 +148,18 @@ pub enum FlexibleUnion {
     Primitive(i32),
     StringNeedsConstructor(String),
     VectorStringAlsoNeedsConstructor(Vec<String>),
+    #[deprecated = "Use `FlexibleUnion::unknown()` to construct and `FlexibleUnionUnknown!()` to exhaustively match."]
     #[doc(hidden)]
-    __UnknownVariant {
+    __Unknown {
         ordinal: u64,
         bytes: Vec<u8>,
     },
 }
-
+/// Pattern that matches an unknown FlexibleUnion member.
+#[macro_export]
+macro_rules! FlexibleUnionUnknown {
+	() => { _ };
+}
 fidl_xunion! {
     name: FlexibleUnion,
     members: [
@@ -166,7 +176,7 @@ fidl_xunion! {
             ordinal: 3,
         },
     ],
-    value_unknown_member: __UnknownVariant,
+    value_unknown_member: __Unknown,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
@@ -175,7 +185,6 @@ pub enum StrictUnion {
     StringNeedsConstructor(String),
     VectorStringAlsoNeedsConstructor(Vec<String>),
 }
-
 fidl_xunion! {
     name: StrictUnion,
     members: [
@@ -192,13 +201,13 @@ fidl_xunion! {
             ordinal: 3,
         },
     ],
+    strict_value: true,
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub enum FieldCollision {
     FieldCollisionTag(i32),
 }
-
 fidl_xunion! {
     name: FieldCollision,
     members: [
@@ -207,6 +216,7 @@ fidl_xunion! {
             ordinal: 1,
         },
     ],
+    strict_value: true,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
@@ -214,7 +224,6 @@ pub enum ExplicitUnion {
     Primitive(i32),
     StringNeedsConstructor(String),
 }
-
 fidl_xunion! {
     name: ExplicitUnion,
     members: [
@@ -227,6 +236,7 @@ fidl_xunion! {
             ordinal: 3,
         },
     ],
+    strict_value: true,
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
@@ -234,7 +244,6 @@ pub enum ReverseOrdinalUnion {
     Second(u32),
     First(u32),
 }
-
 fidl_xunion! {
     name: ReverseOrdinalUnion,
     members: [
@@ -247,19 +256,25 @@ fidl_xunion! {
             ordinal: 1,
         },
     ],
+    strict_value: true,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum FlexibleFoo {
     S(String),
     I(i32),
+    #[deprecated = "Use `FlexibleFoo::unknown()` to construct and `FlexibleFooUnknown!()` to exhaustively match."]
     #[doc(hidden)]
-    __UnknownVariant {
+    __Unknown {
         ordinal: u64,
         bytes: Vec<u8>,
     },
 }
-
+/// Pattern that matches an unknown FlexibleFoo member.
+#[macro_export]
+macro_rules! FlexibleFooUnknown {
+	() => { _ };
+}
 fidl_xunion! {
     name: FlexibleFoo,
     members: [
@@ -272,7 +287,7 @@ fidl_xunion! {
             ordinal: 2,
         },
     ],
-    value_unknown_member: __UnknownVariant,
+    value_unknown_member: __Unknown,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
@@ -280,7 +295,6 @@ pub enum StrictFoo {
     S(String),
     I(i32),
 }
-
 fidl_xunion! {
     name: StrictFoo,
     members: [
@@ -293,19 +307,25 @@ fidl_xunion! {
             ordinal: 2,
         },
     ],
+    strict_value: true,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum ExplicitFoo {
     S(String),
     I(i32),
+    #[deprecated = "Use `ExplicitFoo::unknown()` to construct and `ExplicitFooUnknown!()` to exhaustively match."]
     #[doc(hidden)]
-    __UnknownVariant {
+    __Unknown {
         ordinal: u64,
         bytes: Vec<u8>,
     },
 }
-
+/// Pattern that matches an unknown ExplicitFoo member.
+#[macro_export]
+macro_rules! ExplicitFooUnknown {
+	() => { _ };
+}
 fidl_xunion! {
     name: ExplicitFoo,
     members: [
@@ -318,7 +338,7 @@ fidl_xunion! {
             ordinal: 1,
         },
     ],
-    value_unknown_member: __UnknownVariant,
+    value_unknown_member: __Unknown,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
@@ -326,7 +346,6 @@ pub enum ExplicitStrictFoo {
     S(String),
     I(i32),
 }
-
 fidl_xunion! {
     name: ExplicitStrictFoo,
     members: [
@@ -339,19 +358,25 @@ fidl_xunion! {
             ordinal: 2,
         },
     ],
+    strict_value: true,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum OlderSimpleUnion {
     I(i64),
     F(f32),
+    #[deprecated = "Use `OlderSimpleUnion::unknown()` to construct and `OlderSimpleUnionUnknown!()` to exhaustively match."]
     #[doc(hidden)]
-    __UnknownVariant {
+    __Unknown {
         ordinal: u64,
         bytes: Vec<u8>,
     },
 }
-
+/// Pattern that matches an unknown OlderSimpleUnion member.
+#[macro_export]
+macro_rules! OlderSimpleUnionUnknown {
+	() => { _ };
+}
 fidl_xunion! {
     name: OlderSimpleUnion,
     members: [
@@ -364,7 +389,7 @@ fidl_xunion! {
             ordinal: 2,
         },
     ],
-    value_unknown_member: __UnknownVariant,
+    value_unknown_member: __Unknown,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -372,13 +397,18 @@ pub enum NewerSimpleUnion {
     I(i64),
     S(String),
     V(Vec<String>),
+    #[deprecated = "Use `NewerSimpleUnion::unknown()` to construct and `NewerSimpleUnionUnknown!()` to exhaustively match."]
     #[doc(hidden)]
-    __UnknownVariant {
+    __Unknown {
         ordinal: u64,
         bytes: Vec<u8>,
     },
 }
-
+/// Pattern that matches an unknown NewerSimpleUnion member.
+#[macro_export]
+macro_rules! NewerSimpleUnionUnknown {
+	() => { _ };
+}
 fidl_xunion! {
     name: NewerSimpleUnion,
     members: [
@@ -395,7 +425,7 @@ fidl_xunion! {
             ordinal: 3,
         },
     ],
-    value_unknown_member: __UnknownVariant,
+    value_unknown_member: __Unknown,
 }
 
 #[derive(Debug, Clone, PartialEq, PartialOrd)]
@@ -404,7 +434,6 @@ pub enum StrictSimpleXUnion {
     F(f32),
     S(String),
 }
-
 fidl_xunion! {
     name: StrictSimpleXUnion,
     members: [
@@ -421,18 +450,24 @@ fidl_xunion! {
             ordinal: 3,
         },
     ],
+    strict_value: true,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum XUnionContainingEmptyStruct {
     Empty(Empty),
+    #[deprecated = "Use `XUnionContainingEmptyStruct::unknown()` to construct and `XUnionContainingEmptyStructUnknown!()` to exhaustively match."]
     #[doc(hidden)]
-    __UnknownVariant {
+    __Unknown {
         ordinal: u64,
         bytes: Vec<u8>,
     },
 }
-
+/// Pattern that matches an unknown XUnionContainingEmptyStruct member.
+#[macro_export]
+macro_rules! XUnionContainingEmptyStructUnknown {
+	() => { _ };
+}
 fidl_xunion! {
     name: XUnionContainingEmptyStruct,
     members: [
@@ -441,14 +476,13 @@ fidl_xunion! {
             ordinal: 1,
         },
     ],
-    value_unknown_member: __UnknownVariant,
+    value_unknown_member: __Unknown,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub enum StrictBoundedXUnion {
     V(Vec<u8>),
 }
-
 fidl_xunion! {
     name: StrictBoundedXUnion,
     members: [
@@ -457,19 +491,25 @@ fidl_xunion! {
             ordinal: 1,
         },
     ],
+    strict_value: true,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum ExplicitXUnion {
     I(i64),
     F(f32),
+    #[deprecated = "Use `ExplicitXUnion::unknown()` to construct and `ExplicitXUnionUnknown!()` to exhaustively match."]
     #[doc(hidden)]
-    __UnknownVariant {
+    __Unknown {
         ordinal: u64,
         bytes: Vec<u8>,
     },
 }
-
+/// Pattern that matches an unknown ExplicitXUnion member.
+#[macro_export]
+macro_rules! ExplicitXUnionUnknown {
+	() => { _ };
+}
 fidl_xunion! {
     name: ExplicitXUnion,
     members: [
@@ -482,7 +522,7 @@ fidl_xunion! {
             ordinal: 4,
         },
     ],
-    value_unknown_member: __UnknownVariant,
+    value_unknown_member: __Unknown,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]

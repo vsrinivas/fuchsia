@@ -660,7 +660,7 @@ mod tests {
 
     #[test]
     fn test_repository_key_from_fidl_with_bad_type() {
-        let as_fidl = fidl::RepositoryKeyConfig::__UnknownVariant { ordinal: 999, bytes: vec![] };
+        let as_fidl = fidl::RepositoryKeyConfig::unknown(999, Default::default());
         assert_matches!(
             RepositoryKey::try_from(as_fidl),
             Err(RepositoryParseError::UnsupportedKeyType)

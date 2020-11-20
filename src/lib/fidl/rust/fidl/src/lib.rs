@@ -9,19 +9,19 @@
 
 #[macro_use]
 pub mod encoding;
+
 pub mod client;
 pub mod endpoints;
+pub mod epitaph;
 pub mod handle;
 pub mod server;
 
 mod error;
 pub use self::error::{Error, Result};
 
-pub use server::ServeInner;
-
+pub use encoding::UnknownData;
 pub use handle::*;
-
-pub mod epitaph;
+pub use server::ServeInner;
 
 #[cfg(feature = "fidl_trace")]
 pub use {

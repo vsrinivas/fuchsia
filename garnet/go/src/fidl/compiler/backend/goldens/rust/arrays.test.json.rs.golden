@@ -29,7 +29,6 @@ use {
 pub enum UnionSmallArray {
     A([u32; 2]),
 }
-
 fidl_xunion! {
     name: UnionSmallArray,
     members: [
@@ -38,13 +37,13 @@ fidl_xunion! {
             ordinal: 1,
         },
     ],
+    strict_value: true,
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub enum UnionLargeArray {
     A([u32; 100]),
 }
-
 fidl_xunion! {
     name: UnionLargeArray,
     members: [
@@ -53,6 +52,7 @@ fidl_xunion! {
             ordinal: 1,
         },
     ],
+    strict_value: true,
 }
 
 #[derive(

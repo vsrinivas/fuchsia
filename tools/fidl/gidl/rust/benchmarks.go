@@ -22,7 +22,7 @@ use {
 	fidl::{
 		encoding::{Context, Decodable, Decoder, Encoder, with_tls_encode_buf},
 		handle::Handle, handle::HandleInfo,
-		ObjectType, Rights,
+		ObjectType, Rights, UnknownData,
 	},
 	fidl_benchmarkfidl{{ .CrateSuffix }} as benchmarkfidl{{ .CrateSuffix }},
 	fuchsia_criterion::criterion::{BatchSize, Bencher, black_box},

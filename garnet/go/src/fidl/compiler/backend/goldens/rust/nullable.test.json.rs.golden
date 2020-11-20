@@ -32,7 +32,6 @@ pub enum SimpleUnion {
     A(i32),
     B(f32),
 }
-
 fidl_xunion! {
     name: SimpleUnion,
     members: [
@@ -45,6 +44,7 @@ fidl_xunion! {
             ordinal: 2,
         },
     ],
+    strict_value: true,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]

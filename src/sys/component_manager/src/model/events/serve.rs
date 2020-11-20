@@ -273,7 +273,7 @@ fn maybe_create_empty_payload(event_type: EventType) -> Option<fsys::EventResult
         EventType::Started => {
             fsys::EventResult::Payload(fsys::EventPayload::Started(fsys::StartedPayload::empty()))
         }
-        _ => fsys::EventResult::__UnknownVariant { ordinal: 999, bytes: vec![], handles: vec![] },
+        _ => fsys::EventResult::unknown(999, Default::default()),
     };
     Some(result)
 }
@@ -290,7 +290,7 @@ fn maybe_create_empty_error_payload(error: &EventError) -> Option<fsys::EventRes
         EventType::Resolved => fsys::EventErrorPayload::Resolved(fsys::ResolvedError::empty()),
         EventType::Started => fsys::EventErrorPayload::Started(fsys::StartedError::empty()),
         EventType::Stopped => fsys::EventErrorPayload::Stopped(fsys::StoppedError::empty()),
-        _ => fsys::EventErrorPayload::__UnknownVariant { ordinal: 999, bytes: vec![] },
+        _ => fsys::EventErrorPayload::unknown(999, Default::default()),
     };
     Some(fsys::EventResult::Error(fsys::EventError {
         error_payload: Some(error_payload),

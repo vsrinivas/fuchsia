@@ -45,7 +45,8 @@ fidl_strict_enum! {
 pub enum MyFlexibleEnum {
     Foo,
     Bar,
-    #[deprecated = "Use MyFlexibleEnum::unknown() to construct, MyFlexibleEnumUnknown!() to exhaustively match"]
+    #[deprecated = "Use `MyFlexibleEnum::unknown()` to construct and `MyFlexibleEnumUnknown!()` to exhaustively match."]
+    #[doc(hidden)]
     __Unknown(u32),
 }
 /// Pattern that matches an unknown MyFlexibleEnum member.
@@ -70,7 +71,8 @@ pub enum MyFlexibleEnumWithCustomUnknown {
     Foo,
     Bar,
     CustomUnknown,
-    #[deprecated = "Use MyFlexibleEnumWithCustomUnknown::unknown() to construct, MyFlexibleEnumWithCustomUnknownUnknown!() to exhaustively match"]
+    #[deprecated = "Use `MyFlexibleEnumWithCustomUnknown::unknown()` to construct and `MyFlexibleEnumWithCustomUnknownUnknown!()` to exhaustively match."]
+    #[doc(hidden)]
     __Unknown(u32),
 }
 /// Pattern that matches an unknown MyFlexibleEnumWithCustomUnknown member.

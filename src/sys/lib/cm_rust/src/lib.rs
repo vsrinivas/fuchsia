@@ -104,10 +104,11 @@ macro_rules! fidl_into_struct {
 /// - `into_type` is the name of the enum and the into type for the conversion.
 /// - `into_ident` must be identical to `into_type`.
 /// - `from_type` is the from type for the conversion.
-/// - `from_ident` must be identical to `from_type`.
+/// - `from_path` must be identical to `from_type`.
+/// - `from_unknown` is the from unknown macro, i.e. `from_path` with "Unknown" appended
 /// - `variant(type)` form a list of variants and their types for the generated enum.
 macro_rules! fidl_into_enum {
-    ($into_type:ty, $into_ident:ident, $from_type:ty, $from_path:path,
+    ($into_type:ty, $into_ident:ident, $from_type:ty, $from_path:path, $from_unknown:path,
      { $( $variant:ident($type:ty), )+ } ) => {
         #[derive(Debug, Clone, PartialEq, Eq)]
         pub enum $into_ident {
@@ -123,7 +124,7 @@ macro_rules! fidl_into_enum {
                     $(
                     from_ident::$variant(e) => $into_ident::$variant(e.fidl_into_native()),
                     )+
-                    from_ident::__UnknownVariant {..} => { panic!("invalid variant") }
+                    $from_unknown!() => { panic!("invalid variant") }
                 }
             }
         }
@@ -210,7 +211,7 @@ impl FidlIntoNative<ComponentDecl> for fsys::ComponentDecl {
                     fsys::ExposeDecl::Resolver(r) => {
                         exposes.push(ExposeDecl::Resolver(r.fidl_into_native()))
                     }
-                    fsys::ExposeDecl::__UnknownVariant { .. } => panic!("invalid variant"),
+                    fsys::ExposeDeclUnknown!() => panic!("invalid variant"),
                 }
             }
             for ((target, target_name), sources) in services.into_iter() {
@@ -251,7 +252,7 @@ impl FidlIntoNative<ComponentDecl> for fsys::ComponentDecl {
                     fsys::OfferDecl::Event(e) => {
                         offers.push(OfferDecl::Event(e.fidl_into_native()))
                     }
-                    fsys::OfferDecl::__UnknownVariant { .. } => panic!("invalid variant"),
+                    fsys::OfferDeclUnknown!() => panic!("invalid variant"),
                 }
             }
             for ((target, target_name), sources) in services.into_iter() {
@@ -495,7 +496,7 @@ pub struct OfferServiceDecl {
     pub target_name: CapabilityName,
 }
 
-fidl_into_enum!(UseDecl, UseDecl, fsys::UseDecl, fsys::UseDecl,
+fidl_into_enum!(UseDecl, UseDecl, fsys::UseDecl, fsys::UseDecl, fsys::UseDeclUnknown,
 {
     Service(UseServiceDecl),
     Protocol(UseProtocolDecl),
@@ -638,14 +639,13 @@ fsys::OfferEventDecl,
     target_name: CapabilityName,
     filter: Option<HashMap<String, DictionaryValue>>,
 });
-fidl_into_enum!(CapabilityDecl, CapabilityDecl, fsys::CapabilityDecl, fsys::CapabilityDecl,
+fidl_into_enum!(CapabilityDecl, CapabilityDecl, fsys::CapabilityDecl, fsys::CapabilityDecl, fsys::CapabilityDeclUnknown,
 {
     Service(ServiceDecl),
     Protocol(ProtocolDecl),
     Directory(DirectoryDecl),
     Storage(StorageDecl),
-    Runner(RunnerDecl),
-    Resolver(ResolverDecl),
+    Runner(RunnerDecl),    Resolver(ResolverDecl),
 });
 fidl_into_struct!(ServiceDecl, ServiceDecl, fsys::ServiceDecl, fsys::ServiceDecl,
 {

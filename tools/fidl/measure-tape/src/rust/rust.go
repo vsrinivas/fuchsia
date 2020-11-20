@@ -135,7 +135,7 @@ func (cb *codeBuffer) CaseSelectVariant(
 					toTypeName(targetType), fidl.ToUpperCamelCase(member),
 					formatExpr{localWithBlock.Local})
 			} else {
-				cb.writef("%s::__UnknownVariant { .. } => {\n", toTypeName(targetType))
+				cb.writef("%sUnknown!() => {\n", toTypeName(targetType))
 			}
 			cb.indent(func() {
 				cb.writeBlock(localWithBlock.Body)

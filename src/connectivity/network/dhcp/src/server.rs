@@ -879,9 +879,7 @@ impl ServerDispatcher for Server {
             fidl_fuchsia_net_dhcp::Parameter::BoundDeviceNames(bound_device_names) => {
                 self.params.bound_device_names = bound_device_names
             }
-            fidl_fuchsia_net_dhcp::Parameter::__UnknownVariant { .. } => {
-                return Err(Status::INVALID_ARGS)
-            }
+            fidl_fuchsia_net_dhcp::ParameterUnknown!() => return Err(Status::INVALID_ARGS),
         };
         let () = self.save_params()?;
         Ok(())

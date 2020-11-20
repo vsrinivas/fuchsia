@@ -16,6 +16,7 @@ pub type Result<T> = result::Result<T, Error>;
 
 /// The error type used by FIDL operations.
 #[derive(Debug, Error)]
+#[non_exhaustive]
 pub enum Error {
     /// Unexpected response to synchronous FIDL query.
     ///
@@ -195,10 +196,6 @@ pub enum Error {
     #[cfg(test)]
     #[error("Test zx_status::Status: {}", _0)]
     TestIo(#[source] zx_status::Status),
-
-    #[doc(hidden)]
-    #[error("__Nonexhaustive error should never be created.")]
-    __Nonexhaustive,
 }
 
 impl Error {

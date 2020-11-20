@@ -31,13 +31,18 @@ const _FIDL_TRACE_BINDINGS_RUST: u32 = 6;
 pub enum FlexibleFoo {
     S(String),
     I(i32),
+    #[deprecated = "Use `FlexibleFoo::unknown()` to construct and `FlexibleFooUnknown!()` to exhaustively match."]
     #[doc(hidden)]
-    __UnknownVariant {
+    __Unknown {
         ordinal: u64,
         bytes: Vec<u8>,
     },
 }
-
+/// Pattern that matches an unknown FlexibleFoo member.
+#[macro_export]
+macro_rules! FlexibleFooUnknown {
+	() => { _ };
+}
 fidl_xunion! {
     name: FlexibleFoo,
     members: [
@@ -50,7 +55,7 @@ fidl_xunion! {
             ordinal: 2,
         },
     ],
-    value_unknown_member: __UnknownVariant,
+    value_unknown_member: __Unknown,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
@@ -58,7 +63,6 @@ pub enum StrictFoo {
     S(String),
     I(i32),
 }
-
 fidl_xunion! {
     name: StrictFoo,
     members: [
@@ -71,6 +75,7 @@ fidl_xunion! {
             ordinal: 2,
         },
     ],
+    strict_value: true,
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]

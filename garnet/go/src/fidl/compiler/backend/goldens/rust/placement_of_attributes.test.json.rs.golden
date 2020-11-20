@@ -55,7 +55,6 @@ fidl_strict_enum! {
 pub enum ExampleUnion {
     Variant(u32),
 }
-
 fidl_xunion! {
     name: ExampleUnion,
     members: [
@@ -64,18 +63,24 @@ fidl_xunion! {
             ordinal: 1,
         },
     ],
+    strict_value: true,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum ExampleXUnion {
     Variant(u32),
+    #[deprecated = "Use `ExampleXUnion::unknown()` to construct and `ExampleXUnionUnknown!()` to exhaustively match."]
     #[doc(hidden)]
-    __UnknownVariant {
+    __Unknown {
         ordinal: u64,
         bytes: Vec<u8>,
     },
 }
-
+/// Pattern that matches an unknown ExampleXUnion member.
+#[macro_export]
+macro_rules! ExampleXUnionUnknown {
+	() => { _ };
+}
 fidl_xunion! {
     name: ExampleXUnion,
     members: [
@@ -84,7 +89,7 @@ fidl_xunion! {
             ordinal: 1,
         },
     ],
-    value_unknown_member: __UnknownVariant,
+    value_unknown_member: __Unknown,
 }
 
 #[derive(

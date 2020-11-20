@@ -6,7 +6,7 @@ use super::error::StreamError;
 use byteorder::{ByteOrder, LittleEndian};
 use diagnostics_data::{LogError, Timestamp};
 use diagnostics_hierarchy::DiagnosticsHierarchy;
-use diagnostics_stream::{Severity as StreamSeverity, Value};
+use diagnostics_stream::{Severity as StreamSeverity, Value, ValueUnknown};
 use fidl_fuchsia_logger::{LogLevelFilter, LogMessage, MAX_DATAGRAM_LEN_BYTES};
 use fidl_fuchsia_sys_internal::SourceIdentity;
 use fuchsia_syslog::COMPONENT_NAME_PLACEHOLDER_TAG;
@@ -233,7 +233,7 @@ impl Message {
                         found: "float",
                     }),
                     Value::Text(t) => Err(StreamError::ExpectedInteger { value: t, found: "text" }),
-                    Value::__UnknownVariant { .. } => {
+                    ValueUnknown!() => {
                         Err(StreamError::ExpectedInteger { value: "".into(), found: "unknown" })
                     }
                 }?
@@ -243,7 +243,7 @@ impl Message {
                     Value::UnsignedInt(v) => LogsProperty::Uint(label, v),
                     Value::Floating(v) => LogsProperty::Double(label, v),
                     Value::Text(v) => LogsProperty::String(label, v),
-                    Value::__UnknownVariant { .. } => return Err(StreamError::UnrecognizedValue),
+                    ValueUnknown!() => return Err(StreamError::UnrecognizedValue),
                 })
             }
         }

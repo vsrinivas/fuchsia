@@ -90,7 +90,7 @@ impl Stream for Interrupter {
         let stage = match state {
             UsageState::Muted(_) | UsageState::Ducked(_) => InterruptionStage::Begin,
             UsageState::Unadjusted(_) => InterruptionStage::End,
-            UsageState::__UnknownVariant { .. } => {
+            UsageStateUnknown!() => {
                 fx_log_warn!(tag: LOG_TAG, "Audio policy service sent unknown UsageState variant");
                 return Poll::Pending;
             }
