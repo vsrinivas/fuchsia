@@ -518,7 +518,7 @@ class View {
       return old;
     }
 
-    value_type operator*() const {
+    View::value_type operator*() const {
       Assert(__func__);
       return {header_, payload_};
     }
@@ -536,6 +536,13 @@ class View {
       ZX_ASSERT_MSG(view_, "%s on default-constructed zbitl::View::iterator", __func__);
       return *view_;
     }
+
+    // Iterator traits.
+    using iterator_category = std::input_iterator_tag;
+    using reference = View::value_type&;
+    using value_type = View::value_type;
+    using pointer = View::value_type*;
+    using difference_type = size_t;
 
    private:
     // Private fields accessed by Image<Storage, Check>::Append().
