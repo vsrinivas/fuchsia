@@ -46,8 +46,13 @@ impl UtcTime {
 
 impl TimeSource for UtcTime {
     fn now(&self) -> i64 {
-        let now_utc = chrono::prelude::Utc::now(); // Consider using SystemTime::now()?
-        now_utc.timestamp() * 1_000_000_000 + now_utc.timestamp_subsec_nanos() as i64
+        if cfg!(target_arch = "wasm32") {
+            // TODO(fxbug.dev/64995): Remove this when WASM avoids calling this method.
+            0i64
+        } else {
+            let now_utc = chrono::prelude::Utc::now(); // Consider using SystemTime::now()?
+            now_utc.timestamp() * 1_000_000_000 + now_utc.timestamp_subsec_nanos() as i64
+        }
     }
 }
 
