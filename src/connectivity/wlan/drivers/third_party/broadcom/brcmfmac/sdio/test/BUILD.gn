@@ -25,6 +25,7 @@ executable("sdio_test") {
     "//sdk/banjo/ddk.protocol.sdio:ddk.protocol.sdio_mock",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:core",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sdio",
+    "//src/connectivity/wlan/lib/common/cpp:common",
     "//src/devices/lib/broadcom",
     "//src/devices/testing/fake_ddk",
     "//src/lib/ddk",

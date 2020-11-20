@@ -17,6 +17,8 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_FWIL_TYPES_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_FWIL_TYPES_H_
 
+#include <wlan/common/mac_frame.h>
+
 #include "linuxisms.h"
 
 #define BRCMF_FIL_ACTION_FRAME_SIZE 1800
@@ -1042,4 +1044,35 @@ struct brcmf_bss_ctrl {
   int32_t bsscfgidx;
   int32_t value;  // 0 - bring down, 1 - bring up
 };
+
+/**
+ * struct brcmf_ext_auth_start - the struct come with START_AUTH event, it's the start of SAE
+ * authentication by external supplicant.
+ *
+ * @ssid: ssid of the AP our client iface is connecting to.
+ * @bssid: bssid of the AP our client iface is connecting to.
+ * @key_mgmt_suite: the key suite we are using for the following authentication process.
+ * @status: status code.
+ */
+struct brcmf_ext_auth {
+  brcmf_ssid_le ssid;
+  uint8_t bssid[ETH_ALEN];
+  uint32_t key_mgmt_suite;
+  int32_t status;
+};
+
+/**
+ * struct brcmf_sae_auth_frame - the struct represents SAE authentication frame, driver sends this
+ * struct to firmware as a part of SAE handshake process.
+ *
+ * @mac_hdr: MAC header of the frame.
+ * @auth_hdr: Header of the authentication frame.
+ * @sae_payload: SAE payload data.
+ */
+struct brcmf_sae_auth_frame {
+  wlan::MgmtFrameHeader mac_hdr;
+  wlan::Authentication auth_hdr;
+  uint8_t sae_payload[];
+};
+
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_FWIL_TYPES_H_

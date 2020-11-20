@@ -103,7 +103,8 @@ struct brcmf_cfg80211_info;
   BRCMF_ENUM_DEF(ACTION_FRAME_RX, 75)                \
   BRCMF_ENUM_DEF(CSA_COMPLETE_IND, 80)               \
   BRCMF_ENUM_DEF(TDLS_PEER_EVENT, 92)                \
-  BRCMF_ENUM_DEF(BCMC_CREDIT_SUPPORT, 127)
+  BRCMF_ENUM_DEF(BCMC_CREDIT_SUPPORT, 127)           \
+  BRCMF_ENUM_DEF(START_AUTH, 145)
 
 #define BRCMF_ENUM_DEF(id, val) BRCMF_E_##id = (val),
 
@@ -114,7 +115,7 @@ enum brcmf_fweh_event_code {
        * minimum length check in device firmware so it is
        * hard-coded here.
        */
-      BRCMF_E_LAST = 139
+      BRCMF_E_LAST = 146
 };
 #undef BRCMF_ENUM_DEF
 
@@ -206,9 +207,10 @@ const char* brcmf_fweh_get_event_status_str(brcmf_fweh_event_status_t status);
 
 /* Authentication mode */
 #define BRCMF_FWEH_AUTH_TYPE_LIST                \
-  X(BRCMF_AUTH_MODE_OPEN)                      \
-      X(BRCMF_AUTH_MODE_SHARED_KEY)               \
-      X(BRCMF_AUTH_MODE_AUTO)
+      X(BRCMF_AUTH_MODE_OPEN)                    \
+      X(BRCMF_AUTH_MODE_SHARED_KEY)              \
+      X(BRCMF_AUTH_MODE_AUTO)                    \
+      X(BRCMF_AUTH_MODE_SAE)
 
 #define X(AUTH_TYPE) AUTH_TYPE,
 enum brcmf_fweh_auth_type_t : int32_t { BRCMF_FWEH_AUTH_TYPE_LIST };

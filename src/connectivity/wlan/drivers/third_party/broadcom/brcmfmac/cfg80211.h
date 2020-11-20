@@ -59,7 +59,6 @@
 #define WL_ESCAN_ACTION_CONTINUE   2
 #define WL_ESCAN_ACTION_ABORT      3
 
-#define WL_AUTH_SHARED_KEY 1 /* d11 shared authentication */
 #define IE_MAX_LEN 512
 
 /* IE TLV processing */
@@ -106,6 +105,7 @@
 #define RSN_CAP_PTK_REPLAY_CNTR_MASK (BIT(2) | BIT(3))
 #define RSN_CAP_MFPR_MASK BIT(6)
 #define RSN_CAP_MFPC_MASK BIT(7)
+#define RSN_AKM_SAE_PSK 8
 #define RSN_PMKID_COUNT_LEN 2
 
 #define VNDR_IE_CMD_LEN 4 /* length of the set command string :"add", "del" (+ NUL) */
@@ -228,6 +228,7 @@ enum brcmf_vif_status {
   BRCMF_VIF_STATUS_AP_CREATED,
   BRCMF_VIF_STATUS_EAP_SUCCESS,
   BRCMF_VIF_STATUS_ASSOC_SUCCESS,
+  BRCMF_VIF_STATUS_SAE_AUTHENTICATING,
 };
 
 /**
@@ -550,8 +551,8 @@ void brcmf_if_stop_capture_frames(net_device* ndev);
 zx_status_t brcmf_if_set_multicast_promisc(net_device* ndev, bool enable);
 void brcmf_if_data_queue_tx(net_device* ndev, uint32_t options, ethernet_netbuf_t* netbuf,
                             ethernet_impl_queue_tx_callback completion_cb, void* cookie);
-void brcmf_if_sae_handshake_resp(net_device* ndev, const wlanif_sae_handshake_resp_t* resp);
-void brcmf_if_sae_frame_tx(net_device* ndev, const wlanif_sae_frame_t* frame);
+zx_status_t brcmf_if_sae_handshake_resp(net_device* ndev, const wlanif_sae_handshake_resp_t* resp);
+zx_status_t brcmf_if_sae_frame_tx(net_device* ndev, const wlanif_sae_frame_t* frame);
 
 void brcmf_extract_ies(const uint8_t* ie, size_t ie_len, wlanif_bss_description_t* bss);
 

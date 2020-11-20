@@ -12,6 +12,7 @@ source_set("fake_msgbuf_interfaces") {
   deps = [
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:core",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:dmabuf",
+    "//src/connectivity/wlan/lib/common/cpp:common",
     "//src/devices/testing/fake-bti",
   ]
   public_deps = [
@@ -29,6 +30,7 @@ source_set("test_utils") {
   public_deps = [
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:linuxisms",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/msgbuf",
+    "//src/connectivity/wlan/lib/common/cpp:common",
     "//zircon/public/lib/zxtest",
     "//zircon/system/public",
   ]
@@ -77,6 +79,7 @@ executable("msgbuf_ring_handler_test") {
     ":fake_msgbuf_interfaces",
     ":test_utils",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/msgbuf",
+    "//src/connectivity/wlan/lib/common/cpp:common",
     "//src/devices/testing/fake_ddk",
     "//zircon/public/lib/zxtest",
     "//zircon/system/public",

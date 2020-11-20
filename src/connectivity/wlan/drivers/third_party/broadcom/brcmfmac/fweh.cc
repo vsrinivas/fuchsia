@@ -546,6 +546,7 @@ void brcmf_fweh_process_event(struct brcmf_pub* drvr, const struct brcmf_event* 
 
   event = static_cast<decltype(event)>(calloc(1, sizeof(*event) + datalen));
   if (!event) {
+    BRCMF_ERR("Not enough space when allocating for event.");
     return;
   }
 

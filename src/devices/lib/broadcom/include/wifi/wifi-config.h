@@ -78,6 +78,7 @@
 #define BRCMF_C_GET_VAR 262
 #define BRCMF_C_SET_VAR 263
 #define BRCMF_C_SET_WSEC_PMK 268
+#define BRCMF_C_SCB_AUTHENTICATE 325
 
 // Defines for IOVAR entries
 #define MAX_IOVAR_ENTRIES 32

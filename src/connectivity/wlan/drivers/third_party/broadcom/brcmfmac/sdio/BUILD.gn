@@ -30,6 +30,7 @@ source_set("sdio") {
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:bcdc",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:debug",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/chipset",
+    "//src/connectivity/wlan/lib/common/cpp:common",
     "//src/devices/lib/broadcom",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",

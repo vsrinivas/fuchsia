@@ -56,6 +56,7 @@ executable("cfg80211_test") {
   sources = [ "cfg80211_test.cc" ]
   deps = [
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:core",
+    "//src/connectivity/wlan/lib/common/cpp:common",
     "//src/devices/testing/fake_ddk",
     "//src/lib/fxl/test:gtest_main",
   ]
@@ -154,6 +155,7 @@ executable("timer_test") {
   sources = [ "timer_test.cc" ]
   deps = [
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:core",
+    "//src/connectivity/wlan/lib/common/cpp:common",
     "//src/devices/testing/fake_ddk",
     "//src/lib/fxl/test:gtest_main",
     "//zircon/public/lib/sync",

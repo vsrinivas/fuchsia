@@ -1279,6 +1279,7 @@ static void brcmf_link_down(struct brcmf_cfg80211_vif* vif, uint16_t event_reaso
 }
 
 static zx_status_t brcmf_set_auth_type(struct net_device* ndev, uint8_t auth_type) {
+  brcmf_if* ifp = ndev_to_if(ndev);
   int32_t val = 0;
   zx_status_t status = ZX_OK;
 
@@ -1293,12 +1294,15 @@ static zx_status_t brcmf_set_auth_type(struct net_device* ndev, uint8_t auth_typ
       // levels of the wlan stack.
       val = BRCMF_AUTH_MODE_AUTO;
       break;
+    case WLAN_AUTH_TYPE_SAE:
+      val = BRCMF_AUTH_MODE_SAE;
+      break;
     default:
       return ZX_ERR_NOT_SUPPORTED;
   }
 
   BRCMF_DBG(CONN, "setting auth to %d", val);
-  status = brcmf_fil_bsscfg_int_set(ndev_to_if(ndev), "auth", val);
+  status = brcmf_fil_bsscfg_int_set(ifp, "auth", val);
   if (status != ZX_OK) {
     BRCMF_ERR("set auth failed (%s)", zx_status_get_string(status));
   }
@@ -1333,7 +1337,6 @@ static zx_status_t brcmf_configure_wpaie(struct brcmf_if* ifp, const struct brcm
   if (wpa_ie == nullptr) {
     goto exit;
   }
-
   len = wpa_ie->len + TLV_HDR_LEN;
   data = (uint8_t*)wpa_ie;
   offset = TLV_HDR_LEN;
@@ -1458,66 +1461,16 @@ static zx_status_t brcmf_configure_wpaie(struct brcmf_if* ifp, const struct brcm
         BRCMF_DBG(CONN, "RSN_AKM_MFP_1X");
         wpa_auth |= WPA2_AUTH_1X_SHA256;
         break;
+      case RSN_AKM_SAE_PSK:
+        BRCMF_DBG(CONN, "RSN_AKM_SAE");
+        wpa_auth |= WPA3_AUTH_SAE_PSK;
+        break;
       default:
-        BRCMF_DBG(CONN, "Invalid key mgmt info");
+        BRCMF_DBG(CONN, "Invalid key mgmt info, the auth mgmt suite is %u", data[offset]);
     }
     offset++;
   }
 
-  mfp = BRCMF_MFP_NONE;
-  if (is_rsn_ie && is_ap) {
-    wme_bss_disable = 1;
-    if (((int32_t)offset + RSN_CAP_LEN) <= len) {
-      rsn_cap = data[offset] + (data[offset + 1] << 8);
-      if (rsn_cap & RSN_CAP_PTK_REPLAY_CNTR_MASK) {
-        wme_bss_disable = 0;
-      }
-      if (rsn_cap & RSN_CAP_MFPR_MASK) {
-        BRCMF_DBG(TRACE, "MFP Required");
-        mfp = BRCMF_MFP_REQUIRED;
-        /* Firmware only supports mfp required in
-         * combination with WPA2_AUTH_PSK_SHA256 or
-         * WPA2_AUTH_1X_SHA256.
-         */
-        if (!(wpa_auth & (WPA2_AUTH_PSK_SHA256 | WPA2_AUTH_1X_SHA256))) {
-          err = ZX_ERR_INVALID_ARGS;
-          goto exit;
-        }
-        /* Firmware has requirement that WPA2_AUTH_PSK/
-         * WPA2_AUTH_UNSPECIFIED be set, if SHA256 OUI
-         * is to be included in the rsn ie.
-         */
-        if (wpa_auth & WPA2_AUTH_PSK_SHA256) {
-          wpa_auth |= WPA2_AUTH_PSK;
-        } else if (wpa_auth & WPA2_AUTH_1X_SHA256) {
-          wpa_auth |= WPA2_AUTH_UNSPECIFIED;
-        }
-      } else if (rsn_cap & RSN_CAP_MFPC_MASK) {
-        BRCMF_DBG(TRACE, "MFP Capable");
-        mfp = BRCMF_MFP_CAPABLE;
-      }
-    }
-    offset += RSN_CAP_LEN;
-    /* set wme_bss_disable to sync RSN Capabilities */
-    err = brcmf_fil_bsscfg_int_set(ifp, "wme_bss_disable", wme_bss_disable);
-    if (err != ZX_OK) {
-      BRCMF_ERR("wme_bss_disable error %d", err);
-      goto exit;
-    }
-
-    /* Skip PMKID cnt as it is know to be 0 for AP. */
-    offset += RSN_PMKID_COUNT_LEN;
-
-    /* See if there is BIP wpa suite left for MFP */
-    if (brcmf_feat_is_enabled(ifp, BRCMF_FEAT_MFP) &&
-        ((int32_t)(offset + WPA_IE_MIN_OUI_LEN) <= len)) {
-      err = brcmf_fil_bsscfg_data_set(ifp, "bip", &data[offset], WPA_IE_MIN_OUI_LEN);
-      if (err != ZX_OK) {
-        BRCMF_ERR("bip error %d", err);
-        goto exit;
-      }
-    }
-  }
   /* Don't set SES_OW_ENABLED for now (since we don't support WPS yet) */
   wsec = (pval | gval);
   BRCMF_INFO("WSEC: 0x%x WPA AUTH: 0x%x", wsec, wpa_auth);
@@ -1528,16 +1481,78 @@ static zx_status_t brcmf_configure_wpaie(struct brcmf_if* ifp, const struct brcm
     BRCMF_ERR("wsec error %d", err);
     goto exit;
   }
-  /* Configure MFP, this needs to go after wsec otherwise the wsec command
+
+  mfp = BRCMF_MFP_NONE;
+  if (is_rsn_ie) {
+    if (is_ap) {
+      wme_bss_disable = 1;
+      if (((int32_t)offset + RSN_CAP_LEN) <= len) {
+        rsn_cap = data[offset] + (data[offset + 1] << 8);
+        if (rsn_cap & RSN_CAP_PTK_REPLAY_CNTR_MASK) {
+          wme_bss_disable = 0;
+        }
+        if (rsn_cap & RSN_CAP_MFPR_MASK) {
+          BRCMF_DBG(TRACE, "MFP Required");
+          mfp = BRCMF_MFP_REQUIRED;
+          /* Firmware only supports mfp required in
+           * combination with WPA2_AUTH_PSK_SHA256 or
+           * WPA2_AUTH_1X_SHA256.
+           */
+          if (!(wpa_auth & (WPA2_AUTH_PSK_SHA256 | WPA2_AUTH_1X_SHA256))) {
+            err = ZX_ERR_INVALID_ARGS;
+            goto exit;
+          }
+          /* Firmware has requirement that WPA2_AUTH_PSK/
+           * WPA2_AUTH_UNSPECIFIED be set, if SHA256 OUI
+           * is to be included in the rsn ie.
+           */
+          if (wpa_auth & WPA2_AUTH_PSK_SHA256) {
+            wpa_auth |= WPA2_AUTH_PSK;
+          } else if (wpa_auth & WPA2_AUTH_1X_SHA256) {
+            wpa_auth |= WPA2_AUTH_UNSPECIFIED;
+          }
+        } else if (rsn_cap & RSN_CAP_MFPC_MASK) {
+          BRCMF_DBG(TRACE, "MFP Capable");
+          mfp = BRCMF_MFP_CAPABLE;
+        }
+      }
+      offset += RSN_CAP_LEN;
+      /* set wme_bss_disable to sync RSN Capabilities */
+      err = brcmf_fil_bsscfg_int_set(ifp, "wme_bss_disable", wme_bss_disable);
+      if (err != ZX_OK) {
+        BRCMF_ERR("wme_bss_disable error %d", err);
+        goto exit;
+      }
+
+      /* Skip PMKID cnt as it is know to be 0 for AP. */
+      offset += RSN_PMKID_COUNT_LEN;
+
+      /* See if there is BIP wpa suite left for MFP */
+      if (brcmf_feat_is_enabled(ifp, BRCMF_FEAT_MFP) &&
+          ((int32_t)(offset + WPA_IE_MIN_OUI_LEN) <= len)) {
+        err = brcmf_fil_bsscfg_data_set(ifp, "bip", &data[offset], WPA_IE_MIN_OUI_LEN);
+        if (err != ZX_OK) {
+          BRCMF_ERR("bip error %d", err);
+          goto exit;
+        }
+      }
+    } else if (wpa_auth & WPA3_AUTH_SAE_PSK) {
+      // Set mfp to capable if it's a wpa3 assocation.
+      mfp = BRCMF_MFP_CAPABLE;
+    }
+  }
+
+  /* Configure MFP, just a reminder, this needs to go after wsec otherwise the wsec command
    * will overwrite the values set by MFP
    */
-  if (is_ap && brcmf_feat_is_enabled(ifp, BRCMF_FEAT_MFP)) {
+  if (brcmf_feat_is_enabled(ifp, BRCMF_FEAT_MFP)) {
     err = brcmf_fil_bsscfg_int_set(ifp, "mfp", mfp);
     if (err != ZX_OK) {
       BRCMF_ERR("mfp error %s", zx_status_get_string(err));
       goto exit;
     }
   }
+
   /* set upper-layer auth */
   err = brcmf_fil_bsscfg_int_set(ifp, "wpa_auth", wpa_auth);
   if (err != ZX_OK) {
@@ -1697,7 +1712,6 @@ zx_status_t brcmf_cfg80211_connect(struct net_device* ndev, const wlanif_assoc_r
   if (!check_vif_up(ifp->vif)) {
     return ZX_ERR_IO;
   }
-
   // Firmware is already processing a join request. Don't clear the CONNECTING bit because the
   // operation is still expected to complete.
   if (brcmf_test_bit_in_array(BRCMF_VIF_STATUS_CONNECTING, &ifp->vif->sme_state)) {
@@ -1728,6 +1742,7 @@ zx_status_t brcmf_cfg80211_connect(struct net_device* ndev, const wlanif_assoc_r
     ie = nullptr;
     ie_len = 0;
   }
+
   if (ie) {
     // Set wpaie only if ie is set
     err = brcmf_fil_iovar_data_set(ifp, "wpaie", ie, ie_len, &fw_err);
@@ -1747,10 +1762,6 @@ zx_status_t brcmf_cfg80211_connect(struct net_device* ndev, const wlanif_assoc_r
     BRCMF_DBG(TRACE, "Applied Vndr IEs for Assoc request");
   }
 
-  brcmf_set_bit_in_array(BRCMF_VIF_STATUS_CONNECTING, &ifp->vif->sme_state);
-  chanspec = channel_to_chanspec(&cfg->d11inf, &ifp->bss.chan);
-  cfg->channel = chanspec;
-
   if (ie_len > 0) {
     struct brcmf_vs_tlv* tmp_ie = (struct brcmf_vs_tlv*)ie;
     err = brcmf_configure_wpaie(ifp, tmp_ie, is_rsn_ie, false);
@@ -1760,7 +1771,13 @@ zx_status_t brcmf_cfg80211_connect(struct net_device* ndev, const wlanif_assoc_r
     }
   }
 
+  brcmf_set_bit_in_array(BRCMF_VIF_STATUS_CONNECTING, &ifp->vif->sme_state);
+
+  chanspec = channel_to_chanspec(&cfg->d11inf, &ifp->bss.chan);
+  cfg->channel = chanspec;
+
   ssid_len = std::min<uint32_t>(ifp->bss.ssid.len, WLAN_MAX_SSID_LEN);
+
   join_params_size = sizeof(join_params);
   memset(&join_params, 0, join_params_size);
 
@@ -4419,11 +4436,97 @@ void brcmf_if_data_queue_tx(net_device* ndev, uint32_t options, ethernet_netbuf_
   brcmf_netdev_start_xmit(ndev, std::move(b));
 }
 
-void brcmf_if_sae_handshake_resp(net_device* ndev, const wlanif_sae_handshake_resp_t* resp) {
-  // TODO(fxb/52234) Implement
+zx_status_t brcmf_if_sae_handshake_resp(net_device* ndev, const wlanif_sae_handshake_resp_t* resp) {
+  brcmf_ext_auth auth_data;
+  struct brcmf_if* ifp = ndev_to_if(ndev);
+  bcme_status_t fw_err = BCME_OK;
+  zx_status_t err = ZX_OK;
+
+  if (!resp) {
+    BRCMF_ERR("Invalid arguments, resp is nullptr.");
+    brcmf_return_assoc_result(ndev, WLAN_ASSOC_RESULT_REFUSED_EXTERNAL_REASON);
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  if (memcmp(resp->peer_sta_address, ifp->bss.bssid, ETH_ALEN)) {
+    const uint8_t* old_mac = ifp->bss.bssid;
+    const uint8_t* new_mac = resp->peer_sta_address;
+    BRCMF_ERR("Auth MAC (" MAC_FMT_STR
+              ") !="
+              " join MAC (" MAC_FMT_STR ").",
+              MAC_FMT_ARGS(new_mac), MAC_FMT_ARGS(old_mac));
+
+    // Just in case, in debug builds, we should investigate why the MLME is giving us inconsitent
+    // requests.
+    ZX_DEBUG_ASSERT(0);
+
+    // In release builds, ignore and continue.
+    BRCMF_ERR("Ignoring mismatch and using join MAC address");
+  }
+
+  memcpy(&auth_data.bssid, &resp->peer_sta_address, ETH_ALEN);
+  memcpy(&auth_data.ssid.SSID, &ifp->bss.ssid.data, ifp->bss.ssid.len);
+  auth_data.ssid.SSID_len = ifp->bss.ssid.len;
+  auth_data.status = resp->result_code;
+
+  brcmf_clear_bit_in_array(BRCMF_VIF_STATUS_SAE_AUTHENTICATING, &ifp->vif->sme_state);
+
+  // Using "scb_assoc" iovar to continue the association process in firmware.
+  err = brcmf_fil_iovar_data_set(ifp, "scb_assoc", &auth_data, sizeof(brcmf_ext_auth), &fw_err);
+  if (err != ZX_OK) {
+    BRCMF_ERR("Set iovar scb_assoc fail. err: %s, fw_err: %s", zx_status_get_string(err),
+              brcmf_fil_get_errstr(fw_err));
+    brcmf_return_assoc_result(ndev, WLAN_ASSOC_RESULT_REFUSED_REASON_UNSPECIFIED);
+  }
+  return err;
 }
-void brcmf_if_sae_frame_tx(net_device* ndev, const wlanif_sae_frame_t* frame) {
-  // TODO(fxb/52234) Implement
+
+zx_status_t brcmf_if_sae_frame_tx(net_device* ndev, const wlanif_sae_frame_t* frame) {
+  struct brcmf_if* ifp = ndev_to_if(ndev);
+  bcme_status_t fw_err = BCME_OK;
+  zx_status_t err = ZX_OK;
+
+  // Mac header(24 bytes) + Auth frame header(6 bytes) + sae_fields length.
+  uint32_t frame_size =
+      sizeof(wlan::MgmtFrameHeader) + sizeof(wlan::Authentication) + frame->sae_fields_count;
+  uint8_t frame_buf[frame_size];
+
+  auto sae_frame = reinterpret_cast<brcmf_sae_auth_frame*>(frame_buf);
+
+  // Set MAC addresses in MAC header, firmware will check these parts, and fill other missing parts.
+  sae_frame->mac_hdr.addr1 = wlan::common::MacAddr(frame->peer_sta_address);
+  sae_frame->mac_hdr.addr2 = wlan::common::MacAddr(ifp->mac_addr);
+  sae_frame->mac_hdr.addr3 = wlan::common::MacAddr(frame->peer_sta_address);
+
+  BRCMF_DBG(CONN,
+            "The peer_sta_address: " MAC_FMT_STR ", the ifp mac is: " MAC_FMT_STR
+            ", the seq_num is %u, the result_code is %u",
+            MAC_FMT_ARGS(frame->peer_sta_address), MAC_FMT_ARGS(ifp->mac_addr), frame->seq_num,
+            frame->result_code);
+
+  // Fill the authentication frame header fields.
+  sae_frame->auth_hdr.auth_algorithm_number = BRCMF_AUTH_MODE_SAE;
+  sae_frame->auth_hdr.auth_txn_seq_number = frame->seq_num;
+  sae_frame->auth_hdr.status_code = frame->result_code;
+
+  BRCMF_DBG(CONN, "auth_algorithm_number: %u, auth_txn_seq_number: %u, status_code: %u",
+            sae_frame->auth_hdr.auth_algorithm_number, sae_frame->auth_hdr.auth_txn_seq_number,
+            sae_frame->auth_hdr.status_code);
+
+  // Attach SAE payload after authentication frame header.
+  memcpy(sae_frame->sae_payload, frame->sae_fields_list, frame->sae_fields_count);
+
+  // Use command BRCMF_C_SCB_AUTHENTICATE to send SAE authentication frames to firmware.
+  err = brcmf_fil_cmd_data_set(ifp, BRCMF_C_SCB_AUTHENTICATE, frame_buf, frame_size, &fw_err);
+  if (err != ZX_OK) {
+    BRCMF_ERR("Auth frame is not set correctly to firmware. err: %s, fw_err: %s",
+              zx_status_get_string(err), brcmf_fil_get_errstr(fw_err));
+    // TODO: Even when the frame is successfully passed to firmware, it will still return
+    // a BCME_ERROR, the ZX_ERR code will be set to ZX_ERR_IO_REFUSED in this case(refer
+    // to brcmf_fil_cmd_data() in fwil.cc). This is most likely to be a firmware bug, we
+    // should return an assoc result to SME here once the bug is fixed.
+  }
+  return err;
 }
 
 zx_status_t brcmf_if_set_multicast_promisc(net_device* ndev, bool enable) {
@@ -4661,6 +4764,68 @@ static zx_status_t brcmf_notify_ap_started(struct brcmf_if* ifp, const struct br
   return brcmf_notify_channel_switch(ifp, e, data);
 }
 
+static zx_status_t brcmf_notify_start_auth(struct brcmf_if* ifp, const struct brcmf_event_msg* e,
+                                           void* data) {
+  struct net_device* ndev = ifp->ndev;
+  std::shared_lock<std::shared_mutex> guard(ndev->if_proto_lock);
+  if (ndev->if_proto.ops == nullptr) {
+    BRCMF_DBG(WLANIF, "interface stopped -- skipping SAE auth start notifications.");
+    return ZX_ERR_BAD_HANDLE;
+  }
+
+  wlanif_sae_handshake_ind_t ind;
+  brcmf_ext_auth* auth_start_evt = (brcmf_ext_auth*)data;
+
+  if (!brcmf_test_bit_in_array(BRCMF_VIF_STATUS_CONNECTING, &ifp->vif->sme_state)) {
+    BRCMF_ERR("Receiving a BRCMF_E_START_AUTH event when we are not even connecting to an AP.");
+    ZX_DEBUG_ASSERT(0);
+    return ZX_ERR_BAD_STATE;
+  }
+
+  BRCMF_DBG(EVENT,
+            "The peer addr received from data is: " MAC_FMT_STR
+            ", the addr in event_msg is: " MAC_FMT_STR "\n",
+            MAC_FMT_ARGS(auth_start_evt->bssid), MAC_FMT_ARGS(e->addr));
+  memcpy(ind.peer_sta_address, &auth_start_evt->bssid, ETH_ALEN);
+
+  // SAE four-way authentication start.
+  brcmf_set_bit_in_array(BRCMF_VIF_STATUS_SAE_AUTHENTICATING, &ifp->vif->sme_state);
+
+  wlanif_impl_ifc_sae_handshake_ind(&ndev->if_proto, &ind);
+  return ZX_OK;
+}
+
+static zx_status_t brcmf_rx_auth_frame(struct brcmf_if* ifp, const uint32_t datalen, void* data) {
+  struct net_device* ndev = ifp->ndev;
+  std::shared_lock<std::shared_mutex> guard(ndev->if_proto_lock);
+  if (ndev->if_proto.ops == nullptr) {
+    BRCMF_DBG(WLANIF, "interface stopped -- skipping SAE auth frame receive handler.");
+    return ZX_ERR_BAD_HANDLE;
+  }
+
+  wlanif_sae_frame_t frame = {};
+  auto pframe = (uint8_t*)data;
+  auto pframe_hdr = reinterpret_cast<wlan::Authentication*>(pframe);
+
+  BRCMF_DBG(TRACE, "Receive SAE authentication frame.");
+  BRCMF_DBG(CONN, "SAE authentication frame: ");
+  BRCMF_DBG(CONN, " status code: %u", pframe_hdr->status_code);
+  BRCMF_DBG(CONN, " sequence number: %u", pframe_hdr->auth_txn_seq_number);
+
+  // Copy authentication frame header information.
+  memcpy(frame.peer_sta_address, &ifp->bss.bssid, ETH_ALEN);
+  frame.result_code = pframe_hdr->status_code;
+  frame.seq_num = pframe_hdr->auth_txn_seq_number;
+
+  // Copy challenge text to sae_fields.
+  frame.sae_fields_count = datalen - sizeof(wlan::Authentication);
+  frame.sae_fields_list = pframe + sizeof(wlan::Authentication);
+
+  // Sending SAE authentication up to SME, not rx from SME.
+  wlanif_impl_ifc_sae_frame_rx(&ndev->if_proto, &frame);
+  return ZX_OK;
+}
+
 static zx_status_t brcmf_bss_connect_done(brcmf_if* ifp, brcmf_connect_status_t connect_status) {
   struct brcmf_cfg80211_info* cfg = ifp->drvr->config;
   struct net_device* ndev = ifp->ndev;
@@ -4858,6 +5023,15 @@ static zx_status_t brcmf_process_auth_event(struct brcmf_if* ifp, const struct b
                 brcmf_fil_get_errstr(fwerr));
     }
     brcmf_bss_connect_done(ifp, BRCMF_CONNECT_STATUS_AUTHENTICATION_FAILED);
+  }
+
+  if (e->datalen > 0) {
+    // Ignore the auth frame when SAE is not in progress.
+    if (!brcmf_test_bit_in_array(BRCMF_VIF_STATUS_SAE_AUTHENTICATING, &ifp->vif->sme_state)) {
+      BRCMF_ERR("Received auth frame when sme is not doing SAE four-way authentication.");
+      return ZX_ERR_BAD_STATE;
+    }
+    return brcmf_rx_auth_frame(ifp, e->datalen, data);
   }
 
   return ZX_OK;
@@ -5165,6 +5339,7 @@ static void brcmf_register_event_handlers(struct brcmf_cfg80211_info* cfg) {
   brcmf_fweh_register(cfg->pub, BRCMF_E_IF, brcmf_notify_vif_event);
   brcmf_fweh_register(cfg->pub, BRCMF_E_CSA_COMPLETE_IND, brcmf_notify_channel_switch);
   brcmf_fweh_register(cfg->pub, BRCMF_E_AP_STARTED, brcmf_notify_ap_started);
+  brcmf_fweh_register(cfg->pub, BRCMF_E_START_AUTH, brcmf_notify_start_auth);
 }
 
 static void brcmf_deinit_cfg_mem(struct brcmf_cfg80211_info* cfg) {

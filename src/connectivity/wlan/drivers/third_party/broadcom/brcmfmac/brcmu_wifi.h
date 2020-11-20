@@ -135,9 +135,9 @@
 #define WPA2_AUTH_RESERVED5     0x0800
 #define WPA2_AUTH_1X_SHA256     0x1000  /* 1X with SHA256 key derivation */
 #define WPA2_AUTH_PSK_SHA256    0x8000  /* PSK with SHA256 key derivation */
+#define WPA3_AUTH_SAE_PSK	    0x40000
 
 // clang-format on
-
 #define DOT11_DEFAULT_RTS_LEN 2347
 #define DOT11_DEFAULT_FRAG_LEN 2346
 

@@ -353,7 +353,7 @@ static void brcmf_set_init_cfg_params(brcmf_if* ifp) {
 }
 
 zx_status_t brcmf_c_preinit_dcmds(struct brcmf_if* ifp) {
-  int8_t eventmask[BRCMF_EVENTING_MASK_LEN];
+  uint8_t eventmask[BRCMF_EVENTING_MASK_LEN];
   uint8_t buf[BRCMF_DCMD_SMLEN];
   struct brcmf_rev_info_le revinfo;
   struct brcmf_rev_info* ri;
