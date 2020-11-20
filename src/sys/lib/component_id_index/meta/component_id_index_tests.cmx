@@ -1,0 +1,5 @@
+{
+    "program": {
+        "binary": "test/component_id_index_tests"
+    }
+}

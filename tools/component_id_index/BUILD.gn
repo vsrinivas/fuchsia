@@ -9,6 +9,7 @@ rustc_binary("component_id_index") {
   name = "component_id_index"
 
   deps = [
+    "//src/sys/lib/component_id_index",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:rand",
     "//third_party/rust_crates:serde",
@@ -19,15 +20,16 @@ rustc_binary("component_id_index") {
     "//third_party/rust_crates:thiserror",
   ]
 
-  test_deps = [ "//third_party/rust_crates:proptest" ]
+  test_deps = [
+    "//third_party/rust_crates:pretty_assertions",
+    "//third_party/rust_crates:proptest",
+    "//third_party/rust_crates:regex",
+  ]
 
   with_unit_tests = true
   edition = "2018"
 
-  sources = [
-    "src/index.rs",
-    "src/main.rs",
-  ]
+  sources = [ "src/main.rs" ]
 }
 
 install_host_tools("install") {
