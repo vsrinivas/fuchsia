@@ -21,7 +21,6 @@ rustc_library("pkgfs-ramdisk") {
     "//src/lib/scoped_task",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//src/sys/pkg/lib/fuchsia-merkle",
-    "//src/sys/pkg/lib/fuchsia-pkg",
     "//src/sys/pkg/testing/blobfs-ramdisk",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
@@ -30,6 +29,7 @@ rustc_library("pkgfs-ramdisk") {
   ]
 
   test_deps = [
+    "//src/sys/pkg/lib/fuchsia-pkg",
     "//third_party/rust_crates:maplit",
     "//third_party/rust_crates:matches",
     "//third_party/rust_crates:tempfile",

@@ -44,7 +44,6 @@ rustc_library("lib") {
     "//src/sys/lib/fidl-fuchsia-pkg-rewrite-ext",
     "//src/sys/lib/fuchsia_backoff",
     "//src/sys/pkg/lib/fuchsia-pkg",
-    "//src/sys/pkg/lib/fuchsia-pkg-testing",
     "//src/sys/pkg/lib/metrics:cobalt_sw_delivery_registry_rustlib",
     "//src/sys/pkg/lib/pkgfs",
     "//src/sys/pkg/lib/system-image",
@@ -73,6 +72,7 @@ rustc_library("lib") {
 
   test_deps = [
     "//sdk/fidl/fuchsia.cobalt:fuchsia.cobalt-rustc",
+    "//src/sys/pkg/lib/fuchsia-pkg-testing",
     "//third_party/rust_crates:maplit",
   ]
 

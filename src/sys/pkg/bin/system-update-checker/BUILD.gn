@@ -48,7 +48,6 @@ rustc_binary("bin") {
   ]
 
   test_deps = [
-    "//src/sys/pkg/testing/mock-reboot",
     "//third_party/rust_crates:lazy_static",
     "//third_party/rust_crates:maplit",
     "//third_party/rust_crates:matches",

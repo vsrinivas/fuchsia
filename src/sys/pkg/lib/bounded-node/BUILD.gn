@@ -17,8 +17,6 @@ rustc_library("bounded-node") {
     "//src/lib/diagnostics/inspect/rust",
   ]
 
-  test_deps = [ "//third_party/rust_crates:matches" ]
-
   sources = [ "src/lib.rs" ]
 }
 

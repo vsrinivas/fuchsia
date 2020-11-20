@@ -16,17 +16,19 @@ rustc_library("fuchsia-pkg") {
     "//src/sys/pkg/lib/fuchsia-archive",
     "//src/sys/pkg/lib/fuchsia-hash",
     "//src/sys/pkg/lib/fuchsia-merkle",
-    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:lazy_static",
-    "//third_party/rust_crates:maplit",
     "//third_party/rust_crates:proptest",
-    "//third_party/rust_crates:proptest-derive",
     "//third_party/rust_crates:rand",
     "//third_party/rust_crates:regex",
     "//third_party/rust_crates:serde",
     "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:tempfile",
     "//third_party/rust_crates:thiserror",
+  ]
+
+  test_deps = [
+    "//third_party/rust_crates:maplit",
+    "//third_party/rust_crates:proptest-derive",
   ]
 
   sources = [

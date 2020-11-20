@@ -20,7 +20,6 @@ rustc_library("lib") {
     "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc",
     "//sdk/fidl/fuchsia.pkg.rewrite:fuchsia.pkg.rewrite-rustc",
     "//sdk/fidl/fuchsia.space:fuchsia.space-rustc",
-    "//sdk/fidl/fuchsia.update:fuchsia.update-rustc",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",

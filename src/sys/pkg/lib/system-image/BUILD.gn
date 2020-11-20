@@ -14,10 +14,11 @@ rustc_library("system-image") {
   deps = [
     "//src/sys/pkg/lib/fuchsia-hash",
     "//src/sys/pkg/lib/fuchsia-pkg",
-    "//third_party/rust_crates:matches",
     "//third_party/rust_crates:proptest",
     "//third_party/rust_crates:thiserror",
   ]
+
+  test_deps = [ "//third_party/rust_crates:matches" ]
 
   sources = [
     "src/errors.rs",

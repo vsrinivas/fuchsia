@@ -31,7 +31,6 @@ rustc_library("fuchsia-pkg-testing") {
     "//src/lib/http-sse:http_sse",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//src/sys/lib/fidl-fuchsia-pkg-ext",
-    "//src/sys/lib/fuchsia_backoff",
     "//src/sys/pkg/bin/pkg-local-mirror:lib",
     "//src/sys/pkg/lib/fuchsia-archive",
     "//src/sys/pkg/lib/fuchsia-merkle",

@@ -11,12 +11,13 @@ rustc_library("fuchsia-archive") {
   edition = "2018"
   deps = [
     "//third_party/rust_crates:bincode",
-    "//third_party/rust_crates:itertools",
     "//third_party/rust_crates:serde",
-    "//third_party/rust_crates:tempfile",
     "//third_party/rust_crates:thiserror",
   ]
-  test_deps = [ "//third_party/rust_crates:matches" ]
+  test_deps = [
+    "//third_party/rust_crates:itertools",
+    "//third_party/rust_crates:matches",
+  ]
   sources = [
     "src/error.rs",
     "src/lib.rs",
