@@ -105,6 +105,10 @@ void HidMouse::ReceiveEvent(virtio_input_event_t* event) {
     case VIRTIO_INPUT_EV_REL:
       ReceiveRelEvent(event);
       break;
+    case VIRTIO_INPUT_EV_SYN:
+      // EV_SYN events will be handled by InputDevice directly after calling
+      // |ReceiveEvent|, so we ignore the SYN event here.
+      break;
     default:
       zxlogf(ERROR, "%s: unsupported event type %u!", __func__, event->type);
       break;

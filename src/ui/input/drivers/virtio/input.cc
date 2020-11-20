@@ -208,6 +208,8 @@ void InputDevice::ReceiveEvent(virtio_input_event_t* event) {
   hid_device_->ReceiveEvent(event);
 
   if (event->type == VIRTIO_INPUT_EV_SYN) {
+    // TODO(fxbug.dev/64889): Currently we assume all input events are SYN_REPORT.
+    // We need to handle other event codes like SYN_DROPPED as well.
     fbl::AutoLock lock(&lock_);
     if (hidbus_ifc_.ops) {
       size_t size;
