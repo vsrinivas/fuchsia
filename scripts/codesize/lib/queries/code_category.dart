@@ -203,7 +203,9 @@ class CodeCategoryQuery extends Query {
 
   /// Code categories that are compatible with one another, and with the
   /// exclusive categories. A symbol may match any number of these categories.
-  static const List<CodeCategory> _compatibleCategories = [];
+  static const List<CodeCategory> _compatibleCategories = [
+    DiagnosticsCategory(),
+  ];
 
   /// List of `CodeCategory`s checked by the query.
   static const List<CodeCategory> _allCategories = [

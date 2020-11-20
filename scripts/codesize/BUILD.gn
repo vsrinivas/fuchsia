@@ -36,6 +36,7 @@ dart_test("codesize_tests") {
     "crash_handling.dart",
     "io.dart",
     "queries/categories/categories.dart",
+    "queries/categories/diagnostics.dart",
     "queries/categories/fidl_cpp.dart",
     "queries/categories/fidl_go.dart",
     "queries/categories/fidl_rust.dart",
@@ -62,6 +63,7 @@ dart_test("codesize_tests") {
   sources += [
     "cli_test.dart",
     "crash_handling_test.dart",
+    "queries/categories/diagnostics_test.dart",
     "queries/categories/fidl_cpp_test.dart",
     "queries/categories/fidl_rust_test.dart",
     "queries/crates_test.dart",

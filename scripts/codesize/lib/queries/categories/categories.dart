@@ -7,6 +7,7 @@
 /// All defined category matchers for the `CodeCategoryQuery` query.
 library categories;
 
+export 'diagnostics.dart';
 export 'fidl_cpp.dart';
 export 'fidl_go.dart';
 export 'fidl_rust.dart';

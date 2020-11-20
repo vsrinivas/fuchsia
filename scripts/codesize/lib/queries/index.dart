@@ -48,6 +48,7 @@ class CompileUnitContext
         CFidlContextMixin,
         GoFidlContextMixin,
         RustFidlContextMixin,
+        DiagnosticsContextMixin,
         UntraceableContextMixin {
   CompileUnitContext(this.name);
 
