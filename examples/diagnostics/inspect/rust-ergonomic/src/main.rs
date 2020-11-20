@@ -150,6 +150,8 @@ mod derive_inspect {
     // [START inspect_forward_decl]
     #[derive(Inspect)]
     struct Wrapper {
+        // key is not included, because inspect has been forwarded.
+        _key: String,
         #[inspect(forward)]
         inner: RefCell<Inner>,
     }

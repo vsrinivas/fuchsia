@@ -145,8 +145,9 @@ nodes or properties are added or removed after the initial attachment.
 - `inspect(rename = "foo")`: Use a different name. By default, the field name
   is used.
 - `inspect(forward)`: Forwards the attachment to an inner `Inspect` type, omitting one
-  layer of nesting from the inspect hierarchy. The type must NOT have an
-  `inspect_node` field. Useful for wrapper types. For example:
+  layer of nesting from the inspect hierarchy. All other fields should not have any inspect
+  attributes. The type must NOT have an `inspect_node` field. Useful for wrapper types.
+  For example:
 
 ```rust
 {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/diagnostics/inspect/rust-ergonomic/src/main.rs" region_tag="inspect_forward_decl" adjust_indentation="auto" %}

@@ -150,15 +150,15 @@ struct AutoYakWrapper {
     #[inspect(forward)]
     inner: parking_lot::Mutex<AutoYak>,
 
-    // Attaches `wrapper_data` directly to parent, ignoring the requested name
-    wrapper_data: IValue<String>,
+    // `wrapper_data` is ignored, because we have forwarded to inner.
+    _wrapper_data: IValue<String>,
 }
 
 impl From<AutoYak> for AutoYakWrapper {
     fn from(yak: AutoYak) -> Self {
         let inner = yak.into();
         let wrapper_data = "some data".to_string().into();
-        Self { inner, wrapper_data }
+        Self { inner, _wrapper_data: wrapper_data }
     }
 }
 
@@ -609,7 +609,6 @@ async fn derive_inspect_forward() -> Result<(), AttachError> {
                 age: 0u64,
             },
         },
-        wrapper_data: "some data",
     });
     std::mem::drop(yak);
     assert_inspect_tree!(inspector, root: {});
@@ -690,7 +689,6 @@ async fn with_inspect_interior_mutability() -> Result<(), AttachError> {
                 age: 0u64,
             },
         },
-        wrapper_data: "some data",
     });
     yak.inner.lock().host_bday().await;
     assert_inspect_tree!(inspector, root: {
@@ -701,7 +699,6 @@ async fn with_inspect_interior_mutability() -> Result<(), AttachError> {
                 age: 1u64,
             },
         },
-        wrapper_data: "some data",
     });
     std::mem::drop(yak);
     assert_inspect_tree!(inspector, root: {});

@@ -89,17 +89,13 @@ struct InspectField {
 }
 
 impl InspectField {
-    /// Parse a syn::Field into an inspect field. Returns an error if the field is not named
-    /// and Ok(None) if the field should be skipped.
-    fn try_from_field(f: &syn::Field) -> Result<Option<Self>, Error> {
+    /// Parse a syn::Field into an inspect field. Returns an error if the field is not named,
+    /// it contains unrecognized attributes or an unsupported combination of attributes.
+    fn try_from_field(f: &syn::Field) -> Result<Self, Error> {
         let name = f.ident.as_ref().expect("internal error: expected named field").clone();
         let attr_args = get_field_attrs(f)?;
         attr_args.validate_for_inspect()?;
-        if attr_args.skip {
-            Ok(None)
-        } else {
-            Ok(Some(InspectField { name, attr_args }))
-        }
+        Ok(InspectField { name, attr_args })
     }
 
     /// Get a string literal containing the name of the field.
@@ -210,6 +206,11 @@ impl FieldAttrArgs {
         } else {
             Ok(())
         }
+    }
+
+    /// Returns true if any explicit attributes have been added.
+    fn has_explicit(&self) -> bool {
+        self.skip || self.forward || self.rename.is_some()
     }
 }
 
@@ -405,16 +406,27 @@ fn derive_inspect_inner(ast: DeriveInput) -> Result<TokenStream, Error> {
     for field in fields {
         if field.ident.as_ref().expect("internal error: expected named field") == "inspect_node" {
             has_inspect_node = true;
-            continue;
-        }
-        if let Some(data_field) = InspectField::try_from_field(field)? {
-            inspect_fields.push(data_field);
+        } else {
+            inspect_fields.push(InspectField::try_from_field(field)?);
         }
     }
     let forward_count = inspect_fields.iter().filter(|f| f.attr_args.forward).count();
     if forward_count > 1 {
         return Err(Error::new_spanned(&ast, "only one inspect(forward) is allowed"));
+    } else if forward_count == 1 {
+        // If any other fields have arguments, throw a preventative error.
+        if inspect_fields.iter().filter(|f| f.attr_args.has_explicit()).count() != 1 {
+            return Err(Error::new_spanned(
+                &ast,
+                "if inspect(forward) is used, other fields will not be included",
+            ));
+        }
+        // Remove all other fields except the forwarded one.
+        inspect_fields.retain(|f| f.attr_args.forward);
     }
+    // Remove all skipped fields.
+    inspect_fields.retain(|f| !f.attr_args.skip);
+
     let node_setup_stmt = if has_inspect_node {
         quote! {
             self.inspect_node = parent.create_child(name);

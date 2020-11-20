@@ -47,27 +47,21 @@ use crate::stream::{Stream, Streams};
 #[derive(Inspect)]
 pub struct Peer {
     /// The id of the peer we are connected to.
-    #[inspect(skip)]
     id: PeerId,
     /// Inner keeps track of the peer and the streams.
     #[inspect(forward)]
     inner: Arc<Mutex<PeerInner>>,
     /// Profile Proxy to connect new transport channels
-    #[inspect(skip)]
     profile: ProfileProxy,
     /// The profile descriptor for this peer, if it has been discovered.
-    #[inspect(skip)]
     descriptor: Mutex<Option<ProfileDescriptor>>,
     /// Wakers that are to be woken when the peer disconnects.  If None, the peers have been woken
     /// and this peer is disconnected.  Shared weakly with ClosedPeer future objects that complete
     /// when the peer disconnects.
-    #[inspect(skip)]
     closed_wakers: Arc<Mutex<Option<Vec<Waker>>>>,
     /// Cobalt Sender, if we are sending metrics.
-    #[inspect(skip)]
     cobalt_sender: Option<CobaltSender>,
     /// A task waiting to start a stream if it hasn't been started yet.
-    #[inspect(skip)]
     start_stream_task: Mutex<Option<fasync::Task<avdtp::Result<()>>>>,
 }
 

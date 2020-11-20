@@ -824,12 +824,10 @@ impl SessionInner {
 /// `clients` of the Session.
 #[derive(Inspect)]
 pub struct Session {
-    #[inspect(skip)]
     _task: fasync::Task<()>,
     #[inspect(forward)]
     inner: Arc<Mutex<SessionInner>>,
     /// Shared termination future.
-    #[inspect(skip)]
     terminated: Shared<BoxFuture<'static, ()>>,
 }
 

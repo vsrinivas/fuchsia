@@ -38,7 +38,6 @@ use crate::types::{AdvertiseParams, ServiceGroup, ServiceGroupHandle, Services};
 enum AdvertiseResult {
     /// The Advertise request needed RFCOMM - the client's event stream is returned.
     EventStream(StreamWithEpitaph<bredr::ConnectionReceiverEventStream, ServiceGroupHandle>),
-
     /// The Advertise request did not need RFCOMM - the request is relayed directly
     /// to the upstream server. Because Profile.Advertise returns when the advertisement finishes,
     /// we return a Future that relays the result to the client.
@@ -84,22 +83,14 @@ enum AdvertiseStatus {
 #[derive(Inspect)]
 pub struct ProfileRegistrar {
     /// An upstream provider of the Profile service. Typically provided by bt-host.
-    #[inspect(skip)]
     profile_upstream: bredr::ProfileProxy,
-
     /// The `active_registration` is the current processing task for connection requests
     /// from the upstream server.
-    #[inspect(skip)]
     active_registration: AdvertiseStatus,
-
     /// The currently advertised services.
-    #[inspect(skip)]
     registered_services: Services,
-
     /// Sender used to relay connection requests from the upstream server.
-    #[inspect(skip)]
     connection_sender: Option<mpsc::Sender<ConnectionEvent>>,
-
     /// The RFCOMM server that handles allocating server channels, incoming
     /// l2cap connections, outgoing l2cap connections, and multiplexing channels.
     #[inspect(forward)]
