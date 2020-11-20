@@ -17,9 +17,6 @@ driver_module("msd_img_rgx_mt8167") {
     deps = [ ":driver_sources" ]
   }
   deps += [ "//src/graphics/lib/magma/src/magma_util/platform:logger_for_system_drivers" ]
-
-  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
-  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
 }
 
 template("driver_source_template") {
@@ -65,8 +62,6 @@ template("driver_source_template") {
       ]
       sources += [ "driver_test_gtest.cc" ]
     }
-
-    configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
     if (defined(invoker.configs)) {
       configs += invoker.configs
     }

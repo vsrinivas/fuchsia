@@ -79,12 +79,7 @@ driver_module("driver") {
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
   ]
-
-  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
-  configs += [
-    "//build/config/fuchsia:enable_zircon_asserts",
-    "//build/config/fuchsia:static_cpp_standard_library",
-  ]
+  configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
 }
 
 package("usb-hci-test-driver") {

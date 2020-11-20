@@ -24,11 +24,7 @@ driver_module("ddk-power-test") {
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
   ]
-  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
-  configs += [
-    "//build/config/fuchsia:static_cpp_standard_library",
-    "//build/unification/config:zircon-migrated",
-  ]
+  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "test-driver.cc" ]
   deps = [
     ":fuchsia.device.power.test_llcpp",
@@ -51,11 +47,7 @@ driver_module("ddk-power-test-child") {
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
   ]
-  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
-  configs += [
-    "//build/config/fuchsia:static_cpp_standard_library",
-    "//build/unification/config:zircon-migrated",
-  ]
+  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "test-driver-child.cc" ]
   deps = [
     ":fuchsia.device.power.test_llcpp",

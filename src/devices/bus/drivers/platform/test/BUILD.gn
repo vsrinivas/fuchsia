@@ -36,11 +36,7 @@ bind_rules("test-board-bind") {
 }
 
 driver_module("test-board") {
-  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
-  configs += [
-    "//build/config:all_source",
-    "//build/config/fuchsia:static_cpp_standard_library",
-  ]
+  configs += [ "//build/config:all_source" ]
   sources = [
     "test-board.cc",
     "test-clock.cc",
@@ -79,11 +75,7 @@ bind_rules("test-gpio-bind") {
 }
 
 driver_module("test-gpio") {
-  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
-  configs += [
-    "//build/config:all_source",
-    "//build/config/fuchsia:static_cpp_standard_library",
-  ]
+  configs += [ "//build/config:all_source" ]
   sources = [ "test/gpio.cc" ]
   deps = [
     ":test-gpio-bind",
@@ -109,11 +101,7 @@ bind_rules("test-power-bind") {
 }
 
 driver_module("test-power") {
-  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
-  configs += [
-    "//build/config:all_source",
-    "//build/config/fuchsia:static_cpp_standard_library",
-  ]
+  configs += [ "//build/config:all_source" ]
   sources = [ "test/power.cc" ]
   deps = [
     ":test-power-bind",
@@ -139,11 +127,7 @@ bind_rules("test-goldfish-address-space-bind") {
 }
 
 driver_module("test-goldfish-address-space") {
-  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
-  configs += [
-    "//build/config:all_source",
-    "//build/config/fuchsia:static_cpp_standard_library",
-  ]
+  configs += [ "//build/config:all_source" ]
   sources = [ "test/goldfish_address_space.cc" ]
   deps = [
     ":test-goldfish-address-space-bind",
@@ -168,11 +152,7 @@ bind_rules("test-goldfish-pipe-bind") {
 }
 
 driver_module("test-goldfish-pipe") {
-  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
-  configs += [
-    "//build/config:all_source",
-    "//build/config/fuchsia:static_cpp_standard_library",
-  ]
+  configs += [ "//build/config:all_source" ]
   sources = [ "test/goldfish_pipe.cc" ]
   deps = [
     ":test-goldfish-pipe-bind",
@@ -197,11 +177,7 @@ bind_rules("test-clock-bind") {
 }
 
 driver_module("test-clock") {
-  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
-  configs += [
-    "//build/config:all_source",
-    "//build/config/fuchsia:static_cpp_standard_library",
-  ]
+  configs += [ "//build/config:all_source" ]
   sources = [ "test/clock.cc" ]
   deps = [
     ":test-clock-bind",
@@ -227,11 +203,7 @@ bind_rules("test-i2c-bind") {
 }
 
 driver_module("test-i2c") {
-  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
-  configs += [
-    "//build/config:all_source",
-    "//build/config/fuchsia:static_cpp_standard_library",
-  ]
+  configs += [ "//build/config:all_source" ]
   sources = [ "test/i2c.cc" ]
   deps = [
     ":test-i2c-bind",
@@ -257,11 +229,7 @@ bind_rules("test-spi-bind") {
 }
 
 driver_module("test-spi") {
-  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
-  configs += [
-    "//build/config:all_source",
-    "//build/config/fuchsia:static_cpp_standard_library",
-  ]
+  configs += [ "//build/config:all_source" ]
   sources = [ "test/spi.cc" ]
   deps = [
     ":test-spi-bind",
@@ -287,11 +255,7 @@ bind_rules("test-pwm-bind") {
 }
 
 driver_module("test-pwm") {
-  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
-  configs += [
-    "//build/config:all_source",
-    "//build/config/fuchsia:static_cpp_standard_library",
-  ]
+  configs += [ "//build/config:all_source" ]
   sources = [ "test/pwm.cc" ]
   deps = [
     ":test-pwm-bind",
@@ -316,11 +280,7 @@ bind_rules("test-rpmb-bind") {
 }
 
 driver_module("test-rpmb") {
-  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
-  configs += [
-    "//build/config:all_source",
-    "//build/config/fuchsia:static_cpp_standard_library",
-  ]
+  configs += [ "//build/config:all_source" ]
   sources = [ "test/rpmb.cc" ]
   deps = [
     ":test-rpmb-bind",
@@ -345,11 +305,7 @@ bind_rules("test-vreg-bind") {
 }
 
 driver_module("test-vreg") {
-  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
-  configs += [
-    "//build/config:all_source",
-    "//build/config/fuchsia:static_cpp_standard_library",
-  ]
+  configs += [ "//build/config:all_source" ]
   sources = [ "test/vreg.cc" ]
   deps = [
     ":test-vreg-bind",
@@ -375,11 +331,7 @@ bind_rules("test-composite-bind") {
 }
 
 driver_module("test-composite") {
-  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
-  configs += [
-    "//build/config:all_source",
-    "//build/config/fuchsia:static_cpp_standard_library",
-  ]
+  configs += [ "//build/config:all_source" ]
   sources = [ "test/composite.c" ]
   deps = [
     ":test-composite-bind",
@@ -411,11 +363,7 @@ bind_rules("test-child-2.proxy-bind") {
 }
 
 driver_module("test-child-2.proxy") {
-  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
-  configs += [
-    "//build/config:all_source",
-    "//build/config/fuchsia:static_cpp_standard_library",
-  ]
+  configs += [ "//build/config:all_source" ]
   sources = [ "test/child-2.proxy.c" ]
   deps = [
     ":test-child-2.proxy-bind",
@@ -439,11 +387,7 @@ foreach(driver, simple_drivers) {
   }
 
   driver_module("test-$driver") {
-    configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
-    configs += [
-      "//build/config:all_source",
-      "//build/config/fuchsia:static_cpp_standard_library",
-    ]
+    configs += [ "//build/config:all_source" ]
     sources = [ "test/$driver.c" ]
     deps = [
       ":test-${driver}-bind",
@@ -502,11 +446,7 @@ bind_rules("test-bti-board-bind") {
 }
 
 driver_module("test-bti-board") {
-  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
-  configs += [
-    "//build/config:all_source",
-    "//build/config/fuchsia:static_cpp_standard_library",
-  ]
+  configs += [ "//build/config:all_source" ]
   sources = [ "test-bti-board.cc" ]
   deps = [
     ":test-bti-board-bind",
@@ -527,11 +467,7 @@ bind_rules("test-bti-bind") {
   deps = [ "//src/devices/bind/test.platform" ]
 }
 driver_module("test-bti") {
-  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
-  configs += [
-    "//build/config:all_source",
-    "//build/config/fuchsia:static_cpp_standard_library",
-  ]
+  configs += [ "//build/config:all_source" ]
   sources = [ "test-bti.cc" ]
   deps = [
     ":fuchsia.hardware.btitest_llcpp",

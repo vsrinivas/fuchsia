@@ -25,8 +25,6 @@ driver_module("shtv3") {
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
   ]
-  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
-  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
   sources = [ "shtv3.cc" ]
   deps = [ ":common" ]
 }

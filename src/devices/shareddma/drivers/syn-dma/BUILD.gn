@@ -11,8 +11,6 @@ driver_module("syn-dma") {
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
   ]
-  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
-  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
   if (is_fuchsia) {
     configs += [ "//build/unification/config:zircon-migrated" ]
     fdio_config = [ "//build/config/fuchsia:fdio_config" ]

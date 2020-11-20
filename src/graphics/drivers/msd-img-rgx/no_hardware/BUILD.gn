@@ -12,9 +12,6 @@ driver_module("msd_img_rgx_no_hardware") {
     ":driver_sources",
     "//src/graphics/lib/magma/src/magma_util/platform:logger_for_system_drivers",
   ]
-
-  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
-  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
 }
 
 source_set("driver_sources") {
@@ -39,5 +36,4 @@ source_set("driver_sources") {
     "//third_party/imgtec-pvr-rgx-km:src_no_hardware",
     "//zircon/system/ulib/fidl-utils",
   ]
-  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
 }

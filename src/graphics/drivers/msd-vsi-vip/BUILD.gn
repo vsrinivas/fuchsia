@@ -34,9 +34,6 @@ driver_module("msd_vsi") {
     "$magma_build_root/src/magma_util/platform:logger_for_system_drivers",
     "src",
   ]
-
-  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
-  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
 }
 
 driver_module("msd_vsi_test") {
@@ -47,9 +44,6 @@ driver_module("msd_vsi_test") {
     "$magma_build_root/src/magma_util/platform:logger_for_system_drivers",
     "src",
   ]
-
-  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
-  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
 }
 
 magma_pdev_entry("msd_vsi_entry") {

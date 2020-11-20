@@ -16,8 +16,6 @@ bind_rules("mock-device-bind") {
 driver_module("mock-device") {
   test = true
   testonly = true
-  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
-  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
   sources = [
     "device.cc",
     "fidl.cc",

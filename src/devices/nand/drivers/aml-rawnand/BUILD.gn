@@ -6,9 +6,6 @@ import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
 
 driver_module("aml-rawnand") {
-  configs += [ "//build/config:all_source" ]
-  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
-  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
   deps = [
     ":common",
     "//src/devices/lib/driver",

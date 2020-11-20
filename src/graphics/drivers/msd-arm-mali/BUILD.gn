@@ -15,9 +15,6 @@ driver_module("msd_arm") {
     "src",
     "//src/graphics/lib/magma/src/magma_util/platform:logger_for_system_drivers",
   ]
-
-  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
-  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
 }
 
 driver_module("msd_arm_test") {
@@ -32,9 +29,6 @@ driver_module("msd_arm_test") {
     "//src/graphics/lib/magma/tests/unit_tests:magma_platform_hardware_tests",
     "//src/graphics/lib/magma/tests/unit_tests:msd_abi_conformance_tests",
   ]
-
-  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
-  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
 }
 
 magma_pdev_entry("msd_arm_entry") {

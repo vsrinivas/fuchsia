@@ -10,10 +10,8 @@ driver_module("aml-usb-phy-v2") {
   configs += [
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
-    "//build/config/fuchsia:static_cpp_standard_library",
     "//build/unification/config:zircon-migrated",
   ]
-  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
   sources = [ "aml-usb-phy.cc" ]
   deps = [
     "//sdk/banjo/ddk.protocol.platform.device",

@@ -233,8 +233,6 @@ driver_module("driver_module") {
     # TODO(fxb/38132): Migrate to the new bind rules and delete the below
     "//src/lib/ddk:ddk-deprecated-binding-headers",
   ]
-  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
-  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
   visibility += [ "//src/connectivity/wlan:drivers" ]
 }
 
@@ -255,8 +253,6 @@ driver_module("test_driver_module") {
     "pcie:pcie_driver_test",
   ]
   defines = [ "CONFIG_BRCMFMAC_DRIVER_TEST=1" ]
-  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
-  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
   visibility += [ "//src/connectivity/wlan:drivers" ]
 }
 

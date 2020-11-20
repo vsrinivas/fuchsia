@@ -16,11 +16,7 @@ driver_module("amlogic-clk") {
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
   ]
-  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
-  configs += [
-    "//build/config/fuchsia:static_cpp_standard_library",
-    "//build/unification/config:zircon-migrated",
-  ]
+  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [
     "aml-clk.cc",
     "aml-fclk-rates.cc",

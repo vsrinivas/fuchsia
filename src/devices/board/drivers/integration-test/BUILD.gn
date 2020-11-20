@@ -16,8 +16,6 @@ bind_rules("test-bus-bind") {
 
 driver_module("integration-test") {
   configs += [ "//build/config:all_source" ]
-  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
-  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
 
   # TODO: testonly = true
   sources = [ "test.cc" ]

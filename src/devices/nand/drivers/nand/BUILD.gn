@@ -33,8 +33,6 @@ source_set("common") {
 }
 
 driver_module("nand") {
-  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
-  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
   deps = [
     ":common",
     "//src/devices/lib/driver",

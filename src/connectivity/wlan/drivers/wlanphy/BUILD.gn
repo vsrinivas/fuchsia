@@ -42,12 +42,7 @@ driver_module("wlanphy_driver") {
   sources = wlanphy_sources
 
   deps = wlanphy_deps
-
-  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
-  configs += [
-    "//build/config/fuchsia:enable_zircon_asserts",
-    "//build/config/fuchsia:static_cpp_standard_library",
-  ]
+  configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
 }
 
 driver_package("wlanphy") {

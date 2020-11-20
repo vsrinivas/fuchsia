@@ -50,12 +50,7 @@ driver_module("wlanif_driver") {
   output_name = "wlanif"
 
   deps = [ ":lib_source" ]
-
-  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
-  configs += [
-    "//build/config/fuchsia:enable_zircon_asserts",
-    "//build/config/fuchsia:static_cpp_standard_library",
-  ]
+  configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
 }
 
 driver_package("wlanif") {

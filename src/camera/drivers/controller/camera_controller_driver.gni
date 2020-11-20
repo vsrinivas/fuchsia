@@ -59,12 +59,7 @@ template("camera_controller_driver") {
     if (defined(invoker.deps)) {
       deps += invoker.deps
     }
-
-    configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
-    configs += [
-      "//build/config/fuchsia:static_cpp_standard_library",
-      "//build/config/fuchsia:enable_zircon_asserts",
-    ]
+    configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
   }
 
   driver_package(package_name) {

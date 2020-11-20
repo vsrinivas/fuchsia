@@ -17,11 +17,7 @@ driver_module("realtek-8211f") {
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
   ]
-  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
-  configs += [
-    "//build/config/fuchsia:static_cpp_standard_library",
-    "//build/unification/config:zircon-migrated",
-  ]
+  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "rtl8211f.cc" ]
   deps = [
     ":rtl8211f_bind",

@@ -37,12 +37,7 @@ driver_module("wlan_driver") {
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
   ]
-
-  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
-  configs += [
-    "//build/config/fuchsia:enable_zircon_asserts",
-    "//build/config/fuchsia:static_cpp_standard_library",
-  ]
+  configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
 }
 
 executable("wlan_minstrel_unittest") {

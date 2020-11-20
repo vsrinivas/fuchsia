@@ -21,7 +21,6 @@ test("fake-object") {
     "//zircon/public/lib/zxc",
     "//zircon/public/lib/zxtest",
   ]
-  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
 }
 
 unittest_package("fake-object-package") {

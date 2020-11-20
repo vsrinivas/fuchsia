@@ -32,9 +32,6 @@ target(driver_module, "msd_qcom") {
   if (is_fuchsia) {
     output_name = "libmsd_qcom"
     deps += [ ":msd_qcom_entry" ]
-
-    configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
-    configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
   }
 
   if (is_linux) {
@@ -58,9 +55,6 @@ target(driver_module_test, "msd_qcom_test") {
   if (is_fuchsia) {
     output_name = "libmsd_qcom_test"
     deps += [ ":msd_qcom_entry_test" ]
-
-    configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
-    configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
   }
 
   if (is_linux) {

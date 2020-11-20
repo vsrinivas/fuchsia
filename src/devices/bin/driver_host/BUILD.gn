@@ -72,10 +72,7 @@ source_set("common") {
     "//zircon/system/ulib/zxio",
   ]
 
-  configs += [
-    "//build/config:all_source",
-    "//build/config/fuchsia:static_cpp_standard_library",
-  ]
+  configs += [ "//build/config:all_source" ]
 }
 
 shared_library("driver") {
@@ -91,8 +88,6 @@ bind_rules("test-devhost-parent-bind") {
 }
 
 driver_module("driver-host-test-driver") {
-  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
-  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
   sources = [ "test-driver.cc" ]
   deps = [
     ":test-devhost-parent-bind",
@@ -110,8 +105,6 @@ bind_rules("test-devhost-child-bind") {
 }
 
 driver_module("driver-host-test-child-driver") {
-  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
-  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
   sources = [ "test-driver-child.cc" ]
   deps = [
     ":test-devhost-child-bind",
@@ -153,8 +146,6 @@ bind_rules("unit-test-fail-bind") {
 
 driver_module("unit-test-fail") {
   test = true
-  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
-  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
   sources = [ "unit-test-fail.cc" ]
   deps = [
     ":unit-test-fail-bind",
@@ -172,8 +163,6 @@ bind_rules("unit-test-pass-bind") {
 
 driver_module("unit-test-pass") {
   test = true
-  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
-  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
   sources = [ "unit-test-pass.cc" ]
   deps = [
     ":unit-test-pass-bind",

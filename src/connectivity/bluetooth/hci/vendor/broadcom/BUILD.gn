@@ -14,11 +14,7 @@ driver_module("bt-hci-broadcom") {
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
   ]
-  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
-  configs += [
-    "//build/config/fuchsia:static_cpp_standard_library",
-    "//build/unification/config:zircon-migrated",
-  ]
+  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "bt-hci-broadcom.c" ]
   deps = [
     "//sdk/banjo/ddk.protocol.bt.hci",
@@ -43,9 +39,7 @@ driver_module("bt-hci-broadcom-transitional") {
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
   ]
-  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
   configs += [
-    "//build/config/fuchsia:static_cpp_standard_library",
     "//build/unification/config:zircon-migrated",
   ]
   sources = [ "bt-hci-broadcom.c" ]

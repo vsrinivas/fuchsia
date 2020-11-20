@@ -14,9 +14,6 @@ driver_module("msd_intel") {
     "$magma_build_root/src/magma_util/platform:logger_for_system_drivers",
     "src",
   ]
-
-  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
-  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
 }
 
 # The gpu device; runs gtests at startup
@@ -30,9 +27,6 @@ driver_module("msd_intel_test") {
     "$magma_build_root/src/magma_util/platform:logger_for_system_drivers",
     "src",
   ]
-
-  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
-  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
 }
 
 source_set("msd_intel_entry") {

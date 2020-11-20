@@ -21,8 +21,6 @@ template("sherlock_driver") {
       "//build/config:all_source",
       "//build/config/fuchsia:enable_zircon_asserts",
     ]
-    configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
-    configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
     if (is_fuchsia) {
       configs += [ "//build/unification/config:zircon-migrated" ]
     }

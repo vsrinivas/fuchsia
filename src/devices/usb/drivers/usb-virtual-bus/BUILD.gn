@@ -39,8 +39,6 @@ source_set("common") {
 }
 
 driver_module("usb-virtual-bus") {
-  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
-  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
   deps = [
     ":common",
     "//src/devices/lib/driver",
@@ -68,10 +66,8 @@ driver_module("virtual-bus-tester") {
   configs += [
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
-    "//build/config/fuchsia:static_cpp_standard_library",
     "//build/unification/config:zircon-migrated",
   ]
-  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
   sources = [ "host.cc" ]
   deps = [
     ":fuchsia.hardware.usb.virtualbustest_llcpp",
@@ -102,10 +98,8 @@ driver_module("virtual-bus-tester-function") {
   configs += [
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
-    "//build/config/fuchsia:static_cpp_standard_library",
     "//build/unification/config:zircon-migrated",
   ]
-  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
   sources = [ "peripheral.cc" ]
   deps = [
     ":usb-virtual-bus-tester-function-bind",

@@ -8,11 +8,6 @@ import("//build/test.gni")
 import("//build/test/test_package.gni")
 
 driver_module("skip-block") {
-  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
-  configs += [
-    "//build/config:all_source",
-    "//build/config/fuchsia:static_cpp_standard_library",
-  ]
   deps = [
     ":common",
     "//src/devices/lib/driver",

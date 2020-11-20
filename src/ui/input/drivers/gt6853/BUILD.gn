@@ -94,8 +94,6 @@ driver_module("gt6853-module") {
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
   ]
-  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
-  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
   deps = [ ":common" ]
   defines = [
     "GT6853_CONFIG_9364_PATH=\"$config_9364_path\"",

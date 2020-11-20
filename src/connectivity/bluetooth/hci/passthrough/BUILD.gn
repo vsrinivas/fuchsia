@@ -23,9 +23,6 @@ driver_module("driver") {
   ]
 
   configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
-
-  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
-  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
 }
 
 driver_package("passthrough") {

@@ -25,9 +25,6 @@ driver_module("driver") {
     "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//zircon/public/lib/zx",
   ]
-
-  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
-  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
 }
 
 driver_package("bt-hog") {

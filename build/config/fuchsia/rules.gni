@@ -101,7 +101,7 @@ set_defaults("driver_module") {
   # tells the linker to link against it statically. This is safe for drivers which
   # don't depend on the standard library as well as the linker will not have any
   # symbols to resolve.
-  configs += [ "//build/config/fuchsia:no_cpp_standard_library" ]
+  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
 }
 
 # TODO(64400): Temporary to allow out of tree users to soft migrate.

@@ -23,6 +23,4 @@ static_library("fake-transport-base") {
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-default",
   ]
-
-  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
 }
