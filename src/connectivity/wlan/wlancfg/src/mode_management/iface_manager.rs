@@ -699,7 +699,7 @@ async fn initiate_network_selection(
         info!("Initiating network selection for idle client interface.");
         let fut = async move {
             let ignore_list = vec![];
-            network_selector.get_best_network(iface_manager_client.clone(), &ignore_list).await
+            network_selector.find_best_bss(iface_manager_client.clone(), &ignore_list).await
         };
         network_selection_futures.push(fut.boxed());
     }
@@ -3896,7 +3896,7 @@ mod tests {
             fasync::Interval::new(zx::Duration::from_seconds(reconnect_monitor_interval));
         let iface_manager_client = Arc::new(Mutex::new(FakeIfaceManagerRequester::new()));
         let network =
-            exec.run_singlethreaded(selector.get_best_network(iface_manager_client, &vec![]));
+            exec.run_singlethreaded(selector.find_best_bss(iface_manager_client, &vec![]));
         assert!(network.is_some());
 
         {
