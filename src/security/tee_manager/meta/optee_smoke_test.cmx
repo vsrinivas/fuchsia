@@ -2,7 +2,9 @@
     "facets": {
         "fuchsia.test": {
             "injected-services": {
-                "fuchsia.tee.Device": "fuchsia-pkg://fuchsia.com/tee_manager#meta/tee_manager.cmx"
+                "fuchsia.tee.Application.808032e0-fd9e-4e6f-8896-544735c98480": "fuchsia-pkg://fuchsia.com/tee_manager#meta/tee_manager.cmx",
+                "fuchsia.tee.Device": "fuchsia-pkg://fuchsia.com/tee_manager#meta/tee_manager.cmx",
+                "fuchsia.tee.DeviceInfo": "fuchsia-pkg://fuchsia.com/tee_manager#meta/tee_manager.cmx"
             }
         }
     },
