@@ -15,7 +15,7 @@ use {
     fidl_fuchsia_io as fio, fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
     futures::StreamExt,
     io_util::node::connect_in_namespace,
-    log::{info, warn},
+    log::warn,
     std::sync::Arc,
     vfs::{
         directory::{
@@ -58,15 +58,14 @@ pub trait CapabilityInjector: 'static + Send + Sync {
                 };
 
                 // An event was found! Inject the route.
-                if let Ok(payload) = &event.result {
-                    info!("Injecting CapabilityProvider for `{}`", payload.name);
+                if event.result.is_ok() {
                     let provider_client_end = injector.clone().route();
                     event
                         .protocol_proxy()
-                        .expect(&format!("CapabilityRouted Event for {} does not have RoutingProtocol", payload.name))
+                        .expect("Event does not have routing protocol")
                         .set_provider(provider_client_end)
                         .await
-                        .expect(&format!("Could not set provider for CapabilityRouted event for `{}`", payload.name));
+                        .expect("Could not set provider for CapabilityRouted event");
                 }
             }
         })
@@ -225,7 +224,7 @@ impl<M: ServiceMarker, T: ProtocolInjector<Marker = M> + 'static + Sync + Send> 
         let stream = ServerEnd::<M>::new(server_end)
             .into_stream()
             .expect("could not convert channel into stream");
-        info!("Serving injected capability `{}`...", <M as ServiceMarker>::NAME);
+
         self.serve(stream).await.expect("Injection failed");
     }
 }
