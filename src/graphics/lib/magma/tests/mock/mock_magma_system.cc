@@ -105,35 +105,7 @@ uint64_t magma_get_buffer_size(magma_buffer_t buffer) {
   return reinterpret_cast<magma::PlatformBuffer*>(buffer)->size();
 }
 
-magma_status_t magma_map(magma_connection_t connection, magma_buffer_t buffer, void** addr_out) {
-  if (!reinterpret_cast<magma::PlatformBuffer*>(buffer)->MapCpu(addr_out))
-    return MAGMA_STATUS_MEMORY_ERROR;
-  return MAGMA_STATUS_OK;
-}
-
-magma_status_t magma_buffer_set_padding(magma_connection_t connection, magma_buffer_t buffer,
-                                        uint64_t padding) {
-  return MAGMA_STATUS_UNIMPLEMENTED;
-}
-
-magma_status_t magma_map_aligned(magma_connection_t connection, magma_buffer_t buffer,
-                                 uint64_t alignment, void** addr_out) {
-  if (!reinterpret_cast<magma::PlatformBuffer*>(buffer)->MapCpu(addr_out, alignment))
-    return MAGMA_STATUS_MEMORY_ERROR;
-  return MAGMA_STATUS_OK;
-}
-
-magma_status_t magma_unmap(magma_connection_t connection, magma_buffer_t buffer) {
-  if (!reinterpret_cast<magma::PlatformBuffer*>(buffer)->UnmapCpu())
-    return MAGMA_STATUS_MEMORY_ERROR;
-  return MAGMA_STATUS_OK;
-}
-
 magma_status_t magma_set_cache_policy(magma_buffer_t buffer, magma_cache_policy_t policy) {
-  return MAGMA_STATUS_OK;
-}
-
-magma_status_t magma_set_buffer_mapping_address_range(magma_buffer_t buffer, uint32_t handle) {
   return MAGMA_STATUS_OK;
 }
 

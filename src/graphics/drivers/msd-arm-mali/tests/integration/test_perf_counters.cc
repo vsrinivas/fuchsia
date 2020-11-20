@@ -10,6 +10,7 @@
 
 #include <gtest/gtest.h>
 
+#include "helper/magma_map_cpu.h"
 #include "helper/test_device_helper.h"
 #include "magma.h"
 #include "magma_arm_mali_types.h"
@@ -128,13 +129,14 @@ class TestConnection : public magma::TestDeviceBase {
       EXPECT_LE(time, last_possible_time);
 
       void* data;
-      magma_map(connection_, buffer, &data);
+      EXPECT_TRUE(magma::MapCpuHelper(connection_, buffer, 0 /*offset*/, buffer_size, &data));
       auto data_dwords =
           reinterpret_cast<uint32_t*>(reinterpret_cast<uint8_t*>(data) + buffer_offset);
       constexpr uint32_t kEnableBitsOffset = 2;
       if (i == 0) {
         EXPECT_EQ(0x80ffu, data_dwords[kEnableBitsOffset]);
       }
+      EXPECT_TRUE(magma::UnmapCpuHelper(data, buffer_size));
     }
 
     uint32_t trigger_id;

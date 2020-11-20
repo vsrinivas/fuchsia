@@ -28,6 +28,7 @@ executable("msd_arm_mali_integration_tests") {
     "//src/graphics/lib/magma/src/libmagma",
     "//src/graphics/lib/magma/src/magma_util:macros",
     "//src/graphics/lib/magma/tests/helper:logger_init_helper",
+    "//src/graphics/lib/magma/tests/helper:magma_map_cpu",
     "//src/graphics/lib/magma/tests/helper:test_device_helper",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",

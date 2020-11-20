@@ -11,6 +11,7 @@
 #include <vector>
 
 #include <gtest/gtest.h>
+#include <helper/magma_map_cpu.h>
 
 #include "test_magma_vsi.h"
 
@@ -44,6 +45,8 @@ class MagmaExecuteMsdVsi : public testing::Test {
     friend MagmaExecuteMsdVsi;
 
    public:
+    ~EtnaBuffer() { magma::UnmapCpuHelper(cpu_address_, size_); }
+
     uint32_t* GetCpuAddress() const { return reinterpret_cast<uint32_t*>(cpu_address_); }
 
    private:
@@ -68,8 +71,8 @@ class MagmaExecuteMsdVsi : public testing::Test {
     EXPECT_EQ(MAGMA_STATUS_OK, magma_set_cache_policy(etna_buffer->magma_buffer_,
                                                       MAGMA_CACHE_POLICY_WRITE_COMBINING));
 
-    if (MAGMA_STATUS_OK != magma_map(magma_vsi_.GetConnection(), etna_buffer->magma_buffer_,
-                                     &etna_buffer->cpu_address_))
+    if (!magma::MapCpuHelper(magma_vsi_.GetConnection(), etna_buffer->magma_buffer_, 0 /*offset*/,
+                             actual_size, &etna_buffer->cpu_address_))
       return nullptr;
 
     etna_buffer->size_ = magma_get_buffer_size(etna_buffer->magma_buffer_);

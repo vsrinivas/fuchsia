@@ -8,6 +8,7 @@
 #include <gtest/gtest.h>
 
 #include "helper/inflight_list.h"
+#include "helper/magma_map_cpu.h"
 #include "helper/test_device_helper.h"
 #include "magma.h"
 #include "msd_intel_gen_query.h"
@@ -56,9 +57,9 @@ class TestConnection : public magma::TestDeviceBase {
 
     magma_map_buffer_gpu(connection_, result_buffer, 0, 1, gpu_addr_, 0);
 
-    EXPECT_TRUE(InitBatchBuffer(batch_buffer, register_offset, gpu_addr_));
+    EXPECT_TRUE(InitBatchBuffer(batch_buffer, size, register_offset, gpu_addr_));
 
-    EXPECT_TRUE(ClearBuffer(result_buffer, 0xabcd1234));
+    EXPECT_TRUE(ClearBuffer(result_buffer, size, 0xabcd1234));
 
     magma_system_command_buffer command_buffer;
     std::vector<magma_system_exec_resource> exec_resources;
@@ -75,7 +76,7 @@ class TestConnection : public magma::TestDeviceBase {
     }
 
     uint32_t result;
-    EXPECT_TRUE(ReadBufferAt(result_buffer, 0, &result));
+    EXPECT_TRUE(ReadBufferAt(result_buffer, size, 0, &result));
 
     EXPECT_EQ(expected_value, result)
         << " expected: 0x" << std::hex << expected_value << " got: 0x" << result;
@@ -88,43 +89,40 @@ class TestConnection : public magma::TestDeviceBase {
     ASSERT_EQ(MAGMA_STATUS_OK, status);
   }
 
-  bool ReadBufferAt(magma_buffer_t buffer, uint32_t dword_offset, uint32_t* result_out) {
+  bool ReadBufferAt(magma_buffer_t buffer, size_t size, uint32_t dword_offset,
+                    uint32_t* result_out) {
     void* vaddr;
-    magma_status_t status = magma_map(connection_, buffer, &vaddr);
-    if (status != MAGMA_STATUS_OK)
-      return DRETF(false, "magma_map failed: %d", status);
+    if (!magma::MapCpuHelper(connection_, buffer, 0 /*offset*/, size, &vaddr))
+      return DRETF(false, "MapCpuHelper failed");
 
     *result_out = reinterpret_cast<uint32_t*>(vaddr)[dword_offset];
 
-    status = magma_unmap(connection_, buffer);
-    if (status != MAGMA_STATUS_OK)
-      return DRETF(false, "magma_unmap failed: %d", status);
+    if (!magma::UnmapCpuHelper(vaddr, size))
+      return DRETF(false, "UnmapCpuHelper failed");
 
     return true;
   }
 
-  bool ClearBuffer(magma_buffer_t buffer, uint32_t value) {
+  bool ClearBuffer(magma_buffer_t buffer, size_t size, uint32_t value) {
     void* vaddr;
-    magma_status_t status = magma_map(connection_, buffer, &vaddr);
-    if (status != MAGMA_STATUS_OK)
-      return DRETF(false, "magma_map failed: %d", status);
+    if (!magma::MapCpuHelper(connection_, buffer, 0 /*offset*/, size, &vaddr))
+      return DRETF(false, "CpuMapHelper failed");
 
     for (uint32_t i = 0; i < magma_get_buffer_size(buffer) / sizeof(uint32_t); i++) {
       reinterpret_cast<uint32_t*>(vaddr)[i] = value;
     }
 
-    status = magma_unmap(connection_, buffer);
-    if (status != MAGMA_STATUS_OK)
-      return DRETF(false, "magma_unmap failed: %d", status);
+    if (!magma::UnmapCpuHelper(vaddr, size))
+      return DRETF(false, "UnmapCpuHelper failed");
 
     return true;
   }
 
-  bool InitBatchBuffer(magma_buffer_t buffer, uint32_t register_offset, uint64_t target_gpu_addr) {
+  bool InitBatchBuffer(magma_buffer_t buffer, size_t size, uint32_t register_offset,
+                       uint64_t target_gpu_addr) {
     void* vaddr;
-    magma_status_t status = magma_map(connection_, buffer, &vaddr);
-    if (status != MAGMA_STATUS_OK)
-      return DRETF(false, "magma_map failed: %d", status);
+    if (!magma::MapCpuHelper(connection_, buffer, 0 /*offset*/, size, &vaddr))
+      return DRETF(false, "MapCpuHelper failed");
 
     memset(vaddr, 0, magma_get_buffer_size(buffer));
 
@@ -141,9 +139,8 @@ class TestConnection : public magma::TestDeviceBase {
                      | (0xA << 23);  // command opcode: MI_BATCH_BUFFER_END
     }
 
-    status = magma_unmap(connection_, buffer);
-    if (status != MAGMA_STATUS_OK)
-      return DRETF(false, "magma_unmap failed: %d", status);
+    if (!magma::UnmapCpuHelper(vaddr, size))
+      return DRETF(false, "UnmapCpuHelper failed");
 
     return true;
   }

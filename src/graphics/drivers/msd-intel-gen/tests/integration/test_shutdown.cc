@@ -12,6 +12,7 @@
 #include <gtest/gtest.h>
 
 #include "helper/inflight_list.h"
+#include "helper/magma_map_cpu.h"
 #include "helper/test_device_helper.h"
 #include "magma.h"
 #include "magma_util/macros.h"
@@ -81,7 +82,7 @@ class TestConnection : public magma::TestDeviceBase {
 
   bool InitBatchBuffer(magma_buffer_t buffer, uint64_t size) {
     void* vaddr;
-    if (magma_map(connection_, buffer, &vaddr) != 0)
+    if (!magma::MapCpuHelper(connection_, buffer, 0 /*offset*/, size, &vaddr))
       return DRETF(false, "couldn't map batch buffer");
 
     memset(vaddr, 0, size);
@@ -89,7 +90,7 @@ class TestConnection : public magma::TestDeviceBase {
     // Intel end-of-batch
     *reinterpret_cast<uint32_t*>(vaddr) = 0xA << 23;
 
-    EXPECT_EQ(magma_unmap(connection_, buffer), 0);
+    EXPECT_TRUE(magma::UnmapCpuHelper(vaddr, size));
 
     return true;
   }

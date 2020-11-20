@@ -20,58 +20,6 @@ std::map<uint32_t, virtmagma_handle_t*>& GlobalHandleTable() {
   return ht;
 }
 
-magma_status_t magma_map(magma_connection_t connection, magma_buffer_t buffer, void** addr_out) {
-  *addr_out = nullptr;
-
-  auto connection_wrapped = virtmagma_connection_t::Get(connection);
-  connection = connection_wrapped->Object();
-  int32_t file_descriptor = connection_wrapped->Parent().first;
-  int32_t file_descriptor_mmap = connection_wrapped->Parent().second;
-  auto buffer_wrapped = virtmagma_buffer_t::Get(buffer);
-  buffer = buffer_wrapped->Object();
-
-  virtio_magma_map_ctrl_t request{};
-  struct {
-    virtio_magma_map_resp_t virtio_response;
-    size_t size_to_mmap_out;
-  } response{};
-  request.hdr.type = VIRTIO_MAGMA_CMD_MAP;
-  request.connection = reinterpret_cast<decltype(request.connection)>(connection);
-  request.buffer = reinterpret_cast<decltype(request.buffer)>(buffer);
-
-  if (!virtmagma_send_command(file_descriptor, &request, sizeof(request), &response,
-                              sizeof(response))) {
-    return MAGMA_STATUS_INTERNAL_ERROR;
-  }
-  if (response.virtio_response.hdr.type != VIRTIO_MAGMA_RESP_MAP) {
-    return MAGMA_STATUS_INTERNAL_ERROR;
-  }
-
-  // The only simple way to construct a new vm_area_struct in the kernel is to reuse
-  // the mmap call path.
-  void* mapped_addr = mmap(nullptr, response.size_to_mmap_out, PROT_READ | PROT_WRITE, MAP_SHARED,
-                           file_descriptor_mmap, 0);
-  if (mapped_addr == MAP_FAILED) {
-    return MAGMA_STATUS_INTERNAL_ERROR;
-  }
-  *addr_out = mapped_addr;
-
-  magma_status_t result_return =
-      static_cast<decltype(result_return)>(response.virtio_response.result_return);
-  return result_return;
-}
-
-magma_status_t magma_map_aligned(magma_connection_t connection, magma_buffer_t buffer,
-                                 uint64_t alignment, void** addr_out) {
-  *addr_out = nullptr;
-  return MAGMA_STATUS_UNIMPLEMENTED;
-}
-
-magma_status_t magma_map_specific(magma_connection_t connection, magma_buffer_t buffer,
-                                  uint64_t addr, uint64_t offset, uint64_t length) {
-  return MAGMA_STATUS_UNIMPLEMENTED;
-}
-
 magma_status_t magma_poll(magma_poll_item_t* items, uint32_t count, uint64_t timeout_ns) {
   if (count == 0)
     return MAGMA_STATUS_OK;

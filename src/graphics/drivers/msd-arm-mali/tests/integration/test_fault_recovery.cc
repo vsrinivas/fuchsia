@@ -13,6 +13,7 @@
 
 #include <gtest/gtest.h>
 
+#include "helper/magma_map_cpu.h"
 #include "helper/test_device_helper.h"
 #include "magma.h"
 #include "magma_arm_mali_types.h"
@@ -70,7 +71,7 @@ class TestConnection : public magma::TestDeviceBase {
 
     ASSERT_EQ(magma_create_buffer(connection_, PAGE_SIZE, &size, &job_buffer), 0);
     uint64_t job_va;
-    InitJobBuffer(job_buffer, how, &job_va);
+    InitJobBuffer(job_buffer, how, size, &job_va);
 
     std::vector<uint8_t> vaddr(sizeof(magma_arm_mali_atom));
 
@@ -145,9 +146,9 @@ class TestConnection : public magma::TestDeviceBase {
     return true;
   }
 
-  bool InitJobBuffer(magma_buffer_t buffer, How how, uint64_t* job_va) {
+  bool InitJobBuffer(magma_buffer_t buffer, How how, uint64_t size, uint64_t* job_va) {
     void* vaddr;
-    if (magma_map(connection_, buffer, &vaddr) != 0)
+    if (!magma::MapCpuHelper(connection_, buffer, 0 /*offset*/, size, &vaddr) != 0)
       return DRETF(false, "couldn't map job buffer");
     *job_va = next_job_address_;
     next_job_address_ += 0x5000;
@@ -165,6 +166,7 @@ class TestConnection : public magma::TestDeviceBase {
     }
     header->next_job = 0;
     magma_clean_cache(buffer, 0, PAGE_SIZE, MAGMA_CACHE_OPERATION_CLEAN);
+    magma::UnmapCpuHelper(vaddr, size);
     return true;
   }
 

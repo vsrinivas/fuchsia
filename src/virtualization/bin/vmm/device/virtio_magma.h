@@ -43,16 +43,10 @@ class VirtioMagma : public VirtioMagmaGeneric,
  private:
   zx_status_t Handle_device_import(const virtio_magma_device_import_ctrl_t* request,
                                    virtio_magma_device_import_resp_t* response) override;
-  zx_status_t Handle_create_buffer(const virtio_magma_create_buffer_ctrl_t* request,
-                                   virtio_magma_create_buffer_resp_t* response) override;
   zx_status_t Handle_internal_map(const virtio_magma_internal_map_ctrl_t* request,
                                   virtio_magma_internal_map_resp_t* response) override;
   zx_status_t Handle_internal_unmap(const virtio_magma_internal_unmap_ctrl_t* request,
                                     virtio_magma_internal_unmap_resp_t* response) override;
-  zx_status_t Handle_map_aligned(const virtio_magma_map_aligned_ctrl_t* request,
-                                 virtio_magma_map_aligned_resp_t* response) override;
-  zx_status_t Handle_map_specific(const virtio_magma_map_specific_ctrl_t* request,
-                                  virtio_magma_map_specific_resp_t* response) override;
   zx_status_t Handle_poll(const virtio_magma_poll_ctrl_t* request,
                           virtio_magma_poll_resp_t* response) override;
   zx_status_t Handle_read_notification_channel(

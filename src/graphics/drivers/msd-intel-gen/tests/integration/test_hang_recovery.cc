@@ -13,6 +13,7 @@
 #include <gtest/gtest.h>
 
 #include "helper/inflight_list.h"
+#include "helper/magma_map_cpu.h"
 #include "helper/test_device_helper.h"
 #include "magma.h"
 #include "magma_util/dlog.h"
@@ -60,7 +61,7 @@ class TestConnection : public magma::TestDeviceBase {
 
     ASSERT_EQ(magma_create_buffer(connection_, PAGE_SIZE, &buffer_size, &batch_buffer), 0);
     void* vaddr;
-    ASSERT_EQ(MAGMA_STATUS_OK, magma_map(connection_, batch_buffer, &vaddr));
+    ASSERT_TRUE(magma::MapCpuHelper(connection_, batch_buffer, 0 /*offset*/, buffer_size, &vaddr));
 
     magma_map_buffer_gpu(connection_, batch_buffer, 0, 1, gpu_addr_, 0);
 
@@ -117,7 +118,7 @@ class TestConnection : public magma::TestDeviceBase {
       }
     }
 
-    EXPECT_EQ(magma_unmap(connection_, batch_buffer), 0);
+    EXPECT_TRUE(magma::UnmapCpuHelper(vaddr, buffer_size));
 
     magma_release_buffer(connection_, batch_buffer);
   }
@@ -201,7 +202,7 @@ class TestConnection : public magma::TestDeviceBase {
 
     ASSERT_EQ(magma_create_buffer(connection_, PAGE_SIZE, &size, &batch_buffer), 0);
     void* vaddr;
-    ASSERT_EQ(0, magma_map(connection_, batch_buffer, &vaddr));
+    ASSERT_TRUE(magma::MapCpuHelper(connection_, batch_buffer, 0 /*offset*/, size, &vaddr));
 
     InitBatchBuffer(vaddr, size, true, kUnmappedBufferGpuAddress);
 
@@ -213,7 +214,7 @@ class TestConnection : public magma::TestDeviceBase {
 
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
-    magma_unmap(connection_, batch_buffer);
+    ASSERT_TRUE(magma::UnmapCpuHelper(vaddr, size));
     magma_release_buffer(connection_, batch_buffer);
 
     magma_release_connection(connection_);

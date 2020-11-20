@@ -22,6 +22,7 @@ executable("msd_intel_gen_integration_tests") {
   deps = [
     "$magma_build_root/src/libmagma",
     "$magma_build_root/tests/helper:inflight_list",
+    "$magma_build_root/tests/helper:magma_map_cpu",
     "$magma_build_root/tests/helper:test_device_helper",
     "../../include",
     "//sdk/fidl/fuchsia.gpu.magma:fuchsia.gpu.magma_llcpp",

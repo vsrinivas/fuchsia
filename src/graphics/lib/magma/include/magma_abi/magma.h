@@ -148,68 +148,6 @@ magma_status_t magma_get_buffer_is_mappable(
     magma_bool_t* is_mappable_out);
 
 ///
-/// \brief Sets the mapping address range on the given buffer.  Ownership of the handle is
-///        transferred to magma.
-/// \param buffer The given buffer.
-/// \param handle A platform specific handle to the address range.
-///
-magma_status_t magma_set_buffer_mapping_address_range(
-    magma_buffer_t buffer,
-    magma_handle_t handle);
-
-///
-/// \brief Maps the given buffer's memory into the calling process's address space.
-/// \param connection An open connection.
-/// \param buffer A valid buffer.
-/// \param addr_out The returned CPU virtual address for the start of the buffer.
-///
-magma_status_t magma_map(
-    magma_connection_t connection,
-    magma_buffer_t buffer,
-    void** addr_out);
-
-///
-/// \brief Maps the given buffer's memory into the calling process's address space with a given
-///        alignment.
-/// \param connection An open connection.
-/// \param buffer A valid buffer.
-/// \param alignment The requested alignment. Must be a power of 2 and at least PAGE_SIZE.
-/// \param addr_out The returned CPU virtual address for the start of the buffer.
-///
-magma_status_t magma_map_aligned(
-    magma_connection_t connection,
-    magma_buffer_t buffer,
-    uint64_t alignment,
-    void** addr_out);
-
-///
-/// \brief Maps a region of the given buffer's memory at the given CPU virtual address. Fails if the
-///        buffer was previously mapped, or if the address range is unavailable.
-/// \param connection An open connection.
-/// \param buffer A valid buffer.
-/// \param addr A valid CPU virtual address.
-/// \param offset Offset into the buffer. Must be less than or equal to the buffer's size.
-/// \param length Size of region to be mapped. Offset + length must be less than or equal to the
-///        buffer's size.
-///
-magma_status_t magma_map_specific(
-    magma_connection_t connection,
-    magma_buffer_t buffer,
-    uint64_t addr,
-    uint64_t offset,
-    uint64_t length);
-
-///
-/// \brief Releases a CPU mapping for the given buffer. Should be paired with each call to one of
-///        the mapping interfaces.
-/// \param connection An open connection.
-/// \param buffer A valid buffer with at least one active CPU mapping.
-///
-magma_status_t magma_unmap(
-    magma_connection_t connection,
-    magma_buffer_t buffer);
-
-///
 /// \brief Maps a number of pages from the given buffer onto the GPU in the connection's address
 ///        space at the given address. Depending on the MSD this may automatically commit and
 ///        populate that range.
@@ -482,36 +420,6 @@ magma_status_t magma_poll(
 magma_status_t magma_connection_access_performance_counters(
     magma_connection_t connection,
     magma_handle_t channel);
-
-///
-/// \brief Maps the given buffer's memory below the given CPU virtual address. Fails if the buffer
-///        was previously mapped, or if a suitable address range is unavailable.
-/// \param connection An open connection.
-/// \param buffer A valid buffer.
-/// \param length The length of the region to map.
-/// \param upper_limit The upper limit of the virtual address space to map the buffer.
-/// \param alignment The requested alignment. Must either be 0 (default page alignment) or a power
-///        of 2 >= PAGE_SIZE.
-/// \param addr_out The returned CPU virtual address for the start of the buffer.
-///
-magma_status_t magma_map_constrained(
-    magma_connection_t connection,
-    magma_buffer_t buffer,
-    uint64_t length,
-    uint64_t upper_limit,
-    uint64_t alignment,
-    void** addr_out);
-
-///
-/// \brief Sets how much empty address space to leave after any CPU mappings of a buffer.
-/// \param connection An open connection.
-/// \param buffer A valid buffer.
-/// \param padding The number of bytes of padding to use.
-///
-magma_status_t magma_buffer_set_padding(
-    magma_connection_t connection,
-    magma_buffer_t buffer,
-    uint64_t padding);
 
 ///
 /// \brief Enables a set of performance counters (the precise definition depends on the GPU driver).

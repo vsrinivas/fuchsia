@@ -123,17 +123,6 @@ magma_status_t magma_set_cache_policy(magma_buffer_t buffer, magma_cache_policy_
   return result ? MAGMA_STATUS_OK : MAGMA_STATUS_INTERNAL_ERROR;
 }
 
-magma_status_t magma_set_buffer_mapping_address_range(magma_buffer_t buffer, uint32_t handle) {
-  auto address_range =
-      magma::PlatformBuffer::MappingAddressRange::Create(magma::PlatformHandle::Create(handle));
-  if (!address_range)
-    return DRET(MAGMA_STATUS_INVALID_ARGS);
-
-  magma::Status status = reinterpret_cast<magma::PlatformBuffer*>(buffer)->SetMappingAddressRange(
-      std::move(address_range));
-  return status.get();
-}
-
 uint64_t magma_get_buffer_id(magma_buffer_t buffer) {
   return reinterpret_cast<magma::PlatformBuffer*>(buffer)->id();
 }
@@ -207,63 +196,6 @@ magma_status_t magma_export(magma_connection_t connection, magma_buffer_t buffer
   if (!platform_buffer->duplicate_handle(buffer_handle_out))
     return DRET(MAGMA_STATUS_INVALID_ARGS);
 
-  return MAGMA_STATUS_OK;
-}
-
-magma_status_t magma_map(magma_connection_t connection, magma_buffer_t buffer, void** addr_out) {
-  auto platform_buffer = reinterpret_cast<magma::PlatformBuffer*>(buffer);
-
-  if (!platform_buffer->MapCpu(addr_out))
-    return DRET(MAGMA_STATUS_MEMORY_ERROR);
-
-  return MAGMA_STATUS_OK;
-}
-
-magma_status_t magma_map_aligned(magma_connection_t connection, magma_buffer_t buffer,
-                                 uint64_t alignment, void** addr_out) {
-  auto platform_buffer = reinterpret_cast<magma::PlatformBuffer*>(buffer);
-
-  if (!platform_buffer->MapCpu(addr_out, alignment))
-    return DRET(MAGMA_STATUS_MEMORY_ERROR);
-
-  return MAGMA_STATUS_OK;
-}
-
-magma_status_t magma_map_specific(magma_connection_t connection, magma_buffer_t buffer,
-                                  uint64_t addr, uint64_t offset, uint64_t length) {
-  auto platform_buffer = reinterpret_cast<magma::PlatformBuffer*>(buffer);
-
-  // This may happen often if there happens to be another allocation already there, so don't DRET
-  if (!platform_buffer->MapAtCpuAddr(addr, offset, length))
-    return MAGMA_STATUS_MEMORY_ERROR;
-
-  return MAGMA_STATUS_OK;
-}
-
-magma_status_t magma_map_constrained(magma_connection_t connection, magma_buffer_t buffer,
-                                     uint64_t length, uint64_t upper_limit, uint64_t alignment,
-                                     void** addr_out) {
-  auto platform_buffer = reinterpret_cast<magma::PlatformBuffer*>(buffer);
-  if (!platform_buffer->MapCpuConstrained(addr_out, length, upper_limit, alignment)) {
-    return DRET(MAGMA_STATUS_MEMORY_ERROR);
-  }
-  return MAGMA_STATUS_OK;
-}
-
-magma_status_t magma_unmap(magma_connection_t connection, magma_buffer_t buffer) {
-  auto platform_buffer = reinterpret_cast<magma::PlatformBuffer*>(buffer);
-
-  if (!platform_buffer->UnmapCpu())
-    return DRET(MAGMA_STATUS_MEMORY_ERROR);
-
-  return MAGMA_STATUS_OK;
-}
-
-magma_status_t magma_buffer_set_padding(magma_connection_t connection, magma_buffer_t buffer,
-                                        uint64_t padding) {
-  auto platform_buffer = reinterpret_cast<magma::PlatformBuffer*>(buffer);
-  if (!platform_buffer->SetPadding(padding))
-    return DRET(MAGMA_STATUS_INVALID_ARGS);
   return MAGMA_STATUS_OK;
 }
 
