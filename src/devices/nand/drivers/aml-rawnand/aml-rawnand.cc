@@ -12,6 +12,8 @@
 #include <fbl/algorithm.h>
 #include <fbl/auto_lock.h>
 
+#include "src/devices/nand/drivers/aml-rawnand/aml-rawnand-bind.h"
+
 namespace amlrawnand {
 
 static constexpr uint32_t NAND_BUSWIDTH_16 = 0x00000002;
@@ -998,11 +1000,4 @@ static constexpr zx_driver_ops_t amlrawnand_driver_ops = []() {
 
 }  // namespace amlrawnand
 
-// The formatter does not play nice with these macros.
-// clang-format off
-ZIRCON_DRIVER_BEGIN(aml_rawnand, amlrawnand::amlrawnand_driver_ops, "zircon", "0.1", 3)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PDEV),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_AMLOGIC),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_AMLOGIC_RAW_NAND),
-ZIRCON_DRIVER_END(aml_rawnand)
-    // clang-format on
+ZIRCON_DRIVER(aml_rawnand, amlrawnand::amlrawnand_driver_ops, "zircon", "0.1")

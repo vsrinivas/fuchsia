@@ -2,29 +2,37 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
 
 driver_module("aml-rawnand") {
-  configs += [
-    "//build/config:all_source",
-    "//build/config/fuchsia:enable_zircon_asserts",
-  ]
+  configs += [ "//build/config:all_source" ]
   configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
   configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
-  if (is_fuchsia) {
-    configs += [ "//build/unification/config:zircon-migrated" ]
-  }
-  sources = [ "aml-rawnand.cc" ]
   deps = [
     ":common",
     "//src/devices/lib/driver",
   ]
 }
 
+bind_rules("aml-rawnand-bind") {
+  rules = "aml-rawnand.bind"
+  output = "aml-rawnand-bind.h"
+  tests = "bind-tests.json"
+  deps = [
+    "//src/devices/bind/amlogic.platform",
+    "//src/devices/bind/fuchsia.platform",
+  ]
+}
+
 source_set("common") {
   configs += [ "//build/config:all_source" ]
-  sources = [ "onfi.cc" ]
+  sources = [
+    "aml-rawnand.cc",
+    "onfi.cc",
+  ]
   public_deps = [
+    ":aml-rawnand-bind",
     "//sdk/banjo/ddk.protocol.platform.device",
     "//sdk/banjo/ddk.protocol.rawnand",
     "//sdk/fidl/fuchsia.hardware.nand:fuchsia.hardware.nand_c",
@@ -33,9 +41,6 @@ source_set("common") {
     "//src/devices/lib/amlogic",
     "//src/devices/lib/mmio",
     "//src/lib/ddk",
-
-    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
-    "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//src/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/sync",
@@ -46,5 +51,8 @@ source_set("common") {
 
 group("tests") {
   testonly = true
-  deps = [ "tests" ]
+  deps = [
+    ":aml-rawnand-bind_test",
+    "tests",
+  ]
 }
