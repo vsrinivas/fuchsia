@@ -496,6 +496,55 @@ mod tests {
     use fuchsia_zircon_sys as sys;
 
     #[test]
+    fn into_raw() {
+        let vmo = Vmo::create(1).unwrap();
+        let h = vmo.into_raw();
+        let vmo2 = Vmo::from(unsafe { Handle::from_raw(h) });
+        assert!(vmo2.write(b"1", 0).is_ok());
+    }
+
+    /// Test duplication by means of a VMO
+    #[test]
+    fn duplicate() {
+        let hello_length: usize = 5;
+
+        // Create a VMO and write some data to it.
+        let vmo = Vmo::create(hello_length as u64).unwrap();
+        assert!(vmo.write(b"hello", 0).is_ok());
+
+        // Replace, reducing rights to read.
+        let readonly_vmo = vmo.duplicate_handle(Rights::READ).unwrap();
+        // Make sure we can read but not write.
+        let mut read_vec = vec![0; hello_length];
+        assert!(readonly_vmo.read(&mut read_vec, 0).is_ok());
+        assert_eq!(read_vec, b"hello");
+        assert_eq!(readonly_vmo.write(b"", 0), Err(Status::ACCESS_DENIED));
+
+        // Write new data to the original handle, and read it from the new handle
+        assert!(vmo.write(b"bye", 0).is_ok());
+        assert!(readonly_vmo.read(&mut read_vec, 0).is_ok());
+        assert_eq!(read_vec, b"byelo");
+    }
+
+    // Test replace by means of a VMO
+    #[test]
+    fn replace() {
+        let hello_length: usize = 5;
+
+        // Create a VMO and write some data to it.
+        let vmo = Vmo::create(hello_length as u64).unwrap();
+        assert!(vmo.write(b"hello", 0).is_ok());
+
+        // Replace, reducing rights to read.
+        let readonly_vmo = vmo.replace_handle(Rights::READ).unwrap();
+        // Make sure we can read but not write.
+        let mut read_vec = vec![0; hello_length];
+        assert!(readonly_vmo.read(&mut read_vec, 0).is_ok());
+        assert_eq!(read_vec, b"hello");
+        assert_eq!(readonly_vmo.write(b"", 0), Err(Status::ACCESS_DENIED));
+    }
+
+    #[test]
     fn set_get_name() {
         // We need some concrete object to exercise the AsHandleRef<'_> set/get_name functions.
         let vmo = Vmo::create(1).unwrap();

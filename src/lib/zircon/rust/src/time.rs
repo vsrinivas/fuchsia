@@ -380,6 +380,43 @@ mod tests {
     use crate::Signals;
 
     #[test]
+    fn monotonic_time_increases() {
+        let time1 = Time::get_monotonic();
+        1_000.nanos().sleep();
+        let time2 = Time::get_monotonic();
+        assert!(time2 > time1);
+    }
+
+    #[test]
+    fn ticks_increases() {
+        let ticks1 = ticks_get();
+        1_000.nanos().sleep();
+        let ticks2 = ticks_get();
+        assert!(ticks2 > ticks1);
+    }
+
+    #[test]
+    fn tick_length() {
+        let sleep_time = 1.milli();
+        let ticks1 = ticks_get();
+        sleep_time.sleep();
+        let ticks2 = ticks_get();
+
+        // The number of ticks should have increased by at least 1 ms worth
+        let sleep_ticks = (sleep_time.into_millis() as i64) * ticks_per_second() / 1000;
+        assert!(ticks2 >= (ticks1 + sleep_ticks));
+    }
+
+    #[test]
+    fn sleep() {
+        let sleep_ns = 1.millis();
+        let time1 = Time::get_monotonic();
+        sleep_ns.sleep();
+        let time2 = Time::get_monotonic();
+        assert!(time2 > time1 + sleep_ns);
+    }
+
+    #[test]
     fn create_timer_invalid_clock() {
         assert_eq!(Timer::create(ClockId::UTC).unwrap_err(), Status::INVALID_ARGS);
         assert_eq!(Timer::create(ClockId::Thread), Err(Status::INVALID_ARGS));
