@@ -7,8 +7,9 @@
 #include <assert.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <fuchsia/boot/llcpp/fidl.h>
+#include <fuchsia/device/manager/llcpp/fidl.h>
 #include <fuchsia/hardware/power/statecontrol/llcpp/fidl.h>
-#include <fuchsia/kernel/c/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
@@ -30,6 +31,7 @@
 #include "netcp.h"
 #include "netsvc.h"
 #include "paver.h"
+#include "src/bringup/lib/mexec/mexec.h"
 #include "zbi.h"
 
 static uint32_t last_cookie = 0;
@@ -54,6 +56,41 @@ static nbfilecontainer_t nbcmdline;
 
 // Pointer to the currently active transfer.
 static nbfile* active;
+
+namespace {
+
+bool ConnectToService(const char* service, zx::channel& channel) {
+  zx::channel remote;
+  if (zx_status_t status = zx::channel::create(0, &channel, &remote); status != ZX_OK) {
+    printf("failed to create a channel: %s\n", zx_status_get_string(status));
+    return false;
+  }
+  std::string svc = "/svc/" + std::string(service);
+  if (zx_status_t status = fdio_service_connect(svc.c_str(), remote.release()); status != ZX_OK) {
+    printf("failed to connect to %s: %s\n", service, zx_status_get_string(status));
+    return false;
+  }
+  return true;
+};
+
+bool GetMexecResource(zx::resource* resource) {
+  using Resource = llcpp::fuchsia::boot::RootResource;
+
+  zx::channel local;
+  if (!ConnectToService(Resource::Name, local)) {
+    return false;
+  }
+  Resource::SyncClient client(std::move(local));
+  if (auto result = client.Get(); !result.ok()) {
+    printf("failed to get root resource %s\n", result.status_string());
+    return false;
+  } else {
+    resource->swap(result.Unwrap()->resource);
+  }
+  return true;
+}
+
+}  // namespace
 
 static zx_status_t nbfilecontainer_init(size_t size, nbfilecontainer_t* target) {
   zx_status_t st = ZX_OK;
@@ -259,18 +296,17 @@ static zx_status_t do_dmctl_mexec() {
     return status;
   }
 
-  zx::channel local, remote;
-  status = zx::channel::create(0, &local, &remote);
-  if (status != ZX_OK) {
+  zx::resource resource;
+  if (!GetMexecResource(&resource)) {
+    return ZX_ERR_INTERNAL;
+  }
+  zx::channel devmgr_channel;
+  if (!ConnectToService(llcpp::fuchsia::device::manager::Administrator::Name, devmgr_channel)) {
     return ZX_ERR_INTERNAL;
   }
 
-  status = fdio_service_connect("/svc/fuchsia.kernel.MexecBroker", remote.release());
-  if (status != ZX_OK) {
-    return ZX_ERR_INTERNAL;
-  }
-
-  status = fuchsia_kernel_MexecBrokerPerformMexec(local.get(), kernel_zbi.get(), data_zbi.get());
+  status = mexec::Boot(std::move(resource), std::move(devmgr_channel), std::move(kernel_zbi),
+                       std::move(data_zbi));
   if (status != ZX_OK) {
     return ZX_ERR_INTERNAL;
   }
@@ -281,20 +317,14 @@ static zx_status_t do_dmctl_mexec() {
 }
 
 static zx_status_t reboot() {
-  zx::channel local, remote;
-  zx_status_t status = zx::channel::create(0, &local, &remote);
-  if (status != ZX_OK) {
+  namespace statecontrol = llcpp::fuchsia::hardware::power::statecontrol;
+
+  zx::channel local;
+  if (!ConnectToService(statecontrol::Admin::Name, local)) {
     return ZX_ERR_INTERNAL;
   }
-  std::string svc_dir = "/svc/";
-  std::string service = svc_dir + llcpp::fuchsia::hardware::power::statecontrol::Admin::Name;
-  status = fdio_service_connect(service.c_str(), remote.release());
-  if (status != ZX_OK) {
-    return ZX_ERR_INTERNAL;
-  }
-  auto response = llcpp::fuchsia::hardware::power::statecontrol::Admin::Call::Reboot(
-      zx::unowned_channel(local.get()),
-      llcpp::fuchsia::hardware::power::statecontrol::RebootReason::USER_REQUEST);
+  auto response =
+      statecontrol::Admin::Call::Reboot(local.borrow(), statecontrol::RebootReason::USER_REQUEST);
   if (response.status() != ZX_OK) {
     return response.status();
   }

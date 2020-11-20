@@ -20,7 +20,7 @@ group("tests") {
   deps = [
     "//src/bringup/bin/bootsvc/integration_test:bootsvc-integration-tests",
     "//src/bringup/bin/bootsvc/integration_test:bootsvc-root-job-test",
-    "//src/zircon/tests/mexec",
+    "//src/bringup/lib/mexec/tests",
     "//zircon/system/utest/core:core-tests",
   ]
 

@@ -2,12 +2,18 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+# TODO(joshuaseaton): move this to //src/bringup/lib/mexec/tests.
 executable("mexec-zbi-test-entry") {
   testonly = true
   sources = [ "mexec-zbi-test-entry.cc" ]
   deps = [
+    "//sdk/fidl/fuchsia.device.manager:fuchsia.device.manager_llcpp",
     "//sdk/lib/fdio",
+    "//src/bringup/lib/mexec",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/fidl:fidl-llcpp",
     "//zircon/system/ulib/zbitl",
     "//zircon/system/ulib/zx",
   ]

@@ -1,0 +1,22 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("mexec") {
+  sources = [ "mexec.cc" ]
+
+  deps = [
+    "//sdk/fidl/fuchsia.device.manager:fuchsia.device.manager_llcpp",
+    "//sdk/lib/fdio",
+    "//zircon/public/lib/zircon-internal",
+    "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zbitl",
+  ]
+
+  public_deps = [ "//zircon/public/lib/zx" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ "tests" ]
+}
