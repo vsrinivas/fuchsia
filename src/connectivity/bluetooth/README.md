@@ -74,9 +74,9 @@ Bluetooth tests are built and installed when paving or OTA'ing with [`fx set`](d
 
 #### Tests
 
-Bluetooth test packages are listed in
-[bluetooth/tests](/src/connectivity/bluetooth/tests/) and each contains at least one
-test binary. Refer to package definitions for each package's binaries.
+In general, the Bluetooth codebase defines an associated unit test binary for each production
+binary and library, as well as a number of integration test binaries. Look in the GN file of a
+production binary or library to find its associated unit tests. 
 
 Each test binary is a [component](/docs/glossary.md#component)
 whose runtime environment is defined by its [`.cmx` component manifest](/docs/the-book/package_metadata.md#Component-Manifest)

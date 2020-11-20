@@ -15,7 +15,7 @@
         }
     },
     "program": {
-        "binary": "test/bt-integration-tests"
+        "binary": "bin/integration_tests_bin"
     },
     "sandbox": {
         "dev": [
