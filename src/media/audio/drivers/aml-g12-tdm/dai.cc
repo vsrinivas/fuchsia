@@ -16,7 +16,6 @@
 #include <ddk/debug.h>
 #include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
-#include <ddk/protocol/composite.h>
 #include <fbl/algorithm.h>
 
 #include "src/media/audio/drivers/aml-g12-tdm/aml_tdm_dai_bind.h"

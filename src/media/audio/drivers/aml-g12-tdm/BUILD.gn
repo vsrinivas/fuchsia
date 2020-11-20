@@ -8,7 +8,7 @@ import("//build/config/fuchsia/rules.gni")
 bind_rules("aml-g12-tdm-bind") {
   rules = "aml_tdm.bind"
   output = "aml_tdm-bind.h"
-  tests = "tests.json"
+  tests = "tests-stream.json"
   deps = [
     "//src/devices/bind/amlogic.platform",
     "//src/devices/bind/fuchsia.composite",
@@ -53,9 +53,9 @@ driver_module("aml-g12-tdm") {
 bind_rules("aml-g12-tdm-dai-bind") {
   rules = "aml_tdm_dai.bind"
   output = "aml_tdm_dai_bind.h"
-  tests = "tests.json"
+  tests = "tests-dai.json"
   deps = [
-    "//src/devices/bind/fuchsia.composite",
+    "//src/devices/bind/amlogic.platform",
     "//src/devices/bind/fuchsia.platform",
   ]
 }
@@ -99,6 +99,7 @@ group("tests") {
   testonly = true
   deps = [
     ":aml-g12-tdm-bind_test",
+    ":aml-g12-tdm-dai-bind_test",
     "test:dai-test-package",
     "test:stream-test-package",
   ]
