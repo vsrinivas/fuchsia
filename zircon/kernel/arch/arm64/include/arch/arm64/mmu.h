@@ -406,6 +406,14 @@ __BEGIN_CDECLS
     __isb(ARM_MB_SY);                                            \
   })
 
+#define ARM64_TLBI_ASID(op, val)                                \
+  ({                                                            \
+    uint64_t v = val;                                           \
+    DEBUG_ASSERT((v & ((1u << MMU_ARM64_ASID_BITS) - 1)) == v); \
+    __asm__ volatile("tlbi " #op ", %0" ::"r"(v << 48));        \
+    __isb(ARM_MB_SY);                                           \
+  })
+
 const size_t MMU_ARM64_ASID_BITS = 16;
 const uint16_t MMU_ARM64_GLOBAL_ASID = (1u << MMU_ARM64_ASID_BITS) - 1;
 const uint16_t MMU_ARM64_UNUSED_ASID = 0;

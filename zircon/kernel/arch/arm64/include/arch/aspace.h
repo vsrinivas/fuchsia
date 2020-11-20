@@ -103,6 +103,8 @@ class ArmArchVmAspace final : public ArchVmAspaceInterface {
 
   void FlushTLBEntry(vaddr_t vaddr, bool terminal) TA_REQ(lock_);
 
+  void FlushAsid() TA_REQ(lock_);
+
   uint MmuFlagsFromPte(pte_t pte);
 
   // data fields

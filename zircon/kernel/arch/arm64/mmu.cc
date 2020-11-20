@@ -456,6 +456,19 @@ void ArmArchVmAspace::FlushTLBEntry(vaddr_t vaddr, bool terminal) {
   }
 }
 
+void ArmArchVmAspace::FlushAsid() {
+  if (unlikely(flags_ & ARCH_ASPACE_FLAG_GUEST)) {
+    paddr_t vttbr = arm64_vttbr(asid_, tt_phys_);
+    __UNUSED zx_status_t status = arm64_el2_tlbi_vmid(vttbr);
+    DEBUG_ASSERT(status == ZX_OK);
+  } else if (unlikely(asid_ == MMU_ARM64_GLOBAL_ASID)) {
+    ARM64_TLBI_NOADDR(alle1is);
+  } else {
+    // flush this address for the specific asid
+    ARM64_TLBI_ASID(aside1is, asid_);
+  }
+}
+
 // NOTE: caller must DSB afterwards to ensure TLB entries are flushed
 ssize_t ArmArchVmAspace::UnmapPageTable(vaddr_t vaddr, vaddr_t vaddr_rel, size_t size,
                                         uint index_shift, uint page_size_shift,
@@ -1284,12 +1297,10 @@ zx_status_t ArmArchVmAspace::Destroy() {
   }
 
   // Flush the ASID or VMID associated with this aspace
-  if (flags_ & ARCH_ASPACE_FLAG_GUEST) {
-    paddr_t vttbr = arm64_vttbr(asid_, 0);
-    __UNUSED zx_status_t status = arm64_el2_tlbi_vmid(vttbr);
-    DEBUG_ASSERT(status == ZX_OK);
-  } else {
-    ARM64_TLBI(ASIDE1IS, asid_);
+  FlushAsid();
+
+  // Free any ASID.
+  if (!(flags_ & ARCH_ASPACE_FLAG_GUEST)) {
     asid.Free(asid_);
     asid_ = MMU_ARM64_UNUSED_ASID;
   }
