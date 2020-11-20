@@ -2,33 +2,37 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "vulkan_graphics_pipeline.h"
+#include "src/graphics/examples/vkprimer/common/pipeline.h"
 
 #include <unistd.h>
 
 #include <vector>
 
-#include "utils.h"
-#include "vulkan_fixed_functions.h"
-#include "vulkan_shader.h"
+#include "src/graphics/examples/vkprimer/common/fixed_functions.h"
+#include "src/graphics/examples/vkprimer/common/shader.h"
+#include "src/graphics/examples/vkprimer/common/utils.h"
 
-VulkanGraphicsPipeline::VulkanGraphicsPipeline(std::shared_ptr<vkp::Device> vkp_device,
-                                               const vk::Extent2D &extent,
-                                               std::shared_ptr<VulkanRenderPass> render_pass)
-    : initialized_(false), vkp_device_(vkp_device), extent_(extent), render_pass_(render_pass) {}
+namespace vkp {
 
-VulkanGraphicsPipeline::~VulkanGraphicsPipeline() {
+Pipeline::Pipeline(std::shared_ptr<Device> vkp_device, const vk::Extent2D &extent,
+                   std::shared_ptr<RenderPass> vkp_render_pass)
+    : initialized_(false),
+      vkp_device_(std::move(vkp_device)),
+      extent_(extent),
+      vkp_render_pass_(std::move(vkp_render_pass)) {}
+
+Pipeline::~Pipeline() {
   if (initialized_) {
     const vk::Device &device = vkp_device_->get();
     device.destroyPipelineLayout(pipeline_layout_);
-    device.destroyPipeline(graphics_pipeline_);
+    device.destroyPipeline(pipeline_);
     initialized_ = false;
   }
 }
 
-bool VulkanGraphicsPipeline::Init() {
+bool Pipeline::Init() {
   if (initialized_) {
-    RTN_MSG(false, "VulkanGraphicsPipeline is already initialized.\n");
+    RTN_MSG(false, "Pipeline is already initialized.\n");
   }
 
   std::vector<char> vert_shader_buffer;
@@ -48,22 +52,20 @@ bool VulkanGraphicsPipeline::Init() {
   snprintf(frag_shader, PATH_MAX, "%s/host_x64/obj/src/graphics/examples/vkprimer/frag.spv", cwd);
 #endif
 
-  if (!VulkanShader::ReadFile(vert_shader, &vert_shader_buffer)) {
+  if (!Shader::ReadFile(vert_shader, &vert_shader_buffer)) {
     RTN_MSG(false, "Can't read vertex spv file.\n");
   }
-  if (!VulkanShader::ReadFile(frag_shader, &frag_shader_buffer)) {
+  if (!Shader::ReadFile(frag_shader, &frag_shader_buffer)) {
     RTN_MSG(false, "Can't read fragment spv file.\n");
   }
 
   const vk::Device &device = vkp_device_->get();
 
-  auto [r_vshader_module, vshader_module] =
-      VulkanShader::CreateShaderModule(device, vert_shader_buffer);
+  auto [r_vshader_module, vshader_module] = Shader::CreateShaderModule(device, vert_shader_buffer);
   RTN_IF_VKH_ERR(false, r_vshader_module, "Failed to create vtx shader module.\n");
   vk::UniqueShaderModule vert_shader_module = std::move(vshader_module);
 
-  auto [r_fshader_module, fshader_module] =
-      VulkanShader::CreateShaderModule(device, frag_shader_buffer);
+  auto [r_fshader_module, fshader_module] = Shader::CreateShaderModule(device, frag_shader_buffer);
   RTN_IF_VKH_ERR(false, r_fshader_module, "Failed to create frag shader module.\n");
   vk::UniqueShaderModule frag_shader_module = std::move(fshader_module);
 
@@ -74,7 +76,7 @@ bool VulkanGraphicsPipeline::Init() {
   shader_stages[1].stage = vk::ShaderStageFlagBits::eFragment;
   shader_stages[1].pName = "main";
 
-  VulkanFixedFunctions fixed_functions(extent_);
+  FixedFunctions fixed_functions(extent_);
 
   vk::PipelineLayoutCreateInfo pipeline_layout_info;
   auto rv_layout = device.createPipelineLayout(pipeline_layout_info);
@@ -83,7 +85,7 @@ bool VulkanGraphicsPipeline::Init() {
   }
   pipeline_layout_ = rv_layout.value;
 
-  VulkanFixedFunctions &ff = fixed_functions;
+  FixedFunctions &ff = fixed_functions;
   vk::GraphicsPipelineCreateInfo pipeline_info;
   pipeline_info.stageCount = 2;
   pipeline_info.pStages = shader_stages;
@@ -94,7 +96,7 @@ bool VulkanGraphicsPipeline::Init() {
   pipeline_info.setPMultisampleState(&ff.multisample_info());
   pipeline_info.setPColorBlendState(&ff.color_blending_info());
   pipeline_info.layout = pipeline_layout_;
-  pipeline_info.renderPass = *render_pass_->render_pass();
+  pipeline_info.renderPass = vkp_render_pass_->get();
   pipeline_info.basePipelineIndex = -1;
   // TODO(fxbug.dev/62319): Use vk::Device::createGraphicsPipelinesUnique once
   // the invalid copy-ctor usage is fixed.
@@ -103,11 +105,13 @@ bool VulkanGraphicsPipeline::Init() {
   if (vk::Result::eSuccess != rv_pipelines) {
     RTN_MSG(false, "VK Error: 0x%x - Failed to create pipelines.\n", rv_pipelines);
   }
-  graphics_pipeline_ = pipelines[0];
+  pipeline_ = pipelines[0];
 
   initialized_ = true;
 
   return true;
 }
 
-const vk::Pipeline &VulkanGraphicsPipeline::graphics_pipeline() const { return graphics_pipeline_; }
+const vk::Pipeline &Pipeline::get() const { return pipeline_; }
+
+}  // namespace vkp

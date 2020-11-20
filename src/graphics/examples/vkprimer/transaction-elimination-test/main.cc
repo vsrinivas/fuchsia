@@ -9,20 +9,24 @@
 
 #include <gtest/gtest.h>
 
-#include "device.h"
 #include "hwcpipe.h"
-#include "utils.h"
-#include "vulkan_command_buffers.h"
-#include "vulkan_command_pool.h"
-#include "vulkan_framebuffer.h"
-#include "vulkan_graphics_pipeline.h"
-#include "vulkan_image_view.h"
-#include "vulkan_instance.h"
-#include "vulkan_layer.h"
-#include "vulkan_physical_device.h"
-#include "vulkan_render_pass.h"
-#include "vulkan_surface.h"
-#include "vulkan_swapchain.h"
+#include "src/graphics/examples/vkprimer/common/command_buffers.h"
+#include "src/graphics/examples/vkprimer/common/command_pool.h"
+#include "src/graphics/examples/vkprimer/common/device.h"
+#include "src/graphics/examples/vkprimer/common/framebuffers.h"
+#include "src/graphics/examples/vkprimer/common/image_view.h"
+#include "src/graphics/examples/vkprimer/common/instance.h"
+#include "src/graphics/examples/vkprimer/common/layer.h"
+#include "src/graphics/examples/vkprimer/common/physical_device.h"
+#include "src/graphics/examples/vkprimer/common/pipeline.h"
+#include "src/graphics/examples/vkprimer/common/render_pass.h"
+#ifdef __Fuchsia__
+#include "src/graphics/examples/vkprimer/fuchsia/surface.h"
+#else
+#include "src/graphics/examples/vkprimer/glfw/surface.h"
+#endif
+#include "src/graphics/examples/vkprimer/common/swapchain.h"
+#include "src/graphics/examples/vkprimer/common/utils.h"
 
 #include <vulkan/vulkan.hpp>
 
@@ -33,84 +37,84 @@ uint32_t GetCounterValue(const hwcpipe::GpuMeasurements* gpu, hwcpipe::GpuCounte
 }
 
 static bool DrawAllFrames(const vkp::Device& vkp_device,
-                          const VulkanCommandBuffers& command_buffers);
+                          const vkp::CommandBuffers& vkp_command_buffers);
 
 // Test that transfering an image to a foreign queue and back doesn't prevent transaction
 // elimination from working.
 TEST(TransactionElimination, ForeignQueue) {
   const bool kEnableValidation = true;
-  auto instance = std::make_shared<VulkanInstance>();
-  ASSERT_TRUE(instance->Init(kEnableValidation));
+  auto vkp_instance = std::make_shared<vkp::Instance>();
+  ASSERT_TRUE(vkp_instance->Init(kEnableValidation));
 
-  VulkanLayer vulkan_layer(instance);
-  ASSERT_TRUE(vulkan_layer.Init());
+  vkp::Layer vkp_layer(vkp_instance);
+  ASSERT_TRUE(vkp_layer.Init());
 
-  auto surface = std::make_shared<VulkanSurface>(instance);
-  ASSERT_TRUE(surface->Init());
+  auto vkp_surface = std::make_shared<vkp::Surface>(vkp_instance);
+  ASSERT_TRUE(vkp_surface->Init());
 
-  auto physical_device = std::make_shared<VulkanPhysicalDevice>(instance, surface->surface());
-  ASSERT_TRUE(physical_device->Init());
+  auto vkp_physical_device =
+      std::make_shared<vkp::PhysicalDevice>(vkp_instance, vkp_surface->get());
+  ASSERT_TRUE(vkp_physical_device->Init());
 
-  auto vkp_device = std::make_shared<vkp::Device>(physical_device->phys_device(),
-                                                  surface->surface(), kEnableValidation);
+  auto vkp_device = std::make_shared<vkp::Device>(vkp_physical_device->get(), vkp_surface->get(),
+                                                  kEnableValidation);
   ASSERT_TRUE(vkp_device->Init());
 
   vk::Format image_format;
   vk::Extent2D extent;
 
   std::vector<vk::ImageView> image_views;
-  std::shared_ptr<VulkanImageView> offscreen_image_view;
-  offscreen_image_view =
-      std::make_shared<VulkanImageView>(vkp_device, physical_device, vk::Extent2D{64, 64});
-  ASSERT_TRUE(offscreen_image_view->Init());
+  std::shared_ptr<vkp::ImageView> vkp_offscreen_image_view;
+  vkp_offscreen_image_view =
+      std::make_shared<vkp::ImageView>(vkp_device, vkp_physical_device, vk::Extent2D{64, 64});
+  ASSERT_TRUE(vkp_offscreen_image_view->Init());
 
-  image_format = offscreen_image_view->format();
-  extent = offscreen_image_view->extent();
-  image_views.emplace_back(*(offscreen_image_view->view()));
+  image_format = vkp_offscreen_image_view->format();
+  extent = vkp_offscreen_image_view->extent();
+  image_views.emplace_back(vkp_offscreen_image_view->get());
 
-  auto render_pass = std::make_shared<VulkanRenderPass>(vkp_device, image_format, true);
-  ASSERT_TRUE(render_pass->Init());
+  auto vkp_render_pass = std::make_shared<vkp::RenderPass>(vkp_device, image_format, true);
+  ASSERT_TRUE(vkp_render_pass->Init());
 
-  auto graphics_pipeline =
-      std::make_unique<VulkanGraphicsPipeline>(vkp_device, extent, render_pass);
-  ASSERT_TRUE(graphics_pipeline->Init());
+  auto vkp_pipeline = std::make_unique<vkp::Pipeline>(vkp_device, extent, vkp_render_pass);
+  ASSERT_TRUE(vkp_pipeline->Init());
 
-  auto framebuffer = std::make_unique<VulkanFramebuffer>(vkp_device, extent,
-                                                         *render_pass->render_pass(), image_views);
-  ASSERT_TRUE(framebuffer->Init());
+  auto vkp_framebuffer =
+      std::make_unique<vkp::Framebuffers>(vkp_device, extent, vkp_render_pass->get(), image_views);
+  ASSERT_TRUE(vkp_framebuffer->Init());
 
-  auto command_pool = std::make_shared<VulkanCommandPool>(
-      vkp_device, physical_device->phys_device(), surface->surface());
-  ASSERT_TRUE(command_pool->Init());
+  auto vkp_command_pool = std::make_shared<vkp::CommandPool>(vkp_device, vkp_physical_device->get(),
+                                                             vkp_surface->get());
+  ASSERT_TRUE(vkp_command_pool->Init());
 
   // First command buffer does a transition to queue family foreign and back.
-  auto command_buffers = std::make_unique<VulkanCommandBuffers>(
-      vkp_device, command_pool, *framebuffer, extent, *render_pass->render_pass(),
-      graphics_pipeline->graphics_pipeline());
-  command_buffers->set_image_for_foreign_transition(*offscreen_image_view->image());
-  ASSERT_TRUE(command_buffers->Init());
+  auto vkp_command_buffers = std::make_unique<vkp::CommandBuffers>(
+      vkp_device, vkp_command_pool, vkp_framebuffer->framebuffers(), extent, vkp_render_pass->get(),
+      vkp_pipeline->get());
+  vkp_command_buffers->set_image_for_foreign_transition(*vkp_offscreen_image_view->image());
+  ASSERT_TRUE(vkp_command_buffers->Init());
 
   hwcpipe::HWCPipe pipe;
   pipe.set_enabled_gpu_counters(pipe.gpu_profiler()->supported_counters());
   pipe.run();
 
-  ASSERT_TRUE(DrawAllFrames(*vkp_device, *command_buffers));
+  ASSERT_TRUE(DrawAllFrames(*vkp_device, *vkp_command_buffers));
   vkp_device->get().waitIdle();
   auto sample = pipe.sample();
   EXPECT_EQ(0u, GetCounterValue(sample.gpu, hwcpipe::GpuCounter::TransactionEliminations));
 
   // Second render pass and command buffers do a transition from eTransferSrcOptimal instead of
   // eUndefined, since otherwise transaction elimination would be disabled.
-  auto render_pass2 = std::make_shared<VulkanRenderPass>(vkp_device, image_format, true);
-  render_pass2->set_initial_layout(vk::ImageLayout::eTransferSrcOptimal);
-  ASSERT_TRUE(render_pass2->Init());
+  auto vkp_render_pass2 = std::make_shared<vkp::RenderPass>(vkp_device, image_format, true);
+  vkp_render_pass2->set_initial_layout(vk::ImageLayout::eTransferSrcOptimal);
+  ASSERT_TRUE(vkp_render_pass2->Init());
 
-  auto command_buffers2 = std::make_unique<VulkanCommandBuffers>(
-      vkp_device, command_pool, *framebuffer, extent, *render_pass2->render_pass(),
-      graphics_pipeline->graphics_pipeline());
-  ASSERT_TRUE(command_buffers2->Init());
+  auto vkp_command_buffers2 = std::make_unique<vkp::CommandBuffers>(
+      vkp_device, vkp_command_pool, vkp_framebuffer->framebuffers(), extent,
+      vkp_render_pass2->get(), vkp_pipeline->get());
+  ASSERT_TRUE(vkp_command_buffers2->Init());
 
-  ASSERT_TRUE(DrawAllFrames(*vkp_device, *command_buffers2));
+  ASSERT_TRUE(DrawAllFrames(*vkp_device, *vkp_command_buffers2));
   vkp_device->get().waitIdle();
   auto sample2 = pipe.sample();
   constexpr uint32_t kTransactionMinTileSize = 16;
@@ -122,12 +126,12 @@ TEST(TransactionElimination, ForeignQueue) {
   EXPECT_LE((64u / kTransactionMaxTileSize) * (64u / kTransactionMaxTileSize), eliminated_count);
 }
 
-bool DrawAllFrames(const vkp::Device& vkp_device, const VulkanCommandBuffers& command_buffers) {
+bool DrawAllFrames(const vkp::Device& vkp_device, const vkp::CommandBuffers& vkp_command_buffers) {
   vk::SubmitInfo submit_info;
-  submit_info.commandBufferCount = command_buffers.command_buffers().size();
+  submit_info.commandBufferCount = vkp_command_buffers.command_buffers().size();
   std::vector<vk::CommandBuffer> command_buffer(submit_info.commandBufferCount);
   for (uint32_t i = 0; i < submit_info.commandBufferCount; i++) {
-    command_buffer[i] = command_buffers.command_buffers()[i].get();
+    command_buffer[i] = vkp_command_buffers.command_buffers()[i].get();
   }
   submit_info.pCommandBuffers = command_buffer.data();
 

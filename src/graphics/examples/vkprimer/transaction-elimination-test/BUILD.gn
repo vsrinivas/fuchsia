@@ -43,8 +43,8 @@ executable("bin") {
   sources = common_sources
 
   sources += [
-    "../fuchsia/vulkan_surface.cc",
-    "../fuchsia/vulkan_surface.h",
+    "../fuchsia/surface.cc",
+    "../fuchsia/surface.h",
     "main.cc",
   ]
 

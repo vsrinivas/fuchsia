@@ -77,8 +77,8 @@ bool FindGraphicsQueueFamilies(vk::PhysicalDevice phys_device, VkSurfaceKHR surf
                                std::vector<uint32_t> *queue_family_indices);
 
 // Find physical device memory property index for |properties|.
-int FindMemoryIndex(const vk::PhysicalDevice &phys_dev, const uint32_t memory_type_bits,
-                    const vk::MemoryPropertyFlags &properties);
+int FindMemoryIndex(const vk::PhysicalDevice &phys_dev, uint32_t memory_type_bits,
+                    const vk::MemoryPropertyFlags &memory_prop_flags);
 
 // Log physical device memory properties.
 void LogMemoryProperties(const vk::PhysicalDevice &phys_dev);

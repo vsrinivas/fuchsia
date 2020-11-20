@@ -2,19 +2,21 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "vulkan_render_pass.h"
+#include "src/graphics/examples/vkprimer/common/render_pass.h"
 
-#include "utils.h"
+#include "src/graphics/examples/vkprimer/common/utils.h"
 
-VulkanRenderPass::VulkanRenderPass(std::shared_ptr<vkp::Device> vkp_device,
-                                   const vk::Format &image_format, bool offscreen)
+namespace vkp {
+
+RenderPass::RenderPass(std::shared_ptr<Device> vkp_device, const vk::Format &image_format,
+                       bool offscreen)
     : initialized_(false),
-      vkp_device_(vkp_device),
+      vkp_device_(std::move(vkp_device)),
       image_format_(image_format),
       offscreen_(offscreen) {}
 
-bool VulkanRenderPass::Init() {
-  RTN_IF_MSG(false, initialized_, "VulkanRenderPass is already initialized.\n");
+bool RenderPass::Init() {
+  RTN_IF_MSG(false, initialized_, "RenderPass is already initialized.\n");
 
   vk::AttachmentDescription color_attachment;
   if (offscreen_) {
@@ -52,3 +54,5 @@ bool VulkanRenderPass::Init() {
   initialized_ = true;
   return true;
 }
+
+}  // namespace vkp

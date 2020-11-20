@@ -2,22 +2,24 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "vulkan_surface.h"
+#include "surface.h"
 
 #include "utils.h"
 
-VulkanSurface::VulkanSurface(std::shared_ptr<VulkanInstance> instance)
-    : initialized_(false), instance_(instance) {}
+namespace vkp {
 
-VulkanSurface::~VulkanSurface() {
+Surface::Surface(std::shared_ptr<Instance> vkp_instance)
+    : initialized_(false), vkp_instance_(std::move(vkp_instance)) {}
+
+Surface::~Surface() {
   if (initialized_) {
-    vkDestroySurfaceKHR(*instance_->instance(), surface_, nullptr);
+    vkDestroySurfaceKHR(vkp_instance_->get(), surface_, nullptr);
   }
 }
 
-bool VulkanSurface::Init() {
+bool Surface::Init() {
   if (initialized_) {
-    RTN_MSG(false, "VulkanSurface is already initialized.\n");
+    RTN_MSG(false, "Surface is already initialized.\n");
   }
 
   // TODO(fxbug.dev/13252): Move to scenic (public) surface.
@@ -26,7 +28,7 @@ bool VulkanSurface::Init() {
       .pNext = nullptr,
   };
 
-  auto rv = vkCreateImagePipeSurfaceFUCHSIA(*instance_->instance(), &info, nullptr, &surface_);
+  auto rv = vkCreateImagePipeSurfaceFUCHSIA(vkp_instance_->get(), &info, nullptr, &surface_);
 
   if (rv != VK_SUCCESS) {
     RTN_MSG(false, "Surface creation failed.\n");
@@ -35,3 +37,5 @@ bool VulkanSurface::Init() {
   initialized_ = true;
   return true;
 }
+
+}  // namespace vkp

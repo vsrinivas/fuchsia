@@ -2,18 +2,22 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "vulkan_image_view.h"
+#include "image_view.h"
 
-#include "utils.h"
+#include "src/graphics/examples/vkprimer/common/utils.h"
 
-VulkanImageView::VulkanImageView(std::shared_ptr<vkp::Device> vkp_device,
-                                 std::shared_ptr<VulkanPhysicalDevice> phys_device,
-                                 const vk::Extent2D &extent)
-    : initialized_(false), vkp_device_(vkp_device), phys_device_(phys_device), extent_(extent) {}
+namespace vkp {
 
-bool VulkanImageView::Init() {
+ImageView::ImageView(std::shared_ptr<Device> vkp_device,
+                     std::shared_ptr<PhysicalDevice> vkp_phys_device, const vk::Extent2D &extent)
+    : initialized_(false),
+      vkp_device_(std::move(vkp_device)),
+      vkp_phys_device_(std::move(vkp_phys_device)),
+      extent_(extent) {}
+
+bool ImageView::Init() {
   if (initialized_ == true) {
-    RTN_MSG(false, "VulkanImageView is already initialized.\n");
+    RTN_MSG(false, "ImageView is already initialized.\n");
   }
 
   const vk::Device &device = vkp_device_->get();
@@ -40,8 +44,8 @@ bool VulkanImageView::Init() {
   auto image_memory_requirements = device.getImageMemoryRequirements(*image_);
   vk::MemoryAllocateInfo alloc_info;
   alloc_info.allocationSize = image_memory_requirements.size;
-  alloc_info.memoryTypeIndex = vkp::FindMemoryIndex(
-      phys_device_->phys_device(), image_memory_requirements.memoryTypeBits,
+  alloc_info.memoryTypeIndex = FindMemoryIndex(
+      vkp_phys_device_->get(), image_memory_requirements.memoryTypeBits,
       vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
   auto [r_image_memory, image_memory] = device.allocateMemoryUnique(alloc_info);
   RTN_IF_VKH_ERR(false, r_image_memory, "Failed to allocate device memory for image.\n");
@@ -69,3 +73,5 @@ bool VulkanImageView::Init() {
 
   return initialized_;
 }
+
+}  // namespace vkp

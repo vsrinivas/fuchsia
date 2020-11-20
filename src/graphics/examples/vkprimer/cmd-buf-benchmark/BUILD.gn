@@ -69,8 +69,8 @@ executable("bin") {
     ]
 
     sources += [
-      "../fuchsia/vulkan_surface.cc",
-      "../fuchsia/vulkan_surface.h",
+      "../fuchsia/surface.cc",
+      "../fuchsia/surface.h",
     ]
   } else {
     defines += [ "USE_GLFW=1" ]
@@ -78,8 +78,8 @@ executable("bin") {
     include_dirs += [ "//src/graphics/examples/vkprimer/glfw" ]
 
     sources += [
-      "../glfw/vulkan_surface.cc",
-      "../glfw/vulkan_surface.h",
+      "../glfw/surface.cc",
+      "../glfw/surface.h",
     ]
 
     deps += [

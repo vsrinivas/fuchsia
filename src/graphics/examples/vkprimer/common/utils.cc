@@ -141,13 +141,13 @@ bool FindGraphicsQueueFamilies(vk::PhysicalDevice phys_device, VkSurfaceKHR surf
 }
 
 int FindMemoryIndex(const vk::PhysicalDevice &phys_dev, const uint32_t memory_type_bits,
-                    const vk::MemoryPropertyFlags &desired_props) {
+                    const vk::MemoryPropertyFlags &memory_prop_flags) {
   vk::PhysicalDeviceMemoryProperties memory_props;
   phys_dev.getMemoryProperties(&memory_props);
 
   for (uint32_t i = 0; i < memory_props.memoryTypeCount; i++) {
     if ((memory_type_bits & (1 << i)) &&
-        (memory_props.memoryTypes[i].propertyFlags & desired_props) == desired_props) {
+        (memory_props.memoryTypes[i].propertyFlags & memory_prop_flags) == memory_prop_flags) {
       return i;
     }
   }

@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "device.h"
+#include "src/graphics/examples/vkprimer/common/device.h"
 
-#include "utils.h"
-#include "vulkan_layer.h"
-#include "vulkan_physical_device.h"
-#include "vulkan_swapchain.h"
+#include "src/graphics/examples/vkprimer/common/layer.h"
+#include "src/graphics/examples/vkprimer/common/physical_device.h"
+#include "src/graphics/examples/vkprimer/common/swapchain.h"
+#include "src/graphics/examples/vkprimer/common/utils.h"
 
 namespace vkp {
 
@@ -21,7 +21,7 @@ bool Device::Init() {
   RTN_IF_MSG(false, initialized_, "Logical device already initialized.\n");
 
   std::vector<uint32_t> indices;
-  if (!vkp::FindGraphicsQueueFamilies(params_->phys_device_, params_->surface_, &indices)) {
+  if (!FindGraphicsQueueFamilies(params_->phys_device_, params_->surface_, &indices)) {
     return false;
   }
 
@@ -34,7 +34,7 @@ bool Device::Init() {
   queue_family_index_ = indices[0];
 
   std::vector<const char *> exts;
-  VulkanPhysicalDevice::AppendRequiredPhysDeviceExts(&exts);
+  PhysicalDevice::AppendRequiredPhysDeviceExts(&exts);
 
   vk::PhysicalDeviceFeatures device_features;
   vk::DeviceCreateInfo device_info;
@@ -45,7 +45,7 @@ bool Device::Init() {
   device_info.setPpEnabledExtensionNames(exts.data());
 
   if (enable_validation_) {
-    VulkanLayer::AppendRequiredDeviceLayers(&layers_);
+    Layer::AppendRequiredDeviceLayers(&layers_);
     device_info.setEnabledLayerCount(static_cast<uint32_t>(layers_.size()));
   } else {
     device_info.enabledLayerCount = 0;

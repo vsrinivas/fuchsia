@@ -7,8 +7,8 @@
 
 #include <vector>
 
+#include "src/graphics/examples/vkprimer/common/surface_phys_device_params.h"
 #include "src/lib/fxl/macros.h"
-#include "surface_phys_device_params.h"
 
 #include <vulkan/vulkan.hpp>
 
@@ -17,7 +17,7 @@ namespace vkp {
 class Device {
  public:
   Device(const vk::PhysicalDevice &phys_device, const VkSurfaceKHR &surface,
-         const bool enabled_validation);
+         const bool enable_validation);
 
   bool Init();
   const vk::Device &get() const;

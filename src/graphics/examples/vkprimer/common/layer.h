@@ -2,20 +2,22 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_GRAPHICS_EXAMPLES_VKPRIMER_COMMON_VULKAN_LAYER_H_
-#define SRC_GRAPHICS_EXAMPLES_VKPRIMER_COMMON_VULKAN_LAYER_H_
+#ifndef SRC_GRAPHICS_EXAMPLES_VKPRIMER_COMMON_LAYER_H_
+#define SRC_GRAPHICS_EXAMPLES_VKPRIMER_COMMON_LAYER_H_
 
 #include <memory>
 #include <vector>
 
+#include "src/graphics/examples/vkprimer/common/instance.h"
 #include "src/lib/fxl/macros.h"
-#include "vulkan_instance.h"
 
 #include <vulkan/vulkan.hpp>
 
-class VulkanLayer {
+namespace vkp {
+
+class Layer {
  public:
-  VulkanLayer(std::shared_ptr<VulkanInstance> instance);
+  Layer(std::shared_ptr<Instance> vkp_instance);
 
   bool Init();
 
@@ -26,14 +28,16 @@ class VulkanLayer {
   static void AppendRequiredDeviceLayers(std::vector<const char *> *layers);
 
  private:
-  FXL_DISALLOW_COPY_AND_ASSIGN(VulkanLayer);
+  FXL_DISALLOW_COPY_AND_ASSIGN(Layer);
 
   bool SetupDebugCallback();
 
   bool initialized_;
-  std::shared_ptr<VulkanInstance> instance_;
+  std::shared_ptr<Instance> vkp_instance_;
   vk::UniqueHandle<vk::DebugUtilsMessengerEXT, vk::DispatchLoaderDynamic> debug_messenger_;
   vk::DispatchLoaderDynamic dispatch_loader_;
 };
 
-#endif  // SRC_GRAPHICS_EXAMPLES_VKPRIMER_COMMON_VULKAN_LAYER_H_
+}  // namespace vkp
+
+#endif  // SRC_GRAPHICS_EXAMPLES_VKPRIMER_COMMON_LAYER_H_

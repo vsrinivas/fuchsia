@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "vulkan_layer.h"
+#include "src/graphics/examples/vkprimer/common/layer.h"
 
 #include <cstring>
 #include <iostream>
 #include <vector>
 
-#include "utils.h"
+#include "src/graphics/examples/vkprimer/common/utils.h"
 
 namespace {
 
@@ -59,13 +59,15 @@ DebugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT severity, VkDebugUtilsMessa
 
 }  // namespace
 
-VulkanLayer::VulkanLayer(std::shared_ptr<VulkanInstance> instance)
-    : initialized_(false), instance_(instance) {}
+namespace vkp {
 
-bool VulkanLayer::Init() {
-  RTN_IF_MSG(false, initialized_, "VulkanLayer is already initialized.\n");
+Layer::Layer(std::shared_ptr<Instance> vkp_instance)
+    : initialized_(false), vkp_instance_(std::move(vkp_instance)) {}
 
-  const auto &instance = *instance_->instance();
+bool Layer::Init() {
+  RTN_IF_MSG(false, initialized_, "Layer is already initialized.\n");
+
+  const vk::Instance &instance = vkp_instance_->get();
   dispatch_loader_ = vk::DispatchLoaderDynamic();
   dispatch_loader_.init(instance, vkGetInstanceProcAddr);
 
@@ -90,11 +92,11 @@ bool VulkanLayer::Init() {
   return true;
 }
 
-void VulkanLayer::AppendRequiredInstanceExtensions(std::vector<const char *> *extensions) {
+void Layer::AppendRequiredInstanceExtensions(std::vector<const char *> *extensions) {
   extensions->emplace_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
 }
 
-void VulkanLayer::AppendRequiredInstanceLayers(std::vector<const char *> *layers) {
+void Layer::AppendRequiredInstanceLayers(std::vector<const char *> *layers) {
   if (s_instance_layer_name) {
     layers->emplace_back(s_instance_layer_name);
   } else {
@@ -102,7 +104,7 @@ void VulkanLayer::AppendRequiredInstanceLayers(std::vector<const char *> *layers
   }
 }
 
-void VulkanLayer::AppendValidationInstanceLayers(std::vector<const char *> *layers) {
+void Layer::AppendValidationInstanceLayers(std::vector<const char *> *layers) {
   if (s_instance_validation_layer_name) {
     layers->emplace_back(s_instance_validation_layer_name);
   } else {
@@ -110,13 +112,14 @@ void VulkanLayer::AppendValidationInstanceLayers(std::vector<const char *> *laye
   }
 }
 
-void VulkanLayer::AppendRequiredDeviceLayers(std::vector<const char *> *layers) {
+void Layer::AppendRequiredDeviceLayers(std::vector<const char *> *layers) {
   fprintf(stderr, "No required device layers.\n");
 }
 
-bool VulkanLayer::CheckValidationLayerSupport() {
+bool Layer::CheckValidationLayerSupport() {
   const std::vector<const char *> validation_layers(1, s_instance_validation_layer_name);
-  return FindRequiredProperties(validation_layers, vkp::INSTANCE_LAYER_PROP,
-                                nullptr /* phys_device */, nullptr /* layer */,
-                                nullptr /* missing_props */);
+  return FindRequiredProperties(validation_layers, INSTANCE_LAYER_PROP, nullptr /* phys_device */,
+                                nullptr /* layer */, nullptr /* missing_props */);
 }
+
+}  // namespace vkp

@@ -2,18 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "vulkan_swapchain.h"
+#include "swapchain.h"
 
 #include <limits>
 #include <set>
 #include <string>
 #include <unordered_map>
 
-#include "utils.h"
+#include "src/graphics/examples/vkprimer/common/utils.h"
 
 namespace {
 
-static vk::SurfaceFormatKHR ChooseSwapSurfaceFormat(
+vk::SurfaceFormatKHR ChooseSwapSurfaceFormat(
     const std::vector<vk::SurfaceFormatKHR>& available_formats) {
   if (available_formats.size() == 1 && available_formats[0].format == vk::Format::eUndefined) {
     return {vk::Format::eB8G8R8A8Unorm, vk::ColorSpaceKHR::eSrgbNonlinear};
@@ -29,7 +29,7 @@ static vk::SurfaceFormatKHR ChooseSwapSurfaceFormat(
   return available_formats[0];
 }
 
-static vk::PresentModeKHR ChooseSwapPresentMode(
+vk::PresentModeKHR ChooseSwapPresentMode(
     const std::vector<vk::PresentModeKHR>& available_present_modes) {
   std::unordered_map<vk::PresentModeKHR, int> kPresentModePriorities = {
       {vk::PresentModeKHR::eFifo, 0},
@@ -51,7 +51,7 @@ static vk::PresentModeKHR ChooseSwapPresentMode(
   return best_mode;
 }
 
-static vk::Extent2D ChooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities) {
+vk::Extent2D ChooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities) {
   if (capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max()) {
     return capabilities.currentExtent;
   } else {
@@ -65,9 +65,9 @@ static vk::Extent2D ChooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilitie
   }
 }
 
-static bool CreateImageViews(const vk::Device device, const vk::Format& image_format,
-                             const std::vector<vk::Image> images,
-                             std::vector<vk::UniqueImageView>* image_views) {
+bool CreateImageViews(const vk::Device device, const vk::Format& image_format,
+                      const std::vector<vk::Image> images,
+                      std::vector<vk::UniqueImageView>* image_views) {
   vk::ImageSubresourceRange range;
   range.aspectMask = vk::ImageAspectFlagBits::eColor;
   range.layerCount = 1;
@@ -89,19 +89,22 @@ static bool CreateImageViews(const vk::Device device, const vk::Format& image_fo
 
 }  // namespace
 
-VulkanSwapchain::VulkanSwapchain(const vk::PhysicalDevice phys_device,
-                                 std::shared_ptr<vkp::Device> vkp_device,
-                                 std::shared_ptr<VulkanSurface> surface)
-    : initialized_(false), vkp_device_(vkp_device), surface_(surface) {
+namespace vkp {
+
+Swapchain::Swapchain(const vk::PhysicalDevice phys_device, std::shared_ptr<Device> vkp_device,
+                     std::shared_ptr<Surface> vkp_surface)
+    : initialized_(false),
+      vkp_device_(std::move(vkp_device)),
+      vkp_surface_(std::move(vkp_surface)) {
   phys_device_ = std::make_unique<vk::PhysicalDevice>(phys_device);
 }
 
-bool VulkanSwapchain::Init() {
-  RTN_IF_MSG(false, initialized_, "VulkanSwapchain is already initialized.\n");
+bool Swapchain::Init() {
+  RTN_IF_MSG(false, initialized_, "Swapchain is already initialized.\n");
   const vk::Device& device = vkp_device_->get();
 
-  VulkanSwapchain::Info info;
-  QuerySwapchainSupport(*phys_device_, surface_->surface(), &info);
+  Swapchain::Info info;
+  QuerySwapchainSupport(*phys_device_, vkp_surface_->get(), &info);
   vk::SurfaceFormatKHR surface_format = ChooseSwapSurfaceFormat(info.formats);
   vk::PresentModeKHR present_mode = ChooseSwapPresentMode(info.present_modes);
   extent_ = ChooseSwapExtent(info.capabilities);
@@ -123,7 +126,7 @@ bool VulkanSwapchain::Init() {
   swapchain_info.imageUsage = vk::ImageUsageFlagBits::eColorAttachment;
   swapchain_info.presentMode = present_mode;
   swapchain_info.preTransform = info.capabilities.currentTransform;
-  swapchain_info.surface = surface_->surface();
+  swapchain_info.surface = vkp_surface_->get();
 
   auto [r_swapchain, swapchain] = device.createSwapchainKHRUnique(swapchain_info);
   RTN_IF_VKH_ERR(false, r_swapchain, "Failed to create swap chain.\n");
@@ -143,8 +146,8 @@ bool VulkanSwapchain::Init() {
   return initialized_;
 }
 
-bool VulkanSwapchain::QuerySwapchainSupport(vk::PhysicalDevice phys_device, VkSurfaceKHR surface,
-                                            VulkanSwapchain::Info* info) {
+bool Swapchain::QuerySwapchainSupport(vk::PhysicalDevice phys_device, VkSurfaceKHR surface,
+                                      Swapchain::Info* info) {
   RTN_IF_VKH_ERR(false, phys_device.getSurfaceCapabilitiesKHR(surface, &info->capabilities),
                  "Failed to get surface capabilities\n");
 
@@ -158,3 +161,5 @@ bool VulkanSwapchain::QuerySwapchainSupport(vk::PhysicalDevice phys_device, VkSu
 
   return true;
 }
+
+}  // namespace vkp

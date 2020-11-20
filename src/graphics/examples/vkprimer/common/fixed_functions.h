@@ -2,15 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_GRAPHICS_EXAMPLES_VKPRIMER_COMMON_VULKAN_FIXED_FUNCTIONS_H_
-#define SRC_GRAPHICS_EXAMPLES_VKPRIMER_COMMON_VULKAN_FIXED_FUNCTIONS_H_
+#ifndef SRC_GRAPHICS_EXAMPLES_VKPRIMER_COMMON_FIXED_FUNCTIONS_H_
+#define SRC_GRAPHICS_EXAMPLES_VKPRIMER_COMMON_FIXED_FUNCTIONS_H_
 
 #include <vulkan/vulkan.hpp>
 
-class VulkanFixedFunctions {
+namespace vkp {
+
+class FixedFunctions {
  public:
-  VulkanFixedFunctions(const vk::Extent2D &extent);
-  VulkanFixedFunctions() = delete;
+  FixedFunctions(const vk::Extent2D &extent);
+  FixedFunctions() = delete;
 
   vk::PipelineColorBlendAttachmentState &color_blend_attachment_info() {
     return color_blend_attachment_info_;
@@ -47,4 +49,6 @@ class VulkanFixedFunctions {
   vk::PipelineViewportStateCreateInfo viewport_info_;
 };
 
-#endif  // SRC_GRAPHICS_EXAMPLES_VKPRIMER_COMMON_VULKAN_FIXED_FUNCTIONS_H_
+}  // namespace vkp
+
+#endif  // SRC_GRAPHICS_EXAMPLES_VKPRIMER_COMMON_FIXED_FUNCTIONS_H_

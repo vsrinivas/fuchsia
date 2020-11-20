@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_GRAPHICS_EXAMPLES_VKPRIMER_COMMON_VULKAN_INSTANCE_H_
-#define SRC_GRAPHICS_EXAMPLES_VKPRIMER_COMMON_VULKAN_INSTANCE_H_
+#ifndef SRC_GRAPHICS_EXAMPLES_VKPRIMER_COMMON_INSTANCE_H_
+#define SRC_GRAPHICS_EXAMPLES_VKPRIMER_COMMON_INSTANCE_H_
 
 #include <vector>
 
@@ -16,10 +16,12 @@
 #include <GLFW/glfw3.h>
 #endif
 
-class VulkanInstance {
+namespace vkp {
+
+class Instance {
  public:
-  VulkanInstance() : initialized_(false) {}
-  ~VulkanInstance();
+  Instance() {}
+  ~Instance();
 
 #if USE_GLFW
   bool Init(bool enable_validation, GLFWwindow *window);
@@ -27,10 +29,10 @@ class VulkanInstance {
   bool Init(bool enable_validation);
 #endif
 
-  const vk::UniqueInstance &instance() const;
+  const vk::Instance &get() const;
 
  private:
-  FXL_DISALLOW_COPY_AND_ASSIGN(VulkanInstance);
+  FXL_DISALLOW_COPY_AND_ASSIGN(Instance);
 
   std::vector<const char *> GetExtensions();
 
@@ -38,11 +40,13 @@ class VulkanInstance {
   GLFWwindow *window_;
 #endif
 
-  bool initialized_;
+  bool initialized_ = false;
   std::vector<const char *> extensions_;
   std::vector<const char *> layers_;
 
   vk::UniqueInstance instance_;
 };
 
-#endif  // SRC_GRAPHICS_EXAMPLES_VKPRIMER_COMMON_VULKAN_INSTANCE_H_
+}  // namespace vkp
+
+#endif  // SRC_GRAPHICS_EXAMPLES_VKPRIMER_COMMON_INSTANCE_H_

@@ -2,16 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "vulkan_instance.h"
+#include "src/graphics/examples/vkprimer/common/instance.h"
 
 #include <vector>
 
-#include "utils.h"
-#include "vulkan_layer.h"
+#include "src/graphics/examples/vkprimer/common/layer.h"
+#include "src/graphics/examples/vkprimer/common/utils.h"
 
 namespace {
 
-static const std::vector<const char *> s_required_props = {
+const std::vector<const char *> s_required_props = {
     VK_KHR_EXTERNAL_MEMORY_CAPABILITIES_EXTENSION_NAME,
     VK_KHR_EXTERNAL_SEMAPHORE_CAPABILITIES_EXTENSION_NAME,
     VK_KHR_SURFACE_EXTENSION_NAME,
@@ -20,11 +20,11 @@ static const std::vector<const char *> s_required_props = {
 #endif
 };
 
-static const std::vector<const char *> s_desired_props = {
+const std::vector<const char *> s_desired_props = {
     VK_EXT_DEBUG_REPORT_EXTENSION_NAME,
 };
 
-static void PrintProps(const std::vector<const char *> &props) {
+void PrintProps(const std::vector<const char *> &props) {
   for (const auto &prop : props) {
     printf("\t%s\n", prop);
   }
@@ -63,13 +63,15 @@ std::vector<const char *> GetExtensionsPrivate() {
 
 }  // namespace
 
-VulkanInstance::~VulkanInstance() { initialized_ = false; }
+namespace vkp {
+
+Instance::~Instance() { initialized_ = false; }
 
 #if USE_GLFW
-bool VulkanInstance::Init(bool enable_validation, GLFWwindow *window) {
+bool Instance::Init(bool enable_validation, GLFWwindow *window) {
   window_ = window;
 #else
-bool VulkanInstance::Init(bool enable_validation) {
+bool Instance::Init(bool enable_validation) {
 #endif
   RTN_IF_MSG(false, (initialized_ == true), "Already initialized.\n");
 
@@ -87,16 +89,16 @@ bool VulkanInstance::Init(bool enable_validation) {
 
   // Extensions
   extensions_ = GetExtensions();
-  VulkanLayer::AppendRequiredInstanceExtensions(&extensions_);
+  Layer::AppendRequiredInstanceExtensions(&extensions_);
 
   instance_info.enabledExtensionCount = static_cast<uint32_t>(extensions_.size());
   instance_info.ppEnabledExtensionNames = extensions_.data();
 
   // Layers
-  VulkanLayer::AppendRequiredInstanceLayers(&layers_);
+  Layer::AppendRequiredInstanceLayers(&layers_);
 
   if (enable_validation) {
-    VulkanLayer::AppendValidationInstanceLayers(&layers_);
+    Layer::AppendValidationInstanceLayers(&layers_);
   }
 
   instance_info.enabledLayerCount = static_cast<uint32_t>(layers_.size());
@@ -118,7 +120,7 @@ bool VulkanInstance::Init(bool enable_validation) {
   return true;
 }
 
-std::vector<const char *> VulkanInstance::GetExtensions() {
+std::vector<const char *> Instance::GetExtensions() {
 #if USE_GLFW
   extensions_ = GetExtensionsGLFW();
 #else
@@ -128,4 +130,6 @@ std::vector<const char *> VulkanInstance::GetExtensions() {
   return extensions_;
 }
 
-const vk::UniqueInstance &VulkanInstance::instance() const { return instance_; }
+const vk::Instance &Instance::get() const { return instance_.get(); }
+
+}  // namespace vkp

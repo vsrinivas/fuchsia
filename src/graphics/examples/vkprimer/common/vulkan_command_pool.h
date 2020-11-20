@@ -13,7 +13,11 @@
 
 class VulkanCommandPool {
  public:
+<<<<<<< HEAD
   VulkanCommandPool(std::shared_ptr<vkp::Device> vkp_device, const vk::PhysicalDevice &phys_device,
+=======
+  VulkanCommandPool(std::shared_ptr<vkp::Device> vkp_device, const vk::PhysicalDevice phys_device,
+>>>>>>> 55655bf08bd ([vulkan] Refactor / modernize vkprimer.)
                     const VkSurfaceKHR &surface);
 
   bool Init();

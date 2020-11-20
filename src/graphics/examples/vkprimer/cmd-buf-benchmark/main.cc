@@ -7,19 +7,23 @@
 #include <memory>
 #include <vector>
 
-#include "device.h"
-#include "utils.h"
-#include "vulkan_command_buffers.h"
-#include "vulkan_command_pool.h"
-#include "vulkan_framebuffer.h"
-#include "vulkan_graphics_pipeline.h"
-#include "vulkan_image_view.h"
-#include "vulkan_instance.h"
-#include "vulkan_layer.h"
-#include "vulkan_physical_device.h"
-#include "vulkan_render_pass.h"
-#include "vulkan_surface.h"
-#include "vulkan_swapchain.h"
+#include "src/graphics/examples/vkprimer/common/command_buffers.h"
+#include "src/graphics/examples/vkprimer/common/command_pool.h"
+#include "src/graphics/examples/vkprimer/common/device.h"
+#include "src/graphics/examples/vkprimer/common/framebuffers.h"
+#include "src/graphics/examples/vkprimer/common/image_view.h"
+#include "src/graphics/examples/vkprimer/common/instance.h"
+#include "src/graphics/examples/vkprimer/common/layer.h"
+#include "src/graphics/examples/vkprimer/common/physical_device.h"
+#include "src/graphics/examples/vkprimer/common/pipeline.h"
+#include "src/graphics/examples/vkprimer/common/render_pass.h"
+#ifdef __Fuchsia__
+#include "src/graphics/examples/vkprimer/fuchsia/surface.h"
+#else
+#include "src/graphics/examples/vkprimer/glfw/surface.h"
+#endif
+#include "src/graphics/examples/vkprimer/common/swapchain.h"
+#include "src/graphics/examples/vkprimer/common/utils.h"
 
 #include <vulkan/vulkan.hpp>
 
@@ -33,7 +37,7 @@ void glfwErrorCallback(int error, const char* description) {
 }
 
 static bool DrawAllFrames(const vkp::Device& vkp_device,
-                          const VulkanCommandBuffers& command_buffers);
+                          const vkp::CommandBuffers& vkp_command_buffers);
 
 int main(int argc, char* argv[]) {
 // INSTANCE
@@ -43,7 +47,7 @@ int main(int argc, char* argv[]) {
 #else
   const bool kEnableValidation = false;
 #endif
-  auto instance = std::make_shared<VulkanInstance>();
+  auto vkp_instance = std::make_shared<vkp::Instance>();
 #if USE_GLFW
   glfwInit();
   glfwSetErrorCallback(glfwErrorCallback);
@@ -55,108 +59,107 @@ int main(int argc, char* argv[]) {
   if (!window) {
     RTN_MSG(1, "glfwCreateWindow failed.\n");
   }
-  if (!instance->Init(kEnableValidation, window)) {
+  if (!vkp_instance->Init(kEnableValidation, window)) {
     RTN_MSG(1, "Instance Initialization Failed.\n");
   }
 #else
-  if (!instance->Init(kEnableValidation)) {
+  if (!vkp_instance->Init(kEnableValidation)) {
     RTN_MSG(1, "Instance Initialization Failed.\n");
   }
 #endif
 
   // LAYERS
-  VulkanLayer vulkan_layer(instance);
-  if (!vulkan_layer.Init()) {
+  vkp::Layer vkp_layer(vkp_instance);
+  if (!vkp_layer.Init()) {
     RTN_MSG(1, "Layer Initialization Failed.\n");
   }
 
   // SURFACE
 #if USE_GLFW
-  auto surface = std::make_shared<VulkanSurface>(instance, window);
+  auto vkp_surface = std::make_shared<vkp::Surface>(vkp_instance, window);
 #else
-  auto surface = std::make_shared<VulkanSurface>(instance);
+  auto vkp_surface = std::make_shared<vkp::Surface>(vkp_instance);
 #endif
-  if (!surface->Init()) {
+  if (!vkp_surface->Init()) {
     RTN_MSG(1, "Surface Initialization Failed.\n");
   }
 
   // PHYSICAL DEVICE
-  auto physical_device = std::make_shared<VulkanPhysicalDevice>(instance, surface->surface());
-  if (!physical_device->Init()) {
+  auto vkp_physical_device =
+      std::make_shared<vkp::PhysicalDevice>(vkp_instance, vkp_surface->get());
+  if (!vkp_physical_device->Init()) {
     RTN_MSG(1, "Phys Device Initialization Failed.\n");
   }
 
   // LOGICAL DEVICE
-  auto vkp_device = std::make_shared<vkp::Device>(physical_device->phys_device(),
-                                                  surface->surface(), kEnableValidation);
+  auto vkp_device = std::make_shared<vkp::Device>(vkp_physical_device->get(), vkp_surface->get(),
+                                                  kEnableValidation);
   if (!vkp_device->Init()) {
     RTN_MSG(1, "Logical Device Initialization Failed.\n");
   }
 
   vk::Format image_format;
   vk::Extent2D extent;
-  std::shared_ptr<VulkanSwapchain> swap_chain;
 
   // The number of image views added in either the offscreen or onscreen logic blocks
   // below controls the number of framebuffers, command buffers, fences and signalling
   // semaphores created subsequently.
   std::vector<vk::ImageView> image_views;
-  std::shared_ptr<VulkanImageView> offscreen_image_view;
-  std::vector<std::shared_ptr<VulkanImageView>> offscreen_image_views;
+  std::shared_ptr<vkp::ImageView> offscreen_image_view;
+  std::vector<std::shared_ptr<vkp::ImageView>> vkp_offscreen_image_views;
   constexpr uint32_t kCommandBufferCount = 100;
   for (uint32_t i = 0; i < kCommandBufferCount; i++) {
-    std::shared_ptr<VulkanImageView> offscreen_image_view;
+    std::shared_ptr<vkp::ImageView> offscreen_image_view;
     // IMAGE VIEW
     offscreen_image_view =
-        std::make_shared<VulkanImageView>(vkp_device, physical_device, vk::Extent2D{64, 64});
+        std::make_shared<vkp::ImageView>(vkp_device, vkp_physical_device, vk::Extent2D{64, 64});
     if (!offscreen_image_view->Init()) {
       RTN_MSG(1, "Image View Initialization Failed.\n");
     }
     image_format = offscreen_image_view->format();
     extent = offscreen_image_view->extent();
-    image_views.emplace_back(*(offscreen_image_view->view()));
-    offscreen_image_views.push_back(std::move(offscreen_image_view));
+    image_views.emplace_back(offscreen_image_view->get());
+    vkp_offscreen_image_views.push_back(std::move(offscreen_image_view));
   }
 
   // RENDER PASS
-  auto render_pass = std::make_shared<VulkanRenderPass>(vkp_device, image_format, true);
-  if (!render_pass->Init()) {
+  auto vkp_render_pass = std::make_shared<vkp::RenderPass>(vkp_device, image_format, true);
+  if (!vkp_render_pass->Init()) {
     RTN_MSG(1, "Render Pass Initialization Failed.\n");
   }
 
   // GRAPHICS PIPELINE
-  auto graphics_pipeline =
-      std::make_unique<VulkanGraphicsPipeline>(vkp_device, extent, render_pass);
-  if (!graphics_pipeline->Init()) {
+  auto vkp_pipeline = std::make_unique<vkp::Pipeline>(vkp_device, extent, vkp_render_pass);
+  if (!vkp_pipeline->Init()) {
     RTN_MSG(1, "Graphics Pipeline Initialization Failed.\n");
   }
 
   // FRAMEBUFFER
-  auto framebuffer = std::make_unique<VulkanFramebuffer>(vkp_device, extent,
-                                                         *render_pass->render_pass(), image_views);
-  if (!framebuffer->Init()) {
-    RTN_MSG(1, "Framebuffer Initialization Failed.\n");
+  auto vkp_framebuffer =
+      std::make_unique<vkp::Framebuffers>(vkp_device, extent, vkp_render_pass->get(), image_views);
+  if (!vkp_framebuffer->Init()) {
+    RTN_MSG(1, "Framebuffers Initialization Failed.\n");
   }
 
   // COMMAND POOL
-  auto command_pool = std::make_shared<VulkanCommandPool>(
-      vkp_device, physical_device->phys_device(), surface->surface());
-  if (!command_pool->Init()) {
+  auto vkp_command_pool = std::make_shared<vkp::CommandPool>(vkp_device, vkp_physical_device->get(),
+                                                             vkp_surface->get());
+  if (!vkp_command_pool->Init()) {
     RTN_MSG(1, "Command Pool Initialization Failed.\n");
   }
 
   // COMMAND BUFFER
-  auto command_buffers = std::make_unique<VulkanCommandBuffers>(
-      vkp_device, command_pool, *framebuffer, extent, *render_pass->render_pass(),
-      graphics_pipeline->graphics_pipeline());
-  if (!command_buffers->Init()) {
+  auto vkp_command_buffers = std::make_unique<vkp::CommandBuffers>(
+      vkp_device, vkp_command_pool, vkp_framebuffer->framebuffers(), extent, vkp_render_pass->get(),
+      vkp_pipeline->get());
+  if (!vkp_command_buffers->Init()) {
     RTN_MSG(1, "Command Buffer Initialization Failed.\n");
   }
 
   sleep(1);
 
   // Warm up and force the driver to allocate all the memory it will need for the command buffer.
-  if (!DrawAllFrames(*vkp_device, *command_buffers)) {
+  if (!DrawAllFrames(*vkp_device, *vkp_command_buffers)) {
     RTN_MSG(1, "First DrawAllFrames Failed.\n");
   }
 
@@ -164,7 +167,7 @@ int main(int argc, char* argv[]) {
 
   auto start_time = std::chrono::steady_clock::now();
 
-  if (!DrawAllFrames(*vkp_device, *command_buffers)) {
+  if (!DrawAllFrames(*vkp_device, *vkp_command_buffers)) {
     RTN_MSG(1, "Second DrawAllFrames Failed.\n");
   }
   vkp_device->get().waitIdle();
@@ -181,7 +184,7 @@ int main(int argc, char* argv[]) {
   return 0;
 }
 
-bool DrawAllFrames(const vkp::Device& device, const VulkanCommandBuffers& command_buffers) {
+bool DrawAllFrames(const vkp::Device& device, const vkp::CommandBuffers& command_buffers) {
   vk::SubmitInfo submit_info;
   submit_info.commandBufferCount = static_cast<uint32_t>(command_buffers.command_buffers().size());
   std::vector<vk::CommandBuffer> command_buffer(submit_info.commandBufferCount);

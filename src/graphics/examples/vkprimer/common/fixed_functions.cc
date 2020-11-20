@@ -2,9 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "vulkan_fixed_functions.h"
+#include "src/graphics/examples/vkprimer/common/fixed_functions.h"
 
-VulkanFixedFunctions::VulkanFixedFunctions(const vk::Extent2D &extent) : extent_(extent) {
+namespace vkp {
+
+FixedFunctions::FixedFunctions(const vk::Extent2D &extent) : extent_(extent) {
   color_blend_attachment_info_.setColorWriteMask(
       vk::ColorComponentFlagBits::eR | vk::ColorComponentFlagBits::eG |
       vk::ColorComponentFlagBits::eB | vk::ColorComponentFlagBits::eA);
@@ -33,3 +35,5 @@ VulkanFixedFunctions::VulkanFixedFunctions(const vk::Extent2D &extent) : extent_
   viewport_info_.viewportCount = 1;
   viewport_info_.pViewports = &viewport_;
 };
+
+}  // namespace vkp

@@ -98,9 +98,12 @@ void VulkanCommandBuffers::AddForeignTransitionImageBarriers(
 
   // This barrier should transition it back
   vk::ImageMemoryBarrier barrier2(barrier);
+<<<<<<< HEAD
   barrier2.setSrcQueueFamilyIndex(barrier.dstQueueFamilyIndex);
   barrier2.setDstQueueFamilyIndex(barrier.srcQueueFamilyIndex);
 
+=======
+>>>>>>> 55655bf08bd ([vulkan] Refactor / modernize vkprimer.)
   command_buffer->pipelineBarrier(vk::PipelineStageFlagBits::eAllGraphics,
                                   vk::PipelineStageFlagBits::eAllGraphics, {}, {}, {}, {barrier2});
 }
