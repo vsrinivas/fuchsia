@@ -14,7 +14,6 @@ var additionalSkipDirs = []string{
 	"prebuilt/virtualization/packages/termina_guest",                     // TODO(b/171975485): Remove once completed.
 	"src/connectivity/wlan/drivers/third_party/mediatek",                 // TODO(b/172586985): Remove once completed.
 	"src/developer/system_monitor/bin/third_party",                       // TODO(b/172586985): Remove once completed.
-	"third_party/android/device/generic/goldfish-opengl",                 // TODO(b/172586985): Remove once completed.
 	"third_party/catapult",                                               // TODO(b/171586646): Remove once completed.
 	"third_party/cobalt_config",                                          // TODO(b/172586985): Remove once completed.
 	"third_party/crashpad/third_party/apple_cf",                          // TODO(b/172586985): Remove once completed.
