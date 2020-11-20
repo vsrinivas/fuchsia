@@ -1,0 +1,10 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+using fuchsia.usb;
+using fuchsia.usb.test;
+
+fuchsia.BIND_PROTOCOL == fuchsia.usb.BIND_PROTOCOL.FUNCTION;
+fuchsia.BIND_USB_VID == fuchsia.usb.test.BIND_USB_VID.TEST;
+fuchsia.BIND_USB_PID == fuchsia.usb.test.BIND_USB_PID.TEST;

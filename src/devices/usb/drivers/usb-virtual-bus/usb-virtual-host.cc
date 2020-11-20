@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "usb-virtual-host.h"
+#include "src/devices/usb/drivers/usb-virtual-bus/usb-virtual-host.h"
 
 #include <assert.h>
 #include <stdint.h>
@@ -10,14 +10,13 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <fbl/auto_lock.h>
 #include <usb/usb-request.h>
 
-#include "usb-virtual-bus.h"
+#include "src/devices/usb/drivers/usb-virtual-bus/usb-virtual-bus.h"
 
 namespace usb_virtual_bus {
 

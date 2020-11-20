@@ -1,0 +1,13 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.usb.test;
+
+extend uint fuchsia.BIND_USB_VID {
+  TEST = 0x18D1,
+};
+
+extend uint fuchsia.BIND_USB_PID {
+  TEST = 0x2,
+};

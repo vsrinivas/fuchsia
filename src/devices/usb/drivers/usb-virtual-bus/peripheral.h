@@ -21,8 +21,6 @@
 
 namespace virtualbus {
 constexpr auto kMaxPacketSize = 20;
-constexpr auto kVid = 0x18D1;
-constexpr auto kDid = 0x2;
 
 class TestFunction;
 using DeviceType = ddk::Device<TestFunction, ddk::Unbindable>;

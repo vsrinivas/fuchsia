@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "peripheral.h"
+#include "src/devices/usb/drivers/usb-virtual-bus/peripheral.h"
 
 #include <assert.h>
 #include <lib/zircon-internal/thread_annotations.h>
@@ -17,6 +17,8 @@
 #include <atomic>
 #include <memory>
 #include <vector>
+
+#include "src/devices/usb/drivers/usb-virtual-bus/usb-virtual-bus-tester-function-bind.h"
 
 namespace virtualbus {
 
@@ -142,11 +144,4 @@ static constexpr zx_driver_ops_t driver_ops = []() {
 
 }  // namespace virtualbus
 
-// clang-format off
-ZIRCON_DRIVER_BEGIN(usb_virtual_bus_tester, virtualbus::driver_ops, "zircon", "0.1", 4)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_USB_FUNCTION),
-    BI_ABORT_IF(NE, BIND_USB_VID, virtualbus::kVid),
-    BI_ABORT_IF(NE, BIND_USB_PID, virtualbus::kDid),
-    BI_MATCH()
-ZIRCON_DRIVER_END(usb_virtual_bus_tester)
-    // clang-format on
+ZIRCON_DRIVER(usb_virtual_bus_tester, virtualbus::driver_ops, "zircon", "0.1")

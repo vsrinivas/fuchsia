@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "host.h"
+#include "src/devices/usb/drivers/usb-virtual-bus/host.h"
 
 #include <fcntl.h>
 #include <inttypes.h>
@@ -13,7 +13,6 @@
 #include <unistd.h>
 #include <zircon/hw/usb.h>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/driver.h>
 #include <ddk/protocol/usb.h>
@@ -24,6 +23,8 @@
 #include <fbl/auto_lock.h>
 #include <usb/usb-request.h>
 #include <usb/usb.h>
+
+#include "src/devices/usb/drivers/usb-virtual-bus/usb-virtual-bus-tester-bind.h"
 
 namespace virtualbus {
 
@@ -137,11 +138,4 @@ static constexpr zx_driver_ops_t virtualbustest_driver_ops = []() {
 
 }  // namespace
 
-// clang-format off
-ZIRCON_DRIVER_BEGIN(virtualbustest, virtualbustest_driver_ops, "zircon", "0.1", 4)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_USB_INTERFACE),
-    BI_ABORT_IF(NE, BIND_USB_VID, virtualbus::kVid),
-    BI_ABORT_IF(NE, BIND_USB_PID, virtualbus::kDid),
-    BI_MATCH()
-ZIRCON_DRIVER_END(virtualbustest)
-    // clang-format on
+ZIRCON_DRIVER(virtualbustest, virtualbustest_driver_ops, "zircon", "0.1")

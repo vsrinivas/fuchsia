@@ -6,10 +6,6 @@
 
 #include <thread>
 
-#include <ddk/binding.h>
-#include <ddk/debug.h>
-#include <ddk/device.h>
-#include <ddk/driver.h>
 #include <ddktl/protocol/usb/dci.h>
 #include <zxtest/zxtest.h>
 

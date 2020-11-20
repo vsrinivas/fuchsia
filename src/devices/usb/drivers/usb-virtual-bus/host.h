@@ -21,9 +21,6 @@
 
 namespace virtualbus {
 
-constexpr auto kVid = 0x18D1;
-constexpr auto kDid = 0x2;
-
 class Device;
 using DeviceType = ddk::Device<Device, ddk::Unbindable, ddk::Messageable>;
 class Device : public DeviceType,
