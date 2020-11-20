@@ -2,7 +2,7 @@
   "pkg/inspect/include/lib/inspect/cpp/health.h": "23ab342cd789ef0f035366e1eb81fe54",
   "pkg/inspect/include/lib/inspect/cpp/hierarchy.h": "facdc45c2c1b11b9fb40df6f59eaa888",
   "pkg/inspect/include/lib/inspect/cpp/inspect.h": "39366ae18f7e0bbccf16259ec0b13613",
-  "pkg/inspect/include/lib/inspect/cpp/inspector.h": "bf5841d73b966a1e1ac9ac2a2d9892d0",
+  "pkg/inspect/include/lib/inspect/cpp/inspector.h": "ee99a978dcd698d3df8d0e9ed7fb8637",
   "pkg/inspect/include/lib/inspect/cpp/reader.h": "40bda3b98af3dcdc8070be3691fa7cd8",
   "pkg/inspect/include/lib/inspect/cpp/value_list.h": "88982d6fa5f5db28e031c4c165a41ba6",
   "pkg/inspect/include/lib/inspect/cpp/vmo/block.h": "04d6288164114cc7be5fe856cad409ea",

@@ -123,9 +123,6 @@ class Inspector final {
   std::shared_ptr<ValueList> value_list_;
 };
 
-// Generate a unique name with the given prefix.
-std::string UniqueName(const std::string& prefix);
-
 }  // namespace inspect
 
 #endif  // LIB_INSPECT_CPP_INSPECTOR_H_
