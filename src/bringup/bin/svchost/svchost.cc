@@ -24,7 +24,6 @@
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/kernel-debug/kernel-debug.h>
-#include <lib/kernel-mexec/kernel-mexec.h>
 #include <lib/ktrace/ktrace.h>
 #include <lib/logger/provider.h>
 #include <lib/profile/profile.h>
@@ -321,17 +320,10 @@ int main(int argc, char** argv) {
     return 1;
   }
 
-  KernelMexecContext mexec_context = {
-      .root_resource = root_resource,
-      .devmgr_channel = zx::unowned_channel(devmgr_proxy_channel),
-  };
-
   zx_service_provider_instance_t service_providers[] = {
       {.provider = sysmem2_get_service_provider(), .ctx = nullptr},
       {.provider = kernel_debug_get_service_provider(),
        .ctx = reinterpret_cast<void*>(static_cast<uintptr_t>(root_resource))},
-      {.provider = kernel_mexec_get_service_provider(),
-       .ctx = reinterpret_cast<void*>(&mexec_context)},
       {.provider = profile_get_service_provider(),
        .ctx = reinterpret_cast<void*>(static_cast<uintptr_t>(profile_root_job_copy))},
       {.provider = ktrace_get_service_provider(),

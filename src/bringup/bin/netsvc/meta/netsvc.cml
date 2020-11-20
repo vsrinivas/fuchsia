@@ -79,7 +79,6 @@
                 "fuchsia.hardware.pty.Device",
                 "fuchsia.kernel.Counter",
                 "fuchsia.kernel.DebugBroker",
-                "fuchsia.kernel.MexecBroker",
                 "fuchsia.kernel.Stats",
                 "fuchsia.logger.Log",
                 "fuchsia.net.NameLookup",

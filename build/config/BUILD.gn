@@ -924,7 +924,6 @@ config("Wno-conversion") {
     "//zircon/system/ulib/inspector/*",
     "//zircon/system/ulib/intel-hda/*",
     "//zircon/system/ulib/kcounter/*",
-    "//zircon/system/ulib/kernel-mexec/*",
     "//zircon/system/ulib/ktrace/*",
     "//zircon/system/ulib/launchpad/*",
     "//zircon/system/ulib/log/*",

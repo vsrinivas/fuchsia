@@ -83,7 +83,6 @@ group("tests") {
     "//zircon/system/ulib/inet6/test:inet6-test-bootfs-test",
     "//zircon/system/ulib/intel-hda/test:intel-hda-utils-test-bootfs-test",
     "//zircon/system/ulib/io-scheduler/test:io-scheduler-test-bootfs-test",
-    "//zircon/system/ulib/kernel-mexec/test:kernel-mexec-test-bootfs-test",
     "//zircon/system/ulib/ktrace/test:ktrace-test-bootfs-test",
     "//zircon/system/ulib/launchpad/test:launchpad-bootfs-test",
     "//zircon/system/ulib/lazy_init/test:lazy_init-test-bootfs-test",
