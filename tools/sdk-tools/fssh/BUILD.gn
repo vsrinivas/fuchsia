@@ -18,6 +18,15 @@ go_binary("fssh") {
 }
 
 install_host_tools("fssh-host") {
-  deps = [ ":fssh" ]
+  deps = [
+    ":fssh",
+    "//tools/sdk-tools/sdkcommon:host-tool-deps",
+  ]
   outputs = [ "fssh" ]
+}
+
+sdk_host_tool("fssh_sdk") {
+  category = "partner"
+  output_name = "fssh"
+  deps = [ ":fssh" ]
 }

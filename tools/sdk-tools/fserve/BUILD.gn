@@ -17,7 +17,6 @@ go_library("main") {
     "fserve.go",
     "fserve_test.go",
   ]
-  non_go_deps = [ "//src/sys/pkg/bin/pm:host" ]
 }
 
 go_binary("fserve") {
@@ -40,6 +39,15 @@ if (is_host) {
 }
 
 install_host_tools("fserve-host") {
-  deps = [ ":fserve" ]
+  deps = [
+    ":fserve",
+    "//tools/sdk-tools/sdkcommon:host-tool-deps",
+  ]
   outputs = [ "fserve" ]
+}
+
+sdk_host_tool("fserve_sdk") {
+  category = "partner"
+  output_name = "fserve"
+  deps = [ ":fserve" ]
 }

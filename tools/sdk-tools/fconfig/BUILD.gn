@@ -26,6 +26,15 @@ go_test("fconfig-test") {
 }
 
 install_host_tools("fconfig-host") {
-  deps = [ ":fconfig" ]
+  deps = [
+    ":fconfig",
+    "//tools/sdk-tools/sdkcommon:host-tool-deps",
+  ]
   outputs = [ "fconfig" ]
+}
+
+sdk_host_tool("fconfig_sdk") {
+  category = "partner"
+  output_name = "fconfig"
+  deps = [ ":fconfig" ]
 }

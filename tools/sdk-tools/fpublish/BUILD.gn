@@ -13,7 +13,6 @@ go_library("main") {
     "fpublish_test.go",
     "main.go",
   ]
-  non_go_deps = [ "//src/sys/pkg/bin/pm:host" ]
 }
 
 go_binary("fpublish") {
@@ -27,6 +26,15 @@ go_test("fpublish-test") {
 }
 
 install_host_tools("fpublish-host") {
-  deps = [ ":fpublish" ]
+  deps = [
+    ":fpublish",
+    "//tools/sdk-tools/sdkcommon:host-tool-deps",
+  ]
   outputs = [ "fpublish" ]
+}
+
+sdk_host_tool("fpublish_sdk") {
+  category = "partner"
+  output_name = "fpublish"
+  deps = [ ":fpublish" ]
 }

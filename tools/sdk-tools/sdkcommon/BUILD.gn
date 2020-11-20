@@ -12,13 +12,17 @@ go_library("sdkcommon") {
     "utils.go",
   ]
   deps = [ "//tools/lib/logger" ]
-  non_go_deps = [
-    "//src/developer/ffx:bin_sdk($host_toolchain)",
-    "//tools/net/device-finder:host",
-  ]
 }
 
 go_test("sdkcommon-test") {
   gopackages = [ "go.fuchsia.dev/fuchsia/tools/sdk-tools/sdkcommon" ]
   deps = [ ":sdkcommon" ]
+}
+
+group("host-tool-deps") {
+  deps = [
+    "//src/developer/ffx:bin_sdk($host_toolchain)",
+    "//src/sys/pkg/bin/pm:host",
+    "//tools/net/device-finder:host",
+  ]
 }
