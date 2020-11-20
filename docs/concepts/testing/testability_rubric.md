@@ -154,7 +154,7 @@ into the integration repository. Then add the necessary MULTIPLY line to the
 integration CL instead of the original public CL, and CQ+1 the integration
 CL.
 
-{% dynamic endif %},
+{% dynamic endif %}
 
 As a testability reviewer, if a change adds or modifies tests, you
 should make sure the author correctly tests for flakiness using the MULTIPLY
