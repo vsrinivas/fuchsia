@@ -115,7 +115,7 @@ class DriverHostTest : public gtest::TestLoopFixture {
                                         fbl::MakeRefCounted<fs::Service>(std::move(connector))));
   }
 
-  StartDriverResult StartDriver(fidl::VectorView<fdf::DriverSymbol> symbols = {}) {
+  StartDriverResult StartDriver(fidl::VectorView<fdf::NodeSymbol> symbols = {}) {
     zx_status_t epitaph = ZX_OK;
     TestTransaction transaction(&epitaph);
 
@@ -162,8 +162,7 @@ class DriverHostTest : public gtest::TestLoopFixture {
       Completer completer(&transaction);
       driver_host()->Start(
           fdf::DriverStartArgs::Builder(std::make_unique<fdf::DriverStartArgs::Frame>())
-              .set_symbols(
-                  std::make_unique<fidl::VectorView<fdf::DriverSymbol>>(std::move(symbols)))
+              .set_symbols(std::make_unique<fidl::VectorView<fdf::NodeSymbol>>(std::move(symbols)))
               .set_ns(std::make_unique<fidl::VectorView<frunner::ComponentNamespaceEntry>>(
                   fidl::unowned_vec(ns_entries)))
               .set_program(std::make_unique<fdata::Dictionary>(
@@ -258,9 +257,9 @@ static bool called = false;
 void func() { called = true; }
 
 // Start a single driver, and receive a call to a shared function.
-TEST_F(DriverHostTest, Start_DriverSymbols) {
-  fdf::DriverSymbol symbols[] = {
-      fdf::DriverSymbol::Builder(std::make_unique<fdf::DriverSymbol::Frame>())
+TEST_F(DriverHostTest, Start_NodeSymbols) {
+  fdf::NodeSymbol symbols[] = {
+      fdf::NodeSymbol::Builder(std::make_unique<fdf::NodeSymbol::Frame>())
           .set_name(std::make_unique<fidl::StringView>("func"))
           .set_address(std::make_unique<zx_vaddr_t>(reinterpret_cast<zx_vaddr_t>(func)))
           .build(),

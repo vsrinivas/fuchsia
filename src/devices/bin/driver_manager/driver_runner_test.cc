@@ -360,9 +360,9 @@ TEST_F(DriverRunnerTest, StartRootDriver_AddUnownedChild_DuplicateSymbols) {
     fdf::NodeAddArgs args;
     args.set_name("second");
     args.mutable_symbols()->emplace_back(
-        std::move(fdf::DriverSymbol().set_name("sym").set_address(0xfeed)));
+        std::move(fdf::NodeSymbol().set_name("sym").set_address(0xfeed)));
     args.mutable_symbols()->emplace_back(
-        std::move(fdf::DriverSymbol().set_name("sym").set_address(0xf00d)));
+        std::move(fdf::NodeSymbol().set_name("sym").set_address(0xf00d)));
     root_node->AddChild(std::move(args), node_controller.NewRequest(loop().dispatcher()), {});
   });
   ASSERT_TRUE(StartRootDriver("root", &driver_runner).is_ok());
@@ -408,7 +408,7 @@ TEST_F(DriverRunnerTest, StartSecondDriver_NewDriverHost) {
     fdf::NodeAddArgs args;
     args.set_name("second");
     args.mutable_symbols()->emplace_back(
-        std::move(fdf::DriverSymbol().set_name("sym").set_address(0xfeed)));
+        std::move(fdf::NodeSymbol().set_name("sym").set_address(0xfeed)));
     fdf::NodeControllerPtr node_controller;
     root_node->AddChild(std::move(args), node_controller.NewRequest(loop().dispatcher()), {});
   });
@@ -461,7 +461,7 @@ TEST_F(DriverRunnerTest, StartSecondDriver_SameDriverHost) {
     fdf::NodeAddArgs args;
     args.set_name("second");
     args.mutable_symbols()->emplace_back(
-        std::move(fdf::DriverSymbol().set_name("sym").set_address(0xfeed)));
+        std::move(fdf::NodeSymbol().set_name("sym").set_address(0xfeed)));
     fdf::NodeControllerPtr node_controller;
     root_node->AddChild(std::move(args), node_controller.NewRequest(loop().dispatcher()), {});
   });

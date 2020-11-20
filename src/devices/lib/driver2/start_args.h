@@ -14,7 +14,7 @@ namespace start_args {
 
 template <typename T>
 zx::status<T> symbol_value(
-    const fidl::VectorView<llcpp::fuchsia::driver::framework::DriverSymbol>& symbols,
+    const fidl::VectorView<llcpp::fuchsia::driver::framework::NodeSymbol>& symbols,
     std::string_view path) {
   static_assert(sizeof(T) == sizeof(zx_vaddr_t), "T must match zx_vaddr_t in size");
   for (auto& symbol : symbols) {

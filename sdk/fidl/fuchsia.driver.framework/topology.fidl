@@ -4,17 +4,20 @@
 
 library fuchsia.driver.framework;
 
-using fuchsia.sys2;
+using fuchsia.component;
 
 using zx;
 
 const uint8 MAX_OFFER_COUNT = 64;
 const uint8 MAX_SYMBOL_COUNT = 64;
-const uint8 MAX_SYMBOL_NAME_LENGTH = 128;
-const uint8 MAX_DEVICE_NAME_LENGTH = 128;
+const uint8 MAX_PROPERTY_COUNT = 64;
 
-/// Definition of a symbol provided by a driver, local to a driver host.
-table DriverSymbol {
+const uint8 MAX_NODE_NAME_LENGTH = 128;
+const uint8 MAX_SYMBOL_NAME_LENGTH = 128;
+
+/// Definition of a symbol provided by a driver for a node. A symbol is local to
+/// a driver host.
+table NodeSymbol {
     /// Name of the symbol.
     1: string:MAX_SYMBOL_NAME_LENGTH name;
 
@@ -22,16 +25,29 @@ table DriverSymbol {
     2: zx.vaddr address;
 };
 
+/// Definition of a property for a node. A property is commonly used to match a
+/// node to a driver for driver binding.
+table NodeProperty {
+    /// Key for the property.
+    1: uint32 key;
+
+    /// Value for the property.
+    2: uint32 value;
+};
+
 /// Arguments for adding a node.
 table NodeAddArgs {
-    /// The name of the node.
-    1: string:MAX_DEVICE_NAME_LENGTH name;
+    /// Name of the node.
+    1: string:MAX_NODE_NAME_LENGTH name;
 
     /// FIDL services to offer to the driver that is bound to this node.
-    2: vector<fuchsia.sys2.OfferDecl>:MAX_OFFER_COUNT offers;
+    2: vector<fuchsia.component.name>:MAX_OFFER_COUNT offers;
 
     /// Functions to provide to the driver that is bound to this node.
-    3: vector<DriverSymbol>:MAX_SYMBOL_COUNT symbols;
+    3: vector<NodeSymbol>:MAX_SYMBOL_COUNT symbols;
+
+    /// Properties of the node.
+    4: vector<NodeProperty>:MAX_PROPERTY_COUNT properties;
 };
 
 /// Protocol through which a parent node controls one of its children.

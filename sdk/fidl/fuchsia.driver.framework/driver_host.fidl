@@ -4,19 +4,24 @@
 
 library fuchsia.driver.framework;
 
+using fuchsia.component;
 using fuchsia.component.runner;
 using fuchsia.data;
 using fuchsia.io;
 
 /// Arguments for starting a driver.
 resource table DriverStartArgs {
-    /// The node that the driver is being bound to.
+    /// Node that the driver is bound to.
     1: Node node;
 
-    /// The symbols provided to the driver, for |node|. These come from the
-    /// driver that added the node, and are filtered to the symbols requested
-    /// in the bind program.
-    2: vector<DriverSymbol>:MAX_SYMBOL_COUNT symbols;
+    /// Offers provided to the driver, for |node|. These are names of FIDL
+    /// protocols that can be accessed through |exposed_dir|.
+    2: vector<fuchsia.component.name>:MAX_OFFER_COUNT offers;
+
+    /// Symbols provided to the driver, for |node|. These come from the driver
+    /// that added |node|, and are filtered to the symbols requested in the bind
+    /// program.
+    3: vector<NodeSymbol>:MAX_SYMBOL_COUNT symbols;
 
     /// Information about the driver to start. Currently, we support the
     /// following entries:
@@ -26,13 +31,16 @@ resource table DriverStartArgs {
     ///      specifying whether the driver should be colocated in the same
     ///      driver host as the driver that added |node|. If not specified, the
     ///      driver will be launched in a new driver host.
-    3: fuchsia.data.Dictionary program;
+    4: fuchsia.data.Dictionary program;
 
-    /// The incoming namespace provided to the driver.
-    4: vector<fuchsia.component.runner.ComponentNamespaceEntry>:fuchsia.component.runner.MAX_NAMESPACE_COUNT ns;
+    /// Incoming namespace provided to the driver.
+    5: vector<fuchsia.component.runner.ComponentNamespaceEntry>:fuchsia.component.runner.MAX_NAMESPACE_COUNT ns;
 
-    /// The outgoing directory served by the driver.
-    5: request<fuchsia.io.Directory> outgoing_dir;
+    /// Outgoing directory served by the driver.
+    6: request<fuchsia.io.Directory> outgoing_dir;
+
+    /// Exposed directory provided to the driver, for |node|.
+    7: fuchsia.io.Directory exposed_dir;
 };
 
 /// Protocol through which a driver's lifecycle can be managed.

@@ -11,8 +11,8 @@ namespace fdf = llcpp::fuchsia::driver::framework;
 namespace frunner = llcpp::fuchsia::component::runner;
 
 TEST(StartArgsTest, SymbolValue) {
-  fdf::DriverSymbol symbol_entries[] = {
-      fdf::DriverSymbol::Builder(std::make_unique<fdf::DriverSymbol::Frame>())
+  fdf::NodeSymbol symbol_entries[] = {
+      fdf::NodeSymbol::Builder(std::make_unique<fdf::NodeSymbol::Frame>())
           .set_name(std::make_unique<fidl::StringView>("sym"))
           .set_address(std::make_unique<zx_vaddr_t>(0xfeed))
           .build(),

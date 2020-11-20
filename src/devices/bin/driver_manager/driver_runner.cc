@@ -34,7 +34,7 @@ DriverHostComponent::DriverHostComponent(
                    [this, driver_hosts](auto) { driver_hosts->erase(*this); }) {}
 
 zx::status<zx::channel> DriverHostComponent::Start(
-    zx::channel node, fidl::VectorView<fdf::DriverSymbol> symbols, fdata::Dictionary program,
+    zx::channel node, fidl::VectorView<fdf::NodeSymbol> symbols, fdata::Dictionary program,
     fidl::VectorView<frunner::ComponentNamespaceEntry> ns, zx::channel outgoing_dir) {
   zx::channel client_end, server_end;
   zx_status_t status = zx::channel::create(0, &client_end, &server_end);
@@ -73,7 +73,7 @@ Node::~Node() {
   }
 }
 
-fidl::VectorView<fdf::DriverSymbol> Node::symbols() { return fidl::unowned_vec(symbols_); }
+fidl::VectorView<fdf::NodeSymbol> Node::symbols() { return fidl::unowned_vec(symbols_); }
 
 DriverHostComponent* Node::parent_driver_host() const { return parent_->driver_host_; }
 
@@ -122,7 +122,7 @@ void Node::AddChild(fdf::NodeAddArgs args, zx::channel controller, zx::channel n
         return;
       }
       symbols.emplace_back(
-          fdf::DriverSymbol::Builder(std::make_unique<fdf::DriverSymbol::Frame>())
+          fdf::NodeSymbol::Builder(std::make_unique<fdf::NodeSymbol::Frame>())
               .set_name(std::make_unique<fidl::StringView>(fidl::heap_copy_str(name)))
               .set_address(std::make_unique<zx_vaddr_t>(symbol.address()))
               .build());

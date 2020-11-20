@@ -12,10 +12,10 @@ fidl("fuchsia.driver.framework") {
   ]
 
   public_deps = [
+    "//sdk/fidl/fuchsia.component",
     "//sdk/fidl/fuchsia.component.runner",
     "//sdk/fidl/fuchsia.data",
     "//sdk/fidl/fuchsia.io",
-    "//sdk/fidl/fuchsia.sys2",
     "//sdk/fidl/fuchsia.url",
   ]
 }
