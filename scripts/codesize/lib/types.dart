@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// @dart = 2.8
-
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:protobuf/protobuf.dart' as pb;
@@ -19,13 +17,13 @@ class AnalysisRequest {
 
   /// The SHA-256 hash of the access heatmap file used to generate the reports.
   /// If a heatmap file was not used, this field may be null.
-  String heatmapContentSha;
+  String? heatmapContentSha;
 
-  AnalysisRequest({this.items, this.heatmapContentSha});
+  AnalysisRequest({required this.items, this.heatmapContentSha});
 
-  AnalysisRequest.fromJson(Map<String, dynamic> json) {
+  AnalysisRequest.fromJson(Map<String, dynamic> json)
+      : items = <AnalysisItem>[] {
     if (json['items'] != null) {
-      items = <AnalysisItem>[];
       json['items'].forEach((v) {
         items.add(AnalysisItem.fromJson(v));
       });
@@ -37,9 +35,7 @@ class AnalysisRequest {
 
   Map<String, dynamic> toJson() {
     final data = <String, dynamic>{};
-    if (items != null) {
-      data['items'] = items.map((v) => v.toJson()).toList();
-    }
+    data['items'] = items.map((v) => v.toJson()).toList();
     if (heatmapContentSha != null) {
       data['heatmap_content_sha'] = heatmapContentSha;
     }
@@ -51,17 +47,18 @@ class AnalysisRequest {
 class AnalysisItem {
   String path;
 
-  /// If the access heatmap is not used, this field may be null.
-  String filteredCounterpart;
-
   String name;
 
-  AnalysisItem({this.path, this.filteredCounterpart, this.name});
+  /// If the access heatmap is not used, this field may be null.
+  String? filteredCounterpart;
 
-  AnalysisItem.fromJson(Map<String, dynamic> json) {
-    path = json['path'];
+  AnalysisItem(
+      {required this.path, required this.name, this.filteredCounterpart});
+
+  AnalysisItem.fromJson(Map<String, dynamic> json)
+      : path = json['path']!,
+        name = json['name']! {
     filteredCounterpart = json['filtered_counterpart'];
-    name = json['name'];
   }
 
   Map<String, dynamic> toJson() {
@@ -175,15 +172,13 @@ class CompileUnit {
       : context = CompileUnitContext(name);
   CompileUnit.fromBloaty(bloaty_report.CompileUnit compileUnit)
       : sizes = SizeInfo.fromBloaty(compileUnit.sizes),
-        symbols =
-            compileUnit.symbols?.map((s) => Symbol.fromBloaty(s))?.toList(),
-        name = compileUnit.name {
-    context = CompileUnitContext(name);
-  }
+        symbols = compileUnit.symbols.map((s) => Symbol.fromBloaty(s)).toList(),
+        name = compileUnit.name,
+        context = CompileUnitContext(compileUnit.name);
 
   bloaty_report.CompileUnit toBloaty() => bloaty_report.CompileUnit()
     ..sizes = sizes.toBloaty()
-    ..symbols.addAll(symbols?.map((e) => e.toBloaty())?.toList())
+    ..symbols.addAll(symbols.map((e) => e.toBloaty()).toList())
     ..name = name
     ..freeze();
 
@@ -228,7 +223,7 @@ class Report {
 
   /// Create a report from its corresponding protobuf representation.
   Report.fromBloaty(String name, bloaty_report.Report report,
-      {ProgramContext reuseContext})
+      {ProgramContext? reuseContext})
       : compileUnits =
             report.compileUnits.map((c) => CompileUnit.fromBloaty(c)).toList(),
         fileTotal = report.fileTotal.toInt(),
@@ -240,7 +235,7 @@ class Report {
   }
 
   /// Deserialize a report in protobuf format from `bytes`.
-  Report.fromBytes(String name, Uint8List bytes, {ProgramContext reuseContext})
+  Report.fromBytes(String name, Uint8List bytes, {ProgramContext? reuseContext})
       : this.fromBloaty(
             name,
             bloaty_report.Report.create()
@@ -266,5 +261,5 @@ class Report {
   /// See `ProgramContext`. This object allows queries to attach domain-specific
   /// information to the report as they are run, achieving information sharing
   /// with separation of concerns.
-  ProgramContext context;
+  late ProgramContext context;
 }

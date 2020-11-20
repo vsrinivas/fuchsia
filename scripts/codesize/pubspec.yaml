@@ -4,6 +4,9 @@
 
 name: codesize
 
+environment:
+  sdk: ">=2.12.0 <3.0.0"
+
 # NOTE: This is used only when actively developing `fx codesize`, or when
 # manually running its unit tests by navigating to this directory and
 # executing `pub run test .`. It needs to maintained synchronized with
