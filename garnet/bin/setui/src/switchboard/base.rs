@@ -194,7 +194,6 @@ pub enum SettingRequest {
     SetBrightness(f32),
     SetAutoBrightness(bool),
     SetLowLightMode(LowLightMode),
-    SetScreenEnabled(bool),
     SetThemeMode(ThemeMode),
 
     // Do not disturb requests.
@@ -249,7 +248,6 @@ impl SettingRequest {
             SettingRequest::Restore => "Restore",
             SettingRequest::SetUserDataSharingConsent(_) => "SetUserDataSharingConsent",
             SettingRequest::SetConfigurationInterfaces(_) => "SetConfigurationInterfaces",
-            SettingRequest::SetScreenEnabled(_) => "SetScreenEnabled",
             SettingRequest::SetThemeMode(_) => "SetThemeMode",
         }
     }
@@ -352,7 +350,6 @@ pub struct DisplayInfo {
     /// The last brightness value that was manually set.
     pub manual_brightness_value: f32,
     pub auto_brightness: bool,
-    pub screen_enabled: bool,
     pub low_light_mode: LowLightMode,
     pub theme_mode: ThemeMode,
 }
@@ -361,17 +358,10 @@ impl DisplayInfo {
     pub const fn new(
         auto_brightness: bool,
         manual_brightness_value: f32,
-        screen_enabled: bool,
         low_light_mode: LowLightMode,
         theme_mode: ThemeMode,
     ) -> DisplayInfo {
-        DisplayInfo {
-            manual_brightness_value,
-            auto_brightness,
-            screen_enabled,
-            low_light_mode,
-            theme_mode,
-        }
+        DisplayInfo { manual_brightness_value, auto_brightness, low_light_mode, theme_mode }
     }
 }
 
