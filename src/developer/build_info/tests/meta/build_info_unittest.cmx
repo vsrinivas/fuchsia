@@ -1,0 +1,5 @@
+{
+    "program": {
+        "binary": "bin/build_info_unittest"
+    }
+}

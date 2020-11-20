@@ -6,6 +6,7 @@ group("developer") {
   testonly = true
   deps = [
     ":tests",
+    "build_info:build-info-service",
     "debug",
     "ffx",
     "forensics",
@@ -20,6 +21,7 @@ group("tests") {
   testonly = true
 
   deps = [
+    "//src/developer/build_info:tests",
     "//src/developer/debug:tests",
     "//src/developer/ffx:tests",
     "//src/developer/forensics:tests",

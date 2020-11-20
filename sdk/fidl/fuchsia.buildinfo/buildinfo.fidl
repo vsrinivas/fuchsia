@@ -1,0 +1,41 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.buildinfo;
+
+using zx;
+
+const uint64 MAX_STRING_LENGTH = 100;
+
+table BuildInfo {
+    /// A description of the product configuration used at build time, determined
+    /// by the value passed as PRODUCT in 'fx set'. See 'fx list-products' for a
+    /// list of possible values.
+    1: string:MAX_STRING_LENGTH product_config;
+
+    /// A description of the board configuration used at build time, determined by
+    /// the value passed as BOARD in 'fx set'.
+    2: string:MAX_STRING_LENGTH board_config;
+
+    /// A description of the version of the build. Defaults to the same string as
+    /// latest_commit_date.
+    3: string:MAX_STRING_LENGTH version;
+
+    /// The timestamp of the most recent commit to the integration repository
+    /// (specifically, the "CommitDate" field) formatted in strict ISO 8601 format in
+    /// the UTC timezone. Example: “2019-03-28T15:42:20+00:00”
+    4: string:MAX_STRING_LENGTH latest_commit_date;
+};
+
+/// Returns build information about a Fuchsia system.
+[Discoverable]
+protocol Provider {
+    /// Returns a table of build information.
+    GetBuildInfo() -> (BuildInfo build_info);
+
+    /// Returns a vmo containing the jiri snapshot of the most recent
+    /// ‘jiri update’. Returned as a vmo because snapshots are typically
+    /// much longer than the maximum FIDL message size.
+    GetSnapshotInfo() -> (zx.handle:VMO snapshot);
+};
