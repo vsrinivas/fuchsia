@@ -121,6 +121,8 @@ fn appropriate_check_interval(
 }
 
 fn build_signature(snapshot: triage::SnapshotTrigger, mode: Mode) -> String {
+    // Character restrictions are documented in
+    // https://fuchsia.dev/reference/fidl/fuchsia.feedback#GenericCrashReport
     let sanitized: String = snapshot
         .signature
         .chars()
@@ -221,7 +223,7 @@ pub async fn main(args: CommandLine) -> Result<(), Error> {
                         error!("Snapshot request failed: {}", e);
                     }
                 } else {
-                    warn!("Would have filed {}", signature);
+                    warn!("Detect would have filed {}", signature);
                 }
             }
         }
