@@ -1,4 +1,13 @@
 {
+    "facets": {
+        "fuchsia.test": {
+            "injected-services": {
+                "fuchsia.wlan.devmgr.IsolatedDevmgr": [
+                    "fuchsia-pkg://fuchsia.com/wlan-hw-sim-test#meta/wlan-devmgr.cmx"
+                ]
+            }
+        }
+    },
     "program": {
         "binary": "test/wlanstack_bin_test"
     },
@@ -8,6 +17,9 @@
             "null",
             "test/wlantapctl",
             "zero"
+        ],
+        "services": [
+            "fuchsia.wlan.devmgr.IsolatedDevmgr"
         ]
     }
 }

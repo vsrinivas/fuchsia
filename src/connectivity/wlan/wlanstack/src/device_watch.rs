@@ -89,8 +89,9 @@ mod tests {
         fidl_fuchsia_wlan_common as fidl_common,
         fidl_fuchsia_wlan_device::{self as fidl_wlan_dev, SupportedPhy},
         fidl_fuchsia_wlan_mlme as fidl_mlme, fidl_fuchsia_wlan_tap as fidl_wlantap,
-        fuchsia_async as fasync,
         fuchsia_zircon::prelude::*,
+        futures::{poll, task::Poll},
+        isolated_devmgr::IsolatedDeviceEnv,
         pin_utils::pin_mut,
         std::convert::TryInto,
         wlan_common::{ie::*, test_utils::ExpectWithin},
@@ -101,34 +102,35 @@ mod tests {
     #[test]
     fn watch_phys() {
         let mut exec = fasync::Executor::new().expect("Failed to create an executor");
-        let new_phy_stream =
-            watch_phy_devices::<wlan_dev::RealDeviceEnv>().expect("watch_phy_devices() failed");
-        pin_mut!(new_phy_stream);
-        let wlantap = wlantap_client::Wlantap::open().expect("Failed to connect to wlantapctl");
-        let _tap_phy = wlantap.create_phy(create_wlantap_config(*b"wtchph"));
-        for _ in 0..10 {
-            // 5 is more than enough even for Toulouse but let's be generous
-            let new_phy = exec
-                .run_singlethreaded(
-                    new_phy_stream.next().expect_within(2.seconds(), "No more phys"),
-                )
-                .expect("new_phy_stream ended without yielding a phy")
-                .expect("new_phy_stream returned an error");
-            let query_resp =
-                exec.run_singlethreaded(new_phy.proxy.query()).expect("phy query failed");
-            if b"wtchph" == &query_resp.info.hw_mac_address {
-                return;
+        let phy_watcher =
+            watch_phy_devices::<IsolatedDeviceEnv>().expect("Failed to create phy_watcher");
+        pin_mut!(phy_watcher);
+        let wlantap = wlantap_client::Wlantap::open_from_isolated_devmgr()
+            .expect("Failed to connect to wlantapctl");
+        // Create an intentionally unused variable instead of a plain
+        // underscore. Otherwise, this end of the channel will be
+        // dropped and cause the phy device to begin unbinding.
+        let _wlantap_phy = wlantap.create_phy(create_wlantap_config());
+        exec.run_singlethreaded(async {
+            phy_watcher
+                .next()
+                .expect_within(5.seconds(), "phy_watcher did not respond")
+                .await
+                .expect("phy_watcher ended without yielding a phy")
+                .expect("phy_watcher returned an error");
+            if let Poll::Ready(..) = poll!(phy_watcher.next()) {
+                panic!("phy_watcher found more than one phy");
             }
-        }
-        panic!("Did not get the phy we are looking for");
+        })
     }
 
-    fn create_wlantap_config(mac_addr: [u8; 6]) -> fidl_wlantap::WlantapPhyConfig {
+    fn create_wlantap_config() -> fidl_wlantap::WlantapPhyConfig {
         fidl_wlantap::WlantapPhyConfig {
             phy_info: fidl_wlan_dev::PhyInfo {
+                // TODO(fxbug.dev/64309): The id and dev_path fields are ignored.
                 id: 0,
                 dev_path: None,
-                hw_mac_address: mac_addr,
+                hw_mac_address: [0; 6],
                 supported_phys: vec![
                     SupportedPhy::Dsss,
                     SupportedPhy::Cck,
