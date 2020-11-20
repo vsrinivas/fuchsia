@@ -10,6 +10,7 @@ const (
 	QEMUInvocationErrorMsg    = "QEMU invocation error"
 	ReadConfigFileErrorMsg    = "could not open config file"
 	FailedToResolveIPErrorMsg = "could not resolve target IP address"
+	FailedDueToEOF            = "failed due to EOF"
 
 	NodenameEnvKey     = "FUCHSIA_NODENAME"
 	SSHKeyEnvKey       = "FUCHSIA_SSH_KEY"

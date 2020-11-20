@@ -52,7 +52,7 @@ func (s *Syslogger) Stream(ctx context.Context, output io.Writer) error {
 		err := s.client.Run(ctx, cmd, output, nil)
 		if ctx.Err() == nil {
 			if err != nil {
-				logger.Debugf(ctx, "error streaming syslog: %v", err)
+				logger.Debugf(ctx, "error streaming syslog: %s", err)
 			} else {
 				logger.Debugf(ctx, "log_listener exited successfully, will rerun")
 				// Don't stream from the beginning of the system's uptime, since
@@ -68,16 +68,16 @@ func (s *Syslogger) Stream(ctx context.Context, output io.Writer) error {
 		// this method, so it generally indicates that the caller is exiting
 		// normally).
 		if ctx.Err() != nil || !sshutil.IsConnectionError(err) {
-			logger.Debugf(ctx, "syslog streaming complete")
+			logger.Debugf(ctx, "syslog streaming complete: %s", err)
 			return err
 		}
 
-		logger.Errorf(ctx, "syslog: SSH client unresponsive; will attempt to reconnect and continue streaming: %v", err)
+		logger.Errorf(ctx, "syslog: SSH client unresponsive; will attempt to reconnect and continue streaming: %s", err)
 		if err := s.client.ReconnectWithBackoff(ctx, retry.NewConstantBackoff(defaultReconnectInterval)); err != nil {
 			// The context probably got cancelled before we were able to
 			// reconnect.
 			if ctx.Err() != nil {
-				logger.Errorf(ctx, "syslog: %s: %v", constants.CtxReconnectError, ctx.Err())
+				logger.Errorf(ctx, "syslog: %s: %s", constants.CtxReconnectError, ctx.Err())
 			}
 			return err
 		}

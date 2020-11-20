@@ -10,6 +10,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -168,12 +169,12 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 				line, err := b.ReadString('\n')
 				if err != nil {
 					if !serial.IsErrNetClosing(err) {
-						return err
+						return fmt.Errorf("error reading serial log line: %w", err)
 					}
 					return nil
 				}
 				if _, err := io.WriteString(serialLog, line); err != nil {
-					return err
+					return fmt.Errorf("failed to write line to serial log: %w", err)
 				}
 			}
 		})
@@ -210,7 +211,7 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 		t := t
 		eg.Go(func() error {
 			if err := t.Wait(ctx); err != nil && err != target.ErrUnimplemented && ctx.Err() == nil {
-				return err
+				return fmt.Errorf("target %s failed: %w", t.Nodename(), err)
 			}
 			return nil
 		})
@@ -432,7 +433,12 @@ func (r *RunCommand) Execute(ctx context.Context, f *flag.FlagSet, _ ...interfac
 	r.blobURL = os.ExpandEnv(r.blobURL)
 	r.repoURL = os.ExpandEnv(r.repoURL)
 	if err := r.execute(ctx, expandedArgs); err != nil {
-		logger.Errorf(ctx, "%v", err)
+		if errors.Is(err, io.EOF) {
+			// TODO(fxbug.dev/62670): Remove this log once we figure out the
+			// source of mysterious EOFs.
+			logger.Errorf(ctx, "%s: %s", constants.FailedDueToEOF, err)
+		}
+		logger.Errorf(ctx, "%s", err)
 		return subcommands.ExitFailure
 	}
 	return subcommands.ExitSuccess
