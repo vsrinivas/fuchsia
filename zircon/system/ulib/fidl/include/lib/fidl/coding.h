@@ -17,7 +17,7 @@ __BEGIN_CDECLS
 #define FIDL_RECURSION_DEPTH 32
 
 // See
-// https://fuchsia.dev/fuchsia-src/development/languages/fidl/languages/c.md#fidl_encode-fidl_encode_msg
+// https://fuchsia.dev/fuchsia-src/development/languages/fidl/tutorials/tutorial-c#fidl_encode-fidl_encode_msg
 zx_status_t fidl_encode(const fidl_type_t* type, void* bytes, uint32_t num_bytes,
                         zx_handle_t* handles, uint32_t max_handles, uint32_t* out_actual_handles,
                         const char** out_error_msg);
@@ -61,7 +61,7 @@ zx_status_t fidl_linearize_and_encode_msg(const fidl_type_t* type, void* value,
                                           const char** out_error_msg);
 
 // See
-// https://fuchsia.dev/fuchsia-src/development/languages/fidl/languages/c.md#fidl_decode-fidl_decode_msg
+// https://fuchsia.dev/fuchsia-src/development/languages/fidl/tutorials/tutorial-c#fidl_encode-fidl_encode_msg
 zx_status_t fidl_decode(const fidl_type_t* type, void* bytes, uint32_t num_bytes,
                         const zx_handle_t* handles, uint32_t num_handles,
                         const char** error_msg_out);
