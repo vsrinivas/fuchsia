@@ -51,7 +51,7 @@ class Flatland : public fuchsia::ui::scenic::internal::Flatland {
   explicit Flatland(
       async_dispatcher_t* dispatcher,
       fidl::InterfaceRequest<fuchsia::ui::scenic::internal::Flatland> request,
-      scheduling::SessionId session_id,
+      scheduling::SessionId session_id, std::function<void()> destroy_instance_function,
       const std::shared_ptr<FlatlandPresenter>& flatland_presenter,
       const std::shared_ptr<LinkSystem>& link_system,
       const std::shared_ptr<UberStructSystem::UberStructQueue>& uber_struct_queue,
@@ -157,6 +157,11 @@ class Flatland : public fuchsia::ui::scenic::internal::Flatland {
   // The unique SessionId for this Flatland instance. Used to schedule Presents and register
   // UberStructs with the UberStructSystem.
   const scheduling::SessionId session_id_;
+
+  // A function that, when called, will destroy this instance. Necessary because an async::Wait can
+  // only wait on peer channel destruction, not "this" channel destruction, so the FlatlandManager
+  // cannot detect if this instance closes |binding_|.
+  std::function<void()> destroy_instance_function_;
 
   // A Present2Helper to facilitate sendng the appropriate OnFramePresented() callback to FIDL
   // clients when frames are presented to the display.

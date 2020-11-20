@@ -27,7 +27,7 @@ namespace flatland {
 class FlatlandManager : public scheduling::SessionUpdater {
  public:
   FlatlandManager(
-      const std::shared_ptr<FlatlandPresenter>& flatland_presenter,
+      async_dispatcher_t* dispatcher, const std::shared_ptr<FlatlandPresenter>& flatland_presenter,
       const std::shared_ptr<UberStructSystem>& uber_struct_system,
       const std::shared_ptr<LinkSystem>& link_system,
       const std::vector<std::shared_ptr<BufferCollectionImporter>>& buffer_collection_importers);
@@ -53,6 +53,7 @@ class FlatlandManager : public scheduling::SessionUpdater {
   // Removes the Flatland instance associated with |session_id|.
   void RemoveFlatlandInstance(scheduling::SessionId session_id);
 
+  async_dispatcher_t* dispatcher_;
   std::shared_ptr<FlatlandPresenter> flatland_presenter_;
   std::shared_ptr<UberStructSystem> uber_struct_system_;
   std::shared_ptr<LinkSystem> link_system_;
@@ -92,6 +93,11 @@ class FlatlandManager : public scheduling::SessionUpdater {
       FlatlandInstance* instance,
       const std::map<scheduling::PresentId, /*latched_time*/ zx::time>& latched_times,
       scheduling::PresentTimestamps present_times);
+
+  // The function passed into a Flatland constructor that allows the Flatland instance to trigger
+  // its own destruction when the client makes an unrecoverable error. This function will be called
+  // on Flatland instance worker threads.
+  void DestroyInstanceFunction(scheduling::SessionId session_id);
 };
 
 }  // namespace flatland

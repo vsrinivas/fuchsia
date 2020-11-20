@@ -42,7 +42,8 @@ GlobalImageId GenerateUniqueImageId() {
 Flatland::Flatland(
     async_dispatcher_t* dispatcher,
     fidl::InterfaceRequest<fuchsia::ui::scenic::internal::Flatland> request,
-    scheduling::SessionId session_id, const std::shared_ptr<FlatlandPresenter>& flatland_presenter,
+    scheduling::SessionId session_id, std::function<void()> destroy_instance_function,
+    const std::shared_ptr<FlatlandPresenter>& flatland_presenter,
     const std::shared_ptr<LinkSystem>& link_system,
     const std::shared_ptr<UberStructSystem::UberStructQueue>& uber_struct_queue,
     const std::vector<std::shared_ptr<BufferCollectionImporter>>& buffer_collection_importers,
@@ -50,6 +51,7 @@ Flatland::Flatland(
     : dispatcher_(dispatcher),
       binding_(this, std::move(request), dispatcher_),
       session_id_(session_id),
+      destroy_instance_function_(std::move(destroy_instance_function)),
       present2_helper_([this](fuchsia::scenic::scheduling::FramePresentedInfo info) {
         binding_.events().OnFramePresented(std::move(info));
       }),
@@ -69,7 +71,10 @@ void Flatland::Present(zx_time_t requested_presentation_time, std::vector<zx::ev
                        std::vector<zx::event> release_fences, PresentCallback callback) {
   if (present_tokens_remaining_ == 0) {
     callback(fit::error(Error::NO_PRESENTS_REMAINING));
-    // TODO(fxbug.dev/62292): kill the channel.
+    // Calling this function will cancel any Waits that might be attached to the handle in
+    // |binding_|, which must be cancelled before the handle is destroyed.
+    destroy_instance_function_();
+    binding_.Close(ZX_ERR_BAD_STATE);
     return;
   }
   present_tokens_remaining_--;

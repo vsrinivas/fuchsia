@@ -269,9 +269,11 @@ class FlatlandTest : public gtest::TestLoopFixture {
     fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator;
     auto session_id = scheduling::GetNextSessionId();
     flatlands_.push_back({});
-    return Flatland(dispatcher(), flatlands_.back().NewRequest(), session_id, flatland_presenter_,
-                    link_system_, uber_struct_system_->AllocateQueueForSession(session_id),
-                    {buffer_collection_importer_}, std::move(sysmem_allocator));
+    return Flatland(
+        dispatcher(), flatlands_.back().NewRequest(), session_id,
+        /*destroy_instance_functon=*/[]() {}, flatland_presenter_, link_system_,
+        uber_struct_system_->AllocateQueueForSession(session_id), {buffer_collection_importer_},
+        std::move(sysmem_allocator));
   }
 
   fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> CreateToken() {
@@ -3483,10 +3485,10 @@ TEST_F(FlatlandTest, BufferCollectionImportPassesAndFailsOnDifferentImportersTes
   fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator;
   auto session_id = scheduling::GetNextSessionId();
   fuchsia::ui::scenic::internal::FlatlandPtr flatland_ptr;
-  auto flatland = Flatland(dispatcher(), flatland_ptr.NewRequest(), session_id, flatland_presenter_,
-                           link_system_, uber_struct_system_->AllocateQueueForSession(session_id),
-                           {buffer_collection_importer_, local_buffer_collection_importer},
-                           std::move(sysmem_allocator));
+  auto flatland = Flatland(
+      dispatcher(), flatland_ptr.NewRequest(), session_id, /*destroy_instance_functon=*/[]() {},
+      flatland_presenter_, link_system_, uber_struct_system_->AllocateQueueForSession(session_id),
+      {buffer_collection_importer_, local_buffer_collection_importer}, std::move(sysmem_allocator));
 
   EXPECT_CALL(*mock_buffer_collection_importer_, ImportBufferCollection(_, _, _))
       .WillOnce(Return(true));
@@ -3514,10 +3516,11 @@ TEST_F(FlatlandTest, ImageImportPassesAndFailsOnDifferentImportersTest) {
   fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator;
   auto session_id = scheduling::GetNextSessionId();
   fuchsia::ui::scenic::internal::FlatlandPtr flatland_ptr;
-  auto flatland = Flatland(dispatcher(), flatland_ptr.NewRequest(), session_id, flatland_presenter_,
-                           link_system_, uber_struct_system_->AllocateQueueForSession(session_id),
-                           {buffer_collection_importer_, local_buffer_collection_importer},
-                           std::move(sysmem_allocator));
+  auto flatland = Flatland(
+      dispatcher(), flatland_ptr.NewRequest(), session_id,
+      /*destroy_instance_functon=*/[]() {}, flatland_presenter_, link_system_,
+      uber_struct_system_->AllocateQueueForSession(session_id),
+      {buffer_collection_importer_, local_buffer_collection_importer}, std::move(sysmem_allocator));
 
   sysmem_util::GlobalBufferCollectionId global_collection_id;
   EXPECT_CALL(*mock_buffer_collection_importer_, ImportBufferCollection(_, _, _))
