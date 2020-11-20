@@ -131,20 +131,20 @@ async fn test_font_collections() -> Result<(), Error> {
     // return the same buffer with different font index values.
     let noto_sans_cjk_ja = get_font_info(
         &font_provider,
-        Some("NotoSansCJK".to_string()),
+        Some("Noto Sans CJK JP".to_string()),
         Some(vec!["ja".to_string()]),
         '\0',
     )
     .await
-    .context("Failed to load NotoSansCJK font")?;
+    .context("Failed to load NotoSansCJK JP font")?;
     let noto_sans_cjk_sc = get_font_info(
         &font_provider,
-        Some("NotoSansCJK".to_string()),
+        Some("Noto Sans CJK SC".to_string()),
         Some(vec!["zh-Hans".to_string()]),
         '\0',
     )
     .await
-    .context("Failed to load NotoSansCJK font")?;
+    .context("Failed to load NotoSansCJK SC font")?;
 
     assert_buf_eq!(noto_sans_cjk_ja, noto_sans_cjk_sc);
 
@@ -165,12 +165,12 @@ async fn test_fallback() -> Result<(), Error> {
 
     let noto_sans_cjk_ja = get_font_info(
         &font_provider,
-        Some("NotoSansCJK".to_string()),
+        Some("Noto Sans CJK JP".to_string()),
         Some(vec!["ja".to_string()]),
         '\0',
     )
     .await
-    .context("Failed to load NotoSansCJK font")?;
+    .context("Failed to load NotoSansCJK JP font")?;
 
     let noto_sans_cjk_ja_by_char = get_font_info(
         &font_provider,
@@ -179,7 +179,7 @@ async fn test_fallback() -> Result<(), Error> {
         'な',
     )
     .await
-    .context("Failed to load NotoSansCJK font")?;
+    .context("Failed to load NotoSansCJK JP font")?;
 
     // Same font should be returned in both cases.
     assert_buf_eq!(noto_sans_cjk_ja, noto_sans_cjk_ja_by_char);
@@ -193,7 +193,7 @@ async fn test_fallback_group() -> Result<(), Error> {
 
     let noto_serif_cjk_ja = get_font_info(
         &font_provider,
-        Some("Noto Serif CJK".to_string()),
+        Some("Noto Serif CJK JP".to_string()),
         Some(vec!["ja".to_string()]),
         '\0',
     )
