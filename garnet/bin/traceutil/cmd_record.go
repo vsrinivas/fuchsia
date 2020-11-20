@@ -37,9 +37,7 @@ type reportGenerator struct {
 }
 
 var (
-	builtinReports = map[string]reportGenerator{
-		"html": {getHtmlGenerator(), "html"},
-	}
+	builtinReports = map[string]reportGenerator{}
 )
 
 func NewCmdRecord() *cmdRecord {
@@ -51,7 +49,7 @@ func NewCmdRecord() *cmdRecord {
 		"Prefix for trace file names.  Defaults to 'trace-<timestamp>'.")
 	cmd.flags.StringVar(&cmd.targetHostname, "target", "", "Target hostname. Can also be set in environment with TRACEUTIL_TARGET_HOST.")
 	cmd.flags.StringVar(&cmd.targetPort, "target-port", "", "Target SSH port. Can also be set in environment with TRACEUTIL_TARGET_PORT.")
-	cmd.flags.StringVar(&cmd.reportType, "report-type", "html", "Report type.")
+	cmd.flags.StringVar(&cmd.reportType, "report-type", "", "Report type.")
 	cmd.flags.BoolVar(&cmd.stdout, "stdout", false,
 		"Send the report to stdout, in addition to writing to file.")
 	cmd.flags.StringVar(&cmd.zedmon, "zedmon", "",
@@ -76,7 +74,7 @@ func (*cmdRecord) Name() string {
 }
 
 func (*cmdRecord) Synopsis() string {
-	return "Record a trace on a target, download, and convert to HTML."
+	return "Record a trace on a target, download, and convert to JSON."
 }
 
 func (cmd *cmdRecord) Usage() string {
@@ -97,21 +95,23 @@ func (cmd *cmdRecord) Execute(_ context.Context, f *flag.FlagSet,
 	checkBuildConfiguration()
 
 	// Flag errors in report type early.
-	reportGenerator := builtinReports[cmd.reportType]
 	generatorPath := ""
 	outputFileSuffix := ""
-	if reportGenerator.generatorPath != "" {
-		generatorPath = reportGenerator.generatorPath
-		outputFileSuffix = reportGenerator.outputFileSuffix
-	} else {
-		generatorPath = getExternalReportGenerator(cmd.reportType)
-		outputFileSuffix = cmd.reportType
-	}
-	fmt.Printf("generator path: %s\n", generatorPath)
-	if _, err := os.Stat(generatorPath); os.IsNotExist(err) {
-		fmt.Printf("No generator for report type \"%s\"\n",
-			cmd.reportType)
-		return subcommands.ExitFailure
+	if cmd.reportType != "" {
+		reportGenerator := builtinReports[cmd.reportType]
+		if reportGenerator.generatorPath != "" {
+			generatorPath = reportGenerator.generatorPath
+			outputFileSuffix = reportGenerator.outputFileSuffix
+		} else {
+			generatorPath = getExternalReportGenerator(cmd.reportType)
+			outputFileSuffix = cmd.reportType
+		}
+		fmt.Printf("generator path: %s\n", generatorPath)
+		if _, err := os.Stat(generatorPath); os.IsNotExist(err) {
+			fmt.Printf("No generator for report type \"%s\"\n",
+				cmd.reportType)
+			return subcommands.ExitFailure
+		}
 	}
 
 	// Establish connection to runtime host.
@@ -244,12 +244,11 @@ func (cmd *cmdRecord) Execute(_ context.Context, f *flag.FlagSet,
 	}
 
 	// TODO(fxbug.dev/27613): Remove remote file.  Add command line option to leave it.
-
 	title := cmd.getReportTitle()
 
 	jsonFilename := localFilename
+	jsonFilename = replaceFilenameExt(localFilename, "json")
 	if cmd.captureConfig.Binary {
-		jsonFilename = replaceFilenameExt(localFilename, "json")
 		jsonGenerator := getJsonGenerator()
 		err = convertToJson(jsonGenerator, cmd.captureConfig.Compress, jsonFilename, localFilename)
 		if err != nil {
@@ -264,12 +263,12 @@ func (cmd *cmdRecord) Execute(_ context.Context, f *flag.FlagSet,
 		err = ioutil.WriteFile(zFilename, zData, 0644)
 		if err != nil {
 			fmt.Printf("Failed to write zedmon trace to file")
-			err = convertToHtml(generatorPath, outputFilename, title, jsonFilename)
+			err = convertWithGenerator(generatorPath, outputFilename, title, jsonFilename)
 		} else {
-			err = convertToHtml(generatorPath, outputFilename, title, jsonFilename, zFilename)
+			err = convertWithGenerator(generatorPath, outputFilename, title, jsonFilename, zFilename)
 		}
 	} else {
-		err = convertToHtml(generatorPath, outputFilename, title, jsonFilename)
+		err = convertWithGenerator(generatorPath, outputFilename, title, jsonFilename)
 	}
 	if err != nil {
 		fmt.Println(err.Error())
@@ -288,8 +287,14 @@ func (cmd *cmdRecord) Execute(_ context.Context, f *flag.FlagSet,
 			fmt.Println(reportErr.Error())
 			return subcommands.ExitFailure
 		}
-	}
+	} else {
 
+		fmt.Println("\nTrace Complete:")
+		if cmd.captureConfig.Binary {
+			fmt.Printf("- %s can be viewed using https://ui.perfetto.dev/\n", localFilename)
+		}
+		fmt.Printf("- %s can be viewed using chrome://tracing\n", jsonFilename)
+	}
 	return subcommands.ExitSuccess
 }
 

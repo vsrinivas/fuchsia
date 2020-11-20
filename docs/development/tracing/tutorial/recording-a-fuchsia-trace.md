@@ -52,7 +52,6 @@ tracing specification file. For more information, see
  * Takes a 10 second trace on the Fuchsia target with the default options.
    This records basic graphics data and thread CPU usage.
  * Copies the trace from the Fuchsia target device to your development host.
- * Converts the trace data into a viewable HTML file.
 
 If you specify a component, the component runs after tracing has started.
 This behavior is intended to not miss any early trace events in the component.

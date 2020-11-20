@@ -25,7 +25,7 @@ func (*cmdConvert) Name() string {
 }
 
 func (*cmdConvert) Synopsis() string {
-	return "Converts a JSON trace to a viewable HTML trace, or an FXT trace to both JSON and HTML."
+	return "Converts an FXT trace to JSON."
 }
 
 func (cmd *cmdConvert) Usage() string {
@@ -54,20 +54,6 @@ func (cmd *cmdConvert) Execute(_ context.Context, f *flag.FlagSet,
 			if err != nil {
 				ret = subcommands.ExitFailure
 				continue
-			}
-
-			htmlGenerator := getHtmlGenerator()
-			htmlFilename := basename + ".html"
-			err = convertToHtml(htmlGenerator, htmlFilename, "", jsonFilename)
-			if err != nil {
-				ret = subcommands.ExitFailure
-			}
-		} else if extension == ".json" || extension == ".json.gz" {
-			htmlGenerator := getHtmlGenerator()
-			htmlFilename := basename + ".html"
-			err := convertToHtml(htmlGenerator, htmlFilename, "", filename)
-			if err != nil {
-				ret = subcommands.ExitFailure
 			}
 		} else {
 			fmt.Printf("Skipping file with unknown extension: %s (%s)\n", filename, extension)

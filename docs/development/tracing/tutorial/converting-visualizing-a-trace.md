@@ -33,8 +33,7 @@ The following types of file formats can store Fuchsia trace data:
 
 ## Convert Fuchsia trace files
 
-You can convert one or more files from FXT to JSON, and then to HTML with the
-following:
+You can convert one or more files from FXT to JSON with the following:
 
 Note: If you collect your trace with `fx traceutil record`, the conversion
 is performed automatically.
@@ -43,26 +42,13 @@ is performed automatically.
 <code class="devsite-terminal">fx traceutil convert <var>FILE</var></code>
 </pre>
 
-Depending on the file format that you specify, `fx traceutil convert`
-does the following:
-
- * FXT files produce a corresponding JSON file and a corresponding HTML file.
- * JSON files produce a corresponding HTML file.
-
 ## Visualize a trace
 
 There are different ways to visualize a trace based on the format of that trace:
 
-* [HTML trace](#html-trace)
 * [FXT trace](#fxt-trace)
 * [JSON trace](#json-trace)
-
-### HTML trace {#html-trace}
-
-To visualize this data, you can use a web browser such as
-[Chrome](https://google.com/chrome). For more information on how to use
-Chrome's trace view, see
-[The Trace Event Profiling Tool](https://www.chromium.org/developers/how-tos/trace-event-profiling-tool).
+* [HTML trace](#html-trace)
 
 ### FXT trace {#fxt-trace}
 
@@ -74,15 +60,28 @@ To visualize an FXT trace, you can use the
 
 To visualize this data, you can use Chromium's
 [Trace-Viewer](https://github.com/catapult-project/catapult/tree/HEAD/tracing).
+The viewer is built into [Chrome](https://google.com/chrome) and can be loaded with chrome://tracing.
+For more information on how to use Chrome's trace viewer, see
+[The Trace Event Profiling Tool](https://www.chromium.org/developers/how-tos/trace-event-profiling-tool).
+
+
+### HTML trace {#html-trace}
+
+To generate an HTML trace (viewer bundled with trace data) you'll need to run trace2html
+from the [Chromium Catapult Repository](https://github.com/catapult-project). From the
+catapult repository, run:
+
+<pre class="prettyprint">
+<code class="devsite-terminal">./tracing/bin/trace2html <var>JSON_TRACE_FILE</var></code>
+</pre>
 
 ## Analyze a trace file {#analyze-a-trace-file}
 
-Note: These instructions detail how to visualize an [HTML trace](#html-trace) with
+Note: These instructions detail how to visualize an [JSON trace](#json-trace) with
 Google Chrome.
 
-To analyze an HTML trace file, open the HTML file with Google Chrome. For
-example, if you saved your trace file in `/tmp/trace.html` on your host,
-you can browse to `file:///tmp/trace.html` to view your HTML trace file.
+To analyze a JSON trace file, open a new tab in Google Chrome and navigate to chrome://tracing.
+Click the `Load` button and open your JSON trace file.
 
 ### Navigation controls
 

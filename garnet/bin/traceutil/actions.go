@@ -217,8 +217,14 @@ func captureTrace(config *captureTraceConfig, conn *TargetConnection, traceOutpu
 	return err
 }
 
-func convertToHtml(generator string, outputPath string,
+func convertWithGenerator(generator string, outputPath string,
 	title string, inputPaths ...string) error {
+
+	// Don't run a generator if one is not specified.
+	if generator == "" {
+		return nil
+	}
+
 	fmt.Printf("Converting %v to %s... ", inputPaths, outputPath)
 	var args []string
 	args = append(args, "--output="+outputPath)
