@@ -10,6 +10,7 @@ executable("vkext") {
     "vk_ext_buffer_collection.cc",
     "vk_fuchsia_external_memory.cc",
     "vk_fuchsia_external_semaphore.cc",
+    "vk_fuchsia_memory_control.cc",
   ]
 
   deps = [
@@ -22,6 +23,7 @@ executable("vkext") {
     "//src/graphics/tests/common",
     "//src/lib/fxl/test:test_settings",
     "//third_party/googletest:gtest",
+    "//zircon/system/ulib/fbl",
   ]
 
   deps += [ "//src/lib/vulkan" ]
