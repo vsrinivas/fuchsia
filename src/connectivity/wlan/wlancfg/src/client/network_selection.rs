@@ -614,48 +614,12 @@ mod tests {
         let mock_scan_results = vec![
             types::ScanResult {
                 id: test_id_1.clone(),
-                entries: vec![
-                    types::Bss {
-                        bssid: [0, 1, 2, 3, 4, 5],
-                        rssi: -14,
-                        frequency: 2400,
-                        timestamp_nanos: 0,
-                        snr_db: 1,
-                        observed_in_passive_scan: true,
-                        compatible: true,
-                    },
-                    types::Bss {
-                        bssid: [6, 7, 8, 9, 10, 11],
-                        rssi: -10,
-                        frequency: 2410,
-                        timestamp_nanos: 1,
-                        snr_db: 2,
-                        observed_in_passive_scan: true,
-                        compatible: true,
-                    },
-                    types::Bss {
-                        bssid: [0, 1, 2, 3, 4, 5],
-                        rssi: -20,
-                        frequency: 2400,
-                        timestamp_nanos: 0,
-                        snr_db: 3,
-                        observed_in_passive_scan: false,
-                        compatible: false,
-                    },
-                ],
+                entries: vec![generate_random_bss(), generate_random_bss(), generate_random_bss()],
                 compatibility: types::Compatibility::Supported,
             },
             types::ScanResult {
                 id: test_id_2.clone(),
-                entries: vec![types::Bss {
-                    bssid: [20, 30, 40, 50, 60, 70],
-                    rssi: -15,
-                    frequency: 2400,
-                    timestamp_nanos: 0,
-                    snr_db: 4,
-                    observed_in_passive_scan: false,
-                    compatible: false,
-                }],
+                entries: vec![generate_random_bss()],
                 compatibility: types::Compatibility::DisallowedNotSupported,
             },
         ];
@@ -708,48 +672,12 @@ mod tests {
         let mock_scan_results = vec![
             types::ScanResult {
                 id: test_id_1.clone(),
-                entries: vec![
-                    types::Bss {
-                        bssid: [0, 1, 2, 3, 4, 5],
-                        rssi: -14,
-                        frequency: 2400,
-                        timestamp_nanos: 0,
-                        snr_db: 1,
-                        observed_in_passive_scan: true,
-                        compatible: true,
-                    },
-                    types::Bss {
-                        bssid: [6, 7, 8, 9, 10, 11],
-                        rssi: -10,
-                        frequency: 2410,
-                        timestamp_nanos: 1,
-                        snr_db: 2,
-                        observed_in_passive_scan: true,
-                        compatible: false,
-                    },
-                    types::Bss {
-                        bssid: [0, 1, 2, 3, 4, 5],
-                        rssi: -20,
-                        frequency: 2400,
-                        timestamp_nanos: 0,
-                        snr_db: 3,
-                        observed_in_passive_scan: false,
-                        compatible: true,
-                    },
-                ],
+                entries: vec![generate_random_bss(), generate_random_bss(), generate_random_bss()],
                 compatibility: types::Compatibility::Supported,
             },
             types::ScanResult {
                 id: test_id_2.clone(),
-                entries: vec![types::Bss {
-                    bssid: [20, 30, 40, 50, 60, 70],
-                    rssi: -15,
-                    frequency: 2400,
-                    timestamp_nanos: 0,
-                    snr_db: 4,
-                    observed_in_passive_scan: true,
-                    compatible: false,
-                }],
+                entries: vec![generate_random_bss()],
                 compatibility: types::Compatibility::DisallowedNotSupported,
             },
         ];
@@ -1370,15 +1298,7 @@ mod tests {
         let id = types::NetworkIdentifier { ssid: ssid, type_: types::SecurityType::Wpa2 };
         let mixed_scan_results = vec![types::ScanResult {
             id: id.clone(),
-            entries: vec![types::Bss {
-                bssid: [10, 9, 8, 7, 6, 5],
-                rssi: -70,
-                frequency: 2400,
-                timestamp_nanos: 0,
-                snr_db: 10,
-                observed_in_passive_scan: true,
-                compatible: true,
-            }],
+            entries: vec![types::Bss { compatible: true, ..generate_random_bss() }],
             compatibility: types::Compatibility::Supported,
         }];
         let mut updater = network_selector.generate_scan_result_updater();
@@ -1390,7 +1310,10 @@ mod tests {
             Some((
                 id.clone(),
                 credential,
-                types::NetworkSelectionMetadata { observed_in_passive_scan: true }
+                types::NetworkSelectionMetadata {
+                    observed_in_passive_scan: mixed_scan_results[0].entries[0]
+                        .observed_in_passive_scan
+                }
             ))
         );
         assert_eq!(
@@ -1406,6 +1329,11 @@ mod tests {
             bssid: bss.as_slice().try_into().unwrap(),
             rssi: rng.gen_range(-100, 20),
             frequency: rng.gen_range(2000, 6000),
+            channel: types::WlanChan {
+                primary: rng.gen_range(1, 255),
+                cbw: fidl_common::Cbw::Cbw20,
+                secondary80: 0,
+            },
             timestamp_nanos: 0,
             snr_db: rng.gen_range(-20, 50),
             observed_in_passive_scan: rng.gen::<bool>(),
@@ -1460,46 +1388,17 @@ mod tests {
             types::ScanResult {
                 id: test_id_1.clone(),
                 entries: vec![
-                    types::Bss {
-                        bssid: [0, 1, 2, 3, 4, 5],
-                        rssi: -14,
-                        frequency: 2400,
-                        timestamp_nanos: 0,
-                        snr_db: 1,
-                        observed_in_passive_scan: true,
-                        compatible: true,
-                    },
-                    types::Bss {
-                        bssid: [6, 7, 8, 9, 10, 11],
-                        rssi: -10,
-                        frequency: 2410,
-                        timestamp_nanos: 1,
-                        snr_db: 2,
-                        observed_in_passive_scan: true,
-                        compatible: true,
-                    },
-                    types::Bss {
-                        bssid: [0, 1, 2, 3, 4, 5],
-                        rssi: -20,
-                        frequency: 2400,
-                        timestamp_nanos: 0,
-                        snr_db: 3,
-                        observed_in_passive_scan: false,
-                        compatible: true,
-                    },
+                    types::Bss { observed_in_passive_scan: true, ..generate_random_bss() },
+                    types::Bss { observed_in_passive_scan: true, ..generate_random_bss() },
+                    types::Bss { observed_in_passive_scan: false, ..generate_random_bss() },
                 ],
                 compatibility: types::Compatibility::Supported,
             },
             types::ScanResult {
                 id: test_id_2.clone(),
                 entries: vec![types::Bss {
-                    bssid: [20, 30, 40, 50, 60, 70],
-                    rssi: -15,
-                    frequency: 2400,
-                    timestamp_nanos: 0,
-                    snr_db: 4,
                     observed_in_passive_scan: true,
-                    compatible: true,
+                    ..generate_random_bss()
                 }],
                 compatibility: types::Compatibility::Supported,
             },

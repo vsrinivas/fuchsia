@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use fidl_fuchsia_wlan_common as fidl_common;
 use fidl_fuchsia_wlan_policy as fidl_policy;
 
 pub type NetworkIdentifier = fidl_policy::NetworkIdentifier;
@@ -9,6 +10,7 @@ pub type SecurityType = fidl_policy::SecurityType;
 pub type ConnectionState = fidl_policy::ConnectionState;
 pub type DisconnectStatus = fidl_policy::DisconnectStatus;
 pub type Compatibility = fidl_policy::Compatibility;
+pub type WlanChan = fidl_common::WlanChan;
 
 // An internal version of fidl_policy::ScanResult that can be cloned
 #[derive(Debug, Clone, PartialEq)]
@@ -43,6 +45,8 @@ pub struct Bss {
     pub snr_db: i8,
     /// Operating frequency for this network (in MHz).
     pub frequency: u32,
+    /// Channel for this network.
+    pub channel: WlanChan,
     /// Realtime timestamp for this scan result entry.
     pub timestamp_nanos: i64,
     /// Seen in a passive scan.

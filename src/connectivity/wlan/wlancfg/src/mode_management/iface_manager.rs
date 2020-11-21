@@ -3870,6 +3870,11 @@ mod tests {
                     compatible: true,
                     observed_in_passive_scan: false,
                     snr_db: 20,
+                    channel: fidl_fuchsia_wlan_common::WlanChan {
+                        primary: 8,
+                        cbw: fidl_fuchsia_wlan_common::Cbw::Cbw20,
+                        secondary80: 0,
+                    },
                 }],
                 compatibility: client_types::Compatibility::Supported,
             }];
