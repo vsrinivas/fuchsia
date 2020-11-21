@@ -8,69 +8,30 @@
 #include <string>
 #include <vector>
 
-#include "src/media/audio/lib/test/hermetic_audio_test.h"
+#include "src/media/audio/lib/test/hermetic_pipeline_test.h"
 
 namespace media::audio::test {
 
-// This class defines a framework for standard tests of an output pipeline.
-// There are two kinds of tests:
+// These tests feed an input waveform into a pipeline, producing an output waveform,
+// which is then compared against an expected output waveform in the following ways:
 //
-// 1. Waveform tests feed in an arbitrary waveform and validate that the output
-//    is an approximate match for an expected "golden" output.
+// 1. Ensure RMSE < threshold, where "RMSE" is the "RMS Error", computed as the RMS of
+//    the difference between the actual and expected outputs. This validates that the
+//    output approximately matches the input.
 //
-// 2. Impulse tests feed in a sequence of impulses and validate that they appear
-//    in the output at the correct locations.
+// 2. Ensure RMS ~= expected RMS. This validates loudness of the output audio. This is
+//    technically subsumed by RMSE, but included to help identify cases where the output
+//    differs from the expected output by just volume, not shape.
 //
-class HermeticGoldenTest : public HermeticAudioTest {
+// 3. Ensure FFT(x) ~= expected magnitude. This uses an FFT to compute the magnitude of
+//    the output signal at a given set of frequencies, then compares those magnitudes to
+//    an FFT computed on the expected output. This validates that the output has the
+//    expected frequency response.
+//
+// Together, these three comparisons ensure that the actual output audio is approximately
+// equal to the expected output, within thresholds defined by the test case.
+class HermeticGoldenTest : public HermeticPipelineTest {
  public:
-  void TearDown() {
-    // None of these tests should have overflows or underflows.
-    ExpectNoOverflowsOrUnderflows();
-    HermeticAudioTest::TearDown();
-  }
-
-  struct PipelineConstants {
-    // The positive and negative filter widths of the output pipeline, in unit frames.
-    // The positive width describes how far forward the filter looks.
-    // The negative width describes how far backward the filter looks.
-    //
-    // If we play a sound at frame X that lasts until frame Y, we expect sound within the
-    // range [X-pos_filter_width, Y+neg_filter_width] and silence outside of that range.
-    //
-    // Put differently, pos_filter_width gives the number of "ring in" or "fade in" frames
-    // while neg_filter_width gives the number of "ring out" or "fade out" frames.
-    //
-    // These should be upper-bounds; they don't need to be exact.
-    size_t pos_filter_width = 0;
-    size_t neg_filter_width = 0;
-
-    // Gain of the pipeline's output device.
-    // The test will assert that the output device is created with device gain set to this value.
-    float output_device_gain_db = 0;
-  };
-
-  ////////////////////////////////////////////////////////////////////////////////////////
-  // Waveform tests
-  //
-  // These tests feed an input waveform into a pipeline, producing an output waveform,
-  // which is then compared against an expected output waveform in the following ways:
-  //
-  // 1. Ensure RMSE < threshold, where "RMSE" is the "RMS Error", computed as the RMS of
-  //    the difference between the actual and expected outputs. This validates that the
-  //    output approximately matches the input.
-  //
-  // 2. Ensure RMS ~= expected RMS. This validates loudness of the output audio. This is
-  //    technically subsumed by RMSE, but included to help identify cases where the output
-  //    differs from the expected output by just volume, not shape.
-  //
-  // 3. Ensure FFT(x) ~= expected magnitude. This uses an FFT to compute the magnitude of
-  //    the output signal at a given set of frequencies, then compares those magnitudes to
-  //    an FFT computed on the expected output. This validates that the output has the
-  //    expected frequency response.
-  //
-  // Together, these three comparisons ensure that the actual output audio is approximately
-  // equal to the expected output, within thresholds defined by the test case.
-
   template <fuchsia::media::AudioSampleFormat InputFormat,
             fuchsia::media::AudioSampleFormat OutputFormat>
   struct WaveformTestCase {
@@ -106,12 +67,11 @@ class HermeticGoldenTest : public HermeticAudioTest {
             fuchsia::media::AudioSampleFormat OutputFormat>
   void RunWaveformTest(const WaveformTestCase<InputFormat, OutputFormat>& tc);
 
-  ////////////////////////////////////////////////////////////////////////////////////////
-  // Impulse tests
-  //
   // These tests feed one or more impulses into a pipeline, producing an output buffer,
   // then validate that the impulses appear at the correct positions in the output.
-
+  //
+  // TODO(mpuryear): remove HermeticGoldenTest::RunImpulseTest etc, after clients move to
+  // HermeticImpulseTest.
   template <fuchsia::media::AudioSampleFormat InputFormat,
             fuchsia::media::AudioSampleFormat OutputFormat>
   struct ImpulseTestCase {
@@ -122,7 +82,7 @@ class HermeticGoldenTest : public HermeticAudioTest {
     TypedFormat<OutputFormat> output_format;
 
     // Width, height, and location of the input impulses. Impulses should be separated by
-    // at least pipeline.pos_filter_width + pipeline.neg_filter_width frames.
+    // at least pipeline.pre_end_ramp_frames + pipeline.post_start_ramp_frames.
     size_t impulse_width_in_frames;
     typename SampleFormatTraits<InputFormat>::SampleT impulse_magnitude;
     std::vector<size_t> impulse_locations_in_frames;

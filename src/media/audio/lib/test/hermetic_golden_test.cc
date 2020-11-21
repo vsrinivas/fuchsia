@@ -14,6 +14,7 @@
 #include "src/media/audio/lib/analysis/generators.h"
 #include "src/media/audio/lib/format/audio_buffer.h"
 #include "src/media/audio/lib/test/comparators.h"
+#include "src/media/audio/lib/test/hermetic_pipeline_test.h"
 #include "src/media/audio/lib/test/renderer_shim.h"
 #include "src/media/audio/lib/wav/wav_writer.h"
 
@@ -21,31 +22,7 @@ using ASF = fuchsia::media::AudioSampleFormat;
 
 namespace media::audio::test {
 
-//
-// Command line flags set in hermetic_golden_test_main.cc.
-//
-
-// When enabled, save input and output as WAV files for comparison to the golden outputs.
-// The saved files are:
-//
-//    <testname>_input.wav           - the input audio buffer
-//    <testname>_ring_buffer.wav     - contents of the entire output ring buffer
-//    <testname>_output.wav          - portion of the output ring buffer expected to be non-silent
-//    <testname>_expected_output.wav - expected contents of <testname>_output.wav
-//
-// See
-// ./hermetic_golden_test_update_goldens.sh for a semi-automated process.
-bool flag_save_inputs_and_outputs = false;
-
 namespace {
-
-// Each test can compute a precise number of expected output frames given the number of
-// input frames. Our device ring buffer includes frames than necessary so that, in case
-// we write too many output frames due to a bug, we'll have plenty of space without
-// wrapping around. This helps more easily detect such bugs.
-size_t AddSlackToOutputFrames(size_t expected_output_frames) {
-  return static_cast<size_t>(static_cast<double>(expected_output_frames) * 1.5);
-}
 
 // Using a macro here to preserve line numbers in the test error messages.
 #define EXPECT_WITHIN_RELATIVE_ERROR(actual, expected, threshold)                          \
@@ -59,50 +36,27 @@ size_t AddSlackToOutputFrames(size_t expected_output_frames) {
     }                                                                                      \
   } while (0)
 
-template <ASF SampleFormat>
-void WriteWavFile(const std::string& test_name, const std::string& file_name_suffix,
-                  AudioBufferSlice<SampleFormat> slice) {
-  WavWriter<true> w;
-  auto file_name = "/cache/" + test_name + "_" + file_name_suffix + ".wav";
-  auto& format = slice.format();
-  if (!w.Initialize(file_name.c_str(), format.sample_format(), format.channels(),
-                    format.frames_per_second(), format.bytes_per_frame() * 8 / format.channels())) {
-    FX_LOGS(ERROR) << "Could not create output file " << file_name;
-    return;
-  }
-  // TODO(fxbug.dev/52161): WavWriter.Write() should take const data
-  auto ok =
-      w.Write(
-          const_cast<typename AudioBufferSlice<SampleFormat>::SampleT*>(&slice.buf()->samples()[0]),
-          slice.NumBytes()) &&
-      w.UpdateHeader() && w.Close();
-  if (!ok) {
-    FX_LOGS(ERROR) << "Error writing to output file " << file_name;
-  } else {
-    FX_LOGS(INFO) << "Wrote output file " << file_name;
-  }
-}
-
 // WaveformTestRunner wraps some methods used by RunTestCase.
-template <ASF InputF, ASF OutputF>
+template <ASF InputFormat, ASF OutputFormat>
 class WaveformTestRunner {
  public:
-  WaveformTestRunner(const HermeticGoldenTest::WaveformTestCase<InputF, OutputF>& tc) : tc_(tc) {}
+  WaveformTestRunner(const HermeticGoldenTest::WaveformTestCase<InputFormat, OutputFormat>& tc)
+      : tc_(tc) {}
 
-  void CompareRMSE(AudioBufferSlice<OutputF> actual, AudioBufferSlice<OutputF> expected);
-  void CompareRMS(AudioBufferSlice<OutputF> actual, AudioBufferSlice<OutputF> expected);
-  void CompareFreqs(AudioBufferSlice<OutputF> actual, AudioBufferSlice<OutputF> expected,
+  void CompareRMSE(AudioBufferSlice<OutputFormat> actual, AudioBufferSlice<OutputFormat> expected);
+  void CompareRMS(AudioBufferSlice<OutputFormat> actual, AudioBufferSlice<OutputFormat> expected);
+  void CompareFreqs(AudioBufferSlice<OutputFormat> actual, AudioBufferSlice<OutputFormat> expected,
                     std::vector<size_t> hz_signals);
 
-  void ExpectSilence(AudioBufferSlice<OutputF> actual);
+  void ExpectSilence(AudioBufferSlice<OutputFormat> actual);
 
  private:
-  const HermeticGoldenTest::WaveformTestCase<InputF, OutputF>& tc_;
+  const HermeticGoldenTest::WaveformTestCase<InputFormat, OutputFormat>& tc_;
 };
 
-template <ASF InputF, ASF OutputF>
-void WaveformTestRunner<InputF, OutputF>::CompareRMSE(AudioBufferSlice<OutputF> actual,
-                                                      AudioBufferSlice<OutputF> expected) {
+template <ASF InputFormat, ASF OutputFormat>
+void WaveformTestRunner<InputFormat, OutputFormat>::CompareRMSE(
+    AudioBufferSlice<OutputFormat> actual, AudioBufferSlice<OutputFormat> expected) {
   CompareAudioBuffers(actual, expected,
                       {
                           .max_relative_error = tc_.max_relative_rms_error,
@@ -112,18 +66,18 @@ void WaveformTestRunner<InputF, OutputF>::CompareRMSE(AudioBufferSlice<OutputF> 
                       });
 }
 
-template <ASF InputF, ASF OutputF>
-void WaveformTestRunner<InputF, OutputF>::CompareRMS(AudioBufferSlice<OutputF> actual,
-                                                     AudioBufferSlice<OutputF> expected) {
+template <ASF InputFormat, ASF OutputFormat>
+void WaveformTestRunner<InputFormat, OutputFormat>::CompareRMS(
+    AudioBufferSlice<OutputFormat> actual, AudioBufferSlice<OutputFormat> expected) {
   auto expected_rms = MeasureAudioRMS(expected);
   auto actual_rms = MeasureAudioRMS(actual);
   EXPECT_WITHIN_RELATIVE_ERROR(actual_rms, expected_rms, tc_.max_relative_rms);
 }
 
-template <ASF InputF, ASF OutputF>
-void WaveformTestRunner<InputF, OutputF>::CompareFreqs(AudioBufferSlice<OutputF> actual,
-                                                       AudioBufferSlice<OutputF> expected,
-                                                       std::vector<size_t> hz_signals) {
+template <ASF InputFormat, ASF OutputFormat>
+void WaveformTestRunner<InputFormat, OutputFormat>::CompareFreqs(
+    AudioBufferSlice<OutputFormat> actual, AudioBufferSlice<OutputFormat> expected,
+    std::vector<size_t> hz_signals) {
   ASSERT_EQ(expected.NumFrames(), actual.NumFrames());
 
   // FFT requires a power-of-2 number of samples.
@@ -172,9 +126,10 @@ void WaveformTestRunner<InputF, OutputF>::CompareFreqs(AudioBufferSlice<OutputF>
   }
 }
 
-template <ASF InputF, ASF OutputF>
-void WaveformTestRunner<InputF, OutputF>::ExpectSilence(AudioBufferSlice<OutputF> actual) {
-  CompareAudioBuffers(actual, AudioBufferSlice<OutputF>(),
+template <ASF InputFormat, ASF OutputFormat>
+void WaveformTestRunner<InputFormat, OutputFormat>::ExpectSilence(
+    AudioBufferSlice<OutputFormat> actual) {
+  CompareAudioBuffers(actual, AudioBufferSlice<OutputFormat>(),
                       {
                           .test_label = "check silence",
                           .num_frames_per_packet = actual.format().frames_per_second() / 1000 *
@@ -184,10 +139,10 @@ void WaveformTestRunner<InputF, OutputF>::ExpectSilence(AudioBufferSlice<OutputF
 
 }  // namespace
 
-template <ASF InputF, ASF OutputF>
+template <ASF InputFormat, ASF OutputFormat>
 void HermeticGoldenTest::RunWaveformTest(
-    const HermeticGoldenTest::WaveformTestCase<InputF, OutputF>& tc) {
-  WaveformTestRunner<InputF, OutputF> runner(tc);
+    const HermeticGoldenTest::WaveformTestCase<InputFormat, OutputFormat>& tc) {
+  WaveformTestRunner<InputFormat, OutputFormat> runner(tc);
 
   const auto& input = tc.input;
   const auto& expected_output = tc.expected_output;
@@ -214,18 +169,18 @@ void HermeticGoldenTest::RunWaveformTest(
   auto output_data = AudioBufferSlice(&ring_buffer, 0, num_data_frames);
   auto output_silence = AudioBufferSlice(&ring_buffer, num_data_frames, device->frame_count());
 
-  if (flag_save_inputs_and_outputs) {
-    WriteWavFile<InputF>(tc.test_name, "input", &input);
-    WriteWavFile<OutputF>(tc.test_name, "ring_buffer", &ring_buffer);
-    WriteWavFile<OutputF>(tc.test_name, "output", output_data);
-    WriteWavFile<OutputF>(tc.test_name, "expected_output", &expected_output);
+  if (save_input_and_output_files_) {
+    WriteWavFile<InputFormat>(tc.test_name, "input", &input);
+    WriteWavFile<OutputFormat>(tc.test_name, "ring_buffer", &ring_buffer);
+    WriteWavFile<OutputFormat>(tc.test_name, "output", output_data);
+    WriteWavFile<OutputFormat>(tc.test_name, "expected_output", &expected_output);
   }
 
   runner.CompareRMSE(&expected_output, output_data);
   runner.ExpectSilence(output_silence);
 
   for (size_t chan = 0; chan < expected_output.format().channels(); chan++) {
-    auto expected_chan = AudioBufferSlice<OutputF>(&expected_output).GetChannel(chan);
+    auto expected_chan = AudioBufferSlice<OutputFormat>(&expected_output).GetChannel(chan);
     auto output_chan = output_data.GetChannel(chan);
     SCOPED_TRACE(testing::Message() << "Channel " << chan);
     runner.CompareRMS(&output_chan, &expected_chan);
@@ -233,9 +188,10 @@ void HermeticGoldenTest::RunWaveformTest(
   }
 }
 
-template <ASF InputF, ASF OutputF>
+// TODO: remove HermeticGoldenTest::RunImpulseTest, after clients move to HermeticImpulseTest.
+template <ASF InputFormat, ASF OutputFormat>
 void HermeticGoldenTest::RunImpulseTest(
-    const HermeticGoldenTest::ImpulseTestCase<InputF, OutputF>& tc) {
+    const HermeticGoldenTest::ImpulseTestCase<InputFormat, OutputFormat>& tc) {
   // Compute the number of input frames.
   auto start_of_last_impulse = tc.impulse_locations_in_frames.back();
   auto num_input_frames = start_of_last_impulse + tc.impulse_width_in_frames +
@@ -258,7 +214,7 @@ void HermeticGoldenTest::RunImpulseTest(
   // input to a WAV file for debugging. Include silence at the beginning to account
   // for ring in; this allows us to align the input and output WAV files.
   auto input_impulse_start = tc.pipeline.neg_filter_width;
-  AudioBuffer<InputF> input(tc.input_format, num_input_frames);
+  AudioBuffer<InputFormat> input(tc.input_format, num_input_frames);
   for (auto start_frame : tc.impulse_locations_in_frames) {
     start_frame += input_impulse_start;
     for (size_t f = start_frame; f < start_frame + tc.impulse_width_in_frames; f++) {
@@ -308,7 +264,7 @@ void HermeticGoldenTest::RunImpulseTest(
     // Test each channel.
     for (size_t chan = 0; chan < tc.output_format.channels(); chan++) {
       SCOPED_TRACE(testing::Message() << "Channel " << chan);
-      auto output_chan = AudioBufferSlice<OutputF>(&ring_buffer).GetChannel(chan);
+      auto output_chan = AudioBufferSlice<OutputFormat>(&ring_buffer).GetChannel(chan);
       auto slice = AudioBufferSlice(&output_chan, search_start_frame, search_end_frame);
       auto relative_output_frame = FindImpulseLeadingEdge(slice, kNoiseFloor);
       if (!relative_output_frame) {
@@ -338,19 +294,22 @@ void HermeticGoldenTest::RunImpulseTest(
     }
   }
 
-  if (flag_save_inputs_and_outputs) {
-    WriteWavFile<InputF>(tc.test_name, "input", &input);
-    WriteWavFile<OutputF>(tc.test_name, "ring_buffer", &ring_buffer);
+  if (save_input_and_output_files_) {
+    WriteWavFile<InputFormat>(tc.test_name, "input", &input);
+    WriteWavFile<OutputFormat>(tc.test_name, "ring_buffer", &ring_buffer);
   }
 }
 
 // Explicitly instantiate (almost) all possible implementations.
-// We intentionally don't implementations with OutT = UNSIGNED_8 because no such hardware exists,
-// therefore it's not worth testing.
-#define INSTANTIATE(InT, OutT)                                  \
-  template void HermeticGoldenTest::RunWaveformTest<InT, OutT>( \
-      const WaveformTestCase<InT, OutT>& tc);                   \
-  template void HermeticGoldenTest::RunImpulseTest<InT, OutT>(const ImpulseTestCase<InT, OutT>& tc);
+// We intentionally don't instantiate implementations with OutputFormat = UNSIGNED_8
+// because such hardware is no longer in use, therefore it's not worth testing.
+//
+// TODO: remove HermeticGoldenTest::RunImpulseTest below, after clients move to HermeticImpulseTest.
+#define INSTANTIATE(InputFormat, OutputFormat)                                  \
+  template void HermeticGoldenTest::RunWaveformTest<InputFormat, OutputFormat>( \
+      const WaveformTestCase<InputFormat, OutputFormat>& tc);                   \
+  template void HermeticGoldenTest::RunImpulseTest<InputFormat, OutputFormat>(  \
+      const ImpulseTestCase<InputFormat, OutputFormat>& tc);
 
 INSTANTIATE(ASF::UNSIGNED_8, ASF::SIGNED_16)
 INSTANTIATE(ASF::UNSIGNED_8, ASF::SIGNED_24_IN_32)

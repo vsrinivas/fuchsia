@@ -91,14 +91,21 @@ source_set("hermetic_audio_test") {
   configs += [ "//build/config:Wno-conversion" ]
 }
 
-# Main entry point for tests that use hermetic_golden_test.h.
-source_set("hermetic_golden_test_main") {
+# Main entry point for tests that use hermetic_pipeline_test.h.
+source_set("hermetic_pipeline_test_main") {
   testonly = true
 
   sources = [
+    "hermetic_fidelity_frequencies.cc",
+    "hermetic_fidelity_test.cc",
+    "hermetic_fidelity_test.h",
     "hermetic_golden_test.cc",
     "hermetic_golden_test.h",
-    "hermetic_golden_test_main.cc",
+    "hermetic_impulse_test.cc",
+    "hermetic_impulse_test.h",
+    "hermetic_pipeline_test.cc",
+    "hermetic_pipeline_test.h",
+    "hermetic_pipeline_test_main.cc",
   ]
 
   deps = [
@@ -106,7 +113,18 @@ source_set("hermetic_golden_test_main") {
     "//src/lib/fxl/test:test_settings",
   ]
 
-  public_deps = [ ":hermetic_audio_test" ]
+  public_deps = [
+    ":hermetic_audio_test",
+    "//sdk/fidl/fuchsia.media",
+  ]
+}
+
+# TODO: Remove this, once clients move to hermetic_pipeline_test_main
+# Main entry point for tests that use hermetic_golden_test.h.
+source_set("hermetic_golden_test_main") {
+  testonly = true
+
+  public_deps = [ ":hermetic_pipeline_test_main" ]
 }
 
 # Flexible utility class for channel-based communication (such as to drivers or device services).
