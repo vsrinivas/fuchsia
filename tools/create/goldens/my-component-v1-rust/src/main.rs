@@ -5,7 +5,10 @@
 use anyhow::{self, Context};
 use fuchsia_async as fasync;
 use fuchsia_component::server::ServiceFs;
+use fuchsia_inspect::{component, health::Reporter};
+use fuchsia_syslog as syslog;
 use futures::prelude::*;
+use tracing;
 
 /// Wraps all hosted protocols into a single type that can be matched against
 /// and dispatched.
@@ -18,7 +21,12 @@ enum IncomingRequest {
 
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), anyhow::Error> {
+    syslog::init()?;
     let mut service_fs = ServiceFs::new_local();
+
+    // Initialize inspect
+    component::inspector().serve(&mut service_fs)?;
+    component::health().set_starting_up();
 
     // Add services here. E.g:
     // ```
@@ -26,6 +34,9 @@ async fn main() -> Result<(), anyhow::Error> {
     // ```
 
     service_fs.take_and_serve_directory_handle().context("failed to serve outgoing namespace")?;
+
+    component::health().set_ok();
+    tracing::debug!("Initialized.");
 
     service_fs
         .for_each_concurrent(None, |_request: IncomingRequest| async move {
