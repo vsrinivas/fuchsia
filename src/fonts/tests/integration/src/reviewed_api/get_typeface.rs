@@ -129,7 +129,7 @@ async fn test_font_collections() -> Result<(), Error> {
     .context("Failed to load NotoSansCJK JP font")?;
     let noto_sans_cjk_sc = get_typeface_info(
         &font_provider,
-        Some("Noto Sans CJK JP".to_string()),
+        Some("Noto Sans CJK SC".to_string()),
         None,
         Some(vec!["zh-Hans".to_string()]),
         None,
