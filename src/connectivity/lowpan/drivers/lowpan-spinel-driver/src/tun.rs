@@ -132,6 +132,20 @@ impl NetworkInterface for TunNetworkInterface {
         fx_log_info!("Interface online: {:?}", online);
         if online {
             self.stack.enable_interface(self.id).await.squash_result()?;
+
+            // Get a list of all of the addresses that were automatically
+            // added to the interface (like the link local address).
+            let fnetstack::InterfaceInfo {
+                properties: fnetstack::InterfaceProperties { addresses, .. },
+                ..
+            } = self.stack.get_interface_info(self.id).await.squash_result()?;
+
+            // Now we remove all of those addresses so that the NCP has a
+            // clean slate to start from.
+            for mut subnet in addresses {
+                fx_log_info!("Removing automatically added address: {:?}", &subnet);
+                self.stack.del_interface_address(self.id, &mut subnet).await.squash_result()?;
+            }
         } else {
             self.stack.disable_interface(self.id).await.squash_result()?;
         }
