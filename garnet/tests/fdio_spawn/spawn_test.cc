@@ -5,7 +5,7 @@
 // General fdio_spawn tests
 
 #include <fcntl.h>
-#include <fuchsia/io/cpp/fidl.h>
+#include <fuchsia/io/llcpp/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
@@ -29,7 +29,7 @@
 
 #include "fake_launcher_util.h"
 
-namespace fio = ::fuchsia::io;
+namespace fio = ::llcpp::fuchsia::io;
 
 namespace {
 

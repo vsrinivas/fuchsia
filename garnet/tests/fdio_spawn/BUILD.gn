@@ -2,9 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//sdk/cts/build/cts.gni")
+import("//src/sys/build/components.gni")
 
-cts_executable("fdio-spawn-tests-bin") {
+executable("fdio-spawn-tests-bin") {
   testonly = true
   visibility = [ ":*" ]
 
@@ -18,37 +18,39 @@ cts_executable("fdio-spawn-tests-bin") {
   ]
 
   deps = [
-    "//sdk/fidl/fuchsia.io",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
     "//sdk/lib/fdio",
+    "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
   ]
 }
 
-cts_fuchsia_component("fdio-spawn-tests-component") {
+fuchsia_component("fdio-spawn-tests-component") {
   testonly = true
   manifest = "meta/fdio-spawn-tests-component.cmx"
   deps = [ ":fdio-spawn-tests-bin" ]
 }
 
 # A test utility used to test various features of fdio_spawn, extensively in spawn_test.cc.
-cts_executable("spawn-child-util-bin") {
-  testonly = true
+executable("spawn-child-util-bin") {
   visibility = [ ":*" ]
 
   output_name = "spawn_child_util"
   sources = [ "spawn_child_util.cc" ]
-  deps = [ "//sdk/lib/fdio" ]
+  deps = [
+    "//sdk/lib/fdio",
+    "//zircon/public/lib/zx",
+  ]
 }
 
-cts_fuchsia_component("spawn-child-util-component") {
+fuchsia_component("spawn-child-util-component") {
   testonly = true
   manifest = "meta/spawn-child-util-component.cmx"
   deps = [ ":spawn-child-util-bin" ]
 }
 
 # A test utility that attempts to use zx_process_create (mimicking a launcher implementation).
-cts_executable("fake-launcher-util-bin") {
-  testonly = true
+executable("fake-launcher-util-bin") {
   visibility = [ ":*" ]
 
   output_name = "fake_launcher_util"
@@ -56,35 +58,38 @@ cts_executable("fake-launcher-util-bin") {
     "fake_launcher_util.cc",
     "fake_launcher_util.h",
   ]
-  deps = [ "//sdk/lib/fdio" ]
+  deps = [
+    "//sdk/lib/fdio",
+    "//zircon/public/lib/zx",
+  ]
 }
 
-cts_fuchsia_component("fake-launcher-util-component") {
+fuchsia_component("fake-launcher-util-component") {
   testonly = true
   manifest = "meta/fake-launcher-util-component.cmx"
   deps = [ ":fake-launcher-util-bin" ]
 }
 
 # A simple test utility that returns the integer value provided to it in its first argument.
-cts_executable("return-arg-test-util-bin") {
-  testonly = true
+executable("return-arg-test-util-bin") {
   output_name = "return_arg_test_util"
   sources = [ "return_arg_util.cc" ]
+  deps = [ "//src/lib/fxl" ]
 }
 
-cts_fuchsia_component("return-arg-test-util-component") {
+fuchsia_component("return-arg-test-util-component") {
   testonly = true
   manifest = "meta/return-arg-test-util-component.cmx"
   deps = [ ":return-arg-test-util-bin" ]
 }
 
 # A simple program that prints the arguments with newline delimiter.
-cts_executable("echo-arguments-bin") {
+executable("echo-arguments-bin") {
   output_name = "echo_arguments_bin"
   sources = [ "echo_arguments.cc" ]
 }
 
-cts_fuchsia_component("echo-arguments-bin-component") {
+fuchsia_component("echo-arguments-bin-component") {
   testonly = true
   manifest = "meta/echo-arguments-bin-component.cmx"
   deps = [ ":echo-arguments-bin" ]
@@ -92,128 +97,128 @@ cts_fuchsia_component("echo-arguments-bin-component") {
 
 # The 'binaries' in the components below are really just text files with either
 # a "#!resolve" or "#!" directive.
-cts_resource("resolve-once-bin") {
+resource("resolve-once-bin") {
   sources = [ "test_bins/resolve_once" ]
   outputs = [ "bin/resolve_once" ]
 }
 
-cts_fuchsia_component("resolve-once-component") {
+fuchsia_component("resolve-once-component") {
   testonly = true
   manifest = "meta/resolve-once-component.cmx"
   deps = [ ":resolve-once-bin" ]
 }
 
-cts_resource("resolve-twice-bin") {
+resource("resolve-twice-bin") {
   sources = [ "test_bins/resolve_twice" ]
   outputs = [ "bin/resolve_twice" ]
 }
 
-cts_fuchsia_component("resolve-twice-component") {
+fuchsia_component("resolve-twice-component") {
   testonly = true
   manifest = "meta/resolve-twice-component.cmx"
   deps = [ ":resolve-twice-bin" ]
 }
 
-cts_resource("resolve-infinite-loop-bin") {
+resource("resolve-infinite-loop-bin") {
   sources = [ "test_bins/resolve_infinite_loop" ]
   outputs = [ "bin/resolve_infinite_loop" ]
 }
 
-cts_fuchsia_component("resolve-infinite-loop-component") {
+fuchsia_component("resolve-infinite-loop-component") {
   testonly = true
   manifest = "meta/resolve-infinite-loop-component.cmx"
   deps = [ ":resolve-infinite-loop-bin" ]
 }
 
-cts_resource("resolve-to-not-found-bin") {
+resource("resolve-to-not-found-bin") {
   sources = [ "test_bins/resolve_to_not_found" ]
   outputs = [ "bin/resolve_to_not_found" ]
 }
 
-cts_fuchsia_component("resolve-to-not-found-component") {
+fuchsia_component("resolve-to-not-found-component") {
   testonly = true
   manifest = "meta/resolve-to-not-found-component.cmx"
   deps = [ ":resolve-to-not-found-bin" ]
 }
 
-cts_resource("shebang-echo-arguments-bin") {
+resource("shebang-echo-arguments-bin") {
   sources = [ "test_bins/shebang_echo_arguments" ]
   outputs = [ "bin/shebang_echo_arguments" ]
 }
 
-cts_fuchsia_component("shebang-echo-arguments-component") {
+fuchsia_component("shebang-echo-arguments-component") {
   testonly = true
   manifest = "meta/shebang-echo-arguments-component.cmx"
   deps = [ ":shebang-echo-arguments-bin" ]
 }
 
-cts_resource("use-script-as-interpreter-bin") {
+resource("use-script-as-interpreter-bin") {
   sources = [ "test_bins/use_script_as_interpreter" ]
   outputs = [ "bin/use_script_as_interpreter" ]
 }
 
-cts_fuchsia_component("use-script-as-interpreter-component") {
+fuchsia_component("use-script-as-interpreter-component") {
   testonly = true
   manifest = "meta/use-script-as-interpreter-component.cmx"
   deps = [ ":use-script-as-interpreter-bin" ]
 }
 
-cts_resource("shebang-infinite-loop-bin") {
+resource("shebang-infinite-loop-bin") {
   sources = [ "test_bins/shebang_infinite_loop" ]
   outputs = [ "bin/shebang_infinite_loop" ]
 }
 
-cts_fuchsia_component("shebang-infinite-loop-component") {
+fuchsia_component("shebang-infinite-loop-component") {
   testonly = true
   manifest = "meta/shebang-infinite-loop-component.cmx"
   deps = [ ":shebang-infinite-loop-bin" ]
 }
 
-cts_resource("attempt-use-shell-outside-package-script") {
+resource("attempt-use-shell-outside-package-script") {
   sources = [ "test_bins/attempt_use_shell_outside_package.sh" ]
   outputs = [ "bin/attempt_use_shell_outside_package.sh" ]
 }
 
-cts_fuchsia_component("attempt-use-shell-outside-package-component") {
+fuchsia_component("attempt-use-shell-outside-package-component") {
   testonly = true
   manifest = "meta/attempt-use-shell-outside-package-component.cmx"
   deps = [ ":attempt-use-shell-outside-package-script" ]
 }
 
-cts_resource("too-long-shebang-bin") {
+resource("too-long-shebang-bin") {
   sources = [ "test_bins/too_long_shebang" ]
   outputs = [ "bin/too_long_shebang" ]
 }
 
-cts_fuchsia_component("too-long-shebang-component") {
+fuchsia_component("too-long-shebang-component") {
   testonly = true
   manifest = "meta/too-long-shebang-component.cmx"
   deps = [ ":too-long-shebang-bin" ]
 }
 
-cts_resource("use-resolve-from-shebang-bin") {
+resource("use-resolve-from-shebang-bin") {
   sources = [ "test_bins/use_resolve_from_shebang" ]
   outputs = [ "bin/use_resolve_from_shebang" ]
 }
 
-cts_fuchsia_component("use-resolve-from-shebang-component") {
+fuchsia_component("use-resolve-from-shebang-component") {
   testonly = true
   manifest = "meta/use-resolve-from-shebang-component.cmx"
   deps = [ ":use-resolve-from-shebang-bin" ]
 }
 
-cts_resource("use-shebang-from-resolve-bin") {
+resource("use-shebang-from-resolve-bin") {
   sources = [ "test_bins/use_shebang_from_resolve" ]
   outputs = [ "bin/use_shebang_from_resolve" ]
 }
 
-cts_fuchsia_component("use-shebang-from-resolve-component") {
+fuchsia_component("use-shebang-from-resolve-component") {
   testonly = true
   manifest = "meta/use-shebang-from-resolve-component.cmx"
   deps = [ ":use-shebang-from-resolve-bin" ]
 }
 
-cts_fuchsia_test_package("fdio-spawn-tests") {
+fuchsia_test_package("fdio-spawn-tests") {
   test_components = [ ":fdio-spawn-tests-component" ]
 
   deps = [
