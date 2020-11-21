@@ -66,16 +66,18 @@ std::vector<Location> TargetSymbols::ResolveInputLocation(const InputLocation& i
   return result;
 }
 
-std::vector<std::string> TargetSymbols::FindFileMatches(std::string_view name) const {
+std::vector<std::pair<std::string, std::string>> TargetSymbols::FindFileMatches(
+    std::string_view name) const {
   // Different modules can each use the same file, but we want to return each
   // one once.
-  std::set<std::string> result_set;
+  std::set<std::pair<std::string, std::string>> result_set;
   for (const auto& module : modules_) {
     for (auto& file : module->FindFileMatches(name))
-      result_set.insert(std::move(file));
+      result_set.emplace(file, module->GetBuildDir());
   }
 
-  std::vector<std::string> result;
+  std::vector<std::pair<std::string, std::string>> result;
+  result.reserve(result_set.size());
   for (auto& cur : result_set)
     result.push_back(std::move(cur));
   return result;
@@ -89,8 +91,7 @@ std::string TargetSymbols::GetShortestUniqueFileName(std::string_view file_name)
 
   // Get all matches for just the file name part.
   std::string_view file_name_last_part = ExtractLastFileComponent(file_name);
-  std::vector<std::string> all_matches = FindFileMatches(file_name_last_part);
-  if (all_matches.size() <= 1)
+  if (FindFileMatches(file_name_last_part).size() <= 1)
     return std::string(file_name_last_part);  // Unique or not found.
 
   auto components = fxl::SplitString(std::string_view(file_name.data(), file_name.size()), "/",

@@ -43,6 +43,8 @@ class ProcessSymbolsTestSetup {
   //
   // Most callers only need one module, want to use the standard mock, and don't care about the
   // particular name or load address. This uses some defaults to make injection simpler.
+  //
+  // This function should be called at most once.
   MockModuleSymbols* InjectMockModule();
 
  private:

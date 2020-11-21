@@ -94,14 +94,19 @@ Err CanonicalizeFile(const TargetSymbols* target_symbols, const FileLine& input,
 
   if (matches.size() == 1) {
     // Unambiguous match.
-    *output = FileLine(matches[0], input.line());
+    *output = FileLine(matches[0].first, matches[0].second, input.line());
     return Err();
   }
 
   // Non-unique file name, generate a disambiguation error.
   std::string msg("The file name is ambiguous, it could be:\n");
-  for (const auto& match : matches)
-    msg.append("  " + match + "\n");
+  for (const auto& match : matches) {
+    if (match.second.empty()) {
+      msg.append("  " + match.first + "\n");
+    } else {
+      msg.append("  " + match.first + " (from " + match.second + ")\n");
+    }
+  }
   return Err(msg);
 }
 

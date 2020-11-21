@@ -62,4 +62,27 @@ TEST(TargetSymbols, GetShortestUniqueName) {
   EXPECT_EQ("/absolute.cc", setup.target().GetShortestUniqueFileName(kAbsolute1));
 }
 
+TEST(TargetSymbols, FindFileMatches) {
+  ProcessSymbolsTestSetup setup;
+
+  const char kFileName[] = "file.cc";
+
+  auto mod_sym1 = fxl::MakeRefCounted<MockModuleSymbols>("mock_module1.so");
+  mod_sym1->set_build_dir("/build_dir");
+  mod_sym1->AddFileName(kFileName);
+  setup.InjectModule("mock_module1.so", "build_id1", setup.kDefaultLoadAddress + 0x1000, mod_sym1);
+
+  auto mod_sym2 = fxl::MakeRefCounted<MockModuleSymbols>("mock_module2.so");
+  mod_sym2->set_build_dir("/build_dir");
+  mod_sym2->AddFileName(kFileName);
+  setup.InjectModule("mock_module2.so", "build_id2", setup.kDefaultLoadAddress + 0x2000, mod_sym2);
+
+  auto mod_sym3 = fxl::MakeRefCounted<MockModuleSymbols>("mock_module3.so");
+  mod_sym3->set_build_dir("/another_build_dir");
+  mod_sym3->AddFileName(kFileName);
+  setup.InjectModule("mock_module3.so", "build_id3", setup.kDefaultLoadAddress + 0x3000, mod_sym3);
+
+  EXPECT_EQ(2UL, setup.target().FindFileMatches(kFileName).size());
+}
+
 }  // namespace zxdb

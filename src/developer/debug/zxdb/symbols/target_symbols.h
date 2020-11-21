@@ -67,9 +67,9 @@ class TargetSymbols {
   std::vector<Location> ResolveInputLocation(const InputLocation& input_location,
                                              const ResolveOptions& options) const;
 
-  // Gets file matches across all known modules. See
-  // ModuleSymbols::FindFileMatches().
-  std::vector<std::string> FindFileMatches(std::string_view name) const;
+  // Gets file matches across all known modules. Unlike ModuleSymbols::FindFileMatches(), it returns
+  // a list of pairs of filenames and build directories associated with the filenames.
+  std::vector<std::pair<std::string, std::string>> FindFileMatches(std::string_view name) const;
 
   // Returns the shortest possible name that uniquely identifies the given file in the index.
   //
