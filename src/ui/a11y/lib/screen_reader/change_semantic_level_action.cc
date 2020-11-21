@@ -87,7 +87,7 @@ fit::promise<> ChangeSemanticLevelAction::SpeakSemanticLevelPromise(
   fuchsia::intl::l10n::MessageIds message_id;
   switch (semantic_level) {
     case ScreenReaderContext::SemanticLevel::kNormalNavigation:
-      message_id = fuchsia::intl::l10n::MessageIds::NORMAL_NAVIGATION_GRANULARITY;
+      message_id = fuchsia::intl::l10n::MessageIds::DEFAULT_NAVIGATION_GRANULARITY;
       break;
     case ScreenReaderContext::SemanticLevel::kAdjustValue:
       message_id = fuchsia::intl::l10n::MessageIds::ADJUST_VALUE_GRANULARITY;

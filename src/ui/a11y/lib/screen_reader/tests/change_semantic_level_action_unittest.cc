@@ -86,8 +86,8 @@ TEST_F(ChangeSemanticLevelAction, NoChangeForNonSliderNode) {
   EXPECT_EQ(screen_reader_context_->semantic_level(),
             ScreenReaderContext::SemanticLevel::kNormalNavigation);
   EXPECT_THAT(mock_speaker_ptr_->message_ids(),
-              ElementsAre(MessageIds::NORMAL_NAVIGATION_GRANULARITY,
-                          MessageIds::NORMAL_NAVIGATION_GRANULARITY));
+              ElementsAre(MessageIds::DEFAULT_NAVIGATION_GRANULARITY,
+                          MessageIds::DEFAULT_NAVIGATION_GRANULARITY));
 }
 
 // TODO(fxb/63293): Enable when word and character navigation exist.
@@ -111,7 +111,7 @@ TEST_F(ChangeSemanticLevelAction, DISABLED_CyclesForwardThroughLevelsForNonSlide
             ScreenReaderContext::SemanticLevel::kNormalNavigation);
   EXPECT_THAT(mock_speaker_ptr_->message_ids(),
               ElementsAre(MessageIds::CHARACTER_GRANULARITY, MessageIds::WORD_GRANULARITY,
-                          MessageIds::NORMAL_NAVIGATION_GRANULARITY));
+                          MessageIds::DEFAULT_NAVIGATION_GRANULARITY));
 }
 
 // TODO(fxb/63293): Enable when word and character navigation exist.
@@ -135,7 +135,7 @@ TEST_F(ChangeSemanticLevelAction, DISABLED_CyclesBackwardThroughLevelsForNonSlid
             ScreenReaderContext::SemanticLevel::kNormalNavigation);
   EXPECT_THAT(mock_speaker_ptr_->message_ids(),
               ElementsAre(MessageIds::WORD_GRANULARITY, MessageIds::CHARACTER_GRANULARITY,
-                          MessageIds::NORMAL_NAVIGATION_GRANULARITY));
+                          MessageIds::DEFAULT_NAVIGATION_GRANULARITY));
 }
 
 TEST_F(ChangeSemanticLevelAction, CyclesForwardThroughLevelsForSliderNode) {
@@ -160,9 +160,9 @@ TEST_F(ChangeSemanticLevelAction, CyclesForwardThroughLevelsForSliderNode) {
   RunLoopUntilIdle();
   EXPECT_EQ(screen_reader_context_->semantic_level(),
             ScreenReaderContext::SemanticLevel::kNormalNavigation);
-  EXPECT_THAT(
-      mock_speaker_ptr_->message_ids(),
-      ElementsAre(MessageIds::ADJUST_VALUE_GRANULARITY, MessageIds::NORMAL_NAVIGATION_GRANULARITY));
+  EXPECT_THAT(mock_speaker_ptr_->message_ids(),
+              ElementsAre(MessageIds::ADJUST_VALUE_GRANULARITY,
+                          MessageIds::DEFAULT_NAVIGATION_GRANULARITY));
 }
 
 TEST_F(ChangeSemanticLevelAction, CyclesBackwardThroughLevelsForSliderNode) {
@@ -187,9 +187,9 @@ EXPECT_EQ(screen_reader_context_->semantic_level(),
   RunLoopUntilIdle();
   EXPECT_EQ(screen_reader_context_->semantic_level(),
             ScreenReaderContext::SemanticLevel::kNormalNavigation);
-  EXPECT_THAT(
-      mock_speaker_ptr_->message_ids(),
-      ElementsAre(MessageIds::ADJUST_VALUE_GRANULARITY, MessageIds::NORMAL_NAVIGATION_GRANULARITY));
+  EXPECT_THAT(mock_speaker_ptr_->message_ids(),
+              ElementsAre(MessageIds::ADJUST_VALUE_GRANULARITY,
+                          MessageIds::DEFAULT_NAVIGATION_GRANULARITY));
 }
 
 }  // namespace
