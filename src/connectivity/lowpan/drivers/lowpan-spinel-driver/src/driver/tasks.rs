@@ -260,6 +260,12 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> SpinelDriver<DS, NI> {
         if connectivity_state.is_online() {
             // Mark the network interface as online.
             self.net_if.set_online(true).await.context("Marking network interface as online")?;
+            let driver_state = self.driver_state.lock();
+            for entry in driver_state.address_table.iter() {
+                if let Err(err) = self.net_if.add_address(&entry.subnet) {
+                    fx_log_err!("Unable to add address: {:?}", err);
+                }
+            }
         } else {
             Err(format_err!("Unexpected connectivity state: {:?}", connectivity_state))?
         }
