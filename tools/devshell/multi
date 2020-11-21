@@ -6,7 +6,7 @@
 #### CATEGORY=Other
 ### Run an `fx` command across multiple build directories.
 ## Usage: fx multi [add | list | remove | rm | save FILE | use FILE]
-##        fx multi [-f | --fail] COMMAND ...
+##        fx multi [[-p | --parallel] | [-f | --fail]] COMMAND ...
 ##        fx multi set {PRODUCT.BOARD | SPEC}... [SWITCHES...]
 ##
 ## fx multi maintains lists of build directories and runs fx commands
@@ -36,6 +36,8 @@
 ## With `--fail` (or `-f`), `fx multi` exits as soon as one COMMAND fails.
 ## By default, it runs each one in sequence even if the previous one failed.
 ## At the end it reports which ones failed.
+## With `--parallel` (or `-p`), `fx multi` executes COMMAND on all directories
+## in parallel. Fail and parallel are mutually exclusive.
 ##
 ## The third form resets the multi list to empty and then runs several `fx set`
 ## commands, adding each new build dir to the multi list (if it succeeded).
@@ -61,6 +63,7 @@ readonly MULTI_SPEC_DIRS=(
   "${FUCHSIA_DIR}"/vendor/*/scripts/devshell/lib/multi-specs
 )
 
+PARALLEL=false
 FAIL_FAST=false
 
 MULTI_LIST=()
@@ -68,14 +71,31 @@ MULTI_LIST=()
 function for-each-build {
   local on_failure="$1"
   shift
-  local status=0 failed=() dir
+  local status=0 failed=() pids=() dir
+
   for dir in "${MULTI_LIST[@]}"; do
-    _FX_BUILD_DIR="$FUCHSIA_DIR/$dir" "$@" || {
-      status=$?
-      failed+=("$dir")
-      $FAIL_FAST && break
-    }
+    if "$PARALLEL"; then
+      _FX_BUILD_DIR="$FUCHSIA_DIR/$dir" "$@" &
+      pids+=($!)
+    else
+      _FX_BUILD_DIR="$FUCHSIA_DIR/$dir" "$@" || {
+        status=$?
+        failed+=("$dir")
+        $FAIL_FAST && break
+      }
+    fi
   done
+  if "$PARALLEL"; then
+    n=${#MULTI_LIST[@]}
+    i=0
+    while ((i < n)); do
+      wait "${pids[i]}" || {
+        status=$?
+        failed+=("${MULTI_LIST[i]}")
+      }
+      ((i++))
+    done
+  fi
   for dir in "${failed[@]}"; do
     "$on_failure" "$dir" "$@"
   done
@@ -279,6 +299,9 @@ function main {
 
   while [[ "$1" == -* ]]; do
     case "$1" in
+      -p|--parallel)
+        PARALLEL=true
+        ;;
       -f|--fail)
         FAIL_FAST=true
         ;;
@@ -292,6 +315,11 @@ function main {
     esac
     shift
   done
+
+  if $FAIL_FAST && $PARALLEL; then
+    fx-error "--fail and --parallel are mutually exclusive, pick one."
+    return 1
+  fi
 
   read-multi-list "$MULTI_LIST_FILE" || :
 
