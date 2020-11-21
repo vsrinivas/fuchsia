@@ -9,6 +9,7 @@
 #include <ddktl/protocol/composite.h>
 #include <fake-mmio-reg/fake-mmio-reg.h>
 #include <mock-mmio-reg/mock-mmio-reg.h>
+#include <mock/ddktl/protocol/gpio.h>
 #include <soc/aml-s905d2/s905d2-hw.h>
 #include <zxtest/zxtest.h>
 
@@ -138,6 +139,33 @@ struct AudioStreamInTest : public zxtest::Test {
     EXPECT_EQ(step, 12);
   }
 
+  void TestRingBufferSize(uint8_t number_of_channels, uint32_t frames_req,
+                          uint32_t frames_expected) {
+    auto metadata = GetDefaultMetadata();
+    metadata.number_of_channels = number_of_channels;
+    tester_.SetMetadata(&metadata, sizeof(metadata));
+
+    auto stream = audio::SimpleAudioStream::Create<TestAudioStreamIn>();
+    audio_fidl::Device::SyncClient client_wrap(std::move(tester_.FidlClient()));
+    audio_fidl::Device::ResultOf::GetChannel ch = client_wrap.GetChannel();
+    ASSERT_EQ(ch.status(), ZX_OK);
+    audio_fidl::StreamConfig::SyncClient client(std::move(ch->channel));
+    zx::channel local, remote;
+    ASSERT_OK(zx::channel::create(0, &local, &remote));
+    fidl::aligned<audio_fidl::PcmFormat> pcm_format = GetDefaultPcmFormat();
+    pcm_format.value.number_of_channels = number_of_channels;
+    auto builder = audio_fidl::Format::UnownedBuilder();
+    builder.set_pcm_format(fidl::unowned_ptr(&pcm_format));
+    client.CreateRingBuffer(builder.build(), std::move(remote));
+
+    auto vmo = audio_fidl::RingBuffer::Call::GetVmo(zx::unowned_channel(local), frames_req, 0);
+    ASSERT_OK(vmo.status());
+    ASSERT_EQ(vmo.Unwrap()->result.response().num_frames, frames_expected);
+
+    stream->DdkAsyncRemove();
+    EXPECT_TRUE(tester_.Ok());
+    stream->DdkRelease();
+  }
   FakePDev pdev_;
   fake_ddk::Bind tester_;
 };
@@ -155,6 +183,22 @@ TEST_F(AudioStreamInTest, ChannelsToUseBitmaskMoreThanNeeded) {
   TestMasks(/*channels*/ 2, /*channels_to_use_bitmask*/ 0xff, /*channels_mask*/ 3, /*mute_mask*/ 0);
 }
 
+// With 16 bits samples, frame size is 2 x number of channels bytes.
+// Frames returned are rounded to HW buffer alignment (8 bytes) and frame size.
+TEST_F(AudioStreamInTest, RingBufferSize1) {
+  TestRingBufferSize(2, 1, 2);
+}  // Rounded to HW buffer.
+TEST_F(AudioStreamInTest, RingBufferSize2) {
+  TestRingBufferSize(2, 3, 4);
+}  // Rounded to HW buffer.
+TEST_F(AudioStreamInTest, RingBufferSize3) { TestRingBufferSize(3, 1, 4); }  // Rounded to both.
+TEST_F(AudioStreamInTest, RingBufferSize4) { TestRingBufferSize(3, 3, 4); }  // Rounded to both.
+TEST_F(AudioStreamInTest, RingBufferSize5) {
+  TestRingBufferSize(8, 1, 1);
+}  // Rounded to frame size.
+TEST_F(AudioStreamInTest, RingBufferSize6) {
+  TestRingBufferSize(8, 3, 3);
+}  // Rounded to frame size.
 }  // namespace audio::aml_g12
 
 // Redefine PDevMakeMmioBufferWeak per the recommendation in pdev.h.

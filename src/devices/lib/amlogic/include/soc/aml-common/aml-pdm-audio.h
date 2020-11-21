@@ -31,6 +31,9 @@ class AmlPdmDevice {
   //  must resize in lower 32-bits of address space
   zx_status_t SetBuffer(zx_paddr_t buf, size_t len);
 
+  // Get HW alignment required in the buffer in bytes.
+  static uint32_t GetBufferAlignment() { return 8; }
+
   /*
       Returns offset of dma pointer in the ring buffer
   */

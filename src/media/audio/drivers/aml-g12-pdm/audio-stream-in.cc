@@ -7,6 +7,7 @@
 #include <lib/zx/clock.h>
 #include <math.h>
 
+#include <numeric>
 #include <optional>
 #include <utility>
 
@@ -120,13 +121,18 @@ zx_status_t AudioStreamIn::InitPDev() {
     return ZX_ERR_NO_MEMORY;
   }
 
-  // Calculate ring buffer size for 1 second of 16-bit, 48kHz.
-  size_t kRingBufferSize = fbl::round_up<size_t, size_t>(
-      kMaxSampleRate * 2 * metadata_.number_of_channels, ZX_PAGE_SIZE);
-  // Initialize the ring buffer
-  InitBuffer(kRingBufferSize);
-
-  lib_->SetBuffer(pinned_ring_buffer_.region(0).phys_addr, pinned_ring_buffer_.region(0).size);
+  // Initial setup of one page of buffer, just to be safe.
+  status = InitBuffer(PAGE_SIZE);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s failed to init buffer %d", __FILE__, status);
+    return status;
+  }
+  status =
+      lib_->SetBuffer(pinned_ring_buffer_.region(0).phys_addr, pinned_ring_buffer_.region(0).size);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s failed to set buffer %d", __FILE__, status);
+    return status;
+  }
 
   InitHw();
 
@@ -166,23 +172,33 @@ zx_status_t AudioStreamIn::ChangeFormat(const audio_proto::StreamSetFmtReq& req)
 
 zx_status_t AudioStreamIn::GetBuffer(const audio_proto::RingBufGetBufferReq& req,
                                      uint32_t* out_num_rb_frames, zx::vmo* out_buffer) {
-  uint32_t rb_frames = static_cast<uint32_t>(pinned_ring_buffer_.region(0).size) / frame_size_;
-
-  if (req.min_ring_buffer_frames > rb_frames) {
-    zxlogf(ERROR, "%s out of range min rin buffer frames", __FUNCTION__);
-    return ZX_ERR_OUT_OF_RANGE;
+  size_t ring_buffer_size = fbl::round_up<size_t, size_t>(
+      req.min_ring_buffer_frames * frame_size_, std::lcm(frame_size_, lib_->GetBufferAlignment()));
+  size_t out_frames = ring_buffer_size / frame_size_;
+  if (out_frames > std::numeric_limits<uint32_t>::max()) {
+    return ZX_ERR_INVALID_ARGS;
   }
-  zx_status_t status;
+
+  size_t vmo_size = fbl::round_up<size_t, size_t>(ring_buffer_size, PAGE_SIZE);
+  auto status = InitBuffer(vmo_size);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s failed to init buffer %d", __FILE__, status);
+    return status;
+  }
+
   constexpr uint32_t rights = ZX_RIGHT_READ | ZX_RIGHT_WRITE | ZX_RIGHT_MAP | ZX_RIGHT_TRANSFER;
   status = ring_buffer_vmo_.duplicate(rights, out_buffer);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s failed to duplicate vmo", __FUNCTION__);
     return status;
   }
-
-  *out_num_rb_frames = rb_frames;
-
-  lib_->SetBuffer(pinned_ring_buffer_.region(0).phys_addr, rb_frames * frame_size_);
+  status = lib_->SetBuffer(pinned_ring_buffer_.region(0).phys_addr, ring_buffer_size);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s failed to set buffer %d", __FILE__, status);
+    return status;
+  }
+  // This is safe because of the overflow check we made above.
+  *out_num_rb_frames = static_cast<uint32_t>(out_frames);
   return status;
 }
 
@@ -251,13 +267,13 @@ zx_status_t AudioStreamIn::AddFormats() {
 }
 
 zx_status_t AudioStreamIn::InitBuffer(size_t size) {
-  zx_status_t status;
-  status = zx_vmo_create_contiguous(bti_.get(), size, 0, ring_buffer_vmo_.reset_and_get_address());
+  pinned_ring_buffer_.Unpin();
+  auto status =
+      zx_vmo_create_contiguous(bti_.get(), size, 0, ring_buffer_vmo_.reset_and_get_address());
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s failed to allocate ring buffer vmo - %d", __func__, status);
     return status;
   }
-
   status = pinned_ring_buffer_.Pin(ring_buffer_vmo_, bti_, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s failed to pin ring buffer vmo - %d", __func__, status);
