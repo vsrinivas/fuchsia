@@ -458,7 +458,10 @@ if [[ ! -d "${img_dir}" ]]; then
   fx-error "Failed to create temporary directory"
   exit 1
 fi
-trap 'rm -Rf "${img_dir}"; [[ "${GRPCWEBPROXY_PID}" ]] && kill "${GRPCWEBPROXY_PID}"; [[ $- == *i* ]] && stty sane' EXIT
+
+# Restore the terminal only if the standard input (fd 0) is associated with a
+# terminal device. We check this using test operator "-t".
+trap 'rm -Rf "${img_dir}"; [[ "${GRPCWEBPROXY_PID}" ]] && kill "${GRPCWEBPROXY_PID}"; [[ -t 0 ]] && stty sane' EXIT
 
 KERNEL_ZBI="${img_dir}/fuchsia-ssh.zbi"
 "${ZBI_TOOL}" -o "${KERNEL_ZBI}" "${ZBI_IMAGE}" \
