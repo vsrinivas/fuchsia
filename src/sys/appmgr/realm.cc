@@ -71,6 +71,12 @@ using fuchsia::sys::TerminationReason;
 
 void PushHandle(uint32_t id, zx_handle_t handle, std::vector<fdio_spawn_action_t>* actions) {
   actions->push_back({.action = FDIO_SPAWN_ACTION_ADD_HANDLE, .h = {.id = id, .handle = handle}});
+// Currently clang static analyzer could not analyze union correctly thus it does not know handle
+// is associated with actions.
+// #TODO(fxbug.dev/64385): Remove this hack once we improve static analyzer.
+#ifdef __clang_analyzer__
+  (*actions)[actions->size() - 1].h.handle = handle;
+#endif  //  #ifdef __clang_analyzer__
 }
 
 void PushFileDescriptor(fuchsia::sys::FileDescriptorPtr fd, int target_fd,
