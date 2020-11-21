@@ -1,0 +1,95 @@
+{
+    "title": "Add a protocol method",
+    "fidl": {
+        "before": {
+            "source": "before.test.fidl"
+        },
+        "during": {
+            "source": "during.test.fidl",
+            "instructions": [
+                "Add the new method and mark it with the `[Transitional]` attribute."
+            ]
+        },
+        "after": {
+            "source": "after.test.fidl",
+            "instructions": [
+                "Remove the `[Transitional]` attribute from the new method."
+            ]
+        }
+    },
+    "hlcpp": [
+        {
+            "fidl": "before",
+            "source": "hlcpp_before.cc"
+        },
+        {
+            "fidl": "during"
+        },
+        {
+            "source": "hlcpp_after.cc",
+            "instructions": [
+                "Add the new method to protocol implementations."
+            ]
+        },
+        {
+            "fidl": "after"
+        }
+    ],
+    "go": [
+        {
+            "fidl": "before",
+            "source": "before.go"
+        },
+        {
+            "source": "during.go",
+            "instructions": [
+                "Embed the protocol's `WithCtxTransitionBase` struct into the server type."
+            ]
+        },
+        {
+            "fidl": "during"
+        },
+        {
+            "source": "after.go",
+            "instructions": [
+                "Implement the new method for the server type.",
+                "Remove the protocol's `WithCtxTransitionBase` struct from the server type."
+            ]
+        },
+        {
+            "fidl": "after"
+        }
+    ],
+    "rust": [
+        {
+            "fidl": "before",
+            "source": "before.rs"
+        },
+        {
+            "source": "during_1.rs",
+            "instructions": [
+                "Add `#[allow(unreachable_patterns)]` to the server's request stream match.",
+                "Add an underscore arm to the server's request stream match."
+            ]
+        },
+        {
+            "fidl": "during"
+        },
+        {
+            "source": "during_2.rs",
+            "instructions": [
+                "Add the new method to the protocol's `ProxyInterface` implementation."
+            ]
+        },
+        {
+            "fidl": "after"
+        },
+        {
+            "source": "after.rs",
+            "instructions": [
+                "Remove `#[allow(unreachable_patterns)]` from the server's request stream match.",
+                "Replace the underscore arm in the server's request stream match with one that handles the new method."
+            ]
+        }
+    ]
+}

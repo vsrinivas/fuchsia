@@ -1,0 +1,199 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/fidl/fidl.gni")
+import("//build/go/go_binary.gni")
+import("//build/go/go_library.gni")
+import("//build/rust/rustc_binary.gni")
+
+# HLCPP Compatibility Test
+template("_hlcpp_compat") {
+  executable(target_name) {
+    output_dir = target_out_dir
+    sources = [ invoker.source ]
+    deps = [ ":${invoker.fidl}" ]
+  }
+}
+
+# Go Source Compatibility Test
+template("_go_compat") {
+  gopackage = target_name
+
+  go_library("${target_name}_lib") {
+    name = gopackage
+    source_dir = get_path_info(invoker.source, "dir")
+    sources = [ get_path_info(invoker.source, "file") ]
+    deps = [
+      ":${invoker.fidl}($go_toolchain)",
+      "//src/lib/component",
+    ]
+  }
+
+  go_binary(target_name) {
+    output_dir = target_out_dir
+    gopackage = gopackage
+    deps = [ ":${target_name}_lib" ]
+  }
+}
+
+# Rust Source Compatibility Test
+template("_rust_compat") {
+  rustc_binary(target_name) {
+    output_dir = target_out_dir
+    edition = "2018"
+    deps = [
+      ":${invoker.fidl}-rustc",
+      "//src/lib/fidl/rust/fidl",
+      "//src/lib/fuchsia-async",
+      "//third_party/rust_crates:futures",
+    ]
+    sources = [ invoker.source ]
+    source_root = invoker.source
+  }
+}
+
+# Take the steps definition supplied and generate targets for each.
+# This keeps track of the source and fidl for each step and invokes the
+# supplied template_name.
+template("_source_compat_steps") {
+  assert(defined(invoker.steps))
+  assert(defined(invoker.template_name))
+  assert(defined(invoker.fidl_targets))
+
+  fidl_targets = invoker.fidl_targets
+
+  step_labels = []
+
+  step_source = ""
+  step_fidl = ""
+  step_number = 1
+  foreach(step, invoker.steps) {
+    if (step_number == 1) {
+      # both source and fidl must be declared
+      assert(defined(step.source) && defined(step.fidl),
+             "Step ${step_number}: both 'source' and 'fidl' must be specified")
+      step_source = step.source
+      step_fidl = step.fidl
+    } else {
+      # exactly one of source and fidl must be declared
+      assert(
+          (defined(step.source) || defined(step.fidl)) &&
+              !(defined(step.source) && defined(step.fidl)),
+          "Step ${step_number}: exactly one of 'source' or 'fidl' must be specified")
+      if (defined(step.source)) {
+        step_source = step.source
+      } else {
+        step_fidl = step.fidl
+      }
+    }
+
+    step_label =
+        "${target_name}_${step_fidl}_" + get_path_info(step_source, "name")
+    step_labels += [ ":${step_label}" ]
+
+    target(invoker.template_name, step_label) {
+      source = step_source
+      fidl = fidl_targets[step_fidl]
+    }
+
+    step_number = step_number + 1
+  }
+
+  group(target_name) {
+    deps = step_labels
+  }
+}
+
+template("source_compatibility_test") {
+  test_name = target_name
+  assert(defined(invoker.json),
+         "You must supply a json file describing the test.")
+
+  json_file = invoker.json
+  json = read_file(json_file, "json")
+  assert(defined(json.fidl), "Tests need fidl libraries.")
+
+  json_fidl = json.fidl
+
+  fidl_library = "fidl.test.${test_name}"
+  fidl_targets = {
+    before = test_name + "_fidl_before"
+    during = test_name + "_fidl_during"
+    after = test_name + "_fidl_after"
+  }
+
+  # FIDL libraries
+  fidl(fidl_targets.before) {
+    name = fidl_library
+    tmp = json_fidl.before
+    sources = [ tmp.source ]
+    excluded_checks = [ "too-many-nested-libraries" ]
+  }
+  fidl(fidl_targets.during) {
+    name = fidl_library
+    tmp = json_fidl.during
+    sources = [ tmp.source ]
+    excluded_checks = [ "too-many-nested-libraries" ]
+  }
+  fidl(fidl_targets.after) {
+    name = fidl_library
+    tmp = json_fidl.after
+    sources = [ tmp.source ]
+    excluded_checks = [ "too-many-nested-libraries" ]
+  }
+
+  test_targets = []
+
+  if (is_fuchsia) {
+    # HLCPP
+    if (defined(json.hlcpp)) {
+      _source_compat_steps("${target_name}_hlcpp") {
+        steps = json.hlcpp
+        template_name = "_hlcpp_compat"
+      }
+      test_targets += [ ":${target_name}_hlcpp" ]
+    }
+
+    # Go
+    if (defined(json.go)) {
+      _source_compat_steps("${target_name}_go") {
+        steps = json.go
+        template_name = "_go_compat"
+      }
+      test_targets += [ ":${target_name}_go" ]
+    }
+
+    # Rust
+    if (defined(json.rust)) {
+      _source_compat_steps("${target_name}_rust") {
+        steps = json.rust
+        template_name = "_rust_compat"
+      }
+      test_targets += [ ":${target_name}_rust" ]
+    }
+
+    # Generate documentation
+    docs_md = "${target_gen_dir}/${target_name}_docs.md"
+    docs_target = "${target_name}_docs"
+    action(docs_target) {
+      script = "//src/tests/fidl/source_compatibility/generate_docs.py"
+      inputs = [ json_file ]
+      outputs = [ docs_md ]
+      depfile = "${docs_md}.d"
+
+      args = [
+        "--json=" + rebase_path(json_file),
+        "--out=" + rebase_path(docs_md),
+        "--depfile=" + rebase_path(depfile),
+      ]
+    }
+    test_targets += [ ":${docs_target}" ]
+  } else {
+    not_needed(invoker, "*")
+  }
+
+  group(target_name) {
+    deps = test_targets
+  }
+}

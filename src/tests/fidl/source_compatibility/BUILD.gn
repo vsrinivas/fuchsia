@@ -11,6 +11,9 @@ group("tests") {
     "cpp",
     "go",
     "rust",
+
+    # new-style-tests
+    ":source_compatibility",
   ]
 }
 
@@ -33,4 +36,9 @@ fidl("fidl.test.after") {
   excluded_checks = [ "event-names-must-start-with-on" ]
 
   sources = [ "fidl/after.fidl" ]
+}
+
+# New-style tests
+group("source_compatibility") {
+  deps = [ "addmethod" ]
 }
