@@ -5,6 +5,7 @@
 # Individual dependencies that are approved for use in CTS.
 ALLOWED_CTS_DEPS = [
   "//sdk/cts/tools/package_manager:pm_test_package_gather_deps",
+  "//sdk/lib/fdio:fdio",
   "//sdk/lib/fidl/cpp/test:collision_test",
   "//sdk/lib/fidl/cpp/test:fidl_test",
   "//sdk/lib/fidl/cpp:cpp",
