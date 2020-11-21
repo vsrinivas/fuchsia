@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <limits.h>
-#include <string.h>
-
-#include <fbl/algorithm.h>
 #include <lib/fzl/memory-probe.h>
 #include <lib/zx/vmo.h>
+#include <limits.h>
+#include <string.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
+
+#include <fbl/algorithm.h>
 #include <zxtest/zxtest.h>
 
 namespace {
@@ -250,6 +250,9 @@ TEST(VmoCloneTestCase, NoResize) {
 
   status = zx_handle_close(vmo);
   EXPECT_OK(status, "handle_close");
+
+  status = zx_handle_close(parent);
+  EXPECT_OK(status, "handle_close parent");
 }
 
 }  // namespace
