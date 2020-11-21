@@ -195,7 +195,7 @@ table Node {
     /// Local bounding box of this element.
     7: fuchsia.ui.gfx.BoundingBox location;
 
-    /// Transform from this node's coordinate space to its parent's space. 4x4 for compatibility
+    /// Transform from this node's coordinate space to its container's space. 4x4 for compatibility
     /// with scenic.  This matrix is required to have the form
     ///
     ///  [ Sx   0    0    Tx ]
@@ -206,4 +206,8 @@ table Node {
     ///  where Sx, Sy, and Sz are scale factors and Tx, Ty, Tz are the translation factors for
     ///  the x, y, and z components
     8: fuchsia.ui.gfx.mat4 transform;
+
+    /// Node ID of the ancestor of this node that is used as the target of |transform|.
+    /// If not present, this defaults to this node's parent.
+    9: uint32 container_id;
 };
