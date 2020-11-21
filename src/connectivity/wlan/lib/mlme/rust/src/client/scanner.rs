@@ -20,10 +20,6 @@ use {
     banjo_ddk_protocol_wlan_info as banjo_wlan_info, banjo_ddk_protocol_wlan_mac as banjo_wlan_mac,
     fidl_fuchsia_wlan_mlme as fidl_mlme, fuchsia_zircon as zx,
     log::{error, warn},
-    std::{
-        collections::{hash_map, HashMap},
-        hash::{Hash, Hasher},
-    },
     thiserror::Error,
     wlan_common::{
         mac::{self, Bssid, CapabilityInfo, MacAddr},
@@ -32,8 +28,6 @@ use {
     },
     wlan_frame_writer::write_frame,
 };
-
-type BeaconHash = u64;
 
 #[derive(Error, Debug, PartialEq, Eq)]
 pub enum ScanError {
@@ -118,9 +112,6 @@ pub struct BoundScanner<'a> {
 struct OngoingScan {
     /// Scan request that's currently being serviced.
     req: fidl_mlme::ScanRequest,
-    /// BSS seen from beacon or probe response. This is populated while scan request is in
-    /// progress and is cleared out otherwise.
-    seen_bss: HashMap<Bssid, (BeaconHash, fidl_mlme::BssDescription)>,
     /// ID of timeout event scheduled for active scan at beginning of each channel switch. At
     /// end of timeout, a probe request is sent.
     probe_delay_timeout_id: Option<EventId>,
@@ -192,8 +183,7 @@ impl<'a> BoundScanner<'a> {
                 self.scanner.ongoing_scan.take();
                 send_scan_end_and_return!(req.txn_id, ScanError::StartHwScanFails(status), self);
             }
-            self.scanner.ongoing_scan =
-                Some(OngoingScan { req, seen_bss: HashMap::new(), probe_delay_timeout_id: None });
+            self.scanner.ongoing_scan = Some(OngoingScan { req, probe_delay_timeout_id: None });
         } else {
             let channels = channel_list
                 .iter()
@@ -207,8 +197,7 @@ impl<'a> BoundScanner<'a> {
             // Note: for software scanning case, it's important to populate this beforehand because
             //       channel scheduler may `begin_requested_channel_time` immediately, and scanner
             //       needs these information to determine whether to send probe request.
-            self.scanner.ongoing_scan =
-                Some(OngoingScan { req, seen_bss: HashMap::new(), probe_delay_timeout_id: None });
+            self.scanner.ongoing_scan = Some(OngoingScan { req, probe_delay_timeout_id: None });
             let mut listener = build_channel_listener(self.ctx, self.scanner);
             let dwell_time = TimeUnit(max_channel_time as u16).into();
             chan_sched
@@ -230,76 +219,26 @@ impl<'a> BoundScanner<'a> {
         ies: &[u8],
         rx_info: Option<banjo_wlan_mac::WlanRxInfo>,
     ) {
-        let seen_bss = match &mut self.scanner.ongoing_scan {
-            Some(req) => &mut req.seen_bss,
+        let txn_id = match &self.scanner.ongoing_scan {
+            Some(req) => req.req.txn_id,
             None => return,
         };
-        match seen_bss.entry(bssid) {
-            hash_map::Entry::Occupied(mut entry) => {
-                let (existing_hash, bss_description) = entry.get_mut();
-                if timestamp < bss_description.timestamp {
-                    return;
-                }
-                let hash = beacon_hash(beacon_interval, capability_info, ies);
-                if hash != *existing_hash {
-                    let new_bss_description = construct_bss_description(
-                        bssid,
-                        timestamp,
-                        beacon_interval,
-                        capability_info,
-                        ies,
-                        rx_info,
-                    );
-                    let mut new_bss_description = match new_bss_description {
-                        Ok(bss) => bss,
-                        Err(e) => {
-                            warn!("Failed to parse beacon or probe response: {}", e);
-                            return;
-                        }
-                    };
-                    // In case where AP is hidden, its SSID is blank (all 0) in beacon but contains
-                    // the actual SSID in probe response. So if we receive a blank SSID, always
-                    // prefer the existing one since we may have set the actual SSID if we had
-                    // received a probe response previously.
-                    if new_bss_description.ssid.iter().all(|b| *b == 0)
-                        && bss_description.ssid.iter().any(|b| *b != 0)
-                    {
-                        new_bss_description.ssid = bss_description.ssid.clone();
-                    }
-                    // TIM element is present in beacon frame but not probe response. In case we
-                    // see no DTIM period in latest frame, use value from previous one.
-                    if new_bss_description.dtim_period == 0 {
-                        new_bss_description.dtim_period = bss_description.dtim_period;
-                    }
-                    // If there's no RX info, keep old values
-                    if rx_info.is_none() {
-                        new_bss_description.rssi_dbm = bss_description.rssi_dbm;
-                    }
-
-                    *bss_description = new_bss_description;
-                    *existing_hash = hash;
-                }
+        let bss_description = construct_bss_description(
+            bssid,
+            timestamp,
+            beacon_interval,
+            capability_info,
+            ies,
+            rx_info,
+        );
+        let bss_description = match bss_description {
+            Ok(bss) => bss,
+            Err(e) => {
+                warn!("Failed to parse beacon or probe response: {}", e);
+                return;
             }
-            hash_map::Entry::Vacant(entry) => {
-                let hash = beacon_hash(beacon_interval, capability_info, ies);
-                let bss_description = construct_bss_description(
-                    bssid,
-                    timestamp,
-                    beacon_interval,
-                    capability_info,
-                    ies,
-                    rx_info,
-                );
-                let bss_description = match bss_description {
-                    Ok(bss) => bss,
-                    Err(e) => {
-                        warn!("Failed to parse beacon or probe response: {}", e);
-                        return;
-                    }
-                };
-                entry.insert((hash, bss_description));
-            }
-        }
+        };
+        send_scan_result(txn_id, bss_description, &mut self.ctx.device);
     }
 
     /// Notify scanner about end of probe-delay timeout so that it sends out probe request.
@@ -321,16 +260,12 @@ impl<'a> BoundScanner<'a> {
                 return;
             }
         };
-
-        if status == banjo_wlan_mac::WlanHwScan::SUCCESS {
-            send_results_and_end(req, &mut self.ctx.device);
+        let result_code = if status == banjo_wlan_mac::WlanHwScan::SUCCESS {
+            fidl_mlme::ScanResultCodes::Success
         } else {
-            send_scan_end(
-                req.req.txn_id,
-                fidl_mlme::ScanResultCodes::InternalError,
-                &mut self.ctx.device,
-            );
-        }
+            fidl_mlme::ScanResultCodes::InternalError
+        };
+        send_scan_end(req.req.txn_id, result_code, &mut self.ctx.device);
     }
 
     /// Called after switching to a requested channel from a scan request. It's primarily to
@@ -395,7 +330,11 @@ impl<'a> BoundScanner<'a> {
     /// request. The scanner submits scan results to SME.
     pub fn handle_channel_req_complete(&mut self) {
         if let Some(req) = self.scanner.ongoing_scan.take() {
-            send_results_and_end(req, &mut self.ctx.device);
+            send_scan_end(
+                req.req.txn_id,
+                fidl_mlme::ScanResultCodes::Success,
+                &mut self.ctx.device,
+            );
         }
     }
 }
@@ -412,13 +351,6 @@ fn get_band_info(
             _ => b.band == banjo_hw_wlaninfo::WlanInfoBand::_2GHZ,
         })
         .next()
-}
-
-fn send_results_and_end(mut scan_req: OngoingScan, device: &mut Device) {
-    for (_, (_, bss_description)) in scan_req.seen_bss.drain().into_iter() {
-        send_scan_result(scan_req.req.txn_id, bss_description, device);
-    }
-    send_scan_end(scan_req.req.txn_id, fidl_mlme::ScanResultCodes::Success, device);
 }
 
 fn send_scan_result(txn_id: u64, bss: fidl_mlme::BssDescription, device: &mut Device) {
@@ -438,19 +370,6 @@ fn send_scan_end(txn_id: u64, code: fidl_mlme::ScanResultCodes, device: &mut Dev
         error!("error sending MLME ScanEnd: {}", e);
     }
 }
-
-fn beacon_hash(
-    beacon_interval: TimeUnit,
-    capability_info: CapabilityInfo,
-    ies: &[u8],
-) -> BeaconHash {
-    let mut hasher = hash_map::DefaultHasher::new();
-    beacon_interval.hash(&mut hasher);
-    capability_info.hash(&mut hasher);
-    ies.hash(&mut hasher);
-    hasher.finish()
-}
-
 #[cfg(test)]
 mod tests {
     use {
@@ -784,10 +703,10 @@ mod tests {
 
         // Mock receiving a beacon
         handle_beacon(&mut scanner, &mut ctx, TIMESTAMP, &beacon_ies()[..]);
+        m.fake_device.next_mlme_msg::<fidl_mlme::ScanResult>().expect("error reading ScanResult");
 
         // Verify scan results are sent on hw scan complete
         scanner.bind(&mut ctx).handle_hw_scan_complete(banjo_wlan_mac::WlanHwScan::SUCCESS);
-        m.fake_device.next_mlme_msg::<fidl_mlme::ScanResult>().expect("error reading ScanResult");
         let scan_end = m
             .fake_device
             .next_mlme_msg::<fidl_mlme::ScanEnd>()
@@ -845,6 +764,7 @@ mod tests {
 
         // Mock receiving a beacon
         handle_beacon(&mut scanner, &mut ctx, TIMESTAMP, &beacon_ies()[..]);
+        m.fake_device.next_mlme_msg::<fidl_mlme::ScanResult>().expect("error reading ScanResult");
 
         // Verify scan results are sent on hw scan complete
         scanner.bind(&mut ctx).handle_hw_scan_complete(banjo_wlan_mac::WlanHwScan::ABORTED);
@@ -922,7 +842,7 @@ mod tests {
     }
 
     #[test]
-    fn test_handle_beacon_or_probe_response_update() {
+    fn test_handle_beacon_or_probe_response_multiple() {
         let mut m = MockObjects::new();
         let mut ctx = m.make_ctx();
         let mut scanner = Scanner::new(IFACE_MAC);
@@ -940,14 +860,18 @@ mod tests {
         handle_beacon(&mut scanner, &mut ctx, TIMESTAMP, &beacon_ies_2()[..]);
         scanner.bind(&mut ctx).handle_channel_req_complete();
 
-        // Verify that scan result has updated SSID
+        // Verify that one scan result is sent for each beacon
+        let scan_result = m
+            .fake_device
+            .next_mlme_msg::<fidl_mlme::ScanResult>()
+            .expect("error reading MLME ScanResult");
+        assert_eq!(scan_result.bss.ssid, b"ssid".to_vec());
+
         let scan_result = m
             .fake_device
             .next_mlme_msg::<fidl_mlme::ScanResult>()
             .expect("error reading MLME ScanResult");
         assert_eq!(scan_result.bss.ssid, b"ss".to_vec());
-        assert_eq!(scan_result.bss.rates, vec![0xb0, 0x48, 0x60, 0x6c]);
-        assert_eq!(scan_result.bss.dtim_period, 1);
 
         let scan_end = m
             .fake_device
@@ -956,164 +880,6 @@ mod tests {
         assert_eq!(
             scan_end,
             fidl_mlme::ScanEnd { txn_id: 1337, code: fidl_mlme::ScanResultCodes::Success }
-        );
-    }
-
-    #[test]
-    fn test_handle_beacon_or_probe_response_older_timestamp() {
-        let mut m = MockObjects::new();
-        let mut ctx = m.make_ctx();
-        let mut scanner = Scanner::new(IFACE_MAC);
-
-        scanner
-            .bind(&mut ctx)
-            .on_sme_scan(
-                scan_req(),
-                m.listener_state.create_channel_listener_fn(),
-                &mut m.chan_sched,
-            )
-            .expect("expect scan req accepted");
-        handle_beacon(&mut scanner, &mut ctx, TIMESTAMP, &beacon_ies()[..]);
-        // Beacon comes with different SSID but older timestamp
-        handle_beacon(&mut scanner, &mut ctx, TIMESTAMP - 1, &beacon_ies_2()[..]);
-        scanner.bind(&mut ctx).handle_channel_req_complete();
-
-        // Verify that scan result has first SSID, indicating that second call is ignored
-        let scan_result = m
-            .fake_device
-            .next_mlme_msg::<fidl_mlme::ScanResult>()
-            .expect("error reading MLME ScanResult");
-        assert_eq!(scan_result.bss.ssid, b"ssid".to_vec());
-        assert_eq!(scan_result.bss.rates, vec![0xb0, 0x48, 0x60, 0x6c]);
-        assert_eq!(scan_result.bss.dtim_period, 1);
-
-        let scan_end = m
-            .fake_device
-            .next_mlme_msg::<fidl_mlme::ScanEnd>()
-            .expect("error reading MLME ScanEnd");
-        assert_eq!(
-            scan_end,
-            fidl_mlme::ScanEnd { txn_id: 1337, code: fidl_mlme::ScanResultCodes::Success }
-        );
-    }
-
-    #[test]
-    fn test_handle_beacon_or_probe_response_blank_ssid() {
-        let mut m = MockObjects::new();
-        let mut ctx = m.make_ctx();
-        let mut scanner = Scanner::new(IFACE_MAC);
-
-        scanner
-            .bind(&mut ctx)
-            .on_sme_scan(
-                scan_req(),
-                m.listener_state.create_channel_listener_fn(),
-                &mut m.chan_sched,
-            )
-            .expect("expect scan req accepted");
-        handle_beacon(&mut scanner, &mut ctx, TIMESTAMP, &beacon_ies()[..]);
-        // Beacon comes with blank SSID
-        handle_beacon(&mut scanner, &mut ctx, TIMESTAMP, &beacon_ies_blank_ssid()[..]);
-        scanner.bind(&mut ctx).handle_channel_req_complete();
-
-        // Verify that we keep existing SSID
-        let scan_result = m
-            .fake_device
-            .next_mlme_msg::<fidl_mlme::ScanResult>()
-            .expect("error reading MLME ScanResult");
-        assert_eq!(scan_result.bss.ssid, b"ssid".to_vec());
-        // Second beacon also has different rate. This verifies that second beacon is processed.
-        assert_eq!(scan_result.bss.rates, vec![0x48, 0x60, 0x6c]);
-        assert_eq!(scan_result.bss.dtim_period, 1);
-
-        let scan_end = m
-            .fake_device
-            .next_mlme_msg::<fidl_mlme::ScanEnd>()
-            .expect("error reading MLME ScanEnd");
-        assert_eq!(
-            scan_end,
-            fidl_mlme::ScanEnd { txn_id: 1337, code: fidl_mlme::ScanResultCodes::Success }
-        );
-    }
-
-    #[test]
-    fn test_handle_beacon_or_probe_response_no_tim() {
-        let mut m = MockObjects::new();
-        let mut ctx = m.make_ctx();
-        let mut scanner = Scanner::new(IFACE_MAC);
-
-        scanner
-            .bind(&mut ctx)
-            .on_sme_scan(
-                scan_req(),
-                m.listener_state.create_channel_listener_fn(),
-                &mut m.chan_sched,
-            )
-            .expect("expect scan req accepted");
-        handle_beacon(&mut scanner, &mut ctx, TIMESTAMP, &beacon_ies()[..]);
-        // Beacon comes with blank SSID
-        handle_beacon(&mut scanner, &mut ctx, TIMESTAMP, &beacon_ies_no_tim()[..]);
-        scanner.bind(&mut ctx).handle_channel_req_complete();
-
-        // Verify that we keep existing DTIM period
-        let scan_result = m
-            .fake_device
-            .next_mlme_msg::<fidl_mlme::ScanResult>()
-            .expect("error reading MLME ScanResult");
-        assert_eq!(scan_result.bss.dtim_period, 1);
-        // Second frame also has different rate. This verifies that it is processed.
-        assert_eq!(scan_result.bss.rates, vec![0x48, 0x60, 0x6c]);
-        assert_eq!(scan_result.bss.ssid, b"ssid".to_vec());
-
-        let scan_end = m
-            .fake_device
-            .next_mlme_msg::<fidl_mlme::ScanEnd>()
-            .expect("error reading MLME ScanEnd");
-        assert_eq!(
-            scan_end,
-            fidl_mlme::ScanEnd { txn_id: 1337, code: fidl_mlme::ScanResultCodes::Success }
-        );
-    }
-
-    #[test]
-    fn test_handle_beacon_or_probe_response_no_rx_info() {
-        let mut m = MockObjects::new();
-        let mut ctx = m.make_ctx();
-        let mut scanner = Scanner::new(IFACE_MAC);
-
-        scanner
-            .bind(&mut ctx)
-            .on_sme_scan(
-                scan_req(),
-                m.listener_state.create_channel_listener_fn(),
-                &mut m.chan_sched,
-            )
-            .expect("expect scan req accepted");
-        handle_beacon(&mut scanner, &mut ctx, TIMESTAMP, &beacon_ies()[..]);
-        // No RX info
-        scanner.bind(&mut ctx).handle_beacon_or_probe_response(
-            BSSID,
-            TIMESTAMP,
-            TimeUnit(BEACON_INTERVAL),
-            CAPABILITY_INFO,
-            &beacon_ies()[..],
-            None,
-        );
-        scanner.bind(&mut ctx).handle_channel_req_complete();
-
-        // Verify that we keep existing channel and signal strength measurements
-        let scan_result = m
-            .fake_device
-            .next_mlme_msg::<fidl_mlme::ScanResult>()
-            .expect("error reading MLME ScanResult");
-        assert_eq!(scan_result.bss.rssi_dbm, -40);
-        assert_eq!(
-            scan_result.bss.chan,
-            fidl_common::WlanChan {
-                primary: RX_INFO.chan.primary,
-                cbw: fidl_common::Cbw::Cbw20,
-                secondary80: 0,
-            }
         );
     }
 
@@ -1174,30 +940,6 @@ mod tests {
             0x00, 0x02, 115, 115,
             // Supported rates: 24(B), 36, 48, 54
             0x01, 0x04, 0xb0, 0x48, 0x60, 0x6c,
-            // TIM - DTIM count: 0, DTIM period: 1, PVB: 2
-            0x05, 0x04, 0x00, 0x01, 0x00, 0x02,
-        ];
-        ies
-    }
-
-    fn beacon_ies_no_tim() -> Vec<u8> {
-        #[rustfmt::skip]
-        let ies = vec![
-            // SSID: "ssid"
-            0x00, 0x04, 115, 115, 105, 100,
-            // Supported rates: 36, 48, 54
-            0x01, 0x03, 0x48, 0x60, 0x6c,
-        ];
-        ies
-    }
-
-    fn beacon_ies_blank_ssid() -> Vec<u8> {
-        #[rustfmt::skip]
-        let ies = vec![
-            // SSID: ""
-            0x00, 0x04, 0x00, 0x00, 0x00, 0x00,
-            // Supported rates: 36, 48, 54
-            0x01, 0x03, 0x48, 0x60, 0x6c,
             // TIM - DTIM count: 0, DTIM period: 1, PVB: 2
             0x05, 0x04, 0x00, 0x01, 0x00, 0x02,
         ];

@@ -283,17 +283,32 @@ impl<D, J> ScanScheduler<D, J> {
     }
 }
 
-fn maybe_insert_bss(bss_map: &mut HashMap<BssId, BssDescription>, bss: BssDescription) {
+fn maybe_insert_bss(bss_map: &mut HashMap<BssId, BssDescription>, mut bss: BssDescription) {
     match bss_map.entry(bss.bssid) {
         hash_map::Entry::Occupied(mut entry) => {
             let existing_bss = entry.get_mut();
+
+            // In case where AP is hidden, its SSID is blank (all 0) in beacon but contains
+            // the actual SSID in probe response. So if we receive a blank SSID, always
+            // prefer the existing one since we may have set the actual SSID if we had
+            // received a probe response previously.
+            if bss.ssid.iter().all(|b| *b == 0) && existing_bss.ssid.iter().any(|b| *b != 0) {
+                bss.ssid = existing_bss.ssid.clone();
+            }
+
+            // TIM element is present in beacon frame but not probe response. In case we
+            // see no DTIM period in latest frame, use value from previous one.
+            if bss.dtim_period == 0 {
+                bss.dtim_period = existing_bss.dtim_period;
+            }
+
             let existing_has_manufacturer = existing_bss.has_wsc_attr(ie::wsc::Id::MANUFACTURER);
             let new_has_manufacturer = bss.has_wsc_attr(ie::wsc::Id::MANUFACTURER);
-            // Do not replace the BSS in the BSS map if we are going to lose information.
+            // Keep existing vendor IE if newer scan result lacks WSC IE that older one has.
             // It's likely that the new scan result comes from a beacon while the old scan
             // result comes from a probe response.
             if existing_has_manufacturer && !new_has_manufacturer {
-                return;
+                bss.vendor_ies = existing_bss.vendor_ies.take();
             }
             *existing_bss = bss;
         }
@@ -506,6 +521,84 @@ mod tests {
             .collect::<Vec<_>>();
         ssid_list.sort();
         assert_eq!(vec![b"baz".to_vec()], ssid_list);
+    }
+
+    #[test]
+    fn discovery_scan_handle_blank_ssid() {
+        let mut sched = create_sched();
+        let req = sched
+            .enqueue_scan_to_discover(passive_discovery_scan(10))
+            .expect("expected a ScanRequest");
+        let txn_id = req.txn_id;
+        sched.on_mlme_scan_result(fidl_mlme::ScanResult {
+            txn_id,
+            bss: fake_bss!(Open, ssid: b"ssid".to_vec(), bssid: [1; 6]),
+        });
+
+        // A new scan result with the same BSSID replaces the previous result, but with a blank
+        // SSID so the existing SSID is kept.
+        let mut bss = fake_bss!(Open, ssid: vec![0u8, 0, 0, 0], bssid: [1; 6]);
+        // Add an extra IE so we can distinguish this result from the previous result.
+        let ie_marker = &[0xdd, 0x07, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff];
+        bss.vendor_ies.get_or_insert(vec![]).extend_from_slice(ie_marker);
+        sched.on_mlme_scan_result(fidl_mlme::ScanResult { txn_id, bss });
+        let (result, req) = sched.on_mlme_scan_end(fidl_mlme::ScanEnd {
+            txn_id,
+            code: fidl_mlme::ScanResultCodes::Success,
+        });
+        assert!(req.is_none());
+        let (tokens, result) = assert_variant!(result,
+            ScanResult::DiscoveryFinished { tokens, result } => (tokens, result),
+            "expected discovery scan to be completed"
+        );
+        assert_eq!(vec![10], tokens);
+
+        let result = result.expect("expected a successful scan result");
+        assert_eq!(result.len(), 1);
+        // This verifies that we keep the SSID from the first result.
+        assert_eq!(result[0].ssid, b"ssid".to_vec());
+        // This verifies that we process the second result.
+        assert!(result[0].vendor_ies.as_ref().map(|ies| ies.ends_with(ie_marker)).unwrap_or(false));
+    }
+
+    #[test]
+    fn test_handle_beacon_or_probe_response_no_tim() {
+        let mut sched = create_sched();
+        let req = sched
+            .enqueue_scan_to_discover(passive_discovery_scan(10))
+            .expect("expected a ScanRequest");
+        let txn_id = req.txn_id;
+
+        let mut bss_with_dtim = fake_bss!(Open, ssid: b"ssid".to_vec(), bssid: [1; 6]);
+        bss_with_dtim.dtim_period = 1;
+        sched.on_mlme_scan_result(fidl_mlme::ScanResult { txn_id, bss: bss_with_dtim });
+
+        // A new scan result with the same BSSID replaces the previous result, but with a blank
+        // SSID so the existing SSID is kept.
+        let mut bss_no_dtim = fake_bss!(Open, ssid: b"ssid".to_vec(), bssid: [1; 6]);
+        bss_no_dtim.dtim_period = 0;
+        // Add an extra IE so we can distinguish this result from the previous result.
+        let ie_marker = &[0xdd, 0x07, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff];
+        bss_no_dtim.vendor_ies.get_or_insert(vec![]).extend_from_slice(ie_marker);
+        sched.on_mlme_scan_result(fidl_mlme::ScanResult { txn_id, bss: bss_no_dtim });
+        let (result, req) = sched.on_mlme_scan_end(fidl_mlme::ScanEnd {
+            txn_id,
+            code: fidl_mlme::ScanResultCodes::Success,
+        });
+        assert!(req.is_none());
+        let (tokens, result) = assert_variant!(result,
+            ScanResult::DiscoveryFinished { tokens, result } => (tokens, result),
+            "expected discovery scan to be completed"
+        );
+        assert_eq!(vec![10], tokens);
+
+        let result = result.expect("expected a successful scan result");
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0].ssid, b"ssid".to_vec());
+        // This verifies that we keep the DTIM period from the first result.
+        assert_eq!(result[0].dtim_period, 1);
+        // This verifies that we process the second result.
+        assert!(result[0].vendor_ies.as_ref().map(|ies| ies.ends_with(ie_marker)).unwrap_or(false));
     }
 
     #[test]
