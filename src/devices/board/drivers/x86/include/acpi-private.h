@@ -21,7 +21,7 @@ namespace internal {
 
 // utility functions used to implement ExtractHidToDevProps and
 // ExtractCidToDevProps (below)
-static uint32_t ExtractPnpIdWord(const ACPI_PNP_DEVICE_ID& id, size_t offset) {
+static inline uint32_t ExtractPnpIdWord(const ACPI_PNP_DEVICE_ID& id, size_t offset) {
   auto buf = reinterpret_cast<const char*>(id.String);
   auto buf_len = static_cast<size_t>(id.Length);
 

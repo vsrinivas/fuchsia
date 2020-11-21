@@ -73,9 +73,6 @@ driver_module("platform-bus-x86") {
     configs += [ "//build/unification/config:zircon-migrated" ]
   }
 
-  # TODO(fxbug.dev/58161): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-unused-function" ]
-
   sources = [
     "acpi-dev/dev-battery.cc",
     "acpi-dev/dev-cros-ec/acpi.cc",

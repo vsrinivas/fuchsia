@@ -175,6 +175,7 @@ static ACPI_STATUS acpi_get_pcie_devices_crs(ACPI_HANDLE object, UINT32 nesting_
   return acpi_print_resources(object, 1, CURRENT_RESOURCES);
 }
 
+__UNUSED
 static void acpi_debug_pcie_crs(void) {
   ACPI_STATUS status = AcpiGetDevices((char*)"PNP0A08", acpi_get_pcie_devices_crs, NULL, NULL);
   if (status != AE_OK) {
@@ -288,6 +289,7 @@ static ACPI_STATUS acpi_get_pcie_devices_irq(ACPI_HANDLE object, UINT32 nesting_
   return AE_OK;
 }
 
+__UNUSED
 static void acpi_debug_pcie_irq_routing(void) {
   ACPI_STATUS status = AcpiGetDevices((char*)"PNP0A08", acpi_get_pcie_devices_irq, NULL, NULL);
   if (status != AE_OK) {
@@ -310,6 +312,7 @@ static ACPI_STATUS acpi_debug_print_device_name(ACPI_HANDLE object, UINT32 nesti
   return AE_OK;
 }
 
+__UNUSED
 static void acpi_debug_walk_ns(void) {
   ACPI_STATUS status = AcpiWalkNamespace(ACPI_TYPE_DEVICE, ACPI_ROOT_OBJECT, INT_MAX,
                                          acpi_debug_print_device_name, NULL, NULL, NULL);

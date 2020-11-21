@@ -41,6 +41,10 @@ static zx_status_t pciroot_op_get_bti(void* /*context*/, uint32_t bdf, uint32_t 
   return zx_bti_create(iommu_handle, 0, bdf, bti);
 }
 
+// TODO(fxbug.dev/32978): Remove this when removing kpci, it removes a warning
+// about pciroot_op_connect_sysmem being unused. Unlike the other methods, the
+// get_protocol parameters differ.
+__UNUSED
 static zx_status_t pciroot_op_connect_sysmem(void* context, zx_handle_t handle) {
   auto* dev = static_cast<acpi::Device*>(context);
   sysmem_protocol_t sysmem;

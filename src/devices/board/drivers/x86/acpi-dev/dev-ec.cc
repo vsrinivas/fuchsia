@@ -303,6 +303,7 @@ static uint32_t raw_ec_event_gpe_handler(ACPI_HANDLE gpe_dev, uint32_t gpe_num, 
   return ACPI_REENABLE_GPE;
 }
 
+__UNUSED
 static ACPI_STATUS get_ec_handle(ACPI_HANDLE object, UINT32 nesting_level, void* context,
                                  void** ret) {
   *(ACPI_HANDLE*)context = object;

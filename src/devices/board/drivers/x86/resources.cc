@@ -4,6 +4,25 @@
 
 #include "resources.h"
 
+bool resource_is_memory(ACPI_RESOURCE* res) {
+  return res->Type == ACPI_RESOURCE_TYPE_MEMORY24 || res->Type == ACPI_RESOURCE_TYPE_MEMORY32 ||
+         res->Type == ACPI_RESOURCE_TYPE_FIXED_MEMORY32;
+}
+
+bool resource_is_address(ACPI_RESOURCE* res) {
+  return res->Type == ACPI_RESOURCE_TYPE_ADDRESS16 || res->Type == ACPI_RESOURCE_TYPE_ADDRESS32 ||
+         res->Type == ACPI_RESOURCE_TYPE_ADDRESS64 ||
+         res->Type == ACPI_RESOURCE_TYPE_EXTENDED_ADDRESS64;
+}
+
+bool resource_is_io(ACPI_RESOURCE* res) {
+  return res->Type == ACPI_RESOURCE_TYPE_IO || res->Type == ACPI_RESOURCE_TYPE_FIXED_IO;
+}
+
+bool resource_is_irq(ACPI_RESOURCE* res) {
+  return res->Type == ACPI_RESOURCE_TYPE_IRQ || res->Type == ACPI_RESOURCE_TYPE_EXTENDED_IRQ;
+}
+
 zx_status_t resource_parse_memory(ACPI_RESOURCE* res, resource_memory_t* out) {
   switch (res->Type) {
     case ACPI_RESOURCE_TYPE_MEMORY24: {

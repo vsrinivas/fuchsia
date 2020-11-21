@@ -60,24 +60,10 @@ typedef struct resource_irq {
   uint32_t pins[16];
 } resource_irq_t;
 
-static bool resource_is_memory(ACPI_RESOURCE* res) {
-  return res->Type == ACPI_RESOURCE_TYPE_MEMORY24 || res->Type == ACPI_RESOURCE_TYPE_MEMORY32 ||
-         res->Type == ACPI_RESOURCE_TYPE_FIXED_MEMORY32;
-}
-
-static bool resource_is_address(ACPI_RESOURCE* res) {
-  return res->Type == ACPI_RESOURCE_TYPE_ADDRESS16 || res->Type == ACPI_RESOURCE_TYPE_ADDRESS32 ||
-         res->Type == ACPI_RESOURCE_TYPE_ADDRESS64 ||
-         res->Type == ACPI_RESOURCE_TYPE_EXTENDED_ADDRESS64;
-}
-
-static bool resource_is_io(ACPI_RESOURCE* res) {
-  return res->Type == ACPI_RESOURCE_TYPE_IO || res->Type == ACPI_RESOURCE_TYPE_FIXED_IO;
-}
-
-static bool resource_is_irq(ACPI_RESOURCE* res) {
-  return res->Type == ACPI_RESOURCE_TYPE_IRQ || res->Type == ACPI_RESOURCE_TYPE_EXTENDED_IRQ;
-}
+bool resource_is_memory(ACPI_RESOURCE* res);
+bool resource_is_address(ACPI_RESOURCE* res);
+bool resource_is_io(ACPI_RESOURCE* res);
+bool resource_is_irq(ACPI_RESOURCE* res);
 
 zx_status_t resource_parse_memory(ACPI_RESOURCE* res, resource_memory_t* out);
 zx_status_t resource_parse_address(ACPI_RESOURCE* res, resource_address_t* out);
