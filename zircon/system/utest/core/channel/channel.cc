@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/fit/function.h>
+#include <unistd.h>
+
 #include <atomic>
 #include <cstdio>
 #include <cstdlib>
@@ -9,10 +12,7 @@
 #include <set>
 #include <vector>
 
-#include <unistd.h>
-
 #include <fbl/auto_call.h>
-#include <lib/fit/function.h>
 // Needed to test API coverage of null params in GCC.
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wnonnull"
@@ -400,7 +400,12 @@ TEST(ChannelTest, WriteNonTransferableHandleReturnsAccessDeniedAndClosesHandle) 
 
   zx_handle_t transferred = non_transferable_event.release();
   ASSERT_EQ(local.write(0, nullptr, 0, &transferred, 1), ZX_ERR_ACCESS_DENIED);
+
+// Disable clang static analyzer for this line because it is testing handle
+// double release intentionally.
+#ifndef __clang_analyzer__
   ASSERT_EQ(zx_handle_close(transferred), ZX_ERR_BAD_HANDLE);
+#endif  //  #ifndef __clang_analyzer__
 }
 
 TEST(ChannelTest, WriteRepeatedHandlesReturnsBadHandlesAndClosesHandle) {
@@ -415,7 +420,11 @@ TEST(ChannelTest, WriteRepeatedHandlesReturnsBadHandlesAndClosesHandle) {
   zx_handle_t handles[2] = {event_handle, event_handle};
 
   ASSERT_EQ(local.write(0, nullptr, 0, handles, 2), ZX_ERR_BAD_HANDLE);
+// Disable clang static analyzer for this line because it is testing handle
+// double release intentionally.
+#ifndef __clang_analyzer__
   ASSERT_EQ(zx_handle_close(event_handle), ZX_ERR_BAD_HANDLE);
+#endif  //  #ifndef __clang_analyzer__
 }
 
 TEST(ChannelTest, ConcurrentReadsConsumeUniqueElements) {
@@ -994,10 +1003,10 @@ TEST(ChannelTest, CallHandleAndBytesFitsIsOk) {
 // Inline this so GCC doesn't see there is only one caller and it uses nullptr.
 [[gnu::noinline]]
 #endif
-zx_status_t local_call(const zx::channel &local, zx_channel_call_args_t &args,
-                       uint32_t* bytes, uint32_t* handles) {
-  return zx_channel_call(local.get(), 0, zx::time::infinite().get(), &args,
-                         bytes, handles);
+zx_status_t
+local_call(const zx::channel& local, zx_channel_call_args_t& args, uint32_t* bytes,
+           uint32_t* handles) {
+  return zx_channel_call(local.get(), 0, zx::time::infinite().get(), &args, bytes, handles);
 }
 
 TEST(ChannelTest, CallNullptrNumBytesIsInvalidArgs) {
