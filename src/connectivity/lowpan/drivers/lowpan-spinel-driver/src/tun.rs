@@ -175,7 +175,19 @@ impl NetworkInterface for TunNetworkInterface {
     }
 
     fn take_event_stream(&self) -> BoxStream<'_, Result<NetworkInterfaceEvent, Error>> {
-        // TODO(rquattle): Implement event stream
-        futures::future::pending().into_stream().boxed()
+        let enabled_stream = futures::stream::try_unfold((), move |()| async move {
+            loop {
+                if let ftun::InternalState { has_session: Some(has_session), .. } =
+                    self.tun_dev.watch_state().await?
+                {
+                    break Ok(Some((
+                        NetworkInterfaceEvent::InterfaceEnabledChanged(has_session),
+                        (),
+                    )));
+                }
+            }
+        });
+
+        enabled_stream.boxed()
     }
 }
