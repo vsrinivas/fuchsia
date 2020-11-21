@@ -144,7 +144,10 @@ template("go_build") {
       }
     }
     not_needed(invoker, "*")
-    not_needed([ "output_dir" ])
+    not_needed([
+                 "output_dir",
+                 "output_name",
+               ])
   } else {
     define_sdk_target = defined(invoker.sdk_category) &&
                         invoker.sdk_category != "excluded" && !is_test
