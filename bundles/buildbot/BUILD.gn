@@ -66,3 +66,11 @@ group("workstation") {
     "//src/tests/end_to_end/screen_is_not_black:config",
   ]
 }
+
+# This target is for tests which depend on package artefacts such as
+# the FVM. It should be included using `fx set --with-host`.
+# TODO(fxbug.dev/63508): teach infra about this target.
+group("host-tests") {
+  testonly = true
+  deps = []
+}
