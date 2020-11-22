@@ -823,7 +823,7 @@ class View {
 
   // Copy a single item's payload into supplied storage.
   template <typename CopyStorage>
-  fitx::result<CopyError<CopyStorage>> CopyRawItem(CopyStorage&& to, const iterator& it) {
+  fitx::result<CopyError<std::decay_t<CopyStorage>>> CopyRawItem(CopyStorage&& to, const iterator& it) {
     return Copy(std::forward<CopyStorage>(to), it.payload_offset(), (*it).header->length);
   }
 
@@ -837,7 +837,7 @@ class View {
 
   // Copy a single item's header and payload into supplied storage.
   template <typename CopyStorage>
-  fitx::result<CopyError<CopyStorage>> CopyRawItemWithHeader(CopyStorage&& to, const iterator& it) {
+  fitx::result<CopyError<std::decay_t<CopyStorage>>> CopyRawItemWithHeader(CopyStorage&& to, const iterator& it) {
     return Copy(std::forward<CopyStorage>(to), it.item_offset(),
                 sizeof(zbi_header_t) + (*it).header->length);
   }
@@ -881,7 +881,7 @@ class View {
   fitx::result<CopyError<CreateStorage>, CreateStorage> Copy(const iterator& first,
                                                              const iterator& last) {
     using CopyTraits = StorageTraits<CreateStorage>;
-    using ErrorType = CopyError<std::decay_t<CreateStorage>>;
+    using ErrorType = CopyError<CreateStorage>;
 
     auto [offset, length] = RangeBounds(first, last);
     constexpr auto slopcheck = [](uint32_t slop) {
@@ -994,7 +994,7 @@ class View {
             typename CreateStorage = std::decay_t<typename T::template CreateResult<>>>
   fitx::result<CopyError<CreateStorage>, std::pair<CreateStorage, uint32_t>> CopyWithSlop(
       uint32_t offset, uint32_t length, uint32_t to_offset, SlopCheck&& slopcheck) {
-    using ErrorType = CopyError<std::decay_t<CreateStorage>>;
+    using ErrorType = CopyError<CreateStorage>;
 
     if (auto result = Clone(offset, length, to_offset, std::forward<SlopCheck>(slopcheck));
         result.is_error()) {
