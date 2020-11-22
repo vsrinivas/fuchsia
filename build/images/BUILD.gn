@@ -216,6 +216,9 @@ if (target_cpu == "x64") {
 } else if (target_cpu == "arm64") {
   qemu_kernel_file = "$root_build_dir/qemu-boot-shim.bin"
   qemu_kernel_target = "//zircon/kernel/target/arm64/boot-shim:qemu"
+} else if (target_cpu == "riscv64") {
+  qemu_kernel_file = "$root_build_dir/qemu-boot-shim.bin"
+  qemu_kernel_target = "//zircon/kernel/target/riscv64/boot-shim:qemu"
 } else {
   assert(false, "Unsupported target cpu: $target_cpu")
 }
