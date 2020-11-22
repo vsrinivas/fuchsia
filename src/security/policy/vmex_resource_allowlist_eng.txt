@@ -1,5 +1,6 @@
 fuchsia-pkg://fuchsia.com/blobs-integration#meta/executable-mount-test.cmx
 fuchsia-pkg://fuchsia.com/bootsvc-tests#meta/bootfs-loader-service-test.cmx
+fuchsia-pkg://fuchsia.com/component-manager-tests#meta/component_manager_boot_env_tests.cmx
 fuchsia-pkg://fuchsia.com/driver-manager-tests#meta/driver-host-loader-service-test.cmx
 fuchsia-pkg://fuchsia.com/fshost-tests#meta/fshost-loader-service-test.cmx
 fuchsia-pkg://fuchsia.com/loader-service-test#meta/loader-service-test.cmx

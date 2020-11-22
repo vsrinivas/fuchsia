@@ -132,6 +132,7 @@ TEST_F(HubTest, Services) {
       "fuchsia.kernel.RootJob",
       "fuchsia.kernel.RootJobForInspect",
       "fuchsia.kernel.Stats",
+      "fuchsia.kernel.VmexResource",
       "fuchsia.tracing.kernel.Controller",
       "fuchsia.tracing.kernel.Reader",
       "fuchsia.paver.Paver",

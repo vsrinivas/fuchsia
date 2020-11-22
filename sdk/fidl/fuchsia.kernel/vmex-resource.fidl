@@ -1,0 +1,16 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.kernel;
+
+using zx;
+
+/// Protocol for providing a `ZX_RSRC_KIND_SYSTEM` with base
+/// `ZX_SYS_RSRC_BASE_VMEX` to programs that should be able to mark VMOs as
+/// executable.
+[Discoverable]
+protocol VmexResource {
+    /// Get a VMEX resource handle as `resource`.
+    Get() -> (zx.handle:RESOURCE vmex_resource);
+};

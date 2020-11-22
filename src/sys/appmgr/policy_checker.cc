@@ -105,6 +105,11 @@ std::optional<SecurityPolicy> PolicyChecker::Check(const SandboxMetadata& sandbo
                    << "fuchsia.kernel.SmcResource";
     return std::nullopt;
   }
+  if (sandbox.HasService("fuchsia.kernel.VmexResource") && !CheckVmexResource(pkg_url)) {
+    FX_LOGS(ERROR) << "Component " << pkg_url.ToString() << " is not allowed to use "
+                   << "fuchsia.kernel.VmexResource";
+    return std::nullopt;
+  }
   if (sandbox.HasService("fuchsia.pkg.PackageResolver") && !CheckPackageResolver(pkg_url)) {
     FX_LOGS(ERROR) << "Component " << pkg_url.ToString() << " is not allowed to use "
                    << "fuchsia.pkg.PackageResolver. go/no-package-resolver";

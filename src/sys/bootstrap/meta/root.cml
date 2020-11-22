@@ -49,6 +49,7 @@
                 "fuchsia.kernel.RootJobForInspect",
                 "fuchsia.kernel.SmcResource",
                 "fuchsia.kernel.Stats",
+                "fuchsia.kernel.VmexResource",
                 "fuchsia.process.Launcher",
                 "fuchsia.security.resource.Vmex",
             ],

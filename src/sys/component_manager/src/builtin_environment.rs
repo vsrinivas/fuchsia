@@ -21,6 +21,7 @@ use {
             system_controller::SystemController,
             time::{create_utc_clock, UtcTimeMaintainer},
             vmex::VmexService,
+            vmex_resource::VmexResource,
         },
         capability_ready_notifier::CapabilityReadyNotifier,
         config::RuntimeConfig,
@@ -387,6 +388,7 @@ pub struct BuiltinEnvironment {
     pub system_controller: Arc<SystemController>,
     pub utc_time_maintainer: Option<Arc<UtcTimeMaintainer>>,
     pub vmex_service: Option<Arc<VmexService>>,
+    pub vmex_resource: Option<Arc<VmexResource>>,
 
     pub work_scheduler: Arc<WorkScheduler>,
     pub realm_capability_host: Arc<RealmCapabilityHost>,
@@ -582,6 +584,27 @@ impl BuiltinEnvironment {
             model.root_realm.hooks.install(hypervisor_resource.hooks()).await;
         }
 
+        // Set up the VmexResource service.
+        let vmex_resource_handle = system_resource_handle
+            .as_ref()
+            .map(|handle| {
+                match handle.create_child(
+                    zx::ResourceKind::SYSTEM,
+                    None,
+                    zx::sys::ZX_RSRC_SYSTEM_VMEX_BASE,
+                    1,
+                    b"vmex",
+                ) {
+                    Ok(resource) => Some(resource),
+                    Err(_) => None,
+                }
+            })
+            .flatten();
+        let vmex_resource = vmex_resource_handle.map(VmexResource::new);
+        if let Some(vmex_resource) = vmex_resource.as_ref() {
+            model.root_realm.hooks.install(vmex_resource.hooks()).await;
+        }
+
         // Set up System Controller service.
         let system_controller = Arc::new(SystemController::new(model.clone(), SHUTDOWN_TIMEOUT));
         model.root_realm.hooks.install(system_controller.hooks()).await;
@@ -656,6 +679,7 @@ impl BuiltinEnvironment {
             ioport_resource: _ioport_resource,
             #[cfg(target_arch = "aarch64")]
             smc_resource: _smc_resource,
+            vmex_resource,
             root_resource,
             system_controller,
             utc_time_maintainer,

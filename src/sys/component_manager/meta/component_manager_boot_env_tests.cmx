@@ -8,7 +8,8 @@
                 "fuchsia.kernel.IrqResource",
                 "fuchsia.kernel.MmioResource",
                 "fuchsia.kernel.RootJob",
-                "fuchsia.kernel.SmcResource"
+                "fuchsia.kernel.SmcResource",
+                "fuchsia.kernel.VmexResource"
             ]
         }
     },
@@ -36,6 +37,7 @@
             "fuchsia.kernel.MmioResource",
             "fuchsia.kernel.RootJob",
             "fuchsia.kernel.SmcResource",
+            "fuchsia.kernel.VmexResource",
             "fuchsia.process.Launcher"
         ]
     }

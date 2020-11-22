@@ -95,6 +95,7 @@ template("component_manager") {
     "src/builtin/system_controller.rs",
     "src/builtin/time.rs",
     "src/builtin/vmex.rs",
+    "src/builtin/vmex_resource.rs",
     "src/builtin_environment.rs",
     "src/capability.rs",
     "src/capability_ready_notifier.rs",

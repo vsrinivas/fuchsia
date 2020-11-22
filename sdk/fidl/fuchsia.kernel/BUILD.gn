@@ -18,6 +18,7 @@ fidl("fuchsia.kernel") {
     "mmio-resource.fidl",
     "root-job.fidl",
     "smc-resource.fidl",
+    "vmex-resource.fidl",
   ]
 
   public_deps = [
