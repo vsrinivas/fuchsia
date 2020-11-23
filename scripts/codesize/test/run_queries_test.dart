@@ -5,13 +5,13 @@
 import 'dart:io';
 
 import 'package:test/test.dart';
+import 'package:codesize/queries/index.dart';
+import 'package:codesize/queries/mock_query.dart';
+import 'package:codesize/render/ast.dart';
+import 'package:codesize/run_queries.dart';
+import 'package:codesize/types.dart';
 
-import 'queries/index.dart';
-import 'queries/mock_query.dart';
-import 'render/ast.dart';
-import 'run_queries.dart';
 import 'testing_util.dart';
-import 'types.dart';
 
 class SimpleQuery extends MockQuery {
   SimpleQuery(List<AnyNode> nodes) : super(nodes);

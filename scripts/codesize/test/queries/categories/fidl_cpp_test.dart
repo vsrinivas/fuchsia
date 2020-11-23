@@ -3,9 +3,8 @@
 // found in the LICENSE file.
 
 import 'package:test/test.dart';
-
-import '../index.dart';
-import 'fidl_cpp.dart';
+import 'package:codesize/queries/index.dart';
+import 'package:codesize/queries/categories/fidl_cpp.dart';
 
 void main() {
   group('isNameCppCodingTables', () {

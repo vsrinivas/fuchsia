@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// @dart = 2.8
-
 /// Library for injecting and mocking I/O functionalities.
 library io;
 
@@ -70,24 +68,24 @@ class Standard implements Io {
   @override
   ProcessManager get processManager => LocalProcessManager();
 
-  fxutils.FxEnv _fxEnv;
+  fxutils.FxEnv? _fxEnv;
 
   @override
   fxutils.FxEnv get fxEnv {
     if (_fxEnv != null) {
-      return _fxEnv;
+      return _fxEnv!;
     }
 
     final envReader = fxutils.EnvReader(cwd: cwd, environment: environment);
     return _fxEnv = fxutils.FxEnv(envReader: envReader);
   }
 
-  fxutils.Fx _fx;
+  fxutils.Fx? _fx;
 
   @override
   fxutils.Fx get fx {
     if (_fx != null) {
-      return _fx;
+      return _fx!;
     }
 
     return _fx = fxutils.Fx(fxEnv: fxEnv);

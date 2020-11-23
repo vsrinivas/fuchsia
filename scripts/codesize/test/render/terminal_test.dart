@@ -4,10 +4,10 @@
 
 import 'package:test/test.dart';
 
-import '../queries/index.dart';
-import '../queries/mock_query.dart';
-import 'ast.dart';
-import 'terminal.dart';
+import 'package:codesize/queries/index.dart';
+import 'package:codesize/queries/mock_query.dart';
+import 'package:codesize/render/ast.dart';
+import 'package:codesize/render/terminal.dart';
 
 void main() {
   final renderer = TerminalRenderer(supportsControlCharacters: false);

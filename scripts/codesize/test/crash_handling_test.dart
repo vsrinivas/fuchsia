@@ -9,9 +9,8 @@ import 'package:file/memory.dart';
 import 'package:process/process.dart';
 import 'package:test/test.dart';
 import 'package:fxutils/fxutils.dart' as fxutils;
-
-import 'crash_handling.dart';
-import 'io.dart';
+import 'package:codesize/crash_handling.dart';
+import 'package:codesize/io.dart';
 
 const _mockProcessOutput = '❌ MOCK ❌';
 

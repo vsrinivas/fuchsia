@@ -4,10 +4,10 @@
 
 import 'package:test/test.dart';
 
-import '../queries/index.dart';
-import '../queries/mock_query.dart';
-import 'ast.dart';
-import 'tsv.dart';
+import 'package:codesize/queries/index.dart';
+import 'package:codesize/queries/mock_query.dart';
+import 'package:codesize/render/ast.dart';
+import 'package:codesize/render/tsv.dart';
 
 void main() {
   final renderer = TsvRenderer();

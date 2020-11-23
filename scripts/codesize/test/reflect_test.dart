@@ -3,10 +3,9 @@
 // found in the LICENSE file.
 
 import 'package:test/test.dart';
-
-import 'queries/index.dart';
-import 'reflect.dart';
-import 'types.dart';
+import 'package:codesize/queries/index.dart';
+import 'package:codesize/reflect.dart';
+import 'package:codesize/types.dart';
 
 // ignore_for_file: avoid_as
 

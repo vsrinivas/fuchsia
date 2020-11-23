@@ -5,12 +5,12 @@
 import 'dart:io';
 
 import 'package:test/test.dart';
+import 'package:codesize/render/ast.dart';
+import 'package:codesize/report.pb.dart' as bloaty_report;
+import 'package:codesize/types.dart';
+import 'package:codesize/queries/crates.dart';
 
-import '../render/ast.dart';
-import '../report.pb.dart' as bloaty_report;
 import '../testing_util.dart';
-import '../types.dart';
-import 'crates.dart';
 
 void main() {
   Directory testData = locateTestData();

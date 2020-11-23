@@ -3,8 +3,7 @@
 // found in the LICENSE file.
 
 import 'package:test/test.dart';
-
-import '../index.dart';
+import 'package:codesize/queries/index.dart';
 
 void main() {
   group('isNameDiagnostics', () {

@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/dart/dart_library.gni")
 import("//build/dart/dart_tool.gni")
 import("//build/dart/test.gni")
 import("//build/host.gni")
@@ -23,10 +24,11 @@ if (is_host) {
   }
 }
 
-dart_test("codesize_tests") {
-  source_dir = "lib"
+dart_library("codesize") {
+  package_name = "codesize"
 
-  # Library sources
+  null_safe = true
+
   sources = [
     "bloaty.dart",
     "build.dart",
@@ -53,27 +55,11 @@ dart_test("codesize_tests") {
     "render/html.dart",
     "render/terminal.dart",
     "render/tsv.dart",
+    "report.pb.dart",
     "run_queries.dart",
     "symbols/cache.dart",
     "symbols/repo.dart",
     "types.dart",
-  ]
-
-  # Tests
-  sources += [
-    "cli_test.dart",
-    "crash_handling_test.dart",
-    "queries/categories/diagnostics_test.dart",
-    "queries/categories/fidl_cpp_test.dart",
-    "queries/categories/fidl_rust_test.dart",
-    "queries/crates_test.dart",
-    "queries/unique_symbol_test.dart",
-    "reflect_test.dart",
-    "render/terminal_test.dart",
-    "render/tsv_test.dart",
-    "run_queries_test.dart",
-    "symbols/cache_test.dart",
-    "testing_util.dart",
   ]
 
   # Note: keep in sync with `codesize.packages`.
@@ -110,8 +96,32 @@ dart_test("codesize_tests") {
     "//third_party/dart-pkg/pub/vm_service",
     "//third_party/dart-pkg/pub/watcher",
   ]
+}
 
-  deps += [ "//third_party/dart-pkg/pub/test" ]
+dart_test("codesize_tests") {
+  sources = [
+    "cli_test.dart",
+    "crash_handling_test.dart",
+    "queries/categories/diagnostics_test.dart",
+    "queries/categories/fidl_cpp_test.dart",
+    "queries/categories/fidl_rust_test.dart",
+    "queries/crates_test.dart",
+    "queries/unique_symbol_test.dart",
+    "reflect_test.dart",
+    "render/terminal_test.dart",
+    "render/tsv_test.dart",
+    "run_queries_test.dart",
+    "symbols/cache_test.dart",
+    "testing_util.dart",
+  ]
+
+  deps = [
+    ":codesize",
+    "//scripts/fxutils",
+    "//third_party/dart-pkg/pub/file",
+    "//third_party/dart-pkg/pub/process",
+    "//third_party/dart-pkg/pub/test",
+  ]
 
   non_dart_deps = [ ":bloaty_reports($host_toolchain)" ]
 }

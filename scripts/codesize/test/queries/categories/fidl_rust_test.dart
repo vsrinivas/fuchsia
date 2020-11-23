@@ -3,9 +3,8 @@
 // found in the LICENSE file.
 
 import 'package:test/test.dart';
-
-import '../index.dart';
-import 'fidl_rust.dart';
+import 'package:codesize/queries/index.dart';
+import 'package:codesize/queries/categories/fidl_rust.dart';
 
 void main() {
   group('match symbols', () {

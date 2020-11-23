@@ -3,9 +3,9 @@
 // found in the LICENSE file.
 
 import 'dart:io';
-import 'package:test/test.dart';
 
-import 'cache.dart';
+import 'package:test/test.dart';
+import 'package:codesize/symbols/cache.dart';
 
 void main() {
   group('Cache', () {
