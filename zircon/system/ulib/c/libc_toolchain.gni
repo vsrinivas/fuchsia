@@ -10,22 +10,6 @@
 # For more details, see the extensive TECHNICAL NOTE in the comments at
 # the end of this file.
 
-# Sanity check. If select_variant is not an empty list, then BUILDCONFIG.gn, when
-# executed in the default toolchain, will process the list and create a more elaborate
-# version named 'select_variant_canonical'. This global variable can be passed to
-# other GN toolchain() context through 'toolchain_args'. This file can only work
-# properly if this was done for the current toolchain.
-#
-# NOTE: Some infra bots set select_variant to just "clang", which is a no-op variant
-# corresponding to the default. Consider this to be equivalent to an empty list.
-if (select_variant != [] && select_variant != [ "clang" ]) {
-  # An error here means that whatever created the current GN toolchain() instance
-  # did not pass select_variant_canonical properly through toolchain_args.
-  assert(
-      select_variant_canonical != [],
-      "select_variant_canonical is not defined in the current toolchain ($current_toolchain).")
-}
-
 # The C library's own GN target label, without a toolchain
 sysroot_libc_label = "//zircon/system/ulib/c"
 
