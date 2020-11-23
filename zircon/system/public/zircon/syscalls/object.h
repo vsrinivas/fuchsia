@@ -497,20 +497,29 @@ typedef struct zx_info_vmo_v1 {
     uint32_t cache_policy;
 } zx_info_vmo_v1_t;
 
-typedef struct zx_info_guest_stats {
+// Each machine has its own format for the same ZX_INFO_GUEST_STATS topic.
+// In native builds, zx_info_guest_stats_t is a typedef alias for the type.
+// Cross-tools can select the machine-specific type to use based on the
+// source of the data they are working with.
+
+typedef struct zx_arm64_info_guest_stats {
     uint32_t cpu_number;
     uint32_t flags;
-
     uint64_t vm_entries;
     uint64_t vm_exits;
-#ifdef __aarch64__
     uint64_t wfi_wfe_instructions;
     uint64_t instruction_aborts;
     uint64_t data_aborts;
     uint64_t system_instructions;
     uint64_t smc_instructions;
     uint64_t interrupts;
-#else
+} zx_arm64_info_guest_stats_t;
+
+typedef struct zx_x86_64_info_guest_stats {
+    uint32_t cpu_number;
+    uint32_t flags;
+    uint64_t vm_entries;
+    uint64_t vm_exits;
     uint64_t interrupts;
     uint64_t interrupt_windows;
     uint64_t cpuid_instructions;
@@ -523,8 +532,13 @@ typedef struct zx_info_guest_stats {
     uint64_t xsetbv_instructions;
     uint64_t pause_instructions;
     uint64_t vmcall_instructions;
+} zx_x86_64_info_guest_stats;
+
+#if defined(__aarch64__)
+typedef zx_arm64_info_guest_stats_t zx_info_guest_stats_t;
+#elif defined(__x86_64__)
+typedef zx_x86_64_info_guest_stats zx_info_guest_stats_t;
 #endif
-} zx_info_guest_stats_t;
 
 // Info on the runtime of a task.
 typedef struct zx_info_task_runtime {
