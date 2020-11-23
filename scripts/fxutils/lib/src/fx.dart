@@ -4,7 +4,6 @@
 
 import 'dart:io';
 import 'package:fxutils/fxutils.dart';
-import 'package:meta/meta.dart';
 
 /// Re-entry helper for running other fx subcommands from within any subcommand
 /// written in Dart.
@@ -24,19 +23,19 @@ import 'package:meta/meta.dart';
 /// final output = await fx.getSubCommandOutput('some-command');
 /// ```
 class Fx {
-  final FxEnv fxEnv;
+  final FxEnv? fxEnv;
   final ProcessLauncher _processLauncher;
   Fx({
-    @required this.fxEnv,
-    StartProcess processStarter,
+    required this.fxEnv,
+    StartProcess? processStarter,
   }) : _processLauncher = ProcessLauncher(processStarter: processStarter);
 
-  factory Fx.mock(Process process, [FxEnv fxEnv]) => Fx(
+  factory Fx.mock(Process process, [FxEnv? fxEnv]) => Fx(
         processStarter: returnGivenProcess(process),
         fxEnv: fxEnv,
       );
 
-  Future<String> getDeviceName() async {
+  Future<String?> getDeviceName() async {
     return await getSubCommandOutput('get-device');
   }
 
@@ -53,7 +52,7 @@ class Fx {
     Iterable<String> testNames, {
     int batchSize = 50,
   }) async {
-    final testNamesIterator = ListIterator<String>.from(testNames);
+    final testNamesIterator = ListIterator<String>.from(testNames.toList());
     while (testNamesIterator.isNotEmpty) {
       final result = await runFxSubCommand(
         'update-if-in-base',
@@ -70,12 +69,12 @@ class Fx {
   ///
   /// Intentionally offers no realtime access to output, or to the stderr. This
   /// is meant to simplify the task of getting output from an fx subcommand.
-  Future<String> getSubCommandOutput(
+  Future<String?> getSubCommandOutput(
     /// fx subcommand to execute. For example, "device-name", "status", etc.
     String cmd, {
 
     /// Optional list of arguments to pass to the subcommand.
-    List<String> args,
+    List<String>? args,
 
     /// Accepted exit codes. Unexpected exit codes will throw a
     /// [FailedProcessException]. Set this to [null] to never throw an
@@ -90,9 +89,8 @@ class Fx {
       cmd,
       args: args,
     );
-    if (allowedExitCodes != null &&
-        !allowedExitCodes.contains(processResult.exitCode)) {
-      final fullCommand = [fxEnv.fx, cmd, ...?args];
+    if (!allowedExitCodes.contains(processResult.exitCode)) {
+      final fullCommand = [fxEnv!.fx, cmd, ...?args];
       throw FailedProcessException(
         command: fullCommand,
         exitCode: processResult.exitCode,
@@ -113,7 +111,7 @@ class Fx {
     String cmd, {
 
     /// Argument and flags for the subcommand. Optional.
-    List<String> args,
+    List<String>? args,
 
     /// I/O mode of the spawned process. Defaults to
     /// [ProcessStartMode.inheritStdio] if unset and if [stdoutSink] and
@@ -124,7 +122,7 @@ class Fx {
     SystemEncoding encoding = systemEncoding,
   }) async {
     return _processLauncher.run(
-      fxEnv.fx,
+      fxEnv!.fx,
       [cmd, ...?args],
       mode: mode,
       outputEncoding: encoding,

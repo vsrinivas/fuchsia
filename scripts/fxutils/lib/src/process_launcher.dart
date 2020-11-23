@@ -10,11 +10,17 @@ import 'package:fxutils/fxutils.dart';
 
 class ProcessLauncher {
   final StartProcess processStarter;
-  ProcessLauncher({StartProcess processStarter})
-      : processStarter = processStarter ?? Process.start;
+  ProcessLauncher({StartProcess? processStarter})
+      : processStarter = processStarter ??
+            Process.start as Future<Process> Function(String, List<String>,
+                {Map<String, String>? environment,
+                bool? includeParentEnvironment,
+                ProcessStartMode? mode,
+                bool? runInShell,
+                String? workingDirectory});
 
   Future<Process> start(String executable, List<String> arguments,
-          {String workingDirectory,
+          {String? workingDirectory,
           Map<String, String> environment = const {},
           bool includeParentEnvironment = true,
           bool runInShell = false,
@@ -32,12 +38,12 @@ class ProcessLauncher {
   Future<ProcessResult> run(
     String executable,
     List<String> arguments, {
-    String workingDirectory,
+    String? workingDirectory,
     Map<String, String> environment = const {},
     bool includeParentEnvironment = true,
     bool runInShell = false,
     ProcessStartMode mode = ProcessStartMode.normal,
-    convert.Encoding outputEncoding = systemEncoding,
+    convert.Encoding? outputEncoding = systemEncoding,
   }) async {
     final _stdout = <int>[];
     final _stderr = <int>[];
@@ -59,7 +65,11 @@ class ProcessLauncher {
     });
 
     final results = await Future.wait(
-      [process.exitCode, stdOutFinish, stdErrFinish],
+      [
+        process.exitCode,
+        stdOutFinish.then((_) => /* placeholder */ 0),
+        stdErrFinish.then((_) => /* placeholder */ 0)
+      ],
     );
 
     return ProcessResult(
@@ -75,10 +85,10 @@ class ProcessLauncher {
 StartProcess returnGivenProcess(Process process) => (
       String executable,
       List<String> arguments, {
-      String workingDirectory,
-      Map<String, String> environment,
-      bool includeParentEnvironment,
-      bool runInShell,
-      ProcessStartMode mode,
+      String? workingDirectory,
+      Map<String, String>? environment,
+      bool? includeParentEnvironment,
+      bool? runInShell,
+      ProcessStartMode? mode,
     }) =>
         Future.value(process);

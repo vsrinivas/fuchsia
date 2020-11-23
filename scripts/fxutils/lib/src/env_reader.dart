@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 import 'dart:io';
-import 'package:meta/meta.dart';
 
 /// Wraps [Platform] for the sake of mocking env results in tests.
 ///
@@ -27,14 +26,14 @@ class EnvReader {
   final Map<String, String> overrides;
 
   EnvReader({
-    @required this.environment,
-    @required this.cwd,
+    required this.environment,
+    required this.cwd,
     this.overrides = const {},
   });
   factory EnvReader.fromEnvironment() =>
       EnvReader(environment: Platform.environment, cwd: Directory.current.path);
 
-  String getEnv(String variableName, [String defaultValue]) {
+  String? getEnv(String variableName, [String? defaultValue]) {
     // print('asking for $variableName with overrides: $overrides');
     // print('asking for $variableName with environment: $environment');
     return overrides[variableName] ?? environment[variableName] ?? defaultValue;

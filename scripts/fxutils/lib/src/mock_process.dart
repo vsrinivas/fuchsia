@@ -17,9 +17,9 @@ class MockProcess implements Process {
   final Future<int> exitCode;
 
   MockProcess({
-    Stream<List<int>> stdout,
-    Stream<List<int>> stderr,
-    Future<int> exitCode,
+    Stream<List<int>>? stdout,
+    Stream<List<int>>? stderr,
+    Future<int>? exitCode,
   })  : stdout = stdout ?? Stream.empty(),
         stderr = stderr ?? Stream.empty(),
         exitCode = exitCode ?? Future<int>.value(0);
@@ -35,8 +35,8 @@ class MockProcess implements Process {
   /// abstraction. Since this constructor accepts raw literals, we name it
   /// thusly.
   factory MockProcess.raw({
-    String stdout,
-    String stderr,
+    String? stdout,
+    String? stderr,
     int exitCode = 0,
   }) =>
       MockProcess(
@@ -62,9 +62,9 @@ class MockProcess implements Process {
 /// Creates a [StartProcess] that always returns the provided [process].
 StartProcess mockStartProcess(Process process) =>
     (String executable, List<String> arguments,
-            {String workingDirectory,
-            Map<String, String> environment,
-            bool includeParentEnvironment,
-            bool runInShell,
-            ProcessStartMode mode}) =>
+            {String? workingDirectory,
+            Map<String, String>? environment,
+            bool? includeParentEnvironment,
+            bool? runInShell,
+            ProcessStartMode? mode}) =>
         Future.value(process);

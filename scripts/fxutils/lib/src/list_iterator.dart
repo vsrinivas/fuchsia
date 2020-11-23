@@ -11,10 +11,10 @@ class ListIterator<T> {
   factory ListIterator.from(List<T> list) => ListIterator<T>._(list);
 
   /// Look at the next item in the list without advancing the marker.
-  T peek() => _list.length > _counter ? _list[_counter] : null;
+  T? peek() => _list.length > _counter ? _list[_counter] : null;
 
   /// Look at the next item in the list and advance the marker.
-  T takeNext() {
+  T? takeNext() {
     if (_counter == _list.length) return null;
     _counter += 1;
     return _list[_counter - 1];

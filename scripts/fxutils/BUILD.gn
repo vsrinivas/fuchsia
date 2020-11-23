@@ -14,6 +14,8 @@ group("tests") {
 dart_library("fxutils") {
   package_name = "fxutils"
 
+  null_safe = true
+
   sources = [
     "fxutils.dart",
     "src/constants.dart",
@@ -30,7 +32,6 @@ dart_library("fxutils") {
   deps = [
     "//third_party/dart-pkg/pub/async",
     "//third_party/dart-pkg/pub/io",
-    "//third_party/dart-pkg/pub/meta",
     "//third_party/dart-pkg/pub/path",
     "//third_party/dart-pkg/pub/pedantic",
   ]

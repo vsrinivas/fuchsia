@@ -9,7 +9,7 @@
       "rootUri": "."
     },
     {
-      "languageVersion": "2.8",
+      "languageVersion": "2.12",
       "name": "fxutils",
       "packageUri": "lib",
       "rootUri": "../fxutils"
