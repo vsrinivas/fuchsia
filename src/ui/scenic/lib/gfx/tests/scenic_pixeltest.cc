@@ -154,15 +154,15 @@ TEST_F(ScenicPixelTest, NV12Texture) {
   zx_status_t status = zx::vmo::create(image_vmo_bytes, 0, &image_vmo);
   EXPECT_EQ(ZX_OK, status);
   uint8_t* vmo_base;
-  status = zx::vmar::root_self()->map(ZX_VM_PERM_WRITE | ZX_VM_PERM_READ,
-                                      0, image_vmo, 0, image_vmo_bytes,
-                                      reinterpret_cast<uintptr_t*>(&vmo_base));
+  status = zx::vmar::root_self()->map(ZX_VM_PERM_WRITE | ZX_VM_PERM_READ, 0, image_vmo, 0,
+                                      image_vmo_bytes, reinterpret_cast<uintptr_t*>(&vmo_base));
   EXPECT_EQ(ZX_OK, status);
 
   static const uint8_t kYValue = 110;
   static const uint8_t kUValue = 192;
   static const uint8_t kVValue = 192;
-  const scenic::Color kBgraColor = {0xF1, 0x87, 0xFA, 0xFF};
+  // TODO(fxbug.dev/65765): provide reasoning for why this is the correct expected color.
+  const scenic::Color kBgraColor = {0xE4, 0x44, 0xF6, 0xFF};
 
   // Set all the Y pixels at full res.
   for (uint32_t i = 0; i < num_pixels; ++i) {
@@ -486,9 +486,6 @@ TEST_F(ScenicPixelTest, PoseBuffer) {
     glm::vec3 translation = translations[i];
     glm::quat orientation = orientations[i];
 
-    FX_LOGS(ERROR) << "translation: " << glm::to_string(translation);
-    FX_LOGS(ERROR) << "orientation: " << glm::to_string(orientation);
-
     scenic::Material pane_material(session);
     pane_material.SetColor(color.r, color.g, color.b, color.a);
     scenic::ShapeNode pane_shape_node(session);
@@ -515,7 +512,7 @@ TEST_F(ScenicPixelTest, PoseBuffer) {
   int expected_color_index[num_quaternions] = {0, 0, 1, 1, 2, 3, 4, 5};
 
   uintptr_t ptr;
-  status = zx::vmar::root_self()->map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,  0, pose_buffer_vmo, 0,
+  status = zx::vmar::root_self()->map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, pose_buffer_vmo, 0,
                                       kVmoSize, &ptr);
   FX_CHECK(status == ZX_OK);
 
@@ -1341,15 +1338,15 @@ TEST_P(ParameterizedYuvPixelTest, YuvImagesOnImagePipe2) {
   auto image_vmo_bytes = buffer_collection_info.settings.buffer_settings.size_bytes;
   EXPECT_GT(image_vmo_bytes, 0u);
 
-  status = zx::vmar::root_self()->map(ZX_VM_PERM_WRITE | ZX_VM_PERM_READ,
-                                      0, image_vmo, 0, image_vmo_bytes,
-                                      reinterpret_cast<uintptr_t*>(&vmo_base));
+  status = zx::vmar::root_self()->map(ZX_VM_PERM_WRITE | ZX_VM_PERM_READ, 0, image_vmo, 0,
+                                      image_vmo_bytes, reinterpret_cast<uintptr_t*>(&vmo_base));
   vmo_base += buffer_collection_info.buffers[0].vmo_usable_start;
   const uint32_t num_pixels = kShapeWidth * kShapeHeight;
   static const uint8_t kYValue = 110;
   static const uint8_t kUValue = 192;
   static const uint8_t kVValue = 192;
-  const scenic::Color kBgraColor = {0xF1, 0x87, 0xFA, 0xFF};
+  // TODO(fxbug.dev/65765): provide reasoning for why this is the correct expected color.
+  const scenic::Color kBgraColor = {0xE4, 0x44, 0xF6, 0xFF};
 
   for (uint32_t i = 0; i < num_pixels; ++i) {
     vmo_base[i] = kYValue;
@@ -1991,9 +1988,8 @@ TEST_F(ScenicPixelTest, Image2PixelTest) {
   auto image_vmo_bytes = buffer_collection_info.settings.buffer_settings.size_bytes;
   EXPECT_GT(image_vmo_bytes, 0u);
 
-  status = zx::vmar::root_self()->map(ZX_VM_PERM_WRITE | ZX_VM_PERM_READ,
-                                      0, image_vmo, 0, image_vmo_bytes,
-                                      reinterpret_cast<uintptr_t*>(&vmo_base));
+  status = zx::vmar::root_self()->map(ZX_VM_PERM_WRITE | ZX_VM_PERM_READ, 0, image_vmo, 0,
+                                      image_vmo_bytes, reinterpret_cast<uintptr_t*>(&vmo_base));
   vmo_base += buffer_collection_info.buffers[0].vmo_usable_start;
   const uint32_t num_pixels = kShapeWidth * kShapeHeight;
   const scenic::Color kBgraColor = {0xF1, 0x87, 0xFA, 0xFF};
@@ -2134,15 +2130,15 @@ TEST_P(ParameterizedYuvPixelTest, YuvImagesOnImage2) {
   auto image_vmo_bytes = buffer_collection_info.settings.buffer_settings.size_bytes;
   EXPECT_GT(image_vmo_bytes, 0u);
 
-  status = zx::vmar::root_self()->map(ZX_VM_PERM_WRITE | ZX_VM_PERM_READ,
-                                      0, image_vmo, 0, image_vmo_bytes,
-                                      reinterpret_cast<uintptr_t*>(&vmo_base));
+  status = zx::vmar::root_self()->map(ZX_VM_PERM_WRITE | ZX_VM_PERM_READ, 0, image_vmo, 0,
+                                      image_vmo_bytes, reinterpret_cast<uintptr_t*>(&vmo_base));
   vmo_base += buffer_collection_info.buffers[0].vmo_usable_start;
   const uint32_t num_pixels = kShapeWidth * kShapeHeight;
   static const uint8_t kYValue = 110;
   static const uint8_t kUValue = 192;
   static const uint8_t kVValue = 192;
-  const scenic::Color kBgraColor = {0xF1, 0x87, 0xFA, 0xFF};
+  // TODO(fxbug.dev/65765): provide reasoning for why this is the correct expected color.
+  const scenic::Color kBgraColor = {0xE4, 0x44, 0xF6, 0xFF};
 
   for (uint32_t i = 0; i < num_pixels; ++i) {
     vmo_base[i] = kYValue;

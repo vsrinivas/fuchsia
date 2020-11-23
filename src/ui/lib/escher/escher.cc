@@ -189,7 +189,7 @@ MeshBuilderPtr Escher::NewMeshBuilder(BatchGpuUploader* gpu_uploader, const Mesh
 }
 
 ImagePtr Escher::NewRgbaImage(BatchGpuUploader* gpu_uploader, uint32_t width, uint32_t height,
-                              uint8_t* bytes) {
+                              const uint8_t* bytes) {
   return image_utils::NewRgbaImage(image_cache(), gpu_uploader, width, height, bytes);
 }
 

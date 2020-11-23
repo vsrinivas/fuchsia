@@ -46,7 +46,7 @@ class Escher final : public MeshBuilderFactory, public ShaderProgramFactory {
 
   // Return new Image containing the provided pixels.
   ImagePtr NewRgbaImage(BatchGpuUploader* gpu_uploader, uint32_t width, uint32_t height,
-                        uint8_t* bytes);
+                        const uint8_t* bytes);
   // Returns RGBA image.
   ImagePtr NewCheckerboardImage(BatchGpuUploader* gpu_uploader, uint32_t width, uint32_t height);
   // Returns RGBA image.

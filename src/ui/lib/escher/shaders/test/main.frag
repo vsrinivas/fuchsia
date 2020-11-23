@@ -35,7 +35,9 @@ layout(set = 1, binding = 0) uniform PerObject {
 layout(set = 1, binding = 1) uniform sampler2D material_tex;
 
 void main() {
-  outColor = model_color * texture(material_tex, inUV);
+  vec4 material_color = texture(material_tex, inUV);
+  material_color.rgb = pow(material_color.rgb, vec3(2.2));
+  outColor = model_color * material_color;
 }
 #endif  // NO_SHADOW_LIGHTING_PASS
 

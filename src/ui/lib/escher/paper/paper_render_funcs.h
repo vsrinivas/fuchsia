@@ -73,6 +73,7 @@ class PaperRenderFuncs : public RenderFuncs {
   // uniform GPU memory is allocated using per-Frame allocators.
   static PaperRenderFuncs::MeshDrawData* NewMeshDrawData(const FramePtr& frame,
                                                          const mat4& transform, const vec4& color,
+                                                         float gamma_power,
                                                          const PaperShaderList& shader_list,
                                                          uint32_t num_indices);
 };

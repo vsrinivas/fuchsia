@@ -9,5 +9,8 @@ source_set("escher_types") {
     "color_histogram.h",
   ]
 
-  public_deps = [ "//src/lib/fxl" ]
+  public_deps = [
+    "//src/lib/fxl",
+    "//src/ui/lib/glm_workaround",
+  ]
 }

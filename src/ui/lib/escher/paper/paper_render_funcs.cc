@@ -113,13 +113,14 @@ PaperRenderFuncs::MeshData* PaperRenderFuncs::NewMeshData(const FramePtr& frame,
 }
 
 PaperRenderFuncs::MeshDrawData* PaperRenderFuncs::NewMeshDrawData(
-    const FramePtr& frame, const mat4& transform, const vec4& color,
+    const FramePtr& frame, const mat4& transform, const vec4& color, float gamma_power,
     const PaperShaderList& shader_list, uint32_t num_indices) {
   MeshDrawData* draw_data = frame->Allocate<MeshDrawData>();
 
   auto writable_binding = NewPaperShaderUniformBinding<PaperShaderMeshInstance>(frame);
   writable_binding.first->model_transform = transform;
   writable_binding.first->color = color;
+  writable_binding.first->gamma_power = gamma_power;
   // TODO(fxbug.dev/7243): populate field for vertex-shader clip-planes.
 
   draw_data->object_properties = writable_binding.second;
