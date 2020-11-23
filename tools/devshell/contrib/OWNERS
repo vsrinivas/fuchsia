@@ -23,6 +23,7 @@ per-file fuzz=aarongreen@google.com
 per-file gce=raggi@google.com
 per-file gen-cargo=tmandry@google.com
 per-file gerrit-submit.fx=dgreenaway@google.com,simonshields@google.com
+per-file grep=smithdave@google.com
 per-file iquery=crjohns@google.com
 per-file lint=haowei@google.com,phosek@google.com
 per-file make-fuchsia-vol=raggi@google.com
