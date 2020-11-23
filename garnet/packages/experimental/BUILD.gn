@@ -37,5 +37,8 @@ group("sys") {
 
 group("linux_runner") {
   testonly = true
-  public_deps = [ "//src/virtualization/packages/biscotti_guest/linux_runner" ]
+  public_deps = [
+    ":termina_guest",
+    "//src/virtualization/packages/biscotti_guest/linux_runner",
+  ]
 }

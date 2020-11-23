@@ -28,9 +28,9 @@
 
 namespace linux_runner {
 
-static constexpr const char* kLinuxEnvirionmentName = "biscotti";
+static constexpr const char* kLinuxEnvirionmentName = "termina";
 static constexpr const char* kLinuxGuestPackage =
-    "fuchsia-pkg://fuchsia.com/biscotti_guest#meta/biscotti_guest.cmx";
+    "fuchsia-pkg://fuchsia.com/termina_guest#meta/termina_guest.cmx";
 static constexpr const char* kContainerName = "stretch";
 static constexpr const char* kContainerImageAlias = "debian/stretch";
 static constexpr const char* kContainerImageServer =
