@@ -197,6 +197,7 @@ zx_status_t FakeSdmmcDevice::SdmmcRequest(sdmmc_req_t* req) {
     command_callbacks_[req->cmd_idx](req);
   }
 
+  requests_.push_back(*req);
   return req->status;
 }
 

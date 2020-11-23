@@ -656,73 +656,6 @@ zx_status_t SdioControllerDevice::SdioUnregisterVmo(uint8_t fn_idx, uint32_t vmo
   return sdmmc_.host().UnregisterVmo(vmo_id, fn_idx, out_vmo);
 }
 
-zx_status_t SdioControllerDevice::SdioDoRwTxnNew(uint8_t fn_idx, const sdio_rw_txn_new_t* txn) {
-  if (!SdioFnIdxValid(fn_idx)) {
-    return ZX_ERR_INVALID_ARGS;
-  }
-
-  fbl::AutoLock lock(&lock_);
-
-  // TODO(fxbug.dev/62849): Add support for splitting buffers into multiple requests.
-  if (!(hw_info_.caps & SDIO_CARD_MULTI_BLOCK)) {
-    zxlogf(ERROR, "Card does not support block mode (fxbug.dev/62849)");
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
-  const uint32_t func_blk_size = funcs_[fn_idx].cur_blk_size;
-
-  uint32_t addr = txn->addr;
-  const sdmmc_buffer_region_t* buffers_list = txn->buffers_list;
-  for (size_t buffers_remaining = txn->buffers_count; buffers_remaining > 0;) {
-    size_t buffers_count = 0;
-    uint32_t block_count = 0;
-    while (buffers_count < buffers_remaining) {
-      // TODO(fxbug.dev/62849): Add support for buffers that are not a multiple of the block size.
-      if (buffers_list[buffers_count].size % func_blk_size != 0) {
-        zxlogf(ERROR, "Buffer size %zu is not a multiple of the block size (fxbug.dev/62849)",
-               buffers_list[buffers_count].size);
-        return ZX_ERR_INVALID_ARGS;
-      }
-
-      // TODO(fxbug.dev/62849): Add support for splitting buffers into multiple requests.
-      const size_t buffer_blocks = buffers_list[buffers_count].size / func_blk_size;
-      if (buffer_blocks > SDIO_IO_RW_EXTD_MAX_BLKS_PER_CMD) {
-        zxlogf(ERROR, "Buffer has %zu blocks, only %u supported (fxbug.dev/62849)", buffer_blocks,
-               SDIO_IO_RW_EXTD_MAX_BLKS_PER_CMD);
-        return ZX_ERR_NOT_SUPPORTED;
-      }
-
-      if (block_count + buffer_blocks > SDIO_IO_RW_EXTD_MAX_BLKS_PER_CMD) {
-        break;
-      }
-
-      buffers_count++;
-      block_count += buffer_blocks;
-    }
-
-    zx_status_t status =
-        sdmmc_.SdioIoRwExtended(hw_info_.caps, txn->write, fn_idx, addr, txn->incr, block_count,
-                                func_blk_size, fbl::Span(buffers_list, buffers_count));
-    if (status != ZX_OK) {
-      zxlogf(ERROR, "Error %s func %d: %d", txn->write ? "writing to" : "reading from", fn_idx,
-             status);
-      return status;
-    }
-
-    if (txn->incr) {
-      addr += block_count * func_blk_size;
-    }
-
-    buffers_list += buffers_count;
-    buffers_remaining -= buffers_count;
-  }
-
-  // TODO(fxbug.dev/62849): Do a final byte-mode cmd53 for transfers that are not a multiple of the
-  // block size.
-
-  return ZX_OK;
-}
-
 void SdioControllerDevice::SdioRunDiagnostics() {
   fbl::AutoLock lock(&lock_);
   if (tuned_) {
@@ -755,6 +688,115 @@ zx::status<uint8_t> SdioControllerDevice::ReadCccrByte(uint32_t addr) {
     return zx::error(status);
   }
   return zx::ok(byte);
+}
+
+zx::status<SdioControllerDevice::SdioTxnPosition> SdioControllerDevice::DoOneRwTxnRequest(
+    uint8_t fn_idx, const sdio_rw_txn_new_t& txn, SdioTxnPosition current_position) {
+  const uint32_t func_blk_size = funcs_[fn_idx].cur_blk_size;
+  const bool mbs = hw_info_.caps & SDIO_CARD_MULTI_BLOCK;
+  const size_t max_transfer_size = func_blk_size * (mbs ? SDIO_IO_RW_EXTD_MAX_BLKS_PER_CMD : 1);
+
+  size_t block_count = 0;  // The number of full blocks that are in the buffers processed so far.
+  size_t total_size = 0;   // The total number of bytes that are in the buffers processed so far.
+  size_t last_block_buffer_index = 0;  // The index of the last buffer to cross a block boundary.
+  size_t last_block_buffer_size = 0;   // The offset where the new block starts in this buffer.
+
+  sdmmc_buffer_region_t buffers[SDIO_IO_RW_EXTD_MAX_BLKS_PER_CMD];
+  for (size_t i = 0; i < countof(buffers) && i < current_position.buffers.size(); i++) {
+    buffers[i] = current_position.buffers[i];
+    if (i == 0) {
+      ZX_ASSERT(current_position.first_buffer_offset < buffers[i].size);
+      buffers[i].offset += current_position.first_buffer_offset;
+      buffers[i].size -= current_position.first_buffer_offset;
+    }
+
+    // Trim the buffer to the max transfer size so that block boundaries can be checked.
+    const size_t buffer_size = std::min(buffers[i].size, max_transfer_size - total_size);
+
+    if ((total_size + buffer_size) / func_blk_size != block_count) {
+      // This buffer crosses a block boundary, record the index and the offset at which the next
+      // block begins.
+      last_block_buffer_index = i;
+      last_block_buffer_size = buffer_size - ((total_size + buffer_size) % func_blk_size);
+      block_count = (total_size + buffer_size) / func_blk_size;
+    }
+
+    total_size += buffer_size;
+
+    ZX_ASSERT(total_size <= max_transfer_size);
+    if (total_size == max_transfer_size) {
+      break;
+    }
+  }
+
+  zx_status_t status;
+  uint32_t txn_size = 0;
+  if (block_count == 0) {
+    // The collection of buffers didn't make up a full block.
+    txn_size = static_cast<uint32_t>(total_size);
+
+    // We know the entire buffers list is being used because the max transfer size is always at
+    // least the block size. The first buffer may have had the size adjusted, so use the local
+    // buffers array.
+    fbl::Span txn_buffers(buffers, current_position.buffers.size());
+    status = sdmmc_.SdioIoRwExtended(hw_info_.caps, txn.write, fn_idx, current_position.address,
+                                     txn.incr, 1, static_cast<uint32_t>(total_size), txn_buffers);
+    last_block_buffer_index = current_position.buffers.size();
+  } else {
+    txn_size = static_cast<uint32_t>(block_count * func_blk_size);
+
+    fbl::Span txn_buffers(buffers, last_block_buffer_index + 1);
+    txn_buffers[last_block_buffer_index].size = last_block_buffer_size;
+    status = sdmmc_.SdioIoRwExtended(hw_info_.caps, txn.write, fn_idx, current_position.address,
+                                     txn.incr, static_cast<uint32_t>(block_count), func_blk_size,
+                                     txn_buffers);
+
+    if (last_block_buffer_index == 0) {
+      last_block_buffer_size += current_position.first_buffer_offset;
+    }
+
+    ZX_ASSERT(last_block_buffer_size <= current_position.buffers[last_block_buffer_index].size);
+
+    if (current_position.buffers[last_block_buffer_index].size == last_block_buffer_size) {
+      last_block_buffer_index++;
+      last_block_buffer_size = 0;
+    }
+  }
+
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "Error %s func %d: %s", txn.write ? "writing to" : "reading from", fn_idx,
+           zx_status_get_string(status));
+    return zx::error(status);
+  }
+
+  return zx::ok(SdioTxnPosition{
+      .buffers = current_position.buffers.subspan(last_block_buffer_index),
+      .first_buffer_offset = last_block_buffer_size,
+      .address = current_position.address + (txn.incr ? txn_size : 0),
+  });
+}
+
+zx_status_t SdioControllerDevice::SdioDoRwTxnNew(uint8_t fn_idx, const sdio_rw_txn_new_t* txn) {
+  if (!SdioFnIdxValid(fn_idx)) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  fbl::AutoLock lock(&lock_);
+  SdioTxnPosition current_position = {
+      .buffers = fbl::Span(txn->buffers_list, txn->buffers_count),
+      .first_buffer_offset = 0,
+      .address = txn->addr,
+  };
+
+  while (!current_position.buffers.empty()) {
+    zx::status<SdioTxnPosition> status = DoOneRwTxnRequest(fn_idx, *txn, current_position);
+    if (status.is_error()) {
+      return status.error_value();
+    }
+    current_position = status.value();
+  }
+
+  return ZX_OK;
 }
 
 zx_status_t SdioControllerDevice::SdioReset() {
