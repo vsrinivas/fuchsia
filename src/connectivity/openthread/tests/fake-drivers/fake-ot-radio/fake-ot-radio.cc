@@ -12,17 +12,17 @@
 #include <zircon/compiler.h>
 #include <zircon/status.h>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/driver.h>
 #include <ddk/metadata.h>
-#include <ddk/platform-defs.h>
 #include <ddktl/fidl.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
+
+#include "src/connectivity/openthread/tests/fake-drivers/fake-ot-radio/fake_ot_radio_bind.h"
 
 namespace fake_ot {
 namespace lowpan_spinel_fidl = ::llcpp::fuchsia::lowpan::spinel;
@@ -456,9 +456,4 @@ static constexpr zx_driver_ops_t device_ops = []() {
 
 }  // namespace fake_ot
 
-// clang-format off
-ZIRCON_DRIVER_BEGIN(fake_ot, fake_ot::device_ops, "zircon", "0.1", 3)
-  BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_TEST),
-  BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_OT_TEST),
-  BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_TEST_OT_RADIO),
-ZIRCON_DRIVER_END(fake_ot)
+ZIRCON_DRIVER(fake_ot, fake_ot::device_ops, "zircon", "0.1")

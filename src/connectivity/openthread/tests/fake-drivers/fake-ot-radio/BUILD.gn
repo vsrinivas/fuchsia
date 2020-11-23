@@ -2,8 +2,16 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/driver_package.gni")
+
+bind_rules("fake_ot_radio_bind") {
+  rules = "fake-ot-radio.bind"
+  output = "fake_ot_radio_bind.h"
+  tests = "bind-tests.json"
+  deps = [ "//src/devices/bind/test.platform" ]
+}
 
 driver_package("fake-ot-radio") {
   testonly = true
@@ -27,12 +35,10 @@ driver_module("fake-ot-radio-driver") {
   ]
 
   deps = [
+    ":fake_ot_radio_bind",
     "//sdk/fidl/fuchsia.lowpan.spinel:fuchsia.lowpan.spinel_llcpp",
     "//src/devices/lib/driver",
     "//src/lib/ddk",
-
-    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
-    "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//src/lib/ddktl",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/fbl",
@@ -46,4 +52,9 @@ driver_module("fake-ot-radio-driver") {
 
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":fake_ot_radio_bind_test" ]
 }

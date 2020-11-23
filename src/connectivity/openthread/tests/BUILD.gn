@@ -6,6 +6,7 @@ group("tests") {
   testonly = true
   public_deps = [
     "fake-drivers",
+    "fake-drivers/fake-ot-radio:tests",
     "test-components:ot-radio-component-tests",
   ]
 }
