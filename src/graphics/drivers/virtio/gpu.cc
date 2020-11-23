@@ -306,8 +306,6 @@ GpuDevice::GpuDevice(zx_device_t* bus_device, zx::bti bti, std::unique_ptr<Backe
   sem_init(&request_sem_, 0, 1);
   sem_init(&response_sem_, 0, 0);
   cnd_init(&flush_cond_);
-
-  memset(&gpu_req_, 0, sizeof(gpu_req_));
 }
 
 GpuDevice::~GpuDevice() {

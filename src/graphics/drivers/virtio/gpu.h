@@ -100,7 +100,7 @@ class GpuDevice : public Device,
   Ring vring_ = {this};
 
   // gpu op
-  io_buffer_t gpu_req_;
+  io_buffer_t gpu_req_ = {};
 
   // A saved copy of the display
   virtio_gpu_resp_display_info::virtio_gpu_display_one pmode_ = {};
@@ -109,8 +109,8 @@ class GpuDevice : public Device,
   uint32_t next_resource_id_ = 1;
 
   fbl::Mutex request_lock_;
-  sem_t request_sem_;
-  sem_t response_sem_;
+  sem_t request_sem_ = {};
+  sem_t response_sem_ = {};
 
   // Flush thread
   void virtio_gpu_flusher();
@@ -119,11 +119,11 @@ class GpuDevice : public Device,
   cnd_t flush_cond_ = {};
   bool flush_pending_ = false;
 
-  display_controller_interface_protocol_t dc_intf_;
-  sysmem_protocol_t sysmem_;
+  display_controller_interface_protocol_t dc_intf_ = {};
+  sysmem_protocol_t sysmem_ = {};
 
-  struct imported_image* current_fb_;
-  struct imported_image* displayed_fb_;
+  struct imported_image* current_fb_ = nullptr;
+  struct imported_image* displayed_fb_ = nullptr;
 
   zx_pixel_format_t supported_formats_ = ZX_PIXEL_FORMAT_RGB_x888;
 };
