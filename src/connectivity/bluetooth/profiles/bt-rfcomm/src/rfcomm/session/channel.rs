@@ -6,6 +6,8 @@ use {
     async_trait::async_trait,
     fuchsia_async as fasync,
     fuchsia_bluetooth::types::Channel,
+    fuchsia_inspect as inspect,
+    fuchsia_inspect_derive::{AttachError, Inspect},
     futures::{channel::mpsc, select, FutureExt, SinkExt, StreamExt},
     log::{error, info, trace},
     std::convert::TryInto,
@@ -13,6 +15,7 @@ use {
 
 use crate::rfcomm::{
     frame::{Frame, UserData},
+    inspect::SessionChannelInspect,
     types::{RfcommError, Role, DLCI},
 };
 
@@ -244,11 +247,28 @@ pub struct SessionChannel {
     processing_task: Option<fasync::Task<()>>,
     /// The sender used to push user data to be written in the `processing_task`.
     user_data_queue: Option<mpsc::Sender<FlowControlledData>>,
+    /// The inspect node for this channel.
+    inspect: SessionChannelInspect,
+}
+
+impl Inspect for &mut SessionChannel {
+    fn iattach(self, parent: &inspect::Node, name: impl AsRef<str>) -> Result<(), AttachError> {
+        self.inspect.iattach(parent, name)?;
+        self.inspect.set_dlci(self.dlci);
+        Ok(())
+    }
 }
 
 impl SessionChannel {
     pub fn new(dlci: DLCI, role: Role) -> Self {
-        Self { dlci, role, flow_control: None, processing_task: None, user_data_queue: None }
+        Self {
+            dlci,
+            role,
+            flow_control: None,
+            processing_task: None,
+            user_data_queue: None,
+            inspect: SessionChannelInspect::default(),
+        }
     }
 
     /// Returns true if this SessionChannel has been established. Namely, `self.establish()`

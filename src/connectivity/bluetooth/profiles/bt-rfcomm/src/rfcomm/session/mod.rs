@@ -27,7 +27,7 @@ use {
 mod channel;
 
 /// The multiplexer that manages RFCOMM channels for this session.
-mod multiplexer;
+pub mod multiplexer;
 
 use self::{
     channel::{Credits, FlowControlMode, FlowControlledData},
@@ -151,17 +151,13 @@ pub struct SessionInner {
     /// The session multiplexer that manages the current state of the session and any opened
     /// RFCOMM channels.
     multiplexer: SessionMultiplexer,
-
     /// Outstanding frames that have been sent to the remote peer and are awaiting responses.
     outstanding_frames: OutstandingFrames,
-
     /// Open channel requests that are waiting for either multiplexer startup, parameter
     /// negotiation, or channel establishment to complete.
     pending_channels: HashMap<ServerChannel, ChannelRequestFn>,
-
     /// Sender used to relay outgoing frames to be sent to the remote peer.
     outgoing_frame_sender: mpsc::Sender<Frame>,
-
     /// The channel opened callback that is called anytime a new RFCOMM channel is opened. The
     /// `SessionInner` will relay the client end of the channel to this closure.
     channel_opened_fn: ChannelOpenedFn,
@@ -171,7 +167,8 @@ pub struct SessionInner {
 
 impl Inspect for &mut SessionInner {
     fn iattach(self, parent: &inspect::Node, name: impl AsRef<str>) -> Result<(), AttachError> {
-        self.inspect.iattach(parent, name)
+        self.inspect.iattach(parent, name)?;
+        self.multiplexer.iattach(self.inspect.node(), "multiplexer")
     }
 }
 
@@ -1203,7 +1200,7 @@ mod tests {
         let session = Arc::new(Mutex::new(inner));
         // Default inspect tree.
         fuchsia_inspect::assert_inspect_tree!(inspect, root: {
-            session_test: {
+            session_test: contains {
                 connected: "Connected",
             },
         });
@@ -1218,7 +1215,7 @@ mod tests {
         assert_matches!(exec.run_until_stalled(&mut session_task), Poll::Ready(Ok(_)));
         // Inspect when Session is not active.
         fuchsia_inspect::assert_inspect_tree!(inspect, root: {
-            session_test: {
+            session_test: contains {
                 connected: "Disconnected",
             }
         });

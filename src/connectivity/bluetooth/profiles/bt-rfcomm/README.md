@@ -56,7 +56,12 @@ the current state of the RFCOMM server, use `fx iquery show bt-rfcomm_*/bt-rfcom
       rfcomm_server:
         peer_#:
           connected = (Connected / Disconnected)
-
+          multiplexer:
+            flow_control = (Credit-Based / None)
+            max_frame_size
+            role = (Unassigned / Negotiating / Initiator / Responder)
+            channel_#:
+              dlci
 ```
 
 One peer child exists in the hierarchy for each RFCOMM Session between the local endpoint and remote

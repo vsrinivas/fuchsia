@@ -4,6 +4,8 @@
 
 use {
     fuchsia_bluetooth::types::Channel,
+    fuchsia_inspect as inspect,
+    fuchsia_inspect_derive::Inspect,
     futures::channel::mpsc,
     log::{trace, warn},
     std::collections::HashMap,
@@ -11,6 +13,7 @@ use {
 
 use crate::rfcomm::{
     frame::Frame,
+    inspect::SessionMultiplexerInspect,
     session::channel::{FlowControlMode, FlowControlledData, SessionChannel},
     types::{RfcommError, Role, DLCI, MAX_RFCOMM_FRAME_SIZE},
 };
@@ -92,15 +95,17 @@ impl ParameterNegotiationState {
 /// been established. RFCOMM 5.5.3 states that renegotiation of parameters is optional - this
 /// multiplexer will simply echo the current parameters in the event a negotiation request is
 /// received after the first DLC is opened and established.
+#[derive(Inspect)]
 pub struct SessionMultiplexer {
     /// The role for the multiplexer.
     role: Role,
-
     /// The parameters for the multiplexer.
     parameters: ParameterNegotiationState,
-
     /// Local opened RFCOMM channels for this session.
     channels: HashMap<DLCI, SessionChannel>,
+    /// The inspect node for this object.
+    #[inspect(forward)]
+    inspect: SessionMultiplexerInspect,
 }
 
 impl SessionMultiplexer {
@@ -109,6 +114,7 @@ impl SessionMultiplexer {
             role: Role::Unassigned,
             parameters: ParameterNegotiationState::NotNegotiated,
             channels: HashMap::new(),
+            inspect: SessionMultiplexerInspect::default(),
         }
     }
 
@@ -123,6 +129,7 @@ impl SessionMultiplexer {
 
     pub fn set_role(&mut self, role: Role) {
         self.role = role;
+        self.inspect.set_role(role);
     }
 
     /// Returns true if credit-based flow control is enabled.
@@ -162,6 +169,7 @@ impl SessionMultiplexer {
         // Otherwise, it is OK to negotiate the multiplexer parameters.
         let updated = self.parameters.negotiate(new_session_parameters);
         trace!("Updated Session parameters: {:?}", updated);
+        self.inspect.set_parameters(updated);
         updated
     }
 
@@ -205,7 +213,11 @@ impl SessionMultiplexer {
     /// Finds or initializes a new SessionChannel for the provided `dlci`. Returns a mutable
     /// reference to the channel.
     pub fn find_or_create_session_channel(&mut self, dlci: DLCI) -> &mut SessionChannel {
-        let channel = self.channels.entry(dlci).or_insert(SessionChannel::new(dlci, self.role));
+        let channel = self.channels.entry(dlci).or_insert({
+            let mut channel = SessionChannel::new(dlci, self.role);
+            let _ = channel.iattach(self.inspect.node(), inspect::unique_name("channel_"));
+            channel
+        });
         channel
     }
 
@@ -277,3 +289,71 @@ impl SessionMultiplexer {
 
 // TODO(fxbug.dev/61923): IWBN to have focused tests for the `SessionMultiplexer`. Currently, it's
 // transitively tested by the tests for `SessionInner`.
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::convert::TryFrom;
+
+    use crate::rfcomm::inspect::CREDIT_FLOW_CONTROL;
+
+    #[test]
+    fn test_multiplexer_inspect() {
+        let _exec = fuchsia_async::Executor::new().unwrap();
+        let inspect = inspect::Inspector::new();
+
+        // Setup multiplexer with inspect.
+        let mut multiplexer = SessionMultiplexer::create();
+        multiplexer.iattach(inspect.root(), "multiplexer").expect("should attach to inspect tree");
+        // Default inspect tree.
+        fuchsia_inspect::assert_inspect_tree!(inspect, root: {
+            multiplexer: {
+                role: "Unassigned",
+            },
+        });
+
+        // Reserving a channel should add to the inspect tree.
+        let dlci = DLCI::try_from(9).unwrap();
+        multiplexer.find_or_create_session_channel(dlci);
+        fuchsia_inspect::assert_inspect_tree!(inspect, root: {
+            multiplexer: {
+                role: "Unassigned",
+                channel_0: {
+                    dlci: 9u64,
+                }
+            },
+        });
+
+        // Establishing a channel should add to the inspect tree. Multiplexer parameters are
+        // negotiated to a default and updated in the inspect tree.
+        let dlci2 = DLCI::try_from(20).unwrap();
+        let (sender, _receiver) = mpsc::channel(0);
+        let _channel = multiplexer.establish_session_channel(dlci2, sender);
+        fuchsia_inspect::assert_inspect_tree!(inspect, root: {
+            multiplexer: {
+                role: "Unassigned",
+                flow_control: CREDIT_FLOW_CONTROL,
+                max_frame_size: 672u64,
+                channel_0: {
+                    dlci: 9u64,
+                },
+                channel_1: {
+                    dlci: 20u64,
+                }
+            },
+        });
+
+        // Removing a channel is OK. The lifetime of the `channel_*` node is tied to the
+        // SessionChannel. This makes cleanup easy.
+        assert!(multiplexer.close_session_channel(&dlci2));
+        fuchsia_inspect::assert_inspect_tree!(inspect, root: {
+            multiplexer: {
+                role: "Unassigned",
+                flow_control: CREDIT_FLOW_CONTROL,
+                max_frame_size: 672u64,
+                channel_0: {
+                    dlci: 9u64,
+                }
+            },
+        });
+    }
+}
