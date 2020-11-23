@@ -292,6 +292,7 @@ class MsdVsiDevice : public msd_device_t,
   friend class TestExec;
   friend class TestExec_Backlog_Test;
   friend class TestExec_BacklogWithInvalidBatch_Test;
+  friend class TestExec_KillContextOnSubmitFail_Test;
   friend class TestExec_ReuseGpuAddress_Test;
   friend class TestExec_SubmitContextStateBufferMultipleAddressSpaces_Test;
   friend class TestExec_SubmitContextStateBufferMultipleContexts_Test;

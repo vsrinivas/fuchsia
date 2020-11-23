@@ -141,20 +141,21 @@ class TestCommandBuffer : public ::testing::Test {
   // submits it as a command buffer.
   // |signal| is an optional semaphore that will be passed as a signal semaphore for the batch.
   // If |fault_addr| is populated, the submitted buffer will contain faulting instructions.
-  // If |out_buffer| is non-null, it will be populated with the created buffer.
+  // If |validate_batch| is true, this will check that the batch is correctly mapped and has valid
+  // sized buffers. If |out_buffer| is non-null, it will be populated with the created buffer.
   void CreateAndSubmitBuffer(
       std::shared_ptr<MsdVsiContext> context, const BufferDesc& buffer_desc,
       std::shared_ptr<magma::PlatformSemaphore> signal, std::optional<uint32_t> fault_addr,
       std::optional<CommandBuffer::ExecResource> context_state_buffer = std::nullopt,
-      std::shared_ptr<MsdVsiBuffer>* out_buffer = nullptr);
+      bool validate_batch = true, std::shared_ptr<MsdVsiBuffer>* out_buffer = nullptr);
 
   // Creates a buffer from |buffer_desc|, writes a test instruction to it and
   // submits it as a command buffer. This will wait for execution to complete.
   // If |out_buffer| is non-null, it will be populated with the created buffer.
-  void CreateAndSubmitBuffer(
+  void CreateAndSubmitBufferWaitCompletion(
       std::shared_ptr<MsdVsiContext> context, const BufferDesc& buffer_desc,
       std::optional<CommandBuffer::ExecResource> context_state_buffer = std::nullopt,
-      std::shared_ptr<MsdVsiBuffer>* out_buffer = nullptr);
+      bool validate_batch = true, std::shared_ptr<MsdVsiBuffer>* out_buffer = nullptr);
 
   // Writes a single WAIT command in |buf| at |offset|.
   void WriteWaitCommand(std::shared_ptr<MsdVsiBuffer> buf, uint32_t offset);

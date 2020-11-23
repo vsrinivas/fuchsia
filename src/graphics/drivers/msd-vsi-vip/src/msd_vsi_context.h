@@ -49,7 +49,7 @@ class MsdVsiContext {
  private:
   std::weak_ptr<MsdVsiConnection> connection_;
   std::shared_ptr<AddressSpace> address_space_;
-  bool killed_ = false;
+  std::atomic_bool killed_ = false;
 };
 
 class MsdVsiAbiContext : public msd_context_t {

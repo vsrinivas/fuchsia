@@ -79,7 +79,7 @@ void TestCommandBuffer::CreateAndPrepareBatch(
 void TestCommandBuffer::CreateAndSubmitBuffer(
     std::shared_ptr<MsdVsiContext> context, const BufferDesc& buffer_desc,
     std::shared_ptr<magma::PlatformSemaphore> signal, std::optional<uint32_t> fault_addr,
-    std::optional<CommandBuffer::ExecResource> context_state_buffer,
+    std::optional<CommandBuffer::ExecResource> context_state_buffer, bool validate_batch,
     std::shared_ptr<MsdVsiBuffer>* out_buffer) {
   std::shared_ptr<MsdVsiBuffer> buffer;
   ASSERT_NO_FATAL_FAILURE(CreateAndMapBuffer(
@@ -97,7 +97,9 @@ void TestCommandBuffer::CreateAndSubmitBuffer(
   ASSERT_NO_FATAL_FAILURE(CreateAndPrepareBatch(context, buffer, buffer_desc.data_size,
                                                 buffer_desc.batch_offset, signal,
                                                 std::move(context_state_buffer), &batch));
-  ASSERT_TRUE(batch->IsValidBatch());
+  if (validate_batch) {
+    ASSERT_TRUE(batch->IsValidBatch());
+  }
 
   ASSERT_TRUE(context->SubmitBatch(std::move(batch)).ok());
 
@@ -106,17 +108,17 @@ void TestCommandBuffer::CreateAndSubmitBuffer(
   }
 }
 
-void TestCommandBuffer::CreateAndSubmitBuffer(
+void TestCommandBuffer::CreateAndSubmitBufferWaitCompletion(
     std::shared_ptr<MsdVsiContext> context, const BufferDesc& buffer_desc,
-    std::optional<CommandBuffer::ExecResource> context_state_buffer,
+    std::optional<CommandBuffer::ExecResource> context_state_buffer, bool validate_batch,
     std::shared_ptr<MsdVsiBuffer>* out_buffer) {
   // Submit the batch and verify we get a completion event.
   auto semaphore = magma::PlatformSemaphore::Create();
   ASSERT_NE(semaphore, nullptr);
 
-  ASSERT_NO_FATAL_FAILURE(CreateAndSubmitBuffer(context, buffer_desc, semaphore->Clone(),
-                                                std::optional<uint32_t>{} /* fault_addr */,
-                                                std::move(context_state_buffer), out_buffer));
+  ASSERT_NO_FATAL_FAILURE(CreateAndSubmitBuffer(
+      context, buffer_desc, semaphore->Clone(), std::optional<uint32_t>{} /* fault_addr */,
+      std::move(context_state_buffer), validate_batch, out_buffer));
   constexpr uint64_t kTimeoutMs = 1000;
   ASSERT_EQ(MAGMA_STATUS_OK, semaphore->Wait(kTimeoutMs).get());
 }

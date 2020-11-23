@@ -21,7 +21,7 @@ TEST_F(TestExec, SubmitBatchWithOffset) {
       .batch_offset = 80,
       .gpu_addr = 0x10000,
   };
-  ASSERT_NO_FATAL_FAILURE(CreateAndSubmitBuffer(default_context(), buffer_desc));
+  ASSERT_NO_FATAL_FAILURE(CreateAndSubmitBufferWaitCompletion(default_context(), buffer_desc));
 }
 
 // Verifies reset while GPU is busy.
@@ -37,7 +37,8 @@ TEST_F(TestExec, ResetAfterSubmit) {
         .batch_offset = 80,
         .gpu_addr = 0x10000,
     };
-    ASSERT_NO_FATAL_FAILURE(CreateAndSubmitBuffer(default_context(), buffer_desc));
+    ASSERT_NO_FATAL_FAILURE(CreateAndSubmitBufferWaitCompletion(default_context(), buffer_desc));
+    ASSERT_FALSE(default_context()->killed());
 
     EXPECT_TRUE(device_->HardwareReset());
 
@@ -62,7 +63,7 @@ TEST_F(TestExec, SubmitBatchesMultipleContexts) {
       .batch_offset = 0,
       .gpu_addr = 0x10000,
   };
-  ASSERT_NO_FATAL_FAILURE(CreateAndSubmitBuffer(default_context(), buffer_desc));
+  ASSERT_NO_FATAL_FAILURE(CreateAndSubmitBufferWaitCompletion(default_context(), buffer_desc));
   ASSERT_EQ(device_->configured_address_space_.get(), default_address_space().get());
 
   BufferDesc buffer_desc2 = {
@@ -72,7 +73,7 @@ TEST_F(TestExec, SubmitBatchesMultipleContexts) {
       .batch_offset = 0,
       .gpu_addr = 0x20000,
   };
-  ASSERT_NO_FATAL_FAILURE(CreateAndSubmitBuffer(context2, buffer_desc2));
+  ASSERT_NO_FATAL_FAILURE(CreateAndSubmitBufferWaitCompletion(context2, buffer_desc2));
   ASSERT_EQ(device_->configured_address_space_.get(), default_address_space().get());
 }
 
@@ -100,8 +101,9 @@ TEST_F(TestExec, ReuseGpuAddress) {
   // Create, map and submit another buffer.
   // This will wait for execution to complete.
   std::shared_ptr<MsdVsiBuffer> submitted_buffer;
-  ASSERT_NO_FATAL_FAILURE(CreateAndSubmitBuffer(default_context(), buffer_desc,
-                                                std::nullopt /* csb */, &submitted_buffer));
+  ASSERT_NO_FATAL_FAILURE(
+      CreateAndSubmitBufferWaitCompletion(default_context(), buffer_desc, std::nullopt /* csb */,
+                                          true /* validate_batch */, &submitted_buffer));
 
   // Write a bad instruction into the mapped buffer.
   // If the GPU attempts to run this instruction, it will cause a MMU exception and
@@ -230,7 +232,7 @@ TEST_F(TestExec, SwitchAddressSpace) {
   };
   // Create, map and submit another buffer.
   // This will wait for execution to complete.
-  ASSERT_NO_FATAL_FAILURE(CreateAndSubmitBuffer(default_context(), buffer_desc));
+  ASSERT_NO_FATAL_FAILURE(CreateAndSubmitBufferWaitCompletion(default_context(), buffer_desc));
 
   // Drop the client before creating a new one.
   DropDefaultClient();
@@ -246,7 +248,7 @@ TEST_F(TestExec, SwitchAddressSpace) {
       .batch_offset = 0,
       .gpu_addr = 0x20000,
   };
-  ASSERT_NO_FATAL_FAILURE(CreateAndSubmitBuffer(client->context, buffer_desc2));
+  ASSERT_NO_FATAL_FAILURE(CreateAndSubmitBufferWaitCompletion(client->context, buffer_desc2));
 }
 
 // Tests submitting buffers from many clients, each with different address spaces.
@@ -273,7 +275,8 @@ TEST_F(TestExec, SwitchMultipleAddressSpaces) {
           // Use different gpu addresses to make sure the GPU is not just using the first mapping.
           .gpu_addr = static_cast<uint32_t>(kBaseGpuAddr + (magma::page_size() * (i + j))),
       };
-      ASSERT_NO_FATAL_FAILURE(CreateAndSubmitBuffer(clients[j]->context, buffer_desc));
+      ASSERT_NO_FATAL_FAILURE(
+          CreateAndSubmitBufferWaitCompletion(clients[j]->context, buffer_desc));
       ASSERT_EQ(device_->configured_address_space_.get(), clients[j]->address_space.get());
     }
   }
@@ -300,11 +303,11 @@ TEST_F(TestExec, SubmitContextStateBufferSameContext) {
       .gpu_addr = 0x30000,
   };
   ASSERT_NO_FATAL_FAILURE(
-      CreateAndSubmitBuffer(default_context(), buffer_desc, csb1->ExecResource()));
+      CreateAndSubmitBufferWaitCompletion(default_context(), buffer_desc, csb1->ExecResource()));
 
   buffer_desc.gpu_addr = 0x40000;
   ASSERT_NO_FATAL_FAILURE(
-      CreateAndSubmitBuffer(default_context(), buffer_desc, csb2->ExecResource()));
+      CreateAndSubmitBufferWaitCompletion(default_context(), buffer_desc, csb2->ExecResource()));
 
   // Only the first context state buffer should be executed.
   ASSERT_NO_FATAL_FAILURE(csb1->WaitForCompletion());
@@ -343,7 +346,7 @@ TEST_F(TestExec, SubmitEventBeforeContextStateBuffer) {
       .gpu_addr = 0x30000,
   };
   ASSERT_NO_FATAL_FAILURE(
-      CreateAndSubmitBuffer(default_context(), buffer_desc, csb1->ExecResource()));
+      CreateAndSubmitBufferWaitCompletion(default_context(), buffer_desc, csb1->ExecResource()));
 
   // The context state buffer should be executed.
   ASSERT_NO_FATAL_FAILURE(csb1->WaitForCompletion());
@@ -392,19 +395,22 @@ TEST_F(TestExec, SubmitContextStateBufferMultipleContexts) {
       .batch_offset = 0,
       .gpu_addr = 0x40000,
   };
-  ASSERT_NO_FATAL_FAILURE(CreateAndSubmitBuffer(context_a, buffer_desc, csb_a1->ExecResource()));
+  ASSERT_NO_FATAL_FAILURE(
+      CreateAndSubmitBufferWaitCompletion(context_a, buffer_desc, csb_a1->ExecResource()));
 
   // Submit from context_b with csb_b1.
   buffer_desc.gpu_addr = 0x50000;
-  ASSERT_NO_FATAL_FAILURE(CreateAndSubmitBuffer(context_b, buffer_desc, csb_b1->ExecResource()));
+  ASSERT_NO_FATAL_FAILURE(
+      CreateAndSubmitBufferWaitCompletion(context_b, buffer_desc, csb_b1->ExecResource()));
 
   // Submit from context_c with no CSB.
   buffer_desc.gpu_addr = 0x60000;
-  ASSERT_NO_FATAL_FAILURE(CreateAndSubmitBuffer(context_c, buffer_desc));
+  ASSERT_NO_FATAL_FAILURE(CreateAndSubmitBufferWaitCompletion(context_c, buffer_desc));
 
   // Switch back to context_b and submit with csb_b2.
   buffer_desc.gpu_addr = 0x70000;
-  ASSERT_NO_FATAL_FAILURE(CreateAndSubmitBuffer(context_b, buffer_desc, csb_b2->ExecResource()));
+  ASSERT_NO_FATAL_FAILURE(
+      CreateAndSubmitBufferWaitCompletion(context_b, buffer_desc, csb_b2->ExecResource()));
 
   // All context state buffers should be executed.
   ASSERT_NO_FATAL_FAILURE(csb_a1->WaitForCompletion());
@@ -449,21 +455,21 @@ TEST_F(TestExec, SubmitContextStateBufferMultipleAddressSpaces) {
 
   // Submit from client A.
   ASSERT_NO_FATAL_FAILURE(
-      CreateAndSubmitBuffer(client_a->context, buffer_desc, csb_a1->ExecResource()));
+      CreateAndSubmitBufferWaitCompletion(client_a->context, buffer_desc, csb_a1->ExecResource()));
 
   // Switch to client B.
   buffer_desc.gpu_addr = 0x60000;
   ASSERT_NO_FATAL_FAILURE(
-      CreateAndSubmitBuffer(client_b->context, buffer_desc, csb_b1->ExecResource()));
+      CreateAndSubmitBufferWaitCompletion(client_b->context, buffer_desc, csb_b1->ExecResource()));
 
   buffer_desc.gpu_addr = 0x70000;
   ASSERT_NO_FATAL_FAILURE(
-      CreateAndSubmitBuffer(client_b->context, buffer_desc, csb_b2->ExecResource()));
+      CreateAndSubmitBufferWaitCompletion(client_b->context, buffer_desc, csb_b2->ExecResource()));
 
   // Switch back to client A.
   buffer_desc.gpu_addr = 0x80000;
   ASSERT_NO_FATAL_FAILURE(
-      CreateAndSubmitBuffer(client_a->context, buffer_desc, csb_a2->ExecResource()));
+      CreateAndSubmitBufferWaitCompletion(client_a->context, buffer_desc, csb_a2->ExecResource()));
 
   // We expect all context state buffers except |csb_b2| to be executed.
   ASSERT_NO_FATAL_FAILURE(csb_a1->WaitForCompletion());
@@ -512,4 +518,24 @@ TEST_F(TestExec, BatchHasTooManyResources) {
   auto batch = CommandBuffer::Create(default_context(), 0, std::move(command_buffer),
                                      std::move(resources), std::move(signal_semaphores));
   ASSERT_EQ(batch, nullptr);
+}
+
+TEST_F(TestExec, KillContextOnSubmitFail) {
+  device_->StartDeviceThread();
+
+  constexpr uint32_t kBufferSize = 0x1000;
+
+  // This will fail in |SubmitCommandBuffer| if there is not enough space for the extra LINK
+  // instruction.
+  BufferDesc buffer_desc = {
+      .buffer_size = kBufferSize,
+      .map_page_count = 1,
+      .data_size = kBufferSize,
+      .batch_offset = 0,
+      .gpu_addr = kBufferSize,
+  };
+  ASSERT_NO_FATAL_FAILURE(CreateAndSubmitBufferWaitCompletion(
+      default_context(), buffer_desc, std::nullopt /* context_state_buffer */,
+      false /* validate_buffer */));
+  ASSERT_TRUE(default_context()->killed());
 }

@@ -103,5 +103,5 @@ TEST_F(TestFaultRecovery, MultipleContexts) {
   // Ensure we can queue and complete new batches.
   ASSERT_FALSE(clients[0]->context->killed());
   buffer_desc.gpu_addr += magma::page_size();
-  ASSERT_NO_FATAL_FAILURE(CreateAndSubmitBuffer(clients[0]->context, buffer_desc));
+  ASSERT_NO_FATAL_FAILURE(CreateAndSubmitBufferWaitCompletion(clients[0]->context, buffer_desc));
 }

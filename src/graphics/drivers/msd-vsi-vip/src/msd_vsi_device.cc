@@ -927,6 +927,9 @@ bool MsdVsiDevice::SubmitCommandBuffer(std::shared_ptr<MsdVsiContext> context,
   if (context->killed()) {
     return DRETF(false, "Context killed");
   }
+
+  auto kill_context = fbl::MakeAutoCall([context]() { context->Kill(); });
+
   // Check if we have loaded an address space and enabled the MMU.
   bool initial_address_space_loaded = page_table_arrays_->IsEnabled(register_io());
   if (!initial_address_space_loaded) {
@@ -1053,6 +1056,8 @@ bool MsdVsiDevice::SubmitCommandBuffer(std::shared_ptr<MsdVsiContext> context,
   if (is_cmd_buf) {
     prev_executed_context_ = context;
   }
+
+  kill_context.cancel();
 
   return true;
 }
