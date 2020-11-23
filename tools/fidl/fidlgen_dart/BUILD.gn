@@ -111,7 +111,7 @@ group("goldens") {
     "//zircon/tools/fidl/testdata:fidl.test.consts",
 
     # TODO(fxbug.dev/62761): Fix error about default value not being constant.
-    "//zircon/tools/fidl/testdata/struct_default_value_enum_library_reference:example",
+    "//zircon/tools/fidl/testdata/struct_default_value_enum_library_reference:fidl.test.structdefaultvalueenumlibraryreference",
   ]
 
   deps = []

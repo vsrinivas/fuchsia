@@ -4,12 +4,12 @@
 
 
 extern const struct FidlCodedEnum dependent_MyEnumTable;
-extern const struct FidlCodedStruct example_FooTable;
+extern const struct FidlCodedStruct fidl_test_structdefaultvalueenumlibraryreference_FooTable;
 
 
 
-static const struct FidlStructElement Fields11example_Foo[] = {
+static const struct FidlStructElement Fields52fidl_test_structdefaultvalueenumlibraryreference_Foo[] = {
     /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset=0u, .field_type=(fidl_type_t*)(&dependent_MyEnumTable)}}
 };
-const struct FidlCodedStruct example_FooTable = {.tag=kFidlTypeStruct, .elements=Fields11example_Foo, .element_count=1u, .size=4u, .name="example/Foo"};
+const struct FidlCodedStruct fidl_test_structdefaultvalueenumlibraryreference_FooTable = {.tag=kFidlTypeStruct, .elements=Fields52fidl_test_structdefaultvalueenumlibraryreference_Foo, .element_count=1u, .size=4u, .name="fidl.test.structdefaultvalueenumlibraryreference/Foo"};
 

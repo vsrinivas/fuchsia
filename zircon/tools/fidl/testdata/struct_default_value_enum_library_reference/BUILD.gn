@@ -4,7 +4,7 @@
 
 import("//build/fidl/fidl.gni")
 
-fidl("example") {
+fidl("fidl.test.structdefaultvalueenumlibraryreference") {
   testonly = true
   sources = [ "example.test.fidl" ]
   public_deps = [ ":dependent" ]

@@ -35,14 +35,18 @@
 
 namespace llcpp {
 
-namespace example {
+namespace fidl {
+namespace test {
+namespace structdefaultvalueenumlibraryreference {
 
 struct Foo;
 
-extern "C" const fidl_type_t example_FooTable;
+extern "C" const fidl_type_t
+    fidl_test_structdefaultvalueenumlibraryreference_FooTable;
 
 struct Foo {
-  static constexpr const fidl_type_t* Type = &example_FooTable;
+  static constexpr const fidl_type_t* Type =
+      &fidl_test_structdefaultvalueenumlibraryreference_FooTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 4;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
@@ -152,23 +156,41 @@ struct Foo {
   };
 };
 
-}  // namespace example
+}  // namespace structdefaultvalueenumlibraryreference
+}  // namespace test
+}  // namespace fidl
 }  // namespace llcpp
 
 namespace fidl {
 
 template <>
-struct IsFidlType<::llcpp::example::Foo> : public std::true_type {};
+struct IsFidlType<
+    ::llcpp::fidl::test::structdefaultvalueenumlibraryreference::Foo>
+    : public std::true_type {};
 template <>
-struct IsStruct<::llcpp::example::Foo> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::llcpp::example::Foo>);
-static_assert(offsetof(::llcpp::example::Foo, field) == 0);
-static_assert(sizeof(::llcpp::example::Foo) ==
-              ::llcpp::example::Foo::PrimarySize);
+struct IsStruct<
+    ::llcpp::fidl::test::structdefaultvalueenumlibraryreference::Foo>
+    : public std::true_type {};
+static_assert(
+    std::is_standard_layout_v<
+        ::llcpp::fidl::test::structdefaultvalueenumlibraryreference::Foo>);
+static_assert(
+    offsetof(::llcpp::fidl::test::structdefaultvalueenumlibraryreference::Foo,
+             field) == 0);
+static_assert(
+    sizeof(::llcpp::fidl::test::structdefaultvalueenumlibraryreference::Foo) ==
+    ::llcpp::fidl::test::structdefaultvalueenumlibraryreference::Foo::
+        PrimarySize);
 
 }  // namespace fidl
 
 namespace llcpp {
 
-namespace example {}  // namespace example
+namespace fidl {
+namespace test {
+namespace structdefaultvalueenumlibraryreference {
+
+}  // namespace structdefaultvalueenumlibraryreference
+}  // namespace test
+}  // namespace fidl
 }  // namespace llcpp

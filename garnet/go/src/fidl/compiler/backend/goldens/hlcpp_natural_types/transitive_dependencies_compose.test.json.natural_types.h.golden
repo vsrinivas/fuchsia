@@ -10,7 +10,9 @@
 //
 // Domain objects declarations (i.e. "natural types" in unified bindings).
 //
-namespace top {
+namespace fidl {
+namespace test {
+namespace transitivedependenciescompose {
 
 #ifdef __Fuchsia__
 class Top;
@@ -19,7 +21,8 @@ using TopHandle = ::fidl::InterfaceHandle<Top>;
 #ifdef __Fuchsia__
 
 namespace _internal {
-extern "C" const fidl_type_t top_TopGetFooRequestTable;
+extern "C" const fidl_type_t
+    fidl_test_transitivedependenciescompose_TopGetFooRequestTable;
 }
 
 class Top_RequestEncoder {
@@ -28,16 +31,20 @@ class Top_RequestEncoder {
     fidl_trace(WillHLCPPEncode);
     _encoder->Alloc(16 - sizeof(fidl_message_header_t));
 
-    fidl_trace(DidHLCPPEncode, &_internal::top_TopGetFooRequestTable,
-               _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
-               _encoder->CurrentHandleCount());
+    fidl_trace(
+        DidHLCPPEncode,
+        &_internal::
+            fidl_test_transitivedependenciescompose_TopGetFooRequestTable,
+        _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
+        _encoder->CurrentHandleCount());
 
     return _encoder->GetMessage();
   }
 };
 
 namespace _internal {
-extern "C" const fidl_type_t top_TopGetFooResponseTable;
+extern "C" const fidl_type_t
+    fidl_test_transitivedependenciescompose_TopGetFooResponseTable;
 }
 
 class Top_ResponseEncoder {
@@ -47,13 +54,18 @@ class Top_ResponseEncoder {
     _encoder->Alloc(24 - sizeof(fidl_message_header_t));
     ::fidl::Encode(_encoder, foo, 16);
 
-    fidl_trace(DidHLCPPEncode, &_internal::top_TopGetFooResponseTable,
-               _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
-               _encoder->CurrentHandleCount());
+    fidl_trace(
+        DidHLCPPEncode,
+        &_internal::
+            fidl_test_transitivedependenciescompose_TopGetFooResponseTable,
+        _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
+        _encoder->CurrentHandleCount());
     return _encoder->GetMessage();
   }
 };
 
 #endif  // __Fuchsia__
-}  // namespace top
+}  // namespace transitivedependenciescompose
+}  // namespace test
+}  // namespace fidl
 namespace fidl {}  // namespace fidl

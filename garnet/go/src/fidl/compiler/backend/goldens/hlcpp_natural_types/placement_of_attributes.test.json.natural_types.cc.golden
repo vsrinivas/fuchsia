@@ -7,10 +7,13 @@
 //
 // Domain objects definitions (i.e. "natural types" in unified bindings)
 //
-namespace example {
+namespace fidl {
+namespace test {
+namespace placementofattributes {
 
-extern "C" const fidl_type_t example_ExampleXUnionTable;
-const fidl_type_t* ExampleXUnion::FidlType = &example_ExampleXUnionTable;
+extern "C" const fidl_type_t fidl_test_placementofattributes_ExampleXUnionTable;
+const fidl_type_t* ExampleXUnion::FidlType =
+    &fidl_test_placementofattributes_ExampleXUnionTable;
 
 ExampleXUnion::ExampleXUnion() {}
 
@@ -171,8 +174,9 @@ void ExampleXUnion::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
     }
   }
 }
-extern "C" const fidl_type_t example_ExampleUnionTable;
-const fidl_type_t* ExampleUnion::FidlType = &example_ExampleUnionTable;
+extern "C" const fidl_type_t fidl_test_placementofattributes_ExampleUnionTable;
+const fidl_type_t* ExampleUnion::FidlType =
+    &fidl_test_placementofattributes_ExampleUnionTable;
 
 ExampleUnion::ExampleUnion() {}
 
@@ -307,8 +311,9 @@ void ExampleUnion::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
     }
   }
 }
-extern "C" const fidl_type_t example_ExampleTableTable;
-const fidl_type_t* ExampleTable::FidlType = &example_ExampleTableTable;
+extern "C" const fidl_type_t fidl_test_placementofattributes_ExampleTableTable;
+const fidl_type_t* ExampleTable::FidlType =
+    &fidl_test_placementofattributes_ExampleTableTable;
 
 ExampleTable::ExampleTable() {}
 
@@ -449,8 +454,9 @@ zx_status_t ExampleTable::Clone(ExampleTable* result) const {
   }
   return ::fidl::Clone(_unknown_data, &result->_unknown_data);
 }
-extern "C" const fidl_type_t example_ExampleStructTable;
-const fidl_type_t* ExampleStruct::FidlType = &example_ExampleStructTable;
+extern "C" const fidl_type_t fidl_test_placementofattributes_ExampleStructTable;
+const fidl_type_t* ExampleStruct::FidlType =
+    &fidl_test_placementofattributes_ExampleStructTable;
 
 void ExampleStruct::Encode(::fidl::Encoder* _encoder, size_t _offset) {
   if (::fidl::IsMemcpyCompatible<ExampleStruct>::value) {
@@ -476,4 +482,6 @@ zx_status_t ExampleStruct::Clone(ExampleStruct* _result) const {
   if (_status != ZX_OK) return _status;
   return ZX_OK;
 }
-}  // namespace example
+}  // namespace placementofattributes
+}  // namespace test
+}  // namespace fidl

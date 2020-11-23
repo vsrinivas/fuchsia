@@ -4,6 +4,10 @@
 
 #include <middle/cpp/fidl.h>
 #include <transitive_dependencies.test.json.h>
-namespace top {
+namespace fidl {
+namespace test {
+namespace transitivedependencies {
 namespace testing {}  // namespace testing
-}  // namespace top
+}  // namespace transitivedependencies
+}  // namespace test
+}  // namespace fidl

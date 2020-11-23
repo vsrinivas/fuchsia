@@ -6,9 +6,13 @@
 
 namespace llcpp {
 
-namespace example {
+namespace fidl {
+namespace test {
+namespace structdefaultvalueenumlibraryreference {
 
 void Foo::_CloseHandles() {}
 
-}  // namespace example
+}  // namespace structdefaultvalueenumlibraryreference
+}  // namespace test
+}  // namespace fidl
 }  // namespace llcpp

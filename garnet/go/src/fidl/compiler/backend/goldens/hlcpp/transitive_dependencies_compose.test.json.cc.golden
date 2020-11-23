@@ -7,18 +7,28 @@
 //
 // Domain objects definitions (i.e. "natural types" in unified bindings)
 //
-namespace top {}  // namespace top
+namespace fidl {
+namespace test {
+namespace transitivedependenciescompose {
+
+}  // namespace transitivedependenciescompose
+}  // namespace test
+}  // namespace fidl
 
 //
 // Proxies and stubs definitions
 //
-namespace top {
+namespace fidl {
+namespace test {
+namespace transitivedependenciescompose {
 
 #ifdef __Fuchsia__
 namespace {
 
-extern "C" const fidl_type_t top_TopGetFooRequestTable;
-extern "C" const fidl_type_t top_TopGetFooResponseTable;
+extern "C" const fidl_type_t
+    fidl_test_transitivedependenciescompose_TopGetFooRequestTable;
+extern "C" const fidl_type_t
+    fidl_test_transitivedependenciescompose_TopGetFooResponseTable;
 
 }  // namespace
 
@@ -29,7 +39,7 @@ const fidl_type_t* Top_RequestDecoder::GetType(uint64_t ordinal,
   switch (ordinal) {
     case internal::kTop_GetFoo_Ordinal:
       *out_needs_response = true;
-      return &top_TopGetFooRequestTable;
+      return &fidl_test_transitivedependenciescompose_TopGetFooRequestTable;
     default:
       *out_needs_response = false;
       return nullptr;
@@ -39,7 +49,7 @@ const fidl_type_t* Top_RequestDecoder::GetType(uint64_t ordinal,
 const fidl_type_t* Top_ResponseDecoder::GetType(uint64_t ordinal) {
   switch (ordinal) {
     case internal::kTop_GetFoo_Ordinal:
-      return &top_TopGetFooResponseTable;
+      return &fidl_test_transitivedependenciescompose_TopGetFooResponseTable;
     default:
       return nullptr;
   }
@@ -78,15 +88,16 @@ Top_GetFoo_ResponseHandler(Top::GetFooCallback&& callback) {
         callback_(::fidl::DecodeAs<::bottom::Foo>(&decoder, 16));
         return ZX_OK;
       },
-      &top_TopGetFooResponseTable);
+      &fidl_test_transitivedependenciescompose_TopGetFooResponseTable);
 }
 
 }  // namespace
 void Top_Proxy::GetFoo(GetFooCallback callback) {
   ::fidl::Encoder _encoder(internal::kTop_GetFoo_Ordinal);
-  controller_->Send(&top_TopGetFooRequestTable,
-                    Top_RequestEncoder::GetFoo(&_encoder),
-                    Top_GetFoo_ResponseHandler(std::move(callback)));
+  controller_->Send(
+      &fidl_test_transitivedependenciescompose_TopGetFooRequestTable,
+      Top_RequestEncoder::GetFoo(&_encoder),
+      Top_GetFoo_ResponseHandler(std::move(callback)));
 }
 
 Top_Stub::Top_Stub(Top_clazz* impl) : impl_(impl) { (void)impl_; }
@@ -102,8 +113,9 @@ class Top_GetFoo_Responder final {
 
   void operator()(::bottom::Foo foo) {
     ::fidl::Encoder _encoder(internal::kTop_GetFoo_Ordinal);
-    response_.Send(&top_TopGetFooResponseTable,
-                   Top_ResponseEncoder::GetFoo(&_encoder, &foo));
+    response_.Send(
+        &fidl_test_transitivedependenciescompose_TopGetFooResponseTable,
+        Top_ResponseEncoder::GetFoo(&_encoder, &foo));
   }
 
  private:
@@ -159,9 +171,10 @@ zx_status_t Top_SyncProxy::GetFoo(::bottom::Foo* out_foo) {
   ::fidl::Encoder _encoder(internal::kTop_GetFoo_Ordinal);
   ::fidl::MessageBuffer buffer_;
   ::fidl::Message response_ = buffer_.CreateEmptyMessage();
-  zx_status_t status_ =
-      proxy_.Call(&top_TopGetFooRequestTable, &top_TopGetFooResponseTable,
-                  Top_RequestEncoder::GetFoo(&_encoder), &response_);
+  zx_status_t status_ = proxy_.Call(
+      &fidl_test_transitivedependenciescompose_TopGetFooRequestTable,
+      &fidl_test_transitivedependenciescompose_TopGetFooResponseTable,
+      Top_RequestEncoder::GetFoo(&_encoder), &response_);
   if (status_ != ZX_OK) return status_;
   ::fidl::Decoder decoder_(std::move(response_));
   *out_foo = ::fidl::DecodeAs<::bottom::Foo>(&decoder_, 16);
@@ -170,4 +183,6 @@ zx_status_t Top_SyncProxy::GetFoo(::bottom::Foo* out_foo) {
 
 #endif  // __Fuchsia__
 
-}  // namespace top
+}  // namespace transitivedependenciescompose
+}  // namespace test
+}  // namespace fidl

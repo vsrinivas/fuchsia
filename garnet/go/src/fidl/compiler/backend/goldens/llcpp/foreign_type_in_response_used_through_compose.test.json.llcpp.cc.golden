@@ -6,13 +6,17 @@
 
 namespace llcpp {
 
-namespace top {
+namespace fidl {
+namespace test {
+namespace foreigntypeinresponseusedthroughcompose {
 
 namespace {
 
 [[maybe_unused]] constexpr uint64_t kTop_GetFoo_Ordinal = 7703637629648977298lu;
-extern "C" const fidl_type_t top_TopGetFooRequestTable;
-extern "C" const fidl_type_t top_TopGetFooResponseTable;
+extern "C" const fidl_type_t
+    fidl_test_foreigntypeinresponseusedthroughcompose_TopGetFooRequestTable;
+extern "C" const fidl_type_t
+    fidl_test_foreigntypeinresponseusedthroughcompose_TopGetFooResponseTable;
 
 }  // namespace
 Top::ResultOf::GetFoo::GetFoo(zx_handle_t _client) {
@@ -173,5 +177,7 @@ void Top::GetFooResponse::_InitHeader() {
   fidl_init_txn_header(&_hdr, 0, kTop_GetFoo_Ordinal);
 }
 
-}  // namespace top
+}  // namespace foreigntypeinresponseusedthroughcompose
+}  // namespace test
+}  // namespace fidl
 }  // namespace llcpp

@@ -1,6 +1,6 @@
 {
   "version": "0.0.1",
-  "name": "example",
+  "name": "fidl.test.placementofattributes",
   "library_dependencies": [
     {
       "name": "exampleusing",
@@ -14,7 +14,7 @@
   ],
   "bits_declarations": [
     {
-      "name": "example/ExampleBits",
+      "name": "fidl.test.placementofattributes/ExampleBits",
       "location": {
         "filename": "example.test.fidl",
         "line": 7,
@@ -64,7 +64,7 @@
   ],
   "const_declarations": [
     {
-      "name": "example/EXAMPLE_CONST",
+      "name": "fidl.test.placementofattributes/EXAMPLE_CONST",
       "location": {
         "filename": "example.test.fidl",
         "line": 13,
@@ -95,7 +95,7 @@
   ],
   "enum_declarations": [
     {
-      "name": "example/ExampleEnum",
+      "name": "fidl.test.placementofattributes/ExampleEnum",
       "location": {
         "filename": "example.test.fidl",
         "line": 16,
@@ -142,7 +142,7 @@
   "experimental_resource_declarations": [],
   "interface_declarations": [
     {
-      "name": "example/ExampleProtocol",
+      "name": "fidl.test.placementofattributes/ExampleProtocol",
       "location": {
         "filename": "example.test.fidl",
         "line": 22,
@@ -157,7 +157,7 @@
       ],
       "methods": [
         {
-          "ordinal": 1965996700874037518,
+          "ordinal": 2341079615635566980,
           "name": "Method",
           "location": {
             "filename": "example.test.fidl",
@@ -192,7 +192,7 @@
               }
             }
           ],
-          "maybe_request_payload": "example/SomeLongAnonymousPrefix0",
+          "maybe_request_payload": "fidl.test.placementofattributes/SomeLongAnonymousPrefix0",
           "maybe_request_type_shape_v1": {
             "inline_size": 24,
             "alignment": 8,
@@ -212,7 +212,7 @@
   "service_declarations": [],
   "struct_declarations": [
     {
-      "name": "example/SomeLongAnonymousPrefix0",
+      "name": "fidl.test.placementofattributes/SomeLongAnonymousPrefix0",
       "location": {
         "filename": "example.test.fidl",
         "line": 24,
@@ -253,7 +253,7 @@
       }
     },
     {
-      "name": "example/ExampleStruct",
+      "name": "fidl.test.placementofattributes/ExampleStruct",
       "location": {
         "filename": "example.test.fidl",
         "line": 28,
@@ -307,7 +307,7 @@
   ],
   "table_declarations": [
     {
-      "name": "example/ExampleTable",
+      "name": "fidl.test.placementofattributes/ExampleTable",
       "location": {
         "filename": "example.test.fidl",
         "line": 34,
@@ -359,7 +359,7 @@
   ],
   "union_declarations": [
     {
-      "name": "example/ExampleUnion",
+      "name": "fidl.test.placementofattributes/ExampleUnion",
       "location": {
         "filename": "example.test.fidl",
         "line": 43,
@@ -409,7 +409,7 @@
       }
     },
     {
-      "name": "example/ExampleXUnion",
+      "name": "fidl.test.placementofattributes/ExampleXUnion",
       "location": {
         "filename": "example.test.fidl",
         "line": 49,
@@ -461,7 +461,7 @@
   ],
   "type_alias_declarations": [
     {
-      "name": "example/TypeAlias",
+      "name": "fidl.test.placementofattributes/TypeAlias",
       "location": {
         "filename": "example.test.fidl",
         "line": 40,
@@ -482,26 +482,26 @@
     }
   ],
   "declaration_order": [
-    "example/ExampleProtocol",
-    "example/TypeAlias",
-    "example/ExampleXUnion",
-    "example/ExampleUnion",
-    "example/ExampleTable",
-    "example/ExampleStruct",
-    "example/ExampleEnum",
-    "example/ExampleBits",
-    "example/EXAMPLE_CONST"
+    "fidl.test.placementofattributes/TypeAlias",
+    "fidl.test.placementofattributes/ExampleXUnion",
+    "fidl.test.placementofattributes/ExampleUnion",
+    "fidl.test.placementofattributes/ExampleTable",
+    "fidl.test.placementofattributes/ExampleStruct",
+    "fidl.test.placementofattributes/ExampleEnum",
+    "fidl.test.placementofattributes/ExampleBits",
+    "fidl.test.placementofattributes/EXAMPLE_CONST",
+    "fidl.test.placementofattributes/ExampleProtocol"
   ],
   "declarations": {
-    "example/ExampleBits": "bits",
-    "example/EXAMPLE_CONST": "const",
-    "example/ExampleEnum": "enum",
-    "example/ExampleProtocol": "interface",
-    "example/SomeLongAnonymousPrefix0": "struct",
-    "example/ExampleStruct": "struct",
-    "example/ExampleTable": "table",
-    "example/ExampleUnion": "union",
-    "example/ExampleXUnion": "union",
-    "example/TypeAlias": "type_alias"
+    "fidl.test.placementofattributes/ExampleBits": "bits",
+    "fidl.test.placementofattributes/EXAMPLE_CONST": "const",
+    "fidl.test.placementofattributes/ExampleEnum": "enum",
+    "fidl.test.placementofattributes/ExampleProtocol": "interface",
+    "fidl.test.placementofattributes/SomeLongAnonymousPrefix0": "struct",
+    "fidl.test.placementofattributes/ExampleStruct": "struct",
+    "fidl.test.placementofattributes/ExampleTable": "table",
+    "fidl.test.placementofattributes/ExampleUnion": "union",
+    "fidl.test.placementofattributes/ExampleXUnion": "union",
+    "fidl.test.placementofattributes/TypeAlias": "type_alias"
   }
 }

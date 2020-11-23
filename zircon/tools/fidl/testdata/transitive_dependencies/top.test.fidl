@@ -1,4 +1,4 @@
-library top;
+library fidl.test.transitivedependencies;
 
 using middle;
 

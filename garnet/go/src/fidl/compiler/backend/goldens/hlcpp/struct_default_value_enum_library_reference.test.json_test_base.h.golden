@@ -4,6 +4,10 @@
 
 #include <dependent/cpp/fidl.h>
 #include <struct_default_value_enum_library_reference.test.json.h>
-namespace example {
+namespace fidl {
+namespace test {
+namespace structdefaultvalueenumlibraryreference {
 namespace testing {}  // namespace testing
-}  // namespace example
+}  // namespace structdefaultvalueenumlibraryreference
+}  // namespace test
+}  // namespace fidl

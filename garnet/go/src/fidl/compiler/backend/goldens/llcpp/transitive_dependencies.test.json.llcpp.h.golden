@@ -35,14 +35,17 @@
 
 namespace llcpp {
 
-namespace top {
+namespace fidl {
+namespace test {
+namespace transitivedependencies {
 
 struct Baz;
 
-extern "C" const fidl_type_t top_BazTable;
+extern "C" const fidl_type_t fidl_test_transitivedependencies_BazTable;
 
 struct Baz {
-  static constexpr const fidl_type_t* Type = &top_BazTable;
+  static constexpr const fidl_type_t* Type =
+      &fidl_test_transitivedependencies_BazTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 4;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
@@ -152,22 +155,33 @@ struct Baz {
   };
 };
 
-}  // namespace top
+}  // namespace transitivedependencies
+}  // namespace test
+}  // namespace fidl
 }  // namespace llcpp
 
 namespace fidl {
 
 template <>
-struct IsFidlType<::llcpp::top::Baz> : public std::true_type {};
+struct IsFidlType<::llcpp::fidl::test::transitivedependencies::Baz>
+    : public std::true_type {};
 template <>
-struct IsStruct<::llcpp::top::Baz> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::llcpp::top::Baz>);
-static_assert(offsetof(::llcpp::top::Baz, g) == 0);
-static_assert(sizeof(::llcpp::top::Baz) == ::llcpp::top::Baz::PrimarySize);
+struct IsStruct<::llcpp::fidl::test::transitivedependencies::Baz>
+    : public std::true_type {};
+static_assert(std::is_standard_layout_v<
+              ::llcpp::fidl::test::transitivedependencies::Baz>);
+static_assert(offsetof(::llcpp::fidl::test::transitivedependencies::Baz, g) ==
+              0);
+static_assert(sizeof(::llcpp::fidl::test::transitivedependencies::Baz) ==
+              ::llcpp::fidl::test::transitivedependencies::Baz::PrimarySize);
 
 }  // namespace fidl
 
 namespace llcpp {
 
-namespace top {}  // namespace top
+namespace fidl {
+namespace test {
+namespace transitivedependencies {}  // namespace transitivedependencies
+}  // namespace test
+}  // namespace fidl
 }  // namespace llcpp

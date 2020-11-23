@@ -1,4 +1,4 @@
-library example;
+library fidl.test.typealiases;
 
 using someotherlibrary;
 

@@ -3,49 +3,49 @@
 #include <lib/fidl/internal.h>
 
 
+extern const struct FidlCodedXUnion fidl_test_placementofattributes_ExampleXUnionTable;
+extern const struct FidlCodedXUnion fidl_test_placementofattributes_ExampleXUnionNullableRefTable;
+extern const struct FidlCodedXUnion fidl_test_placementofattributes_ExampleUnionTable;
+extern const struct FidlCodedXUnion fidl_test_placementofattributes_ExampleUnionNullableRefTable;
+extern const struct FidlCodedTable fidl_test_placementofattributes_ExampleTableTable;
+extern const struct FidlCodedStruct fidl_test_placementofattributes_ExampleStructTable;
+extern const struct FidlCodedEnum fidl_test_placementofattributes_ExampleEnumTable;
+extern const struct FidlCodedBits fidl_test_placementofattributes_ExampleBitsTable;
 extern const struct FidlCodedStruct exampleusing_EmptyTable;
-extern const struct FidlCodedXUnion example_ExampleXUnionTable;
-extern const struct FidlCodedXUnion example_ExampleXUnionNullableRefTable;
-extern const struct FidlCodedXUnion example_ExampleUnionTable;
-extern const struct FidlCodedXUnion example_ExampleUnionNullableRefTable;
-extern const struct FidlCodedTable example_ExampleTableTable;
-extern const struct FidlCodedStruct example_ExampleStructTable;
-extern const struct FidlCodedEnum example_ExampleEnumTable;
-extern const struct FidlCodedBits example_ExampleBitsTable;
 
 
-extern const struct FidlCodedStruct example_ExampleProtocolMethodRequestTable;
-static const struct FidlStructElement Fields36example_ExampleProtocolMethodRequest[] = {
+extern const struct FidlCodedStruct fidl_test_placementofattributes_ExampleProtocolMethodRequestTable;
+static const struct FidlStructElement Fields60fidl_test_placementofattributes_ExampleProtocolMethodRequest[] = {
     /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset=16u, .field_type=(fidl_type_t*)(&exampleusing_EmptyTable)}},
     /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset=16u, .header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Padding64,.is_resource=kFidlIsResource_NotResource},.mask_64=18446744073709551360ul}}
 };
-const struct FidlCodedStruct example_ExampleProtocolMethodRequestTable = {.tag=kFidlTypeStruct, .elements=Fields36example_ExampleProtocolMethodRequest, .element_count=2u, .size=24u, .name="example/ExampleProtocolMethodRequest"};
+const struct FidlCodedStruct fidl_test_placementofattributes_ExampleProtocolMethodRequestTable = {.tag=kFidlTypeStruct, .elements=Fields60fidl_test_placementofattributes_ExampleProtocolMethodRequest, .element_count=2u, .size=24u, .name="fidl.test.placementofattributes/ExampleProtocolMethodRequest"};
 
 
-static const struct FidlXUnionField Fields21example_ExampleXUnion[] = {
+static const struct FidlXUnionField Fields45fidl_test_placementofattributes_ExampleXUnion[] = {
     /*FidlXUnionField*/{.type=(fidl_type_t*)(&fidl_internal_kUint32Table)}
 };
-const struct FidlCodedXUnion example_ExampleXUnionTable = {.tag=kFidlTypeXUnion, .field_count=1u, .fields=Fields21example_ExampleXUnion, .nullable=kFidlNullability_Nonnullable, .name="example/ExampleXUnion", .strictness=kFidlStrictness_Flexible, .is_resource=kFidlIsResource_NotResource};
-static const struct FidlXUnionField Fields32example_ExampleXUnionNullableRef[] = {
+const struct FidlCodedXUnion fidl_test_placementofattributes_ExampleXUnionTable = {.tag=kFidlTypeXUnion, .field_count=1u, .fields=Fields45fidl_test_placementofattributes_ExampleXUnion, .nullable=kFidlNullability_Nonnullable, .name="fidl.test.placementofattributes/ExampleXUnion", .strictness=kFidlStrictness_Flexible, .is_resource=kFidlIsResource_NotResource};
+static const struct FidlXUnionField Fields56fidl_test_placementofattributes_ExampleXUnionNullableRef[] = {
     /*FidlXUnionField*/{.type=(fidl_type_t*)(&fidl_internal_kUint32Table)}
 };
-const struct FidlCodedXUnion example_ExampleXUnionNullableRefTable = {.tag=kFidlTypeXUnion, .field_count=1u, .fields=Fields32example_ExampleXUnionNullableRef, .nullable=kFidlNullability_Nullable, .name="example/ExampleXUnion", .strictness=kFidlStrictness_Flexible, .is_resource=kFidlIsResource_NotResource};
-static const struct FidlXUnionField Fields20example_ExampleUnion[] = {
+const struct FidlCodedXUnion fidl_test_placementofattributes_ExampleXUnionNullableRefTable = {.tag=kFidlTypeXUnion, .field_count=1u, .fields=Fields56fidl_test_placementofattributes_ExampleXUnionNullableRef, .nullable=kFidlNullability_Nullable, .name="fidl.test.placementofattributes/ExampleXUnion", .strictness=kFidlStrictness_Flexible, .is_resource=kFidlIsResource_NotResource};
+static const struct FidlXUnionField Fields44fidl_test_placementofattributes_ExampleUnion[] = {
     /*FidlXUnionField*/{.type=(fidl_type_t*)(&fidl_internal_kUint32Table)}
 };
-const struct FidlCodedXUnion example_ExampleUnionTable = {.tag=kFidlTypeXUnion, .field_count=1u, .fields=Fields20example_ExampleUnion, .nullable=kFidlNullability_Nonnullable, .name="example/ExampleUnion", .strictness=kFidlStrictness_Strict, .is_resource=kFidlIsResource_NotResource};
-static const struct FidlXUnionField Fields31example_ExampleUnionNullableRef[] = {
+const struct FidlCodedXUnion fidl_test_placementofattributes_ExampleUnionTable = {.tag=kFidlTypeXUnion, .field_count=1u, .fields=Fields44fidl_test_placementofattributes_ExampleUnion, .nullable=kFidlNullability_Nonnullable, .name="fidl.test.placementofattributes/ExampleUnion", .strictness=kFidlStrictness_Strict, .is_resource=kFidlIsResource_NotResource};
+static const struct FidlXUnionField Fields55fidl_test_placementofattributes_ExampleUnionNullableRef[] = {
     /*FidlXUnionField*/{.type=(fidl_type_t*)(&fidl_internal_kUint32Table)}
 };
-const struct FidlCodedXUnion example_ExampleUnionNullableRefTable = {.tag=kFidlTypeXUnion, .field_count=1u, .fields=Fields31example_ExampleUnionNullableRef, .nullable=kFidlNullability_Nullable, .name="example/ExampleUnion", .strictness=kFidlStrictness_Strict, .is_resource=kFidlIsResource_NotResource};
-static const struct FidlTableField Fields20example_ExampleTable[] = {
+const struct FidlCodedXUnion fidl_test_placementofattributes_ExampleUnionNullableRefTable = {.tag=kFidlTypeXUnion, .field_count=1u, .fields=Fields55fidl_test_placementofattributes_ExampleUnionNullableRef, .nullable=kFidlNullability_Nullable, .name="fidl.test.placementofattributes/ExampleUnion", .strictness=kFidlStrictness_Strict, .is_resource=kFidlIsResource_NotResource};
+static const struct FidlTableField Fields44fidl_test_placementofattributes_ExampleTable[] = {
     /*FidlTableField*/{.type=(fidl_type_t*)(&fidl_internal_kUint32Table), .ordinal=1u}
 };
-const struct FidlCodedTable example_ExampleTableTable = {.tag=kFidlTypeTable, .fields=Fields20example_ExampleTable, .field_count=1u, .is_resource=kFidlIsResource_NotResource, .name="example/ExampleTable"};
+const struct FidlCodedTable fidl_test_placementofattributes_ExampleTableTable = {.tag=kFidlTypeTable, .fields=Fields44fidl_test_placementofattributes_ExampleTable, .field_count=1u, .is_resource=kFidlIsResource_NotResource, .name="fidl.test.placementofattributes/ExampleTable"};
 
-const struct FidlCodedStruct example_ExampleStructTable = {.tag=kFidlTypeStruct, .elements=NULL, .element_count=0u, .size=4u, .name="example/ExampleStruct"};
+const struct FidlCodedStruct fidl_test_placementofattributes_ExampleStructTable = {.tag=kFidlTypeStruct, .elements=NULL, .element_count=0u, .size=4u, .name="fidl.test.placementofattributes/ExampleStruct"};
 
-static bool EnumValidatorFor_example_ExampleEnum(uint64_t v) {
+static bool EnumValidatorFor_fidl_test_placementofattributes_ExampleEnum(uint64_t v) {
   switch (v) {
     case 1ul:
       return true;
@@ -54,7 +54,7 @@ static bool EnumValidatorFor_example_ExampleEnum(uint64_t v) {
   }
 }
 
-const struct FidlCodedEnum example_ExampleEnumTable = {.tag=kFidlTypeEnum, .underlying_type=kFidlCodedPrimitiveSubtype_Uint32, .strictness=kFidlStrictness_Strict, .validate=&EnumValidatorFor_example_ExampleEnum, .name="example/ExampleEnum"};
+const struct FidlCodedEnum fidl_test_placementofattributes_ExampleEnumTable = {.tag=kFidlTypeEnum, .underlying_type=kFidlCodedPrimitiveSubtype_Uint32, .strictness=kFidlStrictness_Strict, .validate=&EnumValidatorFor_fidl_test_placementofattributes_ExampleEnum, .name="fidl.test.placementofattributes/ExampleEnum"};
 
-const struct FidlCodedBits example_ExampleBitsTable = {.tag=kFidlTypeBits, .underlying_type=kFidlCodedPrimitiveSubtype_Uint32, .strictness=kFidlStrictness_Strict, .mask=1ul, .name="example/ExampleBits"};
+const struct FidlCodedBits fidl_test_placementofattributes_ExampleBitsTable = {.tag=kFidlTypeBits, .underlying_type=kFidlCodedPrimitiveSubtype_Uint32, .strictness=kFidlStrictness_Strict, .mask=1ul, .name="fidl.test.placementofattributes/ExampleBits"};
 

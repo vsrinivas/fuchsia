@@ -1,6 +1,6 @@
 {
   "version": "0.0.1",
-  "name": "example",
+  "name": "fidl.test.typealiases",
   "library_dependencies": [
     {
       "name": "someotherlibrary",
@@ -16,7 +16,7 @@
   "const_declarations": [],
   "enum_declarations": [
     {
-      "name": "example/obj_type",
+      "name": "fidl.test.typealiases/obj_type",
       "location": {
         "filename": "example.test.fidl",
         "line": 8,
@@ -69,7 +69,7 @@
   ],
   "experimental_resource_declarations": [
     {
-      "name": "example/handle",
+      "name": "fidl.test.typealiases/handle",
       "location": {
         "filename": "example.test.fidl",
         "line": 13,
@@ -91,7 +91,7 @@
           },
           "type": {
             "kind": "identifier",
-            "identifier": "example/obj_type",
+            "identifier": "fidl.test.typealiases/obj_type",
             "nullable": false
           }
         }
@@ -102,7 +102,7 @@
   "service_declarations": [],
   "struct_declarations": [
     {
-      "name": "example/ExampleOfUseOfAliases",
+      "name": "fidl.test.typealiases/ExampleOfUseOfAliases",
       "location": {
         "filename": "example.test.fidl",
         "line": 27,
@@ -117,7 +117,7 @@
             "subtype": "uint32"
           },
           "experimental_maybe_from_type_alias": {
-            "name": "example/u32",
+            "name": "fidl.test.typealiases/u32",
             "args": [],
             "nullable": false
           },
@@ -144,7 +144,7 @@
             "nullable": false
           },
           "experimental_maybe_from_type_alias": {
-            "name": "example/vec_at_most_five",
+            "name": "fidl.test.typealiases/vec_at_most_five",
             "args": [
               "string"
             ],
@@ -173,7 +173,7 @@
             "nullable": false
           },
           "experimental_maybe_from_type_alias": {
-            "name": "example/vec_at_most_five",
+            "name": "fidl.test.typealiases/vec_at_most_five",
             "args": [
               "uint32"
             ],
@@ -201,7 +201,7 @@
             "nullable": false
           },
           "experimental_maybe_from_type_alias": {
-            "name": "example/vec_of_strings",
+            "name": "fidl.test.typealiases/vec_of_strings",
             "args": [],
             "nullable": false
           },
@@ -228,7 +228,7 @@
             "nullable": false
           },
           "experimental_maybe_from_type_alias": {
-            "name": "example/vec_of_strings",
+            "name": "fidl.test.typealiases/vec_of_strings",
             "args": [],
             "nullable": false,
             "maybe_size": "9"
@@ -256,7 +256,7 @@
             "nullable": false
           },
           "experimental_maybe_from_type_alias": {
-            "name": "example/vec_of_strings_at_most_5",
+            "name": "fidl.test.typealiases/vec_of_strings_at_most_5",
             "args": [],
             "nullable": false
           },
@@ -284,7 +284,7 @@
             "nullable": false
           },
           "experimental_maybe_from_type_alias": {
-            "name": "example/vec_at_most_5",
+            "name": "fidl.test.typealiases/vec_at_most_5",
             "args": [
               "someotherlibrary/ReferenceMe"
             ],
@@ -310,7 +310,7 @@
             "nullable": false
           },
           "experimental_maybe_from_type_alias": {
-            "name": "example/channel",
+            "name": "fidl.test.typealiases/channel",
             "args": [],
             "nullable": false
           },
@@ -334,7 +334,7 @@
             "nullable": false
           },
           "experimental_maybe_from_type_alias": {
-            "name": "example/client_end",
+            "name": "fidl.test.typealiases/client_end",
             "args": [],
             "nullable": false
           },
@@ -358,7 +358,7 @@
             "nullable": true
           },
           "experimental_maybe_from_type_alias": {
-            "name": "example/client_end",
+            "name": "fidl.test.typealiases/client_end",
             "args": [],
             "nullable": true
           },
@@ -392,7 +392,7 @@
   "union_declarations": [],
   "type_alias_declarations": [
     {
-      "name": "example/u32",
+      "name": "fidl.test.typealiases/u32",
       "location": {
         "filename": "example.test.fidl",
         "line": 19,
@@ -406,7 +406,7 @@
       }
     },
     {
-      "name": "example/vec_at_most_five",
+      "name": "fidl.test.typealiases/vec_at_most_five",
       "location": {
         "filename": "example.test.fidl",
         "line": 20,
@@ -414,7 +414,7 @@
         "length": 16
       },
       "partial_type_ctor": {
-        "name": "example/vector",
+        "name": "fidl.test.typealiases/vector",
         "args": [],
         "nullable": false,
         "maybe_size": {
@@ -430,7 +430,7 @@
       }
     },
     {
-      "name": "example/vec_of_strings",
+      "name": "fidl.test.typealiases/vec_of_strings",
       "location": {
         "filename": "example.test.fidl",
         "line": 21,
@@ -450,7 +450,7 @@
       }
     },
     {
-      "name": "example/vec_of_strings_at_most_5",
+      "name": "fidl.test.typealiases/vec_of_strings_at_most_5",
       "location": {
         "filename": "example.test.fidl",
         "line": 22,
@@ -480,7 +480,7 @@
       }
     },
     {
-      "name": "example/vec_at_most_5",
+      "name": "fidl.test.typealiases/vec_at_most_5",
       "location": {
         "filename": "example.test.fidl",
         "line": 23,
@@ -488,7 +488,7 @@
         "length": 13
       },
       "partial_type_ctor": {
-        "name": "example/vector",
+        "name": "fidl.test.typealiases/vector",
         "args": [],
         "nullable": false,
         "maybe_size": {
@@ -504,7 +504,7 @@
       }
     },
     {
-      "name": "example/channel",
+      "name": "fidl.test.typealiases/channel",
       "location": {
         "filename": "example.test.fidl",
         "line": 24,
@@ -518,7 +518,7 @@
       }
     },
     {
-      "name": "example/client_end",
+      "name": "fidl.test.typealiases/client_end",
       "location": {
         "filename": "example.test.fidl",
         "line": 25,
@@ -533,27 +533,27 @@
     }
   ],
   "declaration_order": [
-    "example/vec_of_strings_at_most_5",
-    "example/vec_of_strings",
-    "example/vec_at_most_five",
-    "example/vec_at_most_5",
-    "example/u32",
-    "example/obj_type",
-    "example/handle",
-    "example/channel",
-    "example/client_end",
-    "example/ExampleOfUseOfAliases"
+    "fidl.test.typealiases/vec_of_strings_at_most_5",
+    "fidl.test.typealiases/vec_of_strings",
+    "fidl.test.typealiases/vec_at_most_five",
+    "fidl.test.typealiases/vec_at_most_5",
+    "fidl.test.typealiases/u32",
+    "fidl.test.typealiases/obj_type",
+    "fidl.test.typealiases/handle",
+    "fidl.test.typealiases/channel",
+    "fidl.test.typealiases/client_end",
+    "fidl.test.typealiases/ExampleOfUseOfAliases"
   ],
   "declarations": {
-    "example/obj_type": "enum",
-    "example/handle": "experimental_resource",
-    "example/ExampleOfUseOfAliases": "struct",
-    "example/u32": "type_alias",
-    "example/vec_at_most_five": "type_alias",
-    "example/vec_of_strings": "type_alias",
-    "example/vec_of_strings_at_most_5": "type_alias",
-    "example/vec_at_most_5": "type_alias",
-    "example/channel": "type_alias",
-    "example/client_end": "type_alias"
+    "fidl.test.typealiases/obj_type": "enum",
+    "fidl.test.typealiases/handle": "experimental_resource",
+    "fidl.test.typealiases/ExampleOfUseOfAliases": "struct",
+    "fidl.test.typealiases/u32": "type_alias",
+    "fidl.test.typealiases/vec_at_most_five": "type_alias",
+    "fidl.test.typealiases/vec_of_strings": "type_alias",
+    "fidl.test.typealiases/vec_of_strings_at_most_5": "type_alias",
+    "fidl.test.typealiases/vec_at_most_5": "type_alias",
+    "fidl.test.typealiases/channel": "type_alias",
+    "fidl.test.typealiases/client_end": "type_alias"
   }
 }

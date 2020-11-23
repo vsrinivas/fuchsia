@@ -36,9 +36,10 @@
 
 namespace llcpp {
 
-namespace example {
+namespace fidl {
+namespace test {
+namespace placementofattributes {
 
-class ExampleProtocol;
 class ExampleXUnion;
 class ExampleUnion;
 class ExampleTable;
@@ -100,50 +101,61 @@ class ExampleBits final {
  private:
   uint32_t value_ = 0;
 };
-constexpr const ::llcpp::example::ExampleBits ExampleBits::MEMBER =
-    ::llcpp::example::ExampleBits(1u);
-constexpr const ::llcpp::example::ExampleBits ExampleBits::kMask =
-    ::llcpp::example::ExampleBits(1u);
+constexpr const ::llcpp::fidl::test::placementofattributes::ExampleBits
+    ExampleBits::MEMBER =
+        ::llcpp::fidl::test::placementofattributes::ExampleBits(1u);
+constexpr const ::llcpp::fidl::test::placementofattributes::ExampleBits
+    ExampleBits::kMask =
+        ::llcpp::fidl::test::placementofattributes::ExampleBits(1u);
 
-constexpr inline ::llcpp::example::ExampleBits ExampleBits::operator~() const {
-  return ::llcpp::example::ExampleBits(
+constexpr inline ::llcpp::fidl::test::placementofattributes::ExampleBits
+ExampleBits::operator~() const {
+  return ::llcpp::fidl::test::placementofattributes::ExampleBits(
       static_cast<uint32_t>(~this->value_ & kMask.value_));
 }
 
-constexpr inline ::llcpp::example::ExampleBits ExampleBits::operator|(
-    const ::llcpp::example::ExampleBits& other) const {
-  return ::llcpp::example::ExampleBits(
+constexpr inline ::llcpp::fidl::test::placementofattributes::ExampleBits
+ExampleBits::operator|(
+    const ::llcpp::fidl::test::placementofattributes::ExampleBits& other)
+    const {
+  return ::llcpp::fidl::test::placementofattributes::ExampleBits(
       static_cast<uint32_t>(this->value_ | other.value_));
 }
 
-constexpr inline ::llcpp::example::ExampleBits ExampleBits::operator&(
-    const ::llcpp::example::ExampleBits& other) const {
-  return ::llcpp::example::ExampleBits(
+constexpr inline ::llcpp::fidl::test::placementofattributes::ExampleBits
+ExampleBits::operator&(
+    const ::llcpp::fidl::test::placementofattributes::ExampleBits& other)
+    const {
+  return ::llcpp::fidl::test::placementofattributes::ExampleBits(
       static_cast<uint32_t>(this->value_ & other.value_));
 }
 
-constexpr inline ::llcpp::example::ExampleBits ExampleBits::operator^(
-    const ::llcpp::example::ExampleBits& other) const {
-  return ::llcpp::example::ExampleBits(
+constexpr inline ::llcpp::fidl::test::placementofattributes::ExampleBits
+ExampleBits::operator^(
+    const ::llcpp::fidl::test::placementofattributes::ExampleBits& other)
+    const {
+  return ::llcpp::fidl::test::placementofattributes::ExampleBits(
       static_cast<uint32_t>(this->value_ ^ other.value_));
 }
 
 constexpr inline void ExampleBits::operator|=(
-    const ::llcpp::example::ExampleBits& other) {
+    const ::llcpp::fidl::test::placementofattributes::ExampleBits& other) {
   this->value_ |= other.value_;
 }
 
 constexpr inline void ExampleBits::operator&=(
-    const ::llcpp::example::ExampleBits& other) {
+    const ::llcpp::fidl::test::placementofattributes::ExampleBits& other) {
   this->value_ &= other.value_;
 }
 
 constexpr inline void ExampleBits::operator^=(
-    const ::llcpp::example::ExampleBits& other) {
+    const ::llcpp::fidl::test::placementofattributes::ExampleBits& other) {
   this->value_ ^= other.value_;
 }
 
-extern "C" const fidl_type_t example_ExampleXUnionTable;
+class ExampleProtocol;
+
+extern "C" const fidl_type_t fidl_test_placementofattributes_ExampleXUnionTable;
 
 class ExampleXUnion {
  public:
@@ -184,7 +196,8 @@ class ExampleXUnion {
   }
   Tag which() const;
 
-  static constexpr const fidl_type_t* Type = &example_ExampleXUnionTable;
+  static constexpr const fidl_type_t* Type =
+      &fidl_test_placementofattributes_ExampleXUnionTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 8;
@@ -219,7 +232,7 @@ class ExampleXUnion {
   ::fidl::Envelope<void> envelope_;
 };
 
-extern "C" const fidl_type_t example_ExampleUnionTable;
+extern "C" const fidl_type_t fidl_test_placementofattributes_ExampleUnionTable;
 
 class ExampleUnion {
  public:
@@ -262,7 +275,8 @@ class ExampleUnion {
     return static_cast<Tag>(ordinal_);
   }
 
-  static constexpr const fidl_type_t* Type = &example_ExampleUnionTable;
+  static constexpr const fidl_type_t* Type =
+      &fidl_test_placementofattributes_ExampleUnionTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 8;
@@ -297,7 +311,7 @@ class ExampleUnion {
   ::fidl::Envelope<void> envelope_;
 };
 
-extern "C" const fidl_type_t example_ExampleTableTable;
+extern "C" const fidl_type_t fidl_test_placementofattributes_ExampleTableTable;
 
 class ExampleTable final {
  public:
@@ -321,7 +335,8 @@ class ExampleTable final {
   ExampleTable(ExampleTable&& other) noexcept = default;
   ExampleTable& operator=(ExampleTable&& other) noexcept = default;
 
-  static constexpr const fidl_type_t* Type = &example_ExampleTableTable;
+  static constexpr const fidl_type_t* Type =
+      &fidl_test_placementofattributes_ExampleTableTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 24;
@@ -553,8 +568,127 @@ class ExampleTable::UnownedBuilder final {
   ExampleTable::Frame frame_;
 };
 
-extern "C" const fidl_type_t example_ExampleProtocolMethodRequestTable;
-extern "C" const fidl_type_t example_ExampleProtocolMethodResponseTable;
+extern "C" const fidl_type_t fidl_test_placementofattributes_ExampleStructTable;
+
+struct ExampleStruct {
+  static constexpr const fidl_type_t* Type =
+      &fidl_test_placementofattributes_ExampleStructTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 4;
+  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr bool HasPointer = false;
+  static constexpr bool IsResource = false;
+
+  uint32_t member = {};
+  void _CloseHandles();
+
+  class UnownedEncodedMessage final {
+   public:
+    UnownedEncodedMessage(uint8_t* bytes, uint32_t byte_size,
+                          ExampleStruct* value)
+        : message_(bytes, byte_size, sizeof(ExampleStruct), nullptr, 0, 0) {
+      message_.LinearizeAndEncode<ExampleStruct>(value);
+    }
+    UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
+    UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
+    UnownedEncodedMessage* operator=(const UnownedEncodedMessage&) = delete;
+    UnownedEncodedMessage* operator=(UnownedEncodedMessage&&) = delete;
+
+    zx_status_t status() const { return message_.status(); }
+#ifdef __Fuchsia__
+    const char* status_string() const { return message_.status_string(); }
+#endif
+    bool ok() const { return message_.status() == ZX_OK; }
+    const char* error() const { return message_.error(); }
+
+    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
+
+   private:
+    ::fidl::OutgoingMessage message_;
+  };
+
+  class OwnedEncodedMessage final {
+   public:
+    explicit OwnedEncodedMessage(ExampleStruct* value)
+        : message_(bytes_, sizeof(bytes_), value) {}
+    OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
+    OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
+    OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
+    OwnedEncodedMessage* operator=(OwnedEncodedMessage&&) = delete;
+
+    zx_status_t status() const { return message_.status(); }
+#ifdef __Fuchsia__
+    const char* status_string() const { return message_.status_string(); }
+#endif
+    bool ok() const { return message_.ok(); }
+    const char* error() const { return message_.error(); }
+
+    ::fidl::OutgoingMessage& GetOutgoingMessage() {
+      return message_.GetOutgoingMessage();
+    }
+
+   private:
+    FIDL_ALIGNDECL
+    uint8_t bytes_[FIDL_ALIGN(PrimarySize + MaxOutOfLine)];
+    UnownedEncodedMessage message_;
+  };
+
+  class DecodedMessage final : public ::fidl::internal::IncomingMessage {
+   public:
+    DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
+                   zx_handle_info_t* handles = nullptr,
+                   uint32_t handle_actual = 0)
+        : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
+                                            handle_actual) {
+      Decode<struct ExampleStruct>();
+    }
+    DecodedMessage(fidl_incoming_msg_t* msg)
+        : ::fidl::internal::IncomingMessage(msg) {
+      Decode<struct ExampleStruct>();
+    }
+    DecodedMessage(const DecodedMessage&) = delete;
+    DecodedMessage(DecodedMessage&&) = delete;
+    DecodedMessage* operator=(const DecodedMessage&) = delete;
+    DecodedMessage* operator=(DecodedMessage&&) = delete;
+
+    struct ExampleStruct* PrimaryObject() {
+      ZX_DEBUG_ASSERT(ok());
+      return reinterpret_cast<struct ExampleStruct*>(bytes());
+    }
+
+    // Release the ownership of the decoded message. That means that the handles
+    // won't be closed When the object is destroyed. After calling this method,
+    // the DecodedMessage object should not be used anymore.
+    void ReleasePrimaryObject() { ResetBytes(); }
+
+    // These methods should only be used for testing purpose.
+    // They create an DecodedMessage using the bytes of an outgoing message and
+    // copying the handles.
+    static DecodedMessage FromOutgoingWithRawHandleCopy(
+        UnownedEncodedMessage* encoded_message) {
+      return DecodedMessage(encoded_message->GetOutgoingMessage());
+    }
+    static DecodedMessage FromOutgoingWithRawHandleCopy(
+        OwnedEncodedMessage* encoded_message) {
+      return DecodedMessage(encoded_message->GetOutgoingMessage());
+    }
+
+   private:
+    DecodedMessage(::fidl::OutgoingMessage& outgoing_message) {
+      Init(outgoing_message, nullptr, 0);
+      if (ok()) {
+        Decode<struct ExampleStruct>();
+      }
+    }
+  };
+};
+
+constexpr uint32_t EXAMPLE_CONST = 0u;
+
+extern "C" const fidl_type_t
+    fidl_test_placementofattributes_ExampleProtocolMethodRequestTable;
+extern "C" const fidl_type_t
+    fidl_test_placementofattributes_ExampleProtocolMethodResponseTable;
 
 class ExampleProtocol final {
   ExampleProtocol() = delete;
@@ -571,7 +705,7 @@ class ExampleProtocol final {
     explicit MethodRequest(zx_txid_t _txid) { _InitHeader(_txid); }
 
     static constexpr const fidl_type_t* Type =
-        &example_ExampleProtocolMethodRequestTable;
+        &fidl_test_placementofattributes_ExampleProtocolMethodRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -843,181 +977,94 @@ class ExampleProtocol final {
   class EventSender;
 };
 
-extern "C" const fidl_type_t example_ExampleStructTable;
-
-struct ExampleStruct {
-  static constexpr const fidl_type_t* Type = &example_ExampleStructTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 4;
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr bool HasPointer = false;
-  static constexpr bool IsResource = false;
-
-  uint32_t member = {};
-  void _CloseHandles();
-
-  class UnownedEncodedMessage final {
-   public:
-    UnownedEncodedMessage(uint8_t* bytes, uint32_t byte_size,
-                          ExampleStruct* value)
-        : message_(bytes, byte_size, sizeof(ExampleStruct), nullptr, 0, 0) {
-      message_.LinearizeAndEncode<ExampleStruct>(value);
-    }
-    UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
-    UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
-    UnownedEncodedMessage* operator=(const UnownedEncodedMessage&) = delete;
-    UnownedEncodedMessage* operator=(UnownedEncodedMessage&&) = delete;
-
-    zx_status_t status() const { return message_.status(); }
-#ifdef __Fuchsia__
-    const char* status_string() const { return message_.status_string(); }
-#endif
-    bool ok() const { return message_.status() == ZX_OK; }
-    const char* error() const { return message_.error(); }
-
-    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
-
-   private:
-    ::fidl::OutgoingMessage message_;
-  };
-
-  class OwnedEncodedMessage final {
-   public:
-    explicit OwnedEncodedMessage(ExampleStruct* value)
-        : message_(bytes_, sizeof(bytes_), value) {}
-    OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
-    OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
-    OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
-    OwnedEncodedMessage* operator=(OwnedEncodedMessage&&) = delete;
-
-    zx_status_t status() const { return message_.status(); }
-#ifdef __Fuchsia__
-    const char* status_string() const { return message_.status_string(); }
-#endif
-    bool ok() const { return message_.ok(); }
-    const char* error() const { return message_.error(); }
-
-    ::fidl::OutgoingMessage& GetOutgoingMessage() {
-      return message_.GetOutgoingMessage();
-    }
-
-   private:
-    FIDL_ALIGNDECL
-    uint8_t bytes_[FIDL_ALIGN(PrimarySize + MaxOutOfLine)];
-    UnownedEncodedMessage message_;
-  };
-
-  class DecodedMessage final : public ::fidl::internal::IncomingMessage {
-   public:
-    DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
-                   zx_handle_info_t* handles = nullptr,
-                   uint32_t handle_actual = 0)
-        : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
-                                            handle_actual) {
-      Decode<struct ExampleStruct>();
-    }
-    DecodedMessage(fidl_incoming_msg_t* msg)
-        : ::fidl::internal::IncomingMessage(msg) {
-      Decode<struct ExampleStruct>();
-    }
-    DecodedMessage(const DecodedMessage&) = delete;
-    DecodedMessage(DecodedMessage&&) = delete;
-    DecodedMessage* operator=(const DecodedMessage&) = delete;
-    DecodedMessage* operator=(DecodedMessage&&) = delete;
-
-    struct ExampleStruct* PrimaryObject() {
-      ZX_DEBUG_ASSERT(ok());
-      return reinterpret_cast<struct ExampleStruct*>(bytes());
-    }
-
-    // Release the ownership of the decoded message. That means that the handles
-    // won't be closed When the object is destroyed. After calling this method,
-    // the DecodedMessage object should not be used anymore.
-    void ReleasePrimaryObject() { ResetBytes(); }
-
-    // These methods should only be used for testing purpose.
-    // They create an DecodedMessage using the bytes of an outgoing message and
-    // copying the handles.
-    static DecodedMessage FromOutgoingWithRawHandleCopy(
-        UnownedEncodedMessage* encoded_message) {
-      return DecodedMessage(encoded_message->GetOutgoingMessage());
-    }
-    static DecodedMessage FromOutgoingWithRawHandleCopy(
-        OwnedEncodedMessage* encoded_message) {
-      return DecodedMessage(encoded_message->GetOutgoingMessage());
-    }
-
-   private:
-    DecodedMessage(::fidl::OutgoingMessage& outgoing_message) {
-      Init(outgoing_message, nullptr, 0);
-      if (ok()) {
-        Decode<struct ExampleStruct>();
-      }
-    }
-  };
-};
-
-constexpr uint32_t EXAMPLE_CONST = 0u;
-
-}  // namespace example
+}  // namespace placementofattributes
+}  // namespace test
+}  // namespace fidl
 }  // namespace llcpp
 
 namespace fidl {
 
 template <>
-struct IsFidlType<::llcpp::example::ExampleProtocol::MethodRequest>
+struct IsFidlType<::llcpp::fidl::test::placementofattributes::ExampleXUnion>
     : public std::true_type {};
 template <>
-struct IsFidlMessage<::llcpp::example::ExampleProtocol::MethodRequest>
+struct IsUnion<::llcpp::fidl::test::placementofattributes::ExampleXUnion>
     : public std::true_type {};
-static_assert(sizeof(::llcpp::example::ExampleProtocol::MethodRequest) ==
-              ::llcpp::example::ExampleProtocol::MethodRequest::PrimarySize);
-static_assert(offsetof(::llcpp::example::ExampleProtocol::MethodRequest, arg) ==
-              16);
+static_assert(std::is_standard_layout_v<
+              ::llcpp::fidl::test::placementofattributes::ExampleXUnion>);
 
 template <>
-struct IsFidlType<::llcpp::example::ExampleXUnion> : public std::true_type {};
-template <>
-struct IsUnion<::llcpp::example::ExampleXUnion> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::llcpp::example::ExampleXUnion>);
-
-template <>
-struct IsFidlType<::llcpp::example::ExampleUnion> : public std::true_type {};
-template <>
-struct IsUnion<::llcpp::example::ExampleUnion> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::llcpp::example::ExampleUnion>);
-
-template <>
-struct IsFidlType<::llcpp::example::ExampleTable> : public std::true_type {};
-template <>
-struct IsTable<::llcpp::example::ExampleTable> : public std::true_type {};
-template <>
-struct IsTableBuilder<::llcpp::example::ExampleTable::Builder>
+struct IsFidlType<::llcpp::fidl::test::placementofattributes::ExampleUnion>
     : public std::true_type {};
-static_assert(std::is_standard_layout_v<::llcpp::example::ExampleTable>);
+template <>
+struct IsUnion<::llcpp::fidl::test::placementofattributes::ExampleUnion>
+    : public std::true_type {};
+static_assert(std::is_standard_layout_v<
+              ::llcpp::fidl::test::placementofattributes::ExampleUnion>);
 
 template <>
-struct IsFidlType<::llcpp::example::ExampleStruct> : public std::true_type {};
+struct IsFidlType<::llcpp::fidl::test::placementofattributes::ExampleTable>
+    : public std::true_type {};
 template <>
-struct IsStruct<::llcpp::example::ExampleStruct> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::llcpp::example::ExampleStruct>);
-static_assert(offsetof(::llcpp::example::ExampleStruct, member) == 0);
-static_assert(sizeof(::llcpp::example::ExampleStruct) ==
-              ::llcpp::example::ExampleStruct::PrimarySize);
+struct IsTable<::llcpp::fidl::test::placementofattributes::ExampleTable>
+    : public std::true_type {};
+template <>
+struct IsTableBuilder<
+    ::llcpp::fidl::test::placementofattributes::ExampleTable::Builder>
+    : public std::true_type {};
+static_assert(std::is_standard_layout_v<
+              ::llcpp::fidl::test::placementofattributes::ExampleTable>);
 
 template <>
-struct IsFidlType<::llcpp::example::ExampleEnum> : public std::true_type {};
+struct IsFidlType<::llcpp::fidl::test::placementofattributes::ExampleStruct>
+    : public std::true_type {};
+template <>
+struct IsStruct<::llcpp::fidl::test::placementofattributes::ExampleStruct>
+    : public std::true_type {};
+static_assert(std::is_standard_layout_v<
+              ::llcpp::fidl::test::placementofattributes::ExampleStruct>);
+static_assert(
+    offsetof(::llcpp::fidl::test::placementofattributes::ExampleStruct,
+             member) == 0);
+static_assert(
+    sizeof(::llcpp::fidl::test::placementofattributes::ExampleStruct) ==
+    ::llcpp::fidl::test::placementofattributes::ExampleStruct::PrimarySize);
 
 template <>
-struct IsFidlType<::llcpp::example::ExampleBits> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::llcpp::example::ExampleBits>);
-static_assert(sizeof(::llcpp::example::ExampleBits) == sizeof(uint32_t));
+struct IsFidlType<::llcpp::fidl::test::placementofattributes::ExampleEnum>
+    : public std::true_type {};
+
+template <>
+struct IsFidlType<::llcpp::fidl::test::placementofattributes::ExampleBits>
+    : public std::true_type {};
+static_assert(std::is_standard_layout_v<
+              ::llcpp::fidl::test::placementofattributes::ExampleBits>);
+static_assert(sizeof(::llcpp::fidl::test::placementofattributes::ExampleBits) ==
+              sizeof(uint32_t));
+
+template <>
+struct IsFidlType<
+    ::llcpp::fidl::test::placementofattributes::ExampleProtocol::MethodRequest>
+    : public std::true_type {};
+template <>
+struct IsFidlMessage<
+    ::llcpp::fidl::test::placementofattributes::ExampleProtocol::MethodRequest>
+    : public std::true_type {};
+static_assert(sizeof(::llcpp::fidl::test::placementofattributes::
+                         ExampleProtocol::MethodRequest) ==
+              ::llcpp::fidl::test::placementofattributes::ExampleProtocol::
+                  MethodRequest::PrimarySize);
+static_assert(offsetof(::llcpp::fidl::test::placementofattributes::
+                           ExampleProtocol::MethodRequest,
+                       arg) == 16);
 
 }  // namespace fidl
 
 namespace llcpp {
 
-namespace example {
+namespace fidl {
+namespace test {
+namespace placementofattributes {
 
 struct ExampleProtocol::AsyncEventHandlers {};
 
@@ -1056,5 +1103,7 @@ class ExampleProtocol::EventSender {
   std::weak_ptr<::fidl::internal::AsyncServerBinding> binding_;
 };
 
-}  // namespace example
+}  // namespace placementofattributes
+}  // namespace test
+}  // namespace fidl
 }  // namespace llcpp

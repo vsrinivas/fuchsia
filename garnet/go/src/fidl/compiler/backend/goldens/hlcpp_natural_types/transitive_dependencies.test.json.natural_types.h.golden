@@ -9,7 +9,9 @@
 //
 // Domain objects declarations (i.e. "natural types" in unified bindings).
 //
-namespace top {
+namespace fidl {
+namespace test {
+namespace transitivedependencies {
 
 class Baz;
 
@@ -28,31 +30,38 @@ class Baz final {
   zx_status_t Clone(Baz* result) const;
 };
 
-inline zx_status_t Clone(const ::top::Baz& _value, ::top::Baz* _result) {
+inline zx_status_t Clone(
+    const ::fidl::test::transitivedependencies::Baz& _value,
+    ::fidl::test::transitivedependencies::Baz* _result) {
   return _value.Clone(_result);
 }
 
 using BazPtr = ::std::unique_ptr<Baz>;
-}  // namespace top
+}  // namespace transitivedependencies
+}  // namespace test
+}  // namespace fidl
 namespace fidl {
 
 template <>
-struct CodingTraits<::top::Baz> : public EncodableCodingTraits<::top::Baz, 4> {
-};
+struct CodingTraits<::fidl::test::transitivedependencies::Baz>
+    : public EncodableCodingTraits<::fidl::test::transitivedependencies::Baz,
+                                   4> {};
 
 template <>
-struct IsMemcpyCompatible<::top::Baz>
-    : public internal::BoolConstant<!HasPadding<::top::Baz>::value &&
-                                    IsMemcpyCompatible<::middle::Bar>::value> {
-};
+struct IsMemcpyCompatible<::fidl::test::transitivedependencies::Baz>
+    : public internal::BoolConstant<
+          !HasPadding<::fidl::test::transitivedependencies::Baz>::value &&
+          IsMemcpyCompatible<::middle::Bar>::value> {};
 
-inline zx_status_t Clone(const ::top::Baz& value, ::top::Baz* result) {
-  return ::top::Clone(value, result);
+inline zx_status_t Clone(const ::fidl::test::transitivedependencies::Baz& value,
+                         ::fidl::test::transitivedependencies::Baz* result) {
+  return ::fidl::test::transitivedependencies::Clone(value, result);
 }
 
 template <>
-struct Equality<::top::Baz> {
-  bool operator()(const ::top::Baz& _lhs, const ::top::Baz& _rhs) const {
+struct Equality<::fidl::test::transitivedependencies::Baz> {
+  bool operator()(const ::fidl::test::transitivedependencies::Baz& _lhs,
+                  const ::fidl::test::transitivedependencies::Baz& _rhs) const {
     if (!::fidl::Equals(_lhs.g, _rhs.g)) {
       return false;
     }

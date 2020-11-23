@@ -9,7 +9,9 @@
 //
 // Domain objects declarations (i.e. "natural types" in unified bindings).
 //
-namespace example {
+namespace fidl {
+namespace test {
+namespace structdefaultvalueenumlibraryreference {
 
 class Foo;
 
@@ -28,33 +30,44 @@ class Foo final {
   zx_status_t Clone(Foo* result) const;
 };
 
-inline zx_status_t Clone(const ::example::Foo& _value,
-                         ::example::Foo* _result) {
+inline zx_status_t Clone(
+    const ::fidl::test::structdefaultvalueenumlibraryreference::Foo& _value,
+    ::fidl::test::structdefaultvalueenumlibraryreference::Foo* _result) {
   return _value.Clone(_result);
 }
 
 using FooPtr = ::std::unique_ptr<Foo>;
-}  // namespace example
+}  // namespace structdefaultvalueenumlibraryreference
+}  // namespace test
+}  // namespace fidl
 namespace fidl {
 
 template <>
-struct CodingTraits<::example::Foo>
-    : public EncodableCodingTraits<::example::Foo, 4> {};
+struct CodingTraits<::fidl::test::structdefaultvalueenumlibraryreference::Foo>
+    : public EncodableCodingTraits<
+          ::fidl::test::structdefaultvalueenumlibraryreference::Foo, 4> {};
 
 template <>
-struct IsMemcpyCompatible<::example::Foo>
+struct IsMemcpyCompatible<
+    ::fidl::test::structdefaultvalueenumlibraryreference::Foo>
     : public internal::BoolConstant<
-          !HasPadding<::example::Foo>::value &&
+          !HasPadding<::fidl::test::structdefaultvalueenumlibraryreference::
+                          Foo>::value &&
           IsMemcpyCompatible<::dependent::MyEnum>::value> {};
 
-inline zx_status_t Clone(const ::example::Foo& value, ::example::Foo* result) {
-  return ::example::Clone(value, result);
+inline zx_status_t Clone(
+    const ::fidl::test::structdefaultvalueenumlibraryreference::Foo& value,
+    ::fidl::test::structdefaultvalueenumlibraryreference::Foo* result) {
+  return ::fidl::test::structdefaultvalueenumlibraryreference::Clone(value,
+                                                                     result);
 }
 
 template <>
-struct Equality<::example::Foo> {
-  bool operator()(const ::example::Foo& _lhs,
-                  const ::example::Foo& _rhs) const {
+struct Equality<::fidl::test::structdefaultvalueenumlibraryreference::Foo> {
+  bool operator()(
+      const ::fidl::test::structdefaultvalueenumlibraryreference::Foo& _lhs,
+      const ::fidl::test::structdefaultvalueenumlibraryreference::Foo& _rhs)
+      const {
     if (!::fidl::Equals(_lhs.field, _rhs.field)) {
       return false;
     }

@@ -2,8 +2,8 @@
 
 #pragma once
 
-#include <example/cpp/fidl.h>
 #include <exampleusing/cpp/libfuzzer.h>
+#include <fidl/test/placementofattributes/cpp/fidl.h>
 
 #include "lib/fidl/cpp/fuzzing/traits.h"
 #include "lib/fidl/cpp/internal/header.h"
@@ -14,12 +14,12 @@
 
 namespace fuzzing {
 
-using ExampleXUnion = ::example::ExampleXUnion;
-using ExampleUnion = ::example::ExampleUnion;
-using ExampleTable = ::example::ExampleTable;
-using ExampleStruct = ::example::ExampleStruct;
-using ExampleEnum = ::example::ExampleEnum;
-using ExampleBits = ::example::ExampleBits;
+using ExampleXUnion = ::fidl::test::placementofattributes::ExampleXUnion;
+using ExampleUnion = ::fidl::test::placementofattributes::ExampleUnion;
+using ExampleTable = ::fidl::test::placementofattributes::ExampleTable;
+using ExampleStruct = ::fidl::test::placementofattributes::ExampleStruct;
+using ExampleEnum = ::fidl::test::placementofattributes::ExampleEnum;
+using ExampleBits = ::fidl::test::placementofattributes::ExampleBits;
 
 template <>
 struct MinSize<ExampleXUnion> {

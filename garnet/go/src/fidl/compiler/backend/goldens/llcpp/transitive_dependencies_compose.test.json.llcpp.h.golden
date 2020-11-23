@@ -37,12 +37,16 @@
 
 namespace llcpp {
 
-namespace top {
+namespace fidl {
+namespace test {
+namespace transitivedependenciescompose {
 
 class Top;
 
-extern "C" const fidl_type_t top_TopGetFooRequestTable;
-extern "C" const fidl_type_t top_TopGetFooResponseTable;
+extern "C" const fidl_type_t
+    fidl_test_transitivedependenciescompose_TopGetFooRequestTable;
+extern "C" const fidl_type_t
+    fidl_test_transitivedependenciescompose_TopGetFooResponseTable;
 
 class Top final {
   Top() = delete;
@@ -57,7 +61,8 @@ class Top final {
     }
     GetFooResponse() { _InitHeader(); }
 
-    static constexpr const fidl_type_t* Type = &top_TopGetFooResponseTable;
+    static constexpr const fidl_type_t* Type =
+        &fidl_test_transitivedependenciescompose_TopGetFooResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -525,33 +530,50 @@ class Top final {
   class EventSender;
 };
 
-}  // namespace top
+}  // namespace transitivedependenciescompose
+}  // namespace test
+}  // namespace fidl
 }  // namespace llcpp
 
 namespace fidl {
 
 template <>
-struct IsFidlType<::llcpp::top::Top::GetFooRequest> : public std::true_type {};
+struct IsFidlType<
+    ::llcpp::fidl::test::transitivedependenciescompose::Top::GetFooRequest>
+    : public std::true_type {};
 template <>
-struct IsFidlMessage<::llcpp::top::Top::GetFooRequest> : public std::true_type {
-};
-static_assert(sizeof(::llcpp::top::Top::GetFooRequest) ==
-              ::llcpp::top::Top::GetFooRequest::PrimarySize);
+struct IsFidlMessage<
+    ::llcpp::fidl::test::transitivedependenciescompose::Top::GetFooRequest>
+    : public std::true_type {};
+static_assert(sizeof(::llcpp::fidl::test::transitivedependenciescompose::Top::
+                         GetFooRequest) ==
+              ::llcpp::fidl::test::transitivedependenciescompose::Top::
+                  GetFooRequest::PrimarySize);
 
 template <>
-struct IsFidlType<::llcpp::top::Top::GetFooResponse> : public std::true_type {};
-template <>
-struct IsFidlMessage<::llcpp::top::Top::GetFooResponse>
+struct IsFidlType<
+    ::llcpp::fidl::test::transitivedependenciescompose::Top::GetFooResponse>
     : public std::true_type {};
-static_assert(sizeof(::llcpp::top::Top::GetFooResponse) ==
-              ::llcpp::top::Top::GetFooResponse::PrimarySize);
-static_assert(offsetof(::llcpp::top::Top::GetFooResponse, foo) == 16);
+template <>
+struct IsFidlMessage<
+    ::llcpp::fidl::test::transitivedependenciescompose::Top::GetFooResponse>
+    : public std::true_type {};
+static_assert(sizeof(::llcpp::fidl::test::transitivedependenciescompose::Top::
+                         GetFooResponse) ==
+              ::llcpp::fidl::test::transitivedependenciescompose::Top::
+                  GetFooResponse::PrimarySize);
+static_assert(
+    offsetof(
+        ::llcpp::fidl::test::transitivedependenciescompose::Top::GetFooResponse,
+        foo) == 16);
 
 }  // namespace fidl
 
 namespace llcpp {
 
-namespace top {
+namespace fidl {
+namespace test {
+namespace transitivedependenciescompose {
 
 struct Top::AsyncEventHandlers {};
 
@@ -606,5 +628,7 @@ class Top::EventSender {
   std::weak_ptr<::fidl::internal::AsyncServerBinding> binding_;
 };
 
-}  // namespace top
+}  // namespace transitivedependenciescompose
+}  // namespace test
+}  // namespace fidl
 }  // namespace llcpp

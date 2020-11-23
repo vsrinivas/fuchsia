@@ -1,15 +1,15 @@
 [TOC]
 
-# top
+# fidl.test.transitivedependenciescompose
 
 
 ## **PROTOCOLS**
 
 ## Top {#Top}
-*Defined in [top/top.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/HEAD/top.test.fidl#5)*
+*Defined in [fidl.test.transitivedependenciescompose/top.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/HEAD/top.test.fidl#5)*
 
 
-### GetFoo {#top/Top.GetFoo}
+### GetFoo {#fidl.test.transitivedependenciescompose/Top.GetFoo}
 
 
 #### Request

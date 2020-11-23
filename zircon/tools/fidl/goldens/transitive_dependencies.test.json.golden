@@ -1,6 +1,6 @@
 {
   "version": "0.0.1",
-  "name": "top",
+  "name": "fidl.test.transitivedependencies",
   "library_dependencies": [
     {
       "name": "middle",
@@ -20,7 +20,7 @@
   "service_declarations": [],
   "struct_declarations": [
     {
-      "name": "top/Baz",
+      "name": "fidl.test.transitivedependencies/Baz",
       "location": {
         "filename": "top.test.fidl",
         "line": 5,
@@ -65,9 +65,9 @@
   "union_declarations": [],
   "type_alias_declarations": [],
   "declaration_order": [
-    "top/Baz"
+    "fidl.test.transitivedependencies/Baz"
   ],
   "declarations": {
-    "top/Baz": "struct"
+    "fidl.test.transitivedependencies/Baz": "struct"
   }
 }

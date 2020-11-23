@@ -6,7 +6,9 @@
 
 namespace llcpp {
 
-namespace top {
+namespace fidl {
+namespace test {
+namespace transitivedependencies {
 
 void Baz::_CloseHandles() {
   if constexpr (::llcpp::middle::Bar::IsResource) {
@@ -14,5 +16,7 @@ void Baz::_CloseHandles() {
   }
 }
 
-}  // namespace top
+}  // namespace transitivedependencies
+}  // namespace test
+}  // namespace fidl
 }  // namespace llcpp

@@ -1,6 +1,6 @@
 [TOC]
 
-# example
+# fidl.test.structdefaultvalueenumlibraryreference
 
 
 
@@ -8,7 +8,7 @@
 ## **STRUCTS**
 
 ### Foo {#Foo}
-*Defined in [example/example.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/HEAD/example.test.fidl#5)*
+*Defined in [fidl.test.structdefaultvalueenumlibraryreference/example.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/HEAD/example.test.fidl#5)*
 
 
 

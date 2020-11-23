@@ -3,8 +3,8 @@
 #pragma once
 
 #include <bottom/cpp/libfuzzer.h>
+#include <fidl/test/foreigntypeinresponseusedthroughcompose/cpp/fidl.h>
 #include <middle/cpp/libfuzzer.h>
-#include <top/cpp/fidl.h>
 
 #include "lib/fidl/cpp/fuzzing/traits.h"
 #include "lib/fidl/cpp/internal/header.h"

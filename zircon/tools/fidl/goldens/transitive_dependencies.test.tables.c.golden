@@ -5,9 +5,9 @@
 
 extern const struct FidlCodedStruct bottom_FooTable;
 extern const struct FidlCodedStruct middle_BarTable;
-extern const struct FidlCodedStruct top_BazTable;
+extern const struct FidlCodedStruct fidl_test_transitivedependencies_BazTable;
 
 
 
-const struct FidlCodedStruct top_BazTable = {.tag=kFidlTypeStruct, .elements=NULL, .element_count=0u, .size=4u, .name="top/Baz"};
+const struct FidlCodedStruct fidl_test_transitivedependencies_BazTable = {.tag=kFidlTypeStruct, .elements=NULL, .element_count=0u, .size=4u, .name="fidl.test.transitivedependencies/Baz"};
 

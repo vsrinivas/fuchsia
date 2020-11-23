@@ -1,15 +1,15 @@
 [TOC]
 
-# example
+# fidl.test.placementofattributes
 
 
 ## **PROTOCOLS**
 
 ## ExampleProtocol {#ExampleProtocol}
-*Defined in [example/example.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/HEAD/example.test.fidl#22)*
+*Defined in [fidl.test.placementofattributes/example.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/HEAD/example.test.fidl#22)*
 
 
-### Method {#example/ExampleProtocol.Method}
+### Method {#fidl.test.placementofattributes/ExampleProtocol.Method}
 
 
 #### Request
@@ -29,7 +29,7 @@
 ## **STRUCTS**
 
 ### ExampleStruct {#ExampleStruct}
-*Defined in [example/example.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/HEAD/example.test.fidl#28)*
+*Defined in [fidl.test.placementofattributes/example.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/HEAD/example.test.fidl#28)*
 
 
 
@@ -51,7 +51,7 @@
 ### ExampleEnum {#ExampleEnum}
 Type: <code>uint32</code>
 
-*Defined in [example/example.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/HEAD/example.test.fidl#16)*
+*Defined in [fidl.test.placementofattributes/example.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/HEAD/example.test.fidl#16)*
 
 
 
@@ -69,7 +69,7 @@ Type: <code>uint32</code>
 ### ExampleTable {#ExampleTable}
 
 
-*Defined in [example/example.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/HEAD/example.test.fidl#34)*
+*Defined in [fidl.test.placementofattributes/example.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/HEAD/example.test.fidl#34)*
 
 
 
@@ -89,7 +89,7 @@ Type: <code>uint32</code>
 ## **UNIONS**
 
 ### ExampleUnion {#ExampleUnion}
-*Defined in [example/example.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/HEAD/example.test.fidl#43)*
+*Defined in [fidl.test.placementofattributes/example.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/HEAD/example.test.fidl#43)*
 
 
 <table>
@@ -102,7 +102,7 @@ Type: <code>uint32</code>
         </tr></table>
 
 ### ExampleXUnion {#ExampleXUnion}
-*Defined in [example/example.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/HEAD/example.test.fidl#49)*
+*Defined in [fidl.test.placementofattributes/example.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/HEAD/example.test.fidl#49)*
 
 
 <table>
@@ -121,7 +121,7 @@ Type: <code>uint32</code>
 ### ExampleBits {#ExampleBits}
 Type: <code>uint32</code>
 
-*Defined in [example/example.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/HEAD/example.test.fidl#7)*
+*Defined in [fidl.test.placementofattributes/example.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/HEAD/example.test.fidl#7)*
 
 
 

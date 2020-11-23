@@ -1,6 +1,6 @@
 {
   "version": "0.0.1",
-  "name": "top",
+  "name": "fidl.test.foreigntypeinresponseusedthroughcompose",
   "library_dependencies": [
     {
       "name": "bottom",
@@ -34,7 +34,7 @@
   "experimental_resource_declarations": [],
   "interface_declarations": [
     {
-      "name": "top/Top",
+      "name": "fidl.test.foreigntypeinresponseusedthroughcompose/Top",
       "location": {
         "filename": "top.test.fidl",
         "line": 5,
@@ -148,9 +148,9 @@
   "union_declarations": [],
   "type_alias_declarations": [],
   "declaration_order": [
-    "top/Top"
+    "fidl.test.foreigntypeinresponseusedthroughcompose/Top"
   ],
   "declarations": {
-    "top/Top": "interface"
+    "fidl.test.foreigntypeinresponseusedthroughcompose/Top": "interface"
   }
 }

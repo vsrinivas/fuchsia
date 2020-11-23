@@ -1,6 +1,6 @@
 {
   "version": "0.0.1",
-  "name": "example",
+  "name": "fidl.test.structdefaultvalueenumlibraryreference",
   "library_dependencies": [
     {
       "name": "dependent",
@@ -19,7 +19,7 @@
   "service_declarations": [],
   "struct_declarations": [
     {
-      "name": "example/Foo",
+      "name": "fidl.test.structdefaultvalueenumlibraryreference/Foo",
       "location": {
         "filename": "example.test.fidl",
         "line": 5,
@@ -70,9 +70,9 @@
   "union_declarations": [],
   "type_alias_declarations": [],
   "declaration_order": [
-    "example/Foo"
+    "fidl.test.structdefaultvalueenumlibraryreference/Foo"
   ],
   "declarations": {
-    "example/Foo": "struct"
+    "fidl.test.structdefaultvalueenumlibraryreference/Foo": "struct"
   }
 }

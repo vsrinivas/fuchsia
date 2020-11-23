@@ -5,7 +5,9 @@
 #include <bottom/cpp/fidl.h>
 #include <middle/cpp/fidl.h>
 #include <transitive_dependencies_compose.test.json.h>
-namespace top {
+namespace fidl {
+namespace test {
+namespace transitivedependenciescompose {
 namespace testing {
 
 class Top_TestBase : public Top {
@@ -15,4 +17,6 @@ class Top_TestBase : public Top {
   void GetFoo(GetFooCallback callback) override { NotImplemented_("GetFoo"); }
 };
 }  // namespace testing
-}  // namespace top
+}  // namespace transitivedependenciescompose
+}  // namespace test
+}  // namespace fidl

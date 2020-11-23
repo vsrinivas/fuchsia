@@ -9,7 +9,9 @@
 //
 // Domain objects declarations (i.e. "natural types" in unified bindings).
 //
-namespace example {
+namespace fidl {
+namespace test {
+namespace typealiases {
 
 enum class obj_type : uint32_t {
 
@@ -18,8 +20,8 @@ enum class obj_type : uint32_t {
   CHANNEL = 4u,
 };
 
-inline zx_status_t Clone(::example::obj_type value,
-                         ::example::obj_type* result) {
+inline zx_status_t Clone(::fidl::test::typealiases::obj_type value,
+                         ::fidl::test::typealiases::obj_type* result) {
   *result = value;
   return ZX_OK;
 }
@@ -62,58 +64,68 @@ class ExampleOfUseOfAliases final {
   zx_status_t Clone(ExampleOfUseOfAliases* result) const;
 };
 
-inline zx_status_t Clone(const ::example::ExampleOfUseOfAliases& _value,
-                         ::example::ExampleOfUseOfAliases* _result) {
+inline zx_status_t Clone(
+    const ::fidl::test::typealiases::ExampleOfUseOfAliases& _value,
+    ::fidl::test::typealiases::ExampleOfUseOfAliases* _result) {
   return _value.Clone(_result);
 }
 
 using ExampleOfUseOfAliasesPtr = ::std::unique_ptr<ExampleOfUseOfAliases>;
 #endif  // __Fuchsia__
 
-}  // namespace example
+}  // namespace typealiases
+}  // namespace test
+}  // namespace fidl
 namespace fidl {
 
 template <>
-struct CodingTraits<::example::obj_type> {
-  static constexpr size_t inline_size_old = sizeof(::example::obj_type);
-  static constexpr size_t inline_size_v1_no_ee = sizeof(::example::obj_type);
-  static void Encode(Encoder* encoder, ::example::obj_type* value,
+struct CodingTraits<::fidl::test::typealiases::obj_type> {
+  static constexpr size_t inline_size_old =
+      sizeof(::fidl::test::typealiases::obj_type);
+  static constexpr size_t inline_size_v1_no_ee =
+      sizeof(::fidl::test::typealiases::obj_type);
+  static void Encode(Encoder* encoder,
+                     ::fidl::test::typealiases::obj_type* value,
                      size_t offset) {
     uint32_t underlying = static_cast<uint32_t>(*value);
     ::fidl::Encode(encoder, &underlying, offset);
   }
-  static void Decode(Decoder* decoder, ::example::obj_type* value,
+  static void Decode(Decoder* decoder,
+                     ::fidl::test::typealiases::obj_type* value,
                      size_t offset) {
     uint32_t underlying = {};
     ::fidl::Decode(decoder, &underlying, offset);
-    *value = static_cast<::example::obj_type>(underlying);
+    *value = static_cast<::fidl::test::typealiases::obj_type>(underlying);
   }
 };
 
-inline zx_status_t Clone(::example::obj_type value,
-                         ::example::obj_type* result) {
-  return ::example::Clone(value, result);
+inline zx_status_t Clone(::fidl::test::typealiases::obj_type value,
+                         ::fidl::test::typealiases::obj_type* result) {
+  return ::fidl::test::typealiases::Clone(value, result);
 }
 template <>
-struct Equality<::example::obj_type> {
-  bool operator()(const ::example::obj_type& _lhs,
-                  const ::example::obj_type& _rhs) const {
+struct Equality<::fidl::test::typealiases::obj_type> {
+  bool operator()(const ::fidl::test::typealiases::obj_type& _lhs,
+                  const ::fidl::test::typealiases::obj_type& _rhs) const {
     return _lhs == _rhs;
   }
 };
 
 #ifdef __Fuchsia__
 template <>
-struct CodingTraits<::example::ExampleOfUseOfAliases>
-    : public EncodableCodingTraits<::example::ExampleOfUseOfAliases, 120> {};
+struct CodingTraits<::fidl::test::typealiases::ExampleOfUseOfAliases>
+    : public EncodableCodingTraits<
+          ::fidl::test::typealiases::ExampleOfUseOfAliases, 120> {};
 
 template <>
-struct HasPadding<::example::ExampleOfUseOfAliases> : public std::true_type {};
+struct HasPadding<::fidl::test::typealiases::ExampleOfUseOfAliases>
+    : public std::true_type {};
 
 template <>
-struct IsMemcpyCompatible<::example::ExampleOfUseOfAliases>
+struct IsMemcpyCompatible<::fidl::test::typealiases::ExampleOfUseOfAliases>
     : public internal::BoolConstant<
-          !HasPadding<::example::ExampleOfUseOfAliases>::value &&
+          !HasPadding<
+              ::fidl::test::typealiases::ExampleOfUseOfAliases>::value &&
           IsMemcpyCompatible<
               ::std::vector<::someotherlibrary::ReferenceMe>>::value &&
           IsMemcpyCompatible<::std::vector<::std::string>>::value &&
@@ -121,15 +133,17 @@ struct IsMemcpyCompatible<::example::ExampleOfUseOfAliases>
           IsMemcpyCompatible<::zx::channel>::value &&
           IsMemcpyCompatible<uint32_t>::value> {};
 
-inline zx_status_t Clone(const ::example::ExampleOfUseOfAliases& value,
-                         ::example::ExampleOfUseOfAliases* result) {
-  return ::example::Clone(value, result);
+inline zx_status_t Clone(
+    const ::fidl::test::typealiases::ExampleOfUseOfAliases& value,
+    ::fidl::test::typealiases::ExampleOfUseOfAliases* result) {
+  return ::fidl::test::typealiases::Clone(value, result);
 }
 
 template <>
-struct Equality<::example::ExampleOfUseOfAliases> {
-  bool operator()(const ::example::ExampleOfUseOfAliases& _lhs,
-                  const ::example::ExampleOfUseOfAliases& _rhs) const {
+struct Equality<::fidl::test::typealiases::ExampleOfUseOfAliases> {
+  bool operator()(
+      const ::fidl::test::typealiases::ExampleOfUseOfAliases& _lhs,
+      const ::fidl::test::typealiases::ExampleOfUseOfAliases& _rhs) const {
     if (!::fidl::Equals(_lhs.field_of_u32, _rhs.field_of_u32)) {
       return false;
     }

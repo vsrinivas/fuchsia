@@ -4,7 +4,9 @@
 
 #include <exampleusing/cpp/fidl.h>
 #include <placement_of_attributes.test.json.h>
-namespace example {
+namespace fidl {
+namespace test {
+namespace placementofattributes {
 namespace testing {
 
 class ExampleProtocol_TestBase : public ExampleProtocol {
@@ -14,4 +16,6 @@ class ExampleProtocol_TestBase : public ExampleProtocol {
   void Method(::exampleusing::Empty arg) override { NotImplemented_("Method"); }
 };
 }  // namespace testing
-}  // namespace example
+}  // namespace placementofattributes
+}  // namespace test
+}  // namespace fidl

@@ -1,4 +1,4 @@
-library example;
+library fidl.test.placementofattributes;
 
 // TODO: Support placement of an attribute on using.
 using exampleusing;

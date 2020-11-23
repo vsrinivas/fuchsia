@@ -4,6 +4,10 @@
 
 #include <someotherlibrary/cpp/fidl.h>
 #include <type_aliases.test.json.h>
-namespace example {
+namespace fidl {
+namespace test {
+namespace typealiases {
 namespace testing {}  // namespace testing
-}  // namespace example
+}  // namespace typealiases
+}  // namespace test
+}  // namespace fidl

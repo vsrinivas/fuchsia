@@ -7,10 +7,12 @@
 //
 // Domain objects definitions (i.e. "natural types" in unified bindings)
 //
-namespace top {
+namespace fidl {
+namespace test {
+namespace transitivedependencies {
 
-extern "C" const fidl_type_t top_BazTable;
-const fidl_type_t* Baz::FidlType = &top_BazTable;
+extern "C" const fidl_type_t fidl_test_transitivedependencies_BazTable;
+const fidl_type_t* Baz::FidlType = &fidl_test_transitivedependencies_BazTable;
 
 void Baz::Encode(::fidl::Encoder* _encoder, size_t _offset) {
   if (::fidl::IsMemcpyCompatible<Baz>::value) {
@@ -33,9 +35,15 @@ zx_status_t Baz::Clone(Baz* _result) const {
   if (_status != ZX_OK) return _status;
   return ZX_OK;
 }
-}  // namespace top
+}  // namespace transitivedependencies
+}  // namespace test
+}  // namespace fidl
 
 //
 // Proxies and stubs definitions
 //
-namespace top {}  // namespace top
+namespace fidl {
+namespace test {
+namespace transitivedependencies {}  // namespace transitivedependencies
+}  // namespace test
+}  // namespace fidl

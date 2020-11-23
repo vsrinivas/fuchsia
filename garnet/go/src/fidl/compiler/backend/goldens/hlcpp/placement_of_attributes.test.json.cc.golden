@@ -7,10 +7,13 @@
 //
 // Domain objects definitions (i.e. "natural types" in unified bindings)
 //
-namespace example {
+namespace fidl {
+namespace test {
+namespace placementofattributes {
 
-extern "C" const fidl_type_t example_ExampleXUnionTable;
-const fidl_type_t* ExampleXUnion::FidlType = &example_ExampleXUnionTable;
+extern "C" const fidl_type_t fidl_test_placementofattributes_ExampleXUnionTable;
+const fidl_type_t* ExampleXUnion::FidlType =
+    &fidl_test_placementofattributes_ExampleXUnionTable;
 
 ExampleXUnion::ExampleXUnion() {}
 
@@ -171,8 +174,9 @@ void ExampleXUnion::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
     }
   }
 }
-extern "C" const fidl_type_t example_ExampleUnionTable;
-const fidl_type_t* ExampleUnion::FidlType = &example_ExampleUnionTable;
+extern "C" const fidl_type_t fidl_test_placementofattributes_ExampleUnionTable;
+const fidl_type_t* ExampleUnion::FidlType =
+    &fidl_test_placementofattributes_ExampleUnionTable;
 
 ExampleUnion::ExampleUnion() {}
 
@@ -307,8 +311,9 @@ void ExampleUnion::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
     }
   }
 }
-extern "C" const fidl_type_t example_ExampleTableTable;
-const fidl_type_t* ExampleTable::FidlType = &example_ExampleTableTable;
+extern "C" const fidl_type_t fidl_test_placementofattributes_ExampleTableTable;
+const fidl_type_t* ExampleTable::FidlType =
+    &fidl_test_placementofattributes_ExampleTableTable;
 
 ExampleTable::ExampleTable() {}
 
@@ -449,8 +454,9 @@ zx_status_t ExampleTable::Clone(ExampleTable* result) const {
   }
   return ::fidl::Clone(_unknown_data, &result->_unknown_data);
 }
-extern "C" const fidl_type_t example_ExampleStructTable;
-const fidl_type_t* ExampleStruct::FidlType = &example_ExampleStructTable;
+extern "C" const fidl_type_t fidl_test_placementofattributes_ExampleStructTable;
+const fidl_type_t* ExampleStruct::FidlType =
+    &fidl_test_placementofattributes_ExampleStructTable;
 
 void ExampleStruct::Encode(::fidl::Encoder* _encoder, size_t _offset) {
   if (::fidl::IsMemcpyCompatible<ExampleStruct>::value) {
@@ -476,17 +482,22 @@ zx_status_t ExampleStruct::Clone(ExampleStruct* _result) const {
   if (_status != ZX_OK) return _status;
   return ZX_OK;
 }
-}  // namespace example
+}  // namespace placementofattributes
+}  // namespace test
+}  // namespace fidl
 
 //
 // Proxies and stubs definitions
 //
-namespace example {
+namespace fidl {
+namespace test {
+namespace placementofattributes {
 
 #ifdef __Fuchsia__
 namespace {
 
-extern "C" const fidl_type_t example_ExampleProtocolMethodRequestTable;
+extern "C" const fidl_type_t
+    fidl_test_placementofattributes_ExampleProtocolMethodRequestTable;
 
 }  // namespace
 
@@ -497,7 +508,7 @@ const fidl_type_t* ExampleProtocol_RequestDecoder::GetType(
   switch (ordinal) {
     case internal::kExampleProtocol_Method_Ordinal:
       *out_needs_response = false;
-      return &example_ExampleProtocolMethodRequestTable;
+      return &fidl_test_placementofattributes_ExampleProtocolMethodRequestTable;
     default:
       *out_needs_response = false;
       return nullptr;
@@ -536,9 +547,9 @@ zx_status_t ExampleProtocol_Proxy::Dispatch_(::fidl::Message message) {
 
 void ExampleProtocol_Proxy::Method(::exampleusing::Empty arg) {
   ::fidl::Encoder _encoder(internal::kExampleProtocol_Method_Ordinal);
-  controller_->Send(&example_ExampleProtocolMethodRequestTable,
-                    ExampleProtocol_RequestEncoder::Method(&_encoder, &arg),
-                    nullptr);
+  controller_->Send(
+      &fidl_test_placementofattributes_ExampleProtocolMethodRequestTable,
+      ExampleProtocol_RequestEncoder::Method(&_encoder, &arg), nullptr);
 }
 
 ExampleProtocol_Stub::ExampleProtocol_Stub(ExampleProtocol_clazz* impl)
@@ -596,10 +607,13 @@ ExampleProtocol_SyncProxy::~ExampleProtocol_SyncProxy() = default;
 
 zx_status_t ExampleProtocol_SyncProxy::Method(::exampleusing::Empty arg) {
   ::fidl::Encoder _encoder(internal::kExampleProtocol_Method_Ordinal);
-  return proxy_.Send(&example_ExampleProtocolMethodRequestTable,
-                     ExampleProtocol_RequestEncoder::Method(&_encoder, &arg));
+  return proxy_.Send(
+      &fidl_test_placementofattributes_ExampleProtocolMethodRequestTable,
+      ExampleProtocol_RequestEncoder::Method(&_encoder, &arg));
 }
 
 #endif  // __Fuchsia__
 
-}  // namespace example
+}  // namespace placementofattributes
+}  // namespace test
+}  // namespace fidl

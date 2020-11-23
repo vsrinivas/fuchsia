@@ -4,7 +4,7 @@
 
 import("//build/fidl/fidl.gni")
 
-fidl("top") {
+fidl("fidl.test.transitivedependencies") {
   testonly = true
   sources = [ "top.test.fidl" ]
   public_deps = [

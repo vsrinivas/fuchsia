@@ -7,4 +7,10 @@
 //
 // Domain objects definitions (i.e. "natural types" in unified bindings)
 //
-namespace top {}  // namespace top
+namespace fidl {
+namespace test {
+namespace transitivedependenciescompose {
+
+}  // namespace transitivedependenciescompose
+}  // namespace test
+}  // namespace fidl

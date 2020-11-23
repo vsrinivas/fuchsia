@@ -6,7 +6,9 @@
 
 namespace llcpp {
 
-namespace example {
+namespace fidl {
+namespace test {
+namespace typealiases {
 
 #ifdef __Fuchsia__
 void ExampleOfUseOfAliases::_CloseHandles() {
@@ -27,5 +29,7 @@ void ExampleOfUseOfAliases::_CloseHandles() {
 }
 #endif  // __Fuchsia__
 
-}  // namespace example
+}  // namespace typealiases
+}  // namespace test
+}  // namespace fidl
 }  // namespace llcpp

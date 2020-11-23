@@ -7,12 +7,14 @@
 //
 // Domain objects definitions (i.e. "natural types" in unified bindings)
 //
-namespace example {
+namespace fidl {
+namespace test {
+namespace typealiases {
 
 #ifdef __Fuchsia__
-extern "C" const fidl_type_t example_ExampleOfUseOfAliasesTable;
+extern "C" const fidl_type_t fidl_test_typealiases_ExampleOfUseOfAliasesTable;
 const fidl_type_t* ExampleOfUseOfAliases::FidlType =
-    &example_ExampleOfUseOfAliasesTable;
+    &fidl_test_typealiases_ExampleOfUseOfAliasesTable;
 
 void ExampleOfUseOfAliases::Encode(::fidl::Encoder* _encoder, size_t _offset) {
   if (::fidl::IsMemcpyCompatible<ExampleOfUseOfAliases>::value) {
@@ -93,9 +95,15 @@ zx_status_t ExampleOfUseOfAliases::Clone(ExampleOfUseOfAliases* _result) const {
 }
 #endif  // __Fuchsia__
 
-}  // namespace example
+}  // namespace typealiases
+}  // namespace test
+}  // namespace fidl
 
 //
 // Proxies and stubs definitions
 //
-namespace example {}  // namespace example
+namespace fidl {
+namespace test {
+namespace typealiases {}  // namespace typealiases
+}  // namespace test
+}  // namespace fidl

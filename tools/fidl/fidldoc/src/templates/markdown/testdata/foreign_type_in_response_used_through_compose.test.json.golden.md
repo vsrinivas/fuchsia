@@ -1,15 +1,15 @@
 [TOC]
 
-# top
+# fidl.test.foreigntypeinresponseusedthroughcompose
 
 
 ## **PROTOCOLS**
 
 ## Top {#Top}
-*Defined in [top/top.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/HEAD/top.test.fidl#5)*
+*Defined in [fidl.test.foreigntypeinresponseusedthroughcompose/top.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/HEAD/top.test.fidl#5)*
 
 
-### GetFoo {#top/Top.GetFoo}
+### GetFoo {#fidl.test.foreigntypeinresponseusedthroughcompose/Top.GetFoo}
 
 
 #### Request
