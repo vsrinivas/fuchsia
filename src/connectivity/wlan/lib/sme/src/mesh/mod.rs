@@ -160,7 +160,7 @@ fn on_back_to_idle(pending: PendingRequests, mlme_sink: &MlmeSink) -> State {
 
 fn validate_config(config: &Config) -> Result<(), JoinMeshResult> {
     let c = Channel::new(config.channel.clone(), Cbw::Cbw20);
-    if !c.is_valid() {
+    if !c.is_valid_in_us() {
         Err(JoinMeshResult::InvalidArguments)
     } else if c.is_dfs() {
         Err(JoinMeshResult::DfsUnsupported)

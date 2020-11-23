@@ -195,7 +195,7 @@ pub fn derive_phy_cbw_for_ap(
             } else {
                 // Only one is feasible.
                 let c = Channel::new(chan.primary, Cbw::Cbw40);
-                if c.is_valid() {
+                if c.is_valid_in_us() {
                     Cbw::Cbw40
                 } else {
                     Cbw::Cbw40Below

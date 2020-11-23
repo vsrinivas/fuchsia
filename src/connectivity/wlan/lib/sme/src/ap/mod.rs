@@ -315,7 +315,7 @@ fn adapt_operation(
 
     let phy = usr_cfg.phy.unwrap();
     let chan = Channel::new(usr_cfg.primary_chan.unwrap(), usr_cfg.cbw.unwrap());
-    if !chan.is_valid() {
+    if !chan.is_valid_in_us() {
         return Err(StartResult::InvalidArguments(format!("Invalid channel: {}", chan)));
     }
 
@@ -511,7 +511,7 @@ fn validate_config(config: &Config) -> Result<(), StartResult> {
         return Err(StartResult::InvalidArguments("Invalid radio config".to_string()));
     }
     let c = Channel::new(rc.primary_chan.unwrap(), config.radio_cfg.cbw.unwrap());
-    if !c.is_valid() {
+    if !c.is_valid_in_us() {
         Err(StartResult::InvalidArguments("Invalid channel".to_string()))
     } else if c.is_dfs() {
         Err(StartResult::DfsUnsupported)

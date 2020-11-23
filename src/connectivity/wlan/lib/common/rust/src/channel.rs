@@ -125,7 +125,7 @@ impl Channel {
     // Weak validity test w.r.t the 2 GHz band primary channel only
     fn is_primary_2ghz(&self) -> bool {
         let p = self.primary;
-        p >= 1 && p <= 11
+        p >= 1 && p <= 14
     }
 
     // Weak validity test w.r.t the 5 GHz band primary channel only
@@ -137,11 +137,6 @@ impl Channel {
             149..=165 => (p - 149) % 4 == 0,
             _ => false,
         }
-    }
-
-    // Weak validity test w.r.t the primary channel only in any band.
-    fn is_primary_valid(&self) -> bool {
-        self.is_primary_2ghz() || self.is_primary_5ghz()
     }
 
     fn get_band_start_freq(&self) -> Result<MHz, anyhow::Error> {
@@ -157,7 +152,7 @@ impl Channel {
     // Note get_center_chan_idx() is to assist channel validity test.
     // Return of Ok() does not imply the channel under test is valid.
     fn get_center_chan_idx(&self) -> Result<u8, anyhow::Error> {
-        if !self.is_primary_valid() {
+        if !(self.is_primary_2ghz() || self.is_primary_5ghz()) {
             return Err(format_err!(
                 "cannot get center channel index for an invalid primary channel {}",
                 self
@@ -214,30 +209,30 @@ impl Channel {
     /// Returns true if the primary channel index, channel bandwidth, and the secondary consecutive
     /// frequency segment (Cbw80P80 only) are all consistent and meet regulatory requirements of
     /// the USA. TODO(fxbug.dev/29490): Other countries.
-    pub fn is_valid(&self) -> bool {
+    pub fn is_valid_in_us(&self) -> bool {
         if self.is_primary_2ghz() {
-            self.is_valid_2ghz()
+            self.is_valid_2ghz_in_us()
         } else if self.is_primary_5ghz() {
-            self.is_valid_5ghz()
+            self.is_valid_5ghz_in_us()
         } else {
             false
         }
     }
 
-    fn is_valid_2ghz(&self) -> bool {
+    fn is_valid_2ghz_in_us(&self) -> bool {
         if !self.is_primary_2ghz() {
             return false;
         }
         let p = self.primary;
         match self.cbw {
-            Cbw::Cbw20 => true,
+            Cbw::Cbw20 => p <= 11,
             Cbw::Cbw40 => p <= 7,
             Cbw::Cbw40Below => p >= 5,
             _ => false,
         }
     }
 
-    fn is_valid_5ghz(&self) -> bool {
+    fn is_valid_5ghz_in_us(&self) -> bool {
         if !self.is_primary_5ghz() {
             return false;
         }
@@ -267,12 +262,14 @@ impl Channel {
         }
     }
 
+    /// Returns true if the channel is 2GHz. Does not perform validity checks.
     pub fn is_2ghz(&self) -> bool {
-        self.is_valid_2ghz()
+        self.is_primary_2ghz()
     }
 
+    /// Returns true if the channel is 5GHz. Does not perform validity checks.
     pub fn is_5ghz(&self) -> bool {
-        self.is_valid_5ghz()
+        self.is_primary_5ghz()
     }
 
     fn is_unii1(&self) -> bool {
@@ -385,19 +382,25 @@ mod tests {
     }
 
     #[test]
-    fn test_is_primary_valid() {
+    fn test_is_primary_2ghz_or_5ghz() {
         // Note Cbw is ignored in this test.
-        assert!(Channel::new(1, Cbw::Cbw160).is_primary_valid());
-        assert!(!Channel::new(12, Cbw::Cbw160).is_primary_valid());
-        assert!(Channel::new(36, Cbw::Cbw160).is_primary_valid());
-        assert!(!Channel::new(37, Cbw::Cbw160).is_primary_valid());
-        assert!(Channel::new(165, Cbw::Cbw160).is_primary_valid());
-        assert!(!Channel::new(166, Cbw::Cbw160).is_primary_valid());
-
         assert!(Channel::new(1, Cbw::Cbw160).is_primary_2ghz());
         assert!(!Channel::new(1, Cbw::Cbw160).is_primary_5ghz());
+
+        assert!(Channel::new(12, Cbw::Cbw160).is_primary_2ghz());
+        assert!(!Channel::new(12, Cbw::Cbw160).is_primary_5ghz());
+
         assert!(!Channel::new(36, Cbw::Cbw160).is_primary_2ghz());
         assert!(Channel::new(36, Cbw::Cbw160).is_primary_5ghz());
+
+        assert!(!Channel::new(37, Cbw::Cbw160).is_primary_2ghz());
+        assert!(!Channel::new(37, Cbw::Cbw160).is_primary_5ghz());
+
+        assert!(!Channel::new(165, Cbw::Cbw160).is_primary_2ghz());
+        assert!(Channel::new(165, Cbw::Cbw160).is_primary_5ghz());
+
+        assert!(!Channel::new(166, Cbw::Cbw160).is_primary_2ghz());
+        assert!(!Channel::new(166, Cbw::Cbw160).is_primary_5ghz());
     }
 
     #[test]
@@ -440,51 +443,53 @@ mod tests {
     }
 
     #[test]
-    fn test_valid_combo() {
-        assert!(Channel::new(1, Cbw::Cbw20).is_valid());
-        assert!(Channel::new(1, Cbw::Cbw40).is_valid());
-        assert!(Channel::new(5, Cbw::Cbw40Below).is_valid());
-        assert!(Channel::new(6, Cbw::Cbw20).is_valid());
-        assert!(Channel::new(6, Cbw::Cbw40).is_valid());
-        assert!(Channel::new(6, Cbw::Cbw40Below).is_valid());
-        assert!(Channel::new(7, Cbw::Cbw40).is_valid());
-        assert!(Channel::new(11, Cbw::Cbw20).is_valid());
-        assert!(Channel::new(11, Cbw::Cbw40Below).is_valid());
+    fn test_valid_us_combo() {
+        assert!(Channel::new(1, Cbw::Cbw20).is_valid_in_us());
+        assert!(Channel::new(1, Cbw::Cbw40).is_valid_in_us());
+        assert!(Channel::new(5, Cbw::Cbw40Below).is_valid_in_us());
+        assert!(Channel::new(6, Cbw::Cbw20).is_valid_in_us());
+        assert!(Channel::new(6, Cbw::Cbw40).is_valid_in_us());
+        assert!(Channel::new(6, Cbw::Cbw40Below).is_valid_in_us());
+        assert!(Channel::new(7, Cbw::Cbw40).is_valid_in_us());
+        assert!(Channel::new(11, Cbw::Cbw20).is_valid_in_us());
+        assert!(Channel::new(11, Cbw::Cbw40Below).is_valid_in_us());
 
-        assert!(Channel::new(36, Cbw::Cbw20).is_valid());
-        assert!(Channel::new(36, Cbw::Cbw40).is_valid());
-        assert!(Channel::new(36, Cbw::Cbw160).is_valid());
-        assert!(Channel::new(40, Cbw::Cbw20).is_valid());
-        assert!(Channel::new(40, Cbw::Cbw40Below).is_valid());
-        assert!(Channel::new(40, Cbw::Cbw160).is_valid());
-        assert!(Channel::new(36, Cbw::Cbw80P80 { secondary80: 155 }).is_valid());
-        assert!(Channel::new(40, Cbw::Cbw80P80 { secondary80: 155 }).is_valid());
-        assert!(Channel::new(161, Cbw::Cbw80P80 { secondary80: 42 }).is_valid());
+        assert!(Channel::new(36, Cbw::Cbw20).is_valid_in_us());
+        assert!(Channel::new(36, Cbw::Cbw40).is_valid_in_us());
+        assert!(Channel::new(36, Cbw::Cbw160).is_valid_in_us());
+        assert!(Channel::new(40, Cbw::Cbw20).is_valid_in_us());
+        assert!(Channel::new(40, Cbw::Cbw40Below).is_valid_in_us());
+        assert!(Channel::new(40, Cbw::Cbw160).is_valid_in_us());
+        assert!(Channel::new(36, Cbw::Cbw80P80 { secondary80: 155 }).is_valid_in_us());
+        assert!(Channel::new(40, Cbw::Cbw80P80 { secondary80: 155 }).is_valid_in_us());
+        assert!(Channel::new(161, Cbw::Cbw80P80 { secondary80: 42 }).is_valid_in_us());
     }
 
     #[test]
-    fn test_invalid_combo() {
-        assert!(!Channel::new(1, Cbw::Cbw40Below).is_valid());
-        assert!(!Channel::new(4, Cbw::Cbw40Below).is_valid());
-        assert!(!Channel::new(8, Cbw::Cbw40).is_valid());
-        assert!(!Channel::new(11, Cbw::Cbw40).is_valid());
-        assert!(!Channel::new(6, Cbw::Cbw80).is_valid());
-        assert!(!Channel::new(6, Cbw::Cbw160).is_valid());
-        assert!(!Channel::new(6, Cbw::Cbw80P80 { secondary80: 155 }).is_valid());
+    fn test_invalid_us_combo() {
+        assert!(!Channel::new(1, Cbw::Cbw40Below).is_valid_in_us());
+        assert!(!Channel::new(4, Cbw::Cbw40Below).is_valid_in_us());
+        assert!(!Channel::new(8, Cbw::Cbw40).is_valid_in_us());
+        assert!(!Channel::new(11, Cbw::Cbw40).is_valid_in_us());
+        assert!(!Channel::new(6, Cbw::Cbw80).is_valid_in_us());
+        assert!(!Channel::new(6, Cbw::Cbw160).is_valid_in_us());
+        assert!(!Channel::new(6, Cbw::Cbw80P80 { secondary80: 155 }).is_valid_in_us());
 
-        assert!(!Channel::new(36, Cbw::Cbw40Below).is_valid());
-        assert!(!Channel::new(36, Cbw::Cbw80P80 { secondary80: 58 }).is_valid());
-        assert!(!Channel::new(40, Cbw::Cbw40).is_valid());
-        assert!(!Channel::new(40, Cbw::Cbw80P80 { secondary80: 42 }).is_valid());
+        assert!(!Channel::new(36, Cbw::Cbw40Below).is_valid_in_us());
+        assert!(!Channel::new(36, Cbw::Cbw80P80 { secondary80: 58 }).is_valid_in_us());
+        assert!(!Channel::new(40, Cbw::Cbw40).is_valid_in_us());
+        assert!(!Channel::new(40, Cbw::Cbw80P80 { secondary80: 42 }).is_valid_in_us());
 
-        assert!(!Channel::new(165, Cbw::Cbw80).is_valid());
-        assert!(!Channel::new(165, Cbw::Cbw80P80 { secondary80: 42 }).is_valid());
+        assert!(!Channel::new(165, Cbw::Cbw80).is_valid_in_us());
+        assert!(!Channel::new(165, Cbw::Cbw80P80 { secondary80: 42 }).is_valid_in_us());
     }
 
     #[test]
     fn test_is_2ghz_or_5ghz() {
         assert!(Channel::new(1, Cbw::Cbw20).is_2ghz());
         assert!(!Channel::new(1, Cbw::Cbw20).is_5ghz());
+        assert!(Channel::new(13, Cbw::Cbw20).is_2ghz());
+        assert!(!Channel::new(13, Cbw::Cbw20).is_5ghz());
         assert!(Channel::new(36, Cbw::Cbw20).is_5ghz());
         assert!(!Channel::new(36, Cbw::Cbw20).is_2ghz());
     }

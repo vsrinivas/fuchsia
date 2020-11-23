@@ -109,7 +109,7 @@ pub(crate) fn derive_join_channel_and_capabilities(
 fn derive_channel(ap_channel: Channel, cbw: Cbw) -> Channel {
     let mut channel = ap_channel;
     channel.cbw = std::cmp::min(channel.cbw, cbw);
-    if channel.is_valid() {
+    if channel.is_valid_in_us() {
         channel
     } else {
         warn!(
