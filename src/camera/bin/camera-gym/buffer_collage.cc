@@ -31,6 +31,14 @@ namespace camera {
 
 constexpr uint32_t kViewRequestTimeoutMs = 5000;
 
+constexpr float kOffscreenDepth = 1.0f;
+constexpr float kBackgroundDepth = 0.0f;
+constexpr float kCollectionDepth = -0.1f;
+constexpr float kHighlightDepth = -0.2f;
+constexpr float kDescriptionDepth = -0.3f;
+constexpr float kMuteDepth = -0.4f;
+constexpr float kHeartbeatDepth = -1.0f;
+
 // Returns an event such that when the event is signaled and the dispatcher executed, the provided
 // eventpair is closed. This can be used to bridge event- and eventpair-based fence semantics. If
 // this function returns an error, |eventpair| is closed immediately.
@@ -334,10 +342,10 @@ void BufferCollage::ShowBuffer(uint32_t collection_id, uint32_t buffer_index,
                                   subregion->height * view.view_region.height, 0);
     view.highlight_node->SetTranslation(view.view_region.x + subregion->x * view.view_region.width,
                                         view.view_region.y + subregion->y * view.view_region.height,
-                                        -0.1f);
+                                        kHighlightDepth);
   } else {
     view.highlight_node->SetScale(1, 1, 0);
-    view.highlight_node->SetTranslation(0, 0, 1);
+    view.highlight_node->SetTranslation(0, 0, kOffscreenDepth);
   }
 
   auto result = MakeEventBridge(loop_.dispatcher(), std::move(release_fence));
@@ -618,8 +626,8 @@ void BufferCollage::UpdateLayout() {
       view.node->SetMaterial(*view.material);
       view.highlight_node->SetMaterial(*view.highlight_material);
       auto [x, y] = GetCenter(index++, collection_views_.size());
-      view.node->SetTranslation(view_width * x, view_height * y, 0);
-      view.highlight_node->SetTranslation(0, 0, 1.0f);
+      view.node->SetTranslation(view_width * x, view_height * y, kCollectionDepth);
+      view.highlight_node->SetTranslation(0, 0, kOffscreenDepth);
       view.view_region.width = element_width;
       view.view_region.height = element_height;
       view.view_region.x = view_width * x - element_width * 0.5f;
@@ -630,18 +638,18 @@ void BufferCollage::UpdateLayout() {
                                                  view_height * y + element_height * 0.5f -
                                                      scale * view.description_node->height * 0.5f -
                                                      kPadding,
-                                                 -0.5f);
+                                                 kDescriptionDepth);
       view_->AddChild(*view.node);
       view_->AddChild(*view.highlight_node);
       view_->AddChild(view.description_node->node);
     }
   }
   if (heartbeat_indicator_.node) {
-    heartbeat_indicator_.node->SetTranslation(view_width * 0.5f, view_height, -1.0f);
+    heartbeat_indicator_.node->SetTranslation(view_width * 0.5f, view_height, kHeartbeatDepth);
   }
   if (mute_indicator_) {
     mute_indicator_->node.SetTranslation(view_width * 0.5f, view_height * 0.5f,
-                                         mute_visible_ ? -1.0f : 1.0f);
+                                         mute_visible_ ? kMuteDepth : kOffscreenDepth);
   }
 }
 
@@ -659,6 +667,17 @@ void BufferCollage::MaybeTakeDisplay() {
 
 void BufferCollage::SetupView() {
   ZX_ASSERT(view_);
+
+  constexpr float kBackgroundSize = 16384.f;
+  scenic::Material material(session_.get());
+  material.SetColor(0, 0, 0, 255);  // Opaque black.
+  scenic::Rectangle rectangle(session_.get(), kBackgroundSize, kBackgroundSize);
+  scenic::ShapeNode node(session_.get());
+  node.SetShape(rectangle);
+  node.SetMaterial(material);
+  node.SetTranslation(0.f, 0.f, kBackgroundDepth);  // Far plane.
+  view_->AddChild(node);
+
   heartbeat_indicator_.material = std::make_unique<scenic::Material>(session_.get());
   constexpr float kIndicatorRadius = 12.0f;
   heartbeat_indicator_.shape = std::make_unique<scenic::Circle>(session_.get(), kIndicatorRadius);
