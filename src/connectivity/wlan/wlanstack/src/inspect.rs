@@ -85,6 +85,10 @@ impl WlanstackTree {
             })
             .set(iface_id as u64);
 
+        // Note: "histograms" is a bit of a misnomer since this node also contains packet counters.
+        //       However, as some children of this node are queried by another component, we can't
+        //       just change its name.
+        // TODO(fxbug.dev/65093) - Rename this node by following migration steps.
         let histograms = iface_tree_holder.node.create_lazy_child("histograms", move || {
             {
                 let iface_map = iface_map.clone();
@@ -96,6 +100,13 @@ impl WlanstackTree {
                                 if let fidl_stats::MlmeStats::ClientMlmeStats(mlme_stats) =
                                     mlme_stats.as_ref()
                                 {
+                                    // TODO(fxbug.dev/64905): Fix the fields of PacketCounter
+                                    let counters = inspector.root().create_child("packet_counters");
+                                    counters.record_uint("rx_total", mlme_stats.rx_frame.in_.count);
+                                    counters.record_uint("rx_drop", mlme_stats.rx_frame.drop.count);
+                                    counters.record_uint("tx_total", mlme_stats.tx_frame.in_.count);
+                                    counters.record_uint("tx_drop", mlme_stats.tx_frame.drop.count);
+
                                     let mut histograms = HistogramsSubtrees::new();
                                     histograms.log_per_antenna_snr_histograms(
                                         &mlme_stats.snr_histograms[..],
@@ -114,6 +125,7 @@ impl WlanstackTree {
                                         &inspector,
                                     );
 
+                                    inspector.root().record(counters);
                                     inspector.root().record(histograms);
                                 }
                             }
