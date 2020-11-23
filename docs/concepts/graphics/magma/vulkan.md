@@ -3,13 +3,57 @@ Vulkan Development
 
 ## Runtime dependencies
 
-The magma driver and libraries should already be built into a complete Fuchsia image, however you should have your project depend on the 'magma' package to be sure that the necessary files are included in the system image of whatever build includes your project.
+The magma driver and libraries should already be built into a complete Fuchsia
+image. The correct driver will be built and loaded based on the
+[board](/docs/concepts/build_system/boards_and_products.md) that is selected
+when building.
+
+A component that will use Vulkan must include these features and services in its
+.cmx file:
+
+```json
+{
+   "sandbox": {
+      "features": [
+         "vulkan"
+      ],
+      "services": [
+         "fuchsia.sysmem.Allocator",
+         "fuchsia.vulkan.loader.Loader"
+      ]
+   },
+   ...
+}
+```
+
+The `fuchsia.tracing.provider.Registry` service may optionally be included to
+allow the client driver to report [trace events](/docs/concepts/tracing/README.md).
+`fuchsia.logger.LogSink` is also
+recommended to allow logs from the client driver to appear in the [system
+log](/docs/development/diagnostics/logs/viewing.md).
+
+A [test component](/docs/concepts/testing/test_component.md) must also have
+these lines in its .cmx:
+
+```json
+{
+   "facets": {
+      "fuchsia.test": {
+         "system-services": [
+            "fuchsia.sysmem.Allocator",
+            "fuchsia.vulkan.loader.Loader"
+         ]
+      }
+    },
+    ...
+}
+```
 
 ## Buildtime dependencies
 
 In order for your project to access the Vulkan headers, and to link against the Vulkan loader libvulkan.so, add the following GN dependency:
 
-`//garnet/public/lib/vulkan`
+`//src/lib/vulkan`
 
 ## Rendering onscreen
 
