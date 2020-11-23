@@ -683,6 +683,8 @@ template("package") {
           require_bare_tests_allowlist) {
         deps += [ "//build:deprecated_bare_tests_allowlist" ]
       }
+
+      deps += [ "//build:deprecated_package" ]
     }
   } else {
     # A reference from a different toolchain, e.g. a variant toolchain, is
