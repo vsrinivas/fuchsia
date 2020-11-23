@@ -19,6 +19,7 @@
 #include <zircon/device/sysmem.h>
 
 #include <memory>
+#include <thread>
 
 #include <ddk/device.h>
 #include <ddk/platform-defs.h>
@@ -86,6 +87,10 @@ class SystemRamMemoryAllocator : public MemoryAllocator {
   virtual void Delete(zx::vmo parent_vmo) override {
     // ~parent_vmo
   }
+  // Since this allocator only allocates independent VMOs, it's fine to orphan those VMOs from the
+  // allocator since the VMOs independently track what pages they're using.  So this allocator can
+  // always claim is_empty() true.
+  bool is_empty() override { return true; }
 };
 
 class ContiguousSystemRamMemoryAllocator : public MemoryAllocator {
@@ -140,6 +145,10 @@ class ContiguousSystemRamMemoryAllocator : public MemoryAllocator {
   void Delete(zx::vmo parent_vmo) override {
     // ~vmo
   }
+  // Since this allocator only allocates independent VMOs, it's fine to orphan those VMOs from the
+  // allocator since the VMOs independently track what pages they're using.  So this allocator can
+  // always claim is_empty() true.
+  bool is_empty() override { return true; }
 
  private:
   Owner* const parent_device_;
@@ -147,12 +156,16 @@ class ContiguousSystemRamMemoryAllocator : public MemoryAllocator {
 
 class ExternalMemoryAllocator : public MemoryAllocator {
  public:
-  ExternalMemoryAllocator(fidl::Client<llcpp::fuchsia::sysmem2::Heap> heap,
+  ExternalMemoryAllocator(MemoryAllocator::Owner* owner,
+                          fidl::Client<llcpp::fuchsia::sysmem2::Heap> heap,
                           std::unique_ptr<async::Wait> wait_for_close,
                           llcpp::fuchsia::sysmem2::HeapProperties properties)
       : MemoryAllocator(std::move(properties)),
+        owner_(owner),
         heap_(std::move(heap)),
         wait_for_close_(std::move(wait_for_close)) {}
+
+  ~ExternalMemoryAllocator() { ZX_DEBUG_ASSERT(is_empty()); }
 
   zx_status_t Allocate(uint64_t size, std::optional<std::string> name,
                        zx::vmo* parent_vmo) override {
@@ -207,10 +220,15 @@ class ExternalMemoryAllocator : public MemoryAllocator {
       // already been destroyed.
     }
     allocations_.erase(it);
+    if (is_empty()) {
+      owner_->CheckForUnbind();
+    }
     // ~parent_vmo
   }
+  bool is_empty() override { return allocations_.empty(); }
 
  private:
+  MemoryAllocator::Owner* owner_;
   fidl::Client<llcpp::fuchsia::sysmem2::Heap> heap_;
   std::unique_ptr<async::Wait> wait_for_close_;
 
@@ -259,14 +277,45 @@ void Device::OverrideSizeFromCommandLine(const char* name, uint64_t* memory_size
 }
 
 void Device::DdkUnbind(ddk::UnbindTxn txn) {
-  // Try to ensure all tasks started before this call finish before shutting down the loop.
-  async::PostTask(loop_.dispatcher(), [this]() { loop_.Quit(); });
-  // JoinThreads waits for the Quit() to execute and cause the thread to exit.
+  // Try to ensure there are no outstanding VMOS before shutting down the loop.
+  async::PostTask(loop_.dispatcher(), [this]() mutable {
+    waiting_for_unbind_ = true;
+    CheckForUnbind();
+  });
+
+  // JoinThreads waits for the Quit() in CheckForUnbind to execute and cause the thread to exit. We
+  // could instead try to asynchronously do these operations on another thread, but the display unit
+  // tests don't have a way to wait for the unbind to be complete before tearing down the device.
   loop_.JoinThreads();
   loop_.Shutdown();
   // After this point the FIDL servers should have been shutdown and all DDK and other protocol
   // methods will error out because posting tasks to the dispatcher fails.
   txn.Reply();
+  zxlogf(INFO, "Finished unbind.");
+}
+
+void Device::CheckForUnbind() {
+  if (!waiting_for_unbind_)
+    return;
+  if (!logical_buffer_collections().empty()) {
+    zxlogf(INFO, "Not unbinding because there are logical buffer collections count %ld",
+           logical_buffer_collections().size());
+    return;
+  }
+  if (!contiguous_system_ram_allocator_->is_empty()) {
+    zxlogf(INFO, "Not unbinding because contiguous system ram allocator is not empty");
+    return;
+  }
+  for (auto& [type, allocator] : allocators_) {
+    if (!allocator->is_empty()) {
+      zxlogf(INFO, "Not unbinding because allocator %lx is not empty", static_cast<uint64_t>(type));
+
+      return;
+    }
+  }
+
+  // This will cause the loop to exit and will allow DdkUnbind to continue.
+  loop_.Quit();
 }
 
 zx_status_t Device::Bind() {
@@ -315,9 +364,10 @@ zx_status_t Device::Bind() {
   if (contiguous_memory_size) {
     constexpr bool kIsCpuAccessible = true;
     constexpr bool kIsReady = true;
+    constexpr bool kCanBeTornDown = true;
     auto pooled_allocator = std::make_unique<ContiguousPooledMemoryAllocator>(
         this, "SysmemContiguousPool", &heaps_, fuchsia_sysmem_HeapType_SYSTEM_RAM,
-        contiguous_memory_size, kIsCpuAccessible, kIsReady, loop_.dispatcher());
+        contiguous_memory_size, kIsCpuAccessible, kIsReady, kCanBeTornDown, loop_.dispatcher());
     if (pooled_allocator->Init() != ZX_OK) {
       DRIVER_ERROR("Contiguous system ram allocator initialization failed");
       return ZX_ERR_NO_MEMORY;
@@ -331,9 +381,11 @@ zx_status_t Device::Bind() {
   if (pdev_device_info_vid_ == PDEV_VID_AMLOGIC && protected_memory_size > 0) {
     constexpr bool kIsCpuAccessible = false;
     constexpr bool kIsReady = false;
+    // We have no way to tear down secure memory.
+    constexpr bool kCanBeTornDown = false;
     auto amlogic_allocator = std::make_unique<ContiguousPooledMemoryAllocator>(
         this, "SysmemAmlogicProtectedPool", &heaps_, fuchsia_sysmem_HeapType_AMLOGIC_SECURE,
-        protected_memory_size, kIsCpuAccessible, kIsReady, loop_.dispatcher());
+        protected_memory_size, kIsCpuAccessible, kIsReady, kCanBeTornDown, loop_.dispatcher());
     // Request 64kB alignment because the hardware can only modify protections along 64kB
     // boundaries.
     status = amlogic_allocator->Init(16);
@@ -446,7 +498,7 @@ zx_status_t Device::SysmemRegisterHeap(uint64_t heap_param, zx::channel heap_con
           // wait). This behavior is preferred as it avoids a potential race-condition during
           // heap restart.
           allocators_[heap] = std::make_unique<ExternalMemoryAllocator>(
-              std::move(*heap_client), std::move(wait_for_close),
+              this, std::move(*heap_client), std::move(wait_for_close),
               sysmem::V2CloneHeapProperties(&fidl_allocator_, message->properties).build());
         }});
     ZX_ASSERT(status == ZX_OK);
@@ -561,9 +613,10 @@ zx_status_t Device::SysmemRegisterSecureMem(zx::channel secure_mem_connection) {
               tee_configured_heaps.heaps[heap_index];
           constexpr bool kIsCpuAccessible = false;
           constexpr bool kIsReady = true;
+          constexpr bool kCanBeTornDown = true;
           auto secure_allocator = std::make_unique<ContiguousPooledMemoryAllocator>(
               this, "tee_secure", &heaps_, static_cast<uint64_t>(heap.heap), heap.size_bytes,
-              kIsCpuAccessible, kIsReady, loop_.dispatcher());
+              kIsCpuAccessible, kIsReady, kCanBeTornDown, loop_.dispatcher());
           status = secure_allocator->InitPhysical(heap.physical_address);
           // A failing status is fatal for now.
           ZX_ASSERT(status == ZX_OK);
@@ -681,10 +734,6 @@ MemoryAllocator* Device::GetAllocator(
     return nullptr;
   }
   return iter->second.get();
-}
-
-void Device::RunLoopUntilIdle() {
-  async::PostTask(loop_.dispatcher(), [this]() { loop_.RunUntilIdle(); });
 }
 
 const llcpp::fuchsia::sysmem2::HeapProperties& Device::GetHeapProperties(

@@ -71,17 +71,14 @@ class Device final : public DdkDeviceType,
   // Ddk mixin implementations.
   zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
   void DdkUnbind(ddk::UnbindTxn txn);
-  void DdkRelease() {
-    // Don't do anything. The sysmem driver assumes it's alive for the
-    // lifetime of the system.
-  }
+  void DdkRelease() { delete this; }
 
   // MemoryAllocator::Owner implementation.
   const zx::bti& bti() override;
+  zx_status_t CreatePhysicalVmo(uint64_t base, uint64_t size, zx::vmo* vmo_out) override;
+  void CheckForUnbind() override;
 
   zx_status_t Connect(zx_handle_t allocator_request);
-
-  zx_status_t CreatePhysicalVmo(uint64_t base, uint64_t size, zx::vmo* vmo_out) override;
 
   uint32_t pdev_device_info_vid();
 
@@ -119,10 +116,6 @@ class Device final : public DdkDeviceType,
   const zx_device_t* device() const { return zxdev_; }
   async_dispatcher_t* dispatcher() { return loop_.dispatcher(); }
 
-  // Run the loop until idle (on the loop thread). This can be used to ensure all pending messages,
-  // channel closures, and VMO closures are processed before the device is unbound.
-  void RunLoopUntilIdle();
-
   // Test hook
   std::unordered_set<LogicalBufferCollection*>& logical_buffer_collections() {
     return logical_buffer_collections_;
@@ -136,6 +129,7 @@ class Device final : public DdkDeviceType,
   // Test hook
   void RemoveLogicalBufferCollection(LogicalBufferCollection* collection) {
     logical_buffer_collections_.erase(collection);
+    CheckForUnbind();
   }
 
   inspect::Node& collections_node() { return collections_node_; }
@@ -215,6 +209,8 @@ class Device final : public DdkDeviceType,
   std::unordered_set<LogicalBufferCollection*> logical_buffer_collections_;
 
   Settings settings_;
+
+  bool waiting_for_unbind_ = false;
 };
 
 }  // namespace sysmem_driver

@@ -38,7 +38,8 @@ llcpp::fuchsia::sysmem2::HeapProperties BuildHeapProperties(bool is_cpu_accessib
 
 ContiguousPooledMemoryAllocator::ContiguousPooledMemoryAllocator(
     Owner* parent_device, const char* allocation_name, inspect::Node* parent_node, uint64_t pool_id,
-    uint64_t size, bool is_cpu_accessible, bool is_ready, async_dispatcher_t* dispatcher)
+    uint64_t size, bool is_cpu_accessible, bool is_ready, bool can_be_torn_down,
+    async_dispatcher_t* dispatcher)
     : MemoryAllocator(BuildHeapProperties(is_cpu_accessible)),
       parent_device_(parent_device),
       allocation_name_(allocation_name),
@@ -46,7 +47,8 @@ ContiguousPooledMemoryAllocator::ContiguousPooledMemoryAllocator(
       region_allocator_(RegionAllocator::RegionPool::Create(std::numeric_limits<size_t>::max())),
       size_(size),
       is_cpu_accessible_(is_cpu_accessible),
-      is_ready_(is_ready) {
+      is_ready_(is_ready),
+      can_be_torn_down_(can_be_torn_down) {
   snprintf(child_name_, sizeof(child_name_), "%s-child", allocation_name_);
   // Ensure NUL-terminated.
   child_name_[sizeof(child_name_) - 1] = 0;
@@ -73,6 +75,7 @@ ContiguousPooledMemoryAllocator::ContiguousPooledMemoryAllocator(
 }
 
 ContiguousPooledMemoryAllocator::~ContiguousPooledMemoryAllocator() {
+  ZX_DEBUG_ASSERT(is_empty());
   wait_.Cancel();
   if (trace_observer_event_) {
     trace_unregister_observer(trace_observer_event_.get());
@@ -85,7 +88,7 @@ zx_status_t ContiguousPooledMemoryAllocator::Init(uint32_t alignment_log2) {
                                                   &local_contiguous_vmo);
   if (status != ZX_OK) {
     LOG(ERROR, "Could not allocate contiguous memory, status %d allocation_name_: %s", status,
-                 allocation_name_);
+        allocation_name_);
     return status;
   }
 
@@ -96,8 +99,7 @@ zx_status_t ContiguousPooledMemoryAllocator::InitPhysical(zx_paddr_t paddr) {
   zx::vmo local_contiguous_vmo;
   zx_status_t status = parent_device_->CreatePhysicalVmo(paddr, size_, &local_contiguous_vmo);
   if (status != ZX_OK) {
-    LOG(ERROR, "Failed to create physical VMO: %d allocation_name_: %s", status,
-                 allocation_name_);
+    LOG(ERROR, "Failed to create physical VMO: %d allocation_name_: %s", status, allocation_name_);
     return status;
   }
 
@@ -170,12 +172,11 @@ zx_status_t ContiguousPooledMemoryAllocator::InitCommon(zx::vmo local_contiguous
 keepGoing:;
 
   zx_paddr_t addrs;
-  zx::pmt pmt;
   // When running a unit test, the src/devices/testing/fake-bti provides a fake zx_bti_pin() that
   // should tolerate ZX_BTI_CONTIGUOUS here despite the local_contiguous_vmo not actually having
   // info.flags ZX_INFO_VMO_CONTIGUOUS.
   status = parent_device_->bti().pin(ZX_BTI_PERM_READ | ZX_BTI_PERM_WRITE | ZX_BTI_CONTIGUOUS,
-                                     local_contiguous_vmo, 0, size_, &addrs, 1, &pmt);
+                                     local_contiguous_vmo, 0, size_, &addrs, 1, &pool_pmt_);
   if (status != ZX_OK) {
     LOG(ERROR, "Could not pin memory, status %d", status);
     return status;
@@ -272,6 +273,9 @@ void ContiguousPooledMemoryAllocator::Delete(zx::vmo parent_vmo) {
   regions_.erase(it);
   parent_vmo.reset();
   TracePoolSize(false);
+  if (is_empty()) {
+    parent_device_->CheckForUnbind();
+  }
 }
 
 void ContiguousPooledMemoryAllocator::set_ready() { is_ready_ = true; }
@@ -310,7 +314,7 @@ void ContiguousPooledMemoryAllocator::DumpPoolStats() {
       region_allocator_.AvailableRegionCount());
   for (auto& [vmo, region] : regions_) {
     LOG(INFO, "Region koid %ld name %s size %zu", region.koid, region.name.c_str(),
-                 region.ptr->size);
+        region.ptr->size);
   }
 }
 

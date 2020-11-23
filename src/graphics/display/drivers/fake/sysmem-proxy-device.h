@@ -70,10 +70,7 @@ class SysmemProxyDevice final : public DdkDeviceType2,
   // passing the channel handle to an external Sysmem service, after which SysmemProxyDevice has no
   // further knowledge of the connection.
   void DdkUnbind(ddk::UnbindTxn txn);
-  void DdkRelease() {
-    // Don't do anything. The sysmem driver assumes it's alive for the
-    // lifetime of the system.
-  }
+  void DdkRelease() { delete this; }
 
   zx_status_t Connect(zx_handle_t allocator_request);
 

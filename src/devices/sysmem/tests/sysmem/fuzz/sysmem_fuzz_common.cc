@@ -11,8 +11,6 @@
 
 FakeDdkSysmem::~FakeDdkSysmem() {
   if (initialized_) {
-    // Run loop until idle to ensure all pending VMO closures are processed.
-    sysmem_.RunLoopUntilIdle();
     sysmem_.DdkAsyncRemove();
     ZX_ASSERT(ZX_OK == ddk_.WaitUntilRemove());
     ZX_ASSERT(sysmem_.logical_buffer_collections().size() == 0);

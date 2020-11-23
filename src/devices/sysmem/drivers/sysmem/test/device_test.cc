@@ -120,6 +120,7 @@ class FakeDdkSysmem : public zxtest::Test {
 
   void TearDown() override {
     sysmem_.DdkAsyncRemove();
+    EXPECT_OK(ddk_.WaitUntilRemove());
     EXPECT_TRUE(ddk_.Ok());
   }
 
@@ -374,15 +375,6 @@ TEST_F(FakeDdkSysmem, TeardownLeak) {
     zx_handle_close(info.buffers[i].vmo);
   }
   collection_client.reset();
-  // We need to run the loop until idle to work around an issue:  On device unbind the channel error
-  // handler is run, which causes all the VMOs to be released. However, since the loop is being torn
-  // down TrackedParentVmo.zero_children_wait_ is canceled, which means that TrackedParentVmo
-  // continues to hold a reference to the LogicalBufferCollection and that causes a memory leak.
-
-  // Tearing down sysmem doesn't happen on a production system, so we can just add a workaround for
-  // the fuzzer. If we run the loop until idle after closing the VMO and channel handles then
-  // everything should work properly
-  sysmem_.RunLoopUntilIdle();
 }
 
 TEST_F(FakeDdkSysmemPbus, Register) { EXPECT_EQ(ZX_PROTOCOL_SYSMEM, pbus_.registered_proto_id()); }

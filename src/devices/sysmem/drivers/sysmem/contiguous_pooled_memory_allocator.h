@@ -22,7 +22,7 @@ class ContiguousPooledMemoryAllocator : public MemoryAllocator {
  public:
   ContiguousPooledMemoryAllocator(Owner* parent_device, const char* allocation_name,
                                   inspect::Node* parent_node, uint64_t pool_id, uint64_t size,
-                                  bool is_cpu_accessible, bool is_ready,
+                                  bool is_cpu_accessible, bool is_ready, bool can_be_torn_down,
                                   async_dispatcher_t* dispatcher = nullptr);
 
   ~ContiguousPooledMemoryAllocator();
@@ -40,6 +40,11 @@ class ContiguousPooledMemoryAllocator : public MemoryAllocator {
   zx_status_t SetupChildVmo(const zx::vmo& parent_vmo, const zx::vmo& child_vmo,
                             llcpp::fuchsia::sysmem2::SingleBufferSettings buffer_settings) override;
   void Delete(zx::vmo parent_vmo) override;
+  bool is_empty() override {
+    // If the contiguous VMO has been marked as secure there's no way to unmark it as secure, so
+    // unbinding would never be safe.
+    return regions_.empty() && (can_be_torn_down_ || !is_ready_);
+  }
 
   zx_status_t GetPhysicalMemoryInfo(uint64_t* base, uint64_t* size) override {
     *base = start_;
@@ -73,6 +78,7 @@ class ContiguousPooledMemoryAllocator : public MemoryAllocator {
   const uint64_t pool_id_{};
   char child_name_[ZX_MAX_NAME_LEN] = {};
   zx::vmo contiguous_vmo_;
+  zx::pmt pool_pmt_;
   RegionAllocator region_allocator_;
   // From parent_vmo handle to std::unique_ptr<>
   std::map<zx_handle_t, RegionData> regions_;
@@ -80,6 +86,8 @@ class ContiguousPooledMemoryAllocator : public MemoryAllocator {
   uint64_t size_{};
   bool is_cpu_accessible_{};
   bool is_ready_{};
+  // True if the allocator can be deleted after it's marked ready.
+  bool can_be_torn_down_{};
 
   uint64_t high_water_mark_used_size_{};
   uint64_t max_free_size_at_high_water_mark_{};

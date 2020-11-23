@@ -23,6 +23,8 @@ class MemoryAllocator {
    public:
     virtual const zx::bti& bti() = 0;
     virtual zx_status_t CreatePhysicalVmo(uint64_t base, uint64_t size, zx::vmo* vmo_out) = 0;
+    // Should be called after every delete that makes the allocator empty.
+    virtual void CheckForUnbind() {}
   };
 
   explicit MemoryAllocator(llcpp::fuchsia::sysmem2::HeapProperties properties);
@@ -75,6 +77,11 @@ class MemoryAllocator {
 
   void AddDestroyCallback(intptr_t key, fit::callback<void()> callback);
   void RemoveDestroyCallback(intptr_t key);
+
+  // Returns true if there are no outstanding allocations, or if the allocator only allocates fully
+  // independent VMOs that fully own their own memory separate from any tracking in sysmem.
+  // Allocators must be empty before they're deleted.
+  virtual bool is_empty() = 0;
 
  public:
   std::map<intptr_t, fit::callback<void()>> destroy_callbacks_;

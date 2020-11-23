@@ -35,8 +35,9 @@ class ContiguousPooledSystem : public zxtest::Test {
  public:
   ContiguousPooledSystem()
       : allocator_(&fake_owner_, kVmoName, &inspector_.GetRoot(), 0u, kVmoSize * kVmoCount,
-                   true,     // is_cpu_accessible
-                   false) {  // is_ready
+                   true,    // is_cpu_accessible
+                   false,   // is_ready
+                   true) {  // can_be_torn_down
     // nothing else to do here
   }
 
@@ -62,6 +63,7 @@ TEST_F(ContiguousPooledSystem, VmoNamesAreSet) {
   EXPECT_OK(allocator_.Allocate(kVmoSize, {}, &vmo));
   EXPECT_OK(vmo.get_property(ZX_PROP_NAME, name, sizeof(name)));
   EXPECT_EQ(0u, strcmp("test-pool-child", name));
+  allocator_.Delete(std::move(vmo));
 }
 
 TEST_F(ContiguousPooledSystem, Full) {
@@ -111,6 +113,10 @@ TEST_F(ContiguousPooledSystem, Full) {
   EXPECT_EQ(
       0u,
       value->node().get_property<inspect::UintPropertyValue>("max_free_at_high_water")->value());
+  for (auto& vmo : vmos) {
+    if (vmo)
+      allocator_.Delete(std::move(vmo));
+  }
 }
 
 TEST_F(ContiguousPooledSystem, GetPhysicalMemoryInfo) {
@@ -137,6 +143,7 @@ TEST_F(ContiguousPooledSystem, InitPhysical) {
 
   zx::vmo vmo;
   EXPECT_OK(allocator_.Allocate(kVmoSize, {}, &vmo));
+  allocator_.Delete(std::move(vmo));
 }
 
 TEST_F(ContiguousPooledSystem, SetReady) {
@@ -147,6 +154,7 @@ TEST_F(ContiguousPooledSystem, SetReady) {
   allocator_.set_ready();
   EXPECT_TRUE(allocator_.is_ready());
   EXPECT_OK(allocator_.Allocate(kVmoSize, {}, &vmo));
+  allocator_.Delete(std::move(vmo));
 }
 
 }  // namespace

@@ -227,15 +227,25 @@ class GenericSysmemDeviceWrapper : public SysmemDeviceWrapper {
  public:
   GenericSysmemDeviceWrapper()
       : sysmem_ctx_(std::make_unique<sysmem_driver::Driver>()),
-        sysmem_(std::make_unique<T>(fake_ddk::kFakeParent, sysmem_ctx_.get())) {}
+        owned_sysmem_(std::make_unique<T>(fake_ddk::kFakeParent, sysmem_ctx_.get())) {
+    sysmem_ = owned_sysmem_.get();
+  }
 
   const sysmem_protocol_t* proto() const override { return sysmem_->proto(); }
   const zx_device_t* device() const override { return sysmem_->device(); }
-  zx_status_t Bind() override { return sysmem_->Bind(); }
+  zx_status_t Bind() override {
+    zx_status_t status = sysmem_->Bind();
+    if (status == ZX_OK) {
+      // DDK takes ownership of sysmem and DdkRelease will release it.
+      owned_sysmem_.release();
+    }
+    return status;
+  }
 
  private:
   std::unique_ptr<sysmem_driver::Driver> sysmem_ctx_;
-  std::unique_ptr<T> sysmem_;
+  std::unique_ptr<T> owned_sysmem_;
+  T* sysmem_{};
 };
 
 // FakeDisplayDeviceTree encapusulates the requirements for creating a fake DDK device tree with a
