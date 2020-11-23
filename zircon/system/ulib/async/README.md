@@ -30,7 +30,7 @@ and structures declared in the following headers:
 
 - `libasync-default.so` provides functions for getting or setting a thread-local
 default asynchronous dispatcher as declared in
-[async/default.h](include/lib/async/default.h).
+[async/default.h](../async-default/include/lib/async/default.h).
 
 See also [libasync-loop.a](../async-loop/README.md) which provides a
 general-purpose implementation of `async_dispatcher_t`.
