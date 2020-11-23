@@ -55,14 +55,26 @@ struct Fixture {
     _service_task: Task<()>,
 }
 
-async fn forward(sender: LinkSender, receiver: LinkReceiver) -> Result<(), Error> {
-    let mut frame = [0u8; 2048];
-    while let Some(n) = sender.next_send(&mut frame).await? {
-        if let Err(e) = receiver.received_packet(&mut frame[..n]).await {
-            log::warn!("Packet receive error: {:?}", e);
-        }
-    }
-    Ok(())
+async fn forward(sender: LinkSender, mut receiver: LinkReceiver) -> Result<(), Error> {
+    let (mut tx, mut rx) = futures::channel::mpsc::channel(16);
+    futures::future::try_join(
+        async move {
+            while let Some(packet) = sender.next_send().await {
+                tx.send(packet.bytes().to_vec()).await?;
+            }
+            Ok(())
+        },
+        async move {
+            while let Some(mut bytes) = rx.next().await {
+                if let Err(e) = receiver.received_packet(&mut bytes).await {
+                    log::warn!("Packet receive error: {:?}", e);
+                }
+            }
+            Ok(())
+        },
+    )
+    .map_ok(drop)
+    .await
 }
 
 async fn link(a: Arc<Router>, b: Arc<Router>) {

@@ -92,7 +92,7 @@ async fn process_incoming(
     let context = fidl::encoding::Context {};
     fidl::encoding::Decoder::decode_with_context(&context, frame.as_mut(), &mut [], &mut greeting)?;
 
-    log::info!("Ascendd gets greeting: {:?}", greeting);
+    log::trace!("Ascendd gets greeting: {:?}", greeting);
 
     let node_id = match greeting {
         StreamSocketGreeting { magic_string: None, .. } => anyhow::bail!(
@@ -114,7 +114,7 @@ async fn process_incoming(
 
     // Register our new link!
     let sockpath = sockpath.to_string();
-    let (link_sender, link_receiver) = node
+    let (link_sender, mut link_receiver) = node
         .new_link(
             node_id.into(),
             Box::new(move || {
@@ -130,9 +130,8 @@ async fn process_incoming(
         .await?;
     let _: ((), ()) = futures::future::try_join(
         async move {
-            let mut buf = [0u8; 4096];
-            while let Some(n) = link_sender.next_send(&mut buf).await? {
-                tx_frames.write(FrameType::Overnet, &buf[..n]).await?;
+            while let Some(frame) = link_sender.next_send().await {
+                tx_frames.write(FrameType::Overnet, frame.bytes()).await?;
             }
             Ok(())
         },
@@ -141,7 +140,7 @@ async fn process_incoming(
                 let (frame_type, mut frame) = rx_frames.read().await?;
                 ensure!(frame_type == Some(FrameType::Overnet), "Expect only overnet frames");
                 if let Err(err) = link_receiver.received_packet(frame.as_mut()).await {
-                    log::trace!("Failed handling packet: {:?}", err);
+                    log::info!("Failed handling packet: {:?}", err);
                 }
             }
         },
@@ -158,7 +157,7 @@ async fn run_stream(
     let stream = stream?;
     let (framer, outgoing_reader) = new_framer(LosslessBinary, 4096);
     let (incoming_writer, deframer) = new_deframer(LosslessBinary);
-    log::info!("Processing new Ascendd socket");
+    log::trace!("Processing new Ascendd socket");
     futures::future::try_join3(
         read_incoming(&stream, incoming_writer),
         write_outgoing(outgoing_reader, &stream),
@@ -174,7 +173,7 @@ pub async fn run_ascendd(opt: Opt, stdout: impl AsyncWrite + Unpin + Send) -> Re
     let sockpath = &sockpath.unwrap_or(hoist::DEFAULT_ASCENDD_PATH.to_string());
     let serial = serial.unwrap_or("none".to_string());
 
-    log::info!("starting ascendd on {}", sockpath);
+    log::trace!("starting ascendd on {}", sockpath);
 
     let incoming = loop {
         match async_std::os::unix::net::UnixListener::bind(sockpath).await {

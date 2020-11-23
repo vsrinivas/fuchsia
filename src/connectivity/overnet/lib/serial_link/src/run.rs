@@ -292,16 +292,15 @@ async fn link_to_framer(
     link_sender: LinkSender,
     mut fragment_writer: FragmentWriter,
 ) -> Result<(), Error> {
-    let mut buf = [0u8; 1400];
-    while let Some(n) = link_sender.next_send(&mut buf).await? {
-        fragment_writer.write(FrameType::Overnet, buf[..n].to_vec()).await?;
+    while let Some(frame) = link_sender.next_send().await {
+        fragment_writer.write(FrameType::Overnet, frame.bytes().to_vec()).await?;
     }
     Ok(())
 }
 
 async fn deframer_to_link<OutputSink: AsyncWrite + Unpin>(
     mut fragment_reader: StreamSplitter<OutputSink>,
-    link_receiver: LinkReceiver,
+    mut link_receiver: LinkReceiver,
 ) -> Result<(), Error> {
     loop {
         let (frame_type, mut frame) = fragment_reader.read().await?;
@@ -383,67 +382,57 @@ mod test {
         Ok(())
     }
 
-    async fn end2end(repeat: u64, failures_per_64kib: u16) -> Result<(), Error> {
+    async fn end2end(run: usize, failures_per_64kib: u16) -> Result<(), Error> {
         init();
-        futures::stream::iter(0..repeat)
-            .map(Ok)
-            .try_for_each_concurrent(10, move |i| async move {
-                let rtr_client = Router::new(
-                    RouterOptions::new().set_node_id((100 * i + 1).into()),
-                    test_security_context(),
-                )?;
-                let rtr_server = Router::new(
-                    RouterOptions::new().set_node_id((100 * i + 2).into()),
-                    test_security_context(),
-                )?;
-                let (c2s_rx, c2s_tx) = DodgyPipe::new(failures_per_64kib).split();
-                let (s2c_rx, s2c_tx) = DodgyPipe::new(failures_per_64kib).split();
-                let run_client = super::run(
-                    Role::Client,
-                    s2c_rx,
-                    c2s_tx,
-                    Arc::downgrade(&rtr_client),
-                    ReportSkipped::new("client"),
-                    None,
-                );
-                let run_server = super::run(
-                    Role::Server,
-                    c2s_rx,
-                    s2c_tx,
-                    Arc::downgrade(&rtr_server),
-                    ReportSkipped::new("server"),
-                    None,
-                );
-                let _fwd = Task::spawn(
-                    futures::future::join(
-                        async move { panic!("should never terminate: {:?}", run_client.await) },
-                        async move { panic!("should never terminate: {:?}", run_server.await) },
-                    )
-                    .map(drop),
-                );
-                futures::future::try_join(
-                    await_peer(rtr_client.clone(), rtr_server.node_id()),
-                    await_peer(rtr_server.clone(), rtr_client.node_id()),
-                )
-                .map_ok(drop)
-                .on_timeout(Duration::from_secs(120), || Err(format_err!("timeout")))
-                .await
-            })
-            .map_ok(drop)
-            .await
+        let rtr_client = Router::new(
+            RouterOptions::new().set_node_id((100 * (run as u64) + 1).into()),
+            test_security_context(),
+        )?;
+        let rtr_server = Router::new(
+            RouterOptions::new().set_node_id((100 * (run as u64) + 2).into()),
+            test_security_context(),
+        )?;
+        let (c2s_rx, c2s_tx) = DodgyPipe::new(failures_per_64kib).split();
+        let (s2c_rx, s2c_tx) = DodgyPipe::new(failures_per_64kib).split();
+        let run_client = super::run(
+            Role::Client,
+            s2c_rx,
+            c2s_tx,
+            Arc::downgrade(&rtr_client),
+            ReportSkipped::new("client"),
+            None,
+        );
+        let run_server = super::run(
+            Role::Server,
+            c2s_rx,
+            s2c_tx,
+            Arc::downgrade(&rtr_server),
+            ReportSkipped::new("server"),
+            None,
+        );
+        let _fwd = Task::spawn(
+            futures::future::join(
+                async move { panic!("should never terminate: {:?}", run_client.await) },
+                async move { panic!("should never terminate: {:?}", run_server.await) },
+            )
+            .map(drop),
+        );
+        futures::future::try_join(
+            await_peer(rtr_client.clone(), rtr_server.node_id()),
+            await_peer(rtr_server.clone(), rtr_client.node_id()),
+        )
+        .map_ok(drop)
+        .on_timeout(Duration::from_secs(120), || Err(format_err!("timeout")))
+        .await
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn reliable() -> Result<(), Error> {
-        end2end(1, 0).await
+    async fn reliable(run: usize) -> Result<(), Error> {
+        end2end(run, 0).await
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn mostly_reliable() -> Result<(), Error> {
-        #[cfg(target_os = "fuchsia")]
-        const RUN_COUNT: u64 = 1;
-        #[cfg(not(target_os = "fuchsia"))]
-        const RUN_COUNT: u64 = 100;
-        end2end(RUN_COUNT, 1).await
+    async fn mostly_reliable(run: usize) -> Result<(), Error> {
+        end2end(run, 1).await
     }
 }

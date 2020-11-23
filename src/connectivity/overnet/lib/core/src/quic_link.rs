@@ -255,7 +255,6 @@ async fn link_to_quic(
         Endpoint::Client => QUIC_STREAM_UNIDIRECTIONAL,
         Endpoint::Server => QUIC_STREAM_UNIDIRECTIONAL | QUIC_STREAM_SERVER_INITIATED,
     };
-    let mut frame = [0u8; 1400];
     {
         let mut poll_mutex = PollMutex::new(&*quic);
         let poll_established = |ctx: &mut Context<'_>| -> Poll<()> {
@@ -268,31 +267,28 @@ async fn link_to_quic(
         };
         poll_fn(poll_established).await;
     }
-    loop {
-        if let Some(n) = link.next_send(&mut frame).await? {
-            let id = send_id;
-            send_id += QUIC_STREAM_NUMBER_INCREMENT;
-            let mut q = quic.lock().await;
-            match q.connection.stream_send(id, &frame[..n], true) {
-                Ok(sent) if n == sent => (),
-                Ok(sent) => {
-                    log::warn!("Dropping packet {} (only sent {} of {} bytes)", id, sent, n);
-                    let _ = q.connection.stream_shutdown(id, quiche::Shutdown::Write, 0);
-                }
-                Err(e) => {
-                    log::warn!("Dropping packet {} due to QUIC error {}", id, e);
-                    let _ = q.connection.stream_shutdown(id, quiche::Shutdown::Write, 0);
-                }
+    while let Some(p) = link.next_send().await {
+        let id = send_id;
+        send_id += QUIC_STREAM_NUMBER_INCREMENT;
+        let mut q = quic.lock().await;
+        let bytes = p.bytes();
+        match q.connection.stream_send(id, bytes, true) {
+            Ok(sent) if bytes.len() == sent => (),
+            Ok(sent) => {
+                log::warn!("Dropping packet {} (only sent {} of {} bytes)", id, sent, bytes.len());
+                let _ = q.connection.stream_shutdown(id, quiche::Shutdown::Write, 0);
             }
-            q.wakeup_send();
-        } else {
-            break;
+            Err(e) => {
+                log::warn!("Dropping packet {} due to QUIC error {}", id, e);
+                let _ = q.connection.stream_shutdown(id, quiche::Shutdown::Write, 0);
+            }
         }
+        q.wakeup_send();
     }
     Ok(())
 }
 
-async fn quic_to_link(link: LinkReceiver, quic: Arc<Mutex<Quic>>) -> Result<(), Error> {
+async fn quic_to_link(mut link: LinkReceiver, quic: Arc<Mutex<Quic>>) -> Result<(), Error> {
     let mut incoming: BTreeMap<u64, Vec<u8>> = BTreeMap::new();
     let mut frame = [0u8; MAX_FRAME_SIZE];
     let mut poll_mutex = PollMutex::new(&*quic);

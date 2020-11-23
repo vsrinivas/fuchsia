@@ -1,0 +1,50 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.overnet.protocol;
+
+/// Control frame sent over a link.
+union LinkControlFrame {
+    1: uint64 ack;
+    2: LinkControlMessage message;
+};
+
+/// Control message sent over a link.
+struct LinkControlMessage {
+    uint64 seq;
+    LinkControlPayload payload;
+};
+
+/// Control message payload.
+union LinkControlPayload {
+    /// Configure some routes.
+    /// Since the complete routing table might be longer than can fit in one frame, it may take
+    /// multiple set_route messages to update a routing table. is_end will be set on the last frame
+    /// of a given update round to signify that the update is done.
+    1: SetRoute set_route;
+};
+
+/// Partial send of new routes.
+struct SetRoute {
+    /// Is this the last SetRoute frame in an update?
+    bool is_end;
+    /// Routes to add to the route map being sent.
+    vector<Route>:MAX routes;
+};
+
+/// Update route visibility via a node.
+struct Route {
+    /// Target node id that can be routed to via this peer.
+    NodeId destination;
+    /// Metrics associated with this route.
+    RouteMetrics route_metrics;
+};
+
+/// Metrics that may be used to determine the optimimum route for a packet.
+table RouteMetrics {
+    /// Intermediate proposed path to the destination (used for loop prevention).
+    1: vector<NodeId>:MAX intermediate_hops;
+    /// Round trip time to the destination and back (in microseconds).
+    2: uint64 round_trip_time_us;
+};

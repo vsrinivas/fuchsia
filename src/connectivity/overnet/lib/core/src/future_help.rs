@@ -7,6 +7,7 @@ use futures::{
     lock::{Mutex, MutexGuard, MutexLockFuture},
     prelude::*,
 };
+use pin_project::pin_project;
 use rental::*;
 use std::collections::HashMap;
 use std::pin::Pin;
@@ -248,28 +249,53 @@ impl<T: std::fmt::Debug> Observable<T> {
         }
     }
 
-    pub async fn edit(&self, f: impl FnOnce(&mut T)) {
+    async fn maybe_mutate(&self, f: impl FnOnce(&mut T) -> bool) -> bool {
         let mut inner = self.0.state.lock().await;
         if let Some(trace_id) = self.1 {
             log::info!("[{}] edit version={} prev={:?}", trace_id, inner.version, inner.current);
         }
-        f(&mut inner.current);
-        inner.version += 1;
-        if let Some(trace_id) = self.1 {
-            log::info!(
-                "[{}] edited version={} current={:?}",
-                trace_id,
-                inner.version,
-                inner.current
-            );
+        let changed = f(&mut inner.current);
+        if changed {
+            inner.version += 1;
+            if let Some(trace_id) = self.1 {
+                log::info!(
+                    "[{}] edited version={} current={:?}",
+                    trace_id,
+                    inner.version,
+                    inner.current
+                );
+            }
+            std::mem::replace(&mut inner.waiters, Default::default())
+                .into_iter()
+                .for_each(|(_, w)| w.wake());
         }
-        std::mem::replace(&mut inner.waiters, Default::default())
-            .into_iter()
-            .for_each(|(_, w)| w.wake());
+        changed
+    }
+
+    pub async fn edit(&self, f: impl FnOnce(&mut T)) {
+        self.maybe_mutate(move |v| {
+            f(v);
+            true
+        })
+        .await;
     }
 
     pub async fn push(&self, new: T) {
-        self.edit(|current| *current = new).await;
+        self.edit(|current| *current = new).await
+    }
+
+    pub async fn maybe_push(&self, new: T) -> bool
+    where
+        T: std::cmp::PartialEq,
+    {
+        self.maybe_mutate(move |current| {
+            let change = *current != new;
+            if change {
+                *current = new;
+            }
+            change
+        })
+        .await
     }
 }
 
@@ -324,5 +350,39 @@ mod test {
         assert_eq!(observer.next().await, Some(4));
         drop(observable);
         assert_eq!(observer.next().await, None);
+    }
+}
+
+/// Wait for two futures: A & B.
+/// Poll, biased towards A.
+/// Whenever one completes, invoke now_or_never() on the other, and return a tuple of (optional)
+/// results - the future that triggered completion will always be Some, the future that did not
+/// be Some or None depending on whether it also completed.
+#[pin_project]
+pub struct SelectThenNowOrNever<A, B> {
+    #[pin]
+    a: A,
+    #[pin]
+    b: B,
+}
+
+impl<A: Future, B: Future> SelectThenNowOrNever<A, B> {
+    pub fn new(a: A, b: B) -> Self {
+        Self { a, b }
+    }
+}
+
+impl<A: Future, B: Future> Future for SelectThenNowOrNever<A, B> {
+    type Output = (Option<A::Output>, Option<B::Output>);
+
+    fn poll(self: Pin<&mut Self>, ctx: &mut Context<'_>) -> Poll<Self::Output> {
+        let mut this = self.project();
+        match this.a.as_mut().poll(ctx) {
+            Poll::Ready(a) => Poll::Ready((Some(a), this.b.now_or_never())),
+            Poll::Pending => match this.b.poll(ctx) {
+                Poll::Ready(b) => Poll::Ready((this.a.now_or_never(), Some(b))),
+                Poll::Pending => Poll::Pending,
+            },
+        }
     }
 }

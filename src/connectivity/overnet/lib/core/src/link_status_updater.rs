@@ -5,26 +5,26 @@
 use crate::{
     future_help::{Observable, Observer, PollMutex},
     labels::{NodeId, NodeLinkId},
-    link::LinkStatus,
+    routes::LinkMetrics,
 };
 use anyhow::Error;
-use fuchsia_async::{Task, Timer};
+use fuchsia_async::Task;
 use futures::{future::poll_fn, lock::Mutex, prelude::*, ready};
 use std::{
-    collections::HashMap,
+    collections::{BTreeMap, HashMap},
     sync::Arc,
     task::{Poll, Waker},
     time::Duration,
 };
 
-pub type LinkStatePublisher =
+pub(crate) type LinkStatePublisher =
     futures::channel::mpsc::Sender<(NodeLinkId, NodeId, Observer<Option<Duration>>)>;
-pub type LinkStateReceiver =
+pub(crate) type LinkStateReceiver =
     futures::channel::mpsc::Receiver<(NodeLinkId, NodeId, Observer<Option<Duration>>)>;
 
-pub async fn run_link_status_updater(
+pub(crate) async fn run_link_status_updater(
     my_node_id: NodeId,
-    observable: Arc<Observable<Vec<LinkStatus>>>,
+    observable: Observable<BTreeMap<NodeId, LinkMetrics>>,
     mut receiver: LinkStateReceiver,
 ) -> Result<(), Error> {
     struct RecvState {
@@ -35,7 +35,7 @@ pub async fn run_link_status_updater(
     let publisher_recv_state = recv_state.clone();
     let _publisher = Task::spawn(async move {
         let mut poll_mutex = PollMutex::new(&publisher_recv_state);
-        let mut link_status = HashMap::<NodeLinkId, (NodeId, Duration)>::new();
+        let mut link_status = HashMap::<NodeLinkId, (NodeId, Option<Duration>)>::new();
         loop {
             poll_fn(|ctx| {
                 let mut updated = false;
@@ -49,11 +49,10 @@ pub async fn run_link_status_updater(
                                 i += 1;
                                 break;
                             }
-                            Poll::Ready(Some(Some(duration))) => {
+                            Poll::Ready(Some(duration)) => {
                                 updated = true;
                                 link_status.insert(*node_link_id, (*node_id, duration));
                             }
-                            Poll::Ready(Some(None)) => (),
                             Poll::Ready(None) => {
                                 updated = true;
                                 link_status.remove(node_link_id);
@@ -71,17 +70,21 @@ pub async fn run_link_status_updater(
                 }
             })
             .await;
-            let new_status: Vec<_> = link_status
-                .iter()
-                .map(|(node_link_id, (node_id, round_trip_time))| LinkStatus {
-                    to: *node_id,
-                    local_id: *node_link_id,
-                    round_trip_time: *round_trip_time,
-                })
-                .collect();
+            let mut new_status: BTreeMap<NodeId, LinkMetrics> = Default::default();
+            for (&node_link_id, &(node_id, round_trip_time)) in link_status.iter() {
+                let metrics = LinkMetrics { node_link_id, round_trip_time };
+                new_status
+                    .entry(node_id)
+                    .and_modify(|link_metrics| {
+                        if metrics.score() > link_metrics.score() {
+                            *link_metrics = metrics.clone();
+                        }
+                    })
+                    .or_insert(metrics);
+            }
             log::trace!("[{:?}] new status is {:?}", my_node_id, new_status);
             observable.push(new_status).await;
-            Timer::new(Duration::from_millis(300)).await;
+            //Timer::new(Duration::from_millis(300)).await;
         }
     });
     while let Some(incoming) = receiver.next().await {

@@ -129,9 +129,10 @@ impl State {
                 self.ping_spacing = MAX_PING_SPACING;
             }
         }
+        let previously_published_mean = self.published_mean;
         let new_round_trip_time = mean > 0
-            && (self.published_mean <= 0
-                || (self.published_mean - mean).abs() > self.published_mean / 10);
+            && (previously_published_mean <= 0
+                || (previously_published_mean - mean).abs() > previously_published_mean / 10);
         if new_round_trip_time {
             self.published_mean = mean;
             self.round_trip_time.push(Some(Duration::from_micros(mean as u64))).await;
@@ -143,6 +144,14 @@ impl State {
                 self.wake_on_change_timeout.take().map(|w| w.wake());
             }
         }
+        log::trace!(
+            "PING_TRACKER: n={} mean={} published_mean={} variance={} new_rtt={}",
+            n,
+            mean,
+            previously_published_mean,
+            self.variance,
+            new_round_trip_time
+        );
         Ok(())
     }
 
@@ -298,12 +307,13 @@ impl<'a> PingSender<'a> {
     pub fn new(tracker: &'a PingTracker) -> Self {
         Self(PollMutex::new(&*tracker.0))
     }
+}
 
-    pub fn poll(&mut self, ctx: &mut Context<'_>) -> (Option<u64>, Option<Pong>) {
-        let mut state = match self.0.poll(ctx) {
-            Poll::Pending => return (None, None),
-            Poll::Ready(x) => x,
-        };
+impl<'a> Future for PingSender<'a> {
+    // Output is guaranteed to be not (None, None)
+    type Output = (Option<u64>, Option<Pong>);
+    fn poll(mut self: Pin<&mut Self>, ctx: &mut Context<'_>) -> Poll<Self::Output> {
+        let mut state = ready!(self.0.poll(ctx));
         let ping = if state.send_ping {
             state.send_ping = false;
             let id = state.next_ping_id;
@@ -324,8 +334,10 @@ impl<'a> PingSender<'a> {
         };
         if ping.is_none() && pong.is_none() {
             state.on_send_ping_pong = Some(ctx.waker().clone());
+            Poll::Pending
+        } else {
+            Poll::Ready((ping, pong))
         }
-        (ping, pong)
     }
 }
 
@@ -334,6 +346,7 @@ mod test {
     use super::*;
     use fuchsia_async::{Task, Timer};
     use futures::task::noop_waker;
+    use std::future::Future;
 
     #[fuchsia_async::run(1, test)]
     async fn published_mean_updates(run: usize) {
@@ -345,17 +358,18 @@ mod test {
         });
         loop {
             log::info!("published_mean_updates[{}]: send ping", run);
-            let mut ping_sender = PingSender::new(&pt);
-            let (ping, pong) = ping_sender.poll(&mut Context::from_waker(&noop_waker()));
-            assert_eq!(pong, None);
-            if ping.is_none() {
-                log::info!("published_mean_updates[{}]: got none for ping, retry", run);
-                drop(ping_sender);
-                Timer::new(Duration::from_millis(10)).await;
-                continue;
+            match Pin::new(&mut PingSender::new(&pt)).poll(&mut Context::from_waker(&noop_waker()))
+            {
+                Poll::Pending => {
+                    Timer::new(Duration::from_millis(10)).await;
+                    continue;
+                }
+                Poll::Ready((ping, pong)) => {
+                    assert_eq!(pong, None);
+                    assert_eq!(ping, Some(1));
+                    break;
+                }
             }
-            assert_eq!(ping, Some(1));
-            break;
         }
         log::info!("published_mean_updates[{}]: wait for second observation", run);
         assert_eq!(rtt_obs.next().await, Some(None));
