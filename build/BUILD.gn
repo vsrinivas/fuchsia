@@ -14,20 +14,6 @@ group("tests") {
   ]
 }
 
-group("deprecated_bare_tests_allowlist") {
-  #  ________  _________  ________  ________
-  # |\   ____\|\___   ___\\   __  \|\   __  \
-  # \ \  \___|\|___ \  \_\ \  \|\  \ \  \|\  \
-  #  \ \_____  \   \ \  \ \ \  \\\  \ \   ____\
-  #   \|____|\  \   \ \  \ \ \  \\\  \ \  \___|
-  #     ____\_\  \   \ \__\ \ \_______\ \__\
-  #    |\_________\   \|__|  \|_______|\|__|
-  #    \|_________|
-  # This is an allowlist of packages that have bare tests which haven't been converted to components yet.
-  # This is only intended to be used as a temporary allowlist. Do not add to this list.
-  visibility = [ "//topaz/runtime/dart/utils:run_vmservice_object_tests" ]
-}
-
 group("deprecated_package") {
   #  ________  _________  ________  ________
   # |\   ____\|\___   ___\\   __  \|\   __  \

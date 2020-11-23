@@ -410,20 +410,22 @@ template("package") {
       not_needed([ "dest_name" ])
 
       # Check that all tests are components with cmx/cm files at the expected path.
-      if (!is_disabled && (!defined(require_bare_tests_allowlist) ||
-                           !require_bare_tests_allowlist)) {
-        require_bare_tests_allowlist = true
+      if (!is_disabled) {
+        found_manifest = false
         url_resource_path = ""
         foreach(meta, pkg.meta) {
           extension = get_path_info(meta.dest, "extension")
           if (extension == "cmx" || extension == "cm") {
             meta_name = get_path_info(meta.dest, "name")
             if (dest_name == meta_name) {
-              require_bare_tests_allowlist = false
+              found_manifest = true
               url_resource_path = "#meta/${meta.dest}"
             }
           }
         }
+        assert(
+            found_manifest,
+            "Test ${test.name} did not have a matching component manifest file")
         url += url_resource_path
       }
 
@@ -675,13 +677,6 @@ template("package") {
         # Prevent the contents of this package from getting picked up in a zbi.
         # See fxbug.dev/45680 for more information.
         metadata.distribution_entries_barrier = []
-      }
-
-      # Add the dep on the allowlist here rather than in pkg.deps earlier so that we can allow
-      # specific targets by the package target's name using visibility.
-      if (defined(require_bare_tests_allowlist) &&
-          require_bare_tests_allowlist) {
-        deps += [ "//build:deprecated_bare_tests_allowlist" ]
       }
 
       deps += [ "//build:deprecated_package" ]
