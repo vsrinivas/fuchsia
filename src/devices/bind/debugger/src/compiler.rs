@@ -271,6 +271,7 @@ fn deprecated_keys() -> Vec<(String, u32)> {
     keys.push(("BIND_PLATFORM_DEV_PID".to_string(), 0x0301));
     keys.push(("BIND_PLATFORM_DEV_DID".to_string(), 0x0302));
     keys.push(("BIND_PLATFORM_PROTO".to_string(), 0x0303));
+    keys.push(("BIND_PLATFORM_DEV_INSTANCE_ID".to_string(), 0x0304));
 
     // ACPI binding variables at 0x04XX
     // The _HID is a 7- or 8-byte string. Because a bind property is 32-bit, use 2

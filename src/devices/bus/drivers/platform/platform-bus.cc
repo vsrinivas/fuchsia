@@ -292,7 +292,8 @@ zx_status_t PlatformBus::PBusCompositeDeviceAdd(const pbus_dev_t* pdev,
       BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PDEV),
       BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, pdev->vid),
       BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, pdev->pid),
-      BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, pdev->did),
+      BI_ABORT_IF(NE, BIND_PLATFORM_DEV_DID, pdev->did),
+      BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_INSTANCE_ID, pdev->instance_id),
   };
   const device_fragment_part_t pdev_fragment[] = {
       {countof(root_match), root_match},
@@ -307,6 +308,7 @@ zx_status_t PlatformBus::PBusCompositeDeviceAdd(const pbus_dev_t* pdev,
       {BIND_PLATFORM_DEV_VID, 0, pdev->vid},
       {BIND_PLATFORM_DEV_PID, 0, pdev->pid},
       {BIND_PLATFORM_DEV_DID, 0, pdev->did},
+      {BIND_PLATFORM_DEV_INSTANCE_ID, 0, pdev->instance_id},
   };
 
   const composite_device_desc_t comp_desc = {

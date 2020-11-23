@@ -62,6 +62,9 @@ struct PbusDev {
     uint32 pid;
     /// `BIND_PLATFORM_DEV_DID`
     uint32 did;
+    /// Instance ID. Contributes to device-name if non-zero.
+    /// `BIND_PLATFORM_DEV_INSTANCE_ID`
+    uint32 instance_id;
     vector<PbusMmio> mmio;
     vector<PbusIrq> irq;
     vector<PbusBti> bti;

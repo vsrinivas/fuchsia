@@ -46,7 +46,8 @@ PlatformDevice::PlatformDevice(zx_device_t* parent, PlatformBus* bus, Type type,
       type_(type),
       vid_(pdev->vid),
       pid_(pdev->pid),
-      did_(pdev->did) {
+      did_(pdev->did),
+      instance_id_(pdev->instance_id) {
   strlcpy(name_, pdev->name, sizeof(name_));
 }
 
@@ -472,7 +473,12 @@ zx_status_t PlatformDevice::Start() {
   if (vid_ == PDEV_VID_GENERIC && pid_ == PDEV_PID_GENERIC && did_ == PDEV_DID_KPCI) {
     strlcpy(name, "pci", sizeof(name));
   } else {
-    snprintf(name, sizeof(name), "%02x:%02x:%01x", vid_, pid_, did_);
+    if (instance_id_ == 0) {
+      // For backwards compatability, we elide instance id when it is 0.
+      snprintf(name, sizeof(name), "%02x:%02x:%01x", vid_, pid_, did_);
+    } else {
+      snprintf(name, sizeof(name), "%02x:%02x:%01x:%01x", vid_, pid_, did_, instance_id_);
+    }
   }
   char argstr[64];
   snprintf(argstr, sizeof(argstr), "pdev:%s,", name);
@@ -492,6 +498,7 @@ zx_status_t PlatformDevice::Start() {
       {BIND_PLATFORM_DEV_VID, 0, vid_},
       {BIND_PLATFORM_DEV_PID, 0, pid_},
       {BIND_PLATFORM_DEV_DID, 0, did_},
+      {BIND_PLATFORM_DEV_INSTANCE_ID, 0, instance_id_},
   };
   return DdkAdd(ddk::DeviceAddArgs(name)
                     .set_flags(device_add_flags)

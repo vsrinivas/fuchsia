@@ -103,6 +103,7 @@ class PlatformDevice : public PlatformDeviceType,
   const uint32_t vid_;
   const uint32_t pid_;
   const uint32_t did_;
+  const uint32_t instance_id_;
 
   // Platform bus resources for this device
   DeviceResources resources_;

@@ -81,6 +81,7 @@ __BEGIN_CDECLS
 #define BIND_PLATFORM_DEV_PID 0x0301
 #define BIND_PLATFORM_DEV_DID 0x0302
 #define BIND_PLATFORM_PROTO 0x0303
+#define BIND_PLATFORM_DEV_INSTANCE_ID 0x0304
 
 // ACPI binding variables at 0x04XX
 // The _HID is a 7- or 8-byte string. Because a bind property is 32-bit, use 2
