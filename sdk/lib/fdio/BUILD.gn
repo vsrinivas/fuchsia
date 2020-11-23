@@ -105,6 +105,14 @@ if (toolchain_variant.configs + fuzzer_configs - fuzzer_configs !=
       "//zircon/third_party/ulib/musl:getifaddrs-internal",
     ]
   }
+  zx_library("fdio-spawn-actions") {
+    configs += [ "//build/config:all_source" ]
+    sdk = "shared"
+    sdk_publishable = true
+    sdk_headers = [ "lib/fdio/spawn-actions.h" ]
+    shared = true
+    deps = [ ":fdio" ]
+  }
 } else {
   source_set("fdio") {
     public_configs = [ ":fdio_includes" ]

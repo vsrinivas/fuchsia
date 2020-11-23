@@ -71,6 +71,7 @@ source_set("lib") {
     "//sdk/fidl/fuchsia.power.manager:fuchsia.power.manager_llcpp",
     "//sdk/fidl/fuchsia.process.lifecycle:fuchsia.process.lifecycle_llcpp",
     "//sdk/lib/fdio",
+    "//sdk/lib/fdio:fdio-spawn-actions",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
     "//src/devices/lib/log",

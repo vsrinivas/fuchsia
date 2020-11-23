@@ -10,6 +10,7 @@
 #include <fuchsia/hardware/virtioconsole/llcpp/fidl.h>
 #include <fuchsia/power/manager/llcpp/fidl.h>
 #include <lib/fdio/directory.h>
+#include <lib/fdio/spawn-actions.h>
 #include <lib/fdio/spawn.h>
 #include <lib/fdio/unsafe.h>
 #include <lib/fdio/watcher.h>
@@ -23,9 +24,10 @@
 #include <zircon/syscalls/log.h>
 #include <zircon/syscalls/policy.h>
 
+#include <vector>
+
 #include <fbl/string_printf.h>
 #include <fbl/unique_fd.h>
-#include <fbl/vector.h>
 
 #include "devfs.h"
 #include "fdio.h"
@@ -240,52 +242,64 @@ zx_status_t SystemInstance::StartSvchost(const zx::job& root_job, const zx::chan
       nullptr,
   };
 
-  fbl::Vector<fdio_spawn_action_t> actions;
+  FdioSpawnActions fdio_spawn_actions;
 
-  actions.push_back((fdio_spawn_action_t){
+  fdio_spawn_actions.AddAction(fdio_spawn_action_t{
       .action = FDIO_SPAWN_ACTION_SET_NAME,
       .name = {.data = name},
   });
 
-  actions.push_back((fdio_spawn_action_t){
-      .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
-      .h = {.id = PA_DIRECTORY_REQUEST, .handle = dir_request.release()},
-  });
-  actions.push_back((fdio_spawn_action_t){
-      .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
-      .h = {.id = PA_HND(PA_FD, FDIO_FLAG_USE_FOR_STDIO), .handle = logger.release()},
-  });
+  fdio_spawn_actions.AddActionWithHandle(
+      fdio_spawn_action_t{
+          .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
+          .h = {.id = PA_DIRECTORY_REQUEST},
+      },
+      &dir_request);
+  fdio_spawn_actions.AddActionWithHandle(
+      fdio_spawn_action_t{
+          .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
+          .h = {.id = PA_HND(PA_FD, FDIO_FLAG_USE_FOR_STDIO)},
+      },
+      &logger);
 
   // Give svchost a restricted root job handle. svchost is already a privileged system service
   // as it controls system-wide process launching. With the root job it can consolidate a few
   // services such as crashsvc and the profile service.
-  actions.push_back((fdio_spawn_action_t){
-      .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
-      .h = {.id = PA_HND(PA_USER0, 1), .handle = root_job_copy.release()},
-  });
+  fdio_spawn_actions.AddActionWithHandle(
+      fdio_spawn_action_t{
+          .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
+          .h = {.id = PA_HND(PA_USER0, 1)},
+      },
+      &root_job_copy);
 
   // Also give svchost a restricted root resource handle, this allows it to run the kernel-debug
   // service.
   if (root_resource_copy.is_valid()) {
-    actions.push_back((fdio_spawn_action_t){
-        .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
-        .h = {.id = PA_HND(PA_USER0, 2), .handle = root_resource_copy.release()},
-    });
+    fdio_spawn_actions.AddActionWithHandle(
+        fdio_spawn_action_t{
+            .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
+            .h = {.id = PA_HND(PA_USER0, 2)},
+        },
+        &root_resource_copy);
   }
 
   // Add handle to channel to allow svchost to proxy fidl services to us.
-  actions.push_back((fdio_spawn_action_t){
-      .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
-      .h = {.id = PA_HND(PA_USER0, 3), .handle = coordinator_client.release()},
-  });
+  fdio_spawn_actions.AddActionWithHandle(
+      fdio_spawn_action_t{
+          .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
+          .h = {.id = PA_HND(PA_USER0, 3)},
+      },
+      &coordinator_client);
 
   // Add handle to channel to allow svchost to connect to services from devcoordinator's /svc, which
   // is hosted by fragment_manager and includes services routed from other fragments; see
   // "devcoordinator.cml".
-  actions.push_back((fdio_spawn_action_t){
-      .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
-      .h = {.id = PA_HND(PA_USER0, 7), .handle = devcoordinator_svc.release()},
-  });
+  fdio_spawn_actions.AddActionWithHandle(
+      fdio_spawn_action_t{
+          .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
+          .h = {.id = PA_HND(PA_USER0, 7)},
+      },
+      &devcoordinator_svc);
 
   // Give svchost access to /dev/class/sysmem, to enable svchost to forward sysmem service
   // requests to the sysmem driver.  Create a namespace containing /dev/class/sysmem.
@@ -294,18 +308,21 @@ zx_status_t SystemInstance::StartSvchost(const zx::job& root_job, const zx::chan
     LOGF(ERROR, "Failed to clone '/dev/class/sysmem'");
     return ZX_ERR_BAD_STATE;
   }
-  actions.push_back((fdio_spawn_action_t){
-      .action = FDIO_SPAWN_ACTION_ADD_NS_ENTRY,
-      .ns = {.prefix = "/sysmem", .handle = fs_handle.release()},
-  });
+  fdio_spawn_actions.AddActionWithNamespace(
+      fdio_spawn_action_t{
+          .action = FDIO_SPAWN_ACTION_ADD_NS_ENTRY,
+          .ns = {.prefix = "/sysmem"},
+      },
+      &fs_handle);
 
   uint32_t spawn_flags =
       FDIO_SPAWN_CLONE_JOB | FDIO_SPAWN_DEFAULT_LDSVC | FDIO_SPAWN_CLONE_UTC_CLOCK;
 
   char errmsg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH];
-  zx_handle_t proc = ZX_HANDLE_INVALID;
+  zx::process proc;
+  std::vector<fdio_spawn_action_t> actions = fdio_spawn_actions.GetActions();
   status = fdio_spawn_etc(svc_job_copy.get(), spawn_flags, argv[0], argv, NULL, actions.size(),
-                          actions.data(), &proc, errmsg);
+                          actions.data(), proc.reset_and_get_address(), errmsg);
   if (status != ZX_OK) {
     LOGF(ERROR, "Failed to launch %s (%s): %s", argv[0], name, errmsg);
     return status;
