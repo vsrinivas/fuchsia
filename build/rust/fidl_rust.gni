@@ -36,7 +36,10 @@ template("fidl_rust") {
   compiled_action(generation_target_name) {
     forward_variables_from(invoker, [ "testonly" ])
 
-    visibility = [ ":*" ]
+    visibility = [
+      ":*",
+      "//tools/fidl/fidlgen_rust:*",
+    ]
 
     tool = "//tools/fidl/fidlgen_rust"
 

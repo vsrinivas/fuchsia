@@ -1,0 +1,218 @@
+{
+  "version": "0.0.1",
+  "name": "fidl.test.service",
+  "library_dependencies": [],
+  "bits_declarations": [],
+  "const_declarations": [],
+  "enum_declarations": [],
+  "experimental_resource_declarations": [],
+  "interface_declarations": [
+    {
+      "name": "fidl.test.service/FirstProtocol",
+      "location": {
+        "filename": "../../zircon/tools/fidl/testdata/service.test.fidl",
+        "line": 10,
+        "column": 10,
+        "length": 13
+      },
+      "methods": [
+        {
+          "ordinal": 6590661047173168036,
+          "name": "MethodOnFirst",
+          "location": {
+            "filename": "../../zircon/tools/fidl/testdata/service.test.fidl",
+            "line": 11,
+            "column": 5,
+            "length": 13
+          },
+          "has_request": true,
+          "maybe_request": [],
+          "maybe_request_type_shape_v1": {
+            "inline_size": 16,
+            "alignment": 8,
+            "depth": 0,
+            "max_handles": 0,
+            "max_out_of_line": 0,
+            "has_padding": false,
+            "has_flexible_envelope": false,
+            "is_resource": false
+          },
+          "has_response": false,
+          "is_composed": false
+        }
+      ]
+    },
+    {
+      "name": "fidl.test.service/SecondProtocol",
+      "location": {
+        "filename": "../../zircon/tools/fidl/testdata/service.test.fidl",
+        "line": 18,
+        "column": 10,
+        "length": 14
+      },
+      "methods": [
+        {
+          "ordinal": 6118813307380259369,
+          "name": "MethodOnSecond",
+          "location": {
+            "filename": "../../zircon/tools/fidl/testdata/service.test.fidl",
+            "line": 19,
+            "column": 5,
+            "length": 14
+          },
+          "has_request": true,
+          "maybe_request": [],
+          "maybe_request_type_shape_v1": {
+            "inline_size": 16,
+            "alignment": 8,
+            "depth": 0,
+            "max_handles": 0,
+            "max_out_of_line": 0,
+            "has_padding": false,
+            "has_flexible_envelope": false,
+            "is_resource": false
+          },
+          "has_response": false,
+          "is_composed": false
+        }
+      ]
+    }
+  ],
+  "service_declarations": [
+    {
+      "name": "fidl.test.service/EmptyService",
+      "location": {
+        "filename": "../../zircon/tools/fidl/testdata/service.test.fidl",
+        "line": 7,
+        "column": 9,
+        "length": 12
+      },
+      "members": []
+    },
+    {
+      "name": "fidl.test.service/SingleMemberService",
+      "location": {
+        "filename": "../../zircon/tools/fidl/testdata/service.test.fidl",
+        "line": 14,
+        "column": 9,
+        "length": 19
+      },
+      "members": [
+        {
+          "type": {
+            "kind": "identifier",
+            "identifier": "fidl.test.service/FirstProtocol",
+            "nullable": false
+          },
+          "name": "single_member",
+          "location": {
+            "filename": "../../zircon/tools/fidl/testdata/service.test.fidl",
+            "line": 15,
+            "column": 19,
+            "length": 13
+          }
+        }
+      ]
+    },
+    {
+      "name": "fidl.test.service/MultiHeterogeneousMemberService",
+      "location": {
+        "filename": "../../zircon/tools/fidl/testdata/service.test.fidl",
+        "line": 22,
+        "column": 9,
+        "length": 31
+      },
+      "members": [
+        {
+          "type": {
+            "kind": "identifier",
+            "identifier": "fidl.test.service/FirstProtocol",
+            "nullable": false
+          },
+          "name": "first_member",
+          "location": {
+            "filename": "../../zircon/tools/fidl/testdata/service.test.fidl",
+            "line": 23,
+            "column": 19,
+            "length": 12
+          }
+        },
+        {
+          "type": {
+            "kind": "identifier",
+            "identifier": "fidl.test.service/SecondProtocol",
+            "nullable": false
+          },
+          "name": "second_member",
+          "location": {
+            "filename": "../../zircon/tools/fidl/testdata/service.test.fidl",
+            "line": 24,
+            "column": 20,
+            "length": 13
+          }
+        }
+      ]
+    },
+    {
+      "name": "fidl.test.service/MultiHomogeneousMemberService",
+      "location": {
+        "filename": "../../zircon/tools/fidl/testdata/service.test.fidl",
+        "line": 27,
+        "column": 9,
+        "length": 29
+      },
+      "members": [
+        {
+          "type": {
+            "kind": "identifier",
+            "identifier": "fidl.test.service/FirstProtocol",
+            "nullable": false
+          },
+          "name": "first_member",
+          "location": {
+            "filename": "../../zircon/tools/fidl/testdata/service.test.fidl",
+            "line": 28,
+            "column": 19,
+            "length": 12
+          }
+        },
+        {
+          "type": {
+            "kind": "identifier",
+            "identifier": "fidl.test.service/FirstProtocol",
+            "nullable": false
+          },
+          "name": "second_member",
+          "location": {
+            "filename": "../../zircon/tools/fidl/testdata/service.test.fidl",
+            "line": 29,
+            "column": 19,
+            "length": 13
+          }
+        }
+      ]
+    }
+  ],
+  "struct_declarations": [],
+  "table_declarations": [],
+  "union_declarations": [],
+  "type_alias_declarations": [],
+  "declaration_order": [
+    "fidl.test.service/SecondProtocol",
+    "fidl.test.service/FirstProtocol",
+    "fidl.test.service/SingleMemberService",
+    "fidl.test.service/MultiHomogeneousMemberService",
+    "fidl.test.service/MultiHeterogeneousMemberService",
+    "fidl.test.service/EmptyService"
+  ],
+  "declarations": {
+    "fidl.test.service/FirstProtocol": "interface",
+    "fidl.test.service/SecondProtocol": "interface",
+    "fidl.test.service/EmptyService": "service",
+    "fidl.test.service/SingleMemberService": "service",
+    "fidl.test.service/MultiHeterogeneousMemberService": "service",
+    "fidl.test.service/MultiHomogeneousMemberService": "service",
+    "fidl.test.service/SomeLongAnonymousPrefix0": "struct",
+    "fidl.test.service/SomeLongAnonymousPrefix1": "struct"
+  }
+}

@@ -1,0 +1,138 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/testing/host_test.gni")
+import("//build/testing/host_test_data.gni")
+
+# Declares a golden test.
+#
+# This template creates a test to verify that certain generated files match
+# golden copies checked into the source tree. When invoked with the --regen
+# flag, the test instead overwrites the golden files with freshly generated
+# copies, guaranteeing that the next test run will pass.
+#
+# For simpler, single-file golden testing that executes during the build, see
+# //build/testing/golden_file.gni.
+#
+# Example
+# ```
+# golden_test("foo_golden_tests") {
+#   goldens_dir = "goldens"
+#   deps = [ ":generate_json" ]
+#   entries = [
+#     {
+#       golden = "out.json.golden"
+#       generated = "$target_gen_dir/foo_out.json"
+#     },
+#   ]
+# }
+# ```
+#
+# Setup
+# ```
+# $ $EDITOR BUILD.gn  # add the example code above
+# $ mkdir goldens
+# $ touch goldens/goldens.txt
+# $ fx test foo_golden_tests -- --regen
+# Regenerating goldens in /path/to/your/goldens
+# ...
+# $ fx test foo_golden_tests
+# ...
+# PASS
+# ```
+#
+# Parameters
+#
+#   goldens_dir (required)
+#     Directory of golden files, relative to the invoking BUILD.gn file. Must
+#     contain a goldens.txt file. Each file path listed in goldens.txt must
+#     exist, otherwise a gen-time error is produced.
+#
+#   entries (required)
+#     List of scopes, each with `golden` and `generated` fields. The `golden`
+#     field is a file path relative to `goldens_dir`. The `generated` field is
+#     an absolute path to the corresponding generated file, which must be
+#     produced by one of the targets in `deps`.
+#
+#   deps (required)
+#   visibility
+#
+template("golden_test") {
+  not_needed(invoker,
+             [
+               "testonly",
+               "public_deps",
+             ])
+  assert(defined(invoker.goldens_dir))
+  assert(defined(invoker.entries))
+  assert(defined(invoker.deps))
+
+  copied_goldens_prefix = "$target_gen_dir/${target_name}_"
+  copied_goldens_dir = copied_goldens_prefix + invoker.goldens_dir
+  manifest_file = "$target_gen_dir/${target_name}_manifest.json"
+
+  # Copy golden files from the source tree so the test can access them. Also
+  # copy the goldens.txt file itself to ensure the test fails when golden files
+  # are removed (it won't just use copies that are still lying around).
+  target_copy_goldens = "${target_name}_copy_goldens"
+  host_test_data(target_copy_goldens) {
+    visibility = [ ":*" ]
+    sources = rebase_path(
+            [ "goldens.txt" ] +
+                read_file("${invoker.goldens_dir}/goldens.txt", "list lines"),
+            ".",
+            "${invoker.goldens_dir}")
+    outputs = [ copied_goldens_prefix + "{{source_target_relative}}" ]
+  }
+
+  # Generate the manifest file.
+  target_generate_manifest = "${target_name}_generate_manifest"
+  generated_file(target_generate_manifest) {
+    visibility = [ ":*" ]
+    testonly = true
+    contents = {
+      test_goldens_dir = rebase_path(copied_goldens_dir, root_build_dir)
+      regen_goldens_dir = rebase_path(invoker.goldens_dir, root_build_dir)
+      entries = []
+    }
+    foreach(entry, invoker.entries) {
+      assert(get_path_info(entry.golden, "extension") == "golden",
+             "Golden filename '${entry.golden}' does not end in '.golden'")
+      contents.entries += [
+        {
+          golden = entry.golden
+          generated = rebase_path(entry.generated, root_build_dir)
+        },
+      ]
+    }
+    outputs = [ manifest_file ]
+    output_conversion = "json"
+  }
+
+  # Allow the test to access the manifest file and generated files.
+  target_generated_files = "${target_name}_generated_files"
+  host_test_data(target_generated_files) {
+    visibility = [ ":*" ]
+    sources = [ manifest_file ]
+    foreach(entry, invoker.entries) {
+      sources += [ entry.generated ]
+    }
+    deps = [ ":$target_generate_manifest" ] + invoker.deps
+  }
+
+  # Generate a test target, so that this test can be executed with `fx test`.
+  host_test(target_name) {
+    forward_variables_from(invoker, [ "visibility" ])
+    binary_path = "$root_out_dir/golden-util"
+    args = [
+      "--manifest",
+      rebase_path(manifest_file, root_build_dir),
+    ]
+    deps = [
+      ":$target_copy_goldens",
+      ":$target_generated_files",
+      "//tools/golden-util",
+    ]
+  }
+}

@@ -39,7 +39,10 @@ template("fidl_dart") {
   json_representation = "$fidl_target_gen_dir/$target_name.fidl.json"
 
   compiled_action(generation_target_name) {
-    visibility = [ ":*" ]
+    visibility = [
+      ":*",
+      "//tools/fidl/fidlgen_dart:*",
+    ]
 
     tool = "//tools/fidl/fidlgen_dart"
 

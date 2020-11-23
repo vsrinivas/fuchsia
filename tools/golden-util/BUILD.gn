@@ -1,0 +1,19 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/go/go_binary.gni")
+import("//build/go/go_library.gni")
+
+go_library("lib") {
+  testonly = true
+  name = "golden-util"
+  deps = [ "//third_party/golibs:github.com/google/go-cmp" ]
+  sources = [ "main.go" ]
+}
+
+go_binary("golden-util") {
+  testonly = true
+  gopackage = "golden-util"
+  deps = [ ":lib" ]
+}

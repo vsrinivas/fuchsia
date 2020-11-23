@@ -1,0 +1,322 @@
+{
+  "version": "0.0.1",
+  "name": "fidl.test.bindingsdenylist",
+  "library_dependencies": [],
+  "bits_declarations": [
+    {
+      "name": "fidl.test.bindingsdenylist/OnlySyzkaller",
+      "location": {
+        "filename": "../../zircon/tools/fidl/testdata/bindings_denylist.test.fidl",
+        "line": 13,
+        "column": 6,
+        "length": 13
+      },
+      "maybe_attributes": [
+        {
+          "name": "BindingsDenylist",
+          "value": "hlcpp, dart, go, libfuzzer, llcpp, rust"
+        }
+      ],
+      "type": {
+        "kind": "primitive",
+        "subtype": "uint32"
+      },
+      "mask": "1",
+      "members": [
+        {
+          "name": "A",
+          "location": {
+            "filename": "../../zircon/tools/fidl/testdata/bindings_denylist.test.fidl",
+            "line": 14,
+            "column": 5,
+            "length": 1
+          },
+          "value": {
+            "kind": "literal",
+            "value": "1",
+            "expression": "1",
+            "literal": {
+              "kind": "numeric",
+              "value": "1",
+              "expression": "1"
+            }
+          }
+        }
+      ],
+      "strict": true
+    }
+  ],
+  "const_declarations": [
+    {
+      "name": "fidl.test.bindingsdenylist/AllBindings",
+      "location": {
+        "filename": "../../zircon/tools/fidl/testdata/bindings_denylist.test.fidl",
+        "line": 10,
+        "column": 14,
+        "length": 11
+      },
+      "maybe_attributes": [
+        {
+          "name": "BindingsDenylist",
+          "value": "there_are_no_bindings_with_this_name"
+        }
+      ],
+      "type": {
+        "kind": "primitive",
+        "subtype": "uint32"
+      },
+      "value": {
+        "kind": "literal",
+        "value": "0",
+        "expression": "0",
+        "literal": {
+          "kind": "numeric",
+          "value": "0",
+          "expression": "0"
+        }
+      }
+    }
+  ],
+  "enum_declarations": [
+    {
+      "name": "fidl.test.bindingsdenylist/OnlyDart",
+      "location": {
+        "filename": "../../zircon/tools/fidl/testdata/bindings_denylist.test.fidl",
+        "line": 18,
+        "column": 6,
+        "length": 8
+      },
+      "maybe_attributes": [
+        {
+          "name": "BindingsDenylist",
+          "value": "hlcpp, go, libfuzzer, llcpp, rust, syzkaller"
+        }
+      ],
+      "type": "uint32",
+      "members": [
+        {
+          "name": "A",
+          "location": {
+            "filename": "../../zircon/tools/fidl/testdata/bindings_denylist.test.fidl",
+            "line": 19,
+            "column": 5,
+            "length": 1
+          },
+          "value": {
+            "kind": "literal",
+            "value": "1",
+            "expression": "1",
+            "literal": {
+              "kind": "numeric",
+              "value": "1",
+              "expression": "1"
+            }
+          }
+        }
+      ],
+      "strict": true
+    }
+  ],
+  "experimental_resource_declarations": [],
+  "interface_declarations": [
+    {
+      "name": "fidl.test.bindingsdenylist/OnlyLibfuzzer",
+      "location": {
+        "filename": "../../zircon/tools/fidl/testdata/bindings_denylist.test.fidl",
+        "line": 36,
+        "column": 10,
+        "length": 13
+      },
+      "maybe_attributes": [
+        {
+          "name": "BindingsDenylist",
+          "value": "hlcpp, dart, go, llcpp, rust, syzkaller"
+        }
+      ],
+      "methods": [
+        {
+          "ordinal": 6837315459284345174,
+          "name": "LibfuzzerNeedsNonemptyProtocol",
+          "location": {
+            "filename": "../../zircon/tools/fidl/testdata/bindings_denylist.test.fidl",
+            "line": 37,
+            "column": 5,
+            "length": 30
+          },
+          "has_request": true,
+          "maybe_request": [],
+          "maybe_request_type_shape_v1": {
+            "inline_size": 16,
+            "alignment": 8,
+            "depth": 0,
+            "max_handles": 0,
+            "max_out_of_line": 0,
+            "has_padding": false,
+            "has_flexible_envelope": false,
+            "is_resource": false
+          },
+          "has_response": true,
+          "maybe_response": [],
+          "maybe_response_type_shape_v1": {
+            "inline_size": 16,
+            "alignment": 8,
+            "depth": 0,
+            "max_handles": 0,
+            "max_out_of_line": 0,
+            "has_padding": false,
+            "has_flexible_envelope": false,
+            "is_resource": false
+          },
+          "is_composed": false
+        }
+      ]
+    }
+  ],
+  "service_declarations": [
+    {
+      "name": "fidl.test.bindingsdenylist/OnlyHlcpp",
+      "location": {
+        "filename": "../../zircon/tools/fidl/testdata/bindings_denylist.test.fidl",
+        "line": 41,
+        "column": 9,
+        "length": 9
+      },
+      "maybe_attributes": [
+        {
+          "name": "BindingsDenylist",
+          "value": "dart, go, libfuzzer, llcpp, rust, syzkaller"
+        }
+      ],
+      "members": []
+    }
+  ],
+  "struct_declarations": [
+    {
+      "name": "fidl.test.bindingsdenylist/OnlyGo",
+      "location": {
+        "filename": "../../zircon/tools/fidl/testdata/bindings_denylist.test.fidl",
+        "line": 23,
+        "column": 8,
+        "length": 6
+      },
+      "anonymous": false,
+      "maybe_attributes": [
+        {
+          "name": "BindingsDenylist",
+          "value": "hlcpp, dart, libfuzzer, llcpp, rust, syzkaller"
+        }
+      ],
+      "members": [],
+      "resource": false,
+      "type_shape_v1": {
+        "inline_size": 1,
+        "alignment": 1,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": false,
+        "has_flexible_envelope": false,
+        "is_resource": false
+      }
+    }
+  ],
+  "table_declarations": [
+    {
+      "name": "fidl.test.bindingsdenylist/OnlyRust",
+      "location": {
+        "filename": "../../zircon/tools/fidl/testdata/bindings_denylist.test.fidl",
+        "line": 27,
+        "column": 7,
+        "length": 8
+      },
+      "maybe_attributes": [
+        {
+          "name": "BindingsDenylist",
+          "value": "hlcpp, dart, go, libfuzzer, llcpp, syzkaller"
+        }
+      ],
+      "members": [],
+      "strict": false,
+      "resource": false,
+      "type_shape_v1": {
+        "inline_size": 16,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": false,
+        "has_flexible_envelope": true,
+        "is_resource": false
+      }
+    }
+  ],
+  "union_declarations": [
+    {
+      "name": "fidl.test.bindingsdenylist/OnlyLlcpp",
+      "location": {
+        "filename": "../../zircon/tools/fidl/testdata/bindings_denylist.test.fidl",
+        "line": 31,
+        "column": 7,
+        "length": 9
+      },
+      "maybe_attributes": [
+        {
+          "name": "BindingsDenylist",
+          "value": "hlcpp, dart, go, libfuzzer, rust, syzkaller"
+        }
+      ],
+      "members": [
+        {
+          "ordinal": 1,
+          "reserved": false,
+          "name": "x",
+          "type": {
+            "kind": "primitive",
+            "subtype": "uint32"
+          },
+          "location": {
+            "filename": "../../zircon/tools/fidl/testdata/bindings_denylist.test.fidl",
+            "line": 32,
+            "column": 15,
+            "length": 1
+          }
+        }
+      ],
+      "strict": true,
+      "resource": false,
+      "type_shape_v1": {
+        "inline_size": 24,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 8,
+        "has_padding": true,
+        "has_flexible_envelope": false,
+        "is_resource": false
+      }
+    }
+  ],
+  "type_alias_declarations": [],
+  "declaration_order": [
+    "fidl.test.bindingsdenylist/OnlyLibfuzzer",
+    "fidl.test.bindingsdenylist/OnlySyzkaller",
+    "fidl.test.bindingsdenylist/OnlyRust",
+    "fidl.test.bindingsdenylist/OnlyLlcpp",
+    "fidl.test.bindingsdenylist/OnlyHlcpp",
+    "fidl.test.bindingsdenylist/OnlyGo",
+    "fidl.test.bindingsdenylist/OnlyDart",
+    "fidl.test.bindingsdenylist/AllBindings"
+  ],
+  "declarations": {
+    "fidl.test.bindingsdenylist/OnlySyzkaller": "bits",
+    "fidl.test.bindingsdenylist/AllBindings": "const",
+    "fidl.test.bindingsdenylist/OnlyDart": "enum",
+    "fidl.test.bindingsdenylist/OnlyLibfuzzer": "interface",
+    "fidl.test.bindingsdenylist/OnlyHlcpp": "service",
+    "fidl.test.bindingsdenylist/SomeLongAnonymousPrefix0": "struct",
+    "fidl.test.bindingsdenylist/SomeLongAnonymousPrefix1": "struct",
+    "fidl.test.bindingsdenylist/OnlyGo": "struct",
+    "fidl.test.bindingsdenylist/OnlyRust": "table",
+    "fidl.test.bindingsdenylist/OnlyLlcpp": "union"
+  }
+}

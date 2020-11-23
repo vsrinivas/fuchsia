@@ -5,11 +5,11 @@
 import("//build/dart/dart_library.gni")
 import("//build/go/go_binary.gni")
 import("//build/go/go_library.gni")
-import("//build/go/go_test.gni")
 import("//build/go/toolchain.gni")
 import("//build/host.gni")
 import("//build/sdk/sdk_host_tool.gni")
-import("//zircon/tools/fidl/testdata/targets.gni")
+import("//build/testing/golden_test.gni")
+import("//zircon/tools/fidl/testdata/info.gni")
 
 go_library("fidlgen_dart_lib") {
   name = "go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_dart/..."
@@ -30,20 +30,6 @@ go_library("fidlgen_dart_lib") {
   ]
 }
 
-go_library("fidlgen_dart_test_lib") {
-  name = "go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_dart/..."
-  testonly = true
-
-  deps = [
-    ":fidlgen_dart_lib",
-    "//garnet/go/src/fidl/compiler/backend/typestest",
-  ]
-  if (is_linux || is_mac) {
-    non_go_deps = [ "goldens" ]
-  }
-  sources = [ "backend/codegen_test.go" ]
-}
-
 go_binary("fidlgen_dart") {
   gopackage = "go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_dart/"
   deps = [ ":fidlgen_dart_lib" ]
@@ -55,68 +41,46 @@ sdk_host_tool("fidlgen_dart_sdk") {
   deps = [ ":fidlgen_dart" ]
 }
 
-if (is_host) {
-  go_test("fidlgen_dart_backend_test") {
-    gopackages = [ "go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_dart/backend" ]
-
-    deps = [ ":fidlgen_dart_test_lib" ]
-    non_go_deps = [ ":copies" ]
-  }
-}
-
-group("copies") {
-  deps = [
-    ":copy_dart",
-    ":copy_dartfmt",
-    ":copy_dartsnapshot",
-  ]
-  metadata = {
-    test_runtime_deps = [
-      "$root_out_dir/test_data/fidlgen_dart/dart",
-      "$root_out_dir/test_data/fidlgen_dart/dartfmt",
-      "$root_out_dir/test_data/fidlgen_dart/snapshots/dartfmt.dart.snapshot",
-    ]
-  }
-}
-
-copy("copy_dartsnapshot") {
-  deps = dart_sdk_deps
-  sources = [ "$dart_sdk/bin/snapshots/dartfmt.dart.snapshot" ]
-  outputs =
-      [ "$root_out_dir/test_data/fidlgen_dart/snapshots/dartfmt.dart.snapshot" ]
-}
-
-copy("copy_dart") {
-  deps = dart_sdk_deps
-  sources = [ "$dart_sdk/bin/dart" ]
-  outputs = [ "$root_out_dir/test_data/fidlgen_dart/dart" ]
-}
-
-copy("copy_dartfmt") {
-  deps = dart_sdk_deps
-  sources = [ "$dart_sdk/bin/dartfmt" ]
-  outputs = [ "$root_out_dir/test_data/fidlgen_dart/dartfmt" ]
-}
-
 install_host_tools("host") {
   deps = [ ":fidlgen_dart" ]
   outputs = [ "fidlgen_dart" ]
 }
 
+golden_test("fidlgen_dart_golden_tests") {
+  goldens_dir = "goldens"
+  deps = []
+  entries = []
+  foreach(info, fidl_testdata_info) {
+    if (info.denylist + [ "fidlgen_dart" ] - [ "fidlgen_dart" ] ==
+        info.denylist) {
+      deps += [ "${info.target}_dart_generate($dart_toolchain)" ]
+      dart_gen_dir =
+          get_label_info("${info.target}($dart_toolchain)", "target_gen_dir")
+      entries += [
+        {
+          golden = "${info.name}_async.dart.golden"
+          generated =
+              "${dart_gen_dir}/${info.library}_package/lib/fidl_async.dart"
+        },
+        {
+          golden = "${info.name}_test.dart.golden"
+          generated =
+              "${dart_gen_dir}/${info.library}_package/lib/fidl_test.dart"
+        },
+      ]
+    }
+  }
+}
+
 group("goldens") {
   testonly = true
 
-  denylist = [
-    # TODO(fxbug.dev/62763): Fix undefined_identifier errors.
-    "//zircon/tools/fidl/testdata:fidl.test.consts",
-
-    # TODO(fxbug.dev/62761): Fix error about default value not being constant.
-    "//zircon/tools/fidl/testdata/struct_default_value_enum_library_reference:fidl.test.structdefaultvalueenumlibraryreference",
-  ]
-
   deps = []
-  foreach(target, fidl_testdata_targets - denylist) {
-    deps += [ "$target($dart_toolchain)" ]
+  foreach(info, fidl_testdata_info) {
+    if (info.build_denylist + [ "fidlgen_dart" ] - [ "fidlgen_dart" ] ==
+        info.build_denylist) {
+      deps += [ info.target ]
+    }
   }
 }
 
@@ -124,7 +88,7 @@ group("tests") {
   # TODO(ianloic): put fidlgen_dart non-host test targets here
   testonly = true
   deps = [
-    ":fidlgen_dart_backend_test($host_toolchain)",
-    ":goldens",
+    ":fidlgen_dart_golden_tests($host_toolchain)",
+    ":goldens($dart_toolchain)",
   ]
 }

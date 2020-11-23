@@ -178,9 +178,7 @@ fn render_template(
 #[cfg(test)]
 mod test {
     use super::*;
-    use glob::glob;
     use serde_json::json;
-    use std::{env, fs};
     #[test]
     fn render_main_page_test() {
         let source = include_str!("testdata/README.md");
@@ -247,87 +245,5 @@ mod test {
         let result = render_template(&template.handlebars, "toc".to_string(), &main_fidl_doc)
             .expect("Unable to render toc template");
         assert_eq!(result, source);
-    }
-
-    #[test]
-    fn golden_test() {
-        let template = MarkdownTemplate::new(&PathBuf::new());
-
-        // Load and parse fidldoc config file
-        let fidl_config: Value =
-            serde_json::from_str(include_str!("../../fidldoc.config.json")).unwrap();
-
-        let goldens_path = goldens_path();
-        let glob_pattern = goldens_path.join("*.json.golden");
-
-        let mut num_goldens = 0;
-
-        for entry in glob(&glob_pattern.to_str().unwrap()).unwrap() {
-            if let Ok(ir_golden_path) = entry {
-                num_goldens = num_goldens + 1;
-                let golden = ir_golden_path.file_name().unwrap();
-                let golden_name = golden.clone().to_str().unwrap();
-
-                let ir_golden_data = fs::read_to_string(&ir_golden_path).unwrap();
-
-                // For each golden JSON IR at <filename>.json.golden
-                // there's a corresponding markdown at <filename>.json.golden.md
-                let md_golden_path = goldens_path.join(format!("{}.md", golden_name));
-
-                // Read and parse declarations from the JSON IR golden
-                let mut declarations: Value = serde_json::from_str(&ir_golden_data)
-                    .with_context(|| format!("Unable to parse testdata for {}", golden_name))
-                    .unwrap();
-
-                // Merge declarations with config file
-                declarations["config"] = fidl_config.clone();
-                declarations["tag"] = json!("HEAD");
-
-                let result =
-                    render_template(&template.handlebars, "interface".to_string(), &declarations)
-                        .with_context(|| {
-                            format!("Unable to render interface template for {}", golden_name)
-                        })
-                        .unwrap();
-
-                // Set the environment variable REGENERATE_GOLDENS_FOLDER=<FOLDER>
-                // when running tests to regenerate goldens in <FOLDER>
-                match env::var("REGENERATE_GOLDENS_FOLDER") {
-                    Ok(folder) => {
-                        let mut path = PathBuf::from(folder);
-                        // Create the destination folder if needed
-                        fs::create_dir_all(&path).unwrap();
-                        path.push(format!("{}.md", golden_name));
-                        fs::write(path, result)
-                            .with_context(|| {
-                                format!("Unable to regenerate golden for {}", golden_name)
-                            })
-                            .unwrap();
-                    }
-                    Err(_) => {
-                        let md_golden_data = fs::read_to_string(&md_golden_path)
-                            .with_context(|| {
-                                format!("Unable to read golden from {}", &md_golden_path.display())
-                            })
-                            .unwrap();
-                        // Running regular test
-                        assert_eq!(
-                            result, md_golden_data,
-                            "Generated output for template {} doesn't match goldenset",
-                            golden_name
-                        );
-                    }
-                }
-            }
-        }
-
-        assert_ne!(num_goldens, 0, "Found 0 goldens in {}", &goldens_path.display());
-    }
-
-    fn goldens_path() -> PathBuf {
-        let mut path = env::current_exe().unwrap();
-        path.pop();
-        path = path.join("test_data/fidldoc");
-        path
     }
 }

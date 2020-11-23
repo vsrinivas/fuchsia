@@ -1,0 +1,148 @@
+[TOC]
+
+<div>
+<devsite-filter>
+<input type="text" placeholder="Type a keyword here to find a FIDL">
+
+<table>
+<thead><tr><th>Name</th><th>Description</th></tr></thead>
+<tbody class="list">
+<tr>
+    <td><a href="fidl.test.arrays/index">fidl.test.arrays</a></td>
+    <td></td>
+</tr>
+<tr>
+    <td><a href="fidl.test.bindingsdenylist/index">fidl.test.bindingsdenylist</a></td>
+    <td></td>
+</tr>
+<tr>
+    <td><a href="fidl.test.bits/index">fidl.test.bits</a></td>
+    <td></td>
+</tr>
+<tr>
+    <td><a href="fidl.test.byteandbytes/index">fidl.test.byteandbytes</a></td>
+    <td></td>
+</tr>
+<tr>
+    <td><a href="fidl.test.constants/index">fidl.test.constants</a></td>
+    <td></td>
+</tr>
+<tr>
+    <td><a href="fidl.test.consts/index">fidl.test.consts</a></td>
+    <td></td>
+</tr>
+<tr>
+    <td><a href="fidl.test.doccomments/index">fidl.test.doccomments</a></td>
+    <td> library comment #1</td>
+</tr>
+<tr>
+    <td><a href="fidl.test.emptystruct/index">fidl.test.emptystruct</a></td>
+    <td></td>
+</tr>
+<tr>
+    <td><a href="fidl.test.encapsulatedstructs/index">fidl.test.encapsulatedstructs</a></td>
+    <td></td>
+</tr>
+<tr>
+    <td><a href="fidl.test.enum/index">fidl.test.enum</a></td>
+    <td></td>
+</tr>
+<tr>
+    <td><a href="fidl.test.error/index">fidl.test.error</a></td>
+    <td></td>
+</tr>
+<tr>
+    <td><a href="fidl.test.escaping/index">fidl.test.escaping</a></td>
+    <td></td>
+</tr>
+<tr>
+    <td><a href="fidl.test.foreigntypeinresponseusedthroughcompose/index">fidl.test.foreigntypeinresponseusedthroughcompose</a></td>
+    <td></td>
+</tr>
+<tr>
+    <td><a href="fidl.test.handles/index">fidl.test.handles</a></td>
+    <td></td>
+</tr>
+<tr>
+    <td><a href="fidl.test.handlesintypes/index">fidl.test.handlesintypes</a></td>
+    <td></td>
+</tr>
+<tr>
+    <td><a href="fidl.test.inheritance/index">fidl.test.inheritance</a></td>
+    <td></td>
+</tr>
+<tr>
+    <td><a href="fidl.test.inheritancewithrecursivedecl/index">fidl.test.inheritancewithrecursivedecl</a></td>
+    <td></td>
+</tr>
+<tr>
+    <td><a href="fidl.test.nullable/index">fidl.test.nullable</a></td>
+    <td></td>
+</tr>
+<tr>
+    <td><a href="fidl.test.padding/index">fidl.test.padding</a></td>
+    <td></td>
+</tr>
+<tr>
+    <td><a href="fidl.test.placementofattributes/index">fidl.test.placementofattributes</a></td>
+    <td></td>
+</tr>
+<tr>
+    <td><a href="fidl.test.protocolrequest/index">fidl.test.protocolrequest</a></td>
+    <td></td>
+</tr>
+<tr>
+    <td><a href="fidl.test.protocols/index">fidl.test.protocols</a></td>
+    <td></td>
+</tr>
+<tr>
+    <td><a href="fidl.test.requestflexibleenvelope/index">fidl.test.requestflexibleenvelope</a></td>
+    <td></td>
+</tr>
+<tr>
+    <td><a href="fidl.test.service/index">fidl.test.service</a></td>
+    <td></td>
+</tr>
+<tr>
+    <td><a href="fidl.test.struct/index">fidl.test.struct</a></td>
+    <td></td>
+</tr>
+<tr>
+    <td><a href="fidl.test.structdefaultvalueenumlibraryreference/index">fidl.test.structdefaultvalueenumlibraryreference</a></td>
+    <td></td>
+</tr>
+<tr>
+    <td><a href="fidl.test.table/index">fidl.test.table</a></td>
+    <td></td>
+</tr>
+<tr>
+    <td><a href="fidl.test.transitivedependencies/index">fidl.test.transitivedependencies</a></td>
+    <td></td>
+</tr>
+<tr>
+    <td><a href="fidl.test.transitivedependenciescompose/index">fidl.test.transitivedependenciescompose</a></td>
+    <td></td>
+</tr>
+<tr>
+    <td><a href="fidl.test.typealiases/index">fidl.test.typealiases</a></td>
+    <td></td>
+</tr>
+<tr>
+    <td><a href="fidl.test.union/index">fidl.test.union</a></td>
+    <td></td>
+</tr>
+<tr>
+    <td><a href="fidl.test.unionsandwich/index">fidl.test.unionsandwich</a></td>
+    <td></td>
+</tr>
+<tr>
+    <td><a href="fidl.test.vectors/index">fidl.test.vectors</a></td>
+    <td></td>
+</tr>
+</tbody>
+</table>
+
+</devsite-filter>
+</div>
+
+Generated with fidldoc v0.0.4

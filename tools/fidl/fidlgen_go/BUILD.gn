@@ -7,8 +7,8 @@ import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 import("//build/go/toolchain.gni")
 import("//build/host.gni")
-import("//build/testing/host_test_data.gni")
-import("//zircon/tools/fidl/testdata/targets.gni")
+import("//build/testing/golden_test.gni")
+import("//zircon/tools/fidl/testdata/info.gni")
 
 go_library("gopkg") {
   name = "go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_go/..."
@@ -16,9 +16,9 @@ go_library("gopkg") {
   sources = [
     "codegen/bits.tmpl.go",
     "codegen/codegen.go",
-    "codegen/codegen_test.go",
     "codegen/enum.tmpl.go",
     "codegen/ir.go",
+    "codegen/ir_test.go",
     "codegen/library.tmpl.go",
     "codegen/protocol.tmpl.go",
     "codegen/struct.tmpl.go",
@@ -40,32 +40,45 @@ install_host_tools("host") {
   outputs = [ "fidlgen_go" ]
 }
 
-if (is_host) {
-  go_test("fidlgen_go_test") {
-    gopackages = [ "go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_go/codegen" ]
-    args = [
-      "--test_data_dir",
-      rebase_path("$root_out_dir/test_data/fidlgen", root_build_dir),
-    ]
-    deps = [
-      ":gopkg",
-      "//garnet/go/src/fidl/compiler/backend/typestest",
-    ]
+go_test("fidlgen_go_lib_tests") {
+  gopackages = [ "go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_go/codegen" ]
+  deps = [ ":gopkg" ]
+}
+
+golden_test("fidlgen_go_golden_tests") {
+  goldens_dir = "goldens"
+  deps = []
+  entries = []
+  foreach(info, fidl_testdata_info) {
+    if (info.denylist + [ "fidlgen_go" ] - [ "fidlgen_go" ] == info.denylist) {
+      deps += [ "${info.target}_go_generate($go_toolchain)" ]
+      entries += [
+        {
+          golden = "${info.name}.go.golden"
+          generated = "${info.fidl_gen_dir}/${info.target_name}/${info.library}.fidl/impl.go"
+        },
+      ]
+    }
   }
 }
 
 group("goldens") {
   testonly = true
+
   deps = []
-  foreach(target, fidl_testdata_targets) {
-    deps += [ "$target($go_toolchain)" ]
+  foreach(info, fidl_testdata_info) {
+    if (info.build_denylist + [ "fidlgen_go" ] - [ "fidlgen_go" ] ==
+        info.build_denylist) {
+      deps += [ info.target ]
+    }
   }
 }
 
 group("tests") {
   testonly = true
   deps = [
-    ":fidlgen_go_test($host_toolchain)",
-    ":goldens",
+    ":fidlgen_go_golden_tests($host_toolchain)",
+    ":fidlgen_go_lib_tests($host_toolchain)",
+    ":goldens($go_toolchain)",
   ]
 }

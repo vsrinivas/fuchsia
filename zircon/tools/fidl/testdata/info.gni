@@ -1,0 +1,400 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/fidl/toolchain.gni")
+
+# List of information about FIDL test libraries. Each item has:
+#
+#   name
+#     Unique name to use in golden filenames.
+#
+#   target
+#     Label of a FIDL target. Its target_name must be unique among all items,
+#     and identical to the FIDL library name.
+#
+#   denylist
+#     List of tools that should not generate golden files.
+#     Allowed items: fidldoc, fidlgen_dart, fidlgen_go, fidlgen_hlcpp,
+#       fidlgen_libfuzzer, fidlgen_llcpp, fidlgen_rust, fidlgen_syzkaller.
+#     To exclude a library from fidlc goldens, simply comment the whole item.
+#
+#   build_denylist
+#     List of tools that should not compile golden bindings.
+#     Allowed items: fidlgen_dart, fidlgen_go, fidlgen_hlcpp, fidlgen_libfuzzer,
+#       fidlgen_llcpp, fidlgen_rust.
+#     Tools from `denylist` are implicitly included.
+#
+#   host_build_denylist
+#     List of tools that should not compile golden bindings for host.
+#     Allowed items: fidlgen_hlcpp, fidlgen_llcpp, fidlgen_rust.
+#     Tools from `build_denylist` are implicitly included.
+#
+#   device_build_denylist
+#     List of tools that should not compile golden bindings for device.
+#     Allowed items: fidlgen_hlcpp, fidlgen_llcpp, fidlgen_rust.
+#     Tools from `build_denylist` are implicitly included.
+#
+#   target_name (computed)
+#     Name portion of the target.
+#
+#   library (computed)
+#     Name of the FIDL library (same as `target_name`).
+#
+#   fidl_gen_dir (computed)
+#     The target's `target_gen_dir` in `fidl_toolchain`.
+#
+# Please keep sorted by name.
+fidl_testdata_info = [
+  {
+    name = "arrays"
+    target = "//zircon/tools/fidl/testdata:fidl.test.arrays"
+    denylist = [
+      # Libfuzzer fails without at least one nonempty protocol definition.
+      "fidlgen_libfuzzer",
+    ]
+    build_denylist = [
+      # TODO(fxbug.dev/52276): Support arrays of all sizes in Rust.
+      "fidlgen_rust",
+    ]
+  },
+  {
+    name = "bindings_denylist"
+    target = "//zircon/tools/fidl/testdata:fidl.test.bindingsdenylist"
+    host_build_denylist = [
+      # TODO(fxbug.dev/62573): Add ifdefs so that protocols compile on host.
+      "fidlgen_llcpp",
+    ]
+  },
+  {
+    name = "bits"
+    target = "//zircon/tools/fidl/testdata:fidl.test.bits"
+    denylist = [
+      # Libfuzzer fails without at least one nonempty protocol definition.
+      "fidlgen_libfuzzer",
+    ]
+  },
+  {
+    name = "byte_and_bytes"
+    target = "//zircon/tools/fidl/testdata:fidl.test.byteandbytes"
+    denylist = [
+      # Libfuzzer fails without at least one nonempty protocol definition.
+      "fidlgen_libfuzzer",
+    ]
+  },
+  {
+    name = "consts"
+    target = "//zircon/tools/fidl/testdata:fidl.test.consts"
+    denylist = [
+      # Libfuzzer fails without at least one nonempty protocol definition.
+      "fidlgen_libfuzzer",
+    ]
+    build_denylist = [
+      # TODO(fxbug.dev/62520): Insert enum/bits <-> primitive conversions.
+      "fidlgen_hlcpp",
+      "fidlgen_libfuzzer",
+      "fidlgen_llcpp",
+      "fidlgen_rust",
+
+      # TODO(fxbug.dev/62763): Fix undefined_identifier errors.
+      "fidlgen_dart",
+    ]
+  },
+  {
+    name = "constants"
+    target = "//zircon/tools/fidl/testdata:fidl.test.constants"
+    denylist = [
+      # TODO(fxbug.dev/45006): Implement const expressions in fidlgen.
+      "fidlgen_dart",
+      "fidlgen_go",
+      "fidlgen_hlcpp",
+      "fidlgen_libfuzzer",
+      "fidlgen_llcpp",
+      "fidlgen_rust",
+    ]
+  },
+  {
+    name = "doc_comments"
+    target = "//zircon/tools/fidl/testdata:fidl.test.doccomments"
+    build_denylist = [
+      # TODO(fxbug.dev/62523): Make protocol named "Interface" compile.
+      "fidlgen_llcpp",
+    ]
+    host_build_denylist = [
+      # TODO(fxbug.dev/62573): Add ifdefs so that protocols compile on host.
+      "fidlgen_llcpp",
+    ]
+  },
+  {
+    name = "empty_struct"
+    target = "//zircon/tools/fidl/testdata:fidl.test.emptystruct"
+    host_build_denylist = [
+      # TODO(fxbug.dev/62573): Add ifdefs so that protocols compile on host.
+      "fidlgen_llcpp",
+    ]
+  },
+  {
+    name = "encapsulated_structs"
+    target = "//zircon/tools/fidl/testdata:fidl.test.encapsulatedstructs"
+    denylist = [
+      # Libfuzzer fails without at least one nonempty protocol definition.
+      "fidlgen_libfuzzer",
+    ]
+  },
+  {
+    name = "enum"
+    target = "//zircon/tools/fidl/testdata:fidl.test.enum"
+    denylist = [
+      # Libfuzzer fails without at least one nonempty protocol definition.
+      "fidlgen_libfuzzer",
+    ]
+  },
+  {
+    name = "error"
+    target = "//zircon/tools/fidl/testdata:fidl.test.error"
+    host_build_denylist = [
+      # TODO(fxbug.dev/62573): Add ifdefs so that protocols compile on host.
+      "fidlgen_llcpp",
+    ]
+  },
+  {
+    name = "escaping"
+    target = "//zircon/tools/fidl/testdata:fidl.test.escaping"
+    denylist = [
+      # Libfuzzer fails without at least one nonempty protocol definition.
+      "fidlgen_libfuzzer",
+    ]
+  },
+  {
+    name = "foreign_type_in_response_used_through_compose"
+    target = "//zircon/tools/fidl/testdata/foreign_type_in_response_used_through_compose:fidl.test.foreigntypeinresponseusedthroughcompose"
+    host_build_denylist = [
+      # TODO(fxbug.dev/62573): Add ifdefs so that protocols compile on host.
+      "fidlgen_llcpp",
+    ]
+  },
+  {
+    name = "handles"
+    target = "//zircon/tools/fidl/testdata:fidl.test.handles"
+    denylist = [
+      # Libfuzzer fails without at least one nonempty protocol definition.
+      "fidlgen_libfuzzer",
+    ]
+    build_denylist = [
+      # TODO(fxbug.dev/62533): Fix many issues.
+      "fidlgen_hlcpp",
+      "fidlgen_libfuzzer",
+
+      # TODO(fxbug.dev/62526): Fix pcidevice.h include issue.
+      "fidlgen_llcpp",
+
+      # TODO(fxbug.dev/62524): Fix Ord/Hash trait issue with fidl::Resource.
+      "fidlgen_rust",
+    ]
+    host_build_denylist = [
+      # TODO(fxbug.dev/62573): Add ifdefs so that protocols compile on host.
+      "fidlgen_llcpp",
+    ]
+  },
+  {
+    name = "handles_in_types"
+    target = "//zircon/tools/fidl/testdata:fidl.test.handlesintypes"
+    denylist = [
+      # Libfuzzer fails without at least one nonempty protocol definition.
+      "fidlgen_libfuzzer",
+    ]
+  },
+  {
+    name = "inheritance"
+    target = "//zircon/tools/fidl/testdata:fidl.test.inheritance"
+    host_build_denylist = [
+      # TODO(fxbug.dev/62573): Add ifdefs so that protocols compile on host.
+      "fidlgen_llcpp",
+    ]
+  },
+  {
+    name = "inheritance_with_recursive_decl"
+    target =
+        "//zircon/tools/fidl/testdata:fidl.test.inheritancewithrecursivedecl"
+    host_build_denylist = [
+      # TODO(fxbug.dev/62573): Add ifdefs so that protocols compile on host.
+      "fidlgen_llcpp",
+    ]
+  },
+  {
+    name = "nullable"
+    target = "//zircon/tools/fidl/testdata:fidl.test.nullable"
+    host_build_denylist = [
+      # TODO(fxbug.dev/62573): Add ifdefs so that protocols compile on host.
+      "fidlgen_llcpp",
+    ]
+  },
+  {
+    name = "padding"
+    target = "//zircon/tools/fidl/testdata:fidl.test.padding"
+    denylist = [
+      # Libfuzzer fails without at least one nonempty protocol definition.
+      "fidlgen_libfuzzer",
+    ]
+  },
+  {
+    name = "placement_of_attributes"
+    target = "//zircon/tools/fidl/testdata/placement_of_attributes:fidl.test.placementofattributes"
+    host_build_denylist = [
+      # TODO(fxbug.dev/62573): Add ifdefs so that protocols compile on host.
+      "fidlgen_llcpp",
+    ]
+  },
+  {
+    name = "protocol_request"
+    target = "//zircon/tools/fidl/testdata:fidl.test.protocolrequest"
+    build_denylist = [
+      # TODO(fxbug.dev/62532): Fix many issues.
+      "fidlgen_llcpp",
+    ]
+    host_build_denylist = [
+      # TODO(fxbug.dev/62573): Add ifdefs so that protocols compile on host.
+      "fidlgen_llcpp",
+    ]
+  },
+  {
+    name = "protocols"
+    target = "//zircon/tools/fidl/testdata:fidl.test.protocols"
+    host_build_denylist = [
+      # TODO(fxbug.dev/62573): Add ifdefs so that protocols compile on host.
+      "fidlgen_llcpp",
+    ]
+  },
+  {
+    name = "request_flexible_envelope"
+    target = "//zircon/tools/fidl/testdata:fidl.test.requestflexibleenvelope"
+    host_build_denylist = [
+      # TODO(fxbug.dev/62573): Add ifdefs so that protocols compile on host.
+      "fidlgen_llcpp",
+    ]
+  },
+  {
+    name = "service"
+    target = "//zircon/tools/fidl/testdata:fidl.test.service"
+    host_build_denylist = [
+      # TODO(fxbug.dev/62573): Add ifdefs so that protocols compile on host.
+      "fidlgen_llcpp",
+    ]
+  },
+  {
+    name = "struct"
+    target = "//zircon/tools/fidl/testdata:fidl.test.struct"
+    denylist = [
+      # Libfuzzer fails without at least one nonempty protocol definition.
+      "fidlgen_libfuzzer",
+    ]
+  },
+  {
+    name = "struct_default_value_enum_library_reference"
+    target = "//zircon/tools/fidl/testdata/struct_default_value_enum_library_reference:fidl.test.structdefaultvalueenumlibraryreference"
+    denylist = [
+      # Libfuzzer fails without at least one nonempty protocol definition.
+      "fidlgen_libfuzzer",
+
+      # TODO(fxbug.dev/45007): Syzkaller does not support enum member references
+      # in struct defaults.
+      "fidlgen_syzkaller",
+    ]
+    build_denylist = [
+      # TODO(fxbug.dev/62761): Fix error about default value not being constant.
+      "fidlgen_dart",
+    ]
+  },
+  {
+    name = "table"
+    target = "//zircon/tools/fidl/testdata:fidl.test.table"
+    denylist = [
+      # Libfuzzer fails without at least one nonempty protocol definition.
+      "fidlgen_libfuzzer",
+    ]
+  },
+  {
+    name = "transitive_dependencies"
+    target = "//zircon/tools/fidl/testdata/transitive_dependencies:fidl.test.transitivedependencies"
+    denylist = [
+      # Libfuzzer fails without at least one nonempty protocol definition.
+      "fidlgen_libfuzzer",
+    ]
+  },
+  {
+    name = "transitive_dependencies_compose"
+    target = "//zircon/tools/fidl/testdata/transitive_dependencies_compose:fidl.test.transitivedependenciescompose"
+    host_build_denylist = [
+      # TODO(fxbug.dev/62573): Add ifdefs so that protocols compile on host.
+      "fidlgen_llcpp",
+    ]
+  },
+  {
+    name = "type_aliases"
+    target = "//zircon/tools/fidl/testdata/type_aliases:fidl.test.typealiases"
+    denylist = [
+      # Libfuzzer fails without at least one nonempty protocol definition.
+      "fidlgen_libfuzzer",
+    ]
+  },
+  {
+    name = "union"
+    target = "//zircon/tools/fidl/testdata:fidl.test.union"
+    build_denylist = [
+      # TODO(fxbug.dev/55889): Escape "union" keyword.
+      "fidlgen_llcpp",
+    ]
+    host_build_denylist = [
+      # TODO(fxbug.dev/62573): Add ifdefs so that protocols compile on host.
+      "fidlgen_llcpp",
+    ]
+  },
+  {
+    name = "union_sandwich"
+    target = "//zircon/tools/fidl/testdata:fidl.test.unionsandwich"
+    denylist = [
+      # Libfuzzer fails without at least one nonempty protocol definition.
+      "fidlgen_libfuzzer",
+    ]
+    host_build_denylist = [
+      # TODO(fxbug.dev/62573): Add ifdefs so that protocols compile on host.
+      "fidlgen_llcpp",
+    ]
+  },
+  {
+    name = "vectors"
+    target = "//zircon/tools/fidl/testdata:fidl.test.vectors"
+    denylist = [
+      # Libfuzzer fails without at least one nonempty protocol definition.
+      "fidlgen_libfuzzer",
+    ]
+  },
+]
+
+# Add computed properties.
+_fidl_testdata_info = fidl_testdata_info
+fidl_testdata_info = []
+foreach(info, _fidl_testdata_info) {
+  info.target_name = get_label_info(info.target, "name")
+  info.library = info.target_name
+  info.fidl_gen_dir =
+      get_label_info("${info.target}($fidl_toolchain)", "target_gen_dir")
+
+  if (!defined(info.denylist)) {
+    info.denylist = []
+  }
+  if (!defined(info.build_denylist)) {
+    info.build_denylist = []
+  }
+  if (!defined(info.host_build_denylist)) {
+    info.host_build_denylist = []
+  }
+  if (!defined(info.device_build_denylist)) {
+    info.device_build_denylist = []
+  }
+  info.build_denylist += info.denylist
+  info.host_build_denylist += info.build_denylist
+  info.device_build_denylist += info.build_denylist
+
+  fidl_testdata_info += [ info ]
+}

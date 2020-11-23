@@ -6,8 +6,9 @@ import("//build/go/go_binary.gni")
 import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 import("//build/host.gni")
-import("//build/testing/host_test_data.gni")
-import("//zircon/tools/fidl/testdata/targets.gni")
+import("//build/rust/toolchain.gni")
+import("//build/testing/golden_test.gni")
+import("//zircon/tools/fidl/testdata/info.gni")
 
 go_library("gopkg") {
   name = "go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_rust/..."
@@ -15,7 +16,6 @@ go_library("gopkg") {
   sources = [
     "codegen/bits.tmpl.go",
     "codegen/codegen.go",
-    "codegen/codegen_test.go",
     "codegen/const.tmpl.go",
     "codegen/enum.tmpl.go",
     "codegen/handle_metadata_wrappers.tmpl.go",
@@ -44,58 +44,55 @@ install_host_tools("host") {
   outputs = [ "fidlgen_rust" ]
 }
 
-if (is_host) {
-  go_test("fidlgen_rust_test") {
-    gopackages = [ "go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_rust/codegen" ]
-    args = [
-      "--test_data_dir",
-      rebase_path("$root_out_dir/test_data/fidlgen", root_build_dir),
-      "--rustfmt",
-      rebase_path("$root_out_dir/test_data/fidlgen_rust", root_build_dir),
-      "--rustfmt-toml",
-      rebase_path("$root_out_dir/test_data/fidlgen_rust/rustfmt.toml",
-                  root_build_dir),
-    ]
-    deps = [
-      ":gopkg",
-      "//garnet/go/src/fidl/compiler/backend/typestest",
-    ]
-    non_go_deps = [ ":rustfmt" ]
-  }
+go_test("fidlgen_rust_lib_tests") {
+  gopackages = [ "go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_rust/codegen" ]
+  deps = [
+    ":gopkg",
+    "//third_party/golibs:github.com/google/go-cmp",
+  ]
+}
 
-  host_test_data("rustfmt") {
-    sources = [
-      "//prebuilt/third_party/rust_tools/$host_platform/bin/rustfmt",
-      "//rustfmt.toml",
-    ]
-    outputs = [ "$root_out_dir/test_data/fidlgen_rust/{{source_file_part}}" ]
+golden_test("fidlgen_rust_golden_tests") {
+  goldens_dir = "goldens"
+  deps = []
+  entries = []
+  foreach(info, fidl_testdata_info) {
+    if (info.denylist + [ "fidlgen_rust" ] - [ "fidlgen_rust" ] ==
+        info.denylist) {
+      deps += [ "${info.target}_rust_generate($rust_toolchain)" ]
+      library_underscore = string_replace(info.library, ".", "_")
+      entries += [
+        {
+          golden = "${info.name}.rs.golden"
+          generated = "${info.fidl_gen_dir}/${info.target_name}/fidl_${library_underscore}.rs"
+        },
+      ]
+    }
   }
 }
 
 group("goldens") {
   testonly = true
 
-  denylist = [
-    # TODO(fxbug.dev/52276): Support arrays of all sizes in Rust.
-    "//zircon/tools/fidl/testdata:fidl.test.arrays",
-
-    # TODO(fxbug.dev/62520): Insert enum/bits <-> primitive conversions.
-    "//zircon/tools/fidl/testdata:fidl.test.consts",
-
-    # TODO(fxbug.dev/62524): Fix Ord/Hash trait issue with fidl::Resource.
-    "//zircon/tools/fidl/testdata:fidl.test.handles",
-  ]
+  denylist_key = "device_build_denylist"
+  if (is_host) {
+    denylist_key = "host_build_denylist"
+  }
 
   deps = []
-  foreach(target, fidl_testdata_targets - denylist) {
-    deps += [ "${target}-rustc" ]
+  foreach(info, fidl_testdata_info) {
+    if (info[denylist_key] + [ "fidlgen_rust" ] - [ "fidlgen_rust" ] ==
+        info[denylist_key]) {
+      deps += [ "${info.target}-rustc" ]
+    }
   }
 }
 
 group("tests") {
   testonly = true
   deps = [
-    ":fidlgen_rust_test($host_toolchain)",
+    ":fidlgen_rust_golden_tests($host_toolchain)",
+    ":fidlgen_rust_lib_tests($host_toolchain)",
     ":goldens",
     ":goldens($host_toolchain)",
   ]

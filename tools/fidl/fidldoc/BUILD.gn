@@ -6,7 +6,8 @@ import("//build/host.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_test.gni")
 import("//build/test/test_package.gni")
-import("//build/testing/host_test_data.gni")
+import("//build/testing/golden_test.gni")
+import("//zircon/tools/fidl/testdata/info.gni")
 
 if (host_toolchain == current_toolchain) {
   common_sources = [
@@ -62,10 +63,6 @@ if (host_toolchain == current_toolchain) {
       ":fidldoc_bin",
       ":rust_crates",
     ]
-    non_rust_deps = [
-      ":copy_jsonir_goldens",
-      ":copy_markdown_goldens",
-    ]
 
     sources = common_sources
 
@@ -74,46 +71,6 @@ if (host_toolchain == current_toolchain) {
                "src/templates/markdown/testdata/_toc.yaml",
                "src/fidldoc.config.json",
              ]
-  }
-
-  host_test_data("copy_jsonir_goldens") {
-    sources =
-        rebase_path(read_file("//zircon/tools/fidl/goldens/jsonir_goldens.txt",
-                              "list lines"),
-                    ".",
-                    "//zircon/tools/fidl/goldens/")
-    outputs = [ "$root_out_dir/test_data/fidldoc/{{source_name_part}}.golden" ]
-  }
-
-  action("check_markdown_goldens") {
-    script = "markdown_goldens.py"
-    inputs = [ "//zircon/tools/fidl/goldens/jsonir_goldens.txt" ]
-    outputs = [ "${target_gen_dir}/${target_name}.stamp" ]
-    depfile = "${target_gen_dir}/${target_name}.d"
-    args = [
-      "--input",
-      rebase_path(inputs[0], root_build_dir),
-      "--goldens",
-      rebase_path("src/templates/markdown/testdata/", root_build_dir),
-      "--stamp",
-      rebase_path(outputs[0], root_build_dir),
-      "--depfile",
-      rebase_path(depfile, root_build_dir),
-    ]
-  }
-
-  # Markdown goldens have the same filename as JSON IR goldens with a ".md" extension
-  host_test_data("copy_markdown_goldens") {
-    deps = [ ":check_markdown_goldens" ]
-    sources = []
-    foreach(jsonir,
-            read_file("//zircon/tools/fidl/goldens/jsonir_goldens.txt",
-                      "list lines")) {
-      sources += [ rebase_path(jsonir + ".md",
-                               ".",
-                               "src/templates/markdown/testdata/") ]
-    }
-    outputs = [ "$root_out_dir/test_data/fidldoc/{{source_name_part}}.md" ]
   }
 
   group("rust_crates") {
@@ -143,8 +100,71 @@ install_host_tools("fidldoc") {
   outputs = [ "fidldoc" ]
 }
 
+fidl_testdata_info_filtered = []
+foreach(info, fidl_testdata_info) {
+  if (info.denylist + [ "fidldoc" ] - [ "fidldoc" ] == info.denylist) {
+    fidl_testdata_info_filtered += [ info ]
+  }
+}
+
+copy("config_for_tests") {
+  sources = [ "src/fidldoc.config.json" ]
+  outputs = [ "$target_gen_dir/fidldoc.config.json" ]
+}
+
+compiled_action("generate_goldens") {
+  testonly = true
+  tool = ":fidldoc_bin"
+  tool_output_name = "fidldoc"
+  deps = [ ":config_for_tests" ]
+  sources = []
+  args = [
+    "--config",
+    rebase_path(target_gen_dir, root_build_dir) + "/fidldoc.config.json",
+    "--out",
+    rebase_path(target_gen_dir, root_build_dir) + "/goldens",
+  ]
+  outputs = [
+    "$target_gen_dir/goldens/_toc.yaml",
+    "$target_gen_dir/goldens/README.md",
+  ]
+  foreach(info, fidl_testdata_info_filtered) {
+    deps += [ "${info.target}($fidl_toolchain)" ]
+    json_ir = "${info.fidl_gen_dir}/${info.target_name}.fidl.json"
+    sources += [ json_ir ]
+    args += [ rebase_path(json_ir, root_build_dir) ]
+    outputs += [ "$target_gen_dir/goldens/${info.library}/README.md" ]
+  }
+}
+
+golden_test("fidldoc_golden_tests") {
+  goldens_dir = "goldens"
+  deps = [ ":generate_goldens" ]
+  entries = [
+    {
+      golden = "_toc.yaml.golden"
+      generated = "$target_gen_dir/goldens/_toc.yaml"
+    },
+    {
+      golden = "README.md.golden"
+      generated = "$target_gen_dir/goldens/README.md"
+    },
+  ]
+  foreach(info, fidl_testdata_info_filtered) {
+    entries += [
+      {
+        golden = "${info.name}.md.golden"
+        generated = "$target_gen_dir/goldens/${info.library}/README.md"
+      },
+    ]
+  }
+}
+
 group("tests") {
   testonly = true
 
-  deps = [ ":fidldoc_bin_test($host_toolchain)" ]
+  deps = [
+    ":fidldoc_bin_test($host_toolchain)",
+    ":fidldoc_golden_tests($host_toolchain)",
+  ]
 }

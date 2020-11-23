@@ -1,0 +1,210 @@
+{
+  "version": "0.0.1",
+  "name": "fidl.test.bits",
+  "library_dependencies": [],
+  "bits_declarations": [
+    {
+      "name": "fidl.test.bits/MyBits",
+      "location": {
+        "filename": "../../zircon/tools/fidl/testdata/bits.test.fidl",
+        "line": 3,
+        "column": 6,
+        "length": 6
+      },
+      "type": {
+        "kind": "primitive",
+        "subtype": "uint32"
+      },
+      "mask": "7",
+      "members": [
+        {
+          "name": "MY_FIRST_BIT",
+          "location": {
+            "filename": "../../zircon/tools/fidl/testdata/bits.test.fidl",
+            "line": 4,
+            "column": 5,
+            "length": 12
+          },
+          "value": {
+            "kind": "literal",
+            "value": "1",
+            "expression": "1",
+            "literal": {
+              "kind": "numeric",
+              "value": "1",
+              "expression": "1"
+            }
+          }
+        },
+        {
+          "name": "MY_OTHER_BIT",
+          "location": {
+            "filename": "../../zircon/tools/fidl/testdata/bits.test.fidl",
+            "line": 5,
+            "column": 5,
+            "length": 12
+          },
+          "value": {
+            "kind": "literal",
+            "value": "2",
+            "expression": "2",
+            "literal": {
+              "kind": "numeric",
+              "value": "2",
+              "expression": "2"
+            }
+          }
+        },
+        {
+          "name": "MASK",
+          "location": {
+            "filename": "../../zircon/tools/fidl/testdata/bits.test.fidl",
+            "line": 7,
+            "column": 5,
+            "length": 4
+          },
+          "value": {
+            "kind": "literal",
+            "value": "4",
+            "expression": "4",
+            "literal": {
+              "kind": "numeric",
+              "value": "4",
+              "expression": "4"
+            }
+          }
+        }
+      ],
+      "strict": true
+    },
+    {
+      "name": "fidl.test.bits/StrictBits",
+      "location": {
+        "filename": "../../zircon/tools/fidl/testdata/bits.test.fidl",
+        "line": 10,
+        "column": 13,
+        "length": 10
+      },
+      "type": {
+        "kind": "primitive",
+        "subtype": "uint64"
+      },
+      "mask": "9223372036854775809",
+      "members": [
+        {
+          "name": "SMALLEST",
+          "location": {
+            "filename": "../../zircon/tools/fidl/testdata/bits.test.fidl",
+            "line": 11,
+            "column": 5,
+            "length": 8
+          },
+          "value": {
+            "kind": "literal",
+            "value": "1",
+            "expression": "1",
+            "literal": {
+              "kind": "numeric",
+              "value": "1",
+              "expression": "1"
+            }
+          }
+        },
+        {
+          "name": "BIGGEST",
+          "location": {
+            "filename": "../../zircon/tools/fidl/testdata/bits.test.fidl",
+            "line": 12,
+            "column": 5,
+            "length": 7
+          },
+          "value": {
+            "kind": "literal",
+            "value": "9223372036854775808",
+            "expression": "0x8000000000000000",
+            "literal": {
+              "kind": "numeric",
+              "value": "9223372036854775808",
+              "expression": "0x8000000000000000"
+            }
+          }
+        }
+      ],
+      "strict": true
+    },
+    {
+      "name": "fidl.test.bits/FlexibleBits",
+      "location": {
+        "filename": "../../zircon/tools/fidl/testdata/bits.test.fidl",
+        "line": 15,
+        "column": 15,
+        "length": 12
+      },
+      "type": {
+        "kind": "primitive",
+        "subtype": "uint64"
+      },
+      "mask": "9223372036854775809",
+      "members": [
+        {
+          "name": "SMALLEST",
+          "location": {
+            "filename": "../../zircon/tools/fidl/testdata/bits.test.fidl",
+            "line": 16,
+            "column": 5,
+            "length": 8
+          },
+          "value": {
+            "kind": "literal",
+            "value": "1",
+            "expression": "1",
+            "literal": {
+              "kind": "numeric",
+              "value": "1",
+              "expression": "1"
+            }
+          }
+        },
+        {
+          "name": "BIGGEST",
+          "location": {
+            "filename": "../../zircon/tools/fidl/testdata/bits.test.fidl",
+            "line": 17,
+            "column": 5,
+            "length": 7
+          },
+          "value": {
+            "kind": "literal",
+            "value": "9223372036854775808",
+            "expression": "0x8000000000000000",
+            "literal": {
+              "kind": "numeric",
+              "value": "9223372036854775808",
+              "expression": "0x8000000000000000"
+            }
+          }
+        }
+      ],
+      "strict": false
+    }
+  ],
+  "const_declarations": [],
+  "enum_declarations": [],
+  "experimental_resource_declarations": [],
+  "interface_declarations": [],
+  "service_declarations": [],
+  "struct_declarations": [],
+  "table_declarations": [],
+  "union_declarations": [],
+  "type_alias_declarations": [],
+  "declaration_order": [
+    "fidl.test.bits/StrictBits",
+    "fidl.test.bits/MyBits",
+    "fidl.test.bits/FlexibleBits"
+  ],
+  "declarations": {
+    "fidl.test.bits/MyBits": "bits",
+    "fidl.test.bits/StrictBits": "bits",
+    "fidl.test.bits/FlexibleBits": "bits"
+  }
+}

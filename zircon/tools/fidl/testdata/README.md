@@ -1,34 +1,59 @@
-# Regenerating fidlc Golden Files
+# FIDL test libraries
 
-Ensure `fidlc` is built, for instance
+This directory contains the FIDL test libraries used for golden files.
 
-    fx ninja -C out/default.zircon host-x64-linux-clang/obj/tools/fidl/fidlc host-x64-linux-clang/obj/system/utest/fidl-compiler/fidl-compiler-test
+## Add a new library
 
-Then run the `regen.sh` script:
+To add a new standalone library:
 
-    fx exec zircon/tools/fidl/testdata/regen.sh
+1. Choose a **name**, e.g. `foo_bar`.
+2. Create a FIDL file with the `.test.fidl` extension, e.g. `foo_bar.test.fidl`.
+3. Declare the library as `fidl.test.` followed by **name** without underscores,
+   e.g. `library fidl.test.foobar;`.
+4. Add the filename to the `standalone_libraries` list in BUILD.gn.
+5. Add an entry to `fidl_testdata_info` in info.gni, providing the **name** and
+   the target that BUILD.gn generates, e.g.:
 
-This script runs fidlc on all of the inputs in the `typestest/` directory, and
-outputs them into the `goldens/` directory. The `json_generator_tests` are a
-fidlc unit test that will ensure that the output inside `goldens/` matches the
-current state of the fidl compiler.
+```
+{
+  name = "foo_bar"
+  target = "//zircon/tools/fidl/testdata:fidl.test.foobar"
+}
+```
 
-Each "input" in `typestest/` corresponds to a single json output file in
-`goldens/`, and can take one of two possible forms:
+To add a new library with dependencies:
 
-  - A single fidl file, `foo.fidl` which gets converted to `foo.json`
-  - A directory `foo` which gets converted to `foo.json`. This directory must
-    contain:
-    - One or more fidl files.
-    - An `order.txt` file that describes the dependency ordering of the files in
-      this directory. For example, for a library `foo` that consists of two fidl
-      files `a.fidl` and `b.fidl` where `a.fidl` depends on `b.fidl`,
-      `order.txt` would consist of two lines, the first being `b.fidl` and the
-      second being `a.fidl`.
+1. Choose a **name**, e.g. `foo_bar`.
+2. Create a subdirectory named **name** containing two or more FIDL files ending
+   in `.test.fidl` and a BUILD.gn to build them.
+3. Ensure one of the libraries is named appropriately, e.g. `fidl.test.foobar`,
+   and that its build target name is the same.
+4. Add an entry to `fidl_testdata_info` in info.gni, providing the **name** and
+   the target that BUILD.gn generates, e.g.:
 
-Currently `json_generator_tests.cc` only supports a "linked list" shaped
-dependency tree, where each fidl file depends on only the fidl file in the line
-above it (except for the first fidl file which has no dependencies)
+```
+{
+  name = "foo_bar"
+  target = "//zircon/tools/fidl/testdata/foo_bar:fidl.test.foobar"
+}
+```
 
-Note that you must rebuild `fidl-compiler-test` after regenerating goldens for
-the updated goldens to be used in the test.
+## Golden tests
+
+FIDL tools in //tools/fidl use the test libraries as input when defining golden
+tests with //build/testing/golden_test.gni. Due to build unification issues, the
+fidlc goldens are in //tools/fidl/fidlc/goldens rather than here in zircon.
+
+To run fidlc golden tests:
+
+```
+fx test fidlc_golden_tests
+```
+
+To regenerate fidlc goldens:
+
+```
+fx regen-goldens fidlc
+# The above is just a shortcut for this:
+fx test fidlgen_golden_tests -- --regen
+```

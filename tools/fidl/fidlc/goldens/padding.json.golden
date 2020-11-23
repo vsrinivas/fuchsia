@@ -1,0 +1,1049 @@
+{
+  "version": "0.0.1",
+  "name": "fidl.test.padding",
+  "library_dependencies": [],
+  "bits_declarations": [],
+  "const_declarations": [],
+  "enum_declarations": [],
+  "experimental_resource_declarations": [],
+  "interface_declarations": [],
+  "service_declarations": [],
+  "struct_declarations": [
+    {
+      "name": "fidl.test.padding/Padding1ByteEnd",
+      "location": {
+        "filename": "../../zircon/tools/fidl/testdata/padding.test.fidl",
+        "line": 3,
+        "column": 8,
+        "length": 15
+      },
+      "anonymous": false,
+      "members": [
+        {
+          "type": {
+            "kind": "primitive",
+            "subtype": "uint16"
+          },
+          "name": "a",
+          "location": {
+            "filename": "../../zircon/tools/fidl/testdata/padding.test.fidl",
+            "line": 4,
+            "column": 12,
+            "length": 1
+          },
+          "field_shape_v1": {
+            "offset": 0,
+            "padding": 0
+          }
+        },
+        {
+          "type": {
+            "kind": "primitive",
+            "subtype": "uint8"
+          },
+          "name": "b",
+          "location": {
+            "filename": "../../zircon/tools/fidl/testdata/padding.test.fidl",
+            "line": 5,
+            "column": 11,
+            "length": 1
+          },
+          "field_shape_v1": {
+            "offset": 2,
+            "padding": 1
+          }
+        }
+      ],
+      "resource": false,
+      "type_shape_v1": {
+        "inline_size": 4,
+        "alignment": 2,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": true,
+        "has_flexible_envelope": false,
+        "is_resource": false
+      }
+    },
+    {
+      "name": "fidl.test.padding/Padding2ByteEnd",
+      "location": {
+        "filename": "../../zircon/tools/fidl/testdata/padding.test.fidl",
+        "line": 9,
+        "column": 8,
+        "length": 15
+      },
+      "anonymous": false,
+      "members": [
+        {
+          "type": {
+            "kind": "primitive",
+            "subtype": "uint32"
+          },
+          "name": "a",
+          "location": {
+            "filename": "../../zircon/tools/fidl/testdata/padding.test.fidl",
+            "line": 10,
+            "column": 12,
+            "length": 1
+          },
+          "field_shape_v1": {
+            "offset": 0,
+            "padding": 0
+          }
+        },
+        {
+          "type": {
+            "kind": "primitive",
+            "subtype": "uint16"
+          },
+          "name": "b",
+          "location": {
+            "filename": "../../zircon/tools/fidl/testdata/padding.test.fidl",
+            "line": 11,
+            "column": 12,
+            "length": 1
+          },
+          "field_shape_v1": {
+            "offset": 4,
+            "padding": 2
+          }
+        }
+      ],
+      "resource": false,
+      "type_shape_v1": {
+        "inline_size": 8,
+        "alignment": 4,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": true,
+        "has_flexible_envelope": false,
+        "is_resource": false
+      }
+    },
+    {
+      "name": "fidl.test.padding/Padding3ByteEnd",
+      "location": {
+        "filename": "../../zircon/tools/fidl/testdata/padding.test.fidl",
+        "line": 15,
+        "column": 8,
+        "length": 15
+      },
+      "anonymous": false,
+      "members": [
+        {
+          "type": {
+            "kind": "primitive",
+            "subtype": "uint32"
+          },
+          "name": "a",
+          "location": {
+            "filename": "../../zircon/tools/fidl/testdata/padding.test.fidl",
+            "line": 16,
+            "column": 12,
+            "length": 1
+          },
+          "field_shape_v1": {
+            "offset": 0,
+            "padding": 0
+          }
+        },
+        {
+          "type": {
+            "kind": "primitive",
+            "subtype": "uint8"
+          },
+          "name": "b",
+          "location": {
+            "filename": "../../zircon/tools/fidl/testdata/padding.test.fidl",
+            "line": 17,
+            "column": 11,
+            "length": 1
+          },
+          "field_shape_v1": {
+            "offset": 4,
+            "padding": 3
+          }
+        }
+      ],
+      "resource": false,
+      "type_shape_v1": {
+        "inline_size": 8,
+        "alignment": 4,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": true,
+        "has_flexible_envelope": false,
+        "is_resource": false
+      }
+    },
+    {
+      "name": "fidl.test.padding/Padding4ByteEnd",
+      "location": {
+        "filename": "../../zircon/tools/fidl/testdata/padding.test.fidl",
+        "line": 21,
+        "column": 8,
+        "length": 15
+      },
+      "anonymous": false,
+      "members": [
+        {
+          "type": {
+            "kind": "primitive",
+            "subtype": "uint64"
+          },
+          "name": "a",
+          "location": {
+            "filename": "../../zircon/tools/fidl/testdata/padding.test.fidl",
+            "line": 22,
+            "column": 12,
+            "length": 1
+          },
+          "field_shape_v1": {
+            "offset": 0,
+            "padding": 0
+          }
+        },
+        {
+          "type": {
+            "kind": "primitive",
+            "subtype": "uint32"
+          },
+          "name": "b",
+          "location": {
+            "filename": "../../zircon/tools/fidl/testdata/padding.test.fidl",
+            "line": 23,
+            "column": 12,
+            "length": 1
+          },
+          "field_shape_v1": {
+            "offset": 8,
+            "padding": 4
+          }
+        }
+      ],
+      "resource": false,
+      "type_shape_v1": {
+        "inline_size": 16,
+        "alignment": 8,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": true,
+        "has_flexible_envelope": false,
+        "is_resource": false
+      }
+    },
+    {
+      "name": "fidl.test.padding/Padding5ByteEnd",
+      "location": {
+        "filename": "../../zircon/tools/fidl/testdata/padding.test.fidl",
+        "line": 27,
+        "column": 8,
+        "length": 15
+      },
+      "anonymous": false,
+      "members": [
+        {
+          "type": {
+            "kind": "primitive",
+            "subtype": "uint64"
+          },
+          "name": "a",
+          "location": {
+            "filename": "../../zircon/tools/fidl/testdata/padding.test.fidl",
+            "line": 28,
+            "column": 12,
+            "length": 1
+          },
+          "field_shape_v1": {
+            "offset": 0,
+            "padding": 0
+          }
+        },
+        {
+          "type": {
+            "kind": "primitive",
+            "subtype": "uint16"
+          },
+          "name": "b",
+          "location": {
+            "filename": "../../zircon/tools/fidl/testdata/padding.test.fidl",
+            "line": 29,
+            "column": 12,
+            "length": 1
+          },
+          "field_shape_v1": {
+            "offset": 8,
+            "padding": 0
+          }
+        },
+        {
+          "type": {
+            "kind": "primitive",
+            "subtype": "uint8"
+          },
+          "name": "c",
+          "location": {
+            "filename": "../../zircon/tools/fidl/testdata/padding.test.fidl",
+            "line": 30,
+            "column": 11,
+            "length": 1
+          },
+          "field_shape_v1": {
+            "offset": 10,
+            "padding": 5
+          }
+        }
+      ],
+      "resource": false,
+      "type_shape_v1": {
+        "inline_size": 16,
+        "alignment": 8,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": true,
+        "has_flexible_envelope": false,
+        "is_resource": false
+      }
+    },
+    {
+      "name": "fidl.test.padding/Padding6ByteEnd",
+      "location": {
+        "filename": "../../zircon/tools/fidl/testdata/padding.test.fidl",
+        "line": 34,
+        "column": 8,
+        "length": 15
+      },
+      "anonymous": false,
+      "members": [
+        {
+          "type": {
+            "kind": "primitive",
+            "subtype": "uint64"
+          },
+          "name": "a",
+          "location": {
+            "filename": "../../zircon/tools/fidl/testdata/padding.test.fidl",
+            "line": 35,
+            "column": 12,
+            "length": 1
+          },
+          "field_shape_v1": {
+            "offset": 0,
+            "padding": 0
+          }
+        },
+        {
+          "type": {
+            "kind": "primitive",
+            "subtype": "uint16"
+          },
+          "name": "b",
+          "location": {
+            "filename": "../../zircon/tools/fidl/testdata/padding.test.fidl",
+            "line": 36,
+            "column": 12,
+            "length": 1
+          },
+          "field_shape_v1": {
+            "offset": 8,
+            "padding": 6
+          }
+        }
+      ],
+      "resource": false,
+      "type_shape_v1": {
+        "inline_size": 16,
+        "alignment": 8,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": true,
+        "has_flexible_envelope": false,
+        "is_resource": false
+      }
+    },
+    {
+      "name": "fidl.test.padding/Padding7ByteEnd",
+      "location": {
+        "filename": "../../zircon/tools/fidl/testdata/padding.test.fidl",
+        "line": 40,
+        "column": 8,
+        "length": 15
+      },
+      "anonymous": false,
+      "members": [
+        {
+          "type": {
+            "kind": "primitive",
+            "subtype": "uint64"
+          },
+          "name": "a",
+          "location": {
+            "filename": "../../zircon/tools/fidl/testdata/padding.test.fidl",
+            "line": 41,
+            "column": 12,
+            "length": 1
+          },
+          "field_shape_v1": {
+            "offset": 0,
+            "padding": 0
+          }
+        },
+        {
+          "type": {
+            "kind": "primitive",
+            "subtype": "uint8"
+          },
+          "name": "b",
+          "location": {
+            "filename": "../../zircon/tools/fidl/testdata/padding.test.fidl",
+            "line": 42,
+            "column": 11,
+            "length": 1
+          },
+          "field_shape_v1": {
+            "offset": 8,
+            "padding": 7
+          }
+        }
+      ],
+      "resource": false,
+      "type_shape_v1": {
+        "inline_size": 16,
+        "alignment": 8,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": true,
+        "has_flexible_envelope": false,
+        "is_resource": false
+      }
+    },
+    {
+      "name": "fidl.test.padding/Padding1ByteMiddle",
+      "location": {
+        "filename": "../../zircon/tools/fidl/testdata/padding.test.fidl",
+        "line": 46,
+        "column": 8,
+        "length": 18
+      },
+      "anonymous": false,
+      "members": [
+        {
+          "type": {
+            "kind": "primitive",
+            "subtype": "uint8"
+          },
+          "name": "a",
+          "location": {
+            "filename": "../../zircon/tools/fidl/testdata/padding.test.fidl",
+            "line": 47,
+            "column": 11,
+            "length": 1
+          },
+          "field_shape_v1": {
+            "offset": 0,
+            "padding": 1
+          }
+        },
+        {
+          "type": {
+            "kind": "primitive",
+            "subtype": "uint16"
+          },
+          "name": "b",
+          "location": {
+            "filename": "../../zircon/tools/fidl/testdata/padding.test.fidl",
+            "line": 49,
+            "column": 12,
+            "length": 1
+          },
+          "field_shape_v1": {
+            "offset": 2,
+            "padding": 0
+          }
+        }
+      ],
+      "resource": false,
+      "type_shape_v1": {
+        "inline_size": 4,
+        "alignment": 2,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": true,
+        "has_flexible_envelope": false,
+        "is_resource": false
+      }
+    },
+    {
+      "name": "fidl.test.padding/Padding2ByteMiddle",
+      "location": {
+        "filename": "../../zircon/tools/fidl/testdata/padding.test.fidl",
+        "line": 52,
+        "column": 8,
+        "length": 18
+      },
+      "anonymous": false,
+      "members": [
+        {
+          "type": {
+            "kind": "primitive",
+            "subtype": "uint16"
+          },
+          "name": "a",
+          "location": {
+            "filename": "../../zircon/tools/fidl/testdata/padding.test.fidl",
+            "line": 53,
+            "column": 12,
+            "length": 1
+          },
+          "field_shape_v1": {
+            "offset": 0,
+            "padding": 2
+          }
+        },
+        {
+          "type": {
+            "kind": "primitive",
+            "subtype": "uint32"
+          },
+          "name": "b",
+          "location": {
+            "filename": "../../zircon/tools/fidl/testdata/padding.test.fidl",
+            "line": 55,
+            "column": 12,
+            "length": 1
+          },
+          "field_shape_v1": {
+            "offset": 4,
+            "padding": 0
+          }
+        }
+      ],
+      "resource": false,
+      "type_shape_v1": {
+        "inline_size": 8,
+        "alignment": 4,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": true,
+        "has_flexible_envelope": false,
+        "is_resource": false
+      }
+    },
+    {
+      "name": "fidl.test.padding/Padding3ByteMiddle",
+      "location": {
+        "filename": "../../zircon/tools/fidl/testdata/padding.test.fidl",
+        "line": 58,
+        "column": 8,
+        "length": 18
+      },
+      "anonymous": false,
+      "members": [
+        {
+          "type": {
+            "kind": "primitive",
+            "subtype": "uint8"
+          },
+          "name": "a",
+          "location": {
+            "filename": "../../zircon/tools/fidl/testdata/padding.test.fidl",
+            "line": 59,
+            "column": 11,
+            "length": 1
+          },
+          "field_shape_v1": {
+            "offset": 0,
+            "padding": 3
+          }
+        },
+        {
+          "type": {
+            "kind": "primitive",
+            "subtype": "uint32"
+          },
+          "name": "b",
+          "location": {
+            "filename": "../../zircon/tools/fidl/testdata/padding.test.fidl",
+            "line": 61,
+            "column": 12,
+            "length": 1
+          },
+          "field_shape_v1": {
+            "offset": 4,
+            "padding": 0
+          }
+        }
+      ],
+      "resource": false,
+      "type_shape_v1": {
+        "inline_size": 8,
+        "alignment": 4,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": true,
+        "has_flexible_envelope": false,
+        "is_resource": false
+      }
+    },
+    {
+      "name": "fidl.test.padding/Padding4ByteMiddle",
+      "location": {
+        "filename": "../../zircon/tools/fidl/testdata/padding.test.fidl",
+        "line": 64,
+        "column": 8,
+        "length": 18
+      },
+      "anonymous": false,
+      "members": [
+        {
+          "type": {
+            "kind": "primitive",
+            "subtype": "uint32"
+          },
+          "name": "a",
+          "location": {
+            "filename": "../../zircon/tools/fidl/testdata/padding.test.fidl",
+            "line": 65,
+            "column": 12,
+            "length": 1
+          },
+          "field_shape_v1": {
+            "offset": 0,
+            "padding": 4
+          }
+        },
+        {
+          "type": {
+            "kind": "primitive",
+            "subtype": "uint64"
+          },
+          "name": "b",
+          "location": {
+            "filename": "../../zircon/tools/fidl/testdata/padding.test.fidl",
+            "line": 67,
+            "column": 12,
+            "length": 1
+          },
+          "field_shape_v1": {
+            "offset": 8,
+            "padding": 0
+          }
+        }
+      ],
+      "resource": false,
+      "type_shape_v1": {
+        "inline_size": 16,
+        "alignment": 8,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": true,
+        "has_flexible_envelope": false,
+        "is_resource": false
+      }
+    },
+    {
+      "name": "fidl.test.padding/Padding5ByteMiddle",
+      "location": {
+        "filename": "../../zircon/tools/fidl/testdata/padding.test.fidl",
+        "line": 70,
+        "column": 8,
+        "length": 18
+      },
+      "anonymous": false,
+      "members": [
+        {
+          "type": {
+            "kind": "primitive",
+            "subtype": "uint16"
+          },
+          "name": "a",
+          "location": {
+            "filename": "../../zircon/tools/fidl/testdata/padding.test.fidl",
+            "line": 71,
+            "column": 12,
+            "length": 1
+          },
+          "field_shape_v1": {
+            "offset": 0,
+            "padding": 0
+          }
+        },
+        {
+          "type": {
+            "kind": "primitive",
+            "subtype": "uint8"
+          },
+          "name": "b",
+          "location": {
+            "filename": "../../zircon/tools/fidl/testdata/padding.test.fidl",
+            "line": 72,
+            "column": 11,
+            "length": 1
+          },
+          "field_shape_v1": {
+            "offset": 2,
+            "padding": 5
+          }
+        },
+        {
+          "type": {
+            "kind": "primitive",
+            "subtype": "uint64"
+          },
+          "name": "c",
+          "location": {
+            "filename": "../../zircon/tools/fidl/testdata/padding.test.fidl",
+            "line": 74,
+            "column": 12,
+            "length": 1
+          },
+          "field_shape_v1": {
+            "offset": 8,
+            "padding": 0
+          }
+        }
+      ],
+      "resource": false,
+      "type_shape_v1": {
+        "inline_size": 16,
+        "alignment": 8,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": true,
+        "has_flexible_envelope": false,
+        "is_resource": false
+      }
+    },
+    {
+      "name": "fidl.test.padding/Padding6ByteMiddle",
+      "location": {
+        "filename": "../../zircon/tools/fidl/testdata/padding.test.fidl",
+        "line": 77,
+        "column": 8,
+        "length": 18
+      },
+      "anonymous": false,
+      "members": [
+        {
+          "type": {
+            "kind": "primitive",
+            "subtype": "uint16"
+          },
+          "name": "a",
+          "location": {
+            "filename": "../../zircon/tools/fidl/testdata/padding.test.fidl",
+            "line": 78,
+            "column": 12,
+            "length": 1
+          },
+          "field_shape_v1": {
+            "offset": 0,
+            "padding": 6
+          }
+        },
+        {
+          "type": {
+            "kind": "primitive",
+            "subtype": "uint64"
+          },
+          "name": "b",
+          "location": {
+            "filename": "../../zircon/tools/fidl/testdata/padding.test.fidl",
+            "line": 80,
+            "column": 12,
+            "length": 1
+          },
+          "field_shape_v1": {
+            "offset": 8,
+            "padding": 0
+          }
+        }
+      ],
+      "resource": false,
+      "type_shape_v1": {
+        "inline_size": 16,
+        "alignment": 8,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": true,
+        "has_flexible_envelope": false,
+        "is_resource": false
+      }
+    },
+    {
+      "name": "fidl.test.padding/Padding7ByteMiddle",
+      "location": {
+        "filename": "../../zircon/tools/fidl/testdata/padding.test.fidl",
+        "line": 83,
+        "column": 8,
+        "length": 18
+      },
+      "anonymous": false,
+      "members": [
+        {
+          "type": {
+            "kind": "primitive",
+            "subtype": "uint8"
+          },
+          "name": "a",
+          "location": {
+            "filename": "../../zircon/tools/fidl/testdata/padding.test.fidl",
+            "line": 84,
+            "column": 11,
+            "length": 1
+          },
+          "field_shape_v1": {
+            "offset": 0,
+            "padding": 7
+          }
+        },
+        {
+          "type": {
+            "kind": "primitive",
+            "subtype": "uint64"
+          },
+          "name": "b",
+          "location": {
+            "filename": "../../zircon/tools/fidl/testdata/padding.test.fidl",
+            "line": 86,
+            "column": 12,
+            "length": 1
+          },
+          "field_shape_v1": {
+            "offset": 8,
+            "padding": 0
+          }
+        }
+      ],
+      "resource": false,
+      "type_shape_v1": {
+        "inline_size": 16,
+        "alignment": 8,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": true,
+        "has_flexible_envelope": false,
+        "is_resource": false
+      }
+    },
+    {
+      "name": "fidl.test.padding/Padding4ByteAlignmentLength12",
+      "location": {
+        "filename": "../../zircon/tools/fidl/testdata/padding.test.fidl",
+        "line": 93,
+        "column": 8,
+        "length": 29
+      },
+      "anonymous": false,
+      "members": [
+        {
+          "type": {
+            "kind": "primitive",
+            "subtype": "uint32"
+          },
+          "name": "a",
+          "location": {
+            "filename": "../../zircon/tools/fidl/testdata/padding.test.fidl",
+            "line": 94,
+            "column": 12,
+            "length": 1
+          },
+          "field_shape_v1": {
+            "offset": 0,
+            "padding": 0
+          }
+        },
+        {
+          "type": {
+            "kind": "primitive",
+            "subtype": "uint8"
+          },
+          "name": "b",
+          "location": {
+            "filename": "../../zircon/tools/fidl/testdata/padding.test.fidl",
+            "line": 95,
+            "column": 11,
+            "length": 1
+          },
+          "field_shape_v1": {
+            "offset": 4,
+            "padding": 1
+          }
+        },
+        {
+          "type": {
+            "kind": "primitive",
+            "subtype": "uint16"
+          },
+          "name": "c",
+          "location": {
+            "filename": "../../zircon/tools/fidl/testdata/padding.test.fidl",
+            "line": 97,
+            "column": 12,
+            "length": 1
+          },
+          "field_shape_v1": {
+            "offset": 6,
+            "padding": 0
+          }
+        },
+        {
+          "type": {
+            "kind": "primitive",
+            "subtype": "uint16"
+          },
+          "name": "d",
+          "location": {
+            "filename": "../../zircon/tools/fidl/testdata/padding.test.fidl",
+            "line": 98,
+            "column": 12,
+            "length": 1
+          },
+          "field_shape_v1": {
+            "offset": 8,
+            "padding": 2
+          }
+        }
+      ],
+      "resource": false,
+      "type_shape_v1": {
+        "inline_size": 12,
+        "alignment": 4,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": true,
+        "has_flexible_envelope": false,
+        "is_resource": false
+      }
+    },
+    {
+      "name": "fidl.test.padding/Padding2ByteAlignmentLength6",
+      "location": {
+        "filename": "../../zircon/tools/fidl/testdata/padding.test.fidl",
+        "line": 102,
+        "column": 8,
+        "length": 28
+      },
+      "anonymous": false,
+      "members": [
+        {
+          "type": {
+            "kind": "primitive",
+            "subtype": "uint8"
+          },
+          "name": "a",
+          "location": {
+            "filename": "../../zircon/tools/fidl/testdata/padding.test.fidl",
+            "line": 104,
+            "column": 11,
+            "length": 1
+          },
+          "field_shape_v1": {
+            "offset": 0,
+            "padding": 1
+          }
+        },
+        {
+          "type": {
+            "kind": "primitive",
+            "subtype": "uint16"
+          },
+          "name": "b",
+          "location": {
+            "filename": "../../zircon/tools/fidl/testdata/padding.test.fidl",
+            "line": 106,
+            "column": 12,
+            "length": 1
+          },
+          "field_shape_v1": {
+            "offset": 2,
+            "padding": 0
+          }
+        },
+        {
+          "type": {
+            "kind": "primitive",
+            "subtype": "uint8"
+          },
+          "name": "c",
+          "location": {
+            "filename": "../../zircon/tools/fidl/testdata/padding.test.fidl",
+            "line": 108,
+            "column": 11,
+            "length": 1
+          },
+          "field_shape_v1": {
+            "offset": 4,
+            "padding": 1
+          }
+        }
+      ],
+      "resource": false,
+      "type_shape_v1": {
+        "inline_size": 6,
+        "alignment": 2,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": true,
+        "has_flexible_envelope": false,
+        "is_resource": false
+      }
+    }
+  ],
+  "table_declarations": [],
+  "union_declarations": [],
+  "type_alias_declarations": [],
+  "declaration_order": [
+    "fidl.test.padding/Padding7ByteMiddle",
+    "fidl.test.padding/Padding7ByteEnd",
+    "fidl.test.padding/Padding6ByteMiddle",
+    "fidl.test.padding/Padding6ByteEnd",
+    "fidl.test.padding/Padding5ByteMiddle",
+    "fidl.test.padding/Padding5ByteEnd",
+    "fidl.test.padding/Padding4ByteMiddle",
+    "fidl.test.padding/Padding4ByteEnd",
+    "fidl.test.padding/Padding4ByteAlignmentLength12",
+    "fidl.test.padding/Padding3ByteMiddle",
+    "fidl.test.padding/Padding3ByteEnd",
+    "fidl.test.padding/Padding2ByteMiddle",
+    "fidl.test.padding/Padding2ByteEnd",
+    "fidl.test.padding/Padding2ByteAlignmentLength6",
+    "fidl.test.padding/Padding1ByteMiddle",
+    "fidl.test.padding/Padding1ByteEnd"
+  ],
+  "declarations": {
+    "fidl.test.padding/Padding1ByteEnd": "struct",
+    "fidl.test.padding/Padding2ByteEnd": "struct",
+    "fidl.test.padding/Padding3ByteEnd": "struct",
+    "fidl.test.padding/Padding4ByteEnd": "struct",
+    "fidl.test.padding/Padding5ByteEnd": "struct",
+    "fidl.test.padding/Padding6ByteEnd": "struct",
+    "fidl.test.padding/Padding7ByteEnd": "struct",
+    "fidl.test.padding/Padding1ByteMiddle": "struct",
+    "fidl.test.padding/Padding2ByteMiddle": "struct",
+    "fidl.test.padding/Padding3ByteMiddle": "struct",
+    "fidl.test.padding/Padding4ByteMiddle": "struct",
+    "fidl.test.padding/Padding5ByteMiddle": "struct",
+    "fidl.test.padding/Padding6ByteMiddle": "struct",
+    "fidl.test.padding/Padding7ByteMiddle": "struct",
+    "fidl.test.padding/Padding4ByteAlignmentLength12": "struct",
+    "fidl.test.padding/Padding2ByteAlignmentLength6": "struct"
+  }
+}

@@ -1,0 +1,71 @@
+toc:
+- title: Overview
+  path: /README.md
+- title: API
+  section:
+  - title: fidl.test.arrays
+    path: /fidl.test.arrays
+  - title: fidl.test.bindingsdenylist
+    path: /fidl.test.bindingsdenylist
+  - title: fidl.test.bits
+    path: /fidl.test.bits
+  - title: fidl.test.byteandbytes
+    path: /fidl.test.byteandbytes
+  - title: fidl.test.constants
+    path: /fidl.test.constants
+  - title: fidl.test.consts
+    path: /fidl.test.consts
+  - title: fidl.test.doccomments
+    path: /fidl.test.doccomments
+  - title: fidl.test.emptystruct
+    path: /fidl.test.emptystruct
+  - title: fidl.test.encapsulatedstructs
+    path: /fidl.test.encapsulatedstructs
+  - title: fidl.test.enum
+    path: /fidl.test.enum
+  - title: fidl.test.error
+    path: /fidl.test.error
+  - title: fidl.test.escaping
+    path: /fidl.test.escaping
+  - title: fidl.test.foreigntypeinresponseusedthroughcompose
+    path: /fidl.test.foreigntypeinresponseusedthroughcompose
+  - title: fidl.test.handles
+    path: /fidl.test.handles
+  - title: fidl.test.handlesintypes
+    path: /fidl.test.handlesintypes
+  - title: fidl.test.inheritance
+    path: /fidl.test.inheritance
+  - title: fidl.test.inheritancewithrecursivedecl
+    path: /fidl.test.inheritancewithrecursivedecl
+  - title: fidl.test.nullable
+    path: /fidl.test.nullable
+  - title: fidl.test.padding
+    path: /fidl.test.padding
+  - title: fidl.test.placementofattributes
+    path: /fidl.test.placementofattributes
+  - title: fidl.test.protocolrequest
+    path: /fidl.test.protocolrequest
+  - title: fidl.test.protocols
+    path: /fidl.test.protocols
+  - title: fidl.test.requestflexibleenvelope
+    path: /fidl.test.requestflexibleenvelope
+  - title: fidl.test.service
+    path: /fidl.test.service
+  - title: fidl.test.struct
+    path: /fidl.test.struct
+  - title: fidl.test.structdefaultvalueenumlibraryreference
+    path: /fidl.test.structdefaultvalueenumlibraryreference
+  - title: fidl.test.table
+    path: /fidl.test.table
+  - title: fidl.test.transitivedependencies
+    path: /fidl.test.transitivedependencies
+  - title: fidl.test.transitivedependenciescompose
+    path: /fidl.test.transitivedependenciescompose
+  - title: fidl.test.typealiases
+    path: /fidl.test.typealiases
+  - title: fidl.test.union
+    path: /fidl.test.union
+  - title: fidl.test.unionsandwich
+    path: /fidl.test.unionsandwich
+  - title: fidl.test.vectors
+    path: /fidl.test.vectors

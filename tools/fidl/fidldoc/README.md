@@ -49,12 +49,12 @@ The `tests` target will generate a unit test binary in the build output director
 1. Run with `fx test host_x64/fidldoc_bin_test`
 
 # Goldens
-The test `golden_test` uses `.json.golden` files from `//zircon/tools/fidl/goldens`
-as input, and compares the generated output with the goldens from `src/templates/markdown/testdata`.
+The test `fidldoc_goldens_test` uses `.test.fidl` files from
+`//zircon/tools/fidl/testdata` as input, and compares the generated output with
+goldens from `//tools/fidl/fidldoc/goldens`.
 
 To regenerate the goldens run:
 
 ```
-REGENERATE_GOLDENS_FOLDER=$FUCHSIA_DIR/tools/fidl/fidldoc/src/templates/markdown/testdata \
-    fx test host_x64/fidldoc_bin_test -- golden_test
+fx regen-goldens fidldoc
 ```

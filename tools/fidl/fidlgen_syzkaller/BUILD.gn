@@ -2,19 +2,19 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/compiled_action.gni")
+import("//build/fidl/toolchain.gni")
 import("//build/go/go_binary.gni")
 import("//build/go/go_library.gni")
-import("//build/go/go_test.gni")
 import("//build/host.gni")
-import("//build/testing/host_test_data.gni")
-import("//zircon/tools/fidl/testdata/targets.gni")
+import("//build/testing/golden_test.gni")
+import("//zircon/tools/fidl/testdata/info.gni")
 
 go_library("gopkg") {
   name = "go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_syzkaller/..."
   deps = [ "//tools/fidl/lib/fidlgen" ]
   sources = [
     "codegen/codegen.go",
-    "codegen/codegen_test.go",
     "codegen/description.tmpl.go",
     "codegen/ir.go",
     "codegen/protocol.tmpl.go",
@@ -36,22 +36,48 @@ install_host_tools("host") {
   outputs = [ "fidlgen_syzkaller" ]
 }
 
-if (is_host) {
-  go_test("fidlgen_syzkaller_test") {
-    gopackages =
-        [ "go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_syzkaller/codegen" ]
-    args = [
-      "--test_data_dir",
-      rebase_path("$root_out_dir/test_data/fidlgen", root_build_dir),
-    ]
-    deps = [
-      ":gopkg",
-      "//garnet/go/src/fidl/compiler/backend/typestest",
+fidl_testdata_info_filtered = []
+foreach(info, fidl_testdata_info) {
+  if (info.denylist + [ "fidlgen_syzkaller" ] - [ "fidlgen_syzkaller" ] ==
+      info.denylist) {
+    fidl_testdata_info_filtered += [ info ]
+  }
+}
+
+compiled_action_foreach("generate_goldens") {
+  testonly = true
+  tool = ":fidlgen_syzkaller"
+  deps = []
+  sources = []
+  foreach(info, fidl_testdata_info_filtered) {
+    deps += [ "${info.target}($fidl_toolchain)" ]
+    sources += [ "${info.fidl_gen_dir}/${info.target_name}.fidl.json" ]
+  }
+  args = [
+    "-json",
+    "{{source}}",
+    "-output-syz",
+    rebase_path(target_gen_dir, root_build_dir) +
+        "/golden_{{source_name_part}}.syz.txt",
+  ]
+  outputs = [ "$target_gen_dir/golden_{{source_name_part}}.syz.txt" ]
+}
+
+golden_test("fidlgen_syzkaller_golden_tests") {
+  goldens_dir = "goldens"
+  deps = [ ":generate_goldens" ]
+  entries = []
+  foreach(info, fidl_testdata_info_filtered) {
+    entries += [
+      {
+        golden = "${info.name}.syz.txt.golden"
+        generated = "$target_gen_dir/golden_${info.target_name}.fidl.syz.txt"
+      },
     ]
   }
 }
 
 group("tests") {
   testonly = true
-  deps = [ ":fidlgen_syzkaller_test($host_toolchain)" ]
+  deps = [ ":fidlgen_syzkaller_golden_tests($host_toolchain)" ]
 }

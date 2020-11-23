@@ -1,0 +1,76 @@
+#!/bin/bash
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+#### CATEGORY=Source tree
+### regenerates golden files in the source tree
+
+## Usage: fx regen-goldens PATTERN ... [FLAGS]
+##
+## Regenerates golden files for tools that match the given substring patterns.
+## If no patterns are provided, regenerates for all tools. Forwards all flags to
+## `fx test`, such as -o/--output to show test output (files being regenerated).
+##
+## Examples:
+##
+## fx regen-goldens           # regen all goldens
+## fx regen-goldens fidlgen   # regen goldens for all fidlgen_* tools
+## fx regen-goldens fidlc -o  # regen fidlc goldens, printing verbose output
+##
+## Supported tools:
+##   fidlc, fidldoc, fidlgen_dart, fidlgen_go, fidlgen_hlcpp, fidlgen_libfuzzer,
+##   fidlgen_llcpp, fidlgen_rust, fidlgen_syzkaller
+
+set -eo pipefail
+
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/../lib/vars.sh || exit $?
+fx-config-read
+
+readonly all_tools=(
+    "fidlc"
+    "fidldoc"
+    "fidlgen_dart"
+    "fidlgen_go"
+    "fidlgen_hlcpp"
+    "fidlgen_libfuzzer"
+    "fidlgen_llcpp"
+    "fidlgen_rust"
+    "fidlgen_syzkaller"
+)
+
+tools=()
+flags=()
+
+for arg in "$@"; do
+    case "$arg" in
+        -h|--help) fx-command-help; exit ;;
+        -*) flags+=("$arg") ;;
+        *)
+            found=false
+            for t in "${all_tools[@]}"; do
+                if [[ "$arg" == *"$t"* ]]; then
+                    tools+=("$t")
+                    found=true
+                fi
+            done
+            if [[ "$found" == false ]]; then
+                echo "No tools match the pattern '$arg'." >&2
+                echo "Run \`fx regen-goldens -h\` to see supported tools." >&2
+                exit 1
+            fi
+            ;;
+    esac
+done
+
+if [[ "${#tools[@]}" -eq 0 ]]; then
+    tools=("${all_tools[@]}")
+fi
+
+tests=()
+for t in "${tools[@]}"; do
+    tests+=("${t}_golden_tests")
+done
+
+echo "Regenerating goldens for: ${tools[*]}"
+fx test "${tests[@]}" "${flags[@]}" -- --regen

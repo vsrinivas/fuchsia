@@ -1,3 +1,0 @@
-bottom.test.fidl
-middle.test.fidl
-top.test.fidl

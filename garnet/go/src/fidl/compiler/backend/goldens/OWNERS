@@ -1,4 +1,0 @@
-include /src/testing/fuzzing/OWNERS
-mkember@google.com
-
-# COMPONENT: FIDL>Testing

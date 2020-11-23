@@ -20,7 +20,10 @@ template("_fidl_cpp_codegen_impl") {
 
   json_representation = "$fidl_target_gen_dir/$fidl_target_name.fidl.json"
 
-  generation_visibility = [ ":$target_name" ]
+  generation_visibility = [
+    ":$target_name",
+    "${invoker.fidlgen_tool}:*",
+  ]
   if (defined(invoker.fuzzers)) {
     foreach(fuzzer, invoker.fuzzers) {
       assert(
@@ -97,7 +100,10 @@ template("fidl_cpp_codegen") {
 
 template("_fidl_llcpp_codegen_impl") {
   generation_target_name = "${target_name}_generate"
-  generation_visibility = [ ":$target_name" ]
+  generation_visibility = [
+    ":$target_name",
+    "//tools/fidl/fidlgen_llcpp:*",
+  ]
 
   library_name = invoker.library_name
   fidl_target_name = invoker.fidl_target_name

@@ -56,107 +56,6 @@ if (current_toolchain == default_toolchain) {
     args = rebase_path(outputs, root_build_dir) +
            rebase_path(sources, root_build_dir)
   }
-
-  action("gen-goldens") {
-    visibility = [ ":goldens" ]
-    outputs = [ "$target_gen_dir/goldens.cc" ]
-    sources = [
-      # find zircon/tools/fidl/{testdata,goldens} -type f | sed -e 's+^zircon\(.*\)$+"//zircon\1",+' | grep -v README | grep -v regen | sort
-      "//zircon/tools/fidl/goldens/bits.test.json.golden",
-      "//zircon/tools/fidl/goldens/bits.test.tables.c.golden",
-      "//zircon/tools/fidl/goldens/byte_and_bytes.test.json.golden",
-      "//zircon/tools/fidl/goldens/byte_and_bytes.test.tables.c.golden",
-      "//zircon/tools/fidl/goldens/constants.test.json.golden",
-      "//zircon/tools/fidl/goldens/constants.test.tables.c.golden",
-      "//zircon/tools/fidl/goldens/consts.test.json.golden",
-      "//zircon/tools/fidl/goldens/consts.test.tables.c.golden",
-      "//zircon/tools/fidl/goldens/doc_comments.test.json.golden",
-      "//zircon/tools/fidl/goldens/doc_comments.test.tables.c.golden",
-      "//zircon/tools/fidl/goldens/empty_struct.test.json.golden",
-      "//zircon/tools/fidl/goldens/empty_struct.test.tables.c.golden",
-      "//zircon/tools/fidl/goldens/enum.test.json.golden",
-      "//zircon/tools/fidl/goldens/enum.test.tables.c.golden",
-      "//zircon/tools/fidl/goldens/error.test.json.golden",
-      "//zircon/tools/fidl/goldens/error.test.tables.c.golden",
-      "//zircon/tools/fidl/goldens/escaping.test.json.golden",
-      "//zircon/tools/fidl/goldens/escaping.test.tables.c.golden",
-      "//zircon/tools/fidl/goldens/foreign_type_in_response_used_through_compose.test.json.golden",
-      "//zircon/tools/fidl/goldens/handles.test.json.golden",
-      "//zircon/tools/fidl/goldens/handles.test.tables.c.golden",
-      "//zircon/tools/fidl/goldens/handles_in_types.test.json.golden",
-      "//zircon/tools/fidl/goldens/handles_in_types.test.tables.c.golden",
-      "//zircon/tools/fidl/goldens/inheritance.test.json.golden",
-      "//zircon/tools/fidl/goldens/inheritance.test.tables.c.golden",
-      "//zircon/tools/fidl/goldens/inheritance_with_recursive_decl.test.json.golden",
-      "//zircon/tools/fidl/goldens/inheritance_with_recursive_decl.test.tables.c.golden",
-      "//zircon/tools/fidl/goldens/placement_of_attributes.test.json.golden",
-      "//zircon/tools/fidl/goldens/protocol_request.test.json.golden",
-      "//zircon/tools/fidl/goldens/protocol_request.test.tables.c.golden",
-      "//zircon/tools/fidl/goldens/protocols.test.json.golden",
-      "//zircon/tools/fidl/goldens/protocols.test.tables.c.golden",
-      "//zircon/tools/fidl/goldens/request_flexible_envelope.test.json.golden",
-      "//zircon/tools/fidl/goldens/request_flexible_envelope.test.tables.c.golden",
-      "//zircon/tools/fidl/goldens/service.test.json.golden",
-      "//zircon/tools/fidl/goldens/service.test.tables.c.golden",
-      "//zircon/tools/fidl/goldens/struct.test.json.golden",
-      "//zircon/tools/fidl/goldens/struct.test.tables.c.golden",
-      "//zircon/tools/fidl/goldens/struct_default_value_enum_library_reference.test.json.golden",
-      "//zircon/tools/fidl/goldens/table.test.json.golden",
-      "//zircon/tools/fidl/goldens/table.test.tables.c.golden",
-      "//zircon/tools/fidl/goldens/transitive_dependencies.test.json.golden",
-      "//zircon/tools/fidl/goldens/transitive_dependencies_compose.test.json.golden",
-      "//zircon/tools/fidl/goldens/type_aliases.test.json.golden",
-      "//zircon/tools/fidl/goldens/union.test.json.golden",
-      "//zircon/tools/fidl/goldens/union.test.tables.c.golden",
-      "//zircon/tools/fidl/goldens/union_sandwich.test.json.golden",
-      "//zircon/tools/fidl/goldens/union_sandwich.test.tables.c.golden",
-      "//zircon/tools/fidl/testdata/bits.test.fidl",
-      "//zircon/tools/fidl/testdata/byte_and_bytes.test.fidl",
-      "//zircon/tools/fidl/testdata/constants.test.fidl",
-      "//zircon/tools/fidl/testdata/consts.test.fidl",
-      "//zircon/tools/fidl/testdata/doc_comments.test.fidl",
-      "//zircon/tools/fidl/testdata/empty_struct.test.fidl",
-      "//zircon/tools/fidl/testdata/enum.test.fidl",
-      "//zircon/tools/fidl/testdata/error.test.fidl",
-      "//zircon/tools/fidl/testdata/escaping.test.fidl",
-      "//zircon/tools/fidl/testdata/foreign_type_in_response_used_through_compose/bottom.test.fidl",
-      "//zircon/tools/fidl/testdata/foreign_type_in_response_used_through_compose/middle.test.fidl",
-      "//zircon/tools/fidl/testdata/foreign_type_in_response_used_through_compose/order.txt",
-      "//zircon/tools/fidl/testdata/foreign_type_in_response_used_through_compose/top.test.fidl",
-      "//zircon/tools/fidl/testdata/handles.test.fidl",
-      "//zircon/tools/fidl/testdata/handles_in_types.test.fidl",
-      "//zircon/tools/fidl/testdata/inheritance.test.fidl",
-      "//zircon/tools/fidl/testdata/inheritance_with_recursive_decl.test.fidl",
-      "//zircon/tools/fidl/testdata/placement_of_attributes/example.test.fidl",
-      "//zircon/tools/fidl/testdata/placement_of_attributes/exampleusing.test.fidl",
-      "//zircon/tools/fidl/testdata/placement_of_attributes/order.txt",
-      "//zircon/tools/fidl/testdata/protocol_request.test.fidl",
-      "//zircon/tools/fidl/testdata/protocols.test.fidl",
-      "//zircon/tools/fidl/testdata/request_flexible_envelope.test.fidl",
-      "//zircon/tools/fidl/testdata/service.test.fidl",
-      "//zircon/tools/fidl/testdata/struct.test.fidl",
-      "//zircon/tools/fidl/testdata/struct_default_value_enum_library_reference/dependent.test.fidl",
-      "//zircon/tools/fidl/testdata/struct_default_value_enum_library_reference/example.test.fidl",
-      "//zircon/tools/fidl/testdata/struct_default_value_enum_library_reference/order.txt",
-      "//zircon/tools/fidl/testdata/table.test.fidl",
-      "//zircon/tools/fidl/testdata/transitive_dependencies/bottom.test.fidl",
-      "//zircon/tools/fidl/testdata/transitive_dependencies/middle.test.fidl",
-      "//zircon/tools/fidl/testdata/transitive_dependencies/order.txt",
-      "//zircon/tools/fidl/testdata/transitive_dependencies/top.test.fidl",
-      "//zircon/tools/fidl/testdata/transitive_dependencies_compose/bottom.test.fidl",
-      "//zircon/tools/fidl/testdata/transitive_dependencies_compose/middle.test.fidl",
-      "//zircon/tools/fidl/testdata/transitive_dependencies_compose/order.txt",
-      "//zircon/tools/fidl/testdata/transitive_dependencies_compose/top.test.fidl",
-      "//zircon/tools/fidl/testdata/type_aliases/example.test.fidl",
-      "//zircon/tools/fidl/testdata/type_aliases/order.txt",
-      "//zircon/tools/fidl/testdata/type_aliases/someotherlibrary.test.fidl",
-      "//zircon/tools/fidl/testdata/union.test.fidl",
-      "//zircon/tools/fidl/testdata/union_sandwich.test.fidl",
-    ]
-    script = "gen-goldens.py"
-    args = rebase_path(outputs, root_build_dir) +
-           rebase_path(sources, root_build_dir)
-  }
 } else {
   test("fidl-compiler") {
     if (is_fuchsia) {
@@ -185,7 +84,6 @@ if (current_toolchain == default_toolchain) {
       "handle_tests.cc",
       "json_diagnostics_tests.cc",
       "json_findings_tests.cc",
-      "json_generator_tests.cc",
       "lint_findings_tests.cc",
       "lint_tests.cc",
       "ordinals_tests.cc",
@@ -202,7 +100,6 @@ if (current_toolchain == default_toolchain) {
       "strictness_tests.cc",
       "structs_tests.cc",
       "table_tests.cc",
-      "tables_generator_tests.cc",
       "type_alias_tests.cc",
       "types_tests.cc",
       "typeshape_tests.cc",
@@ -214,7 +111,6 @@ if (current_toolchain == default_toolchain) {
     ]
     deps = [
       ":examples",
-      ":goldens",
       "//third_party/boringssl",
       "//zircon/public/lib/zxtest",
       "//zircon/tools/fidl:fidl",
@@ -226,14 +122,6 @@ if (current_toolchain == default_toolchain) {
     gen_dir = get_label_info(gen_label, "target_gen_dir")
     include_dirs = [ "." ]
     sources = [ "$gen_dir/examples.cc" ]
-    deps = [ gen_label ]
-  }
-
-  source_set("goldens") {
-    gen_label = ":gen-goldens($default_toolchain)"
-    gen_dir = get_label_info(gen_label, "target_gen_dir")
-    include_dirs = [ "." ]
-    sources = [ "$gen_dir/goldens.cc" ]
     deps = [ gen_label ]
   }
 }

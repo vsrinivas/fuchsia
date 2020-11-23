@@ -2,12 +2,12 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/fidl/toolchain.gni")
 import("//build/go/go_binary.gni")
 import("//build/go/go_library.gni")
-import("//build/go/go_test.gni")
 import("//build/host.gni")
-import("//build/testing/host_test_data.gni")
-import("//zircon/tools/fidl/testdata/targets.gni")
+import("//build/testing/golden_test.gni")
+import("//zircon/tools/fidl/testdata/info.gni")
 
 go_library("gopkg") {
   name = "go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_hlcpp/..."
@@ -33,12 +33,6 @@ go_library("gopkg") {
   ]
 }
 
-go_library("gotestpkg") {
-  name = "go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_hlcpp/..."
-  deps = [ ":gopkg" ]
-  sources = [ "codegen/codegen_test.go" ]
-}
-
 go_binary("fidlgen_hlcpp") {
   gopackage = "go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_hlcpp"
 
@@ -60,53 +54,69 @@ go_binary("fidlgen") {
   deps = [ ":gopkg" ]
 }
 
-if (is_host) {
-  go_test("fidlgen_hlcpp_test") {
-    gopackages = [ "go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_hlcpp/codegen" ]
-    args = [
-      "--test_data_dir",
-      rebase_path("$root_out_dir/test_data/fidlgen", root_build_dir),
-      "--clang-format",
-      rebase_path("$root_out_dir/test_data/fidlgen_hlcpp", root_build_dir),
-    ]
-    deps = [
-      ":gotestpkg",
-      "//garnet/go/src/fidl/compiler/backend/typestest",
-    ]
-    non_go_deps = [ ":clang_format" ]
-  }
-
-  host_test_data("clang_format") {
-    sources = [ "//prebuilt/third_party/clang/$host_platform/bin/clang-format" ]
-    outputs = [ "$root_out_dir/test_data/fidlgen_hlcpp/{{source_file_part}}" ]
+golden_test("fidlgen_hlcpp_golden_tests") {
+  goldens_dir = "goldens"
+  deps = []
+  entries = []
+  foreach(info, fidl_testdata_info) {
+    if (info.denylist + [ "fidlgen_hlcpp" ] - [ "fidlgen_hlcpp" ] ==
+        info.denylist) {
+      deps += [
+        "${info.target}_cpp_natural_types_generate($fidl_toolchain)",
+        "${info.target}_hlcpp_generate($fidl_toolchain)",
+      ]
+      gen_dir = "${info.fidl_gen_dir}/${info.target_name}"
+      include_path = string_replace(info.library, ".", "/") + "/cpp"
+      entries += [
+        {
+          golden = "natural_types/${info.name}.h.golden"
+          generated = "$gen_dir/$include_path/natural_types.h"
+        },
+        {
+          golden = "natural_types/${info.name}.cc.golden"
+          generated = "$gen_dir/$include_path/natural_types.cc"
+        },
+        {
+          golden = "bindings/${info.name}.h.golden"
+          generated = "$gen_dir/$include_path/fidl.h"
+        },
+        {
+          golden = "bindings/${info.name}.cc.golden"
+          generated = "$gen_dir/$include_path/fidl.cc"
+        },
+        {
+          golden = "bindings/${info.name}_test_base.h.golden"
+          generated = "$gen_dir/$include_path/fidl_test_base.h"
+        },
+      ]
+    }
   }
 }
 
 group("goldens") {
   testonly = true
 
-  # Keep this in sync with hlcpp_denylist in fidlgen_libfuzzer/BUILD.gn.
-  denylist = [
-    # TODO(fxbug.dev/62520): Insert enum/bits <-> primitive conversions.
-    "//zircon/tools/fidl/testdata:fidl.test.consts",
-
-    # TODO(fxbug.dev/62533): Fix many issues.
-    "//zircon/tools/fidl/testdata:fidl.test.handles",
-  ]
+  denylist_key = "device_build_denylist"
+  if (is_host) {
+    denylist_key = "host_build_denylist"
+  }
 
   deps = []
-  foreach(target, fidl_testdata_targets - denylist) {
-    deps += [
-      "${target}_cpp_natural_types",
-      "${target}_hlcpp",
-    ]
+  foreach(info, fidl_testdata_info) {
+    if (info[denylist_key] + [ "fidlgen_hlcpp" ] - [ "fidlgen_hlcpp" ] ==
+        info[denylist_key]) {
+      deps += [
+        "${info.target}_cpp_natural_types",
+        "${info.target}_hlcpp",
+      ]
+    }
   }
 }
 
 group("tests") {
   testonly = true
   deps = [
-    ":fidlgen_hlcpp_test($host_toolchain)",
+    ":fidlgen_hlcpp_golden_tests($host_toolchain)",
     ":goldens",
     ":goldens($host_toolchain)",
   ]

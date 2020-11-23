@@ -5,6 +5,8 @@
 # Defines a golden file test to be executed during the build. Fails
 # if `golden`'s contents aren't equal to `current`'s.
 #
+# For more complex golden testing, see //build/testing/golden_test.gni.
+#
 # Parameters
 #   golden (required)
 #     Path to the canonical file.

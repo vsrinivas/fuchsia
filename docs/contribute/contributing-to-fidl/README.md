@@ -41,8 +41,7 @@ codegen itself and GIDL generated tests, refer to the [tests section](#all-tests
 for details.
 
 Supporting code for the target specific backends is located in
-[/garnet/go/src/fidl/compiler/backend], which also contains the
-codegen goldens.
+[/tools/fidl/lib/fidlgen].
 
 #### Testing tools
 
@@ -148,15 +147,12 @@ really well for doing remote work from your laptop.
 
   ```json
   "files.associations": {
-        "*.test.json.golden": "json",
-        "*.test.json.rs.golden": "rust",
-        "*.test.json.cc.golden": "cpp",
-        "*.test.json.h.golden": "cpp",
-        "*.test.json.llcpp.cc.golden": "cpp",
-        "*.test.json.llcpp.h.golden": "cpp",
-        "*.test.json.go.golden": "go",
-        "*.test.json_async.dart.golden": "dart",
-        "*.test.json_test.dart.golden": "dart"
+        "*.json.golden": "json",
+        "*.rs.golden": "rust",
+        "*.cc.golden": "cpp",
+        "*.h.golden": "cpp",
+        "*.go.golden": "go",
+        "*.dart.golden": "dart",
   },
   ```
 
@@ -357,8 +353,8 @@ $FUCHSIA_DIR/out/default/host_x64/fidlgen_{llcpp, hlcpp, rust, go}
 Some example tests you can run:
 
 ```sh
-fx run-host-tests fidlgen_hlcpp_test
-fx run-host-tests fidlgen_golang_ir_test
+fx test fidlgen_hlcpp_golden_tests
+fx test fidlgen_golang_lib_tests
 fidldev test --no-regen fidlgen
 ```
 
@@ -506,22 +502,22 @@ Note: While `fx test fidl_bindings_test` prints test names as they run, it does 
 
 #### Fidlgen tests
 
-| Name                     | Test Command                        | Coverage
-|--------------------------|-------------------------------------|---------------------------
-| fidlgen type definitions | `fx test fidlgen_lib_test`          | //tools/fidl/lib/fidlgen           |
-| fidlgen C++ specific IR  | `fx test fidlgen_cpp_ir_test`       | //tools/fidl/lib/fidlgen_cpp       |
-| fidlgen hlcpp            | `fx test fidlgen_hlcpp_test`        | //tools/fidl/fidlgen_hlcpp         |
-| fidlgen llcpp            | `fx test fidlgen_llcpp_test`        | //tools/fidl/fidlgen_llcpp         |
-| fidlgen golang           | `fx test fidlgen_go_test`           | //tools/fidl/fidlgen_golang        |
-| fidlgen rust             | `fx test fidlgen_rust_test`         | //tools/fidl/fidlgen_rust          |
-| fidlgen syzkaller        | `fx test fidlgen_syzkaller_test`    | //tools/fidl/fidlgen_syzkaller     |
-| fidlgen dart             | `fx test fidlgen_dart_backend_test` | //tools/fidl/fidlgen_dart
+| Name                     | Test Command                              | Coverage
+|--------------------------|-------------------------------------------|---------------------------
+| fidlgen type definitions | `fx test fidlgen_lib_test`                | //tools/fidl/lib/fidlgen
+| fidlgen C++ specific IR  | `fx test fidlgen_cpp_ir_test`             | //tools/fidl/lib/fidlgen_cpp
+| fidlgen hlcpp            | `fx test fidlgen_hlcpp_golden_tests`      | //tools/fidl/fidlgen_hlcpp
+| fidlgen llcpp            | `fx test fidlgen_llcpp_golden_tests`      | //tools/fidl/fidlgen_llcpp
+| fidlgen golang           | `fx test fidlgen_go_{lib,golden}_tests`   | //tools/fidl/fidlgen_golang
+| fidlgen rust             | `fx test fidlgen_rust_{lib,golden}_tests` | //tools/fidl/fidlgen_rust
+| fidlgen syzkaller        | `fx test fidlgen_syzkaller_golden_tests`  | //tools/fidl/fidlgen_syzkaller
+| fidlgen dart             | `fx test fidlgen_dart_golden_tests`       | //tools/fidl/fidlgen_dart
 
 #### Other
 
 | Name                     | Test Command                        | Coverage
 |--------------------------|-------------------------------------|---------------------------
-| fidlc compiler           | `fx test fidl-compiler`             | //zircon/tools/fidl
+| fidlc compiler           | `fx test fidl-compiler`<br>`fx test fidlc_golden_tests` | //zircon/tools/fidl
 | gidl parser              | `fx test gidl_parser_test`          | //tools/fidl/gidl/parser
 | measure tape test        | `fx test measure-tape_test`         | //tools/fidl/measure-tape
 
@@ -572,14 +568,13 @@ fx test --e2e fidl_microbenchmarks_test
 
 ### All regen commands
 
-| Name                  | Regen commands                                                              | Input                                                             |  Output                                                                                    |
-|-----------------------|-----------------------------------------------------------------------------|-------------------------------------------------------------------|--------------------------------------------------------------------------------------------|
-| fidlc goldens         | fx exec $FUCHSIA_DIR/zircon/tools/fidl/testdata/regen.sh                    | zircon/tools/fidl/testdata                                        | zircon/tools/fidl/goldens                                                                  |
-| fidlgen goldens       | fx exec $FUCHSIA_DIR/garnet/go/src/fidl/compiler/backend/typestest/regen.sh | zircon/tools/fidl/goldens                                         | garnet/go/src/fidl/compiler/backend/goldens                                                |
-| dart fidlgen goldens  | fx exec $FUCHSIA_DIR/tools/fidl/fidlgen_dart/regen.sh                        | zircon/tools/fidl/goldens                                         | tools/fidl/fidlgen_dart/goldens                                                             |
-| dangerous identifiers | fx exec src/tests/fidl/dangerous_identifiers/generate.sh                    | src/tests/fidl/dangerous_identifiers/generate/*.py                | src/tests/fidl/dangerous_identifiers/{cpp, fidl}                                           |
-| regen third party go  | fx exec $FUCHSIA_DIR/third_party/go/regen-fidl                              |                                                                   |                                                                                            |
-| fidldoc goldens       | REGENERATE_GOLDENS_FOLDER=$FUCHSIA_DIR/tools/fidl/fidldoc/src/templates/markdown/testdata fx test host_x64/fidldoc_bin_test -- golden_test | zircon/tools/fidl/goldens | tools/fidl/fidldoc/src/templates/markdown/testdata |
+| Name                  | Regen commands                                                        | Input                                              |  Output
+|-----------------------|-----------------------------------------------------------------------|----------------------------------------------------|------------
+| fidlc goldens         | fx regen-goldens fidlc                                                | zircon/tools/fidl/testdata                         | tools/fidl/fidlc/goldens
+| fidlgen goldens       | fx regen-goldens $TOOL                                                | zircon/tools/fidl/testdata                         | tools/fidl/$TOOL/goldens
+| fidldoc goldens       | fx regen-goldens fidldoc                                              | zircon/tools/fidl/testdata                         | tools/fidl/fidldoc/goldens
+| dangerous identifiers | fx exec $FUCHSIA_DIR/src/tests/fidl/dangerous_identifiers/generate.sh | src/tests/fidl/dangerous_identifiers/generate/*.py | src/tests/fidl/dangerous_identifiers/{cpp, fidl}
+| third party go        | fx exec $FUCHSIA_DIR/third_party/go/regen-fidl                        |                                                    |
 
 ### Compiling with `ninja`
 
@@ -722,7 +717,7 @@ fidl fmt --library my_library.fidl -i
 [/src/lib/fidl/c]: /src/lib/fidl/c
 [/src/lib/fidl/llcpp]: /src/lib/fidl/llcpp
 [/src/tests/fidl/dart_bindings_test]: /src/tests/fidl/dart_bindings_test
-[/garnet/go/src/fidl/compiler/backend]: /garnet/go/src/fidl/compiler/backend
+[/tools/fidl/lib/fidlgen]: /tools/fidl/lib/fidlgen
 
 [/tools/fidl/gidl]: /tools/fidl/gidl
 [/src/tests/fidl/conformance_suite]: /src/tests/fidl/conformance_suite

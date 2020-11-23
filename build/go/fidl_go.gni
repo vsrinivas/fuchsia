@@ -35,7 +35,10 @@ template("fidl_go") {
   json_representation = "$fidl_target_gen_dir/$target_name.fidl.json"
 
   compiled_action(generation_target_name) {
-    visibility = [ ":*" ]
+    visibility = [
+      ":*",
+      "//tools/fidl/fidlgen_go:*",
+    ]
 
     tool = "//tools/fidl/fidlgen_go"
 

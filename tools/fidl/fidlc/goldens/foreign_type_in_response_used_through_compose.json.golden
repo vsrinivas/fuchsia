@@ -1,0 +1,156 @@
+{
+  "version": "0.0.1",
+  "name": "fidl.test.foreigntypeinresponseusedthroughcompose",
+  "library_dependencies": [
+    {
+      "name": "bottom",
+      "declarations": {
+        "bottom/Foo": {
+          "kind": "struct",
+          "resource": false
+        }
+      }
+    },
+    {
+      "name": "middle",
+      "declarations": {
+        "middle/Middle": {
+          "kind": "interface"
+        },
+        "middle/SomeLongAnonymousPrefix0": {
+          "kind": "struct",
+          "resource": true
+        },
+        "middle/SomeLongAnonymousPrefix1": {
+          "kind": "struct",
+          "resource": true
+        }
+      }
+    }
+  ],
+  "bits_declarations": [],
+  "const_declarations": [],
+  "enum_declarations": [],
+  "experimental_resource_declarations": [],
+  "interface_declarations": [
+    {
+      "name": "fidl.test.foreigntypeinresponseusedthroughcompose/Top",
+      "location": {
+        "filename": "../../zircon/tools/fidl/testdata/foreign_type_in_response_used_through_compose/top.test.fidl",
+        "line": 5,
+        "column": 10,
+        "length": 3
+      },
+      "methods": [
+        {
+          "ordinal": 7703637629648977298,
+          "name": "GetFoo",
+          "location": {
+            "filename": "../../zircon/tools/fidl/testdata/foreign_type_in_response_used_through_compose/middle.test.fidl",
+            "line": 6,
+            "column": 5,
+            "length": 6
+          },
+          "has_request": true,
+          "maybe_request": [],
+          "maybe_request_type_shape_v1": {
+            "inline_size": 16,
+            "alignment": 8,
+            "depth": 0,
+            "max_handles": 0,
+            "max_out_of_line": 0,
+            "has_padding": false,
+            "has_flexible_envelope": false,
+            "is_resource": false
+          },
+          "has_response": true,
+          "maybe_response": [
+            {
+              "type": {
+                "kind": "identifier",
+                "identifier": "bottom/Foo",
+                "nullable": false
+              },
+              "name": "foo",
+              "location": {
+                "filename": "../../zircon/tools/fidl/testdata/foreign_type_in_response_used_through_compose/middle.test.fidl",
+                "line": 6,
+                "column": 29,
+                "length": 3
+              },
+              "field_shape_v1": {
+                "offset": 16,
+                "padding": 4
+              }
+            }
+          ],
+          "maybe_response_payload": "middle/SomeLongAnonymousPrefix1",
+          "maybe_response_type_shape_v1": {
+            "inline_size": 24,
+            "alignment": 8,
+            "depth": 0,
+            "max_handles": 0,
+            "max_out_of_line": 0,
+            "has_padding": true,
+            "has_flexible_envelope": false,
+            "is_resource": false
+          },
+          "is_composed": true
+        }
+      ]
+    }
+  ],
+  "service_declarations": [],
+  "struct_declarations": [
+    {
+      "name": "middle/SomeLongAnonymousPrefix1",
+      "location": {
+        "filename": "../../zircon/tools/fidl/testdata/foreign_type_in_response_used_through_compose/middle.test.fidl",
+        "line": 6,
+        "column": 17,
+        "length": 16
+      },
+      "anonymous": true,
+      "members": [
+        {
+          "type": {
+            "kind": "identifier",
+            "identifier": "bottom/Foo",
+            "nullable": false
+          },
+          "name": "foo",
+          "location": {
+            "filename": "../../zircon/tools/fidl/testdata/foreign_type_in_response_used_through_compose/middle.test.fidl",
+            "line": 6,
+            "column": 29,
+            "length": 3
+          },
+          "field_shape_v1": {
+            "offset": 0,
+            "padding": 4
+          }
+        }
+      ],
+      "resource": true,
+      "type_shape_v1": {
+        "inline_size": 8,
+        "alignment": 8,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": true,
+        "has_flexible_envelope": false,
+        "is_resource": false
+      }
+    }
+  ],
+  "table_declarations": [],
+  "union_declarations": [],
+  "type_alias_declarations": [],
+  "declaration_order": [
+    "fidl.test.foreigntypeinresponseusedthroughcompose/Top"
+  ],
+  "declarations": {
+    "fidl.test.foreigntypeinresponseusedthroughcompose/Top": "interface"
+  }
+}
