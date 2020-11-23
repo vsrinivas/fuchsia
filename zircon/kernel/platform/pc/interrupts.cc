@@ -97,14 +97,13 @@ io_apic_isa_override ParseIsaOverride(const acpi_lite::AcpiMadtIntSourceOverride
     }
   }();
 
-  return io_apic_isa_override {
+  return io_apic_isa_override{
       .isa_irq = record->source,
       .remapped = true,
       .tm = trigger_mode,
       .pol = polarity,
       .global_irq = record->global_sys_interrupt,
   };
-
 }
 
 }  // namespace
@@ -211,8 +210,10 @@ zx_status_t register_permanent_int_handler(unsigned int vector, int_handler hand
 
 uint32_t interrupt_get_base_vector(void) {
   // Intel Software Developer's Manual v3 chapter 6.2
-  // 0-31 are reserved for architecture defined interrupts & exceptions
-  return 32;
+  // Vectors 0-31 are reserved for architecture defined interrupts & exceptions.
+  // Of that, 16-31 can be allocated to the PCI bus by ACPI and are valid for
+  // interrupt objects.
+  return 16;
 }
 
 uint32_t interrupt_get_max_vector(void) {
