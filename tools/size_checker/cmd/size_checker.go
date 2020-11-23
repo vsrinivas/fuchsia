@@ -672,7 +672,7 @@ func generateReport(outputSizes map[string]*ComponentSize, showBudgetOnly bool, 
 	sort.Strings(componentNames)
 	report.WriteString("\n")
 	report.WriteString(fmt.Sprintf("%-80s | %-10s | %-10s | %-10s\n", "Component", "Size", "Budget", "Remaining"))
-	report.WriteString(strings.Repeat("-", 79) + "\n")
+	report.WriteString(strings.Repeat("-", 119) + "\n")
 	for _, componentName := range componentNames {
 		var componentSize = outputSizes[componentName]
 		var remainingBudget = componentSize.Budget - componentSize.Size
