@@ -94,6 +94,11 @@ impl MediaTaskRunner for ConfiguredSinkTask {
         let task = RunningSinkTask::start(media_player_fut, self.cobalt_sender.clone(), codec_type);
         Ok(Box::new(task))
     }
+
+    fn reconfigure(&mut self, codec_config: &MediaCodecConfig) -> Result<(), MediaTaskError> {
+        self.codec_config = codec_config.clone();
+        Ok(())
+    }
 }
 
 #[derive(Error, Debug)]

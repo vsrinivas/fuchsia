@@ -62,6 +62,12 @@ pub trait MediaTaskRunner: Send {
     /// This can fail with MediaTaskError::ResourcesInUse if a MediaTask cannot be started because
     /// one is already running.
     fn start(&mut self, stream: MediaStream) -> Result<Box<dyn MediaTask>, MediaTaskError>;
+    /// Try to reconfigure the MediaTask to accept a new configuration.  This differs from
+    /// `MediaTaskBuilder::configure` as it attempts to preserve the same configured session.
+    /// The runner remains configured with the initial configuration on an error.
+    fn reconfigure(&mut self, _config: &MediaCodecConfig) -> Result<(), MediaTaskError> {
+        Err(MediaTaskError::ConfigurationNotSupported)
+    }
 }
 
 /// MediaTasks represent a media stream being actively processed (sent or received from a peer).
@@ -181,6 +187,8 @@ pub mod tests {
         pub peer_id: PeerId,
         /// The config that this runner will start tasks for
         pub codec_config: MediaCodecConfig,
+        /// If this is reconfigurable
+        pub reconfigurable: bool,
         /// The Sender that will send a clone of the started tasks to the builder.
         pub sender: mpsc::Sender<TestMediaTask>,
     }
@@ -192,6 +200,15 @@ pub mod tests {
             let _ = self.sender.try_send(task.clone());
             Ok(Box::new(task))
         }
+
+        fn reconfigure(&mut self, config: &MediaCodecConfig) -> Result<(), MediaTaskError> {
+            if self.reconfigurable {
+                self.codec_config = config.clone();
+                Ok(())
+            } else {
+                Err(MediaTaskError::ConfigurationNotSupported)
+            }
+        }
     }
 
     /// A TestMediaTask expects to be configured once, and then started and stopped as appropriate.
@@ -200,18 +217,26 @@ pub mod tests {
     pub struct TestMediaTaskBuilder {
         sender: Mutex<mpsc::Sender<TestMediaTask>>,
         receiver: mpsc::Receiver<TestMediaTask>,
+        reconfigurable: bool,
     }
 
     impl TestMediaTaskBuilder {
         pub fn new() -> Self {
             let (sender, receiver) = mpsc::channel(5);
-            Self { sender: Mutex::new(sender), receiver }
+            Self { sender: Mutex::new(sender), receiver, reconfigurable: false }
+        }
+
+        pub fn new_reconfigurable() -> Self {
+            Self { reconfigurable: true, ..Self::new() }
         }
 
         /// Returns a type that implements MediaTaskBuilder.  When a MediaTask is built using
         /// configure(), it will be avialable from `next_task`.
         pub fn builder(&self) -> impl MediaTaskBuilder {
-            self.sender.lock().expect("locking").clone()
+            TestMediaTaskBuilderBuilder(
+                self.sender.lock().expect("locking").clone(),
+                self.reconfigurable,
+            )
         }
 
         /// Gets a future that will return a handle to the next TestMediaTask that gets started
@@ -220,21 +245,32 @@ pub mod tests {
         pub fn next_task(&mut self) -> impl Future<Output = Option<TestMediaTask>> + '_ {
             self.receiver.next()
         }
+
+        /// Expects that a task had been built, and retrieves that task, or panics.
+        pub fn expect_task(&mut self) -> TestMediaTask {
+            self.receiver
+                .try_next()
+                .expect("should have made a task")
+                .expect("shouldn't have dropped all senders")
+        }
     }
 
-    impl MediaTaskBuilder for mpsc::Sender<TestMediaTask> {
+    struct TestMediaTaskBuilderBuilder(mpsc::Sender<TestMediaTask>, bool);
+
+    impl MediaTaskBuilder for TestMediaTaskBuilderBuilder {
         fn configure(
             &self,
             peer_id: &PeerId,
             codec_config: &MediaCodecConfig,
             _data_stream_inspect: DataStreamInspect,
         ) -> Result<Box<dyn MediaTaskRunner>, MediaTaskError> {
-            let task = TestMediaTaskRunner {
+            let runner = TestMediaTaskRunner {
                 peer_id: peer_id.clone(),
                 codec_config: codec_config.clone(),
-                sender: self.clone(),
+                sender: self.0.clone(),
+                reconfigurable: self.1,
             };
-            Ok(Box::new(task))
+            Ok(Box::new(runner))
         }
     }
 }
