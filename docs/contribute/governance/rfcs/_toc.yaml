@@ -28,5 +28,7 @@ toc:
   path: /docs/contribute/governance/rfcs/0009_edge_triggered_async_wait.md
 - title: "RFC-0010: zx_channel_iovec_t support for zx_channel_write and zx_channel_call"
   path: /docs/contribute/governance/rfcs/0010_channel_iovec.md
+- title: "RFC-0011: zx_object_get_info ZX_INFO_KMEM_STATS_EXTENDED"
+  path: /docs/contribute/governance/rfcs/0011_getinfo_kmemstats_extended.md
 - title: "RFC template"
   path: /docs/contribute/governance/rfcs/TEMPLATE.md
