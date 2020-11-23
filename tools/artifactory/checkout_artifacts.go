@@ -28,8 +28,9 @@ func JiriSnapshotUpload(mods *build.Modules, namespace string) (*Upload, error) 
 			return &Upload{
 				Source:      absPath,
 				Destination: path.Join(namespace, jiriSnapshotDestName),
+				Deduplicate: true,
 			}, nil
 		}
 	}
-	return nil, fmt.Errorf("failed to find a jiri snapsot")
+	return nil, fmt.Errorf("failed to find a jiri snapshot")
 }
