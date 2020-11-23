@@ -16,7 +16,6 @@ use futures::{select, StreamExt, TryFutureExt, TryStreamExt};
 use parking_lot::RwLock;
 use serde_json::{to_value, Value};
 use std::io::Write;
-use std::iter::FromIterator;
 use std::sync::Arc;
 
 use fuchsia_syslog::macros::*;
@@ -236,7 +235,7 @@ impl OutputWorker {
                                                    notifications_per_ring)?;
                         },
                         Some(OutputEvent::OnStart { start_time }) => {
-                            if last_timestamp > zx::Time::from_nanos(0) {
+                            if self.capturing && last_timestamp > zx::Time::from_nanos(0) {
                                 fx_log_info!("AudioFacade::OutputWorker: Extraction OnPositionNotify received before OnStart");
                             }
                             last_timestamp = zx::Time::from_nanos(start_time);
@@ -251,16 +250,16 @@ impl OutputWorker {
                             last_event_time = zx::Time::from_nanos(0);
                         },
                         Some(OutputEvent::OnPositionNotify { monotonic_time, ring_position }) => {
-                            if last_timestamp == zx::Time::from_nanos(0) {
-                                fx_log_info!(
-                                    "AudioFacade::OutputWorker: Extraction OnStart not received before OnPositionNotify");
-                            }
-
                             let monotonic_zx_time = zx::Time::from_nanos(monotonic_time);
                             let now = zx::Time::get_monotonic();
 
                             // To minimize logspam, log glitches only when capturing.
-                            if (self.capturing) {
+                            if self.capturing {
+                                if last_timestamp == zx::Time::from_nanos(0) {
+                                    fx_log_info!(
+                                        "AudioFacade::OutputWorker: Extraction OnStart not received before OnPositionNotify");
+                                }
+
                                 // Log if our timestamps had a gap of more than 100ms. This is highly
                                 // abnormal and indicates possible glitching while receiving playback
                                 // audio from the system and/or extracting it for analysis.
@@ -413,47 +412,61 @@ struct InputWorker {
     vmo: Option<zx::Vmo>,
 
     // How much of the vmo's data we're actually using, in bytes.
-    work_space: u64,
+    work_space: usize,
 
     // How many frames ahead of the position we want to be writing to, when writing.
-    target_frames: u64,
-
-    // How close we let position get to where we've written before writing again.
-    low_frames: u64,
+    target_frames: usize,
 
     // How often, in frames, we want to be updated on the state of the injection ring buffer.
-    frames_per_notification: u64,
+    frames_per_notification: usize,
 
     // How many bytes a frame is.
-    frame_size: u64,
+    frame_size: usize,
 
-    // Offset into inj_data, in bytes
-    data_offset: usize,
+    // Next write pointer as a byte number.
+    // This is not an offset into vmo (it does not wrap around).
+    write_pointer: usize,
 
-    // Offset into vmo where we'll write next, in bytes.
-    next_write: u64,
+    // Next ring buffer pointer as a byte number.
+    // This is not an offset into vmo (it does not wrap around).
+    ring_pointer: usize,
 
-    // How many zeros we've written.
-    zeros_written: usize,
+    // Last relative ring buffer byte offset.
+    // This is an offset into vmo (it wraps around).
+    last_ring_offset: usize,
 }
 
 impl InputWorker {
+    fn write_to_vmo(&self, data: &[u8]) -> Result<(), Error> {
+        let vmo = if let Some(vmo) = &self.vmo { vmo } else { return Ok(()) };
+        let start = self.write_pointer % self.work_space;
+        let end = (self.write_pointer + data.len()) % self.work_space;
+
+        // Write in two chunks if we've wrapped around.
+        if end < start {
+            let split = self.work_space - start;
+            vmo.write(&data[0..split], start as u64)?;
+            vmo.write(&data[split..], 0)?;
+        } else {
+            vmo.write(&data, start as u64)?;
+        }
+        Ok(())
+    }
+
     // Events from the sl4f facade
     fn flush(&mut self) {
-        // This will be set to false once the writer has zeroed out the vmo.
         self.inj_data.clear();
-        self.data_offset = 0;
     }
 
     fn set_data(&mut self, data: Vec<u8>) -> Result<(), Error> {
-        self.inj_data.clear();
+        if self.inj_data.len() > 0 {
+            return Err(format_err!("Cannot inject new audio without flushing old audio"));
+        }
         // This is a bad assumption, wav headers can be many different sizes.
         // 8 Bytes for riff header
         // 28 bytes for wave fmt block
         // 8 bytes for data header
-        self.data_offset = 44;
-        self.zeros_written = 0;
-        self.inj_data.write(&data)?;
+        self.inj_data.write(&data[44..])?;
         fx_log_info!("AudioFacade::InputWorker: Injecting {:?} bytes", self.inj_data.len());
         Ok(())
     }
@@ -467,9 +480,9 @@ impl InputWorker {
         _external_delay: i64,
     ) -> Result<(), Error> {
         let sample_size = get_sample_size(sample_format)?;
-        self.frame_size = num_channels as u64 * sample_size as u64;
+        self.frame_size = num_channels as usize * sample_size as usize;
 
-        let frames_per_millisecond = frames_per_second as u64 / 1000;
+        let frames_per_millisecond = frames_per_second as usize / 1000;
 
         fx_log_info!(
             "AudioFacade::InputWorker: configuring with {:?} fps, {:?} bpf",
@@ -477,8 +490,27 @@ impl InputWorker {
             self.frame_size
         );
 
+        // We get notified every 50ms and write up to 250ms worth of data in the future.
+        // The gap between frames_per_notification and target_frames gives us slack to
+        // account for scheduling delays. Audio injection proceeds as follows:
+        //
+        //   1. When the buffer is created, the initial ring buffer position is "0ms".
+        //      At that time, the ring buffer is zeroed and we pretend to write target_frames
+        //      worth of silence to the ring buffer. This puts our write pointer ~250ms
+        //      ahead of the ring buffer's safe read pointer.
+        //
+        //   2. We receive the first notification at time 50ms + scheduling delay. At this
+        //      point we write data for the range 250ms - 300ms. As long as our scheduling
+        //      delay is < 250ms, our writes will stay ahead of the ring buffer's safe read
+        //      pointer. We assume that 250ms is more than enough time (this test framework
+        //      should never be run in a debug or sanitizer build).
+        //
+        //   3. This continues ad infinitum.
+        //
+        // The sum of 250ms + 50ms must fit within the ring buffer. We currently use a 1s
+        // ring buffer: see VirtualInput.start_input.
+        //
         self.target_frames = 250 * frames_per_millisecond;
-        self.low_frames = 100 * frames_per_millisecond;
         self.frames_per_notification = 50 * frames_per_millisecond;
         Ok(())
     }
@@ -486,110 +518,61 @@ impl InputWorker {
     fn on_buffer_created(
         &mut self,
         ring_buffer: zx::Vmo,
-        num_ring_buffer_frames: u32,
+        num_ring_buffer_frames: usize,
         _notifications_per_ring: u32,
     ) -> Result<(), Error> {
         let va_input = self.va_input.as_mut().ok_or(format_err!("va_input not initialized"))?;
 
         // Ignore AudioCore's notification cadence (_notifications_per_ring); set up our own.
-        let target_notifications_per_ring =
-            num_ring_buffer_frames as u64 / self.frames_per_notification;
+        let target_notifications_per_ring = num_ring_buffer_frames / self.frames_per_notification;
 
         va_input.set_notification_frequency(target_notifications_per_ring as u32)?;
-        fx_log_info!(
-            "AudioFacade::InputWorker: created buffer with {:?} frames, {:?} notifications",
-            num_ring_buffer_frames,
-            target_notifications_per_ring
-        );
 
-        self.work_space = num_ring_buffer_frames as u64 * self.frame_size;
-
-        // It starts zeroed, so just pretend we wrote the zeroes at the start.
-        self.next_write = 2 * self.frames_per_notification * self.frame_size;
-
+        // The buffer starts zeroed and our write pointer starts target_frames in the future.
+        self.work_space = num_ring_buffer_frames * self.frame_size;
+        self.write_pointer = self.target_frames * self.frame_size;
+        self.last_ring_offset = 0;
         self.vmo = Some(ring_buffer);
+
+        fx_log_info!(
+            "AudioFacade::InputWorker: created buffer with {:?} frames, {:?} notifications, {:?} target frames per write",
+            num_ring_buffer_frames,
+            target_notifications_per_ring,
+            self.target_frames
+        );
         Ok(())
     }
 
     fn on_position_notify(
         &mut self,
         _monotonic_time: i64,
-        ring_position: u32,
-        active: bool,
+        ring_offset: usize,
     ) -> Result<(), Error> {
-        let vmo = if let Some(vmo) = &self.vmo { vmo } else { return Ok(()) };
-
-        let current_fill = if self.next_write < ring_position as u64 {
-            self.work_space - ring_position as u64 + self.next_write
+        if ring_offset < self.last_ring_offset {
+            self.ring_pointer += (self.work_space - self.last_ring_offset) + ring_offset;
         } else {
-            self.next_write - ring_position as u64
+            self.ring_pointer += ring_offset - self.last_ring_offset;
         };
 
-        // If we've still have more than low_frames notifications worth of data, just continue.
-        if current_fill > self.low_frames * self.frame_size {
-            return Ok(());
+        let next_write_pointer = self.ring_pointer + self.target_frames * self.frame_size;
+        let bytes_to_write = next_write_pointer - self.write_pointer;
+
+        // Next segment of inj_data.
+        if self.inj_data.len() > 0 {
+            let data_end = std::cmp::min(self.inj_data.len(), bytes_to_write);
+            self.write_to_vmo(&self.inj_data[0..data_end])?;
+            self.inj_data.drain(0..data_end);
+            self.write_pointer += data_end;
         }
 
-        // Calculate where to stop writing to hit the target buffer fill.
-        let write_end =
-            (ring_position as u64 + self.target_frames * self.frame_size) % self.work_space;
-
-        if active {
-            fx_log_info!(
-                "AudioFacade::InputWorker: write byte {:?} to {:?}",
-                self.next_write,
-                write_end
-            );
-
-            // Calculate how many bytes we're writing, and figure out if we've wrapped around, and
-            // if so, calculate the split.
-            let (split_point, write_size) = if write_end < self.next_write {
-                (
-                    (self.work_space - self.next_write) as usize,
-                    (self.work_space - self.next_write + write_end) as usize,
-                )
-            } else {
-                (0 as usize, (write_end - self.next_write) as usize)
-            };
-
-            // Calculate the range of the data we need to use.
-            let start = self.data_offset as usize;
-            let end;
-
-            let data_size;
-            let src_data_size = self.inj_data.len();
-            if write_size as usize > (src_data_size - self.data_offset) {
-                data_size = src_data_size - self.data_offset;
-                end = src_data_size as usize;
-            } else {
-                data_size = write_size;
-                end = self.data_offset + write_size as usize;
-            }
-
-            // Build the data to send.
-            let mut wav_data = Vec::from_iter(self.inj_data[start..end].iter().cloned());
-            // Fill out with zeroes.
-            wav_data.resize_with(write_size as usize, || 0);
-
-            // If we're writing any wav data, clear our bookkeeping of having zeroed out the buffer.
-            if !(data_size == 0) {
-                self.zeros_written = 0;
-            }
-
-            // Only write to the VMO when we're going to be changing the contents.
-            if self.zeros_written < self.work_space as usize {
-                if split_point == 0 {
-                    vmo.write(&wav_data, self.next_write)?;
-                } else {
-                    vmo.write(&wav_data[0..split_point], self.next_write)?;
-                    vmo.write(&wav_data[split_point..], 0)?;
-                }
-            }
-            self.data_offset += data_size as usize;
-            self.zeros_written += write_size - data_size;
+        // Pad with zeroes.
+        if self.write_pointer < next_write_pointer {
+            let zeroes = vec![0; next_write_pointer - self.write_pointer];
+            self.write_to_vmo(&zeroes)?;
+            self.write_pointer = next_write_pointer;
         }
-        self.next_write = write_end;
 
+        self.last_ring_offset = ring_offset;
         Ok(())
     }
 
@@ -597,7 +580,6 @@ impl InputWorker {
         &mut self,
         mut rx: mpsc::Receiver<InjectMsg>,
         va_input: InputProxy,
-        active: Arc<Mutex<bool>>,
     ) -> Result<(), Error> {
         let mut input_events = va_input.take_event_stream();
         self.va_input = Some(va_input);
@@ -615,13 +597,10 @@ impl InputWorker {
                             return Err(format_err!("Got None InjectMsg Event, exiting worker"));
                         },
                         Some(InjectMsg::Flush) => {
-                            let active = active.lock().await;
                             self.flush();
                         }
                         Some(InjectMsg::Data { data }) => {
-                            let mut active = active.lock().await;
                             self.set_data(data)?;
-                            *(active) = true;
                         }
                     }
                 },
@@ -637,7 +616,7 @@ impl InputWorker {
                         },
                         Some(InputEvent::OnBufferCreated { ring_buffer, num_ring_buffer_frames,
                                                            notifications_per_ring }) => {
-                            self.on_buffer_created(ring_buffer, num_ring_buffer_frames,
+                            self.on_buffer_created(ring_buffer, num_ring_buffer_frames as usize,
                                                    notifications_per_ring)?;
                         },
                         Some(InputEvent::OnStart { start_time }) => {
@@ -655,16 +634,15 @@ impl InputWorker {
                             last_event_time = zx::Time::from_nanos(0);
                         },
                         Some(InputEvent::OnPositionNotify { monotonic_time, ring_position }) => {
-                            if last_timestamp == zx::Time::from_nanos(0) {
-                                fx_log_info!("AudioFacade::InputWorker: Injection OnStart not received before OnPositionNotify");
-                            }
-
                             let monotonic_zx_time = zx::Time::from_nanos(monotonic_time);
                             let now = zx::Time::get_monotonic();
-                            let mut active = active.lock().await;
 
                             // To minimize logspam, log glitches only when writing audio.
-                            if (*active) {
+                            if self.inj_data.len() > 0 {
+                                if last_timestamp == zx::Time::from_nanos(0) {
+                                    fx_log_info!("AudioFacade::InputWorker: Injection OnStart not received before OnPositionNotify");
+                                }
+
                                 // Log if our timestamps had a gap of more than 100ms. This is highly
                                 // abnormal and indicates possible glitching while receiving audio to
                                 // be injected and/or providing it to the system.
@@ -693,11 +671,7 @@ impl InputWorker {
 
                             last_timestamp = monotonic_zx_time;
                             last_event_time = now;
-
-                            self.on_position_notify(monotonic_time, ring_position, *active)?;
-                            if self.zeros_written >= self.work_space as usize {
-                                *(active) = false;
-                            }
+                            self.on_position_notify(monotonic_time, ring_position as usize)?;
                         },
                         Some(evt) => {
                             fx_log_info!("AudioFacade::InputWorker: Got unknown InputEvent {:?}", evt);
@@ -712,7 +686,6 @@ impl InputWorker {
 #[derive(Debug)]
 struct VirtualInput {
     injection_data: Vec<Vec<u8>>,
-    active: Arc<Mutex<bool>>,
     have_data: bool,
 
     sample_format: AudioSampleFormat,
@@ -726,7 +699,6 @@ impl VirtualInput {
     fn new(sample_format: AudioSampleFormat, channels: u8, frames_per_second: u32) -> Self {
         VirtualInput {
             injection_data: vec![],
-            active: Arc::new(Mutex::new(false)),
             have_data: false,
 
             sample_format,
@@ -762,11 +734,10 @@ impl VirtualInput {
 
         va_input.add()?;
         let (tx, rx) = mpsc::channel(512);
-        let active = self.active.clone();
         fasync::Task::spawn(
             async move {
                 let mut worker = InputWorker::default();
-                worker.run(rx, va_input, active).await?;
+                worker.run(rx, va_input).await?;
                 Ok::<(), Error>(())
             }
             .unwrap_or_else(|e| eprintln!("Input injection thread failed: {:?}", e)),
@@ -786,7 +757,6 @@ impl VirtualInput {
     }
 
     pub fn stop(&mut self) -> Result<(), Error> {
-        // The input worker will set the active flag to false after it has zeroed out the vmo.
         let sender =
             self.input_sender.as_mut().ok_or(format_err!("input_sender not initialized"))?;
         sender.try_send(InjectMsg::Flush)?;
@@ -951,23 +921,15 @@ impl AudioFacade {
         // TODO(perley): check wave format for correct bits per sample and float/int.
         let byte_cnt = wave_data_vec.len();
         {
-            let active = self.audio_input.read().active.clone();
-            let active = active.lock().await;
-            if *active {
-                return Err(format_err!("PutInputAudio failed, currently injecting audio."));
+            let mut write = self.audio_input.write();
+            // Make sure we have somewhere to store the wav data.
+            if write.injection_data.len() <= sample_index {
+                write.injection_data.resize(sample_index + 1, vec![]);
             }
 
-            {
-                let mut write = self.audio_input.write();
-                // Make sure we have somewhere to store the wav data.
-                if write.injection_data.len() <= sample_index {
-                    write.injection_data.resize(sample_index + 1, vec![]);
-                }
-
-                write.injection_data[sample_index].clear();
-                write.injection_data[sample_index].append(&mut wave_data_vec);
-                write.have_data = true;
-            }
+            write.injection_data[sample_index].clear();
+            write.injection_data[sample_index].append(&mut wave_data_vec);
+            write.have_data = true;
         }
         Ok(to_value(byte_cnt)?)
     }
@@ -978,11 +940,7 @@ impl AudioFacade {
             let sample_index = args["index"].as_u64().ok_or(format_err!("index not a number"))?;
             let sample_index = sample_index as usize;
 
-            let active = self.audio_input.read().active.clone();
-            let active = active.lock().await;
-            if *active {
-                return Err(format_err!("StartInputInjection failed, already active."));
-            } else if !self.audio_input.read().have_data {
+            if !self.audio_input.read().have_data {
                 return Err(format_err!("StartInputInjection failed, no Audio data to inject."));
             }
             self.audio_input.write().play(sample_index)?;
@@ -992,15 +950,7 @@ impl AudioFacade {
 
     pub async fn stop_input_injection(&self) -> Result<Value, Error> {
         self.ensure_initialized().await?;
-        {
-            let active = self.audio_input.read().active.clone();
-            let active = active.lock().await;
-            if !*active {
-                return Err(format_err!("StopInputInjection failed, not active."));
-            }
-            self.audio_input.write().stop()?;
-        }
-
+        self.audio_input.write().stop()?;
         Ok(to_value(true)?)
     }
 }
