@@ -32,3 +32,5 @@ toc:
 - title: "Fuzzing"
   section:
   - include: /docs/development/testing/fuzzing/_toc.yaml
+- title: "Host-target interaction tests"
+  path: /docs/development/testing/host_target_interaction_tests.md

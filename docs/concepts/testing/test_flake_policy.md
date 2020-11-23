@@ -1,4 +1,4 @@
-# Fuchsia flaky test policy
+# Flaky test policy
 
 This document codifies the best practice for interacting with test flakes on
 Fuchsia.

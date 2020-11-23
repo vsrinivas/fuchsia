@@ -22,7 +22,7 @@ toc:
   path: /docs/concepts/testing/sl4f.md
 - title: "Fuzz testing"
   path: /docs/concepts/testing/fuzz_testing.md
-- title: "Fuchsia flaky test policy"
+- title: "Flaky test policy"
   path: /docs/concepts/testing/test_flake_policy.md
 - title: "Entropy quality tests"
   path:  /docs/concepts/testing/entropy_quality_tests.md
