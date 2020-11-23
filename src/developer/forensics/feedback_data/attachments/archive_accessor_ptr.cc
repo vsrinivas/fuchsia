@@ -44,11 +44,10 @@ ArchiveAccessor::ArchiveAccessor(async_dispatcher_t* dispatcher,
 }
 
 void ArchiveAccessor::Collect(
-    const std::function<void(const fuchsia::diagnostics::FormattedContent&)>&
-        write_formatted_content) {
+    std::function<void(fuchsia::diagnostics::FormattedContent)> write_formatted_content) {
   // We start the Inspect data collection.
   archive_->StreamDiagnostics(std::move(stream_parameters_), snapshot_iterator_.NewRequest());
-  AppendNextBatch(write_formatted_content);
+  AppendNextBatch(std::move(write_formatted_content));
 }
 
 ::fit::promise<void, Error> ArchiveAccessor::WaitForDone(fit::Timeout timeout) {
@@ -56,37 +55,37 @@ void ArchiveAccessor::Collect(
 }
 
 void ArchiveAccessor::AppendNextBatch(
-    const std::function<void(const fuchsia::diagnostics::FormattedContent&)>&
-        write_formatted_content) {
-  snapshot_iterator_->GetNext([this, write_formatted_content](auto result) {
-    if (archive_.IsAlreadyDone()) {
-      return;
-    }
+    std::function<void(fuchsia::diagnostics::FormattedContent)> write_formatted_content) {
+  snapshot_iterator_->GetNext(
+      [this, write_formatted_content = std::move(write_formatted_content)](auto result) {
+        if (archive_.IsAlreadyDone()) {
+          return;
+        }
 
-    if (result.is_err()) {
-      FX_LOGS(WARNING) << "Failed to retrieve next Inspect batch: " << result.err();
-      // TODO(fxbug.dev/51658): don't complete the flow on an error. The API says we should continue
-      // making calls instead.
-      archive_.CompleteError(Error::kBadValue);
-      return;
-    }
+        if (result.is_err()) {
+          FX_LOGS(WARNING) << "Failed to retrieve next Inspect batch: " << result.err();
+          // TODO(fxbug.dev/51658): don't complete the flow on an error. The API says we should
+          // continue making calls instead.
+          archive_.CompleteError(Error::kBadValue);
+          return;
+        }
 
-    const std::vector<fuchsia::diagnostics::FormattedContent>& batch = result.response().batch;
-    if (batch.empty()) {  // We have gotten all the Inspect data.
-      archive_.CompleteOk();
-      return;
-    }
+        std::vector<fuchsia::diagnostics::FormattedContent>& batch = result.response().batch;
+        if (batch.empty()) {  // We have gotten all the Inspect data.
+          archive_.CompleteOk();
+          return;
+        }
 
-    for (const auto& chunk : batch) {
-      if (!chunk.is_json()) {
-        FX_LOGS(WARNING) << "Missing JSON Inspect chunk, skipping";
-        continue;
-      }
-      write_formatted_content(chunk);
-    }
+        for (auto& chunk : batch) {
+          if (!chunk.is_json()) {
+            FX_LOGS(WARNING) << "Missing JSON Inspect chunk, skipping";
+            continue;
+          }
+          write_formatted_content(std::move(chunk));
+        }
 
-    AppendNextBatch(write_formatted_content);
-  });
+        AppendNextBatch(std::move(write_formatted_content));
+      });
 }
 
 }  // namespace feedback_data

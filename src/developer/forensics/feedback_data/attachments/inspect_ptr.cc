@@ -37,7 +37,7 @@ namespace feedback_data {
   auto inspect_vector = std::make_shared<std::vector<std::string>>();
 
   // Start collecting data.
-  inspect->Collect([inspect_vector](const fuchsia::diagnostics::FormattedContent& chunk) {
+  inspect->Collect([inspect_vector](fuchsia::diagnostics::FormattedContent chunk) {
     std::string json;
     if (!fsl::StringFromVmo(chunk.json(), &json)) {
       FX_LOGS(WARNING) << "Failed to convert Inspect data chunk to string, skipping";

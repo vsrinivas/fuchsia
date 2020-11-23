@@ -36,14 +36,13 @@ class ArchiveAccessor {
                   fuchsia::diagnostics::DataType data_type,
                   fuchsia::diagnostics::StreamMode stream_mode);
 
-  void Collect(const std::function<void(const fuchsia::diagnostics::FormattedContent&)>&
-                   write_formatted_content);
+  void Collect(std::function<void(fuchsia::diagnostics::FormattedContent)> write_formatted_content);
 
   ::fit::promise<void, Error> WaitForDone(fit::Timeout timeout);
 
  private:
-  void AppendNextBatch(const std::function<void(const fuchsia::diagnostics::FormattedContent&)>&
-                           write_formatted_content);
+  void AppendNextBatch(
+      std::function<void(fuchsia::diagnostics::FormattedContent)> write_formatted_content);
 
   fidl::OneShotPtr<fuchsia::diagnostics::ArchiveAccessor> archive_;
   fuchsia::diagnostics::StreamParameters stream_parameters_;
