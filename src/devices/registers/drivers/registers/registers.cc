@@ -164,6 +164,11 @@ zx_status_t RegistersDevice<T>::Init(zx_device_t* parent, Metadata metadata) {
 
   // Check for overlapping bits.
   for (const auto& reg : metadata.registers()) {
+    if (!reg.has_bind_id() && !reg.has_mmio_id() && !reg.has_masks()) {
+      // Doesn't have to have all Register IDs.
+      continue;
+    }
+
     if (mmios_.find(reg.mmio_id()) == mmios_.end()) {
       zxlogf(ERROR, "%s: Invalid MMIO ID %u for Register %u.\n", __func__, reg.mmio_id(),
              reg.bind_id());
@@ -198,6 +203,11 @@ zx_status_t RegistersDevice<T>::Init(zx_device_t* parent, Metadata metadata) {
 
   // Create Registers
   for (auto& reg : metadata.registers()) {
+    if (!reg.has_bind_id() && !reg.has_mmio_id() && !reg.has_masks()) {
+      // Doesn't have to have all Register IDs.
+      continue;
+    }
+
     fbl::AllocChecker ac;
     std::unique_ptr<Register<T>> tmp_register(
         new (&ac) Register<T>(this->zxdev(), mmios_[reg.mmio_id()]));
@@ -292,14 +302,19 @@ zx_status_t Bind(void* ctx, zx_device_t* parent) {
   bool begin = true;
   ::llcpp::fuchsia::hardware::registers::Mask::Tag tag;
   for (const auto& reg : metadata->registers()) {
-    if (begin) {
-      tag = reg.masks().begin()->mask().which();
-      begin = false;
+    if (!reg.has_bind_id() && !reg.has_mmio_id() && !reg.has_masks()) {
+      // Doesn't have to have all Register IDs.
+      continue;
     }
 
     if (!reg.has_bind_id() || !reg.has_mmio_id() || !reg.has_masks()) {
       zxlogf(ERROR, "%s: Metadata incomplete", __FILE__);
       return ZX_ERR_INTERNAL;
+    }
+
+    if (begin) {
+      tag = reg.masks().begin()->mask().which();
+      begin = false;
     }
 
     for (const auto& mask : reg.masks()) {

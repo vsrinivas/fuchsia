@@ -69,6 +69,11 @@ int Vim3::Thread() {
     init_txn_->Reply(ZX_ERR_INTERNAL);
     return status;
   }
+  if ((status = RegistersInit()) != ZX_OK) {
+    zxlogf(ERROR, "RegistersInit() failed: %d", status);
+    init_txn_->Reply(ZX_ERR_INTERNAL);
+    return status;
+  }
   if ((status = ClkInit()) != ZX_OK) {
     zxlogf(ERROR, "ClkInit() failed: %d", status);
     init_txn_->Reply(ZX_ERR_INTERNAL);
