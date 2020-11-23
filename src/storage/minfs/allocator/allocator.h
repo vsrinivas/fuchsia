@@ -144,6 +144,9 @@ class Allocator {
   // Return the number of total available elements, after taking reservations into account.
   size_t GetAvailable() const FS_TA_EXCLUDES(lock_);
 
+  // Returns the number of reserved blocks.
+  size_t GetReserved() const FS_TA_EXCLUDES(lock_);
+
   // Free an item from the allocator.
   void Free(AllocatorReservation* reservation, size_t index) FS_TA_EXCLUDES(lock_);
 

@@ -188,6 +188,37 @@ TEST(AllocatorTest, OverExtendFails) {
   ASSERT_EQ(allocator->GetAvailable(), kTotalElements - kInitialReservation);
 }
 
+TEST(AllocatorTest, GetReserved) {
+  std::unique_ptr<Allocator> allocator;
+  ASSERT_NO_FATAL_FAILURE(CreateAllocator(&allocator));
+  constexpr size_t kInitialReservation = 3;
+  constexpr size_t kExtendedReservation = 2;
+  constexpr size_t kExtendedReservationFail =
+      kTotalElements + 1 - (kInitialReservation + kExtendedReservation);
+
+  AllocatorReservation reservation(allocator.get());
+
+  // Nothing should be reserved.
+  ASSERT_EQ(reservation.GetReserved(), 0ul);
+
+  // kInitialReservation elements should be reserved.
+  ASSERT_EQ(ZX_OK, reservation.Reserve(nullptr, kInitialReservation));
+  ASSERT_EQ(reservation.GetReserved(), kInitialReservation);
+
+  // kInitialReservation + kExtendedReservation elements should be reserved.
+  ASSERT_EQ(ZX_OK, reservation.ExtendReservation(nullptr, kExtendedReservation));
+  ASSERT_EQ(reservation.GetReserved(), kInitialReservation + kExtendedReservation);
+
+  // Attempt to extend reservation more elements than the allocator has. The reserved elements
+  // should be unchanged.
+  ASSERT_NE(ZX_OK, reservation.ExtendReservation(nullptr, kExtendedReservationFail));
+  ASSERT_EQ(reservation.GetReserved(), kInitialReservation + kExtendedReservation);
+
+  // On cancelling reservation, number of reserved elements should be 0.
+  reservation.Cancel();
+  ASSERT_EQ(reservation.GetReserved(), 0ul);
+}
+
 fbl::Array<size_t> CreateArray(size_t size) {
   fbl::Array<size_t> array(new size_t[size], size);
   memset(array.data(), 0, sizeof(size_t) * size);

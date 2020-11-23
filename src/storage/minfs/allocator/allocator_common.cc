@@ -74,6 +74,11 @@ size_t Allocator::GetAvailable() const {
   return GetAvailableLocked();
 }
 
+size_t Allocator::GetReserved() const {
+  std::scoped_lock lock(lock_);
+  return reserved_;
+}
+
 // Loops through all pending changes and finds the next unreserved block that we might be able to
 // allocate.
 size_t Allocator::FindNextUnreserved(size_t start) const {
