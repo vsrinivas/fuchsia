@@ -235,6 +235,14 @@ fxl::RefPtr<VulkanDeviceQueues> VulkanDeviceQueues::New(VulkanInstancePtr instan
     physical_device = result.physical_device;
     main_queue_family = result.main_queue_family;
     transfer_queue_family = result.transfer_queue_family;
+
+    auto props = physical_device.getProperties();
+    FX_LOGS(INFO) << "Using physical device: " << props.deviceName
+                  << "  (apiVersion: " << VK_VERSION_MAJOR(props.apiVersion) << "."
+                  << VK_VERSION_MINOR(props.apiVersion) << "." << VK_VERSION_PATCH(props.apiVersion)
+                  << " driverVersion: " << VK_VERSION_MAJOR(props.driverVersion) << "."
+                  << VK_VERSION_MINOR(props.driverVersion) << "."
+                  << VK_VERSION_PATCH(props.driverVersion) << ")";
   }
 
   // Partially populate device capabilities from the physical device.
