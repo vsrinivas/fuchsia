@@ -66,15 +66,17 @@ protocol Stream {
     /// the new orientation.
     WatchOrientation() -> (Orientation orientation);
 
-    /// Request the next available frame for this stream. Returns when the stream has completed
-    /// populating the buffer and may be read by the client, provided the number of unreleased
-    /// buffers held by the client is less than the count provided via the most recently negotiated
-    /// buffer collection token. If a buffer renegotiation is in progress, this call will return
-    /// only after the negotiation is complete and a new collection is available.
+    /// Request the next available frame for this stream that has not yet been acquired by the
+    /// current client. Multiple participating clients may concurrently hold the same frame. Returns
+    /// when the stream has completed populating the buffer and may be read by the client, provided
+    /// the number of unreleased buffers is less than the count provided via the most recently
+    /// negotiated buffer collection token. If a buffer renegotiation is in progress, this call will
+    /// return only after the negotiation is complete and a new collection is available.
     GetNextFrame() -> (FrameInfo info);
 
     /// Request another connection to this Stream. This allows a client to delegate different
-    /// operations to different coordinated clients.
+    /// operations to different coordinated clients, or have multiple clients concurrently observe
+    /// frames produced by the stream.
     Rebind(request<Stream> request);
 };
 

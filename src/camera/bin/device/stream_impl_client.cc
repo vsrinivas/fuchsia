@@ -27,13 +27,24 @@ StreamImpl::Client::Client(StreamImpl& stream, uint64_t id,
 
 StreamImpl::Client::~Client() = default;
 
-void StreamImpl::Client::SendFrame(fuchsia::camera3::FrameInfo frame) {
-  TRACE_DURATION("camera", "StreamImpl::Client::SendFrame");
+void StreamImpl::Client::AddFrame(fuchsia::camera3::FrameInfo frame) {
+  TRACE_DURATION("camera", "StreamImpl::Client::AddFrame");
+  frames_.push(std::move(frame));
+  MaybeSendFrame();
+}
+
+void StreamImpl::Client::MaybeSendFrame() {
+  TRACE_DURATION("camera", "StreamImpl::Client::MaybeSendFrame");
+  if (frames_.empty() || !frame_callback_) {
+    return;
+  }
+  auto& frame = frames_.front();
   // This Flow can be connected on the client end to allow tracing the flow of frames
   // into the client.
   TRACE_FLOW_BEGIN("camera", "camera3::Stream::GetNextFrame",
                    fsl::GetKoid(frame.release_fence.get()));
   frame_callback_(std::move(frame));
+  frames_.pop();
   frame_callback_ = nullptr;
 }
 
@@ -57,6 +68,12 @@ void StreamImpl::Client::ReceiveCropRegion(std::unique_ptr<fuchsia::math::RectF>
 }
 
 bool& StreamImpl::Client::Participant() { return participant_; }
+
+void StreamImpl::Client::ClearFrames() {
+  while (!frames_.empty()) {
+    frames_.pop();
+  }
+}
 
 void StreamImpl::Client::OnClientDisconnected(zx_status_t status) {
   FX_PLOGS(DEBUG, status) << "Stream client " << id_ << " disconnected.";
@@ -141,10 +158,8 @@ void StreamImpl::Client::GetNextFrame(GetNextFrameCallback callback) {
     CloseConnection(ZX_ERR_BAD_STATE);
     return;
   }
-
   frame_callback_ = std::move(callback);
-
-  stream_.AddFrameSink(id_);
+  MaybeSendFrame();
 }
 
 void StreamImpl::Client::Rebind(fidl::InterfaceRequest<Stream> request) {

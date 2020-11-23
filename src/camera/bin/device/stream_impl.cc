@@ -48,8 +48,8 @@ void StreamImpl::SetMuteState(MuteState mute_state) {
   TRACE_DURATION("camera", "StreamImpl::SetMuteState");
   mute_state_ = mute_state;
   // On either transition, invalidate existing frames.
-  while (!frames_.empty()) {
-    frames_.pop();
+  for (auto& [id, client] : clients_) {
+    client->ClearFrames();
   }
 }
 
@@ -73,12 +73,6 @@ void StreamImpl::RemoveClient(uint64_t id) {
   if (clients_.empty()) {
     on_no_clients_();
   }
-}
-
-void StreamImpl::AddFrameSink(uint64_t id) {
-  TRACE_DURATION("camera", "StreamImpl::AddFrameSink");
-  frame_sinks_.push(id);
-  SendFrames();
 }
 
 void StreamImpl::OnFrameAvailable(fuchsia::camera2::FrameAvailableInfo info) {
@@ -113,39 +107,43 @@ void StreamImpl::OnFrameAvailable(fuchsia::camera2::FrameAvailableInfo info) {
     return;
   }
 
-  // Construct the frame info and create the release fence. These are held by the server until a
-  // client requests one via GetNextFrame.
-  fuchsia::camera3::FrameInfo frame;
-  frame.buffer_index = info.buffer_id;
-  frame.frame_counter = ++frame_counter_;
-  frame.timestamp = info.metadata.timestamp();
-  zx::eventpair fence;
-  ZX_ASSERT(zx::eventpair::create(0u, &fence, &frame.release_fence) == ZX_OK);
-  frames_.push(std::move(frame));
+  // Discard the frame if there are too many frames outstanding.
+  // TODO(fxbug.dev/64801): Recycle LRU frames.
+  if (frame_waiters_.size() == max_camping_buffers_) {
+    legacy_stream_->ReleaseFrame(info.buffer_id);
+    return;
+  }
+
+  // Construct the frame info and create a release fence per client.
+  std::vector<zx::eventpair> fences;
+  for (auto& [id, client] : clients_) {
+    if (!client->Participant()) {
+      continue;
+    }
+    zx::eventpair fence;
+    zx::eventpair release_fence;
+    ZX_ASSERT(zx::eventpair::create(0u, &fence, &release_fence) == ZX_OK);
+    fences.push_back(std::move(fence));
+    client->AddFrame({.buffer_index = info.buffer_id,
+                      .frame_counter = frame_counter_,
+                      .timestamp = info.metadata.timestamp(),
+                      .release_fence = std::move(release_fence)});
+  }
+
+  // No participating clients exist. Release the frame immediately.
+  if (fences.empty()) {
+    legacy_stream_->ReleaseFrame(info.buffer_id);
+    return;
+  }
 
   // Queue a waiter so that when the client end of the fence is released, the frame is released back
   // to the driver.
   ZX_ASSERT(frame_waiters_.size() <= max_camping_buffers_);
   frame_waiters_[info.buffer_id] =
-      std::make_unique<FrameWaiter>(dispatcher_, std::move(fence), [this, index = info.buffer_id] {
+      std::make_unique<FrameWaiter>(dispatcher_, std::move(fences), [this, index = info.buffer_id] {
         legacy_stream_->ReleaseFrame(index);
         frame_waiters_.erase(index);
       });
-
-  // If there are too many frames outstanding, eagerly release the oldest frame not held by a
-  // client. This may be the frame that was just received.
-  if (frame_waiters_.size() > max_camping_buffers_) {
-    ZX_ASSERT(!frames_.empty());
-    auto buffer_index = frames_.front().buffer_index;
-    auto it = frame_waiters_.find(buffer_index);
-    ZX_ASSERT(it != frame_waiters_.end());
-    frame_waiters_.erase(it);
-    legacy_stream_->ReleaseFrame(buffer_index);
-    frames_.pop();
-  }
-
-  // Send the frame to any pending recipients.
-  SendFrames();
 }
 
 void StreamImpl::SetBufferCollection(
@@ -205,27 +203,6 @@ void StreamImpl::SetBufferCollection(
           legacy_stream_->Start();
         });
       });
-}
-
-void StreamImpl::SendFrames() {
-  TRACE_DURATION("camera", "StreamImpl::SendFrames");
-  if (frame_sinks_.size() > 1 && !frame_sink_warning_sent_) {
-    FX_LOGS(INFO) << Messages::kMultipleFrameClients;
-    frame_sink_warning_sent_ = true;
-  }
-
-  if (mute_state_.muted()) {
-    return;
-  }
-
-  while (!frames_.empty() && !frame_sinks_.empty()) {
-    auto it = clients_.find(frame_sinks_.front());
-    frame_sinks_.pop();
-    if (it != clients_.end()) {
-      it->second->SendFrame(std::move(frames_.front()));
-      frames_.pop();
-    }
-  }
 }
 
 void StreamImpl::SetResolution(uint64_t id, fuchsia::math::Size coded_size) {

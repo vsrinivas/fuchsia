@@ -930,8 +930,8 @@ TEST_F(DeviceImplTest, DISABLED_SetBufferCollectionAgainWhileFramesHeld) {
 TEST_F(DeviceImplTest, FrameWaiterTest) {
   {  // Test that destructor of a non-triggered waiter does not panic.
     zx::eventpair client;
-    zx::eventpair server;
-    ASSERT_EQ(zx::eventpair::create(0, &client, &server), ZX_OK);
+    std::vector<zx::eventpair> server(1);
+    ASSERT_EQ(zx::eventpair::create(0, &client, &server[0]), ZX_OK);
     bool signaled = false;
     {
       FrameWaiter waiter(dispatcher(), std::move(server), [&] { signaled = true; });
@@ -943,11 +943,34 @@ TEST_F(DeviceImplTest, FrameWaiterTest) {
 
   {  // Test that closing the client endpoint triggers the wait.
     zx::eventpair client;
-    zx::eventpair server;
-    ASSERT_EQ(zx::eventpair::create(0, &client, &server), ZX_OK);
+    std::vector<zx::eventpair> server(1);
+    ASSERT_EQ(zx::eventpair::create(0, &client, &server[0]), ZX_OK);
     bool signaled = false;
     FrameWaiter waiter(dispatcher(), std::move(server), [&] { signaled = true; });
     client.reset();
+    RunLoopUntilFailureOr(signaled);
+  }
+
+  {  // Test that only closing all client endpoints triggers the wait.
+    constexpr uint32_t kNumFences = 3;
+    std::vector<zx::eventpair> client(kNumFences);
+    std::vector<zx::eventpair> server(kNumFences);
+    for (uint32_t i = 0; i < kNumFences; ++i) {
+      ASSERT_EQ(zx::eventpair::create(0, &client[i], &server[i]), ZX_OK);
+    }
+    bool signaled = false;
+    FrameWaiter waiter(dispatcher(), std::move(server), [&] { signaled = true; });
+
+    // Release some out of order first.
+    client[0].reset();
+    RunLoopUntilIdle();
+    EXPECT_FALSE(signaled);
+    client[2].reset();
+    RunLoopUntilIdle();
+    EXPECT_FALSE(signaled);
+
+    // Release all remaining fences, which should trigger the waiter.
+    client.clear();
     RunLoopUntilFailureOr(signaled);
   }
 }
@@ -1013,6 +1036,111 @@ TEST_F(DeviceImplTest, GoodTokenWithSync) {
   async::PostDelayedTask(
       dispatcher(), [&] { allocator_->AllocateSharedCollection(std::move(request)); }, kDelay);
   RunLoopUntilFailureOr(watch_returned);
+}
+
+TEST_F(DeviceImplTest, GetFramesMultiClient) {
+  constexpr uint32_t kNumClients = 2;
+  constexpr uint32_t kBufferId1 = 42;
+  constexpr uint32_t kBufferId2 = 17;
+  constexpr uint32_t kMaxCampingBuffers = 1;
+  fuchsia::camera3::StreamPtr original_stream;
+  original_stream.set_error_handler(MakeErrorHandler("Stream"));
+  std::unique_ptr<FakeLegacyStream> legacy_stream_fake;
+  bool legacy_stream_created = false;
+  auto stream_impl = std::make_unique<StreamImpl>(
+      dispatcher(), fake_properties_, fake_legacy_config_, original_stream.NewRequest(),
+      check_stream_valid,
+      [&](fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token,
+          fidl::InterfaceRequest<fuchsia::camera2::Stream> request,
+          fit::function<void(uint32_t)> callback, uint32_t format_index) {
+        auto result = FakeLegacyStream::Create(std::move(request), dispatcher());
+        ASSERT_TRUE(result.is_ok());
+        legacy_stream_fake = result.take_value();
+        token.BindSync()->Close();
+        legacy_stream_created = true;
+        callback(kMaxCampingBuffers * kNumClients);
+      },
+      nop);
+  struct PerClient {
+    explicit PerClient(fuchsia::sysmem::AllocatorPtr& allocator) : allocator_(allocator) {}
+    fuchsia::camera3::StreamPtr stream;
+    fuchsia::sysmem::BufferCollectionTokenPtr initial_token;
+    fuchsia::sysmem::BufferCollectionPtr collection;
+    void OnToken(fuchsia::sysmem::BufferCollectionTokenHandle token) {
+      allocator_->BindSharedCollection(std::move(token), collection.NewRequest());
+      constexpr fuchsia::sysmem::BufferCollectionConstraints constraints{
+          .usage{.cpu = fuchsia::sysmem::cpuUsageRead},
+          .min_buffer_count_for_camping = kMaxCampingBuffers,
+          .image_format_constraints_count = 1,
+          .image_format_constraints{
+              {{.pixel_format{.type = fuchsia::sysmem::PixelFormatType::NV12},
+                .color_spaces_count = 1,
+                .color_space{{{.type = fuchsia::sysmem::ColorSpaceType::REC601_NTSC}}},
+                .min_coded_width = 1,
+                .min_coded_height = 1}}}};
+      collection->SetConstraints(true, constraints);
+      collection->WaitForBuffersAllocated(
+          [&](zx_status_t status, fuchsia::sysmem::BufferCollectionInfo_2 buffers) {
+            EXPECT_EQ(status, ZX_OK);
+          });
+      stream->WatchBufferCollection(fit::bind_member(this, &PerClient::OnToken));
+    }
+    fuchsia::sysmem::AllocatorPtr& allocator_;
+  };
+  std::array<PerClient, kNumClients> clients{PerClient(allocator_), PerClient(allocator_)};
+  for (auto& client : clients) {
+    client.stream.set_error_handler(MakeErrorHandler("Stream"));
+    original_stream->Rebind(client.stream.NewRequest());
+    allocator_->AllocateSharedCollection(client.initial_token.NewRequest());
+    client.initial_token->Sync(
+        [&client] { client.stream->SetBufferCollection(std::move(client.initial_token)); });
+    client.stream->WatchBufferCollection(fit::bind_member(&client, &PerClient::OnToken));
+  }
+  original_stream = nullptr;
+
+  RunLoopUntil([&]() {
+    return HasFailure() || (legacy_stream_created && legacy_stream_fake->IsStreaming());
+  });
+  ASSERT_FALSE(HasFailure());
+
+  // Send two frames from the driver.
+  fuchsia::camera2::FrameAvailableInfo frame1_info;
+  frame1_info.frame_status = fuchsia::camera2::FrameStatus::OK;
+  frame1_info.buffer_id = kBufferId1;
+  frame1_info.metadata.set_timestamp(0);
+  ASSERT_EQ(legacy_stream_fake->SendFrameAvailable(std::move(frame1_info)), ZX_OK);
+  fuchsia::camera2::FrameAvailableInfo frame2_info;
+  frame2_info.frame_status = fuchsia::camera2::FrameStatus::OK;
+  frame2_info.buffer_id = kBufferId2;
+  frame2_info.metadata.set_timestamp(0);
+  ASSERT_EQ(legacy_stream_fake->SendFrameAvailable(std::move(frame2_info)), ZX_OK);
+
+  // Try to receive each frame independently via each client.
+  for (auto& client : clients) {
+    bool frame1_received = false;
+    bool frame2_received = false;
+    auto callback2 = [&](fuchsia::camera3::FrameInfo info) {
+      ASSERT_EQ(info.buffer_index, kBufferId2);
+      frame2_received = true;
+    };
+    auto callback1 = [&](fuchsia::camera3::FrameInfo info) {
+      ASSERT_EQ(info.buffer_index, kBufferId1);
+      frame1_received = true;
+      info.release_fence.reset();
+      client.stream->GetNextFrame(std::move(callback2));
+    };
+    client.stream->GetNextFrame(std::move(callback1));
+    while (!HasFailure() && (!frame1_received || !frame2_received)) {
+      RunLoopUntilIdle();
+    }
+  }
+
+  auto client_result = legacy_stream_fake->StreamClientStatus();
+  EXPECT_TRUE(client_result.is_ok()) << client_result.error();
+  for (auto& client : clients) {
+    client.stream = nullptr;
+  }
+  stream_impl = nullptr;
 }
 
 }  // namespace camera

@@ -55,18 +55,12 @@ class StreamImpl {
   // Remove the client with the given id.
   void RemoveClient(uint64_t id);
 
-  // Add the client with the given id to the queue of frame recipients.
-  void AddFrameSink(uint64_t id);
-
   // Called when the legacy stream's OnFrameAvailable event fires.
   void OnFrameAvailable(fuchsia::camera2::FrameAvailableInfo info);
 
   // Renegotiate buffers or opt out of buffer renegotiation for the client with the given id.
   void SetBufferCollection(uint64_t id,
                            fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token);
-
-  // Sends pending frames to waiting recipients.
-  void SendFrames();
 
   // Change the resolution of the stream.
   void SetResolution(uint64_t id, fuchsia::math::Size coded_size);
@@ -81,8 +75,11 @@ class StreamImpl {
            fidl::InterfaceRequest<fuchsia::camera3::Stream> request);
     ~Client() override;
 
-    // Transfer ownership of the given frame to this client.
-    void SendFrame(fuchsia::camera3::FrameInfo frame);
+    // Add a frame to the queue of available frames.
+    void AddFrame(fuchsia::camera3::FrameInfo frame);
+
+    // Send a frame to the client if one is available and has been requested.
+    void MaybeSendFrame();
 
     // Closes |binding_| with the provided |status| epitaph, and removes the client instance from
     // the parent |clients_| map.
@@ -101,6 +98,9 @@ class StreamImpl {
     // Returns a mutable reference to this client's state as a participant in buffer renegotiation.
     // This state must be managed by the parent stream's thread, not the client thread.
     bool& Participant();
+
+    // Clears the client's queue of unsent frames.
+    void ClearFrames();
 
    private:
     // Called when the client endpoint of |binding_| is closed.
@@ -131,6 +131,7 @@ class StreamImpl {
     camera::HangingGetHelper<std::unique_ptr<fuchsia::math::RectF>> crop_region_;
     GetNextFrameCallback frame_callback_;
     bool participant_ = false;
+    std::queue<fuchsia::camera3::FrameInfo> frames_;
   };
 
   async_dispatcher_t* dispatcher_;
@@ -145,9 +146,6 @@ class StreamImpl {
   fit::closure on_no_clients_;
   uint32_t max_camping_buffers_ = 0;
   uint64_t frame_counter_ = 0;
-  std::queue<uint64_t> frame_sinks_;
-  bool frame_sink_warning_sent_ = false;
-  std::queue<fuchsia::camera3::FrameInfo> frames_;
   std::map<uint32_t, std::unique_ptr<FrameWaiter>> frame_waiters_;
   fuchsia::math::Size current_resolution_;
   MuteState mute_state_;

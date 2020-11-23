@@ -89,23 +89,31 @@ struct MuteState {
 // automatically, namely that the waited-upon object must outlive the wait object.
 class FrameWaiter {
  public:
-  FrameWaiter(async_dispatcher_t* dispatcher, zx::eventpair fence, fit::closure signaled)
-      : fence_(std::move(fence)),
-        wait_(fence_.get(), ZX_EVENTPAIR_PEER_CLOSED, 0,
-              fit::bind_member(this, &FrameWaiter::Handler)),
+  FrameWaiter(async_dispatcher_t* dispatcher, std::vector<zx::eventpair> fences,
+              fit::closure signaled)
+      : fences_(std::move(fences)),
+        pending_fences_(fences_.size()),
         signaled_(std::move(signaled)) {
-    wait_.Begin(dispatcher);
+    for (auto& fence : fences_) {
+      waits_.push_back(std::make_unique<async::WaitOnce>(fence.get(), ZX_EVENTPAIR_PEER_CLOSED, 0));
+      waits_.back()->Begin(dispatcher, fit::bind_member(this, &FrameWaiter::Handler));
+    }
   }
   ~FrameWaiter() {
-    wait_.Cancel();
+    for (auto& wait : waits_) {
+      wait->Cancel();
+    }
     signaled_ = nullptr;
-    fence_.reset();
+    fences_.clear();
   }
 
  private:
-  void Handler(async_dispatcher_t* dispatcher, async::Wait* wait, zx_status_t status,
+  void Handler(async_dispatcher_t* dispatcher, async::WaitOnce* wait, zx_status_t status,
                const zx_packet_signal_t* signal) {
     if (status != ZX_OK) {
+      return;
+    }
+    if (--pending_fences_ > 0) {
       return;
     }
     // |signaled_| may delete |this|, so move it to a local before calling it. This ensures captures
@@ -113,8 +121,9 @@ class FrameWaiter {
     auto signaled = std::move(signaled_);
     signaled();
   }
-  zx::eventpair fence_;
-  async::Wait wait_;
+  std::vector<zx::eventpair> fences_;
+  std::vector<std::unique_ptr<async::WaitOnce>> waits_;
+  size_t pending_fences_;
   fit::closure signaled_;
 };
 
