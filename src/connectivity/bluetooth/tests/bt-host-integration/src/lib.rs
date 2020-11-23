@@ -1,12 +1,16 @@
-// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+
+// This entire library is actually only used to create a test binary, so mark the entire module to
+// only build in test configuration
+#![cfg(test)]
 
 use {
     anyhow::{format_err, Context as _, Error},
     bt_test_harness::{
         emulator::{self, add_bredr_peer, add_le_peer, default_bredr_peer, default_le_peer},
-        host_driver::{HostDriverHarness, HostState},
+        host_driver::{expectation as host_expectation, HostDriverHarness},
     },
     fidl_fuchsia_bluetooth::{self as fbt, DeviceClass, MAJOR_DEVICE_CLASS_TOY},
     fidl_fuchsia_bluetooth_host::HostProxy,
@@ -14,26 +18,24 @@ use {
     fidl_fuchsia_bluetooth_test::{EmulatorSettings, HciError, PeerProxy},
     fuchsia_async as fasync,
     fuchsia_bluetooth::{
-        constants::HOST_DEVICE_DIR,
+        constants::{integration_timeout_duration, HOST_DEVICE_DIR},
         device_watcher::{DeviceWatcher, WatchFilter},
         expect_eq,
         expectation::{
             self,
             asynchronous::{ExpectableExt, ExpectableStateExt},
-            peer, Predicate,
+            peer,
         },
         hci_emulator::Emulator,
         host,
-        types::{Address, HostInfo, Peer, PeerId},
+        types::{Address, HostInfo, PeerId},
     },
     fuchsia_zircon as zx,
     std::{convert::TryInto, path::PathBuf},
-    test_harness::run_suite,
 };
 
-use crate::tests::timeout_duration;
-
 // Tests that creating and destroying a fake HCI device binds and unbinds the bt-host driver.
+#[test_harness::run_singlethreaded_test]
 async fn test_lifecycle(_: ()) -> Result<(), Error> {
     let address = Address::Public([1, 2, 3, 4, 5, 6]);
     let settings = EmulatorSettings {
@@ -74,17 +76,19 @@ async fn test_lifecycle(_: ()) -> Result<(), Error> {
 }
 
 // Tests that the bt-host driver assigns the local name to "fuchsia" when initialized.
+#[test_harness::run_singlethreaded_test]
 async fn test_default_local_name(harness: HostDriverHarness) -> Result<(), Error> {
     const NAME: &str = "fuchsia";
     let _ = harness
-        .when_satisfied(emulator::expectation::local_name_is(NAME), timeout_duration())
+        .when_satisfied(emulator::expectation::local_name_is(NAME), integration_timeout_duration())
         .await?;
-    expect_host_state(&harness, expectation::host_driver::name(NAME)).await?;
+    host_expectation::host_state(&harness, expectation::host_driver::name(NAME)).await?;
     Ok(())
 }
 
 // Tests that the local name assigned to a bt-host is reflected in `AdapterState` and propagated
 // down to the controller.
+#[test_harness::run_singlethreaded_test]
 async fn test_set_local_name(harness: HostDriverHarness) -> Result<(), Error> {
     const NAME: &str = "test1234";
     let proxy = harness.aux().host.clone();
@@ -92,14 +96,15 @@ async fn test_set_local_name(harness: HostDriverHarness) -> Result<(), Error> {
     expect_eq!(Ok(()), result)?;
 
     let _ = harness
-        .when_satisfied(emulator::expectation::local_name_is(NAME), timeout_duration())
+        .when_satisfied(emulator::expectation::local_name_is(NAME), integration_timeout_duration())
         .await?;
-    expect_host_state(&harness, expectation::host_driver::name(NAME)).await?;
+    host_expectation::host_state(&harness, expectation::host_driver::name(NAME)).await?;
 
     Ok(())
 }
 
 // Tests that the device class assigned to a bt-host gets propagated down to the controller.
+#[test_harness::run_singlethreaded_test]
 async fn test_set_device_class(harness: HostDriverHarness) -> Result<(), Error> {
     let mut device_class = DeviceClass { value: MAJOR_DEVICE_CLASS_TOY + 4 };
     let proxy = harness.aux().host.clone();
@@ -107,13 +112,17 @@ async fn test_set_device_class(harness: HostDriverHarness) -> Result<(), Error> 
     expect_eq!(Ok(()), result)?;
 
     let _ = harness
-        .when_satisfied(emulator::expectation::device_class_is(device_class), timeout_duration())
+        .when_satisfied(
+            emulator::expectation::device_class_is(device_class),
+            integration_timeout_duration(),
+        )
         .await?;
     Ok(())
 }
 
 // Tests that host state updates when discoverable mode is turned on.
 // TODO(armansito): Test for FakeHciDevice state changes.
+#[test_harness::run_singlethreaded_test]
 async fn test_discoverable(harness: HostDriverHarness) -> Result<(), Error> {
     let proxy = harness.aux().host.clone();
 
@@ -124,12 +133,12 @@ async fn test_discoverable(harness: HostDriverHarness) -> Result<(), Error> {
     // Enable discoverable mode.
     let result = proxy.set_discoverable(true).await?;
     expect_eq!(Ok(()), result)?;
-    expect_host_state(&harness, expectation::host_driver::discoverable(true)).await?;
+    host_expectation::host_state(&harness, expectation::host_driver::discoverable(true)).await?;
 
     // Disable discoverable mode
     let result = proxy.set_discoverable(false).await?;
     expect_eq!(Ok(()), result)?;
-    expect_host_state(&harness, expectation::host_driver::discoverable(false)).await?;
+    host_expectation::host_state(&harness, expectation::host_driver::discoverable(false)).await?;
 
     // Disabling discoverable mode when not discoverable should succeed.
     let result = proxy.set_discoverable(false).await?;
@@ -140,30 +149,32 @@ async fn test_discoverable(harness: HostDriverHarness) -> Result<(), Error> {
 
 // Tests that host state updates when discovery is started and stopped.
 // TODO(armansito): Test for FakeHciDevice state changes.
+#[test_harness::run_singlethreaded_test]
 async fn test_discovery(harness: HostDriverHarness) -> Result<(), Error> {
     let proxy = harness.aux().host.clone();
 
     // Start discovery. "discovering" should get set to true.
     let result = proxy.start_discovery().await?;
     expect_eq!(Ok(()), result)?;
-    expect_host_state(&harness, expectation::host_driver::discovering(true)).await?;
+    host_expectation::host_state(&harness, expectation::host_driver::discovering(true)).await?;
 
     let address = Address::Random([1, 0, 0, 0, 0, 0]);
     let fut = add_le_peer(harness.aux().as_ref(), default_le_peer(&address));
     let _peer = fut.await?;
 
     // The host should discover a fake peer.
-    expect_peer(&harness, peer::name("Fake").and(peer::address(address))).await?;
+    host_expectation::peer(&harness, peer::name("Fake").and(peer::address(address))).await?;
 
     // Stop discovery. "discovering" should get set to false.
     let _ = proxy.stop_discovery()?;
-    expect_host_state(&harness, expectation::host_driver::discovering(false)).await?;
+    host_expectation::host_state(&harness, expectation::host_driver::discovering(false)).await?;
 
     Ok(())
 }
 
 // Tests that "close" cancels all operations.
 // TODO(armansito): Test for FakeHciDevice state changes.
+#[test_harness::run_singlethreaded_test]
 async fn test_close(harness: HostDriverHarness) -> Result<(), Error> {
     // Enable all procedures.
     let proxy = harness.aux().host.clone();
@@ -174,7 +185,7 @@ async fn test_close(harness: HostDriverHarness) -> Result<(), Error> {
 
     let active_state = expectation::host_driver::discoverable(true)
         .and(expectation::host_driver::discovering(true));
-    expect_host_state(&harness, active_state).await?;
+    host_expectation::host_state(&harness, active_state).await?;
 
     // Close should cancel these procedures.
     proxy.close()?;
@@ -182,11 +193,12 @@ async fn test_close(harness: HostDriverHarness) -> Result<(), Error> {
     let closed_state_update = expectation::host_driver::discoverable(false)
         .and(expectation::host_driver::discovering(false));
 
-    expect_host_state(&harness, closed_state_update).await?;
+    host_expectation::host_state(&harness, closed_state_update).await?;
 
     Ok(())
 }
 
+#[test_harness::run_singlethreaded_test]
 async fn test_watch_peers(harness: HostDriverHarness) -> Result<(), Error> {
     // `HostDriverHarness` internally calls `Host.WatchPeers()` to monitor peers and satisfy peer
     // expectations. `harness.peers()` represents the local cache monitored using this method.
@@ -218,13 +230,14 @@ async fn test_watch_peers(harness: HostDriverHarness) -> Result<(), Error> {
     let expected_bredr =
         peer::address(bredr_peer_address).and(peer::technology(TechnologyType::Classic));
 
-    expect_peer(&harness, expected_le).await?;
-    expect_peer(&harness, expected_bredr).await?;
+    host_expectation::peer(&harness, expected_le).await?;
+    host_expectation::peer(&harness, expected_bredr).await?;
     expect_eq!(2, harness.write_state().peers().len())?;
 
     Ok(())
 }
 
+#[test_harness::run_singlethreaded_test]
 async fn test_connect(harness: HostDriverHarness) -> Result<(), Error> {
     let address1 = Address::Random([1, 0, 0, 0, 0, 0]);
     let address2 = Address::Random([2, 0, 0, 0, 0, 0]);
@@ -242,8 +255,8 @@ async fn test_connect(harness: HostDriverHarness) -> Result<(), Error> {
     let result = proxy.start_discovery().await?;
     expect_eq!(Ok(()), result)?;
 
-    expect_peer(&harness, peer::address(address1)).await?;
-    expect_peer(&harness, peer::address(address2)).await?;
+    host_expectation::peer(&harness, peer::address(address1)).await?;
+    host_expectation::peer(&harness, peer::address(address2)).await?;
 
     let peers = harness.write_state().peers().clone();
     expect_eq!(2, peers.len())?;
@@ -273,7 +286,7 @@ async fn test_connect(harness: HostDriverHarness) -> Result<(), Error> {
     expect_eq!(Ok(()), status)?;
 
     let connected = peer::identifier(success_id.into()).and(peer::connected(true));
-    expect_peer(&harness, connected).await?;
+    host_expectation::peer(&harness, connected).await?;
     Ok(())
 }
 
@@ -290,7 +303,7 @@ async fn wait_for_test_peer(
     expect_eq!(Ok(()), result)?;
 
     let le_dev = expectation::peer::address(address.clone());
-    expect_peer(&harness, le_dev).await?;
+    host_expectation::peer(&harness, le_dev).await?;
 
     let peer_id = harness
         .write_state()
@@ -307,6 +320,7 @@ async fn wait_for_test_peer(
 // that we can provide a manner of doing so that will not flake.
 
 /// Disconnecting from an unknown device should succeed
+#[test_harness::run_singlethreaded_test]
 async fn test_disconnect_unknown_device(harness: HostDriverHarness) -> Result<(), Error> {
     let mut unknown_id = PeerId(0).into();
     let fut = harness.aux().host.disconnect(&mut unknown_id);
@@ -315,6 +329,7 @@ async fn test_disconnect_unknown_device(harness: HostDriverHarness) -> Result<()
 }
 
 /// Disconnecting from a known, unconnected device should succeed
+#[test_harness::run_singlethreaded_test]
 async fn test_disconnect_unconnected_device(harness: HostDriverHarness) -> Result<(), Error> {
     let address = Address::Random([1, 0, 0, 0, 0, 0]);
     let (id, _proxy) = wait_for_test_peer(harness.clone(), &address).await?;
@@ -325,6 +340,7 @@ async fn test_disconnect_unconnected_device(harness: HostDriverHarness) -> Resul
 }
 
 /// Disconnecting from a connected device should succeed and result in the device being disconnected
+#[test_harness::run_singlethreaded_test]
 async fn test_disconnect_connected_device(harness: HostDriverHarness) -> Result<(), Error> {
     let address = Address::Random([1, 0, 0, 0, 0, 0]);
     let (id, _proxy) = wait_for_test_peer(harness.clone(), &address).await?;
@@ -337,14 +353,15 @@ async fn test_disconnect_connected_device(harness: HostDriverHarness) -> Result<
     let connected = peer::address(address).and(peer::connected(true));
     let disconnected = peer::address(address).and(peer::connected(false));
 
-    let _ = expect_peer(&harness, connected).await?;
+    let _ = host_expectation::peer(&harness, connected).await?;
     let status = proxy.disconnect(&mut id).await?;
     expect_eq!(Ok(()), status)?;
 
-    let _ = expect_peer(&harness, disconnected).await?;
+    let _ = host_expectation::peer(&harness, disconnected).await?;
     Ok(())
 }
 
+#[test_harness::run_singlethreaded_test]
 async fn test_forget(harness: HostDriverHarness) -> Result<(), Error> {
     let address = Address::Random([1, 0, 0, 0, 0, 0]);
     let (id, _proxy) = wait_for_test_peer(harness.clone(), &address).await?;
@@ -353,81 +370,19 @@ async fn test_forget(harness: HostDriverHarness) -> Result<(), Error> {
 
     // Wait for fake peer to be discovered (`wait_for_test_peer` starts discovery).
     let expected_peer = expectation::peer::address(address);
-    expect_peer(&harness, expected_peer.clone()).await?;
+    host_expectation::peer(&harness, expected_peer.clone()).await?;
 
     // Connecting to the peer should return success and the peer should become connected.
     let status = proxy.connect(&mut id).await?;
     expect_eq!(Ok(()), status)?;
-    expect_peer(&harness, expected_peer.and(expectation::peer::connected(true))).await?;
+    host_expectation::peer(&harness, expected_peer.and(expectation::peer::connected(true))).await?;
 
     // Forgetting the peer should result in its removal.
     let status = proxy.forget(&mut id).await?;
     expect_eq!(Ok(()), status)?;
-    expect_no_peer(&harness, id.into()).await?;
+    host_expectation::no_peer(&harness, id.into()).await?;
 
     // TODO(fxbug.dev/1472): Test that the link closes by querying fake HCI.
 
-    Ok(())
-}
-
-/// Run all test cases.
-pub fn run_all() -> Result<(), Error> {
-    run_suite!(
-        "bt-host driver",
-        [
-            test_lifecycle,
-            test_default_local_name,
-            test_set_local_name,
-            test_set_device_class,
-            test_discoverable,
-            test_discovery,
-            test_close,
-            test_watch_peers,
-            test_connect,
-            test_forget,
-            test_disconnect_unknown_device,
-            test_disconnect_unconnected_device,
-            test_disconnect_connected_device
-        ]
-    )
-}
-
-/// Returns a Future that resolves when the state of any RemoteDevice matches `target`.
-pub async fn expect_peer(
-    host: &HostDriverHarness,
-    target: Predicate<Peer>,
-) -> Result<HostState, Error> {
-    host.when_satisfied(
-        Predicate::any(target).over_value(
-            |host: &HostState| host.peers().values().cloned().collect::<Vec<_>>(),
-            ".peers.values()",
-        ),
-        timeout_duration(),
-    )
-    .await
-}
-
-/// Returns a Future that resolves when the HostInfo matches `target`.
-pub async fn expect_host_state(
-    host: &HostDriverHarness,
-    target: Predicate<HostInfo>,
-) -> Result<HostState, Error> {
-    host.when_satisfied(
-        target.over(|host: &HostState| host.info(), ".host_info"),
-        timeout_duration(),
-    )
-    .await
-}
-
-// Returns a future that resolves when a peer matching `id` is not present on the host.
-pub async fn expect_no_peer(host: &HostDriverHarness, id: PeerId) -> Result<(), Error> {
-    let fut = host.when_satisfied(
-        Predicate::all(Predicate::not_equal(id)).over_value(
-            |host: &HostState| host.peers().keys().cloned().collect::<Vec<_>>(),
-            ".peers.keys()",
-        ),
-        timeout_duration(),
-    );
-    fut.await?;
     Ok(())
 }

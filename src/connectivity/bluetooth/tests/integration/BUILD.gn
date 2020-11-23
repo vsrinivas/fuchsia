@@ -45,7 +45,6 @@ rustc_binary("integration_tests_bin") {
     "src/tests/bonding.rs",
     "src/tests/bootstrap.rs",
     "src/tests/control.rs",
-    "src/tests/host_driver.rs",
     "src/tests/inspect.rs",
     "src/tests/low_energy_central.rs",
     "src/tests/low_energy_peripheral.rs",

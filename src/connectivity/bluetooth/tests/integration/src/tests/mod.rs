@@ -16,9 +16,6 @@ pub mod bootstrap;
 /// Tests for the fuchsia.bluetooth.control.Control protocol
 pub mod control;
 
-/// Tests for the Bluetooth Host driver behavior
-pub mod host_driver;
-
 /// Tests for bt-gap Inspect data
 pub mod inspect;
 

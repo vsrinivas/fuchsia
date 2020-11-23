@@ -1,0 +1,24 @@
+{
+    "program": {
+        "args": [
+            "--test-threads=1"
+        ],
+        "binary": "bin/bt_host_integration_tests"
+    },
+    "sandbox": {
+        "dev": [
+            "class/bt-emulator",
+            "class/bt-host",
+            "test/test"
+        ],
+        "services": [
+            "fuchsia.diagnostics.ArchiveAccessor",
+            "fuchsia.sys.Environment",
+            "fuchsia.sys.Launcher",
+            "fuchsia.sys.Loader"
+        ],
+        "system": [
+            "driver/bt-hci-emulator.so"
+        ]
+    }
+}

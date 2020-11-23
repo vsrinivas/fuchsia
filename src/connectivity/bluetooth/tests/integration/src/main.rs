@@ -21,7 +21,6 @@ fn main() -> Result<(), Error> {
     vec![
         // Tests that require bt-gap.cmx to not be running. Run these tests first as bt-gap
         // interferes with their operation.
-        tests::host_driver::run_all(),
         tests::bonding::run_all(),
         // Tests that trigger bt-gap.cmx.
         tests::inspect::run_all(),
