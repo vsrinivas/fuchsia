@@ -2,24 +2,26 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use anyhow::Error;
-use bt_a2dp::{
-    self as a2dp, codec::MediaCodecConfig, inspect::DataStreamInspect, media_task::*,
-    media_types::*,
+use {
+    anyhow::Error,
+    bt_a2dp::{self as a2dp, codec::MediaCodecConfig, media_task::*, media_types::*},
+    bt_avdtp::{self as avdtp, MediaCodecType, MediaStream},
+    fidl_fuchsia_media::{AudioChannelId, AudioPcmMode, PcmFormat},
+    fuchsia_async as fasync,
+    fuchsia_bluetooth::{
+        inspect::DataStreamInspect,
+        types::{Channel, PeerId},
+    },
+    fuchsia_inspect as inspect,
+    fuchsia_inspect_derive::WithInspect,
+    futures::StreamExt,
+    parking_lot::Mutex,
+    std::{
+        convert::TryFrom,
+        sync::{Arc, RwLock},
+    },
+    test_util::*,
 };
-
-use bt_avdtp::{self as avdtp, MediaCodecType, MediaStream};
-use fidl_fuchsia_media::{AudioChannelId, AudioPcmMode, PcmFormat};
-use fuchsia_async as fasync;
-use fuchsia_bluetooth::types::Channel;
-use fuchsia_bluetooth::types::PeerId;
-use fuchsia_inspect as inspect;
-use fuchsia_inspect_derive::WithInspect;
-use futures::StreamExt;
-use parking_lot::Mutex;
-use std::convert::TryFrom;
-use std::sync::{Arc, RwLock};
-use test_util::*;
 
 mod encoding;
 mod pcm_audio;

@@ -8,7 +8,7 @@ use {
         self as avdtp, ErrorCode, ServiceCapability, ServiceCategory, StreamEndpoint,
         StreamEndpointId,
     },
-    fuchsia_bluetooth::types::PeerId,
+    fuchsia_bluetooth::{inspect::DataStreamInspect, types::PeerId},
     fuchsia_inspect::{self as inspect, Property},
     fuchsia_inspect_derive::{AttachError, Inspect, WithInspect},
     futures::{future::BoxFuture, FutureExt, TryFutureExt},
@@ -16,7 +16,6 @@ use {
 };
 
 use crate::codec::MediaCodecConfig;
-use crate::inspect::DataStreamInspect;
 use crate::media_task::{MediaTask, MediaTaskBuilder, MediaTaskRunner};
 
 /// Manages a local StreamEndpoint and its associated media task, starting and stopping the

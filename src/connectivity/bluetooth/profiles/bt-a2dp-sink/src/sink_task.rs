@@ -4,11 +4,11 @@
 
 use {
     anyhow::Error,
-    bt_a2dp::{codec::MediaCodecConfig, inspect::DataStreamInspect, media_task::*},
+    bt_a2dp::{codec::MediaCodecConfig, media_task::*},
     bt_a2dp_metrics as metrics,
     bt_avdtp::{self as avdtp, MediaStream},
     fuchsia_async as fasync,
-    fuchsia_bluetooth::types::PeerId,
+    fuchsia_bluetooth::{inspect::DataStreamInspect, types::PeerId},
     fuchsia_cobalt::CobaltSender,
     fuchsia_trace as trace,
     futures::{

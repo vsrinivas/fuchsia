@@ -27,6 +27,7 @@ rustc_library("fuchsia-bluetooth") {
     "//sdk/fidl/fuchsia.device.test:fuchsia.device.test-rustc",
     "//sdk/fidl/fuchsia.hardware.bluetooth:fuchsia.hardware.bluetooth-rustc",
     "//src/lib/diagnostics/inspect/contrib/rust",
+    "//src/lib/diagnostics/inspect/derive",
     "//src/lib/diagnostics/inspect/rust",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",

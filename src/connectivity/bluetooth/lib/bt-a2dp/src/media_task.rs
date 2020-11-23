@@ -4,7 +4,7 @@
 
 use {
     bt_avdtp::MediaStream,
-    fuchsia_bluetooth::types::PeerId,
+    fuchsia_bluetooth::{inspect::DataStreamInspect, types::PeerId},
     futures::{
         future::{BoxFuture, Shared},
         FutureExt,
@@ -13,7 +13,6 @@ use {
 };
 
 use crate::codec::MediaCodecConfig;
-use crate::inspect::DataStreamInspect;
 
 #[derive(Debug, Error, Clone)]
 #[non_exhaustive]
