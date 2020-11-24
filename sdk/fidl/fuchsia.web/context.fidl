@@ -59,6 +59,7 @@ resource table ContentDirectoryProvider {
 bits ContextFeatureFlags : uint64 {
     /// Enables network access. Requires the following services:
     /// - [`fuchsia.net/NameLookup`]
+    /// - [`fuchsia.net.interfaces/State`]
     /// - [`fuchsia.netstack/Netstack`]
     /// - [`fuchsia.posix.socket/Provider`]
     NETWORK = 0x1;
