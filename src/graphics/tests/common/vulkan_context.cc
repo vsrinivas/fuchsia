@@ -57,24 +57,31 @@ bool VulkanContext::InitInstance() {
   if (instance_initialized_) {
     RTN_MSG(false, "Instance is already initialized.\n");
   }
-  vk::ResultValue<vk::UniqueInstance> rv_instance(vk::Result::eNotReady, vk::UniqueInstance{});
-
-  if (validation_layers_enabled_) {
-    // Copy and modify the input lists of layers and extensions to add the validation layer and the
-    // debug utils extension (so we can check for validation errors).
+  if (instance_info_.ppEnabledLayerNames && instance_info_.enabledLayerCount) {
+    // Tack custom layers on to |layers_|.
     std::copy(instance_info_.ppEnabledLayerNames,
               instance_info_.ppEnabledLayerNames + instance_info_.enabledLayerCount,
               std::back_inserter(layers_));
-    layers_.push_back("VK_LAYER_KHRONOS_validation");
-    instance_info_.ppEnabledLayerNames = layers_.data();
-    instance_info_.enabledLayerCount = layers_.size();
+  }
+
+  if (instance_info_.ppEnabledExtensionNames && instance_info_.enabledExtensionCount) {
+    // Tack custom extensions on to |extensions_|.
     std::copy(instance_info_.ppEnabledExtensionNames,
               instance_info_.ppEnabledExtensionNames + instance_info_.enabledExtensionCount,
               std::back_inserter(extensions_));
-    extensions_.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
-    instance_info_.ppEnabledExtensionNames = extensions_.data();
-    instance_info_.enabledExtensionCount = extensions_.size();
   }
+
+  if (validation_layers_enabled_) {
+    layers_.emplace_back("VK_LAYER_KHRONOS_validation");
+    extensions_.emplace_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+  }
+
+  instance_info_.ppEnabledLayerNames = layers_.data();
+  instance_info_.enabledLayerCount = layers_.size();
+  instance_info_.ppEnabledExtensionNames = extensions_.data();
+  instance_info_.enabledExtensionCount = extensions_.size();
+
+  vk::ResultValue<vk::UniqueInstance> rv_instance(vk::Result::eNotReady, vk::UniqueInstance{});
   if (allocator_) {
     // Verify valid use of callbacks.
     if (!(allocator_->pfnAllocation && allocator_->pfnReallocation && allocator_->pfnFree)) {
@@ -94,20 +101,19 @@ bool VulkanContext::InitInstance() {
   if (vk::Result::eSuccess != rv_instance.result) {
     RTN_MSG(false, "VK Error: 0x%x - Create instance.\n", rv_instance.result);
   }
+  instance_ = std::move(rv_instance.value);
 
-  if (rv_instance.value && validation_layers_enabled_) {
-    loader_.init(*rv_instance.value, vkGetInstanceProcAddr);
+  if (validation_layers_enabled_) {
+    loader_.init(instance_.get(), vkGetInstanceProcAddr);
     debug_callback_user_data_.context_ = this;
     debug_info_.pUserData = &debug_callback_user_data_;
     auto rv_messenger =
-        rv_instance.value->createDebugUtilsMessengerEXTUnique(debug_info_, nullptr, loader_);
+        instance_->createDebugUtilsMessengerEXTUnique(debug_info_, nullptr, loader_);
     if (rv_messenger.result != vk::Result::eSuccess) {
       RTN_MSG(false, "VK Error: 0x%x - CreateDebugUtilsMessengeEXT\n", rv_messenger.result);
     }
     messenger_ = std::move(rv_messenger.value);
   }
-
-  instance_ = std::move(rv_instance.value);
   instance_initialized_ = true;
   return true;
 }
