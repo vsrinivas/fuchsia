@@ -212,7 +212,7 @@ impl Peer {
             avdtp.set_configuration(&remote_id, &local_id, &capabilities).await?;
             {
                 let strong = PeerInner::upgrade(peer.clone())?;
-                strong.lock().set_opening(&local_id, &remote_id, capabilities.clone())?;
+                strong.lock().set_opening(&local_id, &remote_id, capabilities.clone()).await?;
             }
             avdtp.open(&remote_id).await?;
 
@@ -402,7 +402,7 @@ impl PeerInner {
         self.remote_endpoints.as_ref().map(|v| v.iter().map(StreamEndpoint::as_new).collect())
     }
 
-    fn set_opening(
+    async fn set_opening(
         &mut self,
         local_id: &StreamEndpointId,
         remote_id: &StreamEndpointId,
@@ -415,6 +415,7 @@ impl PeerInner {
         let stream = self.get_mut(&local_id).map_err(|e| avdtp::Error::RequestInvalid(e))?;
         stream
             .configure(&peer_id, &remote_id, capabilities)
+            .await
             .map_err(|(_, c)| avdtp::Error::RequestInvalid(c))?;
         stream.endpoint_mut().establish().or(Err(avdtp::Error::InvalidState))?;
         self.opening = Some(local_id.clone());
@@ -540,7 +541,7 @@ impl PeerInner {
                     Err(e) => return responder.reject(ServiceCategory::None, e),
                     Ok(stream) => stream,
                 };
-                match stream.configure(&peer_id, &remote_stream_id, capabilities) {
+                match stream.configure(&peer_id, &remote_stream_id, capabilities).await {
                     Ok(_) => {
                         self.opening = Some(local_stream_id.clone());
                         responder.send()

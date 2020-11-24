@@ -48,7 +48,7 @@ pub trait MediaTaskBuilder: Send + Sync {
         peer_id: &PeerId,
         codec_config: &MediaCodecConfig,
         data_stream_inspect: DataStreamInspect,
-    ) -> Result<Box<dyn MediaTaskRunner>, MediaTaskError>;
+    ) -> BoxFuture<'static, Result<Box<dyn MediaTaskRunner>, MediaTaskError>>;
 }
 
 /// MediaTaskRunners represent an ability of the media system to start streaming media.
@@ -263,14 +263,14 @@ pub mod tests {
             peer_id: &PeerId,
             codec_config: &MediaCodecConfig,
             _data_stream_inspect: DataStreamInspect,
-        ) -> Result<Box<dyn MediaTaskRunner>, MediaTaskError> {
+        ) -> BoxFuture<'static, Result<Box<dyn MediaTaskRunner>, MediaTaskError>> {
             let runner = TestMediaTaskRunner {
                 peer_id: peer_id.clone(),
                 codec_config: codec_config.clone(),
                 sender: self.0.clone(),
                 reconfigurable: self.1,
             };
-            Ok(Box::new(runner))
+            Box::pin(async move { Ok::<Box<dyn MediaTaskRunner>, _>(Box::new(runner)) })
         }
     }
 }

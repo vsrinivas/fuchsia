@@ -38,8 +38,6 @@ use {
     std::{convert::TryFrom, convert::TryInto, sync::Arc},
 };
 
-use crate::avrcp_relay::AvrcpRelay;
-
 mod avrcp_relay;
 mod latm;
 mod player;
@@ -187,37 +185,17 @@ impl StreamsBuilder {
         )
     }
 
-    async fn setup_audio_session(
-        domain: Option<String>,
-    ) -> Result<(sessions2::PlayerRequestStream, u64), Error> {
-        let publisher =
-            fuchsia_component::client::connect_to_service::<sessions2::PublisherMarker>()
-                .context("Failed to connect to MediaSession interface")?;
-
-        let (player_client, player_request_stream) = create_request_stream()?;
-
-        let registration = sessions2::PlayerRegistration {
-            domain: domain.or(Some("Bluetooth".to_string())),
-            ..Decodable::new_empty()
-        };
-
-        let session_id = publisher.publish(player_client, registration).await?;
-
-        Ok((player_request_stream, session_id))
-    }
-
     fn into_session_gen(self) -> Box<PeerSessionFn> {
-        Box::new(move |peer_id: &PeerId| {
+        Box::new(move |_peer_id: &PeerId| {
             let clone = self.clone();
-            let peer_id = peer_id.clone();
             let gen_fut = async move {
-                let (player_requests, session_id) = Self::setup_audio_session(clone.domain).await?;
-                info!("Session ID: {}", session_id);
-                let avrcp_task = AvrcpRelay::start(peer_id.clone(), player_requests)
-                    .unwrap_or(fasync::Task::spawn(async {}));
+                let publisher =
+                    fuchsia_component::client::connect_to_service::<sessions2::PublisherMarker>()
+                        .context("Failed to connect to MediaSession interface")?;
 
+                let domain = clone.domain.unwrap_or("Bluetooth".to_string());
                 let sink_task_builder =
-                    sink_task::SinkTaskBuilder::new(clone.cobalt_sender, session_id);
+                    sink_task::SinkTaskBuilder::new(clone.cobalt_sender, publisher, domain);
                 let mut streams = stream::Streams::new();
                 let sbc_endpoint = Self::build_sbc_endpoint(avdtp::EndpointType::Sink)?;
                 streams.insert(stream::Stream::build(sbc_endpoint, sink_task_builder.clone()));
@@ -226,7 +204,7 @@ impl StreamsBuilder {
                     let aac_endpoint = Self::build_aac_endpoint(avdtp::EndpointType::Sink)?;
                     streams.insert(stream::Stream::build(aac_endpoint, sink_task_builder.clone()));
                 }
-                Ok((streams, clone.codec_negotiation, avrcp_task))
+                Ok((streams, clone.codec_negotiation, fasync::Task::spawn(async {})))
             };
             fasync::Task::spawn(gen_fut)
         })

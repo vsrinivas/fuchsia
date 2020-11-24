@@ -7,7 +7,8 @@ use {
     bt_a2dp::{codec::MediaCodecConfig, media_task::*},
     bt_a2dp_metrics as metrics,
     bt_avdtp::{self as avdtp, MediaStream},
-    fuchsia_async as fasync,
+    fidl::endpoints::create_request_stream,
+    fidl_fuchsia_media_sessions2 as sessions2, fuchsia_async as fasync,
     fuchsia_bluetooth::{inspect::DataStreamInspect, types::PeerId},
     fuchsia_cobalt::CobaltSender,
     fuchsia_trace as trace,
@@ -22,33 +23,62 @@ use {
     thiserror::Error,
 };
 
+use crate::avrcp_relay::AvrcpRelay;
 use crate::player;
 
 #[derive(Clone)]
 pub struct SinkTaskBuilder {
     cobalt_sender: CobaltSender,
-    session_id: u64,
+    publisher: sessions2::PublisherProxy,
+    domain: String,
 }
 
 impl SinkTaskBuilder {
-    pub fn new(cobalt_sender: CobaltSender, session_id: u64) -> Self {
-        Self { cobalt_sender, session_id }
+    pub fn new(
+        cobalt_sender: CobaltSender,
+        publisher: sessions2::PublisherProxy,
+        domain: String,
+    ) -> Self {
+        Self { cobalt_sender, publisher, domain }
     }
 }
 
 impl MediaTaskBuilder for SinkTaskBuilder {
     fn configure(
         &self,
-        _peer_id: &PeerId,
+        peer_id: &PeerId,
         codec_config: &MediaCodecConfig,
         data_stream_inspect: DataStreamInspect,
-    ) -> Result<Box<dyn MediaTaskRunner>, MediaTaskError> {
-        Ok(Box::new(ConfiguredSinkTask::new(
-            codec_config,
-            self.cobalt_sender.clone(),
-            data_stream_inspect,
-            self.session_id,
-        )))
+    ) -> BoxFuture<'static, Result<Box<dyn MediaTaskRunner>, MediaTaskError>> {
+        let s = self.clone();
+        let peer_id = peer_id.clone();
+        let codec_config = codec_config.clone();
+        Box::pin(async move {
+            let (player_client, player_requests) = create_request_stream()
+                .map_err(|e| MediaTaskError::Other(format!("FIDL error: {:?}", e)))?;
+
+            let registration = sessions2::PlayerRegistration {
+                domain: Some(s.domain),
+                ..sessions2::PlayerRegistration::empty()
+            };
+
+            let session_id = s
+                .publisher
+                .publish(player_client, registration)
+                .await
+                .or(Err(MediaTaskError::ResourcesInUse))?;
+            info!("Session ID: {}", session_id);
+            // Ignoring AVRCP relay errors, they are logged.
+            let avrcp_task = AvrcpRelay::start(peer_id.clone(), player_requests).ok();
+
+            Ok::<Box<dyn MediaTaskRunner>, _>(Box::new(ConfiguredSinkTask::new(
+                codec_config,
+                s.cobalt_sender,
+                data_stream_inspect,
+                session_id,
+                avrcp_task,
+            )))
+        })
     }
 }
 
@@ -61,20 +91,24 @@ struct ConfiguredSinkTask {
     stream_inspect: Arc<Mutex<DataStreamInspect>>,
     /// Session ID for Media
     session_id: u64,
+    /// Session Task (AVRCP relay)
+    _session_task: Option<fasync::Task<()>>,
 }
 
 impl ConfiguredSinkTask {
     fn new(
-        codec_config: &MediaCodecConfig,
+        codec_config: MediaCodecConfig,
         cobalt_sender: CobaltSender,
         stream_inspect: DataStreamInspect,
         session_id: u64,
+        session_task: Option<fasync::Task<()>>,
     ) -> Self {
         Self {
-            codec_config: codec_config.clone(),
+            codec_config,
             cobalt_sender,
             stream_inspect: Arc::new(Mutex::new(stream_inspect)),
             session_id,
+            _session_task: session_task,
         }
     }
 }
