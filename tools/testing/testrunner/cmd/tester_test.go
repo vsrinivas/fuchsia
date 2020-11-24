@@ -642,7 +642,7 @@ func TestCommandForTest(t *testing.T) {
 					Path:       "/path/to/test",
 					PackageURL: "fuchsia-pkg://example.com/test.cmx",
 				}},
-			expected: []string{"run-test-component", "fuchsia-pkg://example.com/test.cmx"},
+			expected: []string{"run-test-component", "--wait-for-utc=10", "fuchsia-pkg://example.com/test.cmx"},
 		},
 		{
 			name:        "components v1 timeout",
@@ -653,7 +653,7 @@ func TestCommandForTest(t *testing.T) {
 					PackageURL: "fuchsia-pkg://example.com/test.cmx",
 				}},
 			timeout:  time.Second,
-			expected: []string{"run-test-component", "--timeout=1", "fuchsia-pkg://example.com/test.cmx"},
+			expected: []string{"run-test-component", "--timeout=1", "--wait-for-utc=10", "fuchsia-pkg://example.com/test.cmx"},
 		},
 		{
 			name:        "components v1 max severity",
@@ -665,7 +665,7 @@ func TestCommandForTest(t *testing.T) {
 					LogSettings: build.LogSettings{MaxSeverity: "ERROR"},
 				}},
 			timeout:  time.Second,
-			expected: []string{"run-test-component", "--max-log-severity=ERROR", "--timeout=1", "fuchsia-pkg://example.com/test.cmx"},
+			expected: []string{"run-test-component", "--max-log-severity=ERROR", "--timeout=1", "--wait-for-utc=10", "fuchsia-pkg://example.com/test.cmx"},
 		},
 		{
 			name:        "components v1 realm label",
@@ -677,7 +677,7 @@ func TestCommandForTest(t *testing.T) {
 				},
 				RealmLabel: "testrealm",
 			},
-			expected: []string{"run-test-component", "--realm-label", "testrealm", "fuchsia-pkg://example.com/test.cmx"},
+			expected: []string{"run-test-component", "--realm-label", "testrealm", "--wait-for-utc=10", "fuchsia-pkg://example.com/test.cmx"},
 		},
 		{
 			name:        "components v2",
@@ -687,7 +687,7 @@ func TestCommandForTest(t *testing.T) {
 					Path:       "/path/to/test",
 					PackageURL: "fuchsia-pkg://example.com/test.cm",
 				}},
-			expected: []string{"run-test-suite", "fuchsia-pkg://example.com/test.cm"},
+			expected: []string{"run-test-suite", "--wait-for-utc", "10", "fuchsia-pkg://example.com/test.cm"},
 		},
 		{
 			name:        "components v2 no parallel",
@@ -697,7 +697,7 @@ func TestCommandForTest(t *testing.T) {
 					Path:       "/path/to/test",
 					PackageURL: "fuchsia-pkg://example.com/test.cm",
 				}},
-			expected: []string{"run-test-suite", "fuchsia-pkg://example.com/test.cm"},
+			expected: []string{"run-test-suite", "--wait-for-utc", "10", "fuchsia-pkg://example.com/test.cm"},
 		},
 		{
 			name:        "components v2 parallel",
@@ -708,7 +708,7 @@ func TestCommandForTest(t *testing.T) {
 					PackageURL: "fuchsia-pkg://example.com/test.cm",
 					Parallel:   2,
 				}},
-			expected: []string{"run-test-suite", "--parallel", "2", "fuchsia-pkg://example.com/test.cm"},
+			expected: []string{"run-test-suite", "--parallel", "2", "--wait-for-utc", "10", "fuchsia-pkg://example.com/test.cm"},
 		},
 		{
 			name:        "components v2 timeout",
@@ -719,7 +719,7 @@ func TestCommandForTest(t *testing.T) {
 					PackageURL: "fuchsia-pkg://example.com/test.cm",
 				}},
 			timeout:  time.Second,
-			expected: []string{"run-test-suite", "--timeout", "1", "fuchsia-pkg://example.com/test.cm"},
+			expected: []string{"run-test-suite", "--timeout", "1", "--wait-for-utc", "10", "fuchsia-pkg://example.com/test.cm"},
 		},
 	}
 

@@ -44,6 +44,12 @@ const (
 	// test timed out.
 	timeoutExitCode = 21
 
+	// Maximum seconds run-test-component and run-test-suite will wait for the
+	// UTC clock to start. This is a hack to work around gtest using UTC to
+	// measure elapsed time. (See fxbug.dev/64901)
+	// TODO(fxbug.dev/65170): remove flags once they are unnecessary.
+	waitForUtcTimeout = 10
+
 	// Printed to the serial console when ready to accept user input.
 	serialConsoleCursor = "\n$"
 
@@ -545,6 +551,7 @@ func commandForTest(test *testsharder.Test, useRuntests bool, remoteOutputDir st
 			if timeout > 0 {
 				command = append(command, "--timeout", fmt.Sprintf("%d", int64(timeout.Seconds())))
 			}
+			command = append(command, "--wait-for-utc", fmt.Sprintf("%d", waitForUtcTimeout))
 		} else {
 			command = []string{runTestComponentName}
 			if test.LogSettings.MaxSeverity != "" {
@@ -559,6 +566,8 @@ func commandForTest(test *testsharder.Test, useRuntests bool, remoteOutputDir st
 			if test.RealmLabel != "" {
 				command = append(command, "--realm-label", test.RealmLabel)
 			}
+
+			command = append(command, fmt.Sprintf("--wait-for-utc=%d", waitForUtcTimeout))
 		}
 		command = append(command, test.PackageURL)
 	} else {

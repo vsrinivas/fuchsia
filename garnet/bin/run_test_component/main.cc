@@ -27,6 +27,7 @@
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
+#include <zircon/utc.h>
 
 #include <memory>
 #include <sstream>
@@ -58,7 +59,7 @@ const std::string max_severity_config_path =
 
 void PrintUsage() {
   fprintf(stderr, R"(
-Usage: run_test_component [--realm-label=<label>] [--timeout=<seconds>] [--min-severity-logs=string] [--max-log-severity=string] <test_url>|<test_matcher> -- [arguments...]
+Usage: run_test_component [--realm-label=<label>] [--timeout=<seconds>] [--min-severity-logs=string] [--max-log-severity=string] [--wait-for-utc=<timeout_sec>] <test_url>|<test_matcher> -- [arguments...]
 
        *test_url* takes the form of component manifest URL which uniquely
        identifies a test component. Example:
@@ -86,6 +87,12 @@ Usage: run_test_component [--realm-label=<label>] [--timeout=<seconds>] [--min-s
        If --max-log-severity is passed, then the test will fail if it produces logs with higher severity.
        Allowed values: TRACE, DEBUG, INFO, WARN, ERROR, FATAL.
        For more information see: https://fuchsia.dev/fuchsia-src/concepts/testing/test_component#restricting_log_severity
+
+       If --wait-for-utc is specified, the runner waits up to <timeout_sec> seconds
+       for the UTC clock to start before launching the test component. If the
+       timeout is reached the runner launches the test anyway. This flag is
+       intended for use with gtest in CI, which measures test execution time
+       using UTC time. This flag should not be depended upon.
 
        By default when installing log listener, all logs are collected. To filter
        by higher severity please pass severity: TRACE, DEBUG, INFO, WARN, ERROR, FATAL.
@@ -406,6 +413,22 @@ int main(int argc, const char** argv) {
     auto& system_services = test_metadata.system_services();
     for (auto& service : system_services) {
       test_env_services->AllowParentService(service);
+    }
+
+    if (parse_result.wait_for_utc_timeout > 0) {
+      zx_handle_t utc_handle = zx_utc_reference_get();
+      async::Wait wait_for_utc(
+          utc_handle, ZX_CLOCK_STARTED, 0,
+          [&loop](async_dispatcher_t* dispatcher, async::Wait* wait, zx_status_t status,
+                  const zx_packet_signal_t* signal) { loop.Quit(); });
+
+      wait_for_utc.Begin(loop.dispatcher());
+      zx_status_t status = loop.Run(zx::deadline_after(zx::sec(parse_result.wait_for_utc_timeout)));
+      if (status == ZX_ERR_TIMED_OUT) {
+        wait_for_utc.Cancel();
+        fprintf(stderr, "Timed out waiting for UTC to start, running test anyway\n");
+      }
+      loop.ResetQuit();
     }
 
     // By default run tests in a realm with a random name and transient storage.

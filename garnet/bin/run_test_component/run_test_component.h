@@ -22,6 +22,8 @@ struct ParseArgsResult {
   std::string realm_label;
   /// Timeout in seconds for test. By default there is no timeout.
   int32_t timeout = -1;
+  /// Timeout in seconds to wait for UTC to start. By default, tests do not wait for UTC.
+  int32_t wait_for_utc_timeout = -1;
   int32_t min_log_severity = syslog::LOG_TRACE;
   int32_t max_log_severity = syslog::LOG_FATAL;
 };

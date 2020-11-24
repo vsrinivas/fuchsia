@@ -5,6 +5,8 @@
 use {
     argh::{EarlyExit, FromArgs},
     fidl_fuchsia_test_manager::HarnessMarker,
+    fuchsia_async::{self, TimeoutExt},
+    fuchsia_zircon as zx,
 };
 
 #[derive(FromArgs, Default, PartialEq, Eq, Debug)]
@@ -14,6 +16,14 @@ struct Args {
     /// test timeout. Exits with -`ZX_ERR_TIMED_OUT` if the test times out.
     #[argh(option, short = 't')]
     timeout: Option<u32>,
+
+    /// seconds to wait for the UTC clock to start before running tests.
+    /// By default the runner does not wait for the UTC clock. This option is
+    /// intended for use with gtest in CI, which measures test execution time
+    /// using UTC time and will eventually be removed. Tests should in general
+    /// not assume the UTC clock is running.
+    #[argh(option)]
+    wait_for_utc: Option<u32>,
 
     /// test url. Test should implement `fuchsia.test.Suite` protocol.
     #[argh(positional)]
@@ -57,7 +67,15 @@ async fn main() {
         })
     });
 
-    let Args { timeout, test_url, test_filter, also_run_disabled_tests, parallel, count } = args;
+    let Args {
+        timeout,
+        wait_for_utc,
+        test_url,
+        test_filter,
+        also_run_disabled_tests,
+        parallel,
+        count,
+    } = args;
     let count = count.unwrap_or(1);
     if count == 0 {
         println!("--count should be greater than zero.");
@@ -66,6 +84,20 @@ async fn main() {
 
     let harness = fuchsia_component::client::connect_to_service::<HarnessMarker>()
         .expect("connecting to HarnessProxy");
+
+    if let Some(wait_for_utc_timeout) = wait_for_utc {
+        let utc_clock = fuchsia_runtime::duplicate_utc_clock_handle(zx::Rights::WAIT)
+            .expect("retrieving utc handle");
+        let timeout =
+            fuchsia_async::Time::after(zx::Duration::from_seconds(wait_for_utc_timeout.into()));
+        fuchsia_async::OnSignals::new(&utc_clock, zx::Signals::CLOCK_STARTED)
+            .on_timeout(timeout, || {
+                println!("Timed out waiting for UTC clock to start, running test anyway");
+                Ok(zx::Signals::NONE)
+            })
+            .await
+            .expect("waiting for utc clock to start");
+    }
 
     match run_test_suite_lib::run_tests_and_get_outcome(
         run_test_suite_lib::TestParams {
