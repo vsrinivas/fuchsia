@@ -84,10 +84,6 @@ type DeviceConfig struct {
 // These values should be set or initialized by calling
 // (sdk *SDKProperties) Init().
 type SDKProperties struct {
-	//DataPath is deprecated! Use GetSDKDataPath().
-	DataPath string
-	// Version is deprecated! Use GetSDKVersion().
-	Version                  string
 	dataPath                 string
 	version                  string
 	globalPropertiesFilename string
@@ -134,37 +130,6 @@ var GetUsername = DefaultGetUsername
 // GetHostname to allow mocking.
 var GetHostname = DefaultGetHostname
 
-// Init is deprecated! use sdkcommon.New().
-func (sdk *SDKProperties) Init() error {
-	homeDir, err := GetUserHomeDir()
-	if err != nil {
-		return err
-	}
-	sdk.DataPath = filepath.Join(homeDir, ".fuchsia")
-	sdk.dataPath = sdk.DataPath
-
-	toolsDir, err := sdk.GetToolsDir()
-	if err != nil {
-		return err
-	}
-	manifestFile, err := filepath.Abs(filepath.Join(toolsDir, "..", "..", "meta", "manifest.json"))
-	if err != nil {
-		return err
-	}
-	// If this is running in-tree, the manifest may not exist.
-	if FileExists(manifestFile) {
-		if sdk.Version, err = readSDKVersion(manifestFile); err != nil {
-			return err
-		}
-		sdk.version = sdk.Version
-	} else {
-		log.Warningf("Cannot find SDK manifest file %v", manifestFile)
-	}
-
-	sdk.globalPropertiesFilename = filepath.Join(sdk.DataPath, "global_ffx_props.json")
-	return initFFXGlobalConfig(*sdk)
-}
-
 // New creates an initialized SDKProperties
 func New() (SDKProperties, error) {
 	sdk := SDKProperties{}
@@ -173,7 +138,6 @@ func New() (SDKProperties, error) {
 		return sdk, err
 	}
 	sdk.dataPath = filepath.Join(homeDir, ".fuchsia")
-	sdk.DataPath = sdk.dataPath
 
 	toolsDir, err := sdk.GetToolsDir()
 	if err != nil {
@@ -188,7 +152,6 @@ func New() (SDKProperties, error) {
 		if sdk.version, err = readSDKVersion(manifestFile); err != nil {
 			return sdk, err
 		}
-		sdk.Version = sdk.version
 	} else {
 		log.Warningf("Cannot find SDK manifest file %v", manifestFile)
 	}
@@ -201,9 +164,6 @@ func New() (SDKProperties, error) {
 // GetSDKVersion returns the version of the SDK or empty if not set.
 // Use sdkcommon.New() to create an initalized SDKProperties struct.
 func (sdk SDKProperties) GetSDKVersion() string {
-	if sdk.Version != "" && sdk.Version != sdk.version {
-		return sdk.Version
-	}
 	return sdk.version
 }
 
@@ -211,9 +171,6 @@ func (sdk SDKProperties) GetSDKVersion() string {
 //  or empty if not set.
 // Use sdkcommon.New() to create an initalized SDKProperties struct.
 func (sdk SDKProperties) GetSDKDataPath() string {
-	if sdk.DataPath != "" && sdk.DataPath != sdk.dataPath {
-		return sdk.DataPath
-	}
 	return sdk.dataPath
 }
 
