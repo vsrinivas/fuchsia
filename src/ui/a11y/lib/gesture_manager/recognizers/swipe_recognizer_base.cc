@@ -123,8 +123,6 @@ void SwipeRecognizerBase::HandleEvent(
 
       // Check if the all the Down events are detected.
       if (gesture_info_map_.size() != number_of_fingers_) {
-        FX_LOGS(INFO) << DebugName()
-                      << ": Failed because an up event is detected before all the down events.";
         contest_->member->Reject();
         break;
       }
@@ -134,7 +132,6 @@ void SwipeRecognizerBase::HandleEvent(
       if (!(ValidatePointerEvent(it->second, pointer_event) &&
             ValidateSwipePath(pointer_id, pointer_event) &&
             ValidateSwipeDistance(pointer_id, pointer_event))) {
-        FX_LOGS(INFO) << DebugName() << ": Failed while validating pointer events.";
         contest_->member->Reject();
         break;
       }
