@@ -81,6 +81,9 @@ pub fn merge_includes(
     Ok(())
 }
 
+const CHECK_INCLUDES_URL: &str =
+    "https://fuchsia.dev/fuchsia-src/development/components/build#component-manifest-includes";
+
 /// Read in the provided JSON file and ensure that it contains all expected includes.
 pub fn check_includes(
     file: PathBuf,
@@ -104,13 +107,8 @@ pub fn check_includes(
         if !includes.contains(&expected) {
             return Err(Error::Validate {
                 schema_name: None,
-                err: format!("{:?} must include {}.{}",
-                        &file, &expected, match file.extension().and_then(|e| e.to_str()) {
-                            Some("cmx") => " See: https://fuchsia.dev/fuchsia-src/concepts/components/v1/component_manifests#include",
-                            Some("cml") => " See: https://fuchsia.dev/fuchsia-src/concepts/components/v2/component_manifests#include",
-                            _ => "",
-                        }),
-                filename: file.to_str().map(String::from)
+                err: format!("{:?} must include {}. See: {}", &file, &expected, CHECK_INCLUDES_URL),
+                filename: file.to_str().map(String::from),
             });
         }
     }

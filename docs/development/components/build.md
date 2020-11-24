@@ -790,6 +790,74 @@ them. This way we could reuse the same test component target in a different
 test package, for instance to test against a different minifier component, and
 the test component would work the same.
 
+## Component manifest includes {#component-manifest-includes}
+
+As shown above, component declarations have an associated [component
+manifest][glossary-component-manifest]. The component manifest supports
+"include" syntax, which allows referencing one or more files where additional
+contents for the component manifest may be merged from. This is conceptually
+similar for instance to `#include` directives in the C programming language.
+These included files are also known as component manifest shards.
+
+Some dependencies, such as libraries, assume that dependent components have
+certain capabilities available to them at runtime.
+Practically this could mean that the code in question assumes that its
+dependents include a certain file in their component manifests. For instance,
+the [C++ Syslog library][cpp-syslog] makes such an assumption.
+
+Target owners can declare that dependent components must include one or more
+files in their component manifest. For example we have the hypothetical file
+`//sdk/lib/fonts/BUILD.gn` below:
+
+```gn
+import("//tools/cmc/build/expect_includes.gni")
+
+# Client library for components that want to use fonts
+source_set("font_provider_client") {
+  sources = [
+    "font_provider_client.cc",
+    ...
+  ]
+  deps = [
+    ":font_provider_client_includes",
+    ...
+  ]
+}
+
+expect_includes("font_provider_client_includes") {
+  includes = [
+    "client.shard.cmx",
+    "client.shard.cml",
+  ]
+}
+```
+
+It is possible (and recommended) to provide both `.cmx` and `.cml` includes.
+Dependent manifests will be required to include the expected files with the
+matching extension.
+
+   * {.cmx}
+
+   ```json
+   {
+       "include": [
+           "sdk/lib/fonts/client.shard.cmx"
+       ]
+       ...
+   }
+   ```
+
+   * {.cml}
+
+   ```json5
+   {
+       include: [
+           "sdk/lib/fonts/client.shard.cmx",
+       ]
+       ...
+   }
+   ```
+
 ## Troubleshooting {#troubleshooting}
 
 ### Listing the contents of a package {#listing-the-contents-of-a-package}
@@ -1097,6 +1165,7 @@ templates. These unsupported features include:
     can still be launched with `fx test` followed by the short name of the
     test. See [fxbug.dev/55739][fxb-55739] for more details.
 
+[cpp-syslog]: /docs/development/languages/c-cpp/logging.md#component_manifest_dependency
 [cml-format]: /docs/concepts/components/v2/component_manifests.md
 [cmx-format]: /docs/concepts/components/v1/component_manifests.md
 [component-index]: /src/sys/component_index/component_index.gni
