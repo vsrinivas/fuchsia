@@ -4,7 +4,7 @@
 
 #include <fcntl.h>
 #include <fuchsia/io/llcpp/fidl.h>
-#include <fuchsia/security/resource/llcpp/fidl.h>
+#include <fuchsia/kernel/llcpp/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/io.h>
@@ -40,15 +40,14 @@ class ExecutableMountTest : public FdioTest {
     zx_status_t status = zx::channel::create(0, &local, &remote);
     ZX_ASSERT(status == ZX_OK);
 
-    status = fdio_service_connect("/svc/fuchsia.security.resource.Vmex", remote.release());
-    ZX_ASSERT_MSG(status == ZX_OK, "Failed to connect to fuchsia.security.resource.Vmex: %u",
-                  status);
+    status = fdio_service_connect("/svc/fuchsia.kernel.VmexResource", remote.release());
+    ZX_ASSERT_MSG(status == ZX_OK, "Failed to connect to fuchsia.kernel.VmexResource: %u", status);
 
-    auto client = llcpp::fuchsia::security::resource::Vmex::SyncClient{std::move(local)};
+    auto client = llcpp::fuchsia::kernel::VmexResource::SyncClient{std::move(local)};
     auto result = client.Get();
-    ZX_ASSERT_MSG(result.ok(), "fuchsia.security.resource.Vmex.Get() failed: %u", result.status());
+    ZX_ASSERT_MSG(result.ok(), "fuchsia.kernel.VmexResource.Get() failed: %u", result.status());
 
-    set_vmex_resource(std::move(result.Unwrap()->vmex));
+    set_vmex_resource(std::move(result->vmex_resource));
   }
 };
 

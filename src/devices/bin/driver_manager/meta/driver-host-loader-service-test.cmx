@@ -2,7 +2,7 @@
     "facets": {
         "fuchsia.test": {
             "system-services": [
-                "fuchsia.security.resource.Vmex"
+                "fuchsia.kernel.VmexResource"
             ]
         }
     },
@@ -14,7 +14,7 @@
     },
     "sandbox": {
         "services": [
-            "fuchsia.security.resource.Vmex"
+            "fuchsia.kernel.VmexResource"
         ]
     }
 }

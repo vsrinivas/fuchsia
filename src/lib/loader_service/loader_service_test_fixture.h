@@ -72,7 +72,7 @@ class LoaderServiceTest : public gtest::RealLoopFixture {
   void Config(llcpp::fuchsia::ldsvc::Loader::SyncClient& client, std::string config,
               zx::status<zx_status_t> expected);
 
-  // Helper function to interact with fuchsia.security.resource.Vmex
+  // Helper function to interact with fuchsia.kernel.VmexResource
   static zx::status<zx::unowned_resource> GetVmexResource();
 
   async::Loop& fs_loop() { return fs_loop_; }

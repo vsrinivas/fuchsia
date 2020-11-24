@@ -4,7 +4,7 @@
 
 #include "src/lib/loader_service/loader_service_test_fixture.h"
 
-#include <fuchsia/security/resource/llcpp/fidl.h>
+#include <fuchsia/kernel/llcpp/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fidl/llcpp/memory.h>
@@ -25,7 +25,7 @@ namespace loader {
 namespace test {
 
 namespace fldsvc = ::llcpp::fuchsia::ldsvc;
-namespace fsec = ::llcpp::fuchsia::security::resource;
+namespace fkernel = ::llcpp::fuchsia::kernel;
 
 namespace {
 
@@ -142,7 +142,7 @@ void LoaderServiceTest::Config(fldsvc::Loader::SyncClient& client, std::string c
 
 // static
 zx::status<zx::unowned_resource> LoaderServiceTest::GetVmexResource() {
-  static const std::string kVmexResourcePath = "/svc/" + std::string(fsec::Vmex::Name);
+  static const std::string kVmexResourcePath = "/svc/" + std::string(fkernel::VmexResource::Name);
 
   static zx::resource vmex_resource;
   if (!vmex_resource.is_valid()) {
@@ -156,11 +156,11 @@ zx::status<zx::unowned_resource> LoaderServiceTest::GetVmexResource() {
       return status.take_error();
     }
 
-    auto result = fsec::Vmex::Call::Get(client.borrow());
+    auto result = fkernel::VmexResource::Call::Get(client.borrow());
     if (!result.ok()) {
       return zx::error(result.status());
     }
-    vmex_resource = std::move(result.Unwrap()->vmex);
+    vmex_resource = std::move(result->vmex_resource);
   }
   return zx::ok(vmex_resource.borrow());
 }

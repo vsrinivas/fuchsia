@@ -60,6 +60,7 @@ static void log_write(const void* data, size_t len) {
 
 static zx_handle_t root_resource;
 static zx_handle_t mmio_root_resource;
+static zx_handle_t system_root_resource;
 
 __EXPORT
 void __libc_extensions_init(uint32_t count, zx_handle_t handle[], uint32_t info[]) {
@@ -71,6 +72,11 @@ void __libc_extensions_init(uint32_t count, zx_handle_t handle[], uint32_t info[
     }
     if (info[n] == PA_HND(PA_MMIO_RESOURCE, 0)) {
       mmio_root_resource = handle[n];
+      handle[n] = 0;
+      info[n] = 0;
+    }
+    if (info[n] == PA_HND(PA_SYSTEM_RESOURCE, 0)) {
+      system_root_resource = handle[n];
       handle[n] = 0;
       info[n] = 0;
     }
@@ -94,6 +100,9 @@ zx_handle_t get_root_resource(void) { return root_resource; }
 
 __EXPORT
 zx_handle_t get_mmio_root_resource(void) { return mmio_root_resource; }
+
+__EXPORT
+zx_handle_t get_system_root_resource(void) { return system_root_resource; }
 
 __EXPORT
 ssize_t write(int fd, const void* data, size_t count) {

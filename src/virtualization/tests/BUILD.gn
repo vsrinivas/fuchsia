@@ -437,7 +437,6 @@ executable("hypervisor_tests") {
   ]
 
   deps = [
-    "//sdk/fidl/fuchsia.boot",
     "//sdk/fidl/fuchsia.kernel",
     "//sdk/fidl/fuchsia.sysinfo",
     "//sdk/lib/fdio",

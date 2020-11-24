@@ -228,7 +228,7 @@ test("executable_mount") {
   ]
   deps = [
     ":test-utils",
-    "//sdk/fidl/fuchsia.security.resource:fuchsia.security.resource_llcpp",
+    "//sdk/fidl/fuchsia.kernel:fuchsia.kernel_llcpp",
     "//sdk/lib/fdio",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",

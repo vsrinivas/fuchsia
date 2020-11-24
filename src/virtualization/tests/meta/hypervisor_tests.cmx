@@ -2,8 +2,8 @@
     "facets": {
         "fuchsia.test": {
             "system-services": [
-                "fuchsia.boot.RootResource",
                 "fuchsia.kernel.HypervisorResource",
+                "fuchsia.kernel.VmexResource",
                 "fuchsia.sysinfo.SysInfo"
             ]
         }
@@ -13,8 +13,8 @@
     },
     "sandbox": {
         "services": [
-            "fuchsia.boot.RootResource",
             "fuchsia.kernel.HypervisorResource",
+            "fuchsia.kernel.VmexResource",
             "fuchsia.sysinfo.SysInfo"
         ]
     }

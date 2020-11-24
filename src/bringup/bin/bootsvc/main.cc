@@ -366,8 +366,8 @@ int main(int argc, char** argv) {
   // Create a VMEX resource object to provide the bootfs service.
   // TODO(smpham): Pass VMEX resource from kernel.
   zx::resource bootfs_vmex_rsrc;
-  status = zx::resource::create(resources.root, ZX_RSRC_KIND_VMEX, 0, 0, kBootfsVmexName,
-                                sizeof(kBootfsVmexName), &bootfs_vmex_rsrc);
+  status = zx::resource::create(resources.system, ZX_RSRC_KIND_SYSTEM, ZX_RSRC_SYSTEM_VMEX_BASE, 1,
+                                kBootfsVmexName, sizeof(kBootfsVmexName), &bootfs_vmex_rsrc);
   ZX_ASSERT_MSG(status == ZX_OK, "Failed to create VMEX resource");
 
   // Set up the bootfs service

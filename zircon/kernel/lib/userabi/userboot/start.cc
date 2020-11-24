@@ -208,8 +208,9 @@ zx::vmar reserve_low_address_space(const zx::debuglog& log, const zx::vmar& root
     check(log, status, "zx_handle_duplicate failed on bootfs VMO handle");
     status = log.duplicate(ZX_RIGHT_SAME_RIGHTS, &log_dup);
     check(log, status, "zx_handle_duplicate failed on debuglog handle");
-    status =
-        zx::resource::create(root_resource, ZX_RSRC_KIND_VMEX, 0, 0, nullptr, 0, &vmex_resource);
+    zx::unowned_resource system_resource(handles[kSystemResource]);
+    status = zx::resource::create(*system_resource, ZX_RSRC_KIND_SYSTEM, ZX_RSRC_SYSTEM_VMEX_BASE,
+                                  1, nullptr, 0, &vmex_resource);
     check(log, status, "zx_resource_create failed");
     Bootfs bootfs{std::move(vmar_self), std::move(bootfs_vmo_dup), std::move(vmex_resource),
                   std::move(log_dup)};

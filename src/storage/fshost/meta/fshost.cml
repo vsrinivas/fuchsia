@@ -127,13 +127,13 @@
             ],
         },
 
-        // Use fuchsia.security.resource.Vmex but locate it under a separate directory in fshost's
+        // Use fuchsia.kernel.VmexResource but locate it under a separate directory in fshost's
         // namespace. This enables providing the service only to the blobfs process but not other
         // filesystems. fshost should not use this itself, only provide to blobfs.
         // TODO: Once blobfs is a component this can be routed directly to it.
         {
-            protocol: "fuchsia.security.resource.Vmex",
-            path: "/svc_blobfs/fuchsia.security.resource.Vmex",
+            protocol: "fuchsia.kernel.VmexResource",
+            path: "/svc_blobfs/fuchsia.kernel.VmexResource",
         },
         {
             protocol: "fuchsia.scheduler.ProfileProvider",

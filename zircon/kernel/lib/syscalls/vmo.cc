@@ -253,7 +253,7 @@ zx_status_t sys_vmo_replace_as_executable(zx_handle_t handle, zx_handle_t vmex,
 
   zx_status_t vmex_status = ZX_OK;
   if (vmex != ZX_HANDLE_INVALID) {
-    vmex_status = validate_resource(vmex, ZX_RSRC_KIND_VMEX);
+    vmex_status = validate_ranged_resource(vmex, ZX_RSRC_KIND_SYSTEM, ZX_RSRC_SYSTEM_VMEX_BASE, 1);
   } else {
     vmex_status = up->EnforceBasicPolicy(ZX_POL_AMBIENT_MARK_VMO_EXEC);
   }

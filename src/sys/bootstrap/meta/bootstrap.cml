@@ -213,7 +213,7 @@
             ],
         },
         {
-            protocol: [ "fuchsia.security.resource.Vmex" ],
+            protocol: [ "fuchsia.kernel.VmexResource" ],
             from: "parent",
             to: [ "#fshost" ],
         },

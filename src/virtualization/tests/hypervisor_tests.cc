@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include <fcntl.h>
-#include <fuchsia/boot/cpp/fidl.h>
 #include <fuchsia/kernel/cpp/fidl.h>
 #include <fuchsia/sysinfo/cpp/fidl.h>
 #include <lib/fdio/directory.h>
@@ -101,17 +100,15 @@ typedef struct test {
   }
 } test_t;
 
-// Ideally, we'd use fuchsia.security.resource.Vmex, but it fails during parsing
-// of the .cmx file for the test.
-static zx_status_t get_root_resource(zx::resource* resource) {
-  fuchsia::boot::RootResourceSyncPtr root_resource;
-  auto path = std::string("/svc/") + fuchsia::boot::RootResource::Name_;
+static zx_status_t get_vmex_resource(zx::resource* resource) {
+  fuchsia::kernel::VmexResourceSyncPtr vmex_resource;
+  auto path = std::string("/svc/") + fuchsia::kernel::VmexResource::Name_;
   zx_status_t status =
-      fdio_service_connect(path.data(), root_resource.NewRequest().TakeChannel().release());
+      fdio_service_connect(path.data(), vmex_resource.NewRequest().TakeChannel().release());
   if (status != ZX_OK) {
     return status;
   }
-  return root_resource->Get(resource);
+  return vmex_resource->Get(resource);
 }
 
 static zx_status_t get_hypervisor_resource(zx::resource* resource) {
@@ -158,9 +155,9 @@ static void setup(test_t* test, const char* start, const char* end) {
             ZX_OK);
 
   // Add ZX_RIGHT_EXECUTABLE so we can map into guest address space.
-  zx::resource root_resource;
-  ASSERT_EQ(get_root_resource(&root_resource), ZX_OK);
-  ASSERT_EQ(test->vmo.replace_as_executable(root_resource, &test->vmo), ZX_OK);
+  zx::resource vmex_resource;
+  ASSERT_EQ(get_vmex_resource(&vmex_resource), ZX_OK);
+  ASSERT_EQ(test->vmo.replace_as_executable(vmex_resource, &test->vmo), ZX_OK);
 
   zx::resource hypervisor_resource;
   ASSERT_EQ(get_hypervisor_resource(&hypervisor_resource), ZX_OK);

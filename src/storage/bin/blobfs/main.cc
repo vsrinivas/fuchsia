@@ -5,7 +5,7 @@
 #include <dirent.h>
 #include <fcntl.h>
 #include <fuchsia/hardware/block/c/fidl.h>
-#include <fuchsia/security/resource/llcpp/fidl.h>
+#include <fuchsia/kernel/llcpp/fidl.h>
 #include <getopt.h>
 #include <lib/fdio/directory.h>
 #include <lib/zx/channel.h>
@@ -53,19 +53,19 @@ zx::resource AttemptToGetVmexResource() {
   if (status != ZX_OK) {
     return zx::resource();
   }
-  status = fdio_service_connect("/svc_blobfs/fuchsia.security.resource.Vmex", remote.release());
+  status = fdio_service_connect("/svc_blobfs/fuchsia.kernel.VmexResource", remote.release());
   if (status != ZX_OK) {
-    FS_TRACE_WARN("blobfs: Failed to connect to fuchsia.security.resource.Vmex: %d\n", status);
+    FS_TRACE_WARN("blobfs: Failed to connect to fuchsia.kernel.VmexResource: %d\n", status);
     return zx::resource();
   }
 
-  auto client = llcpp::fuchsia::security::resource::Vmex::SyncClient{std::move(local)};
+  auto client = llcpp::fuchsia::kernel::VmexResource::SyncClient{std::move(local)};
   auto result = client.Get();
   if (!result.ok()) {
-    FS_TRACE_WARN("blobfs: fuchsia.security.resource.Vmex.Get() failed: %d\n", result.status());
+    FS_TRACE_WARN("blobfs: fuchsia.kernel.VmexResource.Get() failed: %d\n", result.status());
     return zx::resource();
   }
-  return std::move(result.Unwrap()->vmex);
+  return std::move(result->vmex_resource);
 }
 
 zx_status_t Mount(std::unique_ptr<BlockDevice> device, const Options& options) {
@@ -97,7 +97,7 @@ zx_status_t Mount(std::unique_ptr<BlockDevice> device, const Options& options) {
     return ZX_ERR_BAD_STATE;
   }
 
-  // Try and get a ZX_RSRC_KIND_VMEX resource if the fuchsia.security.resource.Vmex service is
+  // Try and get a ZX_RSRC_SYSTEM_BASE_VMEX resource if the fuchsia.kernel.VmexResource service is
   // available, which will only be the case if this is launched by fshost. This is non-fatal because
   // blobfs can still otherwise work but will not support executable blobs.
   zx::resource vmex = AttemptToGetVmexResource();

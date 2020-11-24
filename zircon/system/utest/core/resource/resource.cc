@@ -19,6 +19,7 @@
 
 extern "C" zx_handle_t get_root_resource(void);
 extern "C" zx_handle_t get_mmio_root_resource(void);
+extern "C" zx_handle_t get_system_root_resource(void);
 
 static const size_t mmio_test_size = (PAGE_SIZE * 4);
 static uint64_t mmio_test_base;
@@ -32,6 +33,11 @@ const zx::unowned_resource root() {
 const zx::unowned_resource mmio_root() {
   static zx_handle_t mmio_root = get_mmio_root_resource();
   return zx::unowned_resource(mmio_root);
+}
+
+const zx::unowned_resource system_root() {
+  static zx_handle_t system_root = get_system_root_resource();
+  return zx::unowned_resource(system_root);
 }
 
 // Physical memory is reserved during boot and its location varies based on
@@ -224,7 +230,8 @@ TEST(Resource, VmoReplaceAsExecutable) {
   ASSERT_EQ(ZX_OK, zx_vmo_create(PAGE_SIZE, 0, vmo.reset_and_get_address()));
 
   // set-exec with valid VMEX resource
-  ASSERT_EQ(ZX_OK, zx::resource::create(*root(), ZX_RSRC_KIND_VMEX, 0, 0, NULL, 0, &vmex));
+  ASSERT_EQ(ZX_OK, zx::resource::create(*system_root(), ZX_RSRC_KIND_SYSTEM,
+                                        ZX_RSRC_SYSTEM_VMEX_BASE, 1, NULL, 0, &vmex));
   ASSERT_EQ(ZX_OK, zx_handle_duplicate(vmo.get(), ZX_RIGHT_READ, vmo2.reset_and_get_address()));
   ASSERT_EQ(ZX_OK,
             zx_vmo_replace_as_executable(vmo2.release(), vmex.get(), vmo3.reset_and_get_address()));

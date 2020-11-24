@@ -43,8 +43,7 @@ source_set("loader_service_test_fixture") {
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/memfs:memfs-cpp",
   ]
-  deps =
-      [ "//sdk/fidl/fuchsia.security.resource:fuchsia.security.resource_llcpp" ]
+  deps = [ "//sdk/fidl/fuchsia.kernel:fuchsia.kernel_llcpp" ]
 }
 
 executable("loader_service_test") {
