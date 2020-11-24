@@ -72,8 +72,8 @@ zx_status_t Sherlock::RegistersInit() {
 #ifdef FACTORY_BUILD
   mmio_entries[USB_FACTORY_MMIO] = registers::BuildMetadata(allocator, USB_FACTORY_MMIO);
 
-  register_entries[registers::REGISTER_USB_PHY_FACTORY] =
-      registers::BuildMetadata(allocator, registers::REGISTER_USB_PHY_FACTORY, USB_FACTORY_MMIO,
+  register_entries[aml_registers::REGISTER_USB_PHY_FACTORY] =
+      registers::BuildMetadata(allocator, aml_registers::REGISTER_USB_PHY_FACTORY, USB_FACTORY_MMIO,
                                std::vector<registers::MaskEntryBuilder<uint32_t>>{
                                    {
                                        .mask = 0xFFFFFFFF,
