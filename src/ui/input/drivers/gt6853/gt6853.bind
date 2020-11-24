@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 using fuchsia.composite;
-using fuchsia.platform;
+using goodix.platform;
 
 fuchsia.BIND_PROTOCOL == fuchsia.composite.BIND_PROTOCOL.DEVICE;
-fuchsia.BIND_PLATFORM_DEV_VID == fuchsia.platform.BIND_PLATFORM_DEV_VID.GOODIX;
-fuchsia.BIND_PLATFORM_DEV_DID == 0x01; // PDEV_DID_GOODIX_GT6853
+fuchsia.BIND_PLATFORM_DEV_VID == goodix.platform.BIND_PLATFORM_DEV_VID.GOODIX;
+fuchsia.BIND_PLATFORM_DEV_DID == goodix.platform.BIND_PLATFORM_DEV_DID.GT6853;
