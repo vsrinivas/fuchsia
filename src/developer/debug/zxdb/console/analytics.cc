@@ -56,7 +56,7 @@ void Analytics::IfEnabledSendInvokeEvent(Session* session) {
     // for more information.
     parameters.SetApplicationName("");
 
-    auto event = GoogleAnalyticsEvent(kEventCategoryGeneral, kEventActionInvoke);
+    GoogleAnalyticsEvent event(kEventCategoryGeneral, kEventActionInvoke);
     event.AddGeneralParameters(parameters);
     SendGoogleAnalyticsEvent(event);
   }
