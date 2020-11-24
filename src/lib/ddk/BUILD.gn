@@ -41,7 +41,6 @@ zx_library("ddk") {
     "ddk/phys-iter.h",
     "ddk/physiter.h",
     "ddk/protodefs.h",
-    "ddk/usb-peripheral-config.h",
     "hw/arch_ops.h",
     "hw/inout.h",
     "hw/pci.h",
@@ -57,12 +56,7 @@ zx_library("ddk") {
   public_deps = [
     # <ddk/io-buffer.h> has #include <zircon/syscalls.h>.
 
-    # <ddk/protocol/rawnand.h> has #include <fuchsia/hardware/nand/c/fidl.h>.
-    "//sdk/fidl/fuchsia.hardware.nand:fuchsia.hardware.nand_c",
-
-    # <ddk/usb-peripheral-config.h> has #include <fuchsia/hardware/usb/peripheral/c/fidl.h>.
     "//sdk/fidl/fuchsia.device:fuchsia.device_c",
-    "//sdk/fidl/fuchsia.hardware.usb.peripheral:fuchsia.hardware.usb.peripheral_c",
     "//zircon/system/ulib/ddk-platform-defs",
     "//zircon/system/ulib/mmio-ptr",
     "//zircon/system/ulib/syslog:syslog-headers",
@@ -80,6 +74,15 @@ zx_library("ddk") {
 
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
+}
+
+shared_library("ddk-metadata") {
+  sources = [ "include/ddk/usb-peripheral-config.h" ]
+
+  public_deps = [
+    # <ddk/usb-peripheral-config.h> has #include <fuchsia/hardware/usb/peripheral/c/fidl.h>.
+    "//sdk/fidl/fuchsia.hardware.usb.peripheral:fuchsia.hardware.usb.peripheral_c",
+  ]
 }
 
 zx_library("ddk-deprecated-binding-headers") {

@@ -26,6 +26,7 @@ driver_module("cadence-hpnfc") {
   deps = [
     ":cadence-hpnfc-bind",
     "//sdk/banjo/ddk.protocol.rawnand",
+    "//sdk/fidl/fuchsia.hardware.nand:fuchsia.hardware.nand_c",
     "//src/devices/bus/lib/device-protocol-pdev",
     "//src/devices/lib/driver",
     "//src/devices/lib/mmio",
@@ -61,6 +62,7 @@ test("cadence-hpnfc-test") {
   deps = [
     ":cadence-hpnfc-bind",
     "//sdk/banjo/ddk.protocol.rawnand",
+    "//sdk/fidl/fuchsia.hardware.nand:fuchsia.hardware.nand_c",
     "//src/devices/bus/lib/device-protocol-pdev",
     "//src/devices/lib/as370",
     "//src/devices/lib/mmio",

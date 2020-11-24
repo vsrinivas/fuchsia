@@ -28,6 +28,9 @@ zx_library("ramdevice-client") {
   public_deps = [
     # <ramdevice-client/ramnand.h> has #include <lib/driver-integration-test/fixture.h>
     "//zircon/system/ulib/driver-integration-test:driver-integration-test-static",
+
+    # <ramdevice-client/ramnand.h> has #include <fuchsia/hardware/nand/c/fidl.h>
+    "//sdk/fidl/fuchsia.hardware.nand:fuchsia.hardware.nand_c",
   ]
   deps = [
     "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
@@ -61,11 +64,13 @@ zx_library("ramdevice-client-static") {
   public_deps = [
     # <ramdevice-client/ramnand.h> has #include <lib/driver-integration-test/fixture.h>
     "//zircon/system/ulib/driver-integration-test:driver-integration-test-static",
+
+    # <ramdevice-client/ramnand.h> has #include <fuchsia/hardware/nand/c/fidl.h>
+    "//sdk/fidl/fuchsia.hardware.nand:fuchsia.hardware.nand_c",
   ]
   deps = [
     "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
     "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_c",
-    "//sdk/fidl/fuchsia.hardware.nand:fuchsia.hardware.nand_c",
     "//sdk/fidl/fuchsia.hardware.ramdisk:fuchsia.hardware.ramdisk_c",
     "//sdk/lib/fdio",
     "//src/lib/ddk",

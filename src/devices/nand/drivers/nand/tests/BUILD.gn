@@ -15,6 +15,7 @@ test("nand-unittest") {
   deps = [
     "//sdk/banjo/ddk.protocol.nand",
     "//sdk/banjo/ddk.protocol.rawnand",
+    "//sdk/fidl/fuchsia.hardware.nand:fuchsia.hardware.nand_c",
     "//src/devices/lib/dev-operation",
     "//src/devices/nand/drivers/nand:common",
     "//src/devices/testing/fake_ddk",

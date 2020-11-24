@@ -59,6 +59,7 @@ test("skip-block-test") {
   include_dirs = [ "." ]
   deps = [
     ":common",
+    "//sdk/fidl/fuchsia.hardware.nand:fuchsia.hardware.nand_c",
     "//sdk/lib/fdio",
     "//src/devices/testing/fake_ddk",
     "//zircon/public/lib/fbl",
