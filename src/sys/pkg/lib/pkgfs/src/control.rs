@@ -4,7 +4,11 @@
 
 //! Typesafe wrappers around the /pkgfs/ctl filesystem.
 
-use {fidl_fuchsia_io::DirectoryProxy, fuchsia_zircon::Status, thiserror::Error};
+use {
+    fidl_fuchsia_io::{DirectoryMarker, DirectoryProxy, DirectoryRequestStream},
+    fuchsia_zircon::Status,
+    thiserror::Error,
+};
 
 /// An error encountered while garbage collecting blobs
 #[derive(Debug, Error)]
@@ -53,6 +57,19 @@ impl Client {
                 fidl_fuchsia_io::OPEN_RIGHT_READABLE | fidl_fuchsia_io::OPEN_RIGHT_WRITABLE,
             )?,
         })
+    }
+
+    /// Creates a new client backed by the returned request stream. This constructor should not be
+    /// used outside of tests.
+    ///
+    /// # Panics
+    ///
+    /// Panics on error
+    pub fn new_test() -> (Self, DirectoryRequestStream) {
+        let (proxy, stream) =
+            fidl::endpoints::create_proxy_and_stream::<DirectoryMarker>().unwrap();
+
+        (Self { proxy }, stream)
     }
 
     /// Performs a garbage collection

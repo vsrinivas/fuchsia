@@ -5,7 +5,7 @@
 //! Typesafe wrappers around the /pkgfs/needs filesystem.
 
 use {
-    fidl_fuchsia_io::DirectoryProxy,
+    fidl_fuchsia_io::{DirectoryMarker, DirectoryProxy, DirectoryRequestStream},
     fuchsia_hash::{Hash, ParseHashError},
     fuchsia_zircon::Status,
     futures::prelude::*,
@@ -51,6 +51,19 @@ impl Client {
                 fidl_fuchsia_io::OPEN_RIGHT_READABLE,
             )?,
         })
+    }
+
+    /// Creates a new client backed by the returned request stream. This constructor should not be
+    /// used outside of tests.
+    ///
+    /// # Panics
+    ///
+    /// Panics on error
+    pub fn new_test() -> (Self, DirectoryRequestStream) {
+        let (proxy, stream) =
+            fidl::endpoints::create_proxy_and_stream::<DirectoryMarker>().unwrap();
+
+        (Self { proxy }, stream)
     }
 
     /// Returns a stream of chunks of blobs that are needed to resolve the package specified by

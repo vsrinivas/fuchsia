@@ -5,7 +5,10 @@
 //! Typesafe wrappers around the /pkgfs/install filesystem.
 
 use {
-    fidl_fuchsia_io::{DirectoryProxy, FileProxy},
+    fidl_fuchsia_io::{
+        DirectoryMarker, DirectoryProxy, DirectoryRequestStream, FileMarker, FileProxy,
+        FileRequestStream,
+    },
     fuchsia_hash::Hash,
     fuchsia_zircon::Status,
     thiserror::Error,
@@ -72,6 +75,19 @@ impl Client {
         })
     }
 
+    /// Creates a new client backed by the returned request stream. This constructor should not be
+    /// used outside of tests.
+    ///
+    /// # Panics
+    ///
+    /// Panics on error
+    pub fn new_test() -> (Self, DirectoryRequestStream) {
+        let (proxy, stream) =
+            fidl::endpoints::create_proxy_and_stream::<DirectoryMarker>().unwrap();
+
+        (Self { proxy }, stream)
+    }
+
     /// Create a new blob with the given install intent. Returns an open file proxy to the blob.
     pub async fn create_blob(
         &self,
@@ -113,6 +129,9 @@ pub enum BlobTruncateError {
     #[error("fidl error: {}", _0)]
     Fidl(fidl::Error),
 
+    #[error("fidl endpoint reported that insufficient storage space is available")]
+    NoSpace,
+
     #[error("received unexpected failure status: {}", _0)]
     UnexpectedResponse(Status),
 }
@@ -126,6 +145,12 @@ pub enum BlobWriteError {
 
     #[error("file endpoint reported more bytes written than were provided")]
     Overwrite,
+
+    #[error("fidl endpoint reported the written data was corrupt")]
+    Corrupt,
+
+    #[error("fidl endpoint reported that insufficient storage space is available")]
+    NoSpace,
 
     #[error("received unexpected failure status: {}", _0)]
     UnexpectedResponse(Status),
@@ -192,9 +217,29 @@ impl Blob<NeedsTruncate> {
     pub async fn truncate(self, size: u64) -> Result<Blob<NeedsData>, BlobTruncateError> {
         let s = self.proxy.truncate(size).await.map_err(BlobTruncateError::Fidl)?;
 
-        Status::ok(s).map_err(BlobTruncateError::UnexpectedResponse)?;
+        match Status::from_raw(s) {
+            Status::OK => {}
+            Status::NO_SPACE => return Err(BlobTruncateError::NoSpace),
+            status => return Err(BlobTruncateError::UnexpectedResponse(status)),
+        }
 
         Ok(Blob { proxy: self.proxy, kind: self.kind, state: NeedsData { size, written: 0 } })
+    }
+
+    /// Creates a new blob/closer client backed by the returned request stream. This constructor
+    /// should not be used outside of tests.
+    ///
+    /// # Panics
+    ///
+    /// Panics on error
+    pub fn new_test(kind: BlobKind) -> (Self, BlobCloser, FileRequestStream) {
+        let (proxy, stream) = fidl::endpoints::create_proxy_and_stream::<FileMarker>().unwrap();
+
+        (
+            Blob { proxy: Clone::clone(&proxy), kind, state: NeedsTruncate },
+            BlobCloser { proxy, closed: false },
+            stream,
+        )
     }
 }
 
@@ -234,6 +279,12 @@ impl Blob<NeedsData> {
 
         match Status::from_raw(status) {
             Status::OK => {}
+            Status::IO_DATA_INTEGRITY => {
+                return Err(BlobWriteError::Corrupt);
+            }
+            Status::NO_SPACE => {
+                return Err(BlobWriteError::NoSpace);
+            }
             Status::ALREADY_EXISTS => {
                 if self.kind == BlobKind::Package && self.state.written + actual == self.state.size
                 {
@@ -365,10 +416,7 @@ mod tests {
         let (blob, closer) =
             client.create_blob(pkg_contents["data/corrupt"], BlobKind::Data).await.unwrap();
         let blob = blob.truncate("foo".len() as u64).await.unwrap();
-        assert_matches!(
-            blob.write("bar".as_bytes()).await,
-            Err(BlobWriteError::UnexpectedResponse(Status::IO_DATA_INTEGRITY))
-        );
+        assert_matches!(blob.write("bar".as_bytes()).await, Err(BlobWriteError::Corrupt));
         closer.close().await;
 
         // Retrying with the correct data succeeds.
