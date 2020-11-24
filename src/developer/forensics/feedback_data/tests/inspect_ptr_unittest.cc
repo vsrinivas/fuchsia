@@ -20,8 +20,8 @@
 #include "src/developer/forensics/feedback_data/archive_accessor_ptr.h"
 #include "src/developer/forensics/feedback_data/attachments/types.h"
 #include "src/developer/forensics/testing/gpretty_printers.h"
-#include "src/developer/forensics/testing/stubs/inspect_archive.h"
-#include "src/developer/forensics/testing/stubs/inspect_batch_iterator.h"
+#include "src/developer/forensics/testing/stubs/diagnostics_archive.h"
+#include "src/developer/forensics/testing/stubs/diagnostics_batch_iterator.h"
 #include "src/developer/forensics/testing/unit_test_fixture.h"
 #include "src/developer/forensics/utils/errors.h"
 
@@ -37,7 +37,7 @@ class CollectInspectDataTest : public UnitTestFixture {
   CollectInspectDataTest() : executor_(dispatcher()) {}
 
  protected:
-  void SetUpInspectServer(std::unique_ptr<stubs::InspectArchiveBase> server) {
+  void SetUpInspectServer(std::unique_ptr<stubs::DiagnosticsArchiveBase> server) {
     inspect_server_ = std::move(server);
     if (inspect_server_) {
       InjectServiceProvider(inspect_server_.get(), kArchiveAccessorName);
@@ -57,13 +57,13 @@ class CollectInspectDataTest : public UnitTestFixture {
   async::Executor executor_;
 
  private:
-  std::unique_ptr<stubs::InspectArchiveBase> inspect_server_;
+  std::unique_ptr<stubs::DiagnosticsArchiveBase> inspect_server_;
 };
 
 // TODO(fxbug.dev/63026): Factor out ArchiveAccessor tests.
 TEST_F(CollectInspectDataTest, Succeed_AllInspectData) {
-  SetUpInspectServer(std::make_unique<stubs::InspectArchive>(
-      std::make_unique<stubs::InspectBatchIterator>(std::vector<std::vector<std::string>>({
+  SetUpInspectServer(std::make_unique<stubs::DiagnosticsArchive>(
+      std::make_unique<stubs::DiagnosticsBatchIterator>(std::vector<std::vector<std::string>>({
           {"foo1", "foo2"},
           {"bar1"},
           {},
@@ -82,8 +82,8 @@ bar1
 }
 
 TEST_F(CollectInspectDataTest, Succeed_PartialInspectData) {
-  SetUpInspectServer(std::make_unique<stubs::InspectArchive>(
-      std::make_unique<stubs::InspectBatchIteratorNeverRespondsAfterOneBatch>(
+  SetUpInspectServer(std::make_unique<stubs::DiagnosticsArchive>(
+      std::make_unique<stubs::DiagnosticsBatchIteratorNeverRespondsAfterOneBatch>(
           std::vector<std::string>({"foo1", "foo2"}))));
 
   ::fit::result<AttachmentValue> result = CollectInspectData();
@@ -99,8 +99,9 @@ foo2
 }
 
 TEST_F(CollectInspectDataTest, Succeed_NoInspectData) {
-  SetUpInspectServer(std::make_unique<stubs::InspectArchive>(
-      std::make_unique<stubs::InspectBatchIterator>(std::vector<std::vector<std::string>>({{}}))));
+  SetUpInspectServer(
+      std::make_unique<stubs::DiagnosticsArchive>(std::make_unique<stubs::DiagnosticsBatchIterator>(
+          std::vector<std::vector<std::string>>({{}}))));
 
   ::fit::result<AttachmentValue> result = CollectInspectData();
   ASSERT_TRUE(result.is_ok());
@@ -108,8 +109,8 @@ TEST_F(CollectInspectDataTest, Succeed_NoInspectData) {
 }
 
 TEST_F(CollectInspectDataTest, Fail_BatchIteratorReturnsError) {
-  SetUpInspectServer(std::make_unique<stubs::InspectArchive>(
-      std::make_unique<stubs::InspectBatchIteratorReturnsError>()));
+  SetUpInspectServer(std::make_unique<stubs::DiagnosticsArchive>(
+      std::make_unique<stubs::DiagnosticsBatchIteratorReturnsError>()));
 
   ::fit::result<AttachmentValue> result = CollectInspectData();
   ASSERT_TRUE(result.is_ok());
@@ -118,8 +119,8 @@ TEST_F(CollectInspectDataTest, Fail_BatchIteratorReturnsError) {
 }
 
 TEST_F(CollectInspectDataTest, Fail_BatchIteratorNeverResponds) {
-  SetUpInspectServer(std::make_unique<stubs::InspectArchive>(
-      std::make_unique<stubs::InspectBatchIteratorNeverResponds>()));
+  SetUpInspectServer(std::make_unique<stubs::DiagnosticsArchive>(
+      std::make_unique<stubs::DiagnosticsBatchIteratorNeverResponds>()));
 
   ::fit::result<AttachmentValue> result = CollectInspectData();
   ASSERT_TRUE(result.is_ok());
@@ -127,7 +128,7 @@ TEST_F(CollectInspectDataTest, Fail_BatchIteratorNeverResponds) {
 }
 
 TEST_F(CollectInspectDataTest, Fail_ArchiveClosesIteratorClosesConnection) {
-  SetUpInspectServer(std::make_unique<stubs::InspectArchiveClosesIteratorConnection>());
+  SetUpInspectServer(std::make_unique<stubs::DiagnosticsArchiveClosesIteratorConnection>());
 
   ::fit::result<AttachmentValue> result = CollectInspectData();
   ASSERT_TRUE(result.is_ok());

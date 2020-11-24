@@ -33,8 +33,8 @@
 #include "src/developer/forensics/testing/stubs/channel_provider.h"
 #include "src/developer/forensics/testing/stubs/cobalt_logger_factory.h"
 #include "src/developer/forensics/testing/stubs/device_id_provider.h"
-#include "src/developer/forensics/testing/stubs/inspect_archive.h"
-#include "src/developer/forensics/testing/stubs/inspect_batch_iterator.h"
+#include "src/developer/forensics/testing/stubs/diagnostics_archive.h"
+#include "src/developer/forensics/testing/stubs/diagnostics_batch_iterator.h"
 #include "src/developer/forensics/testing/stubs/last_reboot_info_provider.h"
 #include "src/developer/forensics/testing/stubs/logger.h"
 #include "src/developer/forensics/testing/stubs/product_info_provider.h"
@@ -128,15 +128,15 @@ class DatastoreTest : public UnitTestFixture {
   }
 
   void SetUpInspectServer(const std::string& inspect_chunk) {
-    inspect_server_ = std::make_unique<stubs::InspectArchive>(
-        std::make_unique<stubs::InspectBatchIterator>(std::vector<std::vector<std::string>>({
+    inspect_server_ = std::make_unique<stubs::DiagnosticsArchive>(
+        std::make_unique<stubs::DiagnosticsBatchIterator>(std::vector<std::vector<std::string>>({
             {inspect_chunk},
             {},
         })));
     InjectServiceProvider(inspect_server_.get(), kArchiveAccessorName);
   }
 
-  void SetUpInspectServer(std::unique_ptr<stubs::InspectArchiveBase> server) {
+  void SetUpInspectServer(std::unique_ptr<stubs::DiagnosticsArchiveBase> server) {
     inspect_server_ = std::move(server);
     if (inspect_server_) {
       InjectServiceProvider(inspect_server_.get(), kArchiveAccessorName);
@@ -211,7 +211,7 @@ class DatastoreTest : public UnitTestFixture {
   std::unique_ptr<stubs::BoardInfoProviderBase> board_provider_server_;
   std::unique_ptr<stubs::ChannelProviderBase> channel_provider_server_;
   std::unique_ptr<stubs::DeviceIdProviderBase> device_id_provider_server_;
-  std::unique_ptr<stubs::InspectArchiveBase> inspect_server_;
+  std::unique_ptr<stubs::DiagnosticsArchiveBase> inspect_server_;
   std::unique_ptr<stubs::LastRebootInfoProviderBase> last_reboot_info_provider_server_;
   std::unique_ptr<stubs::LoggerBase> logger_server_;
   std::unique_ptr<stubs::ProductInfoProviderBase> product_provider_server_;
@@ -616,8 +616,8 @@ TEST_F(DatastoreTest, GetAttachments_CobaltLogsTimeouts) {
                                                              kAttachmentLogSystem,
                                                          });
 
-  SetUpInspectServer(std::make_unique<stubs::InspectArchive>(
-      std::make_unique<stubs::InspectBatchIteratorNeverResponds>()));
+  SetUpInspectServer(std::make_unique<stubs::DiagnosticsArchive>(
+      std::make_unique<stubs::DiagnosticsBatchIteratorNeverResponds>()));
   SetUpLoggerServer(std::make_unique<stubs::LoggerBindsToLogListenerButNeverCalls>());
 
   ::fit::result<Attachments> attachments = GetAttachments();

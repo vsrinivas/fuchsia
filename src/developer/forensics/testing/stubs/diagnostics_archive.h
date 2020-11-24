@@ -2,24 +2,25 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVELOPER_FORENSICS_TESTING_STUBS_INSPECT_ARCHIVE_H_
-#define SRC_DEVELOPER_FORENSICS_TESTING_STUBS_INSPECT_ARCHIVE_H_
+#ifndef SRC_DEVELOPER_FORENSICS_TESTING_STUBS_DIAGNOSTICS_ARCHIVE_H_
+#define SRC_DEVELOPER_FORENSICS_TESTING_STUBS_DIAGNOSTICS_ARCHIVE_H_
 
 #include <fuchsia/diagnostics/cpp/fidl.h>
 #include <fuchsia/diagnostics/cpp/fidl_test_base.h>
 
+#include "src/developer/forensics/testing/stubs/diagnostics_batch_iterator.h"
 #include "src/developer/forensics/testing/stubs/fidl_server.h"
-#include "src/developer/forensics/testing/stubs/inspect_batch_iterator.h"
 
 namespace forensics {
 namespace stubs {
 
-using InspectArchiveBase = SINGLE_BINDING_STUB_FIDL_SERVER(fuchsia::diagnostics, ArchiveAccessor);
+using DiagnosticsArchiveBase = SINGLE_BINDING_STUB_FIDL_SERVER(fuchsia::diagnostics,
+                                                               ArchiveAccessor);
 
-class InspectArchive : public InspectArchiveBase {
+class DiagnosticsArchive : public DiagnosticsArchiveBase {
  public:
-  InspectArchive() {}
-  InspectArchive(std::unique_ptr<InspectBatchIteratorBase> batch_iterator)
+  DiagnosticsArchive() {}
+  DiagnosticsArchive(std::unique_ptr<DiagnosticsBatchIteratorBase> batch_iterator)
       : batch_iterator_(std::move(batch_iterator)) {}
 
   // |fuchsia::diagnostics::Archive|
@@ -28,18 +29,18 @@ class InspectArchive : public InspectArchiveBase {
       ::fidl::InterfaceRequest<fuchsia::diagnostics::BatchIterator> request) override;
 
  private:
-  std::unique_ptr<InspectBatchIteratorBase> batch_iterator_;
+  std::unique_ptr<DiagnosticsBatchIteratorBase> batch_iterator_;
   std::unique_ptr<::fidl::Binding<fuchsia::diagnostics::BatchIterator>> batch_iterator_binding_;
 };
 
-class InspectArchiveClosesArchiveConnection : public InspectArchiveBase {
+class DiagnosticsArchiveClosesArchiveConnection : public DiagnosticsArchiveBase {
  public:
   // |fuchsia::diagnostics::ArchiveAccessor|
   STUB_METHOD_CLOSES_CONNECTION(StreamDiagnostics, fuchsia::diagnostics::StreamParameters,
                                 ::fidl::InterfaceRequest<fuchsia::diagnostics::BatchIterator>);
 };
 
-class InspectArchiveClosesIteratorConnection : public InspectArchiveBase {
+class DiagnosticsArchiveClosesIteratorConnection : public DiagnosticsArchiveBase {
  public:
   // |fuchsia::diagnostics::Archive|
   void StreamDiagnostics(
@@ -50,4 +51,4 @@ class InspectArchiveClosesIteratorConnection : public InspectArchiveBase {
 }  // namespace stubs
 }  // namespace forensics
 
-#endif  // SRC_DEVELOPER_FORENSICS_TESTING_STUBS_INSPECT_ARCHIVE_H_
+#endif  // SRC_DEVELOPER_FORENSICS_TESTING_STUBS_DIAGNOSTICS_ARCHIVE_H_

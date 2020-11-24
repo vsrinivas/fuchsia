@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVELOPER_FORENSICS_TESTING_STUBS_INSPECT_BATCH_ITERATOR_H_
-#define SRC_DEVELOPER_FORENSICS_TESTING_STUBS_INSPECT_BATCH_ITERATOR_H_
+#ifndef SRC_DEVELOPER_FORENSICS_TESTING_STUBS_DIAGNOSTICS_BATCH_ITERATOR_H_
+#define SRC_DEVELOPER_FORENSICS_TESTING_STUBS_DIAGNOSTICS_BATCH_ITERATOR_H_
 
 #include <fuchsia/diagnostics/cpp/fidl.h>
 #include <fuchsia/diagnostics/cpp/fidl_test_base.h>
@@ -16,18 +16,18 @@
 namespace forensics {
 namespace stubs {
 
-using InspectBatchIteratorBase = SINGLE_BINDING_STUB_FIDL_SERVER(fuchsia::diagnostics,
-                                                                 BatchIterator);
+using DiagnosticsBatchIteratorBase = SINGLE_BINDING_STUB_FIDL_SERVER(fuchsia::diagnostics,
+                                                                     BatchIterator);
 
-class InspectBatchIterator : public InspectBatchIteratorBase {
+class DiagnosticsBatchIterator : public DiagnosticsBatchIteratorBase {
  public:
-  InspectBatchIterator() : json_batches_({}) {}
-  InspectBatchIterator(const std::vector<std::vector<std::string>>& json_batches)
+  DiagnosticsBatchIterator() : json_batches_({}) {}
+  DiagnosticsBatchIterator(const std::vector<std::vector<std::string>>& json_batches)
       : json_batches_(json_batches) {
     next_json_batch_ = json_batches_.cbegin();
   }
 
-  ~InspectBatchIterator();
+  ~DiagnosticsBatchIterator();
 
   // Whether the batch iterator expects at least one more call to GetNext().
   bool ExpectCall() { return next_json_batch_ != json_batches_.cend(); }
@@ -39,9 +39,9 @@ class InspectBatchIterator : public InspectBatchIteratorBase {
   decltype(json_batches_)::const_iterator next_json_batch_;
 };
 
-class InspectBatchIteratorNeverRespondsAfterOneBatch : public InspectBatchIteratorBase {
+class DiagnosticsBatchIteratorNeverRespondsAfterOneBatch : public DiagnosticsBatchIteratorBase {
  public:
-  InspectBatchIteratorNeverRespondsAfterOneBatch(const std::vector<std::string>& json_batch)
+  DiagnosticsBatchIteratorNeverRespondsAfterOneBatch(const std::vector<std::string>& json_batch)
       : json_batch_(json_batch) {}
 
   // |fuchsia::diagnostics::BatchIterator|
@@ -52,17 +52,17 @@ class InspectBatchIteratorNeverRespondsAfterOneBatch : public InspectBatchIterat
   bool has_returned_batch_ = false;
 };
 
-class InspectBatchIteratorNeverResponds : public InspectBatchIteratorBase {
+class DiagnosticsBatchIteratorNeverResponds : public DiagnosticsBatchIteratorBase {
  public:
-  InspectBatchIteratorNeverResponds() {}
+  DiagnosticsBatchIteratorNeverResponds() {}
 
   // |fuchsia::diagnostics::BatchIterator|
   STUB_METHOD_DOES_NOT_RETURN(GetNext, GetNextCallback);
 };
 
-class InspectBatchIteratorReturnsError : public InspectBatchIteratorBase {
+class DiagnosticsBatchIteratorReturnsError : public DiagnosticsBatchIteratorBase {
  public:
-  InspectBatchIteratorReturnsError() {}
+  DiagnosticsBatchIteratorReturnsError() {}
 
   // |fuchsia::diagnostics::BatchIterator|
   void GetNext(GetNextCallback callback) override;
@@ -71,4 +71,4 @@ class InspectBatchIteratorReturnsError : public InspectBatchIteratorBase {
 }  // namespace stubs
 }  // namespace forensics
 
-#endif  // SRC_DEVELOPER_FORENSICS_TESTING_STUBS_INSPECT_BATCH_ITERATOR_H_
+#endif  // SRC_DEVELOPER_FORENSICS_TESTING_STUBS_DIAGNOSTICS_BATCH_ITERATOR_H_

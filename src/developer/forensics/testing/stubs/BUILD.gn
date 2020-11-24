@@ -128,25 +128,14 @@ source_set("device_id_provider") {
   ]
 }
 
-source_set("fidl_server") {
-  testonly = true
-
-  sources = [ "fidl_server.h" ]
-
-  public_deps = [
-    "//sdk/lib/fidl/cpp",
-    "//src/lib/fxl",
-  ]
-}
-
-source_set("inspect") {
+source_set("diagnostics") {
   testonly = true
 
   sources = [
-    "inspect_archive.cc",
-    "inspect_archive.h",
-    "inspect_batch_iterator.cc",
-    "inspect_batch_iterator.h",
+    "diagnostics_archive.cc",
+    "diagnostics_archive.h",
+    "diagnostics_batch_iterator.cc",
+    "diagnostics_batch_iterator.h",
   ]
 
   public_deps = [
@@ -158,6 +147,17 @@ source_set("inspect") {
     "//sdk/lib/syslog/cpp",
     "//src/lib/fsl",
     "//zircon/public/lib/fit",
+  ]
+}
+
+source_set("fidl_server") {
+  testonly = true
+
+  sources = [ "fidl_server.h" ]
+
+  public_deps = [
+    "//sdk/lib/fidl/cpp",
+    "//src/lib/fxl",
   ]
 }
 

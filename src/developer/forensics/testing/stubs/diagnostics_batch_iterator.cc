@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/forensics/testing/stubs/inspect_batch_iterator.h"
+#include "src/developer/forensics/testing/stubs/diagnostics_batch_iterator.h"
 
 #include <lib/fit/result.h>
 #include <lib/syslog/cpp/macros.h>
@@ -30,14 +30,14 @@ std::vector<fuchsia::diagnostics::FormattedContent> ToVmo(
 
 }  // namespace
 
-InspectBatchIterator::~InspectBatchIterator() {
+DiagnosticsBatchIterator::~DiagnosticsBatchIterator() {
   FX_CHECK(!ExpectCall()) << fxl::StringPrintf(
       "Expected %ld more calls to GetNext() (%ld/%lu calls made)",
       std::distance(next_json_batch_, json_batches_.cend()),
       std::distance(json_batches_.cbegin(), next_json_batch_), json_batches_.size());
 }
 
-void InspectBatchIterator::GetNext(GetNextCallback callback) {
+void DiagnosticsBatchIterator::GetNext(GetNextCallback callback) {
   FX_CHECK(ExpectCall()) << fxl::StringPrintf(
       "No more calls to GetNext() expected (%lu/%lu calls made)",
       std::distance(json_batches_.cbegin(), next_json_batch_), json_batches_.size());
@@ -45,7 +45,7 @@ void InspectBatchIterator::GetNext(GetNextCallback callback) {
   callback(::fit::ok(ToVmo(*next_json_batch_++)));
 }
 
-void InspectBatchIteratorNeverRespondsAfterOneBatch::GetNext(GetNextCallback callback) {
+void DiagnosticsBatchIteratorNeverRespondsAfterOneBatch::GetNext(GetNextCallback callback) {
   if (has_returned_batch_) {
     return;
   }
@@ -54,7 +54,7 @@ void InspectBatchIteratorNeverRespondsAfterOneBatch::GetNext(GetNextCallback cal
   has_returned_batch_ = true;
 }
 
-void InspectBatchIteratorReturnsError::GetNext(GetNextCallback callback) {
+void DiagnosticsBatchIteratorReturnsError::GetNext(GetNextCallback callback) {
   callback(::fit::error(fuchsia::diagnostics::ReaderError::IO));
 }
 
