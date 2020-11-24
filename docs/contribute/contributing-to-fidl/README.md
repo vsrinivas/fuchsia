@@ -31,7 +31,7 @@ C | [/zircon/tools/fidl/lib/c_generator.cc] | [/zircon/system/ulib/fidl] | [/src
 Coding Tables | [/zircon/tools/fidl/lib/tables_generator.cc] | - | [/src/lib/fidl/c]
 HLCPP | [/tools/fidl/fidlgen_hlcpp] | [/sdk/lib/fidl/cpp] | *(located alongside runtime libraries)*
 LLCPP | [/tools/fidl/fidlgen_llcpp] | [/zircon/system/ulib/fidl] | [/src/lib/fidl/llcpp]
-Go | [/tools/fidl/fidlgen_go] | [/third_party/go/src/syscall/zx/fidl] | *(located alongside runtime libraries)*
+Go | [/tools/fidl/fidlgen_go] | [/third_party/go/src/syscall/zx/fidl](https://fuchsia.googlesource.com/third_party/go/+/master/src/syscall/zx/fidl) | *(located alongside runtime libraries)*
 Rust | [/tools/fidl/fidlgen_rust] | [/src/lib/fidl/rust] | *(located alongside runtime libraries)*
 Dart | [/tools/fidl/fidlgen_dart] | [/sdk/dart/fidl] | [/src/tests/fidl/dart_bindings_test]
 
