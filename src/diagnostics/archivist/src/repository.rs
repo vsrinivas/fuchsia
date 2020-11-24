@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 use {
     crate::{
-        container::DiagnosticsArtifactsContainer,
+        container::ComponentDiagnostics,
         events::types::ComponentIdentifier,
         inspect::container::{InspectArtifactsContainer, UnpopulatedInspectDataContainer},
         lifecycle::container::{LifecycleArtifactsContainer, LifecycleDataContainer},
@@ -18,7 +18,7 @@ use {
     std::sync::Arc,
 };
 
-pub type DiagnosticsDataTrie = trie::Trie<String, DiagnosticsArtifactsContainer>;
+pub type DiagnosticsDataTrie = trie::Trie<String, ComponentDiagnostics>;
 
 /// DataRepo manages storage of all state needed in order
 /// for the inspect reader to retrieve inspect data when a read is requested.
@@ -81,7 +81,7 @@ impl DataRepo {
         let diag_repo_entry_opt = self.data_directories.get_mut(key.clone());
         match diag_repo_entry_opt {
             Some(diag_repo_entry) => {
-                let diag_repo_entry_values: &mut [DiagnosticsArtifactsContainer] =
+                let diag_repo_entry_values: &mut [ComponentDiagnostics] =
                     diag_repo_entry.get_values_mut();
 
                 match &mut diag_repo_entry_values[..] {
@@ -92,11 +92,11 @@ impl DataRepo {
                         // time encountering this moniker segment.
                         self.data_directories.insert(
                             key,
-                            DiagnosticsArtifactsContainer {
+                            ComponentDiagnostics {
                                 relative_moniker: relative_moniker,
                                 component_url: component_url.into(),
-                                lifecycle_artifacts_container: Some(lifecycle_artifact_container),
-                                inspect_artifacts_container: None,
+                                lifecycle: Some(lifecycle_artifact_container),
+                                inspect: None,
                             },
                         )
                     }
@@ -104,11 +104,8 @@ impl DataRepo {
                         // Races may occur between seeing diagnostics ready and seeing
                         // creation lifecycle events. Handle this here.
                         // TODO(fxbug.dev/52047): Remove once caching handles ordering issues.
-                        if existing_diagnostics_artifact_container
-                            .lifecycle_artifacts_container
-                            .is_none()
-                        {
-                            existing_diagnostics_artifact_container.lifecycle_artifacts_container =
+                        if existing_diagnostics_artifact_container.lifecycle.is_none() {
+                            existing_diagnostics_artifact_container.lifecycle =
                                 Some(lifecycle_artifact_container);
                         }
                     }
@@ -127,11 +124,11 @@ impl DataRepo {
             // lifecycle event and it promotes the instantiation of a new data repository entry.
             None => self.data_directories.insert(
                 key,
-                DiagnosticsArtifactsContainer {
+                ComponentDiagnostics {
                     relative_moniker: relative_moniker,
                     component_url: component_url.into(),
-                    lifecycle_artifacts_container: Some(lifecycle_artifact_container),
-                    inspect_artifacts_container: None,
+                    lifecycle: Some(lifecycle_artifact_container),
+                    inspect: None,
                 },
             ),
         }
@@ -201,7 +198,7 @@ impl DataRepo {
         let diag_repo_entry_opt = self.data_directories.get_mut(key.clone());
         match diag_repo_entry_opt {
             Some(diag_repo_entry) => {
-                let diag_repo_entry_values: &mut [DiagnosticsArtifactsContainer] =
+                let diag_repo_entry_values: &mut [ComponentDiagnostics] =
                     diag_repo_entry.get_values_mut();
 
                 match &mut diag_repo_entry_values[..] {
@@ -212,11 +209,11 @@ impl DataRepo {
                         // time encountering this moniker segment.
                         self.data_directories.insert(
                             key,
-                            DiagnosticsArtifactsContainer {
+                            ComponentDiagnostics {
                                 relative_moniker: relative_moniker,
                                 component_url,
-                                lifecycle_artifacts_container: None,
-                                inspect_artifacts_container: Some(inspect_container),
+                                lifecycle: None,
+                                inspect: Some(inspect_container),
                             },
                         )
                     }
@@ -224,16 +221,13 @@ impl DataRepo {
                         // Races may occur between synthesized and real diagnostics_ready
                         // events, so we must handle de-duplication here.
                         // TODO(fxbug.dev/52047): Remove once caching handles ordering issues.
-                        if existing_diagnostics_artifact_container
-                            .inspect_artifacts_container
-                            .is_none()
-                        {
+                        if existing_diagnostics_artifact_container.inspect.is_none() {
                             // This is expected to be the most common case. We've encountered the
                             // diagnostics_ready event for a component that has already been
                             // observed to be started/existing. We now must update the diagnostics
                             // artifact container with the inspect artifacts that accompanied the
                             // diagnostics_ready event.
-                            existing_diagnostics_artifact_container.inspect_artifacts_container =
+                            existing_diagnostics_artifact_container.inspect =
                                 Some(inspect_container);
                         }
                     }
@@ -252,11 +246,11 @@ impl DataRepo {
             // event before a start or existing event!
             None => self.data_directories.insert(
                 key,
-                DiagnosticsArtifactsContainer {
+                ComponentDiagnostics {
                     relative_moniker: relative_moniker,
                     component_url,
-                    lifecycle_artifacts_container: None,
-                    inspect_artifacts_container: Some(inspect_container),
+                    lifecycle: None,
+                    inspect: Some(inspect_container),
                 },
             ),
         }
@@ -271,7 +265,7 @@ impl DataRepo {
                     None => acc,
                     Some(diagnostics_artifacts_container) => {
                         if let Some(lifecycle_artifacts) =
-                            &diagnostics_artifacts_container.lifecycle_artifacts_container
+                            &diagnostics_artifacts_container.lifecycle
                         {
                             acc.push(LifecycleDataContainer::from_lifecycle_artifact(
                                 lifecycle_artifacts,
@@ -280,9 +274,7 @@ impl DataRepo {
                             ));
                         }
 
-                        if let Some(inspect_artifacts) =
-                            &diagnostics_artifacts_container.inspect_artifacts_container
-                        {
+                        if let Some(inspect_artifacts) = &diagnostics_artifacts_container.inspect {
                             acc.push(LifecycleDataContainer::from_inspect_artifact(
                                 inspect_artifacts,
                                 diagnostics_artifacts_container.relative_moniker.clone(),
@@ -310,7 +302,7 @@ impl DataRepo {
                 let (diagnostics_artifacts_container, inspect_artifacts) =
                     match &diagnostics_artifacts_container_opt {
                         Some(diagnostics_artifacts_container) => {
-                            match &diagnostics_artifacts_container.inspect_artifacts_container {
+                            match &diagnostics_artifacts_container.inspect {
                                 Some(inspect_artifacts) => {
                                     (diagnostics_artifacts_container, inspect_artifacts)
                                 }
@@ -418,7 +410,7 @@ mod tests {
         let key = component_id.unique_key();
         assert_eq!(data_repo.data_directories.get(key.clone()).unwrap().get_values().len(), 1);
         let entry = &data_repo.data_directories.get(key.clone()).unwrap().get_values()[0];
-        assert!(entry.inspect_artifacts_container.is_some());
+        assert!(entry.inspect.is_some());
         assert_eq!(entry.component_url, TEST_URL);
     }
 
@@ -451,8 +443,8 @@ mod tests {
         let repo_values = data_repo.data_directories.get(key.clone()).unwrap().get_values();
         assert_eq!(repo_values.len(), 1);
         let entry = &repo_values[0];
-        assert!(entry.lifecycle_artifacts_container.is_some());
-        let lifecycle_container = entry.lifecycle_artifacts_container.as_ref().unwrap();
+        assert!(entry.lifecycle.is_some());
+        let lifecycle_container = entry.lifecycle.as_ref().unwrap();
         assert!(lifecycle_container.component_start_time.is_none());
         assert_eq!(entry.relative_moniker, component_id.relative_moniker_for_selectors());
         assert_eq!(entry.component_url, TEST_URL);
@@ -483,8 +475,8 @@ mod tests {
         let repo_values = data_repo.data_directories.get(key.clone()).unwrap().get_values();
         assert_eq!(repo_values.len(), 1);
         let entry = &repo_values[0];
-        assert!(entry.lifecycle_artifacts_container.is_some());
-        let lifecycle_container = entry.lifecycle_artifacts_container.as_ref().unwrap();
+        assert!(entry.lifecycle.is_some());
+        let lifecycle_container = entry.lifecycle.as_ref().unwrap();
         assert!(lifecycle_container.component_start_time.is_some());
         assert_eq!(lifecycle_container.component_start_time.unwrap().into_nanos(), 0);
         assert_eq!(entry.relative_moniker, component_id.relative_moniker_for_selectors());
@@ -524,8 +516,8 @@ mod tests {
         assert_eq!(data_repo.data_directories.get(key.clone()).unwrap().get_values().len(), 1);
         let entry = &data_repo.data_directories.get(key.clone()).unwrap().get_values()[0];
         assert_eq!(entry.component_url, TEST_URL);
-        assert!(entry.inspect_artifacts_container.is_some());
-        assert!(entry.lifecycle_artifacts_container.is_some());
+        assert!(entry.inspect.is_some());
+        assert!(entry.lifecycle.is_some());
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -549,11 +541,11 @@ mod tests {
 
         let mutable_values =
             data_repo.data_directories.get_mut(key.clone()).unwrap().get_values_mut();
-        mutable_values.push(DiagnosticsArtifactsContainer {
+        mutable_values.push(ComponentDiagnostics {
             relative_moniker: component_id.relative_moniker_for_selectors(),
             component_url: TEST_URL.to_string(),
-            inspect_artifacts_container: None,
-            lifecycle_artifacts_container: None,
+            inspect: None,
+            lifecycle: None,
         });
 
         let (proxy, _) =

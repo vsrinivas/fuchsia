@@ -19,7 +19,7 @@ pub enum ReadSnapshot {
     Finished(DiagnosticsHierarchy),
 }
 
-pub struct DiagnosticsArtifactsContainer {
+pub struct ComponentDiagnostics {
     /// Relative moniker of the component that this artifacts container
     /// is representing.
     pub relative_moniker: Vec<String>,
@@ -28,9 +28,9 @@ pub struct DiagnosticsArtifactsContainer {
     /// Container holding the artifacts needed to serve inspect data.
     /// If absent, this is interpereted as a component existing, but not
     /// hosting diagnostics data.
-    pub inspect_artifacts_container: Option<InspectArtifactsContainer>,
+    pub inspect: Option<InspectArtifactsContainer>,
     /// Container holding the artifacts needed to serve lifecycle data.
-    pub lifecycle_artifacts_container: Option<LifecycleArtifactsContainer>,
+    pub lifecycle: Option<LifecycleArtifactsContainer>,
 }
 
 /// Packet containing a snapshot and all the metadata needed to
