@@ -49,6 +49,7 @@ dart_library("codesize") {
     "queries/index.dart",
     "queries/mock_query.dart",
     "queries/source_lang.dart",
+    "queries/symbols.dart",
     "queries/unique_symbol.dart",
     "reflect.dart",
     "render/ast.dart",

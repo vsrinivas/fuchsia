@@ -19,6 +19,7 @@ import 'categories/categories.dart';
 import 'code_category.dart';
 import 'crates.dart';
 import 'source_lang.dart';
+import 'symbols.dart';
 import 'unique_symbol.dart';
 
 /// A context object that allows queries to temporarily stow information
@@ -295,6 +296,7 @@ const List<QueryFactory> allQueries = [
   QueryFactory(CodeCategoryQuery, CodeCategoryQuery.description),
   QueryFactory(SourceLangQuery, SourceLangQuery.description),
   QueryFactory(BinaryNamesQuery, BinaryNamesQuery.description),
+  QueryFactory(SymbolsQuery, SymbolsQuery.description),
   QueryFactory(CratesQuery, CratesQuery.description),
   QueryFactory(UniqueSymbolQuery, UniqueSymbolQuery.description),
 ];

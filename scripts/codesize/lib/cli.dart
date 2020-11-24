@@ -129,8 +129,8 @@ fx codesize --file-regex '^\[zbi: '
 # Another example, only running on appmgr...
 fx codesize --file-regex appmgr CodeCategory
 
-# Dumping all symbols with annotation in a binary, also hiding unknown symbols
-fx codesize --file-regex appmgr 'DumpSymbol(hideUnknown: true)'
+# Listing all symbols with annotation in a binary, grouped by compile units, also hiding unknown symbols
+fx codesize --file-regex appmgr 'Symbols(hideUnknown: true)'
 
 # Look through all C++ symbols alongside their containing programs, sorted by aggregate size
 fx codesize --only-lang=cpp 'UniqueSymbol(showCompileUnit: true, showProgram: true, hideUnknown: false)' | less
