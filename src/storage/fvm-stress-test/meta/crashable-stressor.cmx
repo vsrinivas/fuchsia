@@ -7,7 +7,9 @@
             "--disconnect-secs",
             "1800",
             "--rebind-probability",
-            "0.1"
+            "0.1",
+            "--time-limit-secs",
+            "79200"
         ],
         "binary": "bin/fvm_stressor"
     },

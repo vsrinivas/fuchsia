@@ -7,7 +7,7 @@ pub mod operator;
 
 use {
     fidl_fuchsia_hardware_block_partition::Guid,
-    fuchsia_async::Task,
+    fuchsia_async::{Task, TimeoutExt},
     fuchsia_zircon::Vmo,
     futures::{future::join_all, SinkExt},
     fvm::Volume,
@@ -33,7 +33,7 @@ pub async fn run_test(
     max_vslice_count: u64,
     disconnect_secs: u64,
     rebind_probability: f64,
-    time_limit_secs: u64,
+    time_limit_secs: Option<u64>,
     num_operations: Option<u64>,
 ) {
     let vmo_size = ramdisk_block_count * ramdisk_block_size;
@@ -103,11 +103,11 @@ pub async fn run_test(
         .detach();
     }
 
-    if num_operations.is_some() {
-        // Wait for the operator tasks to finish
-        join_all(tasks).await;
+    let operator_tasks = join_all(tasks);
+
+    if let Some(time_limit_secs) = time_limit_secs {
+        operator_tasks.on_timeout(Duration::from_secs(time_limit_secs), || vec![]).await;
     } else {
-        // Wait for the time limit
-        sleep(Duration::from_secs(time_limit_secs));
-    }
+        operator_tasks.await;
+    };
 }

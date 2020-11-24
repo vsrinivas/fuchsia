@@ -23,12 +23,9 @@ struct Args {
     #[argh(option, short = 'o')]
     num_operations: Option<u64>,
 
-    /// if num_operations flag is not set, then the test
-    /// runs for this time limit before exiting successfully.
-    /// default time limit is 23 hours (the maximum time limit
-    /// supported by infra).
-    #[argh(option, short = 't', default = "82800")]
-    time_limit_secs: u64,
+    /// if set, the test runs for this time limit before exiting successfully.
+    #[argh(option, short = 't')]
+    time_limit_secs: Option<u64>,
 
     /// filter logging by level (off, error, warn, info, debug, trace)
     #[argh(option, short = 'l')]

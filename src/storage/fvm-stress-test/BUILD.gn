@@ -72,6 +72,9 @@ fuchsia_component("no-crash-stressor") {
   deps = [ ":stressor-bin" ]
 }
 
+# This test package is designed to run on infra bots.
+# Infra bots have a time limit of 23 hours. The test runs
+# for 22 hours, leaving an hour for the build process.
 fuchsia_test_package("fvm-stress-test") {
   test_components = [
     ":crashable-stressor",
