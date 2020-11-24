@@ -51,6 +51,7 @@ class SessionContextImpl : fuchsia::modular::internal::SessionContext {
   // Sessionmgr's namespace, including an implementation of
   // `fuchsia.intl.PropertyProvider`.
   SessionContextImpl(fuchsia::sys::Launcher* launcher,
+                     fuchsia::sys::Environment* base_environment,
                      fuchsia::modular::session::AppConfig sessionmgr_app_config,
                      const modular::ModularConfigAccessor* config_accessor,
                      fuchsia::ui::views::ViewToken view_token,

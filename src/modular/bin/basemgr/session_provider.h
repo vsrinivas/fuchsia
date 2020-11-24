@@ -39,6 +39,7 @@ class SessionProvider {
   // |on_zero_sessions| is invoked when all sessions have been deleted. This is
   // meant to be a callback for BasemgrImpl to start a new session.
   SessionProvider(Delegate* delegate, fuchsia::sys::Launcher* launcher,
+                  fuchsia::sys::Environment* base_environment,
                   fuchsia::hardware::power::statecontrol::Admin* administrator,
                   const modular::ModularConfigAccessor* config_accessor,
                   fuchsia::sys::ServiceList services_from_session_launcher,
@@ -72,6 +73,7 @@ class SessionProvider {
 
   Delegate* const delegate_;                                            // Neither owned nor copied.
   fuchsia::sys::Launcher* const launcher_;                              // Not owned.
+  fuchsia::sys::Environment* const base_environment_;                   // Not owned.
   fuchsia::hardware::power::statecontrol::Admin* const administrator_;  // Not owned.
   const modular::ModularConfigAccessor* const config_accessor_;         // Not owned.
   fit::function<void()> on_zero_sessions_;

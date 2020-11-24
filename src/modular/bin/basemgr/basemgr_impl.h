@@ -149,6 +149,9 @@ class BasemgrImpl : public fuchsia::modular::Lifecycle,
 
   // Used to launch component instances.
   fuchsia::sys::LauncherPtr launcher_;
+  // Used to delete isolated storage for legacy sessions with random IDs.
+  // TODO(fxbug.dev/51752): Remove once there are no sessions with random IDs in use
+  fuchsia::sys::EnvironmentPtr base_environment_;
   // Used to connect the |presentation_container_| to scenic.
   fuchsia::ui::policy::PresenterPtr presenter_;
   // Used to trigger device reboot.

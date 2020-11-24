@@ -103,6 +103,8 @@ BasemgrImpl::BasemgrImpl(modular::ModularConfigAccessor config_accessor,
       on_shutdown_(std::move(on_shutdown)),
       session_provider_("SessionProvider"),
       executor_(async_get_default_dispatcher()) {
+  component_context_services_->Connect(base_environment_.NewRequest());
+
   outgoing_services_->AddPublicService<fuchsia::modular::Lifecycle>(
       lifecycle_bindings_.GetHandler(this));
   outgoing_services_->AddPublicService(process_lifecycle_bindings_.GetHandler(this),
@@ -238,10 +240,9 @@ void BasemgrImpl::CreateSessionProvider(const ModularConfigAccessor* const confi
   FX_DCHECK(!session_provider_.get());
 
   session_provider_.reset(new SessionProvider(
-      /* delegate= */ this, launcher_.get(), device_administrator_.get(), config_accessor,
-      std::move(services_from_session_launcher),
-      /* on_zero_sessions= */
-      [this] {
+      /*delegate=*/this, launcher_.get(), base_environment_.get(), device_administrator_.get(),
+      config_accessor, std::move(services_from_session_launcher),
+      /*on_zero_sessions=*/[this] {
         if (state_ == State::SHUTTING_DOWN) {
           return;
         }

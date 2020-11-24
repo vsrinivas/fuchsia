@@ -6,7 +6,6 @@ import("//build/package.gni")
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 import("//src/modular/build/executable_package.gni")
-import("//src/modular/build/tests_package.gni")
 import("//third_party/flatbuffers/flatbuffer.gni")
 
 declare_args() {
@@ -73,12 +72,27 @@ executable_package("basemgr") {
   ]
 }
 
-hermetic_tests_package("basemgr_unittests") {
+test_package("basemgr_unittests") {
   deps = [
     ":basemgr_impl_unittest",
     ":session_context_impl_unittest",
   ]
-  environments = basic_envs
+
+  tests = [
+    {
+      name = "basemgr_impl_unittest"
+      environments = basic_envs
+    },
+    {
+      name = "session_context_impl_unittest"
+      environments = basic_envs
+
+      # This test exercises crash handling that logs an ERROR.
+      log_settings = {
+        max_severity = "ERROR"
+      }
+    },
+  ]
 }
 
 source_set("lib") {
@@ -89,10 +103,13 @@ source_set("lib") {
     "session_context_impl.h",
     "session_provider.cc",
     "session_provider.h",
+    "sessions.cc",
+    "sessions.h",
   ]
 
   deps = [
     "//sdk/fidl/fuchsia.hardware.power.statecontrol",
+    "//src/lib/files",
     "//src/lib/fsl",
     "//src/modular/bin/basemgr/cobalt",
     "//src/modular/lib/common:async_holder",
@@ -134,11 +151,12 @@ executable("session_context_impl_unittest") {
     ":lib",
     "//garnet/public/lib/gtest",
     "//sdk/lib/sys/cpp",
+    "//sdk/lib/sys/cpp/testing:integration",
     "//sdk/lib/sys/cpp/testing:unit",
     "//sdk/lib/ui/scenic/cpp",
+    "//src/lib/files",
     "//src/lib/fsl",
     "//src/lib/fxl/test:gtest_main",
-    "//src/modular/lib/fidl:clone",
     "//src/modular/lib/fidl:environment",
     "//src/modular/lib/modular_config",
     "//src/modular/lib/modular_config:modular_config_accessor",

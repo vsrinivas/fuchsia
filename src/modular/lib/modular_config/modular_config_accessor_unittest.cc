@@ -11,34 +11,10 @@
 
 namespace modular {
 
-// Tests that |use_random_session_id| is false if the |auto_login_to_guest| build flag is set.
-TEST(ModularConfigAccessor, UseRandomSessionIdBuildFlag) {
-  auto accessor = ModularConfigAccessor(fuchsia::modular::session::ModularConfig{});
-
-  // This flag overrides the value for |use_random_session_id|.
-  // If it's isn't set, it's not necessarily true.
-  if (kUseStableSessionId) {
-    EXPECT_FALSE(accessor.use_random_session_id());
-  }
-}
-
-// Tests that |use_random_session_id| is false if the base shell is configured to persist the user.
-TEST(ModularConfigAccessor, UseRandomSessionIdPersistUserArg) {
-  // Create a config that has a base shell config with the `--persist-user` arg.
-  fuchsia::modular::session::ModularConfig config;
-  config.mutable_basemgr_config()->mutable_base_shell()->mutable_app_config()->set_args(
-      {modular_config::kPersistUserArg});
-
-  auto accessor = ModularConfigAccessor(std::move(config));
-
-  // Persisting the user means that the session ID should not be random.
-  EXPECT_FALSE(accessor.use_random_session_id());
-}
-
-// Tests that |use_random_session_id| is true with the default Modular configuration.
+// Tests that |use_random_session_id| is false with the default Modular configuration.
 TEST(ModularConfigAccessor, UseRandomSessionIdDefault) {
   auto accessor = ModularConfigAccessor(modular::DefaultConfig());
-  EXPECT_TRUE(accessor.use_random_session_id());
+  EXPECT_FALSE(accessor.use_random_session_id());
 }
 
 // Tests that |session_shell_app_config| returns the first configured session shell.

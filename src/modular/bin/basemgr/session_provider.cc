@@ -22,12 +22,14 @@ static constexpr auto kMaxCrashRecoveryLimit = 3;
 static constexpr auto kMaxCrashRecoveryDuration = zx::hour(1);
 
 SessionProvider::SessionProvider(Delegate* const delegate, fuchsia::sys::Launcher* const launcher,
+                                 fuchsia::sys::Environment* const environment,
                                  fuchsia::hardware::power::statecontrol::Admin* const administrator,
                                  const modular::ModularConfigAccessor* const config_accessor,
                                  fuchsia::sys::ServiceList services_from_session_launcher,
                                  fit::function<void()> on_zero_sessions)
     : delegate_(delegate),
       launcher_(launcher),
+      base_environment_(environment),
       administrator_(administrator),
       config_accessor_(config_accessor),
       on_zero_sessions_(std::move(on_zero_sessions)),
@@ -59,9 +61,9 @@ SessionProvider::StartSessionResult SessionProvider::StartSession(
   services_from_session_launcher.host_directory =
       session_launcher_service_dir_.CloneChannel().TakeChannel();
   session_context_ = std::make_unique<SessionContextImpl>(
-      launcher_, std::move(sessionmgr_app_config), config_accessor_, std::move(view_token),
-      std::move(services), std::move(services_from_session_launcher),
-      /* get_presentation= */
+      launcher_, base_environment_, std::move(sessionmgr_app_config), config_accessor_,
+      std::move(view_token), std::move(services), std::move(services_from_session_launcher),
+      /*get_presentation=*/
       [this](fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> request) {
         delegate_->GetPresentation(std::move(request));
       },

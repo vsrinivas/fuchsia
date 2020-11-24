@@ -14,13 +14,6 @@
 
 namespace modular {
 
-// Set with the |auto_login_to_guest| build flag.
-#ifdef AUTO_LOGIN_TO_GUEST
-constexpr bool kUseStableSessionId = true;
-#else
-constexpr bool kUseStableSessionId = false;
-#endif
-
 class ModularConfigAccessor {
  public:
   explicit ModularConfigAccessor(fuchsia::modular::session::ModularConfig config);
@@ -45,12 +38,16 @@ class ModularConfigAccessor {
     FX_DCHECK(basemgr_config().has_use_session_shell_for_story_shell_factory());
     return basemgr_config().use_session_shell_for_story_shell_factory();
   }
-
-  const fuchsia::modular::session::AppConfig& session_shell_app_config() const;
-  bool use_random_session_id() const;
   bool enable_cobalt() const {
     return sessionmgr_config().has_enable_cobalt() && sessionmgr_config().enable_cobalt();
   }
+
+  void set_use_random_session_id(bool use_random_session_id) {
+    use_random_session_id_ = use_random_session_id;
+  }
+  bool use_random_session_id() const { return use_random_session_id_; }
+
+  const fuchsia::modular::session::AppConfig& session_shell_app_config() const;
 
   // Returns the ModularConfig serialized as a JSON string.
   std::string GetConfigAsJsonString() const;
@@ -59,6 +56,7 @@ class ModularConfigAccessor {
 
  private:
   fuchsia::modular::session::ModularConfig config_;
+  bool use_random_session_id_ = false;
 };
 
 }  // namespace modular
