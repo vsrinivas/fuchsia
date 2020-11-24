@@ -1,0 +1,20 @@
+{
+    program: {
+        binary: "bin/fxfs_lib_test",
+    },
+    capabilities: [
+        { protocol: "fuchsia.test.Suite" },
+    ],
+    use: [
+        { runner: "rust_test_runner" },
+        {
+            protocol: [ "fuchsia.logger.LogSink" ],
+        },
+    ],
+    expose: [
+        {
+            protocol: "fuchsia.test.Suite",
+            from: "self",
+        },
+    ],
+}
