@@ -60,15 +60,14 @@ ScreenReaderMessageGenerator::DescribeNode(const Node* node) {
     // If this node is a radio button, the label is part of the whole message that describes it.
     if (node->has_role() && node->role() == fuchsia::accessibility::semantics::Role::RADIO_BUTTON) {
       description.emplace_back(DescribeRadioButton(node));
-    } else {
+    } else if (node->has_attributes() && node->attributes().has_label()) {
       Utterance utterance;
-      if (node->has_attributes() && node->attributes().has_label()) {
-        utterance.set_message(node->attributes().label());
-      }
+      utterance.set_message(node->attributes().label());
+
       // Note that empty descriptions (no labels), are allowed. It is common for developers forget
       // to add accessible labels to their UI elements, which causes them to not have one. It is
-      // desirable still to tell the user what the node is (a button), so the Screen Reader can read
-      // something like: (pause) button.
+      // desirable still to tell the user what the node is (a button). But because our TTS does not
+      // support empty utterances we only send the string for "button" in this case.
       description.emplace_back(UtteranceAndContext{.utterance = std::move(utterance)});
     }
   }

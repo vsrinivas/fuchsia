@@ -73,10 +73,6 @@ fit::promise<> ScreenReaderAction::BuildSpeechTaskFromNodePromise(zx_koid_t view
       return fit::make_error_promise();
     }
 
-    if (!node->has_attributes() || !node->attributes().has_label()) {
-      FX_LOGS(INFO) << "ScreenReaderAction: Node is missing Label. Nothing to send to TTS.";
-      return fit::make_error_promise();
-    }
     auto* speaker = screen_reader_context_->speaker();
     FX_DCHECK(speaker);
     return speaker->SpeakNodePromise(node, {.interrupt = true});

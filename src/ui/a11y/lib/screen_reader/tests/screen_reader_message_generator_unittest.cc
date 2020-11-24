@@ -39,8 +39,7 @@ class ScreenReaderMessageGeneratorTest : public gtest::RealLoopFixture {
 TEST_F(ScreenReaderMessageGeneratorTest, BasicNode) {
   Node node;
   auto result = screen_reader_message_generator_->DescribeNode(&node);
-  ASSERT_EQ(result.size(), 1u);
-  EXPECT_FALSE(result[0].utterance.has_message());
+  ASSERT_EQ(result.size(), 0u);
 }
 
 TEST_F(ScreenReaderMessageGeneratorTest, NodeWithALabel) {
@@ -64,6 +63,17 @@ TEST_F(ScreenReaderMessageGeneratorTest, NodeButton) {
   ASSERT_EQ(result[0].utterance.message(), "foo");
   ASSERT_TRUE(result[1].utterance.has_message());
   ASSERT_EQ(result[1].utterance.message(), "button");
+}
+
+TEST_F(ScreenReaderMessageGeneratorTest, NodeButtonNoLabel) {
+  Node node;
+  node.set_role(Role::BUTTON);
+  mock_message_formatter_ptr_->SetMessageForId(static_cast<uint64_t>(MessageIds::ROLE_BUTTON),
+                                               "button");
+  auto result = screen_reader_message_generator_->DescribeNode(&node);
+  ASSERT_EQ(result.size(), 1u);
+  ASSERT_TRUE(result[0].utterance.has_message());
+  ASSERT_EQ(result[0].utterance.message(), "button");
 }
 
 TEST_F(ScreenReaderMessageGeneratorTest, NodeHeader) {
