@@ -3,12 +3,16 @@
 // found in the LICENSE file.
 
 use {
-    crate::blob::{Blob, BlobDataFactory, Compressibility, CreationError},
-    crate::io::Directory,
-    crate::utils::BLOCK_SIZE,
-    log::{debug, error},
+    crate::blob::{Blob, BlobDataFactory, Compressibility},
+    crate::BLOBFS_MOUNT_PATH,
+    fidl_fuchsia_io::{SeekOrigin, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE},
+    fuchsia_zircon::Status,
+    log::{debug, warn},
     rand::{rngs::SmallRng, seq::SliceRandom, Rng, SeedableRng},
+    stress_test_utils::io::Directory,
 };
+
+const BLOCK_SIZE: u64 = fuchsia_merkle::BLOCK_SIZE as u64;
 
 #[derive(Debug)]
 enum BlobfsOperation {
@@ -23,7 +27,7 @@ enum BlobfsOperation {
 }
 
 // In-memory state of blobfs. Stores information about blobs expected to exist on disk.
-pub struct BlobfsState {
+pub struct BlobfsOperator {
     // The path to the blobfs root
     root_dir: Directory,
 
@@ -37,22 +41,48 @@ pub struct BlobfsState {
     factory: BlobDataFactory,
 }
 
-impl BlobfsState {
-    pub fn new(root_dir: Directory, mut initial_rng: SmallRng) -> BlobfsState {
+async fn wait_for_blobfs_dir() -> Directory {
+    loop {
+        match Directory::from_namespace(
+            BLOBFS_MOUNT_PATH,
+            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+        ) {
+            Ok(dir) => break dir,
+            Err(Status::NOT_FOUND) => continue,
+            Err(Status::PEER_CLOSED) => continue,
+            Err(s) => panic!("Unexpected error opening blobfs dir: {}", s),
+        }
+    }
+}
+
+impl BlobfsOperator {
+    pub async fn new(mut initial_rng: SmallRng) -> Self {
         // Setup the RNGs
+        let root_dir = wait_for_blobfs_dir().await;
         let factory_rng = SmallRng::from_seed(initial_rng.gen());
         let state_rng = SmallRng::from_seed(initial_rng.gen());
 
         let factory = BlobDataFactory::new(factory_rng);
 
-        BlobfsState { root_dir, blobs: vec![], rng: state_rng, factory }
+        Self { root_dir, blobs: vec![], rng: state_rng, factory }
     }
 
     // Deletes blob at [index] from the filesystem and from the list of known blobs.
-    async fn delete_blob(&mut self, index: usize) -> Blob {
-        let blob = self.blobs.remove(index);
-        self.root_dir.remove(blob.merkle_root_hash()).await;
-        blob
+    async fn delete_blob(&mut self, index: usize) -> Result<Blob, Status> {
+        let merkle_root_hash = self.blobs.get(index).unwrap().merkle_root_hash();
+        match self.root_dir.remove(merkle_root_hash).await {
+            Ok(()) => {}
+            Err(Status::NOT_FOUND) => {
+                warn!(
+                    "Blob {} does not exist. Possibly lost during fault injection?",
+                    merkle_root_hash
+                );
+            }
+            Err(s) => {
+                return Err(s);
+            }
+        }
+        Ok(self.blobs.remove(index))
     }
 
     fn hashes(&self) -> Vec<String> {
@@ -61,20 +91,34 @@ impl BlobfsState {
 
     // Reads in all blobs stored on the filesystem and compares them to our in-memory
     // model to ensure that everything is as expected.
-    async fn verify_blobs(&self) {
-        let on_disk_hashes = self.root_dir.entries().await.sort_unstable();
+    async fn verify_blobs(&self) -> Result<(), Status> {
+        let on_disk_hashes = self.root_dir.entries().await?.sort_unstable();
         let in_memory_hashes = self.hashes().sort_unstable();
 
         assert_eq!(on_disk_hashes, in_memory_hashes);
 
         for blob in &self.blobs {
-            blob.verify_from_disk(&self.root_dir).await;
+            match blob.verify_from_disk(&self.root_dir).await {
+                Ok(()) => {}
+                Err(Status::NOT_FOUND) => {
+                    warn!(
+                        "Blob {} does not exist. Possibly lost during fault injection?",
+                        blob.merkle_root_hash()
+                    );
+                    continue;
+                }
+                Err(s) => {
+                    return Err(s);
+                }
+            }
         }
+
+        Ok(())
     }
 
     // Creates reasonable-sized blobs to fill a percentage of the free space
     // available on disk.
-    async fn create_reasonable_blobs(&mut self) {
+    async fn create_reasonable_blobs(&mut self) -> Result<(), Status> {
         let num_blobs_to_create: u64 = self.rng.gen_range(1, 200);
         debug!("Creating {} blobs...", num_blobs_to_create);
 
@@ -83,29 +127,15 @@ impl BlobfsState {
             // Create a blob whose uncompressed size is reasonable, or exactly the requested size
             // if the requested size is too small.
             let data = self.factory.create_with_reasonable_size(Compressibility::Compressible);
-
-            let result = Blob::create(data, &self.root_dir).await;
-
-            match result {
-                Ok(blob) => {
-                    // Another blob was created
-                    self.blobs.push(blob);
-                }
-                Err(CreationError::OutOfSpace) => {
-                    error!("Ran out of space creating blob");
-                    break;
-                }
-            }
+            let blob = Blob::create(data, &self.root_dir).await?;
+            self.blobs.push(blob);
         }
+
+        Ok(())
     }
 
     // Deletes a random number of blobs from the disk
-    async fn delete_some_blobs(&mut self) {
-        // Do nothing if there are no blobs.
-        if self.num_blobs() == 0 {
-            return;
-        }
-
+    async fn delete_some_blobs(&mut self) -> Result<(), Status> {
         // Decide how many blobs to delete
         let num_blobs_to_delete = self.rng.gen_range(0, self.num_blobs());
         debug!("Deleting {} blobs", num_blobs_to_delete);
@@ -113,16 +143,14 @@ impl BlobfsState {
         // Randomly select blobs from the list and remove them
         for _ in 0..num_blobs_to_delete {
             let index = self.rng.gen_range(0, self.num_blobs());
-            self.delete_blob(index).await;
+            self.delete_blob(index).await?;
         }
+
+        Ok(())
     }
 
     // Creates open handles for a random number of blobs
-    async fn new_handles(&mut self) {
-        if self.num_blobs() == 0 {
-            return;
-        }
-
+    async fn new_handles(&mut self) -> Result<(), Status> {
         // Decide how many blobs to create new handles for
         let num_blobs_with_new_handles = self.rng.gen_range(0, self.num_blobs());
         debug!("Creating handles for {} blobs", num_blobs_with_new_handles);
@@ -131,28 +159,40 @@ impl BlobfsState {
         for _ in 0..num_blobs_with_new_handles {
             // Choose a random blob and open a handle to it
             let blob = self.blobs.choose_mut(&mut self.rng).unwrap();
-            let handle = self.root_dir.open(blob.merkle_root_hash()).await;
-            blob.handles().push(handle);
-            debug!("Opened blob {} [handles:{}]", blob.merkle_root_hash(), blob.num_handles());
+            match self.root_dir.open_file(blob.merkle_root_hash(), OPEN_RIGHT_READABLE).await {
+                Ok(handle) => blob.handles().push(handle),
+                Err(Status::NOT_FOUND) => {
+                    warn!(
+                        "Blob {} does not exist. Possibly lost during fault injection?",
+                        blob.merkle_root_hash()
+                    );
+                }
+                Err(s) => {
+                    return Err(s);
+                }
+            }
         }
+
+        Ok(())
     }
 
     // Closes all open handles to all blobs.
     // Note that handles do not call `close()` when they are dropped.
     // This is intentional because it offers a way to inelegantly close a file.
-    async fn close_all_handles(&mut self) {
+    async fn close_all_handles(&mut self) -> Result<(), Status> {
         let mut count = 0;
         for blob in &mut self.blobs {
             for handle in blob.handles().drain(..) {
-                handle.close().await;
+                handle.close().await?;
                 count += 1;
             }
         }
         debug!("Closed {} handles to blobs", count);
+        Ok(())
     }
 
     // Reads random portions of a blob from all open handles
-    async fn read_from_all_handles(&mut self) {
+    async fn read_from_all_handles(&mut self) -> Result<(), Status> {
         let mut count: u64 = 0;
         let mut total_bytes_read: u64 = 0;
         for blob in &mut self.blobs {
@@ -175,8 +215,8 @@ impl BlobfsState {
                 let length = end_pos - offset;
 
                 // Read the data from the handle and verify it
-                handle.seek_from_start(offset).await;
-                let actual_data_bytes = handle.read(length).await;
+                handle.seek(SeekOrigin::Start, offset).await?;
+                let actual_data_bytes = handle.read_num_bytes(length).await?;
                 let expected_data_bytes = &data_bytes[offset as usize..end_pos as usize];
                 assert_eq!(expected_data_bytes, actual_data_bytes);
 
@@ -186,47 +226,40 @@ impl BlobfsState {
             }
         }
         debug!("Read {} bytes from {} handles", total_bytes_read, count);
+        Ok(())
     }
 
     // Fills the disk with blobs that are |BLOCK_SIZE| bytes in size (when uncompressed)
     // until the filesystem reports an error.
-    async fn fill_disk_with_small_blobs(&mut self) {
-        let mut blob_count = 0;
-
+    async fn fill_disk_with_small_blobs(&mut self) -> Result<(), Status> {
         loop {
             // Keep making |BLOCK_SIZE| uncompressible blobs
             let data = self
                 .factory
                 .create_with_exact_uncompressed_size(BLOCK_SIZE, Compressibility::Uncompressible);
 
-            let result = Blob::create(data, &self.root_dir).await;
+            let blob = Blob::create(data, &self.root_dir).await?;
 
-            match result {
-                Ok(blob) => {
-                    // Another blob was created
-                    self.blobs.push(blob);
-                    blob_count += 1;
-                }
-                Err(CreationError::OutOfSpace) => {
-                    error!("Ran out of space creating blob");
-                    break;
-                }
-            }
+            // Another blob was created
+            self.blobs.push(blob);
         }
-
-        debug!("Created {} blobs", blob_count);
     }
 
     // Removes all blobs from the filesystem
-    async fn delete_all_blobs(&mut self) {
+    async fn delete_all_blobs(&mut self) -> Result<(), Status> {
         while self.num_blobs() > 0 {
-            self.delete_blob(0).await;
+            self.delete_blob(0).await?;
         }
+        Ok(())
+    }
+
+    fn num_blobs(&self) -> usize {
+        self.blobs.len()
     }
 
     // Returns a list of operations that are valid to perform,
     // given the current state of the filesystem.
-    fn get_operation_list(&mut self) -> Vec<BlobfsOperation> {
+    fn get_operation_list(&self) -> Vec<BlobfsOperation> {
         // It is always valid to do the following operations
         let mut operations = vec![
             BlobfsOperation::VerifyBlobs,
@@ -234,7 +267,7 @@ impl BlobfsState {
             BlobfsOperation::FillDiskWithSmallBlobs,
         ];
 
-        if self.blobs.len() > 0 {
+        if self.num_blobs() > 0 {
             operations.push(BlobfsOperation::DeleteAllBlobs);
             operations.push(BlobfsOperation::DeleteSomeBlobs);
             operations.push(BlobfsOperation::NewHandles);
@@ -249,43 +282,39 @@ impl BlobfsState {
         operations
     }
 
-    pub async fn do_random_operation(&mut self) {
-        let operations = self.get_operation_list();
-        debug!("Operations = {:?}", operations);
-
-        let operation = operations.choose(&mut self.rng).unwrap();
-        debug!("-------> [OPERATION] {:?}", operation);
-        debug!("Number of blobs = {}", self.num_blobs());
+    async fn do_operation(&mut self, operation: &BlobfsOperation) -> Result<(), Status> {
         match operation {
-            BlobfsOperation::CreateReasonableBlobs => {
-                self.create_reasonable_blobs().await;
-            }
-            BlobfsOperation::DeleteSomeBlobs => {
-                self.delete_some_blobs().await;
-            }
-            BlobfsOperation::FillDiskWithSmallBlobs => {
-                self.fill_disk_with_small_blobs().await;
-            }
-            BlobfsOperation::DeleteAllBlobs => {
-                self.delete_all_blobs().await;
-            }
-            BlobfsOperation::NewHandles => {
-                self.new_handles().await;
-            }
-            BlobfsOperation::CloseAllHandles => {
-                self.close_all_handles().await;
-            }
-            BlobfsOperation::ReadFromAllHandles => {
-                self.read_from_all_handles().await;
-            }
-            BlobfsOperation::VerifyBlobs => {
-                self.verify_blobs().await;
-            }
+            BlobfsOperation::VerifyBlobs => self.verify_blobs().await,
+            BlobfsOperation::CreateReasonableBlobs => self.create_reasonable_blobs().await,
+            BlobfsOperation::FillDiskWithSmallBlobs => self.fill_disk_with_small_blobs().await,
+            BlobfsOperation::DeleteAllBlobs => self.delete_all_blobs().await,
+            BlobfsOperation::NewHandles => self.new_handles().await,
+            BlobfsOperation::DeleteSomeBlobs => self.delete_some_blobs().await,
+            BlobfsOperation::CloseAllHandles => self.close_all_handles().await,
+            BlobfsOperation::ReadFromAllHandles => self.read_from_all_handles().await,
         }
-        debug!("<------- [OPERATION] {:?}", operation);
     }
 
-    fn num_blobs(&self) -> usize {
-        self.blobs.len()
+    pub async fn do_random_operations(mut self, num_operations: u64) {
+        for index in 1..=num_operations {
+            let operations = self.get_operation_list();
+            debug!("Operations = {:?}", operations);
+            let operation = operations.choose(&mut self.rng).unwrap();
+
+            debug!("{} ---->>>> {:?}", index, operation);
+            let result = self.do_operation(operation).await;
+
+            if let Err(Status::PEER_CLOSED) = result {
+                // Reconnect to the blobfs mount point
+                self.root_dir = wait_for_blobfs_dir().await;
+
+                // Drain all open handles. These are now invalid.
+                for blob in &mut self.blobs {
+                    blob.handles().drain(..);
+                }
+            }
+
+            debug!("{} <<<<---- {:?} [{:?}]", index, operation, result);
+        }
     }
 }

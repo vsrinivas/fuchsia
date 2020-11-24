@@ -3,7 +3,11 @@
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "test/blobfs_stress_test"
+        "args": [
+            "--time-limit-secs",
+            "79200"
+        ],
+        "binary": "bin/stressor"
     },
     "sandbox": {
         "features": [

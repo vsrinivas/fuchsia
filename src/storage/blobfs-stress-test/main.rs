@@ -4,111 +4,82 @@
 
 use {
     anyhow::Error,
-    blobfs_stress_test_lib::{state::BlobfsState, utils::init_blobfs},
+    argh::FromArgs,
+    blobfs_stress_test_lib::run_test,
     fuchsia_async as fasync,
-    log::{info, set_logger, set_max_level, LevelFilter},
-    rand::{rngs::SmallRng, FromEntropy, Rng, SeedableRng},
-    structopt::StructOpt,
+    log::info,
+    log::LevelFilter,
+    stress_test_utils::{Environment, StdoutLogger},
 };
 
-#[derive(Clone, StructOpt, Debug)]
-#[structopt(
-    name = "blobfs stress test (blobfs_stressor) tool",
-    about = "Creates an instance of blobfs and performs stressful operations on it"
-)]
-
-struct Opt {
-    /// Seed to use for this stressor instance
-    #[structopt(short = "s", long = "seed")]
+#[derive(Clone, Debug, FromArgs)]
+/// Creates an instance of fvm and performs stressful operations on it
+struct Args {
+    /// seed to use for this stressor instance
+    #[argh(option, short = 's')]
     seed: Option<u128>,
 
-    /// Number of operations to complete before exiting.
-    /// Otherwise stressor will run indefinitely.
-    #[structopt(short = "ops", long = "num_operations")]
+    /// number of operations to complete before exiting.
+    #[argh(option, short = 'o')]
     num_operations: Option<u64>,
 
-    /// Filter logging by level (off, error, warn, info, debug, trace)
-    #[structopt(short = "l", long = "log_filter", default_value = "info")]
-    log_filter: LevelFilter,
+    /// filter logging by level (off, error, warn, info, debug, trace)
+    #[argh(option, short = 'l')]
+    log_filter: Option<LevelFilter>,
+
+    /// size of one block of the ramdisk (in bytes)
+    #[argh(option, default = "512")]
+    ramdisk_block_size: u64,
+
+    /// number of blocks in the ramdisk
+    /// defaults to 106MiB ramdisk
+    #[argh(option, default = "217088")]
+    ramdisk_block_count: u64,
+
+    /// size of one slice in FVM (in bytes)
+    #[argh(option, default = "32768")]
+    fvm_slice_size: u64,
+
+    /// controls how often blobfs is disconnected by
+    /// crashing the block device.
+    /// disabled if set to 0.
+    #[argh(option, default = "1200")]
+    disconnect_secs: u64,
+
+    /// if set, the test runs for this time limit before exiting successfully.
+    #[argh(option, short = 't')]
+    time_limit_secs: Option<u64>,
 }
 
-// A simple logger that logs to stdout
-struct SimpleLogger;
-
-impl log::Log for SimpleLogger {
-    fn enabled(&self, _metadata: &log::Metadata<'_>) -> bool {
-        true
+impl Environment for Args {
+    fn init_logger(&self) {
+        let filter = self.log_filter.unwrap_or(LevelFilter::Debug);
+        StdoutLogger::init(filter);
     }
 
-    fn log(&self, record: &log::Record<'_>) {
-        if self.enabled(record.metadata()) {
-            if record.level() == log::Level::Info {
-                println!("{}", record.args());
-            } else {
-                println!("{}: {}", record.level(), record.args());
-            }
-        }
+    fn seed(&self) -> Option<u128> {
+        self.seed
     }
-
-    fn flush(&self) {}
 }
 
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
     // Get arguments from command line
-    let opt = Opt::from_args();
+    let args: Args = argh::from_env();
+    let rng = args.setup_env();
 
-    // Initialize SimpleLogger (just prints to stdout)
-    set_logger(&SimpleLogger).expect("Failed to set SimpleLogger as global logger");
-    set_max_level(opt.log_filter);
+    run_test(
+        rng,
+        args.ramdisk_block_count,
+        args.ramdisk_block_size,
+        args.fvm_slice_size,
+        args.num_operations,
+        args.disconnect_secs,
+        args.time_limit_secs,
+    )
+    .await;
 
-    let seed = if let Some(seed_value) = opt.seed {
-        seed_value
-    } else {
-        // Use entropy to generate a new seed
-        let mut temp_rng = SmallRng::from_entropy();
-        temp_rng.gen()
-    };
-
-    info!("------------------ blobfs_stressor is starting -------------------");
-    info!("ARGUMENTS = {:#?}", opt);
-    info!("SEED FOR THIS INVOCATION = {}", seed);
-    info!("------------------------------------------------------------------");
-
-    // Setup a panic handler that prints out details of this invocation
-    let seed_clone = seed.clone();
-    let opt_clone = opt.clone();
-    let default_panic_hook = std::panic::take_hook();
-    std::panic::set_hook(Box::new(move |panic_info| {
-        println!("");
-        println!("------------------ blobfs_stressor has crashed -------------------");
-        println!("ARGUMENTS = {:#?}", opt_clone);
-        println!("SEED FOR THIS INVOCATION = {}", seed_clone);
-        println!("------------------------------------------------------------------");
-        println!("");
-        default_panic_hook(panic_info);
-    }));
-
-    // Setup blobfs and wait until it is ready
-    let (_test, root_dir) = init_blobfs().await;
-
-    // Initialize blobfs in-memory state
-    let rng = SmallRng::from_seed(seed.to_le_bytes());
-    let mut state = BlobfsState::new(root_dir, rng);
-
-    if let Some(num_operations) = opt.num_operations {
-        info!("Performing {} operations...", num_operations);
-        for _ in 0..num_operations {
-            state.do_random_operation().await;
-        }
-    } else {
-        info!("Running indefinitely...");
-        loop {
-            state.do_random_operation().await;
-        }
-    }
-
-    info!("Run successful!");
+    info!("Stress test is exiting successfully!");
 
     Ok(())
 }

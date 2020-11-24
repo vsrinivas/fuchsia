@@ -54,7 +54,7 @@ use {
         OPEN_RIGHT_ADMIN,
     },
     fuchsia_runtime::{HandleInfo, HandleType},
-    fuchsia_zircon::{self as zx, AsHandleRef},
+    fuchsia_zircon::{self as zx, AsHandleRef, Task},
     std::{ffi::CStr, marker::PhantomData},
 };
 
@@ -89,6 +89,7 @@ where
 {
     namespace: Namespace,
     device: NodeSynchronousProxy,
+    process: Option<zx::Process>,
     mount_point: Option<String>,
     launcher: FSLauncher<FSType, ProcLauncher>,
 }
@@ -227,6 +228,7 @@ where
         Ok(Filesystem {
             namespace,
             device,
+            process: None,
             mount_point: None,
             launcher: FSLauncher::new(FSType::options()),
         })
@@ -246,7 +248,7 @@ where
     /// receive requests on the root channel. In order to be mounted in the traditional sense, the
     /// client side of the provided root channel needs to be bound to a path in a namespace
     /// somewhere.
-    fn initialize(&self, block_device: zx::Channel) -> Result<zx::Channel, Error> {
+    fn initialize(&mut self, block_device: zx::Channel) -> Result<zx::Channel, Error> {
         let (client_chan, server_chan) = zx::Channel::create()?;
 
         let actions = vec![
@@ -256,8 +258,12 @@ where
             SpawnAction::add_handle(HandleInfo::new(HandleType::User0, 1), block_device.into()),
         ];
 
-        let _process =
-            self.launcher.run_command(cstr!("mount"), actions).context("failed to mount")?;
+        if self.process.is_some() {
+            return Err(format_err!("filesystem process is already running!"));
+        }
+        self.process.replace(
+            self.launcher.run_command(cstr!("mount"), actions).context("failed to mount")?,
+        );
 
         let signals = client_chan
             .wait_handle(zx::Signals::USER_0 | zx::Signals::CHANNEL_PEER_CLOSED, zx::Time::INFINITE)
@@ -339,7 +345,21 @@ where
             .unbind(&mount_point)
             .context("failed to unbind filesystem from default namespace")?;
 
+        self.process.take().context("filesystem process isn't running!")?;
         Ok(())
+    }
+
+    /// Terminate the filesystem process and force unmount the mount point
+    pub fn kill(&mut self) -> Result<(), Error> {
+        let process = self.process.take().context("filesystem process isn't running!")?;
+        process.kill().context("Could not kill filesystem process")?;
+
+        let mount_point =
+            self.mount_point.take().ok_or_else(|| format_err!("failed to unmount: not mounted"))?;
+
+        self.namespace
+            .unbind(&mount_point)
+            .context("failed to unbind filesystem from default namespace")
     }
 
     /// Run fsck on the filesystem partition. Returns Ok(()) if fsck succeeds, or the associated

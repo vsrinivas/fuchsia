@@ -29,5 +29,10 @@ rustc_library("stress-test-utils") {
     "//third_party/rust_crates:rand_core",
   ]
 
-  sources = [ "mod.rs" ]
+  sources = [
+    "io.rs",
+    "mod.rs",
+  ]
+
+  non_rust_deps = [ "//zircon/system/ulib/fs-management" ]
 }

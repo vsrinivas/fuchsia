@@ -3,13 +3,19 @@
 // found in the LICENSE file.
 
 use {
-    crate::io::{Directory, File},
-    crate::utils::{BLOCK_SIZE, FOUR_MB},
+    fidl_fuchsia_io::{
+        OPEN_FLAG_CREATE, OPEN_FLAG_CREATE_IF_ABSENT, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
+    },
     fuchsia_merkle::MerkleTree,
     fuchsia_zircon::Status,
     rand::{rngs::SmallRng, seq::SliceRandom, Rng, SeedableRng},
     std::cmp::min,
+    stress_test_utils::io::{Directory, File},
 };
+
+const ONE_MB: u64 = 1048576;
+const FOUR_MB: u64 = 4 * ONE_MB;
+const BLOCK_SIZE: u64 = fuchsia_merkle::BLOCK_SIZE as u64;
 
 // Controls the compressibility of data generated for a blob
 pub enum Compressibility {
@@ -90,12 +96,6 @@ impl BlobData {
     }
 }
 
-// Reasons why creating a blob can fail
-#[derive(Debug)]
-pub enum CreationError {
-    OutOfSpace,
-}
-
 pub struct Blob {
     merkle_root_hash: String,
     data: BlobData,
@@ -105,43 +105,37 @@ pub struct Blob {
 impl Blob {
     // Attempts to write the blob to disk. This operation is allowed to fail
     // if we run out of storage space. Other failures cause a panic.
-    pub async fn create(data: BlobData, root_dir: &Directory) -> Result<Self, CreationError> {
+    pub async fn create(data: BlobData, root_dir: &Directory) -> Result<Self, Status> {
         // Create the root hash for the blob
         let data_bytes = data.generate_bytes();
         let tree = MerkleTree::from_reader(&data_bytes[..]).unwrap();
         let merkle_root_hash = tree.root().to_string();
 
         // Write the file to disk
-        let file = root_dir.create(&merkle_root_hash).await;
-        file.truncate(data.size_bytes).await;
-
-        let result = file.write(&data_bytes).await;
-
-        match result {
-            Err(Status::NO_SPACE) => {
-                return Err(CreationError::OutOfSpace);
-            }
-            Err(x) => {
-                panic!("Unexpected error during write: {}", x);
-            }
-            _ => {}
-        }
-
-        file.flush().await;
-        file.close().await;
+        let file = root_dir
+            .open_file(
+                &merkle_root_hash,
+                OPEN_FLAG_CREATE | OPEN_FLAG_CREATE_IF_ABSENT | OPEN_RIGHT_WRITABLE,
+            )
+            .await?;
+        file.truncate(data.size_bytes).await?;
+        file.write(&data_bytes).await?;
+        file.close().await?;
 
         Ok(Self { merkle_root_hash, data, handles: vec![] })
     }
 
     // Reads the blob in from disk and verifies its contents
-    pub async fn verify_from_disk(&self, root_dir: &Directory) {
-        let file = root_dir.open(&self.merkle_root_hash).await;
-        let on_disk_data_bytes = file.read_until_eof().await;
-        file.close().await;
+    pub async fn verify_from_disk(&self, root_dir: &Directory) -> Result<(), Status> {
+        let file = root_dir.open_file(&self.merkle_root_hash, OPEN_RIGHT_READABLE).await?;
+        let on_disk_data_bytes = file.read_until_eof().await?;
+        file.close().await?;
 
         let in_memory_data_bytes = self.data.generate_bytes();
 
         assert!(on_disk_data_bytes == in_memory_data_bytes);
+
+        Ok(())
     }
 
     pub fn merkle_root_hash(&self) -> &str {

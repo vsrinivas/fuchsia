@@ -33,8 +33,6 @@ rustc_library("lib") {
     "lib/mod.rs",
     "lib/operator.rs",
   ]
-
-  non_rust_deps = [ "//zircon/system/ulib/fs-management" ]
 }
 
 rustc_binary("stressor-bin") {

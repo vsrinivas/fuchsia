@@ -190,6 +190,36 @@ pub async fn read(file: &FileProxy) -> Result<Vec<u8>, ReadError> {
     Ok(out)
 }
 
+/// Attempts to read a number of bytes from the given file's current offset.
+/// This function may return less data than expected.
+pub async fn read_num_bytes(file: &FileProxy, num_bytes: u64) -> Result<Vec<u8>, ReadError> {
+    let mut data = vec![];
+
+    // Read in chunks of |MAX_BUF| bytes.
+    // This is the maximum buffer size supported over FIDL.
+    let mut bytes_left = num_bytes;
+    while bytes_left > 0 {
+        let bytes_to_read = std::cmp::min(bytes_left, MAX_BUF);
+        let (status, mut bytes) = file.read(bytes_to_read).await?;
+        Status::ok(status).map_err(ReadError::ReadError)?;
+
+        if bytes.is_empty() {
+            break;
+        }
+
+        bytes_left -= bytes.len() as u64;
+        data.append(&mut bytes);
+    }
+
+    // Remove excess data read in, if any.
+    let num_bytes = num_bytes as usize;
+    if data.len() > num_bytes {
+        data.drain(num_bytes..data.len());
+    }
+
+    Ok(data)
+}
+
 /// Reads all data from the file at `path` in the current namespace. The path must be an absolute
 /// path.
 pub async fn read_in_namespace(path: &str) -> Result<Vec<u8>, ReadNamedError> {

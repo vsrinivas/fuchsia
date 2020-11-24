@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+pub mod io;
+
 use {
     fidl_fuchsia_device::{ControllerMarker, ControllerProxy},
     fidl_fuchsia_hardware_block_partition::Guid,
@@ -11,6 +13,7 @@ use {
     fidl_fuchsia_io::OPEN_RIGHT_READABLE,
     fuchsia_component::client::connect_to_service_at_path,
     fuchsia_zircon::{sys::zx_status_t, AsHandleRef, Rights, Status, Vmo},
+    io::Directory,
     log::{info, set_logger, set_max_level, LevelFilter},
     ramdevice_client::{RamdiskClient, VmoRamdiskClientBuilder},
     rand::{rngs::SmallRng, FromEntropy, Rng, SeedableRng},
@@ -107,12 +110,6 @@ async fn does_guid_match(volume_proxy: &VolumeProxy, expected_instance_guid: &Gu
 
     let actual_guid_instance = actual_guid_instance.unwrap();
     *actual_guid_instance == *expected_instance_guid
-}
-
-async fn dir_entries(path: PathBuf) -> Vec<String> {
-    let path_str = path.to_str().unwrap();
-    let proxy = io_util::directory::open_in_namespace(&path_str, OPEN_RIGHT_READABLE).unwrap();
-    files_async::readdir(&proxy).await.unwrap().iter().map(|entry| entry.name.clone()).collect()
 }
 
 /// Creates a storage stress test instance.
@@ -294,9 +291,10 @@ fn random_seed() -> u128 {
 /// Gets the full path to a volume matching the given instance GUID at the given
 /// /dev/class/block path. This function will wait until a matching volume is found.
 pub async fn get_volume_path(block_path: PathBuf, instance_guid: &Guid) -> PathBuf {
+    let dir = Directory::from_namespace(block_path.clone(), OPEN_RIGHT_READABLE).unwrap();
     loop {
         // TODO(xbhatnag): Find a better way to wait for the volume to appear
-        for entry in dir_entries(block_path.clone()).await {
+        for entry in dir.entries().await.unwrap() {
             let volume_path = block_path.join(entry);
             let volume_path_str = volume_path.to_str().unwrap();
 
