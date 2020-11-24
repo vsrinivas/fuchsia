@@ -33,6 +33,7 @@ if (is_host) {
       "//src/developer/ffx/plugins/sdk:ffx_sdk",
       "//src/developer/ffx/plugins/self-test:ffx_selftest",
       "//src/developer/ffx/plugins/target:ffx_target",
+      "//src/developer/ffx/plugins/trace:ffx_trace",
       "//src/developer/ffx/plugins/version:ffx_version",
       "//src/developer/ffx/plugins/zxdb:ffx_zxdb_plugin",
     ]
