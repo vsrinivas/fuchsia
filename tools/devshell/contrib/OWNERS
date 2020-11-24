@@ -30,6 +30,7 @@ per-file make-fuchsia-vol=raggi@google.com
 per-file make-integration-patch=thatguy@google.com
 per-file mkinstaller=simonshields@google.com
 per-file onet=ctiller@google.com,raggi@google.com
+per-file regen-goldens=mkember@google.com
 per-file run-dart-action=zra@google.com
 per-file run-e2e-tests=isma@google.com
 per-file run-recovery=abarth@google.com

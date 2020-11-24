@@ -1,0 +1,79 @@
+#!/bin/bash
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+### Test expected behavior of 'fx regen-goldens'
+
+BT_FILE_DEPS=(
+  "scripts/fx"
+  "tools/devshell/contrib/regen-goldens"
+  "tools/devshell/lib/fx-cmd-locator.sh"
+  "tools/devshell/lib/fx-optional-features.sh"
+  "tools/devshell/lib/vars.sh"
+  "tools/devshell/lib/platform.sh"
+)
+
+BT_MOCKED_TOOLS=(
+  "tools/devshell/test"
+)
+
+declare fx fxtest_mock output
+
+BT_SET_UP() {
+  source "$BT_TEMP_DIR/tools/devshell/tests/lib/fuchsia-mock.sh"
+  fx=$(btf::setup_fx)
+  fxtest_mock="$BT_TEMP_DIR/tools/devshell/test.mock_state"
+  output="$BT_TEMP_DIR/_fx_regen_goldens_output"
+}
+
+TEST_help() {
+  BT_EXPECT "$fx" regen-goldens --help &> /dev/null
+  BT_EXPECT_FILE_DOES_NOT_EXIST "$fxtest_mock"
+}
+
+TEST_regen_all() {
+  BT_EXPECT "$fx" regen-goldens &> "$output"
+  # It should regenerate for all tools. Check for a couple of them.
+  BT_EXPECT_FILE_CONTAINS_SUBSTRING "$output" fidlc
+  BT_EXPECT_FILE_CONTAINS_SUBSTRING "$output" fidldoc
+  BT_ASSERT_FILE_EXISTS "$fxtest_mock"
+  source "$fxtest_mock"
+  BT_EXPECT_STRING_CONTAINS_SUBSTRING "${BT_MOCK_ARGS[*]}" fidlc_golden_tests
+  BT_EXPECT_STRING_CONTAINS_SUBSTRING "${BT_MOCK_ARGS[*]}" fidldoc_golden_tests
+}
+
+TEST_regen_one_exact() {
+  BT_EXPECT "$fx" regen-goldens fidlc &> "$output"
+  BT_EXPECT_FILE_CONTAINS_SUBSTRING "$output" fidlc
+  btf::expect-mock-args "$fxtest_mock" fidlc_golden_tests -- --regen
+}
+
+TEST_regen_two_exact() {
+  BT_EXPECT "$fx" regen-goldens fidlc fidldoc &> "$output"
+  BT_EXPECT_FILE_CONTAINS_SUBSTRING "$output" "fidlc fidldoc"
+  btf::expect-mock-args \
+    "$fxtest_mock" fidlc_golden_tests fidldoc_golden_tests -- --regen
+}
+
+TEST_regen_substring_match() {
+  BT_EXPECT "$fx" regen-goldens lcpp &> "$output"
+  BT_EXPECT_FILE_CONTAINS_SUBSTRING "$output" fidlgen_{h,l}lcpp
+  btf::expect-mock-args "$fxtest_mock" fidlgen_{h,l}lcpp_golden_tests -- --regen
+}
+
+TEST_fails_no_match() {
+  BT_EXPECT_FAIL "$fx" regen-goldens definitely_not_a_valid_tool &> "$output"
+  BT_EXPECT_FILE_CONTAINS_SUBSTRING "$output" \
+    "No tools match the pattern 'definitely_not_a_valid_tool'"
+  BT_EXPECT_FILE_DOES_NOT_EXIST "$fxtest_mock"
+}
+
+TEST_regen_with_flags() {
+  BT_EXPECT "$fx" regen-goldens --before fidlc -and fidldoc --after &> "$output"
+  BT_EXPECT_FILE_CONTAINS_SUBSTRING "$output" fidlc
+  btf::expect-mock-args \
+    "$fxtest_mock" fidl{c,doc}_golden_tests --before -and --after -- --regen
+}
+
+BT_RUN_TESTS "$@"
