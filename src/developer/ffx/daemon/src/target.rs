@@ -907,7 +907,7 @@ impl TargetCollection {
         // TODO(awdavies): better merging (using more indices for matching).
         match inner.get(&t.inner.nodename) {
             Some(to_update) => {
-                log::debug!("attempting to merge info into target: {}", t.inner.nodename);
+                log::trace!("attempting to merge info into target: {}", t.inner.nodename);
                 futures::join!(
                     to_update.update_last_response(t.last_response().await),
                     to_update.addrs_extend(t.addrs().await),
@@ -926,6 +926,7 @@ impl TargetCollection {
             None => {
                 let t: Target = t.into();
                 inner.insert(t.nodename(), t.clone());
+                log::info!("New target: {}", t.nodename());
                 if let Some(e) = self.events.read().await.as_ref() {
                     e.push(DaemonEvent::NewTarget(t.nodename()))
                         .await

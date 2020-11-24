@@ -49,7 +49,7 @@ pub struct DaemonEventHandler {
 
 impl DaemonEventHandler {
     async fn handle_mdns(t: events::TargetInfo, tc: &TargetCollection) {
-        log::info!("Found new target via mdns: {}", t.nodename);
+        log::trace!("Found new target via mdns: {}", t.nodename);
         tc.merge_insert(t.into())
             .then(|target| async move {
                 target
@@ -88,7 +88,7 @@ impl DaemonEventHandler {
             }
         };
 
-        log::info!("Found new target via overnet: {}", target.nodename());
+        log::trace!("Found new target via overnet: {}", target.nodename());
         tc.merge_insert(target).await;
     }
 }
@@ -110,7 +110,7 @@ impl EventHandler<DaemonEvent> for DaemonEventHandler {
                     Self::handle_mdns(t, &tc).await;
                 }
                 WireTrafficType::Fastboot(t) => {
-                    log::info!("Found new target via fastboot: {}", t.nodename);
+                    log::trace!("Found new target via fastboot: {}", t.nodename);
                     tc.merge_insert(t.into()).await;
                 }
             },
