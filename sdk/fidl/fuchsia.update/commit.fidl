@@ -31,6 +31,6 @@ protocol CommitStatusProvider {
     ///     which will assert `ZX_EVENTPAIR_PEER_CLOSED`. At this point, any remaining
     ///     EventPairs will observe the `ZX_EVENTPAIR_PEER_CLOSED` signal.
     ///
-    /// - response `event` an EventPair with rights `ZX_RIGHT_WAIT` and `ZX_RIGHT_DUPLICATE`.
+    /// - response `event` an EventPair with rights `ZX_RIGHTS_BASIC`.
     IsCurrentSystemCommitted() -> (zx.handle:EVENTPAIR event);
 };
