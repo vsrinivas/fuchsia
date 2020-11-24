@@ -17,6 +17,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"syscall"
@@ -218,7 +219,7 @@ func prepare(ctx context.Context, sdk sdkcommon.SDKProperties, version string, r
 
 	log.Infof("Serving %v packages for SDK version %v from %v\n", image, version, targetPackage)
 
-	err := downloadImageIfNeeded(ctx, sdk, version, bucket, targetPackage, imageFilename)
+	err := downloadImageIfNeeded(ctx, sdk, version, bucket, targetPackage, imageFilename, repoPath)
 	if err != nil {
 		return fmt.Errorf("Could not download %v:  %v", targetPackage, err)
 	}
@@ -231,10 +232,25 @@ func killServers(ctx context.Context, portNum string) error {
 	cmd := ExecCommand("pgrep", "pm")
 	output, err := cmd.Output()
 	if err != nil {
-		exiterr := err.(*exec.ExitError)
-		err = errors.New(string(exiterr.Stderr))
-		return fmt.Errorf("Error running pgrep: %v", err)
+		var exitError *exec.ExitError
+		if errors.As(err, &exitError) {
+			if string(exitError.Stderr) != "" {
+				err = errors.New(string(exitError.Stderr))
+			}
+			// Special case for mac compared to Linux. If there are no
+			// processes found on Linux, the exit code is 0, but on mac
+			// it is 1 with no text on either stdout or stderr.
+			// In this case we want to treat it as a non-error. However,
+			// if there is an error message or if the exit code is not 1,
+			// return an error.
+			if runtime.GOOS == "darwin" && exitError.ExitCode() == 1 && len(exitError.Stderr) == 0 {
+				return nil
+			}
+			return fmt.Errorf("Error running pgrep: %v", err)
+		}
+		return err
 	}
+
 	if len(output) == 0 {
 		return nil
 	}
@@ -347,7 +363,7 @@ func printValidImages(sdk sdkProvider, version string, bucket string) error {
 // downloadImageIfNeeded downloads from GCS the packages for the given prebuillt image.
 // The md5 hash of the tarball is stored to check for differences from the downloaded version.
 // if the hash matches, the tarball is not un-tarred.
-func downloadImageIfNeeded(ctx context.Context, sdk sdkProvider, version string, bucket string, srcPath string, imageFilename string) error {
+func downloadImageIfNeeded(ctx context.Context, sdk sdkProvider, version string, bucket string, srcPath string, imageFilename string, repoPath string) error {
 	// Validate the image is found
 	localImagePath := filepath.Join(sdk.GetSDKDataPath(), imageFilename)
 	packageDir := filepath.Join(sdk.GetSDKDataPath(), "packages")

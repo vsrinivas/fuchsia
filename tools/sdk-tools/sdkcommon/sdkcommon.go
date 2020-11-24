@@ -411,7 +411,7 @@ func (sdk SDKProperties) GetAddressByName(deviceName string) (string, error) {
 			return "", err
 		}
 	}
-	return string(output), nil
+	return strings.TrimSpace(string(output)), nil
 }
 
 // RunSSHCommand runs the command provided in args on the given target device.

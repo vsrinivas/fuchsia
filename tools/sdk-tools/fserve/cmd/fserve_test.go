@@ -14,6 +14,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"strings"
 	"syscall"
 	"testing"
@@ -50,7 +51,9 @@ func (testSDK testSDKProperties) GetAvailableImages(version string, bucket strin
 func (testSDK testSDKProperties) GetAddressByName(deviceName string) (string, error) {
 	return "::1", nil
 }
-
+func (testSDK testSDKProperties) GetDefaultPackageRepoDir() (string, error) {
+	return filepath.Join(testSDK.dataPath, "packages", "amber-files"), nil
+}
 func (testSDK testSDKProperties) RunSSHCommand(targetAddress string, sshConfig string, privateKey string, verbose bool, sshArgs []string) (string, error) {
 	if testSDK.expectCustomSSHConfig && sshConfig == "" {
 		return "", errors.New("Expected custom ssh config file")
@@ -200,6 +203,10 @@ func TestDownloadImageIfNeeded(t *testing.T) {
 	bucket := "test-bucket"
 	srcPath := "gs://test-bucket/path/on/GCS/theImage.tgz"
 	imageFilename := "theImage.tgz"
+	repoPath, err := testSDK.GetDefaultPackageRepoDir()
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	executable, _ := os.Executable()
 	fmt.Fprintf(os.Stderr, "Running test executable %v\n", executable)
@@ -207,12 +214,12 @@ func TestDownloadImageIfNeeded(t *testing.T) {
 	testrootPath := filepath.Join(filepath.Dir(executable), *testrootFlag)
 	os.Setenv("FSERVE_TEST_TESTROOT", testrootPath)
 
-	if err := downloadImageIfNeeded(ctx, testSDK, version, bucket, srcPath, imageFilename); err != nil {
+	if err := downloadImageIfNeeded(ctx, testSDK, version, bucket, srcPath, imageFilename, repoPath); err != nil {
 		t.Fatal(err)
 	}
 	// Run the test again, and it should skip the download
 	os.Setenv("FSERVE_TEST_ASSERT_NO_DOWNLOAD", "1")
-	if err := downloadImageIfNeeded(ctx, testSDK, version, bucket, srcPath, imageFilename); err != nil {
+	if err := downloadImageIfNeeded(ctx, testSDK, version, bucket, srcPath, imageFilename, repoPath); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -234,11 +241,15 @@ func TestDownloadImageIfNeededCopiedFails(t *testing.T) {
 	bucket := "test-bucket"
 	srcPath := "gs://test-bucket/path/on/GCS/theImage.tgz"
 	imageFilename := "theImage.tgz"
+	repoPath, err := testSDK.GetDefaultPackageRepoDir()
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	// Run the test again, and it should skip the download
 	os.Setenv("FSERVE_TEST_ASSERT_NO_DOWNLOAD", "")
 	os.Setenv("FSERVE_TEST_COPY_FAILS", "1")
-	if err := downloadImageIfNeeded(ctx, testSDK, version, bucket, srcPath, imageFilename); err != nil {
+	if err := downloadImageIfNeeded(ctx, testSDK, version, bucket, srcPath, imageFilename, repoPath); err != nil {
 		destPath := filepath.Join(testSDK.GetSDKDataPath(), imageFilename)
 		expected := fmt.Sprintf("Could not copy image from %v to %v: BucketNotFoundException: 404 %v bucket does not exist.: exit status 2",
 			srcPath, destPath, srcPath)
@@ -349,7 +360,6 @@ func TestFakeFServe(t *testing.T) {
 	// Check the command line
 	cmd, args := args[0], args[1:]
 	switch filepath.Base(cmd) {
-
 	case "pgrep":
 		fakePgrep(args)
 	case "ps":
@@ -435,6 +445,10 @@ func fakePgrep(args []string) {
 	}
 	if args[0] == "pm" {
 		if os.Getenv("FSERVE_TEST_NO_SERVERS") == "1" {
+			// mac exits with 1
+			if runtime.GOOS == "darwin" {
+				os.Exit(1)
+			}
 			os.Exit(0)
 		} else {
 			// return 3 pm instances
