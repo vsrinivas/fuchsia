@@ -701,7 +701,7 @@ From //build/images/custom_signing.gni:23
 
 **Current value (from the default):** `"dart_jit_app"`
 
-From [//topaz/runtime/dart/dart_component.gni:25](https://fuchsia.googlesource.com/topaz/+/3c6d6835b0029dd65a816aaa0569421327ccc914/runtime/dart/dart_component.gni#25)
+From [//topaz/runtime/dart/dart_component.gni:25](https://fuchsia.googlesource.com/topaz/+/2185d136e00813d5467500cc262cf2e652af2e40/runtime/dart/dart_component.gni#25)
 
 ### dart_default_build_cfg
 TODO(fxbug.dev/64153) renable aot builds
@@ -731,14 +731,14 @@ we use to build products.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/3c6d6835b0029dd65a816aaa0569421327ccc914/runtime/dart/config.gni#10)
+From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/2185d136e00813d5467500cc262cf2e652af2e40/runtime/dart/config.gni#10)
 
 ### dart_space_dart
 Whether experimental space dart mode is enabled for Dart applications.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/dart_component.gni:44](https://fuchsia.googlesource.com/topaz/+/3c6d6835b0029dd65a816aaa0569421327ccc914/runtime/dart/dart_component.gni#44)
+From [//topaz/runtime/dart/dart_component.gni:44](https://fuchsia.googlesource.com/topaz/+/2185d136e00813d5467500cc262cf2e652af2e40/runtime/dart/dart_component.gni#44)
 
 ### data_partition_manifest
 Path to manifest file containing data to place into the initial /data
@@ -988,7 +988,7 @@ From //build/images/args.gni:52
 
 **Current value (from the default):** `"flutter_jit_app"`
 
-From [//topaz/runtime/dart/dart_component.gni:14](https://fuchsia.googlesource.com/topaz/+/3c6d6835b0029dd65a816aaa0569421327ccc914/runtime/dart/dart_component.gni#14)
+From [//topaz/runtime/dart/dart_component.gni:14](https://fuchsia.googlesource.com/topaz/+/2185d136e00813d5467500cc262cf2e652af2e40/runtime/dart/dart_component.gni#14)
 
 ### flutter_default_build_cfg
 Non-product JIT
@@ -1028,14 +1028,14 @@ From //build/flutter/config.gni:10
 
 **Current value (from the default):** `true`
 
-From [//topaz/runtime/dart/dart_component.gni:35](https://fuchsia.googlesource.com/topaz/+/3c6d6835b0029dd65a816aaa0569421327ccc914/runtime/dart/dart_component.gni#35)
+From [//topaz/runtime/dart/dart_component.gni:35](https://fuchsia.googlesource.com/topaz/+/2185d136e00813d5467500cc262cf2e652af2e40/runtime/dart/dart_component.gni#35)
 
 ### flutter_space_dart
 Whether experimental space dart mode is enabled for Flutter applications.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/dart_component.gni:41](https://fuchsia.googlesource.com/topaz/+/3c6d6835b0029dd65a816aaa0569421327ccc914/runtime/dart/dart_component.gni#41)
+From [//topaz/runtime/dart/dart_component.gni:41](https://fuchsia.googlesource.com/topaz/+/2185d136e00813d5467500cc262cf2e652af2e40/runtime/dart/dart_component.gni#41)
 
 ### font_catalog_paths
 
@@ -1192,7 +1192,7 @@ From //build/go/go_build.gni:21
     will have build and test results cached, and is safe to be written to
     concurrently. If overridden, this directory must be a full path.
 
-**Current value (from the default):** `"/b/s/w/ir/x/w/root_build_dir/fidling/.gocache"`
+**Current value (from the default):** `"/b/s/w/ir/x/w/root_build_dir/dartlang/.gocache"`
 
 From //build/go/go_build.gni:17
 
