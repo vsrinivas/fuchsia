@@ -43,6 +43,7 @@ source_set("common") {
 
   public_deps = [
     "//sdk/banjo/ddk.protocol.composite",
+    "//sdk/fidl/fuchsia.device:fuchsia.device_c",
     "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
     "//sdk/fidl/fuchsia.device.manager:fuchsia.device.manager_c",
     "//sdk/fidl/fuchsia.device.manager:fuchsia.device.manager_llcpp",

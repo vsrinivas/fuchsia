@@ -9,8 +9,6 @@
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
-#include <ddk/device-power-states.h>
-
 __BEGIN_CDECLS
 
 typedef struct zx_device zx_device_t;
@@ -87,8 +85,11 @@ enum {
 
 // Device Manager API
 
+// One of DEV_POWER_STATE_*
+typedef uint8_t device_power_state_t;
+
 typedef struct device_power_state_info {
-  fuchsia_device_DevicePowerState state_id;
+  device_power_state_t state_id;
   // Restore time for coming out of this state to working D0 state.
   zx_duration_t restore_latency;
   // Is this device wakeup_capable?
@@ -97,8 +98,11 @@ typedef struct device_power_state_info {
   int32_t system_wake_state;
 } device_power_state_info_t;
 
+// One of DEV_PERFORMANCE_STATE_*
+typedef uint32_t device_performance_state_t;
+
 typedef struct device_performance_state_info {
-  uint32_t state_id;
+  device_performance_state_t state_id;
   // Restore time for coming out of this state to fully performant state.
   zx_duration_t restore_latency;
   // TODO(ravoorir): Figure out how best can a device have metadata that is

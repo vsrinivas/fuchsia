@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/device/c/fidl.h>
 #include <fuchsia/device/power/test/llcpp/fidl.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>

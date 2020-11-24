@@ -32,7 +32,6 @@ zx_library("ddk") {
     "ddk/binding_priv.h",
     "ddk/debug.h",
     "ddk/device.h",
-    "ddk/device-power-states.h",
     "ddk/driver.h",
     "ddk/fragment-device.h",
     "ddk/io-buffer.h",
@@ -56,7 +55,6 @@ zx_library("ddk") {
   public_deps = [
     # <ddk/io-buffer.h> has #include <zircon/syscalls.h>.
 
-    "//sdk/fidl/fuchsia.device:fuchsia.device_c",
     "//zircon/system/ulib/ddk-platform-defs",
     "//zircon/system/ulib/mmio-ptr",
     "//zircon/system/ulib/syslog:syslog-headers",

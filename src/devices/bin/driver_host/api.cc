@@ -31,12 +31,18 @@
    DEVICE_ADD_INVISIBLE | DEVICE_ADD_ALLOW_MULTI_COMPOSITE)
 
 namespace internal {
+
+static_assert(fuchsia_device_DevicePowerState_DEVICE_POWER_STATE_D0 == DEV_POWER_STATE_D0);
+static_assert(fuchsia_device_DevicePowerState_DEVICE_POWER_STATE_D1 == DEV_POWER_STATE_D1);
+static_assert(fuchsia_device_DevicePowerState_DEVICE_POWER_STATE_D2 == DEV_POWER_STATE_D2);
+static_assert(fuchsia_device_DevicePowerState_DEVICE_POWER_STATE_D3HOT == DEV_POWER_STATE_D3HOT);
+static_assert(fuchsia_device_DevicePowerState_DEVICE_POWER_STATE_D3COLD == DEV_POWER_STATE_D3COLD);
+
 const device_power_state_info_t kDeviceDefaultPowerStates[2] = {
-    {.state_id = fuchsia_device_DevicePowerState_DEVICE_POWER_STATE_D0},
-    {.state_id = fuchsia_device_DevicePowerState_DEVICE_POWER_STATE_D3COLD}};
+    {.state_id = DEV_POWER_STATE_D0}, {.state_id = DEV_POWER_STATE_D3COLD}};
 
 const device_performance_state_info_t kDeviceDefaultPerfStates[1] = {
-    {.state_id = fuchsia_device_DEVICE_PERFORMANCE_STATE_P0},
+    {.state_id = DEV_PERFORMANCE_STATE_P0},
 };
 
 const zx_device::SystemPowerStateMapping kDeviceDefaultStateMapping = []() {

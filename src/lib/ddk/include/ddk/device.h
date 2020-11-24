@@ -35,14 +35,14 @@ typedef struct zx_protocol_device zx_protocol_device_t;
 #define DEVICE_SUSPEND_FLAG_SUSPEND_RAM 0xdcdc0400
 #define DEVICE_SUSPEND_REASON_MASK 0xffffff00
 
-// These values should be same as the enum fuchsia_device_DevicePowerState
+// These values should be same as the enum fuchsia.device.DevicePowerState
 // generated from FIDL. The system wide power manager will be using the
 // power states from FIDL generated file.
 #define DEV_POWER_STATE_D0 UINT8_C(0)
 #define DEV_POWER_STATE_D1 UINT8_C(1)
 #define DEV_POWER_STATE_D2 UINT8_C(2)
 #define DEV_POWER_STATE_D3HOT UINT8_C(3)
-#define DEV_POWER_STATE_DCOLD UINT8_C(4)
+#define DEV_POWER_STATE_D3COLD UINT8_C(4)
 
 // Performance state
 #define DEV_PERFORMANCE_STATE_P0 UINT32_C(0)

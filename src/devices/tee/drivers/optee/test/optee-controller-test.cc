@@ -241,7 +241,7 @@ TEST_F(FakeDdkOptee, PmtUnpinned) {
   EXPECT_TRUE(fake_object::FakeHandleTable().Get(pmt_handle).is_ok());
   EXPECT_EQ(fake_object::HandleType::PMT, fake_object::FakeHandleTable().Get(pmt_handle)->type());
 
-  optee_.DdkSuspend(ddk::SuspendTxn{fake_ddk::kFakeDevice, DEV_POWER_STATE_DCOLD, false,
+  optee_.DdkSuspend(ddk::SuspendTxn{fake_ddk::kFakeDevice, DEV_POWER_STATE_D3COLD, false,
                                     DEVICE_SUSPEND_REASON_REBOOT});
   EXPECT_FALSE(fake_object::FakeHandleTable().Get(pmt_handle).is_ok());
 }

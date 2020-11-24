@@ -52,6 +52,7 @@ driver_module("ddk-power-test-child") {
   deps = [
     ":fuchsia.device.power.test_llcpp",
     ":test-power-child-bind",
+    "//sdk/fidl/fuchsia.device:fuchsia.device_c",
     "//sdk/lib/fdio",
     "//src/devices/lib/driver",
     "//src/lib/ddk",

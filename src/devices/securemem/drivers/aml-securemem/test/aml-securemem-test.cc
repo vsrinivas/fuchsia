@@ -227,7 +227,7 @@ class AmlogicSecureMemTest : public zxtest::Test {
     // aml-securemem doesn't yet implement DdkUnbind() - and arguably it doesn't really need to
     // given what aml-securemem is.
 
-    ddk::SuspendTxn txn(dev()->zxdev(), DEV_POWER_STATE_DCOLD, false, DEVICE_SUSPEND_REASON_MEXEC);
+    ddk::SuspendTxn txn(dev()->zxdev(), DEV_POWER_STATE_D3COLD, false, DEVICE_SUSPEND_REASON_MEXEC);
     dev()->DdkSuspend(std::move(txn));
   }
 

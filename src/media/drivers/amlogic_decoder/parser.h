@@ -5,6 +5,7 @@
 #ifndef SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_PARSER_H_
 #define SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_PARSER_H_
 
+#include <assert.h>
 #include <lib/zx/bti.h>
 #include <lib/zx/event.h>
 #include <lib/zx/handle.h>

@@ -5,6 +5,7 @@
 #ifndef SRC_DEVICES_BIN_DRIVER_HOST_ZX_DEVICE_H_
 #define SRC_DEVICES_BIN_DRIVER_HOST_ZX_DEVICE_H_
 
+#include <fuchsia/device/c/fidl.h>
 #include <fuchsia/device/llcpp/fidl.h>
 #include <fuchsia/device/manager/c/fidl.h>
 #include <fuchsia/device/manager/llcpp/fidl.h>
@@ -22,7 +23,6 @@
 #include <string>
 
 #include <ddk/debug.h>
-#include <ddk/device-power-states.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <fbl/intrusive_double_list.h>

@@ -5,6 +5,7 @@
 #ifndef SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_MACROS_H_
 #define SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_MACROS_H_
 
+#include <assert.h>
 #include <lib/syslog/global.h>
 #include <zircon/syscalls.h>
 
