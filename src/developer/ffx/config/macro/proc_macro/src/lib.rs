@@ -94,7 +94,10 @@ impl<'a> FfxConfigField<'a> {
                     if let syn::Lit::Str(lit) = &name.lit {
                         *value_to_update = Some(lit.clone())
                     } else {
-                        panic!("ident {} must be set to a string")
+                        panic!(
+                            "value for \"{}\" must be set to a string",
+                            value_to_update.as_ref().expect("value set to empty").value()
+                        )
                     }
                 } else {
                     key = Some(
