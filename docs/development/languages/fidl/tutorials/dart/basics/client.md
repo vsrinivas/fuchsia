@@ -17,7 +17,7 @@ synchronous clients.
 If you want to write the code yourself, delete the following directories:
 
 ```
-rm -r topaz/examples/fidl/client/*
+rm -r examples/fidl/dart/client/*
 ```
 
 ## Create a stub component
@@ -27,7 +27,7 @@ rm -r topaz/examples/fidl/client/*
 1. Once you have created your component, ensure that the following works:
 
    ```
-   fx set core.x64 --with //topaz/examples/fidl/client
+   fx set core.x64 --with //examples/fidl/dart/client
    ```
 
    Note: If necessary, refer back to the [previous tutorial][server-tut].
@@ -159,7 +159,7 @@ the client that provides the server's protocol, then launches the client in it.
 1. Configure your GN build as follows:
 
     ```
-    fx set core.x64 --with //topaz/examples/fidl/server --with //topaz/examples/fidl/client --with //topaz/examples/fidl/launcher_bin
+    fx set core.x64 --with //examples/fidl/dart/server --with //examples/fidl/dart/client --with //examples/fidl/dart/launcher_bin
     ```
 
 2. Build the Fuchsia image:

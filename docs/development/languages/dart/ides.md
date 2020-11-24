@@ -125,8 +125,8 @@ the analyzer, so ensure your build configuration (`fx set`) includes all
 the packages you need (the `--with` flag can be helpful.)
 
 For example, to view the `echo_client_async` example Dart code in VS Code, add
-`--with topaz/examples/fidl/echo_client_async_dart` to your `fx set`
-command. Then, rebuild with `fx build topaz/examples/fidl/echo_client_async_dart`.
+`--with examples/fidl/dart/echo_client_async_dart` to your `fx set`
+command. Then, rebuild with `fx build examples/fidl/dart/echo_client_async_dart`.
 
 ### Reload the Dart Analyzer
 

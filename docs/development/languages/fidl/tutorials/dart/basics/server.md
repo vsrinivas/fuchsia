@@ -31,7 +31,7 @@ and run. Then, it gradually adds functionality to get the server up and running.
 If you want to write the code yourself, delete the following directories:
 
 ```
-rm -r topaz/examples/fidl/server/*
+rm -r examples/fidl/dart/server/*
 ```
 
 ## Create and run a component {#component}
@@ -40,7 +40,7 @@ rm -r topaz/examples/fidl/server/*
 
 To create a component:
 
-1. Add a `main()` function to `topaz/examples/fidl/server/lib/main.dart`:
+1. Add a `main()` function to `examples/fidl/dart/server/lib/main.dart`:
 
    ```dart
    void main(List<String> args) {
@@ -48,7 +48,7 @@ To create a component:
    }
    ```
 
-1. Declare a target for the server in `topaz/examples/fidl/server/BUILD.gn`:
+1. Declare a target for the server in `examples/fidl/dart/server/BUILD.gn`:
 
    ```gn
    {%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/dart/server/BUILD.gn" %}
@@ -92,7 +92,7 @@ other product configurations.
 1. Add the server to your configuration and build:
 
    ```
-   fx set core.x64 --with //topaz/examples/fidl/server && fx build
+   fx set core.x64 --with //examples/fidl/dart/server && fx build
    ```
 
 1. Ensure `fx serve` is running in a separate tab and connected to an instance of

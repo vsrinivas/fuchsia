@@ -22,11 +22,11 @@ This document covers how to complete the following tasks:
   code](#inspect-user-generated-bindings).
 
 The example code is located in your Fuchsia checkout in
-`//topaz/examples/fidl/fidl_packages/`. If you want to write all the code
+`//examples/fidl/dart/fidl_packages/`. If you want to write all the code
 as you follow this tutorial, you can remove the example code:
 
 ```
-rm -r topaz/examples/fidl/fidl_packages/*
+rm -r examples/fidl/dart/fidl_packages/*
 ```
 
 Relative paths in the rest of the tutorial will be relative to this directory.
@@ -79,7 +79,7 @@ Relative paths in the rest of the tutorial will be relative to this directory.
 1. Run the empty test suite:
 
    ```
-   fx set core.x64 --with //topaz/examples/fidl/fidl_packages
+   fx set core.x64 --with //examples/fidl/dart/fidl_packages
    fx test -vo fidl-example-dart-test
    ```
 

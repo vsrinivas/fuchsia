@@ -23,7 +23,7 @@ This tutorial covers:
 * The request pipelining pattern and its benefits.
 
 The full example code for this tutorial is located at
-[//topaz/examples/fidl/request_pipelining][src].
+[//examples/fidl/dart/request_pipelining][src].
 
 ### The FIDL protocol
 
@@ -101,7 +101,7 @@ Optionally, to check that things are correct, try building the server:
 1. Configure your GN build to include the server:
 
    ```
-   fx set core.x64 --with //topaz/examples/fidl/request_pipelining/server
+   fx set core.x64 --with //examples/fidl/dart/request_pipelining/server
    ```
 2. Build the Fuchsia image:
 
@@ -157,7 +157,7 @@ Optionally, to check that things are correct, try building the client:
 1. Configure your GN build to include the client:
 
    ```
-   fx set core.x64 --with //topaz/examples/fidl/request_pipelining/client
+   fx set core.x64 --with //examples/fidl/dart/request_pipelining/client
    ```
 2. Build the Fuchsia image:
 
@@ -172,7 +172,7 @@ To run the example code:
 1. Configure your GN build as follows:
 
    ```
-   fx set core.x64 --with //topaz/examples/fidl/request_pipelining/client --with //topaz/examples/fidl/request_pipelining/server --with //topaz/examples/fidl/launcher_bin
+   fx set core.x64 --with //examples/fidl/dart/request_pipelining/client --with //examples/fidl/dart/request_pipelining/server --with //examples/fidl/dart/launcher_bin
    ```
 
 2. Run the example:
@@ -198,7 +198,7 @@ For further reading about protocol request pipelining, including how to handle
 protocol requests that may fail, see the [FIDL API rubric][rubric].
 
 <!-- xrefs -->
-[src]: /topaz/examples/fidl/request_pipelining
+[src]: /examples/fidl/dart/request_pipelining
 [server-tut]: /docs/development/languages/fidl/tutorials/dart/basics/server.md
 [server-tut-main]: /docs/development/languages/fidl/tutorials/dart/basics/server.md#main
 [client-tut]: /docs/development/languages/fidl/tutorials/dart/basics/client.md
