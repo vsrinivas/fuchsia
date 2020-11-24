@@ -19,7 +19,7 @@ use {
     std::collections::HashMap,
     std::collections::HashSet,
     std::fmt::Write,
-    std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr, SocketAddrV4, SocketAddrV6},
+    std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr},
     std::sync::Arc,
     std::time::Duration,
     zerocopy::ByteSlice,
@@ -235,8 +235,17 @@ lazy_static::lazy_static! {
 
 // query_loop broadcasts an mdns query on sock every interval.
 async fn query_loop(sock: Arc<UdpSocket>, interval: Duration) {
+    let to_addr: SocketAddr = match sock.local_addr() {
+        Ok(SocketAddr::V4(_)) => (MDNS_MCAST_V4, MDNS_PORT).into(),
+        Ok(SocketAddr::V6(_)) => (MDNS_MCAST_V6, MDNS_PORT).into(),
+        Err(err) => {
+            log::info!("resolving local socket addr failed with: {}", err);
+            return;
+        }
+    };
+
     loop {
-        if let Err(err) = sock.send(&QUERY_BUF).await {
+        if let Err(err) = sock.send_to(&QUERY_BUF, to_addr).await {
             log::info!("mdns query failed: {:?}", err);
             return;
         }
@@ -396,11 +405,8 @@ fn make_sender_socket(interface_id: u32, addr: SocketAddr, ttl: u32) -> Result<U
             socket.set_reuse_port(true).context("set_reuse_port")?;
             socket.bind(&addr.into()).context("bind")?;
             socket
-                .connect(&SocketAddrV4::new(MDNS_MCAST_V4, MDNS_PORT).into())
-                .context("connect")?;
-            socket
         }
-        SocketAddr::V6(ref saddr) => {
+        SocketAddr::V6(ref _saddr) => {
             let socket = socket2::Socket::new(
                 socket2::Domain::ipv6(),
                 socket2::Type::dgram(),
@@ -414,9 +420,6 @@ fn make_sender_socket(interface_id: u32, addr: SocketAddr, ttl: u32) -> Result<U
             socket.set_reuse_address(true).context("set_reuse_address")?;
             socket.set_reuse_port(true).context("set_reuse_port")?;
             socket.bind(&addr.into()).context("bind")?;
-            socket
-                .connect(&SocketAddrV6::new(MDNS_MCAST_V6, MDNS_PORT, 0, saddr.scope_id()).into())
-                .context("connect")?;
             socket
         }
     };
