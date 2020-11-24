@@ -13,7 +13,6 @@ import (
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/util"
 
 	"gvisor.dev/gvisor/pkg/tcpip"
-	"gvisor.dev/gvisor/pkg/tcpip/buffer"
 	"gvisor.dev/gvisor/pkg/tcpip/header"
 	"gvisor.dev/gvisor/pkg/tcpip/network/ipv4"
 	"gvisor.dev/gvisor/pkg/tcpip/stack"
@@ -41,9 +40,6 @@ func (*nullEndpoint) WritePacket(r *stack.Route, gso *stack.GSO, protocol tcpip.
 }
 func (*nullEndpoint) WritePackets(r *stack.Route, gso *stack.GSO, pkts stack.PacketBufferList, protocol tcpip.NetworkProtocolNumber) (int, *tcpip.Error) {
 	return pkts.Len(), nil
-}
-func (*nullEndpoint) WriteRawPacket(vv buffer.VectorisedView) *tcpip.Error {
-	return nil
 }
 func (*nullEndpoint) Attach(dispatcher stack.NetworkDispatcher) {}
 func (*nullEndpoint) IsAttached() bool                          { return false }

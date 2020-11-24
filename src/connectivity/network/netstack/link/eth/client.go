@@ -214,15 +214,6 @@ func (c *Client) WritePackets(_ *stack.Route, _ *stack.GSO, pkts stack.PacketBuf
 	return c.write(pkts)
 }
 
-func (c *Client) WriteRawPacket(vv buffer.VectorisedView) *tcpip.Error {
-	var pkts stack.PacketBufferList
-	pkts.PushBack(&stack.PacketBuffer{
-		Data: vv,
-	})
-	_, err := c.write(pkts)
-	return err
-}
-
 func (c *Client) Attach(dispatcher stack.NetworkDispatcher) {
 	c.dispatcher = dispatcher
 

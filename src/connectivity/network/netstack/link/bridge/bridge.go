@@ -19,7 +19,6 @@ import (
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link"
 
 	"gvisor.dev/gvisor/pkg/tcpip"
-	"gvisor.dev/gvisor/pkg/tcpip/buffer"
 	"gvisor.dev/gvisor/pkg/tcpip/header"
 	"gvisor.dev/gvisor/pkg/tcpip/stack"
 )
@@ -172,15 +171,6 @@ func (ep *Endpoint) WritePackets(r *stack.Route, gso *stack.GSO, pkts stack.Pack
 		}
 	}
 	return n, nil
-}
-
-func (ep *Endpoint) WriteRawPacket(packet buffer.VectorisedView) *tcpip.Error {
-	for _, l := range ep.links {
-		if err := l.WriteRawPacket(packet); err != nil {
-			return err
-		}
-	}
-	return nil
 }
 
 func (ep *Endpoint) Attach(d stack.NetworkDispatcher) {

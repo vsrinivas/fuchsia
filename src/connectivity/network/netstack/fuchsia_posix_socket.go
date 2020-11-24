@@ -78,6 +78,11 @@ type endpoint struct {
 	key uint64
 
 	ns *Netstack
+
+	hardErrorMu struct {
+		sync.Mutex
+		err *tcpip.Error
+	}
 }
 
 func (ep *endpoint) incRef() {
@@ -96,6 +101,24 @@ func (ep *endpoint) decRef() bool {
 		panic(fmt.Sprintf("%p: double close", ep))
 	}
 	return doClose
+}
+
+// storeAndRetrieveHardErrorLocked evaluates if the input error is a "hard
+// error" (one which puts the endpoint in an unrecoverable error state) and
+// stores it. Returns the pre-existing hard error if it was already set or the
+// new value if changed.
+//
+// Must be called with hardErrorMu locked.
+func (ep *endpoint) storeAndRetrieveHardErrorLocked(err *tcpip.Error) *tcpip.Error {
+	if ep.hardErrorMu.err == nil {
+		switch err {
+		case tcpip.ErrConnectionAborted, tcpip.ErrConnectionReset,
+			tcpip.ErrNetworkUnreachable, tcpip.ErrNoRoute, tcpip.ErrTimeout,
+			tcpip.ErrConnectionRefused:
+			ep.hardErrorMu.err = err
+		}
+	}
+	return ep.hardErrorMu.err
 }
 
 func (ep *endpoint) Sync(fidl.Context) (int32, error) {
@@ -155,13 +178,28 @@ func (ep *endpoint) Connect(_ fidl.Context, address fidlnet.SocketAddress) (sock
 				return socket.BaseSocketConnectResultWithErr(tcpipErrorToCode(tcpip.ErrAddressFamilyNotSupported)), nil
 			}
 		}
-		if err := ep.ep.Connect(addr); err != nil {
-			if err == tcpip.ErrConnectStarted {
+
+		// Acquire hard error lock across ep calls to avoid races and store the
+		// hard error deterministically.
+		ep.hardErrorMu.Lock()
+		err := ep.ep.Connect(addr)
+		hardError := ep.storeAndRetrieveHardErrorLocked(err)
+		ep.hardErrorMu.Unlock()
+		if err != nil {
+			switch err {
+			case tcpip.ErrConnectStarted:
 				localAddr, err := ep.ep.GetLocalAddress()
 				if err != nil {
 					panic(err)
 				}
 				syslog.VLogTf(syslog.DebugVerbosity, "connect", "%p: started, local=%+v, addr=%+v", ep, localAddr, addr)
+			// For TCP endpoints, gVisor Connect() returns this error when the endpoint
+			// is in an error state and the hard error state has already been read from the
+			// endpoint via other APIs. Apply the saved hard error state here.
+			case tcpip.ErrConnectionAborted:
+				if hardError != nil {
+					err = hardError
+				}
 			}
 			return socket.BaseSocketConnectResultWithErr(tcpipErrorToCode(err)), nil
 		}
@@ -631,7 +669,13 @@ func (eps *endpointWithSocket) loopWrite() {
 		v = v[:n]
 
 		for {
+			// Acquire hard error lock across ep calls to avoid races and store the
+			// hard error deterministically.
+			eps.hardErrorMu.Lock()
 			n, resCh, err := eps.ep.Write(tcpip.SlicePayload(v), tcpip.WriteOptions{})
+			hardError := eps.storeAndRetrieveHardErrorLocked(err)
+			eps.hardErrorMu.Unlock()
+
 			if resCh != nil {
 				if err != tcpip.ErrNoLinkAddress {
 					panic(fmt.Sprintf("err=%v inconsistent with presence of resCh", err))
@@ -670,8 +714,15 @@ func (eps *endpointWithSocket) loopWrite() {
 					continue
 				}
 			case tcpip.ErrClosedForSend:
-				if err := eps.local.Shutdown(zx.SocketShutdownRead); err != nil {
-					panic(err)
+				// Closed for send can be issued when the endpoint is in an error state,
+				// which is encoded by the presence of a hard error having been
+				// observed.
+				// To avoid racing signals with the closing caused by a hard error,
+				// we won't signal here if a hard error is already observed.
+				if hardError == nil {
+					if err := eps.local.Shutdown(zx.SocketShutdownRead); err != nil {
+						panic(err)
+					}
 				}
 				return
 			case tcpip.ErrConnectionAborted, tcpip.ErrConnectionReset, tcpip.ErrNetworkUnreachable, tcpip.ErrNoRoute:
@@ -729,7 +780,12 @@ func (eps *endpointWithSocket) loopRead(inCh <-chan struct{}, initCh chan<- stru
 
 		for {
 			var err *tcpip.Error
+			// Acquire hard error lock across ep calls to avoid races and store the
+			// hard error deterministically.
+			eps.hardErrorMu.Lock()
 			v, _, err = eps.ep.Read(&sender)
+			hardError := eps.storeAndRetrieveHardErrorLocked(err)
+			eps.hardErrorMu.Unlock()
 			if err == tcpip.ErrNotConnected {
 				if connected {
 					panic(fmt.Sprintf("connected endpoint returned %s", err))
@@ -833,8 +889,15 @@ func (eps *endpointWithSocket) loopRead(inCh <-chan struct{}, initCh chan<- stru
 					return
 				}
 			case tcpip.ErrClosedForReceive:
-				if err := eps.local.Shutdown(zx.SocketShutdownWrite); err != nil {
-					panic(err)
+				// Closed for receive can be issued when the endpoint is in an error
+				// state, which is encoded by the presence of a hard error having been
+				// observed.
+				// To avoid racing signals with the closing caused by a hard error,
+				// we won't signal here if a hard error is already observed.
+				if hardError == nil {
+					if err := eps.local.Shutdown(zx.SocketShutdownWrite); err != nil {
+						panic(err)
+					}
 				}
 				return
 			case tcpip.ErrConnectionAborted, tcpip.ErrConnectionReset, tcpip.ErrNetworkUnreachable, tcpip.ErrNoRoute:

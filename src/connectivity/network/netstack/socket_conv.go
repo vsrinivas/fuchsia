@@ -149,11 +149,7 @@ func getSockOptSocket(ep tcpip.Endpoint, ns *Netstack, netProto tcpip.NetworkPro
 		return nil, tcpip.ErrNotSupported
 
 	case C.SO_PASSCRED:
-		v, err := ep.GetSockOptBool(tcpip.PasscredOption)
-		if err != nil {
-			return nil, err
-		}
-
+		v := ep.SocketOptions().GetPassCred()
 		return boolToInt32(v), nil
 
 	case C.SO_SNDBUF:
@@ -181,19 +177,11 @@ func getSockOptSocket(ep tcpip.Endpoint, ns *Netstack, netProto tcpip.NetworkPro
 		return int32(size), nil
 
 	case C.SO_REUSEADDR:
-		v, err := ep.GetSockOptBool(tcpip.ReuseAddressOption)
-		if err != nil {
-			return nil, err
-		}
-
+		v := ep.SocketOptions().GetReuseAddress()
 		return boolToInt32(v), nil
 
 	case C.SO_REUSEPORT:
-		v, err := ep.GetSockOptBool(tcpip.ReusePortOption)
-		if err != nil {
-			return nil, err
-		}
-
+		v := ep.SocketOptions().GetReusePort()
 		return boolToInt32(v), nil
 
 	case C.SO_BINDTODEVICE:
@@ -217,11 +205,7 @@ func getSockOptSocket(ep tcpip.Endpoint, ns *Netstack, netProto tcpip.NetworkPro
 		return boolToInt32(v), nil
 
 	case C.SO_KEEPALIVE:
-		v, err := ep.GetSockOptBool(tcpip.KeepaliveEnabledOption)
-		if err != nil {
-			return nil, err
-		}
-
+		v := ep.SocketOptions().GetKeepAlive()
 		return boolToInt32(v), nil
 
 	case C.SO_LINGER:
@@ -253,11 +237,7 @@ func getSockOptSocket(ep tcpip.Endpoint, ns *Netstack, netProto tcpip.NetworkPro
 		return int32(v), nil
 
 	case C.SO_NO_CHECK:
-		v, err := ep.GetSockOptBool(tcpip.NoChecksumOption)
-		if err != nil {
-			return nil, err
-		}
-
+		v := ep.SocketOptions().GetNoChecksum()
 		return boolToInt32(v), nil
 
 	default:
@@ -583,7 +563,8 @@ func setSockOptSocket(ep tcpip.Endpoint, ns *Netstack, name int16, optVal []byte
 		}
 
 		v := binary.LittleEndian.Uint32(optVal)
-		return ep.SetSockOptBool(tcpip.ReuseAddressOption, v != 0)
+		ep.SocketOptions().SetReuseAddress(v != 0)
+		return nil
 
 	case C.SO_REUSEPORT:
 		if len(optVal) < sizeOfInt32 {
@@ -591,7 +572,8 @@ func setSockOptSocket(ep tcpip.Endpoint, ns *Netstack, name int16, optVal []byte
 		}
 
 		v := binary.LittleEndian.Uint32(optVal)
-		return ep.SetSockOptBool(tcpip.ReusePortOption, v != 0)
+		ep.SocketOptions().SetReusePort(v != 0)
+		return nil
 
 	case C.SO_BINDTODEVICE:
 		n := bytes.IndexByte(optVal, 0)
@@ -627,7 +609,8 @@ func setSockOptSocket(ep tcpip.Endpoint, ns *Netstack, name int16, optVal []byte
 		}
 
 		v := binary.LittleEndian.Uint32(optVal)
-		return ep.SetSockOptBool(tcpip.PasscredOption, v != 0)
+		ep.SocketOptions().SetPassCred(v != 0)
+		return nil
 
 	case C.SO_KEEPALIVE:
 		if len(optVal) < sizeOfInt32 {
@@ -635,7 +618,8 @@ func setSockOptSocket(ep tcpip.Endpoint, ns *Netstack, name int16, optVal []byte
 		}
 
 		v := binary.LittleEndian.Uint32(optVal)
-		return ep.SetSockOptBool(tcpip.KeepaliveEnabledOption, v != 0)
+		ep.SocketOptions().SetKeepAlive(v != 0)
+		return nil
 
 	case C.SO_LINGER:
 		var linger C.struct_linger
@@ -667,7 +651,8 @@ func setSockOptSocket(ep tcpip.Endpoint, ns *Netstack, name int16, optVal []byte
 		}
 
 		v := binary.LittleEndian.Uint32(optVal)
-		return ep.SetSockOptBool(tcpip.NoChecksumOption, v != 0)
+		ep.SocketOptions().SetNoChecksum(v != 0)
+		return nil
 
 	default:
 		syslog.Infof("unimplemented setsockopt: SOL_SOCKET name=%d optVal=%x", name, optVal)

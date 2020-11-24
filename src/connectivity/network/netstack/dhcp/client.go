@@ -380,9 +380,7 @@ func configureEP(ep tcpip.Endpoint, nicID tcpip.NICID, reuse bool) error {
 		return fmt.Errorf("send ep SetSockOpt(&%T(%d)): %s", opt, opt, err)
 	}
 	if reuse {
-		if err := ep.SetSockOptBool(tcpip.ReusePortOption, true); err != nil {
-			return fmt.Errorf("SetSockOptBool(ReusePortOption, true): %s", err)
-		}
+		ep.SocketOptions().SetReusePort(true)
 	}
 	return nil
 }
