@@ -68,6 +68,7 @@ if (current_toolchain == default_toolchain) {
       }
     }
     sources = [
+      "alias_tests.cc",
       "array_tests.cc",
       "attributes_tests.cc",
       "bits_tests.cc",

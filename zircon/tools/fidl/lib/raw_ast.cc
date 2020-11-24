@@ -95,6 +95,15 @@ void Using::Accept(TreeVisitor* visitor) const {
   }
 }
 
+void AliasDeclaration::Accept(TreeVisitor* visitor) const {
+  SourceElementMark sem(visitor, *this);
+  if (attributes != nullptr) {
+    visitor->OnAttributeList(attributes);
+  }
+  visitor->OnIdentifier(alias);
+  visitor->OnTypeConstructor(type_ctor);
+}
+
 void BitsMember::Accept(TreeVisitor* visitor) const {
   SourceElementMark sem(visitor, *this);
   if (attributes != nullptr) {

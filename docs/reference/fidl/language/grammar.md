@@ -129,7 +129,7 @@ ordinal-member-field = ( attribute-list ) , ordinal , ":" , ordinal-member-field
 
 ordinal-member-field-body = member-field | "reserved";
 
-type-alias-declaration = ( attribute-list ) , "using" , IDENTIFIER ,  "=" , type-constructor ;
+type-alias-declaration = ( attribute-list ) , "alias" , IDENTIFIER ,  "=" , type-constructor ;
 
 resource-declaration = ( attribute-list ) , "resource_definition" , IDENTIFIER , ":",
                        "uint32" , "{" , resource-properties ,  "}" ;

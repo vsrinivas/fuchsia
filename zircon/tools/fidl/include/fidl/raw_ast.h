@@ -311,6 +311,22 @@ class BitsDeclaration final : public SourceElement {
   const types::Strictness strictness;
 };
 
+class AliasDeclaration final : public SourceElement {
+ public:
+  AliasDeclaration(SourceElement const& element, std::unique_ptr<AttributeList> attributes,
+                   std::unique_ptr<Identifier> alias, std::unique_ptr<TypeConstructor> type_ctor)
+      : SourceElement(element),
+        attributes(std::move(attributes)),
+        alias(std::move(alias)),
+        type_ctor(std::move(type_ctor)) {}
+
+  void Accept(TreeVisitor* visitor) const;
+
+  std::unique_ptr<AttributeList> attributes;
+  std::unique_ptr<Identifier> alias;
+  std::unique_ptr<TypeConstructor> type_ctor;
+};
+
 class Using final : public SourceElement {
  public:
   Using(SourceElement const& element, std::unique_ptr<AttributeList> attributes,
@@ -702,6 +718,7 @@ class File final : public SourceElement {
  public:
   File(SourceElement const& element, Token end, std::unique_ptr<AttributeList> attributes,
        std::unique_ptr<CompoundIdentifier> library_name,
+       std::vector<std::unique_ptr<AliasDeclaration>> alias_list,
        std::vector<std::unique_ptr<Using>> using_list,
        std::vector<std::unique_ptr<BitsDeclaration>> bits_declaration_list,
        std::vector<std::unique_ptr<ConstDeclaration>> const_declaration_list,
@@ -715,6 +732,7 @@ class File final : public SourceElement {
       : SourceElement(element),
         attributes(std::move(attributes)),
         library_name(std::move(library_name)),
+        alias_list(std::move(alias_list)),
         using_list(std::move(using_list)),
         bits_declaration_list(std::move(bits_declaration_list)),
         const_declaration_list(std::move(const_declaration_list)),
@@ -731,6 +749,7 @@ class File final : public SourceElement {
 
   std::unique_ptr<AttributeList> attributes;
   std::unique_ptr<CompoundIdentifier> library_name;
+  std::vector<std::unique_ptr<AliasDeclaration>> alias_list;
   std::vector<std::unique_ptr<Using>> using_list;
   std::vector<std::unique_ptr<BitsDeclaration>> bits_declaration_list;
   std::vector<std::unique_ptr<ConstDeclaration>> const_declaration_list;

@@ -46,6 +46,7 @@ TOKEN(Pipe)
 
 // Keywords
 KEYWORD(As, "as")
+KEYWORD(Alias, "alias")
 KEYWORD(Library, "library")
 KEYWORD(Using, "using")
 

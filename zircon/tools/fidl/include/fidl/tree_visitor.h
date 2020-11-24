@@ -113,6 +113,10 @@ class TreeVisitor {
     element->Accept(this);
   }
 
+  virtual void OnAliasDeclaration(std::unique_ptr<AliasDeclaration> const& element) {
+    element->Accept(this);
+  }
+
   virtual void OnUsing(std::unique_ptr<Using> const& element) { element->Accept(this); }
 
   virtual void OnConstDeclaration(std::unique_ptr<ConstDeclaration> const& element) {

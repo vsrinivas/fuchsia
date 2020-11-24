@@ -598,7 +598,7 @@ class TypeAliasTypeTemplate final : public TypeTemplate {
       assert(!decl_->compiling && "TODO(fxbug.dev/35218): Improve support for recursive types.");
 
       if (!library_->CompileDecl(decl_)) {
-        return false;
+        return Fail(ErrMustBeParameterized, args.span);
       }
     }
 
@@ -1512,6 +1512,19 @@ void Library::ConsumeUsing(std::unique_ptr<raw::Using> using_directive) {
   declarations_.insert(declarations.begin(), declarations.end());
 }
 
+bool Library::ConsumeTypeAlias(std::unique_ptr<raw::AliasDeclaration> alias_declaration) {
+  assert(alias_declaration->alias && alias_declaration->type_ctor);
+
+  auto alias_name = Name::CreateSourced(this, alias_declaration->alias->span());
+  std::unique_ptr<TypeConstructor> type_ctor_;
+  if (!ConsumeTypeConstructor(std::move(alias_declaration->type_ctor), alias_declaration->span(),
+                              &type_ctor_))
+    return false;
+  return RegisterDecl(std::make_unique<TypeAlias>(std::move(alias_declaration->attributes),
+                                                  std::move(alias_name), std::move(type_ctor_),
+                                                  false /* allow_partial_type_ctor */));
+}
+
 bool Library::ConsumeTypeAlias(std::unique_ptr<raw::Using> using_directive) {
   assert(using_directive->maybe_type_ctor);
 
@@ -1521,9 +1534,9 @@ bool Library::ConsumeTypeAlias(std::unique_ptr<raw::Using> using_directive) {
   if (!ConsumeTypeConstructor(std::move(using_directive->maybe_type_ctor), span,
                               &partial_type_ctor_))
     return false;
-  return RegisterDecl(std::make_unique<TypeAlias>(std::move(using_directive->attributes),
-                                                  std::move(alias_name),
-                                                  std::move(partial_type_ctor_)));
+  return RegisterDecl(std::make_unique<TypeAlias>(
+      std::move(using_directive->attributes), std::move(alias_name), std::move(partial_type_ctor_),
+      true /* allow_partial_type_ctor */));
 }
 
 void Library::ConsumeBitsDeclaration(std::unique_ptr<raw::BitsDeclaration> bits_declaration) {
@@ -1929,6 +1942,11 @@ bool Library::ConsumeFile(std::unique_ptr<raw::File> file) {
   }
 
   auto step = StartConsumeStep();
+
+  auto alias_list = std::move(file->alias_list);
+  for (auto& alias_declaration : alias_list) {
+    step.ForAliasDeclaration(std::move(alias_declaration));
+  }
 
   auto using_list = std::move(file->using_list);
   for (auto& using_directive : using_list) {
@@ -3500,8 +3518,13 @@ bool Library::CompileTypeAlias(TypeAlias* decl) {
   // partial type constructor.
   bool partial_type_ctor_compiled = false;
   {
-    auto temporary_mode = reporter_->OverrideMode(Reporter::ReportingMode::kDoNotReport);
+    auto temporary_mode = reporter_->OverrideMode(decl->allow_partial_type_ctor
+                                                      ? Reporter::ReportingMode::kDoNotReport
+                                                      : Reporter::ReportingMode::kReport);
     partial_type_ctor_compiled = CompileTypeConstructor(decl->partial_type_ctor.get());
+    if (!decl->allow_partial_type_ctor && !partial_type_ctor_compiled) {
+      return false;
+    }
   }
   if (decl->partial_type_ctor->maybe_arg_type_ctor && !partial_type_ctor_compiled) {
     if (!CompileTypeConstructor(decl->partial_type_ctor->maybe_arg_type_ctor.get()))

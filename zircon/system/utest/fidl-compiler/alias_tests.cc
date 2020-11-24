@@ -1,7 +1,6 @@
-// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-// TODO(fxbug.dev/7807): Remove when "using" is replaced by "alias".
 
 #include <fidl/names.h>
 #include <zxtest/zxtest.h>
@@ -11,7 +10,7 @@
 
 namespace {
 
-TEST(TypeAliasTests, primitive) {
+TEST(AliasTests, duplicate_alias_and_using) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -19,7 +18,24 @@ struct Message {
     alias_of_int16 f;
 };
 
+alias alias_of_int16 = int16;
 using alias_of_int16 = int16;
+)FIDL");
+  ASSERT_FALSE(library.Compile());
+  const auto& errors = library.errors();
+  ASSERT_EQ(1, errors.size());
+  ASSERT_ERR(errors[0], fidl::ErrNameCollision);
+}
+
+TEST(AliasTests, primitive) {
+  TestLibrary library(R"FIDL(
+library example;
+
+struct Message {
+    alias_of_int16 f;
+};
+
+alias alias_of_int16 = int16;
 )FIDL");
   ASSERT_TRUE(library.Compile());
   auto msg = library.LookupStruct("Message");
@@ -41,11 +57,11 @@ using alias_of_int16 = int16;
   EXPECT_EQ(from_type_alias.nullability, fidl::types::Nullability::kNonnullable);
 }
 
-TEST(TypeAliasTests, primitive_type_alias_before_use) {
+TEST(AliasTests, primitive_type_alias_before_use) {
   TestLibrary library(R"FIDL(
 library example;
 
-using alias_of_int16 = int16;
+alias alias_of_int16 = int16;
 
 struct Message {
     alias_of_int16 f;
@@ -70,11 +86,11 @@ struct Message {
   EXPECT_EQ(from_type_alias.nullability, fidl::types::Nullability::kNonnullable);
 }
 
-TEST(TypeAliasTests, invalid_primitive_type_shadowing) {
+TEST(AliasTests, invalid_primitive_type_shadowing) {
   TestLibrary library(R"FIDL(
 library example;
 
-using uint32 = uint32;
+alias uint32 = uint32;
 
 struct Message {
     uint32 f;
@@ -86,7 +102,7 @@ struct Message {
   ASSERT_ERR(errors[0], fidl::ErrIncludeCycle);
 }
 
-TEST(TypeAliasTests, invalid_no_optional_on_primitive) {
+TEST(AliasTests, invalid_no_optional_on_primitive) {
   TestLibrary library(R"FIDL(
 library test.optionals;
 
@@ -102,11 +118,11 @@ struct Bad {
   ASSERT_SUBSTR(errors[0]->msg.c_str(), "int64");
 }
 
-TEST(TypeAliasTests, invalid_no_optional_on_aliased_primitive) {
+TEST(AliasTests, invalid_no_optional_on_aliased_primitive) {
   TestLibrary library(R"FIDL(
 library test.optionals;
 
-using alias = int64;
+alias alias = int64;
 
 struct Bad {
     alias? opt_num;
@@ -120,7 +136,7 @@ struct Bad {
   ASSERT_SUBSTR(errors[0]->msg.c_str(), "int64");
 }
 
-TEST(TypeAliasTests, vector_parametrized_on_decl) {
+TEST(AliasTests, vector_parametrized_on_decl) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -128,7 +144,7 @@ struct Message {
     alias_of_vector_of_string f;
 };
 
-using alias_of_vector_of_string = vector<string>;
+alias alias_of_vector_of_string = vector<string>;
 )FIDL");
   ASSERT_TRUE(library.Compile());
   auto msg = library.LookupStruct("Message");
@@ -152,7 +168,7 @@ using alias_of_vector_of_string = vector<string>;
   EXPECT_EQ(from_type_alias.nullability, fidl::types::Nullability::kNonnullable);
 }
 
-TEST(TypeAliasTests, vector_parametrized_on_use) {
+TEST(AliasTests, vector_parametrized_on_use) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -160,39 +176,15 @@ struct Message {
     alias_of_vector<uint8> f;
 };
 
-using alias_of_vector = vector;
+alias alias_of_vector = vector;
 )FIDL");
-  ASSERT_TRUE(library.Compile());
-  auto msg = library.LookupStruct("Message");
-  ASSERT_NOT_NULL(msg);
-  ASSERT_EQ(msg->members.size(), 1);
-
-  auto type = msg->members[0].type_ctor->type;
-  ASSERT_EQ(type->kind, fidl::flat::Type::Kind::kVector);
-  ASSERT_EQ(type->nullability, fidl::types::Nullability::kNonnullable);
-
-  auto vector_type = static_cast<const fidl::flat::VectorType*>(type);
-  ASSERT_EQ(vector_type->element_type->kind, fidl::flat::Type::Kind::kPrimitive);
-  ASSERT_EQ(static_cast<uint32_t>(*vector_type->element_count),
-            static_cast<uint32_t>(fidl::flat::Size::Max()));
-
-  auto primitive_element_type =
-      static_cast<const fidl::flat::PrimitiveType*>(vector_type->element_type);
-  ASSERT_EQ(primitive_element_type->subtype, fidl::types::PrimitiveSubtype::kUint8);
-
-  auto from_type_alias = msg->members[0].type_ctor->from_type_alias.value();
-  EXPECT_STR_EQ(fidl::NameFlatName(from_type_alias.decl->name).c_str(), "example/alias_of_vector");
-  EXPECT_NOT_NULL(from_type_alias.maybe_arg_type);
-  auto from_type_alias_arg_type = from_type_alias.maybe_arg_type;
-  ASSERT_EQ(from_type_alias_arg_type->kind, fidl::flat::Type::Kind::kPrimitive);
-  auto from_type_alias_arg_primitive_type =
-      static_cast<const fidl::flat::PrimitiveType*>(from_type_alias_arg_type);
-  ASSERT_EQ(from_type_alias_arg_primitive_type->subtype, fidl::types::PrimitiveSubtype::kUint8);
-  EXPECT_NULL(from_type_alias.maybe_size);
-  EXPECT_EQ(from_type_alias.nullability, fidl::types::Nullability::kNonnullable);
+  ASSERT_FALSE(library.Compile());
+  const auto& errors = library.errors();
+  ASSERT_EQ(errors.size(), 1);
+  ASSERT_ERR(errors[0], fidl::ErrMustBeParameterized);
 }
 
-TEST(TypeAliasTests, vector_bounded_on_decl) {
+TEST(AliasTests, vector_bounded_on_decl) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -200,32 +192,15 @@ struct Message {
     alias_of_vector_max_8<string> f;
 };
 
-using alias_of_vector_max_8 = vector:8;
+alias alias_of_vector_max_8 = vector:8;
 )FIDL");
-  ASSERT_TRUE(library.Compile());
-  auto msg = library.LookupStruct("Message");
-  ASSERT_NOT_NULL(msg);
-  ASSERT_EQ(msg->members.size(), 1);
-
-  auto type = msg->members[0].type_ctor->type;
-  ASSERT_EQ(type->kind, fidl::flat::Type::Kind::kVector);
-  ASSERT_EQ(type->nullability, fidl::types::Nullability::kNonnullable);
-
-  auto vector_type = static_cast<const fidl::flat::VectorType*>(type);
-  ASSERT_EQ(vector_type->element_type->kind, fidl::flat::Type::Kind::kString);
-  ASSERT_EQ(static_cast<uint32_t>(*vector_type->element_count), 8u);
-
-  auto from_type_alias = msg->members[0].type_ctor->from_type_alias.value();
-  EXPECT_STR_EQ(fidl::NameFlatName(from_type_alias.decl->name).c_str(),
-                "example/alias_of_vector_max_8");
-  EXPECT_NOT_NULL(from_type_alias.maybe_arg_type);
-  auto from_type_alias_arg_type = from_type_alias.maybe_arg_type;
-  ASSERT_EQ(from_type_alias_arg_type->kind, fidl::flat::Type::Kind::kString);
-  EXPECT_NULL(from_type_alias.maybe_size);
-  EXPECT_EQ(from_type_alias.nullability, fidl::types::Nullability::kNonnullable);
+  ASSERT_FALSE(library.Compile());
+  const auto& errors = library.errors();
+  ASSERT_EQ(errors.size(), 1);
+  ASSERT_ERR(errors[0], fidl::ErrMustBeParameterized);
 }
 
-TEST(TypeAliasTests, vector_bounded_on_use) {
+TEST(AliasTests, vector_bounded_on_use) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -233,7 +208,7 @@ struct Message {
     alias_of_vector_of_string:8 f;
 };
 
-using alias_of_vector_of_string = vector<string>;
+alias alias_of_vector_of_string = vector<string>;
 )FIDL");
   ASSERT_TRUE(library.Compile());
   auto msg = library.LookupStruct("Message");
@@ -257,7 +232,7 @@ using alias_of_vector_of_string = vector<string>;
   EXPECT_EQ(from_type_alias.nullability, fidl::types::Nullability::kNonnullable);
 }
 
-TEST(TypeAliasTests, vector_nullable_on_decl) {
+TEST(AliasTests, vector_nullable_on_decl) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -265,7 +240,7 @@ struct Message {
     alias_of_vector_of_string_nullable f;
 };
 
-using alias_of_vector_of_string_nullable = vector<string>?;
+alias alias_of_vector_of_string_nullable = vector<string>?;
 )FIDL");
   ASSERT_TRUE(library.Compile());
   auto msg = library.LookupStruct("Message");
@@ -289,7 +264,7 @@ using alias_of_vector_of_string_nullable = vector<string>?;
   EXPECT_EQ(from_type_alias.nullability, fidl::types::Nullability::kNonnullable);
 }
 
-TEST(TypeAliasTests, vector_nullable_on_use) {
+TEST(AliasTests, vector_nullable_on_use) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -297,7 +272,7 @@ struct Message {
     alias_of_vector_of_string? f;
 };
 
-using alias_of_vector_of_string = vector<string>;
+alias alias_of_vector_of_string = vector<string>;
 )FIDL");
   ASSERT_TRUE(library.Compile());
   auto msg = library.LookupStruct("Message");
@@ -321,78 +296,7 @@ using alias_of_vector_of_string = vector<string>;
   EXPECT_EQ(from_type_alias.nullability, fidl::types::Nullability::kNullable);
 }
 
-TEST(TypeAliasTests, handle_parametrized_on_decl) {
-  TestLibrary library(R"FIDL(
-library example;
-
-enum obj_type : uint32 {
-    VMO = 3;
-};
-
-resource_definition handle : uint32 {
-    properties {
-        obj_type subtype;
-    };
-};
-
-resource struct Message {
-    alias_of_handle_of_vmo h;
-};
-
-using alias_of_handle_of_vmo = handle:VMO;
-)FIDL");
-  ASSERT_TRUE(library.Compile());
-  auto msg = library.LookupStruct("Message");
-  ASSERT_NOT_NULL(msg);
-  ASSERT_EQ(msg->members.size(), 1);
-
-  auto type = msg->members[0].type_ctor->type;
-  ASSERT_EQ(type->kind, fidl::flat::Type::Kind::kHandle);
-  ASSERT_EQ(type->nullability, fidl::types::Nullability::kNonnullable);
-
-  auto handle_type = static_cast<const fidl::flat::HandleType*>(type);
-  ASSERT_EQ(handle_type->subtype, fidl::types::HandleSubtype::kVmo);
-
-  auto from_type_alias = msg->members[0].type_ctor->from_type_alias.value();
-  EXPECT_STR_EQ(fidl::NameFlatName(from_type_alias.decl->name).c_str(),
-                "example/alias_of_handle_of_vmo");
-  EXPECT_NULL(from_type_alias.maybe_arg_type);
-  EXPECT_NULL(from_type_alias.maybe_size);
-  EXPECT_FALSE(from_type_alias.maybe_handle_subtype);
-  EXPECT_EQ(from_type_alias.nullability, fidl::types::Nullability::kNonnullable);
-}
-
-// TODO(fxbug.dev/7807): We are removing partial type aliasing as we are working
-// towards implementing FTP-052, and therefore are not putting in special
-// work to support this with the `using` keyword since that will soon be
-// deprecated.
-TEST(TypeAliasTests, invalid_handle_parametrized_on_use_is_not_supported) {
-  TestLibrary library(R"FIDL(
-library example;
-
-enum obj_type : uint32 {
-    VMO = 3;
-};
-
-resource_definition handle : uint32 {
-    properties {
-        obj_type subtype;
-    };
-};
-
-using alias_of_handle = handle;
-
-resource struct MyStruct {
-    alias_of_handle:VMO h;
-};
-)FIDL");
-  ASSERT_FALSE(library.Compile());
-  const auto& errors = library.errors();
-  ASSERT_EQ(errors.size(), 1);
-  ASSERT_ERR(errors[0], fidl::ErrCouldNotParseSizeBound);
-}
-
-TEST(TypeAliasTests, invalid_cannot_parametrize_twice) {
+TEST(AliasTests, invalid_cannot_parametrize_twice) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -400,7 +304,7 @@ struct Message {
     alias_of_vector_of_string<string> f;
 };
 
-using alias_of_vector_of_string = vector<string>;
+alias alias_of_vector_of_string = vector<string>;
 )FIDL");
   ASSERT_FALSE(library.Compile());
   const auto& errors = library.errors();
@@ -408,7 +312,7 @@ using alias_of_vector_of_string = vector<string>;
   ASSERT_ERR(errors[0], fidl::ErrCannotParametrizeTwice);
 }
 
-TEST(TypeAliasTests, invalid_cannot_bound_twice) {
+TEST(AliasTests, invalid_cannot_bound_twice) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -416,7 +320,7 @@ struct Message {
     alias_of_vector_of_string_max_5:9 f;
 };
 
-using alias_of_vector_of_string_max_5 = vector<string>:5;
+alias alias_of_vector_of_string_max_5 = vector<string>:5;
 )FIDL");
   ASSERT_FALSE(library.Compile());
   const auto& errors = library.errors();
@@ -424,7 +328,7 @@ using alias_of_vector_of_string_max_5 = vector<string>:5;
   ASSERT_ERR(errors[0], fidl::ErrCannotBoundTwice);
 }
 
-TEST(TypeAliasTests, invalid_cannot_null_twice) {
+TEST(AliasTests, invalid_cannot_null_twice) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -432,15 +336,16 @@ struct Message {
     alias_of_vector_nullable<string>? f;
 };
 
-using alias_of_vector_nullable = vector?;
+alias alias_of_vector_nullable = vector?;
 )FIDL");
   ASSERT_FALSE(library.Compile());
   const auto& errors = library.errors();
-  ASSERT_EQ(errors.size(), 1);
-  ASSERT_ERR(errors[0], fidl::ErrCannotIndicateNullabilityTwice);
+  ASSERT_EQ(errors.size(), 2);
+  ASSERT_ERR(errors[0], fidl::ErrMustBeParameterized);
+  ASSERT_ERR(errors[1], fidl::ErrCannotIndicateNullabilityTwice);
 }
 
-TEST(TypeAliasTests, multi_file_alias_reference) {
+TEST(AliasTests, multi_file_alias_reference) {
   TestLibrary library("first.fidl", R"FIDL(
 library example;
 
@@ -452,13 +357,13 @@ struct Protein {
   library.AddSource("second.fidl", R"FIDL(
 library example;
 
-using AminoAcids = vector<uint64>:32;
+alias AminoAcids = vector<uint64>:32;
 )FIDL");
 
   ASSERT_TRUE(library.Compile());
 }
 
-TEST(TypeAliasTests, multi_file_nullable_alias_reference) {
+TEST(AliasTests, multi_file_nullable_alias_reference) {
   TestLibrary library("first.fidl", R"FIDL(
 library example;
 
@@ -470,17 +375,17 @@ struct Protein {
   library.AddSource("second.fidl", R"FIDL(
 library example;
 
-using AminoAcids = vector<uint64>:32;
+alias AminoAcids = vector<uint64>:32;
 )FIDL");
 
   ASSERT_TRUE(library.Compile());
 }
 
-TEST(TypeAliasTests, invalid_recursive_alias) {
+TEST(AliasTests, invalid_recursive_alias) {
   TestLibrary library("first.fidl", R"FIDL(
 library example;
 
-using TheAlias = TheStruct;
+alias TheAlias = TheStruct;
 
 struct TheStruct {
     vector<TheAlias> many_mini_me;
@@ -495,17 +400,21 @@ struct TheStruct {
   // more granular and should be asserted here.
 }
 
-TEST(TypeAliasTests, invalid_compound_identifier) {
+TEST(AliasTests, invalid_compound_identifier) {
   TestLibrary library("test.fidl", R"FIDL(
 library example;
 
-using foo.bar.baz = uint8;
+alias foo.bar.baz = uint8;
 )FIDL");
 
   ASSERT_FALSE(library.Compile());
   const auto& errors = library.errors();
   ASSERT_EQ(1, errors.size());
-  ASSERT_ERR(errors[0], fidl::ErrCompoundAliasIdentifier);
 }
 
 }  // namespace
+// TODO(pascallouis): Test various handle parametrization scenarios, and
+// capture maybe_handle_subtype into FromTypeAlias struct.
+// As noted in the TypeAliasTypeTemplate, there is a bug currently where
+// handle parametrization of a type template is not properly passed down,
+// and as a result gets lost.

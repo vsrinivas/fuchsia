@@ -281,6 +281,8 @@ class Parser {
       std::unique_ptr<raw::Attribute> doc_comment, ASTScope& scope);
   std::unique_ptr<raw::AttributeList> MaybeParseAttributeList(bool for_parameter = false);
 
+  std::unique_ptr<raw::AliasDeclaration> ParseAliasDeclaration(
+      std::unique_ptr<raw::AttributeList> attributes, ASTScope&, const Modifiers&);
   std::unique_ptr<raw::Using> ParseUsing(std::unique_ptr<raw::AttributeList> attributes, ASTScope&,
                                          const Modifiers&);
 

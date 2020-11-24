@@ -49,6 +49,7 @@ enum Enum2:uint32{
  /// a type alias doc comment
 
            using TheTypeAlias      = vector     : 9;
+           alias MyTypeAlias    = vector    :9;
 
 union MyUnion {  // super annoying!
    1:   string? s;
@@ -239,12 +240,15 @@ properties {
 
 using OldHandleAlias = zx.handle : VMO ;
 using OldHandleAlias2 = zx.handle    :  THREAD  ;
+alias MyOldHandleAlias = zx.handle : VMO ;
+alias MyOldHandleAlias2 = zx.handle    :  THREAD  ;
 
 struct        Constraints {
     handle :      THING1         h1;           handle: <  THING2  >    h2;  
 };
 
 using HandleAlias = handle  :  <  THING3  >;
+alias MyHandleAlias = handle  :  <  THING3  >;
 
 
 // Comments at EOF

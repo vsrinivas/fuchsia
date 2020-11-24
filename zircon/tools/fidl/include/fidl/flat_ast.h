@@ -515,11 +515,15 @@ struct Resource final : public Decl {
 
 struct TypeAlias final : public Decl {
   TypeAlias(std::unique_ptr<raw::AttributeList> attributes, Name name,
-            std::unique_ptr<TypeConstructor> partial_type_ctor)
+            std::unique_ptr<TypeConstructor> partial_type_ctor, bool allow_partial_type_ctor)
       : Decl(Kind::kTypeAlias, std::move(attributes), std::move(name)),
-        partial_type_ctor(std::move(partial_type_ctor)) {}
+        partial_type_ctor(std::move(partial_type_ctor)),
+        allow_partial_type_ctor(allow_partial_type_ctor) {}
 
   const std::unique_ptr<TypeConstructor> partial_type_ctor;
+  // TODO(fxbug.dev/7807): Remove when "using" ceased to be used for alias decl,
+  // as the new syntax with "alias" keyword disallows partial type.
+  bool allow_partial_type_ctor;
 };
 
 class TypeTemplate {
@@ -805,6 +809,7 @@ class Library {
                               std::unique_ptr<TypeConstructor>* out_type);
 
   void ConsumeUsing(std::unique_ptr<raw::Using> using_directive);
+  bool ConsumeTypeAlias(std::unique_ptr<raw::AliasDeclaration> alias_declaration);
   bool ConsumeTypeAlias(std::unique_ptr<raw::Using> using_directive);
   void ConsumeBitsDeclaration(std::unique_ptr<raw::BitsDeclaration> bits_declaration);
   void ConsumeConstDeclaration(std::unique_ptr<raw::ConstDeclaration> const_declaration);
@@ -963,6 +968,9 @@ class ConsumeStep : public StepBase {
  public:
   ConsumeStep(Library* library) : StepBase(library) {}
 
+  void ForAliasDeclaration(std::unique_ptr<raw::AliasDeclaration> alias_declaration) {
+    library_->ConsumeTypeAlias(std::move(alias_declaration));
+  }
   void ForUsing(std::unique_ptr<raw::Using> using_directive) {
     library_->ConsumeUsing(std::move(using_directive));
   }

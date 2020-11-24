@@ -450,6 +450,30 @@ std::unique_ptr<raw::Constant> Parser::ParseConstant() {
   return constant;
 }
 
+std::unique_ptr<raw::AliasDeclaration> Parser::ParseAliasDeclaration(
+    std::unique_ptr<raw::AttributeList> attributes, ASTScope& scope, const Modifiers& modifiers) {
+  const auto decl_token = ConsumeToken(IdentifierOfSubkind(Token::Subkind::kAlias));
+  if (!Ok())
+    return Fail();
+
+  ValidateModifiers</* none */>(modifiers, decl_token.value());
+
+  auto alias = ParseIdentifier();
+  if (!Ok())
+    return Fail();
+
+  ConsumeToken(OfKind(Token::Kind::kEqual));
+  if (!Ok())
+    return Fail();
+
+  auto type_ctor = ParseTypeConstructor();
+  if (!Ok())
+    return Fail();
+
+  return std::make_unique<raw::AliasDeclaration>(scope.GetSourceElement(), std::move(attributes),
+                                                 std::move(alias), std::move(type_ctor));
+}
+
 std::unique_ptr<raw::Using> Parser::ParseUsing(std::unique_ptr<raw::AttributeList> attributes,
                                                ASTScope& scope, const Modifiers& modifiers) {
   const auto decl_token = ConsumeToken(IdentifierOfSubkind(Token::Subkind::kUsing));
@@ -1397,6 +1421,7 @@ std::unique_ptr<raw::UnionDeclaration> Parser::ParseUnionDeclaration(
 std::unique_ptr<raw::File> Parser::ParseFile() {
   ASTScope scope(this);
   bool done_with_library_imports = false;
+  std::vector<std::unique_ptr<raw::AliasDeclaration>> alias_list;
   std::vector<std::unique_ptr<raw::Using>> using_list;
   std::vector<std::unique_ptr<raw::BitsDeclaration>> bits_declaration_list;
   std::vector<std::unique_ptr<raw::ConstDeclaration>> const_declaration_list;
@@ -1421,11 +1446,11 @@ std::unique_ptr<raw::File> Parser::ParseFile() {
   if (!Ok())
     return Fail();
 
-  auto parse_declaration = [&bits_declaration_list, &const_declaration_list, &enum_declaration_list,
-                            &protocol_declaration_list, &resource_declaration_list,
-                            &service_declaration_list, &struct_declaration_list,
-                            &done_with_library_imports, &using_list, &table_declaration_list,
-                            &union_declaration_list, this]() {
+  auto parse_declaration = [&alias_list, &bits_declaration_list, &const_declaration_list,
+                            &enum_declaration_list, &protocol_declaration_list,
+                            &resource_declaration_list, &service_declaration_list,
+                            &struct_declaration_list, &done_with_library_imports, &using_list,
+                            &table_declaration_list, &union_declaration_list, this]() {
     ASTScope scope(this);
     std::unique_ptr<raw::AttributeList> attributes = MaybeParseAttributeList();
     if (!Ok())
@@ -1440,6 +1465,13 @@ std::unique_ptr<raw::File> Parser::ParseFile() {
 
       case CASE_TOKEN(Token::Kind::kEndOfFile):
         return Done;
+
+      case CASE_IDENTIFIER(Token::Subkind::kAlias): {
+        done_with_library_imports = true;
+        add(&alias_list,
+            [&] { return ParseAliasDeclaration(std::move(attributes), scope, modifiers); });
+        return More;
+      }
 
       case CASE_IDENTIFIER(Token::Subkind::kBits): {
         done_with_library_imports = true;
@@ -1551,11 +1583,11 @@ std::unique_ptr<raw::File> Parser::ParseFile() {
 
   return std::make_unique<raw::File>(
       scope.GetSourceElement(), end.value(), std::move(attributes), std::move(library_name),
-      std::move(using_list), std::move(bits_declaration_list), std::move(const_declaration_list),
-      std::move(enum_declaration_list), std::move(protocol_declaration_list),
-      std::move(resource_declaration_list), std::move(service_declaration_list),
-      std::move(struct_declaration_list), std::move(table_declaration_list),
-      std::move(union_declaration_list));
+      std::move(alias_list), std::move(using_list), std::move(bits_declaration_list),
+      std::move(const_declaration_list), std::move(enum_declaration_list),
+      std::move(protocol_declaration_list), std::move(resource_declaration_list),
+      std::move(service_declaration_list), std::move(struct_declaration_list),
+      std::move(table_declaration_list), std::move(union_declaration_list));
 }
 
 bool Parser::ConsumeTokensUntil(std::set<Token::Kind> exit_tokens) {
