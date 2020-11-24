@@ -36,12 +36,15 @@ group("tools") {
 group("infratools") {
   testonly = true
 
-  # Tools that are only needed in the context of the current host.
+  # Tools that are only needed in the context of the current type of host.
   current_host_tools = [
     "//tools/artifactory",
     "//tools/blobstats",
+    "//tools/build:tools",
+    "//tools/debug:tools",
     "//tools/integration:tools",
     "//tools/size_checker/cmd:host",
+    "//zircon/tools/minfs",
   ]
 
   # Tools that are only needed on Linux x64, regardless of the current host.
@@ -52,15 +55,13 @@ group("infratools") {
   ]
 
   # Tools needed on all possible hosts.
+  # Anything that runs on ARM64 hosts during testing should be here,
+  # since in that case the build happens on an X64 host.
   all_host_tools = [
-    "//tools/artifactory",
     "//tools/bootserver",
     "//tools/botanist",
-    "//tools/build:tools",
-    "//tools/debug:tools",
     "//tools/testing:tools",
     "//zircon/tools/fvm",
-    "//zircon/tools/minfs",
   ]
 
   public_deps = []
