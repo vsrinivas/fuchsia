@@ -101,6 +101,17 @@ impl Isolate {
         let mut cmd = Command::new(ffx_path);
         cmd.args(args);
         cmd.env_clear();
+
+        // Pass along all temp related variables, so as to avoid anything
+        // falling back to writing into /tmp. In our CI environment /tmp is
+        // extremely limited, whereas invocations of tests are provided
+        // dedicated temporary areas.
+        for (var, val) in std::env::vars() {
+            if var.contains("TEMP") || var.contains("TMP") {
+                cmd.env(var, val);
+            }
+        }
+
         cmd.env("HOME", &*self.home_dir);
         cmd.env("XDG_CONFIG_HOME", &*self.xdg_config_home);
         cmd
