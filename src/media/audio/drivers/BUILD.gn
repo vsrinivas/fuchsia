@@ -13,10 +13,8 @@ group("tests") {
     "aml-g12-pdm:tests",
     "aml-g12-tdm:tests",
     "as370-tdm-output:tests",
-    "astro-pdm-input:tests",
     "codecs:tests",
     "intel-hda:tests",
-    "sherlock-pdm-input:tests",
     "test",
   ]
 }

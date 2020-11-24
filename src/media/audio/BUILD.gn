@@ -26,7 +26,6 @@ group("drivers") {
     "drivers/aml-g12-tdm",
     "drivers/as370-pdm-input",
     "drivers/as370-tdm-output",
-    "drivers/astro-pdm-input",
     "drivers/codecs/max98373",
     "drivers/codecs/tas27xx",
     "drivers/codecs/tas5720",
@@ -39,7 +38,6 @@ group("drivers") {
     "drivers/max98927",
     "drivers/mt8167-tdm-input",
     "drivers/mt8167-tdm-output",
-    "drivers/sherlock-pdm-input",
     "drivers/usb-audio",
     "drivers/virtual_audio:virtual_audio_driver",
   ]
