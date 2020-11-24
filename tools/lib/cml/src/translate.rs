@@ -5,6 +5,7 @@
 use {
     crate::error::Error,
     crate::{AnyRef, Capability, RightsClause},
+    cm_types::Name,
     fidl_fuchsia_io2 as fio2, fidl_fuchsia_sys2 as fsys,
     std::collections::HashSet,
     std::convert::Into,
@@ -55,7 +56,10 @@ pub fn translate_capabilities(
             out_capabilities.push(fsys::CapabilityDecl::Storage(fsys::StorageDecl {
                 name: Some(n.clone().into()),
                 backing_dir: Some(backing_dir),
-                source: Some(offer_source_from_ref(capability.from.as_ref().unwrap().into())?),
+                source: Some(offer_source_from_ref(
+                    capability.from.as_ref().unwrap().into(),
+                    None,
+                )?),
                 subdir: capability.subdir.clone().map(Into::into),
                 ..fsys::StorageDecl::empty()
             }));
@@ -63,7 +67,10 @@ pub fn translate_capabilities(
             out_capabilities.push(fsys::CapabilityDecl::Runner(fsys::RunnerDecl {
                 name: Some(n.clone().into()),
                 source_path: Some(capability.path.clone().expect("missing path").into()),
-                source: Some(offer_source_from_ref(capability.from.as_ref().unwrap().into())?),
+                source: Some(offer_source_from_ref(
+                    capability.from.as_ref().unwrap().into(),
+                    None,
+                )?),
                 ..fsys::RunnerDecl::empty()
             }));
         } else if let Some(n) = &capability.resolver {
@@ -117,9 +124,17 @@ where
     }
 }
 
-pub fn offer_source_from_ref(reference: AnyRef<'_>) -> Result<fsys::Ref, Error> {
+pub fn offer_source_from_ref(
+    reference: AnyRef<'_>,
+    all_capability_names: Option<&HashSet<Name>>,
+) -> Result<fsys::Ref, Error> {
     match reference {
         AnyRef::Named(name) => {
+            if all_capability_names.is_some() && all_capability_names.unwrap().contains(&name) {
+                return Ok(fsys::Ref::Capability(fsys::CapabilityRef {
+                    name: name.clone().into(),
+                }));
+            }
             Ok(fsys::Ref::Child(fsys::ChildRef { name: name.clone().into(), collection: None }))
         }
         AnyRef::Framework => Ok(fsys::Ref::Framework(fsys::FrameworkRef {})),

@@ -29,8 +29,8 @@ use {
     fidl_fuchsia_component_runner as fcrunner,
     fidl_fuchsia_io::{
         DirectoryProxy, FileEvent, FileMarker, FileObject, FileProxy, NodeInfo, NodeMarker,
-        MODE_TYPE_DIRECTORY, MODE_TYPE_FILE, MODE_TYPE_SERVICE, OPEN_FLAG_CREATE,
-        OPEN_FLAG_DESCRIBE, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
+        CLONE_FLAG_SAME_RIGHTS, MODE_TYPE_DIRECTORY, MODE_TYPE_FILE, MODE_TYPE_SERVICE,
+        OPEN_FLAG_CREATE, OPEN_FLAG_DESCRIBE, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
     },
     fidl_fuchsia_sys2 as fsys, fuchsia_zircon as zx,
     futures::lock::Mutex,
@@ -58,7 +58,7 @@ pub fn default_directory_capability() -> CapabilityPath {
     "/data/hippo".try_into().unwrap()
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum ExpectedResult {
     Ok,
     Err(zx::Status),
@@ -83,6 +83,16 @@ pub enum CheckUse {
         // The backing directory for this storage is in component manager's namsepace, not the
         // test's isolated test directory.
         from_cm_namespace: bool,
+        storage_subdir: Option<String>,
+        expected_res: ExpectedResult,
+    },
+    StorageAdmin {
+        // The relative moniker from the storage declaration to the use declaration.
+        storage_relation: RelativeMoniker,
+        // The backing directory for this storage is in component manager's namsepace, not the
+        // test's isolated test directory.
+        from_cm_namespace: bool,
+
         storage_subdir: Option<String>,
         expected_res: ExpectedResult,
     },
@@ -399,6 +409,65 @@ impl RoutingTest {
                     }
                 }
             }
+            CheckUse::StorageAdmin {
+                storage_relation,
+                from_cm_namespace,
+                storage_subdir,
+                expected_res,
+            } => {
+                let storage_admin_proxy =
+                    capability_util::connect_to_svc_in_namespace::<fsys::StorageAdminMarker>(
+                        &namespace,
+                        &"/svc/fuchsia.sys2.StorageAdmin".try_into().unwrap(),
+                    )
+                    .await;
+                let (storage_proxy, server_end) = create_proxy().unwrap();
+                let flags = OPEN_RIGHT_WRITABLE | OPEN_FLAG_CREATE;
+                let relative_moniker_string = format!("{}", storage_relation);
+                storage_admin_proxy
+                    .open_component_storage(
+                        relative_moniker_string.as_str(),
+                        flags,
+                        MODE_TYPE_DIRECTORY,
+                        server_end,
+                    )
+                    .expect("failed to open component storage");
+
+                let storage_proxy =
+                    DirectoryProxy::from_channel(storage_proxy.into_channel().unwrap());
+
+                capability_util::write_hippo_file_to_directory(
+                    &storage_proxy,
+                    expected_res.clone(),
+                )
+                .await;
+                if expected_res == ExpectedResult::Ok {
+                    let storage_dir = if from_cm_namespace {
+                        io_util::open_directory_in_namespace("/tmp", io_util::OPEN_RIGHT_READABLE)
+                            .expect("failed to open /tmp")
+                    } else {
+                        io_util::clone_directory(&self.test_dir_proxy, CLONE_FLAG_SAME_RIGHTS)
+                            .expect("failed to clone test_dir_proxy")
+                    };
+                    capability_util::check_file_in_storage(
+                        storage_subdir.clone(),
+                        storage_relation.clone(),
+                        &storage_dir,
+                    )
+                    .await;
+                    storage_admin_proxy
+                        .delete_component_storage(relative_moniker_string.as_str())
+                        .await
+                        .expect("failed to send fidl message")
+                        .expect("error encountered while deleting component storage");
+                    capability_util::confirm_storage_is_deleted_for_component(
+                        storage_subdir,
+                        storage_relation,
+                        &storage_dir,
+                    )
+                    .await;
+                }
+            }
             CheckUse::Event { names, expected_res } => {
                 // Fails if the component did not use the protocol EventSource or if the event is
                 // not allowed.
@@ -442,6 +511,9 @@ impl RoutingTest {
             }
             CheckUse::Storage { .. } => {
                 panic!("storage capabilities can't be exposed");
+            }
+            CheckUse::StorageAdmin { .. } => {
+                panic!("unimplemented");
             }
             CheckUse::Event { .. } => {
                 panic!("event capabilities can't be exposed");
@@ -741,7 +813,7 @@ pub mod capability_util {
         add_dir_to_namespace(namespace, dir_path.as_str(), dir_proxy).await;
     }
 
-    async fn write_hippo_file_to_directory(
+    pub async fn write_hippo_file_to_directory(
         dir_proxy: &DirectoryProxy,
         expected_res: ExpectedResult,
     ) {
@@ -817,6 +889,25 @@ pub mod capability_util {
         assert_eq!("hippos can be stored here".to_string(), res.expect("failed to read file"));
     }
 
+    pub async fn confirm_storage_is_deleted_for_component(
+        storage_subdir: Option<String>,
+        relation: RelativeMoniker,
+        test_dir_proxy: &DirectoryProxy,
+    ) {
+        let dir_path = generate_storage_path(storage_subdir, &relation);
+        let res = io_util::directory::open_directory(
+            &test_dir_proxy,
+            dir_path.to_str().unwrap(),
+            io_util::OPEN_RIGHT_READABLE,
+        )
+        .await
+        .expect_err("open_directory shouldnt have succeeded");
+        assert_eq!(
+            format!("{:?}", res),
+            format!("{:?}", io_util::node::OpenError::OpenError(zx::Status::NOT_FOUND))
+        );
+    }
+
     pub async fn connect_to_svc_in_namespace<T: ServiceMarker>(
         namespace: &ManagedNamespace,
         path: &CapabilityPath,
@@ -825,7 +916,7 @@ pub mod capability_util {
         let node_proxy = io_util::open_node(
             &dir_proxy,
             &Path::new(&path.basename),
-            OPEN_RIGHT_READABLE,
+            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
             MODE_TYPE_SERVICE,
         )
         .expect("failed to open echo service");

@@ -354,9 +354,12 @@ fn get_dependencies_from_offers(decl: &ComponentDecl, dependency_map: &mut Depen
                             DependencyNode::Collection(target.clone()),
                         )],
                     },
-                    OfferServiceSource::Self_ | OfferServiceSource::Parent => {
-                        // Capabilities offered by the parent or routed in from
-                        // the realm are not relevant.
+                    OfferServiceSource::Self_
+                    | OfferServiceSource::Parent
+                    | OfferServiceSource::Capability(_) => {
+                        // Capabilities offered by the parent, routed in from the realm, or
+                        // provided by the framework (based on some other capability) are not
+                        // relevant.
                         continue;
                     }
                 }
@@ -375,9 +378,12 @@ fn get_dependencies_from_offers(decl: &ComponentDecl, dependency_map: &mut Depen
                                 DependencyNode::Collection(target.clone()),
                             )),
                         },
-                        OfferServiceSource::Self_ | OfferServiceSource::Parent => {
-                            // Capabilities offered by the parent or routed in
-                            // from the realm are not relevant.
+                        OfferServiceSource::Self_
+                        | OfferServiceSource::Parent
+                        | OfferServiceSource::Capability(_) => {
+                            // Capabilities offered by the parent, routed in from the realm, or
+                            // provided by the framework (based on some other capability) are not
+                            // relevant.
                             continue;
                         }
                     }

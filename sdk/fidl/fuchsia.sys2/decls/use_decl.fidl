@@ -48,7 +48,7 @@ table UseServiceDecl {
 /// protocol.
 table UseProtocolDecl {
     /// The provider of the protocol relative to the component itself.
-    /// Must be `parent` or `framework`.
+    /// Must be `parent`, `framework`, or `capability`.
     1: Ref source;
 
     /// Name identifying the protocol, by which it was presented to this

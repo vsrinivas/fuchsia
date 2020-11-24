@@ -428,7 +428,7 @@ impl<'a> ValidationContext<'a> {
     fn validate_use_decl(&mut self, use_: &'a fsys::UseDecl) {
         match use_ {
             fsys::UseDecl::Service(u) => {
-                self.validate_source(u.source.as_ref(), "UseServiceDecl", "source");
+                self.validate_use_source(u.source.as_ref(), "UseServiceDecl", "source");
                 check_name(
                     u.source_name.as_ref(),
                     "UseServiceDecl",
@@ -443,7 +443,7 @@ impl<'a> ValidationContext<'a> {
                 );
             }
             fsys::UseDecl::Protocol(u) => {
-                self.validate_source(u.source.as_ref(), "UseProtocolDecl", "source");
+                self.validate_use_source(u.source.as_ref(), "UseProtocolDecl", "source");
                 check_name(
                     u.source_name.as_ref(),
                     "UseProtocolDecl",
@@ -458,7 +458,7 @@ impl<'a> ValidationContext<'a> {
                 );
             }
             fsys::UseDecl::Directory(u) => {
-                self.validate_source(u.source.as_ref(), "UseDirectoryDecl", "source");
+                self.validate_use_source(u.source.as_ref(), "UseDirectoryDecl", "source");
                 check_name(
                     u.source_name.as_ref(),
                     "UseDirectoryDecl",
@@ -617,7 +617,7 @@ impl<'a> ValidationContext<'a> {
     }
 
     fn validate_event(&mut self, event: &'a fsys::UseEventDecl) {
-        self.validate_source(event.source.as_ref(), "UseEventDecl", "source");
+        self.validate_use_source(event.source.as_ref(), "UseEventDecl", "source");
         check_name(event.source_name.as_ref(), "UseEventDecl", "source_name", &mut self.errors);
         check_name(event.target_name.as_ref(), "UseEventDecl", "target_name", &mut self.errors);
         if let Some(target_name) = event.target_name.as_ref() {
@@ -669,10 +669,15 @@ impl<'a> ValidationContext<'a> {
         }
     }
 
-    fn validate_source(&mut self, source: Option<&fsys::Ref>, decl: &str, field: &str) {
+    fn validate_use_source(&mut self, source: Option<&fsys::Ref>, decl: &str, field: &str) {
         match source {
             Some(fsys::Ref::Parent(_)) => {}
             Some(fsys::Ref::Framework(_)) => {}
+            Some(fsys::Ref::Capability(capability)) => {
+                if !self.all_capability_ids.contains(capability.name.as_str()) {
+                    self.errors.push(Error::invalid_capability(decl, field, &capability.name));
+                }
+            }
             Some(_) => {
                 self.errors.push(Error::invalid_field(decl, field));
             }
@@ -984,6 +989,17 @@ impl<'a> ValidationContext<'a> {
         }
     }
 
+    fn validate_source_capability(
+        &mut self,
+        capability: &fsys::CapabilityRef,
+        decl_type: &str,
+        field: &str,
+    ) {
+        if !self.all_capability_ids.contains(capability.name.as_str()) {
+            self.errors.push(Error::invalid_capability(decl_type, field, &capability.name));
+        }
+    }
+
     fn validate_storage_source(&mut self, source_name: &String, decl_type: &str) {
         if check_name(Some(source_name), decl_type, "source.storage.name", &mut self.errors) {
             if !self.all_storage_and_sources.contains_key(source_name.as_str()) {
@@ -1131,6 +1147,9 @@ impl<'a> ValidationContext<'a> {
                 fsys::Ref::Framework(_) => {}
                 fsys::Ref::Child(child) => {
                     self.validate_source_child(child, decl);
+                }
+                fsys::Ref::Capability(c) => {
+                    self.validate_source_capability(c, decl, "source");
                 }
                 _ => {
                     self.errors.push(Error::invalid_field(decl, "source"));
@@ -1359,6 +1378,7 @@ impl<'a> ValidationContext<'a> {
             Some(fsys::Ref::Self_(_)) => {}
             Some(fsys::Ref::Framework(_)) => {}
             Some(fsys::Ref::Child(child)) => self.validate_source_child(child, decl),
+            Some(fsys::Ref::Capability(c)) => self.validate_source_capability(c, decl, "source"),
             Some(_) => self.errors.push(Error::invalid_field(decl, "source")),
             None => self.errors.push(Error::missing_field(decl, "source")),
         }
@@ -2440,6 +2460,26 @@ mod tests {
                 Error::invalid_event_stream("UseEventStreamDecl", "events", "/b".to_string()),
             ])),
         },
+        test_validate_uses_missing_source => {
+            input = {
+                ComponentDecl {
+                    uses: Some(vec![
+                        UseDecl::Protocol(UseProtocolDecl {
+                            source: Some(fsys::Ref::Capability(fsys::CapabilityRef {
+                                name: "this-storage-doesnt-exist".to_string(),
+                            })),
+                            source_name: Some("fuchsia.sys2.StorageAdmin".to_string()),
+                            target_path: Some("/svc/fuchsia.sys2.StorageAdmin".to_string()),
+                            ..UseProtocolDecl::empty()
+                        })
+                    ]),
+                    ..new_component_decl()
+                }
+            },
+            result = Err(ErrorList::new(vec![
+                Error::invalid_capability("UseProtocolDecl", "source", "this-storage-doesnt-exist"),
+            ])),
+        },
         test_validate_has_events_in_event_stream => {
             input = {
                 let mut decl = new_component_decl();
@@ -3013,6 +3053,27 @@ mod tests {
                 Error::invalid_child("ExposeDirectoryDecl", "source", "netstack"),
                 Error::invalid_child("ExposeRunnerDecl", "source", "netstack"),
                 Error::invalid_child("ExposeResolverDecl", "source", "netstack"),
+            ])),
+        },
+        test_validate_exposes_invalid_source_capability => {
+            input = {
+                ComponentDecl {
+                    exposes: Some(vec![
+                        ExposeDecl::Protocol(ExposeProtocolDecl {
+                            source: Some(Ref::Capability(CapabilityRef {
+                                name: "this-storage-doesnt-exist".to_string(),
+                            })),
+                            source_name: Some("fuchsia.sys2.StorageAdmin".to_string()),
+                            target_name: Some("fuchsia.sys2.StorageAdmin".to_string()),
+                            target: Some(Ref::Parent(ParentRef {})),
+                            ..ExposeProtocolDecl::empty()
+                        }),
+                    ]),
+                    ..new_component_decl()
+                }
+            },
+            result = Err(ErrorList::new(vec![
+                Error::invalid_capability("ExposeProtocolDecl", "source", "this-storage-doesnt-exist"),
             ])),
         },
         test_validate_exposes_duplicate_target => {
@@ -3946,6 +4007,34 @@ mod tests {
                 Error::invalid_child("OfferServiceDecl", "source", "logger"),
                 Error::invalid_child("OfferProtocolDecl", "source", "logger"),
                 Error::invalid_child("OfferDirectoryDecl", "source", "logger"),
+            ])),
+        },
+        test_validate_offers_invalid_source_capability => {
+            input = {
+                ComponentDecl {
+                    offers: Some(vec![
+                        OfferDecl::Protocol(OfferProtocolDecl {
+                            source: Some(Ref::Capability(CapabilityRef {
+                                name: "this-storage-doesnt-exist".to_string(),
+                            })),
+                            source_name: Some("fuchsia.sys2.StorageAdmin".to_string()),
+                            target: Some(Ref::Child(
+                               ChildRef {
+                                   name: "netstack".to_string(),
+                                   collection: None,
+                               }
+                            )),
+                            target_name: Some("fuchsia.sys2.StorageAdmin".to_string()),
+                            dependency_type: Some(DependencyType::Strong),
+                            ..OfferProtocolDecl::empty()
+                        }),
+                    ]),
+                    ..new_component_decl()
+                }
+            },
+            result = Err(ErrorList::new(vec![
+                Error::invalid_capability("OfferProtocolDecl", "source", "this-storage-doesnt-exist"),
+                Error::invalid_child("OfferProtocolDecl", "target", "netstack"),
             ])),
         },
         test_validate_offers_target => {

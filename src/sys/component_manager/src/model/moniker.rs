@@ -4,7 +4,8 @@
 
 use {
     core::cmp::{self, Ord, Ordering},
-    std::fmt,
+    log::*,
+    std::{convert::TryFrom, fmt, iter},
     thiserror::Error,
 };
 
@@ -444,6 +445,72 @@ impl RelativeMoniker {
     pub fn is_self(&self) -> bool {
         self.up_path.is_empty() && self.down_path.is_empty()
     }
+
+    pub fn to_string_without_instances(&self) -> String {
+        let mut res = ".".to_string();
+        for (segment, leading_char) in self
+            .up_path
+            .iter()
+            .zip(iter::repeat("\\"))
+            .chain(self.down_path.iter().zip(iter::repeat("/")))
+        {
+            res.push_str(leading_char);
+            res.push_str(segment.name());
+            if let Some(collection) = segment.collection() {
+                res.push_str(":");
+                res.push_str(collection);
+            }
+        }
+        res
+    }
+
+    /// Parses n `RelativeMoniker` from a string.
+    ///
+    /// Input strings should be of the format
+    /// `.(\<name>(:<collection>)?:<instance_id>)*(/<name>(:<collection>)?:<instance_id>)*`, such
+    /// as `.\foo:42/bar:12/baz:54` or `./biz:foo:42`.
+    fn parse(rep: &str) -> Result<Self, MonikerError> {
+        if rep.chars().nth(0) != Some('.') {
+            return Err(MonikerError::invalid_moniker(rep));
+        }
+        let stripped_input = rep.strip_prefix(".").unwrap();
+
+        let mut up_vs_down = stripped_input.splitn(2, '/');
+        let set_one = up_vs_down.next().unwrap();
+        let set_two = up_vs_down.next();
+
+        let up_string = set_one.strip_prefix("\\").unwrap_or(set_one);
+        let down_string = set_two.unwrap_or("");
+
+        if up_string == "" && down_string == "" {
+            return Ok(Self::new(vec![], vec![]));
+        }
+
+        if down_string.contains("\\") {
+            return Err(MonikerError::invalid_moniker(rep));
+        }
+
+        let up_path;
+        if up_string == "" {
+            up_path = vec![];
+        } else {
+            up_path = up_string
+                .split("\\")
+                .map(ChildMoniker::parse)
+                .collect::<Result<Vec<ChildMoniker>, MonikerError>>()?;
+        }
+
+        let down_path;
+        if down_string == "" {
+            down_path = vec![];
+        } else {
+            down_path = down_string
+                .split("/")
+                .map(ChildMoniker::parse)
+                .collect::<Result<Vec<ChildMoniker>, MonikerError>>()?;
+        }
+        Ok(RelativeMoniker { up_path, down_path })
+    }
 }
 
 impl fmt::Display for RelativeMoniker {
@@ -456,6 +523,14 @@ impl fmt::Display for RelativeMoniker {
             write!(f, "/{}", segment)?
         }
         Ok(())
+    }
+}
+
+impl TryFrom<&str> for RelativeMoniker {
+    type Error = MonikerError;
+
+    fn try_from(input: &str) -> Result<Self, MonikerError> {
+        RelativeMoniker::parse(input)
     }
 }
 
@@ -474,7 +549,7 @@ impl MonikerError {
 
 #[cfg(test)]
 mod tests {
-    use {super::*, anyhow::Error};
+    use {super::*, anyhow::Error, std::convert::TryInto};
 
     #[test]
     fn child_monikers() {
@@ -888,5 +963,53 @@ mod tests {
             )
         );
         assert!(ExtendedMoniker::parse_string_without_instances("").is_err(), "cannot be empty");
+    }
+
+    #[test]
+    fn relative_monikers_parse() {
+        for (up_path, down_path, string_to_parse) in vec![
+            (vec![], vec![], "."),
+            (vec!["a:0"], vec![], ".\\a:0"),
+            (vec!["a:0", "b:1"], vec![], ".\\a:0\\b:1"),
+            (vec!["a:0"], vec!["b:1"], ".\\a:0/b:1"),
+            (vec!["a:0", "b:1"], vec!["c:2"], ".\\a:0\\b:1/c:2"),
+            (vec!["a:0", "b:1"], vec!["c:2", "d:3"], ".\\a:0\\b:1/c:2/d:3"),
+            (vec!["a:0"], vec!["b:1", "c:2"], ".\\a:0/b:1/c:2"),
+            (vec![], vec!["a:0", "b:1"], "./a:0/b:1"),
+            (vec![], vec!["a:0"], "./a:0"),
+        ] {
+            let up_path = up_path
+                .into_iter()
+                .map(|s| ChildMoniker::parse(s).unwrap())
+                .collect::<Vec<ChildMoniker>>();
+            let down_path = down_path
+                .into_iter()
+                .map(|s| ChildMoniker::parse(s).unwrap())
+                .collect::<Vec<ChildMoniker>>();
+            assert_eq!(
+                RelativeMoniker::new(up_path, down_path),
+                string_to_parse.try_into().unwrap()
+            );
+        }
+
+        for invalid_string_to_parse in vec![
+            ".\\missing/instance/ids",
+            ".\\only:0/one:1/is:2/missing/an:4/id:5",
+            ".\\up:0/then-down:1\\then-up-again:2",
+            ".\\\\double-leading-slash-up:0",
+            ".//double-leading-slash-down:0",
+            "doesnt:0\\start:1\\with:2/a:3/dot:4",
+            "..//double:0/dot:0/oh:0/my:0",
+            ".\\internal:1/../double:2/dot:3",
+            ".\\internal:1/./single:2/dot:3",
+            "./negative-instance-id:-1",
+        ] {
+            let res: Result<RelativeMoniker, MonikerError> = invalid_string_to_parse.try_into();
+            assert!(
+                res.is_err(),
+                "didn't expect to correctly parse this: {:?}",
+                invalid_string_to_parse
+            );
+        }
     }
 }

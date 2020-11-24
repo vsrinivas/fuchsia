@@ -41,6 +41,8 @@ pub enum CapabilitySource {
     /// This capability originates from the containing realm of the root component, and is
     /// offered from component manager's namespace.
     Namespace { capability: ComponentCapability },
+    /// This capability is provided by the framework based on some other capability.
+    Capability { source_capability: ComponentCapability, realm: WeakRealm },
 }
 
 impl CapabilitySource {
@@ -51,6 +53,7 @@ impl CapabilitySource {
             CapabilitySource::Framework { capability, .. } => capability.can_be_in_namespace(),
             CapabilitySource::Builtin { capability } => capability.can_be_in_namespace(),
             CapabilitySource::Namespace { capability } => capability.can_be_in_namespace(),
+            CapabilitySource::Capability { .. } => true,
         }
     }
 
@@ -60,6 +63,7 @@ impl CapabilitySource {
             CapabilitySource::Framework { capability, .. } => Some(capability.name()),
             CapabilitySource::Builtin { capability } => Some(capability.name()),
             CapabilitySource::Namespace { capability } => capability.name(),
+            CapabilitySource::Capability { .. } => None,
         }
     }
 }
@@ -76,6 +80,8 @@ impl fmt::Display for CapabilitySource {
                 CapabilitySource::Framework { capability, .. } => capability.to_string(),
                 CapabilitySource::Builtin { capability } => capability.to_string(),
                 CapabilitySource::Namespace { capability } => capability.to_string(),
+                CapabilitySource::Capability { source_capability, .. } =>
+                    format!("{}", source_capability),
             }
         )
     }
@@ -416,6 +422,24 @@ impl ComponentCapability {
         }
     }
 
+    pub fn source_capability_name<'a>(&self) -> Option<&CapabilityName> {
+        match self {
+            ComponentCapability::Offer(OfferDecl::Protocol(OfferProtocolDecl {
+                source: OfferServiceSource::Capability(name),
+                ..
+            })) => Some(name),
+            ComponentCapability::Expose(ExposeDecl::Protocol(ExposeProtocolDecl {
+                source: ExposeSource::Capability(name),
+                ..
+            })) => Some(name),
+            ComponentCapability::Use(UseDecl::Protocol(UseProtocolDecl {
+                source: UseSource::Capability(name),
+                ..
+            })) => Some(name),
+            _ => None,
+        }
+    }
+
     /// Returns the source path or name of the capability as a string, useful for debugging.
     pub fn source_id(&self) -> String {
         self.source_name()
@@ -752,6 +776,12 @@ impl ComponentCapability {
     /// if it exists.
     pub fn find_resolver_source<'a>(&self, decl: &'a ComponentDecl) -> Option<&'a ResolverDecl> {
         decl.find_resolver_source(self.source_name()?)
+    }
+
+    /// Given a name of a storage from `self`, return the associated StorageDecl,
+    /// if it exists.
+    pub fn find_storage_source<'a>(&self, decl: &'a ComponentDecl) -> Option<&'a StorageDecl> {
+        decl.find_storage_source(self.source_capability_name()?)
     }
 
     fn is_offer_service_match(

@@ -45,6 +45,7 @@ use {
             moniker::AbsoluteMoniker,
             realm::BindReason,
             resolver::{Resolver, ResolverRegistrationError, ResolverRegistry},
+            storage::admin_protocol::StorageAdmin,
         },
         root_realm_stop_notifier::RootRealmStopNotifier,
         startup::Arguments,
@@ -390,6 +391,7 @@ pub struct BuiltinEnvironment {
 
     pub work_scheduler: Arc<WorkScheduler>,
     pub realm_capability_host: Arc<RealmCapabilityHost>,
+    pub storage_admin_capability_host: Arc<StorageAdmin>,
     pub hub: Arc<Hub>,
     pub builtin_runners: Vec<Arc<BuiltinRunner>>,
     pub event_registry: Arc<EventRegistry>,
@@ -605,6 +607,10 @@ impl BuiltinEnvironment {
             Arc::new(RealmCapabilityHost::new(model.clone(), runtime_config));
         model.root_realm.hooks.install(realm_capability_host.hooks()).await;
 
+        // Set up the storage admin protocol
+        let storage_admin_capability_host = Arc::new(StorageAdmin::new());
+        model.root_realm.hooks.install(storage_admin_capability_host.hooks()).await;
+
         // Set up the builtin runners.
         for runner in &builtin_runners {
             model.root_realm.hooks.install(runner.hooks()).await;
@@ -671,6 +677,7 @@ impl BuiltinEnvironment {
             utc_time_maintainer,
             work_scheduler,
             realm_capability_host,
+            storage_admin_capability_host,
             hub,
             builtin_runners,
             event_registry,

@@ -381,14 +381,9 @@ impl ComponentDecl {
         &'a self,
         storage_name: &CapabilityName,
     ) -> Option<&'a StorageDecl> {
-        self.capabilities.iter().find_map(|c| {
-            match c {
-                CapabilityDecl::Storage(s) if &s.name == storage_name => {
-                    return Some(s);
-                }
-                _ => {}
-            }
-            None
+        self.capabilities.iter().find_map(|c| match c {
+            CapabilityDecl::Storage(s) if &s.name == storage_name => Some(s),
+            _ => None,
         })
     }
 
@@ -1004,6 +999,7 @@ fn to_fidl_dict(dict: HashMap<String, DictionaryValue>) -> fdata::Dictionary {
 pub enum UseSource {
     Parent,
     Framework,
+    Capability(CapabilityName),
 }
 
 impl FidlIntoNative<UseSource> for Option<fsys::Ref> {
@@ -1011,6 +1007,7 @@ impl FidlIntoNative<UseSource> for Option<fsys::Ref> {
         match self.unwrap() {
             fsys::Ref::Parent(_) => UseSource::Parent,
             fsys::Ref::Framework(_) => UseSource::Framework,
+            fsys::Ref::Capability(c) => UseSource::Capability(c.name.into()),
             _ => panic!("invalid UseSource variant"),
         }
     }
@@ -1021,6 +1018,9 @@ impl NativeIntoFidl<Option<fsys::Ref>> for UseSource {
         Some(match self {
             UseSource::Parent => fsys::Ref::Parent(fsys::ParentRef {}),
             UseSource::Framework => fsys::Ref::Framework(fsys::FrameworkRef {}),
+            UseSource::Capability(name) => {
+                fsys::Ref::Capability(fsys::CapabilityRef { name: name.to_string() })
+            }
         })
     }
 }
@@ -1030,6 +1030,7 @@ pub enum ExposeSource {
     Self_,
     Child(String),
     Framework,
+    Capability(CapabilityName),
 }
 
 impl FidlIntoNative<ExposeSource> for Option<fsys::Ref> {
@@ -1038,6 +1039,7 @@ impl FidlIntoNative<ExposeSource> for Option<fsys::Ref> {
             fsys::Ref::Self_(_) => ExposeSource::Self_,
             fsys::Ref::Child(c) => ExposeSource::Child(c.name),
             fsys::Ref::Framework(_) => ExposeSource::Framework,
+            fsys::Ref::Capability(c) => ExposeSource::Capability(c.name.into()),
             _ => panic!("invalid ExposeSource variant"),
         }
     }
@@ -1051,6 +1053,9 @@ impl NativeIntoFidl<Option<fsys::Ref>> for ExposeSource {
                 fsys::Ref::Child(fsys::ChildRef { name: child_name, collection: None })
             }
             ExposeSource::Framework => fsys::Ref::Framework(fsys::FrameworkRef {}),
+            ExposeSource::Capability(name) => {
+                fsys::Ref::Capability(fsys::CapabilityRef { name: name.to_string() })
+            }
         })
     }
 }
@@ -1121,6 +1126,7 @@ pub enum OfferServiceSource {
     Parent,
     Self_,
     Child(String),
+    Capability(CapabilityName),
 }
 
 impl FidlIntoNative<OfferServiceSource> for Option<fsys::Ref> {
@@ -1129,6 +1135,7 @@ impl FidlIntoNative<OfferServiceSource> for Option<fsys::Ref> {
             fsys::Ref::Parent(_) => OfferServiceSource::Parent,
             fsys::Ref::Self_(_) => OfferServiceSource::Self_,
             fsys::Ref::Child(c) => OfferServiceSource::Child(c.name),
+            fsys::Ref::Capability(c) => OfferServiceSource::Capability(c.name.into()),
             _ => panic!("invalid OfferServiceSource variant"),
         }
     }
@@ -1141,6 +1148,9 @@ impl NativeIntoFidl<Option<fsys::Ref>> for OfferServiceSource {
             OfferServiceSource::Self_ => fsys::Ref::Self_(fsys::SelfRef {}),
             OfferServiceSource::Child(child_name) => {
                 fsys::Ref::Child(fsys::ChildRef { name: child_name, collection: None })
+            }
+            OfferServiceSource::Capability(name) => {
+                fsys::Ref::Capability(fsys::CapabilityRef { name: name.to_string() })
             }
         })
     }

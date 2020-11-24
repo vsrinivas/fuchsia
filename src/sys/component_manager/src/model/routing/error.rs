@@ -201,6 +201,13 @@ pub enum RoutingError {
     )]
     CapabilityFromFrameworkNotFound { moniker: AbsoluteMoniker, capability_id: String },
 
+    #[error(
+        "A capability was sourced to a base capability `{}` from `{}`, but this is unsupported",
+        capability_id,
+        moniker
+    )]
+    CapabilityFromCapabilityNotFound { moniker: AbsoluteMoniker, capability_id: String },
+
     // TODO: Could this be distinguished by use/offer/expose?
     #[error(
         "A capability was sourced to component manager with id `{}`, but no matching \
@@ -208,6 +215,14 @@ pub enum RoutingError {
         capability_id
     )]
     CapabilityFromComponentManagerNotFound { capability_id: String },
+
+    #[error(
+        "A capability was sourced to storage capability `{}` with id `{}`, but no matching \
+        capability was found",
+        storage_capability,
+        capability_id
+    )]
+    CapabilityFromStorageCapabilityNotFound { storage_capability: String, capability_id: String },
 
     #[error(
         "An exposed capability `{}` was used at `{}`, but no matching `expose` \
@@ -485,8 +500,28 @@ impl RoutingError {
         }
     }
 
+    pub fn capability_from_capability_not_found(
+        moniker: &AbsoluteMoniker,
+        capability_id: impl Into<String>,
+    ) -> Self {
+        Self::CapabilityFromCapabilityNotFound {
+            moniker: moniker.clone(),
+            capability_id: capability_id.into(),
+        }
+    }
+
     pub fn capability_from_component_manager_not_found(capability_id: impl Into<String>) -> Self {
         Self::CapabilityFromComponentManagerNotFound { capability_id: capability_id.into() }
+    }
+
+    pub fn capability_from_storage_capability_not_found(
+        storage_capability: impl Into<String>,
+        capability_id: impl Into<String>,
+    ) -> Self {
+        Self::CapabilityFromStorageCapabilityNotFound {
+            storage_capability: storage_capability.into(),
+            capability_id: capability_id.into(),
+        }
     }
 
     pub fn expose_from_framework_not_found(

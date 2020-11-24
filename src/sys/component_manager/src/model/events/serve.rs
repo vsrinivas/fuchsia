@@ -233,6 +233,14 @@ fn maybe_create_capability_routed_payload(
                 ..fsys::ComponentCapability::empty()
             })
         }
+        CapabilitySource::Capability { realm, .. } => {
+            let realm = realm.upgrade().ok()?;
+            let source_moniker = RelativeMoniker::from_absolute(scope, &realm.abs_moniker);
+            fsys::CapabilitySource::Framework(fsys::FrameworkCapability {
+                scope_moniker: Some(source_moniker.to_string()),
+                ..fsys::FrameworkCapability::empty()
+            })
+        }
         CapabilitySource::Framework { scope_moniker, .. } => {
             let scope_moniker = RelativeMoniker::from_absolute(scope, &scope_moniker);
             fsys::CapabilitySource::Framework(fsys::FrameworkCapability {

@@ -147,7 +147,8 @@ template("component_manager") {
     "src/model/routing/mod.rs",
     "src/model/routing_fns.rs",
     "src/model/runner.rs",
-    "src/model/storage.rs",
+    "src/model/storage/admin_protocol.rs",
+    "src/model/storage/mod.rs",
     "src/model/testing/echo_service.rs",
     "src/model/testing/mocks.rs",
     "src/model/testing/mod.rs",
@@ -179,6 +180,7 @@ template("component_manager") {
       "src/model/tests/rights.rs",
       "src/model/tests/routing.rs",
       "src/model/tests/storage.rs",
+      "src/model/tests/storage_admin.rs",
       "src/work_scheduler/routing_tests.rs",
     ]
 

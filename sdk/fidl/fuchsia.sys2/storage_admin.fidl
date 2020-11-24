@@ -1,0 +1,19 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.sys2;
+
+using fuchsia.component;
+using fuchsia.io;
+
+[Discoverable]
+protocol StorageAdmin {
+    /// Opens the isolated directory for the given component. The open request will fail if
+    /// the given component's storage has not been provisioned yet.
+    OpenComponentStorage(string:fuchsia.component.MAX_MONIKER_LENGTH relative_moniker, uint32 flags, uint32 mode, request<fuchsia.io.Node> object);
+
+    /// Deletes the contents of the storage for this component. Does not delete the component's
+    /// subdirectory itself from the backing directory.
+    DeleteComponentStorage(string:fuchsia.component.MAX_MONIKER_LENGTH relative_moniker) -> () error fuchsia.component.Error;
+};

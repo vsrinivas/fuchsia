@@ -25,12 +25,12 @@ pub(crate) mod rights;
 pub(crate) mod routing;
 pub(crate) mod routing_fns;
 pub(crate) mod runner;
+pub(crate) mod storage;
 
 mod addable_directory;
 mod dir_tree;
 mod exposed_dir;
 mod namespace;
-mod storage;
 #[cfg(test)]
 mod tests;
 mod walk_state;

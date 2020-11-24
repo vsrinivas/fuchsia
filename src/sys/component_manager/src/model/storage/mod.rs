@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+pub mod admin_protocol;
 use {
     crate::{
         channel,
@@ -91,6 +92,7 @@ impl StorageError {
 
 /// Information returned by the route_storage_capability function on the source of a storage
 /// capability.
+#[derive(Clone)]
 pub struct StorageCapabilitySource {
     /// The component that's providing the backing directory capability for this storage
     /// capability. If None, then the backing directory comes from component_manager's namespace.
@@ -108,10 +110,6 @@ pub struct StorageCapabilitySource {
     /// appended to backing_directory_path first, and component_manager will create this subdir if
     /// it doesn't exist but won't create backing_directory_subdir.
     pub storage_subdir: Option<PathBuf>,
-
-    /// The relative moniker between the component that declares the storage capability and the
-    /// component that uses the storage capability.
-    pub relative_moniker: RelativeMoniker,
 }
 
 /// Open the isolated storage sub-directory for the given component, creating it if necessary.
@@ -119,6 +117,7 @@ pub struct StorageCapabilitySource {
 /// path.
 pub async fn open_isolated_storage(
     storage_source_info: StorageCapabilitySource,
+    relative_moniker: RelativeMoniker,
     open_mode: u32,
     bind_reason: &BindReason,
 ) -> Result<DirectoryProxy, ModelError> {
@@ -149,7 +148,7 @@ pub async fn open_isolated_storage(
             ModelError::from(StorageError::open(
                 None,
                 storage_source_info.backing_directory_path.clone(),
-                storage_source_info.relative_moniker.clone(),
+                relative_moniker.clone(),
                 e,
             ))
         })?;
@@ -159,23 +158,21 @@ pub async fn open_isolated_storage(
             ModelError::from(StorageError::open(
                 storage_source_info.storage_provider.as_ref().map(|r| r.abs_moniker.clone()),
                 storage_source_info.backing_directory_path.clone(),
-                storage_source_info.relative_moniker.clone(),
+                relative_moniker.clone(),
                 e,
             ))
         })?;
     }
-    let storage_proxy = io_util::create_sub_directories(
-        &dir_proxy,
-        &generate_storage_path(&storage_source_info.relative_moniker),
-    )
-    .map_err(|e| {
-        ModelError::from(StorageError::open(
-            storage_source_info.storage_provider.as_ref().map(|r| r.abs_moniker.clone()),
-            storage_source_info.backing_directory_path.clone(),
-            storage_source_info.relative_moniker.clone(),
-            e,
-        ))
-    })?;
+    let storage_proxy =
+        io_util::create_sub_directories(&dir_proxy, &generate_storage_path(&relative_moniker))
+            .map_err(|e| {
+                ModelError::from(StorageError::open(
+                    storage_source_info.storage_provider.as_ref().map(|r| r.abs_moniker.clone()),
+                    storage_source_info.backing_directory_path.clone(),
+                    relative_moniker.clone(),
+                    e,
+                ))
+            })?;
     Ok(storage_proxy)
 }
 
@@ -183,6 +180,7 @@ pub async fn open_isolated_storage(
 /// `dir_source_path` are the realm hosting the directory and its capability path.
 pub async fn delete_isolated_storage(
     storage_source_info: StorageCapabilitySource,
+    relative_moniker: RelativeMoniker,
 ) -> Result<(), ModelError> {
     let (root_dir, local_server_end) =
         endpoints::create_proxy::<DirectoryMarker>().expect("failed to create proxy");
@@ -213,25 +211,20 @@ pub async fn delete_isolated_storage(
             StorageError::open(
                 None,
                 storage_source_info.backing_directory_path.clone(),
-                storage_source_info.relative_moniker.clone(),
+                relative_moniker.clone(),
                 e,
             )
         })?;
     }
-    let storage_path = generate_storage_path(&storage_source_info.relative_moniker);
+    let storage_path = generate_storage_path(&relative_moniker);
     // We want to strip off the "data" portion of the path, and then one more level to get to the
     // directory holding the target component's storage.
     if storage_path.parent().and_then(|p| p.parent()).is_none() {
-        return Err(StorageError::invalid_storage_path(
-            storage_source_info.relative_moniker.clone(),
-        )
-        .into());
+        return Err(StorageError::invalid_storage_path(relative_moniker.clone()).into());
     }
     let mut dir_path = storage_path.parent().unwrap().parent().unwrap().to_path_buf();
     let name = storage_path.parent().unwrap().file_name().ok_or_else(|| {
-        ModelError::from(StorageError::invalid_storage_path(
-            storage_source_info.relative_moniker.clone(),
-        ))
+        ModelError::from(StorageError::invalid_storage_path(relative_moniker.clone()))
     })?;
     let name = name.to_str().ok_or_else(|| ModelError::name_is_not_utf8(name.to_os_string()))?;
     if let Some(subdir) = storage_source_info.storage_subdir.as_ref() {
@@ -244,7 +237,7 @@ pub async fn delete_isolated_storage(
             StorageError::open(
                 storage_source_info.storage_provider.as_ref().map(|r| r.abs_moniker.clone()),
                 storage_source_info.backing_directory_path.clone(),
-                storage_source_info.relative_moniker.clone(),
+                relative_moniker.clone(),
                 e,
             )
         })?
@@ -259,7 +252,7 @@ pub async fn delete_isolated_storage(
         StorageError::remove(
             storage_source_info.storage_provider.as_ref().map(|r| r.abs_moniker.clone()),
             storage_source_info.backing_directory_path.clone(),
-            storage_source_info.relative_moniker.clone(),
+            relative_moniker.clone(),
             e,
         )
     })?;
@@ -370,8 +363,8 @@ mod tests {
                 backing_directory_path: dir_source_path.clone(),
                 backing_directory_subdir: None,
                 storage_subdir: None,
-                relative_moniker: relative_moniker.clone(),
             },
+            relative_moniker.clone(),
             OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
             &BindReason::Eager,
         )
@@ -388,8 +381,8 @@ mod tests {
                 backing_directory_path: dir_source_path.clone(),
                 backing_directory_subdir: None,
                 storage_subdir: None,
-                relative_moniker: relative_moniker.clone(),
             },
+            relative_moniker.clone(),
             OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
             &BindReason::Eager,
         )
@@ -406,8 +399,8 @@ mod tests {
                 backing_directory_path: dir_source_path.clone(),
                 backing_directory_subdir: None,
                 storage_subdir: None,
-                relative_moniker: relative_moniker.clone(),
             },
+            relative_moniker.clone(),
             OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
             &BindReason::Eager,
         )
@@ -439,8 +432,8 @@ mod tests {
                 backing_directory_path: CapabilityPath::try_from("/data").unwrap().clone(),
                 backing_directory_subdir: None,
                 storage_subdir: None,
-                relative_moniker: relative_moniker.clone(),
             },
+            relative_moniker.clone(),
             OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
             &BindReason::Eager,
         )
@@ -494,8 +487,8 @@ mod tests {
                 backing_directory_path: dir_source_path.clone(),
                 backing_directory_subdir: None,
                 storage_subdir: None,
-                relative_moniker: child_moniker.clone(),
             },
+            child_moniker.clone(),
             OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
             &BindReason::Eager,
         )
@@ -512,8 +505,8 @@ mod tests {
                 backing_directory_path: dir_source_path.clone(),
                 backing_directory_subdir: None,
                 storage_subdir: None,
-                relative_moniker: parent_moniker.clone(),
             },
+            parent_moniker.clone(),
             OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
             &BindReason::Eager,
         )
@@ -524,13 +517,15 @@ mod tests {
         assert_eq!(test_helpers::list_directory(&dir).await, vec!["file".to_string()]);
 
         // Delete the child's storage.
-        delete_isolated_storage(StorageCapabilitySource {
-            storage_provider: Some(Arc::clone(&b_realm)),
-            backing_directory_path: dir_source_path.clone(),
-            backing_directory_subdir: None,
-            storage_subdir: None,
-            relative_moniker: child_moniker.clone(),
-        })
+        delete_isolated_storage(
+            StorageCapabilitySource {
+                storage_provider: Some(Arc::clone(&b_realm)),
+                backing_directory_path: dir_source_path.clone(),
+                backing_directory_subdir: None,
+                storage_subdir: None,
+            },
+            child_moniker.clone(),
+        )
         .await
         .expect("failed to delete child's isolated storage");
 
@@ -541,8 +536,8 @@ mod tests {
                 backing_directory_path: dir_source_path.clone(),
                 backing_directory_subdir: None,
                 storage_subdir: None,
-                relative_moniker: parent_moniker.clone(),
             },
+            parent_moniker.clone(),
             OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
             &BindReason::Eager,
         )
@@ -557,13 +552,15 @@ mod tests {
         );
 
         // Error -- tried to delete nonexistent storage.
-        let err = delete_isolated_storage(StorageCapabilitySource {
-            storage_provider: Some(Arc::clone(&b_realm)),
-            backing_directory_path: dir_source_path,
-            backing_directory_subdir: None,
-            storage_subdir: None,
-            relative_moniker: child_moniker,
-        })
+        let err = delete_isolated_storage(
+            StorageCapabilitySource {
+                storage_provider: Some(Arc::clone(&b_realm)),
+                backing_directory_path: dir_source_path,
+                backing_directory_subdir: None,
+                storage_subdir: None,
+            },
+            child_moniker,
+        )
         .await
         .expect_err("delete isolated storage not meant to succeed");
         match err {

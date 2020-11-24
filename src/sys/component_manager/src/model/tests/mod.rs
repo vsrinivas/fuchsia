@@ -5,3 +5,4 @@
 mod rights;
 mod routing;
 mod storage;
+mod storage_admin;

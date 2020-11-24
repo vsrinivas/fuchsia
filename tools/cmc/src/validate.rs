@@ -60,6 +60,7 @@ pub fn parse_cml(buffer: &str, file: &Path) -> Result<cml::Document, Error> {
         all_resolvers: HashSet::new(),
         all_environment_names: HashSet::new(),
         all_event_names: HashSet::new(),
+        all_capability_names: HashSet::new(),
     };
     let mut res = ctx.validate();
     if let Err(Error::Validate { filename, .. }) = &mut res {
@@ -158,6 +159,7 @@ struct ValidationContext<'a> {
     all_resolvers: HashSet<&'a cml::Name>,
     all_environment_names: HashSet<&'a cml::Name>,
     all_event_names: HashSet<cml::Name>,
+    all_capability_names: HashSet<cml::Name>,
 }
 
 impl<'a> ValidationContext<'a> {
@@ -202,6 +204,7 @@ impl<'a> ValidationContext<'a> {
         self.all_resolvers = self.document.all_resolver_names().into_iter().collect();
         self.all_environment_names = self.document.all_environment_names().into_iter().collect();
         self.all_event_names = self.document.all_event_names()?.into_iter().collect();
+        self.all_capability_names = self.document.all_capability_names();
 
         // Validate "children".
         let mut strong_dependencies = DirectedGraph::new();
@@ -354,7 +357,7 @@ impl<'a> ValidationContext<'a> {
             return Err(Error::validate("\"path\" should be present with \"resolver\""));
         }
         if let Some(from) = capability.from.as_ref() {
-            self.validate_component_ref("\"capabilities\" source", cml::AnyRef::from(from))?;
+            self.validate_component_child_ref("\"capabilities\" source", &cml::AnyRef::from(from))?;
         }
 
         // Disallow multiple capability ids of the same name.
@@ -479,6 +482,10 @@ impl<'a> ValidationContext<'a> {
                 Some(rights) => self.validate_directory_rights(&rights)?,
                 None => return Err(Error::validate("Rights required for this use statement.")),
             };
+        }
+
+        if let Some(cml::UseFromRef::Named(name)) = &use_.from {
+            self.validate_component_capability_ref("\"use\" source", &cml::AnyRef::Named(name))?;
         }
 
         Ok(())
@@ -747,18 +754,6 @@ impl<'a> ValidationContext<'a> {
                 }
             }
 
-            // Ensure that storage offered from self is defined in `capabilities`.
-            if let Some(storage) = &offer.storage {
-                if offer.from.iter().any(|r| *r == cml::OfferFromRef::Self_) {
-                    if !self.all_storage_and_sources.contains_key(storage) {
-                        return Err(Error::validate(format!(
-                           "Storage \"{}\" is offered from self, so it must be declared as a \"storage\" in \"capabilities\"",
-                           storage
-                       )));
-                    }
-                }
-            }
-
             // Ensure we are not offering a capability back to its source.
             if let Some(storage) = offer.storage.as_ref() {
                 // Storage can only have a single `from` clause and this has been
@@ -844,21 +839,30 @@ impl<'a> ValidationContext<'a> {
 
         let reference_description = format!("\"{}\" source", verb);
         for from_clause in from {
-            self.validate_component_ref(&reference_description, from_clause)?;
+            // If this is a protocol, it could reference either a child or a storage capability
+            // (for the storage admin protocol).
+            if cap.protocol().is_some() {
+                self.validate_component_child_or_capability_ref(
+                    &reference_description,
+                    from_clause,
+                )?;
+            } else {
+                self.validate_component_child_ref(&reference_description, &from_clause)?;
+            }
         }
         Ok(())
     }
 
     /// Validates that the given component exists.
     ///
-    /// - `reference_description` is a human-readable description of
-    ///   the reference used in error message, such as `"offer" source`.
-    /// - `component_ref` is a reference to a component. If the reference
-    ///   is a named child, we ensure that the child component exists.
-    fn validate_component_ref(
+    /// - `reference_description` is a human-readable description of the reference used in error
+    ///   message, such as `"offer" source`.
+    /// - `component_ref` is a reference to a component. If the reference is a named child, we
+    ///   ensure that the child component exists.
+    fn validate_component_child_ref(
         &self,
         reference_description: &str,
-        component_ref: cml::AnyRef,
+        component_ref: &cml::AnyRef,
     ) -> Result<(), Error> {
         match component_ref {
             cml::AnyRef::Named(name) => {
@@ -874,6 +878,53 @@ impl<'a> ValidationContext<'a> {
             // We don't attempt to validate other reference types.
             _ => Ok(()),
         }
+    }
+
+    /// Validates that the given capability exists.
+    ///
+    /// - `reference_description` is a human-readable description of the reference used in error
+    ///   message, such as `"offer" source`.
+    /// - `capability_ref` is a reference to a capability. If the reference is a named capability,
+    ///   we ensure that the capability exists.
+    fn validate_component_capability_ref(
+        &self,
+        reference_description: &str,
+        capability_ref: &cml::AnyRef,
+    ) -> Result<(), Error> {
+        match capability_ref {
+            cml::AnyRef::Named(name) => {
+                if !self.all_capability_names.contains(name) {
+                    return Err(Error::validate(format!(
+                        "{} \"{}\" does not appear in \"capabilities\"",
+                        reference_description, capability_ref
+                    )));
+                }
+                Ok(())
+            }
+            _ => Ok(()),
+        }
+    }
+
+    /// Validates that the given child component or capability exists.
+    ///
+    /// - `reference_description` is a human-readable description of the reference used in error
+    ///   message, such as `"offer" source`.
+    /// - `ref_` is a reference to a child component or capability. If the reference contains a
+    ///   name, we ensure that a child component or a capability with the name exists.
+    fn validate_component_child_or_capability_ref(
+        &self,
+        reference_description: &str,
+        ref_: cml::AnyRef,
+    ) -> Result<(), Error> {
+        if self.validate_component_child_ref(reference_description, &ref_).is_err()
+            && self.validate_component_capability_ref(reference_description, &ref_).is_err()
+        {
+            return Err(Error::validate(format!(
+                "{} \"{}\" does not appear in \"children\" or \"capabilities\"",
+                reference_description, ref_
+            )));
+        }
+        Ok(())
     }
 
     /// Validates that directory rights for all route types are valid, i.e that it does not
@@ -960,9 +1011,9 @@ impl<'a> ValidationContext<'a> {
                     )));
                 }
 
-                self.validate_component_ref(
+                self.validate_component_child_ref(
                     &format!("\"{}\" runner source", &registration.runner),
-                    cml::AnyRef::from(&registration.from),
+                    &cml::AnyRef::from(&registration.from),
                 )?;
 
                 // Ensure there are no cycles, such as a resolver in an environment being assigned
@@ -989,9 +1040,9 @@ impl<'a> ValidationContext<'a> {
                     )));
                 }
 
-                self.validate_component_ref(
+                self.validate_component_child_ref(
                     &format!("\"{}\" resolver source", &registration.resolver),
-                    cml::AnyRef::from(&registration.from),
+                    &cml::AnyRef::from(&registration.from),
                 )?;
                 // Ensure there are no cycles, such as a resolver in an environment being assigned
                 // to a child which the resolver depends on.
@@ -1151,7 +1202,7 @@ mod tests {
         assert_matches!(
             result,
             Err(Error::Parse { err, location: Some(l), filename: Some(f) })
-                if &err == "invalid value: string \"self\", expected \"parent\", \"framework\", or none" &&
+                if &err == "invalid value: string \"self\", expected \"parent\", \"framework\", \"#<capability-name>\", or none" &&
                 l == Location { line: 5, column: 21 } &&
                 f.ends_with("/test.cml")
         );
@@ -1194,6 +1245,7 @@ mod tests {
                   { "service": "fuchsia.sys2.Realm", "from": "framework" },
                   { "protocol": "CoolFonts", "path": "/svc/MyFonts" },
                   { "protocol": "fuchsia.test.hub.HubReport", "from": "framework" },
+                  { "protocol": "fuchsia.sys2.StorageAdmin", "from": "#data-storage" },
                   { "protocol": ["fuchsia.ui.scenic.Scenic", "fuchsia.logger.LogSink"] },
                   {
                     "directory": "assets",
@@ -1228,6 +1280,13 @@ mod tests {
                     "event_stream": [ "started", "stopped", "launched" ],
                     "path": "/svc/my_stream"
                   },
+                ],
+                "capabilities": [
+                    {
+                        "storage": "data-storage",
+                        "from": "parent",
+                        "backing_dir": "minfs"
+                    }
                 ]
             }),
             Ok(())
@@ -1288,7 +1347,15 @@ mod tests {
                   { "service": "CoolFonts", "from": "self" }
                 ]
             }),
-            Err(Error::Parse { err, .. }) if &err == "invalid value: string \"self\", expected \"parent\", \"framework\", or none"
+            Err(Error::Parse { err, .. }) if &err == "invalid value: string \"self\", expected \"parent\", \"framework\", \"#<capability-name>\", or none"
+        ),
+        test_cml_use_from_missing_capability(
+            json!({
+                "use": [
+                  { "protocol": "fuchsia.sys2.Admin", "from": "#mystorage" }
+                ]
+            }),
+            Err(Error::Validate { err, .. }) if &err == "\"use\" source \"#mystorage\" does not appear in \"capabilities\""
         ),
         test_cml_use_bad_path(
             json!({
@@ -1480,6 +1547,10 @@ mod tests {
                         "from": "self",
                     },
                     {
+                        "protocol": "D",
+                        "from": "#mystorage",
+                    },
+                    {
                         "directory": "blobfs",
                         "from": "self",
                         "rights": ["r*"],
@@ -1497,6 +1568,11 @@ mod tests {
                         "path": "/blobfs",
                         "rights": ["rw*"],
                     },
+                    {
+                        "storage": "mystorage",
+                        "from": "self",
+                        "backing_dir": "blobfs"
+                    }
                 ],
                 "children": [
                     {
@@ -1595,6 +1671,17 @@ mod tests {
                     ]
                 }),
             Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"protocol\" capabilities cannot have multiple \"from\" clauses"
+        ),
+        test_cml_expose_from_missing_named_source(
+            json!({
+                    "expose": [
+                        {
+                            "protocol": "fuchsia.logger.Log",
+                            "from": "#does-not-exist",
+                        },
+                    ],
+                }),
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"expose\" source \"#does-not-exist\" does not appear in \"children\" or \"capabilities\""
         ),
         test_cml_expose_bad_from(
             json!({
@@ -1876,6 +1963,11 @@ mod tests {
                         "dependency": "weak_for_migration"
                     },
                     {
+                        "protocol": "fuchsia.sys2.StorageAdmin",
+                        "from": "#data",
+                        "to": [ "#echo_server" ]
+                    },
+                    {
                         "protocol": [
                             "fuchsia.settings.Accessibility",
                             "fuchsia.ui.scenic.Scenic"
@@ -2089,6 +2181,24 @@ mod tests {
                     ]
                 }),
             Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"protocol\" capabilities cannot have multiple \"from\" clauses"
+        ),
+        test_cml_offer_from_missing_named_source(
+            json!({
+                    "offer": [
+                        {
+                            "protocol": "fuchsia.logger.Log",
+                            "from": "#does-not-exist",
+                            "to": ["#echo_server" ],
+                        },
+                    ],
+                    "children": [
+                        {
+                            "name": "echo_server",
+                            "url": "fuchsia-pkg://fuchsia.com/echo/stable#meta/echo_server.cm",
+                        },
+                    ]
+                }),
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"offer\" source \"#does-not-exist\" does not appear in \"children\" or \"capabilities\""
         ),
         test_cml_offer_empty_targets(
             json!({

@@ -16,7 +16,10 @@ use {
     lazy_static::lazy_static,
     serde::{de, Deserialize},
     serde_json::{Map, Value},
-    std::{collections::HashMap, fmt, path},
+    std::{
+        collections::{HashMap, HashSet},
+        fmt, path,
+    },
 };
 
 pub use cm_types::{
@@ -400,12 +403,20 @@ impl fmt::Display for AnyRef<'_> {
 
 /// A reference in a `use from`.
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Reference)]
-#[reference(expected = "\"parent\", \"framework\", or none")]
+#[reference(expected = "\"parent\", \"framework\", \"#<capability-name>\", or none")]
 pub enum UseFromRef {
     /// A reference to the parent.
     Parent,
     /// A reference to the framework.
     Framework,
+    /// A reference to a capability declared on self.
+    ///
+    /// This is only valid on use declarations for a protocol that references a storage capability
+    /// declared in the same component, which will cause the framework to host a
+    /// fuchsia.sys2.StorageAdmin protocol for the component.
+    ///
+    /// This cannot be used to directly access capabilities that a component itself declares.
+    Named(Name),
 }
 
 /// A reference in an `expose from`.
@@ -724,6 +735,18 @@ impl Document {
             .map(|c| c.iter().map(|s| &s.name).collect())
             .unwrap_or_else(|| vec![])
     }
+
+    pub fn all_capability_names(&self) -> HashSet<Name> {
+        self.capabilities
+            .as_ref()
+            .map(|c| {
+                c.iter().fold(HashSet::new(), |mut acc, capability| {
+                    acc.extend(capability.names());
+                    acc
+                })
+            })
+            .unwrap_or_default()
+    }
 }
 
 #[derive(Deserialize, Debug)]
@@ -885,6 +908,29 @@ pub trait CapabilityClause {
 
     fn decl_type(&self) -> &'static str;
     fn supported(&self) -> &[&'static str];
+
+    /// Returns the names of the capabilities in this clause.
+    /// If `protocol()` returns `Some(OneOrMany::Many(vec!["a", "b"]))`, this returns!["a", "b"].
+    fn names(&self) -> Vec<Name> {
+        let res = vec![
+            self.service().clone(),
+            self.directory(),
+            self.storage().clone(),
+            self.runner().clone(),
+            self.resolver().clone(),
+        ];
+        let mut res: Vec<Name> = res.into_iter().flatten().collect();
+        if let Some(protocol_names) = self.protocol() {
+            res.extend(protocol_names);
+        }
+        if let Some(event_names) = self.event().as_ref() {
+            res.extend(event_names.clone());
+        }
+        if let Some(event_stream_names) = self.event_stream().as_ref() {
+            res.extend(event_stream_names.clone());
+        }
+        res
+    }
 }
 
 pub trait AsClause {

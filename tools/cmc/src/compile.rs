@@ -48,17 +48,22 @@ pub fn compile(file: &PathBuf, output: &PathBuf) -> Result<(), Error> {
 }
 
 fn compile_cml(document: cml::Document) -> Result<fsys::ComponentDecl, Error> {
+    let all_capability_names = document.all_capability_names();
     Ok(fsys::ComponentDecl {
         program: document.program.as_ref().map(translate_program).transpose()?,
         uses: document.r#use.as_ref().map(translate_use).transpose()?,
-        exposes: document.expose.as_ref().map(translate_expose).transpose()?,
+        exposes: document
+            .expose
+            .as_ref()
+            .map(|e| translate_expose(e, &all_capability_names))
+            .transpose()?,
         offers: document
             .offer
             .as_ref()
             .map(|offer| {
                 let all_children = document.all_children_names().into_iter().collect();
                 let all_collections = document.all_collection_names().into_iter().collect();
-                translate_offer(offer, &all_children, &all_collections)
+                translate_offer(offer, &all_children, &all_collections, &all_capability_names)
             })
             .transpose()?,
         capabilities: document
@@ -270,7 +275,10 @@ fn translate_use(use_in: &Vec<cml::Use>) -> Result<Vec<fsys::UseDecl>, Error> {
 
 /// `expose` rules route a single capability from one or more sources (self|framework|#<child>) to
 /// one or more targets (parent|framework).
-fn translate_expose(expose_in: &Vec<cml::Expose>) -> Result<Vec<fsys::ExposeDecl>, Error> {
+fn translate_expose(
+    expose_in: &Vec<cml::Expose>,
+    all_capability_names: &HashSet<cml::Name>,
+) -> Result<Vec<fsys::ExposeDecl>, Error> {
     let mut out_exposes = vec![];
     for expose in expose_in.iter() {
         let target = extract_expose_target(expose)?;
@@ -287,7 +295,7 @@ fn translate_expose(expose_in: &Vec<cml::Expose>) -> Result<Vec<fsys::ExposeDecl
                 }))
             }
         } else if let Some(n) = expose.protocol() {
-            let source = extract_single_expose_source(expose)?;
+            let source = extract_single_expose_source(expose, Some(all_capability_names))?;
             let source_names: Vec<_> = n.to_vec();
             let target_names = all_target_capability_names(expose, expose)
                 .ok_or_else(|| Error::internal("no capability"))?;
@@ -302,7 +310,7 @@ fn translate_expose(expose_in: &Vec<cml::Expose>) -> Result<Vec<fsys::ExposeDecl
                 }))
             }
         } else if let Some(n) = expose.directory() {
-            let source = extract_single_expose_source(expose)?;
+            let source = extract_single_expose_source(expose, None)?;
             let target_name = one_target_capability_name(expose, expose)?;
             let rights = extract_expose_rights(expose)?;
             let subdir = extract_expose_subdir(expose);
@@ -316,7 +324,7 @@ fn translate_expose(expose_in: &Vec<cml::Expose>) -> Result<Vec<fsys::ExposeDecl
                 ..fsys::ExposeDirectoryDecl::empty()
             }))
         } else if let Some(n) = expose.runner() {
-            let source = extract_single_expose_source(expose)?;
+            let source = extract_single_expose_source(expose, None)?;
             let target_name = one_target_capability_name(expose, expose)?;
             out_exposes.push(fsys::ExposeDecl::Runner(fsys::ExposeRunnerDecl {
                 source: Some(clone_fsys_ref(&source)?),
@@ -326,7 +334,7 @@ fn translate_expose(expose_in: &Vec<cml::Expose>) -> Result<Vec<fsys::ExposeDecl
                 ..fsys::ExposeRunnerDecl::empty()
             }))
         } else if let Some(n) = expose.resolver() {
-            let source = extract_single_expose_source(expose)?;
+            let source = extract_single_expose_source(expose, None)?;
             let target_name = one_target_capability_name(expose, expose)?;
             out_exposes.push(fsys::ExposeDecl::Resolver(fsys::ExposeResolverDecl {
                 source: Some(clone_fsys_ref(&source)?),
@@ -347,6 +355,7 @@ fn translate_offer(
     offer_in: &Vec<cml::Offer>,
     all_children: &HashSet<&cml::Name>,
     all_collections: &HashSet<&cml::Name>,
+    all_capability_names: &HashSet<cml::Name>,
 ) -> Result<Vec<fsys::OfferDecl>, Error> {
     let mut out_offers = vec![];
     for offer in offer_in.iter() {
@@ -365,7 +374,7 @@ fn translate_offer(
                 }
             }
         } else if let Some(n) = offer.protocol() {
-            let source = extract_single_offer_source(offer)?;
+            let source = extract_single_offer_source(offer, Some(all_capability_names))?;
             let targets = extract_all_targets_for_each_child(offer, all_children, all_collections)?;
             let source_names = n.to_vec();
             for (target, target_name) in targets {
@@ -394,7 +403,7 @@ fn translate_offer(
                 }));
             }
         } else if let Some(n) = offer.directory() {
-            let source = extract_single_offer_source(offer)?;
+            let source = extract_single_offer_source(offer, None)?;
             let targets = extract_all_targets_for_each_child(offer, all_children, all_collections)?;
             for (target, target_name) in targets {
                 out_offers.push(fsys::OfferDecl::Directory(fsys::OfferDirectoryDecl {
@@ -423,7 +432,7 @@ fn translate_offer(
                 }));
             }
         } else if let Some(n) = offer.runner() {
-            let source = extract_single_offer_source(offer)?;
+            let source = extract_single_offer_source(offer, None)?;
             let targets = extract_all_targets_for_each_child(offer, all_children, all_collections)?;
             for (target, target_name) in targets {
                 out_offers.push(fsys::OfferDecl::Runner(fsys::OfferRunnerDecl {
@@ -435,7 +444,7 @@ fn translate_offer(
                 }));
             }
         } else if let Some(n) = offer.resolver() {
-            let source = extract_single_offer_source(offer)?;
+            let source = extract_single_offer_source(offer, None)?;
             let targets = extract_all_targets_for_each_child(offer, all_children, all_collections)?;
             for (target, target_name) in targets {
                 out_offers.push(fsys::OfferDecl::Resolver(fsys::OfferResolverDecl {
@@ -447,7 +456,7 @@ fn translate_offer(
                 }));
             }
         } else if let Some(p) = offer.event() {
-            let source = extract_single_offer_source(offer)?;
+            let source = extract_single_offer_source(offer, None)?;
             let targets = extract_all_targets_for_each_child(offer, all_children, all_collections)?;
             let source_names = p.to_vec();
             for (target, target_name) in targets {
@@ -555,7 +564,7 @@ fn translate_runner_registration(
 ) -> Result<fsys::RunnerRegistration, Error> {
     Ok(fsys::RunnerRegistration {
         source_name: Some(reg.runner.clone().into()),
-        source: Some(extract_single_offer_source(reg)?),
+        source: Some(extract_single_offer_source(reg, None)?),
         target_name: Some(reg.r#as.as_ref().unwrap_or(&reg.runner).clone().into()),
         ..fsys::RunnerRegistration::empty()
     })
@@ -566,7 +575,7 @@ fn translate_resolver_registration(
 ) -> Result<fsys::ResolverRegistration, Error> {
     Ok(fsys::ResolverRegistration {
         resolver: Some(reg.resolver.clone().into()),
-        source: Some(extract_single_offer_source(reg)?),
+        source: Some(extract_single_offer_source(reg, None)?),
         scheme: Some(
             reg.scheme
                 .as_str()
@@ -582,6 +591,9 @@ fn extract_use_source(in_obj: &cml::Use) -> Result<fsys::Ref, Error> {
     match in_obj.from.as_ref() {
         Some(cml::UseFromRef::Parent) => Ok(fsys::Ref::Parent(fsys::ParentRef {})),
         Some(cml::UseFromRef::Framework) => Ok(fsys::Ref::Framework(fsys::FrameworkRef {})),
+        Some(cml::UseFromRef::Named(name)) => {
+            Ok(fsys::Ref::Capability(fsys::CapabilityRef { name: name.clone().into() }))
+        }
         None => Ok(fsys::Ref::Parent(fsys::ParentRef {})), // Default value.
     }
 }
@@ -594,6 +606,7 @@ fn clone_fsys_ref(fsys_ref: &fsys::Ref) -> Result<fsys::Ref, Error> {
         fsys::Ref::Child(child_ref) => Ok(fsys::Ref::Child(child_ref.clone())),
         fsys::Ref::Collection(collection_ref) => Ok(fsys::Ref::Collection(collection_ref.clone())),
         fsys::Ref::Framework(framework_ref) => Ok(fsys::Ref::Framework(framework_ref.clone())),
+        fsys::Ref::Capability(capability_ref) => Ok(fsys::Ref::Capability(capability_ref.clone())),
         _ => Err(Error::internal("Unknown fsys::Ref found.")),
     }
 }
@@ -602,6 +615,9 @@ fn extract_use_event_source(in_obj: &cml::Use) -> Result<fsys::Ref, Error> {
     match in_obj.from.as_ref() {
         Some(cml::UseFromRef::Parent) => Ok(fsys::Ref::Parent(fsys::ParentRef {})),
         Some(cml::UseFromRef::Framework) => Ok(fsys::Ref::Framework(fsys::FrameworkRef {})),
+        Some(cml::UseFromRef::Named(name)) => {
+            Ok(fsys::Ref::Capability(fsys::CapabilityRef { name: name.clone().into() }))
+        }
         None => Err(Error::internal(format!("No source \"from\" provided for \"use\""))),
     }
 }
@@ -649,9 +665,17 @@ fn extract_expose_rights(in_obj: &cml::Expose) -> Result<Option<fio2::Operations
     }
 }
 
-fn expose_source_from_ref(reference: &cml::ExposeFromRef) -> Result<fsys::Ref, Error> {
+fn expose_source_from_ref(
+    reference: &cml::ExposeFromRef,
+    all_capability_names: Option<&HashSet<cml::Name>>,
+) -> Result<fsys::Ref, Error> {
     match reference {
         cml::ExposeFromRef::Named(name) => {
+            if all_capability_names.is_some() && all_capability_names.unwrap().contains(&name) {
+                return Ok(fsys::Ref::Capability(fsys::CapabilityRef {
+                    name: name.clone().into(),
+                }));
+            }
             Ok(fsys::Ref::Child(fsys::ChildRef { name: name.clone().into(), collection: None }))
         }
         cml::ExposeFromRef::Framework => Ok(fsys::Ref::Framework(fsys::FrameworkRef {})),
@@ -659,9 +683,12 @@ fn expose_source_from_ref(reference: &cml::ExposeFromRef) -> Result<fsys::Ref, E
     }
 }
 
-fn extract_single_expose_source(in_obj: &cml::Expose) -> Result<fsys::Ref, Error> {
+fn extract_single_expose_source(
+    in_obj: &cml::Expose,
+    all_capability_names: Option<&HashSet<cml::Name>>,
+) -> Result<fsys::Ref, Error> {
     match &in_obj.from {
-        OneOrMany::One(reference) => expose_source_from_ref(&reference),
+        OneOrMany::One(reference) => expose_source_from_ref(&reference, all_capability_names),
         OneOrMany::Many(many) => {
             return Err(Error::internal(format!(
                 "multiple unexpected \"from\" clauses for \"expose\": {:?}",
@@ -672,7 +699,7 @@ fn extract_single_expose_source(in_obj: &cml::Expose) -> Result<fsys::Ref, Error
 }
 
 fn extract_all_expose_sources(in_obj: &cml::Expose) -> Result<Vec<fsys::Ref>, Error> {
-    in_obj.from.to_vec().into_iter().map(expose_source_from_ref).collect()
+    in_obj.from.to_vec().into_iter().map(|e| expose_source_from_ref(e, None)).collect()
 }
 
 fn extract_offer_rights(in_obj: &cml::Offer) -> Result<Option<fio2::Operations>, Error> {
@@ -704,12 +731,17 @@ fn extract_offer_rights(in_obj: &cml::Offer) -> Result<Option<fio2::Operations>,
     }
 }
 
-fn extract_single_offer_source<T>(in_obj: &T) -> Result<fsys::Ref, Error>
+fn extract_single_offer_source<T>(
+    in_obj: &T,
+    all_capability_names: Option<&HashSet<cml::Name>>,
+) -> Result<fsys::Ref, Error>
 where
     T: cml::FromClause,
 {
     match in_obj.from_() {
-        OneOrMany::One(reference) => translate::offer_source_from_ref(reference),
+        OneOrMany::One(reference) => {
+            translate::offer_source_from_ref(reference, all_capability_names)
+        }
         many => {
             return Err(Error::internal(format!(
                 "multiple unexpected \"from\" clauses for \"offer\": {}",
@@ -720,7 +752,12 @@ where
 }
 
 fn extract_all_offer_sources(in_obj: &cml::Offer) -> Result<Vec<fsys::Ref>, Error> {
-    in_obj.from.to_vec().into_iter().map(|r| translate::offer_source_from_ref(r.into())).collect()
+    in_obj
+        .from
+        .to_vec()
+        .into_iter()
+        .map(|r| translate::offer_source_from_ref(r.into(), None))
+        .collect()
 }
 
 fn extract_single_offer_storage_source(in_obj: &cml::Offer) -> Result<fsys::Ref, Error> {
@@ -1030,6 +1067,7 @@ mod tests {
                     { "service": "fuchsia.sys2.Realm", "from": "framework" },
                     { "protocol": "LegacyCoolFonts", "path": "/svc/fuchsia.fonts.LegacyProvider" },
                     { "protocol": "fuchsia.sys2.LegacyRealm", "from": "framework" },
+                    { "protocol": "fuchsia.sys2.StorageAdmin", "from": "#data-storage" },
                     { "directory": "assets", "rights" : ["read_bytes"], "path": "/data/assets" },
                     {
                         "directory": "config",
@@ -1051,6 +1089,13 @@ mod tests {
                         "filter": { "name": "diagnostics" }
                     },
                 ],
+                "capabilities": [
+                    {
+                        "storage": "data-storage",
+                        "from": "parent",
+                        "backing_dir": "minfs"
+                    }
+                ]
             }),
             output = fsys::ComponentDecl {
                 uses: Some(vec![
@@ -1083,6 +1128,14 @@ mod tests {
                             source: Some(fsys::Ref::Framework(fsys::FrameworkRef {})),
                             source_name: Some("fuchsia.sys2.LegacyRealm".to_string()),
                             target_path: Some("/svc/fuchsia.sys2.LegacyRealm".to_string()),
+                            ..fsys::UseProtocolDecl::empty()
+                        }
+                    ),
+                    fsys::UseDecl::Protocol (
+                        fsys::UseProtocolDecl {
+                            source: Some(fsys::Ref::Capability(fsys::CapabilityRef { name: "data-storage".to_string() })),
+                            source_name: Some("fuchsia.sys2.StorageAdmin".to_string()),
+                            target_path: Some("/svc/fuchsia.sys2.StorageAdmin".to_string()),
                             ..fsys::UseProtocolDecl::empty()
                         }
                     ),
@@ -1177,6 +1230,15 @@ mod tests {
                         }
                     ),
                 ]),
+                capabilities: Some(vec![
+                    fsys::CapabilityDecl::Storage(fsys::StorageDecl {
+                        name: Some("data-storage".to_string()),
+                        source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
+                        backing_dir: Some("minfs".to_string()),
+                        subdir: None,
+                        ..fsys::StorageDecl::empty()
+                    }),
+                ]),
                 ..default_component_decl()
             },
         },
@@ -1205,6 +1267,10 @@ mod tests {
                         "to": "parent"
                     },
                     {
+                        "protocol": "C",
+                        "from": "#data-storage",
+                    },
+                    {
                         "directory": "blob",
                         "from": "self",
                         "to": "framework",
@@ -1228,6 +1294,11 @@ mod tests {
                         "runner": "web",
                         "path": "/svc/fuchsia.component.ComponentRunner",
                         "from": "self",
+                    },
+                    {
+                        "storage": "data-storage",
+                        "from": "parent",
+                        "backing_dir": "minfs"
                     },
                 ],
                 "children": [
@@ -1299,6 +1370,17 @@ mod tests {
                             source_name: Some("B".to_string()),
                             target: Some(fsys::Ref::Parent(fsys::ParentRef {})),
                             target_name: Some("B".to_string()),
+                            ..fsys::ExposeProtocolDecl::empty()
+                        }
+                    ),
+                    fsys::ExposeDecl::Protocol (
+                        fsys::ExposeProtocolDecl {
+                            source: Some(fsys::Ref::Capability(fsys::CapabilityRef {
+                                name: "data-storage".to_string(),
+                            })),
+                            source_name: Some("C".to_string()),
+                            target: Some(fsys::Ref::Parent(fsys::ParentRef {})),
+                            target_name: Some("C".to_string()),
                             ..fsys::ExposeProtocolDecl::empty()
                         }
                     ),
@@ -1404,6 +1486,13 @@ mod tests {
                             ..fsys::RunnerDecl::empty()
                         }
                     ),
+                    fsys::CapabilityDecl::Storage(fsys::StorageDecl {
+                        name: Some("data-storage".to_string()),
+                        source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
+                        backing_dir: Some("minfs".to_string()),
+                        subdir: None,
+                        ..fsys::StorageDecl::empty()
+                    }),
                 ]),
                 children: Some(vec![
                     fsys::ChildDecl {
@@ -1457,6 +1546,11 @@ mod tests {
                         ],
                         "from": "parent",
                         "to": [ "#modular" ]
+                    },
+                    {
+                        "protocol": "fuchsia.sys2.StorageAdmin",
+                        "from": "#data",
+                        "to": [ "#modular" ],
                     },
                     {
                         "directory": "assets",
@@ -1661,6 +1755,20 @@ mod tests {
                                 name: "modular".to_string(),
                             })),
                             target_name: Some("fuchsia.test.service.Name".to_string()),
+                            dependency_type: Some(fsys::DependencyType::Strong),
+                            ..fsys::OfferProtocolDecl::empty()
+                        }
+                    ),
+                    fsys::OfferDecl::Protocol (
+                        fsys::OfferProtocolDecl {
+                            source: Some(fsys::Ref::Capability(fsys::CapabilityRef {
+                                name: "data".to_string(),
+                            })),
+                            source_name: Some("fuchsia.sys2.StorageAdmin".to_string()),
+                            target: Some(fsys::Ref::Collection(fsys::CollectionRef {
+                                name: "modular".to_string(),
+                            })),
+                            target_name: Some("fuchsia.sys2.StorageAdmin".to_string()),
                             dependency_type: Some(fsys::DependencyType::Strong),
                             ..fsys::OfferProtocolDecl::empty()
                         }

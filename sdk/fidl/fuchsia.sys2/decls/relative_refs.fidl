@@ -14,6 +14,7 @@ flexible union Ref {
     3: ChildRef child;
     4: CollectionRef collection;
     5: FrameworkRef framework;
+    6: CapabilityRef capability;
 };
 
 /// A reference to a component’s parent instance.
@@ -43,4 +44,9 @@ struct CollectionRef {
 
 /// A reference to the component framework itself.
 struct FrameworkRef {
+};
+
+/// A reference to a capability declared in this component.
+struct CapabilityRef {
+    string:fuchsia.component.MAX_NAME_LENGTH name;
 };
