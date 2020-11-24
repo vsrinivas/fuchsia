@@ -59,7 +59,7 @@ const (
 )
 
 type FlexibleFoo struct {
-	I_flexibleFooTag `fidl:"x" fidl_size_v1:"24" fidl_alignment_v1:"8"`
+	I_flexibleFooTag `fidl:"x" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_resource:"false"`
 	I_unknownData    interface{}
 	S                string `fidl_bounds:"" fidl_ordinal:"1"`
 	I                int32  `fidl_ordinal:"2"`
@@ -113,7 +113,7 @@ const (
 )
 
 type StrictFoo struct {
-	I_strictFooTag `fidl:"x!" fidl_size_v1:"24" fidl_alignment_v1:"8"`
+	I_strictFooTag `fidl:"x!" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_resource:"false"`
 	S              string `fidl_bounds:"" fidl_ordinal:"1"`
 	I              int32  `fidl_ordinal:"2"`
 }

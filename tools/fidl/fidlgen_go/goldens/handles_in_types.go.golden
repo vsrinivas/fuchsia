@@ -72,7 +72,7 @@ const (
 )
 
 type UnionWithHandle struct {
-	I_unionWithHandleTag `fidl:"x" fidl_size_v1:"24" fidl_alignment_v1:"8"`
+	I_unionWithHandleTag `fidl:"x" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_resource:"true"`
 	I_unknownData        interface{}
 	H                    _zx.VMO `fidl_handle_subtype:"3" fidl_handle_rights:"2147483648" fidl_bounds:"0" fidl_ordinal:"1"`
 }
@@ -105,7 +105,7 @@ func (_m *UnionWithHandle) GetUnknownData() _bindings.UnknownData {
 }
 
 type TableWithHandle struct {
-	_             struct{} `fidl:"t" fidl_size_v1:"16" fidl_alignment_v1:"8"`
+	_             struct{} `fidl:"t" fidl_size_v1:"16" fidl_alignment_v1:"8" fidl_resource:"true"`
 	I_unknownData interface{}
 	H             _zx.VMO `fidl_handle_subtype:"3" fidl_handle_rights:"2147483648" fidl_bounds:"0" fidl_ordinal:"1"`
 	HPresent      bool

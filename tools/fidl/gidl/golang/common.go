@@ -302,6 +302,7 @@ var goErrorCodeNames = map[gidlir.ErrorCode]string{
 	gidlir.StrictBitsUnknownBit:       "ErrInvalidBitsValue",
 	gidlir.ExtraHandles:               "ErrTooManyHandles",
 	gidlir.TooFewHandles:              "ErrNotEnoughHandles",
+	gidlir.NonResourceUnknownHandles:  "ErrValueTypeHandles",
 }
 
 func goErrorCode(code gidlir.ErrorCode) (string, error) {

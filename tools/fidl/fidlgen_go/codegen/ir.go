@@ -172,6 +172,7 @@ const (
 	FidlHandleRightsTag
 	FidlBoundsTag
 	FidlOrdinalTag
+	FidlIsResourceTag
 	EndTag   // This value must be last in the list to allow iteration over all tags.
 	StartTag = FidlTag
 )
@@ -194,6 +195,8 @@ func (t Tag) String() string {
 		return "fidl_bounds"
 	case FidlOrdinalTag:
 		return "fidl_ordinal"
+	case FidlIsResourceTag:
+		return "fidl_resource"
 	}
 	panic("unknown tag")
 }
@@ -869,6 +872,7 @@ func (c *compiler) compileUnion(val fidl.Union) Union {
 		FidlTag:            fidlTag,
 		FidlSizeV1Tag:      val.TypeShapeV1.InlineSize,
 		FidlAlignmentV1Tag: val.TypeShapeV1.Alignment,
+		FidlIsResourceTag:  val.IsResourceType(),
 	}
 	return Union{
 		Attributes:      val.Attributes,
@@ -916,6 +920,7 @@ func (c *compiler) compileTable(val fidl.Table) Table {
 		FidlTag:            "t",
 		FidlSizeV1Tag:      val.TypeShapeV1.InlineSize,
 		FidlAlignmentV1Tag: val.TypeShapeV1.Alignment,
+		FidlIsResourceTag:  val.IsResourceType(),
 	}
 	return Table{
 		Attributes:      val.Attributes,

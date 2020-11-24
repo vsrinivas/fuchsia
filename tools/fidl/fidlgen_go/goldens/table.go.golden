@@ -7,7 +7,7 @@ import (
 )
 
 type EmptyTable struct {
-	_             struct{} `fidl:"t" fidl_size_v1:"16" fidl_alignment_v1:"8"`
+	_             struct{} `fidl:"t" fidl_size_v1:"16" fidl_alignment_v1:"8" fidl_resource:"false"`
 	I_unknownData interface{}
 }
 
@@ -20,7 +20,7 @@ func (u *EmptyTable) GetUnknownData() map[uint64]_bindings.UnknownData {
 }
 
 type SimpleTable struct {
-	_             struct{} `fidl:"t" fidl_size_v1:"16" fidl_alignment_v1:"8"`
+	_             struct{} `fidl:"t" fidl_size_v1:"16" fidl_alignment_v1:"8" fidl_resource:"false"`
 	I_unknownData interface{}
 	X             int64 `fidl_ordinal:"1"`
 	XPresent      bool
@@ -85,7 +85,7 @@ func (u *SimpleTable) GetUnknownData() map[uint64]_bindings.UnknownData {
 }
 
 type OlderSimpleTable struct {
-	_             struct{} `fidl:"t" fidl_size_v1:"16" fidl_alignment_v1:"8"`
+	_             struct{} `fidl:"t" fidl_size_v1:"16" fidl_alignment_v1:"8" fidl_resource:"false"`
 	I_unknownData interface{}
 	X             int64 `fidl_ordinal:"1"`
 	XPresent      bool
@@ -124,7 +124,7 @@ func (u *OlderSimpleTable) GetUnknownData() map[uint64]_bindings.UnknownData {
 }
 
 type NewerSimpleTable struct {
-	_             struct{} `fidl:"t" fidl_size_v1:"16" fidl_alignment_v1:"8"`
+	_             struct{} `fidl:"t" fidl_size_v1:"16" fidl_alignment_v1:"8" fidl_resource:"false"`
 	I_unknownData interface{}
 	X             int64 `fidl_ordinal:"1"`
 	XPresent      bool
@@ -215,7 +215,7 @@ func (u *NewerSimpleTable) GetUnknownData() map[uint64]_bindings.UnknownData {
 }
 
 type ReverseOrdinalTable struct {
-	_             struct{} `fidl:"t" fidl_size_v1:"16" fidl_alignment_v1:"8"`
+	_             struct{} `fidl:"t" fidl_size_v1:"16" fidl_alignment_v1:"8" fidl_resource:"false"`
 	I_unknownData interface{}
 	Z             int64 `fidl_ordinal:"1"`
 	ZPresent      bool

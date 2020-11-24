@@ -126,7 +126,7 @@ const (
 )
 
 type SimpleUnion struct {
-	I_simpleUnionTag `fidl:"x!" fidl_size_v1:"24" fidl_alignment_v1:"8"`
+	I_simpleUnionTag `fidl:"x!" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_resource:"false"`
 	A                int32   `fidl_ordinal:"1"`
 	B                float32 `fidl_ordinal:"2"`
 }

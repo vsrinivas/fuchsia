@@ -108,7 +108,7 @@ const (
 )
 
 type ExampleUnion struct {
-	I_exampleUnionTag `fidl:"x!" fidl_size_v1:"24" fidl_alignment_v1:"8"`
+	I_exampleUnionTag `fidl:"x!" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_resource:"false"`
 	Variant           uint32 `fidl_ordinal:"1"`
 }
 
@@ -139,7 +139,7 @@ const (
 )
 
 type ExampleXUnion struct {
-	I_exampleXUnionTag `fidl:"x" fidl_size_v1:"24" fidl_alignment_v1:"8"`
+	I_exampleXUnionTag `fidl:"x" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_resource:"false"`
 	I_unknownData      interface{}
 	Variant            uint32 `fidl_ordinal:"1"`
 }
@@ -172,7 +172,7 @@ func (_m *ExampleXUnion) GetUnknownData() _bindings.UnknownData {
 }
 
 type ExampleTable struct {
-	_             struct{} `fidl:"t" fidl_size_v1:"16" fidl_alignment_v1:"8"`
+	_             struct{} `fidl:"t" fidl_size_v1:"16" fidl_alignment_v1:"8" fidl_resource:"false"`
 	I_unknownData interface{}
 	Member        uint32 `fidl_ordinal:"1"`
 	MemberPresent bool
