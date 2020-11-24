@@ -29,6 +29,27 @@
 
 namespace {
 
+TEST(LocalhostTest, SendToZeroPort) {
+  struct sockaddr_in addr = {
+      .sin_family = AF_INET,
+      .sin_port = htons(0),
+      .sin_addr.s_addr = htonl(INADDR_LOOPBACK),
+  };
+
+  fbl::unique_fd fd;
+  ASSERT_TRUE(fd = fbl::unique_fd(socket(AF_INET, SOCK_DGRAM, 0))) << strerror(errno);
+  ASSERT_EQ(
+      sendto(fd.get(), NULL, 0, 0, reinterpret_cast<const struct sockaddr*>(&addr), sizeof(addr)),
+      -1);
+  ASSERT_EQ(errno, EINVAL) << strerror(errno);
+
+  addr.sin_port = htons(1234);
+  ASSERT_EQ(
+      sendto(fd.get(), NULL, 0, 0, reinterpret_cast<const struct sockaddr*>(&addr), sizeof(addr)),
+      0)
+      << strerror(errno);
+}
+
 TEST(LocalhostTest, DatagramSocketIgnoresMsgWaitAll) {
   fbl::unique_fd recvfd;
   ASSERT_TRUE(recvfd = fbl::unique_fd(socket(AF_INET, SOCK_DGRAM | SOCK_NONBLOCK, 0)))
