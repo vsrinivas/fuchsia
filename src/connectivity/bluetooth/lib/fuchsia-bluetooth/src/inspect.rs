@@ -148,6 +148,27 @@ impl<T, I: ImmutableDataInspect<T>> InspectData<T> for I {
     }
 }
 
+/// The values associated with a data transfer.
+struct DataTransferStats {
+    /// The time at which the data transfer was recorded.
+    time: fasync::Time,
+    /// The elapsed amount of time (nanos) the data transfer took place over.
+    elapsed: std::num::NonZeroU64,
+    /// The bytes transferred.
+    bytes: usize,
+}
+
+impl DataTransferStats {
+    /// Calculates and returns the throughput of the `bytes` received in the
+    /// data transfer.
+    fn calculate_throughput(&self) -> u64 {
+        // NOTE: probably a better way to calculate the speed than using floats.
+        let bytes_per_nano = self.bytes as f64 / self.elapsed.get() as f64;
+        let bytes_per_second = zx::Duration::from_seconds(1).into_nanos() as f64 * bytes_per_nano;
+        bytes_per_second as u64
+    }
+}
+
 /// An inspect node that represents a stream of data, recording the total amount of data
 /// transferred and an instantaneous rate.
 #[derive(Inspect, Default)]
@@ -162,7 +183,7 @@ pub struct DataStreamInspect {
     start_time: Option<fuchsia_inspect_contrib::nodes::TimeProperty>,
     /// Used to calculate instantaneous bytes_per_second.
     #[inspect(skip)]
-    last_update_time: Option<fasync::Time>,
+    last_update: Option<DataTransferStats>,
     inspect_node: inspect::Node,
 }
 
@@ -174,35 +195,37 @@ impl DataStreamInspect {
         } else {
             self.start_time = Some(self.inspect_node.create_time_at("start_time", now.into()));
         }
-        self.last_update_time = Some(now);
-    }
-
-    /// Calculates and returns the throughput of the provided `bytes` received in the
-    /// provided `duration` (nanos) of time.
-    fn calculate_throughput(bytes: usize, duration: std::num::NonZeroU64) -> u64 {
-        // NOTE: probably a better way to calculate the speed than using floats.
-        let bytes_per_nano = bytes as f64 / duration.get() as f64;
-        let bytes_per_second = zx::Duration::from_seconds(1).into_nanos() as f64 * bytes_per_nano;
-        bytes_per_second as u64
+        self.last_update = Some(DataTransferStats {
+            time: now,
+            elapsed: std::num::NonZeroU64::new(1).unwrap(), // Default smallest interval of 1 nano
+            bytes: 0,
+        });
     }
 
     /// Record that `bytes` have been transferred as of `at`.
-    /// This is recorded since the last time `transferred` or since `start` if it
+    /// This is recorded since the `last_update` time or since `start` if it
     /// has never been called.
     /// Does nothing if this stream has never been started or if the provided `at` time
-    /// is in the past relative to the last `transferred` time.
+    /// is in the past relative to the `last_update` time.
     pub fn record_transferred(&mut self, bytes: usize, at: fasync::Time) {
-        let elapsed = match self.last_update_time {
-            Some(last) if at > last => {
+        let (elapsed, current_bytes) = match self.last_update {
+            Some(DataTransferStats { time: last, .. }) if at > last => {
+                // A new data transfer - calculate the new elapsed time interval.
                 let elapsed = (at - last).into_nanos() as u64;
-                std::num::NonZeroU64::new(elapsed).unwrap()
+                (std::num::NonZeroU64::new(elapsed).unwrap(), bytes)
             }
-            _ => return,
+            Some(DataTransferStats { time: last, elapsed, bytes: last_bytes }) if at == last => {
+                // An addition to the previous data transfer - use the previous elapsed time
+                // interval and an updated byte count.
+                (elapsed, last_bytes + bytes)
+            }
+            _ => return, // Otherwise, we haven't started or received an invalid `at` time.
         };
-        self.last_update_time = Some(at);
+
+        let transfer = DataTransferStats { time: at, elapsed, bytes: current_bytes };
         self.total_bytes.add(bytes as u64);
-        let throughput = Self::calculate_throughput(bytes, elapsed);
-        self.bytes_per_second_current.set(throughput);
+        self.bytes_per_second_current.set(transfer.calculate_throughput());
+        self.last_update = Some(transfer);
     }
 }
 
@@ -265,7 +288,7 @@ mod tests {
     }
 
     /// Sets up an inspect test with an executor at timestamp `curr_time`.
-    fn setup_inspect_test(
+    fn setup_inspect(
         curr_time: i64,
     ) -> (fasync::Executor, fuchsia_inspect::Inspector, DataStreamInspect) {
         let exec = fasync::Executor::new_with_fake_time().expect("creating an executor");
@@ -280,7 +303,7 @@ mod tests {
 
     #[test]
     fn data_stream_inspect_data_transfer_before_start_has_no_effect() {
-        let (_exec, inspector, mut d) = setup_inspect_test(5_123400000);
+        let (_exec, inspector, mut d) = setup_inspect(5_123400000);
 
         // Default inspect tree.
         assert_inspect_tree!(inspector, root: {
@@ -303,7 +326,7 @@ mod tests {
     #[test]
     fn data_stream_inspect_record_past_time_has_no_effect() {
         let curr_time = 5_678900000;
-        let (_exec, inspector, mut d) = setup_inspect_test(curr_time);
+        let (_exec, inspector, mut d) = setup_inspect(curr_time);
 
         d.start();
         assert_inspect_tree!(inspector, root: {
@@ -324,9 +347,14 @@ mod tests {
                 bytes_per_second_current: 0 as u64,
             }
         });
+    }
 
-        // Recording a data transfer with no elapsed time has no effect.
-        d.record_transferred(10, fasync::Time::from_nanos(curr_time));
+    #[test]
+    fn data_stream_inspect_data_transfer_immediately_after_start_is_ok() {
+        let curr_time = 5_678900000;
+        let (_exec, inspector, mut d) = setup_inspect(curr_time);
+
+        d.start();
         assert_inspect_tree!(inspector, root: {
             data_stream: {
                 start_time: 5_678900000i64,
@@ -334,11 +362,22 @@ mod tests {
                 bytes_per_second_current: 0 as u64,
             }
         });
+
+        // Although unlikely, recording a data transfer at the same instantaneous moment as starting
+        // is OK.
+        d.record_transferred(5, fasync::Time::from_nanos(curr_time));
+        assert_inspect_tree!(inspector, root: {
+            data_stream: {
+                start_time: 5_678900000i64,
+                total_bytes: 5 as u64,
+                bytes_per_second_current: 5_000_000_000 as u64,
+            }
+        });
     }
 
     #[test]
     fn data_stream_inspect_records_correct_throughput() {
-        let (exec, inspector, mut d) = setup_inspect_test(5_678900000);
+        let (exec, inspector, mut d) = setup_inspect(5_678900000);
 
         d.start();
 
@@ -355,7 +394,6 @@ mod tests {
 
         // If we transferred 500 bytes then, we should have 1000 bytes per second.
         d.record_transferred(500, fasync::Time::now());
-
         assert_inspect_tree!(inspector, root: {
             data_stream: {
                 start_time: 5_678900000i64,
@@ -367,7 +405,6 @@ mod tests {
         // In 5 seconds, we transfer 500 more bytes which is much slower.
         exec.set_fake_time(5.seconds().after_now());
         d.record_transferred(500, fasync::Time::now());
-
         assert_inspect_tree!(inspector, root: {
             data_stream: {
                 start_time: 5_678900000i64,
@@ -375,45 +412,63 @@ mod tests {
                 bytes_per_second_current: 100 as u64,
             }
         });
+
+        // Receiving another update at the same time is OK.
+        d.record_transferred(900, fasync::Time::now());
+        assert_inspect_tree!(inspector, root: {
+            data_stream: {
+                start_time: 5_678900000i64,
+                total_bytes: 1900 as u64,
+                bytes_per_second_current: 280 as u64,
+            }
+        });
     }
 
     #[test]
     fn test_calculate_throughput() {
+        let time = fasync::Time::from_nanos(1_000_000_000);
         // No throughput.
         let bytes = 0;
-        let duration = std::num::NonZeroU64::new(1_000_000).unwrap();
-        assert_eq!(DataStreamInspect::calculate_throughput(bytes, duration), 0);
+        let elapsed = std::num::NonZeroU64::new(1_000_000).unwrap();
+        let transfer1 = DataTransferStats { time, elapsed, bytes };
+        assert_eq!(transfer1.calculate_throughput(), 0);
 
         // Fractional throughput in bytes per nano.
         let bytes = 1;
-        let duration = std::num::NonZeroU64::new(1_000_000).unwrap();
-        assert_eq!(DataStreamInspect::calculate_throughput(bytes, duration), 1000);
+        let elapsed = std::num::NonZeroU64::new(1_000_000).unwrap();
+        let transfer2 = DataTransferStats { time, elapsed, bytes };
+        assert_eq!(transfer2.calculate_throughput(), 1000);
 
         // Fractional throughput in bytes per nano.
         let bytes = 5;
-        let duration = std::num::NonZeroU64::new(9_502_241).unwrap();
+        let elapsed = std::num::NonZeroU64::new(9_502_241).unwrap();
+        let transfer3 = DataTransferStats { time, elapsed, bytes };
         let expected = 526; // Calculated using calculator.
-        assert_eq!(DataStreamInspect::calculate_throughput(bytes, duration), expected);
+        assert_eq!(transfer3.calculate_throughput(), expected);
 
         // Very small fractional throughput in bytes per nano. Should truncate to 0.
         let bytes = 19;
-        let duration = std::num::NonZeroU64::new(5_213_999_642_004).unwrap();
-        assert_eq!(DataStreamInspect::calculate_throughput(bytes, duration), 0);
+        let elapsed = std::num::NonZeroU64::new(5_213_999_642_004).unwrap();
+        let transfer4 = DataTransferStats { time, elapsed, bytes };
+        assert_eq!(transfer4.calculate_throughput(), 0);
 
         // Throughput of 1 in bytes per nano.
         let bytes = 100;
-        let duration = std::num::NonZeroU64::new(100).unwrap();
-        assert_eq!(DataStreamInspect::calculate_throughput(bytes, duration), 1_000_000_000);
+        let elapsed = std::num::NonZeroU64::new(100).unwrap();
+        let transfer5 = DataTransferStats { time, elapsed, bytes };
+        assert_eq!(transfer5.calculate_throughput(), 1_000_000_000);
 
         // Large throughput in bytes per nano.
         let bytes = 100;
-        let duration = std::num::NonZeroU64::new(1).unwrap();
-        assert_eq!(DataStreamInspect::calculate_throughput(bytes, duration), 100_000_000_000);
+        let elapsed = std::num::NonZeroU64::new(1).unwrap();
+        let transfer6 = DataTransferStats { time, elapsed, bytes };
+        assert_eq!(transfer6.calculate_throughput(), 100_000_000_000);
 
         // Large fractional throughput in bytes per nano.
         let bytes = 987_432_002_999;
-        let duration = std::num::NonZeroU64::new(453).unwrap();
+        let elapsed = std::num::NonZeroU64::new(453).unwrap();
+        let transfer7 = DataTransferStats { time, elapsed, bytes };
         let expected = 2_179_761_596_024_282_368; // Calculated using calculator.
-        assert_eq!(DataStreamInspect::calculate_throughput(bytes, duration), expected);
+        assert_eq!(transfer7.calculate_throughput(), expected);
     }
 }
