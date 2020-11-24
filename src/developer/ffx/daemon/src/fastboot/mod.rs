@@ -210,7 +210,7 @@ pub fn oem<T: Read + Write>(interface: &mut T, cmd: &String, params: Vec<String>
 pub(crate) fn spawn_fastboot_discovery(queue: events::Queue<DaemonEvent>) {
     fuchsia_async::Task::spawn(async move {
         loop {
-            log::debug!("Looking for fastboot devices");
+            log::trace!("Looking for fastboot devices");
             let fastboot_devices = find_devices();
             for dev in fastboot_devices {
                 // Add to target collection
