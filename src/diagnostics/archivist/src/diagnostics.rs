@@ -7,7 +7,8 @@ use {
     anyhow::Error,
     fuchsia_component::server::{ServiceFs, ServiceObjTrait},
     fuchsia_inspect::{
-        component, health::Reporter, HistogramProperty, Node, NumericProperty, UintProperty,
+        component, health::Reporter, ExponentialHistogramParams, HistogramProperty, Node,
+        NumericProperty, UintExponentialHistogramProperty, UintProperty,
     },
     fuchsia_zircon::{self as zx, Duration},
     lazy_static::lazy_static,
@@ -52,7 +53,6 @@ impl Groups {
 }
 
 pub fn init() {
-    //TODO(fxbug.dev/36574): Replace log calls once archivist can use LogSink service.
     component::health().set_starting_up();
 }
 
@@ -71,7 +71,7 @@ pub(crate) fn set_group_stats(stats: &EventFileGroupStatsMap) {
 
 pub struct AccessorStats {
     /// Inspect node for tracking usage/health metrics of diagnostics platform.
-    pub archive_accessor_node: fuchsia_inspect::Node,
+    pub archive_accessor_node: Node,
 
     /// Metrics aggregated across all client connections.
     pub global_stats: Arc<GlobalAccessorStats>,
@@ -91,16 +91,16 @@ pub struct AccessorStats {
 
 pub struct GlobalAccessorStats {
     /// Property tracking number of opening connections to any archive_accessor instance.
-    pub archive_accessor_connections_opened: fuchsia_inspect::UintProperty,
+    pub archive_accessor_connections_opened: UintProperty,
     /// Property tracking number of closing connections to any archive_accessor instance.
-    pub archive_accessor_connections_closed: fuchsia_inspect::UintProperty,
+    pub archive_accessor_connections_closed: UintProperty,
     /// Number of requests to a single ArchiveAccessor to StreamDiagnostics, starting a
     /// new inspect ReaderServer.
-    pub stream_diagnostics_requests: fuchsia_inspect::UintProperty,
+    pub stream_diagnostics_requests: UintProperty,
 }
 
 impl AccessorStats {
-    pub fn new(mut archive_accessor_node: fuchsia_inspect::Node) -> Self {
+    pub fn new(mut archive_accessor_node: Node) -> Self {
         let archive_accessor_connections_opened =
             archive_accessor_node.create_uint("archive_accessor_connections_opened", 0);
         let archive_accessor_connections_closed =
@@ -142,34 +142,34 @@ pub struct GlobalConnectionStats {
     /// The name of the diagnostics source being tracked by this struct.
     diagnostics_source: &'static str,
     /// Weak clone of the node that stores stats, used for on-demand population.
-    connection_node: fuchsia_inspect::Node,
+    connection_node: Node,
     /// Number of DiagnosticsServers created in response to an StreamDiagnostics
     /// client request.
-    reader_servers_constructed: fuchsia_inspect::UintProperty,
+    reader_servers_constructed: UintProperty,
     /// Number of DiagnosticsServers destroyed in response to falling out of scope.
-    reader_servers_destroyed: fuchsia_inspect::UintProperty,
+    reader_servers_destroyed: UintProperty,
     /// Property tracking number of opening connections to any batch iterator instance.
-    batch_iterator_connections_opened: fuchsia_inspect::UintProperty,
+    batch_iterator_connections_opened: UintProperty,
     /// Property tracking number of closing connections to any batch iterator instance.
-    batch_iterator_connections_closed: fuchsia_inspect::UintProperty,
+    batch_iterator_connections_closed: UintProperty,
     /// Property tracking number of times a future to retrieve diagnostics data for a component
     /// timed out.
-    component_timeouts_count: fuchsia_inspect::UintProperty,
+    component_timeouts_count: UintProperty,
     /// Number of times "GetNext" was called
-    batch_iterator_get_next_requests: fuchsia_inspect::UintProperty,
+    batch_iterator_get_next_requests: UintProperty,
     /// Number of times a "GetNext" response was sent
-    batch_iterator_get_next_responses: fuchsia_inspect::UintProperty,
+    batch_iterator_get_next_responses: UintProperty,
     /// Number of times "GetNext" resulted in an error
-    batch_iterator_get_next_errors: fuchsia_inspect::UintProperty,
+    batch_iterator_get_next_errors: UintProperty,
     /// Number of items returned in batches from "GetNext"
-    batch_iterator_get_next_result_count: fuchsia_inspect::UintProperty,
+    batch_iterator_get_next_result_count: UintProperty,
     /// Number of items returned in batches from "GetNext" that contained errors
-    batch_iterator_get_next_result_errors: fuchsia_inspect::UintProperty,
+    batch_iterator_get_next_result_errors: UintProperty,
 
     /// Histogram of processing times for overall "GetNext" requests.
-    batch_iterator_get_next_time_usec: fuchsia_inspect::UintExponentialHistogramProperty,
+    batch_iterator_get_next_time_usec: UintExponentialHistogramProperty,
     /// Optional histogram of processing times for individual components in GetNext
-    component_time_usec: Mutex<Option<fuchsia_inspect::UintExponentialHistogramProperty>>,
+    component_time_usec: Mutex<Option<UintExponentialHistogramProperty>>,
     /// Longest processing times for individual components, with timestamps.
     processing_time_tracker: Mutex<Option<ProcessingTimeTracker>>,
 }
@@ -177,23 +177,23 @@ pub struct GlobalConnectionStats {
 impl GlobalConnectionStats {
     // TODO(fxbug.dev/54442): Consider encoding prefix as node name and represent the same
     //              named properties under different nodes for each diagnostics source.
-    pub fn for_inspect(archive_accessor_node: &mut fuchsia_inspect::Node) -> Self {
+    pub fn for_inspect(archive_accessor_node: &mut Node) -> Self {
         GlobalConnectionStats::new(archive_accessor_node, "inspect")
     }
 
     // TODO(fxbug.dev/54442): Consider encoding prefix as node name and represent the same
     //              named properties under different nodes for each diagnostics source.
-    pub fn for_lifecycle(archive_accessor_node: &mut fuchsia_inspect::Node) -> Self {
+    pub fn for_lifecycle(archive_accessor_node: &mut Node) -> Self {
         GlobalConnectionStats::new(archive_accessor_node, "lifecycle")
     }
 
     // TODO(fxbug.dev/54442): Consider encoding prefix as node name and represent the same
     //              named properties under different nodes for each diagnostics source.
-    pub fn for_logs(archive_accessor_node: &mut fuchsia_inspect::Node) -> Self {
+    pub fn for_logs(archive_accessor_node: &mut Node) -> Self {
         GlobalConnectionStats::new(archive_accessor_node, "logs")
     }
 
-    fn new(connection_node: &mut fuchsia_inspect::Node, diagnostics_source: &'static str) -> Self {
+    fn new(connection_node: &mut Node, diagnostics_source: &'static str) -> Self {
         let reader_servers_constructed = connection_node
             .create_uint(format!("{}_reader_servers_constructed", diagnostics_source), 0);
         let reader_servers_destroyed = connection_node
@@ -218,7 +218,7 @@ impl GlobalConnectionStats {
         );
         let batch_iterator_get_next_time_usec = connection_node.create_uint_exponential_histogram(
             format!("{}_batch_iterator_get_next_time_usec", diagnostics_source),
-            fuchsia_inspect::ExponentialHistogramParams {
+            ExponentialHistogramParams {
                 floor: EXPONENTIAL_HISTOGRAM_USEC_FLOOR,
                 initial_step: EXPONENTIAL_HISTOGRAM_USEC_STEP,
                 step_multiplier: EXPONENTIAL_HISTOGRAM_USEC_MULTIPLIER,
@@ -268,7 +268,7 @@ impl GlobalConnectionStats {
                 *component_time_usec =
                     Some(self.connection_node.create_uint_exponential_histogram(
                         format!("{}_component_time_usec", self.diagnostics_source),
-                        fuchsia_inspect::ExponentialHistogramParams {
+                        ExponentialHistogramParams {
                             floor: EXPONENTIAL_HISTOGRAM_USEC_FLOOR,
                             initial_step: EXPONENTIAL_HISTOGRAM_USEC_STEP,
                             step_multiplier: EXPONENTIAL_HISTOGRAM_USEC_MULTIPLIER,
@@ -297,9 +297,9 @@ const PROCESSING_TIME_COMPONENT_COUNT_LIMIT: usize = 20;
 /// Holds stats on the longest processing times for individual components' data.
 struct ProcessingTimeTracker {
     /// The node holding all properties for the tracker.
-    node: fuchsia_inspect::Node,
+    node: Node,
     /// Map from component moniker to a tuple of its time and a node containing the stats about it.
-    longest_times_by_component: BTreeMap<String, (u64, fuchsia_inspect::Node)>,
+    longest_times_by_component: BTreeMap<String, (u64, Node)>,
     /// The shortest time seen so far. If a new component is being
     /// recorded and its time is greater than this, we need to pop the
     /// entry containing this time.
@@ -307,7 +307,7 @@ struct ProcessingTimeTracker {
 }
 
 impl ProcessingTimeTracker {
-    fn new(node: fuchsia_inspect::Node) -> Self {
+    fn new(node: Node) -> Self {
         Self { node, longest_times_by_component: BTreeMap::new(), shortest_time_ns: u64::MAX }
     }
     fn track(&mut self, moniker: &str, time_ns: u64) {
@@ -363,18 +363,18 @@ impl ProcessingTimeTracker {
 
 pub struct ConnectionStats {
     /// Inspect node for tracking usage/health metrics of a single connection to a batch iterator.
-    _batch_iterator_connection_node: fuchsia_inspect::Node,
+    _batch_iterator_connection_node: Node,
 
     /// Global stats for connections to the BatchIterator protocol.
     global_stats: Arc<GlobalConnectionStats>,
 
     /// Property tracking number of requests to the BatchIterator instance this struct is tracking.
-    batch_iterator_get_next_requests: fuchsia_inspect::UintProperty,
+    batch_iterator_get_next_requests: UintProperty,
     /// Property tracking number of responses from the BatchIterator instance this struct is tracking.
-    batch_iterator_get_next_responses: fuchsia_inspect::UintProperty,
+    batch_iterator_get_next_responses: UintProperty,
     /// Property tracking number of times the batch iterator has served a terminal batch signalling that
     /// the client has reached the end of the iterator and should terminate their connection.
-    batch_iterator_terminal_responses: fuchsia_inspect::UintProperty,
+    batch_iterator_terminal_responses: UintProperty,
 }
 
 impl ConnectionStats {
@@ -471,8 +471,9 @@ impl Drop for ConnectionStats {
 #[cfg(test)]
 mod test {
     use {
-        super::*, crate::archive::EventFileGroupStats, fuchsia_inspect::assert_inspect_tree,
-        fuchsia_inspect::health::Reporter, fuchsia_inspect::testing::AnyProperty,
+        super::*,
+        crate::archive::EventFileGroupStats,
+        fuchsia_inspect::{assert_inspect_tree, health::Reporter, testing::AnyProperty, Inspector},
         std::iter::FromIterator,
     };
 
@@ -509,7 +510,7 @@ mod test {
 
     #[test]
     fn group_stats() {
-        let inspector = fuchsia_inspect::Inspector::new();
+        let inspector = Inspector::new();
         let mut group = Groups::new(inspector.root().create_child("archived_events"));
         group.replace(&EventFileGroupStatsMap::from_iter(vec![
             ("a/b".to_string(), EventFileGroupStats { file_count: 1, size: 2 }),
@@ -533,7 +534,7 @@ mod test {
 
     #[test]
     fn processing_time_tracker() {
-        let inspector = fuchsia_inspect::Inspector::new();
+        let inspector = Inspector::new();
         let mut tracker = ProcessingTimeTracker::new(inspector.root().create_child("test"));
 
         tracker.track("a", 1e9 as u64);
