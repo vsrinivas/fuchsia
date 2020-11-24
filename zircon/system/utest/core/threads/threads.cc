@@ -23,6 +23,7 @@
 
 #include <atomic>
 
+#include <fbl/span.h>
 #include <mini-process/mini-process.h>
 #include <runtime/thread.h>
 #include <zxtest/zxtest.h>
@@ -189,16 +190,25 @@ static bool start_thread(zxr_thread_entry_t entry, void* arg, zxr_thread_t* thre
   return starter.StartThread(entry, arg);
 }
 
-// Wait for |thread| to enter blocked state |reason|.
+// Wait until |thread| is in one of the specified |states|.
 // We wait forever and let Unittest's watchdog handle errors.
-static void wait_thread_blocked(zx_handle_t thread, zx_thread_state_t reason) {
+static void wait_thread_state(zx_handle_t thread, fbl::Span<zx_thread_state_t> states) {
   while (true) {
     zx_info_thread_t info;
     ASSERT_TRUE(get_thread_info(thread, &info));
-    if (info.state == reason)
-      break;
+    for (auto s : states) {
+      if (info.state == s) {
+        return;
+      }
+    }
     zx_nanosleep(zx_deadline_after(THREAD_BLOCKED_WAIT_DURATION));
   }
+}
+
+// Wait for |thread| to enter blocked state |reason|.
+// We wait forever and let Unittest's watchdog handle errors.
+static void wait_thread_blocked(zx_handle_t thread, zx_thread_state_t reason) {
+  wait_thread_state(thread, fbl::Span(&reason, 1));
 }
 
 static bool CpuMaskBitSet(const zx_cpu_set_t& set, uint32_t i) {
@@ -519,15 +529,21 @@ TEST(Threads, ResumeSuspended) {
   ASSERT_EQ(zx_handle_close(thread_h), ZX_OK);
 }
 
-// TODO(fxbug.dev/65187): Test is disabled due to flakiness.
-TEST(Threads, DISABLED_SuspendSleeping) {
+TEST(Threads, SuspendSleeping) {
   const zx_time_t sleep_deadline = zx_deadline_after(ZX_MSEC(100));
   zxr_thread_t thread;
 
   zx_handle_t thread_h;
   ASSERT_TRUE(start_thread(threads_test_sleep_fn, (void*)sleep_deadline, &thread, &thread_h));
 
-  wait_thread_blocked(thread_h, ZX_THREAD_STATE_BLOCKED_SLEEPING);
+  // We can't simply wait until the thread is blocked sleeping because it may
+  // complete its sleep and terminate before we get a chance to observe it.
+  zx_thread_state_t states[]{
+      ZX_THREAD_STATE_BLOCKED_SLEEPING,
+      ZX_THREAD_STATE_DYING,
+      ZX_THREAD_STATE_DEAD,
+  };
+  wait_thread_state(thread_h, fbl::Span(states));
 
   // Suspend the thread.
   zx_handle_t suspend_token = ZX_HANDLE_INVALID;
@@ -540,7 +556,8 @@ TEST(Threads, DISABLED_SuspendSleeping) {
     // sleep duration.
     zx_info_thread_t info;
     ASSERT_EQ(zx_object_get_info(thread_h, ZX_INFO_THREAD, &info, sizeof(info), NULL, NULL), ZX_OK);
-    ASSERT_EQ(info.state, ZX_THREAD_STATE_DEAD);
+    ASSERT_TRUE(info.state == ZX_THREAD_STATE_DEAD || info.state == ZX_THREAD_STATE_DYING,
+                "info.state=%d\n", info.state);
     ASSERT_EQ(zx_handle_close(thread_h), ZX_OK);
     // Early bail from the test, since we hit a possible race from an
     // overloaded machine.
