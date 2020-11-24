@@ -12,13 +12,14 @@ using fuchsia.net.name;
 using fuchsia.posix.socket;
 
 /// A list of IP addresses for an interface.
+// TODO(fxb/65218): Replace with an alias.
 using interface_address_list = vector<fuchsia.net.Subnet>:MAX;
 
 /// A path to a device node.
-using device_path = string:255;
+alias device_path = string:255;
 
 /// A list of interface descriptors.
-using interface_list = vector<InterfaceInfo>:255;
+alias interface_list = vector<InterfaceInfo>:255;
 
 enum PresenceStatus {
     /// The interface is added.

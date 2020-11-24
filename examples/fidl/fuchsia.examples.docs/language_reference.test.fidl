@@ -259,14 +259,14 @@ protocol SystemClock {
 // [END layering-systemclock]
 
 // [START aliasing]
-using StoryID = string:MAX;
-using up_to_five = vector:5;
+alias StoryID = string:MAX;
+alias Chapters = vector<StoryID>:5;
 // [END aliasing]
 
 // [START aliasing-usage]
 struct Message {
     StoryID baseline;
-    up_to_five<StoryID> chapters;
+    Chapters chapters;
 };
 // [END aliasing-usage]
 

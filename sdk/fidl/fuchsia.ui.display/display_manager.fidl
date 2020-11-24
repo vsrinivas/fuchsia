@@ -23,7 +23,7 @@ const int32 MODES_MAX_LEN = 256;
 const int32 MODE_INTERLACED = 0x1;
 
 const uint32 IDENTIFIER_MAX_LEN = 128;
-using DisplayIdentifier = string:IDENTIFIER_MAX_LEN;
+alias DisplayIdentifier = string:IDENTIFIER_MAX_LEN;
 
 resource table Info {
     // Unique identifier for the display.

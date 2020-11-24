@@ -6,7 +6,7 @@ library fidl.difl.test;
 
 // Before
 
-using UsingToEnum = uint32;
+alias UsingToEnum = uint32;
 
 enum EnumToStruct {
     VALUE = 1;

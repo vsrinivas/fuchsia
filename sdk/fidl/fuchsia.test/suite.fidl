@@ -7,10 +7,10 @@ library fuchsia.test;
 using zx;
 
 /// Human-readable name for a test case.
-using Name = string:512;
+alias Name = string:512;
 
 /// Optional unique tag to identitfy Invocation.
-using Tag = string:512;
+alias Tag = string:512;
 
 /// Describes a single test case.
 table Case {

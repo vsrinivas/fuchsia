@@ -43,12 +43,10 @@ fidl_strict_enum! {
 #[derive(Debug, PartialEq)]
 pub struct ExampleOfUseOfAliases {
     pub field_of_u32: u32,
-    pub field_of_vec_at_most_five_of_string: Vec<String>,
-    pub field_of_vec_at_most_five_of_uint32: Vec<u32>,
     pub field_of_vec_of_strings: Vec<String>,
     pub field_of_vec_of_strings_at_most_nine: Vec<String>,
     pub field_of_vec_of_strings_at_most_5: Vec<String>,
-    pub field_of_vec_at_most_5_of_reference_me: Vec<fidl_someotherlibrary::ReferenceMe>,
+    pub field_of_vec_of_ref_me_at_most_5: Vec<fidl_someotherlibrary::ReferenceMe>,
     pub field_of_channel: fidl::Channel,
     pub field_of_client_end: fidl::Channel,
     pub field_of_nullable_client_end: Option<fidl::Channel>,
@@ -61,33 +59,25 @@ fidl_struct! {
       ty: u32,
       offset_v1: 0,
     },
-    field_of_vec_at_most_five_of_string {
+    field_of_vec_of_strings {
       ty: Vec<String>,
       offset_v1: 8,
     },
-    field_of_vec_at_most_five_of_uint32 {
-      ty: Vec<u32>,
-      offset_v1: 24,
-    },
-    field_of_vec_of_strings {
-      ty: Vec<String>,
-      offset_v1: 40,
-    },
     field_of_vec_of_strings_at_most_nine {
       ty: Vec<String>,
-      offset_v1: 56,
+      offset_v1: 24,
     },
     field_of_vec_of_strings_at_most_5 {
       ty: Vec<String>,
-      offset_v1: 72,
+      offset_v1: 40,
     },
-    field_of_vec_at_most_5_of_reference_me {
+    field_of_vec_of_ref_me_at_most_5 {
       ty: Vec<fidl_someotherlibrary::ReferenceMe>,
-      offset_v1: 88,
+      offset_v1: 56,
     },
     field_of_channel {
       ty: fidl::Channel,
-      offset_v1: 104,
+      offset_v1: 72,
       handle_metadata: {
         handle_subtype: fidl::ObjectType::CHANNEL,
         handle_rights: fidl::Rights::from_bits_const(2147483648).unwrap(),
@@ -95,7 +85,7 @@ fidl_struct! {
     },
     field_of_client_end {
       ty: fidl::Channel,
-      offset_v1: 108,
+      offset_v1: 76,
       handle_metadata: {
         handle_subtype: fidl::ObjectType::CHANNEL,
         handle_rights: fidl::Rights::from_bits_const(2147483648).unwrap(),
@@ -103,7 +93,7 @@ fidl_struct! {
     },
     field_of_nullable_client_end {
       ty: Option<fidl::Channel>,
-      offset_v1: 112,
+      offset_v1: 80,
       handle_metadata: {
         handle_subtype: fidl::ObjectType::CHANNEL,
         handle_rights: fidl::Rights::from_bits_const(2147483648).unwrap(),
@@ -118,9 +108,9 @@ fidl_struct! {
   },
   {
       ty: u64,
-      offset: 112,
+      offset: 80,
       mask: 0xffffffff00000000u64,
   },],
-  size_v1: 120,
+  size_v1: 88,
   align_v1: 8,
 }

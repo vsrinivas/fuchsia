@@ -7,12 +7,12 @@ library zx;
 // This file is copies of some syscalls that cover more unusual features (see
 // annotations at the method).
 
-using const_futexptr = int32;
-using Futex = int32;
-using mutable_uint32 = uint32;
-using mutable_vector_void = vector<byte>;
-using optional_signals = signals;
-using vector_void_u32size = vector<byte>;
+alias const_futexptr = int32;
+alias Futex = int32;
+alias mutable_uint32 = uint32;
+alias mutable_vector_void = vector<byte>;
+alias optional_signals = signals;
+alias vector_void_u32size = vector<byte>;
 enum Clock : uint32 {
     MONOTONIC = 0;
     UTC = 1;

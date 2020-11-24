@@ -6,7 +6,7 @@ library fuchsia.ui.activity;
 
 using zx;
 
-using OngoingActivityId = uint32;
+alias OngoingActivityId = uint32;
 
 /// The Tracker protocol collects evidence of user activity and uses this
 /// evidence to set the system's activity state.

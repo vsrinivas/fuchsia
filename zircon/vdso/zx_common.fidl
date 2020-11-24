@@ -13,41 +13,41 @@
 library zx;
 
 // zx_status_t and errors.h.
-using status = int32;
+alias status = int32;
 
 // zx_time_t: absolute time in nanoseconds (generally with respect to the
 // monotonic clock).
-using time = int64;
+alias time = int64;
 
 // zx_duration_t: a duration in nanoseconds.
-using duration = int64;
+alias duration = int64;
 
 // zx_ticks_t: a duration in hardware ticks.
-using ticks = int64;
+alias ticks = int64;
 
 // zx_koid_t: global kernel object id.
-using koid = uint64;
+alias koid = uint64;
 
 // zx_vaddr_t: virtual address.
-using vaddr = uint64;
+alias vaddr = uint64;
 
 // zx_paddr_t: physical address.
-using paddr = uint64;
+alias paddr = uint64;
 
 // zx_paddr32_t: low mem physical address.
-using paddr32 = uint32;
+alias paddr32 = uint32;
 
 // zx_gpaddr_t: hypervisor guest physical addresses.
-using gpaddr = uint64;
+alias gpaddr = uint64;
 
 // zx_off_t: offset.
-using off = uint64;
+alias off = uint64;
 
 // See zircon/processargs.h.
-using procarg = uint32;
+alias procarg = uint32;
 
 // zx_signals_t.
-using signals = uint32;
+alias signals = uint32;
 
 // TODO(fxbug.dev/7802): These are currently duplicated with zircon/types.h.
 // Eventually the definitions in zircon/types.h will be generated from this

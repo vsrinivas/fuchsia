@@ -44,14 +44,14 @@ enum Lifetime : uint8 {
 /// A globally unique identifier for a Fuchsia account that is constant across
 /// the devices that the account is provisioned on. Identifiers are not human
 /// readable.
-using GlobalAccountId = bytes:MAX_ID_SIZE;
+alias GlobalAccountId = bytes:MAX_ID_SIZE;
 
 /// A unique identifier for a Fuchsia account on the current device. If the
 /// account is removed and re-added it will receive a different LocalAccountId.
 /// The same account will have different LocalAccountIds on different devices
 /// and a particular LocalAccountId value may refer to different accounts on
 /// different devices.
-using LocalAccountId = uint64;
+alias LocalAccountId = uint64;
 
 /// A unique identifier for a Persona of a Fuchsia account on the current
 /// device. If the account is removed and re-added its personae will receive
@@ -59,7 +59,7 @@ using LocalAccountId = uint64;
 /// different personae and/or different accounts on different devices. The
 /// LocalAccountId for an account cannot be derived from the LocalPersonaId of
 /// its personae.
-using LocalPersonaId = uint64;
+alias LocalPersonaId = uint64;
 
 /// Specifies the reason that a fuchsia.identity.account method failed.
 enum Error {
@@ -116,6 +116,7 @@ enum Error {
 /// authentication mechanism.
 // TODO(dnordstrom): Allow multiple authentication mechanisms in the same
 // component.
+// TODO(fxb/65218): Replace with an alias.
 using AuthMechanismId = fuchsia.sys.component_url;
 
 /// Properties describing the authentication mechanism.
@@ -131,7 +132,7 @@ struct AuthMechanismProperties {
 
 /// An identifier for an enrollment of an authentication mechanism. It is
 /// unique within an account and an authentication mechanism.
-using AuthMechanismEnrollmentId = uint64;
+alias AuthMechanismEnrollmentId = uint64;
 
 /// Metadata about an enrollment, such as a human readable name.
 struct AuthMechanismEnrollmentMetadata {

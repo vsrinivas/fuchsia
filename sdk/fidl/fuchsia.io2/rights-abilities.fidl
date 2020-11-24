@@ -80,7 +80,7 @@ const uint64 X_STAR_DIR = 0xC9;
 ///
 /// Invoking an operation without the corresponding right results in a
 /// `ZX_ERR_ACCESS_DENIED` error.
-using Rights = Operations;
+alias Rights = Operations;
 
 /// Abilities are properties intrinsic to a node. They specify which operations
 /// are supported by it.
@@ -89,4 +89,4 @@ using Rights = Operations;
 /// `ZX_ERR_NOT_SUPPORTED` error.
 /// Note that if both the access denied and the not supported error conditions
 /// apply, the access denied case takes precedence.
-using Abilities = Operations;
+alias Abilities = Operations;

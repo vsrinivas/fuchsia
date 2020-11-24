@@ -10,7 +10,8 @@ const uint32 MAX_SESSION_ID_SIZE = 512;
 const uint32 MAX_LICENSE_INIT_DATA_TYPE_SIZE = 100;
 const uint32 MAX_HDCP_VERSION_SIZE = 16;
 
-using SessionId = string:MAX_SESSION_ID_SIZE;
-using LicenseInitDataType = string:MAX_LICENSE_INIT_DATA_TYPE_SIZE;
-using HdcpVersion = string:MAX_HDCP_VERSION_SIZE;
+alias SessionId = string:MAX_SESSION_ID_SIZE;
+alias LicenseInitDataType = string:MAX_LICENSE_INIT_DATA_TYPE_SIZE;
+alias HdcpVersion = string:MAX_HDCP_VERSION_SIZE;
+// TODO(fxb/65218): Replace with an alias.
 using EncryptionScheme = fuchsia.media.EncryptionScheme;

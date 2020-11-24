@@ -6,7 +6,7 @@ library fuchsia.camera3;
 
 const uint32 MAX_WATCH_DEVICES_EVENTS = 256;
 
-using DeviceId = uint64;
+alias DeviceId = uint64;
 
 /// The DeviceWatcher provides clients a mechanism to discover camera devices present on the
 /// system. This is a temporary mechanism intended to be replaced by go/drivers-as-components,

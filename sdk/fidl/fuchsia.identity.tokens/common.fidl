@@ -10,19 +10,19 @@ const uint32 MAX_ACCOUNT_ID_SIZE = 256;
 /// An identifier for the account that a token is issued against, as specified
 /// by the authorization server. Account identifiers are guaranteed to be unique
 /// within an auth provider type.
-using AccountId = string:MAX_ACCOUNT_ID_SIZE;
+alias AccountId = string:MAX_ACCOUNT_ID_SIZE;
 
 /// The maximum length of an OAuth client ID, in bytes.
 const uint32 MAX_CLIENT_ID_SIZE = 256;
 
 /// An OAuth client ID string.
-using ClientId = string:MAX_CLIENT_ID_SIZE;
+alias ClientId = string:MAX_CLIENT_ID_SIZE;
 
 /// The maximum length of an OAuth scope, in bytes.
 const uint32 MAX_SCOPE_SIZE = 256;
 
 /// An OAuth scope string.
-using Scope = string:MAX_SCOPE_SIZE;
+alias Scope = string:MAX_SCOPE_SIZE;
 
 /// The maximum number of OAuth scopes that may be requested for a single token.
 const uint32 MAX_SCOPE_COUNT = 64;
@@ -31,7 +31,7 @@ const uint32 MAX_SCOPE_COUNT = 64;
 const uint32 MAX_AUDIENCE_SIZE = 256;
 
 /// An OpenID audience string.
-using Audience = string:MAX_AUDIENCE_SIZE;
+alias Audience = string:MAX_AUDIENCE_SIZE;
 
 /// The maximum number of audiences that may be requested for a single ID token.
 const uint32 MAX_AUDIENCE_COUNT = 16;

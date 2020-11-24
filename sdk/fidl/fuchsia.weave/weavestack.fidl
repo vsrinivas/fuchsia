@@ -15,7 +15,7 @@ const uint32 MAX_QR_CODE_SIZE = 256;
 
 /// An endpoint ID used for identifying which service endpoints are of interest when
 /// looking up endpoints in the Weave Service Directory.
-using ServiceEndpointId = uint64;
+alias ServiceEndpointId = uint64;
 
 /// Current state of pairing/provisioning. At the point of a completely unprovisioned
 /// or factory reset device, all states will be `false`. Outside of an explicit

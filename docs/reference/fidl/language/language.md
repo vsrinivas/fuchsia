@@ -749,11 +749,11 @@ For example:
 {%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/language_reference.test.fidl" region_tag="aliasing" %}
 ```
 
-In the above, the identifier `StoryID` is an alias for the declaration of a `string`
-with a maximum size of `MAX_SIZE`.
-The identifier `up_to_five` is an alias for a vector declaration of five elements.
+In the above, the identifier `StoryID` is an alias for the declaration of a
+`string` with a maximum size of `MAX_SIZE`. The identifier `Chapters` is an
+alias for a vector declaration of five `StoryId` elements.
 
-The identifiers `StoryID` and `up_to_five` can be used wherever their aliased
+The identifiers `StoryID` and `Chapters` can be used wherever their aliased
 definitions can be used.
 Consider:
 

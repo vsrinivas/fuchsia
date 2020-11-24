@@ -78,7 +78,7 @@ struct BufferState {
     uint64 capture_end;
 };
 
-using BufferDescriptor = uint32;
+alias BufferDescriptor = uint32;
 
 protocol Controller {
     /// Initialize the trace.

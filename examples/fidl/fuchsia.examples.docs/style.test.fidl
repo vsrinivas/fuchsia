@@ -11,7 +11,7 @@ using fuchsia.mem;
 using zx;
 
 // [START primitive-alias]
-using vaddr = uint64;
+alias vaddr = uint64;
 // [END primitive-alias]
 
 // [START constants]

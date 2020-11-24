@@ -4,6 +4,6 @@
 
 library zx;
 
-using usize = uint64;
+alias usize = uint64;
 
-using uintptr = uint64;
+alias uintptr = uint64;

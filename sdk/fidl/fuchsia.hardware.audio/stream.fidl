@@ -16,7 +16,7 @@ const uint32 MAX_COUNT_SUPPORTED_BYTES_PER_SAMPLE = 8;
 const uint32 MAX_COUNT_SUPPORTED_VALID_BITS_PER_SAMPLE = 8;
 const uint32 MAX_COUNT_FORMATS = 64;
 
-using clock_domain = uint32;
+alias clock_domain = uint32;
 const clock_domain CLOCK_DOMAIN_MONOTONIC = 0x00000000;
 const clock_domain CLOCK_DOMAIN_EXTERNAL = 0xFFFFFFFF;
 

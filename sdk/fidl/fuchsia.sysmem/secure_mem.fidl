@@ -97,7 +97,7 @@ struct PhysicalSecureHeap {
 // Sysmem uses layout=Simple, which requires picking a specific array size.
 // Each heap consumes ~24 bytes on the stack, so we limit to a number that
 // exceeds the needs of any current use case (1 heap in each direction so far),
-// without over-using stack space (24 bytes * 32 == 768 bytes).
+// without over-alias stack space (24 bytes * 32 == 768 bytes).
 const uint32 MAX_HEAPS_COUNT = 32;
 
 // In this struct we use array instead of vector because layout=Simple.

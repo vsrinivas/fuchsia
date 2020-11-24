@@ -7,26 +7,22 @@ include <fidl/test/typealiases/c/fidl.h>
 fidl_test_typealiases_obj_type = fidl_test_typealiases_obj_type_NONE, fidl_test_typealiases_obj_type_CHANNEL
 fidl_test_typealiases_ExampleOfUseOfAliasesInLine {
        field_of_u32 int32
-       field_of_vec_at_most_five_of_stringInLine fidl_vector
-       field_of_vec_at_most_five_of_uint32InLine fidl_vector
        field_of_vec_of_stringsInLine fidl_vector
        field_of_vec_of_strings_at_most_nineInLine fidl_vector
        field_of_vec_of_strings_at_most_5InLine fidl_vector
-       field_of_vec_at_most_5_of_reference_meInLine fidl_vector
+       field_of_vec_of_ref_me_at_most_5InLine fidl_vector
        field_of_channel flags[fidl_handle_presence, int32]
        field_of_client_end flags[fidl_handle_presence, int32]
        field_of_nullable_client_end flags[fidl_handle_presence, int32]
 } [packed]
 fidl_test_typealiases_ExampleOfUseOfAliasesOutOfLine {
-       field_of_vec_at_most_five_of_stringOutOfLine parallel_array[fidl_string, fidl_aligned[stringnoz]]
-       field_of_vec_at_most_five_of_uint32OutOfLine array[int32]
        field_of_vec_of_stringsOutOfLine parallel_array[fidl_string, fidl_aligned[stringnoz]]
        field_of_vec_of_strings_at_most_nineOutOfLine parallel_array[fidl_string, fidl_aligned[stringnoz]]
        field_of_vec_of_strings_at_most_5OutOfLine parallel_array[fidl_string, fidl_aligned[stringnoz]]
-       field_of_vec_at_most_5_of_reference_meOutOfLine parallel_array[someotherlibrary_ReferenceMeInLine, someotherlibrary_ReferenceMeOutOfLine]
+       field_of_vec_of_ref_me_at_most_5OutOfLine parallel_array[someotherlibrary_ReferenceMeInLine, someotherlibrary_ReferenceMeOutOfLine]
 } [packed]
 fidl_test_typealiases_ExampleOfUseOfAliasesHandles {
-       field_of_vec_at_most_5_of_reference_me array[someotherlibrary_ReferenceMeHandles]
+       field_of_vec_of_ref_me_at_most_5 array[someotherlibrary_ReferenceMeHandles]
        field_of_channel zx_chan
        field_of_client_end zx_chan
        field_of_nullable_client_end zx_chan

@@ -32,7 +32,7 @@ using zx;
 const int32 MAX_LABEL_SIZE = 128;
 
 /// A list of libFuzzer options, as defined in https://llvm.org/docs/LibFuzzer.html#options.
-using EngineOptions = vector<string:MAX_OPTION_SIZE>:MAX_OPTION_COUNT;
+alias EngineOptions = vector<string:MAX_OPTION_SIZE>:MAX_OPTION_COUNT;
 const int32 MAX_OPTION_SIZE = 128;
 const int32 MAX_OPTION_COUNT = 128;
 

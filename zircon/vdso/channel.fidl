@@ -4,7 +4,7 @@
 
 library zx;
 
-using HandleOp = uint32;
+alias HandleOp = uint32;
 
 // TODO(scottmg): ZX_HANDLE_OP_xyz here.
 

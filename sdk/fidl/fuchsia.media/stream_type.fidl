@@ -74,7 +74,7 @@ struct Compression {
 };
 
 /// An identifier for compression types.
-using CompressionType = string:256;
+alias CompressionType = string:256;
 
 // /////////////////////////////////////////////////////////////////////////////
 // Audio

@@ -15,7 +15,7 @@ const uint32 MAX_ACCOUNT_COUNT = 128;
 /// The primary domain name of the service provider used to authorize accounts.
 /// Only one `AuthProvider` component can be installed for each service provider
 /// at a time.
-using ServiceProvider = string:256;
+alias ServiceProvider = string:256;
 
 /// `TokenManager` maintains a set of credentials for accounts with service
 /// providers (such as Google) and provides access to standard tokens based on

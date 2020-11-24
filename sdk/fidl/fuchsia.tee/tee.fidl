@@ -83,7 +83,7 @@ flexible resource union Parameter {
 };
 
 const uint32 MAX_PARAMETERSET_COUNT = 4;
-using ParameterSet = vector<Parameter>:MAX_PARAMETERSET_COUNT;
+alias ParameterSet = vector<Parameter>:MAX_PARAMETERSET_COUNT;
 
 /// Each operation must flow through the device driver and the trusted operating system before
 /// reaching the trusted application (and back). The ReturnOrigin indicates which layer provided the

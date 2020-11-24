@@ -74,18 +74,18 @@ struct Enrollment {
 
 /// A unique identifier for an `Enrollment` within an account and an
 /// authentication mechanism.
-using EnrollmentId = uint64;
+alias EnrollmentId = uint64;
 
 /// Arbitrary opaque data associated with an authentication enrollment, created
 /// and subsequently read by the authentication mechanism that produced the
 /// enrollment. It is meaningful only to the authenticator, and opaque to its
 /// clients.
-using EnrollmentData = bytes:ENROLLMENT_DATA_MAX_SIZE;
+alias EnrollmentData = bytes:ENROLLMENT_DATA_MAX_SIZE;
 
 /// Pseudo-random data associated with an enrollment of an authentication
 /// mechanism capable of storage unlock. It is reproduced only upon
 /// successful authentication against that enrollment.
-using PrekeyMaterial = bytes:PREKEY_MATERIAL_MAX_SIZE;
+alias PrekeyMaterial = bytes:PREKEY_MATERIAL_MAX_SIZE;
 
 /// An authentication event is a statement which an authentication mechanism
 /// makes about the presence and/or engagement of an account owner, and thus

@@ -6,7 +6,7 @@ library fuchsia.hardware.input;
 
 using zx;
 
-using ReportId = uint8;
+alias ReportId = uint8;
 
 enum BootProtocol : uint32 {
     NONE = 0;

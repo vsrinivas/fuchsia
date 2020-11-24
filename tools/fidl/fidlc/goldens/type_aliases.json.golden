@@ -105,7 +105,7 @@
       "name": "fidl.test.typealiases/ExampleOfUseOfAliases",
       "location": {
         "filename": "../../zircon/tools/fidl/testdata/type_aliases/example.test.fidl",
-        "line": 27,
+        "line": 25,
         "column": 17,
         "length": 21
       },
@@ -124,71 +124,13 @@
           "name": "field_of_u32",
           "location": {
             "filename": "../../zircon/tools/fidl/testdata/type_aliases/example.test.fidl",
-            "line": 28,
+            "line": 26,
             "column": 9,
             "length": 12
           },
           "field_shape_v1": {
             "offset": 0,
             "padding": 4
-          }
-        },
-        {
-          "type": {
-            "kind": "vector",
-            "element_type": {
-              "kind": "string",
-              "nullable": false
-            },
-            "maybe_element_count": 5,
-            "nullable": false
-          },
-          "experimental_maybe_from_type_alias": {
-            "name": "fidl.test.typealiases/vec_at_most_five",
-            "args": [
-              "string"
-            ],
-            "nullable": false
-          },
-          "name": "field_of_vec_at_most_five_of_string",
-          "location": {
-            "filename": "../../zircon/tools/fidl/testdata/type_aliases/example.test.fidl",
-            "line": 29,
-            "column": 30,
-            "length": 35
-          },
-          "field_shape_v1": {
-            "offset": 8,
-            "padding": 0
-          }
-        },
-        {
-          "type": {
-            "kind": "vector",
-            "element_type": {
-              "kind": "primitive",
-              "subtype": "uint32"
-            },
-            "maybe_element_count": 5,
-            "nullable": false
-          },
-          "experimental_maybe_from_type_alias": {
-            "name": "fidl.test.typealiases/vec_at_most_five",
-            "args": [
-              "uint32"
-            ],
-            "nullable": false
-          },
-          "name": "field_of_vec_at_most_five_of_uint32",
-          "location": {
-            "filename": "../../zircon/tools/fidl/testdata/type_aliases/example.test.fidl",
-            "line": 30,
-            "column": 30,
-            "length": 35
-          },
-          "field_shape_v1": {
-            "offset": 24,
-            "padding": 0
           }
         },
         {
@@ -208,12 +150,12 @@
           "name": "field_of_vec_of_strings",
           "location": {
             "filename": "../../zircon/tools/fidl/testdata/type_aliases/example.test.fidl",
-            "line": 31,
+            "line": 27,
             "column": 20,
             "length": 23
           },
           "field_shape_v1": {
-            "offset": 40,
+            "offset": 8,
             "padding": 0
           }
         },
@@ -236,12 +178,12 @@
           "name": "field_of_vec_of_strings_at_most_nine",
           "location": {
             "filename": "../../zircon/tools/fidl/testdata/type_aliases/example.test.fidl",
-            "line": 32,
+            "line": 28,
             "column": 22,
             "length": 36
           },
           "field_shape_v1": {
-            "offset": 56,
+            "offset": 24,
             "padding": 0
           }
         },
@@ -263,12 +205,12 @@
           "name": "field_of_vec_of_strings_at_most_5",
           "location": {
             "filename": "../../zircon/tools/fidl/testdata/type_aliases/example.test.fidl",
-            "line": 33,
+            "line": 29,
             "column": 30,
             "length": 33
           },
           "field_shape_v1": {
-            "offset": 72,
+            "offset": 40,
             "padding": 0
           }
         },
@@ -283,22 +225,15 @@
             "maybe_element_count": 5,
             "nullable": false
           },
-          "experimental_maybe_from_type_alias": {
-            "name": "fidl.test.typealiases/vec_at_most_5",
-            "args": [
-              "someotherlibrary/ReferenceMe"
-            ],
-            "nullable": false
-          },
-          "name": "field_of_vec_at_most_5_of_reference_me",
+          "name": "field_of_vec_of_ref_me_at_most_5",
           "location": {
             "filename": "../../zircon/tools/fidl/testdata/type_aliases/example.test.fidl",
-            "line": 34,
-            "column": 49,
-            "length": 38
+            "line": 31,
+            "column": 44,
+            "length": 32
           },
           "field_shape_v1": {
-            "offset": 88,
+            "offset": 56,
             "padding": 0
           }
         },
@@ -317,12 +252,12 @@
           "name": "field_of_channel",
           "location": {
             "filename": "../../zircon/tools/fidl/testdata/type_aliases/example.test.fidl",
-            "line": 35,
+            "line": 32,
             "column": 13,
             "length": 16
           },
           "field_shape_v1": {
-            "offset": 104,
+            "offset": 72,
             "padding": 0
           }
         },
@@ -341,12 +276,12 @@
           "name": "field_of_client_end",
           "location": {
             "filename": "../../zircon/tools/fidl/testdata/type_aliases/example.test.fidl",
-            "line": 36,
+            "line": 33,
             "column": 16,
             "length": 19
           },
           "field_shape_v1": {
-            "offset": 108,
+            "offset": 76,
             "padding": 0
           }
         },
@@ -365,19 +300,19 @@
           "name": "field_of_nullable_client_end",
           "location": {
             "filename": "../../zircon/tools/fidl/testdata/type_aliases/example.test.fidl",
-            "line": 37,
+            "line": 34,
             "column": 17,
             "length": 28
           },
           "field_shape_v1": {
-            "offset": 112,
+            "offset": 80,
             "padding": 4
           }
         }
       ],
       "resource": true,
       "type_shape_v1": {
-        "inline_size": 120,
+        "inline_size": 88,
         "alignment": 8,
         "depth": 2,
         "max_handles": 3,
@@ -406,34 +341,10 @@
       }
     },
     {
-      "name": "fidl.test.typealiases/vec_at_most_five",
-      "location": {
-        "filename": "../../zircon/tools/fidl/testdata/type_aliases/example.test.fidl",
-        "line": 20,
-        "column": 7,
-        "length": 16
-      },
-      "partial_type_ctor": {
-        "name": "fidl.test.typealiases/vector",
-        "args": [],
-        "nullable": false,
-        "maybe_size": {
-          "kind": "literal",
-          "value": "5",
-          "expression": "5",
-          "literal": {
-            "kind": "numeric",
-            "value": "5",
-            "expression": "5"
-          }
-        }
-      }
-    },
-    {
       "name": "fidl.test.typealiases/vec_of_strings",
       "location": {
         "filename": "../../zircon/tools/fidl/testdata/type_aliases/example.test.fidl",
-        "line": 21,
+        "line": 20,
         "column": 7,
         "length": 14
       },
@@ -453,7 +364,7 @@
       "name": "fidl.test.typealiases/vec_of_strings_at_most_5",
       "location": {
         "filename": "../../zircon/tools/fidl/testdata/type_aliases/example.test.fidl",
-        "line": 22,
+        "line": 21,
         "column": 7,
         "length": 24
       },
@@ -480,34 +391,10 @@
       }
     },
     {
-      "name": "fidl.test.typealiases/vec_at_most_5",
-      "location": {
-        "filename": "../../zircon/tools/fidl/testdata/type_aliases/example.test.fidl",
-        "line": 23,
-        "column": 7,
-        "length": 13
-      },
-      "partial_type_ctor": {
-        "name": "fidl.test.typealiases/vector",
-        "args": [],
-        "nullable": false,
-        "maybe_size": {
-          "kind": "literal",
-          "value": "5",
-          "expression": "5",
-          "literal": {
-            "kind": "numeric",
-            "value": "5",
-            "expression": "5"
-          }
-        }
-      }
-    },
-    {
       "name": "fidl.test.typealiases/channel",
       "location": {
         "filename": "../../zircon/tools/fidl/testdata/type_aliases/example.test.fidl",
-        "line": 24,
+        "line": 22,
         "column": 7,
         "length": 7
       },
@@ -521,7 +408,7 @@
       "name": "fidl.test.typealiases/client_end",
       "location": {
         "filename": "../../zircon/tools/fidl/testdata/type_aliases/example.test.fidl",
-        "line": 25,
+        "line": 23,
         "column": 7,
         "length": 10
       },
@@ -535,8 +422,6 @@
   "declaration_order": [
     "fidl.test.typealiases/vec_of_strings_at_most_5",
     "fidl.test.typealiases/vec_of_strings",
-    "fidl.test.typealiases/vec_at_most_five",
-    "fidl.test.typealiases/vec_at_most_5",
     "fidl.test.typealiases/u32",
     "fidl.test.typealiases/obj_type",
     "fidl.test.typealiases/handle",
@@ -549,10 +434,8 @@
     "fidl.test.typealiases/handle": "experimental_resource",
     "fidl.test.typealiases/ExampleOfUseOfAliases": "struct",
     "fidl.test.typealiases/u32": "type_alias",
-    "fidl.test.typealiases/vec_at_most_five": "type_alias",
     "fidl.test.typealiases/vec_of_strings": "type_alias",
     "fidl.test.typealiases/vec_of_strings_at_most_5": "type_alias",
-    "fidl.test.typealiases/vec_at_most_5": "type_alias",
     "fidl.test.typealiases/channel": "type_alias",
     "fidl.test.typealiases/client_end": "type_alias"
   }

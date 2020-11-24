@@ -78,11 +78,11 @@ protocol MetricEventLoggerFactory {
 /// A vector of event codes. When used in one of the Log*() calls below,
 /// there must be one event code for each dimension of the metric whose
 /// metric_id is supplied, or else the call will return INVALID_ARGUMENTS.
-using event_vector = vector<uint32>:MAX_METRIC_DIMENSIONS;
+alias event_vector = vector<uint32>:MAX_METRIC_DIMENSIONS;
 
 /// A histogram that assigns a count to each of several integer ranges.
 /// The order of the vector is immaterial.
-using integer_histogram = vector<HistogramBucket>:MAX_HISTOGRAM_BUCKETS;
+alias integer_histogram = vector<HistogramBucket>:MAX_HISTOGRAM_BUCKETS;
 
 /// A logger for events that are associated with one project's metrics.
 protocol MetricEventLogger {

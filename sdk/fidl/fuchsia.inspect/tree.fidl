@@ -11,7 +11,7 @@ const uint64 MAX_TREE_NAME_LENGTH = 2040;
 /// Maximum number of children returned by a single read of the tree name iterator.
 const uint64 MAX_TREE_NAME_LIST_SIZE = 64;
 
-using TreeName = string:MAX_TREE_NAME_LENGTH;
+alias TreeName = string:MAX_TREE_NAME_LENGTH;
 
 /// The content of a specific Inspect Tree.
 resource table TreeContent {

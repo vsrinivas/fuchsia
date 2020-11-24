@@ -10,7 +10,7 @@ using zx;
 /// The RFCOMM channel ID used when requesting to open a channel.
 /// This is known as a ServerChannel in RFCOMM. It must be within the
 /// range [1,30] (inclusive). See RFCOMM 5.4.
-using RfcommChannel = uint8;
+alias RfcommChannel = uint8;
 
 /// The parameters associated with a connection over the RFCOMM protocol.
 table RfcommParameters {

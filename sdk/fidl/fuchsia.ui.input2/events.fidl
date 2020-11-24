@@ -38,7 +38,7 @@ flexible union SemanticKey {
 ///
 /// Example:
 ///   Key.Q for USB HID page 0x0007 usage 0x0014
-using PhysicalKey = Key;
+alias PhysicalKey = Key;
 
 /// Keyboard event is generated to reflect key input.
 table KeyEvent {

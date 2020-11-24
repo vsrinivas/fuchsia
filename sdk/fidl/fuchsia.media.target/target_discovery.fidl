@@ -17,11 +17,11 @@ using fuchsia.media.audio;
 using fuchsia.media.sessions2;
 
 /// A unique id for a target.
-using Id = uint64;
+alias Id = uint64;
 
 /// A user-visible name for a target to display in user interface or read
 /// in voice interfaces.
-using DisplayName = string:200;
+alias DisplayName = string:200;
 
 /// A protocol for discovering media targets.
 [Discoverable]

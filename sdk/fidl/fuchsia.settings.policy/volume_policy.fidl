@@ -6,7 +6,7 @@ library fuchsia.settings.policy;
 
 using fuchsia.media;
 
-using PolicyId = uint32;
+alias PolicyId = uint32;
 
 /// Provides access to enumerating and modifying policies for the
 /// fuchsia.settings.Audio API.

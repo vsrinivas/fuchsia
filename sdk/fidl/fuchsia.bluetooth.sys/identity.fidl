@@ -27,7 +27,7 @@ struct PeerKey {
 };
 
 /// Represents a locally generated key that is distributed across one or more bonds.
-using LocalKey = Key;
+alias LocalKey = Key;
 
 /// Represents a LE Long-Term peer key used for link encyrption. The `ediv` and `rand`
 /// fields are zero if distributed using LE Secure Connections pairing.

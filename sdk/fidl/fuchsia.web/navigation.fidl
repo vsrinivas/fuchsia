@@ -135,7 +135,7 @@ enum PageType {
 
 /// Unique identifier of a navigation. Can be used to correlate different phases for the
 /// same navigation. Guaranteed to be unique for all navigations in the same [`Context`].
-using NavigationId = uint64;
+alias NavigationId = uint64;
 
 /// Identifies a navigation phase.
 bits NavigationPhase : uint32 {

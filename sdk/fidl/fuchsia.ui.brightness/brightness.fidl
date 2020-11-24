@@ -8,7 +8,7 @@ using zx;
 
 /// A normalized relative brightness adjustment in the range
 /// 0.0 (off/minimum) to 1.0 (maximum).
-using brightness = float32;
+alias brightness = float32;
 
 /// Control provides an interface to manage the brightness component.
 [Discoverable]

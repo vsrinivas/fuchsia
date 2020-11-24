@@ -12,7 +12,7 @@ const int32 MAX_ALLOWED_PROFILES = 24;
 const int32 MAX_ID_LENGTH = 36;
 
 /// An alias to a profile's id.
-using ProfileId = string:MAX_ID_LENGTH;
+alias ProfileId = string:MAX_ID_LENGTH;
 
 /// Common error code used across different settings.
 enum ProfileError {

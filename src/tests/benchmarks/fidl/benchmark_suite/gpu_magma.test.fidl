@@ -4,7 +4,7 @@
 
 library benchmarkfidl;
 
-using koid = uint64;
+alias koid = uint64;
 
 // Based on fuchsia.gpu.magma.Primary.ExecuteImmediateCommand.
 struct ExecuteImmediateCommandsRequest {

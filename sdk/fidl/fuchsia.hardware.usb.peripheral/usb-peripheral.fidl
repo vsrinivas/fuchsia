@@ -19,7 +19,7 @@ struct FunctionDescriptor {
     uint8 interface_protocol;
 };
 
-using ConfigurationDescriptor = vector<FunctionDescriptor>:MAX_FUNCTION_DESCRIPTORS;
+alias ConfigurationDescriptor = vector<FunctionDescriptor>:MAX_FUNCTION_DESCRIPTORS;
 
 /// The fields in DeviceDescriptor match those in usb_descriptor_t in the USB specification,
 /// except for the string fields.

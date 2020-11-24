@@ -6,19 +6,19 @@ library fuchsia.web;
 
 // Most web browsers support up to 64 kiB maximum URL length.
 const int32 MAX_URL_LENGTH = 65536;
-using Url = string:MAX_URL_LENGTH;
+alias Url = string:MAX_URL_LENGTH;
 
 // There is no defined maximum length for schemes but this is a reasonable upper bound.
 const int32 MAX_URL_SCHEME_NAME_LENGTH = 255;
-using UrlSchemeName = string:MAX_URL_SCHEME_NAME_LENGTH;
+alias UrlSchemeName = string:MAX_URL_SCHEME_NAME_LENGTH;
 
 // RFC 1035 2.3.4 https://tools.ietf.org/html/rfc1035#section-2.3.4
 const int32 MAX_HOST_LENGTH = 255;
-using UrlHostName = string:MAX_HOST_LENGTH;
+alias UrlHostName = string:MAX_HOST_LENGTH;
 
 // MAX_URL_SCHEME_NAME_LENGTH + 3 + MAX_HOST_LENGTH.
 const int32 MAX_SCHEME_AND_HOST_LENGTH = 513;
-using UrlSchemeAndHostName = string:MAX_SCHEME_AND_HOST_LENGTH;
+alias UrlSchemeAndHostName = string:MAX_SCHEME_AND_HOST_LENGTH;
 
 // Most servers support less than 16 kiB maximum header size. 4k max headers is a reasonable size.
 const int32 MAX_HEADERS_COUNT = 4096;

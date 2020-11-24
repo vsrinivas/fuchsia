@@ -58,10 +58,10 @@ resource struct Annotation {
 };
 
 /// A list of annotations on an element or its graphical view.
-using Annotations = vector<Annotation>:MAX_ANNOTATIONS_PER_ELEMENT;
+alias Annotations = vector<Annotation>:MAX_ANNOTATIONS_PER_ELEMENT;
 
 /// A list of annotation keys.
-using AnnotationKeys = vector<AnnotationKey>:MAX_ANNOTATIONS_PER_ELEMENT;
+alias AnnotationKeys = vector<AnnotationKey>:MAX_ANNOTATIONS_PER_ELEMENT;
 
 /// An interface to create, read, update, and delete annotations,
 /// typically on an element or its view.

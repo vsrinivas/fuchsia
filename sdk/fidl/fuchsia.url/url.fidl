@@ -10,4 +10,4 @@ library fuchsia.url;
 const uint32 MAX_URL_LENGTH = 4096;
 
 /// A URL is used to reference a resource from a specified network location.
-using Url = string:MAX_URL_LENGTH;
+alias Url = string:MAX_URL_LENGTH;

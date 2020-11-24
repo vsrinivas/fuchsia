@@ -82,7 +82,7 @@ struct ProtocolDescriptor {
 
 /// A ProtocolDescriptorList is a list of protocols in a "stack" from lowest to highest,
 /// Specifying a specific protocol endpoint that can be connected.
-using ProtocolDescriptorList = vector<ProtocolDescriptor>:MAX_SEQUENCE_LENGTH;
+alias ProtocolDescriptorList = vector<ProtocolDescriptor>:MAX_SEQUENCE_LENGTH;
 
 /// Identifiers that are valid for Bluetooth Classes / Profiles.
 /// We intentionally omit classes and profile IDs that are unsupported, deprecated,

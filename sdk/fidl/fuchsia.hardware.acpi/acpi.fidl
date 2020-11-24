@@ -8,7 +8,7 @@ using zx;
 const uint32 MAX_ACPI_TABLE_ENTRIES = 512;
 
 /// An ACPI table name signature. This consists of four ASCII characters.
-using AcpiTableSignature = array<uint8>:4;
+alias AcpiTableSignature = array<uint8>:4;
 
 /// Metadata about an ACPI table entry.
 struct TableInfo {

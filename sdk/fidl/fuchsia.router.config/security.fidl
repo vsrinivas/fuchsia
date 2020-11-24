@@ -6,7 +6,7 @@ library fuchsia.router.config;
 
 using fuchsia.net;
 
-using port_number = uint16;
+alias port_number = uint16;
 
 /// Security features define the features enabled or disabled on the router.
 /// For example, NAT, firewall, passthough for common protocols that need it.

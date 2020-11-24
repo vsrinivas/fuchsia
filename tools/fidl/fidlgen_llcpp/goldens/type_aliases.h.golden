@@ -56,17 +56,12 @@ struct ExampleOfUseOfAliases {
   static constexpr const fidl_type_t* Type =
       &fidl_test_typealiases_ExampleOfUseOfAliasesTable;
   static constexpr uint32_t MaxNumHandles = 3;
-  static constexpr uint32_t PrimarySize = 120;
+  static constexpr uint32_t PrimarySize = 88;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 4294967295;
   static constexpr bool HasPointer = true;
   static constexpr bool IsResource = true;
 
   uint32_t field_of_u32 = {};
-
-  ::fidl::VectorView<::fidl::StringView> field_of_vec_at_most_five_of_string =
-      {};
-
-  ::fidl::VectorView<uint32_t> field_of_vec_at_most_five_of_uint32 = {};
 
   ::fidl::VectorView<::fidl::StringView> field_of_vec_of_strings = {};
 
@@ -76,7 +71,7 @@ struct ExampleOfUseOfAliases {
   ::fidl::VectorView<::fidl::StringView> field_of_vec_of_strings_at_most_5 = {};
 
   ::fidl::VectorView<::llcpp::someotherlibrary::ReferenceMe>
-      field_of_vec_at_most_5_of_reference_me = {};
+      field_of_vec_of_ref_me_at_most_5 = {};
 
   ::zx::channel field_of_channel = {};
 
@@ -222,23 +217,19 @@ static_assert(std::is_standard_layout_v<
 static_assert(offsetof(::llcpp::fidl::test::typealiases::ExampleOfUseOfAliases,
                        field_of_u32) == 0);
 static_assert(offsetof(::llcpp::fidl::test::typealiases::ExampleOfUseOfAliases,
-                       field_of_vec_at_most_five_of_string) == 8);
+                       field_of_vec_of_strings) == 8);
 static_assert(offsetof(::llcpp::fidl::test::typealiases::ExampleOfUseOfAliases,
-                       field_of_vec_at_most_five_of_uint32) == 24);
+                       field_of_vec_of_strings_at_most_nine) == 24);
 static_assert(offsetof(::llcpp::fidl::test::typealiases::ExampleOfUseOfAliases,
-                       field_of_vec_of_strings) == 40);
+                       field_of_vec_of_strings_at_most_5) == 40);
 static_assert(offsetof(::llcpp::fidl::test::typealiases::ExampleOfUseOfAliases,
-                       field_of_vec_of_strings_at_most_nine) == 56);
+                       field_of_vec_of_ref_me_at_most_5) == 56);
 static_assert(offsetof(::llcpp::fidl::test::typealiases::ExampleOfUseOfAliases,
-                       field_of_vec_of_strings_at_most_5) == 72);
+                       field_of_channel) == 72);
 static_assert(offsetof(::llcpp::fidl::test::typealiases::ExampleOfUseOfAliases,
-                       field_of_vec_at_most_5_of_reference_me) == 88);
+                       field_of_client_end) == 76);
 static_assert(offsetof(::llcpp::fidl::test::typealiases::ExampleOfUseOfAliases,
-                       field_of_channel) == 104);
-static_assert(offsetof(::llcpp::fidl::test::typealiases::ExampleOfUseOfAliases,
-                       field_of_client_end) == 108);
-static_assert(offsetof(::llcpp::fidl::test::typealiases::ExampleOfUseOfAliases,
-                       field_of_nullable_client_end) == 112);
+                       field_of_nullable_client_end) == 80);
 static_assert(
     sizeof(::llcpp::fidl::test::typealiases::ExampleOfUseOfAliases) ==
     ::llcpp::fidl::test::typealiases::ExampleOfUseOfAliases::PrimarySize);

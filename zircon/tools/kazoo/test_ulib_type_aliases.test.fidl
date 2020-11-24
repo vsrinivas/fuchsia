@@ -9,10 +9,10 @@ enum Destination : uint32 {
 };
 
 /// Test doc comment on type alias.
-using Alias = Destination;
+alias Alias = Destination;
 
 // Test aliasing a special type charptr.
 // This item should not occur in the library header output.
-using charptr = uint64;
+alias charptr = uint64;
 
-using AliasCharPtr = charptr;
+alias AliasCharPtr = charptr;

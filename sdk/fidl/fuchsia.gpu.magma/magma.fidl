@@ -82,7 +82,7 @@ struct CommandBuffer {
 /// triggered, the driver removes a range from the pool, writes the performance counter values from
 /// the hardware into it, then signals the client using OnPerformanceCounterReadCompleted. Pool IDs
 /// are arbitrary uint64 values that are allocated by the client.
-using PerfCountPoolId = uint64;
+alias PerfCountPoolId = uint64;
 
 bits ResultFlags {
     /// This bit is set in result_flags if the performance counters missed some samples, e.g. due to

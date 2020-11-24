@@ -45,7 +45,7 @@ const uint64 MAX_HOSTNAME_SIZE = 255;
 /// [RFC 1035 section 2.3.4](https://tools.ietf.org/html/rfc1035#section-2.3.4).
 /// A label in a host name is the alphanumeric characters or hyphens, seperated
 /// by a period (e.g. abc.com has two labels, 'abc' and 'com').
-using Hostname = string:MAX_HOSTNAME_SIZE;
+alias Hostname = string:MAX_HOSTNAME_SIZE;
 
 // TODO(fxbug.dev/49741): Move to fuchsia.net.name once build unification is done.
 [Discoverable]

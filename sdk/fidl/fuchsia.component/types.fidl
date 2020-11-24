@@ -4,5 +4,5 @@
 
 library fuchsia.component;
 
-using name = string:MAX_NAME_LENGTH;
-using url_scheme = string:MAX_URL_SCHEME_LENGTH;
+alias name = string:MAX_NAME_LENGTH;
+alias url_scheme = string:MAX_URL_SCHEME_LENGTH;

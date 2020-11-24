@@ -40,7 +40,7 @@ const uint32 MAX_ANNOTATION_VALUE_LENGTH = 1024;
 const uint32 MAX_ANNOTATION_VALUE_BUFFER_LENGTH_BYTES = 102400;
 
 /// An identifier for an [`fuchsia.modular/Annotation`].
-using AnnotationKey = string:MAX_ANNOTATION_KEY_LENGTH;
+alias AnnotationKey = string:MAX_ANNOTATION_KEY_LENGTH;
 
 /// The value of a [`fuchsia.modular/Annotation`].
 ///

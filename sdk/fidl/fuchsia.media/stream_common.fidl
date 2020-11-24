@@ -345,15 +345,15 @@ union VideoFormat {
 // media file format files. These are defined as strings rather than enums so as
 // to not limit the encryption schemes that an implementation supports to the
 // constants that are defined here.
-using EncryptionScheme = string:MAX_ENCRYPTION_SCHEME_SIZE;
+alias EncryptionScheme = string:MAX_ENCRYPTION_SCHEME_SIZE;
 const string ENCRYPTION_SCHEME_UNENCRYPTED = "unencrypted";
 const string ENCRYPTION_SCHEME_CENC = "cenc";
 const string ENCRYPTION_SCHEME_CBC1 = "cbc1";
 const string ENCRYPTION_SCHEME_CENS = "cens";
 const string ENCRYPTION_SCHEME_CBCS = "cbcs";
 
-using KeyId = bytes:MAX_KEY_ID_SIZE;
-using InitVector = bytes:MAX_INIT_VECTOR_SIZE;
+alias KeyId = bytes:MAX_KEY_ID_SIZE;
+alias InitVector = bytes:MAX_INIT_VECTOR_SIZE;
 
 /// SubsampleEntry
 ///

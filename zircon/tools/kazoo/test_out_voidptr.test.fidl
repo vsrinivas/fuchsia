@@ -4,7 +4,7 @@
 
 library zx;
 
-using voidptr = uint64;
+alias voidptr = uint64;
 
 [Transport = "Syscall"]
 protocol Ovp {

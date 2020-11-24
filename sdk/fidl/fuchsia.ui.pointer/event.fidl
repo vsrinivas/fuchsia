@@ -10,11 +10,11 @@ library fuchsia.ui.pointer;
 
 /// A floating-point two-dimensional point.
 /// - The values are placed in (x, y) order.
-using Point2 = array<float32>:2;
+alias Point2 = array<float32>:2;
 
 /// A floating-point two-dimensional vector.
 /// - The values are placed in (x, y) order.
-using Vec2 = array<float32>:2;
+alias Vec2 = array<float32>:2;
 
 ///
 /// DeviceInfo

@@ -123,15 +123,15 @@ table ImageProperties {
 
 /// A user-defined identifier for a particular transform. See CreateTransform() and
 /// ReleaseTransform() for more information.
-using TransformId = uint64;
+alias TransformId = uint64;
 
 /// A user-defined identifier for a particular BufferCollection. See RegisterBufferCollection()
 /// for more information.
-using BufferCollectionId = uint64;
+alias BufferCollectionId = uint64;
 
 /// A user-defined identifier for a particular piece of Content. See Content creation functions
 /// (e.g. CreateLink(), CreateImage()) for more information.
-using ContentId = uint64;
+alias ContentId = uint64;
 
 /// Each Flatland instance contains a Graph, which consists of a set of objects, and the
 /// relationships between those objects. The client can specify a subset of those objects

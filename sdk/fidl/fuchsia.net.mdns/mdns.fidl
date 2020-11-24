@@ -24,7 +24,7 @@ using zx;
 /// '.'s. A host name must not end with a '.'. Labels must each be 63 characters
 /// or less (not including the separator) and are UTF-8-encoded. A complete host
 /// name, including separators, must be 255 characters or less.
-using host_name = string:255;
+alias host_name = string:255;
 
 /// Identifies a (type of) service being published. Service names consist of
 /// two labels, both terminated with a '.'. The first label must start with an
@@ -32,22 +32,22 @@ using host_name = string:255;
 /// second label must be either '_tcp' or '_udp'. Labels do not contain '.'s.
 /// With underscores and terminators, that makes for a maximum of 22 characters.
 /// Service names are UTF-8-encoded.
-using service_name = string:22;
+alias service_name = string:22;
 
 /// Identifies a specific instance of a service being published. Instance names
 /// consist of a single label, which is at most 63 characters long and which
 /// contains no '.'s. Instance names are UTF-8-encoded.
-using instance_name = string:63;
+alias instance_name = string:63;
 
 /// Identifies a subtype of a service. Subtype names consist of a single label,
 /// which is at most 63 characters long and which contains no '.'s. Subtype
 /// names are UTF-8-encoded.
-using subtype_name = string:63;
+alias subtype_name = string:63;
 
 /// Provides description relating to a service instance. In typical use, TXT
 /// strings consist of a key and value separated by '='. TXT strings must be
 /// at most 255 characters long and are UTF-8-encoded.
-using txt_string = string:255;
+alias txt_string = string:255;
 
 /// Discoverable protocol for resolving host names to IP addresses.
 [Discoverable]

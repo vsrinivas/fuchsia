@@ -16,7 +16,7 @@ struct NodeId {
 };
 
 /// Node-local link label.
-using LinkId = uint64;
+alias LinkId = uint64;
 
 /// Length of a transfer key.
 const uint32 TRANSFER_KEY_LENGTH = 16;
@@ -24,4 +24,4 @@ const uint32 TRANSFER_KEY_LENGTH = 16;
 /// A transfer key is used when moving a stream endpoint from one node to
 /// another. It identifies a single transfer, should be unique (so, made from
 /// random bytes), and should be discarded at the end of the transfer.
-using TransferKey = array<uint8>:TRANSFER_KEY_LENGTH;
+alias TransferKey = array<uint8>:TRANSFER_KEY_LENGTH;

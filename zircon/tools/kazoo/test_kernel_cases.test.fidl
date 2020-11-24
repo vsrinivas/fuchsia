@@ -7,11 +7,11 @@ library zx;
 // This file is copies of some syscalls that were interesting for the kernel
 // header generator.
 
-using mutable_vector_void = vector<handle>;
-using optional_uint32 = uint32;
-using vector_handle_u32size = vector<byte>;
-using vector_paddr = vector<paddr>;
-using vector_void_u32size = vector<byte>;
+alias mutable_vector_void = vector<handle>;
+alias optional_uint32 = uint32;
+alias vector_handle_u32size = vector<byte>;
+alias vector_paddr = vector<paddr>;
+alias vector_void_u32size = vector<byte>;
 
 [Transport="Syscall"]
 protocol KernelCases {

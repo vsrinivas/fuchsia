@@ -10,7 +10,7 @@ library fuchsia.location.namedplace;
 /// Represents a regulatory region. These values should generally be chosen
 /// from [ISO 3166-2](https://en.wikipedia.org/wiki/ISO_3166-2) codes. However,
 /// some radios may support extensions beyond the set of ISO 3166-2 codes.
-using RegionCode = string:2;
+alias RegionCode = string:2;
 
 /// The RegulatoryRegionConfigurator protocol provides mechanisms to
 /// inform Location Services of the inputs that should be used to

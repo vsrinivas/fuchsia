@@ -4,7 +4,7 @@
 
 library zx;
 
-using VmOption = uint32;
+alias VmOption = uint32;
 
 // TODO(scottmg): bits for ZX_VM_xyz flags, and const for ZX_VM_ALIGN_xyz.
 

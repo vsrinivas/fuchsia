@@ -26,8 +26,12 @@ def constants(f, idents: List[ScopedIdentifier]):
 @use
 def using(f, idents: List[ScopedIdentifier]):
     for ident in idents:
+        # TODO(fxbug.dev/8042): Having a declaration with same same name as what is
+        # aliased causes a cycle.
+        if ident.name == "string":
+            continue
         f.write(ident.decl_attributes)
-        f.write(f'using {ident} = vector;\n')
+        f.write(f'alias {ident} = string;\n')
 
 
 # TODO(ianloic): Make this test work. It requires N libraries to import for N
@@ -56,7 +60,7 @@ def enums(f, idents: List[ScopedIdentifier]):
 @use
 def struct_types(f, idents: List[ScopedIdentifier]):
     # structs with every dangerous name
-    f.write('using membertype = uint32;\n')
+    f.write('alias membertype = uint32;\n')
     for ident in idents:
         f.write(ident.decl_attributes)
         f.write(f'struct {ident} {{ membertype member = 1; }};\n')
@@ -85,7 +89,7 @@ def struct_names(f, idents: List[ScopedIdentifier]):
 # @use
 # def union_names(f, idents):
 #   # unions with every dangerous name
-#   f.write('using membertype = uint32;\n')
+#   f.write('alias membertype = uint32;\n')
 #   for ident in idents:
 #     # TODO(fxbug.dev/8042): Having a declaration with same same name as what is
 #     # aliased causes a cycle.
@@ -113,7 +117,7 @@ def struct_names(f, idents: List[ScopedIdentifier]):
 @use
 def table_names(f, idents: List[ScopedIdentifier]):
     # tables with every dangerous name
-    f.write('using membertype = uint32;\n')
+    f.write('alias membertype = uint32;\n')
     for ident in idents:
         f.write(ident.decl_attributes)
         f.write(f'table {ident} {{ 1: membertype member; }};\n')
@@ -177,7 +181,7 @@ def event_names(f, idents: List[ScopedIdentifier]):
 @use
 def method_request_arguments(f, idents: List[ScopedIdentifier]):
     # a protocol with every dangerous name as a request argument
-    f.write('using argtype = uint32;\n')
+    f.write('alias argtype = uint32;\n')
     f.write('protocol DangerousRequestArguments {\n')
     for ident in idents:
         f.write(ident.decl_attributes)
@@ -188,7 +192,7 @@ def method_request_arguments(f, idents: List[ScopedIdentifier]):
 @use
 def method_response_arguments(f, idents: List[ScopedIdentifier]):
     # a protocol with every dangerous name as a response argument
-    f.write('using argtype = uint32;\n')
+    f.write('alias argtype = uint32;\n')
     f.write('protocol DangerousResponseArguments {\n')
     for ident in idents:
         f.write(ident.decl_attributes)
@@ -199,7 +203,7 @@ def method_response_arguments(f, idents: List[ScopedIdentifier]):
 @use
 def method_event_arguments(f, idents: List[ScopedIdentifier]):
     # a protocol with every dangerous name as a event argument
-    f.write('using argtype = uint32;\n')
+    f.write('alias argtype = uint32;\n')
     f.write('protocol DangerousResponseArguments {\n')
     for ident in idents:
         f.write(ident.decl_attributes)

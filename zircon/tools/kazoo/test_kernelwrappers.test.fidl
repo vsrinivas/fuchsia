@@ -4,7 +4,7 @@
 
 library zx;
 
-using mutable_vector_void = vector<byte>;
+alias mutable_vector_void = vector<byte>;
 
 [Transport="Syscall"]
 protocol Kwrap {

@@ -5,7 +5,9 @@
 library fuchsia.factory.lowpan;
 
 using fuchsia.lowpan.device;
+// TODO(fxb/65218): Replace with an alias.
 using InterfaceName = fuchsia.lowpan.device.InterfaceName;
+// TODO(fxb/65218): Replace with an alias.
 using ServiceError = fuchsia.lowpan.device.ServiceError;
 
 /// Protocol for sending factory commands to a LoWPAN device.

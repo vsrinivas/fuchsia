@@ -15,7 +15,7 @@ using fuchsia.media.audio;
 ///    `domain://<unique name for protocol>.version`
 ///
 /// The `|` symbol is reserved and should not be used in a domain string.
-using Domain = string:1000;
+alias Domain = string:1000;
 
 /// Controls for a media player. `PlayerCapabilities` expresses which of the methods in this
 /// protocol are supported by the player. Because capabilties are dynamic, and a client cannot

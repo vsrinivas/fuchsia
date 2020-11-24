@@ -14,7 +14,7 @@ using zx;
 const uint64 MAX_TRANSFER_SIZE = 8192;
 
 /// The byte vector type used for read/write operations.
-using Transfer = bytes:MAX_TRANSFER_SIZE;
+alias Transfer = bytes:MAX_TRANSFER_SIZE;
 
 /// A [`fuchsia.io2/Node`] which contains a sequence of bytes of definite
 /// length.

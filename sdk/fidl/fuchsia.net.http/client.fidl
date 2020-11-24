@@ -8,7 +8,7 @@ using fuchsia.mem;
 using fuchsia.url;
 using zx;
 
-using Method = string:1024;
+alias Method = string:1024;
 
 /// An error occurred during the HTTP transaction.
 enum Error {

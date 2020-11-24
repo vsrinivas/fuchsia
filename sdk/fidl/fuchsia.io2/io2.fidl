@@ -21,7 +21,7 @@ using zx;
 /// * It cannot be "." (single dot).
 /// * It cannot contain "/".
 /// * It cannot contain embedded NUL.
-using Name = string:MAX_NAME_LENGTH;
+alias Name = string:MAX_NAME_LENGTH;
 
 /// The maximum length, in bytes, of a single filesystem component.
 const uint64 MAX_NAME_LENGTH = 255;
@@ -42,13 +42,14 @@ const uint64 MAX_NAME_LENGTH = 255;
 /// Paths should be transformed into their canonical forms at client side.
 /// For example, a client should convert `"foo/bar/.././baz/"` to `"foo/baz"`
 /// before using it as a path.
-using Path = string:MAX_PATH_LENGTH;
+alias Path = string:MAX_PATH_LENGTH;
 
 /// The maximum length, in bytes, of a filesystem path.
 const uint64 MAX_PATH_LENGTH = 4095;
 
 /// The type to identify a connection to a node.
 /// It represents a capability: a reference to a node with associated rights.
+// TODO(fxb/65218): Replace with an alias.
 using Token = zx.handle:EVENT;
 
 /// The type to identify a node, if the implementation supports some notion of
@@ -68,4 +69,4 @@ using Token = zx.handle:EVENT;
 /// If the implementation also supports [`fuchsia.fs/Query`], the
 /// [`fuchsia.fs/FilesystemInfo.fs_id`] field may be used to disambiguate IDs
 /// from different backing instances.
-using Id = uint64;
+alias Id = uint64;

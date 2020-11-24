@@ -28,7 +28,7 @@ struct BindInstruction {
 
 // Identifier used to let the devcoordinator describe specific devices during
 // composite construction
-using LocalDeviceId = uint64;
+alias LocalDeviceId = uint64;
 
 /// This definition must match `ZX_DEVICE_NAME_MAX` and is checked by a static assert.
 const uint32 DEVICE_NAME_MAX = 31;

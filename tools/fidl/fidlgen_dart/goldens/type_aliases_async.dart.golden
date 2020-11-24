@@ -99,12 +99,10 @@ const $fidl.EnumType<ObjType> kobj_type_Type = $fidl.EnumType<ObjType>(
 class ExampleOfUseOfAliases extends $fidl.Struct {
   const ExampleOfUseOfAliases({
     required this.fieldOfU32,
-    required this.fieldOfVecAtMostFiveOfString,
-    required this.fieldOfVecAtMostFiveOfUint32,
     required this.fieldOfVecOfStrings,
     required this.fieldOfVecOfStringsAtMostNine,
     required this.fieldOfVecOfStringsAtMost5,
-    required this.fieldOfVecAtMost5OfReferenceMe,
+    required this.fieldOfVecOfRefMeAtMost5,
     required this.fieldOfChannel,
     required this.fieldOfClientEnd,
     this.fieldOfNullableClientEnd,
@@ -112,28 +110,22 @@ class ExampleOfUseOfAliases extends $fidl.Struct {
   ExampleOfUseOfAliases.clone(
     ExampleOfUseOfAliases $orig, {
     int? fieldOfU32,
-    List<String>? fieldOfVecAtMostFiveOfString,
-    Uint32List? fieldOfVecAtMostFiveOfUint32,
     List<String>? fieldOfVecOfStrings,
     List<String>? fieldOfVecOfStringsAtMostNine,
     List<String>? fieldOfVecOfStringsAtMost5,
-    List<lib$someotherlibrary.ReferenceMe>? fieldOfVecAtMost5OfReferenceMe,
+    List<lib$someotherlibrary.ReferenceMe>? fieldOfVecOfRefMeAtMost5,
     $zircon.Channel? fieldOfChannel,
     $zircon.Channel? fieldOfClientEnd,
     $zircon.Channel? fieldOfNullableClientEnd,
   }) : this(
           fieldOfU32: fieldOfU32 ?? $orig.fieldOfU32,
-          fieldOfVecAtMostFiveOfString: fieldOfVecAtMostFiveOfString ??
-              $orig.fieldOfVecAtMostFiveOfString,
-          fieldOfVecAtMostFiveOfUint32: fieldOfVecAtMostFiveOfUint32 ??
-              $orig.fieldOfVecAtMostFiveOfUint32,
           fieldOfVecOfStrings: fieldOfVecOfStrings ?? $orig.fieldOfVecOfStrings,
           fieldOfVecOfStringsAtMostNine: fieldOfVecOfStringsAtMostNine ??
               $orig.fieldOfVecOfStringsAtMostNine,
           fieldOfVecOfStringsAtMost5:
               fieldOfVecOfStringsAtMost5 ?? $orig.fieldOfVecOfStringsAtMost5,
-          fieldOfVecAtMost5OfReferenceMe: fieldOfVecAtMost5OfReferenceMe ??
-              $orig.fieldOfVecAtMost5OfReferenceMe,
+          fieldOfVecOfRefMeAtMost5:
+              fieldOfVecOfRefMeAtMost5 ?? $orig.fieldOfVecOfRefMeAtMost5,
           fieldOfChannel: fieldOfChannel ?? $orig.fieldOfChannel,
           fieldOfClientEnd: fieldOfClientEnd ?? $orig.fieldOfClientEnd,
           fieldOfNullableClientEnd:
@@ -145,12 +137,10 @@ class ExampleOfUseOfAliases extends $fidl.Struct {
     bool fieldOfNullableClientEnd = false,
   }) : this(
           fieldOfU32: $orig.fieldOfU32,
-          fieldOfVecAtMostFiveOfString: $orig.fieldOfVecAtMostFiveOfString,
-          fieldOfVecAtMostFiveOfUint32: $orig.fieldOfVecAtMostFiveOfUint32,
           fieldOfVecOfStrings: $orig.fieldOfVecOfStrings,
           fieldOfVecOfStringsAtMostNine: $orig.fieldOfVecOfStringsAtMostNine,
           fieldOfVecOfStringsAtMost5: $orig.fieldOfVecOfStringsAtMost5,
-          fieldOfVecAtMost5OfReferenceMe: $orig.fieldOfVecAtMost5OfReferenceMe,
+          fieldOfVecOfRefMeAtMost5: $orig.fieldOfVecOfRefMeAtMost5,
           fieldOfChannel: $orig.fieldOfChannel,
           fieldOfClientEnd: $orig.fieldOfClientEnd,
           fieldOfNullableClientEnd:
@@ -158,12 +148,10 @@ class ExampleOfUseOfAliases extends $fidl.Struct {
         );
 
   final int fieldOfU32;
-  final List<String> fieldOfVecAtMostFiveOfString;
-  final Uint32List fieldOfVecAtMostFiveOfUint32;
   final List<String> fieldOfVecOfStrings;
   final List<String> fieldOfVecOfStringsAtMostNine;
   final List<String> fieldOfVecOfStringsAtMost5;
-  final List<lib$someotherlibrary.ReferenceMe> fieldOfVecAtMost5OfReferenceMe;
+  final List<lib$someotherlibrary.ReferenceMe> fieldOfVecOfRefMeAtMost5;
   final $zircon.Channel fieldOfChannel;
   final $zircon.Channel fieldOfClientEnd;
   final $zircon.Channel? fieldOfNullableClientEnd;
@@ -172,12 +160,10 @@ class ExampleOfUseOfAliases extends $fidl.Struct {
   List<Object?> get $fields {
     return <Object?>[
       fieldOfU32,
-      fieldOfVecAtMostFiveOfString,
-      fieldOfVecAtMostFiveOfUint32,
       fieldOfVecOfStrings,
       fieldOfVecOfStringsAtMostNine,
       fieldOfVecOfStringsAtMost5,
-      fieldOfVecAtMost5OfReferenceMe,
+      fieldOfVecOfRefMeAtMost5,
       fieldOfChannel,
       fieldOfClientEnd,
       fieldOfNullableClientEnd,
@@ -186,53 +172,43 @@ class ExampleOfUseOfAliases extends $fidl.Struct {
 
   static const $fieldType0 = $fidl.Uint32Type();
   static const $fieldType1 = $fidl.VectorType<String, List<String>>(
-      element: $fidl.StringType(maybeElementCount: null), maybeElementCount: 5);
-  static const $fieldType2 = $fidl.VectorType<int, Uint32List>(
-      element: $fidl.Uint32Type(), maybeElementCount: 5);
-  static const $fieldType3 = $fidl.VectorType<String, List<String>>(
       element: $fidl.StringType(maybeElementCount: null),
       maybeElementCount: null);
-  static const $fieldType4 = $fidl.VectorType<String, List<String>>(
+  static const $fieldType2 = $fidl.VectorType<String, List<String>>(
       element: $fidl.StringType(maybeElementCount: null), maybeElementCount: 9);
-  static const $fieldType5 = $fidl.VectorType<String, List<String>>(
+  static const $fieldType3 = $fidl.VectorType<String, List<String>>(
       element: $fidl.StringType(maybeElementCount: null), maybeElementCount: 5);
-  static const $fieldType6 = $fidl.VectorType<lib$someotherlibrary.ReferenceMe,
+  static const $fieldType4 = $fidl.VectorType<lib$someotherlibrary.ReferenceMe,
           List<lib$someotherlibrary.ReferenceMe>>(
       element: lib$someotherlibrary.kReferenceMe_Type, maybeElementCount: 5);
-  static const $fieldType7 = $fidl.ChannelType();
-  static const $fieldType8 = $fidl.ChannelType();
-  static const $fieldType9 = $fidl.NullableChannelType();
+  static const $fieldType5 = $fidl.ChannelType();
+  static const $fieldType6 = $fidl.ChannelType();
+  static const $fieldType7 = $fidl.NullableChannelType();
 
   @override
   void $encode($fidl.Encoder $encoder, int $offset) {
     $fieldType0.encode($encoder, fieldOfU32, $offset + 0);
-    $fieldType1.encode($encoder, fieldOfVecAtMostFiveOfString, $offset + 8);
-    $fieldType2.encode($encoder, fieldOfVecAtMostFiveOfUint32, $offset + 24);
-    $fieldType3.encode($encoder, fieldOfVecOfStrings, $offset + 40);
-    $fieldType4.encode($encoder, fieldOfVecOfStringsAtMostNine, $offset + 56);
-    $fieldType5.encode($encoder, fieldOfVecOfStringsAtMost5, $offset + 72);
-    $fieldType6.encode($encoder, fieldOfVecAtMost5OfReferenceMe, $offset + 88);
-    $fieldType7.encode($encoder, fieldOfChannel, $offset + 104);
-    $fieldType8.encode($encoder, fieldOfClientEnd, $offset + 108);
-    $fieldType9.encode($encoder, fieldOfNullableClientEnd, $offset + 112);
+    $fieldType1.encode($encoder, fieldOfVecOfStrings, $offset + 8);
+    $fieldType2.encode($encoder, fieldOfVecOfStringsAtMostNine, $offset + 24);
+    $fieldType3.encode($encoder, fieldOfVecOfStringsAtMost5, $offset + 40);
+    $fieldType4.encode($encoder, fieldOfVecOfRefMeAtMost5, $offset + 56);
+    $fieldType5.encode($encoder, fieldOfChannel, $offset + 72);
+    $fieldType6.encode($encoder, fieldOfClientEnd, $offset + 76);
+    $fieldType7.encode($encoder, fieldOfNullableClientEnd, $offset + 80);
   }
 
   @override
   String toString() {
     return r'ExampleOfUseOfAliases' r'(fieldOfU32: ' +
         fieldOfU32.toString() +
-        r', fieldOfVecAtMostFiveOfString: ' +
-        fieldOfVecAtMostFiveOfString.toString() +
-        r', fieldOfVecAtMostFiveOfUint32: ' +
-        fieldOfVecAtMostFiveOfUint32.toString() +
         r', fieldOfVecOfStrings: ' +
         fieldOfVecOfStrings.toString() +
         r', fieldOfVecOfStringsAtMostNine: ' +
         fieldOfVecOfStringsAtMostNine.toString() +
         r', fieldOfVecOfStringsAtMost5: ' +
         fieldOfVecOfStringsAtMost5.toString() +
-        r', fieldOfVecAtMost5OfReferenceMe: ' +
-        fieldOfVecAtMost5OfReferenceMe.toString() +
+        r', fieldOfVecOfRefMeAtMost5: ' +
+        fieldOfVecOfRefMeAtMost5.toString() +
         r', fieldOfChannel: ' +
         fieldOfChannel.toString() +
         r', fieldOfClientEnd: ' +
@@ -246,18 +222,14 @@ class ExampleOfUseOfAliases extends $fidl.Struct {
       $fidl.Decoder $decoder, int $offset) {
     return ExampleOfUseOfAliases(
         fieldOfU32: $fieldType0.decode($decoder, $offset + 0),
-        fieldOfVecAtMostFiveOfString: $fieldType1.decode($decoder, $offset + 8),
-        fieldOfVecAtMostFiveOfUint32:
-            $fieldType2.decode($decoder, $offset + 24),
-        fieldOfVecOfStrings: $fieldType3.decode($decoder, $offset + 40),
+        fieldOfVecOfStrings: $fieldType1.decode($decoder, $offset + 8),
         fieldOfVecOfStringsAtMostNine:
-            $fieldType4.decode($decoder, $offset + 56),
-        fieldOfVecOfStringsAtMost5: $fieldType5.decode($decoder, $offset + 72),
-        fieldOfVecAtMost5OfReferenceMe:
-            $fieldType6.decode($decoder, $offset + 88),
-        fieldOfChannel: $fieldType7.decode($decoder, $offset + 104),
-        fieldOfClientEnd: $fieldType8.decode($decoder, $offset + 108),
-        fieldOfNullableClientEnd: $fieldType9.decode($decoder, $offset + 112));
+            $fieldType2.decode($decoder, $offset + 24),
+        fieldOfVecOfStringsAtMost5: $fieldType3.decode($decoder, $offset + 40),
+        fieldOfVecOfRefMeAtMost5: $fieldType4.decode($decoder, $offset + 56),
+        fieldOfChannel: $fieldType5.decode($decoder, $offset + 72),
+        fieldOfClientEnd: $fieldType6.decode($decoder, $offset + 76),
+        fieldOfNullableClientEnd: $fieldType7.decode($decoder, $offset + 80));
   }
 }
 
@@ -265,7 +237,7 @@ class ExampleOfUseOfAliases extends $fidl.Struct {
 // ignore: recursive_compile_time_constant
 const $fidl.StructType<ExampleOfUseOfAliases> kExampleOfUseOfAliases_Type =
     $fidl.StructType<ExampleOfUseOfAliases>(
-  inlineSize: 120,
+  inlineSize: 88,
   structDecode: ExampleOfUseOfAliases._structDecode,
 );
 

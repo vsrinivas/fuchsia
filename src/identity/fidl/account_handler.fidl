@@ -12,8 +12,8 @@ using fuchsia.kms;
 
 const uint32 HASH_SIZE = 32;
 const uint32 HASH_SALT_SIZE = 32;
-using GlobalIdHash = array<byte>:HASH_SIZE;
-using HashSalt = array<byte>:HASH_SALT_SIZE;
+alias GlobalIdHash = array<byte>:HASH_SIZE;
+alias HashSalt = array<byte>:HASH_SALT_SIZE;
 
 /// The control channel for an AccountHandler component.
 ///
@@ -321,4 +321,4 @@ table AccountData {
 };
 
 /// Encrypted form of AccountData.
-using EncryptedAccountData = bytes:16000;
+alias EncryptedAccountData = bytes:16000;

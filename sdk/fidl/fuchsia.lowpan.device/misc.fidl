@@ -20,7 +20,8 @@ const uint16 MAX_STREAM_SET_SIZE = 32;
 const uint16 MAX_NETWORK_TYPES = 16;
 
 /// Type for describing a channel index.
+// TODO(fxb/65218): Replace with an alias.
 using ChannelIndex = fuchsia.lowpan.ChannelIndex;
 
 /// Used with `DeviceExtra.CommissionNetwork()`.
-using JoinerSecret = bytes:32;
+alias JoinerSecret = bytes:32;

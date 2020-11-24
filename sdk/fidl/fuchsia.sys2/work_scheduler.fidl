@@ -8,7 +8,7 @@ using zx;
 using fuchsia.component;
 
 const uint32 MAX_WORK_ID_LENGTH = 100;
-using WorkId = string:MAX_WORK_ID_LENGTH;
+alias WorkId = string:MAX_WORK_ID_LENGTH;
 
 /// Different ways to specify when to schedule a work item for the first time.
 flexible union Start {

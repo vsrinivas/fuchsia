@@ -8,15 +8,15 @@ using fuchsia.ui.views;
 
 /// A floating-point two-dimensional point.
 /// - The values are placed in (x, y) order.
-using Point2 = array<float32>:2;
+alias Point2 = array<float32>:2;
 
 /// A floating-point pair of points, representing minimal and maximal extents.
 /// - The values are placed in (minimal, maximal) order.
-using Extents = array<Point2>:2;
+alias Extents = array<Point2>:2;
 
 /// A floating-point 3x3 matrix.
 /// - The values are placed in column-major order.
-using Mat3 = array<float32>:9;
+alias Mat3 = array<float32>:9;
 
 /// A specification for an injector |Device|.
 ///

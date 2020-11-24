@@ -35,10 +35,6 @@ class ExampleOfUseOfAliases final {
 
   uint32_t field_of_u32{};
 
-  ::std::vector<::std::string> field_of_vec_at_most_five_of_string{};
-
-  ::std::vector<uint32_t> field_of_vec_at_most_five_of_uint32{};
-
   ::std::vector<::std::string> field_of_vec_of_strings{};
 
   ::std::vector<::std::string> field_of_vec_of_strings_at_most_nine{};
@@ -46,7 +42,7 @@ class ExampleOfUseOfAliases final {
   ::std::vector<::std::string> field_of_vec_of_strings_at_most_5{};
 
   ::std::vector<::someotherlibrary::ReferenceMe>
-      field_of_vec_at_most_5_of_reference_me{};
+      field_of_vec_of_ref_me_at_most_5{};
 
   ::zx::channel field_of_channel{};
 
@@ -115,7 +111,7 @@ struct Equality<::fidl::test::typealiases::obj_type> {
 template <>
 struct CodingTraits<::fidl::test::typealiases::ExampleOfUseOfAliases>
     : public EncodableCodingTraits<
-          ::fidl::test::typealiases::ExampleOfUseOfAliases, 120> {};
+          ::fidl::test::typealiases::ExampleOfUseOfAliases, 88> {};
 
 template <>
 struct HasPadding<::fidl::test::typealiases::ExampleOfUseOfAliases>
@@ -129,7 +125,6 @@ struct IsMemcpyCompatible<::fidl::test::typealiases::ExampleOfUseOfAliases>
           IsMemcpyCompatible<
               ::std::vector<::someotherlibrary::ReferenceMe>>::value &&
           IsMemcpyCompatible<::std::vector<::std::string>>::value &&
-          IsMemcpyCompatible<::std::vector<uint32_t>>::value &&
           IsMemcpyCompatible<::zx::channel>::value &&
           IsMemcpyCompatible<uint32_t>::value> {};
 
@@ -147,14 +142,6 @@ struct Equality<::fidl::test::typealiases::ExampleOfUseOfAliases> {
     if (!::fidl::Equals(_lhs.field_of_u32, _rhs.field_of_u32)) {
       return false;
     }
-    if (!::fidl::Equals(_lhs.field_of_vec_at_most_five_of_string,
-                        _rhs.field_of_vec_at_most_five_of_string)) {
-      return false;
-    }
-    if (!::fidl::Equals(_lhs.field_of_vec_at_most_five_of_uint32,
-                        _rhs.field_of_vec_at_most_five_of_uint32)) {
-      return false;
-    }
     if (!::fidl::Equals(_lhs.field_of_vec_of_strings,
                         _rhs.field_of_vec_of_strings)) {
       return false;
@@ -167,8 +154,8 @@ struct Equality<::fidl::test::typealiases::ExampleOfUseOfAliases> {
                         _rhs.field_of_vec_of_strings_at_most_5)) {
       return false;
     }
-    if (!::fidl::Equals(_lhs.field_of_vec_at_most_5_of_reference_me,
-                        _rhs.field_of_vec_at_most_5_of_reference_me)) {
+    if (!::fidl::Equals(_lhs.field_of_vec_of_ref_me_at_most_5,
+                        _rhs.field_of_vec_of_ref_me_at_most_5)) {
       return false;
     }
     if (!::fidl::Equals(_lhs.field_of_channel, _rhs.field_of_channel)) {

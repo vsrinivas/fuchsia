@@ -6,7 +6,7 @@ library fuchsia.ui.pointer;
 
 /// A floating-point 3x3 matrix.
 /// - The values are placed in column-major order.
-using Mat3 = array<float32>:9;
+alias Mat3 = array<float32>:9;
 
 /// An axis-aligned rectangle. It is defined by its minimal and maximal extents
 /// in a coordinate system.

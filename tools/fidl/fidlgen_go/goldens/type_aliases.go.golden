@@ -50,17 +50,15 @@ func (x ObjType) String() string {
 }
 
 type ExampleOfUseOfAliases struct {
-	_                              struct{}                       `fidl:"s" fidl_size_v1:"120" fidl_alignment_v1:"8"`
-	FieldOfU32                     uint32                         `fidl_offset_v1:"0"`
-	FieldOfVecAtMostFiveOfString   []string                       `fidl_offset_v1:"8" fidl_bounds:"5,"`
-	FieldOfVecAtMostFiveOfUint32   []uint32                       `fidl_offset_v1:"24" fidl_bounds:"5"`
-	FieldOfVecOfStrings            []string                       `fidl_offset_v1:"40" fidl_bounds:""`
-	FieldOfVecOfStringsAtMostNine  []string                       `fidl_offset_v1:"56" fidl_bounds:"9,"`
-	FieldOfVecOfStringsAtMost5     []string                       `fidl_offset_v1:"72" fidl_bounds:"5,"`
-	FieldOfVecAtMost5OfReferenceMe []someotherlibrary.ReferenceMe `fidl_offset_v1:"88" fidl_bounds:"5"`
-	FieldOfChannel                 _zx.Channel                    `fidl_offset_v1:"104" fidl_handle_subtype:"4" fidl_handle_rights:"2147483648" fidl_bounds:"0"`
-	FieldOfClientEnd               _zx.Channel                    `fidl_offset_v1:"108" fidl_handle_subtype:"4" fidl_handle_rights:"2147483648" fidl_bounds:"0"`
-	FieldOfNullableClientEnd       _zx.Channel                    `fidl_offset_v1:"112" fidl_handle_subtype:"4" fidl_handle_rights:"2147483648" fidl_bounds:"1"`
+	_                             struct{}                       `fidl:"s" fidl_size_v1:"88" fidl_alignment_v1:"8"`
+	FieldOfU32                    uint32                         `fidl_offset_v1:"0"`
+	FieldOfVecOfStrings           []string                       `fidl_offset_v1:"8" fidl_bounds:""`
+	FieldOfVecOfStringsAtMostNine []string                       `fidl_offset_v1:"24" fidl_bounds:"9,"`
+	FieldOfVecOfStringsAtMost5    []string                       `fidl_offset_v1:"40" fidl_bounds:"5,"`
+	FieldOfVecOfRefMeAtMost5      []someotherlibrary.ReferenceMe `fidl_offset_v1:"56" fidl_bounds:"5"`
+	FieldOfChannel                _zx.Channel                    `fidl_offset_v1:"72" fidl_handle_subtype:"4" fidl_handle_rights:"2147483648" fidl_bounds:"0"`
+	FieldOfClientEnd              _zx.Channel                    `fidl_offset_v1:"76" fidl_handle_subtype:"4" fidl_handle_rights:"2147483648" fidl_bounds:"0"`
+	FieldOfNullableClientEnd      _zx.Channel                    `fidl_offset_v1:"80" fidl_handle_subtype:"4" fidl_handle_rights:"2147483648" fidl_bounds:"1"`
 }
 
 var _mExampleOfUseOfAliases = _bindings.CreateLazyMarshaler(ExampleOfUseOfAliases{})

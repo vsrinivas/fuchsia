@@ -4,8 +4,8 @@
 
 library zx;
 
-using mutable_vector_void = vector<byte>;
-using voidptr = uint64;
+alias mutable_vector_void = vector<byte>;
+alias voidptr = uint64;
 
 [Transport = "Syscall"]
 protocol Rust {

@@ -8,7 +8,7 @@
 ## **STRUCTS**
 
 ### ExampleOfUseOfAliases {#ExampleOfUseOfAliases}
-*Defined in [fidl.test.typealiases/example.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/tools/fidl/testdata/type_aliases/example.test.fidl#27)*
+*Defined in [fidl.test.typealiases/example.test.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/tools/fidl/testdata/type_aliases/example.test.fidl#25)*
 
 
 
@@ -17,20 +17,6 @@
             <td><code>field_of_u32</code></td>
             <td>
                 <code><a class='link' href='#u32'>u32</a></code>
-            </td>
-            <td></td>
-            <td>No default</td>
-        </tr><tr id="ExampleOfUseOfAliases.field_of_vec_at_most_five_of_string">
-            <td><code>field_of_vec_at_most_five_of_string</code></td>
-            <td>
-                <code><a class='link' href='#vec_at_most_five'>vec_at_most_five</a></code>
-            </td>
-            <td></td>
-            <td>No default</td>
-        </tr><tr id="ExampleOfUseOfAliases.field_of_vec_at_most_five_of_uint32">
-            <td><code>field_of_vec_at_most_five_of_uint32</code></td>
-            <td>
-                <code><a class='link' href='#vec_at_most_five'>vec_at_most_five</a></code>
             </td>
             <td></td>
             <td>No default</td>
@@ -55,10 +41,10 @@
             </td>
             <td></td>
             <td>No default</td>
-        </tr><tr id="ExampleOfUseOfAliases.field_of_vec_at_most_5_of_reference_me">
-            <td><code>field_of_vec_at_most_5_of_reference_me</code></td>
+        </tr><tr id="ExampleOfUseOfAliases.field_of_vec_of_ref_me_at_most_5">
+            <td><code>field_of_vec_of_ref_me_at_most_5</code></td>
             <td>
-                <code><a class='link' href='#vec_at_most_5'>vec_at_most_5</a></code>
+                <code>vector&lt;<a class='link' href='../someotherlibrary/'>someotherlibrary</a>/<a class='link' href='../someotherlibrary/#ReferenceMe'>ReferenceMe</a>&gt;[5]</code>
             </td>
             <td></td>
             <td>No default</td>
@@ -122,12 +108,12 @@ Type: <code>uint32</code>
 
 <table>
     <tr><th>Name</th><th>Value</th><th>Description</th></tr><tr id="channel">
-            <td><a href="https://fuchsia.googlesource.com/fuchsia/+/master/zircon/tools/fidl/testdata/type_aliases/example.test.fidl#24">channel</a></td>
+            <td><a href="https://fuchsia.googlesource.com/fuchsia/+/master/zircon/tools/fidl/testdata/type_aliases/example.test.fidl#22">channel</a></td>
             <td>
                 <code>handle</code></td>
             <td></td>
         </tr><tr id="client_end">
-            <td><a href="https://fuchsia.googlesource.com/fuchsia/+/master/zircon/tools/fidl/testdata/type_aliases/example.test.fidl#25">client_end</a></td>
+            <td><a href="https://fuchsia.googlesource.com/fuchsia/+/master/zircon/tools/fidl/testdata/type_aliases/example.test.fidl#23">client_end</a></td>
             <td>
                 <code>handle</code></td>
             <td></td>
@@ -136,23 +122,13 @@ Type: <code>uint32</code>
             <td>
                 <code>uint32</code></td>
             <td></td>
-        </tr><tr id="vec_at_most_5">
-            <td><a href="https://fuchsia.googlesource.com/fuchsia/+/master/zircon/tools/fidl/testdata/type_aliases/example.test.fidl#23">vec_at_most_5</a></td>
-            <td>
-                <code>fidl.test.typealiases/vector</code>[<code>5</code>]</td>
-            <td></td>
-        </tr><tr id="vec_at_most_five">
-            <td><a href="https://fuchsia.googlesource.com/fuchsia/+/master/zircon/tools/fidl/testdata/type_aliases/example.test.fidl#20">vec_at_most_five</a></td>
-            <td>
-                <code>fidl.test.typealiases/vector</code>[<code>5</code>]</td>
-            <td></td>
         </tr><tr id="vec_of_strings">
-            <td><a href="https://fuchsia.googlesource.com/fuchsia/+/master/zircon/tools/fidl/testdata/type_aliases/example.test.fidl#21">vec_of_strings</a></td>
+            <td><a href="https://fuchsia.googlesource.com/fuchsia/+/master/zircon/tools/fidl/testdata/type_aliases/example.test.fidl#20">vec_of_strings</a></td>
             <td>
                 <code>vector</code></td>
             <td></td>
         </tr><tr id="vec_of_strings_at_most_5">
-            <td><a href="https://fuchsia.googlesource.com/fuchsia/+/master/zircon/tools/fidl/testdata/type_aliases/example.test.fidl#22">vec_of_strings_at_most_5</a></td>
+            <td><a href="https://fuchsia.googlesource.com/fuchsia/+/master/zircon/tools/fidl/testdata/type_aliases/example.test.fidl#21">vec_of_strings_at_most_5</a></td>
             <td>
                 <code>vector</code>[<code>5</code>]</td>
             <td></td>

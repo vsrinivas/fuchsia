@@ -4,7 +4,7 @@
 
 library zx;
 
-using vector_void = vector<byte>;
+alias vector_void = vector<byte>;
 
 // Note that this has to be named "protocol Syscall" to make test_wrapper have
 // the correct name.

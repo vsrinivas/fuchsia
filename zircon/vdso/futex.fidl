@@ -6,7 +6,7 @@ library zx;
 
 // TODO(scottmg): This is approximately right, but will need to match the
 // current definition of zx_futex_t (atomic_int in some #if branches).
-using Futex = int32;
+alias Futex = int32;
 
 // TODO(scottmg): The futex is unusual in that by virtue of being an int,
 // sometimes it's passed by pointer, and sometimes by value.

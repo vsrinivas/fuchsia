@@ -8,7 +8,7 @@ using zx;
 using fuchsia.media.audio;
 using fuchsia.media;
 
-using SessionId = uint64;
+alias SessionId = uint64;
 
 /// SessionInfoDelta holds a description of a media session.
 table SessionInfoDelta {

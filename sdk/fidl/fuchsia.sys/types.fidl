@@ -6,6 +6,6 @@ library fuchsia.sys;
 
 /// A URL used to retrieve, launch, and load a component from a specified network
 /// location, or to identify a component when connecting to it.
-using component_url = string:MAX_URL_LENGTH;
+alias component_url = string:MAX_URL_LENGTH;
 
 const uint16 MAX_URL_LENGTH = 2083;

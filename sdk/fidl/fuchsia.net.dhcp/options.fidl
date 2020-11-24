@@ -8,11 +8,12 @@ using fuchsia.net;
 /// A DHCP duration value, in seconds. As specified in
 /// https://tools.ietf.org/html/rfc2131#section-3.3, DHCP duration values are
 /// relative times.
-using Duration = uint32;
+alias Duration = uint32;
 /// A list of IP addresses. The vector bounds of this list are MAX_OPTION_LEN /
 /// len(Ipv4Address), where MAX_OPTION_LEN is the maximum byte length of a value
 /// for a DHCP option as defined in https://tools.ietf.org/html/rfc2132#section-2:
 /// "All other options are variable-length with a length octet following the tag octet."
+// TODO(fxb/65218): Replace with an alias.
 using Addresses = vector<fuchsia.net.Ipv4Address>:63;
 
 /// An ASCII string with a length limit of 255. All DHCP Option values must have
@@ -21,7 +22,7 @@ using Addresses = vector<fuchsia.net.Ipv4Address>:63;
 /// string values must be limited to the ASCII character set. Should non-ASCII
 /// characters be sent in a `AsciiString` to Server, Server will close the channel to
 /// the client.
-using AsciiString = string:255;
+alias AsciiString = string:255;
 
 /// A indication of which DHCP message field should be used to store additional options.
 enum OptionOverloadValue : byte {

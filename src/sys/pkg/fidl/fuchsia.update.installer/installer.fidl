@@ -6,7 +6,7 @@ library fuchsia.update.installer;
 
 using fuchsia.pkg;
 
-using AttemptId = string:36; // 36 == strlen("01234567-89ab-cdef-0123-456789abcdef")
+alias AttemptId = string:36; // 36 == strlen("01234567-89ab-cdef-0123-456789abcdef")
 
 /// Updates the system.
 ///
