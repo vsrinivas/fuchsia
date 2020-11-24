@@ -6,7 +6,8 @@ group("tools") {
   testonly = true
 
   public_deps = [
-    ":infratools",
+    ":build_infra",
+    ":test_infra",
     "//tools/bindc:host",
     "//tools/blackout:all",
     "//tools/bootserver_old:host($host_toolchain)",
@@ -20,6 +21,7 @@ group("tools") {
     "//tools/doc_checker($host_toolchain)",
     "//tools/fidl",
     "//tools/fidlcat:fidlcat_host",
+    "//tools/integration/cmd/fint($host_toolchain)",
     "//tools/loglistener:host($host_toolchain)",
     "//tools/make-efi:host",
     "//tools/make-fuchsia-vol:host",
@@ -33,18 +35,37 @@ group("tools") {
 }
 
 # Tools that are used by the infrastructure for testing, data collection, etc.
+# TODO(fxbug.dev/63540): delete this. Use build_infra and test_infra directly.
 group("infratools") {
   testonly = true
 
-  # Tools that are only needed in the context of the current type of host.
-  current_host_tools = [
-    "//tools/artifactory",
-    "//tools/blobstats",
-    "//tools/build:tools",
-    "//tools/debug:tools",
-    "//tools/integration:tools",
-    "//tools/size_checker/cmd:host",
-    "//zircon/tools/minfs",
+  public_deps = [
+    ":build_infra",
+    ":test_infra",
+  ]
+}
+
+# Tools that are used by the infrastructure for building.
+group("build_infra") {
+  testonly = true
+
+  public_deps = [
+    "//tools/artifactory($host_toolchain)",
+    "//tools/blobstats($host_toolchain)",
+    "//tools/build:tools($host_toolchain)",
+    "//tools/debug:tools($host_toolchain)",
+    "//tools/size_checker/cmd:host($host_toolchain)",
+  ]
+}
+
+# Tools that are used by the infrastructure for running tests.
+group("test_infra") {
+  testonly = true
+
+  # Tools that are only needed on the type of host that does the build.
+  public_deps = [
+    "//tools/integration/testsharder($host_toolchain)",
+    "//zircon/tools/minfs($host_toolchain)",
   ]
 
   # Tools that are only needed on Linux x64, regardless of the current host.
@@ -63,12 +84,6 @@ group("infratools") {
     "//tools/testing:tools",
     "//zircon/tools/fvm",
   ]
-
-  public_deps = []
-
-  foreach(tool, current_host_tools) {
-    public_deps += [ "$tool($host_toolchain)" ]
-  }
 
   foreach(tool, linux_x64_only_tools) {
     if (host_os == "linux") {
