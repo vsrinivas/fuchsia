@@ -20,6 +20,7 @@ use {
 pub fn merge(
     mut files: Vec<PathBuf>,
     output: Option<PathBuf>,
+    // If specified, this is a path to newline-delimited `files`
     fromfile: Option<PathBuf>,
 ) -> Result<(), Error> {
     if let Some(path) = fromfile {

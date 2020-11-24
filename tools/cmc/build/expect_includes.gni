@@ -1,0 +1,133 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//tools/cmc/build/cmc.gni")
+
+# Declares that any components that are dependent on this target (directly or
+# indirectly) should have certain contents in their component manifest
+# includes.
+#
+# See:
+# https://fuchsia.dev/fuchsia-src/development/components/build#component-manifest-includes
+#
+# Parameters
+#
+#   includes (required)
+#     Contents of component manifest includes to expect in dependant
+#     components.
+#     Includes with .cmx or .cml extensions will only be checked against
+#     component manifests with a matching cmx/cml extension.
+#     Type: list of strings
+#
+#   deps
+#   testonly
+#   visibility
+template("expect_includes") {
+  group(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "includes",
+                             "testonly",
+                             "visibility",
+                           ])
+    includes_cmx = []
+    includes_cml = []
+    foreach(include, includes) {
+      ext = get_path_info(include, "extension")
+      if (ext == "cmx") {
+        includes_cmx += [ rebase_path(include, "//") ]
+      } else if (ext == "cml") {
+        includes_cml += [ rebase_path(include, "//") ]
+      } else {
+        assert(false, "Unexpected include extension for " + include)
+      }
+    }
+    metadata = {
+      cmc_expected_includes_cmx = includes_cmx
+      cmc_expected_includes_cml = includes_cml
+    }
+  }
+}
+
+# Collects expected includes from deps.
+# Expected includes from transitive deps on `expect_includes` will be
+# collected. Those can then be passed to `cmc check-includes`.
+#
+# Parameters
+#
+#   manifest (required)
+#     [file] The path to the cmx file that will be checked.
+#
+#   deps
+#   testonly
+#   visibility
+template("collect_expected_includes") {
+  generated_file(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "manifest",
+                             "testonly",
+                             "visibility",
+                           ])
+    outputs = [ "${target_out_dir}/${target_name}_expected_includes" ]
+    ext = get_path_info(manifest, "extension")
+    if (ext == "cmx") {
+      data_keys = [ "cmc_expected_includes_cmx" ]
+    } else if (ext == "cml") {
+      data_keys = [ "cmc_expected_includes_cml" ]
+    } else {
+      assert(false, "Unexpected manifest extension for " + manifest)
+    }
+  }
+}
+
+# Checks that a component manifest file has all expected includes.
+#
+# Parameters
+#
+#   manifest (required)
+#     [file] The path to the cmx file that is to be processed
+#
+#   deps
+#   testonly
+#   visibility
+template("cmc_check_includes") {
+  expected_includes_label = "${target_name}_expected_includes"
+  collect_expected_includes(expected_includes_label) {
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "manifest",
+                             "testonly",
+                             "visibility",
+                           ])
+  }
+
+  cmc(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "testonly",
+                             "visibility",
+                           ])
+    if (!defined(deps)) {
+      deps = []
+    }
+    deps += [ ":" + expected_includes_label ]
+    inputs =
+        [ invoker.manifest ] + get_target_outputs(":" + expected_includes_label)
+    outputs = [ "${target_out_dir}/${target_name}.stamp" ]
+
+    args = [
+      "--stamp",
+      rebase_path(outputs[0], root_build_dir),
+      "check-includes",
+      rebase_path(invoker.manifest, root_build_dir),
+      "--fromfile",
+      rebase_path(inputs[1], root_build_dir),
+    ]
+  }
+}

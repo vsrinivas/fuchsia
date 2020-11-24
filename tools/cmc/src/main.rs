@@ -40,6 +40,9 @@ fn run_cmc() -> Result<(), Error> {
         opts::Commands::Include { file, output, depfile, includepath } => {
             include::merge_includes(file, output, depfile, includepath)?
         }
+        opts::Commands::CheckIncludes { file, expected_includes, fromfile } => {
+            include::check_includes(file, expected_includes, fromfile)?
+        }
         opts::Commands::Format { file, pretty, cml, inplace, mut output } => {
             if inplace {
                 output = Some(file.clone());

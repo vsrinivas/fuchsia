@@ -75,6 +75,24 @@ pub enum Commands {
         includepath: PathBuf,
     },
 
+    #[structopt(name = "check-includes")]
+    /// check if given includes are present in a given component manifest
+    CheckIncludes {
+        #[structopt(name = "FILE", parse(from_os_str))]
+        /// file to process
+        file: PathBuf,
+
+        #[structopt(name = "expect")]
+        expected_includes: Vec<String>,
+
+        #[structopt(short = "f", long = "fromfile", parse(from_os_str))]
+        /// response file for includes to expect
+        ///
+        /// If specified, additional includes to expect will be read from the path provided.
+        /// The input format is delimited by newlines.
+        fromfile: Option<PathBuf>,
+    },
+
     #[structopt(name = "format")]
     /// format a json file
     Format {

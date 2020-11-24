@@ -4,6 +4,7 @@
 
 import("//src/modular/build/fuchsia_module_facet.gni")
 import("//tools/cmc/build/cmc.gni")
+import("//tools/cmc/build/expect_includes.gni")
 
 # Validates a cmx file
 #
@@ -216,6 +217,17 @@ template("cmx_format") {
 #     [path] Name for the output.
 #     If not specified, the target name is used.
 template("cmx") {
+  cmc_check_includes("${target_name}_check_includes") {
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "manifest",
+                             "testonly",
+                           ])
+    visibility = [ ":*" ]
+  }
+  invoker.deps += [ ":${target_name}_check_includes" ]
+
   cmx_include("${target_name}_include.cmx") {
     forward_variables_from(invoker,
                            [

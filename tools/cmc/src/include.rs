@@ -7,7 +7,11 @@ use {
     crate::merge::merge_json,
     crate::util::json_or_json5_from_file,
     serde_json::Value,
-    std::{fs, io::Write, path::PathBuf},
+    std::{
+        fs,
+        io::{BufRead, BufReader, Write},
+        path::PathBuf,
+    },
 };
 
 /// Read in the provided JSON file and add includes.
@@ -21,18 +25,7 @@ pub fn merge_includes(
     includepath: PathBuf,
 ) -> Result<(), Error> {
     let mut v: Value = json_or_json5_from_file(&file)?;
-
-    // Extract includes if present.
-    // For instance, if file is `{ "include": [ "foo", "bar" ], "baz": "qux" }`
-    // then this will extract `[ "foo", "bar" ]`
-    // and leave behind `{ "baz": "qux" }`.
-    let includes: Vec<_> = v.as_object_mut().map_or(vec![], |v| {
-        v.remove("include").map_or(vec![], |v| {
-            v.as_array().map_or(vec![], |v| {
-                v.iter().cloned().filter_map(|v| v.as_str().map(String::from)).collect()
-            })
-        })
-    });
+    let includes = extract_includes(&mut v);
 
     // Merge contents of includes
     // TODO(shayba): also merge includes recursively
@@ -88,6 +81,57 @@ pub fn merge_includes(
     Ok(())
 }
 
+/// Read in the provided JSON file and ensure that it contains all expected includes.
+pub fn check_includes(
+    file: PathBuf,
+    mut expected_includes: Vec<String>,
+    // If specified, this is a path to newline-delimited `expected_includes`
+    fromfile: Option<PathBuf>,
+) -> Result<(), Error> {
+    if let Some(path) = fromfile {
+        let reader = BufReader::new(fs::File::open(path)?);
+        for line in reader.lines() {
+            match line {
+                Ok(value) => expected_includes.push(String::from(value)),
+                Err(e) => return Err(Error::invalid_args(format!("Invalid --fromfile: {}", e))),
+            }
+        }
+    }
+
+    let mut v: Value = json_or_json5_from_file(&file)?;
+    let includes = extract_includes(&mut v);
+    for expected in expected_includes {
+        if !includes.contains(&expected) {
+            return Err(Error::Validate {
+                schema_name: None,
+                err: format!("{:?} must include {}.{}",
+                        &file, &expected, match file.extension().and_then(|e| e.to_str()) {
+                            Some("cmx") => " See: https://fuchsia.dev/fuchsia-src/concepts/components/v1/component_manifests#include",
+                            Some("cml") => " See: https://fuchsia.dev/fuchsia-src/concepts/components/v2/component_manifests#include",
+                            _ => "",
+                        }),
+                filename: file.to_str().map(String::from)
+            });
+        }
+    }
+    Ok(())
+}
+
+/// Extracts includes from a given JSON document.
+/// For instance, if the document is `{ "include": [ "foo", "bar" ], "baz": "qux" }`
+/// then this will extract `[ "foo", "bar" ]`
+/// and leave behind `{ "baz": "qux" }`.
+pub fn extract_includes(doc: &mut Value) -> Vec<String> {
+    // Extract includes if present.
+    doc.as_object_mut().map_or(vec![], |v| {
+        v.remove("include").map_or(vec![], |v| {
+            v.as_array().map_or(vec![], |v| {
+                v.iter().cloned().filter_map(|v| v.as_str().map(String::from)).collect()
+            })
+        })
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -95,7 +139,7 @@ mod tests {
     use serde_json::json;
     use std::fmt::Display;
     use std::fs::File;
-    use std::io::Read;
+    use std::io::{LineWriter, Read};
     use tempfile::TempDir;
 
     fn tmp_file(tmp_dir: &TempDir, name: &str, contents: impl Display) -> PathBuf {
@@ -362,5 +406,118 @@ mod tests {
 
         assert_matches!(result, Err(Error::Parse { err, .. })
                         if err.starts_with("Couldn't read include ") && err.contains("doesnt_exist.cmx"));
+    }
+
+    #[test]
+    fn test_expect_nothing() {
+        let tmp_dir = TempDir::new().unwrap();
+        let cmx1_path = tmp_file(
+            &tmp_dir,
+            "some1.cmx",
+            json!({
+                "program": {
+                    "binary": "bin/hello_world"
+                }
+            }),
+        );
+        assert_matches!(check_includes(cmx1_path, vec![], None), Ok(()));
+
+        let cmx2_path = tmp_file(
+            &tmp_dir,
+            "some2.cmx",
+            json!({
+                "include": [],
+                "program": {
+                    "binary": "bin/hello_world"
+                }
+            }),
+        );
+        assert_matches!(check_includes(cmx2_path, vec![], None), Ok(()));
+
+        let cmx3_path = tmp_file(
+            &tmp_dir,
+            "some3.cmx",
+            json!({
+                "include": [ "foo.cmx" ],
+                "program": {
+                    "binary": "bin/hello_world"
+                }
+            }),
+        );
+        assert_matches!(check_includes(cmx3_path, vec![], None), Ok(()));
+    }
+
+    #[test]
+    fn test_expect_something_present() {
+        let tmp_dir = TempDir::new().unwrap();
+        let cmx_path = tmp_file(
+            &tmp_dir,
+            "some.cmx",
+            json!({
+                "include": [ "foo.cmx", "bar.cmx" ],
+                "program": {
+                    "binary": "bin/hello_world"
+                }
+            }),
+        );
+        assert_matches!(check_includes(cmx_path, vec!["bar.cmx".into()], None), Ok(()));
+    }
+
+    #[test]
+    fn test_expect_something_missing() {
+        let tmp_dir = TempDir::new().unwrap();
+        let cmx1_path = tmp_file(
+            &tmp_dir,
+            "some1.cmx",
+            json!({
+                "include": [ "foo.cmx", "bar.cmx" ],
+                "program": {
+                    "binary": "bin/hello_world"
+                }
+            }),
+        );
+        assert_matches!(check_includes(cmx1_path.clone(), vec!["qux.cmx".into()], None),
+                        Err(Error::Validate { filename, .. }) if filename == cmx1_path.to_str().map(String::from));
+        let cmx2_path = tmp_file(
+            &tmp_dir,
+            "some2.cmx",
+            json!({
+                // No includes
+                "program": {
+                    "binary": "bin/hello_world"
+                }
+            }),
+        );
+        assert_matches!(check_includes(cmx2_path.clone(), vec!["qux.cmx".into()], None),
+                        Err(Error::Validate { filename, .. }) if filename == cmx2_path.to_str().map(String::from));
+    }
+
+    #[test]
+    fn test_expect_fromfile() {
+        let tmp_dir = TempDir::new().unwrap();
+        let cmx_path = tmp_file(
+            &tmp_dir,
+            "some.cmx",
+            json!({
+                "include": [ "foo.cmx", "bar.cmx" ],
+                "program": {
+                    "binary": "bin/hello_world"
+                }
+            }),
+        );
+
+        let fromfile_path = tmp_dir.path().join("fromfile");
+        let mut fromfile = LineWriter::new(File::create(fromfile_path.clone()).unwrap());
+        writeln!(fromfile, "foo.cmx").unwrap();
+        writeln!(fromfile, "bar.cmx").unwrap();
+        assert_matches!(
+            check_includes(cmx_path.clone(), vec![], Some(fromfile_path.clone())),
+            Ok(())
+        );
+
+        // Add another include that's missing
+        writeln!(fromfile, "qux.cmx").unwrap();
+        assert_matches!(check_includes(cmx_path.clone(), vec![], Some(fromfile_path.clone())),
+                        Err(Error::Validate { filename, .. }) if filename == cmx_path.to_str().map(String::from));
     }
 }

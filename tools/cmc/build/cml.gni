@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//tools/cmc/build/cmc.gni")
+import("//tools/cmc/build/expect_includes.gni")
 
 # Compiles a cml file into a cm file.
 # Any "include"s are merged into the cml and produce an intermediate file.
@@ -20,13 +21,23 @@ import("//tools/cmc/build/cmc.gni")
 #   testonly (optional)
 #   visibility (optional)
 template("cm") {
+  cmc_check_includes("${target_name}_check_includes") {
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "manifest",
+                             "testonly",
+                           ])
+    visibility = [ ":*" ]
+  }
+
   cmc("${target_name}_include") {
     forward_variables_from(invoker,
                            [
                              "deps",
                              "testonly",
-                             "visibility",
                            ])
+    visibility = [ ":*" ]
     inputs = [ invoker.manifest ]
     output = "${target_out_dir}/${target_name}.cml"
     outputs = [ output ]
@@ -60,7 +71,10 @@ template("cm") {
     if (!defined(deps)) {
       deps = []
     }
-    deps += [ ":${target_name}_include" ]
+    deps += [
+      ":${target_name}_check_includes",
+      ":${target_name}_include",
+    ]
 
     compiled_output = "${target_out_dir}/${output_name}"
     inputs = get_target_outputs(":${target_name}_include")

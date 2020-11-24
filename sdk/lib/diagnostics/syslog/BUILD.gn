@@ -1,0 +1,14 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//tools/cmc/build/expect_includes.gni")
+
+# Require dependent components to include logsink capabilities in their
+# component manifests.
+expect_includes("client_includes") {
+  includes = [
+    "client.shard.cml",
+    "client.shard.cmx",
+  ]
+}

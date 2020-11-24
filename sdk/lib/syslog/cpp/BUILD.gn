@@ -135,6 +135,8 @@ sdk_source_set("backend_fuchsia_lib") {
     "//zircon/public/lib/fit",
   ]
 
+  data_deps = [ "//sdk/lib/diagnostics/syslog:client_includes" ]
+
   public_configs = [ "//sdk/config" ]
 }
 
