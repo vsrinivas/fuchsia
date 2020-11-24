@@ -122,21 +122,21 @@ def generate_unwrap(export, needs_connection):
       ret += '    auto _' + name + '_wrapped = virtmagma_connection_t::Get(' + name + ');\n'
       ret += '    ' + name + ' = _' + name + '_wrapped->Object();\n'
       if not have_fd:
-        ret += '    int32_t file_descriptor = _' + name + '_wrapped->Parent().first;\n'
+        ret += '    int32_t file_descriptor = _' + name + '_wrapped->Parent();\n'
         have_fd = True
     if argument['type'] == 'magma_buffer_t':
       ret += '    auto _' + name + '_wrapped = virtmagma_buffer_t::Get(' + name + ');\n'
       ret += '    ' + name + ' = _' + name + '_wrapped->Object();\n'
       if not have_fd:
         ret += '    auto _' + name + '_parent_wrapped = virtmagma_connection_t::Get(_' + name + '_wrapped->Parent());\n'
-        ret += '    int32_t file_descriptor = _' + name + '_parent_wrapped->Parent().first;\n'
+        ret += '    int32_t file_descriptor = _' + name + '_parent_wrapped->Parent();\n'
         have_fd = True
     if argument['type'] == 'magma_semaphore_t':
       ret += '    auto _' + name + '_wrapped = virtmagma_semaphore_t::Get(' + name + ');\n'
       ret += '    ' + name + ' = _' + name + '_wrapped->Object();\n'
       if not have_fd:
         ret += '    auto _' + name + '_parent_wrapped = virtmagma_connection_t::Get(_' + name + '_wrapped->Parent());\n'
-        ret += '    int32_t file_descriptor = _' + name + '_parent_wrapped->Parent().first;\n'
+        ret += '    int32_t file_descriptor = _' + name + '_parent_wrapped->Parent();\n'
         have_fd = True
     if type == 'magma_device_t':
       ret += '    auto _' + name + '_wrapped = virtmagma_device_t::Get(' + name + ');\n'
@@ -169,7 +169,7 @@ def generate_wrap(export):
     type = argument['type']
     name = argument['name']
     if type == 'magma_connection_t*':
-      ret += '    *' + name + ' = virtmagma_connection_t::Create(*' + name + ', virtmagma_fd_pair(file_descriptor))->Wrap();\n'
+      ret += '    *' + name + ' = virtmagma_connection_t::Create(*' + name + ', file_descriptor)->Wrap();\n'
     if type == 'magma_buffer_t*':
       ret += '    *' + name + ' = virtmagma_buffer_t::Create(*' + name + ', _connection)->Wrap();\n'
       needs_connection = True

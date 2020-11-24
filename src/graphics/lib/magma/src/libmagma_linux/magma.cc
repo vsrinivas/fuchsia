@@ -37,7 +37,7 @@ magma_status_t magma_poll(magma_poll_item_t* items, uint32_t count, uint64_t tim
 
         if (i == 0) {
           auto semaphore0_parent_wrapped = virtmagma_connection_t::Get(semaphore_wrapped->Parent());
-          file_descriptor = semaphore0_parent_wrapped->Parent().first;
+          file_descriptor = semaphore0_parent_wrapped->Parent();
         }
         break;
       }
@@ -112,7 +112,7 @@ void magma_execute_command_buffer_with_resources(magma_connection_t connection, 
   request.context_id = context_id;
   request.command_buffer = reinterpret_cast<decltype(request.command_buffer)>(&virt_command_buffer);
 
-  int32_t file_descriptor = connection_wrapped->Parent().first;
+  int32_t file_descriptor = connection_wrapped->Parent();
 
   if (!virtmagma_send_command(file_descriptor, &request, sizeof(request), &response,
                               sizeof(response))) {
