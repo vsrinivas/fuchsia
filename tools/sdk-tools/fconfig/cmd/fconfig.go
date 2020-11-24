@@ -26,8 +26,7 @@ type SDKProvider interface {
 }
 
 func main() {
-	var sdk = sdkcommon.SDKProperties{}
-	err := sdk.Init()
+	sdk, err := sdkcommon.New()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Could not initialize SDK: %v", err)
 		os.Exit(1)

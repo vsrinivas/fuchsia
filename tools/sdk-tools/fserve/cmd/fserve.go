@@ -55,11 +55,23 @@ var syscallWait4 = defaultsyscallWait4
 
 const logFlags = log.Ltime
 
+type sdkProvider interface {
+	GetSDKDataPath() string
+	GetToolsDir() (string, error)
+	GetAvailableImages(version string, bucket string) ([]sdkcommon.GCSImage, error)
+	GetAddressByName(deviceName string) (string, error)
+	RunSSHCommand(targetAddress string, sshConfig string, privateKey string, verbose bool, sshArgs []string) (string, error)
+}
+
 func main() {
 	var (
 		err error
-		sdk sdkcommon.SDKProperties
 	)
+
+	sdk, err := sdkcommon.New()
+	if err != nil {
+		log.Fatalf("Could not initialize SDK: %v", err)
+	}
 
 	helpFlag := flag.Bool("help", false, "Show the usage message")
 	repoFlag := flag.String("repo-dir", "", "Specify the path to the package repository.")
@@ -69,7 +81,7 @@ func main() {
 	repoPortFlag := flag.String("server-port", "", "Port number to use when serving the packages.")
 	killFlag := flag.Bool("kill", false, "Kills any existing package manager server.")
 	prepareFlag := flag.Bool("prepare", false, "Downloads any dependencies but does not start the package server.")
-	versionFlag := flag.String("version", sdk.Version, "SDK Version to use for prebuilt packages.")
+	versionFlag := flag.String("version", sdk.GetSDKVersion(), "SDK Version to use for prebuilt packages.")
 	flag.Var(&level, "level", "Output verbosity, can be fatal, error, warning, info, debug or trace.")
 
 	// target related options
@@ -85,10 +97,6 @@ func main() {
 	log := logger.NewLogger(level, color.NewColor(color.ColorAuto), os.Stdout, os.Stderr, "fserve ")
 	log.SetFlags(logFlags)
 	ctx := logger.WithLogger(context.Background(), log)
-
-	if err := sdk.Init(); err != nil {
-		log.Fatalf("Could not initialize SDK: %v", err)
-	}
 
 	if *helpFlag {
 		usage()
@@ -128,7 +136,7 @@ func main() {
 		flag.Set("server-port", image)
 	}
 	if *versionFlag == "" {
-		flag.Set("version", sdk.Version)
+		flag.Set("version", sdk.GetSDKVersion())
 	}
 	// Handle device name & device IP. If both are given, use name.
 	deviceName := *deviceNameFlag
@@ -288,7 +296,7 @@ func killServers(ctx context.Context, portNum string) error {
 
 // startServer starts the `pm serve` command and returns the command object.
 // The server is started in the background.
-func startServer(sdk sdkcommon.SDKProperties, repoPath string, repoPort string) (*exec.Cmd, error) {
+func startServer(sdk sdkProvider, repoPath string, repoPort string) (*exec.Cmd, error) {
 	toolsDir, err := sdk.GetToolsDir()
 	if err != nil {
 		return nil, fmt.Errorf("Could not determine tools directory %v", err)
@@ -324,7 +332,7 @@ func startServer(sdk sdkcommon.SDKProperties, repoPath string, repoPort string) 
 }
 
 // printValidImages prints the bucket and image names found on GCS.
-func printValidImages(sdk sdkcommon.SDKProperties, version string, bucket string) error {
+func printValidImages(sdk sdkProvider, version string, bucket string) error {
 	images, err := sdk.GetAvailableImages(version, bucket)
 	if err != nil {
 		return fmt.Errorf("Could not get list of images: %v", err)
@@ -339,10 +347,10 @@ func printValidImages(sdk sdkcommon.SDKProperties, version string, bucket string
 // downloadImageIfNeeded downloads from GCS the packages for the given prebuillt image.
 // The md5 hash of the tarball is stored to check for differences from the downloaded version.
 // if the hash matches, the tarball is not un-tarred.
-func downloadImageIfNeeded(ctx context.Context, sdk sdkcommon.SDKProperties, version string, bucket string, srcPath string, imageFilename string) error {
+func downloadImageIfNeeded(ctx context.Context, sdk sdkProvider, version string, bucket string, srcPath string, imageFilename string) error {
 	// Validate the image is found
-	localImagePath := filepath.Join(sdk.DataPath, imageFilename)
-	packageDir := filepath.Join(sdk.DataPath, "packages")
+	localImagePath := filepath.Join(sdk.GetSDKDataPath(), imageFilename)
+	packageDir := filepath.Join(sdk.GetSDKDataPath(), "packages")
 	log := logger.LoggerFromContext(ctx)
 
 	if !sdkcommon.FileExists(localImagePath) {
@@ -425,7 +433,7 @@ func downloadImageIfNeeded(ctx context.Context, sdk sdkcommon.SDKProperties, ver
 }
 
 // setPackageSource sets the URL for the package server on the target device.
-func setPackageSource(ctx context.Context, sdk sdkcommon.SDKProperties, repoPort string, name string,
+func setPackageSource(ctx context.Context, sdk sdkProvider, repoPort string, name string,
 	deviceName string, deviceIP string, sshConfig string, privateKey string) error {
 
 	var (
@@ -468,7 +476,7 @@ func setPackageSource(ctx context.Context, sdk sdkcommon.SDKProperties, repoPort
 }
 
 // getHostIPAddressFromTarget returns the host address reported from the SSH connection on the target device.
-func getHostIPAddressFromTarget(sdk sdkcommon.SDKProperties, targetAddress string, sshConfig string, privateKey string) (string, error) {
+func getHostIPAddressFromTarget(sdk sdkProvider, targetAddress string, sshConfig string, privateKey string) (string, error) {
 
 	var sshArgs = []string{"echo", "$SSH_CONNECTION"}
 

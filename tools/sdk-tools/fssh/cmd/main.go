@@ -21,11 +21,13 @@ var (
 )
 
 func main() {
-	var (
-		err error
-		sdk sdkcommon.SDKProperties
-	)
-	sdk.Init()
+	var err error
+
+	sdk, err := sdkcommon.New()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Could not initialize SDK %v", err)
+		os.Exit(1)
+	}
 
 	helpFlag := flag.Bool("help", false, "Show the usage message")
 	verboseFlag := flag.Bool("verbose", false, "Print informational messages.")

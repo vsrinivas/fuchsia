@@ -40,7 +40,7 @@ func TestGetAvailableImages(t *testing.T) {
 		ExecLookPath = exec.LookPath
 	}()
 	testSDK := SDKProperties{
-		DataPath: t.TempDir(),
+		dataPath: t.TempDir(),
 	}
 	version := "test-version"
 	bucket := ""
@@ -82,7 +82,7 @@ func TestGetAddressByName(t *testing.T) {
 		ExecCommand = exec.Command
 	}()
 	testSDK := SDKProperties{
-		DataPath: t.TempDir(),
+		dataPath: t.TempDir(),
 	}
 	deviceName := "test-device"
 	_, err := testSDK.GetAddressByName(deviceName)
@@ -120,7 +120,7 @@ func TestRunSSHCommand(t *testing.T) {
 		GetHostname = DefaultGetHostname
 	}()
 	testSDK := SDKProperties{
-		DataPath: t.TempDir(),
+		dataPath: t.TempDir(),
 	}
 
 	targetAddress := resolvedAddr
@@ -167,7 +167,7 @@ func TestCheckSSHConfig(t *testing.T) {
 		GetHostname = DefaultGetHostname
 	}()
 	testSDK := SDKProperties{
-		DataPath: t.TempDir(),
+		dataPath: t.TempDir(),
 	}
 	if err := checkSSHConfig(testSDK); err != nil {
 		t.Fatal(err)
@@ -192,7 +192,7 @@ func TestCheckSSHConfigExistingFiles(t *testing.T) {
 		GetHostname = DefaultGetHostname
 	}()
 	testSDK := SDKProperties{
-		DataPath: t.TempDir(),
+		dataPath: t.TempDir(),
 	}
 
 	// Write out SSH keys and config

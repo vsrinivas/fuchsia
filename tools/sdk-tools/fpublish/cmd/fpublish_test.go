@@ -9,9 +9,15 @@ import (
 	"os/exec"
 	"path/filepath"
 	"testing"
-
-	"go.fuchsia.dev/fuchsia/tools/sdk-tools/sdkcommon"
 )
+
+type testSDKProperties struct {
+	dataPath string
+}
+
+func (testSDK testSDKProperties) GetToolsDir() (string, error) {
+	return "fake-tools", nil
+}
 
 // See exec_test.go for details, but effectively this runs the function called TestHelperProcess passing
 // the args.
@@ -71,9 +77,7 @@ func TestFakeFPublish(*testing.T) {
 }
 
 func TestFPublish(t *testing.T) {
-	testSDK := sdkcommon.SDKProperties{
-		DataPath: "/fake",
-	}
+	testSDK := testSDKProperties{dataPath: "/fake"}
 	ExecCommand = helperCommandForFPublish
 	defer func() { ExecCommand = exec.Command }()
 	output, err := publish(testSDK, "/fake/repo/amber-files", false)

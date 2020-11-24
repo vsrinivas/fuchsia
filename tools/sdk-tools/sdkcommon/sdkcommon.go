@@ -84,8 +84,12 @@ type DeviceConfig struct {
 // These values should be set or initialized by calling
 // (sdk *SDKProperties) Init().
 type SDKProperties struct {
-	DataPath                 string
+	//DataPath is deprecated! Use GetSDKDataPath().
+	DataPath string
+	// Version is deprecated! Use GetSDKVersion().
 	Version                  string
+	dataPath                 string
+	version                  string
 	globalPropertiesFilename string
 }
 
@@ -130,14 +134,15 @@ var GetUsername = DefaultGetUsername
 // GetHostname to allow mocking.
 var GetHostname = DefaultGetHostname
 
-// Init initializes the SDK properties.
-// TODO(fxb/64107): Refactor this to New()
+// Init is deprecated! use sdkcommon.New().
 func (sdk *SDKProperties) Init() error {
 	homeDir, err := GetUserHomeDir()
 	if err != nil {
 		return err
 	}
 	sdk.DataPath = filepath.Join(homeDir, ".fuchsia")
+	sdk.dataPath = sdk.DataPath
+
 	toolsDir, err := sdk.GetToolsDir()
 	if err != nil {
 		return err
@@ -148,9 +153,10 @@ func (sdk *SDKProperties) Init() error {
 	}
 	// If this is running in-tree, the manifest may not exist.
 	if FileExists(manifestFile) {
-		if sdk.Version, err = getSDKVersion(manifestFile); err != nil {
+		if sdk.Version, err = readSDKVersion(manifestFile); err != nil {
 			return err
 		}
+		sdk.version = sdk.Version
 	} else {
 		log.Warningf("Cannot find SDK manifest file %v", manifestFile)
 	}
@@ -159,8 +165,60 @@ func (sdk *SDKProperties) Init() error {
 	return initFFXGlobalConfig(*sdk)
 }
 
+// New creates an initialized SDKProperties
+func New() (SDKProperties, error) {
+	sdk := SDKProperties{}
+	homeDir, err := GetUserHomeDir()
+	if err != nil {
+		return sdk, err
+	}
+	sdk.dataPath = filepath.Join(homeDir, ".fuchsia")
+	sdk.DataPath = sdk.dataPath
+
+	toolsDir, err := sdk.GetToolsDir()
+	if err != nil {
+		return sdk, err
+	}
+	manifestFile, err := filepath.Abs(filepath.Join(toolsDir, "..", "..", "meta", "manifest.json"))
+	if err != nil {
+		return sdk, err
+	}
+	// If this is running in-tree, the manifest may not exist.
+	if FileExists(manifestFile) {
+		if sdk.version, err = readSDKVersion(manifestFile); err != nil {
+			return sdk, err
+		}
+		sdk.Version = sdk.version
+	} else {
+		log.Warningf("Cannot find SDK manifest file %v", manifestFile)
+	}
+
+	sdk.globalPropertiesFilename = filepath.Join(sdk.dataPath, "global_ffx_props.json")
+	err = initFFXGlobalConfig(sdk)
+	return sdk, err
+}
+
+// GetSDKVersion returns the version of the SDK or empty if not set.
+// Use sdkcommon.New() to create an initalized SDKProperties struct.
+func (sdk SDKProperties) GetSDKVersion() string {
+	if sdk.Version != "" && sdk.Version != sdk.version {
+		return sdk.Version
+	}
+	return sdk.version
+}
+
+// GetSDKDataPath returns the path to the directory for storing SDK related data,
+//  or empty if not set.
+// Use sdkcommon.New() to create an initalized SDKProperties struct.
+func (sdk SDKProperties) GetSDKDataPath() string {
+	if sdk.DataPath != "" && sdk.DataPath != sdk.dataPath {
+		return sdk.DataPath
+	}
+	return sdk.dataPath
+}
+
 // getSDKVersion reads the manifest JSON file and returns the "id" property.
-func getSDKVersion(manifestFilePath string) (string, error) {
+func readSDKVersion(manifestFilePath string) (string, error) {
 	manifestFile, err := os.Open(manifestFilePath)
 	// if we os.Open returns an error then handle it
 	if err != nil {
@@ -209,7 +267,7 @@ func (sdk SDKProperties) GetDefaultPackageRepoDir() (string, error) {
 			return "", err
 		}
 		if defaultTargetName != "" {
-			return filepath.Join(sdk.DataPath, defaultTargetName,
+			return filepath.Join(sdk.GetSDKDataPath(), defaultTargetName,
 				"packages", "amber-files"), nil
 		}
 	}
@@ -217,7 +275,7 @@ func (sdk SDKProperties) GetDefaultPackageRepoDir() (string, error) {
 	// As a last resort, `ffx` and the data are working as intended,
 	// but no default has been configured, so fall back to the generic
 	// legacy path.
-	return filepath.Join(sdk.DataPath, "packages", "amber-files"), nil
+	return filepath.Join(sdk.GetSDKDataPath(), "packages", "amber-files"), nil
 }
 
 // GetDefaultGCSBucket returns the default GCS bucket name.
@@ -417,7 +475,7 @@ func buildSSHArgs(sdk SDKProperties, targetAddress string, customSSHConfig strin
 }
 
 func getFuchsiaSSHConfigFile(sdk SDKProperties) string {
-	return filepath.Join(sdk.DataPath, "sshconfig")
+	return filepath.Join(sdk.GetSDKDataPath(), "sshconfig")
 }
 
 /* This function creates the ssh keys needed to
@@ -632,7 +690,7 @@ func moveLegacyKeys(sdk SDKProperties, destAuthFile string, destKeyFile string) 
 
 	// Check for legacy GN SDK key and copy it to the new location.
 	var (
-		legacySSHDir   = filepath.Join(sdk.DataPath, ".ssh")
+		legacySSHDir   = filepath.Join(sdk.GetSDKDataPath(), ".ssh")
 		legacyKeyFile  = filepath.Join(legacySSHDir, "pkey")
 		legacyAuthFile = filepath.Join(legacySSHDir, "authorized_keys")
 	)

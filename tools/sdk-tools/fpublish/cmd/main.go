@@ -17,9 +17,16 @@ import (
 // ExecCommand exports exec.Command as a variable so it can be mocked.
 var ExecCommand = exec.Command
 
+type sdkProvider interface {
+	GetToolsDir() (string, error)
+}
+
 func main() {
-	var sdk sdkcommon.SDKProperties
-	sdk.Init()
+	sdk, err := sdkcommon.New()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Could not initialize SDK %v", err)
+		os.Exit(1)
+	}
 
 	defaultRepoDir, err := sdk.GetDefaultPackageRepoDir()
 	if err != nil {
@@ -46,7 +53,7 @@ func main() {
 	os.Exit(0)
 }
 
-func publish(sdk sdkcommon.SDKProperties, repoPath string, verbose bool) (string, error) {
+func publish(sdk sdkProvider, repoPath string, verbose bool) (string, error) {
 	toolsDir, err := sdk.GetToolsDir()
 	if err != nil {
 		log.Fatalf("Could not determine tools directory %v", err)

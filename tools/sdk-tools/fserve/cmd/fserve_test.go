@@ -5,6 +5,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -25,6 +26,67 @@ import (
 // test argument pointing to the directory containing the testdata directory.
 // This is configured in the BUILD.gn file.
 var testrootFlag = flag.String("testroot", "", "Root directory of the files needed to execute the test.")
+
+const hostaddr = "fe80::c0ff:eeee:fefe:c000%eth1"
+
+type testSDKProperties struct {
+	dataPath              string
+	expectCustomSSHConfig bool
+	expectPrivateKey      bool
+	expectedSSHArgs       [][]string
+}
+
+func (testSDK testSDKProperties) GetToolsDir() (string, error) {
+	return "fake-tools", nil
+}
+
+func (testSDK testSDKProperties) GetSDKDataPath() string {
+	return testSDK.dataPath
+}
+
+func (testSDK testSDKProperties) GetAvailableImages(version string, bucket string) ([]sdkcommon.GCSImage, error) {
+	return []sdkcommon.GCSImage{}, nil
+}
+func (testSDK testSDKProperties) GetAddressByName(deviceName string) (string, error) {
+	return "::1", nil
+}
+
+func (testSDK testSDKProperties) RunSSHCommand(targetAddress string, sshConfig string, privateKey string, verbose bool, sshArgs []string) (string, error) {
+	if testSDK.expectCustomSSHConfig && sshConfig == "" {
+		return "", errors.New("Expected custom ssh config file")
+	}
+	if testSDK.expectPrivateKey && privateKey == "" {
+		return "", errors.New("Expected private key file")
+	}
+	expectedArgs := []string{}
+
+	for _, args := range testSDK.expectedSSHArgs {
+		if sshArgs[0] == args[0] {
+			expectedArgs = args
+			break
+		}
+	}
+
+	ok := len(expectedArgs) == len(sshArgs)
+	if ok {
+		for i, expected := range expectedArgs {
+			if !ok {
+				return "", fmt.Errorf("unexpected ssh args[%v]  %v expected[%v] %v",
+					len(sshArgs), sshArgs, len(expectedArgs), expectedArgs)
+			}
+			if strings.Contains(expected, "*") {
+				expectedPattern := regexp.MustCompile(expected)
+				ok = expectedPattern.MatchString(sshArgs[i])
+			} else {
+				ok = expected == sshArgs[i]
+			}
+		}
+	}
+	if sshArgs[0] == "echo" {
+		return fmt.Sprintf("%v 54545 fe80::c00f:f0f0:eeee:cccc 22\n", hostaddr), nil
+	}
+	return "", nil
+}
 
 // Context with a logger used to test.
 func testingContext() context.Context {
@@ -94,8 +156,8 @@ func TestKillServers(t *testing.T) {
 }
 
 func TestStartServer(t *testing.T) {
-	testSDK := sdkcommon.SDKProperties{
-		DataPath: "/fake",
+	testSDK := testSDKProperties{
+		dataPath: "/fake",
 	}
 	repoPath := "/fake/repo/path"
 	repoPort := "8083"
@@ -122,8 +184,8 @@ func TestStartServer(t *testing.T) {
 }
 
 func TestDownloadImageIfNeeded(t *testing.T) {
-	testSDK := sdkcommon.SDKProperties{
-		DataPath: t.TempDir(),
+	testSDK := testSDKProperties{
+		dataPath: t.TempDir(),
 	}
 	ctx := testingContext()
 	ExecCommand = helperCommandForFServe
@@ -156,8 +218,8 @@ func TestDownloadImageIfNeeded(t *testing.T) {
 }
 
 func TestDownloadImageIfNeededCopiedFails(t *testing.T) {
-	testSDK := sdkcommon.SDKProperties{
-		DataPath: t.TempDir(),
+	testSDK := testSDKProperties{
+		dataPath: "/fake",
 	}
 	ctx := testingContext()
 	ExecCommand = helperCommandForFServe
@@ -177,7 +239,7 @@ func TestDownloadImageIfNeededCopiedFails(t *testing.T) {
 	os.Setenv("FSERVE_TEST_ASSERT_NO_DOWNLOAD", "")
 	os.Setenv("FSERVE_TEST_COPY_FAILS", "1")
 	if err := downloadImageIfNeeded(ctx, testSDK, version, bucket, srcPath, imageFilename); err != nil {
-		destPath := filepath.Join(testSDK.DataPath, imageFilename)
+		destPath := filepath.Join(testSDK.GetSDKDataPath(), imageFilename)
 		expected := fmt.Sprintf("Could not copy image from %v to %v: BucketNotFoundException: 404 %v bucket does not exist.: exit status 2",
 			srcPath, destPath, srcPath)
 		actual := fmt.Sprintf("%v", err)
@@ -192,10 +254,10 @@ func TestDownloadImageIfNeededCopiedFails(t *testing.T) {
 const resolvedAddr = "fe80::c0ff:eee:fe00:4444%en0"
 
 func TestSetPackageSource(t *testing.T) {
-	testSDK := sdkcommon.SDKProperties{
-		DataPath: t.TempDir(),
+	testSDK := testSDKProperties{
+		dataPath: t.TempDir(),
 	}
-	homeDir := filepath.Join(testSDK.DataPath, "_TEMP_HOME")
+	homeDir := filepath.Join(testSDK.GetSDKDataPath(), "_TEMP_HOME")
 	if err := os.MkdirAll(homeDir, 0755); err != nil {
 		t.Fatal(err)
 	}
@@ -218,7 +280,10 @@ func TestSetPackageSource(t *testing.T) {
 	sshConfig := ""
 	privateKey := ""
 	name := "devhost"
-
+	testSDK.expectedSSHArgs = [][]string{
+		{"echo", "$SSH_CONNECTION"},
+		{"amber_ctl", "add_src", "-n", "devhost", "-f", "http://[fe80::c0ff:eeee:fefe:c000%25eth1]:8083/config.json"},
+	}
 	if err := setPackageSource(ctx, testSDK, repoPort, name, deviceName, deviceIP, sshConfig, privateKey); err != nil {
 		t.Fatal(err)
 	}
@@ -236,7 +301,8 @@ func TestSetPackageSource(t *testing.T) {
 	deviceIP = ""
 	deviceName = "test-device"
 	sshConfig = "custom-sshconfig"
-	os.Setenv("FSERVE_TEST_USE_CUSTOM_SSH_CONFIG", "1")
+	testSDK.expectCustomSSHConfig = true
+	testSDK.expectPrivateKey = false
 	if err := setPackageSource(ctx, testSDK, repoPort, name, deviceName, deviceIP, sshConfig, privateKey); err != nil {
 		t.Fatal(err)
 	}
@@ -245,8 +311,8 @@ func TestSetPackageSource(t *testing.T) {
 	deviceName = "test-device"
 	sshConfig = ""
 	privateKey = "private-key"
-	os.Setenv("FSERVE_TEST_USE_CUSTOM_SSH_CONFIG", "")
-	os.Setenv("FSERVE_TEST_USE_PRIVATE_KEY", "1")
+	testSDK.expectCustomSSHConfig = false
+	testSDK.expectPrivateKey = true
 	if err := setPackageSource(ctx, testSDK, repoPort, name, deviceName, deviceIP, sshConfig, privateKey); err != nil {
 		t.Fatal(err)
 	}
@@ -283,8 +349,7 @@ func TestFakeFServe(t *testing.T) {
 	// Check the command line
 	cmd, args := args[0], args[1:]
 	switch filepath.Base(cmd) {
-	case "device-finder":
-		fakeDeviceFinder(args)
+
 	case "pgrep":
 		fakePgrep(args)
 	case "ps":
@@ -293,130 +358,8 @@ func TestFakeFServe(t *testing.T) {
 		fakePM(args)
 	case "gsutil":
 		fakeGSUtil(args)
-	case "ssh":
-		fakeSSH(args)
-	case "ssh-keygen":
-		fakeSSHKeyGen(args)
 	default:
 		fmt.Fprintf(os.Stderr, "Unexpected command %v", cmd)
-		os.Exit(1)
-	}
-}
-
-func fakeDeviceFinder(args []string) {
-	expected := []string{}
-	expectedResolveArgs := []string{"resolve", "-device-limit", "1", "-ipv4=false", "test-device"}
-	if args[0] == "resolve" {
-		expected = expectedResolveArgs
-		fmt.Println(resolvedAddr)
-	}
-	ok := len(expected) == len(args)
-	for i := range args {
-		if strings.Contains(expected[i], "*") {
-			expectedPattern := regexp.MustCompile(expected[i])
-			ok = ok && expectedPattern.MatchString(args[i])
-		} else {
-			ok = ok && args[i] == expected[i]
-		}
-	}
-	if !ok {
-		fmt.Fprintf(os.Stderr, "unexpected ssh args  %v exepected %v", args, expected)
-		os.Exit(1)
-	}
-}
-
-func fakeSSH(args []string) {
-	expected := []string{}
-	expectedHostConnection := []string{}
-	expectedSetSource := []string{}
-	privateKeyArgs := []string{"-i", "private-key"}
-
-	sshConfigMatch := "/.*/sshconfig"
-	if os.Getenv("FSERVE_TEST_USE_CUSTOM_SSH_CONFIG") != "" {
-		sshConfigMatch = "custom-sshconfig"
-	}
-	sshConfigArgs := []string{"-F", sshConfigMatch}
-
-	hostaddr := "fe80::c0ff:eeee:fefe:c000%eth1"
-	expectedURL := "http://[fe80::c0ff:eeee:fefe:c000%25eth1]:8083/config.json"
-	targetaddr := resolvedAddr
-	targetIndex := 2
-
-	expectedHostConnection = append(expectedHostConnection, sshConfigArgs...)
-	expectedSetSource = append(expectedSetSource, sshConfigArgs...)
-
-	if os.Getenv("FSERVE_TEST_USE_PRIVATE_KEY") != "" {
-		targetIndex = 4
-		expectedHostConnection = append(expectedHostConnection, privateKeyArgs...)
-		expectedSetSource = append(expectedSetSource, privateKeyArgs...)
-
-	}
-
-	if args[targetIndex] == resolvedAddr {
-		hostaddr = "fe80::c0ff:eeee:fefe:c000%eth1"
-		expectedURL = "http://[fe80::c0ff:eeee:fefe:c000%25eth1]:8083/config.json"
-
-	} else {
-		targetaddr = args[targetIndex]
-		hostaddr = "10.10.1.12"
-		expectedURL = "http://10.10.1.12:8083/config.json"
-
-	}
-
-	expectedHostConnection = append(expectedHostConnection, targetaddr, "echo", "$SSH_CONNECTION")
-	expectedSetSource = append(expectedSetSource, targetaddr, "amber_ctl", "add_src", "-n", "devhost", "-f", expectedURL)
-
-	if args[len(args)-1] == "$SSH_CONNECTION" {
-		expected = expectedHostConnection
-		fmt.Printf("%v 54545 fe80::c00f:f0f0:eeee:cccc 22\n", hostaddr)
-	} else if args[len(args)-1] == expectedURL {
-		expected = expectedSetSource
-	}
-
-	ok := len(args) == len(expected)
-	if ok {
-		for i := range args {
-			if strings.Contains(expected[i], "*") {
-				expectedPattern := regexp.MustCompile(expected[i])
-				ok = ok && expectedPattern.MatchString(args[i])
-			} else {
-				ok = ok && args[i] == expected[i]
-			}
-		}
-	}
-	if !ok {
-		fmt.Fprintf(os.Stderr, "unexpected ssh args  %v expected %v", args, expected)
-		os.Exit(1)
-	}
-}
-
-func fakeSSHKeyGen(args []string) {
-	expected := []string{}
-
-	if len(args) == 0 {
-		fmt.Fprintf(os.Stderr, "Expected arguments to ssh-keygen\n")
-		os.Exit(1)
-	}
-	switch args[0] {
-	case "-P":
-		expected = []string{"-P", "", "-t", "ed25519", "-f", "/.*/_TEMP_HOME/.ssh/fuchsia_ed25519", "-C", "testuser@testhost generated by Fuchsia GN SDK"}
-	case "-y":
-		expected = []string{"-y", "-f", "/.*/_TEMP_HOME/.ssh/fuchsia_ed25519"}
-		fmt.Println("ssh-ed25519 AAAAC3NzaC1lTESTNTE5AAAAILxVYY7Q++kWUCmlfK1B6JQ9FPRaee05Te/PSHWVTeST testuser@test-host generated by Fuchsia GN SDK")
-	}
-	ok := len(args) == len(expected)
-	if ok {
-		for i := range args {
-			if strings.Contains(expected[i], "*") {
-				expectedPattern := regexp.MustCompile(expected[i])
-				ok = ok && expectedPattern.MatchString(args[i])
-			} else {
-				ok = ok && args[i] == expected[i]
-			}
-		}
-	}
-	if !ok {
-		fmt.Fprintf(os.Stderr, "unexpected ssh-keygen args  %v. Expected %v", args, expected)
 		os.Exit(1)
 	}
 }
