@@ -210,6 +210,7 @@ runtime configuration, services and directories it receives in its
 In [Components v2](#components-v2), a component manifest is a file with a `.cm`
 extension, that encodes a [component declaration](#component-declaration).
 
+-   [Component manifests v1](/docs/concepts/components/v1/component_manifests.md)
 -   [Component manifests v2](/docs/concepts/components/v2/component_manifests.md)
 
 ### **Component Manifest Facet** {#component-manifest-facet}
@@ -219,7 +220,7 @@ Additional metadata that is carried in a
 [component framework](#component-framework).
 
 
-### *Component Instance Identifier** {#component-instance-id}
+### **Component Instance Identifier** {#component-instance-id}
 
 A unique, stable identifer for a component instance. The instance id is _the_
 canonical identifier for a component instance. The component runtime uses this
