@@ -4,10 +4,5 @@
     ],
     "program": {
         "binary": "bin/system_log_ptr_unittest_exe"
-    },
-    "sandbox": {
-        "services": [
-            "fuchsia.process.Launcher"
-        ]
     }
 }

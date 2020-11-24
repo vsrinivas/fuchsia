@@ -43,6 +43,7 @@ source_set("attachment_providers") {
     "//src/developer/forensics/utils:errors",
     "//src/developer/forensics/utils:logs",
     "//src/developer/forensics/utils/fit",
+    "//src/lib/diagnostics/stream/cpp",
     "//src/lib/fsl",
   ]
 }

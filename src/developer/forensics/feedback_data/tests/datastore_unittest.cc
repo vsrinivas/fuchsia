@@ -127,19 +127,19 @@ class DatastoreTest : public UnitTestFixture {
     }
   }
 
-  void SetUpInspectServer(const std::string& inspect_chunk) {
-    inspect_server_ = std::make_unique<stubs::DiagnosticsArchive>(
+  void SetUpDiagnosticsServer(const std::string& inspect_chunk) {
+    diagnostics_server_ = std::make_unique<stubs::DiagnosticsArchive>(
         std::make_unique<stubs::DiagnosticsBatchIterator>(std::vector<std::vector<std::string>>({
             {inspect_chunk},
             {},
         })));
-    InjectServiceProvider(inspect_server_.get(), kArchiveAccessorName);
+    InjectServiceProvider(diagnostics_server_.get(), kArchiveAccessorName);
   }
 
-  void SetUpInspectServer(std::unique_ptr<stubs::DiagnosticsArchiveBase> server) {
-    inspect_server_ = std::move(server);
-    if (inspect_server_) {
-      InjectServiceProvider(inspect_server_.get(), kArchiveAccessorName);
+  void SetUpDiagnosticsServer(std::unique_ptr<stubs::DiagnosticsArchiveBase> server) {
+    diagnostics_server_ = std::move(server);
+    if (diagnostics_server_) {
+      InjectServiceProvider(diagnostics_server_.get(), kArchiveAccessorName);
     }
   }
 
@@ -148,20 +148,6 @@ class DatastoreTest : public UnitTestFixture {
     last_reboot_info_provider_server_ = std::move(server);
     if (last_reboot_info_provider_server_) {
       InjectServiceProvider(last_reboot_info_provider_server_.get());
-    }
-  }
-
-  void SetUpLoggerServer(const std::vector<fuchsia::logger::LogMessage>& messages) {
-    auto new_logger = std::make_unique<stubs::Logger>();
-    new_logger->set_messages(messages);
-    logger_server_ = std::move(new_logger);
-    InjectServiceProvider(logger_server_.get());
-  }
-
-  void SetUpLoggerServer(std::unique_ptr<stubs::LoggerBase> server) {
-    logger_server_ = std::move(server);
-    if (logger_server_) {
-      InjectServiceProvider(logger_server_.get());
     }
   }
 
@@ -211,9 +197,8 @@ class DatastoreTest : public UnitTestFixture {
   std::unique_ptr<stubs::BoardInfoProviderBase> board_provider_server_;
   std::unique_ptr<stubs::ChannelProviderBase> channel_provider_server_;
   std::unique_ptr<stubs::DeviceIdProviderBase> device_id_provider_server_;
-  std::unique_ptr<stubs::DiagnosticsArchiveBase> inspect_server_;
+  std::unique_ptr<stubs::DiagnosticsArchiveBase> diagnostics_server_;
   std::unique_ptr<stubs::LastRebootInfoProviderBase> last_reboot_info_provider_server_;
-  std::unique_ptr<stubs::LoggerBase> logger_server_;
   std::unique_ptr<stubs::ProductInfoProviderBase> product_provider_server_;
 };
 
@@ -458,7 +443,7 @@ TEST_F(DatastoreTest, GetAnnotations_FailOn_OnlyUnknownAnnotationInAllowlist) {
 TEST_F(DatastoreTest, GetAttachments_Inspect) {
   // CollectInspectData() has its own set of unit tests so we only cover one chunk of Inspect data
   // here to check that we are attaching the Inspect data.
-  SetUpInspectServer("foo");
+  SetUpDiagnosticsServer("foo");
   SetUpDatastore(kDefaultAnnotationsToAvoidSpuriousLogs, {kAttachmentInspect});
 
   ::fit::result<Attachments> attachments = GetAttachments();
@@ -573,10 +558,24 @@ TEST_F(DatastoreTest, GetAttachments_PreviousSyslogNotFirstInstance) {
 TEST_F(DatastoreTest, GetAttachments_SysLog) {
   // CollectSystemLogs() has its own set of unit tests so we only cover one log message here to
   // check that we are attaching the logs.
-  SetUpLoggerServer({
-      stubs::BuildLogMessage(FX_LOG_INFO, "log message",
-                             /*timestamp_offset=*/zx::duration(0), {"foo"}),
-  });
+  SetUpDiagnosticsServer(R"JSON(
+[
+  {
+    "metadata": {
+      "timestamp": 15604000000000,
+      "severity": "Info"
+    },
+    "payload": {
+      "root": {
+        "message": "log message",
+        "pid": 7559,
+        "tid": 7687,
+        "tag": "foo"
+      }
+    }
+  }
+]
+)JSON");
   SetUpDatastore(kDefaultAnnotationsToAvoidSpuriousLogs, {kAttachmentLogSystem});
 
   ::fit::result<Attachments> attachments = GetAttachments();
@@ -609,16 +608,17 @@ TEST_F(DatastoreTest, GetAttachments_FailOn_OnlyUnknownAttachmentInAllowlist) {
 
 TEST_F(DatastoreTest, GetAttachments_CobaltLogsTimeouts) {
   // The timeout of the kernel log collection cannot be tested due to the fact that
-  // fuchsia::boot::ReadOnlyLog cannot be stubbed and we have no mechanism to set the timeout of the
-  // kernel log collection to 0 seconds.
+  // fuchsia::boot::ReadOnlyLog cannot be stubbed and we have no mechanism to set the timeout of
+  // the kernel log collection to 0 seconds.
+  //
+  // Inspect and system log share the same stub server so we only test one of the two (i.e.
+  // Inspect).
   SetUpDatastore(kDefaultAnnotationsToAvoidSpuriousLogs, {
                                                              kAttachmentInspect,
-                                                             kAttachmentLogSystem,
                                                          });
 
-  SetUpInspectServer(std::make_unique<stubs::DiagnosticsArchive>(
+  SetUpDiagnosticsServer(std::make_unique<stubs::DiagnosticsArchive>(
       std::make_unique<stubs::DiagnosticsBatchIteratorNeverResponds>()));
-  SetUpLoggerServer(std::make_unique<stubs::LoggerBindsToLogListenerButNeverCalls>());
 
   ::fit::result<Attachments> attachments = GetAttachments();
 
@@ -626,12 +626,10 @@ TEST_F(DatastoreTest, GetAttachments_CobaltLogsTimeouts) {
   EXPECT_THAT(attachments.take_value(),
               ElementsAreArray({
                   Pair(kAttachmentInspect, AttachmentValue(Error::kTimeout)),
-                  Pair(kAttachmentLogSystem, AttachmentValue(Error::kTimeout)),
               }));
 
   EXPECT_THAT(ReceivedCobaltEvents(), UnorderedElementsAreArray({
                                           cobalt::Event(cobalt::TimedOutData::kInspect),
-                                          cobalt::Event(cobalt::TimedOutData::kSystemLog),
                                       }));
 }
 

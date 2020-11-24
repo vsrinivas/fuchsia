@@ -4,264 +4,210 @@
 
 #include "src/developer/forensics/feedback_data/attachments/system_log_ptr.h"
 
+#include <fuchsia/mem/cpp/fidl.h>
 #include <lib/async/cpp/executor.h>
-#include <lib/syslog/cpp/macros.h>
-#include <lib/syslog/logger.h>
+#include <lib/fit/result.h>
+#include <lib/sys/cpp/service_directory.h>
 #include <lib/zx/time.h>
-#include <zircon/errors.h>
 
 #include <memory>
-#include <ostream>
+#include <string>
 #include <vector>
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include "src/developer/forensics/feedback_data/archive_accessor_ptr.h"
 #include "src/developer/forensics/feedback_data/attachments/types.h"
 #include "src/developer/forensics/testing/gpretty_printers.h"
-#include "src/developer/forensics/testing/stubs/logger.h"
+#include "src/developer/forensics/testing/stubs/diagnostics_archive.h"
+#include "src/developer/forensics/testing/stubs/diagnostics_batch_iterator.h"
 #include "src/developer/forensics/testing/unit_test_fixture.h"
 #include "src/developer/forensics/utils/errors.h"
-#include "src/lib/fsl/vmo/strings.h"
 
 namespace forensics {
 namespace feedback_data {
 namespace {
 
+using testing::IsEmpty;
 using testing::UnorderedElementsAreArray;
 
-class CollectSystemLogTest : public UnitTestFixture {
+constexpr char kMessage1Json[] = R"JSON(
+[
+  {
+    "metadata": {
+      "timestamp": 1234000000000,
+      "severity": "Info"
+    },
+    "payload": {
+      "root": {
+        "message": "Message 1",
+        "pid": 200,
+        "tid": 300,
+        "tag": "tag_1, tag_a"
+      }
+    }
+  }
+]
+)JSON";
+
+constexpr char kMessage2Json[] = R"JSON(
+[
+  {
+    "metadata": {
+      "timestamp": 1234000000000,
+      "severity": "Info"
+    },
+    "payload": {
+      "root": {
+        "message": "Message 2",
+        "pid": 200,
+        "tid": 300,
+        "tag": "tag_2"
+      }
+    }
+  }
+]
+)JSON";
+
+constexpr char kMessage3Json[] = R"JSON(
+[
+  {
+    "metadata": {
+      "timestamp": 1234000000000,
+      "severity": "Info"
+    },
+    "payload": {
+      "root": {
+        "message": "Message 3",
+        "pid": 200,
+        "tid": 300,
+        "tag": "tag_3"
+      }
+    }
+  }
+]
+)JSON";
+
+class CollectLogDataTest : public UnitTestFixture {
  public:
-  CollectSystemLogTest() : executor_(dispatcher()) {}
+  CollectLogDataTest() : executor_(dispatcher()) {}
 
  protected:
-  void SetUpLoggerServer(std::unique_ptr<stubs::LoggerBase> server) {
-    logger_server_ = std::move(server);
-    if (logger_server_) {
-      InjectServiceProvider(logger_server_.get());
+  void SetupLogServer(std::unique_ptr<stubs::DiagnosticsArchiveBase> server) {
+    log_server_ = std::move(server);
+    if (log_server_) {
+      InjectServiceProvider(log_server_.get(), kArchiveAccessorName);
     }
   }
 
   ::fit::result<AttachmentValue> CollectSystemLog(const zx::duration timeout = zx::sec(1)) {
     ::fit::result<AttachmentValue> result;
     executor_.schedule_task(
-        feedback_data::CollectSystemLog(
-            dispatcher(), services(),
-            fit::Timeout(timeout, /*action=*/[this] { did_timeout_ = true; }))
+        feedback_data::CollectSystemLog(dispatcher(), services(),
+                                        fit::Timeout(timeout, /*action=*/[] {}))
             .then([&result](::fit::result<AttachmentValue>& res) { result = std::move(res); }));
     RunLoopFor(timeout);
     return result;
   }
 
-  bool did_timeout_ = false;
-
- private:
   async::Executor executor_;
 
-  std::unique_ptr<stubs::LoggerBase> logger_server_;
+ private:
+  std::unique_ptr<stubs::DiagnosticsArchiveBase> log_server_;
 };
 
-TEST_F(CollectSystemLogTest, Succeed_BasicCase) {
-  std::unique_ptr<stubs::Logger> logger = std::make_unique<stubs::Logger>();
-  logger->set_messages({
-      stubs::BuildLogMessage(FX_LOG_INFO, "line 1"),
-      stubs::BuildLogMessage(FX_LOG_WARNING, "line 2", zx::msec(1)),
-      stubs::BuildLogMessage(FX_LOG_ERROR, "line 3", zx::msec(2)),
-      stubs::BuildLogMessage(FX_LOG_FATAL, "line 4", zx::msec(3)),
-      stubs::BuildLogMessage(FX_LOG_INFO - 1 /*VLOG(1)*/, "line 5", zx::msec(4)),
-      stubs::BuildLogMessage(FX_LOG_INFO - 2 /*VLOG(2)*/, "line 6", zx::msec(5)),
-      stubs::BuildLogMessage(FX_LOG_INFO, "line 7", zx::msec(6), /*tags=*/{"foo"}),
-      stubs::BuildLogMessage(FX_LOG_INFO, "line 8", zx::msec(7), /*tags=*/{"bar"}),
-      stubs::BuildLogMessage(FX_LOG_INFO, "line 9", zx::msec(8),
-                             /*tags=*/{"foo", "bar"}),
-  });
-  SetUpLoggerServer(std::move(logger));
+TEST_F(CollectLogDataTest, Succeed_AllSystemLogs) {
+  SetupLogServer(std::make_unique<stubs::DiagnosticsArchive>(
+      std::make_unique<stubs::DiagnosticsBatchIterator>(std::vector<std::vector<std::string>>({
+          {kMessage1Json, kMessage2Json},
+          {kMessage3Json},
+          {},
+      }))));
 
   ::fit::result<AttachmentValue> result = CollectSystemLog();
-
   ASSERT_TRUE(result.is_ok());
-  AttachmentValue logs = result.take_value();
 
+  const AttachmentValue& logs = result.value();
   ASSERT_EQ(logs.State(), AttachmentValue::State::kComplete);
-  EXPECT_STREQ(logs.Value().c_str(), R"([15604.000][07559][07687][] INFO: line 1
-[15604.001][07559][07687][] WARN: line 2
-[15604.002][07559][07687][] ERROR: line 3
-[15604.003][07559][07687][] FATAL: line 4
-[15604.004][07559][07687][] VLOG(1): line 5
-[15604.005][07559][07687][] VLOG(2): line 6
-[15604.006][07559][07687][foo] INFO: line 7
-[15604.007][07559][07687][bar] INFO: line 8
-[15604.008][07559][07687][foo, bar] INFO: line 9
+  ASSERT_STREQ(logs.Value().c_str(), R"([01234.000][00200][00300][tag_1, tag_a] INFO: Message 1
+[01234.000][00200][00300][tag_2] INFO: Message 2
+[01234.000][00200][00300][tag_3] INFO: Message 3
 )");
 }
 
-TEST_F(CollectSystemLogTest, Succeed_OrdersMessagesCorrectly) {
-  std::unique_ptr<stubs::Logger> logger = std::make_unique<stubs::Logger>();
-  logger->set_messages({
-      stubs::BuildLogMessage(FX_LOG_INFO, "line 1"),
-      stubs::BuildLogMessage(FX_LOG_WARNING, "line 2", zx::msec(2)),
-      stubs::BuildLogMessage(FX_LOG_ERROR, "line 3", zx::msec(2)),
-      stubs::BuildLogMessage(FX_LOG_FATAL, "line 4", zx::msec(2)),
-      stubs::BuildLogMessage(FX_LOG_INFO - 1 /*VLOG(1)*/, "line 5", zx::msec(1)),
-      stubs::BuildLogMessage(FX_LOG_INFO - 2 /*VLOG(2)*/, "line 6", zx::msec(1)),
-      stubs::BuildLogMessage(FX_LOG_INFO, "line 7", zx::msec(3), /*tags=*/{"foo"}),
-      stubs::BuildLogMessage(FX_LOG_INFO, "line 8", zx::msec(4), /*tags=*/{"bar"}),
-      stubs::BuildLogMessage(FX_LOG_INFO, "line 9", zx::msec(5),
-                             /*tags=*/{"foo", "bar"}),
-  });
-  SetUpLoggerServer(std::move(logger));
+TEST_F(CollectLogDataTest, Succeed_PartialSystemLogs) {
+  SetupLogServer(std::make_unique<stubs::DiagnosticsArchive>(
+      std::make_unique<stubs::DiagnosticsBatchIteratorNeverRespondsAfterOneBatch>(
+          std::vector<std::string>({kMessage1Json, kMessage2Json}))));
 
   ::fit::result<AttachmentValue> result = CollectSystemLog();
-
   ASSERT_TRUE(result.is_ok());
-  AttachmentValue logs = result.take_value();
 
+  const AttachmentValue& logs = result.value();
+  ASSERT_EQ(logs.State(), AttachmentValue::State::kPartial);
+  ASSERT_STREQ(logs.Value().c_str(), R"([01234.000][00200][00300][tag_1, tag_a] INFO: Message 1
+[01234.000][00200][00300][tag_2] INFO: Message 2
+)");
+  EXPECT_EQ(logs.Error(), Error::kTimeout);
+}
+
+TEST_F(CollectLogDataTest, Succeed_FormattingErrors) {
+  SetupLogServer(std::make_unique<stubs::DiagnosticsArchive>(
+      std::make_unique<stubs::DiagnosticsBatchIterator>(std::vector<std::vector<std::string>>({
+          {kMessage1Json, kMessage2Json},
+          {kMessage3Json},
+          {"foo", "bar"},
+          {},
+      }))));
+
+  ::fit::result<AttachmentValue> result = CollectSystemLog();
+  ASSERT_TRUE(result.is_ok());
+
+  const AttachmentValue& logs = result.value();
   ASSERT_EQ(logs.State(), AttachmentValue::State::kComplete);
-  EXPECT_STREQ(logs.Value().c_str(), R"([15604.000][07559][07687][] INFO: line 1
-[15604.001][07559][07687][] VLOG(1): line 5
-[15604.001][07559][07687][] VLOG(2): line 6
-[15604.002][07559][07687][] WARN: line 2
-[15604.002][07559][07687][] ERROR: line 3
-[15604.002][07559][07687][] FATAL: line 4
-[15604.003][07559][07687][foo] INFO: line 7
-[15604.004][07559][07687][bar] INFO: line 8
-[15604.005][07559][07687][foo, bar] INFO: line 9
+  ASSERT_STREQ(logs.Value().c_str(), R"([01234.000][00200][00300][tag_1, tag_a] INFO: Message 1
+[01234.000][00200][00300][tag_2] INFO: Message 2
+[01234.000][00200][00300][tag_3] INFO: Message 3
+!!! Failed to format chunk: Failed to parse content as JSON. Offset 1: Invalid value. !!!
+!!! Failed to format chunk: Failed to parse content as JSON. Offset 0: Invalid value. !!!
 )");
 }
 
-TEST_F(CollectSystemLogTest, Succeed_LoggerUnbindsFromLogListenerAfterOneMessage) {
-  auto logger = std::make_unique<stubs::LoggerUnbindsFromLogListenerAfterOneMessage>();
-  logger->set_messages({
-      stubs::BuildLogMessage(FX_LOG_INFO, "this line should appear in the partial logs"),
-      stubs::BuildLogMessage(FX_LOG_INFO, "this line should be missing from the partial logs"),
-  });
-  SetUpLoggerServer(std::move(logger));
+TEST_F(CollectLogDataTest, Succeed_NoLogs) {
+  SetupLogServer(std::make_unique<stubs::DiagnosticsArchive>(
+      std::make_unique<stubs::DiagnosticsBatchIterator>(std::vector<std::vector<std::string>>({{}}))));
 
   ::fit::result<AttachmentValue> result = CollectSystemLog();
-
-  ASSERT_TRUE(result.is_ok());
-  AttachmentValue logs = result.take_value();
-
-  EXPECT_EQ(logs,
-            AttachmentValue(
-                "[15604.000][07559][07687][] INFO: this line should appear in the partial logs\n",
-                Error::kConnectionError));
-}
-
-TEST_F(CollectSystemLogTest, Succeed_LogCollectionTimesOut) {
-  // The logger will delay sending the rest of the messages after the first message.
-  // The delay needs to be longer than the log collection timeout to get partial logs.
-  // Since we are using a test loop with a fake clock, the actual durations don't matter so we can
-  // set them arbitrary long.
-  const zx::duration logger_delay = zx::sec(10);
-  const zx::duration log_collection_timeout = zx::sec(1);
-
-  auto logger = std::make_unique<stubs::LoggerDelaysAfterOneMessage>(dispatcher(), logger_delay);
-  logger->set_messages({
-      stubs::BuildLogMessage(FX_LOG_INFO, "this line should appear in the partial logs"),
-      stubs::BuildLogMessage(FX_LOG_INFO, "this line should be missing from the partial logs"),
-  });
-  SetUpLoggerServer(std::move(logger));
-
-  ::fit::result<AttachmentValue> result = CollectSystemLog(log_collection_timeout);
-
-  // First, we check that the log collection terminated with partial logs after the timeout.
-  ASSERT_TRUE(result.is_ok());
-  AttachmentValue logs = result.take_value();
-
-  EXPECT_EQ(logs,
-            AttachmentValue(
-                "[15604.000][07559][07687][] INFO: this line should appear in the partial logs\n",
-                Error::kTimeout));
-  EXPECT_TRUE(did_timeout_);
-}
-
-TEST_F(CollectSystemLogTest, Fail_EmptyLog) {
-  SetUpLoggerServer(std::make_unique<stubs::Logger>());
-
-  ::fit::result<AttachmentValue> result = CollectSystemLog();
-
   ASSERT_TRUE(result.is_ok());
   EXPECT_EQ(result.value(), AttachmentValue(Error::kMissingValue));
 }
 
-TEST_F(CollectSystemLogTest, Fail_LoggerNotAvailable) {
-  SetUpLoggerServer(nullptr);
+TEST_F(CollectLogDataTest, Fail_BatchIteratorReturnsError) {
+  SetupLogServer(std::make_unique<stubs::DiagnosticsArchive>(
+      std::make_unique<stubs::DiagnosticsBatchIteratorReturnsError>()));
 
   ::fit::result<AttachmentValue> result = CollectSystemLog();
-
   ASSERT_TRUE(result.is_ok());
-  EXPECT_EQ(result.value(), AttachmentValue(Error::kConnectionError));
+
+  EXPECT_EQ(result.value(), AttachmentValue(Error::kBadValue));
 }
 
-TEST_F(CollectSystemLogTest, Fail_LoggerClosesConnection) {
-  SetUpLoggerServer(std::make_unique<stubs::LoggerClosesConnection>());
+TEST_F(CollectLogDataTest, Fail_BatchIteratorNeverResponds) {
+  SetupLogServer(std::make_unique<stubs::DiagnosticsArchive>(
+      std::make_unique<stubs::DiagnosticsBatchIteratorNeverResponds>()));
 
   ::fit::result<AttachmentValue> result = CollectSystemLog();
-
-  ASSERT_TRUE(result.is_ok());
-  EXPECT_EQ(result.value(), AttachmentValue(Error::kConnectionError));
-}
-
-TEST_F(CollectSystemLogTest, Fail_LoggerNeverBindsToLogListener) {
-  SetUpLoggerServer(std::make_unique<stubs::LoggerNeverBindsToLogListener>());
-
-  ::fit::result<AttachmentValue> result = CollectSystemLog();
-
-  ASSERT_TRUE(result.is_ok());
-  EXPECT_EQ(result.value(), AttachmentValue(Error::kConnectionError));
-}
-
-TEST_F(CollectSystemLogTest, Fail_LoggerNeverCallsLogManyBeforeDone) {
-  SetUpLoggerServer(std::make_unique<stubs::LoggerNeverCallsLogManyBeforeDone>());
-
-  ::fit::result<AttachmentValue> result = CollectSystemLog();
-
-  ASSERT_TRUE(result.is_ok());
-  EXPECT_EQ(result.value(), AttachmentValue(Error::kMissingValue));
-}
-
-TEST_F(CollectSystemLogTest, Fail_LogCollectionTimesOut) {
-  SetUpLoggerServer(std::make_unique<stubs::LoggerBindsToLogListenerButNeverCalls>());
-
-  ::fit::result<AttachmentValue> result = CollectSystemLog();
-
   ASSERT_TRUE(result.is_ok());
   EXPECT_EQ(result.value(), AttachmentValue(Error::kTimeout));
 }
 
-class LogListenerTest : public UnitTestFixture {
- public:
-  LogListenerTest() : executor_(dispatcher()) {}
+TEST_F(CollectLogDataTest, Fail_ArchiveClosesIteratorClosesConnection) {
+  SetupLogServer(std::make_unique<stubs::DiagnosticsArchiveClosesIteratorConnection>());
 
- protected:
-  async::Executor executor_;
-};
-
-// fxbug.dev/6388
-TEST_F(LogListenerTest, Succeed_LoggerClosesConnectionAfterSuccessfulFlow) {
-  std::unique_ptr<stubs::Logger> logger = std::make_unique<stubs::Logger>();
-  logger->set_messages({
-      stubs::BuildLogMessage(FX_LOG_INFO, "msg"),
-  });
-  InjectServiceProvider(logger.get());
-
-  // Since we are using a test loop with a fake clock, the actual duration doesn't matter so we can
-  // set it arbitrary long.
-  const zx::duration timeout = zx::sec(1);
-  ::fit::result<AttachmentValue> result;
-  LogListener log_listener(dispatcher(), services());
-  executor_.schedule_task(
-      log_listener.CollectLogs(fit::Timeout(timeout))
-          .then([&result](const ::fit::result<AttachmentValue>& res) { result = std::move(res); }));
-  RunLoopFor(timeout);
-
-  // First, we check we have had a successful flow.
+  ::fit::result<AttachmentValue> result = CollectSystemLog();
   ASSERT_TRUE(result.is_ok());
-
-  // Then, we check that if the logger closes the connection (and triggers the error handler on the
-  // LogListener side), we don't crash (cf. fxbug.dev/6388).
-  logger->CloseConnection();
+  EXPECT_EQ(result.value(), AttachmentValue(Error::kConnectionError));
 }
 
 }  // namespace
