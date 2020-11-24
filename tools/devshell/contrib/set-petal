@@ -34,23 +34,12 @@ if [[ "${petal}" != "fuchsia" ]] &&
   exit 1
 fi
 
-# If jiri is not found which will return an err which will cause bash to exit.
-# "|| echo" catches that.
-jiri=$(which jiri || echo)
-if [[ -z ${jiri} ]]; then
-  jiri="${FUCHSIA_DIR}/.jiri_root/bin/jiri"
-  if [[ ! -f ${jiri} ]]; then
-    fx-error "Cannot find \"jiri\" in your PATH nor at ${jiri}."
-    exit 1
-  fi
-fi
-
 cd "${FUCHSIA_DIR}"
 rm -f -- "${FUCHSIA_DIR}/.jiri_manifest"
-"${jiri}" import -name=integration flower https://fuchsia.googlesource.com/integration
+fx-command-run jiri import -name=integration flower https://fuchsia.googlesource.com/integration
 
 if [[ "${petal}" != "none" ]]; then
-  "${jiri}" override "${petal}" "https://fuchsia.googlesource.com/${petal}"
+  fx-command-run jiri override "${petal}" "https://fuchsia.googlesource.com/${petal}"
   echo "Configured jiri for ${petal}."
 else
   echo "Configured jiri for no petal/global integration."
