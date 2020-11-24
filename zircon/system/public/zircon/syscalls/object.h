@@ -48,6 +48,7 @@ typedef uint32_t zx_object_info_topic_t;
 #define ZX_INFO_MSI                     ((zx_object_info_topic_t) 28u) // zx_info_msi_t[1]
 #define ZX_INFO_GUEST_STATS             ((zx_object_info_topic_t) 29u) // zx_info_guest_stats_t[1]
 #define ZX_INFO_TASK_RUNTIME            ((zx_object_info_topic_t) 30u) // zx_info_task_runtime_t[1]
+#define ZX_INFO_KMEM_STATS_EXTENDED     ((zx_object_info_topic_t) 31u) // zx_info_kmem_stats_extended_t[1]
 
 // Return codes set when a task is killed.
 #define ZX_TASK_RETCODE_SYSCALL_KILL            ((int64_t) -1024)   // via zx_task_kill().
@@ -611,10 +612,6 @@ typedef struct zx_info_kmem_stats {
     // The amount of memory committed to VMOs, both kernel and user.
     // A superset of all userspace memory.
     // Does not include certain VMOs that fall under |wired_bytes|.
-    //
-    // TODO(dbort): Break this into at least two pieces: userspace VMOs that
-    // have koids, and kernel VMOs that don't. Or maybe look at VMOs
-    // mapped into the kernel aspace vs. everything else.
     uint64_t vmo_bytes;
 
     // The amount of memory used for architecture-specific MMU metadata
@@ -627,6 +624,64 @@ typedef struct zx_info_kmem_stats {
     // Non-free memory that isn't accounted for in any other field.
     uint64_t other_bytes;
 } zx_info_kmem_stats_t;
+
+// Information about kernel memory usage - includes information returned by
+// zx_info_kmem_stats_t plus some additional details.
+// More expensive to gather than zx_info_kmem_stats_t.
+typedef struct zx_info_kmem_stats_extended {
+    // The total amount of physical memory available to the system.
+    uint64_t total_bytes;
+
+    // The amount of unallocated memory.
+    uint64_t free_bytes;
+
+    // The amount of memory reserved by and mapped into the kernel for reasons
+    // not covered by other fields in this struct. Typically for readonly data
+    // like the ram disk and kernel image, and for early-boot dynamic memory.
+    uint64_t wired_bytes;
+
+    // The amount of memory allocated to the kernel heap.
+    uint64_t total_heap_bytes;
+
+    // The portion of |total_heap_bytes| that is not in use.
+    uint64_t free_heap_bytes;
+
+    // The amount of memory committed to VMOs, both kernel and user.
+    // A superset of all userspace memory.
+    // Does not include certain VMOs that fall under |wired_bytes|.
+    uint64_t vmo_bytes;
+
+    // The amount of memory committed to pager-backed VMOs.
+    uint64_t vmo_pager_total_bytes;
+
+    // The amount of memory committed to pager-backed VMOs, that has been most
+    // recently accessed, and would not be eligible for eviction by the kernel
+    // under memory pressure.
+    uint64_t vmo_pager_newest_bytes;
+
+    // The amount of memory committed to pager-backed VMOs, that has been least
+    // recently accessed, and would be the first to be evicted by the kernel
+    // under memory pressure.
+    uint64_t vmo_pager_oldest_bytes;
+
+    // The amount of memory committed to discardable VMOs that is currently
+    // locked, or unreclaimable by the kernel under memory pressure.
+    uint64_t vmo_discardable_locked_bytes;
+
+    // The amount of memory committed to discardable VMOs that is currently
+    // unlocked, or reclaimable by the kernel under memory pressure.
+    uint64_t vmo_discardable_unlocked_bytes;
+
+    // The amount of memory used for architecture-specific MMU metadata
+    // like page tables.
+    uint64_t mmu_overhead_bytes;
+
+    // The amount of memory in use by IPC.
+    uint64_t ipc_bytes;
+
+    // Non-free memory that isn't accounted for in any other field.
+    uint64_t other_bytes;
+} zx_info_kmem_stats_extended_t;
 
 typedef struct zx_info_resource {
     // The resource kind; resource object kinds are detailed in the resource.md

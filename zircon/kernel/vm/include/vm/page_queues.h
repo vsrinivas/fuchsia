@@ -116,6 +116,17 @@ class PageQueues {
   // not modified.
   ktl::optional<VmoBacklink> PeekPagerBacked(size_t lowest_queue) const;
 
+  // Helper struct to group pager-backed queue length counts returned by GetPagerQueueCounts.
+  struct PagerCounts {
+    size_t total = 0;
+    size_t newest = 0;
+    size_t oldest = 0;
+  };
+
+  // Returns pager-backed queue counts. Called from the zx_object_get_info() syscall.
+  // Performs O(n) traversal of the pager-backed queues.
+  PagerCounts GetPagerQueueCounts() const;
+
   // Helper struct to group queue length counts returned by DebugQueueCounts.
   struct Counts {
     ktl::array<size_t, kNumPagerBacked> pager_backed = {0};

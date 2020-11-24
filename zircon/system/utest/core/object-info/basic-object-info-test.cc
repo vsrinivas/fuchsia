@@ -85,10 +85,5 @@ TEST(ObjectGetInfoTest, InvalidHandleFails) {
   ASSERT_NO_FATAL_FAILURES((CheckInvalidHandleFails<void*>(ZX_INFO_HANDLE_VALID, 1, provider)));
 }
 
-// As reference from previous object-info test.
-// TODO(dbort): Test resource topics
-// RUN_MULTI_ENTRY_TESTS(ZX_INFO_CPU_STATS, zx_info_cpu_stats_t, get_root_resource);
-// RUN_SINGLE_ENTRY_TESTS(ZX_INFO_KMEM_STATS, zx_info_kmem_stats_t, get_root_resource);
-
 }  // namespace
 }  // namespace object_info_test

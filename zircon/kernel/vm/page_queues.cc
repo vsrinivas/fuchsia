@@ -152,6 +152,19 @@ void PageQueues::RemoveArrayIntoList(vm_page_t** pages, size_t count, list_node_
   }
 }
 
+PageQueues::PagerCounts PageQueues::GetPagerQueueCounts() const {
+  PagerCounts counts;
+  Guard<SpinLock, IrqSave> guard{&lock_};
+  counts.newest = list_length(&pager_backed_[0]);
+  counts.total = counts.newest;
+  for (size_t i = 1; i < kNumPagerBacked - 1; i++) {
+    counts.total += list_length(&pager_backed_[i]);
+  }
+  counts.oldest = list_length(&pager_backed_[kNumPagerBacked - 1]);
+  counts.total += counts.oldest;
+  return counts;
+}
+
 PageQueues::Counts PageQueues::DebugQueueCounts() const {
   Counts counts;
   Guard<SpinLock, IrqSave> guard{&lock_};

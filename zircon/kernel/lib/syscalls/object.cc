@@ -628,7 +628,8 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic, user_out_ptr
       }
       return ZX_OK;
     }
-    case ZX_INFO_KMEM_STATS: {
+    case ZX_INFO_KMEM_STATS:
+    case ZX_INFO_KMEM_STATS_EXTENDED: {
       auto status = validate_resource(handle, ZX_RSRC_KIND_ROOT);
       if (status != ZX_OK)
         return status;
@@ -684,7 +685,34 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic, user_out_ptr
         stats.other_bytes = 0;
       }
 
-      return single_record_result(_buffer, buffer_size, _actual, _avail, stats);
+      if (topic == ZX_INFO_KMEM_STATS) {
+        return single_record_result(_buffer, buffer_size, _actual, _avail, stats);
+      }
+
+      // Copy over the common counters from |stats| to |stats_ext|.
+      zx_info_kmem_stats_extended_t stats_ext = {};
+      stats_ext.total_bytes = stats.total_bytes;
+      stats_ext.free_bytes = stats.free_bytes;
+      stats_ext.wired_bytes = stats.wired_bytes;
+      stats_ext.total_heap_bytes = stats.total_heap_bytes;
+      stats_ext.free_heap_bytes = stats.free_heap_bytes;
+      stats_ext.vmo_bytes = stats.vmo_bytes;
+      stats_ext.mmu_overhead_bytes = stats.mmu_overhead_bytes;
+      stats_ext.ipc_bytes = stats.ipc_bytes;
+      stats_ext.other_bytes = stats.other_bytes;
+
+      // Populate additional stats for the ZX_INFO_KMEM_STATS_EXTENDED topic, that are more
+      // expensive to compute than ZX_INFO_KMEM_STATS.
+      PageQueues::PagerCounts counts = pmm_page_queues()->GetPagerQueueCounts();
+      stats_ext.vmo_pager_total_bytes = counts.total * PAGE_SIZE;
+      stats_ext.vmo_pager_newest_bytes = counts.newest * PAGE_SIZE;
+      stats_ext.vmo_pager_oldest_bytes = counts.oldest * PAGE_SIZE;
+
+      // Unimplemented.
+      stats_ext.vmo_discardable_locked_bytes = 0;
+      stats_ext.vmo_discardable_unlocked_bytes = 0;
+
+      return single_record_result(_buffer, buffer_size, _actual, _avail, stats_ext);
     }
     case ZX_INFO_RESOURCE: {
       // grab a reference to the dispatcher

@@ -19,6 +19,7 @@ source_set("object-info") {
   sources = [
     "basic-object-info-test.cc",
     "job-object-info-test.cc",
+    "kernel-stats-object-info-test.cc",
     "process-object-info-test.cc",
     "task-object-info-test.cc",
     "thread-object-info-test.cc",
