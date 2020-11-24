@@ -221,6 +221,7 @@ SincFilter::CacheT* CreateSincFilterCoefficientTableCache() {
   SincFilter::persistent_cache_->push_back(cache->Get(make_inputs(96000, 48000)));
   SincFilter::persistent_cache_->push_back(cache->Get(make_inputs(48000, 96000)));
   SincFilter::persistent_cache_->push_back(cache->Get(make_inputs(96000, 16000)));
+  SincFilter::persistent_cache_->push_back(cache->Get(make_inputs(44100, 48000)));
   return cache;
 }
 
