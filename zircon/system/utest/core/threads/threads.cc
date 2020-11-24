@@ -519,7 +519,8 @@ TEST(Threads, ResumeSuspended) {
   ASSERT_EQ(zx_handle_close(thread_h), ZX_OK);
 }
 
-TEST(Threads, SuspendSleeping) {
+// TODO(fxbug.dev/65187): Test is disabled due to flakiness.
+TEST(Threads, DISABLED_SuspendSleeping) {
   const zx_time_t sleep_deadline = zx_deadline_after(ZX_MSEC(100));
   zxr_thread_t thread;
 
