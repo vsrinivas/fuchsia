@@ -1,0 +1,12 @@
+{
+    "program": {
+        "data": "data/echo-dart-client"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.examples.Echo",
+            "fuchsia.logger.LogSink",
+            "fuchsia.sys.Environment"
+        ]
+    }
+}

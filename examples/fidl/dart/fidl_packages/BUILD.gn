@@ -1,0 +1,26 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# [START imports]
+import("//build/dart/test.gni")
+
+# [END imports]
+
+# [START test]
+dart_test("fidl-example-dart-test") {
+  sources = [ "types_test.dart" ]
+  deps = [
+    "//examples/fidl/fuchsia.examples",
+    "//third_party/dart-pkg/pub/test",
+  ]
+}
+
+# [END test]
+
+# [START group]
+group("fidl_packages") {
+  testonly = true
+  deps = [ ":fidl-example-dart-test($host_toolchain)" ]
+}
+# [END group]

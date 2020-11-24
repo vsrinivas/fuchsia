@@ -60,6 +60,7 @@ group("test") {
     ":examples-integration-test",
 
     # Ensure FIDL snippets used in documentation builds
+    "//examples/fidl/dart:all",
     "//examples/fidl/fuchsia.examples.docs",
     "//examples/fidl/go:all",
     "//examples/fidl/hlcpp:all",

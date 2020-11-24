@@ -1,0 +1,33 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/dart/fidl_move.gni")
+import("//topaz/runtime/dart_runner/dart_app.gni")
+
+dart_app("echo-dart-client") {
+  main_dart = "lib/main.dart"
+  meta = [
+    {
+      path = rebase_path("meta/client.cmx")
+      dest = "echo-dart-client.cmx"
+    },
+  ]
+  sources = [ "main.dart" ]
+
+  # [START deps]
+  deps = [
+    "//examples/fidl/fuchsia.examples",
+    "//topaz/public/dart/fuchsia_logger",
+    "//topaz/public/dart/fuchsia_services",
+    dart_package_label.fidl,
+    dart_package_label.fuchsia,
+  ]
+
+  # [END deps]
+}
+
+group("client") {
+  testonly = true
+  deps = [ ":echo-dart-client" ]
+}

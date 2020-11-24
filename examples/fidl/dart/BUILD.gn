@@ -2,25 +2,19 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-group("fidl") {
+# Group containing all example code
+group("all") {
   testonly = true
   deps = [
-    ":tests",
-    "dart:all",
-    "go:all",
-    "hlcpp:all",
-    "llcpp:all",
-    "rust:all",
+    "client",
+    "request_pipelining/client",
+    "request_pipelining/server",
+    "server",
   ]
 }
 
+# Group containing all tests for the example code
 group("tests") {
   testonly = true
-  deps = [
-    "dart:tests",
-    "go:tests",
-    "hlcpp:tests",
-    "llcpp:tests",
-    "test",
-  ]
+  deps = [ "fidl_packages" ]
 }

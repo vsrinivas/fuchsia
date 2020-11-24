@@ -51,7 +51,7 @@ To create a component:
 1. Declare a target for the server in `topaz/examples/fidl/server/BUILD.gn`:
 
    ```gn
-   {%includecode gerrit_repo="fuchsia/topaz" gerrit_path="examples/fidl/server/BUILD.gn" %}
+   {%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/dart/server/BUILD.gn" %}
    ```
 
    The `dart_app` template defines multiple parts:
@@ -76,7 +76,7 @@ To create a component:
    to define the Dart executable.
 
    ```cmx
-   {%includecode gerrit_repo="fuchsia/topaz" gerrit_path="examples/fidl/server/meta/server.cmx" %}
+   {%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/dart/server/meta/server.cmx" %}
    ```
 
 ### Run the component
@@ -115,7 +115,7 @@ other product configurations.
 Import the required dependencies in `lib/main.dart`:
 
 ```dart
-{%includecode gerrit_repo="fuchsia/topaz" gerrit_path="examples/fidl/server/lib/main.dart" region_tag="imports" %}
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/dart/server/lib/main.dart" region_tag="imports" %}
 ```
 
 ### Implement an Echo server
@@ -123,7 +123,7 @@ Import the required dependencies in `lib/main.dart`:
 Add the following to `lib/main.dart`, above the `main()` function:
 
 ```dart
-{%includecode gerrit_repo="fuchsia/topaz" gerrit_path="examples/fidl/server/lib/main.dart" region_tag="impl" %}
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/dart/server/lib/main.dart" region_tag="impl" %}
 ```
 
 The implementation consists of the following elements:
@@ -172,7 +172,7 @@ This complete process is described in further detail in the
 First, the code initializes the `EchoBinding` as mentioned above:
 
 ```cpp
-{%includecode gerrit_repo="fuchsia/topaz" gerrit_path="examples/fidl/server/lib/main.dart" region_tag="main" highlight="4,5,6,7" %}
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/dart/server/lib/main.dart" region_tag="main" highlight="4,5,6,7" %}
 ```
 
 In order to run, a binding needs two things:
@@ -188,7 +188,7 @@ connect to an `Echo` server.
 Then, the code calls the component manager to expose the `Echo` FIDL protocol to other components:
 
 ```cpp
-{%includecode gerrit_repo="fuchsia/topaz" gerrit_path="examples/fidl/server/lib/main.dart" region_tag="main" highlight="10,11,12,13,14,15,16,17" %}
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/dart/server/lib/main.dart" region_tag="main" highlight="10,11,12,13,14,15,16,17" %}
 ```
 
 It does so using the `fuchsia_services` package, which provides an API to access the startup context

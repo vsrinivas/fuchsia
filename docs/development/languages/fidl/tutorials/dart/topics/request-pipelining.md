@@ -63,7 +63,7 @@ This implementation of `Echo` allows specifying a prefix in order to
 distinguish between the different instances of `Echo` servers:
 
 ```dart
-{%includecode gerrit_repo="fuchsia/topaz" gerrit_path="examples/fidl/request_pipelining/server/lib/main.dart" region_tag="echo-impl" %}
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/dart/request_pipelining/server/lib/main.dart" region_tag="echo-impl" %}
 ```
 
 The `SendString` handler is empty as the client just uses `EchoString`.
@@ -76,7 +76,7 @@ server to a channel.
 This class uses stores a list of all of the instances of `Echo` that it launches:
 
 ```dart
-{%includecode gerrit_repo="fuchsia/topaz" gerrit_path="examples/fidl/request_pipelining/server/lib/main.dart" region_tag="launcher-impl" %}
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/dart/request_pipelining/server/lib/main.dart" region_tag="launcher-impl" %}
 ```
 
 Both of the `EchoLauncher` methods are handled by calling the `launchEchoServer` helper method on
@@ -91,7 +91,7 @@ The main loop should is the same as in the
 [server tutorial][server-tut-main] but serves an `EchoLauncher` instead of `Echo`.
 
 ```dart
-{%includecode gerrit_repo="fuchsia/topaz" gerrit_path="examples/fidl/request_pipelining/server/lib/main.dart" region_tag="main" %}
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/dart/request_pipelining/server/lib/main.dart" region_tag="main" %}
 ```
 
 ## Build the server
@@ -122,7 +122,7 @@ code connects to one instance of `Echo` using `GetEcho` and another using
 This is the non-pipelined code:
 
 ```dart
-{%includecode gerrit_repo="fuchsia/topaz" gerrit_path="examples/fidl/request_pipelining/client/lib/main.dart" region_tag="main" highlight="9,10,11,12,13,14,15,16" %}
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/dart/request_pipelining/client/lib/main.dart" region_tag="main" highlight="9,10,11,12,13,14,15,16" %}
 ```
 
 This code chains together two futures. First, it makes the `GetEcho` request to the client. It then
@@ -136,7 +136,7 @@ the futures get completed.
 The pipelined code is much simpler:
 
 ```dart
-{%includecode gerrit_repo="fuchsia/topaz" gerrit_path="examples/fidl/request_pipelining/client/lib/main.dart" region_tag="main" highlight="18,19,20,21,22,23,24,25,26" %}
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/dart/request_pipelining/client/lib/main.dart" region_tag="main" highlight="18,19,20,21,22,23,24,25,26" %}
 ```
 
 The call to `pipelinedEcho.ctrl.request()` creates a channel, binds the client object to one end,
@@ -147,7 +147,7 @@ Finally, the two futures corresponding to the non-pipelined and pipelined calls 
 completion concurrently, to see which one completes first:
 
 ```dart
-{%includecode gerrit_repo="fuchsia/topaz" gerrit_path="examples/fidl/request_pipelining/client/lib/main.dart" region_tag="main" highlight="28,29" %}
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/dart/request_pipelining/client/lib/main.dart" region_tag="main" highlight="28,29" %}
 ```
 
 ## Build the client

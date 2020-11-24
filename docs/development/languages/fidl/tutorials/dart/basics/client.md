@@ -55,13 +55,13 @@ rm -r topaz/examples/fidl/client/*
 1. Add the following dependencies:
 
    ```gn
-   {%includecode gerrit_repo="fuchsia/topaz" gerrit_path="examples/fidl/client/BUILD.gn" region_tag="deps" %}
+   {%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/dart/client/BUILD.gn" region_tag="deps" %}
    ```
 
 1. Then, import them in `lib/main.dart`:
 
    ```rust
-   {%includecode gerrit_repo="fuchsia/topaz" gerrit_path="examples/fidl/client/lib/main.dart" region_tag="imports" %}
+   {%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/dart/client/lib/main.dart" region_tag="imports" %}
    ```
 
 These dependencies are explained in the [server tutorial][server-tut].
@@ -87,7 +87,7 @@ to a server, called a proxy class. To connect to the server, the client needs to
 a proxy class and then bind it to the server:
 
 ```dart
-{%includecode gerrit_repo="fuchsia/topaz" gerrit_path="examples/fidl/client/lib/main.dart" region_tag="main" highlight="4,5,6,7" %}
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/dart/client/lib/main.dart" region_tag="main" highlight="4,5,6,7" %}
 ```
 
 Similar to the server code, the client uses `sys.StartupContext.fromStartupInfo()` to access the
@@ -124,7 +124,7 @@ The code makes two requests to the server:
 * A `SendString` request
 
 ```dart
-{%includecode gerrit_repo="fuchsia/topaz" gerrit_path="examples/fidl/client/lib/main.dart" region_tag="main" highlight="9,10,11,12,13,14" %}
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/dart/client/lib/main.dart" region_tag="main" highlight="9,10,11,12,13,14" %}
 ```
 
 The call to `EchoString` returns a future, which resolves to the response
@@ -142,7 +142,7 @@ The [bindings reference][bindings-ref] describes how these proxy methods are gen
 The code then waits for a single `OnString` event from the server:
 
 ```dart
-{%includecode gerrit_repo="fuchsia/topaz" gerrit_path="examples/fidl/client/lib/main.dart" region_tag="main" highlight="15,16,17" %}
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/dart/client/lib/main.dart" region_tag="main" highlight="15,16,17" %}
 ```
 
 This is done by [taking the event stream][events] from the client object, then waiting

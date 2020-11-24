@@ -15,7 +15,7 @@ suffix are hardcoded by the FIDL toolchain.
 This code can then be imported using:
 
 ```dart
-{%includecode gerrit_repo="fuchsia/topaz" gerrit_path="examples/fidl/fidl_packages/test/types_test.dart" region_tag="import" %}
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/dart/fidl_packages/test/types_test.dart" region_tag="import" %}
 ```
 
 ## Constants {#constants}
@@ -132,7 +132,7 @@ or every flag set (`$mask`):
 Example usage:
 
 ```dart
-{%includecode gerrit_repo="fuchsia/topaz" gerrit_path="examples/fidl/fidl_packages/test/types_test.dart" region_tag="bits" adjust_indentation="auto" %}
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/dart/fidl_packages/test/types_test.dart" region_tag="bits" adjust_indentation="auto" %}
 ```
 
 ### Enums {#enums}
@@ -177,7 +177,7 @@ member.
 Example usage:
 
 ```dart
-{%includecode gerrit_repo="fuchsia/topaz" gerrit_path="examples/fidl/fidl_packages/test/types_test.dart" region_tag="enums" adjust_indentation="auto" %}
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/dart/fidl_packages/test/types_test.dart" region_tag="enums" adjust_indentation="auto" %}
 ```
 
 ### Structs {#structs}
@@ -206,7 +206,7 @@ The FIDL toolchain generates a `Color` class with the following methods:
 Example usage:
 
 ```dart
-{%includecode gerrit_repo="fuchsia/topaz" gerrit_path="examples/fidl/fidl_packages/test/types_test.dart" region_tag="structs" adjust_indentation="auto" %}
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/dart/fidl_packages/test/types_test.dart" region_tag="structs" adjust_indentation="auto" %}
 ```
 
 ### Unions {#unions}
@@ -252,7 +252,7 @@ Flexible unions have additional methods for interacting with unknown data:
 Example usage:
 
 ```dart
-{%includecode gerrit_repo="fuchsia/topaz" gerrit_path="examples/fidl/fidl_packages/test/types_test.dart" region_tag="unions" adjust_indentation="auto" %}
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/dart/fidl_packages/test/types_test.dart" region_tag="unions" adjust_indentation="auto" %}
 ```
 
 #### Flexible unions and unknown variants
@@ -307,7 +307,7 @@ The FIDL toolchain generates a `User` class that defines the following methods:
 Example usage:
 
 ```dart
-{%includecode gerrit_repo="fuchsia/topaz" gerrit_path="examples/fidl/fidl_packages/test/types_test.dart" region_tag="tables" adjust_indentation="auto" %}
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/dart/fidl_packages/test/types_test.dart" region_tag="tables" adjust_indentation="auto" %}
 ```
 
 ## Protocols {#protocols}
