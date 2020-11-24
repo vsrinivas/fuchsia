@@ -19,8 +19,6 @@ common_files = [
   "image_view.h",
   "instance.cc",
   "instance.h",
-  "layer.cc",
-  "layer.h",
   "physical_device.cc",
   "physical_device.h",
   "pipeline.cc",

@@ -11,12 +11,8 @@
 #include <vector>
 
 #include "src/graphics/examples/vkprimer/common/command_buffers.h"
-#include "src/graphics/examples/vkprimer/common/command_pool.h"
-#include "src/graphics/examples/vkprimer/common/device.h"
-#include "src/graphics/examples/vkprimer/common/framebuffers.h"
 #include "src/graphics/examples/vkprimer/common/image_view.h"
 #include "src/graphics/examples/vkprimer/common/instance.h"
-#include "src/graphics/examples/vkprimer/common/layer.h"
 #include "src/graphics/examples/vkprimer/common/physical_device.h"
 #include "src/graphics/examples/vkprimer/common/pipeline.h"
 #include "src/graphics/examples/vkprimer/common/render_pass.h"
@@ -54,7 +50,7 @@ int main(int argc, char* argv[]) {
 
   // INSTANCE
   const bool kEnableValidation = true;
-  auto vkp_instance = std::make_shared<vkp::Instance>();
+  auto vkp_instance = std::make_shared<vkp::Instance>(kEnableValidation);
 #if USE_GLFW
   glfwInit();
   glfwSetErrorCallback(glfwErrorCallback);
@@ -62,14 +58,10 @@ int main(int argc, char* argv[]) {
   glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
   GLFWwindow* window = glfwCreateWindow(1024, 768, "VkPrimer", nullptr, nullptr);
   RTN_IF_MSG(1, !window, "glfwCreateWindow failed.\n");
-  RTN_IF_MSG(1, !instance->Init(kEnableValidation, window), "Instance Initialization Failed.\n");
+  RTN_IF_MSG(1, !instance->Init(window), "Instance Initialization Failed.\n");
 #else
-  RTN_IF_MSG(1, !vkp_instance->Init(kEnableValidation), "Instance Initialization Failed.\n");
+  RTN_IF_MSG(1, !vkp_instance->Init(), "Instance Initialization Failed.\n");
 #endif
-
-  // LAYERS
-  vkp::Layer vkp_layer(vkp_instance);
-  RTN_IF_MSG(1, !vkp_layer.Init(), "Layer Initialization Failed.\n");
 
 // SURFACE
 #if USE_GLFW
@@ -85,8 +77,7 @@ int main(int argc, char* argv[]) {
   RTN_IF_MSG(1, !vkp_physical_device->Init(), "Physical device initialization failed\n");
 
   // LOGICAL DEVICE
-  auto vkp_device = std::make_shared<vkp::Device>(vkp_physical_device->get(), vkp_surface->get(),
-                                                  kEnableValidation);
+  auto vkp_device = std::make_shared<vkp::Device>(vkp_physical_device->get(), vkp_surface->get());
   RTN_IF_MSG(1, !vkp_device->Init(), "Logical device initialization failed\n");
 
   vk::Format image_format;

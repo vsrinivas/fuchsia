@@ -16,8 +16,7 @@ namespace vkp {
 
 class Device {
  public:
-  Device(const vk::PhysicalDevice &phys_device, const VkSurfaceKHR &surface,
-         const bool enable_validation);
+  Device(const vk::PhysicalDevice &phys_device, const VkSurfaceKHR &surface);
 
   bool Init();
   const vk::Device &get() const;
@@ -31,7 +30,6 @@ class Device {
 
   bool initialized_;
   std::unique_ptr<SurfacePhysDeviceParams> params_;
-  const bool enable_validation_;
   std::vector<const char *> layers_;
 
   // Queue with support for both drawing and presentation.

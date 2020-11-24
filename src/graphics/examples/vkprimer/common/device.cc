@@ -4,16 +4,14 @@
 
 #include "src/graphics/examples/vkprimer/common/device.h"
 
-#include "src/graphics/examples/vkprimer/common/layer.h"
 #include "src/graphics/examples/vkprimer/common/physical_device.h"
 #include "src/graphics/examples/vkprimer/common/swapchain.h"
 #include "src/graphics/examples/vkprimer/common/utils.h"
 
 namespace vkp {
 
-Device::Device(const vk::PhysicalDevice &phys_device, const VkSurfaceKHR &surface,
-               const bool enable_validation)
-    : initialized_(false), enable_validation_(enable_validation), queue_(nullptr) {
+Device::Device(const vk::PhysicalDevice &phys_device, const VkSurfaceKHR &surface)
+    : initialized_(false), queue_(nullptr) {
   params_ = std::make_unique<SurfacePhysDeviceParams>(phys_device, surface);
 }
 
@@ -43,13 +41,7 @@ bool Device::Init() {
   device_info.pQueueCreateInfos = &queue_info;
   device_info.pEnabledFeatures = &device_features;
   device_info.setPpEnabledExtensionNames(exts.data());
-
-  if (enable_validation_) {
-    Layer::AppendRequiredDeviceLayers(&layers_);
-    device_info.setEnabledLayerCount(static_cast<uint32_t>(layers_.size()));
-  } else {
-    device_info.enabledLayerCount = 0;
-  }
+  device_info.enabledLayerCount = 0;
 
   auto [r_device, device] = params_->phys_device_.createDeviceUnique(device_info);
   RTN_IF_VKH_ERR(false, r_device, "Failed to create logical device.\n");

@@ -4,9 +4,9 @@
 
 #include "src/graphics/examples/vkprimer/common/instance.h"
 
+#include <iostream>
 #include <vector>
 
-#include "src/graphics/examples/vkprimer/common/layer.h"
 #include "src/graphics/examples/vkprimer/common/utils.h"
 
 namespace {
@@ -20,11 +20,8 @@ const std::vector<const char *> s_required_props = {
 #endif
 };
 
-const std::vector<const char *> s_desired_props = {
-    VK_EXT_DEBUG_REPORT_EXTENSION_NAME,
-};
-
-void PrintProps(const std::vector<const char *> &props) {
+void PrintProps(const std::vector<const char *> &props, const char *msg) {
+  printf("%s\n", msg);
   for (const auto &prop : props) {
     printf("\t%s\n", prop);
   }
@@ -32,17 +29,20 @@ void PrintProps(const std::vector<const char *> &props) {
 }
 
 #if USE_GLFW
-std::vector<const char *> GetExtensionsGLFW() {
+std::vector<const char *> GetExtensionsGLFW(bool enable_validation) {
   uint32_t num_extensions = 0;
   const char **glfw_extensions;
   glfw_extensions = glfwGetRequiredInstanceExtensions(&num_extensions);
   std::vector<const char *> extensions(glfw_extensions, glfw_extensions + num_extensions);
-  extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+  if (enable_validation) {
+    extensions.emplace_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+  }
 
   return extensions;
 }
 #else
-std::vector<const char *> GetExtensionsPrivate() {
+std::vector<const char *> GetExtensionsPrivate(bool enable_validation) {
+  std::vector<const char *> required_props = s_required_props;
   std::vector<const char *> extensions;
   std::vector<std::string> missing_props;
 
@@ -52,6 +52,10 @@ std::vector<const char *> GetExtensionsPrivate() {
   const char *kMagmaLayer = nullptr;
 #endif
 
+  if (enable_validation) {
+    required_props.emplace_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+  }
+
   if (FindRequiredProperties(s_required_props, vkp::INSTANCE_EXT_PROP, nullptr /* phys_device */,
                              kMagmaLayer, &missing_props)) {
     extensions.insert(extensions.end(), s_required_props.begin(), s_required_props.end());
@@ -60,6 +64,43 @@ std::vector<const char *> GetExtensionsPrivate() {
   return extensions;
 }
 #endif
+
+VKAPI_ATTR VkBool32 VKAPI_CALL
+DebugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT severity, VkDebugUtilsMessageTypeFlagsEXT type,
+              const VkDebugUtilsMessengerCallbackDataEXT *callback_data, void *user_data) {
+  std::string severity_str{};
+  if (severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT) {
+    severity_str = "VERBOSE";
+  } else if (severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT) {
+    severity_str = "INFO";
+  } else if (severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT) {
+    severity_str = "WARNING";
+  } else if (severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT) {
+    severity_str = "ERROR";
+  }
+
+  std::string type_str{};
+  if (type & VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT) {
+    type_str = "General";
+  } else if (type & VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT) {
+    type_str = "Validation";
+  } else if (type & VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT) {
+    type_str = "Performance";
+  } else {
+    type_str = "Unknown";
+  }
+
+  if (severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT) {
+    std::cerr << "VK[" << severity_str << "]\tType: " << type_str << "\tMessage:\n\t"
+              << callback_data->pMessage << std::endl
+              << std::endl;
+  } else {
+    std::cout << "VK[" << severity_str << "]\tType: " << type_str << "\tMessage:\n\t"
+              << callback_data->pMessage << std::endl
+              << std::endl;
+  }
+  return VK_FALSE;
+}
 
 }  // namespace
 
@@ -71,7 +112,7 @@ Instance::~Instance() { initialized_ = false; }
 bool Instance::Init(bool enable_validation, GLFWwindow *window) {
   window_ = window;
 #else
-bool Instance::Init(bool enable_validation) {
+bool Instance::Init() {
 #endif
   RTN_IF_MSG(false, (initialized_ == true), "Already initialized.\n");
 
@@ -89,29 +130,23 @@ bool Instance::Init(bool enable_validation) {
 
   // Extensions
   extensions_ = GetExtensions();
-  Layer::AppendRequiredInstanceExtensions(&extensions_);
 
   instance_info.enabledExtensionCount = static_cast<uint32_t>(extensions_.size());
   instance_info.ppEnabledExtensionNames = extensions_.data();
 
-  // Layers
-  Layer::AppendRequiredInstanceLayers(&layers_);
+// Layers
+#ifdef __Fuchsia__
+  layers_.emplace_back("VK_LAYER_FUCHSIA_imagepipe_swapchain_fb");
+#endif
 
-  if (enable_validation) {
-    Layer::AppendValidationInstanceLayers(&layers_);
+  if (enable_validation_) {
+    layers_.emplace_back("VK_LAYER_KHRONOS_validation");
   }
 
   instance_info.enabledLayerCount = static_cast<uint32_t>(layers_.size());
   instance_info.ppEnabledLayerNames = layers_.data();
-
-  fprintf(stdout, "Enabled Instance Extensions:\n");
-  PrintProps(extensions_);
-
-  fprintf(stdout, "Enabled layers:\n");
-  for (auto &layer : layers_) {
-    fprintf(stdout, "\t%s\n", layer);
-  }
-  fprintf(stdout, "\n");
+  PrintProps(extensions_, "Enabled Instance Extensions");
+  PrintProps(layers_, "Enabled Layers");
 
   auto [r_instance, instance] = vk::createInstanceUnique(instance_info);
   RTN_IF_VKH_ERR(false, r_instance, "Failed to create instance\n");
@@ -122,12 +157,37 @@ bool Instance::Init(bool enable_validation) {
 
 std::vector<const char *> Instance::GetExtensions() {
 #if USE_GLFW
-  extensions_ = GetExtensionsGLFW();
+  extensions_ = GetExtensionsGLFW(enable_validation_);
 #else
-  extensions_ = GetExtensionsPrivate();
+  extensions_ = GetExtensionsPrivate(enable_validation_);
 #endif
 
   return extensions_;
+}
+
+bool Instance::ConfigureDebugMessenger() {
+  dispatch_loader_ = vk::DispatchLoaderDynamic();
+  dispatch_loader_.init(instance_.get(), vkGetInstanceProcAddr);
+
+  vk::DebugUtilsMessengerCreateInfoEXT info;
+  info.messageSeverity = vk::DebugUtilsMessageSeverityFlagBitsEXT::eInfo |
+                         vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning |
+                         vk::DebugUtilsMessageSeverityFlagBitsEXT::eError;
+#if VERBOSE_LOGGING
+  info.messageSeverity |= vk::DebugUtilsMessageSeverityFlagBitsEXT::eVerbose;
+#endif
+
+  info.messageType = vk::DebugUtilsMessageTypeFlagBitsEXT::eGeneral |
+                     vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance |
+                     vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation;
+  info.pfnUserCallback = DebugCallback;
+
+  auto [r_messenger, messenger] =
+      instance_->createDebugUtilsMessengerEXTUnique(info, nullptr, dispatch_loader_);
+  RTN_IF_VKH_ERR(false, r_messenger, "Failed to create debug messenger.\n");
+  debug_messenger_ = std::move(messenger);
+  initialized_ = true;
+  return true;
 }
 
 const vk::Instance &Instance::get() const { return instance_.get(); }

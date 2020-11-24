@@ -20,20 +20,20 @@ namespace vkp {
 
 class Instance {
  public:
-  Instance() {}
+  explicit Instance(bool enable_validation) : enable_validation_(enable_validation) {}
   ~Instance();
 
 #if USE_GLFW
-  bool Init(bool enable_validation, GLFWwindow *window);
+  bool Init(GLFWwindow *window);
 #else
-  bool Init(bool enable_validation);
+  bool Init();
 #endif
 
   const vk::Instance &get() const;
 
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(Instance);
-
+  bool ConfigureDebugMessenger();
   std::vector<const char *> GetExtensions();
 
 #if USE_GLFW
@@ -41,8 +41,11 @@ class Instance {
 #endif
 
   bool initialized_ = false;
+  bool enable_validation_ = false;
   std::vector<const char *> extensions_;
   std::vector<const char *> layers_;
+  vk::UniqueHandle<vk::DebugUtilsMessengerEXT, vk::DispatchLoaderDynamic> debug_messenger_;
+  vk::DispatchLoaderDynamic dispatch_loader_;
 
   vk::UniqueInstance instance_;
 };

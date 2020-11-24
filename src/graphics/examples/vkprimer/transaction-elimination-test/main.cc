@@ -16,7 +16,6 @@
 #include "src/graphics/examples/vkprimer/common/framebuffers.h"
 #include "src/graphics/examples/vkprimer/common/image_view.h"
 #include "src/graphics/examples/vkprimer/common/instance.h"
-#include "src/graphics/examples/vkprimer/common/layer.h"
 #include "src/graphics/examples/vkprimer/common/physical_device.h"
 #include "src/graphics/examples/vkprimer/common/pipeline.h"
 #include "src/graphics/examples/vkprimer/common/render_pass.h"
@@ -43,11 +42,8 @@ static bool DrawAllFrames(const vkp::Device& vkp_device,
 // elimination from working.
 TEST(TransactionElimination, ForeignQueue) {
   const bool kEnableValidation = true;
-  auto vkp_instance = std::make_shared<vkp::Instance>();
-  ASSERT_TRUE(vkp_instance->Init(kEnableValidation));
-
-  vkp::Layer vkp_layer(vkp_instance);
-  ASSERT_TRUE(vkp_layer.Init());
+  auto vkp_instance = std::make_shared<vkp::Instance>(kEnableValidation);
+  ASSERT_TRUE(vkp_instance->Init());
 
   auto vkp_surface = std::make_shared<vkp::Surface>(vkp_instance);
   ASSERT_TRUE(vkp_surface->Init());
@@ -56,8 +52,7 @@ TEST(TransactionElimination, ForeignQueue) {
       std::make_shared<vkp::PhysicalDevice>(vkp_instance, vkp_surface->get());
   ASSERT_TRUE(vkp_physical_device->Init());
 
-  auto vkp_device = std::make_shared<vkp::Device>(vkp_physical_device->get(), vkp_surface->get(),
-                                                  kEnableValidation);
+  auto vkp_device = std::make_shared<vkp::Device>(vkp_physical_device->get(), vkp_surface->get());
   ASSERT_TRUE(vkp_device->Init());
 
   vk::Format image_format;
