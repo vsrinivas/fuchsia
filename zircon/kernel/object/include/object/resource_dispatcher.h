@@ -66,7 +66,6 @@ class ResourceDispatcher final
   bool IsRangedRoot(zx_rsrc_kind_t kind) const {
     switch (kind_) {
       case ZX_RSRC_KIND_ROOT:
-      case ZX_RSRC_KIND_VMEX:
         return false;
     }
     return (kind_ == kind && base_ == 0 && size_ == 0);

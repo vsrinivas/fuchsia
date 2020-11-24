@@ -60,9 +60,6 @@ HandleOwner get_resource_handle(zx_rsrc_kind_t kind) {
     case ZX_RSRC_KIND_ROOT:
       strlcpy(name, "root", ZX_MAX_NAME_LEN);
       break;
-    case ZX_RSRC_KIND_VMEX:
-      strlcpy(name, "vmex", ZX_MAX_NAME_LEN);
-      break;
     case ZX_RSRC_KIND_SMC:
       strlcpy(name, "smc", ZX_MAX_NAME_LEN);
       break;
@@ -75,7 +72,6 @@ HandleOwner get_resource_handle(zx_rsrc_kind_t kind) {
   zx_status_t result;
   switch (kind) {
     case ZX_RSRC_KIND_ROOT:
-    case ZX_RSRC_KIND_VMEX:
       result = ResourceDispatcher::Create(&rsrc, &rights, kind, 0, 0, 0, name);
       break;
     case ZX_RSRC_KIND_MMIO:

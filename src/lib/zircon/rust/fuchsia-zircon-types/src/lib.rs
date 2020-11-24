@@ -357,9 +357,8 @@ multiconst!(zx_rsrc_kind_t, [
     ZX_RSRC_KIND_IRQ        = 1;
     ZX_RSRC_KIND_IOPORT     = 2;
     ZX_RSRC_KIND_ROOT       = 3;
-    ZX_RSRC_KIND_VMEX       = 4;
-    ZX_RSRC_KIND_SMC        = 5;
-    ZX_RSRC_KIND_SYSTEM     = 6;
+    ZX_RSRC_KIND_SMC        = 4;
+    ZX_RSRC_KIND_SYSTEM     = 5;
 ]);
 
 multiconst!(zx_rsrc_system_base_t, [

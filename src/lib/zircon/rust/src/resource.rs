@@ -119,7 +119,6 @@ bitflags! {
        const IRQ        = sys::ZX_RSRC_KIND_IRQ;
        const IOPORT     = sys::ZX_RSRC_KIND_IOPORT;
        const ROOT       = sys::ZX_RSRC_KIND_ROOT;
-       const VMEX       = sys::ZX_RSRC_KIND_VMEX;
        const SMC        = sys::ZX_RSRC_KIND_SMC;
        const SYSTEM     = sys::ZX_RSRC_KIND_SYSTEM;
     }
@@ -207,7 +206,7 @@ mod tests {
     fn create_child() {
         let invalid_resource = Resource::from(Handle::invalid());
         assert_eq!(
-            invalid_resource.create_child(ResourceKind::VMEX, None, 0, 0, b"vmex"),
+            invalid_resource.create_child(ResourceKind::IRQ, None, 0, 0, b"irq"),
             Err(Status::BAD_HANDLE)
         );
     }

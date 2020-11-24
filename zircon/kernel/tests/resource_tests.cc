@@ -141,9 +141,8 @@ static bool root_resource_filter() {
   // None of these requests should be denied, not even the ones which have no
   // meaningful concept of "range" associated with this.  Unless explicitly
   // disallowed, all requests should default to OK.
-  ktl::array kResourceKinds = {ZX_RSRC_KIND_MMIO,  ZX_RSRC_KIND_IRQ,  ZX_RSRC_KIND_IOPORT,
-                               ZX_RSRC_KIND_ROOT,  ZX_RSRC_KIND_VMEX, ZX_RSRC_KIND_SMC,
-                               ZX_RSRC_KIND_SYSTEM};
+  ktl::array kResourceKinds = {ZX_RSRC_KIND_MMIO, ZX_RSRC_KIND_IRQ, ZX_RSRC_KIND_IOPORT,
+                               ZX_RSRC_KIND_ROOT, ZX_RSRC_KIND_SMC, ZX_RSRC_KIND_SYSTEM};
 
   // make sure that if someone adds new resource type, that someone comes back
   // here and adds it to this test.
