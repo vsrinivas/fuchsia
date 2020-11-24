@@ -11,7 +11,8 @@ mod test;
 
 #[ffx_plugin()]
 pub async fn selftest(cmd: SelftestCommand) -> Result<()> {
-    let default_tests = tests![test_isolated, test_daemon_echo, test_daemon_stop,];
+    let default_tests =
+        tests![test_isolated, test_daemon_echo, test_daemon_config_flag, test_daemon_stop,];
     let mut target_tests = tests![test_target_list,];
 
     let mut tests = default_tests;
@@ -38,6 +39,32 @@ async fn test_daemon_echo() -> Result<()> {
     let got = String::from_utf8(out.stdout)?;
     let want = "SUCCESS: received \"Ffx\"\n";
     assert_eq!(got, want);
+
+    Ok(())
+}
+
+async fn test_daemon_config_flag() -> Result<()> {
+    let isolate = Isolate::new("daemon-config-flag")?;
+    let mut daemon =
+        isolate.ffx(&["daemon", "start"]).stdout(Stdio::null()).stderr(Stdio::null()).spawn()?;
+
+    // This should not terminate the daemon just started, as it won't
+    // share an overnet socket with it.
+    let mut ascendd_path2 = isolate.ascendd_path.clone();
+    ascendd_path2.set_extension("2");
+    let _out = isolate
+        .ffx(&[
+            "--config",
+            &format!("overnet.socket={}", ascendd_path2.to_string_lossy()),
+            "daemon",
+            "stop",
+        ])
+        .output()?;
+
+    assert_eq!(None, daemon.try_wait()?);
+
+    let _out = isolate.ffx(&["daemon", "stop"]).output()?;
+    daemon.wait()?;
 
     Ok(())
 }

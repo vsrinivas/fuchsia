@@ -97,18 +97,15 @@ pub async fn spawn_daemon() -> Result<()> {
     }
 
     let mut cmd = Command::new(ffx_path);
-    cmd.stdin(Stdio::null())
-        .stdout(stdout)
-        .stderr(stderr)
-        .env("RUST_BACKTRACE", "full")
-        .arg(DAEMON)
-        .arg("start");
+    cmd.stdin(Stdio::null()).stdout(stdout).stderr(stderr).env("RUST_BACKTRACE", "full");
     if let Some(c) = ffx.config.as_ref() {
         cmd.arg("--config").arg(c);
     }
     if let Some(e) = ffx.env.as_ref() {
         cmd.arg("--env").arg(e);
     }
+    cmd.arg(DAEMON);
+    cmd.arg("start");
     daemonize(&mut cmd)
         .spawn()
         .context("spawning daemon start")?

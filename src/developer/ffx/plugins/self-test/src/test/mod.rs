@@ -20,7 +20,7 @@ pub struct Isolate {
 
     home_dir: PathBuf,
     xdg_config_home: PathBuf,
-    ascendd_path: PathBuf,
+    pub ascendd_path: PathBuf,
 }
 
 impl Isolate {
