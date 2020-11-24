@@ -784,7 +784,6 @@ int main(int argc, const char** argv) {
   netdump::Stats stats = {};
   handle_rx(rx_fifo, iobuf, count, options, &stats);
 
-  zx_handle_close(rx_fifo.get());
   if (options.dumpfile_fd != -1) {
     close(options.dumpfile_fd);
   }
