@@ -105,6 +105,8 @@ const $fidl.UnionType<UnionSize8Alignment4> kUnionSize8Alignment4_Type =
     1: $fidl.Uint32Type(),
   },
   ctor: UnionSize8Alignment4._ctor,
+  flexible: false,
+  resource: false,
 );
 // See fxbug.dev/7644:
 // ignore: recursive_compile_time_constant
@@ -115,6 +117,8 @@ const $fidl.NullableUnionType<UnionSize8Alignment4>
     1: $fidl.Uint32Type(),
   },
   ctor: UnionSize8Alignment4._ctor,
+  flexible: false,
+  resource: false,
 );
 
 enum UnionSize12Alignment4Tag {
@@ -185,6 +189,8 @@ const $fidl.UnionType<UnionSize12Alignment4> kUnionSize12Alignment4_Type =
         element: $fidl.Uint8Type(), elementCount: 6),
   },
   ctor: UnionSize12Alignment4._ctor,
+  flexible: false,
+  resource: false,
 );
 // See fxbug.dev/7644:
 // ignore: recursive_compile_time_constant
@@ -196,6 +202,8 @@ const $fidl.NullableUnionType<UnionSize12Alignment4>
         element: $fidl.Uint8Type(), elementCount: 6),
   },
   ctor: UnionSize12Alignment4._ctor,
+  flexible: false,
+  resource: false,
 );
 
 enum UnionSize24Alignment8Tag {
@@ -265,6 +273,8 @@ const $fidl.UnionType<UnionSize24Alignment8> kUnionSize24Alignment8_Type =
     1: kStructSize16Alignment8_Type,
   },
   ctor: UnionSize24Alignment8._ctor,
+  flexible: false,
+  resource: false,
 );
 // See fxbug.dev/7644:
 // ignore: recursive_compile_time_constant
@@ -275,6 +285,8 @@ const $fidl.NullableUnionType<UnionSize24Alignment8>
     1: kStructSize16Alignment8_Type,
   },
   ctor: UnionSize24Alignment8._ctor,
+  flexible: false,
+  resource: false,
 );
 
 enum UnionSize36Alignment4Tag {
@@ -345,6 +357,8 @@ const $fidl.UnionType<UnionSize36Alignment4> kUnionSize36Alignment4_Type =
         element: $fidl.Uint8Type(), elementCount: 32),
   },
   ctor: UnionSize36Alignment4._ctor,
+  flexible: false,
+  resource: false,
 );
 // See fxbug.dev/7644:
 // ignore: recursive_compile_time_constant
@@ -356,6 +370,8 @@ const $fidl.NullableUnionType<UnionSize36Alignment4>
         element: $fidl.Uint8Type(), elementCount: 32),
   },
   ctor: UnionSize36Alignment4._ctor,
+  flexible: false,
+  resource: false,
 );
 
 class SandwichUnionSize8Alignment4 extends $fidl.Struct {

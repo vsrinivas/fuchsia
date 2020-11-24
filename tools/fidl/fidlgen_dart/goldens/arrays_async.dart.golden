@@ -106,6 +106,8 @@ const $fidl.UnionType<UnionSmallArray> kUnionSmallArray_Type =
         element: $fidl.Uint32Type(), elementCount: 2),
   },
   ctor: UnionSmallArray._ctor,
+  flexible: false,
+  resource: false,
 );
 // See fxbug.dev/7644:
 // ignore: recursive_compile_time_constant
@@ -116,6 +118,8 @@ const $fidl.NullableUnionType<UnionSmallArray> kUnionSmallArray_OptType =
         element: $fidl.Uint32Type(), elementCount: 2),
   },
   ctor: UnionSmallArray._ctor,
+  flexible: false,
+  resource: false,
 );
 
 enum UnionLargeArrayTag {
@@ -186,6 +190,8 @@ const $fidl.UnionType<UnionLargeArray> kUnionLargeArray_Type =
         element: $fidl.Uint32Type(), elementCount: 100),
   },
   ctor: UnionLargeArray._ctor,
+  flexible: false,
+  resource: false,
 );
 // See fxbug.dev/7644:
 // ignore: recursive_compile_time_constant
@@ -196,6 +202,8 @@ const $fidl.NullableUnionType<UnionLargeArray> kUnionLargeArray_OptType =
         element: $fidl.Uint32Type(), elementCount: 100),
   },
   ctor: UnionLargeArray._ctor,
+  flexible: false,
+  resource: false,
 );
 
 class StructSmallArray extends $fidl.Struct {
@@ -333,6 +341,7 @@ const $fidl.TableType<TableSmallArray> kTableSmallArray_Type =
         element: $fidl.Uint32Type(), elementCount: 2),
   ],
   ctor: TableSmallArray._ctor,
+  resource: false,
 );
 
 class TableLargeArray extends $fidl.Table {
@@ -378,6 +387,7 @@ const $fidl.TableType<TableLargeArray> kTableLargeArray_Type =
         element: $fidl.Uint32Type(), elementCount: 100),
   ],
   ctor: TableLargeArray._ctor,
+  resource: false,
 );
 
 // ignore: unused_element, avoid_private_typedef_functions

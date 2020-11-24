@@ -72,6 +72,7 @@ const $fidl.TableType<EmptyTable> kEmptyTable_Type =
   inlineSize: 16,
   members: [],
   ctor: EmptyTable._ctor,
+  resource: false,
 );
 
 class SimpleTable extends $fidl.Table {
@@ -127,6 +128,7 @@ const $fidl.TableType<SimpleTable> kSimpleTable_Type =
     $fidl.Int64Type(),
   ],
   ctor: SimpleTable._ctor,
+  resource: false,
 );
 
 class OlderSimpleTable extends $fidl.Table {
@@ -171,6 +173,7 @@ const $fidl.TableType<OlderSimpleTable> kOlderSimpleTable_Type =
     $fidl.Int64Type(),
   ],
   ctor: OlderSimpleTable._ctor,
+  resource: false,
 );
 
 class NewerSimpleTable extends $fidl.Table {
@@ -233,6 +236,7 @@ const $fidl.TableType<NewerSimpleTable> kNewerSimpleTable_Type =
     $fidl.Int64Type(),
   ],
   ctor: NewerSimpleTable._ctor,
+  resource: false,
 );
 
 class ReverseOrdinalTable extends $fidl.Table {
@@ -292,6 +296,7 @@ const $fidl.TableType<ReverseOrdinalTable> kReverseOrdinalTable_Type =
     $fidl.Int64Type(),
   ],
   ctor: ReverseOrdinalTable._ctor,
+  resource: false,
 );
 
 // ignore: unused_element, avoid_private_typedef_functions

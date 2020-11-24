@@ -80,6 +80,7 @@ type BitsMember struct {
 
 // Union represents a union declaration.
 type Union struct {
+	fidl.Union
 	Name          string
 	TagName       string
 	Members       []UnionMember
@@ -88,7 +89,6 @@ type Union struct {
 	OptTypeSymbol string
 	OptTypeExpr   string
 	Documented
-	fidl.Strictness
 }
 
 // UnionMember represents a member of a Union declaration.
@@ -124,6 +124,7 @@ type StructMember struct {
 
 // Table represents a table declaration.
 type Table struct {
+	fidl.Table
 	Name       string
 	Members    []TableMember
 	TypeSymbol string
@@ -1087,6 +1088,7 @@ func (c *compiler) compileTableMember(val fidl.TableMember) TableMember {
 func (c *compiler) compileTable(val fidl.Table) Table {
 	ci := fidl.ParseCompoundIdentifier(val.Name)
 	r := Table{
+		Table:      val,
 		Name:       c.compileUpperCamelCompoundIdentifier(ci, "", declarationContext),
 		TypeSymbol: c.typeSymbolForCompoundIdentifier(ci),
 		Documented: docString(val),
@@ -1100,7 +1102,8 @@ func (c *compiler) compileTable(val fidl.Table) Table {
   inlineSize: %v,
   members: %s,
   ctor: %s._ctor,
-)`, r.Name, val.TypeShapeV1.InlineSize, formatTableMemberList(r.Members), r.Name)
+  resource: %t,
+)`, r.Name, val.TypeShapeV1.InlineSize, formatTableMemberList(r.Members), r.Name, r.IsResourceType())
 	return r
 }
 
@@ -1123,26 +1126,26 @@ func (c *compiler) compileUnion(val fidl.Union) Union {
 
 	ci := fidl.ParseCompoundIdentifier(val.Name)
 	r := Union{
+		Union:         val,
 		Name:          c.compileUpperCamelCompoundIdentifier(ci, "", declarationContext),
 		TagName:       c.compileUpperCamelCompoundIdentifier(ci, "Tag", declarationContext),
 		TypeSymbol:    c.typeSymbolForCompoundIdentifier(ci),
 		OptTypeSymbol: c.optTypeSymbolForCompoundIdentifier(ci),
 		Members:       members,
 		Documented:    docString(val),
-		Strictness:    val.Strictness,
 	}
-	ctor := ""
-	if r.IsFlexible() {
-		ctor = ".flexible"
-	}
-	r.TypeExpr = fmt.Sprintf(`$fidl.UnionType<%s>%s(
+	r.TypeExpr = fmt.Sprintf(`$fidl.UnionType<%s>(
   members: %s,
   ctor: %s._ctor,
-)`, r.Name, ctor, formatUnionMemberList(r.Members), r.Name)
-	r.OptTypeExpr = fmt.Sprintf(`$fidl.NullableUnionType<%s>%s(
+  flexible: %t,
+  resource: %t,
+)`, r.Name, formatUnionMemberList(r.Members), r.Name, r.IsFlexible(), r.IsResourceType())
+	r.OptTypeExpr = fmt.Sprintf(`$fidl.NullableUnionType<%s>(
 members: %s,
 ctor: %s._ctor,
-)`, r.Name, ctor, formatUnionMemberList(r.Members), r.Name)
+flexible: %t,
+resource: %t,
+)`, r.Name, formatUnionMemberList(r.Members), r.Name, r.IsFlexible(), r.IsResourceType())
 
 	return r
 }

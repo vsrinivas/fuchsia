@@ -123,6 +123,8 @@ const $fidl.UnionType<SimpleUnion> kSimpleUnion_Type =
     2: $fidl.Float32Type(),
   },
   ctor: SimpleUnion._ctor,
+  flexible: false,
+  resource: false,
 );
 // See fxbug.dev/7644:
 // ignore: recursive_compile_time_constant
@@ -133,6 +135,8 @@ const $fidl.NullableUnionType<SimpleUnion> kSimpleUnion_OptType =
     2: $fidl.Float32Type(),
   },
   ctor: SimpleUnion._ctor,
+  flexible: false,
+  resource: false,
 );
 
 class StructWithNullableString extends $fidl.Struct {

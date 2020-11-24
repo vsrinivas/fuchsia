@@ -122,6 +122,8 @@ const $fidl.UnionType<PizzaOrPasta> kPizzaOrPasta_Type =
     2: kPasta_Type,
   },
   ctor: PizzaOrPasta._ctor,
+  flexible: false,
+  resource: false,
 );
 // See fxbug.dev/7644:
 // ignore: recursive_compile_time_constant
@@ -132,6 +134,8 @@ const $fidl.NullableUnionType<PizzaOrPasta> kPizzaOrPasta_OptType =
     2: kPasta_Type,
   },
   ctor: PizzaOrPasta._ctor,
+  flexible: false,
+  resource: false,
 );
 
 enum ExplicitPizzaOrPastaTag {
@@ -218,6 +222,8 @@ const $fidl.UnionType<ExplicitPizzaOrPasta> kExplicitPizzaOrPasta_Type =
     4: kPasta_Type,
   },
   ctor: ExplicitPizzaOrPasta._ctor,
+  flexible: false,
+  resource: false,
 );
 // See fxbug.dev/7644:
 // ignore: recursive_compile_time_constant
@@ -229,6 +235,8 @@ const $fidl.NullableUnionType<ExplicitPizzaOrPasta>
     4: kPasta_Type,
   },
   ctor: ExplicitPizzaOrPasta._ctor,
+  flexible: false,
+  resource: false,
 );
 
 enum FlexiblePizzaOrPastaTag {
@@ -315,23 +323,27 @@ class FlexiblePizzaOrPasta extends $fidl.XUnion {
 // See fxbug.dev/7644:
 // ignore: recursive_compile_time_constant
 const $fidl.UnionType<FlexiblePizzaOrPasta> kFlexiblePizzaOrPasta_Type =
-    $fidl.UnionType<FlexiblePizzaOrPasta>.flexible(
+    $fidl.UnionType<FlexiblePizzaOrPasta>(
   members: <int, $fidl.FidlType>{
     1: kPizza_Type,
     2: kPasta_Type,
   },
   ctor: FlexiblePizzaOrPasta._ctor,
+  flexible: true,
+  resource: false,
 );
 // See fxbug.dev/7644:
 // ignore: recursive_compile_time_constant
 const $fidl.NullableUnionType<FlexiblePizzaOrPasta>
     kFlexiblePizzaOrPasta_OptType =
-    $fidl.NullableUnionType<FlexiblePizzaOrPasta>.flexible(
+    $fidl.NullableUnionType<FlexiblePizzaOrPasta>(
   members: <int, $fidl.FidlType>{
     1: kPizza_Type,
     2: kPasta_Type,
   },
   ctor: FlexiblePizzaOrPasta._ctor,
+  flexible: true,
+  resource: false,
 );
 
 enum StrictPizzaOrPastaTag {
@@ -418,6 +430,8 @@ const $fidl.UnionType<StrictPizzaOrPasta> kStrictPizzaOrPasta_Type =
     2: kPasta_Type,
   },
   ctor: StrictPizzaOrPasta._ctor,
+  flexible: false,
+  resource: false,
 );
 // See fxbug.dev/7644:
 // ignore: recursive_compile_time_constant
@@ -428,6 +442,8 @@ const $fidl.NullableUnionType<StrictPizzaOrPasta> kStrictPizzaOrPasta_OptType =
     2: kPasta_Type,
   },
   ctor: StrictPizzaOrPasta._ctor,
+  flexible: false,
+  resource: false,
 );
 
 enum UnionTag {
@@ -536,6 +552,8 @@ const $fidl.UnionType<Union> kUnion_Type = $fidl.UnionType<Union>(
         maybeElementCount: null),
   },
   ctor: Union._ctor,
+  flexible: false,
+  resource: false,
 );
 // See fxbug.dev/7644:
 // ignore: recursive_compile_time_constant
@@ -549,6 +567,8 @@ const $fidl.NullableUnionType<Union> kUnion_OptType =
         maybeElementCount: null),
   },
   ctor: Union._ctor,
+  flexible: false,
+  resource: false,
 );
 
 enum FlexibleUnionTag {
@@ -653,7 +673,7 @@ class FlexibleUnion extends $fidl.XUnion {
 // See fxbug.dev/7644:
 // ignore: recursive_compile_time_constant
 const $fidl.UnionType<FlexibleUnion> kFlexibleUnion_Type =
-    $fidl.UnionType<FlexibleUnion>.flexible(
+    $fidl.UnionType<FlexibleUnion>(
   members: <int, $fidl.FidlType>{
     1: $fidl.Int32Type(),
     2: $fidl.StringType(maybeElementCount: null),
@@ -662,11 +682,13 @@ const $fidl.UnionType<FlexibleUnion> kFlexibleUnion_Type =
         maybeElementCount: null),
   },
   ctor: FlexibleUnion._ctor,
+  flexible: true,
+  resource: false,
 );
 // See fxbug.dev/7644:
 // ignore: recursive_compile_time_constant
 const $fidl.NullableUnionType<FlexibleUnion> kFlexibleUnion_OptType =
-    $fidl.NullableUnionType<FlexibleUnion>.flexible(
+    $fidl.NullableUnionType<FlexibleUnion>(
   members: <int, $fidl.FidlType>{
     1: $fidl.Int32Type(),
     2: $fidl.StringType(maybeElementCount: null),
@@ -675,6 +697,8 @@ const $fidl.NullableUnionType<FlexibleUnion> kFlexibleUnion_OptType =
         maybeElementCount: null),
   },
   ctor: FlexibleUnion._ctor,
+  flexible: true,
+  resource: false,
 );
 
 enum StrictUnionTag {
@@ -784,6 +808,8 @@ const $fidl.UnionType<StrictUnion> kStrictUnion_Type =
         maybeElementCount: null),
   },
   ctor: StrictUnion._ctor,
+  flexible: false,
+  resource: false,
 );
 // See fxbug.dev/7644:
 // ignore: recursive_compile_time_constant
@@ -797,6 +823,8 @@ const $fidl.NullableUnionType<StrictUnion> kStrictUnion_OptType =
         maybeElementCount: null),
   },
   ctor: StrictUnion._ctor,
+  flexible: false,
+  resource: false,
 );
 
 enum FieldCollisionTag {
@@ -868,6 +896,8 @@ const $fidl.UnionType<FieldCollision> kFieldCollision_Type =
     1: $fidl.Int32Type(),
   },
   ctor: FieldCollision._ctor,
+  flexible: false,
+  resource: false,
 );
 // See fxbug.dev/7644:
 // ignore: recursive_compile_time_constant
@@ -877,6 +907,8 @@ const $fidl.NullableUnionType<FieldCollision> kFieldCollision_OptType =
     1: $fidl.Int32Type(),
   },
   ctor: FieldCollision._ctor,
+  flexible: false,
+  resource: false,
 );
 
 enum ExplicitUnionTag {
@@ -965,6 +997,8 @@ const $fidl.UnionType<ExplicitUnion> kExplicitUnion_Type =
     3: $fidl.StringType(maybeElementCount: null),
   },
   ctor: ExplicitUnion._ctor,
+  flexible: false,
+  resource: false,
 );
 // See fxbug.dev/7644:
 // ignore: recursive_compile_time_constant
@@ -975,6 +1009,8 @@ const $fidl.NullableUnionType<ExplicitUnion> kExplicitUnion_OptType =
     3: $fidl.StringType(maybeElementCount: null),
   },
   ctor: ExplicitUnion._ctor,
+  flexible: false,
+  resource: false,
 );
 
 enum ReverseOrdinalUnionTag {
@@ -1061,6 +1097,8 @@ const $fidl.UnionType<ReverseOrdinalUnion> kReverseOrdinalUnion_Type =
     1: $fidl.Uint32Type(),
   },
   ctor: ReverseOrdinalUnion._ctor,
+  flexible: false,
+  resource: false,
 );
 // See fxbug.dev/7644:
 // ignore: recursive_compile_time_constant
@@ -1071,6 +1109,8 @@ const $fidl.NullableUnionType<ReverseOrdinalUnion>
     1: $fidl.Uint32Type(),
   },
   ctor: ReverseOrdinalUnion._ctor,
+  flexible: false,
+  resource: false,
 );
 
 enum FlexibleFooTag {
@@ -1155,22 +1195,26 @@ class FlexibleFoo extends $fidl.XUnion {
 // See fxbug.dev/7644:
 // ignore: recursive_compile_time_constant
 const $fidl.UnionType<FlexibleFoo> kFlexibleFoo_Type =
-    $fidl.UnionType<FlexibleFoo>.flexible(
+    $fidl.UnionType<FlexibleFoo>(
   members: <int, $fidl.FidlType>{
     1: $fidl.StringType(maybeElementCount: null),
     2: $fidl.Int32Type(),
   },
   ctor: FlexibleFoo._ctor,
+  flexible: true,
+  resource: false,
 );
 // See fxbug.dev/7644:
 // ignore: recursive_compile_time_constant
 const $fidl.NullableUnionType<FlexibleFoo> kFlexibleFoo_OptType =
-    $fidl.NullableUnionType<FlexibleFoo>.flexible(
+    $fidl.NullableUnionType<FlexibleFoo>(
   members: <int, $fidl.FidlType>{
     1: $fidl.StringType(maybeElementCount: null),
     2: $fidl.Int32Type(),
   },
   ctor: FlexibleFoo._ctor,
+  flexible: true,
+  resource: false,
 );
 
 enum StrictFooTag {
@@ -1256,6 +1300,8 @@ const $fidl.UnionType<StrictFoo> kStrictFoo_Type = $fidl.UnionType<StrictFoo>(
     2: $fidl.Int32Type(),
   },
   ctor: StrictFoo._ctor,
+  flexible: false,
+  resource: false,
 );
 // See fxbug.dev/7644:
 // ignore: recursive_compile_time_constant
@@ -1266,6 +1312,8 @@ const $fidl.NullableUnionType<StrictFoo> kStrictFoo_OptType =
     2: $fidl.Int32Type(),
   },
   ctor: StrictFoo._ctor,
+  flexible: false,
+  resource: false,
 );
 
 enum ExplicitFooTag {
@@ -1350,22 +1398,26 @@ class ExplicitFoo extends $fidl.XUnion {
 // See fxbug.dev/7644:
 // ignore: recursive_compile_time_constant
 const $fidl.UnionType<ExplicitFoo> kExplicitFoo_Type =
-    $fidl.UnionType<ExplicitFoo>.flexible(
+    $fidl.UnionType<ExplicitFoo>(
   members: <int, $fidl.FidlType>{
     2: $fidl.StringType(maybeElementCount: null),
     1: $fidl.Int32Type(),
   },
   ctor: ExplicitFoo._ctor,
+  flexible: true,
+  resource: false,
 );
 // See fxbug.dev/7644:
 // ignore: recursive_compile_time_constant
 const $fidl.NullableUnionType<ExplicitFoo> kExplicitFoo_OptType =
-    $fidl.NullableUnionType<ExplicitFoo>.flexible(
+    $fidl.NullableUnionType<ExplicitFoo>(
   members: <int, $fidl.FidlType>{
     2: $fidl.StringType(maybeElementCount: null),
     1: $fidl.Int32Type(),
   },
   ctor: ExplicitFoo._ctor,
+  flexible: true,
+  resource: false,
 );
 
 enum ExplicitStrictFooTag {
@@ -1452,6 +1504,8 @@ const $fidl.UnionType<ExplicitStrictFoo> kExplicitStrictFoo_Type =
     2: $fidl.Int32Type(),
   },
   ctor: ExplicitStrictFoo._ctor,
+  flexible: false,
+  resource: false,
 );
 // See fxbug.dev/7644:
 // ignore: recursive_compile_time_constant
@@ -1462,6 +1516,8 @@ const $fidl.NullableUnionType<ExplicitStrictFoo> kExplicitStrictFoo_OptType =
     2: $fidl.Int32Type(),
   },
   ctor: ExplicitStrictFoo._ctor,
+  flexible: false,
+  resource: false,
 );
 
 enum OlderSimpleUnionTag {
@@ -1547,22 +1603,26 @@ class OlderSimpleUnion extends $fidl.XUnion {
 // See fxbug.dev/7644:
 // ignore: recursive_compile_time_constant
 const $fidl.UnionType<OlderSimpleUnion> kOlderSimpleUnion_Type =
-    $fidl.UnionType<OlderSimpleUnion>.flexible(
+    $fidl.UnionType<OlderSimpleUnion>(
   members: <int, $fidl.FidlType>{
     1: $fidl.Int64Type(),
     2: $fidl.Float32Type(),
   },
   ctor: OlderSimpleUnion._ctor,
+  flexible: true,
+  resource: false,
 );
 // See fxbug.dev/7644:
 // ignore: recursive_compile_time_constant
 const $fidl.NullableUnionType<OlderSimpleUnion> kOlderSimpleUnion_OptType =
-    $fidl.NullableUnionType<OlderSimpleUnion>.flexible(
+    $fidl.NullableUnionType<OlderSimpleUnion>(
   members: <int, $fidl.FidlType>{
     1: $fidl.Int64Type(),
     2: $fidl.Float32Type(),
   },
   ctor: OlderSimpleUnion._ctor,
+  flexible: true,
+  resource: false,
 );
 
 enum NewerSimpleUnionTag {
@@ -1664,7 +1724,7 @@ class NewerSimpleUnion extends $fidl.XUnion {
 // See fxbug.dev/7644:
 // ignore: recursive_compile_time_constant
 const $fidl.UnionType<NewerSimpleUnion> kNewerSimpleUnion_Type =
-    $fidl.UnionType<NewerSimpleUnion>.flexible(
+    $fidl.UnionType<NewerSimpleUnion>(
   members: <int, $fidl.FidlType>{
     1: $fidl.Int64Type(),
     2: $fidl.StringType(maybeElementCount: null),
@@ -1673,11 +1733,13 @@ const $fidl.UnionType<NewerSimpleUnion> kNewerSimpleUnion_Type =
         maybeElementCount: null),
   },
   ctor: NewerSimpleUnion._ctor,
+  flexible: true,
+  resource: false,
 );
 // See fxbug.dev/7644:
 // ignore: recursive_compile_time_constant
 const $fidl.NullableUnionType<NewerSimpleUnion> kNewerSimpleUnion_OptType =
-    $fidl.NullableUnionType<NewerSimpleUnion>.flexible(
+    $fidl.NullableUnionType<NewerSimpleUnion>(
   members: <int, $fidl.FidlType>{
     1: $fidl.Int64Type(),
     2: $fidl.StringType(maybeElementCount: null),
@@ -1686,6 +1748,8 @@ const $fidl.NullableUnionType<NewerSimpleUnion> kNewerSimpleUnion_OptType =
         maybeElementCount: null),
   },
   ctor: NewerSimpleUnion._ctor,
+  flexible: true,
+  resource: false,
 );
 
 enum StrictSimpleXUnionTag {
@@ -1789,6 +1853,8 @@ const $fidl.UnionType<StrictSimpleXUnion> kStrictSimpleXUnion_Type =
     3: $fidl.StringType(maybeElementCount: null),
   },
   ctor: StrictSimpleXUnion._ctor,
+  flexible: false,
+  resource: false,
 );
 // See fxbug.dev/7644:
 // ignore: recursive_compile_time_constant
@@ -1800,6 +1866,8 @@ const $fidl.NullableUnionType<StrictSimpleXUnion> kStrictSimpleXUnion_OptType =
     3: $fidl.StringType(maybeElementCount: null),
   },
   ctor: StrictSimpleXUnion._ctor,
+  flexible: false,
+  resource: false,
 );
 
 enum XUnionContainingEmptyStructTag {
@@ -1872,21 +1940,25 @@ class XUnionContainingEmptyStruct extends $fidl.XUnion {
 // ignore: recursive_compile_time_constant
 const $fidl.UnionType<XUnionContainingEmptyStruct>
     kXUnionContainingEmptyStruct_Type =
-    $fidl.UnionType<XUnionContainingEmptyStruct>.flexible(
+    $fidl.UnionType<XUnionContainingEmptyStruct>(
   members: <int, $fidl.FidlType>{
     1: kEmpty_Type,
   },
   ctor: XUnionContainingEmptyStruct._ctor,
+  flexible: true,
+  resource: false,
 );
 // See fxbug.dev/7644:
 // ignore: recursive_compile_time_constant
 const $fidl.NullableUnionType<XUnionContainingEmptyStruct>
     kXUnionContainingEmptyStruct_OptType =
-    $fidl.NullableUnionType<XUnionContainingEmptyStruct>.flexible(
+    $fidl.NullableUnionType<XUnionContainingEmptyStruct>(
   members: <int, $fidl.FidlType>{
     1: kEmpty_Type,
   },
   ctor: XUnionContainingEmptyStruct._ctor,
+  flexible: true,
+  resource: false,
 );
 
 enum StrictBoundedXUnionTag {
@@ -1957,6 +2029,8 @@ const $fidl.UnionType<StrictBoundedXUnion> kStrictBoundedXUnion_Type =
         element: $fidl.Uint8Type(), maybeElementCount: 10),
   },
   ctor: StrictBoundedXUnion._ctor,
+  flexible: false,
+  resource: false,
 );
 // See fxbug.dev/7644:
 // ignore: recursive_compile_time_constant
@@ -1967,6 +2041,8 @@ const $fidl.NullableUnionType<StrictBoundedXUnion>
         element: $fidl.Uint8Type(), maybeElementCount: 10),
   },
   ctor: StrictBoundedXUnion._ctor,
+  flexible: false,
+  resource: false,
 );
 
 enum ExplicitXUnionTag {
@@ -2052,22 +2128,26 @@ class ExplicitXUnion extends $fidl.XUnion {
 // See fxbug.dev/7644:
 // ignore: recursive_compile_time_constant
 const $fidl.UnionType<ExplicitXUnion> kExplicitXUnion_Type =
-    $fidl.UnionType<ExplicitXUnion>.flexible(
+    $fidl.UnionType<ExplicitXUnion>(
   members: <int, $fidl.FidlType>{
     1: $fidl.Int64Type(),
     4: $fidl.Float32Type(),
   },
   ctor: ExplicitXUnion._ctor,
+  flexible: true,
+  resource: false,
 );
 // See fxbug.dev/7644:
 // ignore: recursive_compile_time_constant
 const $fidl.NullableUnionType<ExplicitXUnion> kExplicitXUnion_OptType =
-    $fidl.NullableUnionType<ExplicitXUnion>.flexible(
+    $fidl.NullableUnionType<ExplicitXUnion>(
   members: <int, $fidl.FidlType>{
     1: $fidl.Int64Type(),
     4: $fidl.Float32Type(),
   },
   ctor: ExplicitXUnion._ctor,
+  flexible: true,
+  resource: false,
 );
 
 class Pizza extends $fidl.Struct {

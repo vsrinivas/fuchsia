@@ -120,22 +120,26 @@ class FlexibleFoo extends $fidl.XUnion {
 // See fxbug.dev/7644:
 // ignore: recursive_compile_time_constant
 const $fidl.UnionType<FlexibleFoo> kFlexibleFoo_Type =
-    $fidl.UnionType<FlexibleFoo>.flexible(
+    $fidl.UnionType<FlexibleFoo>(
   members: <int, $fidl.FidlType>{
     1: $fidl.StringType(maybeElementCount: null),
     2: $fidl.Int32Type(),
   },
   ctor: FlexibleFoo._ctor,
+  flexible: true,
+  resource: false,
 );
 // See fxbug.dev/7644:
 // ignore: recursive_compile_time_constant
 const $fidl.NullableUnionType<FlexibleFoo> kFlexibleFoo_OptType =
-    $fidl.NullableUnionType<FlexibleFoo>.flexible(
+    $fidl.NullableUnionType<FlexibleFoo>(
   members: <int, $fidl.FidlType>{
     1: $fidl.StringType(maybeElementCount: null),
     2: $fidl.Int32Type(),
   },
   ctor: FlexibleFoo._ctor,
+  flexible: true,
+  resource: false,
 );
 
 enum StrictFooTag {
@@ -221,6 +225,8 @@ const $fidl.UnionType<StrictFoo> kStrictFoo_Type = $fidl.UnionType<StrictFoo>(
     2: $fidl.Int32Type(),
   },
   ctor: StrictFoo._ctor,
+  flexible: false,
+  resource: false,
 );
 // See fxbug.dev/7644:
 // ignore: recursive_compile_time_constant
@@ -231,6 +237,8 @@ const $fidl.NullableUnionType<StrictFoo> kStrictFoo_OptType =
     2: $fidl.Int32Type(),
   },
   ctor: StrictFoo._ctor,
+  flexible: false,
+  resource: false,
 );
 
 // ignore: unused_element, avoid_private_typedef_functions

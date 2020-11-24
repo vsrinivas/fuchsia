@@ -365,6 +365,7 @@ var dartErrorCodeNames = map[gidlir.ErrorCode]string{
 	gidlir.StrictEnumUnknownValue:     "fidlInvalidEnumValue",
 	gidlir.InvalidPaddingByte:         "unknown",
 	gidlir.TooFewHandles:              "fidlTooFewHandles",
+	gidlir.NonResourceUnknownHandles:  "fidlNonResourceHandle",
 }
 
 func dartErrorCode(code gidlir.ErrorCode) (string, error) {

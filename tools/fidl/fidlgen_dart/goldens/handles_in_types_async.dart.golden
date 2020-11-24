@@ -162,20 +162,24 @@ class UnionWithHandle extends $fidl.XUnion {
 // See fxbug.dev/7644:
 // ignore: recursive_compile_time_constant
 const $fidl.UnionType<UnionWithHandle> kUnionWithHandle_Type =
-    $fidl.UnionType<UnionWithHandle>.flexible(
+    $fidl.UnionType<UnionWithHandle>(
   members: <int, $fidl.FidlType>{
     1: $fidl.VmoType(),
   },
   ctor: UnionWithHandle._ctor,
+  flexible: true,
+  resource: true,
 );
 // See fxbug.dev/7644:
 // ignore: recursive_compile_time_constant
 const $fidl.NullableUnionType<UnionWithHandle> kUnionWithHandle_OptType =
-    $fidl.NullableUnionType<UnionWithHandle>.flexible(
+    $fidl.NullableUnionType<UnionWithHandle>(
   members: <int, $fidl.FidlType>{
     1: $fidl.VmoType(),
   },
   ctor: UnionWithHandle._ctor,
+  flexible: true,
+  resource: true,
 );
 
 class HandlesInTypes extends $fidl.Struct {
@@ -325,6 +329,7 @@ const $fidl.TableType<TableWithHandle> kTableWithHandle_Type =
     $fidl.VmoType(),
   ],
   ctor: TableWithHandle._ctor,
+  resource: true,
 );
 
 // ignore: unused_element, avoid_private_typedef_functions

@@ -402,6 +402,8 @@ const $fidl.UnionType<StrictUnion> kStrictUnion_Type =
     1: $fidl.Int32Type(),
   },
   ctor: StrictUnion._ctor,
+  flexible: false,
+  resource: false,
 );
 // See fxbug.dev/7644:
 // ignore: recursive_compile_time_constant
@@ -411,6 +413,8 @@ const $fidl.NullableUnionType<StrictUnion> kStrictUnion_OptType =
     1: $fidl.Int32Type(),
   },
   ctor: StrictUnion._ctor,
+  flexible: false,
+  resource: false,
 );
 
 enum FlexibleUnionTag {
@@ -482,20 +486,24 @@ class FlexibleUnion extends $fidl.XUnion {
 // See fxbug.dev/7644:
 // ignore: recursive_compile_time_constant
 const $fidl.UnionType<FlexibleUnion> kFlexibleUnion_Type =
-    $fidl.UnionType<FlexibleUnion>.flexible(
+    $fidl.UnionType<FlexibleUnion>(
   members: <int, $fidl.FidlType>{
     1: $fidl.Int32Type(),
   },
   ctor: FlexibleUnion._ctor,
+  flexible: true,
+  resource: false,
 );
 // See fxbug.dev/7644:
 // ignore: recursive_compile_time_constant
 const $fidl.NullableUnionType<FlexibleUnion> kFlexibleUnion_OptType =
-    $fidl.NullableUnionType<FlexibleUnion>.flexible(
+    $fidl.NullableUnionType<FlexibleUnion>(
   members: <int, $fidl.FidlType>{
     1: $fidl.Int32Type(),
   },
   ctor: FlexibleUnion._ctor,
+  flexible: true,
+  resource: false,
 );
 
 /// struct comment #1
@@ -596,6 +604,7 @@ const $fidl.TableType<Table> kTable_Type = $fidl.TableType<Table>(
     $fidl.Int32Type(),
   ],
   ctor: Table._ctor,
+  resource: false,
 );
 
 // ignore: unused_element, avoid_private_typedef_functions

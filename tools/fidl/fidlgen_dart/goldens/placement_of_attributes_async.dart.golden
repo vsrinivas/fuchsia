@@ -216,6 +216,8 @@ const $fidl.UnionType<ExampleUnion> kExampleUnion_Type =
     1: $fidl.Uint32Type(),
   },
   ctor: ExampleUnion._ctor,
+  flexible: false,
+  resource: false,
 );
 // See fxbug.dev/7644:
 // ignore: recursive_compile_time_constant
@@ -225,6 +227,8 @@ const $fidl.NullableUnionType<ExampleUnion> kExampleUnion_OptType =
     1: $fidl.Uint32Type(),
   },
   ctor: ExampleUnion._ctor,
+  flexible: false,
+  resource: false,
 );
 
 enum ExampleXUnionTag {
@@ -293,20 +297,24 @@ class ExampleXUnion extends $fidl.XUnion {
 // See fxbug.dev/7644:
 // ignore: recursive_compile_time_constant
 const $fidl.UnionType<ExampleXUnion> kExampleXUnion_Type =
-    $fidl.UnionType<ExampleXUnion>.flexible(
+    $fidl.UnionType<ExampleXUnion>(
   members: <int, $fidl.FidlType>{
     1: $fidl.Uint32Type(),
   },
   ctor: ExampleXUnion._ctor,
+  flexible: true,
+  resource: false,
 );
 // See fxbug.dev/7644:
 // ignore: recursive_compile_time_constant
 const $fidl.NullableUnionType<ExampleXUnion> kExampleXUnion_OptType =
-    $fidl.NullableUnionType<ExampleXUnion>.flexible(
+    $fidl.NullableUnionType<ExampleXUnion>(
   members: <int, $fidl.FidlType>{
     1: $fidl.Uint32Type(),
   },
   ctor: ExampleXUnion._ctor,
+  flexible: true,
+  resource: false,
 );
 
 class ExampleStruct extends $fidl.Struct {
@@ -396,6 +404,7 @@ const $fidl.TableType<ExampleTable> kExampleTable_Type =
     $fidl.Uint32Type(),
   ],
   ctor: ExampleTable._ctor,
+  resource: false,
 );
 
 // ignore: unused_element, avoid_private_typedef_functions

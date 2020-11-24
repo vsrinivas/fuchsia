@@ -903,15 +903,25 @@ T? _decodeEnvelopeContent<T, I extends Iterable<T>>(Decoder decoder,
   }
 }
 
+void _maybeThrowOnUnknownHandles(bool resource, UnknownRawData data) {
+  if (!resource && data.handles.isNotEmpty) {
+    data.closeHandles();
+    throw FidlError('Unknown data contained handles on encode',
+        FidlErrorCode.fidlNonResourceHandle);
+  }
+}
+
 class TableType<T extends Table> extends SimpleFidlType<T> {
   const TableType({
     required int inlineSize,
     required this.members,
     required this.ctor,
+    required this.resource,
   }) : super(inlineSize: inlineSize);
 
   final List<FidlType?> members;
   final TableFactory<T> ctor;
+  final bool resource;
 
   @override
   void encode(Encoder encoder, T value, int offset) {
@@ -943,6 +953,7 @@ class TableType<T extends Table> extends SimpleFidlType<T> {
       } else if (unknownDataMap != null) {
         final unknownData = unknownDataMap[i];
         if (unknownData != null) {
+          _maybeThrowOnUnknownHandles(resource, unknownData);
           field = unknownData;
           fieldType = UnknownRawDataType(
               numBytes: unknownData.data.length,
@@ -1004,6 +1015,7 @@ class TableType<T extends Table> extends SimpleFidlType<T> {
         if (fieldType != null) {
           argv[ordinal] = field;
         } else {
+          _maybeThrowOnUnknownHandles(resource, field);
           unknownData[ordinal] = field;
         }
       }
@@ -1015,12 +1027,13 @@ class TableType<T extends Table> extends SimpleFidlType<T> {
 }
 
 void _encodeUnion<T extends XUnion>(Encoder encoder, T value, int offset,
-    Map<int, FidlType> members, bool flexible) {
+    Map<int, FidlType> members, bool flexible, bool resource) {
   final int envelopeOffset = offset + 8;
   final int ordinal = value.$ordinal;
   var fieldType = members[ordinal];
   final data = value.$data;
   if (fieldType == null && flexible && data is UnknownRawData) {
+    _maybeThrowOnUnknownHandles(resource, data);
     fieldType = UnknownRawDataType(
         numBytes: data.data.length, numHandles: data.handles.length);
   }
@@ -1032,8 +1045,13 @@ void _encodeUnion<T extends XUnion>(Encoder encoder, T value, int offset,
   _encodeEnvelopePresent(encoder, envelopeOffset, data, fieldType);
 }
 
-T? _decodeUnion<T extends XUnion>(Decoder decoder, int offset,
-    Map<int, FidlType> members, XUnionFactory<T> ctor, bool flexible) {
+T? _decodeUnion<T extends XUnion>(
+    Decoder decoder,
+    int offset,
+    Map<int, FidlType> members,
+    XUnionFactory<T> ctor,
+    bool flexible,
+    bool resource) {
   final int envelopeOffset = offset + 8;
   final int ordinal = decoder.decodeUint64(offset);
   if (ordinal == 0) {
@@ -1056,6 +1074,8 @@ T? _decodeUnion<T extends XUnion>(Decoder decoder, int offset,
         throw FidlError('Bad xunion ordinal: $ordinal',
             FidlErrorCode.fidlStrictXUnionUnknownField);
       }
+
+      _maybeThrowOnUnknownHandles(resource, unknownData);
       return ctor(ordinal, unknownData);
     }
     final field = _decodeEnvelopeContent(decoder, header, fieldType, false);
@@ -1065,24 +1085,25 @@ T? _decodeUnion<T extends XUnion>(Decoder decoder, int offset,
 }
 
 class UnionType<T extends XUnion> extends SimpleFidlType<T> {
-  const UnionType({required this.members, required this.ctor})
-      : flexible = false,
-        super(inlineSize: 24);
-  const UnionType.flexible({required this.members, required this.ctor})
-      : flexible = true,
-        super(inlineSize: 24);
+  const UnionType(
+      {required this.members,
+      required this.ctor,
+      required this.flexible,
+      required this.resource})
+      : super(inlineSize: 24);
 
   final Map<int, FidlType> members;
   final XUnionFactory<T> ctor;
   final bool flexible;
+  final bool resource;
 
   @override
   void encode(Encoder encoder, T value, int offset) =>
-      _encodeUnion(encoder, value, offset, members, flexible);
+      _encodeUnion(encoder, value, offset, members, flexible, resource);
 
   @override
   T decode(Decoder decoder, int offset) {
-    T? value = _decodeUnion(decoder, offset, members, ctor, flexible);
+    T? value = _decodeUnion(decoder, offset, members, ctor, flexible, resource);
     if (value == null) {
       throw _notNullable;
     }
@@ -1091,16 +1112,17 @@ class UnionType<T extends XUnion> extends SimpleFidlType<T> {
 }
 
 class NullableUnionType<T extends XUnion> extends SimpleFidlType<T?> {
-  const NullableUnionType({required this.members, required this.ctor})
-      : flexible = false,
-        super(inlineSize: 24);
-  const NullableUnionType.flexible({required this.members, required this.ctor})
-      : flexible = true,
-        super(inlineSize: 24);
+  const NullableUnionType(
+      {required this.members,
+      required this.ctor,
+      required this.flexible,
+      required this.resource})
+      : super(inlineSize: 24);
 
   final Map<int, FidlType> members;
   final XUnionFactory<T> ctor;
   final bool flexible;
+  final bool resource;
 
   @override
   void encode(Encoder encoder, T? value, int offset) {
@@ -1108,13 +1130,13 @@ class NullableUnionType<T extends XUnion> extends SimpleFidlType<T?> {
       encoder.encodeUint64(0, offset);
       _encodeEnvelopeAbsent(encoder, offset + 8);
     } else {
-      _encodeUnion(encoder, value, offset, members, flexible);
+      _encodeUnion(encoder, value, offset, members, flexible, resource);
     }
   }
 
   @override
   T? decode(Decoder decoder, int offset) =>
-      _decodeUnion(decoder, offset, members, ctor, flexible);
+      _decodeUnion(decoder, offset, members, ctor, flexible, resource);
 }
 
 class EnumType<T extends Enum> extends SimpleFidlType<T> {
