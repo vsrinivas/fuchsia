@@ -51,8 +51,8 @@ struct TimeSourceUrls {
 /// The time sources to install in the default (i.e. non-test) case. In the future, these values
 /// belong in a config file.
 const DEFAULT_SOURCES: TimeSourceUrls = TimeSourceUrls {
-    primary: "fuchsia-pkg://fuchsia.com/network-time-service#meta/network_time_service.cmx",
-    monitor: Some("fuchsia-pkg://fuchsia.com/httpsdate-time-source#meta/httpsdate_time_source.cmx"),
+    primary: "fuchsia-pkg://fuchsia.com/httpsdate-time-source#meta/httpsdate_time_source.cmx",
+    monitor: Some("fuchsia-pkg://fuchsia.com/network-time-service#meta/network_time_service.cmx"),
 };
 
 /// The time sources to install when the dev_time_sources flag is set. In the future, these values
@@ -63,7 +63,7 @@ const DEV_TEST_SOURCES: TimeSourceUrls = TimeSourceUrls {
 };
 
 /// The experiment to record on Cobalt events in the non-test case.
-const COBALT_EXPERIMENT: TimeMetricDimensionExperiment = TimeMetricDimensionExperiment::A;
+const COBALT_EXPERIMENT: TimeMetricDimensionExperiment = TimeMetricDimensionExperiment::None;
 /// The experiment to record on Cobalt events to install when the dev_time_sources flag is set.
 const DEV_COBALT_EXPERIMENT: TimeMetricDimensionExperiment = TimeMetricDimensionExperiment::None;
 
