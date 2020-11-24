@@ -14,8 +14,8 @@ use {
         LaunchConfiguration, LaunchError, LauncherRequest, LauncherRequestStream, RestartError,
         RestarterRequest, RestarterRequestStream,
     },
-    fidl_fuchsia_sys2 as fsys, fidl_fuchsia_ui_lifecycle as fui_lifecycle,
-    fuchsia_component::{client::connect_to_service, server::ServiceFs},
+    fidl_fuchsia_sys2 as fsys,
+    fuchsia_component::server::ServiceFs,
     fuchsia_zircon as zx,
     futures::lock::Mutex,
     futures::{StreamExt, TryStreamExt},
@@ -248,15 +248,6 @@ impl SessionManager {
     /// Handles calls to Restarter.Restart().
     async fn handle_restart_request(&mut self) -> Result<(), RestartError> {
         let mut state = self.state.lock().await;
-
-        if let Ok(scenic_lifecycle) =
-            connect_to_service::<fui_lifecycle::LifecycleControllerMarker>()
-        {
-            if scenic_lifecycle.terminate().is_err() {
-                return Err(RestartError::DestroyComponentFailed);
-            }
-        }
-
         if let Some(ref session_url) = state.session_url {
             startup::launch_session(&session_url, &state.realm)
                 .await

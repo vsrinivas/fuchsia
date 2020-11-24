@@ -106,6 +106,7 @@ mod tests {
         // fidl_fuchsia.sys2::EventType, TODO(fxbug.dev/47730): re-enable the tests.
         fuchsia_async as fasync,
         futures::TryStreamExt,
+        // test_utils_lib::events::{EventSource, Ordering, RecordedEvent},
     };
 
     /// Tests that the session_control tool successfully handles a call to LaunchSession with the provided URL.
