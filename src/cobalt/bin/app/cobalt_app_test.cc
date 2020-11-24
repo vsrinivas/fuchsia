@@ -49,7 +49,7 @@ class CreateCobaltConfigTest : public gtest::TestLoopFixture {
   CobaltConfig CreateCobaltConfig(
       const std::string& metrics_registry_path, const FuchsiaConfigurationData& configuration_data,
       std::chrono::seconds target_interval, std::chrono::seconds min_interval,
-      std::chrono::seconds initial_interval, size_t event_aggregator_backfill_days,
+      std::chrono::seconds initial_interval, float jitter, size_t event_aggregator_backfill_days,
       bool use_memory_observation_store, size_t max_bytes_per_observation_store,
       const std::string& product_name, const std::string& board_name, const std::string& version) {
     return CobaltApp::CreateCobaltConfig(
@@ -59,7 +59,7 @@ class CreateCobaltConfigTest : public gtest::TestLoopFixture {
           service_directory_provider_.service_directory()->Connect(loader_sync.NewRequest());
           return loader_sync;
         },
-        target_interval, min_interval, initial_interval, event_aggregator_backfill_days,
+        target_interval, min_interval, initial_interval, jitter, event_aggregator_backfill_days,
         use_memory_observation_store, max_bytes_per_observation_store, product_name, board_name,
         version,
         std::make_unique<ActivityListenerImpl>(dispatcher(), context_provider_.context()->svc()));
@@ -76,9 +76,10 @@ TEST_F(CreateCobaltConfigTest, Devel) {
   ASSERT_TRUE(WriteFile("cobalt_environment", "DEVEL"));
   ASSERT_TRUE(WriteFile("config.json", "{\"release_stage\": \"DEBUG\"}"));
   FuchsiaConfigurationData configuration_data(kTestDir, kTestDir);
-  CobaltConfig config = CreateCobaltConfig(
-      "/pkg/data/testapp_metrics_registry.pb", configuration_data, std::chrono::seconds(1),
-      std::chrono::seconds(2), std::chrono::seconds(3), 4, true, 1048000, "core", "x64", "0.1.2");
+  CobaltConfig config =
+      CreateCobaltConfig("/pkg/data/testapp_metrics_registry.pb", configuration_data,
+                         std::chrono::seconds(1), std::chrono::seconds(2), std::chrono::seconds(3),
+                         0, 4, true, 1048000, "core", "x64", "0.1.2");
   EXPECT_EQ(config.target_pipeline->environment(), system_data::Environment::DEVEL);
   EXPECT_EQ(config.release_stage, ReleaseStage::DEBUG);
 }
@@ -87,9 +88,10 @@ TEST_F(CreateCobaltConfigTest, Local) {
   ASSERT_TRUE(WriteFile("cobalt_environment", "LOCAL"));
   ASSERT_TRUE(WriteFile("config.json", "{\"release_stage\": \"DEBUG\"}"));
   FuchsiaConfigurationData configuration_data(kTestDir, kTestDir);
-  CobaltConfig config = CreateCobaltConfig(
-      "/pkg/data/testapp_metrics_registry.pb", configuration_data, std::chrono::seconds(1),
-      std::chrono::seconds(2), std::chrono::seconds(3), 4, true, 1048000, "core", "x64", "0.1.2");
+  CobaltConfig config =
+      CreateCobaltConfig("/pkg/data/testapp_metrics_registry.pb", configuration_data,
+                         std::chrono::seconds(1), std::chrono::seconds(2), std::chrono::seconds(3),
+                         0, 4, true, 1048000, "core", "x64", "0.1.2");
   EXPECT_EQ(config.target_pipeline->environment(), system_data::Environment::LOCAL);
   EXPECT_EQ(config.release_stage, ReleaseStage::DEBUG);
 }
@@ -98,11 +100,24 @@ TEST_F(CreateCobaltConfigTest, GA) {
   ASSERT_TRUE(WriteFile("cobalt_environment", "DEVEL"));
   ASSERT_TRUE(WriteFile("config.json", "{\"release_stage\": \"GA\"}"));
   FuchsiaConfigurationData configuration_data(kTestDir, kTestDir);
-  CobaltConfig config = CreateCobaltConfig(
-      "/pkg/data/testapp_metrics_registry.pb", configuration_data, std::chrono::seconds(1),
-      std::chrono::seconds(2), std::chrono::seconds(3), 4, true, 1048000, "core", "x64", "0.1.2");
+  CobaltConfig config =
+      CreateCobaltConfig("/pkg/data/testapp_metrics_registry.pb", configuration_data,
+                         std::chrono::seconds(1), std::chrono::seconds(2), std::chrono::seconds(3),
+                         0, 4, true, 1048000, "core", "x64", "0.1.2");
   EXPECT_EQ(config.target_pipeline->environment(), system_data::Environment::DEVEL);
   EXPECT_EQ(config.release_stage, ReleaseStage::GA);
+}
+
+TEST_F(CreateCobaltConfigTest, ConfigFields) {
+  ASSERT_TRUE(WriteFile("cobalt_environment", "DEVEL"));
+  ASSERT_TRUE(WriteFile("config.json", "{\"release_stage\": \"GA\"}"));
+  float test_jitter = .3;
+  FuchsiaConfigurationData configuration_data(kTestDir, kTestDir);
+  CobaltConfig config =
+      CreateCobaltConfig("/pkg/data/testapp_metrics_registry.pb", configuration_data,
+                         std::chrono::seconds(1), std::chrono::seconds(2), std::chrono::seconds(3),
+                         test_jitter, 4, true, 1048000, "core", "x64", "0.1.2");
+  EXPECT_EQ(config.upload_jitter, test_jitter);
 }
 
 class CobaltAppTest : public gtest::TestLoopFixture {
@@ -454,8 +469,9 @@ TEST_F(CobaltAppTest, NoNewLoggersAfterShutDown) {
   EXPECT_EQ(metrics_status, fuchsia::metrics::Status::SHUT_DOWN);
   EXPECT_FALSE(metric_logger.is_bound());
 
-  factory_->CreateLoggerFromProjectId(testapp_registry::kProjectId, logger.NewRequest(),
-                                      [&](fuchsia::cobalt::Status status_) { cobalt_status = status_; });
+  factory_->CreateLoggerFromProjectId(
+      testapp_registry::kProjectId, logger.NewRequest(),
+      [&](fuchsia::cobalt::Status status_) { cobalt_status = status_; });
   RunLoopUntilIdle();
   EXPECT_EQ(cobalt_status, fuchsia::cobalt::Status::SHUT_DOWN);
   EXPECT_FALSE(logger.is_bound());

@@ -43,6 +43,9 @@ constexpr std::string_view kInitialIntervalSecondsFlagName = "initial_interval_s
 // Used to override kMinIntervalDefault;
 constexpr std::string_view kMinIntervalSecondsFlagName = "min_interval_seconds";
 
+// Used to override kUploadJitterDefault;
+constexpr std::string_view kUploadJitterFlagName = "upload_jitter";
+
 // Used to override kEventAggregatorBackfillDaysDefault
 constexpr std::string_view kEventAggregatorBackfillDaysFlagName = "event_aggregator_backfill_days";
 
@@ -67,6 +70,9 @@ const std::chrono::minutes kInitialIntervalDefault(1);
 // is a safety parameter. We do not make two attempts within a period of this
 // specified length.
 const std::chrono::seconds kMinIntervalDefault(10);
+
+// Offset uploads by at most 20% of current interval.
+float kUploadJitterDefault(.2);
 
 // The EventAggregator looks back 2 days, in addition to the previous day, to
 // make sure that all locally aggregated observations have been generated.
@@ -156,6 +162,17 @@ int main(int argc, const char** argv) {
     }
   }
 
+  // Parse the upload_jitter flag.
+  float upload_jitter = kUploadJitterDefault;
+  flag_value.clear();
+  if (command_line.GetOptionValue(kUploadJitterFlagName, &flag_value)) {
+    float jitter_percentage = std::stof(flag_value);
+    // We allow 0 <= jitter < 1.
+    if (jitter_percentage >= 0 && jitter_percentage < 1) {
+      upload_jitter = jitter_percentage;
+    }
+  }
+
   // Parse the event_aggregator_backfill_days flag.
   size_t event_aggregator_backfill_days = kEventAggregatorBackfillDaysDefault;
   flag_value.clear();
@@ -194,7 +211,8 @@ int main(int argc, const char** argv) {
                 << "schedule_interval=" << schedule_interval.count()
                 << " seconds, min_interval=" << min_interval.count()
                 << " seconds, initial_interval=" << initial_interval.count()
-                << " seconds, max_bytes_per_observation_store=" << max_bytes_per_observation_store
+                << " seconds, upload_jitter=" << (upload_jitter * 100) << "%"
+                << ", max_bytes_per_observation_store=" << max_bytes_per_observation_store
                 << ", event_aggregator_backfill_days=" << event_aggregator_backfill_days
                 << ", start_event_aggregator_worker=" << start_event_aggregator_worker << ".";
 
@@ -227,9 +245,9 @@ int main(int argc, const char** argv) {
   trace::TraceProviderWithFdio trace_provider(loop.dispatcher(), "cobalt_fidl_provider");
   cobalt::CobaltApp app = cobalt::CobaltApp::CreateCobaltApp(
       std::move(context), loop.dispatcher(), schedule_interval, min_interval, initial_interval,
-      event_aggregator_backfill_days, start_event_aggregator_worker, use_memory_observation_store,
-      max_bytes_per_observation_store, ReadBuildInfo("product"), boardname,
-      ReadBuildInfo("version"));
+      upload_jitter, event_aggregator_backfill_days, start_event_aggregator_worker,
+      use_memory_observation_store, max_bytes_per_observation_store, ReadBuildInfo("product"),
+      boardname, ReadBuildInfo("version"));
   loop.Run();
   return 0;
 }

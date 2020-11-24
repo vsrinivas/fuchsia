@@ -52,6 +52,9 @@ class CobaltApp {
   //                    this interval and then exponentially back off until it reaches a periodic
   //                    rhythm of |target_interval|.
   //
+  // |upload_jitter| The percentage of the current interval by which the upload scheduler will
+  //                 delay or expedite a send.
+  //
   // |event_aggregator_backfill_days| The number of past days, in addition to the previous day,
   //                                  for which local aggregation generates observations. If  a
   //                                  device is unable to generate observations for more than this
@@ -84,13 +87,14 @@ class CobaltApp {
   // REQUIRED:
   //   0 <= min_interval <= target_interval <= kMaxSeconds
   //   0 <= initial_interval <= target_interval
+  //   0 <= upload_jitter < 1
   static CobaltApp CreateCobaltApp(
       std::unique_ptr<sys::ComponentContext> context, async_dispatcher_t* dispatcher,
       std::chrono::seconds target_interval, std::chrono::seconds min_interval,
-      std::chrono::seconds initial_interval, size_t event_aggregator_backfill_days,
-      bool start_event_aggregator_worker, bool use_memory_observation_store,
-      size_t max_bytes_per_observation_store, const std::string& product_name,
-      const std::string& board_name, const std::string& version);
+      std::chrono::seconds initial_interval, float upload_jitter,
+      size_t event_aggregator_backfill_days, bool start_event_aggregator_worker,
+      bool use_memory_observation_store, size_t max_bytes_per_observation_store,
+      const std::string& product_name, const std::string& board_name, const std::string& version);
 
  private:
   friend class CobaltAppTest;
@@ -102,9 +106,10 @@ class CobaltApp {
       FuchsiaSystemClockInterface* validated_clock,
       utils::FuchsiaHTTPClient::LoaderFactory http_loader_factory,
       std::chrono::seconds target_interval, std::chrono::seconds min_interval,
-      std::chrono::seconds initial_interval, size_t event_aggregator_backfill_days,
-      bool use_memory_observation_store, size_t max_bytes_per_observation_store,
-      const std::string& product_name, const std::string& board_name, const std::string& version,
+      std::chrono::seconds initial_interval, float upload_jitter,
+      size_t event_aggregator_backfill_days, bool use_memory_observation_store,
+      size_t max_bytes_per_observation_store, const std::string& product_name,
+      const std::string& board_name, const std::string& version,
       std::unique_ptr<ActivityListenerImpl> listener);
 
   CobaltApp(std::unique_ptr<sys::ComponentContext> context, async_dispatcher_t* dispatcher,
@@ -129,7 +134,8 @@ class CobaltApp {
   fidl::BindingSet<fuchsia::cobalt::LoggerFactory> logger_factory_bindings_;
 
   std::unique_ptr<MetricEventLoggerFactoryImpl> metric_event_logger_factory_impl_;
-  fidl::BindingSet<fuchsia::metrics::MetricEventLoggerFactory> metric_event_logger_factory_bindings_;
+  fidl::BindingSet<fuchsia::metrics::MetricEventLoggerFactory>
+      metric_event_logger_factory_bindings_;
 
   std::unique_ptr<fuchsia::cobalt::SystemDataUpdater> system_data_updater_impl_;
   fidl::BindingSet<fuchsia::cobalt::SystemDataUpdater> system_data_updater_bindings_;
