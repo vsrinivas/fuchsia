@@ -377,7 +377,7 @@ zx_status_t OtRadioDevice::Reset() {
 
 zx_status_t OtRadioDevice::RadioThread() {
   zx_status_t status = ZX_OK;
-  zxlogf(ERROR, "ot-radio: entered thread");
+  zxlogf(INFO, "ot-radio: entered thread");
 
   while (true) {
     zx_port_packet_t packet = {};
