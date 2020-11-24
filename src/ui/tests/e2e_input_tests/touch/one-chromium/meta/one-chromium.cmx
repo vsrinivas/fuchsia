@@ -12,6 +12,7 @@
             "fuchsia.fonts.Provider",
             "fuchsia.intl.PropertyProvider",
             "fuchsia.memorypressure.Provider",
+            "fuchsia.net.interfaces.State",
             "fuchsia.netstack.Netstack",
             "fuchsia.process.Launcher",
             "fuchsia.sysmem.Allocator",

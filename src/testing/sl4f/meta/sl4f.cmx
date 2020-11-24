@@ -68,6 +68,7 @@
             "fuchsia.lowpan.device.Lookup",
             "fuchsia.memorypressure.Provider",
             "fuchsia.net.NameLookup",
+            "fuchsia.net.interfaces.State",
             "fuchsia.net.stack.Stack",
             "fuchsia.netstack.Netstack",
             "fuchsia.paver.Paver",
