@@ -155,7 +155,7 @@ MemRangeTable::iterator& MemRangeTable::iterator::operator++() {
   if (!it_.has_value()) {
     it_ = parent_->view_.begin();
   } else {
-    it_ = ++it_.value();
+    ++(*it_);
   }
 
   // Keep searching until we find a valid payload.
@@ -165,7 +165,7 @@ MemRangeTable::iterator& MemRangeTable::iterator::operator++() {
       offset_ = 0;
       return *this;
     }
-    it_ = ++it_.value();
+    ++(*it_);
   }
 
   // Exhausted all ZBI items. Move to an end state.
