@@ -202,8 +202,8 @@ async fn recv_loop(sock: Arc<UdpSocket>, e: events::Queue<events::DaemonEvent>) 
         }
 
         if let Ok(info) = msg.try_into_target_info(addr) {
-            log::debug!(
-                "received mdns packet from {} ({}) on {}",
+            log::trace!(
+                "packet from {} ({}) on {}",
                 addr,
                 info.nodename,
                 sock.local_addr().unwrap()
