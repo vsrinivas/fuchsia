@@ -10,7 +10,7 @@ namespace fs {
 
 MountChannel::~MountChannel() {
   if (channel_.is_valid()) {
-    Vfs::UnmountHandle(std::move(channel_), zx::time::infinite_past());
+    Vfs::UnmountHandle(std::move(channel_), zx::time::infinite());
   }
 }
 
