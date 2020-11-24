@@ -14,7 +14,6 @@
 #include <fuchsia/net/cpp/fidl.h>
 #include <fuchsia/posix/socket/cpp/fidl.h>
 #include <fuchsia/scheduler/cpp/fidl.h>
-#include <fuchsia/security/resource/cpp/fidl.h>
 #include <fuchsia/sys/internal/cpp/fidl.h>
 #include <fuchsia/sys/test/cpp/fidl.h>
 #include <fuchsia/sysinfo/cpp/fidl.h>
@@ -76,7 +75,6 @@ const std::unordered_set<std::string> kAllowedSystemServices = {
     fuchsia::media::AudioCore::Name_,
     fuchsia::media::ProfileProvider::Name_,
     fuchsia::scheduler::ProfileProvider::Name_,
-    fuchsia::security::resource::Vmex::Name_,
     fuchsia::sys::internal::CrashIntrospect::Name_,
     fuchsia::sys::test::CacheControl::Name_,
     fuchsia::sysinfo::SysInfo::Name_,

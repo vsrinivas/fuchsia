@@ -139,7 +139,6 @@ TEST_F(HubTest, Services) {
       "fuchsia.process.Launcher",
       "fuchsia.process.Resolver",
       "fuchsia.scheduler.ProfileProvider",
-      "fuchsia.security.resource.Vmex",
       "fuchsia.sys.Environment",
       "fuchsia.sys.Launcher",
       "fuchsia.sys.Loader",

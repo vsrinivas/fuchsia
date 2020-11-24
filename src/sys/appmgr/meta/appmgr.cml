@@ -159,10 +159,6 @@
             path: "/svc_for_sys/fuchsia.boot.RootResource",
         },
         {
-            protocol: "fuchsia.security.resource.Vmex",
-            path: "/svc_for_sys/fuchsia.security.resource.Vmex",
-        },
-        {
             protocol: "fuchsia.boot.WriteOnlyLog",
             path: "/svc_for_sys/fuchsia.boot.WriteOnlyLog",
         },

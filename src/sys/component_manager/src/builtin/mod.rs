@@ -17,5 +17,4 @@ pub mod runner;
 pub mod smc_resource;
 pub mod system_controller;
 pub mod time;
-pub mod vmex;
 pub mod vmex_resource;

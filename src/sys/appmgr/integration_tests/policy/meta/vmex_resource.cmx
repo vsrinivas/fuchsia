@@ -4,8 +4,7 @@
     },
     "sandbox": {
         "services": [
-            "fuchsia.kernel.VmexResource",
-            "fuchsia.security.resource.Vmex"
+            "fuchsia.kernel.VmexResource"
         ]
     }
 }

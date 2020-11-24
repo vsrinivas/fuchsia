@@ -51,7 +51,6 @@
                 "fuchsia.kernel.Stats",
                 "fuchsia.kernel.VmexResource",
                 "fuchsia.process.Launcher",
-                "fuchsia.security.resource.Vmex",
             ],
             from: "parent",
             to: [

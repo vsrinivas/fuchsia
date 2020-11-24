@@ -39,7 +39,6 @@ source_set("lib") {
     "//sdk/fidl/fuchsia.net",
     "//sdk/fidl/fuchsia.posix.socket",
     "//sdk/fidl/fuchsia.scheduler",
-    "//sdk/fidl/fuchsia.security.resource",
     "//sdk/fidl/fuchsia.sys.internal",
     "//sdk/fidl/fuchsia.sys.test",
     "//sdk/fidl/fuchsia.sysinfo",

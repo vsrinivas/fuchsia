@@ -20,7 +20,6 @@ use {
             smc_resource::SmcResource,
             system_controller::SystemController,
             time::{create_utc_clock, UtcTimeMaintainer},
-            vmex::VmexService,
             vmex_resource::VmexResource,
         },
         capability_ready_notifier::CapabilityReadyNotifier,
@@ -387,7 +386,6 @@ pub struct BuiltinEnvironment {
     pub smc_resource: Option<Arc<SmcResource>>,
     pub system_controller: Arc<SystemController>,
     pub utc_time_maintainer: Option<Arc<UtcTimeMaintainer>>,
-    pub vmex_service: Option<Arc<VmexService>>,
     pub vmex_resource: Option<Arc<VmexResource>>,
 
     pub work_scheduler: Arc<WorkScheduler>,
@@ -509,18 +507,6 @@ impl BuiltinEnvironment {
         } else {
             None
         };
-
-        // Set up the Vmex service.
-        let vmex_service = root_resource_handle.as_ref().map(|handle| {
-            VmexService::new(
-                handle
-                    .duplicate_handle(zx::Rights::SAME_RIGHTS)
-                    .expect("Failed to duplicate root resource handle"),
-            )
-        });
-        if let Some(vmex_service) = vmex_service.as_ref() {
-            model.root_realm.hooks.install(vmex_service.hooks()).await;
-        }
 
         // Set up the MmioResource service.
         let mmio_resource = mmio_resource_handle.map(MmioResource::new);
@@ -683,7 +669,6 @@ impl BuiltinEnvironment {
             root_resource,
             system_controller,
             utc_time_maintainer,
-            vmex_service,
             work_scheduler,
             realm_capability_host,
             hub,

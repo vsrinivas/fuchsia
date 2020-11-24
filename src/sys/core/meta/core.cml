@@ -133,7 +133,6 @@
                 "fuchsia.paver.Paver",
                 "fuchsia.process.Launcher",
                 "fuchsia.scheduler.ProfileProvider",
-                "fuchsia.security.resource.Vmex",
                 "fuchsia.sysinfo.SysInfo",
                 "fuchsia.thermal.Controller",
                 "fuchsia.time.Maintenance",

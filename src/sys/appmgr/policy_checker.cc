@@ -135,11 +135,6 @@ std::optional<SecurityPolicy> PolicyChecker::Check(const SandboxMetadata& sandbo
                    << "fuchsia.boot.RootResource";
     return std::nullopt;
   }
-  if (sandbox.HasService("fuchsia.security.resource.Vmex") && !CheckVmexResource(pkg_url)) {
-    FX_LOGS(ERROR) << "Component " << pkg_url.ToString() << " is not allowed to use "
-                   << "fuchsia.security.resource.Vmex";
-    return std::nullopt;
-  }
   return policy;
 }
 
