@@ -17,7 +17,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "src/developer/forensics/feedback_data/attachments/archive_accessor_ptr.h"
+#include "src/developer/forensics/feedback_data/archive_accessor_ptr.h"
 #include "src/developer/forensics/feedback_data/attachments/types.h"
 #include "src/developer/forensics/testing/gpretty_printers.h"
 #include "src/developer/forensics/testing/stubs/inspect_archive.h"
@@ -60,6 +60,7 @@ class CollectInspectDataTest : public UnitTestFixture {
   std::unique_ptr<stubs::InspectArchiveBase> inspect_server_;
 };
 
+// TODO(fxbug.dev/63026): Factor out ArchiveAccessor tests.
 TEST_F(CollectInspectDataTest, Succeed_AllInspectData) {
   SetUpInspectServer(std::make_unique<stubs::InspectArchive>(
       std::make_unique<stubs::InspectBatchIterator>(std::vector<std::vector<std::string>>({

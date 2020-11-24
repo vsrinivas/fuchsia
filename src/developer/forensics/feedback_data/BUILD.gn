@@ -9,6 +9,30 @@ visibility = [ "//src/developer/forensics/feedback_data/*" ]
 ###############################################################################
 # SOURCES
 ###############################################################################
+source_set("archive_accessor") {
+  sources = [
+    "archive_accessor_ptr.cc",
+    "archive_accessor_ptr.h",
+  ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.diagnostics",
+    "//sdk/lib/sys/cpp",
+    "//src/developer/forensics/utils:errors",
+    "//src/developer/forensics/utils/fidl:oneshot_ptr",
+    "//src/developer/forensics/utils/fit",
+    "//src/lib/fxl",
+    "//zircon/public/lib/async",
+    "//zircon/public/lib/async-cpp",
+    "//zircon/public/lib/fit",
+  ]
+
+  deps = [
+    "//garnet/public/lib/fostr/fidl/fuchsia.diagnostics",
+    "//sdk/lib/syslog/cpp",
+  ]
+}
+
 source_set("config") {
   sources = [
     "config.cc",

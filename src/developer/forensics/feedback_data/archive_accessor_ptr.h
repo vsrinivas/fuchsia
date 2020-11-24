@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVELOPER_FORENSICS_FEEDBACK_DATA_ATTACHMENTS_ARCHIVE_ACCESSOR_PTR_H_
-#define SRC_DEVELOPER_FORENSICS_FEEDBACK_DATA_ATTACHMENTS_ARCHIVE_ACCESSOR_PTR_H_
+#ifndef SRC_DEVELOPER_FORENSICS_FEEDBACK_DATA_ARCHIVE_ACCESSOR_PTR_H_
+#define SRC_DEVELOPER_FORENSICS_FEEDBACK_DATA_ARCHIVE_ACCESSOR_PTR_H_
 
 #include <fuchsia/diagnostics/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
@@ -15,7 +15,7 @@
 #include <string>
 #include <vector>
 
-#include "src/developer/forensics/feedback_data/attachments/types.h"
+#include "src/developer/forensics/utils/errors.h"
 #include "src/developer/forensics/utils/fidl/oneshot_ptr.h"
 #include "src/developer/forensics/utils/fit/timeout.h"
 #include "src/lib/fxl/macros.h"
@@ -53,4 +53,4 @@ class ArchiveAccessor {
 
 }  // namespace forensics::feedback_data
 
-#endif  // SRC_DEVELOPER_FORENSICS_FEEDBACK_DATA_ATTACHMENTS_ARCHIVE_ACCESSOR_PTR_H_
+#endif  // SRC_DEVELOPER_FORENSICS_FEEDBACK_DATA_ARCHIVE_ACCESSOR_PTR_H_

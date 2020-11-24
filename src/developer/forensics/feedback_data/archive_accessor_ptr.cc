@@ -2,9 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/forensics/feedback_data/attachments/archive_accessor_ptr.h"
+#include "src/developer/forensics/feedback_data/archive_accessor_ptr.h"
 
-#include <lib/async/cpp/task.h>
 #include <lib/fit/result.h>
 #include <lib/fostr/fidl/fuchsia/diagnostics/formatting.h>
 #include <lib/syslog/cpp/macros.h>

@@ -6,7 +6,6 @@
 
 #include <lib/async/cpp/task.h>
 #include <lib/fit/result.h>
-#include <lib/fostr/fidl/fuchsia/diagnostics/formatting.h>
 #include <lib/syslog/cpp/macros.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
@@ -15,7 +14,7 @@
 #include <string>
 #include <vector>
 
-#include "src/developer/forensics/feedback_data/attachments/archive_accessor_ptr.h"
+#include "src/developer/forensics/feedback_data/archive_accessor_ptr.h"
 #include "src/developer/forensics/utils/errors.h"
 #include "src/developer/forensics/utils/fit/promise.h"
 #include "src/developer/forensics/utils/fit/timeout.h"
