@@ -79,8 +79,6 @@ TEST(Tcs3400Test, InputReport) {
   mock_i2c.ExpectWriteStop({0x81, 0x01});  // integration time (ATIME).
   mock_i2c.ExpectWriteStop({0x8f, 0x03});  // control (for AGAIN).
 
-  mock_i2c.ExpectWrite({0x93}).ExpectReadStop({0x00});  // Saturated bit, not set
-
   // Raw clear.
   mock_i2c.ExpectWrite({0x94}).ExpectReadStop({0x12});
   mock_i2c.ExpectWrite({0x95}).ExpectReadStop({0x34});
@@ -152,8 +150,21 @@ TEST(Tcs3400Test, InputReportSaturated) {
   mock_i2c.ExpectWriteStop({0x81, 0x01});  // integration time (ATIME).
   mock_i2c.ExpectWriteStop({0x8f, 0x03});  // control (for AGAIN).
 
-  mock_i2c.ExpectWrite({0x93}).ExpectReadStop({0x80});  // Saturated bit, set
-  mock_i2c.ExpectWriteStop({0xe6, 0x00});               // Clearing saturated bit.
+  // Raw clear.
+  mock_i2c.ExpectWrite({0x94}).ExpectReadStop({0xff});
+  mock_i2c.ExpectWrite({0x95}).ExpectReadStop({0xff});
+
+  // Raw red.
+  mock_i2c.ExpectWrite({0x96}).ExpectReadStop({0xab});
+  mock_i2c.ExpectWrite({0x97}).ExpectReadStop({0xcd});
+
+  // Raw green.
+  mock_i2c.ExpectWrite({0x98}).ExpectReadStop({0x55});
+  mock_i2c.ExpectWrite({0x99}).ExpectReadStop({0x66});
+
+  // Raw Blue.
+  mock_i2c.ExpectWrite({0x9a}).ExpectReadStop({0x77});
+  mock_i2c.ExpectWrite({0x9b}).ExpectReadStop({0x88});
 
   ddk::I2cChannel i2c(mock_i2c.GetProto());
   zx::port port;

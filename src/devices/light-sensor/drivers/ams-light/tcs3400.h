@@ -9,6 +9,7 @@
 #include <lib/zircon-internal/thread_annotations.h>
 #include <lib/zx/interrupt.h>
 #include <lib/zx/status.h>
+#include <time.h>
 
 #include <ddk/protocol/gpio.h>
 #include <ddk/protocol/i2c.h>
@@ -38,7 +39,6 @@ class Tcs3400Device : public DeviceType,
 
   zx_status_t Bind();
   zx_status_t InitMetadata();
-  zx::status<bool> CheckIfSaturated();
 
   // Methods required by the ddk mixins
   zx_status_t HidbusStart(const hidbus_ifc_protocol_t* ifc) TA_EXCL(client_input_lock_);
@@ -75,7 +75,8 @@ class Tcs3400Device : public DeviceType,
   ambient_light_feature_rpt_t feature_rpt_ TA_GUARDED(feature_lock_);
   uint8_t atime_ = 1;
   uint8_t again_ = 1;
-  bool saturated_ = false;
+  bool isSaturated_ = false;
+  time_t lastSaturatedLog_ = 0;
 
   zx_status_t FillInputRpt() TA_REQ(client_input_lock_);
   zx_status_t InitGain(uint8_t gain);
