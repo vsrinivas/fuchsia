@@ -446,7 +446,6 @@ mod test {
             assert_missing,
             metrics::{Expression, Fetcher, MetricState, TrialDataFetcher},
         },
-        injectable_time::FakeTime,
         std::collections::HashMap,
     };
 
@@ -709,7 +708,7 @@ mod test {
 
     macro_rules! eval {
         ($e:expr) => {
-            MetricState::evaluate_math(&parse_expression($e)?)
+            MetricState::evaluate_math($e)
         };
     }
 
@@ -904,21 +903,15 @@ mod test {
 
     #[test]
     fn test_now() -> Result<(), Error> {
-        let time_source = FakeTime::new();
-        time_source.set(2000);
         let now_expression = parse_expression("Now()")?;
         let values = HashMap::new();
         let fetcher = Fetcher::TrialData(TrialDataFetcher::new(&values));
         let files = HashMap::new();
-        let state = MetricState::new(&files, fetcher, &time_source);
+        let state = MetricState::new(&files, fetcher, Some(2000));
 
-        let first_time = state.evaluate_expression(&now_expression);
-        // Changing "wall clock" time shouldn't modify the time used by the metric state
-        time_source.set(3000);
-        let second_time = state.evaluate_expression(&now_expression);
+        let time = state.evaluate_expression(&now_expression);
         let no_time = state.evaluate_expression(&parse_expression("Now(5)")?);
-        assert_eq!(first_time, i(2000));
-        assert_eq!(second_time, i(2000));
+        assert_eq!(time, i(2000));
         assert_missing!(no_time, "Now() requires no operands.");
         Ok(())
     }

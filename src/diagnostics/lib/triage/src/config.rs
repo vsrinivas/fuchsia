@@ -22,7 +22,7 @@ pub(crate) mod parse;
 // These numbers are used in the wasm-bindgen bridge so they are explicit and
 // permanent. They don't need to be sequential. This enum must be consistent
 // with the Source enum in //src/diagnostics/lib/triage/wasm/src/lib.rs.
-#[derive(Debug, Clone, Copy, FromPrimitive)]
+#[derive(Debug, Clone, Copy, FromPrimitive, PartialEq)]
 pub enum Source {
     Inspect = 0,
     Klog = 1,

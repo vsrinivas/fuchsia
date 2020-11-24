@@ -11,8 +11,6 @@ use {
         metrics::{Fetcher, FileDataFetcher, Metric, MetricState, MetricValue, Metrics},
         plugins::{register_plugins, Plugin},
     },
-    injectable_time::UtcTime,
-    lazy_static::lazy_static,
     serde::{self, Deserialize},
     std::collections::HashMap,
 };
@@ -25,15 +23,12 @@ pub struct ActionContext<'a> {
     plugins: Vec<Box<dyn Plugin>>,
 }
 
-lazy_static! {
-    pub static ref REAL_CLOCK: UtcTime = UtcTime::new();
-}
-
 impl<'a> ActionContext<'a> {
     pub fn new(
         metrics: &'a Metrics,
         actions: &'a Actions,
         diagnostic_data: &'a Vec<DiagnosticData>,
+        now: Option<i64>,
     ) -> ActionContext<'a> {
         let fetcher = FileDataFetcher::new(diagnostic_data);
         let mut action_results = ActionResults::new();
@@ -42,7 +37,7 @@ impl<'a> ActionContext<'a> {
         });
         ActionContext {
             actions,
-            metric_state: MetricState::new(metrics, Fetcher::FileData(fetcher), &*REAL_CLOCK),
+            metric_state: MetricState::new(metrics, Fetcher::FileData(fetcher), now),
             action_results,
             plugins: register_plugins(),
         }
@@ -51,7 +46,7 @@ impl<'a> ActionContext<'a> {
 
 /// Stores the results of each [Action] specified in [source] and
 /// the [warnings] and [gauges] that are generated.
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct ActionResults {
     results: HashMap<String, bool>,
     warnings: Vec<String>,
@@ -382,7 +377,7 @@ mod test {
         );
         actions.insert("file".to_string(), action_file);
         let no_data = Vec::new();
-        let mut context = ActionContext::new(&metrics, &actions, &no_data);
+        let mut context = ActionContext::new(&metrics, &actions, &no_data, None);
         let results = context.process();
         assert!(includes(results.get_warnings(), "[WARNING] True was fired"));
         assert!(includes(results.get_warnings(), "[WARNING] Inequality triggered"));
@@ -430,7 +425,7 @@ mod test {
         insert_gauge!("gauge_s9", None);
         actions.insert("file".to_string(), action_file);
         let no_data = Vec::new();
-        let mut context = ActionContext::new(&metrics, &actions, &no_data);
+        let mut context = ActionContext::new(&metrics, &actions, &no_data, None);
 
         let results = context.process();
 
@@ -467,8 +462,9 @@ mod test {
             .to_string(),
         )
         .expect("create data")];
-        let action_context = ActionContext::new(&metrics, &actions, &data);
-
+        let action_context = ActionContext::new(&metrics, &actions, &data, None);
+        // Caution - test footgun! This error will show up without calling process() but
+        // most get_warnings() results will not.
         assert_eq!(
             &vec!["[ERROR] Unable to deserialize Inspect contents for abcd2 to node hierarchy"
                 .to_string()],
@@ -477,11 +473,46 @@ mod test {
     }
 
     #[test]
+    fn time_propagates_correctly() {
+        let metrics = Metrics::new();
+        let mut actions = Actions::new();
+        let mut action_file = ActionsSchema::new();
+        action_file.insert(
+            "time_1234".to_string(),
+            Action::Warning(Warning {
+                trigger: Metric::Eval("Now() == 1234".to_string()),
+                print: "1234".to_string(),
+                tag: None,
+            }),
+        );
+        action_file.insert(
+            "time_missing".to_string(),
+            Action::Warning(Warning {
+                trigger: Metric::Eval("Missing(Now())".to_string()),
+                print: "missing".to_string(),
+                tag: None,
+            }),
+        );
+        actions.insert("file".to_string(), action_file);
+        let data = vec![];
+        let mut context_1234 = ActionContext::new(&metrics, &actions, &data, Some(1234));
+        let results_1234 = context_1234.process();
+        let mut context_missing = ActionContext::new(&metrics, &actions, &data, None);
+        let results_no_time = context_missing.process();
+
+        assert_eq!(&vec!["[WARNING] 1234.".to_string()], results_1234.get_warnings());
+        assert!(results_no_time
+            .get_warnings()
+            .contains(&"[MISSING] In config \'file\': No valid time available".to_string()));
+        assert!(results_no_time.get_warnings().contains(&"[WARNING] missing.".to_string()));
+    }
+
+    #[test]
     fn snapshots_update_correctly() -> Result<(), Error> {
         let metrics = Metrics::new();
         let actions = Actions::new();
         let data = vec![];
-        let mut action_context = ActionContext::new(&metrics, &actions, &data);
+        let mut action_context = ActionContext::new(&metrics, &actions, &data, None);
         let selector =
             Metric::Selector(SelectorString::try_from("INSPECT:foo:bar:baz".to_string())?);
         let true_value = Metric::Eval("1==1".to_string());

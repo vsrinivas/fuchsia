@@ -9,7 +9,6 @@ use {
     super::config::{self, DataFetcher, DiagnosticData, Source},
     diagnostics_hierarchy::{ArrayContent, Property as DiagnosticProperty},
     fetch::{InspectFetcher, KeyValueFetcher, SelectorString, SelectorType, TextFetcher},
-    injectable_time::{FakeTime, TimeSource},
     lazy_static::lazy_static,
     serde::{Deserialize, Deserializer},
     serde_json::Value as JsonValue,
@@ -64,7 +63,7 @@ pub type Metrics = HashMap<String, HashMap<String, Metric>>;
 pub struct MetricState<'a> {
     pub metrics: &'a Metrics,
     pub fetcher: Fetcher<'a>,
-    now: i64,
+    now: Option<i64>,
 }
 
 /// [Fetcher] is a source of values to feed into the calculations. It may contain data either
@@ -540,12 +539,8 @@ fn missing(message: &str) -> MetricValue {
 
 impl<'a> MetricState<'a> {
     /// Create an initialized MetricState.
-    pub fn new(
-        metrics: &'a Metrics,
-        fetcher: Fetcher<'a>,
-        time_source: &'a dyn TimeSource,
-    ) -> MetricState<'a> {
-        MetricState { metrics, fetcher, now: time_source.now() }
+    pub fn new(metrics: &'a Metrics, fetcher: Fetcher<'a>, now: Option<i64>) -> MetricState<'a> {
+        MetricState { metrics, fetcher, now }
     }
 
     /// Any [name] found in the trial's "values" uses the corresponding value, regardless of
@@ -652,13 +647,18 @@ impl<'a> MetricState<'a> {
     }
 
     /// Evaluate an Expression which contains only base values, not referring to other Metrics.
-    pub fn evaluate_math(e: &Expression) -> MetricValue {
+    pub fn evaluate_math(expr: &str) -> MetricValue {
+        let parsed = match config::parse::parse_expression(expr) {
+            Ok(p) => p,
+            Err(err) => {
+                return MetricValue::Missing(format!("Failed to parse '{}': {}", expr, err))
+            }
+        };
         let values = HashMap::new();
         let fetcher = Fetcher::TrialData(TrialDataFetcher::new(&values));
         let files = HashMap::new();
-        let time_source = FakeTime::new();
-        let metric_state = MetricState::new(&files, fetcher, &time_source);
-        metric_state.evaluate(&"".to_string(), e)
+        let metric_state = MetricState::new(&files, fetcher, None);
+        metric_state.evaluate(&"".to_string(), &parsed)
     }
 
     #[cfg(test)]
@@ -718,7 +718,10 @@ impl<'a> MetricState<'a> {
         if !operands.is_empty() {
             return missing("Now() requires no operands.");
         }
-        MetricValue::Int(self.now)
+        match self.now {
+            Some(time) => MetricValue::Int(time),
+            None => missing("No valid time available"),
+        }
     }
 
     fn apply_lambda(&self, namespace: &str, lambda: &Lambda, args: &[&MetricValue]) -> MetricValue {
@@ -1393,9 +1396,8 @@ pub(crate) mod test {
         let mut metrics = HashMap::new();
         metrics.insert("bar_file".to_owned(), file_map);
         metrics.insert("other_file".to_owned(), other_file_map);
-        let fake_time = FakeTime::new();
         let file_state =
-            MetricState::new(&metrics, Fetcher::FileData(BAR_99_FILE_FETCHER.clone()), &fake_time);
+            MetricState::new(&metrics, Fetcher::FileData(BAR_99_FILE_FETCHER.clone()), None);
         assert_eq!(
             file_state.evaluate_variable("bar_file", variable!("bar_plus_one")),
             MetricValue::Int(100)
@@ -1451,12 +1453,8 @@ pub(crate) mod test {
         let mut metrics = HashMap::new();
         metrics.insert("foo_file".to_owned(), trial_map);
         metrics.insert("a".to_owned(), a_map);
-        let fake_time = FakeTime::new();
-        let trial_state = MetricState::new(
-            &metrics,
-            Fetcher::TrialData(FOO_42_AB_7_TRIAL_FETCHER.clone()),
-            &fake_time,
-        );
+        let trial_state =
+            MetricState::new(&metrics, Fetcher::TrialData(FOO_42_AB_7_TRIAL_FETCHER.clone()), None);
         // foo from values shadows foo selector.
         assert_eq!(
             trial_state.evaluate_variable("foo_file", variable!("foo")),
@@ -1497,8 +1495,7 @@ pub(crate) mod test {
         let metrics = HashMap::new();
         let mut data = vec![klog, syslog, bootlog];
         let fetcher = FileDataFetcher::new(&data);
-        let fake_time = FakeTime::new();
-        let state = MetricState::new(&metrics, Fetcher::FileData(fetcher), &fake_time);
+        let state = MetricState::new(&metrics, Fetcher::FileData(fetcher), None);
         assert_eq!(state.evaluate_value("", r#"KlogHas("lin")"#), MetricValue::Bool(true));
         assert_eq!(state.evaluate_value("", r#"KlogHas("l.ne")"#), MetricValue::Bool(true));
         assert_eq!(state.evaluate_value("", r#"KlogHas("fi.*ne")"#), MetricValue::Bool(true));
@@ -1527,8 +1524,7 @@ pub(crate) mod test {
         assert_eq!(state.evaluate_value("", r#"BootlogHas("syslog")"#), MetricValue::Bool(false));
         data.pop();
         let fetcher = FileDataFetcher::new(&data);
-        let fake_time = FakeTime::new();
-        let state = MetricState::new(&metrics, Fetcher::FileData(fetcher), &fake_time);
+        let state = MetricState::new(&metrics, Fetcher::FileData(fetcher), None);
         assert_eq!(state.evaluate_value("", r#"SyslogHas("syslog")"#), MetricValue::Bool(true));
         assert_eq!(state.evaluate_value("", r#"BootlogHas("bootlog")"#), MetricValue::Bool(false));
         assert_eq!(state.evaluate_value("", r#"BootlogHas("syslog")"#), MetricValue::Bool(false));
@@ -1543,8 +1539,7 @@ pub(crate) mod test {
         let metrics = HashMap::new();
         let data = vec![annotations];
         let fetcher = FileDataFetcher::new(&data);
-        let fake_time = FakeTime::new();
-        let state = MetricState::new(&metrics, Fetcher::FileData(fetcher), &fake_time);
+        let state = MetricState::new(&metrics, Fetcher::FileData(fetcher), None);
         assert_eq!(
             state.evaluate_value("", "Annotation('build.board')"),
             MetricValue::String("chromebook-x64".to_string())
@@ -1589,9 +1584,7 @@ pub(crate) mod test {
         .iter()
         .cloned()
         .collect();
-        let fake_time = FakeTime::new();
-        let state =
-            MetricState::new(&metrics, Fetcher::FileData(EMPTY_FILE_FETCHER.clone()), &fake_time);
+        let state = MetricState::new(&metrics, Fetcher::FileData(EMPTY_FILE_FETCHER.clone()), None);
 
         // Can read a value.
         assert_eq!(state.evaluate_value("root", "is42"), MetricValue::Int(42));
@@ -1820,7 +1813,7 @@ pub(crate) mod test {
     fn test_missing_hacks() -> Result<(), Error> {
         macro_rules! eval {
             ($e:expr) => {
-                MetricState::evaluate_math(&config::parse::parse_expression($e)?)
+                MetricState::evaluate_math($e)
             };
         }
         assert_eq!(eval!("Missing(2>'a')"), MetricValue::Bool(true));
@@ -1829,6 +1822,24 @@ pub(crate) mod test {
         assert_eq!(eval!("Missing([2>'a', 2>'a'])"), MetricValue::Bool(false));
         assert_eq!(eval!("Missing([2>1])"), MetricValue::Bool(false));
         assert_eq!(eval!("Or(Missing(2>'a'), 2>'a')"), MetricValue::Bool(true));
+        Ok(())
+    }
+
+    #[test]
+    fn test_time() -> Result<(), Error> {
+        let metrics = Metrics::new();
+        let files = vec![];
+        let state_1234 =
+            MetricState::new(&metrics, Fetcher::FileData(FileDataFetcher::new(&files)), Some(1234));
+        let state_missing =
+            MetricState::new(&metrics, Fetcher::FileData(FileDataFetcher::new(&files)), None);
+        let now_expression = config::parse::parse_expression("Now()").unwrap();
+        assert_missing!(MetricState::evaluate_math("Now()"), "No valid time available");
+        assert_eq!(state_1234.evaluate_expression(&now_expression), MetricValue::Int(1234));
+        assert_missing!(
+            state_missing.evaluate_expression(&now_expression),
+            "No valid time available"
+        );
         Ok(())
     }
 

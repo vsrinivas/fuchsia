@@ -12,7 +12,6 @@ use {
         },
     },
     anyhow::{bail, format_err, Error},
-    injectable_time::FakeTime,
     serde::Deserialize,
     serde_json as json,
     std::{collections::HashMap, convert::TryFrom},
@@ -22,6 +21,7 @@ use {
 pub struct Trial {
     yes: Option<Vec<String>>,
     no: Option<Vec<String>>,
+    now: Option<String>,
     values: Option<HashMap<String, json::Value>>,
     klog: Option<String>,
     syslog: Option<String>,
@@ -67,10 +67,21 @@ pub fn validate(parse_result: &ParseResult) -> Result<(), Error> {
                     fetcher.set_annotations(&annotations_fetcher);
                 }
             }
-            let time_source = FakeTime::new();
-            // TODO(cphoenix): Figure out what the fake time should be for validation.
-            // Tests will want a predictable ergonomic Now() time.
-            let state = MetricState::new(metrics, fetcher, &time_source);
+            let now = if trial.now == None {
+                None
+            } else {
+                match MetricState::evaluate_math(&trial.now.as_ref().unwrap()) {
+                    MetricValue::Int(time) => Some(time),
+                    oops => bail!(
+                        "Trial {} in {}: 'now: {}' was not integer, it was {:?}",
+                        trial_name,
+                        namespace,
+                        trial.now.as_ref().unwrap(),
+                        oops
+                    ),
+                }
+            };
+            let state = MetricState::new(metrics, fetcher, now);
             if let Some(action_names) = &trial.yes {
                 for action_name in action_names.iter() {
                     failed =
@@ -206,6 +217,7 @@ mod test {
             syslog: None,
             bootlog: None,
             annotations: None,
+            now: None,
         };
         assert!(validate(&create_parse_result!(
             metrics: metrics,
@@ -223,6 +235,7 @@ mod test {
             syslog: None,
             bootlog: None,
             annotations: None,
+            now: None,
         };
         let good_trial = Trial {
             yes: Some(vec!["fires".to_string()]),
@@ -232,6 +245,7 @@ mod test {
             syslog: None,
             bootlog: None,
             annotations: None,
+            now: None,
         };
         assert!(validate(&create_parse_result!(
             metrics: metrics,
@@ -248,11 +262,87 @@ mod test {
             syslog: None,
             bootlog: None,
             annotations: None,
+            now: None,
         };
         assert!(validate(&create_parse_result!(
             metrics: metrics,
             actions: actions,
             tests: build_map!(("foo", build_map!(("bad", bad_trial))))
+        ))
+        .is_err());
+        Ok(())
+    }
+
+    #[test]
+    fn validate_time() -> Result<(), Error> {
+        let metrics = HashMap::new();
+        let actions = build_map!((
+            "foo",
+            build_map!(
+                (
+                    "time_quarter",
+                    Action::Warning(Warning {
+                        trigger: Metric::Eval("Now()==250000000".to_string()),
+                        print: "time_billion".to_string(),
+                        tag: None
+                    })
+                ),
+                (
+                    "time_missing",
+                    Action::Warning(Warning {
+                        trigger: Metric::Eval("Missing(Now())".to_string()),
+                        print: "time_missing".to_string(),
+                        tag: None
+                    })
+                )
+            )
+        ));
+        let time_trial = Trial {
+            yes: Some(vec!["time_quarter".to_string()]),
+            no: Some(vec!["time_missing".to_string()]),
+            values: Some(HashMap::new()),
+            klog: None,
+            syslog: None,
+            bootlog: None,
+            annotations: None,
+            now: Some("Seconds(0.25)".to_string()),
+        };
+        assert!(validate(&create_parse_result!(
+            metrics: metrics,
+            actions: actions,
+            tests: build_map!(("foo", build_map!(("good", time_trial))))
+        ))
+        .is_ok());
+        let missing_trial = Trial {
+            yes: Some(vec!["time_missing".to_string()]),
+            no: Some(vec![]),
+            values: Some(HashMap::new()),
+            klog: None,
+            syslog: None,
+            bootlog: None,
+            annotations: None,
+            now: None,
+        };
+        assert!(validate(&create_parse_result!(
+            metrics: metrics,
+            actions: actions,
+            tests: build_map!(("foo", build_map!(("good", missing_trial))))
+        ))
+        .is_ok());
+        let bad_trial = Trial {
+            yes: Some(vec!["time_missing".to_string()]),
+            no: Some(vec![]),
+            values: Some(HashMap::new()),
+            klog: None,
+            syslog: None,
+            bootlog: None,
+            annotations: None,
+            now: Some("this won't parse".to_string()),
+        };
+        assert!(validate(&create_parse_result!(
+            metrics: metrics,
+            actions: actions,
+            tests: build_map!(("foo", build_map!(("good", bad_trial))))
         ))
         .is_err());
         Ok(())
