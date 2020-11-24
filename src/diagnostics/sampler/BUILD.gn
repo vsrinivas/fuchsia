@@ -17,6 +17,7 @@ rustc_library("lib") {
     "//sdk/fidl/fuchsia.cobalt:fuchsia.cobalt-rustc",
     "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics-rustc",
     "//src/diagnostics/control:controller-rustc",
+    "//src/diagnostics/control:controller-rustc",
     "//src/lib/diagnostics/hierarchy/rust",
     "//src/lib/diagnostics/reader/rust",
     "//src/lib/fdio/rust:fdio",
@@ -51,18 +52,17 @@ rustc_library("lib") {
   ]
 }
 
-package("sampler") {
+fuchsia_component("sampler-component") {
+  component_name = "sampler"
   deps = [
     ":archivist_config",
     "//src/diagnostics/launcher:bin",
   ]
+  manifest = "meta/sampler.cml"
+}
 
-  meta = [
-    {
-      path = rebase_path("meta/sampler.cml")
-      dest = "sampler.cm"
-    },
-  ]
+fuchsia_package("sampler") {
+  deps = [ ":sampler-component" ]
 }
 
 config_data("archivist_config") {

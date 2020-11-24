@@ -59,6 +59,7 @@ base_package_labels += [
   "//src/developer/forensics/snapshot:pkg",
   "//src/diagnostics/log-stats:package",
   "//src/diagnostics/detect:triage-detect",
+  "//src/diagnostics/sampler",
   "//src/hwinfo:hwinfo",
   "//src/hwinfo:default_product_config",
   "//src/media/audio/bundles:audio_config",

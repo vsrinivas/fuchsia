@@ -104,6 +104,11 @@
             from: "#temperature-logger",
             to: [ "#appmgr" ],
         },
+        {
+            protocol: [ "fuchsia.cobalt.LoggerFactory" ],
+            from: "#appmgr",
+            to: [ "#sampler" ],
+        },
 
         // Passing from root realm to appmgr
         {

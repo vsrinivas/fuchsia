@@ -10,7 +10,9 @@ use {
     anyhow::{Context, Error},
     archivist_lib::{archivist, configs, diagnostics, logs},
     argh::FromArgs,
-    fidl_fuchsia_diagnostics_internal::{DetectControllerMarker, LogStatsControllerMarker},
+    fidl_fuchsia_diagnostics_internal::{
+        DetectControllerMarker, LogStatsControllerMarker, SamplerControllerMarker,
+    },
     fidl_fuchsia_sys2::EventSourceMarker,
     fidl_fuchsia_sys_internal::{ComponentEventProviderMarker, LogConnectorMarker},
     fuchsia_async as fasync,
@@ -56,6 +58,10 @@ pub struct Args {
     /// connect to fuchsia.diagnostics.internal.LogStatsController
     #[argh(switch)]
     connect_to_log_stats: bool,
+
+    /// connect to fuchsia.diagnostics.internal.SamplerController
+    #[argh(switch)]
+    connect_to_sampler: bool,
 
     /// path to a JSON configuration file
     #[argh(option)]
@@ -148,6 +154,16 @@ fn main() -> Result<(), Error> {
         _stats = connect_to_service::<LogStatsControllerMarker>();
         if let Err(e) = &_stats {
             error!("Couldn't connect to log stats: {}", e);
+        }
+    }
+
+    let _sampler;
+    if opt.connect_to_sampler {
+        info!("Starting sampler service.");
+        _sampler = connect_to_service::<SamplerControllerMarker>();
+
+        if let Err(e) = &_sampler {
+            error!("Couldn't connect to sampler: {}", e);
         }
     }
 

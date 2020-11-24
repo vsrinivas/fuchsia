@@ -2,5 +2,11 @@
   "project_id": 5,
   "poll_rate_sec": 60,
   "metrics": [
+    {
+       "selector": "bootstrap/archivist:root/event_stats:components_started",
+       "metric_id": 7,
+       "metric_type": "EventCount",
+       "event_codes": [0],
+     },
   ]
 }

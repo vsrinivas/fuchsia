@@ -5,6 +5,7 @@
             "--consume-own-logs",
             "--connect-to-detect",
             "--connect-to-log-stats",
+            "--connect-to-sampler",
             "--config-path",
             "/config/data/archivist_config.json",
         ],
