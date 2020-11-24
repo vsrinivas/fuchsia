@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::repository::DiagnosticsDataRepository,
+    crate::repository::DataRepo,
     diagnostics_data::{Data, LifecycleData},
     futures::prelude::*,
     parking_lot::RwLock,
@@ -22,14 +22,14 @@ use container::LifecycleDataContainer;
 /// LifecycleServer holds the state and data needed to serve Lifecycle data
 /// reading requests for a single client.
 ///
-/// diagnostics_repo: the DiagnosticsDataRepository which holds the access-points for
+/// diagnostics_repo: the DataRepo which holds the access-points for
 ///               all relevant lifecycle data.
 pub struct LifecycleServer {
     data: std::vec::IntoIter<LifecycleDataContainer>,
 }
 
 impl LifecycleServer {
-    pub fn new(diagnostics_repo: Arc<RwLock<DiagnosticsDataRepository>>) -> Self {
+    pub fn new(diagnostics_repo: Arc<RwLock<DataRepo>>) -> Self {
         LifecycleServer { data: diagnostics_repo.read().fetch_lifecycle_event_data().into_iter() }
     }
 
@@ -144,7 +144,7 @@ mod tests {
     }
 
     async fn verify_reader(path: PathBuf) {
-        let diagnostics_repo = Arc::new(RwLock::new(DiagnosticsDataRepository::new(
+        let diagnostics_repo = Arc::new(RwLock::new(DataRepo::new(
             crate::logs::LogManager::new(),
             crate::logs::redact::Redactor::noop(),
             None,

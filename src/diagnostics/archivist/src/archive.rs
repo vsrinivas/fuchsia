@@ -9,7 +9,7 @@ use {
             ComponentEvent, ComponentEventStream, ComponentIdentifier, DiagnosticsReadyEvent,
             EventMetadata,
         },
-        repository::DiagnosticsDataRepository,
+        repository::DataRepo,
     },
     anyhow::{format_err, Error},
     chrono::prelude::*,
@@ -580,13 +580,13 @@ pub struct ArchivistState {
     writer: Option<ArchiveWriter>,
     log_node: BoundedListNode,
     configuration: configs::Config,
-    diagnostics_repositories: Vec<Arc<RwLock<DiagnosticsDataRepository>>>,
+    diagnostics_repositories: Vec<Arc<RwLock<DataRepo>>>,
 }
 
 impl ArchivistState {
     pub fn new(
         configuration: configs::Config,
-        diagnostics_repositories: Vec<Arc<RwLock<DiagnosticsDataRepository>>>,
+        diagnostics_repositories: Vec<Arc<RwLock<DataRepo>>>,
         writer: Option<ArchiveWriter>,
     ) -> Result<Self, Error> {
         let mut log_node = BoundedListNode::new(

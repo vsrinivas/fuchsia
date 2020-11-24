@@ -7,7 +7,7 @@ use {
         constants,
         container::{ReadSnapshot, SnapshotData},
         diagnostics::DiagnosticsServerStats,
-        repository::DiagnosticsDataRepository,
+        repository::DataRepo,
     },
     anyhow::Error,
     collector::Moniker,
@@ -79,7 +79,7 @@ impl Into<NodeHierarchyData> for SnapshotData {
 ///                       what inspect data is returned by read requests. A none type
 ///                       implies that all available data should be returned.
 ///
-/// inspect_repo: the DiagnosticsDataRepository which holds the access-points for all relevant
+/// inspect_repo: the DataRepo which holds the access-points for all relevant
 ///               inspect data.
 pub struct ReaderServer {
     selectors: Option<Vec<Arc<Selector>>>,
@@ -107,7 +107,7 @@ pub struct BatchResultItem {
 impl ReaderServer {
     /// Create a stream of filtered inspect data, ready to serve.
     pub fn stream(
-        inspect_repo: Arc<RwLock<DiagnosticsDataRepository>>,
+        inspect_repo: Arc<RwLock<DataRepo>>,
         timeout: Option<i64>,
         selectors: Option<Vec<Selector>>,
         stats: Arc<DiagnosticsServerStats>,
@@ -631,11 +631,8 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn inspect_repo_disallows_duplicated_dirs() {
-        let mut inspect_repo = DiagnosticsDataRepository::new(
-            LogManager::new(),
-            crate::logs::redact::Redactor::noop(),
-            None,
-        );
+        let mut inspect_repo =
+            DataRepo::new(LogManager::new(), crate::logs::redact::Redactor::noop(), None);
         let realm_path = RealmPath(vec!["a".to_string(), "b".to_string()]);
         let instance_id = "1234".to_string();
 
@@ -766,7 +763,7 @@ mod tests {
                     }))
                     .await;
 
-                let inspect_repo = Arc::new(RwLock::new(DiagnosticsDataRepository::new(
+                let inspect_repo = Arc::new(RwLock::new(DataRepo::new(
                     log_manager.clone(),
                     crate::logs::redact::Redactor::noop(),
                     None,
@@ -838,7 +835,7 @@ mod tests {
         let child_1_1_selector = selectors::parse_selector(r#"*:root/child_1/*:some-int"#).unwrap();
         let child_2_selector =
             selectors::parse_selector(r#"test_component.cmx:root/child_2:*"#).unwrap();
-        let inspect_repo = Arc::new(RwLock::new(DiagnosticsDataRepository::new(
+        let inspect_repo = Arc::new(RwLock::new(DataRepo::new(
             LogManager::new(),
             crate::logs::redact::Redactor::noop(),
             Some(vec![Arc::new(child_1_1_selector), Arc::new(child_2_selector)]),
@@ -1080,7 +1077,7 @@ mod tests {
     }
 
     fn start_snapshot(
-        inspect_repo: Arc<RwLock<DiagnosticsDataRepository>>,
+        inspect_repo: Arc<RwLock<DataRepo>>,
         stats: Arc<DiagnosticsServerStats>,
     ) -> (BatchIteratorProxy, Task<()>) {
         let reader_server = Box::pin(ReaderServer::stream(
@@ -1109,7 +1106,7 @@ mod tests {
     }
 
     async fn read_snapshot(
-        inspect_repo: Arc<RwLock<DiagnosticsDataRepository>>,
+        inspect_repo: Arc<RwLock<DataRepo>>,
         _test_inspector: Arc<Inspector>,
         stats: Arc<DiagnosticsServerStats>,
     ) -> serde_json::Value {
@@ -1146,7 +1143,7 @@ mod tests {
     }
 
     async fn read_snapshot_verify_batch_count_and_batch_size(
-        inspect_repo: Arc<RwLock<DiagnosticsDataRepository>>,
+        inspect_repo: Arc<RwLock<DataRepo>>,
         expected_batch_sizes: Vec<usize>,
         stats: Arc<DiagnosticsServerStats>,
     ) -> serde_json::Value {

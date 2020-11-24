@@ -9,7 +9,7 @@ use {
         events::{stream::EventStream, types::EventSource},
         logs,
         logs::redact::Redactor,
-        repository::DiagnosticsDataRepository,
+        repository::DataRepo,
     },
     anyhow::Error,
     fidl_fuchsia_diagnostics::Selector,
@@ -250,11 +250,8 @@ impl Archivist {
         // selectors, meaning all diagnostics data is visible.
         // This should not be used for production services.
         // TODO(fxbug.dev/55735): Lock down this protocol using allowlists.
-        let all_inspect_repository = Arc::new(RwLock::new(DiagnosticsDataRepository::new(
-            log_manager.clone(),
-            Redactor::noop(),
-            None,
-        )));
+        let all_inspect_repository =
+            Arc::new(RwLock::new(DataRepo::new(log_manager.clone(), Redactor::noop(), None)));
 
         // The Inspect Repository offered to the Feedback pipeline. This repository applies
         // static selectors configured under config/data/feedback to inspect exfiltration.
@@ -272,7 +269,7 @@ impl Archivist {
             (None, Redactor::noop())
         };
 
-        let feedback_inspect_repository = Arc::new(RwLock::new(DiagnosticsDataRepository::new(
+        let feedback_inspect_repository = Arc::new(RwLock::new(DataRepo::new(
             log_manager.clone(),
             feedback_redactor,
             feedback_static_selectors,
@@ -281,20 +278,19 @@ impl Archivist {
         // The Inspect Repository offered to the LegacyMetrics
         // pipeline. This repository applies static selectors configured
         // under config/data/legacy_metrics to inspect exfiltration.
-        let legacy_metrics_inspect_repository =
-            Arc::new(RwLock::new(DiagnosticsDataRepository::new(
-                log_manager.clone(),
-                Redactor::noop(),
-                match legacy_config.disable_filtering {
-                    false => legacy_config.take_inspect_selectors().map(|selectors| {
-                        selectors
-                            .into_iter()
-                            .map(|selector| Arc::new(selector))
-                            .collect::<Vec<Arc<Selector>>>()
-                    }),
-                    true => None,
-                },
-            )));
+        let legacy_metrics_inspect_repository = Arc::new(RwLock::new(DataRepo::new(
+            log_manager.clone(),
+            Redactor::noop(),
+            match legacy_config.disable_filtering {
+                false => legacy_config.take_inspect_selectors().map(|selectors| {
+                    selectors
+                        .into_iter()
+                        .map(|selector| Arc::new(selector))
+                        .collect::<Vec<Arc<Selector>>>()
+                }),
+                true => None,
+            },
+        )));
 
         // TODO(fxbug.dev/55736): Refactor this code so that we don't store
         // diagnostics data N times if we have N pipelines. We should be

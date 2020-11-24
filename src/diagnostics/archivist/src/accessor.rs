@@ -10,7 +10,7 @@ use {
         formatter::{new_batcher, FormattedStream, JsonPacketSerializer, JsonString},
         inspect,
         lifecycle::LifecycleServer,
-        repository::DiagnosticsDataRepository,
+        repository::DataRepo,
     },
     anyhow::format_err,
     diagnostics_data::{Data, DiagnosticsData},
@@ -36,7 +36,7 @@ use {
 pub struct ArchiveAccessor {
     // The inspect repository containing read-only inspect data shared across
     // all inspect reader instances.
-    diagnostics_repo: Arc<RwLock<DiagnosticsDataRepository>>,
+    diagnostics_repo: Arc<RwLock<DataRepo>>,
     archive_accessor_stats: Arc<diagnostics::ArchiveAccessorStats>,
 }
 
@@ -67,14 +67,14 @@ impl ArchiveAccessor {
     /// parameter determines which static configurations scope/restrict the visibility of inspect
     /// data accessed by readers spawned by this accessor.
     pub fn new(
-        diagnostics_repo: Arc<RwLock<DiagnosticsDataRepository>>,
+        diagnostics_repo: Arc<RwLock<DataRepo>>,
         archive_accessor_stats: Arc<ArchiveAccessorStats>,
     ) -> Self {
         ArchiveAccessor { diagnostics_repo, archive_accessor_stats }
     }
 
     async fn run_server(
-        diagnostics_repo: Arc<RwLock<DiagnosticsDataRepository>>,
+        diagnostics_repo: Arc<RwLock<DataRepo>>,
         requests: BatchIteratorRequestStream,
         params: fidl_fuchsia_diagnostics::StreamParameters,
         accessor_stats: Arc<ArchiveAccessorStats>,
