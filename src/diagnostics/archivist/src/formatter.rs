@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 use {
-    crate::{diagnostics::DiagnosticsServerStats, error::AccessorError},
+    crate::{diagnostics::ConnectionStats, error::AccessorError},
     fidl_fuchsia_diagnostics::{FormattedContent, StreamMode, MAXIMUM_ENTRIES_PER_BATCH},
     fuchsia_zircon as zx,
     futures::prelude::*,
@@ -24,7 +24,7 @@ pub type FormattedStream =
 pub struct FormattedContentBatcher<C> {
     #[pin]
     items: C,
-    stats: Arc<DiagnosticsServerStats>,
+    stats: Arc<ConnectionStats>,
 }
 
 /// Make a new `FormattedContentBatcher` with a chunking strategy depending on stream mode.
@@ -36,7 +36,7 @@ pub struct FormattedContentBatcher<C> {
 /// underlying stream is pending, ensuring clients always receive latest results.
 pub fn new_batcher<I, T, E>(
     items: I,
-    stats: Arc<DiagnosticsServerStats>,
+    stats: Arc<ConnectionStats>,
     mode: StreamMode,
 ) -> FormattedStream
 where
@@ -121,13 +121,13 @@ impl Deref for JsonString {
 /// into a JSON array in each VMO up to the size limit provided.
 pub struct JsonPacketSerializer<I> {
     items: I,
-    stats: Arc<DiagnosticsServerStats>,
+    stats: Arc<ConnectionStats>,
     max_packet_size: usize,
     overflow: Option<String>,
 }
 
 impl<I> JsonPacketSerializer<I> {
-    pub fn new(stats: Arc<DiagnosticsServerStats>, max_packet_size: usize, items: I) -> Self {
+    pub fn new(stats: Arc<ConnectionStats>, max_packet_size: usize, items: I) -> Self {
         Self { items, stats, max_packet_size, overflow: None }
     }
 }
@@ -212,7 +212,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::diagnostics::ArchiveAccessorStats;
+    use crate::diagnostics::AccessorStats;
     use futures::stream::iter;
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -224,8 +224,8 @@ mod tests {
 
         let make_packets = |max| async move {
             let node = fuchsia_inspect::Node::default();
-            let accessor_stats = Arc::new(ArchiveAccessorStats::new(node));
-            let test_stats = Arc::new(DiagnosticsServerStats::for_logs(accessor_stats));
+            let accessor_stats = Arc::new(AccessorStats::new(node));
+            let test_stats = Arc::new(ConnectionStats::for_logs(accessor_stats));
             JsonPacketSerializer::new(test_stats, max, iter(inputs.iter()))
                 .collect::<Vec<_>>()
                 .await

@@ -68,7 +68,7 @@ mod tests {
         super::*,
         crate::{
             accessor::BatchIterator,
-            diagnostics::{self, DiagnosticsServerStats},
+            diagnostics::{self, ConnectionStats},
             events::types::{ComponentIdentifier, LegacyIdentifier},
             inspect::collector::InspectDataCollector,
         },
@@ -180,11 +180,10 @@ mod tests {
         let test_archive_accessor_node = root.create_child("test_archive_accessor_node");
 
         let test_accessor_stats =
-            Arc::new(diagnostics::ArchiveAccessorStats::new(test_archive_accessor_node));
+            Arc::new(diagnostics::AccessorStats::new(test_archive_accessor_node));
 
-        let test_batch_iterator_stats1 = Arc::new(
-            diagnostics::DiagnosticsServerStats::for_lifecycle(test_accessor_stats.clone()),
-        );
+        let test_batch_iterator_stats1 =
+            Arc::new(diagnostics::ConnectionStats::for_lifecycle(test_accessor_stats.clone()));
         {
             let reader_server = LifecycleServer::new(diagnostics_repo.clone());
             let result_json = read_snapshot(reader_server, test_batch_iterator_stats1).await;
@@ -194,9 +193,8 @@ mod tests {
         }
 
         diagnostics_repo.write().remove(&component_id);
-        let test_batch_iterator_stats2 = Arc::new(
-            diagnostics::DiagnosticsServerStats::for_lifecycle(test_accessor_stats.clone()),
-        );
+        let test_batch_iterator_stats2 =
+            Arc::new(diagnostics::ConnectionStats::for_lifecycle(test_accessor_stats.clone()));
 
         {
             let reader_server = LifecycleServer::new(diagnostics_repo.clone());
@@ -209,7 +207,7 @@ mod tests {
 
     async fn read_snapshot(
         reader_server: LifecycleServer,
-        stats: Arc<DiagnosticsServerStats>,
+        stats: Arc<ConnectionStats>,
     ) -> serde_json::Value {
         let (consumer, batch_iterator_requests) =
             create_proxy_and_stream::<BatchIteratorMarker>().unwrap();

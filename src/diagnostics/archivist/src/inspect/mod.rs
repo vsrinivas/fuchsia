@@ -6,7 +6,7 @@ use {
     crate::{
         constants,
         container::{ReadSnapshot, SnapshotData},
-        diagnostics::DiagnosticsServerStats,
+        diagnostics::ConnectionStats,
         repository::DataRepo,
     },
     anyhow::Error,
@@ -110,7 +110,7 @@ impl ReaderServer {
         inspect_repo: Arc<RwLock<DataRepo>>,
         timeout: Option<i64>,
         selectors: Option<Vec<Selector>>,
-        stats: Arc<DiagnosticsServerStats>,
+        stats: Arc<ConnectionStats>,
     ) -> impl Stream<Item = Data<Inspect>> + Send + 'static {
         let selectors = selectors.map(|s| s.into_iter().map(Arc::new).collect());
         let repo_data = inspect_repo.read().fetch_inspect_data(&selectors).into_iter();
@@ -786,9 +786,9 @@ mod tests {
                 let test_archive_accessor_node = root.create_child("test_archive_accessor_node");
 
                 let test_accessor_stats =
-                    Arc::new(diagnostics::ArchiveAccessorStats::new(test_archive_accessor_node));
+                    Arc::new(diagnostics::AccessorStats::new(test_archive_accessor_node));
                 let test_batch_iterator_stats1 = Arc::new(
-                    diagnostics::DiagnosticsServerStats::for_inspect(test_accessor_stats.clone()),
+                    diagnostics::ConnectionStats::for_inspect(test_accessor_stats.clone()),
                 );
 
                 let _result_json = read_snapshot_verify_batch_count_and_batch_size(
@@ -858,10 +858,10 @@ mod tests {
         assert_inspect_tree!(inspector, root: {test_archive_accessor_node: {}});
 
         let test_accessor_stats =
-            Arc::new(diagnostics::ArchiveAccessorStats::new(test_archive_accessor_node));
+            Arc::new(diagnostics::AccessorStats::new(test_archive_accessor_node));
 
         let test_batch_iterator_stats1 =
-            Arc::new(diagnostics::DiagnosticsServerStats::for_inspect(test_accessor_stats.clone()));
+            Arc::new(diagnostics::ConnectionStats::for_inspect(test_accessor_stats.clone()));
 
         assert_inspect_tree!(inspector, root: {
             test_archive_accessor_node: {
@@ -1012,7 +1012,7 @@ mod tests {
         }
 
         let test_batch_iterator_stats2 =
-            Arc::new(diagnostics::DiagnosticsServerStats::for_inspect(test_accessor_stats.clone()));
+            Arc::new(diagnostics::ConnectionStats::for_inspect(test_accessor_stats.clone()));
 
         inspect_repo.write().remove(&component_id);
         {
@@ -1078,7 +1078,7 @@ mod tests {
 
     fn start_snapshot(
         inspect_repo: Arc<RwLock<DataRepo>>,
-        stats: Arc<DiagnosticsServerStats>,
+        stats: Arc<ConnectionStats>,
     ) -> (BatchIteratorProxy, Task<()>) {
         let reader_server = Box::pin(ReaderServer::stream(
             inspect_repo,
@@ -1108,7 +1108,7 @@ mod tests {
     async fn read_snapshot(
         inspect_repo: Arc<RwLock<DataRepo>>,
         _test_inspector: Arc<Inspector>,
-        stats: Arc<DiagnosticsServerStats>,
+        stats: Arc<ConnectionStats>,
     ) -> serde_json::Value {
         let (consumer, server) = start_snapshot(inspect_repo, stats);
 
@@ -1145,7 +1145,7 @@ mod tests {
     async fn read_snapshot_verify_batch_count_and_batch_size(
         inspect_repo: Arc<RwLock<DataRepo>>,
         expected_batch_sizes: Vec<usize>,
-        stats: Arc<DiagnosticsServerStats>,
+        stats: Arc<ConnectionStats>,
     ) -> serde_json::Value {
         let (consumer, server) = start_snapshot(inspect_repo, stats);
 

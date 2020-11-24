@@ -69,27 +69,27 @@ pub(crate) fn set_group_stats(stats: &EventFileGroupStatsMap) {
     GROUPS.lock().replace(stats);
 }
 
-pub struct ArchiveAccessorStats {
+pub struct AccessorStats {
     /// Inspect node for tracking usage/health metrics of diagnostics platform.
     pub archive_accessor_node: fuchsia_inspect::Node,
 
     /// Metrics aggregated across all client connections.
-    pub global_stats: Arc<ArchiveAccessorStatsGlobal>,
+    pub global_stats: Arc<GlobalAccessorStats>,
 
     /// Global stats tracking the usages of StreamDiagnostics for
     /// exfiltrating inspect data.
-    pub global_inspect_stats: Arc<DiagnosticsServerStatsGlobal>,
+    pub global_inspect_stats: Arc<GlobalConnectionStats>,
 
     /// Global stats tracking the usages of StreamDiagnostics for
     /// exfiltrating lifecycle data.
-    pub global_lifecycle_stats: Arc<DiagnosticsServerStatsGlobal>,
+    pub global_lifecycle_stats: Arc<GlobalConnectionStats>,
 
     /// Global stats tracking the usages of StreamDiagnostics for
     /// exfiltrating logs.
-    pub global_logs_stats: Arc<DiagnosticsServerStatsGlobal>,
+    pub global_logs_stats: Arc<GlobalConnectionStats>,
 }
 
-pub struct ArchiveAccessorStatsGlobal {
+pub struct GlobalAccessorStats {
     /// Property tracking number of opening connections to any archive_accessor instance.
     pub archive_accessor_connections_opened: fuchsia_inspect::UintProperty,
     /// Property tracking number of closing connections to any archive_accessor instance.
@@ -99,7 +99,7 @@ pub struct ArchiveAccessorStatsGlobal {
     pub stream_diagnostics_requests: fuchsia_inspect::UintProperty,
 }
 
-impl ArchiveAccessorStats {
+impl AccessorStats {
     pub fn new(mut archive_accessor_node: fuchsia_inspect::Node) -> Self {
         let archive_accessor_connections_opened =
             archive_accessor_node.create_uint("archive_accessor_connections_opened", 0);
@@ -110,17 +110,17 @@ impl ArchiveAccessorStats {
             archive_accessor_node.create_uint("stream_diagnostics_requests", 0);
 
         let global_inspect_stats =
-            Arc::new(DiagnosticsServerStatsGlobal::for_inspect(&mut archive_accessor_node));
+            Arc::new(GlobalConnectionStats::for_inspect(&mut archive_accessor_node));
 
         let global_lifecycle_stats =
-            Arc::new(DiagnosticsServerStatsGlobal::for_lifecycle(&mut archive_accessor_node));
+            Arc::new(GlobalConnectionStats::for_lifecycle(&mut archive_accessor_node));
 
         let global_logs_stats =
-            Arc::new(DiagnosticsServerStatsGlobal::for_logs(&mut archive_accessor_node));
+            Arc::new(GlobalConnectionStats::for_logs(&mut archive_accessor_node));
 
-        ArchiveAccessorStats {
+        AccessorStats {
             archive_accessor_node,
-            global_stats: Arc::new(ArchiveAccessorStatsGlobal {
+            global_stats: Arc::new(GlobalAccessorStats {
                 archive_accessor_connections_opened,
                 archive_accessor_connections_closed,
                 stream_diagnostics_requests,
@@ -138,11 +138,11 @@ const EXPONENTIAL_HISTOGRAM_USEC_STEP: u64 = 1;
 const EXPONENTIAL_HISTOGRAM_USEC_MULTIPLIER: u64 = 2;
 const EXPONENTIAL_HISTOGRAM_USEC_BUCKETS: u64 = 26;
 
-pub struct DiagnosticsServerStatsGlobal {
+pub struct GlobalConnectionStats {
     /// The name of the diagnostics source being tracked by this struct.
     diagnostics_source: &'static str,
     /// Weak clone of the node that stores stats, used for on-demand population.
-    archive_accessor_node: fuchsia_inspect::Node,
+    connection_node: fuchsia_inspect::Node,
     /// Number of DiagnosticsServers created in response to an StreamDiagnostics
     /// client request.
     reader_servers_constructed: fuchsia_inspect::UintProperty,
@@ -174,65 +174,61 @@ pub struct DiagnosticsServerStatsGlobal {
     processing_time_tracker: Mutex<Option<ProcessingTimeTracker>>,
 }
 
-impl DiagnosticsServerStatsGlobal {
+impl GlobalConnectionStats {
     // TODO(fxbug.dev/54442): Consider encoding prefix as node name and represent the same
     //              named properties under different nodes for each diagnostics source.
     pub fn for_inspect(archive_accessor_node: &mut fuchsia_inspect::Node) -> Self {
-        DiagnosticsServerStatsGlobal::generate_server_properties(archive_accessor_node, "inspect")
+        GlobalConnectionStats::new(archive_accessor_node, "inspect")
     }
 
     // TODO(fxbug.dev/54442): Consider encoding prefix as node name and represent the same
     //              named properties under different nodes for each diagnostics source.
     pub fn for_lifecycle(archive_accessor_node: &mut fuchsia_inspect::Node) -> Self {
-        DiagnosticsServerStatsGlobal::generate_server_properties(archive_accessor_node, "lifecycle")
+        GlobalConnectionStats::new(archive_accessor_node, "lifecycle")
     }
 
     // TODO(fxbug.dev/54442): Consider encoding prefix as node name and represent the same
     //              named properties under different nodes for each diagnostics source.
     pub fn for_logs(archive_accessor_node: &mut fuchsia_inspect::Node) -> Self {
-        DiagnosticsServerStatsGlobal::generate_server_properties(archive_accessor_node, "logs")
+        GlobalConnectionStats::new(archive_accessor_node, "logs")
     }
 
-    fn generate_server_properties(
-        archive_accessor_node: &mut fuchsia_inspect::Node,
-        diagnostics_source: &'static str,
-    ) -> Self {
-        let reader_servers_constructed = archive_accessor_node
+    fn new(connection_node: &mut fuchsia_inspect::Node, diagnostics_source: &'static str) -> Self {
+        let reader_servers_constructed = connection_node
             .create_uint(format!("{}_reader_servers_constructed", diagnostics_source), 0);
-        let reader_servers_destroyed = archive_accessor_node
+        let reader_servers_destroyed = connection_node
             .create_uint(format!("{}_reader_servers_destroyed", diagnostics_source), 0);
-        let batch_iterator_connections_opened = archive_accessor_node
+        let batch_iterator_connections_opened = connection_node
             .create_uint(format!("{}_batch_iterator_connections_opened", diagnostics_source), 0);
-        let batch_iterator_connections_closed = archive_accessor_node
+        let batch_iterator_connections_closed = connection_node
             .create_uint(format!("{}_batch_iterator_connections_closed", diagnostics_source), 0);
-        let component_timeouts_count = archive_accessor_node
+        let component_timeouts_count = connection_node
             .create_uint(format!("{}_component_timeouts_count", diagnostics_source), 0);
-        let batch_iterator_get_next_requests = archive_accessor_node
+        let batch_iterator_get_next_requests = connection_node
             .create_uint(format!("{}_batch_iterator_get_next_requests", diagnostics_source), 0);
-        let batch_iterator_get_next_responses = archive_accessor_node
+        let batch_iterator_get_next_responses = connection_node
             .create_uint(format!("{}_batch_iterator_get_next_responses", diagnostics_source), 0);
-        let batch_iterator_get_next_errors = archive_accessor_node
+        let batch_iterator_get_next_errors = connection_node
             .create_uint(format!("{}_batch_iterator_get_next_errors", diagnostics_source), 0);
-        let batch_iterator_get_next_result_count = archive_accessor_node
+        let batch_iterator_get_next_result_count = connection_node
             .create_uint(format!("{}_batch_iterator_get_next_result_count", diagnostics_source), 0);
-        let batch_iterator_get_next_result_errors = archive_accessor_node.create_uint(
+        let batch_iterator_get_next_result_errors = connection_node.create_uint(
             format!("{}_batch_iterator_get_next_result_errors", diagnostics_source),
             0,
         );
-        let batch_iterator_get_next_time_usec = archive_accessor_node
-            .create_uint_exponential_histogram(
-                format!("{}_batch_iterator_get_next_time_usec", diagnostics_source),
-                fuchsia_inspect::ExponentialHistogramParams {
-                    floor: EXPONENTIAL_HISTOGRAM_USEC_FLOOR,
-                    initial_step: EXPONENTIAL_HISTOGRAM_USEC_STEP,
-                    step_multiplier: EXPONENTIAL_HISTOGRAM_USEC_MULTIPLIER,
-                    buckets: EXPONENTIAL_HISTOGRAM_USEC_BUCKETS as usize,
-                },
-            );
+        let batch_iterator_get_next_time_usec = connection_node.create_uint_exponential_histogram(
+            format!("{}_batch_iterator_get_next_time_usec", diagnostics_source),
+            fuchsia_inspect::ExponentialHistogramParams {
+                floor: EXPONENTIAL_HISTOGRAM_USEC_FLOOR,
+                initial_step: EXPONENTIAL_HISTOGRAM_USEC_STEP,
+                step_multiplier: EXPONENTIAL_HISTOGRAM_USEC_MULTIPLIER,
+                buckets: EXPONENTIAL_HISTOGRAM_USEC_BUCKETS as usize,
+            },
+        );
 
-        DiagnosticsServerStatsGlobal {
+        GlobalConnectionStats {
             diagnostics_source,
-            archive_accessor_node: archive_accessor_node.clone_weak(),
+            connection_node: connection_node.clone_weak(),
             reader_servers_constructed,
             reader_servers_destroyed,
             batch_iterator_connections_opened,
@@ -270,7 +266,7 @@ impl DiagnosticsServerStatsGlobal {
             let mut component_time_usec = self.component_time_usec.lock();
             if component_time_usec.is_none() {
                 *component_time_usec =
-                    Some(self.archive_accessor_node.create_uint_exponential_histogram(
+                    Some(self.connection_node.create_uint_exponential_histogram(
                         format!("{}_component_time_usec", self.diagnostics_source),
                         fuchsia_inspect::ExponentialHistogramParams {
                             floor: EXPONENTIAL_HISTOGRAM_USEC_FLOOR,
@@ -284,9 +280,10 @@ impl DiagnosticsServerStatsGlobal {
             let mut processing_time_tracker = self.processing_time_tracker.lock();
             if processing_time_tracker.is_none() {
                 *processing_time_tracker =
-                    Some(ProcessingTimeTracker::new(self.archive_accessor_node.create_child(
-                        format!("{}_longest_processing_times", self.diagnostics_source),
-                    )));
+                    Some(ProcessingTimeTracker::new(self.connection_node.create_child(format!(
+                        "{}_longest_processing_times",
+                        self.diagnostics_source
+                    ))));
             }
 
             component_time_usec.as_ref().unwrap().insert(nanos as u64 / 1000);
@@ -364,12 +361,12 @@ impl ProcessingTimeTracker {
     }
 }
 
-pub struct DiagnosticsServerStats {
+pub struct ConnectionStats {
     /// Inspect node for tracking usage/health metrics of a single connection to a batch iterator.
     _batch_iterator_connection_node: fuchsia_inspect::Node,
 
-    /// Global stats for the accessor itself.
-    global_stats: Arc<DiagnosticsServerStatsGlobal>,
+    /// Global stats for connections to the BatchIterator protocol.
+    global_stats: Arc<GlobalConnectionStats>,
 
     /// Property tracking number of requests to the BatchIterator instance this struct is tracking.
     batch_iterator_get_next_requests: fuchsia_inspect::UintProperty,
@@ -380,7 +377,7 @@ pub struct DiagnosticsServerStats {
     batch_iterator_terminal_responses: fuchsia_inspect::UintProperty,
 }
 
-impl DiagnosticsServerStats {
+impl ConnectionStats {
     pub fn open_connection(&self) {
         self.global_stats.batch_iterator_connections_opened.add(1);
     }
@@ -389,7 +386,7 @@ impl DiagnosticsServerStats {
         self.global_stats.batch_iterator_connections_closed.add(1);
     }
 
-    pub fn global_stats(&self) -> &Arc<DiagnosticsServerStatsGlobal> {
+    pub fn global_stats(&self) -> &Arc<GlobalConnectionStats> {
         &self.global_stats
     }
 
@@ -419,36 +416,24 @@ impl DiagnosticsServerStats {
         self.global_stats.batch_iterator_get_next_result_errors.add(1);
     }
 
-    pub fn for_inspect(archive_accessor_stats: Arc<ArchiveAccessorStats>) -> Self {
+    pub fn for_inspect(archive_accessor_stats: Arc<AccessorStats>) -> Self {
         let global_inspect = archive_accessor_stats.global_inspect_stats.clone();
-        DiagnosticsServerStats::generate_diagnostics_server_stats(
-            archive_accessor_stats,
-            global_inspect,
-            "inspect",
-        )
+        ConnectionStats::new(archive_accessor_stats, global_inspect, "inspect")
     }
 
-    pub fn for_lifecycle(archive_accessor_stats: Arc<ArchiveAccessorStats>) -> Self {
+    pub fn for_lifecycle(archive_accessor_stats: Arc<AccessorStats>) -> Self {
         let global_lifecycle = archive_accessor_stats.global_lifecycle_stats.clone();
-        DiagnosticsServerStats::generate_diagnostics_server_stats(
-            archive_accessor_stats,
-            global_lifecycle,
-            "lifecycle",
-        )
+        ConnectionStats::new(archive_accessor_stats, global_lifecycle, "lifecycle")
     }
 
-    pub fn for_logs(archive_accessor_stats: Arc<ArchiveAccessorStats>) -> Self {
+    pub fn for_logs(archive_accessor_stats: Arc<AccessorStats>) -> Self {
         let global_logs = archive_accessor_stats.global_logs_stats.clone();
-        DiagnosticsServerStats::generate_diagnostics_server_stats(
-            archive_accessor_stats,
-            global_logs,
-            "logs",
-        )
+        ConnectionStats::new(archive_accessor_stats, global_logs, "logs")
     }
 
-    pub fn generate_diagnostics_server_stats(
-        archive_accessor_stats: Arc<ArchiveAccessorStats>,
-        global_stats: Arc<DiagnosticsServerStatsGlobal>,
+    fn new(
+        archive_accessor_stats: Arc<AccessorStats>,
+        global_stats: Arc<GlobalConnectionStats>,
         prefix: &str,
     ) -> Self {
         // we'll decrement these on drop
@@ -467,7 +452,7 @@ impl DiagnosticsServerStats {
         let batch_iterator_terminal_responses = batch_iterator_connection_node
             .create_uint(format!("{}_batch_iterator_terminal_responses", prefix), 0);
 
-        DiagnosticsServerStats {
+        ConnectionStats {
             _batch_iterator_connection_node: batch_iterator_connection_node,
             global_stats,
             batch_iterator_get_next_requests,
@@ -477,7 +462,7 @@ impl DiagnosticsServerStats {
     }
 }
 
-impl Drop for DiagnosticsServerStats {
+impl Drop for ConnectionStats {
     fn drop(&mut self) {
         self.global_stats.reader_servers_destroyed.add(1);
     }

@@ -5,7 +5,7 @@
 use {
     crate::{
         constants::FORMATTED_CONTENT_CHUNK_SIZE_TARGET,
-        diagnostics::{self, ArchiveAccessorStats, DiagnosticsServerStats},
+        diagnostics::{AccessorStats, ConnectionStats},
         error::AccessorError,
         formatter::{new_batcher, FormattedStream, JsonPacketSerializer, JsonString},
         inspect,
@@ -37,7 +37,7 @@ pub struct ArchiveAccessor {
     // The inspect repository containing read-only inspect data shared across
     // all inspect reader instances.
     diagnostics_repo: Arc<RwLock<DataRepo>>,
-    archive_accessor_stats: Arc<diagnostics::ArchiveAccessorStats>,
+    archive_accessor_stats: Arc<AccessorStats>,
 }
 
 fn validate_and_parse_inspect_selectors(
@@ -68,7 +68,7 @@ impl ArchiveAccessor {
     /// data accessed by readers spawned by this accessor.
     pub fn new(
         diagnostics_repo: Arc<RwLock<DataRepo>>,
-        archive_accessor_stats: Arc<ArchiveAccessorStats>,
+        archive_accessor_stats: Arc<AccessorStats>,
     ) -> Self {
         ArchiveAccessor { diagnostics_repo, archive_accessor_stats }
     }
@@ -77,7 +77,7 @@ impl ArchiveAccessor {
         diagnostics_repo: Arc<RwLock<DataRepo>>,
         requests: BatchIteratorRequestStream,
         params: fidl_fuchsia_diagnostics::StreamParameters,
-        accessor_stats: Arc<ArchiveAccessorStats>,
+        accessor_stats: Arc<AccessorStats>,
     ) -> Result<(), AccessorError> {
         let format = params.format.ok_or(AccessorError::MissingFormat)?;
         if !matches!(format, Format::Json) {
@@ -90,7 +90,7 @@ impl ArchiveAccessor {
                 if !matches!(mode, StreamMode::Snapshot) {
                     return Err(AccessorError::UnsupportedMode);
                 }
-                let stats = Arc::new(DiagnosticsServerStats::for_inspect(accessor_stats));
+                let stats = Arc::new(ConnectionStats::for_inspect(accessor_stats));
 
                 let selectors =
                     params.client_selector_configuration.ok_or(AccessorError::MissingSelectors)?;
@@ -121,7 +121,7 @@ impl ArchiveAccessor {
                 if !matches!(mode, StreamMode::Snapshot) {
                     return Err(AccessorError::UnsupportedMode);
                 }
-                let stats = Arc::new(DiagnosticsServerStats::for_lifecycle(accessor_stats));
+                let stats = Arc::new(ConnectionStats::for_lifecycle(accessor_stats));
 
                 let selectors =
                     params.client_selector_configuration.ok_or(AccessorError::MissingSelectors)?;
@@ -136,7 +136,7 @@ impl ArchiveAccessor {
                 BatchIterator::new(events, requests, mode, stats)?.run().await
             }
             DataType::Logs => {
-                let stats = Arc::new(DiagnosticsServerStats::for_logs(accessor_stats));
+                let stats = Arc::new(ConnectionStats::for_logs(accessor_stats));
                 let (manager, redactor) = {
                     let repo = diagnostics_repo.read();
                     (repo.log_manager(), repo.log_redactor())
@@ -188,7 +188,7 @@ impl ArchiveAccessor {
 
 pub struct BatchIterator {
     requests: BatchIteratorRequestStream,
-    stats: Arc<DiagnosticsServerStats>,
+    stats: Arc<ConnectionStats>,
     data: FormattedStream,
 }
 
@@ -197,7 +197,7 @@ impl BatchIterator {
         data: Items,
         requests: BatchIteratorRequestStream,
         mode: StreamMode,
-        stats: Arc<DiagnosticsServerStats>,
+        stats: Arc<ConnectionStats>,
     ) -> Result<Self, AccessorError>
     where
         Items: Stream<Item = Data<D>> + Send + 'static,
@@ -223,7 +223,7 @@ impl BatchIterator {
         data: S,
         requests: BatchIteratorRequestStream,
         mode: StreamMode,
-        stats: Arc<DiagnosticsServerStats>,
+        stats: Arc<ConnectionStats>,
     ) -> Result<Self, AccessorError>
     where
         D: Serialize,
@@ -237,7 +237,7 @@ impl BatchIterator {
     fn new_inner(
         data: FormattedStream,
         requests: BatchIteratorRequestStream,
-        stats: Arc<DiagnosticsServerStats>,
+        stats: Arc<ConnectionStats>,
     ) -> Result<Self, AccessorError> {
         stats.open_connection();
         Ok(Self { data, requests, stats })

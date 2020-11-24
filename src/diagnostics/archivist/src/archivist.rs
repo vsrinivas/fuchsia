@@ -305,15 +305,15 @@ impl Archivist {
             writer,
         )?;
 
-        let all_accessor_stats = Arc::new(diagnostics::ArchiveAccessorStats::new(
+        let all_accessor_stats = Arc::new(diagnostics::AccessorStats::new(
             component::inspector().root().create_child("all_archive_accessor"),
         ));
 
-        let feedback_accessor_stats = Arc::new(diagnostics::ArchiveAccessorStats::new(
+        let feedback_accessor_stats = Arc::new(diagnostics::AccessorStats::new(
             component::inspector().root().create_child("feedback_archive_accessor"),
         ));
 
-        let legacy_accessor_stats = Arc::new(diagnostics::ArchiveAccessorStats::new(
+        let legacy_accessor_stats = Arc::new(diagnostics::AccessorStats::new(
             component::inspector().root().create_child("legacy_metrics_archive_accessor"),
         ));
 
