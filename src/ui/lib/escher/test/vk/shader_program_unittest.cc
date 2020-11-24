@@ -606,15 +606,7 @@ VK_TEST_F(ShaderProgramTest, PipelineBuilder) {
 // state in a standalone CommandBufferPipelineState object.
 // NOTE: see some of the other tests above, such as GeneratePipelineWithoutCommandBuffer...
 // it is now possible to generate pipelines more directly.
-//
-// TODO(fxbug.dev/59139): Fix the test on Linux and macOS host.
-VK_TEST_F(ShaderProgramTest,
-#if !defined(__linux__) && !defined(__APPLE__)
-          GeneratePipelines
-#else
-          DISABLED_GeneratePipelines
-#endif
-) {
+VK_TEST_F(ShaderProgramTest, GeneratePipelines) {
   auto escher = test::GetEscher();
 
   // TODO(fxbug.dev/7272): remove PaperRenderer shader dependency.
