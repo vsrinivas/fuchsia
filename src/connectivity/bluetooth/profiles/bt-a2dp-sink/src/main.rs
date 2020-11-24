@@ -10,7 +10,7 @@ use {
     async_helpers::component_lifecycle::ComponentLifecycleServer,
     bt_a2dp::{
         codec::{CodecNegotiation, MediaCodecConfig},
-        connected_peers::{ConnectedPeers, PeerSessionFn},
+        connected_peers::ConnectedPeers,
         media_types::*,
         peer::ControllerPool,
         stream,
@@ -185,29 +185,27 @@ impl StreamsBuilder {
         )
     }
 
-    fn into_session_gen(self) -> Box<PeerSessionFn> {
-        Box::new(move |_peer_id: &PeerId| {
-            let clone = self.clone();
-            let gen_fut = async move {
-                let publisher =
-                    fuchsia_component::client::connect_to_service::<sessions2::PublisherMarker>()
-                        .context("Failed to connect to MediaSession interface")?;
+    fn streams(&self) -> Result<stream::Streams, Error> {
+        let publisher =
+            fuchsia_component::client::connect_to_service::<sessions2::PublisherMarker>()
+                .context("Failed to connect to MediaSession interface")?;
 
-                let domain = clone.domain.unwrap_or("Bluetooth".to_string());
-                let sink_task_builder =
-                    sink_task::SinkTaskBuilder::new(clone.cobalt_sender, publisher, domain);
-                let mut streams = stream::Streams::new();
-                let sbc_endpoint = Self::build_sbc_endpoint(avdtp::EndpointType::Sink)?;
-                streams.insert(stream::Stream::build(sbc_endpoint, sink_task_builder.clone()));
+        let domain = self.domain.clone().unwrap_or("Bluetooth".to_string());
+        let sink_task_builder =
+            sink_task::SinkTaskBuilder::new(self.cobalt_sender.clone(), publisher, domain);
+        let mut streams = stream::Streams::new();
+        let sbc_endpoint = Self::build_sbc_endpoint(avdtp::EndpointType::Sink)?;
+        streams.insert(stream::Stream::build(sbc_endpoint, sink_task_builder.clone()));
 
-                if clone.aac_available {
-                    let aac_endpoint = Self::build_aac_endpoint(avdtp::EndpointType::Sink)?;
-                    streams.insert(stream::Stream::build(aac_endpoint, sink_task_builder.clone()));
-                }
-                Ok((streams, clone.codec_negotiation, fasync::Task::spawn(async {})))
-            };
-            fasync::Task::spawn(gen_fut)
-        })
+        if self.aac_available {
+            let aac_endpoint = Self::build_aac_endpoint(avdtp::EndpointType::Sink)?;
+            streams.insert(stream::Stream::build(aac_endpoint, sink_task_builder.clone()));
+        }
+        Ok(streams)
+    }
+
+    fn negotiation(&self) -> CodecNegotiation {
+        self.codec_negotiation.clone()
     }
 }
 
@@ -269,12 +267,11 @@ async fn connect_after_timeout(
         /* initiate = */ true,
         &mut peers.lock(),
         &mut controller_pool.lock(),
-    )
-    .await;
+    );
 }
 
 /// Handles incoming peer connections
-async fn handle_connection(
+fn handle_connection(
     peer_id: &PeerId,
     channel: Channel,
     initiate: bool,
@@ -282,7 +279,7 @@ async fn handle_connection(
     controller_pool: &mut ControllerPool,
 ) {
     info!("Connection from {}: {:?}!", peer_id, channel);
-    if let Ok(peer) = peers.connected(peer_id.clone(), channel, initiate).await {
+    if let Ok(peer) = peers.connected(peer_id.clone(), channel, initiate) {
         // Add the controller to the peers
         controller_pool.peer_connected(peer_id.clone(), peer);
     }
@@ -388,13 +385,15 @@ async fn main() -> Result<(), Error> {
         sender
     };
 
-    let stream_gen = StreamsBuilder::system_playable(cobalt_logger.clone(), opts.domain).await?;
+    let stream_builder =
+        StreamsBuilder::system_playable(cobalt_logger.clone(), opts.domain).await?;
 
     let profile_svc = fuchsia_component::client::connect_to_service::<bredr::ProfileMarker>()
         .context("Failed to connect to Bluetooth Profile service")?;
 
     let mut peers = ConnectedPeers::new(
-        stream_gen.into_session_gen(),
+        stream_builder.streams()?,
+        stream_builder.negotiation(),
         profile_svc.clone(),
         Some(cobalt_logger.clone()),
     );
@@ -470,7 +469,7 @@ async fn handle_profile_events(
                     channel.try_into()?,
                     /* initiate = */ false,
                     &mut peers.lock(),
-                    &mut controller_pool.lock()).await;
+                    &mut controller_pool.lock());
             }
             results_request = results_requests.try_next() => {
                 let result = match results_request? {
@@ -512,18 +511,6 @@ mod tests {
         let _ = exec.run_until_stalled(&mut futures::future::pending::<()>());
     }
 
-    fn no_streams_gen() -> Box<PeerSessionFn> {
-        Box::new(|_peer_id| {
-            fasync::Task::spawn(async {
-                Ok((
-                    stream::Streams::new(),
-                    CodecNegotiation::build(vec![]).unwrap(),
-                    fasync::Task::spawn(async {}),
-                ))
-            })
-        })
-    }
-
     fn setup_connected_peer_test() -> (
         fasync::Executor,
         Arc<Mutex<ConnectedPeers>>,
@@ -536,7 +523,8 @@ mod tests {
             .expect("Profile proxy should be created");
         let (cobalt_sender, _) = fake_cobalt_sender();
         let peers = Arc::new(Mutex::new(ConnectedPeers::new(
-            no_streams_gen(),
+            stream::Streams::new(),
+            CodecNegotiation::build(vec![]).unwrap(),
             proxy.clone(),
             Some(cobalt_sender),
         )));
@@ -705,16 +693,13 @@ mod tests {
         {
             let mut peers_lock = peers.lock();
             let mut controller_pool_lock = controller_pool.lock();
-            let connection_fut = handle_connection(
+            handle_connection(
                 &peer_id,
                 transport,
                 /* initiate = */ false,
                 &mut peers_lock,
                 &mut controller_pool_lock,
             );
-            pin_mut!(connection_fut);
-
-            assert!(exec.run_until_stalled(&mut connection_fut).is_ready());
         }
 
         run_to_stalled(&mut exec);

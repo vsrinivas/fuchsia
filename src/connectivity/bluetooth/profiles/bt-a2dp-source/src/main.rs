@@ -10,7 +10,7 @@ use {
     async_helpers::component_lifecycle::ComponentLifecycleServer,
     bt_a2dp::{
         codec::{CodecNegotiation, MediaCodecConfig},
-        connected_peers::{ConnectedPeers, PeerSessionFn},
+        connected_peers::ConnectedPeers,
         media_types::*,
         peer::ControllerPool,
         stream,
@@ -268,16 +268,7 @@ async fn main() -> Result<(), Error> {
         build_sbc_capability()?,
     ])?;
 
-    let peer_session_fn: Box<PeerSessionFn> = Box::new(move |_peer_id| {
-        let stream_clone = streams.as_new();
-        let negotiation_clone = negotiation.clone();
-        fasync::Task::spawn(async move {
-            let nothing_task = fasync::Task::spawn(async {});
-            Ok((stream_clone, negotiation_clone, nothing_task))
-        })
-    });
-
-    let mut peers = ConnectedPeers::new(peer_session_fn, profile_svc.clone(), None);
+    let mut peers = ConnectedPeers::new(streams, negotiation, profile_svc.clone(), None);
     if let Err(e) = peers.iattach(inspect.root(), "connected") {
         info!("Failed to attach peers to inspect: {:?}", e);
     }
@@ -321,7 +312,7 @@ async fn handle_profile_events(
                         continue;
                     }
                 };
-                match peers.lock().await.connected(peer_id, channel, false).await {
+                match peers.lock().await.connected(peer_id, channel, false) {
                     Err(e) => info!("Error connecting peer {}: {:?}", peer_id, e),
                     Ok(weak) => controller_pool.peer_connected(peer_id.clone(), weak),
                 };
@@ -399,7 +390,7 @@ async fn connect_after_timeout(
             return;
         }
     };
-    match peers.lock().await.connected(id, channel, true).await {
+    match peers.lock().await.connected(id, channel, true) {
         Err(e) => info!("Error connecting peer {}: {:?}", id, e),
         Ok(weak) => controller_pool.peer_connected(id, weak),
     };
@@ -411,18 +402,6 @@ mod tests {
     use fidl::endpoints::create_proxy_and_stream;
     use futures::{pin_mut, task::Poll};
     use matches::assert_matches;
-
-    fn no_streams_gen() -> Box<PeerSessionFn> {
-        Box::new(|_peer_id| {
-            fasync::Task::spawn(async {
-                Ok((
-                    stream::Streams::new(),
-                    CodecNegotiation::build(vec![]).unwrap(),
-                    fasync::Task::spawn(async {}),
-                ))
-            })
-        })
-    }
 
     #[test]
     fn test_responds_to_search_results() {
@@ -437,7 +416,12 @@ mod tests {
                 .expect("ConnectionReceiver proxy should be created");
         let controller = Arc::new(ControllerPool::new());
 
-        let peers = ConnectedPeers::new(no_streams_gen(), profile_proxy.clone(), None);
+        let peers = ConnectedPeers::new(
+            stream::Streams::new(),
+            CodecNegotiation::build(vec![]).unwrap(),
+            profile_proxy.clone(),
+            None,
+        );
 
         let handler_fut = handle_profile_events(
             peers,
