@@ -1,11 +1,12 @@
+// [START example_snippet]
 {
     program: {
-        binary: "test/hello_world_integration_test",
+        binary: "bin/hello_world_integration_test",
     },
     children: [
         {
             name: "hello_world",
-            url: "fuchsia-pkg://fuchsia.com/hello-world-integration-test#meta/hello_world.cm",
+            url: "fuchsia-pkg://fuchsia.com/hello-world-integration-test#meta/hello-world.cm",
         },
     ],
     capabilities: [
@@ -33,3 +34,5 @@
         },
     ],
 }
+
+// [END example_snippet]

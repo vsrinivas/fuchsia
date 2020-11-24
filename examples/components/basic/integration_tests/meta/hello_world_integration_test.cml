@@ -1,3 +1,4 @@
+// [START example_snippet]
 {
     children: [
         {
@@ -6,7 +7,7 @@
         },
         {
             name: "driver",
-            url: "fuchsia-pkg://fuchsia.com/hello-world-integration-test#meta/hello_world_integration_test_driver.cm",
+            url: "fuchsia-pkg://fuchsia.com/hello-world-integration-test#meta/hello-world-integration-test-driver.cm",
         },
     ],
     offer: [
@@ -26,3 +27,5 @@
         },
     ],
 }
+
+// [END example_snippet]

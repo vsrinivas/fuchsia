@@ -3,8 +3,9 @@
 # found in the LICENSE file.
 
 import("//build/rust/rustc_test.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
+# [START example_snippet]
 rustc_test("bin") {
   name = "hello_world_integration_test"
   edition = "2018"
@@ -25,32 +26,24 @@ rustc_test("bin") {
   sources = [ "src/hello_world_integration_test.rs" ]
 }
 
-test_package("hello-world-integration-test") {
+fuchsia_component("hello-world-integration-test-driver") {
+  testonly = true
+  manifest = "meta/hello_world_integration_test_driver.cml"
+  deps = [ ":bin" ]
+}
+
+fuchsia_component("hello-world-integration-test-component") {
+  component_name = "hello-world-integration-test"
+  testonly = true
+  manifest = "meta/hello_world_integration_test.cml"
+}
+
+fuchsia_test_package("hello-world-integration-test") {
+  test_components = [ ":hello-world-integration-test-component" ]
   deps = [
-    ":bin",
-    "..:hello_world_bin",
+    ":hello-world-integration-test-driver",
+    "//examples/components/basic:hello-world",
     "//src/diagnostics/archivist:archivist-for-embedding",
   ]
-  v2_tests = [
-    {
-      name = "hello_world_integration_test"
-      environments = basic_envs
-    },
-  ]
-  binaries = [
-    {
-      name = "hello_world"
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("../meta/hello_world.cml")
-      dest = "hello_world.cm"
-    },
-    {
-      path = rebase_path("meta/hello_world_integration_test_driver.cml")
-      dest = "hello_world_integration_test_driver.cm"
-    },
-  ]
 }
+# [END example_snippet]
