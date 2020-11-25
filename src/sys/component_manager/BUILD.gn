@@ -282,6 +282,17 @@ fuchsia_component("component-manager-cmp") {
   manifest = "meta/component_manager.cmx"
 }
 
+# This component is identical to `component-manager-cmp`, except the manifest
+# includes the arguments to point component_manager at the bundled config file
+fuchsia_component("component-manager-for-examples-cmp") {
+  deps = [
+    ":bin",
+    ":component_manager_for_examples_config_resource",
+  ]
+  component_name = "component_manager_for_examples"
+  manifest = "meta/component_manager_for_examples.cmx"
+}
+
 fuchsia_package("component-manager") {
   deps = [ ":component-manager-cmp" ]
 }
@@ -349,7 +360,7 @@ group("bootfs") {
 }
 
 component_config("component_manager_appmgr_config") {
-  sources = [ "appmgr_config.json" ]
+  sources = [ "configs/appmgr_config.json" ]
 }
 
 resource("component_manager_appmgr_config_resource") {
@@ -359,7 +370,7 @@ resource("component_manager_appmgr_config_resource") {
 }
 
 component_config("component_manager_debug_config") {
-  sources = [ "debug_config.json" ]
+  sources = [ "configs/debug_config.json" ]
 }
 
 resource("component_manager_debug_config_resource") {
@@ -370,8 +381,8 @@ resource("component_manager_debug_config_resource") {
 
 component_config("component_manager_bootfs_config") {
   sources = [
-    "resolver_pkgfs.json",
-    "bootfs_config.json",
+    "configs/resolver_pkgfs.json",
+    "configs/bootfs_config.json",
     rebase_path("//src/security/policy/component_manager_policy.json"),
   ]
 }
@@ -384,8 +395,8 @@ resource("component_manager_config_bootfs_resource") {
 
 component_config("component_manager_bootfs_config_no_pkgresolver") {
   sources = [
-    "bootfs_config.json",
-    "pkgfs_resolver_disabled.json",
+    "configs/bootfs_config.json",
+    "configs/pkgfs_resolver_disabled.json",
     rebase_path("//src/security/policy/component_manager_policy.json"),
   ]
 }
@@ -394,4 +405,14 @@ resource("config_no_pkgresolver_resource") {
   sources = [ "$target_gen_dir/component_manager_bootfs_config_no_pkgresolver" ]
   outputs = [ "config/component_manager" ]
   deps = [ ":component_manager_bootfs_config_no_pkgresolver" ]
+}
+
+component_config("component_manager_for_examples_config") {
+  sources = [ "configs/for_examples_config.json" ]
+}
+
+resource("component_manager_for_examples_config_resource") {
+  sources = [ "$target_gen_dir/component_manager_for_examples_config" ]
+  outputs = [ "data/component_manager_config" ]
+  deps = [ ":component_manager_for_examples_config" ]
 }

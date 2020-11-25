@@ -199,7 +199,7 @@ package("elf_runner_lifecycle_test") {
 
   meta = [
     {
-      path = rebase_path("//examples/components/basic/meta/lifecycle_full.cml")
+      path = rebase_path("//examples/components/basic/meta/lifecycle-full.cml")
       dest = "lifecycle-full.cm"
     },
     {

@@ -68,17 +68,17 @@ rustc_binary("lifecycle_full_bin") {
 
 fuchsia_component("hello-world") {
   deps = [ ":hello_world_bin" ]
-  manifest = "meta/hello_world.cml"
+  manifest = "meta/hello-world.cml"
 }
 
 fuchsia_component("ls-root-pkg") {
   deps = [ ":ls_root_pkg_bin" ]
-  manifest = "meta/ls_root_pkg.cml"
+  manifest = "meta/ls-root-pkg.cml"
 }
 
 fuchsia_component("echo-args") {
   deps = [ ":echo_args_bin" ]
-  manifest = "meta/echo_args.cml"
+  manifest = "meta/echo-args.cml"
 }
 
 fuchsia_component("lifecycle") {
@@ -88,7 +88,7 @@ fuchsia_component("lifecycle") {
 
 fuchsia_component("lifecycle-full") {
   deps = [ ":lifecycle_full_bin" ]
-  manifest = "meta/lifecycle_full.cml"
+  manifest = "meta/lifecycle-full.cml"
 }
 
 fuchsia_package("components-basic-example") {
@@ -98,13 +98,14 @@ fuchsia_package("components-basic-example") {
     ":lifecycle",
     ":lifecycle-full",
     ":ls-root-pkg",
+    "//src/sys/component_manager:component-manager-for-examples-cmp",
   ]
 }
 
 fuchsia_component("hello-world-test") {
   testonly = true
   deps = [ ":hello_world_bin_test" ]
-  manifest = "meta/hello_world_bin_test.cml"
+  manifest = "meta/hello-world-bin-test.cml"
 }
 
 fuchsia_test_package("hello-world-tests") {

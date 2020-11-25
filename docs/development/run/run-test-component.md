@@ -11,10 +11,10 @@ example, the test manager
 starts a test component in response to a request to run a test.
 
 This guide uses the
-<code>[hello_world_bin_test](/examples/components/basic/meta/hello_world_bin_test.cml)</code>
+<code>[hello-world-bin-test](/examples/components/basic/meta/hello-world-bin-test.cml)</code>
 component in the <code>[basic](/examples/components/basic)</code> example package. When you
 run this package’s `hello-world-tests` test suite, the test manager starts the
-`hello_world_bin_test` component. As a result, the component’s test binary runs
+`hello-world-bin-test` component. As a result, the component’s test binary runs
 on a Fuchsia device, or in this case, on the Fuchsia emulator.
 
 The steps to run a test component are:
@@ -51,7 +51,7 @@ Configure and build your Fuchsia image to include the test component:
     ```
 
     When the `fx build` command completes, your new Fuchsia image now includes
-    the `hello_world_bin_test` component, which can be
+    the `hello-world-bin-test` component, which can be
     [fetched and launched on demand](/docs/concepts/build_system/boards_and_products.md#universe).
 
 ## Start the emulator {#start-the-emulator}
@@ -110,21 +110,21 @@ $ fx test hello-world-tests
 
 ...
 
-[0/1] 00:00 🤔  /home/fuchsia/.jiri_root/bin/fx shell run-test-suite fuchsia-pkg://fuchsia.com/hello-world-tests#meta/hello_world_bin_test.cm
+[0/1] 00:00 🤔  /home/fuchsia/.jiri_root/bin/fx shell run-test-suite fuchsia-pkg://fuchsia.com/hello-world-tests#meta/hello-world-bin-test.cm
  >> Runtime has exceeded 2 seconds (adjust this value with the -s|--slow flag)
-Running test 'fuchsia-pkg://fuchsia.com/hello-world-tests#meta/hello_world_bin_test.cm'
+Running test 'fuchsia-pkg://fuchsia.com/hello-world-tests#meta/hello-world-bin-test.cm'
 
 [RUNNING]   tests::assert_0_is_0
 [PASSED]    tests::assert_0_is_0
 1 out of 1 tests passed...
-fuchsia-pkg://fuchsia.com/hello-world-tests#meta/hello_world_bin_test.cm completed with result: PASSED
+fuchsia-pkg://fuchsia.com/hello-world-tests#meta/hello-world-bin-test.cm completed with result: PASSED
 
-[1/1] 00:05 ✅  /home/fuchsia/.jiri_root/bin/fx shell run-test-suite fuchsia-pkg://fuchsia.com/hello-world-tests#meta/hello_world_bin_test.cm
+[1/1] 00:05 ✅  /home/fuchsia/.jiri_root/bin/fx shell run-test-suite fuchsia-pkg://fuchsia.com/hello-world-tests#meta/hello-world-bin-test.cm
 
 🎉  Ran 1 tests with 0 failures (use the -v flag to see each test) 🎉
 ```
 
-The output shows that the `hello_world_bin_test` component is fetched from the
+The output shows that the `hello-world-bin-test` component is fetched from the
 package repository server and the component instance runs the test binary on the
 Fuchsia device (the emulator). See
 <code>[hello_world.rs](/examples/components/basic/src/hello_world.rs)</code>

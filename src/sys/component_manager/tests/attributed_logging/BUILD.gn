@@ -54,7 +54,7 @@ fuchsia_component("e2e-root-component") {
 }
 
 component_config("component-manager-debug-config") {
-  sources = [ "//src/sys/component_manager/debug_config.json" ]
+  sources = [ "//src/sys/component_manager/configs/debug_config.json" ]
 }
 
 resource("cm-config") {

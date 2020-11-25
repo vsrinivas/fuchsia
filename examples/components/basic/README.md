@@ -19,21 +19,29 @@ $ fx build
 
 ## Running
 
-Use the `locate` tool to find the fuchsia-pkg URLs of these components:
+These examples are all stored in a package named `components-basic-example`.
+
+There isn't yet a convenient way to directly run a native v2 component, so these
+examples are run by launching a new component manager in a v1 component to run
+them. A component manager packaged to be a v1 component is also included in this
+package for this purpose.
+
+The component manager can be invoked with the `run` command, and given a URL for
+which test component to launch. As an example, the following will run the
+`hello_world` example.
 
 ```bash
-$ fx shell locate hello_world
+$ fx shell 'run fuchsia-pkg://fuchsia.com/components-basic-example#meta/component_manager_for_examples.cmx fuchsia-pkg://fuchsia.com/components-basic-example#meta/hello-world.cm'
 ```
 
-Pick the URL of a component, and provide it to `run` as an argument to
-`component_manager`:
+When the above command is run, the following output can be seen in `fx log`:
 
-```bash
-$ fx shell 'run fuchsia-pkg://fuchsia.com/component_manager#meta/component_manager.cmx fuchsia-pkg://fuchsia.com/components_basic_example#meta/hello_world.cm'
+```
+[682199.986470][5056597][5056599][hello_world] INFO: Hippo: Hello World!
 ```
 
-This will run the component in an instance of component manager as a v1
-component.
+To run a different example, replace `hello-world` with the name of a different
+manifest in `meta/`.
 
 Make sure you have `fx serve` running in another terminal so your component can
 be installed!

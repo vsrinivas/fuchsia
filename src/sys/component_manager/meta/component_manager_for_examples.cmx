@@ -1,0 +1,17 @@
+{
+    "program": {
+        "args": [
+            "--config",
+            "/pkg/data/component_manager_config"
+        ],
+        "binary": "bin/component_manager"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.logger.LogSink",
+            "fuchsia.process.Launcher",
+            "fuchsia.sys.Loader",
+            "fuchsia.tracing.provider.Registry"
+        ]
+    }
+}

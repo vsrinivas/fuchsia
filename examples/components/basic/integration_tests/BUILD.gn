@@ -28,14 +28,14 @@ rustc_test("bin") {
 
 fuchsia_component("hello-world-integration-test-driver") {
   testonly = true
-  manifest = "meta/hello_world_integration_test_driver.cml"
+  manifest = "meta/hello-world-integration-test-driver.cml"
   deps = [ ":bin" ]
 }
 
 fuchsia_component("hello-world-integration-test-component") {
   component_name = "hello-world-integration-test"
   testonly = true
-  manifest = "meta/hello_world_integration_test.cml"
+  manifest = "meta/hello-world-integration-test.cml"
 }
 
 fuchsia_test_package("hello-world-integration-test") {
