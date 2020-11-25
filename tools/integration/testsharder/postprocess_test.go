@@ -58,13 +58,6 @@ func affectedShard(env build.Environment, os string, ids ...int) *Shard {
 	}
 }
 
-func applyMultiplyShardTargetDurationFactor(in float64) float64 {
-	// If we in-line this then the compiler treats the expression as a constant and complains
-	// about implicit type conversion when we cast the product to an int. Hence this stupidly
-	// simple function.
-	return in * multiplyShardTargetDurationFactor
-}
-
 func TestMultiplyShards(t *testing.T) {
 	env1 := build.Environment{
 		Dimensions: build.DimensionSet{DeviceType: "QEMU"},
@@ -89,10 +82,11 @@ func TestMultiplyShards(t *testing.T) {
 		}
 	}
 
-	multShard := func(env build.Environment, os string, id int, runs int) *Shard {
+	multShard := func(env build.Environment, os string, id, runs, timeoutSecs int) *Shard {
 		test := makeTest(id, os)
 		test.Runs = runs
 		test.RunAlgorithm = StopOnFailure
+		test.TimeoutSecs = timeoutSecs
 		return &Shard{
 			Name:  multipliedShardPrefix + environmentName(env) + "-" + normalizeTestName(test.Name),
 			Tests: []Test{test},
@@ -120,8 +114,8 @@ func TestMultiplyShards(t *testing.T) {
 				makeTestModifier(1, "", 5),
 			},
 			expected: []*Shard{
-				multShard(env1, "fuchsia", 1, 5),
-				multShard(env3, "linux", 1, 5),
+				multShard(env1, "fuchsia", 1, 5, 0),
+				multShard(env3, "linux", 1, 5, 0),
 			},
 		},
 		{
@@ -138,9 +132,9 @@ func TestMultiplyShards(t *testing.T) {
 			expected: []*Shard{
 				shard(env2, "fuchsia", 2, 4),
 				// We multiplied the test with id 1 five times from the first two shards.
-				multShard(env1, "fuchsia", 1, 5),
-				multShard(env2, "fuchsia", 1, 5),
-				multShard(env3, "linux", 3, 3),
+				multShard(env1, "fuchsia", 1, 5, 0),
+				multShard(env2, "fuchsia", 1, 5, 0),
+				multShard(env3, "linux", 3, 3, 0),
 			},
 		},
 		{
@@ -158,7 +152,7 @@ func TestMultiplyShards(t *testing.T) {
 			expected: []*Shard{
 				// The expected duration for this test is 1 second and our
 				// target duration is three seconds.
-				multShard(env1, "fuchsia", 1, int(applyMultiplyShardTargetDurationFactor(3.0))),
+				multShard(env1, "fuchsia", 1, 3, 3),
 			},
 		},
 		{
@@ -171,7 +165,7 @@ func TestMultiplyShards(t *testing.T) {
 			},
 			targetTestCount: 4,
 			expected: []*Shard{
-				multShard(env1, "fuchsia", 1, 4),
+				multShard(env1, "fuchsia", 1, 4, 0),
 			},
 		},
 		{
@@ -183,7 +177,7 @@ func TestMultiplyShards(t *testing.T) {
 				makeTestModifier(1, "fuchsia", 0),
 			},
 			expected: []*Shard{
-				multShard(env1, "fuchsia", 1, 1),
+				multShard(env1, "fuchsia", 1, 1, 0),
 			},
 		},
 		{
@@ -197,9 +191,9 @@ func TestMultiplyShards(t *testing.T) {
 			testDurations: TestDurationsMap{
 				"*": {MedianDuration: time.Second},
 			},
-			targetDuration: (multipliedTestMaxRuns + 10) / multiplyShardTargetDurationFactor * time.Second,
+			targetDuration: (multipliedTestMaxRuns + 10) * time.Second,
 			expected: []*Shard{
-				multShard(env1, "fuchsia", 1, multipliedTestMaxRuns),
+				multShard(env1, "fuchsia", 1, multipliedTestMaxRuns, multipliedTestMaxRuns+10),
 			},
 		},
 		{
@@ -211,7 +205,7 @@ func TestMultiplyShards(t *testing.T) {
 				{Name: "1", TotalRuns: 1},
 			},
 			expected: []*Shard{
-				multShard(env1, "fuchsia", 210, 1),
+				multShard(env1, "fuchsia", 210, 1, 0),
 			},
 		},
 		{
@@ -223,7 +217,7 @@ func TestMultiplyShards(t *testing.T) {
 				{Name: "fuchsia-pkg", TotalRuns: 1},
 			},
 			expected: []*Shard{
-				multShard(env1, "fuchsia", 1, 1),
+				multShard(env1, "fuchsia", 1, 1, 0),
 			},
 		},
 		{
@@ -255,7 +249,7 @@ func TestMultiplyShards(t *testing.T) {
 				{Name: "fuchsia-pkg", TotalRuns: 5},
 			},
 			expected: []*Shard{
-				multShard(env1, "fuchsia", 1, 5),
+				multShard(env1, "fuchsia", 1, 5, 0),
 			},
 		},
 		{
@@ -268,7 +262,7 @@ func TestMultiplyShards(t *testing.T) {
 			},
 			expected: []*Shard{
 				shard(env1, "fuchsia", 2),
-				multShard(env1, "fuchsia", 1, 2),
+				multShard(env1, "fuchsia", 1, 2, 0),
 			},
 		},
 	}

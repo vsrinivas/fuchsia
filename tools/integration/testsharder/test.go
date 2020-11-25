@@ -32,7 +32,10 @@ type Test struct {
 	RunAlgorithm RunAlgorithm `json:"run_algorithm,omitempty"`
 
 	// RealmLabel is an optional arg passed to run-test-component to specify a realm
-	RealmLabel string `json:"realm_label",omitempty"`
+	RealmLabel string `json:"realm_label,omitempty"`
+
+	// TimeoutSecs is the duration for which to keep running a test.
+	TimeoutSecs int `json:"timeout,omitempty"`
 }
 
 func (t *Test) applyModifier(m TestModifier) {
@@ -47,7 +50,7 @@ func (t *Test) applyModifier(m TestModifier) {
 }
 
 func (t *Test) minRequiredRuns() int {
-	if t.RunAlgorithm == KeepGoing {
+	if t.RunAlgorithm == KeepGoing || t.RunAlgorithm == StopOnFailure {
 		return t.Runs
 	}
 	return 1

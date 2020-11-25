@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -34,6 +35,7 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/testing/tap"
 	"go.fuchsia.dev/fuchsia/tools/testing/testparser"
 	"go.fuchsia.dev/fuchsia/tools/testing/testrunner"
+	"golang.org/x/sync/errgroup"
 )
 
 // Fuchsia-specific environment variables possibly exposed to the testrunner.
@@ -322,23 +324,40 @@ func (b *stdioBuffer) Write(p []byte) (n int, err error) {
 
 func runAndOutputTest(ctx context.Context, test testsharder.Test, t tester, outputs *testOutputs, collectiveStdout, collectiveStderr io.Writer, outDir string) ([]*testrunner.TestResult, error) {
 	var results []*testrunner.TestResult
-	for i := 0; i < test.Runs; i++ {
-		outDirForI := filepath.Join(outDir, url.PathEscape(strings.ReplaceAll(test.Name, ":", "")), strconv.Itoa(i))
-		result, err := runTestOnce(ctx, test, t, i, collectiveStdout, collectiveStderr, outDirForI)
-		if err != nil {
-			return results, err
-		}
-		if err := outputs.record(*result); err != nil {
-			return results, err
-		}
-		results = append(results, result)
-
-		if (test.RunAlgorithm == testsharder.StopOnSuccess && result.Result == runtests.TestSuccess) ||
-			(test.RunAlgorithm == testsharder.StopOnFailure && result.Result == runtests.TestFailure) {
-			break
-		}
+	runTestCtx := ctx
+	if test.TimeoutSecs > 0 {
+		var cancel func()
+		runTestCtx, cancel = context.WithTimeout(ctx, time.Duration(test.TimeoutSecs)*time.Second)
+		defer cancel()
 	}
-	return results, nil
+	eg, runTestCtx := errgroup.WithContext(runTestCtx)
+	eg.Go(func() error {
+		for i := 0; i < test.Runs; i++ {
+			outDirForI := filepath.Join(outDir, url.PathEscape(strings.ReplaceAll(test.Name, ":", "")), strconv.Itoa(i))
+			result, err := runTestOnce(runTestCtx, test, t, i, collectiveStdout, collectiveStderr, outDirForI)
+			if err != nil {
+				return err
+			}
+			if err := outputs.record(*result); err != nil {
+				return err
+			}
+			results = append(results, result)
+
+			if (test.RunAlgorithm == testsharder.StopOnSuccess && result.Result == runtests.TestSuccess) ||
+				(test.RunAlgorithm == testsharder.StopOnFailure && result.Result == runtests.TestFailure) {
+				break
+			}
+		}
+		return nil
+	})
+	err := eg.Wait()
+	if errors.Is(err, context.DeadlineExceeded) && len(results) > 0 {
+		// If the timeout was reached but previous runs succeeded, we
+		// just want to return the completed runs instead of failing for
+		// a timeout failure.
+		err = nil
+	}
+	return results, err
 }
 
 func runTestOnce(ctx context.Context, test testsharder.Test, t tester, runIndex int, collectiveStdout, collectiveStderr io.Writer, outDir string) (*testrunner.TestResult, error) {
@@ -372,6 +391,12 @@ func runTestOnce(ctx context.Context, test testsharder.Test, t tester, runIndex 
 		logger.Errorf(ctx, err.Error())
 		if sshutil.IsConnectionError(err) {
 			return nil, err
+		}
+		if runIndex > 0 && errors.Is(ctx.Err(), context.DeadlineExceeded) {
+			// If this is a rerun and the timeout was reached, return the
+			// DeadlineExceeded error so as not to record the output.
+			// Only completed runs will be recorded.
+			return nil, ctx.Err()
 		}
 	}
 
