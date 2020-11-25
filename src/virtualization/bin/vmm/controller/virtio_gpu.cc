@@ -4,6 +4,8 @@
 
 #include "src/virtualization/bin/vmm/controller/virtio_gpu.h"
 
+#include <fuchsia/ui/app/cpp/fidl.h>
+
 static constexpr char kVirtioGpuUrl[] = "fuchsia-pkg://fuchsia.com/virtio_gpu#meta/virtio_gpu.cmx";
 
 VirtioGpu::VirtioGpu(const PhysMem& phys_mem)
@@ -11,6 +13,18 @@ VirtioGpu::VirtioGpu(const PhysMem& phys_mem)
                             fit::bind_member(this, &VirtioGpu::ConfigureQueue),
                             fit::bind_member(this, &VirtioGpu::Ready)) {
   config_.num_scanouts = 1;
+}
+
+zx_status_t VirtioGpu::AddPublicService(sys::ComponentContext* context) {
+  zx_status_t status = context->outgoing()->AddPublicService(
+      fidl::InterfaceRequestHandler<fuchsia::ui::app::ViewProvider>(
+          [this](auto request) { services_->Connect(std::move(request)); }));
+  if (status != ZX_OK) {
+    return status;
+  }
+  return context->outgoing()->AddPublicService(
+      fidl::InterfaceRequestHandler<fuchsia::ui::views::View>(
+          [this](auto request) { services_->Connect(std::move(request)); }));
 }
 
 zx_status_t VirtioGpu::Start(

@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/ui/scenic/cpp/fidl_test_base.h>
+
 #include <virtio/gpu.h>
 
 #include "src/virtualization/bin/vmm/device/gpu.h"
@@ -16,16 +18,20 @@ static constexpr uint32_t kPixelFormat = VIRTIO_GPU_FORMAT_B8G8R8A8_UNORM;
 static constexpr uint32_t kResourceId = 0;
 static constexpr uint32_t kScanoutId = 0;
 
-class VirtioGpuTest : public TestWithDevice {
+class VirtioGpuTest : public TestWithDevice, public fuchsia::ui::scenic::testing::Scenic_TestBase {
  protected:
   VirtioGpuTest()
       : control_queue_(phys_mem_, PAGE_SIZE * kNumQueues, kQueueSize),
         cursor_queue_(phys_mem_, control_queue_.end(), kQueueSize) {}
 
   void SetUp() override {
+    auto env_services = CreateServices();
+    zx_status_t status = env_services->AddService(bindings_.GetHandler(this));
+    ASSERT_EQ(ZX_OK, status);
+
     // Launch device process.
     fuchsia::virtualization::hardware::StartInfo start_info;
-    zx_status_t status = LaunchDevice(kVirtioGpuUrl, cursor_queue_.end(), &start_info);
+    status = LaunchDevice(kVirtioGpuUrl, cursor_queue_.end(), &start_info, std::move(env_services));
     ASSERT_EQ(ZX_OK, status);
 
     // Start device execution.
@@ -43,6 +49,10 @@ class VirtioGpuTest : public TestWithDevice {
       status = gpu_->ConfigureQueue(i, q->size(), q->desc(), q->avail(), q->used());
       ASSERT_EQ(ZX_OK, status);
     }
+  }
+
+  void NotImplemented_(const std::string& name) override {
+    printf("Not implemented: Scenic::%s\n", name.data());
   }
 
   void ResourceCreate2d() {
@@ -116,6 +126,7 @@ class VirtioGpuTest : public TestWithDevice {
   fuchsia::virtualization::hardware::VirtioGpuSyncPtr gpu_;
   VirtioQueueFake control_queue_;
   VirtioQueueFake cursor_queue_;
+  fidl::BindingSet<fuchsia::ui::scenic::Scenic> bindings_;
 };
 
 TEST_F(VirtioGpuTest, GetDisplayInfo) {

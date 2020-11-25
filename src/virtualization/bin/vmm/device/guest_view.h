@@ -12,9 +12,8 @@
 
 class GuestView : public scenic::BaseView {
  public:
-  GuestView(scenic::ViewContext view_context,
-            fidl::InterfaceHandle<fuchsia::virtualization::hardware::ViewListener> view_listener,
-            GpuScanout* scanout);
+  GuestView(scenic::ViewContext view_context, GpuScanout* scanout,
+            fuchsia::virtualization::hardware::ViewListenerPtr view_listener);
 
  private:
   scenic::ShapeNode background_;

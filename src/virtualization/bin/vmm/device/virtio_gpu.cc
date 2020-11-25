@@ -17,6 +17,7 @@
 
 #include <virtio/gpu.h>
 
+#include "src/lib/ui/base_view/view_provider_component.h"
 #include "src/virtualization/bin/vmm/device/device_base.h"
 #include "src/virtualization/bin/vmm/device/gpu_resource.h"
 #include "src/virtualization/bin/vmm/device/gpu_scanout.h"
@@ -283,8 +284,15 @@ class CursorStream : public StreamBase {
 class VirtioGpuImpl : public DeviceBase<VirtioGpuImpl>,
                       public fuchsia::virtualization::hardware::VirtioGpu {
  public:
-  VirtioGpuImpl(sys::ComponentContext* context) : DeviceBase(context), context_(*context) {
-    scanout_.SetConfigChangedHandler(fit::bind_member(this, &VirtioGpuImpl::OnConfigChanged));
+  VirtioGpuImpl(sys::ComponentContext* context, GpuScanout* scanout)
+      : DeviceBase(context),
+        control_stream_(scanout, &resources_),
+        cursor_stream_(scanout, &resources_) {
+    scanout->SetConfigChangedHandler(fit::bind_member(this, &VirtioGpuImpl::OnConfigChanged));
+  }
+
+  fuchsia::virtualization::hardware::ViewListenerPtr TakeViewListener() {
+    return std::move(view_listener_);
   }
 
   // |fuchsia::virtualization::hardware::VirtioDevice|
@@ -309,26 +317,7 @@ class VirtioGpuImpl : public DeviceBase<VirtioGpuImpl>,
              StartCallback callback) override {
     auto deferred = fit::defer(std::move(callback));
     PrepStart(std::move(start_info));
-
-    if (view_listener) {
-      auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
-
-      // Create view.
-      auto scenic = context_.svc()->Connect<fuchsia::ui::scenic::Scenic>();
-      scenic::ViewContext view_context = {
-          .session_and_listener_request =
-              scenic::CreateScenicSessionPtrAndListenerRequest(scenic.get()),
-          .view_token = std::move(view_token),
-          .component_context = &context_,
-      };
-      view_ =
-          std::make_unique<GuestView>(std::move(view_context), std::move(view_listener), &scanout_);
-      view_->SetReleaseHandler([this](zx_status_t status) { view_.reset(); });
-
-      // Present view.
-      auto presenter = context_.svc()->Connect<fuchsia::ui::policy::Presenter>();
-      presenter->PresentView(std::move(view_holder_token), nullptr);
-    }
+    view_listener_ = view_listener.Bind();
 
     // Initialize streams.
     control_stream_.Init(
@@ -363,12 +352,10 @@ class VirtioGpuImpl : public DeviceBase<VirtioGpuImpl>,
     }
   }
 
-  sys::ComponentContext& context_;
-  std::unique_ptr<GuestView> view_;
-  GpuScanout scanout_;
+  fuchsia::virtualization::hardware::ViewListenerPtr view_listener_;
   GpuResourceMap resources_;
-  ControlStream control_stream_{&scanout_, &resources_};
-  CursorStream cursor_stream_{&scanout_, &resources_};
+  ControlStream control_stream_;
+  CursorStream cursor_stream_;
 };
 
 int main(int argc, char** argv) {
@@ -379,6 +366,14 @@ int main(int argc, char** argv) {
   std::unique_ptr<sys::ComponentContext> context =
       sys::ComponentContext::CreateAndServeOutgoingDirectory();
 
-  VirtioGpuImpl virtio_gpu(context.get());
+  GpuScanout scanout;
+  VirtioGpuImpl virtio_gpu(context.get(), &scanout);
+
+  auto guest_view = [&scanout, &virtio_gpu](scenic::ViewContext view_context) {
+    return std::make_unique<GuestView>(std::move(view_context), &scanout,
+                                       virtio_gpu.TakeViewListener());
+  };
+  scenic::ViewProviderComponent view_component(guest_view, &loop, context.get());
+
   return loop.Run();
 }

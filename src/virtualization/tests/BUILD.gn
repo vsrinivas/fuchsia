@@ -43,8 +43,10 @@ group("tests") {
   # TODO(fxbug.dev/12616): These tests currently do not work on arm64.
   if (current_cpu == "x64") {
     deps += [
-      ":virtualization_gpu_tests_pkg",
-      ":virtualization_input_tests_pkg",
+      # TODO(fxbug.dev/64348): These tests needs to be reworked so that they
+      # interact correctly with Scenic.
+      # ":virtualization_gpu_tests_pkg",
+      # ":virtualization_input_tests_pkg",
     ]
   }
 

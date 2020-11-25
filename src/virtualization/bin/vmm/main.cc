@@ -484,6 +484,11 @@ int main(int argc, char** argv) {
     FX_LOGS(ERROR) << "Failed to add public service " << status;
     loop.Quit();
   }
+  status = gpu.AddPublicService(context.get());
+  if (status != ZX_OK) {
+    FX_LOGS(ERROR) << "Failed to add public service " << status;
+    loop.Quit();
+  }
 
   // Start the dispatch thread for communicating with the out of process
   // devices.

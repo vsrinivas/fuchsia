@@ -182,6 +182,7 @@ executable("virtio_gpu_bin") {
   ]
   deps = [
     ":virtio",
+    "//sdk/fidl/fuchsia.ui.app",
     "//sdk/fidl/fuchsia.ui.policy",
     "//sdk/fidl/fuchsia.ui.scenic",
     "//sdk/fidl/fuchsia.ui.views",
@@ -406,6 +407,7 @@ executable("device_tests") {
   deps = [
     ":device",
     "//sdk/fidl/fuchsia.netstack",
+    "//sdk/fidl/fuchsia.ui.scenic",
     "//sdk/fidl/fuchsia.virtualization.hardware",
     "//sdk/lib/sys/cpp/testing:integration",
     "//src/graphics/lib/magma/include:magma_abi",

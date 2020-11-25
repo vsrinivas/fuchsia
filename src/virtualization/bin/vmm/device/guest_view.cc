@@ -7,17 +7,15 @@
 #include <lib/images/cpp/images.h>
 #include <lib/syslog/cpp/macros.h>
 
-GuestView::GuestView(
-    scenic::ViewContext view_context,
-    fidl::InterfaceHandle<fuchsia::virtualization::hardware::ViewListener> view_listener,
-    GpuScanout* scanout)
+GuestView::GuestView(scenic::ViewContext view_context, GpuScanout* scanout,
+                     fuchsia::virtualization::hardware::ViewListenerPtr view_listener)
     : BaseView(std::move(view_context), "Guest"),
       background_(session()),
       material_(session()),
       scanout_(*scanout),
-      view_listener_(view_listener.Bind()) {
-  root_node().AddChild(background_);
+      view_listener_(std::move(view_listener)) {
   background_.SetMaterial(material_);
+  root_node().AddChild(background_);
 
   // Request hard key events be delivered to the view.
   fuchsia::ui::input::Command command;

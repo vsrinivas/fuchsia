@@ -34,7 +34,7 @@ constexpr zx::duration kGpuTestTimeout = zx::sec(15);
 template <typename T>
 using VirtioGpuTest = GuestTest<T>;
 
-// TODO(fxdebug.dev/64348) Re-enable ZirconEnclosedHost.
+// TODO(fxdebug.dev/64348): Re-enable ZirconEnclosedGuest.
 using GuestTypes = ::testing::Types<DebianEnclosedGuest>;
 TYPED_TEST_SUITE(VirtioGpuTest, GuestTypes);
 
