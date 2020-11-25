@@ -1187,8 +1187,13 @@ class ReuseTest : public ::testing::TestWithParam<typeMulticast> {};
 
 TEST_P(ReuseTest, AllowsAddressReuse) {
   const int on = true;
-
   auto const& [type, multicast] = GetParam();
+
+#if defined(__Fuchsia__)
+  if (multicast && type == SOCK_STREAM) {
+    GTEST_SKIP() << "Cannot bind a TCP socket to a multicast address on Fuchsia";
+  }
+#endif
 
   struct sockaddr_in addr = {
       .sin_family = AF_INET,
