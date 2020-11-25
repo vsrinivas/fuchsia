@@ -27,8 +27,10 @@ static void print_level(PlatformLogger::LogLevel level) {
   }
 }
 
-void PlatformLogger::LogVa(LogLevel level, const char* msg, va_list args) {
+void PlatformLogger::LogVa(LogLevel level, const char* file, int line, const char* msg,
+                           va_list args) {
   print_level(level);
+  printf("%s:%d ", file, line);
   vprintf(msg, args);
   printf("\n");
 }

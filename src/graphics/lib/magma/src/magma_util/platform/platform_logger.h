@@ -12,7 +12,7 @@
 #include "platform_handle.h"
 
 #define MAGMA_LOG(level, ...) \
-  magma::PlatformLogger::Log(magma::PlatformLogger::LOG_##level, __VA_ARGS__)
+  magma::PlatformLogger::Log(magma::PlatformLogger::LOG_##level, __FILE__, __LINE__, __VA_ARGS__)
 
 namespace magma {
 
@@ -23,15 +23,17 @@ class PlatformLogger {
   static bool Initialize(std::unique_ptr<PlatformHandle> channel);
   static bool IsInitialized();
 
-  __attribute__((format(printf, 2, 3))) static void Log(PlatformLogger::LogLevel level,
-                                                        const char* msg, ...) {
+  __attribute__((format(printf, 4, 5))) static void Log(PlatformLogger::LogLevel level,
+                                                        const char* file, int line, const char* msg,
+                                                        ...) {
     va_list args;
     va_start(args, msg);
-    LogVa(level, msg, args);
+    LogVa(level, file, line, msg, args);
     va_end(args);
   }
 
-  static void LogVa(PlatformLogger::LogLevel level, const char* msg, va_list args);
+  static void LogVa(PlatformLogger::LogLevel level, const char* file, int line, const char* msg,
+                    va_list args);
 };
 
 }  // namespace magma

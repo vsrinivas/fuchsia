@@ -28,49 +28,47 @@ namespace magma {
 
 static constexpr bool kDebug = MAGMA_DEBUG_INTERNAL_USE_ONLY;
 
-#define DASSERT(x)                                                                                \
-  do {                                                                                            \
-    if (magma::kDebug && !(x)) {                                                                  \
-      magma::PlatformLogger::Log(magma::PlatformLogger::LOG_ERROR, "%s:%d DASSERT: %s", __FILE__, \
-                                 __LINE__, #x);                                                   \
-      abort();                                                                                    \
-    }                                                                                             \
+#define DASSERT(x)                                                                     \
+  do {                                                                                 \
+    if (magma::kDebug && !(x)) {                                                       \
+      magma::PlatformLogger::Log(magma::PlatformLogger::LOG_ERROR, __FILE__, __LINE__, \
+                                 "DASSERT: %s", #x);                                   \
+      abort();                                                                         \
+    }                                                                                  \
   } while (0)
 
-#define DMESSAGE(format, ...)                                                                \
-  do {                                                                                       \
-    if (magma::kDebug) {                                                                     \
-      magma::PlatformLogger::Log(magma::PlatformLogger::LOG_INFO, "%s:%d " format, __FILE__, \
-                                 __LINE__, ##__VA_ARGS__);                                   \
-    }                                                                                        \
+#define DMESSAGE(format, ...)                                                                 \
+  do {                                                                                        \
+    if (magma::kDebug) {                                                                      \
+      magma::PlatformLogger::Log(magma::PlatformLogger::LOG_INFO, __FILE__, __LINE__, format, \
+                                 ##__VA_ARGS__);                                              \
+    }                                                                                         \
   } while (0)
 
 static constexpr bool kMagmaDretEnable = kDebug;
 
-#define DRET(ret)                                                                              \
-  (magma::kMagmaDretEnable && (ret) != 0                                                       \
-   ? magma::PlatformLogger::Log(magma::PlatformLogger::LOG_ERROR, "%s:%d Returning error %ld", \
-                                __FILE__, __LINE__, (int64_t)(ret)),                           \
+#define DRET(ret)                                                                     \
+  (magma::kMagmaDretEnable && (ret) != 0                                              \
+   ? magma::PlatformLogger::Log(magma::PlatformLogger::LOG_ERROR, __FILE__, __LINE__, \
+                                "Returning error %ld", (int64_t)(ret)),               \
    (ret) : (ret))
 
-#define DRET_MSG(ret, format, ...)                                                        \
-  (magma::kMagmaDretEnable && (ret) != 0                                                  \
-   ? magma::PlatformLogger::Log(magma::PlatformLogger::LOG_ERROR,                         \
-                                "%s:%d Returning error %ld: " format, __FILE__, __LINE__, \
-                                (int64_t)(ret), ##__VA_ARGS__),                           \
+#define DRET_MSG(ret, format, ...)                                                              \
+  (magma::kMagmaDretEnable && (ret) != 0                                                        \
+   ? magma::PlatformLogger::Log(magma::PlatformLogger::LOG_ERROR, __FILE__, __LINE__,           \
+                                "Returning error %ld: " format, (int64_t)(ret), ##__VA_ARGS__), \
    (ret) : (ret))
 
 #define DRETF(ret, format, ...)                                                       \
   (magma::kMagmaDretEnable && !(ret)                                                  \
-   ? magma::PlatformLogger::Log(magma::PlatformLogger::LOG_ERROR,                     \
-                                "%s:%d Returning false: " format, __FILE__, __LINE__, \
-                                ##__VA_ARGS__),                                       \
+   ? magma::PlatformLogger::Log(magma::PlatformLogger::LOG_ERROR, __FILE__, __LINE__, \
+                                "Returning false: " format, ##__VA_ARGS__),           \
    (ret) : (ret))
 
-#define DRETP(ret, format, ...)                                                                    \
-  (magma::kMagmaDretEnable && ((ret) == nullptr)                                                   \
-   ? magma::PlatformLogger::Log(magma::PlatformLogger::LOG_ERROR, "%s:%d Returning null: " format, \
-                                __FILE__, __LINE__, ##__VA_ARGS__),                                \
+#define DRETP(ret, format, ...)                                                       \
+  (magma::kMagmaDretEnable && ((ret) == nullptr)                                      \
+   ? magma::PlatformLogger::Log(magma::PlatformLogger::LOG_ERROR, __FILE__, __LINE__, \
+                                "Returning null: " format, ##__VA_ARGS__),            \
    (ret) : (ret))
 
 enum LogLevel { LOG_WARNING, LOG_INFO };

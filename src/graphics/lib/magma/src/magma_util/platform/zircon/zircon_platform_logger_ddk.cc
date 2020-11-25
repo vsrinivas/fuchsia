@@ -15,17 +15,18 @@ bool PlatformLogger::IsInitialized() { return true; }
 
 bool PlatformLogger::Initialize(std::unique_ptr<PlatformHandle> handle) { return true; }
 
-void PlatformLogger::LogVa(LogLevel level, const char* fmt, va_list args) {
+void PlatformLogger::LogVa(LogLevel level, const char* file, int line, const char* fmt,
+                           va_list args) {
   // TODO: Propogate file and line via caller.
   switch (level) {
     case PlatformLogger::LOG_ERROR:
-      zxlogvf(ERROR, __FILE__, __LINE__, fmt, args);
+      zxlogvf(ERROR, file, line, fmt, args);
       return;
     case PlatformLogger::LOG_WARNING:
-      zxlogvf(WARNING, __FILE__, __LINE__, fmt, args);
+      zxlogvf(WARNING, file, line, fmt, args);
       return;
     case PlatformLogger::LOG_INFO:
-      zxlogvf(INFO, __FILE__, __LINE__, fmt, args);
+      zxlogvf(INFO, file, line, fmt, args);
       return;
   }
 }
