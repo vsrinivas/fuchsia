@@ -193,8 +193,8 @@ mod tests {
         proptest_derive::Arbitrary,
     };
 
-    const TEST_PATH: &str = "test/update-package-lib-test";
-    const TEST_PATH_IN_NAMESPACE: &str = "/pkg/test/update-package-lib-test";
+    const TEST_PATH: &str = "bin/update_package_lib_test";
+    const TEST_PATH_IN_NAMESPACE: &str = "/pkg/bin/update_package_lib_test";
 
     #[test]
     fn image_new() {

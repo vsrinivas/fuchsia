@@ -830,7 +830,6 @@ group("deprecated_package") {
     "//src/sys/pkg/lib/pkgfs/*",
     "//src/sys/pkg/lib/system-image/*",
     "//src/sys/pkg/lib/tuf/*",
-    "//src/sys/pkg/lib/update-package/*",
     "//src/sys/pkg/lib/version/*",
     "//src/sys/pkg/testing/mock-installer/*",
     "//src/sys/pkg/testing/mock-omaha-server/*",
