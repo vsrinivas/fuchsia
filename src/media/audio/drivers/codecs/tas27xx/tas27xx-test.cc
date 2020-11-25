@@ -102,14 +102,15 @@ TEST(Tas27xxTest, CodecReset) {
   mock_i2c::MockI2c mock_i2c;
   // Reset by the call to Reset.
   mock_i2c
-      .ExpectWriteStop({0x01, 0x01})  // SW_RESET.
-      .ExpectWriteStop({0x02, 0x0d})  // PRW_CTL stopped.
-      .ExpectWriteStop({0x3c, 0x10})  // CLOCK_CFG.
-      .ExpectWriteStop({0x0a, 0x07})  // SetRate.
-      .ExpectWriteStop({0x0c, 0x22})  // TDM_CFG2.
-      .ExpectWriteStop({0x0e, 0x02})  // TDM_CFG4.
-      .ExpectWriteStop({0x0f, 0x44})  // TDM_CFG5.
-      .ExpectWriteStop({0x10, 0x40})  // TDM_CFG6.
+      .ExpectWriteStop({0x01, 0x01}, ZX_ERR_INTERNAL)  // SW_RESET error, will retry.
+      .ExpectWriteStop({0x01, 0x01}, ZX_OK)            // SW_RESET.
+      .ExpectWriteStop({0x02, 0x0d})                   // PRW_CTL stopped.
+      .ExpectWriteStop({0x3c, 0x10})                   // CLOCK_CFG.
+      .ExpectWriteStop({0x0a, 0x07})                   // SetRate.
+      .ExpectWriteStop({0x0c, 0x22})                   // TDM_CFG2.
+      .ExpectWriteStop({0x0e, 0x02})                   // TDM_CFG4.
+      .ExpectWriteStop({0x0f, 0x44})                   // TDM_CFG5.
+      .ExpectWriteStop({0x10, 0x40})                   // TDM_CFG6.
       .ExpectWrite({0x24})
       .ExpectReadStop({0x00})  // INT_LTCH0.
       .ExpectWrite({0x25})

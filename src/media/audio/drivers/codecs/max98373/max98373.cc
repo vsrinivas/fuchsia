@@ -176,7 +176,7 @@ std::vector<DaiSupportedFormats> Max98373::GetDaiFormats() {
 
 zx_status_t Max98373::SetDaiFormat(const DaiFormat& format) {
   if (!IsDaiFormatSupported(format, kSupportedDaiFormats)) {
-    zxlogf(ERROR, "%s unsupported format\n", __FILE__);
+    zxlogf(ERROR, "%s unsupported format", __FILE__);
     return ZX_ERR_NOT_SUPPORTED;
   }
   return ZX_OK;
@@ -202,7 +202,7 @@ void Max98373::SetGainState(GainState gain_state) {
     return;
   }
   if (gain_state.agc_enable) {
-    zxlogf(ERROR, "%s AGC enable not supported\n", __FILE__);
+    zxlogf(ERROR, "%s AGC enable not supported", __FILE__);
     gain_state.agc_enable = false;
   }
   gain_state_ = gain_state;
@@ -234,7 +234,15 @@ zx_status_t Max98373::WriteReg(uint16_t reg, uint8_t value) {
   printf("%s Read register just written 0x%04X, value 0x%02X\n", __FILE__, reg, buffer);
   return ZX_OK;
 #else
-  return i2c_.WriteSync(write_buffer, countof(write_buffer));
+  constexpr uint8_t kNumberOfRetries = 2;
+  constexpr zx::duration kRetryDelay = zx::msec(1);
+  auto ret =
+      i2c_.WriteSyncRetries(write_buffer, countof(write_buffer), kNumberOfRetries, kRetryDelay);
+  if (ret.status != ZX_OK) {
+    zxlogf(ERROR, "%s I2C write reg 0x%02X error %d, %d retries", __FILE__, reg, ret.status,
+           ret.retries);
+  }
+  return ret.status;
 #endif
 }
 
@@ -242,15 +250,18 @@ zx_status_t Max98373::ReadReg(uint16_t reg, uint8_t* value) {
   uint8_t write_buffer[2];
   write_buffer[0] = static_cast<uint8_t>((reg >> 8) & 0xff);
   write_buffer[1] = static_cast<uint8_t>((reg >> 0) & 0xff);
-  auto status = i2c_.WriteReadSync(write_buffer, 2, value, 1);
-  if (status != ZX_OK) {
-    printf("%s Could not I2C read reg 0x%X status %d\n", __FILE__, reg, status);
-    return status;
+  constexpr uint8_t kNumberOfRetries = 2;
+  constexpr zx::duration kRetryDelay = zx::msec(1);
+  auto ret = i2c_.WriteReadSyncRetries(write_buffer, sizeof(write_buffer), value, 1,
+                                       kNumberOfRetries, kRetryDelay);
+  if (ret.status != ZX_OK) {
+    zxlogf(ERROR, "%s I2C read reg 0x%02X error %d, %d retries", __FILE__, reg, ret.status,
+           ret.retries);
   }
 #ifdef TRACE_I2C
   printf("%s Read register 0x%04X, value 0x%02X\n", __FILE__, reg, *value);
 #endif
-  return status;
+  return ret.status;
 }
 
 zx_status_t max98373_bind(void* ctx, zx_device_t* parent) { return Max98373::Create(parent); }

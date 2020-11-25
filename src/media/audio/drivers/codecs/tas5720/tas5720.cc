@@ -218,7 +218,7 @@ bool Tas5720::IsBridgeable() { return false; }
 
 void Tas5720::SetBridgedMode(bool enable_bridged_mode) {
   if (enable_bridged_mode) {
-    zxlogf(INFO, "tas5720: bridged mode note supported\n");
+    zxlogf(INFO, "tas5720: bridged mode note supported");
   }
 }
 std::vector<DaiSupportedFormats> Tas5720::GetDaiFormats() {
@@ -256,14 +256,14 @@ GainState Tas5720::GetGainState() { return gain_state_; }
 void Tas5720::SetGainState(GainState gain_state) {
   auto status = SetGain(gain_state.gain);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "tas5720: Could not set gain %d\n", status);
+    zxlogf(ERROR, "tas5720: Could not set gain %d", status);
   }
   status = SetMuted(gain_state.muted);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "tas5720: Could not set mute state %d\n", status);
+    zxlogf(ERROR, "tas5720: Could not set mute state %d", status);
   }
   if (gain_state.agc_enable) {
-    zxlogf(ERROR, "tas5720: AGC enable not supported\n");
+    zxlogf(ERROR, "tas5720: AGC enable not supported");
     gain_state.agc_enable = false;
   }
   gain_state_ = gain_state;
@@ -286,19 +286,30 @@ zx_status_t Tas5720::WriteReg(uint8_t reg, uint8_t value) {
   }
   return ZX_OK;
 #else
-  return i2c_.WriteSync(write_buffer, countof(write_buffer));
+  constexpr uint8_t kNumberOfRetries = 2;
+  constexpr zx::duration kRetryDelay = zx::msec(1);
+  auto ret =
+      i2c_.WriteSyncRetries(write_buffer, countof(write_buffer), kNumberOfRetries, kRetryDelay);
+  if (ret.status != ZX_OK) {
+    zxlogf(ERROR, "tas5720: I2C write reg 0x%02X error %d, %d retries", reg, ret.status,
+           ret.retries);
+  }
+  return ret.status;
 #endif
 }
 
 zx_status_t Tas5720::ReadReg(uint8_t reg, uint8_t* value) {
-  auto status = i2c_.WriteReadSync(&reg, 1, value, 1);
-  if (status != ZX_OK) {
-    return status;
+  constexpr uint8_t kNumberOfRetries = 2;
+  constexpr zx::duration kRetryDelay = zx::msec(1);
+  auto ret = i2c_.WriteReadSyncRetries(&reg, 1, value, 1, kNumberOfRetries, kRetryDelay);
+  if (ret.status != ZX_OK) {
+    zxlogf(ERROR, "tas5720: I2C read reg 0x%02X error %d, %d retries", reg, ret.status,
+           ret.retries);
   }
 #ifdef TRACE_I2C
   printf("Read register 0x%02X, value %02X\n", reg, *value);
 #endif
-  return status;
+  return ret.status;
 }
 
 zx_status_t tas5720_bind(void* ctx, zx_device_t* parent) {

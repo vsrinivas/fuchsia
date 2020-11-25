@@ -201,11 +201,13 @@ TEST(Tas5782Test, Init) {
   fake_ddk::Bind tester;
   mock_i2c::MockI2c mock_i2c;
   mock_i2c
-      .ExpectWriteStop({0x02, 0x10})   // Enter standby.
-      .ExpectWriteStop({0x01, 0x11})   // Reset modules and registers.
-      .ExpectWriteStop({0x0d, 0x10})   // The PLL reference clock is SCLK.
-      .ExpectWriteStop({0x04, 0x01})   // PLL for MCLK setting.
-      .ExpectWriteStop({0x28, 0x03})   // I2S, 32 bits.
+      .ExpectWriteStop({0x02, 0x10},
+                       ZX_ERR_ADDRESS_UNREACHABLE)  // Enter standby, error will retry.
+      .ExpectWriteStop({0x02, 0x10})                // Enter standby.
+      .ExpectWriteStop({0x01, 0x11})                // Reset modules and registers.
+      .ExpectWriteStop({0x0d, 0x10})                // The PLL reference clock is SCLK.
+      .ExpectWriteStop({0x04, 0x01})                // PLL for MCLK setting.
+      .ExpectWriteStop({0x28, 0x03})                // I2S, 32 bits.
       .ExpectWriteStop({0x2a, 0x22})   // Left DAC to Left ch, Right DAC to right channel.
       .ExpectWriteStop({0x02, 0x00});  // Exit standby.
 

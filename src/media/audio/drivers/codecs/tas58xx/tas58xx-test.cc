@@ -25,7 +25,9 @@ struct Tas58xxCodec : public Tas58xx {
 TEST(Tas58xxTest, GoodSetDai) {
   fake_ddk::Bind tester;
   mock_i2c::MockI2c mock_i2c;
-  mock_i2c.ExpectWrite({0x67}).ExpectReadStop({0x00});  // Check DIE ID.
+  mock_i2c.ExpectWrite({0x67}).ExpectReadStop({0x00}, ZX_ERR_INTERNAL);  // Error will retry.
+  mock_i2c.ExpectWrite({0x67}).ExpectReadStop({0x00}, ZX_ERR_INTERNAL);  // Error will retry.
+  mock_i2c.ExpectWrite({0x67}).ExpectReadStop({0x00}, ZX_OK);  // Check DIE ID, no error now.
 
   auto codec = SimpleCodecServer::Create<Tas58xxCodec>(mock_i2c.GetProto());
   ASSERT_NOT_NULL(codec);

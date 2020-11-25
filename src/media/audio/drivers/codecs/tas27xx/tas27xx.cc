@@ -44,7 +44,7 @@ int Tas27xx::Thread() {
       break;
     }
     if (status != ZX_OK) {
-      zxlogf(ERROR, "tas27xx: Interrupt Errror - %d\n", status);
+      zxlogf(ERROR, "tas27xx: Interrupt Errror - %d", status);
       return status;
     }
     ReadReg(INT_LTCH0, &ltch0);
@@ -53,19 +53,19 @@ int Tas27xx::Thread() {
     // Clock error interrupts may happen during a rate change as the codec
     // attempts to auto configure to the tdm bus.
     if (ltch0 & INT_MASK0_TDM_CLOCK_ERROR) {
-      zxlogf(INFO, "tas27xx: TDM clock disrupted (may be due to rate change)\n");
+      zxlogf(INFO, "tas27xx: TDM clock disrupted (may be due to rate change)");
     }
     // While these are logged as errors, the amp will enter a shutdown mode
     //  until the condition is remedied, then the output will ramp back on.
     if (ltch0 & INT_MASK0_OVER_CURRENT_ERROR) {
-      zxlogf(ERROR, "tas27xx: Over current error\n");
+      zxlogf(ERROR, "tas27xx: Over current error");
     }
     if (ltch0 & INT_MASK0_OVER_TEMP_ERROR) {
-      zxlogf(ERROR, "tas27xx: Over temperature error\n");
+      zxlogf(ERROR, "tas27xx: Over temperature error");
     }
   }
 
-  zxlogf(INFO, "tas27xx: Exiting interrupt thread\n");
+  zxlogf(INFO, "tas27xx: Exiting interrupt thread");
   return ZX_OK;
 }
 
@@ -144,7 +144,7 @@ void Tas27xx::SetGainState(GainState gain_state) {
   uint8_t gain_reg = static_cast<uint8_t>(-gain_state.gain / kGainStep);
   WriteReg(PB_CFG2, gain_reg);
   if (gain_state.agc_enable) {
-    zxlogf(ERROR, "tas27xx: AGC enable not supported\n");
+    zxlogf(ERROR, "tas27xx: AGC enable not supported");
     gain_state.agc_enable = false;
   }
   gain_state_ = gain_state;
@@ -171,7 +171,7 @@ zx::status<DriverIds> Tas27xx::Initialize() {
   // Make it safe to re-init an already running device
   auto status = Shutdown();
   if (status != ZX_OK) {
-    zxlogf(ERROR, "tas27xx: Could not shutdown %d\n", status);
+    zxlogf(ERROR, "tas27xx: Could not shutdown %d", status);
     return zx::error(status);
   }
 
@@ -180,7 +180,7 @@ zx::status<DriverIds> Tas27xx::Initialize() {
 
   status = fault_gpio_.GetInterrupt(ZX_INTERRUPT_MODE_EDGE_LOW, &irq_);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "tas27xx: Could not get codec interrupt %d\n", status);
+    zxlogf(ERROR, "tas27xx: Could not get codec interrupt %d", status);
     return zx::error(status);
   }
 
@@ -316,7 +316,7 @@ bool Tas27xx::IsBridgeable() { return false; }
 
 void Tas27xx::SetBridgedMode(bool enable_bridged_mode) {
   if (enable_bridged_mode) {
-    zxlogf(INFO, "tas27xx: bridged mode note supported\n");
+    zxlogf(INFO, "tas27xx: bridged mode note supported");
   }
 }
 
@@ -347,19 +347,30 @@ zx_status_t Tas27xx::WriteReg(uint8_t reg, uint8_t value) {
   }
   return ZX_OK;
 #else
-  return i2c_.WriteSync(write_buffer, countof(write_buffer));
+  constexpr uint8_t kNumberOfRetries = 2;
+  constexpr zx::duration kRetryDelay = zx::msec(1);
+  auto ret =
+      i2c_.WriteSyncRetries(write_buffer, countof(write_buffer), kNumberOfRetries, kRetryDelay);
+  if (ret.status != ZX_OK) {
+    zxlogf(ERROR, "tas27xx: I2C write reg 0x%02X error %d, %d retries", reg, ret.status,
+           ret.retries);
+  }
+  return ret.status;
 #endif
 }
 
 zx_status_t Tas27xx::ReadReg(uint8_t reg, uint8_t* value) {
-  auto status = i2c_.WriteReadSync(&reg, 1, value, 1);
-  if (status != ZX_OK) {
-    return status;
+  constexpr uint8_t kNumberOfRetries = 2;
+  constexpr zx::duration kRetryDelay = zx::msec(1);
+  auto ret = i2c_.WriteReadSyncRetries(&reg, 1, value, 1, kNumberOfRetries, kRetryDelay);
+  if (ret.status != ZX_OK) {
+    zxlogf(ERROR, "tas27xx: I2C read reg 0x%02X error %d, %d retries", reg, ret.status,
+           ret.retries);
   }
 #ifdef TRACE_I2C
   printf("Read register 0x%02X, value %02X\n", reg, *value);
 #endif
-  return status;
+  return ret.status;
 }
 
 zx_status_t tas27xx_bind(void* ctx, zx_device_t* parent) {

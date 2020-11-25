@@ -47,7 +47,9 @@ TEST(Max98373Test, Reset) {
   mock_i2c::MockI2c mock_i2c;
 
   mock_i2c
-      .ExpectWriteStop({0x20, 0x00, 0x01})  // Reset.
+      .ExpectWriteStop({0x20, 0x00, 0x01}, ZX_ERR_INTERNAL)  // Reset, error will retry.
+      .ExpectWriteStop({0x20, 0x00, 0x01}, ZX_ERR_INTERNAL)  // Reset, error will retry.
+      .ExpectWriteStop({0x20, 0x00, 0x01})                   // Reset.
       .ExpectWrite({0x21, 0xff})
       .ExpectReadStop({0x43})                // Get revision id.
       .ExpectWriteStop({0x20, 0xff, 0x01})   // Global enable.

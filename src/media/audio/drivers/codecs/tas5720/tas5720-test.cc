@@ -87,10 +87,14 @@ TEST(Tas5720Test, CodecInitBad) {
   tester.SetMetadata(&instance_count, sizeof(instance_count));
 
   mock_i2c::MockI2c mock_i2c;
-  // Bad reply to enter shutdown (part of reset).
+  // Bad replies (2 retries) to enter shutdown (part of reset).
   mock_i2c.ExpectWrite({0x01}).ExpectReadStop({0xff}, ZX_ERR_TIMED_OUT);
-  // Bad reply to enter shutdown (part of shutdown becuase init failed).
+  mock_i2c.ExpectWrite({0x01}).ExpectReadStop({0xff}, ZX_ERR_TIMED_OUT);  // Retry 1.
+  mock_i2c.ExpectWrite({0x01}).ExpectReadStop({0xff}, ZX_ERR_TIMED_OUT);  // Retry 2.
+  // Bad replies (2 retries) to enter shutdown (part of shutdown becuase init failed).
   mock_i2c.ExpectWrite({0x01}).ExpectReadStop({0xff}, ZX_ERR_TIMED_OUT);
+  mock_i2c.ExpectWrite({0x01}).ExpectReadStop({0xff}, ZX_ERR_TIMED_OUT);  // Retry 1.
+  mock_i2c.ExpectWrite({0x01}).ExpectReadStop({0xff}, ZX_ERR_TIMED_OUT);  // Retry 2.
 
   auto codec = SimpleCodecServer::Create<Tas5720Codec>(mock_i2c.GetProto());
   ASSERT_NULL(codec);

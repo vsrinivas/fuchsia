@@ -226,7 +226,7 @@ std::vector<DaiSupportedFormats> Tas58xx::GetDaiFormats() {
 
 zx_status_t Tas58xx::SetDaiFormat(const DaiFormat& format) {
   if (!IsDaiFormatSupported(format, kSupportedDaiDaiFormats)) {
-    zxlogf(ERROR, "%s unsupported format\n", __FILE__);
+    zxlogf(ERROR, "%s unsupported format", __FILE__);
     return ZX_ERR_NOT_SUPPORTED;
   }
   if (format.number_of_channels == 2 && format.channels_to_use_bitmask != 3) {
@@ -276,7 +276,7 @@ void Tas58xx::SetGainState(GainState gain_state) {
     return;
   }
   if (gain_state.agc_enable) {
-    zxlogf(ERROR, "%s AGC enable not supported\n", __FILE__);
+    zxlogf(ERROR, "%s AGC enable not supported", __FILE__);
     gain_state.agc_enable = false;
   }
   gain_state_ = gain_state;
@@ -300,19 +300,29 @@ zx_status_t Tas58xx::WriteReg(uint8_t reg, uint8_t value) {
   }
   return ZX_OK;
 #else
-  return i2c_.WriteSync(write_buf, 2);
+  constexpr uint8_t kNumberOfRetries = 2;
+  constexpr zx::duration kRetryDelay = zx::msec(1);
+  auto ret = i2c_.WriteSyncRetries(write_buf, countof(write_buf), kNumberOfRetries, kRetryDelay);
+  if (ret.status != ZX_OK) {
+    zxlogf(ERROR, "%s I2C write reg 0x%02X error %d, %d retries", __FILE__, reg, ret.status,
+           ret.retries);
+  }
+  return ret.status;
 #endif
 }
 
 zx_status_t Tas58xx::ReadReg(uint8_t reg, uint8_t* value) {
-  auto status = i2c_.WriteReadSync(&reg, 1, value, 1);
-  if (status != ZX_OK) {
-    return status;
+  constexpr uint8_t kNumberOfRetries = 2;
+  constexpr zx::duration kRetryDelay = zx::msec(1);
+  auto ret = i2c_.WriteReadSyncRetries(&reg, 1, value, 1, kNumberOfRetries, kRetryDelay);
+  if (ret.status != ZX_OK) {
+    zxlogf(ERROR, "%s I2C read reg 0x%02X error %d, %d retries", __FILE__, reg, ret.status,
+           ret.retries);
   }
 #ifdef TRACE_I2C
   printf("Read register 0x%02X, value %02X\n", reg, *value);
 #endif
-  return status;
+  return ret.status;
 }
 
 zx_status_t Tas58xx::UpdateReg(uint8_t reg, uint8_t mask, uint8_t value) {
