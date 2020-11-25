@@ -5,7 +5,7 @@
 use {
     crate::{
         accessor::ArchiveAccessor,
-        archive, configs, constants, data_stats, diagnostics,
+        archive, configs, constants, diagnostics,
         events::{stream::EventStream, types::EventSource},
         logs,
         logs::redact::Redactor,
@@ -241,9 +241,6 @@ impl Archivist {
         let pipeline_exists = !((Path::new("/config/data/feedback").is_dir()
             && feedback_config.has_error())
             || (Path::new("/config/data/legacy_metrics").is_dir() && legacy_config.has_error()));
-        if let Some(to_summarize) = &archivist_configuration.summarized_dirs {
-            data_stats::add_stats_nodes(component::inspector().root(), to_summarize.clone())?;
-        }
 
         // The Inspect Repository offered to the ALL_ACCESS pipeline. This
         // repository is unique in that it has no statically configured
@@ -435,7 +432,6 @@ mod tests {
             max_archive_size_bytes: 10,
             max_event_group_size_bytes: 10,
             num_threads: 1,
-            summarized_dirs: None,
         };
 
         Archivist::new(config).unwrap()

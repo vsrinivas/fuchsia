@@ -80,7 +80,6 @@ rustc_library("lib") {
     "src/configs.rs",
     "src/constants.rs",
     "src/container.rs",
-    "src/data_stats.rs",
     "src/diagnostics.rs",
     "src/error.rs",
     "src/events/core.rs",

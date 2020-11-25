@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::{format_err, Context as _, Error},
+    anyhow::{Context as _, Error},
     fidl_fuchsia_diagnostics::Selector,
     fuchsia_inspect as inspect,
     selectors::parse_selector_file,
@@ -27,9 +27,6 @@ pub struct Config {
 
     /// Number of threads the archivist has available to use.
     pub num_threads: usize,
-
-    /// Paths to summarize in our own diagnostics output.
-    pub summarized_dirs: Option<BTreeMap<String, String>>,
 }
 
 /// Configuration for pipeline selection.
@@ -151,11 +148,6 @@ pub fn parse_config(path: impl AsRef<Path>) -> Result<Config, Error> {
     let json_string: String =
         fs::read_to_string(path).with_context(|| format!("parsing config: {}", path.display()))?;
     let config: Config = serde_json::from_str(&json_string).context("parsing json config")?;
-    if let Some(summarized_dirs) = &config.summarized_dirs {
-        if summarized_dirs.iter().any(|(dir, _)| dir == "archive") {
-            return Err(format_err!("Invalid name 'archive' in summarized dirs"));
-        }
-    }
     Ok(config)
 }
 
@@ -173,27 +165,6 @@ mod tests {
     }
 
     #[test]
-    fn parse_config_with_invalid_summarized_dir() {
-        let dir = tempfile::tempdir().unwrap();
-        let config_path = dir.path().join("config");
-        fs::create_dir(&config_path).unwrap();
-
-        let test_config_file_name = config_path.join("test_config.json");
-        let test_config = r#"
-                {
-                  "max_archive_size_bytes": 10485760,
-                  "max_event_group_size_bytes": 262144,
-                  "num_threads": 4,
-                  "summarized_dirs": {
-                      "archive": "/data/archive"
-                  }
-                }"#;
-        write_test_config_to_file(&test_config_file_name, test_config);
-        let parsed_config_result = parse_config(&test_config_file_name);
-        assert!(parsed_config_result.is_err());
-    }
-
-    #[test]
     fn parse_valid_config() {
         let dir = tempfile::tempdir().unwrap();
         let config_path = dir.path().join("config");
@@ -204,22 +175,14 @@ mod tests {
                 {
                   "max_archive_size_bytes": 10485760,
                   "max_event_group_size_bytes": 262144,
-                  "num_threads": 4,
-                  "summarized_dirs": {
-                      "global_data": "/global_data",
-                      "global_tmp": "/global_tmp"
-                  }
+                  "num_threads": 4
                 }"#;
-        let mut expected_dirs: BTreeMap<String, String> = BTreeMap::new();
-        expected_dirs.insert("global_data".into(), "/global_data".into());
-        expected_dirs.insert("global_tmp".into(), "/global_tmp".into());
 
         write_test_config_to_file(&test_config_file_name, test_config);
         let parsed_config = parse_config(&test_config_file_name).unwrap();
         assert_eq!(parsed_config.max_archive_size_bytes, 10485760);
         assert_eq!(parsed_config.max_event_group_size_bytes, 262144);
         assert_eq!(parsed_config.num_threads, 4);
-        assert_eq!(parsed_config.summarized_dirs, Some(expected_dirs));
     }
 
     #[test]
