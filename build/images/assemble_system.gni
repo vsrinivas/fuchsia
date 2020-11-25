@@ -181,14 +181,9 @@ template("assemble_system") {
     deps = system_image_deps
   }
 
-  boot_manifest = "$target_out_dir/${image_name}.boot.manifest"
-
   generate_manifest("${image_name}_system_image.manifest") {
     visibility = [ ":*" ]
     testonly = true
-
-    bootfs_manifest = boot_manifest
-    bootfs_zircon_groups = "all"
 
     deps = [
       ":${image_name}_pkgsvr_index",
@@ -209,10 +204,6 @@ template("assemble_system") {
           rebase_path(pkgsvr_index[0], root_build_dir),
     ]
   }
-
-  system_manifest_outputs =
-      get_target_outputs(":${image_name}_system_image.manifest")
-  assert(boot_manifest == system_manifest_outputs[1])
 
   pm_build("${image_name}_system_image.meta") {
     visibility = [ ":*" ]
@@ -366,18 +357,6 @@ template("assemble_system") {
     foreach(entry, devmgr_config) {
       args += [ "--entry=$entry" ]
     }
-
-    # If there were any ASan drivers in the build, bin/devhost.asan
-    # should have been brought into the boot manifest.  devmgr needs to
-    # be told to use it in case there are ASan drivers in /system but
-    # none in /boot.  If there were any non-ASan drivers in the build,
-    # bin/devhost.asan will load them and needs to know to moderate the
-    # checking for interacting with uninstrumented code.
-    sources += [ boot_manifest ]
-    args += [
-      "--include=bin/devhost",
-      "--manifest=" + rebase_path(boot_manifest, root_build_dir),
-    ]
   }
 
   devmgr_config("${image_name}_devmgr_config") {

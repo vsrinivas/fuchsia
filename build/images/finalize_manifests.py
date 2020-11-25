@@ -58,10 +58,6 @@ binary_context = namedtuple(
 # Each --output argument yields an output_manifest tuple.
 output_manifest = namedtuple('output_manifest', ['file', 'manifest'])
 
-# Each --binary argument yields a input_binary tuple.
-input_binary = namedtuple('input_binary', ['target_pattern', 'output_group'])
-
-
 # Collect all the binaries from auxiliary manifests into
 # a dictionary mapping entry.target to binary_entry.
 def collect_auxiliaries(manifest, examined):
@@ -79,10 +75,10 @@ def collect_auxiliaries(manifest, examined):
     return aux_binaries
 
 
-# Return an iterable of binary_entry for all the binaries in `manifest` and
-# `input_binaries` and their dependencies from `aux_binaries`, and an
-# iterable of manifest_entry for all the other files in `manifest`.
-def collect_binaries(manifest, input_binaries, aux_binaries, examined):
+# Return an iterable of binary_entry for all the binaries in `manifest`
+# and their dependencies from `aux_binaries`, and an iterable of
+# manifest_entry for all the other files in `manifest`.
+def collect_binaries(manifest, aux_binaries, examined):
     # As we go, we'll collect the actual binaries for the output
     # in this dictionary mapping entry.target to binary_entry.
     unexamined_binaries = {}
@@ -252,22 +248,6 @@ def collect_binaries(manifest, input_binaries, aux_binaries, examined):
         assert target in binaries, (
             "Target %s missing from %s" % (target, binaries.keys()))
 
-    matched_binaries = set()
-    for input_binary in input_binaries:
-        matches = fnmatch.filter(
-            iter(aux_binaries.keys()), input_binary.target_pattern)
-        assert matches, (
-            "--input-binary='%s' did not match any binaries" %
-            input_binary.target_pattern)
-        for target in matches:
-            assert target not in matched_binaries, (
-                "'%s' matched by multiple --input-binary patterns" % target)
-            matched_binaries.add(target)
-            add_binary(
-                rewrite_binary_group(
-                    aux_binaries[target], input_binary.output_group),
-                auxiliary=True)
-
     return iter(binaries.values()), nonbinaries
 
 
@@ -374,7 +354,7 @@ def strip_binary_manifest(
     return stripped_manifest, debug_list, new_output
 
 
-def emit_manifests(args, selected, unselected, input_binaries):
+def emit_manifests(args, selected, unselected):
 
     def update_file(file, contents, force=False):
         if (not force and os.path.exists(file) and
@@ -391,7 +371,7 @@ def emit_manifests(args, selected, unselected, input_binaries):
     # Collect all the inputs and reify.
     aux_binaries = collect_auxiliaries(unselected, examined)
     binaries, nonbinaries = collect_binaries(
-        selected, input_binaries, aux_binaries, examined)
+        selected, aux_binaries, examined)
 
     # Prepare to collate groups.
     outputs = [output_manifest(file, []) for file in args.output]
@@ -433,18 +413,6 @@ def emit_manifests(args, selected, unselected, input_binaries):
             f.write('\n')
 
 
-class input_binary_action(argparse.Action):
-
-    def __call__(self, parser, namespace, values, option_string=None):
-        binaries = getattr(namespace, self.dest, None)
-        if binaries is None:
-            binaries = []
-            setattr(namespace, self.dest, binaries)
-        outputs = getattr(namespace, 'output', None)
-        output_group = len(outputs) - 1
-        binaries.append(input_binary(values, output_group))
-
-
 def parse_args():
     parser = argparse.ArgumentParser(
         description='''
@@ -473,12 +441,6 @@ is used for shared libraries and the like.
     parser.add_argument(
         '--depfile', metavar='DEPFILE', help='Ninja depfile to write')
     parser.add_argument(
-        '--binary',
-        action=input_binary_action,
-        default=[],
-        metavar='PATH',
-        help='Take matching binaries from auxiliary manifests')
-    parser.add_argument(
         '--stripped-dir',
         required=True,
         metavar='STRIPPED_DIR',
@@ -488,7 +450,7 @@ is used for shared libraries and the like.
 
 def main():
     args = parse_args()
-    emit_manifests(args, args.selected, args.unselected, args.binary)
+    emit_manifests(args, args.selected, args.unselected)
 
 
 if __name__ == "__main__":

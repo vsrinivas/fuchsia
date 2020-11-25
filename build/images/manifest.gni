@@ -20,8 +20,6 @@ declare_args() {
 
 # Manifests inherited from Zircon.
 # Paths in these manifest are relative to this build's root directory.
-zircon_boot_manifests = []
-zircon_boot_manifests_deps = []
 zircon_aux_manifests = []
 zircon_aux_manifests_deps = []
 
@@ -105,28 +103,8 @@ template("generate_response_file") {
 #     [list of strings] Additional arguments to finalize_manifests.py;
 #     `sources` should list any files directly referenced.
 #
-#   bootfs_manifest (optional)
-#     [string] Output a separate manifest file for the Zircon BOOTFS.  This
-#     manifest will get the `bootfs_zircon_groups` selections, while the
-#     main manifest will get `zircon_groups` and the other entries
-#     indicated by `args`.  The main output manifest will assume that
-#     libraries from the BOOTFS are available and not duplicate them.
-#
-#   bootfs_zircon_groups (required with `bootfs_manifest`)
-#     [string] Comma-separated list of Zircon manifest groups to include
-#     in `bootfs_manifest`.
-#
-#   bootfs_allowlist (optional with `bootfs_manifest`)
-#     [list of strings] Comma-separated list of files to include in the bootfs
-#     manifest created. This overrides the option set by `bootfs_zircon_groups`
-#
 #   output_name (optional, default: target_name)
 #     [string] Root name of the output manifest file.
-#
-#   zircon_groups (optional, default: "")
-#     [string] Comma-separated list of Zircon manifest groups to include.
-#     If this is "", then the Zircon manifest only provides binaries
-#     to satisfy dependencies.
 #
 #   deps (optional)
 #   sources (optional)
@@ -160,16 +138,12 @@ template("generate_manifest") {
                              "sources",
                              "testonly",
                              "visibility",
-                             "zircon_groups",
                            ])
     if (!defined(sources)) {
       sources = []
     }
     if (!defined(deps)) {
       deps = []
-    }
-    if (!defined(zircon_groups)) {
-      zircon_groups = ""
     }
     if (defined(invoker.output_name)) {
       manifest_file = "$target_out_dir/${invoker.output_name}"
@@ -202,90 +176,22 @@ template("generate_manifest") {
     # they just supply libraries that might satisfy dependencies.
     sources += [ runtime_deps_manifest ]
     deps += [ ":${runtime_deps_manifest_target}" ]
-    sources += zircon_aux_manifests + zircon_boot_manifests
-    deps += zircon_aux_manifests_deps + zircon_boot_manifests_deps
-    foreach(manifest,
-            [ runtime_deps_manifest ] + zircon_aux_manifests +
-                zircon_boot_manifests) {
+    sources += zircon_aux_manifests
+    deps += zircon_aux_manifests_deps
+    foreach(manifest, [ runtime_deps_manifest ] + zircon_aux_manifests) {
       response_file_contents += [
         "--cwd=.",
         "--manifest=" + rebase_path(manifest),
       ]
     }
 
-    manifests = []
-
-    if (defined(invoker.bootfs_manifest)) {
-      assert(
-          defined(invoker.bootfs_zircon_groups),
-          "generate_manifest with bootfs_manifest needs bootfs_zircon_groups")
-      outputs += [ invoker.bootfs_manifest ]
-
-      # Omit both devhost variants from the Zircon input manifest.
-      # Each variant will be included if there is a driver that needs it.
-      # That way we can tell whether both variants are actually in use.
-      response_file_contents += [
-        "--exclude=bin/devhost",
-        "--exclude=bin/devhost.asan",
-
-        # Omit the empty file deposited by the Zircon build, since
-        # we will add our own.
-        "--exclude=config/devmgr",
-      ]
-
-      # Omit virtual-console from the Zircon manifest since it is built in //src.
-      response_file_contents += [ "--exclude=bin/virtual-console" ]
-
-      if (defined(invoker.bootfs_allowlist) && invoker.bootfs_allowlist != []) {
-        not_needed(invoker, [ "bootfs_zircon_groups" ])
-        response_file_contents += [ "--output=" +
-                                    rebase_path(invoker.bootfs_manifest,
-                                                root_build_dir) ]
-        foreach(binary, invoker.bootfs_allowlist) {
-          response_file_contents += [ "--binary=" + binary ]
-        }
-      } else {
-        manifests += [
-          {
-            output = invoker.bootfs_manifest
-            groups = invoker.bootfs_zircon_groups
-          },
-        ]
-      }
-    }
-
-    manifests += [
-      {
-        output = manifest_file
-        groups = zircon_groups
-      },
-    ]
-
-    foreach(manifest, manifests) {
-      response_file_contents +=
-          [ "--output=" + rebase_path(manifest.output, root_build_dir) ]
-      if (manifest.groups != "") {
-        # The boot manifests were already listed as auxiliaries, but now
-        # list them again with selected groups to go in the output.  This
-        # means the script processes these manifests twice, but we can't
-        # just omit them as auxiliaries because dependencies from the
-        # binaries selected here have to be found by target name in a
-        # previously-processed manifest.
-        response_file_contents += [ "--groups=${manifest.groups}" ]
-        sources += zircon_boot_manifests
-        foreach(manifest, zircon_boot_manifests) {
-          response_file_contents += [
-            "--cwd=.",
-            "--manifest=" + rebase_path(manifest),
-          ]
-        }
-      }
-    }
-
-    response_file_contents += [ "--groups=all" ]
-
-    # Now further `--manifest` or `--entry` arguments in invoker.args will
-    # contribute to the output manifest.
-    response_file_contents += [ "--cwd=." ] + invoker.args
+    # Note that after the first '--output' argument, further `--manifest` or
+    # `--entry` arguments in invoker.args will contribute to the output manifest.
+    response_file_contents +=
+        [
+          "--output=" + rebase_path(manifest_file, root_build_dir),
+          "--groups=all",
+          "--cwd=.",
+        ] + invoker.args
   }
 }
