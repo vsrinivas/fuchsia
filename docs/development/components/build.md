@@ -425,7 +425,7 @@ Since unit tests are very common, two simplified templates are provided:
   manifest, that must then be included in a package.
 * [`fuchsia_unittest_package.gni`](/src/sys/build/fuchsia_unittest_package.gni) defines a
   package with a single component to be run as a test, shorthand for a single
-  `fucshia_unittest_component` target paired with a `fuchsia_test_package`.
+  `fuchsia_unittest_component` target paired with a `fuchsia_test_package`.
 
 #### Unit tests with manifests {#unit-tests-with-manifests}
 
