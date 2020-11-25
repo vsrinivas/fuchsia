@@ -70,9 +70,8 @@ toc:
   - title: "Message encoding"
     path: /docs/reference/diagnostics/logs/encoding.md
 
-  # TODO(fxbug.dev/60815)
-  # - title: "Access"
-  #   path: /docs/reference/diagnostics/logs/access.md
+  - title: "Access"
+    path: /docs/reference/diagnostics/logs/access.md
 
 # TODO(fxbug.dev/60813)
 # - title: "Producers"
