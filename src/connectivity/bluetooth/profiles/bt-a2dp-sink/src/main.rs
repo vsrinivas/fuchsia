@@ -213,7 +213,7 @@ impl StreamsBuilder {
 async fn connect_after_timeout(
     peer_id: PeerId,
     peers: Arc<Mutex<ConnectedPeers>>,
-    controller_pool: Arc<Mutex<ControllerPool>>,
+    controller_pool: Arc<ControllerPool>,
     profile_svc: bredr::ProfileProxy,
     channel_mode: bredr::ChannelMode,
 ) {
@@ -266,7 +266,7 @@ async fn connect_after_timeout(
         channel,
         /* initiate = */ true,
         &mut peers.lock(),
-        &mut controller_pool.lock(),
+        &controller_pool,
     );
 }
 
@@ -276,7 +276,7 @@ fn handle_connection(
     channel: Channel,
     initiate: bool,
     peers: &mut ConnectedPeers,
-    controller_pool: &mut ControllerPool,
+    controller_pool: &ControllerPool,
 ) {
     info!("Connection from {}: {:?}!", peer_id, channel);
     if let Ok(peer) = peers.connected(peer_id.clone(), channel, initiate) {
@@ -291,7 +291,7 @@ fn handle_services_found(
     peer_id: &PeerId,
     attributes: &[bredr::Attribute],
     peers: Arc<Mutex<ConnectedPeers>>,
-    controller_pool: Arc<Mutex<ControllerPool>>,
+    controller_pool: Arc<ControllerPool>,
     profile_svc: bredr::ProfileProxy,
     channel_mode: bredr::ChannelMode,
 ) {
@@ -355,7 +355,7 @@ async fn main() -> Result<(), Error> {
     fuchsia_trace_provider::trace_provider_create_with_fdio();
 
     let signaling_channel_mode = channel_mode_from_arg(opts.channel_mode)?;
-    let controller_pool = Arc::new(Mutex::new(ControllerPool::new()));
+    let controller_pool = Arc::new(ControllerPool::new());
 
     let mut fs = ServiceFs::new();
 
@@ -366,7 +366,7 @@ async fn main() -> Result<(), Error> {
     fs.dir("svc").add_fidl_service(lifecycle.fidl_service());
 
     let pool_clone = controller_pool.clone();
-    fs.dir("svc").add_fidl_service(move |s| pool_clone.lock().connected(s));
+    fs.dir("svc").add_fidl_service(move |s| pool_clone.connected(s));
 
     if let Err(e) = fs.take_and_serve_directory_handle() {
         warn!("Unable to serve service directory: {}", e);
@@ -450,7 +450,7 @@ async fn main() -> Result<(), Error> {
 
 async fn handle_profile_events(
     peers: Arc<Mutex<ConnectedPeers>>,
-    controller_pool: Arc<Mutex<ControllerPool>>,
+    controller_pool: Arc<ControllerPool>,
     profile_svc: bredr::ProfileProxy,
     channel_mode: bredr::ChannelMode,
     mut connect_requests: bredr::ConnectionReceiverRequestStream,
@@ -469,7 +469,7 @@ async fn handle_profile_events(
                     channel.try_into()?,
                     /* initiate = */ false,
                     &mut peers.lock(),
-                    &mut controller_pool.lock());
+                    &controller_pool);
             }
             results_request = results_requests.try_next() => {
                 let result = match results_request? {
@@ -478,7 +478,13 @@ async fn handle_profile_events(
                 };
                 let bredr::SearchResultsRequest::ServiceFound { peer_id, protocol, attributes, responder } = result;
 
-                handle_services_found(&peer_id.into(), &attributes, peers.clone(), controller_pool.clone(), profile_svc.clone(), channel_mode.clone());
+                handle_services_found(
+                    &peer_id.into(),
+                    &attributes,
+                    peers.clone(),
+                    controller_pool.clone(),
+                    profile_svc.clone(),
+                    channel_mode.clone());
                 responder.send()?;
             }
             complete => break,
@@ -516,7 +522,7 @@ mod tests {
         Arc<Mutex<ConnectedPeers>>,
         bredr::ProfileProxy,
         ProfileRequestStream,
-        Arc<Mutex<ControllerPool>>,
+        Arc<ControllerPool>,
     ) {
         let exec = fasync::Executor::new_with_fake_time().expect("executor should build");
         let (proxy, stream) = create_proxy_and_stream::<bredr::ProfileMarker>()
@@ -529,7 +535,7 @@ mod tests {
             Some(cobalt_sender),
         )));
 
-        let controller_pool = Arc::new(Mutex::new(ControllerPool::new()));
+        let controller_pool = Arc::new(ControllerPool::new());
 
         (exec, peers, proxy, stream, controller_pool)
     }
@@ -611,7 +617,7 @@ mod tests {
             &peer_id,
             &attributes,
             peers.clone(),
-            controller_pool.clone(),
+            controller_pool,
             proxy.clone(),
             bredr::ChannelMode::Basic,
         );
@@ -692,13 +698,12 @@ mod tests {
         let (_remote, transport) = Channel::create();
         {
             let mut peers_lock = peers.lock();
-            let mut controller_pool_lock = controller_pool.lock();
             handle_connection(
                 &peer_id,
                 transport,
                 /* initiate = */ false,
                 &mut peers_lock,
-                &mut controller_pool_lock,
+                &controller_pool,
             );
         }
 
