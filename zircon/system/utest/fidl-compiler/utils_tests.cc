@@ -433,6 +433,40 @@ TEST(UtilsTests, whitespace_and_comments) {
   ASSERT_FALSE(FirstLineIsRegularComment("///not blank\n"));
 }
 
+TEST(UtilsTests, IsValidLibraryComponent) {
+  ASSERT_TRUE(IsValidLibraryComponent("a"));
+  ASSERT_TRUE(IsValidLibraryComponent("abc"));
+  ASSERT_TRUE(IsValidLibraryComponent("a2b"));
+
+  ASSERT_FALSE(IsValidLibraryComponent(""));
+  ASSERT_FALSE(IsValidLibraryComponent("A"));
+  ASSERT_FALSE(IsValidLibraryComponent("2"));
+  ASSERT_FALSE(IsValidLibraryComponent("a_c"));
+  ASSERT_FALSE(IsValidLibraryComponent("ab_"));
+}
+
+TEST(UtilsTests, IsValidIdentifierComponent) {
+  ASSERT_TRUE(IsValidIdentifierComponent("a"));
+  ASSERT_TRUE(IsValidIdentifierComponent("abc"));
+  ASSERT_TRUE(IsValidIdentifierComponent("A"));
+  ASSERT_TRUE(IsValidIdentifierComponent("a2b"));
+  ASSERT_TRUE(IsValidIdentifierComponent("a_c"));
+
+  ASSERT_FALSE(IsValidIdentifierComponent(""));
+  ASSERT_FALSE(IsValidIdentifierComponent("2"));
+  ASSERT_FALSE(IsValidIdentifierComponent("ab_"));
+}
+
+TEST(UtilsTests, IsValidFullyQualifiedMethodIdentifier) {
+  ASSERT_TRUE(IsValidFullyQualifiedMethodIdentifier("lib/Protocol.Method"));
+  ASSERT_TRUE(IsValidFullyQualifiedMethodIdentifier("long.lib/Protocol.Method"));
+
+  ASSERT_FALSE(IsValidFullyQualifiedMethodIdentifier("Method"));
+  ASSERT_FALSE(IsValidFullyQualifiedMethodIdentifier("lib/Protocol"));
+  ASSERT_FALSE(IsValidFullyQualifiedMethodIdentifier("lonG.lib/Protocol.Method"));
+  ASSERT_FALSE(IsValidFullyQualifiedMethodIdentifier("long.liB/Protocol.Method"));
+}
+
 TEST(UtilsTests, is_only_whitespace) {
   std::string good_output;
   std::string bad_output;

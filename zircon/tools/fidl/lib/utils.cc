@@ -10,6 +10,35 @@
 namespace fidl {
 namespace utils {
 
+const std::string kLibraryComponentPattern = "[a-z][a-z0-9]*";
+const std::string kIdentifierComponentPattern = "[A-Za-z]([A-Za-z0-9_]*[A-Za-z0-9])?";
+
+bool IsValidLibraryComponent(const std::string& component) {
+  static const std::regex kPattern("^" + kLibraryComponentPattern + "$");
+  return std::regex_match(component, kPattern);
+}
+
+bool IsValidIdentifierComponent(const std::string& component) {
+  static const std::regex kPattern("^" + kIdentifierComponentPattern + "$");
+  return std::regex_match(component, kPattern);
+}
+
+bool IsValidFullyQualifiedMethodIdentifier(const std::string& fq_identifier) {
+  static const std::regex kPattern("^" +
+                                   // library identifier
+                                   kLibraryComponentPattern + "(\\." + kLibraryComponentPattern +
+                                   ")*" +
+                                   // slash
+                                   "/" +
+                                   // protocol
+                                   kIdentifierComponentPattern +
+                                   // dot
+                                   "\\." +
+                                   // method
+                                   kIdentifierComponentPattern + "$");
+  return std::regex_match(fq_identifier, kPattern);
+}
+
 bool ends_with_underscore(const std::string& str) {
   assert(str.size() > 0);
   return str.back() == '_';

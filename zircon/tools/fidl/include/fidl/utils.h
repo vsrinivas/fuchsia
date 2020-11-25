@@ -9,6 +9,7 @@
 
 #include <clocale>
 #include <cstring>
+#include <regex>
 #include <set>
 #include <string>
 #include <string_view>
@@ -34,6 +35,23 @@ inline bool IsWhitespaceNoNewline(char ch) {
 inline bool IsBlank(std::string_view view) {
   return view.find_first_not_of(kWhitespaceChars) == std::string::npos;
 }
+
+// IsValidLibraryComponent validates individual components of a library
+// identifier.
+//
+// See https://fuchsia.dev/fuchsia-src/reference/fidl/language/language#identifiers
+bool IsValidLibraryComponent(const std::string& component);
+
+// IsValidIdentifierComponent validates individual components of an identifier
+// (other than a library identifier).
+//
+// See https://fuchsia.dev/fuchsia-src/reference/fidl/language/language#identifiers
+bool IsValidIdentifierComponent(const std::string& component);
+
+// IsValidFullyQualifiedMethodIdentifier validates fully qualified method
+// identifiers, i.e. a library identifier, followed by a slash, followed by a
+// protocol identifier, a dot, and lastly the method name.
+bool IsValidFullyQualifiedMethodIdentifier(const std::string& fq_identifier);
 
 inline bool LineFromOffsetIsBlank(const std::string& str, size_t offset) {
   for (size_t i = offset; i < str.size() && str[i] != '\n'; i++) {

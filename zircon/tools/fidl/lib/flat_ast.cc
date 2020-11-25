@@ -1690,10 +1690,14 @@ void Library::ConsumeProtocolDeclaration(
 
   std::vector<Protocol::Method> methods;
   for (auto& method : protocol_declaration->methods) {
-    auto selector_name =
+    auto selector =
         fidl::ordinals::GetSelector(method->attributes.get(), method->identifier->span());
+    if (!utils::IsValidIdentifierComponent(selector) &&
+        !utils::IsValidFullyQualifiedMethodIdentifier(selector)) {
+      Fail(ErrInvalidSelectorValue, method->identifier->span());
+    }
     auto generated_ordinal64 = std::make_unique<raw::Ordinal64>(
-        method_hasher_(library_name_, name.decl_name(), selector_name, *method->identifier));
+        method_hasher_(library_name_, name.decl_name(), selector, *method->identifier));
     auto attributes = std::move(method->attributes);
     SourceSpan method_name = method->identifier->span();
 

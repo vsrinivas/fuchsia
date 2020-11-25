@@ -7,12 +7,11 @@
 #include <errno.h>
 #include <lib/fit/function.h>
 
-#include <regex>
-
 #include "fidl/attributes.h"
 #include "fidl/diagnostics.h"
 #include "fidl/experimental_flags.h"
 #include "fidl/types.h"
+#include "fidl/utils.h"
 
 namespace fidl {
 
@@ -46,20 +45,6 @@ enum {
   More,
   Done,
 };
-
-bool IsValidLibraryComponentName(const std::string& component) {
-  static const std::regex kPattern("^[a-z][a-z0-9]*$");
-  return std::regex_match(component, kPattern);
-}
-
-// IsIdentifierValid disallows identifiers (escaped, and unescaped) from
-// starting or ending with underscore.
-bool IsIdentifierValid(const std::string& identifier) {
-  // this pattern comes from the FIDL language spec, available here:
-  // https://fuchsia.googlesource.com/fuchsia/+/HEAD/docs/development/languages/fidl/reference/language.md#identifiers
-  static const std::regex kPattern("^[A-Za-z0-9]([A-Za-z0-9_]*[A-Za-z0-9])?$");
-  return std::regex_match(identifier, kPattern);
-}
 
 template <typename T, typename Fn>
 void add(std::vector<std::unique_ptr<T>>* elements, Fn producer_fn) {
@@ -163,7 +148,7 @@ std::unique_ptr<raw::Identifier> Parser::ParseIdentifier(bool is_discarded) {
   if (!Ok() || !token)
     return Fail();
   std::string identifier(token->data());
-  if (!IsIdentifierValid(identifier))
+  if (!utils::IsValidIdentifierComponent(identifier))
     return Fail(ErrInvalidIdentifier, identifier);
 
   return std::make_unique<raw::Identifier>(scope.GetSourceElement());
@@ -206,7 +191,7 @@ std::unique_ptr<raw::CompoundIdentifier> Parser::ParseLibraryName() {
 
   for (const auto& component : library_name->components) {
     std::string component_data(component->start_.data());
-    if (!IsValidLibraryComponentName(component_data)) {
+    if (!utils::IsValidLibraryComponent(component_data)) {
       return Fail(ErrInvalidLibraryNameComponent, component->start_, component_data);
     }
   }
