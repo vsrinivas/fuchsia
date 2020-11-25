@@ -330,7 +330,6 @@ zx_status_t GetBlockCount(int fd, uint64_t* out) {
 
 int Mkfs(int fd, uint64_t block_count, const FilesystemOptions& options) {
   Superblock info;
-  // TODO(fxbug.dev/36663): Add support for setting the blob layout format.
   InitializeSuperblock(block_count, options, &info);
   zx_status_t status = CheckSuperblock(&info, block_count);
   if (status != ZX_OK) {
