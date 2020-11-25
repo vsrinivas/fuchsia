@@ -21,8 +21,7 @@ Only `JSON` is currently supported.
 
 ### [ClientSelectorConfiguration]
 
-Only `select_all=true` is currently supported. [https://fxbug.dev/62650] tracks support for
-component and data selectors for logs.
+Only `select_all=true` is [currently supported](https://fxbug.dev/62650).
 
 ### `batch_retrieval_timeout_seconds`
 
@@ -91,7 +90,7 @@ Note: version 1 of this format is [not yet stable](https://fxbug.dev/63883) and 
 on it may require some small migrations in the future. These migrations will be transparent to users
 of the [Rust](/src/lib/diagnostics/reader/rust) client library.
 
-Bug: messages with multiple tags [currently have the `tag` field repeated](https://fxbug.dev/63883)
+Caution: messages with multiple tags [currently have the `tag` field repeated](https://fxbug.dev/63883)
 in the same object. Most JSON parsers consider this invalid by default, and will be resolved soon.
 
 #### Timestamps
@@ -112,7 +111,7 @@ result, v1 monikers from appmgr come as a realm path starting from appmgr plus t
 filename, `sys/netstack.cmx` for example. In v2, an explicit component name replaces the manifest
 filename and all realms are included.
 
-Bug: Due to an [issue with CapabilityRequested events](https://fxbug.dev/64197) the v2 monikers
+Caution: Due to an [issue with CapabilityRequested events](https://fxbug.dev/64197) the v2 monikers
 returned start at the archivist rather than the topology root. For components in the same realm,
 this results in a slightly confusing moniker like `.\\archivist:0/driver_manager:0`. For components
 with a different parent realm it is even more confusing:
@@ -164,7 +163,7 @@ format. This API is superceded by `fuchsia.diagnostics.ArchiveAccessor` and will
 future.
 
 Note: Prefer `Log.ListenSafe` and `Log.DumpLogsSafe` to avoid channel overflow issues. Deletion of
-the unsafe `fuchsia.logger.LogListener` API is tracked in [https://fxbug.dev/48758].
+the unsafe `fuchsia.logger.LogListener` API is [planned](https://fxbug.dev/48758).
 
 [ArchiveAccessor]: https://fuchsia.dev/reference/fidl/fuchsia.diagnostics#ArchiveAccessor
 [ArchiveAccessor reference]: /src/diagnostics/docs/reference/access.md
