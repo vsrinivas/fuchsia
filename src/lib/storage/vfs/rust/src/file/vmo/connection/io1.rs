@@ -580,7 +580,7 @@ impl FileConnection {
         R: FnOnce(Status, &[u8]) -> Result<(), fidl::Error>,
     {
         if self.flags & OPEN_RIGHT_READABLE == 0 {
-            responder(Status::ACCESS_DENIED, &[])?;
+            responder(Status::BAD_HANDLE, &[])?;
             return Ok(0);
         }
 
@@ -648,7 +648,7 @@ impl FileConnection {
         R: FnOnce(Status, u64) -> Result<(), fidl::Error>,
     {
         if self.flags & OPEN_RIGHT_WRITABLE == 0 {
-            responder(Status::ACCESS_DENIED, 0)?;
+            responder(Status::BAD_HANDLE, 0)?;
             return Ok(0);
         }
 
@@ -714,7 +714,7 @@ impl FileConnection {
         R: FnOnce(Status, u64) -> Result<(), fidl::Error>,
     {
         if self.flags & OPEN_FLAG_NODE_REFERENCE != 0 {
-            responder(Status::ACCESS_DENIED, 0)?;
+            responder(Status::BAD_HANDLE, 0)?;
             return Ok(());
         }
 
@@ -762,7 +762,7 @@ impl FileConnection {
         R: FnOnce(Status) -> Result<(), fidl::Error>,
     {
         if self.flags & OPEN_RIGHT_WRITABLE == 0 {
-            return responder(Status::ACCESS_DENIED);
+            return responder(Status::BAD_HANDLE);
         }
 
         match Self::truncate_vmo(&mut *self.file.state().await, length, &mut self.seek) {

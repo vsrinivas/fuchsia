@@ -223,7 +223,7 @@ async fn file_read_with_insufficient_rights() {
             open_node::<io::FileMarker>(&test_dir_proxy, file_flags, io::MODE_TYPE_FILE, filename)
                 .await;
         let (status, _data) = file.read(0).await.expect("Read failed.");
-        assert_ne!(Status::from_raw(status), Status::OK);
+        assert_eq!(Status::from_raw(status), Status::BAD_HANDLE);
     }
 }
 
@@ -275,7 +275,7 @@ async fn file_read_at_with_insufficient_rights() {
             open_node::<io::FileMarker>(&test_dir_proxy, file_flags, io::MODE_TYPE_FILE, filename)
                 .await;
         let (status, _data) = file.read_at(0, 0).await.expect("Read at failed.");
-        assert_ne!(Status::from_raw(status), Status::OK);
+        assert_eq!(Status::from_raw(status), Status::BAD_HANDLE);
     }
 }
 
@@ -327,7 +327,7 @@ async fn file_write_with_insufficient_rights() {
             open_node::<io::FileMarker>(&test_dir_proxy, file_flags, io::MODE_TYPE_FILE, filename)
                 .await;
         let (status, _actual) = file.write("".as_bytes()).await.expect("Failed to write file");
-        assert_ne!(Status::from_raw(status), Status::OK);
+        assert_eq!(Status::from_raw(status), Status::BAD_HANDLE);
     }
 }
 

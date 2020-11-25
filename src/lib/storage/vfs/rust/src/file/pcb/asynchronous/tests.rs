@@ -98,7 +98,7 @@ fn read_only_ignore_posix_flag() {
         ),
         |proxy| async move {
             assert_read!(proxy, "Content");
-            assert_write_err!(proxy, "Can write", Status::ACCESS_DENIED);
+            assert_write_err!(proxy, "Can write", Status::BAD_HANDLE);
             assert_close!(proxy);
         },
     );
@@ -323,8 +323,8 @@ fn read_write_no_write_flag() {
         ),
         |proxy| async move {
             assert_read!(proxy, "Can read");
-            assert_write_err!(proxy, "Can write", Status::ACCESS_DENIED);
-            assert_write_at_err!(proxy, 0, "Can write", Status::ACCESS_DENIED);
+            assert_write_err!(proxy, "Can write", Status::BAD_HANDLE);
+            assert_write_at_err!(proxy, 0, "Can write", Status::BAD_HANDLE);
             assert_close!(proxy);
         },
     );
@@ -345,8 +345,8 @@ fn read_write_no_read_flag() {
             },
         ),
         |proxy| async move {
-            assert_read_err!(proxy, Status::ACCESS_DENIED);
-            assert_read_at_err!(proxy, 0, Status::ACCESS_DENIED);
+            assert_read_err!(proxy, Status::BAD_HANDLE);
+            assert_read_at_err!(proxy, 0, Status::BAD_HANDLE);
             assert_write!(proxy, "Can write");
             assert_close!(proxy);
         },
@@ -817,7 +817,7 @@ fn truncate_read_only_file() {
         OPEN_RIGHT_READABLE,
         read_only_static(b"Read-only content"),
         |proxy| async move {
-            assert_truncate_err!(proxy, 10, Status::ACCESS_DENIED);
+            assert_truncate_err!(proxy, 10, Status::BAD_HANDLE);
             assert_close!(proxy);
         },
     );
@@ -879,8 +879,8 @@ fn clone_reduce_access() {
             );
 
             assert_read!(second_proxy, "Initial content");
-            assert_truncate_err!(second_proxy, 0, Status::ACCESS_DENIED);
-            assert_write_err!(second_proxy, "As updated", Status::ACCESS_DENIED);
+            assert_truncate_err!(second_proxy, 0, Status::BAD_HANDLE);
+            assert_write_err!(second_proxy, "As updated", Status::BAD_HANDLE);
 
             assert_close!(first_proxy);
         },
@@ -1009,7 +1009,7 @@ fn clone_cannot_increase_access() {
         ),
         |first_proxy| async move {
             assert_read!(first_proxy, "Initial content");
-            assert_write_err!(first_proxy, "Write attempt", Status::ACCESS_DENIED);
+            assert_write_err!(first_proxy, "Write attempt", Status::BAD_HANDLE);
 
             let second_proxy = clone_as_file_assert_err!(
                 &first_proxy,
@@ -1030,7 +1030,7 @@ fn node_reference_ignores_read_access() {
         OPEN_FLAG_NODE_REFERENCE | OPEN_RIGHT_READABLE,
         read_only(|| async move { panic!("Not supposed to read!") }),
         |proxy| async move {
-            assert_read_err!(proxy, Status::ACCESS_DENIED);
+            assert_read_err!(proxy, Status::BAD_HANDLE);
             assert_close!(proxy);
         },
     );
@@ -1042,7 +1042,7 @@ fn node_reference_ignores_write_access() {
         OPEN_FLAG_NODE_REFERENCE | OPEN_RIGHT_WRITABLE,
         write_only(100, |_content| async move { panic!("Not supposed to write!") }),
         |proxy| async move {
-            assert_write_err!(proxy, "Can write", Status::ACCESS_DENIED);
+            assert_write_err!(proxy, "Can write", Status::BAD_HANDLE);
             assert_close!(proxy);
         },
     );
@@ -1090,7 +1090,7 @@ fn clone_can_not_remove_node_reference() {
                     // We now try without OPEN_RIGHT_READABLE, as we might still be able to Seek.
                     let forth_proxy =
                         clone_get_file_proxy_assert_ok!(&first_proxy, OPEN_FLAG_DESCRIBE);
-                    assert_seek_err!(forth_proxy, 0, Current, Status::ACCESS_DENIED, 0);
+                    assert_seek_err!(forth_proxy, 0, Current, Status::BAD_HANDLE, 0);
                     assert_close!(forth_proxy);
                 }
 
@@ -1103,7 +1103,7 @@ fn clone_can_not_remove_node_reference() {
 #[test]
 fn node_reference_can_not_seek() {
     run_server_client(OPEN_FLAG_NODE_REFERENCE, read_only_static(b"Content"), |proxy| async move {
-        assert_seek_err!(proxy, 0, Current, Status::ACCESS_DENIED, 0);
+        assert_seek_err!(proxy, 0, Current, Status::BAD_HANDLE, 0);
         assert_close!(proxy);
     });
 }
