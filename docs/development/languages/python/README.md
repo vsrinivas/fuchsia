@@ -4,9 +4,7 @@ Python is a scripting language from [python.org](https://python.org/).
 
 ## Versions 2 and 3
 
-Python has been migrating from Python 2 to Python 3. We are not yet ready to
-drop support for Python 2. Until that time, scripts should support both
-versions. See [Fuchsia Python style guide](python_style.md) for details.
+See [Python versions](python_style.md#python-versions) in the style guide.
 
 ## Style
 

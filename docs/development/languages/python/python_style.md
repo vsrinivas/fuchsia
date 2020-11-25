@@ -13,12 +13,10 @@ below for details.
 
 ### Scripts invoked by the build
 
-Scripts invoked by the build (GN or Ninja) should use `python3.8` in the shebang:
-`#!/usr/bin/env python3.8`.
+Scripts invoked by the build (GN or Ninja) are executed with Python 3.8.
 
-Both `fx` and the continuous integration infrastructure ensure that that
-executable will be in the path during GN and Ninja invocations, so it's safe to
-use in that context.
+The build system ensures that all python scripts are executed by the
+interpreter that is intalled as part of a Fuchsia source checkout.
 
 ### Other scripts
 
@@ -26,14 +24,13 @@ Scripts which are invoked directly should use `python` in the shebang and be
 compatible with both 2 and 3: `#!/usr/bin/env python`.
 
 Developers working on Fuchsia modules may use various platforms. Some platforms
-include Python 2.x and not Python 3.x and vice versa. Until Python 3.x is
+include Python 2 and not Python 3 and vice versa. Until Python 3 is
 included in the prominent development environments we support, we should support
-Python 2.x.
+Python 2.
 
-While Python 2.x is supported, test scripts on both versions. Python 2.7 will be
-supported by the Python team until January 1, 2020. When we drop Python 2.7
-support will be influenced by, but not dictated by that support pledge from the
-Python team.
+While Python 2 is supported, test scripts on both versions.
+
+Any policy change will be reflected in this document.
 
 ## Multiple Inheritance
 
@@ -109,7 +106,7 @@ in the Google Python style guide for comparison.)
 
 ### Type annotations
 
-In scripts that support Python 2.x (see [Python versions](#python-versions)),
+In scripts that support Python 2 (see [Python versions](#python-versions)),
 type annotations will not be used.
 
 (See
@@ -138,4 +135,3 @@ or library. Look for a style guide within that library as appropriate.
 (See
 [Parting Words](https://github.com/google/styleguide/blob/gh-pages/pyguide.md#4-parting-words){:.external}
 in the Google Python style guide.)
-
