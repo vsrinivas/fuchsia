@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <inttypes.h>
+#include <lib/zx/status.h>
 
 #include <limits>
 #include <utility>
@@ -143,52 +144,53 @@ zx_status_t BlobfsFormat::MakeFvmReady(size_t slice_size, uint32_t vpart_index,
   return ZX_OK;
 }
 
-zx_status_t BlobfsFormat::GetVsliceRange(unsigned extent_index, vslice_info_t* vslice_info) const {
+zx::status<ExtentInfo> BlobfsFormat::GetExtent(unsigned extent_index) const {
   CheckFvmReady();
+  ExtentInfo info;
   switch (extent_index) {
     case 0: {
-      vslice_info->vslice_start = 0;
-      vslice_info->slice_count = 1;
-      vslice_info->block_offset = 0;
-      vslice_info->block_count = ToU32(SuperblockBlocks(info_));
-      vslice_info->zero_fill = true;
-      return ZX_OK;
+      info.vslice_start = 0;
+      info.vslice_count = 1;
+      info.block_offset = 0;
+      info.block_count = ToU32(SuperblockBlocks(info_));
+      info.zero_fill = true;
+      return zx::ok(info);
     }
     case 1: {
-      vslice_info->vslice_start = blobfs::kFVMBlockMapStart;
-      vslice_info->slice_count = fvm_info_.abm_slices;
-      vslice_info->block_offset = ToU32(BlockMapStartBlock(info_));
-      vslice_info->block_count = ToU32(BlockMapBlocks(info_));
-      vslice_info->zero_fill = true;
-      return ZX_OK;
+      info.vslice_start = blobfs::kFVMBlockMapStart / BlocksPerSlice();
+      info.vslice_count = fvm_info_.abm_slices;
+      info.block_offset = ToU32(BlockMapStartBlock(info_));
+      info.block_count = ToU32(BlockMapBlocks(info_));
+      info.zero_fill = true;
+      return zx::ok(info);
     }
     case 2: {
-      vslice_info->vslice_start = blobfs::kFVMNodeMapStart;
-      vslice_info->slice_count = fvm_info_.ino_slices;
-      vslice_info->block_offset = ToU32(NodeMapStartBlock(info_));
-      vslice_info->block_count = ToU32(NodeMapBlocks(info_));
-      vslice_info->zero_fill = true;
-      return ZX_OK;
+      info.vslice_start = blobfs::kFVMNodeMapStart / BlocksPerSlice();
+      info.vslice_count = fvm_info_.ino_slices;
+      info.block_offset = ToU32(NodeMapStartBlock(info_));
+      info.block_count = ToU32(NodeMapBlocks(info_));
+      info.zero_fill = true;
+      return zx::ok(info);
     }
     case 3: {
-      vslice_info->vslice_start = blobfs::kFVMJournalStart;
-      vslice_info->slice_count = fvm_info_.journal_slices;
-      vslice_info->block_offset = ToU32(JournalStartBlock(info_));
-      vslice_info->block_count = ToU32(JournalBlocks(info_));
-      vslice_info->zero_fill = false;
-      return ZX_OK;
+      info.vslice_start = blobfs::kFVMJournalStart / BlocksPerSlice();
+      info.vslice_count = fvm_info_.journal_slices;
+      info.block_offset = ToU32(JournalStartBlock(info_));
+      info.block_count = ToU32(JournalBlocks(info_));
+      info.zero_fill = false;
+      return zx::ok(info);
     }
     case 4: {
-      vslice_info->vslice_start = blobfs::kFVMDataStart;
-      vslice_info->slice_count = fvm_info_.dat_slices;
-      vslice_info->block_offset = ToU32(DataStartBlock(info_));
-      vslice_info->block_count = ToU32(DataBlocks(info_));
-      vslice_info->zero_fill = false;
-      return ZX_OK;
+      info.vslice_start = blobfs::kFVMDataStart / BlocksPerSlice();
+      info.vslice_count = fvm_info_.dat_slices;
+      info.block_offset = ToU32(DataStartBlock(info_));
+      info.block_count = ToU32(DataBlocks(info_));
+      info.zero_fill = false;
+      return zx::ok(info);
     }
   }
 
-  return ZX_ERR_OUT_OF_RANGE;
+  return zx::error(ZX_ERR_OUT_OF_RANGE);
 }
 
 zx_status_t BlobfsFormat::GetSliceCount(uint32_t* slices_out) const {

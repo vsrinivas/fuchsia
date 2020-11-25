@@ -14,6 +14,7 @@
 #include <fvm/format.h>
 #include <fvm/snapshot-metadata-format.h>
 #include <fvm/sparse-reader.h>
+#include <safemath/checked_math.h>
 
 #include "fvm-host/container.h"
 #include "fvm-host/format.h"
@@ -502,58 +503,43 @@ zx_status_t FvmContainer::AddPartition(const char* path, const char* type_name,
     return status;
   }
 
-  // Allocate all slices for this partition
+  // Allocate all slices for each extent in this partition
   uint32_t pslice_start = 0;
   uint32_t pslice_total = 0;
   unsigned extent_index = 0;
   while (true) {
-    vslice_info_t vslice_info;
-    zx_status_t status;
-    if ((status = format->GetVsliceRange(extent_index, &vslice_info)) != ZX_OK) {
-      if (status == ZX_ERR_OUT_OF_RANGE) {
+    zx::status<ExtentInfo> extent_or = format->GetExtent(extent_index);
+    if (extent_or.is_error()) {
+      if (extent_or.status_value() == ZX_ERR_OUT_OF_RANGE) {
         break;
       }
-      return status;
+      return extent_or.status_value();
     }
+    const ExtentInfo& extent = extent_or.value();
 
-    uint32_t vslice = static_cast<uint32_t>(vslice_info.vslice_start / format->BlocksPerSlice());
-
-    for (unsigned i = 0; i < vslice_info.slice_count; i++) {
-      uint32_t pslice;
-
-      if ((status = info_.AllocateSlice(format->VpartIndex(), vslice + i, &pslice)) != ZX_OK) {
-        fprintf(stderr, "Failed to allocate slice: %d\n", status);
-        return status;
-      }
-
-      if (!pslice_start) {
-        pslice_start = pslice;
-      }
-
-      // On a new FVM container, pslice allocation is expected to be contiguous.
-      if (pslice != pslice_start + pslice_total) {
-        fprintf(stderr, "Unexpected error during slice allocation\n");
-        return ZX_ERR_INTERNAL;
-      }
-
-      pslice_total++;
+    zx::status<uint32_t> pslice_or = info_.AllocateSlicesContiguous(format->VpartIndex(), extent);
+    if (pslice_or.is_error()) {
+      return pslice_or.status_value();
     }
+    if (pslice_start == 0) {
+      pslice_start = pslice_or.value();
+    }
+    pslice_total += extent.PslicesNeeded();
 
-    extent_index++;
+    ++extent_index;
   }
 
   fvm::VPartitionEntry* entry;
   if ((status = info_.GetPartition(format->VpartIndex(), &entry)) != ZX_OK) {
     return status;
   }
-
-  ZX_ASSERT(entry->slices == slice_count);
+  ZX_ASSERT(entry->slices == pslice_total);
 
   FvmPartitionInfo partition;
-  partition.format = std::move(format);
-  partition.vpart_index = vpart_index;
+  partition.vpart_index = format->VpartIndex();
   partition.pslice_start = pslice_start;
-  partition.slice_count = slice_count;
+  partition.pslice_count = pslice_total;
+  partition.format = std::move(format);
   partitions_.push_back(std::move(partition));
   return ZX_OK;
 }
@@ -570,50 +556,39 @@ zx_status_t FvmContainer::AddSnapshotMetadataPartition(size_t reserved_slices) {
   // TODO(fxbug.dev/59567): Add partition/extent entries describing blobfs.
   std::vector<fvm::PartitionSnapshotState> partition_states{};
   std::vector<fvm::SnapshotExtentType> extent_types{};
-  auto format =
-      std::make_unique<InternalSnapshotMetaFormat>(slice_size_, partition_states, extent_types);
+  auto format = std::make_unique<InternalSnapshotMetaFormat>(reserved_slices, slice_size_,
+                                                             partition_states, extent_types);
 
-  zx_status_t status;
-  if ((status = info_.GrowForSlices(reserved_slices)) != ZX_OK) {
+  // Find out the actual number of slices we need by asking |format|.
+  uint32_t final_slices;
+  zx_status_t status = format->GetSliceCount(&final_slices);
+  if (status != ZX_OK) {
+    return status;
+  }
+  if ((status = info_.GrowForSlices(final_slices)) != ZX_OK) {
     fprintf(stderr, "Failed to resize metadata buffer: %d\n", status);
     return status;
   }
 
-  // Allocate all slices for this partition
-  uint32_t pslice_start = 0;
-  uint32_t pslice_total = 0;
-  for (size_t i = 0; i < reserved_slices; ++i) {
-    uint32_t pslice;
-
-    if ((status = info_.AllocateSlice(vpart_index, i, &pslice)) != ZX_OK) {
-      fprintf(stderr, "Failed to allocate slice: %d\n", status);
-      return status;
-    }
-
-    if (!pslice_start) {
-      pslice_start = pslice;
-    }
-
-    // On a new FVM container, pslice allocation is expected to be contiguous.
-    if (pslice != pslice_start + pslice_total) {
-      fprintf(stderr, "Unexpected error during slice allocation\n");
-      return ZX_ERR_INTERNAL;
-    }
-
-    pslice_total++;
+  // Allocate all slices for this partition.
+  // This assumes there is only one extent in |format|.
+  auto pslice_start_or = info_.AllocateSlicesContiguous(vpart_index, format->GetExtent(0).value());
+  if (pslice_start_or.is_error()) {
+    fprintf(stderr, "Failed to allocate slices: %d\n", pslice_start_or.status_value());
+    return pslice_start_or.status_value();
   }
 
   fvm::VPartitionEntry* entry;
   if ((status = info_.GetPartition(vpart_index, &entry)) != ZX_OK) {
     return status;
   }
-  ZX_ASSERT(entry->slices == reserved_slices);
+  ZX_ASSERT(entry->slices == final_slices);
 
   FvmPartitionInfo partition;
   partition.format = std::move(format);
   partition.vpart_index = vpart_index;
-  partition.pslice_start = pslice_start;
-  partition.slice_count = reserved_slices;
+  partition.pslice_start = pslice_start_or.value();
+  partition.vslice_count = final_slices;
   partitions_.push_back(std::move(partition));
 
   return ZX_OK;
@@ -673,43 +648,48 @@ zx_status_t FvmContainer::WritePartition(unsigned part_index) {
 }
 
 zx_status_t FvmContainer::WriteExtent(unsigned extent_index, Format* format, uint32_t* pslice) {
-  vslice_info_t vslice_info{};
-  zx_status_t status;
-  if ((status = format->GetVsliceRange(extent_index, &vslice_info)) != ZX_OK) {
-    return status;
+  auto extent_or = format->GetExtent(extent_index);
+  if (extent_or.is_error()) {
+    return extent_or.status_value();
   }
+  const ExtentInfo& extent = extent_or.value();
 
   auto slice_start = GetBlockStart(*pslice, 0, format->BlockSize());
-  auto slice_end = slice_start + vslice_info.slice_count * slice_size_;
+  auto slice_end =
+      safemath::CheckMul(safemath::CheckAdd(slice_start, extent.vslice_count), slice_size_)
+          .ValueOrDie();
   AddNonEmptySegment(slice_start, slice_end);
 
+  zx_status_t status;
   // Write each slice in the given extent
   uint32_t current_block = 0;
-  for (unsigned i = 0; i < vslice_info.slice_count; i++) {
+  uint32_t current_pslice = *pslice;
+  for (unsigned i = 0; i < extent.vslice_count; i++) {
     // Write each block in this slice
     for (uint32_t j = 0; j < format->BlocksPerSlice(); j++) {
       // If we have gone beyond the blocks written to partition file, write empty block
-      if (current_block >= vslice_info.block_count) {
-        if (!vslice_info.zero_fill) {
+      if (current_block >= extent.block_count) {
+        if (!extent.zero_fill) {
           break;
         }
         format->EmptyBlock();
       } else {
-        if ((status = format->FillBlock(vslice_info.block_offset + current_block)) != ZX_OK) {
+        if ((status = format->FillBlock(extent.block_offset + current_block)) != ZX_OK) {
           fprintf(stderr, "Failed to read block from filesystem\n");
           return status;
         }
-        current_block++;
+        ++current_block;
       }
 
-      if ((status = WriteData(*pslice, j, format->BlockSize(), format->Data())) != ZX_OK) {
+      if ((status = WriteData(current_pslice, j, format->BlockSize(), format->Data())) != ZX_OK) {
         fprintf(stderr, "Failed to write data to FVM\n");
         return status;
       }
     }
-    (*pslice)++;
+    ++current_pslice;
   }
 
+  *pslice += extent.PslicesNeeded();
   return ZX_OK;
 }
 

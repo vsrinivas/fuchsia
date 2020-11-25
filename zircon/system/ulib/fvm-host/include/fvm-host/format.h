@@ -6,6 +6,7 @@
 #define FVM_HOST_FORMAT_H_
 
 #include <fcntl.h>
+#include <lib/zx/status.h>
 #include <stdio.h>
 #include <sys/stat.h>
 #include <time.h>
@@ -53,13 +54,25 @@ static constexpr uint8_t kDataType[] = GUID_DATA_VALUE;
 static constexpr uint8_t kSystemType[] = GUID_SYSTEM_VALUE;
 static constexpr uint8_t kBlobType[] = GUID_BLOB_VALUE;
 
-typedef struct {
-  size_t vslice_start;
-  uint32_t slice_count;
-  uint32_t block_offset;
-  uint32_t block_count;
-  bool zero_fill;
-} vslice_info_t;
+// An ExtentInfo is a mapping between a range of vslices in a vpartition, and a range of blocks in
+// the underlying filesystem. It describes how to fill a target vslice range with blocks from the
+// filesystem.
+struct ExtentInfo {
+  // Address of the first vslice in the extent.
+  size_t vslice_start = 0;
+  // Virtual length of the extent
+  uint32_t vslice_count = 0;
+  // Block offset of the first block to fill the extent from.
+  uint32_t block_offset = 0;
+  // Number of blocks to fill the extent with.
+  uint32_t block_count = 0;
+  // If |block_count| * block_size < |vslice_count| * slice_size, then |zero_fill| controls whether
+  // the remaining bytes are explicitly zeroed. If not set, their value is undefined.
+  bool zero_fill = false;
+
+  // Returns the number of pslices needed to store the extent.
+  uint32_t PslicesNeeded() const { return vslice_count; }
+};
 
 // Reservation is a request that may or may not be approved.
 // Request for reservation may fail the AddPartition or
@@ -151,8 +164,11 @@ class Format {
   // for the partition to be placed in FVM.
   virtual zx_status_t MakeFvmReady(size_t slice_size, uint32_t vpart_index,
                                    FvmReservation* reserve) = 0;
-  // Get FVM data for each extent
-  virtual zx_status_t GetVsliceRange(unsigned extent_index, vslice_info_t* vslice_info) const = 0;
+
+  // Get the extent at |index| in the partition.
+  // Once ZX_ERR_OUT_OF_RANGE is returned, any higher values of index will return the same.
+  virtual zx::status<ExtentInfo> GetExtent(unsigned index) const = 0;
+
   // Get total number of slices required for this partition
   virtual zx_status_t GetSliceCount(uint32_t* slices_out) const = 0;
   // Fill the in-memory data block with data from the specified block on disk
@@ -208,7 +224,7 @@ class MinfsFormat final : public Format {
  public:
   MinfsFormat(fbl::unique_fd fd, const char* type);
   zx_status_t MakeFvmReady(size_t slice_size, uint32_t vpart_index, FvmReservation* reserve) final;
-  zx_status_t GetVsliceRange(unsigned extent_index, vslice_info_t* vslice_info) const final;
+  zx::status<ExtentInfo> GetExtent(unsigned index) const final;
   zx_status_t GetSliceCount(uint32_t* slices_out) const final;
   zx_status_t FillBlock(size_t block_offset) final;
   zx_status_t EmptyBlock() final;
@@ -240,7 +256,7 @@ class BlobfsFormat final : public Format {
   BlobfsFormat(fbl::unique_fd fd, const char* type);
   ~BlobfsFormat();
   zx_status_t MakeFvmReady(size_t slice_size, uint32_t vpart_index, FvmReservation* reserve) final;
-  zx_status_t GetVsliceRange(unsigned extent_index, vslice_info_t* vslice_info) const final;
+  zx::status<ExtentInfo> GetExtent(unsigned index) const final;
   zx_status_t GetSliceCount(uint32_t* slices_out) const final;
   zx_status_t FillBlock(size_t block_offset) final;
   zx_status_t EmptyBlock() final;
@@ -275,14 +291,14 @@ class BlobfsFormat final : public Format {
 
 class InternalSnapshotMetaFormat final : public Format {
  public:
-  InternalSnapshotMetaFormat(size_t slice_size,
+  InternalSnapshotMetaFormat(size_t reserved_slices, size_t slice_size,
                              const std::vector<fvm::PartitionSnapshotState>& partitions,
                              const std::vector<fvm::SnapshotExtentType>& extents);
   ~InternalSnapshotMetaFormat() override;
   zx_status_t MakeFvmReady(size_t slice_size, uint32_t vpart_index, FvmReservation* reserve) final {
     return ZX_OK;
   }
-  zx_status_t GetVsliceRange(unsigned extent_index, vslice_info_t* vslice_info) const final;
+  zx::status<ExtentInfo> GetExtent(unsigned index) const final;
   zx_status_t GetSliceCount(uint32_t* slices_out) const final;
   zx_status_t FillBlock(size_t block_offset) final;
   zx_status_t EmptyBlock() final;
@@ -293,6 +309,7 @@ class InternalSnapshotMetaFormat final : public Format {
  private:
   const char* Name() const final;
 
+  size_t reserved_slices_ = 0;
   size_t slice_size_ = 0;
   // When FillBlock(0) is called, we read from meta_. Otherwise we read from zero_buf_.
   bool reading_from_meta_ = false;

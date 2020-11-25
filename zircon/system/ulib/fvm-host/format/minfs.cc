@@ -155,67 +155,67 @@ zx_status_t MinfsFormat::MakeFvmReady(size_t slice_size, uint32_t vpart_index,
   return ZX_OK;
 }
 
-zx_status_t MinfsFormat::GetVsliceRange(unsigned extent_index, vslice_info_t* vslice_info) const {
+zx::status<ExtentInfo> MinfsFormat::GetExtent(unsigned extent_index) const {
   CheckFvmReady();
+  ExtentInfo info;
   switch (extent_index) {
     case 0: {
-      vslice_info->vslice_start = 0;
-      vslice_info->slice_count = 1;
-      vslice_info->block_offset = 0;
-      vslice_info->block_count = 1;
-      vslice_info->zero_fill = true;
-      return ZX_OK;
+      info.vslice_start = 0;
+      info.vslice_count = 1;
+      info.block_offset = 0;
+      info.block_count = 1;
+      info.zero_fill = true;
+      return zx::ok(info);
     }
     case 1: {
-      size_t blocks_per_slice = fvm_info_.slice_size / minfs::kMinfsBlockSize;
-      uint32_t reserved_blocks = fvm_info_.ibm_slices * blocks_per_slice;
-      vslice_info->vslice_start = minfs::kFVMBlockInodeBmStart;
-      vslice_info->slice_count = fvm_info_.ibm_slices;
-      vslice_info->block_offset = info_.ibm_block;
+      uint32_t reserved_blocks = fvm_info_.ibm_slices * BlocksPerSlice();
+      info.vslice_start = minfs::kFVMBlockInodeBmStart / BlocksPerSlice();
+      info.vslice_count = fvm_info_.ibm_slices;
+      info.block_offset = info_.ibm_block;
 
       // block_count is used to determine the extent_length, which tells the
       // paver, for the slices reserved how many blocks contain valid data.
       // This helps to keep sparse image small and helps paver to zero-out
       // block that are reserved but are not part of the sparse image file.
-      vslice_info->block_count = std::min(info_.abm_block - info_.ibm_block, reserved_blocks);
-      vslice_info->zero_fill = true;
-      return ZX_OK;
+      info.block_count = std::min(info_.abm_block - info_.ibm_block, reserved_blocks);
+      info.zero_fill = true;
+      return zx::ok(info);
     }
     case 2: {
-      vslice_info->vslice_start = minfs::kFVMBlockDataBmStart;
-      vslice_info->slice_count = fvm_info_.abm_slices;
-      vslice_info->block_offset = info_.abm_block;
-      vslice_info->block_count = info_.ino_block - info_.abm_block;
-      vslice_info->zero_fill = true;
-      return ZX_OK;
+      info.vslice_start = minfs::kFVMBlockDataBmStart / BlocksPerSlice();
+      info.vslice_count = fvm_info_.abm_slices;
+      info.block_offset = info_.abm_block;
+      info.block_count = info_.ino_block - info_.abm_block;
+      info.zero_fill = true;
+      return zx::ok(info);
     }
     case 3: {
-      vslice_info->vslice_start = minfs::kFVMBlockInodeStart;
-      vslice_info->slice_count = fvm_info_.ino_slices;
-      vslice_info->block_offset = info_.ino_block;
-      vslice_info->block_count = info_.integrity_start_block - info_.ino_block;
-      vslice_info->zero_fill = true;
-      return ZX_OK;
+      info.vslice_start = minfs::kFVMBlockInodeStart / BlocksPerSlice();
+      info.vslice_count = fvm_info_.ino_slices;
+      info.block_offset = info_.ino_block;
+      info.block_count = info_.integrity_start_block - info_.ino_block;
+      info.zero_fill = true;
+      return zx::ok(info);
     }
     case 4: {
-      vslice_info->vslice_start = minfs::kFvmSuperblockBackup;
-      vslice_info->slice_count = fvm_info_.integrity_slices;
-      vslice_info->block_offset = info_.integrity_start_block;
-      vslice_info->block_count = info_.dat_block - info_.integrity_start_block;
-      vslice_info->zero_fill = false;
-      return ZX_OK;
+      info.vslice_start = minfs::kFvmSuperblockBackup / BlocksPerSlice();
+      info.vslice_count = fvm_info_.integrity_slices;
+      info.block_offset = info_.integrity_start_block;
+      info.block_count = info_.dat_block - info_.integrity_start_block;
+      info.zero_fill = false;
+      return zx::ok(info);
     }
     case 5: {
-      vslice_info->vslice_start = minfs::kFVMBlockDataStart;
-      vslice_info->slice_count = fvm_info_.dat_slices;
-      vslice_info->block_offset = info_.dat_block;
-      vslice_info->block_count = info_.block_count;
-      vslice_info->zero_fill = false;
-      return ZX_OK;
+      info.vslice_start = minfs::kFVMBlockDataStart / BlocksPerSlice();
+      info.vslice_count = fvm_info_.dat_slices;
+      info.block_offset = info_.dat_block;
+      info.block_count = info_.block_count;
+      info.zero_fill = false;
+      return zx::ok(info);
     }
   }
 
-  return ZX_ERR_OUT_OF_RANGE;
+  return zx::error(ZX_ERR_OUT_OF_RANGE);
 }
 
 zx_status_t MinfsFormat::GetSliceCount(uint32_t* slices_out) const {

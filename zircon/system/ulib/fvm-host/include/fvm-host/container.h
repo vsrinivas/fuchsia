@@ -6,6 +6,7 @@
 #define FVM_HOST_CONTAINER_H_
 
 #include <fcntl.h>
+#include <lib/zx/status.h>
 #include <string.h>
 
 #include <memory>
@@ -85,9 +86,10 @@ class Container {
 
 class FvmContainer final : public Container {
   struct FvmPartitionInfo {
-    uint32_t vpart_index;
-    uint32_t pslice_start;
-    uint32_t slice_count;
+    uint32_t vpart_index = 0;
+    uint32_t vslice_count = 0;
+    uint32_t pslice_start = 0;
+    uint32_t pslice_count = 0;
     std::unique_ptr<Format> format;
   };
 

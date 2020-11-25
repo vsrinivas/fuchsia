@@ -4,8 +4,11 @@
 
 #include "fvm-host/sparse-paver.h"
 
+#include <unistd.h>
+
 #include <algorithm>
 #include <memory>
+
 zx_status_t SparsePaver::Create(std::unique_ptr<fvm::host::FileWrapper> wrapper, size_t slice_size,
                                 size_t disk_offset, size_t disk_size,
                                 std::unique_ptr<SparsePaver>* out) {
@@ -93,38 +96,24 @@ zx_status_t SparsePaver::Init(std::unique_ptr<fvm::host::FileWrapper> wrapper, s
 
 zx_status_t SparsePaver::AddExtent(uint32_t vpart_index, fvm::ExtentDescriptor* extent,
                                    fvm::SparseReader* reader) {
-  uint32_t pslice_start = 0;
-  uint32_t pslice_total = 0;
-
   size_t bytes_left = extent->extent_length;
   if (extent->slice_start > std::numeric_limits<uint32_t>::max()) {
     return ZX_ERR_INTERNAL;
   }
-  uint32_t vslice = static_cast<uint32_t>(extent->slice_start);
 
+  ExtentInfo extent_info{
+      .vslice_start = extent->slice_start,
+      .vslice_count = static_cast<uint32_t>(extent->slice_count),
+  };
+  auto pslice_or = info_.AllocateSlicesContiguous(vpart_index, extent_info);
+  if (pslice_or.is_error()) {
+    fprintf(stderr, "Failed to allocate slices: %d\n", pslice_or.status_value());
+    return pslice_or.status_value();
+  }
   for (unsigned i = 0; i < extent->slice_count; i++) {
-    uint32_t pslice;
-
-    zx_status_t status = info_.AllocateSlice(vpart_index, vslice + i, &pslice);
-    if (status != ZX_OK) {
+    if (zx_status_t status = WriteSlice(&bytes_left, reader); status != ZX_OK) {
       return status;
     }
-
-    if (!pslice_start) {
-      pslice_start = pslice;
-    }
-
-    // On a new FVM container, pslice allocation is expected to be contiguous.
-    if (pslice != pslice_start + pslice_total) {
-      fprintf(stderr, "fvm: pslice allocation unexpectedly non-contiguous (internal error)\n");
-      return ZX_ERR_INTERNAL;
-    }
-
-    if ((status = WriteSlice(&bytes_left, reader)) != ZX_OK) {
-      return status;
-    }
-
-    pslice_total++;
   }
 
   return ZX_OK;
@@ -135,7 +124,8 @@ zx_status_t SparsePaver::WriteSlice(size_t* bytes_left, fvm::SparseReader* reade
   const size_t slice_size = info_.SliceSize();
 
   if (disk_ptr_ + slice_size > disk_offset_ + disk_size_) {
-    fprintf(stderr, "Partition data exceeds the provided disk size\n");
+    fprintf(stderr, "%lu + %lu exceeds the provided disk size (%lu)\n", disk_ptr_, slice_size,
+            disk_offset_ + disk_size_);
     return ZX_ERR_INVALID_ARGS;
   }
 

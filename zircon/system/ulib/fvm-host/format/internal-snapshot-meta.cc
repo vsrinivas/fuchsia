@@ -28,9 +28,10 @@ uint32_t ToU32(T in) {
 }  // namespace
 
 InternalSnapshotMetaFormat::InternalSnapshotMetaFormat(
-    size_t slice_size, const std::vector<fvm::PartitionSnapshotState>& partitions,
+    size_t reserved_slices, size_t slice_size,
+    const std::vector<fvm::PartitionSnapshotState>& partitions,
     const std::vector<fvm::SnapshotExtentType>& extents)
-    : Format(), slice_size_(slice_size) {
+    : Format(), reserved_slices_(reserved_slices), slice_size_(slice_size) {
   meta_ = fvm::SnapshotMetadata::Synthesize(partitions.data(), partitions.size(), extents.data(),
                                             extents.size())
               .value();
@@ -39,21 +40,21 @@ InternalSnapshotMetaFormat::InternalSnapshotMetaFormat(
 
 InternalSnapshotMetaFormat::~InternalSnapshotMetaFormat() = default;
 
-zx_status_t InternalSnapshotMetaFormat::GetVsliceRange(unsigned extent_index,
-                                                       vslice_info_t* vslice_info) const {
-  if (extent_index == 0) {
-    vslice_info->vslice_start = 0;
-    vslice_info->slice_count = 1;
-    vslice_info->block_offset = 0;
-    vslice_info->block_count = 1;
-    vslice_info->zero_fill = false;
-    return ZX_OK;
+zx::status<ExtentInfo> InternalSnapshotMetaFormat::GetExtent(unsigned index) const {
+  if (index == 0) {
+    return zx::ok(ExtentInfo{
+        .vslice_start = 0,
+        .vslice_count = ToU32(reserved_slices_),
+        .block_offset = 0,
+        .block_count = 1,
+        .zero_fill = false,
+    });
   }
-  return ZX_ERR_OUT_OF_RANGE;
+  return zx::error(ZX_ERR_OUT_OF_RANGE);
 }
 
 zx_status_t InternalSnapshotMetaFormat::GetSliceCount(uint32_t* slices_out) const {
-  *slices_out = 1;
+  *slices_out = reserved_slices_;
   return ZX_OK;
 }
 

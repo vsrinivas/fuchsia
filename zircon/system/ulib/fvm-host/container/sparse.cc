@@ -423,12 +423,12 @@ zx_status_t SparseContainer::Commit() {
       header_length += sizeof(fvm::ExtentDescriptor);
       // If format is non-null, then we should zero fill if the slice requests it.
       if (format) {
-        vslice_info_t vslice_info;
-        if (format->GetVsliceRange(j, &vslice_info) != ZX_OK) {
+        auto extent_or = format->GetExtent(j);
+        if (extent_or.is_error()) {
           fprintf(stderr, "Unable to access partition extent\n");
-          return ZX_ERR_OUT_OF_RANGE;
+          return extent_or.status_value();
         }
-        if (vslice_info.zero_fill) {
+        if (extent_or.value().zero_fill) {
           extent.extent_length = extent.slice_count * slice_size_;
         }
       }
@@ -454,7 +454,6 @@ zx_status_t SparseContainer::Commit() {
   for (unsigned i = 0; i < image_.partition_count; i++) {
     fvm::PartitionDescriptor partition = partitions_[i].descriptor;
     Format* format = partitions_[i].format.get();
-    vslice_info_t vslice_info;
     // Write out each extent in the partition
     for (unsigned j = 0; j < partition.extent_count; j++) {
       if (!format) {
@@ -465,22 +464,24 @@ zx_status_t SparseContainer::Commit() {
         }
         continue;
       }
-      if (format->GetVsliceRange(j, &vslice_info) != ZX_OK) {
+      auto extent_or = format->GetExtent(j);
+      if (extent_or.is_error()) {
         fprintf(stderr, "Unable to access partition extent\n");
-        return ZX_ERR_OUT_OF_RANGE;
+        return extent_or.status_value();
       }
+      const ExtentInfo& extent = extent_or.value();
 
       // Write out each block in the extent
       size_t bytes_written = 0;
-      for (unsigned k = 0; k < vslice_info.slice_count * format->BlocksPerSlice(); ++k) {
-        if (k >= vslice_info.block_count) {
+      for (unsigned k = 0; k < extent.vslice_count * format->BlocksPerSlice(); ++k) {
+        if (k >= extent.block_count) {
           // Zero fill, but only if compression is enabled and it has been requested; we wrote an
           // appropriate extent entry earlier.
-          if (!(flags_ & fvm::kSparseFlagLz4) || !vslice_info.zero_fill) {
+          if (!(flags_ & fvm::kSparseFlagLz4) || !extent.zero_fill) {
             break;
           }
           format->EmptyBlock();
-        } else if (format->FillBlock(vslice_info.block_offset + k) != ZX_OK) {
+        } else if (format->FillBlock(extent.block_offset + k) != ZX_OK) {
           fprintf(stderr, "Failed to read block\n");
           return ZX_ERR_IO;
         }
@@ -654,13 +655,18 @@ zx_status_t SparseContainer::AddSnapshotMetadataPartition(size_t reserved_slices
   // TODO(fxbug.dev/59567): Add partition/extent entries describing blobfs.
   std::vector<fvm::PartitionSnapshotState> partition_states{};
   std::vector<fvm::SnapshotExtentType> extent_types{};
-  info.format =
-      std::make_unique<InternalSnapshotMetaFormat>(slice_size_, partition_states, extent_types);
+  info.format = std::make_unique<InternalSnapshotMetaFormat>(reserved_slices, slice_size_,
+                                                             partition_states, extent_types);
+  // Find out the actual number of slices we need by asking |format|.
+  uint32_t final_slices;
+  if (zx_status_t status = info.format->GetSliceCount(&final_slices); status != ZX_OK) {
+    return status;
+  }
 
   fvm::ExtentDescriptor extent{
       .magic = fvm::kExtentDescriptorMagic,
       .slice_start = 0u,
-      .slice_count = reserved_slices,
+      .slice_count = final_slices,
       .extent_length = info.format->BlockSize(),
   };
 
@@ -713,23 +719,24 @@ zx_status_t SparseContainer::AllocatePartition(std::unique_ptr<Format> format,
   uint64_t extent_length;
 
   while (true) {
-    vslice_info_t extent;
-    if ((status = format->GetVsliceRange(i++, &extent)) != ZX_OK) {
-      if (status == ZX_ERR_OUT_OF_RANGE)
+    auto extent_or = format->GetExtent(i++);
+    if (extent_or.is_error()) {
+      if (extent_or.status_value() == ZX_ERR_OUT_OF_RANGE) {
         break;
-      return status;
+      }
+      return extent_or.status_value();
     }
-    if (mul_overflow(extent.block_count, format->BlockSize(), &extent_length)) {
+    if (mul_overflow(extent_or.value().block_count, format->BlockSize(), &extent_length)) {
       fprintf(stderr, "Multiplication overflow when getting extent length\n");
       return ZX_ERR_OUT_OF_RANGE;
     }
-    fvm::ExtentDescriptor extent_descriptor{
+    fvm::ExtentDescriptor extent{
         .magic = fvm::kExtentDescriptorMagic,
-        .slice_start = extent.vslice_start / format->BlocksPerSlice(),
-        .slice_count = extent.slice_count,
+        .slice_start = extent_or.value().vslice_start,
+        .slice_count = extent_or.value().vslice_count,
         .extent_length = extent_length,
     };
-    if ((status = AllocateExtent(part_index, extent_descriptor)) != ZX_OK) {
+    if ((status = AllocateExtent(part_index, extent)) != ZX_OK) {
       return status;
     }
   }

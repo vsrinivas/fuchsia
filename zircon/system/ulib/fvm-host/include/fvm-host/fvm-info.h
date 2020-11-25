@@ -5,10 +5,13 @@
 #ifndef FVM_HOST_FVM_INFO_H_
 #define FVM_HOST_FVM_INFO_H_
 
+#include <lib/zx/status.h>
+
 #include <memory>
 
 #include <fbl/unique_fd.h>
 #include <fvm-host/file-wrapper.h>
+#include <fvm-host/format.h>
 #include <fvm/format.h>
 #include <fvm/fvm-sparse.h>
 #include <fvm/metadata.h>
@@ -48,8 +51,10 @@ class FvmInfo {
   // Allocates new partition (in memory).
   zx::status<uint32_t> AllocatePartition(const fvm::VPartitionEntry& entry);
 
-  // Allocates new slice for given partition (in memory).
-  zx_status_t AllocateSlice(uint32_t vpart, uint32_t vslice, uint32_t* pslice);
+  // Allocates a contiguous range of slices for a vslice extent, owned by |vpart|.
+  // Returns the index of the first pslice for the allocation.
+  // The allocation contains |info.PslicesNeeded()| slices.
+  zx::status<uint32_t> AllocateSlicesContiguous(uint32_t vpart, const ExtentInfo& info);
 
   // Helpers to grab reference to partition/slice from metadata
   zx_status_t GetPartition(size_t index, fvm::VPartitionEntry** out) const;
@@ -73,6 +78,8 @@ class FvmInfo {
   void CheckValid() const;
 
  private:
+  // Reserves |num| contiguous slices, returning the pslice index of the first slice.
+  zx::status<uint32_t> ReserveSlicesContiguous(size_t num);
   bool valid_;
   bool dirty_;
   uint32_t vpart_hint_;

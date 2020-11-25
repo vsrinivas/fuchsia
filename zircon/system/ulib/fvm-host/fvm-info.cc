@@ -11,6 +11,7 @@
 #include <fvm/format.h>
 #include <fvm/fvm.h>
 #include <fvm/metadata.h>
+#include <safemath/safe_math.h>
 
 zx_status_t FvmInfo::Reset(size_t disk_size, size_t slice_size) {
   if (slice_size == 0) {
@@ -250,39 +251,42 @@ zx::status<uint32_t> FvmInfo::AllocatePartition(const fvm::VPartitionEntry& entr
   return zx::error(ZX_ERR_INTERNAL);
 }
 
-zx_status_t FvmInfo::AllocateSlice(uint32_t vpart, uint32_t vslice, uint32_t* pslice) {
+zx::status<uint32_t> FvmInfo::AllocateSlicesContiguous(uint32_t vpart, const ExtentInfo& extent) {
   CheckValid();
-  const fvm::Header& sb = SuperBlock();
 
-  for (uint32_t index = pslice_hint_; index <= sb.GetAllocationTableUsedEntryCount(); index++) {
+  uint32_t pslices = extent.PslicesNeeded();
+
+  auto index_or = ReserveSlicesContiguous(pslices);
+  if (index_or.is_error()) {
+    return index_or;
+  }
+  uint32_t index = index_or.value();
+
+  fvm::VPartitionEntry* partition;
+  zx_status_t status;
+  if ((status = GetPartition(vpart, &partition)) != ZX_OK) {
+    return zx::error(status);
+  }
+
+  const auto assign_slice = [&](uint32_t pslice, uint32_t vslice) {
     fvm::SliceEntry* slice = nullptr;
-    if (zx_status_t status = GetSlice(index, &slice); status != ZX_OK) {
+    if ((status = GetSlice(pslice, &slice)) != ZX_OK) {
       fprintf(stderr, "Failed to retrieve slice %u\n", index);
       return status;
     }
-
-    if (slice->IsAllocated()) {
-      continue;
-    }
-
-    pslice_hint_ = index + 1;
-
-    fvm::VPartitionEntry* partition;
-    if (zx_status_t status = GetPartition(vpart, &partition); status != ZX_OK) {
-      return status;
-    }
-
     slice->Set(vpart, vslice);
-    partition->slices++;
-
-    dirty_ = true;
-    *pslice = index;
     return ZX_OK;
+  };
+
+  for (unsigned i = 0; i < pslices; ++i) {
+    if ((status = assign_slice(index + i, extent.vslice_start + i)) != ZX_OK) {
+      return zx::error(status);
+    }
   }
 
-  fprintf(stderr, "Unable to find any free slices (last allocated %u, avail %lu)\n", pslice_hint_,
-          sb.GetAllocationTableUsedEntryCount());
-  return ZX_ERR_INTERNAL;
+  partition->slices += pslices;
+
+  return zx::ok(index);
 }
 
 zx_status_t FvmInfo::GetPartition(size_t index, fvm::VPartitionEntry** out) const {
@@ -307,4 +311,41 @@ zx_status_t FvmInfo::GetSlice(size_t index, fvm::SliceEntry** out) const {
 
   *out = &metadata_.GetSliceEntry(index);
   return ZX_OK;
+}
+
+zx::status<uint32_t> FvmInfo::ReserveSlicesContiguous(size_t num) {
+  CheckValid();
+  const fvm::Header& sb = SuperBlock();
+  auto ReserveSlice = [&]() -> zx::status<uint32_t> {
+    for (uint32_t index = pslice_hint_; index <= sb.GetAllocationTableUsedEntryCount(); index++) {
+      fvm::SliceEntry* slice = nullptr;
+      if (zx_status_t status = GetSlice(index, &slice); status != ZX_OK) {
+        fprintf(stderr, "Failed to retrieve slice %u\n", index);
+        return zx::error(status);
+      }
+
+      if (slice->IsAllocated()) {
+        continue;
+      }
+
+      pslice_hint_ = index + 1;
+      dirty_ = true;
+      return zx::ok(index);
+    }
+    return zx::error(ZX_ERR_NO_SPACE);
+  };
+
+  uint32_t first_slice = 0;
+  uint32_t last_slice = 0;
+  while (num--) {
+    auto index_or = ReserveSlice();
+    if (index_or.is_error()) {
+      return index_or.take_error();
+    }
+    ZX_ASSERT(!last_slice || index_or.value() == last_slice + 1);
+    if (!first_slice)
+      first_slice = index_or.value();
+    last_slice = index_or.value();
+  }
+  return zx::ok(first_slice);
 }
