@@ -168,6 +168,10 @@ zx_status_t Journal::CommitTransaction(Transaction transaction) {
     return block_count_or.status_value();
   }
 
+  if (block_count_or.value() > kMaxBlockDescriptors) {
+    return ZX_ERR_NO_SPACE;
+  }
+
   // Ensure there is enough space in the journal buffer.
   // Note that in addition to the operation's blocks, we also reserve space for the journal
   // entry's metadata (header, footer, etc).

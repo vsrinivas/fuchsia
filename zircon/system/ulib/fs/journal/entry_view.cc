@@ -4,13 +4,12 @@
 
 #include "entry_view.h"
 
-#include <vector>
-
 #include <lib/cksum.h>
-#include <storage/operation/operation.h>
 #include <zircon/types.h>
 
-#include <fbl/vector.h>
+#include <vector>
+
+#include <storage/operation/operation.h>
 
 namespace fs {
 
@@ -29,7 +28,7 @@ JournalEntryView::JournalEntryView(storage::BlockBufferView view,
 
 void JournalEntryView::Encode(const std::vector<storage::BufferedOperation>& operations,
                               uint64_t sequence_number) {
-  ZX_DEBUG_ASSERT(header_.PayloadBlocks() < kMaxBlockDescriptors);
+  ZX_DEBUG_ASSERT(header_.PayloadBlocks() <= kMaxBlockDescriptors);
   uint32_t block_index = 0;
   for (const auto& operation : operations) {
     for (size_t i = 0; i < operation.op.length; i++) {

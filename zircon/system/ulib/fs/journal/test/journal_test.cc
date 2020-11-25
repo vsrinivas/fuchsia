@@ -331,9 +331,11 @@ zx_status_t FlushCallback(const std::vector<storage::BufferedOperation>& request
 // structures can be "taken" from this fixture using the "take_*" methods below.
 class JournalTest : public testing::Test {
  public:
+  virtual size_t GetJournalLength() const { return kJournalLength; }
+
   void SetUp() override {
     registry_.SetNextVmoid(kJournalVmoid);
-    ASSERT_EQ(storage::BlockingRingBuffer::Create(&registry_, kJournalLength, kBlockSize,
+    ASSERT_EQ(storage::BlockingRingBuffer::Create(&registry_, GetJournalLength(), kBlockSize,
                                                   "journal-writeback-buffer", &journal_buffer_),
               ZX_OK);
 
@@ -3119,6 +3121,58 @@ TEST_F(JournalTest, MetricsUpdates) {
             static_cast<uint32_t>(1));
 }
 
+class JournalTestWithLargeBuffer : public JournalTest {
+ public:
+  size_t GetJournalLength() const override { return 1024; }
+};
+
+class StubTransactionHandler final : public fs::TransactionHandler {
+ public:
+  uint64_t BlockNumberToDevice(uint64_t block_num) const final { return block_num; }
+  zx_status_t RunRequests(const std::vector<storage::BufferedOperation>& requests) final {
+    return ZX_OK;
+  }
+  zx_status_t Flush() final { return ZX_OK; }
+};
+
+TEST_F(JournalTestWithLargeBuffer, ExactlyMaxBlockDescriptorsSucceeds) {
+  storage::VmoBuffer buffer = registry()->InitializeBuffer(1);
+  const std::vector<storage::UnbufferedOperation> operations(
+      kMaxBlockDescriptors, {
+                                .vmo = zx::unowned_vmo(buffer.vmo().get()),
+                                .op =
+                                    {
+                                        storage::OperationType::kWrite,
+                                        .vmo_offset = 0,
+                                        .dev_offset = 20,
+                                        .length = 1,
+                                    },
+                            });
+  StubTransactionHandler handler;
+  Journal journal(&handler, take_info(), take_journal_buffer(), take_data_buffer(), 0,
+                  Journal::Options());
+  EXPECT_EQ(journal.CommitTransaction({.metadata_operations = operations}), ZX_OK);
+}
+
+TEST_F(JournalTestWithLargeBuffer, MoreThanMaxBlockDescriptorsFails) {
+  storage::VmoBuffer buffer = registry()->InitializeBuffer(1);
+  const std::vector<storage::UnbufferedOperation> operations(
+      kMaxBlockDescriptors + 1, {
+                                    .vmo = zx::unowned_vmo(buffer.vmo().get()),
+                                    .op =
+                                        {
+                                            storage::OperationType::kWrite,
+                                            .vmo_offset = 0,
+                                            .dev_offset = 20,
+                                            .length = 1,
+                                        },
+                                });
+  StubTransactionHandler handler;
+  Journal journal(&handler, take_info(), take_journal_buffer(), take_data_buffer(), 0,
+                  Journal::Options());
+  EXPECT_EQ(journal.CommitTransaction({.metadata_operations = operations}), ZX_ERR_NO_SPACE);
+}
+
 class TestTransactionHandler : public DeviceTransactionHandler {
  public:
   TestTransactionHandler(block_client::BlockDevice& device) : device_(device) {}
@@ -3300,7 +3354,7 @@ TEST(JournaCallbackTest, CommitCallbackTriggeredAtCorrectTime) {
   }
 }
 
-TEST(JournaCallbackTest, CompleteCallbackTriggeredAtCorrectTime) {
+TEST(JournalCallbackTest, CompleteCallbackTriggeredAtCorrectTime) {
   constexpr int kBlockCount = 100;
   block_client::FakeBlockDevice device(kBlockCount, kBlockSize);
   TestTransactionHandler handler(device);
@@ -3403,7 +3457,7 @@ TEST(MakeJournal, ValidArgs) {
   }
 }
 
-TEST(MakeJournal, SmallBUffer) {
+TEST(MakeJournal, SmallBuffer) {
   constexpr uint64_t kBlockCount = 1;
   uint8_t blocks[kBlockCount * (fs::kJournalBlockSize - 1)];
 
