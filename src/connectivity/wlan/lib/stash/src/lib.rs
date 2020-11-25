@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-///! High level node abstraction on top of Fuchsia's Stash service.
-///! Allows to insert structured, hierarchical data into a Stash backed
-///! store.
+//! High level node abstraction on top of Fuchsia's Stash service.
+//! Allows to insert structured, hierarchical data into a Stash backed
+//! store.
 use {
     anyhow::{format_err, Error},
     fidl_fuchsia_stash as fidl_stash,

@@ -253,18 +253,30 @@ impl<K: Clone + Eq + Hash + Unpin, St: Stream> Stream for StreamMap<K, St> {
 pub type IndexedStreams<K, St> = StreamMap<K, StreamWithEpitaph<Tagged<K, St>, K>>;
 
 #[cfg(test)]
-mod tests {
-    use {
-        super::*,
-        fuchsia_async as fasync,
-        futures::{
-            channel::mpsc,
-            future::ready,
-            stream::{empty, iter, once, Empty, StreamExt},
-        },
-        proptest::prelude::*,
-        std::{collections::HashSet, fmt::Debug},
-    };
+mod test {
+    //! We validate the behavior of the StreamMap stream by enumerating all possible external
+    //! events, and then generating permutations of valid sequences of those events. These model
+    //! the possible executions sequences the stream could go through in program execution. We
+    //! then assert that:
+    //!   a) At all points during execution, all invariants are held
+    //!   b) The final result is as expected
+    //!
+    //! In this case, the invariants are:
+    //!   * If the map is empty, it is pending
+    //!   * If all streams are pending, the map is pending
+    //!   * otherwise the map is ready
+    //!
+    //! The result is:
+    //!   * All test messages have been injected
+    //!   * All test messages have been yielded
+    //!   * All test streams have terminated
+    //!   * No event is yielded with a given key after the stream for that key has terminated
+    //!
+    //! Together these show:
+    //!   * Progress is always eventually made - the Stream cannot be stalled
+    //!   * All inserted elements will eventually be yielded
+    //!   * Elements are never duplicated
+    use super::*;
 
     #[fasync::run_until_stalled(test)]
     async fn empty_stream_returns_epitaph_only() {

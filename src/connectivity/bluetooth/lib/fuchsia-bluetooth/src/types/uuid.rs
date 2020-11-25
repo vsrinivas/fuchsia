@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-///! This module defines the `Uuid` type which represents a 128-bit Bluetooth UUID. It provides
-///! convenience functions to support 16-bit, 32-bit, and 128-bit canonical formats as well as
-///! string representation. It can be converted to/from a fuchsia.bluetooth.Uuid FIDL type.
+//! This module defines the `Uuid` type which represents a 128-bit Bluetooth UUID. It provides
+//! convenience functions to support 16-bit, 32-bit, and 128-bit canonical formats as well as
+//! string representation. It can be converted to/from a fuchsia.bluetooth.Uuid FIDL type.
 use {
     anyhow::{format_err, Error},
     byteorder::{ByteOrder, LittleEndian},

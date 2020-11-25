@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-///! Implements a DHCPv6 client.
+//! Implements a DHCPv6 client.
 use {
     anyhow::{Context as _, Result},
     async_utils::futures::{FutureExt as _, ReplaceValue},

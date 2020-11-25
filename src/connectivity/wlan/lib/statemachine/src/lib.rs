@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+//! Generic state machine implementation with compile time checked state transitions.
+
 use std::{
     convert::{AsMut, AsRef},
     fmt::Debug,
@@ -9,8 +11,6 @@ use std::{
     ops::{Deref, DerefMut},
 };
 
-///! Generic state machine implementation with compile time checked state transitions.
-///
 pub use wlan_statemachine_macro::statemachine;
 
 /// Wrapper to safely replace states of state machine which don't consume their states.

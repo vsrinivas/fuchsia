@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-///! This module provides abstractions over the fatfs Dir and File types,
-///! erasing their lifetimes and allowing them to be kept without holding the filesystem lock.
+//! This module provides abstractions over the fatfs Dir and File types,
+//! erasing their lifetimes and allowing them to be kept without holding the filesystem lock.
 use {
     crate::{
         directory::FatDirectory,

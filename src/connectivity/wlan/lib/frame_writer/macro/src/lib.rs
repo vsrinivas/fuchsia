@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+//! A procedural macro for writing frames into buffers.
+
 extern crate proc_macro;
 
 mod frame_writer;
@@ -9,8 +11,6 @@ mod header;
 mod ie;
 
 use proc_macro_hack::proc_macro_hack;
-
-///! A procedural macro for writing frames into buffers.
 
 /// This macro allows for writing frames into a buffer. The macro operates in three steps:
 /// (1) Compute the frame's resulting length by adding up all headers and IEs.

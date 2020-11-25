@@ -88,7 +88,7 @@
 //! }
 //! ```
 //!
-///! This adds a `Logical(YourErrorType)` variant to the generated error enum.
+//! This adds a `Logical(YourErrorType)` variant to the generated error enum.
 // TODO(turnage): Infer optionality based on parsing for
 //                "Option<" in field types.
 pub use fidl_table_validation_derive::ValidFidlTable;

@@ -4,7 +4,7 @@
 
 #![recursion_limit = "256"]
 
-///! Safe wrappers for enumerating `fuchsia.io.Directory` contents.
+//! Safe wrappers for enumerating `fuchsia.io.Directory` contents.
 use {
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::{self as fio, DirectoryMarker, DirectoryProxy, MAX_BUF, MODE_TYPE_DIRECTORY},
