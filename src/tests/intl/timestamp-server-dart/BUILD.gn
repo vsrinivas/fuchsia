@@ -6,7 +6,7 @@ import("//build/dart/dart_app.gni")
 import("//build/dart/fidl_move.gni")
 import("//build/flutter/flutter_app.gni")
 
-dart_app_polyfill("timestamp-server-dart") {
+dart_app("timestamp-server-dart") {
   main_dart = "lib/main.dart"
 
   meta = [

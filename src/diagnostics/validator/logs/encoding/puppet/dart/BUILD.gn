@@ -6,7 +6,7 @@ import("//build/dart/dart_app.gni")
 import("//build/dart/fidl_move.gni")
 import("//src/sys/build/components.gni")
 
-dart_app_polyfill("log-validator-dart-puppet") {
+dart_app("log-validator-dart-puppet") {
   components = [
     {
       component_name = "log-validator-dart-puppet"

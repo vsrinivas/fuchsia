@@ -61,7 +61,7 @@ import("//src/sys/build/components.gni")
 #   deps (optional)
 #     List of Dart packages the application depends on. Can only be defined if
 #     main_dart is defined.
-template("dart_app_polyfill") {
+template("dart_app") {
   assert(defined(invoker.meta), "Must define meta")
   _invoker_meta = invoker.meta
   assert(_invoker_meta != [] && _invoker_meta == [ _invoker_meta[0] ],

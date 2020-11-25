@@ -5,7 +5,7 @@
 import("//build/dart/dart_app.gni")
 import("//build/dart/fidl_move.gni")
 
-dart_app_polyfill("echo-dart-server") {
+dart_app("echo-dart-server") {
   main_dart = "lib/main.dart"
 
   meta = [
