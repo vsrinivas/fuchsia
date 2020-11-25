@@ -5,6 +5,7 @@
 #ifndef SRC_UI_INPUT_DRIVERS_FOCALTECH_FT_DEVICE_H_
 #define SRC_UI_INPUT_DRIVERS_FOCALTECH_FT_DEVICE_H_
 
+#include <lib/device-protocol/i2c-channel.h>
 #include <lib/zx/interrupt.h>
 #include <threads.h>
 #include <zircon/compiler.h>
@@ -13,22 +14,13 @@
 #include <atomic>
 
 #include <ddk/device.h>
-#include <ddk/protocol/gpio.h>
-#include <ddk/protocol/i2c.h>
-#include <ddk/protocol/test.h>
 #include <ddktl/device.h>
+#include <ddktl/protocol/gpio.h>
 #include <ddktl/protocol/hidbus.h>
-#include <ddktl/protocol/test.h>
 #include <fbl/mutex.h>
 #include <hid/ft3x27.h>
 #include <hid/ft5726.h>
 #include <hid/ft6336.h>
-
-enum {
-  FT_INT_PIN,
-  FT_RESET_PIN,
-  FT_PIN_COUNT,
-};
 
 // clang-format off
 #define FTS_REG_CURPOINT                    0x02
@@ -111,9 +103,10 @@ class FtDevice : public ddk::Device<FtDevice, ddk::Unbindable>,
   ft3x27_touch_t ft_rpt_ __TA_GUARDED(client_lock_);
   void ParseReport(ft3x27_finger_t* rpt, uint8_t* buf);
 
-  gpio_protocol_t gpios_[FT_PIN_COUNT];
+  ddk::GpioProtocolClient int_gpio_;
+  ddk::GpioProtocolClient reset_gpio_;
   zx::interrupt irq_;
-  i2c_protocol_t i2c_;
+  ddk::I2cChannel i2c_;
 
   thrd_t thread_;
   std::atomic<bool> running_;

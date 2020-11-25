@@ -11,20 +11,14 @@
 #include <ddk/debug.h>
 #include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
-#include <ddk/protocol/composite.h>
 #include <ddktl/fidl.h>
+#include <ddktl/protocol/composite.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 
 #include "src/ui/backlight/drivers/ti-lp8556/ti-lp8556-bind.h"
 
 namespace ti {
-
-enum {
-  FRAGMENT_PDEV,
-  FRAGMENT_I2C,
-  FRAGMENT_COUNT,
-};
 
 void Lp8556Device::DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
 
@@ -298,24 +292,14 @@ zx_status_t Lp8556Device::SetCurrentScale(uint16_t scale) {
 }
 
 zx_status_t ti_lp8556_bind(void* ctx, zx_device_t* parent) {
-  composite_protocol_t composite;
-
-  auto status = device_get_protocol(parent, ZX_PROTOCOL_COMPOSITE, &composite);
-  if (status != ZX_OK) {
+  ddk::CompositeProtocolClient composite(parent);
+  if (!composite.is_valid()) {
     LOG_ERROR("Could not get composite protocol\n");
-    return status;
-  }
-
-  zx_device_t* fragments[FRAGMENT_COUNT];
-  size_t actual;
-  composite_get_fragments(&composite, fragments, FRAGMENT_COUNT, &actual);
-  if (actual != FRAGMENT_COUNT) {
-    LOG_ERROR("Could not get fragments\n");
-    return ZX_ERR_INTERNAL;
+    return ZX_ERR_NO_RESOURCES;
   }
 
   // Get platform device protocol
-  ddk::PDev pdev(fragments[FRAGMENT_PDEV]);
+  ddk::PDev pdev(composite);
   if (!pdev.is_valid()) {
     LOG_ERROR("Could not get PDEV protocol\n");
     return ZX_ERR_NO_RESOURCES;
@@ -323,24 +307,22 @@ zx_status_t ti_lp8556_bind(void* ctx, zx_device_t* parent) {
 
   // Map MMIO
   std::optional<ddk::MmioBuffer> mmio;
-  status = pdev.MapMmio(0, &mmio);
+  zx_status_t status = pdev.MapMmio(0, &mmio);
   if (status != ZX_OK) {
     LOG_ERROR("Could not map mmio %d\n", status);
     return status;
   }
 
   // Obtain I2C protocol needed to control backlight
-  i2c_protocol_t i2c;
-  status = device_get_protocol(fragments[FRAGMENT_I2C], ZX_PROTOCOL_I2C, &i2c);
-  if (status != ZX_OK) {
+  ddk::I2cChannel i2c(composite, "i2c");
+  if (!i2c.is_valid()) {
     LOG_ERROR("Could not obtain I2C protocol\n");
-    return status;
+    return ZX_ERR_NO_RESOURCES;
   }
-  ddk::I2cChannel i2c_channel(&i2c);
 
   fbl::AllocChecker ac;
-  auto dev = fbl::make_unique_checked<ti::Lp8556Device>(&ac, parent, std::move(i2c_channel),
-                                                        *std::move(mmio));
+  auto dev =
+      fbl::make_unique_checked<ti::Lp8556Device>(&ac, parent, std::move(i2c), *std::move(mmio));
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }

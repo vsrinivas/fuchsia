@@ -9,8 +9,8 @@
 
 #include <ddk/debug.h>
 #include <ddk/platform-defs.h>
-#include <ddk/protocol/composite.h>
 #include <ddktl/fidl.h>
+#include <ddktl/protocol/composite.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 
@@ -20,55 +20,37 @@ namespace {
 
 constexpr int64_t kEnableSleepTimeMs = 20;
 
-enum {
-  FRAGMENT_I2C,
-  FRAGMENT_GPIO,
-  FRAGMENT_COUNT,
-};
-
 }  // namespace
 
 namespace backlight {
 
 zx_status_t Sgm37603a::Create(void* ctx, zx_device_t* parent) {
-  composite_protocol_t composite;
-
-  auto status = device_get_protocol(parent, ZX_PROTOCOL_COMPOSITE, &composite);
-  if (status != ZX_OK) {
+  ddk::CompositeProtocolClient composite(parent);
+  if (!composite.is_valid()) {
     zxlogf(ERROR, "%s: could not get ZX_PROTOCOL_COMPOSITE", __FILE__);
-    return status;
+    return ZX_ERR_NO_RESOURCES;
   }
 
-  zx_device_t* fragments[FRAGMENT_COUNT];
-  size_t actual;
-  composite_get_fragments(&composite, fragments, FRAGMENT_COUNT, &actual);
-  if (actual != FRAGMENT_COUNT) {
-    zxlogf(ERROR, "%s: could not get our fragments", __FILE__);
-    return ZX_ERR_INTERNAL;
-  }
-
-  i2c_protocol_t i2c;
-  status = device_get_protocol(fragments[FRAGMENT_I2C], ZX_PROTOCOL_I2C, &i2c);
-  if (status != ZX_OK) {
+  ddk::I2cChannel i2c(composite, "i2c");
+  if (!i2c.is_valid()) {
     zxlogf(ERROR, "%s: could not get protocol ZX_PROTOCOL_I2C", __FILE__);
-    return status;
+    return ZX_ERR_NO_RESOURCES;
   }
 
-  gpio_protocol_t reset_gpio;
-  status = device_get_protocol(fragments[FRAGMENT_GPIO], ZX_PROTOCOL_GPIO, &reset_gpio);
-  if (status != ZX_OK) {
+  ddk::GpioProtocolClient reset_gpio(composite, "gpio");
+  if (!reset_gpio.is_valid()) {
     zxlogf(ERROR, "%s: could not get protocol ZX_PROTOCOL_GPIO", __FILE__);
-    return status;
+    return ZX_ERR_NO_RESOURCES;
   }
 
   fbl::AllocChecker ac;
-  std::unique_ptr<Sgm37603a> device(new (&ac) Sgm37603a(parent, &i2c, &reset_gpio));
+  std::unique_ptr<Sgm37603a> device(new (&ac) Sgm37603a(parent, i2c, reset_gpio));
   if (!ac.check()) {
     zxlogf(ERROR, "%s: Sgm37603a alloc failed", __FILE__);
     return ZX_ERR_NO_MEMORY;
   }
 
-  status = device->SetBacklightState(true, 1.0);
+  zx_status_t status = device->SetBacklightState(true, 1.0);
   if (status != ZX_OK) {
     return status;
   }

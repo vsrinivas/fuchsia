@@ -88,10 +88,6 @@ class Lp50xxLight : public Lp50xxLightType,
  private:
   friend class Lp50xxLightTest;
 
-  static constexpr uint32_t kFragmentCount = 2;
-  static constexpr uint32_t kPdevFragment = 0;
-  static constexpr uint32_t kI2cFragment = 1;
-
   zx_status_t Lp50xxRegConfig();
 
   static constexpr size_t kNameLength = ZX_MAX_NAME_LEN;

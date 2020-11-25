@@ -5,7 +5,6 @@
 #include "ft_device.h"
 
 #include <fuchsia/input/report/llcpp/fidl.h>
-#include <lib/device-protocol/i2c.h>
 #include <lib/focaltech/focaltech.h>
 #include <lib/zx/profile.h>
 #include <lib/zx/time.h>
@@ -25,8 +24,8 @@
 #include <ddk/device.h>
 #include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
-#include <ddk/protocol/composite.h>
 #include <ddk/trace/event.h>
+#include <ddktl/protocol/composite.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
@@ -36,13 +35,6 @@
 #include <hw/reg.h>
 
 namespace ft {
-
-enum {
-  FRAGMENT_I2C,
-  FRAGMENT_INT_GPIO,
-  FRAGMENT_RESET_GPIO,
-  FRAGMENT_COUNT,
-};
 
 FtDevice::FtDevice(zx_device_t* device) : ddk::Device<FtDevice, ddk::Unbindable>(device) {}
 
@@ -87,49 +79,38 @@ int FtDevice::Thread() {
 }
 
 zx_status_t FtDevice::Init() {
-  composite_protocol_t composite;
-
-  auto status = device_get_protocol(parent(), ZX_PROTOCOL_COMPOSITE, &composite);
-  if (status != ZX_OK) {
+  ddk::CompositeProtocolClient composite(parent());
+  if (!composite.is_valid()) {
     zxlogf(ERROR, "Could not get composite protocol");
+    return ZX_ERR_NO_RESOURCES;
+  }
+
+  i2c_ = ddk::I2cChannel(composite, "i2c");
+  if (!i2c_.is_valid()) {
+    zxlogf(ERROR, "failed to acquire i2c");
+    return ZX_ERR_NO_RESOURCES;
+  }
+
+  int_gpio_ = ddk::GpioProtocolClient(composite, "gpio-int");
+  if (!int_gpio_.is_valid()) {
+    zxlogf(ERROR, "failed to acquire int gpio");
+    return ZX_ERR_NO_RESOURCES;
+  }
+
+  reset_gpio_ = ddk::GpioProtocolClient(composite, "gpio-reset");
+  if (!reset_gpio_.is_valid()) {
+    zxlogf(ERROR, "focaltouch: failed to acquire gpio");
+    return ZX_ERR_NO_RESOURCES;
+  }
+
+  int_gpio_.ConfigIn(GPIO_NO_PULL);
+
+  zx_status_t status = int_gpio_.GetInterrupt(ZX_INTERRUPT_MODE_EDGE_LOW, &irq_);
+  if (status != ZX_OK) {
     return status;
   }
 
-  zx_device_t* fragments[FRAGMENT_COUNT];
   size_t actual;
-  composite_get_fragments(&composite, fragments, std::size(fragments), &actual);
-  if (actual != std::size(fragments)) {
-    zxlogf(ERROR, "could not get fragments");
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
-  status = device_get_protocol(fragments[FRAGMENT_I2C], ZX_PROTOCOL_I2C, &i2c_);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "focaltouch: failed to acquire i2c");
-    return status;
-  }
-
-  status = device_get_protocol(fragments[FRAGMENT_INT_GPIO], ZX_PROTOCOL_GPIO, &gpios_[FT_INT_PIN]);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "focaltouch: failed to acquire gpio");
-    return status;
-  }
-
-  status =
-      device_get_protocol(fragments[FRAGMENT_RESET_GPIO], ZX_PROTOCOL_GPIO, &gpios_[FT_RESET_PIN]);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "focaltouch: failed to acquire gpio");
-    return status;
-  }
-
-  gpio_config_in(&gpios_[FT_INT_PIN], GPIO_NO_PULL);
-
-  status = gpio_get_interrupt(&gpios_[FT_INT_PIN], ZX_INTERRUPT_MODE_EDGE_LOW,
-                              irq_.reset_and_get_address());
-  if (status != ZX_OK) {
-    return status;
-  }
-
   uint32_t device_id;
   status = device_get_metadata(parent(), DEVICE_METADATA_PRIVATE, &device_id, sizeof(device_id),
                                &actual);
@@ -297,7 +278,7 @@ zx_status_t FtDevice::HidbusStart(const hidbus_ifc_protocol_t* ifc) {
 //  intended mostly for debug purposes
 uint8_t FtDevice::Read(uint8_t addr) {
   uint8_t rbuf;
-  i2c_write_read_sync(&i2c_, &addr, 1, &rbuf, 1);
+  i2c_.WriteReadSync(&addr, 1, &rbuf, 1);
   return rbuf;
 }
 
@@ -307,7 +288,7 @@ zx_status_t FtDevice::Read(uint8_t addr, uint8_t* buf, size_t len) {
   while (len > 0) {
     size_t readlen = std::min(len, kMaxI2cTransferLength);
 
-    zx_status_t status = i2c_write_read_sync(&i2c_, &addr, 1, buf, readlen);
+    zx_status_t status = i2c_.WriteReadSync(&addr, 1, buf, readlen);
     if (status != ZX_OK) {
       zxlogf(ERROR, "Failed to read i2c - %d", status);
       return status;

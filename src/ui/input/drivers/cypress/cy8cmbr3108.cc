@@ -10,20 +10,12 @@
 #include <ddk/driver.h>
 #include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
-#include <ddk/protocol/composite.h>
+#include <ddktl/protocol/composite.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
 #include <hid/visalia-touch.h>
 
 #include "src/ui/input/drivers/cypress/cypress_cy8cmbr3108-bind.h"
-
-namespace {
-enum {
-  kI2cFragment,
-  kTouchGpioFragment,
-  kFragmentCount,
-};
-}  // namespace
 
 namespace cypress {
 
@@ -244,38 +236,28 @@ void Cy8cmbr3108::DdkUnbind(ddk::UnbindTxn txn) {
 void Cy8cmbr3108::DdkRelease() { delete this; }
 
 zx_status_t Cy8cmbr3108::InitializeProtocols() {
-  composite_protocol_t composite;
-  auto status = device_get_protocol(parent(), ZX_PROTOCOL_COMPOSITE, &composite);
-  if (status != ZX_OK) {
+  ddk::CompositeProtocolClient composite(parent());
+  if (!composite.is_valid()) {
     zxlogf(ERROR, "%s: Get ZX_PROTOCOL_COMPOSITE failed", __func__);
-    return status;
-  }
-
-  zx_device_t* fragments[kFragmentCount];
-  size_t actual;
-  composite_get_fragments(&composite, fragments, countof(fragments), &actual);
-  if (actual != kFragmentCount) {
-    zxlogf(ERROR, "%s: Invalid fragment count (need %d, have %zu)", __func__, kFragmentCount,
-           actual);
-    return ZX_ERR_INTERNAL;
+    return ZX_ERR_NO_RESOURCES;
   }
 
   // Get I2C and GPIO protocol.
-  i2c_ = ddk::I2cProtocolClient(fragments[kI2cFragment]);
+  i2c_ = ddk::I2cProtocolClient(composite, "i2c");
   if (!i2c_.is_valid()) {
-    zxlogf(ERROR, "%s: ZX_PROTOCOL_I2C not found, err=%d", __func__, status);
-    return status;
+    zxlogf(ERROR, "%s: ZX_PROTOCOL_I2C not found", __func__);
+    return ZX_ERR_NO_RESOURCES;
   }
 
-  touch_gpio_ = ddk::GpioProtocolClient(fragments[kTouchGpioFragment]);
+  touch_gpio_ = ddk::GpioProtocolClient(composite, "gpio");
   if (!touch_gpio_.is_valid()) {
-    zxlogf(ERROR, "%s: ZX_PROTOCOL_GPIO not found, err=%d", __func__, status);
-    return status;
+    zxlogf(ERROR, "%s: ZX_PROTOCOL_GPIO not found", __func__);
+    return ZX_ERR_NO_RESOURCES;
   }
 
   // Get buttons metadata.
-  actual = 0;
-  status = device_get_metadata_size(parent(), DEVICE_METADATA_PRIVATE, &actual);
+  size_t actual = 0;
+  zx_status_t status = device_get_metadata_size(parent(), DEVICE_METADATA_PRIVATE, &actual);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s device_get_metadata_size failed %d", __FILE__, status);
     return ZX_OK;

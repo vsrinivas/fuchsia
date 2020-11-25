@@ -5,6 +5,7 @@
 #include "lp50xx-light.h"
 
 #include <assert.h>
+#include <lib/device-protocol/pdev.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -22,9 +23,8 @@
 #include <ddk/metadata.h>
 #include <ddk/metadata/lights.h>
 #include <ddk/platform-defs.h>
-#include <ddk/protocol/composite.h>
 #include <ddktl/fidl.h>
-#include <ddktl/protocol/platform/device.h>
+#include <ddktl/protocol/composite.h>
 #include <fbl/alloc_checker.h>
 
 #include "lp50xx-regs.h"
@@ -354,39 +354,29 @@ void Lp50xxLight::DdkRelease() { delete this; }
 
 zx_status_t Lp50xxLight::InitHelper() {
   // Get Pdev and I2C protocol.
-  composite_protocol_t composite;
-  auto status = device_get_protocol(parent(), ZX_PROTOCOL_COMPOSITE, &composite);
-  if (status != ZX_OK) {
+  ddk::CompositeProtocolClient composite(parent());
+  if (!composite.is_valid()) {
     zxlogf(ERROR, "%s: Get ZX_PROTOCOL_COMPOSITE failed", __func__);
-    return status;
+    return ZX_ERR_NO_RESOURCES;
   }
 
-  zx_device_t* fragments[kFragmentCount];
-  size_t actual;
-  composite_get_fragments(&composite, fragments, countof(fragments), &actual);
-  if (actual != kFragmentCount) {
-    zxlogf(ERROR, "Invalid fragment count (need %d, have %zu)", kFragmentCount, actual);
-    return ZX_ERR_INTERNAL;
-  }
-
-  // status = device_get_protocol(fragments[kI2cFragment], ZX_PROTOCOL_I2C, &i2c_);
-  ddk::I2cProtocolClient i2c(fragments[kI2cFragment]);
+  ddk::I2cProtocolClient i2c(composite, "i2c");
   if (!i2c.is_valid()) {
-    zxlogf(ERROR, "ZX_PROTOCOL_I2C not found, err=%d", status);
-    return status;
+    zxlogf(ERROR, "ZX_PROTOCOL_I2C not found");
+    return ZX_ERR_NO_RESOURCES;
   }
 
-  ddk::PDevProtocolClient pdev(fragments[kPdevFragment]);
+  ddk::PDev pdev(composite);
   if (!pdev.is_valid()) {
     zxlogf(ERROR, "%s: Get PBusProtocolClient failed", __func__);
-    return ZX_ERR_INTERNAL;
+    return ZX_ERR_NO_RESOURCES;
   }
 
   pdev_device_info info = {};
-  status = pdev.GetDeviceInfo(&info);
+  zx_status_t status = pdev.GetDeviceInfo(&info);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: GetDeviceInfo failed: %d", __func__, status);
-    return ZX_ERR_INTERNAL;
+    return status;
   }
   pid_ = info.pid;
   i2c_ = std::move(i2c);
@@ -403,6 +393,7 @@ zx_status_t Lp50xxLight::InitHelper() {
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
+  size_t actual = 0;
   if ((status = device_get_metadata(parent(), DEVICE_METADATA_LIGHTS, configs.data(), metadata_size,
                                     &actual)) != ZX_OK) {
     return status;
