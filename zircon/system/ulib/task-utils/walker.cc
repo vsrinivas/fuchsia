@@ -10,6 +10,7 @@
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/zx/channel.h>
+#include <lib/zx/handle.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -120,20 +121,19 @@ static zx_status_t do_threads_worker(const walk_ctx_t* ctx, koid_table_t* koids,
   }
 
   for (size_t n = 0; n < koids->num_entries; n++) {
-    zx_handle_t child;
-    status = zx_object_get_child(process, koids->entries[n], ZX_RIGHT_SAME_RIGHTS, &child);
+    zx::handle child;
+    status = zx_object_get_child(process, koids->entries[n], ZX_RIGHT_SAME_RIGHTS,
+                                 child.reset_and_get_address());
     if (status == ZX_OK) {
       // call the thread_callback if supplied
       if (ctx->thread_callback) {
-        status = (ctx->thread_callback)(ctx->callback_context, depth, child, koids->entries[n],
-                                        process_koid);
+        status = (ctx->thread_callback)(ctx->callback_context, depth, child.get(),
+                                        koids->entries[n], process_koid);
         // abort on failure
         if (status != ZX_OK) {
           return status;
         }
       }
-
-      zx_handle_close(child);
     } else {
       fprintf(stderr,
               "WARNING: zx_object_get_child(%" PRIu64
@@ -165,13 +165,14 @@ static zx_status_t do_processes_worker(const walk_ctx_t* ctx, koid_table_t* koid
   }
 
   for (size_t n = 0; n < koids->num_entries; n++) {
-    zx_handle_t child;
-    status = zx_object_get_child(job, koids->entries[n], ZX_RIGHT_SAME_RIGHTS, &child);
+    zx::handle child;
+    status = zx_object_get_child(job, koids->entries[n], ZX_RIGHT_SAME_RIGHTS,
+                                 child.reset_and_get_address());
     if (status == ZX_OK) {
       // call the process_callback if supplied
       if (ctx->process_callback) {
-        status = (ctx->process_callback)(ctx->callback_context, depth, child, koids->entries[n],
-                                         job_koid);
+        status = (ctx->process_callback)(ctx->callback_context, depth, child.get(),
+                                         koids->entries[n], job_koid);
         // abort on failure
         if (status != ZX_OK) {
           return status;
@@ -179,14 +180,12 @@ static zx_status_t do_processes_worker(const walk_ctx_t* ctx, koid_table_t* koid
       }
 
       if (ctx->thread_callback) {
-        status = do_threads(ctx, child, koids->entries[n], depth + 1);
+        status = do_threads(ctx, child.get(), koids->entries[n], depth + 1);
         // abort on failure
         if (status != ZX_OK) {
           return status;
         }
       }
-
-      zx_handle_close(child);
     } else {
       fprintf(stderr,
               "WARNING: zx_object_get_child(%" PRIu64
@@ -219,13 +218,14 @@ static zx_status_t do_jobs_worker(const walk_ctx_t* ctx, koid_table_t* koids, zx
 
   // drill down into the job tree
   for (size_t n = 0; n < koids->num_entries; n++) {
-    zx_handle_t child;
-    status = zx_object_get_child(job, koids->entries[n], ZX_RIGHT_SAME_RIGHTS, &child);
+    zx::handle child;
+    status = zx_object_get_child(job, koids->entries[n], ZX_RIGHT_SAME_RIGHTS,
+                                 child.reset_and_get_address());
     if (status == ZX_OK) {
       // call the job_callback if supplied
       if (ctx->job_callback) {
-        status =
-            (ctx->job_callback)(ctx->callback_context, depth, child, koids->entries[n], job_koid);
+        status = (ctx->job_callback)(ctx->callback_context, depth, child.get(), koids->entries[n],
+                                     job_koid);
         // abort on failure
         if (status != ZX_OK) {
           return status;
@@ -233,13 +233,11 @@ static zx_status_t do_jobs_worker(const walk_ctx_t* ctx, koid_table_t* koids, zx
       }
 
       // recurse to its children
-      status = walk_job_tree_internal(ctx, child, koids->entries[n], depth + 1);
+      status = walk_job_tree_internal(ctx, child.get(), koids->entries[n], depth + 1);
       // abort on failure
       if (status != ZX_OK) {
         return status;
       }
-
-      zx_handle_close(child);
     } else {
       fprintf(stderr,
               "WARNING: zx_object_get_child(%" PRIu64 ", (job)%" PRIu64 ", ...) failed: %s (%d)\n",
@@ -311,16 +309,17 @@ zx_status_t walk_root_job_tree(task_callback_t job_callback, task_callback_t pro
     return status;
   }
 
-  zx_handle_t root_job;
-  zx_status_t fidl_status = fuchsia_kernel_RootJobGet(local.get(), &root_job);
+  zx::handle root_job;
+  zx_status_t fidl_status =
+      fuchsia_kernel_RootJobGet(local.get(), root_job.reset_and_get_address());
 
   if (fidl_status != ZX_OK) {
     fprintf(stderr, "task-utils/walker: cannot obtain root job\n");
     return ZX_ERR_NOT_FOUND;
   }
 
-  zx_status_t s = walk_job_tree(root_job, job_callback, process_callback, thread_callback, context);
-  zx_handle_close(root_job);
+  zx_status_t s =
+      walk_job_tree(root_job.get(), job_callback, process_callback, thread_callback, context);
   return s;
 }
 
