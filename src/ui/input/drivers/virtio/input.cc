@@ -98,14 +98,14 @@ zx_status_t InputDevice::Init() {
     SelectConfig(VIRTIO_INPUT_CFG_ABS_INFO, VIRTIO_INPUT_EV_MT_POSITION_Y);
     virtio_input_absinfo_t y_info = config_.u.abs;
     hid_device_ = std::make_unique<HidTouch>(x_info, y_info);
-  } else if (cfg_rel_size > 0 || cfg_abs_size > 0) {
-    // Mouse
-    dev_class_ = HID_DEVICE_CLASS_POINTER;
-    hid_device_ = std::make_unique<HidMouse>();
   } else if (cfg_key_size > 0) {
     // Keyboard
     dev_class_ = HID_DEVICE_CLASS_KBD;
     hid_device_ = std::make_unique<HidKeyboard>();
+  } else if (cfg_rel_size > 0 || cfg_abs_size > 0) {
+    // Mouse
+    dev_class_ = HID_DEVICE_CLASS_POINTER;
+    hid_device_ = std::make_unique<HidMouse>();
   } else {
     return ZX_ERR_NOT_SUPPORTED;
   }
