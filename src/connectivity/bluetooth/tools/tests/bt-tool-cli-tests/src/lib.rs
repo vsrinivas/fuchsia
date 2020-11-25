@@ -138,5 +138,5 @@ fn bt_snoop_cli_help_string() {
     assert!(ret.contains("Usage: "), "found: {}", ret);
     assert!(ret.contains("Snoop Bluetooth controller packets"), "found: {}", ret);
     // Ensure that the doc comment on the type isn't leaking into the help docs.
-    assert!(!ret.contains("command line arguments"), "found: {}");
+    assert!(!ret.contains("command line arguments"), "found: {}", ret);
 }
