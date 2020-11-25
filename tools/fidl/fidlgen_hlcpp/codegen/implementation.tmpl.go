@@ -36,6 +36,7 @@ namespace {{ . }} {
 {{- range .Decls }}
 {{- if Eq .Kind Kinds.Bits }}{{ template "BitsDefinition" . }}{{- end }}
 {{- if Eq .Kind Kinds.Const }}{{ template "ConstDefinition" . }}{{- end }}
+{{- if Eq .Kind Kinds.Enum }}{{ template "EnumDefinition" . }}{{- end }}
 {{- if Eq .Kind Kinds.Struct }}{{ template "StructDefinition" . }}{{- end }}
 {{- if Eq .Kind Kinds.Union }}{{ template "UnionDefinition" . }}{{- end }}
 {{- if Eq .Kind Kinds.Table }}{{ template "TableDefinition" . }}{{- end }}

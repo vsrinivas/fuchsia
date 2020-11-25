@@ -24,14 +24,52 @@ inline zx_status_t Clone(::fidl::test::enum_::MyStrictEnum value,
   return ZX_OK;
 }
 
-enum class MyFlexibleEnumWithCustomUnknown : uint32_t {
+class MyFlexibleEnumWithCustomUnknown final {
+ public:
+  constexpr MyFlexibleEnumWithCustomUnknown() : value_(0) {}
+  constexpr explicit MyFlexibleEnumWithCustomUnknown(uint32_t value)
+      : value_(value) {}
+  constexpr MyFlexibleEnumWithCustomUnknown(
+      const MyFlexibleEnumWithCustomUnknown& other) = default;
+  constexpr operator uint32_t() const { return value_; }
 
-  FOO = 1u,
+  constexpr bool IsUnknown() const {
+    switch (value_) {
+      case 1u:
 
-  BAR = 2u,
+      case 2u:
 
-  CUSTOM_UNKNOWN = 3u,
+        return false;
+      default:
+        return true;
+    }
+  }
+
+  constexpr static MyFlexibleEnumWithCustomUnknown Unknown() {
+    return MyFlexibleEnumWithCustomUnknown(0x3);
+  }
+
+  static const MyFlexibleEnumWithCustomUnknown FOO;
+
+  static const MyFlexibleEnumWithCustomUnknown BAR;
+
+  static const MyFlexibleEnumWithCustomUnknown CUSTOM_UNKNOWN;
+
+ private:
+  uint32_t value_;
 };
+
+#if !(__cplusplus < 201703)
+constexpr const ::fidl::test::enum_::MyFlexibleEnumWithCustomUnknown
+    MyFlexibleEnumWithCustomUnknown::FOO =
+        ::fidl::test::enum_::MyFlexibleEnumWithCustomUnknown(1u);
+constexpr const ::fidl::test::enum_::MyFlexibleEnumWithCustomUnknown
+    MyFlexibleEnumWithCustomUnknown::BAR =
+        ::fidl::test::enum_::MyFlexibleEnumWithCustomUnknown(2u);
+constexpr const ::fidl::test::enum_::MyFlexibleEnumWithCustomUnknown
+    MyFlexibleEnumWithCustomUnknown::CUSTOM_UNKNOWN =
+        ::fidl::test::enum_::MyFlexibleEnumWithCustomUnknown(3u);
+#endif  // !(__cplusplus < 201703)
 
 inline zx_status_t Clone(
     ::fidl::test::enum_::MyFlexibleEnumWithCustomUnknown value,
@@ -40,12 +78,43 @@ inline zx_status_t Clone(
   return ZX_OK;
 }
 
-enum class MyFlexibleEnum : uint32_t {
+class MyFlexibleEnum final {
+ public:
+  constexpr MyFlexibleEnum() : value_(0) {}
+  constexpr explicit MyFlexibleEnum(uint32_t value) : value_(value) {}
+  constexpr MyFlexibleEnum(const MyFlexibleEnum& other) = default;
+  constexpr operator uint32_t() const { return value_; }
 
-  FOO = 1u,
+  constexpr bool IsUnknown() const {
+    switch (value_) {
+      case 1u:
 
-  BAR = 2u,
+      case 2u:
+
+        return false;
+      default:
+        return true;
+    }
+  }
+
+  constexpr static MyFlexibleEnum Unknown() {
+    return MyFlexibleEnum(0xffffffff);
+  }
+
+  static const MyFlexibleEnum FOO;
+
+  static const MyFlexibleEnum BAR;
+
+ private:
+  uint32_t value_;
 };
+
+#if !(__cplusplus < 201703)
+constexpr const ::fidl::test::enum_::MyFlexibleEnum MyFlexibleEnum::FOO =
+    ::fidl::test::enum_::MyFlexibleEnum(1u);
+constexpr const ::fidl::test::enum_::MyFlexibleEnum MyFlexibleEnum::BAR =
+    ::fidl::test::enum_::MyFlexibleEnum(2u);
+#endif  // !(__cplusplus < 201703)
 
 inline zx_status_t Clone(::fidl::test::enum_::MyFlexibleEnum value,
                          ::fidl::test::enum_::MyFlexibleEnum* result) {

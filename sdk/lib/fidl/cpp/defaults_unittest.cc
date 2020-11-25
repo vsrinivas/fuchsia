@@ -16,7 +16,8 @@ TEST(Defaults, Various) {
   VariousDefaults value;
   EXPECT_EQ(value.int64_with_default, static_cast<int64_t>(5));
   EXPECT_STR_EQ(value.string_with_default.c_str(), "stuff");
-  EXPECT_EQ(value.enum_with_default, SampleEnum::MEMBER_B);
+  EXPECT_EQ(value.strict_enum_with_default, StrictEnum::MEMBER_B);
+  EXPECT_EQ(value.flexible_enum_with_default, FlexibleEnum::MEMBER_B);
   EXPECT_TRUE(value.bool_with_default);
 }
 

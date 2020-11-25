@@ -9,7 +9,26 @@
 //
 namespace fidl {
 namespace test {
-namespace enum_ {}  // namespace enum_
+namespace enum_ {
+
+#if (__cplusplus < 201703)
+constexpr const ::fidl::test::enum_::MyFlexibleEnumWithCustomUnknown
+    MyFlexibleEnumWithCustomUnknown::FOO =
+        ::fidl::test::enum_::MyFlexibleEnumWithCustomUnknown(1u);
+constexpr const ::fidl::test::enum_::MyFlexibleEnumWithCustomUnknown
+    MyFlexibleEnumWithCustomUnknown::BAR =
+        ::fidl::test::enum_::MyFlexibleEnumWithCustomUnknown(2u);
+constexpr const ::fidl::test::enum_::MyFlexibleEnumWithCustomUnknown
+    MyFlexibleEnumWithCustomUnknown::CUSTOM_UNKNOWN =
+        ::fidl::test::enum_::MyFlexibleEnumWithCustomUnknown(3u);
+#endif  // (__cplusplus < 201703)
+#if (__cplusplus < 201703)
+constexpr const ::fidl::test::enum_::MyFlexibleEnum MyFlexibleEnum::FOO =
+    ::fidl::test::enum_::MyFlexibleEnum(1u);
+constexpr const ::fidl::test::enum_::MyFlexibleEnum MyFlexibleEnum::BAR =
+    ::fidl::test::enum_::MyFlexibleEnum(2u);
+#endif  // (__cplusplus < 201703)
+}  // namespace enum_
 }  // namespace test
 }  // namespace fidl
 

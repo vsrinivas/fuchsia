@@ -122,18 +122,49 @@ inline zx_status_t Clone(::fidl::test::doccomments::MyStrictBits value,
 /// flexible enum comment #1.
 ///
 /// flexible enum comment #2.
-enum class MyFlexibleEnum : uint32_t {
+class MyFlexibleEnum final {
+ public:
+  constexpr MyFlexibleEnum() : value_(0) {}
+  constexpr explicit MyFlexibleEnum(uint32_t value) : value_(value) {}
+  constexpr MyFlexibleEnum(const MyFlexibleEnum& other) = default;
+  constexpr operator uint32_t() const { return value_; }
+
+  constexpr bool IsUnknown() const {
+    switch (value_) {
+      case 1u:
+
+      case 2u:
+
+        return false;
+      default:
+        return true;
+    }
+  }
+
+  constexpr static MyFlexibleEnum Unknown() {
+    return MyFlexibleEnum(0xffffffff);
+  }
 
   /// FOO member comment #1
   ///
   /// FOO member comment #3
-  FOO = 1u,
+  static const MyFlexibleEnum FOO;
 
   /// BAR member comment #1
   ///
   /// BAR member comment #3
-  BAR = 2u,
+  static const MyFlexibleEnum BAR;
+
+ private:
+  uint32_t value_;
 };
+
+#if !(__cplusplus < 201703)
+constexpr const ::fidl::test::doccomments::MyFlexibleEnum MyFlexibleEnum::FOO =
+    ::fidl::test::doccomments::MyFlexibleEnum(1u);
+constexpr const ::fidl::test::doccomments::MyFlexibleEnum MyFlexibleEnum::BAR =
+    ::fidl::test::doccomments::MyFlexibleEnum(2u);
+#endif  // !(__cplusplus < 201703)
 
 inline zx_status_t Clone(::fidl::test::doccomments::MyFlexibleEnum value,
                          ::fidl::test::doccomments::MyFlexibleEnum* result) {

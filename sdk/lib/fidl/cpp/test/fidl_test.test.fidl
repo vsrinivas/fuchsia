@@ -124,16 +124,24 @@ table PrimitiveArrayInTable {
     3: string after;
 };
 
-enum SampleEnum {
+strict enum StrictEnum {
     MEMBER_A = 23;
     MEMBER_B = 34;
     MEMBER_C = 45;
 };
 
+flexible enum FlexibleEnum {
+    MEMBER_A = 23;
+    MEMBER_B = 34;
+    MEMBER_C = 45;
+    [Unknown] MEMBER_CUSTOM_UNKNOWN = 89;
+};
+
 struct VariousDefaults {
     int64 int64_with_default = 5;
     string string_with_default = "stuff";
-    SampleEnum enum_with_default = SampleEnum.MEMBER_B;
+    StrictEnum strict_enum_with_default = StrictEnum.MEMBER_B;
+    FlexibleEnum flexible_enum_with_default = FlexibleEnum.MEMBER_B;
     bool bool_with_default = true;
 };
 

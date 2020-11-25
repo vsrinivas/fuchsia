@@ -314,6 +314,12 @@ void StrictUnion::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
   }
 }
 #if (__cplusplus < 201703)
+constexpr const ::fidl::test::doccomments::MyFlexibleEnum MyFlexibleEnum::FOO =
+    ::fidl::test::doccomments::MyFlexibleEnum(1u);
+constexpr const ::fidl::test::doccomments::MyFlexibleEnum MyFlexibleEnum::BAR =
+    ::fidl::test::doccomments::MyFlexibleEnum(2u);
+#endif  // (__cplusplus < 201703)
+#if (__cplusplus < 201703)
 constexpr const ::fidl::test::doccomments::MyFlexibleBits
     MyFlexibleBits::MY_FIRST_BIT =
         ::fidl::test::doccomments::MyFlexibleBits(1u);

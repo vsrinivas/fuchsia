@@ -190,6 +190,7 @@ cts_source_set("host_test_sources") {
     "clone_unittest.cc",
     "comparison_unittest.cc",
     "defaults_unittest.cc",
+    "enum_unittest.cc",
     "fidl_test.cc",
     "internal/bitset_unittest.cc",
     "object_coding_unittest.cc",
