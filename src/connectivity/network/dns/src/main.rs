@@ -21,7 +21,6 @@ use {
         FutureExt as _, Sink, SinkExt as _, StreamExt as _, TryFutureExt as _, TryStreamExt as _,
     },
     log::{debug, error, info, warn},
-    net_declare::fidl_ip_v6,
     parking_lot::RwLock,
     std::pin::Pin,
     std::sync::Arc,
@@ -278,325 +277,58 @@ fn handle_err(source: &'static str, err: ResolveError) -> fnet::LookupError {
     lookup_err
 }
 
-struct LookupMode {
-    ipv4_lookup: bool,
-    ipv6_lookup: bool,
-}
-
-async fn lookup_ip_inner<T: ResolverLookup>(
-    caller: &'static str,
-    resolver: &SharedResolver<T>,
-    hostname: String,
-    LookupMode { ipv4_lookup, ipv6_lookup }: LookupMode,
-) -> Result<Vec<fnet::IpAddress>, fnet::LookupError> {
-    let resolver = resolver.read();
-    let result: Result<Vec<_>, _> = match (ipv4_lookup, ipv6_lookup) {
-        (true, false) => resolver.ipv4_lookup(hostname).await.map(|addrs| {
-            addrs.into_iter().map(|addr| net_ext::IpAddress(IpAddr::V4(addr)).into()).collect()
-        }),
-        (false, true) => resolver.ipv6_lookup(hostname).await.map(|addrs| {
-            addrs.into_iter().map(|addr| net_ext::IpAddress(IpAddr::V6(addr)).into()).collect()
-        }),
-        (true, true) => resolver
-            .lookup_ip(hostname)
-            .await
-            .map(|addrs| addrs.into_iter().map(|addr| net_ext::IpAddress(addr).into()).collect()),
-        (false, false) => {
-            return Err(fnet::LookupError::InvalidArgs);
-        }
-    };
-    result.map_err(|e| handle_err(caller, e)).and_then(|addrs| {
-        if addrs.is_empty() {
-            Err(fnet::LookupError::NotFound)
-        } else {
-            Ok(addrs)
-        }
-    })
-}
-
 async fn handle_lookup_ip<T: ResolverLookup>(
     resolver: &SharedResolver<T>,
     hostname: String,
     options: fnet::LookupIpOptions,
 ) -> Result<fnet::IpAddressInfo, fnet::LookupError> {
-    let mode = LookupMode {
-        ipv4_lookup: options.contains(fnet::LookupIpOptions::V4Addrs),
-        ipv6_lookup: options.contains(fnet::LookupIpOptions::V6Addrs),
-    };
-    let response = lookup_ip_inner("LookupIp", resolver, hostname, mode).await?;
-    let mut result =
-        fnet::IpAddressInfo { ipv4_addrs: vec![], ipv6_addrs: vec![], canonical_name: None };
-    for address in response.into_iter() {
-        match address {
-            fnet::IpAddress::Ipv4(ipv4) => {
-                result.ipv4_addrs.push(ipv4);
-            }
-            fnet::IpAddress::Ipv6(ipv6) => {
-                result.ipv6_addrs.push(ipv6);
-            }
-        }
-    }
-    Ok(result)
-}
+    let resolver = resolver.read();
 
-async fn handle_lookup_ip2<T: ResolverLookup>(
-    resolver: &SharedResolver<T>,
-    routes: &fidl_fuchsia_net_routes::StateProxy,
-    hostname: String,
-    options: fnet::LookupIpOptions2,
-) -> Result<fnet::LookupResult, fnet::LookupError> {
-    let fnet::LookupIpOptions2 { ipv4_lookup, ipv6_lookup, sort_addresses, .. } = options;
-    let mode = LookupMode {
-        ipv4_lookup: ipv4_lookup.unwrap_or(false),
-        ipv6_lookup: ipv6_lookup.unwrap_or(false),
-    };
-    let addrs = lookup_ip_inner("LookupIp2", resolver, hostname, mode).await?;
-    let addrs = if sort_addresses.unwrap_or(false) {
-        sort_preferred_addresses(addrs, routes).await?
-    } else {
-        addrs
-    };
-    Ok(fnet::LookupResult { addresses: Some(addrs), ..fnet::LookupResult::empty() })
-}
-
-async fn sort_preferred_addresses(
-    mut addrs: Vec<fnet::IpAddress>,
-    routes: &fidl_fuchsia_net_routes::StateProxy,
-) -> Result<Vec<fnet::IpAddress>, fnet::LookupError> {
-    let mut addrs_info = futures::future::try_join_all(
-        addrs
-            // Drain addresses from addrs, but keep it alive so we don't need to
-            // reallocate.
-            .drain(..)
-            .map(|mut addr| async move {
-                let source_addr = match routes.resolve(&mut addr).await? {
-                    Ok(fidl_fuchsia_net_routes::Resolved::Direct(
-                        fidl_fuchsia_net_routes::Destination { source_address, .. },
-                    ))
-                    | Ok(fidl_fuchsia_net_routes::Resolved::Gateway(
-                        fidl_fuchsia_net_routes::Destination { source_address, .. },
-                    )) => source_address,
-                    // If resolving routes returns an error treat it as an
-                    // unreachable address.
-                    Err(e) => {
-                        debug!(
-                            "fuchsia.net.routes/State.resolve({}) failed {}",
-                            fidl_fuchsia_net_ext::IpAddress::from(addr),
-                            fuchsia_zircon::Status::from_raw(e)
-                        );
-                        None
-                    }
-                };
-                Ok((addr, DasCmpInfo::from_addrs(&addr, source_addr.as_ref())))
-            }),
-    )
-    .await
-    .map_err(|e: fidl::Error| {
-        error!("fuchsia.net.routes/State.resolve FIDL error {:?}", e);
-        fnet::LookupError::InternalError
-    })?;
-    let () = addrs_info.sort_by(|(_laddr, left), (_raddr, right)| left.cmp(right));
-    // Reinsert the addresses in order from addr_info.
-    let () = addrs.extend(addrs_info.into_iter().map(|(addr, _)| addr));
-    Ok(addrs)
-}
-
-#[derive(Debug)]
-struct Policy {
-    prefix: net_types::ip::Subnet<net_types::ip::Ipv6Addr>,
-    precedence: usize,
-    label: usize,
-}
-
-macro_rules! decl_policy {
-    ($ip:tt/$prefix:expr => $precedence:expr, $label:expr) => {
-        Policy {
-            // Unsafe allows us to declare constant subnets.
-            // We make sure no invalid subnets are created in
-            // test_valid_policy_table.
-            prefix: unsafe {
-                net_types::ip::Subnet::new_unchecked(
-                    net_types::ip::Ipv6Addr::new(fidl_ip_v6!($ip).addr),
-                    $prefix,
-                )
-            },
-            precedence: $precedence,
-            label: $label,
-        }
-    };
-}
-
-/// Policy table is defined in RFC 6724, section 2.1
-///
-/// A more human-readable version:
-///
-///  Prefix        Precedence Label
-///  ::1/128               50     0
-///  ::/0                  40     1
-///  ::ffff:0:0/96         35     4
-///  2002::/16             30     2
-///  2001::/32              5     5
-///  fc00::/7               3    13
-///  ::/96                  1     3
-///  fec0::/10              1    11
-///  3ffe::/16              1    12
-///
-/// We willingly left out ::/96, fec0::/10, 3ffe::/16 since those prefix
-/// assignments are deprecated.
-///
-/// The table is sorted by prefix length so longest-prefix match can be easily
-/// achieved.
-const POLICY_TABLE: [Policy; 6] = [
-    decl_policy!("::1"/128 => 50, 0),
-    decl_policy!("::ffff:0:0"/96 => 35, 4),
-    decl_policy!("2001::"/32 => 5, 5),
-    decl_policy!("2002::"/16 => 30, 2),
-    decl_policy!("fc00::"/7 => 3, 13),
-    decl_policy!("::"/0 => 40, 1),
-];
-
-fn policy_lookup(addr: &net_types::ip::Ipv6Addr) -> &'static Policy {
-    POLICY_TABLE
-        .iter()
-        .find(|policy| policy.prefix.contains(addr))
-        .expect("policy table MUST contain the all addresses subnet")
-}
-
-/// Destination Address selection information.
-///
-/// `DasCmpInfo` provides an implementation of a subset of Destination Address
-/// Selection according to the sorting rules defined in [RFC 6724 Section 6].
-///
-/// TODO(fxbug.dev/65219): Implement missing rules 3, 4, and 7.
-/// Rules 3, 4, and 7 are omitted for compatibility with the equivalent
-/// implementation in Fuchsia's libc.
-///
-/// `DasCmpInfo` provides an [`std::cmp::Ord`] implementation that will return
-/// preferred addresses as "lesser" values.
-///
-/// [RFC 6724 Section 6]: https://tools.ietf.org/html/rfc6724#section-6
-#[derive(Debug)]
-struct DasCmpInfo {
-    usable: bool,
-    matching_scope: bool,
-    matching_label: bool,
-    precedence: usize,
-    scope: net_types::ip::Ipv6Scope,
-    common_prefix_len: u8,
-}
-
-impl DasCmpInfo {
-    /// Helper function to convert a FIDL IP address into
-    /// [`net_types::ip::Ipv6Addr`], using a mapped IPv4 when that's the case.  
-    fn convert_addr(fidl: &fnet::IpAddress) -> net_types::ip::Ipv6Addr {
-        match fidl {
-            fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr }) => {
-                net_types::ip::Ipv6Addr::from(net_types::ip::Ipv4Addr::new(*addr))
-            }
-            fnet::IpAddress::Ipv6(fnet::Ipv6Address { addr }) => {
-                net_types::ip::Ipv6Addr::new(*addr)
-            }
-        }
-    }
-
-    fn from_addrs(dst_addr: &fnet::IpAddress, src_addr: Option<&fnet::IpAddress>) -> Self {
-        use net_types::ScopeableAddress;
-
-        let dst_addr = Self::convert_addr(dst_addr);
-        let Policy { prefix: _, precedence, label: dst_label } = policy_lookup(&dst_addr);
-        let (usable, matching_scope, matching_label, common_prefix_len) = match src_addr {
-            Some(src_addr) => {
-                let src_addr = Self::convert_addr(src_addr);
-                let Policy { prefix: _, precedence: _, label: src_label } =
-                    policy_lookup(&src_addr);
-                (
-                    true,
-                    dst_addr.scope() == src_addr.scope(),
-                    dst_label == src_label,
-                    dst_addr.common_prefix_length(&src_addr),
-                )
-            }
-            None => (false, false, false, 0),
+    let response: Result<Vec<fnet::IpAddress>, ResolveError> =
+        if options.contains(fnet::LookupIpOptions::V4Addrs | fnet::LookupIpOptions::V6Addrs) {
+            resolver
+                .lookup_ip(hostname)
+                .await
+                .map(|addrs| addrs.iter().map(|addr| net_ext::IpAddress(addr).into()).collect())
+        } else if options.contains(fnet::LookupIpOptions::V4Addrs) {
+            resolver.ipv4_lookup(hostname).await.map(|addrs| {
+                addrs.iter().map(|addr| net_ext::IpAddress(IpAddr::V4(*addr)).into()).collect()
+            })
+        } else if options.contains(fnet::LookupIpOptions::V6Addrs) {
+            resolver.ipv6_lookup(hostname).await.map(|addrs| {
+                addrs.iter().map(|addr| net_ext::IpAddress(IpAddr::V6(*addr)).into()).collect()
+            })
+        } else {
+            return Err(fnet::LookupError::InvalidArgs);
         };
-        DasCmpInfo {
-            usable,
-            matching_scope,
-            matching_label,
-            precedence: *precedence,
-            scope: dst_addr.scope(),
-            common_prefix_len,
-        }
-    }
-}
 
-impl std::cmp::Ord for DasCmpInfo {
-    // TODO(fxbug.dev/65219): Implement missing rules 3, 4, and 7.
-    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        use std::cmp::Ordering;
-        let DasCmpInfo {
-            usable: self_usable,
-            matching_scope: self_matching_scope,
-            matching_label: self_matching_label,
-            precedence: self_precedence,
-            scope: self_scope,
-            common_prefix_len: self_common_prefix_len,
-        } = self;
-        let DasCmpInfo {
-            usable: other_usable,
-            matching_scope: other_matching_scope,
-            matching_label: other_matching_label,
-            precedence: other_precedence,
-            scope: other_scope,
-            common_prefix_len: other_common_prefix_len,
-        } = other;
-
-        fn prefer_true(left: bool, right: bool) -> Ordering {
-            match (left, right) {
-                (true, false) => Ordering::Less,
-                (false, true) => Ordering::Greater,
-                (false, false) | (true, true) => Ordering::Equal,
+    match response {
+        Ok(response) => {
+            if response.is_empty() {
+                return Err(fnet::LookupError::NotFound);
             }
+
+            let mut result = fnet::IpAddressInfo {
+                ipv4_addrs: vec![],
+                ipv6_addrs: vec![],
+                canonical_name: None,
+            };
+
+            for address in response.iter() {
+                match address {
+                    fnet::IpAddress::Ipv4(ipv4) => {
+                        result.ipv4_addrs.push(*ipv4);
+                    }
+                    fnet::IpAddress::Ipv6(ipv6) => {
+                        result.ipv6_addrs.push(*ipv6);
+                    }
+                }
+            }
+            Ok(result)
         }
-
-        // Rule 1: Avoid unusable destinations.
-        prefer_true(*self_usable, *other_usable)
-            .then(
-                // Rule 2: Prefer matching scope.
-                prefer_true(*self_matching_scope, *other_matching_scope),
-            )
-            .then(
-                // Rule 5: Prefer matching label.
-                prefer_true(*self_matching_label, *other_matching_label),
-            )
-            .then(
-                // Rule 6: Prefer higher precedence.
-                self_precedence.cmp(other_precedence).reverse(),
-            )
-            .then(
-                // Rule 8: Prefer smaller scope.
-                self_scope.cmp(other_scope),
-            )
-            .then(
-                // Rule 9: Use longest matching prefix.
-                self_common_prefix_len.cmp(other_common_prefix_len).reverse(),
-            )
-        // Rule 10: Otherwise, leave the order unchanged.
+        Err(error) => Err(handle_err("LookupIp", error)),
     }
 }
-
-impl std::cmp::PartialOrd for DasCmpInfo {
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        Some(self.cmp(other))
-    }
-}
-
-impl std::cmp::PartialEq for DasCmpInfo {
-    fn eq(&self, other: &Self) -> bool {
-        self.cmp(other) == std::cmp::Ordering::Equal
-    }
-}
-
-impl std::cmp::Eq for DasCmpInfo {}
 
 async fn handle_lookup_hostname<T: ResolverLookup>(
     resolver: &SharedResolver<T>,
@@ -616,7 +348,6 @@ async fn handle_lookup_hostname<T: ResolverLookup>(
 
 async fn run_name_lookup<T: ResolverLookup>(
     resolver: &SharedResolver<T>,
-    routes: &fidl_fuchsia_net_routes::StateProxy,
     stream: NameLookupRequestStream,
 ) -> Result<(), fidl::Error> {
     // TODO(fxbug.dev/45035):Limit the number of parallel requests to 1000.
@@ -626,8 +357,6 @@ async fn run_name_lookup<T: ResolverLookup>(
                 NameLookupRequest::LookupIp { hostname, options, responder } => {
                     responder.send(&mut handle_lookup_ip(resolver, hostname, options).await)
                 }
-                NameLookupRequest::LookupIp2 { hostname, options, responder } => responder
-                    .send(&mut handle_lookup_ip2(resolver, routes, hostname, options).await),
                 NameLookupRequest::LookupHostname { addr, responder } => {
                     responder.send(&mut handle_lookup_hostname(resolver, addr).await)
                 }
@@ -749,10 +478,6 @@ async fn main() -> Result<(), Error> {
     let _state_inspect_node = add_config_state_inspect(inspector.root(), config_state.clone());
     let () = inspector.serve(&mut fs)?;
 
-    let routes =
-        fuchsia_component::client::connect_to_service::<fidl_fuchsia_net_routes::StateMarker>()
-            .context("failed to connect to fuchsia.net.routes/State")?;
-
     fs.dir("svc")
         .add_fidl_service(IncomingRequest::NameLookup)
         .add_fidl_service(IncomingRequest::LookupAdmin);
@@ -766,7 +491,7 @@ async fn main() -> Result<(), Error> {
                         .await
                         .unwrap_or_else(|e| error!("run_lookup_admin finished with error: {:?}", e))
                 }
-                IncomingRequest::NameLookup(stream) => run_name_lookup(&resolver, &routes, stream)
+                IncomingRequest::NameLookup(stream) => run_name_lookup(&resolver, stream)
                     .await
                     .unwrap_or_else(|e| error!("run_name_lookup finished with error: {:?}", e)),
             }
@@ -791,7 +516,7 @@ mod tests {
     use dns::DEFAULT_PORT;
     use fidl_fuchsia_net_ext::IntoExt as _;
     use fuchsia_inspect::assert_inspect_tree;
-    use net_declare::{fidl_ip, fidl_ip_v4, fidl_ip_v6, std_ip, std_ip_v4, std_ip_v6};
+    use net_declare::{fidl_ip_v4, fidl_ip_v6, std_ip_v4, std_ip_v6};
     use trust_dns_proto::{
         op::Query,
         rr::{Name, RData, Record},
@@ -821,12 +546,12 @@ mod tests {
     // host which has IPv4 and IPv6 address if reset name servers.
     const REMOTE_IPV4_IPV6_HOST: &str = "www.foobar.com";
 
-    async fn setup_namelookup_service() -> (fnet::NameLookupProxy, impl futures::Future<Output = ()>)
-    {
+    async fn setup_namelookup_service() -> fnet::NameLookupProxy {
         let (proxy, stream) = fidl::endpoints::create_proxy_and_stream::<fnet::NameLookupMarker>()
             .expect("failed to create NamelookupProxy");
 
         let mut resolver_opts = ResolverOpts::default();
+        // Resolver will query for A and AAAA in parallel for lookup_ip.
         resolver_opts.ip_strategy = LookupIpStrategy::Ipv4AndIpv6;
 
         let resolver = SharedResolver::new(
@@ -835,28 +560,11 @@ mod tests {
                 .expect("failed to create resolver"),
         );
 
-        let (routes_proxy, routes_stream) =
-            fidl::endpoints::create_proxy_and_stream::<fidl_fuchsia_net_routes::StateMarker>()
-                .expect("failed to create routes.StateProxy");
-        let routes_fut =
-            routes_stream.try_for_each(|req| -> futures::future::Ready<Result<(), fidl::Error>> {
-                panic!("Should not call routes/State. Received request {:?}", req)
-            });
-        (
-            proxy,
-            futures::future::try_join(
-                async move {
-                    // We must move routes_proxy into this future so routes_fut will
-                    // close.
-                    run_name_lookup(&resolver, &routes_proxy, stream).await
-                },
-                routes_fut,
-            )
-            .map(|r| match r {
-                Ok(((), ())) => (),
-                Err(e) => panic!("namelookup service error {:?}", e),
-            }),
-        )
+        fasync::Task::local(async move {
+            let () = run_name_lookup(&resolver, stream).await.expect("failed to run_name_lookup");
+        })
+        .detach();
+        proxy
     }
 
     async fn check_lookup_ip(
@@ -880,73 +588,64 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_lookupip_invalid_option() {
-        let (proxy, fut) = setup_namelookup_service().await;
+        let proxy = setup_namelookup_service().await;
 
-        let ((), ()) = futures::future::join(fut, async move {
-            // IP Lookup localhost with invalid option.
-            let res = proxy
-                .lookup_ip(LOCAL_HOST, fnet::LookupIpOptions::CnameLookup)
-                .await
-                .expect("failed to LookupIp");
-            assert_eq!(res, Err(fnet::LookupError::InvalidArgs));
-        })
-        .await;
+        // IP Lookup localhost with invalid option.
+        let res = proxy
+            .lookup_ip(LOCAL_HOST, fnet::LookupIpOptions::CnameLookup)
+            .await
+            .expect("failed to LookupIp");
+        assert_eq!(res, Err(fnet::LookupError::InvalidArgs));
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_lookupip_localhost() {
-        let (proxy, fut) = setup_namelookup_service().await;
-        let ((), ()) = futures::future::join(fut, async move {
-            // IP Lookup IPv4 and IPv6 for localhost.
-            check_lookup_ip(
-                &proxy,
-                LOCAL_HOST,
-                fnet::LookupIpOptions::V4Addrs | fnet::LookupIpOptions::V6Addrs,
-                Ok(fnet::IpAddressInfo {
-                    ipv4_addrs: vec![IPV4_LOOPBACK],
-                    ipv6_addrs: vec![IPV6_LOOPBACK],
-                    canonical_name: None,
-                }),
-            )
-            .await;
+        let proxy = setup_namelookup_service().await;
 
-            // IP Lookup IPv4 only for localhost.
-            check_lookup_ip(
-                &proxy,
-                LOCAL_HOST,
-                fnet::LookupIpOptions::V4Addrs,
-                Ok(fnet::IpAddressInfo {
-                    ipv4_addrs: vec![IPV4_LOOPBACK],
-                    ipv6_addrs: vec![],
-                    canonical_name: None,
-                }),
-            )
-            .await;
+        // IP Lookup IPv4 and IPv6 for localhost.
+        check_lookup_ip(
+            &proxy,
+            LOCAL_HOST,
+            fnet::LookupIpOptions::V4Addrs | fnet::LookupIpOptions::V6Addrs,
+            Ok(fnet::IpAddressInfo {
+                ipv4_addrs: vec![IPV4_LOOPBACK],
+                ipv6_addrs: vec![IPV6_LOOPBACK],
+                canonical_name: None,
+            }),
+        )
+        .await;
 
-            // IP Lookup IPv6 only for localhost.
-            check_lookup_ip(
-                &proxy,
-                LOCAL_HOST,
-                fnet::LookupIpOptions::V6Addrs,
-                Ok(fnet::IpAddressInfo {
-                    ipv4_addrs: vec![],
-                    ipv6_addrs: vec![IPV6_LOOPBACK],
-                    canonical_name: None,
-                }),
-            )
-            .await;
-        })
+        // IP Lookup IPv4 only for localhost.
+        check_lookup_ip(
+            &proxy,
+            LOCAL_HOST,
+            fnet::LookupIpOptions::V4Addrs,
+            Ok(fnet::IpAddressInfo {
+                ipv4_addrs: vec![IPV4_LOOPBACK],
+                ipv6_addrs: vec![],
+                canonical_name: None,
+            }),
+        )
+        .await;
+
+        // IP Lookup IPv6 only for localhost.
+        check_lookup_ip(
+            &proxy,
+            LOCAL_HOST,
+            fnet::LookupIpOptions::V6Addrs,
+            Ok(fnet::IpAddressInfo {
+                ipv4_addrs: vec![],
+                ipv6_addrs: vec![IPV6_LOOPBACK],
+                canonical_name: None,
+            }),
+        )
         .await;
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_lookuphostname_localhost() {
-        let (proxy, fut) = setup_namelookup_service().await;
-        let ((), ()) = futures::future::join(fut, async move {
-            check_lookup_hostname(&proxy, IPV4_LOOPBACK.into_ext(), Ok(String::from(LOCAL_HOST)))
-                .await
-        })
-        .await;
+        let proxy = setup_namelookup_service().await;
+        check_lookup_hostname(&proxy, IPV4_LOOPBACK.into_ext(), Ok(String::from(LOCAL_HOST))).await;
     }
 
     struct MockResolver {
@@ -1066,32 +765,13 @@ mod tests {
             Fut: futures::Future<Output = ()>,
             F: FnOnce(fnet::NameLookupProxy) -> Fut,
         {
-            self.run_lookup_with_routes_handler(f, |req| {
-                panic!("Should not call routes/State. Received request {:?}", req)
-            })
-            .await
-        }
-
-        async fn run_lookup_with_routes_handler<F, Fut, R>(&self, f: F, handle_routes: R)
-        where
-            Fut: futures::Future<Output = ()>,
-            F: FnOnce(fnet::NameLookupProxy) -> Fut,
-            R: Fn(fidl_fuchsia_net_routes::StateRequest),
-        {
             let (name_lookup_proxy, name_lookup_stream) =
                 fidl::endpoints::create_proxy_and_stream::<fnet::NameLookupMarker>()
                     .expect("failed to create NameLookupProxy");
 
-            let (routes_proxy, routes_stream) =
-                fidl::endpoints::create_proxy_and_stream::<fidl_fuchsia_net_routes::StateMarker>()
-                    .expect("failed to create routes.StateProxy");
-
-            let ((), (), ()) = futures::future::try_join3(
-                async move {
-                    run_name_lookup(&self.shared_resolver, &routes_proxy, name_lookup_stream).await
-                },
+            let ((), ()) = futures::future::try_join(
+                run_name_lookup(&self.shared_resolver, name_lookup_stream),
                 f(name_lookup_proxy).map(Ok),
-                routes_stream.try_for_each(|req| futures::future::ok(handle_routes(req))),
             )
             .await
             .expect("Error running lookup future");
@@ -1384,317 +1064,5 @@ mod tests {
                 },
             }
         });
-    }
-
-    fn test_das_helper(
-        l_addr: fnet::IpAddress,
-        l_src: Option<fnet::IpAddress>,
-        r_addr: fnet::IpAddress,
-        r_src: Option<fnet::IpAddress>,
-        want: std::cmp::Ordering,
-    ) {
-        let left = DasCmpInfo::from_addrs(&l_addr, l_src.as_ref());
-        let right = DasCmpInfo::from_addrs(&r_addr, r_src.as_ref());
-        assert_eq!(
-            left.cmp(&right),
-            want,
-            "want = {:?}\n left = {:?}({:?}) DAS={:?}\n right = {:?}({:?}) DAS={:?}",
-            want,
-            l_addr,
-            l_src,
-            left,
-            r_addr,
-            r_src,
-            right
-        );
-    }
-
-    macro_rules! add_das_test {
-        ($name:ident, preferred: $pref_dst:expr => $pref_src:expr, other: $other_dst:expr => $other_src:expr) => {
-            #[test]
-            fn $name() {
-                test_das_helper(
-                    $pref_dst,
-                    $pref_src,
-                    $other_dst,
-                    $other_src,
-                    std::cmp::Ordering::Less,
-                )
-            }
-        };
-    }
-
-    add_das_test!(
-        prefer_reachable,
-        preferred: fidl_ip!(198.51.100.121) => Some(fidl_ip!(198.51.100.117)),
-        other: fidl_ip!(2001:db8:1::1) => Option::<fnet::IpAddress>::None
-    );
-
-    // These test cases are taken from RFC 6724, section 10.2.
-
-    add_das_test!(
-        prefer_matching_scope,
-        preferred: fidl_ip!(198.51.100.121) => Some(fidl_ip!(198.51.100.117)),
-        other: fidl_ip!(2001:db8:1::1) => Some(fidl_ip!(fe80::1))
-    );
-
-    add_das_test!(
-        prefer_matching_label,
-        preferred: fidl_ip!(2002:c633:6401::1) => Some(fidl_ip!(2002:c633:6401::2)),
-        other:  fidl_ip!(2001:db8:1::1) => Some(fidl_ip!(2002:c633:6401::2))
-    );
-
-    add_das_test!(
-        prefer_higher_precedence_1,
-        preferred: fidl_ip!(2001:db8:1::1) => Some(fidl_ip!(2001:db8:1::2)),
-        other: fidl_ip!(10.1.2.3) => Some(fidl_ip!(10.1.2.4))
-    );
-
-    add_das_test!(
-        prefer_higher_precedence_2,
-        preferred: fidl_ip!(2001:db8:1::1) => Some(fidl_ip!(2001:db8:1::2)),
-        other: fidl_ip!(2002:c633:6401::1) => Some(fidl_ip!(2002:c633:6401::2))
-    );
-
-    add_das_test!(
-        prefer_smaller_scope,
-        preferred: fidl_ip!(fe80::1) => Some(fidl_ip!(fe80::2)),
-        other: fidl_ip!(2001:db8:1::1) => Some(fidl_ip!(2001:db8:1::2))
-    );
-
-    add_das_test!(
-        prefer_longest_matching_prefix,
-        preferred: fidl_ip!(2001:db8:1::1) => Some(fidl_ip!(2001:db8:1::2)),
-        other: fidl_ip!(2001:db8:3ffe::1) => Some(fidl_ip!(2001:db8:3f44::2))
-    );
-
-    #[test]
-    fn test_das_equals() {
-        for (dst, src) in [
-            (fidl_ip!(192.168.0.1), fidl_ip!(192.168.0.2)),
-            (fidl_ip!(2001:db8::1), fidl_ip!(2001:db8::2)),
-        ]
-        .iter()
-        {
-            let () = test_das_helper(*dst, None, *dst, None, std::cmp::Ordering::Equal);
-            let () = test_das_helper(*dst, Some(*src), *dst, Some(*src), std::cmp::Ordering::Equal);
-        }
-    }
-
-    #[test]
-    fn test_valid_policy_table() {
-        // Last element in policy table MUST be ::/0.
-        assert_eq!(
-            POLICY_TABLE.iter().last().expect("empty policy table").prefix,
-            net_types::ip::Subnet::new(fidl_ip_v6!(::).addr.into(), 0).expect("invalid subnet")
-        );
-        // Policy table must be sorted by prefix length.
-        let () = POLICY_TABLE.windows(2).for_each(|w| {
-            let Policy { prefix: cur, precedence: _, label: _ } = w[0];
-            let Policy { prefix: nxt, precedence: _, label: _ } = w[1];
-            assert!(
-                cur.prefix() >= nxt.prefix(),
-                "bad ordering of prefixes, {} must come after {}",
-                cur,
-                nxt
-            )
-        });
-        // Assert that POLICY_TABLE declaration does not use any invalid
-        // subnets.
-        for policy in POLICY_TABLE.iter() {
-            assert!(policy.prefix.prefix() <= 128, "Invalid subnet in policy {:?}", policy);
-        }
-    }
-
-    #[fasync::run_singlethreaded(test)]
-    async fn test_sort_preferred_addresses() {
-        const TEST_IPS: [(fnet::IpAddress, Option<fnet::IpAddress>); 5] = [
-            (fidl_ip!(127.0.0.1), Some(fidl_ip!(127.0.0.1))),
-            (fidl_ip!(::1), Some(fidl_ip!(::1))),
-            (fidl_ip!(192.168.50.22), None),
-            (fidl_ip!(2001::2), None),
-            (fidl_ip!(2001:db8:1::1), Some(fidl_ip!(2001:db8:1::2))),
-        ];
-        // Declared using std types so we get cleaner output when we assert
-        // expectations.
-        const SORTED: [IpAddr; 5] = [
-            std_ip!(::1),
-            std_ip!(2001:db8:1::1),
-            std_ip!(127.0.0.1),
-            std_ip!(192.168.50.22),
-            std_ip!(2001::2),
-        ];
-        let (routes_proxy, routes_stream) =
-            fidl::endpoints::create_proxy_and_stream::<fidl_fuchsia_net_routes::StateMarker>()
-                .expect("failed to create routes.StateProxy");
-        let routes_fut = routes_stream.map(|r| r.context("stream FIDL error")).try_for_each(
-            |fidl_fuchsia_net_routes::StateRequest::Resolve { destination, responder }| {
-                let mut result = TEST_IPS
-                    .iter()
-                    .enumerate()
-                    .find_map(|(i, (dst, src))| {
-                        if *dst == destination && src.is_some() {
-                            let inner = fidl_fuchsia_net_routes::Destination {
-                                address: Some(*dst),
-                                source_address: *src,
-                                ..fidl_fuchsia_net_routes::Destination::empty()
-                            };
-                            // Send both Direct and Gateway resolved routes to show we
-                            // don't care about that part.
-                            if i % 2 == 0 {
-                                Some(fidl_fuchsia_net_routes::Resolved::Direct(inner))
-                            } else {
-                                Some(fidl_fuchsia_net_routes::Resolved::Gateway(inner))
-                            }
-                        } else {
-                            None
-                        }
-                    })
-                    .ok_or(fuchsia_zircon::Status::ADDRESS_UNREACHABLE.into_raw());
-                futures::future::ready(
-                    responder.send(&mut result).context("failed to send Resolve response"),
-                )
-            },
-        );
-
-        let ((), ()) = futures::future::try_join(routes_fut, async move {
-            let addrs = TEST_IPS.iter().map(|(dst, _src)| *dst).collect();
-            let addrs = sort_preferred_addresses(addrs, &routes_proxy)
-                .await
-                .expect("failed to sort addresses");
-            let addrs = addrs
-                .into_iter()
-                .map(|a| {
-                    let fidl_fuchsia_net_ext::IpAddress(a) = a.into();
-                    a
-                })
-                .collect::<Vec<_>>();
-            assert_eq!(&addrs[..], &SORTED[..]);
-            Ok(())
-        })
-        .await
-        .expect("error running futures");
-    }
-
-    #[fasync::run_singlethreaded(test)]
-    async fn test_lookupip2() {
-        fn map_ip<T: Into<IpAddr>>(addr: T) -> fnet::IpAddress {
-            fidl_fuchsia_net_ext::IpAddress(addr.into()).into()
-        }
-        // Routes handler will say that only IPV6_HOST is reachable.
-        let routes_handler =
-            |fidl_fuchsia_net_routes::StateRequest::Resolve { destination, responder }| {
-                let mut response = if destination == map_ip(IPV6_HOST) {
-                    Ok(fidl_fuchsia_net_routes::Resolved::Direct(
-                        fidl_fuchsia_net_routes::Destination {
-                            address: Some(destination),
-                            source_address: Some(destination),
-                            ..fidl_fuchsia_net_routes::Destination::empty()
-                        },
-                    ))
-                } else {
-                    Err(fuchsia_zircon::Status::ADDRESS_UNREACHABLE.into_raw())
-                };
-                let () =
-                    responder.send(&mut response).expect("failed to send Resolve FIDL response");
-            };
-        TestEnvironment::new()
-            .run_lookup_with_routes_handler(
-                |proxy| async move {
-                    let proxy = &proxy;
-                    let lookup_ip = |hostname, options| async move {
-                        proxy.lookup_ip2(hostname, options).await.expect("FIDL error")
-                    };
-                    let empty_options = fidl_fuchsia_net::LookupIpOptions2::empty();
-                    let empty_result = fidl_fuchsia_net::LookupResult::empty();
-
-                    // All arguments unset.
-                    assert_eq!(
-                        lookup_ip(
-                            REMOTE_IPV4_HOST,
-                            fidl_fuchsia_net::LookupIpOptions2 { ..empty_options }
-                        )
-                        .await,
-                        Err(fidl_fuchsia_net::LookupError::InvalidArgs)
-                    );
-                    // No IP addresses to look.
-                    assert_eq!(
-                        lookup_ip(
-                            REMOTE_IPV4_HOST,
-                            fidl_fuchsia_net::LookupIpOptions2 {
-                                ipv4_lookup: Some(false),
-                                ipv6_lookup: Some(false),
-                                ..empty_options
-                            }
-                        )
-                        .await,
-                        Err(fidl_fuchsia_net::LookupError::InvalidArgs)
-                    );
-                    // No results for an IPv4 only host.
-                    assert_eq!(
-                        lookup_ip(
-                            REMOTE_IPV4_HOST,
-                            fidl_fuchsia_net::LookupIpOptions2 {
-                                ipv4_lookup: Some(false),
-                                ipv6_lookup: Some(true),
-                                ..empty_options
-                            }
-                        )
-                        .await,
-                        Err(fidl_fuchsia_net::LookupError::NotFound)
-                    );
-                    // Successfully resolve IPv4.
-                    assert_eq!(
-                        lookup_ip(
-                            REMOTE_IPV4_HOST,
-                            fidl_fuchsia_net::LookupIpOptions2 {
-                                ipv4_lookup: Some(true),
-                                ipv6_lookup: Some(true),
-                                ..empty_options
-                            }
-                        )
-                        .await,
-                        Ok(fidl_fuchsia_net::LookupResult {
-                            addresses: Some(vec![map_ip(IPV4_HOST)]),
-                            ..empty_result
-                        })
-                    );
-                    // Successfully resolve IPv4 + IPv6 (no sorting).
-                    assert_eq!(
-                        lookup_ip(
-                            REMOTE_IPV4_IPV6_HOST,
-                            fidl_fuchsia_net::LookupIpOptions2 {
-                                ipv4_lookup: Some(true),
-                                ipv6_lookup: Some(true),
-                                ..empty_options
-                            }
-                        )
-                        .await,
-                        Ok(fidl_fuchsia_net::LookupResult {
-                            addresses: Some(vec![map_ip(IPV4_HOST), map_ip(IPV6_HOST)]),
-                            ..empty_result
-                        })
-                    );
-                    // Successfully resolve IPv4 + IPv6 (with sorting).
-                    assert_eq!(
-                        lookup_ip(
-                            REMOTE_IPV4_IPV6_HOST,
-                            fidl_fuchsia_net::LookupIpOptions2 {
-                                ipv4_lookup: Some(true),
-                                ipv6_lookup: Some(true),
-                                sort_addresses: Some(true),
-                                ..empty_options
-                            }
-                        )
-                        .await,
-                        Ok(fidl_fuchsia_net::LookupResult {
-                            addresses: Some(vec![map_ip(IPV6_HOST), map_ip(IPV4_HOST)]),
-                            ..empty_result
-                        })
-                    );
-                },
-                routes_handler,
-            )
-            .await
     }
 }

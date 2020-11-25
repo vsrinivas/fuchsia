@@ -7,7 +7,6 @@
     },
     "sandbox": {
         "services": [
-            "fuchsia.net.routes.State",
             "fuchsia.posix.socket.Provider"
         ]
     }
