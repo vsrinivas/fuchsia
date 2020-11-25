@@ -75,11 +75,11 @@ func TestToolUploads(t *testing.T) {
 		},
 	}
 
-	whitelist := map[string]string{
+	allowlist := map[string]string{
 		"A": "A",
 		"C": "C_dest",
 	}
-	actual := toolUploads(m, whitelist, "namespace")
+	actual := toolUploads(m, allowlist, "namespace")
 	if !reflect.DeepEqual(actual, expected) {
 		t.Fatalf("unexpected tool uploads:\nexpected: %v\nactual: %v\n", expected, actual)
 	}

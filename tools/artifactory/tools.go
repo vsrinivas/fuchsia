@@ -30,15 +30,15 @@ func ToolUploads(mods *build.Modules, namespace string) []Upload {
 	return toolUploads(mods, toolsToUpload, namespace)
 }
 
-func toolUploads(mods toolModules, whitelist map[string]string, namespace string) []Upload {
+func toolUploads(mods toolModules, allowlist map[string]string, namespace string) []Upload {
 	var uploads []Upload
 	for _, tool := range mods.Tools() {
-		if _, ok := whitelist[tool.Name]; !ok {
+		if _, ok := allowlist[tool.Name]; !ok {
 			continue
 		}
 		uploads = append(uploads, Upload{
 			Source:      filepath.Join(mods.BuildDir(), tool.Path),
-			Destination: path.Join(namespace, fmt.Sprintf("%s-%s", tool.OS, tool.CPU), whitelist[tool.Name]),
+			Destination: path.Join(namespace, fmt.Sprintf("%s-%s", tool.OS, tool.CPU), allowlist[tool.Name]),
 		})
 	}
 	return uploads

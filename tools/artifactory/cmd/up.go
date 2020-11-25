@@ -124,7 +124,7 @@ Uploads artifacts from a build to $GCS_BUCKET with the following structure:
 │   │   │   │   │   └── keys
 │   │   │   │   │       └── <package repo keys>
 │   │   │   │   ├── sdk
-│   │   │   │   │   ├── <host-agnostic SDK archives>
+│   │   │   │   │   ├── <host-independent SDK archives>
 │   │   │   │   │   └── <OS-CPU>
 │   │   │   │   │       └── <host-specific SDK archives>
 │   │   │   │   ├── build_api
@@ -396,7 +396,7 @@ func (s *cloudSink) write(ctx context.Context, upload *artifactory.Upload) error
 		reader = bytes.NewBuffer(upload.Contents)
 	}
 	obj := s.bucket.Object(upload.Destination)
-	// Setting timeouts to fail fast on hung connections.
+	// Setting timeouts to fail fast on unresponsive connections.
 	tctx, cancel := context.WithTimeout(ctx, perFileUploadTimeout)
 	defer cancel()
 	sw := obj.If(storage.Conditions{DoesNotExist: true}).NewWriter(tctx)
