@@ -20,14 +20,9 @@ namespace escher {
 // RenderQueueContext which provides more convenient access to the client-data
 // bits.
 struct RenderQueueContext {
-  static constexpr uint8_t kNumRenderQueueFuncChoiceBits =
-      RenderQueueItem::kNumRenderQueueFuncChoiceBits;
-  static constexpr uint8_t kNumReservedBits = 15;
+  static constexpr uint8_t kNumReservedBits = 16;
   static constexpr uint8_t kNumClientDataBits = 48;
   static constexpr uint8_t kNumPrivateBits = 64U - kNumClientDataBits;
-
-  // Specifies which of a RenderQueueItem's kNumRenderQueueFuncs to invoke.
-  uint8_t render_queue_func_to_use : kNumRenderQueueFuncChoiceBits;
 
   // Reserved for future use.
   uint16_t reserved : kNumReservedBits;
@@ -36,8 +31,7 @@ struct RenderQueueContext {
   uint64_t client_data : kNumClientDataBits;
 
   static_assert(64U == kNumPrivateBits + kNumClientDataBits, "wrong number of bits");
-  static_assert(kNumPrivateBits == kNumRenderQueueFuncChoiceBits + kNumReservedBits,
-                "wrong number of bits");
+  static_assert(kNumPrivateBits == kNumReservedBits, "wrong number of bits");
 };
 static_assert(8U == sizeof(RenderQueueContext), "size mismatch");
 

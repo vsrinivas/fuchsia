@@ -9,7 +9,8 @@
 namespace escher {
 
 PaperRenderQueueContext::PaperRenderQueueContext() {
-  render_queue_func_to_use = 0U;
+  // TODO(fxbug.dev/65246): once we can use C++20, initialize these where they're declared in
+  // RenderQueueContext.
   reserved = 0U;
   client_data = 0U;
 }

@@ -18,9 +18,6 @@ struct RenderQueueContext;
 // knows how to interpret the object/instance data in order to emit commands
 // into a Vulkan command buffer.
 struct RenderQueueItem {
-  static constexpr uint8_t kNumRenderQueueFuncChoiceBits = 1U;
-  static constexpr size_t kNumRenderQueueFuncs = 1U << kNumRenderQueueFuncChoiceBits;
-
   // Render callback that knows how to interpret the |object_data| and
   // |instance_data| fields of a RenderQueueItem.  The number of instances to be
   // rendered is given by |instance_count|, which is guaranteed to be >= 1.  If
@@ -31,14 +28,13 @@ struct RenderQueueItem {
   //     guaranteed to have the same |object_data| and |render| function.
   typedef void (*Func)(CommandBuffer* cmd_buf, const RenderQueueContext* context,
                        const RenderQueueItem* instances, uint32_t instance_count);
-  using Funcs = std::array<Func, kNumRenderQueueFuncs>;
 
   uint64_t sort_key;
 
   const void* object_data;
   const void* instance_data;
 
-  Funcs render_queue_funcs;
+  Func render_queue_func;
 };
 
 }  // namespace escher

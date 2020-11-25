@@ -34,7 +34,7 @@ class RenderQueue final {
   // resources must be kept alive until all Vulkan command buffers that
   // reference them are finished.
   void Push(uint64_t sort_key, const void* object_data, const void* instance_data,
-            const RenderQueueItem::Funcs& funcs);
+            RenderQueueItem::Func func);
   void Push(const RenderQueueItem& item);
 
   // Performs a stable sort of all items, according to the |sort_key| provided
@@ -72,8 +72,8 @@ class RenderQueue final {
 // Inline function definitions.
 
 inline void RenderQueue::Push(uint64_t sort_key, const void* object_data, const void* instance_data,
-                              const RenderQueueItem::Funcs& funcs) {
-  items_.push_back({sort_key, object_data, instance_data, funcs});
+                              RenderQueueItem::Func func) {
+  items_.push_back({sort_key, object_data, instance_data, func});
 }
 
 inline void RenderQueue::Push(const RenderQueueItem& item) { items_.push_back(item); }

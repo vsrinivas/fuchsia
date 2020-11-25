@@ -209,7 +209,7 @@ void PaperDrawCallFactory::EnqueueDrawCalls(const PaperShapeCacheEntry& cache_en
       {.render_queue_item = {.sort_key = sort_key,
                              .object_data = mesh_data,
                              .instance_data = draw_data,
-                             .render_queue_funcs = {PaperRenderFuncs::RenderMesh}},
+                             .render_queue_func = PaperRenderFuncs::RenderMesh},
        .render_queue_flags = queue_flags});
 }
 

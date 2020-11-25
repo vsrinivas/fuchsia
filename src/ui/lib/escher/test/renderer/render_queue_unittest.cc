@@ -100,13 +100,13 @@ TEST(RenderQueue, PushSortGenerate) {
   TestRenderInstance two2;
   TestRenderInstance two3;
 
-  queue.Push(1, &one, &one1, {RenderFuncOne});
-  queue.Push(2, &one, &one2, {RenderFuncOne});
-  queue.Push(6, &one, &one3, {RenderFuncOne});
+  queue.Push(1, &one, &one1, RenderFuncOne);
+  queue.Push(2, &one, &one2, RenderFuncOne);
+  queue.Push(6, &one, &one3, RenderFuncOne);
 
-  queue.Push(3, &two, &two1, {RenderFuncTwo});
-  queue.Push(5, &two, &two2, {RenderFuncTwo});
-  queue.Push(4, &two, &two3, {RenderFuncTwo});
+  queue.Push(3, &two, &two1, RenderFuncTwo);
+  queue.Push(5, &two, &two2, RenderFuncTwo);
+  queue.Push(4, &two, &two3, RenderFuncTwo);
 
   // A real application would sort the queue first, but this allows us to verify
   // that things are rendered in the order that they were inserted.  There
@@ -192,12 +192,12 @@ TEST(RenderQueue, SameObjectDifferentFuncs) {
   TestRenderInstance inst5;
   TestRenderInstance inst6;
 
-  queue.Push(1, &obj, &inst1, {RenderFuncOne});
-  queue.Push(2, &obj, &inst2, {RenderFuncOne});
-  queue.Push(3, &obj, &inst3, {RenderFuncTwo});
-  queue.Push(4, &obj, &inst4, {RenderFuncTwo});
-  queue.Push(5, &obj, &inst5, {RenderFuncTwo});
-  queue.Push(6, &obj, &inst6, {RenderFuncOne});
+  queue.Push(1, &obj, &inst1, RenderFuncOne);
+  queue.Push(2, &obj, &inst2, RenderFuncOne);
+  queue.Push(3, &obj, &inst3, RenderFuncTwo);
+  queue.Push(4, &obj, &inst4, RenderFuncTwo);
+  queue.Push(5, &obj, &inst5, RenderFuncTwo);
+  queue.Push(6, &obj, &inst6, RenderFuncOne);
 
   // Don't bother sorting, we already tested that in a different test case.
   queue.GenerateCommands(nullptr, nullptr);
@@ -211,57 +211,6 @@ TEST(RenderQueue, SameObjectDifferentFuncs) {
   // Expect one final instance rendered with RenderFuncOne().
   EXPECT_EQ(kRenderFuncOneId, stats.invocations[2].render_func_id);
   EXPECT_EQ(1U, stats.invocations[2].instance_data.size());
-}
-
-TEST(RenderQueue, MultipleFuncs) {
-  RenderQueue queue;
-
-  TestStatistics stats;
-
-  TestRenderObject obj = {.id = 1, .stats = &stats};
-  TestRenderInstance inst1;
-  TestRenderInstance inst2;
-  TestRenderInstance inst3;
-  TestRenderInstance inst4;
-  TestRenderInstance inst5;
-  TestRenderInstance inst6;
-
-  // Hopefully real client code is never this confusing.  The first 4 instances
-  // have RenderFuncOne as their first func and RenderFuncTwo as the second.
-  // The next two instances are the opposite.
-  queue.Push(1, &obj, &inst1, {RenderFuncOne, RenderFuncTwo});
-  queue.Push(2, &obj, &inst2, {RenderFuncOne, RenderFuncTwo});
-  queue.Push(3, &obj, &inst3, {RenderFuncOne, RenderFuncTwo});
-  queue.Push(4, &obj, &inst4, {RenderFuncOne, RenderFuncTwo});
-  queue.Push(5, &obj, &inst5, {RenderFuncTwo, RenderFuncOne});
-  queue.Push(6, &obj, &inst6, {RenderFuncTwo, RenderFuncOne});
-
-  // Don't bother sorting, we already tested that in a different test case.
-
-  RenderQueueContext context;
-
-  // Each instance renders with its first func.
-  context.render_queue_func_to_use = 0;
-  queue.GenerateCommands(nullptr, nullptr, &context);
-  ASSERT_EQ(2U, stats.invocations.size());
-  // Expect the first 4 instances to call RenderFuncOne() and the last two to
-  // call  RenderFuncTwo().
-  EXPECT_EQ(kRenderFuncOneId, stats.invocations[0].render_func_id);
-  EXPECT_EQ(4U, stats.invocations[0].instance_data.size());
-  EXPECT_EQ(kRenderFuncTwoId, stats.invocations[1].render_func_id);
-  EXPECT_EQ(2U, stats.invocations[1].instance_data.size());
-
-  // Now, each instance renderers with its second func.
-  context.render_queue_func_to_use = 1;
-  queue.GenerateCommands(nullptr, nullptr, &context);
-  // Two new invocations should have been added.
-  ASSERT_EQ(4U, stats.invocations.size());
-  // Expect the first 4 instances to call RenderFuncTwo() and the last two to
-  // call  RenderFuncOne().
-  EXPECT_EQ(kRenderFuncTwoId, stats.invocations[2].render_func_id);
-  EXPECT_EQ(4U, stats.invocations[2].instance_data.size());
-  EXPECT_EQ(kRenderFuncOneId, stats.invocations[3].render_func_id);
-  EXPECT_EQ(2U, stats.invocations[3].instance_data.size());
 }
 
 }  // namespace
