@@ -320,6 +320,5 @@ int main(int argc, char** argv) {
       sys::ComponentContext::CreateAndServeOutgoingDirectory();
 
   VirtioNetImpl virtio_net(context.get());
-
   return loop.Run();
 }
