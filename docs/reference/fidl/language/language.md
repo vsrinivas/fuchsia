@@ -212,6 +212,9 @@ module for that language.
 
 ## Types and Type Declarations
 
+FIDL supports a number of builtin types as well as declarations of new types
+(e.g. structs, unions, type aliases) and protocols.
+
 ### Primitives
 
 *   Simple value types.
