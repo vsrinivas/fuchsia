@@ -16,6 +16,8 @@
 namespace goldfish {
 namespace {
 
+#define FAIL_ASYNC(epitaph, ...) FailAsync(epitaph, __FILE__, __LINE__, __VA_ARGS__)
+
 static const char* kTag = "GoldfishPipe";
 
 constexpr size_t DEFAULT_BUFFER_SIZE = 8192;
@@ -52,26 +54,26 @@ void Pipe::Init() {
   fbl::AutoLock lock(&lock_);
 
   if (!pipe_.is_valid()) {
-    FailAsync(ZX_ERR_BAD_STATE, "[%s] Pipe::Pipe() no pipe protocol", kTag);
+    FAIL_ASYNC(ZX_ERR_BAD_STATE, "[%s] Pipe::Pipe() no pipe protocol", kTag);
     return;
   }
 
   zx_status_t status = pipe_.GetBti(&bti_);
   if (status != ZX_OK) {
-    FailAsync(status, "[%s] Pipe::Pipe() GetBti failed", kTag);
+    FAIL_ASYNC(status, "[%s] Pipe::Pipe() GetBti failed", kTag);
     return;
   }
 
   status = SetBufferSizeLocked(DEFAULT_BUFFER_SIZE);
   if (status != ZX_OK) {
-    FailAsync(status, "[%s] Pipe::Pipe() failed to set initial buffer size", kTag);
+    FAIL_ASYNC(status, "[%s] Pipe::Pipe() failed to set initial buffer size", kTag);
     return;
   }
 
   zx::event event;
   status = zx::event::create(0, &event);
   if (status != ZX_OK) {
-    FailAsync(status, "[%s] Pipe::Pipe() failed to create event", kTag);
+    FAIL_ASYNC(status, "[%s] Pipe::Pipe() failed to create event", kTag);
     return;
   }
   status = event.signal(0, SIGNALS);
@@ -80,7 +82,7 @@ void Pipe::Init() {
   zx::vmo vmo;
   status = pipe_.Create(&id_, &vmo);
   if (status != ZX_OK) {
-    FailAsync(status, "[%s] Pipe::Pipe() failed to create pipe", kTag);
+    FAIL_ASYNC(status, "[%s] Pipe::Pipe() failed to create pipe", kTag);
     return;
   }
   status = pipe_.SetEvent(id_, std::move(event));
@@ -91,7 +93,7 @@ void Pipe::Init() {
 
   status = cmd_buffer_.InitVmo(bti_.get(), vmo.get(), 0, IO_BUFFER_RW);
   if (status != ZX_OK) {
-    FailAsync(status, "[%s] Pipe::Pipe() io_buffer_init_vmo failed", kTag);
+    FAIL_ASYNC(status, "[%s] Pipe::Pipe() io_buffer_init_vmo failed", kTag);
     return;
   }
 
@@ -102,7 +104,7 @@ void Pipe::Init() {
 
   pipe_.Open(id_);
   if (buffer->status) {
-    FailAsync(ZX_ERR_INTERNAL, "[%s] Pipe::Pipe() failed to open pipe", kTag);
+    FAIL_ASYNC(ZX_ERR_INTERNAL, "[%s] Pipe::Pipe() failed to open pipe", kTag);
     cmd_buffer_.release();
   }
 }
@@ -333,14 +335,15 @@ zx_status_t Pipe::SetBufferSizeLocked(size_t size) {
   return ZX_OK;
 }
 
-void Pipe::FailAsync(zx_status_t epitaph, const char* format, ...) {
+void Pipe::FailAsync(zx_status_t epitaph, const char* file, int line, const char* format,
+                     ...) {
   if (binding_ref_) {
     binding_ref_->Close(epitaph);
   }
 
   va_list args;
   va_start(args, format);
-  zxlogvf(ERROR, format, args);
+  zxlogvf(ERROR, file, line, format, args);
   va_end(args);
 }
 

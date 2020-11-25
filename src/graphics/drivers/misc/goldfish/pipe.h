@@ -70,7 +70,7 @@ class Pipe : public llcpp::fuchsia::hardware::goldfish::Pipe::Interface {
   zx_status_t SetBufferSizeLocked(uint64_t size) TA_REQ(lock_);
 
   // Close current bounded channel and send an epitaph to the client.
-  void FailAsync(zx_status_t epitaph, const char* format, ...);
+  void FailAsync(zx_status_t epitaph, const char* file, int line, const char* format, ...);
 
   std::unique_ptr<fidl::ServerBindingRef<llcpp::fuchsia::hardware::goldfish::Pipe>> binding_ref_;
   const OnBindFn on_bind_;

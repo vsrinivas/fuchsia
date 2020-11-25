@@ -91,10 +91,10 @@ void driver_logvf_internal(const zx_driver_t* drv, fx_log_severity_t flag, const
   } while (0)
 
 // Do not use this macro directly, use zxlogvf() instead.
-#define zxlogvf_etc(flag, format, args)                                                            \
+#define zxlogvf_etc(flag, file, line, format, args)                                                \
   do {                                                                                             \
     if (driver_log_severity_enabled_internal(__zircon_driver_rec__.driver, flag)) {                \
-      driver_logvf_internal(__zircon_driver_rec__.driver, flag, __FILE__, __LINE__, format, args); \
+      driver_logvf_internal(__zircon_driver_rec__.driver, flag, file, line, format, args); \
     }                                                                                              \
   } while (0)
 
@@ -116,18 +116,19 @@ void driver_logvf_internal(const zx_driver_t* drv, fx_log_severity_t flag, const
 // analogous to vprintf() and printf().
 //
 // Examples:
-//   void log(const char* format, ...) {
+//   void log(const char* file, const char* line, const char* format, ...) {
 //     std::string new_format = std::string("[tag] ") + format;
 //
 //     va_list args;
 //     va_start(args, format);
-//     zxlogvf(new_format.c_str(), args);
+//     zxlogvf(file, line, new_format.c_str(), args);
 //     va_end(args);
 //   }
 //
 // The debug levels are the same as those of zxlogf() macro.
 //
-#define zxlogvf(flag, format, args) zxlogvf_etc(DDK_LOG_##flag, format, args);
+#define zxlogvf(flag, file, line, format, args) \
+  zxlogvf_etc(DDK_LOG_##flag, file, line, format, args);
 
 __END_CDECLS
 
