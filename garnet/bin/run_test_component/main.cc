@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fuchsia/debugdata/cpp/fidl.h>
+#include <fuchsia/diagnostics/cpp/fidl.h>
 #include <fuchsia/diagnostics/test/cpp/fidl.h>
 #include <fuchsia/logger/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
@@ -365,6 +366,7 @@ int main(int argc, const char** argv) {
     auto services = test_metadata.TakeServices();
     bool collect_logs = true;
     bool offer_collected_logs = true;
+    bool offer_diagnostics_archive = true;
     for (auto& service : services) {
       test_env_services->AddServiceWithLaunchInfo(std::move(service.second), service.first);
       if (service.first == fuchsia::logger::LogSink::Name_) {
@@ -375,13 +377,33 @@ int main(int argc, const char** argv) {
         // don't add log service if test component is injecting it.
         offer_collected_logs = false;
       }
+      if (service.first == fuchsia::diagnostics::ArchiveAccessor::Name_) {
+        // don't add ArchiveAccessor if test component is injecting it.
+        offer_diagnostics_archive = false;
+      }
+    }
+
+    auto& requested_system_services = test_metadata.system_services();
+    for (auto& service : requested_system_services) {
+      if (service == fuchsia::logger::LogSink::Name_) {
+        // don't add log sink service if test component is using system service.
+        collect_logs = false;
+      }
+      if (service == fuchsia::logger::Log::Name_) {
+        // don't add log service if test component is using system service.
+        offer_collected_logs = false;
+      }
+      if (service == fuchsia::diagnostics::ArchiveAccessor::Name_) {
+        // don't add ArchiveAccessor if test component is using system service.
+        offer_diagnostics_archive = false;
+      }
     }
 
     // Compute a common random suffix for the environments created to run the test.
     uint32_t env_rand_suffix;
     zx_cprng_draw(&env_rand_suffix, sizeof(env_rand_suffix));
 
-    if (collect_logs || offer_collected_logs) {
+    if (collect_logs || offer_collected_logs || offer_diagnostics_archive) {
       // create a nested diagnostics realm and launch the archivist if it'll be used
       std::string env_label = fxl::StringPrintf("%s%08x", "diagnostics_", env_rand_suffix);
       diagnostics_enclosing_env = sys::testing::EnclosingEnvironment::Create(
@@ -406,6 +428,14 @@ int main(int argc, const char** argv) {
       test_env_services->AddService<fuchsia::logger::Log>(
           [archivist_svc =
                archivist_component->svc()](fidl::InterfaceRequest<fuchsia::logger::Log> request) {
+            archivist_svc->Connect(std::move(request));
+          });
+    }
+    if (offer_diagnostics_archive) {
+      ZX_ASSERT(archivist_component != nullptr);
+      test_env_services->AddService<fuchsia::diagnostics::ArchiveAccessor>(
+          [archivist_svc = archivist_component->svc()](
+              fidl::InterfaceRequest<fuchsia::diagnostics::ArchiveAccessor> request) {
             archivist_svc->Connect(std::move(request));
           });
     }

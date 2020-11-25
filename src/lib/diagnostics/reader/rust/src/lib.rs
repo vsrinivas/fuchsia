@@ -4,7 +4,7 @@
 
 // TODO(fxbug.dev/58038) use thiserror for library errors
 use anyhow::{Context as _, Error};
-use diagnostics_data::{Data, DiagnosticsData, InspectData};
+use diagnostics_data::{DiagnosticsData, InspectData};
 use fidl;
 use fidl_fuchsia_diagnostics::{
     ArchiveAccessorMarker, ArchiveAccessorProxy, BatchIteratorMarker, BatchIteratorProxy,
@@ -22,7 +22,9 @@ use std::{
     task::{Context, Poll},
 };
 
-pub use diagnostics_data::{assert_data_tree, tree_assertion, Inspect, Lifecycle, Logs, Severity};
+pub use diagnostics_data::{
+    assert_data_tree, tree_assertion, Data, Inspect, Lifecycle, Logs, Severity,
+};
 pub use diagnostics_hierarchy::{DiagnosticsHierarchy, Property};
 pub use fidl_fuchsia_diagnostics::DataType;
 
