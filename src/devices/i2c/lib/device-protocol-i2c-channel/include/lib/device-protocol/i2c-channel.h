@@ -16,6 +16,11 @@ namespace ddk {
 
 class I2cChannel : public I2cProtocolClient {
  public:
+  struct StatusRetries {
+    zx_status_t status;
+    uint8_t retries;
+  };
+
   I2cChannel() {}
 
   I2cChannel(const i2c_protocol_t* proto) : I2cProtocolClient(proto) {}
@@ -42,6 +47,33 @@ class I2cChannel : public I2cProtocolClient {
     i2c_protocol_t proto;
     GetProto(&proto);
     return i2c_write_read_sync(&proto, tx_buf, tx_len, rx_buf, rx_len);
+  }
+
+  // ReadSync with retries, returns status and retry attempts.
+  StatusRetries ReadSyncRetries(uint8_t addr, uint8_t* buf, size_t len, uint8_t retries,
+                                zx::duration delay) {
+    return WriteReadSyncRetries(&addr, 1, buf, len, retries, delay);
+  }
+
+  // WriteSync with retries, returns status and retry attempts.
+  StatusRetries WriteSyncRetries(const uint8_t* buf, size_t len, uint8_t retries,
+                                 zx::duration delay) {
+    return WriteReadSyncRetries(buf, len, nullptr, 0, retries, delay);
+  }
+
+  // WriteReadSync with retries, returns status and retry attempts.
+  StatusRetries WriteReadSyncRetries(const uint8_t* tx_buf, size_t tx_len, uint8_t* rx_buf,
+                                     size_t rx_len, uint8_t retries, zx::duration delay) {
+    i2c_protocol_t proto;
+    GetProto(&proto);
+    uint8_t attempt = 0;
+    auto status = i2c_write_read_sync(&proto, tx_buf, tx_len, rx_buf, rx_len);
+    while (status != ZX_OK && attempt < retries) {
+      zx::nanosleep(zx::deadline_after(delay));
+      attempt++;
+      status = i2c_write_read_sync(&proto, tx_buf, tx_len, rx_buf, rx_len);
+    }
+    return {status, attempt};
   }
 };
 
