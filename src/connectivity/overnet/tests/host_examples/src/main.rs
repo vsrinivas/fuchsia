@@ -10,7 +10,7 @@ use std::collections::HashMap;
 use std::env::current_exe;
 use std::io::{Read, Write};
 use std::process::{Child, Command, Stdio};
-use std::sync::Arc;
+use std::sync::{mpsc, Arc};
 use std::time::Duration;
 use tempfile::{NamedTempFile, TempPath};
 
@@ -63,18 +63,20 @@ fn cmd(name: &str) -> Command {
     cmd
 }
 
-fn copy_output(mut out: impl std::io::Read + Send + 'static) -> TempPath {
+fn copy_output(mut out: impl std::io::Read + Send + 'static) -> (TempPath, mpsc::Receiver<()>) {
+    let (sender, receiver) = mpsc::channel();
     let (mut file, path) = NamedTempFile::new().unwrap().into_parts();
     std::thread::spawn(move || {
         std::io::copy(&mut out, &mut file).unwrap();
+        let _ = sender.send(());
     });
-    path
+    (path, receiver)
 }
 
 struct ChildInfo {
     name: String,
-    stdout: Option<TempPath>,
-    stderr: Option<TempPath>,
+    stdout: Option<(TempPath, mpsc::Receiver<()>)>,
+    stderr: Option<(TempPath, mpsc::Receiver<()>)>,
 }
 
 impl ChildInfo {
@@ -89,11 +91,11 @@ impl ChildInfo {
     fn show(&self) {
         println!("*******************************************************************************");
         println!("** {}", self.name);
-        if let Some(f) = self.stdout.as_ref() {
+        if let Some((f, _)) = self.stdout.as_ref() {
             println!("** STDOUT:");
             println!("{}", std::fs::read_to_string(f).unwrap());
         }
-        if let Some(f) = self.stderr.as_ref() {
+        if let Some((f, _)) = self.stderr.as_ref() {
             println!("** STDERR:");
             println!("{}", std::fs::read_to_string(f).unwrap());
         }
@@ -158,10 +160,12 @@ impl TestContext {
         }
         let mut child = cmd.spawn().context("spawning client")?;
         let child_info = ChildInfo::new(name, &mut child);
-        let stdout_path: std::path::PathBuf =
-            child_info.stdout.as_ref().unwrap().to_owned().to_path_buf();
         self.state.lock().run_things.push(child_info);
         assert!(child.wait().expect("client should succeed").success());
+        let child_info = self.state.lock().run_things.pop().unwrap();
+        let (stdout, wait) = child_info.stdout.unwrap();
+        wait.recv_timeout(Duration::from_secs(60))?;
+        let stdout_path: std::path::PathBuf = stdout.to_path_buf();
         Ok(std::fs::read_to_string(stdout_path)?)
     }
 
