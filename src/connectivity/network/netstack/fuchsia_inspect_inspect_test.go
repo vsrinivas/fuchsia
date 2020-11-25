@@ -42,6 +42,17 @@ func TestStatCounterInspectImpl(t *testing.T) {
 		value: reflect.ValueOf(s),
 	}
 	children := v.ListChildren()
+
+	// Skip the IGMP child so that we can avoid a breaking change.
+	//
+	// TODO(65254): Remove once IGMP has rolled.
+	for i, child := range children {
+		if child == "IGMP" {
+			children = append(children[:i], children[i+1:]...)
+		}
+	}
+
+	// TODO(65254): Add IGMP to the list of children once IGMP has rolled.
 	if diff := cmp.Diff([]string{
 		"ICMP",
 		"IP",
