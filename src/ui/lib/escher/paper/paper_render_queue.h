@@ -40,6 +40,7 @@ class PaperRenderQueue final {
   RenderQueue opaque_;
   RenderQueue translucent_;
   RenderQueue wireframe_;
+  RenderQueue shadow_caster_;
 };
 
 }  // namespace escher

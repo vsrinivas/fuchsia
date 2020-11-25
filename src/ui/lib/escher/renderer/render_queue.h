@@ -64,6 +64,7 @@ class RenderQueue final {
 
   void clear() { items_.clear(); }
   size_t size() const { return items_.size(); }
+  bool empty() const { return size() == 0; }
 
  protected:
   std::vector<RenderQueueItem> items_;

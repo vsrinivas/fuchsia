@@ -17,6 +17,7 @@ void PaperRenderQueue::Clear() {
   opaque_.clear();
   translucent_.clear();
   wireframe_.clear();
+  shadow_caster_.clear();
 }
 
 void PaperRenderQueue::Sort() {
@@ -24,6 +25,7 @@ void PaperRenderQueue::Sort() {
   opaque_.Sort();
   translucent_.Sort();
   wireframe_.Sort();
+  shadow_caster_.Sort();
 }
 
 void PaperRenderQueue::GenerateCommands(CommandBuffer* cmd_buf,
@@ -41,6 +43,10 @@ void PaperRenderQueue::GenerateCommands(CommandBuffer* cmd_buf,
   if (flags & PaperRenderQueueFlagBits::kWireframe) {
     TRACE_DURATION("gfx", "PaperRenderQueue::GenerateCommands[wireframe]");
     wireframe_.GenerateCommands(cmd_buf, nullptr, context);
+  }
+  if (flags & PaperRenderQueueFlagBits::kShadowCaster) {
+    TRACE_DURATION("gfx", "PaperRenderQueue::GenerateCommands[wireframe]");
+    shadow_caster_.GenerateCommands(cmd_buf, nullptr, context);
   }
 }
 
@@ -71,6 +77,9 @@ void PaperRenderQueue::PushDrawCall(const PaperDrawCall& draw_call) {
   }
   if (flags & PaperRenderQueueFlagBits::kWireframe) {
     wireframe_.Push(draw_call.render_queue_item);
+  }
+  if (flags & PaperRenderQueueFlagBits::kShadowCaster) {
+    shadow_caster_.Push(draw_call.render_queue_item);
   }
 }
 

@@ -16,11 +16,6 @@ class AmbientLight {
   explicit AmbientLight(const vec3& color);
   ~AmbientLight();
 
-  // The amount of light emitted.
-  // TODO(abarth): In what units?
-  // TODO(jjosh): deprecated.  Only used for SSDO shadows, and white lights.
-  float intensity() const { return color_.r; }
-
   const vec3 color() const { return color_; }
 
  private:

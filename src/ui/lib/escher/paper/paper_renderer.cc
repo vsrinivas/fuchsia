@@ -526,7 +526,6 @@ void PaperRenderer::GenerateCommandsForNoShadows(uint32_t camera_index) {
 
   {
     PaperRenderQueueContext context;
-    context.set_draw_mode(PaperRendererDrawMode::kAmbient);
 
     // Render wireframe.
     context.set_shader_program(no_lighting_program_);
@@ -587,8 +586,6 @@ void PaperRenderer::GenerateCommandsForShadowVolumes(uint32_t camera_index) {
         .eye_index = cam_data.eye_index,
     });
 
-    context.set_draw_mode(PaperRendererDrawMode::kAmbient);
-
     // Render wireframe.
     cmd_buf->SetToDefaultState(CommandBuffer::DefaultState::kWireframe);
     context.set_shader_program(no_lighting_program_);
@@ -638,7 +635,6 @@ void PaperRenderer::GenerateCommandsForShadowVolumes(uint32_t camera_index) {
 
     // Emit commands for stencil shadow geometry.
     {
-      context.set_draw_mode(PaperRendererDrawMode::kShadowVolumeGeometry);
       context.set_shader_program(shadow_volume_geometry_program_);
 
       // Draw front and back faces of the shadow volumes in a single pass.  We
@@ -655,13 +651,11 @@ void PaperRenderer::GenerateCommandsForShadowVolumes(uint32_t camera_index) {
       // all shadow-casters.
       cmd_buf->SetDepthCompareOp(vk::CompareOp::eLess);
 
-      render_queue_.GenerateCommands(cmd_buf, &context, PaperRenderQueueFlagBits::kOpaque);
+      render_queue_.GenerateCommands(cmd_buf, &context, PaperRenderQueueFlagBits::kShadowCaster);
     }
 
     // Emit commands for adding lighting contribution.
     {
-      context.set_draw_mode(PaperRendererDrawMode::kShadowVolumeLighting);
-
       // Use a slightly less expensive shader when distance-based attenuation is
       // disabled.
       const bool use_light_falloff = frame_data_->scene->point_lights[i].falloff > 0.f;
@@ -688,7 +682,6 @@ void PaperRenderer::GenerateCommandsForShadowVolumes(uint32_t camera_index) {
       if (!escher_->supports_wireframe()) {
         FX_LOGS(WARNING) << "Wireframe not supported; cannot visualize shadow volume geometry.";
       } else {
-        context.set_draw_mode(PaperRendererDrawMode::kShadowVolumeGeometry);
         context.set_shader_program(shadow_volume_geometry_debug_program_);
 
         cmd_buf->SetBlendEnable(false);
@@ -696,13 +689,12 @@ void PaperRenderer::GenerateCommandsForShadowVolumes(uint32_t camera_index) {
         cmd_buf->SetWireframe(true);
         cmd_buf->SetCullMode(vk::CullModeFlagBits::eNone);
 
-        render_queue_.GenerateCommands(cmd_buf, &context, PaperRenderQueueFlagBits::kOpaque);
+        render_queue_.GenerateCommands(cmd_buf, &context, PaperRenderQueueFlagBits::kShadowCaster);
       }
     }
   }
 
   // Draw translucent geometry without lighting.
-  context.set_draw_mode(PaperRendererDrawMode::kAmbient);
   context.set_shader_program(no_lighting_program_);
   cmd_buf->SetToDefaultState(CommandBuffer::DefaultState::kTranslucent);
   render_queue_.GenerateCommands(cmd_buf, &context, PaperRenderQueueFlagBits::kTranslucent);

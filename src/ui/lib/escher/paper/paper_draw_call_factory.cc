@@ -9,6 +9,7 @@
 #include "src/ui/lib/escher/paper/paper_render_funcs.h"
 #include "src/ui/lib/escher/paper/paper_render_queue.h"
 #include "src/ui/lib/escher/paper/paper_render_queue_flags.h"
+#include "src/ui/lib/escher/paper/paper_renderer_static_config.h"
 #include "src/ui/lib/escher/paper/paper_scene.h"
 #include "src/ui/lib/escher/paper/paper_shader_structs.h"
 #include "src/ui/lib/escher/paper/paper_shape_cache.h"
@@ -65,7 +66,8 @@ PaperRenderQueueFlagBits GetRenderQueueFlagBits(const Material& mat) {
 }  // anonymous namespace
 
 PaperDrawCallFactory::PaperDrawCallFactory(EscherWeakPtr weak_escher,
-                                           const PaperRendererConfig& config) {}
+                                           const PaperRendererConfig& config)
+    : config_(config) {}
 
 PaperDrawCallFactory::~PaperDrawCallFactory() { FX_DCHECK(!frame_); }
 
@@ -143,8 +145,6 @@ void PaperDrawCallFactory::EnqueueDrawCalls(const PaperShapeCacheEntry& cache_en
   auto* mesh = cache_entry.mesh.get();
   const auto& texture = material.texture() ? material.texture() : white_texture_;
   const auto& transform = transform_stack_->Top();
-  const uint32_t num_indices = cache_entry.num_indices;
-  const uint32_t num_shadow_volume_indices = cache_entry.num_shadow_volume_indices;
 
   Hash pipeline_hash;
   Hash mesh_hash;
@@ -175,16 +175,14 @@ void PaperDrawCallFactory::EnqueueDrawCalls(const PaperShapeCacheEntry& cache_en
   if (it != object_data_.end()) {
     mesh_data = reinterpret_cast<PaperRenderFuncs::MeshData*>(it->second);
   } else {
-    mesh_data = PaperRenderFuncs::NewMeshData(frame_, mesh, texture, num_indices,
-                                              num_shadow_volume_indices);
+    mesh_data = PaperRenderFuncs::NewMeshData(frame_, mesh, texture);
     object_data_.insert(it, std::make_pair(mesh_hash, mesh_data));
   }
 
   // Allocate and initialize per-instance data.
+  vec4 material_color = material.GetPremultipliedRgba();
   PaperRenderFuncs::MeshDrawData* draw_data = PaperRenderFuncs::NewMeshDrawData(
-      frame_, transform.matrix, material.GetPremultipliedRgba(), drawable_flags);
-
-  frame_->cmds()->KeepAlive(texture.get());
+      frame_, transform.matrix, material_color, cache_entry.num_indices);
 
   // Compute a depth metric for sorting objects.
 #if 1
@@ -211,11 +209,32 @@ void PaperDrawCallFactory::EnqueueDrawCalls(const PaperShapeCacheEntry& cache_en
                              .instance_data = draw_data,
                              .render_queue_func = PaperRenderFuncs::RenderMesh},
        .render_queue_flags = queue_flags});
+
+  // Generate additional draw calls for stencil shadow volumes.
+  if (config_.shadow_type == PaperRendererShadowType::kShadowVolume &&
+      !(drawable_flags & PaperDrawableFlagBits::kDisableShadowCasting)) {
+    // Generate an additional draw call.
+
+    draw_data = PaperRenderFuncs::NewMeshDrawData(frame_, transform.matrix, material_color,
+                                                  cache_entry.num_shadow_volume_indices);
+
+    // TODO(fxbug.dev/7241): revisit sort key... we expect that a subsequent CL will add a
+    // ShaderProgram as a field in the |instance_data| created by NewMeshDrawData().  Then, we'll
+    // want the sort key to reflect the fact that a different pipeline is being used.
+    render_queue_->PushDrawCall(
+        {.render_queue_item = {.sort_key = sort_key,
+                               .object_data = mesh_data,
+                               .instance_data = draw_data,
+                               .render_queue_func = PaperRenderFuncs::RenderMesh},
+         .render_queue_flags = PaperRenderQueueFlagBits::kShadowCaster});
+  }
 }
 
 void PaperDrawCallFactory::SetConfig(const PaperRendererConfig& config) {
-  // NOTE: nothing currently to do here.  This will change, e.g. when we
-  // add other shadow techniques.
+  FX_DCHECK(!frame_) << "Illegal call to SetConfig() during a frame.";
+  FX_DCHECK(config.shadow_type == PaperRendererShadowType::kNone ||
+            config.shadow_type == PaperRendererShadowType::kShadowVolume);
+  config_ = config;
 }
 
 void PaperDrawCallFactory::BeginFrame(const FramePtr& frame, BatchGpuUploader* gpu_uploader,

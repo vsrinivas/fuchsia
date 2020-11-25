@@ -15,6 +15,7 @@ enum class PaperRenderQueueFlagBits : uint8_t {
   kOpaque = 1U << 0,
   kTranslucent = 1U << 1,
   kWireframe = 1U << 2,
+  kShadowCaster = 1U << 3,
 
   kAllFlags = 0x7u,
 };

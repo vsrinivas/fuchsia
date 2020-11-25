@@ -582,7 +582,7 @@ bool DefaultFrameScheduler::ApplyUpdates(zx::time target_presentation_time, zx::
                 << target_presentation_time.get() << " frame_number=" << frame_number;
   }
 
-  // NOTE: this name is used by scenic_processing_helpers.go
+  // NOTE: this name is used by scenic_frame_stats.dart
   TRACE_DURATION("gfx", "ApplyScheduledSessionUpdates", "target_presentation_time",
                  target_presentation_time.get() / 1'000'000, "frame_number", frame_number);
 

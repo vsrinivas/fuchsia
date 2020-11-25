@@ -8,6 +8,7 @@
 #include "src/ui/lib/escher/geometry/types.h"
 #include "src/ui/lib/escher/paper/paper_drawable_flags.h"
 #include "src/ui/lib/escher/paper/paper_readme.h"
+#include "src/ui/lib/escher/paper/paper_renderer_config.h"
 #include "src/ui/lib/escher/renderer/uniform_binding.h"
 #include "src/ui/lib/escher/util/hash_map.h"
 
@@ -108,6 +109,8 @@ class PaperDrawCallFactory final {
   // stack.
   void EnqueueDrawCalls(const PaperShapeCacheEntry& cache_entry, const PaperMaterial& material,
                         PaperDrawableFlags flags);
+
+  PaperRendererConfig config_;
 
   // Rather than using a separate Vulkan pipeline for Materials that have no
   // texture (only a color), we use a 1x1 texture with a single white pixel.

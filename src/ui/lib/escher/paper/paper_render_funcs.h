@@ -6,7 +6,6 @@
 #define SRC_UI_LIB_ESCHER_PAPER_PAPER_RENDER_FUNCS_H_
 
 #include "src/ui/lib/escher/forward_declarations.h"
-#include "src/ui/lib/escher/paper/paper_drawable_flags.h"
 #include "src/ui/lib/escher/paper/paper_readme.h"
 #include "src/ui/lib/escher/renderer/render_funcs.h"
 
@@ -30,15 +29,13 @@ class PaperRenderFuncs : public RenderFuncs {
   // Struct intended to be used as the |instance_data| of a |RenderQueueItem|.
   struct MeshDrawData {
     UniformBinding object_properties;
-    PaperDrawableFlags flags;
+    uint32_t num_indices = 0;
   };
 
   // Struct intended to be used as the |object_data| of a |RenderQueueItem|.
   // Typically populated via the helper function NewMeshData(); see below.
   struct MeshData {
     IndexBinding index_binding;
-    uint32_t num_indices;
-    uint32_t num_shadow_volume_indices;
 
     uint32_t vertex_binding_count;
     VertexBinding* vertex_bindings;
@@ -68,14 +65,13 @@ class PaperRenderFuncs : public RenderFuncs {
   // Helper function for allocating/populating a |MeshData|.  Both CPU and
   // uniform GPU memory is allocated using per-Frame allocators.
   static PaperRenderFuncs::MeshData* NewMeshData(const FramePtr& frame, Mesh* mesh,
-                                                 const TexturePtr& texture, uint32_t num_indices,
-                                                 uint32_t num_shadow_volume_indices);
+                                                 const TexturePtr& texture);
 
   // Helper function for allocating/populating a |MeshDrawData|.  Both CPU and
   // uniform GPU memory is allocated using per-Frame allocators.
   static PaperRenderFuncs::MeshDrawData* NewMeshDrawData(const FramePtr& frame,
                                                          const mat4& transform, const vec4& color,
-                                                         PaperDrawableFlags flags);
+                                                         uint32_t num_indices);
 };
 
 }  // namespace escher
