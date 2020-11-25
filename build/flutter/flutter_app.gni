@@ -124,15 +124,16 @@ template("flutter_app") {
   flutter_component(flutter_component_gn_label) {
     forward_variables_from(invoker, [ "flutter_driver_extendable" ])
     main_package = _package_name
-    component_name = string_replace(_package_name, "_", "-")
+    component_name = string_replace(_fuchsia_package_name, "_", "-")
     main_dart = _main_dart
     manifest = _meta.path
     deps = [ ":$dart_library_gn_label" ]
     build_cfg = _build_cfg
   }
 
-  fuchsia_package_gn_label = string_replace(_fuchsia_package_name, "_", "-")
+  fuchsia_package_gn_label = string_replace(target_name, "_", "-")
   fuchsia_package(fuchsia_package_gn_label) {
+    package_name = string_replace(_fuchsia_package_name, "_", "-")
     deps = [
       ":$flutter_component_gn_label",
       "//build/flutter:deprecated_flutter_app_allowlist",
@@ -140,8 +141,8 @@ template("flutter_app") {
   }
 
   # @TODO(fxb/62741): For purposes of soft transition.
-  if (_fuchsia_package_name != fuchsia_package_gn_label) {
-    group(_fuchsia_package_name) {
+  if (target_name != fuchsia_package_gn_label) {
+    group(target_name) {
       deps = [ ":$fuchsia_package_gn_label" ]
     }
   }

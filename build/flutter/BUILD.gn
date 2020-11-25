@@ -2,7 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-# TODO(fxb/58062): Delete after all packages are migrated away from flutter_app.
+# TODO(fxb/58062): Delete after all packages are migrated away from dart_app
+# and flutter_app.
 group("deprecated_flutter_app_allowlist") {
   #  ________  _________  ________  ________
   # |\   ____\|\___   ___\\   __  \|\   __  \

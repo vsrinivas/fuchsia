@@ -15,6 +15,51 @@ declare_args() {
   concurrent_dart_jobs = default_concurrent_jobs.dart
 }
 
+# TODO(fxb/58062): Delete after all packages are migrated away from dart_app
+# and flutter_app.
+group("deprecated_dart_app_allowlist") {
+  #  ________  _________  ________  ________
+  # |\   ____\|\___   ___\\   __  \|\   __  \
+  # \ \  \___|\|___ \  \_\ \  \|\  \ \  \|\  \
+  #  \ \_____  \   \ \  \ \ \  \\\  \ \   ____\
+  #   \|____|\  \   \ \  \ \ \  \\\  \ \  \___|
+  #     ____\_\  \   \ \__\ \ \_______\ \__\
+  #    |\_________\   \|__|  \|_______|\|__|
+  #    \|_________|
+  # This is an allowlist of packages that have not migrated to use dart_component.
+  # This is only intended to be used as a temporary allowlist. Do not add to this list.
+  allowlist = [
+    "//examples/fidl/dart/client:echo-dart-client",
+    "//examples/fidl/dart/request_pipelining/client:echo-launcher-dart-client",
+    "//examples/fidl/dart/request_pipelining/server:echo-launcher-dart-server",
+    "//examples/fidl/dart/server:echo-dart-server",
+    "//src/diagnostics/validator/logs/encoding/puppet/dart:log-validator-dart-puppet",
+    "//src/tests/intl/timestamp-server-dart:timestamp-server-dart",
+    "//topaz/public/dart/fuchsia_inspect/codelab/client:bin",
+    "//topaz/public/dart/fuchsia_inspect/codelab/fizzbuzz:bin",
+    "//topaz/public/dart/fuchsia_inspect/codelab/part_1:bin",
+    "//topaz/public/dart/fuchsia_inspect/codelab/part_2:bin",
+    "//topaz/public/dart/fuchsia_inspect/codelab/part_3:bin",
+    "//topaz/public/dart/fuchsia_inspect/codelab/part_4:bin",
+    "//topaz/public/dart/fuchsia_inspect/codelab/part_5:bin",
+    "//topaz/public/dart/fuchsia_inspect/test/integration:dart-inspect-vmo-test-writer",
+    "//topaz/public/dart/fuchsia_inspect/test/validator_puppet:dart-inspect-validator-puppet",
+    "//topaz/public/dart/fuchsia_modular/examples/fibonacci_agent:fibonacci-agent",
+    "//topaz/public/dart/fuchsia_services/test_support:fuchsia-services-foo-test-server",
+    "//topaz/tests/dart-inspect-benchmarks:dart-inspect-benchmarks",
+  ]
+
+  visibility = []
+  foreach(target, allowlist) {
+    visibility += [
+      target,
+      target + "_manifest_dist",
+      target + "_manifest_dist_generate",
+      target + "_component_manifests",
+    ]
+  }
+}
+
 # Copies the patched SDK files for the dart runner
 # NOTE: copies to an _nnbd directory to allow for soft transition
 copy("platform_files") {

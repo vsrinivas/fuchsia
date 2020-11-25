@@ -2,10 +2,10 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/dart/dart_app.gni")
 import("//build/dart/fidl_move.gni")
-import("//topaz/runtime/dart_runner/dart_app.gni")
 
-dart_app("echo-dart-client") {
+dart_app_polyfill("echo-dart-client") {
   main_dart = "lib/main.dart"
   meta = [
     {

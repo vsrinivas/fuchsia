@@ -1,0 +1,183 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/dart/dart_component.gni")
+import("//build/dart/dart_library.gni")
+import("//src/sys/build/components.gni")
+
+# Defines a Dart application that can be run in the Dart content handler
+#
+# Parameters
+#
+#   meta (required)
+#     A list of exactly one scope with the path to the cmx file associated with
+#     the dart app.
+#
+#   fuchsia_package_name (optional)
+#     Name of the Fuchsia package.
+#
+#   resources (optional)
+#     Resources for the package (see //build/package.gni)
+#
+#   pubspec (optional)
+#     Path to the pubspec file. Must be "pubspec.yaml".
+#
+#   analysis_options (optional)
+#     Path to the analysis options file. Must be "analysis_options.yaml".
+#
+#   components (required)
+#     [list of one scope] Defines the component in the package. Either main_dart
+#     or components must be defined, but not both.
+#
+#     The entry in a scope in the resources list:
+#
+#       main_dart (required)
+#         File containing the main function of the component.
+#
+#       component_name (required)
+#         Name of the component.
+#
+#       component_type (optional)
+#         Always "dart".
+#
+#       sources (optional)
+#         Relative path of source files to be included in the dart package for
+#         the component at $package_root/lib.
+#
+#       deps (optional)
+#         List of Dart packages the application depends on.
+#
+#   main_dart (required)
+#     Name of the Dart file containing the main function. Either main_dart or
+#     components must be defined, but not both.
+#
+#   package_name (optional)
+#     Name of the Dart package. Can only be defined if main_dart is defined.
+#
+#   sources (optional)
+#     Can only be defined if main_dart is defined.
+#
+#   deps (optional)
+#     List of Dart packages the application depends on. Can only be defined if
+#     main_dart is defined.
+template("dart_app_polyfill") {
+  assert(defined(invoker.meta), "Must define meta")
+  _invoker_meta = invoker.meta
+  assert(_invoker_meta != [] && _invoker_meta == [ _invoker_meta[0] ],
+         "meta must have exactly 1 element!")
+  _meta = _invoker_meta[0]
+  assert(defined(_meta.path), "Must define meta[0].path")
+  assert(!defined(invoker.pubspec) || invoker.pubspec == "pubspec.yaml",
+         "pubspec must be 'pubspec.yaml'")
+  assert(!defined(invoker.options_file) ||
+             invoker.options_file == "analysis_options.yaml",
+         "options_file must be 'analysis_options.yaml'")
+  _package_name = target_name
+  if (defined(invoker.package_name)) {
+    _package_name = invoker.package_name
+  }
+  _sources = []
+  _deps = []
+  _fuchsia_package_name = target_name
+  if (defined(invoker.fuchsia_package_name)) {
+    _fuchsia_package_name = invoker.fuchsia_package_name
+  }
+  if (defined(invoker.main_dart)) {
+    assert(!defined(invoker.components),
+           "either components or main_dart should be defined, but not both")
+    _main_dart = invoker.main_dart
+    if (defined(invoker.sources)) {
+      _sources = invoker.sources
+    }
+    if (defined(invoker.deps)) {
+      _deps = invoker.deps
+    }
+  } else {
+    assert(defined(invoker.components),
+           "either components or main_dart should be defined, but not both")
+    assert(!defined(invoker.package_name),
+           "package_name cannot be defined if components is defined")
+    assert(!defined(invoker.sources),
+           "sources cannot be defined if components is defined")
+    assert(!defined(invoker.deps),
+           "deps cannot be defined if components is defined")
+    _components = invoker.components
+    assert(_components == [ _components[0] ],
+           "components should contain exactly one scope")
+    _component = _components[0]
+    assert(defined(_component.main_dart) && defined(_component.component_name),
+           "components[0] should define main_dart and component_name")
+    assert(!defined(_component.component_type) ||
+               _component.component_type == "dart",
+           "components[0].component_type must be 'dart'")
+    _main_dart = _component.main_dart
+    if (defined(_component.component_name)) {
+      _package_name = _component.component_name
+    }
+    if (defined(_component.sources)) {
+      _sources = _component.sources
+    }
+    if (defined(_component.deps)) {
+      _deps = _component.deps
+    }
+  }
+  if (defined(invoker.source_dir)) {
+    _source_dir = invoker.source_dir
+  } else {
+    _split_main_dart = string_split(_main_dart, "lib/")
+    if (_split_main_dart[0] == "") {
+      _main_dart = string_replace(_main_dart, "lib/", "", 1)
+      _source_dir = "lib"
+    } else {
+      _source_dir = "."
+    }
+  }
+
+  resource_gn_labels = []
+  if (defined(invoker.resources)) {
+    i = 0
+    foreach(res, invoker.resources) {
+      current_gn_label = target_name + "_resource_" + i
+      resource(current_gn_label) {
+        sources = [ res.path ]
+        outputs = [ "data/" + res.dest ]
+      }
+      resource_gn_labels += [ ":$current_gn_label" ]
+      i += 1
+    }
+  }
+
+  dart_library_gn_label = target_name + "_dart_library"
+  dart_library(dart_library_gn_label) {
+    package_name = _package_name
+    sources = _sources
+    source_dir = _source_dir
+    deps = _deps + resource_gn_labels
+  }
+
+  dart_component_gn_label = target_name + "_dart_component"
+  dart_component(dart_component_gn_label) {
+    main_package = _package_name
+    component_name = string_replace(_fuchsia_package_name, "_", "-")
+    main_dart = _main_dart
+    manifest = _meta.path
+    deps = [ ":$dart_library_gn_label" ]
+  }
+
+  fuchsia_package_gn_label = string_replace(target_name, "_", "-")
+  fuchsia_package(fuchsia_package_gn_label) {
+    package_name = string_replace(_fuchsia_package_name, "_", "-")
+    deps = [
+      ":$dart_component_gn_label",
+      "//build/dart:deprecated_dart_app_allowlist",
+    ]
+  }
+
+  # @TODO(fxb/62741): For purposes of soft transition.
+  if (target_name != fuchsia_package_gn_label) {
+    group(target_name) {
+      deps = [ ":$fuchsia_package_gn_label" ]
+    }
+  }
+}
