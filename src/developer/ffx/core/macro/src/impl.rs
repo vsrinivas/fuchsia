@@ -58,7 +58,7 @@ fn generate_fake_test_proxy_method(
     quote! {
         #[cfg(test)]
         fn #method_name<R:'static>(handle_request: R) -> #qualified_proxy_type
-            where R: FnOnce(fidl::endpoints::Request<<#qualified_proxy_type as fidl::endpoints::Proxy>::Service>) + std::marker::Send + Copy
+            where R: Fn(fidl::endpoints::Request<<#qualified_proxy_type as fidl::endpoints::Proxy>::Service>) + std::marker::Send
         {
             use futures::TryStreamExt;
             let (proxy, mut stream) =
@@ -74,7 +74,7 @@ fn generate_fake_test_proxy_method(
 
         #[cfg(test)]
         fn #oneshot_method_name<R:'static>(handle_request: R) -> #qualified_proxy_type
-            where R: FnOnce(fidl::endpoints::Request<<#qualified_proxy_type as fidl::endpoints::Proxy>::Service>) + std::marker::Send + Copy
+            where R: Fn(fidl::endpoints::Request<<#qualified_proxy_type as fidl::endpoints::Proxy>::Service>) + std::marker::Send
         {
             use futures::TryStreamExt;
             let (proxy, mut stream) =
@@ -698,7 +698,7 @@ mod test {
         let fake_test: ItemFn = parse_quote! {
             #[cfg(test)]
             fn setup_fake_daemon<R:'static>(handle_request: R) -> DaemonProxy
-                where R: FnOnce(fidl::endpoints::Request<<DaemonProxy as fidl::endpoints::Proxy>::Service>) + std::marker::Send + Copy
+                where R: Fn(fidl::endpoints::Request<<DaemonProxy as fidl::endpoints::Proxy>::Service>) + std::marker::Send
             {
                 use futures::TryStreamExt;
                 let (proxy, mut stream) =
@@ -715,7 +715,7 @@ mod test {
         let oneshot_fake_test: ItemFn = parse_quote! {
             #[cfg(test)]
             fn setup_oneshot_fake_daemon<R:'static>(handle_request: R) -> DaemonProxy
-                where R: FnOnce(fidl::endpoints::Request<<DaemonProxy as fidl::endpoints::Proxy>::Service>) + std::marker::Send + Copy
+                where R: Fn(fidl::endpoints::Request<<DaemonProxy as fidl::endpoints::Proxy>::Service>) + std::marker::Send
             {
                 use futures::TryStreamExt;
                 let (proxy, mut stream) =
@@ -779,7 +779,7 @@ mod test {
         let fake_test: ItemFn = parse_quote! {
             #[cfg(test)]
             fn setup_fake_fastboot<R:'static>(handle_request: R) -> FastbootProxy
-                where R: FnOnce(fidl::endpoints::Request<<FastbootProxy as fidl::endpoints::Proxy>::Service>) + std::marker::Send + Copy
+                where R: Fn(fidl::endpoints::Request<<FastbootProxy as fidl::endpoints::Proxy>::Service>) + std::marker::Send
             {
                 use futures::TryStreamExt;
                 let (proxy, mut stream) =
@@ -796,7 +796,7 @@ mod test {
         let oneshot_fake_test: ItemFn = parse_quote! {
             #[cfg(test)]
             fn setup_oneshot_fake_fastboot<R:'static>(handle_request: R) -> FastbootProxy
-                where R: FnOnce(fidl::endpoints::Request<<FastbootProxy as fidl::endpoints::Proxy>::Service>) + std::marker::Send + Copy
+                where R: Fn(fidl::endpoints::Request<<FastbootProxy as fidl::endpoints::Proxy>::Service>) + std::marker::Send
             {
                 use futures::TryStreamExt;
                 let (proxy, mut stream) =
@@ -860,7 +860,7 @@ mod test {
         let fake_test: ItemFn = parse_quote! {
             #[cfg(test)]
             fn setup_fake_remote<R:'static>(handle_request: R) -> RemoteControlProxy
-                where R: FnOnce(fidl::endpoints::Request<<RemoteControlProxy as fidl::endpoints::Proxy>::Service>) + std::marker::Send + Copy
+                where R: Fn(fidl::endpoints::Request<<RemoteControlProxy as fidl::endpoints::Proxy>::Service>) + std::marker::Send
             {
                 use futures::TryStreamExt;
                 let (proxy, mut stream) =
@@ -925,7 +925,7 @@ mod test {
         let fake_daemon_test: ItemFn = parse_quote! {
             #[cfg(test)]
             fn setup_fake_daemon<R:'static>(handle_request: R) -> DaemonProxy
-                where R: FnOnce(fidl::endpoints::Request<<DaemonProxy as fidl::endpoints::Proxy>::Service>) + std::marker::Send + Copy
+                where R: Fn(fidl::endpoints::Request<<DaemonProxy as fidl::endpoints::Proxy>::Service>) + std::marker::Send
             {
                 use futures::TryStreamExt;
                 let (proxy, mut stream) =
@@ -942,7 +942,7 @@ mod test {
         let fake_remote_test: ItemFn = parse_quote! {
             #[cfg(test)]
             fn setup_fake_remote<R:'static>(handle_request: R) -> RemoteControlProxy
-                where R: FnOnce(fidl::endpoints::Request<<RemoteControlProxy as fidl::endpoints::Proxy>::Service>) + std::marker::Send + Copy
+                where R: Fn(fidl::endpoints::Request<<RemoteControlProxy as fidl::endpoints::Proxy>::Service>) + std::marker::Send
             {
                 use futures::TryStreamExt;
                 let (proxy, mut stream) =
@@ -1009,7 +1009,7 @@ mod test {
         let fake_daemon_test: ItemFn = parse_quote! {
             #[cfg(test)]
             fn setup_fake_daemon<R:'static>(handle_request: R) -> DaemonProxy
-                where R: FnOnce(fidl::endpoints::Request<<DaemonProxy as fidl::endpoints::Proxy>::Service>) + std::marker::Send + Copy
+                where R: Fn(fidl::endpoints::Request<<DaemonProxy as fidl::endpoints::Proxy>::Service>) + std::marker::Send
             {
                 use futures::TryStreamExt;
                 let (proxy, mut stream) =
@@ -1026,7 +1026,7 @@ mod test {
         let fake_remote_test: ItemFn = parse_quote! {
             #[cfg(test)]
             fn setup_fake_remote<R:'static>(handle_request: R) -> RemoteControlProxy
-                where R: FnOnce(fidl::endpoints::Request<<RemoteControlProxy as fidl::endpoints::Proxy>::Service>) + std::marker::Send + Copy
+                where R: Fn(fidl::endpoints::Request<<RemoteControlProxy as fidl::endpoints::Proxy>::Service>) + std::marker::Send
             {
                 use futures::TryStreamExt;
                 let (proxy, mut stream) =
@@ -1143,7 +1143,7 @@ Plugin developers: you can use `ffx component select '{}'` to see which services
         let fake_test: ItemFn = parse_quote! {
             #[cfg(test)]
             fn setup_fake_test<R:'static>(handle_request: R) -> TestProxy
-                where R: FnOnce(fidl::endpoints::Request<<TestProxy as fidl::endpoints::Proxy>::Service>) + std::marker::Send + Copy
+                where R: Fn(fidl::endpoints::Request<<TestProxy as fidl::endpoints::Proxy>::Service>) + std::marker::Send
             {
                 use futures::TryStreamExt;
                 let (proxy, mut stream) =
@@ -1301,7 +1301,7 @@ Plugin developers: you can use `ffx component select '{}'` to see which services
         let fake_foo_test: ItemFn = parse_quote! {
             #[cfg(test)]
             fn setup_fake_foo<R:'static>(handle_request: R) -> FooProxy
-                where R: FnOnce(fidl::endpoints::Request<<FooProxy as fidl::endpoints::Proxy>::Service>) + std::marker::Send + Copy
+                where R: Fn(fidl::endpoints::Request<<FooProxy as fidl::endpoints::Proxy>::Service>) + std::marker::Send
             {
                 use futures::TryStreamExt;
                 let (proxy, mut stream) =
@@ -1318,7 +1318,7 @@ Plugin developers: you can use `ffx component select '{}'` to see which services
         let fake_test_test: ItemFn = parse_quote! {
             #[cfg(test)]
             fn setup_fake_test<R:'static>(handle_request: R) -> TestProxy
-                where R: FnOnce(fidl::endpoints::Request<<TestProxy as fidl::endpoints::Proxy>::Service>) + std::marker::Send + Copy
+                where R: Fn(fidl::endpoints::Request<<TestProxy as fidl::endpoints::Proxy>::Service>) + std::marker::Send
             {
                 use futures::TryStreamExt;
                 let (proxy, mut stream) =
