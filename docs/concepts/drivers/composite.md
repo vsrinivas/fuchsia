@@ -238,7 +238,7 @@ declare an array of `zx_device_t*` pointers to hold the devices, and call
 zx_device_t* fragment;
 bool found = composite_get_fragments(&composite, "fragment-name", &fragment);
 if (!found) {
-    zxlogf(ERROR, "%s: could not get fragment-name", __FILE__);
+    zxlogf(ERROR, "could not get fragment-name");
     return ZX_ERR_INTERNAL;
 }
 ```
