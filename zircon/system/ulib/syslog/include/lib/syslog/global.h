@@ -110,14 +110,17 @@ zx_status_t fx_log_reconfigure(const fx_logger_config_t* config);
     }                                                                                     \
   } while (0)
 
-#define _FX_LOGVF(severity, tag, message, args)                                             \
-  do {                                                                                      \
-    fx_logger_t* logger = fx_log_get_logger();                                              \
-    if (fx_logger_get_min_severity(logger) <= (severity)) {                                 \
-      fx_logger_logvf_with_source(logger, (severity), (tag), __FILE__, __LINE__, (message), \
-                                  (args));                                                  \
-    }                                                                                       \
+#define _FX_LOGVF2(severity, tag, file, line, message, args)                                 \
+  do {                                                                                       \
+    fx_logger_t* logger = fx_log_get_logger();                                               \
+    if (fx_logger_get_min_severity(logger) <= (severity)) {                                  \
+      fx_logger_logvf_with_source(logger, (severity), (tag), file, line, (message), (args)); \
+    }                                                                                        \
   } while (0)
+
+// Temporary for transition
+#define _FX_LOGVF(severity, tag, message, args) \
+  _FX_LOGVF2(severity, tag, __FILE__, __LINE__, message, args)
 
 // Writes a message to the global logger.
 // |severity| is one of TRACE, DEBUG, INFO, WARNING, ERROR, FATAL
@@ -134,9 +137,16 @@ zx_status_t fx_log_reconfigure(const fx_logger_config_t* config);
 // Writes formatted message to the global logger using vaargs
 // |severity| is one of TRACE, DEBUG, INFO, WARNING, ERROR, FATAL
 // |tag| is a tag to associated with the message, or NULL if none.
+// |file| is the file writing the log.
+// |line| is the line number of the file writing the log.
 // |message| is the message to write, or NULL if none.
 // |args| are the arguments to |message|.
-#define FX_LOGVF(severity, tag, message, args) _FX_LOGVF((FX_LOG_##severity), tag, message, args)
+#define FX_LOGVF2(severity, tag, file, line, message, args) \
+  _FX_LOGVF2((FX_LOG_##severity), tag, file, line, message, args)
+
+// Temporary for soft-transition.
+#define FX_LOGVF(severity, tag, message, args) \
+  _FX_LOGVF2((FX_LOG_##severity), tag, __FILE__, __LINE__, message, args)
 
 // Writes verbose message to the global logger.
 // |verbosity| is an integer value > 0 up to a maximum of 15.
@@ -155,10 +165,16 @@ zx_status_t fx_log_reconfigure(const fx_logger_config_t* config);
 // Writes formatted verbose message to the global logger using vaargs
 // |verbosity| is an integer value > 0 up to a maximum of 15.
 // |tag| is a tag to associated with the message, or NULL if none.
+// |file| is the file writing the log.
+// |line| is the line number of the file writing the log.
 // |message| is the message to write, or NULL if none.
 // |args| are the arguments to |message|.
+#define FX_VLOGVF2(verbosity, tag, file, line, message, args) \
+  _FX_LOGVF2(fx_log_severity_from_verbosity(verbosity), tag, file, line, message, args)
+
+// Temporary for soft-transition.
 #define FX_VLOGVF(verbosity, tag, message, args) \
-  _FX_LOGVF(fx_log_severity_from_verbosity(verbosity), tag, message, args)
+  _FX_LOGVF2(fx_log_severity_from_verbosity(verbosity), tag, __FILE__, __LINE__, message)
 
 __END_CDECLS
 
