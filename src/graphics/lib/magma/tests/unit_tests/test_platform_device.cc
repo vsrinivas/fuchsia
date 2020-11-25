@@ -74,7 +74,11 @@ TEST(PlatformDevice, DeadlineSchedulerProfile) {
 }
 
 #ifndef __STDC_NO_THREADS__
-static int thread_function(void* input) { return 0; }
+static int thread_function(void* input) {
+  auto mutex = reinterpret_cast<std::mutex*>(input);
+  std::unique_lock<std::mutex> lock(*mutex);
+  return 0;
+}
 
 TEST(PlatformDevice, SchedulerThreadProfile) {
   magma::PlatformDevice* platform_device = TestPlatformDevice::GetInstance();
@@ -84,9 +88,16 @@ TEST(PlatformDevice, SchedulerThreadProfile) {
                                                       "msd/test-profile");
   ASSERT_TRUE(profile);
 
+  // Block the thread to prevent it from exiting before we set the profile
+  std::mutex mutex;
+  std::unique_lock<std::mutex> lock(mutex);
+
   thrd_t thread;
-  ASSERT_EQ(0, thrd_create(&thread, &thread_function, nullptr));
+  ASSERT_EQ(0, thrd_create(&thread, &thread_function, &mutex));
+
   EXPECT_TRUE(magma::PlatformThreadHelper::SetThreadProfile(thread, profile.get()));
+
+  lock.unlock();
   thrd_join(thread, nullptr);
 }
 #endif
