@@ -227,6 +227,8 @@ enum SendFrameInner<'a> {
     /// Right now this is only needed for frame labels without payloads (specifically pings).
     /// Consequently we restrict the length to just what is needed for those.
     Raw { bytes: [u8; LINK_FRAME_LABEL_MAX_SIZE], length: usize },
+    /// Send these (potentially large) number of bytes
+    LargeRaw(Vec<u8>),
 }
 
 impl<'a> SendFrame<'a> {
@@ -237,6 +239,15 @@ impl<'a> SendFrame<'a> {
                 &frame.bytes[..frame.length]
             }
             SendFrameInner::Raw { bytes, length } => &bytes[..*length],
+            SendFrameInner::LargeRaw(bytes) => &bytes,
+        }
+    }
+
+    pub fn drop_inner_locks(&mut self) {
+        if let SendFrameInner::FromFrameOutput(g, frame) = &self.0 {
+            let frame = &g.frames[*frame];
+            let new = SendFrameInner::LargeRaw(frame.bytes[..frame.length].to_vec());
+            self.0 = new;
         }
     }
 }
