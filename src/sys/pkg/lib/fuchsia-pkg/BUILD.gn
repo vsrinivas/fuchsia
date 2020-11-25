@@ -2,10 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
 import("//build/rust/rustc_library.gni")
-import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
+import("//src/sys/build/components.gni")
 
 rustc_library("fuchsia-pkg") {
   version = "0.1.0"
@@ -44,16 +42,16 @@ rustc_library("fuchsia-pkg") {
   ]
 }
 
-test_package("fuchsia-pkg-tests") {
+fuchsia_component("test-component") {
+  component_name = "fuchsia-pkg-lib-test"
+  visibility = [ ":*" ]
+  testonly = true
   deps = [ ":fuchsia-pkg_test" ]
+  manifest = "meta/fuchsia-pkg-tests.cml"
+}
 
-  tests = [
-    {
-      name = "fuchsia_pkg_lib_test"
-      dest = "fuchsia-pkg-tests"
-      environments = basic_envs
-    },
-  ]
+fuchsia_test_package("fuchsia-pkg-tests") {
+  test_components = [ ":test-component" ]
 }
 
 group("tests") {

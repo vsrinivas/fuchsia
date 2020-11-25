@@ -4,8 +4,7 @@
 
 import("//build/rust/rustc_library.gni")
 import("//build/rust/rustc_test.gni")
-import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
+import("//src/sys/build/components.gni")
 
 common_sources = [
   "//third_party/rust-mirrors/rust-tuf/src/client.rs",
@@ -117,16 +116,16 @@ rustc_test("tuf_lib_test") {
   ]
 }
 
-test_package("rust-tuf-tests") {
+fuchsia_component("test-component") {
+  component_name = "tuf-lib-test"
+  visibility = [ ":*" ]
+  testonly = true
   deps = [ ":tuf_lib_test" ]
+  manifest = "meta/tuf-lib-test.cml"
+}
 
-  tests = [
-    {
-      name = "tuf_lib_test"
-      dest = "tuf-lib-test"
-      environments = basic_envs
-    },
-  ]
+fuchsia_test_package("rust-tuf-tests") {
+  test_components = [ ":test-component" ]
 }
 
 group("tests") {

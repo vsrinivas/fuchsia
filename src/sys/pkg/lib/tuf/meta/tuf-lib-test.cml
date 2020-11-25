@@ -1,0 +1,23 @@
+{
+    program: {
+        binary: "bin/tuf_lib_test",
+    },
+    capabilities: [
+        {
+            protocol: [ "fuchsia.test.Suite" ],
+        },
+    ],
+    use: [
+        { runner: "rust_test_runner" },
+        {
+            storage: "temp",
+            path: "/tmp",
+        },
+    ],
+    expose: [
+        {
+            protocol: "fuchsia.test.Suite",
+            from: "self",
+        },
+    ],
+}
