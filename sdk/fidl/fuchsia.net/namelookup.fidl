@@ -4,11 +4,14 @@
 
 library fuchsia.net;
 
+/// The maximum number of IPs returned by a lookup.
+const uint64 MAX_LOOKUP_IPS = 256;
+
 struct IpAddressInfo {
     /// All of the IPv4 addresses for the requested hostname.
-    vector<Ipv4Address>:256 ipv4_addrs;
+    vector<Ipv4Address>:MAX_LOOKUP_IPS ipv4_addrs;
     /// All of the IPv6 addresses for the requested hostname.
-    vector<Ipv6Address>:256 ipv6_addrs;
+    vector<Ipv6Address>:MAX_LOOKUP_IPS ipv6_addrs;
     /// The canonical name of the requested hostname (usually the DNS CNAME record, if one exists).
     string:256? canonical_name;
 };
@@ -35,6 +38,30 @@ bits LookupIpOptions : uint8 {
     CNAME_LOOKUP = 0b100;
 };
 
+/// Lookup operation options.
+table LookupIpOptions2 {
+    /// Include IPv4 results. Defaults to false.
+    1: bool ipv4_lookup;
+    /// Include IPv6 results. Defaults to false.
+    2: bool ipv6_lookup;
+    /// Sort addresses in order of preference.
+    ///
+    /// It true, Addresses are sorted according to destination address selection described in [RFC
+    /// 6724 Section 6](https://tools.ietf.org/html/rfc6724#section-6).
+    ///
+    /// Defaults to false.
+    3: bool sort_addresses;
+};
+
+/// The result of a lookup operation.
+table LookupResult {
+    /// The IP addresses resulting from a lookup.
+    ///
+    /// If sorting was requested, `addresses` is sorted in order of preference, most preferred
+    /// destination address first.
+    1: vector<IpAddress>:MAX_LOOKUP_IPS addresses;
+};
+
 /// The maximum length of a hostname, as per [RFC 1035 section 2.3.4](https://tools.ietf.org/html/rfc1035#section-2.3.4).
 const uint64 MAX_HOSTNAME_SIZE = 255;
 
@@ -53,7 +80,12 @@ protocol NameLookup {
     /// Look up a list of IP addresses by hostname.
     ///
     /// If `hostname` is an Internationalized Domain Name, it must be encoded as per RFC 3490.
+    [Deprecated = "Use LookupIp2"]
     LookupIp(Hostname hostname, LookupIpOptions options) -> (IpAddressInfo addr) error LookupError;
+    /// Lookup a list of IP addresses by hostname.
+    ///
+    /// If `hostname` is an Internationalized Domain Name, it must be encoded as per RFC 3490.
+    LookupIp2(Hostname hostname, LookupIpOptions2 options) -> (LookupResult result) error LookupError;
     /// Look up a hostname by IP address.
     LookupHostname(IpAddress addr) -> (Hostname hostname) error LookupError;
 };

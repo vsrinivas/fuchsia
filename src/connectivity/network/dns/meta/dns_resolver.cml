@@ -18,6 +18,7 @@
         {
             protocol: [
                 "fuchsia.logger.LogSink",
+                "fuchsia.net.routes.State",
                 "fuchsia.posix.socket.Provider",
             ],
         },
