@@ -1,6 +1,10 @@
-// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+
+// This entire library is actually only used to create a test binary, so mark the entire module to
+// only build in test configuration
+#![cfg(test)]
 
 use {
     anyhow::Error,
@@ -11,7 +15,7 @@ use {
         expectation::{self, asynchronous::ExpectableExt},
         types::{Address, BondingData, LeData, OneOrBoth, PeerId},
     },
-    test_harness::run_suite,
+    test_harness,
 };
 
 // TODO(armansito|xow): Add tests for BR/EDR and dual mode bond data.
@@ -68,12 +72,14 @@ const TEST_ADDR2: Address = Address::Public([1, 2, 3, 4, 5, 6]);
 const TEST_NAME1: &str = "Name1";
 const TEST_NAME2: &str = "Name2";
 
+#[test_harness::run_singlethreaded_test]
 async fn test_restore_no_bonds_succeeds(harness: HostDriverHarness) -> Result<(), Error> {
     let errors = restore_bonds(&harness, vec![]).await?;
     expect_eq!(vec![], errors)
 }
 
 // Tests initializing bonded LE devices.
+#[test_harness::run_singlethreaded_test]
 async fn test_restore_bonded_devices_success(harness: HostDriverHarness) -> Result<(), Error> {
     // Peers should be initially empty.
     expect_eq!(0, harness.write_state().peers().len())?;
@@ -100,6 +106,7 @@ async fn test_restore_bonded_devices_success(harness: HostDriverHarness) -> Resu
     Ok(())
 }
 
+#[test_harness::run_singlethreaded_test]
 async fn test_restore_bonded_devices_no_ltk_fails(harness: HostDriverHarness) -> Result<(), Error> {
     // Peers should be initially empty.
     expect_eq!(0, harness.write_state().peers().len())?;
@@ -113,6 +120,7 @@ async fn test_restore_bonded_devices_no_ltk_fails(harness: HostDriverHarness) ->
     Ok(())
 }
 
+#[test_harness::run_singlethreaded_test]
 async fn test_restore_bonded_devices_duplicate_entry(
     harness: HostDriverHarness,
 ) -> Result<(), Error> {
@@ -145,6 +153,7 @@ async fn test_restore_bonded_devices_duplicate_entry(
 
 // Tests that adding a list of bonding data with malformed content succeeds for the valid entries
 // but reports an error.
+#[test_harness::run_singlethreaded_test]
 async fn test_restore_bonded_devices_invalid_entry(
     harness: HostDriverHarness,
 ) -> Result<(), Error> {
@@ -164,18 +173,4 @@ async fn test_restore_bonded_devices_invalid_entry(
     host_driver::expectation::peer(&harness, expected.clone()).await?;
 
     Ok(())
-}
-
-/// Run all test cases.
-pub fn run_all() -> Result<(), Error> {
-    run_suite!(
-        "bt-host driver bonding",
-        [
-            test_restore_no_bonds_succeeds,
-            test_restore_bonded_devices_success,
-            test_restore_bonded_devices_no_ltk_fails,
-            test_restore_bonded_devices_duplicate_entry,
-            test_restore_bonded_devices_invalid_entry
-        ]
-    )
 }

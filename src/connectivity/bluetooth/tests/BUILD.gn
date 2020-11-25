@@ -29,6 +29,7 @@ group("tests") {
   testonly = true
   deps = [
     ":bluetooth-tests",
+    "bt-bonding-integration:bt-bonding-integration-tests",
     "bt-host-integration:bt-host-integration-tests",
     "integration:bt-integration-tests",
   ]

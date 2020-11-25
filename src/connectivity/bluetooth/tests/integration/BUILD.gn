@@ -42,7 +42,6 @@ rustc_binary("integration_tests_bin") {
     "src/expect.rs",
     "src/main.rs",
     "src/tests/access.rs",
-    "src/tests/bonding.rs",
     "src/tests/bootstrap.rs",
     "src/tests/control.rs",
     "src/tests/inspect.rs",

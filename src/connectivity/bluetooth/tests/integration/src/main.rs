@@ -19,9 +19,6 @@ fn main() -> Result<(), Error> {
     // TODO(fxbug.dev/613): Add test cases for GATT server role
     // TODO(fxbug.dev/613): Add test cases for BR/EDR and dual-mode connections
     vec![
-        // Tests that require bt-gap.cmx to not be running. Run these tests first as bt-gap
-        // interferes with their operation.
-        tests::bonding::run_all(),
         // Tests that trigger bt-gap.cmx.
         tests::inspect::run_all(),
         tests::bootstrap::run_all(),
