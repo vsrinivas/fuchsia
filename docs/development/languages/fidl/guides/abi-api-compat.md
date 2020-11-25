@@ -110,8 +110,8 @@ Note: When using the Rust bindings, you need to manually add catch-all cases
 
 ### Renaming a method {#protocol-method-rename}
 
-ABI: Method renames can be made safe with use of the `[Selector = "..."]`
-attribute.
+ABI: Method renames can be made safe with use of the [`[Selector = "..."]`
+attribute][selector].
 
 API: It is not possible to rename a method in a source-compatible way.
 

@@ -135,19 +135,27 @@ The compiler will issue an error if the number of handles exceeds this limit.
 **USAGE**: `[Selector = "`_selector_`"]`
 
 **MEANING**:
-Allows you to change the hashing basis for the method ordinal, see
-[FTP-020].
+Allows you to change the hashing basis for the method ordinal, see [FTP-020].
+The *_selector_* can be either the original method's name (e.g. `SomeMethod`),
+or the fully qualified name (e.g. `some.library/SomeProtocol.SomeMethod`).
 
 It can be used to rename a method without breaking ABI compatibility.
 For example, if we wish to rename the `Investigate` method to `Experiment`
 in the `Science` interface, we can write:
 
 ```fidl
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/attributes.test.fidl" region_tag="selector" %}
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/attributes.test.fidl" region_tag="selector-simple" %}
 ```
 
-It can also be used for `union` variants to keep ABI compatibility in the
-same way.
+The attribute can also be used to handle a method moving from one protocol to
+another, or to one library to another, or both. For example, consider the method
+`Productionize` on the `Org` protocol in the `fuchsia.examples.docs` library
+which was originally named `Discover` on the `Area120` protocol, in the
+`purple.examples.docs` library:
+
+```fidl
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/attributes.test.fidl" region_tag="selector-fq-name" %}
+```
 
 ## `[Transitional]` {#transitional}
 

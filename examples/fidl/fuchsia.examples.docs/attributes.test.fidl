@@ -34,8 +34,14 @@ protocol SimpleProtocol {
 };
 // [END layout-simple]
 
-// [START selector]
+// [START selector-simple]
 protocol Science {
     [Selector = "Investigate"] Experiment();
 };
-// [END selector]
+// [END selector-simple]
+
+// [START selector-fq-name]
+protocol Org {
+    [Selector = "purple.examples.docs/Area120.Discover"] Productionize();
+};
+// [END selector-fq-name]
