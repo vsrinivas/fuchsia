@@ -22,6 +22,9 @@ var (
 		// and is called bootserver instead of bootserver_new.
 		"bootserver_new": "bootserver",
 		"device-finder":  "device-finder",
+		"symbolize":      "symbolize",
+		// Undercoat is used by fuzzing infrastructure.
+		"undercoat": "undercoat",
 	}
 )
 
