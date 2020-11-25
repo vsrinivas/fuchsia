@@ -81,6 +81,7 @@ template("collect_expected_includes") {
     } else {
       assert(false, "Unexpected manifest extension for " + manifest)
     }
+    walk_keys = [ "expect_includes_barrier" ]
   }
 }
 

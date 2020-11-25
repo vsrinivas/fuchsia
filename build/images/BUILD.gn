@@ -2132,6 +2132,11 @@ generate_component_index("component_index_metadata") {
   outputs = [ component_index_metadata ]
 
   deps = [ ":universe_packages" ]
+
+  metadata = {
+    # Don't collect all expect_includes() in the universe
+    expect_includes_barrier = []
+  }
 }
 
 # We copy the metatdata to the root dir so that it can easily be used by host

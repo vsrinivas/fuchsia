@@ -20,6 +20,7 @@ template("generate_component_index") {
                            [
                              "data_deps",
                              "deps",
+                             "metadata",
                              "outputs",
                              "public_deps",
                              "testonly",
