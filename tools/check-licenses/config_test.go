@@ -14,10 +14,10 @@ import (
 var testDataDir = flag.String("test_data_dir", "", "Path to test data; only used in GN build")
 
 func TestConfigInit(t *testing.T) {
-	folder := mkDir(t)
+	folder := t.TempDir()
 	path := filepath.Join(folder, "config.json")
 	json := `{"filesRegex":[],"skipFiles":[".gitignore"],"skipDirs":[".git"],"textExtensionList":["go"],"maxReadSize":6144,"separatorWidth":80,"outputFilePrefix":"NOTICE","outputFileExtension":"txt","outputLicenseFile": true,"product":"astro","singleLicenseFiles":["LICENSE"],"licensePatternDir":"golden/","baseDir":".","target":"all","logLevel":"verbose", "customProjectLicenses": [{"projectRoot": "test", "licenseLocation": "test"}], "exitOnUnlicensedFiles": false}`
-	if err := ioutil.WriteFile(path, []byte(json), 0644); err != nil {
+	if err := ioutil.WriteFile(path, []byte(json), 0o600); err != nil {
 		t.Errorf("%v(): got %v", t.Name(), err)
 	}
 	var config Config

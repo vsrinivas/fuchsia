@@ -12,17 +12,12 @@ import (
 	"io"
 	"io/ioutil"
 	"net"
-	"os"
 	"path/filepath"
 	"testing"
 )
 
 func TestDownloadImagesToDir(t *testing.T) {
-	tmpDir, err := ioutil.TempDir("", "test-data")
-	if err != nil {
-		t.Fatalf("failed to create temp dir: %v", err)
-	}
-	defer os.RemoveAll(tmpDir)
+	tmpDir := t.TempDir()
 	var imgs []Image
 	numImages := 4
 	for i := 0; i < numImages; i++ {

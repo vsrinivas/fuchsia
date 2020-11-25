@@ -78,12 +78,7 @@ func (r *fakeCmdRunner) Run(_ context.Context, command []string, _, _ io.Writer)
 }
 
 func TestSubprocessTester(t *testing.T) {
-	tmpDir, err := ioutil.TempDir("", "TestSubprocessTester")
-	if err != nil {
-		t.Fatal("failed to create a temporary directory:", err)
-	}
-	defer os.RemoveAll(tmpDir)
-
+	tmpDir := t.TempDir()
 	tester := subprocessTester{
 		localOutputDir: tmpDir,
 		getModuleBuildIDs: func(test string) ([]string, error) {
@@ -98,7 +93,7 @@ func TestSubprocessTester(t *testing.T) {
 	failingProfile := filepath.Join("llvm-profile", failingTest+".profraw")
 	for _, profile := range []string{passingProfile, failingProfile} {
 		abs := filepath.Join(tmpDir, profile)
-		os.MkdirAll(filepath.Dir(abs), os.ModePerm)
+		os.MkdirAll(filepath.Dir(abs), 0o700)
 		f, err := os.Create(abs)
 		if err != nil {
 			t.Fatalf("failed to create profile: %v", err)
@@ -332,17 +327,8 @@ func TestSSHTester(t *testing.T) {
 			}
 
 			if c.runSnapshot {
-				snapshotFile, err := ioutil.TempFile("", "snapshot")
-				if err != nil {
-					t.Fatal("TempFile() failed:", err)
-				}
-				defer func() {
-					if err := os.Remove(snapshotFile.Name()); err != nil {
-						t.Errorf("os.Remove(%s) failed: %v", snapshotFile.Name(), err)
-					}
-				}()
-				err = tester.RunSnapshot(context.Background(), snapshotFile.Name())
-				if err != nil {
+				p := filepath.Join(t.TempDir(), "testrunner-cmd-test")
+				if err = tester.RunSnapshot(context.Background(), p); err != nil {
 					t.Errorf("failed to run snapshot: %v", err)
 				}
 			}

@@ -5,7 +5,6 @@
 package tefmocheck
 
 import (
-	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
@@ -66,11 +65,7 @@ func TestRunChecks(t *testing.T) {
 	checks := []FailureModeCheck{
 		falseCheck, trueCheck, panicCheck,
 	}
-	outputsDir, err := ioutil.TempDir("", "check-outputs")
-	if err != nil {
-		t.Fatal("failed to create temp outputs dir:", err)
-	}
-	defer os.RemoveAll(outputsDir)
+	outputsDir := t.TempDir()
 	want := []runtests.TestDetails{
 		{
 			Name:                 path.Join(checkTestNamePrefix, falseCheck.Name()),

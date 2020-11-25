@@ -131,7 +131,7 @@ func TestSSHPut(t *testing.T) {
 	tmpFile := path.Join(tmpDir, "testfile")
 	fileContents := "test file contents"
 
-	if err := ioutil.WriteFile(tmpFile, []byte(fileContents), 0644); err != nil {
+	if err := ioutil.WriteFile(tmpFile, []byte(fileContents), 0o600); err != nil {
 		t.Fatalf("error writing local file: %s", err)
 	}
 
@@ -192,7 +192,7 @@ func TestSSHPutGlob(t *testing.T) {
 
 	for _, testFile := range testFiles {
 		tmpFile := path.Join(tmpDir, testFile.name)
-		if err := ioutil.WriteFile(tmpFile, []byte(testFile.content), 0644); err != nil {
+		if err := ioutil.WriteFile(tmpFile, []byte(testFile.content), 0o600); err != nil {
 			t.Fatalf("error writing local file: %s", err)
 		}
 	}
@@ -298,14 +298,14 @@ func TestSSHPutDir(t *testing.T) {
 
 	for _, testDir := range testDirs {
 		newDir := path.Join(tmpDir, testDir.name)
-		if err := os.Mkdir(newDir, 0755); err != nil {
+		if err := os.Mkdir(newDir, 0o700); err != nil {
 			t.Fatalf("error creating local dir: %s", err)
 		}
 	}
 
 	for _, testFile := range testFiles {
 		tmpFile := path.Join(tmpDir, testFile.name)
-		if err := ioutil.WriteFile(tmpFile, []byte(testFile.content), 0644); err != nil {
+		if err := ioutil.WriteFile(tmpFile, []byte(testFile.content), 0o600); err != nil {
 			t.Fatalf("error writing local file: %s", err)
 		}
 	}

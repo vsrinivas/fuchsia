@@ -64,15 +64,11 @@ func TestEndToEnd(t *testing.T) {
 	}
 
 	// Make a tempdir for holding local files
-	dir, err := ioutil.TempDir("", "e2e_test")
-	if err != nil {
+	dir := t.TempDir()
+	artifactDir := filepath.Join(dir, "artifacts")
+	if err := os.Mkdir(artifactDir, 0o700); err != nil {
 		t.Fatal(err)
 	}
-
-	defer os.RemoveAll(dir)
-
-	artifactDir := filepath.Join(dir, "artifacts")
-	os.Mkdir(artifactDir, 0755|os.ModeDir)
 	out = runCommand(t, "run_fuzzer", "-handle", handle, "-fuzzer", fuzzer,
 		"-artifact-dir", artifactDir, "--", "-artifact_prefix=data/", "-jobs=0")
 
@@ -104,7 +100,7 @@ func TestEndToEnd(t *testing.T) {
 
 	testFile := path.Join(dir, "test_file")
 	testFileContents := []byte("test file contents!")
-	if err := ioutil.WriteFile(testFile, testFileContents, 0600); err != nil {
+	if err := ioutil.WriteFile(testFile, testFileContents, 0o600); err != nil {
 		t.Fatalf("error creating test file: %s", err)
 	}
 	out = runCommand(t, "put_data", "-handle", handle, "-fuzzer", fuzzer,

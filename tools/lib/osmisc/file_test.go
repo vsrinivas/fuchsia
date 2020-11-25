@@ -13,55 +13,46 @@ import (
 )
 
 func TestCopyFile(t *testing.T) {
-	dir, err := ioutil.TempDir("", "osmisc")
-	if err != nil {
-		t.Fatalf("failed to create a temporary directory: %v", err)
-	}
-	defer os.RemoveAll(dir)
-
-	src := filepath.Join(dir, "src")
+	tmpdir := t.TempDir()
+	src := filepath.Join(tmpdir, "src")
 	in := []byte("written to src")
-	if err := ioutil.WriteFile(src, in, 0444); err != nil {
+	if err := ioutil.WriteFile(src, in, 0o400); err != nil {
 		t.Fatalf("failed to write contents to src: %v", err)
 	}
 
-	dest := filepath.Join(dir, "dest")
+	dest := filepath.Join(tmpdir, "dest")
 	if err := CopyFile(src, dest); err != nil {
 		t.Fatalf("failed to copy file: %v", err)
 	}
 
 	out, err := ioutil.ReadFile(dest)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if bytes.Compare(in, out) != 0 {
 		t.Fatalf("bytes read from dest not as expected: %q != %q", in, out)
 	}
 }
 
 func TestFileIsOpen(t *testing.T) {
-	tmpFile, err := ioutil.TempFile("", "tmpFile")
+	f, err := os.Create(filepath.Join(t.TempDir(), "osmic-test"))
 	if err != nil {
-		t.Fatalf("failed to create a temporary file: %v", err)
+		t.Fatal(err)
 	}
-	defer os.Remove(tmpFile.Name())
-
-	if FileIsOpen(tmpFile) == false {
-		t.Errorf("file is closed when it should be open; fd: %v", tmpFile.Fd())
+	if !FileIsOpen(f) {
+		t.Errorf("file is closed when it should be open; fd: %v", f.Fd())
 	}
-	if err := tmpFile.Close(); err != nil {
+	if err := f.Close(); err != nil {
 		t.Fatalf("failed to close file: %v", err)
 	}
-	if FileIsOpen(tmpFile) == true {
-		t.Errorf("file is open when it should be closed; fd: %v", tmpFile.Fd())
+	if FileIsOpen(f) {
+		t.Errorf("file is open when it should be closed; fd: %v", f.Fd())
 	}
 }
 
 func TestCreateFile(t *testing.T) {
-	dir, err := ioutil.TempDir("", "tmpdir")
-	if err != nil {
-		t.Fatalf("failed to create a temporary directory: %v", err)
-	}
-	defer os.RemoveAll(dir)
-
-	path := filepath.Join(dir, "subdir", "subdir2", "file")
+	tmpdir := t.TempDir()
+	path := filepath.Join(tmpdir, "subdir", "subdir2", "file")
 	f, err := CreateFile(path)
 	if err != nil {
 		t.Fatalf("failed to create file: %v", err)
@@ -81,15 +72,10 @@ func TestCreateFile(t *testing.T) {
 }
 
 func TestFileExists(t *testing.T) {
-	tmpdir, err := ioutil.TempDir("", "")
-	if err != nil {
-		t.Fatalf("failed to create temp dir: %v", err)
-	}
-	defer os.RemoveAll(tmpdir)
-
+	tmpdir := t.TempDir()
 	fA := filepath.Join(tmpdir, "fileA.txt")
 	fB := filepath.Join(tmpdir, "fileB.txt")
-	if err := ioutil.WriteFile(fB, []byte("content"), os.ModePerm); err != nil {
+	if err := ioutil.WriteFile(fB, []byte("content"), 0o600); err != nil {
 		t.Fatalf("failed to write to %s", fB)
 	}
 

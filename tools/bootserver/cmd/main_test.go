@@ -8,7 +8,6 @@ import (
 	"context"
 	"io"
 	"io/ioutil"
-	"os"
 	"path/filepath"
 	"testing"
 
@@ -101,58 +100,55 @@ func TestPopulateReaders(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		testImgs := make([]bootserver.Image, len(allImgs))
-		copy(testImgs, allImgs)
-		tmpDir, err := ioutil.TempDir("", "test-data")
-		if err != nil {
-			t.Fatalf("failed to create temp dir: %v", err)
-		}
-		defer os.RemoveAll(tmpDir)
-		for i := range testImgs {
-			imgPath := filepath.Join(tmpDir, testImgs[i].Name)
-			testImgs[i].Path = imgPath
-		}
+		t.Run(test.name, func(t *testing.T) {
+			testImgs := make([]bootserver.Image, len(allImgs))
+			copy(testImgs, allImgs)
+			tmpDir := t.TempDir()
+			for i := range testImgs {
+				imgPath := filepath.Join(tmpDir, testImgs[i].Name)
+				testImgs[i].Path = imgPath
+			}
 
-		for _, i := range test.existingImageIndexes {
-			err := ioutil.WriteFile(testImgs[i].Path, []byte("data"), 0755)
+			for _, i := range test.existingImageIndexes {
+				if err := ioutil.WriteFile(testImgs[i].Path, []byte("data"), 0o700); err != nil {
+					t.Fatal(err)
+				}
+			}
+
+			closeFunc, err := populateReaders(testImgs)
+
+			if test.expectErr {
+				if err == nil {
+					closeFunc()
+					t.Error("expected error; no errors found")
+				}
+				return
+			}
 			if err != nil {
-				t.Fatalf("Failed to create tmp file: %s", err)
+				t.Error(err)
 			}
-		}
 
-		closeFunc, err := populateReaders(testImgs)
-
-		if test.expectErr && err == nil {
-			t.Errorf("Test%v: Expected errors; no errors found", test.name)
-		}
-
-		if !test.expectErr && err != nil {
-			t.Errorf("Test%v: Expected no errors; found error - %v", test.name, err)
-		}
-
-		if test.expectErr && err != nil {
-			continue
-		}
-		for _, img := range testImgs {
-			if img.Reader == nil {
-				t.Errorf("Test%v: missing reader for %s", test.name, img.Name)
+			for _, img := range testImgs {
+				if img.Reader == nil {
+					t.Errorf("missing reader for %s", img.Name)
+				}
+				// The contents of each image is `data` so the size should be 4.
+				if img.Size != int64(4) {
+					t.Errorf("incorrect size for %s; actual: %d, expected: 4", img.Name, img.Size)
+				}
+				buf := make([]byte, 1)
+				if _, err := img.Reader.ReadAt(buf, 0); err != nil {
+					t.Errorf("failed to read %s: %s", img.Name, err)
+				}
 			}
-			// The contents of each image is `data` so the size should be 4.
-			if img.Size != int64(4) {
-				t.Errorf("Test%v: incorrect size for %s; actual: %d, expected: 4", test.name, img.Name, img.Size)
+			closeFunc()
+			for _, img := range testImgs {
+				buf := make([]byte, 1)
+				if _, err := img.Reader.ReadAt(buf, 0); err == nil || err == io.EOF {
+					t.Fatalf("reader is not closed for %s", img.Name)
+				}
 			}
-			buf := make([]byte, 1)
-			if _, err := img.Reader.ReadAt(buf, 0); err != nil {
-				t.Errorf("Test%v: failed to read %s: %v", test.name, img.Name, err)
-			}
-		}
-		closeFunc()
-		for _, img := range testImgs {
-			buf := make([]byte, 1)
-			if _, err := img.Reader.ReadAt(buf, 0); err == nil || err == io.EOF {
-				t.Fatalf("Test%v: reader is not closed for %s", test.name, img.Name)
-			}
-		}
+		})
 	}
 }
 

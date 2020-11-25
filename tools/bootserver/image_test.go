@@ -8,7 +8,6 @@ import (
 	"context"
 	"io"
 	"io/ioutil"
-	"os"
 	"path/filepath"
 	"reflect"
 	"testing"
@@ -53,13 +52,9 @@ func TestGetImages(t *testing.T) {
   }
 ]`
 
-	tmpDir, err := ioutil.TempDir("", "test-data")
-	if err != nil {
-		t.Fatalf("failed to create temp dir: %v", err)
-	}
-	defer os.RemoveAll(tmpDir)
+	tmpDir := t.TempDir()
 	imgManifest := filepath.Join(tmpDir, "images.json")
-	if err := ioutil.WriteFile(imgManifest, []byte(mockManifest), 0755); err != nil {
+	if err := ioutil.WriteFile(imgManifest, []byte(mockManifest), 0o600); err != nil {
 		t.Fatalf("failed to write image manifest: %v", err)
 	}
 	type testImage struct {
@@ -92,8 +87,8 @@ func TestGetImages(t *testing.T) {
 	}
 	allImages := make(map[string]testImage)
 	for _, img := range []testImage{bootloaderImage, zedbootImage, netbootImage} {
-		if err := ioutil.WriteFile(img.path, []byte(img.contents), 0755); err != nil {
-			t.Fatalf("failed to write %s: %v", img.path, err)
+		if err := ioutil.WriteFile(img.path, []byte(img.contents), 0o600); err != nil {
+			t.Fatal(err)
 		}
 		allImages[img.name] = img
 	}

@@ -5,21 +5,15 @@
 package build
 
 import (
-	"io"
 	"io/ioutil"
-	"os"
+	"path/filepath"
 	"testing"
 )
 
 func TestGetBuildID(t *testing.T) {
-	tempDir, err := ioutil.TempDir("", "")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(tempDir)
-
-	buildIDFile, err := fileWithContent(tempDir, "abcd")
-	if err != nil {
+	tempDir := t.TempDir()
+	buildIDFile := filepath.Join(tempDir, "buildid")
+	if err := ioutil.WriteFile(buildIDFile, []byte("abcd"), 0o600); err != nil {
 		t.Fatal(err)
 	}
 
@@ -32,7 +26,7 @@ func TestGetBuildID(t *testing.T) {
 			name: "basic",
 			bin: Binary{
 				Debug:       "foo.debug",
-				BuildIDFile: buildIDFile,
+				BuildIDFile: "buildid",
 			},
 			err: nil,
 		},
@@ -64,23 +58,12 @@ func TestGetBuildID(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
 			id, err := c.bin.ELFBuildID(tempDir)
-			if err == c.err {
-				if (c.err == nil && id != "abcd") || (c.err == ErrBuildIDNotFound && id != "") {
-					t.Errorf("invalid build ID found: %q", id)
-				}
+			if err != c.err {
+				t.Errorf("Expected %v, got %v", err, c.err)
+			}
+			if (c.err == nil && id != "abcd") || (c.err == ErrBuildIDNotFound && id != "") {
+				t.Errorf("invalid build ID found: %q", id)
 			}
 		})
 	}
-}
-
-func fileWithContent(dir, content string) (string, error) {
-	f, err := ioutil.TempFile(dir, "")
-	if err != nil {
-		return "", err
-	}
-	defer f.Close()
-	if _, err := io.WriteString(f, content); err != nil {
-		return "", err
-	}
-	return f.Name(), nil
 }

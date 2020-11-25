@@ -87,17 +87,13 @@ func sinkHasContents(t *testing.T, s *memSink, contents map[string][]byte) {
 // Given a mapping of relative filepath to byte contents, this utility populates
 // a temporary directory with those contents at those paths.
 func newDirWithContents(t *testing.T, contents map[string][]byte) string {
-	dir, err := ioutil.TempDir("", "artifactory")
-	if err != nil {
-		t.Fatal(err)
-	}
+	dir := t.TempDir()
 	for name, content := range contents {
 		p := filepath.Join(dir, name)
-		if err := os.MkdirAll(path.Dir(p), os.ModePerm); err != nil {
+		if err := os.MkdirAll(path.Dir(p), 0o700); err != nil {
 			t.Fatal(err)
 		}
-		// 0444 == read-only.
-		if err := ioutil.WriteFile(p, content, 0444); err != nil {
+		if err := ioutil.WriteFile(p, content, 0o400); err != nil {
 			t.Fatalf("failed to write %q at %q: %v", content, p, err)
 		}
 	}
@@ -106,7 +102,6 @@ func newDirWithContents(t *testing.T, contents map[string][]byte) string {
 
 func sinkHasExpectedContents(t *testing.T, actual, expected map[string][]byte, j int) {
 	dir := newDirWithContents(t, actual)
-	defer os.RemoveAll(dir)
 	sink := newMemSink()
 	ctx := context.Background()
 	files := getUploadFiles(dir, expected)
@@ -160,7 +155,6 @@ func TestUploading(t *testing.T) {
 			"c/e/f/g": []byte("four"),
 		}
 		dir := artifactory.Upload{Source: newDirWithContents(t, actual)}
-		defer os.RemoveAll(dir.Source)
 		expected := []artifactory.Upload{
 			{Source: filepath.Join(dir.Source, "a"), Destination: "a"},
 			{Source: filepath.Join(dir.Source, "b"), Destination: "b"},
@@ -182,7 +176,6 @@ func TestUploading(t *testing.T) {
 			"c/e/f/g": []byte("four"),
 		}
 		dir := artifactory.Upload{Source: newDirWithContents(t, actual), Recursive: true}
-		defer os.RemoveAll(dir.Source)
 		expected := []artifactory.Upload{
 			{Source: filepath.Join(dir.Source, "a"), Destination: "a"},
 			{Source: filepath.Join(dir.Source, "b"), Destination: "b"},
@@ -199,22 +192,18 @@ func TestUploading(t *testing.T) {
 	})
 
 	t.Run("non-existent or empty sources are skipped", func(t *testing.T) {
-		dir, err := ioutil.TempDir("", "artifactory")
-		if err != nil {
-			t.Fatal(err)
-		}
-		defer os.RemoveAll(dir)
+		dir := t.TempDir()
 		sink := newMemSink()
 		ctx := context.Background()
 		nonexistentFile := artifactory.Upload{Source: filepath.Join(dir, "nonexistent")}
-		if err = uploadFiles(ctx, []artifactory.Upload{nonexistentFile}, sink, 1); err != nil {
+		if err := uploadFiles(ctx, []artifactory.Upload{nonexistentFile}, sink, 1); err != nil {
 			t.Fatal(err)
 		}
 		if len(sink.contents) > 0 {
 			t.Fatal("sink should be empty")
 		}
 		// Now check that uploading an empty files list also does not result in an error.
-		if err = uploadFiles(ctx, []artifactory.Upload{}, sink, 1); err != nil {
+		if err := uploadFiles(ctx, []artifactory.Upload{}, sink, 1); err != nil {
 			t.Fatal(err)
 		}
 		if len(sink.contents) > 0 {

@@ -6,7 +6,7 @@ package target
 
 import (
 	"io/ioutil"
-	"os"
+	"path/filepath"
 	"testing"
 )
 
@@ -23,33 +23,27 @@ func TestLoadConfigs(t *testing.T) {
 		{"InvalidConfig", `{{"nodename":"upper-drank-wick-creek"},{"nodename":"siren-swoop-wick-hasty"}}`, 0, true},
 	}
 	for _, test := range tests {
-		tmpfile, err := ioutil.TempFile(os.TempDir(), "common_test")
-		if err != nil {
-			t.Fatalf("Failed to create test device properties file: %s", err)
-		}
-		defer os.Remove(tmpfile.Name())
-
-		content := []byte(test.jsonStr)
-		if _, err := tmpfile.Write(content); err != nil {
-			t.Fatalf("Failed to write to test device properties file: %s", err)
-		}
-
-		configs, err := LoadDeviceConfigs(tmpfile.Name())
-
-		if test.expectErr && err == nil {
-			t.Errorf("Test%v: Exepected errors; no errors found", test.name)
-		}
-
-		if !test.expectErr && err != nil {
-			t.Errorf("Test%v: Exepected no errors; found error - %v", test.name, err)
-		}
-
-		if len(configs) != test.expectedLen {
-			t.Errorf("Test%v: Expected %d nodes; found %d", test.name, test.expectedLen, len(configs))
-		}
-
-		if err := tmpfile.Close(); err != nil {
-			t.Fatal(err)
-		}
+		t.Run(test.name, func(t *testing.T) {
+			configs, err := LoadDeviceConfigs(mkTempFile(t, test.jsonStr))
+			if test.expectErr && err == nil {
+				t.Error("expected errors; no errors found")
+			}
+			if !test.expectErr && err != nil {
+				t.Errorf("expected no errors; found error %s", err)
+			}
+			if len(configs) != test.expectedLen {
+				t.Errorf("expected %d nodes; found %d", test.expectedLen, len(configs))
+			}
+		})
 	}
+}
+
+// mkTempFile returns a new temporary file with the specified content that will
+// be cleaned up automatically.
+func mkTempFile(t *testing.T, content string) string {
+	name := filepath.Join(t.TempDir(), "foo")
+	if err := ioutil.WriteFile(name, []byte(content), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	return name
 }

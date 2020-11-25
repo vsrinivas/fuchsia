@@ -15,33 +15,19 @@ import (
 )
 
 // createBuildDir generates a mock build directory for the tests to use.
+//
+// The tree will be cleaned up automatically.
 func createBuildDir(t *testing.T, files map[string]string) string {
-	tempDirPath, err := ioutil.TempDir("", "env")
-	if err != nil {
-		t.Fatalf("Unable to create tempdir: %v", err)
-	}
-	t.Cleanup(func() {
-		if err := os.RemoveAll(tempDirPath); err != nil {
-			t.Error(err)
-		}
-	})
-
-	// Generate all the directories so file writes to nested directories succeed.
-	for filename := range files {
-		path := filepath.Join(tempDirPath, filepath.Dir(filename))
-		if err := os.MkdirAll(path, os.ModePerm); err != nil {
-			t.Fatalf("Unable to crate directory %s in tempdir: %v", path, err)
-		}
-	}
-
-	// Write all the files.
+	dir := t.TempDir()
 	for filename, data := range files {
-		path := filepath.Join(tempDirPath, filename)
-		if err := ioutil.WriteFile(path, []byte(data), 0600); err != nil {
-			t.Fatalf("Unable to write file %s to tempdir: %v", path, err)
+		if err := os.MkdirAll(filepath.Join(dir, filepath.Dir(filename)), 0o700); err != nil {
+			t.Fatal(err)
+		}
+		if err := ioutil.WriteFile(filepath.Join(dir, filename), []byte(data), 0o600); err != nil {
+			t.Fatal(err)
 		}
 	}
-	return tempDirPath
+	return dir
 }
 
 // Implements pkgManifestModules

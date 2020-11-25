@@ -43,12 +43,7 @@ func TestLoadTestModifiers(t *testing.T) {
 		return reflect.DeepEqual(a, b)
 	}
 
-	tmpDir, err := ioutil.TempDir("", "test-spec")
-	if err != nil {
-		t.Fatalf("failed to create temp dir: %v", err)
-	}
-	defer os.RemoveAll(tmpDir)
-
+	tmpDir := t.TempDir()
 	initial := []TestModifier{barTestModifier, bazTestModifier}
 
 	modifiersPath := filepath.Join(tmpDir, "test_modifiers.json")
@@ -77,29 +72,13 @@ func TestLoadTestModifiers(t *testing.T) {
 }
 
 func TestAffectedModifiers(t *testing.T) {
-	affectedTestsFile, err := ioutil.TempFile("", "")
-	if err != nil {
-		t.Fatalf("ioutil.TempFile() failed: %v", err)
-	}
-	defer func() {
-		if err := affectedTestsFile.Close(); err != nil {
-			t.Errorf("affectedTestsFile.Close() failed: %v", err)
-		}
-		if err := os.Remove(affectedTestsFile.Name()); err != nil {
-			t.Errorf("os.Remove(affectedTestsFile) failed: %v", err)
-		}
-	}()
 	affectedTests := []string{
 		"affected-arm64", "affected-linux", "affected-mac", "affected-host+target", "affected-AEMU", "affected-other-device",
 	}
-	_, err = affectedTestsFile.Write([]byte(strings.Join(affectedTests, "\n")))
-	if err != nil {
-		t.Fatalf("affectedTestsFile.Write() failed: %v", err)
-	}
-
+	name := mkTempFile(t, strings.Join(affectedTests, "\n"))
 	const maxAttempts = 2
 	t.Run("not multiplied if over threshold", func(t *testing.T) {
-		mods, err := AffectedModifiers(nil, affectedTestsFile.Name(), maxAttempts, len(affectedTests)-1)
+		mods, err := AffectedModifiers(nil, name, maxAttempts, len(affectedTests)-1)
 		if err != nil {
 			t.Errorf("AffectedModifiers() returned failed: %v", err)
 		}
@@ -137,7 +116,7 @@ func TestAffectedModifiers(t *testing.T) {
 			"affected-AEMU":         true,
 			"affected-other-device": false,
 		}
-		mods, err := AffectedModifiers(specs, affectedTestsFile.Name(), maxAttempts, len(affectedTests))
+		mods, err := AffectedModifiers(specs, name, maxAttempts, len(affectedTests))
 		if err != nil {
 			t.Errorf("AffectedModifiers() returned failed: %v", err)
 		}
@@ -163,4 +142,14 @@ func TestAffectedModifiers(t *testing.T) {
 			}
 		}
 	})
+}
+
+// mkTempFile returns a new temporary file with the specified content that will
+// be cleaned up automatically.
+func mkTempFile(t *testing.T, content string) string {
+	name := filepath.Join(t.TempDir(), "foo")
+	if err := ioutil.WriteFile(name, []byte(content), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	return name
 }

@@ -12,7 +12,6 @@ import (
 	"io"
 	"io/ioutil"
 	"net"
-	"os"
 	"path/filepath"
 	"reflect"
 	"strings"
@@ -42,11 +41,7 @@ func (c *mockClient) RemoteAddr() *net.UDPAddr {
 }
 
 func TestPollForSummary(t *testing.T) {
-	testResultsDir, err := ioutil.TempDir("", "test-results")
-	if err != nil {
-		t.Fatalf("failed to create test results dir: %v", err)
-	}
-	defer os.RemoveAll(testResultsDir)
+	testResultsDir := t.TempDir()
 	outputDir := filepath.Join(testResultsDir, "out")
 
 	outputFileA := filepath.Join("test_a", "stdout-and-stderr.txt")

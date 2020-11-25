@@ -9,7 +9,6 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"os"
 	"path/filepath"
 	"reflect"
 	"sort"
@@ -803,18 +802,16 @@ func depsFile(t *testing.T, buildDir string, deps ...string) string {
 	if err != nil {
 		t.Fatal(err)
 	}
+	name := depsFile.Name()
+	depsFile.Close()
 	b, err := json.Marshal([]string(deps))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := ioutil.WriteFile(depsFile.Name(), b, 0444); err != nil {
+	if err := ioutil.WriteFile(name, b, 0o400); err != nil {
 		t.Fatal(err)
 	}
-	relPath, err := filepath.Rel(buildDir, depsFile.Name())
-	if err != nil {
-		t.Fatal(err)
-	}
-	return relPath
+	return filepath.Base(name)
 }
 
 func shardHasExpectedDeps(t *testing.T, buildDir string, tests []Test, expected []string) {
@@ -844,12 +841,7 @@ func unorderedSlicesAreEqual(a, b []string) bool {
 }
 
 func TestExtractDeps(t *testing.T) {
-	buildDir, err := ioutil.TempDir("", "postprocess_test")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(buildDir)
-
+	buildDir := t.TempDir()
 	t.Run("no deps", func(t *testing.T) {
 		tests := []Test{{
 			Test: build.Test{

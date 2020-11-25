@@ -7,13 +7,12 @@ package checklicenses
 import (
 	"context"
 	"io/ioutil"
-	"os"
 	"path/filepath"
 	"testing"
 )
 
 func TestLicensesMatchSingleLicenseFile(t *testing.T) {
-	folder := mkDir(t)
+	folder := mkLicenseDir(t)
 	l, err := NewLicenses(context.Background(), folder, []string{"gcc"})
 	if err != nil {
 		t.Fatalf("NewLicenses(...): %s", err)
@@ -32,7 +31,7 @@ func TestLicensesMatchSingleLicenseFile(t *testing.T) {
 }
 
 func TestLicensesMatchFile(t *testing.T) {
-	folder := mkDir(t)
+	folder := mkLicenseDir(t)
 	l, err := NewLicenses(context.Background(), folder, []string{"gcc"})
 	if err != nil {
 		t.Fatalf("NewLicenses(...): %s", err)
@@ -55,7 +54,7 @@ func TestLicensesMatchFile(t *testing.T) {
 }
 
 func TestNewLicenses(t *testing.T) {
-	folder := mkDir(t)
+	folder := mkLicenseDir(t)
 	l, err := NewLicenses(context.Background(), folder, []string{"gcc"})
 	if err != nil {
 		t.Fatalf("NewLicenses(...): %s", err)
@@ -72,20 +71,14 @@ func TestNewLicenses(t *testing.T) {
 	}
 }
 
-func mkDir(t *testing.T) string {
-	name, err := ioutil.TempDir("", "check-licenses")
-	if err != nil {
+// mkLicenseDir returns a new temporary directory that will be cleaned up
+// automatically containing license pattern files.
+func mkLicenseDir(t *testing.T) string {
+	name := t.TempDir()
+	if err := ioutil.WriteFile(filepath.Join(name, "apache.lic"), []byte("Apache"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() {
-		if err := os.RemoveAll(name); err != nil {
-			t.Error(err)
-		}
-	})
-	if err := ioutil.WriteFile(filepath.Join(name, "apache.lic"), []byte("Apache"), 0600); err != nil {
-		t.Fatal(err)
-	}
-	if err := ioutil.WriteFile(filepath.Join(name, "bsd.lic"), []byte("BSD"), 0600); err != nil {
+	if err := ioutil.WriteFile(filepath.Join(name, "bsd.lic"), []byte("BSD"), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	return name

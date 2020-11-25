@@ -12,10 +12,10 @@ import (
 )
 
 func TestFileTreeNew(t *testing.T) {
-	folder := mkDir(t)
+	folder := t.TempDir()
 	path := filepath.Join(folder, "config.json")
 	json := `{"filesRegex":[],"skipFiles":[".gitignore"],"skipDirs":[".git"],"textExtensionList":["go"],"maxReadSize":6144,"separatorWidth":80,"outputFilePrefix":"NOTICE","outputFileExtension":"txt","product":"astro","singleLicenseFiles":["LICENSE"],"licensePatternDir":"golden/","baseDir":".","target":"all","logLevel":"verbose", "customProjectLicenses": [{"projectRoot": "test", "licenseLocation": "test"}]}`
-	if err := ioutil.WriteFile(path, []byte(json), 0644); err != nil {
+	if err := ioutil.WriteFile(path, []byte(json), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	config := Config{}

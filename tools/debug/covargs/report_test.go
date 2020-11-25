@@ -6,10 +6,8 @@ package covargs
 
 import (
 	"fmt"
-	"io/ioutil"
-	"os"
-	"path/filepath"
 	"reflect"
+	"strconv"
 	"testing"
 
 	"go.fuchsia.dev/fuchsia/tools/debug/covargs/api/llvm"
@@ -497,61 +495,52 @@ func TestSave(t *testing.T) {
 		{8, 3, 3, []string{"files1.json.gz", "files2.json.gz", "files3.json.gz"}},
 	}
 
-	dir, err := ioutil.TempDir("", "covargs")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(dir)
-
 	for i, tt := range tests {
-		testDir := filepath.Join(dir, fmt.Sprintf("test%d", i))
-		err := os.MkdirAll(testDir, os.ModePerm)
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		var files []*codecoverage.File
-		for i := 0; i < tt.numFiles; i++ {
-			files = append(files, &codecoverage.File{
-				Path:            fmt.Sprintf("//test%d.cc", i+1),
-				Lines:           []*codecoverage.LineRange{},
-				UncoveredBlocks: []*codecoverage.ColumnRanges{},
-				Summaries: []*codecoverage.Metric{
-					{
-						Name:    "function",
-						Covered: 0,
-						Total:   0,
+		t.Run(strconv.Itoa(i), func(t *testing.T) {
+			testDir := t.TempDir()
+			var files []*codecoverage.File
+			for i := 0; i < tt.numFiles; i++ {
+				files = append(files, &codecoverage.File{
+					Path:            fmt.Sprintf("//test%d.cc", i+1),
+					Lines:           []*codecoverage.LineRange{},
+					UncoveredBlocks: []*codecoverage.ColumnRanges{},
+					Summaries: []*codecoverage.Metric{
+						{
+							Name:    "function",
+							Covered: 0,
+							Total:   0,
+						},
+						{
+							Name:    "region",
+							Covered: 0,
+							Total:   0,
+						},
+						{
+							Name:    "line",
+							Covered: 0,
+							Total:   0,
+						},
 					},
-					{
-						Name:    "region",
-						Covered: 0,
-						Total:   0,
-					},
-					{
-						Name:    "line",
-						Covered: 0,
-						Total:   0,
-					},
-				},
-			})
-		}
+				})
+			}
 
-		report, err := SaveReport(files, tt.shardSize, testDir)
-		if err != nil {
-			t.Error("unexpected error", err)
-		}
+			report, err := SaveReport(files, tt.shardSize, testDir)
+			if err != nil {
+				t.Error("unexpected error", err)
+			}
 
-		if tt.numShards > 0 {
-			if numShards := len(report.FileShards); numShards != tt.numShards {
-				t.Error("expected", tt.numShards, "but got", numShards)
+			if tt.numShards > 0 {
+				if numShards := len(report.FileShards); numShards != tt.numShards {
+					t.Error("expected", tt.numShards, "but got", numShards)
+				}
+				if !reflect.DeepEqual(report.FileShards, tt.fileShards) {
+					t.Error("expected", tt.fileShards, "but got", report.FileShards)
+				}
+			} else {
+				if numFiles := len(report.Files); numFiles != tt.numFiles {
+					t.Error("expected", tt.numFiles, "but got", numFiles)
+				}
 			}
-			if !reflect.DeepEqual(report.FileShards, tt.fileShards) {
-				t.Error("expected", tt.fileShards, "but got", report.FileShards)
-			}
-		} else {
-			if numFiles := len(report.Files); numFiles != tt.numFiles {
-				t.Error("expected", tt.numFiles, "but got", numFiles)
-			}
-		}
+		})
 	}
 }

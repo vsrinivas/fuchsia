@@ -65,13 +65,10 @@ func TestLoadStringsFromJson(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			// Generate test env based on input.
-			dirPath, err := ioutil.TempDir("", "env")
-			if err != nil {
-				t.Fatalf("Unable to create tempdir for loadBlobsFromPaths test: %v", err)
-			}
+			dirPath := t.TempDir()
 			if tc.file.name != "" {
-				if err := ioutil.WriteFile(filepath.Join(dirPath, tc.file.name), []byte(tc.file.content), 0666); err != nil {
-					t.Fatalf("Unable to write file %s to tempdir: %v", tc.file.name, err)
+				if err := ioutil.WriteFile(filepath.Join(dirPath, tc.file.name), []byte(tc.file.content), 0o600); err != nil {
+					t.Fatal(err)
 				}
 			}
 
@@ -87,5 +84,4 @@ func TestLoadStringsFromJson(t *testing.T) {
 			}
 		})
 	}
-
 }

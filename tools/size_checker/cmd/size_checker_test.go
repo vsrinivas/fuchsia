@@ -327,13 +327,9 @@ func Test_processInput(t *testing.T) {
 			},
 		},
 	}
-	buildDir, err := ioutil.TempDir("", "out")
-	if err != nil {
-		t.Fatalf("Failed to create build dir: %v", err)
-	}
-	defer os.RemoveAll(buildDir)
+	buildDir := t.TempDir()
 	pkgDir := path.Join("obj", "foo-pkg")
-	if err := os.MkdirAll(path.Join(buildDir, pkgDir), 0777); err != nil {
+	if err := os.MkdirAll(path.Join(buildDir, pkgDir), 0o700); err != nil {
 		t.Fatalf("Failed to create package dir: %v", err)
 	}
 	blobsJSONF, err := os.Create(path.Join(buildDir, pkgDir, BlobsJSON))
@@ -429,15 +425,7 @@ func Test_writeOutputSizes(t *testing.T) {
 			nodes:  []*Node{newNode("b node")},
 		},
 	}
-	tmpDir, err := ioutil.TempDir("", "")
-	if err != nil {
-		t.Fatalf("ioutil.TempDir() failed: %v", err)
-	}
-	defer func() {
-		if err := os.RemoveAll(tmpDir); err != nil {
-			t.Error(err)
-		}
-	}()
+	tmpDir := t.TempDir()
 	outPath := filepath.Join(tmpDir, "sizes.json")
 	if err := writeOutputSizes(sizes, outPath); err != nil {
 		t.Fatalf("writeOutputSizes failed: %v", err)

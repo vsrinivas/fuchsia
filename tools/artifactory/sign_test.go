@@ -10,19 +10,13 @@ import (
 	"encoding/base64"
 	"encoding/pem"
 	"io/ioutil"
-	"os"
 	"path/filepath"
 	"reflect"
 	"testing"
 )
 
 func TestSign(t *testing.T) {
-	dir, err := ioutil.TempDir("", "artifactory")
-	if err != nil {
-		t.Fatalf("failed to create temp dir: %v", err)
-	}
-	defer os.RemoveAll(dir)
-
+	dir := t.TempDir()
 	var pkey ed25519.PrivateKey
 	dataFile := filepath.Join(dir, "data")
 
@@ -50,7 +44,7 @@ func TestSign(t *testing.T) {
 		t.Errorf("missing data file should return unmodified uploads; got %v", actual)
 	}
 
-	err = ioutil.WriteFile(dataFile, []byte("data"), 0444)
+	err = ioutil.WriteFile(dataFile, []byte("data"), 0o400)
 	if err != nil {
 		t.Errorf("failed to write data file: %v", err)
 	}

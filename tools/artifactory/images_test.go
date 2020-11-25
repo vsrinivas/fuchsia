@@ -6,13 +6,11 @@ package artifactory
 
 import (
 	"archive/tar"
-	"io"
 	"io/ioutil"
-	"os"
 	"path/filepath"
-	"reflect"
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
 	"go.fuchsia.dev/fuchsia/tools/build"
 )
 
@@ -36,25 +34,11 @@ func (m mockModules) Images() []build.Image {
 
 func TestImageUploads(t *testing.T) {
 	// Create a temporary disk.raw image.
-	dir, err := ioutil.TempDir("", "testBuildDir")
-	if err != nil {
-		t.Fatalf("failed to create fake build dir: %s", err)
-	}
-	defer os.RemoveAll(dir)
-	f, err := ioutil.TempFile(dir, "disk.raw")
-	if err != nil {
-		t.Fatalf("failed to create fake disk.raw: %s", err)
-	}
-	defer f.Close()
-	if _, err := io.WriteString(f, "Hello World!"); err != nil {
+	dir := t.TempDir()
+	name := filepath.Join(dir, "disk.raw")
+	content := []byte("Hello World!")
+	if err := ioutil.WriteFile(name, content, 0o600); err != nil {
 		t.Fatalf("failed to write to fake disk.raw file: %s", err)
-	}
-	if err := f.Sync(); err != nil {
-		t.Fatalf("failed to sync fake disk.raw: %s", err)
-	}
-	info, err := f.Stat()
-	if err != nil {
-		t.Fatalf("failed to get file info for fake disk.raw: %s", err)
 	}
 	m := &mockModules{
 		buildDir: dir,
@@ -90,12 +74,12 @@ func TestImageUploads(t *testing.T) {
 			},
 			{
 				Name: "uefi-disk",
-				Path: filepath.Base(f.Name()),
+				Path: "disk.raw",
 				Type: "blk",
 			},
 		},
 	}
-	expected := []Upload{
+	want := []Upload{
 		{
 			Source:      "BUILD_DIR/IMAGE_MANIFEST",
 			Destination: "namespace/IMAGE_MANIFEST",
@@ -121,22 +105,22 @@ func TestImageUploads(t *testing.T) {
 			Compress:    true,
 		},
 		{
-			Source:      f.Name(),
+			Source:      name,
 			Destination: filepath.Join("namespace", gceUploadName),
 			Compress:    true,
 			TarHeader: &tar.Header{
 				Format: tar.FormatGNU,
 				Name:   gceImageName,
-				Mode:   0666,
-				Size:   info.Size(),
+				Mode:   0o666,
+				Size:   int64(len(content)),
 			},
 		},
 	}
-	actual, err := imageUploads(m, "namespace")
+	got, err := imageUploads(m, "namespace")
 	if err != nil {
 		t.Fatalf("imageUploads failed: %s", err)
 	}
-	if !reflect.DeepEqual(actual, expected) {
-		t.Fatalf("unexpected image uploads:\nexpected: %v\nactual: %v\n", expected, actual)
+	if diff := cmp.Diff(got, want); diff != "" {
+		t.Fatalf("unexpected image uploads (-want +got):\n%s", diff)
 	}
 }

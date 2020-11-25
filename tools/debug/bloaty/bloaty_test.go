@@ -5,33 +5,16 @@
 package bloaty
 
 import (
-	"fmt"
 	"io/ioutil"
+	"path/filepath"
 	"testing"
 )
 
-const (
-	ids = `0071116f87e52dab0c21bd1cabc590fab5b06348 /out/libc.so
+func TestGetFiles(t *testing.T) {
+	const ids = `0071116f87e52dab0c21bd1cabc590fab5b06348 /out/libc.so
 01885627175ee9996b08af6c64c95a6e30787269 /out/libpc-ps2.so
 `
-)
-
-func WriteTempIdsTxt() (string, error) {
-	idsPath, err := ioutil.TempFile("", "ids")
-	if err != nil {
-		return "", err
-	}
-	fmt.Fprintf(idsPath, ids)
-	idsPath.Close()
-	return idsPath.Name(), nil
-}
-
-func TestGetFiles(t *testing.T) {
-	idsPath, errIds := WriteTempIdsTxt()
-	if errIds != nil {
-		t.Fatal(errIds)
-	}
-
+	idsPath := mkTempFile(t, ids)
 	actual, errConfig := getFiles(idsPath)
 	if errConfig != nil {
 		t.Fatal(errConfig)
@@ -282,4 +265,14 @@ func TestAddRowToOutput(t *testing.T) {
 	} else if val.Name != "ecm_bind" || val.Vmsz != 3 || val.Filesz != 3 {
 		t.Fatalf("In TestAddRowToOutput, got \n%+v", val)
 	}
+}
+
+// mkTempFile returns a new temporary file with the specified content that will
+// be cleaned up automatically.
+func mkTempFile(t *testing.T, content string) string {
+	name := filepath.Join(t.TempDir(), "foo")
+	if err := ioutil.WriteFile(name, []byte(content), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	return name
 }

@@ -17,15 +17,7 @@ import (
 )
 
 func TestHostTestUploads(t *testing.T) {
-	buildDir, err := ioutil.TempDir("", "")
-	if err != nil {
-		t.Fatalf("ioutil.TempDir() failed: %v", err)
-	}
-	defer func() {
-		if err := os.RemoveAll(buildDir); err != nil {
-			t.Error(err)
-		}
-	}()
+	buildDir := t.TempDir()
 	runtimeDepsRelPath := "runtime_deps.json"
 	testSpecs := []build.TestSpec{
 		{Test: build.Test{OS: "linux", Path: "foo"}},
@@ -37,7 +29,7 @@ func TestHostTestUploads(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to Marhsal(runtimeDeps): %v", err)
 	}
-	if err := ioutil.WriteFile(filepath.Join(buildDir, runtimeDepsRelPath), runtimeDepsBytes, 0444); err != nil {
+	if err := ioutil.WriteFile(filepath.Join(buildDir, runtimeDepsRelPath), runtimeDepsBytes, 0o400); err != nil {
 		t.Fatalf("failed to write runtimeDepsRelPath: %v", err)
 	}
 	// The regular files inside runtime deps, some of which are directories.
@@ -45,10 +37,10 @@ func TestHostTestUploads(t *testing.T) {
 	for _, filePath := range runtimeDepFilePaths {
 		absPath := filepath.Join(buildDir, filePath)
 		parentDir := filepath.Dir(absPath)
-		if err = os.MkdirAll(parentDir, 0700); err != nil {
+		if err = os.MkdirAll(parentDir, 0o700); err != nil {
 			t.Fatalf("os.MkdirAll(%s) failed: %v", parentDir, err)
 		}
-		if err = ioutil.WriteFile(absPath, []byte("\n"), 0700); err != nil {
+		if err = ioutil.WriteFile(absPath, []byte("\n"), 0o700); err != nil {
 			t.Fatalf("ioutil.WriteFile(%s) failed: %v", absPath, err)
 		}
 	}

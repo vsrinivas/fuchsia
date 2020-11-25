@@ -6,7 +6,6 @@ package artifactory
 
 import (
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -47,14 +46,10 @@ func (m mockBinModules) PrebuiltBinaries() []build.PrebuiltBinaries {
 }
 
 func TestDebugBinaryUploads(t *testing.T) {
-	checkout, err := ioutil.TempDir("", "")
-	if err != nil {
-		t.Fatalf("failed to create a temporary directory: %v", err)
-	}
-	defer os.RemoveAll(checkout)
-	buildDir, err := ioutil.TempDir(checkout, "out")
-	if err != nil {
-		t.Fatalf("failed to create a 'build directory'")
+	checkout := t.TempDir()
+	buildDir := filepath.Join(checkout, "out")
+	if err := os.Mkdir(buildDir, 0o700); err != nil {
+		t.Fatal(err)
 	}
 
 	pbins := []build.Binary{
@@ -77,10 +72,8 @@ func TestDebugBinaryUploads(t *testing.T) {
 			Label:    "//prebuilt",
 		},
 	}
-	prebuiltBinManifest, err := binaryManifest(buildDir, pbins)
-	if err != nil {
-		t.Fatalf("failed to create binary manifest: %v", err)
-	}
+	const prebuiltBinManifest = "manifest"
+	writeJson(t, filepath.Join(buildDir, prebuiltBinManifest), pbins)
 
 	m := &mockBinModules{
 		buildDir: buildDir,
@@ -274,7 +267,7 @@ func touch(t *testing.T, file string) {
 	if err != nil {
 		t.Fatalf("failed to absolutize: %v", err)
 	}
-	if err := os.MkdirAll(filepath.Dir(file), os.ModePerm); err != nil {
+	if err := os.MkdirAll(filepath.Dir(file), 0o700); err != nil {
 		t.Fatalf("failed to create parent directories for %s: %v", file, err)
 	}
 	f, err := os.Create(file)
@@ -284,14 +277,13 @@ func touch(t *testing.T, file string) {
 	f.Close()
 }
 
-func binaryManifest(buildDir string, bins []build.Binary) (string, error) {
-	manifest, err := ioutil.TempFile(buildDir, "artifactory_tests")
+// writeJson writes data as json into file named p.
+func writeJson(t *testing.T, p string, data interface{}) {
+	raw, err := json.Marshal(data)
 	if err != nil {
-		return "", err
+		t.Fatal(err)
 	}
-	defer manifest.Close()
-	if err := json.NewEncoder(manifest).Encode(&bins); err != nil {
-		return "", fmt.Errorf("failed to encode binary manifest: %v", err)
+	if err := ioutil.WriteFile(p, raw, 0o600); err != nil {
+		t.Fatal(err)
 	}
-	return filepath.Base(manifest.Name()), nil
 }

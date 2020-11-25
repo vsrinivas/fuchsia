@@ -11,6 +11,7 @@ import (
 	"crypto/rand"
 	"io"
 	"log"
+	"path/filepath"
 
 	"io/ioutil"
 	"net"
@@ -50,11 +51,7 @@ func TestServerDrainsSerial(t *testing.T) {
 
 func TestServerAuxOutput(t *testing.T) {
 	serial, device := serialAndDevice()
-
-	aux, err := ioutil.TempFile("", "test-serial-aux")
-	if err != nil {
-		t.Fatal(err)
-	}
+	aux := mkTempFile(t)
 
 	s := NewServer(serial, ServerOptions{AuxiliaryOutput: aux})
 
@@ -69,8 +66,7 @@ func TestServerAuxOutput(t *testing.T) {
 	}()
 
 	buf := make([]byte, 1024*1024)
-	_, err = io.ReadFull(rand.Reader, buf)
-	if err != nil {
+	if _, err := io.ReadFull(rand.Reader, buf); err != nil {
 		t.Fatal(err)
 	}
 	n, err := device.Write(buf)
@@ -97,11 +93,7 @@ func TestServerAuxOutput(t *testing.T) {
 
 func TestServerSocketOutput(t *testing.T) {
 	serial, device := serialAndDevice()
-
-	aux, err := ioutil.TempFile("", "test-serial-aux")
-	if err != nil {
-		t.Fatal(err)
-	}
+	aux := mkTempFile(t)
 
 	s := NewServer(serial, ServerOptions{AuxiliaryOutput: aux, Logger: log.New(os.Stdout, "test-serial", log.LstdFlags)})
 
@@ -155,11 +147,7 @@ func TestServerSocketOutput(t *testing.T) {
 
 func TestServerSerialWrites(t *testing.T) {
 	serial, device := serialAndDevice()
-
-	aux, err := ioutil.TempFile("", "test-serial-aux")
-	if err != nil {
-		t.Fatal(err)
-	}
+	aux := mkTempFile(t)
 
 	s := NewServer(serial, ServerOptions{AuxiliaryOutput: aux, Logger: log.New(os.Stdout, "test-serial", log.LstdFlags)})
 
@@ -219,11 +207,7 @@ func TestServerSerialWrites(t *testing.T) {
 
 func TestServerSerialClosing(t *testing.T) {
 	serial, _ := serialAndDevice()
-
-	aux, err := ioutil.TempFile("", "test-serial-aux")
-	if err != nil {
-		t.Fatal(err)
-	}
+	aux := mkTempFile(t)
 
 	s := NewServer(serial, ServerOptions{AuxiliaryOutput: aux, Logger: log.New(os.Stdout, "test-serial", log.LstdFlags)})
 
@@ -290,18 +274,13 @@ func serialAndDevice() (io.ReadWriteCloser, io.ReadWriteCloser) {
 func testListener(t *testing.T) (net.Listener, string) {
 	t.Helper()
 
-	f, err := ioutil.TempFile("", "test-serial-listener")
-	if err != nil {
-		t.Fatal(err)
-	}
-	f.Close()
-	os.Remove(f.Name())
-	l, err := net.ListenUnix("unix", &net.UnixAddr{Name: f.Name(), Net: "unix"})
+	name := filepath.Join(t.TempDir(), "test-serial-listener")
+	l, err := net.ListenUnix("unix", &net.UnixAddr{Name: name, Net: "unix"})
 	if err != nil {
 		t.Fatal(err)
 	}
 	l.SetUnlinkOnClose(true)
-	return l, f.Name()
+	return l, name
 }
 
 type joinedPipeEnds struct {
@@ -323,4 +302,19 @@ func (pe *joinedPipeEnds) Close() error {
 		return err
 	}
 	return pe.w.Close()
+}
+
+// mkTempFile returns a new temporary file that will be cleaned up
+// automatically.
+func mkTempFile(t *testing.T) *os.File {
+	f, err := os.Create(filepath.Join(t.TempDir(), "serial-test"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		if err := f.Close(); err != nil {
+			t.Error(err)
+		}
+	})
+	return f
 }

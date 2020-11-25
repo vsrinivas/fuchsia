@@ -269,7 +269,7 @@ func TestSetPackageSource(t *testing.T) {
 		dataPath: t.TempDir(),
 	}
 	homeDir := filepath.Join(testSDK.GetSDKDataPath(), "_TEMP_HOME")
-	if err := os.MkdirAll(homeDir, 0755); err != nil {
+	if err := os.MkdirAll(homeDir, 0o700); err != nil {
 		t.Fatal(err)
 	}
 	ctx := testingContext()

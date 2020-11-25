@@ -13,26 +13,22 @@ import (
 )
 
 func TestDirIsEmpty(t *testing.T) {
-	tmpdir, err := ioutil.TempDir("", "")
-	if err != nil {
-		t.Fatalf("failed to create temp dir: %v", err)
-	}
-	defer os.RemoveAll(tmpdir)
+	tmpDir := t.TempDir()
 
 	// Directory should start off empty.
-	empty, err := DirIsEmpty(tmpdir)
+	empty, err := DirIsEmpty(tmpDir)
 	if err != nil {
 		t.Fatal(err.Error())
 	} else if !empty {
 		t.Fatalf("directory should be empty")
 	}
 
-	if err := ioutil.WriteFile(filepath.Join(tmpdir, "file.txt"), []byte("content"), os.ModePerm); err != nil {
+	if err := ioutil.WriteFile(filepath.Join(tmpDir, "file.txt"), []byte("content"), 0o600); err != nil {
 		t.Fatal(err.Error())
 	}
 
 	// Directory should now be non-empty.
-	empty, err = DirIsEmpty(tmpdir)
+	empty, err = DirIsEmpty(tmpDir)
 	if err != nil {
 		t.Fatal(err.Error())
 	} else if empty {
@@ -40,7 +36,7 @@ func TestDirIsEmpty(t *testing.T) {
 	}
 
 	// Non-existent directories should be empty by convention.
-	nonexistentSubdir := filepath.Join(tmpdir, "i_dont_exist")
+	nonexistentSubdir := filepath.Join(tmpDir, "i_dont_exist")
 	empty, err = DirIsEmpty(nonexistentSubdir)
 	if err != nil {
 		t.Fatal(err.Error())
@@ -51,19 +47,15 @@ func TestDirIsEmpty(t *testing.T) {
 }
 
 func TestCopyDir(t *testing.T) {
-	tmpDir, err := ioutil.TempDir("", "osmisc")
-	if err != nil {
-		t.Fatalf("failed to create a temporary directory: %v", err)
-	}
-	defer os.RemoveAll(tmpDir)
+	tmpDir := t.TempDir()
 
 	srcDir := filepath.Join(tmpDir, "src")
-	if err := os.Mkdir(srcDir, 0700); err != nil {
+	if err := os.Mkdir(srcDir, 0o700); err != nil {
 		t.Fatalf("failed to create src %q: %v", srcDir, err)
 	}
 
 	dstDir := filepath.Join(tmpDir, "dst")
-	if err := os.Mkdir(dstDir, os.ModePerm); err != nil {
+	if err := os.Mkdir(dstDir, 0o700); err != nil {
 		t.Fatalf("failed to create dst %q: %v", dstDir, err)
 	}
 
@@ -79,16 +71,16 @@ func TestCopyDir(t *testing.T) {
 	for path, contents := range srcPaths {
 		path = filepath.Join(srcDir, path)
 
-		if err := os.MkdirAll(filepath.Dir(path), 0700); err != nil {
+		if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
 			t.Fatalf("failed to create path %q: %v", path, err)
 		}
 
 		if contents == "" {
-			if err := os.MkdirAll(path, 0700); err != nil {
+			if err := os.MkdirAll(path, 0o700); err != nil {
 				t.Fatalf("failed to create path %q: %v", path, err)
 			}
 		} else {
-			if err := ioutil.WriteFile(path, []byte(contents), 0400); err != nil {
+			if err := ioutil.WriteFile(path, []byte(contents), 0o400); err != nil {
 				t.Fatalf("failed to write contents to src %q: %v", path, err)
 			}
 		}
@@ -103,7 +95,7 @@ func TestCopyDir(t *testing.T) {
 		t.Fatalf("failed to copy directory: %v", err)
 	}
 
-	err = filepath.Walk(dstDir, func(dstPath string, dstInfo os.FileInfo, err error) error {
+	err := filepath.Walk(dstDir, func(dstPath string, dstInfo os.FileInfo, err error) error {
 		if dstDir == dstPath {
 			return nil
 		}

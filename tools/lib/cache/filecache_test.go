@@ -205,21 +205,6 @@ func (c *cacheFuzzer) fuzz(t *testing.T) {
 	c.wg.Wait()
 }
 
-func fuzzCache(t *testing.T, fuzzConfig string, size uint64) {
-	cachePath, err := ioutil.TempDir("", "cachehammer")
-	if err != nil {
-		t.Fatalf("%v", err)
-	}
-	filecache, err := newCacheFuzzer(fuzzConfig, cachePath, size)
-	if err != nil {
-		t.Fatalf("%v", err)
-	}
-	defer DeleteCache(cachePath)
-	filecache.fuzz(t)
-	t.Logf("cache hit/miss ratio: %v:%v", filecache.totalTries-filecache.totalMisses, filecache.totalMisses)
-	t.Logf("write success/fail ratio: %v:%v", filecache.totalWrites-filecache.writeFails, filecache.writeFails)
-}
-
 const fuzzConfig = `
 [
   {"threads":[
@@ -244,5 +229,15 @@ const fuzzConfig = `
 `
 
 func TestFileCache(t *testing.T) {
-	fuzzCache(t, fuzzConfig, 250)
+	cachePath := t.TempDir()
+	filecache, err := newCacheFuzzer(fuzzConfig, cachePath, 250)
+	if err != nil {
+		t.Fatalf("%v", err)
+	}
+	filecache.fuzz(t)
+	t.Logf("cache hit/miss ratio: %v:%v", filecache.totalTries-filecache.totalMisses, filecache.totalMisses)
+	t.Logf("write success/fail ratio: %v:%v", filecache.totalWrites-filecache.writeFails, filecache.writeFails)
+	if err := DeleteCache(cachePath); err != nil {
+		t.Error(err)
+	}
 }

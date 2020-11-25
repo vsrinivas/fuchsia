@@ -62,11 +62,7 @@ func TestRecordingOfOutputs(t *testing.T) {
 		},
 	}
 
-	dataDir, err := ioutil.TempDir("", "testrunner_tests")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(dataDir)
+	dataDir := t.TempDir()
 	outDir := filepath.Join(dataDir, "out")
 
 	var buf bytes.Buffer
@@ -140,10 +136,10 @@ func TestRecordingOfOutputs(t *testing.T) {
 		expectedContents[name] = content
 		path := filepath.Join(o.outDir, name)
 		dir := filepath.Dir(path)
-		if err := os.MkdirAll(dir, os.ModePerm); err != nil {
+		if err := os.MkdirAll(dir, 0o700); err != nil {
 			t.Fatalf("failed to make directory %q for outputs: %v", dir, err)
 		}
-		if err := ioutil.WriteFile(path, []byte(content), 0444); err != nil {
+		if err := ioutil.WriteFile(path, []byte(content), 0o400); err != nil {
 			t.Fatalf("failed to write contents %q to file %q: %v", content, name, err)
 		}
 	}

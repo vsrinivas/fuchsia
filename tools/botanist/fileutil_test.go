@@ -9,7 +9,6 @@ import (
 	"context"
 	"fmt"
 	"io/ioutil"
-	"os"
 	"path/filepath"
 	"testing"
 
@@ -41,17 +40,13 @@ func TestFetchAndCopyFile(t *testing.T) {
 		ClientImpl: client,
 	}
 
-	outDir, err := ioutil.TempDir("", "out")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(outDir)
-	if err := FetchAndCopyFile(context.Background(), tftp, "test/test", "test", outDir); err != nil {
+	outDir := t.TempDir()
+	if err := FetchAndCopyFile(context.Background(), tftp, filepath.Join("test", "test"), "test", outDir); err != nil {
 		t.Errorf("FetchAndCopy failed: %s", err)
 	}
 	// Try to read from copied file.
 	expectedFile := filepath.Join(outDir, "test")
 	if _, err := ioutil.ReadFile(expectedFile); err != nil {
-		t.Errorf("failed to read from copied file %s: %v", expectedFile, err)
+		t.Errorf("failed to read from copied file %s: %s", expectedFile, err)
 	}
 }

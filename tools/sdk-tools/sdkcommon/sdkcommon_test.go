@@ -106,7 +106,7 @@ func TestGetAddressByName(t *testing.T) {
 func TestRunSSHCommand(t *testing.T) {
 	tempDir := t.TempDir()
 	homeDir := filepath.Join(tempDir, "_TEMP_HOME")
-	if err := os.MkdirAll(homeDir, 0755); err != nil {
+	if err := os.MkdirAll(homeDir, 0o700); err != nil {
 		t.Fatal(err)
 	}
 	ExecCommand = helperCommandForSDKCommon
@@ -153,7 +153,7 @@ func TestRunSSHCommand(t *testing.T) {
 func TestCheckSSHConfig(t *testing.T) {
 	tempDir := t.TempDir()
 	homeDir := filepath.Join(tempDir, "_TEMP_HOME")
-	if err := os.MkdirAll(homeDir, 0755); err != nil {
+	if err := os.MkdirAll(homeDir, 0o700); err != nil {
 		t.Fatal(err)
 	}
 	ExecCommand = helperCommandForSDKCommon
@@ -178,7 +178,7 @@ func TestCheckSSHConfigExistingFiles(t *testing.T) {
 
 	tempDir := t.TempDir()
 	homeDir := filepath.Join(tempDir, "_TEMP_HOME")
-	if err := os.MkdirAll(homeDir, 0755); err != nil {
+	if err := os.MkdirAll(homeDir, 0o700); err != nil {
 		t.Fatal(err)
 	}
 	ExecCommand = helperCommandForSDKCommon
@@ -201,16 +201,16 @@ func TestCheckSSHConfigExistingFiles(t *testing.T) {
 	authFile := filepath.Join(sshDir, "fuchsia_authorized_keys")
 	keyFile := filepath.Join(sshDir, "fuchsia_ed25519")
 	sshConfigFile := getFuchsiaSSHConfigFile(testSDK)
-	if err := os.MkdirAll(sshDir, 0755); err != nil {
+	if err := os.MkdirAll(sshDir, 0o700); err != nil {
 		t.Fatal(err)
 	}
-	if err := ioutil.WriteFile(authFile, data, 0644); err != nil {
+	if err := ioutil.WriteFile(authFile, data, 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if err := ioutil.WriteFile(keyFile, data, 0644); err != nil {
+	if err := ioutil.WriteFile(keyFile, data, 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if err := ioutil.WriteFile(sshConfigFile, []byte(sshConfigTag), 0644); err != nil {
+	if err := ioutil.WriteFile(sshConfigFile, []byte(sshConfigTag), 0o600); err != nil {
 		t.Fatal(err)
 	}
 

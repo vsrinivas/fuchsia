@@ -7,7 +7,6 @@ package ninjalog
 import (
 	"encoding/json"
 	"io/ioutil"
-	"os"
 	"path/filepath"
 	"testing"
 	"time"
@@ -426,27 +425,10 @@ func TestClangTracesToInterleave(t *testing.T) {
 		},
 	} {
 		t.Run(tc.desc, func(t *testing.T) {
-			tmpDir, err := ioutil.TempDir("", "TestClangTracesToInterleave")
-			if err != nil {
-				t.Fatalf("Failed to create temp dir for test clang traces: %v", err)
-			}
-			defer func() {
-				if err := os.RemoveAll(tmpDir); err != nil {
-					t.Fatalf("Failed to remove temp dir %s after test: %v", tmpDir, err)
-				}
-			}()
-
+			tmpDir := t.TempDir()
 			for filename, trace := range tc.clangTraces {
-				p := filepath.Join(tmpDir, filename)
-				traceFile, err := os.Create(p)
-				if err != nil {
-					t.Fatalf("Failed to create test clang trace at path %s: %v", p, err)
-				}
-				if err := json.NewEncoder(traceFile).Encode(trace); err != nil {
-					t.Fatalf("Failed to write to test clang trace to file %s: %v", p, err)
-				}
+				writeJson(t, filepath.Join(tmpDir, filename), trace)
 			}
-
 			got, err := ClangTracesToInterleave(tc.traces, tmpDir, tc.granularity)
 			if (err != nil) != tc.wantErr {
 				t.Errorf("ClangTracesToInterleave got error: %v, want error: %t", err, tc.wantErr)
@@ -455,5 +437,16 @@ func TestClangTracesToInterleave(t *testing.T) {
 				t.Errorf("ClangTracesToInterleave got: %#v, want: %#v, diff (-want, +got):\n%s", got, tc.want, diff)
 			}
 		})
+	}
+}
+
+// writeJson writes data as json into file named p.
+func writeJson(t *testing.T, p string, data interface{}) {
+	raw, err := json.Marshal(data)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := ioutil.WriteFile(p, raw, 0o600); err != nil {
+		t.Fatal(err)
 	}
 }
