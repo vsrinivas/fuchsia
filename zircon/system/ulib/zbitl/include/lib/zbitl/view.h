@@ -468,6 +468,14 @@ class View {
       } else {
         header_ = header_type(header.value());
         offset_ += static_cast<uint32_t>(sizeof(zbi_header_t));
+        if (view_->limit_ - offset_ < header_->length) {
+          // Reached the end of the container.
+          if constexpr (Check != Checking::kPermissive) {
+            Fail("container too short for next item payload");
+          }
+          *this = view_->end();
+          return *this;
+        }
         if (auto payload = Traits::Payload(view_->storage(), offset_, header_->length);
             payload.is_error()) {
           Fail("cannot extract payload view", std::move(payload.error_value()));
@@ -624,6 +632,11 @@ class View {
     auto check_error = CheckHeader<Check>(*header, capacity);
     if (check_error.is_error()) {
       return fitx::error(Error{check_error.error_value(), 0, {}});
+    }
+
+    if (sizeof(zbi_header_t) + header->length > capacity) {
+      return fitx::error(Error{
+          "container header specifies length that exceeds capcity", sizeof(zbi_header_t), {}});
     }
 
     if constexpr (Check != Checking::kPermissive) {
@@ -823,7 +836,8 @@ class View {
 
   // Copy a single item's payload into supplied storage.
   template <typename CopyStorage>
-  fitx::result<CopyError<std::decay_t<CopyStorage>>> CopyRawItem(CopyStorage&& to, const iterator& it) {
+  fitx::result<CopyError<std::decay_t<CopyStorage>>> CopyRawItem(CopyStorage&& to,
+                                                                 const iterator& it) {
     return Copy(std::forward<CopyStorage>(to), it.payload_offset(), (*it).header->length);
   }
 
@@ -837,7 +851,8 @@ class View {
 
   // Copy a single item's header and payload into supplied storage.
   template <typename CopyStorage>
-  fitx::result<CopyError<std::decay_t<CopyStorage>>> CopyRawItemWithHeader(CopyStorage&& to, const iterator& it) {
+  fitx::result<CopyError<std::decay_t<CopyStorage>>> CopyRawItemWithHeader(CopyStorage&& to,
+                                                                           const iterator& it) {
     return Copy(std::forward<CopyStorage>(to), it.item_offset(),
                 sizeof(zbi_header_t) + (*it).header->length);
   }

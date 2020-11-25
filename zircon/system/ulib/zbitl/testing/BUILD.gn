@@ -1,0 +1,22 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/cpp/cpp_fuzzer.gni")
+
+group("testing") {
+  testonly = true
+  deps = []
+  if (is_fuchsia) {
+    deps += [ ":zbitl-fuzzers" ]
+  }
+}
+
+fuzzer_package("zbitl-fuzzers") {
+  cpp_fuzzers = [ ":iteration" ]
+}
+
+cpp_fuzzer("iteration") {
+  sources = [ "iteration-fuzzer.cc" ]
+  deps = [ ".." ]
+}
