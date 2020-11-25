@@ -32,7 +32,7 @@
 use {
     fidl_fuchsia_bluetooth as bt, fidl_fuchsia_bluetooth_sys as sys,
     fuchsia_bluetooth::types::{
-        Address, BondingData, BredrData, HostData, LeData, OneOrBoth, PeerId, Uuid,
+        Address, BondingData, BredrBondData, HostData, LeBondData, OneOrBoth, PeerId, Uuid,
     },
     serde::{Deserialize, Serialize},
     std::convert::{From, TryInto},
@@ -306,9 +306,9 @@ struct LtkDef {
 option_encoding!(OptionLtkDef, sys::Ltk, "LtkDef");
 
 #[derive(Serialize, Deserialize)]
-#[serde(remote = "LeData")]
+#[serde(remote = "LeBondData")]
 #[serde(rename_all = "camelCase")]
-struct LeDataDef {
+struct LeBondDataDef {
     #[serde(with = "OptionLeConnectionParametersDef")]
     pub connection_parameters: Option<sys::LeConnectionParameters>,
     #[serde(with = "OptionLtkDef")]
@@ -322,12 +322,12 @@ struct LeDataDef {
     #[serde(skip)]
     pub services: Vec<Uuid>,
 }
-option_encoding!(OptionLeDataDef, LeData, "LeDataDef");
+option_encoding!(OptionLeBondDataDef, LeBondData, "LeBondDataDef");
 
 #[derive(Serialize, Deserialize)]
-#[serde(remote = "BredrData")]
+#[serde(remote = "BredrBondData")]
 #[serde(rename_all = "camelCase")]
-struct BredrDataDef {
+struct BredrBondDataDef {
     #[serde(with = "OptionConnectionRoleDef")]
     pub role_preference: Option<bt::ConnectionRole>,
     #[serde(with = "OptionPeerKeyDef")]
@@ -335,7 +335,7 @@ struct BredrDataDef {
     #[serde(default)] // Accept legacy stores that didn't serialize `services`.
     pub services: Vec<Uuid>,
 }
-option_encoding!(OptionBredrDataDef, BredrData, "BredrDataDef");
+option_encoding!(OptionBredrBondDataDef, BredrBondData, "BredrBondDataDef");
 
 #[derive(Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -347,10 +347,10 @@ struct BondingDataDef {
     #[serde(rename(serialize = "hostAddress", deserialize = "hostAddress"))]
     pub local_address: Address,
     pub name: Option<String>,
-    #[serde(with = "OptionLeDataDef")]
-    pub le: Option<LeData>,
-    #[serde(with = "OptionBredrDataDef")]
-    pub bredr: Option<BredrData>,
+    #[serde(with = "OptionLeBondDataDef")]
+    pub le: Option<LeBondData>,
+    #[serde(with = "OptionBredrBondDataDef")]
+    pub bredr: Option<BredrBondData>,
 }
 
 // The transport-specific data is stored in the library representation using the OneOrBoth type. We
@@ -423,7 +423,7 @@ mod tests {
             local_address: Address::Public([0xFF, 0xEE, 0xDD, 0xCC, 0xBB, 0xAA]),
             name: Some("Device Name".to_string()),
             data: OneOrBoth::Both(
-                LeData {
+                LeBondData {
                     connection_parameters: Some(sys::LeConnectionParameters {
                         connection_interval: 1,
                         connection_latency: 2,
@@ -470,7 +470,7 @@ mod tests {
                     }),
                     csrk: None,
                 },
-                BredrData {
+                BredrBondData {
                     role_preference: Some(bt::ConnectionRole::Follower),
                     services: vec![Uuid::new16(0x110a), Uuid::new16(0x110b)],
                     link_key: Some(sys::PeerKey {

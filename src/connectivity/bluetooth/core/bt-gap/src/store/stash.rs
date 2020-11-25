@@ -29,7 +29,7 @@ use {
 #[cfg(test)]
 use {
     fidl::endpoints::Proxy,
-    fuchsia_bluetooth::types::{LeData, OneOrBoth},
+    fuchsia_bluetooth::types::{LeBondData, OneOrBoth},
     fuchsia_zircon as zx,
     std::collections::HashSet,
 };
@@ -535,8 +535,8 @@ mod tests {
         )
     }
 
-    fn default_le_data() -> LeData {
-        LeData {
+    fn default_le_data() -> LeBondData {
+        LeBondData {
             connection_parameters: None,
             services: vec![],
             peer_ltk: None,

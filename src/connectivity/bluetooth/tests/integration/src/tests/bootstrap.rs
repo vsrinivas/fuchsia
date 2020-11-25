@@ -14,7 +14,7 @@ use {
         Predicate as P,
     },
     fuchsia_bluetooth::types::{
-        Address, BondingData, HostData, Identity, LeData, OneOrBoth, PeerId,
+        Address, BondingData, HostData, Identity, LeBondData, OneOrBoth, PeerId,
     },
     std::collections::HashSet,
     test_harness::run_suite,
@@ -39,7 +39,7 @@ fn example_emulator_identity() -> Identity {
             encryption_key_size: 0,
         },
     };
-    let le_data = LeData {
+    let le_data = LeBondData {
         connection_parameters: None,
         services: vec![],
         peer_ltk: None,

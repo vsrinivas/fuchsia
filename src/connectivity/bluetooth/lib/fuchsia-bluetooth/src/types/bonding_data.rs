@@ -40,7 +40,7 @@ struct LeInspect {
 }
 
 impl LeInspect {
-    fn new(d: &LeData, inspect: inspect::Node) -> LeInspect {
+    fn new(d: &LeBondData, inspect: inspect::Node) -> LeInspect {
         LeInspect {
             _services: inspect.create_string("services", d.services.to_property()),
 
@@ -128,7 +128,7 @@ struct BredrInspect {
 }
 
 impl BredrInspect {
-    fn new(d: &BredrData, inspect: inspect::Node) -> BredrInspect {
+    fn new(d: &BredrBondData, inspect: inspect::Node) -> BredrInspect {
         BredrInspect {
             _role_preference: d.role_preference.as_ref().map(|role| {
                 inspect.create_string(
@@ -181,7 +181,7 @@ impl IsInspectable for BondingData {
 
 /// Bluetooth Low Energy specific bonding data
 #[derive(Clone, Debug, PartialEq)]
-pub struct LeData {
+pub struct LeBondData {
     /// The peer's preferred connection parameters, if known.
     pub connection_parameters: Option<sys::LeConnectionParameters>,
     /// Known GATT service UUIDs.
@@ -206,8 +206,8 @@ pub struct LeData {
     pub csrk: Option<sys::PeerKey>,
 }
 
-impl LeData {
-    fn into_control(src: LeData, address: &Address) -> control::LeData {
+impl LeBondData {
+    fn into_control(src: Self, address: &Address) -> control::LeData {
         let address_type = match address {
             Address::Public(_) => control::AddressType::LePublic,
             Address::Random(_) => control::AddressType::LeRandom,
@@ -238,7 +238,7 @@ impl LeData {
 
 /// Bluetooth BR/EDR (Classic) specific bonding data
 #[derive(Clone, Debug, PartialEq)]
-pub struct BredrData {
+pub struct BredrBondData {
     /// True if the peer prefers to lead the piconet. This is determined by role switch procedures.
     /// Paging and connecting from a peer does not automatically set this flag.
     pub role_preference: Option<bt::ConnectionRole>,
@@ -249,8 +249,8 @@ pub struct BredrData {
     pub link_key: Option<sys::PeerKey>,
 }
 
-impl BredrData {
-    fn into_control(src: BredrData, address: &Address) -> control::BredrData {
+impl BredrBondData {
+    fn into_control(src: Self, address: &Address) -> control::BredrData {
         let address = address.to_string();
         let piconet_leader =
             src.role_preference.map_or(false, |role| role == bt::ConnectionRole::Leader);
@@ -354,12 +354,12 @@ fn address_from_ctrl_le_data(src: &control::LeData) -> Result<Address, anyhow::E
     }
 }
 
-impl TryFrom<control::LeData> for LeData {
+impl TryFrom<control::LeData> for LeBondData {
     type Error = anyhow::Error;
-    fn try_from(src: control::LeData) -> Result<LeData, Self::Error> {
+    fn try_from(src: control::LeData) -> Result<Self, Self::Error> {
         let services: Result<Vec<Uuid>, uuid::parser::ParseError> =
             src.services.iter().map(|s| s.parse::<Uuid>()).collect();
-        Ok(LeData {
+        Ok(Self {
             connection_parameters: src
                 .connection_parameters
                 .map(|params| compat::sys_conn_params_from_control(*params)),
@@ -374,16 +374,17 @@ impl TryFrom<control::LeData> for LeData {
         })
     }
 }
-impl TryFrom<sys::LeData> for LeData {
+
+impl TryFrom<sys::LeData> for LeBondData {
     type Error = anyhow::Error;
-    fn try_from(src: sys::LeData) -> Result<LeData, Self::Error> {
+    fn try_from(src: sys::LeData) -> Result<Self, Self::Error> {
         // If one of the new `peer_ltk` and `local_ltk` fields are present, then we use those.
         // Otherwise we default to the deprecated `ltk` field for backwards compatibility.
         let (peer_ltk, local_ltk) = match (src.peer_ltk, src.local_ltk) {
             (None, None) => (src.ltk, src.ltk),
             (p, l) => (p, l),
         };
-        Ok(LeData {
+        Ok(Self {
             connection_parameters: src.connection_parameters,
             services: src.services.unwrap_or(vec![]).iter().map(|uuid| uuid.into()).collect(),
             peer_ltk,
@@ -394,9 +395,9 @@ impl TryFrom<sys::LeData> for LeData {
     }
 }
 
-impl TryFrom<control::BredrData> for BredrData {
+impl TryFrom<control::BredrData> for BredrBondData {
     type Error = anyhow::Error;
-    fn try_from(src: control::BredrData) -> Result<BredrData, Self::Error> {
+    fn try_from(src: control::BredrData) -> Result<Self, Self::Error> {
         let role_preference = Some(if src.piconet_leader {
             bt::ConnectionRole::Leader
         } else {
@@ -404,13 +405,13 @@ impl TryFrom<control::BredrData> for BredrData {
         });
         let services = src.services.iter().map(|uuid_str| uuid_str.parse()).collect_results()?;
         let link_key = src.link_key.map(|ltk| compat::peer_key_from_control(ltk.key));
-        Ok(BredrData { role_preference, services, link_key })
+        Ok(Self { role_preference, services, link_key })
     }
 }
-impl TryFrom<sys::BredrData> for BredrData {
+impl TryFrom<sys::BredrData> for BredrBondData {
     type Error = anyhow::Error;
-    fn try_from(src: sys::BredrData) -> Result<BredrData, Self::Error> {
-        Ok(BredrData {
+    fn try_from(src: sys::BredrData) -> Result<Self, Self::Error> {
+        Ok(Self {
             role_preference: src.role_preference,
             services: src.services.unwrap_or(vec![]).iter().map(|uuid| uuid.into()).collect(),
             link_key: src.link_key,
@@ -418,8 +419,8 @@ impl TryFrom<sys::BredrData> for BredrData {
     }
 }
 
-impl From<LeData> for sys::LeData {
-    fn from(src: LeData) -> sys::LeData {
+impl From<LeBondData> for sys::LeData {
+    fn from(src: LeBondData) -> sys::LeData {
         sys::LeData {
             address: None,
             connection_parameters: src.connection_parameters,
@@ -427,9 +428,9 @@ impl From<LeData> for sys::LeData {
             // The LTK field is deprecated and is not necessary for internal conversions to sys
             // types.
             //
-            // Note: when converting in the opposite direction (from sys::LeData to
-            // LeData) the `ltk` field will be mapped to both `peer_ltk` and `local_ltk`. This
-            // means that converting from a sys::LeData to LeData and back is no longer idempotent.
+            // Note: when converting in the opposite direction (from sys::LeData to LeBondData) the
+            // `ltk` field will be mapped to both `peer_ltk` and `local_ltk`. This means that
+            // converting from a sys::LeData to LeBondData and back is no longer idempotent.
             ltk: None,
             peer_ltk: src.peer_ltk,
             local_ltk: src.local_ltk,
@@ -440,8 +441,8 @@ impl From<LeData> for sys::LeData {
     }
 }
 
-impl From<BredrData> for sys::BredrData {
-    fn from(src: BredrData) -> sys::BredrData {
+impl From<BredrBondData> for sys::BredrData {
+    fn from(src: BredrBondData) -> sys::BredrData {
         sys::BredrData {
             address: None,
             role_preference: src.role_preference,
@@ -467,15 +468,15 @@ pub struct BondingData {
     /// The device name obtained using general discovery and name discovery procedures.
     pub name: Option<String>,
 
-    /// Valid Bonding Data must include at least one of LeData or BredrData
-    pub data: OneOrBoth<LeData, BredrData>,
+    /// Valid Bonding Data must include at least one of LeBondData or BredrBondData.
+    pub data: OneOrBoth<LeBondData, BredrBondData>,
 }
 
 impl BondingData {
-    pub fn le(&self) -> Option<&LeData> {
+    pub fn le(&self) -> Option<&LeBondData> {
         self.data.left()
     }
-    pub fn bredr(&self) -> Option<&BredrData> {
+    pub fn bredr(&self) -> Option<&BredrBondData> {
         self.data.right()
     }
 }
@@ -522,9 +523,10 @@ impl TryFrom<control::BondingData> for BondingData {
 
 impl From<BondingData> for control::BondingData {
     fn from(bd: BondingData) -> control::BondingData {
-        let le = bd.le().map(|le| Box::new(LeData::into_control(le.clone(), &bd.address)));
-        let bredr =
-            bd.bredr().map(|bredr| Box::new(BredrData::into_control(bredr.clone(), &bd.address)));
+        let le = bd.le().map(|le| Box::new(LeBondData::into_control(le.clone(), &bd.address)));
+        let bredr = bd
+            .bredr()
+            .map(|bredr| Box::new(BredrBondData::into_control(bredr.clone(), &bd.address)));
         control::BondingData {
             identifier: bd.identifier.to_string(),
             local_address: bd.local_address.to_string(),
@@ -679,16 +681,16 @@ pub mod proptest_util {
     // TODO(fxbug.dev/36378) Note: We don't generate data with a None role_preference, as these can't be
     // safely roundtripped to control::BredrData. This can be removed when the control api is
     // retired.
-    pub(crate) fn any_bredr_data() -> impl Strategy<Value = BredrData> {
+    pub(crate) fn any_bredr_data() -> impl Strategy<Value = BredrBondData> {
         (any_connection_role(), option::of(any_peer_key())).prop_map(
             |(role_preference, link_key)| {
                 let role_preference = Some(role_preference);
-                BredrData { role_preference, services: vec![], link_key }
+                BredrBondData { role_preference, services: vec![], link_key }
             },
         )
     }
 
-    pub(crate) fn any_le_data() -> impl Strategy<Value = LeData> {
+    pub(crate) fn any_le_data() -> impl Strategy<Value = LeBondData> {
         (
             option::of(any_connection_params()),
             option::of(any_ltk()),
@@ -696,26 +698,28 @@ pub mod proptest_util {
             option::of(any_peer_key()),
             option::of(any_peer_key()),
         )
-            .prop_map(|(connection_parameters, peer_ltk, local_ltk, irk, csrk)| LeData {
-                connection_parameters,
-                services: vec![],
-                peer_ltk,
-                local_ltk,
-                irk,
-                csrk,
+            .prop_map(|(connection_parameters, peer_ltk, local_ltk, irk, csrk)| {
+                LeBondData {
+                    connection_parameters,
+                    services: vec![],
+                    peer_ltk,
+                    local_ltk,
+                    irk,
+                    csrk,
+                }
             })
     }
 
     // TODO(fxbug.dev/35008): The control library conversions expect `local_ltk` and `peer_ltk` to be the
     // same. We emulate that invariant here.
-    pub(crate) fn any_le_data_for_control_test() -> impl Strategy<Value = LeData> {
+    pub(crate) fn any_le_data_for_control_test() -> impl Strategy<Value = LeBondData> {
         (
             option::of(any_connection_params()),
             option::of(any_ltk()),
             option::of(any_peer_key()),
             option::of(any_peer_key()),
         )
-            .prop_map(|(connection_parameters, ltk, irk, csrk)| LeData {
+            .prop_map(|(connection_parameters, ltk, irk, csrk)| LeBondData {
                 connection_parameters,
                 services: vec![],
                 peer_ltk: ltk,
@@ -820,7 +824,7 @@ mod tests {
             local_address: Address::Public([0, 0, 0, 0, 0, 0]),
             name: Some("name".into()),
             data: OneOrBoth::Both(
-                LeData {
+                LeBondData {
                     connection_parameters: Some(sys::LeConnectionParameters {
                         connection_interval: 0,
                         connection_latency: 1,
@@ -832,7 +836,7 @@ mod tests {
                     irk: Some(remote_key.clone()),
                     csrk: Some(remote_key.clone()),
                 },
-                BredrData {
+                BredrBondData {
                     role_preference: Some(bt::ConnectionRole::Leader),
                     services: vec![],
                     link_key: Some(remote_key.clone()),
@@ -1362,7 +1366,7 @@ mod tests {
             }
             #[test]
             fn bredr_data_control_roundtrip((address, data) in (any_public_address(), any_bredr_data())) {
-                let control_bredr_data = BredrData::into_control(data.clone(), &address);
+                let control_bredr_data = BredrBondData::into_control(data.clone(), &address);
                 assert_eq!(address.to_string(), control_bredr_data.address);
                 assert_eq!(Ok(data), control_bredr_data.try_into().map_err(|e: anyhow::Error| e.to_string()));
             }
@@ -1374,7 +1378,7 @@ mod tests {
             }
             #[test]
             fn le_data_control_roundtrip((address, mut data) in (any_public_address(), any_le_data_for_control_test())) {
-                let control_le_data = LeData::into_control(data.clone(), &address);
+                let control_le_data = LeBondData::into_control(data.clone(), &address);
                 assert_eq!(address.to_string(), control_le_data.address);
                 assert_eq!(Ok(data), control_le_data.try_into().map_err(|e: anyhow::Error| e.to_string()));
             }
