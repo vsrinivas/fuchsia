@@ -5,9 +5,9 @@
 use anyhow::{anyhow, Context, Error};
 use fidl_componentmanager_test as ftest;
 use fidl_fuchsia_time as ftime;
-use fuchsia_async as fasync;
+use fuchsia_async::{self as fasync, TimeoutExt};
 use fuchsia_component::client;
-use fuchsia_zircon::{ClockUpdate, Duration};
+use fuchsia_zircon::{ClockUpdate, Duration, Signals, Status, Time};
 use log::*;
 
 /// Time to set in the UTC clock, as an offset above backstop time.
@@ -30,6 +30,14 @@ async fn main() -> Result<(), Error> {
             .await
             .context("failed to get UTC clock")?;
         debug!("received clock");
+        match fasync::OnSignals::new(&clock, Signals::CLOCK_STARTED)
+            .on_timeout(Time::after(Duration::from_millis(10)), || Err(Status::TIMED_OUT))
+            .await
+        {
+            Err(Status::TIMED_OUT) => (),
+            res => return Err(anyhow!("expected CLOCK_STARTED is not asserted but got {:?}", res)),
+        }
+        debug!("checked clock signals");
         let details =
             clock.get_details().map_err(|s| anyhow!("failed to get clock details: {}", s))?;
         debug!("got clock details");

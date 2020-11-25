@@ -6,7 +6,7 @@ use anyhow::{anyhow, Context, Error};
 use fidl_componentmanager_test as ftest;
 use fuchsia_async as fasync;
 use fuchsia_component::client;
-use fuchsia_zircon::{Clock, Duration, Rights};
+use fuchsia_zircon::{Rights, Signals};
 use log::*;
 
 #[fasync::run_singlethreaded]
@@ -17,9 +17,11 @@ async fn main() -> Result<(), Error> {
     let test_proxy = client::connect_to_service::<ftest::TestOutcomeReportMarker>()?;
 
     let result: Result<_, Error> = async {
-        let clock = fuchsia_runtime::duplicate_utc_clock_handle(Rights::READ)
+        let clock = fuchsia_runtime::duplicate_utc_clock_handle(Rights::READ | Rights::WAIT)
             .context("Failed to get clock from runtime")?;
-        wait_for_clock_adjustment(&clock).await?;
+        fasync::OnSignals::new(&clock, Signals::CLOCK_STARTED)
+            .await
+            .context("Failed to wait for clock to start")?;
         let details =
             clock.get_details().map_err(|s| anyhow!("failed to get clock details: {}", s))?;
         debug!("got clock details");
@@ -47,17 +49,5 @@ async fn main() -> Result<(), Error> {
                 .expect("failed to report failure");
             Err(e)
         }
-    }
-}
-
-async fn wait_for_clock_adjustment(clock: &Clock) -> Result<(), Error> {
-    // TODO(fxbug.dev/64635): just wait for the started signal instead.
-    loop {
-        let details =
-            clock.get_details().map_err(|s| anyhow!("failed to get clock details: {}", s))?;
-        if details.backstop.into_nanos() != details.ticks_to_synthetic.synthetic_offset {
-            return Ok(());
-        }
-        fasync::Timer::new(fasync::Time::after(Duration::from_millis(10))).await;
     }
 }
