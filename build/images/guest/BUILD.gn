@@ -83,6 +83,7 @@ assemble_system("guest") {
     "//src/sys/bootstrap:root_manifests",
     "//src/sys/component_manager:bootfs",
     "//src/sys/component_manager:component_manager_config_bootfs_resource",
+    "//src/ui/input/drivers/hid",
     "//src/ui/input/drivers/hid-input-report",
     "//src/ui/input/drivers/virtio:virtio_input",
     "//zircon/third_party/uapp/dash",
