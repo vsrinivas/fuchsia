@@ -67,6 +67,12 @@ class DwarfExprEval {
     kData
   };
 
+  enum class StringOutput {
+    kNone,     // Don't do string output.
+    kLiteral,  // Outputs exact DWARF opcodes and values.
+    kPretty,   // Decodes values and register names.
+  };
+
   // The DWARF spec says the stack entry "can represent a value of any supported base type of the
   // target machine". We need to support x87 long doubles (80 bits) and XMM registers (128 bits).
   // Generally the XMM registers used for floating point use only the low 64 bits and long doubles
@@ -135,7 +141,21 @@ class DwarfExprEval {
   Completion Eval(fxl::RefPtr<SymbolDataProvider> data_provider,
                   const SymbolContext& symbol_context, Expression expr, CompletionCallback cb);
 
+  // Converts the given DWARF expression to a string. The result values on this class won't be
+  // set since the expression won't actually be evaluated.
+  //
+  // The data_provider is required to get the current architecture for pretty-printing register
+  // names. To disable this, pass the default SymbolDataProvider implementation.
+  //
+  // When "pretty" mode is enabled, operations will be simplified and platform register names will
+  // be substituted.
+  std::string ToString(fxl::RefPtr<SymbolDataProvider> data_provider,
+                       const SymbolContext& symbol_context, Expression expr, bool pretty);
+
  private:
+  void SetUp(fxl::RefPtr<SymbolDataProvider> data_provider, const SymbolContext& symbol_context,
+             Expression expr, CompletionCallback cb);
+
   // Evaluates the next phases of the expression until an asynchronous operation is required.
   // Returns the value of |is_complete| because |this| could be deleted by the time this method
   // returns.
@@ -177,24 +197,30 @@ class DwarfExprEval {
 
   // Executes the given unary operation with the top stack entry as the parameter and pushes the
   // result.
-  Completion OpUnary(StackEntry (*op)(StackEntry));
+  Completion OpUnary(StackEntry (*op)(StackEntry), const char* op_name);
 
   // Executes the given binary operation by popping the top two stack entries as parameters (the
   // first is the next-to-top, the second is the top) and pushing the result on the stack.
-  Completion OpBinary(StackEntry (*op)(StackEntry, StackEntry));
+  Completion OpBinary(StackEntry (*op)(StackEntry, StackEntry), const char* op_name);
 
   // Operations. On call, the expr_index_ will index the byte following the opcode, and on return
   // expr_index_ will index the next instruction (any parameters will be consumed).
+  //
+  // Some functions handle more than one opcode. In these cases, the opcode name for string output
+  // is passed in as op_name.
   Completion OpAddr();
+  Completion OpBitPiece();
   Completion OpBra();
   Completion OpBreg(uint8_t op);
   Completion OpCFA();
-  Completion OpDeref(uint32_t byte_size);
+  Completion OpDeref(uint32_t byte_size, const char* op_name, bool string_include_size);
   Completion OpDerefSize();
   Completion OpDiv();
   Completion OpDrop();
   Completion OpDup();
+  Completion OpEntryValue();
   Completion OpFbreg();
+  Completion OpImplicitPointer(const char* op_name);
   Completion OpImplicitValue();
   Completion OpRegx();
   Completion OpBregx();
@@ -203,19 +229,38 @@ class DwarfExprEval {
   Completion OpPick();
   Completion OpPiece();
   Completion OpPlusUconst();
-  Completion OpPushSigned(int byte_count);
-  Completion OpPushUnsigned(int byte_count);
+  Completion OpPushSigned(int byte_count, const char* op_name);
+  Completion OpPushUnsigned(int byte_count, const char* op_name);
   Completion OpPushLEBSigned();
   Completion OpPushLEBUnsigned();
   Completion OpRot();
   Completion OpSkip();
   Completion OpStackValue();
   Completion OpSwap();
-  Completion OpTlsAddr();
+  Completion OpTlsAddr(const char* op_name);
 
   // Adjusts the instruction offset by the given amount, handling out-of-bounds as appropriate. This
   // is the backend for jumps and branches.
   void Skip(int128_t amount);
+
+  // Returns true if generating a string rather than evaluating an expression.
+  bool is_string_output() const { return string_output_mode_ != StringOutput::kNone; }
+
+  // Returns a user-readable name for the current architecture's given DWARF register. For
+  // stringinfying DWARF expressions.
+  std::string GetRegisterName(int reg_number) const;
+
+  // Append an operation to the description in is_string_output() mode (will assert if used outside
+  // of this mode).
+  //
+  // When in kPretty output mode, the second parameter will be used if present. Otherwise the first
+  // parameter will be used. The first output should be the actual DWARF operatiors, while the
+  // second one can have another level of decode.
+  //
+  // Always returns "sync" completion so it can be used like "return AppendString(...)" from the
+  // opcode handlers.
+  Completion AppendString(const std::string& op_output,
+                          const std::string& nice_output = std::string());
 
   fxl::RefPtr<SymbolDataProvider> data_provider_;
   SymbolContext symbol_context_;
@@ -223,12 +268,17 @@ class DwarfExprEval {
   // The expression. See also expr_index_.
   Expression expr_;
 
+  // Determines if a string describing the expression is being generated instead of evaluating
+  // the expression. See is_string_output() and AppendString().
+  StringOutput string_output_mode_ = StringOutput::kNone;
+  std::string string_output_;  // Result when string_output_mode_ != kNone;
+
   // Index into expr_ of the next thing to read. This is a uint64_t to integrate with LLVM
   // DataExtractor.
   uint64_t expr_index_ = 0;
 
-  CompletionCallback completion_callback_;
-  bool in_completion_callback_ = false;  // To check for lifetime errors.
+  CompletionCallback completion_callback_;  // Null in string printing mode (it's synchronous).
+  bool in_completion_callback_ = false;     // To check for lifetime errors.
 
   // Allocated on the heap to avoid exposing LLVM headers.
   std::unique_ptr<llvm::DataExtractor> data_extractor_;

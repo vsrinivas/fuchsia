@@ -26,6 +26,8 @@ namespace zxdb {
 
 namespace {
 
+constexpr int kDwarfExprSwitch = 1;
+
 const char kSymInfoShortHelp[] = "sym-info: Print information about a symbol.";
 const char kSymInfoHelp[] =
     R"(sym-info <name>
@@ -34,6 +36,10 @@ const char kSymInfoHelp[] =
 
   It will also show the demangled name if the input is a mangled symbol.
 
+Options
+
+)" DWARF_EXPR_COMMAND_SWTICH_HELP
+    R"(
 Example
 
   sym-info i
@@ -125,16 +131,20 @@ Err RunVerbSymInfo(ConsoleContext* context, const Command& cmd) {
   std::vector<FoundName> found_items;
   FindName(find_context, find_opts, identifier, &found_items);
 
+  ErrOr<FormatSymbolOptions> opts = GetFormatSymbolOptionsFromCommand(cmd, kDwarfExprSwitch);
+  if (opts.has_error())
+    return opts.err();
+
   bool found_item = false;
   for (const FoundName& found : found_items) {
     switch (found.kind()) {
       case FoundName::kNone:
         continue;
       case FoundName::kVariable:
-        out.Append(FormatSymbol(process_symbols, found.variable()));
+        out.Append(FormatSymbol(process_symbols, found.variable(), opts.value()));
         break;
       case FoundName::kMemberVariable:
-        out.Append(FormatSymbol(process_symbols, found.member().data_member()));
+        out.Append(FormatSymbol(process_symbols, found.member().data_member(), opts.value()));
         break;
       case FoundName::kNamespace:
         // Probably useless to display info on a namespace.
@@ -143,13 +153,13 @@ Err RunVerbSymInfo(ConsoleContext* context, const Command& cmd) {
         // TODO(brettw) it would be nice to list all template specializations here.
         continue;
       case FoundName::kType:
-        out.Append(FormatSymbol(process_symbols, found.type().get()));
+        out.Append(FormatSymbol(process_symbols, found.type().get(), opts.value()));
         break;
       case FoundName::kFunction:
-        out.Append(FormatSymbol(process_symbols, found.function().get()));
+        out.Append(FormatSymbol(process_symbols, found.function().get(), opts.value()));
         break;
       case FoundName::kOtherSymbol:
-        out.Append(FormatSymbol(process_symbols, found.other_symbol().get()));
+        out.Append(FormatSymbol(process_symbols, found.other_symbol().get(), opts.value()));
         break;
     }
     found_item = true;
@@ -171,6 +181,9 @@ Err RunVerbSymInfo(ConsoleContext* context, const Command& cmd) {
 VerbRecord GetSymInfoVerbRecord() {
   VerbRecord sym_info(&RunVerbSymInfo, {"sym-info"}, kSymInfoShortHelp, kSymInfoHelp,
                       CommandGroup::kSymbol);
+
+  SwitchRecord dwarf_expr_switch(kDwarfExprSwitch, true, "dwarf-expr");
+  sym_info.switches = {dwarf_expr_switch};
 
   // Accept just one arg and allow for spaces in it.
   sym_info.param_type = VerbRecord::kOneParam;

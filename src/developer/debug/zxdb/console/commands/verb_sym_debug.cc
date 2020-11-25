@@ -13,6 +13,7 @@
 #include "src/developer/debug/zxdb/console/console.h"
 #include "src/developer/debug/zxdb/console/format_location.h"
 #include "src/developer/debug/zxdb/console/format_name.h"
+#include "src/developer/debug/zxdb/console/format_symbol.h"
 #include "src/developer/debug/zxdb/console/format_table.h"
 #include "src/developer/debug/zxdb/console/output_buffer.h"
 #include "src/developer/debug/zxdb/console/string_util.h"
@@ -29,19 +30,25 @@ namespace zxdb {
 
 namespace {
 
-constexpr int kInlineSwitch = 1;
-constexpr int kInlineTreeSwitch = 2;
-constexpr int kLineSwitch = 3;
+constexpr int kFunctionSwitch = 1;
+constexpr int kInlineSwitch = 2;
+constexpr int kInlineTreeSwitch = 3;
+constexpr int kLineSwitch = 4;
+constexpr int kDwarfExprSwitch = 5;
 
 const char kSymDebugShortHelp[] = "sym-debug: Print debug symbol information.";
 const char kSymDebugHelp[] =
-    R"(sym-debug ( -i | -t | -l ) [ <address-expression> ]
+    R"(sym-debug ( -f | -i | -t | -l ) [ <address-expression> ]
 
   This command takes a flag for what to print and an optional address. If no
   address-expression is given, the current frame's instruction pointer will be
   used.
 
-Options
+Printing modes
+
+  --function | -f
+      Prints the information about the function symbol covering the address.
+      This is equivalent to "sym-info <current-function-name>".
 
   --inlines | -i
       Prints the chain of inline functions covering the address. The plysical
@@ -56,16 +63,19 @@ Options
   --line | -l
       Dumps the DWARF line table sequence containing the address.
 
+Options
+
+)" DWARF_EXPR_COMMAND_SWTICH_HELP
+    R"(
 Examples
 
   sym-debug -l
   sym-debug -i 0x56cfe7b4
+  sym-debug -f --dwarf-expr=raw
 )";
 
-// Returns the inline chain of functions corresponding to the given address. Guaranteed to return
-// nonempty if there's no error.
-ErrOr<std::vector<fxl::RefPtr<Function>>> GetInlineChainAtAddress(ProcessSymbols* process_symbols,
-                                                                  uint64_t address) {
+ErrOr<fxl::RefPtr<Function>> GetFunctionAtAddress(ProcessSymbols* process_symbols,
+                                                  uint64_t address) {
   // With an address, we should get exactly one location back.
   std::vector<Location> locs = process_symbols->ResolveInputLocation(InputLocation(address));
   if (locs.size() != 1)
@@ -79,7 +89,17 @@ ErrOr<std::vector<fxl::RefPtr<Function>>> GetInlineChainAtAddress(ProcessSymbols
   if (!func)
     return Err("No function at address " + to_hex_string(address) + ".\n");
 
-  return func->GetInlineChain();
+  return RefPtrTo(func);
+}
+
+// Returns the inline chain of functions corresponding to the given address. Guaranteed to return
+// nonempty if there's no error.
+ErrOr<std::vector<fxl::RefPtr<Function>>> GetInlineChainAtAddress(ProcessSymbols* process_symbols,
+                                                                  uint64_t address) {
+  auto func_or = GetFunctionAtAddress(process_symbols, address);
+  if (!func_or)
+    return func_or.err();
+  return func_or.value()->GetInlineChain();
 }
 
 // Appends the function name and its code ranges to the given output buffer.
@@ -98,7 +118,20 @@ void AppendFunctionAndRanges(const SymbolContext& context, const Function* funct
   out.Append("\n");
 }
 
-OutputBuffer DumpInlineChain(ProcessSymbols* process_symbols, uint64_t address) {
+OutputBuffer DumpFunction(ProcessSymbols* process_symbols, uint64_t address,
+                          const FormatSymbolOptions& opts) {
+  auto func_or = GetFunctionAtAddress(process_symbols, address);
+  if (func_or.has_error()) {
+    OutputBuffer out;
+    out.Append(func_or.err());
+    return out;
+  }
+
+  return FormatSymbol(process_symbols, func_or.value().get(), opts);
+}
+
+OutputBuffer DumpInlineChain(ProcessSymbols* process_symbols, uint64_t address,
+                             const FormatSymbolOptions& opts) {
   OutputBuffer out;
 
   auto chain = GetInlineChainAtAddress(process_symbols, address);
@@ -149,7 +182,8 @@ void PrintInlineRecursive(const SymbolContext& context, uint64_t address, const 
   }
 }
 
-OutputBuffer DumpInlineTree(ProcessSymbols* process_symbols, uint64_t address) {
+OutputBuffer DumpInlineTree(ProcessSymbols* process_symbols, uint64_t address,
+                            const FormatSymbolOptions& opts) {
   OutputBuffer out;
 
   auto chain = GetInlineChainAtAddress(process_symbols, address);
@@ -166,7 +200,8 @@ OutputBuffer DumpInlineTree(ProcessSymbols* process_symbols, uint64_t address) {
   return out;
 }
 
-OutputBuffer DumpLineTable(ProcessSymbols* process_symbols, uint64_t address) {
+OutputBuffer DumpLineTable(ProcessSymbols* process_symbols, uint64_t address,
+                           const FormatSymbolOptions& opts) {
   const LoadedModuleSymbols* loaded_module = process_symbols->GetModuleForAddress(address);
   if (!loaded_module)
     return OutputBuffer("The address " + to_hex_string(address) + " is not covered by a module.\n");
@@ -241,13 +276,35 @@ OutputBuffer DumpLineTable(ProcessSymbols* process_symbols, uint64_t address) {
 }
 
 Err RunVerbSymDebug(ConsoleContext* context, const Command& cmd) {
-  if (Err err = cmd.ValidateNouns({Noun::kProcess}); err.has_error())
+  if (Err err = cmd.ValidateNouns({Noun::kProcess, Noun::kFrame}); err.has_error())
     return err;
   if (Err err = AssertRunningTarget(context, "sym-debug", cmd.target()); err.has_error())
     return err;
 
-  OutputBuffer (*dumper)(ProcessSymbols*, uint64_t) = nullptr;
-  if (cmd.HasSwitch(kInlineSwitch)) {
+  ErrOr<FormatSymbolOptions> opts = GetFormatSymbolOptionsFromCommand(cmd, kDwarfExprSwitch);
+  if (opts.has_error())
+    return opts.err();
+
+  OutputBuffer (*dumper)(ProcessSymbols*, uint64_t, const FormatSymbolOptions&) = nullptr;
+  if (cmd.HasSwitch(kFunctionSwitch)) {
+    if (cmd.args().empty()) {
+      // When no address is given, use the function symbol from the current frame. This will handle
+      // the case of ambiguous inlines wher just looking up the address won't get what the user sees
+      // as the current function.
+      if (const Frame* frame = cmd.frame()) {
+        if (!frame->GetLocation().symbol())
+          return Err("No function symbol for current location.");
+        Console::get()->Output(FormatSymbol(cmd.target()->GetProcess()->GetSymbols(),
+                                            frame->GetLocation().symbol().Get(), opts.value()));
+      } else {
+        return Err("No current frame, please specify an address.");
+      }
+      return Err();
+    }
+
+    // Fall back on address lookup. when a parameter is given.
+    dumper = &DumpFunction;
+  } else if (cmd.HasSwitch(kInlineSwitch)) {
     dumper = &DumpInlineChain;
   } else if (cmd.HasSwitch(kInlineTreeSwitch)) {
     dumper = &DumpInlineTree;
@@ -265,14 +322,14 @@ Err RunVerbSymDebug(ConsoleContext* context, const Command& cmd) {
       return Err("No current frame, please specify an address.");
 
     Console::get()->Output(
-        dumper(cmd.target()->GetProcess()->GetSymbols(), cmd.frame()->GetAddress()));
+        dumper(cmd.target()->GetProcess()->GetSymbols(), cmd.frame()->GetAddress(), opts.value()));
     return Err();
   }
 
   // Evaluate the expression to get the location.
   return EvalCommandAddressExpression(
       cmd, "sym-debug", GetEvalContextForCommand(cmd),
-      [weak_process = cmd.target()->GetProcess()->GetWeakPtr(), dumper](
+      [weak_process = cmd.target()->GetProcess()->GetWeakPtr(), dumper, opts = opts.value()](
           const Err& err, uint64_t address, std::optional<uint64_t> size) {
         Console* console = Console::get();
         if (err.has_error()) {
@@ -285,7 +342,7 @@ Err RunVerbSymDebug(ConsoleContext* context, const Command& cmd) {
           return;
         }
 
-        console->Output(dumper(weak_process->GetSymbols(), address));
+        console->Output(dumper(weak_process->GetSymbols(), address, opts));
       });
 }
 
@@ -296,10 +353,13 @@ VerbRecord GetSymDebugVerbRecord() {
                        CommandGroup::kSymbol);
   sym_debug.param_type = VerbRecord::kOneParam;
 
+  SwitchRecord func_switch(kFunctionSwitch, false, "function", 'f');
   SwitchRecord inline_switch(kInlineSwitch, false, "inlines", 'i');
   SwitchRecord inline_tree_switch(kInlineTreeSwitch, false, "inline-tree", 't');
   SwitchRecord line_switch(kLineSwitch, false, "line", 'l');
-  sym_debug.switches = {inline_switch, inline_tree_switch, line_switch};
+  SwitchRecord dwarf_expr_switch(kDwarfExprSwitch, true, "dwarf-expr");
+  sym_debug.switches = {func_switch, inline_switch, inline_tree_switch, line_switch,
+                        dwarf_expr_switch};
 
   return sym_debug;
 }

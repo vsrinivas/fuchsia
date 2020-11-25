@@ -17,6 +17,8 @@ TEST(StringUtil, to_hex_string) {
   EXPECT_EQ("f", to_hex_string(static_cast<uint32_t>(0xf), 0, false));
   EXPECT_EQ("0xf", to_hex_string(static_cast<int64_t>(0xf)));
   EXPECT_EQ("ffff", to_hex_string(static_cast<uint64_t>(0xffff), 2, false));
+  EXPECT_EQ("0x1", to_hex_string(static_cast<uint128_t>(1)));
+  EXPECT_EQ("0xffffffffffffffffffffffffffffffff", to_hex_string(static_cast<int128_t>(-1)));
 
   // Just one bit of the high 64-bits is set.
   uint128_t sixty_fourth_bit = static_cast<uint128_t>(1) << 64;

@@ -75,6 +75,9 @@ std::string to_hex_string(int128_t i, int digits, bool include_prefix) {
   return to_hex_string(static_cast<uint128_t>(i), digits, include_prefix);
 }
 std::string to_hex_string(uint128_t i, int digits, bool include_prefix) {
+  if (i <= std::numeric_limits<uint64_t>::max())
+    return to_hex_string(static_cast<uint64_t>(i), digits, include_prefix);
+
   // Compute the padding to apply to just the high 64 bits. The low 64 bits will always have 16.
   int high_digits = 0;
   if (digits > 16)

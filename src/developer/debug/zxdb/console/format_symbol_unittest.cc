@@ -21,30 +21,60 @@ TEST(FormatSymbol, Variable) {
   loc_entries.resize(2);
   loc_entries[0].begin = 0x1000;
   loc_entries[0].end = 0x2000;
-  loc_entries[0].expression.push_back(0x01);
-  loc_entries[0].expression.push_back(0x02);
+  loc_entries[0].expression.push_back(0x30);  // DW_OP_lit0
+  loc_entries[0].expression.push_back(0x71);  // DW_OP_breg1
+  loc_entries[0].expression.push_back(1);     // 1 (param for breg).
 
   loc_entries[1].begin = 0x3000;
   loc_entries[1].end = 0x4000;
-  loc_entries[1].expression.push_back(0x99);
+  loc_entries[1].expression.push_back(0x31);  // DW_OP_lit1
 
   auto var = fxl::MakeRefCounted<Variable>(DwarfTag::kVariable, "my_var", int32_type,
                                            VariableLocation(loc_entries));
 
-  OutputBuffer out = FormatSymbol(nullptr, var.get());
-  const char kExpected[] =
+  FormatSymbolOptions opts;
+  opts.arch = debug_ipc::Arch::kX64;
+
+  // Format expressions as bytes.
+  opts.dwarf_expr = FormatSymbolOptions::DwarfExpr::kBytes;
+  OutputBuffer out = FormatSymbol(nullptr, var.get(), opts);
+  const char kExpectedBytes[] =
       "Variable: my_var\n"
       "  Type: int32_t\n"
       "  DWARF tag: DW_TAG_variable (0x34)\n"
-      "  DWARF location (address range + DWARF expression bytes):\n"
-      "    [0x1000, 0x2000): 0x01 0x02\n"
-      "    [0x3000, 0x4000): 0x99\n";
-  EXPECT_EQ(kExpected, out.AsString());
+      "  DWARF location (address range + DWARF expression):\n"
+      "    [0x1000, 0x2000): 0x30 0x71 0x01\n"
+      "    [0x3000, 0x4000): 0x31\n";
+  EXPECT_EQ(kExpectedBytes, out.AsString());
+
+  // Format expressions as DWARF operations.
+  opts.dwarf_expr = FormatSymbolOptions::DwarfExpr::kOps;
+  out = FormatSymbol(nullptr, var.get(), opts);
+  const char kExpectedOps[] =
+      "Variable: my_var\n"
+      "  Type: int32_t\n"
+      "  DWARF tag: DW_TAG_variable (0x34)\n"
+      "  DWARF location (address range + DWARF expression):\n"
+      "    [0x1000, 0x2000): DW_OP_lit0, DW_OP_breg1(1)\n"
+      "    [0x3000, 0x4000): DW_OP_lit1\n";
+  EXPECT_EQ(kExpectedOps, out.AsString());
+
+  // Pretty formatting of expressions.
+  opts.dwarf_expr = FormatSymbolOptions::DwarfExpr::kPretty;
+  out = FormatSymbol(nullptr, var.get(), opts);
+  const char kExpectedPretty[] =
+      "Variable: my_var\n"
+      "  Type: int32_t\n"
+      "  DWARF tag: DW_TAG_variable (0x34)\n"
+      "  DWARF location (address range + DWARF expression):\n"
+      "    [0x1000, 0x2000): push(0), register(rdx) + 1\n"
+      "    [0x3000, 0x4000): push(1)\n";
+  EXPECT_EQ(kExpectedPretty, out.AsString());
 }
 
 TEST(FormatSymbol, BaseType) {
   auto int32_type = MakeInt32Type();
-  OutputBuffer out = FormatSymbol(nullptr, int32_type.get());
+  OutputBuffer out = FormatSymbol(nullptr, int32_type.get(), FormatSymbolOptions());
   const char kExpected[] =
       "Type: int32_t\n"
       "  DWARF tag: DW_TAG_base_type (0x24)\n"
@@ -77,7 +107,7 @@ TEST(FormatSymbol, Collection) {
 
   coll->set_inherited_from({LazySymbol(base_from), LazySymbol(virtual_base_from)});
 
-  OutputBuffer out = FormatSymbol(nullptr, coll.get());
+  OutputBuffer out = FormatSymbol(nullptr, coll.get(), FormatSymbolOptions());
   const char kExpectedHeader[] =
       "Type: MyStruct\n"
       "  DWARF tag: DW_TAG_structure_type (0x13)\n"
@@ -100,7 +130,7 @@ TEST(FormatSymbol, Collection) {
       "  DWARF tag: DW_TAG_typedef (0x16)\n"
       "  Byte size: 12\n"
       "  Underlying type: MyStruct\n";
-  out = FormatSymbol(nullptr, coll_typedef.get());
+  out = FormatSymbol(nullptr, coll_typedef.get(), FormatSymbolOptions());
   EXPECT_EQ(std::string(kTypedefHeader) + std::string(kMembers), out.AsString());
 }
 

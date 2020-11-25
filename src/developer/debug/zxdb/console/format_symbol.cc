@@ -7,7 +7,10 @@
 #include <algorithm>
 #include <optional>
 
+#include "src/developer/debug/zxdb/client/session.h"
+#include "src/developer/debug/zxdb/client/target.h"
 #include "src/developer/debug/zxdb/common/string_util.h"
+#include "src/developer/debug/zxdb/console/command.h"
 #include "src/developer/debug/zxdb/console/format_name.h"
 #include "src/developer/debug/zxdb/console/format_table.h"
 #include "src/developer/debug/zxdb/expr/find_name.h"
@@ -16,10 +19,12 @@
 #include "src/developer/debug/zxdb/symbols/collection.h"
 #include "src/developer/debug/zxdb/symbols/compile_unit.h"
 #include "src/developer/debug/zxdb/symbols/data_member.h"
+#include "src/developer/debug/zxdb/symbols/dwarf_expr_eval.h"
 #include "src/developer/debug/zxdb/symbols/elf_symbol.h"
 #include "src/developer/debug/zxdb/symbols/function.h"
 #include "src/developer/debug/zxdb/symbols/inherited_from.h"
 #include "src/developer/debug/zxdb/symbols/modified_type.h"
+#include "src/developer/debug/zxdb/symbols/symbol_data_provider.h"
 #include "src/developer/debug/zxdb/symbols/type.h"
 #include "src/developer/debug/zxdb/symbols/variable.h"
 #include "src/lib/fxl/strings/string_printf.h"
@@ -160,7 +165,12 @@ OutputBuffer FormatCollectionMembers(const ProcessSymbols* process_symbols,
 OutputBuffer FormatTypeDescription(const char* heading, const LazySymbol& lazy_type) {
   OutputBuffer out;
   out.Append(fxl::StringPrintf("  %s: ", heading));
-  out.Append(GetFormattedName(lazy_type.Get()->AsType()));
+  // DWARF uses empty types for "void".
+  if (lazy_type) {
+    out.Append(GetFormattedName(lazy_type.Get()->AsType()));
+  } else {
+    out.Append("void");
+  }
   out.Append("\n");
   return out;
 }
@@ -181,29 +191,51 @@ OutputBuffer FormatCompilationUnit(const Symbol* symbol) {
   return out;
 }
 
-OutputBuffer FormatVariableLocation(const SymbolContext& symbol_context,
-                                    const VariableLocation& loc) {
+// Implements SymbolDataProvider just enough for the DwarfExprEval to pretty-print register names.
+class ArchDataProvider : public SymbolDataProvider {
+ public:
+  ArchDataProvider(debug_ipc::Arch a) : arch_(a) {}
+
+  debug_ipc::Arch GetArch() override { return arch_; }
+
+ private:
+  debug_ipc::Arch arch_;
+};
+
+OutputBuffer FormatVariableLocation(int indent, const std::string& title,
+                                    const SymbolContext& symbol_context,
+                                    const VariableLocation& loc, const FormatSymbolOptions& opts) {
+  std::string indent_str(indent * 2, ' ');
+
   OutputBuffer out;
   if (loc.is_null()) {
-    out.Append("  DWARF location: <no location info>\n");
+    out.Append(indent_str + title + ": <no location info>\n");
     return out;
   }
 
-  out.Append("  DWARF location (address range + DWARF expression bytes):\n");
+  out.Append(indent_str + title + " (address range + DWARF expression):\n");
   for (const auto& entry : loc.locations()) {
     // Address range.
     if (entry.begin == 0 && entry.end == 0) {
-      out.Append("    <always valid>:");
+      out.Append(indent_str + "  <always valid>:");
     } else {
-      out.Append(fxl::StringPrintf(
-          "    [0x%" PRIx64 ", 0x%" PRIx64 "):", symbol_context.RelativeToAbsolute(entry.begin),
-          symbol_context.RelativeToAbsolute(entry.end)));
+      out.Append(indent_str + fxl::StringPrintf("  [0x%" PRIx64 ", 0x%" PRIx64 "):",
+                                                symbol_context.RelativeToAbsolute(entry.begin),
+                                                symbol_context.RelativeToAbsolute(entry.end)));
     }
 
-    // Dump the raw DWARF expression bytes. In the future we can decode if necessary (check LLVM's
-    // "dwarfdump" utility which can do this).
-    for (uint8_t byte : entry.expression)
-      out.Append(fxl::StringPrintf(" 0x%02x", byte));
+    if (opts.dwarf_expr == FormatSymbolOptions::DwarfExpr::kBytes) {
+      // Dump the raw DWARF expression bytes.
+      for (uint8_t byte : entry.expression)
+        out.Append(fxl::StringPrintf(" 0x%02x", byte));
+    } else {
+      out.Append(" ");
+
+      DwarfExprEval eval;
+      out.Append(eval.ToString(fxl::MakeRefCounted<ArchDataProvider>(opts.arch), symbol_context,
+                               entry.expression,
+                               opts.dwarf_expr == FormatSymbolOptions::DwarfExpr::kPretty));
+    }
     out.Append("\n");
   }
 
@@ -245,7 +277,26 @@ OutputBuffer FormatType(const ProcessSymbols* process_symbols, const Type* type)
   return out;
 }
 
-OutputBuffer FormatFunction(const SymbolContext& symbol_context, const Function* function) {
+OutputBuffer FormatVariable(const std::string& heading, int indent,
+                            const SymbolContext& symbol_context, const Variable* variable,
+                            const FormatSymbolOptions& opts) {
+  std::string indent_str(indent * 2, ' ');
+
+  OutputBuffer out;
+  out.Append(Syntax::kHeading, indent_str + heading + ": ");
+  out.Append(Syntax::kVariable, variable->GetAssignedName());
+  out.Append("\n" + indent_str);
+  out.Append(FormatTypeDescription("Type", variable->type()));
+  out.Append(indent_str + "  DWARF tag: " + DwarfTagToString(variable->tag(), true) + "\n");
+
+  out.Append(FormatVariableLocation(indent + 1, "DWARF location", symbol_context,
+                                    variable->location(), opts));
+
+  return out;
+}
+
+OutputBuffer FormatFunction(const SymbolContext& symbol_context, const Function* function,
+                            const FormatSymbolOptions& opts) {
   OutputBuffer out;
 
   if (function->is_inline())
@@ -253,11 +304,11 @@ OutputBuffer FormatFunction(const SymbolContext& symbol_context, const Function*
   else
     out.Append(Syntax::kHeading, "Function: ");
 
-  FormatFunctionNameOptions opts;
-  opts.name.bold_last = true;
-  opts.params = FormatFunctionNameOptions::kParamTypes;
+  FormatFunctionNameOptions name_opts;
+  name_opts.name.bold_last = true;
+  name_opts.params = FormatFunctionNameOptions::kParamTypes;
 
-  out.Append(FormatFunctionName(function, opts));
+  out.Append(FormatFunctionName(function, name_opts));
   out.Append("\n");
 
   // Code ranges.
@@ -269,18 +320,13 @@ OutputBuffer FormatFunction(const SymbolContext& symbol_context, const Function*
     for (const auto& range : ranges)
       out.Append("    " + range.ToString() + "\n");
   }
-  return out;
-}
 
-OutputBuffer FormatVariable(const SymbolContext& symbol_context, const Variable* variable) {
-  OutputBuffer out;
-  out.Append(Syntax::kHeading, "Variable: ");
-  out.Append(Syntax::kVariable, variable->GetAssignedName());
-  out.Append("\n");
-  out.Append(FormatTypeDescription("Type", variable->type()));
-  out.Append("  DWARF tag: " + DwarfTagToString(variable->tag(), true) + "\n");
+  out.Append(FormatVariableLocation(1, "Frame base", symbol_context, function->frame_base(), opts));
+  out.Append(FormatTypeDescription("Return type", function->return_type()));
 
-  out.Append(FormatVariableLocation(symbol_context, variable->location()));
+  // Object pointer.
+  if (const Variable* object = function->GetObjectPointerVariable())
+    out.Append(FormatVariable("Object", 1, symbol_context, object, opts));
 
   return out;
 }
@@ -331,21 +377,42 @@ OutputBuffer FormatOtherSymbol(const Symbol* symbol) {
 
 }  // namespace
 
-OutputBuffer FormatSymbol(const ProcessSymbols* process_symbols, const Symbol* symbol) {
+OutputBuffer FormatSymbol(const ProcessSymbols* process_symbols, const Symbol* symbol,
+                          const FormatSymbolOptions& opts) {
   SymbolContext symbol_context = symbol->GetSymbolContext(process_symbols);
 
   if (const Type* type = symbol->AsType())
     return FormatType(process_symbols, type);
   if (const Function* function = symbol->AsFunction())
-    return FormatFunction(symbol_context, function);
+    return FormatFunction(symbol_context, function, opts);
   if (const Variable* variable = symbol->AsVariable())
-    return FormatVariable(symbol_context, variable);
+    return FormatVariable("Variable", 0, symbol_context, variable, opts);
   if (const DataMember* data_member = symbol->AsDataMember())
     return FormatDataMember(data_member);
   if (const ElfSymbol* elf_symbol = symbol->AsElfSymbol())
     return FormatElfSymbol(symbol_context, elf_symbol);
 
   return FormatOtherSymbol(symbol);
+}
+
+ErrOr<FormatSymbolOptions> GetFormatSymbolOptionsFromCommand(const Command& cmd, int expr_switch) {
+  FormatSymbolOptions opts;
+  opts.arch = cmd.target()->session()->arch();
+
+  if (cmd.HasSwitch(expr_switch)) {
+    std::string expr_value = cmd.GetSwitchValue(expr_switch);
+    if (expr_value == "bytes") {
+      opts.dwarf_expr = FormatSymbolOptions::DwarfExpr::kBytes;
+    } else if (expr_value == "ops") {
+      opts.dwarf_expr = FormatSymbolOptions::DwarfExpr::kOps;
+    } else if (expr_value == "pretty") {
+      opts.dwarf_expr = FormatSymbolOptions::DwarfExpr::kPretty;
+    } else {
+      return Err("Expected 'bytes', 'ops', or 'pretty' for DWARF expression format.");
+    }
+  }
+
+  return opts;
 }
 
 }  // namespace zxdb
