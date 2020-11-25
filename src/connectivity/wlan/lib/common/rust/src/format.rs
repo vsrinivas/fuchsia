@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 const SSID_HASH_LEN: usize = 16;
+const PARTIAL_MAC_HASH_LEN: usize = 16;
 
 pub trait MacFmt {
     fn to_mac_str(&self) -> String;
@@ -26,7 +27,9 @@ impl MacFmt for [u8; 6] {
     where
         H: FnOnce(&[u8]) -> String,
     {
-        format!("{:02x}:{:02x}:{:02x}:{}", self[0], self[1], self[2], hash(&self[3..]))
+        let mut partial_hash = hash(&self[3..]);
+        partial_hash.truncate(PARTIAL_MAC_HASH_LEN);
+        format!("{:02x}:{:02x}:{:02x}:{}", self[0], self[1], self[2], partial_hash)
     }
 
     fn to_oui_uppercase(&self, sep: &str) -> String {
@@ -67,6 +70,13 @@ mod tests {
             format!("{:02x}{:02x}{:02x}", bytes[0], bytes[1], bytes[2])
         });
         assert_eq!(result, "00:12:48:9abcdf");
+    }
+
+    #[test]
+    fn format_mac_str_partial_hashed_truncation() {
+        let mac: [u8; 6] = [0x00, 0x12, 0x48, 0x9a, 0xbc, 0xdf];
+        let result = mac.to_mac_str_partial_hashed(|_| format!("12345678901234567890"));
+        assert_eq!(result, "00:12:48:1234567890123456");
     }
 
     #[test]
