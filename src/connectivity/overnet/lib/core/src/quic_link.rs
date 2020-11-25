@@ -4,7 +4,7 @@
 
 use crate::future_help::{log_errors, PollMutex};
 use crate::labels::Endpoint;
-use crate::link::{LinkReceiver, LinkSender, MAX_FRAME_LENGTH};
+use crate::link::{LinkReceiver, LinkSender, SendFrame, MAX_FRAME_LENGTH};
 use crate::security_context::quiche_config_from_security_context;
 use anyhow::Error;
 use fuchsia_async::{Task, Timer};
@@ -204,24 +204,29 @@ async fn run_link(
 }
 
 async fn link_to_quic(link: LinkSender, quic: Arc<Mutex<Quic>>) -> Result<(), Error> {
+    fn drop_frame<S: std::fmt::Display>(
+        p: &SendFrame<'_>,
+        make_reason: impl FnOnce() -> S,
+    ) -> Poll<Result<(), Error>> {
+        log::info!("Drop frame of length {}b: {}", p.bytes().len(), make_reason());
+        Poll::Ready(Ok(()))
+    };
+
     while let Some(mut p) = link.next_send().await {
         poll_quic(&quic, move |q, ctx| match q.connection.dgram_send(p.bytes()) {
             Ok(()) => {
                 q.conn_send.ready();
                 Poll::Ready(Ok(()))
             }
-            Err(quiche::Error::InvalidState) => {
-                log::info!(
-                    "Drop packet of length {}b due to connection invalid state",
-                    p.bytes().len()
-                );
-                Poll::Ready(Ok(()))
-            }
             Err(quiche::Error::Done) => {
                 p.drop_inner_locks();
                 q.dgram_send.pending(ctx)
             }
-            Err(e) => Poll::Ready(Err(e)),
+            Err(quiche::Error::InvalidState) => drop_frame(&p, || "invalid state"),
+            Err(quiche::Error::BufferTooShort) => drop_frame(&p, || {
+                format!("buffer too short (max = {:?})", q.connection.dgram_max_writable_len())
+            }),
+            Err(e) => Poll::Ready(Err(e.into())),
         })
         .await?
     }
