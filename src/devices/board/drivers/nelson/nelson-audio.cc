@@ -91,11 +91,11 @@ static const device_fragment_t p2_codec_fragments[] = {
 };
 static const device_fragment_t ref_controller_fragments[] = {
     {"gpio-enable", countof(ref_out_enable_gpio_fragment), ref_out_enable_gpio_fragment},
-    {"codec", countof(ref_out_codec_fragment), ref_out_codec_fragment},
+    {"codec-01", countof(ref_out_codec_fragment), ref_out_codec_fragment},
 };
 static const device_fragment_t p2_controller_fragments[] = {
     {"gpio-enable", countof(ref_out_enable_gpio_fragment), ref_out_enable_gpio_fragment},
-    {"codec", countof(p2_out_codec_fragment), p2_out_codec_fragment},
+    {"codec-01", countof(p2_out_codec_fragment), p2_out_codec_fragment},
 };
 
 zx_status_t Nelson::AudioInit() {

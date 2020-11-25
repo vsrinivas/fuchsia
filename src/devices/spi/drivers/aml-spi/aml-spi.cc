@@ -4,7 +4,7 @@
 
 #include "aml-spi.h"
 
-#include <lib/device-protocol/platform-device.h>
+#include <lib/device-protocol/pdev.h>
 #include <string.h>
 #include <threads.h>
 #include <zircon/types.h>
@@ -14,8 +14,8 @@
 #include <ddk/device.h>
 #include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
-#include <ddk/protocol/composite.h>
 #include <ddk/protocol/spiimpl.h>
+#include <ddktl/protocol/composite.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
 #include <hw/reg.h>
@@ -25,11 +25,6 @@
 namespace spi {
 
 static constexpr size_t kBurstMax = 16;
-
-enum {
-  FRAGMENT_PDEV,
-  FRAGMENT_GPIO0,
-};
 
 void AmlSpi::DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
 
@@ -136,51 +131,38 @@ zx_status_t AmlSpi::SpiImplExchange(uint32_t cs, const uint8_t* txdata, size_t t
   return ZX_OK;
 }
 
-zx_status_t AmlSpi::GpioInit(amlspi_cs_map_t* map, zx_device_t** gpio_fragments, size_t count) {
+zx_status_t AmlSpi::GpioInit(amlspi_cs_map_t* map, ddk::CompositeProtocolClient& composite) {
   for (uint32_t i = 0; i < map->cs_count; i++) {
-    gpio_protocol_t gpio;
     uint32_t index = map->cs[i];
-    zx_status_t status = device_get_protocol(gpio_fragments[index], ZX_PROTOCOL_GPIO, &gpio);
-    if (status != ZX_OK) {
+    char fragment_name[32] = {};
+    snprintf(fragment_name, 32, "gpio-cs-%d", index);
+    ddk::GpioProtocolClient gpio(composite, fragment_name);
+    if (!gpio.is_valid()) {
       zxlogf(ERROR, "%s: failed to acquire gpio for SS%d", __func__, i);
-      return status;
+      return ZX_ERR_NO_RESOURCES;
     }
 
-    ddk::GpioProtocolClient gpio_client(&gpio);
-    gpio_.push_back(gpio_client);
+    gpio_.push_back(gpio);
   }
 
   return ZX_OK;
 }
 
 zx_status_t AmlSpi::Create(void* ctx, zx_device_t* device) {
-  composite_protocol_t composite;
-
-  auto status = device_get_protocol(device, ZX_PROTOCOL_COMPOSITE, &composite);
-  if (status != ZX_OK) {
+  ddk::CompositeProtocolClient composite(device);
+  if (!composite.is_valid()) {
     zxlogf(ERROR, "%s: could not get composite protocol", __func__);
-    return status;
+    return ZX_ERR_NO_RESOURCES;
   }
 
-  size_t fragment_count = composite_get_fragment_count(&composite);
-
-  zx_device_t* fragments[fragment_count];
-  size_t actual;
-  composite_get_fragments(&composite, fragments, fragment_count, &actual);
-  if (actual != fragment_count) {
-    zxlogf(ERROR, "%s: could not get fragments", __func__);
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
-  pdev_protocol_t pdev;
-  status = device_get_protocol(fragments[FRAGMENT_PDEV], ZX_PROTOCOL_PDEV, &pdev);
-  if (status != ZX_OK) {
+  ddk::PDev pdev(composite);
+  if (!pdev.is_valid()) {
     zxlogf(ERROR, "%s: ZX_PROTOCOL_PDEV not available", __func__);
-    return status;
+    return ZX_ERR_NO_RESOURCES;
   }
 
   pdev_device_info_t info;
-  status = pdev_get_device_info(&pdev, &info);
+  zx_status_t status = pdev.GetDeviceInfo(&info);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: pdev_get_device_info failed", __func__);
     return status;
@@ -193,6 +175,7 @@ zx_status_t AmlSpi::Create(void* ctx, zx_device_t* device) {
     return status;
   }
 
+  size_t actual;
   amlspi_cs_map_t gpio_map[info.mmio_count];
   status = device_get_metadata(device, DEVICE_METADATA_AMLSPI_CS_MAPPING, gpio_map, sizeof gpio_map,
                                &actual);
@@ -202,22 +185,22 @@ zx_status_t AmlSpi::Create(void* ctx, zx_device_t* device) {
   }
 
   for (uint32_t i = 0; i < info.mmio_count; i++) {
-    mmio_buffer_t mmio;
-    status = pdev_map_mmio_buffer(&pdev, i, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
+    std::optional<ddk::MmioBuffer> mmio;
+    status = pdev.MapMmio(i, &mmio);
     if (status != ZX_OK) {
       zxlogf(ERROR, "%s: pdev_map_&mmio__buffer #%d failed %d", __func__, i, status);
       return status;
     }
 
     fbl::AllocChecker ac;
-    auto* spi = new (&ac) AmlSpi(device, ddk::MmioBuffer(mmio));
+    auto* spi = new (&ac) AmlSpi(device, *std::move(mmio));
     if (!ac.check()) {
       return ZX_ERR_NO_MEMORY;
     }
 
     auto cleanup = fbl::MakeAutoCall([&spi]() { spi->DdkRelease(); });
 
-    status = spi->GpioInit(&gpio_map[i], &fragments[FRAGMENT_GPIO0], fragment_count - 1);
+    status = spi->GpioInit(&gpio_map[i], composite);
     if (status != ZX_OK) {
       return status;
     }

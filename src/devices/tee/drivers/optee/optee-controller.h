@@ -6,6 +6,7 @@
 #define SRC_DEVICES_TEE_DRIVERS_OPTEE_OPTEE_CONTROLLER_H_
 
 #include <fuchsia/hardware/tee/llcpp/fidl.h>
+#include <lib/device-protocol/pdev.h>
 #include <lib/device-protocol/platform-device.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <lib/zx/channel.h>
@@ -13,12 +14,11 @@
 
 #include <memory>
 
-#include <ddk/protocol/platform/device.h>
-#include <ddk/protocol/sysmem.h>
 #include <ddktl/device.h>
 #include <ddktl/fidl.h>
 #include <ddktl/protocol/empty-protocol.h>
 #include <ddktl/protocol/rpmb.h>
+#include <ddktl/protocol/sysmem.h>
 #include <ddktl/protocol/tee.h>
 #include <fbl/function.h>
 #include <fbl/intrusive_double_list.h>
@@ -124,8 +124,8 @@ class OpteeController : public OpteeControllerBase,
   zx_status_t InitializeSharedMemory();
   zx_status_t DiscoverSharedMemoryConfig(zx_paddr_t* out_start_addr, size_t* out_size);
 
-  pdev_protocol_t pdev_proto_ = {};
-  sysmem_protocol_t sysmem_proto_ = {};
+  ddk::PDev pdev_;
+  ddk::SysmemProtocolClient sysmem_;
   ddk::RpmbProtocolClient rpmb_protocol_client_ = {};
   zx::resource secure_monitor_;
   uint32_t secure_world_capabilities_ = 0;

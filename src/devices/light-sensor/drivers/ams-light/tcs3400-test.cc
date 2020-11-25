@@ -33,7 +33,7 @@ struct Tcs3400Test : public zxtest::Test {
         .ExpectWriteStop({0x8f, again_register});  // control (for AGAIN).
 
     ddk::I2cChannel i2c(mock_i2c.GetProto());
-    gpio_protocol_t gpio = {};
+    ddk::GpioProtocolClient gpio;
     zx::port port;
     ASSERT_OK(zx::port::create(0, &port));
     Tcs3400Device device(fake_ddk::kFakeParent, std::move(i2c), gpio, std::move(port));
@@ -100,12 +100,13 @@ TEST(Tcs3400Test, InputReport) {
   ASSERT_OK(zx::port::create(ZX_PORT_BIND_TO_INTERRUPT, &port));
 
   struct Tcs3400DeviceTest : public Tcs3400Device {
-    Tcs3400DeviceTest(zx_device_t* device, ddk::I2cChannel i2c, gpio_protocol_t gpio, zx::port port)
+    Tcs3400DeviceTest(zx_device_t* device, ddk::I2cChannel i2c, ddk::GpioProtocolClient gpio,
+                      zx::port port)
         : Tcs3400Device(device, std::move(i2c), gpio, std::move(port)) {}
     void ShutDown() override { Tcs3400Device::ShutDown(); }
   };
-  Tcs3400DeviceTest device(fake_ddk::kFakeParent, std::move(i2c), *mock_gpio.GetProto(),
-                           std::move(port));
+  Tcs3400DeviceTest device(fake_ddk::kFakeParent, std::move(i2c),
+                           ddk::GpioProtocolClient(mock_gpio.GetProto()), std::move(port));
   EXPECT_OK(device.InitMetadata());
 
   ambient_light_input_rpt_t report = {};
@@ -171,12 +172,13 @@ TEST(Tcs3400Test, InputReportSaturated) {
   ASSERT_OK(zx::port::create(ZX_PORT_BIND_TO_INTERRUPT, &port));
 
   struct Tcs3400DeviceTest : public Tcs3400Device {
-    Tcs3400DeviceTest(zx_device_t* device, ddk::I2cChannel i2c, gpio_protocol_t gpio, zx::port port)
+    Tcs3400DeviceTest(zx_device_t* device, ddk::I2cChannel i2c, ddk::GpioProtocolClient gpio,
+                      zx::port port)
         : Tcs3400Device(device, std::move(i2c), gpio, std::move(port)) {}
     void ShutDown() override { Tcs3400Device::ShutDown(); }
   };
-  Tcs3400DeviceTest device(fake_ddk::kFakeParent, std::move(i2c), *mock_gpio.GetProto(),
-                           std::move(port));
+  Tcs3400DeviceTest device(fake_ddk::kFakeParent, std::move(i2c),
+                           ddk::GpioProtocolClient(mock_gpio.GetProto()), std::move(port));
   EXPECT_OK(device.InitMetadata());
 
   ambient_light_input_rpt_t report = {};

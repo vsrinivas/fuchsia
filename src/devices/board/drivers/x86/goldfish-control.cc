@@ -46,7 +46,7 @@ static const device_fragment_part_t goldfish_address_space_fragment[] = {
 };
 
 static const device_fragment_t goldfish_control_fragments[] = {
-    {"golfish-pipe", std::size(goldfish_pipe_fragment), goldfish_pipe_fragment},
+    {"goldfish-pipe", std::size(goldfish_pipe_fragment), goldfish_pipe_fragment},
     {"goldfish-address-space", std::size(goldfish_address_space_fragment),
      goldfish_address_space_fragment},
 };

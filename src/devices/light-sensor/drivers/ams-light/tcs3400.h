@@ -11,9 +11,8 @@
 #include <lib/zx/status.h>
 #include <time.h>
 
-#include <ddk/protocol/gpio.h>
-#include <ddk/protocol/i2c.h>
 #include <ddktl/device.h>
+#include <ddktl/protocol/gpio.h>
 #include <ddktl/protocol/hidbus.h>
 #include <fbl/mutex.h>
 #include <hid/ambient-light.h>
@@ -33,7 +32,8 @@ class Tcs3400Device : public DeviceType,
  public:
   static zx_status_t Create(void* ctx, zx_device_t* parent);
 
-  Tcs3400Device(zx_device_t* device, ddk::I2cChannel i2c, gpio_protocol_t gpio, zx::port port)
+  Tcs3400Device(zx_device_t* device, ddk::I2cChannel i2c, ddk::GpioProtocolClient gpio,
+                zx::port port)
       : DeviceType(device), i2c_(std::move(i2c)), gpio_(gpio), port_(std::move(port)) {}
   virtual ~Tcs3400Device() = default;
 
@@ -63,7 +63,7 @@ class Tcs3400Device : public DeviceType,
 
  private:
   ddk::I2cChannel i2c_ TA_GUARDED(i2c_lock_);
-  gpio_protocol_t gpio_ TA_GUARDED(i2c_lock_);
+  ddk::GpioProtocolClient gpio_ TA_GUARDED(i2c_lock_);
   zx::interrupt irq_;
   thrd_t thread_ = {};
   zx::port port_;

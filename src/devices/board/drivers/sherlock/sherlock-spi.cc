@@ -100,7 +100,7 @@ static constexpr device_fragment_part_t gpio_spicc0_ss0_fragment[] = {
     {std::size(gpio_spicc0_ss0_match), gpio_spicc0_ss0_match},
 };
 static constexpr device_fragment_t fragments[] = {
-    {"gpio", std::size(gpio_spicc0_ss0_fragment), gpio_spicc0_ss0_fragment},
+    {"gpio-cs-0", std::size(gpio_spicc0_ss0_fragment), gpio_spicc0_ss0_fragment},
 };
 
 zx_status_t Sherlock::SpiInit() {

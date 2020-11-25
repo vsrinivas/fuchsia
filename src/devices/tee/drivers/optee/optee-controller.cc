@@ -30,14 +30,6 @@ namespace optee {
 
 namespace fuchsia_tee = ::llcpp::fuchsia::tee;
 
-enum {
-  kFragmentPdev,
-  kFragmentSysmem,
-  kFragmentRequiredCount,
-  kFragmentRpmbOptional = kFragmentRequiredCount,  // This fragment is optional.
-  kFragmentMaxCount,
-};
-
 constexpr TEEC_UUID kOpteeOsUuid = {
     0x486178E0, 0xE7F8, 0x11E3, {0xBC, 0x5E, 0x00, 0x02, 0xA5, 0xD5, 0xC5, 0x1B}};
 
@@ -133,7 +125,7 @@ zx_status_t OpteeController::InitializeSharedMemory() {
   // used as the shared memory. The rest of the TEE's memory region is secure.
 
   static constexpr uint32_t kTeeBtiIndex = 0;
-  zx_status_t status = pdev_get_bti(&pdev_proto_, kTeeBtiIndex, bti_.reset_and_get_address());
+  zx_status_t status = pdev_.GetBti(kTeeBtiIndex, &bti_);
   if (status != ZX_OK) {
     LOG(ERROR, "unable to get bti");
     return status;
@@ -161,7 +153,7 @@ zx_status_t OpteeController::InitializeSharedMemory() {
   // the platform device map the physical vmo for us.
   static constexpr uint32_t kSecureWorldMemoryMmioIndex = 0;
   pdev_mmio_t mmio_dev;
-  status = pdev_get_mmio(&pdev_proto_, kSecureWorldMemoryMmioIndex, &mmio_dev);
+  status = pdev_.GetMmio(kSecureWorldMemoryMmioIndex, &mmio_dev);
   if (status != ZX_OK) {
     LOG(ERROR, "unable to get secure world mmio");
     return status;
@@ -271,45 +263,29 @@ zx_status_t OpteeController::Create(void* ctx, zx_device_t* parent) {
 zx_status_t OpteeController::Bind() {
   zx_status_t status = ZX_ERR_INTERNAL;
 
-  composite_protocol_t composite;
-  status = device_get_protocol(parent(), ZX_PROTOCOL_COMPOSITE, &composite);
-  if (status != ZX_OK) {
+  ddk::CompositeProtocolClient composite(parent());
+  if (!composite.is_valid()) {
     LOG(ERROR, "unable to get composite protocol");
-    return status;
+    return ZX_ERR_NO_RESOURCES;
   }
 
-  zx_device_t* fragments[kFragmentMaxCount];
-  size_t actual;
-  composite_get_fragments(&composite, fragments, countof(fragments), &actual);
-  if (actual < kFragmentRequiredCount) {
-    LOG(ERROR, "unable to composite_get_fragments()");
-    return ZX_ERR_INTERNAL;
-  }
-
-  status = device_get_protocol(fragments[kFragmentPdev], ZX_PROTOCOL_PDEV, &pdev_proto_);
-  if (status != ZX_OK) {
+  pdev_ = ddk::PDev(composite);
+  if (!pdev_.is_valid()) {
     LOG(ERROR, "unable to get pdev protocol");
-    return status;
+    return ZX_ERR_NO_RESOURCES;
   }
 
-  status = device_get_protocol(fragments[kFragmentSysmem], ZX_PROTOCOL_SYSMEM, &sysmem_proto_);
-  if (status != ZX_OK) {
+  sysmem_ = ddk::SysmemProtocolClient(composite, "sysmem");
+  if (!sysmem_.is_valid()) {
     LOG(ERROR, "unable to get sysmem protocol");
-    return status;
+    return ZX_ERR_NO_RESOURCES;
   }
 
-  if (actual > kFragmentRpmbOptional) {
-    rpmb_protocol_t rpmb_proto;
-    status = device_get_protocol(fragments[kFragmentRpmbOptional], ZX_PROTOCOL_RPMB, &rpmb_proto);
-    if (status != ZX_OK) {
-      LOG(ERROR, "unable to get rpmb protocol");
-      return status;
-    }
-    rpmb_protocol_client_ = ddk::RpmbProtocolClient(&rpmb_proto);
-  }
+  // Optional protocol
+  rpmb_protocol_client_ = ddk::RpmbProtocolClient(composite, "rpmb");
 
   static constexpr uint32_t kTrustedOsSmcIndex = 0;
-  status = pdev_get_smc(&pdev_proto_, kTrustedOsSmcIndex, secure_monitor_.reset_and_get_address());
+  status = pdev_.GetSmc(kTrustedOsSmcIndex, &secure_monitor_);
   if (status != ZX_OK) {
     LOG(ERROR, "unable to get secure monitor handle");
     return status;

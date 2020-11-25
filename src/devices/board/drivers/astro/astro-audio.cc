@@ -118,8 +118,8 @@ static const device_fragment_t tdm_pcm_fragments[] = {};
 #endif
 #endif
 static const device_fragment_t tdm_i2s_fragments[] = {
-    {"gpio", countof(enable_gpio_fragment), enable_gpio_fragment},
-    {"codec", countof(codec_fragment), codec_fragment},
+    {"gpio-enable", countof(enable_gpio_fragment), enable_gpio_fragment},
+    {"codec-01", countof(codec_fragment), codec_fragment},
 };
 static const device_fragment_t codec_fragments[] = {
     {"i2c", countof(i2c_fragment), i2c_fragment},

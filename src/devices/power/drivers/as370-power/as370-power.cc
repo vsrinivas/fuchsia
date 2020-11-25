@@ -8,9 +8,9 @@
 
 #include <ddk/debug.h>
 #include <ddk/platform-defs.h>
-#include <ddk/protocol/composite.h>
 #include <ddk/protocol/platform/bus.h>
 #include <ddk/protocol/platform/device.h>
+#include <ddktl/protocol/composite.h>
 #include <fbl/alloc_checker.h>
 #include <soc/as370/as370-power.h>
 
@@ -268,26 +268,16 @@ zx_status_t As370Power::InitializePowerDomains(const ddk::I2cProtocolClient& i2c
 
 zx_status_t As370Power::InitializeProtocols(ddk::I2cProtocolClient* i2c) {
   // Get I2C protocol.
-  composite_protocol_t composite;
-  auto status = device_get_protocol(parent(), ZX_PROTOCOL_COMPOSITE, &composite);
-  if (status != ZX_OK) {
+  ddk::CompositeProtocolClient composite(parent());
+  if (!composite.is_valid()) {
     zxlogf(ERROR, "%s: Get ZX_PROTOCOL_COMPOSITE failed", __func__);
-    return status;
+    return ZX_ERR_NO_RESOURCES;
   }
 
-  zx_device_t* fragments[kFragmentCount];
-  size_t actual;
-  composite_get_fragments(&composite, fragments, countof(fragments), &actual);
-  if (actual != kFragmentCount) {
-    zxlogf(ERROR, "%s: Invalid fragment count (need %d, have %zu)", __func__, kFragmentCount,
-           actual);
-    return ZX_ERR_INTERNAL;
-  }
-
-  *i2c = ddk::I2cProtocolClient(fragments[kI2cFragment]);
+  *i2c = ddk::I2cProtocolClient(composite, "i2c");
   if (!i2c->is_valid()) {
-    zxlogf(ERROR, "%s: ZX_PROTOCOL_I2C not found, err=%d", __func__, status);
-    return status;
+    zxlogf(ERROR, "%s: ZX_PROTOCOL_I2C not found", __func__);
+    return ZX_ERR_NO_RESOURCES;
   }
 
   return ZX_OK;

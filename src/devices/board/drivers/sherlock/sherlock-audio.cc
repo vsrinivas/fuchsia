@@ -220,18 +220,18 @@ zx_status_t Sherlock::AudioInit() {
 
   const device_fragment_t sherlock_tdm_i2s_fragments[] = {
       {"gpio-enable", countof(enable_gpio_fragment), enable_gpio_fragment},
-      {"codec-woofer", countof(codec_woofer_fragment), codec_woofer_fragment},
-      {"codec-twitter-left", countof(codec_tweeter_left_fragment), codec_tweeter_left_fragment},
-      {"codec-tweeter-right", countof(codec_tweeter_right_fragment), codec_tweeter_right_fragment},
+      {"codec-01", countof(codec_woofer_fragment), codec_woofer_fragment},
+      {"codec-02", countof(codec_tweeter_left_fragment), codec_tweeter_left_fragment},
+      {"codec-03", countof(codec_tweeter_right_fragment), codec_tweeter_right_fragment},
   };
   const device_fragment_t luis_tdm_i2s_fragments[] = {
       {"gpio-enable", countof(enable_gpio_fragment), enable_gpio_fragment},
-      {"codec", countof(luis_codec_fragment), luis_codec_fragment},
+      {"codec-01", countof(luis_codec_fragment), luis_codec_fragment},
   };
   const device_fragment_t ernie_tdm_i2s_fragments[] = {
       {"gpio-enable", countof(enable_gpio_fragment), enable_gpio_fragment},
-      {"codec-woofer", countof(ernie_codec_woofer_fragment), ernie_codec_woofer_fragment},
-      {"codec-tweeter", countof(ernie_codec_tweeter_fragment), ernie_codec_tweeter_fragment},
+      {"codec-01", countof(ernie_codec_woofer_fragment), ernie_codec_woofer_fragment},
+      {"codec-02", countof(ernie_codec_tweeter_fragment), ernie_codec_tweeter_fragment},
   };
 
   status = clk_impl_.Disable(g12b_clk::CLK_HIFI_PLL);

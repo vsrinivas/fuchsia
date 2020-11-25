@@ -4,7 +4,6 @@
 
 #include <lib/mmio/mmio.h>
 
-#include <ddk/protocol/platform/device.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/gpio.h>
 #include <ddktl/protocol/spiimpl.h>
@@ -33,7 +32,7 @@ class AmlSpi : public DeviceType, public ddk::SpiImplProtocol<AmlSpi, ddk::base_
   explicit AmlSpi(zx_device_t* device, ddk::MmioBuffer mmio)
       : DeviceType(device), mmio_(std::move(mmio)) {}
 
-  zx_status_t GpioInit(amlspi_cs_map_t* map, zx_device_t** gpio_fragments, size_t count);
+  zx_status_t GpioInit(amlspi_cs_map_t* map, ddk::CompositeProtocolClient& composite);
   void DumpState();
 
   fbl::Vector<ddk::GpioProtocolClient> gpio_;

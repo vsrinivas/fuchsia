@@ -18,8 +18,8 @@
 #include <ddk/debug.h>
 #include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
-#include <ddk/protocol/composite.h>
 #include <ddktl/metadata/light-sensor.h>
+#include <ddktl/protocol/composite.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
@@ -55,12 +55,6 @@ constexpr uint16_t kMaxSaturationClear = 65'085;
 #define TCS_REARM_IRQ 0x04
 #define TCS_POLL      0x05
 // clang-format on
-
-enum {
-  FRAGMENT_I2C,
-  FRAGMENT_GPIO,
-  FRAGMENT_COUNT,
-};
 
 }  // namespace
 
@@ -352,40 +346,29 @@ zx_status_t Tcs3400Device::HidbusSetProtocol(uint8_t protocol) { return ZX_OK; }
 
 // static
 zx_status_t Tcs3400Device::Create(void* ctx, zx_device_t* parent) {
-  composite_protocol_t composite;
-
-  auto status = device_get_protocol(parent, ZX_PROTOCOL_COMPOSITE, &composite);
-  if (status != ZX_OK) {
+  ddk::CompositeProtocolClient composite(parent);
+  if (!composite.is_valid()) {
     zxlogf(ERROR, "Could not get composite protocol");
-    return status;
+    return ZX_ERR_NO_RESOURCES;
   }
 
-  zx_device_t* fragments[FRAGMENT_COUNT];
-  size_t actual;
-  composite_get_fragments(&composite, fragments, std::size(fragments), &actual);
-  if (actual != std::size(fragments)) {
-    zxlogf(ERROR, "could not get fragments");
-    return ZX_ERR_NOT_SUPPORTED;
+  ddk::I2cChannel channel(composite, "i2c");
+  if (!channel.is_valid()) {
+    return ZX_ERR_NO_RESOURCES;
   }
 
-  i2c_protocol_t i2c = {};
-  if (device_get_protocol(fragments[FRAGMENT_I2C], ZX_PROTOCOL_I2C, &i2c) != ZX_OK) {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
-  gpio_protocol_t gpio = {};
-  if (device_get_protocol(fragments[FRAGMENT_GPIO], ZX_PROTOCOL_GPIO, &gpio) != ZX_OK) {
-    return ZX_ERR_NOT_SUPPORTED;
+  ddk::GpioProtocolClient gpio(composite, "gpio");
+  if (!gpio.is_valid()) {
+    return ZX_ERR_NO_RESOURCES;
   }
 
   zx::port port;
-  status = zx::port::create(ZX_PORT_BIND_TO_INTERRUPT, &port);
+  zx_status_t status = zx::port::create(ZX_PORT_BIND_TO_INTERRUPT, &port);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s port_create failed: %d", __FILE__, status);
     return status;
   }
 
-  ddk::I2cChannel channel(&i2c);
   auto dev =
       std::make_unique<tcs::Tcs3400Device>(parent, std::move(channel), gpio, std::move(port));
   status = dev->Bind();
@@ -489,16 +472,18 @@ zx_status_t Tcs3400Device::InitMetadata() {
 }
 
 zx_status_t Tcs3400Device::Bind() {
-  gpio_config_in(&gpio_, GPIO_NO_PULL);
+  {
+    fbl::AutoLock al(&i2c_lock_);
+    gpio_.ConfigIn(GPIO_NO_PULL);
 
-  auto status =
-      gpio_get_interrupt(&gpio_, ZX_INTERRUPT_MODE_EDGE_LOW, irq_.reset_and_get_address());
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s gpio_get_interrupt failed: %d", __FILE__, status);
-    return status;
+    auto status = gpio_.GetInterrupt(ZX_INTERRUPT_MODE_EDGE_LOW, &irq_);
+    if (status != ZX_OK) {
+      zxlogf(ERROR, "%s gpio_get_interrupt failed: %d", __FILE__, status);
+      return status;
+    }
   }
 
-  status = irq_.bind(port_, TCS_INTERRUPT, 0);
+  zx_status_t status = irq_.bind(port_, TCS_INTERRUPT, 0);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s zx_interrupt_bind failed: %d", __FILE__, status);
     return status;
