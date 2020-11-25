@@ -133,6 +133,8 @@ inline bool FilterByType(const gpt_partition_t& part, const uuid::Uuid& type) {
   return type == uuid::Uuid(part.type);
 }
 
+bool FilterByName(const gpt_partition_t& part, fbl::StringPiece name);
+
 bool FilterByTypeAndName(const gpt_partition_t& part, const uuid::Uuid& type,
                          fbl::StringPiece name);
 

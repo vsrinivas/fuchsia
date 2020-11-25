@@ -1383,6 +1383,43 @@ TEST_F(SherlockPartitionerTests, FindPartitionNewGuids) {
   EXPECT_OK(partitioner->FindPartition(PartitionSpec(paver::Partition::kFuchsiaVolumeManager)));
 }
 
+TEST_F(SherlockPartitionerTests, FindPartitionNewGuidsWithWrongTypeGUIDS) {
+  // Due to a bootloader bug (b/173801312), the type GUID's may be reset in certain conditions.
+  // This test verifies that the sherlock partitioner only looks at the partition name.
+
+  std::unique_ptr<BlockDevice> gpt_dev;
+  constexpr uint64_t kBlockCount = 0x748034;
+  ASSERT_NO_FATAL_FAILURES(CreateDisk(kBlockCount * block_size_, &gpt_dev));
+
+  const std::vector<PartitionDescription> kSherlockNewPartitions = {
+      {GPT_DURABLE_BOOT_NAME, kStateLinuxGuid, 0x10400, 0x10000},
+      {GPT_VBMETA_A_NAME, kStateLinuxGuid, 0x20400, 0x10000},
+      {GPT_VBMETA_B_NAME, kStateLinuxGuid, 0x30400, 0x10000},
+      {GPT_VBMETA_R_NAME, kStateLinuxGuid, 0x40400, 0x10000},
+      {GPT_ZIRCON_A_NAME, kStateLinuxGuid, 0x50400, 0x10000},
+      {GPT_ZIRCON_B_NAME, kStateLinuxGuid, 0x60400, 0x10000},
+      {GPT_ZIRCON_R_NAME, kStateLinuxGuid, 0x70400, 0x10000},
+      {GPT_FVM_NAME, kStateLinuxGuid, 0x80400, 0x10000},
+  };
+  ASSERT_NO_FATAL_FAILURES(InitializeStartingGPTPartitions(gpt_dev.get(), kSherlockNewPartitions));
+
+  fbl::unique_fd gpt_fd(dup(gpt_dev->fd()));
+  auto status = CreatePartitioner(std::move(gpt_fd));
+  ASSERT_OK(status);
+  std::unique_ptr<paver::DevicePartitioner>& partitioner = status.value();
+
+  // Make sure we can find the important partitions.
+  EXPECT_OK(partitioner->FindPartition(PartitionSpec(paver::Partition::kZirconA)));
+  EXPECT_OK(partitioner->FindPartition(PartitionSpec(paver::Partition::kZirconB)));
+  EXPECT_OK(partitioner->FindPartition(PartitionSpec(paver::Partition::kZirconR)));
+  EXPECT_OK(partitioner->FindPartition(PartitionSpec(paver::Partition::kAbrMeta)));
+  EXPECT_OK(partitioner->FindPartition(PartitionSpec(paver::Partition::kVbMetaA)));
+  EXPECT_OK(partitioner->FindPartition(PartitionSpec(paver::Partition::kVbMetaB)));
+  EXPECT_OK(partitioner->FindPartition(PartitionSpec(paver::Partition::kVbMetaR)));
+  EXPECT_OK(partitioner->FindPartition(PartitionSpec(paver::Partition::kFuchsiaVolumeManager)));
+}
+
+
 
 TEST_F(SherlockPartitionerTests, FindBootloader) {
   std::unique_ptr<BlockDevice> gpt_dev;

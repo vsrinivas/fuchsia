@@ -55,14 +55,18 @@ zx::status<Uuid> GptPartitionType(Partition type) {
   }
 }
 
-bool FilterByTypeAndName(const gpt_partition_t& part, const Uuid& type, fbl::StringPiece name) {
+bool FilterByName(const gpt_partition_t& part, fbl::StringPiece name) {
   char cstring_name[GPT_NAME_LEN];
   ::utf16_to_cstring(cstring_name, reinterpret_cast<const uint16_t*>(part.name), GPT_NAME_LEN);
-  return type == Uuid(part.type) &&
-         // We use a case-insenstive comparison to be compatible with the previous naming scheme.
-         // On a ChromeOS device, all of the kernel partitions share a common GUID type, so we
-         // distinguish Zircon kernel partitions based on name.
-         strncasecmp(cstring_name, name.data(), name.length()) == 0;
+
+  // We use a case-insenstive comparison to be compatible with the previous naming scheme.
+  // On a ChromeOS device, all of the kernel partitions share a common GUID type, so we
+  // distinguish Zircon kernel partitions based on name.
+  return strncasecmp(cstring_name, name.data(), name.length()) == 0;
+}
+
+bool FilterByTypeAndName(const gpt_partition_t& part, const Uuid& type, fbl::StringPiece name) {
+  return type == Uuid(part.type) && FilterByName(part, name);
 }
 
 zx::status<> RebindGptDriver(const zx::channel& svc_root, zx::unowned_channel chan) {

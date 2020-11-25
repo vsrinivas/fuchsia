@@ -101,7 +101,6 @@ zx::status<std::unique_ptr<PartitionClient>> SherlockPartitioner::FindPartition(
 
   // TODO(b/173125535): Remove legacy GPT support
   Uuid legacy_type;
-  Uuid type;
   std::string_view part_name;
 
   switch (spec.partition) {
@@ -130,42 +129,34 @@ zx::status<std::unique_ptr<PartitionClient>> SherlockPartitioner::FindPartition(
     }
     case Partition::kZirconA:
       legacy_type = GUID_ZIRCON_A_VALUE;
-      type = GPT_ZIRCON_ABR_TYPE_GUID;
       part_name = GPT_ZIRCON_A_NAME;
       break;
     case Partition::kZirconB:
       legacy_type = GUID_ZIRCON_B_VALUE;
-      type = GPT_ZIRCON_ABR_TYPE_GUID;
       part_name = GPT_ZIRCON_B_NAME;
       break;
     case Partition::kZirconR:
       legacy_type = GUID_ZIRCON_R_VALUE;
-      type = GPT_ZIRCON_ABR_TYPE_GUID;
       part_name = GPT_ZIRCON_R_NAME;
       break;
     case Partition::kVbMetaA:
       legacy_type = GUID_VBMETA_A_VALUE;
-      type = GPT_VBMETA_ABR_TYPE_GUID;
       part_name = GPT_VBMETA_A_NAME;
       break;
     case Partition::kVbMetaB:
       legacy_type = GUID_VBMETA_B_VALUE;
-      type = GPT_VBMETA_ABR_TYPE_GUID;
       part_name = GPT_VBMETA_B_NAME;
       break;
     case Partition::kVbMetaR:
       legacy_type = GUID_VBMETA_R_VALUE;
-      type = GPT_VBMETA_ABR_TYPE_GUID;
       part_name = GPT_VBMETA_R_NAME;
       break;
     case Partition::kAbrMeta:
       legacy_type = GUID_ABR_META_VALUE;
-      type = GPT_DURABLE_BOOT_TYPE_GUID;
       part_name = GPT_DURABLE_BOOT_NAME;
       break;
     case Partition::kFuchsiaVolumeManager:
       legacy_type = GUID_FVM_VALUE;
-      type = GPT_FVM_TYPE_GUID;
       part_name = GPT_FVM_NAME;
       break;
     default:
@@ -173,8 +164,9 @@ zx::status<std::unique_ptr<PartitionClient>> SherlockPartitioner::FindPartition(
       return zx::error(ZX_ERR_INVALID_ARGS);
   }
 
-  const auto filter = [&legacy_type, &type, &part_name](const gpt_partition_t& part) {
-    return FilterByType(part, legacy_type) || FilterByTypeAndName(part, type, part_name);
+  const auto filter = [&legacy_type, &part_name](const gpt_partition_t& part) {
+    // Only filter by partition name instead of name + type due to bootloader bug (b/173801312)
+    return FilterByType(part, legacy_type) || FilterByName(part, part_name);
   };
   auto status = gpt_->FindPartition(std::move(filter));
   if (status.is_error()) {
