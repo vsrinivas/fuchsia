@@ -117,6 +117,14 @@ const uint8_t kEventCodeMap[] = {
     79,                                 // KEY_RIGHT (106)
     0,                                  // Unsupported
     81,                                 // KEY_DOWN (108)
+    78,                                 // KEY_PAGEDOWN (109)
+    73,                                 // KEY_INSERT (110)
+    76,                                 // KEY_DELETE (111)
+    0, 0, 0, 0, 0, 0, 0,                // Unsupported
+    72,                                 // KEY_PAUSE (119)
+    0, 0, 0, 0, 0,                      // Unsupported
+    227,                                // KEY_LEFTMETA (125)
+    231,                                // KEY_RIGHTMETA (126)
 };
 
 static const uint8_t kbd_hid_report_desc[] = {
