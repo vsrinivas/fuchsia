@@ -23,6 +23,7 @@ group("zedboot") {
     "//src/bringup/bin/console-launcher:bootfs",
     "//src/bringup/bin/debuglog",
     "//src/bringup/bin/device-name-provider:bootfs",
+    "//src/bringup/bin/dlog",
     "//src/bringup/bin/miscsvc:bootfs",
     "//src/bringup/bin/netsvc:bootfs",
     "//src/bringup/bin/ptysvc",
