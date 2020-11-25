@@ -264,7 +264,7 @@ zx_status_t Bind(void* ctx, zx_device_t* parent) {
   size_t size;
   auto status = device_get_metadata_size(parent, DEVICE_METADATA_REGISTERS, &size);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: device_get_metadata_size failed %d", __FILE__, status);
+    zxlogf(ERROR, "device_get_metadata_size failed %d", status);
     return status;
   }
 
@@ -272,30 +272,30 @@ zx_status_t Bind(void* ctx, zx_device_t* parent) {
   auto bytes = std::make_unique<uint8_t[]>(size);
   status = device_get_metadata(parent, DEVICE_METADATA_REGISTERS, bytes.get(), size, &actual);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: device_get_metadata failed %d", __FILE__, status);
+    zxlogf(ERROR, "device_get_metadata failed %d", status);
     return status;
   }
   if (actual != size) {
-    zxlogf(ERROR, "%s: device_get_metadata size error %d", __FILE__, status);
+    zxlogf(ERROR, "device_get_metadata size error %d", status);
     return ZX_ERR_INTERNAL;
   }
 
   // Parse
   fidl::DecodedMessage<Metadata> decoded(bytes.get(), static_cast<uint32_t>(size), nullptr, 0);
   if (!decoded.ok() || (decoded.error() != nullptr)) {
-    zxlogf(ERROR, "%s: Unable to parse metadata %s", __FILE__, decoded.error());
+    zxlogf(ERROR, "Unable to parse metadata %s", decoded.error());
     return ZX_ERR_INTERNAL;
   }
   const auto& metadata = decoded.PrimaryObject();
 
   // Validate
   if (!metadata->has_mmio() || !metadata->has_registers()) {
-    zxlogf(ERROR, "%s: Metadata incomplete", __FILE__);
+    zxlogf(ERROR, "Metadata incomplete");
     return ZX_ERR_INTERNAL;
   }
   for (const auto& mmio : metadata->mmio()) {
     if (!mmio.has_id()) {
-      zxlogf(ERROR, "%s: Metadata incomplete", __FILE__);
+      zxlogf(ERROR, "Metadata incomplete");
       return ZX_ERR_INTERNAL;
     }
   }
@@ -308,7 +308,7 @@ zx_status_t Bind(void* ctx, zx_device_t* parent) {
     }
 
     if (!reg.has_bind_id() || !reg.has_mmio_id() || !reg.has_masks()) {
-      zxlogf(ERROR, "%s: Metadata incomplete", __FILE__);
+      zxlogf(ERROR, "Metadata incomplete");
       return ZX_ERR_INTERNAL;
     }
 
@@ -319,12 +319,12 @@ zx_status_t Bind(void* ctx, zx_device_t* parent) {
 
     for (const auto& mask : reg.masks()) {
       if (!mask.has_mask() || !mask.has_mmio_offset() || !mask.has_count()) {
-        zxlogf(ERROR, "%s: Metadata incomplete", __FILE__);
+        zxlogf(ERROR, "Metadata incomplete");
         return ZX_ERR_INTERNAL;
       }
 
       if (mask.mask().which() != tag) {
-        zxlogf(ERROR, "%s: Width of registers don't match up.", __FILE__);
+        zxlogf(ERROR, "Width of registers don't match up.");
         return ZX_ERR_INTERNAL;
       }
 
