@@ -35,7 +35,14 @@ void* __asan_memcpy(void* dst, const void* src, size_t n) {
   auto dstptr = reinterpret_cast<uintptr_t>(dst);
   auto srcptr = reinterpret_cast<uintptr_t>(src);
 
-  asan_check_memory_overlap(dstptr, n, srcptr, n);
+  // When src and dst are equal, skip the overlap check because LLVM requires
+  // that memcpy handle the case where src and dest are equal (and the kernel's
+  // implementations do).  See https://bugs.llvm.org/show_bug.cgi?id=11763 and
+  // https://reviews.llvm.org/D86993.
+  if (dstptr != srcptr) {
+    asan_check_memory_overlap(dstptr, n, srcptr, n);
+  }
+
   asan_check(srcptr, n, /*is_write=*/false, __builtin_return_address(0));
   asan_check(dstptr, n, /*is_write=*/true, __builtin_return_address(0));
   return __unsanitized_memcpy(dst, src, n);

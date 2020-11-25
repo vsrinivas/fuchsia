@@ -291,6 +291,17 @@ bool kasan_test_globals_are_poisoned() {
   END_TEST;
 }
 
+// Verify that (asan-instrumented) memcpy succeeds when dst equals src even though they overlap
+// (fxbug.dev/65228).
+bool kasan_test_memcpy_dst_src_equal() {
+  BEGIN_TEST;
+
+  char buffer[256]{};
+  memcpy(buffer, buffer, sizeof(buffer));
+
+  END_TEST;
+}
+
 }  // namespace
 
 UNITTEST_START_TESTCASE(kasan_tests)
@@ -305,6 +316,7 @@ UNITTEST("test_quarantine", kasan_test_quarantine)
 UNITTEST("test_walk_shadow", kasan_test_walk_shadow)
 UNITTEST("test_asan_remap_shadow", kasan_test_remap_shadow)
 UNITTEST("test_globals", kasan_test_globals_are_poisoned)
+UNITTEST("memcpy_dst_src_equal", kasan_test_memcpy_dst_src_equal)
 UNITTEST_END_TESTCASE(kasan_tests, "kasan", "Kernel Address Sanitizer Tests")
 
 #endif  // _has_feature(address_sanitizer)
