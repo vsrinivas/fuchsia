@@ -112,6 +112,7 @@ static zx_status_t try_dispatch_user_data_fault_exception(zx_excp_type_t type,
   context.frame = iframe;
   context.esr = esr;
   context.far = far;
+  context.user_synth_code = 0;
 
   arch_enable_ints();
   zx_status_t status = dispatch_user_exception(type, &context);
@@ -547,18 +548,22 @@ void arch_fill_in_exception_context(const arch_exception_context_t* arch_context
                                     zx_exception_report_t* report) {
   zx_exception_context_t* zx_context = &report->context;
 
+  zx_context->synth_code = arch_context->user_synth_code;
+  zx_context->synth_data = 0;
+
   zx_context->arch.u.arm_64.esr = arch_context->esr;
 
   // If there was a fatal page fault, fill in the address that caused the fault.
-  if (ZX_EXCP_FATAL_PAGE_FAULT == report->header.type) {
+  if (report->header.type == ZX_EXCP_FATAL_PAGE_FAULT) {
     zx_context->arch.u.arm_64.far = arch_context->far;
   } else {
     zx_context->arch.u.arm_64.far = 0;
   }
 }
 
-zx_status_t arch_dispatch_user_policy_exception(void) {
+zx_status_t arch_dispatch_user_policy_exception(uint32_t policy_exception_code) {
   arch_exception_context_t context = {};
+  context.user_synth_code = policy_exception_code;
   return dispatch_user_exception(ZX_EXCP_POLICY_ERROR, &context);
 }
 

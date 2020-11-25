@@ -35,7 +35,7 @@ namespace {
 
 __NO_INLINE int sys_invalid_syscall(uint64_t num, uint64_t pc, uintptr_t vdso_code_address) {
   LTRACEF("invalid syscall %lu from PC %#lx vDSO code %#lx\n", num, pc, vdso_code_address);
-  Thread::Current::SignalPolicyException();
+  Thread::Current::SignalPolicyException(ZX_EXCP_POLICY_CODE_BAD_SYSCALL);
   return ZX_ERR_BAD_SYSCALL;
 }
 

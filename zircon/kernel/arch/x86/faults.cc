@@ -102,7 +102,12 @@ __NO_RETURN static void exception_die(iframe_t* frame, const char* msg) {
 
 static bool try_dispatch_user_exception(iframe_t* frame, uint exception_type) {
   if (is_from_user(frame)) {
-    struct arch_exception_context context = {false, frame, 0};
+    struct arch_exception_context context = {
+        .frame = frame,
+        .cr2 = 0,
+        .user_synth_code = 0,
+        .is_page_fault = false,
+    };
     PreemptionState& preemption_state = Thread::Current::preemption_state();
     preemption_state.PreemptReenableNoResched();
     arch_set_blocking_disallowed(false);
@@ -329,7 +334,12 @@ static zx_status_t x86_pfe_handler(iframe_t* frame) {
   /* let high level code deal with this */
   if (is_from_user(frame)) {
     kcounter_add(exceptions_user, 1);
-    struct arch_exception_context context = {true, frame, va};
+    struct arch_exception_context context = {
+        .frame = frame,
+        .cr2 = va,
+        .user_synth_code = 0,
+        .is_page_fault = true,
+    };
     return dispatch_user_exception(ZX_EXCP_FATAL_PAGE_FAULT, &context);
   }
 
@@ -536,6 +546,9 @@ void arch_fill_in_exception_context(const arch_exception_context_t* arch_context
                                     zx_exception_report_t* report) {
   zx_exception_context_t* zx_context = &report->context;
 
+  zx_context->synth_code = arch_context->user_synth_code;
+  zx_context->synth_data = 0;
+
   // TODO(fxbug.dev/30521): |frame| will be nullptr for synthetic exceptions that
   // don't provide general register values yet.
   if (arch_context->frame) {
@@ -545,8 +558,9 @@ void arch_fill_in_exception_context(const arch_exception_context_t* arch_context
   zx_context->arch.u.x86_64.cr2 = arch_context->cr2;
 }
 
-zx_status_t arch_dispatch_user_policy_exception(void) {
+zx_status_t arch_dispatch_user_policy_exception(uint32_t policy_exception_code) {
   arch_exception_context_t context = {};
+  context.user_synth_code = policy_exception_code;
   return dispatch_user_exception(ZX_EXCP_POLICY_ERROR, &context);
 }
 

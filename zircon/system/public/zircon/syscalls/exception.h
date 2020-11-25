@@ -47,13 +47,33 @@ __BEGIN_CDECLS
 // handles the exception.
 #define ZX_EXCP_THREAD_EXITING          ((uint32_t) 0x108u | ZX_EXCP_SYNTH)
 
-// This exception is generated when a syscall fails with a job policy
-// error (for example, an invalid handle argument is passed to the
-// syscall when the ZX_POL_BAD_HANDLE policy is enabled) and
-// ZX_POL_ACTION_EXCEPTION is set for the policy.
-// The thread that generates this exception is paused until it the debugger
-// handles the exception.
+// This exception is generated when a syscall fails with a job policy error (for
+// example, an invalid handle argument is passed to the syscall when the
+// ZX_POL_BAD_HANDLE policy is enabled) and ZX_POL_ACTION_EXCEPTION is set for
+// the policy. The thread that generates this exception is paused until it the
+// debugger handles the exception. Additional data about the type of policy
+// error can be found in the |synth_code| field of the report and will be a
+// ZX_EXCP_POLICY_CODE_* value.
 #define ZX_EXCP_POLICY_ERROR            ((uint32_t) 0x208u | ZX_EXCP_SYNTH)
+
+#define ZX_EXCP_POLICY_CODE_BAD_HANDLE            0u
+#define ZX_EXCP_POLICY_CODE_WRONG_OBJECT          1u
+#define ZX_EXCP_POLICY_CODE_VMAR_WX               2u
+#define ZX_EXCP_POLICY_CODE_NEW_ANY               3u
+#define ZX_EXCP_POLICY_CODE_NEW_VMO               4u
+#define ZX_EXCP_POLICY_CODE_NEW_CHANNEL           5u
+#define ZX_EXCP_POLICY_CODE_NEW_EVENT             6u
+#define ZX_EXCP_POLICY_CODE_NEW_EVENTPAIR         7u
+#define ZX_EXCP_POLICY_CODE_NEW_PORT              8u
+#define ZX_EXCP_POLICY_CODE_NEW_SOCKET            9u
+#define ZX_EXCP_POLICY_CODE_NEW_FIFO              10u
+#define ZX_EXCP_POLICY_CODE_NEW_TIMER             11u
+#define ZX_EXCP_POLICY_CODE_NEW_PROCESS           12u
+#define ZX_EXCP_POLICY_CODE_NEW_PROFILE           13u
+#define ZX_EXCP_POLICY_CODE_AMBIENT_MARK_VMO_EXEC 14u
+#define ZX_EXCP_POLICY_CODE_CHANNEL_FULL_WRITE    15u
+#define ZX_EXCP_POLICY_CODE_PORT_TOO_MANY_PACKETS 16u
+#define ZX_EXCP_POLICY_CODE_BAD_SYSCALL           17u
 
 // A process is starting.
 // This exception is sent to job debuggers only
@@ -74,11 +94,30 @@ typedef struct zx_x86_64_exc_data {
     uint64_t cr2;
 } zx_x86_64_exc_data_t;
 
+typedef struct zx_arm64_exc_data_v1 {
+    uint32_t esr;
+    uint8_t padding1[4];
+    uint64_t far;
+} zx_arm64_exc_data_v1_t;
+
 typedef struct zx_arm64_exc_data {
     uint32_t esr;
     uint8_t padding1[4];
     uint64_t far;
+    uint8_t padding2[8];
 } zx_arm64_exc_data_t;
+
+typedef struct zx_exception_context_v1 {
+    struct {
+        union {
+            zx_x86_64_exc_data_t x86_64;
+            struct {
+              zx_arm64_exc_data_v1_t arm_64;
+              uint8_t padding1[8];
+            };
+        } u;
+    } arch;
+} zx_exception_context_v1_t;
 
 // data associated with an exception (siginfo in linux parlance)
 // Things available from regsets (e.g., pc) are not included here.
@@ -87,12 +126,11 @@ typedef struct zx_exception_context {
     struct {
         union {
             zx_x86_64_exc_data_t x86_64;
-            struct {
-                zx_arm64_exc_data_t  arm_64;
-                uint8_t padding1[8];
-            };
+            zx_arm64_exc_data_t arm_64;
         } u;
     } arch;
+    uint32_t synth_code;
+    uint32_t synth_data;
 } zx_exception_context_t;
 
 // The common header of all exception reports.
@@ -104,9 +142,14 @@ typedef struct zx_exception_header {
 } zx_exception_header_t;
 
 // Data reported to an exception handler for most exceptions.
-typedef struct zx_exception_report {
+typedef struct zx_exception_report_v1 {
     zx_exception_header_t header;
     // The remainder of the report is exception-specific.
+    zx_exception_context_v1_t context;
+} zx_exception_report_v1_t;
+
+typedef struct zx_exception_report {
+    zx_exception_header_t header;
     zx_exception_context_t context;
 } zx_exception_report_t;
 

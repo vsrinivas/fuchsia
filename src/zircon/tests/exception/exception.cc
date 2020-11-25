@@ -23,6 +23,7 @@
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/debug.h>
 #include <zircon/syscalls/exception.h>
+#include <zircon/syscalls/port.h>
 #include <zircon/threads.h>
 
 #include <iterator>
@@ -331,6 +332,32 @@ static void __NO_RETURN trigger_hw_bkpt() {
   trigger_unsupported();
 }
 
+static void __NO_RETURN trigger_port_overflow() {
+  zx_handle_t port;
+  zx_status_t status = zx_port_create(0u, &port);
+  if (status != ZX_OK)
+    ZX_PANIC("zx_port_create");
+
+  zx_port_packet_t packet = {1ull, ZX_PKT_TYPE_USER, 0, {{}}};
+
+  int count = 0;
+  for (;;) {
+    status = zx_port_queue(port, &packet);
+    if (status != ZX_OK) {
+      printf("packet queue failed. error: %d after %d writes\n", status, count);
+      break;
+    }
+    ++count;
+    if ((count % 100) == 0) {
+      write(1, ".", 1);
+    }
+  }
+
+  zx_handle_close(port);
+  zx_nanosleep(ZX_TIME_INFINITE);
+  trigger_unsupported();
+}
+
 #if defined(__aarch64__)
 static void __NO_RETURN trigger_arm64_wfi() {
   // WFI is illegal in user space
@@ -415,6 +442,7 @@ static const struct {
     {ZX_EXCP_UNDEFINED_INSTRUCTION, "undefined-insn", true, trigger_undefined_insn},
     {ZX_EXCP_SW_BREAKPOINT, "sw-bkpt", true, trigger_sw_bkpt},
     {ZX_EXCP_HW_BREAKPOINT, "hw-bkpt", false, trigger_hw_bkpt},
+    {ZX_EXCP_POLICY_ERROR, "port-overflow", true, trigger_port_overflow},
 #if defined(__x86_64__)
     {ZX_EXCP_GENERAL, "integer-divide-by-zero", true, trigger_integer_divide_by_zero},
     {ZX_EXCP_GENERAL, "sse-divide-by-zero", true, trigger_sse_divide_by_zero},

@@ -136,28 +136,47 @@ VALIDATE_FIELD_OFFSET_SIZE(zx_exception_info_t, pid, 0, 8);
 VALIDATE_FIELD_OFFSET_SIZE(zx_exception_info_t, tid, 8, 8);
 VALIDATE_FIELD_OFFSET_SIZE(zx_exception_info_t, type, 16, 4);
 
-VALIDATE_TYPE_SIZE_ALIGNMENT(zx_exception_report_t, 32, 8);
+VALIDATE_TYPE_SIZE_ALIGNMENT(zx_exception_report_v1_t, 32, 8);
+VALIDATE_FIELD_OFFSET_SIZE(zx_exception_report_v1_t, header, 0, 8);
+VALIDATE_FIELD_OFFSET_SIZE(zx_exception_report_v1_t, context, 8, 24);
+
+VALIDATE_TYPE_SIZE_ALIGNMENT(zx_exception_report_t, 40, 8);
 VALIDATE_FIELD_OFFSET_SIZE(zx_exception_report_t, header, 0, 8);
-VALIDATE_FIELD_OFFSET_SIZE(zx_exception_report_t, context, 8, 24);
+VALIDATE_FIELD_OFFSET_SIZE(zx_exception_report_t, context, 8, 32);
 
 VALIDATE_TYPE_SIZE_ALIGNMENT(zx_exception_header_t, 8, 4);
 VALIDATE_FIELD_OFFSET_SIZE(zx_exception_header_t, size, 0, 4);
 VALIDATE_FIELD_OFFSET_SIZE(zx_exception_header_t, type, 4, 4);
 
-VALIDATE_TYPE_SIZE_ALIGNMENT(zx_exception_context_t, 24, 8);
+VALIDATE_TYPE_SIZE_ALIGNMENT(zx_exception_context_v1_t, 24, 8);
+VALIDATE_FIELD_OFFSET_SIZE(zx_exception_context_v1_t, arch, 0, 24);
+VALIDATE_FIELD_OFFSET_SIZE(zx_exception_context_v1_t, arch.u, 0, 24);
+VALIDATE_FIELD_OFFSET_SIZE(zx_exception_context_v1_t, arch.u.x86_64, 0, 24);
+VALIDATE_FIELD_OFFSET_SIZE(zx_exception_context_v1_t, arch.u.arm_64, 0, 16);
+
+VALIDATE_TYPE_SIZE_ALIGNMENT(zx_exception_context_t, 32, 8);
 VALIDATE_FIELD_OFFSET_SIZE(zx_exception_context_t, arch, 0, 24);
 VALIDATE_FIELD_OFFSET_SIZE(zx_exception_context_t, arch.u, 0, 24);
 VALIDATE_FIELD_OFFSET_SIZE(zx_exception_context_t, arch.u.x86_64, 0, 24);
-VALIDATE_FIELD_OFFSET_SIZE(zx_exception_context_t, arch.u.arm_64, 0, 16);
+VALIDATE_FIELD_OFFSET_SIZE(zx_exception_context_t, arch.u.arm_64, 0, 24);
+VALIDATE_FIELD_OFFSET_SIZE(zx_exception_context_t, synth_code, 24, 4);
+VALIDATE_FIELD_OFFSET_SIZE(zx_exception_context_t, synth_data, 28, 4);
 
 VALIDATE_TYPE_SIZE_ALIGNMENT(zx_x86_64_exc_data_t, 24, 8);
 VALIDATE_FIELD_OFFSET_SIZE(zx_x86_64_exc_data_t, vector, 0, 8);
 VALIDATE_FIELD_OFFSET_SIZE(zx_x86_64_exc_data_t, err_code, 8, 8);
 VALIDATE_FIELD_OFFSET_SIZE(zx_x86_64_exc_data_t, cr2, 16, 8);
 
-VALIDATE_TYPE_SIZE_ALIGNMENT(zx_arm64_exc_data_t, 16, 8);
-VALIDATE_FIELD_OFFSET_SIZE(zx_arm64_exc_data_t, esr, 0, 4);
-VALIDATE_FIELD_OFFSET_SIZE(zx_arm64_exc_data_t, far, 8, 8);
+VALIDATE_TYPE_SIZE_ALIGNMENT(zx_arm64_exc_data_v1_t, 16, 8);
+VALIDATE_FIELD_OFFSET_SIZE(zx_arm64_exc_data_v1_t, esr, 0, 4);
+VALIDATE_FIELD_OFFSET_SIZE(zx_arm64_exc_data_v1_t, far, 8, 8);
+
+VALIDATE_TYPE_SIZE_ALIGNMENT(zx_arm64_exc_data_t, 24, 8);
+VALIDATE_FIELD_OFFSET_SIZE(zx_arm64_exc_data_v1_t, esr, 0, 4);
+VALIDATE_FIELD_OFFSET_SIZE(zx_arm64_exc_data_v1_t, far, 8, 8);
+
+static_assert(sizeof(zx_x86_64_exc_data_t) == sizeof(zx_arm64_exc_data_t),
+                               "zx_exception_context_* need padding update");
 
 VALIDATE_TYPE_SIZE_ALIGNMENT(zx_info_bti_t, 32, 8);
 VALIDATE_FIELD_OFFSET_SIZE(zx_info_bti_t, minimum_contiguity, 0, 8);

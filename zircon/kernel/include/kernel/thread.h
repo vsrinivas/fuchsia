@@ -769,7 +769,8 @@ struct Thread {
     // Transition the current thread to the THREAD_SUSPENDED state.
     static void DoSuspend();
 
-    static void SignalPolicyException();
+    // |policy_exception_code| should be a ZX_EXCP_POLICY_CODE_* value.
+    static void SignalPolicyException(uint32_t policy_exception_code);
 
     // Process pending signals, may never return because of kill signal.
     static void ProcessPendingSignals(GeneralRegsSource source, void* gregs);
@@ -1030,6 +1031,10 @@ struct Thread {
 
   // pointer to the kernel address space this thread is associated with
   VmAspace* aspace_;
+
+  // Saved by SignalPolicyException() to store the type of policy error, and
+  // passed to exception disptach in ProcessPendingSignals().
+  uint32_t extra_policy_exception_data_ TA_GUARDED(thread_lock) = 0;
 
   // Strong reference to user thread if one exists for this thread.
   // In the common case freeing Thread will also free ThreadDispatcher when this

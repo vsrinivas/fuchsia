@@ -322,10 +322,8 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic, user_out_ptr
 
       return single_record_result(_buffer, buffer_size, _actual, _avail, info);
     }
+    case ZX_INFO_THREAD_EXCEPTION_REPORT_V1:
     case ZX_INFO_THREAD_EXCEPTION_REPORT: {
-      // TODO(fxbug.dev/30418): Handle forward/backward compatibility issues
-      // with changes to the struct.
-
       // grab a reference to the dispatcher
       fbl::RefPtr<ThreadDispatcher> thread;
       auto error = up->handle_table().GetDispatcherWithRights(handle, ZX_RIGHT_INSPECT, &thread);
@@ -338,6 +336,15 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic, user_out_ptr
       auto err = thread->GetExceptionReport(&report);
       if (err != ZX_OK)
         return err;
+
+      if (topic == ZX_INFO_THREAD_EXCEPTION_REPORT_V1) {
+        // Current second version is an extension of v1; simply copy over the
+        // earlier header and context.arch fields.
+        zx_exception_report_v1_t v1_report = {};
+        v1_report.header = report.header;
+        memcpy(&v1_report.context, &report.context, sizeof(v1_report.context));
+        return single_record_result(_buffer, buffer_size, _actual, _avail, v1_report);
+      }
 
       return single_record_result(_buffer, buffer_size, _actual, _avail, report);
     }

@@ -33,9 +33,10 @@ void x86_exception_handler(struct iframe_t* frame);
 void platform_irq(struct iframe_t* frame);
 
 struct arch_exception_context {
-  bool is_page_fault;
   struct iframe_t* frame;
   uint64_t cr2;
+  uint32_t user_synth_code;
+  bool is_page_fault;
 };
 
 // Register state layout used by x86_64_context_switch().

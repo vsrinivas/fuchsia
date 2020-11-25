@@ -714,7 +714,7 @@ multiconst!(zx_object_info_topic_t, [
     ZX_INFO_JOB_CHILDREN               = 8;  // zx_koid_t[n]
     ZX_INFO_JOB_PROCESSES              = 9;  // zx_koid_t[n]
     ZX_INFO_THREAD                     = 10; // zx_info_thread_t[1]
-    ZX_INFO_THREAD_EXCEPTION_REPORT    = 11; // zx_exception_report_t[1]
+    ZX_INFO_THREAD_EXCEPTION_REPORT    = info_topic(11, 1); // zx_exception_report_t[1]
     ZX_INFO_TASK_STATS                 = 12; // zx_info_task_stats_t[1]
     ZX_INFO_PROCESS_MAPS               = 13; // zx_info_maps_t[n]
     ZX_INFO_PROCESS_VMOS               = info_topic(14, 1); // zx_info_vmo_t[n]

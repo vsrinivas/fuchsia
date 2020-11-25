@@ -11,6 +11,7 @@
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/exception.h>
+#include <zircon/syscalls/policy.h>
 #include <zircon/types.h>
 
 #include <string>
@@ -50,6 +51,49 @@ static const char* excp_type_to_str(const zx_excp_type_t type) {
       // been added without having also updated this function, compile with
       // -Wswitch-enum.
       return "<unknown fault>";
+  }
+}
+
+static const char* policy_exception_code_to_str(uint32_t policy_exception_code) {
+  switch (policy_exception_code) {
+    case ZX_EXCP_POLICY_CODE_BAD_HANDLE:
+      return "BAD_HANDLE";
+    case ZX_EXCP_POLICY_CODE_WRONG_OBJECT:
+      return "WRONG_OBJECT";
+    case ZX_EXCP_POLICY_CODE_VMAR_WX:
+      return "VMAR_WX";
+    case ZX_EXCP_POLICY_CODE_NEW_ANY:
+      return "NEW_ANY";
+    case ZX_EXCP_POLICY_CODE_NEW_VMO:
+      return "NEW_VMO";
+    case ZX_EXCP_POLICY_CODE_NEW_CHANNEL:
+      return "NEW_CHANNEL";
+    case ZX_EXCP_POLICY_CODE_NEW_EVENT:
+      return "NEW_EVENT";
+    case ZX_EXCP_POLICY_CODE_NEW_EVENTPAIR:
+      return "NEW_EVENTPAIR";
+    case ZX_EXCP_POLICY_CODE_NEW_PORT:
+      return "NEW_PORT";
+    case ZX_EXCP_POLICY_CODE_NEW_SOCKET:
+      return "NEW_SOCKET";
+    case ZX_EXCP_POLICY_CODE_NEW_FIFO:
+      return "NEW_FIFO";
+    case ZX_EXCP_POLICY_CODE_NEW_TIMER:
+      return "NEW_TIMER";
+    case ZX_EXCP_POLICY_CODE_NEW_PROCESS:
+      return "NEW_PROCESS";
+    case ZX_EXCP_POLICY_CODE_NEW_PROFILE:
+      return "NEW_PROFILE";
+    case ZX_EXCP_POLICY_CODE_AMBIENT_MARK_VMO_EXEC:
+      return "AMBIENT_MARK_VMO_EXEC";
+    case ZX_EXCP_POLICY_CODE_CHANNEL_FULL_WRITE:
+      return "CHANNEL_FULL_WRITE";
+    case ZX_EXCP_POLICY_CODE_PORT_TOO_MANY_PACKETS:
+      return "PORT_TOO_MANY_PACKETS";
+    case ZX_EXCP_POLICY_CODE_BAD_SYSCALL:
+      return "BAD_SYSCALL";
+    default:
+      return "<unknown policy code>";
   }
 }
 
@@ -170,6 +214,10 @@ static void print_exception_report(FILE* out, const zx_exception_report_t& repor
 #endif
     fprintf(out, "<== %s %s page fault, PC at 0x%" PRIxPTR "\n", access_type, violation,
             decoded.pc);
+  } else if (report.header.type == ZX_EXCP_POLICY_ERROR) {
+    fprintf(out, "<== policy error: %s (%d), PC at 0x%" PRIxPTR "\n",
+            inspector::policy_exception_code_to_str(report.context.synth_code),
+            report.context.synth_code, decoded.pc);
   } else {
     fprintf(out, "<== %s, PC at 0x%" PRIxPTR "\n", inspector::excp_type_to_str(report.header.type),
             decoded.pc);

@@ -46,6 +46,7 @@ struct arch_exception_context {
   struct iframe_t* frame;
   uint64_t far;
   uint32_t esr;
+  uint32_t user_synth_code;
 };
 
 // Register state layout used by arm64_context_switch().

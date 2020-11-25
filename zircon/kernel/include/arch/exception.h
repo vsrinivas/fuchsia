@@ -22,9 +22,10 @@ zx_status_t dispatch_user_exception(uint exception_type, const arch_exception_co
 
 // Dispatches an exception that was raised by a syscall using
 // thread_signal_policy_exception() (see <kernel/thread.h>), causing
-// dispatch_user_exception() to be called with the current context.
-// Implemented by arch code.
-zx_status_t arch_dispatch_user_policy_exception(void);
+// dispatch_user_exception() to be called with the current context. Implemented
+// by arch code. |policy_exception_code| is information about the policy error
+// which is stored into the zx_exception_report_t.
+zx_status_t arch_dispatch_user_policy_exception(uint32_t policy_exception_code);
 
 // Dumps architecture-specific state to the console. |context| typically comes
 // from a call to dispatch_user_exception(). Implemented by arch code.

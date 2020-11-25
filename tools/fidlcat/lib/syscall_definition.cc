@@ -113,6 +113,8 @@ class ZxExceptionContext : public Class<zx_exception_context_t> {
   static const zx_arm64_exc_data_t* arm_64(const zx_exception_context_t* from) {
     return &from->arch.u.arm_64;
   }
+  static uint32_t synth_code(const zx_exception_context_t* from) { return from->synth_code; }
+  static uint32_t synth_data(const zx_exception_context_t* from) { return from->synth_data; }
 
  private:
   ZxExceptionContext() : Class("zx_exception_context_t") {
@@ -120,6 +122,10 @@ class ZxExceptionContext : public Class<zx_exception_context_t> {
         "arch.x86_64", x86_64, ZxX86_64ExcData::GetClass()));
     AddField(std::make_unique<ClassClassField<zx_exception_context_t, zx_arm64_exc_data_t>>(
         "arch.arm_64", arm_64, ZxArm64ExcData::GetClass()));
+    AddField(std::make_unique<ClassField<zx_exception_context_t, uint32_t>>(
+        "synth_code", SyscallType::kUint32, synth_code));
+    AddField(std::make_unique<ClassField<zx_exception_context_t, uint32_t>>(
+        "synth_data", SyscallType::kUint32, synth_data));
   }
   ZxExceptionContext(const ZxExceptionContext&) = delete;
   ZxExceptionContext& operator=(const ZxExceptionContext&) = delete;
