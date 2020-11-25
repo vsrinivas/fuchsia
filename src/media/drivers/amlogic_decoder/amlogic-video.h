@@ -6,6 +6,7 @@
 #define SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_AMLOGIC_VIDEO_H_
 
 #include <fuchsia/tee/cpp/fidl.h>
+#include <lib/device-protocol/pdev.h>
 #include <lib/zx/handle.h>
 #include <zircon/errors.h>
 #include <zircon/syscalls.h>
@@ -20,11 +21,10 @@
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
-#include <ddk/protocol/amlogiccanvas.h>
-#include <ddk/protocol/clock.h>
-#include <ddk/protocol/platform/device.h>
-#include <ddk/protocol/sysmem.h>
-#include <ddk/protocol/tee.h>
+#include <ddktl/protocol/amlogiccanvas.h>
+#include <ddktl/protocol/clock.h>
+#include <ddktl/protocol/sysmem.h>
+#include <ddktl/protocol/tee.h>
 #include <tee-client-api/tee-client-types.h>
 
 #include "decoder_core.h"
@@ -57,7 +57,7 @@ class AmlogicVideo final : public VideoDecoder::Owner,
     ZX_DEBUG_ASSERT(metrics_);
     return *metrics_;
   }
-  [[nodiscard]] DosRegisterIo* dosbus() override { return dosbus_.get(); }
+  [[nodiscard]] DosRegisterIo* dosbus() override { return &*dosbus_; }
   [[nodiscard]] zx::unowned_bti bti() override { return zx::unowned_bti(bti_); }
   [[nodiscard]] DeviceType device_type() override { return device_type_; }
   [[nodiscard]] FirmwareBlob* firmware_blob() override { return firmware_.get(); }
@@ -197,14 +197,14 @@ class AmlogicVideo final : public VideoDecoder::Owner,
   void PowerOffForError() __TA_REQUIRES(video_decoder_lock_);
 
   zx_device_t* parent_ = nullptr;
-  pdev_protocol_t pdev_{};
-  sysmem_protocol_t sysmem_{};
-  amlogic_canvas_protocol_t canvas_{};
+  ddk::PDev pdev_;
+  ddk::SysmemProtocolClient sysmem_;
+  ddk::AmlogicCanvasProtocolClient canvas_;
 
-  clock_protocol_t clocks_[static_cast<int>(ClockType::kMax)] = {};
+  ddk::ClockProtocolClient clocks_[static_cast<int>(ClockType::kMax)];
 
   // Unlike sysmem and canvas, tee is optional (no tee on vim2).
-  tee_protocol_t tee_{};
+  ddk::TeeProtocolClient tee_;
   bool is_tee_available_ = false;
   std::optional<SecmemSession> secmem_session_;
 
@@ -212,15 +212,15 @@ class AmlogicVideo final : public VideoDecoder::Owner,
   CodecMetrics* metrics_ = &default_nop_metrics_;
 
   DeviceType device_type_ = DeviceType::kUnknown;
-  zx::handle secure_monitor_;
-  std::unique_ptr<CbusRegisterIo> cbus_;
-  std::unique_ptr<DosRegisterIo> dosbus_;
-  std::unique_ptr<HiuRegisterIo> hiubus_;
-  std::unique_ptr<AoRegisterIo> aobus_;
-  std::unique_ptr<DmcRegisterIo> dmc_;
-  std::unique_ptr<ResetRegisterIo> reset_;
-  std::unique_ptr<DemuxRegisterIo> demux_;
-  std::unique_ptr<ParserRegisterIo> parser_regs_;
+  zx::resource secure_monitor_;
+  std::optional<CbusRegisterIo> cbus_;
+  std::optional<DosRegisterIo> dosbus_;
+  std::optional<HiuRegisterIo> hiubus_;
+  std::optional<AoRegisterIo> aobus_;
+  std::optional<DmcRegisterIo> dmc_;
+  std::optional<ResetRegisterIo> reset_;
+  std::optional<DemuxRegisterIo> demux_;
+  std::optional<ParserRegisterIo> parser_regs_;
 
   std::unique_ptr<MmioRegisters> registers_;
 
@@ -233,9 +233,9 @@ class AmlogicVideo final : public VideoDecoder::Owner,
 
   zx::bti bti_;
 
-  zx::handle parser_interrupt_handle_;
-  zx::handle vdec0_interrupt_handle_;
-  zx::handle vdec1_interrupt_handle_;
+  zx::interrupt parser_interrupt_handle_;
+  zx::interrupt vdec0_interrupt_handle_;
+  zx::interrupt vdec1_interrupt_handle_;
 
   std::thread parser_interrupt_thread_;
   std::thread vdec0_interrupt_thread_;

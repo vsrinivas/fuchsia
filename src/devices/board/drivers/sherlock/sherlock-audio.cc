@@ -197,22 +197,22 @@ zx_status_t Sherlock::AudioInit() {
 
   // Fragments to be used by the codecs.
   const device_fragment_t woofer_fragments[] = {
-      {"i2c-woofer", countof(woofer_i2c_fragment), woofer_i2c_fragment},
+      {"i2c", countof(woofer_i2c_fragment), woofer_i2c_fragment},
   };
   const device_fragment_t tweeter_left_fragments[] = {
-      {"i2c-tweeter-left", countof(tweeter_left_i2c_fragment), tweeter_left_i2c_fragment},
+      {"i2c", countof(tweeter_left_i2c_fragment), tweeter_left_i2c_fragment},
   };
   const device_fragment_t tweeter_right_fragments[] = {
-      {"i2c-tweeter-right", countof(tweeter_right_i2c_fragment), tweeter_right_i2c_fragment},
+      {"i2c", countof(tweeter_right_i2c_fragment), tweeter_right_i2c_fragment},
   };
   const device_fragment_t luis_codec_fragments[] = {
-      {"i2c-codec", countof(luis_codec_i2c_fragment), luis_codec_i2c_fragment},
+      {"i2c", countof(luis_codec_i2c_fragment), luis_codec_i2c_fragment},
   };
   const device_fragment_t ernie_woofer_fragments[] = {
-      {"i2c-woofer", countof(ernie_woofer_codec_i2c_fragment), ernie_woofer_codec_i2c_fragment},
+      {"i2c", countof(ernie_woofer_codec_i2c_fragment), ernie_woofer_codec_i2c_fragment},
   };
   const device_fragment_t ernie_tweeter_fragments[] = {
-      {"i2c-tweeter", countof(ernie_tweeter_codec_i2c_fragment), ernie_tweeter_codec_i2c_fragment},
+      {"i2c", countof(ernie_tweeter_codec_i2c_fragment), ernie_tweeter_codec_i2c_fragment},
   };
 #ifdef ENABLE_BT
   static const device_fragment_t tdm_pcm_fragments[] = {};

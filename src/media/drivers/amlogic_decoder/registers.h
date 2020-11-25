@@ -48,46 +48,46 @@ class TypedRegisterAddr : public hwreg::RegisterAddr<RegType> {
 // processing.
 class CbusRegisterIo : public ddk::MmioBuffer {
  public:
-  CbusRegisterIo(const mmio_buffer_t& mmio) : ddk::MmioBuffer(mmio) {}
+  CbusRegisterIo(ddk::MmioBuffer mmio) : ddk::MmioBuffer(std::move(mmio)) {}
 };
 
 // The DOS bus mainly seems to handle video decoding.
 class DosRegisterIo : public ddk::MmioBuffer {
  public:
-  DosRegisterIo(const mmio_buffer_t& mmio) : ddk::MmioBuffer(mmio) {}
+  DosRegisterIo(ddk::MmioBuffer mmio) : ddk::MmioBuffer(std::move(mmio)) {}
 };
 
 // Aobus communicates with the always-on power management processor.
 class AoRegisterIo : public ddk::MmioBuffer {
  public:
-  AoRegisterIo(const mmio_buffer_t& mmio) : ddk::MmioBuffer(mmio) {}
+  AoRegisterIo(ddk::MmioBuffer mmio) : ddk::MmioBuffer(std::move(mmio)) {}
 };
 
 // Hiubus mainly seems to handle clock control and gating.
 class HiuRegisterIo : public ddk::MmioBuffer {
  public:
-  HiuRegisterIo(const mmio_buffer_t& mmio) : ddk::MmioBuffer(mmio) {}
+  HiuRegisterIo(ddk::MmioBuffer mmio) : ddk::MmioBuffer(std::move(mmio)) {}
 };
 
 // The DMC is the DDR memory controller.
 class DmcRegisterIo : public ddk::MmioBuffer {
  public:
-  DmcRegisterIo(const mmio_buffer_t& mmio) : ddk::MmioBuffer(mmio) {}
+  DmcRegisterIo(ddk::MmioBuffer mmio) : ddk::MmioBuffer(std::move(mmio)) {}
 };
 
 class ResetRegisterIo : public ddk::MmioView {
  public:
-  ResetRegisterIo(const mmio_buffer_t& mmio, zx_off_t off) : ddk::MmioView(mmio, off) {}
+  ResetRegisterIo(const ddk::MmioBuffer& mmio, zx_off_t off) : ddk::MmioView(mmio.View(off)) {}
 };
 
 class ParserRegisterIo : public ddk::MmioView {
  public:
-  ParserRegisterIo(const mmio_buffer_t& mmio, zx_off_t off) : ddk::MmioView(mmio, off) {}
+  ParserRegisterIo(const ddk::MmioBuffer& mmio, zx_off_t off) : ddk::MmioView(mmio.View(off)) {}
 };
 
 class DemuxRegisterIo : public ddk::MmioView {
  public:
-  DemuxRegisterIo(const mmio_buffer_t& mmio, zx_off_t off) : ddk::MmioView(mmio, off) {}
+  DemuxRegisterIo(const ddk::MmioBuffer& mmio, zx_off_t off) : ddk::MmioView(mmio.View(off)) {}
 };
 
 #define DEFINE_REGISTER(name, type, address)                           \

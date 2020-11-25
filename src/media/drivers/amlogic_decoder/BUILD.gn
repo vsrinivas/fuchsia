@@ -149,7 +149,7 @@ if (target_cpu == "arm64") {
       "//sdk/banjo/ddk.protocol.sysmem",
       "//sdk/banjo/ddk.protocol.tee",
       "//sdk/fidl/fuchsia.tee",
-      "//src/devices/bus/lib/device-protocol-platform-device",
+      "//src/devices/bus/lib/device-protocol-pdev",
       "//src/devices/lib/driver",
       "//src/devices/lib/mmio",
       "//src/lib/ddk",

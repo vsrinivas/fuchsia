@@ -15,27 +15,13 @@
 #include <ddk/debug.h>
 #include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
-#include <ddk/protocol/composite.h>
+#include <ddktl/protocol/composite.h>
 #include <fbl/auto_call.h>
 
 #include "src/media/audio/drivers/aml-g12-tdm/aml_tdm-bind.h"
 
 namespace audio {
 namespace aml_g12 {
-
-enum {
-  FRAGMENT_PDEV,
-  FRAGMENT_ENABLE_GPIO,
-  FRAGMENT_CODEC_0,
-  FRAGMENT_CODEC_1,
-  FRAGMENT_CODEC_2,
-  FRAGMENT_CODEC_3,
-  FRAGMENT_CODEC_4,
-  FRAGMENT_CODEC_5,
-  FRAGMENT_CODEC_6,
-  FRAGMENT_CODEC_7,  // Support up to 8 codecs.
-  FRAGMENT_COUNT,
-};
 
 AmlG12TdmStream::AmlG12TdmStream(zx_device_t* parent, bool is_input, ddk::PDev pdev,
                                  const ddk::GpioProtocolClient enable_gpio)
@@ -72,17 +58,15 @@ void AmlG12TdmStream::InitDaiFormats() {
 }
 
 zx_status_t AmlG12TdmStream::InitPDev() {
-  composite_protocol_t composite;
-
-  auto status = device_get_protocol(parent(), ZX_PROTOCOL_COMPOSITE, &composite);
-  if (status != ZX_OK) {
+  ddk::CompositeProtocolClient composite(parent());
+  if (!composite.is_valid()) {
     zxlogf(ERROR, "%s Could not get composite protocol", __FILE__);
-    return status;
+    return ZX_ERR_NO_RESOURCES;
   }
 
   size_t actual = 0;
-  status = device_get_metadata(parent(), DEVICE_METADATA_PRIVATE, &metadata_,
-                               sizeof(metadata::AmlConfig), &actual);
+  zx_status_t status = device_get_metadata(parent(), DEVICE_METADATA_PRIVATE, &metadata_,
+                                           sizeof(metadata::AmlConfig), &actual);
   if (status != ZX_OK || sizeof(metadata::AmlConfig) != actual) {
     zxlogf(ERROR, "%s device_get_metadata failed %d", __FILE__, status);
     return status;
@@ -93,14 +77,6 @@ zx_status_t AmlG12TdmStream::InitPDev() {
     return status;
   }
   InitDaiFormats();
-
-  zx_device_t* fragments[FRAGMENT_COUNT] = {};
-  composite_get_fragments(&composite, fragments, countof(fragments), &actual);
-  // Either only pdev or pdev + enable gpio + codecs.
-  if (actual != 1 && actual != metadata_.codecs.number_of_codecs + 2) {
-    zxlogf(ERROR, "%s could not get the correct number of fragments %lu", __FILE__, actual);
-    return ZX_ERR_NOT_SUPPORTED;
-  }
 
   if (!pdev_.is_valid()) {
     zxlogf(ERROR, "%s could not get pdev", __FILE__);
@@ -116,9 +92,11 @@ zx_status_t AmlG12TdmStream::InitPDev() {
   ZX_ASSERT(metadata_.codecs.number_of_codecs <= 8);
   for (size_t i = 0; i < metadata_.codecs.number_of_codecs; ++i) {
     codecs_.push_back(SimpleCodecClient());
-    status = codecs_[i].SetProtocol(fragments[FRAGMENT_CODEC_0 + i]);
+    char fragment_name[32] = {};
+    snprintf(fragment_name, 32, "codec-%02lu", i + 1);
+    status = codecs_[i].SetProtocol(ddk::CodecProtocolClient(composite, fragment_name));
     if (status != ZX_OK) {
-      zxlogf(ERROR, "%s could set protocol - %d", __func__, status);
+      zxlogf(ERROR, "%s could set protocol - %s - %d", __func__, fragment_name, status);
       return status;
     }
   }
@@ -525,26 +503,15 @@ static zx_status_t audio_bind(void* ctx, zx_device_t* device) {
     return status;
   }
 
-  composite_protocol_t composite;
-  status = device_get_protocol(device, ZX_PROTOCOL_COMPOSITE, &composite);
-  if (status != ZX_OK) {
+  ddk::CompositeProtocolClient composite(device);
+  if (!composite.is_valid()) {
     zxlogf(ERROR, "%s Could not get composite protocol", __FILE__);
-    return status;
-  }
-
-  zx_device_t* fragments[FRAGMENT_COUNT] = {};
-  composite_get_fragments(&composite, fragments, countof(fragments), &actual);
-  // Either only pdev or pdev + enable gpio + codecs.
-  if (actual != 1 && actual != metadata.codecs.number_of_codecs + 2) {
-    zxlogf(ERROR, "%s could not get the correct number of fragments %lu", __FILE__, actual);
-    return ZX_ERR_NOT_SUPPORTED;
+    return ZX_ERR_NO_RESOURCES;
   }
 
   if (metadata.is_input) {
     auto stream = audio::SimpleAudioStream::Create<audio::aml_g12::AmlG12TdmStream>(
-        device, true, fragments[FRAGMENT_PDEV],
-        fragments[FRAGMENT_ENABLE_GPIO] ? fragments[FRAGMENT_ENABLE_GPIO]
-                                        : ddk::GpioProtocolClient());
+        device, true, ddk::PDev(composite), ddk::GpioProtocolClient(composite, "gpio-enable"));
     if (stream == nullptr) {
       zxlogf(ERROR, "%s Could not create aml-g12-tdm driver", __FILE__);
       return ZX_ERR_NO_MEMORY;
@@ -552,9 +519,7 @@ static zx_status_t audio_bind(void* ctx, zx_device_t* device) {
     __UNUSED auto dummy = fbl::ExportToRawPtr(&stream);
   } else {
     auto stream = audio::SimpleAudioStream::Create<audio::aml_g12::AmlG12TdmStream>(
-        device, false, fragments[FRAGMENT_PDEV],
-        fragments[FRAGMENT_ENABLE_GPIO] ? fragments[FRAGMENT_ENABLE_GPIO]
-                                        : ddk::GpioProtocolClient());
+        device, false, ddk::PDev(composite), ddk::GpioProtocolClient(composite, "gpio-enable"));
     if (stream == nullptr) {
       zxlogf(ERROR, "%s Could not create aml-g12-tdm driver", __FILE__);
       return ZX_ERR_NO_MEMORY;

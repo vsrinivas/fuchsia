@@ -22,8 +22,8 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/platform-defs.h>
-#include <ddk/protocol/composite.h>
 #include <ddk/protocol/platform/device.h>
+#include <ddktl/protocol/composite.h>
 #include <hw/reg.h>
 #include <hwreg/bitfields.h>
 #include <hwreg/mmio.h>
@@ -74,20 +74,6 @@ enum Interrupt {
   kDosMbox1Irq,
 };
 
-enum {
-  kFragmentPdev = 0,
-  kFragmentSysmem = 1,
-  kFragmentCanvas = 2,
-  kFragmentDosGclkVdec = 3,
-  kFragmentClkDos = 4,
-  // The tee is optional.
-  kFragmentTee = 5,
-  // with tee
-  kMaxFragmentCount = 6,
-  // without tee
-  kMinFragmentCount = 5,
-};
-
 }  // namespace
 
 AmlogicVideo::AmlogicVideo() {
@@ -133,37 +119,33 @@ void AmlogicVideo::AddNewDecoderInstance(std::unique_ptr<DecoderInstance> instan
 
 void AmlogicVideo::UngateClocks() {
   ToggleClock(ClockType::kClkDos, true);
-  HhiGclkMpeg1::Get()
-      .ReadFrom(hiubus_.get())
-      .set_aiu(0xff)
-      .set_demux(true)
-      .set_audio_in(true)
-      .WriteTo(hiubus_.get());
-  HhiGclkMpeg2::Get().ReadFrom(hiubus_.get()).set_vpu_interrupt(true).WriteTo(hiubus_.get());
+  HhiGclkMpeg1::Get().ReadFrom(&*hiubus_).set_aiu(0xff).set_demux(true).set_audio_in(true).WriteTo(
+      &*hiubus_);
+  HhiGclkMpeg2::Get().ReadFrom(&*hiubus_).set_vpu_interrupt(true).WriteTo(&*hiubus_);
   UngateParserClock();
 }
 
 void AmlogicVideo::UngateParserClock() {
   is_parser_gated_ = false;
-  HhiGclkMpeg1::Get().ReadFrom(hiubus_.get()).set_u_parser_top(true).WriteTo(hiubus_.get());
+  HhiGclkMpeg1::Get().ReadFrom(&*hiubus_).set_u_parser_top(true).WriteTo(&*hiubus_);
 }
 
 void AmlogicVideo::GateClocks() {
   // Keep VPU interrupt enabled, as it's used for vsync by the display.
   HhiGclkMpeg1::Get()
-      .ReadFrom(hiubus_.get())
+      .ReadFrom(&*hiubus_)
       .set_u_parser_top(false)
       .set_aiu(0)
       .set_demux(false)
       .set_audio_in(false)
-      .WriteTo(hiubus_.get());
+      .WriteTo(&*hiubus_);
   ToggleClock(ClockType::kClkDos, false);
   GateParserClock();
 }
 
 void AmlogicVideo::GateParserClock() {
   is_parser_gated_ = true;
-  HhiGclkMpeg1::Get().ReadFrom(hiubus_.get()).set_u_parser_top(false).WriteTo(hiubus_.get());
+  HhiGclkMpeg1::Get().ReadFrom(&*hiubus_).set_u_parser_top(false).WriteTo(&*hiubus_);
 }
 
 void AmlogicVideo::ClearDecoderInstance() {
@@ -233,7 +215,7 @@ zx_status_t AmlogicVideo::ConnectToTee(fuchsia::tee::DeviceSyncPtr* tee) {
     return status;
   }
 
-  status = tee_connect(&tee_, tee_server.release(), /*service_provider=*/ZX_HANDLE_INVALID);
+  status = tee_.Connect(std::move(tee_server), /*service_provider=*/zx::channel());
   if (status != ZX_OK) {
     LOG(ERROR, "tee_connect() failed - status: %d", status);
     return status;
@@ -314,7 +296,7 @@ std::unique_ptr<CanvasEntry> AmlogicVideo::ConfigureCanvas(io_buffer_t* io_buffe
     return nullptr;
   }
   uint8_t idx;
-  status = amlogic_canvas_config(&canvas_, dup_vmo.release(), offset, &info, &idx);
+  status = canvas_.Config(std::move(dup_vmo), offset, &info, &idx);
   if (status != ZX_OK) {
     DECODE_ERROR("Failed to configure canvas, status: %d", status);
     return nullptr;
@@ -323,9 +305,7 @@ std::unique_ptr<CanvasEntry> AmlogicVideo::ConfigureCanvas(io_buffer_t* io_buffe
   return std::make_unique<CanvasEntry>(this, idx);
 }
 
-void AmlogicVideo::FreeCanvas(CanvasEntry* canvas) {
-  amlogic_canvas_free(&canvas_, canvas->index());
-}
+void AmlogicVideo::FreeCanvas(CanvasEntry* canvas) { canvas_.Free(canvas->index()); }
 
 void AmlogicVideo::OnSignaledWatchdog() {
   std::lock_guard<std::mutex> lock(video_decoder_lock_);
@@ -588,7 +568,7 @@ void AmlogicVideo::SwapInCurrentInstance() {
 fidl::InterfaceHandle<fuchsia::sysmem::Allocator> AmlogicVideo::ConnectToSysmem() {
   fidl::InterfaceHandle<fuchsia::sysmem::Allocator> client_end;
   fidl::InterfaceRequest<fuchsia::sysmem::Allocator> server_end = client_end.NewRequest();
-  zx_status_t connect_status = sysmem_connect(&sysmem_, server_end.TakeChannel().release());
+  zx_status_t connect_status = sysmem_.Connect(server_end.TakeChannel());
   if (connect_status != ZX_OK) {
     // failure
     return fidl::InterfaceHandle<fuchsia::sysmem::Allocator>();
@@ -722,9 +702,9 @@ zx_status_t AmlogicVideo::TeeVp9AddHeaders(zx_paddr_t page_phys_base, uint32_t b
 
 void AmlogicVideo::ToggleClock(ClockType type, bool enable) {
   if (enable) {
-    clock_enable(&clocks_[static_cast<int>(type)]);
+    clocks_[static_cast<int>(type)].Enable();
   } else {
-    clock_disable(&clocks_[static_cast<int>(type)]);
+    clocks_[static_cast<int>(type)].Disable();
   }
 }
 
@@ -738,63 +718,50 @@ void AmlogicVideo::SetMetrics(CodecMetrics* metrics) {
 zx_status_t AmlogicVideo::InitRegisters(zx_device_t* parent) {
   parent_ = parent;
 
-  composite_protocol_t composite;
-  auto status = device_get_protocol(parent, ZX_PROTOCOL_COMPOSITE, &composite);
-  if (status != ZX_OK) {
+  ddk::CompositeProtocolClient composite(parent);
+  if (!composite.is_valid()) {
     DECODE_ERROR("Could not get composite protocol");
-    return status;
+    return ZX_ERR_NO_RESOURCES;
   }
 
-  zx_device_t* fragments[kMaxFragmentCount];
-  size_t actual;
-  composite_get_fragments(&composite, fragments, countof(fragments), &actual);
-  if (actual < kMinFragmentCount || actual > kMaxFragmentCount) {
-    DECODE_ERROR("could not get fragments");
-    return ZX_ERR_NOT_SUPPORTED;
+  pdev_ = ddk::PDev(composite);
+  if (!pdev_.is_valid()) {
+    DECODE_ERROR("Failed to get pdev protocol");
+    return ZX_ERR_NO_RESOURCES;
   }
+
+  sysmem_ = ddk::SysmemProtocolClient(composite, "sysmem");
+  if (!sysmem_.is_valid()) {
+    DECODE_ERROR("Could not get SYSMEM protocol");
+    return ZX_ERR_NO_RESOURCES;
+  }
+
+  canvas_ = ddk::AmlogicCanvasProtocolClient(composite, "canvas");
+  if (!canvas_.is_valid()) {
+    DECODE_ERROR("Could not get video CANVAS protocol");
+    return ZX_ERR_NO_RESOURCES;
+  }
+
+  clocks_[static_cast<int>(ClockType::kGclkVdec)] =
+      ddk::ClockProtocolClient(composite, "clock-dos-vdec");
+  if (!clocks_[static_cast<int>(ClockType::kGclkVdec)].is_valid()) {
+    DECODE_ERROR("Could not get CLOCK protocol\n");
+    return ZX_ERR_NO_RESOURCES;
+  }
+
+  clocks_[static_cast<int>(ClockType::kClkDos)] = ddk::ClockProtocolClient(composite, "clock-dos");
+  if (!clocks_[static_cast<int>(ClockType::kClkDos)].is_valid()) {
+    DECODE_ERROR("Could not get CLOCK protocol\n");
+    return ZX_ERR_NO_RESOURCES;
+  }
+
   // If tee is available as a fragment, we require that we can get ZX_PROTOCOL_TEE.  It'd be nice
   // if there were a less fragile way to detect this.  Passing in driver metadata for this doesn't
   // seem worthwhile so far.  There's no tee on vim2.
-  is_tee_available_ = (actual == kMaxFragmentCount);
-
-  status = device_get_protocol(fragments[kFragmentPdev], ZX_PROTOCOL_PDEV, &pdev_);
-  if (status != ZX_OK) {
-    DECODE_ERROR("Failed to get pdev protocol");
-    return ZX_ERR_NO_MEMORY;
-  }
-
-  status = device_get_protocol(fragments[kFragmentSysmem], ZX_PROTOCOL_SYSMEM, &sysmem_);
-  if (status != ZX_OK) {
-    DECODE_ERROR("Could not get SYSMEM protocol");
-    return status;
-  }
-
-  status = device_get_protocol(fragments[kFragmentCanvas], ZX_PROTOCOL_AMLOGIC_CANVAS, &canvas_);
-  if (status != ZX_OK) {
-    DECODE_ERROR("Could not get video CANVAS protocol");
-    return status;
-  }
-
-  status = device_get_protocol(fragments[kFragmentDosGclkVdec], ZX_PROTOCOL_CLOCK,
-                               &clocks_[static_cast<int>(ClockType::kGclkVdec)]);
-  if (status != ZX_OK) {
-    DECODE_ERROR("Could not get CLOCK protocol\n");
-    return status;
-  }
-
-  status = device_get_protocol(fragments[kFragmentClkDos], ZX_PROTOCOL_CLOCK,
-                               &clocks_[static_cast<int>(ClockType::kClkDos)]);
-  if (status != ZX_OK) {
-    DECODE_ERROR("Could not get CLOCK protocol\n");
-    return status;
-  }
+  tee_ = ddk::TeeProtocolClient(composite, "tee");
+  is_tee_available_ = tee_.is_valid();
 
   if (is_tee_available_) {
-    status = device_get_protocol(fragments[kFragmentTee], ZX_PROTOCOL_TEE, &tee_);
-    if (status != ZX_OK) {
-      DECODE_ERROR("Could not get TEE protocol, despite is_tee_available_");
-      return status;
-    }
     // TODO(fxbug.dev/39808): remove log spam once we're loading firmware via video_firmware TA
     LOG(INFO, "Got ZX_PROTOCOL_TEE");
   } else {
@@ -803,9 +770,9 @@ zx_status_t AmlogicVideo::InitRegisters(zx_device_t* parent) {
   }
 
   pdev_device_info_t info;
-  status = pdev_get_device_info(&pdev_, &info);
+  zx_status_t status = pdev_.GetDeviceInfo(&info);
   if (status != ZX_OK) {
-    DECODE_ERROR("pdev_get_device_info failed");
+    DECODE_ERROR("pdev_.GetDeviceInfo failed");
     return status;
   }
 
@@ -825,64 +792,61 @@ zx_status_t AmlogicVideo::InitRegisters(zx_device_t* parent) {
   }
 
   static constexpr uint32_t kTrustedOsSmcIndex = 0;
-  status = pdev_get_smc(&pdev_, kTrustedOsSmcIndex, secure_monitor_.reset_and_get_address());
+  status = pdev_.GetSmc(kTrustedOsSmcIndex, &secure_monitor_);
   if (status != ZX_OK) {
     // On systems where there's no protected memory it's fine if we can't get
     // a handle to the secure monitor.
     LOG(INFO, "amlogic-video: Unable to get secure monitor handle, assuming no protected memory");
   }
 
-  mmio_buffer_t cbus_mmio;
-  status = pdev_map_mmio_buffer(&pdev_, kCbus, ZX_CACHE_POLICY_UNCACHED_DEVICE, &cbus_mmio);
+  std::optional<ddk::MmioBuffer> cbus_mmio;
+  status = pdev_.MapMmio(kCbus, &cbus_mmio);
   if (status != ZX_OK) {
     DECODE_ERROR("Failed map cbus");
     return ZX_ERR_NO_MEMORY;
   }
-  cbus_ = std::make_unique<CbusRegisterIo>(cbus_mmio);
-  mmio_buffer_t mmio;
-  status = pdev_map_mmio_buffer(&pdev_, kDosbus, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
+
+  std::optional<ddk::MmioBuffer> mmio;
+  status = pdev_.MapMmio(kDosbus, &mmio);
   if (status != ZX_OK) {
     DECODE_ERROR("Failed map dosbus");
     return ZX_ERR_NO_MEMORY;
   }
-  dosbus_ = std::make_unique<DosRegisterIo>(mmio);
-  status = pdev_map_mmio_buffer(&pdev_, kHiubus, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
+  dosbus_.emplace(*std::move(mmio));
+  status = pdev_.MapMmio(kHiubus, &mmio);
   if (status != ZX_OK) {
     DECODE_ERROR("Failed map hiubus");
     return ZX_ERR_NO_MEMORY;
   }
-  hiubus_ = std::make_unique<HiuRegisterIo>(mmio);
-  status = pdev_map_mmio_buffer(&pdev_, kAobus, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
+  hiubus_.emplace(*std::move(mmio));
+  status = pdev_.MapMmio(kAobus, &mmio);
   if (status != ZX_OK) {
     DECODE_ERROR("Failed map aobus");
     return ZX_ERR_NO_MEMORY;
   }
-  aobus_ = std::make_unique<AoRegisterIo>(mmio);
-  status = pdev_map_mmio_buffer(&pdev_, kDmc, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
+  aobus_.emplace(*std::move(mmio));
+  status = pdev_.MapMmio(kDmc, &mmio);
   if (status != ZX_OK) {
     DECODE_ERROR("Failed map dmc");
     return ZX_ERR_NO_MEMORY;
   }
-  dmc_ = std::make_unique<DmcRegisterIo>(mmio);
-  status =
-      pdev_get_interrupt(&pdev_, kParserIrq, 0, parser_interrupt_handle_.reset_and_get_address());
+  dmc_.emplace(*std::move(mmio));
+  status = pdev_.GetInterrupt(kParserIrq, 0, &parser_interrupt_handle_);
   if (status != ZX_OK) {
     DECODE_ERROR("Failed get parser interrupt");
     return ZX_ERR_NO_MEMORY;
   }
-  status =
-      pdev_get_interrupt(&pdev_, kDosMbox0Irq, 0, vdec0_interrupt_handle_.reset_and_get_address());
+  status = pdev_.GetInterrupt(kDosMbox0Irq, 0, &vdec0_interrupt_handle_);
   if (status != ZX_OK) {
     DECODE_ERROR("Failed get vdec0 interrupt");
     return ZX_ERR_NO_MEMORY;
   }
-  status =
-      pdev_get_interrupt(&pdev_, kDosMbox1Irq, 0, vdec1_interrupt_handle_.reset_and_get_address());
+  status = pdev_.GetInterrupt(kDosMbox1Irq, 0, &vdec1_interrupt_handle_);
   if (status != ZX_OK) {
     DECODE_ERROR("Failed get vdec interrupt");
     return ZX_ERR_NO_MEMORY;
   }
-  status = pdev_get_bti(&pdev_, 0, bti_.reset_and_get_address());
+  status = pdev_.GetBti(0, &bti_);
   if (status != ZX_OK) {
     DECODE_ERROR("Failed get bti");
     return ZX_ERR_NO_MEMORY;
@@ -897,12 +861,12 @@ zx_status_t AmlogicVideo::InitRegisters(zx_device_t* parent) {
     parser_register_offset = (0x3800 - 0x2900) * 4;
     demux_register_offset = (0x1800 - 0x1600) * 4;
   }
-  reset_ = std::make_unique<ResetRegisterIo>(cbus_mmio, reset_register_offset);
-  parser_regs_ = std::make_unique<ParserRegisterIo>(cbus_mmio, parser_register_offset);
-  demux_ = std::make_unique<DemuxRegisterIo>(cbus_mmio, demux_register_offset);
-  registers_ = std::unique_ptr<MmioRegisters>(
-      new MmioRegisters{dosbus_.get(), aobus_.get(), dmc_.get(), hiubus_.get(), reset_.get(),
-                        parser_regs_.get(), demux_.get()});
+  reset_.emplace(*cbus_mmio, reset_register_offset);
+  parser_regs_.emplace(*cbus_mmio, parser_register_offset);
+  demux_.emplace(*cbus_mmio, demux_register_offset);
+  cbus_.emplace(*std::move(cbus_mmio));
+  registers_ = std::unique_ptr<MmioRegisters>(new MmioRegisters{
+      &*dosbus_, &*aobus_, &*dmc_, &*hiubus_, &*reset_, &*parser_regs_, &*demux_});
 
   firmware_ = std::make_unique<FirmwareBlob>();
   status = firmware_->LoadFirmware(parent_);

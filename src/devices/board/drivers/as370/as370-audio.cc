@@ -71,7 +71,7 @@ static const device_fragment_part_t ref_out_clk0_fragment[] = {
 
 static const device_fragment_t codec_fragments[] = {
     {"i2c", countof(ref_out_i2c_fragment), ref_out_i2c_fragment},
-    {"gpio", countof(ref_out_enable_gpio_fragment), ref_out_enable_gpio_fragment},
+    {"gpio-enable", countof(ref_out_enable_gpio_fragment), ref_out_enable_gpio_fragment},
 };
 static const device_fragment_t controller_fragments[] = {
     {"dma", countof(dma_fragment), dma_fragment},

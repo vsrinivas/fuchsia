@@ -8,8 +8,8 @@
 #include <memory>
 
 #include <ddk/platform-defs.h>
-#include <ddk/protocol/composite.h>
 #include <ddk/protocol/i2c.h>
+#include <ddktl/protocol/composite.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
@@ -31,12 +31,6 @@ static const audio::DaiSupportedFormats kSupportedDaiFormats = {
     .frame_rates = kSupportedRates,
     .bits_per_slot = kSupportedBitsPerSlot,
     .bits_per_sample = kSupportedBitsPerSample,
-};
-
-enum {
-  FRAGMENT_I2C,
-  FRAGMENT_FAULT_GPIO,
-  FRAGMENT_COUNT,
 };
 
 int Tas27xx::Thread() {
@@ -369,24 +363,25 @@ zx_status_t Tas27xx::ReadReg(uint8_t reg, uint8_t* value) {
 }
 
 zx_status_t tas27xx_bind(void* ctx, zx_device_t* parent) {
-  composite_protocol_t composite;
-
-  auto status = device_get_protocol(parent, ZX_PROTOCOL_COMPOSITE, &composite);
-  if (status != ZX_OK) {
+  ddk::CompositeProtocolClient composite(parent);
+  if (!composite.is_valid()) {
     zxlogf(ERROR, "tas27xx: Could not get composite protocol");
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  zx_device_t* fragments[FRAGMENT_COUNT] = {};
-  size_t actual = 0;
-  composite_get_fragments(&composite, fragments, countof(fragments), &actual);
-  if (actual != FRAGMENT_COUNT) {
-    zxlogf(ERROR, "tas27xx: Could not get fragments");
+  ddk::I2cChannel i2c(composite, "i2c");
+  if (!i2c.is_valid()) {
+    zxlogf(ERROR, "tas27xx: Could not get i2c protocol");
+    return ZX_ERR_NO_RESOURCES;
+  }
+
+  ddk::GpioProtocolClient gpio(composite, "gpio");
+  if (!gpio.is_valid()) {
+    zxlogf(ERROR, "tas27xx: Could not get gpio protocol");
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  auto dev = SimpleCodecServer::Create<Tas27xx>(parent, fragments[FRAGMENT_I2C],
-                                                fragments[FRAGMENT_FAULT_GPIO], false, false);
+  auto dev = SimpleCodecServer::Create<Tas27xx>(parent, i2c, gpio, false, false);
 
   // devmgr is now in charge of the memory for dev.
   dev.release();

@@ -13,18 +13,11 @@
 #include <ddk/debug.h>
 #include <ddk/driver.h>
 #include <ddk/platform-defs.h>
-#include <ddk/protocol/composite.h>
+#include <ddktl/protocol/composite.h>
 #include <soc/mt8167/mt8167-clk-regs.h>
 
 namespace audio {
 namespace mt8167 {
-
-enum {
-  FRAGMENT_PDEV,
-  FRAGMENT_I2C,
-  FRAGMENT_GPIO,
-  FRAGMENT_COUNT,
-};
 
 // Expects 2 mics.
 constexpr size_t kNumberOfChannels = 2;
@@ -72,40 +65,31 @@ zx_status_t Mt8167AudioStreamIn::Init() {
 }
 
 zx_status_t Mt8167AudioStreamIn::InitPdev() {
-  composite_protocol_t composite;
-
-  auto status = device_get_protocol(parent(), ZX_PROTOCOL_COMPOSITE, &composite);
-  if (status != ZX_OK) {
+  ddk::CompositeProtocolClient composite(parent());
+  if (!composite.is_valid()) {
     zxlogf(ERROR, "Could not get composite protocol");
-    return status;
+    return ZX_ERR_NO_RESOURCES;
   }
 
-  zx_device_t* fragments[FRAGMENT_COUNT];
-  size_t actual;
-  composite_get_fragments(&composite, fragments, countof(fragments), &actual);
-  if (actual != countof(fragments)) {
-    zxlogf(ERROR, "could not get fragments");
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
-  pdev_ = fragments[FRAGMENT_PDEV];
+  pdev_ = ddk::PDev(composite);
   if (!pdev_.is_valid()) {
     return ZX_ERR_NO_RESOURCES;
   }
 
-  codec_reset_ = fragments[FRAGMENT_GPIO];
+  codec_reset_ = ddk::GpioProtocolClient(composite, "gpio");
   if (!codec_reset_.is_valid()) {
     zxlogf(ERROR, "%s failed to allocate gpio", __FUNCTION__);
     return ZX_ERR_NO_RESOURCES;
   }
 
-  codec_ = Tlv320adc::Create(fragments[FRAGMENT_I2C], 0);  // ADC for TDM in.
+  ddk::I2cChannel i2c(composite, "i2c");
+  codec_ = Tlv320adc::Create(i2c, 0);  // ADC for TDM in.
   if (!codec_) {
     zxlogf(ERROR, "%s could not get Tlv320adc", __func__);
     return ZX_ERR_NO_RESOURCES;
   }
 
-  status = pdev_.GetBti(0, &bti_);
+  zx_status_t status = pdev_.GetBti(0, &bti_);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s could not obtain bti %d", __func__, status);
     return status;

@@ -14,18 +14,12 @@
 #include <ddk/driver.h>
 #include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
-#include <ddk/protocol/composite.h>
 #include <ddktl/metadata/audio.h>
+#include <ddktl/protocol/composite.h>
 #include <fbl/array.h>
 #include <soc/mt8167/mt8167-clk-regs.h>
 
 namespace {
-
-enum {
-  FRAGMENT_PDEV,
-  FRAGMENT_CODEC,
-  FRAGMENT_COUNT,
-};
 
 // Expects L+R.
 constexpr size_t kNumberOfChannels = 2;
@@ -41,37 +35,27 @@ Mt8167AudioStreamOut::Mt8167AudioStreamOut(zx_device_t* parent)
     : SimpleAudioStream(parent, false), pdev_(parent) {}
 
 zx_status_t Mt8167AudioStreamOut::InitPdev() {
-  composite_protocol_t composite;
-
-  auto status = device_get_protocol(parent(), ZX_PROTOCOL_COMPOSITE, &composite);
-  if (status != ZX_OK) {
+  ddk::CompositeProtocolClient composite(parent());
+  if (!composite.is_valid()) {
     zxlogf(ERROR, "Could not get composite protocol");
-    return status;
+    return ZX_ERR_NO_RESOURCES;
   }
 
-  zx_device_t* fragments[FRAGMENT_COUNT] = {};
-  size_t actual;
-  composite_get_fragments(&composite, fragments, countof(fragments), &actual);
-  // Only PDEV and I2C fragments are required.
-  if (actual < 2) {
-    zxlogf(ERROR, "could not get fragments");
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
-  pdev_ = fragments[FRAGMENT_PDEV];
+  pdev_ = ddk::PDev(composite);
   if (!pdev_.is_valid()) {
     return ZX_ERR_NO_RESOURCES;
   }
 
+  size_t actual;
   metadata::CodecType codec;
-  status = device_get_metadata(parent(), DEVICE_METADATA_PRIVATE, &codec,
-                               sizeof(metadata::CodecType), &actual);
+  zx_status_t status = device_get_metadata(parent(), DEVICE_METADATA_PRIVATE, &codec,
+                                           sizeof(metadata::CodecType), &actual);
   if (status != ZX_OK || sizeof(metadata::CodecType) != actual) {
     zxlogf(ERROR, "%s device_get_metadata failed %d", __FILE__, status);
     return status;
   }
 
-  status = codec_.SetProtocol(fragments[FRAGMENT_CODEC]);
+  status = codec_.SetProtocol(ddk::CodecProtocolClient(composite, "codec"));
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s could set codec protocol %d", __FUNCTION__, status);
     return ZX_ERR_NO_RESOURCES;

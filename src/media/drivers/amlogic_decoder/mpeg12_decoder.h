@@ -5,13 +5,10 @@
 #ifndef SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_MPEG12_DECODER_H_
 #define SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_MPEG12_DECODER_H_
 
-#include <lib/device-protocol/platform-device.h>
-
 #include <thread>
 #include <vector>
 
 #include <ddk/platform-defs.h>
-#include <ddk/protocol/platform/device.h>
 
 #include "registers.h"
 #include "video_decoder.h"

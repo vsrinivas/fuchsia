@@ -14,8 +14,8 @@
 #include <ddk/driver.h>
 #include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
-#include <ddk/protocol/composite.h>
 #include <ddktl/metadata/audio.h>
+#include <ddktl/protocol/composite.h>
 #include <fbl/array.h>
 #include <soc/as370/as370-audio-regs.h>
 
@@ -24,14 +24,6 @@
 // TODO(andresoportus): Add handling for the other formats supported by this controller.
 
 namespace {
-
-enum {
-  FRAGMENT_PDEV,
-  FRAGMENT_SHARED_DMA,
-  FRAGMENT_CODEC,
-  FRAGMENT_CLOCK,
-  FRAGMENT_COUNT,
-};
 
 constexpr uint32_t kWantedFrameRate = 48'000;
 
@@ -47,45 +39,34 @@ As370AudioStreamOut::As370AudioStreamOut(zx_device_t* parent)
     : SimpleAudioStream(parent, false), pdev_(parent) {}
 
 zx_status_t As370AudioStreamOut::InitPdev() {
-  composite_protocol_t composite;
-
-  auto status = device_get_protocol(parent(), ZX_PROTOCOL_COMPOSITE, &composite);
-  if (status != ZX_OK) {
+  ddk::CompositeProtocolClient composite(parent());
+  if (!composite.is_valid()) {
     zxlogf(ERROR, "%s Could not get composite protocol", __FILE__);
-    return status;
+    return ZX_ERR_NO_RESOURCES;
   }
 
-  zx_device_t* fragments[FRAGMENT_COUNT] = {};
-  size_t actual;
-  composite_get_fragments(&composite, fragments, countof(fragments), &actual);
-  if (actual != FRAGMENT_COUNT) {
-    zxlogf(ERROR, "%s could not get fragments", __FILE__);
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
-  pdev_ = fragments[FRAGMENT_PDEV];
+  pdev_ = ddk::PDev(composite);
   if (!pdev_.is_valid()) {
     zxlogf(ERROR, "%s could not get pdev", __FILE__);
     return ZX_ERR_NO_RESOURCES;
   }
-  clks_[kAvpll0Clk] = fragments[FRAGMENT_CLOCK];
+  clks_[kAvpll0Clk] = ddk::ClockProtocolClient(composite, "clock");
   if (!clks_[kAvpll0Clk].is_valid()) {
     zxlogf(ERROR, "%s GetClk failed", __FILE__);
-    return status;
+    return ZX_ERR_NO_RESOURCES;
   }
   // PLL0 = 196.608MHz = e.g. 48K (FSYNC) * 64 (BCLK) * 8 (MCLK) * 8.
   clks_[kAvpll0Clk].SetRate(kWantedFrameRate * 64 * 8 * 8);
   clks_[kAvpll0Clk].Enable();
 
-  ddk::SharedDmaProtocolClient dma;
-  dma = fragments[FRAGMENT_SHARED_DMA];
+  ddk::SharedDmaProtocolClient dma(composite, "dma");
   if (!dma.is_valid()) {
     zxlogf(ERROR, "%s could not get DMA", __FILE__);
     return ZX_ERR_NO_RESOURCES;
   }
 
   std::optional<ddk::MmioBuffer> mmio_global, mmio_avio_global, mmio_i2s;
-  status = pdev_.MapMmio(0, &mmio_global);
+  zx_status_t status = pdev_.MapMmio(0, &mmio_global);
   if (status != ZX_OK) {
     return status;
   }
@@ -114,7 +95,7 @@ zx_status_t As370AudioStreamOut::InitPdev() {
     return status;
   }
 
-  status = codec_.SetProtocol(fragments[FRAGMENT_CODEC]);
+  status = codec_.SetProtocol(ddk::CodecProtocolClient(composite, "codec"));
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s could set codec protocol %d", __FUNCTION__, status);
     return ZX_ERR_NO_RESOURCES;

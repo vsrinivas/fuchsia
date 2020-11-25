@@ -120,7 +120,7 @@ constexpr device_fragment_part_t tee_fragment[] = {
 constexpr device_fragment_t fragments[] = {
     {"sysmem", countof(sysmem_fragment), sysmem_fragment},
     {"canvas", countof(canvas_fragment), canvas_fragment},
-    {"clock-doc-vdec", countof(dos_gclk0_vdec_fragment), dos_gclk0_vdec_fragment},
+    {"clock-dos-vdec", countof(dos_gclk0_vdec_fragment), dos_gclk0_vdec_fragment},
     {"clock-dos", countof(clk_dos_fragment), clk_dos_fragment},
     {"tee", countof(tee_fragment), tee_fragment},
 };

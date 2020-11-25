@@ -15,16 +15,11 @@
 #include <ddk/debug.h>
 #include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
-#include <ddk/protocol/composite.h>
+#include <ddktl/protocol/composite.h>
 
 #include "src/media/audio/drivers/dai-test/dai_test_bind.h"
 
 namespace audio::daitest {
-
-enum {
-  FRAGMENT_DAI,
-  FRAGMENT_COUNT,
-};
 
 DaiTest::DaiTest(zx_device_t* parent, bool is_input)
     : DaiTestDeviceType(parent),
@@ -36,28 +31,19 @@ DaiTest::DaiTest(zx_device_t* parent, bool is_input)
 }
 
 zx_status_t DaiTest::InitPDev() {
-  composite_protocol_t composite;
-  auto status = device_get_protocol(parent(), ZX_PROTOCOL_COMPOSITE, &composite);
-  if (status != ZX_OK) {
+  ddk::CompositeProtocolClient composite(parent());
+  if (!composite.is_valid()) {
     zxlogf(ERROR, "%s Could not get composite protocol", __FILE__);
-    return status;
+    return ZX_ERR_NO_RESOURCES;
   }
 
-  zx_device_t* fragments[FRAGMENT_COUNT] = {};
-  size_t actual = 0;
-  composite_get_fragments(&composite, fragments, countof(fragments), &actual);
-  if (actual != FRAGMENT_COUNT) {
-    zxlogf(ERROR, "%s could not get the correct number of fragments %lu", __FILE__, actual);
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
-  proto_client_ = fragments[FRAGMENT_DAI];
+  proto_client_ = ddk::DaiProtocolClient(composite, is_input ? "dai-in" : "dai-out");
   if (!proto_client_.is_valid()) {
     zxlogf(ERROR, "%s could not get DAI fragment", __FILE__);
     return ZX_ERR_NO_RESOURCES;
   }
   zx::channel channel_remote, channel_local;
-  status = zx::channel::create(0, &channel_local, &channel_remote);
+  zx_status_t status = zx::channel::create(0, &channel_local, &channel_remote);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s could not create channel", __FILE__);
     return status;

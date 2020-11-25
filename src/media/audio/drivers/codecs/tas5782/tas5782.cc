@@ -11,8 +11,8 @@
 #include <memory>
 
 #include <ddk/platform-defs.h>
-#include <ddk/protocol/composite.h>
 #include <ddk/protocol/i2c.h>
+#include <ddktl/protocol/composite.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 
@@ -34,13 +34,6 @@ static const audio::DaiSupportedFormats kSupportedDaiFormats = {
     .frame_rates = kSupportedDaiRates,
     .bits_per_slot = kSupportedDaiBitsPerSlot,
     .bits_per_sample = kSupportedDaiBitsPerSample,
-};
-
-enum {
-  FRAGMENT_I2C,
-  FRAGMENT_RESET_GPIO,
-  FRAGMENT_MUTE_GPIO,
-  FRAGMENT_COUNT,
 };
 
 zx_status_t Tas5782::Reset() {
@@ -98,26 +91,23 @@ zx_status_t Tas5782::Shutdown() {
 }
 
 zx_status_t Tas5782::Create(zx_device_t* parent) {
-  composite_protocol_t composite;
-
-  auto status = device_get_protocol(parent, ZX_PROTOCOL_COMPOSITE, &composite);
-  if (status != ZX_OK) {
+  ddk::CompositeProtocolClient composite(parent);
+  if (!composite.is_valid()) {
     zxlogf(ERROR, "%s Could not get composite protocol", __FILE__);
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  zx_device_t* fragments[FRAGMENT_COUNT] = {};
-  size_t actual = 0;
-  composite_get_fragments(&composite, fragments, countof(fragments), &actual);
   // Only I2C fragment is required.
-  if (actual < 1) {
-    zxlogf(ERROR, "%s Could not get fragments", __FILE__);
-    return ZX_ERR_NOT_SUPPORTED;
+  ddk::I2cChannel i2c(composite, "i2c");
+  if (!i2c.is_valid()) {
+    zxlogf(ERROR, "%s Could not get i2c protocol", __FILE__);
+    return ZX_ERR_NO_RESOURCES;
   }
 
-  auto dev = SimpleCodecServer::Create<Tas5782>(parent, fragments[FRAGMENT_I2C],
-                                                fragments[FRAGMENT_RESET_GPIO],
-                                                fragments[FRAGMENT_MUTE_GPIO]);
+  ddk::GpioProtocolClient gpio_reset(composite, "gpio-reset");
+  ddk::GpioProtocolClient gpio_mute(composite, "gpio-mute");
+
+  auto dev = SimpleCodecServer::Create<Tas5782>(parent, i2c, gpio_reset, gpio_mute);
 
   // devmgr is now in charge of the memory for dev.
   dev.release();
