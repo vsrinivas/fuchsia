@@ -28,10 +28,15 @@ namespace feedback_data {
 namespace system_log_recorder {
 namespace {
 
-using stubs::BuildLogMessage;
+::fit::result<fuchsia::logger::LogMessage, std::string> BuildLogMessage(
+    const int32_t severity, const std::string& text,
+    const zx::duration timestamp_offset = zx::duration(0),
+    const std::vector<std::string>& tags = {}) {
+  return ::fit::ok(stubs::BuildLogMessage(severity, text, timestamp_offset, tags));
+}
 
 // Only change "X" for one character. i.e. X -> 12 is not allowed.
-const size_t kMaxLogLineSize = Format(BuildLogMessage(FX_LOG_INFO, "line X")).size();
+const size_t kMaxLogLineSize = Format(BuildLogMessage(FX_LOG_INFO, "line X").value()).size();
 
 class EncoderStub : public Encoder {
  public:
@@ -116,8 +121,7 @@ TEST(WriterTest, VerifyFileOrdering) {
 )");
 
   float compression_ratio;
-  ASSERT_TRUE(Concatenate(temp_dir.path(), &decoder, output_path,
-                          &compression_ratio));
+  ASSERT_TRUE(Concatenate(temp_dir.path(), &decoder, output_path, &compression_ratio));
   EXPECT_EQ(compression_ratio, 1.0);
 
   std::string contents;
@@ -179,8 +183,7 @@ TEST(WriterTest, WritesMessages) {
   IdentityDecoder decoder;
 
   float compression_ratio;
-  ASSERT_TRUE(Concatenate(temp_dir.path(), &decoder, output_path,
-                          &compression_ratio));
+  ASSERT_TRUE(Concatenate(temp_dir.path(), &decoder, output_path, &compression_ratio));
   EXPECT_EQ(compression_ratio, 1.0);
 
   std::string contents;
@@ -194,8 +197,7 @@ TEST(WriterTest, WritesMessages) {
   EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 4")));
   writer.Write();
 
-  ASSERT_TRUE(Concatenate(temp_dir.path(), &decoder, output_path,
-                          &compression_ratio));
+  ASSERT_TRUE(Concatenate(temp_dir.path(), &decoder, output_path, &compression_ratio));
   EXPECT_EQ(compression_ratio, 1.0);
 
   ASSERT_TRUE(files::ReadFileToString(output_path, &contents));
@@ -221,8 +223,7 @@ TEST(WriterTest, VerifyCompressionRatio) {
   Decoder2x decoder;
 
   float compression_ratio;
-  ASSERT_TRUE(Concatenate(temp_dir.path(), &decoder, output_path,
-                          &compression_ratio));
+  ASSERT_TRUE(Concatenate(temp_dir.path(), &decoder, output_path, &compression_ratio));
   EXPECT_EQ(compression_ratio, 2.0);
 }
 
@@ -246,8 +247,7 @@ TEST(WriterTest, VerifyProductionEcoding) {
   ProductionDecoder decoder;
 
   float compression_ratio;
-  ASSERT_TRUE(Concatenate(temp_dir.path(), &decoder, output_path,
-                          &compression_ratio));
+  ASSERT_TRUE(Concatenate(temp_dir.path(), &decoder, output_path, &compression_ratio));
   EXPECT_FALSE(std::isnan(compression_ratio));
 
   std::string contents;
@@ -291,8 +291,7 @@ TEST(WriterTest, FilesAlreadyPresent) {
   ProductionDecoder decoder;
 
   float compression_ratio;
-  ASSERT_TRUE(Concatenate(temp_dir.path(), &decoder, output_path,
-                          &compression_ratio));
+  ASSERT_TRUE(Concatenate(temp_dir.path(), &decoder, output_path, &compression_ratio));
   EXPECT_FALSE(std::isnan(compression_ratio));
 
   std::string contents;

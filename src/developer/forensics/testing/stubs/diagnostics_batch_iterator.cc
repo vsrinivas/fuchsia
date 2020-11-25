@@ -4,9 +4,11 @@
 
 #include "src/developer/forensics/testing/stubs/diagnostics_batch_iterator.h"
 
+#include <lib/async/cpp/task.h>
 #include <lib/fit/result.h>
 #include <lib/syslog/cpp/macros.h>
 
+#include "lib/async/cpp/task.h"
 #include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
@@ -56,6 +58,23 @@ void DiagnosticsBatchIteratorNeverRespondsAfterOneBatch::GetNext(GetNextCallback
 
 void DiagnosticsBatchIteratorReturnsError::GetNext(GetNextCallback callback) {
   callback(::fit::error(fuchsia::diagnostics::ReaderError::IO));
+}
+
+void DiagnosticsBatchIteratorDelayedBatches::GetNext(GetNextCallback callback) {
+  // Don't delay executing |callback| the first time GetNext is called.
+  static bool delay_response{false};
+
+  async::PostDelayedTask(
+      dispatcher_,
+      [this, callback = std::move(callback)]() {
+        FX_CHECK(ExpectCall()) << fxl::StringPrintf(
+            "No more calls to GetNext() expected (%lu/%lu calls made)",
+            std::distance(json_batches_.cbegin(), next_json_batch_), json_batches_.size());
+
+        callback(::fit::ok(ToVmo(*next_json_batch_++)));
+      },
+      delay_between_batches_ * delay_response);
+  delay_response = true;
 }
 
 }  // namespace stubs

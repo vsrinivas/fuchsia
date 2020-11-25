@@ -31,8 +31,6 @@ source_set("src") {
   public = [ "system_log_recorder.h" ]
 
   sources = [
-    "listener.cc",
-    "listener.h",
     "log_message_store.cc",
     "log_message_store.h",
     "system_log_recorder.cc",
@@ -43,15 +41,16 @@ source_set("src") {
 
   public_deps = [
     "encoding:encoder",
-    "//sdk/fidl/fuchsia.logger",
-    "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
+    "//src/developer/forensics/feedback_data:archive_accessor",
     "//src/developer/forensics/utils:logs",
   ]
 
   deps = [
+    "//sdk/fidl/fuchsia.diagnostics",
     "//sdk/lib/syslog/cpp",
     "//src/developer/forensics/feedback_data:constants",
+    "//src/lib/diagnostics/stream/cpp",
     "//src/lib/fxl",
     "//zircon/system/ulib/trace",
   ]

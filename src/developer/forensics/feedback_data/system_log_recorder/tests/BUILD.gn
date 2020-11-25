@@ -7,22 +7,6 @@ import("//src/sys/build/components.gni")
 ###############################################################################
 # EXECUTABLES
 ###############################################################################
-executable("listener_unittest_exe") {
-  testonly = true
-
-  sources = [ "listener_unittest.cc" ]
-
-  deps = [
-    "//src/developer/forensics/feedback_data/system_log_recorder:src",
-    "//src/developer/forensics/feedback_data/system_log_recorder/encoding:identity_encoder",
-    "//src/developer/forensics/testing:gtest_with_syslog_main",
-    "//src/developer/forensics/testing:unit_test_fixture",
-    "//src/developer/forensics/testing/stubs:logger",
-    "//third_party/googletest:gmock",
-    "//third_party/googletest:gtest",
-  ]
-}
-
 executable("log_message_store_unittest_exe") {
   testonly = true
 
@@ -95,6 +79,7 @@ executable("system_log_recorder_unittest_exe") {
     "//src/developer/forensics/feedback_data/system_log_recorder/encoding:production",
     "//src/developer/forensics/testing:gtest_with_syslog_main",
     "//src/developer/forensics/testing:unit_test_fixture",
+    "//src/developer/forensics/testing/stubs:diagnostics",
     "//src/developer/forensics/testing/stubs:logger",
     "//src/lib/files",
     "//third_party/googletest:gmock",
@@ -126,14 +111,6 @@ executable("writer_unittest_exe") {
 ###############################################################################
 # COMPONENTS
 ###############################################################################
-fuchsia_component("listener_unittest") {
-  testonly = true
-
-  manifest = "meta/listener_unittest.cmx"
-
-  deps = [ ":listener_unittest_exe" ]
-}
-
 fuchsia_component("log_message_store_unittest") {
   testonly = true
 
@@ -179,7 +156,6 @@ fuchsia_component("writer_unittest") {
 ###############################################################################
 fuchsia_test_package("system-log-recorder-tests") {
   test_components = [
-    ":listener_unittest",
     ":log_message_store_unittest",
     ":lz4_encoding_unittest",
     ":reader_unittest",

@@ -20,10 +20,15 @@ namespace feedback_data {
 namespace system_log_recorder {
 namespace {
 
-using stubs::BuildLogMessage;
+::fit::result<fuchsia::logger::LogMessage, std::string> BuildLogMessage(
+    const int32_t severity, const std::string& text,
+    const zx::duration timestamp_offset = zx::duration(0),
+    const std::vector<std::string>& tags = {}) {
+  return ::fit::ok(stubs::BuildLogMessage(severity, text, timestamp_offset, tags));
+}
 
 // Only change "X" for one character. i.e. X -> 12 is not allowed.
-const size_t kMaxLogLineSize = Format(BuildLogMessage(FX_LOG_INFO, "line X")).size();
+const size_t kMaxLogLineSize = Format(BuildLogMessage(FX_LOG_INFO, "line X").value()).size();
 const size_t kRepeatedFormatStrSize = std::string("!!! MESSAGE REPEATED X MORE TIMES !!!\n").size();
 // We set the block size to an arbitrary large numbers for test cases where the block logic does
 // not matter.

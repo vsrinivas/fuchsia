@@ -16,22 +16,23 @@
 #include "src/developer/forensics/feedback_data/system_log_recorder/encoding/identity_encoder.h"
 #include "src/developer/forensics/feedback_data/system_log_recorder/encoding/production_encoding.h"
 #include "src/developer/forensics/feedback_data/system_log_recorder/reader.h"
+#include "src/developer/forensics/testing/stubs/diagnostics_archive.h"
+#include "src/developer/forensics/testing/stubs/diagnostics_batch_iterator.h"
 #include "src/developer/forensics/testing/stubs/logger.h"
 #include "src/developer/forensics/testing/unit_test_fixture.h"
 #include "src/developer/forensics/utils/log_format.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/path.h"
 #include "src/lib/files/scoped_temp_dir.h"
+#include "src/lib/fxl/strings/string_printf.h"
 
 namespace forensics {
 namespace feedback_data {
 namespace system_log_recorder {
 namespace {
 
-using stubs::BuildLogMessage;
-
 // Only change "X" for one character. i.e. X -> 12 is not allowed.
-const size_t kMaxLogLineSize = Format(BuildLogMessage(FX_LOG_INFO, "line X")).size();
+const size_t kMaxLogLineSize = std::string("[15604.000][07559][07687][] INFO: line X\n").size();
 const size_t kDroppedFormatStrSize = std::string("!!! DROPPED X MESSAGES !!!\n").size();
 
 TEST(Encoding, VerifyProductionEncoderDecoderVersion) {
@@ -40,6 +41,28 @@ TEST(Encoding, VerifyProductionEncoderDecoderVersion) {
   ProductionDecoder decoder;
 
   EXPECT_EQ(encoder.GetEncodingVersion(), decoder.GetEncodingVersion());
+}
+
+std::string BuildLogMessage(const std::string& message) {
+  constexpr char fmt[] = R"JSON(
+[
+  {
+    "metadata": {
+      "timestamp": 15604000000000,
+      "severity": "Info"
+    },
+    "payload": {
+      "root": {
+      "message": "%s",
+        "pid": 7559,
+        "tid": 7687
+      }
+    }
+  }
+]
+)JSON";
+
+  return fxl::StringPrintf(fmt, message.c_str());
 }
 
 using SystemLogRecorderTest = UnitTestFixture;
@@ -62,43 +85,42 @@ TEST_F(SystemLogRecorderTest, SingleThreaded_SmokeTest) {
   //    5.25: line13 -> write 6 -> file 3
   //
   // Note: we use the IdentityEncoder to easily control which messages are dropped.
-  const zx::duration kListenerPeriod = zx::msec(750);
+  const zx::duration kArchivePeriod = zx::msec(750);
   const zx::duration kWriterPeriod = zx::sec(1);
 
-  const std::vector<std::vector<fuchsia::logger::LogMessage>> dumps({
+  const std::vector<std::vector<std::string>> json_batches({
       {
-          BuildLogMessage(FX_LOG_INFO, "line 0"),
-          BuildLogMessage(FX_LOG_INFO, "line 1"),
-          BuildLogMessage(FX_LOG_INFO, "line 2"),
-          BuildLogMessage(FX_LOG_INFO, "line 3"),
+          BuildLogMessage("line 0"),
+          BuildLogMessage("line 1"),
+          BuildLogMessage("line 2"),
+          BuildLogMessage("line 3"),
 
       },
       {
-          BuildLogMessage(FX_LOG_INFO, "line 4"),
-          BuildLogMessage(FX_LOG_INFO, "line 5"),
-          BuildLogMessage(FX_LOG_INFO, "line 6"),
-          BuildLogMessage(FX_LOG_INFO, "line 7"),
+          BuildLogMessage("line 4"),
+          BuildLogMessage("line 5"),
+          BuildLogMessage("line 6"),
+          BuildLogMessage("line 7"),
       },
-
+      {BuildLogMessage("line 8")},
+      {BuildLogMessage("line 9")},
+      {BuildLogMessage("line A")},
+      {BuildLogMessage("line B")},
+      {BuildLogMessage("line C")},
+      {BuildLogMessage("line D")},
+      {},
   });
 
-  const std::vector<fuchsia::logger::LogMessage> messages({
-      BuildLogMessage(FX_LOG_INFO, "line 8"),
-      BuildLogMessage(FX_LOG_INFO, "line 9"),
-      BuildLogMessage(FX_LOG_INFO, "line A"),
-      BuildLogMessage(FX_LOG_INFO, "line B"),
-      BuildLogMessage(FX_LOG_INFO, "line C"),
-      BuildLogMessage(FX_LOG_INFO, "line D"),
-  });
+  stubs::DiagnosticsArchive archive(std::make_unique<stubs::DiagnosticsBatchIteratorDelayedBatches>(
+      dispatcher(), json_batches, kArchivePeriod));
 
-  stubs::LoggerDelayedResponses logger(dispatcher(), dumps, messages, kListenerPeriod);
-  InjectServiceProvider(&logger);
+  InjectServiceProvider(&archive, kArchiveAccessorName);
 
   files::ScopedTempDir temp_dir;
 
   const size_t kWriteSize = kMaxLogLineSize * 2 + kDroppedFormatStrSize;
 
-  SystemLogRecorder recorder(dispatcher(), services(),
+  SystemLogRecorder recorder(dispatcher(), dispatcher(), services(),
                              SystemLogRecorder::WriteParameters{
                                  .period = kWriterPeriod,
                                  .max_write_size_bytes = kWriteSize,
@@ -120,8 +142,7 @@ TEST_F(SystemLogRecorderTest, SingleThreaded_SmokeTest) {
 
   {
     float compression_ratio;
-    ASSERT_TRUE(Concatenate(temp_dir.path(), &decoder,
-                            output_path, &compression_ratio));
+    ASSERT_TRUE(Concatenate(temp_dir.path(), &decoder, output_path, &compression_ratio));
     EXPECT_EQ(compression_ratio, 1.0);
   }
   ASSERT_TRUE(files::ReadFileToString(output_path, &contents));
@@ -134,8 +155,7 @@ TEST_F(SystemLogRecorderTest, SingleThreaded_SmokeTest) {
 
   {
     float compression_ratio;
-    ASSERT_TRUE(Concatenate(temp_dir.path(), &decoder,
-                            output_path, &compression_ratio));
+    ASSERT_TRUE(Concatenate(temp_dir.path(), &decoder, output_path, &compression_ratio));
     EXPECT_EQ(compression_ratio, 1.0);
   }
   ASSERT_TRUE(files::ReadFileToString(output_path, &contents));
@@ -149,8 +169,7 @@ TEST_F(SystemLogRecorderTest, SingleThreaded_SmokeTest) {
 
   {
     float compression_ratio;
-    ASSERT_TRUE(Concatenate(temp_dir.path(), &decoder,
-                            output_path, &compression_ratio));
+    ASSERT_TRUE(Concatenate(temp_dir.path(), &decoder, output_path, &compression_ratio));
     EXPECT_EQ(compression_ratio, 1.0);
   }
   ASSERT_TRUE(files::ReadFileToString(output_path, &contents));
@@ -165,8 +184,7 @@ TEST_F(SystemLogRecorderTest, SingleThreaded_SmokeTest) {
 
   {
     float compression_ratio;
-    ASSERT_TRUE(Concatenate(temp_dir.path(), &decoder,
-                            output_path, &compression_ratio));
+    ASSERT_TRUE(Concatenate(temp_dir.path(), &decoder, output_path, &compression_ratio));
     EXPECT_EQ(compression_ratio, 1.0);
   }
   ASSERT_TRUE(files::ReadFileToString(output_path, &contents));
@@ -180,8 +198,7 @@ TEST_F(SystemLogRecorderTest, SingleThreaded_SmokeTest) {
 
   {
     float compression_ratio;
-    ASSERT_TRUE(Concatenate(temp_dir.path(), &decoder,
-                            output_path, &compression_ratio));
+    ASSERT_TRUE(Concatenate(temp_dir.path(), &decoder, output_path, &compression_ratio));
     EXPECT_EQ(compression_ratio, 1.0);
   }
   ASSERT_TRUE(files::ReadFileToString(output_path, &contents));
@@ -196,8 +213,7 @@ TEST_F(SystemLogRecorderTest, SingleThreaded_SmokeTest) {
 
   {
     float compression_ratio;
-    ASSERT_TRUE(Concatenate(temp_dir.path(), &decoder,
-                            output_path, &compression_ratio));
+    ASSERT_TRUE(Concatenate(temp_dir.path(), &decoder, output_path, &compression_ratio));
     EXPECT_EQ(compression_ratio, 1.0);
   }
   ASSERT_TRUE(files::ReadFileToString(output_path, &contents));

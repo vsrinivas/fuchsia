@@ -8,8 +8,8 @@
 #include <lib/sys/cpp/service_directory.h>
 
 #include "lib/zx/time.h"
+#include "src/developer/forensics/feedback_data/archive_accessor_ptr.h"
 #include "src/developer/forensics/feedback_data/system_log_recorder/encoding/encoder.h"
-#include "src/developer/forensics/feedback_data/system_log_recorder/listener.h"
 #include "src/developer/forensics/feedback_data/system_log_recorder/log_message_store.h"
 #include "src/developer/forensics/feedback_data/system_log_recorder/writer.h"
 
@@ -27,7 +27,7 @@ class SystemLogRecorder {
     size_t total_log_size_bytes;
   };
 
-  SystemLogRecorder(async_dispatcher_t* write_dispatcher,
+  SystemLogRecorder(async_dispatcher_t* archive_dispatcher, async_dispatcher_t* write_dispatcher,
                     std::shared_ptr<sys::ServiceDirectory> services,
                     WriteParameters write_parameters, std::unique_ptr<Encoder> encoder);
   void Start();
@@ -39,7 +39,7 @@ class SystemLogRecorder {
   const zx::duration write_period_;
 
   LogMessageStore store_;
-  SystemLogListener listener_;
+  ArchiveAccessor archive_accessor_;
   SystemLogWriter writer_;
 };
 

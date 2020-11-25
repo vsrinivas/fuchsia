@@ -34,7 +34,7 @@ class DiagnosticsBatchIterator : public DiagnosticsBatchIteratorBase {
 
   void GetNext(GetNextCallback callback) override;
 
- private:
+ protected:
   const std::vector<std::vector<std::string>> json_batches_;
   decltype(json_batches_)::const_iterator next_json_batch_;
 };
@@ -66,6 +66,22 @@ class DiagnosticsBatchIteratorReturnsError : public DiagnosticsBatchIteratorBase
 
   // |fuchsia::diagnostics::BatchIterator|
   void GetNext(GetNextCallback callback) override;
+};
+
+class DiagnosticsBatchIteratorDelayedBatches : public DiagnosticsBatchIterator {
+ public:
+  DiagnosticsBatchIteratorDelayedBatches(async_dispatcher_t* dispatcher,
+                                         const std::vector<std::vector<std::string>>& json_batches,
+                                         zx::duration delay_between_batches)
+      : DiagnosticsBatchIterator(json_batches),
+        dispatcher_(dispatcher),
+        delay_between_batches_(delay_between_batches) {}
+
+  void GetNext(GetNextCallback callback) override;
+
+ private:
+  async_dispatcher_t* dispatcher_;
+  zx::duration delay_between_batches_;
 };
 
 }  // namespace stubs

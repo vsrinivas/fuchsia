@@ -34,7 +34,7 @@ int main() {
 
   auto context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
 
-  SystemLogRecorder recorder(write_loop.dispatcher(), context->svc(),
+  SystemLogRecorder recorder(main_loop.dispatcher(), write_loop.dispatcher(), context->svc(),
                              SystemLogRecorder::WriteParameters{
                                  .period = kWritePeriod,
                                  .max_write_size_bytes = kMaxWriteSizeInBytes,

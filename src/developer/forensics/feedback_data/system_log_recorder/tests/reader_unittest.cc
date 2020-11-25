@@ -27,10 +27,15 @@ namespace feedback_data {
 namespace system_log_recorder {
 namespace {
 
-using stubs::BuildLogMessage;
+::fit::result<fuchsia::logger::LogMessage, std::string> BuildLogMessage(
+    const int32_t severity, const std::string& text,
+    const zx::duration timestamp_offset = zx::duration(0),
+    const std::vector<std::string>& tags = {}) {
+  return ::fit::ok(stubs::BuildLogMessage(severity, text, timestamp_offset, tags));
+}
 
 // Only change "X" for one character. i.e. X -> 12 is not allowed.
-const size_t kMaxLogLineSize = Format(BuildLogMessage(FX_LOG_INFO, "line X")).size();
+const size_t kMaxLogLineSize = Format(BuildLogMessage(FX_LOG_INFO, "line X").value()).size();
 
 std::unique_ptr<Encoder> MakeIdentityEncoder() {
   return std::unique_ptr<Encoder>(new IdentityEncoder());
@@ -65,8 +70,7 @@ TEST(ReaderTest, MergeRepeatedMessages) {
   float compression_ratio;
   IdentityDecoder decoder;
 
-  ASSERT_TRUE(Concatenate(temp_dir.path(), &decoder, output_path,
-                          &compression_ratio));
+  ASSERT_TRUE(Concatenate(temp_dir.path(), &decoder, output_path, &compression_ratio));
 
   std::string contents;
   ASSERT_TRUE(files::ReadFileToString(output_path, &contents));
@@ -93,8 +97,7 @@ TEST(ReaderTest, SortsMessagesNoTimeTagOnly) {
   float compression_ratio;
   IdentityDecoder decoder;
 
-  ASSERT_TRUE(Concatenate(temp_dir.path(), &decoder, output_path,
-                          &compression_ratio));
+  ASSERT_TRUE(Concatenate(temp_dir.path(), &decoder, output_path, &compression_ratio));
 
   std::string contents;
   ASSERT_TRUE(files::ReadFileToString(output_path, &contents));
@@ -122,8 +125,7 @@ TEST(ReaderTest, SortsMessagesMixed) {
   float compression_ratio;
   IdentityDecoder decoder;
 
-  ASSERT_TRUE(Concatenate(temp_dir.path(), &decoder, output_path,
-                          &compression_ratio));
+  ASSERT_TRUE(Concatenate(temp_dir.path(), &decoder, output_path, &compression_ratio));
 
   std::string contents;
   ASSERT_TRUE(files::ReadFileToString(output_path, &contents));
@@ -153,8 +155,7 @@ TEST(ReaderTest, SortsMessages) {
   IdentityDecoder decoder;
 
   float compression_ratio;
-  ASSERT_TRUE(Concatenate(temp_dir.path(), &decoder, output_path,
-                          &compression_ratio));
+  ASSERT_TRUE(Concatenate(temp_dir.path(), &decoder, output_path, &compression_ratio));
   EXPECT_EQ(compression_ratio, 1.0);
 
   std::string contents;
@@ -196,8 +197,7 @@ TEST(ReaderTest, SortsMessagesDifferentTimestampLength) {
   float compression_ratio;
   IdentityDecoder decoder;
 
-  ASSERT_TRUE(Concatenate(temp_dir.path(), &decoder, output_path,
-                          &compression_ratio));
+  ASSERT_TRUE(Concatenate(temp_dir.path(), &decoder, output_path, &compression_ratio));
 
   std::string contents;
   ASSERT_TRUE(files::ReadFileToString(output_path, &contents));
@@ -230,8 +230,7 @@ TEST(ReaderTest, SortsMessagesMultipleFiles) {
   IdentityDecoder decoder;
 
   float compression_ratio;
-  ASSERT_TRUE(Concatenate(temp_dir.path(), &decoder, output_path,
-                          &compression_ratio));
+  ASSERT_TRUE(Concatenate(temp_dir.path(), &decoder, output_path, &compression_ratio));
   EXPECT_EQ(compression_ratio, 1.0);
 
   std::string contents;

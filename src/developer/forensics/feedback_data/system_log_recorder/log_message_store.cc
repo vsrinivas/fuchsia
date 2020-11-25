@@ -27,6 +27,10 @@ std::string MakeRepeatedWarning(const size_t message_count) {
   }
 }
 
+std::string FormatError(const std::string& error) {
+  return fxl::StringPrintf("!!! LOG PARSING ERROR: %s !!!", error.c_str());
+}
+
 }  // namespace
 
 LogMessageStore::LogMessageStore(size_t max_block_capacity_bytes, size_t max_buffer_capacity_bytes,
@@ -46,13 +50,15 @@ void LogMessageStore::AddToBuffer(const std::string& str) {
   buffer_stats_.Use(encoded.size());
 }
 
-bool LogMessageStore::Add(fuchsia::logger::LogMessage log) {
+bool LogMessageStore::Add(::fit::result<fuchsia::logger::LogMessage, std::string> log) {
   TRACE_DURATION("feedback:io", "LogMessageStore::Add");
 
   std::lock_guard<std::mutex> lk(mtx_);
 
+  const auto& log_msg = (log.is_ok()) ? log.value().msg : log.error();
+
   // 1. Early return if the incoming message is the same as last time.
-  if (last_pushed_message_ == log.msg) {
+  if (last_pushed_message_ == log_msg) {
     last_pushed_message_count_++;
     return true;
   }
@@ -76,12 +82,12 @@ bool LogMessageStore::Add(fuchsia::logger::LogMessage log) {
   }
 
   // 4. Serialize incoming message.
-  const std::string str = Format(log);
+  const std::string str = (log.is_ok()) ? Format(log.value()) : FormatError(log.error());
 
   // 5. Push the incoming message if below the limit, otherwise drop it.
   if (buffer_stats_.CanUse(str.size())) {
     AddToBuffer(str);
-    last_pushed_message_ = log.msg;
+    last_pushed_message_ = log_msg;
     last_pushed_message_count_ = 1;
     return true;
   } else {

@@ -60,7 +60,7 @@ class CollectInspectDataTest : public UnitTestFixture {
   std::unique_ptr<stubs::DiagnosticsArchiveBase> inspect_server_;
 };
 
-// TODO(fxbug.dev/63026): Factor out ArchiveAccessor tests.
+// TODO(fxbug.dev/65226): Factor out ArchiveAccessor tests.
 TEST_F(CollectInspectDataTest, Succeed_AllInspectData) {
   SetUpInspectServer(std::make_unique<stubs::DiagnosticsArchive>(
       std::make_unique<stubs::DiagnosticsBatchIterator>(std::vector<std::vector<std::string>>({
