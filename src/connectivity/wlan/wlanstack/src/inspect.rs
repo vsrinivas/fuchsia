@@ -30,6 +30,7 @@ const DEVICE_EVENTS_LIMIT: usize = 20;
 const CONNECT_EVENTS_LIMIT: usize = 7;
 const DISCONNECT_EVENTS_LIMIT: usize = 7;
 const SCAN_FAILURE_EVENTS_LIMIT: usize = 5;
+const COUNTERS_EVENTS_LIMIT: usize = 60;
 
 pub struct WlanstackTree {
     /// Root of the tree
@@ -160,6 +161,7 @@ pub struct ClientStatsNode {
     pub connect: Mutex<BoundedListNode>,
     pub disconnect: Mutex<BoundedListNode>,
     pub scan_failures: Mutex<BoundedListNode>,
+    pub counters: Mutex<BoundedListNode>,
 }
 
 impl ClientStatsNode {
@@ -167,6 +169,7 @@ impl ClientStatsNode {
         let connect = node.create_child("connect");
         let disconnect = node.create_child("disconnect");
         let scan_failures = node.create_child("scan_failures");
+        let counters = node.create_child("counters");
         Self {
             _node: node,
             connect: Mutex::new(BoundedListNode::new(connect, CONNECT_EVENTS_LIMIT)),
@@ -175,6 +178,7 @@ impl ClientStatsNode {
                 scan_failures,
                 SCAN_FAILURE_EVENTS_LIMIT,
             )),
+            counters: Mutex::new(BoundedListNode::new(counters, COUNTERS_EVENTS_LIMIT)),
         }
     }
 }

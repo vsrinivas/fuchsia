@@ -94,8 +94,11 @@ async fn main() -> Result<(), Error> {
     };
     let (cobalt_sender, cobalt_reporter) = CobaltConnector::default()
         .serve(ConnectionType::project_id(wlan_metrics_registry::PROJECT_ID));
-    let telemetry_server =
-        telemetry::report_telemetry_periodically(ifaces.clone(), cobalt_sender.clone());
+    let telemetry_server = telemetry::report_telemetry_periodically(
+        ifaces.clone(),
+        cobalt_sender.clone(),
+        inspect_tree.clone(),
+    );
     let (watcher_service, watcher_fut) =
         watcher_service::serve_watchers(phys.clone(), ifaces.clone(), phy_events, iface_events);
     let serve_fidl_fut =

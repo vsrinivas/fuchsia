@@ -46,7 +46,11 @@ struct ReconnectInfo {
 }
 
 // Export MLME stats to Cobalt every REPORT_PERIOD_MINUTES.
-pub async fn report_telemetry_periodically(ifaces_map: Arc<IfaceMap>, mut sender: CobaltSender) {
+pub async fn report_telemetry_periodically(
+    ifaces_map: Arc<IfaceMap>,
+    mut sender: CobaltSender,
+    inspect_tree: Arc<inspect::WlanstackTree>,
+) {
     // TODO(fxbug.dev/28800): Make this module resilient to Wlanstack2 downtime.
 
     let mut last_reported_stats: HashMap<u16, StatsRef> = HashMap::new();
@@ -68,6 +72,12 @@ pub async fn report_telemetry_periodically(ifaces_map: Arc<IfaceMap>, mut sender
                     }
                     Entry::Occupied(mut value) => {
                         let last_stats = value.get_mut();
+                        log_counters_to_inspect(
+                            id,
+                            &last_stats.lock(),
+                            &current_stats.lock(),
+                            inspect_tree.clone(),
+                        );
                         report_stats(&last_stats.lock(), &current_stats.lock(), &mut sender);
                         let _dropped = std::mem::replace(value.get_mut(), current_stats);
                     }
@@ -79,6 +89,28 @@ pub async fn report_telemetry_periodically(ifaces_map: Arc<IfaceMap>, mut sender
             };
         }
     }
+}
+
+fn log_counters_to_inspect(
+    iface_id: u16,
+    last: &fidl_stats::IfaceStats,
+    current: &fidl_stats::IfaceStats,
+    inspect_tree: Arc<inspect::WlanstackTree>,
+) {
+    let (last, current) = match (&last.mlme_stats, &current.mlme_stats) {
+        (Some(ref last), Some(ref current)) => match (last.as_ref(), current.as_ref()) {
+            (ClientMlmeStats(last), ClientMlmeStats(current)) => (last, current),
+            _ => return,
+        },
+        _ => return,
+    };
+    inspect_log!(inspect_tree.client_stats.counters.lock(), {
+        iface: iface_id,
+        tx_total: current.tx_frame.in_.count - last.tx_frame.in_.count,
+        tx_drop: current.tx_frame.drop.count - last.tx_frame.drop.count,
+        rx_total: current.rx_frame.in_.count - last.rx_frame.in_.count,
+        rx_drop: current.rx_frame.drop.count - last.rx_frame.drop.count,
+    });
 }
 
 fn report_stats(
@@ -742,8 +774,13 @@ mod tests {
 
         let (ifaces_map, stats_requests) = fake_iface_map();
         let (cobalt_sender, mut cobalt_receiver) = fake_cobalt_sender();
+        let inspect_tree = fake_inspect_tree();
 
-        let telemetry_fut = report_telemetry_periodically(Arc::new(ifaces_map), cobalt_sender);
+        let telemetry_fut = report_telemetry_periodically(
+            Arc::new(ifaces_map),
+            cobalt_sender,
+            inspect_tree.clone(),
+        );
         pin_mut!(telemetry_fut);
 
         // Schedule the first stats request
