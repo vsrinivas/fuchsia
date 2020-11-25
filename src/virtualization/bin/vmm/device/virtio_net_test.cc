@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/netstack/cpp/fidl.h>
+#include <fuchsia/netstack/cpp/fidl_test_base.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/trace-provider/provider.h>
@@ -19,51 +19,7 @@ static constexpr uint16_t kQueueSize = 16;
 static constexpr size_t kVmoSize = 1024;
 static constexpr uint16_t kFakeInterfaceId = 0;
 
-class VirtioNetTest : public TestWithDevice, public fuchsia::netstack::Netstack {
- public:
-  void GetInterfaces(GetInterfacesCallback callback) override {}
-  void GetInterfaces2(GetInterfaces2Callback callback) override {}
-
-  void GetRouteTable(GetRouteTableCallback callback) override {}
-  void GetRouteTable2(GetRouteTable2Callback callback) override {}
-
-  void SetInterfaceStatus(uint32_t nicid, bool enabled) override {}
-
-  void SetInterfaceAddress(uint32_t nicid, fuchsia::net::IpAddress addr, uint8_t prefixLen,
-                           SetInterfaceAddressCallback callback) override {
-    fuchsia::netstack::NetErr err{
-        .status = fuchsia::netstack::Status::OK,
-        .message = "",
-    };
-    callback(err);
-  }
-
-  void RemoveInterfaceAddress(uint32_t nicid, fuchsia::net::IpAddress addr, uint8_t prefixLen,
-                              RemoveInterfaceAddressCallback callback) override {}
-
-  void SetInterfaceMetric(uint32_t nicid, uint32_t metric,
-                          SetInterfaceMetricCallback callback) override {}
-
-  void GetDhcpClient(uint32_t nicid, ::fidl::InterfaceRequest<::fuchsia::net::dhcp::Client> client,
-                     GetDhcpClientCallback callback) override {}
-
-  void BridgeInterfaces(::std::vector<uint32_t> nicids,
-                        BridgeInterfacesCallback callback) override {}
-
-  void AddEthernetDevice(::std::string topological_path,
-                         fuchsia::netstack::InterfaceConfig interfaceConfig,
-                         ::fidl::InterfaceHandle<::fuchsia::hardware::ethernet::Device> device,
-                         AddEthernetDeviceCallback callback) override {
-    eth_device_ = device.Bind();
-    eth_device_added_ = true;
-    callback(fuchsia::netstack::Netstack_AddEthernetDevice_Result::WithResponse(
-        fuchsia::netstack::Netstack_AddEthernetDevice_Response{kFakeInterfaceId}));
-  }
-
-  void StartRouteTableTransaction(
-      ::fidl::InterfaceRequest<fuchsia::netstack::RouteTableTransaction> routeTableTransaction,
-      StartRouteTableTransactionCallback callback) override {}
-
+class VirtioNetTest : public TestWithDevice, public fuchsia::netstack::testing::Netstack_TestBase {
  protected:
   VirtioNetTest()
       : rx_queue_(phys_mem_, PAGE_SIZE * kNumQueues, kQueueSize),
@@ -125,12 +81,35 @@ class VirtioNetTest : public TestWithDevice, public fuchsia::netstack::Netstack 
     eth_device_->Start([](zx_status_t status) { ASSERT_EQ(ZX_OK, status); });
   }
 
+  void SetInterfaceAddress(uint32_t nicid, fuchsia::net::IpAddress addr, uint8_t prefixLen,
+                           SetInterfaceAddressCallback callback) override {
+    fuchsia::netstack::NetErr err{
+        .status = fuchsia::netstack::Status::OK,
+        .message = "",
+    };
+    callback(err);
+  }
+
+  void AddEthernetDevice(::std::string topological_path,
+                         fuchsia::netstack::InterfaceConfig interfaceConfig,
+                         ::fidl::InterfaceHandle<::fuchsia::hardware::ethernet::Device> device,
+                         AddEthernetDeviceCallback callback) override {
+    eth_device_ = device.Bind();
+    eth_device_added_ = true;
+    callback(fuchsia::netstack::Netstack_AddEthernetDevice_Result::WithResponse(
+        fuchsia::netstack::Netstack_AddEthernetDevice_Response{kFakeInterfaceId}));
+  }
+
+  void NotImplemented_(const std::string& name) override {
+    printf("Not implemented: Netstack::%s\n", name.data());
+  }
+
   // Note: use of sync can be problematic here if the test environment needs to handle
   // some incoming FIDL requests.
   fuchsia::virtualization::hardware::VirtioNetPtr net_;
   VirtioQueueFake rx_queue_;
   VirtioQueueFake tx_queue_;
-  ::fidl::BindingSet<fuchsia::netstack::Netstack> bindings_;
+  fidl::BindingSet<fuchsia::netstack::Netstack> bindings_;
   fuchsia::hardware::ethernet::DevicePtr eth_device_;
   bool eth_device_added_ = false;
 
