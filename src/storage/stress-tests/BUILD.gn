@@ -1,0 +1,65 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_binary.gni")
+import("//build/rust/rustc_library.gni")
+import("//src/sys/build/components.gni")
+
+fuchsia_component("blobfs-crash") {
+  testonly = true
+  manifest = "blobfs/meta/crash.cmx"
+  deps = [ "blobfs:stressor-bin" ]
+}
+
+fuchsia_component("blobfs-no-crash") {
+  testonly = true
+  manifest = "blobfs/meta/no-crash.cmx"
+  deps = [ "blobfs:stressor-bin" ]
+}
+
+fuchsia_component("fvm-no-crash") {
+  testonly = true
+  manifest = "fvm/meta/no-crash.cmx"
+  deps = [ "fvm:stressor-bin" ]
+}
+
+fuchsia_component("fvm-crash") {
+  testonly = true
+  manifest = "fvm/meta/crash.cmx"
+  deps = [ "fvm:stressor-bin" ]
+}
+
+# This test package is designed to run on infra bots.
+# Infra bots have a time limit of 23 hours. Each test runs
+# for 22 hours, leaving an hour for the build process.
+fuchsia_test_package("storage-stress-tests") {
+  test_components = [
+    ":fvm-crash",
+    ":fvm-no-crash",
+    ":blobfs-crash",
+    ":blobfs-no-crash",
+  ]
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+    environments = [
+      {
+        dimensions = {
+          device_type = "QEMU"
+        }
+        tags = [ "stress-tests" ]
+      },
+    ]
+  }
+}
+
+group("stress-tests") {
+  testonly = true
+  deps = [
+    ":storage-stress-tests",
+    "//src/lib/isolated_devmgr/v2_component:isolated-devmgr",
+    "//src/sys/component_manager:component-manager",
+  ]
+}

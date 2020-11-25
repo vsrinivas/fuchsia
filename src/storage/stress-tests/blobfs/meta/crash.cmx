@@ -4,10 +4,12 @@
     ],
     "program": {
         "args": [
+            "--disconnect-secs",
+            "1800",
             "--time-limit-secs",
             "79200"
         ],
-        "binary": "bin/stressor"
+        "binary": "bin/blobfs_stressor"
     },
     "sandbox": {
         "features": [

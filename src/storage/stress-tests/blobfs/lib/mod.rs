@@ -35,29 +35,26 @@ pub async fn run_test(
     disconnect_secs: u64,
     time_limit_secs: Option<u64>,
 ) {
-    // Create the initialization task in a new thread
-    Task::blocking(async move {
-        // Create the VMO that the ramdisk is backed by
-        let vmo_size = ramdisk_block_count * ramdisk_block_size;
-        let vmo = Vmo::create(vmo_size).unwrap();
+    // Create the VMO that the ramdisk is backed by
+    let vmo_size = ramdisk_block_count * ramdisk_block_size;
+    let vmo = Vmo::create(vmo_size).unwrap();
 
-        // Initialize the ramdisk and setup FVM.
-        let mut instance = TestInstance::init(&vmo, fvm_slice_size, ramdisk_block_size).await;
+    // Initialize the ramdisk and setup FVM.
+    let mut instance = TestInstance::init(&vmo, fvm_slice_size, ramdisk_block_size).await;
 
-        // Create a blobfs volume
-        let volume_instance_guid = instance.new_volume("blobfs", TYPE_GUID).await;
+    // Create a blobfs volume
+    let volume_instance_guid = instance.new_volume("blobfs", TYPE_GUID).await;
 
-        // Find the path to the volume
-        let block_path = instance.block_path();
-        let mut volume_path = get_volume_path(block_path, &volume_instance_guid).await;
+    // Find the path to the volume
+    let block_path = instance.block_path();
+    let mut volume_path = get_volume_path(block_path, &volume_instance_guid).await;
 
-        // Initialize blobfs for the first time
-        {
-            let mut blobfs = Blobfs::new(volume_path.to_str().unwrap()).unwrap();
-            blobfs.format().unwrap();
-        }
+    // Initialize blobfs for the first time
+    let mut blobfs = Blobfs::new(volume_path.to_str().unwrap()).unwrap();
+    blobfs.format().unwrap();
 
-        if disconnect_secs > 0 {
+    if disconnect_secs > 0 {
+        Task::blocking(async move {
             // Crash the block device every |disconnect_secs|.
             loop {
                 {
@@ -84,19 +81,13 @@ pub async fn run_test(
                 let block_path = instance.block_path();
                 volume_path = get_volume_path(block_path, &volume_instance_guid).await;
             }
-        } else {
-            // Start up blobfs
-            let mut blobfs = Blobfs::new(volume_path.to_str().unwrap()).unwrap();
-            blobfs.fsck().unwrap();
-            blobfs.mount(BLOBFS_MOUNT_PATH).unwrap();
-
-            // Do nothing on this thread.
-            loop {
-                std::thread::park();
-            }
-        }
-    })
-    .detach();
+        })
+        .detach();
+    } else {
+        // Start up blobfs
+        blobfs.fsck().unwrap();
+        blobfs.mount(BLOBFS_MOUNT_PATH).unwrap();
+    }
 
     // Run the operator in a new thread
     let operator_task = Task::blocking(async move {

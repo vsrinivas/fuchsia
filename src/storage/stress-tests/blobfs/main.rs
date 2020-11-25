@@ -43,7 +43,7 @@ struct Args {
     /// controls how often blobfs is disconnected by
     /// crashing the block device.
     /// disabled if set to 0.
-    #[argh(option, default = "1200")]
+    #[argh(option, default = "0")]
     disconnect_secs: u64,
 
     /// if set, the test runs for this time limit before exiting successfully.

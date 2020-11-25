@@ -4,7 +4,7 @@
 
 import("//build/rust/rustc_library.gni")
 
-rustc_library("stress-test-utils") {
+rustc_library("utils") {
   name = "stress_test_utils"
   edition = "2018"
   source_root = "mod.rs"

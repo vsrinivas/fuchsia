@@ -21,7 +21,7 @@ rustc_library("lib") {
     "//src/lib/fuchsia-async",
     "//src/lib/storage/fs_management",
     "//src/lib/zircon/rust:fuchsia-zircon",
-    "//src/storage/stress-test-utils",
+    "//src/storage/stress-tests/utils",
     "//src/sys/component_manager/testing:test_utils_lib",
     "//src/sys/pkg/lib/fuchsia-hash",
     "//src/sys/pkg/lib/fuchsia-merkle",
@@ -40,7 +40,7 @@ rustc_library("lib") {
 }
 
 rustc_binary("stressor-bin") {
-  name = "stressor"
+  name = "blobfs_stressor"
   edition = "2018"
   source_root = "main.rs"
 
@@ -48,7 +48,7 @@ rustc_binary("stressor-bin") {
     ":lib",
     "//src/lib/fuchsia-async",
     "//src/lib/syslog/rust:syslog",
-    "//src/storage/stress-test-utils",
+    "//src/storage/stress-tests/utils",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:argh",
     "//third_party/rust_crates:futures",
@@ -58,39 +58,4 @@ rustc_binary("stressor-bin") {
   ]
 
   sources = [ "main.rs" ]
-}
-
-fuchsia_component("stressor") {
-  testonly = true
-  manifest = "meta/stressor.cmx"
-  deps = [ ":stressor-bin" ]
-}
-
-# This test package is designed to run on infra bots.
-# Infra bots have a time limit of 23 hours. The test runs
-# for 22 hours, leaving an hour for the build process.
-fuchsia_test_package("blobfs-stress-test") {
-  test_components = [ ":stressor" ]
-  test_specs = {
-    log_settings = {
-      max_severity = "ERROR"
-    }
-    environments = [
-      {
-        dimensions = {
-          device_type = "QEMU"
-        }
-        tags = [ "stress-tests" ]
-      },
-    ]
-  }
-}
-
-group("tests") {
-  testonly = true
-  deps = [
-    ":blobfs-stress-test",
-    "//src/lib/isolated_devmgr/v2_component:isolated-devmgr",
-    "//src/sys/component_manager:component-manager",
-  ]
 }

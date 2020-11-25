@@ -1,0 +1,26 @@
+{
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
+    "program": {
+        "args": [
+            "--time-limit-secs",
+            "79200"
+        ],
+        "binary": "bin/blobfs_stressor"
+    },
+    "sandbox": {
+        "features": [
+            "hub"
+        ],
+        "services": [
+            "fuchsia.boot.Arguments",
+            "fuchsia.boot.Items",
+            "fuchsia.boot.WriteOnlyLog",
+            "fuchsia.ldsvc.Loader",
+            "fuchsia.process.Launcher",
+            "fuchsia.sys.Environment",
+            "fuchsia.sys.Launcher"
+        ]
+    }
+}
