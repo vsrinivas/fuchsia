@@ -36,6 +36,11 @@ import("fuchsia_unittest_component.gni")
 #     Type: string
 #     Default: target_name
 #
+#   component_name (optional)
+#     The name of the component.
+#     Type: string
+#     Default: target_name
+#
 #   manifest (required if `executable_path` is not specified)
 #     Specify a component manifest for the test.
 #     If a manifest is not specified, a trivial manifest will be generated.
@@ -70,12 +75,15 @@ template("fuchsia_unittest_package") {
   fuchsia_unittest_component(component_target) {
     forward_variables_from(invoker,
                            [
+                             "component_name",
                              "deps",
                              "manifest",
                              "executable_path",
                              "executable_args",
                            ])
-    component_name = invoker.target_name
+    if (!defined(component_name)) {
+      component_name = invoker.target_name
+    }
     visibility = [ ":*" ]
   }
 
