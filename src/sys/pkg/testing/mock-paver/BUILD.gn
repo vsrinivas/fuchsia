@@ -18,6 +18,7 @@ rustc_library("mock-paver") {
     "//src/lib/fuchsia-async",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:async-trait",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:parking_lot",
   ]

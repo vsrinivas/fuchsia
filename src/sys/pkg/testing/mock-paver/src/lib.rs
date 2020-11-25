@@ -3,10 +3,12 @@
 // found in the LICENSE file.
 use {
     anyhow::{anyhow, Error},
+    async_trait::async_trait,
     fidl_fuchsia_mem::Buffer,
     fidl_fuchsia_paver as paver, fuchsia_async as fasync,
     fuchsia_zircon::{Status, Vmo},
-    futures::prelude::*,
+    futures::lock::Mutex as AsyncMutex,
+    futures::{channel::mpsc, prelude::*},
     parking_lot::Mutex,
     std::{convert::TryInto, sync::Arc},
 };
@@ -110,15 +112,16 @@ impl PaverEvent {
 ///
 /// Responding to requests with the fidl bindings can be kind of unwieldy, so see the `hooks` module
 /// for tidier syntax in simpler cases.
-pub trait Hook {
-    fn boot_manager(
+#[async_trait]
+pub trait Hook: Sync {
+    async fn boot_manager(
         &self,
         request: paver::BootManagerRequest,
     ) -> Option<paver::BootManagerRequest> {
         Some(request)
     }
 
-    fn data_sink(&self, request: paver::DataSinkRequest) -> Option<paver::DataSinkRequest> {
+    async fn data_sink(&self, request: paver::DataSinkRequest) -> Option<paver::DataSinkRequest> {
         Some(request)
     }
 }
@@ -138,11 +141,12 @@ pub mod hooks {
 
     pub struct ReturnError<F>(F);
 
+    #[async_trait]
     impl<F> Hook for ReturnError<F>
     where
-        F: Fn(&PaverEvent) -> Status,
+        F: Fn(&PaverEvent) -> Status + Sync,
     {
-        fn boot_manager(
+        async fn boot_manager(
             &self,
             request: paver::BootManagerRequest,
         ) -> Option<paver::BootManagerRequest> {
@@ -178,7 +182,10 @@ pub mod hooks {
             }
         }
 
-        fn data_sink(&self, request: paver::DataSinkRequest) -> Option<paver::DataSinkRequest> {
+        async fn data_sink(
+            &self,
+            request: paver::DataSinkRequest,
+        ) -> Option<paver::DataSinkRequest> {
             let status = (self.0)(&PaverEvent::from_data_sink_request(&request));
             if status == Status::OK {
                 Some(request)
@@ -214,11 +221,12 @@ pub mod hooks {
 
     pub struct ConfigStatus<F>(F);
 
+    #[async_trait]
     impl<F> Hook for ConfigStatus<F>
     where
-        F: Fn(paver::Configuration) -> Result<paver::ConfigurationStatus, Status>,
+        F: Fn(paver::Configuration) -> Result<paver::ConfigurationStatus, Status> + Sync,
     {
-        fn boot_manager(
+        async fn boot_manager(
             &self,
             request: paver::BootManagerRequest,
         ) -> Option<paver::BootManagerRequest> {
@@ -250,15 +258,20 @@ pub mod hooks {
 
     pub struct WriteFirmware<F>(F);
 
+    #[async_trait]
     impl<F> Hook for WriteFirmware<F>
     where
         F: Fn(
-            paver::Configuration,
-            /* firmware_type */ String,
-            /* payload */ Vec<u8>,
-        ) -> paver::WriteFirmwareResult,
+                paver::Configuration,
+                /* firmware_type */ String,
+                /* payload */ Vec<u8>,
+            ) -> paver::WriteFirmwareResult
+            + Sync,
     {
-        fn data_sink(&self, request: paver::DataSinkRequest) -> Option<paver::DataSinkRequest> {
+        async fn data_sink(
+            &self,
+            request: paver::DataSinkRequest,
+        ) -> Option<paver::DataSinkRequest> {
             match request {
                 paver::DataSinkRequest::WriteFirmware {
                     configuration,
@@ -286,11 +299,15 @@ pub mod hooks {
 
     pub struct ReadAsset<F>(F);
 
+    #[async_trait]
     impl<F> Hook for ReadAsset<F>
     where
-        F: Fn(paver::Configuration, paver::Asset) -> Result<Vec<u8>, Status>,
+        F: Fn(paver::Configuration, paver::Asset) -> Result<Vec<u8>, Status> + Sync,
     {
-        fn data_sink(&self, request: paver::DataSinkRequest) -> Option<paver::DataSinkRequest> {
+        async fn data_sink(
+            &self,
+            request: paver::DataSinkRequest,
+        ) -> Option<paver::DataSinkRequest> {
             match request {
                 paver::DataSinkRequest::ReadAsset { configuration, asset, responder } => {
                     let mut result = (self.0)(configuration, asset)
@@ -301,6 +318,51 @@ pub mod hooks {
                 }
                 request => Some(request),
             }
+        }
+    }
+
+    /// A Hook for the specific case where you want to control when each `PaverEvent` is emitted.
+    pub fn throttle() -> (ThrottleHook, Throttle) {
+        let (send, recv) = mpsc::unbounded();
+        (ThrottleHook(AsyncMutex::new(recv)), Throttle(send))
+    }
+
+    /// Wrapper type to control how many `PaverEvent`s are unblocked.
+    /// Dropping the `Throttle` will cause all subsequent Paver requests to panic.
+    pub struct Throttle(mpsc::UnboundedSender<()>);
+
+    impl Throttle {
+        pub fn emit_next_paver_event(&self) {
+            self.0.unbounded_send(()).expect("emit next paver event");
+        }
+
+        pub fn emit_next_n_paver_events(&self, n: usize) {
+            for _i in 0..n {
+                self.emit_next_paver_event();
+            }
+        }
+    }
+
+    pub struct ThrottleHook(AsyncMutex<mpsc::UnboundedReceiver<()>>);
+
+    #[async_trait]
+    impl Hook for ThrottleHook {
+        async fn boot_manager(
+            &self,
+            request: paver::BootManagerRequest,
+        ) -> Option<paver::BootManagerRequest> {
+            let mut recv = self.0.lock().await;
+            let () = recv.next().await.expect("receive unblock for boot manger");
+            Some(request)
+        }
+
+        async fn data_sink(
+            &self,
+            request: paver::DataSinkRequest,
+        ) -> Option<paver::DataSinkRequest> {
+            let mut recv = self.0.lock().await;
+            let () = recv.next().await.expect("receive unblock for data sink");
+            Some(request)
         }
     }
 }
@@ -426,7 +488,7 @@ impl MockPaverService {
 
             // Run all the hooks in reverse order (last hook added gets first chance to respond).
             for hook in self.hooks.iter().rev() {
-                match hook.data_sink(request) {
+                match hook.data_sink(request).await {
                     Some(r) => request = r,
                     None => continue 'req_stream,
                 }
@@ -471,7 +533,7 @@ impl MockPaverService {
 
             // Run all the hooks in reverse order (last hook added gets first chance to respond).
             for hook in self.hooks.iter().rev() {
-                match hook.boot_manager(request) {
+                match hook.boot_manager(request).await {
                     Some(r) => request = r,
                     None => continue 'req_stream,
                 }
@@ -559,6 +621,7 @@ pub mod tests {
         super::*,
         fidl_fuchsia_paver as paver,
         fuchsia_zircon::{self as zx, VmoOptions},
+        futures::task::Poll,
         matches::assert_matches,
     };
 
@@ -673,6 +736,39 @@ pub mod tests {
         assert_eq!(
             paver.paver.take_events(),
             vec![PaverEvent::QueryConfigurationStatus { configuration: paver::Configuration::A }]
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    pub fn test_throttle_hook() -> Result<(), Error> {
+        let mut executor = fasync::Executor::new().unwrap();
+
+        let (throttle_hook, throttler) = hooks::throttle();
+        let paver = MockPaverForTest::new(|p| p.insert_hook(throttle_hook));
+
+        // Both events are blocked.
+        let mut fut0 = paver.boot_manager.query_configuration_status(paver::Configuration::A);
+        assert_eq!(executor.run_until_stalled(&mut fut0).map(|fidl| fidl.unwrap()), Poll::Pending);
+        let mut fut1 = paver.data_sink.flush();
+        assert_eq!(executor.run_until_stalled(&mut fut1).map(|fidl| fidl.unwrap()), Poll::Pending);
+
+        // Since we called query_configuration_status first, the boot_manager method has the lock on
+        // the `ThrottleHook`. Therefore, when we unblock the next event, we'll observe that
+        // query_configuration_status is unblocked first.
+        let () = throttler.emit_next_paver_event();
+        assert_eq!(
+            executor.run_until_stalled(&mut fut0).map(|fidl| fidl.unwrap()),
+            Poll::Ready(Ok(paver::ConfigurationStatus::Healthy))
+        );
+        assert_eq!(executor.run_until_stalled(&mut fut1).map(|fidl| fidl.unwrap()), Poll::Pending);
+
+        // Unblock the remaining event.
+        let () = throttler.emit_next_paver_event();
+        assert_eq!(
+            executor.run_until_stalled(&mut fut1).map(|fidl| fidl.unwrap()),
+            Poll::Ready(Status::OK.into_raw())
         );
 
         Ok(())
