@@ -13,10 +13,19 @@ group("testing") {
 }
 
 fuzzer_package("zbitl-fuzzers") {
-  cpp_fuzzers = [ ":iteration" ]
+  cpp_fuzzers = [
+    ":mem-config",
+    ":iteration",
+  ]
+  fuzz_host = true
 }
 
 cpp_fuzzer("iteration") {
   sources = [ "iteration-fuzzer.cc" ]
+  deps = [ ".." ]
+}
+
+cpp_fuzzer("mem-config") {
+  sources = [ "mem-config-fuzzer.cc" ]
   deps = [ ".." ]
 }
