@@ -198,30 +198,21 @@ zx_status_t AmlMipiPhy::Startup() {
   return ZX_OK;
 }
 
-zx_status_t AmlMipiPhy::Init(zx_device_t* pdev_dev, zx_device_t* dsi_dev, uint32_t lane_num) {
+zx_status_t AmlMipiPhy::Init(ddk::PDev& pdev, ddk::DsiImplProtocolClient dsi, uint32_t lane_num) {
   if (initialized_) {
     return ZX_OK;
   }
 
   num_of_lanes_ = lane_num;
 
-  zx_status_t status = device_get_protocol(pdev_dev, ZX_PROTOCOL_PDEV, &pdev_);
-  if (status != ZX_OK) {
-    DISP_ERROR("AmlMipiPhy: Could not get ZX_PROTOCOL_PDEV protocol\n");
-    return status;
-  }
-
-  dsiimpl_ = dsi_dev;
+  dsiimpl_ = dsi;
 
   // Map Mipi Dsi and Dsi Phy registers
-  mmio_buffer_t mmio;
-
-  status = pdev_map_mmio_buffer(&pdev_, MMIO_DSI_PHY, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
+  zx_status_t status = pdev.MapMmio(MMIO_DSI_PHY, &dsi_phy_mmio_);
   if (status != ZX_OK) {
     DISP_ERROR("AmlMipiPhy: Could not map DSI PHY mmio\n");
     return status;
   }
-  dsi_phy_mmio_ = ddk::MmioBuffer(mmio);
 
   initialized_ = true;
   return ZX_OK;

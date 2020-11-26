@@ -5,7 +5,7 @@
 #ifndef SRC_GRAPHICS_DISPLAY_DRIVERS_AMLOGIC_DISPLAY_AMLOGIC_CLOCK_H_
 #define SRC_GRAPHICS_DISPLAY_DRIVERS_AMLOGIC_DISPLAY_AMLOGIC_CLOCK_H_
 
-#include <lib/device-protocol/platform-device.h>
+#include <lib/device-protocol/pdev.h>
 #include <lib/mmio/mmio.h>
 #include <unistd.h>
 #include <zircon/compiler.h>
@@ -14,7 +14,6 @@
 
 #include <ddk/driver.h>
 #include <ddk/protocol/dsiimpl.h>
-#include <ddk/protocol/platform/device.h>
 #include <ddktl/device.h>
 #include <hwreg/mmio.h>
 
@@ -28,7 +27,7 @@ namespace amlogic_display {
 class AmlogicDisplayClock {
  public:
   AmlogicDisplayClock() {}
-  zx_status_t Init(zx_device_t* parent);
+  zx_status_t Init(ddk::PDev& pdev);
   zx_status_t Enable(const display_setting_t& d);
   void Disable();
   void Dump();
@@ -48,7 +47,6 @@ class AmlogicDisplayClock {
 
   std::optional<ddk::MmioBuffer> vpu_mmio_;
   std::optional<ddk::MmioBuffer> hhi_mmio_;
-  pdev_protocol_t pdev_ = {nullptr, nullptr};
 
   PllConfig pll_cfg_;
   LcdTiming lcd_timing_;

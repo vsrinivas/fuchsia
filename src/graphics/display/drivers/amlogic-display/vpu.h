@@ -5,14 +5,13 @@
 #ifndef SRC_GRAPHICS_DISPLAY_DRIVERS_AMLOGIC_DISPLAY_VPU_H_
 #define SRC_GRAPHICS_DISPLAY_DRIVERS_AMLOGIC_DISPLAY_VPU_H_
 
-#include <lib/device-protocol/platform-device.h>
+#include <lib/device-protocol/pdev.h>
 #include <lib/mmio/mmio.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <zircon/compiler.h>
 
 #include <optional>
 
-#include <ddk/protocol/platform/device.h>
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
 
@@ -24,7 +23,7 @@ namespace amlogic_display {
 class Vpu {
  public:
   Vpu() {}
-  zx_status_t Init(zx_device_t* parent);
+  zx_status_t Init(ddk::PDev& pdev);
   // This function powers on VPU related blocks. The function contains undocumented
   // register and/or power-on sequences.
   void PowerOn();
@@ -60,7 +59,6 @@ class Vpu {
   std::optional<ddk::MmioBuffer> hhi_mmio_;
   std::optional<ddk::MmioBuffer> aobus_mmio_;
   std::optional<ddk::MmioBuffer> cbus_mmio_;
-  pdev_protocol_t pdev_ = {};
 
   bool initialized_ = false;
 

@@ -8,9 +8,8 @@
 #include <unistd.h>
 #include <zircon/compiler.h>
 
-#include <ddk/protocol/gpio.h>
-#include <ddk/protocol/platform/device.h>
 #include <ddktl/protocol/dsiimpl.h>
+#include <ddktl/protocol/gpio.h>
 #include <hwreg/mmio.h>
 
 namespace amlogic_display {
@@ -19,7 +18,7 @@ class Lcd {
  public:
   Lcd(uint32_t panel_type) : panel_type_(panel_type) {}
 
-  zx_status_t Init(zx_device_t* dsi_dev, zx_device_t* gpio_dev);
+  zx_status_t Init(ddk::DsiImplProtocolClient dsiimpl, ddk::GpioProtocolClient gpio);
   zx_status_t Enable();
   zx_status_t Disable();
 
@@ -28,7 +27,7 @@ class Lcd {
   zx_status_t GetDisplayId();
 
   uint32_t panel_type_;
-  gpio_protocol_t gpio_ = {};
+  ddk::GpioProtocolClient gpio_;
   ddk::DsiImplProtocolClient dsiimpl_;
 
   bool initialized_ = false;

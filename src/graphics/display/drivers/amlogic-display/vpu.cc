@@ -65,47 +65,38 @@ constexpr uint32_t capture_yuv2rgb_offset[3] = {0, 0, 0};
 #define READ32_CBUS_REG(a) cbus_mmio_->Read32(a)
 #define WRITE32_CBUS_REG(a, v) cbus_mmio_->Write32(v, a)
 
-zx_status_t Vpu::Init(zx_device_t* parent) {
+zx_status_t Vpu::Init(ddk::PDev& pdev) {
   if (initialized_) {
     return ZX_OK;
   }
-  zx_status_t status = device_get_protocol(parent, ZX_PROTOCOL_PDEV, &pdev_);
-  if (status != ZX_OK) {
-    return status;
-  }
 
   // Map VPU registers
-  mmio_buffer_t mmio;
-  status = pdev_map_mmio_buffer(&pdev_, MMIO_VPU, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
+  zx_status_t status = pdev.MapMmio(MMIO_VPU, &vpu_mmio_);
   if (status != ZX_OK) {
     DISP_ERROR("vpu: Could not map VPU mmio\n");
     return status;
   }
-  vpu_mmio_ = ddk::MmioBuffer(mmio);
 
   // Map HHI registers
-  status = pdev_map_mmio_buffer(&pdev_, MMIO_HHI, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
+  status = pdev.MapMmio(MMIO_HHI, &hhi_mmio_);
   if (status != ZX_OK) {
     DISP_ERROR("vpu: Could not map HHI mmio\n");
     return status;
   }
-  hhi_mmio_ = ddk::MmioBuffer(mmio);
 
   // Map AOBUS registers
-  status = pdev_map_mmio_buffer(&pdev_, MMIO_AOBUS, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
+  status = pdev.MapMmio(MMIO_AOBUS, &aobus_mmio_);
   if (status != ZX_OK) {
     DISP_ERROR("vpu: Could not map AOBUS mmio\n");
     return status;
   }
-  aobus_mmio_ = ddk::MmioBuffer(mmio);
 
   // Map CBUS registers
-  status = pdev_map_mmio_buffer(&pdev_, MMIO_CBUS, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
+  status = pdev.MapMmio(MMIO_CBUS, &cbus_mmio_);
   if (status != ZX_OK) {
     DISP_ERROR("vpu: Could not map CBUS mmio\n");
     return status;
   }
-  cbus_mmio_ = ddk::MmioBuffer(mmio);
 
   // VPU object is ready to be used
   initialized_ = true;

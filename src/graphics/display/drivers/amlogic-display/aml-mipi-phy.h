@@ -5,14 +5,13 @@
 #ifndef SRC_GRAPHICS_DISPLAY_DRIVERS_AMLOGIC_DISPLAY_AML_MIPI_PHY_H_
 #define SRC_GRAPHICS_DISPLAY_DRIVERS_AMLOGIC_DISPLAY_AML_MIPI_PHY_H_
 
-#include <lib/device-protocol/platform-device.h>
+#include <lib/device-protocol/pdev.h>
 #include <lib/mmio/mmio.h>
 #include <unistd.h>
 #include <zircon/compiler.h>
 
 #include <optional>
 
-#include <ddk/protocol/platform/device.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/dsiimpl.h>
 
@@ -25,7 +24,7 @@ class AmlMipiPhy {
  public:
   AmlMipiPhy() {}
   // This function initializes internal state of the object
-  zx_status_t Init(zx_device_t* pdev_dev, zx_device_t* dsi_dev, uint32_t lane_num);
+  zx_status_t Init(ddk::PDev& pdev, ddk::DsiImplProtocolClient dsi, uint32_t lane_num);
   // This function enables and starts up the Mipi Phy
   zx_status_t Startup();
   // This function stops Mipi Phy
@@ -59,7 +58,6 @@ class AmlMipiPhy {
   void PhyInit();
 
   std::optional<ddk::MmioBuffer> dsi_phy_mmio_;
-  pdev_protocol_t pdev_ = {nullptr, nullptr};
   uint32_t num_of_lanes_;
   DsiPhyConfig dsi_phy_cfg_;
   ddk::DsiImplProtocolClient dsiimpl_;

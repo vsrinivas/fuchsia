@@ -5,16 +5,17 @@
 #ifndef SRC_GRAPHICS_DISPLAY_DRIVERS_AMLOGIC_DISPLAY_AML_DSI_HOST_H_
 #define SRC_GRAPHICS_DISPLAY_DRIVERS_AMLOGIC_DISPLAY_AML_DSI_HOST_H_
 
+#include <lib/device-protocol/pdev.h>
 #include <unistd.h>
 #include <zircon/compiler.h>
 
 #include <memory>
 #include <optional>
 
-#include <ddk/protocol/dsiimpl.h>
-#include <ddk/protocol/platform/device.h>
 #include <ddktl/device.h>
+#include <ddktl/protocol/composite.h>
 #include <ddktl/protocol/dsiimpl.h>
+#include <ddktl/protocol/gpio.h>
 #include <hwreg/mmio.h>
 
 #include "aml-mipi-phy.h"
@@ -27,11 +28,10 @@ namespace amlogic_display {
 
 class AmlDsiHost {
  public:
-  AmlDsiHost(zx_device_t* pdev_dev, zx_device_t* dsi_dev, zx_device_t* lcd_gpio_dev,
-             uint32_t bitrate, uint32_t panel_type)
-      : pdev_dev_(pdev_dev),
-        dsi_dev_(dsi_dev),
-        lcd_gpio_dev_(lcd_gpio_dev),
+  AmlDsiHost(ddk::CompositeProtocolClient& composite, uint32_t bitrate, uint32_t panel_type)
+      : pdev_(composite),
+        dsiimpl_(composite, "dsi"),
+        lcd_gpio_(composite, "gpio"),
         bitrate_(bitrate),
         panel_type_(panel_type) {}
 
@@ -55,13 +55,11 @@ class AmlDsiHost {
   std::optional<ddk::MmioBuffer> mipi_dsi_mmio_;
   std::optional<ddk::MmioBuffer> hhi_mmio_;
 
-  pdev_protocol_t pdev_ = {};
+  ddk::PDev pdev_;
 
   ddk::DsiImplProtocolClient dsiimpl_;
 
-  zx_device_t* pdev_dev_;
-  zx_device_t* dsi_dev_;
-  zx_device_t* lcd_gpio_dev_;
+  ddk::GpioProtocolClient lcd_gpio_;
 
   uint32_t bitrate_;
   uint32_t panel_type_;

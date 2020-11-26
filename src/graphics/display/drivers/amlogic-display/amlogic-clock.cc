@@ -339,32 +339,23 @@ zx_status_t AmlogicDisplayClock::Enable(const display_setting_t& d) {
   return ZX_OK;
 }
 
-zx_status_t AmlogicDisplayClock::Init(zx_device_t* parent) {
+zx_status_t AmlogicDisplayClock::Init(ddk::PDev& pdev) {
   if (initialized_) {
     return ZX_OK;
   }
 
-  zx_status_t status = device_get_protocol(parent, ZX_PROTOCOL_PDEV, &pdev_);
-  if (status != ZX_OK) {
-    DISP_ERROR("AmlogicDisplayClock: Could not get ZX_PROTOCOL_PDEV protocol\n");
-    return status;
-  }
-
   // Map VPU and HHI registers
-  mmio_buffer_t mmio;
-  status = pdev_map_mmio_buffer(&pdev_, MMIO_VPU, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
+  zx_status_t status = pdev.MapMmio(MMIO_VPU, &vpu_mmio_);
   if (status != ZX_OK) {
     DISP_ERROR("AmlogicDisplayClock: Could not map VPU mmio\n");
     return status;
   }
-  vpu_mmio_ = ddk::MmioBuffer(mmio);
 
-  status = pdev_map_mmio_buffer(&pdev_, MMIO_HHI, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
+  status = pdev.MapMmio(MMIO_HHI, &hhi_mmio_);
   if (status != ZX_OK) {
     DISP_ERROR("AmlogicDisplayClock: Could not map HHI mmio\n");
     return status;
   }
-  hhi_mmio_ = ddk::MmioBuffer(mmio);
 
   initialized_ = true;
   return ZX_OK;

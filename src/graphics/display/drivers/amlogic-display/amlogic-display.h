@@ -20,17 +20,14 @@
 
 #include <ddk/debug.h>
 #include <ddk/driver.h>
-#include <ddk/protocol/amlogiccanvas.h>
-#include <ddk/protocol/display/clamprgb.h>
-#include <ddk/protocol/dsiimpl.h>
-#include <ddk/protocol/gpio.h>
-#include <ddk/protocol/platform/device.h>
-#include <ddk/protocol/sysmem.h>
 #include <ddktl/device.h>
+#include <ddktl/protocol/amlogiccanvas.h>
 #include <ddktl/protocol/display/capture.h>
 #include <ddktl/protocol/display/clamprgb.h>
 #include <ddktl/protocol/display/controller.h>
 #include <ddktl/protocol/dsiimpl.h>
+#include <ddktl/protocol/platform/device.h>
+#include <ddktl/protocol/sysmem.h>
 #include <fbl/auto_lock.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/mutex.h>
@@ -46,14 +43,14 @@ namespace amlogic_display {
 
 struct ImageInfo : public fbl::DoublyLinkedListable<std::unique_ptr<ImageInfo>> {
   ~ImageInfo() {
-    if (canvas.ctx && canvas_idx > 0) {
-      amlogic_canvas_free(&canvas, canvas_idx);
+    if (canvas.is_valid() && canvas_idx > 0) {
+      canvas.Free(canvas_idx);
     }
     if (pmt) {
       pmt.unpin();
     }
   }
-  amlogic_canvas_protocol_t canvas;
+  ddk::AmlogicCanvasProtocolClient canvas;
   uint8_t canvas_idx;
   uint32_t image_height;
   uint32_t image_width;
@@ -122,16 +119,6 @@ class AmlogicDisplay
   void Dump();
 
  private:
-  enum {
-    FRAGMENT_PDEV,
-    FRAGMENT_DSI,
-    FRAGMENT_LCD_GPIO,
-    FRAGMENT_SYSMEM,
-    FRAGMENT_CANVAS,
-    FRAGMENT_COUNT,
-  };
-  zx_device_t* fragments_[FRAGMENT_COUNT];
-
   zx_status_t SetupDisplayInterface();
   int VSyncThread();
   int CaptureThread();
@@ -157,9 +144,9 @@ class AmlogicDisplay
   thrd_t capture_thread_;
 
   // Protocol handles used in by this driver
-  pdev_protocol_t pdev_ = {};
-  amlogic_canvas_protocol_t canvas_ = {};
-  sysmem_protocol_t sysmem_ = {};
+  ddk::PDev pdev_;
+  ddk::AmlogicCanvasProtocolClient canvas_;
+  ddk::SysmemProtocolClient sysmem_;
 
   // Board Info
   pdev_board_info_t board_info_;

@@ -5,7 +5,7 @@
 #ifndef SRC_GRAPHICS_DISPLAY_DRIVERS_AMLOGIC_DISPLAY_OSD_H_
 #define SRC_GRAPHICS_DISPLAY_DRIVERS_AMLOGIC_DISPLAY_OSD_H_
 
-#include <lib/device-protocol/platform-device.h>
+#include <lib/device-protocol/pdev.h>
 #include <lib/inspect/cpp/inspect.h>
 #include <lib/mmio/mmio.h>
 #include <lib/zircon-internal/thread_annotations.h>
@@ -20,7 +20,6 @@
 #include <cstdint>
 #include <optional>
 
-#include <ddk/protocol/platform/device.h>
 #include <ddktl/protocol/display/controller.h>
 #include <fbl/auto_lock.h>
 #include <fbl/condition_variable.h>
@@ -175,7 +174,7 @@ class Osd {
         inspect_node_(parent_node->CreateChild("osd")),
         rdma_allocation_failures_(inspect_node_.CreateUint("rdma_allocation_failures", 0)) {}
 
-  zx_status_t Init(zx_device_t* parent);
+  zx_status_t Init(ddk::PDev& pdev);
   void HwInit();
   void Disable();
   void Enable();
@@ -224,7 +223,6 @@ class Osd {
   int GetNextAvailableRdmaTableIndex();
 
   std::optional<ddk::MmioBuffer> vpu_mmio_;
-  pdev_protocol_t pdev_ = {nullptr, nullptr};
   zx::bti bti_;
 
   // RDMA IRQ handle and thread

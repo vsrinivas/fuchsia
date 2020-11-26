@@ -24,14 +24,13 @@
 #include <ddk/metadata.h>
 #include <ddk/metadata/display.h>
 #include <ddk/platform-defs.h>
-#include <ddk/protocol/amlogiccanvas.h>
-#include <ddk/protocol/composite.h>
-#include <ddk/protocol/display/clamprgb.h>
-#include <ddk/protocol/display/controller.h>
-#include <ddk/protocol/dsiimpl.h>
-#include <ddk/protocol/platform/device.h>
+#include <ddktl/protocol/amlogiccanvas.h>
+#include <ddktl/protocol/composite.h>
 #include <ddktl/protocol/display/capture.h>
 #include <ddktl/protocol/display/clamprgb.h>
+#include <ddktl/protocol/display/controller.h>
+#include <ddktl/protocol/dsiimpl.h>
+#include <ddktl/protocol/platform/device.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
@@ -116,7 +115,7 @@ zx_status_t AmlogicDisplay::RestartDisplay() {
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
-  status = clock_->Init(fragments_[FRAGMENT_PDEV]);
+  status = clock_->Init(pdev_);
   if (status != ZX_OK) {
     DISP_ERROR("Could not initialize Clock object\n");
     return status;
@@ -130,9 +129,9 @@ zx_status_t AmlogicDisplay::RestartDisplay() {
   }
 
   // Program and Enable DSI Host Interface
+  ddk::CompositeProtocolClient composite(parent_);
   dsi_host_ = fbl::make_unique_checked<amlogic_display::AmlDsiHost>(
-      &ac, fragments_[FRAGMENT_PDEV], fragments_[FRAGMENT_DSI], fragments_[FRAGMENT_LCD_GPIO],
-      clock_->GetBitrate(), panel_type_);
+      &ac, composite, clock_->GetBitrate(), panel_type_);
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
@@ -159,7 +158,7 @@ zx_status_t AmlogicDisplay::DisplayInit() {
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
-  status = vpu_->Init(fragments_[FRAGMENT_PDEV]);
+  status = vpu_->Init(pdev_);
   if (status != ZX_OK) {
     DISP_ERROR("Could not initialize VPU object\n");
     return status;
@@ -208,7 +207,7 @@ zx_status_t AmlogicDisplay::DisplayInit() {
   }
 
   // Initialize osd object
-  status = osd_->Init(fragments_[FRAGMENT_PDEV]);
+  status = osd_->Init(pdev_);
   if (status != ZX_OK) {
     DISP_ERROR("Could not initialize OSD object\n");
     return status;
@@ -313,9 +312,9 @@ zx_status_t AmlogicDisplay::DisplayControllerImplImportImage(image_t* image,
       canvas_info.flags = CANVAS_FLAGS_READ;
 
       uint8_t local_canvas_idx;
-      status = amlogic_canvas_config(&canvas_, collection_info.buffers[index].vmo.release(),
-                                     collection_info.buffers[index].vmo_usable_start, &canvas_info,
-                                     &local_canvas_idx);
+      status = canvas_.Config(std::move(collection_info.buffers[index].vmo),
+                              collection_info.buffers[index].vmo_usable_start, &canvas_info,
+                              &local_canvas_idx);
       if (status != ZX_OK) {
         DISP_ERROR("Could not configure canvas: %d\n", status);
         return ZX_ERR_NO_RESOURCES;
@@ -481,8 +480,8 @@ void AmlogicDisplay::DdkSuspend(ddk::SuspendTxn txn) {
     if (i.pmt) {
       i.pmt.unpin();
     }
-    if (i.canvas.ctx && i.canvas_idx > 0) {
-      amlogic_canvas_free(&i.canvas, i.canvas_idx);
+    if (i.canvas.is_valid() && i.canvas_idx > 0) {
+      i.canvas.Free(i.canvas_idx);
     }
   }
   txn.Reply(ZX_OK, txn.requested_state());
@@ -542,7 +541,7 @@ zx_status_t AmlogicDisplay::SetupDisplayInterface() {
 }
 
 zx_status_t AmlogicDisplay::DisplayControllerImplGetSysmemConnection(zx::channel connection) {
-  zx_status_t status = sysmem_connect(&sysmem_, connection.release());
+  zx_status_t status = sysmem_.Connect(std::move(connection));
   if (status != ZX_OK) {
     DISP_ERROR("Could not connect to sysmem\n");
     return status;
@@ -688,9 +687,9 @@ zx_status_t AmlogicDisplay::DisplayCaptureImplImportImageForCapture(zx_unowned_h
   canvas_info.endianness = kCanvasLittleEndian64Bit;
   canvas_info.flags = CANVAS_FLAGS_READ | CANVAS_FLAGS_WRITE;
   uint8_t canvas_idx;
-  zx_status_t status = amlogic_canvas_config(&canvas_, collection_info.buffers[index].vmo.release(),
-                                             collection_info.buffers[index].vmo_usable_start,
-                                             &canvas_info, &canvas_idx);
+  zx_status_t status =
+      canvas_.Config(std::move(collection_info.buffers[index].vmo),
+                     collection_info.buffers[index].vmo_usable_start, &canvas_info, &canvas_idx);
   if (status != ZX_OK) {
     DISP_ERROR("Could not configure canvas %d\n", status);
     return status;
@@ -818,18 +817,12 @@ int AmlogicDisplay::VSyncThread() {
 
 // TODO(payamm): make sure unbind/release are called if we return error
 zx_status_t AmlogicDisplay::Bind() {
-  composite_protocol_t composite;
-
-  auto status = device_get_protocol(parent_, ZX_PROTOCOL_COMPOSITE, &composite);
-  if (status != ZX_OK) {
-    DISP_ERROR("Could not get composite protocol\n");
-    return status;
-  }
+  ddk::CompositeProtocolClient composite(parent_);
 
   display_panel_t display_info;
   size_t actual;
-  status = device_get_metadata(parent_, DEVICE_METADATA_DISPLAY_CONFIG, &display_info,
-                               sizeof(display_info), &actual);
+  zx_status_t status = device_get_metadata(parent_, DEVICE_METADATA_DISPLAY_CONFIG, &display_info,
+                                           sizeof(display_info), &actual);
   if (status != ZX_OK || actual != sizeof(display_panel_t)) {
     DISP_ERROR("Could not get display panel metadata %d\n", status);
     return status;
@@ -844,46 +837,38 @@ zx_status_t AmlogicDisplay::Bind() {
   width_ = display_info.width;
   height_ = display_info.height;
 
-  composite_get_fragments(&composite, fragments_, std::size(fragments_), &actual);
-  if (actual != std::size(fragments_)) {
-    DISP_ERROR("could not get fragments\n");
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
-  status = device_get_protocol(fragments_[FRAGMENT_PDEV], ZX_PROTOCOL_PDEV, &pdev_);
+  status = ddk::PDev::CreateFromComposite(composite, &pdev_);
   if (status != ZX_OK) {
     DISP_ERROR("Could not get PDEV protocol\n");
     return status;
   }
 
-  dsi_impl_protocol_t dsi;
-  status = device_get_protocol(fragments_[FRAGMENT_DSI], ZX_PROTOCOL_DSI_IMPL, &dsi);
+  status = ddk::DsiImplProtocolClient::CreateFromComposite(composite, "dsi", &dsiimpl_);
   if (status != ZX_OK) {
     DISP_ERROR("Could not get DSI_IMPL protocol\n");
     return status;
   }
-  dsiimpl_ = &dsi;
 
   // Get board info
-  status = pdev_get_board_info(&pdev_, &board_info_);
+  status = pdev_.GetBoardInfo(&board_info_);
   if (status != ZX_OK) {
     DISP_ERROR("Could not obtain board info\n");
     return status;
   }
 
-  status = device_get_protocol(fragments_[FRAGMENT_SYSMEM], ZX_PROTOCOL_SYSMEM, &sysmem_);
+  status = ddk::SysmemProtocolClient::CreateFromComposite(composite, "sysmem", &sysmem_);
   if (status != ZX_OK) {
     DISP_ERROR("Could not get Display SYSMEM protocol\n");
     return status;
   }
 
-  status = device_get_protocol(fragments_[FRAGMENT_CANVAS], ZX_PROTOCOL_AMLOGIC_CANVAS, &canvas_);
+  status = ddk::AmlogicCanvasProtocolClient::CreateFromComposite(composite, "canvas", &canvas_);
   if (status != ZX_OK) {
     DISP_ERROR("Could not obtain CANVAS protocol\n");
     return status;
   }
 
-  status = pdev_get_bti(&pdev_, 0, bti_.reset_and_get_address());
+  status = pdev_.GetBti(0, &bti_);
   if (status != ZX_OK) {
     DISP_ERROR("Could not get BTI handle\n");
     return status;
@@ -897,14 +882,14 @@ zx_status_t AmlogicDisplay::Bind() {
   }
 
   // Map VSync Interrupt
-  status = pdev_get_interrupt(&pdev_, IRQ_VSYNC, 0, vsync_irq_.reset_and_get_address());
+  status = pdev_.GetInterrupt(IRQ_VSYNC, 0, &vsync_irq_);
   if (status != ZX_OK) {
     DISP_ERROR("Could not map vsync interrupt\n");
     return status;
   }
 
   // Map VD1_WR Interrupt (used for capture)
-  status = pdev_get_interrupt(&pdev_, IRQ_VD1_WR, 0, vd1_wr_irq_.reset_and_get_address());
+  status = pdev_.GetInterrupt(IRQ_VD1_WR, 0, &vd1_wr_irq_);
   if (status != ZX_OK) {
     DISP_ERROR("Could not map vd1 wr interrupt\n");
     return status;

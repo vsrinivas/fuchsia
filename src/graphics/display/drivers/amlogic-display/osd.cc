@@ -178,35 +178,27 @@ int Osd::RdmaThread() {
   return status;
 }
 
-zx_status_t Osd::Init(zx_device_t* parent) {
+zx_status_t Osd::Init(ddk::PDev& pdev) {
   if (initialized_) {
     return ZX_OK;
   }
 
-  zx_status_t status = device_get_protocol(parent, ZX_PROTOCOL_PDEV, &pdev_);
-  if (status != ZX_OK) {
-    return status;
-  }
-
   // Map vpu mmio used by the OSD object
-  mmio_buffer_t mmio;
-  status = pdev_map_mmio_buffer(&pdev_, MMIO_VPU, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
+  zx_status_t status = pdev.MapMmio(MMIO_VPU, &vpu_mmio_);
   if (status != ZX_OK) {
     DISP_ERROR("osd: Could not map VPU mmio");
     return status;
   }
 
-  vpu_mmio_ = ddk::MmioBuffer(mmio);
-
   // Get BTI from parent
-  status = pdev_get_bti(&pdev_, 0, bti_.reset_and_get_address());
+  status = pdev.GetBti(0, &bti_);
   if (status != ZX_OK) {
     DISP_ERROR("Could not get BTI handle");
     return status;
   }
 
   // Map RDMA Done Interrupt
-  status = pdev_get_interrupt(&pdev_, IRQ_RDMA, 0, rdma_irq_.reset_and_get_address());
+  status = pdev.GetInterrupt(IRQ_RDMA, 0, &rdma_irq_);
   if (status != ZX_OK) {
     DISP_ERROR("Could not map RDMA interrupt");
     return status;
@@ -738,9 +730,8 @@ zx_status_t Osd::SetupRdma() {
     return status;
   }
 
-  status = zx::vmar::root_self()->map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
-                                      0, rdma_vmo_, 0, kRdmaRegionSize,
-                                      reinterpret_cast<zx_vaddr_t*>(&rdma_vbuf_));
+  status = zx::vmar::root_self()->map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, rdma_vmo_, 0,
+                                      kRdmaRegionSize, reinterpret_cast<zx_vaddr_t*>(&rdma_vbuf_));
 
   // At this point, we have a table initialized.
   // Initialize each rdma channel container

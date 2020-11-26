@@ -99,7 +99,7 @@ zx_status_t AmlDsiHost::HostOn(const display_setting_t& disp_setting) {
     DISP_ERROR("Could not create AmlMipiPhy object\n");
     return ZX_ERR_NO_MEMORY;
   }
-  zx_status_t status = phy_->Init(pdev_dev_, dsi_dev_, disp_setting.lane_num);
+  zx_status_t status = phy_->Init(pdev_, dsiimpl_, disp_setting.lane_num);
   if (status != ZX_OK) {
     DISP_ERROR("MIPI PHY Init failed!\n");
     return status;
@@ -144,7 +144,7 @@ zx_status_t AmlDsiHost::HostOn(const display_setting_t& disp_setting) {
     return ZX_ERR_NO_MEMORY;
   }
 
-  status = lcd_->Init(dsi_dev_, lcd_gpio_dev_);
+  status = lcd_->Init(dsiimpl_, lcd_gpio_);
   if (status != ZX_OK) {
     DISP_ERROR("Error during LCD Initialization! %d\n", status);
     return status;
@@ -169,29 +169,23 @@ zx_status_t AmlDsiHost::Init() {
     return ZX_OK;
   }
 
-  zx_status_t status = device_get_protocol(pdev_dev_, ZX_PROTOCOL_PDEV, &pdev_);
-  if (status != ZX_OK) {
+  if (!pdev_.is_valid()) {
     DISP_ERROR("AmlDsiHost: Could not get ZX_PROTOCOL_PDEV protocol\n");
-    return status;
+    return ZX_ERR_NO_RESOURCES;
   }
 
-  dsiimpl_ = dsi_dev_;
-
   // Map MIPI DSI and HHI registers
-  mmio_buffer_t mmio;
-  status = pdev_map_mmio_buffer(&pdev_, MMIO_MPI_DSI, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
+  zx_status_t status = pdev_.MapMmio(MMIO_MPI_DSI, &mipi_dsi_mmio_);
   if (status != ZX_OK) {
     DISP_ERROR("Could not map MIPI DSI mmio\n");
     return status;
   }
-  mipi_dsi_mmio_ = ddk::MmioBuffer(mmio);
 
-  status = pdev_map_mmio_buffer(&pdev_, MMIO_HHI, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
+  status = pdev_.MapMmio(MMIO_HHI, &hhi_mmio_);
   if (status != ZX_OK) {
     DISP_ERROR("Could not map HHI mmio\n");
     return status;
   }
-  hhi_mmio_ = ddk::MmioBuffer(mmio);
 
   initialized_ = true;
   return ZX_OK;
