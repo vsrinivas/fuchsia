@@ -42,12 +42,11 @@ class Tas58xx : public SimpleCodecServer {
   zx_status_t Start() override;
   bool IsBridgeable() override;
   void SetBridgedMode(bool enable_bridged_mode) override;
-  std::vector<DaiSupportedFormats> GetDaiFormats() override;
+  DaiSupportedFormats GetDaiFormats() override;
   zx_status_t SetDaiFormat(const DaiFormat& format) override;
   GainFormat GetGainFormat() override;
   GainState GetGainState() override;
   void SetGainState(GainState state) override;
-  PlugState GetPlugState() override;
 
   std::atomic<bool> initialized_ = false;  // Protected for unit tests.
 

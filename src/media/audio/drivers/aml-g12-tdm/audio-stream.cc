@@ -177,7 +177,7 @@ zx_status_t AmlG12TdmStream::InitPDev() {
 void AmlG12TdmStream::UpdateCodecsGainStateFromCurrent() {
   UpdateCodecsGainState({.gain = cur_gain_state_.cur_gain,
                          .muted = cur_gain_state_.cur_mute,
-                         .agc_enable = cur_gain_state_.cur_agc});
+                         .agc_enabled = cur_gain_state_.cur_agc});
 }
 
 void AmlG12TdmStream::UpdateCodecsGainState(GainState state) {
@@ -202,6 +202,7 @@ zx_status_t AmlG12TdmStream::InitCodecsGain() {
     for (size_t i = 0; i < metadata_.codecs.number_of_codecs; ++i) {
       auto format = codecs_[i].GetGainFormat();
       if (format.is_error()) {
+        zxlogf(ERROR, "%s Could not get gain format %d", __FILE__, format.error_value());
         return format.error_value();
       }
       min_gain = std::max(min_gain, format->min_gain);
@@ -214,6 +215,7 @@ zx_status_t AmlG12TdmStream::InitCodecsGain() {
     // Use first codec as reference initial gain.
     auto state = codecs_[0].GetGainState();
     if (state.is_error()) {
+      zxlogf(ERROR, "%s Could not get gain state %d", __FILE__, state.error_value());
       return state.error_value();
     }
     cur_gain_state_.cur_gain = state->gain;

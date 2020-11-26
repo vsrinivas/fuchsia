@@ -1,0 +1,115 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.hardware.audio;
+
+using zx;
+
+/// Textual information about the codec.
+struct CodecInfo {
+    /// Unique identifier for the codec.
+    string:UNIQUE_ID_SIZE unique_id;
+
+    /// Name of the codec manufacturer.
+    string:MAX_UI_STRING_SIZE manufacturer;
+
+    /// Product name of the codec.
+    string:MAX_UI_STRING_SIZE product_name;
+};
+
+/// Gain type of representation.
+enum GainType : uint8 {
+    /// Gain specified in dB, for example -103.0dB or +3.2dB.
+    DECIBELS = 1;
+
+    /// Gain specified as a percentage, for example 10.0% or 80.5%.
+    PERCENT = 2;
+};
+
+/// Gain format/parameters.
+table GainFormat {
+    /// Specifies what the numbers for gain represent, e.g. a percentage.
+    1: GainType type;
+
+    /// Minimum gain. Must be included.
+    2: float32 min_gain;
+
+    /// Maximum gain. Must be included.
+    3: float32 max_gain;
+
+    /// Gain step in decibels, this value must not be negative, but may be zero to convey an
+    /// effectively continuous range of values. Must not exceed `max_gain_db` - `min_gain_db`.
+    /// Must be included.
+    4: float32 gain_step;
+
+    /// Gain mute capability. If not included, mute is not supported.
+    5: bool can_mute;
+
+    /// Automatic Gain Control (AGC) capability. If not included, AGC is not supported.
+    6: bool can_agc;
+};
+
+/// For an overview see
+/// [Audio Codec Interface](//docs/concepts/drivers/driver_interfaces/audio_codec.md)
+protocol Codec {
+    /// Resets the codec.
+    /// `Reset` returns when the reset is completed. If the driver can't successfully reset the
+    /// codec it will close the codec protocol channel, in this case the client may obtain a new
+    /// codec protocol channel and retry.
+    Reset() -> ();
+
+    /// Retrieves textual information about the codec.
+    GetInfo() -> (CodecInfo info);
+
+    /// Stops the codec operation.
+    /// `Stop` returns when stopping the codec is completed. If the driver can't successfully stop
+    /// the codec it will close the codec protocol channel, in this case the client may obtain a new
+    /// codec protocol channel and retry.
+    Stop() -> ();
+
+    /// Start/Re-start the codec operation.
+    /// `Start` returns when starting the codec is completed. If the driver can't successfully start
+    /// the codec it will close the codec protocol channel, in this case the client may obtain a new
+    /// codec protocol channel and retry.
+    Start() -> ();
+
+    /// Retrieves bridgeable mode from a codec.
+    IsBridgeable() -> (bool supports_bridged_mode);
+
+    /// Sets a codec's bridged mode.  Only required if the codec supports bridged mode as specified
+    /// by IsBridgeable's reply.
+    SetBridgedMode(bool enable_bridged_mode);
+
+    /// Retrieves the DAI formats supported by the codec, if not available at the time the codec
+    /// may reply with an error status and the controller may retry at a later time.
+    /// Retrieving multiple DaiSupportedFormats allows for cases where exclusive
+    /// combinations of the parameters in DaiSupportedFormats may be supported.
+    GetDaiFormats() -> (vector<DaiSupportedFormats>:MAX_COUNT_FORMATS formats)
+        error zx.status;
+
+    /// Sets the DAI format to be used in the interface between the controller and codec, if
+    /// the codec is not able to support the DAI format anymore, e.g. for a removable component
+    /// then the function may return an error status.
+    SetDaiFormat(DaiFormat format) -> (zx.status status);
+
+    /// Retrieves gain format.
+    GetGainFormat() -> (GainFormat gain_format);
+
+    /// Retrieves Plug Detect Capabilities.
+    GetPlugDetectCapabilities() -> (PlugDetectCapabilities plug_detect_capabilities);
+
+    /// Get the gain state via a hanging get. The driver will reply to the first `WatchGainState`
+    /// sent by the client and this reply must include a `gain_db` set to 0dB or lower. The driver
+    /// will not respond to subsequent client `WatchGainState` calls until the gain state changes
+    /// from what was most recently reported.
+    WatchGainState() -> (GainState gain_state);
+
+    /// Client update of the gain state.
+    SetGainState(GainState target_state);
+
+    /// Get the plug detect state via a hanging get. The driver will reply to the first
+    /// `WatchPlugState` sent by the client. The driver will not respond to subsequent client
+    /// `WatchPlugState` calls until the plug state changes from what was most recently reported.
+    WatchPlugState() -> (PlugState plug_state);
+};

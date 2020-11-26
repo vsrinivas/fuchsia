@@ -9,6 +9,7 @@ fidl("fuchsia.hardware.audio") {
 
   sources = [
     "audio.fidl",
+    "codec.fidl",
     "dai.fidl",
     "dai_format.fidl",
     "ring_buffer.fidl",

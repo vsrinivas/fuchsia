@@ -7,8 +7,9 @@
 #include <ddk/debug.h>
 
 namespace audio {
-namespace codec_fidl = ::fuchsia::hardware::audio::codec;
-using SyncCall = ::fuchsia::hardware::audio::codec::Codec_Sync;
+
+namespace audio_fidl = ::fuchsia::hardware::audio;
+using SyncCall = ::fuchsia::hardware::audio::Codec_Sync;
 
 zx_status_t SimpleCodecClient::SetProtocol(ddk::CodecProtocolClient proto_client) {
   proto_client_ = proto_client;
@@ -27,28 +28,15 @@ zx_status_t SimpleCodecClient::SetProtocol(ddk::CodecProtocolClient proto_client
   codec_.Bind(std::move(channel_local));
   return ZX_OK;
 }
-void SimpleCodecClient::SetTimeout(int64_t nsecs) { timeout_nsecs_ = nsecs; }
 
-zx_status_t SimpleCodecClient::Reset() {
-  int32_t out_status = 0;
-  auto status = codec_->Reset(&out_status);
-  return (status == ZX_OK) ? out_status : status;
-}
+zx_status_t SimpleCodecClient::Reset() { return codec_->Reset(); }
 
-zx_status_t SimpleCodecClient::Stop() {
-  int32_t out_status = 0;
-  auto status = codec_->Stop(&out_status);
-  return (status == ZX_OK) ? out_status : status;
-}
+zx_status_t SimpleCodecClient::Stop() { return codec_->Stop(); }
 
-zx_status_t SimpleCodecClient::Start() {
-  int32_t out_status = 0;
-  auto status = codec_->Start(&out_status);
-  return (status == ZX_OK) ? out_status : status;
-}
+zx_status_t SimpleCodecClient::Start() { return codec_->Start(); }
 
 zx::status<Info> SimpleCodecClient::GetInfo() {
-  codec_fidl::Info info = {};
+  Info info = {};
   auto status = codec_->GetInfo(&info);
   if (status != ZX_OK) {
     return zx::error(status);
@@ -69,52 +57,84 @@ zx_status_t SimpleCodecClient::SetBridgedMode(bool bridged) {
   return codec_->SetBridgedMode(bridged);
 }
 
-zx::status<std::vector<DaiSupportedFormats>> SimpleCodecClient::GetDaiFormats() {
-  int32_t out_status = 0;
-  std::vector<DaiSupportedFormats> out_formats;
-  auto status = codec_->GetDaiFormats(&out_status, &out_formats);
+zx::status<DaiSupportedFormats> SimpleCodecClient::GetDaiFormats() {
+  audio_fidl::Codec_GetDaiFormats_Result result;
+  auto status = codec_->GetDaiFormats(&result);
   if (status != ZX_OK) {
     return zx::error(status);
   }
-  return zx::ok(std::move(out_formats));
+  ZX_ASSERT(result.response().formats.size() == 1);
+  std::vector<FrameFormat> frame_formats;
+  auto& formats = result.response().formats[0];
+  for (auto& frame_format : formats.frame_formats) {
+    frame_formats.push_back(frame_format.frame_format_standard());
+  }
+  return zx::ok(DaiSupportedFormats{
+      .number_of_channels = std::move(formats.number_of_channels),
+      .sample_formats = std::move(formats.sample_formats),
+      .frame_formats = std::move(frame_formats),
+      .frame_rates = std::move(formats.frame_rates),
+      .bits_per_slot = std::move(formats.bits_per_slot),
+      .bits_per_sample = std::move(formats.bits_per_sample),
+  });
 }
 
 zx_status_t SimpleCodecClient::SetDaiFormat(DaiFormat format) {
-  int32_t out_status = 0;
-  auto status = codec_->SetDaiFormat(std::move(format), &out_status);
+  int32_t out_status = ZX_OK;
+  audio_fidl::DaiFormat format2;
+  format2.number_of_channels = format.number_of_channels;
+  format2.channels_to_use_bitmask = format.channels_to_use_bitmask;
+  format2.sample_format = format.sample_format;
+  format2.frame_format.set_frame_format_standard(format.frame_format);
+  format2.frame_rate = format.frame_rate;
+  format2.bits_per_slot = format.bits_per_slot;
+  format2.bits_per_sample = format.bits_per_sample;
+  auto status = codec_->SetDaiFormat(std::move(format2), &out_status);
   return (status == ZX_OK) ? out_status : status;
 }
 
 zx::status<GainFormat> SimpleCodecClient::GetGainFormat() {
-  codec_fidl::GainFormat gain_format = {};
-  auto status = codec_->GetGainFormat(&gain_format);
+  audio_fidl::GainFormat format = {};
+  auto status = codec_->GetGainFormat(&format);
   if (status != ZX_OK) {
     return zx::error(status);
   }
-  return zx::ok(std::move(gain_format));
+  ZX_ASSERT(format.type() == audio_fidl::GainType::DECIBELS);  // Only decibels in simple codec.
+  // Only hardwired in simple codec.
+  return zx::ok(GainFormat{
+      .min_gain = format.min_gain(),
+      .max_gain = format.max_gain(),
+      .gain_step = format.gain_step(),
+      .can_mute = format.can_mute(),
+      .can_agc = format.can_agc(),
+  });
 }
 
 zx::status<GainState> SimpleCodecClient::GetGainState() {
-  codec_fidl::GainState gain_state = {};
-  auto status = codec_->GetGainState(&gain_state);
-  if (status != ZX_OK) {
-    return zx::error(status);
+  // Only watch the first time.
+  static bool first_time = true;
+  if (first_time) {
+    ::fuchsia::hardware::audio::GainState out_gain_state;
+    auto status = codec_->WatchGainState(&out_gain_state);
+    if (status != ZX_OK) {
+      return zx::error(status);
+    }
+    gain_state_.gain = out_gain_state.gain_db();
+    gain_state_.muted = out_gain_state.muted();
+    gain_state_.agc_enabled = out_gain_state.agc_enabled();
+    first_time = false;
   }
-  return zx::ok(std::move(gain_state));
+  return zx::ok(gain_state_);
 }
 
 void SimpleCodecClient::SetGainState(GainState state) {
-  auto unused = codec_->SetGainState(std::move(state));
+  audio_fidl::GainState state2;
+  state2.set_gain_db(state.gain);
+  state2.set_muted(state.muted);
+  state2.set_agc_enabled(state.agc_enabled);
+  gain_state_ = state;
+  auto unused = codec_->SetGainState(std::move(state2));
   static_cast<void>(unused);
-}
-
-zx::status<PlugState> SimpleCodecClient::GetPlugState() {
-  codec_fidl::PlugState plug_state = {};
-  auto status = codec_->GetPlugState(&plug_state);
-  if (status != ZX_OK) {
-    return zx::error(status);
-  }
-  return zx::ok(std::move(plug_state));
 }
 
 }  // namespace audio

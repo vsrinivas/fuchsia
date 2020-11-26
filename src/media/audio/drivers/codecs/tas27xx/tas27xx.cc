@@ -128,7 +128,6 @@ zx_status_t Tas27xx::Start() {
 
 GainFormat Tas27xx::GetGainFormat() {
   return {
-      .type = GainType::DECIBELS,
       .min_gain = kMinGain,
       .max_gain = kMaxGain,
       .gain_step = kGainStep,
@@ -143,9 +142,9 @@ void Tas27xx::SetGainState(GainState gain_state) {
   gain_state.gain = std::clamp(gain_state.gain, kMinGain, kMaxGain);
   uint8_t gain_reg = static_cast<uint8_t>(-gain_state.gain / kGainStep);
   WriteReg(PB_CFG2, gain_reg);
-  if (gain_state.agc_enable) {
+  if (gain_state.agc_enabled) {
     zxlogf(ERROR, "tas27xx: AGC enable not supported");
-    gain_state.agc_enable = false;
+    gain_state.agc_enabled = false;
   }
   gain_state_ = gain_state;
   UpdatePowerControl();
@@ -278,9 +277,7 @@ zx_status_t Tas27xx::Reinitialize() {
     return status;
   }
   constexpr float kDefaultGainDb = -30.f;
-  GainState gain_state = {
-
-      .gain = kDefaultGainDb, .muted = true};
+  GainState gain_state = {.gain = kDefaultGainDb, .muted = true};
   SetGainState(std::move(gain_state));
   return ZX_OK;
 }
@@ -320,18 +317,12 @@ void Tas27xx::SetBridgedMode(bool enable_bridged_mode) {
   }
 }
 
-std::vector<DaiSupportedFormats> Tas27xx::GetDaiFormats() {
-  std::vector<DaiSupportedFormats> formats;
-  formats.push_back(kSupportedDaiFormats);
-  return formats;
-}
+DaiSupportedFormats Tas27xx::GetDaiFormats() { return kSupportedDaiFormats; }
 
 zx_status_t Tas27xx::SetDaiFormat(const DaiFormat& format) {
   ZX_ASSERT(format.channels_to_use_bitmask == 1);  // Use right channel.
   return SetRate(format.frame_rate);
 }
-
-PlugState Tas27xx::GetPlugState() { return {.hardwired = true, .plugged = true}; }
 
 zx_status_t Tas27xx::WriteReg(uint8_t reg, uint8_t value) {
   uint8_t write_buffer[2];

@@ -7,7 +7,7 @@
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
-#include <lib/simple-codec/simple-codec-types.h>
+#include <lib/simple-codec/simple-codec-server-internal.h>
 #include <lib/zx/status.h>
 #include <lib/zx/time.h>
 #include <string.h>
@@ -19,7 +19,6 @@
 #include <ddk/debug.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/audio.h>
-#include <sdk/lib/fidl/cpp/binding.h>
 
 namespace audio {
 
@@ -30,7 +29,7 @@ using SimpleCodecServerDeviceType = ddk::Device<SimpleCodecServer>;
 // drivers. The subclass must implement all the virtual methods and use Create() for construction.
 class SimpleCodecServer : public SimpleCodecServerDeviceType,
                           public ddk::CodecProtocol<SimpleCodecServer, ddk::base_protocol>,
-                          public ::fuchsia::hardware::audio::codec::Codec {
+                          public SimpleCodecServerInternal<SimpleCodecServer> {
  public:
   // Create
   //
@@ -71,18 +70,24 @@ class SimpleCodecServer : public SimpleCodecServerDeviceType,
   virtual zx_status_t Shutdown() = 0;
   // Protocol methods to be implemented by the driver, for descriptions see
   // //docs/concepts/drivers/driver_interfaces/audio_codec.md
+  // Methods are simplified to use standard C++ types (see simple-codec-types.h) and also:
+  // - Only allow standard frame formats (DaiFrameFormatStandard, see
+  //   //sdk/fidl/fuchsia.hardware.audio/dai_format.fidl).
+  // - GetDaiFormats returns one DaiSupportedFormats instead of a vector (still allows supported
+  //   formats with multiple frame rates, number of channels, etc. just not overly complex ones).
+  // - No need to implement WatchGainState, gain must only be changed by SetGainState.
+  // - No need to implement WatchPlugState, the library always advertises "hardwired".
   virtual zx_status_t Reset() = 0;
   virtual Info GetInfo() = 0;
   virtual zx_status_t Stop() = 0;
   virtual zx_status_t Start() = 0;
   virtual bool IsBridgeable() = 0;
   void SetBridgedMode(bool enable_bridged_mode) override = 0;
-  virtual std::vector<DaiSupportedFormats> GetDaiFormats() = 0;
+  virtual DaiSupportedFormats GetDaiFormats() = 0;
   virtual zx_status_t SetDaiFormat(const DaiFormat& format) = 0;
   virtual GainFormat GetGainFormat() = 0;
   virtual GainState GetGainState() = 0;
-  void SetGainState(GainState state) override = 0;
-  virtual PlugState GetPlugState() = 0;
+  virtual void SetGainState(GainState state) = 0;
 
   zx_status_t CodecConnect(zx::channel(channel));
 
@@ -90,27 +95,25 @@ class SimpleCodecServer : public SimpleCodecServerDeviceType,
   explicit SimpleCodecServer(zx_device_t* parent)
       : SimpleCodecServerDeviceType(parent), loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {}
 
-  void Reset(ResetCallback callback) override { callback(Reset()); }
-  void Stop(StopCallback callback) override { callback(Stop()); }
-  void Start(StartCallback callback) override { callback(Start()); }
-  void GetInfo(GetInfoCallback callback) override { callback(GetInfo()); }
-  void IsBridgeable(IsBridgeableCallback callback) override { callback(IsBridgeable()); }
-  void GetDaiFormats(GetDaiFormatsCallback callback) override { callback(ZX_OK, GetDaiFormats()); }
-  void SetDaiFormat(::fuchsia::hardware::audio::codec::DaiFormat format,
-                    SetDaiFormatCallback callback) override {
-    callback(SetDaiFormat(std::move(format)));
-  }
-  void GetGainFormat(GetGainFormatCallback callback) override { callback(GetGainFormat()); }
-  void GetGainState(GetGainStateCallback callback) override { callback(GetGainState()); }
-  void GetPlugState(GetPlugStateCallback callback) override { callback(GetPlugState()); }
-
  private:
+  // Internal implementaions have the same name but different signatures.
+  using SimpleCodecServerInternal::GetDaiFormats;
+  using SimpleCodecServerInternal::GetGainFormat;
+  using SimpleCodecServerInternal::GetInfo;
+  using SimpleCodecServerInternal::IsBridgeable;
+  using SimpleCodecServerInternal::Reset;
+  using SimpleCodecServerInternal::SetDaiFormat;
+  using SimpleCodecServerInternal::SetGainState;
+  using SimpleCodecServerInternal::Start;
+  using SimpleCodecServerInternal::Stop;
+
   friend class std::default_delete<SimpleCodecServer>;
+  friend class SimpleCodecServerInternal;
 
   zx_status_t CreateInternal();
 
   DriverIds driver_ids_;
-  std::optional<fidl::Binding<::fuchsia::hardware::audio::codec::Codec>> binding_;
+  std::optional<fidl::Binding<::fuchsia::hardware::audio::Codec>> binding_;
   async::Loop loop_;
 };
 

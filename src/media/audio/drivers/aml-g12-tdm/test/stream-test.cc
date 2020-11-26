@@ -61,7 +61,7 @@ struct CodecTest : public DeviceType, public SimpleCodecServer {
   }
   bool IsBridgeable() override { return true; }
   void SetBridgedMode(bool enable_bridged_mode) override {}
-  std::vector<DaiSupportedFormats> GetDaiFormats() override {
+  DaiSupportedFormats GetDaiFormats() override {
     DaiSupportedFormats formats;
     formats.number_of_channels.push_back(2);
     formats.sample_formats.push_back(SampleFormat::PCM_SIGNED);
@@ -69,18 +69,15 @@ struct CodecTest : public DeviceType, public SimpleCodecServer {
     formats.frame_rates.push_back(kTestFrameRate1);
     formats.bits_per_slot.push_back(16);
     formats.bits_per_sample.push_back(16);
-    return std::vector<DaiSupportedFormats>{formats};
+    return formats;
   }
   zx_status_t SetDaiFormat(const DaiFormat& format) override {
     last_frame_rate_ = format.frame_rate;
     return ZX_OK;
   }
   GainFormat GetGainFormat() override {
-    return {.type = GainType::DECIBELS,
-            .min_gain = -10.f,
-            .max_gain = 10.f,
-            .can_mute = true,
-            .can_agc = true};
+    return {
+        .min_gain = -10.f, .max_gain = 10.f, .gain_step = .5f, .can_mute = true, .can_agc = true};
   }
   GainState GetGainState() override { return {}; }
   void SetGainState(GainState state) override {
@@ -88,8 +85,6 @@ struct CodecTest : public DeviceType, public SimpleCodecServer {
     gain_ = state.gain;
     sync_completion_signal(&set_gain_completion_);
   }
-  PlugState GetPlugState() override { return {}; }
-
   void DdkRelease() { delete this; }
 
   uint32_t last_frame_rate_ = {};
@@ -590,9 +585,9 @@ TEST(AmlG12Tdm, I2sOutOneCodecCantAgc) {
   struct CodecCantAgcTest : public CodecTest {
     explicit CodecCantAgcTest(zx_device_t* device) : CodecTest(device) {}
     GainFormat GetGainFormat() override {
-      return {.type = GainType::DECIBELS,
-              .min_gain = -10.f,
+      return {.min_gain = -10.f,
               .max_gain = 10.f,
+              .gain_step = .5f,
               .can_mute = true,
               .can_agc = false};
     }
@@ -637,9 +632,9 @@ TEST(AmlG12Tdm, I2sOutOneCodecCantMute) {
   struct CodecCantMuteTest : public CodecTest {
     explicit CodecCantMuteTest(zx_device_t* device) : CodecTest(device) {}
     GainFormat GetGainFormat() override {
-      return {.type = GainType::DECIBELS,
-              .min_gain = -10.f,
+      return {.min_gain = -10.f,
               .max_gain = 10.f,
+              .gain_step = .5f,
               .can_mute = false,
               .can_agc = true};
     }

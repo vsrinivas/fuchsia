@@ -124,11 +124,7 @@ void Tas5782::SetBridgedMode(bool enable_bridged_mode) {
   // TODO(andresoportus): Add support and report true in CodecIsBridgeable.
 }
 
-std::vector<DaiSupportedFormats> Tas5782::GetDaiFormats() {
-  std::vector<DaiSupportedFormats> formats;
-  formats.push_back(kSupportedDaiFormats);
-  return formats;
-}
+DaiSupportedFormats Tas5782::GetDaiFormats() { return kSupportedDaiFormats; }
 
 zx_status_t Tas5782::SetDaiFormat(const DaiFormat& format) {
   if (!IsDaiFormatSupported(format, kSupportedDaiFormats)) {
@@ -140,7 +136,6 @@ zx_status_t Tas5782::SetDaiFormat(const DaiFormat& format) {
 
 GainFormat Tas5782::GetGainFormat() {
   return {
-      .type = GainType::DECIBELS,
       .min_gain = kMinGain,
       .max_gain = kMaxGain,
       .gain_step = kGainStep,
@@ -161,16 +156,14 @@ void Tas5782::SetGainState(GainState gain_state) {
   if (status != ZX_OK) {
     return;
   }
-  if (gain_state.agc_enable) {
+  if (gain_state.agc_enabled) {
     zxlogf(ERROR, "%s AGC enable not supported", __FILE__);
-    gain_state.agc_enable = false;
+    gain_state.agc_enabled = false;
   }
   gain_state_ = gain_state;
 }
 
 GainState Tas5782::GetGainState() { return gain_state_; }
-
-PlugState Tas5782::GetPlugState() { return {.hardwired = true, .plugged = true}; }
 
 zx_status_t Tas5782::WriteReg(uint8_t reg, uint8_t value) {
   uint8_t write_buf[2];

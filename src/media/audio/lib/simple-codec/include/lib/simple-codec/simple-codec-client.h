@@ -26,30 +26,33 @@ class SimpleCodecClient {
   // Convenience methods not part of the audio codec protocol.
   // Initialize the client using the DDK codec protocol object.
   zx_status_t SetProtocol(ddk::CodecProtocolClient proto_client);
-  // Configures the timeout the the codec protocol equivalent methods below.
-  void SetTimeout(int64_t nsecs);
 
   // Sync C++ methods to communicate with codecs, for descriptions see
   // //docs/concepts/drivers/driver_interfaces/audio_codec.md.
+  // Methods are simplified to use standard C++ types (see simple-codec-types.h) and also:
+  // - Only allow standard frame formats (DaiFrameFormatStandard, see
+  //   //sdk/fidl/fuchsia.hardware.audio/dai_format.fidl).
+  // - GetDaiFormats returns one DaiSupportedFormats instead of a vector (still allows supported
+  //   formats with multiple frame rates, number of channels, etc. just not overly complex ones).
+  // - No direct calls to WatchGainState. GetGainState queries the last gain set, the gain is to be
+  //   changed only via SetGainState.
+  // - No direct calls to WatchPlugState, the library only expects "hardwired" codecs.
   zx_status_t Reset();
   zx::status<Info> GetInfo();
   zx_status_t Stop();
   zx_status_t Start();
   zx::status<bool> IsBridgeable();
   zx_status_t SetBridgedMode(bool bridged);
-  zx::status<std::vector<DaiSupportedFormats>> GetDaiFormats();
+  zx::status<DaiSupportedFormats> GetDaiFormats();
   zx_status_t SetDaiFormat(DaiFormat format);
   zx::status<GainFormat> GetGainFormat();
   zx::status<GainState> GetGainState();
   void SetGainState(GainState state);
-  zx::status<PlugState> GetPlugState();
 
  protected:
   ddk::CodecProtocolClient proto_client_;
 
  private:
-  static constexpr int64_t kDefaultTimeoutNsecs = 1'000'000'000;
-
   template <class T>
   struct AsyncOutData {
     sync_completion_t completion;
@@ -64,8 +67,8 @@ class SimpleCodecClient {
 
   zx::unowned_channel Connect();
 
-  int64_t timeout_nsecs_ = kDefaultTimeoutNsecs;
-  ::fuchsia::hardware::audio::codec::CodecSyncPtr codec_;
+  ::fuchsia::hardware::audio::CodecSyncPtr codec_;
+  GainState gain_state_;
 };
 
 }  // namespace audio

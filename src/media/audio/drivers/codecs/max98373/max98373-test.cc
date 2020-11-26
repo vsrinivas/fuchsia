@@ -92,7 +92,7 @@ TEST(Max98373Test, SetGainGood) {
   SimpleCodecClient client;
   client.SetProtocol(&codec_proto);
 
-  GainState gain({.gain = -32.f, .muted = false, .agc_enable = false});
+  GainState gain({.gain = -32.f, .muted = false, .agc_enabled = false});
   client.SetGainState(gain);
 
   // Make a 2-way call to make sure the server (we know single threaded) completed previous calls.
@@ -119,7 +119,7 @@ TEST(Max98373Test, SetGainOurOfRangeLow) {
   SimpleCodecClient client;
   client.SetProtocol(&codec_proto);
 
-  GainState gain({.gain = -999.f, .muted = false, .agc_enable = false});
+  GainState gain({.gain = -999.f, .muted = false, .agc_enabled = false});
   client.SetGainState(gain);
 
   // Make a 2-way call to make sure the server (we know single threaded) completed previous calls.
@@ -146,7 +146,7 @@ TEST(Max98373Test, SetGainOurOfRangeHigh) {
   SimpleCodecClient client;
   client.SetProtocol(&codec_proto);
 
-  GainState gain({.gain = 999.f, .muted = false, .agc_enable = false});
+  GainState gain({.gain = 999.f, .muted = false, .agc_enabled = false});
   client.SetGainState(gain);
 
   // Make a 2-way call to make sure the server (we know single threaded) completed previous calls.

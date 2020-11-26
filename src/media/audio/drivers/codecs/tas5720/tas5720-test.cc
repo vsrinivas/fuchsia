@@ -222,21 +222,20 @@ TEST_F(Tas5720Test, CodecDaiFormat) {
   // Check getting DAI formats.
   {
     auto formats = client.GetDaiFormats();
-    ASSERT_EQ(formats->size(), 1);
-    ASSERT_EQ(formats.value()[0].number_of_channels.size(), 1);
-    ASSERT_EQ(formats.value()[0].number_of_channels[0], 2);
-    ASSERT_EQ(formats.value()[0].sample_formats.size(), 1);
-    ASSERT_EQ(formats.value()[0].sample_formats[0], SampleFormat::PCM_SIGNED);
-    ASSERT_EQ(formats.value()[0].frame_formats.size(), 2);
-    ASSERT_EQ(formats.value()[0].frame_formats[0], FrameFormat::STEREO_LEFT);
-    ASSERT_EQ(formats.value()[0].frame_formats[1], FrameFormat::I2S);
-    ASSERT_EQ(formats.value()[0].frame_rates.size(), 2);
-    ASSERT_EQ(formats.value()[0].frame_rates[0], 48000);
-    ASSERT_EQ(formats.value()[0].frame_rates[1], 96000);
-    ASSERT_EQ(formats.value()[0].bits_per_slot.size(), 1);
-    ASSERT_EQ(formats.value()[0].bits_per_slot[0], 32);
-    ASSERT_EQ(formats.value()[0].bits_per_sample.size(), 1);
-    ASSERT_EQ(formats.value()[0].bits_per_sample[0], 16);
+    ASSERT_EQ(formats.value().number_of_channels.size(), 1);
+    ASSERT_EQ(formats.value().number_of_channels[0], 2);
+    ASSERT_EQ(formats.value().sample_formats.size(), 1);
+    ASSERT_EQ(formats.value().sample_formats[0], SampleFormat::PCM_SIGNED);
+    ASSERT_EQ(formats.value().frame_formats.size(), 2);
+    ASSERT_EQ(formats.value().frame_formats[0], FrameFormat::STEREO_LEFT);
+    ASSERT_EQ(formats.value().frame_formats[1], FrameFormat::I2S);
+    ASSERT_EQ(formats.value().frame_rates.size(), 2);
+    ASSERT_EQ(formats.value().frame_rates[0], 48000);
+    ASSERT_EQ(formats.value().frame_rates[1], 96000);
+    ASSERT_EQ(formats.value().bits_per_slot.size(), 1);
+    ASSERT_EQ(formats.value().bits_per_slot[0], 32);
+    ASSERT_EQ(formats.value().bits_per_sample.size(), 1);
+    ASSERT_EQ(formats.value().bits_per_sample[0], 16);
   }
 
   // Check setting DAI formats.
@@ -308,17 +307,17 @@ TEST_F(Tas5720Test, CodecGain) {
   client.SetGainState({
       .gain = -32.f,
       .muted = false,
-      .agc_enable = false,
+      .agc_enabled = false,
   });
   client.SetGainState({
       .gain = -999.f,
       .muted = false,
-      .agc_enable = false,
+      .agc_enabled = false,
   });
   client.SetGainState({
       .gain = 111.f,
       .muted = false,
-      .agc_enable = false,
+      .agc_enabled = false,
   });
 
   // Make a 2-wal call to make sure the server (we know single threaded) completed previous calls.
@@ -340,10 +339,6 @@ TEST_F(Tas5720Test, CodecPlugState) {
   auto codec_proto = codec->GetProto();
   SimpleCodecClient client;
   client.SetProtocol(&codec_proto);
-
-  auto state = client.GetPlugState();
-  ASSERT_TRUE(state->hardwired);
-  ASSERT_TRUE(state->plugged);
 
   // Shutdown.
   mock_i2c_.ExpectWrite({0x01}).ExpectReadStop({0xff}).ExpectWriteStop({0x01, 0xfe});

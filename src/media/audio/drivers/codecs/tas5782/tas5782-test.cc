@@ -101,19 +101,18 @@ TEST(Tas5782Test, GetDai) {
   client.SetProtocol(&codec_proto);
   auto formats = client.GetDaiFormats();
 
-  EXPECT_EQ(formats.value().size(), 1);
-  EXPECT_EQ(formats.value()[0].number_of_channels.size(), 1);
-  EXPECT_EQ(formats.value()[0].number_of_channels[0], 2);
-  EXPECT_EQ(formats.value()[0].sample_formats.size(), 1);
-  EXPECT_EQ(formats.value()[0].sample_formats[0], SampleFormat::PCM_SIGNED);
-  EXPECT_EQ(formats.value()[0].frame_formats.size(), 1);
-  EXPECT_EQ(formats.value()[0].frame_formats[0], FrameFormat::I2S);
-  EXPECT_EQ(formats.value()[0].frame_rates.size(), 1);
-  EXPECT_EQ(formats.value()[0].frame_rates[0], 48000);
-  EXPECT_EQ(formats.value()[0].bits_per_slot.size(), 1);
-  EXPECT_EQ(formats.value()[0].bits_per_slot[0], 32);
-  EXPECT_EQ(formats.value()[0].bits_per_sample.size(), 1);
-  EXPECT_EQ(formats.value()[0].bits_per_sample[0], 32);
+  EXPECT_EQ(formats.value().number_of_channels.size(), 1);
+  EXPECT_EQ(formats.value().number_of_channels[0], 2);
+  EXPECT_EQ(formats.value().sample_formats.size(), 1);
+  EXPECT_EQ(formats.value().sample_formats[0], SampleFormat::PCM_SIGNED);
+  EXPECT_EQ(formats.value().frame_formats.size(), 1);
+  EXPECT_EQ(formats.value().frame_formats[0], FrameFormat::I2S);
+  EXPECT_EQ(formats.value().frame_rates.size(), 1);
+  EXPECT_EQ(formats.value().frame_rates[0], 48000);
+  EXPECT_EQ(formats.value().bits_per_slot.size(), 1);
+  EXPECT_EQ(formats.value().bits_per_slot[0], 32);
+  EXPECT_EQ(formats.value().bits_per_sample.size(), 1);
+  EXPECT_EQ(formats.value().bits_per_sample[0], 32);
   codec->DdkAsyncRemove();
   ASSERT_TRUE(tester.Ok());
   codec.release()->DdkRelease();  // codec release managed by the DDK
@@ -173,25 +172,6 @@ TEST(Tas5782Test, GetGainFormat) {
   EXPECT_EQ(format.value().min_gain, -103.0);
   EXPECT_EQ(format.value().max_gain, 24.0);
   EXPECT_EQ(format.value().gain_step, 0.5);
-  codec->DdkAsyncRemove();
-  ASSERT_TRUE(tester.Ok());
-  codec.release()->DdkRelease();  // codec release managed by the DDK
-}
-
-TEST(Tas5782Test, GetPlugState) {
-  fake_ddk::Bind tester;
-  mock_i2c::MockI2c unused_i2c;
-  ddk::GpioProtocolClient unused_gpio0, unused_gpio1;
-  auto codec = SimpleCodecServer::Create<Tas5782Codec>(
-      unused_i2c.GetProto(), std::move(unused_gpio0), std::move(unused_gpio1));
-  ASSERT_NOT_NULL(codec);
-  auto codec_proto = codec->GetProto();
-  SimpleCodecClient client;
-  client.SetProtocol(&codec_proto);
-
-  auto state = client.GetPlugState();
-  EXPECT_EQ(state.value().hardwired, true);
-  EXPECT_EQ(state.value().plugged, true);
   codec->DdkAsyncRemove();
   ASSERT_TRUE(tester.Ok());
   codec.release()->DdkRelease();  // codec release managed by the DDK

@@ -42,24 +42,9 @@ bool IsDaiFormatSupported(const DaiFormat& format, const DaiSupportedFormats& su
     return false;
   }
 
-  size_t j = 0;
   for (i = 0; i < supported.frame_formats.size(); ++i) {
     if (supported.frame_formats[i] == frame_format) {
-      if (frame_format != FrameFormat::CUSTOM) {
-        break;
-      } else {
-        if (j < supported.frame_formats_custom.size()) {
-          auto& this_supported = supported.frame_formats_custom[j];
-          auto& this_format = format.frame_format_custom;
-          if (this_supported.left_justified == this_format.left_justified &&
-              this_supported.sclk_on_raising == this_format.sclk_on_raising &&
-              this_supported.frame_sync_sclks_offset == this_format.frame_sync_sclks_offset &&
-              this_supported.frame_sync_size == this_format.frame_sync_size) {
-            break;
-          }
-        }
-        j++;
-      }
+      break;
     }
   }
   if (i == supported.frame_formats.size()) {

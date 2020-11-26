@@ -77,7 +77,7 @@ writing and using simple codec drivers implementing the codec protocol.
 ## Protocol definition
 
 The codec protocol is defined in FIDL at
-[codec.fidl](/sdk/fidl/fuchsia.hardware.audio.codec/codec.fidl).
+[codec.fidl](/sdk/fidl/fuchsia.hardware.audio/codec.fidl).
 
 Note that because the DDK does not currently provide a way to directly get a FIDL
 channel for communication, we define a way to get a channel via
@@ -195,17 +195,23 @@ notifications are added to Banjo.
 
 Gain related support by any given codec is returned by the codec in response to
 a `GetGainFormat` function in the `GainFormat` structure. The controller can
-control gain, mute and AGC states in a codec using the `SetGainState` function
-and the corresponding `GetGainState` function allows retrieving the current
-state for the same.
+control gain, mute and AGC states in a codec using the `SetGainState` function.
+
+Clients may request that codecs send them asynchronous notifications of
+gain state changes by using the `WatchGainState` command. The driver will reply to the
+first |WatchGainState| sent by the client and will not respond to subsequent
+client |WatchGainState| calls until the gain state changes from what was most recently
+reported.
 
 ### Plug Detect {#plug-detect}
 
-The controller can query the plug detect state with the `GetPlugState` function.
-The plug state includes hardwired and plugged states.
-
-TODO(andresoportus): Add `can_notify` bool to `PlugState` once asynchronous
-notifications are added to Banjo.
+Clients may request that codecs send them asynchronous notifications of
+plug state changes by using the `WatchPlugState` command if the `CAN_ASYNC_NOTIFY`
+flag was sent by the driver in `GetPlugDetectCapabilites`. I.e. drivers for codecs which
+do not set the `CAN_ASYNC_NOTIFY` flag are free to ignore the `WatchPlugState` sent
+by clients. Drivers with `CAN_ASYNC_NOTIFY` set will reply to the first
+|WatchPlugState| sent by the client and will not respond to subsequent client
+|WatchPlugState| calls until the plug state changes from what was most recently reported.
 
 ### Power Control {#power-control}
 

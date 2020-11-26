@@ -36,12 +36,11 @@ class Tas5720 : public SimpleCodecServer {
   zx_status_t Start() override;
   bool IsBridgeable() override;
   void SetBridgedMode(bool enable_bridged_mode) override;
-  std::vector<DaiSupportedFormats> GetDaiFormats() override;
+  DaiSupportedFormats GetDaiFormats() override;
   zx_status_t SetDaiFormat(const DaiFormat& format) override;
   GainFormat GetGainFormat() override;
   GainState GetGainState() override;
   void SetGainState(GainState state) override;
-  PlugState GetPlugState() override;
 
  private:
   static constexpr float kMaxGain = 24.f + 0.f;        // Max digital + analog.

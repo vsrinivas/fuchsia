@@ -170,26 +170,23 @@ TEST(Tas58xxTest, GetDai) {
   SimpleCodecClient client;
   client.SetProtocol(&codec_proto);
 
-  {
-    auto formats = client.GetDaiFormats();
-    EXPECT_EQ(formats.value().size(), 1);
-    EXPECT_EQ(formats.value()[0].number_of_channels.size(), 2);
-    EXPECT_EQ(formats.value()[0].number_of_channels[0], 2);
-    EXPECT_EQ(formats.value()[0].number_of_channels[1], 4);
-    EXPECT_EQ(formats.value()[0].sample_formats.size(), 1);
-    EXPECT_EQ(formats.value()[0].sample_formats[0], SampleFormat::PCM_SIGNED);
-    EXPECT_EQ(formats.value()[0].frame_formats.size(), 2);
-    EXPECT_EQ(formats.value()[0].frame_formats[0], FrameFormat::I2S);
-    EXPECT_EQ(formats.value()[0].frame_formats[1], FrameFormat::TDM1);
-    EXPECT_EQ(formats.value()[0].frame_rates.size(), 1);
-    EXPECT_EQ(formats.value()[0].frame_rates[0], 48000);
-    EXPECT_EQ(formats.value()[0].bits_per_slot.size(), 2);
-    EXPECT_EQ(formats.value()[0].bits_per_slot[0], 16);
-    EXPECT_EQ(formats.value()[0].bits_per_slot[1], 32);
-    EXPECT_EQ(formats.value()[0].bits_per_sample.size(), 2);
-    EXPECT_EQ(formats.value()[0].bits_per_sample[0], 16);
-    EXPECT_EQ(formats.value()[0].bits_per_sample[1], 32);
-  }
+  auto formats = client.GetDaiFormats();
+  EXPECT_EQ(formats.value().number_of_channels.size(), 2);
+  EXPECT_EQ(formats.value().number_of_channels[0], 2);
+  EXPECT_EQ(formats.value().number_of_channels[1], 4);
+  EXPECT_EQ(formats.value().sample_formats.size(), 1);
+  EXPECT_EQ(formats.value().sample_formats[0], SampleFormat::PCM_SIGNED);
+  EXPECT_EQ(formats.value().frame_formats.size(), 2);
+  EXPECT_EQ(formats.value().frame_formats[0], FrameFormat::I2S);
+  EXPECT_EQ(formats.value().frame_formats[1], FrameFormat::TDM1);
+  EXPECT_EQ(formats.value().frame_rates.size(), 1);
+  EXPECT_EQ(formats.value().frame_rates[0], 48000);
+  EXPECT_EQ(formats.value().bits_per_slot.size(), 2);
+  EXPECT_EQ(formats.value().bits_per_slot[0], 16);
+  EXPECT_EQ(formats.value().bits_per_slot[1], 32);
+  EXPECT_EQ(formats.value().bits_per_sample.size(), 2);
+  EXPECT_EQ(formats.value().bits_per_sample[0], 16);
+  EXPECT_EQ(formats.value().bits_per_sample[1], 32);
 
   mock_i2c.VerifyAndClear();
 }
@@ -263,10 +260,6 @@ TEST(Tas58xxTest, CheckState) {
     EXPECT_EQ(format.value().min_gain, -103.0);
     EXPECT_EQ(format.value().max_gain, 24.0);
     EXPECT_EQ(format.value().gain_step, 0.5);
-
-    auto state = client.GetPlugState();
-    EXPECT_EQ(state.value().hardwired, true);
-    EXPECT_EQ(state.value().plugged, true);
   }
 
   codec->DdkAsyncRemove();
@@ -292,7 +285,7 @@ TEST(Tas58xxTest, SetGain) {
         .ExpectWrite({0x03})
         .ExpectReadStop({0x00})
         .ExpectWriteStop({0x03, 0x00});  // Muted = false.
-    GainState gain({.gain = -12.f, .muted = false, .agc_enable = false});
+    GainState gain({.gain = -12.f, .muted = false, .agc_enabled = false});
     client.SetGainState(gain);
   }
 
@@ -302,7 +295,7 @@ TEST(Tas58xxTest, SetGain) {
         .ExpectWrite({0x03})
         .ExpectReadStop({0x00})
         .ExpectWriteStop({0x03, 0x08});  // Muted = true.
-    GainState gain({.gain = -24.f, .muted = true, .agc_enable = false});
+    GainState gain({.gain = -24.f, .muted = true, .agc_enabled = false});
     client.SetGainState(gain);
   }
 

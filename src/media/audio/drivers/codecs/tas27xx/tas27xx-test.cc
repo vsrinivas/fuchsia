@@ -189,20 +189,19 @@ TEST(Tas27xxTest, CodecDaiFormat) {
   // Check getting DAI formats.
   {
     auto formats = client.GetDaiFormats();
-    ASSERT_EQ(formats->size(), 1);
-    ASSERT_EQ(formats.value()[0].number_of_channels.size(), 1);
-    ASSERT_EQ(formats.value()[0].number_of_channels[0], 2);
-    ASSERT_EQ(formats.value()[0].sample_formats.size(), 1);
-    ASSERT_EQ(formats.value()[0].sample_formats[0], SampleFormat::PCM_SIGNED);
-    ASSERT_EQ(formats.value()[0].frame_formats.size(), 1);
-    ASSERT_EQ(formats.value()[0].frame_formats[0], FrameFormat::I2S);
-    ASSERT_EQ(formats.value()[0].frame_rates.size(), 2);
-    ASSERT_EQ(formats.value()[0].frame_rates[0], 48000);
-    ASSERT_EQ(formats.value()[0].frame_rates[1], 96000);
-    ASSERT_EQ(formats.value()[0].bits_per_slot.size(), 1);
-    ASSERT_EQ(formats.value()[0].bits_per_slot[0], 32);
-    ASSERT_EQ(formats.value()[0].bits_per_sample.size(), 1);
-    ASSERT_EQ(formats.value()[0].bits_per_sample[0], 16);
+    ASSERT_EQ(formats.value().number_of_channels.size(), 1);
+    ASSERT_EQ(formats.value().number_of_channels[0], 2);
+    ASSERT_EQ(formats.value().sample_formats.size(), 1);
+    ASSERT_EQ(formats.value().sample_formats[0], SampleFormat::PCM_SIGNED);
+    ASSERT_EQ(formats.value().frame_formats.size(), 1);
+    ASSERT_EQ(formats.value().frame_formats[0], FrameFormat::I2S);
+    ASSERT_EQ(formats.value().frame_rates.size(), 2);
+    ASSERT_EQ(formats.value().frame_rates[0], 48000);
+    ASSERT_EQ(formats.value().frame_rates[1], 96000);
+    ASSERT_EQ(formats.value().bits_per_slot.size(), 1);
+    ASSERT_EQ(formats.value().bits_per_slot[0], 32);
+    ASSERT_EQ(formats.value().bits_per_sample.size(), 1);
+    ASSERT_EQ(formats.value().bits_per_sample[0], 16);
   }
 
   // Check setting DAI formats.
@@ -274,48 +273,22 @@ TEST(Tas27xxTest, CodecGain) {
   client.SetGainState({
       .gain = -32.f,
       .muted = false,
-      .agc_enable = false,
+      .agc_enabled = false,
   });
   client.SetGainState({
       .gain = -999.f,
       .muted = false,
-      .agc_enable = false,
+      .agc_enabled = false,
   });
   client.SetGainState({
       .gain = 111.f,
       .muted = false,
-      .agc_enable = false,
+      .agc_enabled = false,
   });
 
   // Make a 2-wal call to make sure the server (we know single threaded) completed previous calls.
   auto unused = client.GetInfo();
   static_cast<void>(unused);
-
-  codec->DdkAsyncRemove();
-  ASSERT_TRUE(tester.Ok());
-  codec.release()->DdkRelease();  // codec release managed by the DDK
-  mock_i2c.VerifyAndClear();
-  mock_fault.VerifyAndClear();
-}
-
-TEST(Tas27xxTest, CodecPlugState) {
-  fake_ddk::Bind tester;
-  zx::interrupt irq;
-  ASSERT_OK(zx::interrupt::create(zx::resource(), 0, ZX_INTERRUPT_VIRTUAL, &irq));
-
-  mock_i2c::MockI2c mock_i2c;
-  ddk::MockGpio mock_fault;
-  mock_fault.ExpectGetInterrupt(ZX_OK, ZX_INTERRUPT_MODE_EDGE_LOW, std::move(irq));
-
-  auto codec = SimpleCodecServer::Create<Tas27xxCodec>(mock_i2c.GetProto(), mock_fault.GetProto());
-  ASSERT_NOT_NULL(codec);
-  auto codec_proto = codec->GetProto();
-  SimpleCodecClient client;
-  client.SetProtocol(&codec_proto);
-
-  auto state = client.GetPlugState();
-  ASSERT_TRUE(state->hardwired);
-  ASSERT_TRUE(state->plugged);
 
   codec->DdkAsyncRemove();
   ASSERT_TRUE(tester.Ok());

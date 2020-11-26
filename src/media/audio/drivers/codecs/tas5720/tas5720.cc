@@ -221,11 +221,7 @@ void Tas5720::SetBridgedMode(bool enable_bridged_mode) {
     zxlogf(INFO, "tas5720: bridged mode note supported");
   }
 }
-std::vector<DaiSupportedFormats> Tas5720::GetDaiFormats() {
-  std::vector<DaiSupportedFormats> formats;
-  formats.push_back(kSupportedDaiFormats);
-  return formats;
-}
+DaiSupportedFormats Tas5720::GetDaiFormats() { return kSupportedDaiFormats; }
 
 zx_status_t Tas5720::SetDaiFormat(const DaiFormat& format) {
   ZX_ASSERT(format.channels_to_use_bitmask == 1 ||
@@ -242,7 +238,6 @@ zx_status_t Tas5720::SetDaiFormat(const DaiFormat& format) {
 
 GainFormat Tas5720::GetGainFormat() {
   return {
-      .type = GainType::DECIBELS,
       .min_gain = kMinGain,
       .max_gain = kMaxGain,
       .gain_step = kGainStep,
@@ -262,14 +257,12 @@ void Tas5720::SetGainState(GainState gain_state) {
   if (status != ZX_OK) {
     zxlogf(ERROR, "tas5720: Could not set mute state %d", status);
   }
-  if (gain_state.agc_enable) {
+  if (gain_state.agc_enabled) {
     zxlogf(ERROR, "tas5720: AGC enable not supported");
-    gain_state.agc_enable = false;
+    gain_state.agc_enabled = false;
   }
   gain_state_ = gain_state;
 }
-
-PlugState Tas5720::GetPlugState() { return {.hardwired = true, .plugged = true}; }
 
 zx_status_t Tas5720::WriteReg(uint8_t reg, uint8_t value) {
   uint8_t write_buffer[2];

@@ -150,7 +150,7 @@ zx_status_t Mt8167AudioStreamOut::Init() {
   }
   cur_gain_state_.cur_gain = state->gain;
   cur_gain_state_.cur_mute = state->muted;
-  cur_gain_state_.cur_agc = state->agc_enable;
+  cur_gain_state_.cur_agc = state->agc_enabled;
 
   auto format = codec_.GetGainFormat();
   if (format.is_error()) {
@@ -206,7 +206,7 @@ zx_status_t Mt8167AudioStreamOut::SetGain(const audio_proto::SetGainReq& req) {
   GainState state;
   state.gain = req.gain;
   state.muted = cur_gain_state_.cur_mute;
-  state.agc_enable = cur_gain_state_.cur_agc;
+  state.agc_enabled = cur_gain_state_.cur_agc;
   codec_.SetGainState(std::move(state));
   cur_gain_state_.cur_gain = state.gain;
   return ZX_OK;

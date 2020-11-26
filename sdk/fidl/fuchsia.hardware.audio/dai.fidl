@@ -22,7 +22,7 @@ protocol Dai {
 
     /// Resets the DAI HW. The `ring_buffer` channel obtained via `CreateRingBuffer` may be closed
     /// by the driver, in this case the client needs to obtain a new `ring_buffer`.
-    /// `Reset` returns when the reset is completed. If the driver can't successfuly reset the HW,
+    /// `Reset` returns when the reset is completed. If the driver can't successfully reset the HW,
     /// it will close the DAI protocol channel, in this case the client may obtain a new DAI
     /// protocol channel and retry.
     Reset() -> ();

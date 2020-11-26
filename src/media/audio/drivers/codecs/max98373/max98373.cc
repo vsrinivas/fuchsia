@@ -168,11 +168,7 @@ void Max98373::SetBridgedMode(bool enable_bridged_mode) {
   // TODO(andresoportus): Add support and report true in CodecIsBridgeable.
 }
 
-std::vector<DaiSupportedFormats> Max98373::GetDaiFormats() {
-  std::vector<DaiSupportedFormats> formats;
-  formats.push_back(kSupportedDaiFormats);
-  return formats;
-}
+DaiSupportedFormats Max98373::GetDaiFormats() { return kSupportedDaiFormats; }
 
 zx_status_t Max98373::SetDaiFormat(const DaiFormat& format) {
   if (!IsDaiFormatSupported(format, kSupportedDaiFormats)) {
@@ -184,7 +180,6 @@ zx_status_t Max98373::SetDaiFormat(const DaiFormat& format) {
 
 GainFormat Max98373::GetGainFormat() {
   return {
-      .type = GainType::DECIBELS,
       .min_gain = kMinGain,
       .max_gain = kMaxGain,
       .gain_step = kGainStep,
@@ -201,16 +196,14 @@ void Max98373::SetGainState(GainState gain_state) {
   if (status != ZX_OK) {
     return;
   }
-  if (gain_state.agc_enable) {
+  if (gain_state.agc_enabled) {
     zxlogf(ERROR, "%s AGC enable not supported", __FILE__);
-    gain_state.agc_enable = false;
+    gain_state.agc_enabled = false;
   }
   gain_state_ = gain_state;
 }
 
 GainState Max98373::GetGainState() { return gain_state_; }
-
-PlugState Max98373::GetPlugState() { return {.hardwired = true, .plugged = true}; }
 
 zx_status_t Max98373::WriteReg(uint16_t reg, uint8_t value) {
   uint8_t write_buffer[3];
