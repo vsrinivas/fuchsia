@@ -4,9 +4,10 @@
 
 #include "src/storage/factory/factoryfs/format.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include <block-client/cpp/block-device.h>
 #include <block-client/cpp/client.h>
-#include <fs/trace.h>
 #include <storage/buffer/owned_vmoid.h>
 
 #include "src/storage/factory/factoryfs/factoryfs.h"
@@ -35,14 +36,14 @@ zx_status_t WriteFilesystemToDisk(block_client::BlockDevice* device, const Super
   // Write the superblock.
   status = vmo.write(&superblock, 0, kFactoryfsBlockSize);
   if (status != ZX_OK) {
-    FS_TRACE_INFO("\nfactoryfs: error writing superblock block\n");
+    FX_LOGS(INFO) << "\nfactoryfs: error writing superblock block";
     return status;
   }
 
   fuchsia_hardware_block_BlockInfo block_info;
   status = device->BlockGetInfo(&block_info);
   if (status != ZX_OK) {
-    FS_TRACE_ERROR("factoryfs: cannot acquire block info: %d\n", status);
+    FX_LOGS(ERROR) << "cannot acquire block info: " << status;
     return status;
   }
   block_fifo_request_t request = {};
@@ -63,12 +64,12 @@ zx_status_t FormatFilesystem(block_client::BlockDevice* device) {
   fuchsia_hardware_block_BlockInfo block_info = {};
   status = device->BlockGetInfo(&block_info);
   if (status != ZX_OK) {
-    FS_TRACE_ERROR("factoryfs: cannot acquire block info: %d\n", status);
+    FX_LOGS(ERROR) << "cannot acquire block info: " << status;
     return status;
   }
 
   if (block_info.flags & BLOCK_FLAG_READONLY) {
-    FS_TRACE_ERROR("factoryfs: cannot format read-only device\n");
+    FX_LOGS(ERROR) << "cannot format read-only device";
     return ZX_ERR_ACCESS_DENIED;
   }
   if (block_info.block_size == 0 || block_info.block_count == 0) {
@@ -87,11 +88,11 @@ zx_status_t FormatFilesystem(block_client::BlockDevice* device) {
 
   status = WriteFilesystemToDisk(device, superblock, block_info.block_size);
   if (status != ZX_OK) {
-    FS_TRACE_ERROR("factoryfs: Failed to write to disk: %d\n", status);
+    FX_LOGS(ERROR) << "Failed to write to disk: " << status;
     return status;
   }
 
-  FS_TRACE_DEBUG("factoryfs: mkfs success\n");
+  FX_LOGS(DEBUG) << "mkfs success";
   return ZX_OK;
 }
 

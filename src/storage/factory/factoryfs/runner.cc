@@ -5,6 +5,7 @@
 #include "src/storage/factory/factoryfs/runner.h"
 
 #include <fuchsia/fs/llcpp/fidl.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <fbl/auto_lock.h>
 #include <fs/pseudo_dir.h>
@@ -26,7 +27,7 @@ zx_status_t Runner::Create(async::Loop* loop, std::unique_ptr<BlockDevice> devic
 }
 
 void Runner::Shutdown(fs::Vfs::ShutdownCallback cb) {
-  FS_TRACE_INFO("factoryfs: Shutdown\n");
+  FX_LOGS(INFO) << "Shutdown";
   // Shutdown all external connections to Factoryfs.
   ManagedVfs::Shutdown([this, cb = std::move(cb)](zx_status_t status) mutable {
     async::PostTask(dispatcher(), [this, status, cb = std::move(cb)]() mutable {
@@ -46,7 +47,7 @@ zx_status_t Runner::ServeRoot(zx::channel root, ServeLayout layout) {
   fbl::RefPtr<fs::Vnode> vn;
   zx_status_t status = factoryfs_->OpenRootNode(&vn);
   if (status != ZX_OK) {
-    FS_TRACE_ERROR("factoryfs: mount failed; could not get root node\n");
+    FX_LOGS(ERROR) << "mount failed; could not get root node";
     return status;
   }
 
@@ -68,7 +69,7 @@ zx_status_t Runner::ServeRoot(zx::channel root, ServeLayout layout) {
 
   status = ServeDirectory(std::move(export_root), std::move(root));
   if (status != ZX_OK) {
-    FS_TRACE_ERROR("factoryfs: mount failed; could not serve root directory\n");
+    FX_LOGS(ERROR) << "mount failed; could not serve root directory";
     return status;
   }
   return ZX_OK;

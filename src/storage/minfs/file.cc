@@ -5,6 +5,7 @@
 #include "src/storage/minfs/file.h"
 
 #include <fcntl.h>
+#include <lib/syslog/cpp/macros.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -243,7 +244,8 @@ fs::VnodeProtocolSet File::GetProtocols() const { return fs::VnodeProtocol::kFil
 
 zx_status_t File::Read(void* data, size_t len, size_t off, size_t* out_actual) {
   TRACE_DURATION("minfs", "File::Read", "ino", GetIno(), "len", len, "off", off);
-  FS_TRACE_DEBUG("minfs_read() vn=%p(#%u) len=%zd off=%zd\n", this, GetIno(), len, off);
+  FX_LOGS(DEBUG) << "minfs_read() vn=" << this << "(#" << GetIno() << ") len=" << len
+                 << " off=" << off;
 
   fs::Ticker ticker(Vfs()->StartTicker());
   auto get_metrics = fbl::MakeAutoCall(
@@ -255,7 +257,8 @@ zx_status_t File::Read(void* data, size_t len, size_t off, size_t* out_actual) {
 
 zx_status_t File::Write(const void* data, size_t len, size_t offset, size_t* out_actual) {
   TRACE_DURATION("minfs", "File::Write", "ino", GetIno(), "len", len, "off", offset);
-  FS_TRACE_DEBUG("minfs_write() vn=%p(#%u) len=%zd off=%zd\n", this, GetIno(), len, offset);
+  FX_LOGS(DEBUG) << "minfs_write() vn=" << this << "(#" << GetIno() << ") len=" << len
+                 << " off=" << offset;
 
   *out_actual = 0;
   fs::Ticker ticker(Vfs()->StartTicker());

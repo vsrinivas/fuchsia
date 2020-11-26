@@ -5,6 +5,7 @@
 #ifndef ZIRCON_SYSTEM_ULIB_DISK_INSPECTOR_DISK_PRIMITIVE_H_
 #define ZIRCON_SYSTEM_ULIB_DISK_INSPECTOR_DISK_PRIMITIVE_H_
 
+#include <lib/syslog/cpp/macros.h>
 #include <zircon/assert.h>
 #include <zircon/types.h>
 
@@ -15,7 +16,6 @@
 
 #include <disk_inspector/disk_obj.h>
 #include <disk_inspector/supported_types.h>
-#include <fs/trace.h>
 
 namespace disk_inspector {
 
@@ -27,7 +27,7 @@ zx_status_t StringToUint(const std::string& string, T* out) {
   char* endptr;
   uint64_t value = std::strtoull(string.c_str(), &endptr, 0);
   if (*endptr != '\0' || value > std::numeric_limits<T>::max()) {
-    FS_TRACE_ERROR("String %s cannot be converted to unsigned int.\n", string.c_str());
+    FX_LOGS(ERROR) << "String " << string << " cannot be converted to unsigned int.";
     return ZX_ERR_INVALID_ARGS;
   }
   *out = static_cast<T>(value);

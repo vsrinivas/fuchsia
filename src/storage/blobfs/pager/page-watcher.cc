@@ -4,6 +4,7 @@
 
 #include "src/storage/blobfs/pager/page-watcher.h"
 
+#include <lib/syslog/cpp/macros.h>
 #include <zircon/status.h>
 
 #include <blobfs/format.h>
@@ -23,7 +24,7 @@ zx_status_t PageWatcher::CreatePagedVmo(size_t vmo_size, zx::vmo* vmo_out) {
       user_pager_->Dispatcher(), zx::unowned_pager(user_pager_->Pager().get()), vmo_options,
       vmo_size, &vmo);
   if (status != ZX_OK) {
-    FS_TRACE_ERROR("blobfs: Failed to create paged VMO: %s\n", zx_status_get_string(status));
+    FX_LOGS(ERROR) << "Failed to create paged VMO: " << zx_status_get_string(status);
     return status;
   }
   {
@@ -81,8 +82,9 @@ void PageWatcher::HandlePageRequest(async_dispatcher_t* dispatcher, async::Paged
       return;
     }
     default:
-      FS_TRACE_ERROR("blobfs: Invalid pager request on vmo %u. [%u, %zu, %zu, %u]\n", vmo_->get(),
-                     request->command, request->offset, request->length, request->flags);
+      FX_LOGS(ERROR) << "Invalid pager request on vmo " << vmo_->get() << ". [" << request->command
+                     << ", " << request->offset << ", " << request->length << ", " << request->flags
+                     << "]";
       return;
   }
 }
@@ -93,7 +95,7 @@ void PageWatcher::PopulateAndVerifyPagesInRange(uint64_t offset, uint64_t length
                  length);
 
   if (!vmo_->is_valid()) {
-    FS_TRACE_ERROR("blobfs: pager VMO is not valid.\n");
+    FX_LOGS(ERROR) << "pager VMO is not valid.";
     // Return without calling op_range(ZX_PAGER_OP_FAIL), since that requires a valid pager VMO
     // handle. This could potentially cause the faulting thread to hang, but there's no way for us
     // to recover gracefully from this state.
@@ -103,13 +105,13 @@ void PageWatcher::PopulateAndVerifyPagesInRange(uint64_t offset, uint64_t length
   PagerErrorStatus pager_error_status;
   if (is_corrupt_) {
     pager_error_status = PagerErrorStatus::kErrBadState;
-    FS_TRACE_ERROR("blobfs: Pager failed page request because blob is corrupt, error: %s\n",
-                   zx_status_get_string(static_cast<zx_status_t>(pager_error_status)));
+    FX_LOGS(ERROR) << "Pager failed page request because blob is corrupt, error: "
+                   << zx_status_get_string(static_cast<zx_status_t>(pager_error_status));
   } else {
     pager_error_status = user_pager_->TransferPagesToVmo(offset, length, *vmo_, userpager_info_);
     if (pager_error_status != PagerErrorStatus::kOK) {
-      FS_TRACE_ERROR("blobfs: Pager failed to transfer pages to the blob, error: %s\n",
-                     zx_status_get_string(static_cast<zx_status_t>(pager_error_status)));
+      FX_LOGS(ERROR) << "Pager failed to transfer pages to the blob, error: "
+                     << zx_status_get_string(static_cast<zx_status_t>(pager_error_status));
     }
   }
 
@@ -117,8 +119,7 @@ void PageWatcher::PopulateAndVerifyPagesInRange(uint64_t offset, uint64_t length
     zx_status_t status = user_pager_->Pager().op_range(
         ZX_PAGER_OP_FAIL, *vmo_, offset, length, static_cast<zx_status_t>(pager_error_status));
     if (status != ZX_OK) {
-      FS_TRACE_ERROR("blobfs: op_range ZX_PAGER_OP_FAIL failed with %s\n",
-                     zx_status_get_string(status));
+      FX_LOGS(ERROR) << "op_range ZX_PAGER_OP_FAIL failed with " << zx_status_get_string(status);
       return;
     }
 

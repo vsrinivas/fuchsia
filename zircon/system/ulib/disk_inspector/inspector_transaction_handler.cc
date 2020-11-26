@@ -6,11 +6,11 @@
 
 #include <fcntl.h>
 #include <lib/fdio/fdio.h>
+#include <lib/syslog/cpp/macros.h>
 #include <zircon/assert.h>
 #include <zircon/errors.h>
 
 #include <block-client/cpp/remote-block-device.h>
-#include <fs/trace.h>
 #include <safemath/checked_math.h>
 #include <storage/buffer/vmo_buffer.h>
 
@@ -22,12 +22,12 @@ zx_status_t InspectorTransactionHandler::Create(std::unique_ptr<block_client::Bl
   fuchsia_hardware_block_BlockInfo info;
   zx_status_t status = device->BlockGetInfo(&info);
   if (status != ZX_OK) {
-    FS_TRACE_ERROR("Cannot get block device information: %d\n", status);
+    FX_LOGS(ERROR) << "Cannot get block device information: " << status;
     return status;
   }
   if (info.block_size == 0 || block_size % info.block_size != 0) {
-    FS_TRACE_ERROR("fs block size: %d not multiple of underlying block size: %d\n", block_size,
-                   info.block_size);
+    FX_LOGS(ERROR) << "fs block size: " << block_size
+                   << " not multiple of underlying block size: " << info.block_size;
     return ZX_ERR_NOT_SUPPORTED;
   }
   out->reset(new InspectorTransactionHandler(std::move(device), info, block_size));

@@ -5,12 +5,12 @@
 #include <fcntl.h>
 #include <getopt.h>
 #include <lib/fdio/fd.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/channel.h>
 
 #include <block-client/cpp/remote-block-device.h>
 #include <digest/digest.h>
 #include <fbl/unique_fd.h>
-#include <fs/trace.h>
 #include <fs/vfs.h>
 
 #include "corrupt_blob.h"
@@ -68,32 +68,33 @@ zx_status_t ProcessArgs(int argc, char** argv, zx::channel* block_channel,
   }
 
   if (arg_block_path == nullptr) {
-    FS_TRACE_ERROR("blobfs-corrupt: '-d <device_path>' is required\n");
+    FX_LOGS(ERROR) << "'-d <device_path>' is required";
     return Usage();
   }
 
   if (arg_merkle == nullptr) {
-    FS_TRACE_ERROR("blobfs-corrupt: '-m <merkle>' is required\n");
+    FX_LOGS(ERROR) << "'-m <merkle>' is required";
     return Usage();
   }
 
   zx_status_t status = options->merkle.Parse(arg_merkle);
 
   if (status != ZX_OK) {
-    FS_TRACE_ERROR("blobfs-corrupt: invalid merkle root: '%s'\n", arg_merkle);
+    FX_LOGS(ERROR) << "invalid merkle root: '" << arg_merkle << "'";
     return Usage();
   }
 
   fbl::unique_fd block_fd(open(arg_block_path, O_RDWR));
 
   if (!block_fd) {
-    FS_TRACE_ERROR("blobfs-corrupt: unable to open block device: '%s' %d\n", arg_block_path, errno);
+    FX_LOGS(ERROR) << "unable to open block device: '" << arg_block_path << "' "
+                   << errno;
     return Usage();
   }
 
   status = fdio_fd_transfer(block_fd.release(), block_channel->reset_and_get_address());
   if (status != ZX_OK) {
-    FS_TRACE_ERROR("blobfs-corrupt: unable to open block device: %d\n", status);
+    FX_LOGS(ERROR) << "unable to open block device: " << status;
     return Usage();
   }
 
@@ -113,14 +114,14 @@ int main(int argc, char** argv) {
   std::unique_ptr<RemoteBlockDevice> device;
   status = RemoteBlockDevice::Create(std::move(block_connection), &device);
   if (status != ZX_OK) {
-    FS_TRACE_ERROR("blobfs-corrupt: Could not initialize block device\n");
+    FX_LOGS(ERROR) << "Could not initialize block device";
     return -1;
   }
 
   status = CorruptBlob(std::move(device), &options);
   if (status != ZX_OK) {
-    FS_TRACE_ERROR("blobfs-corrupt: Could not corrupt the requested blob. Failed with error %d\n",
-                   status);
+    FX_LOGS(ERROR) << "Could not corrupt the requested blob. Failed with error "
+                   << status;
     return -1;
   }
   return 0;

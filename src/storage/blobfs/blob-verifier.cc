@@ -5,6 +5,7 @@
 #include "src/storage/blobfs/blob-verifier.h"
 
 #include <fuchsia/blobfs/c/fidl.h>
+#include <lib/syslog/cpp/macros.h>
 #include <zircon/status.h>
 
 #include <blobfs/blob-layout.h>
@@ -28,18 +29,18 @@ zx_status_t BlobVerifier::Create(digest::Digest digest, BlobfsMetrics* metrics, 
       ShouldUseCompactMerkleTreeFormat(blob_layout_format));
   zx_status_t status = verifier->tree_verifier_.SetDataLength(data_size);
   if (status != ZX_OK) {
-    FS_TRACE_ERROR("blobfs: Failed to set merkle data length: %s\n", zx_status_get_string(status));
+    FX_LOGS(ERROR) << "Failed to set merkle data length: " << zx_status_get_string(status);
     return status;
   }
   size_t actual_merkle_length = verifier->tree_verifier_.GetTreeLength();
   if (actual_merkle_length > merkle_size) {
-    FS_TRACE_ERROR("blobfs: merkle too small for data\n");
+    FX_LOGS(ERROR) << "merkle too small for data";
     return ZX_ERR_BUFFER_TOO_SMALL;
   }
   if ((status = verifier->tree_verifier_.SetTree(
            merkle, actual_merkle_length, verifier->digest_.get(), verifier->digest_.len())) !=
       ZX_OK) {
-    FS_TRACE_ERROR("blobfs: Failed to create merkle verifier: %s\n", zx_status_get_string(status));
+    FX_LOGS(ERROR) << "Failed to create merkle verifier: " << zx_status_get_string(status);
     return status;
   }
   *out = std::move(verifier);
@@ -55,15 +56,15 @@ zx_status_t BlobVerifier::CreateWithoutTree(digest::Digest digest, BlobfsMetrics
   verifier->corruption_notifier_ = notifier;
   zx_status_t status = verifier->tree_verifier_.SetDataLength(data_size);
   if (status != ZX_OK) {
-    FS_TRACE_ERROR("blobfs: Failed to set merkle data length: %s\n", zx_status_get_string(status));
+    FX_LOGS(ERROR) << "Failed to set merkle data length: " << zx_status_get_string(status);
     return status;
   } else if (verifier->tree_verifier_.GetTreeLength() > 0) {
-    FS_TRACE_ERROR("blobfs: Failed to create merkle verifier -- data too big for empty tree");
+    FX_LOGS(ERROR) << "Failed to create merkle verifier -- data too big for empty tree";
     return ZX_ERR_INVALID_ARGS;
   }
   if ((status = verifier->tree_verifier_.SetTree(nullptr, 0, verifier->digest_.get(),
                                                  verifier->digest_.len())) != ZX_OK) {
-    FS_TRACE_ERROR("blobfs: Failed to create merkle verifier: %s\n", zx_status_get_string(status));
+    FX_LOGS(ERROR) << "Failed to create merkle verifier: " << zx_status_get_string(status);
     return status;
   }
   *out = std::move(verifier);
@@ -105,14 +106,13 @@ zx_status_t BlobVerifier::Verify(const void* data, size_t data_size, size_t buff
 
   zx_status_t status = tree_verifier_.Verify(data, data_size, 0);
   if (status != ZX_OK) {
-    FS_TRACE_ERROR("blobfs: Verify(%s, %lu, %lu) failed: %s\n", digest_.ToString().c_str(),
-                   data_size, buffer_size, zx_status_get_string(status));
+    FX_LOGS(ERROR) << "Verify(" << digest_.ToString() << ", " << data_size << ", " << buffer_size
+                   << ") failed: " << zx_status_get_string(status);
   } else {
     status = VerifyTailZeroed(data, data_size, buffer_size);
     if (status != ZX_OK) {
-      FS_TRACE_ERROR("blobfs: VerifyTailZeroed(%s, %lu, %lu) failed: %s\n",
-                     digest_.ToString().c_str(), data_size, buffer_size,
-                     zx_status_get_string(status));
+      FX_LOGS(ERROR) << "VerifyTailZeroed(" << digest_.ToString() << ", " << data_size << ", "
+                     << buffer_size << ") failed: " << zx_status_get_string(status);
     }
   }
   metrics_->verification_metrics().Increment(data_size, tree_verifier_.GetTreeLength(),
@@ -123,8 +123,8 @@ zx_status_t BlobVerifier::Verify(const void* data, size_t data_size, size_t buff
     zx_status_t notify_status =
         corruption_notifier_->NotifyCorruptBlob(digest_.get(), digest_.len());
     if (notify_status != ZX_OK) {
-      FS_TRACE_ERROR("blobfs: Failed to notify corruptionHandler for blob: %s error: %s\n",
-                     digest_.ToString().c_str(), zx_status_get_string(notify_status));
+      FX_LOGS(ERROR) << "Failed to notify corruptionHandler for blob: " << digest_.ToString()
+                     << " error: " << zx_status_get_string(notify_status);
     }
   }
   return status;
@@ -137,14 +137,13 @@ zx_status_t BlobVerifier::VerifyPartial(const void* data, size_t length, size_t 
 
   zx_status_t status = tree_verifier_.Verify(data, length, data_offset);
   if (status != ZX_OK) {
-    FS_TRACE_ERROR("blobfs: VerifyPartial(%s, %lu, %lu, %lu) failed: %s\n",
-                   digest_.ToString().c_str(), data_offset, length, buffer_size,
-                   zx_status_get_string(status));
+    FX_LOGS(ERROR) << "VerifyPartial(" << digest_.ToString() << ", " << data_offset << ", "
+                   << length << ", " << buffer_size << ") failed: " << zx_status_get_string(status);
   } else {
     status = VerifyTailZeroed(data, length, buffer_size);
     if (status != ZX_OK) {
-      FS_TRACE_ERROR("blobfs: VerifyTailZeroed(%s, %lu, %lu) failed: %s\n",
-                     digest_.ToString().c_str(), length, buffer_size, zx_status_get_string(status));
+      FX_LOGS(ERROR) << "VerifyTailZeroed(" << digest_.ToString() << ", " << length << ", "
+                     << buffer_size << ") failed: " << zx_status_get_string(status);
     }
   }
   metrics_->verification_metrics().Increment(length, tree_verifier_.GetTreeLength(), ticker.End());
@@ -155,8 +154,8 @@ zx_status_t BlobVerifier::VerifyPartial(const void* data, size_t length, size_t 
     zx_status_t notify_status =
         corruption_notifier_->NotifyCorruptBlob(digest_.get(), digest_.len());
     if (notify_status != ZX_OK) {
-      FS_TRACE_ERROR("blobfs: Failed to notify corruptionHandler for blob: %s error: %s\n",
-                     digest_.ToString().c_str(), zx_status_get_string(notify_status));
+      FX_LOGS(ERROR) << "Failed to notify corruptionHandler for blob: " << digest_.ToString()
+                     << " error: " << zx_status_get_string(notify_status);
     }
   }
   return status;

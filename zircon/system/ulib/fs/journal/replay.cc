@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/syslog/cpp/macros.h>
 #include <zircon/types.h>
 
 #include <optional>
@@ -134,19 +135,20 @@ zx_status_t ParseJournalEntries(const JournalSuperblock* info, storage::VmoBuffe
   // Validate |info| before using it.
   zx_status_t status = info->Validate();
   if (status != ZX_OK) {
-    FS_TRACE_ERROR("Journal Superblock does not validate: %d\n", status);
+    FX_LOGS(ERROR) << "Journal Superblock does not validate: " << status;
     return status;
   }
   if (info->start() >= journal_buffer->capacity()) {
-    FS_TRACE_ERROR("Journal entries start beyond end of journal capacity (%zu vs %zu)\n",
-                   info->start(), journal_buffer->capacity());
+    FX_LOGS(ERROR) << "Journal entries start beyond end of journal capacity (" << info->start()
+                   << " vs " << journal_buffer->capacity() << ")";
     return ZX_ERR_IO_DATA_INTEGRITY;
   }
 
   // Start parsing the journal, and replay as many entries as possible.
   uint64_t entry_start = info->start();
   uint64_t sequence_number = info->sequence_number();
-  FS_TRACE_INFO("replay: entry_start: %zu, sequence_number: %zu\n", entry_start, sequence_number);
+  FX_LOGS(INFO) << "replay: entry_start: " << entry_start
+                << ", sequence_number: " << sequence_number;
   ReplayTree operation_tree;
   while (true) {
     // Attempt to parse the next entry in the journal. Eventually, we expect this to fail.
@@ -205,26 +207,26 @@ zx::status<JournalSuperblock> ReplayJournal(fs::TransactionHandler* transaction_
                                             uint32_t block_size) {
   const uint64_t journal_entry_start = journal_start + kJournalMetadataBlocks;
   const uint64_t journal_entry_blocks = journal_length - kJournalMetadataBlocks;
-  FS_TRACE_DEBUG("replay: Initializing journal superblock\n");
+  FX_LOGS(DEBUG) << "replay: Initializing journal superblock";
 
   // Initialize and read the journal superblock and journal buffer.
   auto journal_superblock_buffer = std::make_unique<storage::VmoBuffer>();
   zx_status_t status = journal_superblock_buffer->Initialize(registry, kJournalMetadataBlocks,
                                                              block_size, "journal-superblock");
   if (status != ZX_OK) {
-    FS_TRACE_ERROR("journal: Cannot initialize journal info block: %d\n", status);
+    FX_LOGS(ERROR) << "journal: Cannot initialize journal info block: " << status;
     return zx::error(status);
   }
   // Initialize and read the journal itself.
-  FS_TRACE_INFO("replay: Initializing journal buffer (%zu blocks)\n", journal_entry_blocks);
+  FX_LOGS(INFO) << "replay: Initializing journal buffer (" << journal_entry_blocks << " blocks)";
   storage::VmoBuffer journal_buffer;
   status = journal_buffer.Initialize(registry, journal_entry_blocks, block_size, "journal-buffer");
   if (status != ZX_OK) {
-    FS_TRACE_ERROR("journal: Cannot initialize journal buffer: %d\n", status);
+    FX_LOGS(ERROR) << "journal: Cannot initialize journal buffer: " << status;
     return zx::error(status);
   }
 
-  FS_TRACE_DEBUG("replay: Reading from storage\n");
+  FX_LOGS(DEBUG) << "replay: Reading from storage";
   fs::BufferedOperationsBuilder builder;
   builder
       .Add(storage::Operation{.type = storage::OperationType::kRead,
@@ -239,7 +241,7 @@ zx::status<JournalSuperblock> ReplayJournal(fs::TransactionHandler* transaction_
            &journal_buffer);
   status = transaction_handler->RunRequests(builder.TakeOperations());
   if (status != ZX_OK) {
-    FS_TRACE_ERROR("journal: Cannot load journal: %d\n", status);
+    FX_LOGS(ERROR) << "journal: Cannot load journal: " << status;
     return zx::error(status);
   }
 
@@ -254,12 +256,12 @@ zx::status<JournalSuperblock> ReplayJournal(fs::TransactionHandler* transaction_
   std::vector<storage::BufferedOperation> operations;
   uint64_t sequence_number = 0;
   uint64_t next_entry_start = 0;
-  FS_TRACE_DEBUG("replay: Parsing journal entries\n");
+  FX_LOGS(DEBUG) << "replay: Parsing journal entries";
   JournalSuperblock journal_superblock(std::move(journal_superblock_buffer));
   status = ParseJournalEntries(&journal_superblock, &journal_buffer, &operations, &sequence_number,
                                &next_entry_start);
   if (status != ZX_OK) {
-    FS_TRACE_ERROR("journal: Cannot parse journal entries: %d\n", status);
+    FX_LOGS(ERROR) << "journal: Cannot parse journal entries: " << status;
     return zx::error(status);
   }
 
@@ -269,25 +271,25 @@ zx::status<JournalSuperblock> ReplayJournal(fs::TransactionHandler* transaction_
     journal_superblock.Update(next_entry_start, sequence_number);
 
     for (auto& op : operations) {
-      FS_TRACE_INFO("replay: writing operation @ dev_offset: %zu, vmo_offset: %zu, length: %zu\n",
-                    op.op.dev_offset, op.op.vmo_offset, op.op.length);
+      FX_LOGS(INFO) << "replay: writing operation @ dev_offset: " << op.op.dev_offset
+                    << ", vmo_offset: " << op.op.vmo_offset << ", length: " << op.op.length;
     }
 
     status = transaction_handler->RunRequests(operations);
     if (status != ZX_OK) {
-      FS_TRACE_ERROR("journal: Cannot replay entries: %d\n", status);
+      FX_LOGS(ERROR) << "journal: Cannot replay entries: " << status;
       return zx::error(status);
     }
 
     status = transaction_handler->Flush();
     if (status != ZX_OK) {
-      FS_TRACE_ERROR("replay: Flush failed: %d\n", status);
+      FX_LOGS(ERROR) << "replay: Flush failed: " << status;
       return zx::error(status);
     }
 
     operations.clear();
-    FS_TRACE_INFO("replay: New start: %zu, sequence_number: %zu\n", next_entry_start,
-                  sequence_number);
+    FX_LOGS(INFO) << "replay: New start: " << next_entry_start
+                  << ", sequence_number: " << sequence_number;
     storage::BufferedOperation operation;
     operation.vmoid = journal_superblock.buffer().vmoid();
     operation.op.type = storage::OperationType::kWrite;
@@ -297,12 +299,12 @@ zx::status<JournalSuperblock> ReplayJournal(fs::TransactionHandler* transaction_
     operations.push_back(operation);
     status = transaction_handler->RunRequests(operations);
     if (status != ZX_OK) {
-      FS_TRACE_ERROR("journal: Cannot update journal superblock: %d\n", status);
+      FX_LOGS(ERROR) << "journal: Cannot update journal superblock: " << status;
       return zx::error(status);
     }
 
   } else {
-    FS_TRACE_DEBUG("replay: Not replaying entries\n");
+    FX_LOGS(DEBUG) << "replay: Not replaying entries";
   }
 
   return zx::ok(std::move(journal_superblock));

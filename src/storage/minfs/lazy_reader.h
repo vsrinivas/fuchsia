@@ -12,7 +12,6 @@
 
 #include <bitmap/rle-bitmap.h>
 #include <fbl/algorithm.h>
-#include <fs/trace.h>
 #include <fs/transaction/buffered_operations_builder.h>
 #include <fs/transaction/transaction_handler.h>
 

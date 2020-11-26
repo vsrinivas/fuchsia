@@ -4,6 +4,7 @@
 
 #include "src/storage/blobfs/compression/zstd-plain.h"
 
+#include <lib/syslog/cpp/macros.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
 
@@ -32,7 +33,7 @@ zx_status_t AbstractZSTDDecompressor::Decompress(void* uncompressed_buf, size_t*
 
   size_t r = ZSTD_initDStream(stream);
   if (ZSTD_isError(r)) {
-    FS_TRACE_ERROR("[blobfs][zstd] Failed to initialize dstream: %s\n", ZSTD_getErrorName(r));
+    FX_LOGS(ERROR) << "[zstd] Failed to initialize dstream: " << ZSTD_getErrorName(r);
     return ZX_ERR_INTERNAL;
   }
 
@@ -52,7 +53,7 @@ zx_status_t AbstractZSTDDecompressor::Decompress(void* uncompressed_buf, size_t*
     prev_output_pos = output.pos;
     r = DecompressStream(stream, &output, &input);
     if (ZSTD_isError(r)) {
-      FS_TRACE_ERROR("[blobfs][zstd] Failed to decompress: %s\n", ZSTD_getErrorName(r));
+      FX_LOGS(ERROR) << "[zstd] Failed to decompress: " << ZSTD_getErrorName(r);
       return ZX_ERR_IO_DATA_INTEGRITY;
     }
     // Halt decompression when no more progress is being made (or can be made) on the output buffer.
@@ -98,7 +99,7 @@ zx_status_t ZSTDCompressor::Create(CompressionSettings settings, size_t input_si
   int level = settings.compression_level ? *(settings.compression_level) : kDefaultCompressionLevel;
   ssize_t r = ZSTD_initCStream(compressor->stream_, level);
   if (ZSTD_isError(r)) {
-    FS_TRACE_ERROR("[blobfs][zstd] Failed to initialize cstream: %s\n", ZSTD_getErrorName(r));
+    FX_LOGS(ERROR) << "[zstd] Failed to initialize cstream: " << ZSTD_getErrorName(r);
     return ZX_ERR_INTERNAL;
   }
 
@@ -116,7 +117,7 @@ zx_status_t ZSTDCompressor::Update(const void* input_data, size_t input_length) 
 
   size_t r = ZSTD_compressStream(stream_, &output_, &input);
   if (ZSTD_isError(r)) {
-    FS_TRACE_ERROR("[blobfs][zstd] Failed to compress: %s\n", ZSTD_getErrorName(r));
+    FX_LOGS(ERROR) << "[zstd] Failed to compress: " << ZSTD_getErrorName(r);
     return ZX_ERR_IO_DATA_INTEGRITY;
   } else if (input.pos != input_length) {
     // The only way this condition can occur is when the output buffer is full.
@@ -128,7 +129,7 @@ zx_status_t ZSTDCompressor::Update(const void* input_data, size_t input_length) 
     // If this is the case, a client must have not supplied an honest value for
     // |input_size| when creating the ZSTDCompressor object, which requires that the
     // output compression buffer be large enough to hold the "worst case" input size.
-    FS_TRACE_ERROR("[blobfs][zstd] Could not compress all input\n");
+    FX_LOGS(ERROR) << "[zstd] Could not compress all input";
     return ZX_ERR_INVALID_ARGS;
   }
 
@@ -138,12 +139,12 @@ zx_status_t ZSTDCompressor::Update(const void* input_data, size_t input_length) 
 zx_status_t ZSTDCompressor::End() {
   size_t r = ZSTD_flushStream(stream_, &output_);
   if (ZSTD_isError(r)) {
-    FS_TRACE_ERROR("[blobfs][zstd] Failed to flush stream: %s\n", ZSTD_getErrorName(r));
+    FX_LOGS(ERROR) << "[zstd] Failed to flush stream: " << ZSTD_getErrorName(r);
     return ZX_ERR_IO_DATA_INTEGRITY;
   }
   r = ZSTD_endStream(stream_, &output_);
   if (ZSTD_isError(r)) {
-    FS_TRACE_ERROR("[blobfs][zstd] Failed to end stream: %s\n", ZSTD_getErrorName(r));
+    FX_LOGS(ERROR) << "[zstd] Failed to end stream: " << ZSTD_getErrorName(r);
     return ZX_ERR_IO_DATA_INTEGRITY;
   }
 

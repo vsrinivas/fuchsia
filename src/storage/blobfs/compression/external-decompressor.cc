@@ -4,10 +4,12 @@
 
 #include "src/storage/blobfs/compression/external-decompressor.h"
 
-#include <fs/debug.h>
 #include <lib/fdio/directory.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/time.h>
 #include <zircon/rights.h>
+
+#include <fs/debug.h>
 
 namespace blobfs {
 
@@ -19,15 +21,13 @@ zx::status<std::unique_ptr<ExternalDecompressorClient>> ExternalDecompressorClie
   zx_status_t status =
       decompressed_vmo.duplicate(ZX_DEFAULT_VMO_RIGHTS, &(client->decompressed_vmo_));
   if (status != ZX_OK) {
-    FS_TRACE_ERROR("[blobfs] Failed to duplicate decompressed VMO: %s.\n",
-                   zx_status_get_string(status));
+    FX_LOGS(ERROR) << "Failed to duplicate decompressed VMO: " << zx_status_get_string(status);
     return zx::error(status);
   }
   status = compressed_vmo.duplicate(ZX_DEFAULT_VMO_RIGHTS & (~ZX_RIGHT_WRITE),
                                     &(client->compressed_vmo_));
   if (status != ZX_OK) {
-    FS_TRACE_ERROR("[blobfs] Failed to duplicate compressed VMO: %s.\n",
-                   zx_status_get_string(status));
+    FX_LOGS(ERROR) << "Failed to duplicate compressed VMO: " << zx_status_get_string(status);
     return zx::error(status);
   }
   status = client->Prepare();
@@ -53,15 +53,15 @@ zx_status_t ExternalDecompressorClient::Prepare() {
   zx::vmo remote_decompressed_vmo;
   status = decompressed_vmo_.duplicate(ZX_RIGHT_SAME_RIGHTS, &remote_decompressed_vmo);
   if (status != ZX_OK) {
-    FS_TRACE_ERROR("[blobfs] Failed to create remote duplicate of decompressed VMO: %s.\n",
-                   zx_status_get_string(status));
+    FX_LOGS(ERROR) << "Failed to create remote duplicate of decompressed VMO: "
+                   << zx_status_get_string(status);
     return status;
   }
   zx::vmo remote_compressed_vmo;
   status = compressed_vmo_.duplicate(ZX_RIGHT_SAME_RIGHTS, &remote_compressed_vmo);
   if (status != ZX_OK) {
-    FS_TRACE_ERROR("[blobfs] Failed to create remote duplicate of compressed VMO: %s.\n",
-                   zx_status_get_string(status));
+    FX_LOGS(ERROR) << "Failed to create remote duplicate of compressed VMO: "
+                   << zx_status_get_string(status);
     return status;
   }
 
@@ -71,8 +71,8 @@ zx_status_t ExternalDecompressorClient::Prepare() {
   status = zx::fifo::create(4, sizeof(llcpp::fuchsia::blobfs::internal::DecompressRequest), 0,
                             &fifo_, &remote_fifo);
   if (status != ZX_OK) {
-    FS_TRACE_ERROR("[blobfs] Failed create fifo for external decompressor: %s.\n",
-                   zx_status_get_string(status));
+    FX_LOGS(ERROR) << "Failed create fifo for external decompressor: "
+                   << zx_status_get_string(status);
     return status;
   }
 
@@ -83,13 +83,13 @@ zx_status_t ExternalDecompressorClient::Prepare() {
     decompressor_creator_.Unbind();
   }
   if (fidl_status != ZX_OK) {
-    FS_TRACE_ERROR("[blobfs] FIDL error communicating with external decompressor: %s.\n",
-                   zx_status_get_string(fidl_status));
+    FX_LOGS(ERROR) << "FIDL error communicating with external decompressor: "
+                   << zx_status_get_string(fidl_status);
     return fidl_status;
   }
   if (status != ZX_OK) {
-    FS_TRACE_ERROR("[blobfs] Error calling Create on DecompressorCreator service: %s.\n",
-                   zx_status_get_string(status));
+    FX_LOGS(ERROR) << "Error calling Create on DecompressorCreator service: "
+                   << zx_status_get_string(status);
   }
   return status;
 }
@@ -109,7 +109,7 @@ zx_status_t ExternalDecompressorClient::PrepareDecompressorCreator() {
 
   auto remote_channel = decompressor_creator_.NewRequest();
   if (!decompressor_creator_.is_bound()) {
-    FS_TRACE_ERROR("[blobfs] Failed to create channel pair for external decompressor.\n");
+    FX_LOGS(ERROR) << "Failed to create channel pair for external decompressor.";
     return ZX_ERR_NO_RESOURCES;
   }
 
@@ -117,8 +117,8 @@ zx_status_t ExternalDecompressorClient::PrepareDecompressorCreator() {
       fdio_service_connect("/svc_blobfs/fuchsia.blobfs.internal.DecompressorCreator",
                            remote_channel.TakeChannel().release());
   if (status != ZX_OK) {
-    FS_TRACE_ERROR("[blobfs] Failed to connect to DecompressorCreator service: %s.\n",
-                   zx_status_get_string(status));
+    FX_LOGS(ERROR) << "Failed to connect to DecompressorCreator service: "
+                   << zx_status_get_string(status);
     decompressor_creator_.Unbind();
   }
   return status;
@@ -135,8 +135,8 @@ zx_status_t ExternalDecompressorClient::SendMessage(
 
   status = fifo_.write(sizeof(request), &request, 1, nullptr);
   if (status != ZX_OK) {
-    FS_TRACE_ERROR("[blobfs] Failed to write fifo request to decompressor: %s.\n",
-                   zx_status_get_string(status));
+    FX_LOGS(ERROR) << "Failed to write fifo request to decompressor: "
+                   << zx_status_get_string(status);
     return status;
   }
 
@@ -144,23 +144,23 @@ zx_status_t ExternalDecompressorClient::SendMessage(
   fifo_.wait_one(ZX_FIFO_READABLE | ZX_FIFO_PEER_CLOSED, zx::time::infinite(), &signal);
   if ((signal & ZX_FIFO_READABLE) == 0) {
     fifo_.reset();
-    FS_TRACE_ERROR("[blobfs] External decompressor closed the fifo.\n");
+    FX_LOGS(ERROR) << "External decompressor closed the fifo.";
     return ZX_ERR_INTERNAL;
   }
 
   status = fifo_.read(sizeof(response), &response, 1, nullptr);
   if (status != ZX_OK) {
-    FS_TRACE_ERROR("[blobfs] Failed to read from fifo: %s\n", zx_status_get_string(status));
+    FX_LOGS(ERROR) << "Failed to read from fifo: " << zx_status_get_string(status);
     return status;
   }
   if (response.status != ZX_OK) {
-    FS_TRACE_ERROR("[blobfs] Error from external decompressor: %s size: %ld\n",
-                   zx_status_get_string(status), response.size);
+    FX_LOGS(ERROR) << "Error from external decompressor: " << zx_status_get_string(status)
+                   << " size: " << response.size;
     return response.status;
   }
   if (response.size != request.decompressed.size) {
-    FS_TRACE_ERROR("[blobfs] Decompressed size did not match. Expected: %ld Got: %ld\n",
-                   request.decompressed.size, response.size);
+    FX_LOGS(ERROR) << "Decompressed size did not match. Expected: " << request.decompressed.size
+                   << " Got: " << response.size;
     return ZX_ERR_IO_DATA_INTEGRITY;
   }
   return ZX_OK;
@@ -202,8 +202,8 @@ ExternalDecompressorClient::CompressionAlgorithmLocalToFidl(CompressionAlgorithm
 }
 
 zx::status<llcpp::fuchsia::blobfs::internal::CompressionAlgorithm>
-    ExternalDecompressorClient::CompressionAlgorithmLocalToFidlForPartial(
-        CompressionAlgorithm algorithm) {
+ExternalDecompressorClient::CompressionAlgorithmLocalToFidlForPartial(
+    CompressionAlgorithm algorithm) {
   switch (algorithm) {
     case CompressionAlgorithm::CHUNKED:
       return zx::ok(llcpp::fuchsia::blobfs::internal::CompressionAlgorithm::CHUNKED_PARTIAL);

@@ -41,7 +41,10 @@ if (is_fuchsia) {
     ]
 
     public_deps = [ "//zircon/public/lib/fbl" ]
-    deps = [ "//zircon/public/lib/fbl" ]
+    deps = [
+      "//sdk/lib/syslog/cpp",
+      "//zircon/public/lib/fbl",
+    ]
 
     if (is_fuchsia) {
       sources += [ "inspector_transaction_handler.cc" ]

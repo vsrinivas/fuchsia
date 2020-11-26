@@ -6,11 +6,11 @@
 
 #include "disk_inspector/command.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include <iterator>
 #include <sstream>
 #include <utility>
-
-#include <fs/trace.h>
 
 namespace disk_inspector {
 
@@ -46,9 +46,9 @@ fit::result<ParsedCommand, zx_status_t> ParseCommand(const std::vector<std::stri
   ParsedCommand parsed_args;
   parsed_args.name = args[0];
   if (command.fields.size() != args.size() - 1) {
-    FS_TRACE_ERROR(
-        "Number of arguments provided(%lu) does not match number of arguments needed(%lu)\n",
-        args.size() - 1, command.fields.size());
+    FX_LOGS(ERROR) << "Number of arguments provided(" << args.size() - 1
+                   << ") does not match number of arguments needed(" << command.fields.size()
+                   << ")";
     return fit::error(ZX_ERR_INVALID_ARGS);
   }
   for (uint32_t i = 0; i < command.fields.size(); ++i) {
@@ -64,15 +64,15 @@ fit::result<ParsedCommand, zx_status_t> ParseCommand(const std::vector<std::stri
         char* endptr;
         uint64_t value = std::strtoull(args[i + 1].c_str(), &endptr, 10);
         if (*endptr != '\0') {
-          FS_TRACE_ERROR("Argument %s cannot be converted to uint64 (value: %s)\n",
-                         field.name.c_str(), args[i].c_str());
+          FX_LOGS(ERROR) << "Argument " << field.name
+                         << " cannot be converted to uint64 (value: " << args[i] << ")";
           return fit::error(ZX_ERR_INVALID_ARGS);
         }
         parsed_args.uint64_fields[field.name] = value;
         break;
       }
       default: {
-        FS_TRACE_ERROR("Command parsing reached unknown ArgType.\n");
+        FX_LOGS(ERROR) << "Command parsing reached unknown ArgType.";
         return fit::error(ZX_ERR_NOT_SUPPORTED);
       }
     }

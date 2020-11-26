@@ -5,7 +5,6 @@
 #include <memory>
 
 #include <blobfs/host/fsck.h>
-#include <fs/trace.h>
 
 #include "src/storage/blobfs/blobfs-checker.h"
 

@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/cksum.h>
+#include <lib/syslog/cpp/macros.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -10,7 +11,6 @@
 #include <utility>
 
 #include <bitmap/raw-bitmap.h>
-#include <fs/trace.h>
 #include <fs/transaction/buffered_operations_builder.h>
 #include <storage/buffer/block_buffer.h>
 
@@ -32,7 +32,7 @@ zx_status_t SuperblockManager::Create(const Superblock* info, uint32_t max_block
   if (checks == IntegrityCheck::kAll) {
     status = CheckSuperblock(info, max_blocks);
     if (status != ZX_OK) {
-      FS_TRACE_ERROR("SuperblockManager::Create failed to check info: %d\n", status);
+      FX_LOGS(ERROR) << "SuperblockManager::Create failed to check info: " << status;
       return status;
     }
   }

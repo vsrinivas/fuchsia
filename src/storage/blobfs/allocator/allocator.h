@@ -24,7 +24,6 @@
 #include <fbl/algorithm.h>
 #include <fbl/function.h>
 #include <fbl/vector.h>
-#include <fs/trace.h>
 #include <fs/transaction/legacy_transaction_handler.h>
 #include <id_allocator/id_allocator.h>
 #include <storage/buffer/vmoid_registry.h>

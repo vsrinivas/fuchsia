@@ -58,6 +58,11 @@ test("fs-test-utils") {
 }
 
 isolated_devmgr_unittest_package("fs-test-utils-test") {
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
   executable_path = "test/fs-test-utils"
 
   features = [ "isolated-temp" ]

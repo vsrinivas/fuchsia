@@ -97,6 +97,11 @@ fuchsia_component("factoryfs-integration-test") {
 }
 
 fuchsia_test_package("factoryfs-tests") {
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
   test_components = [
     ":factoryfs-unit",
     ":factoryfs-integration-test",

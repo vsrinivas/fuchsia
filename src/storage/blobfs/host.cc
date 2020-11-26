@@ -5,6 +5,7 @@
 #include <fcntl.h>
 #include <inttypes.h>
 #include <lib/cksum.h>
+#include <lib/syslog/cpp/macros.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -37,7 +38,6 @@
 #include <fbl/macros.h>
 #include <fs-host/common.h>
 #include <fs/journal/initializer.h>
-#include <fs/trace.h>
 #include <fs/transaction/transaction_handler.h>
 #include <safemath/checked_math.h>
 #include <safemath/safe_conversions.h>
@@ -68,7 +68,7 @@ constexpr CompressionSettings kCompressionSettings = {
 zx_status_t ReadBlockOffset(int fd, uint64_t bno, off_t offset, void* data) {
   off_t off = offset + bno * kBlobfsBlockSize;
   if (pread(fd, data, kBlobfsBlockSize, off) != kBlobfsBlockSize) {
-    FS_TRACE_ERROR("blobfs: cannot read block %" PRIu64 "\n", bno);
+    FX_LOGS(ERROR) << "cannot read block " << bno;
     return ZX_ERR_IO;
   }
   return ZX_OK;
@@ -86,8 +86,7 @@ zx_status_t WriteBlockOffset(int fd, const void* data, uint64_t block_count, off
     ret = pwrite(fd, udata, size, off);
     if (ret < 0) {
       perror("failed write");
-      FS_TRACE_ERROR("blobfs: cannot write block %" PRIu64 " (size:%lu off:%lld)\n", block_number,
-                     size, static_cast<long long>(off));
+      FX_LOGS(ERROR) << "cannot write block " << block_number << " size:" << size << " off:" << off;
       return ZX_ERR_IO;
     }
     size -= ret;
@@ -143,21 +142,21 @@ zx_status_t buffer_compress(const FileMapping& mapping, MerkleInfo* out_info) {
   size_t output_limit;
   if ((status = HostCompressor::Create(kCompressionSettings, mapping.length(), &output_limit,
                                        &compressor)) != ZX_OK) {
-    FS_TRACE_ERROR("Failed to initialize blobfs compressor: %d\n", status);
+    FX_LOGS(ERROR) << "Failed to initialize blobfs compressor: " << status;
     return status;
   }
   if ((status = compressor->SetOutput(out_info->compressed_data.get(), max)) != ZX_OK) {
-    FS_TRACE_ERROR("Failed to initialize blobfs compressor: %d\n", status);
+    FX_LOGS(ERROR) << "Failed to initialize blobfs compressor: " << status;
     return status;
   }
 
   if ((status = compressor->Update(mapping.data(), mapping.length())) != ZX_OK) {
-    FS_TRACE_ERROR("Failed to update blobfs compressor: %d\n", status);
+    FX_LOGS(ERROR) << "Failed to update blobfs compressor: " << status;
     return status;
   }
 
   if ((status = compressor->End()) != ZX_OK) {
-    FS_TRACE_ERROR("Failed to complete blobfs compressor: %d\n", status);
+    FX_LOGS(ERROR) << "Failed to complete blobfs compressor: " << status;
     return status;
   }
 
@@ -186,7 +185,7 @@ zx_status_t blobfs_add_mapped_blob_with_merkle(Blobfs* bs, JsonRecorder* json_re
   auto blob_layout = BlobLayout::CreateFromSizes(GetBlobLayoutFormat(bs->Info()), info.length,
                                                  info.GetDataSize(), bs->GetBlockSize());
   if (blob_layout.is_error()) {
-    FS_TRACE_ERROR("blobfs: Failed to create blob layout: %d\n", blob_layout.status_value());
+    FX_LOGS(ERROR) << "Failed to create blob layout: " << blob_layout.status_value();
     return blob_layout.status_value();
   }
 
@@ -197,11 +196,11 @@ zx_status_t blobfs_add_mapped_blob_with_merkle(Blobfs* bs, JsonRecorder* json_re
   std::unique_ptr<InodeBlock> inode_block;
   zx_status_t status;
   if ((status = bs->NewBlob(info.digest, &inode_block)) != ZX_OK) {
-    FS_TRACE_ERROR("error: Failed to allocate a new blob\n");
+    FX_LOGS(ERROR) << "error: Failed to allocate a new blob";
     return status;
   }
   if (inode_block == nullptr) {
-    FS_TRACE_ERROR("error: No nodes available on blobfs image\n");
+    FX_LOGS(ERROR) << "error: No nodes available on blobfs image";
     return ZX_ERR_NO_RESOURCES;
   }
 
@@ -214,13 +213,14 @@ zx_status_t blobfs_add_mapped_blob_with_merkle(Blobfs* bs, JsonRecorder* json_re
   // TODO(smklein): Currently, host-side tools can only generate single-extent
   // blobs. This should be fixed.
   if (inode->block_count > kBlockCountMax) {
-    FS_TRACE_ERROR("error: Blobs larger than %lu blocks not yet implemented\n", kBlockCountMax);
+    FX_LOGS(ERROR) << "error: Blobs larger than " << kBlockCountMax
+                   << " blocks not yet implemented";
     return ZX_ERR_NOT_SUPPORTED;
   }
 
   size_t start_block = 0;
   if ((status = bs->AllocateBlocks(inode->block_count, &start_block)) != ZX_OK) {
-    FS_TRACE_ERROR("error: No blocks available\n");
+    FX_LOGS(ERROR) << "error: No blocks available";
     return status;
   }
 
@@ -263,17 +263,17 @@ zx_status_t blobfs_load_info_block(const fbl::unique_fd& fd, info_block_t* out_i
   uint64_t blocks;
   zx_status_t status;
   if ((status = GetBlockCount(fd.get(), &blocks)) != ZX_OK) {
-    FS_TRACE_ERROR("blobfs: cannot find end of underlying device\n");
+    FX_LOGS(ERROR) << "cannot find end of underlying device";
     return status;
   }
 
   if (end &&
       ((blocks * kBlobfsBlockSize) < safemath::checked_cast<uint64_t>(end.value() - start))) {
-    FS_TRACE_ERROR("blobfs: Invalid file size\n");
+    FX_LOGS(ERROR) << "Invalid file size";
     return ZX_ERR_BAD_STATE;
   }
   if ((status = CheckSuperblock(&info_block.info, blocks)) != ZX_OK) {
-    FS_TRACE_ERROR("blobfs: Info check failed\n");
+    FX_LOGS(ERROR) << "Info check failed";
     return status;
   }
 
@@ -300,7 +300,7 @@ zx_status_t get_superblock(const fbl::unique_fd& fd, off_t start, std::optional<
 zx_status_t ReadBlock(int fd, uint64_t bno, void* data) {
   off_t off = bno * kBlobfsBlockSize;
   if (pread(fd, data, kBlobfsBlockSize, off) != kBlobfsBlockSize) {
-    FS_TRACE_ERROR("blobfs: cannot read block %" PRIu64 "\n", bno);
+    FX_LOGS(ERROR) << "cannot read block " << bno;
     return ZX_ERR_IO;
   }
   return ZX_OK;
@@ -308,8 +308,8 @@ zx_status_t ReadBlock(int fd, uint64_t bno, void* data) {
 
 zx_status_t WriteBlocks(int fd, uint64_t block_offset, uint64_t block_count, const void* data) {
   if (WriteBlockOffset(fd, data, block_count, 0, block_offset) != ZX_OK) {
-    FS_TRACE_ERROR("blobfs: cannot write blocks: %" PRIu64 " at block offset: %" PRIu64 "\n",
-                   block_count, block_offset);
+    FX_LOGS(ERROR) << "cannot write blocks: " << block_count
+                   << " at block offset: " << block_offset;
     return ZX_ERR_IO;
   }
   return ZX_OK;
@@ -333,7 +333,7 @@ int Mkfs(int fd, uint64_t block_count, const FilesystemOptions& options) {
   InitializeSuperblock(block_count, options, &info);
   zx_status_t status = CheckSuperblock(&info, block_count);
   if (status != ZX_OK) {
-    FS_TRACE_ERROR("Failed to initialize superblock: %d\n", status);
+    FX_LOGS(ERROR) << "Failed to initialize superblock: " << status;
     return -1;
   }
   uint64_t block_bitmap_blocks = BlockMapBlocks(info);
@@ -341,11 +341,11 @@ int Mkfs(int fd, uint64_t block_count, const FilesystemOptions& options) {
 
   RawBitmap block_bitmap;
   if (block_bitmap.Reset(block_bitmap_blocks * kBlobfsBlockBits)) {
-    FS_TRACE_ERROR("Couldn't allocate blobfs block map\n");
+    FX_LOGS(ERROR) << "Couldn't allocate blobfs block map";
     return -1;
   }
   if (block_bitmap.Shrink(info.data_block_count)) {
-    FS_TRACE_ERROR("Couldn't shrink blobfs block map\n");
+    FX_LOGS(ERROR) << "Couldn't shrink blobfs block map";
     return -1;
   }
 
@@ -362,21 +362,21 @@ int Mkfs(int fd, uint64_t block_count, const FilesystemOptions& options) {
   };
   status = fs::MakeJournal(JournalBlocks(info), write_blocks_fn);
   if (status != ZX_OK) {
-    FS_TRACE_ERROR("Failed to write journal block\n");
+    FX_LOGS(ERROR) << "Failed to write journal block";
     return -1;
   }
 
   // Write the root block to disk.
   static_assert(kBlobfsBlockSize == sizeof(info));
   if ((status = WriteBlock(fd, 0, &info)) != ZX_OK) {
-    FS_TRACE_ERROR("Failed to write Superblock\n");
+    FX_LOGS(ERROR) << "Failed to write Superblock";
     return -1;
   }
 
   // Write allocation bitmap to disk.
   if (WriteBlocks(fd, BlockMapStartBlock(info), block_bitmap_blocks,
                   block_bitmap.StorageUnsafe()->GetData()) != ZX_OK) {
-    FS_TRACE_ERROR("Failed to write blockmap block %" PRIu64 "\n", block_bitmap_blocks);
+    FX_LOGS(ERROR) << "Failed to write blockmap block " << block_bitmap_blocks;
     return -1;
   }
 
@@ -384,20 +384,20 @@ int Mkfs(int fd, uint64_t block_count, const FilesystemOptions& options) {
   size_t map_length = node_map_blocks * kBlobfsBlockSize;
   void* blocks = mmap(nullptr, map_length, PROT_READ, MAP_PRIVATE | MAP_ANON, -1, 0);
   if (blocks == MAP_FAILED) {
-    FS_TRACE_ERROR("blobfs: failed to map zeroes for inode map of size %lu\n", map_length);
+    FX_LOGS(ERROR) << "failed to map zeroes for inode map of size " << map_length;
     return -1;
   }
   if (WriteBlocks(fd, NodeMapStartBlock(info), node_map_blocks, blocks) != ZX_OK) {
-    FS_TRACE_ERROR("blobfs: failed writing inode map\n");
+    FX_LOGS(ERROR) << "failed writing inode map";
     munmap(blocks, map_length);
     return -1;
   }
   if (munmap(blocks, map_length) != 0) {
-    FS_TRACE_ERROR("blobfs: failed unmap inode map\n");
+    FX_LOGS(ERROR) << "failed unmap inode map";
     return -1;
   }
 
-  FS_TRACE_DEBUG("BLOBFS: mkfs success\n");
+  FX_LOGS(DEBUG) << "mkfs success";
   return 0;
 }
 
@@ -457,7 +457,7 @@ zx_status_t blobfs_create(std::unique_ptr<Blobfs>* out, fbl::unique_fd fd) {
   extent_lengths[4] = DataBlocks(info_block.info) * kBlobfsBlockSize;
 
   if ((status = Blobfs::Create(std::move(fd), 0, info_block, extent_lengths, out)) != ZX_OK) {
-    FS_TRACE_ERROR("blobfs: mount failed; could not create blobfs\n");
+    FX_LOGS(ERROR) << "mount failed; could not create blobfs";
     return status;
   }
 
@@ -467,11 +467,11 @@ zx_status_t blobfs_create(std::unique_ptr<Blobfs>* out, fbl::unique_fd fd) {
 zx_status_t blobfs_create_sparse(std::unique_ptr<Blobfs>* out, fbl::unique_fd fd, off_t start,
                                  off_t end, const fbl::Vector<size_t>& extent_vector) {
   if (start >= end) {
-    FS_TRACE_ERROR("blobfs: Insufficient space allocated\n");
+    FX_LOGS(ERROR) << "Insufficient space allocated";
     return ZX_ERR_INVALID_ARGS;
   }
   if (extent_vector.size() != kExtentCount) {
-    FS_TRACE_ERROR("blobfs: Incorrect number of extents\n");
+    FX_LOGS(ERROR) << "Incorrect number of extents";
     return ZX_ERR_INVALID_ARGS;
   }
 
@@ -491,7 +491,7 @@ zx_status_t blobfs_create_sparse(std::unique_ptr<Blobfs>* out, fbl::unique_fd fd
   extent_lengths[4] = extent_vector[4];
 
   if ((status = Blobfs::Create(std::move(fd), start, info_block, extent_lengths, out)) != ZX_OK) {
-    FS_TRACE_ERROR("blobfs: mount failed; could not create blobfs\n");
+    FX_LOGS(ERROR) << "mount failed; could not create blobfs";
     return status;
   }
 
@@ -581,7 +581,7 @@ zx_status_t Blobfs::Create(fbl::unique_fd blockfd_, off_t offset, const info_blo
                            const fbl::Array<size_t>& extent_lengths, std::unique_ptr<Blobfs>* out) {
   zx_status_t status = CheckSuperblock(&info_block.info, TotalBlocks(info_block.info));
   if (status < 0) {
-    FS_TRACE_ERROR("blobfs: Check info failure\n");
+    FX_LOGS(ERROR) << "Check info failure";
     return status;
   }
 
@@ -597,7 +597,7 @@ zx_status_t Blobfs::Create(fbl::unique_fd blockfd_, off_t offset, const info_blo
       std::unique_ptr<Blobfs>(new Blobfs(std::move(blockfd_), offset, info_block, extent_lengths));
 
   if ((status = fs->LoadBitmap()) < 0) {
-    FS_TRACE_ERROR("blobfs: Failed to load bitmaps\n");
+    FX_LOGS(ERROR) << "Failed to load bitmaps";
     return status;
   }
 
@@ -742,7 +742,7 @@ zx_status_t Blobfs::WriteData(Inode* inode, const void* merkle_data, const void*
   zx_status_t status;
   uint32_t blob_start_block = data_start_block_ + inode->extents[0].Start();
   if ((status = WriteBlocks(blob_start_block, blob_layout.TotalBlockCount(), buf.get())) != ZX_OK) {
-    FS_TRACE_ERROR("blobfs: Failed to write a blob: %d\n", status);
+    FX_LOGS(ERROR) << "Failed to write a blob: " << status;
     return status;
   }
   return ZX_OK;

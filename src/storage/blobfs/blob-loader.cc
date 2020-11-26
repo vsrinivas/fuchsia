@@ -5,6 +5,7 @@
 #include "src/storage/blobfs/blob-loader.h"
 
 #include <lib/fzl/owned-vmo-mapper.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/status.h>
 #include <zircon/assert.h>
 #include <zircon/errors.h>
@@ -20,6 +21,7 @@
 #include <blobfs/format.h>
 #include <fbl/auto_call.h>
 #include <fbl/string_buffer.h>
+#include <fs/trace.h>
 #include <storage/buffer/owned_vmoid.h>
 
 #include "src/storage/blobfs/blob-verifier.h"
@@ -54,7 +56,7 @@ zx::status<BlobLoader> BlobLoader::Create(TransactionManager* txn_manager,
   fzl::OwnedVmoMapper scratch_vmo;
   zx_status_t status = scratch_vmo.CreateAndMap(kScratchBufferSize, "blobfs-loader");
   if (status != ZX_OK) {
-    FS_TRACE_ERROR("blobfs: Failed to map scratch vmo: %s\n", zx_status_get_string(status));
+    FX_LOGS(ERROR) << "Failed to map scratch vmo: " << zx_status_get_string(status);
     return zx::error(status);
   }
   return zx::ok(BlobLoader(txn_manager, block_iter_provider, node_finder, pager, metrics,
@@ -81,7 +83,7 @@ zx_status_t BlobLoader::LoadBlob(uint32_t node_index,
   auto blob_layout = BlobLayout::CreateFromInode(GetBlobLayoutFormat(txn_manager_->Info()), *inode,
                                                  GetBlockSize());
   if (blob_layout.is_error()) {
-    FS_TRACE_ERROR("blobfs: Failed to create blob layout: %s\n", blob_layout.status_string());
+    FX_LOGS(ERROR) << "Failed to create blob layout: " << blob_layout.status_string();
     return blob_layout.status_value();
   }
   if (inode->blob_size == 0) {
@@ -104,8 +106,7 @@ zx_status_t BlobLoader::LoadBlob(uint32_t node_index,
   fzl::OwnedVmoMapper data_mapper;
   status = data_mapper.CreateAndMap(file_block_aligned_size, data_vmo_name.c_str());
   if (status != ZX_OK) {
-    FS_TRACE_ERROR("blobfs: Failed to initialize data vmo; error: %s\n",
-                   zx_status_get_string(status));
+    FX_LOGS(ERROR) << "Failed to initialize data vmo; error: " << zx_status_get_string(status);
     return status;
   }
   status = inode->IsCompressed()
@@ -148,8 +149,8 @@ zx_status_t BlobLoader::LoadBlobPaged(uint32_t node_index,
   auto blob_layout = BlobLayout::CreateFromInode(GetBlobLayoutFormat(txn_manager_->Info()), *inode,
                                                  GetBlockSize());
   if (blob_layout.is_error()) {
-    FS_TRACE_ERROR("blobfs: Failed to create blob layout: %s\n",
-                   zx_status_get_string(blob_layout.error_value()));
+    FX_LOGS(ERROR) << "Failed to create blob layout: "
+                   << zx_status_get_string(blob_layout.error_value());
     return blob_layout.error_value();
   }
   if (inode->blob_size == 0) {
@@ -191,8 +192,7 @@ zx_status_t BlobLoader::LoadBlobPaged(uint32_t node_index,
 
   fzl::OwnedVmoMapper data_mapper;
   if ((status = data_mapper.Map(std::move(data_vmo))) != ZX_OK) {
-    FS_TRACE_ERROR("blobfs: Failed to create mapping for data vmo: %s\n",
-                   zx_status_get_string(status));
+    FX_LOGS(ERROR) << "Failed to create mapping for data vmo: " << zx_status_get_string(status);
     return status;
   }
 
@@ -223,8 +223,7 @@ zx_status_t BlobLoader::InitMerkleVerifier(uint32_t node_index, const Inode& ino
   zx_status_t status;
   if ((status = merkle_mapper.CreateAndMap(blob_layout.MerkleTreeBlockAlignedSize(),
                                            merkle_vmo_name.c_str())) != ZX_OK) {
-    FS_TRACE_ERROR("blobfs: Failed to initialize merkle vmo; error: %s\n",
-                   zx_status_get_string(status));
+    FX_LOGS(ERROR) << "Failed to initialize merkle vmo; error: " << zx_status_get_string(status);
     return status;
   }
 
@@ -254,7 +253,7 @@ zx_status_t BlobLoader::InitForDecompression(
     const BlobVerifier& verifier, std::unique_ptr<SeekableDecompressor>* decompressor_out) {
   zx::status<CompressionAlgorithm> algorithm_status = AlgorithmForInode(inode);
   if (algorithm_status.is_error()) {
-    FS_TRACE_ERROR("blobfs: Cannot decode blob due to multiple compression flags.\n");
+    FX_LOGS(ERROR) << "Cannot decode blob due to multiple compression flags.";
     return algorithm_status.status_value();
   }
   CompressionAlgorithm algorithm = algorithm_status.value();
@@ -269,10 +268,9 @@ zx_status_t BlobLoader::InitForDecompression(
     case CompressionAlgorithm::ZSTD_SEEKABLE:
       // Callers should have guarded against calling this code path with an algorithm that
       // does not support paging.
-      FS_TRACE_ERROR(
-          "Algorithm %s does not support paging; this path should not be called.\n"
-          "This is most likely programmer error.\n",
-          CompressionAlgorithmToString(algorithm));
+      FX_LOGS(ERROR) << "Algorithm " << CompressionAlgorithmToString(algorithm)
+                     << " does not support paging; this path should not be called.\n"
+                        "This is most likely programmer error.";
       ZX_DEBUG_ASSERT(false);
       return ZX_ERR_NOT_SUPPORTED;
   }
@@ -289,14 +287,14 @@ zx_status_t BlobLoader::InitForDecompression(
   uint32_t scratch_block_count = static_cast<uint32_t>(scratch_vmo_.size()) / GetBlockSize();
   uint32_t blocks_to_read = std::min(scratch_block_count, data_block_count);
   if (blocks_to_read == 0) {
-    FS_TRACE_ERROR("blobfs: No data blocks; corrupted inode?\n");
+    FX_LOGS(ERROR) << "No data blocks; corrupted inode?";
     return ZX_ERR_BAD_STATE;
   }
 
   auto bytes_read =
       LoadBlocks(node_index, blob_layout.DataBlockOffset(), blocks_to_read, scratch_vmo_);
   if (bytes_read.is_error()) {
-    FS_TRACE_ERROR("blobfs: Failed to load compression header: %s\n", bytes_read.status_string());
+    FX_LOGS(ERROR) << "Failed to load compression header: " << bytes_read.status_string();
     return bytes_read.error_value();
   }
 
@@ -311,7 +309,7 @@ zx_status_t BlobLoader::InitForDecompression(
            scratch_vmo_.start(), /*max_seek_table_size=*/
            std::min(uint64_t{blocks_to_read} * GetBlockSize(), blob_layout.DataSizeUpperBound()),
            /*max_compressed_size=*/blob_layout.DataSizeUpperBound(), decompressor_out)) != ZX_OK) {
-    FS_TRACE_ERROR("blobfs: Failed to init decompressor: %s\n", zx_status_get_string(status));
+    FX_LOGS(ERROR) << "Failed to init decompressor: " << zx_status_get_string(status);
     return status;
   }
 
@@ -324,7 +322,7 @@ zx_status_t BlobLoader::LoadMerkle(uint32_t node_index, const BlobLayout& blob_l
   auto bytes_read = LoadBlocks(node_index, blob_layout.MerkleTreeBlockOffset(),
                                blob_layout.MerkleTreeBlockCount(), vmo);
   if (bytes_read.is_error()) {
-    FS_TRACE_ERROR("blobfs: Failed to load Merkle tree: %s\n", bytes_read.status_string());
+    FX_LOGS(ERROR) << "Failed to load Merkle tree: " << bytes_read.status_string();
     return bytes_read.error_value();
   }
 
@@ -354,7 +352,7 @@ zx_status_t BlobLoader::LoadAndDecompressData(uint32_t node_index, const Inode& 
                                               const fzl::OwnedVmoMapper& vmo) const {
   zx::status<CompressionAlgorithm> algorithm_or = AlgorithmForInode(inode);
   if (algorithm_or.is_error()) {
-    FS_TRACE_ERROR("Blob has no known compression format\n");
+    FX_LOGS(ERROR) << "Blob has no known compression format";
     return algorithm_or.status_value();
   }
   CompressionAlgorithm algorithm = algorithm_or.value();
@@ -370,7 +368,7 @@ zx_status_t BlobLoader::LoadAndDecompressData(uint32_t node_index, const Inode& 
   zx_status_t status =
       compressed_mapper.CreateAndMap(blob_layout.DataBlockAlignedSize(), vmo_name.c_str());
   if (status != ZX_OK) {
-    FS_TRACE_ERROR("Failed to initialized compressed vmo; error: %d\n", status);
+    FX_LOGS(ERROR) << "Failed to initialized compressed vmo; error: " << status;
     return status;
   }
 
@@ -393,18 +391,18 @@ zx_status_t BlobLoader::LoadAndDecompressData(uint32_t node_index, const Inode& 
   std::unique_ptr<Decompressor> decompressor;
   status = Decompressor::Create(algorithm, &decompressor);
   if (status != ZX_OK) {
-    FS_TRACE_ERROR("Failed to create decompressor, status=%d", status);
+    FX_LOGS(ERROR) << "Failed to create decompressor, status=" << status;
     return status;
   }
 
   status = decompressor->Decompress(vmo.start(), &target_size, compressed_buffer,
                                     blob_layout.DataSizeUpperBound());
   if (status != ZX_OK) {
-    FS_TRACE_ERROR("Failed to decompress data: %s\n", zx_status_get_string(status));
+    FX_LOGS(ERROR) << "Failed to decompress data: " << zx_status_get_string(status);
     return status;
   } else if (target_size != inode.blob_size) {
-    FS_TRACE_ERROR("Failed to fully decompress blob (%zu of %zu expected)\n", target_size,
-                   inode.blob_size);
+    FX_LOGS(ERROR) << "Failed to fully decompress blob (" << target_size << " of "
+                   << inode.blob_size << " expected)";
     return ZX_ERR_IO_DATA_INTEGRITY;
   }
 
@@ -422,8 +420,8 @@ zx::status<uint64_t> BlobLoader::LoadBlocks(uint32_t node_index, uint32_t block_
   // Attach |vmo| for transfer to the block FIFO.
   storage::OwnedVmoid vmoid(txn_manager_);
   if ((status = vmoid.AttachVmo(vmo.vmo())) != ZX_OK) {
-    FS_TRACE_ERROR("Failed to attach VMO to block device; error: %s\n",
-                   zx_status_get_string(status));
+    FX_LOGS(ERROR) << "Failed to attach VMO to block device; error: "
+                   << zx_status_get_string(status);
     return zx::error(status);
   }
 
@@ -432,7 +430,7 @@ zx::status<uint64_t> BlobLoader::LoadBlocks(uint32_t node_index, uint32_t block_
   const uint64_t kDataStart = DataStartBlock(txn_manager_->Info());
   BlockIterator block_iter = block_iter_provider_->BlockIteratorByNodeIndex(node_index);
   if ((status = IterateToBlock(&block_iter, block_offset)) != ZX_OK) {
-    FS_TRACE_ERROR("blobfs: Failed to seek to starting block: %s\n", zx_status_get_string(status));
+    FX_LOGS(ERROR) << "Failed to seek to starting block: " << zx_status_get_string(status);
     return zx::error(status);
   }
 
@@ -442,11 +440,11 @@ zx::status<uint64_t> BlobLoader::LoadBlocks(uint32_t node_index, uint32_t block_
         return ZX_OK;
       });
   if (status != ZX_OK) {
-    FS_TRACE_ERROR("blobfs: Failed to stream blocks: %s\n", zx_status_get_string(status));
+    FX_LOGS(ERROR) << "Failed to stream blocks: " << zx_status_get_string(status);
     return zx::error(status);
   }
   if ((status = txn.Transact()) != ZX_OK) {
-    FS_TRACE_ERROR("blobfs: Failed to flush read transaction: %s\n", zx_status_get_string(status));
+    FX_LOGS(ERROR) << "Failed to flush read transaction: " << zx_status_get_string(status);
     return zx::error(status);
   }
 

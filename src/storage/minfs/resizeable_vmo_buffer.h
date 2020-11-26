@@ -8,7 +8,6 @@
 #include <lib/fzl/resizeable-vmo-mapper.h>
 #include <zircon/compiler.h>
 
-#include <fs/trace.h>
 #include <storage/buffer/block_buffer.h>
 #include <storage/buffer/vmoid_registry.h>
 
