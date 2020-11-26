@@ -3,8 +3,17 @@
     program: {
         binary: "bin/system-update-committer",
     },
+    capabilities: [
+        { protocol: "fuchsia.update.CommitStatusProvider" },
+    ],
     use: [
         { runner: "elf" },
         { protocol: "fuchsia.paver.Paver" },
+    ],
+    expose: [
+        {
+            protocol: "fuchsia.update.CommitStatusProvider",
+            from: "self",
+        },
     ],
 }

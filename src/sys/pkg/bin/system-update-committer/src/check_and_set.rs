@@ -3,7 +3,9 @@
 // found in the LICENSE file.
 
 use {
-    fidl_fuchsia_paver as paver, fuchsia_syslog::fx_log_info, fuchsia_zircon::Status,
+    fidl_fuchsia_paver as paver,
+    fuchsia_syslog::fx_log_info,
+    fuchsia_zircon::{self as zx, AsHandleRef, EventPair, Peered, Status},
     thiserror::Error,
 };
 
@@ -12,6 +14,12 @@ use {
 pub enum Error {
     #[error("health check failed")]
     HealthCheck(#[source] anyhow::Error),
+
+    #[error("failed to signal EventPair peer")]
+    SignalPeer(#[source] Status),
+
+    #[error("failed to signal EventPair handle")]
+    SignalHandle(#[source] Status),
 
     #[error("the current configuration ({_0:?}) is unbootable. This should never happen.")]
     CurrentConfigurationUnbootable(paver::Configuration),
@@ -78,9 +86,11 @@ impl<T> BootManagerResultExt for Result<Result<T, i32>, fidl::Error> {
 ///
 /// First we decide whether the system is likely to be functional enough to apply an OTA:
 /// - If the current configuration is marked Pending, we run a variety of checks and return
-///   Error::HealthCheck if they fail.
+///   Error::HealthCheck if they fail. At this point, the FIDL server should start responding to
+///   fuchsia.update/CommitStatusProvider requests.
 /// - If the current configuration is marked Healthy, it means the system already passed the health
-///   checks at some point. We assume they would still pass, and skip them.
+///   checks at some point. We assume they would still pass, and skip them. In this case, we only
+///   unblock the FIDL server once we guarantee the signal on the EventPair has been asserted.
 /// - If the current configuration is marked Unbootable, and this function returns
 ///   Error::CurrentConfigurationUnbootable, because that should never happen.
 ///
@@ -95,6 +105,27 @@ impl<T> BootManagerResultExt for Result<Result<T, i32>, fidl::Error> {
 /// eventually leading to a rollback.
 pub async fn check_and_set_system_health(
     boot_manager: &paver::BootManagerProxy,
+    p_check: &EventPair,
+) -> Result<(), Error> {
+    let () = check_and_set_system_health_helper(boot_manager, p_check).await?;
+
+    // Either the checks passed or we were already committed on boot. Either way, let's
+    // notify the peers we are committed.
+    let () =
+        p_check.signal_peer(zx::Signals::NONE, zx::Signals::USER_0).map_err(Error::SignalPeer)?;
+
+    // Ensure the FIDL server will be unblocked, even if the system is already committed on boot.
+    let () = p_check
+        .signal_handle(zx::Signals::NONE, zx::Signals::USER_1)
+        .map_err(Error::SignalHandle)?;
+
+    Ok(())
+}
+
+/// We create a helper so we can re-use the signalling functionality.
+async fn check_and_set_system_health_helper(
+    boot_manager: &paver::BootManagerProxy,
+    p_check: &EventPair,
 ) -> Result<(), Error> {
     let (current_config, alternate_config) = match boot_manager
         .query_current_configuration()
@@ -135,6 +166,11 @@ pub async fn check_and_set_system_health(
             return Err(Error::CurrentConfigurationUnbootable(current_config))
         }
         paver::ConfigurationStatus::Pending => {
+            // Unblock the FIDL server.
+            let () = p_check
+                .signal_handle(zx::Signals::NONE, zx::Signals::USER_1)
+                .map_err(Error::SignalHandle)?;
+
             // Bail out if the system is unhealthy.
             let () = check_system_health().await.map_err(Error::HealthCheck)?;
         }
@@ -176,9 +212,10 @@ mod tests {
     #![cfg(test)]
     use {
         super::*,
+        fasync::OnSignals,
         fidl_fuchsia_paver::Configuration,
         fuchsia_async as fasync,
-        fuchsia_zircon::Status,
+        fuchsia_zircon::{AsHandleRef, Status},
         matches::assert_matches,
         mock_paver::{hooks as mphooks, MockPaverServiceBuilder, PaverEvent},
         std::sync::Arc,
@@ -194,7 +231,10 @@ mod tests {
                 .insert_hook(mphooks::config_status(|_| Ok(paver::ConfigurationStatus::Healthy)))
                 .build(),
         );
-        check_and_set_system_health(&paver.spawn_boot_manager_service()).await.unwrap();
+        let (p_check, p_fidl) = EventPair::create().unwrap();
+
+        check_and_set_system_health(&paver.spawn_boot_manager_service(), &p_check).await.unwrap();
+
         assert_eq!(
             paver.take_events(),
             vec![
@@ -205,6 +245,8 @@ mod tests {
                 PaverEvent::BootManagerFlush,
             ]
         );
+        assert_eq!(OnSignals::new(&p_fidl, zx::Signals::USER_0).await, Ok(zx::Signals::USER_0));
+        assert_eq!(OnSignals::new(&p_check, zx::Signals::USER_1).await, Ok(zx::Signals::USER_1));
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -227,7 +269,10 @@ mod tests {
                 .insert_hook(mphooks::config_status(|_| Ok(paver::ConfigurationStatus::Pending)))
                 .build(),
         );
-        check_and_set_system_health(&paver.spawn_boot_manager_service()).await.unwrap();
+        let (p_check, p_fidl) = EventPair::create().unwrap();
+
+        check_and_set_system_health(&paver.spawn_boot_manager_service(), &p_check).await.unwrap();
+
         assert_eq!(
             paver.take_events(),
             vec![
@@ -239,6 +284,8 @@ mod tests {
                 PaverEvent::BootManagerFlush,
             ]
         );
+        assert_eq!(OnSignals::new(&p_fidl, zx::Signals::USER_0).await, Ok(zx::Signals::USER_0));
+        assert_eq!(OnSignals::new(&p_check, zx::Signals::USER_1).await, Ok(zx::Signals::USER_1));
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -258,17 +305,28 @@ mod tests {
                 .insert_hook(mphooks::config_status(|_| Ok(paver::ConfigurationStatus::Unbootable)))
                 .build(),
         );
+        let (p_check, p_fidl) = EventPair::create().unwrap();
+
         assert_matches!(
-            check_and_set_system_health(&paver.spawn_boot_manager_service()).await,
+            check_and_set_system_health(&paver.spawn_boot_manager_service(), &p_check).await,
             Err(Error::CurrentConfigurationUnbootable(cc))
             if cc == current_config
         );
+
         assert_eq!(
             paver.take_events(),
             vec![
                 PaverEvent::QueryCurrentConfiguration,
                 PaverEvent::QueryConfigurationStatus { configuration: current_config },
             ]
+        );
+        assert_eq!(
+            p_fidl.wait_handle(zx::Signals::USER_0, zx::Time::INFINITE_PAST),
+            Err(Status::TIMED_OUT)
+        );
+        assert_eq!(
+            p_check.wait_handle(zx::Signals::USER_1, zx::Time::INFINITE_PAST),
+            Err(Status::TIMED_OUT)
         );
     }
 
@@ -289,9 +347,16 @@ mod tests {
                 .boot_manager_close_with_epitaph(Status::NOT_SUPPORTED)
                 .build(),
         );
+        let (p_check, p_fidl) = EventPair::create().unwrap();
 
-        check_and_set_system_health(&paver.spawn_boot_manager_service()).await.unwrap();
+        check_and_set_system_health(&paver.spawn_boot_manager_service(), &p_check).await.unwrap();
+
         assert_eq!(paver.take_events(), vec![]);
+        assert_eq!(
+            p_fidl.wait_handle(zx::Signals::USER_0, zx::Time::INFINITE_PAST),
+            Ok(zx::Signals::USER_0)
+        );
+        assert_eq!(OnSignals::new(&p_check, zx::Signals::USER_1).await, Ok(zx::Signals::USER_1));
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -302,8 +367,16 @@ mod tests {
                 .insert_hook(mphooks::config_status(|_| Ok(paver::ConfigurationStatus::Healthy)))
                 .build(),
         );
-        check_and_set_system_health(&paver.spawn_boot_manager_service()).await.unwrap();
+        let (p_check, p_fidl) = EventPair::create().unwrap();
+
+        check_and_set_system_health(&paver.spawn_boot_manager_service(), &p_check).await.unwrap();
+
         assert_eq!(paver.take_events(), vec![PaverEvent::QueryCurrentConfiguration]);
+        assert_eq!(
+            p_fidl.wait_handle(zx::Signals::USER_0, zx::Time::INFINITE_PAST),
+            Ok(zx::Signals::USER_0)
+        );
+        assert_eq!(OnSignals::new(&p_check, zx::Signals::USER_1).await, Ok(zx::Signals::USER_1));
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -316,14 +389,16 @@ mod tests {
                 }))
                 .build(),
         );
+        let (p_check, p_fidl) = EventPair::create().unwrap();
 
         assert_matches!(
-            check_and_set_system_health(&paver.spawn_boot_manager_service()).await,
+            check_and_set_system_health(&paver.spawn_boot_manager_service(), &p_check).await,
             Err(Error::BootManagerStatus {
                 method_name: "set_configuration_healthy",
                 status: Status::OUT_OF_RANGE
             })
         );
+
         assert_eq!(
             paver.take_events(),
             vec![
@@ -332,6 +407,14 @@ mod tests {
                 PaverEvent::SetConfigurationHealthy { configuration: Configuration::A },
                 PaverEvent::BootManagerFlush,
             ]
+        );
+        assert_eq!(
+            p_fidl.wait_handle(zx::Signals::USER_0, zx::Time::INFINITE_PAST),
+            Err(Status::TIMED_OUT)
+        );
+        assert_eq!(
+            p_check.wait_handle(zx::Signals::USER_1, zx::Time::INFINITE_PAST),
+            Err(Status::TIMED_OUT)
         );
     }
 }
