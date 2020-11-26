@@ -105,9 +105,12 @@ int Nelson::Thread() {
 
   if ((info.board_revision != BOARD_REV_P1) && (info.board_revision != BOARD_REV_P2) &&
       (info.board_revision != BOARD_REV_EVT)) {
-    zxlogf(ERROR, "Unsupported board revision %u. Booting will not continue",
-           info.board_revision);
+    zxlogf(ERROR, "Unsupported board revision %u. Booting will not continue", info.board_revision);
     return -1;
+  }
+
+  if ((status = RegistersInit()) != ZX_OK) {
+    zxlogf(ERROR, "RegistersInit failed: %d", status);
   }
 
   if ((status = ClkInit()) != ZX_OK) {
