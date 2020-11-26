@@ -244,7 +244,7 @@ int main(int argc, char** argv) {
   // Create a new VirtioBlock device for each device requested.
   std::vector<std::unique_ptr<VirtioBlock>> block_devices;
   for (auto& block_device : block_infos) {
-    auto block = std::make_unique<VirtioBlock>(block_device.mode, guest.phys_mem());
+    auto block = std::make_unique<VirtioBlock>(guest.phys_mem(), block_device.mode);
     status = bus.Connect(block->pci_device(), device_loop.dispatcher(), true);
     if (status != ZX_OK) {
       return status;
