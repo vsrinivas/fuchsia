@@ -428,8 +428,9 @@ class View {
   /// the last loop early, then call ignore_error() instead of take_error().
   void ignore_error() { static_cast<void>(take_error()); }
 
-  /// Trivial accessor for the underlying Storage (view) object.
+  /// Trivial accessors for the underlying Storage (view) object.
   storage_type& storage() { return storage_; }
+  const storage_type& storage() const { return storage_; }
 
   class iterator {
    public:
