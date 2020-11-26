@@ -11,8 +11,8 @@
 
 #include <optional>
 
-#include <ddktl/protocol/platform/device.h>
 #include <ddktl/protocol/composite.h>
+#include <ddktl/protocol/platform/device.h>
 
 namespace ddk {
 
@@ -31,6 +31,14 @@ class PDev : public PDevProtocolClient {
       : PDevProtocolClient(composite, "ddk.protocol.platform.device.PDev") {}
 
   ~PDev() = default;
+
+  static zx_status_t CreateFromComposite(ddk::CompositeProtocolClient& composite, PDev* out) {
+    *out = PDev(composite);
+    if (!out->is_valid()) {
+      return ZX_ERR_NO_RESOURCES;
+    }
+    return ZX_OK;
+  }
 
   // Prints out information about the platform device.
   void ShowInfo();
