@@ -49,6 +49,7 @@ zx_library("ddk") {
   ]
   sources = [
     "io-buffer.c",
+    "macros.h",
     "mmio-buffer.c",
     "phys-iter.c",
   ]
@@ -65,10 +66,7 @@ zx_library("ddk") {
     # <ddk/trace/event.h> has #include <trace/internal/event_common.h>.
     #"//zircon/system/ulib/trace",
   ]
-  deps = [
-    "//zircon/public/lib/sync",
-    "//zircon/public/lib/zircon-internal",
-  ]
+  deps = [ "//zircon/public/lib/sync" ]
 
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
