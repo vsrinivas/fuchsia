@@ -73,12 +73,16 @@ protocol RingBuffer {
     /// Accessor for top level static properties.
     GetProperties() -> (RingBufferProperties properties);
 
-    /// Gets the ring buffer current position via a hanging get. The driver must immediately
-    /// respond to a client's first `WatchClockRecoveryPositionInfo` call, but will not respond to
-    /// subsequent client calls until the position information has changed from what was most
-    /// recently provided to that client. If `clock_recovery_notifications_per_ring` is not zero,
-    /// the driver will reply with its estimated position to be used for clock recovery at most at
+    /// Gets the ring buffer current position via a hanging get. The driver must respond to a
+    /// client's first `WatchClockRecoveryPositionInfo` call, but will not respond to subsequent
+    /// client calls until the position information has changed from what was most recently
+    /// provided to that client. The driver must not respond to a
+    /// `WatchClockRecoveryPositionInfo` until after it has replied to the `Start` command. If
+    /// `clock_recovery_notifications_per_ring` is not zero, the driver will reply with its
+    /// estimated position to be used for clock recovery at most at
     /// `clock_recovery_notifications_per_ring` frequency.
+    /// `WatchClockRecoveryPositionInfo` may only be called after `GetVmo` was called, hence a
+    /// `clock_recovery_notifications_per_ring` was specified.
     /// Must be delivered with timestamps that are monotonically increasing.
     WatchClockRecoveryPositionInfo() -> (RingBufferPositionInfo position_info);
 
@@ -100,7 +104,7 @@ protocol RingBuffer {
     Start() -> (zx.time start_time);
 
     /// Stop the ring buffer. Once this call's response is received, no further position
-    /// notifications will be sent until Start() is called again. TODO(fxbug.dev/39494): Add timestamp
-    /// parameter.
+    /// notifications will be sent until `Start` is called again.
+    // TODO(fxbug.dev/39494): Add timestamp parameter.
     Stop() -> ();
 };

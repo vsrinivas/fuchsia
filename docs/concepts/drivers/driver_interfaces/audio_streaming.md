@@ -537,8 +537,10 @@ or consumption position in the buffer. This position is expressed in bytes in
 the `position` field of the `RingBufferPositionInfo` struct sent on
 a reply to the `WatchClockRecoveryPositionInfo` message. The
 message also includes a `timestamp` field that contains the time (as
-zx::time) that this byte position was valid. `WatchClockRecoveryPositionInfo` replies
-must only be sent while the ring-buffer is started. Note, these position
+zx::time) that this byte position was valid. A `WatchClockRecoveryPositionInfo`
+request must only be sent after `clock_recovery_notifications_per_ring` has been
+specified in the `GetVmo` function and the `GetVmo` function has returned. Note,
+these position
 notifications indicate where in the buffer the driver has consumed or produced
 data, *not* the nominal playback or capture position (sometimes called the
 "write cursor" or "read cursor" respectively). The timing of their arrival is
