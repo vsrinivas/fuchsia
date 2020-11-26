@@ -329,21 +329,21 @@ pub mod hooks {
 
     /// Wrapper type to control how many `PaverEvent`s are unblocked.
     /// Dropping the `Throttle` will cause all subsequent Paver requests to panic.
-    pub struct Throttle(mpsc::UnboundedSender<()>);
+    pub struct Throttle(mpsc::UnboundedSender<PaverEvent>);
 
     impl Throttle {
-        pub fn emit_next_paver_event(&self) {
-            self.0.unbounded_send(()).expect("emit next paver event");
+        pub fn emit_next_paver_event(&self, expected_event: &PaverEvent) {
+            self.0.unbounded_send(expected_event.clone()).expect("emit next paver event");
         }
 
-        pub fn emit_next_n_paver_events(&self, n: usize) {
-            for _i in 0..n {
-                self.emit_next_paver_event();
+        pub fn emit_next_paver_events(&self, expected_events: &[PaverEvent]) {
+            for event in expected_events.iter() {
+                self.emit_next_paver_event(event);
             }
         }
     }
 
-    pub struct ThrottleHook(AsyncMutex<mpsc::UnboundedReceiver<()>>);
+    pub struct ThrottleHook(AsyncMutex<mpsc::UnboundedReceiver<PaverEvent>>);
 
     #[async_trait]
     impl Hook for ThrottleHook {
@@ -352,7 +352,8 @@ pub mod hooks {
             request: paver::BootManagerRequest,
         ) -> Option<paver::BootManagerRequest> {
             let mut recv = self.0.lock().await;
-            let () = recv.next().await.expect("receive unblock for boot manger");
+            let expected_event = recv.next().await.expect("receive unblock for boot manger");
+            assert_eq!(PaverEvent::from_boot_manager_request(&request), expected_event);
             Some(request)
         }
 
@@ -361,7 +362,8 @@ pub mod hooks {
             request: paver::DataSinkRequest,
         ) -> Option<paver::DataSinkRequest> {
             let mut recv = self.0.lock().await;
-            let () = recv.next().await.expect("receive unblock for data sink");
+            let expected_event = recv.next().await.expect("receive unblock for data sink");
+            assert_eq!(PaverEvent::from_data_sink_request(&request), expected_event);
             Some(request)
         }
     }
@@ -757,7 +759,9 @@ pub mod tests {
         // Since we called query_configuration_status first, the boot_manager method has the lock on
         // the `ThrottleHook`. Therefore, when we unblock the next event, we'll observe that
         // query_configuration_status is unblocked first.
-        let () = throttler.emit_next_paver_event();
+        let () = throttler.emit_next_paver_event(&PaverEvent::QueryConfigurationStatus {
+            configuration: paver::Configuration::A,
+        });
         assert_eq!(
             executor.run_until_stalled(&mut fut0).map(|fidl| fidl.unwrap()),
             Poll::Ready(Ok(paver::ConfigurationStatus::Healthy))
@@ -765,7 +769,7 @@ pub mod tests {
         assert_eq!(executor.run_until_stalled(&mut fut1).map(|fidl| fidl.unwrap()), Poll::Pending);
 
         // Unblock the remaining event.
-        let () = throttler.emit_next_paver_event();
+        let () = throttler.emit_next_paver_event(&PaverEvent::DataSinkFlush);
         assert_eq!(
             executor.run_until_stalled(&mut fut1).map(|fidl| fidl.unwrap()),
             Poll::Ready(Status::OK.into_raw())
