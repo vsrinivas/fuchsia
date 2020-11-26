@@ -26,11 +26,13 @@ bool FakeDdkSysmem::Init() {
   }
   // Avoid wasting fuzzer time outputting logs.
   fake_ddk::kMinLogSeverity = FX_LOG_FATAL;
-  // Pick a platform where AFBC textures will be used.
+  // Pick a platform where AFBC textures will be used. Also add a protected pool to test code that
+  // handles that specially (though protected allocations will always fail because the pool is never
+  // marked ready).
   static const sysmem_metadata_t metadata{
       .vid = PDEV_VID_AMLOGIC,
       .pid = PDEV_PID_AMLOGIC_S905D2,
-      .protected_memory_size = 0,
+      .protected_memory_size = 1024 * 1024,
       .contiguous_memory_size = 0,
   };
   ddk_.SetMetadata(&metadata, sizeof(metadata));
