@@ -57,18 +57,21 @@ async fn main() -> Result<(), Error> {
 
     while running.len() < 4 || capability_ready.len() < 1 {
         let event = event_stream.next().await?;
-        match event.event_type {
-            Some(Running::TYPE) => {
-                let event = Running::try_from(event).expect("convert to running");
-                info!("Got running event");
-                running.push(event.target_moniker().to_string());
+        if let Some(header) = &event.header {
+            match header.event_type {
+                Some(Running::TYPE) => {
+                    let event = Running::try_from(event).expect("convert to running");
+                    info!("Got running event");
+                    running.push(event.target_moniker().to_string());
+                }
+                Some(CapabilityReady::TYPE) => {
+                    let event =
+                        CapabilityReady::try_from(event).expect("convert to capability ready");
+                    info!("Got capability ready event");
+                    capability_ready.insert(event.target_moniker().to_string());
+                }
+                other => panic!("unexpected event type: {:?}", other),
             }
-            Some(CapabilityReady::TYPE) => {
-                let event = CapabilityReady::try_from(event).expect("convert to capability ready");
-                info!("Got capability ready event");
-                capability_ready.insert(event.target_moniker().to_string());
-            }
-            other => panic!("unexpected event type: {:?}", other),
         }
     }
 
@@ -93,17 +96,20 @@ async fn main() -> Result<(), Error> {
     let mut seen_marked_for_destruction = 0;
     while seen_marked_for_destruction != 3 {
         let event = event_stream.next().await?;
-        match event.event_type {
-            Some(CapabilityReady::TYPE) => {
-                // ignore. we could get a duplicate here.
-            }
-            Some(MarkedForDestruction::TYPE) => {
-                let _ =
-                    echo.echo_string(Some(&format!("{:?}", MarkedForDestruction::TYPE))).await?;
-                seen_marked_for_destruction += 1;
-            }
-            event => {
-                panic!("Got unexpected event type: {:?}", event);
+        if let Some(header) = event.header {
+            match header.event_type {
+                Some(CapabilityReady::TYPE) => {
+                    // ignore. we could get a duplicate here.
+                }
+                Some(MarkedForDestruction::TYPE) => {
+                    let _ = echo
+                        .echo_string(Some(&format!("{:?}", MarkedForDestruction::TYPE)))
+                        .await?;
+                    seen_marked_for_destruction += 1;
+                }
+                event => {
+                    panic!("Got unexpected event type: {:?}", event);
+                }
             }
         }
     }

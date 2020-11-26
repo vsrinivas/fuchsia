@@ -68,7 +68,7 @@ async fn main() {
         let event =
             EventMatcher::default().expect_match::<CapabilityReady>(&mut event_stream).await;
         let (node_clone, server_end) = fidl::endpoints::create_proxy().expect("create proxy");
-        match &event.result {
+        match event.result() {
             Ok(payload) if !seen.contains(&payload.name) => {
                 payload.node.clone(fio::CLONE_FLAG_SAME_RIGHTS, server_end).expect("clone node");
                 let directory = io_util::node_to_directory(node_clone).expect("node to directory");

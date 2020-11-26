@@ -95,13 +95,14 @@ pub mod tests {
         // Send a `Started` event.
         stream_server
             .on_event(fsys::Event {
-                event_type: Some(fsys::EventType::Started),
-                descriptor: Some(fsys::ComponentDescriptor {
+                header: Some(fsys::EventHeader {
+                    event_type: Some(fsys::EventType::Started),
                     moniker: Some("./foo:0/bar:0".to_string()),
                     component_url: Some("fuchsia-pkg://fuchsia.com/foo#meta/bar.cmx".to_string()),
-                    ..fsys::ComponentDescriptor::empty()
+                    timestamp: Some(zx::Time::get_monotonic().into_nanos()),
+                    ..fsys::EventHeader::empty()
                 }),
-                timestamp: Some(zx::Time::get_monotonic().into_nanos()),
+
                 ..fsys::Event::empty()
             })
             .expect("send started event ok");
@@ -109,11 +110,12 @@ pub mod tests {
         // Send a `Running` event.
         stream_server
             .on_event(fsys::Event {
-                event_type: Some(fsys::EventType::Running),
-                descriptor: Some(fsys::ComponentDescriptor {
+                header: Some(fsys::EventHeader {
+                    event_type: Some(fsys::EventType::Running),
                     moniker: Some("./foo:0/bar:0".to_string()),
                     component_url: Some("fuchsia-pkg://fuchsia.com/foo#meta/bar.cmx".to_string()),
-                    ..fsys::ComponentDescriptor::empty()
+                    timestamp: Some(zx::Time::get_monotonic().into_nanos()),
+                    ..fsys::EventHeader::empty()
                 }),
                 event_result: Some(fsys::EventResult::Payload(fsys::EventPayload::Running(
                     fsys::RunningPayload {
@@ -121,7 +123,6 @@ pub mod tests {
                         ..fsys::RunningPayload::empty()
                     },
                 ))),
-                timestamp: Some(zx::Time::get_monotonic().into_nanos()),
                 ..fsys::Event::empty()
             })
             .expect("send running event ok");
@@ -130,11 +131,12 @@ pub mod tests {
         let (node, _) = fidl::endpoints::create_request_stream::<NodeMarker>().unwrap();
         stream_server
             .on_event(fsys::Event {
-                event_type: Some(fsys::EventType::CapabilityReady),
-                descriptor: Some(fsys::ComponentDescriptor {
+                header: Some(fsys::EventHeader {
+                    event_type: Some(fsys::EventType::CapabilityReady),
                     moniker: Some("./foo:0/bar:0".to_string()),
                     component_url: Some("fuchsia-pkg://fuchsia.com/foo#meta/bar.cmx".to_string()),
-                    ..fsys::ComponentDescriptor::empty()
+                    timestamp: Some(zx::Time::get_monotonic().into_nanos()),
+                    ..fsys::EventHeader::empty()
                 }),
                 event_result: Some(fsys::EventResult::Payload(
                     fsys::EventPayload::CapabilityReady(fsys::CapabilityReadyPayload {
@@ -143,7 +145,6 @@ pub mod tests {
                         ..fsys::CapabilityReadyPayload::empty()
                     }),
                 )),
-                timestamp: Some(zx::Time::get_monotonic().into_nanos()),
                 ..fsys::Event::empty()
             })
             .expect("send diagnostics ready event ok");
@@ -151,13 +152,14 @@ pub mod tests {
         // Send a Stopped event.
         stream_server
             .on_event(fsys::Event {
-                event_type: Some(fsys::EventType::Stopped),
-                descriptor: Some(fsys::ComponentDescriptor {
+                header: Some(fsys::EventHeader {
+                    event_type: Some(fsys::EventType::Stopped),
                     moniker: Some("./foo:0/bar:0".to_string()),
                     component_url: Some("fuchsia-pkg://fuchsia.com/foo#meta/bar.cmx".to_string()),
-                    ..fsys::ComponentDescriptor::empty()
+                    timestamp: Some(zx::Time::get_monotonic().into_nanos()),
+                    ..fsys::EventHeader::empty()
                 }),
-                timestamp: Some(zx::Time::get_monotonic().into_nanos()),
+
                 ..fsys::Event::empty()
             })
             .expect("send stopped event ok");

@@ -310,15 +310,15 @@ impl LogManager {
     // TODO(fxbug.dev/54330): LogManager should have its own error type.
     fn source_identity_from_event(event: &fsys::Event) -> Result<Arc<SourceIdentity>, LogsError> {
         let target_moniker = event
-            .descriptor
+            .header
             .as_ref()
-            .and_then(|descriptor| descriptor.moniker.clone())
+            .and_then(|header| header.moniker.clone())
             .ok_or(EventError::MissingField("moniker"))?;
 
         let component_url = event
-            .descriptor
+            .header
             .as_ref()
-            .and_then(|descriptor| descriptor.component_url.clone())
+            .and_then(|header| header.component_url.clone())
             .ok_or(EventError::MissingField("component_url"))?;
 
         let mut source = SourceIdentity::empty();

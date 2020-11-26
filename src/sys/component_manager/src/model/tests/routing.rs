@@ -350,13 +350,13 @@ async fn capability_requested_event_at_parent() {
     // is './b:0'.
     assert_matches!(&event,
         fsys::Event {
-            descriptor: Some(fsys::ComponentDescriptor {
+            header: Some(fsys::EventHeader {
             moniker: Some(moniker), .. }), ..
         } if *moniker == "./b:0".to_string() );
 
     assert_matches!(&event,
         fsys::Event {
-            descriptor: Some(fsys::ComponentDescriptor {
+            header: Some(fsys::EventHeader {
             component_url: Some(component_url), .. }), ..
         } if *component_url == "test:///b".to_string() );
 

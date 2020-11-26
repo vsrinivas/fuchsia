@@ -42,11 +42,11 @@ pub fn create_capability_requested_event(
     capability: zx::Channel,
 ) -> fsys::Event {
     fsys::Event {
-        event_type: Some(fsys::EventType::CapabilityRequested),
-        descriptor: Some(fsys::ComponentDescriptor {
+        header: Some(fsys::EventHeader {
+            event_type: Some(fsys::EventType::CapabilityRequested),
             moniker: Some(target_moniker),
             component_url: Some(target_url),
-            ..fsys::ComponentDescriptor::empty()
+            ..fsys::EventHeader::empty()
         }),
         event_result: Some(fsys::EventResult::Payload(fsys::EventPayload::CapabilityRequested(
             fsys::CapabilityRequestedPayload {

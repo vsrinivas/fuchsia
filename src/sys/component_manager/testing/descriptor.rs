@@ -2,9 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {
-    crate::events::ExitStatus, anyhow::format_err, fidl_fuchsia_sys2 as fsys, std::convert::TryFrom,
-};
+use {crate::events::ExitStatus, fidl_fuchsia_sys2 as fsys, std::convert::TryFrom};
 
 #[derive(Clone, Eq, PartialEq, PartialOrd, Ord, Debug)]
 pub struct EventDescriptor {
@@ -20,9 +18,8 @@ impl TryFrom<&fsys::Event> for EventDescriptor {
 
     fn try_from(event: &fsys::Event) -> Result<Self, Self::Error> {
         // Construct the EventDescriptor from the Event
-        let event_type = Some(event.event_type.ok_or(format_err!("No event type"))?);
-        let target_moniker =
-            event.descriptor.as_ref().and_then(|descriptor| descriptor.moniker.clone());
+        let event_type = event.header.as_ref().and_then(|header| header.event_type.clone());
+        let target_moniker = event.header.as_ref().and_then(|header| header.moniker.clone());
         let capability_name = match &event.event_result {
             Some(fsys::EventResult::Payload(fsys::EventPayload::CapabilityReady(
                 fsys::CapabilityReadyPayload { name, .. },

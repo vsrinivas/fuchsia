@@ -186,18 +186,24 @@ impl From<i32> for ExitStatus {
 }
 
 #[derive(Debug)]
-struct ComponentDescriptor {
+struct EventHeader {
+    event_type: fsys::EventType,
     component_url: String,
     moniker: String,
+    timestamp: zx::Time,
 }
 
-impl TryFrom<fsys::ComponentDescriptor> for ComponentDescriptor {
+impl TryFrom<fsys::EventHeader> for EventHeader {
     type Error = anyhow::Error;
 
-    fn try_from(descriptor: fsys::ComponentDescriptor) -> Result<Self, Self::Error> {
-        let component_url = descriptor.component_url.ok_or(format_err!("No component url"))?;
-        let moniker = descriptor.moniker.ok_or(format_err!("No moniker"))?;
-        Ok(ComponentDescriptor { component_url, moniker })
+    fn try_from(header: fsys::EventHeader) -> Result<Self, Self::Error> {
+        let event_type = header.event_type.ok_or(format_err!("No event type"))?;
+        let component_url = header.component_url.ok_or(format_err!("No component url"))?;
+        let moniker = header.moniker.ok_or(format_err!("No moniker"))?;
+        let timestamp = zx::Time::from_nanos(
+            header.timestamp.ok_or(format_err!("Missing timestamp from the Event object"))?,
+        );
+        Ok(EventHeader { event_type, component_url, moniker, timestamp })
     }
 }
 
@@ -274,15 +280,14 @@ macro_rules! create_event {
             }
 
             pub struct $event_type {
-                descriptor: ComponentDescriptor,
+                header: EventHeader,
+                result: Result<[<$event_type Payload>], [<$event_type Error>]>,
                 handler: Option<fsys::HandlerProxy>,
-                timestamp: zx::Time,
-                pub result: Result<[<$event_type Payload>], [<$event_type Error>]>,
             }
 
             impl $event_type {
-                pub fn unwrap_payload<'a>(&'a self) -> &'a [<$event_type Payload>] {
-                    self.result.as_ref().unwrap()
+                pub fn result<'a>(&'a self) -> Result<&'a [<$event_type Payload>], &'a [<$event_type Error>]> {
+                    self.result.as_ref()
                 }
 
                 $(
@@ -304,15 +309,15 @@ macro_rules! create_event {
                 const NAME: &'static str = stringify!($event_name);
 
                 fn target_moniker(&self) -> &str {
-                    &self.descriptor.moniker
+                    &self.header.moniker
                 }
 
                 fn component_url(&self) -> &str {
-                    &self.descriptor.component_url
+                    &self.header.component_url
                 }
 
                 fn timestamp(&self) -> zx::Time {
-                    self.timestamp
+                    self.header.timestamp
                 }
 
                 fn is_ok(&self) -> bool {
@@ -404,26 +409,17 @@ macro_rules! create_event {
                     }?;
 
                     let event = {
-                        // Event type in event must match what is expected
-                        let event_type = event.event_type.ok_or(
-                            format_err!("Missing event_type from Event object")
-                        )?;
+                        let header = event.header
+                            .ok_or(format_err!("Missing Event header"))
+                            .and_then(|header| EventHeader::try_from(header))?;
 
-                        if event_type != Self::TYPE {
+                        if header.event_type != Self::TYPE {
                             return Err(format_err!("Incorrect event type"));
                         }
 
-                        let descriptor = event.descriptor
-                            .ok_or(format_err!("Missing descriptor Event object"))
-                            .and_then(|descriptor| ComponentDescriptor::try_from(descriptor))?;
-
-                        let timestamp = zx::Time::from_nanos(event.timestamp.ok_or(
-                            format_err!("Missing timestamp from the Event object")
-                        )?);
-
                         let handler = event.handler.map(|h| h.into_proxy()).transpose()?;
 
-                        $event_type { descriptor,  handler,  timestamp, result }
+                        $event_type { header,  handler, result }
                     };
                     Ok(event)
                 }

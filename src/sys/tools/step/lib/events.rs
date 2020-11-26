@@ -12,10 +12,10 @@ use {
 /// Prints detailed description of an `event`
 fn print_event_details(index: usize, event: &fsys::Event) {
     println!("------- EVENT {} -------", index);
-    let descriptor = event.descriptor.as_ref().unwrap();
-    let moniker = descriptor.moniker.as_ref().unwrap();
-    let component_url = descriptor.component_url.as_ref().unwrap();
-    println!("Timestamp: {}", event.timestamp.unwrap());
+    let header = event.header.as_ref().unwrap();
+    let moniker = header.moniker.as_ref().unwrap();
+    let component_url = header.component_url.as_ref().unwrap();
+    println!("Timestamp: {}", header.timestamp.unwrap());
     println!("Origin: \"{}\" ({})", moniker, component_url);
 
     match &event.event_result {
@@ -33,9 +33,9 @@ fn print_event_details(index: usize, event: &fsys::Event) {
 
 /// Prints a one-line summary of an `event`
 fn print_event_summary(index: usize, event: &fsys::Event) {
-    let descriptor = event.descriptor.as_ref().unwrap();
-    let moniker = descriptor.moniker.as_ref().unwrap();
-    let event_type = event.event_type.unwrap();
+    let header = event.header.as_ref().unwrap();
+    let moniker = header.moniker.as_ref().unwrap();
+    let event_type = header.event_type.unwrap();
     println!("{}: {:?} ({})", index, event_type, moniker);
 }
 

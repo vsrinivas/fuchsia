@@ -8,7 +8,7 @@ use {
     fidl_fuchsia_inspect::TreeProxy,
     fidl_fuchsia_inspect_deprecated::InspectProxy,
     fidl_fuchsia_io::DirectoryProxy,
-    fidl_fuchsia_sys2::{self as fsys, ComponentDescriptor, Event},
+    fidl_fuchsia_sys2::{self as fsys, Event, EventHeader},
     fidl_fuchsia_sys_internal::SourceIdentity,
     fidl_table_validation::*,
     fuchsia_zircon as zx,
@@ -172,27 +172,23 @@ pub struct ValidatedSourceIdentity {
 }
 
 #[derive(Debug, ValidFidlTable)]
-#[fidl_table_src(ComponentDescriptor)]
-pub struct ValidatedComponentDescriptor {
+#[fidl_table_src(EventHeader)]
+pub struct ValidatedEventHeader {
+    pub event_type: fsys::EventType,
     pub component_url: String,
     pub moniker: String,
+    pub timestamp: i64,
 }
 
 #[derive(Debug, ValidFidlTable)]
 #[fidl_table_src(Event)]
 pub struct ValidatedEvent {
-    /// Event type corresponding to the event
-    pub event_type: fsys::EventType,
-
     /// Information about the component for which this event was generated.
-    pub descriptor: ValidatedComponentDescriptor,
+    pub header: ValidatedEventHeader,
 
     /// Optional payload for some event types
     #[fidl_field_type(optional)]
     pub event_result: Option<fsys::EventResult>,
-
-    /// Time when the event occurred.
-    pub timestamp: i64,
 }
 
 /// The ID of a component as used in components V1.
@@ -307,12 +303,12 @@ impl TryFrom<Event> for ComponentEvent {
         let event: ValidatedEvent = ValidatedEvent::try_from(event)?;
 
         let shared_data = EventMetadata {
-            component_id: ComponentIdentifier::Moniker(event.descriptor.moniker.clone()),
-            component_url: event.descriptor.component_url.clone(),
-            timestamp: zx::Time::from_nanos(event.timestamp),
+            component_id: ComponentIdentifier::Moniker(event.header.moniker.clone()),
+            component_url: event.header.component_url.clone(),
+            timestamp: zx::Time::from_nanos(event.header.timestamp),
         };
 
-        match event.event_type {
+        match event.header.event_type {
             fsys::EventType::Started => {
                 let start_event = StartEvent { metadata: shared_data };
                 Ok(ComponentEvent::Start(start_event))
@@ -324,7 +320,7 @@ impl TryFrom<Event> for ComponentEvent {
             fsys::EventType::CapabilityReady | fsys::EventType::Running => {
                 construct_payload_holding_component_event(event, shared_data)
             }
-            _ => Err(format_err!("Unexpected type: {:?}", event.event_type)),
+            _ => Err(format_err!("Unexpected type: {:?}", event.header.event_type)),
         }
     }
 }

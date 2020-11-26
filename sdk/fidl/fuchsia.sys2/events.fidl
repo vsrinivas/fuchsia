@@ -297,32 +297,32 @@ table StoppedPayload {
     1: zx.status status;
 };
 
-/// A descriptor providing metadata about a target component instance.
-table ComponentDescriptor {
+/// A head providing metadata about a target component instance.
+table EventHeader {
+    /// Event type corresponding to the event
+    1: EventType event_type;
+
     /// Relative moniker identifying the component instance. Relative to the scope of the event.
-    1: string:fuchsia.component.MAX_MONIKER_LENGTH moniker;
+    2: string:fuchsia.component.MAX_MONIKER_LENGTH moniker;
 
     /// URL used to resolve the component.
-    2: fuchsia.url.Url component_url;
+    3: fuchsia.url.Url component_url;
+
+    /// Time when the event occurred.
+    4: zx.time timestamp;
 };
 
 /// Contains all information about a single event
 resource table Event {
-    /// Event type corresponding to the event
-    1: EventType event_type;
-
     /// Information about the component for which this event was generated.
-    2: ComponentDescriptor descriptor;
+    1: EventHeader header;
+
+    /// Optional payload for some event types
+    2: EventResult event_result;
 
     /// Handler for resuming from event
     /// This will be absent if this is an async event.
     3: Handler handler;
-
-    /// Optional payload for some event types
-    4: EventResult event_result;
-
-    /// Time when the event occurred.
-    5: zx.time timestamp;
 };
 
 /// Subscribe to events in component manager.

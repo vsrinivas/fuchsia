@@ -58,7 +58,7 @@ pub trait CapabilityInjector: 'static + Send + Sync {
                 };
 
                 // An event was found! Inject the route.
-                if event.result.is_ok() {
+                if event.is_ok() {
                     let provider_client_end = injector.clone().route();
                     event
                         .protocol_proxy()

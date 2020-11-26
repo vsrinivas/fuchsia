@@ -65,7 +65,7 @@ pub trait ProtocolInterposer: 'static + Send + Sync {
                             };
 
                         // An event was found! Inject the route.
-                        if event.result.is_ok() {
+                        if event.is_ok() {
                             let (provider_client_end, server_end) = self.clone().route();
                             event
                                 .protocol_proxy()

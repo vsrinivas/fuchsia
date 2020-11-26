@@ -310,25 +310,18 @@ fn maybe_create_empty_error_payload(error: &EventError) -> Option<fsys::EventRes
 /// Creates the basic FIDL Event object containing the event type, target_realm
 /// and basic handler for resumption.
 async fn create_event_fidl_object(event: Event) -> Result<fsys::Event, fidl::Error> {
-    let event_type = Some(event.event.event_type().into());
-    let timestamp = Some(event.event.timestamp.into_nanos());
     let target_relative_moniker =
         RelativeMoniker::from_absolute(&event.scope_moniker, &event.event.target_moniker);
-    let descriptor = Some(fsys::ComponentDescriptor {
+    let header = Some(fsys::EventHeader {
+        event_type: Some(event.event.event_type().into()),
         moniker: Some(target_relative_moniker.to_string()),
         component_url: Some(event.event.component_url.clone()),
-        ..fsys::ComponentDescriptor::empty()
+        timestamp: Some(event.event.timestamp.into_nanos()),
+        ..fsys::EventHeader::empty()
     });
     let event_result = maybe_create_event_result(&event.scope_moniker, &event.event.result).await?;
     let handler = maybe_serve_handler_async(event);
-    Ok(fsys::Event {
-        event_type,
-        descriptor,
-        handler,
-        event_result,
-        timestamp,
-        ..fsys::Event::empty()
-    })
+    Ok(fsys::Event { header, handler, event_result, ..fsys::Event::empty() })
 }
 
 /// Serves the server end of the RoutingProtocol FIDL protocol asynchronously.
