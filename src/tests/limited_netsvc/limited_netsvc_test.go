@@ -7,6 +7,7 @@ package main
 import (
 	"context"
 	"crypto/rand"
+	"encoding/hex"
 	"fmt"
 	"net"
 	"os"
@@ -75,18 +76,12 @@ func attemptNetcp(t *testing.T, i *emulator.Instance, shouldWork bool) {
 		"/tmp/vdso")
 }
 
-func randomTokenAsString() string {
-	b := make([]byte, 32)
-	_, err := rand.Read(b)
-	if err != nil {
-		panic(err)
+func randomTokenAsString(t *testing.T) string {
+	b := [32]byte{}
+	if _, err := rand.Read(b[:]); err != nil {
+		t.Fatal(err)
 	}
-
-	ret := ""
-	for i := 0; i < 32; i++ {
-		ret += fmt.Sprintf("%x", b[i])
-	}
-	return ret
+	return hex.EncodeToString(b[:])
 }
 
 func attemptNetruncmd(t *testing.T, i *emulator.Instance, shouldWork bool) {
@@ -94,7 +89,7 @@ func attemptNetruncmd(t *testing.T, i *emulator.Instance, shouldWork bool) {
 	defer cancel()
 
 	name := toolPath(t, "netruncmd")
-	tokenFromNetruncmd := randomTokenAsString()
+	tokenFromNetruncmd := randomTokenAsString(t)
 	cmd := exec.CommandContext(ctx, name, defaultNodename, tokenFromNetruncmd)
 
 	err := cmd.Run()
@@ -103,7 +98,7 @@ func attemptNetruncmd(t *testing.T, i *emulator.Instance, shouldWork bool) {
 	}
 
 	time.Sleep(time.Second)
-	tokenFromSerial := randomTokenAsString()
+	tokenFromSerial := randomTokenAsString(t)
 	i.RunCommand("echo '" + tokenFromSerial + "'")
 
 	if shouldWork {

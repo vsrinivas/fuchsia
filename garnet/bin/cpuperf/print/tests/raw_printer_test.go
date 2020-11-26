@@ -5,18 +5,14 @@
 package tests
 
 import (
+	"bytes"
+	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
-	"path"
+	"os/exec"
 	"path/filepath"
 	"testing"
-)
-
-const (
-	sessionFilename        = "raw-test.cpsession"
-	expectedOutputFilename = "raw-expected-output.txt"
-	printerProgram         = "cpuperf_print"
-	outputTempFile         = "raw-printer-test."
 )
 
 func TestRawPrinter(t *testing.T) {
@@ -25,29 +21,33 @@ func TestRawPrinter(t *testing.T) {
 		t.Fatal(err)
 	}
 	outDir := filepath.Dir(testPath)
-	printerProgramPath := path.Join(outDir, printerProgram)
-	testDataDir := path.Join(outDir, "test_data", "cpuperf")
-	sessionSpecPath := path.Join(testDataDir, sessionFilename)
-	expectedOutputPath := path.Join(testDataDir, expectedOutputFilename)
+	testDataDir := filepath.Join(outDir, "test_data", "cpuperf")
+	sessionSpecPath := filepath.Join(testDataDir, "raw-test.cpsession")
 
-	outputFile, err := ioutil.TempFile("", outputTempFile)
-	if err != nil {
-		t.Fatalf("Error creating output file: %s", err.Error())
-	}
-	defer os.Remove(outputFile.Name())
-	defer outputFile.Close()
-
+	got := bytes.Buffer{}
 	// Pass --quiet so INFO lines, which contain source line numbers
 	// and the output path prefix, won't cause erroneous failures.
 	args := []string{"--session=" + sessionSpecPath, "--quiet", "--log-file=test.log"}
-	err = runCommandWithOutputToFile(printerProgramPath, args,
-		outputFile)
-	if err != nil {
-		t.Fatal(err)
-	}
+	runCommandWithOutputToFile(t, filepath.Join(outDir, "cpuperf_print"), args, &got)
 
-	err = compareFiles(expectedOutputPath, outputFile.Name())
+	want, err := ioutil.ReadFile(filepath.Join(testDataDir, "raw-expected-output.txt"))
 	if err != nil {
-		t.Fatalf("Error comparing output with expected output: %v", err)
+		t.Error(err)
+	}
+	if !bytes.Equal(want, got.Bytes()) {
+		t.Fatalf("Unexpected output.\nwant:\n%s\ngot:\n%s", want, got.Bytes())
+	}
+}
+
+func runCommandWithOutputToFile(t *testing.T, command string, args []string, output io.Writer) {
+	// This doesn't use testing.Logf or some such because we always
+	// want to see this, especially when run on bots.
+	fmt.Printf("Running %s %v\n", command, args)
+	cmd := exec.Command(command, args...)
+	// There's no point to distinguishing stdout,stderr here.
+	cmd.Stdout = output
+	cmd.Stderr = output
+	if err := cmd.Run(); err != nil {
+		t.Fatalf("Running %s failed: %s", command, err)
 	}
 }

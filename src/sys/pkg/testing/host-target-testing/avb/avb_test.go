@@ -9,34 +9,20 @@ import (
 	"context"
 	"fmt"
 	"io/ioutil"
-	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
 
-func createScript(fileName string) (script string, err error) {
-	file, err := ioutil.TempFile("", fileName)
-	if err != nil {
-		return "", err
+// createScript returns the path to a bash script that outputs its name and
+// all its arguments.
+func createScript(t *testing.T) string {
+	name := filepath.Join(t.TempDir(), "avbtool.sh")
+	contents := "#!/bin/bash\necho \"$0 $@\"\n"
+	if err := ioutil.WriteFile(name, []byte(contents), 0o700); err != nil {
+		t.Fatal(err)
 	}
-	defer file.Close()
-
-	// Script outputs its name and all its arguments.
-	contents := `#!/bin/bash
-echo "$0 $@"
-`
-
-	if _, err := file.Write([]byte(contents)); err != nil {
-		os.Remove(file.Name())
-		return "", err
-	}
-
-	if err := file.Chmod(0744); err != nil {
-		os.Remove(file.Name())
-		return "", err
-	}
-
-	return file.Name(), nil
+	return name
 }
 
 func checkEq(t *testing.T, name string, actual string, expected string) {
@@ -55,31 +41,23 @@ func checkContains(t *testing.T, name string, needle string, haystack []string) 
 }
 
 func TestNoProperties(t *testing.T) {
-	avbtoolScript, err := createScript("avbtool.*.sh")
-	if err != nil {
-		t.Fatalf("Failed to create script: %s", err)
+	avbtoolScript := createScript(t)
+	dir := t.TempDir()
+	avbKey := filepath.Join(dir, "avbkey")
+	if err := ioutil.WriteFile(avbKey, nil, 0o600); err != nil {
+		t.Fatal(err)
 	}
-	defer os.Remove(avbtoolScript)
-
-	avbKey, err := ioutil.TempFile("", "")
-	if err != nil {
-		t.Fatalf("Failed to create key file: %s", err)
+	avbMetadata := filepath.Join(dir, "avbmetadata")
+	if err := ioutil.WriteFile(avbMetadata, nil, 0o600); err != nil {
+		t.Fatal(err)
 	}
-	defer os.Remove(avbKey.Name())
-
-	avbMetadata, err := ioutil.TempFile("", "")
-	if err != nil {
-		t.Fatalf("Failed to create metadata file: %s", err)
-	}
-	defer os.Remove(avbMetadata.Name())
-
 	var output bytes.Buffer
-	avbTool, err := newAVBToolWithStdout(avbtoolScript, avbKey.Name(), avbMetadata.Name(), &output)
+	avbTool, err := newAVBToolWithStdout(avbtoolScript, avbKey, avbMetadata, &output)
 	if err != nil {
 		t.Fatalf("Failed to create AVBTool: %s", err)
 	}
 
-	err = avbTool.MakeVBMetaImage(context.Background(), "destination/path", "source/path", map[string]string{})
+	err = avbTool.MakeVBMetaImage(context.Background(), filepath.Join("destination", "path"), filepath.Join("source", "path"), map[string]string{})
 	if err != nil {
 		t.Fatalf("Failed to add properties: %s", err)
 	}
@@ -121,47 +99,40 @@ func TestNoProperties(t *testing.T) {
 
 	checkEq(t, "source path", srcPath, "source/path")
 	checkEq(t, "destination path", destPath, "destination/path")
-	checkEq(t, "key path", keyPath, avbKey.Name())
-	checkEq(t, "key metadata path", keyMetadataPath, avbMetadata.Name())
+	checkEq(t, "key path", keyPath, avbKey)
+	checkEq(t, "key metadata path", keyMetadataPath, avbMetadata)
 	checkEq(t, "algorithm", algorithm, "SHA512_RSA4096")
 }
 
 func TestProperties(t *testing.T) {
-	avbtoolScript, err := createScript("avbtool.*.sh")
-	if err != nil {
-		t.Fatalf("Failed to create script: %s", err)
+	avbtoolScript := createScript(t)
+	dir := t.TempDir()
+	avbKey := filepath.Join(dir, "avbkey")
+	if err := ioutil.WriteFile(avbKey, nil, 0o600); err != nil {
+		t.Fatal(err)
 	}
-	defer os.Remove(avbtoolScript)
-
-	avbKey, err := ioutil.TempFile("", "")
-	if err != nil {
-		t.Fatalf("Failed to create key file: %s", err)
+	avbMetadata := filepath.Join(dir, "avbmetadata")
+	if err := ioutil.WriteFile(avbMetadata, nil, 0o600); err != nil {
+		t.Fatal(err)
 	}
-	defer os.Remove(avbKey.Name())
-
-	avbMetadata, err := ioutil.TempFile("", "")
-	if err != nil {
-		t.Fatalf("Failed to create metadata file: %s", err)
-	}
-	defer os.Remove(avbMetadata.Name())
-
 	var output bytes.Buffer
-	avbTool, err := newAVBToolWithStdout(avbtoolScript, avbKey.Name(), avbMetadata.Name(), &output)
+	avbTool, err := newAVBToolWithStdout(avbtoolScript, avbKey, avbMetadata, &output)
 	if err != nil {
 		t.Fatalf("Failed to create AVBTool: %s", err)
 	}
 
-	propFile1, err := ioutil.TempFile("", "")
-	defer os.Remove(propFile1.Name())
-	propFile2, err := ioutil.TempFile("", "")
-	defer os.Remove(propFile2.Name())
-	propFile3, err := ioutil.TempFile("", "")
-	defer os.Remove(propFile3.Name())
-
+	propFile1 := filepath.Join(dir, "prop1")
+	propFile2 := filepath.Join(dir, "prop2")
+	propFile3 := filepath.Join(dir, "prop3")
+	for _, p := range []string{propFile1, propFile2, propFile3} {
+		if err := ioutil.WriteFile(p, nil, 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
 	err = avbTool.MakeVBMetaImage(context.Background(), "destination/path", "source/path", map[string]string{
-		"key1": propFile1.Name(),
-		"key2": propFile2.Name(),
-		"key3": propFile3.Name(),
+		"key1": propFile1,
+		"key2": propFile2,
+		"key3": propFile3,
 	})
 	if err != nil {
 		t.Fatalf("Failed to add properties: %s", err)
@@ -209,14 +180,14 @@ func TestProperties(t *testing.T) {
 
 	checkEq(t, "source path", srcPath, "source/path")
 	checkEq(t, "destination path", destPath, "destination/path")
-	checkEq(t, "key path", keyPath, avbKey.Name())
-	checkEq(t, "key metadata path", keyMetadataPath, avbMetadata.Name())
+	checkEq(t, "key path", keyPath, avbKey)
+	checkEq(t, "key metadata path", keyMetadataPath, avbMetadata)
 	checkEq(t, "algorithm", algorithm, "SHA512_RSA4096")
 
 	if len(prop_from_files) != 3 {
 		t.Fatal("Incorrect number of prop_from_file arguments")
 	}
-	checkContains(t, "first property", fmt.Sprintf("key1:%s", propFile1.Name()), prop_from_files)
-	checkContains(t, "second property", fmt.Sprintf("key2:%s", propFile2.Name()), prop_from_files)
-	checkContains(t, "third property", fmt.Sprintf("key3:%s", propFile3.Name()), prop_from_files)
+	checkContains(t, "first property", fmt.Sprintf("key1:%s", propFile1), prop_from_files)
+	checkContains(t, "second property", fmt.Sprintf("key2:%s", propFile2), prop_from_files)
+	checkContains(t, "third property", fmt.Sprintf("key3:%s", propFile3), prop_from_files)
 }

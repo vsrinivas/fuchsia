@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 	"math/rand"
 	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -28,29 +29,18 @@ func setUp(t *testing.T) (string, []byte, *rand.Rand) {
 	r := rand.New(rand.NewSource(seed))
 
 	buf := make([]byte, fileSize)
-	r.Read(buf)
-
-	tmpFile, err := ioutil.TempFile("", "file_test")
-	if err != nil {
-		t.Fatal("Error creating temp file: ", err)
+	if _, err := r.Read(buf); err != nil {
+		t.Fatal(err)
 	}
-
-	name := tmpFile.Name()
-
-	if _, err := tmpFile.Write(buf); err != nil {
-		t.Fatal("Error writing random data to temp file: ", err)
+	name := filepath.Join(t.TempDir(), "file_test")
+	if err := ioutil.WriteFile(name, buf, 0o600); err != nil {
+		t.Fatal(err)
 	}
-
-	if err := tmpFile.Close(); err != nil {
-		t.Fatal("Error closing temp file: ", err)
-	}
-
 	return name, buf, r
 }
 
 func TestReadAt(t *testing.T) {
 	name, buf, r := setUp(t)
-	defer os.Remove(name)
 
 	f, err := os.OpenFile(name, os.O_RDWR, 0666)
 	if err != nil {
@@ -72,15 +62,14 @@ func TestReadAt(t *testing.T) {
 
 func TestWriteAt(t *testing.T) {
 	name, buf, r := setUp(t)
-	defer os.Remove(name)
 
 	f, err := os.OpenFile(name, os.O_RDWR, 0666)
 	if err != nil {
 		t.Fatal("Error opening TempFile: ", err)
 	}
+	defer f.Close()
 	file, err := New(f, defaultBlockSize)
 	if err != nil {
-		f.Close()
 		t.Fatal("Error creating File: ", err)
 	}
 	defer func() {
@@ -94,7 +83,6 @@ func TestWriteAt(t *testing.T) {
 
 func TestErrorPaths(t *testing.T) {
 	name, _, _ := setUp(t)
-	defer os.Remove(name)
 
 	f, err := os.OpenFile(name, os.O_RDWR, 0666)
 	if err != nil {
@@ -116,7 +104,6 @@ func TestErrorPaths(t *testing.T) {
 
 func TestRangeReadWrite(t *testing.T) {
 	name, _, _ := setUp(t)
-	defer os.Remove(name)
 
 	f, err := os.OpenFile(name, os.O_RDWR, 0666)
 	if err != nil {

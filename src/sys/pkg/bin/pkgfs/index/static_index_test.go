@@ -5,33 +5,24 @@
 package index
 
 import (
-	"fmt"
-	"io/ioutil"
-	"os"
 	"reflect"
 	"sort"
+	"strings"
 	"testing"
 
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/bin/pm/pkg"
 )
 
+const lotsOf2s = "2222222222222222222222222222222222222222222222222222222222222222"
+
 func setUpStaticIndex(t *testing.T) (*StaticIndex, pkg.Package) {
-	f, err := ioutil.TempFile("", t.Name())
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.Remove(f.Name())
-
-	fmt.Fprintf(f, "a/0=331e2e4b22e61fba85c595529103f957d7fe19731a278853361975d639a1bdd8\n")
-	f.Seek(0, os.SEEK_SET)
-
+	f := strings.NewReader("a/0=331e2e4b22e61fba85c595529103f957d7fe19731a278853361975d639a1bdd8\n")
 	si := NewStatic()
 	systemImage := pkg.Package{
 		Name:    "system_image",
 		Version: "0",
 	}
-	err = si.LoadFrom(f, systemImage, "2222222222222222222222222222222222222222222222222222222222222222")
-	if err != nil {
+	if err := si.LoadFrom(f, systemImage, lotsOf2s); err != nil {
 		t.Fatal(err)
 	}
 	return si, systemImage
@@ -124,23 +115,15 @@ func TestStaticUpdatesShownInListVersions(t *testing.T) {
 }
 
 func TestHasName(t *testing.T) {
-	f, err := ioutil.TempFile("", t.Name())
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.Remove(f.Name())
-
-	fmt.Fprintf(f, "static/0=0000000000000000000000000000000000000000000000000000000000000000\n")
-	fmt.Fprintf(f, "update/0=0000000000000000000000000000000000000000000000000000000000000001\n")
-	f.Seek(0, os.SEEK_SET)
-
+	f := strings.NewReader(
+		"static/0=0000000000000000000000000000000000000000000000000000000000000000\n" +
+			"update/0=0000000000000000000000000000000000000000000000000000000000000001\n")
 	si := NewStatic()
 	systemImage := pkg.Package{
 		Name:    "system_image",
 		Version: "0",
 	}
-	err = si.LoadFrom(f, systemImage, "2222222222222222222222222222222222222222222222222222222222222222")
-	if err != nil {
+	if err := si.LoadFrom(f, systemImage, lotsOf2s); err != nil {
 		t.Fatal(err)
 	}
 
@@ -172,23 +155,16 @@ func TestHasName(t *testing.T) {
 }
 
 func TestHasStaticRoot(t *testing.T) {
-	f, err := ioutil.TempFile("", t.Name())
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.Remove(f.Name())
-
-	fmt.Fprintf(f, "static/0=0000000000000000000000000000000000000000000000000000000000000000\n")
-	fmt.Fprintf(f, "update/0=0000000000000000000000000000000000000000000000000000000000000001\n")
-	f.Seek(0, os.SEEK_SET)
-
+	f := strings.NewReader(
+		"static/0=0000000000000000000000000000000000000000000000000000000000000000\n" +
+			"update/0=0000000000000000000000000000000000000000000000000000000000000001\n")
 	si := NewStatic()
 	systemImage := pkg.Package{
 		Name:    "system_image",
 		Version: "0",
 	}
-	err = si.LoadFrom(f, systemImage, "2222222222222222222222222222222222222222222222222222222222222222")
-	if err != nil {
+
+	if err := si.LoadFrom(f, systemImage, lotsOf2s); err != nil {
 		t.Fatal(err)
 	}
 

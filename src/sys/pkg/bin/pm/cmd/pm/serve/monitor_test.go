@@ -25,12 +25,7 @@ func makeTestMetadata(version int) []byte {
 }
 
 func TestMetadataMissingShutdown(t *testing.T) {
-	dir, err := ioutil.TempDir("", "pm-serve-monitor-test")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(dir)
-
+	dir := t.TempDir()
 	w, err := fswatch.NewWatcher()
 	if err != nil {
 		t.Fatal(err)
@@ -42,14 +37,9 @@ func TestMetadataMissingShutdown(t *testing.T) {
 }
 
 func TestMetadataPresentShutdown(t *testing.T) {
-	dir, err := ioutil.TempDir("", "pm-serve-monitor-test")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(dir)
-
+	dir := t.TempDir()
 	metadataPath := filepath.Join(dir, "metadata.json")
-	if err := ioutil.WriteFile(metadataPath, makeTestMetadata(10), 0644); err != nil {
+	if err := ioutil.WriteFile(metadataPath, makeTestMetadata(10), 0o600); err != nil {
 		t.Fatal(err)
 	}
 
@@ -65,14 +55,9 @@ func TestMetadataPresentShutdown(t *testing.T) {
 
 func TestMetadataMonitor(t *testing.T) {
 	defer pushPopMonitorPollInterval(20 * time.Millisecond)()
-	dir, err := ioutil.TempDir("", "pm-serve-monitor-test")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(dir)
-
+	dir := t.TempDir()
 	metadataPath := filepath.Join(dir, "metadata.json")
-	if err := ioutil.WriteFile(metadataPath, makeTestMetadata(1), 0644); err != nil {
+	if err := ioutil.WriteFile(metadataPath, makeTestMetadata(1), 0o600); err != nil {
 		t.Fatal(err)
 	}
 
@@ -100,7 +85,7 @@ func TestMetadataMonitor(t *testing.T) {
 	})
 
 	t.Run("writing with same version does not send an event", func(t *testing.T) {
-		if err := ioutil.WriteFile(metadataPath, makeTestMetadata(1), 0644); err != nil {
+		if err := ioutil.WriteFile(metadataPath, makeTestMetadata(1), 0o600); err != nil {
 			t.Fatal(err)
 		}
 
@@ -112,7 +97,7 @@ func TestMetadataMonitor(t *testing.T) {
 	})
 
 	t.Run("writing with different version does send an event", func(t *testing.T) {
-		if err := ioutil.WriteFile(metadataPath, makeTestMetadata(2), 0644); err != nil {
+		if err := ioutil.WriteFile(metadataPath, makeTestMetadata(2), 0o600); err != nil {
 			t.Fatal(err)
 		}
 
@@ -132,7 +117,7 @@ func TestMetadataMonitor(t *testing.T) {
 		case <-time.After(time.Millisecond):
 		}
 
-		if err := ioutil.WriteFile(metadataPath, makeTestMetadata(3), 0644); err != nil {
+		if err := ioutil.WriteFile(metadataPath, makeTestMetadata(3), 0o600); err != nil {
 			t.Fatal(err)
 		}
 		metadata := <-monitor.Events
@@ -151,7 +136,7 @@ func TestMetadataMonitor(t *testing.T) {
 		case <-time.After(time.Millisecond):
 		}
 
-		if err := ioutil.WriteFile(metadataPath, makeTestMetadata(4), 0644); err != nil {
+		if err := ioutil.WriteFile(metadataPath, makeTestMetadata(4), 0o600); err != nil {
 			t.Fatal(err)
 		}
 		metadata := <-monitor.Events
@@ -164,14 +149,9 @@ func TestMetadataMonitor(t *testing.T) {
 
 func TestMetadataMonitorResetsStateOnInvalidData(t *testing.T) {
 	defer pushPopMonitorPollInterval(20 * time.Millisecond)()
-	dir, err := ioutil.TempDir("", "pm-serve-monitor-test")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(dir)
-
+	dir := t.TempDir()
 	metadataPath := filepath.Join(dir, "metadata.json")
-	if err := ioutil.WriteFile(metadataPath, makeTestMetadata(1), 0644); err != nil {
+	if err := ioutil.WriteFile(metadataPath, makeTestMetadata(1), 0o600); err != nil {
 		t.Fatal(err)
 	}
 
@@ -186,7 +166,7 @@ func TestMetadataMonitorResetsStateOnInvalidData(t *testing.T) {
 
 	// Writing invalid metadata doesn't trigger an event, but the monitor does forget about the
 	// previous contents.
-	if err := ioutil.WriteFile(metadataPath, []byte("bad metadata"), 0644); err != nil {
+	if err := ioutil.WriteFile(metadataPath, []byte("bad metadata"), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	monitor.HandleEvent(fswatch.Event{
@@ -201,7 +181,7 @@ func TestMetadataMonitorResetsStateOnInvalidData(t *testing.T) {
 
 	// Rewriting the same file results in an event as it went from an invalid state to a valid
 	// one.
-	if err := ioutil.WriteFile(metadataPath, makeTestMetadata(1), 0644); err != nil {
+	if err := ioutil.WriteFile(metadataPath, makeTestMetadata(1), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	go monitor.HandleEvent(fswatch.Event{

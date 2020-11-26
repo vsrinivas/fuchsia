@@ -46,15 +46,12 @@ var roleJsons = []string{"root.json", "timestamp.json", "targets.json", "snapsho
 var merklePat = regexp.MustCompile("^[0-9a-f]{64}$")
 
 func TestInitRepoWithCreate_no_directory(t *testing.T) {
-	repoDir, err := ioutil.TempDir("", "publish-test-repo")
-	if err != nil {
-		t.Fatalf("Couldn't create test repo directory.")
-	}
-	// remove the repository directory that tempdir just created, as we want to
+	repoDir := t.TempDir()
+	// Remove the repository directory that tempdir just created, as we want to
 	// check that a new one is created.
-	os.RemoveAll(repoDir)
-	defer os.RemoveAll(repoDir)
-
+	if err := os.RemoveAll(repoDir); err != nil {
+		t.Fatal(err)
+	}
 	r, err := New(repoDir)
 	if err != nil {
 		t.Fatalf("Repo new returned error %v", err)
@@ -71,14 +68,9 @@ func TestInitRepoWithCreate_no_directory(t *testing.T) {
 	}
 }
 func TestInitRepoWithCreate_existing_directory(t *testing.T) {
-	repoDir, err := ioutil.TempDir("", "publish-test-repo")
-	if err != nil {
-		t.Fatalf("Couldn't create test repo directory.")
-	}
+	repoDir := t.TempDir()
 	// The tempdir is not removed, so the repo directory already exists but is
 	// empty.
-	defer os.RemoveAll(repoDir)
-
 	r, err := New(repoDir)
 	if err != nil {
 		t.Fatalf("Repo new returned error %v", err)
@@ -95,28 +87,19 @@ func TestInitRepoWithCreate_existing_directory(t *testing.T) {
 	}
 }
 func TestInitRepoWithCreate_file_at_target_path(t *testing.T) {
-	repoPath, err := ioutil.TempFile("", "publish-test-repo")
-	if err != nil {
-		t.Fatalf("Couldn't create test repo file.")
+	repoPath := filepath.Join(t.TempDir(), "publish-test-repo")
+	if err := ioutil.WriteFile(repoPath, []byte("foo"), 0o600); err != nil {
+		t.Fatal(err)
 	}
-	defer os.RemoveAll(repoPath.Name())
-
-	_, err = New(repoPath.Name())
-	if err == nil {
+	if _, err := New(repoPath); err == nil {
 		t.Fatal("expected error, did not get one")
-	}
-	if !errors.Is(err, syscall.ENOTDIR) {
+	} else if !errors.Is(err, syscall.ENOTDIR) {
 		t.Fatalf("unexpected error: %#v", err)
 	}
 }
 
 func TestInitRepoNoCreate(t *testing.T) {
-	repoDir, err := ioutil.TempDir("", "publish-test-repo")
-	if err != nil {
-		t.Fatalf("Couldn't create test repo directory.")
-	}
-	defer os.RemoveAll(repoDir)
-
+	repoDir := t.TempDir()
 	r, err := New(repoDir)
 	if err != nil {
 		t.Fatalf("Repo init returned error %v", err)
@@ -137,12 +120,7 @@ func TestInitRepoNoCreate(t *testing.T) {
 }
 
 func TestAddPackage(t *testing.T) {
-	repoDir, err := ioutil.TempDir("", "publish-test-repo")
-	if err != nil {
-		t.Fatalf("Couldn't create test repo directory.")
-	}
-	defer os.RemoveAll(repoDir)
-
+	repoDir := t.TempDir()
 	r, err := New(repoDir)
 	if err != nil {
 		t.Fatalf("Repo init returned error %v", err)
@@ -243,12 +221,7 @@ func TestAddPackage(t *testing.T) {
 }
 
 func TestAddBlob(t *testing.T) {
-	repoDir, err := ioutil.TempDir("", "publish-test-repo")
-	if err != nil {
-		t.Fatalf("Couldn't create test repo directory.")
-	}
-	defer os.RemoveAll(repoDir)
-
+	repoDir := t.TempDir()
 	repo, err := New(repoDir)
 	if err != nil {
 		t.Fatalf("Repo init returned error %v", err)
@@ -311,20 +284,14 @@ func TestAddBlob(t *testing.T) {
 }
 
 func TestLinkOrCopy(t *testing.T) {
-	tmpDir, err := ioutil.TempDir("", "link-or-copy-test")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(tmpDir)
-
+	tmpDir := t.TempDir()
 	srcPath := filepath.Join(tmpDir, "source-file")
-	dstPath := filepath.Join(tmpDir, "dest-file")
 
 	srcContent := "I am a file"
 
 	t.Run("hardlinking", func(t *testing.T) {
-		defer os.RemoveAll(dstPath)
-		if err := ioutil.WriteFile(srcPath, []byte(srcContent), os.ModePerm); err != nil {
+		dstPath := filepath.Join(t.TempDir(), "dest-file")
+		if err := ioutil.WriteFile(srcPath, []byte(srcContent), 0o600); err != nil {
 			t.Fatal(err)
 		}
 
@@ -343,13 +310,12 @@ func TestLinkOrCopy(t *testing.T) {
 	})
 
 	t.Run("copying", func(t *testing.T) {
-		defer os.RemoveAll(dstPath)
-
+		dstPath := filepath.Join(t.TempDir(), "dest-file")
 		var oldLink func(s, d string) error
 		oldLink, link = link, func(s, d string) error { return &os.LinkError{"", "", "", fmt.Errorf("stub error")} }
 		defer func() { link = oldLink }()
 
-		if err := ioutil.WriteFile(srcPath, []byte(srcContent), os.ModePerm); err != nil {
+		if err := ioutil.WriteFile(srcPath, []byte(srcContent), 0o600); err != nil {
 			t.Fatal(err)
 		}
 
@@ -374,19 +340,14 @@ func copyFile(src string, dest string) error {
 	if err != nil {
 		return fmt.Errorf("ReadFile: failed to read file %s, err: %w", src, err)
 	}
-	if err := ioutil.WriteFile(dest, b, os.ModePerm); err != nil {
+	if err := ioutil.WriteFile(dest, b, 0o600); err != nil {
 		return fmt.Errorf("WriteFile: failed to write file %s, err: %w", dest, err)
 	}
 	return nil
 }
 
 func TestLoadExistingRepo(t *testing.T) {
-	repoDir, err := ioutil.TempDir("", "publish-test-repo")
-	if err != nil {
-		t.Fatalf("Couldn't create test repo directory.")
-	}
-	defer os.RemoveAll(repoDir)
-
+	repoDir := t.TempDir()
 	// Create a test repo.
 	r, err := New(repoDir)
 	if err != nil {
@@ -407,14 +368,11 @@ func TestLoadExistingRepo(t *testing.T) {
 		t.Fatalf("CommitUpdates: failed to commit updates: %v", err)
 	}
 
-	newRepoDir, err := ioutil.TempDir("", "publish-new-test-repo")
-	if err != nil {
+	newRepoDir := t.TempDir()
+	if err := os.Mkdir(filepath.Join(newRepoDir, "repository"), 0o700); err != nil {
 		t.Fatalf("Couldn't create test repo directory.")
 	}
-	if err := os.Mkdir(filepath.Join(newRepoDir, "repository"), os.ModePerm); err != nil {
-		t.Fatalf("Couldn't create test repo directory.")
-	}
-	if err := os.Mkdir(filepath.Join(newRepoDir, "keys"), os.ModePerm); err != nil {
+	if err := os.Mkdir(filepath.Join(newRepoDir, "keys"), 0o700); err != nil {
 		t.Fatalf("Couldn't create test keys directory.")
 	}
 	defer os.RemoveAll(newRepoDir)
@@ -491,5 +449,4 @@ func TestLoadExistingRepo(t *testing.T) {
 			}
 		}
 	}
-
 }

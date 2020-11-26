@@ -76,11 +76,11 @@ func verifySnapshotDelta(t *testing.T, source Snapshot, target Snapshot, expecte
 }
 
 func TestDeltaSnapshots_inconsistentBlobs(t *testing.T) {
-	source := newSnapshotBuilder().
+	source := newSnapshotBuilder(t).
 		File(1, fileRef{"a", "file"}).
 		Build()
 
-	target := newSnapshotBuilder().
+	target := newSnapshotBuilder(t).
 		File(2, fileRef{"different", "file?"}).
 		Build()
 
@@ -101,7 +101,7 @@ func TestDeltaSnapshots_inconsistentBlobs(t *testing.T) {
 }
 
 func TestDeltaSnapshots_empty(t *testing.T) {
-	empty := newSnapshotBuilder().Build()
+	empty := newSnapshotBuilder(t).Build()
 
 	expected := SnapshotDelta{}
 
@@ -109,7 +109,7 @@ func TestDeltaSnapshots_empty(t *testing.T) {
 }
 
 func TestDeltaSnapshots_same(t *testing.T) {
-	s := makeTestSnapshot()
+	s := makeTestSnapshot(t)
 
 	expected := SnapshotDelta{
 		UnchangedSize: s.Size(),
@@ -143,13 +143,13 @@ func TestDeltaSnapshots_same(t *testing.T) {
 }
 
 func TestDeltaSnapshots_changeBlob(t *testing.T) {
-	source := newSnapshotBuilder().
+	source := newSnapshotBuilder(t).
 		File(1, fileRef{"a", "same"}).
 		File(10, fileRef{"b", "same"}).
 		File(100, fileRef{"b", "update"}).
 		Build()
 
-	target := newSnapshotBuilder().
+	target := newSnapshotBuilder(t).
 		File(1, fileRef{"a", "same"}).
 		File(10, fileRef{"b", "same"}).
 		IncrementMerkleRootEpoch().
@@ -192,12 +192,12 @@ func TestDeltaSnapshots_changeBlob(t *testing.T) {
 }
 
 func TestDeltaSnapshots_addBlobs(t *testing.T) {
-	source := newSnapshotBuilder().
+	source := newSnapshotBuilder(t).
 		File(1, fileRef{"a", "same"}).
 		File(10, fileRef{"b", "same"}).
 		Build()
 
-	target := newSnapshotBuilder().
+	target := newSnapshotBuilder(t).
 		File(1, fileRef{"a", "same"}).
 		File(10, fileRef{"b", "same"}).
 		File(100, fileRef{"a", "new1"}).
@@ -252,14 +252,14 @@ func TestDeltaSnapshots_addBlobs(t *testing.T) {
 }
 
 func TestDeltaSnapshots_removeBlobs(t *testing.T) {
-	source := newSnapshotBuilder().
+	source := newSnapshotBuilder(t).
 		File(1, fileRef{"a", "same"}).
 		File(10, fileRef{"b", "same"}).
 		File(100, fileRef{"a", "new1"}).
 		File(1000, fileRef{"b", "new2"}).
 		Build()
 
-	target := newSnapshotBuilder().
+	target := newSnapshotBuilder(t).
 		File(1, fileRef{"a", "same"}).
 		File(10, fileRef{"b", "same"}).
 		Build()
@@ -288,14 +288,14 @@ func TestDeltaSnapshots_removeBlobs(t *testing.T) {
 }
 
 func TestDeltaSnapshots_updateAliasedBetweenPackages(t *testing.T) {
-	source := newSnapshotBuilder().
+	source := newSnapshotBuilder(t).
 		File(1,
 			fileRef{"a", "blob1"},
 			fileRef{"b", "blob2"},
 		).
 		Build()
 
-	target := newSnapshotBuilder().
+	target := newSnapshotBuilder(t).
 		IncrementMerkleRootEpoch().
 		File(10,
 			fileRef{"a", "blob1"},
@@ -345,7 +345,7 @@ func TestDeltaSnapshots_updateAliasedBetweenPackages(t *testing.T) {
 }
 
 func TestDeltaSnapshots_updateAliasedWithinPackage(t *testing.T) {
-	source := newSnapshotBuilder().
+	source := newSnapshotBuilder(t).
 		File(1000, fileRef{"a", "static"}).
 		File(1,
 			fileRef{"a", "file"},
@@ -353,7 +353,7 @@ func TestDeltaSnapshots_updateAliasedWithinPackage(t *testing.T) {
 		).
 		Build()
 
-	target := newSnapshotBuilder().
+	target := newSnapshotBuilder(t).
 		File(1000, fileRef{"a", "static"}).
 		IncrementMerkleRootEpoch().
 		File(10,
@@ -399,12 +399,12 @@ func TestDeltaSnapshots_updateAliasedWithinPackage(t *testing.T) {
 }
 
 func TestDeltaSnapshots_addRemoveAliased(t *testing.T) {
-	source := newSnapshotBuilder().
+	source := newSnapshotBuilder(t).
 		File(1, fileRef{"a", "remove"}).
 		File(3, fileRef{"b", "remove"}).
 		Build()
 
-	target := newSnapshotBuilder().
+	target := newSnapshotBuilder(t).
 		IncrementMerkleRootEpoch().
 		File(10,
 			fileRef{"a", "add"},
@@ -454,12 +454,12 @@ func TestDeltaSnapshots_addRemoveAliased(t *testing.T) {
 }
 
 func TestDeltaSnapshots_addPackage(t *testing.T) {
-	source := newSnapshotBuilder().
+	source := newSnapshotBuilder(t).
 		File(1, fileRef{"a", "shared"}).
 		File(10, fileRef{"a", "unique_a"}).
 		Build()
 
-	target := newSnapshotBuilder().
+	target := newSnapshotBuilder(t).
 		File(1,
 			fileRef{"a", "shared"},
 			fileRef{"b", "shared"},
@@ -506,7 +506,7 @@ func TestDeltaSnapshots_addPackage(t *testing.T) {
 }
 
 func TestDeltaSnapshots_removePackage(t *testing.T) {
-	source := newSnapshotBuilder().
+	source := newSnapshotBuilder(t).
 		File(1,
 			fileRef{"a", "shared"},
 			fileRef{"b", "shared"},
@@ -515,7 +515,7 @@ func TestDeltaSnapshots_removePackage(t *testing.T) {
 		File(100, fileRef{"b", "unique_b"}).
 		Build()
 
-	target := newSnapshotBuilder().
+	target := newSnapshotBuilder(t).
 		File(1, fileRef{"a", "shared"}).
 		File(10, fileRef{"a", "unique_a"}).
 		Build()

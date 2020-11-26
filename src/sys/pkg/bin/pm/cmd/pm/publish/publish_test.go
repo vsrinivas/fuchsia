@@ -23,18 +23,16 @@ func TestPublishArchive(t *testing.T) {
 	defer os.RemoveAll(filepath.Dir(cfg.TempDir))
 	depfilePath := filepath.Join(cfg.OutputDir, "depfile.d")
 
-	archivePath, err := makePackageArchive(cfg)
-	if err != nil {
+	build.BuildTestPackage(cfg)
+	name := filepath.Join(t.TempDir(), "testpackage-0")
+	if err := ioutil.WriteFile(name, nil, 0o600); err != nil {
 		t.Fatal(err)
 	}
-	defer os.Remove(archivePath)
-
-	repoDir, err := ioutil.TempDir("", "pm-publish-test-repo")
-	if err != nil {
+	if err := build.Archive(cfg, name); err != nil {
 		t.Fatal(err)
 	}
-	defer os.RemoveAll(repoDir)
-
+	archivePath := name + ".far"
+	repoDir := t.TempDir()
 	if err := Run(cfg, []string{"-repo", repoDir, "-depfile", depfilePath, "-a", "-f", archivePath}); err != nil {
 		t.Fatal(err)
 	}
@@ -53,7 +51,7 @@ func TestPublishArchive(t *testing.T) {
 
 	assertHasTestPackage(t, repoDir)
 
-	outName, inputPaths := readDepfile(depfilePath)
+	outName, inputPaths := readDepfile(t, depfilePath)
 	if ex := filepath.Join(repoDir, "repository", "timestamp.json"); ex != outName {
 		t.Errorf("depfile output: got %q, want %q", outName, ex)
 	}
@@ -77,23 +75,18 @@ func TestPublishListOfPackages(t *testing.T) {
 	outputManifestPath := filepath.Join(cfg.OutputDir, "package_manifest.json")
 	packagesListPath := filepath.Join(cfg.OutputDir, "packages.list")
 
-	if err := ioutil.WriteFile(packagesListPath, []byte(outputManifestPath+"\n"), os.ModePerm); err != nil {
+	if err := ioutil.WriteFile(packagesListPath, []byte(outputManifestPath+"\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
 
-	repoDir, err := ioutil.TempDir("", "pm-publish-test-repo")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(repoDir)
-
+	repoDir := t.TempDir()
 	if err := Run(cfg, []string{"-repo", repoDir, "-depfile", depfilePath, "-lp", "-f", packagesListPath}); err != nil {
 		t.Fatal(err)
 	}
 
 	assertHasTestPackage(t, repoDir)
 
-	outName, inputPaths := readDepfile(depfilePath)
+	outName, inputPaths := readDepfile(t, depfilePath)
 	if ex := filepath.Join(repoDir, "repository", "timestamp.json"); ex != outName {
 		t.Errorf("depfile output: got %q, want %q", outName, ex)
 	}
@@ -128,10 +121,10 @@ func TestPublishListOfPackages(t *testing.T) {
 	}
 }
 
-func readDepfile(depfilePath string) (string, []string) {
+func readDepfile(t *testing.T, depfilePath string) (string, []string) {
 	b, err := ioutil.ReadFile(depfilePath)
 	if err != nil {
-		panic(err)
+		t.Fatal(err)
 	}
 	parts := bytes.SplitN(b, []byte(": "), 2)
 	outName := string(parts[0])
@@ -142,9 +135,8 @@ func readDepfile(depfilePath string) (string, []string) {
 	}
 	for i, input := range inputPaths {
 		var err error
-		inputPaths[i], err = strconv.Unquote(input)
-		if err != nil {
-			panic(err)
+		if inputPaths[i], err = strconv.Unquote(input); err != nil {
+			t.Fatal(err)
 		}
 	}
 	return outName, inputPaths
@@ -153,23 +145,13 @@ func readDepfile(depfilePath string) (string, []string) {
 func assertHasTestPackage(t *testing.T, repoDir string) {
 	repo, err := repo.New(repoDir)
 	if err != nil {
-		panic(err)
+		t.Fatal(err)
 	}
 	dataFiles, err := repo.Targets()
 	if err != nil {
-		panic(err)
+		t.Fatal(err)
 	}
 	if _, ok := dataFiles["testpackage/0"]; !ok {
 		t.Fatalf("package not found: %q in %#v", "testpackage", dataFiles)
 	}
-}
-
-func makePackageArchive(cfg *build.Config) (string, error) {
-	build.BuildTestPackage(cfg)
-	f, err := ioutil.TempFile("", "testpackage-0")
-	if err != nil {
-		return "", err
-	}
-	f.Close()
-	return f.Name() + ".far", build.Archive(cfg, f.Name())
 }

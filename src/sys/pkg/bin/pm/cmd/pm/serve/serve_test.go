@@ -69,22 +69,12 @@ func TestServer(t *testing.T) {
 	defer os.RemoveAll(filepath.Dir(cfg.TempDir))
 	build.BuildTestPackage(cfg)
 
-	portFileDir, err := ioutil.TempDir("", "pm-serve-test-port-file-dir")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(portFileDir)
-	portFile := fmt.Sprintf("%s/%s", portFileDir, "port-file")
-
-	repoDir, err := ioutil.TempDir("", "pm-serve-test-repo")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(repoDir)
-
+	portFileDir := t.TempDir()
+	portFile := filepath.Join(portFileDir, "port-file")
+	repoDir := t.TempDir()
 	manifestListPath := filepath.Join(cfg.OutputDir, "pkg-manifests.list")
 	pkgManifestPath := filepath.Join(cfg.OutputDir, "package_manifest.json")
-	if err := ioutil.WriteFile(manifestListPath, []byte(pkgManifestPath+"\n"), 0644); err != nil {
+	if err := ioutil.WriteFile(manifestListPath, []byte(pkgManifestPath+"\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
 
@@ -241,7 +231,7 @@ func TestServer(t *testing.T) {
 	})
 
 	t.Run("auto-publishes new package version", func(t *testing.T) {
-		if hasTarget(baseURL, "testpackage/1") {
+		if hasTarget(t, baseURL, "testpackage/1") {
 			t.Fatalf("prematurely found target package")
 		}
 
@@ -259,7 +249,7 @@ func TestServer(t *testing.T) {
 			t.Errorf("got %q, want %q", got, want)
 		}
 
-		if !hasTarget(baseURL, "testpackage/1") {
+		if !hasTarget(t, baseURL, "testpackage/1") {
 			t.Fatal("missing target package")
 		}
 	})
@@ -287,19 +277,9 @@ func TestServeAuto(t *testing.T) {
 	defer os.RemoveAll(filepath.Dir(cfg.TempDir))
 	build.BuildTestPackage(cfg)
 
-	portFileDir, err := ioutil.TempDir("", "pm-serve-test-port-file-dir")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(portFileDir)
-	portFile := fmt.Sprintf("%s/%s", portFileDir, "port-file")
-
-	repoDir, err := ioutil.TempDir("", "pm-serve-test-repo")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(repoDir)
-
+	portFileDir := t.TempDir()
+	portFile := filepath.Join(portFileDir, "port-file")
+	repoDir := t.TempDir()
 	repo, err := repo.New(repoDir)
 	if err != nil {
 		t.Fatal(err)
@@ -420,10 +400,10 @@ func TestServeAuto(t *testing.T) {
 	})
 }
 
-func hasTarget(baseURL, target string) bool {
+func hasTarget(t *testing.T, baseURL, target string) bool {
 	res, err := http.Get(baseURL + "/targets.json")
 	if err != nil {
-		panic(err)
+		t.Fatal(err)
 	}
 	defer res.Body.Close()
 	m := struct {
@@ -432,7 +412,7 @@ func hasTarget(baseURL, target string) bool {
 		}
 	}{}
 	if err := json.NewDecoder(res.Body).Decode(&m); err != nil {
-		panic(err)
+		t.Fatal(err)
 	}
 	_, found := m.Signed.Targets[target]
 	return found

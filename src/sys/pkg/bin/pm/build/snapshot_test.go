@@ -33,6 +33,7 @@ func (b *merkleRootGenerator) NextEpoch() MerkleRoot {
 
 // snapshotBuilder allows test cases to hand generate Snapshot structures
 type snapshotBuilder struct {
+	t        *testing.T
 	snapshot Snapshot
 
 	currentBlobID merkleRootGenerator
@@ -40,8 +41,9 @@ type snapshotBuilder struct {
 
 type fileRef = PackageFileRef
 
-func newSnapshotBuilder() *snapshotBuilder {
+func newSnapshotBuilder(t *testing.T) *snapshotBuilder {
 	return &snapshotBuilder{
+		t: t,
 		snapshot: Snapshot{
 			Packages: map[string]Package{},
 			Blobs:    map[MerkleRoot]BlobInfo{},
@@ -72,7 +74,7 @@ func (b *snapshotBuilder) IncrementMerkleRoot() *snapshotBuilder {
 // Package declares a new package with the given tags
 func (b *snapshotBuilder) Package(pkg string, tags ...string) *snapshotBuilder {
 	if _, ok := b.snapshot.Packages[pkg]; ok {
-		panic("Package already defined")
+		b.t.Fatal("Package already defined")
 	}
 	b.snapshot.Packages[pkg] = Package{
 		Files: map[string]MerkleRoot{},
@@ -84,7 +86,7 @@ func (b *snapshotBuilder) Package(pkg string, tags ...string) *snapshotBuilder {
 // File defines a new file with the given size, included at the given locations
 func (b *snapshotBuilder) File(size uint64, refs ...fileRef) *snapshotBuilder {
 	if len(refs) == 0 {
-		panic("File called without any file refs")
+		b.t.Fatal("File called without any file refs")
 	}
 	b.IncrementMerkleRoot()
 	b.snapshot.Blobs[b.currentBlobID.Value()] = BlobInfo{Size: size}
@@ -100,13 +102,13 @@ func (b *snapshotBuilder) File(size uint64, refs ...fileRef) *snapshotBuilder {
 // Build finalizes and returns the Snapshot
 func (b *snapshotBuilder) Build() Snapshot {
 	if err := b.snapshot.Verify(); err != nil {
-		panic(err)
+		b.t.Fatal(err)
 	}
 	return b.snapshot
 }
 
-func makeTestSnapshot() Snapshot {
-	return newSnapshotBuilder().
+func makeTestSnapshot(t *testing.T) Snapshot {
+	return newSnapshotBuilder(t).
 		Package("system/0", "monolith").
 		Package("foo/0", "monolith").
 		Package("bar/0", "monolith").
@@ -168,7 +170,7 @@ func verifyFilteredSnapshot(t *testing.T, original Snapshot, filtered Snapshot, 
 }
 
 func TestSnapshotFilter_includeAll(t *testing.T) {
-	original := makeTestSnapshot()
+	original := makeTestSnapshot(t)
 
 	filtered := original.Filter([]string{"*"}, []string{})
 
@@ -178,14 +180,14 @@ func TestSnapshotFilter_includeAll(t *testing.T) {
 }
 
 func TestSnapshotFilter_includeNone(t *testing.T) {
-	original := makeTestSnapshot()
+	original := makeTestSnapshot(t)
 
 	filtered := original.Filter([]string{}, []string{})
 	verifyFilteredSnapshot(t, original, filtered, []string{})
 }
 
 func TestSnapshotFilter_includeSingleTag(t *testing.T) {
-	original := makeTestSnapshot()
+	original := makeTestSnapshot(t)
 
 	filtered := original.Filter([]string{"monolith"}, []string{})
 	verifyFilteredSnapshot(t, original, filtered, []string{"system/0", "foo/0", "bar/0", "foobar/0"})
@@ -195,21 +197,21 @@ func TestSnapshotFilter_includeSingleTag(t *testing.T) {
 }
 
 func TestSnapshotFilter_matchSingleTag(t *testing.T) {
-	original := makeTestSnapshot()
+	original := makeTestSnapshot(t)
 
 	filtered := original.Filter([]string{"monolith"}, []string{})
 	verifyFilteredSnapshot(t, original, filtered, []string{"system/0", "foo/0", "bar/0", "foobar/0"})
 }
 
 func TestSnapshotFilter_excludeSingleTag(t *testing.T) {
-	original := makeTestSnapshot()
+	original := makeTestSnapshot(t)
 
 	filtered := original.Filter([]string{"*"}, []string{"available"})
 	verifyFilteredSnapshot(t, original, filtered, []string{"system/0", "foo/0", "bar/0", "foobar/0"})
 }
 
 func TestSnapshotFilter_excludeSinglePackage(t *testing.T) {
-	original := makeTestSnapshot()
+	original := makeTestSnapshot(t)
 
 	filtered := original.Filter([]string{"*"}, []string{"bar/0"})
 	verifyFilteredSnapshot(t, original, filtered, []string{"system/0", "foo/0", "optional/0", "foobar/0"})
@@ -219,35 +221,35 @@ func TestSnapshotFilter_excludeSinglePackage(t *testing.T) {
 }
 
 func TestSnapshotFilter_includeMultiplePackage(t *testing.T) {
-	original := makeTestSnapshot()
+	original := makeTestSnapshot(t)
 
 	filtered := original.Filter([]string{"foo/0", "optional/0"}, []string{})
 	verifyFilteredSnapshot(t, original, filtered, []string{"foo/0", "optional/0"})
 }
 
 func TestSnapshotFilter_excludeMultiplePackage(t *testing.T) {
-	original := makeTestSnapshot()
+	original := makeTestSnapshot(t)
 
 	filtered := original.Filter([]string{"*"}, []string{"foo/0", "optional/0"})
 	verifyFilteredSnapshot(t, original, filtered, []string{"system/0", "bar/0", "foobar/0"})
 }
 
 func TestSnapshotFilter_includeWildcardPackage(t *testing.T) {
-	original := makeTestSnapshot()
+	original := makeTestSnapshot(t)
 
 	filtered := original.Filter([]string{"foo*"}, []string{})
 	verifyFilteredSnapshot(t, original, filtered, []string{"foo/0", "foobar/0"})
 }
 
 func TestSnapshotFilter_excludeWildcardPackage(t *testing.T) {
-	original := makeTestSnapshot()
+	original := makeTestSnapshot(t)
 
 	filtered := original.Filter([]string{"*"}, []string{"foo*"})
 	verifyFilteredSnapshot(t, original, filtered, []string{"system/0", "bar/0", "optional/0"})
 }
 
 func TestSnapshotAddPackage_consistent(t *testing.T) {
-	s := newSnapshotBuilder().Build()
+	s := newSnapshotBuilder(t).Build()
 	var m merkleRootGenerator
 
 	shared := PackageBlobInfo{
@@ -273,7 +275,7 @@ func TestSnapshotAddPackage_consistent(t *testing.T) {
 	}
 
 	{
-		expected := newSnapshotBuilder().
+		expected := newSnapshotBuilder(t).
 			Package("foo/0").
 			File(42,
 				fileRef{"foo/0", "shared"},
@@ -304,7 +306,7 @@ func TestSnapshotAddPackage_consistent(t *testing.T) {
 	}
 
 	{
-		expected := newSnapshotBuilder().
+		expected := newSnapshotBuilder(t).
 			Package("foo/0").
 			Package("bar/0").
 			File(42,
@@ -324,7 +326,7 @@ func TestSnapshotAddPackage_consistent(t *testing.T) {
 }
 
 func TestSnapshotAddPackage_duplicatePackage(t *testing.T) {
-	s := newSnapshotBuilder().
+	s := newSnapshotBuilder(t).
 		Package("foo/0").
 		Build()
 
@@ -353,7 +355,7 @@ func TestSnapshotAddPackage_duplicatePackage(t *testing.T) {
 }
 
 func TestSnapshotAddPackage_inconsistentBlob(t *testing.T) {
-	s := newSnapshotBuilder().
+	s := newSnapshotBuilder(t).
 		Package("foo/0").
 		File(100, fileRef{"foo/0", "fileA"}).
 		Build()

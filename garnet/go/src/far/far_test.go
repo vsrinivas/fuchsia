@@ -8,7 +8,6 @@ import (
 	"bytes"
 	"encoding/binary"
 	"encoding/hex"
-	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
@@ -21,8 +20,6 @@ import (
 func TestWrite(t *testing.T) {
 	files := []string{"a", "b", "dir/c"}
 	d := create(t, files)
-	defer os.Remove(d)
-
 	inputs := map[string]string{}
 	for _, path := range files {
 		inputs[path] = filepath.Join(d, path)
@@ -57,26 +54,16 @@ func TestLengths(t *testing.T) {
 }
 
 // create makes a temporary directory and populates it with the files in
-// the given slice. the files will contain their name as content. The path of
+// the given slice. The files will contain their name as content. The path of
 // the created directory is returned.
 func create(t *testing.T, files []string) string {
-	d, err := ioutil.TempDir("", t.Name())
-	if err != nil {
-		t.Fatal(err)
-	}
+	d := t.TempDir()
 	for _, path := range files {
 		absPath := filepath.Join(d, path)
 		if err := os.MkdirAll(filepath.Dir(absPath), os.ModePerm); err != nil {
 			t.Fatal(err)
 		}
-		f, err := os.Create(absPath)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if _, err := fmt.Fprintf(f, "%s\n", path); err != nil {
-			t.Fatal(err)
-		}
-		if err := f.Close(); err != nil {
+		if err := ioutil.WriteFile(absPath, []byte(path+"\n"), 0o600); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -84,8 +71,7 @@ func create(t *testing.T, files []string) string {
 }
 
 func TestReader(t *testing.T) {
-	_, err := NewReader(bytes.NewReader(exampleArchive()))
-	if err != nil {
+	if _, err := NewReader(bytes.NewReader(exampleArchive())); err != nil {
 		t.Fatal(err)
 	}
 
@@ -192,6 +178,7 @@ func TestReaderOpen(t *testing.T) {
 		t.Errorf("got %d %v, want %d, %v", n, err, 0, io.EOF)
 	}
 }
+
 func TestReaderReadFile(t *testing.T) {
 	far := exampleArchive()
 	r, err := NewReader(bytes.NewReader(far))

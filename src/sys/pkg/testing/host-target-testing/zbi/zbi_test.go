@@ -8,37 +8,26 @@ import (
 	"bytes"
 	"context"
 	"io/ioutil"
-	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
 
-func createScript(fileName string) (script string, err error) {
-	file, err := ioutil.TempFile("", fileName)
-	if err != nil {
-		return "", err
-	}
-	defer file.Close()
-
-	// Script outputs its name and all its arguments on the first line. Then it
-	// cats the input file, which we assume is the last argument.
+// createScript returns the path to a bash script that outputs its name and
+// all its arguments on the first line.
+//
+// Then it cats the input file, which we assume is the last argument.
+func createScript(t *testing.T) string {
 	contents := `#!/bin/bash
 echo "$0 $@"
 file="${@: -1}"
 cat "$file"
 `
-
-	if _, err := file.Write([]byte(contents)); err != nil {
-		os.Remove(file.Name())
-		return "", err
+	name := filepath.Join(t.TempDir(), "zbi.sh")
+	if err := ioutil.WriteFile(name, []byte(contents), 0o700); err != nil {
+		t.Fatal(err)
 	}
-
-	if err := file.Chmod(0744); err != nil {
-		os.Remove(file.Name())
-		return "", err
-	}
-
-	return file.Name(), nil
+	return name
 }
 
 func checkEq(t *testing.T, name string, actual string, expected string) {
@@ -48,14 +37,8 @@ func checkEq(t *testing.T, name string, actual string, expected string) {
 }
 
 func TestNoArguments(t *testing.T) {
-	script, err := createScript("zbi.*.sh")
-	if err != nil {
-		t.Fatalf("Failed to create script: %s", err)
-	}
-	defer os.Remove(script)
-
 	var output bytes.Buffer
-	zbiTool, err := NewZBIToolWithStdout(script, &output)
+	zbiTool, err := NewZBIToolWithStdout(createScript(t), &output)
 	if err != nil {
 		t.Fatalf("Failed to create ZBI tool: %s", err)
 	}
@@ -90,14 +73,8 @@ func TestNoArguments(t *testing.T) {
 }
 
 func TestArguments(t *testing.T) {
-	script, err := createScript("zbi.*.sh")
-	if err != nil {
-		t.Fatalf("Failed to create script: %s", err)
-	}
-	defer os.Remove(script)
-
 	var output bytes.Buffer
-	zbiTool, err := NewZBIToolWithStdout(script, &output)
+	zbiTool, err := NewZBIToolWithStdout(createScript(t), &output)
 	if err != nil {
 		t.Fatalf("Failed to create ZBI tool: %s", err)
 	}

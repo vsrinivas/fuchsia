@@ -15,6 +15,7 @@ import (
 	"math/big"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -108,8 +109,7 @@ func testToStdout(t *testing.T, tag, expected string) {
 	cmd := exec.Command(loglistener, "--tag", tag)
 	var stdout bytes.Buffer
 	cmd.Stdout = &stdout
-	err := cmd.Start()
-	if err != nil {
+	if err := cmd.Start(); err != nil {
 		log.Fatal(err)
 	}
 	defer cmd.Process.Kill()
@@ -129,17 +129,10 @@ func testDumpLogs(t *testing.T, tag, expected string) {
 	cmd := exec.Command(loglistener, "--tag", tag, "--dump_logs", "yes")
 	var stdout bytes.Buffer
 	cmd.Stdout = &stdout
-	err := cmd.Start()
-	if err != nil {
+	if err := cmd.Run(); err != nil {
 		log.Fatal(err)
 	}
-	if err := cmd.Wait(); err != nil {
-		log.Fatal(err)
-	}
-
-	has_suffix := strings.HasSuffix(stdout.String(), expected)
-
-	if !has_suffix {
+	if !strings.HasSuffix(stdout.String(), expected) {
 		t.Fatalf("expected suffix: %q, got: %q", expected, stdout.String())
 	}
 }
@@ -148,23 +141,16 @@ func testDumpLogs(t *testing.T, tag, expected string) {
 // output into a temporary file. The temporary file is then checked for the
 // expected string.
 func testToFile(t *testing.T, tag, expected string) {
-	tmpfile, err := ioutil.TempFile("", "syslog-test")
-	if err != nil {
+	name := filepath.Join(t.TempDir(), "syslog")
+	cmd := exec.Command(loglistener, "--tag", tag, "--file", name)
+	if err := cmd.Start(); err != nil {
 		t.Fatal(err)
-	}
-	tmpfile.Close()
-	defer os.Remove(tmpfile.Name())
-
-	cmd := exec.Command(loglistener, "--tag", tag, "--file", tmpfile.Name())
-	err = cmd.Start()
-	if err != nil {
-		log.Fatal(err)
 	}
 	defer cmd.Process.Kill()
 
 	var fileout []byte
 	res := tryWithBackoff(t, func() bool {
-		fileout, err = ioutil.ReadFile(tmpfile.Name())
+		fileout, err = ioutil.ReadFile(name)
 		if err != nil {
 			t.Fatal(err)
 		}

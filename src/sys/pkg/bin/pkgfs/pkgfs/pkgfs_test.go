@@ -49,20 +49,32 @@ func installTestPackage(installJustMetaFar bool) string {
 	build.BuildTestPackage(cfg)
 
 	bi, err := cfg.BlobInfo()
-	panicErrWithInfo(err, "Creating BlobInfo")
+	if err != nil {
+		panic(fmt.Errorf("Creating BlobInfo: %s", err))
+	}
 
 	// Install the blobs to blobfs directly.
 	for _, b := range bi {
 		src, err := os.Open(b.SourcePath)
-		panicErrWithInfo(err, "Opening blob src")
-		dst, err := blobDir.Open(b.Merkle.String(), os.O_WRONLY|os.O_CREATE, 0777)
-		panicErrWithInfo(err, "Opening blob dst")
-		panicErrWithInfo(dst.Truncate(int64(b.Size)), "Truncating dst blob")
-		_, err = io.Copy(dst, src)
-		panicErrWithInfo(err, "Writing blob")
-		panicErrWithInfo(src.Close(), "Closing src")
-		panicErrWithInfo(dst.Close(), "Closing dst")
-
+		if err != nil {
+			panic(err)
+		}
+		dst, err := blobDir.Open(b.Merkle.String(), os.O_WRONLY|os.O_CREATE, 0o700)
+		if err != nil {
+			panic(fmt.Errorf("Opening blob dst: %s", err))
+		}
+		if err := dst.Truncate(int64(b.Size)); err != nil {
+			panic(err)
+		}
+		if _, err = io.Copy(dst, src); err != nil {
+			panic(err)
+		}
+		if err := src.Close(); err != nil {
+			panic(err)
+		}
+		if err := dst.Close(); err != nil {
+			panic(err)
+		}
 		if installJustMetaFar {
 			return bi[0].Merkle.String()
 		}
@@ -79,20 +91,27 @@ func tmain(m *testing.M) int {
 	log.SetOutput(os.Stdout)
 
 	var err error
-	blobDir, err = ramdisk.New(10 * 1024 * 1024)
-	panicErrWithInfo(err, "Creating blobfs ramdisk")
-	panicErrWithInfo(blobDir.StartBlobfs(), "Starting blobfs")
+	if blobDir, err = ramdisk.New(10 * 1024 * 1024); err != nil {
+		panic(fmt.Errorf("Creating blobfs ramdisk: %s", err))
+	}
+	if err := blobDir.StartBlobfs(); err != nil {
+		panic(fmt.Errorf("Starting blobfs: %s", err))
+	}
 	defer blobDir.Destroy()
 
 	testPackageMerkle = installTestPackage(false)
 	systemImageMerkle := installTestPackage(true)
 
 	d, err := ioutil.TempDir("", "pkgfs-test-mount")
-	panicerr(err)
+	if err != nil {
+		panic(err)
+	}
 	defer os.RemoveAll(d)
 
-	blobd, err := blobDir.Open(".", os.O_RDWR|syscall.O_DIRECTORY, 0777)
-	panicerr(err)
+	blobd, err := blobDir.Open(".", os.O_RDWR|syscall.O_DIRECTORY, 0o700)
+	if err != nil {
+		panic(err)
+	}
 	defer func() {
 		// The Go syscall API doesn't provide any way to detatch the underlying
 		// channel from the *File wrapper, so once the GC runs, then blobd will be
@@ -102,7 +121,9 @@ func tmain(m *testing.M) int {
 	}()
 
 	pkgfs, err := New(syscall.FDIOForFD(int(blobd.Fd())).(*fdio.Directory), false, false)
-	panicerr(err)
+	if err != nil {
+		panic(err)
+	}
 	systemImagePackage := pkg.Package{
 		Name:    "system_image",
 		Version: "0",
@@ -111,10 +132,14 @@ func tmain(m *testing.M) int {
 		fmt.Sprintf("static-package/0=%s\n", testPackageMerkle)), systemImagePackage, systemImageMerkle)
 
 	nc, sc, err := zx.NewChannel(0)
-	panicerr(err)
+	if err != nil {
+		panic(err)
+	}
 
 	pkgfsDir = fdio.NewDirectoryWithCtx(&zxio.DirectoryAdminWithCtxInterface{Channel: nc})
-	panicerr(pkgfs.Serve(sc))
+	if err = pkgfs.Serve(sc); err != nil {
+		panic(err)
+	}
 	return m.Run()
 }
 
@@ -131,37 +156,51 @@ func TestAddPackage(t *testing.T) {
 	build.BuildTestPackage(cfg)
 
 	bi, err := cfg.BlobInfo()
-	panicerr(err)
+	if err != nil {
+		t.Fatal(err)
+	}
 	merkleroot := bi[0].Merkle.String()
 
-	dst, err := iou.OpenFrom(pkgfsDir, filepath.Join("install/pkg", merkleroot), os.O_RDWR|os.O_CREATE, 0777)
-	panicerr(err)
-	panicerr(dst.Truncate(int64(bi[0].Size)))
+	dst, err := iou.OpenFrom(pkgfsDir, filepath.Join("install/pkg", merkleroot), os.O_RDWR|os.O_CREATE, 0o700)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := dst.Truncate(int64(bi[0].Size)); err != nil {
+		t.Fatal(err)
+	}
 	src, err := os.Open(bi[0].SourcePath)
-	panicerr(err)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if _, err := io.Copy(dst, src); err != nil {
 		src.Close()
 		dst.Close()
 		t.Fatal(err)
 	}
-	panicerr(src.Close())
-	panicerr(dst.Close())
-
-	// Opening it again gives EEXIST
-	_, err = iou.OpenFrom(pkgfsDir, filepath.Join("install/pkg", merkleroot), os.O_RDWR|os.O_CREATE, 0777)
-	if !os.IsExist(err) {
-		panicerr(err)
+	if src.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if dst.Close(); err != nil {
+		t.Fatal(err)
 	}
 
-	d, err := blobDir.Open(merkleroot, syscall.O_PATH, 0777)
-	panicerr(err)
+	// Opening it again gives EEXIST
+	_, err = iou.OpenFrom(pkgfsDir, filepath.Join("install/pkg", merkleroot), os.O_RDWR|os.O_CREATE, 0o700)
+	if !os.IsExist(err) {
+		t.Fatal(err)
+	}
+
+	d, err := blobDir.Open(merkleroot, syscall.O_PATH, 0o700)
+	if err != nil {
+		t.Fatal(err)
+	}
 	_, err = d.Stat()
 	d.Close()
 	if err != nil {
 		t.Fatalf("package blob missing after package write: %s", err)
 	}
 
-	f, err := iou.OpenFrom(pkgfsDir, filepath.Join("packages", cfg.PkgName, cfg.PkgVersion), os.O_RDONLY|syscall.O_DIRECTORY, 0777)
+	f, err := iou.OpenFrom(pkgfsDir, filepath.Join("packages", cfg.PkgName, cfg.PkgVersion), os.O_RDONLY|syscall.O_DIRECTORY, 0o700)
 	if err == nil {
 		f.Close()
 		t.Error("package appeared in the pkgfs package tree before needs fulfilled")
@@ -169,16 +208,20 @@ func TestAddPackage(t *testing.T) {
 
 	expectedNeeds := []string{}
 	for _, b := range bi {
-		if _, err := blobDir.Open(b.Merkle.String(), syscall.O_PATH, 0777); os.IsNotExist(err) {
+		if _, err := blobDir.Open(b.Merkle.String(), syscall.O_PATH, 0o700); os.IsNotExist(err) {
 			expectedNeeds = append(expectedNeeds, b.Merkle.String())
 		}
 	}
 	sort.Strings(expectedNeeds)
 
-	f, err = iou.OpenFrom(pkgfsDir, filepath.Join("needs", "packages", merkleroot), os.O_RDONLY|syscall.O_DIRECTORY, 0777)
+	f, err = iou.OpenFrom(pkgfsDir, filepath.Join("needs", "packages", merkleroot), os.O_RDONLY|syscall.O_DIRECTORY, 0o700)
 	needsPkgs, err := f.Readdirnames(256)
-	panicerr(f.Close())
-	panicerr(err)
+	if err != nil {
+		t.Error(err)
+	}
+	if err := f.Close(); err != nil {
+		t.Fatal(err)
+	}
 
 	if got, want := len(needsPkgs), len(expectedNeeds); got != want {
 		t.Errorf("needs/packages/{root}/* count: got %d, want %d", got, want)
@@ -198,18 +241,29 @@ func TestAddPackage(t *testing.T) {
 			continue
 		}
 
-		dst, err := iou.OpenFrom(pkgfsDir, filepath.Join("install/blob", root), os.O_RDWR|os.O_CREATE, 0777)
+		dst, err := iou.OpenFrom(pkgfsDir, filepath.Join("install/blob", root), os.O_RDWR|os.O_CREATE, 0o700)
 		if os.IsExist(err) {
 			continue
 		}
-		panicerr(err)
-		panicerr(dst.Truncate(int64(b.Size)))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := dst.Truncate(int64(b.Size)); err != nil {
+			t.Fatal(err)
+		}
 		src, err := os.Open(b.SourcePath)
-		panicerr(err)
-		_, err = io.Copy(dst, src)
-		panicerr(err)
-		panicerr(src.Close())
-		panicerr(dst.Close())
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err = io.Copy(dst, src); err != nil {
+			t.Fatal(err)
+		}
+		if src.Close(); err != nil {
+			t.Fatal(err)
+		}
+		if dst.Close(); err != nil {
+			t.Fatal(err)
+		}
 	}
 
 	var info os.FileInfo
@@ -228,9 +282,13 @@ func TestAddPackage(t *testing.T) {
 
 	for _, b := range bi[1:] {
 		got, err := pkgfsReadFile(filepath.Join("packages", cfg.PkgName, cfg.PkgVersion, b.Path))
-		panicerr(err)
+		if err != nil {
+			t.Fatal(err)
+		}
 		want, err := ioutil.ReadFile(b.SourcePath)
-		panicerr(err)
+		if err != nil {
+			t.Fatal(err)
+		}
 		if !bytes.Equal(got, want) {
 			t.Errorf("got %x, want %x", got, want)
 		}
@@ -238,14 +296,16 @@ func TestAddPackage(t *testing.T) {
 
 	// assert that the dynamically added package appears in /versions
 	metaMerkle, err := pkgfsReadFile(filepath.Join("versions", merkleroot, "meta"))
-	panicerr(err)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if got, want := string(metaMerkle), merkleroot; got != want {
 		t.Errorf("add dynamic package, bad version: got %q, want %q", got, want)
 	}
 }
 
 func pkgfsReadFile(path string) ([]byte, error) {
-	f, err := iou.OpenFrom(pkgfsDir, path, os.O_RDONLY, 0777)
+	f, err := iou.OpenFrom(pkgfsDir, path, os.O_RDONLY, 0o700)
 	if err != nil {
 		return nil, err
 	}
@@ -258,7 +318,7 @@ func pkgfsReadFile(path string) ([]byte, error) {
 }
 
 func pkgfsStat(path string) (os.FileInfo, error) {
-	f, err := iou.OpenFrom(pkgfsDir, path, os.O_RDONLY|syscall.O_PATH, 0777)
+	f, err := iou.OpenFrom(pkgfsDir, path, os.O_RDONLY|syscall.O_PATH, 0o700)
 	if err != nil {
 		return nil, err
 	}
@@ -270,7 +330,7 @@ func TestMetaFarRootDuality(t *testing.T) {
 	path := "packages/static-package/0/meta"
 
 	t.Run("meta is a file containing the merkleroot", func(t *testing.T) {
-		f, err := iou.OpenFrom(pkgfsDir, path, 0, 0777)
+		f, err := iou.OpenFrom(pkgfsDir, path, 0, 0o700)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -285,7 +345,7 @@ func TestMetaFarRootDuality(t *testing.T) {
 	})
 
 	t.Run("meta is a directory containing files", func(t *testing.T) {
-		f, err := iou.OpenFrom(pkgfsDir, path, syscall.O_DIRECTORY, 0777)
+		f, err := iou.OpenFrom(pkgfsDir, path, syscall.O_DIRECTORY, 0o700)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -305,7 +365,7 @@ func TestMetaFarRootDuality(t *testing.T) {
 			t.Fatalf("did not find 'contents' file among meta/ readdir: %v", list)
 		}
 
-		contents, err := iou.OpenFrom(pkgfsDir, filepath.Join(path, "contents"), 0, 0777)
+		contents, err := iou.OpenFrom(pkgfsDir, filepath.Join(path, "contents"), 0, 0o700)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -342,7 +402,7 @@ func TestMetaFarRootDuality(t *testing.T) {
 	})
 
 	t.Run("meta subdirectories are openable and listable", func(t *testing.T) {
-		f, err := iou.OpenFrom(pkgfsDir, "packages/static-package/0/meta/foo", 0, 0777)
+		f, err := iou.OpenFrom(pkgfsDir, "packages/static-package/0/meta/foo", 0, 0o700)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -367,13 +427,13 @@ func TestMetaFarRootDuality(t *testing.T) {
 		// protect against regression of name prefix fixup in metafar.go,
 		// wherein at time of test authorship, a "." open would open meta/
 		// instead.
-		d, err := pkgfsDir.Open("packages/static-package/0/meta/foo", syscall.O_DIRECTORY, 0777)
+		d, err := pkgfsDir.Open("packages/static-package/0/meta/foo", syscall.O_DIRECTORY, 0o700)
 		if err != nil {
 			t.Fatal(err)
 		}
 		defer d.Close()
 
-		f, err := iou.OpenFrom(d.(*fdio.Directory), "", syscall.O_RDONLY, 0777)
+		f, err := iou.OpenFrom(d.(*fdio.Directory), "", syscall.O_RDONLY, 0o700)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -393,7 +453,7 @@ func TestExecutability(t *testing.T) {
 	// packages/static-package/0/meta/contents should not be openable
 	// executable, because meta/* is never executable
 	path := "packages/static-package/0/meta/contents"
-	f, err := pkgfsDir.Open(path, syscall.FsRightReadable|syscall.FsRightExecutable, 0777)
+	f, err := pkgfsDir.Open(path, syscall.FsRightReadable|syscall.FsRightExecutable, 0o700)
 	if f != nil || err == nil {
 		t.Fatal(err)
 	}
@@ -401,7 +461,7 @@ func TestExecutability(t *testing.T) {
 	// packages/static-package/0/a should be openable executable, because
 	// files from packages are executable.
 	path = "packages/static-package/0/a"
-	f, err = pkgfsDir.Open(path, syscall.FsRightReadable|syscall.FsRightExecutable, 0777)
+	f, err = pkgfsDir.Open(path, syscall.FsRightReadable|syscall.FsRightExecutable, 0o700)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -410,7 +470,7 @@ func TestExecutability(t *testing.T) {
 
 func TestListContainsStatic(t *testing.T) {
 	//names, err := filepath.Glob(filepath.Join(pkgfsMount, "packages", "*", "*"))
-	f, err := iou.OpenFrom(pkgfsDir, "packages/static-package/0", os.O_RDONLY|syscall.O_DIRECTORY, 0777)
+	f, err := iou.OpenFrom(pkgfsDir, "packages/static-package/0", os.O_RDONLY|syscall.O_DIRECTORY, 0o700)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -426,7 +486,7 @@ func TestListContainsStatic(t *testing.T) {
 }
 
 func TestListRoot(t *testing.T) {
-	f, err := iou.OpenFrom(pkgfsDir, ".", os.O_RDONLY|syscall.O_DIRECTORY, 0777)
+	f, err := iou.OpenFrom(pkgfsDir, ".", os.O_RDONLY|syscall.O_DIRECTORY, 0o700)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -453,7 +513,7 @@ func TestListRoot(t *testing.T) {
 }
 
 func TestListCtl(t *testing.T) {
-	f, err := iou.OpenFrom(pkgfsDir, "ctl", os.O_RDONLY|syscall.O_DIRECTORY, 0777)
+	f, err := iou.OpenFrom(pkgfsDir, "ctl", os.O_RDONLY|syscall.O_DIRECTORY, 0o700)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -479,7 +539,7 @@ func TestListCtl(t *testing.T) {
 }
 
 func TestSync(t *testing.T) {
-	d, err := iou.OpenFrom(pkgfsDir, "ctl", os.O_RDONLY|syscall.O_DIRECTORY, 0777)
+	d, err := iou.OpenFrom(pkgfsDir, "ctl", os.O_RDONLY|syscall.O_DIRECTORY, 0o700)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -491,7 +551,7 @@ func TestSync(t *testing.T) {
 
 func TestMetaFileGetFlags(t *testing.T) {
 	path := "packages/static-package/0/meta/contents"
-	f, err := pkgfsDir.Open(path, syscall.FsRightReadable, 0777)
+	f, err := pkgfsDir.Open(path, syscall.FsRightReadable, 0o700)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -516,7 +576,7 @@ func TestMetaFileGetFlags(t *testing.T) {
 
 func TestMapFileForRead(t *testing.T) {
 	path := "packages/static-package/0/meta/contents"
-	f, err := pkgfsDir.Open(path, syscall.FsRightReadable, 0777)
+	f, err := pkgfsDir.Open(path, syscall.FsRightReadable, 0o700)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -557,7 +617,7 @@ func getKoid(h *zx.Handle) (uint64, error) {
 
 func TestMapFileForReadPrivate(t *testing.T) {
 	path := "packages/static-package/0/meta/contents"
-	f, err := pkgfsDir.Open(path, syscall.FsRightReadable, 0777)
+	f, err := pkgfsDir.Open(path, syscall.FsRightReadable, 0o700)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -605,7 +665,7 @@ func TestMapFileForReadPrivate(t *testing.T) {
 
 func TestMapFileForReadExact(t *testing.T) {
 	path := "packages/static-package/0/meta/contents"
-	f, err := pkgfsDir.Open(path, syscall.FsRightReadable, 0777)
+	f, err := pkgfsDir.Open(path, syscall.FsRightReadable, 0o700)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -627,7 +687,7 @@ func TestMapFileForReadExact(t *testing.T) {
 
 func TestMapFilePrivateAndExact(t *testing.T) {
 	path := "packages/static-package/0/meta/contents"
-	f, err := pkgfsDir.Open(path, syscall.FsRightReadable, 0777)
+	f, err := pkgfsDir.Open(path, syscall.FsRightReadable, 0o700)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -649,7 +709,7 @@ func TestMapFilePrivateAndExact(t *testing.T) {
 
 func TestMapFileForWrite(t *testing.T) {
 	path := "packages/static-package/0/meta/contents"
-	f, err := pkgfsDir.Open(path, syscall.FsRightReadable, 0777)
+	f, err := pkgfsDir.Open(path, syscall.FsRightReadable, 0o700)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -671,7 +731,7 @@ func TestMapFileForWrite(t *testing.T) {
 
 func TestMapFileForExec(t *testing.T) {
 	path := "packages/static-package/0/meta/contents"
-	f, err := pkgfsDir.Open(path, syscall.FsRightReadable, 0777)
+	f, err := pkgfsDir.Open(path, syscall.FsRightReadable, 0o700)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -693,7 +753,7 @@ func TestTriggerGC(t *testing.T) {
 	// always perform the operation on a dedicated channel, so that pkgfsDir is not
 	// closed.
 	unlink := func(path string) error {
-		d, err := pkgfsDir.Open(".", zxio.OpenFlagDirectory|zxio.OpenRightReadable|zxio.OpenFlagPosix, 0777)
+		d, err := pkgfsDir.Open(".", zxio.OpenFlagDirectory|zxio.OpenRightReadable|zxio.OpenFlagPosix, 0o700)
 		if err != nil {
 			return err
 		}
@@ -715,7 +775,7 @@ func TestTriggerGC(t *testing.T) {
 }
 
 func TestVersions(t *testing.T) {
-	f, err := iou.OpenFrom(pkgfsDir, "versions", os.O_RDONLY|syscall.O_DIRECTORY, 0777)
+	f, err := iou.OpenFrom(pkgfsDir, "versions", os.O_RDONLY|syscall.O_DIRECTORY, 0o700)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -741,17 +801,5 @@ func TestVersions(t *testing.T) {
 		if got, want := string(b), filepath.Base(name); got != want {
 			t.Errorf("got %q, want %q", got, want)
 		}
-	}
-}
-
-func panicerr(err error) {
-	if err != nil {
-		panic(err)
-	}
-}
-
-func panicErrWithInfo(err error, info string) {
-	if err != nil {
-		panic(fmt.Errorf("%s: %v", info, err))
 	}
 }

@@ -9,65 +9,48 @@ import (
 	"context"
 	"crypto/rand"
 	"crypto/rsa"
-	"fmt"
-	"golang.org/x/crypto/ssh"
 	"io/ioutil"
-	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"golang.org/x/crypto/ssh"
 )
 
 // The easiest way to make a fake key is to just generate a real one.
-func GeneratePublicKey() (ssh.PublicKey, error) {
+func generatePublicKey(t *testing.T) ssh.PublicKey {
 	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
-		return nil, err
+		t.Fatal(err)
 	}
-	return ssh.NewPublicKey(&privateKey.PublicKey)
+	pub, err := ssh.NewPublicKey(&privateKey.PublicKey)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return pub
 }
 
-func CreateScript(fileName string) (script string, err error) {
-	file, err := ioutil.TempFile("", fileName)
-	if err != nil {
-		return "", err
+// createScript returns the path to a bash script that outputs its name and
+// all its arguments.
+func createScript(t *testing.T) string {
+	contents := "#!/bin/sh\necho \"$0 $@\"\n"
+	name := filepath.Join(t.TempDir(), "bootserver.sh")
+	if err := ioutil.WriteFile(name, []byte(contents), 0o700); err != nil {
+		t.Fatal(err)
 	}
-	defer file.Close()
-
-	// Script outputs its name and all its arguments.
-	contents := `#!/bin/sh
-echo "$0 $@"
-`
-
-	if _, err := file.Write([]byte(contents)); err != nil {
-		os.Remove(file.Name())
-		return "", err
-	}
-
-	if err := file.Chmod(0744); err != nil {
-		os.Remove(file.Name())
-		return "", err
-	}
-
-	return file.Name(), nil
+	return name
 }
 
-func CreateAndRunPaver(options ...BuildPaverOption) (zedbootPaverArgs []string, paverArgs []string, err error) {
-	bootserverPath, err := CreateScript("bootserver_tool")
-	if err != nil {
-		return nil, nil, err
-	}
-	defer os.Remove(bootserverPath)
-
+func createAndRunPaver(t *testing.T, options ...BuildPaverOption) (zedbootPaverArgs []string, paverArgs []string) {
+	bootserverPath := createScript(t)
 	var output bytes.Buffer
 	options = append(options, Stdout(&output))
 	paver, err := NewBuildPaver(bootserverPath, filepath.Dir(bootserverPath), options...)
 	if err != nil {
-		return nil, nil, err
+		t.Fatal(err)
 	}
-
 	if err := paver.Pave(context.Background(), "a-fake-device-name"); err != nil {
-		return nil, nil, err
+		t.Fatal(err)
 	}
 
 	outputs := strings.Split(output.String(), "\n")
@@ -75,25 +58,18 @@ func CreateAndRunPaver(options ...BuildPaverOption) (zedbootPaverArgs []string, 
 	paverArgs = strings.Split(outputs[1], " ")
 
 	if zedbootPaverArgs[0] != bootserverPath || zedbootPaverArgs[4] != "pave-zedboot" {
-		err := fmt.Errorf("Paver called the wrong bootserver or mode. Expected %s with mode pave-zedboot, actual %s with mode %s",
+		t.Fatalf("Paver called the wrong bootserver or mode. Expected %s with mode pave-zedboot, actual %s with mode %s",
 			bootserverPath, zedbootPaverArgs[0], zedbootPaverArgs[4])
-		return nil, nil, err
 	}
-
 	if paverArgs[0] != bootserverPath || paverArgs[4] != "pave" {
-		err := fmt.Errorf("Paver called the wrong bootserver or mode. Expected %s with mode pave, actual %s with mode %s",
+		t.Fatalf("Paver called the wrong bootserver or mode. Expected %s with mode pave, actual %s with mode %s",
 			bootserverPath, paverArgs[0], paverArgs[4])
-		return nil, nil, err
 	}
-
 	return
 }
 
 func TestDefault(t *testing.T) {
-	zedbootPaverArgs, paverArgs, err := CreateAndRunPaver()
-	if err != nil {
-		t.Fatal(err)
-	}
+	zedbootPaverArgs, paverArgs := createAndRunPaver(t)
 
 	{
 		var deviceName string
@@ -139,46 +115,26 @@ func TestDefault(t *testing.T) {
 }
 
 func TestSSHKeys(t *testing.T) {
-	sshKey, err := GeneratePublicKey()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	_, paverArgs, err := CreateAndRunPaver(SSHPublicKey(sshKey))
-	if err != nil {
-		t.Fatal(err)
-	}
-
+	sshKey := generatePublicKey(t)
+	_, paverArgs := createAndRunPaver(t, SSHPublicKey(sshKey))
 	hasAuthorizedKeys := false
 	for i, arg := range paverArgs {
 		if arg == "--authorized-keys" {
 			// Check that there's at least one more argument.
 			if i+1 < len(paverArgs) {
 				hasAuthorizedKeys = true
+				break
 			}
 		}
 	}
-
 	if !hasAuthorizedKeys {
 		t.Fatalf("Missing authorized keys file in paver arguments.")
 	}
 }
 
 func TestOverrideSlotA(t *testing.T) {
-	zirconAFile, err := ioutil.TempFile("", "zircona.*")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer func() {
-		zirconAFile.Close()
-		os.Remove(zirconAFile.Name())
-	}()
-
-	_, paverArgs, err := CreateAndRunPaver(OverrideSlotA(zirconAFile.Name()))
-	if err != nil {
-		t.Fatal(err)
-	}
-
+	name := t.TempDir()
+	_, paverArgs := createAndRunPaver(t, OverrideSlotA(name))
 	var zirconAPath string
 	for i, arg := range paverArgs {
 		if arg == "--zircona" {
@@ -187,28 +143,14 @@ func TestOverrideSlotA(t *testing.T) {
 			}
 		}
 	}
-
-	if zirconAPath != zirconAFile.Name() {
+	if zirconAPath != name {
 		t.Fatalf("Missing zircon A image in paver arguments.")
 	}
 }
 
 func TestOverrideVBMetaA(t *testing.T) {
-	vbMetaAFile, err := ioutil.TempFile("", "vbmetaa.*")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer func() {
-		vbMetaAFile.Close()
-		os.Remove(vbMetaAFile.Name())
-	}()
-
-	_, paverArgs, err := CreateAndRunPaver(
-		OverrideVBMetaA(vbMetaAFile.Name()))
-	if err != nil {
-		t.Fatal(err)
-	}
-
+	name := t.TempDir()
+	_, paverArgs := createAndRunPaver(t, OverrideVBMetaA(name))
 	var vbmetaAPath string
 	for i, arg := range paverArgs {
 		if arg == "--vbmetaa" {
@@ -217,8 +159,7 @@ func TestOverrideVBMetaA(t *testing.T) {
 			}
 		}
 	}
-
-	if vbmetaAPath != vbMetaAFile.Name() {
+	if vbmetaAPath != name {
 		t.Fatalf("Missing vbmeta A image in paver arguments.")
 	}
 }

@@ -16,18 +16,9 @@ import (
 )
 
 func TestExpand(t *testing.T) {
-	// Create temporary work directory.
-	parentDir, err := ioutil.TempDir("", "omaha-pkg-test-expand")
-	if err != nil {
-		t.Fatalf("Failed to create directory %s, %s", parentDir, err)
-	}
-	defer os.RemoveAll(parentDir)
+	parentDir := t.TempDir()
 	log.Printf("TestExpand working dir: %s", parentDir)
-
-	_, expandDir, err := createAndExpandPackage(parentDir)
-	if err != nil {
-		t.Fatalf("Failed to create and expand package. %s", err)
-	}
+	_, expandDir := createAndExpandPackage(t, parentDir)
 
 	// Make a "set" of all files we expect to see in the expand directory.
 	expectedFiles := map[string]struct{}{
