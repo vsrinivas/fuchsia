@@ -4,7 +4,16 @@
 
 import("//build/config/fuchsia/zircon.gni")
 import("//build/go/go_library.gni")
+import("//build/go/go_test.gni")
 import("//build/testing/host_test_data.gni")
+
+group("tests") {
+  testonly = true
+  deps = []
+  if (host_os == "linux") {
+    deps = [ ":emulator_tests($host_toolchain)" ]
+  }
+}
 
 # Currently, we only support working with QEMU or FEMU on Linux.
 if (is_linux) {
@@ -96,6 +105,14 @@ if (is_linux) {
       ":kernel",
       ":test_data",
     ]
-    sources = [ "emulator.go" ]
+    sources = [
+      "emulator.go",
+      "emulator_test.go",
+    ]
+  }
+
+  go_test("emulator_tests") {
+    gopackages = [ "go.fuchsia.dev/fuchsia/src/testing/emulator" ]
+    deps = [ ":emulator" ]
   }
 }

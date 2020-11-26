@@ -594,7 +594,17 @@ func (i *Instance) RunCommand(cmd string) error {
 //
 // panic()s on error (and in particular if the string is not seen until EOF).
 func (i *Instance) WaitForLogMessage(msg string) error {
-	err := i.checkForLogMessage(i.stdout, msg)
+	return i.WaitForLogMessages([]string{msg})
+}
+
+// WaitForLogMessages reads log messages from the emulator instance until it reads all
+// message in |msgs|. The log messages can appear in *any* order. Only one
+// expected message from |msgs| is retired per matching actual message even if
+// multiple messages from |msgs| match the log line.
+//
+// panic()s on error (and in particular if the string is not seen until EOF).
+func (i *Instance) WaitForLogMessages(msgs []string) error {
+	err := i.checkForLogMessages(i.stdout, msgs)
 	if err != nil {
 		// TODO(maruel): remove once call sites are updated.
 		panic(err)
@@ -663,8 +673,14 @@ func (i *Instance) AssertLogMessageNotSeenWithinTimeout(notSeen string, timeout 
 // All text attributes off: ESC [ 0 m
 const emuClearPrefix = "\x1b\x63\x1b\x5b\x3f\x37\x6c\x1b\x5b\x32\x4a\x1b\x5b\x30\x6d"
 
-// Reads all messages from |r| and tests if |msg| appears. Returns error if any.
+// Reads all messages from |b| and tests if |msg| appears. Returns error if any.
 func (i *Instance) checkForLogMessage(b *bufio.Reader, msg string) error {
+	return i.checkForLogMessages(b, []string{msg})
+}
+
+// Reads all messages from |b| and tests if all messages of |msgs| appear in *any* order. Returns
+// error if any.
+func (i *Instance) checkForLogMessages(b *bufio.Reader, msgs []string) error {
 	for {
 		line, err := b.ReadString('\n')
 		if err != nil {
@@ -685,8 +701,14 @@ func (i *Instance) checkForLogMessage(b *bufio.Reader, msg string) error {
 			toPrint = toPrint[len(emuClearPrefix):]
 		}
 		fmt.Print(toPrint)
-		if strings.Contains(line, msg) {
-			return nil
+		for i, msg := range msgs {
+			if strings.Contains(line, msg) {
+				msgs = append(msgs[:i], msgs[i+1:]...)
+				if len(msgs) == 0 {
+					return nil
+				}
+				break
+			}
 		}
 	}
 }

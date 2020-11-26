@@ -15,6 +15,7 @@ group("tests") {
   testonly = true
 
   deps = [
+    "emulator:tests",
     "fuzzing:tests",
     "loadbench:tests",
     "sl4f:tests",
