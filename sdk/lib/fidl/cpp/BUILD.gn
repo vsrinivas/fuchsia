@@ -6,8 +6,6 @@ import("//build/cpp/sdk_source_set.gni")
 import("//build/fidl/fidl.gni")
 import("//build/package.gni")
 import("//build/test.gni")
-import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
 import("//sdk/cts/build/cts.gni")
 import("//src/sys/build/components.gni")
 import("//src/tests/fidl/conformance_suite/gidl-conformance-suite.gni")
@@ -250,10 +248,11 @@ cts_source_set("test_sources") {
   public_configs = [ "//sdk/config" ]
 }
 
-cts_executable("fidl_hlcpp_conformance_test") {
+cts_executable("fidl_hlcpp_conformance_tests_bin") {
   visibility = [ ":*" ]
   testonly = true
 
+  output_name = "fidl_hlcpp_conformance_tests"
   sources = [ "test/async_loop_for_test.cc" ]
 
   deps = [
@@ -266,16 +265,17 @@ cts_executable("fidl_hlcpp_conformance_test") {
   ]
 }
 
-cts_fuchsia_unittest_component("fidl-hlcpp-conformance-test") {
+cts_fuchsia_unittest_component("fidl_hlcpp_conformance_tests") {
   visibility = [ ":*" ]
-  executable_path = "bin/fidl_hlcpp_conformance_test"
-  deps = [ ":fidl_hlcpp_conformance_test" ]
+  executable_path = "bin/fidl_hlcpp_conformance_tests"
+  deps = [ ":fidl_hlcpp_conformance_tests_bin" ]
 }
 
-cts_executable("fidl_hlcpp_unit_tests") {
+cts_executable("fidl_hlcpp_unit_tests_bin") {
   visibility = [ ":*" ]
   testonly = true
 
+  output_name = "fidl_hlcpp_unit_tests"
   sources = [ "test/async_loop_for_test.cc" ]
 
   deps = [
@@ -289,30 +289,30 @@ cts_executable("fidl_hlcpp_unit_tests") {
   ]
 }
 
-cts_fuchsia_unittest_component("fidl-hlcpp-unit-tests") {
+cts_fuchsia_unittest_component("fidl_hlcpp_unit_tests") {
   visibility = [ ":*" ]
   executable_path = "bin/fidl_hlcpp_unit_tests"
-  deps = [ ":fidl_hlcpp_unit_tests" ]
+  deps = [ ":fidl_hlcpp_unit_tests_bin" ]
 }
 
 cts_fuchsia_test_package("fidl-hlcpp-tests") {
   test_components = [
-    ":fidl-hlcpp-conformance-test",
-    ":fidl-hlcpp-unit-tests",
+    ":fidl_hlcpp_conformance_tests",
+    ":fidl_hlcpp_unit_tests",
   ]
 }
 
-if (is_linux || is_mac) {
-  test("fidl_cpp_host_unittests") {
+if (is_host) {
+  test("fidl_hlcpp_unit_tests_host") {
+    output_name = "fidl_hlcpp_unit_tests"
     deps = [
       ":host_test_sources",
       "//zircon/public/lib/zxtest",
     ]
   }
-}
 
-if (is_linux || is_mac) {
-  test("fidl_cpp_host_conformance_test") {
+  test("fidl_hlcpp_conformance_tests_host") {
+    output_name = "fidl_hlcpp_conformance_tests"
     deps = [
       ":conformance_test_sources",
       "//zircon/public/lib/zxtest",
@@ -320,16 +320,18 @@ if (is_linux || is_mac) {
   }
 }
 
-# group("host_tests") {
-#   deps = [
-#     ":fidl_cpp_host_conformance_test($host_toolchain)",
-#     ":fidl_cpp_host_unittests($host_toolchain)",
-#   ]
-#   testonly = true
-# }
-
 fidl("union_migration_test_fidl") {
   name = "fidl.test.unionmigration"
 
   sources = [ "union_migration.test.fidl" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":fidl-hlcpp-tests",
+    ":fidl_hlcpp_conformance_tests_host($host_toolchain)",
+    ":fidl_hlcpp_unit_tests_host($host_toolchain)",
+    "fuzzing:tests",
+  ]
 }

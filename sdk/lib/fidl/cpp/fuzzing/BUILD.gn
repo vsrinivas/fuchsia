@@ -4,7 +4,7 @@
 
 import("//build/cpp/sdk_source_set.gni")
 import("//build/test.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 source_set("fuzzing") {
   testonly = true
@@ -26,12 +26,7 @@ source_set("fuzzing") {
   public_configs = [ "//sdk/config" ]
 }
 
-group("tests") {
-  testonly = true
-  deps = [ ":fidl_cpp_fuzzing_tests" ]
-}
-
-test("fidl_cpp_fuzzing_unittests") {
+test("fidl_hlcpp_fuzzing_unittests") {
   sources = [ "traits_unittest.cc" ]
   deps = [
     ":fuzzing",
@@ -39,11 +34,13 @@ test("fidl_cpp_fuzzing_unittests") {
   ]
 }
 
-test_package("fidl_cpp_fuzzing_tests") {
-  deps = [ ":fidl_cpp_fuzzing_unittests" ]
-  tests = [
-    {
-      name = "fidl_cpp_fuzzing_unittests"
-    },
-  ]
+fuchsia_unittest_package("fidl-hlcpp-fuzzing-tests") {
+  component_name = "fidl_hlcpp_fuzzing_tests"
+  manifest = "meta/fidl_hlcpp_fuzzing_tests.cmx"
+  deps = [ ":fidl_hlcpp_fuzzing_unittests" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":fidl-hlcpp-fuzzing-tests" ]
 }

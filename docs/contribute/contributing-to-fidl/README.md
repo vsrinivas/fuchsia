@@ -491,9 +491,9 @@ Note: While `fx test fidl_bindings_test` prints test names as they run, it does 
 | Name                     | Test Command                                    | Coverage
 |--------------------------|-------------------------------------------------|---------------------------
 | walker, misc             | `fx test --host fidl-walker-host-tests`         | //zircon/system/ulib/fidl
-| hlcpp unittests          | `fx test --host fidl_cpp_host_unittests`        | //sdk/lib/fidl
-| hlcpp conformance tests  | `fx test --host fidl_cpp_host_conformance_test` | //sdk/lib/fidl
-| llcpp conformance tests  | `fx test --host fidl_llcpp_conformance_test`    | //zircon/system/ulib/fidl/include/lib/fidl/llcpp
+| hlcpp unittests          | `fx test --host fidl_hlcpp_unit_tests`          | //sdk/lib/fidl
+| hlcpp conformance tests  | `fx test --host fidl_hlcpp_conformance_tests`   | //sdk/lib/fidl
+| llcpp conformance tests  | `fx test --host fidl_llcpp_conformance_tests`    | //zircon/system/ulib/fidl/include/lib/fidl/llcpp
 | rust conformance tests   | `fx test --host fidl_rust_conformance_tests`    | //src/lib/fidl/rust
 | rust fidl lib tests      | `fx test --host fidl_rust_lib_tests`            | //src/lib/fidl/rust
 | go conformance tests     | `fx test --host fidl_go_conformance_tests`      | //third_party/go/syscall/zx/fidl

@@ -4,8 +4,7 @@
 
 import("//build/fidl/fidl.gni")
 import("//build/test.gni")
-import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
+import("//src/sys/build/components.gni")
 import("//src/tests/fidl/conformance_suite/gidl-conformance-suite.gni")
 import("//tools/fidl/gidl/gidl.gni")
 
@@ -25,10 +24,10 @@ foreach(gidl_file, conformance_suite_gidl_files) {
   }
 }
 
-executable("fidl_llcpp_conformance_test_bin") {
+executable("fidl_llcpp_conformance_tests_bin") {
   testonly = true
 
-  output_name = "fidl_llcpp_conformance_test"
+  output_name = "fidl_llcpp_conformance_tests"
 
   sources = [
     "manual_conformance_test.cc",
@@ -46,26 +45,22 @@ executable("fidl_llcpp_conformance_test_bin") {
          ] + gidl_deps
 }
 
-test_package("fidl-llcpp-conformance-test") {
-  deps = [ ":fidl_llcpp_conformance_test_bin" ]
-
-  tests = [
-    {
-      name = "fidl_llcpp_conformance_test"
-      environments = basic_envs
-    },
-  ]
+fuchsia_unittest_component("fidl_llcpp_conformance_tests") {
+  executable_path = "bin/fidl_llcpp_conformance_tests"
+  deps = [ ":fidl_llcpp_conformance_tests_bin" ]
 }
 
-test("fidl_llcpp_conformance_test") {
-  output_name = "fidl_llcpp_conformance_host_test"
-  sources = [ "test_utils.cc" ]
-  deps = [
-    "//src/lib/fxl/test:gtest_main",
-    "//src/tests/fidl/conformance_suite:conformance_fidl_llcpp",
-    "//third_party/googletest:gtest",
-    "//zircon/public/lib/fbl",
-  ]
+if (is_host) {
+  test("fidl_llcpp_conformance_tests_host") {
+    output_name = "fidl_llcpp_conformance_tests"
+    sources = [ "test_utils.cc" ]
+    deps = [
+      "//src/lib/fxl/test:gtest_main",
+      "//src/tests/fidl/conformance_suite:conformance_fidl_llcpp",
+      "//third_party/googletest:gtest",
+      "//zircon/public/lib/fbl",
+    ]
+  }
 }
 
 fidl("fidl.llcpp.types.test") {
@@ -94,10 +89,10 @@ fidl("llcpptest.transitional.test") {
   sources = [ "transitional.test.fidl" ]
 }
 
-executable("fidl_llcpp_types_test_bin") {
+executable("fidl_llcpp_type_tests_bin") {
   testonly = true
 
-  output_name = "fidl_llcpp_types_test"
+  output_name = "fidl_llcpp_type_tests"
 
   sources = [
     "bits_test.cc",
@@ -131,30 +126,15 @@ executable("fidl_llcpp_types_test_bin") {
   ]
 }
 
-package("fidl_llcpp_types_test") {
-  testonly = true
-
-  deps = [ ":fidl_llcpp_types_test_bin" ]
-
-  meta = [
-    {
-      path = "fidl_llcpp_types_test.cmx"
-      dest = "fidl_llcpp_types_test.cmx"
-    },
-  ]
-
-  tests = [
-    {
-      name = "fidl_llcpp_types_test"
-      environments = basic_envs
-    },
-  ]
+fuchsia_unittest_component("fidl_llcpp_type_tests") {
+  manifest = "meta/fidl_llcpp_type_tests.cmx"
+  deps = [ ":fidl_llcpp_type_tests_bin" ]
 }
 
-executable("fidl_llcpp_builder_test_bin") {
+executable("fidl_llcpp_builder_tests_bin") {
   testonly = true
 
-  output_name = "fidl_llcpp_builder_test"
+  output_name = "fidl_llcpp_builder_tests"
 
   sources = [
     "aligned_test.cc",
@@ -178,32 +158,23 @@ executable("fidl_llcpp_builder_test_bin") {
   ]
 }
 
-package("fidl_llcpp_builder_test") {
-  testonly = true
+fuchsia_unittest_component("fidl_llcpp_builder_tests") {
+  manifest = "meta/fidl_llcpp_builder_tests.cmx"
+  deps = [ ":fidl_llcpp_builder_tests_bin" ]
+}
 
-  deps = [ ":fidl_llcpp_builder_test_bin" ]
-
-  meta = [
-    {
-      path = "fidl_llcpp_builder_test.cmx"
-      dest = "fidl_llcpp_builder_test.cmx"
-    },
-  ]
-
-  tests = [
-    {
-      name = "fidl_llcpp_builder_test"
-      environments = basic_envs
-    },
+fuchsia_test_package("fidl-llcpp-tests") {
+  test_components = [
+    ":fidl_llcpp_builder_tests",
+    ":fidl_llcpp_conformance_tests",
+    ":fidl_llcpp_type_tests",
   ]
 }
 
 group("tests") {
   testonly = true
   public_deps = [
-    ":fidl-llcpp-conformance-test",
-    ":fidl_llcpp_builder_test",
-    ":fidl_llcpp_conformance_test($host_toolchain)",
-    ":fidl_llcpp_types_test",
+    ":fidl-llcpp-tests",
+    ":fidl_llcpp_conformance_tests_host($host_toolchain)",
   ]
 }

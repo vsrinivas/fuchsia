@@ -3,7 +3,7 @@
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "test/fidl_llcpp_conformance_test"
+        "binary": "bin/fidl_llcpp_conformance_tests"
     },
     "sandbox": {
         "services": [

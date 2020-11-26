@@ -85,23 +85,36 @@ src/lib/fidl/BUILD.gn) should be included in bundles/fidl/BUILD.gn. This enables
 (The tests are also run in CQ because `//bundles/buildbot:core` includes
 `//bundles/fidl:tests`.)
 
+## Binary names
+
+Normally test binary names are based on the target name. For example, a
+`test("some_tests") { ... }` target would produce a `some_tests` binary.
+However, for a single test you often need multiple targets (source sets,
+components, packages, etc.) with unique names. Therefore, the examples in this
+document use target names like `some_tests_bin` and override the binary name
+using the `output_name` parameter:
+
+```gn
+test("some_tests_bin") {
+  output_name = "some_tests"
+  ...
+}
+```
+
+This also works for `rustc_test`, `go_test`, etc.
+
 ## Device tests
 
 Assume we have a `:fidl_foo_tests_bin` target that produces a `fidl_foo_tests`
-binary. To wrap this in a package, start with a `unittest_package`:
+binary. To wrap this in a package, start with a `fuchsia_unittest_package`:
 
 ```gn
-import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
+import("//src/sys/build/components.gni")
 
-unittest_package("fidl-foo-tests") {
+fuchsia_unittest_package("fidl-foo-tests") { # package names must use hyphens
+  component_name = "fidl_foo_tests"          # but we can use underscores here
+  executable_path = "bin/fidl_foo_tests"
   deps = [ ":fidl_foo_tests_bin" ]
-  tests = [
-    {
-      name = "fidl_foo_tests"
-      environments = basic_envs
-    },
-  ]
 }
 ```
 
@@ -110,49 +123,42 @@ component name (`fx test fidl_foo_tests`). For single-test packages like this,
 **use the component name in documentation** (e.g. contributing_to_fidl.md,
 `"Test:"` lines in commit messages).
 
-For multiple device tests, collect them all in a **single package** instead of
-making separate packages. For example, suppose we split `fidl_foo_tests` into
+For multiple device tests, collect them all in a **single package** with
+`fuchsia_test_package`. For example, suppose we split `fidl_foo_tests` into
 `fidl_foo_unit_tests` and `fidl_foo_integration_tests`:
 
 ```gn
-import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
+import("//src/sys/build/components.gni")
 
-unittest_package("fidl-foo-tests") {
-  deps = [
-    ":fidl_foo_unit_tests_bin",
-    ":fidl_foo_integration_tests_bin",
-  ]
-  tests = [
-    {
-      name = "fidl_foo_unit_tests"
-      environments = basic_envs
-    },
-    {
-      name = "fidl_foo_integration_tests"
-      environments = basic_envs
-    },
+fuchsia_unittest_component("fidl_foo_unit_tests") {
+  executable_path = "bin/fidl_foo_unit_tests"
+  deps = [ "fidl_foo_unit_tests_bin" ]
+}
+
+fuchsia_unittest_component("fidl_foo_integration_tests") {
+  executable_path = "bin/fidl_foo_integration_tests"
+  deps = [ "fidl_foo_integration_tests_bin" ]
+}
+
+fuchsia_test_package("fidl-foo-tests") {
+  test_components = [
+    ":fidl_foo_unit_tests",
+    ":fidl_foo_integration_tests",
   ]
 }
 ```
 
-Most of the time `unittest_package` is enough. If your test needs any component
-features, services, etc., you must instead use `test_package` and write a
-component manifest file:
+If your test requires any component features, services, etc. beyond the
+`fuchsia_unittest_component` defaults, you must write a component manifest file:
 
 ```gn
 # BUILD.gn
-import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
+import("//src/sys/build/components.gni")
 
-test_package("fidl-foo-tests") {
+fuchsia_unittest_package("fidl-foo-tests") {
+  component_name = "fidl_foo_tests"
+  manifest = "meta/fidl_foo_tests.cmx"
   deps = [ ":fidl_foo_tests_bin" ]
-  tests = [
-    {
-      name = "fidl_foo_tests"
-      environments = basic_envs
-    },
-  ]
 }
 
 # meta/fidl_foo_tests.cmx
@@ -169,39 +175,40 @@ test_package("fidl-foo-tests") {
 }
 ```
 
-The manifest path defaults to meta/fidl\_too\_tests.cmx in this case. As with
-`unittest_package`, you can include multiple test components. Each one will need
-its own component manifest file.
+If you're grouping multiple components into a single `fuchsia_test_package`,
+each `fuchsia_unittest_component` needs its own manifest.
+
+For more information on package and component templates, see
+[Building components][building_components].
 
 ## Host tests
 
-Assume we have a `:fidl_bar_tests` target that produces a `fidl_bar_tests` host
-test binary, defined using one of the test templates: `test`, `go_test`, etc. We
-must **ensure that GN is in `$host_toolchain` when it reaches that target**,
-otherwise it will try to build it for Fuchsia:
+Assume we have a `:fidl_bar_tests_bin` target that produces a `fidl_bar_tests`
+binary. We must **ensure that GN is in `$host_toolchain` when it reaches that
+target**, otherwise it will try to build it for Fuchsia:
 
 ```gn
 groups("tests") {
   testonly = true
-  deps = [ ":fidl_bar_tests($host_toolchain)" ]
+  deps = [ ":fidl_bar_tests_bin($host_toolchain)" ]
 }
 ```
 
 (Always put `($host_toolchain)` in the BUILD.gn file's `tests` group, not in
 //bundles/fidl:tests.)
 
-This will create a test\_spec entry named `host_x64/fidl_bar_tests`, which will
+This will create a test_spec entry named `host_x64/fidl_bar_tests`, which will
 end up in out/default/tests.json:
 
 ```json
 {
   "command": [ "host_x64/fidl_bar_tests", "--test.timeout", "5m" ],
   "cpu": "x64",
-  "label": "//PATH/TO/BAR:fidl_bar_tests(//build/toolchain:host_x64)",
+  "label": "//PATH/TO/BAR:fidl_bar_tests_bin(//build/toolchain:host_x64)",
   "name": "host_x64/fidl_bar_tests",
   "os": "linux",
   "path": "host_x64/fidl_bar_tests",
-  "runtime_deps": "host_x64/gen/PATH/TO/BAR/fidl_bar_tests.deps.json"
+  "runtime_deps": "host_x64/gen/PATH/TO/BAR/fidl_bar_tests_bin.deps.json"
 }
 ```
 
@@ -214,27 +221,54 @@ Tests that run both on host and device fall in two categories. In the first
 category, the test target simply builds under either toolchain. For example:
 
 ```gn
-import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
+import("//src/sys/build/components.gni")
 
-rustc_test("fidl_rust_conformance_tests") {  # host test name
+rustc_test("fidl_rust_conformance_tests_bin") {
+  output_name = "fidl_rust_conformance_tests"          # host test name
   ...
 }
 
-unittest_package("fidl-rust-tests") {
-  deps = [ ":fidl_rust_conformance_tests" ]
-  tests = [
-    {
-      name = "fidl_rust_conformance_tests"   # device test name
-      environments = basic_envs
-    },
+fuchsia_unittest_package("fidl-rust-tests") {
+  component_name = "fidl_rust_conformance_tests"       # device test name
+  executable_path = "bin/fidl_rust_conformance_tests"
+  deps = [ ":fidl_rust_conformance_tests_bin" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":fidl_rust_conformance_tests_bin($host_toolchain)",
+    ":fidl-rust-tests",
+  ]
+}
+```
+
+Or, if the component is packaged with other tests:
+
+```gn
+import("//src/sys/build/components.gni")
+
+rustc_test("fidl_rust_conformance_tests_bin") {
+  output_name = "fidl_rust_conformance_tests"                # host test name
+  ...
+}
+
+fuchsia_unittest_component("fidl_rust_conformance_tests") {  # device test name
+  executable_path = "bin/fidl_rust_conformance_tests"
+  deps = [ ":fidl_rust_conformance_tests_bin" ]
+}
+
+fuchsia_test_package("fidl-rust-tests") {
+  test_components = [
+    ":fidl_rust_conformance_tests",
+    ...
   ]
 }
 
 group("tests") {
   testonly = true
   deps = [
-    ":fidl_rust_conformance_tests($host_toolchain)",
+    ":fidl_rust_conformance_tests_bin($host_toolchain)",
     ":fidl-rust-tests",
   ]
 }
@@ -247,30 +281,18 @@ We can now run the test both ways:
 
 In the second category, the device and host tests share source code, but they
 are sufficiently different that they must be defined by separate targets. This
-time, **use the same name for the _host_ test target and the component name**.
-This will require choosing a different name for the _device_ test target. For
-example:
+requires wrapping the host test definition in `if (is_host) { ... }` to prevent
+GN complaining about multiple targets producing the same output. For example:
 
 ```gn
-import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
+import("//src/sys/build/components.gni")
 
 source_set("conformance_test_sources") {
   ...
 }
 
-test("fidl_hlcpp_conformance_tests") {       # host test name
-  ...
-  deps = [
-    ":conformance_test_sources",
-    ...
-  ]
-}
 
-test("fidl_hlcpp_conformance_tests_fuchsia") {
-  # We had to append _fuchsia to distinguish this from the host test target.
-  # But we want the binary name to be fidl_hlcpp_conformance_tests to match
-  # up with the same-named test component in the unittest_package.
+test("fidl_hlcpp_conformance_tests_bin") {
   output_name = "fidl_hlcpp_conformance_tests"
   ...
   deps = [
@@ -279,20 +301,27 @@ test("fidl_hlcpp_conformance_tests_fuchsia") {
   ]
 }
 
-unittest_package("fidl-hlcpp-tests") {
-  deps = [ ":fidl_hlcpp_conformance_tests_fuchsia" ]
-  tests = [
-    {
-      name = "fidl_hlcpp_conformance_tests"  # device test name
-      environments = basic_envs
-    },
-  ]
+if (is_host) {
+  test("fidl_hlcpp_conformance_tests_bin_host") {
+    output_name = "fidl_hlcpp_conformance_tests"        # host test name
+    ...
+    deps = [
+      ":conformance_test_sources",
+      ...
+    ]
+  }
+}
+
+fuchsia_unittest_package("fidl-hlcpp-tests") {
+  component_name = "fidl_hlcpp_conformance_tests"       # device test name
+  executable_path = "bin/fidl_hlcpp_conformance_tests"
+  deps = [ ":fidl_hlcpp_conformance_tests_bin" ]
 }
 
 group("tests") {
   testonly = true
   deps = [
-    ":fidl_hlcpp_conformance_tests($host_toolchain)",
+    ":fidl_hlcpp_conformance_tests_bin_host($host_toolchain)",
     ":fidl-hlcpp-tests"
   ]
 }
