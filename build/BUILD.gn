@@ -954,6 +954,7 @@ group("deprecated_package") {
     "//third_party/iperf/*",
     "//third_party/libc-tests/*",
     "//third_party/micro-ecc/*",
+    "//third_party/network-conformance/*",
     "//third_party/openssh-portable/*",
     "//third_party/openssl-ecjpake/*",
     "//third_party/quickjs/*",
