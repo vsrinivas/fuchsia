@@ -212,10 +212,13 @@ static uint32_t y_coordinate(float y, float height) {
 }
 
 // Stream for event queue.
-class EventStream : public StreamBase, public fuchsia::virtualization::hardware::ViewListener {
+class EventStream : public StreamBase,
+                    public fuchsia::virtualization::hardware::KeyboardListener,
+                    public fuchsia::virtualization::hardware::PointerListener {
  public:
   EventStream(sys::ComponentContext* context) {
-    context->outgoing()->AddPublicService(view_listener_bindings_.GetHandler(this));
+    context->outgoing()->AddPublicService(keyboard_listener_bindings_.GetHandler(this));
+    context->outgoing()->AddPublicService(pointer_listener_bindings_.GetHandler(this));
   }
 
   void DoEvent() {
@@ -229,57 +232,58 @@ class EventStream : public StreamBase, public fuchsia::virtualization::hardware:
   }
 
  private:
-  fidl::BindingSet<ViewListener> view_listener_bindings_;
+  fidl::BindingSet<KeyboardListener> keyboard_listener_bindings_;
+  fidl::BindingSet<PointerListener> pointer_listener_bindings_;
   std::array<virtio_input_event_t, 64> event_ring_;
   size_t head_ = 0;
   size_t tail_ = 0;
   fuchsia::ui::gfx::vec3 view_size_ = {0, 0, 0};
 
-  void OnKeyboard(const fuchsia::ui::input::KeyboardEvent& keyboard) {
-    uint32_t hid_usage = keyboard.hid_usage;
+  // |fuchsia::virtualization::hardware::KeyboardListener|
+  void OnKeyboardEvent(fuchsia::ui::input::KeyboardEvent event) override {
+    uint32_t hid_usage = event.hid_usage;
     if (hid_usage >= kKeyMap.size()) {
       FX_LOGS(WARNING) << "Unsupported keyboard event";
       return;
     }
     virtio_input_event_t events[] = {
         {
-            .type = key_or_repeat(keyboard.phase),
+            .type = key_or_repeat(event.phase),
             .code = kKeyMap[hid_usage],
-            .value = press_or_release(keyboard.phase),
+            .value = press_or_release(event.phase),
         },
         {
             .type = VIRTIO_INPUT_EV_SYN,
         },
     };
-    bool enqueued = EnqueueEvents(events);
-    if (!enqueued) {
-      FX_LOGS(WARNING) << "Dropped keyboard event";
-    }
+    EnqueueEvents(events);
+    DoEvent();
   }
 
-  void OnPointer(const fuchsia::ui::input::PointerEvent& pointer) {
-    switch (pointer.phase) {
+  // |fuchsia::virtualization::hardware::PointerListener|
+  void OnSizeChanged(fuchsia::ui::gfx::vec3 size) override { view_size_ = size; }
+
+  // |fuchsia::virtualization::hardware::PointerListener|
+  void OnPointerEvent(fuchsia::ui::input::PointerEvent event) override {
+    switch (event.phase) {
       case fuchsia::ui::input::PointerEventPhase::MOVE: {
         virtio_input_event_t events[] = {
             {
                 .type = VIRTIO_INPUT_EV_ABS,
                 .code = VIRTIO_INPUT_EV_ABS_X,
-                .value = x_coordinate(pointer.x, view_size_.x),
+                .value = x_coordinate(event.x, view_size_.x),
             },
             {
                 .type = VIRTIO_INPUT_EV_ABS,
                 .code = VIRTIO_INPUT_EV_ABS_Y,
-                .value = y_coordinate(pointer.y, view_size_.y),
+                .value = y_coordinate(event.y, view_size_.y),
             },
             {
                 .type = VIRTIO_INPUT_EV_SYN,
             },
         };
-        bool enqueued = EnqueueEvents(events);
-        if (!enqueued) {
-          FX_LOGS(WARNING) << "Dropped pointer event";
-        }
-        return;
+        EnqueueEvents(events);
+        break;
       }
       case fuchsia::ui::input::PointerEventPhase::DOWN:
       case fuchsia::ui::input::PointerEventPhase::UP: {
@@ -287,64 +291,41 @@ class EventStream : public StreamBase, public fuchsia::virtualization::hardware:
             {
                 .type = VIRTIO_INPUT_EV_ABS,
                 .code = VIRTIO_INPUT_EV_ABS_X,
-                .value = x_coordinate(pointer.x, view_size_.x),
+                .value = x_coordinate(event.x, view_size_.x),
             },
             {
                 .type = VIRTIO_INPUT_EV_ABS,
                 .code = VIRTIO_INPUT_EV_ABS_Y,
-                .value = y_coordinate(pointer.y, view_size_.y),
+                .value = y_coordinate(event.y, view_size_.y),
             },
             {
                 .type = VIRTIO_INPUT_EV_KEY,
                 .code = kButtonTouchCode,
-                .value = press_or_release(pointer.phase),
+                .value = press_or_release(event.phase),
             },
             {
                 .type = VIRTIO_INPUT_EV_SYN,
             },
         };
-        bool enqueued = EnqueueEvents(events);
-        if (!enqueued) {
-          FX_LOGS(WARNING) << "Dropped pointer event";
-        }
-        return;
+        EnqueueEvents(events);
+        break;
       }
       default:
         return;
     }
-  }
-
-  // |fuchsia::virtualization::hardware::ViewListener|
-  void OnInputEvent(fuchsia::ui::input::InputEvent event) override {
-    switch (event.Which()) {
-      case fuchsia::ui::input::InputEvent::Tag::kKeyboard:
-        OnKeyboard(event.keyboard());
-        break;
-      case fuchsia::ui::input::InputEvent::Tag::kPointer:
-        if (view_size_.x > 0 && view_size_.y > 0) {
-          OnPointer(event.pointer());
-        }
-        break;
-      default:
-        return;
-    }
-
     DoEvent();
   }
 
-  // |fuchsia::virtualization::hardware::ViewListener|
-  void OnSizeChanged(fuchsia::ui::gfx::vec3 size) override { view_size_ = size; }
-
   template <size_t N>
-  bool EnqueueEvents(virtio_input_event_t (&events)[N]) {
+  void EnqueueEvents(virtio_input_event_t (&events)[N]) {
     if (RingFree() < N) {
-      return false;
+      FX_LOGS(WARNING) << "Dropped input event";
+      return;
     }
     for (auto& event : events) {
       event_ring_[tail_] = event;
       tail_ = RingIndex(tail_ + 1);
     }
-    return true;
   }
 
   void DequeueEvent(virtio_input_event_t* event) {

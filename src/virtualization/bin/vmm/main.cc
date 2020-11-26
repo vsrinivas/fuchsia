@@ -274,27 +274,40 @@ int main(int argc, char** argv) {
   }
 
   VirtioGpu gpu(guest.phys_mem());
-  VirtioInput input(guest.phys_mem());
+  VirtioInput input_keyboard(guest.phys_mem(), VirtioInput::Keyboard);
+  VirtioInput input_pointer(guest.phys_mem(), VirtioInput::Pointer);
   if (cfg->virtio_gpu()) {
-    // Setup input device.
-    status = bus.Connect(input.pci_device(), device_loop.dispatcher(), true);
+    // Setup keyboard device.
+    status = bus.Connect(input_keyboard.pci_device(), device_loop.dispatcher(), true);
     if (status != ZX_OK) {
       return status;
     }
-    fidl::InterfaceHandle<fuchsia::virtualization::hardware::ViewListener> view_listener;
-    status = input.Start(guest.object(), view_listener.NewRequest(), launcher.get(),
-                         device_loop.dispatcher());
+    status = input_keyboard.Start(guest.object(), launcher.get(), device_loop.dispatcher());
     if (status != ZX_OK) {
       return status;
     }
+    fidl::InterfaceHandle<fuchsia::virtualization::hardware::KeyboardListener> keyboard_listener;
+    input_keyboard.Connect(keyboard_listener.NewRequest());
+
+    // Setup pointer device.
+    status = bus.Connect(input_pointer.pci_device(), device_loop.dispatcher(), true);
+    if (status != ZX_OK) {
+      return status;
+    }
+    status = input_pointer.Start(guest.object(), launcher.get(), device_loop.dispatcher());
+    if (status != ZX_OK) {
+      return status;
+    }
+    fidl::InterfaceHandle<fuchsia::virtualization::hardware::PointerListener> pointer_listener;
+    input_pointer.Connect(pointer_listener.NewRequest());
 
     // Setup GPU device.
     status = bus.Connect(gpu.pci_device(), device_loop.dispatcher(), true);
     if (status != ZX_OK) {
       return status;
     }
-    status = gpu.Start(guest.object(), std::move(view_listener), launcher.get(),
-                       device_loop.dispatcher());
+    status = gpu.Start(guest.object(), std::move(keyboard_listener), std::move(pointer_listener),
+                       launcher.get(), device_loop.dispatcher());
     if (status != ZX_OK) {
       return status;
     }

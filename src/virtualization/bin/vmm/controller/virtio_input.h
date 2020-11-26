@@ -6,6 +6,8 @@
 #define SRC_VIRTUALIZATION_BIN_VMM_CONTROLLER_VIRTIO_INPUT_H_
 
 #include <fuchsia/virtualization/hardware/cpp/fidl.h>
+#include <lib/sys/cpp/service_directory.h>
+
 #include <virtio/input.h>
 #include <virtio/virtio_ids.h>
 
@@ -13,18 +15,28 @@
 
 static constexpr uint16_t kVirtioInputNumQueues = 2;
 
+using VirtioInputType = uint8_t (*)(uint8_t subsel, uint8_t* bitmap);
+
 // Virtio input device.
 class VirtioInput
     : public VirtioComponentDevice<VIRTIO_ID_INPUT, kVirtioInputNumQueues, virtio_input_config_t> {
  public:
-  explicit VirtioInput(const PhysMem& phys_mem);
+  static uint8_t Keyboard(uint8_t subsel, uint8_t* bitmap);
+  static uint8_t Pointer(uint8_t subsel, uint8_t* bitmap);
 
-  zx_status_t Start(
-      const zx::guest& guest,
-      fidl::InterfaceRequest<fuchsia::virtualization::hardware::ViewListener> view_listener_request,
-      fuchsia::sys::Launcher* launcher, async_dispatcher_t* dispatcher);
+  VirtioInput(const PhysMem& phys_mem, VirtioInputType type);
+
+  zx_status_t Start(const zx::guest& guest, fuchsia::sys::Launcher* launcher,
+                    async_dispatcher_t* dispatcher);
+
+  template <typename Protocol>
+  void Connect(fidl::InterfaceRequest<Protocol> request) {
+    services_->Connect(std::move(request));
+  }
 
  private:
+  VirtioInputType type_;
+  std::shared_ptr<sys::ServiceDirectory> services_;
   fuchsia::sys::ComponentControllerPtr controller_;
   // Use a sync pointer for consistency of virtual machine execution.
   fuchsia::virtualization::hardware::VirtioInputSyncPtr input_;

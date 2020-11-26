@@ -24,7 +24,8 @@ class VirtioInputTest : public TestWithDevice {
     ASSERT_EQ(ZX_OK, status);
 
     // Start device execution.
-    services_->Connect(view_listener_.NewRequest());
+    services_->Connect(keyboard_listener_.NewRequest());
+    services_->Connect(pointer_listener_.NewRequest());
     services_->Connect(input_.NewRequest());
     RunLoopUntilIdle();
 
@@ -44,17 +45,17 @@ class VirtioInputTest : public TestWithDevice {
   // Note: use of sync can be problematic here if the test environment needs to handle
   // some incoming FIDL requests.
   fuchsia::virtualization::hardware::VirtioInputSyncPtr input_;
-  fuchsia::virtualization::hardware::ViewListenerSyncPtr view_listener_;
+  fuchsia::virtualization::hardware::KeyboardListenerSyncPtr keyboard_listener_;
+  fuchsia::virtualization::hardware::PointerListenerSyncPtr pointer_listener_;
   VirtioQueueFake event_queue_;
 };
 
 TEST_F(VirtioInputTest, Keyboard) {
-  fuchsia::ui::input::InputEvent fuchsia_event;
-  fuchsia_event.set_keyboard({
+  fuchsia::ui::input::KeyboardEvent keyboard = {
       .phase = fuchsia::ui::input::KeyboardEventPhase::PRESSED,
       .hid_usage = 4,
-  });
-  view_listener_->OnInputEvent(std::move(fuchsia_event));
+  };
+  keyboard_listener_->OnKeyboardEvent(std::move(keyboard));
 
   virtio_input_event_t* event_1;
   virtio_input_event_t* event_2;
@@ -76,15 +77,13 @@ TEST_F(VirtioInputTest, Keyboard) {
 }
 
 TEST_F(VirtioInputTest, PointerMove) {
-  view_listener_->OnSizeChanged({1, 1});
-  fuchsia::ui::input::InputEvent fuchsia_event;
+  pointer_listener_->OnSizeChanged({1, 1});
   fuchsia::ui::input::PointerEvent pointer = {
       .phase = fuchsia::ui::input::PointerEventPhase::MOVE,
       .x = 0.25,
       .y = 0.5,
   };
-  fuchsia_event.set_pointer(pointer);
-  view_listener_->OnInputEvent(std::move(fuchsia_event));
+  pointer_listener_->OnPointerEvent(std::move(pointer));
 
   virtio_input_event_t* event_1;
   virtio_input_event_t* event_2;
@@ -111,15 +110,13 @@ TEST_F(VirtioInputTest, PointerMove) {
 }
 
 TEST_F(VirtioInputTest, PointerUp) {
-  view_listener_->OnSizeChanged({1, 1});
-  fuchsia::ui::input::InputEvent fuchsia_event;
+  pointer_listener_->OnSizeChanged({1, 1});
   fuchsia::ui::input::PointerEvent pointer = {
       .phase = fuchsia::ui::input::PointerEventPhase::UP,
       .x = 0.25,
       .y = 0.5,
   };
-  fuchsia_event.set_pointer(pointer);
-  view_listener_->OnInputEvent(std::move(fuchsia_event));
+  pointer_listener_->OnPointerEvent(std::move(pointer));
 
   virtio_input_event_t* event_1;
   virtio_input_event_t* event_2;

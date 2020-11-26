@@ -29,7 +29,8 @@ zx_status_t VirtioGpu::AddPublicService(sys::ComponentContext* context) {
 
 zx_status_t VirtioGpu::Start(
     const zx::guest& guest,
-    fidl::InterfaceHandle<fuchsia::virtualization::hardware::ViewListener> view_listener,
+    fidl::InterfaceHandle<fuchsia::virtualization::hardware::KeyboardListener> keyboard_listener,
+    fidl::InterfaceHandle<fuchsia::virtualization::hardware::PointerListener> pointer_listener,
     fuchsia::sys::Launcher* launcher, async_dispatcher_t* dispatcher) {
   fuchsia::sys::LaunchInfo launch_info;
   launch_info.url = kVirtioGpuUrl;
@@ -44,7 +45,8 @@ zx_status_t VirtioGpu::Start(
   if (status != ZX_OK) {
     return status;
   }
-  return gpu_->Start(std::move(start_info), std::move(view_listener));
+  return gpu_->Start(std::move(start_info), std::move(keyboard_listener),
+                     std::move(pointer_listener));
 }
 
 zx_status_t VirtioGpu::ConfigureQueue(uint16_t queue, uint16_t size, zx_gpaddr_t desc,

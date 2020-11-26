@@ -13,7 +13,8 @@
 class GuestView : public scenic::BaseView {
  public:
   GuestView(scenic::ViewContext view_context, GpuScanout* scanout,
-            fuchsia::virtualization::hardware::ViewListenerPtr view_listener);
+            fuchsia::virtualization::hardware::KeyboardListenerPtr keyboard_listener,
+            fuchsia::virtualization::hardware::PointerListenerPtr pointer_listener);
 
  private:
   scenic::ShapeNode background_;
@@ -24,7 +25,8 @@ class GuestView : public scenic::BaseView {
   uint32_t scanout_source_height_;
 
   GpuScanout& scanout_;
-  fuchsia::virtualization::hardware::ViewListenerPtr view_listener_;
+  fuchsia::virtualization::hardware::KeyboardListenerPtr keyboard_listener_;
+  fuchsia::virtualization::hardware::PointerListenerPtr pointer_listener_;
 
   // |scenic::BaseView|
   void OnSceneInvalidated(fuchsia::images::PresentationInfo presentation_info) override;

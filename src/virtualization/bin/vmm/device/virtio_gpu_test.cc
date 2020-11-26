@@ -38,7 +38,7 @@ class VirtioGpuTest : public TestWithDevice, public fuchsia::ui::scenic::testing
     services_->Connect(gpu_.NewRequest());
     RunLoopUntilIdle();
 
-    status = gpu_->Start(std::move(start_info), nullptr);
+    status = gpu_->Start(std::move(start_info), nullptr, nullptr);
     ASSERT_EQ(ZX_OK, status);
 
     // Configure device queues.

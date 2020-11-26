@@ -96,14 +96,21 @@ protocol VirtioConsole {
     Start(StartInfo start_info, zx.handle:SOCKET socket) -> ();
 };
 
-/// Provides a way for VirtioInput to listen to view events.
+/// Provides a way for VirtioInput to listen to keyboard events.
 [Discoverable]
-protocol ViewListener {
-    /// Called when a View's size is changed.
+protocol KeyboardListener {
+    /// Called when a view receives keyboard events.
+    OnKeyboardEvent(fuchsia.ui.input.KeyboardEvent event);
+};
+
+/// Provides a way for VirtioInput to listen to pointer events.
+[Discoverable]
+protocol PointerListener {
+    /// Called when a view's size changes.
     OnSizeChanged(fuchsia.ui.gfx.vec3 size);
 
-    /// Called when a View receives input events.
-    OnInputEvent(fuchsia.ui.input.InputEvent event);
+    /// Called when a view receives pointer events.
+    OnPointerEvent(fuchsia.ui.input.PointerEvent event);
 };
 
 [Discoverable]
@@ -111,7 +118,8 @@ protocol VirtioGpu {
     compose VirtioDevice;
 
     /// Start the GPU device.
-    Start(StartInfo start_info, ViewListener? view_listener) -> ();
+    Start(StartInfo start_info, KeyboardListener? keyboard_listener,
+          PointerListener? pointer_listener) -> ();
 
     /// Called when a device's configuration is changed.
     -> OnConfigChanged();

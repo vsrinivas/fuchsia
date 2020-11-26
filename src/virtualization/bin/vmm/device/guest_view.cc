@@ -8,12 +8,14 @@
 #include <lib/syslog/cpp/macros.h>
 
 GuestView::GuestView(scenic::ViewContext view_context, GpuScanout* scanout,
-                     fuchsia::virtualization::hardware::ViewListenerPtr view_listener)
+                     fuchsia::virtualization::hardware::KeyboardListenerPtr keyboard_listener,
+                     fuchsia::virtualization::hardware::PointerListenerPtr pointer_listener)
     : BaseView(std::move(view_context), "Guest"),
       background_(session()),
       material_(session()),
       scanout_(*scanout),
-      view_listener_(std::move(view_listener)) {
+      keyboard_listener_(std::move(keyboard_listener)),
+      pointer_listener_(std::move(pointer_listener)) {
   background_.SetMaterial(material_);
   root_node().AddChild(background_);
 
@@ -79,11 +81,22 @@ void GuestView::OnSceneInvalidated(fuchsia::images::PresentationInfo presentatio
 }
 
 void GuestView::OnPropertiesChanged(fuchsia::ui::gfx::ViewProperties old_properties) {
-  view_listener_->OnSizeChanged(logical_size());
+  pointer_listener_->OnSizeChanged(logical_size());
 }
 
 void GuestView::OnInputEvent(fuchsia::ui::input::InputEvent event) {
-  view_listener_->OnInputEvent(std::move(event));
+  switch (event.Which()) {
+    case fuchsia::ui::input::InputEvent::Tag::kKeyboard:
+      keyboard_listener_->OnKeyboardEvent(event.keyboard());
+      break;
+    case fuchsia::ui::input::InputEvent::Tag::kPointer:
+      if (logical_size().x > 0 && logical_size().y > 0) {
+        pointer_listener_->OnPointerEvent(event.pointer());
+      }
+      break;
+    default:
+      break;
+  }
 }
 
 void GuestView::OnScenicError(std::string error) {

@@ -27,7 +27,8 @@ class VirtioGpu
 
   zx_status_t Start(
       const zx::guest& guest,
-      fidl::InterfaceHandle<fuchsia::virtualization::hardware::ViewListener> view_listener,
+      fidl::InterfaceHandle<fuchsia::virtualization::hardware::KeyboardListener> keyboard_listener,
+      fidl::InterfaceHandle<fuchsia::virtualization::hardware::PointerListener> pointer_listener,
       fuchsia::sys::Launcher* launcher, async_dispatcher_t* dispatcher);
 
  private:

@@ -38,22 +38,45 @@ static_assert((kATKeyboardLastCode + 7) / 8 < sizeof(virtio_input_config_t().u.b
 static_assert((kMediaKeyboardLastCode + 7) / 8 < sizeof(virtio_input_config_t().u.bitmap),
               "Last scan code cannot exceed allowed range.");
 
-VirtioInput::VirtioInput(const PhysMem& phys_mem)
+static void set_config_bit(uint8_t* bitmap, uint32_t event_code) {
+  bitmap[event_code / 8] |= 1u << (event_code % 8);
+}
+
+uint8_t VirtioInput::Keyboard(uint8_t subsel, uint8_t* bitmap) {
+  if (subsel != VIRTIO_INPUT_EV_KEY) {
+    return 0;
+  }
+  memset(&bitmap[kATKeyboardFirstCode / 8], 0xff,
+         (kATKeyboardLastCode + 1 - kATKeyboardFirstCode) / 8);
+  memset(&bitmap[kMediaKeyboardFirstCode / 8], 0xff,
+         (kMediaKeyboardLastCode + 1 - kMediaKeyboardFirstCode) / 8);
+  set_config_bit(bitmap, kButtonTouchCode);
+  return sizeof(virtio_input_config::u);
+}
+
+uint8_t VirtioInput::Pointer(uint8_t subsel, uint8_t* bitmap) {
+  if (subsel == VIRTIO_INPUT_EV_ABS) {
+    return 0;
+  }
+  set_config_bit(bitmap, VIRTIO_INPUT_EV_ABS_X);
+  set_config_bit(bitmap, VIRTIO_INPUT_EV_ABS_Y);
+  return 1;
+}
+
+VirtioInput::VirtioInput(const PhysMem& phys_mem, VirtioInputType type)
     : VirtioComponentDevice(phys_mem, 0 /* device_features */,
                             fit::bind_member(this, &VirtioInput::ConfigureQueue),
                             fit::bind_member(this, &VirtioInput::ConfigureDevice),
-                            fit::bind_member(this, &VirtioInput::Ready)) {}
+                            fit::bind_member(this, &VirtioInput::Ready)),
+      type_(type) {}
 
-zx_status_t VirtioInput::Start(
-    const zx::guest& guest,
-    fidl::InterfaceRequest<fuchsia::virtualization::hardware::ViewListener> view_listener_request,
-    fuchsia::sys::Launcher* launcher, async_dispatcher_t* dispatcher) {
+zx_status_t VirtioInput::Start(const zx::guest& guest, fuchsia::sys::Launcher* launcher,
+                               async_dispatcher_t* dispatcher) {
   fuchsia::sys::LaunchInfo launch_info;
   launch_info.url = kVirtioInputUrl;
-  auto services = sys::ServiceDirectory::CreateWithRequest(&launch_info.directory_request);
+  services_ = sys::ServiceDirectory::CreateWithRequest(&launch_info.directory_request);
   launcher->CreateComponent(std::move(launch_info), controller_.NewRequest());
-  services->Connect(input_.NewRequest());
-  services->Connect(std::move(view_listener_request));
+  services_->Connect(input_.NewRequest());
 
   fuchsia::virtualization::hardware::StartInfo start_info;
   zx_status_t status = PrepStart(guest, dispatcher, &start_info);
@@ -70,35 +93,6 @@ zx_status_t VirtioInput::ConfigureQueue(uint16_t queue, uint16_t size, zx_gpaddr
 
 zx_status_t VirtioInput::Ready(uint32_t negotiated_features) {
   return input_->Ready(negotiated_features);
-}
-
-static void set_config_bit(virtio_input_config_t* config, uint32_t event_code) {
-  config->u.bitmap[event_code / 8] |= 1u << (event_code % 8);
-}
-
-static void configure_ev_bits(virtio_input_config_t* config) {
-  // VIRTIO_INPUT_CFG_EV_BITS: subsel specifies the event type (EV_*).
-  // If size is non-zero the event type is supported and a bitmap the of
-  // supported event codes is returned in u.bitmap.
-  memset(&config->u, 0, sizeof(config->u));
-  switch (config->subsel) {
-    case VIRTIO_INPUT_EV_KEY:
-      memset(&config->u.bitmap[kATKeyboardFirstCode / 8], 0xff,
-             (kATKeyboardLastCode + 1 - kATKeyboardFirstCode) / 8);
-      memset(&config->u.bitmap[kMediaKeyboardFirstCode / 8], 0xff,
-             (kMediaKeyboardLastCode + 1 - kMediaKeyboardFirstCode) / 8);
-      set_config_bit(config, kButtonTouchCode);
-      config->size = sizeof(config->u);
-      break;
-    case VIRTIO_INPUT_EV_ABS:
-      set_config_bit(config, VIRTIO_INPUT_EV_ABS_X);
-      set_config_bit(config, VIRTIO_INPUT_EV_ABS_Y);
-      config->size = 1;
-      break;
-    default:
-      config->size = 0;
-      break;
-  }
 }
 
 static void configure_abs_info(virtio_input_config_t* config) {
@@ -129,7 +123,11 @@ zx_status_t VirtioInput::ConfigureDevice(uint64_t addr, const IoValue& value) {
   std::lock_guard<std::mutex> lock(device_config_.mutex);
   switch (config_.select) {
     case VIRTIO_INPUT_CFG_EV_BITS:
-      configure_ev_bits(&config_);
+      // VIRTIO_INPUT_CFG_EV_BITS: subsel specifies the event type (EV_*).
+      // If size is non-zero the event type is supported and a bitmap the of
+      // supported event codes is returned in u.bitmap.
+      memset(&config_.u, 0, sizeof(config_.u));
+      config_.size = type_(config_.subsel, config_.u.bitmap);
       return ZX_OK;
     case VIRTIO_INPUT_CFG_ABS_INFO:
       configure_abs_info(&config_);

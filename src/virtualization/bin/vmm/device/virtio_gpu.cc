@@ -291,8 +291,12 @@ class VirtioGpuImpl : public DeviceBase<VirtioGpuImpl>,
     scanout->SetConfigChangedHandler(fit::bind_member(this, &VirtioGpuImpl::OnConfigChanged));
   }
 
-  fuchsia::virtualization::hardware::ViewListenerPtr TakeViewListener() {
-    return std::move(view_listener_);
+  fuchsia::virtualization::hardware::KeyboardListenerPtr TakeKeyboardListener() {
+    return std::move(keyboard_listener_);
+  }
+
+  fuchsia::virtualization::hardware::PointerListenerPtr TakePointerListener() {
+    return std::move(pointer_listener_);
   }
 
   // |fuchsia::virtualization::hardware::VirtioDevice|
@@ -312,12 +316,15 @@ class VirtioGpuImpl : public DeviceBase<VirtioGpuImpl>,
 
  private:
   // |fuchsia::virtualization::hardware::VirtioGpu|
-  void Start(fuchsia::virtualization::hardware::StartInfo start_info,
-             fidl::InterfaceHandle<fuchsia::virtualization::hardware::ViewListener> view_listener,
-             StartCallback callback) override {
+  void Start(
+      fuchsia::virtualization::hardware::StartInfo start_info,
+      fidl::InterfaceHandle<fuchsia::virtualization::hardware::KeyboardListener> keyboard_listener,
+      fidl::InterfaceHandle<fuchsia::virtualization::hardware::PointerListener> pointer_listener,
+      StartCallback callback) override {
     auto deferred = fit::defer(std::move(callback));
     PrepStart(std::move(start_info));
-    view_listener_ = view_listener.Bind();
+    keyboard_listener_ = keyboard_listener.Bind();
+    pointer_listener_ = pointer_listener.Bind();
 
     // Initialize streams.
     control_stream_.Init(
@@ -352,7 +359,8 @@ class VirtioGpuImpl : public DeviceBase<VirtioGpuImpl>,
     }
   }
 
-  fuchsia::virtualization::hardware::ViewListenerPtr view_listener_;
+  fuchsia::virtualization::hardware::KeyboardListenerPtr keyboard_listener_;
+  fuchsia::virtualization::hardware::PointerListenerPtr pointer_listener_;
   GpuResourceMap resources_;
   ControlStream control_stream_;
   CursorStream cursor_stream_;
@@ -371,7 +379,8 @@ int main(int argc, char** argv) {
 
   auto guest_view = [&scanout, &virtio_gpu](scenic::ViewContext view_context) {
     return std::make_unique<GuestView>(std::move(view_context), &scanout,
-                                       virtio_gpu.TakeViewListener());
+                                       virtio_gpu.TakeKeyboardListener(),
+                                       virtio_gpu.TakePointerListener());
   };
   scenic::ViewProviderComponent view_component(guest_view, &loop, context.get());
 
