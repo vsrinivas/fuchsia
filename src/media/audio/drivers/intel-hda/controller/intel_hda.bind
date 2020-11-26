@@ -12,6 +12,7 @@ accept fuchsia.BIND_PCI_DID {
   0x9CA0,  // Intel Broadwell PCH
   0x9D70,  // Intel 6th Gen (Skylake) PCH-U/Y I/O Datasheet
   0x9D71,  // Intel 7th Gen (Kabylake) PCH-U/Y I/O Datasheet
+  0x9DC8,  // Cannon Point-LP High Definition Audio Controller
   0xA170,  // Intel 100/C230 PCH Spec
   0xA1F0,  // Intel 200/C400 PCH Spec
 }

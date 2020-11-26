@@ -75,6 +75,7 @@ zx_status_t RealtekCodec::ProcessSolicitedResponse(const CodecResponse& resp) {
     // Intel NUC
     case 0x80862068:  // Kaby Lake NUC Impl ID
     case 0x80862063:  // Skylake NUC Impl ID
+    case 0x80862074:  // Coffee Lake NUC Impl ID
       res = SetupIntelNUC();
       break;
 
