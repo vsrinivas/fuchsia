@@ -11,9 +11,9 @@
 
 #include <ddk/debug.h>
 #include <ddk/platform-defs.h>
-#include <ddk/protocol/composite.h>
 #include <ddk/trace/event.h>
 #include <ddktl/fidl.h>
+#include <ddktl/protocol/composite.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 
@@ -23,8 +23,6 @@
 
 namespace goldfish {
 namespace {
-
-enum { FRAGMENT_GOLDFISH_PIPE, FRAGMENT_GOLDFISH_ADDRESS_SPACE, FRAGMENT_COUNT };
 
 const char* kTag = "goldfish-control";
 
@@ -152,32 +150,24 @@ Control::~Control() {
 }
 
 zx_status_t Control::Init() {
-  composite_protocol_t composite;
-
-  auto status = device_get_protocol(parent(), ZX_PROTOCOL_COMPOSITE, &composite);
+  ddk::CompositeProtocolClient composite;
+  zx_status_t status = ddk::CompositeProtocolClient::CreateFromDevice(parent(), &composite);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: could not get composite protocol: %d", kTag, status);
+    zxlogf(ERROR, "%s: could not get composite protocol", kTag);
     return status;
   }
 
-  zx_device_t* fragments[FRAGMENT_COUNT];
-  size_t actual;
-  composite_get_fragments(&composite, fragments, countof(fragments), &actual);
-  if (actual != countof(fragments)) {
-    zxlogf(ERROR, "%s: could not get fragments", kTag);
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
-  pipe_ = fragments[FRAGMENT_GOLDFISH_PIPE];
-  if (!pipe_.is_valid()) {
+  status = ddk::GoldfishPipeProtocolClient::CreateFromComposite(composite, "goldfish-pipe", &pipe_);
+  if (status != ZX_OK) {
     zxlogf(ERROR, "%s: goldfish pipe fragment is invalid", kTag);
-    return ZX_ERR_NO_RESOURCES;
+    return status;
   }
 
-  address_space_ = fragments[FRAGMENT_GOLDFISH_ADDRESS_SPACE];
-  if (!address_space_.is_valid()) {
+  status = ddk::GoldfishAddressSpaceProtocolClient::CreateFromComposite(
+      composite, "goldfish-address-space", &address_space_);
+  if (status != ZX_OK) {
     zxlogf(ERROR, "%s: goldfish address space fragment is invalid", kTag);
-    return ZX_ERR_NO_RESOURCES;
+    return status;
   }
 
   return ZX_OK;
