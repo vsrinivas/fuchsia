@@ -1,6 +1,13 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+
+//! This crate defines attribute proc macros for writing tests with its sibling test-harness crate.
+//! Specifically, marking fns which take `test-harness::TestHarness` with the macros in this crate
+//! enables them to run with the standard Rust test runner. While `run_singlethreaded_test` is
+//! currently the only attribute available, further attributes could be defined for other execution
+//! environments.
+
 extern crate proc_macro;
 
 use {
@@ -8,12 +15,6 @@ use {
     quote::quote_spanned,
     syn::{parse_macro_input, Error, Visibility},
 };
-
-///! This crate defines attribute proc macros for writing tests with its sibling test-harness crate.
-///! Specifically, marking fns which take `test-harness::TestHarness` with the macros in this crate
-///! enables them to run with the standard Rust test runner. While `run_singlethreaded_test` is
-///! currently the only attribute available, further attributes could be defined for other execution
-///! environments.
 
 fn validate_item_fn(sig: &syn::Signature, vis: &syn::Visibility) -> Result<(), syn::Error> {
     // Disallow const, unsafe or abi linkage, generics etc

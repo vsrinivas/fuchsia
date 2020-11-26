@@ -308,28 +308,28 @@ mod test {
         assert!(s.is_terminated());
     }
 
-    ///! We validate the behavior of the StreamMap stream by enumerating all possible external
-    ///! events, and then generating permutations of valid sequences of those events. These model
-    ///! the possible executions sequences the stream could go through in program execution. We
-    ///! then assert that:
-    ///!   a) At all points during execution, all invariants are held
-    ///!   b) The final result is as expected
-    ///!
-    ///! In this case, the invariants are:
-    ///!   * If the map is empty, it is pending
-    ///!   * If all streams are pending, the map is pending
-    ///!   * otherwise the map is ready
-    ///!
-    ///! The result is:
-    ///!   * All test messages have been injected
-    ///!   * All test messages have been yielded
-    ///!   * All test streams have terminated
-    ///!   * No event is yielded with a given key after the stream for that key has terminated
-    ///!
-    ///! Together these show:
-    ///!   * Progress is always eventually made - the Stream cannot be stalled
-    ///!   * All inserted elements will eventually be yielded
-    ///!   * Elements are never duplicated
+    // We validate the behavior of the StreamMap stream by enumerating all possible external
+    // events, and then generating permutations of valid sequences of those events. These model
+    // the possible executions sequences the stream could go through in program execution. We
+    // then assert that:
+    //   a) At all points during execution, all invariants are held
+    //   b) The final result is as expected
+    //
+    // In this case, the invariants are:
+    //   * If the map is empty, it is pending
+    //   * If all streams are pending, the map is pending
+    //   * otherwise the map is ready
+    //
+    // The result is:
+    //   * All test messages have been injected
+    //   * All test messages have been yielded
+    //   * All test streams have terminated
+    //   * No event is yielded with a given key after the stream for that key has terminated
+    //
+    // Together these show:
+    //   * Progress is always eventually made - the Stream cannot be stalled
+    //   * All inserted elements will eventually be yielded
+    //   * Elements are never duplicated
 
     /// Possible actions to take in evaluating the stream
     enum Event<K> {
