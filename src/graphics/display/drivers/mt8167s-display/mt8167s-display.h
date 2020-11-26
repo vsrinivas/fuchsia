@@ -6,7 +6,7 @@
 #define SRC_GRAPHICS_DISPLAY_DRIVERS_MT8167S_DISPLAY_MT8167S_DISPLAY_H_
 
 #include <lib/device-protocol/display-panel.h>
-#include <lib/device-protocol/platform-device.h>
+#include <lib/device-protocol/pdev.h>
 #include <lib/mmio/mmio.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <lib/zx/bti.h>
@@ -20,12 +20,12 @@
 
 #include <ddk/debug.h>
 #include <ddk/protocol/platform/device.h>
-#include <ddk/protocol/sysmem.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/display/controller.h>
 #include <ddktl/protocol/dsiimpl.h>
 #include <ddktl/protocol/gpio.h>
 #include <ddktl/protocol/power.h>
+#include <ddktl/protocol/sysmem.h>
 #include <fbl/auto_lock.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/mutex.h>
@@ -119,9 +119,8 @@ class Mt8167sDisplay
   thrd_t vsync_thread_;
 
   // Protocol handles
-  pdev_protocol_t pdev_ = {};
-  zx_device_t* pdev_device_;
-  sysmem_protocol_t sysmem_ = {};
+  ddk::PDev pdev_;
+  ddk::SysmemProtocolClient sysmem_;
 
   // Board Info
   pdev_board_info_t board_info_;
@@ -156,7 +155,7 @@ class Mt8167sDisplay
   ddk::DisplayControllerInterfaceProtocolClient dc_intf_ TA_GUARDED(display_lock_);
 
   // SMI
-  std::unique_ptr<ddk::MmioBuffer> smi_mmio_;
+  std::optional<ddk::MmioBuffer> smi_mmio_;
 
   // DSIIMPL Protocol
   ddk::DsiImplProtocolClient dsiimpl_;

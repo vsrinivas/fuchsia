@@ -17,40 +17,23 @@ constexpr uint32_t kDsi0SelRdma0 = 1;
 constexpr uint32_t kDefaultMutexMod = (0xF940);
 }  // namespace
 
-zx_status_t MtSysConfig::Init(zx_device_t* parent) {
+zx_status_t MtSysConfig::Init(ddk::PDev& pdev) {
   if (initialized_) {
     return ZX_OK;
   }
 
-  zx_status_t status = device_get_protocol(parent, ZX_PROTOCOL_PDEV, &pdev_);
-  if (status != ZX_OK) {
-    return status;
-  }
-
   // Map Sys Config MMIO
-  mmio_buffer_t mmio;
-  status = pdev_map_mmio_buffer(&pdev_, MMIO_DISP_SYSCFG, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
+  zx_status_t status = pdev.MapMmio(MMIO_DISP_SYSCFG, &syscfg_mmio_);
   if (status != ZX_OK) {
     DISP_ERROR("Could not map SYS CFG mmio\n");
     return status;
-  }
-  fbl::AllocChecker ac;
-  syscfg_mmio_ = fbl::make_unique_checked<ddk::MmioBuffer>(&ac, mmio);
-  if (!ac.check()) {
-    DISP_ERROR("Could not map SYS CFG mmio\n");
-    return ZX_ERR_NO_MEMORY;
   }
 
   // Map Mutex MMIO
-  status = pdev_map_mmio_buffer(&pdev_, MMIO_DISP_MUTEX, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
+  status = pdev.MapMmio(MMIO_DISP_MUTEX, &mutex_mmio_);
   if (status != ZX_OK) {
     DISP_ERROR("Could not map Mutex mmio\n");
     return status;
-  }
-  mutex_mmio_ = fbl::make_unique_checked<ddk::MmioBuffer>(&ac, mmio);
-  if (!ac.check()) {
-    DISP_ERROR("Could not map Mutex mmio\n");
-    return ZX_ERR_NO_MEMORY;
   }
 
   // Sysconfig is ready to be used
@@ -242,12 +225,9 @@ void MtSysConfig::PrintRegisters() {
          syscfg_mmio_->Read32(SYSCONFIG_MMSYS_HW_DCM_DIS_SET0));
   zxlogf(INFO, "SYSCONFIG_MMSYS_HW_DCM_DIS_CLR0 = 0x%x",
          syscfg_mmio_->Read32(SYSCONFIG_MMSYS_HW_DCM_DIS_CLR0));
-  zxlogf(INFO, "SYSCONFIG_MMSYS_SW0_RST_B = 0x%x",
-         syscfg_mmio_->Read32(SYSCONFIG_MMSYS_SW0_RST_B));
-  zxlogf(INFO, "SYSCONFIG_MMSYS_SW1_RST_B = 0x%x",
-         syscfg_mmio_->Read32(SYSCONFIG_MMSYS_SW1_RST_B));
-  zxlogf(INFO, "SYSCONFIG_MMSYS_LCM_RST_B = 0x%x",
-         syscfg_mmio_->Read32(SYSCONFIG_MMSYS_LCM_RST_B));
+  zxlogf(INFO, "SYSCONFIG_MMSYS_SW0_RST_B = 0x%x", syscfg_mmio_->Read32(SYSCONFIG_MMSYS_SW0_RST_B));
+  zxlogf(INFO, "SYSCONFIG_MMSYS_SW1_RST_B = 0x%x", syscfg_mmio_->Read32(SYSCONFIG_MMSYS_SW1_RST_B));
+  zxlogf(INFO, "SYSCONFIG_MMSYS_LCM_RST_B = 0x%x", syscfg_mmio_->Read32(SYSCONFIG_MMSYS_LCM_RST_B));
   zxlogf(INFO, "SYSCONFIG_MMSYS_DUMMY = 0x%x", syscfg_mmio_->Read32(SYSCONFIG_MMSYS_DUMMY));
   zxlogf(INFO, "######################\n");
 

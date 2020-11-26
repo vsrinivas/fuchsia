@@ -8,28 +8,16 @@
 
 namespace mt8167s_display {
 
-zx_status_t Gamma::Init(zx_device_t* parent) {
+zx_status_t Gamma::Init(ddk::PDev& pdev) {
   if (initialized_) {
     return ZX_OK;
   }
 
-  zx_status_t status = device_get_protocol(parent, ZX_PROTOCOL_PDEV, &pdev_);
-  if (status != ZX_OK) {
-    return status;
-  }
-
   // Map GAMMA MMIO
-  mmio_buffer_t mmio;
-  status = pdev_map_mmio_buffer(&pdev_, MMIO_DISP_GAMMA, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
+  zx_status_t status = pdev.MapMmio(MMIO_DISP_GAMMA, &gamma_mmio_);
   if (status != ZX_OK) {
     DISP_ERROR("Could not map GAMMA mmio\n");
     return status;
-  }
-  fbl::AllocChecker ac;
-  gamma_mmio_ = fbl::make_unique_checked<ddk::MmioBuffer>(&ac, mmio);
-  if (!ac.check()) {
-    DISP_ERROR("Could not map GAMMA mmio\n");
-    return ZX_ERR_NO_MEMORY;
   }
 
   // GAMMA is ready to be used

@@ -24,28 +24,16 @@ constexpr uint32_t kDitherReg15Default = 0x20200001;
 constexpr uint32_t kDitherReg16Default = 0x20202020;
 }  // namespace
 
-zx_status_t Dither::Init(zx_device_t* parent) {
+zx_status_t Dither::Init(ddk::PDev& pdev) {
   if (initialized_) {
     return ZX_OK;
   }
 
-  zx_status_t status = device_get_protocol(parent, ZX_PROTOCOL_PDEV, &pdev_);
-  if (status != ZX_OK) {
-    return status;
-  }
-
   // Map Sys Config MMIO
-  mmio_buffer_t mmio;
-  status = pdev_map_mmio_buffer(&pdev_, MMIO_DISP_DITHER, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
+  zx_status_t status = pdev.MapMmio(MMIO_DISP_DITHER, &dither_mmio_);
   if (status != ZX_OK) {
     DISP_ERROR("Could not map DITHER mmio\n");
     return status;
-  }
-  fbl::AllocChecker ac;
-  dither_mmio_ = fbl::make_unique_checked<ddk::MmioBuffer>(&ac, mmio);
-  if (!ac.check()) {
-    DISP_ERROR("Could not map DITHER mmio\n");
-    return ZX_ERR_NO_MEMORY;
   }
 
   // DITHER is ready to be used

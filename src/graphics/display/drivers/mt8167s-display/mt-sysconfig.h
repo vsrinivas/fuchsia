@@ -4,7 +4,7 @@
 
 #ifndef SRC_GRAPHICS_DISPLAY_DRIVERS_MT8167S_DISPLAY_MT_SYSCONFIG_H_
 #define SRC_GRAPHICS_DISPLAY_DRIVERS_MT8167S_DISPLAY_MT_SYSCONFIG_H_
-#include <lib/device-protocol/platform-device.h>
+#include <lib/device-protocol/pdev.h>
 #include <lib/mmio/mmio.h>
 #include <lib/zx/bti.h>
 #include <zircon/assert.h>
@@ -13,7 +13,6 @@
 #include <memory>
 #include <optional>
 
-#include <ddk/protocol/platform/device.h>
 #include <ddktl/device.h>
 #include <hwreg/mmio.h>
 
@@ -28,9 +27,8 @@ class MtSysConfig {
   MtSysConfig() {}
 
   // Init
-  zx_status_t Init(zx_device_t* parent);
-  zx_status_t Init(std::unique_ptr<ddk::MmioBuffer> syscfg_mmio,
-                   std::unique_ptr<ddk::MmioBuffer> mutex_mmio) {
+  zx_status_t Init(ddk::PDev& pdev);
+  zx_status_t Init(ddk::MmioBuffer syscfg_mmio, ddk::MmioBuffer mutex_mmio) {
     syscfg_mmio_ = std::move(syscfg_mmio);
     mutex_mmio_ = std::move(mutex_mmio);
     initialized_ = true;
@@ -55,9 +53,8 @@ class MtSysConfig {
   void PrintRegisters();
 
  private:
-  std::unique_ptr<ddk::MmioBuffer> syscfg_mmio_;
-  std::unique_ptr<ddk::MmioBuffer> mutex_mmio_;
-  pdev_protocol_t pdev_ = {nullptr, nullptr};
+  std::optional<ddk::MmioBuffer> syscfg_mmio_;
+  std::optional<ddk::MmioBuffer> mutex_mmio_;
   bool initialized_ = false;
 };
 

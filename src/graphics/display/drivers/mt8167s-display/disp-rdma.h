@@ -5,7 +5,7 @@
 #ifndef SRC_GRAPHICS_DISPLAY_DRIVERS_MT8167S_DISPLAY_DISP_RDMA_H_
 #define SRC_GRAPHICS_DISPLAY_DRIVERS_MT8167S_DISPLAY_DISP_RDMA_H_
 
-#include <lib/device-protocol/platform-device.h>
+#include <lib/device-protocol/pdev.h>
 #include <lib/mmio/mmio.h>
 #include <lib/zx/bti.h>
 #include <zircon/assert.h>
@@ -14,7 +14,6 @@
 #include <memory>
 #include <optional>
 
-#include <ddk/protocol/platform/device.h>
 #include <ddktl/device.h>
 
 #include "common.h"
@@ -45,7 +44,7 @@ class DispRdma {
   }
 
   // Init
-  zx_status_t Init(zx_device_t* parent);
+  zx_status_t Init(ddk::PDev& pdev);
 
   // Reset Display RDMA engine
   void Reset();
@@ -71,8 +70,7 @@ class DispRdma {
   uint32_t height_;
   uint32_t width_;
 
-  std::unique_ptr<ddk::MmioBuffer> disp_rdma_mmio_;
-  pdev_protocol_t pdev_ = {nullptr, nullptr};
+  std::optional<ddk::MmioBuffer> disp_rdma_mmio_;
   zx::bti bti_;
 
   bool initialized_ = false;

@@ -13,7 +13,7 @@
 #include <ddk/metadata.h>
 #include <ddk/metadata/display.h>
 #include <ddk/platform-defs.h>
-#include <ddk/protocol/composite.h>
+#include <ddktl/protocol/composite.h>
 #include <fbl/auto_call.h>
 #include <fbl/vector.h>
 
@@ -28,15 +28,6 @@ namespace {
 // List of supported pixel formats
 zx_pixel_format_t kSupportedPixelFormats[3] = {ZX_PIXEL_FORMAT_ARGB_8888, ZX_PIXEL_FORMAT_RGB_x888,
                                                ZX_PIXEL_FORMAT_RGB_565};
-
-enum {
-  FRAGMENT_PDEV,
-  FRAGMENT_GPIO,
-  FRAGMENT_SYSMEM,
-  FRAGMENT_DSI_IMPL,  // DSI is optional
-  FRAGMENT_POWER,
-  FRAGMENT_COUNT,
-};
 
 constexpr uint64_t kDisplayId = PANEL_DISPLAY_ID;
 constexpr uint32_t kLarbMmuEnOffset = 0x0FC0;
@@ -278,7 +269,7 @@ void Mt8167sDisplay::DisplayControllerImplApplyConfiguration(
 }
 
 zx_status_t Mt8167sDisplay::DisplayControllerImplGetSysmemConnection(zx::channel connection) {
-  zx_status_t status = sysmem_connect(&sysmem_, connection.release());
+  zx_status_t status = sysmem_.Connect(std::move(connection));
   if (status != ZX_OK) {
     DISP_ERROR("Could not connect to sysmem\n");
     return status;
@@ -434,14 +425,14 @@ zx_status_t Mt8167sDisplay::CreateAndInitDisplaySubsystems() {
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
-  status = syscfg_->Init(pdev_device_);
+  status = syscfg_->Init(pdev_);
   if (status != ZX_OK) {
     DISP_ERROR("Could not initialize SYS Config object\n");
     return status;
   }
 
   // Create and initialize DSI Host object
-  dsi_host_ = fbl::make_unique_checked<mt8167s_display::MtDsiHost>(&ac, &pdev_, height_, width_,
+  dsi_host_ = fbl::make_unique_checked<mt8167s_display::MtDsiHost>(&ac, pdev_, height_, width_,
                                                                    panel_type_);
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
@@ -458,7 +449,7 @@ zx_status_t Mt8167sDisplay::CreateAndInitDisplaySubsystems() {
     return ZX_ERR_NO_MEMORY;
   }
   // Initialize ovl object
-  status = ovl_->Init(pdev_device_);
+  status = ovl_->Init(pdev_);
   if (status != ZX_OK) {
     DISP_ERROR("Could not initialize OVL object\n");
     return status;
@@ -470,7 +461,7 @@ zx_status_t Mt8167sDisplay::CreateAndInitDisplaySubsystems() {
     return ZX_ERR_NO_MEMORY;
   }
   // Initialize color object
-  status = color_->Init(pdev_device_);
+  status = color_->Init(pdev_);
   if (status != ZX_OK) {
     DISP_ERROR("Could not initialize Color object\n");
     return status;
@@ -482,7 +473,7 @@ zx_status_t Mt8167sDisplay::CreateAndInitDisplaySubsystems() {
     return ZX_ERR_NO_MEMORY;
   }
   // Initialize ccorr object
-  status = ccorr_->Init(pdev_device_);
+  status = ccorr_->Init(pdev_);
   if (status != ZX_OK) {
     DISP_ERROR("Could not initialize Ccorr object\n");
     return status;
@@ -494,7 +485,7 @@ zx_status_t Mt8167sDisplay::CreateAndInitDisplaySubsystems() {
     return ZX_ERR_NO_MEMORY;
   }
   // Initialize aal object
-  status = aal_->Init(pdev_device_);
+  status = aal_->Init(pdev_);
   if (status != ZX_OK) {
     DISP_ERROR("Could not initialize Aal object\n");
     return status;
@@ -506,7 +497,7 @@ zx_status_t Mt8167sDisplay::CreateAndInitDisplaySubsystems() {
     return ZX_ERR_NO_MEMORY;
   }
   // Initialize gamma object
-  status = gamma_->Init(pdev_device_);
+  status = gamma_->Init(pdev_);
   if (status != ZX_OK) {
     DISP_ERROR("Could not initialize Gamma object\n");
     return status;
@@ -518,7 +509,7 @@ zx_status_t Mt8167sDisplay::CreateAndInitDisplaySubsystems() {
     return ZX_ERR_NO_MEMORY;
   }
   // Initialize dither object
-  status = dither_->Init(pdev_device_);
+  status = dither_->Init(pdev_);
   if (status != ZX_OK) {
     DISP_ERROR("Could not initialize Dither object\n");
     return status;
@@ -530,7 +521,7 @@ zx_status_t Mt8167sDisplay::CreateAndInitDisplaySubsystems() {
     return ZX_ERR_NO_MEMORY;
   }
   // Initialize disp rdma object
-  status = disp_rdma_->Init(pdev_device_);
+  status = disp_rdma_->Init(pdev_);
   if (status != ZX_OK) {
     DISP_ERROR("Could not initialize DISP RDMA object\n");
     return status;
@@ -595,7 +586,7 @@ zx_status_t Mt8167sDisplay::DisplaySubsystemInit() {
   dsi_host_->Start();
 
   // Map VSync Interrupt
-  status = pdev_get_interrupt(&pdev_, 0, 0, vsync_irq_.reset_and_get_address());
+  status = pdev_.GetInterrupt(0, 0, &vsync_irq_);
   if (status != ZX_OK) {
     DISP_ERROR("Could not map vsync Interruptn");
     return status;
@@ -623,9 +614,8 @@ void Mt8167sDisplay::DdkUnbind(ddk::UnbindTxn txn) {
 void Mt8167sDisplay::DdkRelease() { delete this; }
 
 zx_status_t Mt8167sDisplay::Bind() {
-  composite_protocol_t composite;
-
-  auto status = device_get_protocol(parent_, ZX_PROTOCOL_COMPOSITE, &composite);
+  ddk::CompositeProtocolClient composite;
+  zx_status_t status = ddk::CompositeProtocolClient::CreateFromDevice(parent_, &composite);
   if (status != ZX_OK) {
     DISP_ERROR("Could not get composite protocol\n");
     return status;
@@ -634,7 +624,7 @@ zx_status_t Mt8167sDisplay::Bind() {
   display_panel_t display_info;
   size_t actual;
   status = device_get_metadata(parent_, DEVICE_METADATA_DISPLAY_CONFIG, &display_info,
-                               sizeof(display_info), &actual);
+                                           sizeof(display_info), &actual);
   if (status != ZX_OK || actual != sizeof(display_panel_t)) {
     DISP_ERROR("Could not get display panel metadata %d\n", status);
     return status;
@@ -646,83 +636,53 @@ zx_status_t Mt8167sDisplay::Bind() {
   width_ = display_info.width;
   height_ = display_info.height;
 
-  zx_device_t* fragments[FRAGMENT_COUNT];
-  composite_get_fragments(&composite, fragments, FRAGMENT_COUNT, &actual);
-  if (actual < FRAGMENT_DSI_IMPL) {
-    DISP_ERROR("could not get fragments\n");
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
-  status = device_get_protocol(fragments[FRAGMENT_PDEV], ZX_PROTOCOL_PDEV, &pdev_);
+  status = ddk::PDev::CreateFromComposite(composite, &pdev_);
   if (status != ZX_OK) {
-    DISP_ERROR("Could not get parent protocol\n");
+    DISP_ERROR("Could not get pdev protocol\n");
     return status;
   }
-  pdev_device_ = fragments[FRAGMENT_PDEV];
 
-  // Retrieve optional DSI_IMPL protocol.
-  if (actual == FRAGMENT_COUNT) {
-    dsi_impl_protocol_t dsi;
-    status = device_get_protocol(fragments[FRAGMENT_DSI_IMPL], ZX_PROTOCOL_DSI_IMPL, &dsi);
-    if (status != ZX_OK) {
-      DISP_ERROR("Could not get Display DSI_IMPL protocol\n");
-      return status;
-    }
-    dsiimpl_ = &dsi;
+  status = ddk::DsiImplProtocolClient::CreateFromComposite(composite, "dsi", &dsiimpl_);
+  if (status != ZX_OK) {
+    DISP_ERROR("DSI Protocol Not implemented\n");
+    return status;
   }
 
   // Get board info
-  status = pdev_get_board_info(&pdev_, &board_info_);
+  status = pdev_.GetBoardInfo(&board_info_);
   if (status != ZX_OK) {
     DISP_ERROR("Could not obtain board info\n");
     return status;
   }
 
-  if (!dsiimpl_.is_valid()) {
-    DISP_ERROR("DSI Protocol Not implemented\n");
-    return ZX_ERR_NO_RESOURCES;
-  }
-
-  gpio_protocol_t gpio;
-  status = device_get_protocol(fragments[FRAGMENT_GPIO], ZX_PROTOCOL_GPIO, &gpio);
+  status = ddk::GpioProtocolClient::CreateFromComposite(composite, "gpio-lcd", &gpio_);
   if (status != ZX_OK) {
     DISP_ERROR("Could not get Display GPIO protocol\n");
     return status;
   }
-  gpio_ = &gpio;
 
-  power_protocol_t power;
-  status = device_get_protocol(fragments[FRAGMENT_POWER], ZX_PROTOCOL_POWER, &power);
+  status = ddk::PowerProtocolClient::CreateFromComposite(composite, "power", &power_);
   if (status != ZX_OK) {
     DISP_ERROR("Could not get Display Power protocol\n");
     return status;
   }
-  power_ = &power;
 
-  status = device_get_protocol(fragments[FRAGMENT_SYSMEM], ZX_PROTOCOL_SYSMEM, &sysmem_);
+  status = ddk::SysmemProtocolClient::CreateFromComposite(composite, "sysmem", &sysmem_);
   if (status != ZX_OK) {
     DISP_ERROR("Could not get Display SYSMEM protocol\n");
     return status;
   }
 
-  status = pdev_get_bti(&pdev_, 0, bti_.reset_and_get_address());
+  status = pdev_.GetBti(0, &bti_);
   if (status != ZX_OK) {
     DISP_ERROR("Could not get BTI handle\n");
     return status;
   }
 
-  mmio_buffer_t mmio;
-  status =
-      pdev_map_mmio_buffer(&pdev_, MMIO_DISP_SMI_LARB0, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
+  status = pdev_.MapMmio(MMIO_DISP_SMI_LARB0, &smi_mmio_);
   if (status != ZX_OK) {
     DISP_ERROR("Could not map SMI LARB0 mmio\n");
     return status;
-  }
-  fbl::AllocChecker ac;
-  smi_mmio_ = fbl::make_unique_checked<ddk::MmioBuffer>(&ac, mmio);
-  if (!ac.check()) {
-    DISP_ERROR("Could not map SMI LARB0 MMIO\n");
-    return ZX_ERR_NO_MEMORY;
   }
 
   status = DdkAdd("mt8167s-display");

@@ -8,28 +8,16 @@
 
 namespace mt8167s_display {
 
-zx_status_t Aal::Init(zx_device_t* parent) {
+zx_status_t Aal::Init(ddk::PDev& pdev) {
   if (initialized_) {
     return ZX_OK;
   }
 
-  zx_status_t status = device_get_protocol(parent, ZX_PROTOCOL_PDEV, &pdev_);
-  if (status != ZX_OK) {
-    return status;
-  }
-
   // Map Aal MMIO
-  mmio_buffer_t mmio;
-  status = pdev_map_mmio_buffer(&pdev_, MMIO_DISP_AAL, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
+  zx_status_t status = pdev.MapMmio(MMIO_DISP_AAL, &aal_mmio_);
   if (status != ZX_OK) {
     DISP_ERROR("Could not map AAL mmio\n");
     return status;
-  }
-  fbl::AllocChecker ac;
-  aal_mmio_ = fbl::make_unique_checked<ddk::MmioBuffer>(&ac, mmio);
-  if (!ac.check()) {
-    DISP_ERROR("Could not map AAL mmio\n");
-    return ZX_ERR_NO_MEMORY;
   }
 
   // AAL is ready to be used

@@ -14,32 +14,20 @@ namespace {
 constexpr int kIdleTimeout = 20000;
 }  // namespace
 
-zx_status_t DispRdma::Init(zx_device_t* parent) {
+zx_status_t DispRdma::Init(ddk::PDev& pdev) {
   if (initialized_) {
     return ZX_OK;
   }
 
-  zx_status_t status = device_get_protocol(parent, ZX_PROTOCOL_PDEV, &pdev_);
-  if (status != ZX_OK) {
-    return status;
-  }
-
   // Map Disp RDMA MMIO
-  mmio_buffer_t mmio;
-  status = pdev_map_mmio_buffer(&pdev_, MMIO_DISP_RDMA, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
+  zx_status_t status = pdev.MapMmio(MMIO_DISP_RDMA, &disp_rdma_mmio_);
   if (status != ZX_OK) {
     DISP_ERROR("Could not map DISP RDMA mmio\n");
     return status;
   }
-  fbl::AllocChecker ac;
-  disp_rdma_mmio_ = fbl::make_unique_checked<ddk::MmioBuffer>(&ac, mmio);
-  if (!ac.check()) {
-    DISP_ERROR("Could not map DISP RDMA MMIO\n");
-    return ZX_ERR_NO_MEMORY;
-  }
 
   // Get BTI from parent
-  status = pdev_get_bti(&pdev_, 0, bti_.reset_and_get_address());
+  status = pdev.GetBti(0, &bti_);
   if (status != ZX_OK) {
     DISP_ERROR("Could not get BTI handle\n");
     return status;
@@ -125,8 +113,7 @@ void DispRdma::Dump() {
   zxlogf(INFO, "DISP_RDMA_SIZE_CON1 = 0x%x", disp_rdma_mmio_->Read32(DISP_RDMA_SIZE_CON1));
   zxlogf(INFO, "DISP_RDMA_TARGET_LINE = 0x%x", disp_rdma_mmio_->Read32(DISP_RDMA_TARGET_LINE));
   zxlogf(INFO, "DISP_RDMA_MEM_CON = 0x%x", disp_rdma_mmio_->Read32(DISP_RDMA_MEM_CON));
-  zxlogf(INFO, "DISP_RDMA_MEM_SRC_PITCH = 0x%x",
-         disp_rdma_mmio_->Read32(DISP_RDMA_MEM_SRC_PITCH));
+  zxlogf(INFO, "DISP_RDMA_MEM_SRC_PITCH = 0x%x", disp_rdma_mmio_->Read32(DISP_RDMA_MEM_SRC_PITCH));
   zxlogf(INFO, "DISP_RDMA_MEM_GMC_SETTING_0 = 0x%x",
          disp_rdma_mmio_->Read32(DISP_RDMA_MEM_GMC_SETTING_0));
   zxlogf(INFO, "DISP_RDMA_MEM_SLOW_CON = 0x%x", disp_rdma_mmio_->Read32(DISP_RDMA_MEM_SLOW_CON));
@@ -150,8 +137,7 @@ void DispRdma::Dump() {
   zxlogf(INFO, "DISP_RDMA_POST_ADD_1 = 0x%x", disp_rdma_mmio_->Read32(DISP_RDMA_POST_ADD_1));
   zxlogf(INFO, "DISP_RDMA_POST_ADD_2 = 0x%x", disp_rdma_mmio_->Read32(DISP_RDMA_POST_ADD_2));
   zxlogf(INFO, "DISP_RDMA_DUMMY = 0x%x", disp_rdma_mmio_->Read32(DISP_RDMA_DUMMY));
-  zxlogf(INFO, "DISP_RDMA_DEBUG_OUT_SEL = 0x%x",
-         disp_rdma_mmio_->Read32(DISP_RDMA_DEBUG_OUT_SEL));
+  zxlogf(INFO, "DISP_RDMA_DEBUG_OUT_SEL = 0x%x", disp_rdma_mmio_->Read32(DISP_RDMA_DEBUG_OUT_SEL));
   zxlogf(INFO, "DISP_RDMA_BG_CON_0 = 0x%x", disp_rdma_mmio_->Read32(DISP_RDMA_BG_CON_0));
   zxlogf(INFO, "DISP_RDMA_BG_CON_1 = 0x%x", disp_rdma_mmio_->Read32(DISP_RDMA_BG_CON_1));
   zxlogf(INFO, "DISP_RDMA_THRESHOLD_FOR_SODI = 0x%x",

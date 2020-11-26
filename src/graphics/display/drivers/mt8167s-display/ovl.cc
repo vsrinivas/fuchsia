@@ -17,32 +17,20 @@ constexpr uint32_t kDefaultBackgroundColor = 0xFF000000;  // alpha/red/green/blu
 constexpr int kIdleTimeout = 200000;                      // uSec
 }  // namespace
 
-zx_status_t Ovl::Init(zx_device_t* parent) {
+zx_status_t Ovl::Init(ddk::PDev& pdev) {
   if (initialized_) {
     return ZX_OK;
   }
 
-  zx_status_t status = device_get_protocol(parent, ZX_PROTOCOL_PDEV, &pdev_);
-  if (status != ZX_OK) {
-    return status;
-  }
-
   // Map Ovl mmio
-  mmio_buffer_t mmio;
-  status = pdev_map_mmio_buffer(&pdev_, MMIO_DISP_OVL, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
+  zx_status_t status = pdev.MapMmio(MMIO_DISP_OVL, &ovl_mmio_);
   if (status != ZX_OK) {
     DISP_ERROR("Could not map OVL mmio\n");
     return status;
   }
-  fbl::AllocChecker ac;
-  ovl_mmio_ = fbl::make_unique_checked<ddk::MmioBuffer>(&ac, mmio);
-  if (!ac.check()) {
-    DISP_ERROR("Could not mapp Overlay MMIO\n");
-    return ZX_ERR_NO_MEMORY;
-  }
 
   // Get BTI from parent
-  status = pdev_get_bti(&pdev_, 0, bti_.reset_and_get_address());
+  status = pdev.GetBti(0, &bti_);
   if (status != ZX_OK) {
     DISP_ERROR("Could not get BTI handle\n");
     return status;
@@ -295,9 +283,9 @@ void Ovl::PrintRegisters() {
   zxlogf(INFO, "OVL_Lx_TILE0123 = 0x%x, 0x%x, 0x%x, 0x%x", ovl_mmio_->Read32(OVL_Lx_TILE(0)),
          ovl_mmio_->Read32(OVL_Lx_TILE(1)), ovl_mmio_->Read32(OVL_Lx_TILE(2)),
          ovl_mmio_->Read32(OVL_Lx_TILE(3)));
-  zxlogf(INFO, "OVL_RDMAx_CTRL0123 = 0x%x, 0x%x, 0x%x, 0x%x",
-         ovl_mmio_->Read32(OVL_RDMAx_CTRL(0)), ovl_mmio_->Read32(OVL_RDMAx_CTRL(1)),
-         ovl_mmio_->Read32(OVL_RDMAx_CTRL(2)), ovl_mmio_->Read32(OVL_RDMAx_CTRL(3)));
+  zxlogf(INFO, "OVL_RDMAx_CTRL0123 = 0x%x, 0x%x, 0x%x, 0x%x", ovl_mmio_->Read32(OVL_RDMAx_CTRL(0)),
+         ovl_mmio_->Read32(OVL_RDMAx_CTRL(1)), ovl_mmio_->Read32(OVL_RDMAx_CTRL(2)),
+         ovl_mmio_->Read32(OVL_RDMAx_CTRL(3)));
   zxlogf(INFO, "OVL_RDMAx_MEM_GMC_SETTING0123 = 0x%x, 0x%x, 0x%x, 0x%x",
          ovl_mmio_->Read32(OVL_RDMAx_MEM_GMC_SETTING(0)),
          ovl_mmio_->Read32(OVL_RDMAx_MEM_GMC_SETTING(1)),

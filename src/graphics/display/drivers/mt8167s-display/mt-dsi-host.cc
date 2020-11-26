@@ -33,27 +33,20 @@ zx_status_t MtDsiHost::Init(const ddk::DsiImplProtocolClient* dsi,
   power_ = *power;
 
   // Map MIPI TX
-  mmio_buffer_t mmio;
-  auto status =
-      pdev_map_mmio_buffer(&pdev_, MMIO_DISP_MIPITX, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
+  auto status = pdev_.MapMmio(MMIO_DISP_MIPITX, &mipi_tx_mmio_);
   if (status != ZX_OK) {
     DISP_ERROR("Could not map MIPI TX mmio\n");
     return status;
   }
-  fbl::AllocChecker ac;
-  mipi_tx_mmio_ = fbl::make_unique_checked<ddk::MmioBuffer>(&ac, mmio);
-  if (!ac.check()) {
-    DISP_ERROR("Could not map MIPI TX mmio\n");
-    return ZX_ERR_NO_MEMORY;
-  }
 
   // Get BTI from parent
-  status = pdev_get_bti(&pdev_, 0, bti_.reset_and_get_address());
+  status = pdev_.GetBti(0, &bti_);
   if (status != ZX_OK) {
     DISP_ERROR("Could not get BTI handle\n");
     return status;
   }
 
+  fbl::AllocChecker ac;
   // Load LCD Init values while in command mode
   lcd_ = fbl::make_unique_checked<mt8167s_display::Lcd>(&ac, dsi, gpio, panel_type_);
   if (!ac.check()) {

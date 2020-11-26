@@ -12,28 +12,16 @@ namespace {
 constexpr uint32_t kColorMainCfg = 0x200032bc;
 }  // namespace
 
-zx_status_t Color::Init(zx_device_t* parent) {
+zx_status_t Color::Init(ddk::PDev& pdev) {
   if (initialized_) {
     return ZX_OK;
   }
 
-  zx_status_t status = device_get_protocol(parent, ZX_PROTOCOL_PDEV, &pdev_);
-  if (status != ZX_OK) {
-    return status;
-  }
-
   // Map COLOR MMIO
-  mmio_buffer_t mmio;
-  status = pdev_map_mmio_buffer(&pdev_, MMIO_DISP_COLOR, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
+  zx_status_t status = pdev.MapMmio(MMIO_DISP_COLOR, &color_mmio_);
   if (status != ZX_OK) {
     DISP_ERROR("Could not map COLOR mmio\n");
     return status;
-  }
-  fbl::AllocChecker ac;
-  color_mmio_ = fbl::make_unique_checked<ddk::MmioBuffer>(&ac, mmio);
-  if (!ac.check()) {
-    DISP_ERROR("Could not map COLOR mmio\n");
-    return ZX_ERR_NO_MEMORY;
   }
 
   // COLOR is ready to be used

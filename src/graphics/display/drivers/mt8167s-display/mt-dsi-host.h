@@ -5,7 +5,7 @@
 #ifndef SRC_GRAPHICS_DISPLAY_DRIVERS_MT8167S_DISPLAY_MT_DSI_HOST_H_
 #define SRC_GRAPHICS_DISPLAY_DRIVERS_MT8167S_DISPLAY_MT_DSI_HOST_H_
 
-#include <lib/device-protocol/platform-device.h>
+#include <lib/device-protocol/pdev.h>
 #include <lib/mmio/mmio.h>
 #include <lib/zx/bti.h>
 #include <zircon/assert.h>
@@ -14,7 +14,6 @@
 #include <memory>
 #include <optional>
 
-#include <ddk/protocol/platform/device.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/dsiimpl.h>
 #include <ddktl/protocol/gpio.h>
@@ -37,8 +36,8 @@ namespace mt8167s_display {
 
 class MtDsiHost {
  public:
-  MtDsiHost(const pdev_protocol_t* pdev, uint32_t height, uint32_t width, uint32_t panel_type)
-      : pdev_(*pdev), height_(height), width_(width), panel_type_(panel_type) {
+  MtDsiHost(ddk::PDev pdev, uint32_t height, uint32_t width, uint32_t panel_type)
+      : pdev_(pdev), height_(height), width_(width), panel_type_(panel_type) {
     ZX_ASSERT(height_ < kMaxHeight);
     ZX_ASSERT(width_ < kMaxWidth);
   }
@@ -47,7 +46,7 @@ class MtDsiHost {
                    const ddk::PowerProtocolClient* power);
 
   // Used for Unit Testing
-  zx_status_t Init(std::unique_ptr<ddk::MmioBuffer> mmio, std::unique_ptr<Lcd> lcd,
+  zx_status_t Init(std::optional<ddk::MmioBuffer> mmio, std::unique_ptr<Lcd> lcd,
                    const ddk::DsiImplProtocolClient* dsi, const ddk::GpioProtocolClient* gpio,
                    const ddk::PowerProtocolClient* power) {
     mipi_tx_mmio_ = std::move(mmio);
@@ -77,11 +76,11 @@ class MtDsiHost {
   void ConfigMipiPll(uint32_t pll_clock, uint32_t lane_num);
   void PowerOffMipiTx();
 
-  const pdev_protocol_t pdev_;
+  ddk::PDev pdev_;
   uint32_t height_;  // display height
   uint32_t width_;   // display width
   uint32_t panel_type_;
-  std::unique_ptr<ddk::MmioBuffer> mipi_tx_mmio_;
+  std::optional<ddk::MmioBuffer> mipi_tx_mmio_;
   zx::bti bti_;
   ddk::DsiImplProtocolClient dsiimpl_;
   ddk::PowerProtocolClient power_;

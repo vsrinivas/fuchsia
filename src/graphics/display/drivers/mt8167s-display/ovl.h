@@ -5,7 +5,7 @@
 #ifndef SRC_GRAPHICS_DISPLAY_DRIVERS_MT8167S_DISPLAY_OVL_H_
 #define SRC_GRAPHICS_DISPLAY_DRIVERS_MT8167S_DISPLAY_OVL_H_
 
-#include <lib/device-protocol/platform-device.h>
+#include <lib/device-protocol/pdev.h>
 #include <lib/mmio/mmio.h>
 #include <lib/zx/bti.h>
 #include <zircon/assert.h>
@@ -43,7 +43,7 @@ class Ovl {
   }
 
   // Init
-  zx_status_t Init(zx_device_t* parent);
+  zx_status_t Init(ddk::PDev& pdev);
 
   // Stops the overlay engine and resets the active layers
   void Reset();
@@ -110,8 +110,7 @@ class Ovl {
   // TODO(payam): ZX_PIXEL_FORMAT_BYTES returns 4 for x888. We need three
   uint32_t GetBytesPerPixel(zx_pixel_format_t format);
 
-  std::unique_ptr<ddk::MmioBuffer> ovl_mmio_;
-  pdev_protocol_t pdev_ = {nullptr, nullptr};
+  std::optional<ddk::MmioBuffer> ovl_mmio_;
   zx::bti bti_;
 
   const uint32_t height_;  // Display height
