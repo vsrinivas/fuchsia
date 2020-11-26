@@ -56,18 +56,6 @@ const ShaderProgramData kPointLightProgramData = {
     }),
 };
 
-const ShaderProgramData kPointLightFalloffProgramData = {
-    .source_files = {{ShaderStage::kVertex, "shaders/model_renderer/main.vert"},
-                     {ShaderStage::kFragment, "shaders/paper/frag/main_point_light.frag"}},
-    .args = ShaderVariantArgs({
-        {"USE_ATTRIBUTE_UV", "1"},
-        {"USE_PAPER_SHADER_POINT_LIGHT", "1"},
-        {"USE_PAPER_SHADER_POINT_LIGHT_FALLOFF", "1"},
-        {"USE_PAPER_SHADER_PUSH_CONSTANTS", "1"},
-        {"SHADOW_VOLUME_POINT_LIGHTING", "1"},
-    }),
-};
-
 const ShaderProgramData kShadowVolumeGeometryProgramData = {
     .source_files = {{ShaderStage::kVertex, "shaders/model_renderer/main.vert"},
                      {ShaderStage::kFragment, ""}},

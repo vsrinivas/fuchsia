@@ -9,6 +9,7 @@
 #include "src/ui/lib/escher/paper/paper_render_funcs.h"
 #include "src/ui/lib/escher/paper/paper_render_queue.h"
 #include "src/ui/lib/escher/paper/paper_render_queue_flags.h"
+#include "src/ui/lib/escher/paper/paper_renderer_config.h"
 #include "src/ui/lib/escher/paper/paper_renderer_static_config.h"
 #include "src/ui/lib/escher/paper/paper_scene.h"
 #include "src/ui/lib/escher/paper/paper_shader_structs.h"
@@ -19,6 +20,7 @@
 #include "src/ui/lib/escher/shape/mesh.h"
 #include "src/ui/lib/escher/util/hasher.h"
 #include "src/ui/lib/escher/util/trace_macros.h"
+#include "src/ui/lib/escher/vk/shader_program.h"
 
 #include <glm/gtc/matrix_access.hpp>
 
@@ -67,7 +69,13 @@ PaperRenderQueueFlagBits GetRenderQueueFlagBits(const Material& mat) {
 
 PaperDrawCallFactory::PaperDrawCallFactory(EscherWeakPtr weak_escher,
                                            const PaperRendererConfig& config)
-    : config_(config) {}
+    : config_(config),
+      ambient_light_program_(weak_escher->GetProgram(kAmbientLightProgramData)),
+      no_lighting_program_(weak_escher->GetProgram(kNoLightingProgramData)),
+      point_light_program_(weak_escher->GetProgram(kPointLightProgramData)),
+      shadow_volume_geometry_program_(weak_escher->GetProgram(kShadowVolumeGeometryProgramData)),
+      shadow_volume_geometry_debug_program_(
+          weak_escher->GetProgram(kShadowVolumeGeometryDebugProgramData)) {}
 
 PaperDrawCallFactory::~PaperDrawCallFactory() { FX_DCHECK(!frame_); }
 
@@ -179,11 +187,6 @@ void PaperDrawCallFactory::EnqueueDrawCalls(const PaperShapeCacheEntry& cache_en
     object_data_.insert(it, std::make_pair(mesh_hash, mesh_data));
   }
 
-  // Allocate and initialize per-instance data.
-  vec4 material_color = material.GetPremultipliedRgba();
-  PaperRenderFuncs::MeshDrawData* draw_data = PaperRenderFuncs::NewMeshDrawData(
-      frame_, transform.matrix, material_color, cache_entry.num_indices);
-
   // Compute a depth metric for sorting objects.
 #if 1
   // As long as the camera is above the top of the viewing volume and the scene
@@ -193,12 +196,21 @@ void PaperDrawCallFactory::EnqueueDrawCalls(const PaperShapeCacheEntry& cache_en
   // incorrect results at glancing angles (i.e. where the center of one object
   // is closer to the camera than the other, but is nevertheless partly behind
   // the other object from the camera's perspective.
-  float depth = -(camera_pos_.z - transform.matrix[3][2]);
+  const float depth = -(camera_pos_.z - transform.matrix[3][2]);
 #else
   // Compute the vector from the camera to the object, and project it against
   // the camera's direction to obtain the depth.
-  float depth = glm::dot(vec3(transform[3]) - camera_pos_, camera_dir_);
+  const float depth = glm::dot(vec3(transform[3]) - camera_pos_, camera_dir_);
 #endif
+
+  // Allocate and initialize per-instance data.
+  const vec4 material_color = material.GetPremultipliedRgba();
+  const bool cast_shadows = config_.shadow_type == PaperRendererShadowType::kShadowVolume &&
+                            !(drawable_flags & PaperDrawableFlagBits::kDisableShadowCasting);
+  const PaperShaderList shader_list = GetShaderList(material, cast_shadows);
+
+  auto draw_data = PaperRenderFuncs::NewMeshDrawData(frame_, transform.matrix, material_color,
+                                                     shader_list, cache_entry.num_indices);
 
   auto sort_key = GetSortKey(material, pipeline_hash, mesh_hash, depth).key();
   auto queue_flags = GetRenderQueueFlagBits(material);
@@ -211,12 +223,12 @@ void PaperDrawCallFactory::EnqueueDrawCalls(const PaperShapeCacheEntry& cache_en
        .render_queue_flags = queue_flags});
 
   // Generate additional draw calls for stencil shadow volumes.
-  if (config_.shadow_type == PaperRendererShadowType::kShadowVolume &&
-      !(drawable_flags & PaperDrawableFlagBits::kDisableShadowCasting)) {
+  if (cast_shadows) {
     // Generate an additional draw call.
 
-    draw_data = PaperRenderFuncs::NewMeshDrawData(frame_, transform.matrix, material_color,
-                                                  cache_entry.num_shadow_volume_indices);
+    draw_data =
+        PaperRenderFuncs::NewMeshDrawData(frame_, transform.matrix, material_color, shader_list,
+                                          cache_entry.num_shadow_volume_indices);
 
     // TODO(fxbug.dev/7241): revisit sort key... we expect that a subsequent CL will add a
     // ShaderProgram as a field in the |instance_data| created by NewMeshDrawData().  Then, we'll
@@ -228,6 +240,33 @@ void PaperDrawCallFactory::EnqueueDrawCalls(const PaperShapeCacheEntry& cache_en
                                .render_queue_func = PaperRenderFuncs::RenderMesh},
          .render_queue_flags = PaperRenderQueueFlagBits::kShadowCaster});
   }
+}
+
+PaperShaderList PaperDrawCallFactory::GetShaderList(const Material& mat, bool cast_shadows) const {
+  PaperShaderList list;
+  switch (mat.type()) {
+    case Material::Type::kTranslucent: {
+      list.set_shader(PaperShaderListSelector::kAmbientLighting, no_lighting_program_.get());
+      break;
+    }
+    case Material::Type::kWireframe: {
+      list.set_shader(PaperShaderListSelector::kAmbientLighting, no_lighting_program_.get());
+      break;
+    }
+    case Material::Type::kOpaque: {
+      list.set_shader(PaperShaderListSelector::kAmbientLighting, ambient_light_program_.get());
+      list.set_shader(PaperShaderListSelector::kPointLighting, point_light_program_.get());
+      if (cast_shadows) {
+        FX_DCHECK(config_.shadow_type == PaperRendererShadowType::kShadowVolume);
+        list.set_shader(PaperShaderListSelector::kShadowCaster,
+                        shadow_volume_geometry_program_.get());
+        list.set_shader(PaperShaderListSelector::kShadowCasterDebug,
+                        shadow_volume_geometry_debug_program_.get());
+      }
+      break;
+    }
+  }
+  return list;
 }
 
 void PaperDrawCallFactory::SetConfig(const PaperRendererConfig& config) {

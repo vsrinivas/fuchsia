@@ -4,8 +4,6 @@
 
 #include "src/ui/lib/escher/paper/paper_render_queue_context.h"
 
-#include "src/ui/lib/escher/vk/shader_program.h"
-
 namespace escher {
 
 PaperRenderQueueContext::PaperRenderQueueContext() {
@@ -16,9 +14,5 @@ PaperRenderQueueContext::PaperRenderQueueContext() {
 }
 
 PaperRenderQueueContext::~PaperRenderQueueContext() = default;
-
-void PaperRenderQueueContext::set_shader_program(ShaderProgramPtr program) {
-  shader_program_ = std::move(program);
-}
 
 }  // namespace escher

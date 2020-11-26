@@ -6,6 +6,10 @@
 
 #include <gtest/gtest.h>
 
+#include "src/ui/lib/escher/paper/paper_material.h"
+#include "src/ui/lib/escher/test/common/gtest_escher.h"
+#include "src/ui/lib/escher/test/paper/paper_tester.h"
+
 #include <glm/gtc/matrix_access.hpp>
 
 namespace {
@@ -92,6 +96,85 @@ TEST(PaperDrawCallFactory, SortKeyComparisons) {
             Key::NewOpaque(high_hash, low_hash, near_depth).key());
   EXPECT_LT(Key::NewOpaque(low_hash, high_hash, near_depth).key(),
             Key::NewOpaque(low_hash, low_hash, far_depth).key());
+}
+
+using PaperDrawCallFactoryTest = test::TestWithVkValidationLayer;
+
+VK_TEST_F(PaperDrawCallFactoryTest, ShaderList) {
+  auto escher = test::GetEscher()->GetWeakPtr();
+  PaperRendererConfig no_shadow_config{.shadow_type = PaperRendererShadowType::kNone};
+  PaperRendererConfig shadow_config{.shadow_type = PaperRendererShadowType::kShadowVolume};
+
+  PaperDrawCallFactory factory(escher, no_shadow_config);
+  MaterialPtr mat = Material::New(vec4(1, 1, 1, 1));
+  PaperShaderList shader_list{};
+
+  // Opaque material.
+  {
+    mat->set_type(Material::Type::kOpaque);
+
+    factory.SetConfig(no_shadow_config);
+    shader_list = PaperTester::GetShaderList(factory, *mat.get(), false);
+    EXPECT_EQ(PaperTester::ambient_light_program(factory),
+              shader_list.get_shader(PaperShaderListSelector::kAmbientLighting));
+    EXPECT_EQ(PaperTester::point_light_program(factory),
+              shader_list.get_shader(PaperShaderListSelector::kPointLighting));
+    EXPECT_EQ(nullptr, shader_list.get_shader(PaperShaderListSelector::kShadowCaster));
+    EXPECT_EQ(nullptr, shader_list.get_shader(PaperShaderListSelector::kShadowCasterDebug));
+
+    factory.SetConfig(shadow_config);
+    shader_list = PaperTester::GetShaderList(factory, *mat.get(), true);
+    EXPECT_EQ(PaperTester::ambient_light_program(factory),
+              shader_list.get_shader(PaperShaderListSelector::kAmbientLighting));
+    EXPECT_EQ(PaperTester::point_light_program(factory),
+              shader_list.get_shader(PaperShaderListSelector::kPointLighting));
+    EXPECT_EQ(PaperTester::shadow_volume_geometry_program(factory),
+              shader_list.get_shader(PaperShaderListSelector::kShadowCaster));
+    EXPECT_EQ(PaperTester::shadow_volume_geometry_debug_program(factory),
+              shader_list.get_shader(PaperShaderListSelector::kShadowCasterDebug));
+  }
+
+  // Wireframe material.
+  {
+    mat->set_type(Material::Type::kWireframe);
+
+    factory.SetConfig(no_shadow_config);
+    shader_list = PaperTester::GetShaderList(factory, *mat.get(), false);
+    EXPECT_EQ(PaperTester::no_lighting_program(factory),
+              shader_list.get_shader(PaperShaderListSelector::kAmbientLighting));
+    EXPECT_EQ(nullptr, shader_list.get_shader(PaperShaderListSelector::kPointLighting));
+    EXPECT_EQ(nullptr, shader_list.get_shader(PaperShaderListSelector::kShadowCaster));
+    EXPECT_EQ(nullptr, shader_list.get_shader(PaperShaderListSelector::kShadowCasterDebug));
+
+    factory.SetConfig(shadow_config);
+    shader_list = PaperTester::GetShaderList(factory, *mat.get(), true);
+    EXPECT_EQ(PaperTester::no_lighting_program(factory),
+              shader_list.get_shader(PaperShaderListSelector::kAmbientLighting));
+    EXPECT_EQ(nullptr, shader_list.get_shader(PaperShaderListSelector::kPointLighting));
+    EXPECT_EQ(nullptr, shader_list.get_shader(PaperShaderListSelector::kShadowCaster));
+    EXPECT_EQ(nullptr, shader_list.get_shader(PaperShaderListSelector::kShadowCasterDebug));
+  }
+
+  // Translucent material.
+  {
+    mat->set_type(Material::Type::kTranslucent);
+
+    factory.SetConfig(no_shadow_config);
+    shader_list = PaperTester::GetShaderList(factory, *mat.get(), false);
+    EXPECT_EQ(PaperTester::no_lighting_program(factory),
+              shader_list.get_shader(PaperShaderListSelector::kAmbientLighting));
+    EXPECT_EQ(nullptr, shader_list.get_shader(PaperShaderListSelector::kPointLighting));
+    EXPECT_EQ(nullptr, shader_list.get_shader(PaperShaderListSelector::kShadowCaster));
+    EXPECT_EQ(nullptr, shader_list.get_shader(PaperShaderListSelector::kShadowCasterDebug));
+
+    factory.SetConfig(shadow_config);
+    shader_list = PaperTester::GetShaderList(factory, *mat.get(), true);
+    EXPECT_EQ(PaperTester::no_lighting_program(factory),
+              shader_list.get_shader(PaperShaderListSelector::kAmbientLighting));
+    EXPECT_EQ(nullptr, shader_list.get_shader(PaperShaderListSelector::kPointLighting));
+    EXPECT_EQ(nullptr, shader_list.get_shader(PaperShaderListSelector::kShadowCaster));
+    EXPECT_EQ(nullptr, shader_list.get_shader(PaperShaderListSelector::kShadowCasterDebug));
+  }
 }
 
 }  // namespace

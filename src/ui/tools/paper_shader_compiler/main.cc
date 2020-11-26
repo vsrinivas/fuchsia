@@ -89,10 +89,6 @@ int main(int argc, const char** argv) {
     return EXIT_FAILURE;
   }
 
-  if (!CompileAndWriteShader(filesystem, escher::kPointLightFalloffProgramData)) {
-    return EXIT_FAILURE;
-  }
-
   if (!CompileAndWriteShader(filesystem, escher::kShadowVolumeGeometryProgramData)) {
     return EXIT_FAILURE;
   }

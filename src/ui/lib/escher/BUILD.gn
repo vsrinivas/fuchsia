@@ -218,6 +218,7 @@ template("escher_library") {
       "paper/paper_renderer_static_config.cc",
       "paper/paper_renderer_static_config.h",
       "paper/paper_scene.h",
+      "paper/paper_shader_list.h",
       "paper/paper_shader_structs.h",
       "paper/paper_shape_cache.cc",
       "paper/paper_shape_cache.h",

@@ -9,6 +9,7 @@
 #include "src/ui/lib/escher/paper/paper_drawable_flags.h"
 #include "src/ui/lib/escher/paper/paper_readme.h"
 #include "src/ui/lib/escher/paper/paper_renderer_config.h"
+#include "src/ui/lib/escher/paper/paper_shader_list.h"
 #include "src/ui/lib/escher/renderer/uniform_binding.h"
 #include "src/ui/lib/escher/util/hash_map.h"
 
@@ -42,6 +43,9 @@ class PaperDrawCallFactory final {
   // longer work.
   void DrawMesh(const MeshPtr& mesh, const PaperMaterial& material, PaperDrawableFlags flags = {});
 
+  // Must not be called during a frame, i.e. between |BeginFrame()| and |EndFrame()|.
+  void SetConfig(const PaperRendererConfig& config);
+
   // TODO(ES203) - We will eventualy not need to do this as we will simply
   // inject PaperRenderer with a version of the PaperDrawCallFactory that
   // is used explicitly for testing.
@@ -73,13 +77,6 @@ class PaperDrawCallFactory final {
  private:
   friend class PaperRenderer;
   friend class PaperTester;
-
-  // Called by |PaperRenderer::SetConfig()|.
-  // TODO(fxbug.dev/7242): Currently a no-op.  In order to support other rendering
-  // techniques, |PaperDrawCallFactory| will need to be in charge of managing
-  // shader variations.
-  void SetConfig(const PaperRendererConfig& config);
-
   // Called by |PaperRenderer::BeginFrame()|.  Returns a vector of
   // UniformBindings; PaperRenderer should bind these before directing the
   // PaperRenderQueue to emit commands into a CommandBuffer.
@@ -110,12 +107,23 @@ class PaperDrawCallFactory final {
   void EnqueueDrawCalls(const PaperShapeCacheEntry& cache_entry, const PaperMaterial& material,
                         PaperDrawableFlags flags);
 
+  // Return the list of shaders that "will" be used to render a mesh.  For simplicity, some shaders
+  // may be provided which won't be used, for example if shadows are disabled then the shaders for
+  // shadow-volume generation will be ignored.
+  PaperShaderList GetShaderList(const Material& mat, bool cast_shadows) const;
+
   PaperRendererConfig config_;
 
   // Rather than using a separate Vulkan pipeline for Materials that have no
   // texture (only a color), we use a 1x1 texture with a single white pixel.
   // This is simpler to implement and avoids the cost of switching pipelines.
   TexturePtr white_texture_;
+
+  ShaderProgramPtr ambient_light_program_;
+  ShaderProgramPtr no_lighting_program_;
+  ShaderProgramPtr point_light_program_;
+  ShaderProgramPtr shadow_volume_geometry_program_;
+  ShaderProgramPtr shadow_volume_geometry_debug_program_;
 
   FramePtr frame_;
   PaperTransformStack* transform_stack_ = nullptr;

@@ -7,6 +7,7 @@
 
 #include "src/ui/lib/escher/paper/paper_readme.h"
 #include "src/ui/lib/escher/paper/paper_render_funcs.h"
+#include "src/ui/lib/escher/paper/paper_shader_list.h"
 #include "src/ui/lib/escher/renderer/render_queue_context.h"
 
 namespace escher {
@@ -18,13 +19,11 @@ class PaperRenderQueueContext final : public RenderQueueContext {
   PaperRenderQueueContext();
   ~PaperRenderQueueContext();
 
-  // TODO(fxbug.dev/7249): Providing the shader-program to the render-func via the
-  // context works fine for now, but we will need a new approach.
-  ShaderProgram* shader_program() const { return shader_program_.get(); }
-  void set_shader_program(ShaderProgramPtr program);
+  PaperShaderListSelector shader_selector() const { return shader_selector_; }
+  void set_shader_selector(PaperShaderListSelector sel) { shader_selector_ = sel; }
 
  private:
-  ShaderProgramPtr shader_program_;
+  PaperShaderListSelector shader_selector_ = PaperShaderListSelector::kAmbientLighting;
 };
 
 }  // namespace escher

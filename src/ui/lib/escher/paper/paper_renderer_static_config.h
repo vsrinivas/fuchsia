@@ -23,7 +23,6 @@ extern const std::vector<std::string> kPaperRendererShaderSpirvPaths;
 extern const ShaderProgramData kAmbientLightProgramData;
 extern const ShaderProgramData kNoLightingProgramData;
 extern const ShaderProgramData kPointLightProgramData;
-extern const ShaderProgramData kPointLightFalloffProgramData;
 extern const ShaderProgramData kShadowVolumeGeometryProgramData;
 extern const ShaderProgramData kShadowVolumeGeometryDebugProgramData;
 

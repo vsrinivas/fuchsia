@@ -82,8 +82,8 @@ class PaperRenderer final : public fxl::RefCountedThreadSafe<PaperRenderer> {
   Escher* escher() const { return escher_.get(); }
   EscherWeakPtr GetEscherWeakPtr() { return escher_; }
 
-  // Set configuration parameters which affect how the renderer will render
-  // subsequent frames.
+  // Set configuration parameters which affect how the renderer will render subsequent frames.  Must
+  // not be called during a frame, i.e. between |BeginFrame()| and |EndFrame()|.
   void SetConfig(const PaperRendererConfig& config);
   const PaperRendererConfig& config() const { return config_; }
 
@@ -288,14 +288,6 @@ class PaperRenderer final : public fxl::RefCountedThreadSafe<PaperRenderer> {
   PaperTransformStack transform_stack_;
 
   std::unique_ptr<FrameData> frame_data_;
-
-  ShaderProgramPtr ambient_light_program_;
-  ShaderProgramPtr no_lighting_program_;
-  ShaderProgramPtr point_light_program_;
-  ShaderProgramPtr point_light_falloff_program_;
-  ShaderProgramPtr shadow_volume_geometry_program_;
-  ShaderProgramPtr shadow_volume_geometry_debug_program_;
-  ShaderProgramPtr shadow_volume_lighting_program_;
 
   std::vector<TexturePtr> depth_buffers_;
   std::vector<TexturePtr> msaa_buffers_;

@@ -7,6 +7,7 @@
 
 #include "src/ui/lib/escher/forward_declarations.h"
 #include "src/ui/lib/escher/paper/paper_readme.h"
+#include "src/ui/lib/escher/paper/paper_shader_list.h"
 #include "src/ui/lib/escher/renderer/render_funcs.h"
 
 #include <vulkan/vulkan.hpp>
@@ -29,7 +30,8 @@ class PaperRenderFuncs : public RenderFuncs {
   // Struct intended to be used as the |instance_data| of a |RenderQueueItem|.
   struct MeshDrawData {
     UniformBinding object_properties;
-    uint32_t num_indices = 0;
+    PaperShaderList shader_list;
+    uint32_t num_indices;
   };
 
   // Struct intended to be used as the |object_data| of a |RenderQueueItem|.
@@ -71,6 +73,7 @@ class PaperRenderFuncs : public RenderFuncs {
   // uniform GPU memory is allocated using per-Frame allocators.
   static PaperRenderFuncs::MeshDrawData* NewMeshDrawData(const FramePtr& frame,
                                                          const mat4& transform, const vec4& color,
+                                                         const PaperShaderList& shader_list,
                                                          uint32_t num_indices);
 };
 

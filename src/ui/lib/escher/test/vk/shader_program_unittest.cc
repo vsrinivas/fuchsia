@@ -155,10 +155,9 @@ VK_TEST_F(ShaderProgramTest, TimingTest) {
   auto program1 = escher->GetProgram(kAmbientLightProgramData);
   auto program2 = escher->GetProgram(kNoLightingProgramData);
   auto program3 = escher->GetProgram(kPointLightProgramData);
-  auto program4 = escher->GetProgram(kPointLightFalloffProgramData);
-  auto program5 = escher->GetProgram(kShadowVolumeGeometryProgramData);
-  auto program6 = escher->GetProgram(kShadowVolumeGeometryDebugProgramData);
-  auto program7 = escher->GetProgram(kFlatlandStandardProgram);
+  auto program4 = escher->GetProgram(kShadowVolumeGeometryProgramData);
+  auto program5 = escher->GetProgram(kShadowVolumeGeometryDebugProgramData);
+  auto program6 = escher->GetProgram(kFlatlandStandardProgram);
   auto stop = std::chrono::high_resolution_clock::now();
   auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
   FX_LOGS(INFO) << "Time taken to load shaders: " << duration.count() << " microseconds.";
@@ -184,7 +183,6 @@ VK_TEST_F(ShaderProgramTest, SpirVReadFileTest) {
   load_and_check_program(kAmbientLightProgramData);
   load_and_check_program(kNoLightingProgramData);
   load_and_check_program(kPointLightProgramData);
-  load_and_check_program(kPointLightFalloffProgramData);
   load_and_check_program(kShadowVolumeGeometryProgramData);
   load_and_check_program(kShadowVolumeGeometryDebugProgramData);
   load_and_check_program(kFlatlandStandardProgram);
@@ -241,7 +239,6 @@ VK_TEST_F(ShaderProgramTest, SpirvNotChangedTest) {
   check_spirv_change(kAmbientLightProgramData);
   check_spirv_change(kNoLightingProgramData);
   check_spirv_change(kPointLightProgramData);
-  check_spirv_change(kPointLightFalloffProgramData);
   check_spirv_change(kShadowVolumeGeometryProgramData);
   check_spirv_change(kShadowVolumeGeometryDebugProgramData);
   check_spirv_change(kFlatlandStandardProgram);

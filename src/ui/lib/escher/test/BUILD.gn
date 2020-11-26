@@ -51,6 +51,7 @@ if (is_host && !has_prebuilt_vulkan_runtime) {
       "paper/paper_draw_call_factory_unittest.cc",
       "paper/paper_render_config_unittest.cc",
       "paper/paper_shape_cache_unittest.cc",
+      "paper/paper_tester.h",
       "paper/paper_transform_stack_unittest.cc",
       "renderer/batch_gpu_downloader_unittest.cc",
       "renderer/batch_gpu_uploader_unittest.cc",

@@ -44,15 +44,17 @@ void PaperRenderFuncs::RenderMesh(CommandBuffer* cb, const RenderQueueContext* c
 
   // TODO(fxbug.dev/7249): this assumes that all meshes in this render-queue pass are
   // drawn exactly the same way.  We will need something better soon.
-  cb->SetShaderProgram(context->shader_program(), mesh_data->texture->sampler()->is_immutable()
-                                                      ? mesh_data->texture->sampler()
-                                                      : nullptr);
+  const SamplerPtr& sampler =
+      mesh_data->texture->sampler()->is_immutable() ? mesh_data->texture->sampler() : nullptr;
+  const PaperShaderListSelector shader_selector = context->shader_selector();
 
   // For each instance, set up per-instance state and draw.
   for (uint32_t i = 0; i < instance_count; ++i) {
     FX_DCHECK(items[i].object_data == mesh_data);
 
     const MeshDrawData* instance_data = static_cast<const MeshDrawData*>(items[i].instance_data);
+
+    cb->SetShaderProgram(instance_data->shader_list.get_shader(shader_selector), sampler);
 
     auto& b = instance_data->object_properties;
     cb->BindUniformBuffer(b.descriptor_set_index, b.binding_index, b.buffer, b.offset, b.size);
@@ -110,10 +112,9 @@ PaperRenderFuncs::MeshData* PaperRenderFuncs::NewMeshData(const FramePtr& frame,
   return obj;
 }
 
-PaperRenderFuncs::MeshDrawData* PaperRenderFuncs::NewMeshDrawData(const FramePtr& frame,
-                                                                  const mat4& transform,
-                                                                  const vec4& color,
-                                                                  uint32_t num_indices) {
+PaperRenderFuncs::MeshDrawData* PaperRenderFuncs::NewMeshDrawData(
+    const FramePtr& frame, const mat4& transform, const vec4& color,
+    const PaperShaderList& shader_list, uint32_t num_indices) {
   MeshDrawData* draw_data = frame->Allocate<MeshDrawData>();
 
   auto writable_binding = NewPaperShaderUniformBinding<PaperShaderMeshInstance>(frame);
@@ -122,6 +123,7 @@ PaperRenderFuncs::MeshDrawData* PaperRenderFuncs::NewMeshDrawData(const FramePtr
   // TODO(fxbug.dev/7243): populate field for vertex-shader clip-planes.
 
   draw_data->object_properties = writable_binding.second;
+  draw_data->shader_list = shader_list;
   draw_data->num_indices = num_indices;
 
   return draw_data;

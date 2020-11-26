@@ -44,15 +44,7 @@ PaperRenderer::PaperRenderer(EscherWeakPtr weak_escher, const PaperRendererConfi
       context_(weak_escher->vulkan_context()),
       config_(config),
       draw_call_factory_(weak_escher, config),
-      shape_cache_(std::move(weak_escher), config),
-      // TODO(fxbug.dev/7242): (probably) move programs into PaperDrawCallFactory.
-      ambient_light_program_(escher()->GetProgram(kAmbientLightProgramData)),
-      no_lighting_program_(escher()->GetProgram(kNoLightingProgramData)),
-      point_light_program_(escher()->GetProgram(kPointLightProgramData)),
-      point_light_falloff_program_(escher()->GetProgram(kPointLightFalloffProgramData)),
-      shadow_volume_geometry_program_(escher()->GetProgram(kShadowVolumeGeometryProgramData)),
-      shadow_volume_geometry_debug_program_(
-          escher()->GetProgram(kShadowVolumeGeometryDebugProgramData)) {
+      shape_cache_(std::move(weak_escher), config) {
   FX_DCHECK(config.num_depth_buffers > 0);
   depth_buffers_.resize(config.num_depth_buffers);
   msaa_buffers_.resize(config.num_depth_buffers);
@@ -526,20 +518,18 @@ void PaperRenderer::GenerateCommandsForNoShadows(uint32_t camera_index) {
 
   {
     PaperRenderQueueContext context;
+    context.set_shader_selector(PaperShaderListSelector::kAmbientLighting);
 
     // Render wireframe.
-    context.set_shader_program(no_lighting_program_);
     cmd_buf->SetToDefaultState(CommandBuffer::DefaultState::kWireframe);
     render_queue_.GenerateCommands(cmd_buf, &context, PaperRenderQueueFlagBits::kWireframe);
 
     // Render opaque.
-    context.set_shader_program(ambient_light_program_);
     cmd_buf->SetWireframe(false);
     cmd_buf->SetToDefaultState(CommandBuffer::DefaultState::kOpaque);
     render_queue_.GenerateCommands(cmd_buf, &context, PaperRenderQueueFlagBits::kOpaque);
 
     // Render translucent.
-    context.set_shader_program(no_lighting_program_);
     cmd_buf->SetToDefaultState(CommandBuffer::DefaultState::kTranslucent);
     render_queue_.GenerateCommands(cmd_buf, &context, PaperRenderQueueFlagBits::kTranslucent);
   }
@@ -585,15 +575,14 @@ void PaperRenderer::GenerateCommandsForShadowVolumes(uint32_t camera_index) {
         .light_index = 0,  // ignored
         .eye_index = cam_data.eye_index,
     });
+    context.set_shader_selector(PaperShaderListSelector::kAmbientLighting);
 
     // Render wireframe.
     cmd_buf->SetToDefaultState(CommandBuffer::DefaultState::kWireframe);
-    context.set_shader_program(no_lighting_program_);
     render_queue_.GenerateCommands(cmd_buf, &context, PaperRenderQueueFlagBits::kWireframe);
 
     // Render opaque.
     cmd_buf->SetToDefaultState(CommandBuffer::DefaultState::kOpaque);
-    context.set_shader_program(ambient_light_program_);
     render_queue_.GenerateCommands(cmd_buf, &context, PaperRenderQueueFlagBits::kOpaque);
   }
 
@@ -635,7 +624,7 @@ void PaperRenderer::GenerateCommandsForShadowVolumes(uint32_t camera_index) {
 
     // Emit commands for stencil shadow geometry.
     {
-      context.set_shader_program(shadow_volume_geometry_program_);
+      context.set_shader_selector(PaperShaderListSelector::kShadowCaster);
 
       // Draw front and back faces of the shadow volumes in a single pass.  We
       // use the standard approach of modifying the stencil buffer only when the
@@ -656,14 +645,7 @@ void PaperRenderer::GenerateCommandsForShadowVolumes(uint32_t camera_index) {
 
     // Emit commands for adding lighting contribution.
     {
-      // Use a slightly less expensive shader when distance-based attenuation is
-      // disabled.
-      const bool use_light_falloff = frame_data_->scene->point_lights[i].falloff > 0.f;
-      if (use_light_falloff) {
-        context.set_shader_program(point_light_falloff_program_);
-      } else {
-        context.set_shader_program(point_light_program_);
-      }
+      context.set_shader_selector(PaperShaderListSelector::kPointLighting);
 
       cmd_buf->SetBlendEnable(true);
 
@@ -682,7 +664,7 @@ void PaperRenderer::GenerateCommandsForShadowVolumes(uint32_t camera_index) {
       if (!escher_->supports_wireframe()) {
         FX_LOGS(WARNING) << "Wireframe not supported; cannot visualize shadow volume geometry.";
       } else {
-        context.set_shader_program(shadow_volume_geometry_debug_program_);
+        context.set_shader_selector(PaperShaderListSelector::kShadowCasterDebug);
 
         cmd_buf->SetBlendEnable(false);
         cmd_buf->SetStencilTest(false);
@@ -695,7 +677,7 @@ void PaperRenderer::GenerateCommandsForShadowVolumes(uint32_t camera_index) {
   }
 
   // Draw translucent geometry without lighting.
-  context.set_shader_program(no_lighting_program_);
+  context.set_shader_selector(PaperShaderListSelector::kAmbientLighting);
   cmd_buf->SetToDefaultState(CommandBuffer::DefaultState::kTranslucent);
   render_queue_.GenerateCommands(cmd_buf, &context, PaperRenderQueueFlagBits::kTranslucent);
 
@@ -936,10 +918,6 @@ void PaperRenderer::WarmPipelineAndRenderPassCaches(
 
         WarmProgramHelper(escher->pipeline_layout_cache(),
                           escher->GetProgram(kPointLightProgramData), &cbps, immutable_samplers);
-
-        WarmProgramHelper(escher->pipeline_layout_cache(),
-                          escher->GetProgram(kPointLightFalloffProgramData), &cbps,
-                          immutable_samplers);
       }
 
       // Wireframe shadow volumes (for debug-mode).
