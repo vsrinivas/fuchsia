@@ -241,8 +241,8 @@ func Main() {
 					MaxTempAddrPreferredLifetime:  maxTempAddrPreferredLifetime,
 					RegenAdvanceDuration:          regenAdvanceDuration,
 				},
-				AutoGenIPv6LinkLocal: true,
-				NDPDisp:              ndpDisp,
+				AutoGenLinkLocal: true,
+				NDPDisp:          ndpDisp,
 				OpaqueIIDOpts: ipv6.OpaqueInterfaceIdentifierOptions{
 					NICNameFromID: func(nicID tcpip.NICID, nicName string) string {
 						// As of writing, Netstack creates NICs with names so we return the name

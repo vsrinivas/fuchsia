@@ -261,7 +261,10 @@ async fn inspect_nic() -> Result {
                 Rx: {
                     Bytes: 0u64,
                     Packets: 0u64,
-                }
+                },
+                Neighbor: {
+                    FailedEntryLookups: 0u64,
+                },
             }
         },
         eth.id().to_string() => {
@@ -292,7 +295,10 @@ async fn inspect_nic() -> Result {
                 Rx: {
                     Bytes: AnyProperty,
                     Packets: AnyProperty,
-                }
+                },
+                Neighbor: {
+                    FailedEntryLookups: AnyProperty,
+                },
             },
             "Ethernet Info": {
                 Filepath: "",
@@ -345,7 +351,10 @@ async fn inspect_nic() -> Result {
                 Rx: {
                     Bytes: AnyProperty,
                     Packets: AnyProperty,
-                }
+                },
+                Neighbor: {
+                    FailedEntryLookups: AnyProperty,
+                },
             },
             "Network Device Info": {
                 TxDrops: AnyProperty,
