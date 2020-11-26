@@ -27,6 +27,67 @@ fbl::Span<const T> ByteViewAsSpan(ByteView bytes) {
   return fbl::Span<const T>(reinterpret_cast<const T*>(bytes.data()), bytes.size() / sizeof(T));
 }
 
+// Ensure the given payload is a valid EFI memory table.
+//
+// The EFI memory dump format is described in the UEFI Spec (version 2.8),
+// Section 7.2 under "EFI_BOOT_SERVICES.GetMemoryMap()".
+//
+// The format consists of a 64-bit `entry_size` value, followed by one or more
+// table entries. Each table entry consists of `entry_size` bytes, the
+// beginning of each containing a `efi_memory_descriptor` structure.
+//
+// We return "true" if the table is valid, along with the number of entries and
+// the size of each entry. Otherwise, we return false.
+bool ParseEfiPayload(ByteView payload, size_t* num_entries, size_t* entry_size) {
+  *num_entries = 0;
+  *entry_size = 0;
+  if (payload.size() < sizeof(uint64_t)) {
+    return false;
+  }
+  *entry_size = *reinterpret_cast<const uint64_t*>(payload.data());
+  if (*entry_size < sizeof(efi_memory_descriptor)) {
+    return false;
+  }
+  if (*entry_size % alignof(efi_memory_descriptor) != 0) {
+    return false;
+  }
+  if ((payload.size() - sizeof(uint64_t)) % *entry_size != 0) {
+    return false;
+  }
+
+  *num_entries = (payload.size() - sizeof(uint64_t)) / *entry_size;
+  return true;
+}
+
+// Get the number of entries in the given EFI memory table.
+size_t GetEfiEntryCount(ByteView payload) {
+  size_t num_entries, entry_size;
+  if (!ParseEfiPayload(payload, &num_entries, &entry_size)) {
+    return 0;
+  }
+  return num_entries;
+}
+
+// Get the n'th entry in the given EFI memory table, or nullptr if no such entry
+// exists.
+const efi_memory_descriptor* GetEfiEntry(ByteView payload, size_t n) {
+  // Parse the table structure.
+  size_t num_entries, entry_size;
+  if (!ParseEfiPayload(payload, &num_entries, &entry_size)) {
+    return nullptr;
+  }
+
+  // Ensure the index is valid.
+  if (n >= num_entries) {
+    return nullptr;
+  }
+
+  // Get the n'th entry.
+  size_t offset = sizeof(uint64_t) + n * entry_size;
+  ZX_DEBUG_ASSERT(offset + sizeof(efi_memory_descriptor) <= payload.size());
+  return reinterpret_cast<const efi_memory_descriptor*>(&payload[offset]);
+}
+
 // Get the number of memory ranges in the given ZBI payload, assuming it
 // is encoded as the given type.
 size_t MemRangeElementCount(uint32_t type, ByteView payload) {
@@ -35,8 +96,9 @@ size_t MemRangeElementCount(uint32_t type, ByteView payload) {
       return payload.size() / sizeof(e820entry_t);
     case ZBI_TYPE_MEM_CONFIG:
       return payload.size() / sizeof(zbi_mem_range_t);
-    case ZBI_TYPE_EFI_MEMORY_MAP:
-      return payload.size() / sizeof(efi_memory_descriptor);
+    case ZBI_TYPE_EFI_MEMORY_MAP: {
+      return GetEfiEntryCount(payload);
+    }
     default:
       return 0;
   }
@@ -49,8 +111,12 @@ zbi_mem_range_t MemRangeElement(uint32_t type, ByteView payload, size_t n) {
       return ToMemRange(ByteViewAsSpan<e820entry_t>(payload)[n]);
     case ZBI_TYPE_MEM_CONFIG:
       return ByteViewAsSpan<zbi_mem_range_t>(payload)[n];
-    case ZBI_TYPE_EFI_MEMORY_MAP:
-      return ToMemRange(ByteViewAsSpan<efi_memory_descriptor>(payload)[n]);
+    case ZBI_TYPE_EFI_MEMORY_MAP: {
+      const efi_memory_descriptor* descriptor = GetEfiEntry(payload, n);
+      // Calling code should ensure that it only requests valid entries.
+      ZX_DEBUG_ASSERT(descriptor != nullptr);
+      return ToMemRange(*descriptor);
+    }
     default:
       ZX_PANIC("Attempted to get element of non-memory payload type %" PRIx32 "\n", type);
   }
