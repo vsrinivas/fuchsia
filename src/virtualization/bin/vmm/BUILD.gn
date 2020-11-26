@@ -119,8 +119,8 @@ source_set("lib") {
     "//src/lib/fsl",
     "//src/lib/ui/base_view",
     "//src/virtualization/third_party/fdt",
-    "//zircon/public/lib/fbl",
-    "//zircon/public/lib/zbi",
+    "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zbitl",
   ]
 
   public_deps = [

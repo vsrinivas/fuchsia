@@ -11,7 +11,9 @@
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/syslog/cpp/macros.h>
-#include <lib/zbi/zbi.h>
+#include <lib/zbitl/error_string.h>
+#include <lib/zbitl/image.h>
+#include <lib/zbitl/memory.h>
 #include <lib/zx/channel.h>
 #include <zircon/boot/driver-config.h>
 
@@ -21,6 +23,7 @@
 #include "src/virtualization/bin/vmm/guest.h"
 #include "src/virtualization/bin/vmm/sysinfo.h"
 #include "src/virtualization/bin/vmm/vcpu.h"
+#include "src/virtualization/bin/vmm/zbi.h"
 
 __BEGIN_CDECLS;
 #include <libfdt.h>
@@ -544,7 +547,7 @@ zx_status_t GicDistributor::Write(uint64_t addr, const IoValue& value) {
   }
 }
 
-zx_status_t GicDistributor::ConfigureZbi(void* zbi_base, size_t zbi_max) const {
+zx_status_t GicDistributor::ConfigureZbi(fbl::Span<std::byte> zbi) const {
   const dcfg_arm_gicv2_driver_t gic_v2 = {
       .mmio_phys = kGicv2DistributorPhysBase,
       .gicd_offset = 0x0000,
@@ -563,16 +566,14 @@ zx_status_t GicDistributor::ConfigureZbi(void* zbi_base, size_t zbi_max) const {
       .optional = true,
   };
 
-  zbi_result_t res;
-  if (type_ == fuchsia::sysinfo::InterruptControllerType::GIC_V2) {
-    res = zbi_create_entry_with_payload(zbi_base, zbi_max, ZBI_TYPE_KERNEL_DRIVER, KDRV_ARM_GIC_V2,
-                                        0, &gic_v2, sizeof(gic_v2));
-  } else {
-    // GICv3 driver.
-    res = zbi_create_entry_with_payload(zbi_base, zbi_max, ZBI_TYPE_KERNEL_DRIVER, KDRV_ARM_GIC_V3,
-                                        0, &gic_v3, sizeof(gic_v3));
-  }
-  return res == ZBI_RESULT_OK ? ZX_OK : ZX_ERR_INTERNAL;
+  zbitl::Image image(zbi);
+  bool v2 = type_ == fuchsia::sysinfo::InterruptControllerType::GIC_V2;
+  return LogIfZbiError(image.Append(
+      zbi_header_t{
+          .type = ZBI_TYPE_KERNEL_DRIVER,
+          .extra = static_cast<uint32_t>(v2 ? KDRV_ARM_GIC_V2 : KDRV_ARM_GIC_V3),
+      },
+      v2 ? zbitl::AsBytes(&gic_v2, sizeof(gic_v2)) : zbitl::AsBytes(&gic_v3, sizeof(gic_v3))));
 }
 
 static inline void gic_dtb_error(const char* reg) {

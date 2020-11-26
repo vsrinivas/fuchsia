@@ -5,12 +5,15 @@
 #include "src/virtualization/bin/vmm/arch/x64/i8250.h"
 
 #include <lib/syslog/cpp/macros.h>
-#include <lib/zbi/zbi.h>
+#include <lib/zbitl/error_string.h>
+#include <lib/zbitl/image.h>
+#include <lib/zbitl/memory.h>
 #include <stdio.h>
 #include <zircon/boot/driver-config.h>
 #include <zircon/boot/image.h>
 
 #include "src/virtualization/bin/vmm/guest.h"
+#include "src/virtualization/bin/vmm/zbi.h"
 
 // I8250 state flags.
 static constexpr uint64_t kI8250LineStatusEmpty = 1u << 5;
@@ -143,13 +146,16 @@ zx_status_t I8250Group::Init(Guest* guest) {
   return ZX_OK;
 }
 
-zx_status_t I8250Group::ConfigureZbi(void* zbi_base, size_t zbi_max) const {
+zx_status_t I8250Group::ConfigureZbi(fbl::Span<std::byte> zbi) const {
   dcfg_simple_pio_t zbi_uart = {
       .base = kI8250Base0,
       .irq = 4,
   };
-  zbi_result_t res =
-      zbi_create_entry_with_payload(zbi_base, zbi_max, ZBI_TYPE_KERNEL_DRIVER, KDRV_I8250_PIO_UART,
-                                    0, &zbi_uart, sizeof(zbi_uart));
-  return res == ZBI_RESULT_OK ? ZX_OK : ZX_ERR_INTERNAL;
+  zbitl::Image image(zbi);
+  return LogIfZbiError(image.Append(
+      zbi_header_t{
+          .type = ZBI_TYPE_KERNEL_DRIVER,
+          .extra = KDRV_I8250_PIO_UART,
+      },
+      zbitl::AsBytes(&zbi_uart, sizeof(zbi_uart))));
 }

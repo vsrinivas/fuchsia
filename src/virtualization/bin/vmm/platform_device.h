@@ -7,11 +7,15 @@
 
 #include <zircon/types.h>
 
+#include <cstddef>
+
+#include <fbl/span.h>
+
 class PlatformDevice {
  public:
   virtual ~PlatformDevice() = default;
 
-  virtual zx_status_t ConfigureZbi(void *zbi_base, size_t zbi_max) const { return ZX_OK; }
+  virtual zx_status_t ConfigureZbi(fbl::Span<std::byte> zbi) const { return ZX_OK; }
   virtual zx_status_t ConfigureDtb(void *dtb) const { return ZX_OK; }
 };
 

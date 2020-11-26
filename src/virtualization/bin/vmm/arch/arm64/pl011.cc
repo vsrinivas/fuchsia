@@ -6,11 +6,14 @@
 
 #include <endian.h>
 #include <lib/syslog/cpp/macros.h>
-#include <lib/zbi/zbi.h>
+#include <lib/zbitl/error_string.h>
+#include <lib/zbitl/image.h>
+#include <lib/zbitl/memory.h>
 #include <stdio.h>
 #include <zircon/boot/driver-config.h>
 
 #include "src/virtualization/bin/vmm/guest.h"
+#include "src/virtualization/bin/vmm/zbi.h"
 
 __BEGIN_CDECLS;
 #include <libfdt.h>
@@ -96,14 +99,18 @@ void Pl011::Print(uint8_t ch) {
   tx_offset_ = 0;
 }
 
-zx_status_t Pl011::ConfigureZbi(void* zbi_base, size_t zbi_max) const {
+zx_status_t Pl011::ConfigureZbi(fbl::Span<std::byte> zbi) const {
   dcfg_simple_t zbi_uart = {
       .mmio_phys = kPl011PhysBase,
       .irq = 111,
   };
-  zbi_result_t res = zbi_create_entry_with_payload(zbi_base, zbi_max, ZBI_TYPE_KERNEL_DRIVER,
-                                                   KDRV_PL011_UART, 0, &zbi_uart, sizeof(zbi_uart));
-  return res == ZBI_RESULT_OK ? ZX_OK : ZX_ERR_INTERNAL;
+  zbitl::Image image(zbi);
+  return LogIfZbiError(image.Append(
+      zbi_header_t{
+          .type = ZBI_TYPE_KERNEL_DRIVER,
+          .extra = KDRV_PL011_UART,
+      },
+      zbitl::AsBytes(&zbi_uart, sizeof(zbi_uart))));
 }
 
 zx_status_t Pl011::ConfigureDtb(void* dtb) const {

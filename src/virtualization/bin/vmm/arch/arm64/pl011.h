@@ -25,7 +25,7 @@ class Pl011 : public IoHandler, public PlatformDevice {
   zx_status_t Write(uint64_t addr, const IoValue& value) override;
 
   // |PlatformDevice|
-  zx_status_t ConfigureZbi(void* zbi_base, size_t zbi_max) const override;
+  zx_status_t ConfigureZbi(fbl::Span<std::byte> zbi) const override;
   zx_status_t ConfigureDtb(void* dtb) const override;
 
  private:

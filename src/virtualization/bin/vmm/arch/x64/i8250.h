@@ -43,7 +43,7 @@ class I8250Group : public PlatformDevice {
   zx_status_t Init(Guest* guest);
 
   // |PlatformDevice|
-  zx_status_t ConfigureZbi(void* zbi_base, size_t zbi_max) const override;
+  zx_status_t ConfigureZbi(fbl::Span<std::byte> zbi) const override;
 
  private:
   static constexpr size_t kNumUarts = 4;

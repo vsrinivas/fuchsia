@@ -6,7 +6,10 @@
 
 #include <fcntl.h>
 #include <fuchsia/virtualization/cpp/fidl.h>
-#include <lib/zbi/zbi.h>
+#include <lib/zbitl/error_string.h>
+#include <lib/zbitl/fd.h>
+#include <lib/zbitl/image.h>
+#include <lib/zbitl/memory.h>
 #include <limits.h>
 #include <stdio.h>
 #include <string.h>
@@ -17,10 +20,13 @@
 #include <zircon/boot/e820.h>
 #include <zircon/boot/image.h>
 
+#include <iterator>
+
 #include <fbl/unique_fd.h>
 
 #include "src/virtualization/bin/vmm/dev_mem.h"
 #include "src/virtualization/bin/vmm/guest.h"
+#include "src/virtualization/bin/vmm/zbi.h"
 
 #if __aarch64__
 // This address works for direct-mapping of host memory. This address is chosen
@@ -53,110 +59,99 @@ static inline bool is_within(uintptr_t x, uintptr_t addr, uintptr_t size) {
   return x >= addr && x < addr + size;
 }
 
-zx_status_t read_unified_zbi(const std::string& zbi_path, const uintptr_t kernel_off,
-                             const uintptr_t zbi_off, const PhysMem& phys_mem,
+zx_status_t read_unified_zbi(const std::string& zbi_path, const uintptr_t kernel_zbi_off,
+                             const uintptr_t data_zbi_off, const PhysMem& phys_mem,
                              uintptr_t* guest_ip) {
-  fbl::unique_fd fd(open(zbi_path.c_str(), O_RDONLY));
-  if (!fd) {
-    FX_LOGS(ERROR) << "Failed to open kernel image " << zbi_path;
-    return ZX_ERR_IO;
-  }
-  struct stat stat;
-  ssize_t ret = fstat(fd.get(), &stat);
-  if (ret < 0) {
-    FX_LOGS(ERROR) << "Failed to stat kernel image " << zbi_path;
-    return ZX_ERR_IO;
-  }
+  // Alias for clarity.
+  using complete_zbi_t = zircon_kernel_t;
 
-  if (ZBI_ALIGN(kernel_off) != kernel_off) {
-    FX_LOGS(ERROR) << "Kernel offset has invalid alignment";
+  if (ZBI_ALIGN(kernel_zbi_off) != kernel_zbi_off) {
+    FX_LOGS(ERROR) << "Kernel ZBI offset has invalid alignment";
+    return ZX_ERR_INVALID_ARGS;
+  }
+  if (ZBI_ALIGN(data_zbi_off) != data_zbi_off) {
+    FX_LOGS(ERROR) << "Data ZBI offset has invalid alignment";
     return ZX_ERR_INVALID_ARGS;
   }
 
-  // First read just the kernel header.
-  ret = read(fd.get(), phys_mem.as<void>(kernel_off, sizeof(zircon_kernel_t)),
-             sizeof(zircon_kernel_t));
-  if (ret != sizeof(zircon_kernel_t)) {
-    FX_LOGS(ERROR) << "Failed to read kernel header";
+  fbl::unique_fd fd(open(zbi_path.c_str(), O_RDONLY));
+  if (!fd) {
+    FX_LOGS(ERROR) << "Failed to open ZBI " << zbi_path;
     return ZX_ERR_IO;
   }
 
-  // Check that the kernel ZBI is the correct type.
-  auto kernel_hdr = phys_mem.as<zircon_kernel_t>(kernel_off);
-  if (!ZBI_IS_KERNEL_BOOTITEM(kernel_hdr->hdr_kernel.type)) {
-    FX_LOGS(ERROR) << "Invalid Zircon container";
-    return ZX_ERR_IO_DATA_INTEGRITY;
-  }
+  // Read out the initial headers to check that the ZBI's total memory
+  // reservation fits into the guest's physical memory.
+  zbi_header_t kernel_item_header;
+  zbi_kernel_t kernel_payload_header;
+  {
+    if (auto ret = read(fd.get(), phys_mem.as<void>(kernel_zbi_off, sizeof(complete_zbi_t)),
+                        sizeof(complete_zbi_t));
+        ret != sizeof(complete_zbi_t)) {
+      FX_LOGS(ERROR) << "Failed to read initial ZBI headers: " << strerror(errno);
+      return ZX_ERR_IO;
+    }
+    if (auto ret = lseek(fd.get(), 0, SEEK_SET); ret) {
+      FX_LOGS(ERROR) << "Failed to seek back to beginning of ZBI: " << strerror(errno);
+      return ZX_ERR_IO;
+    }
 
-  // Check that the total size of the ZBI matches the file size.
-  const uint32_t file_len = sizeof(zbi_header_t) + kernel_hdr->hdr_file.length;
-  if (stat.st_size != file_len) {
-    FX_LOGS(ERROR) << "ZBI length does not match file size";
-    return ZX_ERR_OUT_OF_RANGE;
+    // Dereference and copy for good measure, as we will soon be overwriting
+    // the kernel ZBI range.
+    kernel_item_header =
+        *phys_mem.as<zbi_header_t>(kernel_zbi_off + offsetof(complete_zbi_t, hdr_kernel));
+    kernel_payload_header =
+        *phys_mem.as<zbi_kernel_t>(kernel_zbi_off + offsetof(complete_zbi_t, data_kernel));
   }
-
-  // Check that the kernel's total memory reservation fits into guest physical
-  // memory.
-  const uint32_t reserved_size = offsetof(zircon_kernel_t, data_kernel) +
-                                 kernel_hdr->hdr_kernel.length +
-                                 kernel_hdr->data_kernel.reserve_memory_size;
-  if (kernel_off + reserved_size > phys_mem.size()) {
+  const uint32_t reserved_size = offsetof(complete_zbi_t, data_kernel) + kernel_item_header.length +
+                                 kernel_payload_header.reserve_memory_size;
+  if (kernel_zbi_off + reserved_size > phys_mem.size()) {
     FX_LOGS(ERROR) << "Zircon kernel memory reservation exceeds guest physical memory";
     return ZX_ERR_OUT_OF_RANGE;
   }
 
-  // Check that the kernel's total memory reservation does not overlap the
+  // Check that the ZBI's total memory reservation does not overlap the
   // ramdisk.
-  if (is_within(zbi_off, kernel_off, reserved_size)) {
+  if (is_within(data_zbi_off, kernel_zbi_off, reserved_size)) {
     FX_LOGS(ERROR) << "Kernel reservation memory reservation overlaps RAM disk location";
     return ZX_ERR_OUT_OF_RANGE;
   }
 
-  // Read the kernel payload.
-  const uint32_t kernel_payload_len = kernel_hdr->hdr_kernel.length - sizeof(zbi_kernel_t);
-  ret =
-      read(fd.get(),
-           phys_mem.as<void>(kernel_off + offsetof(zircon_kernel_t, contents), kernel_payload_len),
-           kernel_payload_len);
-  if (ret != kernel_payload_len) {
-    FX_LOGS(ERROR) << "Failed to read kernel payload";
-    return ZX_ERR_IO;
+  zbitl::View view(std::move(fd));
+  if (auto result = zbitl::CheckComplete(view); result.is_error()) {
+    FX_LOGS(ERROR) << "Incomplete ZBI: " << result.error_value();
+    return ZX_ERR_IO_DATA_INTEGRITY;
   }
+  auto first = view.begin();
+  auto second = std::next(first);
+  size_t kernel_zbi_size = second.item_offset();
+  size_t data_zbi_size = view.size_bytes() - (second.item_offset() - first.item_offset());
+  fbl::Span<std::byte> kernel_zbi{phys_mem.as<std::byte>(kernel_zbi_off), kernel_zbi_size};
+  fbl::Span<std::byte> data_zbi{phys_mem.as<std::byte>(data_zbi_off), data_zbi_size};
 
-  // Update the kernel ZBI container header and check that it is valid.
-  kernel_hdr->hdr_file = ZBI_CONTAINER_HEADER(kernel_hdr->hdr_kernel.length +
-                                              static_cast<uint32_t>(sizeof(zbi_header_t)));
-  zbi_result_t res = zbi_check(kernel_hdr, nullptr);
-  if (res != ZBI_RESULT_OK) {
-    FX_LOGS(ERROR) << "Invalid kernel ZBI " << res;
+  // Now that we have performed basic data integrity checks and know that the
+  // kernel and data ZBI ranges do not overlap, copy.
+  if (auto result = view.Copy(kernel_zbi, first, second); result.is_error()) {
+    FX_LOGS(ERROR) << "Failed to create kernel ZBI: "
+                   << zbitl::ViewCopyErrorString(result.error_value());
+    view.ignore_error();
     return ZX_ERR_INTERNAL;
   }
-
-  // Create a separate data ZBI.
-
-  if (ZBI_ALIGN(zbi_off) != zbi_off) {
-    FX_LOGS(ERROR) << "ZBI offset has invalid alignment";
-    return ZX_ERR_INVALID_ARGS;
+  if (auto result = view.Copy(data_zbi, second, view.end()); result.is_error()) {
+    FX_LOGS(ERROR) << zbitl::ViewCopyErrorString(result.error_value());
+    view.ignore_error();
+    return ZX_ERR_INTERNAL;
   }
-  auto container_hdr = phys_mem.as<zbi_header_t>(zbi_off);
-  *container_hdr = ZBI_CONTAINER_HEADER(0);
-
-  // Read additional items from the kernel ZBI container to the data ZBI.
-  const uint32_t kernel_end =
-      offsetof(zircon_kernel_t, data_kernel) + kernel_hdr->hdr_kernel.length;
-  if (file_len > kernel_end) {
-    const uint32_t items_len = file_len - kernel_end;
-    const uintptr_t data_off = zbi_off + sizeof(zbi_header_t) + container_hdr->length;
-    ret = read(fd.get(), phys_mem.as<void>(data_off, items_len), items_len);
-    container_hdr->length += ZBI_ALIGN(items_len);
+  if (zx_status_t status = LogIfZbiError(view.take_error()); status != ZX_OK) {
+    return status;
   }
 
   // On arm64, the kernel is relocatable so the entry point must be offset by
   // kKernelOffset. On x64, the entry point is absolute.
 #if __aarch64__
-  *guest_ip = kernel_hdr->data_kernel.entry + kKernelOffset;
+  *guest_ip = kernel_payload_header.entry + kKernelOffset;
 #elif __x86_64__
-  *guest_ip = kernel_hdr->data_kernel.entry;
+  *guest_ip = kernel_payload_header.entry;
 #endif
 
   return ZX_OK;
@@ -165,20 +160,23 @@ zx_status_t read_unified_zbi(const std::string& zbi_path, const uintptr_t kernel
 static zx_status_t build_data_zbi(const fuchsia::virtualization::GuestConfig& cfg,
                                   const PhysMem& phys_mem, const DevMem& dev_mem,
                                   const std::vector<PlatformDevice*>& devices, uintptr_t zbi_off) {
-  auto container_hdr = phys_mem.as<zbi_header_t>(zbi_off);
   const size_t zbi_max = phys_mem.size() - zbi_off;
+  fbl::Span<std::byte> zbi{phys_mem.as<std::byte>(zbi_off), zbi_max};
+  zbitl::Image image(zbi);
 
   // Command line.
-  zbi_result_t res;
-  res = zbi_create_entry_with_payload(container_hdr, zbi_max, ZBI_TYPE_CMDLINE, 0, 0,
-                                      cfg.cmdline().c_str(), cfg.cmdline().size() + 1);
-  if (res != ZBI_RESULT_OK) {
-    return ZX_ERR_INTERNAL;
+  const std::string cmdline = cfg.cmdline();
+  zbitl::ByteView cmdline_bytes = zbitl::AsBytes(cmdline.data(), cmdline.size() + 1);
+  zx_status_t status =
+      LogIfZbiError(image.Append(zbi_header_t{.type = ZBI_TYPE_CMDLINE}, cmdline_bytes),
+                    "Failed to append command-line item");
+  if (status != ZX_OK) {
+    return status;
   }
 
   // Any platform devices
   for (auto device : devices) {
-    zx_status_t status = device->ConfigureZbi(container_hdr, zbi_max);
+    status = device->ConfigureZbi(zbi);
     if (status != ZX_OK) {
       return status;
     }
@@ -190,11 +188,13 @@ static zx_status_t build_data_zbi(const fuchsia::virtualization::GuestConfig& cf
   auto cpu_config = reinterpret_cast<zbi_cpu_config_t*>(cpu_buffer);
   cpu_config->cluster_count = 1;
   cpu_config->clusters[0].cpu_count = cfg.cpus();
-  res = zbi_create_entry_with_payload(container_hdr, zbi_max, ZBI_TYPE_CPU_CONFIG, 0, 0, cpu_buffer,
-                                      sizeof(cpu_buffer));
-  if (res != ZBI_RESULT_OK) {
-    return ZX_ERR_INTERNAL;
+  status = LogIfZbiError(
+      image.Append(zbi_header_t{.type = ZBI_TYPE_CPU_CONFIG}, zbitl::AsBytes(cpu_buffer)),
+      "Failed to append CPU configuration");
+  if (status != ZX_OK) {
+    return status;
   }
+
   // Memory config.
   std::vector<zbi_mem_range_t> mem_config;
   auto yield = [&mem_config](zx_gpaddr_t addr, size_t size) {
@@ -232,56 +232,65 @@ static zx_status_t build_data_zbi(const fuchsia::virtualization::GuestConfig& cf
   if (periph_range.length != 0) {
     mem_config.emplace_back(std::move(periph_range));
   }
-  res = zbi_create_entry_with_payload(container_hdr, zbi_max, ZBI_TYPE_MEM_CONFIG, 0, 0,
-                                      &mem_config[0], sizeof(zbi_mem_range_t) * mem_config.size());
-  if (res != ZBI_RESULT_OK) {
-    return ZX_ERR_INTERNAL;
+  zbitl::ByteView mem_config_bytes =
+      zbitl::AsBytes(mem_config.data(), sizeof(zbi_mem_range_t) * mem_config.size());
+  status = LogIfZbiError(image.Append(zbi_header_t{.type = ZBI_TYPE_MEM_CONFIG}, mem_config_bytes),
+                         "Failed to append memory configuration");
+  if (status != ZX_OK) {
+    return status;
   }
+
   // Platform ID.
-  res = zbi_create_entry_with_payload(container_hdr, zbi_max, ZBI_TYPE_PLATFORM_ID, 0, 0,
-                                      &kPlatformId, sizeof(kPlatformId));
-  if (res != ZBI_RESULT_OK) {
-    return ZX_ERR_INTERNAL;
+  status = LogIfZbiError(
+      image.Append(zbi_header_t{.type = ZBI_TYPE_PLATFORM_ID}, zbitl::AsBytes(kPlatformId)),
+      "Failed to append platform ID");
+  if (status != ZX_OK) {
+    return status;
   }
+
   // PSCI driver.
-  res = zbi_create_entry_with_payload(container_hdr, zbi_max, ZBI_TYPE_KERNEL_DRIVER, KDRV_ARM_PSCI,
-                                      0, &kPsciDriver, sizeof(kPsciDriver));
-  if (res != ZBI_RESULT_OK) {
-    return ZX_ERR_INTERNAL;
+  status = LogIfZbiError(image.Append(
+                             zbi_header_t{
+                                 .type = ZBI_TYPE_KERNEL_DRIVER,
+                                 .extra = KDRV_ARM_PSCI,
+                             },
+                             zbitl::AsBytes(&kPsciDriver, sizeof(kPsciDriver))),
+                         "Failed to append PSCI driver item");
+  if (status != ZX_OK) {
+    return status;
   }
+
   // Timer driver.
-  res =
-      zbi_create_entry_with_payload(container_hdr, zbi_max, ZBI_TYPE_KERNEL_DRIVER,
-                                    KDRV_ARM_GENERIC_TIMER, 0, &kTimerDriver, sizeof(kTimerDriver));
-  if (res != ZBI_RESULT_OK) {
-    return ZX_ERR_INTERNAL;
+  status = LogIfZbiError(image.Append(
+                             zbi_header_t{
+                                 .type = ZBI_TYPE_KERNEL_DRIVER,
+                                 .extra = KDRV_ARM_GENERIC_TIMER,
+                             },
+                             zbitl::AsBytes(kTimerDriver)),
+                         "Failed to append timer driver item");
+  if (status != ZX_OK) {
+    return status;
   }
 #elif __x86_64__
   // ACPI root table pointer.
-  res = zbi_create_entry_with_payload(container_hdr, zbi_max, ZBI_TYPE_ACPI_RSDP, 0, 0,
-                                      &kAcpiOffset, sizeof(uint64_t));
-  if (res != ZBI_RESULT_OK) {
-    return ZX_ERR_INTERNAL;
+  if (zx_status_t status = LogIfZbiError(
+          image.Append(zbi_header_t{.type = ZBI_TYPE_ACPI_RSDP}, zbitl::AsBytes(kAcpiOffset)),
+          "Failed to append root ACPI table pointer");
+      status != ZX_OK) {
+    return status;
   }
+
   // E820 memory map.
   E820Map e820_map(phys_mem.size(), dev_mem);
   for (const auto& range : dev_mem) {
     e820_map.AddReservedRegion(range.addr, range.size);
   }
-  const size_t e820_size = e820_map.size() * sizeof(e820entry_t);
-  void* e820_addr = nullptr;
-  res = zbi_create_entry(container_hdr, zbi_max, ZBI_TYPE_E820_TABLE, 0, 0, e820_size, &e820_addr);
-  if (res != ZBI_RESULT_OK) {
-    return ZX_ERR_INTERNAL;
-  }
-  e820_map.copy(static_cast<e820entry_t*>(e820_addr));
+  const uint32_t e820_size = e820_map.size() * sizeof(e820entry_t);
+  auto result = image.Append(zbi_header_t{.type = ZBI_TYPE_E820_TABLE, .length = e820_size});
+  LogIfZbiError(result);
+  auto it = std::move(result).value();
+  e820_map.copy(reinterpret_cast<e820entry_t*>((*it).payload.data()));
 #endif
-
-  res = zbi_check(container_hdr, nullptr);
-  if (res != ZBI_RESULT_OK) {
-    FX_LOGS(ERROR) << "Invalid Zircon container: " << res;
-    return ZX_ERR_INTERNAL;
-  }
 
   return ZX_OK;
 }
