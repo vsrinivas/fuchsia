@@ -7,7 +7,6 @@
 #include <fuchsia/scheduler/cpp/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/fzl/owned-vmo-mapper.h>
-#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/thread.h>
 #include <limits.h>
 #include <zircon/status.h>
@@ -43,21 +42,22 @@ zx::status<std::unique_ptr<UserPager>> UserPager::Create(
   zx_status_t status = pager->compressed_mapper_.Map(pager->compressed_transfer_buffer_->vmo(), 0,
                                                      kTransferBufferSize, ZX_VM_PERM_READ);
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Failed to map the compressed TransferBuffer: "
-                   << zx_status_get_string(status);
+    FS_TRACE_ERROR("blobfs: Failed to map the compressed TransferBuffer: %s\n",
+                   zx_status_get_string(status));
     return zx::error(status);
   }
 
   status = zx::vmo::create(kDecompressionBufferSize, 0, &pager->decompression_buffer_);
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Failed to create decompression buffer: " << zx_status_get_string(status);
+    FS_TRACE_ERROR("blobfs: Failed to create decompression buffer: %s\n",
+                   zx_status_get_string(status));
     return zx::error(status);
   }
 
   // Create the pager object.
   status = zx::pager::create(0, &pager->pager_);
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Cannot initialize pager";
+    FS_TRACE_ERROR("blobfs: Cannot initialize pager\n");
     return zx::error(status);
   }
 
@@ -65,7 +65,7 @@ zx::status<std::unique_ptr<UserPager>> UserPager::Create(
   thrd_t thread;
   status = pager->pager_loop_.StartThread("blobfs-pager-thread", &thread);
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Could not start pager thread";
+    FS_TRACE_ERROR("blobfs: Could not start pager thread\n");
     return zx::error(status);
   }
 
@@ -79,7 +79,7 @@ zx::status<std::unique_ptr<UserPager>> UserPager::Create(
   pager->watchdog_ = fs_watchdog::CreateWatchdog();
   zx::status<> watchdog_status = pager->watchdog_->Start();
   if (!watchdog_status.is_ok()) {
-    FX_LOGS(ERROR) << "Could not start pager watchdog";
+    FS_TRACE_ERROR("blobfs: Could not start pager watchdog\n");
     return zx::error(watchdog_status.status_value());
   }
 
@@ -90,7 +90,7 @@ void UserPager::SetDeadlineProfile(thrd_t thread) {
   zx::channel channel0, channel1;
   zx_status_t status = zx::channel::create(0u, &channel0, &channel1);
   if (status != ZX_OK) {
-    FX_LOGS(WARNING) << "Could not create channel pair: " << zx_status_get_string(status);
+    FS_TRACE_WARN("blobfs: Could not create channel pair: %s\n", zx_status_get_string(status));
     return;
   }
 
@@ -99,8 +99,8 @@ void UserPager::SetDeadlineProfile(thrd_t thread) {
       (std::string("/svc_blobfs/") + fuchsia::scheduler::ProfileProvider::Name_).c_str(),
       channel0.release());
   if (status != ZX_OK) {
-    FX_LOGS(WARNING) << "Could not connect to scheduler profile provider: "
-                     << zx_status_get_string(status);
+    FS_TRACE_WARN("blobfs: Could not connect to scheduler profile provider: %s\n",
+                  zx_status_get_string(status));
     return;
   }
 
@@ -122,14 +122,14 @@ void UserPager::SetDeadlineProfile(thrd_t thread) {
       capacity, deadline, period, "/boot/bin/blobfs:blobfs-pager-thread", &fidl_status, &profile);
 
   if (status != ZX_OK || fidl_status != ZX_OK) {
-    FX_LOGS(WARNING) << "Failed to get deadline profile: " << zx_status_get_string(status) << ", "
-                     << zx_status_get_string(fidl_status);
+    FS_TRACE_WARN("blobfs: Failed to get deadline profile: %s, %s\n", zx_status_get_string(status),
+                  zx_status_get_string(fidl_status));
   } else {
     auto pager_thread = zx::unowned_thread(thrd_get_zx_handle(thread));
     // Set the deadline profile.
     status = pager_thread->set_profile(profile, 0);
     if (status != ZX_OK) {
-      FX_LOGS(WARNING) << "Failed to set deadline profile: " << zx_status_get_string(status);
+      FS_TRACE_WARN("blobfs: Failed to set deadline profile: %s\n", zx_status_get_string(status));
     }
   }
 }
@@ -180,8 +180,8 @@ PagerErrorStatus UserPager::TransferPagesToVmo(uint64_t offset, uint64_t length,
                                                const UserPagerInfo& info) {
   size_t end;
   if (add_overflow(offset, length, &end)) {
-    FX_LOGS(ERROR) << "pager transfer range would overflow (off=" << offset << ", len=" << length
-                   << ")";
+    FS_TRACE_ERROR("blobfs: pager transfer range would overflow (off=%lu, len=%lu)\n", offset,
+                   length);
     return PagerErrorStatus::kErrBadState;
   }
 
@@ -218,8 +218,8 @@ PagerErrorStatus UserPager::TransferUncompressedPagesToVmo(uint64_t requested_of
   // Read from storage into the transfer buffer.
   auto populate_status = uncompressed_transfer_buffer_->Populate(offset, length, info);
   if (!populate_status.is_ok()) {
-    FX_LOGS(ERROR) << "TransferUncompressed: Failed to populate transfer vmo: "
-                   << populate_status.status_string();
+    FS_TRACE_ERROR("blobfs: TransferUncompressed: Failed to populate transfer vmo: %s\n",
+                   populate_status.status_string());
     return ToPagerErrorStatus(populate_status.status_value());
   }
 
@@ -235,8 +235,9 @@ PagerErrorStatus UserPager::TransferUncompressedPagesToVmo(uint64_t requested_of
     zx_status_t status = uncompressed_transfer_buffer_->vmo().op_range(
         ZX_VMO_OP_ZERO, length, rounded_length - length, nullptr, 0);
     if (status != ZX_OK) {
-      FX_LOGS(ERROR) << "TransferUncompressed: Failed to remove Merkle tree from transfer buffer: "
-                     << zx_status_get_string(status);
+      FS_TRACE_ERROR(
+          "blobfs: TransferUncompressed: Failed to remove Merkle tree from transfer buffer: %s\n",
+          zx_status_get_string(status));
       return ToPagerErrorStatus(status);
     }
   }
@@ -252,15 +253,15 @@ PagerErrorStatus UserPager::TransferUncompressedPagesToVmo(uint64_t requested_of
     zx_status_t status =
         mapping.Map(uncompressed_transfer_buffer_->vmo(), 0, rounded_length, ZX_VM_PERM_READ);
     if (status != ZX_OK) {
-      FX_LOGS(ERROR) << "TransferUncompressed: Failed to map transfer buffer: "
-                     << zx_status_get_string(status);
+      FS_TRACE_ERROR("blobfs: TransferUncompressed: Failed to map transfer buffer: %s\n",
+                     zx_status_get_string(status));
       return ToPagerErrorStatus(status);
     }
 
     status = info.verifier->VerifyPartial(mapping.start(), length, offset, rounded_length);
     if (status != ZX_OK) {
-      FX_LOGS(ERROR) << "TransferUncompressed: Failed to verify data: "
-                     << zx_status_get_string(status);
+      FS_TRACE_ERROR("blobfs: TransferUncompressed: Failed to verify data: %s\n",
+                     zx_status_get_string(status));
       return ToPagerErrorStatus(status);
     }
   }
@@ -270,8 +271,8 @@ PagerErrorStatus UserPager::TransferUncompressedPagesToVmo(uint64_t requested_of
   zx_status_t status =
       pager_.supply_pages(vmo, offset, rounded_length, uncompressed_transfer_buffer_->vmo(), 0);
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "TransferUncompressed: Failed to supply pages to paged VMO: "
-                   << zx_status_get_string(status);
+    FS_TRACE_ERROR("blobfs: TransferUncompressed: Failed to supply pages to paged VMO: %s\n",
+                   zx_status_get_string(status));
     return ToPagerErrorStatus(status);
   }
 
@@ -291,8 +292,8 @@ PagerErrorStatus UserPager::TransferChunkedPagesToVmo(uint64_t requested_offset,
   zx::status<CompressionMapping> mapping_status =
       info.decompressor->MappingForDecompressedRange(offset, length);
   if (!mapping_status.is_ok()) {
-    FX_LOGS(ERROR) << "TransferChunked: Failed to find range for [" << offset << ", "
-                   << offset + length << "): " << mapping_status.status_string();
+    FS_TRACE_ERROR("blobfs: TransferChunked: Failed to find range for [%lu, %lu): %s\n", offset,
+                   offset + length, mapping_status.status_string());
     return ToPagerErrorStatus(mapping_status.status_value());
   }
   CompressionMapping mapping = mapping_status.value();
@@ -318,8 +319,8 @@ PagerErrorStatus UserPager::TransferChunkedPagesToVmo(uint64_t requested_offset,
 
   auto populate_status = compressed_transfer_buffer_->Populate(read_offset, read_len, info);
   if (!populate_status.is_ok()) {
-    FX_LOGS(ERROR) << "TransferChunked: Failed to populate transfer vmo: "
-                   << populate_status.status_string();
+    FS_TRACE_ERROR("blobfs: TransferChunked: Failed to populate transfer vmo: %s\n",
+                   populate_status.status_string());
     return ToPagerErrorStatus(populate_status.status_value());
   }
 
@@ -335,8 +336,8 @@ PagerErrorStatus UserPager::TransferChunkedPagesToVmo(uint64_t requested_offset,
   if (zx_status_t status =
           decompressed_mapper.Map(decompression_buffer_, 0, mapping.decompressed_length,
                                   ZX_VM_PERM_READ | ZX_VM_PERM_WRITE) != ZX_OK) {
-    FX_LOGS(ERROR) << "TransferChunked: Failed to map decompress buffer: "
-                   << zx_status_get_string(status);
+    FS_TRACE_ERROR("blobfs: TransferChunked: Failed to map decompress buffer: %s\n",
+                   zx_status_get_string(status));
     return ToPagerErrorStatus(status);
   }
   auto unmap_decompression = fbl::MakeAutoCall([&]() { decompressed_mapper.Unmap(); });
@@ -349,7 +350,8 @@ PagerErrorStatus UserPager::TransferChunkedPagesToVmo(uint64_t requested_offset,
       info.decompressor->DecompressRange(decompressed_mapper.start(), &decompressed_size, src,
                                          mapping.compressed_length, mapping.decompressed_offset);
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "TransferChunked: Failed to decompress: " << zx_status_get_string(status);
+    FS_TRACE_ERROR("blobfs: TransferChunked: Failed to decompress: %s\n",
+                   zx_status_get_string(status));
     return ToPagerErrorStatus(status);
   }
   metrics_->paged_read_metrics().IncrementDecompression(CompressionAlgorithm::CHUNKED,
@@ -361,7 +363,8 @@ PagerErrorStatus UserPager::TransferChunkedPagesToVmo(uint64_t requested_offset,
   status = info.verifier->VerifyPartial(decompressed_mapper.start(), mapping.decompressed_length,
                                         mapping.decompressed_offset, rounded_length);
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "TransferChunked: Failed to verify data: " << zx_status_get_string(status);
+    FS_TRACE_ERROR("blobfs: TransferChunked: Failed to verify data: %s\n",
+                   zx_status_get_string(status));
     return ToPagerErrorStatus(status);
   }
 
@@ -371,8 +374,8 @@ PagerErrorStatus UserPager::TransferChunkedPagesToVmo(uint64_t requested_offset,
   status = pager_.supply_pages(vmo, mapping.decompressed_offset, rounded_length,
                                decompression_buffer_, 0);
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "TransferChunked: Failed to supply pages to paged VMO: "
-                   << zx_status_get_string(status);
+    FS_TRACE_ERROR("blobfs: TransferChunked: Failed to supply pages to paged VMO: %s\n",
+                   zx_status_get_string(status));
     return ToPagerErrorStatus(status);
   }
 

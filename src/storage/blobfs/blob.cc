@@ -9,7 +9,6 @@
 #include <fuchsia/device/c/fidl.h>
 #include <fuchsia/io/llcpp/fidl.h>
 #include <lib/sync/completion.h>
-#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/status.h>
 #include <stdlib.h>
 #include <string.h>
@@ -40,6 +39,7 @@
 #include <fbl/string_piece.h>
 #include <fs/journal/data_streamer.h>
 #include <fs/metrics/events.h>
+#include <fs/trace.h>
 #include <fs/transaction/writeback.h>
 #include <fs/vfs_types.h>
 #include <safemath/checked_math.h>
@@ -284,7 +284,7 @@ zx_status_t Blob::Verify() const {
   auto blob_layout =
       BlobLayout::CreateFromInode(GetBlobLayoutFormat(blobfs_->Info()), inode_, GetBlockSize());
   if (blob_layout.is_error()) {
-    FX_LOGS(ERROR) << "Failed to create blob layout: " << blob_layout.status_string();
+    FS_TRACE_ERROR("blobfs: Failed to create blob layout: %s\n", blob_layout.status_string());
     return blob_layout.status_value();
   }
 
@@ -379,7 +379,7 @@ zx_status_t Blob::PrepareWrite(uint64_t size_data, bool compress) {
     write_info->compressor =
         BlobCompressor::Create(blobfs_->write_compression_settings(), inode_.blob_size);
     if (!write_info->compressor) {
-      FX_LOGS(ERROR) << "Failed to initialize compressor: " << status;
+      FS_TRACE_ERROR("blobfs: Failed to initialize compressor: %d\n", status);
       return status;
     }
   } else if (inode_.blob_size != 0) {
@@ -439,8 +439,8 @@ zx_status_t Blob::SpaceAllocate(uint32_t block_count) {
     return status;
   }
   if (extents.size() > kMaxBlobExtents) {
-    FX_LOGS(ERROR) << "Error: Block reservation requires too many extents (" << extents.size()
-                   << " vs " << kMaxBlobExtents << " max)";
+    FS_TRACE_ERROR("Error: Block reservation requires too many extents (%zu vs %zu max)\n",
+                   extents.size(), kMaxBlobExtents);
     return ZX_ERR_BAD_STATE;
   }
   const ExtentCountType extent_count = static_cast<ExtentCountType>(extents.size());
@@ -575,14 +575,14 @@ zx_status_t Blob::WriteInternal(const void* data, size_t len, size_t* actual) {
     }
   } else {
     if (zx_status_t status = data_mapping_.vmo().write(data, offset, to_write); status != ZX_OK) {
-      FX_LOGS(ERROR) << "blob: VMO write failed: " << zx_status_get_string(status);
+      FS_TRACE_ERROR("blob: VMO write failed: %s\n", zx_status_get_string(status));
       return status;
     }
   }
 
   if (zx_status_t status = write_info_->merkle_tree_creator.Append(data, to_write);
       status != ZX_OK) {
-    FX_LOGS(ERROR) << "blob: MerkleTreeCreator::Append failed: " << zx_status_get_string(status);
+    FS_TRACE_ERROR("blob: MerkleTreeCreator::Append failed: %s\n", zx_status_get_string(status));
     return status;
   }
 
@@ -633,14 +633,14 @@ zx_status_t Blob::Commit() {
   auto blob_layout = BlobLayout::CreateFromSizes(GetBlobLayoutFormat(blobfs_->Info()),
                                                  inode_.blob_size, data_size, GetBlockSize());
   if (blob_layout.is_error()) {
-    FX_LOGS(ERROR) << "Failed to create blob layout: " << blob_layout.status_string();
+    FS_TRACE_ERROR("blobfs: Failed to create blob layout: %s\n", blob_layout.status_string());
     return blob_layout.status_value();
   }
 
   const uint32_t total_block_count = blob_layout->TotalBlockCount();
   if (zx_status_t status = SpaceAllocate(total_block_count); status != ZX_OK) {
-    FX_LOGS(ERROR) << "Failed to allocate " << total_block_count
-                   << " blocks for the blob: " << zx_status_get_string(status);
+    FS_TRACE_ERROR("blobfs: Failed to allocate %u blocks for the blob: %s\n", total_block_count,
+                   zx_status_get_string(status));
     return status;
   }
 
@@ -823,7 +823,7 @@ zx_status_t Blob::CloneDataVmo(zx_rights_t rights, zx::vmo* out_vmo, size_t* out
   zx::vmo clone;
   status = data_vmo.create_child(ZX_VMO_CHILD_COPY_ON_WRITE, 0, inode_.blob_size, &clone);
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Failed to create child VMO: " << zx_status_get_string(status);
+    FS_TRACE_ERROR("blobfs: Failed to create child VMO: %s\n", zx_status_get_string(status));
     return status;
   }
 
@@ -834,7 +834,7 @@ zx_status_t Blob::CloneDataVmo(zx_rights_t rights, zx::vmo* out_vmo, size_t* out
     // sure that we aren't implicitly relying on the ZX_POL_AMBIENT_MARK_VMO_EXEC job policy.
     const zx::resource& vmex = blobfs_->vmex_resource();
     if (!vmex.is_valid()) {
-      FX_LOGS(ERROR) << "No VMEX resource available, executable blobs unsupported";
+      FS_TRACE_ERROR("blobfs: No VMEX resource available, executable blobs unsupported\n");
       return ZX_ERR_NOT_SUPPORTED;
     }
     if ((status = clone.replace_as_executable(vmex, &clone)) != ZX_OK) {
@@ -888,8 +888,8 @@ void Blob::HandleNoClones(async_dispatcher_t* dispatcher, async::WaitBase* wait,
         return;
       }
     } else {
-      FX_LOGS(WARNING) << "Failed to get_info for vmo (" << zx_status_get_string(info_status)
-                       << "); unable to verify VMO has no clones.";
+      FS_TRACE_WARN("Failed to get_info for vmo (%s); unable to verify VMO has no clones.\n",
+                    zx_status_get_string(info_status));
     }
   }
   if (!tearing_down_) {
@@ -967,7 +967,7 @@ zx_status_t Blob::PrepareDataVmoForWriting() {
   if (zx_status_t status = data_mapping.CreateAndMap(
           fbl::round_up(inode_.blob_size, kBlobfsBlockSize), data_vmo_name.c_str());
       status != ZX_OK) {
-    FX_LOGS(ERROR) << "Failed to map data vmo: " << zx_status_get_string(status);
+    FS_TRACE_ERROR("blobfs: Failed to map data vmo: %s\n", zx_status_get_string(status));
     return status;
   }
   data_mapping_ = std::move(data_mapping);

@@ -4,13 +4,12 @@
 
 #include "src/storage/minfs/minfs_inspector.h"
 
-#include <lib/syslog/cpp/macros.h>
-
 #include <algorithm>
 
 #include <disk_inspector/inspector_transaction_handler.h>
 #include <disk_inspector/vmo_buffer_factory.h>
 #include <fs/journal/internal/inspector_parser.h>
+#include <fs/trace.h>
 
 #include "src/storage/minfs/format.h"
 #include "src/storage/minfs/inspector/loader.h"
@@ -44,7 +43,7 @@ zx_status_t MinfsInspector::ReloadSuperblock() {
   zx_status_t status;
   status = loader.LoadSuperblock(kSuperblockStart, buffer_.get());
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Cannot load superblock. err: " << status;
+    FS_TRACE_ERROR("Cannot load superblock. err: %d\n", status);
     return status;
   }
   superblock_ = GetSuperblock(buffer_.get());
@@ -86,7 +85,7 @@ fit::result<std::vector<Inode>, zx_status_t> MinfsInspector::InspectInodeRange(u
 
   zx_status_t status = loader.RunReadOperation(inode_buffer.get(), 0, start_block, block_length);
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Cannot load inode. err: " << status;
+    FS_TRACE_ERROR("Cannot load inode. err: %d\n", status);
     return fit::error(status);
   }
 
@@ -123,7 +122,7 @@ fit::result<std::vector<uint64_t>, zx_status_t> MinfsInspector::InspectInodeAllo
 
   zx_status_t status = loader.RunReadOperation(bit_buffer.get(), 0, start_block, block_length);
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Cannot load allocation bits. err: " << status;
+    FS_TRACE_ERROR("Cannot load allocation bits. err: %d\n", status);
     return fit::error(status);
   }
 
@@ -150,7 +149,7 @@ fit::result<fs::JournalInfo, zx_status_t> MinfsInspector::InspectJournalSuperblo
   zx_status_t status = loader.RunReadOperation(buffer_.get(), 0, JournalStartBlock(superblock_),
                                                fs::kJournalMetadataBlocks);
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Cannot load journal superblock. err: " << status;
+    FS_TRACE_ERROR("Cannot load journal superblock. err: %d\n", status);
     return fit::error(status);
   }
   return fit::ok(fs::GetJournalSuperblock(buffer_.get()));
@@ -191,7 +190,7 @@ fit::result<Superblock, zx_status_t> MinfsInspector::InspectBackupSuperblock() {
       superblock_.GetFlagFvm() ? kFvmSuperblockBackup : kNonFvmSuperblockBackup;
   zx_status_t status = loader.LoadSuperblock(backup_location, buffer_.get());
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Cannot load backup superblock. err: " << status;
+    FS_TRACE_ERROR("Cannot load backup superblock. err: %d\n", status);
     return fit::error(status);
   }
   return fit::ok(GetSuperblock(buffer_.get()));
@@ -202,7 +201,7 @@ fit::result<void, zx_status_t> MinfsInspector::WriteSuperblock(Superblock superb
   *static_cast<Superblock*>(buffer_->Data(0)) = superblock;
   zx_status_t status = loader.RunWriteOperation(buffer_.get(), 0, 0, 1);
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Cannot write superblock. err: " << status;
+    FS_TRACE_ERROR("Cannot write superblock. err: %d\n", status);
     return fit::error(status);
   }
   superblock_ = superblock;
@@ -214,7 +213,7 @@ zx_status_t MinfsInspector::LoadJournalEntry(storage::BlockBuffer* buffer, uint6
   uint64_t start_block = JournalStartBlock(superblock_) + fs::kJournalMetadataBlocks + index;
   zx_status_t status = loader.RunReadOperation(buffer, 0, start_block, 1);
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Cannot load journal entry. err: " << status;
+    FS_TRACE_ERROR("Cannot load journal entry. err: %d\n", status);
   }
   return status;
 }

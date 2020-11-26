@@ -3,17 +3,16 @@
 // found in the LICENSE file.
 
 #include <inttypes.h>
-#include <lib/syslog/cpp/macros.h>
 #include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>
 #include <zircon/assert.h>
 
-#include <iomanip>
 #include <limits>
 
 #include <blobfs/blob-layout.h>
 #include <blobfs/format.h>
+#include <fs/trace.h>
 #include <safemath/checked_math.h>
 
 #ifdef __Fuchsia__
@@ -88,9 +87,9 @@ bool CheckFilesystemAndDriverCompatibility(uint32_t format_version) {
   if (format_version == 0x8 && kBlobfsCurrentFormatVersion == 0x9) {
     return true;
   }
-  FX_LOGS(ERROR) << "Filesystem and Driver are incompatible. FS Version: " << std::setfill('0')
-                 << std::setw(8) << std::hex << format_version
-                 << ". Driver version: " << std::setw(8) << kBlobfsCurrentFormatVersion;
+  FS_TRACE_ERROR(
+      "blobfs: Filesystem and Driver are incompatible. FS Version: %08x. Driver version: %08x\n",
+      format_version, kBlobfsCurrentFormatVersion);
   return false;
 }
 
@@ -100,7 +99,7 @@ bool CheckFilesystemAndDriverCompatibility(uint32_t format_version) {
 // available blocks.
 zx_status_t CheckSuperblock(const Superblock* info, uint64_t max) {
   if ((info->magic0 != kBlobfsMagic0) || (info->magic1 != kBlobfsMagic1)) {
-    FX_LOGS(ERROR) << "bad magic";
+    FS_TRACE_ERROR("blobfs: bad magic\n");
     return ZX_ERR_INVALID_ARGS;
   }
   if (!CheckFilesystemAndDriverCompatibility(info->format_version)) {
@@ -108,50 +107,50 @@ zx_status_t CheckSuperblock(const Superblock* info, uint64_t max) {
     return ZX_ERR_INVALID_ARGS;
   }
   if (info->block_size != kBlobfsBlockSize) {
-    FX_LOGS(ERROR) << "bsz " << info->block_size << " unsupported";
+    FS_TRACE_ERROR("blobfs: bsz %u unsupported\n", info->block_size);
     DumpSuperblock(*info, stderr);
     return ZX_ERR_INVALID_ARGS;
   }
 
   if (info->data_block_count < kMinimumDataBlocks) {
-    FX_LOGS(ERROR) << "Not enough space for minimum data partition";
+    FS_TRACE_ERROR("blobfs: Not enough space for minimum data partition\n");
     return ZX_ERR_NO_SPACE;
   }
 
 #ifdef __Fuchsia__
   if ((info->flags & kBlobFlagClean) == 0) {
-    FX_LOGS(WARNING) << "filesystem in dirty state. Was not unmounted cleanly.";
+    FS_TRACE_ERROR("blobfs: filesystem in dirty state. Was not unmounted cleanly.\n");
   } else {
-    FX_LOGS(INFO) << "filesystem in clean state.";
+    FS_TRACE_INFO("blobfs: filesystem in clean state.\n");
   }
 #endif
 
   // Determine the number of blocks necessary for the block map and node map.
   uint64_t total_inode_size;
   if (mul_overflow(info->inode_count, sizeof(Inode), &total_inode_size)) {
-    FX_LOGS(ERROR) << "Multiplication overflow";
+    FS_TRACE_ERROR("Multiplication overflow");
     return ZX_ERR_OUT_OF_RANGE;
   }
 
   uint64_t node_map_size;
   if (mul_overflow(NodeMapBlocks(*info), kBlobfsBlockSize, &node_map_size)) {
-    FX_LOGS(ERROR) << "Multiplication overflow";
+    FS_TRACE_ERROR("Multiplication overflow");
     return ZX_ERR_OUT_OF_RANGE;
   }
 
   if (total_inode_size != node_map_size) {
-    FX_LOGS(ERROR) << "Inode table block must be entirely filled";
+    FS_TRACE_ERROR("blobfs: Inode table block must be entirely filled\n");
     return ZX_ERR_BAD_STATE;
   }
 
   if (info->journal_block_count < kMinimumJournalBlocks) {
-    FX_LOGS(ERROR) << "Not enough space for minimum journal partition";
+    FS_TRACE_ERROR("blobfs: Not enough space for minimum journal partition\n");
     return ZX_ERR_NO_SPACE;
   }
 
   if ((info->flags & kBlobFlagFVM) == 0) {
     if (TotalBlocks(*info) > max) {
-      FX_LOGS(ERROR) << "too large for device";
+      FS_TRACE_ERROR("blobfs: too large for device\n");
       DumpSuperblock(*info, stderr);
       return ZX_ERR_INVALID_ARGS;
     }
@@ -161,11 +160,11 @@ zx_status_t CheckSuperblock(const Superblock* info, uint64_t max) {
     size_t abm_blocks_needed = BlockMapBlocks(*info);
     size_t abm_blocks_allocated = info->abm_slices * blocks_per_slice;
     if (abm_blocks_needed > abm_blocks_allocated) {
-      FX_LOGS(ERROR) << "Not enough slices for block bitmap";
+      FS_TRACE_ERROR("blobfs: Not enough slices for block bitmap\n");
       DumpSuperblock(*info, stderr);
       return ZX_ERR_INVALID_ARGS;
     } else if (abm_blocks_allocated + BlockMapStartBlock(*info) >= NodeMapStartBlock(*info)) {
-      FX_LOGS(ERROR) << "Block bitmap collides into node map";
+      FS_TRACE_ERROR("blobfs: Block bitmap collides into node map\n");
       DumpSuperblock(*info, stderr);
       return ZX_ERR_INVALID_ARGS;
     }
@@ -173,11 +172,11 @@ zx_status_t CheckSuperblock(const Superblock* info, uint64_t max) {
     size_t ino_blocks_needed = NodeMapBlocks(*info);
     size_t ino_blocks_allocated = info->ino_slices * blocks_per_slice;
     if (ino_blocks_needed > ino_blocks_allocated) {
-      FX_LOGS(ERROR) << "Not enough slices for node map";
+      FS_TRACE_ERROR("blobfs: Not enough slices for node map\n");
       DumpSuperblock(*info, stderr);
       return ZX_ERR_INVALID_ARGS;
     } else if (ino_blocks_allocated + NodeMapStartBlock(*info) >= DataStartBlock(*info)) {
-      FX_LOGS(ERROR) << "Node bitmap collides into data blocks";
+      FS_TRACE_ERROR("blobfs: Node bitmap collides into data blocks\n");
       DumpSuperblock(*info, stderr);
       return ZX_ERR_INVALID_ARGS;
     }
@@ -185,16 +184,16 @@ zx_status_t CheckSuperblock(const Superblock* info, uint64_t max) {
     size_t dat_blocks_needed = DataBlocks(*info);
     size_t dat_blocks_allocated = info->dat_slices * blocks_per_slice;
     if (dat_blocks_needed < kStartBlockMinimum) {
-      FX_LOGS(ERROR) << "Partition too small; no space left for data blocks";
+      FS_TRACE_ERROR("blobfs: Partition too small; no space left for data blocks\n");
       DumpSuperblock(*info, stderr);
       return ZX_ERR_INVALID_ARGS;
     } else if (dat_blocks_needed > dat_blocks_allocated) {
-      FX_LOGS(ERROR) << "Not enough slices for data blocks";
+      FS_TRACE_ERROR("blobfs: Not enough slices for data blocks\n");
       DumpSuperblock(*info, stderr);
       return ZX_ERR_INVALID_ARGS;
     } else if (dat_blocks_allocated + DataStartBlock(*info) >
                std::numeric_limits<uint32_t>::max()) {
-      FX_LOGS(ERROR) << "Data blocks overflow uint32";
+      FS_TRACE_ERROR("blobfs: Data blocks overflow uint32\n");
       DumpSuperblock(*info, stderr);
       return ZX_ERR_INVALID_ARGS;
     }

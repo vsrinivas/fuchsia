@@ -38,6 +38,7 @@
 #include <fs-management/launch.h>
 #include <fs-management/mount.h>
 #include <fs/test_support/test_support.h>
+#include <fs/trace.h>
 #include <fvm/format.h>
 #include <gtest/gtest.h>
 

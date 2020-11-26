@@ -34,4 +34,14 @@ constexpr bool trace_debug_enabled() {
 
 }  // namespace fs
 
+#define FS_TRACE_DEBUG(fmt...)     \
+  do {                             \
+    if (fs::trace_debug_enabled()) \
+      fprintf(stderr, fmt);        \
+  } while (0)
+
+#define FS_TRACE_INFO(fmt...) fprintf(stderr, fmt)
+#define FS_TRACE_WARN(fmt...) fprintf(stderr, fmt)
+#define FS_TRACE_ERROR(fmt...) fprintf(stderr, fmt)
+
 #endif  // FS_TRACE_H_

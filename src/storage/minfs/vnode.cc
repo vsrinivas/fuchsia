@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include <fcntl.h>
-#include <lib/syslog/cpp/macros.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
@@ -17,7 +16,6 @@
 
 #include <fbl/algorithm.h>
 #include <fbl/string_piece.h>
-#include <fs/trace.h>
 #include <fs/vfs_types.h>
 #include <safemath/checked_math.h>
 
@@ -144,7 +142,7 @@ zx_status_t VnodeMinfs::InitVmo() {
   zx_status_t status;
   const size_t vmo_size = fbl::round_up(GetSize(), fs_->BlockSize());
   if ((status = zx::vmo::create(vmo_size, ZX_VMO_RESIZABLE, &vmo_)) != ZX_OK) {
-    FX_LOGS(ERROR) << "Failed to initialize vmo; error: " << status;
+    FS_TRACE_ERROR("Failed to initialize vmo; error: %d\n", status);
     return status;
   }
   vmo_size_ = vmo_size;
@@ -413,7 +411,7 @@ zx_status_t VnodeMinfs::ReadInternal(PendingWork* transaction, void* vdata, size
     if (bno != 0) {
       char bdata[fs_->BlockSize()];
       if (fs_->ReadDat(bno, bdata)) {
-        FX_LOGS(ERROR) << "Failed to read data block " << bno;
+        FS_TRACE_ERROR("minfs: Failed to read data block %u\n", bno);
         return ZX_ERR_IO;
       }
       memcpy(data, bdata + adjust, xfer);
@@ -533,7 +531,7 @@ zx_status_t VnodeMinfs::WriteInternal(Transaction* transaction, const uint8_t* d
 }
 
 zx_status_t VnodeMinfs::GetAttributes(fs::VnodeAttributes* a) {
-  FX_LOGS(DEBUG) << "minfs_getattr() vn=" << this << "(#" << ino_ << ")";
+  FS_TRACE_DEBUG("minfs_getattr() vn=%p(#%u)\n", this, ino_);
   // This transaction exists because acquiring the block size and block
   // count may be unsafe without locking.
   //
@@ -553,7 +551,7 @@ zx_status_t VnodeMinfs::GetAttributes(fs::VnodeAttributes* a) {
 
 zx_status_t VnodeMinfs::SetAttributes(fs::VnodeAttributesUpdate attr) {
   int dirty = 0;
-  FX_LOGS(DEBUG) << "minfs_setattr() vn=" << this << "(#" << ino_ << ")";
+  FS_TRACE_DEBUG("minfs_setattr() vn=%p(#%u)\n", this, ino_);
   if (attr.has_creation_time()) {
     inode_.create_time = attr.take_creation_time();
     dirty = 1;
@@ -703,7 +701,7 @@ zx_status_t VnodeMinfs::TruncateInternal(Transaction* transaction, size_t len) {
   // TODO(smklein): We should only init up to 'len'; no need
   // to read in the portion of a large file we plan on deleting.
   if ((status = InitVmo()) != ZX_OK) {
-    FX_LOGS(ERROR) << "Truncate failed to initialize VMO: " << status;
+    FS_TRACE_ERROR("minfs: Truncate failed to initialize VMO: %d\n", status);
     return ZX_ERR_IO;
   }
 #endif
@@ -730,10 +728,10 @@ zx_status_t VnodeMinfs::TruncateInternal(Transaction* transaction, size_t len) {
       if (status != ZX_OK) {
         // TODO(fxbug.dev/35948): This is a known issue; the additional logging here is to help
         // diagnose.
-        FX_LOGS(ERROR) << "TruncateInternal: Modifying node length from " << inode_size << " to "
-                       << len;
-        FX_LOGS(ERROR) << "  Decommit from offset " << decommit_offset << ", length "
-                       << decommit_length << ". Status: " << status;
+        FS_TRACE_ERROR("TruncateInternal: Modifying node length from %zu to %zu\n", inode_size,
+                       len);
+        FS_TRACE_ERROR("  Decommit from offset %zu, length %zu. Status: %d\n", decommit_offset,
+                       decommit_length, status);
         ZX_ASSERT(status == ZX_OK);
       }
     }
@@ -750,7 +748,7 @@ zx_status_t VnodeMinfs::TruncateInternal(Transaction* transaction, size_t len) {
       blk_t rel_bno = static_cast<blk_t>(len / fs_->BlockSize());
       bno = 0;
       if ((status = BlockGetReadable(rel_bno, &bno)) != ZX_OK) {
-        FX_LOGS(ERROR) << "Truncate failed to get block " << rel_bno << " of file: " << status;
+        FS_TRACE_ERROR("minfs: Truncate failed to get block %u of file: %d\n", rel_bno, status);
         return ZX_ERR_IO;
       }
 
@@ -759,18 +757,18 @@ zx_status_t VnodeMinfs::TruncateInternal(Transaction* transaction, size_t len) {
       bool allocated = (bno != 0);
       if (allocated || HasPendingAllocation(rel_bno)) {
         if ((status = vmo_.read(bdata, len - adjust, adjust)) != ZX_OK) {
-          FX_LOGS(ERROR) << "Truncate failed to read last block: " << status;
+          FS_TRACE_ERROR("minfs: Truncate failed to read last block: %d\n", status);
           return ZX_ERR_IO;
         }
         memset(bdata + adjust, 0, fs_->BlockSize() - adjust);
 
         if ((status = vmo_.write(bdata, len - adjust, fs_->BlockSize())) != ZX_OK) {
-          FX_LOGS(ERROR) << "Truncate failed to write last block: " << status;
+          FS_TRACE_ERROR("minfs: Truncate failed to write last block: %d\n", status);
           return ZX_ERR_IO;
         }
 
         if ((status = BlockGetWritable(transaction, rel_bno, &bno)) != ZX_OK) {
-          FX_LOGS(ERROR) << "Truncate failed to get block " << rel_bno << " of file: " << status;
+          FS_TRACE_ERROR("minfs: Truncate failed to get block %u of file: %d\n", rel_bno, status);
           return ZX_ERR_IO;
         }
         IssueWriteback(transaction, rel_bno, bno + fs_->Info().dat_block, 1);

@@ -4,9 +4,8 @@
 
 #include "corrupt_blob.h"
 
-#include <lib/syslog/cpp/macros.h>
-
 #include <blobfs/format.h>
+#include <fs/trace.h>
 
 #include "fs_block_client.h"
 
@@ -18,27 +17,27 @@ zx_status_t CorruptBlob(std::unique_ptr<BlockDevice> device, BlobCorruptOptions*
 
   zx_status_t status = FsBlockClient::Create(std::move(device), &block_client);
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Could not initialize block client";
+    FS_TRACE_ERROR("blobfs-corrupt: Could not initialize block client\n");
     return status;
   }
 
   // Read and verify the superblock.
   status = block_client->ReadBlock(blobfs::kSuperblockOffset, block);
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Could not read superblock";
+    FS_TRACE_ERROR("blobfs-corrupt: Could not read superblock\n");
     return status;
   }
 
   blobfs::Superblock superblock = *reinterpret_cast<blobfs::Superblock*>(block);
   status = blobfs::CheckSuperblock(&superblock, block_client->BlockCount());
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Bad superblock, bailing out";
+    FS_TRACE_ERROR("blobfs-corrupt: Bad superblock, bailing out\n");
     return status;
   }
 
   if ((superblock.flags & blobfs::kBlobFlagClean) == 0) {
-    FX_LOGS(ERROR)
-        << "blobfs-corrupt: Superblock indicates filesystem was not unmounted cleanly, bailing out";
+    FS_TRACE_ERROR(
+        "blobfs-corrupt: Superblock indicates filesystem was not unmounted cleanly, bailing out\n");
     return ZX_ERR_BAD_STATE;
   }
 
@@ -48,7 +47,7 @@ zx_status_t CorruptBlob(std::unique_ptr<BlockDevice> device, BlobCorruptOptions*
        inode_block++) {
     status = block_client->ReadBlock(inode_block, block);
     if (status != ZX_OK) {
-      FX_LOGS(ERROR) << "Could not read inode block " << inode_block;
+      FS_TRACE_ERROR("blobfs-corrupt: Could not read inode block %lu\n", inode_block);
       return status;
     }
 
@@ -70,21 +69,21 @@ zx_status_t CorruptBlob(std::unique_ptr<BlockDevice> device, BlobCorruptOptions*
       // Determine the location of the first data block (which may be the merkle tree or data block
       // depending on how large the blob is).
       if (inode->extent_count == 0) {
-        FX_LOGS(ERROR) << "blob to corrupt is the empty blob!";
+        FS_TRACE_ERROR("blobfs-corrupt: blob to corrupt is the empty blob!\n");
         return ZX_ERR_INVALID_ARGS;
       }
       auto extent = inode->extents[0];
       uint64_t data_block = DataStartBlock(superblock) + extent.Start();
 
       if (extent.Length() == 0) {
-        FX_LOGS(ERROR) << "blob extent has 0 blocks?";
+        FS_TRACE_ERROR("blobfs-corrupt: blob extent has 0 blocks?\n");
         return ZX_ERR_BAD_STATE;
       }
 
       // Read the first data block, flip the first byte, and re-write the block.
       status = block_client->ReadBlock(data_block, block);
       if (status != ZX_OK) {
-        FX_LOGS(ERROR) << "Could not read data block " << extent.Start();
+        FS_TRACE_ERROR("blobfs-corrupt: Could not read data block %lu\n", extent.Start());
         return status;
       }
 
@@ -92,12 +91,12 @@ zx_status_t CorruptBlob(std::unique_ptr<BlockDevice> device, BlobCorruptOptions*
 
       status = block_client->WriteBlock(data_block, block);
       if (status != ZX_OK) {
-        FX_LOGS(ERROR) << "Could not write corrupted data block: " << status;
+        FS_TRACE_ERROR("blobfs-corrupt: Could not write corrupted data block: %d\n", status);
       }
       return status;
     }
   }
 
-  FX_LOGS(ERROR) << "requested blob not found";
+  FS_TRACE_ERROR("blobfs-corrupt: requested blob not found\n");
   return ZX_ERR_NOT_FOUND;
 }

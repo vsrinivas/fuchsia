@@ -16,7 +16,6 @@
 #include <block-client/cpp/remote-block-device.h>
 #include <fs/managed_vfs.h>
 #include <fs/pseudo_dir.h>
-#include <fs/trace.h>
 #include <fs/vnode.h>
 #include <storage/buffer/owned_vmoid.h>
 
@@ -83,33 +82,33 @@ zx_status_t Factoryfs::Create(async_dispatcher_t* dispatcher, std::unique_ptr<Bl
   Superblock superblock;
   zx_status_t status = device->ReadBlock(0, kFactoryfsBlockSize, &superblock);
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "could not read info block: " << zx_status_get_string(status);
+    FS_TRACE_ERROR("factoryfs: could not read info block: %s\n", zx_status_get_string(status));
     return status;
   }
 
   fuchsia_hardware_block_BlockInfo block_info;
   status = device->BlockGetInfo(&block_info);
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "cannot acquire block info: " << zx_status_get_string(status);
+    FS_TRACE_ERROR("factoryfs: cannot acquire block info: %s\n", zx_status_get_string(status));
     return status;
   }
   // TODO(manalib).
   // Both generic fsck as well as generic mount open the device in read-write mode.
   // Hence we cannot return an error here. Simply flagging this inconsistency for now.
   if ((block_info.flags & BLOCK_FLAG_READONLY) == 0) {
-    FX_LOGS(ERROR) << "Factory partition should only be mounting as read-only.";
+    FS_TRACE_ERROR("factoryfs: Factory partition should only be mounting as read-only.\n");
     // return ZX_ERR_IO;
   }
   if (kFactoryfsBlockSize % block_info.block_size != 0) {
-    FX_LOGS(ERROR) << "Factoryfs block size (" << kFactoryfsBlockSize
-                   << ") not divisible by device block size (" << block_info.block_size << ")";
+    FS_TRACE_ERROR("factoryfs: Factoryfs block size (%u) not divisible by device block size (%u)\n",
+                   kFactoryfsBlockSize, block_info.block_size);
     return ZX_ERR_IO;
   }
 
   // Perform superblock validations.
   status = CheckSuperblock(&superblock);
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Check Superblock failure";
+    FS_TRACE_ERROR("factoryfs: Check Superblock failure\n");
     return status;
   }
 
@@ -135,7 +134,7 @@ zx_status_t Factoryfs::InitDirectoryVmo() {
   zx_status_t status;
   const size_t vmo_size = fbl::round_up(GetDirectorySize(), kFactoryfsBlockSize);
   if ((status = zx::vmo::create(vmo_size, 0, &directory_vmo_)) != ZX_OK) {
-    FX_LOGS(ERROR) << "Failed to initialize directory vmo; error: " << zx_status_get_string(status);
+    FS_TRACE_ERROR("Failed to initialize directory vmo; error: %s\n", zx_status_get_string(status));
     return status;
   }
 
@@ -187,12 +186,12 @@ zx_status_t Factoryfs::ParseEntries(Callback callback, void* parse_data) {
     }
     size_t size = DirentSize(entry->name_len);
     if (size > avail) {
-      FX_LOGS(ERROR) << "invalid directory entry: size > avail!";
+      FS_TRACE_ERROR("factoryfs: invalid directory entry: size > avail!\n");
       DumpDirectoryEntry(entry);
       return ZX_ERR_IO;
     }
     if ((status = IsValidDirectoryEntry(*entry, Info())) != ZX_OK) {
-      FX_LOGS(ERROR) << "invalid directory entry!";
+      FS_TRACE_ERROR("factoryfs: invalid directory entry!\n");
       DumpDirectoryEntry(entry);
       return status;
     }
@@ -221,12 +220,12 @@ zx::status<std::unique_ptr<DirectoryEntryManager>> Factoryfs::LookupInternal(
 
   zx_status_t status = ZX_OK;
   if ((status = InitDirectoryVmo()) != ZX_OK) {
-    FX_LOGS(ERROR) << "Failed to initialize VMO error: " << zx_status_get_string(status);
+    FS_TRACE_ERROR("factoryfs: Failed to initialize VMO error: %s\n", zx_status_get_string(status));
     return zx::error(status);
   }
 
   if ((status = directory_vmo_.read(block.data(), 0, len)) != ZX_OK) {
-    FX_LOGS(ERROR) << "Failed to read VMO error: " << zx_status_get_string(status);
+    FS_TRACE_ERROR("factoryfs: Failed to read VMO error: %s\n", zx_status_get_string(status));
     return zx::error(status);
   }
 
@@ -244,8 +243,8 @@ zx::status<std::unique_ptr<DirectoryEntryManager>> Factoryfs::LookupInternal(
       block.data());
 
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Directory::LookupInternal failed with error: "
-                   << zx_status_get_string(status);
+    FS_TRACE_ERROR("factoryfs:  Directory::LookupInternal failed with error: %s\n",
+                   zx_status_get_string(status));
     return zx::error(status);
   }
 

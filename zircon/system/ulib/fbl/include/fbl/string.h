@@ -5,16 +5,14 @@
 #ifndef FBL_STRING_H_
 #define FBL_STRING_H_
 
-#include <zircon/compiler.h>
-
 #include <atomic>
-#include <initializer_list>
-#include <string_view>
-#include <type_traits>
-
 #include <fbl/alloc_checker.h>
 #include <fbl/string_piece.h>
 #include <fbl/string_traits.h>
+#include <initializer_list>
+#include <string_view>
+#include <type_traits>
+#include <zircon/compiler.h>
 
 namespace fbl {
 namespace tests {
@@ -220,7 +218,7 @@ class __OWNER(char) String {
   // Create a std::string_view backed by the string.
   // The view does not take ownership of the data so the string
   // must outlast the std::string_view.
-  operator std::string_view() const { return {data(), length()}; }
+  operator std::string_view() const { return { data(), length() }; }
 
   // Concatenates the specified strings.
   static String Concat(std::initializer_list<String> strings);
@@ -293,10 +291,6 @@ inline bool operator>(const String& lhs, const String& rhs) { return lhs.compare
 inline bool operator<=(const String& lhs, const String& rhs) { return lhs.compare(rhs) <= 0; }
 
 inline bool operator>=(const String& lhs, const String& rhs) { return lhs.compare(rhs) >= 0; }
-
-inline std::ostream& operator<<(std::ostream& stream, const fbl::String& string) {
-  return stream << std::string_view(string);
-}
 
 }  // namespace fbl
 

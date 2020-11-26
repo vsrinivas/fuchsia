@@ -4,11 +4,12 @@
 
 #include "storage/buffer/vmo_buffer.h"
 
-#include <lib/syslog/cpp/macros.h>
 #include <zircon/assert.h>
 #include <zircon/status.h>
 
 #include <utility>
+
+#include <fs/trace.h>
 
 namespace storage {
 
@@ -49,21 +50,19 @@ void VmoBuffer::Reset() {
   capacity_ = 0;
 }
 
-zx_status_t VmoBuffer::Initialize(storage::VmoidRegistry* vmoid_registry, size_t blocks,
-                                  uint32_t block_size, const char* label) {
+zx_status_t VmoBuffer::Initialize(storage::VmoidRegistry* vmoid_registry, size_t blocks, uint32_t block_size,
+                                  const char* label) {
   ZX_DEBUG_ASSERT(!vmoid_.IsAttached());
   fzl::OwnedVmoMapper mapper;
   zx_status_t status = mapper.CreateAndMap(blocks * block_size, label);
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "VmoBuffer: Failed to create vmo " << label << ": "
-                   << zx_status_get_string(status);
+    FS_TRACE_ERROR("VmoBuffer: Failed to create vmo %s: %s\n", label, zx_status_get_string(status));
     return status;
   }
 
   status = vmoid_registry->BlockAttachVmo(mapper.vmo(), &vmoid_);
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "VmoBuffer: Failed to attach vmo " << label << ": "
-                   << zx_status_get_string(status);
+    FS_TRACE_ERROR("VmoBuffer: Failed to attach vmo %s: %s\n", label, zx_status_get_string(status));
     return status;
   }
 
@@ -85,8 +84,8 @@ const void* VmoBuffer::Data(size_t index) const {
 }
 
 void VmoBuffer::Zero(size_t index, size_t count) {
-  ZX_ASSERT(mapper_.vmo().op_range(ZX_VMO_OP_ZERO, index * BlockSize(), count * BlockSize(),
-                                   nullptr, 0) == ZX_OK);
+  ZX_ASSERT(mapper_.vmo().op_range(ZX_VMO_OP_ZERO, index * BlockSize(),
+                                   count * BlockSize(), nullptr, 0) == ZX_OK);
 }
 
 }  // namespace storage

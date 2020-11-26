@@ -74,7 +74,6 @@ zx_library("journal") {
     ]
     deps += [
       "//sdk/lib/fdio",
-      "//sdk/lib/syslog/cpp",
       "//zircon/public/lib/fbl",
       "//zircon/public/lib/safemath",
       "//zircon/public/lib/sync",

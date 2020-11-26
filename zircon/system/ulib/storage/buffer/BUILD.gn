@@ -52,7 +52,6 @@ zx_library("buffer") {
       "//zircon/public/lib/fbl",
 
       # TODO(fxbug.dev/38240): Clean up any remaining 'fs' dependencies. Only for fs/trace
-      "//sdk/lib/syslog/cpp",
       "//zircon/public/lib/zx",
       "//zircon/system/ulib/fs",
       "//zircon/system/ulib/fzl",

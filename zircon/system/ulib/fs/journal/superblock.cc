@@ -3,12 +3,12 @@
 // found in the LICENSE file.
 
 #include <lib/cksum.h>
-#include <lib/syslog/cpp/macros.h>
 #include <zircon/assert.h>
 #include <zircon/types.h>
 
 #include <fs/journal/format.h>
 #include <fs/journal/superblock.h>
+#include <fs/trace.h>
 
 namespace fs {
 
@@ -21,11 +21,11 @@ JournalSuperblock::JournalSuperblock(std::unique_ptr<storage::BlockBuffer> buffe
 
 zx_status_t JournalSuperblock::Validate() const {
   if (Info()->magic != kJournalMagic) {
-    FX_LOGS(ERROR) << "Bad journal magic";
+    FS_TRACE_ERROR("Bad journal magic\n");
     return ZX_ERR_IO;
   }
   if (old_checksum() != new_checksum()) {
-    FX_LOGS(ERROR) << "Bad journal info checksum";
+    FS_TRACE_ERROR("Bad journal info checksum\n");
     return ZX_ERR_IO;
   }
   return ZX_OK;

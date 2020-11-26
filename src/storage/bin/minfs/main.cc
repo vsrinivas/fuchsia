@@ -10,7 +10,6 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fdio/vfs.h>
-#include <lib/syslog/cpp/macros.h>
 #include <lib/trace-provider/provider.h>
 #include <libgen.h>
 #include <stdarg.h>
@@ -30,6 +29,7 @@
 
 #include <block-client/cpp/block-device.h>
 #include <block-client/cpp/remote-block-device.h>
+#include <fs/trace.h>
 
 #include "src/storage/minfs/fsck.h"
 #include "src/storage/minfs/minfs.h"
@@ -56,8 +56,9 @@ int Mount(std::unique_ptr<minfs::Bcache> bcache, const minfs::MountOptions& opti
   zx::channel root_server = zx::channel(zx_take_startup_handle(FS_HANDLE_ROOT_ID));
 
   if (outgoing_server.is_valid() && root_server.is_valid()) {
-    FX_LOGS(ERROR) << "both PA_DIRECTORY_REQUEST and FS_HANDLE_ROOT_ID provided - need one or the "
-                      "other.";
+    FS_TRACE_ERROR(
+        "minfs: both PA_DIRECTORY_REQUEST and FS_HANDLE_ROOT_ID provided - need one or the "
+        "other.\n");
     return ZX_ERR_BAD_STATE;
   }
 
@@ -71,7 +72,7 @@ int Mount(std::unique_ptr<minfs::Bcache> bcache, const minfs::MountOptions& opti
     serve_layout = minfs::ServeLayout::kDataRootOnly;
   } else {
     // neither provided? or we can't access them for some reason.
-    FX_LOGS(ERROR) << "could not get startup handle to serve on";
+    FS_TRACE_ERROR("minfs: could not get startup handle to serve on\n");
     return ZX_ERR_BAD_STATE;
   }
 
@@ -80,20 +81,20 @@ int Mount(std::unique_ptr<minfs::Bcache> bcache, const minfs::MountOptions& opti
 
   auto on_unmount = [&loop]() {
     loop.Quit();
-    FX_LOGS(WARNING) << "Unmounted";
+    FS_TRACE_WARN("minfs: Unmounted\n");
   };
 
   zx_status_t status = MountAndServe(options, loop.dispatcher(), std::move(bcache),
                                      std::move(export_root), std::move(on_unmount), serve_layout);
   if (status != ZX_OK) {
     if (options.verbose) {
-      FX_LOGS(ERROR) << "Failed to mount: " << status;
+      FS_TRACE_ERROR("minfs: Failed to mount: %d\n", status);
     }
     return -1;
   }
 
   if (options.verbose) {
-    FX_LOGS(ERROR) << "Mounted successfully";
+    FS_TRACE_ERROR("minfs: Mounted successfully\n");
   }
 
   // |ZX_ERR_CANCELED| is returned when the loop is cancelled via |loop.Quit()|.
@@ -221,7 +222,7 @@ int main(int argc, char** argv) {
   std::unique_ptr<block_client::RemoteBlockDevice> device;
   zx_status_t status = block_client::RemoteBlockDevice::Create(std::move(device_channel), &device);
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Could not access block device";
+    FS_TRACE_ERROR("minfs: Could not access block device\n");
     return -1;
   }
 

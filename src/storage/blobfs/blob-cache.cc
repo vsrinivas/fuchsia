@@ -12,7 +12,6 @@
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <fbl/ref_ptr.h>
-#include <fs/trace.h>
 
 using digest::Digest;
 

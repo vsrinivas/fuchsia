@@ -14,6 +14,7 @@
 #include <block-client/cpp/remote-block-device.h>
 #include <fs/managed_vfs.h>
 #include <fs/pseudo_dir.h>
+#include <fs/trace.h>
 #include <fs/vfs.h>
 #include <storage/buffer/vmoid_registry.h>
 

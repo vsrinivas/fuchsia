@@ -5,11 +5,11 @@
 #include "src/storage/blobfs/blob-corruption-notifier.h"
 
 #include <fuchsia/blobfs/c/fidl.h>
-#include <lib/syslog/cpp/macros.h>
 #include <zircon/status.h>
 
 #include <digest/digest.h>
 #include <digest/merkle-tree.h>
+#include <fs/trace.h>
 #include <safemath/checked_math.h>
 
 namespace blobfs {
@@ -35,13 +35,13 @@ zx_status_t BlobCorruptionNotifier::NotifyCorruptBlob(const uint8_t* blob_root_h
   }
 
   if (corruption_handler_.get() == ZX_HANDLE_INVALID) {
-    FX_LOGS(WARNING) << "Invalid corruption handler";
+    FS_TRACE_WARN("blobfs: Invalid corruption handler\n");
     // If the corruption handler has not been registered yet, we should not error out due to
     // unset corruption handler.
     return ZX_OK;
   }
 
-  FX_LOGS(INFO) << "Notifying corruption handler service";
+  FS_TRACE_INFO("blobfs: Notifying corruption handler service\n");
   return fuchsia_blobfs_CorruptBlobHandlerCorruptBlob(corruption_handler_.get(), blob_root_hash,
                                                       blob_root_len);
 }

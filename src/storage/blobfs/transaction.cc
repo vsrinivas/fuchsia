@@ -4,8 +4,6 @@
 
 #include "src/storage/blobfs/transaction.h"
 
-#include <lib/syslog/cpp/macros.h>
-
 namespace blobfs {
 
 void BlobTransaction::Commit(fs::Journal& journal, fit::promise<void, zx_status_t> data,
@@ -20,7 +18,7 @@ void BlobTransaction::Commit(fs::Journal& journal, fit::promise<void, zx_status_
   });
   // We can't do much except log the error.
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "BlobTransaction::Commit failed: " << zx_status_get_string(status);
+    FS_TRACE_ERROR("BlobTransaction::Commit failed: %s\n", zx_status_get_string(status));
   }
 }
 

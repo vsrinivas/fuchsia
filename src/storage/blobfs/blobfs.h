@@ -38,6 +38,7 @@
 #include <fbl/ref_ptr.h>
 #include <fbl/vector.h>
 #include <fs/journal/journal.h>
+#include <fs/trace.h>
 #include <fs/vfs.h>
 #include <fs/vnode.h>
 #include <storage/operation/unbuffered_operations_builder.h>

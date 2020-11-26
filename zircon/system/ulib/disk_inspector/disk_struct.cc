@@ -4,11 +4,11 @@
 
 #include "disk_inspector/disk_struct.h"
 
-#include <lib/syslog/cpp/macros.h>
-
 #include <iostream>
 #include <regex>
 #include <utility>
+
+#include <fs/trace.h>
 
 #include "disk_primitive.h"
 
@@ -59,7 +59,7 @@ void DiskStruct::AddField(std::string key, FieldType type, uint64_t field_offset
       break;
     }
     default: {
-      FX_LOGS(ERROR) << "Field " << key << " uses an unsupported type to be parsed by DiskStruct";
+      FS_TRACE_ERROR("Field %s uses an unsupported type to be parsed by DiskStruct\n", key.c_str());
       info.element_size = 0;
       info.element = nullptr;
       info.count = -1;
@@ -80,21 +80,21 @@ zx_status_t DiskStruct::WriteField(void* position, std::vector<std::string> keys
   indices.erase(indices.begin());
   auto field = fields_.find(key);
   if (field == fields_.end()) {
-    FX_LOGS(ERROR) << "Field name " << key << " is not in struct.";
+    FS_TRACE_ERROR("Field name %s is not in struct.\n", key.c_str());
     return ZX_ERR_INVALID_ARGS;
   };
   FieldInfo& info = field->second;
   if (info.count < 0) {
-    FX_LOGS(ERROR) << "Cannot write to unparsable field " << key;
+    FS_TRACE_ERROR("Cannot write to unparsable field %s.\n", key.c_str());
     return ZX_ERR_INVALID_ARGS;
   }
   if (info.count == 0 && index != 0) {
-    FX_LOGS(ERROR) << "Index (" << index << ") for field " << key << " should be 0.";
+    FS_TRACE_ERROR("Index (%ld) for field %s should be 0.\n", index, key.c_str());
     return ZX_ERR_INVALID_ARGS;
   }
   if (info.count > 0 && index >= info.count) {
-    FX_LOGS(ERROR) << "Field " << key << " index " << index << " greater than number of elements "
-                   << info.count;
+    FS_TRACE_ERROR("Field %s index %ld greater than number of elements %ld\n", key.c_str(), index,
+                   info.count);
     return ZX_ERR_INVALID_ARGS;
   }
   void* element_position =

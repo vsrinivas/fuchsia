@@ -6,7 +6,6 @@
 #include <fuchsia/hardware/block/c/fidl.h>
 #include <getopt.h>
 #include <lib/fdio/directory.h>
-#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/resource.h>
 #include <libgen.h>
@@ -25,6 +24,7 @@
 #include <fbl/string.h>
 #include <fbl/unique_fd.h>
 #include <fbl/vector.h>
+#include <fs/trace.h>
 #include <fs/vfs.h>
 
 #include "src/storage/factory/factoryfs/fsck.h"
@@ -43,8 +43,9 @@ zx_status_t Mount(std::unique_ptr<BlockDevice> device, factoryfs::MountOptions* 
   zx::channel diagnostics_dir = zx::channel(zx_take_startup_handle(FS_HANDLE_DIAGNOSTICS_DIR));
 
   if (outgoing_server.is_valid() && root_server.is_valid()) {
-    FX_LOGS(ERROR) << "both PA_DIRECTORY_REQUEST and FS_HANDLE_ROOT_ID provided - need one or the "
-                      "other.";
+    FS_TRACE_ERROR(
+        "factoryfs: both PA_DIRECTORY_REQUEST and FS_HANDLE_ROOT_ID provided - need one or the "
+        "other.\n");
     return ZX_ERR_BAD_STATE;
   }
 
@@ -58,7 +59,7 @@ zx_status_t Mount(std::unique_ptr<BlockDevice> device, factoryfs::MountOptions* 
     layout = factoryfs::ServeLayout::kDataRootOnly;
   } else {
     // neither provided or we can't access them for some reason.
-    FX_LOGS(ERROR) << "could not get startup handle to serve on";
+    FS_TRACE_ERROR("factoryfs: could not get startup handle to serve on\n");
     return ZX_ERR_BAD_STATE;
   }
 
@@ -169,20 +170,20 @@ int main(int argc, char** argv) {
 
   zx::channel block_connection = zx::channel(zx_take_startup_handle(FS_HANDLE_BLOCK_DEVICE_ID));
   if (!block_connection.is_valid()) {
-    FX_LOGS(ERROR) << "Could not access startup handle to block device";
+    FS_TRACE_ERROR("factoryfs: Could not access startup handle to block device\n");
     return EXIT_FAILURE;
   }
 
   fbl::unique_fd svc_fd(open("/svc", O_RDONLY));
   if (!svc_fd.is_valid()) {
-    FX_LOGS(ERROR) << "Failed to open svc from incoming namespace";
+    FS_TRACE_ERROR("factoryfs: Failed to open svc from incoming namespace\n");
     return EXIT_FAILURE;
   }
 
   std::unique_ptr<RemoteBlockDevice> device;
   status = RemoteBlockDevice::Create(std::move(block_connection), &device);
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Could not initialize block device";
+    FS_TRACE_ERROR("factoryfs: Could not initialize block device\n");
     return EXIT_FAILURE;
   }
   status = func(std::move(device), &options);

@@ -4,6 +4,8 @@
 
 #include "src/storage/minfs/vnode_mapper.h"
 
+#include <fs/trace.h>
+
 #include "src/storage/minfs/lazy_buffer.h"
 #include "src/storage/minfs/minfs_private.h"
 #include "src/storage/minfs/vnode.h"

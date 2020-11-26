@@ -13,6 +13,7 @@
 
 #include <fbl/algorithm.h>
 #include <fbl/ref_ptr.h>
+#include <fs/trace.h>
 #include <fs/vnode.h>
 
 #include "src/storage/minfs/format.h"

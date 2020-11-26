@@ -4,7 +4,6 @@
 
 #include "src/storage/blobfs/iterator/block-iterator.h"
 
-#include <lib/syslog/cpp/macros.h>
 #include <stdint.h>
 #include <zircon/types.h>
 
@@ -60,7 +59,7 @@ zx_status_t IterateToBlock(BlockIterator* iter, uint32_t block_num) {
 zx_status_t StreamBlocks(BlockIterator* iterator, uint32_t block_count, StreamFn stream) {
   while (block_count > 0) {
     if (iterator->Done()) {
-      FX_LOGS(ERROR) << "Failed to access data (early exit)";
+      FS_TRACE_ERROR("Failed to access data (early exit)\n");
       return ZX_ERR_IO_DATA_INTEGRITY;
     }
     uint64_t local_offset = iterator->BlockIndex();
@@ -68,12 +67,12 @@ zx_status_t StreamBlocks(BlockIterator* iterator, uint32_t block_count, StreamFn
     uint64_t dev_offset;
     zx_status_t status = iterator->Next(block_count, &actual_length, &dev_offset);
     if (status != ZX_OK) {
-      FX_LOGS(ERROR) << "Failed to iterate over blocks: " << status;
+      FS_TRACE_ERROR("Failed to iterate over blocks: %d\n", status);
       return status;
     }
     status = stream(local_offset, dev_offset, actual_length);
     if (status != ZX_OK) {
-      FX_LOGS(ERROR) << "Failed to enqueue blocks: " << status;
+      FS_TRACE_ERROR("Failed to enqueue blocks: %d\n", status);
       return status;
     }
     block_count -= actual_length;

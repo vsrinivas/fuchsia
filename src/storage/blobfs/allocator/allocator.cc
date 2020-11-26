@@ -6,7 +6,6 @@
 
 #include <inttypes.h>
 #include <lib/fzl/resizeable-vmo-mapper.h>
-#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/vmo.h>
 #include <stdint.h>
 #include <zircon/types.h>
@@ -488,14 +487,14 @@ void Allocator::LogAllocationFailure(uint64_t num_blocks) const {
     return;
   }
 
-  FX_LOGS(ERROR) << "Blobfs has run out of space on persistent storage.";
-  FX_LOGS(ERROR) << "    Could not allocate " << requested_bytes << " bytes";
-  FX_LOGS(ERROR) << "    Total data bytes  : " << total_bytes;
-  FX_LOGS(ERROR) << "    Used data bytes   : " << persisted_used_bytes;
-  FX_LOGS(ERROR) << "    Preallocated bytes: " << pending_used_bytes;
-  FX_LOGS(ERROR) << "    Free data bytes   : " << free_bytes;
-  FX_LOGS(ERROR) << "    This allocation failure is the result of "
-                 << (requested_bytes <= free_bytes ? "fragmentation" : "over-allocation");
+  FS_TRACE_ERROR("Blobfs has run out of space on persistent storage.\n");
+  FS_TRACE_ERROR("    Could not allocate %" PRIu64 " bytes\n", requested_bytes);
+  FS_TRACE_ERROR("    Total data bytes  : %" PRIu64 "\n", total_bytes);
+  FS_TRACE_ERROR("    Used data bytes   : %" PRIu64 "\n", persisted_used_bytes);
+  FS_TRACE_ERROR("    Preallocated bytes: %" PRIu64 "\n", pending_used_bytes);
+  FS_TRACE_ERROR("    Free data bytes   : %" PRIu64 "\n", free_bytes);
+  FS_TRACE_ERROR("    This allocation failure is the result of %s.\n",
+                 requested_bytes <= free_bytes ? "fragmentation" : "over-allocation");
 }
 
 // Finds all allocated regions in the bitmap and returns a vector of their offsets and lengths.

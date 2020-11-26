@@ -4,12 +4,12 @@
 
 #include "src/storage/blobfs/iterator/allocated-extent-iterator.h"
 
-#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/status.h>
 #include <stdint.h>
 #include <zircon/types.h>
 
 #include <blobfs/format.h>
+#include <fs/trace.h>
 
 #include "src/storage/blobfs/iterator/allocated-node-iterator.h"
 #include "src/storage/blobfs/iterator/extent-iterator.h"
@@ -69,15 +69,15 @@ zx_status_t AllocatedExtentIterator::VerifyIteration(NodeFinder* finder, Inode* 
     // Verify the correct iterability of the current node.
     if (fast.Done()) {
       if (inode->extent_count != fast.ExtentIndex() + current->extent_count) {
-        FX_LOGS(ERROR) << "Final extent count " << fast.ExtentIndex() + current->extent_count
-                       << " does not match inode extent count " << inode->extent_count << " .";
+        FS_TRACE_ERROR("blobfs: Final extent count %u does not match inode extent count %u .\n",
+                       fast.ExtentIndex() + current->extent_count, inode->extent_count);
         return ZX_ERR_OUT_OF_RANGE;
       }
     } else if (fast.NextNodeIndex() == slow.NextNodeIndex()) {
-      FX_LOGS(ERROR) << "node cycle detected.";
+      FS_TRACE_ERROR("blobfs: node cycle detected.\n");
       return ZX_ERR_IO_DATA_INTEGRITY;
     } else if (current->extent_count != kContainerMaxExtents) {
-      FX_LOGS(ERROR) << "non-packed extent container found.";
+      FS_TRACE_ERROR("blobfs: non-packed extent container found.\n");
       return ZX_ERR_BAD_STATE;
     }
 
@@ -88,7 +88,7 @@ zx_status_t AllocatedExtentIterator::VerifyIteration(NodeFinder* finder, Inode* 
         return status.status_value();
       }
       if (!fast.Done() && fast.NextNodeIndex() == slow.NextNodeIndex()) {
-        FX_LOGS(ERROR) << "Node cycle detected.";
+        FS_TRACE_ERROR("blobfs: Node cycle detected.\n");
         return ZX_ERR_IO_DATA_INTEGRITY;
       }
     }

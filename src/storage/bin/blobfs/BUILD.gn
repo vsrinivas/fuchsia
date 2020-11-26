@@ -12,7 +12,6 @@ executable("blobfs") {
     "//sdk/fidl/fuchsia.kernel:fuchsia.kernel_llcpp",
     "//sdk/fidl/fuchsia.scheduler",
     "//sdk/lib/fdio",
-    "//sdk/lib/syslog/cpp",
     "//src/storage/blobfs",
     "//third_party/boringssl",
     "//zircon/public/lib/bitmap",

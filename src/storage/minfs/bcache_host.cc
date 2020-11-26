@@ -3,17 +3,16 @@
 // found in the LICENSE file.
 
 #include <assert.h>
-#include <lib/syslog/cpp/macros.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 
-#include <iomanip>
 #include <utility>
 
 #include <fbl/alloc_checker.h>
 #include <fbl/ref_ptr.h>
+#include <fs/trace.h>
 #include <storage/buffer/block_buffer.h>
 #include <storage/operation/operation.h>
 
@@ -43,10 +42,9 @@ zx_status_t Bcache::RunRequests(const std::vector<storage::BufferedOperation>& o
 
     if (result != static_cast<ssize_t>(operation.op.length * kMinfsBlockSize)) {
       // Linux and Mac don't agree on the number of "longs" on uint64_t.
-      FX_LOGS(ERROR) << "RunOperation "
-                     << (operation.op.type == storage::OperationType::kRead ? "read" : "write")
-                     << " failure at block 0x" << std::hex << operation.op.dev_offset
-                     << " result=" << std::dec << result;
+      FS_TRACE_ERROR("minfs: RunOperation %s failure at block 0x%lx (%zd)\n",
+                     operation.op.type == storage::OperationType::kRead ? "read" : "write",
+                     static_cast<unsigned long>(operation.op.dev_offset), result);
       return ZX_ERR_IO;
     }
   }
@@ -58,11 +56,11 @@ zx_status_t Bcache::Readblk(blk_t bno, void* data) {
   assert(off / kMinfsBlockSize == bno);  // Overflow
   off += offset_;
   if (lseek(fd_.get(), off, SEEK_SET) < 0) {
-    FX_LOGS(ERROR) << "cannot seek to block " << bno;
+    FS_TRACE_ERROR("minfs: cannot seek to block %u\n", bno);
     return ZX_ERR_IO;
   }
   if (read(fd_.get(), data, kMinfsBlockSize) != kMinfsBlockSize) {
-    FX_LOGS(ERROR) << "cannot read block " << bno;
+    FS_TRACE_ERROR("minfs: cannot read block %u\n", bno);
     return ZX_ERR_IO;
   }
   return ZX_OK;
@@ -73,12 +71,12 @@ zx_status_t Bcache::Writeblk(blk_t bno, const void* data) {
   assert(off / kMinfsBlockSize == bno);  // Overflow
   off += offset_;
   if (lseek(fd_.get(), off, SEEK_SET) < 0) {
-    FX_LOGS(ERROR) << "cannot seek to block " << bno << ". " << errno;
+    FS_TRACE_ERROR("minfs: cannot seek to block %u. %d\n", bno, errno);
     return ZX_ERR_IO;
   }
   ssize_t ret = write(fd_.get(), data, kMinfsBlockSize);
   if (ret != kMinfsBlockSize) {
-    FX_LOGS(ERROR) << "cannot write block " << bno << " (" << ret << ")";
+    FS_TRACE_ERROR("minfs: cannot write block %u (%zd)\n", bno, ret);
     return ZX_ERR_IO;
   }
   return ZX_OK;

@@ -6,7 +6,6 @@
 
 #include <fuchsia/fs/llcpp/fidl.h>
 #include <lib/inspect/service/cpp/service.h>
-#include <lib/syslog/cpp/macros.h>
 
 #include <fs/pseudo_dir.h>
 
@@ -41,8 +40,8 @@ zx_status_t Runner::Create(async::Loop* loop, std::unique_ptr<BlockDevice> devic
 
   status = diagnostics_dir->AddEntry(fuchsia::inspect::Tree::Name_, vnode);
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "failed to add Inspect vnode to diagnostics directory: "
-                   << zx_status_get_string(status);
+    FS_TRACE_ERROR("blobfs: failed to add Inspect vnode to diagnostics directory: %s\n",
+                   zx_status_get_string(status));
     return status;
   }
 
@@ -51,11 +50,12 @@ zx_status_t Runner::Create(async::Loop* loop, std::unique_ptr<BlockDevice> devic
   if (diagnostics_dir_server.is_valid()) {
     status = runner->ServeDirectory(diagnostics_dir, std::move(diagnostics_dir_server));
     if (status != ZX_OK) {
-      FX_LOGS(ERROR) << "failed to serve diagnostics directory: " << zx_status_get_string(status);
+      FS_TRACE_ERROR("blobfs: failed to serve diagnostics directory: %s\n",
+                     zx_status_get_string(status));
       return status;
     }
   } else {
-    FX_LOGS(WARNING) << "diagnostics directory server handle is invalid!";
+    FS_TRACE_WARN("blobfs: diagnostics directory server handle is invalid!\n");
   }
 
   *out = std::move(runner);
@@ -93,7 +93,7 @@ zx_status_t Runner::ServeRoot(zx::channel root, ServeLayout layout) {
   fbl::RefPtr<fs::Vnode> vn;
   zx_status_t status = blobfs_->OpenRootNode(&vn);
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "mount failed; could not get root blob";
+    FS_TRACE_ERROR("blobfs: mount failed; could not get root blob\n");
     return status;
   }
 
@@ -115,7 +115,7 @@ zx_status_t Runner::ServeRoot(zx::channel root, ServeLayout layout) {
 
   status = ServeDirectory(std::move(export_root), std::move(root));
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "mount failed; could not serve root directory";
+    FS_TRACE_ERROR("blobfs: mount failed; could not serve root directory\n");
     return status;
   }
   return ZX_OK;

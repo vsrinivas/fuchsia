@@ -6,7 +6,6 @@
 
 #include <lib/cksum.h>
 #include <lib/fzl/owned-vmo-mapper.h>
-#include <lib/syslog/cpp/macros.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -14,6 +13,7 @@
 #include <utility>
 
 #include <bitmap/raw-bitmap.h>
+#include <fs/trace.h>
 
 #include "src/storage/minfs/unowned_vmo_buffer.h"
 
@@ -32,7 +32,7 @@ zx_status_t SuperblockManager::Create(block_client::BlockDevice* device, const S
   if (checks == IntegrityCheck::kAll) {
     status = CheckSuperblock(info, device, max_blocks);
     if (status != ZX_OK) {
-      FX_LOGS(ERROR) << "SuperblockManager::Create failed to check info: " << status;
+      FS_TRACE_ERROR("SuperblockManager::Create failed to check info: %d\n", status);
       return status;
     }
   }

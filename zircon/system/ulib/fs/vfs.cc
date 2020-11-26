@@ -13,6 +13,7 @@
 
 #include <fbl/auto_call.h>
 #include <fs/debug.h>
+#include <fs/trace.h>
 #include <fs/vfs.h>
 #include <fs/vnode.h>
 
@@ -206,6 +207,7 @@ Vfs::OpenResult Vfs::OpenLocked(fbl::RefPtr<Vnode> vndir, fbl::StringPiece path,
     }
   }
 
+  FS_TRACE_DEBUG("VfsOpen: vn=%p\n", vn.get());
   return OpenResult::Ok{.vnode = std::move(vn), .validated_options = validated_options.value()};
 }
 

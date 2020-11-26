@@ -3,11 +3,11 @@
 // found in the LICENSE file.
 
 #include <lib/sync/completion.h>
-#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/status.h>
 #include <zircon/status.h>
 
 #include <fs/journal/journal.h>
+#include <fs/trace.h>
 #include <fs/transaction/writeback.h>
 #include <safemath/checked_math.h>
 
@@ -22,27 +22,26 @@ zx::status<uint64_t> CheckOperationsAndGetTotalBlockCount(const T& operations) {
   uint64_t total_blocks = 0;
   for (const auto& operation : operations) {
     if (operation.op.type != type) {
-      FX_LOGS(ERROR) << "journal: Unexpected operation type (actual="
-                     << static_cast<int>(operation.op.type)
-                     << ", expected=" << static_cast<int>(type) << ")";
+      FS_TRACE_ERROR("journal: Unexpected operation type (actual=%u, expected=%u)\n",
+                     operation.op.type, type);
       return zx::error(ZX_ERR_WRONG_TYPE);
     }
     if (!safemath::CheckAdd(total_blocks, operation.op.length).AssignIfValid(&total_blocks)) {
-      FX_LOGS(ERROR) << "journal: Too many blocks";
+      FS_TRACE_ERROR("journal: Too many blocks\n");
       return zx::error(ZX_ERR_OUT_OF_RANGE);
     }
   }
   // Make sure there's enough for kEntryMetadataBlocks without overflowing, but don't include that
   // in the result.
   if (!safemath::CheckAdd(total_blocks, kEntryMetadataBlocks).IsValid()) {
-    FX_LOGS(ERROR) << "journal: Too many blocks";
+    FS_TRACE_ERROR("journal: Too many blocks\n");
     return zx::error(ZX_ERR_OUT_OF_RANGE);
   }
   return zx::ok(total_blocks);
 }
 
 fit::result<void, zx_status_t> SignalSyncComplete(sync_completion_t* completion) {
-  FX_LOGS(DEBUG) << "SignalSyncComplete";
+  FS_TRACE_DEBUG("SignalSyncComplete\n");
   sync_completion_signal(completion);
   return fit::ok();
 }
@@ -123,8 +122,8 @@ Journal::Promise Journal::WriteData(std::vector<storage::UnbufferedOperation> op
   storage::BlockingRingBufferReservation reservation;
   zx_status_t status = writeback_buffer_->Reserve(block_count_or.value(), &reservation);
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "journal: Failed to reserve space in writeback buffer: "
-                   << zx_status_get_string(status);
+    FS_TRACE_ERROR("journal: Failed to reserve space in writeback buffer: %s\n",
+                   zx_status_get_string(status));
     event.set_success(false);
     return fit::make_error_promise(status);
   }
@@ -133,8 +132,8 @@ Journal::Promise Journal::WriteData(std::vector<storage::UnbufferedOperation> op
   std::vector<storage::BufferedOperation> buffered_operations;
   auto result = reservation.CopyRequests(operations, 0, &buffered_operations);
   if (result.is_error()) {
-    FX_LOGS(ERROR) << "journal: Failed to copy operations into writeback buffer: "
-                   << result.status_string();
+    FS_TRACE_ERROR("journal: Failed to copy operations into writeback buffer: %s\n",
+                   result.status_string());
     event.set_success(false);
     return fit::make_error_promise(result.error_value());
   }
@@ -185,8 +184,8 @@ zx_status_t Journal::CommitTransaction(Transaction transaction) {
   }
   zx_status_t status = journal_buffer_->Reserve(block_count, &reservation);
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "journal: Failed to reserve space in journal buffer: "
-                   << zx_status_get_string(status);
+    FS_TRACE_ERROR("journal: Failed to reserve space in journal buffer: %s\n",
+                   zx_status_get_string(status));
     event.set_success(false);
     return status;
   }
@@ -196,8 +195,8 @@ zx_status_t Journal::CommitTransaction(Transaction transaction) {
   auto result = reservation.CopyRequests(transaction.metadata_operations, kJournalEntryHeaderBlocks,
                                          &buffered_operations);
   if (result.is_error()) {
-    FX_LOGS(ERROR) << "journal: Failed to copy operations into journal buffer: "
-                   << result.status_string();
+    FS_TRACE_ERROR("journal: Failed to copy operations into journal buffer: %s\n",
+                   result.status_string());
     event.set_success(false);
     return result.error_value();
   }

@@ -4,7 +4,6 @@
 
 #include "src/storage/blobfs/compression/chunked.h"
 
-#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/status.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
@@ -66,7 +65,7 @@ zx_status_t ChunkedCompressor::SetOutput(void* dst, size_t dst_len) {
   Status status = compressor_.Init(input_len_, dst, dst_len);
   if (status != chunked_compression::kStatusOk) {
     zx_status_t zstatus = ToZxStatus(status);
-    FX_LOGS(ERROR) << "Failed to initialize compressor: " << zstatus;
+    FS_TRACE_ERROR("blobfs: Failed to initialize compressor: %d\n", zstatus);
     return zstatus;
   }
   return ZX_OK;
@@ -82,7 +81,7 @@ size_t ChunkedCompressor::Size() const { return compressed_size_.value_or(0ul); 
 zx_status_t ChunkedCompressor::Update(const void* input_data, size_t input_length) {
   TRACE_DURATION("blobfs", "ChunkedCompressor::Update", "input_length", input_length);
   if (compressor_.Update(input_data, input_length) != chunked_compression::kStatusOk) {
-    FX_LOGS(ERROR) << "Compression failed.";
+    FS_TRACE_ERROR("blobfs: Compression failed.\n");
     return ZX_ERR_INTERNAL;
   }
   return ZX_OK;
@@ -93,7 +92,7 @@ zx_status_t ChunkedCompressor::End() {
   size_t sz;
   Status status = compressor_.Final(&sz);
   if (status != chunked_compression::kStatusOk) {
-    FX_LOGS(ERROR) << "Compression failed.";
+    FS_TRACE_ERROR("blobfs: Compression failed.\n");
     return ZX_ERR_INTERNAL;
   }
   compressed_size_ = sz;
@@ -111,14 +110,14 @@ zx_status_t ChunkedDecompressor::Decompress(void* uncompressed_buf, size_t* unco
   Status status =
       reader.Parse(compressed_buf, max_compressed_size, max_compressed_size, &seek_table);
   if (status != chunked_compression::kStatusOk) {
-    FX_LOGS(ERROR) << "Invalid archive header.";
+    FS_TRACE_ERROR("blobfs: Invalid archive header.\n");
     return ToZxStatus(status);
   }
   size_t decompression_buf_size = *uncompressed_size;
   if (decompressor_.Decompress(seek_table, compressed_buf, max_compressed_size, uncompressed_buf,
                                decompression_buf_size,
                                uncompressed_size) != chunked_compression::kStatusOk) {
-    FX_LOGS(ERROR) << "Failed to decompress archive.";
+    FS_TRACE_ERROR("blobfs: Failed to decompress archive.\n");
     return ZX_ERR_IO_DATA_INTEGRITY;
   }
   return ZX_OK;
@@ -171,7 +170,7 @@ zx_status_t SeekableChunkedDecompressor::DecompressRange(void* uncompressed_buf,
         decompressor_.DecompressFrame(seek_table_, i, src, max_compressed_size - src_offset, dst,
                                       *uncompressed_size - dst_offset, &bytes_in_frame);
     if (status != chunked_compression::kStatusOk) {
-      FX_LOGS(ERROR) << "DecompressFrame failed: " << status;
+      FS_TRACE_ERROR("blobfs DecompressFrame failed: %d\n", status);
       return ToZxStatus(status);
     }
     src_offset += entry.compressed_size;

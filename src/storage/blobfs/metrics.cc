@@ -11,7 +11,6 @@
 #include <lib/inspect/cpp/inspector.h>
 #include <lib/inspect/cpp/vmo/types.h>
 #include <lib/inspect/service/cpp/service.h>
-#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/time.h>
 #include <zircon/assert.h>
 
@@ -20,6 +19,7 @@
 #include <fbl/algorithm.h>
 #include <fs/metrics/events.h>
 #include <fs/service.h>
+#include <fs/trace.h>
 #include <fs/vnode.h>
 
 namespace blobfs {
@@ -72,32 +72,29 @@ BlobfsMetrics::~BlobfsMetrics() { Dump(); }
 void PrintReadMetrics(ReadMetrics& metrics) {
   constexpr uint64_t mb = 1 << 20;
   auto snapshot = metrics.GetSnapshot(CompressionAlgorithm::UNCOMPRESSED);
-  FX_LOGS(INFO) << "    Uncompressed: Read " << snapshot.read_bytes / mb << " MB (spent "
-                << TicksToMs(zx::ticks(snapshot.read_ticks)) << " ms)";
+  FS_TRACE_INFO("    Uncompressed: Read %zu MB (spent %zu ms)\n", snapshot.read_bytes / mb,
+                TicksToMs(zx::ticks(snapshot.read_ticks)));
 
   snapshot = metrics.GetSnapshot(CompressionAlgorithm::LZ4);
-  FX_LOGS(INFO) << "    LZ4: Read " << snapshot.read_bytes / mb << " MB (spent "
-                << TicksToMs(zx::ticks(snapshot.read_ticks)) << " ms) | Decompressed "
-                << snapshot.decompress_bytes / mb << " MB (spent "
-                << TicksToMs(zx::ticks(snapshot.decompress_ticks)) << " ms)";
+  FS_TRACE_INFO("    LZ4: Read %zu MB (spent %zu ms) | Decompressed %zu MB (spent %zu ms)\n",
+                snapshot.read_bytes / mb, TicksToMs(zx::ticks(snapshot.read_ticks)),
+                snapshot.decompress_bytes / mb, TicksToMs(zx::ticks(snapshot.decompress_ticks)));
 
   snapshot = metrics.GetSnapshot(CompressionAlgorithm::CHUNKED);
-  FX_LOGS(INFO) << "    Chunked: Read " << snapshot.read_bytes / mb << " MB (spent "
-                << TicksToMs(zx::ticks(snapshot.read_ticks)) << " ms) | Decompressed "
-                << snapshot.decompress_bytes / mb << " MB (spent "
-                << TicksToMs(zx::ticks(snapshot.decompress_ticks)) << " ms)";
+  FS_TRACE_INFO("    Chunked: Read %zu MB (spent %zu ms) | Decompressed %zu MB (spent %zu ms)\n",
+                snapshot.read_bytes / mb, TicksToMs(zx::ticks(snapshot.read_ticks)),
+                snapshot.decompress_bytes / mb, TicksToMs(zx::ticks(snapshot.decompress_ticks)));
 
   snapshot = metrics.GetSnapshot(CompressionAlgorithm::ZSTD);
-  FX_LOGS(INFO) << "    ZSTD: Read " << snapshot.read_bytes / mb << " MB (spent "
-                << TicksToMs(zx::ticks(snapshot.read_ticks)) << " ms) | Decompressed "
-                << snapshot.decompress_bytes / mb << " MB (spent "
-                << TicksToMs(zx::ticks(snapshot.decompress_ticks)) << " ms)";
+  FS_TRACE_INFO("    ZSTD: Read %zu MB (spent %zu ms) | Decompressed %zu MB (spent %zu ms)\n",
+                snapshot.read_bytes / mb, TicksToMs(zx::ticks(snapshot.read_ticks)),
+                snapshot.decompress_bytes / mb, TicksToMs(zx::ticks(snapshot.decompress_ticks)));
 
   snapshot = metrics.GetSnapshot(CompressionAlgorithm::ZSTD_SEEKABLE);
-  FX_LOGS(INFO) << "    ZSTD Seekable: Read " << snapshot.read_bytes / mb << " MB (spent "
-                << TicksToMs(zx::ticks(snapshot.read_ticks)) << " ms) | Decompressed "
-                << snapshot.decompress_bytes / mb << " MB (spent "
-                << TicksToMs(zx::ticks(snapshot.decompress_ticks)) << " ms)";
+  FS_TRACE_INFO(
+      "    ZSTD Seekable: Read %zu MB (spent %zu ms) | Decompressed %zu MB (spent %zu ms)\n",
+      snapshot.read_bytes / mb, TicksToMs(zx::ticks(snapshot.read_ticks)),
+      snapshot.decompress_bytes / mb, TicksToMs(zx::ticks(snapshot.decompress_ticks)));
 }
 
 void BlobfsMetrics::Dump() {
@@ -105,48 +102,45 @@ void BlobfsMetrics::Dump() {
 
   // Timings are only recorded when Cobalt metrics are enabled.
 
-  FX_LOGS(INFO) << "Allocation Info:";
-  FX_LOGS(INFO) << "  Allocated " << blobs_created_ << " blobs (" << blobs_created_total_size_ / mb
-                << " MB)";
+  FS_TRACE_INFO("Allocation Info:\n");
+  FS_TRACE_INFO("  Allocated %zu blobs (%zu MB)\n", blobs_created_, blobs_created_total_size_ / mb);
   if (Collecting())
-    FX_LOGS(INFO) << "  Total allocation time is " << TicksToMs(total_allocation_time_ticks_)
-                  << " ms";
+    FS_TRACE_INFO("  Total allocation time is %zu ms\n", TicksToMs(total_allocation_time_ticks_));
 
-  FX_LOGS(INFO) << "Write Info:";
-  FX_LOGS(INFO) << "  Wrote " << data_bytes_written_ / mb << " MB of data and "
-                << merkle_bytes_written_ / mb << " MB of merkle trees";
+  FS_TRACE_INFO("Write Info:\n");
+  FS_TRACE_INFO("  Wrote %zu MB of data and %zu MB of merkle trees\n", data_bytes_written_ / mb,
+                merkle_bytes_written_ / mb);
   if (Collecting()) {
-    FX_LOGS(INFO) << "  Enqueued to journal in " << TicksToMs(total_write_enqueue_time_ticks_)
-                  << " ms, made merkle tree in " << TicksToMs(total_merkle_generation_time_ticks_)
-                  << " ms";
+    FS_TRACE_INFO("  Enqueued to journal in %zu ms, made merkle tree in %zu ms\n",
+                  TicksToMs(total_write_enqueue_time_ticks_),
+                  TicksToMs(total_merkle_generation_time_ticks_));
   }
 
-  FX_LOGS(INFO) << "Read Info:";
-  FX_LOGS(INFO) << "  Paged:";
+  FS_TRACE_INFO("Read Info:\n");
+  FS_TRACE_INFO("  Paged:\n");
   PrintReadMetrics(paged_read_metrics_);
-  FX_LOGS(INFO) << "  Unpaged:";
+  FS_TRACE_INFO("  Unpaged:\n");
   PrintReadMetrics(unpaged_read_metrics_);
 
-  FX_LOGS(INFO) << "  Merkle data read: " << bytes_merkle_read_from_disk_ / mb << " MB (spent "
-                << TicksToMs(zx::ticks(total_read_merkle_time_ticks_)) << " ms)";
+  FS_TRACE_INFO("  Merkle data read: %zu MB (spent %zu ms)\n", bytes_merkle_read_from_disk_ / mb,
+                TicksToMs(zx::ticks(total_read_merkle_time_ticks_)));
 
-  FX_LOGS(INFO) << "  Opened " << blobs_opened_ << " blobs (" << blobs_opened_total_size_ / mb
-                << " MB)";
+  FS_TRACE_INFO("  Opened %zu blobs (%zu MB)\n", blobs_opened_, blobs_opened_total_size_ / mb);
 
   auto verify_snapshot = verification_metrics_.Get();
-  FX_LOGS(INFO) << "  Verified " << verify_snapshot.blobs_verified << " blobs ("
-                << verify_snapshot.data_size / mb << " MB data, "
-                << verify_snapshot.merkle_size / mb << " MB merkle)";
+  FS_TRACE_INFO("  Verified %zu blobs (%zu MB data, %zu MB merkle)\n",
+                verify_snapshot.blobs_verified, verify_snapshot.data_size / mb,
+                verify_snapshot.merkle_size / mb);
   if (Collecting()) {
-    FX_LOGS(INFO) << "  Spent " << TicksToMs(zx::ticks(verify_snapshot.verification_time))
-                  << " ms verifying";
+    FS_TRACE_INFO("  Spent %zu ms verifying\n",
+                  TicksToMs(zx::ticks(verify_snapshot.verification_time)));
   }
 
-  FX_LOGS(INFO) << "Inspect VMO:";
-  FX_LOGS(INFO) << "  Maximum Size (bytes) = " << inspector_.GetStats().maximum_size;
-  FX_LOGS(INFO) << "  Current Size (bytes) = " << inspector_.GetStats().size;
-  FX_LOGS(INFO) << "Page-in Metrics Recording Enabled = "
-                << (should_record_page_in ? "true" : "false");
+  FS_TRACE_INFO("Inspect VMO:\n");
+  FS_TRACE_INFO("  Maximum Size (bytes) = %zu\n", inspector_.GetStats().maximum_size);
+  FS_TRACE_INFO("  Current Size (bytes) = %zu\n", inspector_.GetStats().size);
+  FS_TRACE_INFO("Page-in Metrics Recording Enabled = %s\n",
+                should_record_page_in ? "true" : "false");
 }
 
 void BlobfsMetrics::ScheduleMetricFlush() {
@@ -235,10 +229,10 @@ void BlobfsMetrics::IncrementPageIn(const fbl::String& merkle_hash, uint64_t off
 
   inspect::InspectStats stats = inspector_.GetStats();
   if (stats.maximum_size <= stats.size) {
-    FX_LOGS(ERROR) << "Blobfs has run out of space in the Inspect VMO.";
-    FX_LOGS(ERROR) << "To record page-in metrics accurately, increase the VMO size.";
-    FX_LOGS(ERROR) << "    Maximum size  : " << stats.maximum_size;
-    FX_LOGS(ERROR) << "    Current size  : " << stats.size;
+    FS_TRACE_ERROR("Blobfs has run out of space in the Inspect VMO.\n");
+    FS_TRACE_ERROR("To record page-in metrics accurately, increase the VMO size.\n");
+    FS_TRACE_ERROR("    Maximum size  : %zu\n", stats.maximum_size);
+    FS_TRACE_ERROR("    Current size  : %zu\n", stats.size);
     should_record_page_in = false;
     return;
   }

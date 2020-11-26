@@ -16,6 +16,7 @@
 #include <fbl/intrusive_wavl_tree.h>
 #include <fbl/mutex.h>
 #include <fbl/ref_ptr.h>
+#include <fs/trace.h>
 #include <fs/vnode.h>
 
 #include "src/storage/blobfs/cache-node.h"

@@ -9,7 +9,6 @@
 #include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
-#include <lib/syslog/cpp/macros.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -106,13 +105,13 @@ struct FakeFs {
 int emu_mkfs(const char* path) {
   fbl::unique_fd fd(open(path, O_RDWR));
   if (!fd) {
-    FX_LOGS(ERROR) << "error: could not open path " << path;
+    FS_TRACE_ERROR("error: could not open path %s\n", path);
     return -1;
   }
 
   struct stat s;
   if (fstat(fd.get(), &s) < 0) {
-    FX_LOGS(ERROR) << "error: minfs could not find end of file/device";
+    FS_TRACE_ERROR("error: minfs could not find end of file/device\n");
     return -1;
   }
 
@@ -121,7 +120,7 @@ int emu_mkfs(const char* path) {
   std::unique_ptr<minfs::Bcache> bc;
   zx_status_t status = minfs::Bcache::Create(std::move(fd), static_cast<uint32_t>(size), &bc);
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "error: cannot create block cache: " << status;
+    FS_TRACE_ERROR("error: cannot create block cache: %d\n", status);
     return -1;
   }
 
@@ -140,13 +139,13 @@ int emu_mount_bcache(std::unique_ptr<minfs::Bcache> bc) {
 int emu_create_bcache(const char* path, std::unique_ptr<minfs::Bcache>* out_bc) {
   fbl::unique_fd fd(open(path, O_RDWR));
   if (!fd) {
-    FX_LOGS(ERROR) << "error: could not open path " << path;
+    FS_TRACE_ERROR("error: could not open path %s\n", path);
     return -1;
   }
 
   struct stat s;
   if (fstat(fd.get(), &s) < 0) {
-    FX_LOGS(ERROR) << "error: minfs could not find end of file/device";
+    FS_TRACE_ERROR("error: minfs could not find end of file/device\n");
     return 0;
   }
 
@@ -155,7 +154,7 @@ int emu_create_bcache(const char* path, std::unique_ptr<minfs::Bcache>* out_bc) 
   std::unique_ptr<minfs::Bcache> bc;
   zx_status_t status = minfs::Bcache::Create(std::move(fd), static_cast<uint32_t>(size), &bc);
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "error: cannot create block cache: " << status;
+    FS_TRACE_ERROR("error: cannot create block cache: %d\n", status);
     return -1;
   }
 

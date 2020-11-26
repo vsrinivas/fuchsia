@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/syslog/cpp/macros.h>
 #include <zircon/status.h>
 
 #include <algorithm>
 
 #include <blobfs/blobfs_inspector.h>
 #include <fs/journal/internal/inspector_parser.h>
+#include <fs/trace.h>
 
 #include "src/storage/blobfs/inspector/parser.h"
 
@@ -41,7 +41,7 @@ zx_status_t BlobfsInspector::ReloadSuperblock() {
   zx_status_t status;
   status = loader_.RunReadOperation(buffer_.get(), 0, kSuperblockOffset, kBlobfsSuperblockBlocks);
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Cannot load superblock. Error: " << zx_status_get_string(status);
+    FS_TRACE_ERROR("Cannot load superblock. Error: %s\n", zx_status_get_string(status));
     return status;
   }
   superblock_ = GetSuperblock(buffer_.get());
@@ -81,7 +81,7 @@ zx::status<std::vector<Inode>> BlobfsInspector::InspectInodeRange(uint64_t start
 
   zx_status_t status = loader_.RunReadOperation(inode_buffer.get(), 0, start_block, block_length);
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Cannot load inode. Error: " << zx_status_get_string(status);
+    FS_TRACE_ERROR("Cannot load inode. Error: %s\n", zx_status_get_string(status));
     return zx::error(status);
   }
 
@@ -105,7 +105,7 @@ zx::status<fs::JournalInfo> BlobfsInspector::InspectJournalSuperblock() {
   zx_status_t status = loader_.RunReadOperation(buffer_.get(), 0, JournalStartBlock(superblock_),
                                                 fs::kJournalMetadataBlocks);
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Cannot load journal superblock. Error: " << zx_status_get_string(status);
+    FS_TRACE_ERROR("Cannot load journal superblock. Error: %s\n", zx_status_get_string(status));
     return zx::error(status);
   }
   return zx::ok(fs::GetJournalSuperblock(buffer_.get()));
@@ -158,7 +158,7 @@ zx::status<std::vector<uint64_t>> BlobfsInspector::InspectDataBlockAllocatedInRa
 
   zx_status_t status = loader_.RunReadOperation(bit_buffer.get(), 0, start_block, block_length);
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Cannot load allocation bits. Error: " << zx_status_get_string(status);
+    FS_TRACE_ERROR("Cannot load allocation bits. Error: %s\n", zx_status_get_string(status));
     return zx::error(status);
   }
 
@@ -180,7 +180,7 @@ zx::status<> BlobfsInspector::WriteSuperblock(Superblock superblock) {
   *static_cast<Superblock*>(buffer_->Data(0)) = superblock;
   zx_status_t status = loader_.RunWriteOperation(buffer_.get(), 0, 0, 1);
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Cannot write superblock. Error: " << zx_status_get_string(status);
+    FS_TRACE_ERROR("Cannot write superblock. Error: %s\n", zx_status_get_string(status));
     return zx::error(status);
   }
   superblock_ = superblock;
@@ -208,7 +208,7 @@ zx::status<> BlobfsInspector::WriteInodes(std::vector<Inode> inodes, uint64_t st
   // aligned on block boundaries.
   zx_status_t status = loader_.RunReadOperation(inode_buffer.get(), 0, start_block, block_length);
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Cannot load inodes. Error: " << zx_status_get_string(status);
+    FS_TRACE_ERROR("Cannot load inodes. Error: %s\n", zx_status_get_string(status));
     return zx::error(status);
   }
 
@@ -223,7 +223,7 @@ zx::status<> BlobfsInspector::WriteInodes(std::vector<Inode> inodes, uint64_t st
 
   status = loader_.RunWriteOperation(inode_buffer.get(), 0, start_block, block_length);
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Cannot write inodes. Error: " << zx_status_get_string(status);
+    FS_TRACE_ERROR("Cannot write inodes. Error: %s\n", zx_status_get_string(status));
     return zx::error(status);
   }
   return zx::ok();
@@ -234,7 +234,7 @@ zx::status<> BlobfsInspector::WriteJournalSuperblock(fs::JournalInfo journal_inf
   zx_status_t status = loader_.RunWriteOperation(buffer_.get(), 0, JournalStartBlock(superblock_),
                                                  fs::kJournalMetadataBlocks);
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Cannot write journal superblock. Error: " << zx_status_get_string(status);
+    FS_TRACE_ERROR("Cannot write journal superblock. Error: %s\n", zx_status_get_string(status));
     return zx::error(status);
   }
   return zx::ok();
@@ -245,7 +245,7 @@ zx::status<> BlobfsInspector::WriteJournalEntryBlocks(storage::BlockBuffer* buff
   uint64_t start_block = JournalStartBlock(superblock_) + fs::kJournalMetadataBlocks + start_index;
   zx_status_t status = loader_.RunWriteOperation(buffer, 0, start_block, buffer->capacity());
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Cannot write journal entries. Error: " << zx_status_get_string(status);
+    FS_TRACE_ERROR("Cannot write journal entries. Error: %s\n", zx_status_get_string(status));
     return zx::error(status);
   }
   return zx::ok();
@@ -273,7 +273,7 @@ zx::status<> BlobfsInspector::WriteDataBlockAllocationBits(bool value, uint64_t 
   // aligned on block boundaries.
   zx_status_t status = loader_.RunReadOperation(bit_buffer.get(), 0, start_block, block_length);
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Cannot load allocation bits. Error: " << zx_status_get_string(status);
+    FS_TRACE_ERROR("Cannot load allocation bits. Error: %s\n", zx_status_get_string(status));
     return zx::error(status);
   }
 
@@ -289,7 +289,7 @@ zx::status<> BlobfsInspector::WriteDataBlockAllocationBits(bool value, uint64_t 
 
   status = loader_.RunWriteOperation(bit_buffer.get(), 0, start_block, block_length);
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Cannot load allocation bits. Error: " << zx_status_get_string(status);
+    FS_TRACE_ERROR("Cannot load allocation bits. Error: %s\n", zx_status_get_string(status));
     return zx::error(status);
   }
   return zx::ok();
@@ -299,7 +299,7 @@ zx::status<> BlobfsInspector::WriteDataBlocks(storage::BlockBuffer* buffer, uint
   uint64_t start_block = DataStartBlock(superblock_) + start_index;
   zx_status_t status = loader_.RunWriteOperation(buffer, 0, start_block, buffer->capacity());
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Cannot write data blocks. Error: " << zx_status_get_string(status);
+    FS_TRACE_ERROR("Cannot write data blocks. Error: %s\n", zx_status_get_string(status));
     return zx::error(status);
   }
   return zx::ok();
@@ -310,7 +310,7 @@ zx_status_t BlobfsInspector::LoadNodeElement(storage::BlockBuffer* buffer, uint6
   uint64_t start_block = NodeMapStartBlock(superblock_) + start_block_offset;
   zx_status_t status = loader_.RunReadOperation(buffer, 0, start_block, 1);
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Cannot load node element. Error: " << zx_status_get_string(status);
+    FS_TRACE_ERROR("Cannot load node element. Error: %s\n", zx_status_get_string(status));
   }
   return status;
 }
@@ -319,7 +319,7 @@ zx_status_t BlobfsInspector::LoadJournalEntry(storage::BlockBuffer* buffer, uint
   uint64_t start_block = JournalStartBlock(superblock_) + fs::kJournalMetadataBlocks + index;
   zx_status_t status = loader_.RunReadOperation(buffer, 0, start_block, 1);
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Cannot load journal entry. Error: " << zx_status_get_string(status);
+    FS_TRACE_ERROR("Cannot load journal entry. Error: %s\n", zx_status_get_string(status));
   }
   return status;
 }

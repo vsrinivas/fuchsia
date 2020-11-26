@@ -3,13 +3,13 @@
 // found in the LICENSE file.
 
 #include <lib/sync/completion.h>
-#include <lib/syslog/cpp/macros.h>
 #include <zircon/status.h>
 
 #include <cstdio>
 
 #include <fs/journal/internal/journal_writer.h>
 #include <fs/metrics/events.h>
+#include <fs/trace.h>
 #include <fs/transaction/writeback.h>
 
 #include "entry_view.h"
@@ -60,7 +60,7 @@ fit::result<void, zx_status_t> JournalWriter::WriteData(JournalWorkItem work) {
       // then blocking on writing the info block".
       zx_status_t status = WriteInfoBlock();
       if (status != ZX_OK) {
-        FX_LOGS(WARNING) << "journal: Failed to write data: " << zx_status_get_string(status);
+        FS_TRACE_ERROR("journal: Failed to write data: %s\n", zx_status_get_string(status));
         return fit::error(status);
       }
     }
@@ -70,7 +70,7 @@ fit::result<void, zx_status_t> JournalWriter::WriteData(JournalWorkItem work) {
   event.set_block_count(block_count);
   zx_status_t status = WriteOperations(work.operations);
   if (status != ZX_OK) {
-    FX_LOGS(WARNING) << "journal: Failed to write data: " << zx_status_get_string(status);
+    FS_TRACE_ERROR("journal: Failed to write data: %s\n", zx_status_get_string(status));
     event.set_success(false);
     return fit::error(status);
   }
@@ -80,7 +80,7 @@ fit::result<void, zx_status_t> JournalWriter::WriteData(JournalWorkItem work) {
 fit::result<void, zx_status_t> JournalWriter::WriteMetadata(
     JournalWorkItem work, std::optional<JournalWorkItem> trim_work) {
   const uint64_t block_count = work.reservation.length();
-  FX_LOGS(DEBUG) << "WriteMetadata: Writing " << block_count << " blocks (includes header, commit)";
+  FS_TRACE_DEBUG("WriteMetadata: Writing %zu blocks (includes header, commit)\n", block_count);
   auto event = metrics()->NewLatencyEvent(fs_metrics::Event::kJournalWriterWriteMetadata);
   event.set_block_count(block_count);
   event.set_success(false);
@@ -88,8 +88,7 @@ fit::result<void, zx_status_t> JournalWriter::WriteMetadata(
   // Ensure the info block is caught up, so it doesn't point to the middle of an invalid entry.
   zx_status_t status = WriteInfoBlockIfIntersect(block_count);
   if (status != ZX_OK) {
-    FX_LOGS(WARNING) << "WriteMetadata: Failed to write info block: "
-                     << zx_status_get_string(status);
+    FS_TRACE_ERROR("WriteMetadata: Failed to write info block: %s\n", zx_status_get_string(status));
     return fit::error(status);
   }
 
@@ -103,8 +102,8 @@ fit::result<void, zx_status_t> JournalWriter::WriteMetadata(
   // Write metadata to the journal itself.
   status = WriteMetadataToJournal(&work);
   if (status != ZX_OK) {
-    FX_LOGS(WARNING) << "WriteMetadata: Failed to write metadata to journal: "
-                     << zx_status_get_string(status);
+    FS_TRACE_ERROR("WriteMetadata: Failed to write metadata to journal: %s\n",
+                   zx_status_get_string(status));
     return fit::error(status);
   }
   event.set_success(true);
@@ -147,8 +146,8 @@ zx_status_t JournalWriter::WriteOperationToJournal(const storage::BlockBufferVie
 
   zx_status_t status = WriteOperations(journal_operations);
   if (status != ZX_OK) {
-    FX_LOGS(WARNING) << "JournalWriter::WriteOperationToJournal: Failed to write: "
-                     << zx_status_get_string(status);
+    FS_TRACE_ERROR("JournalWriter::WriteOperationToJournal: Failed to write: %s\n",
+                   zx_status_get_string(status));
     return status;
   }
   return status;
@@ -162,7 +161,7 @@ fit::result<void, zx_status_t> JournalWriter::Sync() {
   }
 
   if (next_sequence_number_ == journal_superblock_.sequence_number()) {
-    FX_LOGS(DEBUG) << "Sync: Skipping write to info block (no sequence update)";
+    FS_TRACE_DEBUG("Sync: Skipping write to info block (no sequence update)\n");
     return fit::ok();
   }
 
@@ -175,8 +174,8 @@ fit::result<void, zx_status_t> JournalWriter::Sync() {
 }
 
 zx_status_t JournalWriter::WriteMetadataToJournal(JournalWorkItem* work) {
-  FX_LOGS(DEBUG) << "WriteMetadataToJournal: Writing " << work->reservation.length()
-                 << " blocks with sequence_number " << next_sequence_number_;
+  FS_TRACE_DEBUG("WriteMetadataToJournal: Writing %zu blocks with sequence_number %zu\n",
+                 work->reservation.length(), next_sequence_number_);
 
   // Set the header and commit blocks within the journal.
   JournalEntryView entry(work->reservation.buffer_view(), work->operations,
@@ -233,19 +232,19 @@ zx_status_t JournalWriter::WriteInfoBlockIfIntersect(uint64_t block_count) {
     const uint64_t journal_used = (head <= tail) ? (tail - head) : ((capacity - head) + tail);
     const uint64_t journal_free = capacity - journal_used;
     if (journal_free < block_count) {
-      FX_LOGS(DEBUG) << "WriteInfoBlockIfIntersect: Writing info block (can't write " << block_count
-                     << " blocks)";
+      FS_TRACE_DEBUG("WriteInfoBlockIfIntersect: Writing info block (can't write %zu blocks)\n",
+                     block_count);
       write_info = true;
     } else {
-      FX_LOGS(DEBUG) << "WriteInfoBlockIfIntersect: Not writing info (have " << journal_free
-                     << ", need " << block_count << " blocks)";
+      FS_TRACE_DEBUG("WriteInfoBlockIfIntersect: Not writing info (have %zu, need %zu blocks)\n",
+                     journal_free, block_count);
     }
   }
 
   if (write_info) {
     zx_status_t status = WriteInfoBlock();
     if (status != ZX_OK) {
-      FX_LOGS(WARNING) << "WriteInfoBlockIfIntersect: Failed to write info block";
+      FS_TRACE_ERROR("WriteInfoBlockIfIntersect: Failed to write info block\n");
       return status;
     }
   }
@@ -263,8 +262,8 @@ zx_status_t JournalWriter::WriteInfoBlock() {
   auto event = metrics()->NewLatencyEvent(fs_metrics::Event::kJournalWriterWriteInfoBlock);
   event.set_block_count(InfoLength());
   ZX_DEBUG_ASSERT(next_sequence_number_ > journal_superblock_.sequence_number());
-  FX_LOGS(DEBUG) << "WriteInfoBlock: Updating sequence_number from "
-                 << journal_superblock_.sequence_number() << " to " << next_sequence_number_;
+  FS_TRACE_DEBUG("WriteInfoBlock: Updating sequence_number from %zu to %zu\n",
+                 journal_superblock_.sequence_number(), next_sequence_number_);
 
   ZX_DEBUG_ASSERT(next_entry_start_block_ < EntriesLength());
   journal_superblock_.Update(next_entry_start_block_, next_sequence_number_);
@@ -291,14 +290,14 @@ zx_status_t JournalWriter::WriteInfoBlock() {
 zx_status_t JournalWriter::WriteOperations(
     const std::vector<storage::BufferedOperation>& operations) {
   if (!IsWritebackEnabled()) {
-    FX_LOGS(INFO) << "WriteOperations: Not issuing writeback because writeback is disabled";
+    FS_TRACE_ERROR("WriteOperations: Not issuing writeback because writeback is disabled\n");
     return ZX_ERR_IO_REFUSED;
   }
 
   zx_status_t status = transaction_handler_->RunRequests(operations);
   if (status != ZX_OK) {
-    FX_LOGS(WARNING) << "WriteOperations: Failed to write requests: "
-                     << zx_status_get_string(status) << ". Filesystem now read-only.";
+    FS_TRACE_ERROR("WriteOperations: Failed to write requests: %s. Filesystem now read-only.\n",
+                   zx_status_get_string(status));
     DisableWriteback();
     return status;
   }
@@ -307,11 +306,11 @@ zx_status_t JournalWriter::WriteOperations(
 
 fit::result<void, zx_status_t> JournalWriter::Flush() {
   if (!IsWritebackEnabled()) {
-    FX_LOGS(INFO) << "JournalWriter::Flush: Not issuing writeback because writeback is disabled";
+    FS_TRACE_ERROR("JournalWriter::Flush: Not issuing writeback because writeback is disabled\n");
     return fit::error(ZX_ERR_BAD_STATE);
   }
   if (zx_status_t status = transaction_handler_->Flush(); status != ZX_OK) {
-    FX_LOGS(WARNING) << "JournalWriter::Flush: " << zx_status_get_string(status);
+    FS_TRACE_ERROR("JournalWriter::Flush: %s\n", zx_status_get_string(status));
     return fit::error(status);
   }
   pending_flush_ = false;
@@ -323,8 +322,8 @@ fit::result<void, zx_status_t> JournalWriter::Flush() {
     }
     zx_status_t status = WriteOperations(work.operations);
     if (status != ZX_OK) {
-      FX_LOGS(WARNING) << "Flush: Failed to write metadata to final location: "
-                       << zx_status_get_string(status);
+      FS_TRACE_ERROR("Flush: Failed to write metadata to final location: %s\n",
+                     zx_status_get_string(status));
       // WriteOperations will mark things so that all subsequent writes will fail.
       pending_work_items_.clear();
       return fit::error(status);

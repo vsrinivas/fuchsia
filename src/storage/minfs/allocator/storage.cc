@@ -4,8 +4,6 @@
 
 #include "src/storage/minfs/allocator/storage.h"
 
-#include <lib/syslog/cpp/macros.h>
-
 #include <cstdint>
 #include <utility>
 
@@ -58,7 +56,7 @@ zx_status_t PersistentStorage::Extend(PendingWork* write_transaction, WriteData 
     // TODO(smklein): Grow the bitmap another slice.
     // TODO(planders): Once we start growing the [block] bitmap,
     //                 we will need to start growing the journal as well.
-    FX_LOGS(ERROR) << "Minfs allocator needs to increase bitmap size";
+    FS_TRACE_ERROR("Minfs allocator needs to increase bitmap size\n");
     return ZX_ERR_NO_SPACE;
   }
 
@@ -69,13 +67,13 @@ zx_status_t PersistentStorage::Extend(PendingWork* write_transaction, WriteData 
 
   zx_status_t status = device_->VolumeExtend(request.offset, request.length);
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << ":PersistentStorage::Extend failed to grow (on disk): " << status;
+    FS_TRACE_ERROR("minfs::PersistentStorage::Extend failed to grow (on disk): %d\n", status);
     return status;
   }
 
   if (grow_cb_) {
     if ((status = grow_cb_(pool_size)) != ZX_OK) {
-      FX_LOGS(ERROR) << ":Allocator grow callback failure: " << status;
+      FS_TRACE_ERROR("minfs::Allocator grow callback failure: %d\n", status);
       return status;
     }
   }

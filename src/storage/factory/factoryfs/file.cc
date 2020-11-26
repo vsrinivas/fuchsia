@@ -4,8 +4,6 @@
 
 #include "src/storage/factory/factoryfs/file.h"
 
-#include <lib/syslog/cpp/macros.h>
-
 namespace factoryfs {
 
 File::File(Factoryfs& factoryfs, std::unique_ptr<DirectoryEntryManager> entry)
@@ -25,7 +23,8 @@ zx_status_t File::InitFileVmo() {
   zx_status_t status;
   const size_t vmo_size = fbl::round_up(GetSize(), kFactoryfsBlockSize);
   if ((status = zx::vmo::create(vmo_size, 0, &vmo_)) != ZX_OK) {
-    FX_LOGS(ERROR) << "Failed to initialize vmo; error: " << zx_status_get_string(status);
+    FS_TRACE_ERROR("factoryfs: Failed to initialize vmo; error: %s\n",
+                   zx_status_get_string(status));
     return status;
   }
   vmo_size_ = vmo_size;
@@ -34,7 +33,8 @@ zx_status_t File::InitFileVmo() {
   zx_object_set_property(vmo_.get(), ZX_PROP_NAME, "factoryfs-file", strlen("factoryfs-file"));
 
   if ((status = factoryfs_.Device().BlockAttachVmo(vmo_, &vmoid_)) != ZX_OK) {
-    FX_LOGS(INFO) << "File::Failed to attach vmo to block device: " << zx_status_get_string(status);
+    FS_TRACE_INFO("factoryfs:File::Failed to attach vmo to block device: %s\n",
+                  zx_status_get_string(status));
     vmo_.reset();
     return status;
   }
@@ -69,11 +69,11 @@ zx_status_t File::Read(void* data, size_t len, size_t offset, size_t* out_actual
 
   zx_status_t status = ZX_OK;
   if ((status = InitFileVmo()) != ZX_OK) {
-    FX_LOGS(ERROR) << "Failed to initialize VMO error: " << zx_status_get_string(status);
+    FS_TRACE_ERROR("factoryfs: Failed to initialize VMO error: %s\n", zx_status_get_string(status));
     return status;
   }
   if ((status = vmo_.read(data, offset, len)) != ZX_OK) {
-    FX_LOGS(ERROR) << "Failed to read VMO error: " << zx_status_get_string(status);
+    FS_TRACE_ERROR("factoryfs: Failed to read VMO error: %s\n", zx_status_get_string(status));
     return status;
   }
   *out_actual = len;

@@ -188,14 +188,12 @@ void PrintEach(fbl::StringBuffer<N>* sb, T val, Args... args) {
   PrintEach(sb, args...);
 }
 
-void Log(fbl::StringPiece buffer);
-
 template <typename... Args>
 void ConnectionTraceDebug(Args... args) {
   constexpr size_t kMaxSize = 2000;
   auto str = std::make_unique<fbl::StringBuffer<kMaxSize>>();
   PrintEach(str.get(), args...);
-  Log(*str);
+  FS_TRACE_DEBUG("%s\n", str->c_str());
 }
 
 }  // namespace debug_internal

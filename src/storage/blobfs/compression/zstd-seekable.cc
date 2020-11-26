@@ -4,7 +4,6 @@
 
 #include "src/storage/blobfs/compression/zstd-seekable.h"
 
-#include <lib/syslog/cpp/macros.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
 
@@ -60,8 +59,8 @@ zx_status_t ZSTDSeekableCompressor::Create(CompressionSettings settings, size_t 
   size_t r = ZSTD_seekable_initCStream(compressor->stream_, level, kSeekableChecksumFlag,
                                        kZSTDSeekableMaxFrameSize);
   if (ZSTD_isError(r)) {
-    FX_LOGS(ERROR) << "[zstd-seekable] Failed to initialize seekable cstream: "
-                   << ZSTD_getErrorName(r);
+    FS_TRACE_ERROR("[blobfs][zstd-seekable] Failed to initialize seekable cstream: %s\n",
+                   ZSTD_getErrorName(r));
     return ZX_ERR_INTERNAL;
   }
 
@@ -107,8 +106,8 @@ zx_status_t ZSTDSeekableCompressor::Update(const void* input_data, size_t input_
   while (input.pos != input_length) {
     zstd_return = ZSTD_seekable_compressStream(stream_, &output_, &input);
     if (ZSTD_isError(zstd_return)) {
-      FX_LOGS(ERROR) << "[zstd-seekable] Failed to compress in seekable format: "
-                     << ZSTD_getErrorName(zstd_return);
+      FS_TRACE_ERROR("[blobfs][zstd-seekable] Failed to compress in seekable format: %s\n",
+                     ZSTD_getErrorName(zstd_return));
       return ZX_ERR_IO_DATA_INTEGRITY;
     }
   }
@@ -119,8 +118,8 @@ zx_status_t ZSTDSeekableCompressor::Update(const void* input_data, size_t input_
 zx_status_t ZSTDSeekableCompressor::End() {
   size_t zstd_return = ZSTD_seekable_endStream(stream_, &output_);
   if (ZSTD_isError(zstd_return)) {
-    FX_LOGS(ERROR) << "[zstd-seekable] Failed to end seekable stream: "
-                   << ZSTD_getErrorName(zstd_return);
+    FS_TRACE_ERROR("[blobfs][zstd-seekable] Failed to end seekable stream: %s\n",
+                   ZSTD_getErrorName(zstd_return));
     return ZX_ERR_IO_DATA_INTEGRITY;
   }
 
@@ -141,8 +140,8 @@ zx_status_t ZSTDSeekableDecompressor::DecompressArchive(void* uncompressed_buf,
   auto cleanup = fbl::MakeAutoCall([&stream] { ZSTD_seekable_free(stream); });
   size_t zstd_return = ZSTD_seekable_initBuff(stream, compressed_buf, compressed_size);
   if (ZSTD_isError(zstd_return)) {
-    FX_LOGS(ERROR) << "[zstd-seekable] Failed to initialize seekable dstream: "
-                   << ZSTD_getErrorName(zstd_return);
+    FS_TRACE_ERROR("[blobfs][zstd-seekable] Failed to initialize seekable dstream: %s\n",
+                   ZSTD_getErrorName(zstd_return));
     return ZX_ERR_INTERNAL;
   }
 
@@ -153,8 +152,8 @@ zx_status_t ZSTDSeekableDecompressor::DecompressArchive(void* uncompressed_buf,
                                            offset + decompressed);
     decompressed += zstd_return;
     if (ZSTD_isError(zstd_return)) {
-      FX_LOGS(ERROR) << "[zstd-seekable] Failed to decompress: "
-                     << ZSTD_getErrorName(zstd_return);
+      FS_TRACE_ERROR("[blobfs][zstd-seekable] Failed to decompress: %s\n",
+                     ZSTD_getErrorName(zstd_return));
       return ZX_ERR_IO_DATA_INTEGRITY;
     }
     // From the ZSTD_seekable_decompress Documentation:

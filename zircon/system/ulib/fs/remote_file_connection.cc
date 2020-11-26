@@ -23,6 +23,7 @@
 #include <fs/debug.h>
 #include <fs/internal/fidl_transaction.h>
 #include <fs/internal/remote_file_connection.h>
+#include <fs/trace.h>
 #include <fs/vfs_types.h>
 #include <fs/vnode.h>
 

@@ -62,11 +62,10 @@ zx_library("fs") {
     "//zircon/public/lib/zircon-internal",
   ]
 
-  # Uncomment to enable some debug log messages
+  # Uncomment to enable FS_TRACE_DEBUG-level logging
   # defines = [ "FS_TRACE_DEBUG_ENABLED" ]
 
   sources = [
-    "debug.cc",
     "vfs.cc",
     "vnode.cc",
   ]
