@@ -20,9 +20,9 @@
 
 #include <ddk/binding.h>
 #include <ddk/platform-defs.h>
-#include <ddk/protocol/composite.h>
 #include <ddk/protocol/display/controller.h>
 #include <ddktl/device.h>
+#include <ddktl/protocol/composite.h>
 #include <ddktl/protocol/display/capture.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
@@ -212,7 +212,7 @@ void FakeDisplay::DisplayControllerImplApplyConfiguration(const display_config_t
 
 // part of ZX_PROTOCOL_DISPLAY_CONTROLLER_IMPL ops
 zx_status_t FakeDisplay::DisplayControllerImplGetSysmemConnection(zx::channel connection) {
-  zx_status_t status = sysmem_connect(&sysmem_, connection.release());
+  zx_status_t status = sysmem_.Connect(std::move(connection));
   if (status != ZX_OK) {
     DISP_ERROR("Could not connect to sysmem\n");
     return status;
@@ -489,25 +489,19 @@ void FakeDisplay::SendVsync() {
 }
 
 zx_status_t FakeDisplay::Bind(bool start_vsync) {
-  composite_protocol_t composite;
-  auto status = device_get_protocol(parent_, ZX_PROTOCOL_COMPOSITE, &composite);
+  ddk::CompositeProtocolClient composite;
+  zx_status_t status = ddk::CompositeProtocolClient::CreateFromDevice(parent(), &composite);
   if (status != ZX_OK) {
-    DISP_ERROR("Could not get composite protocol %d\n", status);
+    DISP_ERROR("Could not get composite protocol\n");
     return status;
   }
-  size_t actual;
-  composite_get_fragments(&composite, fragments_, std::size(fragments_), &actual);
-  if (actual != std::size(fragments_)) {
-    DISP_ERROR("could not get fragments\n");
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-  status = device_get_protocol(fragments_[FRAGMENT_PDEV], ZX_PROTOCOL_PDEV, &pdev_);
+  status = ddk::PDev::CreateFromComposite(composite, &pdev_);
   if (status != ZX_OK) {
     DISP_ERROR("Could not get PDEV protocol\n");
     return status;
   }
 
-  status = device_get_protocol(fragments_[FRAGMENT_SYSMEM], ZX_PROTOCOL_SYSMEM, &sysmem_);
+  status = ddk::SysmemProtocolClient::CreateFromComposite(composite, "sysmem", &sysmem_);
   if (status != ZX_OK) {
     DISP_ERROR("Could not get Display SYSMEM protocol\n");
     return status;

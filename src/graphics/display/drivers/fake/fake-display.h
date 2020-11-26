@@ -5,6 +5,7 @@
 #ifndef SRC_GRAPHICS_DISPLAY_DRIVERS_FAKE_FAKE_DISPLAY_H_
 #define SRC_GRAPHICS_DISPLAY_DRIVERS_FAKE_FAKE_DISPLAY_H_
 
+#include <lib/device-protocol/pdev.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <sys/types.h>
 #include <unistd.h>
@@ -19,12 +20,11 @@
 #include <ddk/debug.h>
 #include <ddk/driver.h>
 #include <ddk/protocol/display/capture.h>
-#include <ddk/protocol/platform/device.h>
-#include <ddk/protocol/sysmem.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/display/capture.h>
 #include <ddktl/protocol/display/clamprgb.h>
 #include <ddktl/protocol/display/controller.h>
+#include <ddktl/protocol/sysmem.h>
 #include <fbl/auto_lock.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/mutex.h>
@@ -113,13 +113,6 @@ class FakeDisplay : public DeviceType,
   uint8_t GetClampRgbValue() const { return clamp_rgb_value_; }
 
  private:
-  enum {
-    FRAGMENT_PDEV,
-    FRAGMENT_SYSMEM,
-    FRAGMENT_COUNT,
-  };
-  zx_device_t* fragments_[FRAGMENT_COUNT];
-
   zx_status_t SetupDisplayInterface();
   int VSyncThread();
   int CaptureThread() __TA_EXCLUDES(capture_lock_, display_lock_);
@@ -127,8 +120,8 @@ class FakeDisplay : public DeviceType,
 
   display_controller_impl_protocol_t dcimpl_proto_ = {};
   display_clamp_rgb_impl_protocol_t clamp_rgbimpl_proto_ = {};
-  pdev_protocol_t pdev_ = {};
-  sysmem_protocol_t sysmem_ = {};
+  ddk::PDev pdev_;
+  ddk::SysmemProtocolClient sysmem_;
 
   std::atomic_bool vsync_shutdown_flag_ = false;
   std::atomic_bool capture_shutdown_flag_ = false;

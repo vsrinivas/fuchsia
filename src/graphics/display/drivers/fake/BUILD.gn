@@ -33,7 +33,7 @@ source_set("fake-lib") {
     "//sdk/banjo/ddk.protocol.display.controller",
     "//sdk/banjo/ddk.protocol.sysmem",
     "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_c",
-    "//src/devices/bus/lib/device-protocol-platform-device",
+    "//src/devices/bus/lib/device-protocol-pdev",
     "//src/lib/ddk",
 
     # TODO(fxb/38132): Migrate to the new bind rules and delete the below
