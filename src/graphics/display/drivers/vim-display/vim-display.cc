@@ -6,7 +6,7 @@
 
 #include <assert.h>
 #include <fuchsia/sysmem/c/fidl.h>
-#include <lib/device-protocol/platform-device.h>
+#include <lib/device-protocol/pdev.h>
 #include <lib/image-format/image_format.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -25,24 +25,19 @@
 #include <ddk/driver.h>
 #include <ddk/io-buffer.h>
 #include <ddk/platform-defs.h>
-#include <ddk/protocol/composite.h>
 #include <ddk/protocol/display/controller.h>
 #include <ddk/protocol/i2cimpl.h>
 #include <ddk/protocol/platform/device.h>
+#include <ddktl/protocol/amlogiccanvas.h>
+#include <ddktl/protocol/composite.h>
+#include <ddktl/protocol/gpio.h>
+#include <ddktl/protocol/sysmem.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <hw/arch_ops.h>
 #include <hw/reg.h>
 
 #include "hdmitx.h"
-
-enum {
-  FRAGMENT_PDEV,
-  FRAGMENT_HPD_GPIO,
-  FRAGMENT_CANVAS,
-  FRAGMENT_SYSMEM,
-  FRAGMENT_COUNT,
-};
 
 /* Default formats */
 static const uint8_t _ginput_color_format = HDMI_COLOR_FORMAT_444;
@@ -745,30 +740,24 @@ zx_status_t vim2_display_bind(void* ctx, zx_device_t* parent) {
     display_release(display);
   });
 
-  composite_protocol_t composite;
-  status = device_get_protocol(parent, ZX_PROTOCOL_COMPOSITE, &composite);
+  ddk::CompositeProtocolClient composite;
+  status = ddk::CompositeProtocolClient::CreateFromDevice(parent, &composite);
   if (status != ZX_OK) {
     DISP_ERROR("Could not get composite protocol\n");
     return status;
   }
 
-  zx_device_t* fragments[FRAGMENT_COUNT];
-  size_t actual;
-  composite_get_fragments(&composite, fragments, countof(fragments), &actual);
-  if (actual != countof(fragments)) {
-    DISP_ERROR("could not get fragments\n");
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
-  status = device_get_protocol(fragments[FRAGMENT_PDEV], ZX_PROTOCOL_PDEV, &display->pdev);
+  ddk::PDev pdev;
+  status = ddk::PDev::CreateFromComposite(composite, &pdev);
   if (status != ZX_OK) {
     DISP_ERROR("Could not get PDEV protocol\n");
     return status;
   }
+  pdev.GetProto(&display->pdev);
 
   // Test for platform device get_board_info support.
   pdev_board_info_t board_info;
-  pdev_get_board_info(&display->pdev, &board_info);
+  pdev.GetBoardInfo(&board_info);
   printf("BOARD INFO: %d %d %s %d\n", board_info.vid, board_info.pid, board_info.board_name,
          board_info.board_revision);
   assert(board_info.vid == PDEV_VID_KHADAS);
@@ -778,7 +767,7 @@ zx_status_t vim2_display_bind(void* ctx, zx_device_t* parent) {
 
   // Fetch the device info and sanity check our resource counts.
   pdev_device_info_t dev_info;
-  status = pdev_get_device_info(&display->pdev, &dev_info);
+  status = pdev.GetDeviceInfo(&dev_info);
   if (status != ZX_OK) {
     DISP_ERROR("Failed to fetch device info (status %d)\n", status);
     return status;
@@ -800,97 +789,96 @@ zx_status_t vim2_display_bind(void* ctx, zx_device_t* parent) {
     return status;
   }
 
-  status = pdev_get_bti(&display->pdev, 0, &display->bti);
+  zx::bti bti;
+  status = pdev.GetBti(0, &bti);
   if (status != ZX_OK) {
     DISP_ERROR("Could not get BTI handle\n");
     return status;
   }
 
-  status = device_get_protocol(fragments[FRAGMENT_HPD_GPIO], ZX_PROTOCOL_GPIO, &display->gpio);
+  ddk::GpioProtocolClient gpio;
+  status = ddk::GpioProtocolClient::CreateFromComposite(composite, "gpio", &gpio);
   if (status != ZX_OK) {
     DISP_ERROR("Could not get Display GPIO protocol\n");
     return status;
   }
+  gpio.GetProto(&display->gpio);
 
-  status = device_get_protocol(fragments[FRAGMENT_CANVAS], ZX_PROTOCOL_AMLOGIC_CANVAS,
-                               &display->canvas);
+  ddk::AmlogicCanvasProtocolClient canvas;
+  status = ddk::AmlogicCanvasProtocolClient::CreateFromComposite(composite, "canvas", &canvas);
   if (status != ZX_OK) {
     DISP_ERROR("Could not get Display CANVAS protocol\n");
     return status;
   }
+  canvas.GetProto(&display->canvas);
 
-  status = device_get_protocol(fragments[FRAGMENT_SYSMEM], ZX_PROTOCOL_SYSMEM, &display->sysmem);
-  if (status != ZX_OK) {
+  ddk::SysmemProtocolClient sysmem;
+  status = ddk::SysmemProtocolClient::CreateFromComposite(composite, "sysmem", &sysmem);
+  if (!sysmem.is_valid()) {
     DISP_ERROR("Could not get Display SYSMEM protocol\n");
     return status;
   }
+  sysmem.GetProto(&display->sysmem);
 
   // Map all the various MMIOs
-  mmio_buffer_t mmio;
-  status =
-      pdev_map_mmio_buffer(&display->pdev, MMIO_PRESET, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
+  status = pdev.MapMmio(MMIO_PRESET, &display->mmio_preset);
   if (status != ZX_OK) {
     DISP_ERROR("Could not map display MMIO PRESET\n");
     return status;
   }
-  display->mmio_preset = ddk::MmioBuffer(mmio);
 
-  status =
-      pdev_map_mmio_buffer(&display->pdev, MMIO_HDMITX, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
+  status = pdev.MapMmio(MMIO_HDMITX, &display->mmio_hdmitx);
   if (status != ZX_OK) {
     DISP_ERROR("Could not map display MMIO HDMITX\n");
     return status;
   }
-  display->mmio_hdmitx = ddk::MmioBuffer(mmio);
 
-  status = pdev_map_mmio_buffer(&display->pdev, MMIO_HIU, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
+  status = pdev.MapMmio(MMIO_HIU, &display->mmio_hiu);
   if (status != ZX_OK) {
     DISP_ERROR("Could not map display MMIO HIU\n");
     return status;
   }
-  display->mmio_hiu = ddk::MmioBuffer(mmio);
 
-  status = pdev_map_mmio_buffer(&display->pdev, MMIO_VPU, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
+  status = pdev.MapMmio(MMIO_VPU, &display->mmio_vpu);
   if (status != ZX_OK) {
     DISP_ERROR("Could not map display MMIO VPU\n");
     return status;
   }
-  display->mmio_vpu = ddk::MmioBuffer(mmio);
 
-  status =
-      pdev_map_mmio_buffer(&display->pdev, MMIO_HDMTX_SEC, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
+  status = pdev.MapMmio(MMIO_HDMTX_SEC, &display->mmio_hdmitx_sec);
   if (status != ZX_OK) {
     DISP_ERROR("Could not map display MMIO HDMITX SEC\n");
     return status;
   }
-  display->mmio_hdmitx_sec = ddk::MmioBuffer(mmio);
 
-  status = pdev_map_mmio_buffer(&display->pdev, MMIO_CBUS, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
+  status = pdev.MapMmio(MMIO_CBUS, &display->mmio_cbus);
   if (status != ZX_OK) {
     DISP_ERROR("Could not map display MMIO CBUS\n");
     return status;
   }
-  display->mmio_cbus = ddk::MmioBuffer(mmio);
 
-  status = gpio_config_in(&display->gpio, GPIO_PULL_DOWN);
+  status = gpio.ConfigIn(GPIO_PULL_DOWN);
   if (status != ZX_OK) {
     DISP_ERROR("gpio_config_in failed for gpio\n");
     return status;
   }
 
-  status = gpio_get_interrupt(&display->gpio, ZX_INTERRUPT_MODE_LEVEL_HIGH, &display->inth);
+  zx::interrupt inth;
+  status = gpio.GetInterrupt(ZX_INTERRUPT_MODE_LEVEL_HIGH, &inth);
   if (status != ZX_OK) {
     DISP_ERROR("gpio_get_interrupt failed for gpio\n");
     return status;
   }
 
-  status = pdev_get_interrupt(&display->pdev, IRQ_VSYNC, 0, &display->vsync_interrupt);
+  zx::interrupt vsync_interrupt;
+  status = pdev.GetInterrupt(IRQ_VSYNC, 0, &vsync_interrupt);
   if (status != ZX_OK) {
     DISP_ERROR("Could not map vsync interrupt\n");
     return status;
   }
 
-  status = pdev_get_interrupt(&display->pdev, IRQ_RDMA, 0, &display->rdma_interrupt);
+  zx::interrupt rdma_interrupt;
+  status = pdev.GetInterrupt(IRQ_RDMA, 0, &rdma_interrupt);
   if (status != ZX_OK) {
     DISP_ERROR("Could not map RDMA interrupt\n");
     return status;
@@ -906,10 +894,16 @@ zx_status_t vim2_display_bind(void* ctx, zx_device_t* parent) {
   // vsync interrupts to occur at the correct rate.
   display->mmio_vpu->ClearBits32(1 << 8, VPU_VIU_MISC_CTRL0);
 
+  display->bti = bti.release();
+  display->inth = inth.release();
+  display->vsync_interrupt = vsync_interrupt.release();
+  display->rdma_interrupt = rdma_interrupt.release();
+
   // Setup RDMA
   status = setup_rdma(display);
   if (status != ZX_OK) {
     DISP_ERROR("Could not setup RDMA (status %d)\n", status);
+    display_release(display);
     return status;
   }
 
