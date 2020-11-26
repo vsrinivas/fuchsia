@@ -76,6 +76,7 @@ TEST(Surface, CreateImagePipeSurface) { TestSurface(false).CreateSurface(false);
 
 TEST(Surface, CreateImagePipeSurfaceDynamicSymbol) { TestSurface(false).CreateSurface(true); }
 
-TEST(Surface, CreateFramebufferSurface) { TestSurface(true).CreateSurface(false); }
+// Flaking: see https://fxbug.dev/65248
+TEST(Surface, DISABLED_CreateFramebufferSurface) { TestSurface(true).CreateSurface(false); }
 
 TEST(Surface, CreateFramebufferSurfaceDynamicSymbol) { TestSurface(true).CreateSurface(true); }
