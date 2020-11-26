@@ -18,9 +18,11 @@
 #include "astro.h"
 
 // Enables BT PCM audio.
-// #define ENABLE_BT
+#define ENABLE_BT
 // Enable DAI mode for BT PCM audio.
-// #define ENABLE_DAI_MODE
+#define ENABLE_DAI_MODE
+// Enable DAI test.
+//#define ENABLE_DAI_TEST
 
 namespace astro {
 
@@ -65,6 +67,7 @@ static const zx_bind_inst_t codec_match[] = {
 };
 #ifdef ENABLE_BT
 #ifdef ENABLE_DAI_MODE
+#ifdef ENABLE_DAI_TEST
 static const zx_bind_inst_t dai_out_match[] = {
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_DAI),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_AMLOGIC),
@@ -77,6 +80,7 @@ static const zx_bind_inst_t dai_in_match[] = {
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_AMLOGIC_S905D2),
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_AMLOGIC_DAI_IN),
 };
+#endif
 #endif
 #endif
 static const device_fragment_part_t i2c_fragment[] = {
@@ -99,6 +103,7 @@ static const device_fragment_part_t codec_fragment[] = {
 };
 #ifdef ENABLE_BT
 #ifdef ENABLE_DAI_MODE
+#ifdef ENABLE_DAI_TEST
 static const device_fragment_part_t dai_out_fragment[] = {
     {countof(root_match), root_match},
     {countof(dai_out_match), dai_out_match},
@@ -113,6 +118,7 @@ static const device_fragment_t dai_test_out_fragments[] = {
 static const device_fragment_t dai_test_in_fragments[] = {
     {"dai-in", countof(dai_in_fragment), dai_in_fragment},
 };
+#endif
 #else
 static const device_fragment_t tdm_pcm_fragments[] = {};
 #endif
@@ -238,6 +244,7 @@ zx_status_t Astro::AudioInit() {
     }
 
 #ifdef ENABLE_DAI_MODE
+#ifdef ENABLE_DAI_TEST
     // Add test driver.
     bool is_input = false;
     const device_metadata_t test_metadata[] = {
@@ -262,6 +269,7 @@ zx_status_t Astro::AudioInit() {
       zxlogf(ERROR, "%s: PCM CompositeDeviceAdd failed: %d", __FILE__, status);
       return status;
     }
+#endif
 #endif
   }
 #endif
@@ -399,6 +407,7 @@ zx_status_t Astro::AudioInit() {
   }
 
 #ifdef ENABLE_DAI_MODE
+#ifdef ENABLE_DAI_TEST
   // Add test driver.
   bool is_input = true;
   const device_metadata_t test_metadata[] = {
@@ -423,6 +432,7 @@ zx_status_t Astro::AudioInit() {
     zxlogf(ERROR, "%s: PCM CompositeDeviceAdd failed: %d", __FILE__, status);
     return status;
   }
+#endif
 #endif
 #endif
 
