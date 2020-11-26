@@ -323,7 +323,9 @@ A driver's logs are tagged with the process name, "driver", and the driver name.
 This can be used to filter the output of the syslog whilst searching for
 particular logs.
 
-For further information on how to view driver logs, see
+Note: There is both producer and consumer filtering applied to logs. The above
+covers the producer-side, for more information on the consumer-side, and on how
+to view driver logs, see
 [viewing logs](/docs/development/diagnostics/logs/viewing.md).
 
 ## Driver testing
