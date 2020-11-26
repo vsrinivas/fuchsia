@@ -12,6 +12,75 @@ import shlex
 import shutil
 import sys
 
+# TECHNICAL NOTE:
+#
+# This Python file serves both as a standalone script, and a utility module, to
+# read and write ZBI manifests, which are simple text files where each line
+# should look like:
+#
+#   <target-path>=<source-path>
+#
+# Where <target-path> is an destination/installation path, e.g. within a Fuchsia
+# package, and <source-path> is the location of the corresponding source content.
+#
+# Each manifest entry will be identified by a |manifest_entry| instance (see below),
+# which records the entry's target and source paths, the input manifest it appears
+# in, and an optional output 'group' index (more on this later).
+#
+# The core feature implemented here is to parse command-line arguments to build
+# two manifest_entry lists:
+#
+#  - A list of 'selected' entries that will be output to one of the output
+#    manifest specified on the command-line through '--output=FILE'. Each such entry
+#    has a 'group' field which indicates which output file it must be written to.
+#
+#  - A list of 'unselected' entries, either because they appeared before the
+#    first '--output=FILE' argument, or because they were excluded from selection
+#    through the use of '--exclude' and '--include' options. Each such entry
+#    as a 'group' value of None.
+#
+# Input manifest entries can be fed to the command line in two ways:
+#
+#  * Using --manifest=FILE to read an existing ZBI manifest file.
+#
+#  * Using --entry=TARGET=SOURCE directly, where TARGET and SOURCE are target and
+#    source paths for the entry. This requires at least one previous
+#    --entry-manifest=PATH argument, which will be used to populate the entry's
+#    |manifest| field.
+#
+# Note that each source path will be relative to the latest --cwd=DIR argument
+# that appeared on the command line, with a default value of '.'.
+#
+# An output manifest can be specified with --output=FILE. This argument can be used
+# several times to generate several output manifests.
+#
+# Any input entry that appears before the first --output argument goes to the
+# unselected list.
+#
+# Input entries that appear after an --output argument are assigned to be written
+# to the correspondind output manifest file, by default, through --exclude and
+# --include options described below can result in such an entry to be unselected
+# as well.
+#
+# Many command line options control state during parsing that will either filter
+# or transform the input entries before they are recorded into one of the two
+# output lists. See their description in common_parse_args() and parse_args()
+# below.
+#
+# Note that some scripts use this Python module to first build a first version
+# of the 'unselected' and 'selected' lists, and will later modify these lists
+# before actually writing to the output manifest(s). For example to move
+# unselected shared library dependencies to the selected list if some selected
+# binaries depend on them.
+#
+
+# Describes a manifest entry:
+#   group: Either None, if the entry doesn't need to be written to any output
+#      manifest, or an integer index into the list of --output=FILE arguments
+#      otherwise.
+#   target: Target installation path.
+#   source: Source path for the entry.
+#   manifest: Path to input manifest this entry belongs to.
 manifest_entry = namedtuple(
     'manifest_entry', [
         'group',
@@ -22,28 +91,38 @@ manifest_entry = namedtuple(
 
 
 def format_manifest_entry(entry):
-    return (
-        ('' if entry.group is None else '{' + entry.group + '}') +
-        entry.target + '=' + entry.source)
+    """Convert a manifest_entry instance to its final text representation."""
+    return entry.target + '=' + entry.source
 
 
 def format_manifest_file(manifest):
+    """Convert a list of manifest_entry instances to a ZBI manifest file."""
     return ''.join(format_manifest_entry(entry) + '\n' for entry in manifest)
 
 
 def read_manifest_lines(sep, lines, title, manifest_cwd, result_cwd):
+    """Convert an input manifest into a manifest_entry iteration.
+
+    Args:
+      sep: Separator used between target and source path (e.g. '=').
+      lines: Iterable of ZBI manifest input lines.
+      title: Path to the input manifest these lines belong to.
+      manifest_cwd: Current source directory assumed by input manifest.
+      result_cwd: Current source directory assumed by the resulting entries.
+
+    Returns:
+      An iterable of manifest_entry instances. Where 'source' will be relative
+      to `result_cwd`.
+    """
     for line in lines:
         # Remove the trailing newline.
         assert line.endswith('\n'), 'Unterminated manifest line: %r' % line
         line = line[:-1]
 
-        # Grok {group}... syntax.
-        group = None
-        if line.startswith('{'):
-            end = line.find('}')
-            assert end > 0, 'Unterminated { in manifest line: %r' % line
-            group = line[1:end]
-            line = line[end + 1:]
+        # The {group}target=source syntax is no longer supported, but just
+        # assert that we do not find it in input manifests anymore.
+        assert not line.startswith('{'), (
+            '{group} syntax no longer supported in manifest line: %r'% line)
 
         # Grok target=source syntax.
         [target_file, build_file] = line.split(sep, 1)
@@ -55,44 +134,66 @@ def read_manifest_lines(sep, lines, title, manifest_cwd, result_cwd):
             # Make it relative to the cwd we want to work from.
             build_file = os.path.relpath(build_file, result_cwd)
 
-        yield manifest_entry(group, target_file, build_file, title)
-
-
-def partition_manifest(manifest, select, selected_group, unselected_group):
-    selected = []
-    unselected = []
-    for entry in manifest:
-        if select(entry.group):
-            selected.append(entry._replace(group=selected_group))
-        else:
-            unselected.append(entry._replace(group=unselected_group))
-    return selected, unselected
+        yield manifest_entry(None, target_file, build_file, title)
 
 
 def ingest_manifest_lines(
-        sep, lines, title, in_cwd, groups, out_cwd, output_group):
-    groups_seen = set()
+        sep, lines, title, in_cwd, select_entries, out_cwd, output_group):
+    """Convert an input manifest into two lists of selected and unselected entries.
 
-    def select(group):
-        groups_seen.add(group)
-        if isinstance(groups, bool):
-            return groups
-        return group in groups
+    Args:
+      sep: Separator used between target and source path (e.g. '=').
+      lines: Iterable of manifest input lines.
+      title: Path to the input manifest these lines belong to.
+      in_cwd: Current directory assumed by input manifest entries.
+      select_entries: A boolean indicating whether to select these manifest
+        entries.
+      out_cwd: Current directory assumed by the output.
+      output_group: A manifest_entry.group value that is only applied to
+        selected entries.
 
-    selected, unselected = partition_manifest(
-        read_manifest_lines(sep, lines, title, in_cwd, out_cwd), select,
-        output_group, None)
-    return selected, unselected, groups_seen
+    Returns:
+      A (selected, unselected) tuple, where each item is a list of manifest_entry
+      instances from the input. If |select_entries| is true, |selected| will contain
+      all entries from the input, with their group set to |output_group| and
+      |unselected| will be empty. If |select_entries| is False, then |selected| will
+      be empty, and |unselected| will contain all entries from the input, with their
+      group set to None.
+    """
+    selected = []
+    unselected = []
+    for entry in read_manifest_lines(sep, lines, title, in_cwd, out_cwd):
+        if select_entries:
+            selected.append(entry._replace(group=output_group))
+        else:
+            unselected.append(entry._replace(group=None))
 
-
-def apply_source_rewrites(rewrites, entry):
-    for rewrite in rewrites:
-        if entry.source == rewrite.source:
-            return entry._replace(source=rewrite.target)
-    return entry
+    return selected, unselected
 
 
 def apply_rewrites(sep, rewrites, entry):
+    """Rewrite a manifest entry based on a list of rewrite rules.
+
+    The rewrite rules must be passed as a list of (pattern, line)
+    tuples, where |pattern| is an fnmatch pattern, that will be checked
+    against the entry's target path.
+
+    In case of a match, the whole entry is replaced by the content of
+    |line|, which should typically look like "<target>=<source>" and will be
+    parsed through read_manifest_lines().
+
+    The {source} and {target} substitutions are supported in |line|.
+
+    Note that rewrites preserve the original entry's manifest and group values.
+
+    Args:
+      sep: Separator used between target and source path (e.g. '=')
+      rewrites: A list of (pattern, line) tuples.
+      entry: The entry to rewrite if necessary.
+
+    Returns:
+      The new entry value after potential rewrites.
+    """
     for pattern, line in rewrites:
         if fnmatch.fnmatchcase(entry.target, pattern):
             [new_entry] = read_manifest_lines(
@@ -104,13 +205,29 @@ def apply_rewrites(sep, rewrites, entry):
 
 
 def contents_entry(entry):
+    """Replace a manifest_entry source path with its file content.
+
+    Used to implement the --content option. In a nutshell, an entry
+    that looks like '<target>=<source>' will be rewritten to
+    '<target>=<content of source file>', preserving other fields
+    in the entry.
+    """
     with open(entry.source) as file:
         [line] = file.read().splitlines()
         return entry._replace(source=line)
 
 
 class input_action_base(argparse.Action):
+    """Helper base class used to implement --manifest and --entry parsing.
 
+    This is a base class that assumes each derived class provides a
+    get_manifest_lines() method returning a (selected, unselected) pair
+    of manifest_entry lists, as returned by ingest_manifest_lines().
+
+    This maintains the state of the command-line parser, and creates and
+    updates the args.selected and args.unselected lists, described in the
+    technical note at the top of this file.
+    """
     def __init__(self, *args, **kwargs):
         super(input_action_base, self).__init__(*args, **kwargs)
 
@@ -126,14 +243,9 @@ class input_action_base(argparse.Action):
             all_unselected = []
             setattr(namespace, 'unselected', all_unselected)
 
-        if namespace.groups is None or outputs is None:
-            groups = False
-        elif namespace.groups == 'all':
-            groups = True
-        else:
-            groups = set(
-                group if group else None
-                for group in namespace.groups.split(','))
+        # Only select manifest entries for output if at least one
+        # --output=FILE argument was found.
+        select_entries = outputs is not None
 
         cwd = getattr(namespace, 'cwd', '')
 
@@ -142,13 +254,12 @@ class input_action_base(argparse.Action):
         else:
             output_group = None
 
-        selected, unselected, groups_seen = self.get_manifest_lines(
-            namespace, values, cwd, groups, namespace.output_cwd, output_group)
+        selected, unselected = self.get_manifest_lines(
+            namespace, values, cwd, select_entries, namespace.output_cwd, output_group)
 
         include = getattr(namespace, 'include', [])
-        include_source = getattr(namespace, 'include_source', [])
         exclude = getattr(namespace, 'exclude', [])
-        if include or exclude or include_source:
+        if include or exclude:
 
             def included(entry):
 
@@ -160,12 +271,11 @@ class input_action_base(argparse.Action):
                     return False
                 if include and not matches(entry.target, include):
                     return False
-                return (
-                    not include_source or matches(entry.source, include_source))
+                return True
 
             unselected += [entry for entry in selected if not included(entry)]
             selected = list(filter(included, selected))
-
+ 
         if getattr(namespace, 'contents', False):
             selected = list(map(contents_entry, selected))
             unselected = list(map(contents_entry, unselected))
@@ -178,14 +288,6 @@ class input_action_base(argparse.Action):
         unselected = [
             apply_rewrites(sep, rewrites, entry) for entry in unselected
         ]
-
-        if not isinstance(groups, bool):
-            unused_groups = groups - groups_seen - set([None])
-            if unused_groups:
-                raise Exception(
-                    '%s not found in %r; try one of: %s' % (
-                        ', '.join(map(repr, unused_groups)), values, ', '.join(
-                            map(repr, groups_seen - groups))))
 
         all_selected += selected
         all_unselected += unselected
@@ -219,6 +321,10 @@ class input_entry_action(input_action_base):
 
 
 def common_parse_args(parser):
+    """Add common parsier arguments for this script and users of this module.
+
+    See technical note above to understand what these do.
+    """
     parser.fromfile_prefix_chars = '@'
     parser.convert_arg_line_to_args = shlex.split
     parser.add_argument(
@@ -226,80 +332,71 @@ def common_parse_args(parser):
         action='append',
         required=True,
         metavar='FILE',
-        help='Output file')
+        help='Specift next output manifest file.')
     parser.add_argument(
         '--output-cwd',
         default='',
         metavar='DIRECTORY',
-        help='Emit source paths relative to DIRECTORY')
+        help='Change the current source directory used when writing entries to output files.')
     parser.add_argument(
         '--absolute',
         action='store_true',
         default=False,
-        help='Output source file names as absolute paths')
+        help='Output source file names as absolute paths.')
     parser.add_argument(
         '--cwd',
         default='',
         metavar='DIRECTORY',
-        help='Input entries are relative to this directory')
-    parser.add_argument(
-        '--groups',
-        default='all',
-        metavar='GROUP_LIST',
-        help='"all" or comma-separated groups to include')
+        help='Change the current source directory used when reading input entries.')
     parser.add_argument(
         '--manifest',
         action=input_manifest_action,
         metavar='FILE',
         default=[],
-        help='Input manifest file (must exist)')
+        help='Add all entries from input manifest file (must exist)')
     parser.add_argument(
         '--entry',
         action=input_entry_action,
         metavar='PATH=FILE',
-        help='Add a single entry as if from an input manifest')
+        help='Add a single entry as if from an input manifest. Requires a previous ' +
+             '--entry-manifest argument.')
     parser.add_argument(
         '--entry-manifest',
         default='<command-line --entry>',
         metavar='TITLE',
-        help=(
-            'Title in lieu of manifest file name for' +
-            ' subsequent --entry arguments'))
+        help='Title in lieu of manifest file name for subsequent --entry arguments.')
     parser.add_argument(
         '--include',
         action='append',
         default=[],
         metavar='TARGET',
-        help='Include only input entries matching TARGET'),
-    parser.add_argument(
-        '--include-source',
-        action='append',
-        default=[],
-        metavar='SOURCE',
-        help='Include only input entries matching SOURCE'),
+        help='Only include input entries whose target path matches the fnmatch pattern ' +
+             'TARGET. Can be used multiple times to extend the list of patterns. These ' +
+             'are always applied after --exclude pattern exclusions.')
     parser.add_argument(
         '--reset-include',
         action='store_const',
         const=[],
         dest='include',
-        help='Reset previous --include')
+        help='Reset the --include pattern list to be empty.')
     parser.add_argument(
         '--exclude',
         action='append',
         default=[],
         metavar='TARGET',
-        help='Ignore input entries matching TARGET'),
+        help='Ignore input entries whose target path matches the fnmatch pattern TARGET. ' +
+             'Can be used multiple times to extend the list of patterns.'),
     parser.add_argument(
         '--reset-exclude',
         action='store_const',
         const=[],
         dest='exclude',
-        help='Reset previous --exclude')
+        help='Reset the --exclude pattern list to be empty.')
     parser.add_argument(
         '--separator',
         default='=',
         metavar='SEP',
-        help='Use SEP between TARGET and SOURCE in entries')
+        help='Use SEP between TARGET and SOURCE in manifet entries.')
     return parser.parse_args()
 
 
@@ -309,17 +406,17 @@ def parse_args():
         '--copy-contentaddr',
         action='store_true',
         default=False,
-        help='Copy to content-addressed targets, not manifest')
+        help='Copy to content-addressed targets, not manifest.')
     parser.add_argument(
         '--sources',
         action='store_true',
         default=False,
-        help='Write source file per line, not manifest entry')
+        help='Write source file per line, not manifest entry.')
     parser.add_argument(
         '--contents',
         action='store_true',
         default=False,
-        help='Replace each source file name with its contents')
+        help='Replace each source file name with its contents.')
     parser.add_argument(
         '--no-contents',
         action='store_false',
@@ -331,18 +428,18 @@ def parse_args():
         default=[],
         metavar='PATTERN=ENTRY',
         help='Replace entries whose target matches PATTERN with ENTRY,'
-        ' which can use {source} and {target} substitutions'),
+        ' which can use {source} and {target} substitutions.'),
     parser.add_argument(
         '--reset-rewrite',
         dest='rewrite',
         action='store_const',
         const=[],
-        help='Reset previous --rewrite')
+        help='Reset previous --rewrite.')
     parser.add_argument(
         '--unique',
         action='store_true',
         default=False,
-        help='Elide duplicates even with different sources')
+        help='Elide duplicates even with different sources.')
     parser.add_argument(
         '--stamp', metavar='FILE', help='Touch FILE at the end.')
     args = common_parse_args(parser)

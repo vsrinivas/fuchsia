@@ -190,7 +190,6 @@ template("generate_manifest") {
     response_file_contents +=
         [
           "--output=" + rebase_path(manifest_file, root_build_dir),
-          "--groups=all",
           "--cwd=.",
         ] + invoker.args
   }

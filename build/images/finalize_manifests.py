@@ -58,9 +58,18 @@ binary_context = namedtuple(
 # Each --output argument yields an output_manifest tuple.
 output_manifest = namedtuple('output_manifest', ['file', 'manifest'])
 
-# Collect all the binaries from auxiliary manifests into
-# a dictionary mapping entry.target to binary_entry.
 def collect_auxiliaries(manifest, examined):
+    """Collect all the binaries from auxiliary manifests.
+
+    Args:
+      manifest: A list/iterable of input manifest.manifest_entry items.
+      examined: A set that will be updated with the list of source files
+        from the |manifest| input list.
+    Returns:
+      A { target_path -> binary_entry } map, where |target_path| is the
+      target path that appears in the input entries list, and |binary_entry|
+      corresponds to the corresponding ELF binary.
+    """
     aux_binaries = {}
     for entry in manifest:
         examined.add(entry.source)
