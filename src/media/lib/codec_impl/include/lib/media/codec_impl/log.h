@@ -28,13 +28,13 @@
   } while (0)
 
 // Temporary solution for logging in driver and non-driver contexts by logging to stderr
-// TODO(fxbug.dev/41539): Replace with logging interface that accommodates both driver and non-driver contexts
-#define LOG(severity, format, ...)                                                               \
-  do {                                                                                           \
-    static_assert(true || DDK_LOG_##severity);                                                   \
-    static_assert(true || FX_LOG_##severity);                                                    \
-    FX_LOGF(severity, "codec_impl", "[%s:%d:%s] " format "",                                     \
-            codec_impl::internal::BaseName(__FILE__).data(), __LINE__, __func__, ##__VA_ARGS__); \
+// TODO(fxbug.dev/41539): Replace with logging interface that accommodates both driver and
+// non-driver contexts
+#define LOG(severity, format, ...)                          \
+  do {                                                      \
+    static_assert(true || DDK_LOG_##severity);              \
+    static_assert(true || FX_LOG_##severity);               \
+    FX_LOGF(severity, "codec_impl", format, ##__VA_ARGS__); \
   } while (0)
 
 namespace codec_impl {
