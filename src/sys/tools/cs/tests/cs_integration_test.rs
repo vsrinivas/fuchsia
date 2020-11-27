@@ -7,6 +7,59 @@ use {
     test_utils_lib::{events::*, matcher::EventMatcher, opaque_test::*},
 };
 
+fn validate_executions(actual: &Option<Execution>, expected: &Option<Execution>) {
+    assert_eq!(actual.is_some(), expected.is_some());
+    if let (Some(actual_execution), Some(expected_execution)) = (actual, expected) {
+        assert_eq!(
+            actual_execution.elf_runtime.is_some(),
+            expected_execution.elf_runtime.is_some()
+        );
+        if let Some(elf_runtime) = &actual_execution.elf_runtime {
+            // The number is irrelevant
+            assert!(elf_runtime.job_id > 0);
+            assert!(elf_runtime.process_id > 0);
+        }
+
+        assert_eq!(
+            actual_execution.merkle_root.is_some(),
+            expected_execution.merkle_root.is_some()
+        );
+        if let Some(merkle_root) = &actual_execution.merkle_root {
+            // The string is irrelevant
+            assert!(merkle_root.chars().all(char::is_alphanumeric));
+        }
+
+        assert_eq!(
+            actual_execution.incoming_capabilities,
+            expected_execution.incoming_capabilities
+        );
+        assert_eq!(
+            actual_execution.outgoing_capabilities,
+            expected_execution.outgoing_capabilities
+        );
+        assert_eq!(actual_execution.exposed_capabilities, expected_execution.exposed_capabilities);
+    }
+}
+
+fn validate_v2_components(actual_v2_component: &V2Component, expected_v2_component: &V2Component) {
+    assert_eq!(actual_v2_component.name, expected_v2_component.name);
+    assert_eq!(actual_v2_component.url, expected_v2_component.url);
+    assert_eq!(actual_v2_component.id, expected_v2_component.id);
+    assert_eq!(actual_v2_component.component_type, expected_v2_component.component_type);
+
+    assert_eq!(actual_v2_component.children.len(), expected_v2_component.children.len());
+    for (index, actual_child) in actual_v2_component.children.iter().enumerate() {
+        validate_v2_components(actual_child, &expected_v2_component.children[index]);
+    }
+
+    validate_executions(&actual_v2_component.execution, &expected_v2_component.execution);
+
+    assert_eq!(
+        actual_v2_component.appmgr_root_v1_realm,
+        expected_v2_component.appmgr_root_v1_realm
+    );
+}
+
 #[fuchsia_async::run_singlethreaded(test)]
 async fn empty_component() {
     let test =
@@ -31,6 +84,9 @@ async fn empty_component() {
         appmgr_root_v1_realm: None,
         execution: Some(Execution {
             elf_runtime: None,
+            merkle_root: Some(
+                "284714fdf0a8125949946c2609be45d67899cbf104d7b9a020b51b8da540ec93".to_string(),
+            ),
             incoming_capabilities: vec!["pkg".to_string()],
             outgoing_capabilities: None,
             exposed_capabilities: vec![],
@@ -38,7 +94,7 @@ async fn empty_component() {
         children: vec![],
     };
 
-    assert_eq!(actual_root_component, expected_root_component);
+    validate_v2_components(&actual_root_component, &expected_root_component);
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
@@ -71,6 +127,7 @@ async fn tree() {
         appmgr_root_v1_realm: None,
         execution: Some(Execution {
             elf_runtime: None,
+            merkle_root: Some("284714fdf0a8125949946c2609be45d67899cbf104d7b9a020b51b8da540ec93".to_string()),
             incoming_capabilities: vec!["pkg".to_string()],
             outgoing_capabilities: None,
             exposed_capabilities: vec![],
@@ -84,6 +141,7 @@ async fn tree() {
                 appmgr_root_v1_realm: None,
                 execution: Some(Execution {
                     elf_runtime: None,
+                    merkle_root: Some("284714fdf0a8125949946c2609be45d67899cbf104d7b9a020b51b8da540ec93".to_string()),
                     incoming_capabilities: vec!["pkg".to_string()],
                     outgoing_capabilities: None,
                     exposed_capabilities: vec![],
@@ -96,6 +154,7 @@ async fn tree() {
                     appmgr_root_v1_realm: None,
                     execution: Some(Execution {
                         elf_runtime: None,
+                        merkle_root: Some("284714fdf0a8125949946c2609be45d67899cbf104d7b9a020b51b8da540ec93".to_string()),
                         incoming_capabilities: vec!["pkg".to_string()],
                         outgoing_capabilities: None,
                         exposed_capabilities: vec![],
@@ -111,6 +170,7 @@ async fn tree() {
                 appmgr_root_v1_realm: None,
                 execution: Some(Execution {
                     elf_runtime: None,
+                    merkle_root: Some("284714fdf0a8125949946c2609be45d67899cbf104d7b9a020b51b8da540ec93".to_string()),
                     incoming_capabilities: vec!["pkg".to_string()],
                     outgoing_capabilities: None,
                     exposed_capabilities: vec![],
@@ -124,6 +184,7 @@ async fn tree() {
                         appmgr_root_v1_realm: None,
                         execution: Some(Execution {
                             elf_runtime: None,
+                            merkle_root: Some("284714fdf0a8125949946c2609be45d67899cbf104d7b9a020b51b8da540ec93".to_string()),
                             incoming_capabilities: vec!["pkg".to_string()],
                             outgoing_capabilities: None,
                             exposed_capabilities: vec![],
@@ -136,6 +197,7 @@ async fn tree() {
                             appmgr_root_v1_realm: None,
                             execution: Some(Execution {
                                 elf_runtime: None,
+                                merkle_root: Some("284714fdf0a8125949946c2609be45d67899cbf104d7b9a020b51b8da540ec93".to_string()),
                                 incoming_capabilities: vec!["pkg".to_string()],
                                 outgoing_capabilities: None,
                                 exposed_capabilities: vec![],
@@ -151,6 +213,7 @@ async fn tree() {
                         appmgr_root_v1_realm: None,
                         execution: Some(Execution {
                             elf_runtime: None,
+                            merkle_root: Some("284714fdf0a8125949946c2609be45d67899cbf104d7b9a020b51b8da540ec93".to_string()),
                             incoming_capabilities: vec!["pkg".to_string()],
                             outgoing_capabilities: None,
                             exposed_capabilities: vec![],
@@ -162,7 +225,7 @@ async fn tree() {
         ],
     };
 
-    assert_eq!(actual_root_component, expected_root_component);
+    validate_v2_components(&actual_root_component, &expected_root_component);
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
@@ -195,6 +258,9 @@ async fn echo_realm() {
         appmgr_root_v1_realm: None,
         execution: Some(Execution {
             elf_runtime: None,
+            merkle_root: Some(
+                "284714fdf0a8125949946c2609be45d67899cbf104d7b9a020b51b8da540ec93".to_string(),
+            ),
             incoming_capabilities: vec!["pkg".to_string()],
             outgoing_capabilities: None,
             exposed_capabilities: vec![],
@@ -211,6 +277,10 @@ async fn echo_realm() {
                         job_id: 42,     // This number is irrelevant
                         process_id: 42, // This number is irrelevant
                     }),
+                    merkle_root: Some(
+                        "284714fdf0a8125949946c2609be45d67899cbf104d7b9a020b51b8da540ec93"
+                            .to_string(),
+                    ),
                     incoming_capabilities: vec!["pkg".to_string()],
                     outgoing_capabilities: Some(
                         vec!["fidl.examples.routing.echo.Echo".to_string()],
@@ -233,6 +303,10 @@ async fn echo_realm() {
                         job_id: 42,     // This number is irrelevant
                         process_id: 42, // This number is irrelevant
                     }),
+                    merkle_root: Some(
+                        "284714fdf0a8125949946c2609be45d67899cbf104d7b9a020b51b8da540ec93"
+                            .to_string(),
+                    ),
                     incoming_capabilities: vec![
                         "fidl.examples.routing.echo.Echo".to_string(),
                         "fuchsia.logger.LogSink".to_string(),
@@ -246,5 +320,5 @@ async fn echo_realm() {
         ],
     };
 
-    assert_eq!(actual_root_component, expected_root_component);
+    validate_v2_components(&actual_root_component, &expected_root_component);
 }

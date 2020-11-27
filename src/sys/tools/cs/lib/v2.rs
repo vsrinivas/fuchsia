@@ -32,9 +32,9 @@ fn explore(name: String, hub_path: PathBuf) -> BoxFuture<'static, V2Component> {
     async move {
         let hub_dir = Directory::from_namespace(hub_path.clone());
 
-        let url = hub_dir.read_file("url").await;
-        let id = hub_dir.read_file("id").await.parse::<u32>().unwrap();
-        let component_type = hub_dir.read_file("component_type").await;
+        let url = hub_dir.read_file("url").await.unwrap();
+        let id = hub_dir.read_file("id").await.unwrap().parse::<u32>().unwrap();
+        let component_type = hub_dir.read_file("component_type").await.unwrap();
 
         // Get the execution state
         let execution = if hub_dir.exists("exec").await {
@@ -67,24 +67,16 @@ fn explore(name: String, hub_path: PathBuf) -> BoxFuture<'static, V2Component> {
     .boxed()
 }
 
-#[derive(Debug, Eq)]
+#[derive(Debug, Eq, PartialEq)]
 pub struct ElfRuntime {
     pub job_id: u32,
     pub process_id: u32,
 }
 
-impl PartialEq for ElfRuntime {
-    // For simplicity sake, assume that job id
-    // and process id are irrelevant when
-    // determining if components are the same.
-    fn eq(&self, _other: &Self) -> bool {
-        true
-    }
-}
-
 #[derive(Debug, Eq, PartialEq)]
 pub struct Execution {
     pub elf_runtime: Option<ElfRuntime>,
+    pub merkle_root: Option<String>,
     pub incoming_capabilities: Vec<String>,
     pub outgoing_capabilities: Option<Vec<String>>,
     pub exposed_capabilities: Vec<String>,
@@ -97,9 +89,10 @@ impl Execution {
             let runtime_dir = exec_dir.open_dir("runtime").await;
             if runtime_dir.exists("elf").await {
                 let elf_runtime_dir = runtime_dir.open_dir("elf").await;
-                let job_id = elf_runtime_dir.read_file("job_id").await.parse::<u32>().unwrap();
+                let job_id =
+                    elf_runtime_dir.read_file("job_id").await.unwrap().parse::<u32>().unwrap();
                 let process_id =
-                    elf_runtime_dir.read_file("process_id").await.parse::<u32>().unwrap();
+                    elf_runtime_dir.read_file("process_id").await.unwrap().parse::<u32>().unwrap();
                 Some(ElfRuntime { job_id, process_id })
             } else {
                 None
@@ -108,10 +101,23 @@ impl Execution {
             None
         };
 
-        let incoming_capabilities = {
-            let in_dir = exec_dir.open_dir("in").await;
-            get_capabilities(in_dir).await
+        let in_dir = exec_dir.open_dir("in").await;
+
+        let merkle_root = if in_dir.exists("pkg").await {
+            let pkg_dir = in_dir.open_dir("pkg").await;
+            if pkg_dir.exists("meta").await {
+                match pkg_dir.read_file("meta").await {
+                    Ok(file) => Some(file),
+                    Err(_) => None,
+                }
+            } else {
+                None
+            }
+        } else {
+            None
         };
+
+        let incoming_capabilities = { get_capabilities(in_dir).await };
 
         let outgoing_capabilities = if exec_dir.exists("out").await {
             if let Some(out_dir) = exec_dir.open_dir_timeout("out").await {
@@ -131,6 +137,7 @@ impl Execution {
 
         Execution {
             elf_runtime,
+            merkle_root,
             incoming_capabilities,
             outgoing_capabilities,
             exposed_capabilities,
@@ -141,6 +148,10 @@ impl Execution {
         if let Some(runtime) = &self.elf_runtime {
             println!("Job ID: {}", runtime.job_id);
             println!("Process ID: {}", runtime.process_id);
+        }
+
+        if let Some(merkle_root) = &self.merkle_root {
+            println!("Merkle root: {}", merkle_root);
         }
 
         println!("Incoming Capabilities ({}):", self.incoming_capabilities.len());
@@ -283,7 +294,8 @@ mod tests {
         let exec_dir = Directory::from_namespace(exec.to_path_buf());
         let execution = Execution::new(exec_dir).await;
 
-        assert_eq!(execution.elf_runtime, None);
+        assert!(execution.elf_runtime.is_none());
+        assert!(execution.merkle_root.is_none());
         assert_eq!(execution.incoming_capabilities, Vec::<String>::new());
         assert_eq!(execution.outgoing_capabilities.unwrap(), Vec::<String>::new());
         assert_eq!(execution.exposed_capabilities, Vec::<String>::new());
@@ -307,9 +319,10 @@ mod tests {
         let exec_dir = Directory::from_namespace(exec.to_path_buf());
         let execution = Execution::new(exec_dir).await;
 
-        assert_eq!(execution.elf_runtime, None);
+        assert!(execution.elf_runtime.is_none());
+        assert!(execution.merkle_root.is_none());
         assert_eq!(execution.incoming_capabilities, Vec::<String>::new());
-        assert_eq!(execution.outgoing_capabilities, None);
+        assert!(execution.outgoing_capabilities.is_none());
         assert_eq!(execution.exposed_capabilities, Vec::<String>::new());
     }
 
@@ -346,6 +359,85 @@ mod tests {
         let execution = Execution::new(exec_dir).await;
 
         assert_eq!(execution.elf_runtime.unwrap(), ElfRuntime { job_id: 12345, process_id: 67890 });
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn execution_loads_merkle_root() {
+        let test_dir = TempDir::new_in("/tmp").unwrap();
+        let root = test_dir.path();
+
+        // Create the following structure
+        // <root>
+        // |- exec
+        //    |- expose
+        //    |- in
+        //       |- pkg
+        //          |- meta
+        let exec = root.join("exec");
+        fs::create_dir(&exec).unwrap();
+        fs::create_dir(exec.join("expose")).unwrap();
+        fs::create_dir(exec.join("in")).unwrap();
+        fs::create_dir(exec.join("in/pkg")).unwrap();
+        File::create(exec.join("in/pkg/meta"))
+            .unwrap()
+            .write_all(
+                "284714fdf0a8125949946c2609be45d67899cbf104d7b9a020b51b8da540ec93".as_bytes(),
+            )
+            .unwrap();
+
+        let exec_dir = Directory::from_namespace(exec.to_path_buf());
+        let execution = Execution::new(exec_dir).await;
+
+        assert_eq!(
+            execution.merkle_root.unwrap(),
+            "284714fdf0a8125949946c2609be45d67899cbf104d7b9a020b51b8da540ec93"
+        );
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn execution_does_not_load_merkle_root_without_pkg_directory() {
+        let test_dir = TempDir::new_in("/tmp").unwrap();
+        let root = test_dir.path();
+
+        // Create the following structure
+        // <root>
+        // |- exec
+        //    |- expose
+        //    |- in
+        let exec = root.join("exec");
+        fs::create_dir(&exec).unwrap();
+        fs::create_dir(exec.join("expose")).unwrap();
+        fs::create_dir(exec.join("in")).unwrap();
+
+        let exec_dir = Directory::from_namespace(exec.to_path_buf());
+        let execution = Execution::new(exec_dir).await;
+
+        assert_eq!(execution.merkle_root, None);
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn execution_does_not_load_merkle_root_if_meta_file_cannot_be_opened() {
+        let test_dir = TempDir::new_in("/tmp").unwrap();
+        let root = test_dir.path();
+
+        // Create the following structure
+        // <root>
+        // |- exec
+        //    |- expose
+        //    |- in
+        //       |- pkg
+        //          |- meta
+        let exec = root.join("exec");
+        fs::create_dir(&exec).unwrap();
+        fs::create_dir(exec.join("expose")).unwrap();
+        fs::create_dir(exec.join("in")).unwrap();
+        fs::create_dir(exec.join("in/pkg")).unwrap();
+        fs::create_dir(exec.join("in/pkg/meta")).unwrap();
+
+        let exec_dir = Directory::from_namespace(exec.to_path_buf());
+        let execution = Execution::new(exec_dir).await;
+
+        assert_eq!(execution.merkle_root, None);
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -445,10 +537,10 @@ mod tests {
 
         let v2_component = V2Component::explore(root.to_path_buf()).await;
 
-        assert_eq!(v2_component.appmgr_root_v1_realm, None);
+        assert!(v2_component.appmgr_root_v1_realm.is_none());
         assert_eq!(v2_component.children, vec![]);
         assert_eq!(v2_component.component_type, "static");
-        assert_eq!(v2_component.execution, None);
+        assert!(v2_component.execution.is_none());
         assert_eq!(v2_component.id, 0);
         assert_eq!(v2_component.name, "<root>");
         assert_eq!(v2_component.url, "fuchsia-boot:///#meta/root.cm");
@@ -618,7 +710,7 @@ mod tests {
         let v2_component = V2Component::explore(root.to_path_buf()).await;
 
         let v1_hub_dir = Directory::from_namespace(appmgr.join("exec/out/hub"));
-        assert_eq!(v2_component.appmgr_root_v1_realm, None);
+        assert!(v2_component.appmgr_root_v1_realm.is_none());
 
         assert_eq!(
             v2_component.children,
@@ -630,6 +722,7 @@ mod tests {
                 appmgr_root_v1_realm: Some(V1Realm::create(v1_hub_dir).await),
                 execution: Some(Execution {
                     elf_runtime: None,
+                    merkle_root: None,
                     incoming_capabilities: vec![],
                     outgoing_capabilities: Some(vec!["hub".to_string()]),
                     exposed_capabilities: vec![],
@@ -639,7 +732,7 @@ mod tests {
         );
 
         assert_eq!(v2_component.component_type, "static");
-        assert_eq!(v2_component.execution, None);
+        assert!(v2_component.execution.is_none());
         assert_eq!(v2_component.id, 0);
         assert_eq!(v2_component.name, "<root>");
         assert_eq!(v2_component.url, "fuchsia-boot:///#meta/root.cm");

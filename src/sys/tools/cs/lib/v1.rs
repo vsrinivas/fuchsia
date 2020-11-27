@@ -78,16 +78,16 @@ async fn get_capabilities(capability_dir: Directory) -> Vec<String> {
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct V1Realm {
-    name: String,
-    job_id: u32,
-    child_realms: Vec<V1Realm>,
-    child_components: Vec<V1Component>,
+    pub name: String,
+    pub job_id: u32,
+    pub child_realms: Vec<V1Realm>,
+    pub child_components: Vec<V1Component>,
 }
 
 impl V1Realm {
     pub async fn create(realm_dir: Directory) -> V1Realm {
-        let name = realm_dir.read_file("name").await;
-        let job_id = realm_dir.read_file("job-id").await.parse::<u32>().unwrap();
+        let name = realm_dir.read_file("name").await.unwrap();
+        let job_id = realm_dir.read_file("job-id").await.unwrap().parse::<u32>().unwrap();
         let child_realms_dir = realm_dir.open_dir("r").await;
         let child_components_dir = realm_dir.open_dir("c").await;
         V1Realm {
@@ -135,32 +135,35 @@ impl V1Realm {
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct V1Component {
-    job_id: u32,
-    process_id: Option<u32>,
-    name: String,
-    url: String,
-    merkleroot: Option<String>,
-    incoming_capabilities: Vec<String>,
-    outgoing_capabilities: Option<Vec<String>>,
-    child_components: Vec<V1Component>,
+    pub job_id: u32,
+    pub process_id: Option<u32>,
+    pub name: String,
+    pub url: String,
+    pub merkle_root: Option<String>,
+    pub incoming_capabilities: Vec<String>,
+    pub outgoing_capabilities: Option<Vec<String>>,
+    pub child_components: Vec<V1Component>,
 }
 
 impl V1Component {
     async fn create(component_dir: Directory) -> V1Component {
-        let job_id = component_dir.read_file("job-id").await.parse::<u32>().unwrap();
+        let job_id = component_dir.read_file("job-id").await.unwrap().parse::<u32>().unwrap();
         let process_id = if component_dir.exists("process-id").await {
-            Some(component_dir.read_file("process-id").await.parse::<u32>().unwrap())
+            Some(component_dir.read_file("process-id").await.unwrap().parse::<u32>().unwrap())
         } else {
             None
         };
-        let url = component_dir.read_file("url").await;
-        let name = component_dir.read_file("name").await;
+        let url = component_dir.read_file("url").await.unwrap();
+        let name = component_dir.read_file("name").await.unwrap();
         let in_dir = component_dir.open_dir("in").await;
 
-        let merkleroot = if in_dir.exists("pkg").await {
+        let merkle_root = if in_dir.exists("pkg").await {
             let pkg_dir = in_dir.open_dir("pkg").await;
             if pkg_dir.exists("meta").await {
-                Some(pkg_dir.read_file("meta").await)
+                match pkg_dir.read_file("meta").await {
+                    Ok(file) => Some(file),
+                    Err(_) => None,
+                }
             } else {
                 None
             }
@@ -196,7 +199,7 @@ impl V1Component {
             process_id,
             name,
             url,
-            merkleroot,
+            merkle_root,
             incoming_capabilities,
             outgoing_capabilities,
             child_components,
@@ -214,7 +217,7 @@ impl V1Component {
     fn print_details_recursive(&self, moniker_prefix: &str, filter: &str) {
         let moniker = format!("{}{}", moniker_prefix, self.name);
         let unknown_merkle = UNKNOWN.to_string();
-        let merkle = self.merkleroot.as_ref().unwrap_or(&unknown_merkle);
+        let merkle = self.merkle_root.as_ref().unwrap_or(&unknown_merkle);
 
         if filter.is_empty() || self.url.contains(filter) || self.name.contains(filter) {
             println!("Moniker: {}", moniker);
@@ -338,7 +341,7 @@ mod tests {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn v1_component_loads_merkleroot() {
+    async fn v1_component_loads_merkle_root() {
         let test_dir = TempDir::new_in("/tmp").unwrap();
         let root = test_dir.path();
 
@@ -368,7 +371,7 @@ mod tests {
         let v1_component = V1Component::create(root_dir).await;
 
         assert_eq!(
-            v1_component.merkleroot,
+            v1_component.merkle_root,
             Some("eb4c673a880a232cc05363ff27691107c89d5b2766d995f782dac1056ecfe8c9".to_string())
         );
     }

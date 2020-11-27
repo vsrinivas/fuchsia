@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use {
+    anyhow::Error,
     fidl_fuchsia_io::*,
     files_async::*,
     fuchsia_async::{DurationExt, TimeoutExt},
@@ -50,9 +51,9 @@ impl Directory {
     }
 
     // Open a file that already exists in the directory with the given |filename|.
-    async fn open_file(&self, filename: &str) -> File {
-        let proxy = open_file(&self.proxy, filename, OPEN_RIGHT_READABLE).await.unwrap();
-        File { proxy }
+    async fn open_file(&self, filename: &str) -> Result<File, Error> {
+        let proxy = open_file(&self.proxy, filename, OPEN_RIGHT_READABLE).await?;
+        Ok(File { proxy })
     }
 
     // Open a directory that already exists in the directory with the given |filename|.
@@ -71,11 +72,11 @@ impl Directory {
     }
 
     // Returns the contents of a file in this directory as a string
-    pub async fn read_file(&self, filename: &str) -> String {
-        let file = self.open_file(filename).await;
+    pub async fn read_file(&self, filename: &str) -> Result<String, Error> {
+        let file = self.open_file(filename).await?;
         let data = file.read_string().await;
         file.close().await;
-        data
+        Ok(data)
     }
 
     // Checks if a file exists in this directory.
