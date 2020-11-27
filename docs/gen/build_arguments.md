@@ -652,13 +652,13 @@ From //build/config/clang/crash_diagnostics.gni:7
 
 **Current value (from the default):** `"fuchsia"`
 
-From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/0917d31d19efaa9278a6242bfdb971f4e8407d59/build/crashpad_buildconfig.gni#22)
+From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/ed132d5ec247698537766b8df47eacc920eaf355/build/crashpad_buildconfig.gni#22)
 
 ### crashpad_use_boringssl_for_http_transport_socket
 
 **Current value (from the default):** `true`
 
-From [//third_party/crashpad/util/net/tls.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/0917d31d19efaa9278a6242bfdb971f4e8407d59/util/net/tls.gni#22)
+From [//third_party/crashpad/util/net/tls.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/ed132d5ec247698537766b8df47eacc920eaf355/util/net/tls.gni#22)
 
 ### current_cpu
 
@@ -701,7 +701,7 @@ From //build/images/custom_signing.gni:23
 
 **Current value (from the default):** `"dart_jit_app"`
 
-From [//topaz/runtime/dart/dart_component.gni:25](https://fuchsia.googlesource.com/topaz/+/39e919e9c3d3412b03397871e006a00bc13c4e68/runtime/dart/dart_component.gni#25)
+From [//topaz/runtime/dart/dart_component.gni:25](https://fuchsia.googlesource.com/topaz/+/ae8c2fea4b75141179b7b073f9546f24e1815835/runtime/dart/dart_component.gni#25)
 
 ### dart_default_build_cfg
 TODO(fxbug.dev/64153) renable aot builds
@@ -731,14 +731,14 @@ we use to build products.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/39e919e9c3d3412b03397871e006a00bc13c4e68/runtime/dart/config.gni#10)
+From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/ae8c2fea4b75141179b7b073f9546f24e1815835/runtime/dart/config.gni#10)
 
 ### dart_space_dart
 Whether experimental space dart mode is enabled for Dart applications.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/dart_component.gni:44](https://fuchsia.googlesource.com/topaz/+/39e919e9c3d3412b03397871e006a00bc13c4e68/runtime/dart/dart_component.gni#44)
+From [//topaz/runtime/dart/dart_component.gni:44](https://fuchsia.googlesource.com/topaz/+/ae8c2fea4b75141179b7b073f9546f24e1815835/runtime/dart/dart_component.gni#44)
 
 ### data_partition_manifest
 Path to manifest file containing data to place into the initial /data
@@ -988,7 +988,7 @@ From //build/images/args.gni:52
 
 **Current value (from the default):** `"flutter_jit_app"`
 
-From [//topaz/runtime/dart/dart_component.gni:14](https://fuchsia.googlesource.com/topaz/+/39e919e9c3d3412b03397871e006a00bc13c4e68/runtime/dart/dart_component.gni#14)
+From [//topaz/runtime/dart/dart_component.gni:14](https://fuchsia.googlesource.com/topaz/+/ae8c2fea4b75141179b7b073f9546f24e1815835/runtime/dart/dart_component.gni#14)
 
 ### flutter_default_build_cfg
 Non-product JIT
@@ -1028,14 +1028,14 @@ From //build/flutter/config.gni:10
 
 **Current value (from the default):** `true`
 
-From [//topaz/runtime/dart/dart_component.gni:35](https://fuchsia.googlesource.com/topaz/+/39e919e9c3d3412b03397871e006a00bc13c4e68/runtime/dart/dart_component.gni#35)
+From [//topaz/runtime/dart/dart_component.gni:35](https://fuchsia.googlesource.com/topaz/+/ae8c2fea4b75141179b7b073f9546f24e1815835/runtime/dart/dart_component.gni#35)
 
 ### flutter_space_dart
 Whether experimental space dart mode is enabled for Flutter applications.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/dart_component.gni:41](https://fuchsia.googlesource.com/topaz/+/39e919e9c3d3412b03397871e006a00bc13c4e68/runtime/dart/dart_component.gni#41)
+From [//topaz/runtime/dart/dart_component.gni:41](https://fuchsia.googlesource.com/topaz/+/ae8c2fea4b75141179b7b073f9546f24e1815835/runtime/dart/dart_component.gni#41)
 
 ### font_catalog_paths
 
