@@ -31,7 +31,6 @@
 #include <fbl/ref_ptr.h>
 #include <fs/locking.h>
 #include <fs/ticker.h>
-#include <fs/trace.h>
 #include <fs/vfs.h>
 #include <fs/vnode.h>
 

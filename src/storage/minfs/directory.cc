@@ -5,6 +5,7 @@
 #include "src/storage/minfs/directory.h"
 
 #include <fcntl.h>
+#include <lib/syslog/cpp/macros.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -51,16 +52,16 @@ constexpr zx_status_t kDirIteratorSaveSync = 2;
 zx_status_t ValidateDirent(Dirent* de, size_t bytes_read, size_t off) {
   uint32_t reclen = static_cast<uint32_t>(MinfsReclen(de, off));
   if ((bytes_read < kMinfsDirentSize) || (reclen < kMinfsDirentSize)) {
-    FS_TRACE_ERROR("vn_dir: Could not read dirent at offset: %zd\n", off);
+    FX_LOGS(ERROR) << "vn_dir: Could not read dirent at offset: " << off;
     return ZX_ERR_IO;
   }
   if ((off + reclen > kMinfsMaxDirectorySize) || (reclen & kMinfsDirentAlignmentMask)) {
-    FS_TRACE_ERROR("vn_dir: bad reclen %u > %u\n", reclen, kMinfsMaxDirectorySize);
+    FX_LOGS(ERROR) << "vn_dir: bad reclen " << reclen << " > " << kMinfsMaxDirectorySize;
     return ZX_ERR_IO;
   }
   if (de->ino != 0) {
     if ((de->namelen == 0) || (de->namelen > (reclen - kMinfsDirentSize))) {
-      FS_TRACE_ERROR("vn_dir: bad namelen %u / %u\n", de->namelen, reclen);
+      FX_LOGS(ERROR) << "vn_dir: bad namelen " << de->namelen << " / " << reclen;
       return ZX_ERR_IO;
     }
   }
@@ -164,11 +165,11 @@ zx_status_t Directory::UnlinkChild(Transaction* transaction, fbl::RefPtr<VnodeMi
     Dirent de_next;
     size_t len = kMinfsDirentSize;
     if ((status = ReadExactInternal(transaction, &de_next, len, off_next)) != ZX_OK) {
-      FS_TRACE_ERROR("unlink: Failed to read next dirent\n");
+      FX_LOGS(ERROR) << "unlink: Failed to read next dirent";
       return status;
     }
     if ((status = ValidateDirent(&de_next, len, off_next)) != ZX_OK) {
-      FS_TRACE_ERROR("unlink: Read invalid dirent\n");
+      FX_LOGS(ERROR) << "unlink: Read invalid dirent";
       return status;
     }
     if (de_next.ino == 0) {
@@ -181,11 +182,11 @@ zx_status_t Directory::UnlinkChild(Transaction* transaction, fbl::RefPtr<VnodeMi
     Dirent de_prev;
     size_t len = kMinfsDirentSize;
     if ((status = ReadExactInternal(transaction, &de_prev, len, off_prev)) != ZX_OK) {
-      FS_TRACE_ERROR("unlink: Failed to read previous dirent\n");
+      FX_LOGS(ERROR) << "unlink: Failed to read previous dirent";
       return status;
     }
     if ((status = ValidateDirent(&de_prev, len, off_prev)) != ZX_OK) {
-      FS_TRACE_ERROR("unlink: Read invalid dirent\n");
+      FX_LOGS(ERROR) << "unlink: Read invalid dirent";
       return status;
     }
     if (de_prev.ino == 0) {
@@ -196,7 +197,7 @@ zx_status_t Directory::UnlinkChild(Transaction* transaction, fbl::RefPtr<VnodeMi
 
   if (!(de->reclen & kMinfsReclenLast) && (coalesced_size >= kMinfsReclenMask)) {
     // Should only be possible if the on-disk record format is corrupted
-    FS_TRACE_ERROR("unlink: Corrupted direntry with impossibly large size\n");
+    FX_LOGS(ERROR) << "unlink: Corrupted direntry with impossibly large size";
     return ZX_ERR_IO;
   }
   de->ino = 0;
@@ -353,7 +354,7 @@ zx_status_t Directory::DirentCallbackFindSpace(fbl::RefPtr<Directory> vndir, Dir
   // filled entry, can we sub-divide?
   uint32_t size = static_cast<uint32_t>(DirentSize(de->namelen));
   if (size > reclen) {
-    FS_TRACE_ERROR("bad reclen (smaller than dirent) %u < %u\n", reclen, size);
+    FX_LOGS(ERROR) << "bad reclen (smaller than dirent) " << reclen << " < " << size;
     return ZX_ERR_IO;
   }
   uint32_t extra = reclen - size;
@@ -388,7 +389,7 @@ zx_status_t Directory::AppendDirent(DirArgs* args) {
     // filled entry, can we sub-divide?
     uint32_t size = static_cast<uint32_t>(DirentSize(de->namelen));
     if (size > reclen) {
-      FS_TRACE_ERROR("bad reclen (smaller than dirent) %u < %u\n", reclen, size);
+      FX_LOGS(ERROR) << "bad reclen (smaller than dirent) " << reclen << " < " << size;
       return ZX_ERR_IO;
     }
     uint32_t extra = reclen - size;
@@ -448,7 +449,7 @@ zx_status_t Directory::ForEachDirent(DirArgs* args, const DirentCallback func) {
   args->offs.off = 0;
   args->offs.off_prev = 0;
   while (args->offs.off + kMinfsDirentSize < kMinfsMaxDirectorySize) {
-    FS_TRACE_DEBUG("Reading dirent at offset %zd\n", args->offs.off);
+    FX_LOGS(DEBUG) << "Reading dirent at offset " << args->offs.off;
     size_t r;
     zx_status_t status =
         ReadInternal(args->transaction, de, kMinfsMaxDirentSize, args->offs.off, &r);
@@ -533,7 +534,8 @@ static_assert(sizeof(DirCookie) <= sizeof(fs::vdircookie_t),
 zx_status_t Directory::Readdir(fs::vdircookie_t* cookie, void* dirents, size_t len,
                                size_t* out_actual) {
   TRACE_DURATION("minfs", "Directory::Readdir");
-  FS_TRACE_DEBUG("minfs_readdir() vn=%p(#%u) cookie=%p len=%zd\n", this, GetIno(), cookie, len);
+  FX_LOGS(DEBUG) << "minfs_readdir() vn=" << this << "(#" << GetIno() << ") cookie=" << cookie
+                 << " len=" << len;
 
   if (IsUnlinked()) {
     *out_actual = 0;
@@ -557,12 +559,12 @@ zx_status_t Directory::Readdir(fs::vdircookie_t* cookie, void* dirents, size_t l
     size_t off_recovered = 0;
     while (off_recovered < off) {
       if (off_recovered + kMinfsDirentSize >= kMinfsMaxDirectorySize) {
-        FS_TRACE_ERROR("minfs: Readdir: Corrupt dirent; dirent reclen too large\n");
+        FX_LOGS(ERROR) << "Readdir: Corrupt dirent; dirent reclen too large";
         goto fail;
       }
       zx_status_t status = ReadInternal(nullptr, de, kMinfsMaxDirentSize, off_recovered, &r);
       if ((status != ZX_OK) || (ValidateDirent(de, r, off_recovered) != ZX_OK)) {
-        FS_TRACE_ERROR("minfs: Readdir: Corrupt dirent unreadable/failed validation\n");
+        FX_LOGS(ERROR) << "Readdir: Corrupt dirent unreadable/failed validation";
         goto fail;
       }
       off_recovered += MinfsReclen(de, off_recovered);
@@ -573,10 +575,10 @@ zx_status_t Directory::Readdir(fs::vdircookie_t* cookie, void* dirents, size_t l
   while (off + kMinfsDirentSize < kMinfsMaxDirectorySize) {
     zx_status_t status = ReadInternal(nullptr, de, kMinfsMaxDirentSize, off, &r);
     if (status != ZX_OK) {
-      FS_TRACE_ERROR("minfs: Readdir: Unreadable dirent %d\n", status);
+      FX_LOGS(ERROR) << "Readdir: Unreadable dirent " << status;
       goto fail;
     } else if ((status = ValidateDirent(de, r, off)) != ZX_OK) {
-      FS_TRACE_ERROR("minfs: Readdir: Corrupt dirent failed validation %d\n", status);
+      FX_LOGS(ERROR) << "Readdir: Corrupt dirent failed validation " << status;
       goto fail;
     }
 
@@ -676,7 +678,7 @@ zx_status_t Directory::Create(fbl::StringPiece name, uint32_t mode, fbl::RefPtr<
     InitializeDirectory(bdata, vn->GetIno(), GetIno());
     size_t expected = DirentSize(1) + DirentSize(2);
     if ((status = vn->WriteExactInternal(transaction.get(), bdata, expected, 0)) != ZX_OK) {
-      FS_TRACE_ERROR("minfs: Create: Failed to initialize empty directory: %d\n", status);
+      FX_LOGS(ERROR) << "Create: Failed to initialize empty directory: " << status;
       return ZX_ERR_IO;
     }
     vn->InodeSync(transaction.get(), kMxFsSyncDefault);

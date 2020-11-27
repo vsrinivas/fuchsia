@@ -4,6 +4,10 @@
 
 #include "src/storage/blobfs/pager/transfer-buffer.h"
 
+#include <lib/syslog/cpp/macros.h>
+
+#include <fs/trace.h>
+
 namespace blobfs {
 namespace pager {
 
@@ -27,15 +31,13 @@ zx::status<std::unique_ptr<StorageBackedTransferBuffer>> StorageBackedTransferBu
   zx::vmo vmo;
   zx_status_t status = zx::vmo::create(size, 0, &vmo);
   if (status != ZX_OK) {
-    FS_TRACE_ERROR("blobfs: Cannot create pager transfer buffer: %s\n",
-                   zx_status_get_string(status));
+    FX_LOGS(ERROR) << "Cannot create pager transfer buffer: " << zx_status_get_string(status);
     return zx::error(status);
   }
   storage::OwnedVmoid vmoid(txn_manager);
   status = vmoid.AttachVmo(vmo);
   if (status != ZX_OK) {
-    FS_TRACE_ERROR("blobfs: Failed to attach pager transfer vmo: %s\n",
-                   zx_status_get_string(status));
+    FX_LOGS(ERROR) << "Failed to attach pager transfer vmo: " << zx_status_get_string(status);
     return zx::error(status);
   }
 
@@ -63,8 +65,8 @@ zx::status<> StorageBackedTransferBuffer::Populate(uint64_t offset, uint64_t len
   // Navigate to the start block.
   zx_status_t status = IterateToBlock(&block_iter, start_block);
   if (status != ZX_OK) {
-    FS_TRACE_ERROR("blobfs: Failed to navigate to start block %u: %s\n", start_block,
-                   zx_status_get_string(status));
+    FX_LOGS(ERROR) << "Failed to navigate to start block " << start_block << ": "
+                   << zx_status_get_string(status);
     return zx::error(status);
   }
 
@@ -76,15 +78,14 @@ zx::status<> StorageBackedTransferBuffer::Populate(uint64_t offset, uint64_t len
         return ZX_OK;
       });
   if (status != ZX_OK) {
-    FS_TRACE_ERROR("blobfs: Failed to enqueue read operations: %s\n", zx_status_get_string(status));
+    FX_LOGS(ERROR) << "Failed to enqueue read operations: " << zx_status_get_string(status);
     return zx::error(status);
   }
 
   // Issue the read.
   status = txn.Transact();
   if (status != ZX_OK) {
-    FS_TRACE_ERROR("blobfs: Failed to transact read operations: %s\n",
-                   zx_status_get_string(status));
+    FX_LOGS(ERROR) << "Failed to transact read operations: " << zx_status_get_string(status);
     return zx::error(status);
   }
 

@@ -13,7 +13,6 @@
 
 #include <disk_inspector/disk_struct.h>
 #include <fs/journal/disk_struct.h>
-#include <fs/trace.h>
 
 #include "src/storage/minfs/inspector/disk_struct.h"
 

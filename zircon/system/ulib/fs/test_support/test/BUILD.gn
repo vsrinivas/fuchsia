@@ -35,6 +35,12 @@ test("fs-test-support") {
 }
 
 isolated_devmgr_unittest_package("fs-test-support-test") {
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
+
   executable_path = "test/fs-test-support-test"
 
   features = [ "isolated-temp" ]

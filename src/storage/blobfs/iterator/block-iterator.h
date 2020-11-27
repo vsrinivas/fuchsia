@@ -13,7 +13,6 @@
 
 #include <blobfs/format.h>
 #include <fbl/function.h>
-#include <fs/trace.h>
 
 #include "src/storage/blobfs/iterator/allocated-extent-iterator.h"
 #include "src/storage/blobfs/iterator/extent-iterator.h"

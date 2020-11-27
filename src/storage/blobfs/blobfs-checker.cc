@@ -5,11 +5,10 @@
 #include "src/storage/blobfs/blobfs-checker.h"
 
 #include <inttypes.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <iterator>
 #include <utility>
-
-#include <fs/trace.h>
 
 #ifdef __Fuchsia__
 
@@ -44,8 +43,8 @@ void BlobfsChecker::TraverseInodeBitmap() {
         const Extent* extent;
         zx_status_t status = extents.Next(&extent);
         if (status != ZX_OK) {
-          FS_TRACE_ERROR("check: Failed to acquire extent %u within inode %u.\n",
-                         extents.ExtentIndex(), n);
+          FX_LOGS(ERROR) << "check: Failed to acquire extent " << extents.ExtentIndex()
+                         << " within inode " << n;
           valid = false;
           break;
         }
@@ -54,17 +53,18 @@ void BlobfsChecker::TraverseInodeBitmap() {
         uint64_t end_block = extent->Start() + extent->Length();
         uint64_t first_unset = 0;
         if (!blobfs_->CheckBlocksAllocated(start_block, end_block, &first_unset)) {
-          FS_TRACE_ERROR("check: ino %u using blocks [%" PRIu64 ", %" PRIu64
-                         "). "
-                         "Not fully allocated in block bitmap; first unset @%" PRIu64 "\n",
-                         n, start_block, end_block, first_unset);
+          FX_LOGS(ERROR) << "check: ino " << n << " using blocks [" << start_block << ", "
+                         << end_block
+                         << "). "
+                            "Not fully allocated in block bitmap; first unset @"
+                         << first_unset;
           valid = false;
         }
         inode_blocks_ += extent->Length();
       }
 
       if (blobfs_->LoadAndVerifyBlob(n) != ZX_OK) {
-        FS_TRACE_ERROR("check: detected inode %u with bad state\n", n);
+        FX_LOGS(ERROR) << "check: detected inode " << n << " with bad state";
         valid = false;
       }
       if (!valid) {
@@ -85,28 +85,28 @@ void BlobfsChecker::TraverseBlockBitmap() {
 zx_status_t BlobfsChecker::CheckAllocatedCounts() const {
   zx_status_t status = ZX_OK;
   if (alloc_blocks_ != blobfs_->info_.alloc_block_count) {
-    FS_TRACE_ERROR("check: incorrect allocated block count %" PRIu64 " (should be %u)\n",
-                   blobfs_->info_.alloc_block_count, alloc_blocks_);
+    FX_LOGS(ERROR) << "check: incorrect allocated block count " << blobfs_->info_.alloc_block_count
+                   << " (should be " << alloc_blocks_ << ")";
     status = ZX_ERR_BAD_STATE;
   }
 
   if (alloc_blocks_ < kStartBlockMinimum) {
-    FS_TRACE_ERROR("check: allocated blocks (%u) are less than minimum (%" PRIu64 ")\n",
-                   alloc_blocks_, kStartBlockMinimum);
+    FX_LOGS(ERROR) << "check: allocated blocks (" << alloc_blocks_ << ") are less than minimum ("
+                   << kStartBlockMinimum << ")";
     status = ZX_ERR_BAD_STATE;
   }
 
   if (inode_blocks_ + kStartBlockMinimum != alloc_blocks_) {
-    FS_TRACE_ERROR(
-        "check: bitmap allocated blocks (%u) do not match inode allocated blocks "
-        "(%" PRIu64 ")\n",
-        alloc_blocks_, inode_blocks_ + kStartBlockMinimum);
+    FX_LOGS(ERROR) << "check: bitmap allocated blocks (" << alloc_blocks_
+                   << ") do not match inode allocated blocks "
+                      "("
+                   << inode_blocks_ + kStartBlockMinimum << ")";
     status = ZX_ERR_BAD_STATE;
   }
 
   if (alloc_inodes_ != blobfs_->info_.alloc_inode_count) {
-    FS_TRACE_ERROR("check: incorrect allocated inode count %" PRIu64 " (should be %u)\n",
-                   blobfs_->info_.alloc_inode_count, alloc_inodes_);
+    FX_LOGS(ERROR) << "check: incorrect allocated inode count " << blobfs_->info_.alloc_inode_count
+                   << " (should be " << alloc_inodes_ << ")";
     status = ZX_ERR_BAD_STATE;
   }
 
@@ -135,12 +135,12 @@ zx_status_t CheckFvmConsistency(const Superblock* info, BlockDevice* device, boo
   fuchsia_hardware_block_volume_VolumeInfo fvm_info;
   zx_status_t status = device->VolumeQuery(&fvm_info);
   if (status != ZX_OK) {
-    FS_TRACE_ERROR("blobfs: Unable to query FVM, status: %s\n", zx_status_get_string(status));
+    FX_LOGS(ERROR) << "Unable to query FVM, status: " << zx_status_get_string(status);
     return status;
   }
 
   if (info->slice_size != fvm_info.slice_size) {
-    FS_TRACE_ERROR("blobfs: Slice size did not match expected\n");
+    FX_LOGS(ERROR) << "Slice size did not match expected";
     return ZX_ERR_BAD_STATE;
   }
   const size_t kBlocksPerSlice = info->slice_size / kBlobfsBlockSize;
@@ -163,12 +163,12 @@ zx_status_t CheckFvmConsistency(const Superblock* info, BlockDevice* device, boo
   status = device->VolumeQuerySlices(start_slices, std::size(start_slices), ranges,
                                      &actual_ranges_count);
   if (status != ZX_OK) {
-    FS_TRACE_ERROR("blobfs: Cannot query slices, status: %s\n", zx_status_get_string(status));
+    FX_LOGS(ERROR) << "Cannot query slices, status: " << zx_status_get_string(status);
     return status;
   }
 
   if (actual_ranges_count != std::size(start_slices)) {
-    FS_TRACE_ERROR("blobfs: Missing slice\n");
+    FX_LOGS(ERROR) << "Missing slice";
     return ZX_ERR_BAD_STATE;
   }
 
@@ -181,7 +181,7 @@ zx_status_t CheckFvmConsistency(const Superblock* info, BlockDevice* device, boo
       // the FVM to report a slice size smaller than what is reported by Blobfs. In this
       // case, automatically fail without trying to resolve the situation, as it is
       // possible that Blobfs structures are allocated in the slices that have been lost.
-      FS_TRACE_ERROR("blobfs: Mismatched slice count\n");
+      FX_LOGS(ERROR) << "Mismatched slice count";
       return ZX_ERR_IO_DATA_INTEGRITY;
     }
 
@@ -191,8 +191,7 @@ zx_status_t CheckFvmConsistency(const Superblock* info, BlockDevice* device, boo
       uint64_t length = fvm_count - blobfs_count;
       zx_status_t status = device->VolumeShrink(offset, length);
       if (status != ZX_OK) {
-        FS_TRACE_ERROR("blobfs: Unable to shrink to expected size: %s\n",
-                       zx_status_get_string(status));
+        FX_LOGS(ERROR) << "Unable to shrink to expected size: " << zx_status_get_string(status);
         return status;
       }
     }

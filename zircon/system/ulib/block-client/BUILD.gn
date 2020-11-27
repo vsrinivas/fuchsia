@@ -54,6 +54,7 @@ zx_library("block-client") {
     "//sdk/fidl/fuchsia.io:fuchsia.io_c",
     "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
     "//sdk/lib/fdio",
+    "//sdk/lib/syslog/cpp",
     "//src/lib/ddk",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/sync",

@@ -4,6 +4,7 @@
 
 #include "src/storage/minfs/inspector.h"
 
+#include <lib/syslog/cpp/macros.h>
 #include <sys/stat.h>
 
 #include <block-client/cpp/block-device.h>
@@ -63,7 +64,7 @@ zx_status_t Inspector::CreateRoot(std::unique_ptr<Bcache> bc,
   std::unique_ptr<Minfs> fs;
   zx_status_t status = Minfs::Create(std::move(bc), options, &fs);
   if (status != ZX_OK) {
-    FS_TRACE_ERROR("minfsInspector: Create Failed to Create Minfs: %d\n", status);
+    FX_LOGS(ERROR) << "minfsInspector: Create Failed to Create Minfs: " << status;
     return status;
   }
   *out = std::unique_ptr<disk_inspector::DiskObject>(new RootObject(std::move(fs)));
@@ -87,7 +88,7 @@ std::unique_ptr<disk_inspector::DiskObject> RootObject::GetJournal() const {
   uint64_t start_block = JournalStartBlock(superblock);
   uint64_t length = JournalBlocks(superblock);
   if (fs_->ReadBlock(static_cast<blk_t>(start_block), data) < 0) {
-    FS_TRACE_ERROR("minfsInspector: could not read journal block\n");
+    FX_LOGS(ERROR) << "minfsInspector: could not read journal block";
     return nullptr;
   }
   fs::JournalInfo* info = reinterpret_cast<fs::JournalInfo*>(data);
@@ -102,7 +103,7 @@ std::unique_ptr<disk_inspector::DiskObject> RootObject::GetBackupSuperBlock() co
   uint64_t location =
       ((info.flags & kMinfsFlagFVM) == 0) ? kNonFvmSuperblockBackup : kFvmSuperblockBackup;
   if (fs_->ReadBlock(static_cast<blk_t>(location), &data) < 0) {
-    FS_TRACE_ERROR("minfsInspector: could not read backup superblock\n");
+    FX_LOGS(ERROR) << "minfsInspector: could not read backup superblock";
     return nullptr;
   }
   auto backup_info = reinterpret_cast<Superblock&>(data);

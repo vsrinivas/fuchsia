@@ -92,6 +92,7 @@ static_library("minfs") {
     "//zircon/system/ulib/storage/buffer",
   ]
   deps = [
+    "//sdk/lib/syslog/cpp",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/safemath",
     "//zircon/public/lib/zircon-internal",
@@ -152,6 +153,7 @@ static_library("minfs") {
       "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_c",
       "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
       "//sdk/fidl/fuchsia.minfs:fuchsia.minfs_llcpp",
+      "//sdk/lib/syslog/cpp",
       "//zircon/public/lib/async",
       "//zircon/public/lib/async-cpp",
       "//zircon/public/lib/fidl",

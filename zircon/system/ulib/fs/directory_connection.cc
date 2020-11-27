@@ -24,7 +24,6 @@
 #include <fs/internal/directory_connection.h>
 #include <fs/internal/fidl_transaction.h>
 #include <fs/mount_channel.h>
-#include <fs/trace.h>
 #include <fs/vfs_types.h>
 #include <fs/vnode.h>
 
@@ -42,17 +41,14 @@ void OpenAt(Vfs* vfs, const fbl::RefPtr<Vnode>& parent, zx::channel channel, fbl
     using ResultT = std::decay_t<decltype(result)>;
     using OpenResult = fs::Vfs::OpenResult;
     if constexpr (std::is_same_v<ResultT, OpenResult::Error>) {
-      FS_TRACE_DEBUG("vfs: open failure: %d\n", result);
       if (describe) {
         fio::Node::SendOnOpenEvent(zx::unowned_channel(channel), result, fio::NodeInfo());
       }
     } else if constexpr (std::is_same_v<ResultT, OpenResult::Remote>) {
-      FS_TRACE_DEBUG("vfs: handoff to remote\n");
       // Remote handoff to a remote filesystem node.
       vfs->ForwardOpenRemote(std::move(result.vnode), std::move(channel), result.path, options,
                              mode);
     } else if constexpr (std::is_same_v<ResultT, OpenResult::RemoteRoot>) {
-      FS_TRACE_DEBUG("vfs: handoff to remote\n");
       // Remote handoff to a remote filesystem node.
       vfs->ForwardOpenRemote(std::move(result.vnode), std::move(channel), ".", options, mode);
     } else if constexpr (std::is_same_v<ResultT, OpenResult::Ok>) {

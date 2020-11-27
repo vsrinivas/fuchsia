@@ -10,6 +10,7 @@
 #include <lib/async/cpp/task.h>
 #include <lib/cksum.h>
 #include <lib/sync/completion.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zircon-internal/debug.h>
 #include <lib/zx/event.h>
 #include <lib/zx/status.h>
@@ -90,7 +91,7 @@ zx_status_t Blobfs::Create(async_dispatcher_t* dispatcher, std::unique_ptr<Block
   char block[kBlobfsBlockSize];
   zx_status_t status = device->ReadBlock(0, kBlobfsBlockSize, block);
   if (status != ZX_OK) {
-    FS_TRACE_ERROR("blobfs: could not read info block\n");
+    FX_LOGS(ERROR) << "could not read info block";
     return status;
   }
   const Superblock* superblock = reinterpret_cast<Superblock*>(&block[0]);
@@ -98,7 +99,7 @@ zx_status_t Blobfs::Create(async_dispatcher_t* dispatcher, std::unique_ptr<Block
   fuchsia_hardware_block_BlockInfo block_info;
   status = device->BlockGetInfo(&block_info);
   if (status != ZX_OK) {
-    FS_TRACE_ERROR("blobfs: cannot acquire block info: %d\n", status);
+    FX_LOGS(ERROR) << "cannot acquire block info: " << status;
     return status;
   }
   uint64_t blocks = (block_info.block_size * block_info.block_count) / kBlobfsBlockSize;
@@ -108,21 +109,21 @@ zx_status_t Blobfs::Create(async_dispatcher_t* dispatcher, std::unique_ptr<Block
     return ZX_ERR_ACCESS_DENIED;
   }
   if (kBlobfsBlockSize % block_info.block_size != 0) {
-    FS_TRACE_ERROR("blobfs: Blobfs block size (%u) not divisible by device block size (%u)\n",
-                   kBlobfsBlockSize, block_info.block_size);
+    FX_LOGS(ERROR) << "Blobfs block size (" << kBlobfsBlockSize
+                   << ") not divisible by device block size (" << block_info.block_size << ")";
     return ZX_ERR_IO;
   }
 
   // Perform superblock validations which should succeed prior to journal replay.
   const uint64_t total_blocks = TotalBlocks(*superblock);
   if (blocks < total_blocks) {
-    FS_TRACE_ERROR("blobfs: Block size mismatch: (superblock: %zu) vs (actual: %zu)\n",
-                   total_blocks, blocks);
+    FX_LOGS(ERROR) << "Block size mismatch: (superblock: " << total_blocks
+                   << ") vs (actual: " << blocks << ")";
     return ZX_ERR_BAD_STATE;
   }
   status = CheckSuperblock(superblock, total_blocks);
   if (status != ZX_OK) {
-    FS_TRACE_ERROR("blobfs: Check Superblock failure\n");
+    FX_LOGS(ERROR) << "Check Superblock failure";
     return status;
   }
 
@@ -137,24 +138,24 @@ zx_status_t Blobfs::Create(async_dispatcher_t* dispatcher, std::unique_ptr<Block
   auto status_or_buffer = pager::StorageBackedTransferBuffer::Create(
       pager::kTransferBufferSize, fs_ptr, fs_ptr, fs_ptr->Metrics());
   if (!status_or_buffer.is_ok()) {
-    FS_TRACE_ERROR("blobfs: Could not initialize uncompressed pager transfer buffer\n");
+    FX_LOGS(ERROR) << "Could not initialize uncompressed pager transfer buffer";
     return status_or_buffer.status_value();
   }
   auto status_or_compressed_buffer = pager::StorageBackedTransferBuffer::Create(
       pager::kTransferBufferSize, fs_ptr, fs_ptr, fs_ptr->Metrics());
   if (!status_or_compressed_buffer.is_ok()) {
-    FS_TRACE_ERROR("blobfs: Could not initialize compressed pager transfer buffer\n");
+    FX_LOGS(ERROR) << "Could not initialize compressed pager transfer buffer";
     return status_or_compressed_buffer.status_value();
   }
   auto status_or_pager =
       pager::UserPager::Create(std::move(status_or_buffer).value(),
                                std::move(status_or_compressed_buffer).value(), fs_ptr->Metrics());
   if (!status_or_pager.is_ok()) {
-    FS_TRACE_ERROR("blobfs: Could not initialize user pager\n");
+    FX_LOGS(ERROR) << "Could not initialize user pager";
     return status_or_pager.status_value();
   }
   fs->pager_ = std::move(status_or_pager).value();
-  FS_TRACE_INFO("blobfs: Initialized user pager\n");
+  FX_LOGS(INFO) << "Initialized user pager";
 
   if (options.metrics) {
     fs->metrics_->Collect();
@@ -162,29 +163,29 @@ zx_status_t Blobfs::Create(async_dispatcher_t* dispatcher, std::unique_ptr<Block
 
   JournalSuperblock journal_superblock;
   if (options.writability != blobfs::Writability::ReadOnlyDisk) {
-    FS_TRACE_INFO("blobfs: Replaying journal\n");
+    FX_LOGS(INFO) << "Replaying journal";
     auto journal_superblock_or = fs::ReplayJournal(fs.get(), fs.get(), JournalStartBlock(fs->info_),
                                                    JournalBlocks(fs->info_), kBlobfsBlockSize);
     if (journal_superblock_or.is_error()) {
-      FS_TRACE_ERROR("blobfs: Failed to replay journal\n");
+      FX_LOGS(ERROR) << "Failed to replay journal";
       return journal_superblock_or.error_value();
     }
     journal_superblock = std::move(journal_superblock_or.value());
-    FS_TRACE_DEBUG("blobfs: Journal replayed\n");
+    FX_LOGS(DEBUG) << "Journal replayed";
     if (zx_status_t status = fs->ReloadSuperblock(); status != ZX_OK) {
-      FS_TRACE_ERROR("blobfs: Failed to re-load superblock\n");
+      FX_LOGS(ERROR) << "Failed to re-load superblock";
       return status;
     }
   }
 
   switch (options.writability) {
     case blobfs::Writability::Writable: {
-      FS_TRACE_DEBUG("blobfs: Initializing journal for writeback\n");
+      FX_LOGS(DEBUG) << "Initializing journal for writeback";
       auto journal_or =
           InitializeJournal(fs.get(), fs.get(), JournalStartBlock(fs->info_),
                             JournalBlocks(fs->info_), std::move(journal_superblock), fs->metrics_);
       if (journal_or.is_error()) {
-        FS_TRACE_ERROR("blobfs: Failed to initialize journal\n");
+        FX_LOGS(ERROR) << "Failed to initialize journal";
         return journal_or.error_value();
       }
       fs->journal_ = std::move(journal_or.value());
@@ -206,25 +207,25 @@ zx_status_t Blobfs::Create(async_dispatcher_t* dispatcher, std::unique_ptr<Block
   status = CheckFvmConsistency(&fs->info_, fs->Device(),
                                /*repair=*/options.writability != blobfs::Writability::ReadOnlyDisk);
   if (status != ZX_OK) {
-    FS_TRACE_ERROR("blobfs: FVM info check failed\n");
+    FX_LOGS(ERROR) << "FVM info check failed";
     return status;
   }
 
-  FS_TRACE_INFO("blobfs: Using eviction policy %s\n", CachePolicyToString(options.cache_policy));
+  FX_LOGS(INFO) << "Using eviction policy " << CachePolicyToString(options.cache_policy);
   if (options.pager_backed_cache_policy) {
-    FS_TRACE_INFO("blobfs: Using overridden pager eviction policy %s\n",
-                  CachePolicyToString(*options.pager_backed_cache_policy));
+    FX_LOGS(INFO) << "Using overridden pager eviction policy "
+                  << CachePolicyToString(*options.pager_backed_cache_policy);
   }
   fs->Cache().SetCachePolicy(options.cache_policy);
 
   RawBitmap block_map;
   // Keep the block_map aligned to a block multiple
   if ((status = block_map.Reset(BlockMapBlocks(fs->info_) * kBlobfsBlockBits)) < 0) {
-    FS_TRACE_ERROR("blobfs: Could not reset block bitmap\n");
+    FX_LOGS(ERROR) << "Could not reset block bitmap";
     return status;
   }
   if ((status = block_map.Shrink(fs->info_.data_block_count)) < 0) {
-    FS_TRACE_ERROR("blobfs: Could not shrink block bitmap\n");
+    FX_LOGS(ERROR) << "Could not shrink block bitmap";
     return status;
   }
   fzl::ResizeableVmoMapper node_map;
@@ -237,36 +238,36 @@ zx_status_t Blobfs::Create(async_dispatcher_t* dispatcher, std::unique_ptr<Block
   }
   std::unique_ptr<IdAllocator> nodes_bitmap = {};
   if ((status = IdAllocator::Create(fs->info_.inode_count, &nodes_bitmap) != ZX_OK)) {
-    FS_TRACE_ERROR("blobfs: Failed to allocate bitmap for inodes\n");
+    FX_LOGS(ERROR) << "Failed to allocate bitmap for inodes";
     return status;
   }
 
   fs->allocator_ = std::make_unique<Allocator>(fs.get(), std::move(block_map), std::move(node_map),
                                                std::move(nodes_bitmap));
   if ((status = fs->allocator_->ResetFromStorage(fs::ReadTxn(fs.get()))) != ZX_OK) {
-    FS_TRACE_ERROR("blobfs: Failed to load bitmaps: %d\n", status);
+    FX_LOGS(ERROR) << "Failed to load bitmaps: " << status;
     return status;
   }
   if ((status = fs->info_mapping_.CreateAndMap(kBlobfsBlockSize, "blobfs-superblock")) != ZX_OK) {
-    FS_TRACE_ERROR("blobfs: Failed to create info vmo: %d\n", status);
+    FX_LOGS(ERROR) << "Failed to create info vmo: " << status;
     return status;
   }
   if ((status = fs->BlockAttachVmo(fs->info_mapping_.vmo(), &fs->info_vmoid_)) != ZX_OK) {
-    FS_TRACE_ERROR("blobfs: Failed to attach info vmo: %d\n", status);
+    FX_LOGS(ERROR) << "Failed to attach info vmo: " << status;
     return status;
   }
   if ((status = fs->CreateFsId()) != ZX_OK) {
-    FS_TRACE_ERROR("blobfs: Failed to create fs_id: %d\n", status);
+    FX_LOGS(ERROR) << "Failed to create fs_id: " << status;
     return status;
   }
   if ((status = fs->InitializeVnodes()) != ZX_OK) {
-    FS_TRACE_ERROR("blobfs: Failed to initialize Vnodes\n");
+    FX_LOGS(ERROR) << "Failed to initialize Vnodes";
     return status;
   }
   zx::status<BlobLoader> loader =
       BlobLoader::Create(fs_ptr, fs_ptr, fs->GetNodeFinder(), fs->pager_.get(), fs->Metrics());
   if (!loader.is_ok()) {
-    FS_TRACE_ERROR("blobfs: Failed to initialize loader: %s\n", loader.status_string());
+    FX_LOGS(ERROR) << "Failed to initialize loader: " << loader.status_string();
     return loader.status_value();
   }
   fs->loader_ = std::move(loader.value());
@@ -279,35 +280,34 @@ zx_status_t Blobfs::Create(async_dispatcher_t* dispatcher, std::unique_ptr<Block
   // sure we are unmounted cleanly i.e the kBlobFlagClean flag is set back on clean unmount.
   //
   // Additionally, we can now update the oldest_revision field if it needs to be updated.
-  FS_TRACE_INFO("blobfs: detected oldest_revision %" PRIu64 ", current revision %" PRIu64 "\n",
-                fs->info_.oldest_revision, kBlobfsCurrentRevision);
+  FX_LOGS(INFO) << "detected oldest_revision " << fs->info_.oldest_revision << ", current revision "
+                << kBlobfsCurrentRevision;
   if (options.writability == blobfs::Writability::Writable) {
     BlobTransaction transaction;
     fs->info_.flags &= ~kBlobFlagClean;
     if (fs->info_.oldest_revision > kBlobfsCurrentRevision) {
-      FS_TRACE_INFO("Setting oldest_revision to %" PRIu64 "\n", kBlobfsCurrentRevision);
+      FX_LOGS(INFO) << "Setting oldest_revision to " << kBlobfsCurrentRevision;
       fs->info_.oldest_revision = kBlobfsCurrentRevision;
     }
     fs->WriteInfo(transaction);
     transaction.Commit(*fs->journal());
   }
 
-  FS_TRACE_INFO(
-      "blobfs: Using compression %s\n",
-      CompressionAlgorithmToString(fs->write_compression_settings_.compression_algorithm));
+  FX_LOGS(INFO) << "Using compression "
+                << CompressionAlgorithmToString(
+                       fs->write_compression_settings_.compression_algorithm);
   if (fs->write_compression_settings_.compression_level) {
-    FS_TRACE_INFO("blobfs: Using overridden compression level %d\n",
-                  *(fs->write_compression_settings_.compression_level));
+    FX_LOGS(INFO) << "Using overridden compression level "
+                  << *(fs->write_compression_settings_.compression_level);
   }
 
-  FS_TRACE_INFO("blobfs: Using blob layout format: %s\n",
-                BlobLayoutFormatToString(GetBlobLayoutFormat(*superblock)));
+  FX_LOGS(INFO) << "Using blob layout format: "
+                << BlobLayoutFormatToString(GetBlobLayoutFormat(*superblock));
 
   status = BlobCorruptionNotifier::Create(&(fs->blob_corruption_notifier_));
 
   if (status != ZX_OK) {
-    FS_TRACE_ERROR("blobfs: Failed to initialize corruption notifier: %s\n",
-                   zx_status_get_string(status));
+    FX_LOGS(ERROR) << "Failed to initialize corruption notifier: " << zx_status_get_string(status);
   }
 
   *out = std::move(fs);
@@ -325,7 +325,7 @@ zx::status<std::unique_ptr<Journal>> Blobfs::InitializeJournal(
   zx_status_t status = BlockingRingBuffer::Create(registry, journal_entry_blocks, kBlobfsBlockSize,
                                                   "journal-writeback-buffer", &journal_buffer);
   if (status != ZX_OK) {
-    FS_TRACE_ERROR("blobfs: Cannot create journal buffer: %s\n", zx_status_get_string(status));
+    FX_LOGS(ERROR) << "Cannot create journal buffer: " << zx_status_get_string(status);
     return zx::error(status);
   }
 
@@ -333,7 +333,7 @@ zx::status<std::unique_ptr<Journal>> Blobfs::InitializeJournal(
   status = BlockingRingBuffer::Create(registry, WriteBufferBlockCount(), kBlobfsBlockSize,
                                       "data-writeback-buffer", &writeback_buffer);
   if (status != ZX_OK) {
-    FS_TRACE_ERROR("blobfs: Cannot create writeback buffer: %s\n", zx_status_get_string(status));
+    FX_LOGS(ERROR) << "Cannot create writeback buffer: " << zx_status_get_string(status);
     return zx::error(status);
   }
 
@@ -533,7 +533,7 @@ zx_status_t Blobfs::Readdir(fs::vdircookie_t* cookie, void* dirents, size_t len,
 zx_status_t Blobfs::BlockAttachVmo(const zx::vmo& vmo, storage::Vmoid* out) {
   zx_status_t status = Device()->BlockAttachVmo(vmo, out);
   if (status != ZX_OK) {
-    FS_TRACE_ERROR("Failed to attach blob VMO: %s\n", zx_status_get_string(status));
+    FX_LOGS(ERROR) << "Failed to attach blob VMO: " << zx_status_get_string(status);
     return status;
   }
   return ZX_OK;
@@ -555,7 +555,7 @@ zx_status_t Blobfs::AddInodes(Allocator* allocator) {
   uint64_t length = 1;
   zx_status_t status = Device()->VolumeExtend(offset, length);
   if (status != ZX_OK) {
-    FS_TRACE_ERROR("Blobfs::AddInodes fvm_extend failure: %s", zx_status_get_string(status));
+    FX_LOGS(ERROR) << ":AddInodes fvm_extend failure: " << zx_status_get_string(status);
     return status;
   }
 
@@ -622,13 +622,13 @@ zx_status_t Blobfs::AddBlocks(size_t nblocks, RawBitmap* block_map) {
 
   if (abmblks > blocks_per_slice) {
     // TODO(planders): Allocate more slices for the block bitmap.
-    FS_TRACE_ERROR("Blobfs::AddBlocks needs to increase block bitmap size\n");
+    FX_LOGS(ERROR) << ":AddBlocks needs to increase block bitmap size";
     return ZX_ERR_NO_SPACE;
   }
 
   zx_status_t status = Device()->VolumeExtend(offset, length);
   if (status != ZX_OK) {
-    FS_TRACE_ERROR("Blobfs::AddBlocks FVM Extend failure: %s\n", zx_status_get_string(status));
+    FX_LOGS(ERROR) << ":AddBlocks FVM Extend failure: " << zx_status_get_string(status);
     return status;
   }
 
@@ -731,7 +731,7 @@ std::unique_ptr<BlockDevice> Blobfs::Reset() {
     return nullptr;
   }
 
-  FS_TRACE_INFO("blobfs: Shutting down\n");
+  FX_LOGS(INFO) << "Shutting down";
 
   // Shutdown all internal connections to blobfs.
   Cache().ForAllOpenNodes([](fbl::RefPtr<CacheNode> cache_node) {
@@ -751,7 +751,7 @@ std::unique_ptr<BlockDevice> Blobfs::Reset() {
     // the object into a valid state as soon as possible and reassess what is needed
     // in the destructor.
     if (info_mapping_.start() == nullptr) {
-      FS_TRACE_ERROR("blobfs: Cannot write journal clean bit\n");
+      FX_LOGS(ERROR) << "Cannot write journal clean bit";
     } else {
       BlobTransaction transaction;
       info_.flags |= kBlobFlagClean;
@@ -811,17 +811,16 @@ zx_status_t Blobfs::InitializeVnodes() {
     zx_status_t status = Cache().Add(vnode);
     if (status != ZX_OK) {
       Digest digest(vnode->GetNode().merkle_root_hash);
-      FS_TRACE_ERROR("blobfs: CORRUPTED FILESYSTEM: Duplicate node: %s @ index %u\n",
-                     digest.ToString().c_str(), node_index - 1);
+      FX_LOGS(ERROR) << "CORRUPTED FILESYSTEM: Duplicate node: " << digest.ToString() << " @ index "
+                     << node_index - 1;
       return status;
     }
     metrics_->IncrementCompressionFormatMetric(*inode);
   }
 
   if (total_allocated != info_.alloc_inode_count) {
-    FS_TRACE_ERROR(
-        "blobfs: CORRUPTED FILESYSTEM: Allocated nodes mismatch. Expected:%lu. Found: %u\n",
-        info_.alloc_inode_count, total_allocated);
+    FX_LOGS(ERROR) << "CORRUPTED FILESYSTEM: Allocated nodes mismatch. Expected:"
+                   << info_.alloc_inode_count << ". Found: " << total_allocated;
     return ZX_ERR_IO_OVERRUN;
   }
 
@@ -835,13 +834,13 @@ zx_status_t Blobfs::ReloadSuperblock() {
   char block[kBlobfsBlockSize];
   zx_status_t status = Device()->ReadBlock(0, kBlobfsBlockSize, block);
   if (status != ZX_OK) {
-    FS_TRACE_ERROR("blobfs: could not read info block\n");
+    FX_LOGS(ERROR) << "could not read info block";
     return status;
   }
 
   Superblock* info = reinterpret_cast<Superblock*>(&block[0]);
   if ((status = CheckSuperblock(info, TotalBlocks(*info))) != ZX_OK) {
-    FS_TRACE_ERROR("blobfs: Check info failure\n");
+    FX_LOGS(ERROR) << "Check info failure";
     return status;
   }
 

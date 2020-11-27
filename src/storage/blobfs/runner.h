@@ -12,7 +12,6 @@
 
 #include <blobfs/mount.h>
 #include <fs/managed_vfs.h>
-#include <fs/trace.h>
 #include <fs/vfs.h>
 #include <fs/vnode.h>
 

@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/cksum.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <iterator>
 #include <utility>
@@ -12,7 +13,6 @@
 #include <blobfs/mkfs.h>
 #include <fbl/ref_ptr.h>
 #include <fs/journal/initializer.h>
-#include <fs/trace.h>
 #include <fvm/client.h>
 #include <safemath/checked_math.h>
 #include <storage/buffer/owned_vmoid.h>
@@ -37,13 +37,13 @@ zx_status_t TryFormattingFVM(BlockDevice* device, Superblock* superblock) {
   superblock->flags |= kBlobFlagFVM;
 
   if (superblock->slice_size % kBlobfsBlockSize) {
-    FS_TRACE_ERROR("blobfs mkfs: Slice size not multiple of blobfs block\n");
+    FX_LOGS(ERROR) << "mkfs: Slice size not multiple of blobfs block";
     return ZX_ERR_IO_INVALID;
   }
 
   status = fvm::ResetAllSlices(device);
   if (status != ZX_OK) {
-    FS_TRACE_ERROR("blobfs mkfs: Failed to reset slices\n");
+    FX_LOGS(ERROR) << "mkfs: Failed to reset slices";
     return status;
   }
 
@@ -59,7 +59,7 @@ zx_status_t TryFormattingFVM(BlockDevice* device, Superblock* superblock) {
   superblock->abm_slices = static_cast<uint32_t>(length);
   status = device->VolumeExtend(offset, superblock->abm_slices);
   if (status != ZX_OK) {
-    FS_TRACE_ERROR("blobfs mkfs: Failed to allocate block map\n");
+    FX_LOGS(ERROR) << "mkfs: Failed to allocate block map";
     return status;
   }
 
@@ -67,7 +67,7 @@ zx_status_t TryFormattingFVM(BlockDevice* device, Superblock* superblock) {
   superblock->ino_slices = 1;
   status = device->VolumeExtend(offset, superblock->ino_slices);
   if (status != ZX_OK) {
-    FS_TRACE_ERROR("blobfs mkfs: Failed to allocate node map\n");
+    FX_LOGS(ERROR) << "mkfs: Failed to allocate node map";
     return status;
   }
 
@@ -77,7 +77,7 @@ zx_status_t TryFormattingFVM(BlockDevice* device, Superblock* superblock) {
   superblock->journal_slices = static_cast<uint32_t>(length);
   status = device->VolumeExtend(offset, superblock->journal_slices);
   if (status != ZX_OK) {
-    FS_TRACE_ERROR("blobfs mkfs: Failed to allocate journal blocks\n");
+    FX_LOGS(ERROR) << "mkfs: Failed to allocate journal blocks";
     return status;
   }
 
@@ -87,7 +87,7 @@ zx_status_t TryFormattingFVM(BlockDevice* device, Superblock* superblock) {
   superblock->dat_slices = static_cast<uint32_t>(length);
   status = device->VolumeExtend(offset, superblock->dat_slices);
   if (status != ZX_OK) {
-    FS_TRACE_ERROR("blobfs mkfs: Failed to allocate data blocks\n");
+    FX_LOGS(ERROR) << "mkfs: Failed to allocate data blocks";
     return status;
   }
 
@@ -213,12 +213,12 @@ zx_status_t FormatFilesystem(BlockDevice* device, const FilesystemOptions& optio
   fuchsia_hardware_block_BlockInfo block_info = {};
   status = device->BlockGetInfo(&block_info);
   if (status != ZX_OK) {
-    FS_TRACE_ERROR("blobfs: cannot acquire block info: %d\n", status);
+    FX_LOGS(ERROR) << "cannot acquire block info: " << status;
     return status;
   }
 
   if (block_info.flags & BLOCK_FLAG_READONLY) {
-    FS_TRACE_ERROR("blobfs: cannot format read-only device\n");
+    FX_LOGS(ERROR) << "cannot format read-only device";
     return ZX_ERR_ACCESS_DENIED;
   }
   if (block_info.block_size == 0 || block_info.block_count == 0) {
@@ -246,11 +246,11 @@ zx_status_t FormatFilesystem(BlockDevice* device, const FilesystemOptions& optio
 
   RawBitmap block_bitmap;
   if (block_bitmap.Reset(blockmap_blocks * kBlobfsBlockBits)) {
-    FS_TRACE_ERROR("blobfs: Couldn't allocate block map\n");
+    FX_LOGS(ERROR) << "Couldn't allocate block map";
     return -1;
   }
   if (block_bitmap.Shrink(superblock.data_block_count)) {
-    FS_TRACE_ERROR("blobfs: Couldn't shrink block map\n");
+    FX_LOGS(ERROR) << "Couldn't shrink block map";
     return -1;
   }
 
@@ -259,11 +259,11 @@ zx_status_t FormatFilesystem(BlockDevice* device, const FilesystemOptions& optio
 
   status = WriteFilesystemToDisk(device, superblock, block_bitmap, block_info);
   if (status != ZX_OK) {
-    FS_TRACE_ERROR("blobfs: Failed to write to disk: %d\n", status);
+    FX_LOGS(ERROR) << "Failed to write to disk: " << status;
     return status;
   }
 
-  FS_TRACE_DEBUG("BLOBFS: mkfs success\n");
+  FX_LOGS(DEBUG) << "mkfs success";
   return ZX_OK;
 }
 

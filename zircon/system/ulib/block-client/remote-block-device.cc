@@ -4,10 +4,10 @@
 
 #include <fuchsia/device/llcpp/fidl.h>
 #include <fuchsia/io/llcpp/fidl.h>
+#include <lib/syslog/cpp/macros.h>
 #include <zircon/device/vfs.h>
 
 #include <block-client/cpp/remote-block-device.h>
-#include <fs/trace.h>
 
 namespace fio = llcpp::fuchsia::io;
 
@@ -177,7 +177,7 @@ zx_status_t RemoteBlockDevice::Create(zx::channel device, std::unique_ptr<Remote
   zx::fifo fifo;
   zx_status_t status = BlockGetFifo(device, &fifo);
   if (status != ZX_OK) {
-    FS_TRACE_ERROR("Could not acquire block fifo: %d\n", status);
+    FX_LOGS(ERROR) << "Could not acquire block fifo: " << status;
     return status;
   }
   block_client::Client fifo_client;

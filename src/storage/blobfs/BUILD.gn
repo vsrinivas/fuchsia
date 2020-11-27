@@ -139,6 +139,7 @@ zx_library("blobfs") {
     "//zircon/system/ulib/storage/operation",
 
     # TODO(fxbug.dev/57392): Move it back to //third_party once unification completes.
+    "//sdk/lib/syslog/cpp",
     "//zircon/third_party/ulib/zstd",
     "//zircon/third_party/ulib/zstd:zstdseek",
   ]
@@ -186,6 +187,7 @@ zx_library("blobfs") {
       "//sdk/fidl/fuchsia.scheduler",
       "//sdk/lib/fdio",
       "//sdk/lib/sys/inspect/cpp",
+      "//sdk/lib/syslog/cpp",
       "//zircon/public/lib/async",
       "//zircon/public/lib/async-cpp",
       "//zircon/public/lib/sync",
