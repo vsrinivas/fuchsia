@@ -83,7 +83,7 @@ protocol VirtioBlock {
 
     /// Start the block device.
     Start(StartInfo start_info,
-          string:fuchsia.virtualization.MAX_BLOCK_DEVICE_ID_SIZE id,
+          string:fuchsia.virtualization.MAX_BLOCK_DEVICE_ID id,
           fuchsia.virtualization.BlockMode mode, fuchsia.virtualization.BlockFormat format,
           fuchsia.io.File file) -> (uint64 size);
 };

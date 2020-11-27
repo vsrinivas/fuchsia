@@ -1,0 +1,123 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.virtualization;
+
+using fuchsia.hardware.ethernet;
+using fuchsia.io;
+
+const uint8 MAX_BLOCK_DEVICE_ID = 20;
+const uint16 MAX_CMDLINE = 1024;
+
+const uint8 MAX_CMDLINE_ADD = 64;
+const uint8 MAX_MEMORY = 32;
+const uint8 MAX_BLOCK_DEVICES = 32;
+const uint8 MAX_NET_DEVICES = 32;
+const uint8 MAX_INTERRUPTS = 128;
+
+/// Mode of the file backing a block device.
+enum BlockMode {
+    /// Reads and writes are allowed.
+    READ_WRITE = 0;
+    /// Only reads are allowed.
+    READ_ONLY = 1;
+    /// Writes are allowed, but are stored in memory, not to disk.
+    VOLATILE_WRITE = 2;
+};
+
+/// Data format of the file backing a block device.
+enum BlockFormat {
+    /// Raw IO. All reads and writes go directly to disk as a flat file.
+    RAW = 0;
+    /// QCOW image. All reads and writes go to a QCOW image.
+    QCOW = 1;
+};
+
+/// Properties describing a single block device in the system.
+resource struct BlockDevice {
+    /// A label used to identify the block device.
+    string:MAX_BLOCK_DEVICE_ID id;
+    /// The access mode for the block backing file.
+    BlockMode mode;
+    /// The data format of the backing file.
+    BlockFormat format;
+    /// The underlying file that stores the drive contents.
+    fuchsia.io.File file;
+};
+
+struct BlockSpec {
+    string:fuchsia.io.MAX_PATH path;
+    BlockFormat format;
+    BlockMode mode;
+};
+
+enum Kernel {
+    ZIRCON = 0;
+    LINUX = 1;
+};
+
+enum MemoryPolicy {
+    /// Map a VMO as cached memory into the guest physical address space.
+    GUEST_CACHED = 0;
+    /// Map a VMO with 1:1 correspondence with host memory as cached memory into
+    /// the guest physical address space.
+    HOST_CACHED = 1;
+    /// Map a VMO with 1:1 correspondence with host memory as device memory into
+    /// the guest physical address space.
+    HOST_DEVICE = 2;
+};
+
+struct MemorySpec {
+    uint64 base;
+    uint64 size;
+    MemoryPolicy policy;
+};
+
+struct NetSpec {
+    fuchsia.hardware.ethernet.MacAddress mac_address;
+};
+
+/// The configuration required to start up a guest.
+table GuestConfig {
+    /// Which kernel to use. Cannot be changed from the command-line.
+    1: Kernel kernel;
+    // TODO(fxbug.dev/42889): Make kernel_path, ramdisk_path, and block_devices into a fuchsia.io.File
+    /// The path to load the kernel from. Cannot be changed from the command-line.
+    2: string:fuchsia.io.MAX_PATH kernel_path;
+    /// Load the ramdisk_path as an initial RAM disk. Cannot be changed from the command-line.
+    3: string:fuchsia.io.MAX_PATH ramdisk_path;
+    /// The file path to the dtb overlay for a linux kernel. Cannot be changed from the
+    /// command-line.
+    4: string:fuchsia.io.MAX_PATH dtb_overlay_path;
+    /// The command to start the client with.
+    5: string:MAX_CMDLINE cmdline;
+    /// Any additional arguments to add to the cmdline.
+    6: vector<string:MAX_CMDLINE>:MAX_CMDLINE_ADD cmdline_add;
+
+    /// The number of CPUs to provide to the guest.
+    7: uint8 cpus;
+    /// The layout of memory to be mapped into the guest.
+    8: vector<MemorySpec>:MAX_MEMORY memory;
+    /// A list of block devices to give the guest. Cannot be changed from the command-line.
+    9: vector<BlockSpec>:MAX_BLOCK_DEVICES block_devices;
+    /// A list of specifications for network devices.
+    10: vector<NetSpec>:MAX_NET_DEVICES net_devices;
+    /// A list of physical interrupts to bind to.
+    11: vector<uint32>:MAX_INTERRUPTS interrupts;
+
+    /// Whether to add a default network device (default).
+    12: bool default_net;
+    /// Enable virtio-balloon (default).
+    13: bool virtio_balloon;
+    /// Enable virtio-console (default).
+    14: bool virtio_console;
+    /// Enable virtio-gpu (default).
+    15: bool virtio_gpu;
+    /// Enable virtio-magma (default).
+    16: bool virtio_magma;
+    /// Enable virtio-rng (default).
+    17: bool virtio_rng;
+    /// Enable virtio-vsock (default).
+    18: bool virtio_vsock;
+};
