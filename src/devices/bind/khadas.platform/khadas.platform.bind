@@ -1,0 +1,21 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library khadas.platform;
+
+extend uint fuchsia.BIND_PLATFORM_DEV_VID {
+  KHADAS = 4,
+};
+
+extend uint fuchsia.BIND_PLATFORM_DEV_PID {
+  VIM2 = 0x02,
+  VIM2_MACHINA = 0X3EA,
+  VIM3 = 0x03,
+};
+
+extend uint fuchsia.BIND_PLATFORM_DEV_DID {
+  VIM3_MCU = 0x05,
+  VIM2_THERMAL = 0x06,
+  VIM_DISPLAY = 0x01,
+};
