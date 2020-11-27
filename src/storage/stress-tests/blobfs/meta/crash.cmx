@@ -7,7 +7,7 @@
             "--disconnect-secs",
             "1800",
             "--time-limit-secs",
-            "79200"
+            "3600"
         ],
         "binary": "bin/blobfs_stressor"
     },
