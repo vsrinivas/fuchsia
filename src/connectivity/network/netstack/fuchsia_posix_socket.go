@@ -379,6 +379,12 @@ func newEndpointWithSocket(ep tcpip.Endpoint, wq *waiter.Queue, transProto tcpip
 		linger:        make(chan struct{}),
 	}
 
+	// Add the endpoint before registering for an EventHUp callback and starting
+	// the loop{read,Write} go-routines. We remove the endpoint from the map on
+	// EventHUp which can be trigerred soon-after the callback registration or
+	// starting of the loop{Read,Write}.
+	ns.onAddEndpoint(&eps.endpoint)
+
 	// Register a callback for error and closing events from gVisor to
 	// trigger a close of the endpoint.
 	eps.onHUp.Callback = callback(func(*waiter.Entry) {
@@ -444,8 +450,6 @@ func newEndpointWithSocket(ep tcpip.Endpoint, wq *waiter.Queue, transProto tcpip
 	}
 
 	go eps.loopWrite()
-
-	ns.onAddEndpoint(&eps.endpoint)
 
 	return eps, nil
 }
