@@ -21,6 +21,5 @@ source_set("platform") {
     "$zx/kernel/lib/init",
     "$zx/kernel/lib/root_resource_filter",
     "$zx/system/ulib/ram-crashlog",
-    "$zx/system/ulib/zbi",
   ]
 }

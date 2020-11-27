@@ -5,28 +5,22 @@
 import("$zx_build/public/gn/migrated_targets.gni")
 
 zx_library("zbi") {
-  sdk = "static"
-  sdk_headers = [
-    "lib/zbi/zbi-cpp.h",
-    "lib/zbi/zbi-zx.h",
-    "lib/zbi/zbi.h",
+  # TODO(fxbug.dev/57244): restricted, as the library is slated to be replaced
+  # by //zircon/system/lib/zbitl.
+  visibility = [
+    "./*",
+    "//zircon/kernel/target/arm64/boot-shim:*",
+    "//zircon/kernel/target/pc/multiboot:*",
   ]
+
+  sdk = "static"
+  sdk_headers = [ "lib/zbi/zbi.h" ]
   sdk_migrated = true
 
   host = true
   kernel = true
   static = true
   sources = [ "zbi.c" ]
-  if (is_fuchsia && !is_kernel) {
-    sources += [ "zbi-zx.cc" ]
-    deps = [
-      "$zx/system/ulib/fbl",
-      "$zx/system/ulib/zx",
-    ]
-  }
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "$zx_build_config:Wno-conversion" ]
 }
 
 group("tests") {
