@@ -15,12 +15,22 @@ use {
 pub struct Echo {
     pub message: String,
     // This Sender is used to unblock the client that sent the echo.
-    responder: oneshot::Sender<()>,
+    responder: Option<oneshot::Sender<()>>,
 }
 
 impl Echo {
-    pub fn resume(self) {
-        self.responder.send(()).unwrap()
+    pub fn resume(mut self) {
+        if let Some(responder) = self.responder.take() {
+            responder.send(()).unwrap();
+        }
+    }
+}
+
+impl Drop for Echo {
+    fn drop(&mut self) {
+        if let Some(responder) = self.responder.take() {
+            responder.send(()).unwrap();
+        }
     }
 }
 
@@ -39,7 +49,7 @@ impl EchoSender {
         let (responder_tx, responder_rx) = oneshot::channel();
         {
             let mut tx = self.tx.lock().await;
-            tx.send(Echo { message, responder: responder_tx }).await?;
+            tx.send(Echo { message, responder: Some(responder_tx) }).await?;
         }
         Ok(responder_rx)
     }

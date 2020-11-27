@@ -15,7 +15,7 @@ use {
     fidl_fuchsia_io as fio, fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
     futures::StreamExt,
     io_util::node::connect_in_namespace,
-    log::warn,
+    log::{info, warn},
     std::sync::Arc,
     vfs::{
         directory::{
@@ -58,14 +58,21 @@ pub trait CapabilityInjector: 'static + Send + Sync {
                 };
 
                 // An event was found! Inject the route.
-                if event.is_ok() {
+                if let Ok(payload) = event.result() {
+                    info!("Injecting CapabilityProvider for `{}`", payload.name);
                     let provider_client_end = injector.clone().route();
                     event
                         .protocol_proxy()
-                        .expect("Event does not have routing protocol")
+                        .expect(&format!(
+                            "CapabilityRouted Event for {} does not have RoutingProtocol",
+                            payload.name
+                        ))
                         .set_provider(provider_client_end)
                         .await
-                        .expect("Could not set provider for CapabilityRouted event");
+                        .expect(&format!(
+                            "Could not set provider for CapabilityRouted event for `{}`",
+                            payload.name
+                        ));
                 }
             }
         })
@@ -224,7 +231,16 @@ impl<M: ServiceMarker, T: ProtocolInjector<Marker = M> + 'static + Sync + Send> 
         let stream = ServerEnd::<M>::new(server_end)
             .into_stream()
             .expect("could not convert channel into stream");
-
-        self.serve(stream).await.expect("Injection failed");
+        let capability_name = <M as ServiceMarker>::NAME;
+        info!("Serving injected capability `{}`...", capability_name);
+        if let Err(e) = self.serve(stream).await {
+            if let Some(e) = e.downcast_ref::<fidl::Error>() {
+                if e.is_closed() {
+                    warn!("Injection for `{}` has stopped.", capability_name);
+                    return;
+                }
+            }
+            panic!(e);
+        }
     }
 }

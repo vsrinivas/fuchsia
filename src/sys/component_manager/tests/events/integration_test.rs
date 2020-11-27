@@ -279,7 +279,7 @@ async fn resolved_error_test() {
 
     event_source.start_component_tree().await;
 
-    let message = echo_rx.next().await.map(|m| m.message).unwrap();
+    let message = echo_rx.next().await.map(|m| m.message.clone()).unwrap();
     assert_eq!("ERROR", message);
 }
 
