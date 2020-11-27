@@ -4,16 +4,12 @@
 
 import("//build/package.gni")
 
-source_set("lib") {
-  visibility = [ ":*" ]
+executable("bin") {
+  output_name = "guest_runner"
 
-  sources = [
-    "runner_impl.cc",
-    "runner_impl.h",
-  ]
+  sources = [ "main.cc" ]
 
-  public_deps = [
-    "//garnet/public/lib/svc/cpp",
+  deps = [
     "//sdk/fidl/fuchsia.sys",
     "//sdk/fidl/fuchsia.virtualization",
     "//sdk/fidl/fuchsia.virtualization.vmm",
@@ -24,20 +20,13 @@ source_set("lib") {
   ]
 }
 
-executable("bin") {
-  output_name = "guest_runner"
-
-  sources = [ "main.cc" ]
-
-  deps = [ ":lib" ]
-}
-
 package("guest_runner") {
   binaries = [
     {
       name = "guest_runner"
     },
   ]
+
   deps = [ ":bin" ]
 
   meta = [
