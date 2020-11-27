@@ -511,6 +511,5 @@ int main(int argc, char** argv) {
     return status;
   }
 
-  loop.Run();
-  return ZX_OK;
+  return loop.Run();
 }
