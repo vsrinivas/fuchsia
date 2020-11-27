@@ -58,6 +58,7 @@ binary_context = namedtuple(
 # Each --output argument yields an output_manifest tuple.
 output_manifest = namedtuple('output_manifest', ['file', 'manifest'])
 
+
 def collect_auxiliaries(manifest, examined):
     """Collect all the binaries from auxiliary manifests.
 
@@ -278,38 +279,48 @@ def strip_binary_manifest(
             debugfile = filename[:-6]
         elif os.path.exists(filename + '.debug'):
             debugfile = filename + '.debug'
-        elif (lib_dir := next((dir for dir in toolchain_lib_dirs if
-                os.path.realpath(filename).startswith(os.path.realpath(dir) + os.sep)),
-                None)):
-            build_id_dir = os.path.join(lib_dir, 'debug', '.build-id')
-            if not os.path.exists(build_id_dir):
-                return None
-            info = elfinfo.get_elf_info(filename)
-            debugfile = os.path.join(
-                build_id_dir, info.build_id[:2], info.build_id[2:] + '.debug')
-            if not os.path.exists(debugfile):
-                return None
-            # Pass filename as fallback so we don't fallback to the build-id entry name.
-            return binary_info(debugfile, fallback_soname=os.path.basename(filename))
         else:
-            dir, file = os.path.split(filename)
-            if file.endswith('.so') or '.so.' in file:
-                subdir = 'lib.unstripped'
-            else:
-                subdir = 'exe.unstripped'
-            debugfile = os.path.join(dir, subdir, file)
-            while not os.path.exists(debugfile):
-                # For dir/foo/bar, if dir/foo/exe.unstripped/bar
-                # didn't exist, try dir/exe.unstripped/foo/bar.
-                parent, dir = os.path.split(dir)
-                if not parent or not dir:
+            # Check for toolchain runtime libraries, which are stored under
+            # {toolchain}/lib/.../libfoo.so, and whose unstripped file will
+            # be under {toolchain}/lib/debug/.build-id/xx/xxxxxx.debug.
+            lib_dir = None
+            for dir in toolchain_lib_dirs:
+                if os.path.realpath(filename).startswith(os.path.realpath(dir) +
+                                                         os.sep):
+                    lib_dir = dir
+                    break
+            if lib_dir:
+                build_id_dir = os.path.join(lib_dir, 'debug', '.build-id')
+                if not os.path.exists(build_id_dir):
                     return None
-                dir, file = parent, os.path.join(dir, file)
-                debugfile = os.path.join(dir, subdir, file)
-            if not os.path.exists(debugfile):
-                debugfile = os.path.join(subdir, filename)
+                info = elfinfo.get_elf_info(filename)
+                debugfile = os.path.join(
+                    build_id_dir, info.build_id[:2],
+                    info.build_id[2:] + '.debug')
                 if not os.path.exists(debugfile):
                     return None
+                # Pass filename as fallback so we don't fallback to the build-id entry name.
+                return binary_info(
+                    debugfile, fallback_soname=os.path.basename(filename))
+            else:
+                dir, file = os.path.split(filename)
+                if file.endswith('.so') or '.so.' in file:
+                    subdir = 'lib.unstripped'
+                else:
+                    subdir = 'exe.unstripped'
+                debugfile = os.path.join(dir, subdir, file)
+                while not os.path.exists(debugfile):
+                    # For dir/foo/bar, if dir/foo/exe.unstripped/bar
+                    # didn't exist, try dir/exe.unstripped/foo/bar.
+                    parent, dir = os.path.split(dir)
+                    if not parent or not dir:
+                        return None
+                    dir, file = parent, os.path.join(dir, file)
+                    debugfile = os.path.join(dir, subdir, file)
+                if not os.path.exists(debugfile):
+                    debugfile = os.path.join(subdir, filename)
+                    if not os.path.exists(debugfile):
+                        return None
         debug = binary_info(debugfile)
         assert debug, (
             "Debug file '%s' for '%s' is invalid" % (debugfile, filename))
@@ -379,8 +390,7 @@ def emit_manifests(args, selected, unselected):
 
     # Collect all the inputs and reify.
     aux_binaries = collect_auxiliaries(unselected, examined)
-    binaries, nonbinaries = collect_binaries(
-        selected, aux_binaries, examined)
+    binaries, nonbinaries = collect_binaries(selected, aux_binaries, examined)
 
     # Prepare to collate groups.
     outputs = [output_manifest(file, []) for file in args.output]
