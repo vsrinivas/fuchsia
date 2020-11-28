@@ -127,7 +127,7 @@ static int format_status(NDM ndm) {
       // If control info found, device is formatted. Return TRUE.
       if (status == NDM_CTRL_BLOCK) {
 #if NDM_DEBUG
-        ndm->logger.debug("NDM formatted - block #%u has control info!", b);
+        ndm->logger.debug(__FILE__, __LINE__, "NDM formatted - block #%u has control info!", b);
 #endif
         PfAssert(ndm->ctrl_blk0 == (ui32)-1);
         ndm->ctrl_blk0 = b;
@@ -227,8 +227,8 @@ static int init_ibad_list(NDM ndm) {
       // Add block to initial bad blocks array and increment bad count.
       ndm->init_bad_blk[ndm->num_bad_blks] = b;
 #if NDM_DEBUG
-      ndm->logger.debug("init_ibad_lis: adding block #%u to init_bad_blk[%u]", b,
-                        ndm->num_bad_blks);
+      ndm->logger.debug(__FILE__, __LINE__, "init_ibad_lis: adding block #%u to init_bad_blk[%u]",
+                        b, ndm->num_bad_blks);
 #endif
       ++ndm->num_bad_blks;
     }
@@ -237,8 +237,8 @@ static int init_ibad_list(NDM ndm) {
   // Set the last initial bad block entry to the device block count.
   ndm->init_bad_blk[ndm->num_bad_blks] = ndm->num_dev_blks;
 #if NDM_DEBUG
-  ndm->logger.debug("init_ibad_lis: LAST init_bad_blk[%u] = %u", ndm->num_bad_blks,
-                    ndm->num_dev_blks);
+  ndm->logger.debug(__FILE__, __LINE__, "init_ibad_lis: LAST init_bad_blk[%u] = %u",
+                    ndm->num_bad_blks, ndm->num_dev_blks);
 #endif
 
   // Return success.
@@ -287,7 +287,8 @@ static int ndm_format(NDM ndm) {
   if (ndm->ctrl_blk1 == (ui32)-1)
     return FsError2(NDM_NO_FREE_BLK, ENOSPC);
 #if NDM_DEBUG
-  ndm->logger.debug("NDM ctrl_blk0=%u, ctrl_blk1=%u", ndm->ctrl_blk0, ndm->ctrl_blk1);
+  ndm->logger.debug(__FILE__, __LINE__, "NDM ctrl_blk0=%u, ctrl_blk1=%u", ndm->ctrl_blk0,
+                    ndm->ctrl_blk1);
 #endif
 
   // Begin the first control write on ctrl_blk0.
@@ -401,10 +402,10 @@ static int find_last_ctrl_info(NDM ndm) {
           last_ctrl_p = p;
           ctrl_pages = last_p;
 #if NDM_DEBUG
-          ndm->logger.debug(
-              "find_ctrl: seq #%u, last = %u (block = %u), "
-              "# pages = %u",
-              high_seq, last_ctrl_p, last_ctrl_p / ndm->pgs_per_blk, ctrl_pages);
+          ndm->logger.debug(__FILE__, __LINE__,
+                            "find_ctrl: seq #%u, last = %u (block = %u), "
+                            "# pages = %u",
+                            high_seq, last_ctrl_p, last_ctrl_p / ndm->pgs_per_blk, ctrl_pages);
 #endif
         }
 
@@ -445,7 +446,8 @@ static int find_last_ctrl_info(NDM ndm) {
 
     if (curr_p == 1 && curr_seq == high_seq && last_p == ctrl_pages) {
 #if NDM_DEBUG
-      ndm->logger.debug("find_ctrl: first = %u (block = %u)", p, p / ndm->pgs_per_blk);
+      ndm->logger.debug(__FILE__, __LINE__, "find_ctrl: first = %u (block = %u)", p,
+                        p / ndm->pgs_per_blk);
 #endif
       ndm->frst_ctrl_page = p;
       return 0;
@@ -477,7 +479,8 @@ static int find_last_ctrl_info(NDM ndm) {
 
       if (curr_p == 1 && curr_seq == high_seq && last_p == ctrl_pages) {
 #if NDM_DEBUG
-        ndm->logger.debug("find_ctrl: first = %u (block = %u)", p, p / ndm->pgs_per_blk);
+        ndm->logger.debug(__FILE__, __LINE__, "find_ctrl: first = %u (block = %u)", p,
+                          p / ndm->pgs_per_blk);
 #endif
         ndm->frst_ctrl_page = p;
         return 0;
@@ -612,7 +615,7 @@ static int check_next_read(CNDM ndm, ui32* curr_loc, ui32* pn, ui32* ctrl_pages,
       return FsError2(NDM_EIO, EIO);
 
 #if NDM_DEBUG
-    ndm->logger.debug("read_ctrl: READ page #%u", *pn);
+    ndm->logger.debug(__FILE__, __LINE__, "read_ctrl: READ page #%u", *pn);
 #endif
   }
 
@@ -641,7 +644,7 @@ static int read_ctrl_info(NDM ndm) {
   if (ndm->read_page(p, ndm->main_buf, ndm->spare_buf, ndm->dev) < 0)
     return FsError2(NDM_EIO, EIO);
 #if NDM_DEBUG
-  ndm->logger.debug("read_ctrl: READ page #%u", p);
+  ndm->logger.debug(__FILE__, __LINE__, "read_ctrl: READ page #%u", p);
 #endif
 
   // Ensure the number of blocks and block size are correct.
@@ -667,12 +670,12 @@ static int read_ctrl_info(NDM ndm) {
   curr_loc += sizeof(ui32);
 
 #if NDM_DEBUG
-  ndm->logger.debug("read_ctrl info:");
-  ndm->logger.debug("  -> ctrl_seq    = %u", ndm->ctrl_seq);
-  ndm->logger.debug("  -> ctrl_blk0   = %u", ndm->ctrl_blk0);
-  ndm->logger.debug("  -> ctrl_blk1   = %u", ndm->ctrl_blk1);
-  ndm->logger.debug("  -> free_virt_blk = %u", ndm->free_virt_blk);
-  ndm->logger.debug("  -> free_ctrl_blk = %u", ndm->free_ctrl_blk);
+  ndm->logger.debug(__FILE__, __LINE__, "read_ctrl info:");
+  ndm->logger.debug(__FILE__, __LINE__, "  -> ctrl_seq    = %u", ndm->ctrl_seq);
+  ndm->logger.debug(__FILE__, __LINE__, "  -> ctrl_blk0   = %u", ndm->ctrl_blk0);
+  ndm->logger.debug(__FILE__, __LINE__, "  -> ctrl_blk1   = %u", ndm->ctrl_blk1);
+  ndm->logger.debug(__FILE__, __LINE__, "  -> free_virt_blk = %u", ndm->free_virt_blk);
+  ndm->logger.debug(__FILE__, __LINE__, "  -> free_ctrl_blk = %u", ndm->free_ctrl_blk);
 #endif
 
   // Retrieve the transfer to block (if any).
@@ -700,15 +703,15 @@ static int read_ctrl_info(NDM ndm) {
     }
 
 #if NDM_DEBUG
-    ndm->logger.debug("  -> xfr_tblk       = %u", ndm->xfr_tblk);
-    ndm->logger.debug("  -> xfr_fblk       = %u", ndm->xfr_fblk);
-    ndm->logger.debug("  -> xfr_bad_po     = %u", ndm->xfr_bad_po);
+    ndm->logger.debug(__FILE__, __LINE__, "  -> xfr_tblk       = %u", ndm->xfr_tblk);
+    ndm->logger.debug(__FILE__, __LINE__, "  -> xfr_fblk       = %u", ndm->xfr_fblk);
+    ndm->logger.debug(__FILE__, __LINE__, "  -> xfr_bad_po     = %u", ndm->xfr_bad_po);
 #endif
   }
 
 #if NDM_DEBUG
   if (ndm->xfr_tblk == (ui32)-1) {
-    ndm->logger.debug("  -> xfr_tblk       = -1");
+    ndm->logger.debug(__FILE__, __LINE__, "  -> xfr_tblk       = -1");
   }
 #endif
 
@@ -716,8 +719,8 @@ static int read_ctrl_info(NDM ndm) {
   ndm->num_partitions = RD32_LE(&ndm->main_buf[curr_loc]);
   curr_loc += sizeof(ui32);
 #if NDM_DEBUG
-  ndm->logger.debug("  -> num_partitions = %u", ndm->num_partitions);
-  ndm->logger.debug("read_ctrl: init_bad_blk[]");
+  ndm->logger.debug(__FILE__, __LINE__, "  -> num_partitions = %u", ndm->num_partitions);
+  ndm->logger.debug(__FILE__, __LINE__, "read_ctrl: init_bad_blk[]");
 #endif
 
   // Retrieve the initial bad blocks map.
@@ -735,7 +738,7 @@ static int read_ctrl_info(NDM ndm) {
     curr_loc += sizeof(ui32);
 
 #if NDM_DEBUG
-    ndm->logger.debug("    [%u] = %u", i, bn);
+    ndm->logger.debug(__FILE__, __LINE__, "    [%u] = %u", i, bn);
 #endif
 
     // Store block in initial bad block map and check for end of map.
@@ -748,7 +751,7 @@ static int read_ctrl_info(NDM ndm) {
   }
 
 #if NDM_DEBUG
-  ndm->logger.debug("read_ctrl: run_bad_blk[]");
+  ndm->logger.debug(__FILE__, __LINE__, "read_ctrl: run_bad_blk[]");
 #endif
 
   // Retrieve running bad blocks map.
@@ -776,7 +779,7 @@ static int read_ctrl_info(NDM ndm) {
     ndm->run_bad_blk[ndm->num_rbb].val = bn;
 
 #if NDM_DEBUG
-    ndm->logger.debug("    [%u] key = %u, val = %u\n", ndm->num_rbb, vbn, bn);
+    ndm->logger.debug(__FILE__, __LINE__, "    [%u] key = %u, val = %u\n", ndm->num_rbb, vbn, bn);
 #endif
 
     // Adjust running count of bad blocks to account for this one.
@@ -801,7 +804,7 @@ static int read_ctrl_info(NDM ndm) {
       return -1;
 
 #if NDM_DEBUG
-    ndm->logger.debug("read_ctrl: partitions[]");
+    ndm->logger.debug(__FILE__, __LINE__, "read_ctrl: partitions[]");
 #endif
 
     // Read partitions from the control information one at a time.
@@ -850,13 +853,15 @@ static int read_ctrl_info(NDM ndm) {
       }
 
 #if NDM_DEBUG
-      ndm->logger.debug(" partition[%2u]:", i);
-      ndm->logger.debug("   - name        = %s", ndm->partitions[i].name);
-      ndm->logger.debug("   - first block = %u", ndm->partitions[i].first_block);
-      ndm->logger.debug("   - num blocks  = %u", ndm->partitions[i].num_blocks);
+      ndm->logger.debug(__FILE__, __LINE__, " partition[%2u]:", i);
+      ndm->logger.debug(__FILE__, __LINE__, "   - name        = %s", ndm->partitions[i].name);
+      ndm->logger.debug(__FILE__, __LINE__, "   - first block = %u",
+                        ndm->partitions[i].first_block);
+      ndm->logger.debug(__FILE__, __LINE__, "   - num blocks  = %u", ndm->partitions[i].num_blocks);
 #if NDM_PART_USER
       for (j = 0; j < NDM_PART_USER; ++j)
-        ndm->logger.debug("   - user[%u]     = %u", j, ndm->partitions[i].user[j]);
+        ndm->logger.debug(__FILE__, __LINE__, "   - user[%u]     = %u", j,
+                          ndm->partitions[i].user[j]);
 #endif
 #endif  // NDM_DEBUG
     }
@@ -883,28 +888,32 @@ static int recover_bad_blk(NDM ndm) {
 
   // Ensure the 'transfer from' block value is valid.
   if (ndm->xfr_fblk >= ndm->num_dev_blks) {
-    ndm->logger.error("Failed to recover NDM Bad Block. Invalid |transfer_from| block %u.",
+    ndm->logger.error(__FILE__, __LINE__,
+                      "Failed to recover NDM Bad Block. Invalid |transfer_from| block %u.",
                       ndm->xfr_fblk);
     return FsError2(NDM_BAD_META_DATA, EINVAL);
   }
 
   // Ensure the 'transfer to' block value is valid.
   if (ndm->xfr_tblk < ndm->frst_reserved || ndm->xfr_tblk >= ndm->free_virt_blk) {
-    ndm->logger.error("Failed to recover NDM Bad Block. Invalid |transfer_to| block %u.",
+    ndm->logger.error(__FILE__, __LINE__,
+                      "Failed to recover NDM Bad Block. Invalid |transfer_to| block %u.",
                       ndm->xfr_tblk);
     return FsError2(NDM_BAD_META_DATA, EINVAL);
   }
 
   // Return error if doing a read-only initialization.
   if (ndm->flags & FSF_READ_ONLY_INIT) {
-    ndm->logger.error("Failed to recover NDM Bad Block. NDM in read-only mode.");
+    ndm->logger.error(__FILE__, __LINE__,
+                      "Failed to recover NDM Bad Block. NDM in read-only mode.");
     return FsError2(NDM_BAD_BLK_RECOV, EINVAL);
   }
 
   // Erase the 'transfer to' block. Return if fatal error.
   rc = ndm->erase_block(ndm->xfr_tblk * ndm->pgs_per_blk, ndm->dev);
   if (rc == -2) {
-    ndm->logger.error("Failed to recover NDM Bad Block. Failed to erase |transfer_to_block|.");
+    ndm->logger.error(__FILE__, __LINE__,
+                      "Failed to recover NDM Bad Block. Failed to erase |transfer_to_block|.");
     return FsError2(NDM_EIO, EIO);
   }
 
@@ -917,9 +926,9 @@ static int recover_bad_blk(NDM ndm) {
     // Find running list entry with this 'transfer from/to' block pair.
     for (i = 0;; ++i) {
       if (i == ndm->num_rbb) {
-        ndm->logger.error(
-            "Failed to recover NDM Bad Block. Failed to obtain run bad block for "
-            "|transfer_to/from| block.");
+        ndm->logger.error(__FILE__, __LINE__,
+                          "Failed to recover NDM Bad Block. Failed to obtain run bad block for "
+                          "|transfer_to/from| block.");
         return FsError2(NDM_ASSERT, EINVAL);
       }
       if (ndm->run_bad_blk[i].key == ndm->xfr_fblk && ndm->run_bad_blk[i].val == ndm->xfr_tblk)
@@ -963,11 +972,11 @@ static int init_ndm(NDM ndm) {
 
   // See if device is formatted with NDM metadata. Check for error.
   if (format_status(ndm) != 0) {
-    ndm->logger.info("No NDM control block found.");
+    ndm->logger.info(__FILE__, __LINE__, "No NDM control block found.");
     // If no metadata was found and initialization is not being done
     // in read-only mode, format the device. Else return -1.
     if ((GetFsErrCode() == NDM_NO_META_BLK) && FLAG_IS_CLR(ndm->flags, FSF_READ_ONLY_INIT)) {
-      ndm->logger.info("No meta block found. Initializing NDM Volume.");
+      ndm->logger.info(__FILE__, __LINE__, "No meta block found. Initializing NDM Volume.");
       return ndm_format(ndm);
     }
     return -1;
@@ -975,14 +984,14 @@ static int init_ndm(NDM ndm) {
 
   // Else device is NDM formatted. Find latest control information.
   if (find_last_ctrl_info(ndm)) {
-    ndm->logger.warning("Failed to obtain valid NDM Control Block.");
+    ndm->logger.warning(__FILE__, __LINE__, "Failed to obtain valid NDM Control Block.");
     return -1;
   }
 
   // Read the control information. Return -1 if error.
   PfAssert(ndm->ctrl_blk1 == (ui32)-1);
   if (read_ctrl_info(ndm)) {
-    ndm->logger.info("Failed to read contents NDM Control Block.");
+    ndm->logger.info(__FILE__, __LINE__, "Failed to read contents NDM Control Block.");
     return -1;
   }
 
@@ -1002,13 +1011,14 @@ static int init_ndm(NDM ndm) {
   else {
     // Fail start-up if image's running bad block count is non-zero.
     if (ndm->num_rbb) {
-      ndm->logger.error("Failed to initialize NDM. |num_rbb| must be zero, found %d", ndm->num_rbb);
+      ndm->logger.error(__FILE__, __LINE__,
+                        "Failed to initialize NDM. |num_rbb| must be zero, found %d", ndm->num_rbb);
       return FsError2(NDM_IMAGE_RBB_CNT, ENXIO);
     }
 
     // Redo the initial bad block list for our device.
     if (init_ibad_list(ndm)) {
-      ndm->logger.error("Failed to initialize NDM bad block list.");
+      ndm->logger.error(__FILE__, __LINE__, "Failed to initialize NDM bad block list.");
       return -1;
     }
 
@@ -1026,6 +1036,7 @@ static int init_ndm(NDM ndm) {
   // Ensure even lowest running bad block lies in reserved area.
   if (ndm->run_bad_blk[0].val < ndm->frst_reserved) {
     ndm->logger.error(
+        __FILE__, __LINE__,
         "Failed to initialize NDM. First bad block in unexpected location. First bad block at %d, "
         "reservation starts at %d.",
         ndm->run_bad_blk[0].val, ndm->frst_reserved);
@@ -1034,7 +1045,7 @@ static int init_ndm(NDM ndm) {
 
   // If in the middle of transferring a bad block, continue transfer.
   if (ndm->xfr_tblk != (ui32)-1) {
-    ndm->logger.info("Resuming bad block transfer.");
+    ndm->logger.info(__FILE__, __LINE__, "Resuming bad block transfer.");
     return recover_bad_blk(ndm);
   }
 
@@ -1042,7 +1053,8 @@ static int init_ndm(NDM ndm) {
   if (wr_metadata) {
     // Return error if doing a read-only initialization.
     if (ndm->flags & FSF_READ_ONLY_INIT) {
-      ndm->logger.info("Failed to Initialize NDM, attempted to write metadata on READ-ONLY mode.");
+      ndm->logger.info(__FILE__, __LINE__,
+                       "Failed to Initialize NDM, attempted to write metadata on READ-ONLY mode.");
       return FsError2(NDM_META_WR_REQ, EINVAL);
     }
 
@@ -1080,11 +1092,11 @@ static int ndm_xfr_page(ui32 old_pn, ui32 new_pn, ui8* buf, ui8* old_spare, ui8*
   // Error check: return 1 for ECC decode error, else -2 fatal error.
   if (status < 0) {
     if (status == -1) {
-      ndm->logger.error("Failed to read page %d. ECC decode error.", old_pn);
+      ndm->logger.error(__FILE__, __LINE__, "Failed to read page %d. ECC decode error.", old_pn);
       FsError2(NDM_RD_ECC_FAIL, EIO);
       return 1;
     }
-    ndm->logger.error("Failed to read page %d. IO Error.");
+    ndm->logger.error(__FILE__, __LINE__, "Failed to read page %d. IO Error.");
     FsError2(NDM_EIO, EIO);
     return -2;
   }
@@ -1146,7 +1158,7 @@ NDM ndmAddDev(const NDMDrvr* dvr) {
   // Ensure NDM driver flags are valid.
   if (dvr->flags & ~(FSF_MULTI_ACCESS | FSF_TRANSFER_PAGE | FSF_FREE_SPARE_ECC |
                      FSF_NDM_INIT_WRITE | FSF_READ_ONLY_INIT)) {
-    dvr->logger.error("Failed to initialized NDM. Invalid flag.");
+    dvr->logger.error(__FILE__, __LINE__, "Failed to initialized NDM. Invalid flag.");
     FsError2(NDM_CFG_ERR, EINVAL);
     return NULL;
   }
@@ -1154,6 +1166,7 @@ NDM ndmAddDev(const NDMDrvr* dvr) {
   // Check for valid number of blocks.
   if (dvr->num_blocks <= dvr->max_bad_blocks + NDM_META_BLKS) {
     dvr->logger.error(
+        __FILE__, __LINE__,
         "Failed to initialized NDM. Not enough blocks for reservation and control blocks, found %d "
         "but required %d.",
         dvr->num_blocks, (dvr->max_bad_blocks + NDM_META_BLKS));
@@ -1164,6 +1177,7 @@ NDM ndmAddDev(const NDMDrvr* dvr) {
   // Check for valid page size (multiple of 512).
   if (dvr->page_size == 0 || dvr->page_size % 512) {
     dvr->logger.error(
+        __FILE__, __LINE__,
         "Failed to initialized NDM. Invalid page size, must positive multiple of 512, but found "
         "%d.",
         dvr->page_size);
@@ -1174,6 +1188,7 @@ NDM ndmAddDev(const NDMDrvr* dvr) {
   // Check for valid spare bytes size.
   if (dvr->eb_size > dvr->page_size || dvr->eb_size < 16) {
     dvr->logger.error(
+        __FILE__, __LINE__,
         "Failed to initialized NDM. Invalid page oob size, must at least 16 bytes, but found %d.",
         dvr->eb_size);
     FsError2(NDM_CFG_ERR, EINVAL);
@@ -1183,7 +1198,7 @@ NDM ndmAddDev(const NDMDrvr* dvr) {
   // Allocate space for TargetNDM control block.
   ndm = FsCalloc(1, sizeof(struct ndm));
   if (ndm == NULL) {
-    dvr->logger.error("Failed to initialized NDM. Memory allocation failed.");
+    dvr->logger.error(__FILE__, __LINE__, "Failed to initialized NDM. Memory allocation failed.");
     FsError2(NDM_ENOMEM, ENOMEM);
     return NULL;
   }
@@ -1205,6 +1220,7 @@ NDM ndmAddDev(const NDMDrvr* dvr) {
   ndm->init_bad_blk = FsMalloc((ndm->max_bad_blks + 1) * sizeof(ui32));
   if (ndm->init_bad_blk == NULL) {
     ndm->logger.error(
+        __FILE__, __LINE__,
         "Failed to initialize NDM. Failed to allocated memory for factory bad block table.");
     FsError2(NDM_ENOMEM, ENOMEM);
     goto ndmAddDe_err;
@@ -1212,6 +1228,7 @@ NDM ndmAddDev(const NDMDrvr* dvr) {
   ndm->run_bad_blk = FsMalloc((ndm->max_bad_blks + 1) * sizeof(Pair));
   if (ndm->run_bad_blk == NULL) {
     ndm->logger.error(
+        __FILE__, __LINE__,
         "Failed to initialized NDM. Failed to allocated memory for runtime bad block table.");
     FsError2(NDM_ENOMEM, ENOMEM);
     goto ndmAddDe_err;
@@ -1225,7 +1242,7 @@ NDM ndmAddDev(const NDMDrvr* dvr) {
   snprintf(sem_name, sizeof(sem_name), "NDM_S%03d", NdmSemCount++);
   ndm->sem = semCreate(sem_name, 1, OS_FIFO);
   if (ndm->sem == NULL) {
-    ndm->logger.error("Failed to initialize NDM. Failed to created semaphore.");
+    ndm->logger.error(__FILE__, __LINE__, "Failed to initialize NDM. Failed to created semaphore.");
     FsError2(NDM_SEM_CRE_ERR, errno);
     goto ndmAddDe_err;
   }
@@ -1240,6 +1257,7 @@ NDM ndmAddDev(const NDMDrvr* dvr) {
   ndm->main_buf = FsAalloc(ndm->page_size + 2 * eb_alloc_sz);
   if (ndm->main_buf == NULL) {
     ndm->logger.error(
+        __FILE__, __LINE__,
         "Failed to initialied NDM. Failed to allocate memory for page content staging buffer.");
     FsError2(NDM_ENOMEM, ENOMEM);
     goto ndmAddDe_err;
@@ -1275,13 +1293,13 @@ NDM ndmAddDev(const NDMDrvr* dvr) {
 
   // If driver supplies transfer page function, use it.
   if (FLAG_IS_SET(dvr->flags, FSF_TRANSFER_PAGE)) {
-    ndm->logger.info("Using driver page transfer routine.");
+    ndm->logger.info(__FILE__, __LINE__, "Using driver page transfer routine.");
     ndm->dev_ndm = ndm->dev;
     ndm->xfr_page = dvr->transfer_page;
 
     // Else use internal read-page/write-page substitute.
   } else {
-    ndm->logger.info("Using software page transfer routine.");
+    ndm->logger.info(__FILE__, __LINE__, "Using software page transfer routine.");
     ndm->dev_ndm = ndm;
     ndm->xfr_page = ndm_xfr_page;
   }
@@ -1294,7 +1312,7 @@ NDM ndmAddDev(const NDMDrvr* dvr) {
 
   // Initialize the NDM.
   if (init_ndm(ndm)) {
-    ndm->logger.error("Failed to initialized NDM layer.");
+    ndm->logger.error(__FILE__, __LINE__, "Failed to initialized NDM layer.");
     goto ndmAddDe_err;
   }
 
@@ -1339,13 +1357,13 @@ int ndmDelDev(NDM ndm) {
 
   // Acquire exclusive access to global NDM semaphore.
   semPend(NdmSem, WAIT_FOREVER);
-  ndm->logger.info("Removing NDM device.");
+  ndm->logger.info(__FILE__, __LINE__, "Removing NDM device.");
 
   // Ensure the device is on the device list.
   for (circ = CIRC_LIST_HEAD(&NdmDevs);; circ = circ->next_bck) {
     // If the device was not found, return error.
     if (CIRC_LIST_AT_END(circ, &NdmDevs)) {
-      ndm->logger.info("failed to remove ndm device. device not found.");
+      ndm->logger.info(__FILE__, __LINE__, "failed to remove ndm device. device not found.");
       semPostBin(NdmSem);
       return FsError2(NDM_NOT_FOUND, ENOENT);
     }

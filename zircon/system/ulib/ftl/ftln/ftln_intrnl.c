@@ -270,7 +270,8 @@ static int wr_vol_page(FTLN ftl, ui32 vpn, void* buf, ui32 old_ppn) {
   // If list of erased blocks/wear counts exists, erase it now.
   if (ftl->elist_blk != (ui32)-1)
     if (FtlnEraseBlk(ftl, ftl->elist_blk)) {
-      ftl->logger.error("Failed to erase block list at block %u.", ftl->elist_blk);
+      ftl->logger.error(__FILE__, __LINE__, "Failed to erase block list at block %u.",
+                        ftl->elist_blk);
       return -1;
     }
 #endif
@@ -278,7 +279,7 @@ static int wr_vol_page(FTLN ftl, ui32 vpn, void* buf, ui32 old_ppn) {
   // Allocate next free volume page. Return -1 if error.
   ppn = next_free_vpg(ftl);
   if (ppn == (ui32)-1) {
-    ftl->logger.error("Failed to allocate a volume page.");
+    ftl->logger.error(__FILE__, __LINE__, "Failed to allocate a volume page.");
     return -1;
   }
 
@@ -306,7 +307,8 @@ static int wr_vol_page(FTLN ftl, ui32 vpn, void* buf, ui32 old_ppn) {
 
   // Return -1 for any error. Any write error is fatal.
   if (rc) {
-    ftl->logger.error("Failed to write volume page %u at %u.", vpn, ftl->start_pn + ppn);
+    ftl->logger.error(__FILE__, __LINE__, "Failed to write volume page %u at %u.", vpn,
+                      ftl->start_pn + ppn);
     return FtlnFatErr(ftl);
   }
 
@@ -604,7 +606,8 @@ static int recycle_vblk(FTLN ftl, ui32 recycle_b) {
     // Return -1 if fatal error, skip page if ECC error on spare read.
     if (rc) {
       if (rc == -2) {
-        ftl->logger.error("Failed to read spare area from block %u.", recycle_b);
+        ftl->logger.error(__FILE__, __LINE__, "Failed to read spare area from block %u.",
+                          recycle_b);
         return FtlnFatErr(ftl);
       } else
         continue;
@@ -625,14 +628,15 @@ static int recycle_vblk(FTLN ftl, ui32 recycle_b) {
 
     // Write page to new flash block. Return -1 if error.
     if (wr_vol_page(ftl, vpn, NULL, pn)) {
-      ftl->logger.error("Failed to transfer page %u to physical page %u.", vpn, pn);
+      ftl->logger.error(__FILE__, __LINE__, "Failed to transfer page %u to physical page %u.", vpn,
+                        pn);
       return -1;
     }
   }
 
   // Save MPGs modified by volume page transfers. Return -1 if error.
   if (ftlmcFlushMap(ftl->map_cache)) {
-    ftl->logger.error("Failed to flush map cache.");
+    ftl->logger.error(__FILE__, __LINE__, "Failed to flush map cache.");
     return -1;
   }
 
@@ -716,7 +720,7 @@ static int flush_pending_writes(FTLN ftl, StagedWr* staged) {
   ftl->stats.write_page += staged->cnt;
   if (ndmWritePages(ftl->start_pn + staged->ppn0, staged->cnt, staged->buf, ftl->spare_buf,
                     ftl->ndm)) {
-    ftl->logger.error("Failed to stage writes.");
+    ftl->logger.error(__FILE__, __LINE__, "Failed to stage writes.");
     return FtlnFatErr(ftl);
   }
 
@@ -998,7 +1002,7 @@ int FtlnMetaWr(FTLN ftl, ui32 type) {
   // Issue meta page write.
   int result = FtlnMapWr(ftl, ftl->num_map_pgs - 1, ftl->main_buf);
   if (result < 0) {
-    ftl->logger.error("FTL failed to write meta map page.");
+    ftl->logger.error(__FILE__, __LINE__, "FTL failed to write meta map page.");
   }
   return result;
 }

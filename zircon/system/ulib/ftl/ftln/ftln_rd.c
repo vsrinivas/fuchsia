@@ -73,7 +73,7 @@ int FtlnRdPages(void* buf, ui32 vpn, int count, void* vol) {
 
   // Ensure request is within volume's range of provided pages.
   if (vpn + count > ftl->num_vpages) {
-    ftl->logger.error("FTL Read failed. Attempting to read page %u is out of range(max %u).",
+    ftl->logger.error(__FILE__, __LINE__, "FTL Read failed. Attempting to read page %u is out of range(max %u).",
                       vpn + count - 1, ftl->num_pages - 1);
     return FsError2(FTL_ASSERT, ENOSPC);
   }
@@ -85,7 +85,7 @@ int FtlnRdPages(void* buf, ui32 vpn, int count, void* vol) {
   // If there's at least a block with a maximum read count, recycle.
   if (ftl->max_rc_blk != (ui32)-1)
     if (FtlnRecCheck(ftl, 0)) {
-      ftl->logger.error("FTL read recycle failed for page %u.");
+      ftl->logger.error(__FILE__, __LINE__, "FTL read recycle failed for page %u.");
       return -1;
     }
 
@@ -116,13 +116,13 @@ int FtlnRdPages(void* buf, ui32 vpn, int count, void* vol) {
 
     // Prepare to potentially write one map page. Return -1 if error.
     if (FtlnRecCheck(ftl, -1)) {
-      ftl->logger.error("Failed to obtain free pages through block recycling.");
+      ftl->logger.error(__FILE__, __LINE__, "Failed to obtain free pages through block recycling.");
       return -1;
     }
 
     // Convert the virtual page number to its physical page number.
     if (FtlnMapGetPpn(ftl, vpn, &ppn) < 0) {
-      ftl->logger.error("Failed to obtain map physical page number.");
+      ftl->logger.error(__FILE__, __LINE__, "Failed to obtain map physical page number.");
       return -1;
     }
 

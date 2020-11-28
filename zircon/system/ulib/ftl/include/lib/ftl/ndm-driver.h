@@ -42,11 +42,11 @@ struct VolumeOptions {
 
 // Helper for overriding default logging routines.
 struct LoggerProxy {
-  __PRINTFLIKE(1, 2) void (*trace)(const char*, ...) = nullptr;
-  __PRINTFLIKE(1, 2) void (*debug)(const char*, ...) = nullptr;
-  __PRINTFLIKE(1, 2) void (*info)(const char*, ...) = nullptr;
-  __PRINTFLIKE(1, 2) void (*warn)(const char*, ...) = nullptr;
-  __PRINTFLIKE(1, 2) void (*error)(const char*, ...) = nullptr;
+  __PRINTFLIKE(3, 4) void (*trace)(const char*, int, const char*, ...) = nullptr;
+  __PRINTFLIKE(3, 4) void (*debug)(const char*, int, const char*, ...) = nullptr;
+  __PRINTFLIKE(3, 4) void (*info)(const char*, int, const char*, ...) = nullptr;
+  __PRINTFLIKE(3, 4) void (*warn)(const char*, int, const char*, ...) = nullptr;
+  __PRINTFLIKE(3, 4) void (*error)(const char*, int, const char*, ...) = nullptr;
 };
 
 // Encapsulates the lower layer TargetFtl-Ndm driver.

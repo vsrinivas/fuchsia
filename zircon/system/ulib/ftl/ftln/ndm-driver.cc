@@ -142,7 +142,7 @@ int CheckPage(uint32_t page, uint8_t* data, uint8_t* spare, int* status, void* d
   return kNdmOk;
 }
 
-__PRINTFLIKE(1, 2) void LogTrace(const char* format, ...) {
+__PRINTFLIKE(3, 4) void LogTrace(const char* file, int line, const char* format, ...) {
   fprintf(stderr, "[FTL] TRACE: ");
   va_list args;
   va_start(args, format);
@@ -151,7 +151,7 @@ __PRINTFLIKE(1, 2) void LogTrace(const char* format, ...) {
   fprintf(stderr, "\n");
 }
 
-__PRINTFLIKE(1, 2) void LogDebug(const char* format, ...) {
+__PRINTFLIKE(3, 4) void LogDebug(const char* file, int line, const char* format, ...) {
   fprintf(stderr, "[FTL] DEBUG: ");
   va_list args;
   va_start(args, format);
@@ -160,7 +160,7 @@ __PRINTFLIKE(1, 2) void LogDebug(const char* format, ...) {
   fprintf(stderr, "\n");
 }
 
-__PRINTFLIKE(1, 2) void LogInfo(const char* format, ...) {
+__PRINTFLIKE(3, 4) void LogInfo(const char* file, int line, const char* format, ...) {
   fprintf(stderr, "[FTL] INFO: ");
   va_list args;
   va_start(args, format);
@@ -169,7 +169,7 @@ __PRINTFLIKE(1, 2) void LogInfo(const char* format, ...) {
   fprintf(stderr, "\n");
 }
 
-__PRINTFLIKE(1, 2) void LogWarning(const char* format, ...) {
+__PRINTFLIKE(3, 4) void LogWarning(const char* file, int line, const char* format, ...) {
   fprintf(stderr, "[FTL] WARNING: ");
   va_list args;
   va_start(args, format);
@@ -178,7 +178,7 @@ __PRINTFLIKE(1, 2) void LogWarning(const char* format, ...) {
   fprintf(stderr, "\n");
 }
 
-__PRINTFLIKE(1, 2) void LogError(const char* format, ...) {
+__PRINTFLIKE(3, 4) void LogError(const char* file, int line, const char* format, ...) {
   fprintf(stderr, "[FTL] ERROR: ");
   va_list args;
   va_start(args, format);

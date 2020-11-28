@@ -472,7 +472,9 @@ TEST_F(NdmReadOnlyTest, BadBlocksV2) {
 
   class LoggerHelper {
    public:
-    static void Log(const char* _, ...) __PRINTFLIKE(1, 2) { logger_called = true; }
+    static void Log(const char*, int, const char* _, ...) __PRINTFLIKE(3, 4) {
+      logger_called = true;
+    }
   };
 
   ftl::LoggerProxy logger;

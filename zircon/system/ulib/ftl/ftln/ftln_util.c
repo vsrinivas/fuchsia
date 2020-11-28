@@ -125,7 +125,7 @@ int FtlnReport(void* vol, ui32 msg, ...) {
     case FS_FORMAT_RESET_WC: {
       // Format volume. Return -1 if error.
       if (format_ftl(ftl)) {
-        ftl->logger.error("FTL format failed.");
+        ftl->logger.error(__FILE__, __LINE__, "FTL format failed.");
         return -1;
       }
 
@@ -477,7 +477,7 @@ int FtlnEraseBlk(FTLN ftl, ui32 b) {
   // Call driver to erase block. Return -1 if error.
   ++ftl->stats.erase_block;
   if (ndmEraseBlock(ftl->start_pn + b * ftl->pgs_per_blk, ftl->ndm)) {
-    ftl->logger.error("FTL failed to erase block %u.", ftl->start_pn / ftl->pgs_per_blk + b);
+    ftl->logger.error(__FILE__, __LINE__, "FTL failed to erase block %u.", ftl->start_pn / ftl->pgs_per_blk + b);
     return FtlnFatErr(ftl);
   }
 

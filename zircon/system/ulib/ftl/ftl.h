@@ -189,7 +189,7 @@ typedef struct {
 typedef struct ndm* NDM;
 typedef const struct ndm* CNDM;
 
-typedef void (*LogFunction)(const char*, ...) __PRINTFLIKE(1, 2);
+typedef void (*LogFunction)(const char*, int, const char*, ...) __PRINTFLIKE(3, 4);
 
 typedef struct {
   // Logger interface for different log levels.

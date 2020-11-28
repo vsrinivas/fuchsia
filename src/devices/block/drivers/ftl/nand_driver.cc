@@ -31,43 +31,38 @@ uint32_t GetParameter(const char* key) {
   return static_cast<uint32_t>(strtoul(value, nullptr, 0));
 }
 
-__PRINTFLIKE(1, 2) void LogTrace(const char* format, ...) {
+__PRINTFLIKE(3, 4) void LogTrace(const char* file, int line, const char* format, ...) {
   va_list args;
   va_start(args, format);
-  // TODO: Propogate file and line via caller.
-  zxlogvf(TRACE, __FILE__, __LINE__, format, args);
+  zxlogvf(TRACE, file, line, format, args);
   va_end(args);
 }
 
-__PRINTFLIKE(1, 2) void LogDebug(const char* format, ...) {
+__PRINTFLIKE(3, 4) void LogDebug(const char* file, int line, const char* format, ...) {
   va_list args;
   va_start(args, format);
-  // TODO: Propogate file and line via caller.
-  zxlogvf(DEBUG, __FILE__, __LINE__, format, args);
+  zxlogvf(DEBUG, file, line, format, args);
   va_end(args);
 }
 
-__PRINTFLIKE(1, 2) void LogInfo(const char* format, ...) {
+__PRINTFLIKE(3, 4) void LogInfo(const char* file, int line, const char* format, ...) {
   va_list args;
   va_start(args, format);
-  // TODO: Propogate file and line via caller.
-  zxlogvf(INFO, __FILE__, __LINE__, format, args);
+  zxlogvf(INFO, file, line, format, args);
   va_end(args);
 }
 
-__PRINTFLIKE(1, 2) void LogWarning(const char* format, ...) {
+__PRINTFLIKE(3, 4) void LogWarning(const char* file, int line, const char* format, ...) {
   va_list args;
   va_start(args, format);
-  // TODO: Propogate file and line via caller.
-  zxlogvf(WARNING, __FILE__, __LINE__, format, args);
+  zxlogvf(WARNING, file, line, format, args);
   va_end(args);
 }
 
-__PRINTFLIKE(1, 2) void LogError(const char* format, ...) {
+__PRINTFLIKE(3, 4) void LogError(const char* file, int line, const char* format, ...) {
   va_list args;
   va_start(args, format);
-  // TODO: Propogate file and line via caller.
-  zxlogvf(ERROR, __FILE__, __LINE__, format, args);
+  zxlogvf(ERROR, file, line, format, args);
   va_end(args);
 }
 
