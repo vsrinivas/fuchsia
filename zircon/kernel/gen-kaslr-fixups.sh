@@ -82,6 +82,7 @@ BEGIN {
     address_prefix = "";
     fixup_types["R_X86_64_64"] = 1;
     fixup_types["R_AARCH64_ABS64"] = 1;
+    fixup_types["R_RISCV_64"] = 1;
 }
 # In GNU awk, this is just: return strtonum("0x" string)
 # But for least-common-denominator awk, you really have to do it by hand.
@@ -127,14 +128,19 @@ $3 == "R_AARCH64_PREL32" || $3 == "R_AARCH64_PREL64" || \
 $3 == "R_AARCH64_CALL26" || $3 == "R_AARCH64_JUMP26" || \
 $3 == "R_AARCH64_CONDBR19" || $3 == "R_AARCH64_TSTBR14" || \
 $3 == "R_AARCH64_PLT32" || \
-$3 ~ /^R_AARCH64_ADR_/ || $3 ~ /^R_AARCH64_.*ABS_L/ {
+$3 ~ /^R_AARCH64_ADR_/ || $3 ~ /^R_AARCH64_.*ABS_L/ || \
+$3 == "R_RISCV_JAL" || $3 == "R_RISCV_CALL" || \
+$3 == "R_RISCV_CALL_PLT"  || $3 == "R_RISCV_GOT_HI20" || \
+$3 == "R_RISCV_ADD32"  || $3 == "R_RISCV_SUB32" || \
+$3 == "R_RISCV_32_PCREL" || \
+$3 ~ /^R_RISCV_PCREL_/ {
     # PC-relative relocs need no fixup.
     next
 }
 {
     # awk handles large integers poorly, so factor out the high 40 bits.
     this_prefix = substr($1, 1, 10)
-    raw_offset = substr($1, 10)
+    raw_offset = substr($1, 11)
     if (address_prefix == "") {
         address_prefix = this_prefix;
     } else if (this_prefix != address_prefix) {
@@ -160,7 +166,7 @@ $3 ~ /^R_AARCH64_ADR_/ || $3 ~ /^R_AARCH64_.*ABS_L/ {
         bad = "";
     } else if (r_offset % 8 != 0) {
         bad = "misaligned r_offset";
-    } else if (secname !~ /^\.(ro)?data|^\.kcounter.desc|\.init_array|\.fini_array|\.code-patches|code_patch_table|__llvm_prf_data|asan_globals/) {
+    } else if (secname !~ /^\.(ro|s)?data|^\.kcounter.desc|\.init_array|\.fini_array|\.code-patches|code_patch_table|__llvm_prf_data|asan_globals/) {
         bad = "fixup in unexpected section"
     } else {
         bad = "";
