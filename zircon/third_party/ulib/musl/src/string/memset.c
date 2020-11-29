@@ -94,5 +94,7 @@ NO_ASAN void* memset(void* dest, int c, size_t n) {
   return dest;
 }
 
+// This name is called from inside libc to avoid going through the PLT.
+__typeof(memset) __libc_memset __attribute__((alias("memset"))) __attribute__((visibility("hidden")));
 __typeof(memset) __unsanitized_memset __attribute__((alias("memset")));
 __asan_weak_alias(memset)

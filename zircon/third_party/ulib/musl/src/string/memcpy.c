@@ -153,5 +153,7 @@ NO_ASAN void* memcpy(void* restrict dest, const void* restrict src, size_t n) {
   return dest;
 }
 
+// This name is called from inside libc to avoid going through the PLT.
+__typeof(memcpy) __libc_memcpy __attribute__((alias("memcpy")));
 __typeof(memcpy) __unsanitized_memcpy __attribute__((alias("memcpy")));
 __asan_weak_alias(memcpy)
