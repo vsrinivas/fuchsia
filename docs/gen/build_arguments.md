@@ -1290,7 +1290,7 @@ is produced by the build.
 
 **Current value for `target_cpu = "arm64"`:** `["//tools/devshell:fx"]`
 
-From //products/bringup.gni:46
+From //products/bringup.gni:47
 
 **Overridden from the default:** `[]`
 
@@ -1298,7 +1298,7 @@ From //BUILD.gn:59
 
 **Current value for `target_cpu = "x64"`:** `["//tools/devshell:fx"]`
 
-From //products/bringup.gni:46
+From //products/bringup.gni:47
 
 **Overridden from the default:** `[]`
 
@@ -2061,17 +2061,17 @@ From //src/graphics/lib/magma/gnbuild/magma.gni:32
 ### product_bootfs_labels
 A list of binary labels to include in ZBIs built for this product.
 
-**Current value for `target_cpu = "arm64"`:** `["//build/info:bootfs", "//bundles:bootstrap", "//bundles:debugging", "//bundles/bringup:manual_testing", "//bundles/drivers:bootstrap", "//bundles/drivers:bootstrap-eng", "//bundles/drivers:usb-host-stack", "//bundles/drivers:usb-peripheral-stack", "//bundles/drivers:utils", "//src/testing/runtests", "//src/sys/component_manager:component_manager_config_bootfs_resource"]`
+**Current value for `target_cpu = "arm64"`:** `["//build/info:bootfs", "//bundles:bootstrap", "//bundles:debugging", "//bundles/bringup:manual_testing", "//bundles/drivers:bootstrap", "//bundles/drivers:bootstrap-eng", "//bundles/drivers:usb-host-stack", "//bundles/drivers:usb-peripheral-stack", "//bundles/drivers:utils", "//src/testing/runtests", "//src/sys/component_manager:component_manager_bootfs_config"]`
 
-From //products/core.gni:109
+From //products/core.gni:110
 
 **Overridden from the default:** `[]`
 
 From //build/product.gni:7
 
-**Current value for `target_cpu = "x64"`:** `["//build/info:bootfs", "//bundles:bootstrap", "//bundles:debugging", "//bundles/bringup:manual_testing", "//bundles/drivers:bootstrap", "//bundles/drivers:bootstrap-eng", "//bundles/drivers:usb-host-stack", "//bundles/drivers:usb-peripheral-stack", "//bundles/drivers:utils", "//src/testing/runtests", "//src/sys/component_manager:component_manager_config_bootfs_resource"]`
+**Current value for `target_cpu = "x64"`:** `["//build/info:bootfs", "//bundles:bootstrap", "//bundles:debugging", "//bundles/bringup:manual_testing", "//bundles/drivers:bootstrap", "//bundles/drivers:bootstrap-eng", "//bundles/drivers:usb-host-stack", "//bundles/drivers:usb-peripheral-stack", "//bundles/drivers:utils", "//src/testing/runtests", "//src/sys/component_manager:component_manager_bootfs_config"]`
 
-From //products/core.gni:109
+From //products/core.gni:110
 
 **Overridden from the default:** `[]`
 
