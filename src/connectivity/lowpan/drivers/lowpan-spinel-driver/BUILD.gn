@@ -98,5 +98,8 @@ package("lowpan-spinel-driver") {
 
 group("tests") {
   testonly = true
-  public_deps = [ ":bin_test" ]
+  public_deps = [
+    ":bin_test",
+    "tests",
+  ]
 }

@@ -1,0 +1,50 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_test.gni")
+import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
+import("//src/lib/isolated_devmgr/isolated_devmgr.gni")
+import("//src/sys/build/components.gni")
+
+rustc_test("lowpan-driver-provision-mock") {
+  name = "lowpan_driver_provision_mock"
+  source_root = "mock-device/lowpan_driver_provision_mock.rs"
+  edition = "2018"
+  deps = [
+    "//src/connectivity/lowpan/drivers/lowpan-spinel-driver/tests/lib",
+    "//src/connectivity/lowpan/drivers/lowpan-spinel-driver/tests/test-code",
+    "//src/connectivity/lowpan/tools/lowpanctl",
+    "//src/connectivity/openthread/tests/lib",
+    "//src/lib/fuchsia-async",
+    "//src/lib/syslog/rust:syslog",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:matches",
+    "//third_party/rust_crates:thiserror",
+  ]
+  non_rust_deps = [ "//zircon/system/ulib/syslog" ]
+
+  sources = [ "mock-device/lowpan_driver_provision_mock.rs" ]
+}
+
+fuchsia_component("lowpan-driver-provision-mock-component") {
+  testonly = true
+  manifest = "meta/lowpan_driver_provision_mock.cmx"
+  deps = [
+    ":lowpan-driver-provision-mock",
+    "//src/connectivity/lowpan",
+    "//src/connectivity/openthread/ot-stack:component",
+    "//src/connectivity/openthread/tests/ot-devmgr:ot-devmgr-component-integration",
+  ]
+}
+
+fuchsia_test_package("lowpan-integration-tests") {
+  package_name = "lowpan-integration-tests"
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
+  test_components = [ ":lowpan-driver-provision-mock-component" ]
+}

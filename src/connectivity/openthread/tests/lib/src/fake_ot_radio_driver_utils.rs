@@ -13,6 +13,8 @@ use {
     std::path::Path,
 };
 
+const OT_PROTOCOL_PATH: &str = "class/ot-radio";
+
 /// Get the ot radio device in path `dir_path_str` in isolated_devmgr
 pub async fn get_ot_device_in_isolated_devmgr(dir_path_str: &str) -> Result<File, Error> {
     let ot_radio_dir =
@@ -68,4 +70,13 @@ pub async fn validate_removal_of_device_in_isolated_devmgr(
         }
     }
     Ok::<(), Error>(())
+}
+
+pub async fn ot_radio_deinit() {
+    // Remove fake ot device
+    let device = get_ot_device_in_isolated_devmgr(OT_PROTOCOL_PATH).await.expect("getting device");
+    unbind_device_in_isolated_devmgr(&device).expect("schedule unbind");
+    validate_removal_of_device_in_isolated_devmgr(OT_PROTOCOL_PATH)
+        .await
+        .expect("validate removal of device");
 }

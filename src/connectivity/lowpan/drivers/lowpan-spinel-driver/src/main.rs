@@ -55,7 +55,7 @@ use fidl_fuchsia_lowpan_spinel::{
     DeviceMarker as SpinelDeviceMarker, DeviceProxy as SpinelDeviceProxy,
     DeviceSetupProxy as SpinelDeviceSetupProxy,
 };
-use fuchsia_component::client::connect_to_service_at;
+use fuchsia_component::client::{connect_to_service, connect_to_service_at};
 use fuchsia_component::client::{launch, launcher, App};
 use lowpan_driver_common::{register_and_serve_driver, register_and_serve_driver_factory};
 
@@ -73,6 +73,9 @@ struct DriverArgs {
 
     #[argh(switch, long = "otstack", description = "launch and connect to ot-stack")]
     pub use_ot_stack: bool,
+
+    #[argh(switch, long = "integration", description = "enable integration test mode")]
+    pub is_integration_test: bool,
 
     #[argh(
         option,
@@ -191,13 +194,22 @@ fn connect_to_spinel_device_proxy() -> Result<(Option<App>, SpinelDeviceProxy), 
     Ok((Some(app), ot_stack_proxy))
 }
 
+#[allow(unused)]
+fn connect_to_spinel_device_proxy_test() -> Result<(Option<App>, SpinelDeviceProxy), Error> {
+    let ot_stack_proxy =
+        connect_to_service::<SpinelDeviceMarker>().expect("Failed to connect to ot-stack service");
+    Ok((None, ot_stack_proxy))
+}
+
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
     let args: DriverArgs = argh::from_env();
 
     fuchsia_syslog::init_with_tags(&["lowpan-spinel-driver"]).context("initialize logging")?;
 
-    let (_app, spinel_device) = if args.use_ot_stack {
+    let (_app, spinel_device) = if args.is_integration_test {
+        connect_to_spinel_device_proxy_test().context("connect_to_spinel_device_proxy_test")?
+    } else if args.use_ot_stack {
         connect_to_spinel_device_proxy().context("connect_to_spinel_device_proxy")?
     } else {
         connect_to_spinel_device_proxy_hack()

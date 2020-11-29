@@ -1,0 +1,41 @@
+{
+    "facets": {
+        "fuchsia.test": {
+            "injected-services": {
+                "fuchsia.factory.lowpan.FactoryLookup": "fuchsia-pkg://fuchsia.com/lowpanservice#meta/lowpanservice.cmx",
+                "fuchsia.factory.lowpan.FactoryRegister": "fuchsia-pkg://fuchsia.com/lowpanservice#meta/lowpanservice.cmx",
+                "fuchsia.lowpan.device.Lookup": "fuchsia-pkg://fuchsia.com/lowpanservice#meta/lowpanservice.cmx",
+                "fuchsia.lowpan.device.Register": "fuchsia-pkg://fuchsia.com/lowpanservice#meta/lowpanservice.cmx",
+                "fuchsia.lowpan.spinel.Device": [
+                    "fuchsia-pkg://fuchsia.com/ot-radio-component-tests#meta/ot-stack.cmx",
+                    "-t",
+                    "class/ot-radio/000"
+                ],
+                "fuchsia.net.interfaces.State": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",
+                "fuchsia.net.stack.Stack": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",
+                "fuchsia.net.tun.Control": "fuchsia-pkg://fuchsia.com/network-tun#meta/network-tun.cmx",
+                "fuchsia.openthread.devmgr.IsolatedDevmgr": [
+                    "fuchsia-pkg://fuchsia.com/ot-radio-component-tests#meta/ot-devmgr-component-integration.cmx"
+                ]
+            }
+        }
+    },
+    "program": {
+        "binary": "bin/lowpan_driver_provision_mock"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.factory.lowpan.FactoryLookup",
+            "fuchsia.factory.lowpan.FactoryRegister",
+            "fuchsia.logger.LogSink",
+            "fuchsia.lowpan.device.Lookup",
+            "fuchsia.lowpan.device.Register",
+            "fuchsia.lowpan.spinel.Device",
+            "fuchsia.net.interfaces.State",
+            "fuchsia.net.stack.Stack",
+            "fuchsia.net.tun.Control",
+            "fuchsia.openthread.devmgr.IsolatedDevmgr",
+            "fuchsia.sys.Launcher"
+        ]
+    }
+}
