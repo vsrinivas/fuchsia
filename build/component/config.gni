@@ -11,13 +11,13 @@ import("//build/dist/resource.gni")
 #
 # ```
 # component_config("some_config") {
-#   source = "config.json"
+#   sources = [ "config.json" ]
 # }
 # ```
 #
 # Inputs:
 #
-# - JSON file with config values.
+# - JSON file(s) with config values.
 #
 # Outputs:
 #
@@ -25,52 +25,52 @@ import("//build/dist/resource.gni")
 #
 # Parameters:
 #
-#   source: (required string), path to json file containing config values.
+#   sources (required)
+#     Paths to one or more JSON files containing config values.
 #
-#   output_name: (optional string), path to the binary config destination.
-#     By default, rule name is used as a file name.
+#   dest (optional)
+#     If specified, the packaged path for the generated binary config file.
+#     Default: "data/${target_name}"
 template("component_config") {
-  # Best practices forward.
-  forward_variables_from(invoker,
-                         [
-                           "testonly",
-                           "visibility",
-                           "sources",
-                         ])
+  assert(defined(invoker.sources), "Parameter source=... is required")
 
-  assert(defined(sources), "Parameter source=... is required")
-
-  if (defined(invoker.output_name)) {
-    output_name = invoker.output_name
-  } else {
-    output_name = target_name
-  }
-  output_file_name = "${target_gen_dir}/${output_name}"
-
-  compiled_target = "${target_name}"
-  compiled_action(compiled_target) {
+  generate_target = "${target_name}_generate"
+  output = "$target_gen_dir/$target_name"
+  compiled_action(generate_target) {
     forward_variables_from(invoker,
                            [
                              "deps",
                              "testonly",
                            ])
+    visibility = [ ":*" ]
 
     tool = "//tools/component_manager_config:generate_config_bin"
     tool_output_name = "generate_config"
 
-    inputs = sources
+    inputs = invoker.sources
+    outputs = [ output ]
 
-    outputs = [ output_file_name ]
-
-    args = [
-      "--output",
-      rebase_path(output_file_name, root_build_dir),
-    ]
-    foreach(source, sources) {
+    args = [ "--output" ] + rebase_path(outputs, root_build_dir)
+    foreach(source, invoker.sources) {
       args += [
         "--input",
         rebase_path(source, root_build_dir),
       ]
+    }
+  }
+
+  resource(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                           ])
+    public_deps = [ ":$generate_target" ]
+    sources = [ output ]
+    if (defined(invoker.dest)) {
+      outputs = [ invoker.dest ]
+    } else {
+      outputs = [ "data/${target_name}" ]
     }
   }
 }

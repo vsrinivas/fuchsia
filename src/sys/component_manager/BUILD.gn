@@ -275,8 +275,8 @@ rustc_binary("bin") {
 fuchsia_component("component-manager-cmp") {
   deps = [
     ":bin",
-    ":component_manager_appmgr_config_resource",
-    ":component_manager_debug_config_resource",
+    ":component_manager_appmgr_config",
+    ":component_manager_debug_config",
   ]
   component_name = "component_manager"
   manifest = "meta/component_manager.cmx"
@@ -287,7 +287,7 @@ fuchsia_component("component-manager-cmp") {
 fuchsia_component("component-manager-for-examples-cmp") {
   deps = [
     ":bin",
-    ":component_manager_for_examples_config_resource",
+    ":component_manager_for_examples_config",
   ]
   component_name = "component_manager_for_examples"
   manifest = "meta/component_manager_for_examples.cmx"
@@ -300,7 +300,7 @@ fuchsia_package("component-manager") {
 fuchsia_component("component-manager-tests-cmp") {
   testonly = true
   deps = [
-    ":component_manager_debug_config_resource",
+    ":component_manager_debug_config",
     ":component_manager_test",
     "//src/lib/process_builder:test_util",
   ]
@@ -317,7 +317,7 @@ fuchsia_component("component-manager-boot-env-tests-cmp") {
   testonly = true
   deps = [
     ":component_manager_boot_env_test",
-    ":component_manager_debug_config_resource",
+    ":component_manager_debug_config",
     "//src/lib/process_builder:root_job_test_runner",
     "//src/lib/process_builder:test_util",
   ]
@@ -363,56 +363,34 @@ component_config("component_manager_appmgr_config") {
   sources = [ "configs/appmgr_config.json" ]
 }
 
-resource("component_manager_appmgr_config_resource") {
-  sources = [ "$target_gen_dir/component_manager_appmgr_config" ]
-  outputs = [ "data/component_manager_appmgr_config" ]
-  deps = [ ":component_manager_appmgr_config" ]
-}
-
 component_config("component_manager_debug_config") {
   sources = [ "configs/debug_config.json" ]
 }
 
-resource("component_manager_debug_config_resource") {
-  sources = [ "$target_gen_dir/component_manager_debug_config" ]
-  outputs = [ "data/component_manager_debug_config" ]
-  deps = [ ":component_manager_debug_config" ]
-}
-
 component_config("component_manager_bootfs_config") {
   sources = [
-    "configs/resolver_pkgfs.json",
+    "//src/security/policy/component_manager_policy.json",
     "configs/bootfs_config.json",
-    rebase_path("//src/security/policy/component_manager_policy.json"),
+    "configs/resolver_pkgfs.json",
   ]
+  dest = "config/component_manager"
 }
 
-resource("component_manager_config_bootfs_resource") {
-  sources = [ "$target_gen_dir/component_manager_bootfs_config" ]
-  outputs = [ "config/component_manager" ]
+# Temporary alias for a soft transition
+group("component_manager_config_bootfs_resource") {
   deps = [ ":component_manager_bootfs_config" ]
 }
 
 component_config("component_manager_bootfs_config_no_pkgresolver") {
   sources = [
+    "//src/security/policy/component_manager_policy.json",
     "configs/bootfs_config.json",
     "configs/pkgfs_resolver_disabled.json",
-    rebase_path("//src/security/policy/component_manager_policy.json"),
   ]
-}
-
-resource("config_no_pkgresolver_resource") {
-  sources = [ "$target_gen_dir/component_manager_bootfs_config_no_pkgresolver" ]
-  outputs = [ "config/component_manager" ]
-  deps = [ ":component_manager_bootfs_config_no_pkgresolver" ]
+  dest = "config/component_manager"
 }
 
 component_config("component_manager_for_examples_config") {
   sources = [ "configs/for_examples_config.json" ]
-}
-
-resource("component_manager_for_examples_config_resource") {
-  sources = [ "$target_gen_dir/component_manager_for_examples_config" ]
-  outputs = [ "data/component_manager_config" ]
-  deps = [ ":component_manager_for_examples_config" ]
+  dest = "data/component_manager_config"
 }

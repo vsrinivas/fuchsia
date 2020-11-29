@@ -87,14 +87,17 @@ rustc_binary("root_component_bin") {
 
 component_config("component_manager_base_resolver_test_config") {
   sources = [ "cm_config.json" ]
+  dest = "data/component_manager_config"
 }
 
 component_config("component_manager_base_resolver_disabled_test_config") {
   sources = [ "cm_config_disabled_resolver.json" ]
+  dest = "data/component_manager_config_resolver_disabled"
 }
 
 component_config("component_manager_base_appmgr_loader_test_config") {
   sources = [ "cm_config_appmgr_loader.json" ]
+  dest = "data/component_manager_config_appmgr_loader"
 }
 
 test_package("base_resolver_test") {

@@ -82,7 +82,7 @@ assemble_system("guest") {
     "//src/sys/bin/psutils",
     "//src/sys/bootstrap:root_manifests",
     "//src/sys/component_manager:bootfs",
-    "//src/sys/component_manager:component_manager_config_bootfs_resource",
+    "//src/sys/component_manager:component_manager_bootfs_config",
     "//src/ui/input/drivers/hid",
     "//src/ui/input/drivers/hid-input-report",
     "//src/ui/input/drivers/virtio:virtio_input",

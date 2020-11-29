@@ -38,7 +38,7 @@ test_package("component_manager_for_test_integration_test") {
 
   resources = [
     {
-      path = "${root_gen_dir}/src/sys/component_manager_for_test/tests/component_manager_config"
+      path = "${target_gen_dir}/component_manager_config"
       dest = "component_manager_config"
     },
   ]

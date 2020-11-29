@@ -8,8 +8,8 @@ import("//build/rust/rustc_binary.gni")
 
 component_config("component_manager_config") {
   sources = [
-    rebase_path("config.json"),
-    rebase_path("//src/security/policy/component_manager_policy.json"),
+    "//src/security/policy/component_manager_policy.json",
+    "config.json",
   ]
 }
 

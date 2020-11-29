@@ -88,13 +88,13 @@ rustc_binary("use_storage") {
   sources = [ "use_storage.rs" ]
 }
 
-component_config("component_manager_rights_test_config") {
+component_config("component_manager_debug_config") {
   sources = [ "rights_test_config.json" ]
 }
 
 test_package("rights_integration_test") {
   deps = [
-    ":component_manager_rights_test_config",
+    ":component_manager_debug_config",
     ":expose_dir_rights",
     ":rights_integration_test_bin",
     ":use_dir_rights",
@@ -104,7 +104,7 @@ test_package("rights_integration_test") {
 
   resources = [
     {
-      path = "${root_gen_dir}/src/sys/component_manager/tests/rights/component_manager_rights_test_config"
+      path = "${target_gen_dir}/component_manager_debug_config"
 
       # OpaqueTest uses this path to search for config file.
       dest = "component_manager_debug_config"

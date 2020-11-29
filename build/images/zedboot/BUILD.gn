@@ -29,7 +29,7 @@ zedboot_deps += [
 # Component manager configuration.
 
 zedboot_deps +=
-    [ "//src/sys/component_manager:component_manager_config_bootfs_resource" ]
+    [ "//src/sys/component_manager:component_manager_bootfs_config" ]
 
 # Needed for installer runs.
 zedboot_deps += [

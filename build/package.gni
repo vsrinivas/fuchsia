@@ -542,6 +542,7 @@ template("package") {
     # Collect all the arguments describing input manifest files
     # and all the entries we've just synthesized in `pkg_manifest`.
     manifest_sources = pkg.extra
+
     manifest_args = []
     foreach(manifest_file, pkg.extra) {
       manifest_file = rebase_path(manifest_file, root_build_dir)

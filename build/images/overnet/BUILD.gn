@@ -32,7 +32,7 @@ assemble_system("overnet") {
     "//bundles/drivers:utils",
   ]
   bootfs_labels +=
-      [ "//src/sys/component_manager:component_manager_config_bootfs_resource" ]
+      [ "//src/sys/component_manager:component_manager_bootfs_config" ]
   ramdisk_fvm_in_zbi = true
 }
 

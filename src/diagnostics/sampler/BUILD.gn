@@ -77,7 +77,6 @@ rustc_test("test-bin") {
   deps = [
     "//sdk/fidl/fuchsia.cobalt:fuchsia.cobalt-rustc",
     "//sdk/fidl/fuchsia.cobalt.test:fuchsia.cobalt.test-rustc",
-    "//src/cobalt/bin/testing/mock_cobalt:component",
     "//src/diagnostics/sampler/tests/fidl-for-test:fuchsia.samplertestcontroller-rustc",
     "//src/lib/diagnostics/reader/rust",
     "//src/lib/diagnostics/testing/rust",
@@ -105,14 +104,16 @@ fuchsia_component("sampler-integration-test") {
   deps = [
     ":sampler-v1",
     ":test-bin",
-    "//src/cobalt/bin/testing/mock_cobalt",
     "//src/diagnostics/sampler/tests/test_component:single_counter_test_component",
   ]
 }
 
 fuchsia_test_package("sampler-integration-tests") {
   test_components = [ ":sampler-integration-test" ]
-  deps = [ ":test-config" ]
+  deps = [
+    ":test-config",
+    "//src/cobalt/bin/testing/mock_cobalt:component",
+  ]
 }
 
 config_data("test-config") {
@@ -137,6 +138,5 @@ group("tests") {
   deps = [
     ":sampler-integration-tests",
     ":sampler-tests",
-    "//src/cobalt/bin/testing/mock_cobalt",
   ]
 }

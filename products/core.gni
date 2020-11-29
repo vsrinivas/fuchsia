@@ -103,8 +103,9 @@ cache_package_labels += [ "//src/developer/ffx:runtime" ]
 product_system_image_deps += [ "//bundles:tools-system" ]
 universe_package_labels += [ "//bundles:tools" ]
 
-product_bootfs_labels -=
-    [ "//src/sys/component_manager:config_no_pkgresolver_resource" ]
+product_bootfs_labels -= [
+  "//src/sys/component_manager:component_manager_bootfs_config_no_pkgresolver",
+]
 
 product_bootfs_labels +=
-    [ "//src/sys/component_manager:component_manager_config_bootfs_resource" ]
+    [ "//src/sys/component_manager:component_manager_bootfs_config" ]

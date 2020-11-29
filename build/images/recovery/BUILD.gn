@@ -32,7 +32,7 @@ recovery_packages = [
   "//src/sys/appmgr:component_id_index_no_restrict_storage",
   "//src/sys/core",
   "//src/sys/pkg:recovery",
-  "//src/sys/stash",
+  "//src/sys/stash:pkg",
   "//src/sys/time:recovery",
 ]
 
@@ -91,7 +91,7 @@ assemble_system("recovery-eng") {
     "//bundles/drivers:utils",
   ]
   bootfs_labels +=
-      [ "//src/sys/component_manager:component_manager_config_bootfs_resource" ]
+      [ "//src/sys/component_manager:component_manager_bootfs_config" ]
 
   sysmgr_golden = "sysmgr-eng-golden.json"
 }
@@ -120,7 +120,7 @@ assemble_system("recovery-fdr") {
     "//bundles/drivers:utils",
   ]
   bootfs_labels +=
-      [ "//src/sys/component_manager:component_manager_config_bootfs_resource" ]
+      [ "//src/sys/component_manager:component_manager_bootfs_config" ]
 
   sysmgr_golden = "sysmgr-fdr-golden.json"
 }

@@ -10,7 +10,7 @@ import("//src/sys/build/components.gni")
 
 group("stash") {
   testonly = true
-  public_deps = [
+  deps = [
     ":pkg",
     ":tests",
   ]
@@ -18,7 +18,7 @@ group("stash") {
 
 group("tests") {
   testonly = true
-  public_deps = [
+  deps = [
     ":stash-tests",
     "tests",
   ]

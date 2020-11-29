@@ -32,8 +32,9 @@ product_bootfs_labels = [
 product_bootfs_labels += [ "//src/testing/runtests" ]
 
 # Component manager configuration.
-product_bootfs_labels +=
-    [ "//src/sys/component_manager:config_no_pkgresolver_resource" ]
+product_bootfs_labels += [
+  "//src/sys/component_manager:component_manager_bootfs_config_no_pkgresolver",
+]
 
 meta_package_labels = []
 
