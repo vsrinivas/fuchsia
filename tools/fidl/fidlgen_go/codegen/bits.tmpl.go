@@ -33,6 +33,20 @@ func (x {{ .Name }}) GetUnknownBits() uint64 {
 	return uint64(^{{ .Name }}_Mask & x)
 }
 
+func (x {{ .Name }}) InvertKnownBits() {{ .Name }} {
+  return (^{{ .Name }}_Mask & x) | ({{ .Name }}_Mask & ^x)
+}
+
+// HasBits validates that all flipped bits in the mask are set.
+func (x {{ .Name }}) HasBits(mask {{ .Name }}) bool {
+	return mask | x == x
+}
+
+// ClearBits ensures all flipped bits in the mask are unset.
+func (x {{ .Name }}) ClearBits(mask {{ .Name }}) {{ .Name }} {
+  return ^mask & x
+}
+
 func (x {{.Name}}) String() string {
 	switch x {
 	{{- range .Members }}

@@ -149,6 +149,20 @@ func (x MyStrictBits) GetUnknownBits() uint64 {
 	return uint64(^MyStrictBits_Mask & x)
 }
 
+func (x MyStrictBits) InvertKnownBits() MyStrictBits {
+	return (^MyStrictBits_Mask & x) | (MyStrictBits_Mask & ^x)
+}
+
+// HasBits validates that all flipped bits in the mask are set.
+func (x MyStrictBits) HasBits(mask MyStrictBits) bool {
+	return mask|x == x
+}
+
+// ClearBits ensures all flipped bits in the mask are unset.
+func (x MyStrictBits) ClearBits(mask MyStrictBits) MyStrictBits {
+	return ^mask & x
+}
+
 func (x MyStrictBits) String() string {
 	switch x {
 	case 1:
@@ -186,6 +200,20 @@ func (x MyFlexibleBits) HasUnknownBits() bool {
 
 func (x MyFlexibleBits) GetUnknownBits() uint64 {
 	return uint64(^MyFlexibleBits_Mask & x)
+}
+
+func (x MyFlexibleBits) InvertKnownBits() MyFlexibleBits {
+	return (^MyFlexibleBits_Mask & x) | (MyFlexibleBits_Mask & ^x)
+}
+
+// HasBits validates that all flipped bits in the mask are set.
+func (x MyFlexibleBits) HasBits(mask MyFlexibleBits) bool {
+	return mask|x == x
+}
+
+// ClearBits ensures all flipped bits in the mask are unset.
+func (x MyFlexibleBits) ClearBits(mask MyFlexibleBits) MyFlexibleBits {
+	return ^mask & x
 }
 
 func (x MyFlexibleBits) String() string {

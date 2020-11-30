@@ -94,6 +94,20 @@ func (x BitsType) GetUnknownBits() uint64 {
 	return uint64(^BitsType_Mask & x)
 }
 
+func (x BitsType) InvertKnownBits() BitsType {
+	return (^BitsType_Mask & x) | (BitsType_Mask & ^x)
+}
+
+// HasBits validates that all flipped bits in the mask are set.
+func (x BitsType) HasBits(mask BitsType) bool {
+	return mask|x == x
+}
+
+// ClearBits ensures all flipped bits in the mask are unset.
+func (x BitsType) ClearBits(mask BitsType) BitsType {
+	return ^mask & x
+}
+
 func (x BitsType) String() string {
 	switch x {
 	case 1:
