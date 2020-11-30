@@ -852,11 +852,23 @@ matching extension.
    ```json5
    {
        include: [
-           "sdk/lib/fonts/client.shard.cmx",
+           "sdk/lib/fonts/client.shard.cml",
        ]
        ...
    }
    ```
+
+Include paths are resolved relative to the source root.
+
+By convention, component manifest shard files are named with the suffix
+`.shard.cmx` or `.shard.cml`.
+
+When naming your shards, don't repeat yourself in relation to the full path.
+In the example above it would have been repetitive to name the shard
+`fonts.shard.cml` because then the full path would have been
+`sdk/lib/fonts/fonts.shard.cml`, which is repetitive. Instead the file is
+named `client.shard.cml`, to indicate that it is to be used by clients of the
+SDK library for fonts.
 
 ## Troubleshooting {#troubleshooting}
 
