@@ -24,6 +24,10 @@ static_library("libmagma_linux") {
     "virtmagma.h",
     "virtmagma_util.h",
   ]
+
+  if (virtmagma_debug) {
+    defines = [ "VIRTMAGMA_DEBUG=1" ]
+  }
 }
 
 action("magma_generic") {

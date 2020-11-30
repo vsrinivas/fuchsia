@@ -21,6 +21,10 @@ std::map<uint32_t, virtmagma_handle_t*>& GlobalHandleTable() {
 }
 
 magma_status_t magma_poll(magma_poll_item_t* items, uint32_t count, uint64_t timeout_ns) {
+#if VIRTMAGMA_DEBUG
+  printf("%s\n", __PRETTY_FUNCTION__);
+#endif
+
   if (count == 0)
     return MAGMA_STATUS_OK;
 
@@ -89,6 +93,10 @@ void magma_execute_command_buffer_with_resources(magma_connection_t connection, 
                                                  struct magma_system_command_buffer* command_buffer,
                                                  struct magma_system_exec_resource* resources,
                                                  uint64_t* semaphore_ids) {
+#if VIRTMAGMA_DEBUG
+  printf("%s\n", __PRETTY_FUNCTION__);
+#endif
+
   virtmagma_command_buffer virt_command_buffer;
   virt_command_buffer.command_buffer_size = sizeof(magma_system_command_buffer);
   virt_command_buffer.command_buffer =
