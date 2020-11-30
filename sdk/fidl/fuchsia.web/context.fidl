@@ -70,7 +70,6 @@ bits ContextFeatureFlags : uint64 {
     AUDIO = 0x2;
 
     /// Enables GPU-accelerated rendering of the web content. Requires the following services:
-    /// - [`fuchsia.sysmem/Allocator`]
     /// - [`fuchsia.vulkan.loader/Loader`]
     VULKAN = 0x4;
 
@@ -106,6 +105,7 @@ resource table CreateContextParams {
     /// - [`fuchsia.logger/LogSink`]
     /// - [`fuchsia.memorypressure/Provider`]
     /// - [`fuchsia.process/Launcher`]
+    /// - [`fuchsia.sysmem/Allocator`]
     ///
     /// The following services must be present in order to present web content in a Scenic view
     /// using [`Frame.CreateView`]:
