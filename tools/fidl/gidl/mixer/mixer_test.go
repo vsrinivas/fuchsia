@@ -21,7 +21,7 @@ import (
 
 var hostDir = map[string]string{"arm64": "host_arm64", "amd64": "host_x64"}[runtime.GOARCH]
 
-func testDataDir() string {
+func getTestDataDir() string {
 	base := filepath.Join("..", "..", "..", "..")
 	c, err := ioutil.ReadFile(filepath.Join(base, ".fx-build-dir"))
 	if err != nil {
@@ -30,10 +30,10 @@ func testDataDir() string {
 	return filepath.Join(base, strings.TrimSpace(string(c)), hostDir, "test_data", "gidl")
 }
 
-var testDataFlag = flag.String("test_data_dir", testDataDir(), "Path to golden files; only used in GN build")
+var testDataDir = flag.String("test_data_dir", getTestDataDir(), "Path to golden files; only used in GN build")
 
 func testSchema(t *testing.T) Schema {
-	path := filepath.Join(*testDataFlag, "mixer.test.fidl.json")
+	path := filepath.Join(*testDataDir, "mixer.test.fidl.json")
 	bytes, err := ioutil.ReadFile(path)
 	if err != nil {
 		t.Fatalf("please \"fx build %s/test_data/gidl/mixer.test.fidl.json\" first then \"go test\" again", hostDir)

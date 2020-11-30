@@ -35,6 +35,9 @@ func testDataDir() string {
 }
 
 // TestDataDir is the location to test data files.
+//
+//  - In "go test" mode, it's relative to this directory.
+//  - In "fx test" mode, it's relative to the build directory (out/default).
 var TestDataDir = flag.String("test_data_dir", testDataDir(), "Path to test_data/; only used in GN build")
 
 // DefaultNodename is the default nodename given to an target with the default

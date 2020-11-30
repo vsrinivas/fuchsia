@@ -53,7 +53,7 @@ func TestBasic(t *testing.T) {
 	// mock the input and outputs of llvm-symbolizer
 	symbo := newMockSymbolizer([]mockModule{
 		{
-			filepath.Join(*testDataFlag, "libc.elf"),
+			filepath.Join(*testDataDir, "libc.elf"),
 			map[uint64][]SourceLocation{
 				0x429c0: {{NewOptStr("atan2.c"), 49, NewOptStr("atan2")}, {NewOptStr("math.h"), 51, NewOptStr("__DOUBLE_FLOAT")}},
 				0x43680: {{NewOptStr("pow.c"), 23, NewOptStr("pow")}},
@@ -61,7 +61,7 @@ func TestBasic(t *testing.T) {
 			},
 		},
 		{
-			filepath.Join(*testDataFlag, "libcrypto.elf"),
+			filepath.Join(*testDataDir, "libcrypto.elf"),
 			map[uint64][]SourceLocation{
 				0x81000: {{NewOptStr("rsa.c"), 101, NewOptStr("mod_exp")}},
 				0x82000: {{NewOptStr("aes.c"), 17, NewOptStr("gf256_mul")}},
@@ -143,7 +143,7 @@ func TestBacktrace(t *testing.T) {
 	// mock the input and outputs of llvm-symbolizer
 	symbo := newMockSymbolizer([]mockModule{
 		{
-			filepath.Join(*testDataFlag, "libc.elf"),
+			filepath.Join(*testDataDir, "libc.elf"),
 			map[uint64][]SourceLocation{
 				0x44988: {{NewOptStr("duff.h"), 64, NewOptStr("duffcopy")}, {NewOptStr("memcpy.c"), 76, NewOptStr("memcpy")}},
 			},
@@ -198,7 +198,7 @@ func TestReset(t *testing.T) {
 	// mock the input and outputs of llvm-symbolizer
 	symbo := newMockSymbolizer([]mockModule{
 		{
-			filepath.Join(*testDataFlag, "libc.elf"),
+			filepath.Join(*testDataDir, "libc.elf"),
 			map[uint64][]SourceLocation{
 				0x44987: {{NewOptStr("memcpy.c"), 76, NewOptStr("memcpy")}},
 			},

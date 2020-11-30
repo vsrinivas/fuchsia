@@ -12,7 +12,7 @@ import (
 )
 
 func testPeBuildIDFile(t *testing.T, filename string, expected string) {
-	testfile := filepath.Join(*testDataFlag, filename)
+	testfile := filepath.Join(*testDataDir, filename)
 	f, err := os.Open(testfile)
 	if err != nil {
 		t.Fatal("from os.Open: ", err)

@@ -14,12 +14,12 @@ import (
 	sinkpb "go.chromium.org/luci/resultdb/sink/proto/v1"
 )
 
-var testDataFlag = flag.String("test_data_dir", "testdata", "Path to testdata/; only used in GN build")
+var testDataDir = flag.String("test_data_dir", "testdata", "Path to testdata/; only used in GN build")
 
 func TestGetLUCICtx(t *testing.T) {
 	old := os.Getenv("LUCI_CONTEXT")
 	defer os.Setenv("LUCI_CONTEXT", old)
-	os.Setenv("LUCI_CONTEXT", filepath.Join(*testDataFlag, "lucictx.json"))
+	os.Setenv("LUCI_CONTEXT", filepath.Join(*testDataDir, "lucictx.json"))
 	ctx, err := resultSinkCtx()
 	if err != nil {
 		t.Errorf("Cannot parse LUCI_CONTEXT: %v", err)
@@ -38,7 +38,7 @@ func TestParse2Summary(t *testing.T) {
 	var requests []*sinkpb.ReportTestResultsRequest
 	expectRequests := 0
 	for _, name := range []string{"summary.json", "summary2.json"} {
-		summary, err := ParseSummary(filepath.Join(*testDataFlag, name))
+		summary, err := ParseSummary(filepath.Join(*testDataDir, name))
 		if err != nil {
 			log.Fatal(err)
 		}

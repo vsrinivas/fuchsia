@@ -22,7 +22,7 @@ func hexEqual(a []byte, b string) bool {
 type gobugMockSource struct{}
 
 func (g *gobugMockSource) GetBinaries() ([]elflib.BinaryFileRef, error) {
-	p := filepath.Join(*testDataFlag, "gobug.elf")
+	p := filepath.Join(*testDataDir, "gobug.elf")
 	out := []elflib.BinaryFileRef{
 		{BuildID: "5bf6a28a259b95b4f20ffbcea0cbb149", Filepath: p},
 		{BuildID: "4FCB712AA6387724A9F465A3DEADBEEF", Filepath: p},
@@ -41,7 +41,7 @@ func (g *gobugMockSource) GetBinaries() ([]elflib.BinaryFileRef, error) {
 // still ensure that our mentioned build id matches any of the build ids in the file.
 func TestGoBug(t *testing.T) {
 	source := &gobugMockSource{}
-	p := filepath.Join(*testDataFlag, "gobug.elf")
+	p := filepath.Join(*testDataDir, "gobug.elf")
 	data, err := os.Open(p)
 	if err != nil {
 		t.Fatal(err)

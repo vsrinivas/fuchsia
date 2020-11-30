@@ -17,7 +17,7 @@ const (
 )
 
 func TestListSources(t *testing.T) {
-	file := filepath.Join(*testDataFlag, "cycle.elf")
+	file := filepath.Join(*testDataDir, "cycle.elf")
 	srcs, err := ListSources(file)
 	if err != nil {
 		t.Fatalf("failed to read sources from %q: %v", file, err)

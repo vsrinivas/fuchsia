@@ -108,10 +108,10 @@ func TestIsReadable(t *testing.T) {
 	if r := isReadable(""); r {
 		t.Errorf("Empty string cannot be readable. got %t, want false", r)
 	}
-	if r := isReadable(*testDataFlag); r {
+	if r := isReadable(*testDataDir); r {
 		t.Errorf("Directory should not be readable. got %t, want false", r)
 	}
-	luciCtx := filepath.Join(*testDataFlag, "lucictx.json")
+	luciCtx := filepath.Join(*testDataDir, "lucictx.json")
 	if r := isReadable(luciCtx); !r {
 		t.Errorf("File %v should be readable. got %t, want true", luciCtx, r)
 	}

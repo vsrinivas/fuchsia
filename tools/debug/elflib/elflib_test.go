@@ -12,10 +12,10 @@ import (
 	"testing"
 )
 
-var testDataFlag = flag.String("test_data_dir", "testdata", "Path to testdata/; only used in GN build")
+var testDataDir = flag.String("test_data_dir", "testdata", "Path to testdata/; only used in GN build")
 
 func TestBuildIDs(t *testing.T) {
-	testfile := filepath.Join(*testDataFlag, "libc.elf.section-only")
+	testfile := filepath.Join(*testDataDir, "libc.elf.section-only")
 	f, err := os.Open(testfile)
 	if err != nil {
 		t.Fatal("from os.Open: ", err)
@@ -34,7 +34,7 @@ func TestBuildIDs(t *testing.T) {
 }
 
 func TestStrippedBuildIDs(t *testing.T) {
-	testfile := filepath.Join(*testDataFlag, "libc.elf.stripped")
+	testfile := filepath.Join(*testDataDir, "libc.elf.stripped")
 	f, err := os.Open(testfile)
 	if err != nil {
 		t.Fatal("from os.Open: ", err)
