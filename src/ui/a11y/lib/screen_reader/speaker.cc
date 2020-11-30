@@ -210,7 +210,7 @@ fit::promise<> Speaker::EnqueueUtterance(Utterance utterance) {
                 [completer = std::move(bridge.completer)](
                     fuchsia::accessibility::tts::Engine_Enqueue_Result result) mutable {
                   if (result.is_err()) {
-                    FX_LOGS(ERROR) << "Error returned while calling tts::Enqueue().";
+                    FX_LOGS(WARNING) << "Error returned while calling tts::Enqueue().";
                     return completer.complete_error();
                   }
                   completer.complete_ok();
@@ -224,7 +224,8 @@ fit::promise<> Speaker::Speak() {
       ->Speak([completer = std::move(bridge.completer)](
                   fuchsia::accessibility::tts::Engine_Speak_Result result) mutable {
         if (result.is_err()) {
-          FX_LOGS(ERROR) << "Speaker: Error returned while calling tts::Speak().";
+          // This is likely due to the screen reader "interrupting" itself.
+          FX_LOGS(WARNING) << "Speaker: Error returned while calling tts::Speak().";
           return completer.complete_error();
         }
         completer.complete_ok();
