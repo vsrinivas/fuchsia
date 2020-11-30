@@ -13,7 +13,6 @@ var additionalSkipDirs = []string{
 	"prebuilt/third_party/zlib",                                          // TODO(b/172066115): Remove once completed.
 	"prebuilt/virtualization/packages/termina_guest",                     // TODO(b/171975485): Remove once completed.
 	"src/connectivity/wlan/drivers/third_party/mediatek",                 // TODO(b/172586985): Remove once completed.
-	"src/developer/system_monitor/bin/third_party",                       // TODO(b/172586985): Remove once completed.
 	"third_party/catapult",                                               // TODO(b/171586646): Remove once completed.
 	"third_party/cobalt_config",                                          // TODO(b/172586985): Remove once completed.
 	"third_party/crashpad/third_party/apple_cf",                          // TODO(b/172586985): Remove once completed.
@@ -51,26 +50,7 @@ var additionalSkipDirs = []string{
 }
 
 var additionalSkipFiles = []string{
-	// TODO(b/172070492): Remove this list once completed.
-	"scripts/codesize/lib/report.pb.dart",
-	"src/camera/drivers/sensors/imx227/mipi_ccs_regs.h",
-	"src/connectivity/ethernet/drivers/asix-88179/hooks.test.fidl",
-	"src/connectivity/network/netstack/filter/filter_string.go",
-	"src/connectivity/network/netstack/dhcp/dhcp_string.go",
 	"src/connectivity/network/netstack/dns/servers_config_test.go",
-	"src/security/policy/BUILD.gn",
-	"src/storage/fuchsia-fatfs/corpus/BUILD.gn",
 	"third_party/rust_crates/README.md",  // TODO(b/172586985): Remove once completed.
 	"third_party/dart-pkg/pub/README.md", // TODO(b/172586985): Remove once completed.
-	"tools/fidl/gidl/example/example.test.fidl",
-	"topaz/tools/download_dev_sdk.py",
-	"topaz/tools/utils.py",
-	"zircon/kernel/dev/coresight/BUILD.gn",
-	"zircon/kernel/dev/coresight/BUILD.zircon.gn",
-	"zircon/kernel/kernel/thread_test.cc",
-	"zircon/kernel/lib/libc/string/memchr.c",
-	"zircon/kernel/lib/libc/string/memset.c",
-	"zircon/kernel/lib/libc/string/strlcat.c",
-	"zircon/kernel/lib/libc/string/strlcpy.c",
-	"zircon/kernel/lib/libc/string/strrchr.c",
 }
