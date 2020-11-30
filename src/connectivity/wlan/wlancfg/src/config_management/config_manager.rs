@@ -280,7 +280,11 @@ impl SavedNetworksManager {
                     .remove(network_id.ssid, credential.into_bytes())
                     .map_err(|_| NetworkConfigError::LegacyWriteError)?;
                 return Ok(true);
+            } else {
+                info!("No matching network with the provided credential was found to remove.");
             }
+        } else {
+            info!("No network was found to remove with the provided SSID and security.");
         }
         Ok(false)
     }

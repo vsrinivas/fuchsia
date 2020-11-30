@@ -353,12 +353,16 @@ async fn handle_client_request_remove_network(
     let credential = Credential::try_from(
         network_config.credential.ok_or_else(|| NetworkConfigError::ConfigMissingCredential)?,
     )?;
-    saved_networks.remove(net_id.clone(), credential.clone()).await?;
-
-    match iface_manager.lock().await.disconnect(fidl_policy::NetworkIdentifier::from(net_id)).await
-    {
-        Ok(()) => {}
-        Err(e) => error!("failed to disconnect from network: {}", e),
+    if saved_networks.remove(net_id.clone(), credential.clone()).await? {
+        match iface_manager
+            .lock()
+            .await
+            .disconnect(fidl_policy::NetworkIdentifier::from(net_id))
+            .await
+        {
+            Ok(()) => {}
+            Err(e) => error!("failed to disconnect from network: {}", e),
+        }
     }
     Ok(())
 }
@@ -1514,22 +1518,29 @@ mod tests {
             credential: Some(fidl_policy::Credential::from(credential.clone())),
             ..fidl_policy::NetworkConfig::empty()
         };
-        let mut remove_fut = controller.remove_network(network_config);
+        let mut remove_fut = controller.remove_network(network_config.clone());
 
         // Process the remove request on the server side and handle requests to stash on the way.
         assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
         process_stash_remove(&mut exec, &mut stash_server);
         assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
 
-        // Removing a network should always request a disconnect from IfaceManager, which will
-        // know whether we are connected to the network to disconnect from. This checks that the
-        // IfaceManager is told to disconnect (if connected).
+        // Successfully removing a network should always request a disconnect from IfaceManager,
+        // which will know whether we are connected to the network to disconnect from. This checks
+        // that the IfaceManager is told to disconnect (if connected).
         assert_variant!(exec.run_until_stalled(&mut req_recvr.next()), Poll::Ready(Some(IfaceManagerRequest::Disconnect(net_id))) => {
             assert_eq!(net_id,fidl_policy::NetworkIdentifier::from(network_id.clone()));
         });
         assert_variant!(exec.run_until_stalled(&mut remove_fut), Poll::Ready(Ok(Ok(()))));
         assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
         assert!(exec.run_singlethreaded(saved_networks.lookup(network_id)).is_empty());
+
+        // Removing a network that is not saved should not trigger a disconnect.
+        let mut remove_fut = controller.remove_network(network_config.clone());
+        // Process the remove request on the server side and handle requests to stash on the way.
+        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
+        assert_variant!(exec.run_until_stalled(&mut req_recvr.next()), Poll::Pending);
+        assert_variant!(exec.run_until_stalled(&mut remove_fut), Poll::Ready(Ok(Ok(()))));
     }
 
     #[test]
