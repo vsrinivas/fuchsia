@@ -4,7 +4,6 @@
 
 #include <lib/mmio/mmio.h>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/metadata.h>
 #include <ddk/metadata/spi.h>
@@ -12,6 +11,7 @@
 #include <fbl/algorithm.h>
 #include <soc/vs680/vs680-spi.h>
 
+#include "src/devices/board/drivers/vs680-evk/vs680-evk-bind.h"
 #include "vs680-evk.h"
 
 namespace board_vs680_evk {

@@ -6,11 +6,12 @@
 
 #include <lib/device-protocol/pdev.h>
 
-#include <ddk/binding.h>
 #include <ddk/platform-defs.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_lock.h>
 #include <soc/vs680/vs680-clk.h>
+
+#include "src/devices/clock/drivers/vs680-clk/vs680-clk-bind.h"
 
 namespace clk {
 
@@ -174,10 +175,4 @@ static constexpr zx_driver_ops_t vs680_clk_driver_ops = []() {
   return ops;
 }();
 
-// clang-format off
-ZIRCON_DRIVER_BEGIN(vs680_clk, vs680_clk_driver_ops, "zircon", "0.1", 3)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PDEV),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_SYNAPTICS),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_VS680_CLOCK),
-ZIRCON_DRIVER_END(vs680_clk)
-    // clang-format on
+ZIRCON_DRIVER(vs680_clk, vs680_clk_driver_ops, "zircon", "0.1")

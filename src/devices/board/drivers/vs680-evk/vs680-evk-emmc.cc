@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/metadata.h>
@@ -12,6 +11,7 @@
 #include <soc/vs680/vs680-gpio.h>
 #include <soc/vs680/vs680-hw.h>
 
+#include "src/devices/board/drivers/vs680-evk/vs680-evk-bind.h"
 #include "vs680-evk.h"
 
 namespace board_vs680_evk {

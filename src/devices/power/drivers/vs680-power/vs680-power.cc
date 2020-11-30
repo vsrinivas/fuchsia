@@ -6,7 +6,6 @@
 
 #include <memory>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/platform-defs.h>
 #include <ddktl/protocol/composite.h>
@@ -15,6 +14,8 @@
 #include <fbl/auto_lock.h>
 #include <hwreg/i2c.h>
 #include <soc/vs680/vs680-power.h>
+
+#include "src/devices/power/drivers/vs680-power/vs680-power-bind.h"
 
 namespace {
 
@@ -208,10 +209,4 @@ static constexpr zx_driver_ops_t vs680_power_driver_ops = []() {
   return ops;
 }();
 
-// clang-format off
-ZIRCON_DRIVER_BEGIN(vs680_power, vs680_power_driver_ops, "zircon", "0.1", 3)
-  BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_COMPOSITE),
-  BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_SYNAPTICS),
-  BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_VS680_POWER),
-ZIRCON_DRIVER_END(vs680_power)
-// clang-format on
+ZIRCON_DRIVER(vs680_power, vs680_power_driver_ops, "zircon", "0.1")

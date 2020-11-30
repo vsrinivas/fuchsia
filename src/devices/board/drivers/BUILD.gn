@@ -7,5 +7,6 @@ group("tests") {
   deps = [
     "as370:tests",
     "mt8167s_ref:tests",
+    "vs680-evk:tests",
   ]
 }

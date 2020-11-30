@@ -9,7 +9,6 @@
 #include <zircon/hw/usb.h>
 #include <zircon/hw/usb/cdc.h>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
@@ -18,6 +17,7 @@
 #include <soc/vs680/vs680-usb.h>
 #include <usb/dwc2/metadata.h>
 
+#include "src/devices/board/drivers/vs680-evk/vs680-evk-bind.h"
 #include "vs680-evk.h"
 
 namespace board_vs680_evk {

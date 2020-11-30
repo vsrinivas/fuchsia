@@ -9,7 +9,6 @@
 
 #include <algorithm>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/platform-defs.h>
 #include <ddktl/fidl.h>
@@ -17,6 +16,7 @@
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 
+#include "src/devices/thermal/drivers/vs680-thermal/vs680-thermal-bind.h"
 #include "vs680-thermal-reg.h"
 
 namespace {
@@ -295,10 +295,4 @@ static constexpr zx_driver_ops_t vs680_thermal_driver_ops = []() -> zx_driver_op
   return ops;
 }();
 
-// clang-format off
-ZIRCON_DRIVER_BEGIN(vs680_thermal, vs680_thermal_driver_ops, "zircon", "0.1", 3)
-  BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_COMPOSITE),
-  BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_SYNAPTICS),
-  BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_VS680_THERMAL),
-ZIRCON_DRIVER_END(vs680_thermal)
-    // clang-format on
+ZIRCON_DRIVER(vs680_thermal, vs680_thermal_driver_ops, "zircon", "0.1")

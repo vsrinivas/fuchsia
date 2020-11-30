@@ -1,0 +1,20 @@
+[
+    {
+        "name": "Match",
+        "expected": "match",
+        "device": {
+            "fuchsia.BIND_PROTOCOL": "fuchsia.platform.BIND_PROTOCOL.BUS",
+            "fuchsia.BIND_PLATFORM_DEV_VID": "fuchsia.platform.BIND_PLATFORM_DEV_VID.GOOGLE",
+            "fuchsia.BIND_PLATFORM_DEV_PID": "0x0B"
+        }
+    },
+    {
+        "name": "Bad protocol",
+        "expected": "abort",
+        "device": {
+            "fuchsia.BIND_PROTOCOL": "fuchsia.platform.BIND_PROTOCOL.DEVICE",
+            "fuchsia.BIND_PLATFORM_DEV_VID": "fuchsia.platform.BIND_PLATFORM_DEV_VID.GOOGLE",
+            "fuchsia.BIND_PLATFORM_DEV_PID": "0x0B"
+        }
+    }
+]

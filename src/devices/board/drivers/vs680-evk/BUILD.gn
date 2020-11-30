@@ -2,7 +2,15 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
+
+bind_rules("vs680-evk-bind") {
+  rules = "vs680-evk.bind"
+  output = "vs680-evk-bind.h"
+  tests = "vs680-evk-bind-test.json"
+  deps = [ "//src/devices/bind/fuchsia.platform" ]
+}
 
 driver_module("vs680-evk") {
   configs += [
@@ -25,6 +33,7 @@ driver_module("vs680-evk") {
     "vs680-evk.cc",
   ]
   deps = [
+    ":vs680-evk-bind",
     "//sdk/banjo/ddk.protocol.gpioimpl",
     "//sdk/banjo/ddk.protocol.i2cimpl",
     "//sdk/banjo/ddk.protocol.platform.bus",
@@ -35,13 +44,15 @@ driver_module("vs680-evk") {
     "//src/devices/usb/lib/usb",
     "//src/lib/ddk",
     "//src/lib/ddk:ddk-metadata",
-
-    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
-    "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//src/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/hwreg",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
   ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":vs680-evk-bind_test" ]
 }

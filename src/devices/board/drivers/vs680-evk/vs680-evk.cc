@@ -7,10 +7,11 @@
 #include <zircon/status.h>
 #include <zircon/threads.h>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/platform-defs.h>
 #include <fbl/alloc_checker.h>
+
+#include "src/devices/board/drivers/vs680-evk/vs680-evk-bind.h"
 
 namespace board_vs680_evk {
 
@@ -106,10 +107,4 @@ static constexpr zx_driver_ops_t driver_ops = []() {
   return ops;
 }();
 
-// clang-format off
-ZIRCON_DRIVER_BEGIN(vs680_evk, driver_ops, "zircon", "0.1", 3)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PBUS),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_GOOGLE),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_VS680_EVK),
-ZIRCON_DRIVER_END(vs680_evk)
-//clang-format on
+ZIRCON_DRIVER(vs680_evk, driver_ops, "zircon", "0.1")

@@ -2,9 +2,20 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 import("//build/test/test_package.gni")
+
+bind_rules("vs680-power-bind") {
+  rules = "vs680-power.bind"
+  output = "vs680-power-bind.h"
+  tests = "vs680-power-bind-test.json"
+  deps = [
+    "//src/devices/bind/fuchsia.composite",
+    "//src/devices/bind/fuchsia.platform",
+  ]
+}
 
 driver_module("vs680-power") {
   configs += [
@@ -14,15 +25,13 @@ driver_module("vs680-power") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "vs680-power.cc" ]
   deps = [
+    ":vs680-power-bind",
     "//sdk/banjo/ddk.protocol.composite",
     "//sdk/banjo/ddk.protocol.powerimpl",
     "//src/devices/i2c/lib/device-protocol-i2c",
     "//src/devices/lib/as370",
     "//src/devices/lib/driver",
     "//src/lib/ddk",
-
-    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
-    "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//src/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/hwreg",
@@ -38,6 +47,7 @@ test("vs680-power-test") {
     "vs680-power.cc",
   ]
   deps = [
+    ":vs680-power-bind",
     "//sdk/banjo/ddk.protocol.composite",
     "//sdk/banjo/ddk.protocol.powerimpl",
     "//sdk/lib/fdio",
@@ -46,9 +56,6 @@ test("vs680-power-test") {
     "//src/devices/lib/as370",
     "//src/devices/lib/driver",
     "//src/lib/ddk",
-
-    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
-    "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//src/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/hwreg",
@@ -72,5 +79,8 @@ unittest_package("vs680-power-test-package") {
 
 group("tests") {
   testonly = true
-  deps = [ ":vs680-power-test-package" ]
+  deps = [
+    ":vs680-power-bind_test",
+    ":vs680-power-test-package",
+  ]
 }

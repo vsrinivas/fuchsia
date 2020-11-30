@@ -2,9 +2,20 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 import("//build/test/test_package.gni")
+
+bind_rules("vs680-thermal-bind") {
+  rules = "vs680-thermal.bind"
+  output = "vs680-thermal-bind.h"
+  tests = "vs680-thermal-bind-test.json"
+  deps = [
+    "//src/devices/bind/fuchsia.composite",
+    "//src/devices/bind/fuchsia.platform",
+  ]
+}
 
 driver_module("vs680-thermal") {
   configs += [
@@ -14,6 +25,7 @@ driver_module("vs680-thermal") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "vs680-thermal.cc" ]
   deps = [
+    ":vs680-thermal-bind",
     "//sdk/banjo/ddk.protocol.clock",
     "//sdk/banjo/ddk.protocol.composite",
     "//sdk/banjo/ddk.protocol.platform.device",
@@ -24,9 +36,6 @@ driver_module("vs680-thermal") {
     "//src/devices/lib/driver",
     "//src/devices/lib/mmio",
     "//src/lib/ddk",
-
-    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
-    "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//src/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/hwreg",
@@ -44,6 +53,7 @@ test("vs680-thermal-test") {
     "vs680-thermal.cc",
   ]
   deps = [
+    ":vs680-thermal-bind",
     "//sdk/banjo/ddk.protocol.clock",
     "//sdk/banjo/ddk.protocol.clock:ddk.protocol.clock_mock",
     "//sdk/banjo/ddk.protocol.composite",
@@ -57,9 +67,6 @@ test("vs680-thermal-test") {
     "//src/devices/lib/mmio",
     "//src/devices/testing/fake_ddk",
     "//src/lib/ddk",
-
-    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
-    "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//src/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/hwreg",
@@ -85,5 +92,8 @@ unittest_package("vs680-thermal-test-package") {
 
 group("tests") {
   testonly = true
-  deps = [ ":vs680-thermal-test-package" ]
+  deps = [
+    ":vs680-thermal-bind_test",
+    ":vs680-thermal-test-package",
+  ]
 }
