@@ -29,7 +29,7 @@ VirtioBlock::VirtioBlock(const PhysMem& phys_mem, fuchsia::virtualization::Block
 
 zx_status_t VirtioBlock::Start(const zx::guest& guest, const std::string& id,
                                fuchsia::virtualization::BlockFormat format,
-                               fuchsia::io::FilePtr file, fuchsia::sys::Launcher* launcher,
+                               fuchsia::io::FileHandle file, fuchsia::sys::Launcher* launcher,
                                async_dispatcher_t* dispatcher) {
   fuchsia::sys::LaunchInfo launch_info;
   launch_info.url = kVirtioBlockUrl;

@@ -21,7 +21,7 @@ class VirtioBlock
   VirtioBlock(const PhysMem& phys_mem, fuchsia::virtualization::BlockMode mode);
 
   zx_status_t Start(const zx::guest& guest, const std::string& id,
-                    fuchsia::virtualization::BlockFormat format, fuchsia::io::FilePtr file,
+                    fuchsia::virtualization::BlockFormat format, fuchsia::io::FileHandle file,
                     fuchsia::sys::Launcher* launcher, async_dispatcher_t* dispatcher);
 
  private:
