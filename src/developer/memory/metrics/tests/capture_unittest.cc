@@ -271,5 +271,25 @@ TEST_F(CaptureUnitTest, VMORooted) {
   EXPECT_EQ(25U, c.vmo_for_koid(2).committed_bytes);
   EXPECT_EQ(25U, c.vmo_for_koid(3).committed_bytes);
 }
+
+TEST_F(CaptureUnitTest, VMORootedPartialCommit) {
+  Capture c;
+  TestUtils::CreateCapture(&c,
+                           {.vmos =
+                                {
+                                    {.koid = 1, .name = "R1", .committed_bytes = 75},
+                                    {.koid = 2, .name = "C1", .size_bytes = 77, .parent_koid = 1},
+                                    {.koid = 3, .name = "C2", .size_bytes = 100, .parent_koid = 2},
+                                },
+                            .processes =
+                                {
+                                    {.koid = 10, .name = "p1", .vmos = {1, 2, 3}},
+                                },
+                            .rooted_vmo_names = {"R1"}});
+  // The grandchild should take all available committed bytes from the root.
+  EXPECT_EQ(0U, c.vmo_for_koid(1).committed_bytes);
+  EXPECT_EQ(0U, c.vmo_for_koid(2).committed_bytes);
+  EXPECT_EQ(75U, c.vmo_for_koid(3).committed_bytes);
+}
 }  // namespace test
 }  // namespace memory

@@ -211,8 +211,9 @@ void Capture::ReallocateDescendents(zx_koid_t parent_koid) {
   for (auto& pair : koid_to_vmo_) {
     Vmo& child = pair.second;
     if (child.parent_koid == parent_koid) {
-      parent.committed_bytes -= child.allocated_bytes;
-      child.committed_bytes = child.allocated_bytes;
+      uint64_t reallocated_bytes = std::min(parent.committed_bytes, child.allocated_bytes);
+      parent.committed_bytes -= reallocated_bytes;
+      child.committed_bytes = reallocated_bytes;
       ReallocateDescendents(child.koid);
     }
   }
