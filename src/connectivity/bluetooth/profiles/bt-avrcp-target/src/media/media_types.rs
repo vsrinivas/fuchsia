@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 use {
-    fidl::encoding::Decodable as FidlDecodable,
     fidl_fuchsia_bluetooth_avrcp::{self as fidl_avrcp, MediaAttributes, PlayStatus},
     fidl_fuchsia_media::{self as fidl_media_types, Metadata, TimelineFunction},
     fidl_fuchsia_media_sessions2 as fidl_media,
@@ -302,7 +301,7 @@ impl From<fidl_avrcp::PlayerApplicationSettings> for ValidPlayerApplicationSetti
 
 impl From<ValidPlayerApplicationSettings> for fidl_avrcp::PlayerApplicationSettings {
     fn from(src: ValidPlayerApplicationSettings) -> fidl_avrcp::PlayerApplicationSettings {
-        let mut setting = fidl_avrcp::PlayerApplicationSettings::new_empty();
+        let mut setting = fidl_avrcp::PlayerApplicationSettings::empty();
         if let Some(eq) = src.equalizer {
             setting.equalizer = Some(eq.into());
         }
@@ -499,7 +498,7 @@ impl From<fidl_avrcp::Notification> for Notification {
 
 impl From<Notification> for fidl_avrcp::Notification {
     fn from(src: Notification) -> fidl_avrcp::Notification {
-        let mut res = fidl_avrcp::Notification::new_empty();
+        let mut res = fidl_avrcp::Notification::empty();
 
         res.status = src.status.map(|s| s.into());
         res.track_id = src.track_id;
@@ -515,12 +514,7 @@ impl From<Notification> for fidl_avrcp::Notification {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use {
-        fidl::encoding::Decodable as FidlDecodable,
-        fidl_fuchsia_bluetooth_avrcp::{self as fidl_avrcp},
-        fidl_fuchsia_media::{self as fidl_media_types},
-        fidl_fuchsia_media_sessions2::{self as fidl_media},
-    };
+    use fidl::encoding::Decodable as FidlDecodable;
 
     #[test]
     /// Tests correctness of updating and getting the playback rate from the PlaybackRate.

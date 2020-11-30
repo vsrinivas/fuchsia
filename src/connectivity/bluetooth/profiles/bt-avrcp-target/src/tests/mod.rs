@@ -5,21 +5,15 @@
 use {
     super::*,
     anyhow::Error,
-    fidl::encoding::Decodable as FidlDecodable,
-    fidl::endpoints::create_proxy_and_stream,
+    fidl::{client::QueryResponseFut, endpoints::create_proxy_and_stream},
     fidl_fuchsia_bluetooth_avrcp::*,
     fidl_fuchsia_media_sessions2::*,
     fuchsia_async as fasync,
-    futures::TryStreamExt,
-    futures::{pin_mut, task::Poll},
+    futures::{
+        StreamExt, TryStreamExt,
+        {pin_mut, task::Poll},
+    },
 };
-
-use fidl::client::QueryResponseFut;
-use fidl_fuchsia_bluetooth_avrcp::{
-    TargetHandlerMarker, TargetHandlerProxy, TargetHandlerRequestStream,
-    TargetHandlerWatchNotificationResponder, TargetHandlerWatchNotificationResult,
-};
-use futures::StreamExt;
 
 use crate::avrcp_handler::handle_target_requests;
 use crate::media::media_sessions::MediaSessionId;
@@ -49,7 +43,7 @@ pub async fn generate_empty_watch_notification(
     Error,
 > {
     let dummy_id = NotificationEvent::TrackChanged;
-    let dummy_current = Notification::new_empty();
+    let dummy_current = Notification::empty();
     let interval: u32 = 0;
 
     let result_fut = proxy.watch_notification(dummy_id, dummy_current, interval);
@@ -75,7 +69,7 @@ async fn send_get_player_application_settings(target_proxy: TargetHandlerProxy) 
         Ok(PlayerApplicationSettings {
             repeat_status_mode: Some(RepeatStatusMode::GroupRepeat),
             shuffle_mode: Some(ShuffleMode::Off),
-            ..PlayerApplicationSettings::new_empty()
+            ..PlayerApplicationSettings::empty()
         }),
         res
     );
@@ -94,7 +88,7 @@ async fn send_set_player_application_settings(target_proxy: TargetHandlerProxy) 
     let requested_settings = PlayerApplicationSettings {
         equalizer: Some(Equalizer::On), // Unsupported
         shuffle_mode: Some(ShuffleMode::GroupShuffle),
-        ..PlayerApplicationSettings::new_empty()
+        ..PlayerApplicationSettings::empty()
     };
     let res = target_proxy
         .set_player_application_settings(requested_settings)
@@ -106,7 +100,7 @@ async fn send_set_player_application_settings(target_proxy: TargetHandlerProxy) 
     // there is not a 1:1 mapping of AVRCP to Media types.
     let requested_settings = PlayerApplicationSettings {
         shuffle_mode: Some(ShuffleMode::GroupShuffle),
-        ..PlayerApplicationSettings::new_empty()
+        ..PlayerApplicationSettings::empty()
     };
     let res = target_proxy
         .set_player_application_settings(requested_settings)
@@ -114,7 +108,7 @@ async fn send_set_player_application_settings(target_proxy: TargetHandlerProxy) 
         .expect("FIDL call should work");
     let expected_response = PlayerApplicationSettings {
         shuffle_mode: Some(ShuffleMode::AllTrackShuffle),
-        ..PlayerApplicationSettings::new_empty()
+        ..PlayerApplicationSettings::empty()
     };
     assert_eq!(Ok(expected_response), res);
 }
@@ -145,17 +139,14 @@ async fn send_get_notification(target_proxy: TargetHandlerProxy) {
         .get_notification(NotificationEvent::TrackPosChanged)
         .await
         .expect("FIDL call should work");
-    assert_eq!(Ok(Notification { pos: Some(std::u32::MAX), ..Notification::new_empty() }), res);
+    assert_eq!(Ok(Notification { pos: Some(std::u32::MAX), ..Notification::empty() }), res);
 
     // Send a GetNotification request for the active session.
     let res = target_proxy
         .get_notification(NotificationEvent::TrackChanged)
         .await
         .expect("FIDL call should work");
-    assert_eq!(
-        Ok(Notification { track_id: Some(std::u64::MAX), ..Notification::new_empty() }),
-        res
-    );
+    assert_eq!(Ok(Notification { track_id: Some(std::u64::MAX), ..Notification::empty() }), res);
 
     // Send an unsupported `NotificationEvent`.
     let res = target_proxy
@@ -299,7 +290,7 @@ fn test_listen_to_media_sessions() -> Result<(), Error> {
 
         // Send a MediaSessionUpdate for session1 -> New active session because no
         // active sessions exist.
-        let delta1 = SessionInfoDelta { ..SessionInfoDelta::new_empty() };
+        let delta1 = SessionInfoDelta::empty();
         let _ = watcher_client.session_updated(session1_id.0, delta1).await;
         assert_eq!(Some(session1_id), media_sessions.get_active_session_id());
 
@@ -331,7 +322,7 @@ fn test_listen_to_media_sessions() -> Result<(), Error> {
         let delta2 = SessionInfoDelta {
             metadata: Some(create_metadata()),
             player_status: Some(create_player_status()),
-            ..SessionInfoDelta::new_empty()
+            ..SessionInfoDelta::empty()
         };
         let _ = watcher_client.session_updated(session2_id.0, delta2).await;
         assert_eq!(Some(session1_id), media_sessions.get_active_session_id());
@@ -359,8 +350,6 @@ fn test_listen_to_media_sessions() -> Result<(), Error> {
 /// This test simulates end-to-end behavior of the AVRCP Target component. It tests a
 /// fake client (usually AVRCP component) sending procedures and verifies the results.
 fn test_media_and_avrcp_listener() -> Result<(), Error> {
-    fuchsia_syslog::init_with_tags(&["avrcp-tg-test"]).expect("Unable to initialize logger");
-    fuchsia_syslog::set_verbosity(1);
     let mut exec = fasync::Executor::new_with_fake_time().expect("executor should build");
     exec.set_fake_time(fasync::Time::from_nanos(555555555));
 
@@ -389,7 +378,7 @@ fn test_media_and_avrcp_listener() -> Result<(), Error> {
 
         // Send a MediaSessionUpdate for session1 -> New active session because no
         // active sessions exist.
-        let delta1 = SessionInfoDelta { ..SessionInfoDelta::new_empty() };
+        let delta1 = SessionInfoDelta::empty();
         let _ = watcher_client.session_updated(session1_id.0, delta1).await;
         assert_eq!(Some(session1_id), media_sessions.get_active_session_id());
 
@@ -413,7 +402,7 @@ fn test_media_and_avrcp_listener() -> Result<(), Error> {
             metadata: Some(create_metadata()),
             player_status: Some(create_player_status()),
             is_locally_active: Some(true),
-            ..SessionInfoDelta::new_empty()
+            ..SessionInfoDelta::empty()
         };
         let _ = watcher_client.session_updated(session2_id.0, delta2).await;
         assert_eq!(Some(session2_id), media_sessions.get_active_session_id());
@@ -430,10 +419,10 @@ fn test_media_and_avrcp_listener() -> Result<(), Error> {
                 duration: Some(9876543210),
                 player_state: Some(PlayerState::Playing),
                 repeat_mode: Some(RepeatMode::Group),
-                ..PlayerStatus::new_empty()
+                ..PlayerStatus::empty()
             }),
             is_locally_active: Some(true),
-            ..SessionInfoDelta::new_empty()
+            ..SessionInfoDelta::empty()
         };
         let _ = watcher_client.session_updated(session1_id.0, delta1).await;
         assert_eq!(Some(session1_id), media_sessions.get_active_session_id());
@@ -455,13 +444,13 @@ fn test_media_and_avrcp_listener() -> Result<(), Error> {
         let res = target_proxy
             .watch_notification(
                 NotificationEvent::PlaybackStatusChanged,
-                Notification::new_empty(),
-                0,
+                Notification::empty(),
+                /* interval= */ 0,
             )
             .await
             .expect("FIDL call should work");
         assert_eq!(
-            Ok(Notification { status: Some(PlaybackStatus::Playing), ..Notification::new_empty() }),
+            Ok(Notification { status: Some(PlaybackStatus::Playing), ..Notification::empty() }),
             res
         );
 
@@ -470,7 +459,7 @@ fn test_media_and_avrcp_listener() -> Result<(), Error> {
         // notification.
         let mut watch = target_proxy.watch_notification(
             NotificationEvent::TrackChanged,
-            Notification { track_id: Some(std::u64::MAX), ..Notification::new_empty() },
+            Notification { track_id: Some(std::u64::MAX), ..Notification::empty() },
             0,
         );
         // This should not complete until we send the state update.
@@ -480,13 +469,13 @@ fn test_media_and_avrcp_listener() -> Result<(), Error> {
         let delta1 = SessionInfoDelta {
             metadata: Some(create_metadata()),
             player_status: Some(create_player_status()),
-            ..SessionInfoDelta::new_empty()
+            ..SessionInfoDelta::empty()
         };
         let res = watcher_client.session_updated(session1_id.0, delta1).await;
         assert_eq!(Ok(()), res.map_err(|e| format!("{}", e)));
 
         // We expect the `watch` future to have resolved now that an update has been received.
-        let expected = Notification { track_id: Some(0), ..Notification::new_empty() };
+        let expected = Notification { track_id: Some(0), ..Notification::empty() };
         assert_eq!(
             Poll::Ready(Ok(Ok(expected))),
             futures::poll!(&mut watch).map_err(|e| format!("{}", e))
@@ -494,7 +483,7 @@ fn test_media_and_avrcp_listener() -> Result<(), Error> {
 
         // Test the special case TrackPosChanged event.
         target_proxy
-            .watch_notification(NotificationEvent::TrackPosChanged, Notification::new_empty(), 1)
+            .watch_notification(NotificationEvent::TrackPosChanged, Notification::empty(), 1)
             .await
     };
 
@@ -510,7 +499,7 @@ fn test_media_and_avrcp_listener() -> Result<(), Error> {
 
     // The current track position is returned.
     // We expect the future to finish, now that the time has advanced by 10 seconds.
-    let expected = Notification { pos: Some(55), ..Notification::new_empty() };
+    let expected = Notification { pos: Some(55), ..Notification::empty() };
     assert_eq!(Poll::Ready(Ok(Ok(expected))), r1);
 
     Ok(())

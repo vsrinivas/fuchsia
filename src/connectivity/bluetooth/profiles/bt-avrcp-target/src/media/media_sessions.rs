@@ -4,9 +4,8 @@
 
 use {
     anyhow::{format_err, Context, Error},
-    fidl::encoding::Decodable as FidlDecodable,
     fidl::endpoints::{create_proxy, create_request_stream},
-    fidl_fuchsia_bluetooth_avrcp::{self as fidl_avrcp},
+    fidl_fuchsia_bluetooth_avrcp as fidl_avrcp,
     fidl_fuchsia_media_sessions2::{
         DiscoveryMarker, DiscoveryProxy, SessionControlProxy, SessionInfoDelta,
         SessionsWatcherRequest, SessionsWatcherRequestStream, WatchOptions,
@@ -17,8 +16,7 @@ use {
     futures::{future, Future, TryStreamExt},
     log::{trace, warn},
     parking_lot::RwLock,
-    std::collections::HashMap,
-    std::sync::Arc,
+    std::{collections::HashMap, sync::Arc},
 };
 
 use crate::media::{
@@ -55,7 +53,7 @@ impl MediaSessions {
 
         // Subscribe to all players. The active player is the player that has sent this
         // component the most recent SessionUpdate with an active status.
-        let watch_options = WatchOptions::new_empty();
+        let watch_options = WatchOptions::empty();
 
         if let Err(e) = discovery
             .watch_sessions(watch_options, watcher_client)
@@ -230,7 +228,7 @@ impl MediaSessionsInner {
                         state.session_info().get_play_status().get_playback_status(),
                     ),
                     displayable_name: Some(MEDIA_SESSION_DISPLAYABLE_NAME.to_string()),
-                    ..fidl_avrcp::MediaPlayerItem::new_empty()
+                    ..fidl_avrcp::MediaPlayerItem::empty()
                 }])
             },
         )
@@ -464,11 +462,9 @@ pub(crate) mod tests {
     use crate::media::media_types::ValidPlayStatus;
     use crate::tests::generate_empty_watch_notification;
 
-    use fidl::encoding::Decodable as FidlDecodable;
     use fidl::endpoints::{create_proxy, create_proxy_and_stream};
     use fidl_fuchsia_bluetooth_avrcp::TargetHandlerMarker;
     use fidl_fuchsia_media_sessions2 as fidl_media;
-    use fuchsia_async as fasync;
     use futures::future::join_all;
 
     /// Creates the MediaSessions object and sets an active session if `is_active` = true.
@@ -479,7 +475,6 @@ pub(crate) mod tests {
         is_active: bool,
     ) -> MediaSessionsInner {
         let mut sessions = MediaSessionsInner::new();
-        let delta = SessionInfoDelta::new_empty();
 
         if is_active {
             sessions.active_session_id = Some(id.clone());
@@ -487,7 +482,7 @@ pub(crate) mod tests {
         let create_res = sessions.create_or_update_session(
             discovery.clone(),
             id,
-            delta,
+            SessionInfoDelta::empty(),
             &create_session_control_proxy,
         );
         assert_eq!(Ok(()), create_res.map_err(|e| e.to_string()));
@@ -520,7 +515,7 @@ pub(crate) mod tests {
 
             let current = fidl_avrcp::Notification {
                 track_id: Some(std::u64::MAX),
-                ..fidl_avrcp::Notification::new_empty()
+                ..fidl_avrcp::Notification::empty()
             };
             let res = inner.register_notification(supported_id, current.into(), 0, responder);
             assert_eq!(Ok(None), res.map_err(|e| e.to_string()));
@@ -540,7 +535,7 @@ pub(crate) mod tests {
         assert_eq!(
             Ok(Ok(fidl_avrcp::Notification {
                 track_id: Some(std::u64::MAX),
-                ..fidl_avrcp::Notification::new_empty()
+                ..fidl_avrcp::Notification::empty()
             })),
             result_fut.await.map_err(|e| format!("{:?}", e))
         );
@@ -567,10 +562,8 @@ pub(crate) mod tests {
             let mut inner = create_session(disc_clone.clone(), id, true);
 
             // Because this is TrackPosChanged, the given `current` data should be ignored.
-            let ignored_current = fidl_avrcp::Notification {
-                pos: Some(1234),
-                ..fidl_avrcp::Notification::new_empty()
-            };
+            let ignored_current =
+                fidl_avrcp::Notification { pos: Some(1234), ..fidl_avrcp::Notification::empty() };
             let supported_id = fidl_avrcp::NotificationEvent::TrackPosChanged;
             // Register the TrackPosChanged with an interval of 2 seconds.
             let res =
@@ -594,7 +587,7 @@ pub(crate) mod tests {
         assert_eq!(
             Ok(Ok(fidl_avrcp::Notification {
                 pos: Some(std::u32::MAX),
-                ..fidl_avrcp::Notification::new_empty()
+                ..fidl_avrcp::Notification::empty()
             })),
             result_fut.await.map_err(|e| format!("{:?}", e))
         );
@@ -623,7 +616,7 @@ pub(crate) mod tests {
         let supported_id = fidl_avrcp::NotificationEvent::AddressedPlayerChanged;
         let res = inner.register_notification(
             supported_id,
-            fidl_avrcp::Notification::new_empty().into(),
+            fidl_avrcp::Notification::empty().into(),
             2,
             responder,
         );
@@ -654,7 +647,7 @@ pub(crate) mod tests {
             // Create state with no active session.
             let mut inner = MediaSessionsInner::new();
 
-            let current = fidl_avrcp::Notification::new_empty();
+            let current = fidl_avrcp::Notification::empty();
             let event_id = fidl_avrcp::NotificationEvent::PlaybackStatusChanged;
             let res = inner.register_notification(event_id, current.into(), 0, responder);
             assert_eq!(Ok(None), res.map_err(|e| e.to_string()));
@@ -682,7 +675,7 @@ pub(crate) mod tests {
         {
             let mut inner = MediaSessionsInner::new();
             let unsupported_id = fidl_avrcp::NotificationEvent::BattStatusChanged;
-            let current = fidl_avrcp::Notification::new_empty();
+            let current = fidl_avrcp::Notification::empty();
             let res = inner.register_notification(unsupported_id, current.into(), 0, responder);
             assert_eq!(Ok(None), res.map_err(|e| e.to_string()));
         }
@@ -710,9 +703,9 @@ pub(crate) mod tests {
             player_status: Some(fidl_media::PlayerStatus {
                 shuffle_on: Some(true),
                 player_state: Some(fidl_media::PlayerState::Playing),
-                ..fidl_media::PlayerStatus::new_empty()
+                ..fidl_media::PlayerStatus::empty()
             }),
-            ..fidl_media::SessionInfoDelta::new_empty()
+            ..fidl_media::SessionInfoDelta::empty()
         };
         let update_res = sessions.create_or_update_session(
             discovery.clone(),
@@ -762,7 +755,7 @@ pub(crate) mod tests {
             let supported_id = fidl_avrcp::NotificationEvent::TrackChanged;
             let current = fidl_avrcp::Notification {
                 track_id: Some(std::u64::MAX),
-                ..fidl_avrcp::Notification::new_empty()
+                ..fidl_avrcp::Notification::empty()
             };
             let res = sessions.register_notification(supported_id, current.into(), 0, responder);
             assert_eq!(Ok(None), res.map_err(|e| e.to_string()));
@@ -836,12 +829,12 @@ pub(crate) mod tests {
                 let current_val = match event_id {
                     fidl_avrcp::NotificationEvent::TrackChanged => fidl_avrcp::Notification {
                         track_id: Some(std::u64::MAX),
-                        ..fidl_avrcp::Notification::new_empty()
+                        ..fidl_avrcp::Notification::empty()
                     },
                     fidl_avrcp::NotificationEvent::PlaybackStatusChanged => {
                         fidl_avrcp::Notification {
                             status: Some(fidl_avrcp::PlaybackStatus::Stopped),
-                            ..fidl_avrcp::Notification::new_empty()
+                            ..fidl_avrcp::Notification::empty()
                         }
                     }
                     fidl_avrcp::NotificationEvent::PlayerApplicationSettingChanged => {
@@ -849,16 +842,16 @@ pub(crate) mod tests {
                             application_settings: Some(fidl_avrcp::PlayerApplicationSettings {
                                 shuffle_mode: Some(fidl_avrcp::ShuffleMode::Off),
                                 repeat_status_mode: Some(fidl_avrcp::RepeatStatusMode::Off),
-                                ..fidl_avrcp::PlayerApplicationSettings::new_empty()
+                                ..fidl_avrcp::PlayerApplicationSettings::empty()
                             }),
-                            ..fidl_avrcp::Notification::new_empty()
+                            ..fidl_avrcp::Notification::empty()
                         }
                     }
                     fidl_avrcp::NotificationEvent::TrackPosChanged => fidl_avrcp::Notification {
                         pos: Some(std::u32::MAX),
-                        ..fidl_avrcp::Notification::new_empty()
+                        ..fidl_avrcp::Notification::empty()
                     },
-                    _ => fidl_avrcp::Notification::new_empty(),
+                    _ => fidl_avrcp::Notification::empty(),
                 };
                 // Register the notification event with responder.
                 let res =
@@ -877,7 +870,7 @@ pub(crate) mod tests {
             let delta = fidl_media::SessionInfoDelta {
                 player_status: Some(create_player_status()),
                 metadata: Some(create_metadata()),
-                ..fidl_media::SessionInfoDelta::new_empty()
+                ..fidl_media::SessionInfoDelta::empty()
             };
 
             // First, update state values.
@@ -897,15 +890,15 @@ pub(crate) mod tests {
                 application_settings: Some(fidl_avrcp::PlayerApplicationSettings {
                     shuffle_mode: Some(fidl_avrcp::ShuffleMode::AllTrackShuffle),
                     repeat_status_mode: Some(fidl_avrcp::RepeatStatusMode::Off),
-                    ..fidl_avrcp::PlayerApplicationSettings::new_empty()
+                    ..fidl_avrcp::PlayerApplicationSettings::empty()
                 }),
-                ..fidl_avrcp::Notification::new_empty()
+                ..fidl_avrcp::Notification::empty()
             },
             fidl_avrcp::Notification {
                 status: Some(fidl_avrcp::PlaybackStatus::Playing),
-                ..fidl_avrcp::Notification::new_empty()
+                ..fidl_avrcp::Notification::empty()
             },
-            fidl_avrcp::Notification { track_id: Some(0), ..fidl_avrcp::Notification::new_empty() },
+            fidl_avrcp::Notification { track_id: Some(0), ..fidl_avrcp::Notification::empty() },
         ]);
 
         let response: Result<Vec<fidl_avrcp::Notification>, String> = n_result_futs
@@ -964,19 +957,19 @@ pub(crate) mod tests {
                 let current_val = match event_id {
                     fidl_avrcp::NotificationEvent::TrackChanged => fidl_avrcp::Notification {
                         track_id: Some(std::u64::MAX),
-                        ..fidl_avrcp::Notification::new_empty()
+                        ..fidl_avrcp::Notification::empty()
                     },
                     fidl_avrcp::NotificationEvent::PlayerApplicationSettingChanged => {
                         fidl_avrcp::Notification {
                             application_settings: Some(fidl_avrcp::PlayerApplicationSettings {
                                 shuffle_mode: Some(fidl_avrcp::ShuffleMode::Off),
                                 repeat_status_mode: Some(fidl_avrcp::RepeatStatusMode::Off),
-                                ..fidl_avrcp::PlayerApplicationSettings::new_empty()
+                                ..fidl_avrcp::PlayerApplicationSettings::empty()
                             }),
-                            ..fidl_avrcp::Notification::new_empty()
+                            ..fidl_avrcp::Notification::empty()
                         }
                     }
-                    _ => fidl_avrcp::Notification::new_empty(),
+                    _ => fidl_avrcp::Notification::empty(),
                 };
                 // Register the notification event with responder.
                 let res =
@@ -1027,7 +1020,7 @@ pub(crate) mod tests {
         assert!(sessions.map.contains_key(&id));
 
         let id2 = MediaSessionId(5678);
-        let delta2 = SessionInfoDelta::new_empty();
+        let delta2 = SessionInfoDelta::empty();
         let create_res2 = sessions.create_or_update_session(
             discovery.clone(),
             id2,
@@ -1106,7 +1099,7 @@ pub(crate) mod tests {
             sub_type: Some(fidl_avrcp::PlayerSubType::empty()),
             playback_status: Some(fidl_avrcp::PlaybackStatus::Stopped),
             displayable_name: Some(MEDIA_SESSION_DISPLAYABLE_NAME.to_string()),
-            ..fidl_avrcp::MediaPlayerItem::new_empty()
+            ..fidl_avrcp::MediaPlayerItem::empty()
         }];
         assert_eq!(res, Ok(expected));
 
