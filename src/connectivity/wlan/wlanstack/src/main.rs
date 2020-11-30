@@ -165,7 +165,7 @@ async fn serve_fidl(
 
 #[cfg(test)]
 mod tests {
-    use {super::*, std::panic};
+    use super::*;
 
     #[test]
     fn parse_svc_cfg_wep() {
