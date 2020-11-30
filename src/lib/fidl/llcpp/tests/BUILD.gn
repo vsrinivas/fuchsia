@@ -101,6 +101,7 @@ executable("fidl_llcpp_type_tests_bin") {
     "handle_test.cc",
     "linearized_and_encoded_test.cc",
     "protocol_test.cc",
+    "server_end_test.cc",
     "table_test.cc",
     "test_utils.cc",
     "traits_test.cc",
