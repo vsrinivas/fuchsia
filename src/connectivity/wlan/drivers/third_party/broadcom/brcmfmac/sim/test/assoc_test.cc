@@ -108,6 +108,8 @@ class AssocTest : public SimTest {
     size_t deauth_ind_count = 0;
     // Number of deauth confirmations (when initiated by self)
     size_t deauth_conf_count = 0;
+    // Whether deauth/disassoc is locally initiated
+    size_t ind_locally_initiated_count = 0;
     // Number of signal report indications (once client is assoc'd)
     size_t signal_ind_count = 0;
     // SNR seen in the signal report indication.
@@ -271,6 +273,7 @@ void AssocTest::Init() {
   context_.disassoc_conf_count = 0;
   context_.deauth_ind_count = 0;
   context_.disassoc_ind_count = 0;
+  context_.ind_locally_initiated_count = 0;
   context_.signal_ind_count = 0;
   context_.signal_ind_rssi = 0;
   context_.signal_ind_snr = 0;
@@ -337,11 +340,17 @@ void AssocTest::OnDeauthConf(const wlanif_deauth_confirm_t* resp) { context_.dea
 
 void AssocTest::OnDeauthInd(const wlanif_deauth_indication_t* ind) {
   context_.deauth_ind_count++;
+  if (ind->locally_initiated) {
+    context_.ind_locally_initiated_count++;
+  }
   client_ifc_.stats_.deauth_indications.push_back(*ind);
 }
 
 void AssocTest::OnDisassocInd(const wlanif_disassoc_indication_t* ind) {
   context_.disassoc_ind_count++;
+  if (ind->locally_initiated) {
+    context_.ind_locally_initiated_count++;
+  }
   client_ifc_.stats_.disassoc_indications.push_back(*ind);
 }
 
@@ -1012,6 +1021,7 @@ TEST_F(AssocTest, DisassocFromAPTest) {
 
   EXPECT_EQ(context_.assoc_resp_count, 1U);
   EXPECT_EQ(context_.disassoc_ind_count, 1U);
+  EXPECT_EQ(context_.ind_locally_initiated_count, 0U);
 
   EXPECT_EQ(client_ifc_.stats_.disassoc_indications.size(), 1U);
   const wlanif_disassoc_indication_t& disassoc_ind =
@@ -1041,6 +1051,7 @@ TEST_F(AssocTest, LinkEventTest) {
   DeauthFromAp();
   EXPECT_EQ(context_.assoc_resp_count, 1U);
   EXPECT_EQ(context_.disassoc_ind_count, 1U);
+  EXPECT_EQ(context_.ind_locally_initiated_count, 0U);
 }
 
 // After assoc, send a deauth from ap - client should disassociate
@@ -1066,6 +1077,7 @@ TEST_F(AssocTest, deauth_from_ap) {
   EXPECT_EQ(context_.deauth_ind_count, 1U);
   EXPECT_EQ(context_.disassoc_conf_count, 0U);
   EXPECT_EQ(context_.disassoc_ind_count, 0U);
+  EXPECT_EQ(context_.ind_locally_initiated_count, 0U);
 }
 
 // After assoc, send a deauth from client - client should disassociate
@@ -1091,6 +1103,7 @@ TEST_F(AssocTest, deauth_from_self) {
   EXPECT_EQ(context_.deauth_ind_count, 0U);
   EXPECT_EQ(context_.disassoc_conf_count, 0U);
   EXPECT_EQ(context_.disassoc_ind_count, 0U);
+  EXPECT_EQ(context_.ind_locally_initiated_count, 0U);
 }
 
 // Associate, send a deauth from client, associate again, then send deauth from AP.
@@ -1118,6 +1131,7 @@ TEST_F(AssocTest, deauth_from_self_then_from_ap) {
   EXPECT_EQ(context_.deauth_ind_count, 1U);
   EXPECT_EQ(context_.disassoc_conf_count, 0U);
   EXPECT_EQ(context_.disassoc_ind_count, 0U);
+  EXPECT_EQ(context_.ind_locally_initiated_count, 0U);
 }
 
 // Verify that association is retried as per the setting

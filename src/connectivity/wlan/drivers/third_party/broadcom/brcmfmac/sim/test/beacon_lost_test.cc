@@ -129,7 +129,9 @@ TEST_F(BeaconLostTest, BeaconTooFarDisassocTest) {
   EXPECT_EQ(client_ifc_.stats_.assoc_successes, 1U);
 
   // A disassociation should have occured due to moving away from the AP
-  EXPECT_EQ(client_ifc_.stats_.disassoc_indications.size(), 1U);
+  ASSERT_EQ(client_ifc_.stats_.disassoc_indications.size(), 1U);
+  auto disassoc_ind = *client_ifc_.stats_.disassoc_indications.begin();
+  EXPECT_TRUE(disassoc_ind.locally_initiated);
 }
 
 // Verify that losing a beacon from an unassociated ap does not cause any disassociation

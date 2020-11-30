@@ -1228,24 +1228,29 @@ static void cfg80211_disconnected(struct brcmf_cfg80211_vif* vif, uint16_t event
   BRCMF_DBG(CONN, "Link Down: address: " MAC_FMT_STR ", SME reason: %d",
             MAC_FMT_ARGS(vif->profile.bssid), event_reason);
 
-  const bool locally_initiated = (event_code == BRCMF_E_DEAUTH) || (event_code == BRCMF_E_DISASSOC);
-  if (cfg->disconnect_mode == BRCMF_DISCONNECT_DEAUTH && locally_initiated) {
-    // Deauthenticate came from SME.
+  const bool sme_initiated_deauth =
+      cfg->disconnect_mode == BRCMF_DISCONNECT_DEAUTH &&
+      (event_code == BRCMF_E_DEAUTH || event_code == BRCMF_E_DISASSOC);
+  const bool sme_initiated_disassoc =
+      cfg->disconnect_mode == BRCMF_DISCONNECT_DISASSOC &&
+      (event_code == BRCMF_E_DEAUTH || event_code == BRCMF_E_DISASSOC);
+
+  if (sme_initiated_deauth) {
     brcmf_notify_deauth(ndev, vif->profile.bssid);
-    cfg->disconnect_mode = BRCMF_DISCONNECT_NONE;
-  } else if (cfg->disconnect_mode == BRCMF_DISCONNECT_DISASSOC && locally_initiated) {
+  } else if (sme_initiated_disassoc) {
     brcmf_notify_disassoc(ndev, ZX_OK);
-    cfg->disconnect_mode = BRCMF_DISCONNECT_NONE;
-  } else {  // Not initiated by SME
-    // If not initiated by SME we are not likely to get E_DEAUTH but just in case...
+  } else {
+    const bool locally_initiated = event_code == BRCMF_E_DEAUTH || event_code == BRCMF_E_DISASSOC ||
+                                   event_code == BRCMF_E_LINK;
+    // BRCMF_E_DEAUTH is unlikely if not SME-initiated
     if (event_code == BRCMF_E_DEAUTH || event_code == BRCMF_E_DEAUTH_IND) {
       brcmf_notify_deauth_ind(ndev, vif->profile.bssid, event_reason, locally_initiated);
     } else {
-      // This is a catch-all case - could be E_DISASSOC (not likely), E_DISASSOC_IND, E_LINK or
-      // locally initiated (IF delete)
+      // This is a catch-all case - could be E_DISASSOC, E_DISASSOC_IND, E_LINK or IF delete
       brcmf_notify_disassoc_ind(ndev, vif->profile.bssid, event_reason, locally_initiated);
     }
   }
+  cfg->disconnect_mode = BRCMF_DISCONNECT_NONE;
 }
 
 static void brcmf_link_down(struct brcmf_cfg80211_vif* vif, uint16_t event_reason,

@@ -271,14 +271,10 @@ impl Authenticating {
                 fidl_mlme::AuthenticateResultCodes::Refused,
             )),
         );
-        state_change_ctx.replace(StateChangeContext::Disconnect {
-            msg: format!(
-                "received DeauthenticateInd msg while authenticating; reason code {:?}",
-                ind.reason_code
-            ),
-            reason_code: ind.reason_code.into_primitive(),
-            locally_initiated: ind.locally_initiated,
-        });
+        state_change_ctx.set_msg(format!(
+            "received DeauthenticateInd msg; reason code: {:?}, locally_initiated: {:?}",
+            ind.reason_code, ind.locally_initiated,
+        ));
         Idle { cfg: self.cfg }
     }
 
@@ -461,14 +457,10 @@ impl Associating {
                 .into(),
             ),
         );
-        state_change_ctx.replace(StateChangeContext::Disconnect {
-            msg: format!(
-                "received DeauthenticateInd msg while associating; reason code {:?}",
-                ind.reason_code
-            ),
-            reason_code: ind.reason_code.into_primitive(),
-            locally_initiated: ind.locally_initiated,
-        });
+        state_change_ctx.set_msg(format!(
+            "received DeauthenticateInd msg; reason code: {:?}, locally_initiated: {:?}",
+            ind.reason_code, ind.locally_initiated,
+        ));
         Idle { cfg: self.cfg }
     }
 
@@ -490,15 +482,10 @@ impl Associating {
                 .into(),
             ),
         );
-        state_change_ctx.replace(StateChangeContext::Disconnect {
-            msg: format!(
-                "received DisassociateInd msg while associating; reason code {:?}",
-                ind.reason_code
-            ),
-            reason_code: ind.reason_code,
-            locally_initiated: ind.locally_initiated,
-        });
-
+        state_change_ctx.set_msg(format!(
+            "received DisassociateInd msg; reason code: {:?}, locally_initiated: {:?}",
+            ind.reason_code, ind.locally_initiated,
+        ));
         Idle { cfg: self.cfg }
     }
 
@@ -585,7 +572,11 @@ impl Associated {
             &self.protection_ie,
             &context.mlme_sink,
         );
-        state_change_ctx.set_msg("received DisassociateInd msg".to_string());
+        state_change_ctx.replace(StateChangeContext::Disconnect {
+            msg: format!("received DisassociateInd msg; reason code {:?}", ind.reason_code),
+            reason_code: ind.reason_code,
+            locally_initiated: ind.locally_initiated,
+        });
         Associating {
             cfg: self.cfg,
             cmd,
@@ -1305,7 +1296,7 @@ mod tests {
     use super::*;
     use anyhow::format_err;
     use fidl_fuchsia_wlan_common as fidl_common;
-    use fuchsia_inspect::Inspector;
+    use fuchsia_inspect::{assert_inspect_tree, Inspector};
     use futures::channel::{mpsc, oneshot};
     use link_state::{EstablishingRsna, LinkUp};
     use std::sync::Arc;
@@ -2047,6 +2038,34 @@ mod tests {
         let state = state.on_mlme_event(disassociate_ind, &mut h.context);
         assert_associating(state, &fake_bss!(Open, ssid: b"bar".to_vec(), bssid: [8; 6]));
         assert_eq!(h.context.att_id, 1);
+    }
+
+    #[test]
+    fn log_disconnect_ctx_on_disassoc_from_associated() {
+        let mut h = TestHelper::new();
+        let state = link_up_state(Box::new(fake_bss!(Open, ssid: b"bar".to_vec(), bssid: [8; 6])));
+        assert_eq!(h.context.att_id, 0);
+
+        let disassociate_ind = MlmeEvent::DisassociateInd {
+            ind: fidl_mlme::DisassociateIndication {
+                peer_sta_address: [0, 0, 0, 0, 0, 0],
+                reason_code: 10,
+                locally_initiated: true,
+            },
+        };
+        let state = state.on_mlme_event(disassociate_ind, &mut h.context);
+        assert_associating(state, &fake_bss!(Open, ssid: b"bar".to_vec(), bssid: [8; 6]));
+
+        assert_inspect_tree!(h._inspector, root: contains {
+            state_events: {
+                "0": contains {
+                    disconnect_ctx: {
+                        reason_code: 10u64,
+                        locally_initiated: true,
+                    }
+                }
+            }
+        });
     }
 
     #[test]
