@@ -16,6 +16,7 @@
 #include <lib/fdio/watcher.h>
 #include <lib/fidl-async/cpp/bind.h>
 #include <lib/fit/defer.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/channel.h>
 #include <stdio.h>
 #include <zircon/boot/image.h>
@@ -81,13 +82,13 @@ zx_status_t MiscDeviceAdded(int dirfd, int event, const char* fn, void* cookie) 
   zbi_header_t header;
   zx_status_t status = ramdisk_vmo.read(&header, 0, sizeof(header));
   if (status != ZX_OK) {
-    printf("fshost: cannot read ZBI_TYPE_STORAGE_RAMDISK item header: %s\n",
-           zx_status_get_string(status));
+    FX_LOGS(ERROR) << "cannot read ZBI_TYPE_STORAGE_RAMDISK item header: "
+                   << zx_status_get_string(status);
     return ZX_ERR_STOP;
   }
   if (!(header.flags & ZBI_FLAG_VERSION) || header.magic != ZBI_ITEM_MAGIC ||
       header.type != ZBI_TYPE_STORAGE_RAMDISK) {
-    printf("fshost: invalid ZBI_TYPE_STORAGE_RAMDISK item header\n");
+    FX_LOGS(ERROR) << "invalid ZBI_TYPE_STORAGE_RAMDISK item header";
     return ZX_ERR_STOP;
   }
 
@@ -95,14 +96,14 @@ zx_status_t MiscDeviceAdded(int dirfd, int event, const char* fn, void* cookie) 
   if (header.flags & ZBI_FLAG_STORAGE_COMPRESSED) {
     status = zx::vmo::create(header.extra, 0, &vmo);
     if (status != ZX_OK) {
-      printf("fshost: cannot create VMO for uncompressed RAMDISK: %s\n",
-             zx_status_get_string(status));
+      FX_LOGS(ERROR) << "cannot create VMO for uncompressed RAMDISK: "
+                     << zx_status_get_string(status);
       return ZX_ERR_STOP;
     }
     status = zbi_bootfs::Decompress(ramdisk_vmo, sizeof(zbi_header_t), header.length, vmo, 0,
                                     header.extra);
     if (status != ZX_OK) {
-      printf("fshost: failed to decompress RAMDISK: %s\n", zx_status_get_string(status));
+      FX_LOGS(ERROR) << "failed to decompress RAMDISK: " << zx_status_get_string(status);
       return ZX_ERR_STOP;
     }
   } else {
@@ -111,16 +112,16 @@ zx_status_t MiscDeviceAdded(int dirfd, int event, const char* fn, void* cookie) 
     // without the header in it and then it could just be used here directly
     // if uncompressed (or maybe bootsvc deals with decompression in the first
     // place so the uncompressed VMO is always what we get).
-    printf("fshost: ignoring uncompressed RAMDISK item in ZBI\n");
+    FX_LOGS(ERROR) << "ignoring uncompressed RAMDISK item in ZBI";
     return ZX_ERR_STOP;
   }
 
   ramdisk_client* client;
   status = ramdisk_create_from_vmo(vmo.release(), &client);
   if (status != ZX_OK) {
-    printf("fshost: failed to create ramdisk from ZBI_TYPE_STORAGE_RAMDISK\n");
+    FX_LOGS(ERROR) << "failed to create ramdisk from ZBI_TYPE_STORAGE_RAMDISK";
   } else {
-    printf("fshost: ZBI_TYPE_STORAGE_RAMDISK attached\n");
+    FX_LOGS(INFO) << "ZBI_TYPE_STORAGE_RAMDISK attached";
   }
   return ZX_ERR_STOP;
 }
@@ -128,7 +129,7 @@ zx_status_t MiscDeviceAdded(int dirfd, int event, const char* fn, void* cookie) 
 int RamctlWatcher(void* arg) {
   fbl::unique_fd dirfd(open("/dev/misc", O_DIRECTORY | O_RDONLY));
   if (!dirfd) {
-    printf("fshost: failed to open /dev/misc: %s\n", strerror(errno));
+    FX_LOGS(ERROR) << "failed to open /dev/misc: " << strerror(errno);
     return -1;
   }
   fdio_watch_directory(dirfd.get(), &MiscDeviceAdded, ZX_TIME_INFINITE, arg);
@@ -143,7 +144,7 @@ int BlockWatcher(std::unique_ptr<devmgr::FsManager> fs_manager) {
   options.wait_for_data = fs_manager->boot_args()->wait_for_data();
 
   if (options.netboot) {
-    printf("fshost: disabling automount\n");
+    FX_LOGS(INFO) << "disabling automount";
   }
 
   BlockDeviceWatcher(std::move(fs_manager), options);
@@ -157,13 +158,13 @@ zx_status_t BindNamespace(zx::channel fs_root_client) {
   fdio_ns_t* ns;
   zx_status_t status;
   if ((status = fdio_ns_get_installed(&ns)) != ZX_OK) {
-    printf("fshost: cannot get namespace: %d\n", status);
+    FX_LOGS(ERROR) << "cannot get namespace: " << status;
     return status;
   }
 
   // Bind "/fs".
   if ((status = fdio_ns_bind(ns, "/fs", fs_root_client.release())) != ZX_OK) {
-    printf("fshost: cannot bind /fs to namespace: %d\n", status);
+    FX_LOGS(ERROR) << "cannot bind /fs to namespace: " << status;
     return status;
   }
 
@@ -176,11 +177,11 @@ zx_status_t BindNamespace(zx::channel fs_root_client) {
     if ((status = fdio_open("/fs/system",
                             ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_EXECUTABLE | ZX_FS_RIGHT_ADMIN,
                             server.release())) != ZX_OK) {
-      printf("fshost: cannot open connection to /system: %d\n", status);
+      FX_LOGS(ERROR) << "cannot open connection to /system: " << status;
       return status;
     }
     if ((status = fdio_ns_bind(ns, "/system", client.release())) != ZX_OK) {
-      printf("fshost: cannot bind /system to namespace: %d\n", status);
+      FX_LOGS(ERROR) << "cannot bind /system to namespace: " << status;
       return status;
     }
   }
@@ -207,7 +208,7 @@ int main(int argc, char** argv) {
   while ((opt = getopt_long(argc, argv, "", options, nullptr)) != -1) {
     switch (opt) {
       case kDisableBlockWatcher:
-        printf("fshost: received --disable-block-watcher\n");
+        FX_LOGS(INFO) << "received --disable-block-watcher";
         disable_block_watcher = true;
         break;
       case kLogToDebuglog:
@@ -228,7 +229,7 @@ int main(int argc, char** argv) {
   async::Loop loader_loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   zx_status_t status = loader_loop.StartThread("fshost-loader");
   if (status != ZX_OK) {
-    fprintf(stderr, "fshost: failed to start loader thread: %s\n", zx_status_get_string(status));
+    FX_LOGS(ERROR) << "failed to start loader thread: " << zx_status_get_string(status);
     return status;
   }
   fbl::unique_fd root_fd;
@@ -236,7 +237,7 @@ int main(int argc, char** argv) {
       "/", fio::OPEN_FLAG_DIRECTORY | fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
       root_fd.reset_and_get_address());
   if (status != ZX_OK) {
-    fprintf(stderr, "fshost: failed to open namespace root: %s\n", zx_status_get_string(status));
+    FX_LOGS(ERROR) << "failed to open namespace root: " << zx_status_get_string(status);
     return status;
   }
   auto loader = DeprecatedBootSystemLoaderService::Create(loader_loop.dispatcher(),
@@ -247,7 +248,7 @@ int main(int argc, char** argv) {
   // minimize behavior differences per change.
   auto conn = loader->Connect();
   if (conn.is_error()) {
-    fprintf(stderr, "fshost: failed to create loader connection: %s\n", conn.status_string());
+    FX_LOGS(ERROR) << "failed to create loader connection: " << conn.status_string();
     return conn.status_value();
   }
   zx_handle_close(dl_set_loader_service(std::move(conn).value().release()));

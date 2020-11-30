@@ -86,8 +86,6 @@ class ArgumentVector {
   // lifetime of |this|.
   const char* const* argv() const { return argv_; }
 
-  void Print(const char* prefix) const;
-
  private:
   ArgumentVector() = default;
 
@@ -95,6 +93,8 @@ class ArgumentVector {
   const char* argv_[kMaxArgs + 1];
   std::unique_ptr<char[]> raw_bytes_;
 };
+
+std::ostream& operator<<(std::ostream& stream, const ArgumentVector& arguments);
 
 // The variable to set on the kernel command line to enable ld.so tracing
 // of the processes we launch.

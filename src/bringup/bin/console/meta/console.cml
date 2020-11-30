@@ -14,6 +14,15 @@
             "netstack",
             "--deny-log-tag",
             "klog",
+            "--allow-log-tag",
+            "fshost.cm",
+            "--allow-log-tag",
+            "/boot/bin/blobfs",
+            "--allow-log-tag",
+            "/boot/bin/minfs",
+
+            // LogListener has a maxmimum number of tags that can be filtered, so adding
+            // more here may not work.
         ],
     },
     capabilities: [

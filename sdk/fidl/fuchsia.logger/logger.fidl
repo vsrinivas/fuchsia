@@ -46,7 +46,7 @@ const uint8 LOG_VERBOSITY_STEP_SIZE = 0x1;
 const uint8 LOG_LEVEL_DEFAULT = 0x30; // LogLevel.INFO
 
 /// Max number of tags that can be passed to filter by listener.
-const uint8 MAX_TAGS = 5;
+const uint8 MAX_TAGS = 8;
 
 /// Max tag length that can be passed to filter by listener.
 const uint8 MAX_TAG_LEN_BYTES = 63;

@@ -4,6 +4,7 @@
 
 #include "filesystem-mounter.h"
 
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/process.h>
 #include <zircon/status.h>
 
@@ -164,15 +165,15 @@ zx_status_t FilesystemMounter::MountBlob(zx::channel block_device, const mount_o
   zx_status_t status =
       zx::channel::create(0, &fs_diagnostics_dir_client, &fs_diagnostics_dir_server);
   if (status != ZX_OK) {
-    fprintf(stderr, "fshost: failed to create channel for diagnostics dir: %s\n",
-            zx_status_get_string(status));
+    FX_LOGS(ERROR) << "failed to create channel for diagnostics dir: "
+                   << zx_status_get_string(status);
     return status;
   }
 
   status = fshost_->AddFsDiagnosticsDirectory("blobfs", std::move(fs_diagnostics_dir_client));
   if (status != ZX_OK) {
-    fprintf(stderr, "fshost: failed to add diagnostic directory for blobfs: %s\n",
-            zx_status_get_string(status));
+    FX_LOGS(ERROR) << "failed to add diagnostic directory for blobfs: "
+                   << zx_status_get_string(status);
   }
 
   status = MountFilesystem(PATH_BLOB, "/boot/bin/blobfs", options, std::move(block_device),
@@ -200,7 +201,7 @@ void FilesystemMounter::TryMountPkgfs() {
     // TODO(fxbug.dev/58363): fshost should handle failures to mount critical filesystems better.
     auto status = LaunchPkgfs(this);
     if (status.is_error()) {
-      printf("fshost: failed to launch pkgfs: %s\n", status.status_string());
+      FX_LOGS(ERROR) << "failed to launch pkgfs: " << status.status_string();
     }
     pkgfs_mounted_ = true;
   }

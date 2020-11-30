@@ -63,7 +63,7 @@ func RebootWithCommand(t *testing.T, cmd string, kind ExpectedRebootType) {
 
 	if kind == CleanReboot {
 		// Make sure the file system is notified and unmounts.
-		i.WaitForLogMessage("fshost: shutdown complete")
+		i.WaitForLogMessage("fshost shutdown complete")
 	}
 
 	// Is the target rebooting?

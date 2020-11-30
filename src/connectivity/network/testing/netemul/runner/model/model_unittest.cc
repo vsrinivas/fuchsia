@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/logger/llcpp/fidl.h>
+
 #include <iostream>
 
 #include <gtest/gtest.h>
@@ -20,7 +22,7 @@ class ModelTest : public ::testing::Test {
     auto doc = parser.ParseFromString(
         json, ::testing::UnitTest::GetInstance()->current_test_info()->name());
 
-    ASSERT_FALSE(parser.HasError());
+    ASSERT_FALSE(parser.HasError()) << json;
 
     EXPECT_FALSE(config.ParseFromJSON(doc, &parser)) << msg;
     ASSERT_TRUE(parser.HasError());
@@ -340,9 +342,14 @@ TEST_F(ModelTest, TestBadLoggerFilterOptions) {
   json = R"({"environment": {"logger_options": {"filters": {"tags": {}}}}})";
   ExpectFailedParse(json, "test with non array for logger_options.filters.tags");
 
-  json =
-      R"({"environment": {"logger_options": {"filters": {"tags": ["a", "b", "c", "d", "e", "f"]}}}})";
-  ExpectFailedParse(json, "test with too many tags for logger_options.filters.tags");
+  std::string json_string = R"({"environment": {"logger_options": {"filters": {"tags": [)";
+  for (int i = 0; i < llcpp::fuchsia::logger::MAX_TAGS + 1; ++i) {
+    char tag[] = R"(, "a")";
+    tag[3] += i;
+    json_string.append(i == 0 ? tag + 2 : tag);
+  }
+  json_string.append("]}}}}");
+  ExpectFailedParse(json_string.c_str(), "test with too many tags for logger_options.filters.tags");
 
   json =
       R"({"environment": {"logger_options": {"filters": {"tags": ["sdfkjaskhfgaskjfhASFSADFSAFSADFsdfkjaskhfgaskjfhASFSADFSAFSADFDD"]}}}})";

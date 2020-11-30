@@ -11,6 +11,7 @@
 #include <lib/async/cpp/wait.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/io.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zircon-internal/debug.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <stdio.h>
@@ -123,7 +124,7 @@ zx_status_t FsManager::SetupOutgoingDirectory(zx::channel dir_request,
       "fuchsia.fshost.Loader", fbl::MakeRefCounted<fs::Service>([loader](zx::channel chan) {
         auto status = loader->Bind(std::move(chan));
         if (status.is_error()) {
-          fprintf(stderr, "fshost: failed to attach loader service: %s\n", status.status_string());
+          FX_LOGS(ERROR) << "failed to attach loader service: " << status.status_string();
         }
         return status.status_value();
       }));
@@ -139,12 +140,12 @@ zx_status_t FsManager::SetupOutgoingDirectory(zx::channel dir_request,
   zx::channel filesystems_client, filesystems_server;
   zx_status_t status = zx::channel::create(0, &filesystems_client, &filesystems_server);
   if (status != ZX_OK) {
-    printf("fshost: failed to create channel\n");
+    FX_LOGS(ERROR) << "failed to create channel";
     return status;
   }
   status = this->ServeRoot(std::move(filesystems_server));
   if (status != ZX_OK) {
-    printf("fshost: Cannot serve root filesystem\n");
+    FX_LOGS(ERROR) << "Cannot serve root filesystem";
     return status;
   }
   outgoing_dir->AddEntry("fs", fbl::MakeRefCounted<fs::RemoteDir>(std::move(filesystems_client)));
@@ -153,12 +154,12 @@ zx_status_t FsManager::SetupOutgoingDirectory(zx::channel dir_request,
   zx::channel services_client, services_server;
   status = zx::channel::create(0, &services_client, &services_server);
   if (status != ZX_OK) {
-    printf("fshost: failed to create channel\n");
+    FX_LOGS(ERROR) << "failed to create channel";
     return status;
   }
   status = this->ServeFshostRoot(std::move(services_server));
   if (status != ZX_OK) {
-    printf("fshost: Cannot serve export directory\n");
+    FX_LOGS(ERROR) << "Cannot serve export directory";
     return status;
   }
   outgoing_dir->AddEntry("fs-manager-svc",
@@ -169,12 +170,12 @@ zx_status_t FsManager::SetupOutgoingDirectory(zx::channel dir_request,
   zx::channel filesystems_client_2, filesystems_server_2;
   status = zx::channel::create(0, &filesystems_client_2, &filesystems_server_2);
   if (status != ZX_OK) {
-    printf("fshost: failed to create channel\n");
+    FX_LOGS(ERROR) << "failed to create channel";
     return status;
   }
   status = this->ServeRoot(std::move(filesystems_server_2));
   if (status != ZX_OK) {
-    printf("fshost: cannot serve root filesystem\n");
+    FX_LOGS(ERROR) << "cannot serve root filesystem";
     return status;
   }
   outgoing_dir->AddEntry("delayed", delayed_outdir_.Initialize(std::move(filesystems_client_2)));
@@ -219,12 +220,12 @@ zx_status_t FsManager::Initialize() {
   if (open_result.is_ok()) {
     inspect_.ServeStats("data", open_result.ok().vnode);
   } else {
-    fprintf(stderr, "fshost: failed to serve /data stats");
+    FX_LOGS(ERROR) << "failed to serve /data stats";
   }
 
   status = zx::event::create(0, &event_);
   if (status != ZX_OK) {
-    fprintf(stderr, "fshost: failed to create fs-manager event: %d\n", status);
+    FX_LOGS(ERROR) << "failed to create fs-manager event: " << status;
     return status;
   }
 
@@ -254,10 +255,10 @@ zx_status_t FsManager::ServeRoot(zx::channel server) {
 }
 
 void FsManager::WatchExit() {
-  printf("fshost: watching for exit\n");
+  FX_LOGS(INFO) << "watching for exit";
   global_shutdown_.set_handler([this](async_dispatcher_t* dispatcher, async::Wait* wait,
                                       zx_status_t status, const zx_packet_signal_t* signal) {
-    printf("fshost: exit signal detected\n");
+    FX_LOGS(INFO) << "exit signal detected";
     root_vfs_->UninstallAll(zx::time::infinite());
     event_.signal(0, FSHOST_SIGNAL_EXIT_DONE);
   });
@@ -270,7 +271,7 @@ void FsManager::WatchExit() {
 void FsManager::Shutdown(fit::function<void(zx_status_t)> callback) {
   zx_status_t status = event_.signal(0, FSHOST_SIGNAL_EXIT);
   if (status != ZX_OK) {
-    printf("fshost: error signalling event: %s\n", zx_status_get_string(status));
+    FX_LOGS(ERROR) << "error signalling event: " << zx_status_get_string(status);
     return;
   }
 

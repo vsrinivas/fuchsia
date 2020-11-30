@@ -34,7 +34,6 @@
 
 #include <condition_variable>
 #include <fstream>
-#include <iostream>
 #include <mutex>
 #include <utility>
 
@@ -84,15 +83,15 @@ class Watcher {
         device_manager_(GetDeviceManagerOptions(options.netboot)) {
     zx_status_t status = zx::event::create(0, &pause_event_);
     if (status != ZX_OK) {
-      std::cerr << "fshost: failed to create block watcher pause event: "
-                << zx_status_get_string(status) << std::endl;
+      FX_LOGS(ERROR) << "failed to create block watcher pause event: "
+                     << zx_status_get_string(status);
     }
   }
 
   void Run() {
     fbl::unique_fd dirfd(open(kPathBlockDeviceRoot, O_DIRECTORY | O_RDONLY));
     if (!dirfd) {
-      std::cerr << "fshost: failed to open block device dir: " << strerror(errno) << std::endl;
+      FX_LOGS(ERROR) << "failed to open block device dir: " << strerror(errno);
       return;
     }
     fdio_cpp::FdioCaller caller(std::move(dirfd));
@@ -102,8 +101,7 @@ class Watcher {
       zx::channel watcher, server;
       zx_status_t status = zx::channel::create(0, &watcher, &server);
       if (status != ZX_OK) {
-        std::cerr << "fshost: failed to create watcher channel: " << zx_status_get_string(status)
-                  << std::endl;
+        FX_LOGS(ERROR) << "failed to create watcher channel: " << zx_status_get_string(status);
         return;
       }
 
@@ -113,12 +111,11 @@ class Watcher {
       }
       auto result = fio::Directory::Call::Watch(caller.channel(), mask, 0, std::move(server));
       if (result.status() != ZX_OK) {
-        std::cerr << "fshost: failed to send watch: " << zx_status_get_string(result.status())
-                  << std::endl;
+        FX_LOGS(ERROR) << "failed to send watch: " << zx_status_get_string(result.status());
         return;
       }
       if (result->s != ZX_OK) {
-        std::cerr << "fshost: watch failed: " << zx_status_get_string(result->s) << std::endl;
+        FX_LOGS(ERROR) << "watch failed: " << zx_status_get_string(result->s);
         return;
       }
 
@@ -149,7 +146,7 @@ class Watcher {
         }
         is_paused_ = false;
       } else {
-        std::cerr << "fshost: watch failed with signal " << signals << std::endl;
+        FX_LOGS(ERROR) << "watch failed with signal " << signals;
         break;
       }
     }
@@ -172,8 +169,7 @@ class Watcher {
       // Indicate that the watcher is paused.
       zx_status_t status = pause_event_.signal(0, kSignalWatcherPaused);
       if (status != ZX_OK) {
-        std::cerr << "fshost: failed to set paused signal: " << zx_status_get_string(status)
-                  << std::endl;
+        FX_LOGS(ERROR) << "failed to set paused signal: " << zx_status_get_string(status);
         return status;
       }
 
@@ -231,13 +227,15 @@ class Watcher {
 
     BlockDevice device(&mounter_, std::move(device_fd));
     zx_status_t status = device_manager_.AddDevice(device);
-    if (status != ZX_OK) {
+    if (status == ZX_ERR_NOT_SUPPORTED) {
+      // The femu tests watch for the following message and will need updating if this changes.
+      FX_LOGS(INFO) << "" << kPathBlockDeviceRoot << "/" << name << " ignored (not supported)";
+    } else if (status != ZX_OK) {
       // There's not much we can do if this fails - we want to keep seeing future block device
       // events, so we just log loudly that we failed to do something.
-      std::cerr << "fshost: " << kPathBlockDeviceRoot << "/" << name
-                << " failed: " << zx_status_get_string(status) << std::endl;
+      FX_LOGS(ERROR) << "" << kPathBlockDeviceRoot << "/" << name
+                     << " failed: " << zx_status_get_string(status);
     }
-
     return false;
   }
 
@@ -301,7 +299,7 @@ class Watcher {
 
     if ((status = zx_object_wait_many(wait_items, wait_item_count, zx::time::infinite().get())) !=
         ZX_OK) {
-      std::cerr << "fshost: failed to wait_many: " << zx_status_get_string(status) << std::endl;
+      FX_LOGS(ERROR) << "failed to wait_many: " << zx_status_get_string(status);
       return 0;
     }
 
@@ -316,8 +314,7 @@ class Watcher {
     status = zx_channel_read(watcher_chan->get(), 0, buf.begin(), nullptr,
                              static_cast<uint32_t>(buf.size()), 0, &read_len, nullptr);
     if (status != ZX_OK) {
-      std::cerr << "fshost: failed to read from channel:" << zx_status_get_string(status)
-                << std::endl;
+      FX_LOGS(ERROR) << "failed to read from channel:" << zx_status_get_string(status);
       return 0;
     }
     buf = buf.subspan(0, read_len);
@@ -352,8 +349,7 @@ fbl::RefPtr<fs::Service> BlockWatcherServer::Create(async_dispatcher* dispatcher
     zx_status_t status = fidl::BindSingleInFlightOnly(dispatcher, std::move(chan),
                                                       std::make_unique<BlockWatcherServer>());
     if (status != ZX_OK) {
-      std::cerr << "fshost: failed to bind admin service:" << zx_status_get_string(status)
-                << std::endl;
+      FX_LOGS(ERROR) << "failed to bind admin service:" << zx_status_get_string(status);
       return status;
     }
     return ZX_OK;

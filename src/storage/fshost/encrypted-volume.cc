@@ -5,10 +5,11 @@
 #include "encrypted-volume.h"
 
 #include <lib/fdio/fdio.h>
-#include <zircon/status.h>
-#include <zxcrypt/fdio-volume.h>
-
+#include <lib/syslog/cpp/macros.h>
 #include <stdio.h>
+#include <zircon/status.h>
+
+#include <zxcrypt/fdio-volume.h>
 
 namespace devmgr {
 
@@ -20,14 +21,14 @@ zx_status_t EncryptedVolume::Unseal() {
   std::unique_ptr<zxcrypt::FdioVolume> zxcrypt_volume;
   rc = zxcrypt::FdioVolume::Init(fd_.duplicate(), devfs_root_.duplicate(), &zxcrypt_volume);
   if (rc != ZX_OK) {
-    fprintf(stderr, "fshost: couldn't open zxcrypt fdio volume: %s\n", zx_status_get_string(rc));
+    FX_LOGS(ERROR) << "couldn't open zxcrypt fdio volume: " << zx_status_get_string(rc);
     return rc;
   }
 
   zx::channel zxcrypt_volume_manager_chan;
   rc = zxcrypt_volume->OpenManager(zx::sec(2), zxcrypt_volume_manager_chan.reset_and_get_address());
   if (rc != ZX_OK) {
-    fprintf(stderr, "fshost: couldn't open zxcrypt manager device: %s\n", zx_status_get_string(rc));
+    FX_LOGS(ERROR) << "couldn't open zxcrypt manager device: " << zx_status_get_string(rc);
     return rc;
   }
 
@@ -35,8 +36,7 @@ zx_status_t EncryptedVolume::Unseal() {
   uint8_t slot = 0;
   rc = zxcrypt_volume_manager.UnsealWithDeviceKey(slot);
   if (rc != ZX_OK) {
-    fprintf(stderr, "fshost: couldn't unseal zxcrypt manager device: %s\n",
-            zx_status_get_string(rc));
+    FX_LOGS(ERROR) << "couldn't unseal zxcrypt manager device: " << zx_status_get_string(rc);
     return rc;
   }
 
@@ -47,8 +47,8 @@ zx_status_t EncryptedVolume::Format() {
   zx_status_t rc;
   rc = zxcrypt::FdioVolume::CreateWithDeviceKey(fd_.duplicate(), devfs_root_.duplicate(), nullptr);
   if (rc != ZX_OK) {
-    fprintf(stderr, "fshost: couldn't format zxcrypt volume with device key: %s\n",
-            zx_status_get_string(rc));
+    FX_LOGS(ERROR) << "couldn't format zxcrypt volume with device key: "
+                   << zx_status_get_string(rc);
     return rc;
   }
 
@@ -82,7 +82,7 @@ zx_status_t EncryptedVolumeInterface::EnsureUnsealedAndFormatIfNeeded() {
             "rather than none at all.  Expect factory-reset-like behavior.\n");
     rc = Format();
     if (rc != ZX_OK) {
-      fprintf(stderr, "fshost: couldn't format encrypted volume: %s\n", zx_status_get_string(rc));
+      FX_LOGS(ERROR) << "couldn't format encrypted volume: " << zx_status_get_string(rc);
       return rc;
     }
 
@@ -90,15 +90,15 @@ zx_status_t EncryptedVolumeInterface::EnsureUnsealedAndFormatIfNeeded() {
     // formatted.
     rc = Unseal();
     if (rc != ZX_OK) {
-      fprintf(stderr, "fshost: formatted volume but couldn't unseal it thereafter: %s\n",
-              zx_status_get_string(rc));
+      FX_LOGS(ERROR) << "formatted volume but couldn't unseal it thereafter: "
+                     << zx_status_get_string(rc);
       return rc;
     }
 
     return ZX_OK;
   } else {
-    fprintf(stderr, "fshost: could not produce an unsealed volume for minfs: %s\n",
-            zx_status_get_string(rc));
+    FX_LOGS(ERROR) << "could not produce an unsealed volume for minfs: "
+                   << zx_status_get_string(rc);
     return rc;
   }
 }

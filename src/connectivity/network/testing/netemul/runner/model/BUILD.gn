@@ -49,6 +49,7 @@ executable("model_unittest") {
     ":model",
     "//garnet/public/lib/gtest",
     "//garnet/public/lib/json",
+    "//sdk/fidl/fuchsia.logger:fuchsia.logger_llcpp",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/pkg_url",
 

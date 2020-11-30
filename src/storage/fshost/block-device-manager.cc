@@ -6,6 +6,7 @@
 
 #include <fuchsia/device/llcpp/fidl.h>
 #include <lib/fdio/cpp/caller.h>
+#include <lib/syslog/cpp/macros.h>
 #include <zircon/device/block.h>
 #include <zircon/hw/gpt.h>
 
@@ -189,7 +190,7 @@ class MinfsMatcher : public BlockDeviceManager::Matcher {
     // but the log messages in that case are scary.
     if (device.GetFormat() == DISK_FORMAT_ZXCRYPT) {
       if (device.content_format() != DISK_FORMAT_ZXCRYPT) {
-        printf("fshost: Formatting as zxcrypt partition\n");
+        FX_LOGS(INFO) << "Formatting as zxcrypt partition";
         zx_status_t status = device.FormatZxcrypt();
         if (status != ZX_OK) {
           return status;

@@ -8,6 +8,7 @@
 #include <lib/async-loop/default.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/io.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include "src/lib/files/path.h"
 
@@ -33,19 +34,19 @@ zx::status<zx::vmo> PkgfsLoaderService::LoadObjectImpl(std::string path) {
 zx::status<zx::vmo> PkgfsLoaderService::LoadPkgfsFile(std::string path) {
   auto merkleroot = boot_args_->pkgfs_file_with_path(path);
   if (merkleroot.is_error()) {
-    printf("fshost: failed to find pkgfs file merkleroot in boot arguments \"%s\"\n", path.c_str());
+    FX_LOGS(ERROR) << "failed to find pkgfs file merkleroot in boot arguments \"" << path << "\"";
     return merkleroot.take_error();
   }
 
   auto vmo = LoadBlob(merkleroot.value());
   if (vmo.is_error()) {
-    printf("fshost: failed to load pkgfs file \"%s\": %s\n", path.c_str(), vmo.status_string());
+    FX_LOGS(ERROR) << "failed to load pkgfs file \"" << path << "\": " << vmo.status_string();
     return vmo.take_error();
   }
 
   auto status = zx::make_status(vmo->set_property(ZX_PROP_NAME, path.c_str(), path.length()));
   if (status.is_error()) {
-    printf("fshost: failed to set vmo name to %s: %s\n", path.c_str(), status.status_string());
+    FX_LOGS(ERROR) << "failed to set vmo name to " << path << ": " << status.status_string();
     return status.take_error();
   }
   return vmo;

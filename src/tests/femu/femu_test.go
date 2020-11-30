@@ -86,8 +86,8 @@ func TestFemuWithDisk(t *testing.T) {
 	}
 	defer i.Kill()
 
-	// This message indicates that disks have been bound.
-	i.WaitForLogMessage("fshost: /dev/class/block/000")
+	// This message indicates that disks have been bound.  This message comes from fshost.
+	i.WaitForLogMessage("/dev/class/block/000 ignored")
 
 	// Check that the emulated disk is there.
 	i.RunCommand("lsblk")

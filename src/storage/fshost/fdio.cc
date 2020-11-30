@@ -9,6 +9,7 @@
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/io.h>
 #include <lib/fdio/spawn.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zircon-internal/paths.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/debuglog.h>
@@ -17,7 +18,6 @@
 #include <lib/zx/resource.h>
 #include <lib/zx/vmo.h>
 #include <limits.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
@@ -71,7 +71,7 @@ zx_status_t DevmgrLauncher::LaunchWithLoader(const zx::job& job, const char* nam
   zx::job job_copy;
   zx_status_t status = job.duplicate(CHILD_JOB_RIGHTS, &job_copy);
   if (status != ZX_OK) {
-    printf("launch failed %s\n", zx_status_get_string(status));
+    FX_LOGS(ERROR) << "launch failed " << zx_status_get_string(status);
     return status;
   }
 
@@ -167,10 +167,11 @@ zx_status_t DevmgrLauncher::LaunchWithLoader(const zx::job& job, const char* nam
                             actions.data(), proc.reset_and_get_address(), err_msg);
   }
   if (status != ZX_OK) {
-    printf("fshost: spawn %s (%s) failed: %s: %d\n", argv[0], name, err_msg, status);
+    FX_LOGS(ERROR) << "spawn " << argv[0] << " (" << name << ") failed: " << err_msg << ": "
+                   << status;
     return status;
   }
-  printf("fshost: launch %s (%s) OK\n", argv[0], name);
+  FX_LOGS(INFO) << "launch " << argv[0] << " (" << name << ") OK";
   if (out_proc != nullptr) {
     *out_proc = std::move(proc);
   }
@@ -203,13 +204,14 @@ ArgumentVector ArgumentVector::FromCmdline(const char* cmdline) {
   return argv;
 }
 
-void ArgumentVector::Print(const char* prefix) const {
-  const char* const* argv = argv_;
-  printf("%s: starting", prefix);
+std::ostream& operator<<(std::ostream& stream, const ArgumentVector& arguments) {
+  const char* const* argv = arguments.argv();
+  const char* prefix = "'";
   for (const char* arg = *argv; arg != nullptr; ++argv, arg = *argv) {
-    printf(" '%s'", *argv);
+    stream << prefix << *argv << "'";
+    prefix = " '";
   }
-  printf("...\n");
+  return stream;
 }
 
 }  // namespace devmgr

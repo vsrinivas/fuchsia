@@ -10,6 +10,7 @@
 #include <lib/fit/bridge.h>
 #include <lib/fit/result.h>
 #include <lib/fit/single_threaded_executor.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/channel.h>
 #include <zircon/status.h>
 #include <zircon/types.h>
@@ -46,10 +47,10 @@ class DelayedOutdir {
 
       fit::result<zx_status_t, void> result = fit::run_single_threaded(std::move(promise_shutdown));
       if (!result.is_ok()) {
-        printf("fshost: error running fit executor to shutdown delayed outdir vfs\n");
+        FX_LOGS(ERROR) << "error running fit executor to shutdown delayed outdir vfs";
       } else if (result.value() != ZX_OK) {
-        printf("fshost: error shutting down delayed outdir vfs: %s\n",
-               zx_status_get_string(result.value()));
+        FX_LOGS(ERROR) << "error shutting down delayed outdir vfs: "
+                       << zx_status_get_string(result.value());
       }
     }
   }

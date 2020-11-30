@@ -33,6 +33,7 @@ source_set("launcher") {
   sources = [ "fdio.cc" ]
   deps = [
     "//sdk/lib/fdio",
+    "//sdk/lib/syslog/cpp",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/zircon-internal",

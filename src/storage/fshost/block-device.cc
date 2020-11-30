@@ -83,7 +83,7 @@ zx_status_t MountMinfs(FilesystemMounter* mounter, zx::channel block_device,
   } else if (gpt_is_durable_guid(type_guid.value, GPT_GUID_LEN)) {
     return mounter->MountDurable(std::move(block_device), *options);
   }
-  printf("fshost: Unrecognized partition GUID for minfs; not mounting\n");
+  FX_LOGS(ERROR) << "Unrecognized partition GUID for minfs; not mounting";
   return ZX_ERR_WRONG_TYPE;
 }
 
@@ -113,14 +113,14 @@ int OpenVerityDeviceThread(void* arg) {
       state->fd.get(), std::move(devfs_root),
       block_verity::VerifiedVolumeClient::Disposition::kDriverAlreadyBound, zx::sec(5), &vvc);
   if (status != ZX_OK) {
-    printf("fshost: Couldn't create VerifiedVolumeClient: %s\n", zx_status_get_string(status));
+    FX_LOGS(ERROR) << "Couldn't create VerifiedVolumeClient: " << zx_status_get_string(status);
     return 1;
   }
 
   fbl::unique_fd inner_block_fd;
   status = vvc->OpenForVerifiedRead(std::move(state->seal), zx::sec(5), inner_block_fd);
   if (status != ZX_OK) {
-    printf("fshost: OpenForVerifiedRead failed: %s\n", zx_status_get_string(status));
+    FX_LOGS(ERROR) << "OpenForVerifiedRead failed: " << zx_status_get_string(status);
     return 1;
   }
   return 0;
@@ -221,7 +221,7 @@ const fuchsia_hardware_block_partition_GUID& BlockDevice::GetTypeGuid() const {
 }
 
 zx_status_t BlockDevice::AttachDriver(const std::string_view& driver) {
-  printf("fshost: Binding: %.*s\n", static_cast<int>(driver.length()), driver.data());
+  FX_LOGS(INFO) << "Binding: " << driver;
   fdio_cpp::UnownedFdioCaller connection(fd_.get());
   zx_status_t call_status = ZX_OK;
   auto resp = ::llcpp::fuchsia::device::Controller::Call::Bind(
@@ -238,7 +238,7 @@ zx_status_t BlockDevice::AttachDriver(const std::string_view& driver) {
 }
 
 zx_status_t BlockDevice::UnsealZxcrypt() {
-  printf("fshost: unsealing zxcrypt\n");
+  FX_LOGS(INFO) << "unsealing zxcrypt";
   // Bind and unseal the driver from a separate thread, since we
   // have to wait for a number of devices to do I/O and settle,
   // and we don't want to block block-watcher for any nontrivial
@@ -251,7 +251,7 @@ zx_status_t BlockDevice::UnsealZxcrypt() {
   thrd_t th;
   int err = thrd_create_with_name(&th, &UnsealZxcryptThread, raw_fd_ptr, "zxcrypt-unseal");
   if (err != thrd_success) {
-    printf("fshost: failed to spawn zxcrypt worker thread\n");
+    FX_LOGS(ERROR) << "failed to spawn zxcrypt worker thread";
     close(loose_fd);
     delete raw_fd_ptr;
     return ZX_ERR_INTERNAL;
@@ -262,13 +262,13 @@ zx_status_t BlockDevice::UnsealZxcrypt() {
 }
 
 zx_status_t BlockDevice::OpenBlockVerityForVerifiedRead(std::string seal_hex) {
-  printf("fshost: preparing block-verity\n");
+  FX_LOGS(INFO) << "preparing block-verity";
 
   std::unique_ptr<VerityDeviceThreadState> state = std::make_unique<VerityDeviceThreadState>();
   zx_status_t rc = state->seal.Parse(seal_hex.c_str());
   if (rc != ZX_OK) {
-    printf("block-verity seal %s did not parse as SHA256 hex digest: %s\n", seal_hex.c_str(),
-           zx_status_get_string(rc));
+    FX_LOGS(ERROR) << "block-verity seal " << seal_hex
+                   << " did not parse as SHA256 hex digest: " << zx_status_get_string(rc);
     return rc;
   }
 
@@ -278,7 +278,7 @@ zx_status_t BlockDevice::OpenBlockVerityForVerifiedRead(std::string seal_hex) {
   thrd_t th;
   int err = thrd_create_with_name(&th, OpenVerityDeviceThread, state.get(), "block-verity-open");
   if (err != thrd_success) {
-    printf("fshost: failed to spawn block-verity worker thread\n");
+    FX_LOGS(ERROR) << "failed to spawn block-verity worker thread";
     return ZX_ERR_INTERNAL;
   } else {
     // Release our reference to the state now owned by the other thread.
@@ -323,12 +323,12 @@ zx_status_t BlockDevice::CheckFilesystem() {
 
   switch (format_) {
     case DISK_FORMAT_BLOBFS: {
-      fprintf(stderr, "fshost: Skipping blobfs consistency checker.\n");
+      FX_LOGS(INFO) << "Skipping blobfs consistency checker.";
       return ZX_OK;
     }
 
     case DISK_FORMAT_FACTORYFS: {
-      fprintf(stderr, "fshost: Skipping factory consistency checker.\n");
+      FX_LOGS(INFO) << "Skipping factory consistency checker.";
       return ZX_OK;
     }
 
@@ -337,21 +337,21 @@ zx_status_t BlockDevice::CheckFilesystem() {
       auto timer = fbl::MakeAutoCall([before]() {
         auto after = zx::ticks::now();
         auto duration = fzl::TicksToNs(after - before);
-        printf("fshost: fsck took %" PRId64 ".%" PRId64 " seconds\n", duration.to_secs(),
-               duration.to_msecs() % 1000);
+        FX_LOGS(INFO) << "fsck took " << duration.to_secs() << "." << duration.to_msecs() % 1000
+                      << " seconds";
       });
-      printf("fshost: fsck of %s started\n", disk_format_string_[format_]);
+      FX_LOGS(INFO) << "fsck of " << disk_format_string_[format_] << " started";
       uint64_t device_size = info.block_size * info.block_count / minfs::kMinfsBlockSize;
       std::unique_ptr<block_client::BlockDevice> device;
       zx_status_t status = minfs::FdToBlockDevice(fd_, &device);
       if (status != ZX_OK) {
-        fprintf(stderr, "fshost: Cannot convert fd to block device: %d\n", status);
+        FX_LOGS(ERROR) << "Cannot convert fd to block device: " << status;
         return status;
       }
       std::unique_ptr<minfs::Bcache> bc;
       status = minfs::Bcache::Create(std::move(device), static_cast<uint32_t>(device_size), &bc);
       if (status != ZX_OK) {
-        fprintf(stderr, "fshost: Could not initialize minfs bcache.\n");
+        FX_LOGS(ERROR) << "Could not initialize minfs bcache.";
         return status;
       }
       status = minfs::Fsck(std::move(bc), minfs::FsckOptions{.repair = true});
@@ -359,24 +359,23 @@ zx_status_t BlockDevice::CheckFilesystem() {
       if (status != ZX_OK) {
         mounter_->mutable_metrics()->LogMinfsCorruption();
         mounter_->FlushMetrics();
-        fprintf(stderr, "--------------------------------------------------------------\n");
-        fprintf(stderr, "|                                                             \n");
-        fprintf(stderr, "|   WARNING: fshost fsck failure!                             \n");
-        fprintf(stderr, "|   Corrupt %s filesystem\n", disk_format_string_[format_]);
-        fprintf(stderr, "|                                                             \n");
-        fprintf(stderr, "|   If your system was shutdown cleanly (via 'dm poweroff'    \n");
-        fprintf(stderr, "|   or an OTA), report this device to the local-storage       \n");
-        fprintf(stderr, "|   team. Please file bugs with logs before and after reboot. \n");
-        fprintf(stderr, "|   Please use the 'filesystem' and 'minfs' component tag.    \n");
-        fprintf(stderr, "|                                                             \n");
-        fprintf(stderr, "--------------------------------------------------------------\n");
+        FX_LOGS(ERROR) << "--------------------------------------------------------------\n"
+                       << "|\n"
+                       << "|   WARNING: fshost fsck failure!\n"
+                       << "|   Corrupt " << disk_format_string_[format_] << " filesystem\n"
+                       << "|\n"
+                       << "|   If your system was shutdown cleanly (via 'dm poweroff'\n"
+                       << "|   or an OTA), report this device to the local-storage\n"
+                       << "|   team. Please file bugs with logs before and after reboot.\n"
+                       << "|\n"
+                       << "--------------------------------------------------------------";
       } else {
-        printf("fshost: fsck of %s completed OK\n", disk_format_string_[format_]);
+        FX_LOGS(INFO) << "fsck of " << disk_format_string_[format_] << " completed OK";
       }
       return status;
     }
     default:
-      fprintf(stderr, "fshost: Not checking unknown filesystem\n");
+      FX_LOGS(ERROR) << "Not checking unknown filesystem";
       return ZX_ERR_NOT_SUPPORTED;
   }
 }
@@ -390,38 +389,38 @@ zx_status_t BlockDevice::FormatFilesystem() {
 
   switch (format_) {
     case DISK_FORMAT_BLOBFS: {
-      fprintf(stderr, "fshost: Not formatting blobfs.\n");
+      FX_LOGS(ERROR) << "Not formatting blobfs.";
       return ZX_ERR_NOT_SUPPORTED;
     }
     case DISK_FORMAT_FACTORYFS: {
-      fprintf(stderr, "fshost: Not formatting factoryfs.\n");
+      FX_LOGS(ERROR) << "Not formatting factoryfs.";
       return ZX_ERR_NOT_SUPPORTED;
     }
     case DISK_FORMAT_MINFS: {
-      fprintf(stderr, "fshost: Formatting minfs.\n");
+      FX_LOGS(INFO) << "Formatting minfs.";
       uint64_t blocks = info.block_size * info.block_count / minfs::kMinfsBlockSize;
       std::unique_ptr<block_client::BlockDevice> device;
       zx_status_t status = minfs::FdToBlockDevice(fd_, &device);
       if (status != ZX_OK) {
-        fprintf(stderr, "fshost: Cannot convert fd to block device: %d\n", status);
+        FX_LOGS(ERROR) << "Cannot convert fd to block device: " << status;
         return status;
       }
       std::unique_ptr<minfs::Bcache> bc;
       status = minfs::Bcache::Create(std::move(device), static_cast<uint32_t>(blocks), &bc);
       if (status != ZX_OK) {
-        fprintf(stderr, "fshost: Could not initialize minfs bcache.\n");
+        FX_LOGS(ERROR) << "Could not initialize minfs bcache.";
         return status;
       }
       minfs::MountOptions options = {};
       if ((status = minfs::Mkfs(options, bc.get())) != ZX_OK) {
-        fprintf(stderr, "fshost: Could not format minfs filesystem.\n");
+        FX_LOGS(ERROR) << "Could not format minfs filesystem.";
         return status;
       }
-      printf("fshost: Minfs filesystem re-formatted. Expect data loss.\n");
+      FX_LOGS(INFO) << "Minfs filesystem re-formatted. Expect data loss.";
       return ZX_OK;
     }
     default:
-      fprintf(stderr, "fshost: Not formatting unknown filesystem.\n");
+      FX_LOGS(ERROR) << "Not formatting unknown filesystem.";
       return ZX_ERR_NOT_SUPPORTED;
   }
 }
@@ -438,19 +437,20 @@ zx_status_t BlockDevice::MountFilesystem() {
   }
   switch (format_) {
     case DISK_FORMAT_FACTORYFS: {
-      fprintf(stderr, "fshost: BlockDevice::MountFilesystem(factoryfs)\n");
+      FX_LOGS(INFO) << "BlockDevice::MountFilesystem(factoryfs)";
       mount_options_t options = default_mount_options;
       options.collect_metrics = false;
       options.readonly = true;
 
       zx_status_t status = mounter_->MountFactoryFs(std::move(block_device), options);
       if (status != ZX_OK) {
-        printf("fshost: Failed to mount factoryfs partition: %s.\n", zx_status_get_string(status));
+        FX_LOGS(ERROR) << "Failed to mount factoryfs partition: " << zx_status_get_string(status)
+                       << ".";
       }
       return status;
     }
     case DISK_FORMAT_BLOBFS: {
-      fprintf(stderr, "fshost: BlockDevice::MountFilesystem(blobfs)\n");
+      FX_LOGS(INFO) << "BlockDevice::MountFilesystem(blobfs)";
       mount_options_t options = default_mount_options;
       options.collect_metrics = true;
       std::optional<std::string> algorithm = std::nullopt;
@@ -463,7 +463,8 @@ zx_status_t BlockDevice::MountFilesystem() {
       options.cache_eviction_policy = eviction_policy ? eviction_policy->c_str() : nullptr;
       zx_status_t status = mounter_->MountBlob(std::move(block_device), options);
       if (status != ZX_OK) {
-        printf("fshost: Failed to mount blobfs partition: %s.\n", zx_status_get_string(status));
+        FX_LOGS(ERROR) << "Failed to mount blobfs partition: " << zx_status_get_string(status)
+                       << ".";
         return status;
       }
       mounter_->TryMountPkgfs();
@@ -471,17 +472,18 @@ zx_status_t BlockDevice::MountFilesystem() {
     }
     case DISK_FORMAT_MINFS: {
       mount_options_t options = default_mount_options;
-      fprintf(stderr, "fshost: BlockDevice::MountFilesystem(minfs)\n");
+      FX_LOGS(INFO) << "BlockDevice::MountFilesystem(minfs)";
       zx_status_t status = MountMinfs(mounter_, std::move(block_device), &options);
       if (status != ZX_OK) {
-        printf("fshost: Failed to mount minfs partition: %s.\n", zx_status_get_string(status));
+        FX_LOGS(ERROR) << "Failed to mount minfs partition: " << zx_status_get_string(status)
+                       << ".";
         return status;
       }
       mounter_->TryMountPkgfs();
       return ZX_OK;
     }
     default:
-      fprintf(stderr, "fshost: BlockDevice::MountFilesystem(unknown)\n");
+      FX_LOGS(ERROR) << "BlockDevice::MountFilesystem(unknown)";
       return ZX_ERR_NOT_SUPPORTED;
   }
 }
@@ -508,7 +510,7 @@ zx_status_t BlockDeviceInterface::Add() {
       if (!ShouldAllowAuthoringFactory()) {
         zx::status<std::string> seal_text = VeritySeal();
         if (seal_text.is_error()) {
-          printf("Couldn't get block-verity seal: %s\n", seal_text.status_string());
+          FX_LOGS(ERROR) << "Couldn't get block-verity seal: " << seal_text.status_string();
           return seal_text.error_value();
         }
 
@@ -534,14 +536,14 @@ zx_status_t BlockDeviceInterface::Add() {
       return MountFilesystem();
     }
     case DISK_FORMAT_MINFS: {
-      printf("fshost: mounting minfs\n");
+      FX_LOGS(INFO) << "mounting minfs";
       if (CheckFilesystem() != ZX_OK) {
         if (zx_status_t status = FormatFilesystem(); status != ZX_OK) {
           return status;
         }
       }
       if (zx_status_t status = MountFilesystem(); status != ZX_OK) {
-        printf("fshost: failed to mount filesystem: %s\n", zx_status_get_string(status));
+        FX_LOGS(ERROR) << "failed to mount filesystem: " << zx_status_get_string(status);
         if ((status = FormatFilesystem()) != ZX_OK) {
           return status;
         }

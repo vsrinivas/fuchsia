@@ -5,6 +5,7 @@
 #include "src/storage/fshost/fshost-boot-args.h"
 
 #include <lib/fdio/directory.h>
+#include <lib/syslog/cpp/macros.h>
 #include <zircon/errors.h>
 
 namespace devmgr {
@@ -16,10 +17,9 @@ std::shared_ptr<FshostBootArgs> FshostBootArgs::Create() {
   if (status != ZX_OK) {
     // This service might be missing if we're running in a test environment. Log
     // the error and continue.
-    fprintf(stderr,
-            "fshost: failed to get boot arguments (%s), assuming test "
-            "environment and continuing\n",
-            zx_status_get_string(status));
+    FX_LOGS(ERROR) << "failed to get boot arguments (" << zx_status_get_string(status)
+                   << "), assuming test "
+                      "environment and continuing";
     return std::make_shared<FshostBootArgs>(std::nullopt);
   }
   auto path = fbl::StringPrintf("/svc/%s", llcpp::fuchsia::boot::Arguments::Name);
@@ -27,10 +27,9 @@ std::shared_ptr<FshostBootArgs> FshostBootArgs::Create() {
   if (status != ZX_OK) {
     // This service might be missing if we're running in a test environment. Log
     // the error and continue.
-    fprintf(stderr,
-            "fshost: failed to get boot arguments (%s), assuming test "
-            "environment and continuing\n",
-            zx_status_get_string(status));
+    FX_LOGS(ERROR) << "failed to get boot arguments (" << zx_status_get_string(status)
+                   << "), assuming test "
+                      "environment and continuing";
     return std::make_shared<FshostBootArgs>(std::nullopt);
   }
   return std::make_shared<FshostBootArgs>(
@@ -51,7 +50,7 @@ FshostBootArgs::FshostBootArgs(std::optional<llcpp::fuchsia::boot::Arguments::Sy
   };
   auto ret = boot_args_->GetBools(fidl::unowned_vec(defaults));
   if (!ret.ok()) {
-    fprintf(stderr, "fshost: failed to get boolean parameters: %s", ret.error());
+    FX_LOGS(ERROR) << "failed to get boolean parameters: " << ret.error() << "";
   } else {
     netsvc_netboot_ = ret->values[0];
     zircon_system_disable_automount_ = ret->values[1];
@@ -62,8 +61,7 @@ FshostBootArgs::FshostBootArgs(std::optional<llcpp::fuchsia::boot::Arguments::Sy
   auto algorithm = GetStringArgument("blobfs.write-compression-algorithm");
   if (algorithm.is_error()) {
     if (algorithm.status_value() != ZX_ERR_NOT_FOUND) {
-      fprintf(stderr, "fshost: failed to get blobfs compression algorithm: %s\n",
-              algorithm.status_string());
+      FX_LOGS(ERROR) << "failed to get blobfs compression algorithm: " << algorithm.status_string();
     }
   } else {
     blobfs_write_compression_algorithm_ = std::move(algorithm).value();
@@ -72,8 +70,7 @@ FshostBootArgs::FshostBootArgs(std::optional<llcpp::fuchsia::boot::Arguments::Sy
   auto eviction_policy = GetStringArgument("blobfs.cache-eviction-policy");
   if (eviction_policy.is_error()) {
     if (eviction_policy.status_value() != ZX_ERR_NOT_FOUND) {
-      fprintf(stderr, "fshost: failed to get blobfs eviction policy: %s\n",
-              eviction_policy.status_string());
+      FX_LOGS(ERROR) << "failed to get blobfs eviction policy: " << eviction_policy.status_string();
     }
   } else {
     blobfs_eviction_policy_ = std::move(eviction_policy).value();

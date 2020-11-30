@@ -6,6 +6,7 @@
 
 #include <fuchsia/io/llcpp/fidl.h>
 #include <lib/fdio/directory.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/process.h>
 #include <stdio.h>
@@ -29,11 +30,11 @@ zx::status<> WaitForPkgfsLaunchCompletion(zx::process proc) {
   auto status =
       zx::make_status(proc.wait_one(ZX_USER_SIGNAL_0 | ZX_PROCESS_TERMINATED, deadline, &observed));
   if (status.is_error()) {
-    printf("fshost: pkgfs did not signal completion: %s\n", status.status_string());
+    FX_LOGS(ERROR) << "pkgfs did not signal completion: " << status.status_string();
     return status;
   }
   if (!(observed & ZX_USER_SIGNAL_0)) {
-    printf("fshost: pkgfs terminated prematurely\n");
+    FX_LOGS(ERROR) << "pkgfs terminated prematurely";
     return zx::error(ZX_ERR_BAD_STATE);
   }
   return zx::ok();
@@ -60,22 +61,22 @@ zx::status<> FinishPkgfsLaunch(FilesystemMounter* filesystems, zx::channel pkgfs
                         bin_req.release());
   if (status != ZX_OK) {
     // non-fatal.
-    printf("fshost: failed to install /bin (could not open shell-commands)\n");
+    FX_LOGS(ERROR) << "failed to install /bin (could not open shell-commands)";
   }
   status = filesystems->InstallFs("/pkgfs", std::move(pkgfs_root));
   if (status != ZX_OK) {
-    printf("fshost: failed to install /pkgfs\n");
+    FX_LOGS(ERROR) << "failed to install /pkgfs";
     return zx::error(status);
   }
   status = filesystems->InstallFs("/system", std::move(system_channel));
   if (status != ZX_OK) {
-    printf("fshost: failed to install /system\n");
+    FX_LOGS(ERROR) << "failed to install /system";
     return zx::error(status);
   }
   // as above, failure of /bin export is non-fatal.
   status = filesystems->InstallFs("/bin", std::move(bin_chan));
   if (status != ZX_OK) {
-    printf("fshost: failed to install /bin\n");
+    FX_LOGS(ERROR) << "failed to install /bin";
   }
   // start the delayed vfs
   filesystems->FuchsiaStart();
@@ -88,7 +89,7 @@ zx::status<> LaunchPkgfs(FilesystemMounter* filesystems) {
   // Get the pkgfs.cmd boot argument
   auto cmd_status = filesystems->boot_args()->pkgfs_cmd();
   if (cmd_status.is_error()) {
-    printf("fshost: unable to launch pkgfs, missing \"zircon.system.pkgfs.cmd\" boot argument\n");
+    FX_LOGS(ERROR) << "unable to launch pkgfs, missing \"zircon.system.pkgfs.cmd\" boot argument";
     return zx::error(ZX_ERR_INVALID_ARGS);
   }
   const char* cmd = cmd_status.value().c_str();
@@ -98,7 +99,7 @@ zx::status<> LaunchPkgfs(FilesystemMounter* filesystems) {
                                              fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
                                              blob_dir.reset_and_get_address()));
   if (status.is_error()) {
-    printf("fshost: fdio_open_fd(/fs/blob) failed: %s\n", status.status_string());
+    FX_LOGS(ERROR) << "fdio_open_fd(/fs/blob) failed: " << status.status_string();
     return status;
   }
 
@@ -114,20 +115,20 @@ zx::status<> LaunchPkgfs(FilesystemMounter* filesystems) {
   auto loader = PkgfsLoaderService::Create(std::move(blob_dir), filesystems->boot_args());
   auto executable = loader->LoadPkgfsFile(argv[0]);
   if (executable.is_error()) {
-    printf("fshost: cannot load pkgfs executable: %s\n", executable.status_string());
+    FX_LOGS(ERROR) << "cannot load pkgfs executable: " << executable.status_string();
     return executable.take_error();
   }
 
   auto loader_conn = loader->Connect();
   if (loader_conn.is_error()) {
-    printf("fshost: failed to connect to pkgfs loader: %s\n", loader_conn.status_string());
+    FX_LOGS(ERROR) << "failed to connect to pkgfs loader: " << loader_conn.status_string();
     return loader_conn.take_error();
   }
 
   zx::channel h0, h1;
   status = zx::make_status(zx::channel::create(0, &h0, &h1));
   if (status.is_error()) {
-    printf("fshost: cannot create pkgfs root channel: %s\n", status.status_string());
+    FX_LOGS(ERROR) << "cannot create pkgfs root channel: " << status.status_string();
     return status;
   }
 
@@ -135,7 +136,7 @@ zx::status<> LaunchPkgfs(FilesystemMounter* filesystems) {
   const uint32_t handle_types[] = {PA_HND(PA_USER0, 0)};
   size_t hcount = sizeof(handles) / sizeof(*handles);
   zx::process proc;
-  args.Print("fshost");
+  FX_LOGS(INFO) << "starting " << args << "...";
 
   FshostFsProvider fs_provider;
   DevmgrLauncher launcher(&fs_provider);
@@ -145,7 +146,7 @@ zx::status<> LaunchPkgfs(FilesystemMounter* filesystems) {
                                 /* TODO(fxbug.dev/32044) */ zx::resource(), handles, handle_types,
                                 hcount, &proc, FS_DATA | FS_BLOB_EXEC | FS_SVC));
   if (status.is_error()) {
-    printf("fshost: failed to launch %s: %s\n", cmd, status.status_string());
+    FX_LOGS(ERROR) << "failed to launch " << cmd << ": " << status.status_string();
     return status;
   }
 

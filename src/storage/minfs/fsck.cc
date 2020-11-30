@@ -12,7 +12,6 @@
 #include <unistd.h>
 
 #include <iomanip>
-#include <iostream>
 #include <limits>
 #include <map>
 #include <memory>
@@ -825,11 +824,10 @@ zx_status_t MinfsChecker::Create(std::unique_ptr<Bcache> bc, const FsckOptions& 
 
 void MinfsChecker::DumpStats() {
   if (!fsck_options_.quiet) {
-    std::cerr << "Minfs fsck:" << std::endl
-              << "  inodes           : " << alloc_inodes_ - 1 << std::endl
-              << "  blocks           : " << alloc_blocks_ - 1 << std::endl
-              << "  indirect blocks  : " << indirect_blocks_ << std::endl
-              << "  directory blocks : " << directory_blocks_ << std::endl;
+    FX_LOGS(INFO) << "Minfs fsck:\n  inodes           : " << alloc_inodes_ - 1
+                  << "\n  blocks           : " << alloc_blocks_ - 1
+                  << "\n  indirect blocks  : " << indirect_blocks_
+                  << "\n  directory blocks : " << directory_blocks_;
   }
 }
 

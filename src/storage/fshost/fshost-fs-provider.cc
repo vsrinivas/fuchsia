@@ -5,6 +5,7 @@
 #include "fshost-fs-provider.h"
 
 #include <lib/fdio/directory.h>
+#include <lib/syslog/cpp/macros.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -18,7 +19,7 @@ zx::channel FshostFsProvider::CloneFs(const char* path) {
     path = "/fs/blob";
     flags = FS_READ_WRITE_EXEC_DIR_FLAGS;
   } else {
-    printf("%s: Cannot clone: %s\n", __FUNCTION__, path);
+    FX_LOGS(ERROR) << "" << __FUNCTION__ << ": Cannot clone: " << path;
     return zx::channel();
   }
 
@@ -29,7 +30,7 @@ zx::channel FshostFsProvider::CloneFs(const char* path) {
   }
   status = fdio_open(path, flags, server.release());
   if (status != ZX_OK) {
-    printf("%s: Failed to connect to %s: %d\n", __FUNCTION__, path, status);
+    FX_LOGS(ERROR) << "" << __FUNCTION__ << ": Failed to connect to " << path << ": " << status;
     return zx::channel();
   }
   return client;
