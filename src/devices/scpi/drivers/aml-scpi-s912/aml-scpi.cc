@@ -11,7 +11,6 @@
 #include <unistd.h>
 #include <zircon/assert.h>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
@@ -21,6 +20,8 @@
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
+
+#include "src/devices/scpi/drivers/aml-scpi-s912/aml-scpi-s912-bind.h"
 
 namespace scpi {
 
@@ -302,8 +303,4 @@ static constexpr zx_driver_ops_t driver_ops = []() {
 
 }  // namespace scpi
 
-// clang-format off
-ZIRCON_DRIVER_BEGIN(aml_scpi, scpi::driver_ops, "zircon", "0.1", 2)
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_AMLOGIC),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_AMLOGIC_MAILBOX),
-ZIRCON_DRIVER_END(aml_scpi)
+ZIRCON_DRIVER(aml_scpi, scpi::driver_ops, "zircon", "0.1")

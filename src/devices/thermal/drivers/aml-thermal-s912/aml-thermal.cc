@@ -7,7 +7,6 @@
 #include <string.h>
 #include <zircon/syscalls/port.h>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
@@ -16,6 +15,8 @@
 #include <ddktl/protocol/composite.h>
 #include <fbl/auto_call.h>
 #include <soc/aml-common/aml-thermal.h>
+
+#include "src/devices/thermal/drivers/aml-thermal-s912/aml-thermal-s912-bind.h"
 
 #define THERMAL_ERROR(fmt, ...) zxlogf(ERROR, "[%s %d]" fmt, __func__, __LINE__, ##__VA_ARGS__)
 
@@ -399,9 +400,4 @@ static constexpr zx_driver_ops_t driver_ops = []() {
 
 }  // namespace thermal
 
-// clang-format off
-ZIRCON_DRIVER_BEGIN(aml_thermal, thermal::driver_ops, "zircon", "0.1", 3)
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_AMLOGIC),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_AMLOGIC_S912),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_VIM2_THERMAL),
-ZIRCON_DRIVER_END(aml_thermal)
+ZIRCON_DRIVER(aml_thermal, thermal::driver_ops, "zircon", "0.1")

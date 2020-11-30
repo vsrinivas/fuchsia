@@ -10,12 +10,12 @@
 #include <string.h>
 #include <unistd.h>
 
-#include <ddk/binding.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
 
 #include "aml-mailbox-hw.h"
+#include "src/devices/scpi/drivers/aml-scpi-s912/aml-mailbox-s912-bind.h"
 
 namespace mailbox {
 
@@ -169,10 +169,4 @@ static constexpr zx_driver_ops_t driver_ops = []() {
 
 }  // namespace mailbox
 
-// clang-format off
-ZIRCON_DRIVER_BEGIN(aml_mailbox, mailbox::driver_ops, "zircon", "0.1", 4)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PDEV),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_AMLOGIC),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_AMLOGIC_S912),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_AMLOGIC_MAILBOX),
-ZIRCON_DRIVER_END(aml_mailbox)
+ZIRCON_DRIVER(aml_mailbox, mailbox::driver_ops, "zircon", "0.1")

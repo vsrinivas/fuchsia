@@ -9,3 +9,8 @@ group("drivers") {
     "drivers/aml-scpi-s912:scpi",
   ]
 }
+
+group("tests") {
+  testonly = true
+  deps = [ "drivers/aml-scpi-s912:tests" ]
+}

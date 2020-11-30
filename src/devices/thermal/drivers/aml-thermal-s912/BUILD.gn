@@ -2,9 +2,17 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 import("//build/test/test_package.gni")
+
+bind_rules("aml-thermal-s912-bind") {
+  rules = "aml-thermal-s912.bind"
+  output = "aml-thermal-s912-bind.h"
+  tests = "aml-thermal-s912-bind-test.json"
+  deps = [ "//src/devices/bind/amlogic.platform" ]
+}
 
 driver_module("aml-thermal-s912") {
   configs += [
@@ -14,6 +22,7 @@ driver_module("aml-thermal-s912") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "aml-thermal.cc" ]
   deps = [
+    ":aml-thermal-s912-bind",
     "//sdk/banjo/ddk.protocol.composite",
     "//sdk/banjo/ddk.protocol.gpio",
     "//sdk/banjo/ddk.protocol.scpi",
@@ -23,9 +32,6 @@ driver_module("aml-thermal-s912") {
     "//src/devices/lib/amlogic",
     "//src/devices/lib/driver",
     "//src/lib/ddk",
-
-    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
-    "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//src/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/sync",
@@ -45,6 +51,7 @@ test("aml-thermal-s912-test") {
     "aml-thermal.cc",
   ]
   deps = [
+    ":aml-thermal-s912-bind",
     "//sdk/banjo/ddk.protocol.composite",
     "//sdk/banjo/ddk.protocol.gpio",
     "//sdk/banjo/ddk.protocol.gpio:ddk.protocol.gpio_mock",
@@ -56,9 +63,6 @@ test("aml-thermal-s912-test") {
     "//src/devices/lib/amlogic",
     "//src/devices/testing/fake_ddk",
     "//src/lib/ddk",
-
-    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
-    "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//src/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/mock-function",
@@ -86,5 +90,8 @@ unittest_package("aml-thermal-s912-test-package") {
 
 group("tests") {
   testonly = true
-  deps = [ ":aml-thermal-s912-test-package" ]
+  deps = [
+    ":aml-thermal-s912-bind_test",
+    ":aml-thermal-s912-test-package",
+  ]
 }
