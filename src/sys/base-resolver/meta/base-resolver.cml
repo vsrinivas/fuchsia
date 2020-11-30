@@ -1,0 +1,29 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    program: {
+        binary: "bin/base_resolver",
+    },
+    capabilities: [
+        {
+            resolver: "base_resolver",
+            path: "/svc/fuchsia.sys2.ComponentResolver",
+        },
+    ],
+    use: [
+        { runner: "elf" },
+        { protocol: "fuchsia.logger.LogSink" },
+        {
+            directory: "pkgfs-delayed",
+            rights: [ "rx*" ],
+            path: "/pkgfs",
+        },
+    ],
+    expose: [
+        {
+            resolver: "base_resolver",
+            from: "self",
+        },
+    ],
+}

@@ -29,8 +29,8 @@ use {
     },
     async_trait::async_trait,
     cm_rust::{
-        self, CapabilityDecl, CapabilityName, CapabilityPath, ComponentDecl, DirectoryDecl,
-        ExposeDecl, ExposeDirectoryDecl, ExposeSource, ExposeTarget, OfferDecl, OfferDirectoryDecl,
+        self, CapabilityDecl, CapabilityName, CapabilityPath, ComponentDecl, ExposeDecl,
+        ExposeDirectoryDecl, ExposeSource, ExposeTarget, OfferDecl, OfferDirectoryDecl,
         OfferDirectorySource, OfferEventDecl, OfferEventSource, OfferResolverSource,
         OfferRunnerSource, OfferServiceSource, OfferStorageSource, StorageDecl,
         StorageDirectorySource, UseDecl, UseDirectoryDecl, UseEventDecl, UseProtocolDecl,
@@ -936,94 +936,6 @@ fn find_capability_source_from_self(
         },
         _ => {
             panic!("Capability has invalid type: {:?}", capability);
-        }
-    }
-}
-
-/// Finds the providing realm and path of a directory exposed by the root realm to component
-/// manager.
-pub async fn find_exposed_root_directory_capability(
-    root_realm: &Arc<Realm>,
-    name: CapabilityName,
-) -> Result<(CapabilityPath, Arc<Realm>), ModelError> {
-    let (root_decl, expose_dir_decl) = {
-        let realm_state = root_realm.lock_state().await;
-        let root_decl = realm_state
-            .as_ref()
-            .expect("find_exposed_root_directory_capability: not resolved")
-            .decl()
-            .clone();
-        let expose_dir_decl = root_decl
-            .exposes
-            .iter()
-            .find_map(|e| match e {
-                ExposeDecl::Directory(dir_decl) => Some(dir_decl),
-                _ => None,
-            })
-            .ok_or_else(|| {
-                ModelError::from(RoutingError::used_expose_not_found(
-                    &AbsoluteMoniker::root(),
-                    name.to_string(),
-                ))
-            })?
-            .clone();
-        (root_decl, expose_dir_decl)
-    };
-    let capability =
-        ComponentCapability::UsedExpose(ExposeDecl::Directory(expose_dir_decl.clone()));
-    let _ = capability.source_name().ok_or_else(|| {
-        ModelError::unsupported(
-            "find_exposed_root_directory does not support path-based capabilities",
-        )
-    })?;
-    match &expose_dir_decl.source {
-        ExposeSource::Framework => {
-            return Err(ModelError::unsupported(
-                "find_exposed_root_directory_capability does not support capabilities exposed from framework"));
-        }
-        ExposeSource::Capability(_) => {
-            return Err(ModelError::unsupported(
-                "find_exposed_root_directory_capability does not support capabilities based on a different capability"));
-        }
-        ExposeSource::Self_ => {
-            let source_path = capability
-                .find_directory_source(&root_decl)
-                .expect("missing directory decl")
-                .source_path
-                .clone();
-            return Ok((source_path, Arc::clone(root_realm)));
-        }
-        ExposeSource::Child(_) => {
-            let cap_state = CapabilityState::new(&capability);
-            let mut wp = WalkPosition {
-                capability,
-                cap_state,
-                last_child_moniker: None,
-                realm: ExtendedRealm::Component(Arc::clone(root_realm)),
-            };
-            let capability_source = walk_expose_chain(&mut wp).await?;
-            match capability_source {
-                CapabilitySource::Component {
-                    capability: ComponentCapability::Directory(DirectoryDecl { source_path, .. }),
-                    realm,
-                } => {
-                    return Ok((source_path, realm.upgrade()?));
-                }
-                CapabilitySource::Framework {
-                    capability: InternalCapability::Directory(_),
-                    ..
-                } => {
-                    return Err(ModelError::unsupported(
-                        "find_exposed_root_directory_capability does not support \
-                        capabilities exposed from framework",
-                    ));
-                }
-                _ => {
-                    return Err(ModelError::unsupported(
-                        "find_exposed_root_directory_capability source is not supported",
-                    ));
-                }
-            }
         }
     }
 }

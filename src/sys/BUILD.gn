@@ -19,6 +19,7 @@ group("tests") {
   deps = [
     "activity:tests",
     "appmgr:tests",
+    "base-resolver:tests",
     "build:tests",
     "component_index:tests",
     "component_manager:tests",

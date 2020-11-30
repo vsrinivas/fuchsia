@@ -1,0 +1,25 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    program: {
+        binary: "bin/base_resolver_fake_pkgfs_bin",
+    },
+    capabilities: [
+        {
+            directory: "pkgfs",
+            rights: [ "rx*" ],
+            path: "/pkgfs",
+        },
+    ],
+    use: [
+        { runner: "elf" },
+        { protocol: "fuchsia.logger.LogSink" },
+    ],
+    expose: [
+        {
+            directory: "pkgfs",
+            from: "self",
+        },
+    ],
+}

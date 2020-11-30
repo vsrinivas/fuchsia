@@ -57,8 +57,16 @@
             url: "fuchsia-boot:///#meta/sysinfo.cm",
         },
         {
+            // base_resolver is present on all product configurations except
+            // bringup builds, as its dependency pkgfs is not available on
+            // bringup builds either.
+            name: "base_resolver",
+            url: "fuchsia-boot:///#meta/base-resolver.cm",
+        },
+        {
             name: "power_manager",
             url: "fuchsia-pkg://fuchsia.com/power-manager#meta/power-manager.cm",
+            environment: "#power-manager-env",
         },
         {
             name: "virtual_console",
@@ -557,6 +565,7 @@
             protocol: [ "fuchsia.logger.LogSink" ],
             from: "#archivist",
             to: [
+                "#base_resolver",
                 "#console-launcher",
                 "#driver_manager",
                 "#fshost",
@@ -654,6 +663,16 @@
         },
 
         // -- End Archivist offers --
+        {
+            directory: "pkgfs-delayed",
+            from: "#fshost",
+            to: [ "#base_resolver" ],
+
+            // Marking this offer as weak solves the following cycle:
+            // base_resolver -> fshost -> driver_manager -> power_manager -> base_resolver.
+            // TODO(fxbug.dev/64587): Make this strong once power_manager is in ZBI.
+            dependency: "weak_for_migration",
+        },
     ],
     expose: [
         // This handle is used by component manager to resolve packages from the
@@ -758,6 +777,10 @@
             ],
             from: "#archivist",
         },
+        {
+            resolver: "base_resolver",
+            from: "#base_resolver",
+        },
     ],
     environments: [
         {
@@ -772,6 +795,20 @@
             extends: "realm",
 
             // 1 minute
+            __stop_timeout_ms: 60000,
+        },
+
+        // TODO(fxbug.dev/64587): Remove once power_manager is in the ZBI.
+        {
+            name: "power-manager-env",
+            extends: "realm",
+            resolvers: [
+                {
+                    resolver: "base_resolver",
+                    scheme: "fuchsia-pkg",
+                    from: "#base_resolver",
+                },
+            ],
             __stop_timeout_ms: 60000,
         },
     ],

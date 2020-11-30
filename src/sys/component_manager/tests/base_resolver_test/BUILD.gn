@@ -7,25 +7,6 @@ import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_test.gni")
 import("//build/test/test_package.gni")
 
-rustc_test("base_resolver_test_bin") {
-  name = "base_resolver_test"
-  edition = "2018"
-  source_root = "base_resolver_test.rs"
-
-  deps = [
-    "//garnet/examples/fidl/services:echo-rustc",
-    "//garnet/lib/rust/io_util",
-    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
-    "//src/lib/fidl/rust/fidl",
-    "//src/lib/fuchsia-async",
-    "//src/lib/fuchsia-component",
-    "//src/sys/component_manager/testing:test_utils_lib",
-    "//third_party/rust_crates:anyhow",
-  ]
-
-  sources = [ "base_resolver_test.rs" ]
-}
-
 rustc_test("base_resolver_disabled_test_bin") {
   name = "base_resolver_disabled_test"
   edition = "2018"
@@ -85,11 +66,6 @@ rustc_binary("root_component_bin") {
   sources = [ "root_component.rs" ]
 }
 
-component_config("component_manager_base_resolver_test_config") {
-  sources = [ "cm_config.json" ]
-  dest = "data/component_manager_config"
-}
-
 component_config("component_manager_base_resolver_disabled_test_config") {
   sources = [ "cm_config_disabled_resolver.json" ]
   dest = "data/component_manager_config_resolver_disabled"
@@ -104,20 +80,14 @@ test_package("base_resolver_test") {
   deps = [
     ":base_resolver_appmgr_loader_test_bin",
     ":base_resolver_disabled_test_bin",
-    ":base_resolver_test_bin",
     ":component_manager_base_appmgr_loader_test_config",
     ":component_manager_base_resolver_disabled_test_config",
-    ":component_manager_base_resolver_test_config",
     ":root_component_bin",
     "//garnet/examples/fidl/echo_server_rust:echo_server_rust_bin",
     "//src/sys/component_manager:bin",
   ]
 
   resources = [
-    {
-      path = "${root_gen_dir}/src/sys/component_manager/tests/base_resolver_test/component_manager_base_resolver_test_config"
-      dest = "component_manager_config"
-    },
     {
       path = "${root_gen_dir}/src/sys/component_manager/tests/base_resolver_test/component_manager_base_resolver_disabled_test_config"
       dest = "component_manager_config_resolver_disabled"
@@ -143,10 +113,6 @@ test_package("base_resolver_test") {
 
   meta = [
     {
-      path = rebase_path("meta/component_manager_without_loader.cmx")
-      dest = "component_manager_without_loader.cmx"
-    },
-    {
       path = rebase_path("meta/component_manager_disabled_resolver.cmx")
       dest = "component_manager_disabled_resolver.cmx"
     },
@@ -169,9 +135,6 @@ test_package("base_resolver_test") {
   ]
 
   tests = [
-    {
-      name = "base_resolver_test"
-    },
     {
       name = "base_resolver_disabled_test"
     },

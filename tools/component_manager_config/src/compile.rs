@@ -39,16 +39,9 @@ struct Config {
 enum BuiltinPkgResolver {
     None,
     AppmgrBridge,
-    PkgfsBase,
 }
 
-symmetrical_enums!(
-    BuiltinPkgResolver,
-    component_internal::BuiltinPkgResolver,
-    None,
-    AppmgrBridge,
-    PkgfsBase
-);
+symmetrical_enums!(BuiltinPkgResolver, component_internal::BuiltinPkgResolver, None, AppmgrBridge);
 
 impl std::default::Default for BuiltinPkgResolver {
     fn default() -> Self {
@@ -411,7 +404,7 @@ mod tests {
             list_children_batch_size: 123,
             maintain_utc_clock: false,
             use_builtin_process_launcher: true,
-            builtin_pkg_resolver: "pkgfs_base",
+            builtin_pkg_resolver: "appmgr_bridge",
             security_policy: {
                 job_policy: {
                     main_process_critical: [ "/", "/bar" ],
@@ -459,7 +452,7 @@ mod tests {
                 maintain_utc_clock: Some(false),
                 use_builtin_process_launcher: Some(true),
                 list_children_batch_size: Some(123),
-                builtin_pkg_resolver: Some(component_internal::BuiltinPkgResolver::PkgfsBase),
+                builtin_pkg_resolver: Some(component_internal::BuiltinPkgResolver::AppmgrBridge),
                 security_policy: Some(component_internal::SecurityPolicy {
                     job_policy: Some(component_internal::JobPolicyAllowlists {
                         main_process_critical: Some(vec!["/".to_string(), "/bar".to_string()]),

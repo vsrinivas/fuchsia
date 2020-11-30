@@ -1,0 +1,49 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    program: {
+        binary: "bin/base_resolver_integration_test_bin",
+    },
+    children: [
+        // This will be resolved by the base package resolver.
+        {
+            name: "component",
+            url: "fuchsia-pkg://fuchsia.com/mock-package#meta/mock-component.cm",
+            environment: "#base_resolver_env",
+        },
+    ],
+    capabilities: [
+        { protocol: "fuchsia.test.Suite" },
+    ],
+    use: [
+        { runner: "rust_test_runner" },
+        {
+            protocol: "fuchsia.sys2.Realm",
+            from: "framework",
+        },
+    ],
+    expose: [
+        {
+            protocol: "fuchsia.test.Suite",
+            from: "self",
+        },
+    ],
+
+    // [START environment]
+    environments: [
+        {
+            name: "base_resolver_env",
+            extends: "realm",
+            resolvers: [
+                {
+                    resolver: "base_resolver",
+                    from: "parent",
+                    scheme: "fuchsia-pkg",
+                },
+            ],
+        },
+    ],
+
+    // [END environment]
+}

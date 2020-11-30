@@ -49,7 +49,6 @@ template("component_manager") {
     "//src/sys/lib/cm_rust",
     "//src/sys/lib/cm_types",
     "//src/sys/lib/directory_broker",
-    "//src/sys/lib/library_loader",
     "//src/sys/lib/runner",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:async-trait",
@@ -102,7 +101,6 @@ template("component_manager") {
     "src/constants.rs",
     "src/elf_runner/mod.rs",
     "src/framework.rs",
-    "src/fuchsia_base_pkg_resolver.rs",
     "src/fuchsia_boot_resolver.rs",
     "src/fuchsia_pkg_resolver.rs",
     "src/klog.rs",
@@ -199,6 +197,7 @@ template("component_manager") {
       deps += [
         "//src/lib/process_builder:test-util-fidl-rustc",
         "//src/sys/lib/directory_broker",
+        "//src/sys/lib/library_loader",
       ]
     }
   } else {
@@ -371,7 +370,6 @@ component_config("component_manager_bootfs_config") {
   sources = [
     "//src/security/policy/component_manager_policy.json",
     "configs/bootfs_config.json",
-    "configs/resolver_pkgfs.json",
   ]
   dest = "config/component_manager"
 }
@@ -379,15 +377,6 @@ component_config("component_manager_bootfs_config") {
 # Temporary alias for a soft transition
 group("component_manager_config_bootfs_resource") {
   deps = [ ":component_manager_bootfs_config" ]
-}
-
-component_config("component_manager_bootfs_config_no_pkgresolver") {
-  sources = [
-    "//src/security/policy/component_manager_policy.json",
-    "configs/bootfs_config.json",
-    "configs/pkgfs_resolver_disabled.json",
-  ]
-  dest = "config/component_manager"
 }
 
 component_config("component_manager_for_examples_config") {

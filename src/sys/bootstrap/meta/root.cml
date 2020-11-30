@@ -8,6 +8,7 @@
         {
             name: "core",
             url: "fuchsia-pkg://fuchsia.com/core#meta/core.cm",
+            environment: "#core-env",
         },
         {
             name: "startup",
@@ -219,13 +220,18 @@
             to: [ "#bootstrap" ],
         },
     ],
-    expose: [
-        // This handle is used by component manager to resolve packages from the
-        // base package set.
+    environments: [
         {
-            directory: "pkgfs-delayed",
-            from: "#bootstrap",
-            as: "pkgfs",
+            name: "core-env",
+            extends: "realm",
+            resolvers: [
+                {
+                    resolver: "base_resolver",
+                    scheme: "fuchsia-pkg",
+                    from: "#bootstrap",
+                },
+            ],
+            __stop_timeout_ms: 60000,
         },
     ],
 }

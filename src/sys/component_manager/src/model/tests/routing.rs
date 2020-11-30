@@ -3396,3 +3396,83 @@ async fn resolver_is_not_available() {
         }
     );
 }
+
+///   a
+///  /
+/// b
+/// a: creates environment "env" and registers resolver "base" from self.
+/// b: has environment "env".
+#[fuchsia_async::run_singlethreaded(test)]
+async fn resolver_component_decl_is_validated() {
+    // Note that we do not define a component "b". This will be resolved by our custom resolver.
+    let components = vec![(
+        "a",
+        ComponentDeclBuilder::new()
+            .add_child(ChildDeclBuilder::new().name("b").url("base://b").environment("env"))
+            .add_environment(
+                EnvironmentDeclBuilder::new()
+                    .name("env")
+                    .extends(fsys::EnvironmentExtends::Realm)
+                    .add_resolver(ResolverRegistration {
+                        resolver: "base".into(),
+                        source: RegistrationSource::Self_,
+                        scheme: "base".into(),
+                    }),
+            )
+            .resolver(ResolverDecl {
+                name: "base".into(),
+                source_path: "/svc/fuchsia.sys2.ComponentResolver".parse().unwrap(),
+            })
+            .build(),
+    )];
+
+    // Set up the system.
+    let (resolver_service, mut receiver) =
+        create_service_directory_entry::<fsys::ComponentResolverMarker>();
+    let universe = RoutingTestBuilder::new("a", components)
+        // Component "a" exposes a resolver service.
+        .add_outgoing_path(
+            "a",
+            CapabilityPath::try_from("/svc/fuchsia.sys2.ComponentResolver").unwrap(),
+            resolver_service,
+        )
+        .build()
+        .await;
+
+    join!(
+        // Bind "b:0". We expect to see a ResolverError.
+        async move {
+            assert_matches!(
+                universe.bind_instance(&vec!["b:0"].into()).await,
+                Err(ModelError::ResolverError { err: ResolverError::ManifestInvalid { .. } })
+            );
+        },
+        // Wait for a request, and resolve it.
+        async {
+            while let Some(fsys::ComponentResolverRequest::Resolve { component_url, responder }) =
+                receiver.next().await
+            {
+                assert_eq!(component_url, "base://b");
+                responder
+                    .send(
+                        Status::OK.into_raw(),
+                        fsys::Component {
+                            resolved_url: Some("test://b".into()),
+                            decl: Some(fsys::ComponentDecl {
+                                exposes: Some(vec![fsys::ExposeDecl::Protocol(
+                                    fsys::ExposeProtocolDecl {
+                                        source: Some(fsys::Ref::Self_(fsys::SelfRef {})),
+                                        ..fsys::ExposeProtocolDecl::empty()
+                                    },
+                                )]),
+                                ..fsys::ComponentDecl::empty()
+                            }),
+                            package: None,
+                            ..fsys::Component::empty()
+                        },
+                    )
+                    .expect("failed to send resolve response");
+            }
+        }
+    );
+}

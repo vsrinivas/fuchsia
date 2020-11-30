@@ -1,0 +1,23 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    program: {
+        binary: "bin/base_resolver_mock_component_bin",
+    },
+    capabilities: [
+        {
+            protocol: "test.ping.Ping",
+            path: "/svc/test.ping.Ping",
+        },
+    ],
+    use: [
+        { runner: "elf" },
+    ],
+    expose: [
+        {
+            protocol: "test.ping.Ping",
+            from: "self",
+        },
+    ],
+}

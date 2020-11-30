@@ -1,0 +1,50 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    children: [
+        {
+            name: "fake_pkgfs",
+            url: "fuchsia-pkg://fuchsia.com/base-resolver-tests#meta/fake-pkgfs.cm",
+        },
+        {
+            name: "base_resolver",
+            url: "fuchsia-pkg://fuchsia.com/base-resolver-tests#meta/base-resolver-component.cm",
+        },
+        {
+            name: "integration_test",
+            url: "fuchsia-pkg://fuchsia.com/base-resolver-tests#meta/integration-test.cm",
+        },
+    ],
+    offer: [
+        {
+            // The production base-resolver uses a `pkgfs-delayed` directory capability,
+            // which blocks open requests until pkgfs is ready and serving. We use the
+            // same capability name here so that the production base-resolver manifest can
+            // be used, even though the pkgfs directory is being mocked.
+            directory: "pkgfs",
+            from: "#fake_pkgfs",
+            as: "pkgfs-delayed",
+            to: [ "#base_resolver" ],
+        },
+        {
+            protocol: "fuchsia.logger.LogSink",
+            from: "parent",
+            to: [
+                "#base_resolver",
+                "#fake_pkgfs",
+            ],
+        },
+        {
+            resolver: "base_resolver",
+            from: "#base_resolver",
+            to: [ "#integration_test" ],
+        },
+    ],
+    expose: [
+        {
+            protocol: "fuchsia.test.Suite",
+            from: "#integration_test",
+        },
+    ],
+}

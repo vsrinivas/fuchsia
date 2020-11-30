@@ -120,7 +120,7 @@ impl Resolver for RemoteResolver {
                 source_name: self.capability_name.clone(),
                 source: self.source.clone(),
             };
-            let flags = fio::OPEN_RIGHT_READABLE | fio::OPEN_FLAG_POSIX;
+            let flags = fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE;
             let open_mode = fio::MODE_TYPE_SERVICE;
             let (proxy, server_end) =
                 fidl::endpoints::create_proxy::<fsys::ComponentResolverMarker>()
@@ -142,7 +142,12 @@ impl Resolver for RemoteResolver {
                 .map_err(ResolverError::unknown_resolver_error)?;
             let status = Status::from_raw(status);
             match status {
-                Status::OK => Ok(component),
+                Status::OK => {
+                    let decl = component.decl.as_ref().ok_or(ResolverError::RemoteInvalidData)?;
+                    cm_fidl_validator::validate(decl)
+                        .map_err(|e| ResolverError::manifest_invalid(component_url, e))?;
+                    Ok(component)
+                }
                 Status::INVALID_ARGS => {
                     Err(ResolverError::url_parse_error(component_url, RemoteError(status)))
                 }
@@ -195,6 +200,8 @@ pub enum ResolverError {
     UrlMissingResourceError { url: String },
     #[error("failed to route resolver capability: {}", .0)]
     RoutingError(#[source] Box<ModelError>),
+    #[error("the remote resolver returned invalid data")]
+    RemoteInvalidData,
     #[error("an unknown error ocurred with the resolver: {}", .0)]
     UnknownResolverError(#[source] ClonableError),
 }
