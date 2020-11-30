@@ -9,12 +9,13 @@
 #include <threads.h>
 #include <zircon/threads.h>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/platform-defs.h>
 #include <ddktl/fidl.h>
 #include <ddktl/protocol/composite.h>
 #include <fbl/auto_lock.h>
+
+#include "src/ui/input/drivers/ft8201/ft8201-bind.h"
 
 namespace {
 
@@ -803,9 +804,4 @@ static zx_driver_ops_t ft8201_driver_ops = []() -> zx_driver_ops_t {
 
 }  // namespace touch
 
-// clang-format off
-ZIRCON_DRIVER_BEGIN(Ft8201Device, touch::ft8201_driver_ops, "zircon", "0.1", 3)
-  BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_COMPOSITE),
-  BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_FOCALTECH),
-  BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_FOCALTECH_FT8201),
-ZIRCON_DRIVER_END(Ft8201Device)
+ZIRCON_DRIVER(Ft8201Device, touch::ft8201_driver_ops, "zircon", "0.1")

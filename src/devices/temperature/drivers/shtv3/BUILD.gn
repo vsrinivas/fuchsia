@@ -2,19 +2,28 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 import("//build/test/test_package.gni")
 
+bind_rules("shtv3-bind") {
+  rules = "shtv3.bind"
+  output = "shtv3-bind.h"
+  tests = "shtv3-bind-test.json"
+  deps = [
+    "//src/devices/bind/fuchsia.i2c",
+    "//src/devices/bind/fuchsia.platform",
+  ]
+}
+
 source_set("common") {
   public_deps = [
+    ":shtv3-bind",
     "//sdk/fidl/fuchsia.hardware.temperature:fuchsia.hardware.temperature_llcpp",
     "//src/devices/i2c/lib/device-protocol-i2c-channel",
     "//src/devices/lib/driver",
     "//src/lib/ddk",
-
-    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
-    "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//src/lib/ddktl",
     "//zircon/public/lib/zxc",
   ]
@@ -56,5 +65,8 @@ unittest_package("shtv3-test-package") {
 
 group("tests") {
   testonly = true
-  deps = [ ":shtv3-test-package" ]
+  deps = [
+    ":shtv3-bind_test",
+    ":shtv3-test-package",
+  ]
 }

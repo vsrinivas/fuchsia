@@ -7,10 +7,11 @@
 #include <endian.h>
 #include <lib/device-protocol/pdev.h>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/platform-defs.h>
 #include <ddktl/fidl.h>
+
+#include "src/devices/temperature/drivers/tmp112/tmp112-bind.h"
 
 namespace temperature {
 
@@ -118,10 +119,4 @@ static constexpr zx_driver_ops_t tmp112_driver_ops = []() {
 
 }  // namespace temperature
 
-// clang-format off
-ZIRCON_DRIVER_BEGIN(tmp112, temperature::tmp112_driver_ops, "zircon", "0.1", 4)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_I2C),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_TI),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_DID, PDEV_DID_TI_TEMPERATURE),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_TI_TMP112),
-ZIRCON_DRIVER_END(tmp112)
+ZIRCON_DRIVER(tmp112, temperature::tmp112_driver_ops, "zircon", "0.1")

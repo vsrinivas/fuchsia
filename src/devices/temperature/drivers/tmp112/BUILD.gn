@@ -2,9 +2,20 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
 import("//build/test/test_package.gni")
+
+bind_rules("tmp112-bind") {
+  rules = "tmp112.bind"
+  output = "tmp112-bind.h"
+  tests = "tmp112-bind-test.json"
+  deps = [
+    "//src/devices/bind/fuchsia.i2c",
+    "//src/devices/bind/fuchsia.platform",
+  ]
+}
 
 driver_module("tmp112") {
   configs += [
@@ -14,15 +25,13 @@ driver_module("tmp112") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "tmp112.cc" ]
   deps = [
+    ":tmp112-bind",
     "//sdk/fidl/fuchsia.hardware.temperature:fuchsia.hardware.temperature_llcpp",
     "//src/devices/bus/lib/device-protocol-pdev",
     "//src/devices/i2c/lib/device-protocol-i2c-channel",
     "//src/devices/lib/driver",
     "//src/lib/ddk",
     "//src/lib/ddktl",
-
-    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
-    "//src/lib/ddk:ddk-deprecated-binding-headers",
   ]
 }
 
@@ -34,15 +43,13 @@ test("tmp112-test") {
     "tmp112.cc",
   ]
   deps = [
+    ":tmp112-bind",
     "//sdk/fidl/fuchsia.hardware.temperature:fuchsia.hardware.temperature_llcpp",
     "//src/devices/bus/lib/device-protocol-pdev",
     "//src/devices/i2c/lib/device-protocol-i2c-channel",
     "//src/devices/i2c/testing/mock-i2c",
     "//src/devices/testing/fake_ddk",
     "//zircon/public/lib/zxtest",
-
-    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
-    "//src/lib/ddk:ddk-deprecated-binding-headers",
   ]
 }
 
@@ -60,5 +67,8 @@ unittest_package("tmp112-test-package") {
 
 group("tests") {
   testonly = true
-  deps = [ ":tmp112-test-package" ]
+  deps = [
+    ":tmp112-bind_test",
+    ":tmp112-test-package",
+  ]
 }

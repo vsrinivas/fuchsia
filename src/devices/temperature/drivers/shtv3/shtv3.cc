@@ -7,10 +7,11 @@
 #include <endian.h>
 #include <lib/zx/time.h>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/platform-defs.h>
 #include <ddktl/fidl.h>
+
+#include "src/devices/temperature/drivers/shtv3/shtv3-bind.h"
 
 namespace {
 
@@ -126,9 +127,4 @@ static constexpr zx_driver_ops_t shtv3_driver_ops = []() {
 
 }  // namespace temperature
 
-// clang-format off
-ZIRCON_DRIVER_BEGIN(shtv3, temperature::shtv3_driver_ops, "zircon", "0.1", 3)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_I2C),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_SENSIRION),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_SENSIRION_SHTV3),
-ZIRCON_DRIVER_END(shtv3)
+ZIRCON_DRIVER(shtv3, temperature::shtv3_driver_ops, "zircon", "0.1")
